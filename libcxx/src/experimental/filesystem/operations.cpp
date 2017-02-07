@@ -35,12 +35,9 @@ namespace detail { namespace  {
 using value_type = path::value_type;
 using string_type = path::string_type;
 
-
-
 inline std::error_code capture_errno() {
-    _LIBCPP_ASSERT(errno, "Expected errno to be non-zero");
-    std::error_code m_ec(errno, std::generic_category());
-    return m_ec;
+  _LIBCPP_ASSERT(errno, "Expected errno to be non-zero");
+  return std::error_code(errno, std::generic_category());
 }
 
 void set_or_throw(std::error_code const& m_ec, std::error_code* ec,

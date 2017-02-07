@@ -8923,8 +8923,9 @@ static SDValue splitStoreSplat(SelectionDAG &DAG, StoreSDNode &St,
   // instructions (stp).
   SDLoc DL(&St);
   SDValue BasePtr = St.getBasePtr();
+  const MachinePointerInfo &PtrInfo = St.getPointerInfo();
   SDValue NewST1 =
-      DAG.getStore(St.getChain(), DL, SplatVal, BasePtr, St.getPointerInfo(),
+      DAG.getStore(St.getChain(), DL, SplatVal, BasePtr, PtrInfo,
                    OrigAlignment, St.getMemOperand()->getFlags());
 
   unsigned Offset = EltOffset;
@@ -8933,7 +8934,7 @@ static SDValue splitStoreSplat(SelectionDAG &DAG, StoreSDNode &St,
     SDValue OffsetPtr = DAG.getNode(ISD::ADD, DL, MVT::i64, BasePtr,
                                     DAG.getConstant(Offset, DL, MVT::i64));
     NewST1 = DAG.getStore(NewST1.getValue(0), DL, SplatVal, OffsetPtr,
-                          St.getPointerInfo(), Alignment,
+                          PtrInfo.getWithOffset(Offset), Alignment,
                           St.getMemOperand()->getFlags());
     Offset += EltOffset;
   }

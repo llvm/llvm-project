@@ -12,6 +12,14 @@ r_hex_b15_pcrel:
 r_hex_b7_pcrel:
 { loop1 (#undefined, #0) }
 
+# CHECK: R_HEX_LO16
+r_hex_lo16:
+{ r0.l = #lo(undefined) }
+
+# CHECK: R_HEX_HI16
+r_hex_hi16:
+{ r0.h = #hi(undefined) }
+
 # CHECK: R_HEX_32
 r_hex_32:
 .word undefined
@@ -67,10 +75,6 @@ r_hex_b22_pcrel_x:
 # CHECK: R_HEX_B15_PCREL_X
 r_hex_b15_pcrel_x:
 { if (p0) jump ##undefined }
-
-# CHECK: R_HEX_B9_PCREL_X
-r_hex_b9_pcrel_x:
-{ r0 = #0 ; jump ##undefined }
 
 # CHECK: R_HEX_B7_PCREL_X
 r_hex_b7_pcrel_x:

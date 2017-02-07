@@ -961,6 +961,61 @@ bool RuntimeDyldELF::resolveAArch64ShortBranch(
   return true;
 }
 
+void RuntimeDyldELF::resolveAArch64Branch(unsigned SectionID,
+                                          const RelocationValueRef &Value,
+                                          relocation_iterator RelI,
+                                          StubMap &Stubs) {
+
+  DEBUG(dbgs() << "\t\tThis is an AArch64 branch relocation.");
+  SectionEntry &Section = Sections[SectionID];
+
+  uint64_t Offset = RelI->getOffset();
+  unsigned RelType = RelI->getType();
+  // Look for an existing stub.
+  StubMap::const_iterator i = Stubs.find(Value);
+  if (i != Stubs.end()) {
+    resolveRelocation(Section, Offset,
+                      (uint64_t)Section.getAddressWithOffset(i->second),
+                      RelType, 0);
+    DEBUG(dbgs() << " Stub function found\n");
+  } else if (!resolveAArch64ShortBranch(SectionID, RelI, Value)) {
+    // Create a new stub function.
+    DEBUG(dbgs() << " Create a new stub function\n");
+    Stubs[Value] = Section.getStubOffset();
+    uint8_t *StubTargetAddr = createStubFunction(
+        Section.getAddressWithOffset(Section.getStubOffset()));
+
+    RelocationEntry REmovz_g3(SectionID, StubTargetAddr - Section.getAddress(),
+                              ELF::R_AARCH64_MOVW_UABS_G3, Value.Addend);
+    RelocationEntry REmovk_g2(SectionID,
+                              StubTargetAddr - Section.getAddress() + 4,
+                              ELF::R_AARCH64_MOVW_UABS_G2_NC, Value.Addend);
+    RelocationEntry REmovk_g1(SectionID,
+                              StubTargetAddr - Section.getAddress() + 8,
+                              ELF::R_AARCH64_MOVW_UABS_G1_NC, Value.Addend);
+    RelocationEntry REmovk_g0(SectionID,
+                              StubTargetAddr - Section.getAddress() + 12,
+                              ELF::R_AARCH64_MOVW_UABS_G0_NC, Value.Addend);
+
+    if (Value.SymbolName) {
+      addRelocationForSymbol(REmovz_g3, Value.SymbolName);
+      addRelocationForSymbol(REmovk_g2, Value.SymbolName);
+      addRelocationForSymbol(REmovk_g1, Value.SymbolName);
+      addRelocationForSymbol(REmovk_g0, Value.SymbolName);
+    } else {
+      addRelocationForSection(REmovz_g3, Value.SectionID);
+      addRelocationForSection(REmovk_g2, Value.SectionID);
+      addRelocationForSection(REmovk_g1, Value.SectionID);
+      addRelocationForSection(REmovk_g0, Value.SectionID);
+    }
+    resolveRelocation(Section, Offset,
+                      reinterpret_cast<uint64_t>(Section.getAddressWithOffset(
+                          Section.getStubOffset())),
+                      RelType, 0);
+    Section.advanceStubOffset(getMaxStubSize());
+  }
+}
+
 Expected<relocation_iterator>
 RuntimeDyldELF::processRelocationRef(
     unsigned SectionID, relocation_iterator RelI, const ObjectFile &O,
@@ -1055,55 +1110,22 @@ RuntimeDyldELF::processRelocationRef(
 
   DEBUG(dbgs() << "\t\tSectionID: " << SectionID << " Offset: " << Offset
                << "\n");
-  if ((Arch == Triple::aarch64 || Arch == Triple::aarch64_be) &&
-      (RelType == ELF::R_AARCH64_CALL26 || RelType == ELF::R_AARCH64_JUMP26)) {
-    // This is an AArch64 branch relocation, need to use a stub function.
-    DEBUG(dbgs() << "\t\tThis is an AArch64 branch relocation.");
-    SectionEntry &Section = Sections[SectionID];
+  if ((Arch == Triple::aarch64 || Arch == Triple::aarch64_be)) {
+    if (RelType == ELF::R_AARCH64_CALL26 || RelType == ELF::R_AARCH64_JUMP26) {
+      resolveAArch64Branch(SectionID, Value, RelI, Stubs);
+    } else if (RelType == ELF::R_AARCH64_ADR_GOT_PAGE) {
+      // Craete new GOT entry or find existing one. If GOT entry is
+      // to be created, then we also emit ABS64 relocation for it.
+      uint64_t GOTOffset = findOrAllocGOTEntry(Value, ELF::R_AARCH64_ABS64);
+      resolveGOTOffsetRelocation(SectionID, Offset, GOTOffset + Addend,
+                                 ELF::R_AARCH64_ADR_PREL_PG_HI21);
 
-    // Look for an existing stub.
-    StubMap::const_iterator i = Stubs.find(Value);
-    if (i != Stubs.end()) {
-      resolveRelocation(Section, Offset,
-                        (uint64_t)Section.getAddressWithOffset(i->second),
-                        RelType, 0);
-      DEBUG(dbgs() << " Stub function found\n");
-    } else if (!resolveAArch64ShortBranch(SectionID, RelI, Value)) {
-      // Create a new stub function.
-      DEBUG(dbgs() << " Create a new stub function\n");
-      Stubs[Value] = Section.getStubOffset();
-      uint8_t *StubTargetAddr = createStubFunction(
-          Section.getAddressWithOffset(Section.getStubOffset()));
-
-      RelocationEntry REmovz_g3(SectionID,
-                                StubTargetAddr - Section.getAddress(),
-                                ELF::R_AARCH64_MOVW_UABS_G3, Value.Addend);
-      RelocationEntry REmovk_g2(SectionID, StubTargetAddr -
-                                               Section.getAddress() + 4,
-                                ELF::R_AARCH64_MOVW_UABS_G2_NC, Value.Addend);
-      RelocationEntry REmovk_g1(SectionID, StubTargetAddr -
-                                               Section.getAddress() + 8,
-                                ELF::R_AARCH64_MOVW_UABS_G1_NC, Value.Addend);
-      RelocationEntry REmovk_g0(SectionID, StubTargetAddr -
-                                               Section.getAddress() + 12,
-                                ELF::R_AARCH64_MOVW_UABS_G0_NC, Value.Addend);
-
-      if (Value.SymbolName) {
-        addRelocationForSymbol(REmovz_g3, Value.SymbolName);
-        addRelocationForSymbol(REmovk_g2, Value.SymbolName);
-        addRelocationForSymbol(REmovk_g1, Value.SymbolName);
-        addRelocationForSymbol(REmovk_g0, Value.SymbolName);
-      } else {
-        addRelocationForSection(REmovz_g3, Value.SectionID);
-        addRelocationForSection(REmovk_g2, Value.SectionID);
-        addRelocationForSection(REmovk_g1, Value.SectionID);
-        addRelocationForSection(REmovk_g0, Value.SectionID);
-      }
-      resolveRelocation(Section, Offset,
-                        reinterpret_cast<uint64_t>(Section.getAddressWithOffset(
-                            Section.getStubOffset())),
-                        RelType, 0);
-      Section.advanceStubOffset(getMaxStubSize());
+    } else if (RelType == ELF::R_AARCH64_LD64_GOT_LO12_NC) {
+      uint64_t GOTOffset = findOrAllocGOTEntry(Value, ELF::R_AARCH64_ABS64);
+      resolveGOTOffsetRelocation(SectionID, Offset, GOTOffset + Addend,
+                                 ELF::R_AARCH64_LDST64_ABS_LO12_NC);
+    } else {
+      processSimpleRelocation(SectionID, Offset, RelType, Value);
     }
   } else if (Arch == Triple::arm) {
     if (RelType == ELF::R_ARM_PC24 || RelType == ELF::R_ARM_CALL ||
@@ -1252,7 +1274,7 @@ RuntimeDyldELF::processRelocationRef(
       if (i != GOTSymbolOffsets.end())
         RE.SymOffset = i->second;
       else {
-        RE.SymOffset = allocateGOTEntries(SectionID, 1);
+        RE.SymOffset = allocateGOTEntries(1);
         GOTSymbolOffsets[TargetName] = RE.SymOffset;
       }
     }
@@ -1509,14 +1531,15 @@ RuntimeDyldELF::processRelocationRef(
           Section.advanceStubOffset(getMaxStubSize());
 
           // Allocate a GOT Entry
-          uint64_t GOTOffset = allocateGOTEntries(SectionID, 1);
+          uint64_t GOTOffset = allocateGOTEntries(1);
 
           // The load of the GOT address has an addend of -4
-          resolveGOTOffsetRelocation(SectionID, StubOffset + 2, GOTOffset - 4);
+          resolveGOTOffsetRelocation(SectionID, StubOffset + 2, GOTOffset - 4,
+                                     ELF::R_X86_64_PC32);
 
           // Fill in the value of the symbol we're targeting into the GOT
           addRelocationForSymbol(
-              computeGOTOffsetRE(SectionID, GOTOffset, 0, ELF::R_X86_64_64),
+              computeGOTOffsetRE(GOTOffset, 0, ELF::R_X86_64_64),
               Value.SymbolName);
         }
 
@@ -1531,11 +1554,13 @@ RuntimeDyldELF::processRelocationRef(
     } else if (RelType == ELF::R_X86_64_GOTPCREL ||
                RelType == ELF::R_X86_64_GOTPCRELX ||
                RelType == ELF::R_X86_64_REX_GOTPCRELX) {
-      uint64_t GOTOffset = allocateGOTEntries(SectionID, 1);
-      resolveGOTOffsetRelocation(SectionID, Offset, GOTOffset + Addend);
+      uint64_t GOTOffset = allocateGOTEntries(1);
+      resolveGOTOffsetRelocation(SectionID, Offset, GOTOffset + Addend,
+                                 ELF::R_X86_64_PC32);
 
       // Fill in the value of the symbol we're targeting into the GOT
-      RelocationEntry RE = computeGOTOffsetRE(SectionID, GOTOffset, Value.Offset, ELF::R_X86_64_64);
+      RelocationEntry RE =
+          computeGOTOffsetRE(GOTOffset, Value.Offset, ELF::R_X86_64_64);
       if (Value.SymbolName)
         addRelocationForSymbol(RE, Value.SymbolName);
       else
@@ -1593,9 +1618,7 @@ size_t RuntimeDyldELF::getGOTEntrySize() {
   return Result;
 }
 
-uint64_t RuntimeDyldELF::allocateGOTEntries(unsigned SectionID, unsigned no)
-{
-  (void)SectionID; // The GOT Section is the same for all section in the object file
+uint64_t RuntimeDyldELF::allocateGOTEntries(unsigned no) {
   if (GOTSectionID == 0) {
     GOTSectionID = Sections.size();
     // Reserve a section id. We'll allocate the section later
@@ -1607,17 +1630,38 @@ uint64_t RuntimeDyldELF::allocateGOTEntries(unsigned SectionID, unsigned no)
   return StartOffset;
 }
 
-void RuntimeDyldELF::resolveGOTOffsetRelocation(unsigned SectionID, uint64_t Offset, uint64_t GOTOffset)
-{
+uint64_t RuntimeDyldELF::findOrAllocGOTEntry(const RelocationValueRef &Value,
+                                             unsigned GOTRelType) {
+  auto E = GOTOffsetMap.insert({Value, 0});
+  if (E.second) {
+    uint64_t GOTOffset = allocateGOTEntries(1);
+
+    // Create relocation for newly created GOT entry
+    RelocationEntry RE =
+        computeGOTOffsetRE(GOTOffset, Value.Offset, GOTRelType);
+    if (Value.SymbolName)
+      addRelocationForSymbol(RE, Value.SymbolName);
+    else
+      addRelocationForSection(RE, Value.SectionID);
+
+    E.first->second = GOTOffset;
+  }
+
+  return E.first->second;
+}
+
+void RuntimeDyldELF::resolveGOTOffsetRelocation(unsigned SectionID,
+                                                uint64_t Offset,
+                                                uint64_t GOTOffset,
+                                                uint32_t Type) {
   // Fill in the relative address of the GOT Entry into the stub
-  RelocationEntry GOTRE(SectionID, Offset, ELF::R_X86_64_PC32, GOTOffset);
+  RelocationEntry GOTRE(SectionID, Offset, Type, GOTOffset);
   addRelocationForSection(GOTRE, GOTSectionID);
 }
 
-RelocationEntry RuntimeDyldELF::computeGOTOffsetRE(unsigned SectionID, uint64_t GOTOffset, uint64_t SymbolOffset,
-                                                   uint32_t Type)
-{
-  (void)SectionID; // The GOT Section is the same for all section in the object file
+RelocationEntry RuntimeDyldELF::computeGOTOffsetRE(uint64_t GOTOffset,
+                                                   uint64_t SymbolOffset,
+                                                   uint32_t Type) {
   return RelocationEntry(GOTSectionID, GOTOffset, Type, SymbolOffset);
 }
 
@@ -1681,6 +1725,19 @@ Error RuntimeDyldELF::finalizeLoad(const ObjectFile &Obj,
 
 bool RuntimeDyldELF::isCompatibleFile(const object::ObjectFile &Obj) const {
   return Obj.isELF();
+}
+
+bool RuntimeDyldELF::relocationNeedsGot(const RelocationRef &R) const {
+  unsigned RelTy = R.getType();
+  if (Arch == Triple::aarch64 || Arch == Triple::aarch64_be)
+    return RelTy == ELF::R_AARCH64_ADR_GOT_PAGE ||
+           RelTy == ELF::R_AARCH64_LD64_GOT_LO12_NC;
+
+  if (Arch == Triple::x86_64)
+    return RelTy == ELF::R_X86_64_GOTPCREL ||
+           RelTy == ELF::R_X86_64_GOTPCRELX ||
+           RelTy == ELF::R_X86_64_REX_GOTPCRELX;
+  return false;
 }
 
 bool RuntimeDyldELF::relocationNeedsStub(const RelocationRef &R) const {

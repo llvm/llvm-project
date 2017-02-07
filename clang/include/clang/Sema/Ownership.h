@@ -257,6 +257,7 @@ namespace clang {
 
   typedef ActionResult<Decl*> DeclResult;
   typedef OpaquePtr<TemplateName> ParsedTemplateTy;
+  typedef UnionOpaquePtr<TemplateName> UnionParsedTemplateTy;
 
   typedef MutableArrayRef<Expr*> MultiExprArg;
   typedef MutableArrayRef<Stmt*> MultiStmtArg;

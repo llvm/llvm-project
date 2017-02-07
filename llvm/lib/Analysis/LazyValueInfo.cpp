@@ -839,13 +839,19 @@ bool LazyValueInfoImpl::solveBlockValueNonLocal(LVILatticeVal &BBLV,
   }
 
   // Loop over all of our predecessors, merging what we know from them into
-  // result.
-  bool EdgesMissing = false;
+  // result.  If we encounter an unexplored predecessor, we eagerly explore it
+  // in a depth first manner.  In practice, this has the effect of discovering
+  // paths we can't analyze eagerly without spending compile times analyzing
+  // other paths.  This heuristic benefits from the fact that predecessors are
+  // frequently arranged such that dominating ones come first and we quickly
+  // find a path to function entry.  TODO: We should consider explicitly
+  // canonicalizing to make this true rather than relying on this happy
+  // accident.  
   for (pred_iterator PI = pred_begin(BB), E = pred_end(BB); PI != E; ++PI) {
     LVILatticeVal EdgeResult;
-    EdgesMissing |= !getEdgeValue(Val, *PI, BB, EdgeResult);
-    if (EdgesMissing)
-      continue;
+    if (!getEdgeValue(Val, *PI, BB, EdgeResult))
+      // Explore that input, then return here
+      return false;
 
     Result.mergeIn(EdgeResult, DL);
 
@@ -866,8 +872,6 @@ bool LazyValueInfoImpl::solveBlockValueNonLocal(LVILatticeVal &BBLV,
       return true;
     }
   }
-  if (EdgesMissing)
-    return false;
 
   // Return the merged value, which is more precise than 'overdefined'.
   assert(!Result.isOverdefined());
@@ -880,8 +884,8 @@ bool LazyValueInfoImpl::solveBlockValuePHINode(LVILatticeVal &BBLV,
   LVILatticeVal Result;  // Start Undefined.
 
   // Loop over all of our predecessors, merging what we know from them into
-  // result.
-  bool EdgesMissing = false;
+  // result.  See the comment about the chosen traversal order in
+  // solveBlockValueNonLocal; the same reasoning applies here.
   for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i) {
     BasicBlock *PhiBB = PN->getIncomingBlock(i);
     Value *PhiVal = PN->getIncomingValue(i);
@@ -889,9 +893,9 @@ bool LazyValueInfoImpl::solveBlockValuePHINode(LVILatticeVal &BBLV,
     // Note that we can provide PN as the context value to getEdgeValue, even
     // though the results will be cached, because PN is the value being used as
     // the cache key in the caller.
-    EdgesMissing |= !getEdgeValue(PhiVal, PhiBB, BB, EdgeResult, PN);
-    if (EdgesMissing)
-      continue;
+    if (!getEdgeValue(PhiVal, PhiBB, BB, EdgeResult, PN))
+      // Explore that input, then return here
+      return false;
 
     Result.mergeIn(EdgeResult, DL);
 
@@ -905,8 +909,6 @@ bool LazyValueInfoImpl::solveBlockValuePHINode(LVILatticeVal &BBLV,
       return true;
     }
   }
-  if (EdgesMissing)
-    return false;
 
   // Return the merged value, which is more precise than 'overdefined'.
   assert(!Result.isOverdefined() && "Possible PHI in entry block?");

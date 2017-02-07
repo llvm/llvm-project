@@ -3199,6 +3199,22 @@ resulting assembly string is parsed by LLVM's integrated assembler unless it is
 disabled -- even when emitting a ``.s`` file -- and thus must contain assembly
 syntax known to LLVM.
 
+LLVM also supports a few more substitions useful for writing inline assembly:
+
+- ``${:uid}``: Expands to a decimal integer unique to this inline assembly blob.
+  This substitution is useful when declaring a local label. Many standard
+  compiler optimizations, such as inlining, may duplicate an inline asm blob.
+  Adding a blob-unique identifier ensures that the two labels will not conflict
+  during assembly. This is used to implement `GCC's %= special format
+  string <https://gcc.gnu.org/onlinedocs/gcc/Extended-Asm.html>`_.
+- ``${:comment}``: Expands to the comment character of the current target's
+  assembly dialect. This is usually ``#``, but many targets use other strings,
+  such as ``;``, ``//``, or ``!``.
+- ``${:private}``: Expands to the assembler private label prefix. Labels with
+  this prefix will not appear in the symbol table of the assembled object.
+  Typically the prefix is ``L``, but targets may use other strings. ``.L`` is
+  relatively popular.
+
 LLVM's support for inline asm is modeled closely on the requirements of Clang's
 GCC-compatible inline-asm support. Thus, the feature-set and the constraint and
 modifier codes listed here are similar or identical to those in GCC's inline asm

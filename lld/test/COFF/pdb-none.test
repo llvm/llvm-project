@@ -1,0 +1,13 @@
+# RUN: yaml2obj < %p/Inputs/pdb1.yaml > %t1.obj
+# RUN: yaml2obj < %p/Inputs/pdb2.yaml > %t2.obj
+# RUN: lld-link /debug /debugtype:pdata /pdb:%t.pdb /dll /out:%t.dll /entry:main /nodefaultlib \
+# RUN:   /debugpdb %t1.obj %t2.obj
+
+# RUN: llvm-pdbdump pdb2yaml -pdb-stream %t.pdb | FileCheck %s
+
+# CHECK:      PdbStream:
+# CHECK-NEXT:   Age:             0
+# CHECK-NEXT:   Guid:            '{00000000-0000-0000-0000-000000000000}'
+# CHECK-NEXT:   Signature:       0
+# CHECK-NEXT:   Version:         VC70
+

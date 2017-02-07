@@ -1140,7 +1140,8 @@ public:
   const SCEV *getSignExtendExpr(const SCEV *Op, Type *Ty);
   const SCEV *getAnyExtendExpr(const SCEV *Op, Type *Ty);
   const SCEV *getAddExpr(SmallVectorImpl<const SCEV *> &Ops,
-                         SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap);
+                         SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap,
+                         unsigned Depth = 0);
   const SCEV *getAddExpr(const SCEV *LHS, const SCEV *RHS,
                          SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap) {
     SmallVector<const SCEV *, 2> Ops = {LHS, RHS};
@@ -1612,6 +1613,10 @@ private:
   /// the stride and the knowledge of NSW/NUW flags on the recurrence.
   bool doesIVOverflowOnGT(const SCEV *RHS, const SCEV *Stride, bool IsSigned,
                           bool NoWrap);
+
+  /// Get add expr already created or create a new one
+  const SCEV *getOrCreateAddExpr(SmallVectorImpl<const SCEV *> &Ops,
+                                 SCEV::NoWrapFlags Flags);
 
 private:
   FoldingSet<SCEV> UniqueSCEVs;

@@ -105,9 +105,8 @@ void BitcodeCompiler::add(BitcodeFile &F) {
 }
 
 // Merge all the bitcode files we have seen, codegen the result
-// and return the resulting ObjectFile(s).
-std::vector<InputFile *> BitcodeCompiler::compile() {
-  std::vector<InputFile *> Ret;
+// and return the resulting objects.
+std::vector<StringRef> BitcodeCompiler::compile() {
   unsigned MaxTasks = LTOObj->getMaxTasks();
   Buff.resize(MaxTasks);
 
@@ -116,10 +115,9 @@ std::vector<InputFile *> BitcodeCompiler::compile() {
         llvm::make_unique<raw_svector_ostream>(Buff[Task]));
   }));
 
-  for (unsigned I = 0; I != MaxTasks; ++I) {
-    if (Buff[I].empty())
-      continue;
-    Ret.push_back(make<ObjectFile>(MemoryBufferRef(Buff[I], "lto.tmp")));
-  }
+  std::vector<StringRef> Ret;
+  for (unsigned I = 0; I != MaxTasks; ++I)
+    if (!Buff[I].empty())
+      Ret.emplace_back(Buff[I].data(), Buff[I].size());
   return Ret;
 }

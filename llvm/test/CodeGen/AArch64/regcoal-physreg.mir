@@ -2,40 +2,33 @@
 --- |
   declare void @f2()
 
-  define void @func() { ret void }
+  define void @func0() { ret void }
+  define void @func1() { ret void }
+  define void @func2() { ret void }
 ...
 ---
 # Check coalescing of COPYs from reserved physregs.
-# CHECK-LABEL: name: func
-name: func
-registers:
-  - { id: 0, class: gpr32 }
-  - { id: 1, class: gpr64 }
-  - { id: 2, class: gpr64 }
-  - { id: 3, class: gpr32 }
-  - { id: 4, class: gpr64 }
-  - { id: 5, class: gpr32 }
-  - { id: 6, class: xseqpairsclass }
-  - { id: 7, class: gpr64 }
+# CHECK-LABEL: name: func0
+name: func0
 body: |
   bb.0:
     ; We usually should not coalesce copies from allocatable physregs.
     ; CHECK: %0 = COPY %w7
     ; CHECK: STRWui %0, %x1, 0
-    %0 = COPY %w7
+    %0 : gpr32 = COPY %w7
     STRWui %0, %x1, 0
 
     ; It is fine to coalesce copies from reserved physregs
     ; CHECK-NOT: COPY
     ; CHECK: STRXui %fp, %x1, 0
-    %1 = COPY %fp
+    %1 : gpr64 = COPY %fp
     STRXui %1, %x1, 0
 
     ; It is not fine to coalesce copies from reserved physregs when they are
     ; clobbered.
     ; CHECK: %2 = COPY %fp
     ; CHECK: STRXui %2, %x1, 0
-    %2 = COPY %fp
+    %2 : gpr64 = COPY %fp
     %fp = SUBXri %fp, 4, 0
     STRXui %2, %x1, 0
 
@@ -43,7 +36,7 @@ body: |
     ; clobbered.
     ; CHECK-NOT: COPY
     ; CHECK: STRWui %wzr, %x1
-    %3 = COPY %wzr
+    %3 : gpr32 = COPY %wzr
     dead %wzr = SUBSWri %w1, 0, 0, implicit-def %nzcv
     STRWui %3, %x1, 0
 
@@ -51,13 +44,13 @@ body: |
     ; clobbered.
     ; CHECK-NOT: COPY
     ; CHECK: STRXui %xzr, %x1
-    %4 = COPY %xzr
+    %4 : gpr64 = COPY %xzr
     dead %wzr = SUBSWri %w1, 0, 0, implicit-def %nzcv
     STRXui %4, %x1, 0
 
     ; Coalescing COPYs into constant physregs.
     ; CHECK: %wzr = SUBSWri %w1, 0, 0
-    %5 = SUBSWri %w1, 0, 0, implicit-def %nzcv
+    %5 : gpr32 = SUBSWri %w1, 0, 0, implicit-def %nzcv
     %wzr = COPY %5
 
     ; Only coalesce when the source register is reserved as a whole (this is
@@ -65,7 +58,7 @@ body: |
     ; of the non-reserved part).
     ; CHECK: %6 = COPY %x28_fp
     ; CHECK: HINT 0, implicit %6
-    %6 = COPY %x28_fp
+    %6 : xseqpairsclass = COPY %x28_fp
     HINT 0, implicit %6
 
     ; It is not fine to coalesce copies from reserved physregs when they are
@@ -76,7 +69,69 @@ body: |
 
     ; Need a def of x18 so that it's not deduced as "constant".
     %x18 = COPY %xzr
-    %7 = COPY %x18
+    %7 : gpr64 = COPY %x18
     BL @f2, csr_aarch64_aapcs, implicit-def dead %lr, implicit %sp, implicit-def %sp
     STRXui %7, %x1, 0
+
+    ; This can be coalesced.
+    ; CHECK: %fp = SUBXri %fp, 4, 0
+    %8 : gpr64sp = SUBXri %fp, 4, 0
+    %fp = COPY %8
+
+    ; Cannot coalesce when there are reads of the physreg.
+    ; CHECK-NOT: %fp = SUBXri %fp, 8, 0
+    ; CHECK: %9 = SUBXri %fp, 8, 0
+    ; CHECK: STRXui %fp, %fp, 0
+    ; CHECK: %fp = COPY %9
+    %9 : gpr64sp = SUBXri %fp, 8, 0
+    STRXui %fp, %fp, 0
+    %fp = COPY %9
+...
+---
+# Check coalescing of COPYs from reserved physregs.
+# CHECK-LABEL: name: func1
+name: func1
+body: |
+  bb.0:
+    successors: %bb.1, %bb.2
+    ; Cannot coalesce physreg because we have reads on other CFG paths (we
+    ; currently abort for any control flow)
+    ; CHECK-NOT: %fp = SUBXri
+    ; CHECK: %0 = SUBXri %fp, 12, 0
+    ; CHECK: CBZX undef %x0, %bb.1
+    ; CHECK: B %bb.2
+    %0 : gpr64sp = SUBXri %fp, 12, 0
+    CBZX undef %x0, %bb.1
+    B %bb.2
+
+  bb.1:
+    %fp = COPY %0
+    RET_ReallyLR
+
+  bb.2:
+    STRXui %fp, %fp, 0
+    RET_ReallyLR
+...
+---
+# CHECK-LABEL: name: func2
+name: func2
+body: |
+  bb.0:
+    successors: %bb.1, %bb.2
+    ; We can coalesce copies from physreg to vreg across multiple blocks.
+    ; CHECK-NOT: COPY
+    ; CHECK: CBZX undef %x0, %bb.1
+    ; CHECK-NEXT: B %bb.2
+    %0 : gpr64sp = COPY %fp
+    CBZX undef %x0, %bb.1
+    B %bb.2
+
+  bb.1:
+    ; CHECK: STRXui undef %x0, %fp, 0
+    ; CHECK-NEXT: RET_ReallyLR
+    STRXui undef %x0, %0, 0
+    RET_ReallyLR
+
+  bb.2:
+    RET_ReallyLR
 ...

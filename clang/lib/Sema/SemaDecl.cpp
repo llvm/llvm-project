@@ -4675,6 +4675,34 @@ Sema::GetNameFromUnqualifiedId(const UnqualifiedId &Name) {
     NameInfo.setLoc(Name.StartLocation);
     return NameInfo;
 
+  case UnqualifiedId::IK_DeductionGuideName: {
+    // C++ [temp.deduct.guide]p3:
+    //   The simple-template-id shall name a class template specialization.
+    //   The template-name shall be the same identifier as the template-name
+    //   of the simple-template-id.
+    // These together intend to imply that the template-name shall name a
+    // class template.
+    // FIXME: template<typename T> struct X {};
+    //        template<typename T> using Y = X<T>;
+    //        Y(int) -> Y<int>;
+    //   satisfies these rules but does not name a class template.
+    TemplateName TN = Name.TemplateName.get().get();
+    auto *Template = TN.getAsTemplateDecl();
+    if (!Template || !isa<ClassTemplateDecl>(Template)) {
+      Diag(Name.StartLocation,
+           diag::err_deduction_guide_name_not_class_template)
+        << (int)getTemplateNameKindForDiagnostics(TN) << TN;
+      if (Template)
+        Diag(Template->getLocation(), diag::note_template_decl_here);
+      return DeclarationNameInfo();
+    }
+
+    NameInfo.setName(
+        Context.DeclarationNames.getCXXDeductionGuideName(Template));
+    NameInfo.setLoc(Name.StartLocation);
+    return NameInfo;
+  }
+
   case UnqualifiedId::IK_OperatorFunctionId:
     NameInfo.setName(Context.DeclarationNames.getCXXOperatorName(
                                            Name.OperatorFunctionId.Operator));
@@ -7621,6 +7649,15 @@ static FunctionDecl* CreateNewFunctionDecl(Sema &SemaRef, Declarator &D,
                                      R, TInfo, isInline, isExplicit,
                                      isConstexpr, SourceLocation());
 
+  } else if (Name.getNameKind() == DeclarationName::CXXDeductionGuideName) {
+    SemaRef.CheckDeductionGuideDeclarator(D, R, SC);
+
+    // We don't need to store any extra information for a deduction guide, so
+    // just model it as a plain FunctionDecl.
+    return FunctionDecl::Create(SemaRef.Context, DC,
+                                D.getLocStart(),
+                                NameInfo, R, TInfo, SC, isInline,
+                                true/*HasPrototype*/, isConstexpr);
   } else if (DC->isRecord()) {
     // If the name of the function is the same as the name of the record,
     // then this must be an invalid constructor that has a return type.
@@ -8109,7 +8146,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
     //  The explicit specifier shall be used only in the declaration of a
     //  constructor or conversion function within its class definition;
     //  see 12.3.1 and 12.3.2.
-    if (isExplicit && !NewFD->isInvalidDecl()) {
+    if (isExplicit && !NewFD->isInvalidDecl() && !NewFD->isDeductionGuide()) {
       if (!CurContext->isRecord()) {
         // 'explicit' was specified outside of the class.
         Diag(D.getDeclSpec().getExplicitSpecLoc(),

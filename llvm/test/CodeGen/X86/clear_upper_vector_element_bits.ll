@@ -260,13 +260,7 @@ define <16 x i8> @_clearupper16xi8a(<16 x i8>) nounwind {
 define <2 x i64> @_clearupper2xi64b(<2 x i64>) nounwind {
 ; SSE-LABEL: _clearupper2xi64b:
 ; SSE:       # BB#0:
-; SSE-NEXT:    xorps %xmm2, %xmm2
-; SSE-NEXT:    xorps %xmm1, %xmm1
-; SSE-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,0],xmm0[0,0]
-; SSE-NEXT:    shufps {{.*#+}} xmm1 = xmm1[2,0],xmm0[2,3]
-; SSE-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,0],xmm1[2,0]
-; SSE-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,1],xmm2[2,0]
-; SSE-NEXT:    movaps %xmm1, %xmm0
+; SSE-NEXT:    andps {{.*}}(%rip), %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: _clearupper2xi64b:

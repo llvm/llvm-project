@@ -196,7 +196,10 @@ class PtrUseVisitor : protected InstVisitor<DerivedT>,
   typedef InstVisitor<DerivedT> Base;
 
 public:
-  PtrUseVisitor(const DataLayout &DL) : PtrUseVisitorBase(DL) {}
+  PtrUseVisitor(const DataLayout &DL) : PtrUseVisitorBase(DL) {
+    static_assert(std::is_base_of<PtrUseVisitor, DerivedT>::value,
+                  "Must pass the derived type to this template!");
+  }
 
   /// \brief Recursively visit the uses of the given pointer.
   /// \returns An info struct about the pointer. See \c PtrInfo for details.

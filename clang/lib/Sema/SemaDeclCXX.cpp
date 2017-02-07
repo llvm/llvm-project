@@ -8033,6 +8033,15 @@ Decl *Sema::ActOnConversionDeclarator(CXXConversionDecl *Conversion) {
   return Conversion;
 }
 
+/// Check the validity of a declarator that we parsed for a deduction-guide.
+/// These aren't actually declarators in the grammar, so we need to check that
+/// the user didn't specify any pieces that are not part of the deduction-guide
+/// grammar.
+void Sema::CheckDeductionGuideDeclarator(Declarator &D, QualType &R,
+                                         StorageClass &SC) {
+  // FIXME: Implement
+}
+
 //===----------------------------------------------------------------------===//
 // Namespace Handling
 //===----------------------------------------------------------------------===//
@@ -8613,6 +8622,9 @@ Decl *Sema::ActOnUsingDeclaration(Scope *S,
     Diag(Name.getLocStart(), diag::err_using_decl_template_id)
       << SourceRange(Name.TemplateId->LAngleLoc, Name.TemplateId->RAngleLoc);
     return nullptr;
+
+  case UnqualifiedId::IK_DeductionGuideName:
+    llvm_unreachable("cannot parse qualified deduction guide name");
   }
 
   DeclarationNameInfo TargetNameInfo = GetNameFromUnqualifiedId(Name);
@@ -13746,6 +13758,9 @@ NamedDecl *Sema::ActOnFriendFunctionDecl(Scope *S, Declarator &D,
       break;
     case UnqualifiedId::IK_ConversionFunctionId:
       DiagArg = 2;
+      break;
+    case UnqualifiedId::IK_DeductionGuideName:
+      DiagArg = 3;
       break;
     case UnqualifiedId::IK_Identifier:
     case UnqualifiedId::IK_ImplicitSelfParam:

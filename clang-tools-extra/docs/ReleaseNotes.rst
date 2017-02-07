@@ -57,7 +57,10 @@ The improvements are...
 Improvements to clang-tidy
 --------------------------
 
-The improvements are...
+- New `safety-no-assembler
+  <http://clang.llvm.org/extra/clang-tidy/checks/safety-no-assembler.html>`_ check
+
+  Finds uses of inline assembler.
 
 Improvements to include-fixer
 -----------------------------

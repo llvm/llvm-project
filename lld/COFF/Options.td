@@ -92,6 +92,7 @@ def help_q : Flag<["/?", "-?"], "">, Alias<help>;
 
 // LLD extensions
 def nosymtab : F<"nosymtab">;
+def msvclto : F<"msvclto">;
 
 // Flags for debugging
 def debugpdb : F<"debugpdb">;

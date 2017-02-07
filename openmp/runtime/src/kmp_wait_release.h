@@ -196,11 +196,16 @@ __kmp_wait_template(kmp_info_t *this_thr, C *flag, int final_spin
                     if (KMP_TASKING_ENABLED(task_team))
                         flag->execute_tasks(this_thr, th_gtid, final_spin, &tasks_completed
                                             USE_ITT_BUILD_ARG(itt_sync_obj), 0);
+                    else
+                        this_thr->th.th_reap_state = KMP_SAFE_TO_REAP;
                 }
                 else {
                     KMP_DEBUG_ASSERT(!KMP_MASTER_TID(this_thr->th.th_info.ds.ds_tid));
                     this_thr->th.th_task_team = NULL;
+                    this_thr->th.th_reap_state = KMP_SAFE_TO_REAP;
                 }
+            } else {
+                this_thr->th.th_reap_state = KMP_SAFE_TO_REAP;
             } // if
         } // if
 
@@ -272,6 +277,10 @@ __kmp_wait_template(kmp_info_t *this_thr, C *flag, int final_spin
             if (__kmp_global.g.g_abort)
                 __kmp_abort_thread();
             break;
+        }
+        else if (__kmp_tasking_mode != tskm_immediate_exec
+                 && this_thr->th.th_reap_state == KMP_SAFE_TO_REAP) {
+            this_thr->th.th_reap_state = KMP_NOT_SAFE_TO_REAP;
         }
         // TODO: If thread is done with work and times out, disband/free
     }

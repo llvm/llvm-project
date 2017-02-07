@@ -1625,6 +1625,9 @@ typedef struct kmp_disp {
 #define KMP_BARRIER_SWITCH_TO_OWN_FLAG 3  // Special state; tells worker to shift from parent to own b_go
 #define KMP_BARRIER_SWITCHING          4  // Special state; worker resets appropriate flag on wake-up
 
+#define KMP_NOT_SAFE_TO_REAP 0  // Thread th_reap_state: not safe to reap (tasking)
+#define KMP_SAFE_TO_REAP 1      // Thread th_reap_state: safe to reap (not tasking)
+
 enum barrier_type {
     bs_plain_barrier = 0,       /* 0, All non-fork/join barriers (except reduction barriers if enabled) */
     bs_forkjoin_barrier,        /* 1, All fork/join (parallel region) barriers */
@@ -2301,6 +2304,8 @@ typedef struct KMP_ALIGN_CACHE kmp_base_info {
     kmp_uint8          * th_task_state_memo_stack;  // Stack holding memos of th_task_state at nested levels
     kmp_uint32           th_task_state_top;         // Top element of th_task_state_memo_stack
     kmp_uint32           th_task_state_stack_sz;    // Size of th_task_state_memo_stack
+    kmp_uint32           th_reap_state;  // Non-zero indicates thread is not
+                                         // tasking, thus safe to reap
 
     /*
      * More stuff for keeping track of active/sleeping threads

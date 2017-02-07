@@ -15,6 +15,8 @@
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Utility/Stream.h"
 
+#include "llvm/Support/Threading.h"
+
 #include <mutex>
 
 using namespace lldb;
@@ -39,9 +41,9 @@ void ScriptInterpreterNone::ExecuteInterpreterLoop() {
 }
 
 void ScriptInterpreterNone::Initialize() {
-  static std::once_flag g_once_flag;
+  static llvm::once_flag g_once_flag;
 
-  std::call_once(g_once_flag, []() {
+  llvm::call_once(g_once_flag, []() {
     PluginManager::RegisterPlugin(GetPluginNameStatic(),
                                   GetPluginDescriptionStatic(),
                                   lldb::eScriptLanguageNone, CreateInstance);

@@ -532,5 +532,37 @@ TEST_F(ScalarEvolutionsTest, SCEVCompareComplexity) {
   EXPECT_NE(nullptr, SE.getSCEV(Acc[0]));
 }
 
+TEST_F(ScalarEvolutionsTest, SCEVAddExpr) {
+  Type *Ty32 = Type::getInt32Ty(Context);
+  Type *ArgTys[] = {Type::getInt64Ty(Context), Ty32};
+
+  FunctionType *FTy =
+      FunctionType::get(Type::getVoidTy(Context), ArgTys, false);
+  Function *F = cast<Function>(M.getOrInsertFunction("f", FTy));
+
+  Argument *A1 = &*F->arg_begin();
+  Argument *A2 = &*(std::next(F->arg_begin()));
+  BasicBlock *EntryBB = BasicBlock::Create(Context, "entry", F);
+
+  Instruction *Trunc = CastInst::CreateTruncOrBitCast(A1, Ty32, "", EntryBB);
+  Instruction *Mul1 = BinaryOperator::CreateMul(Trunc, A2, "", EntryBB);
+  Instruction *Add1 = BinaryOperator::CreateAdd(Mul1, Trunc, "", EntryBB);
+  Mul1 = BinaryOperator::CreateMul(Add1, Trunc, "", EntryBB);
+  Instruction *Add2 = BinaryOperator::CreateAdd(Mul1, Add1, "", EntryBB);
+  // FIXME: The size of this is arbitrary and doesn't seem to change the
+  // result, but SCEV will do quadratic work for these so a large number here
+  // will be extremely slow. We should revisit what and how this is testing
+  // SCEV.
+  for (int i = 0; i < 10; i++) {
+    Mul1 = BinaryOperator::CreateMul(Add2, Add1, "", EntryBB);
+    Add1 = Add2;
+    Add2 = BinaryOperator::CreateAdd(Mul1, Add1, "", EntryBB);
+  }
+
+  ReturnInst::Create(Context, nullptr, EntryBB);
+  ScalarEvolution SE = buildSE(*F);
+  EXPECT_NE(nullptr, SE.getSCEV(Mul1));
+}
+
 }  // end anonymous namespace
 }  // end namespace llvm

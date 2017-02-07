@@ -2142,6 +2142,62 @@ int HexagonAsmParser::processInstruction(MCInst &Inst,
     Inst = TmpInst;
     break;
   }
+  case Hexagon::PS_loadrubabs:
+    if (!HexagonMCInstrInfo::mustExtend(*Inst.getOperand(1).getExpr()))
+      Inst.setOpcode(Hexagon::L2_loadrubgp);
+    break;
+  case Hexagon::PS_loadrbabs:
+    if (!HexagonMCInstrInfo::mustExtend(*Inst.getOperand(1).getExpr()))
+      Inst.setOpcode(Hexagon::L2_loadrbgp);
+    break;
+  case Hexagon::PS_loadruhabs:
+    if (!HexagonMCInstrInfo::mustExtend(*Inst.getOperand(1).getExpr()))
+      Inst.setOpcode(Hexagon::L2_loadruhgp);
+    break;
+  case Hexagon::PS_loadrhabs:
+    if (!HexagonMCInstrInfo::mustExtend(*Inst.getOperand(1).getExpr()))
+      Inst.setOpcode(Hexagon::L2_loadrhgp);
+    break;
+  case Hexagon::PS_loadriabs:
+    if (!HexagonMCInstrInfo::mustExtend(*Inst.getOperand(1).getExpr()))
+      Inst.setOpcode(Hexagon::L2_loadrigp);
+    break;
+  case Hexagon::PS_loadrdabs:
+    if (!HexagonMCInstrInfo::mustExtend(*Inst.getOperand(1).getExpr()))
+      Inst.setOpcode(Hexagon::L2_loadrdgp);
+    break;
+  case Hexagon::PS_storerbabs:
+    if (!HexagonMCInstrInfo::mustExtend(*Inst.getOperand(0).getExpr()))
+      Inst.setOpcode(Hexagon::S2_storerbgp);
+    break;
+  case Hexagon::PS_storerhabs:
+    if (!HexagonMCInstrInfo::mustExtend(*Inst.getOperand(0).getExpr()))
+      Inst.setOpcode(Hexagon::S2_storerhgp);
+    break;
+  case Hexagon::PS_storerfabs:
+    if (!HexagonMCInstrInfo::mustExtend(*Inst.getOperand(0).getExpr()))
+      Inst.setOpcode(Hexagon::S2_storerfgp);
+    break;
+  case Hexagon::PS_storeriabs:
+    if (!HexagonMCInstrInfo::mustExtend(*Inst.getOperand(0).getExpr()))
+      Inst.setOpcode(Hexagon::S2_storerigp);
+    break;
+  case Hexagon::PS_storerdabs:
+    if (!HexagonMCInstrInfo::mustExtend(*Inst.getOperand(0).getExpr()))
+      Inst.setOpcode(Hexagon::S2_storerdgp);
+    break;
+  case Hexagon::PS_storerbnewabs:
+    if (!HexagonMCInstrInfo::mustExtend(*Inst.getOperand(0).getExpr()))
+      Inst.setOpcode(Hexagon::S2_storerbnewgp);
+    break;
+  case Hexagon::PS_storerhnewabs:
+    if (!HexagonMCInstrInfo::mustExtend(*Inst.getOperand(0).getExpr()))
+      Inst.setOpcode(Hexagon::S2_storerhnewgp);
+    break;
+  case Hexagon::PS_storerinewabs:
+    if (!HexagonMCInstrInfo::mustExtend(*Inst.getOperand(0).getExpr()))
+      Inst.setOpcode(Hexagon::S2_storerinewgp);
+    break;
   } // switch
 
   return Match_Success;

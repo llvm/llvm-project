@@ -17,6 +17,7 @@
 #include "llvm/Analysis/Loads.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/MDBuilder.h"
@@ -1425,7 +1426,9 @@ bool InstCombiner::SimplifyStoreAtEndOfBlock(StoreInst &SI) {
                                    SI.getOrdering(),
                                    SI.getSynchScope());
   InsertNewInstBefore(NewSI, *BBI);
-  NewSI->setDebugLoc(OtherStore->getDebugLoc());
+  // The debug locations of the original instructions might differ; merge them.
+  NewSI->setDebugLoc(DILocation::getMergedLocation(SI.getDebugLoc(),
+                                                   OtherStore->getDebugLoc()));
 
   // If the two stores had AA tags, merge them.
   AAMDNodes AATags;

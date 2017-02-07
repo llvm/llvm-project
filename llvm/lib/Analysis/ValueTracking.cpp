@@ -20,6 +20,7 @@
 #include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/OptimizationDiagnosticInfo.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/ConstantRange.h"
@@ -76,6 +77,9 @@ struct Query {
   AssumptionCache *AC;
   const Instruction *CxtI;
   const DominatorTree *DT;
+  // Unlike the other analyses, this may be a nullptr because not all clients
+  // provide it currently.
+  OptimizationRemarkEmitter *ORE;
 
   /// Set of assumptions that should be excluded from further queries.
   /// This is because of the potential for mutual recursion to cause
@@ -90,11 +94,12 @@ struct Query {
   unsigned NumExcluded;
 
   Query(const DataLayout &DL, AssumptionCache *AC, const Instruction *CxtI,
-        const DominatorTree *DT)
-      : DL(DL), AC(AC), CxtI(CxtI), DT(DT), NumExcluded(0) {}
+        const DominatorTree *DT, OptimizationRemarkEmitter *ORE = nullptr)
+      : DL(DL), AC(AC), CxtI(CxtI), DT(DT), ORE(ORE), NumExcluded(0) {}
 
   Query(const Query &Q, const Value *NewExcl)
-      : DL(Q.DL), AC(Q.AC), CxtI(Q.CxtI), DT(Q.DT), NumExcluded(Q.NumExcluded) {
+      : DL(Q.DL), AC(Q.AC), CxtI(Q.CxtI), DT(Q.DT), ORE(Q.ORE),
+        NumExcluded(Q.NumExcluded) {
     Excluded = Q.Excluded;
     Excluded[NumExcluded++] = NewExcl;
     assert(NumExcluded <= Excluded.size());
@@ -131,9 +136,10 @@ static void computeKnownBits(const Value *V, APInt &KnownZero, APInt &KnownOne,
 void llvm::computeKnownBits(const Value *V, APInt &KnownZero, APInt &KnownOne,
                             const DataLayout &DL, unsigned Depth,
                             AssumptionCache *AC, const Instruction *CxtI,
-                            const DominatorTree *DT) {
+                            const DominatorTree *DT,
+                            OptimizationRemarkEmitter *ORE) {
   ::computeKnownBits(V, KnownZero, KnownOne, Depth,
-                     Query(DL, AC, safeCxtI(V, CxtI), DT));
+                     Query(DL, AC, safeCxtI(V, CxtI), DT, ORE));
 }
 
 bool llvm::haveNoCommonBitsSet(const Value *LHS, const Value *RHS,
@@ -790,16 +796,21 @@ static void computeKnownBitsFromAssume(const Value *V, APInt &KnownZero,
   }
 
   // If assumptions conflict with each other or previous known bits, then we
-  // have a logical fallacy. This should only happen when a program has
-  // undefined behavior. We can't assert/crash, so clear out the known bits and
-  // hope for the best.
-
-  // FIXME: Publish a warning/remark that we have encountered UB or the compiler
-  // is broken.
-
+  // have a logical fallacy. It's possible that the assumption is not reachable,
+  // so this isn't a real bug. On the other hand, the program may have undefined
+  // behavior, or we might have a bug in the compiler. We can't assert/crash, so
+  // clear out the known bits, try to warn the user, and hope for the best.
   if ((KnownZero & KnownOne) != 0) {
     KnownZero.clearAllBits();
     KnownOne.clearAllBits();
+
+    if (Q.ORE) {
+      auto *CxtI = const_cast<Instruction *>(Q.CxtI);
+      OptimizationRemarkAnalysis ORA("value-tracking", "BadAssumption", CxtI);
+      Q.ORE->emit(ORA << "Detected conflicting code assumptions. Program may "
+                         "have undefined behavior, or compiler may have "
+                         "internal error.");
+    }
   }
 }
 

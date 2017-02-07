@@ -27,9 +27,9 @@ def ArchV5:  SubtargetFeature<"v5",  "HexagonArchVersion", "V5",  "Hexagon V5">;
 def ArchV55: SubtargetFeature<"v55", "HexagonArchVersion", "V55", "Hexagon V55">;
 def ArchV60: SubtargetFeature<"v60", "HexagonArchVersion", "V60", "Hexagon V60">;
 
-def FeatureHVX: SubtargetFeature<"hvx", "UseHVXOps", "true",
+def ExtensionHVX: SubtargetFeature<"hvx", "UseHVXOps", "true",
       "Hexagon HVX instructions">;
-def FeatureHVXDbl: SubtargetFeature<"hvx-double", "UseHVXDblOps", "true",
+def ExtensionHVXDbl: SubtargetFeature<"hvx-double", "UseHVXDblOps", "true",
       "Hexagon HVX Double instructions">;
 def FeatureLongCalls: SubtargetFeature<"long-calls", "UseLongCalls", "true",
       "Use constant-extended calls">;
@@ -46,10 +46,10 @@ def HasV60T            : Predicate<"HST->hasV60TOps()">,
 def UseMEMOP           : Predicate<"HST->useMemOps()">;
 def IEEERndNearV5T     : Predicate<"HST->modeIEEERndNear()">;
 def UseHVXDbl          : Predicate<"HST->useHVXDblOps()">,
-                         AssemblerPredicate<"FeatureHVXDbl">;
+                         AssemblerPredicate<"ExtensionHVXDbl">;
 def UseHVXSgl          : Predicate<"HST->useHVXSglOps()">;
 def UseHVX             : Predicate<"HST->useHVXSglOps() ||HST->useHVXDblOps()">,
-                         AssemblerPredicate<"FeatureHVX">;
+                         AssemblerPredicate<"ExtensionHVX">;
 
 //===----------------------------------------------------------------------===//
 // Classes used for relation maps.
@@ -271,7 +271,7 @@ def : Proc<"hexagonv5",  HexagonModelV4,
 def : Proc<"hexagonv55", HexagonModelV55,
            [ArchV4, ArchV5, ArchV55]>;
 def : Proc<"hexagonv60", HexagonModelV60,
-           [ArchV4, ArchV5, ArchV55, ArchV60, FeatureHVX]>;
+           [ArchV4, ArchV5, ArchV55, ArchV60, ExtensionHVX]>;
 
 //===----------------------------------------------------------------------===//
 // Declare the target which we are implementing

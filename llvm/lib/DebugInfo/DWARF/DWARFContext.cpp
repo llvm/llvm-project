@@ -439,23 +439,32 @@ DWARFCompileUnit *DWARFContext::getCompileUnitForAddress(uint64_t Address) {
   return getCompileUnitForOffset(CUOffset);
 }
 
-static bool getFunctionNameForAddress(DWARFCompileUnit *CU, uint64_t Address,
-                                      FunctionNameKind Kind,
-                                      std::string &FunctionName) {
-  if (Kind == FunctionNameKind::None)
-    return false;
+static bool getFunctionNameAndStartLineForAddress(DWARFCompileUnit *CU,
+                                                  uint64_t Address,
+                                                  FunctionNameKind Kind,
+                                                  std::string &FunctionName,
+                                                  uint32_t &StartLine) {
   // The address may correspond to instruction in some inlined function,
   // so we have to build the chain of inlined functions and take the
-  // name of the topmost function in it.SmallVectorImpl<DWARFDie> &InlinedChain
+  // name of the topmost function in it.
   SmallVector<DWARFDie, 4> InlinedChain;
   CU->getInlinedChainForAddress(Address, InlinedChain);
-  if (InlinedChain.size() == 0)
+  if (InlinedChain.empty())
     return false;
-  if (const char *Name = InlinedChain[0].getSubroutineName(Kind)) {
+
+  const DWARFDie &DIE = InlinedChain[0];
+  bool FoundResult = false;
+  const char *Name = nullptr;
+  if (Kind != FunctionNameKind::None && (Name = DIE.getSubroutineName(Kind))) {
     FunctionName = Name;
-    return true;
+    FoundResult = true;
   }
-  return false;
+  if (auto DeclLineResult = DIE.getDeclLine()) {
+    StartLine = DeclLineResult;
+    FoundResult = true;
+  }
+
+  return FoundResult;
 }
 
 DILineInfo DWARFContext::getLineInfoForAddress(uint64_t Address,
@@ -465,7 +474,9 @@ DILineInfo DWARFContext::getLineInfoForAddress(uint64_t Address,
   DWARFCompileUnit *CU = getCompileUnitForAddress(Address);
   if (!CU)
     return Result;
-  getFunctionNameForAddress(CU, Address, Spec.FNKind, Result.FunctionName);
+  getFunctionNameAndStartLineForAddress(CU, Address, Spec.FNKind,
+                                        Result.FunctionName,
+                                        Result.StartLine);
   if (Spec.FLIKind != FileLineInfoKind::None) {
     if (const DWARFLineTable *LineTable = getLineTableForUnit(CU))
       LineTable->getFileLineInfoForAddress(Address, CU->getCompilationDir(),
@@ -483,13 +494,16 @@ DWARFContext::getLineInfoForAddressRange(uint64_t Address, uint64_t Size,
     return Lines;
 
   std::string FunctionName = "<invalid>";
-  getFunctionNameForAddress(CU, Address, Spec.FNKind, FunctionName);
+  uint32_t StartLine = 0;
+  getFunctionNameAndStartLineForAddress(CU, Address, Spec.FNKind, FunctionName,
+                                        StartLine);
 
   // If the Specifier says we don't need FileLineInfo, just
   // return the top-most function at the starting address.
   if (Spec.FLIKind == FileLineInfoKind::None) {
     DILineInfo Result;
     Result.FunctionName = FunctionName;
+    Result.StartLine = StartLine;
     Lines.push_back(std::make_pair(Address, Result));
     return Lines;
   }
@@ -510,6 +524,7 @@ DWARFContext::getLineInfoForAddressRange(uint64_t Address, uint64_t Size,
     Result.FunctionName = FunctionName;
     Result.Line = Row.Line;
     Result.Column = Row.Column;
+    Result.StartLine = StartLine;
     Lines.push_back(std::make_pair(Row.Address, Result));
   }
 
@@ -549,6 +564,8 @@ DWARFContext::getInliningInfoForAddress(uint64_t Address,
     // Get function name if necessary.
     if (const char *Name = FunctionDIE.getSubroutineName(Spec.FNKind))
       Frame.FunctionName = Name;
+    if (auto DeclLineResult = FunctionDIE.getDeclLine())
+      Frame.StartLine = DeclLineResult;
     if (Spec.FLIKind != FileLineInfoKind::None) {
       if (i == 0) {
         // For the topmost frame, initialize the line table of this

@@ -65,9 +65,10 @@ uint32_t HexagonMCCodeEmitter::parseBits(size_t Last,
   return HexagonII::INST_PARSE_NOT_END;
 }
 
-void HexagonMCCodeEmitter::encodeInstruction(MCInst const &MI, raw_ostream &OS,
+/// EncodeInstruction - Emit the bundle
+void HexagonMCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
                                              SmallVectorImpl<MCFixup> &Fixups,
-                                             MCSubtargetInfo const &STI) const {
+                                             const MCSubtargetInfo &STI) const {
   MCInst &HMB = const_cast<MCInst &>(MI);
 
   assert(HexagonMCInstrInfo::isBundle(HMB));
@@ -137,60 +138,7 @@ void HexagonMCCodeEmitter::EncodeSingleInstruction(
       MI.getOpcode() <= Hexagon::DuplexIClassF) {
     assert(Parse == HexagonII::INST_PARSE_DUPLEX &&
            "Emitting duplex without duplex parse bits");
-    unsigned dupIClass;
-    switch (MI.getOpcode()) {
-    case Hexagon::DuplexIClass0:
-      dupIClass = 0;
-      break;
-    case Hexagon::DuplexIClass1:
-      dupIClass = 1;
-      break;
-    case Hexagon::DuplexIClass2:
-      dupIClass = 2;
-      break;
-    case Hexagon::DuplexIClass3:
-      dupIClass = 3;
-      break;
-    case Hexagon::DuplexIClass4:
-      dupIClass = 4;
-      break;
-    case Hexagon::DuplexIClass5:
-      dupIClass = 5;
-      break;
-    case Hexagon::DuplexIClass6:
-      dupIClass = 6;
-      break;
-    case Hexagon::DuplexIClass7:
-      dupIClass = 7;
-      break;
-    case Hexagon::DuplexIClass8:
-      dupIClass = 8;
-      break;
-    case Hexagon::DuplexIClass9:
-      dupIClass = 9;
-      break;
-    case Hexagon::DuplexIClassA:
-      dupIClass = 10;
-      break;
-    case Hexagon::DuplexIClassB:
-      dupIClass = 11;
-      break;
-    case Hexagon::DuplexIClassC:
-      dupIClass = 12;
-      break;
-    case Hexagon::DuplexIClassD:
-      dupIClass = 13;
-      break;
-    case Hexagon::DuplexIClassE:
-      dupIClass = 14;
-      break;
-    case Hexagon::DuplexIClassF:
-      dupIClass = 15;
-      break;
-    default:
-      llvm_unreachable("Unimplemented DuplexIClass");
-      break;
-    }
+    unsigned dupIClass = MI.getOpcode() - Hexagon::DuplexIClass0;
     // 29 is the bit position.
     // 0b1110 =0xE bits are masked off and down shifted by 1 bit.
     // Last bit is moved to bit position 13
@@ -390,7 +338,8 @@ unsigned HexagonMCCodeEmitter::getExprOpValue(const MCInst &MI,
   int64_t Value;
   if (ME->evaluateAsAbsolute(Value))
     return Value;
-  assert(ME->getKind() == MCExpr::SymbolRef || ME->getKind() == MCExpr::Binary);
+  assert(ME->getKind() == MCExpr::SymbolRef ||
+         ME->getKind() == MCExpr::Binary);
   if (ME->getKind() == MCExpr::Binary) {
     MCBinaryExpr const *Binary = cast<MCBinaryExpr>(ME);
     getExprOpValue(MI, MO, Binary->getLHS(), Fixups, STI);
@@ -523,7 +472,7 @@ unsigned HexagonMCCodeEmitter::getExprOpValue(const MCInst &MI,
         else
           if (MCID.mayStore() || MCID.mayLoad()) {
             for (const MCPhysReg *ImpUses = MCID.getImplicitUses(); *ImpUses;
-              ++ImpUses) {
+                 ++ImpUses) {
               if (*ImpUses != Hexagon::GP)
                 continue;
               switch (HexagonMCInstrInfo::getAccessSize(MCII, MI)) {
@@ -543,8 +492,7 @@ unsigned HexagonMCCodeEmitter::getExprOpValue(const MCInst &MI,
                 raise_relocation_error(bits, kind);
               }
             }
-          }
-          else
+          } else
             raise_relocation_error(bits, kind);
         break;
       }
@@ -759,6 +707,13 @@ unsigned
 HexagonMCCodeEmitter::getMachineOpValue(MCInst const &MI, MCOperand const &MO,
                                         SmallVectorImpl<MCFixup> &Fixups,
                                         MCSubtargetInfo const &STI) const {
+  size_t OperandNumber = ~0U;
+  for (unsigned i = 0, n = MI.getNumOperands(); i < n; ++i)
+    if (&MI.getOperand(i) == &MO) {
+      OperandNumber = i;
+      break;
+    }
+  assert((OperandNumber != ~0U) && "Operand not found");
 
   if (HexagonMCInstrInfo::isNewValue(MCII, MI) &&
       &MO == &MI.getOperand(HexagonMCInstrInfo::getNewValueOp(MCII, MI))) {

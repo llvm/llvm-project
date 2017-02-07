@@ -437,9 +437,9 @@ size_t MutationDispatcher::Mutate_CrossOver(uint8_t *Data, size_t Size,
       break;
     case 1:
       NewSize = InsertPartOf(O.data(), O.size(), U.data(), U.size(), MaxSize);
-      if (NewSize)
-        break;
-      // LLVM_FALLTHROUGH;
+      if (!NewSize)
+        NewSize = CopyPartOf(O.data(), O.size(), U.data(), U.size());
+      break;
     case 2:
       NewSize = CopyPartOf(O.data(), O.size(), U.data(), U.size());
       break;

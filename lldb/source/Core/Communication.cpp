@@ -322,10 +322,9 @@ lldb::thread_result_t Communication::ReadThread(lldb::thread_arg_t p) {
         comm->Disconnect();
         done = true;
       }
-      if (log)
-        error.LogIfError(
-            log, "%p Communication::ReadFromConnection () => status = %s", p,
-            Communication::ConnectionStatusAsCString(status));
+      if (error.Fail())
+        LLDB_LOG(log, "error: {0}, status = {1}", error,
+                 Communication::ConnectionStatusAsCString(status));
       break;
     case eConnectionStatusInterrupted: // Synchronization signal from
                                        // SynchronizeWithReadThread()
@@ -340,10 +339,9 @@ lldb::thread_result_t Communication::ReadThread(lldb::thread_arg_t p) {
       done = true;
       LLVM_FALLTHROUGH;
     case eConnectionStatusTimedOut: // Request timed out
-      if (log)
-        error.LogIfError(
-            log, "%p Communication::ReadFromConnection () => status = %s", p,
-            Communication::ConnectionStatusAsCString(status));
+      if (error.Fail())
+        LLDB_LOG(log, "error: {0}, status = {1}", error,
+                 Communication::ConnectionStatusAsCString(status));
       break;
     }
   }

@@ -191,8 +191,8 @@ CGSCCAnalysisManagerModuleProxy::run(Module &M, ModuleAnalysisManager &AM);
 // template.
 extern template class InnerAnalysisManagerProxy<CGSCCAnalysisManager, Module>;
 
-extern template class OuterAnalysisManagerProxy<ModuleAnalysisManager,
-                                                LazyCallGraph::SCC>;
+extern template class OuterAnalysisManagerProxy<
+    ModuleAnalysisManager, LazyCallGraph::SCC, LazyCallGraph &>;
 /// A proxy from a \c ModuleAnalysisManager to an \c SCC.
 typedef OuterAnalysisManagerProxy<ModuleAnalysisManager, LazyCallGraph::SCC,
                                   LazyCallGraph &>
@@ -334,6 +334,7 @@ public:
                             InvalidSCCSet, nullptr,   nullptr};
 
     PreservedAnalyses PA = PreservedAnalyses::all();
+    CG.buildRefSCCs();
     for (auto RCI = CG.postorder_ref_scc_begin(),
               RCE = CG.postorder_ref_scc_end();
          RCI != RCE;) {

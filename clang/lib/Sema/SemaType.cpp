@@ -2733,6 +2733,17 @@ static QualType GetDeclSpecTypeForDeclarator(TypeProcessingState &state,
                      D.getDeclSpec().getAttributes().getList());
     break;
 
+  case UnqualifiedId::IK_DeductionGuideName:
+    // Deduction guides have a trailing return type and no type in their
+    // decl-specifier sequence.
+    T = SemaRef.Context.getAutoDeductType();
+    if (!D.hasTrailingReturnType()) {
+      SemaRef.Diag(D.getName().getLocStart(),
+                   diag::err_deduction_guide_no_trailing_return_type);
+      D.setInvalidType(true);
+    }
+    break;
+
   case UnqualifiedId::IK_ConversionFunctionId:
     // The result type of a conversion function is the type that it
     // converts to.
@@ -2884,20 +2895,10 @@ static QualType GetDeclSpecTypeForDeclarator(TypeProcessingState &state,
     // better diagnostics.
     // We don't support '__auto_type' with trailing return types.
     // FIXME: Should we only do this for 'auto' and not 'decltype(auto)'?
-    if (SemaRef.getLangOpts().CPlusPlus11 && IsCXXAutoType) {
-      for (unsigned i = 0, e = D.getNumTypeObjects(); i != e; ++i) {
-        unsigned chunkIndex = e - i - 1;
-        state.setCurrentChunkIndex(chunkIndex);
-        DeclaratorChunk &DeclType = D.getTypeObject(chunkIndex);
-        if (DeclType.Kind == DeclaratorChunk::Function) {
-          const DeclaratorChunk::FunctionTypeInfo &FTI = DeclType.Fun;
-          if (FTI.hasTrailingReturnType()) {
-            HaveTrailing = true;
-            Error = -1;
-            break;
-          }
-        }
-      }
+    if (SemaRef.getLangOpts().CPlusPlus11 && IsCXXAutoType &&
+        D.hasTrailingReturnType()) {
+      HaveTrailing = true;
+      Error = -1;
     }
 
     SourceRange AutoRange = D.getDeclSpec().getTypeSpecTypeLoc();
@@ -4176,16 +4177,22 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
         } else if (FTI.hasTrailingReturnType()) {
           // T must be exactly 'auto' at this point. See CWG issue 681.
           if (isa<ParenType>(T)) {
-            S.Diag(D.getDeclSpec().getTypeSpecTypeLoc(),
+            S.Diag(D.getLocStart(),
                  diag::err_trailing_return_in_parens)
-              << T << D.getDeclSpec().getSourceRange();
+              << T << D.getSourceRange();
             D.setInvalidType(true);
           } else if (D.getContext() != Declarator::LambdaExprContext &&
                      (T.hasQualifiers() || !isa<AutoType>(T) ||
-                      cast<AutoType>(T)->getKeyword() != AutoTypeKeyword::Auto)) {
-            S.Diag(D.getDeclSpec().getTypeSpecTypeLoc(),
-                 diag::err_trailing_return_without_auto)
-              << T << D.getDeclSpec().getSourceRange();
+                      cast<AutoType>(T)->getKeyword() !=
+                          AutoTypeKeyword::Auto)) {
+            if (D.getName().getKind() == UnqualifiedId::IK_DeductionGuideName)
+              S.Diag(D.getDeclSpec().getLocStart(),
+                     diag::err_deduction_guide_with_complex_decl)
+                  << D.getSourceRange();
+            else
+              S.Diag(D.getDeclSpec().getTypeSpecTypeLoc(),
+                     diag::err_trailing_return_without_auto)
+                  << T << D.getDeclSpec().getSourceRange();
             D.setInvalidType(true);
           }
           T = S.GetTypeFromParser(FTI.getTrailingReturnType(), &TInfo);

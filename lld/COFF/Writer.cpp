@@ -258,8 +258,12 @@ void Writer::run() {
   sortExceptionTable();
   writeBuildId();
 
-  if (!Config->PDBPath.empty())
-    createPDB(Config->PDBPath, Symtab, SectionTable, BuildId->DI);
+  if (!Config->PDBPath.empty()) {
+    const llvm::codeview::DebugInfo *DI = nullptr;
+    if (Config->DebugTypes & static_cast<unsigned>(coff::DebugType::CV))
+      DI = BuildId->DI;
+    createPDB(Config->PDBPath, Symtab, SectionTable, DI);
+  }
 
   writeMapFile(OutputSections);
 

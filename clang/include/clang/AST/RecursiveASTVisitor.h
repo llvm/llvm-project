@@ -774,6 +774,11 @@ bool RecursiveASTVisitor<Derived>::TraverseDeclarationNameInfo(
       TRY_TO(TraverseTypeLoc(TSInfo->getTypeLoc()));
     break;
 
+  case DeclarationName::CXXDeductionGuideName:
+    TRY_TO(TraverseTemplateName(
+        TemplateName(NameInfo.getName().getCXXDeductionGuideTemplate())));
+    break;
+
   case DeclarationName::Identifier:
   case DeclarationName::ObjCZeroArgSelector:
   case DeclarationName::ObjCOneArgSelector:

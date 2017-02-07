@@ -18,7 +18,6 @@
 // Project includes
 #include "lldb/Core/Log.h"
 
-#define POSIX_LOG_VERBOSE (1u << 0)
 #define POSIX_LOG_PROCESS (1u << 1)
 #define POSIX_LOG_THREAD (1u << 2)
 #define POSIX_LOG_PACKETS (1u << 3)

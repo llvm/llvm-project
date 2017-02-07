@@ -13,8 +13,8 @@
 //                    *** Must match HexagonBaseInfo.h ***
 //===----------------------------------------------------------------------===//
 
-class IType<bits<5> t> {
-  bits<5> Value = t;
+class IType<bits<6> t> {
+  bits<6> Value = t;
 }
 def TypePSEUDO : IType<0>;
 def TypeALU32  : IType<1>;
@@ -99,85 +99,85 @@ class InstHexagon<dag outs, dag ins, string asmstr, list<dag> pattern,
 
   // Instruction type according to the ISA.
   IType Type = type;
-  let TSFlags{4-0} = Type.Value;
+  let TSFlags{5-0} = Type.Value;
 
   // Solo instructions, i.e., those that cannot be in a packet with others.
   bits<1> isSolo = 0;
-  let TSFlags{5} = isSolo;
+  let TSFlags{6} = isSolo;
   // Packed only with A or X-type instructions.
   bits<1> isSoloAX = 0;
-  let TSFlags{6} = isSoloAX;
+  let TSFlags{7} = isSoloAX;
   // Only A-type instruction in first slot or nothing.
   bits<1> isSoloAin1 = 0;
-  let TSFlags{7} = isSoloAin1;
+  let TSFlags{8} = isSoloAin1;
 
   // Predicated instructions.
   bits<1> isPredicated = 0;
-  let TSFlags{8} = isPredicated;
+  let TSFlags{9} = isPredicated;
   bits<1> isPredicatedFalse = 0;
-  let TSFlags{9} = isPredicatedFalse;
+  let TSFlags{10} = isPredicatedFalse;
   bits<1> isPredicatedNew = 0;
-  let TSFlags{10} = isPredicatedNew;
+  let TSFlags{11} = isPredicatedNew;
   bits<1> isPredicateLate = 0;
-  let TSFlags{11} = isPredicateLate; // Late predicate producer insn.
+  let TSFlags{12} = isPredicateLate; // Late predicate producer insn.
 
   // New-value insn helper fields.
   bits<1> isNewValue = 0;
-  let TSFlags{12} = isNewValue; // New-value consumer insn.
+  let TSFlags{13} = isNewValue; // New-value consumer insn.
   bits<1> hasNewValue = 0;
-  let TSFlags{13} = hasNewValue; // New-value producer insn.
+  let TSFlags{14} = hasNewValue; // New-value producer insn.
   bits<3> opNewValue = 0;
-  let TSFlags{16-14} = opNewValue; // New-value produced operand.
+  let TSFlags{17-15} = opNewValue; // New-value produced operand.
   bits<1> isNVStorable = 0;
-  let TSFlags{17} = isNVStorable; // Store that can become new-value store.
+  let TSFlags{18} = isNVStorable; // Store that can become new-value store.
   bits<1> isNVStore = 0;
-  let TSFlags{18} = isNVStore; // New-value store insn.
+  let TSFlags{19} = isNVStore; // New-value store insn.
   bits<1> isCVLoadable = 0;
-  let TSFlags{19} = isCVLoadable; // Load that can become cur-value load.
+  let TSFlags{20} = isCVLoadable; // Load that can become cur-value load.
   bits<1> isCVLoad = 0;
-  let TSFlags{20} = isCVLoad; // Cur-value load insn.
+  let TSFlags{21} = isCVLoad; // Cur-value load insn.
 
   // Immediate extender helper fields.
   bits<1> isExtendable = 0;
-  let TSFlags{21} = isExtendable; // Insn may be extended.
+  let TSFlags{22} = isExtendable; // Insn may be extended.
   bits<1> isExtended = 0;
-  let TSFlags{22} = isExtended; // Insn must be extended.
+  let TSFlags{23} = isExtended; // Insn must be extended.
   bits<3> opExtendable = 0;
-  let TSFlags{25-23} = opExtendable; // Which operand may be extended.
+  let TSFlags{26-24} = opExtendable; // Which operand may be extended.
   bits<1> isExtentSigned = 0;
-  let TSFlags{26} = isExtentSigned; // Signed or unsigned range.
+  let TSFlags{27} = isExtentSigned; // Signed or unsigned range.
   bits<5> opExtentBits = 0;
-  let TSFlags{31-27} = opExtentBits; //Number of bits of range before extending.
+  let TSFlags{32-28} = opExtentBits; //Number of bits of range before extending.
   bits<2> opExtentAlign = 0;
-  let TSFlags{33-32} = opExtentAlign; // Alignment exponent before extending.
+  let TSFlags{34-33} = opExtentAlign; // Alignment exponent before extending.
 
   // If an instruction is valid on a subtarget, set the corresponding
   // bit from validSubTargets.
   // By default, instruction is valid on all subtargets.
   SubTarget validSubTargets = HasAnySubT;
-  let TSFlags{39-34} = validSubTargets.Value;
+  let TSFlags{40-35} = validSubTargets.Value;
 
   // Addressing mode for load/store instructions.
   AddrModeType addrMode = NoAddrMode;
-  let TSFlags{42-40} = addrMode.Value;
+  let TSFlags{43-41} = addrMode.Value;
 
   // Memory access size for mem access instructions (load/store)
   MemAccessSize accessSize = NoMemAccess;
-  let TSFlags{46-43} = accessSize.Value;
+  let TSFlags{47-44} = accessSize.Value;
 
   bits<1> isTaken = 0;
-  let TSFlags {47} = isTaken; // Branch prediction.
+  let TSFlags {48} = isTaken; // Branch prediction.
 
   bits<1> isFP = 0;
-  let TSFlags {48} = isFP; // Floating-point.
+  let TSFlags {49} = isFP; // Floating-point.
 
   bits<1> hasNewValue2 = 0;
-  let TSFlags{50} = hasNewValue2; // Second New-value producer insn.
+  let TSFlags{51} = hasNewValue2; // Second New-value producer insn.
   bits<3> opNewValue2 = 0;
-  let TSFlags{53-51} = opNewValue2; // Second New-value produced operand.
+  let TSFlags{54-52} = opNewValue2; // Second New-value produced operand.
 
   bits<1> isAccumulator = 0;
-  let TSFlags{54} = isAccumulator;
+  let TSFlags{55} = isAccumulator;
 
   bit cofMax1 = 0;
   let TSFlags{60} = cofMax1;
@@ -200,6 +200,7 @@ class InstHexagon<dag outs, dag ins, string asmstr, list<dag> pattern,
   let NValueST = !if(isNVStore, "true", "false");
   let isNT = !if(isNonTemporal, "true", "false");
 
+  let hasSideEffects = 0;
   // *** Must match MCTargetDesc/HexagonBaseInfo.h ***
 }
 
