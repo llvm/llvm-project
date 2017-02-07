@@ -2585,6 +2585,7 @@ static void AddTypedNameChunk(ASTContext &Context, const PrintingPolicy &Policy,
                       Result.getAllocator().CopyString(ND->getNameAsString()));
     break;
       
+  case DeclarationName::CXXDeductionGuideName:
   case DeclarationName::CXXUsingDirective:
   case DeclarationName::ObjCZeroArgSelector:
   case DeclarationName::ObjCOneArgSelector:

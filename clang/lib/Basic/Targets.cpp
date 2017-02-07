@@ -7037,6 +7037,15 @@ public:
     Builder.defineMacro("__zarch__");
     Builder.defineMacro("__LONG_DOUBLE_128__");
 
+    const std::string ISARev = llvm::StringSwitch<std::string>(CPU)
+                                   .Cases("arch8", "z10", "8")
+                                   .Cases("arch9", "z196", "9")
+                                   .Cases("arch10", "zEC12", "10")
+                                   .Cases("arch11", "z13", "11")
+                                   .Default("");
+    if (!ISARev.empty())
+      Builder.defineMacro("__ARCH__", ISARev);
+
     Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1");
     Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_2");
     Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_4");
@@ -7044,6 +7053,8 @@ public:
 
     if (HasTransactionalExecution)
       Builder.defineMacro("__HTM__");
+    if (HasVector)
+      Builder.defineMacro("__VX__");
     if (Opts.ZVector)
       Builder.defineMacro("__VEC__", "10301");
   }

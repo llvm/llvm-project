@@ -818,6 +818,7 @@ public:
 #define OVERLOADED_OPERATOR(Name,Spelling,Token,Unary,Binary,MemberOnly) \
     CXXOperator##Name,
 #include "clang/Basic/OperatorKinds.def"
+    CXXDeductionGuide,
     CXXLiteralOperator,
     CXXUsingDirective,
     NUM_EXTRA_KINDS

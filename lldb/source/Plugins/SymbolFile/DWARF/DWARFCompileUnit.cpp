@@ -256,16 +256,15 @@ size_t DWARFCompileUnit::ExtractDIEsIfNeeded(bool cu_die_only) {
                                                          m_die_array.end());
     exact_size_die_array.swap(m_die_array);
   }
-  Log *verbose_log(
-      LogChannelDWARF::GetLogIfAll(DWARF_LOG_DEBUG_INFO | DWARF_LOG_VERBOSE));
-  if (verbose_log) {
+  Log *log(LogChannelDWARF::GetLogIfAll(DWARF_LOG_DEBUG_INFO));
+  if (log && log->GetVerbose()) {
     StreamString strm;
     Dump(&strm);
     if (m_die_array.empty())
       strm.Printf("error: no DIE for compile unit");
     else
       m_die_array[0].Dump(m_dwarf2Data, this, strm, UINT32_MAX);
-    verbose_log->PutString(strm.GetString());
+    log->PutString(strm.GetString());
   }
 
   if (!m_dwo_symbol_file)

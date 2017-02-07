@@ -3365,8 +3365,10 @@ collectSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
     if (SanArgs.linkCXXRuntimes())
       StaticRuntimes.push_back("ubsan_standalone_cxx");
   }
-  if (SanArgs.needsSafeStackRt())
-    StaticRuntimes.push_back("safestack");
+  if (SanArgs.needsSafeStackRt()) {
+    NonWholeStaticRuntimes.push_back("safestack");
+    RequiredSymbols.push_back("__safestack_init");
+  }
   if (SanArgs.needsCfiRt())
     StaticRuntimes.push_back("cfi");
   if (SanArgs.needsCfiDiagRt()) {
@@ -3417,7 +3419,7 @@ static bool addSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
   if (SanArgs.hasCrossDsoCfi() && !AddExportDynamic)
     CmdArgs.push_back("-export-dynamic-symbol=__cfi_check");
 
-  return !StaticRuntimes.empty();
+  return !StaticRuntimes.empty() || !NonWholeStaticRuntimes.empty();
 }
 
 static bool addXRayRuntime(const ToolChain &TC, const ArgList &Args,

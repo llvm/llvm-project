@@ -120,7 +120,7 @@ class X86TargetInfo final : public TargetInfo {
 public:
   X86TargetInfo();
   RelExpr getRelExpr(uint32_t Type, const SymbolBody &S) const override;
-  uint64_t getImplicitAddend(const uint8_t *Buf, uint32_t Type) const override;
+  int64_t getImplicitAddend(const uint8_t *Buf, uint32_t Type) const override;
   void writeGotPltHeader(uint8_t *Buf) const override;
   uint32_t getDynRel(uint32_t Type) const override;
   bool isTlsLocalDynamicRel(uint32_t Type) const override;
@@ -217,7 +217,7 @@ public:
   RelExpr getRelExpr(uint32_t Type, const SymbolBody &S) const override;
   bool isPicRel(uint32_t Type) const override;
   uint32_t getDynRel(uint32_t Type) const override;
-  uint64_t getImplicitAddend(const uint8_t *Buf, uint32_t Type) const override;
+  int64_t getImplicitAddend(const uint8_t *Buf, uint32_t Type) const override;
   bool isTlsLocalDynamicRel(uint32_t Type) const override;
   bool isTlsGlobalDynamicRel(uint32_t Type) const override;
   bool isTlsInitialExecRel(uint32_t Type) const override;
@@ -237,7 +237,7 @@ template <class ELFT> class MipsTargetInfo final : public TargetInfo {
 public:
   MipsTargetInfo();
   RelExpr getRelExpr(uint32_t Type, const SymbolBody &S) const override;
-  uint64_t getImplicitAddend(const uint8_t *Buf, uint32_t Type) const override;
+  int64_t getImplicitAddend(const uint8_t *Buf, uint32_t Type) const override;
   bool isPicRel(uint32_t Type) const override;
   uint32_t getDynRel(uint32_t Type) const override;
   bool isTlsLocalDynamicRel(uint32_t Type) const override;
@@ -291,8 +291,7 @@ TargetInfo *createTarget() {
 
 TargetInfo::~TargetInfo() {}
 
-uint64_t TargetInfo::getImplicitAddend(const uint8_t *Buf,
-                                       uint32_t Type) const {
+int64_t TargetInfo::getImplicitAddend(const uint8_t *Buf, uint32_t Type) const {
   return 0;
 }
 
@@ -486,8 +485,8 @@ void X86TargetInfo::writePlt(uint8_t *Buf, uint64_t GotEntryAddr,
   write32le(Buf + 12, -Index * PltEntrySize - PltHeaderSize - 16);
 }
 
-uint64_t X86TargetInfo::getImplicitAddend(const uint8_t *Buf,
-                                          uint32_t Type) const {
+int64_t X86TargetInfo::getImplicitAddend(const uint8_t *Buf,
+                                         uint32_t Type) const {
   switch (Type) {
   default:
     return 0;
@@ -1943,8 +1942,8 @@ void ARMTargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
   }
 }
 
-uint64_t ARMTargetInfo::getImplicitAddend(const uint8_t *Buf,
-                                          uint32_t Type) const {
+int64_t ARMTargetInfo::getImplicitAddend(const uint8_t *Buf,
+                                         uint32_t Type) const {
   switch (Type) {
   default:
     return 0;
@@ -2242,8 +2241,8 @@ bool MipsTargetInfo<ELFT>::needsThunk(RelExpr Expr, uint32_t Type,
 }
 
 template <class ELFT>
-uint64_t MipsTargetInfo<ELFT>::getImplicitAddend(const uint8_t *Buf,
-                                                 uint32_t Type) const {
+int64_t MipsTargetInfo<ELFT>::getImplicitAddend(const uint8_t *Buf,
+                                                uint32_t Type) const {
   const endianness E = ELFT::TargetEndianness;
   switch (Type) {
   default:

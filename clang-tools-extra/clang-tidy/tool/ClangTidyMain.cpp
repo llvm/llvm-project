@@ -475,6 +475,11 @@ extern volatile int ReadabilityModuleAnchorSource;
 static int LLVM_ATTRIBUTE_UNUSED ReadabilityModuleAnchorDestination =
     ReadabilityModuleAnchorSource;
 
+// This anchor is used to force the linker to link the SafetyModule.
+extern volatile int SafetyModuleAnchorSource;
+static int LLVM_ATTRIBUTE_UNUSED SafetyModuleAnchorDestination =
+    SafetyModuleAnchorSource;
+
 } // namespace tidy
 } // namespace clang
 

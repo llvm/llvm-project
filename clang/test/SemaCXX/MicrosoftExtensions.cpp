@@ -1,4 +1,6 @@
 // RUN: %clang_cc1 %s -triple i686-pc-win32 -fsyntax-only -Wmicrosoft -Wc++11-extensions -Wno-long-long -verify -fms-extensions -fexceptions -fcxx-exceptions -DTEST1
+// RUN: %clang_cc1 -std=c++98 %s -triple i686-pc-win32 -fsyntax-only -Wmicrosoft -Wc++11-extensions -Wno-long-long -verify -fms-extensions -fexceptions -fcxx-exceptions -DTEST1
+// RUN: %clang_cc1 -std=c++11 %s -triple i686-pc-win32 -fsyntax-only -Wmicrosoft -Wc++11-extensions -Wno-long-long -verify -fms-extensions -fexceptions -fcxx-exceptions -DTEST1
 // RUN: %clang_cc1 %s -triple i686-pc-win32 -fsyntax-only -Wmicrosoft -Wc++11-extensions -Wno-long-long -verify -fexceptions -fcxx-exceptions -DTEST2
 
 #if TEST1
@@ -23,11 +25,17 @@ struct Derived : Base {
 };
 
 class A {
-  virtual ~A() throw();  // expected-note {{overridden virtual function is here}}
+  virtual ~A() throw();
+#if __cplusplus <= 199711L
+  // expected-note@-2 {{overridden virtual function is here}}
+#endif
 };
 
 class B : public A {
-  virtual ~B();  // expected-warning {{exception specification of overriding function is more lax than base version}}
+  virtual ~B();
+#if __cplusplus <= 199711L
+  // expected-warning@-2 {{exception specification of overriding function is more lax than base version}}
+#endif
 };
 
 }
@@ -174,11 +182,18 @@ const int seventeen = 17;
 typedef int Int;
 
 struct X0 {
-  enum E1 : Int { SomeOtherValue } field; // expected-warning{{enumeration types with a fixed underlying type are a C++11 extension}}
+  enum E1 : Int { SomeOtherValue } field;
+#if __cplusplus <= 199711L
+  // expected-warning@-2 {{enumeration types with a fixed underlying type are a C++11 extension}}
+#endif
+
   enum E1 : seventeen;
 };
 
-enum : long long {  // expected-warning{{enumeration types with a fixed underlying type are a C++11 extension}}
+#if __cplusplus <= 199711L
+// expected-warning@+2 {{enumeration types with a fixed underlying type are a C++11 extension}}
+#endif
+enum : long long {
   SomeValue = 0x100000000
 };
 
@@ -450,7 +465,9 @@ struct SealedType sealed : SomeBase {
   // FIXME. warning can be suppressed if we're also issuing error for overriding a 'final' function.
   virtual void SealedFunction(); // expected-warning {{'SealedFunction' overrides a member function but is not marked 'override'}}
 
-  // expected-warning@+1 {{'override' keyword is a C++11 extension}}
+#if __cplusplus <= 199711L
+  // expected-warning@+2 {{'override' keyword is a C++11 extension}}
+#endif
   virtual void OverrideMe() override;
 };
 

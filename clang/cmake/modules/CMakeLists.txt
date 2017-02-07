@@ -15,6 +15,10 @@ export(TARGETS ${CLANG_EXPORTS} FILE ${clang_cmake_builddir}/ClangTargets.cmake)
 set(CLANG_CONFIG_CMAKE_DIR "${clang_cmake_builddir}")
 set(CLANG_CONFIG_LLVM_CMAKE_DIR "${llvm_cmake_builddir}")
 set(CLANG_CONFIG_EXPORTS_FILE "${clang_cmake_builddir}/ClangTargets.cmake")
+set(CLANG_CONFIG_INCLUDE_DIRS
+  "${CLANG_SOURCE_DIR}/include"
+  "${CLANG_BINARY_DIR}/include"
+  )
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/ClangConfig.cmake.in
   ${clang_cmake_builddir}/ClangConfig.cmake
@@ -37,6 +41,9 @@ endforeach(p)
 set(CLANG_CONFIG_CMAKE_DIR "\${CLANG_INSTALL_PREFIX}/${CLANG_INSTALL_PACKAGE_DIR}")
 set(CLANG_CONFIG_LLVM_CMAKE_DIR "\${CLANG_INSTALL_PREFIX}/${LLVM_INSTALL_PACKAGE_DIR}")
 set(CLANG_CONFIG_EXPORTS_FILE "\${CLANG_CMAKE_DIR}/ClangTargets.cmake")
+set(CLANG_CONFIG_INCLUDE_DIRS
+  "${CLANG_INSTALL_PREFIX}/include"
+  )
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/ClangConfig.cmake.in
   ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/ClangConfig.cmake

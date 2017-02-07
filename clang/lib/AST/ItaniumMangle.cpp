@@ -1190,6 +1190,8 @@ void CXXNameMangler::mangleUnresolvedName(
       llvm_unreachable("Can't mangle a constructor name!");
     case DeclarationName::CXXUsingDirective:
       llvm_unreachable("Can't mangle a using directive name!");
+    case DeclarationName::CXXDeductionGuideName:
+      llvm_unreachable("Can't mangle a deduction guide name!");
     case DeclarationName::ObjCMultiArgSelector:
     case DeclarationName::ObjCOneArgSelector:
     case DeclarationName::ObjCZeroArgSelector:
@@ -1418,6 +1420,9 @@ void CXXNameMangler::mangleUnqualifiedName(const NamedDecl *ND,
     mangleOperatorName(Name, Arity);
     writeAbiTags(ND, AdditionalAbiTags);
     break;
+
+  case DeclarationName::CXXDeductionGuideName:
+    llvm_unreachable("Can't mangle a deduction guide name!");
 
   case DeclarationName::CXXUsingDirective:
     llvm_unreachable("Can't mangle a using directive name!");
@@ -1997,6 +2002,7 @@ void CXXNameMangler::mangleOperatorName(DeclarationName Name, unsigned Arity) {
   switch (Name.getNameKind()) {
   case DeclarationName::CXXConstructorName:
   case DeclarationName::CXXDestructorName:
+  case DeclarationName::CXXDeductionGuideName:
   case DeclarationName::CXXUsingDirective:
   case DeclarationName::Identifier:
   case DeclarationName::ObjCMultiArgSelector:

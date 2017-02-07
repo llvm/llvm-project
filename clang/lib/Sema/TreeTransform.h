@@ -3617,6 +3617,19 @@ TreeTransform<Derived>
   case DeclarationName::CXXUsingDirective:
     return NameInfo;
 
+  case DeclarationName::CXXDeductionGuideName: {
+    TemplateDecl *OldTemplate = Name.getCXXDeductionGuideTemplate();
+    TemplateDecl *NewTemplate = cast_or_null<TemplateDecl>(
+        getDerived().TransformDecl(NameInfo.getLoc(), OldTemplate));
+    if (!NewTemplate)
+      return DeclarationNameInfo();
+
+    DeclarationNameInfo NewNameInfo(NameInfo);
+    NewNameInfo.setName(
+        SemaRef.Context.DeclarationNames.getCXXDeductionGuideName(NewTemplate));
+    return NewNameInfo;
+  }
+
   case DeclarationName::CXXConstructorName:
   case DeclarationName::CXXDestructorName:
   case DeclarationName::CXXConversionFunctionName: {

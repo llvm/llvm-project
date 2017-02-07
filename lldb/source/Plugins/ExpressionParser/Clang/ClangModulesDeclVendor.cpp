@@ -21,6 +21,7 @@
 #include "clang/Sema/Lookup.h"
 #include "clang/Serialization/ASTReader.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/Threading.h"
 
 // Project includes
 #include "ClangModulesDeclVendor.h"
@@ -143,9 +144,9 @@ void StoringDiagnosticConsumer::DumpDiagnostics(Stream &error_stream) {
 static FileSpec GetResourceDir() {
   static FileSpec g_cached_resource_dir;
 
-  static std::once_flag g_once_flag;
+  static llvm::once_flag g_once_flag;
 
-  std::call_once(g_once_flag, []() {
+  llvm::call_once(g_once_flag, []() {
     HostInfo::GetLLDBPath(lldb::ePathTypeClangDir, g_cached_resource_dir);
   });
 
