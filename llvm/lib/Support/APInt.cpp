@@ -1252,8 +1252,21 @@ APInt APInt::shlSlowCase(unsigned shiftAmt) const {
   return Result;
 }
 
+// Calculate the rotate amount modulo the bit width.
+static unsigned rotateModulo(unsigned BitWidth, const APInt &rotateAmt) {
+  unsigned rotBitWidth = rotateAmt.getBitWidth();
+  APInt rot = rotateAmt;
+  if (rotBitWidth < BitWidth) {
+    // Extend the rotate APInt, so that the urem doesn't divide by 0.
+    // e.g. APInt(1, 32) would give APInt(1, 0).
+    rot = rotateAmt.zext(BitWidth);
+  }
+  rot = rot.urem(APInt(rot.getBitWidth(), BitWidth));
+  return rot.getLimitedValue(BitWidth);
+}
+
 APInt APInt::rotl(const APInt &rotateAmt) const {
-  return rotl((unsigned)rotateAmt.getLimitedValue(BitWidth));
+  return rotl(rotateModulo(BitWidth, rotateAmt));
 }
 
 APInt APInt::rotl(unsigned rotateAmt) const {
@@ -1264,7 +1277,7 @@ APInt APInt::rotl(unsigned rotateAmt) const {
 }
 
 APInt APInt::rotr(const APInt &rotateAmt) const {
-  return rotr((unsigned)rotateAmt.getLimitedValue(BitWidth));
+  return rotr(rotateModulo(BitWidth, rotateAmt));
 }
 
 APInt APInt::rotr(unsigned rotateAmt) const {

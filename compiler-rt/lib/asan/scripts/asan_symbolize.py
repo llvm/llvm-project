@@ -92,7 +92,9 @@ class LLVMSymbolizer(Symbolizer):
       print ' '.join(cmd)
     try:
       result = subprocess.Popen(cmd, stdin=subprocess.PIPE,
-                                stdout=subprocess.PIPE)
+                                stdout=subprocess.PIPE,
+                                bufsize=0,
+                                universal_newlines=True)
     except OSError:
       result = None
     return result
@@ -153,7 +155,9 @@ class Addr2LineSymbolizer(Symbolizer):
     if DEBUG:
       print ' '.join(cmd)
     return subprocess.Popen(cmd,
-                            stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+                            stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                            bufsize=0,
+                            universal_newlines=True)
 
   def symbolize(self, addr, binary, offset):
     """Overrides Symbolizer.symbolize."""

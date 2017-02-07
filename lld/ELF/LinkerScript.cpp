@@ -91,20 +91,22 @@ static bool isUnderSysroot(StringRef Path) {
   return false;
 }
 
-template <class ELFT> static void assignSymbol(SymbolAssignment *Cmd) {
-  // If there are sections, then let the value be assigned later in
-  // `assignAddresses`.
-  if (ScriptConfig->HasSections)
+// Sets value of a symbol. Two kinds of symbols are processed: synthetic
+// symbols, whose value is an offset from beginning of section and regular
+// symbols whose value is absolute.
+template <class ELFT>
+static void assignSymbol(SymbolAssignment *Cmd, typename ELFT::uint Dot = 0) {
+  if (!Cmd->Sym)
     return;
 
-  uint64_t Value = Cmd->Expression(0);
-  if (Cmd->Expression.IsAbsolute()) {
-    cast<DefinedRegular<ELFT>>(Cmd->Sym)->Value = Value;
-  } else {
-    const OutputSectionBase *Sec = Cmd->Expression.Section();
-    if (Sec)
-      cast<DefinedSynthetic>(Cmd->Sym)->Value = Value - Sec->Addr;
+  if (auto *Body = dyn_cast<DefinedSynthetic>(Cmd->Sym)) {
+    Body->Section = Cmd->Expression.Section();
+    if (Body->Section)
+      Body->Value = Cmd->Expression(Dot) - Body->Section->Addr;
+    return;
   }
+
+  cast<DefinedRegular<ELFT>>(Cmd->Sym)->Value = Cmd->Expression(Dot);
 }
 
 template <class ELFT> static void addSymbol(SymbolAssignment *Cmd) {
@@ -123,7 +125,11 @@ template <class ELFT> static void addSymbol(SymbolAssignment *Cmd) {
     Cmd->Sym = addRegular<ELFT>(Cmd);
   else
     Cmd->Sym = addSynthetic<ELFT>(Cmd);
-  assignSymbol<ELFT>(Cmd);
+
+  // If there are sections, then let the value be assigned later in
+  // `assignAddresses`.
+  if (!ScriptConfig->HasSections)
+    assignSymbol<ELFT>(Cmd);
 }
 
 bool SymbolAssignment::classof(const BaseCommand *C) {
@@ -371,25 +377,6 @@ void LinkerScript<ELFT>::addOrphanSections(
       addSection(Factory, S, getOutputSectionName(S->Name));
 }
 
-// Sets value of a section-defined symbol. Two kinds of
-// symbols are processed: synthetic symbols, whose value
-// is an offset from beginning of section and regular
-// symbols whose value is absolute.
-template <class ELFT>
-static void assignSectionSymbol(SymbolAssignment *Cmd,
-                                typename ELFT::uint Value) {
-  if (!Cmd->Sym)
-    return;
-
-  if (auto *Body = dyn_cast<DefinedSynthetic>(Cmd->Sym)) {
-    Body->Section = Cmd->Expression.Section();
-    Body->Value = Cmd->Expression(Value) - Body->Section->Addr;
-    return;
-  }
-  auto *Body = cast<DefinedRegular<ELFT>>(Cmd->Sym);
-  Body->Value = Cmd->Expression(Value);
-}
-
 template <class ELFT> static bool isTbss(OutputSectionBase *Sec) {
   return (Sec->Flags & SHF_TLS) && Sec->Type == SHT_NOBITS;
 }
@@ -472,7 +459,7 @@ template <class ELFT> void LinkerScript<ELFT>::process(BaseCommand &Base) {
       CurOutSec->Size = Dot - CurOutSec->Addr;
       return;
     }
-    assignSectionSymbol<ELFT>(AssignCmd, Dot);
+    assignSymbol<ELFT>(AssignCmd, Dot);
     return;
   }
 
@@ -794,7 +781,7 @@ void LinkerScript<ELFT>::assignAddresses(std::vector<PhdrEntry> &Phdrs) {
       if (Cmd->Name == ".") {
         Dot = Cmd->Expression(Dot);
       } else if (Cmd->Sym) {
-        assignSectionSymbol<ELFT>(Cmd, Dot);
+        assignSymbol<ELFT>(Cmd, Dot);
       }
       continue;
     }

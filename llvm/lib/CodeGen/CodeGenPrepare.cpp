@@ -143,7 +143,9 @@ class TypePromotionTransaction;
 
   class CodeGenPrepare : public FunctionPass {
     const TargetMachine *TM;
+    const TargetSubtargetInfo *SubtargetInfo;
     const TargetLowering *TLI;
+    const TargetRegisterInfo *TRI;
     const TargetTransformInfo *TTI;
     const TargetLibraryInfo *TLInfo;
     const LoopInfo *LI;
@@ -250,8 +252,11 @@ bool CodeGenPrepare::runOnFunction(Function &F) {
   BPI.reset();
 
   ModifiedDT = false;
-  if (TM)
-    TLI = TM->getSubtargetImpl(F)->getTargetLowering();
+  if (TM) {
+    SubtargetInfo = TM->getSubtargetImpl(F);
+    TLI = SubtargetInfo->getTargetLowering();
+    TRI = SubtargetInfo->getRegisterInfo();
+  }
   TLInfo = &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
   TTI = &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
   LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
@@ -2705,8 +2710,8 @@ void TypePromotionTransaction::rollback(
 /// This encapsulates the logic for matching the target-legal addressing modes.
 class AddressingModeMatcher {
   SmallVectorImpl<Instruction*> &AddrModeInsts;
-  const TargetMachine &TM;
   const TargetLowering &TLI;
+  const TargetRegisterInfo &TRI;
   const DataLayout &DL;
 
   /// AccessTy/MemoryInst - This is the type for the access (e.g. double) and
@@ -2731,14 +2736,14 @@ class AddressingModeMatcher {
   bool IgnoreProfitability;
 
   AddressingModeMatcher(SmallVectorImpl<Instruction *> &AMI,
-                        const TargetMachine &TM, Type *AT, unsigned AS,
+                        const TargetLowering &TLI,
+                        const TargetRegisterInfo &TRI,
+                        Type *AT, unsigned AS,
                         Instruction *MI, ExtAddrMode &AM,
                         const SetOfInstrs &InsertedInsts,
                         InstrToOrigTy &PromotedInsts,
                         TypePromotionTransaction &TPT)
-      : AddrModeInsts(AMI), TM(TM),
-        TLI(*TM.getSubtargetImpl(*MI->getParent()->getParent())
-                 ->getTargetLowering()),
+      : AddrModeInsts(AMI), TLI(TLI), TRI(TRI),
         DL(MI->getModule()->getDataLayout()), AccessTy(AT), AddrSpace(AS),
         MemoryInst(MI), AddrMode(AM), InsertedInsts(InsertedInsts),
         PromotedInsts(PromotedInsts), TPT(TPT) {
@@ -2756,13 +2761,15 @@ public:
   static ExtAddrMode Match(Value *V, Type *AccessTy, unsigned AS,
                            Instruction *MemoryInst,
                            SmallVectorImpl<Instruction*> &AddrModeInsts,
-                           const TargetMachine &TM,
+                           const TargetLowering &TLI,
+                           const TargetRegisterInfo &TRI,
                            const SetOfInstrs &InsertedInsts,
                            InstrToOrigTy &PromotedInsts,
                            TypePromotionTransaction &TPT) {
     ExtAddrMode Result;
 
-    bool Success = AddressingModeMatcher(AddrModeInsts, TM, AccessTy, AS,
+    bool Success = AddressingModeMatcher(AddrModeInsts, TLI, TRI,
+                                         AccessTy, AS,
                                          MemoryInst, Result, InsertedInsts,
                                          PromotedInsts, TPT).matchAddr(V, 0);
     (void)Success; assert(Success && "Couldn't select *anything*?");
@@ -3583,18 +3590,18 @@ bool AddressingModeMatcher::matchAddr(Value *Addr, unsigned Depth) {
 /// Check to see if all uses of OpVal by the specified inline asm call are due
 /// to memory operands. If so, return true, otherwise return false.
 static bool IsOperandAMemoryOperand(CallInst *CI, InlineAsm *IA, Value *OpVal,
-                                    const TargetMachine &TM) {
+                                    const TargetLowering &TLI,
+                                    const TargetRegisterInfo &TRI) {
   const Function *F = CI->getParent()->getParent();
-  const TargetLowering *TLI = TM.getSubtargetImpl(*F)->getTargetLowering();
-  const TargetRegisterInfo *TRI = TM.getSubtargetImpl(*F)->getRegisterInfo();
   TargetLowering::AsmOperandInfoVector TargetConstraints =
-      TLI->ParseConstraints(F->getParent()->getDataLayout(), TRI,
+      TLI.ParseConstraints(F->getParent()->getDataLayout(), &TRI,
                             ImmutableCallSite(CI));
+
   for (unsigned i = 0, e = TargetConstraints.size(); i != e; ++i) {
     TargetLowering::AsmOperandInfo &OpInfo = TargetConstraints[i];
 
     // Compute the constraint code and ConstraintType to use.
-    TLI->ComputeConstraintToUse(OpInfo, SDValue());
+    TLI.ComputeConstraintToUse(OpInfo, SDValue());
 
     // If this asm operand is our Value*, and if it isn't an indirect memory
     // operand, we can't fold it!
@@ -3613,7 +3620,8 @@ static bool IsOperandAMemoryOperand(CallInst *CI, InlineAsm *IA, Value *OpVal,
 static bool FindAllMemoryUses(
     Instruction *I,
     SmallVectorImpl<std::pair<Instruction *, unsigned>> &MemoryUses,
-    SmallPtrSetImpl<Instruction *> &ConsideredInsts, const TargetMachine &TM) {
+    SmallPtrSetImpl<Instruction *> &ConsideredInsts,
+    const TargetLowering &TLI, const TargetRegisterInfo &TRI) {
   // If we already considered this instruction, we're done.
   if (!ConsideredInsts.insert(I).second)
     return false;
@@ -3650,12 +3658,12 @@ static bool FindAllMemoryUses(
       if (!IA) return true;
 
       // If this is a memory operand, we're cool, otherwise bail out.
-      if (!IsOperandAMemoryOperand(CI, IA, I, TM))
+      if (!IsOperandAMemoryOperand(CI, IA, I, TLI, TRI))
         return true;
       continue;
     }
 
-    if (FindAllMemoryUses(UserI, MemoryUses, ConsideredInsts, TM))
+    if (FindAllMemoryUses(UserI, MemoryUses, ConsideredInsts, TLI, TRI))
       return true;
   }
 
@@ -3743,7 +3751,7 @@ isProfitableToFoldIntoAddressingMode(Instruction *I, ExtAddrMode &AMBefore,
   // the use is just a particularly nice way of sinking it.
   SmallVector<std::pair<Instruction*,unsigned>, 16> MemoryUses;
   SmallPtrSet<Instruction*, 16> ConsideredInsts;
-  if (FindAllMemoryUses(I, MemoryUses, ConsideredInsts, TM))
+  if (FindAllMemoryUses(I, MemoryUses, ConsideredInsts, TLI, TRI))
     return false;  // Has a non-memory, non-foldable use!
 
   // Now that we know that all uses of this instruction are part of a chain of
@@ -3775,7 +3783,8 @@ isProfitableToFoldIntoAddressingMode(Instruction *I, ExtAddrMode &AMBefore,
     ExtAddrMode Result;
     TypePromotionTransaction::ConstRestorationPt LastKnownGood =
         TPT.getRestorationPoint();
-    AddressingModeMatcher Matcher(MatchedAddrModeInsts, TM, AddressAccessTy, AS,
+    AddressingModeMatcher Matcher(MatchedAddrModeInsts, TLI, TRI,
+                                  AddressAccessTy, AS,
                                   MemoryInst, Result, InsertedInsts,
                                   PromotedInsts, TPT);
     Matcher.IgnoreProfitability = true;
@@ -3869,7 +3878,7 @@ bool CodeGenPrepare::optimizeMemoryInst(Instruction *MemoryInst, Value *Addr,
     // addressing instructions might have.
     SmallVector<Instruction*, 16> NewAddrModeInsts;
     ExtAddrMode NewAddrMode = AddressingModeMatcher::Match(
-      V, AccessTy, AddrSpace, MemoryInst, NewAddrModeInsts, *TM,
+      V, AccessTy, AddrSpace, MemoryInst, NewAddrModeInsts, *TLI, *TRI,
       InsertedInsts, PromotedInsts, TPT);
 
     // This check is broken into two cases with very similar code to avoid using
@@ -3938,8 +3947,7 @@ bool CodeGenPrepare::optimizeMemoryInst(Instruction *MemoryInst, Value *Addr,
       SunkAddr = Builder.CreateBitCast(SunkAddr, Addr->getType());
   } else if (AddrSinkUsingGEPs ||
              (!AddrSinkUsingGEPs.getNumOccurrences() && TM &&
-              TM->getSubtargetImpl(*MemoryInst->getParent()->getParent())
-                  ->useAA())) {
+              SubtargetInfo->useAA())) {
     // By default, we use the GEP-based method when AA is used later. This
     // prevents new inttoptr/ptrtoint pairs from degrading AA capabilities.
     DEBUG(dbgs() << "CGP: SINKING nonlocal addrmode: " << AddrMode << " for "

@@ -2648,6 +2648,7 @@ void TokenAnnotator::printDebugInfo(const AnnotatedLine &Line) {
                  << " T=" << getTokenTypeName(Tok->Type)
                  << " S=" << Tok->SpacesRequiredBefore
                  << " B=" << Tok->BlockParameterCount
+                 << " BK=" << Tok->BlockKind
                  << " P=" << Tok->SplitPenalty << " Name=" << Tok->Tok.getName()
                  << " L=" << Tok->TotalLength << " PPK=" << Tok->PackingKind
                  << " FakeLParens=";
