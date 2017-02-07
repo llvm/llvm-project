@@ -368,7 +368,7 @@ static Error parseSegmentLoadCommand(
                             CmdName + " extends past the end of the file");
     if (S.vmsize != 0 && S.filesize > S.vmsize)
       return malformedError("load command " + Twine(LoadCommandIndex) +
-                            " fileoff field in " + CmdName +
+                            " filesize field in " + CmdName +
                             " greater than vmsize field");
     IsPageZeroSegment |= StringRef("__PAGEZERO").equals(S.segname);
   } else
