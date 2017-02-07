@@ -56,17 +56,20 @@ endif()
 
 # This should only apply if you are both on an Apple host, and targeting Apple.
 if(CMAKE_HOST_APPLE AND APPLE)
-  if(NOT CMAKE_XCRUN)
-    find_program(CMAKE_XCRUN NAMES xcrun)
-  endif()
-  if(CMAKE_XCRUN)
-    execute_process(COMMAND ${CMAKE_XCRUN} -find libtool
-      OUTPUT_VARIABLE CMAKE_LIBTOOL
-      OUTPUT_STRIP_TRAILING_WHITESPACE)
-  endif()
+  # if CMAKE_LIBTOOL is not set, try and find it with xcrun or find_program
+  if(NOT CMAKE_LIBTOOL)
+    if(NOT CMAKE_XCRUN)
+      find_program(CMAKE_XCRUN NAMES xcrun)
+    endif()
+    if(CMAKE_XCRUN)
+      execute_process(COMMAND ${CMAKE_XCRUN} -find libtool
+        OUTPUT_VARIABLE CMAKE_LIBTOOL
+        OUTPUT_STRIP_TRAILING_WHITESPACE)
+    endif()
 
-  if(NOT CMAKE_LIBTOOL OR NOT EXISTS CMAKE_LIBTOOL)
-    find_program(CMAKE_LIBTOOL NAMES libtool)
+    if(NOT CMAKE_LIBTOOL OR NOT EXISTS CMAKE_LIBTOOL)
+      find_program(CMAKE_LIBTOOL NAMES libtool)
+    endif()
   endif()
 
   get_property(languages GLOBAL PROPERTY ENABLED_LANGUAGES)
