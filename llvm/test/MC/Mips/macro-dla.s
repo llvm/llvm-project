@@ -702,6 +702,54 @@ dla $5, extern_sym+8($5) # CHECK: lui $1, %highest(extern_sym+8)       # encodin
                          # CHECK: daddiu $1, $1, %lo(extern_sym+8)     # encoding: [0x64,0x21,A,A]
                          # CHECK:                                      # fixup A - offset: 0, value: %lo(extern_sym+8), kind: fixup_Mips_LO16
                          # CHECK: daddu   $5, $1, $5                   # encoding: [0x00,0x25,0x28,0x2d]
+.set noat
+dla $5, extern_sym       # CHECK: lui $5, %highest(extern_sym)         # encoding: [0x3c,0x05,A,A]
+                         # CHECK:                                      # fixup A - offset: 0, value: %highest(extern_sym), kind: fixup_Mips_HIGHEST
+                         # CHECK: daddiu  $5, $5, %higher(extern_sym)  # encoding: [0x64,0xa5,A,A]
+                         # CHECK:                                      # fixup A - offset: 0, value: %higher(extern_sym), kind: fixup_Mips_HIGHER
+                         # CHECK: dsll  $5, $5, 16                     # encoding: [0x00,0x05,0x2c,0x38]
+                         # CHECK: daddiu  $5, $5, %hi(extern_sym)      # encoding: [0x64,0xa5,A,A]
+                         # CHECK:                                      # fixup A - offset: 0, value: %hi(extern_sym), kind: fixup_Mips_HI16
+                         # CHECK: dsll  $5, $5, 16                     # encoding: [0x00,0x05,0x2c,0x38]
+                         # CHECK: daddiu  $5, $5, %lo(extern_sym)      # encoding: [0x64,0xa5,A,A]
+                         # CHECK:                                      # fixup A - offset: 0, value: %lo(extern_sym), kind: fixup_Mips_LO16
+
+dla $5, extern_sym+8     # CHECK: lui $5, %highest(extern_sym+8)        # encoding: [0x3c,0x05,A,A]
+                         # CHECK:                                       # fixup A - offset: 0, value: %highest(extern_sym+8), kind: fixup_Mips_HIGHEST
+                         # CHECK: daddiu  $5, $5, %higher(extern_sym+8) # encoding: [0x64,0xa5,A,A]
+                         # CHECK:                                       # fixup A - offset: 0, value: %higher(extern_sym+8), kind: fixup_Mips_HIGHER
+                         # CHECK: dsll  $5, $5, 16                      # encoding: [0x00,0x05,0x2c,0x38]
+                         # CHECK: daddiu  $5, $5, %hi(extern_sym+8)     # encoding: [0x64,0xa5,A,A]
+                         # CHECK:                                       # fixup A - offset: 0, value: %hi(extern_sym+8), kind: fixup_Mips_HI16
+                         # CHECK: dsll  $5, $5, 16                      # encoding: [0x00,0x05,0x2c,0x38]
+                         # CHECK: daddiu  $5, $5, %lo(extern_sym+8)     # encoding: [0x64,0xa5,A,A]
+                         # CHECK:                                       # fixup A - offset: 0, value: %lo(extern_sym+8), kind: fixup_Mips_LO16
+
+dla $5, extern_sym($6)   # CHECK: lui $5, %highest(extern_sym)          # encoding: [0x3c,0x05,A,A]
+                         # CHECK:                                       # fixup A - offset: 0, value: %highest(extern_sym), kind: fixup_Mips_HIGHEST
+                         # CHECK: daddiu  $5, $5, %higher(extern_sym)   # encoding: [0x64,0xa5,A,A]
+                         # CHECK:                                       # fixup A - offset: 0, value: %higher(extern_sym), kind: fixup_Mips_HIGHER
+                         # CHECK: dsll  $5, $5, 16                      # encoding: [0x00,0x05,0x2c,0x38]
+                         # CHECK: daddiu  $5, $5, %hi(extern_sym)       # encoding: [0x64,0xa5,A,A]
+                         # CHECK:                                       # fixup A - offset: 0, value: %hi(extern_sym), kind: fixup_Mips_HI16
+                         # CHECK: dsll  $5, $5, 16                      # encoding: [0x00,0x05,0x2c,0x38]
+                         # CHECK: daddiu  $5, $5, %lo(extern_sym)       # encoding: [0x64,0xa5,A,A]
+                         # CHECK:                                       # fixup A - offset: 0, value: %lo(extern_sym), kind: fixup_Mips_LO16
+                         # CHECK: daddu $5, $5, $6                      # encoding: [0x00,0xa6,0x28,0x2d]
+
+dla $4, extern_sym+8($6) # CHECK: lui $4, %highest(extern_sym+8)        # encoding: [0x3c,0x04,A,A]
+                         # CHECK:                                       # fixup A - offset: 0, value: %highest(extern_sym+8), kind: fixup_Mips_HIGHEST
+                         # CHECK: daddiu  $4, $4, %higher(extern_sym+8) # encoding: [0x64,0x84,A,A]
+                         # CHECK:                                       # fixup A - offset: 0, value: %higher(extern_sym+8), kind: fixup_Mips_HIGHER
+                         # CHECK: dsll  $4, $4, 16                      # encoding: [0x00,0x04,0x24,0x38]
+                         # CHECK: daddiu  $4, $4, %hi(extern_sym+8)     # encoding: [0x64,0x84,A,A]
+                         # CHECK:                                       # fixup A - offset: 0, value: %hi(extern_sym+8), kind: fixup_Mips_HI16
+                         # CHECK: dsll  $4, $4, 16                      # encoding: [0x00,0x04,0x24,0x38]
+                         # CHECK: daddiu  $4, $4, %lo(extern_sym+8)     # encoding: [0x64,0x84,A,A]
+                         # CHECK:                                       # fixup A - offset: 0, value: %lo(extern_sym+8), kind: fixup_Mips_LO16
+                         # CHECK: daddu $4, $4, $6                      # encoding: [0x00,0x86,0x20,0x2d]
+
+.set at
 
 .option pic2
 #dla $5, symbol

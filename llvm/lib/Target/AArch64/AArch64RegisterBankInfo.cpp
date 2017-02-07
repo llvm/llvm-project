@@ -536,9 +536,15 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   RegisterBankInfo::InstructionMapping Mapping =
       InstructionMapping{DefaultMappingID, Cost, nullptr, NumOperands};
   SmallVector<const ValueMapping *, 8> OpdsMapping(NumOperands);
-  for (unsigned Idx = 0; Idx < NumOperands; ++Idx)
-    if (MI.getOperand(Idx).isReg())
-      OpdsMapping[Idx] = getValueMapping(OpRegBankIdx[Idx], OpSize[Idx]);
+  for (unsigned Idx = 0; Idx < NumOperands; ++Idx) {
+    if (MI.getOperand(Idx).isReg()) {
+      auto Mapping = getValueMapping(OpRegBankIdx[Idx], OpSize[Idx]);
+      if (!Mapping->isValid())
+        return InstructionMapping();
+
+      OpdsMapping[Idx] = Mapping;
+    }
+  }
 
   Mapping.setOperandsMapping(getOperandsMapping(OpdsMapping));
   return Mapping;

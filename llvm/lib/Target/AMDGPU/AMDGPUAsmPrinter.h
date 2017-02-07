@@ -111,6 +111,11 @@ public:
   /// pseudo lowering.
   bool lowerOperand(const MachineOperand &MO, MCOperand &MCOp) const;
 
+  /// \brief Lower the specified LLVM Constant to an MCExpr.
+  /// The AsmPrinter::lowerConstantof does not know how to lower
+  /// addrspacecast, therefore they should be lowered by this function.
+  const MCExpr *lowerConstant(const Constant *CV) override;
+
   /// \brief tblgen'erated driver function for lowering simple MI->MC pseudo
   /// instructions.
   bool emitPseudoExpansionLowering(MCStreamer &OutStreamer,

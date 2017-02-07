@@ -6,3 +6,6 @@ test_inline:3000:0
 test_noinline:3000:0
  5: foo_noinline:3000
   1: 3000
+test_direct:3000:0
+ 5: foo_direct:3000
+  1: 3000

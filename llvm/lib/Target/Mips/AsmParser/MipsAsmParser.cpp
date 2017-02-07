@@ -361,6 +361,8 @@ class MipsAsmParser : public MCTargetAsmParser {
   /// This should be used in pseudo-instruction expansions which need AT.
   unsigned getATReg(SMLoc Loc);
 
+  bool canUseATReg();
+
   bool processInstruction(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
                           const MCSubtargetInfo *STI);
 
@@ -2706,20 +2708,24 @@ bool MipsAsmParser::loadAndAddSymbolAddress(const MCExpr *SymExpr,
 
   // This is the 64-bit symbol address expansion.
   if (ABI.ArePtrs64bit() && isGP64bit()) {
-    // We always need AT for the 64-bit expansion.
-    // If it is not available we exit.
-    unsigned ATReg = getATReg(IDLoc);
-    if (!ATReg)
-      return true;
+    // We need AT for the 64-bit expansion in the cases where the optional
+    // source register is the destination register and for the superscalar
+    // scheduled form.
+    //
+    // If it is not available we exit if the destination is the same as the
+    // source register.
 
     const MipsMCExpr *HighestExpr =
         MipsMCExpr::create(MipsMCExpr::MEK_HIGHEST, SymExpr, getContext());
     const MipsMCExpr *HigherExpr =
         MipsMCExpr::create(MipsMCExpr::MEK_HIGHER, SymExpr, getContext());
 
-    if (UseSrcReg &&
-        getContext().getRegisterInfo()->isSuperOrSubRegisterEq(DstReg,
-                                                               SrcReg)) {
+    bool RdRegIsRsReg =
+        getContext().getRegisterInfo()->isSuperOrSubRegisterEq(DstReg, SrcReg);
+
+    if (canUseATReg() && UseSrcReg && RdRegIsRsReg) {
+      unsigned ATReg = getATReg(IDLoc);
+
       // If $rs is the same as $rd:
       // (d)la $rd, sym($rd) => lui    $at, %highest(sym)
       //                        daddiu $at, $at, %higher(sym)
@@ -2741,29 +2747,65 @@ bool MipsAsmParser::loadAndAddSymbolAddress(const MCExpr *SymExpr,
       TOut.emitRRR(Mips::DADDu, DstReg, ATReg, SrcReg, IDLoc, STI);
 
       return false;
+    } else if (canUseATReg() && !RdRegIsRsReg) {
+      unsigned ATReg = getATReg(IDLoc);
+
+      // If the $rs is different from $rd or if $rs isn't specified and we
+      // have $at available:
+      // (d)la $rd, sym/sym($rs) => lui    $rd, %highest(sym)
+      //                            lui    $at, %hi(sym)
+      //                            daddiu $rd, $rd, %higher(sym)
+      //                            daddiu $at, $at, %lo(sym)
+      //                            dsll32 $rd, $rd, 0
+      //                            daddu  $rd, $rd, $at
+      //                            (daddu  $rd, $rd, $rs)
+      //
+      // Which is preferred for superscalar issue.
+      TOut.emitRX(Mips::LUi, DstReg, MCOperand::createExpr(HighestExpr), IDLoc,
+                  STI);
+      TOut.emitRX(Mips::LUi, ATReg, MCOperand::createExpr(HiExpr), IDLoc, STI);
+      TOut.emitRRX(Mips::DADDiu, DstReg, DstReg,
+                   MCOperand::createExpr(HigherExpr), IDLoc, STI);
+      TOut.emitRRX(Mips::DADDiu, ATReg, ATReg, MCOperand::createExpr(LoExpr),
+                   IDLoc, STI);
+      TOut.emitRRI(Mips::DSLL32, DstReg, DstReg, 0, IDLoc, STI);
+      TOut.emitRRR(Mips::DADDu, DstReg, DstReg, ATReg, IDLoc, STI);
+      if (UseSrcReg)
+        TOut.emitRRR(Mips::DADDu, DstReg, DstReg, SrcReg, IDLoc, STI);
+
+      return false;
+    } else if (!canUseATReg() && !RdRegIsRsReg) {
+      // Otherwise, synthesize the address in the destination register
+      // serially:
+      // (d)la $rd, sym/sym($rs) => lui    $rd, %highest(sym)
+      //                            daddiu $rd, $rd, %higher(sym)
+      //                            dsll   $rd, $rd, 16
+      //                            daddiu $rd, $rd, %hi(sym)
+      //                            dsll   $rd, $rd, 16
+      //                            daddiu $rd, $rd, %lo(sym)
+      TOut.emitRX(Mips::LUi, DstReg, MCOperand::createExpr(HighestExpr), IDLoc,
+                  STI);
+      TOut.emitRRX(Mips::DADDiu, DstReg, DstReg,
+                   MCOperand::createExpr(HigherExpr), IDLoc, STI);
+      TOut.emitRRI(Mips::DSLL, DstReg, DstReg, 16, IDLoc, STI);
+      TOut.emitRRX(Mips::DADDiu, DstReg, DstReg,
+                   MCOperand::createExpr(HiExpr), IDLoc, STI);
+      TOut.emitRRI(Mips::DSLL, DstReg, DstReg, 16, IDLoc, STI);
+      TOut.emitRRX(Mips::DADDiu, DstReg, DstReg,
+                   MCOperand::createExpr(LoExpr), IDLoc, STI);
+      if (UseSrcReg)
+        TOut.emitRRR(Mips::DADDu, DstReg, DstReg, SrcReg, IDLoc, STI);
+
+      return false;
+    } else {
+      // We have a case where SrcReg == DstReg and we don't have $at
+      // available. We can't expand this case, so error out appropriately.
+      assert(SrcReg == DstReg && !canUseATReg() &&
+             "Could have expanded dla but didn't?");
+      reportParseError(IDLoc,
+                     "pseudo-instruction requires $at, which is not available");
+      return true;
     }
-
-    // Otherwise, if the $rs is different from $rd or if $rs isn't specified:
-    // (d)la $rd, sym/sym($rs) => lui    $rd, %highest(sym)
-    //                            lui    $at, %hi(sym)
-    //                            daddiu $rd, $rd, %higher(sym)
-    //                            daddiu $at, $at, %lo(sym)
-    //                            dsll32 $rd, $rd, 0
-    //                            daddu  $rd, $rd, $at
-    //                            (daddu  $rd, $rd, $rs)
-    TOut.emitRX(Mips::LUi, DstReg, MCOperand::createExpr(HighestExpr), IDLoc,
-                STI);
-    TOut.emitRX(Mips::LUi, ATReg, MCOperand::createExpr(HiExpr), IDLoc, STI);
-    TOut.emitRRX(Mips::DADDiu, DstReg, DstReg,
-                 MCOperand::createExpr(HigherExpr), IDLoc, STI);
-    TOut.emitRRX(Mips::DADDiu, ATReg, ATReg, MCOperand::createExpr(LoExpr),
-                 IDLoc, STI);
-    TOut.emitRRI(Mips::DSLL32, DstReg, DstReg, 0, IDLoc, STI);
-    TOut.emitRRR(Mips::DADDu, DstReg, DstReg, ATReg, IDLoc, STI);
-    if (UseSrcReg)
-      TOut.emitRRR(Mips::DADDu, DstReg, DstReg, SrcReg, IDLoc, STI);
-
-    return false;
   }
 
   // And now, the 32-bit symbol address expansion:
@@ -4648,6 +4690,10 @@ int MipsAsmParser::matchMSA128CtrlRegisterName(StringRef Name) {
            .Default(-1);
 
   return CC;
+}
+
+bool MipsAsmParser::canUseATReg() {
+  return AssemblerOptions.back()->getATRegIndex() != 0;
 }
 
 unsigned MipsAsmParser::getATReg(SMLoc Loc) {

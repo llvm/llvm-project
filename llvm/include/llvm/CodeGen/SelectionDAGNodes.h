@@ -737,6 +737,10 @@ public:
     return false;
   }
 
+  /// Return true if all the users of N are contained in Nodes.
+  /// NOTE: Requires at least one match, but doesn't require them all.
+  static bool areOnlyUsersOf(ArrayRef<const SDNode *> Nodes, const SDNode *N);
+
   /// Return the number of values used by this operation.
   unsigned getNumOperands() const { return NumOperands; }
 

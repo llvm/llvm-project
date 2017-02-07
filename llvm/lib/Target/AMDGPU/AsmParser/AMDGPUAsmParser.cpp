@@ -2294,9 +2294,10 @@ AMDGPUAsmParser::parseNamedBit(const char *Name, OperandVector &Operands,
 
 typedef std::map<enum AMDGPUOperand::ImmTy, unsigned> OptionalImmIndexMap;
 
-void addOptionalImmOperand(MCInst& Inst, const OperandVector& Operands,
-                           OptionalImmIndexMap& OptionalIdx,
-                           AMDGPUOperand::ImmTy ImmT, int64_t Default = 0) {
+static void addOptionalImmOperand(MCInst& Inst, const OperandVector& Operands,
+                                  OptionalImmIndexMap& OptionalIdx,
+                                  AMDGPUOperand::ImmTy ImmT,
+                                  int64_t Default = 0) {
   auto i = OptionalIdx.find(ImmT);
   if (i != OptionalIdx.end()) {
     unsigned Idx = i->second;

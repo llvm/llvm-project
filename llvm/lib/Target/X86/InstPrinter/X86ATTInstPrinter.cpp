@@ -12,19 +12,22 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "X86ATTInstPrinter.h"
 #include "MCTargetDesc/X86BaseInfo.h"
-#include "MCTargetDesc/X86MCTargetDesc.h"
+#include "X86ATTInstPrinter.h"
 #include "X86InstComments.h"
-#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
+#include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCInstrInfo.h"
-#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
-#include "llvm/Support/FormattedStream.h"
+#include "llvm/Support/raw_ostream.h"
+#include <cassert>
+#include <cinttypes>
+#include <cstdint>
+
 using namespace llvm;
 
 #define DEBUG_TYPE "asm-printer"
@@ -146,6 +149,7 @@ void X86ATTInstPrinter::printRoundingControl(const MCInst *MI, unsigned Op,
   case 3: O << "{rz-sae}"; break;
   }
 }
+
 /// printPCRelImm - This is used to print an immediate value that ends up
 /// being encoded as a pc-relative value (e.g. for jumps and calls).  These
 /// print slightly differently than normal immediates.  For example, a $ is not

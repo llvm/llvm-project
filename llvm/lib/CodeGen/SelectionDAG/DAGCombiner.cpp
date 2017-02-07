@@ -1841,39 +1841,28 @@ SDValue DAGCombiner::visitADDC(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
   EVT VT = N0.getValueType();
+  SDLoc DL(N);
 
   // If the flag result is dead, turn this into an ADD.
   if (!N->hasAnyUseOfValue(1))
-    return CombineTo(N, DAG.getNode(ISD::ADD, SDLoc(N), VT, N0, N1),
-                     DAG.getNode(ISD::CARRY_FALSE,
-                                 SDLoc(N), MVT::Glue));
+    return CombineTo(N, DAG.getNode(ISD::ADD, DL, VT, N0, N1),
+                     DAG.getNode(ISD::CARRY_FALSE, DL, MVT::Glue));
 
   // canonicalize constant to RHS.
   ConstantSDNode *N0C = dyn_cast<ConstantSDNode>(N0);
   ConstantSDNode *N1C = dyn_cast<ConstantSDNode>(N1);
   if (N0C && !N1C)
-    return DAG.getNode(ISD::ADDC, SDLoc(N), N->getVTList(), N1, N0);
+    return DAG.getNode(ISD::ADDC, DL, N->getVTList(), N1, N0);
 
   // fold (addc x, 0) -> x + no carry out
   if (isNullConstant(N1))
     return CombineTo(N, N0, DAG.getNode(ISD::CARRY_FALSE,
-                                        SDLoc(N), MVT::Glue));
+                                        DL, MVT::Glue));
 
-  // fold (addc a, b) -> (or a, b), CARRY_FALSE iff a and b share no bits.
-  APInt LHSZero, LHSOne;
-  APInt RHSZero, RHSOne;
-  DAG.computeKnownBits(N0, LHSZero, LHSOne);
-
-  if (LHSZero.getBoolValue()) {
-    DAG.computeKnownBits(N1, RHSZero, RHSOne);
-
-    // If all possibly-set bits on the LHS are clear on the RHS, return an OR.
-    // If all possibly-set bits on the RHS are clear on the LHS, return an OR.
-    if ((RHSZero & ~LHSZero) == ~LHSZero || (LHSZero & ~RHSZero) == ~RHSZero)
-      return CombineTo(N, DAG.getNode(ISD::OR, SDLoc(N), VT, N0, N1),
-                       DAG.getNode(ISD::CARRY_FALSE,
-                                   SDLoc(N), MVT::Glue));
-  }
+  // If it cannot overflow, transform into an add.
+  if (DAG.computeOverflowKind(N0, N1) == SelectionDAG::OFK_Never)
+    return CombineTo(N, DAG.getNode(ISD::ADD, DL, VT, N0, N1),
+                     DAG.getNode(ISD::CARRY_FALSE, DL, MVT::Glue));
 
   return SDValue();
 }
@@ -4468,6 +4457,9 @@ const Optional<ByteProvider> calculateByteProvider(SDValue Op, unsigned Index,
                ? ByteProvider::getConstantZero()
                : calculateByteProvider(NarrowOp, Index, Depth + 1);
   }
+  case ISD::BSWAP:
+    return calculateByteProvider(Op->getOperand(0), ByteWidth - Index - 1,
+                                 Depth + 1);
   case ISD::LOAD: {
     auto L = cast<LoadSDNode>(Op.getNode());
 

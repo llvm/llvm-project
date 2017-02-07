@@ -168,6 +168,7 @@ class HexagonMCChecker {
 
   void init();
   void init(MCInst const&);
+  void initReg(MCInst const &, unsigned, unsigned &PredReg, bool &isTrue);
 
   // Checks performed.
   bool checkBranches();
@@ -177,6 +178,7 @@ class HexagonMCChecker {
   bool checkSolo();
   bool checkShuffle();
   bool checkSlots();
+  bool checkSize();
 
   static void compoundRegisterMap(unsigned&);
 
@@ -196,7 +198,7 @@ class HexagonMCChecker {
   explicit HexagonMCChecker(MCInstrInfo const &MCII, MCSubtargetInfo const &STI, MCInst& mcb, MCInst &mcbdx,
                             const MCRegisterInfo& ri);
 
-  bool check();
+  bool check(bool FullCheck = true);
 
   /// add a new error/warning
   void addErrInfo(HexagonMCErrInfo &err) { ErrInfoQ.push(err.s); };

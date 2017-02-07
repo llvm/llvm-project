@@ -151,6 +151,28 @@ bool AMDGPUAsmPrinter::lowerOperand(const MachineOperand &MO,
   return MCInstLowering.lowerOperand(MO, MCOp);
 }
 
+const MCExpr *AMDGPUAsmPrinter::lowerConstant(const Constant *CV) {
+  // TargetMachine does not support llvm-style cast. Use C++-style cast.
+  // This is safe since TM is always of type AMDGPUTargetMachine or its
+  // derived class.
+  auto *AT = static_cast<AMDGPUTargetMachine*>(&TM);
+  auto *CE = dyn_cast<ConstantExpr>(CV);
+
+  // Lower null pointers in private and local address space.
+  // Clang generates addrspacecast for null pointers in private and local
+  // address space, which needs to be lowered.
+  if (CE && CE->getOpcode() == Instruction::AddrSpaceCast) {
+    auto Op = CE->getOperand(0);
+    auto SrcAddr = Op->getType()->getPointerAddressSpace();
+    if (Op->isNullValue() && AT->getNullPointerValue(SrcAddr) == 0) {
+      auto DstAddr = CE->getType()->getPointerAddressSpace();
+      return MCConstantExpr::create(AT->getNullPointerValue(DstAddr),
+        OutContext);
+    }
+  }
+  return AsmPrinter::lowerConstant(CV);
+}
+
 void AMDGPUAsmPrinter::EmitInstruction(const MachineInstr *MI) {
   if (emitPseudoExpansionLowering(*OutStreamer, MI))
     return;

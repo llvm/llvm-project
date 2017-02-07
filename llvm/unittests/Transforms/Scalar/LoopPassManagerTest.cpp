@@ -46,7 +46,10 @@ public:
 
     DerivedT *Handle;
 
-    Analysis(DerivedT &Handle) : Handle(&Handle) {}
+    Analysis(DerivedT &Handle) : Handle(&Handle) {
+      static_assert(std::is_base_of<MockAnalysisHandleBase, DerivedT>::value,
+                    "Must pass the derived type to this template!");
+    }
 
   public:
     class Result {
@@ -152,7 +155,10 @@ public:
 
     DerivedT *Handle;
 
-    Pass(DerivedT &Handle) : Handle(&Handle) {}
+    Pass(DerivedT &Handle) : Handle(&Handle) {
+      static_assert(std::is_base_of<MockPassHandleBase, DerivedT>::value,
+                    "Must pass the derived type to this template!");
+    }
 
   public:
     PreservedAnalyses run(IRUnitT &IR, AnalysisManagerT &AM,

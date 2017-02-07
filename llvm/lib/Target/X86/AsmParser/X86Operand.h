@@ -1,4 +1,4 @@
-//===-- X86Operand.h - Parsed X86 machine instruction --------------------===//
+//===- X86Operand.h - Parsed X86 machine instruction ------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -11,12 +11,17 @@
 #define LLVM_LIB_TARGET_X86_ASMPARSER_X86OPERAND_H
 
 #include "X86AsmParserCommon.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCParser/MCParsedAsmOperand.h"
-#include "llvm/ADT/STLExtras.h"
-#include "MCTargetDesc/X86MCTargetDesc.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/SMLoc.h"
+#include <cassert>
+#include <memory>
 
 namespace llvm {
 
@@ -74,11 +79,14 @@ struct X86Operand : public MCParsedAsmOperand {
 
   /// getStartLoc - Get the location of the first token of this operand.
   SMLoc getStartLoc() const override { return StartLoc; }
+
   /// getEndLoc - Get the location of the last token of this operand.
   SMLoc getEndLoc() const override { return EndLoc; }
+
   /// getLocRange - Get the range between the first and last token of this
   /// operand.
   SMRange getLocRange() const { return SMRange(StartLoc, EndLoc); }
+
   /// getOffsetOfLoc - Get the location of the offset operator.
   SMLoc getOffsetOfLoc() const override { return OffsetOfLoc; }
 
@@ -422,10 +430,12 @@ struct X86Operand : public MCParsedAsmOperand {
       RegNo = getGR32FromGR64(RegNo);
     Inst.addOperand(MCOperand::createReg(RegNo));
   }
+
   void addAVX512RCOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
     addExpr(Inst, getImm());
   }
+
   void addImmOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
     addExpr(Inst, getImm());
@@ -454,6 +464,7 @@ struct X86Operand : public MCParsedAsmOperand {
     Inst.addOperand(MCOperand::createReg(getMemBaseReg()));
     Inst.addOperand(MCOperand::createReg(getMemSegReg()));
   }
+
   void addDstIdxOperands(MCInst &Inst, unsigned N) const {
     assert((N == 1) && "Invalid number of operands!");
     Inst.addOperand(MCOperand::createReg(getMemBaseReg()));
@@ -544,6 +555,6 @@ struct X86Operand : public MCParsedAsmOperand {
   }
 };
 
-} // End of namespace llvm
+} // end namespace llvm
 
-#endif
+#endif // LLVM_LIB_TARGET_X86_ASMPARSER_X86OPERAND_H

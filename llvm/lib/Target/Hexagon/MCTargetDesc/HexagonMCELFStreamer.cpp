@@ -37,30 +37,19 @@
 
 using namespace llvm;
 
-static cl::opt<unsigned>
-    GPSize("gpsize", cl::NotHidden,
-           cl::desc("Global Pointer Addressing Size.  The default size is 8."),
-           cl::Prefix, cl::init(8));
+static cl::opt<unsigned> GPSize
+  ("gpsize", cl::NotHidden,
+   cl::desc("Global Pointer Addressing Size.  The default size is 8."),
+   cl::Prefix,
+   cl::init(8));
 
-void HexagonMCELFStreamer::EmitInstruction(const MCInst &MCK,
+void HexagonMCELFStreamer::EmitInstruction(const MCInst &MCB,
                                            const MCSubtargetInfo &STI) {
-  MCInst HMI = HexagonMCInstrInfo::createBundle();
-  MCInst *MCB;
-
-  if (MCK.getOpcode() != Hexagon::BUNDLE) {
-    HMI.addOperand(MCOperand::createInst(&MCK));
-    MCB = &HMI;
-  } else
-    MCB = const_cast<MCInst *>(&MCK);
-
-  // Examines packet and pad the packet, if needed, when an
-  // end-loop is in the bundle.
-  HexagonMCInstrInfo::padEndloop(getContext(), *MCB);
-  HexagonMCShuffle(*MCII, STI, *MCB);
-
-  assert(HexagonMCInstrInfo::bundleSize(*MCB) <= HEXAGON_PACKET_SIZE);
+  assert(MCB.getOpcode() == Hexagon::BUNDLE);
+  assert(HexagonMCInstrInfo::bundleSize(MCB) <= HEXAGON_PACKET_SIZE);
+  assert(HexagonMCInstrInfo::bundleSize(MCB) > 0);
   bool Extended = false;
-  for (auto &I : HexagonMCInstrInfo::bundleInstructions(*MCB)) {
+  for (auto &I : HexagonMCInstrInfo::bundleInstructions(MCB)) {
     MCInst *MCI = const_cast<MCInst *>(I.getInst());
     if (Extended) {
       if (HexagonMCInstrInfo::isDuplex(*MCII, *MCI)) {
@@ -77,11 +66,12 @@ void HexagonMCELFStreamer::EmitInstruction(const MCInst &MCK,
 
   // At this point, MCB is a bundle
   // Iterate through the bundle and assign addends for the instructions
-  for (auto const &I : HexagonMCInstrInfo::bundleInstructions(*MCB)) {
+  for (auto const &I : HexagonMCInstrInfo::bundleInstructions(MCB)) {
     MCInst *MCI = const_cast<MCInst *>(I.getInst());
     EmitSymbol(*MCI);
   }
-  MCObjectStreamer::EmitInstruction(*MCB, STI);
+
+  MCObjectStreamer::EmitInstruction(MCB, STI);
 }
 
 void HexagonMCELFStreamer::EmitSymbol(const MCInst &Inst) {
@@ -119,9 +109,11 @@ void HexagonMCELFStreamer::HexagonMCEmitCommonSymbol(MCSymbol *Symbol,
     MCSectionSubPair P = getCurrentSection();
     SwitchSection(&Section);
 
-    EmitValueToAlignment(ByteAlignment, 0, 1, 0);
-    EmitLabel(Symbol);
-    EmitZeros(Size);
+    if (ELFSymbol->isUndefined(false)) {
+      EmitValueToAlignment(ByteAlignment, 0, 1, 0);
+      EmitLabel(Symbol);
+      EmitZeros(Size);
+    }
 
     // Update the maximum alignment of the section if necessary.
     if (ByteAlignment > Section.getAlignment())
@@ -144,9 +136,10 @@ void HexagonMCELFStreamer::HexagonMCEmitCommonSymbol(MCSymbol *Symbol,
   ELFSymbol->setSize(MCConstantExpr::create(Size, getContext()));
 }
 
-void HexagonMCELFStreamer::HexagonMCEmitLocalCommonSymbol(
-    MCSymbol *Symbol, uint64_t Size, unsigned ByteAlignment,
-    unsigned AccessSize) {
+void HexagonMCELFStreamer::HexagonMCEmitLocalCommonSymbol(MCSymbol *Symbol,
+                                                         uint64_t Size,
+                                                         unsigned ByteAlignment,
+                                                         unsigned AccessSize) {
   getAssembler().registerSymbol(*Symbol);
   auto ELFSymbol = cast<MCSymbolELF>(Symbol);
   ELFSymbol->setBinding(ELF::STB_LOCAL);
@@ -154,11 +147,12 @@ void HexagonMCELFStreamer::HexagonMCEmitLocalCommonSymbol(
   HexagonMCEmitCommonSymbol(Symbol, Size, ByteAlignment, AccessSize);
 }
 
-namespace llvm {
 
-MCStreamer *createHexagonELFStreamer(MCContext &Context, MCAsmBackend &MAB,
-                                     raw_pwrite_stream &OS, MCCodeEmitter *CE) {
-  return new HexagonMCELFStreamer(Context, MAB, OS, CE);
-}
+namespace llvm {
+  MCStreamer *createHexagonELFStreamer(Triple const &TT, MCContext &Context,
+                                       MCAsmBackend &MAB,
+                                       raw_pwrite_stream &OS, MCCodeEmitter *CE) {
+    return new HexagonMCELFStreamer(Context, MAB, OS, CE);
+  }
 
 } // end namespace llvm

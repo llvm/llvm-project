@@ -111,6 +111,20 @@ public:
     return dyn_cast<FunTy>(getCalledValue());
   }
 
+  /// Returns true if the callsite is an indirect call
+  bool isIndirectCall() const {
+    Value *V = getCalledValue();
+    if (!V)
+      return false;
+    if (isa<FunTy>(V) || isa<Constant>(V))
+      return false;
+    if (CallInst *CI = dyn_cast<CallInst>(getInstruction())) {
+      if (CI->isInlineAsm())
+        return false;
+    }
+    return true;
+  }
+
   /// setCalledFunction - Set the callee to the specified value.
   ///
   void setCalledFunction(Value *V) {

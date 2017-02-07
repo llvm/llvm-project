@@ -794,14 +794,10 @@ public:
 
   /// A post-order depth-first RefSCC iterator over the call graph.
   ///
-  /// This iterator triggers the Tarjan DFS-based formation of the RefSCC (and
-  /// SCC) DAG for the call graph, walking it lazily in depth-first post-order.
-  /// That is, it always visits RefSCCs for the target of a reference edge
-  /// prior to visiting the RefSCC for a source of the edge (when they are in
-  /// different RefSCCs).
-  ///
-  /// When forming each RefSCC, the call edges within it are used to form SCCs
-  /// within it, so iterating this also controls the lazy formation of SCCs.
+  /// This iterator walks the cached post-order sequence of RefSCCs. However,
+  /// it trades stability for flexibility. It is restricted to a forward
+  /// iterator but will survive mutations which insert new RefSCCs and continue
+  /// to point to the same RefSCC even if it moves in the post-order sequence.
   class postorder_ref_scc_iterator
       : public iterator_facade_base<postorder_ref_scc_iterator,
                                     std::forward_iterator_tag, RefSCC> {
@@ -825,12 +821,9 @@ public:
     /// populating it if necessary.
     static RefSCC *getRC(LazyCallGraph &G, int Index) {
       if (Index == (int)G.PostOrderRefSCCs.size())
-        if (!G.buildNextRefSCCInPostOrder())
-          // We're at the end.
-          return nullptr;
+        // We're at the end.
+        return nullptr;
 
-      assert(Index < (int)G.PostOrderRefSCCs.size() &&
-             "Built the next post-order RefSCC without growing list!");
       return G.PostOrderRefSCCs[Index];
     }
 
@@ -866,10 +859,18 @@ public:
     return edge_iterator(EntryEdges.end(), EntryEdges.end());
   }
 
+  void buildRefSCCs();
+
   postorder_ref_scc_iterator postorder_ref_scc_begin() {
+    if (!EntryEdges.empty())
+      assert(!PostOrderRefSCCs.empty() &&
+             "Must form RefSCCs before iterating them!");
     return postorder_ref_scc_iterator(*this);
   }
   postorder_ref_scc_iterator postorder_ref_scc_end() {
+    if (!EntryEdges.empty())
+      assert(!PostOrderRefSCCs.empty() &&
+             "Must form RefSCCs before iterating them!");
     return postorder_ref_scc_iterator(*this,
                                       postorder_ref_scc_iterator::IsAtEndT());
   }
@@ -1045,18 +1046,6 @@ private:
   /// These are all of the RefSCCs which have no children.
   SmallVector<RefSCC *, 4> LeafRefSCCs;
 
-  /// Stack of nodes in the DFS walk.
-  SmallVector<std::pair<Node *, edge_iterator>, 4> DFSStack;
-
-  /// Set of entry nodes not-yet-processed into RefSCCs.
-  SmallVector<Function *, 4> RefSCCEntryNodes;
-
-  /// Stack of nodes the DFS has walked but not yet put into a RefSCC.
-  SmallVector<Node *, 4> PendingRefSCCStack;
-
-  /// Counter for the next DFS number to assign.
-  int NextDFSNumber;
-
   /// Helper to insert a new function, with an already looked-up entry in
   /// the NodeMap.
   Node &insertInto(Function &F, Node *&MappedN);
@@ -1078,6 +1067,23 @@ private:
     return new (RefSCCBPA.Allocate()) RefSCC(std::forward<Ts>(Args)...);
   }
 
+  /// Common logic for building SCCs from a sequence of roots.
+  ///
+  /// This is a very generic implementation of the depth-first walk and SCC
+  /// formation algorithm. It uses a generic sequence of roots and generic
+  /// callbacks for each step. This is designed to be used to implement both
+  /// the RefSCC formation and SCC formation with shared logic.
+  ///
+  /// Currently this is a relatively naive implementation of Tarjan's DFS
+  /// algorithm to form the SCCs.
+  ///
+  /// FIXME: We should consider newer variants such as Nuutila.
+  template <typename RootsT, typename GetBeginT, typename GetEndT,
+            typename GetNodeT, typename FormSCCCallbackT>
+  static void buildGenericSCCs(RootsT &&Roots, GetBeginT &&GetBegin,
+                               GetEndT &&GetEnd, GetNodeT &&GetNode,
+                               FormSCCCallbackT &&FormSCC);
+
   /// Build the SCCs for a RefSCC out of a list of nodes.
   void buildSCCs(RefSCC &RC, node_stack_range Nodes);
 
@@ -1098,13 +1104,6 @@ private:
            "Index does not point back at RC!");
     return IndexIt->second;
   }
-
-  /// Builds the next node in the post-order RefSCC walk of the call graph and
-  /// appends it to the \c PostOrderRefSCCs vector.
-  ///
-  /// Returns true if a new RefSCC was successfully constructed, and false if
-  /// there are no more RefSCCs to build in the graph.
-  bool buildNextRefSCCInPostOrder();
 };
 
 inline LazyCallGraph::Edge::Edge() : Value() {}

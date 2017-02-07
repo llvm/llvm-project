@@ -484,6 +484,14 @@ Error RuntimeDyldImpl::computeTotalAllocSize(const ObjectFile &Obj,
     }
   }
 
+  // Compute Global Offset Table size. If it is not zero we
+  // also update alignment, which is equal to a size of a
+  // single GOT entry.
+  if (unsigned GotSize = computeGOTSize(Obj)) {
+    RWSectionSizes.push_back(GotSize);
+    RWDataAlign = std::max<uint32_t>(RWDataAlign, getGOTEntrySize());
+  }
+
   // Compute the size of all common symbols
   uint64_t CommonSize = 0;
   uint32_t CommonAlign = 1;
@@ -516,6 +524,24 @@ Error RuntimeDyldImpl::computeTotalAllocSize(const ObjectFile &Obj,
   RWDataSize = computeAllocationSizeForSections(RWSectionSizes, RWDataAlign);
 
   return Error::success();
+}
+
+// compute GOT size
+unsigned RuntimeDyldImpl::computeGOTSize(const ObjectFile &Obj) {
+  size_t GotEntrySize = getGOTEntrySize();
+  if (!GotEntrySize)
+    return 0;
+
+  size_t GotSize = 0;
+  for (section_iterator SI = Obj.section_begin(), SE = Obj.section_end();
+       SI != SE; ++SI) {
+
+    for (const RelocationRef &Reloc : SI->relocations())
+      if (relocationNeedsGot(Reloc))
+        GotSize += GotEntrySize;
+  }
+
+  return GotSize;
 }
 
 // compute stub buffer size for the given section
