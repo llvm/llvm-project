@@ -130,4 +130,68 @@ TEST(MachineInstrBundleIteratorTest, CompareToBundledMI) {
   ASSERT_TRUE(CI != CMBI.getIterator());
 }
 
+struct MyUnbundledInstr
+    : ilist_node<MyUnbundledInstr, ilist_sentinel_tracking<true>> {
+  bool isBundledWithPred() const { return false; }
+  bool isBundledWithSucc() const { return false; }
+};
+typedef MachineInstrBundleIterator<MyUnbundledInstr> unbundled_iterator;
+typedef MachineInstrBundleIterator<const MyUnbundledInstr>
+    const_unbundled_iterator;
+typedef MachineInstrBundleIterator<MyUnbundledInstr, true>
+    reverse_unbundled_iterator;
+typedef MachineInstrBundleIterator<const MyUnbundledInstr, true>
+    const_reverse_unbundled_iterator;
+
+TEST(MachineInstrBundleIteratorTest, ReverseConstructor) {
+  simple_ilist<MyUnbundledInstr, ilist_sentinel_tracking<true>> L;
+  const auto &CL = L;
+  MyUnbundledInstr A, B;
+  L.insert(L.end(), A);
+  L.insert(L.end(), B);
+
+  // Save typing.
+  typedef MachineInstrBundleIterator<MyUnbundledInstr> iterator;
+  typedef MachineInstrBundleIterator<MyUnbundledInstr, true> reverse_iterator;
+  typedef MachineInstrBundleIterator<const MyUnbundledInstr> const_iterator;
+  typedef MachineInstrBundleIterator<const MyUnbundledInstr, true>
+      const_reverse_iterator;
+
+  // Convert to bundle iterators.
+  auto begin = [&]() -> iterator { return L.begin(); };
+  auto end = [&]() -> iterator { return L.end(); };
+  auto rbegin = [&]() -> reverse_iterator { return L.rbegin(); };
+  auto rend = [&]() -> reverse_iterator { return L.rend(); };
+  auto cbegin = [&]() -> const_iterator { return CL.begin(); };
+  auto cend = [&]() -> const_iterator { return CL.end(); };
+  auto crbegin = [&]() -> const_reverse_iterator { return CL.rbegin(); };
+  auto crend = [&]() -> const_reverse_iterator { return CL.rend(); };
+
+  // Check conversion values.
+  EXPECT_EQ(begin(), iterator(rend()));
+  EXPECT_EQ(++begin(), iterator(++rbegin()));
+  EXPECT_EQ(end(), iterator(rbegin()));
+  EXPECT_EQ(rbegin(), reverse_iterator(end()));
+  EXPECT_EQ(++rbegin(), reverse_iterator(++begin()));
+  EXPECT_EQ(rend(), reverse_iterator(begin()));
+
+  // Check const iterator constructors.
+  EXPECT_EQ(cbegin(), const_iterator(rend()));
+  EXPECT_EQ(cbegin(), const_iterator(crend()));
+  EXPECT_EQ(crbegin(), const_reverse_iterator(end()));
+  EXPECT_EQ(crbegin(), const_reverse_iterator(cend()));
+
+  // Confirm lack of implicit conversions.
+  static_assert(!std::is_convertible<iterator, reverse_iterator>::value,
+                "unexpected implicit conversion");
+  static_assert(!std::is_convertible<reverse_iterator, iterator>::value,
+                "unexpected implicit conversion");
+  static_assert(
+      !std::is_convertible<const_iterator, const_reverse_iterator>::value,
+      "unexpected implicit conversion");
+  static_assert(
+      !std::is_convertible<const_reverse_iterator, const_iterator>::value,
+      "unexpected implicit conversion");
+}
+
 } // end namespace

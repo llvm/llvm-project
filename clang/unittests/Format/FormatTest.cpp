@@ -6934,6 +6934,11 @@ TEST_F(FormatTest, BreaksLongVariableDeclarations) {
                "    LoooooooooooooooooooooooooooooooooooooooongVariable({});");
   verifyFormat("LoooooooooooooooooooooooooooooooooooooooongType\n"
                "    LoooooooooooooooooooooooooooooooooooooongVariable([A a]);");
+
+  // Lambdas should not confuse the variable declaration heuristic.
+  verifyFormat("LooooooooooooooooongType\n"
+               "    variable(nullptr, [](A *a) {});",
+               getLLVMStyleWithColumns(40));
 }
 
 TEST_F(FormatTest, BreaksLongDeclarations) {

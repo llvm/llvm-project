@@ -1707,7 +1707,7 @@ static bool isFunctionDeclarationName(const FormatToken &Current,
     }
   }
 
-  // Check whether parameter list can be long to a function declaration.
+  // Check whether parameter list can belong to a function declaration.
   if (!Next || !Next->is(tok::l_paren) || !Next->MatchingParen)
     return false;
   // If the lines ends with "{", this is likely an function definition.
@@ -1721,6 +1721,10 @@ static bool isFunctionDeclarationName(const FormatToken &Current,
     return true;
   for (const FormatToken *Tok = Next->Next; Tok && Tok != Next->MatchingParen;
        Tok = Tok->Next) {
+    if (Tok->is(tok::l_paren) && Tok->MatchingParen) {
+      Tok = Tok->MatchingParen;
+      continue;
+    }
     if (Tok->is(tok::kw_const) || Tok->isSimpleTypeSpecifier() ||
         Tok->isOneOf(TT_PointerOrReference, TT_StartOfName, tok::ellipsis))
       return true;

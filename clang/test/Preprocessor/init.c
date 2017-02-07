@@ -8462,6 +8462,7 @@
 // PS4:#define __WINT_WIDTH__ 32
 // PS4:#define __amd64 1
 // PS4:#define __amd64__ 1
+// PS4:#define __unix 1
 // PS4:#define __unix__ 1
 // PS4:#define __x86_64 1
 // PS4:#define __x86_64__ 1
@@ -8859,6 +8860,7 @@
 // WEBASSEMBLY32-NOT:#define __wasm_simd128__
 // WEBASSEMBLY32-NOT:#define __wasm_simd256__
 // WEBASSEMBLY32-NOT:#define __wasm_simd512__
+// WEBASSEMBLY32-NOT:#define __unix
 // WEBASSEMBLY32-NOT:#define __unix__
 // WEBASSEMBLY32-NEXT:#define __wasm 1
 // WEBASSEMBLY32-NEXT:#define __wasm32 1
@@ -9174,6 +9176,7 @@
 // WEBASSEMBLY64-NOT:#define __wasm_simd128__
 // WEBASSEMBLY64-NOT:#define __wasm_simd256__
 // WEBASSEMBLY64-NOT:#define __wasm_simd512__
+// WEBASSEMBLY64-NOT:#define __unix
 // WEBASSEMBLY64-NOT:#define __unix__
 // WEBASSEMBLY64-NEXT:#define __wasm 1
 // WEBASSEMBLY64-NOT:#define __wasm32

@@ -16,6 +16,8 @@
 //  However, for backwards compatibility, if _LIBCPP_NO_REMOVE_AUTOPTR
 //  is defined before including <memory>, then auto_ptr will be restored.
 
+// MODULES_DEFINES: _LIBCPP_ENABLE_CXX17_REMOVED_AUTO_PTR
+
 #define _LIBCPP_ENABLE_CXX17_REMOVED_AUTO_PTR
 
 #include <memory>

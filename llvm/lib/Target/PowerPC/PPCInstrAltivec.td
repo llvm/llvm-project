@@ -853,6 +853,7 @@ def V_SETALLONES  : VXForm_3<908, (outs vrrc:$vD), (ins),
 
 // Extended mnemonics
 def : InstAlias<"vmr $vD, $vA", (VOR vrrc:$vD, vrrc:$vA, vrrc:$vA)>;
+def : InstAlias<"vnot $vD, $vA", (VNOR vrrc:$vD, vrrc:$vA, vrrc:$vA)>;
 
 // Loads.
 def : Pat<(v4i32 (load xoaddr:$src)), (LVX xoaddr:$src)>;

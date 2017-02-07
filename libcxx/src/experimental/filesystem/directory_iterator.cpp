@@ -45,11 +45,12 @@ inline bool set_or_throw(std::error_code& my_ec,
 inline path::string_type posix_readdir(DIR *dir_stream, error_code& ec) {
     struct dirent* dir_entry_ptr = nullptr;
     errno = 0; // zero errno in order to detect errors
+    ec.clear();
     if ((dir_entry_ptr = ::readdir(dir_stream)) == nullptr) {
-        ec = capture_errno();
+        if (errno)
+          ec = capture_errno();
         return {};
     } else {
-        ec.clear();
         return dir_entry_ptr->d_name;
     }
 }

@@ -514,7 +514,7 @@ public:
   }
 
   /// Maximum size of array considered when transforming.
-  int MaxArraySizeForCombine;
+  uint64_t MaxArraySizeForCombine;
 
 private:
   /// \brief Performs a few simplifications for operators which are associative

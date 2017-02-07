@@ -49,18 +49,6 @@ class CXXCompiler(object):
         if self.type is None or self.version is None:
             self._initTypeAndVersion()
 
-    def copy(self):
-        new_cxx = CXXCompiler(
-            self.path, flags=self.flags, compile_flags=self.compile_flags,
-            link_flags=self.link_flags, warning_flags=self.warning_flags,
-            verify_supported=self.verify_supported,
-            verify_flags=self.verify_flags, use_verify=self.use_verify,
-            modules_flags=self.modules_flags, use_modules=self.use_modules,
-            use_ccache=self.use_ccache, use_warnings=self.use_warnings,
-            compile_env=self.compile_env, cxx_type=self.type,
-            cxx_version=self.version)
-        return new_cxx
-
     def isVerifySupported(self):
         if self.verify_supported is None:
             self.verify_supported = self.hasCompileFlag(['-Xclang',

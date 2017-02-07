@@ -131,4 +131,44 @@ TEST(IListIteratorTest, CheckEraseReverse) {
   EXPECT_EQ(L.rend(), RI);
 }
 
+TEST(IListIteratorTest, ReverseConstructor) {
+  simple_ilist<Node> L;
+  const simple_ilist<Node> &CL = L;
+  Node A, B;
+  L.insert(L.end(), A);
+  L.insert(L.end(), B);
+
+  // Save typing.
+  typedef simple_ilist<Node>::iterator iterator;
+  typedef simple_ilist<Node>::reverse_iterator reverse_iterator;
+  typedef simple_ilist<Node>::const_iterator const_iterator;
+  typedef simple_ilist<Node>::const_reverse_iterator const_reverse_iterator;
+
+  // Check conversion values.
+  EXPECT_EQ(L.begin(), iterator(L.rend()));
+  EXPECT_EQ(++L.begin(), iterator(++L.rbegin()));
+  EXPECT_EQ(L.end(), iterator(L.rbegin()));
+  EXPECT_EQ(L.rbegin(), reverse_iterator(L.end()));
+  EXPECT_EQ(++L.rbegin(), reverse_iterator(++L.begin()));
+  EXPECT_EQ(L.rend(), reverse_iterator(L.begin()));
+
+  // Check const iterator constructors.
+  EXPECT_EQ(CL.begin(), const_iterator(L.rend()));
+  EXPECT_EQ(CL.begin(), const_iterator(CL.rend()));
+  EXPECT_EQ(CL.rbegin(), const_reverse_iterator(L.end()));
+  EXPECT_EQ(CL.rbegin(), const_reverse_iterator(CL.end()));
+
+  // Confirm lack of implicit conversions.
+  static_assert(!std::is_convertible<iterator, reverse_iterator>::value,
+                "unexpected implicit conversion");
+  static_assert(!std::is_convertible<reverse_iterator, iterator>::value,
+                "unexpected implicit conversion");
+  static_assert(
+      !std::is_convertible<const_iterator, const_reverse_iterator>::value,
+      "unexpected implicit conversion");
+  static_assert(
+      !std::is_convertible<const_reverse_iterator, const_iterator>::value,
+      "unexpected implicit conversion");
+}
+
 } // end namespace

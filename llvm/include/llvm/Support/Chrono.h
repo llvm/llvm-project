@@ -76,21 +76,15 @@ raw_ostream &operator<<(raw_ostream &OS, sys::TimePoint<> TP);
 ///  display unit or you request that the unit is not displayed.
 
 namespace detail {
-template <typename Period> struct unit { static constexpr char value[] = ""; };
-template <typename Period> constexpr char unit<Period>::value[];
+template <typename Period> struct unit { static const char value[]; };
+template <typename Period> const char unit<Period>::value[] = "";
 
-template <> struct unit<std::ratio<3600>> {
-  static constexpr char value[] = "h";
-};
-
-template <> struct unit<std::ratio<60>> {
-  static constexpr char value[] = "m";
-};
-
-template <> struct unit<std::ratio<1>> { static constexpr char value[] = "s"; };
-template <> struct unit<std::milli> { static constexpr char value[] = "ms"; };
-template <> struct unit<std::micro> { static constexpr char value[] = "us"; };
-template <> struct unit<std::nano> { static constexpr char value[] = "ns"; };
+template <> struct unit<std::ratio<3600>> { static const char value[]; };
+template <> struct unit<std::ratio<60>> { static const char value[]; };
+template <> struct unit<std::ratio<1>> { static const char value[]; };
+template <> struct unit<std::milli> { static const char value[]; };
+template <> struct unit<std::micro> { static const char value[]; };
+template <> struct unit<std::nano> { static const char value[]; };
 } // namespace detail
 
 template <typename Rep, typename Period>

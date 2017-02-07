@@ -26,7 +26,12 @@ class MCStreamer;
 
 class FaultMaps {
 public:
-  enum FaultKind { FaultingLoad = 1, FaultKindMax };
+  enum FaultKind {
+    FaultingLoad = 1,
+    FaultingLoadStore,
+    FaultingStore,
+    FaultKindMax
+  };
 
   static const char *faultTypeToString(FaultKind);
 

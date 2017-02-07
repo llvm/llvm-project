@@ -156,11 +156,14 @@ StringRef ScriptParserBase::next() {
   return Tokens[Pos++];
 }
 
-StringRef ScriptParserBase::peek() {
-  StringRef Tok = next();
-  if (Error)
-    return "";
-  --Pos;
+StringRef ScriptParserBase::peek(unsigned N) {
+  StringRef Tok;
+  for (unsigned I = 0; I <= N; ++I) {
+    Tok = next();
+    if (Error)
+      return "";
+  }
+  Pos = Pos - N - 1;
   return Tok;
 }
 

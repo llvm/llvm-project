@@ -134,11 +134,13 @@ HANDLE_TARGET_OPCODE(STATEPOINT)
 /// frame index of the local stack allocation.
 HANDLE_TARGET_OPCODE(LOCAL_ESCAPE)
 
-/// Loading instruction that may page fault, bundled with associated
+/// Wraps a machine instruction which can fault, bundled with associated
+/// information on how to handle such a fault.
+/// For example loading instruction that may page fault, bundled with associated
 /// information on how to handle such a page fault.  It is intended to support
 /// "zero cost" null checks in managed languages by allowing LLVM to fold
 /// comparisons into existing memory operations.
-HANDLE_TARGET_OPCODE(FAULTING_LOAD_OP)
+HANDLE_TARGET_OPCODE(FAULTING_OP)
 
 /// Wraps a machine instruction to add patchability constraints.  An
 /// instruction wrapped in PATCHABLE_OP has to either have a minimum

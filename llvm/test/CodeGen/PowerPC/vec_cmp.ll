@@ -54,7 +54,7 @@ entry:
 }
 ; CHECK-LABEL:     v16si8_cmp_ne:
 ; CHECK:     vcmpequb [[RET:[0-9]+]], 2, 3
-; CHECK-NEXT: vnor     2, [[RET]], [[RET]]
+; CHECK-NEXT: vnot     2, [[RET]]
 
 define <16 x i8> @v16si8_cmp_le(<16 x i8> %x, <16 x i8> %y) nounwind readnone {
 entry:
@@ -64,7 +64,7 @@ entry:
 }
 ; CHECK-LABEL:      v16si8_cmp_le:
 ; CHECK:      vcmpgtsb [[RET:[0-9]+]], 2, 3
-; CHECK-NEXT: vnor     2, [[RET]], [[RET]]
+; CHECK-NEXT: vnot     2, [[RET]]
 
 define <16 x i8> @v16ui8_cmp_le(<16 x i8> %x, <16 x i8> %y) nounwind readnone {
 entry:
@@ -74,7 +74,7 @@ entry:
 }
 ; CHECK-LABEL:      v16ui8_cmp_le:
 ; CHECK:      vcmpgtub [[RET:[0-9]+]], 2, 3
-; CHECK-NEXT: vnor     2, [[RET]], [[RET]]
+; CHECK-NEXT: vnot     2, [[RET]]
 
 define <16 x i8> @v16si8_cmp_lt(<16 x i8> %x, <16 x i8> %y) nounwind readnone {
 entry:
@@ -120,7 +120,7 @@ entry:
 }
 ; CHECK-LABEL:      v16si8_cmp_ge:
 ; CHECK:      vcmpgtsb [[RET:[0-9]+]], 3, 2
-; CHECK-NEXT: vnor     2, [[RET]], [[RET]]
+; CHECK-NEXT: vnot     2, [[RET]]
 
 define <16 x i8> @v16ui8_cmp_ge(<16 x i8> %x, <16 x i8> %y) nounwind readnone {
 entry:
@@ -130,7 +130,7 @@ entry:
 }
 ; CHECK-LABEL:      v16ui8_cmp_ge:
 ; CHECK:      vcmpgtub [[RET:[0-9]+]], 3, 2
-; CHECK-NEXT: vnor     2, [[RET]], [[RET]]
+; CHECK-NEXT: vnot     2, [[RET]]
 
 
 define <32 x i8> @v32si8_cmp(<32 x i8> %x, <32 x i8> %y) nounwind readnone {
@@ -180,7 +180,7 @@ entry:
 }
 ; CHECK-LABEL:      v8si16_cmp_ne:
 ; CHECK:      vcmpequh [[RET:[0-9]+]], 2, 3
-; CHECK-NEXT: vnor     2, [[RET]], [[RET]]
+; CHECK-NEXT: vnot     2, [[RET]]
 
 define <8 x i16> @v8si16_cmp_le(<8 x i16> %x, <8 x i16> %y) nounwind readnone {
 entry:
@@ -190,7 +190,7 @@ entry:
 }
 ; CHECK-LABEL:      v8si16_cmp_le:
 ; CHECK:      vcmpgtsh [[RET:[0-9]+]], 2, 3
-; CHECK-NEXT: vnor     2, [[RET]], [[RET]]
+; CHECK-NEXT: vnot     2, [[RET]]
 
 define <8 x i16> @v8ui16_cmp_le(<8 x i16> %x, <8 x i16> %y) nounwind readnone {
 entry:
@@ -200,7 +200,7 @@ entry:
 }
 ; CHECK-LABEL:      v8ui16_cmp_le:
 ; CHECK:      vcmpgtuh [[RET:[0-9]+]], 2, 3
-; CHECK-NEXT: vnor     2, [[RET]], [[RET]]
+; CHECK-NEXT: vnot     2, [[RET]]
 
 define <8 x i16> @v8si16_cmp_lt(<8 x i16> %x, <8 x i16> %y) nounwind readnone {
 entry:
@@ -246,7 +246,7 @@ entry:
 }
 ; CHECK-LABEL:      v8si16_cmp_ge:
 ; CHECK:      vcmpgtsh [[RET:[0-9]+]], 3, 2
-; CHECK-NEXT: vnor     2, [[RET]], [[RET]]
+; CHECK-NEXT: vnot     2, [[RET]]
 
 define <8 x i16> @v8ui16_cmp_ge(<8 x i16> %x, <8 x i16> %y) nounwind readnone {
 entry:
@@ -256,7 +256,7 @@ entry:
 }
 ; CHECK-LABEL:      v8ui16_cmp_ge:
 ; CHECK:      vcmpgtuh [[RET:[0-9]+]], 3, 2
-; CHECK-NEXT: vnor     2, [[RET]], [[RET]]
+; CHECK-NEXT: vnot     2, [[RET]]
 
 
 define <16 x i16> @v16si16_cmp(<16 x i16> %x, <16 x i16> %y) nounwind readnone {
@@ -309,7 +309,7 @@ entry:
 }
 ; CHECK-LABEL:      v4si32_cmp_ne:
 ; CHECK:      vcmpequw [[RCMP:[0-9]+]], 2, 3
-; CHECK-NEXT: vnor     2, [[RCMP]], [[RCMP]]
+; CHECK-NEXT: vnot     2, [[RCMP]]
 
 define <4 x i32> @v4si32_cmp_le(<4 x i32> %x, <4 x i32> %y) nounwind readnone {
 entry:
@@ -319,7 +319,7 @@ entry:
 }
 ; CHECK-LABEL:      v4si32_cmp_le:
 ; CHECK:      vcmpgtsw [[RET:[0-9]+]], 2, 3
-; CHECK-NEXT: vnor     2, [[RET]], [[RET]]
+; CHECK-NEXT: vnot     2, [[RET]]
 
 define <4 x i32> @v4ui32_cmp_le(<4 x i32> %x, <4 x i32> %y) nounwind readnone {
 entry:
@@ -329,7 +329,7 @@ entry:
 }
 ; CHECK-LABEL:      v4ui32_cmp_le:
 ; CHECK:      vcmpgtuw [[RET:[0-9]+]], 2, 3
-; CHECK-NEXT: vnor     2, [[RET]], [[RET]]
+; CHECK-NEXT: vnot     2, [[RET]]
 
 define <4 x i32> @v4si32_cmp_lt(<4 x i32> %x, <4 x i32> %y) nounwind readnone {
 entry:
@@ -375,7 +375,7 @@ entry:
 }
 ; CHECK-LABEL:      v4si32_cmp_ge:
 ; CHECK:      vcmpgtsw [[RET:[0-9]+]], 3, 2
-; CHECK-NEXT: vnor     2, [[RET]], [[RET]]
+; CHECK-NEXT: vnot     2, [[RET]]
 
 define <4 x i32> @v4ui32_cmp_ge(<4 x i32> %x, <4 x i32> %y) nounwind readnone {
 entry:
@@ -385,7 +385,7 @@ entry:
 }
 ; CHECK-LABEL:      v4ui32_cmp_ge:
 ; CHECK:      vcmpgtuw [[RET:[0-9]+]], 3, 2
-; CHECK-NEXT: vnor     2, [[RET]], [[RET]]
+; CHECK-NEXT: vnot     2, [[RET]]
 
 
 define <8 x i32> @v8si32_cmp(<8 x i32> %x, <8 x i32> %y) nounwind readnone {
@@ -458,7 +458,7 @@ entry:
 }
 ; CHECK-LABEL:      v4f32_cmp_ne:
 ; CHECK:      vcmpeqfp [[RET:[0-9]+]], 2, 3
-; CHECK-NEXT: vnor     2, [[RET]], [[RET]]
+; CHECK-NEXT: vnot     2, [[RET]]
 
 define <4 x float> @v4f32_cmp_le(<4 x float> %x, <4 x float> %y) nounwind readnone {
 entry:
@@ -509,7 +509,7 @@ entry:
 }
 ; CHECK-LABEL: v4f32_cmp_ule:
 ; CHECK:      vcmpgtfp [[RET:[0-9]+]], 2, 3
-; CHECK-NEXT: vnor     2, [[RET]], [[RET]]
+; CHECK-NEXT: vnot     2, [[RET]]
 
 define <4 x float> @v4f32_cmp_ult(<4 x float> %x, <4 x float> %y) nounwind readnone {
 entry:
@@ -520,7 +520,7 @@ entry:
 }
 ; CHECK-LABEL: v4f32_cmp_ult:
 ; CHECK:      vcmpgefp [[RET:[0-9]+]], 2, 3
-; CHECK-NEXT: vnor     2, [[RET]], [[RET]]
+; CHECK-NEXT: vnot     2, [[RET]]
 
 define <4 x float> @v4f32_cmp_uge(<4 x float> %x, <4 x float> %y) nounwind readnone {
 entry:
@@ -531,7 +531,7 @@ entry:
 }
 ; CHECK-LABEL: v4f32_cmp_uge:
 ; CHECK:      vcmpgtfp [[RET:[0-9]+]], 3, 2
-; CHECK-NEXT: vnor     2, [[RET]], [[RET]]
+; CHECK-NEXT: vnot     2, [[RET]]
 
 define <4 x float> @v4f32_cmp_ugt(<4 x float> %x, <4 x float> %y) nounwind readnone {
 entry:
@@ -542,7 +542,7 @@ entry:
 }
 ; CHECK-LABEL: v4f32_cmp_ugt:
 ; CHECK:      vcmpgefp [[RET:[0-9]+]], 3, 2
-; CHECK-NEXT: vnor     2, [[RET]], [[RET]]
+; CHECK-NEXT: vnot     2, [[RET]]
 
 
 define <8 x float> @v8f32_cmp(<8 x float> %x, <8 x float> %y) nounwind readnone {

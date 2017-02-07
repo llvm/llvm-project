@@ -54,6 +54,16 @@ void __le64defined() {}
 void __le64__defined() {}
 #endif
 
+// CHECK: unixdefined
+#ifdef unix
+void unixdefined() {}
+#endif
+
+// CHECK: __unixdefined
+#ifdef __unix
+void __unixdefined() {}
+#endif
+
 // CHECK: __unix__defined
 #ifdef __unix__
 void __unix__defined() {}
