@@ -576,6 +576,7 @@ bool Parser::ParseUsingDeclarator(unsigned Context, UsingDeclarator &D) {
             /*AllowDestructorName=*/true,
             /*AllowConstructorName=*/!(Tok.is(tok::identifier) &&
                                        NextToken().is(tok::equal)),
+            /*AllowDeductionGuide=*/false,
             nullptr, D.TemplateKWLoc, D.Name))
       return true;
   }
@@ -2426,8 +2427,8 @@ Parser::ParseCXXClassMemberDeclaration(AccessSpecifier AS,
       // Try to parse an unqualified-id.
       SourceLocation TemplateKWLoc;
       UnqualifiedId Name;
-      if (ParseUnqualifiedId(SS, false, true, true, nullptr, TemplateKWLoc,
-                             Name)) {
+      if (ParseUnqualifiedId(SS, false, true, true, false, nullptr,
+                             TemplateKWLoc, Name)) {
         SkipUntil(tok::semi);
         return nullptr;
       }

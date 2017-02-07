@@ -47,11 +47,12 @@ protected:
   static PartialMappingIdx BankIDToCopyMapIdx[];
 
   enum ValueMappingIdx {
-    First3OpsIdx = 0,
-    Last3OpsIdx = 18,
+    InvalidIdx = 0,
+    First3OpsIdx = 1,
+    Last3OpsIdx = 19,
     DistanceBetweenRegBanks = 3,
-    FirstCrossRegCpyIdx = 21,
-    LastCrossRegCpyIdx = 33,
+    FirstCrossRegCpyIdx = 22,
+    LastCrossRegCpyIdx = 34,
     DistanceBetweenCrossRegCpy = 2
   };
 

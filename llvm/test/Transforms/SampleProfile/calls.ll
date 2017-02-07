@@ -48,8 +48,8 @@ while.cond:                                       ; preds = %if.end, %entry
   store i32 %inc, i32* %i, align 4, !dbg !14
   %cmp = icmp slt i32 %0, 400000000, !dbg !14
   br i1 %cmp, label %while.body, label %while.end, !dbg !14
-; CHECK: edge while.cond -> while.body probability is 0x7d9eb367 / 0x80000000 = 98.14% [HOT edge]
-; CHECK: edge while.cond -> while.end probability is 0x02614c99 / 0x80000000 = 1.86%
+; CHECK: edge while.cond -> while.body probability is 0x75bcbf1b / 0x80000000 = 91.98% [HOT edge]
+; CHECK: edge while.cond -> while.end probability is 0x0a4340e5 / 0x80000000 = 8.02%
 
 while.body:                                       ; preds = %while.cond
   %1 = load i32, i32* %i, align 4, !dbg !16

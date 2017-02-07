@@ -157,6 +157,6 @@ public:
   }
 };
 
-}
+} // end namespace llvm
 
-#endif
+#endif // LLVM_LIB_TARGET_X86_INSTPRINTER_X86INTELINSTPRINTER_H

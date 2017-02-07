@@ -18,7 +18,7 @@
 //----------------------------------------------------------------------------//
 
 def TypeV4LDST   : IType<9>;
-def TypeNV       : IType<10>;
+def TypeNCJ      : IType<10>;
 def TypeDUPLEX   : IType<11>;
 def TypeCJ       : IType<12>;
 def TypeEXTENDER   : IType<30>;
@@ -61,7 +61,7 @@ class InstDuplex<bits<4> iClass, list<dag> pattern = [],
 
   // *** Must match MCTargetDesc/HexagonBaseInfo.h ***
 
-  let TSFlags{4-0} = Type.Value;
+  let TSFlags{5-0} = Type.Value;
 
   // Predicated instructions.
   bits<1> isPredicated = 0;
@@ -107,7 +107,7 @@ class InstDuplex<bits<4> iClass, list<dag> pattern = [],
 //
 class NVInst<dag outs, dag ins, string asmstr, list<dag> pattern = [],
              string cstr = "", InstrItinClass itin = NCJ_tc_3or4stall_SLOT0>
-  : InstHexagon<outs, ins, asmstr, pattern, cstr, itin, TypeNV>, OpcodeHexagon;
+  : InstHexagon<outs, ins, asmstr, pattern, cstr, itin, TypeNCJ>, OpcodeHexagon;
 
 class NVInst_V4<dag outs, dag ins, string asmstr, list<dag> pattern = [],
                 string cstr = "", InstrItinClass itin = NCJ_tc_3or4stall_SLOT0>

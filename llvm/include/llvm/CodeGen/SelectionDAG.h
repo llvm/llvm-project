@@ -1274,6 +1274,19 @@ public:
   void computeKnownBits(SDValue Op, APInt &KnownZero, APInt &KnownOne,
                         const APInt &DemandedElts, unsigned Depth = 0) const;
 
+  /// Used to represent the possible overflow behavior of an operation.
+  /// Never: the operation cannot overflow.
+  /// Always: the operation will always overflow.
+  /// Sometime: the operation may or may not overflow.
+  enum OverflowKind {
+    OFK_Never,
+    OFK_Sometime,
+    OFK_Always,
+  };
+
+  /// Determine if the result of the addition of 2 node can overflow.
+  OverflowKind computeOverflowKind(SDValue N0, SDValue N1) const;
+
   /// Test if the given value is known to have exactly one bit set. This differs
   /// from computeKnownBits in that it doesn't necessarily determine which bit
   /// is set.

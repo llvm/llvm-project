@@ -291,6 +291,10 @@ DWARFDie::getName(DINameKind Kind) const {
   return nullptr;
 }
 
+uint64_t DWARFDie::getDeclLine() const {
+  return toUnsigned(findRecursively(DW_AT_decl_line), 0);
+}
+
 void DWARFDie::getCallerFrame(uint32_t &CallFile, uint32_t &CallLine,
                               uint32_t &CallColumn) const {
   CallFile = toUnsigned(find(DW_AT_call_file), 0);

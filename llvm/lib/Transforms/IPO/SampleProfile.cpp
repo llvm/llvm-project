@@ -634,7 +634,8 @@ bool SampleProfileLoader::inlineHotFunctions(Function &F) {
       InlineFunctionInfo IFI(nullptr, ACT ? &GetAssumptionCache : nullptr);
       Function *CalledFunction = CallSite(I).getCalledFunction();
       Instruction *DI = I;
-      if (!CalledFunction && !PromotedInsns.count(I)) {
+      if (!CalledFunction && !PromotedInsns.count(I) &&
+          CallSite(I).isIndirectCall()) {
         auto CalleeFunctionName = findCalleeFunctionSamples(*I)->getName();
         const char *Reason = "Callee function not available";
         CalledFunction = F.getParent()->getFunction(CalleeFunctionName);
@@ -643,7 +644,9 @@ bool SampleProfileLoader::inlineHotFunctions(Function &F) {
           // result, we do not have profile info for the branch probability.
           // We set the probability to 80% taken to indicate that the static
           // call is likely taken.
-          DI = promoteIndirectCall(I, CalledFunction, 80, 100);
+          DI = dyn_cast<Instruction>(
+              promoteIndirectCall(I, CalledFunction, 80, 100)
+                  ->stripPointerCasts());
           PromotedInsns.insert(I);
         } else {
           DEBUG(dbgs() << "\nFailed to promote indirect call to "

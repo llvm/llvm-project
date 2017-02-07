@@ -200,8 +200,7 @@ size_t CommunicationKDP::WaitForPacketWithTimeoutMicroSecondsNoLock(
   uint8_t buffer[8192];
   Error error;
 
-  Log *log(ProcessKDPLog::GetLogIfAllCategoriesSet(KDP_LOG_PACKETS |
-                                                   KDP_LOG_VERBOSE));
+  Log *log(ProcessKDPLog::GetLogIfAllCategoriesSet(KDP_LOG_PACKETS));
 
   // Check for a packet from our cache first without trying any reading...
   if (CheckForPacket(NULL, 0, packet))
@@ -216,12 +215,12 @@ size_t CommunicationKDP::WaitForPacketWithTimeoutMicroSecondsNoLock(
                                  : std::chrono::microseconds(timeout_usec),
                              status, &error);
 
-    if (log)
-      log->Printf("%s: Read (buffer, (sizeof(buffer), timeout_usec = 0x%x, "
-                  "status = %s, error = %s) => bytes_read = %" PRIu64,
-                  LLVM_PRETTY_FUNCTION, timeout_usec,
+    LLDB_LOGV(log, 
+      "Read (buffer, sizeof(buffer), timeout_usec = 0x{0:x}, "
+                  "status = {1}, error = {2}) => bytes_read = {4}",
+                  timeout_usec,
                   Communication::ConnectionStatusAsCString(status),
-                  error.AsCString(), (uint64_t)bytes_read);
+                  error, bytes_read);
 
     if (bytes_read > 0) {
       if (CheckForPacket(buffer, bytes_read, packet))

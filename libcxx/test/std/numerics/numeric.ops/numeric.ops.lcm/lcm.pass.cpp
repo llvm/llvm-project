@@ -128,4 +128,11 @@ int main()
     assert((do_test<long, int>(non_cce)));
     assert((do_test<int, long long>(non_cce)));
     assert((do_test<long long, int>(non_cce)));
+
+//  LWG#2837
+    {
+        auto res = std::lcm((int64_t)1234, (int32_t)-2147483648);
+        static_assert( std::is_same<decltype(res), std::common_type<int64_t, int32_t>::type>::value, "");
+        assert(res == -1324997410816LL);
+    }
 }

@@ -1207,8 +1207,9 @@ def warn_cxx98_compat_unelaborated_friend_type : Warning<
 def err_qualified_friend_not_found : Error<
   "no function named %0 with type %1 was found in the specified scope">;
 def err_introducing_special_friend : Error<
-  "must use a qualified name when declaring a %select{constructor|"
-  "destructor|conversion operator}0 as a friend">;
+  "%plural{[0,2]:must use a qualified name when declaring|3:cannot declare}0"
+  " a %select{constructor|destructor|conversion operator|deduction guide}0 "
+  "as a friend">;
 def err_tagless_friend_type_template : Error<
   "friend type templates must use an elaborated type">;
 def err_no_matching_local_friend : Error<
@@ -1960,6 +1961,15 @@ def err_deduced_class_template_compound_type : Error<
   "deduced class template specialization type">;
 def err_deduced_class_template_not_supported : Error<
   "deduction of template arguments for class templates is not yet supported">;
+def err_deduction_guide_no_trailing_return_type : Error<
+  "deduction guide declaration without trailing return type">;
+def err_deduction_guide_with_complex_decl : Error<
+  "cannot specify any part of a return type in the "
+  "declaration of a deduction guide">;
+def err_deduction_guide_name_not_class_template : Error<
+  "cannot specify deduction guide for "
+  "%select{<error>|function template|variable template|alias template|"
+  "template template parameter|dependent template name}0 %1">;
 
 // C++1y deduced return types
 def err_auto_fn_deduction_failure : Error<

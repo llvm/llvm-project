@@ -2035,41 +2035,88 @@
 
 // Begin SystemZ/GCC/Linux tests ----------------
 //
+// RUN: %clang -march=arch8 -E -dM %s -o - 2>&1 \
+// RUN:     -target s390x-unknown-linux \
+// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_SYSTEMZ_ARCH8
 // RUN: %clang -march=z10 -E -dM %s -o - 2>&1 \
 // RUN:     -target s390x-unknown-linux \
-// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_SYSTEMZ_Z10
+// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_SYSTEMZ_ARCH8
 //
-// CHECK_SYSTEMZ_Z10: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_1 1
-// CHECK_SYSTEMZ_Z10: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_2 1
-// CHECK_SYSTEMZ_Z10: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_4 1
-// CHECK_SYSTEMZ_Z10: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_8 1
-// CHECK_SYSTEMZ_Z10: #define __LONG_DOUBLE_128__ 1
-// CHECK_SYSTEMZ_Z10: #define __s390__ 1
-// CHECK_SYSTEMZ_Z10: #define __s390x__ 1
-// CHECK_SYSTEMZ_Z10: #define __zarch__ 1
+// CHECK_SYSTEMZ_ARCH8: #define __ARCH__ 8
+// CHECK_SYSTEMZ_ARCH8: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_1 1
+// CHECK_SYSTEMZ_ARCH8: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_2 1
+// CHECK_SYSTEMZ_ARCH8: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_4 1
+// CHECK_SYSTEMZ_ARCH8: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_8 1
+// CHECK_SYSTEMZ_ARCH8: #define __LONG_DOUBLE_128__ 1
+// CHECK_SYSTEMZ_ARCH8: #define __s390__ 1
+// CHECK_SYSTEMZ_ARCH8: #define __s390x__ 1
+// CHECK_SYSTEMZ_ARCH8: #define __zarch__ 1
 //
-// RUN: %clang -march=zEC12 -E -dM %s -o - 2>&1 \
+// RUN: %clang -march=arch9 -E -dM %s -o - 2>&1 \
 // RUN:     -target s390x-unknown-linux \
-// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_SYSTEMZ_ZEC12
+// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_SYSTEMZ_ARCH9
+// RUN: %clang -march=z196 -E -dM %s -o - 2>&1 \
+// RUN:     -target s390x-unknown-linux \
+// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_SYSTEMZ_ARCH9
+//
+// CHECK_SYSTEMZ_ARCH9: #define __ARCH__ 9
+// CHECK_SYSTEMZ_ARCH9: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_1 1
+// CHECK_SYSTEMZ_ARCH9: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_2 1
+// CHECK_SYSTEMZ_ARCH9: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_4 1
+// CHECK_SYSTEMZ_ARCH9: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_8 1
+// CHECK_SYSTEMZ_ARCH9: #define __LONG_DOUBLE_128__ 1
+// CHECK_SYSTEMZ_ARCH9: #define __s390__ 1
+// CHECK_SYSTEMZ_ARCH9: #define __s390x__ 1
+// CHECK_SYSTEMZ_ARCH9: #define __zarch__ 1
+//
 // RUN: %clang -march=arch10 -E -dM %s -o - 2>&1 \
 // RUN:     -target s390x-unknown-linux \
-// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_SYSTEMZ_ZEC12
+// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_SYSTEMZ_ARCH10
+// RUN: %clang -march=zEC12 -E -dM %s -o - 2>&1 \
+// RUN:     -target s390x-unknown-linux \
+// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_SYSTEMZ_ARCH10
 //
-// CHECK_SYSTEMZ_ZEC12: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_1 1
-// CHECK_SYSTEMZ_ZEC12: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_2 1
-// CHECK_SYSTEMZ_ZEC12: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_4 1
-// CHECK_SYSTEMZ_ZEC12: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_8 1
-// CHECK_SYSTEMZ_ZEC12: #define __HTM__ 1
-// CHECK_SYSTEMZ_ZEC12: #define __LONG_DOUBLE_128__ 1
-// CHECK_SYSTEMZ_ZEC12: #define __s390__ 1
-// CHECK_SYSTEMZ_ZEC12: #define __s390x__ 1
-// CHECK_SYSTEMZ_ZEC12: #define __zarch__ 1
+// CHECK_SYSTEMZ_ARCH10: #define __ARCH__ 10
+// CHECK_SYSTEMZ_ARCH10: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_1 1
+// CHECK_SYSTEMZ_ARCH10: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_2 1
+// CHECK_SYSTEMZ_ARCH10: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_4 1
+// CHECK_SYSTEMZ_ARCH10: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_8 1
+// CHECK_SYSTEMZ_ARCH10: #define __HTM__ 1
+// CHECK_SYSTEMZ_ARCH10: #define __LONG_DOUBLE_128__ 1
+// CHECK_SYSTEMZ_ARCH10: #define __s390__ 1
+// CHECK_SYSTEMZ_ARCH10: #define __s390x__ 1
+// CHECK_SYSTEMZ_ARCH10: #define __zarch__ 1
+//
+// RUN: %clang -march=arch11 -E -dM %s -o - 2>&1 \
+// RUN:     -target s390x-unknown-linux \
+// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_SYSTEMZ_ARCH11
+// RUN: %clang -march=z13 -E -dM %s -o - 2>&1 \
+// RUN:     -target s390x-unknown-linux \
+// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_SYSTEMZ_ARCH11
+//
+// CHECK_SYSTEMZ_ARCH11: #define __ARCH__ 11
+// CHECK_SYSTEMZ_ARCH11: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_1 1
+// CHECK_SYSTEMZ_ARCH11: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_2 1
+// CHECK_SYSTEMZ_ARCH11: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_4 1
+// CHECK_SYSTEMZ_ARCH11: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_8 1
+// CHECK_SYSTEMZ_ARCH11: #define __HTM__ 1
+// CHECK_SYSTEMZ_ARCH11: #define __LONG_DOUBLE_128__ 1
+// CHECK_SYSTEMZ_ARCH11: #define __VX__ 1
+// CHECK_SYSTEMZ_ARCH11: #define __s390__ 1
+// CHECK_SYSTEMZ_ARCH11: #define __s390x__ 1
+// CHECK_SYSTEMZ_ARCH11: #define __zarch__ 1
 //
 // RUN: %clang -mhtm -E -dM %s -o - 2>&1 \
 // RUN:     -target s390x-unknown-linux \
 // RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_SYSTEMZ_HTM
 //
 // CHECK_SYSTEMZ_HTM: #define __HTM__ 1
+//
+// RUN: %clang -mvx -E -dM %s -o - 2>&1 \
+// RUN:     -target s390x-unknown-linux \
+// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_SYSTEMZ_VX
+//
+// CHECK_SYSTEMZ_VX: #define __VX__ 1
 //
 // RUN: %clang -fzvector -E -dM %s -o - 2>&1 \
 // RUN:     -target s390x-unknown-linux \

@@ -229,8 +229,6 @@ int main() {
 // the distribute loop
 // CHECK: call void @__kmpc_for_static_init_4(
 // assignment: vec[i] = t_var;
-// the following is extremely weak, because it assumes ordering of this load with no reference after the call to static_init: fix!!!!
-// CHECK: [[IV_VAL:%.+]] =
 // CHECK: [[T_VAR_PRIV_VAL:%.+]] = load i{{[0-9]+}}, i{{[0-9]+}}* [[T_VAR_PRIV]],
 // CHECK: [[VEC_PTR:%.+]] = getelementptr inbounds [2 x i{{[0-9]+}}], [2 x i{{[0-9]+}}]* [[VEC_PRIV]], i{{[0-9]+}} 0, i{{[0-9]+}} {{.+}}
 // CHECK:  store i{{[0-9]+}} [[T_VAR_PRIV_VAL]], i{{[0-9]+}}* [[VEC_PTR]],

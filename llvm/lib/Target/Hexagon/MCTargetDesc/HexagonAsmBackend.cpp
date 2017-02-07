@@ -9,10 +9,10 @@
 
 #include "Hexagon.h"
 #include "HexagonFixupKinds.h"
-#include "HexagonMCTargetDesc.h"
 #include "MCTargetDesc/HexagonBaseInfo.h"
 #include "MCTargetDesc/HexagonMCChecker.h"
 #include "MCTargetDesc/HexagonMCCodeEmitter.h"
+#include "MCTargetDesc/HexagonMCTargetDesc.h"
 #include "MCTargetDesc/HexagonMCInstrInfo.h"
 #include "MCTargetDesc/HexagonMCShuffler.h"
 #include "llvm/MC/MCAsmBackend.h"
@@ -59,9 +59,10 @@ class HexagonAsmBackend : public MCAsmBackend {
     RF.getFixups() = Fixups;
   }
 public:
-  HexagonAsmBackend(const Target &T, uint8_t OSABI, StringRef CPU) :
-    OSABI(OSABI), MCII (T.createMCInstrInfo()), RelaxTarget(new MCInst *),
-    Extender(nullptr) {}
+  HexagonAsmBackend(const Target &T, const Triple &TT, uint8_t OSABI,
+      StringRef CPU) :
+      OSABI(OSABI), CPU(CPU), MCII(T.createMCInstrInfo()),
+      RelaxTarget(new MCInst *), Extender(nullptr) {}
 
   MCObjectWriter *createObjectWriter(raw_pwrite_stream &OS) const override {
     return createHexagonELFObjectWriter(OS, OSABI, CPU);
@@ -88,101 +89,101 @@ public:
       // This table *must* be in same the order of fixup_* kinds in
       // HexagonFixupKinds.h.
       //
-      // namei                          offset  bits  flags
-      { "fixup_Hexagon_B22_PCREL",        0,    32,   MCFixupKindInfo::FKF_IsPCRel },
-      { "fixup_Hexagon_B15_PCREL",        0,    32,   MCFixupKindInfo::FKF_IsPCRel },
-      { "fixup_Hexagon_B7_PCREL",         0,    32,   MCFixupKindInfo::FKF_IsPCRel },
-      { "fixup_Hexagon_LO16",             0,    32,   0 },
-      { "fixup_Hexagon_HI16",             0,    32,   0 },
-      { "fixup_Hexagon_32",               0,    32,   0 },
-      { "fixup_Hexagon_16",               0,    32,   0 },
-      { "fixup_Hexagon_8",                0,    32,   0 },
-      { "fixup_Hexagon_GPREL16_0",        0,    32,   0 },
-      { "fixup_Hexagon_GPREL16_1",        0,    32,   0 },
-      { "fixup_Hexagon_GPREL16_2",        0,    32,   0 },
-      { "fixup_Hexagon_GPREL16_3",        0,    32,   0 },
-      { "fixup_Hexagon_HL16",             0,    32,   0 },
-      { "fixup_Hexagon_B13_PCREL",        0,    32,   MCFixupKindInfo::FKF_IsPCRel },
-      { "fixup_Hexagon_B9_PCREL",         0,    32,   MCFixupKindInfo::FKF_IsPCRel },
-      { "fixup_Hexagon_B32_PCREL_X",      0,    32,   MCFixupKindInfo::FKF_IsPCRel },
-      { "fixup_Hexagon_32_6_X",           0,    32,   0 },
-      { "fixup_Hexagon_B22_PCREL_X",      0,    32,   MCFixupKindInfo::FKF_IsPCRel },
-      { "fixup_Hexagon_B15_PCREL_X",      0,    32,   MCFixupKindInfo::FKF_IsPCRel },
-      { "fixup_Hexagon_B13_PCREL_X",      0,    32,   MCFixupKindInfo::FKF_IsPCRel },
-      { "fixup_Hexagon_B9_PCREL_X",       0,    32,   MCFixupKindInfo::FKF_IsPCRel },
-      { "fixup_Hexagon_B7_PCREL_X",       0,    32,   MCFixupKindInfo::FKF_IsPCRel },
-      { "fixup_Hexagon_16_X",             0,    32,   0 },
-      { "fixup_Hexagon_12_X",             0,    32,   0 },
-      { "fixup_Hexagon_11_X",             0,    32,   0 },
-      { "fixup_Hexagon_10_X",             0,    32,   0 },
-      { "fixup_Hexagon_9_X",              0,    32,   0 },
-      { "fixup_Hexagon_8_X",              0,    32,   0 },
-      { "fixup_Hexagon_7_X",              0,    32,   0 },
-      { "fixup_Hexagon_6_X",              0,    32,   0 },
-      { "fixup_Hexagon_32_PCREL",         0,    32,   MCFixupKindInfo::FKF_IsPCRel },
-      { "fixup_Hexagon_COPY",             0,    32,   0 },
-      { "fixup_Hexagon_GLOB_DAT",         0,    32,   0 },
-      { "fixup_Hexagon_JMP_SLOT",         0,    32,   0 },
-      { "fixup_Hexagon_RELATIVE",         0,    32,   0 },
-      { "fixup_Hexagon_PLT_B22_PCREL",    0,    32,   MCFixupKindInfo::FKF_IsPCRel },
-      { "fixup_Hexagon_GOTREL_LO16",      0,    32,   0 },
-      { "fixup_Hexagon_GOTREL_HI16",      0,    32,   0 },
-      { "fixup_Hexagon_GOTREL_32",        0,    32,   0 },
-      { "fixup_Hexagon_GOT_LO16",         0,    32,   0 },
-      { "fixup_Hexagon_GOT_HI16",         0,    32,   0 },
-      { "fixup_Hexagon_GOT_32",           0,    32,   0 },
-      { "fixup_Hexagon_GOT_16",           0,    32,   0 },
-      { "fixup_Hexagon_DTPMOD_32",        0,    32,   0 },
-      { "fixup_Hexagon_DTPREL_LO16",      0,    32,   0 },
-      { "fixup_Hexagon_DTPREL_HI16",      0,    32,   0 },
-      { "fixup_Hexagon_DTPREL_32",        0,    32,   0 },
-      { "fixup_Hexagon_DTPREL_16",        0,    32,   0 },
-      { "fixup_Hexagon_GD_PLT_B22_PCREL", 0,    32,   MCFixupKindInfo::FKF_IsPCRel },
-      { "fixup_Hexagon_LD_PLT_B22_PCREL", 0,    32,   MCFixupKindInfo::FKF_IsPCRel },
-      { "fixup_Hexagon_GD_GOT_LO16",      0,    32,   0 },
-      { "fixup_Hexagon_GD_GOT_HI16",      0,    32,   0 },
-      { "fixup_Hexagon_GD_GOT_32",        0,    32,   0 },
-      { "fixup_Hexagon_GD_GOT_16",        0,    32,   0 },
-      { "fixup_Hexagon_LD_GOT_LO16",      0,    32,   0 },
-      { "fixup_Hexagon_LD_GOT_HI16",      0,    32,   0 },
-      { "fixup_Hexagon_LD_GOT_32",        0,    32,   0 },
-      { "fixup_Hexagon_LD_GOT_16",        0,    32,   0 },
-      { "fixup_Hexagon_IE_LO16",          0,    32,   0 },
-      { "fixup_Hexagon_IE_HI16",          0,    32,   0 },
-      { "fixup_Hexagon_IE_32",            0,    32,   0 },
-      { "fixup_Hexagon_IE_16",            0,    32,   0 },
-      { "fixup_Hexagon_IE_GOT_LO16",      0,    32,   0 },
-      { "fixup_Hexagon_IE_GOT_HI16",      0,    32,   0 },
-      { "fixup_Hexagon_IE_GOT_32",        0,    32,   0 },
-      { "fixup_Hexagon_IE_GOT_16",        0,    32,   0 },
-      { "fixup_Hexagon_TPREL_LO16",       0,    32,   0 },
-      { "fixup_Hexagon_TPREL_HI16",       0,    32,   0 },
-      { "fixup_Hexagon_TPREL_32",         0,    32,   0 },
-      { "fixup_Hexagon_TPREL_16",         0,    32,   0 },
-      { "fixup_Hexagon_6_PCREL_X",        0,    32,   MCFixupKindInfo::FKF_IsPCRel },
-      { "fixup_Hexagon_GOTREL_32_6_X",    0,    32,   0 },
-      { "fixup_Hexagon_GOTREL_16_X",      0,    32,   0 },
-      { "fixup_Hexagon_GOTREL_11_X",      0,    32,   0 },
-      { "fixup_Hexagon_GOT_32_6_X",       0,    32,   0 },
-      { "fixup_Hexagon_GOT_16_X",         0,    32,   0 },
-      { "fixup_Hexagon_GOT_11_X",         0,    32,   0 },
-      { "fixup_Hexagon_DTPREL_32_6_X",    0,    32,   0 },
-      { "fixup_Hexagon_DTPREL_16_X",      0,    32,   0 },
-      { "fixup_Hexagon_DTPREL_11_X",      0,    32,   0 },
-      { "fixup_Hexagon_GD_GOT_32_6_X",    0,    32,   0 },
-      { "fixup_Hexagon_GD_GOT_16_X",      0,    32,   0 },
-      { "fixup_Hexagon_GD_GOT_11_X",      0,    32,   0 },
-      { "fixup_Hexagon_LD_GOT_32_6_X",    0,    32,   0 },
-      { "fixup_Hexagon_LD_GOT_16_X",      0,    32,   0 },
-      { "fixup_Hexagon_LD_GOT_11_X",      0,    32,   0 },
-      { "fixup_Hexagon_IE_32_6_X",        0,    32,   0 },
-      { "fixup_Hexagon_IE_16_X",          0,    32,   0 },
-      { "fixup_Hexagon_IE_GOT_32_6_X",    0,    32,   0 },
-      { "fixup_Hexagon_IE_GOT_16_X",      0,    32,   0 },
-      { "fixup_Hexagon_IE_GOT_11_X",      0,    32,   0 },
-      { "fixup_Hexagon_TPREL_32_6_X",     0,    32,   0 },
-      { "fixup_Hexagon_TPREL_16_X",       0,    32,   0 },
-      { "fixup_Hexagon_TPREL_11_X",       0,    32,   0 }
+      // namei                          offset  bits    flags
+      { "fixup_Hexagon_B22_PCREL",      0,      32,     MCFixupKindInfo::FKF_IsPCRel },
+      { "fixup_Hexagon_B15_PCREL",      0,      32,     MCFixupKindInfo::FKF_IsPCRel },
+      { "fixup_Hexagon_B7_PCREL",       0,      32,     MCFixupKindInfo::FKF_IsPCRel },
+      { "fixup_Hexagon_LO16",           0,      32,     0 },
+      { "fixup_Hexagon_HI16",           0,      32,     0 },
+      { "fixup_Hexagon_32",             0,      32,     0 },
+      { "fixup_Hexagon_16",             0,      32,     0 },
+      { "fixup_Hexagon_8",              0,      32,     0 },
+      { "fixup_Hexagon_GPREL16_0",      0,      32,     0 },
+      { "fixup_Hexagon_GPREL16_1",      0,      32,     0 },
+      { "fixup_Hexagon_GPREL16_2",      0,      32,     0 },
+      { "fixup_Hexagon_GPREL16_3",      0,      32,     0 },
+      { "fixup_Hexagon_HL16",           0,      32,     0 },
+      { "fixup_Hexagon_B13_PCREL",      0,      32,     MCFixupKindInfo::FKF_IsPCRel },
+      { "fixup_Hexagon_B9_PCREL",       0,      32,     MCFixupKindInfo::FKF_IsPCRel },
+      { "fixup_Hexagon_B32_PCREL_X",    0,      32,     MCFixupKindInfo::FKF_IsPCRel },
+      { "fixup_Hexagon_32_6_X",         0,      32,     0 },
+      { "fixup_Hexagon_B22_PCREL_X",    0,      32,     MCFixupKindInfo::FKF_IsPCRel },
+      { "fixup_Hexagon_B15_PCREL_X",    0,      32,     MCFixupKindInfo::FKF_IsPCRel },
+      { "fixup_Hexagon_B13_PCREL_X",    0,      32,     MCFixupKindInfo::FKF_IsPCRel },
+      { "fixup_Hexagon_B9_PCREL_X",     0,      32,     MCFixupKindInfo::FKF_IsPCRel },
+      { "fixup_Hexagon_B7_PCREL_X",     0,      32,     MCFixupKindInfo::FKF_IsPCRel },
+      { "fixup_Hexagon_16_X",           0,      32,     0 },
+      { "fixup_Hexagon_12_X",           0,      32,     0 },
+      { "fixup_Hexagon_11_X",           0,      32,     0 },
+      { "fixup_Hexagon_10_X",           0,      32,     0 },
+      { "fixup_Hexagon_9_X",            0,      32,     0 },
+      { "fixup_Hexagon_8_X",            0,      32,     0 },
+      { "fixup_Hexagon_7_X",            0,      32,     0 },
+      { "fixup_Hexagon_6_X",            0,      32,     0 },
+      { "fixup_Hexagon_32_PCREL",       0,      32,     MCFixupKindInfo::FKF_IsPCRel },
+      { "fixup_Hexagon_COPY",           0,      32,     0 },
+      { "fixup_Hexagon_GLOB_DAT",       0,      32,     0 },
+      { "fixup_Hexagon_JMP_SLOT",       0,      32,     0 },
+      { "fixup_Hexagon_RELATIVE",       0,      32,     0 },
+      { "fixup_Hexagon_PLT_B22_PCREL",  0,      32,     MCFixupKindInfo::FKF_IsPCRel },
+      { "fixup_Hexagon_GOTREL_LO16",    0,      32,     0 },
+      { "fixup_Hexagon_GOTREL_HI16",    0,      32,     0 },
+      { "fixup_Hexagon_GOTREL_32",      0,      32,     0 },
+      { "fixup_Hexagon_GOT_LO16",       0,      32,     0 },
+      { "fixup_Hexagon_GOT_HI16",       0,      32,     0 },
+      { "fixup_Hexagon_GOT_32",         0,      32,     0 },
+      { "fixup_Hexagon_GOT_16",         0,      32,     0 },
+      { "fixup_Hexagon_DTPMOD_32",      0,      32,     0 },
+      { "fixup_Hexagon_DTPREL_LO16",    0,      32,     0 },
+      { "fixup_Hexagon_DTPREL_HI16",    0,      32,     0 },
+      { "fixup_Hexagon_DTPREL_32",      0,      32,     0 },
+      { "fixup_Hexagon_DTPREL_16",      0,      32,     0 },
+      { "fixup_Hexagon_GD_PLT_B22_PCREL",0,     32,     MCFixupKindInfo::FKF_IsPCRel },
+      { "fixup_Hexagon_LD_PLT_B22_PCREL",0,     32,     MCFixupKindInfo::FKF_IsPCRel },
+      { "fixup_Hexagon_GD_GOT_LO16",    0,      32,     0 },
+      { "fixup_Hexagon_GD_GOT_HI16",    0,      32,     0 },
+      { "fixup_Hexagon_GD_GOT_32",      0,      32,     0 },
+      { "fixup_Hexagon_GD_GOT_16",      0,      32,     0 },
+      { "fixup_Hexagon_LD_GOT_LO16",    0,      32,     0 },
+      { "fixup_Hexagon_LD_GOT_HI16",    0,      32,     0 },
+      { "fixup_Hexagon_LD_GOT_32",      0,      32,     0 },
+      { "fixup_Hexagon_LD_GOT_16",      0,      32,     0 },
+      { "fixup_Hexagon_IE_LO16",        0,      32,     0 },
+      { "fixup_Hexagon_IE_HI16",        0,      32,     0 },
+      { "fixup_Hexagon_IE_32",          0,      32,     0 },
+      { "fixup_Hexagon_IE_16",          0,      32,     0 },
+      { "fixup_Hexagon_IE_GOT_LO16",    0,      32,     0 },
+      { "fixup_Hexagon_IE_GOT_HI16",    0,      32,     0 },
+      { "fixup_Hexagon_IE_GOT_32",      0,      32,     0 },
+      { "fixup_Hexagon_IE_GOT_16",      0,      32,     0 },
+      { "fixup_Hexagon_TPREL_LO16",     0,      32,     0 },
+      { "fixup_Hexagon_TPREL_HI16",     0,      32,     0 },
+      { "fixup_Hexagon_TPREL_32",       0,      32,     0 },
+      { "fixup_Hexagon_TPREL_16",       0,      32,     0 },
+      { "fixup_Hexagon_6_PCREL_X",      0,      32,     MCFixupKindInfo::FKF_IsPCRel },
+      { "fixup_Hexagon_GOTREL_32_6_X",  0,      32,     0 },
+      { "fixup_Hexagon_GOTREL_16_X",    0,      32,     0 },
+      { "fixup_Hexagon_GOTREL_11_X",    0,      32,     0 },
+      { "fixup_Hexagon_GOT_32_6_X",     0,      32,     0 },
+      { "fixup_Hexagon_GOT_16_X",       0,      32,     0 },
+      { "fixup_Hexagon_GOT_11_X",       0,      32,     0 },
+      { "fixup_Hexagon_DTPREL_32_6_X",  0,      32,     0 },
+      { "fixup_Hexagon_DTPREL_16_X",    0,      32,     0 },
+      { "fixup_Hexagon_DTPREL_11_X",    0,      32,     0 },
+      { "fixup_Hexagon_GD_GOT_32_6_X",  0,      32,     0 },
+      { "fixup_Hexagon_GD_GOT_16_X",    0,      32,     0 },
+      { "fixup_Hexagon_GD_GOT_11_X",    0,      32,     0 },
+      { "fixup_Hexagon_LD_GOT_32_6_X",  0,      32,     0 },
+      { "fixup_Hexagon_LD_GOT_16_X",    0,      32,     0 },
+      { "fixup_Hexagon_LD_GOT_11_X",    0,      32,     0 },
+      { "fixup_Hexagon_IE_32_6_X",      0,      32,     0 },
+      { "fixup_Hexagon_IE_16_X",        0,      32,     0 },
+      { "fixup_Hexagon_IE_GOT_32_6_X",  0,      32,     0 },
+      { "fixup_Hexagon_IE_GOT_16_X",    0,      32,     0 },
+      { "fixup_Hexagon_IE_GOT_11_X",    0,      32,     0 },
+      { "fixup_Hexagon_TPREL_32_6_X",   0,      32,     0 },
+      { "fixup_Hexagon_TPREL_16_X",     0,      32,     0 },
+      { "fixup_Hexagon_TPREL_11_X",     0,      32,     0 }
     };
 
     if (Kind < FirstTargetFixupKind)
@@ -526,7 +527,7 @@ public:
     if (llvm::HexagonMCInstrInfo::getType(*MCII, HMI) == HexagonII::TypeJ ||
         (llvm::HexagonMCInstrInfo::getType(*MCII, HMI) == HexagonII::TypeCJ &&
          MCID.isBranch()) ||
-        (llvm::HexagonMCInstrInfo::getType(*MCII, HMI) == HexagonII::TypeNV &&
+        (llvm::HexagonMCInstrInfo::getType(*MCII, HMI) == HexagonII::TypeNCJ &&
          MCID.isBranch()) ||
         (llvm::HexagonMCInstrInfo::getType(*MCII, HMI) == HexagonII::TypeCR &&
          HMI.getOpcode() != Hexagon::C4_addipc))
@@ -723,7 +724,8 @@ public:
                   Size = 0;
                 }
               }
-              bool Error = HexagonMCShuffle(*MCII, RF.getSubtargetInfo(), Inst);
+              bool Error = HexagonMCShuffle(true, *MCII, RF.getSubtargetInfo(),
+                                            Inst);
               //assert(!Error);
               (void)Error;
               ReplaceInstruction(Asm.getEmitter(), RF, Inst);
@@ -738,15 +740,17 @@ public:
       }
     }
   }
-};
-} // end anonymous namespace
+}; // class HexagonAsmBackend
 
-namespace llvm {
-MCAsmBackend *createHexagonAsmBackend(Target const &T,
+} // namespace
+
+// MCAsmBackend
+MCAsmBackend *llvm::createHexagonAsmBackend(Target const &T,
                                       MCRegisterInfo const & /*MRI*/,
                                       const Triple &TT, StringRef CPU,
                                       const MCTargetOptions &Options) {
   uint8_t OSABI = MCELFObjectTargetWriter::getOSABI(TT.getOS());
-  return new HexagonAsmBackend(T, OSABI, CPU);
-}
+
+  StringRef CPUString = Hexagon_MC::selectHexagonCPU(TT, CPU);
+  return new HexagonAsmBackend(T, TT, OSABI, CPUString);
 }

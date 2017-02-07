@@ -23,6 +23,7 @@ namespace llvm {
 
 namespace clang {
   class ASTContext;
+  class CXXDeductionGuideNameExtra;
   class CXXLiteralOperatorIdName;
   class CXXOperatorIdName;
   class CXXSpecialName;
@@ -32,6 +33,7 @@ namespace clang {
   enum OverloadedOperatorKind : int;
   struct PrintingPolicy;
   class QualType;
+  class TemplateDecl;
   class Type;
   class TypeSourceInfo;
   class UsingDirectiveDecl;
@@ -56,6 +58,7 @@ public:
     CXXConstructorName,
     CXXDestructorName,
     CXXConversionFunctionName,
+    CXXDeductionGuideName,
     CXXOperatorName,
     CXXLiteralOperatorName,
     CXXUsingDirective
@@ -118,42 +121,36 @@ private:
   CXXSpecialName *getAsCXXSpecialName() const {
     NameKind Kind = getNameKind();
     if (Kind >= CXXConstructorName && Kind <= CXXConversionFunctionName)
-      return reinterpret_cast<CXXSpecialName *>(Ptr & ~PtrMask);
+      return reinterpret_cast<CXXSpecialName *>(getExtra());
+    return nullptr;
+  }
+
+  /// If the stored pointer is actually a CXXDeductionGuideNameExtra, returns a
+  /// pointer to it. Otherwise, returns a NULL pointer.
+  CXXDeductionGuideNameExtra *getAsCXXDeductionGuideNameExtra() const {
+    if (getNameKind() == CXXDeductionGuideName)
+      return reinterpret_cast<CXXDeductionGuideNameExtra *>(getExtra());
     return nullptr;
   }
 
   /// getAsCXXOperatorIdName
   CXXOperatorIdName *getAsCXXOperatorIdName() const {
     if (getNameKind() == CXXOperatorName)
-      return reinterpret_cast<CXXOperatorIdName *>(Ptr & ~PtrMask);
+      return reinterpret_cast<CXXOperatorIdName *>(getExtra());
     return nullptr;
   }
 
   CXXLiteralOperatorIdName *getAsCXXLiteralOperatorIdName() const {
     if (getNameKind() == CXXLiteralOperatorName)
-      return reinterpret_cast<CXXLiteralOperatorIdName *>(Ptr & ~PtrMask);
+      return reinterpret_cast<CXXLiteralOperatorIdName *>(getExtra());
     return nullptr;
   }
 
   // Construct a declaration name from the name of a C++ constructor,
   // destructor, or conversion function.
-  DeclarationName(CXXSpecialName *Name)
+  DeclarationName(DeclarationNameExtra *Name)
     : Ptr(reinterpret_cast<uintptr_t>(Name)) {
-    assert((Ptr & PtrMask) == 0 && "Improperly aligned CXXSpecialName");
-    Ptr |= StoredDeclarationNameExtra;
-  }
-
-  // Construct a declaration name from the name of a C++ overloaded
-  // operator.
-  DeclarationName(CXXOperatorIdName *Name)
-    : Ptr(reinterpret_cast<uintptr_t>(Name)) {
-    assert((Ptr & PtrMask) == 0 && "Improperly aligned CXXOperatorId");
-    Ptr |= StoredDeclarationNameExtra;
-  }
-
-  DeclarationName(CXXLiteralOperatorIdName *Name)
-    : Ptr(reinterpret_cast<uintptr_t>(Name)) {
-    assert((Ptr & PtrMask) == 0 && "Improperly aligned CXXLiteralOperatorId");
+    assert((Ptr & PtrMask) == 0 && "Improperly aligned DeclarationNameExtra");
     Ptr |= StoredDeclarationNameExtra;
   }
 
@@ -252,6 +249,10 @@ public:
   /// type associated with that name.
   QualType getCXXNameType() const;
 
+  /// If this name is the name of a C++ deduction guide, return the
+  /// template associated with that name.
+  TemplateDecl *getCXXDeductionGuideTemplate() const;
+
   /// getCXXOverloadedOperator - If this name is the name of an
   /// overloadable operator in C++ (e.g., @c operator+), retrieve the
   /// kind of overloaded operator.
@@ -346,6 +347,7 @@ class DeclarationNameTable {
   void *CXXSpecialNamesImpl; // Actually a FoldingSet<CXXSpecialName> *
   CXXOperatorIdName *CXXOperatorNames; // Operator names
   void *CXXLiteralOperatorNames; // Actually a CXXOperatorIdName*
+  void *CXXDeductionGuideNames; // FoldingSet<CXXDeductionGuideNameExtra> *
 
   DeclarationNameTable(const DeclarationNameTable&) = delete;
   void operator=(const DeclarationNameTable&) = delete;
@@ -367,6 +369,9 @@ public:
   /// getCXXDestructorName - Returns the name of a C++ destructor
   /// for the given Type.
   DeclarationName getCXXDestructorName(CanQualType Ty);
+
+  /// Returns the name of a C++ deduction guide for the given template.
+  DeclarationName getCXXDeductionGuideName(TemplateDecl *TD);
 
   /// getCXXConversionFunctionName - Returns the name of a C++
   /// conversion function for the given Type.

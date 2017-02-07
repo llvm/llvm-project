@@ -776,6 +776,19 @@ void LinkerScript<ELFT>::assignAddresses(std::vector<PhdrEntry> &Phdrs) {
   // Assign addresses as instructed by linker script SECTIONS sub-commands.
   Dot = 0;
 
+  // A symbol can be assigned before any section is mentioned in the linker
+  // script. In an DSO, the symbol values are addresses, so the only important
+  // section values are:
+  // * SHN_UNDEF
+  // * SHN_ABS
+  // * Any value meaning a regular section.
+  // To handle that, create a dummy aether section that fills the void before
+  // the linker scripts switches to another section. It has an index of one
+  // which will map to whatever the first actual section is.
+  auto *Aether = make<OutputSectionBase>("", 0, SHF_ALLOC);
+  Aether->SectionIndex = 1;
+  switchTo(Aether);
+
   for (const std::unique_ptr<BaseCommand> &Base : Opt.Commands) {
     if (auto *Cmd = dyn_cast<SymbolAssignment>(Base.get())) {
       if (Cmd->Name == ".") {
@@ -973,14 +986,9 @@ template <class ELFT> bool LinkerScript<ELFT>::isAbsolute(StringRef S) {
 // to find suitable section for it as well.
 template <class ELFT>
 const OutputSectionBase *LinkerScript<ELFT>::getSymbolSection(StringRef S) {
-  SymbolBody *Sym = Symtab<ELFT>::X->find(S);
-  if (!Sym) {
-    if (OutputSections->empty())
-      return nullptr;
-    return CurOutSec ? CurOutSec : (*OutputSections)[0];
-  }
-
-  return SymbolTableSection<ELFT>::getOutputSection(Sym);
+  if (SymbolBody *Sym = Symtab<ELFT>::X->find(S))
+    return SymbolTableSection<ELFT>::getOutputSection(Sym);
+  return CurOutSec;
 }
 
 // Returns indices of ELF headers containing specific section, identified

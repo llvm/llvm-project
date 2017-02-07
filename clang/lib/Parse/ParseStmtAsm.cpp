@@ -224,6 +224,7 @@ ExprResult Parser::ParseMSAsmIdentifier(llvm::SmallVectorImpl<Token> &LineToks,
                                  /*EnteringContext=*/false,
                                  /*AllowDestructorName=*/false,
                                  /*AllowConstructorName=*/false,
+                                 /*AllowDeductionGuide=*/false,
                                  /*ObjectType=*/nullptr, TemplateKWLoc, Id);
     // Perform the lookup.
     Result = Actions.LookupInlineAsmIdentifier(SS, TemplateKWLoc, Id, Info,

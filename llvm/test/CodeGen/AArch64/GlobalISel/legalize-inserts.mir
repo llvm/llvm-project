@@ -1,0 +1,100 @@
+# RUN: llc -O0 -run-pass=legalizer -global-isel %s -o - 2>&1 | FileCheck %s
+
+--- |
+  target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
+  target triple = "aarch64--"
+  define void @test_inserts_1() { ret void }
+  define void @test_inserts_2() { ret void }
+  define void @test_inserts_3() { ret void }
+  define void @test_inserts_4() { ret void }
+...
+
+---
+name:            test_inserts_1
+body: |
+  bb.0:
+    liveins: %w0
+
+      ; Low part of insertion wipes out the old register entirely, so %0 gets
+      ; forwarded to the G_STORE. Hi part is unchanged so (split) G_LOAD gets
+      ; forwarded.
+    ; CHECK-LABEL: name: test_inserts_1
+    ; CHECK: [[LO:%[0-9]+]](s64) = G_LOAD
+    ; CHECK: [[HI:%[0-9]+]](s64) = G_LOAD
+    ; CHECK: G_STORE %0(s64)
+    ; CHECK: G_STORE [[HI]]
+    %0:_(s64) = COPY %x0
+    %1:_(s32) = COPY %w1
+    %2:_(p0) = COPY %x2
+    %3:_(s128) = G_LOAD %2(p0) :: (load 16)
+    %4:_(s128) = G_INSERT %3(s128), %0(s64), 0
+    G_STORE %4(s128), %2(p0) :: (store 16)
+    RET_ReallyLR
+...
+
+---
+name:            test_inserts_2
+body: |
+  bb.0:
+    liveins: %w0
+
+      ; Low insertion wipes out the old register entirely, so %0 gets forwarded
+      ; to the G_STORE again. Second insertion is real.
+    ; CHECK-LABEL: name: test_inserts_2
+    ; CHECK: [[LO:%[0-9]+]](s64) = G_LOAD
+    ; CHECK: [[HI:%[0-9]+]](s64) = G_LOAD
+    ; CHECK: [[NEWHI:%[0-9]+]](s64) = G_INSERT [[HI]](s64), %1(s32), 0
+    ; CHECK: G_STORE %0(s64)
+    ; CHECK: G_STORE [[NEWHI]]
+    %0:_(s64) = COPY %x0
+    %1:_(s32) = COPY %w1
+    %2:_(p0) = COPY %x2
+    %3:_(s128) = G_LOAD %2(p0) :: (load 16)
+    %4:_(s128) = G_INSERT %3(s128), %0(s64), 0
+    %5:_(s128) = G_INSERT %4(s128), %1(s32), 64
+    G_STORE %5(s128), %2(p0) :: (store 16)
+    RET_ReallyLR
+...
+
+---
+name:            test_inserts_3
+body: |
+  bb.0:
+    liveins: %w0
+
+      ; I'm not entirely convinced inserting a p0 into an s64 is valid, but it's
+      ; certainly better than the alternative of directly forwarding the value
+      ; which would cause a nasty type mismatch.
+    ; CHECK-LABEL: name: test_inserts_3
+    ; CHECK: [[LO:%[0-9]+]](s64) = G_LOAD
+    ; CHECK: [[HI:%[0-9]+]](s64) = G_LOAD
+    ; CHECK: [[NEWLO:%[0-9]+]](s64) = G_INSERT [[LO]](s64), %0(p0), 0
+    ; CHECK: G_STORE [[NEWLO]](s64)
+    ; CHECK: G_STORE [[HI]]
+    %0:_(p0) = COPY %x0
+    %1:_(s32) = COPY %w1
+    %2:_(p0) = COPY %x2
+    %3:_(s128) = G_LOAD %2(p0) :: (load 16)
+    %4:_(s128) = G_INSERT %3(s128), %0(p0), 0
+    G_STORE %4(s128), %2(p0) :: (store 16)
+    RET_ReallyLR
+...
+
+---
+name:            test_inserts_4
+body: |
+  bb.0:
+    liveins: %w0
+
+      ; A narrow insert gets surrounded by a G_ANYEXT/G_TRUNC pair.
+    ; CHECK-LABEL: name: test_inserts_4
+    ; CHECK: [[VALEXT:%[0-9]+]](s32) = G_ANYEXT %1(s8)
+    ; CHECK: [[VAL:%[0-9]+]](s32) = G_INSERT [[VALEXT]](s32), %0(s1), 0
+    ; CHECK: %3(s8) = G_TRUNC [[VAL]](s32)
+    %0:_(s1) = COPY %w0
+    %1:_(s8) = COPY %w1
+    %2:_(p0) = COPY %x2
+    %3:_(s8) = G_INSERT %1(s8), %0(s1), 0
+    G_STORE %3(s8), %2(p0) :: (store 1)
+    RET_ReallyLR
+...

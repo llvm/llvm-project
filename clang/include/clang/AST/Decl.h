@@ -1931,6 +1931,12 @@ public:
   bool isDeletedAsWritten() const { return IsDeleted && !IsDefaulted; }
   void setDeletedAsWritten(bool D = true) { IsDeleted = D; }
 
+  /// \brief Determines whether this function is a deduction guide.
+  bool isDeductionGuide() const {
+    return getDeclName().getNameKind() ==
+           DeclarationName::CXXDeductionGuideName;
+  }
+
   /// \brief Determines whether this function is "main", which is the
   /// entry point into an executable program.
   bool isMain() const;

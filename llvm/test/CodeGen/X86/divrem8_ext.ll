@@ -206,8 +206,7 @@ define i64 @pr25754(i8 %a, i8 %c) {
 ; X32-NEXT:    movzbl %ah, %ecx # NOREX
 ; X32-NEXT:    movzbl %al, %eax
 ; X32-NEXT:    addl %ecx, %eax
-; X32-NEXT:    sbbl %edx, %edx
-; X32-NEXT:    andl $1, %edx
+; X32-NEXT:    xorl %edx, %edx
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: pr25754:

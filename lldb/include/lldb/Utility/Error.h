@@ -12,6 +12,7 @@
 #if defined(__cplusplus)
 
 #include "llvm/Support/DataTypes.h"
+#include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/FormatVariadic.h"
 
 #include <cstdarg>
@@ -23,8 +24,6 @@
 #include "llvm/Support/FormatVariadic.h"
 
 namespace lldb_private {
-
-class Log;
 
 //----------------------------------------------------------------------
 /// @class Error Error.h "lldb/Utility/Error.h"
@@ -148,48 +147,6 @@ public:
   lldb::ErrorType GetType() const;
 
   //------------------------------------------------------------------
-  /// Log an error to Log().
-  ///
-  /// Log the error given a formatted string \a format. If the this
-  /// object contains an error code, update the error string to
-  /// contain the prefix "error: ", followed by the formatted string,
-  /// followed by the error value and any string that describes the
-  /// error value. This allows more context to be given to an error
-  /// string that remains cached in this object. Logging always occurs
-  /// even when the error code contains a non-error value.
-  ///
-  /// @param[in] format
-  ///     A printf style format string.
-  ///
-  /// @param[in] ...
-  ///     Variable arguments that are needed for the printf style
-  ///     format string \a format.
-  //------------------------------------------------------------------
-  void PutToLog(Log *log, const char *format, ...)
-      __attribute__((format(printf, 3, 4)));
-
-  //------------------------------------------------------------------
-  /// Log an error to Log() if the error value is an error.
-  ///
-  /// Log the error given a formatted string \a format only if the
-  /// error value in this object describes an error condition. If the
-  /// this object contains an error, update the error string to
-  /// contain the prefix "error: " followed by the formatted string,
-  /// followed by the error value and any string that describes the
-  /// error value. This allows more context to be given to an error
-  /// string that remains cached in this object.
-  ///
-  /// @param[in] format
-  ///     A printf style format string.
-  ///
-  /// @param[in] ...
-  ///     Variable arguments that are needed for the printf style
-  ///     format string \a format.
-  //------------------------------------------------------------------
-  void LogIfError(Log *log, const char *format, ...)
-      __attribute__((format(printf, 3, 4)));
-
-  //------------------------------------------------------------------
   /// Set accessor from a kern_return_t.
   ///
   /// Set accesssor for the error value to \a err and the error type
@@ -304,10 +261,7 @@ protected:
 namespace llvm {
 template <> struct format_provider<lldb_private::Error> {
   static void format(const lldb_private::Error &error, llvm::raw_ostream &OS,
-                     llvm::StringRef Options) {
-    llvm::format_provider<llvm::StringRef>::format(error.AsCString(), OS,
-                                                   Options);
-  }
+                     llvm::StringRef Options);
 };
 }
 

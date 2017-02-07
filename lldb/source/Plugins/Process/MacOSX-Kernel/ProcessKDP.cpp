@@ -39,6 +39,8 @@
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/StringExtractor.h"
 
+#include "llvm/Support/Threading.h"
+
 #define USEC_PER_SEC 1000000
 
 // Project includes
@@ -516,8 +518,7 @@ bool ProcessKDP::UpdateThreadList(ThreadList &old_thread_list,
                                   ThreadList &new_thread_list) {
   // locker will keep a mutex locked until it goes out of scope
   Log *log(ProcessKDPLog::GetLogIfAllCategoriesSet(KDP_LOG_THREAD));
-  if (log && log->GetMask().Test(KDP_LOG_VERBOSE))
-    log->Printf("ProcessKDP::%s (pid = %" PRIu64 ")", __FUNCTION__, GetID());
+  LLDB_LOGV(log, "pid = {0}", GetID());
 
   // Even though there is a CPU mask, it doesn't mean we can see each CPU
   // individually, there is really only one. Lets call this thread 1.
@@ -718,9 +719,9 @@ Error ProcessKDP::DoSignal(int signo) {
 }
 
 void ProcessKDP::Initialize() {
-  static std::once_flag g_once_flag;
+  static llvm::once_flag g_once_flag;
 
-  std::call_once(g_once_flag, []() {
+  llvm::call_once(g_once_flag, []() {
     PluginManager::RegisterPlugin(GetPluginNameStatic(),
                                   GetPluginDescriptionStatic(), CreateInstance,
                                   DebuggerInitialize);

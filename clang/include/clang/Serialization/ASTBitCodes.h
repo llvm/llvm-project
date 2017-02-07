@@ -1628,7 +1628,8 @@ namespace clang {
 
       IdentifierInfo *getIdentifier() const {
         assert(Kind == DeclarationName::Identifier ||
-               Kind == DeclarationName::CXXLiteralOperatorName);
+               Kind == DeclarationName::CXXLiteralOperatorName ||
+               Kind == DeclarationName::CXXDeductionGuideName);
         return (IdentifierInfo *)Data;
       }
       Selector getSelector() const {

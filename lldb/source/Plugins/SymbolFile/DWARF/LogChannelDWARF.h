@@ -16,7 +16,6 @@
 // Project includes
 #include "lldb/Core/Log.h"
 
-#define DWARF_LOG_VERBOSE (1u << 0)
 #define DWARF_LOG_DEBUG_INFO (1u << 1)
 #define DWARF_LOG_DEBUG_LINE (1u << 2)
 #define DWARF_LOG_DEBUG_PUBNAMES (1u << 3)

@@ -430,7 +430,7 @@ int main_gdbserver(int argc, char *argv[]) {
               LLDB_LOG_OPTION_PREPEND_FILE_FUNCTION))
     return -1;
 
-  Log *log(lldb_private::GetLogIfAnyCategoriesSet(GDBR_LOG_VERBOSE));
+  Log *log(lldb_private::GetLogIfAnyCategoriesSet(GDBR_LOG_PROCESS));
   if (log) {
     log->Printf("lldb-server launch");
     for (int i = 0; i < argc; i++) {

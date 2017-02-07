@@ -41,6 +41,7 @@ LegalizerInfo::LegalizerInfo() : TablesInitialized(false) {
   DefaultActions[TargetOpcode::G_STORE] = NarrowScalar;
 
   DefaultActions[TargetOpcode::G_BRCOND] = WidenScalar;
+  DefaultActions[TargetOpcode::G_INSERT] = NarrowScalar;
 }
 
 void LegalizerInfo::computeTables() {

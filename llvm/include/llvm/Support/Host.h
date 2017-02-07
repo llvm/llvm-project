@@ -32,9 +32,9 @@ namespace llvm {
 namespace sys {
 
 #if defined(BYTE_ORDER) && defined(BIG_ENDIAN) && BYTE_ORDER == BIG_ENDIAN
-  static const bool IsBigEndianHost = true;
+constexpr bool IsBigEndianHost = true;
 #else
-  static const bool IsBigEndianHost = false;
+constexpr bool IsBigEndianHost = false;
 #endif
 
   static const bool IsLittleEndianHost = !IsBigEndianHost;

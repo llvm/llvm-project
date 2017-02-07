@@ -47,10 +47,38 @@ void HexagonMCChecker::init() {
   if (HexagonMCInstrInfo::isBundle(MCB))
     // Unfurl a bundle.
     for (auto const&I : HexagonMCInstrInfo::bundleInstructions(MCB)) {
-      init(*I.getInst());
+      MCInst const &Inst = *I.getInst();
+      if (HexagonMCInstrInfo::isDuplex(MCII, Inst)) {
+        init(*Inst.getOperand(0).getInst());
+        init(*Inst.getOperand(1).getInst());
+      }
+      else
+        init(Inst);
     }
   else
     init(MCB);
+}
+
+void HexagonMCChecker::initReg(MCInst const &MCI, unsigned R, unsigned &PredReg,
+                               bool &isTrue) {
+  if (HexagonMCInstrInfo::isPredicated(MCII, MCI) && isPredicateRegister(R)) {
+    // Note an used predicate register.
+    PredReg = R;
+    isTrue = HexagonMCInstrInfo::isPredicatedTrue(MCII, MCI);
+
+    // Note use of new predicate register.
+    if (HexagonMCInstrInfo::isPredicatedNew(MCII, MCI))
+      NewPreds.insert(PredReg);
+  }
+  else
+    // Note register use.  Super-registers are not tracked directly,
+    // but their components.
+    for(MCRegAliasIterator SRI(R, &RI, !MCSubRegIterator(R, &RI).isValid());
+        SRI.isValid();
+        ++SRI)
+      if (!MCSubRegIterator(*SRI, &RI).isValid())
+        // Skip super-registers used indirectly.
+        Uses.insert(*SRI);
 }
 
 void HexagonMCChecker::init(MCInst const& MCI) {
@@ -60,28 +88,10 @@ void HexagonMCChecker::init(MCInst const& MCI) {
 
   // Get used registers.
   for (unsigned i = MCID.getNumDefs(); i < MCID.getNumOperands(); ++i)
-    if (MCI.getOperand(i).isReg()) {
-      unsigned R = MCI.getOperand(i).getReg();
-
-      if (HexagonMCInstrInfo::isPredicated(MCII, MCI) && isPredicateRegister(R)) {
-        // Note an used predicate register.
-        PredReg = R;
-        isTrue = HexagonMCInstrInfo::isPredicatedTrue(MCII, MCI);
-
-        // Note use of new predicate register.
-        if (HexagonMCInstrInfo::isPredicatedNew(MCII, MCI))
-          NewPreds.insert(PredReg);
-      }
-      else
-        // Note register use.  Super-registers are not tracked directly,
-        // but their components.
-        for(MCRegAliasIterator SRI(R, &RI, !MCSubRegIterator(R, &RI).isValid());
-           SRI.isValid();
-           ++SRI)
-         if (!MCSubRegIterator(*SRI, &RI).isValid())
-           // Skip super-registers used indirectly.
-           Uses.insert(*SRI);
-    }
+    if (MCI.getOperand(i).isReg())
+      initReg(MCI, MCI.getOperand(i).getReg(), PredReg, isTrue);
+  for (unsigned i = 0; i < MCID.getNumImplicitUses(); ++i)
+    initReg(MCI, MCID.getImplicitUses()[i], PredReg, isTrue);
 
   // Get implicit register definitions.
   if (const MCPhysReg *ImpDef = MCID.getImplicitDefs())
@@ -216,9 +226,11 @@ void HexagonMCChecker::init(MCInst const& MCI) {
     if (!MCSubRegIterator(N, &RI).isValid()) {
       // Super-registers cannot use new values.
       if (MCID.isBranch())
-        NewUses[N] = NewSense::Jmp(llvm::HexagonMCInstrInfo::getType(MCII, MCI) == HexagonII::TypeNV);
+        NewUses[N] = NewSense::Jmp(
+          llvm::HexagonMCInstrInfo::getType(MCII, MCI) == HexagonII::TypeNCJ);
       else
-        NewUses[N] = NewSense::Use(PredReg, HexagonMCInstrInfo::isPredicatedTrue(MCII, MCI));
+        NewUses[N] = NewSense::Use(
+          PredReg, HexagonMCInstrInfo::isPredicatedTrue(MCII, MCI));
     }
   }
 }
@@ -230,14 +242,18 @@ HexagonMCChecker::HexagonMCChecker(MCInstrInfo const &MCII, MCSubtargetInfo cons
   init();
 }
 
-bool HexagonMCChecker::check() {
+bool HexagonMCChecker::check(bool FullCheck) {
   bool chkB = checkBranches();
   bool chkP = checkPredicates();
   bool chkNV = checkNewValues();
   bool chkR = checkRegisters();
   bool chkS = checkSolo();
-  bool chkSh = checkShuffle();
-  bool chkSl = checkSlots();
+  bool chkSh = true;
+  if (FullCheck)
+   chkSh = checkShuffle();
+  bool chkSl = true;
+  if (FullCheck)
+   chkSl = checkSlots();
   bool chk = chkB && chkP && chkNV && chkR && chkS && chkSh && chkSl;
 
   return chk;
@@ -504,7 +520,7 @@ bool HexagonMCChecker::checkShuffle() {
   HexagonMCErrInfo errInfo;
   // Branch info is lost when duplexing. The unduplexed insns must be
   // checked and only branch errors matter for this case.
-  HexagonMCShuffler MCS(MCII, STI, MCB);
+  HexagonMCShuffler MCS(true, MCII, STI, MCB);
   if (!MCS.check()) {
     if (MCS.getError() == HexagonShuffler::SHUFFLE_ERROR_BRANCHES) {
       errInfo.setError(HexagonMCErrInfo::CHECK_ERROR_SHUFFLE);
@@ -513,7 +529,7 @@ bool HexagonMCChecker::checkShuffle() {
       return false;
     }
   }
-  HexagonMCShuffler MCSDX(MCII, STI, MCBDX);
+  HexagonMCShuffler MCSDX(true, MCII, STI, MCBDX);
   if (!MCSDX.check()) {
     errInfo.setError(HexagonMCErrInfo::CHECK_ERROR_SHUFFLE);
     errInfo.setShuffleError(MCSDX.getError());

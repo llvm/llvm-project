@@ -15,6 +15,7 @@ RUN: llvm-symbolizer -verbose -print-address -obj=%p/Inputs/discrim < %p/Inputs/
 #CHECK: 0x4004f2
 #CHECK-NEXT: main
 #CHECK-NEXT: Filename: /tmp{{[\\/]}}discrim.c
+#CHECK-NEXT: Function start line: 4
 #CHECK-NEXT: Line: 6
 #CHECK-NEXT: Column: 7
 #CHECK-NOT: Discriminator: 0
@@ -22,6 +23,7 @@ RUN: llvm-symbolizer -verbose -print-address -obj=%p/Inputs/discrim < %p/Inputs/
 #CHECK: 0x400509
 #CHECK-NEXT: main
 #CHECK-NEXT: Filename: /tmp{{[\\/]}}discrim.c
+#CHECK-NEXT: Function start line: 4
 #CHECK-NEXT: Line: 7
 #CHECK-NEXT: Column: 3
 #CHECK-NEXT: Discriminator: 1
@@ -29,6 +31,7 @@ RUN: llvm-symbolizer -verbose -print-address -obj=%p/Inputs/discrim < %p/Inputs/
 #CHECK: 0x40050d
 #CHECK-NEXT: main
 #CHECK-NEXT: Filename: /tmp{{[\\/]}}discrim.c
+#CHECK-NEXT: Function start line: 4
 #CHECK-NEXT: Line: 7
 #CHECK-NEXT: Column: 3
 #CHECK-NEXT: Discriminator: 2

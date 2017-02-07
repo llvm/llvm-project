@@ -14,6 +14,7 @@
 #include "sanitizer_common/sanitizer_internal_defs.h"
 #include <sanitizer/allocator_interface.h>
 #include <sanitizer/asan_interface.h>
+#include <vector>
 
 TEST(AddressSanitizerInterface, GetEstimatedAllocatedSize) {
   EXPECT_EQ(0U, __sanitizer_get_estimated_allocated_size(0));

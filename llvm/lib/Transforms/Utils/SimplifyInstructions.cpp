@@ -20,6 +20,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/InstructionSimplify.h"
+#include "llvm/Analysis/OptimizationDiagnosticInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Dominators.h"
@@ -35,7 +36,8 @@ using namespace llvm;
 STATISTIC(NumSimplified, "Number of redundant instructions removed");
 
 static bool runImpl(Function &F, const DominatorTree *DT,
-                    const TargetLibraryInfo *TLI, AssumptionCache *AC) {
+                    const TargetLibraryInfo *TLI, AssumptionCache *AC,
+                    OptimizationRemarkEmitter *ORE) {
   const DataLayout &DL = F.getParent()->getDataLayout();
   SmallPtrSet<const Instruction *, 8> S1, S2, *ToSimplify = &S1, *Next = &S2;
   bool Changed = false;
@@ -54,7 +56,7 @@ static bool runImpl(Function &F, const DominatorTree *DT,
 
         // Don't waste time simplifying unused instructions.
         if (!I->use_empty()) {
-          if (Value *V = SimplifyInstruction(I, DL, TLI, DT, AC)) {
+          if (Value *V = SimplifyInstruction(I, DL, TLI, DT, AC, ORE)) {
             // Mark all uses for resimplification next time round the loop.
             for (User *U : I->users())
               Next->insert(cast<Instruction>(U));
@@ -95,6 +97,7 @@ namespace {
       AU.addRequired<DominatorTreeWrapperPass>();
       AU.addRequired<AssumptionCacheTracker>();
       AU.addRequired<TargetLibraryInfoWrapperPass>();
+      AU.addRequired<OptimizationRemarkEmitterWrapperPass>();
     }
 
     /// runOnFunction - Remove instructions that simplify.
@@ -108,7 +111,10 @@ namespace {
           &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
       AssumptionCache *AC =
           &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
-      return runImpl(F, DT, TLI, AC);
+      OptimizationRemarkEmitter *ORE =
+          &getAnalysis<OptimizationRemarkEmitterWrapperPass>().getORE();
+
+      return runImpl(F, DT, TLI, AC, ORE);
     }
   };
 }
@@ -119,6 +125,7 @@ INITIALIZE_PASS_BEGIN(InstSimplifier, "instsimplify",
 INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(OptimizationRemarkEmitterWrapperPass)
 INITIALIZE_PASS_END(InstSimplifier, "instsimplify",
                     "Remove redundant instructions", false, false)
 char &llvm::InstructionSimplifierID = InstSimplifier::ID;
@@ -133,7 +140,8 @@ PreservedAnalyses InstSimplifierPass::run(Function &F,
   auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
   auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);
   auto &AC = AM.getResult<AssumptionAnalysis>(F);
-  bool Changed = runImpl(F, &DT, &TLI, &AC);
+  auto &ORE = AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
+  bool Changed = runImpl(F, &DT, &TLI, &AC, &ORE);
   if (!Changed)
     return PreservedAnalyses::all();
 

@@ -319,7 +319,7 @@ bool OperatingSystemGo::UpdateThreadList(ThreadList &old_thread_list,
   for (uint64_t i = 0; i < allglen; ++i) {
     goroutines.push_back(CreateGoroutineAtIndex(i, err));
     if (err.Fail()) {
-      err.PutToLog(log, "OperatingSystemGo::UpdateThreadList");
+      LLDB_LOG(log, "error: {0}", err);
       return new_thread_list.GetSize(false) > 0;
     }
   }
