@@ -35,7 +35,8 @@ public:
   HexagonResource(unsigned s) { setUnits(s); };
 
   void setUnits(unsigned s) {
-    Slots = s & ~(~0U << HEXAGON_PACKET_SIZE);
+    Slots = s & ((1u << HEXAGON_PACKET_SIZE) - 1);
+    setWeight(s);
   };
   unsigned setWeight(unsigned s);
 
@@ -44,7 +45,8 @@ public:
 
   // Check if the resources are in ascending slot order.
   static bool lessUnits(const HexagonResource &A, const HexagonResource &B) {
-    return (countPopulation(A.getUnits()) < countPopulation(B.getUnits()));
+    return (countPopulation(A.getUnits()) <
+            countPopulation(B.getUnits()));
   };
   // Check if the resources are in ascending weight order.
   static bool lessWeight(const HexagonResource &A, const HexagonResource &B) {
@@ -86,10 +88,10 @@ public:
                      unsigned s, MCInst const *id);
   static void SetupTUL(TypeUnitsAndLanes *TUL, StringRef CPU);
 
-  bool isValid() const { return (Valid); };
-  unsigned getLanes() const { return (Lanes); };
-  bool mayLoad() const { return (Load); };
-  bool mayStore() const { return (Store); };
+  bool isValid() const { return Valid; };
+  unsigned getLanes() const { return Lanes; };
+  bool mayLoad() const { return Load; };
+  bool mayStore() const { return Store; };
 };
 
 // Handle to an insn used by the shuffling algorithm.
@@ -100,20 +102,16 @@ class HexagonInstr {
   MCInst const *Extender;
   HexagonResource Core;
   HexagonCVIResource CVI;
-  bool SoloException;
 
 public:
   HexagonInstr(HexagonCVIResource::TypeUnitsAndLanes *T,
                MCInstrInfo const &MCII, MCInst const *id,
-               MCInst const *Extender, unsigned s, bool x = false)
-      : ID(id), Extender(Extender), Core(s), CVI(T, MCII, s, id),
-        SoloException(x) {};
+               MCInst const *Extender, unsigned s)
+      : ID(id), Extender(Extender), Core(s), CVI(T, MCII, s, id) {}
 
-  MCInst const *getDesc() const { return (ID); };
+  MCInst const &getDesc() const { return *ID; };
 
   MCInst const *getExtender() const { return Extender; }
-
-  unsigned isSoloException() const { return (SoloException); };
 
   // Check if the handles are in ascending order for shuffling purposes.
   bool operator<(const HexagonInstr &B) const {
@@ -136,6 +134,7 @@ class HexagonShuffler {
 
   // Insn handles in a bundle.
   HexagonPacket Packet;
+  HexagonPacket PacketSave;
 
   // Shuffling error code.
   unsigned Error;
@@ -178,8 +177,7 @@ public:
   iterator end() { return (Packet.end()); };
 
   // Add insn handle to the bundle .
-  void append(MCInst const *ID, MCInst const *Extender, unsigned S,
-              bool X = false);
+  void append(MCInst const &ID, MCInst const *Extender, unsigned S);
 
   // Return the error code for the last check or shuffling of the bundle.
   void setError(unsigned Err) { Error = Err; };

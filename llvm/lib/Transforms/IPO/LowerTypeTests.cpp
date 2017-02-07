@@ -746,7 +746,6 @@ LowerTypeTestsModule::importTypeId(StringRef TypeId) {
   TIL.TheKind = TTRes.TheKind;
 
   auto ImportGlobal = [&](StringRef Name, unsigned AbsWidth) {
-    unsigned PtrWidth = IntPtrTy->getBitWidth();
     Constant *C =
         M.getOrInsertGlobal(("__typeid_" + TypeId + "_" + Name).str(), Int8Ty);
     auto *GV = dyn_cast<GlobalVariable>(C);
@@ -757,13 +756,12 @@ LowerTypeTestsModule::importTypeId(StringRef TypeId) {
 
     GV->setVisibility(GlobalValue::HiddenVisibility);
     auto SetAbsRange = [&](uint64_t Min, uint64_t Max) {
-      auto *T = IntegerType::get(M.getContext(), PtrWidth);
-      auto *MinC = ConstantAsMetadata::get(ConstantInt::get(T, Min));
-      auto *MaxC = ConstantAsMetadata::get(ConstantInt::get(T, Max));
+      auto *MinC = ConstantAsMetadata::get(ConstantInt::get(IntPtrTy, Min));
+      auto *MaxC = ConstantAsMetadata::get(ConstantInt::get(IntPtrTy, Max));
       GV->setMetadata(LLVMContext::MD_absolute_symbol,
                       MDNode::get(M.getContext(), {MinC, MaxC}));
     };
-    if (AbsWidth == PtrWidth)
+    if (AbsWidth == IntPtrTy->getBitWidth())
       SetAbsRange(~0ull, ~0ull); // Full set.
     else if (AbsWidth)
       SetAbsRange(0, 1ull << AbsWidth);

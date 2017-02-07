@@ -389,6 +389,8 @@ protected:
     return KeyInfoT::getHashValue(Val);
   }
   static const KeyT getEmptyKey() {
+    static_assert(std::is_base_of<DenseMapBase, DerivedT>::value,
+                  "Must pass the derived type to this template!");
     return KeyInfoT::getEmptyKey();
   }
   static const KeyT getTombstoneKey() {

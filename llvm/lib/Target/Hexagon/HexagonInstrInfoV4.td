@@ -2532,7 +2532,7 @@ let hasSideEffects = 0, isPredicable = 1 in
 class T_StoreAbsGP <string mnemonic, RegisterClass RC, Operand ImmOp,
                     bits<2>MajOp, bit isAbs, bit isHalf>
   : STInst<(outs), (ins ImmOp:$addr, RC:$src),
-  mnemonic # "(#$addr) = $src"#!if(isHalf, ".h",""),
+  mnemonic # "(" # !if(isAbs,"","gp+") # "#$addr) = $src" # !if(isHalf,".h",""),
   [], "", V2LDST_tc_st_SLOT01> {
     bits<19> addr;
     bits<5> src;
@@ -2646,9 +2646,9 @@ multiclass ST_Abs<string mnemonic, string CextOp, RegisterClass RC,
 //===----------------------------------------------------------------------===//
 let hasSideEffects = 0, isPredicable = 1, mayStore = 1, isNVStore = 1,
     isNewValue = 1, opNewValue = 1 in
-class T_StoreAbsGP_NV <string mnemonic, Operand ImmOp, bits<2>MajOp>
+class T_StoreAbsGP_NV <string mnemonic, Operand ImmOp, bits<2>MajOp, bit isAbs>
   : NVInst_V4<(outs), (ins ImmOp:$addr, IntRegs:$src),
-  mnemonic #"(#$addr) = $src.new",
+  mnemonic #"(" # !if(isAbs, "", "gp+") # "#$addr) = $src.new",
   [], "", V2LDST_tc_st_SLOT0> {
     bits<19> addr;
     bits<3> src;
@@ -2716,7 +2716,7 @@ class T_StoreAbs_NV_Pred <string mnemonic, bits<2> MajOp, bit isNot, bit isNew>
 // absolute addressing.
 //===----------------------------------------------------------------------===//
 class T_StoreAbs_NV <string mnemonic, Operand ImmOp, bits<2> MajOp>
-  : T_StoreAbsGP_NV <mnemonic, u32_0MustExt, MajOp>, AddrModeRel {
+  : T_StoreAbsGP_NV <mnemonic, u32_0MustExt, MajOp, 1>, AddrModeRel {
 
   string ImmOpStr = !cast<string>(ImmOp);
   let opExtentBits = !if (!eq(ImmOpStr, "u16_3Imm"), 19,
@@ -2798,7 +2798,7 @@ multiclass ST_GP <string mnemonic, string BaseOp, Operand ImmOp,
     def NAME#gp : T_StoreAbsGP <mnemonic, IntRegs, ImmOp, MajOp,
                                 0, isHalf>;
     // New-value store
-    def NAME#newgp : T_StoreAbsGP_NV <mnemonic, ImmOp, MajOp> ;
+    def NAME#newgp : T_StoreAbsGP_NV <mnemonic, ImmOp, MajOp, 0> ;
   }
 }
 
@@ -2825,9 +2825,9 @@ def S2_storerfgp : T_StoreGP <"memh", "STrif", IntRegs,
 //===----------------------------------------------------------------------===//
 let isPredicable = 1, hasSideEffects = 0 in
 class T_LoadAbsGP <string mnemonic, RegisterClass RC, Operand ImmOp,
-                   bits<3> MajOp>
+                   bits<3> MajOp, bit isAbs>
   : LDInst <(outs RC:$dst), (ins ImmOp:$addr),
-  "$dst = "#mnemonic# "(#$addr)",
+  "$dst = " # mnemonic # "(" # !if(isAbs, "", "gp+") # "#$addr)",
   [], "", V2LDST_tc_ld_SLOT01> {
     bits<5> dst;
     bits<19> addr;
@@ -2860,7 +2860,7 @@ class T_LoadAbsGP <string mnemonic, RegisterClass RC, Operand ImmOp,
 
 class T_LoadAbs <string mnemonic, RegisterClass RC, Operand ImmOp,
                  bits<3> MajOp>
-  : T_LoadAbsGP <mnemonic, RC, u32_0MustExt, MajOp>, AddrModeRel {
+  : T_LoadAbsGP <mnemonic, RC, u32_0MustExt, MajOp, 1>, AddrModeRel {
 
     string ImmOpStr = !cast<string>(ImmOp);
     let opExtentBits = !if (!eq(ImmOpStr, "u16_3Imm"), 19,
@@ -2956,7 +2956,7 @@ defm loadrd  : LD_Abs<"memd",  "LDrid", DoubleRegs, u16_3Imm, 0b110>;
 let isAsmParserOnly = 1, Uses = [GP] in
 class T_LoadGP <string mnemonic, string BaseOp, RegisterClass RC, Operand ImmOp,
                 bits<3> MajOp>
-  : T_LoadAbsGP <mnemonic, RC, ImmOp, MajOp>, PredNewRel {
+  : T_LoadAbsGP <mnemonic, RC, ImmOp, MajOp, 0>, PredNewRel {
     let BaseOpcode = BaseOp#_abs;
   }
 

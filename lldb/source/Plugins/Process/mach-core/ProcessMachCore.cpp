@@ -14,6 +14,7 @@
 
 // C++ Includes
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/Threading.h"
 #include <mutex>
 
 // Other libraries and framework includes
@@ -579,9 +580,9 @@ Error ProcessMachCore::GetMemoryRegionInfo(addr_t load_addr,
 void ProcessMachCore::Clear() { m_thread_list.Clear(); }
 
 void ProcessMachCore::Initialize() {
-  static std::once_flag g_once_flag;
+  static llvm::once_flag g_once_flag;
 
-  std::call_once(g_once_flag, []() {
+  llvm::call_once(g_once_flag, []() {
     PluginManager::RegisterPlugin(GetPluginNameStatic(),
                                   GetPluginDescriptionStatic(), CreateInstance);
   });

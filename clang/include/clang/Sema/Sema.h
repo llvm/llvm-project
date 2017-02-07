@@ -5619,6 +5619,8 @@ public:
   void CheckConversionDeclarator(Declarator &D, QualType &R,
                                  StorageClass& SC);
   Decl *ActOnConversionDeclarator(CXXConversionDecl *Conversion);
+  void CheckDeductionGuideDeclarator(Declarator &D, QualType &R,
+                                     StorageClass &SC);
 
   void CheckExplicitlyDefaultedSpecialMember(CXXMethodDecl *MD);
   void CheckExplicitlyDefaultedMemberExceptionSpec(CXXMethodDecl *MD,
@@ -5821,6 +5823,22 @@ public:
                                   bool EnteringContext,
                                   TemplateTy &Template,
                                   bool &MemberOfUnknownSpecialization);
+
+  /// Determine whether a particular identifier might be the name in a C++1z
+  /// deduction-guide declaration.
+  bool isDeductionGuideName(Scope *S, const IdentifierInfo &Name,
+                            SourceLocation NameLoc,
+                            ParsedTemplateTy *Template = nullptr) {
+    CXXScopeSpec SS;
+    UnqualifiedId Id;
+    Id.setIdentifier(&Name, NameLoc);
+    TemplateTy TemplateFallback;
+    bool MemberOfUnknownSpecialization;
+    // FIXME: Use redeclaration lookup!
+    return isTemplateName(S, SS, false, Id, ParsedType(), false,
+                          Template ? *Template : TemplateFallback,
+                          MemberOfUnknownSpecialization) == TNK_Type_template;
+  }
 
   bool DiagnoseUnknownTemplateName(const IdentifierInfo &II,
                                    SourceLocation IILoc,

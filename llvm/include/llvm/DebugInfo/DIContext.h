@@ -34,24 +34,28 @@ struct DILineInfo {
   std::string FunctionName;
   uint32_t Line;
   uint32_t Column;
+  uint32_t StartLine;
 
   // DWARF-specific.
   uint32_t Discriminator;
 
   DILineInfo()
       : FileName("<invalid>"), FunctionName("<invalid>"), Line(0), Column(0),
-        Discriminator(0) {}
+        StartLine(0), Discriminator(0) {}
 
   bool operator==(const DILineInfo &RHS) const {
     return Line == RHS.Line && Column == RHS.Column &&
-           FileName == RHS.FileName && FunctionName == RHS.FunctionName;
+           FileName == RHS.FileName && FunctionName == RHS.FunctionName &&
+           StartLine == RHS.StartLine && Discriminator == RHS.Discriminator;
   }
   bool operator!=(const DILineInfo &RHS) const {
     return !(*this == RHS);
   }
   bool operator<(const DILineInfo &RHS) const {
-    return std::tie(FileName, FunctionName, Line, Column) <
-           std::tie(RHS.FileName, RHS.FunctionName, RHS.Line, RHS.Column);
+    return std::tie(FileName, FunctionName, Line, Column, StartLine,
+                    Discriminator) <
+           std::tie(RHS.FileName, RHS.FunctionName, RHS.Line, RHS.Column,
+                    RHS.StartLine, RHS.Discriminator);
   }
 };
 

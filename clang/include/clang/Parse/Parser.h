@@ -1967,7 +1967,7 @@ private:
   /// \brief Starting with a scope specifier, identifier, or
   /// template-id that refers to the current class, determine whether
   /// this is a constructor declarator.
-  bool isConstructorDeclarator(bool Unqualified);
+  bool isConstructorDeclarator(bool Unqualified, bool DeductionGuide = false);
 
   /// \brief Specifies the context in which type-id/expression
   /// disambiguation will occur.
@@ -2634,6 +2634,7 @@ public:
   bool ParseUnqualifiedId(CXXScopeSpec &SS, bool EnteringContext,
                           bool AllowDestructorName,
                           bool AllowConstructorName,
+                          bool AllowDeductionGuide,
                           ParsedType ObjectType,
                           SourceLocation& TemplateKWLoc,
                           UnqualifiedId &Result);

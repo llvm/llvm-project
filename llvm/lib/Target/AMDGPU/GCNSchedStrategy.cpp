@@ -225,9 +225,9 @@ SUnit *GCNMaxOccupancySchedStrategy::pickNodeBidirectional(bool &IsTopNode) {
   // Pick best from BotCand and TopCand.
   DEBUG(
     dbgs() << "Top Cand: ";
-    traceCandidate(BotCand);
-    dbgs() << "Bot Cand: ";
     traceCandidate(TopCand);
+    dbgs() << "Bot Cand: ";
+    traceCandidate(BotCand);
   );
   SchedCandidate Cand;
   if (TopCand.Reason == BotCand.Reason) {

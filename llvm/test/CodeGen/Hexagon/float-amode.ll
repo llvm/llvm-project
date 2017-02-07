@@ -54,9 +54,9 @@ entry:
 }
 
 ; CHECK-LABEL: test3
-; CHECK: [[REG31:(r[0-9]+)]]{{ *}}={{ *}}memw(#b)
+; CHECK: [[REG31:(r[0-9]+)]]{{ *}}={{ *}}memw(gp+#b)
 ; CHECK: [[REG32:(r[0-9]+)]] = sfadd({{.*}}[[REG31]]
-; CHECK: memw(#a) = [[REG32]]
+; CHECK: memw(gp+#a) = [[REG32]]
 
 ; Function Attrs: norecurse nounwind
 define void @test3(%struct.matrix_params* nocapture readonly %params, i32 %col1) {

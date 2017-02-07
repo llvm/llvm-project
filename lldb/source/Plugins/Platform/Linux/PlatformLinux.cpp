@@ -45,19 +45,9 @@ static uint32_t g_initialize_count = 0;
 
 PlatformSP PlatformLinux::CreateInstance(bool force, const ArchSpec *arch) {
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PLATFORM));
-  if (log) {
-    const char *arch_name;
-    if (arch && arch->GetArchitectureName())
-      arch_name = arch->GetArchitectureName();
-    else
-      arch_name = "<null>";
-
-    const char *triple_cstr =
-        arch ? arch->GetTriple().getTriple().c_str() : "<null>";
-
-    log->Printf("PlatformLinux::%s(force=%s, arch={%s,%s})", __FUNCTION__,
-                force ? "true" : "false", arch_name, triple_cstr);
-  }
+  LLDB_LOG(log, "force = {0}, arch=({1}, {2})", force,
+           arch ? arch->GetArchitectureName() : "<null>",
+           arch ? arch->GetTriple().getTriple() : "<null>");
 
   bool create = force;
   if (create == false && arch && arch->IsValid()) {
@@ -80,18 +70,10 @@ PlatformSP PlatformLinux::CreateInstance(bool force, const ArchSpec *arch) {
     }
   }
 
+  LLDB_LOG(log, "create = {0}", create);
   if (create) {
-    if (log)
-      log->Printf("PlatformLinux::%s() creating remote-linux platform",
-                  __FUNCTION__);
     return PlatformSP(new PlatformLinux(false));
   }
-
-  if (log)
-    log->Printf(
-        "PlatformLinux::%s() aborting creation of remote-linux platform",
-        __FUNCTION__);
-
   return PlatformSP();
 }
 
@@ -290,19 +272,15 @@ bool PlatformLinux::CanDebugProcess() {
 }
 
 // For local debugging, Linux will override the debug logic to use llgs-launch
-// rather than
-// lldb-launch, llgs-attach.  This differs from current lldb-launch,
-// debugserver-attach
-// approach on MacOSX.
+// rather than lldb-launch, llgs-attach.  This differs from current lldb-launch,
+// debugserver-attach approach on MacOSX.
 lldb::ProcessSP
 PlatformLinux::DebugProcess(ProcessLaunchInfo &launch_info, Debugger &debugger,
                             Target *target, // Can be NULL, if NULL create a new
                                             // target, else use existing one
                             Error &error) {
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PLATFORM));
-  if (log)
-    log->Printf("PlatformLinux::%s entered (target %p)", __FUNCTION__,
-                static_cast<void *>(target));
+  LLDB_LOG(log, "target {0}", target);
 
   // If we're a remote host, use standard behavior from parent class.
   if (!IsHost())
@@ -325,61 +303,42 @@ PlatformLinux::DebugProcess(ProcessLaunchInfo &launch_info, Debugger &debugger,
 
   // Ensure we have a target.
   if (target == nullptr) {
-    if (log)
-      log->Printf("PlatformLinux::%s creating new target", __FUNCTION__);
-
+    LLDB_LOG(log, "creating new target");
     TargetSP new_target_sp;
     error = debugger.GetTargetList().CreateTarget(debugger, "", "", false,
                                                   nullptr, new_target_sp);
     if (error.Fail()) {
-      if (log)
-        log->Printf("PlatformLinux::%s failed to create new target: %s",
-                    __FUNCTION__, error.AsCString());
+      LLDB_LOG(log, "failed to create new target: {0}", error);
       return process_sp;
     }
 
     target = new_target_sp.get();
     if (!target) {
       error.SetErrorString("CreateTarget() returned nullptr");
-      if (log)
-        log->Printf("PlatformLinux::%s failed: %s", __FUNCTION__,
-                    error.AsCString());
+      LLDB_LOG(log, "error: {0}", error);
       return process_sp;
     }
-  } else {
-    if (log)
-      log->Printf("PlatformLinux::%s using provided target", __FUNCTION__);
   }
 
   // Mark target as currently selected target.
   debugger.GetTargetList().SetSelectedTarget(target);
 
   // Now create the gdb-remote process.
-  if (log)
-    log->Printf(
-        "PlatformLinux::%s having target create process with gdb-remote plugin",
-        __FUNCTION__);
+  LLDB_LOG(log, "having target create process with gdb-remote plugin");
   process_sp = target->CreateProcess(
       launch_info.GetListenerForProcess(debugger), "gdb-remote", nullptr);
 
   if (!process_sp) {
     error.SetErrorString("CreateProcess() failed for gdb-remote process");
-    if (log)
-      log->Printf("PlatformLinux::%s failed: %s", __FUNCTION__,
-                  error.AsCString());
+    LLDB_LOG(log, "error: {0}", error);
     return process_sp;
-  } else {
-    if (log)
-      log->Printf("PlatformLinux::%s successfully created process",
-                  __FUNCTION__);
   }
 
+  LLDB_LOG(log, "successfully created process");
   // Adjust launch for a hijacker.
   ListenerSP listener_sp;
   if (!launch_info.GetHijackListener()) {
-    if (log)
-      log->Printf("PlatformLinux::%s setting up hijacker", __FUNCTION__);
-
+    LLDB_LOG(log, "setting up hijacker");
     listener_sp =
         Listener::MakeListener("lldb.PlatformLinux.DebugProcess.hijack");
     launch_info.SetHijackListener(listener_sp);
@@ -388,16 +347,13 @@ PlatformLinux::DebugProcess(ProcessLaunchInfo &launch_info, Debugger &debugger,
 
   // Log file actions.
   if (log) {
-    log->Printf(
-        "PlatformLinux::%s launching process with the following file actions:",
-        __FUNCTION__);
-
+    LLDB_LOG(log, "launching process with the following file actions:");
     StreamString stream;
     size_t i = 0;
     const FileAction *file_action;
     while ((file_action = launch_info.GetFileActionAtIndex(i++)) != nullptr) {
       file_action->Dump(stream);
-      log->PutCString(stream.GetData());
+      LLDB_LOG(log, "{0}", stream.GetData());
       stream.Clear();
     }
   }
@@ -410,16 +366,7 @@ PlatformLinux::DebugProcess(ProcessLaunchInfo &launch_info, Debugger &debugger,
       const StateType state = process_sp->WaitForProcessToStop(
           llvm::None, NULL, false, listener_sp);
 
-      if (state == eStateStopped) {
-        if (log)
-          log->Printf("PlatformLinux::%s pid %" PRIu64 " state %s\n",
-                      __FUNCTION__, process_sp->GetID(), StateAsCString(state));
-      } else {
-        if (log)
-          log->Printf("PlatformLinux::%s pid %" PRIu64
-                      " state is not stopped - %s\n",
-                      __FUNCTION__, process_sp->GetID(), StateAsCString(state));
-      }
+      LLDB_LOG(log, "pid {0} state {0}", process_sp->GetID(), state);
     }
 
     // Hook up process PTY if we have one (which we should for local debugging
@@ -427,20 +374,11 @@ PlatformLinux::DebugProcess(ProcessLaunchInfo &launch_info, Debugger &debugger,
     int pty_fd = launch_info.GetPTY().ReleaseMasterFileDescriptor();
     if (pty_fd != lldb_utility::PseudoTerminal::invalid_fd) {
       process_sp->SetSTDIOFileDescriptor(pty_fd);
-      if (log)
-        log->Printf("PlatformLinux::%s pid %" PRIu64
-                    " hooked up STDIO pty to process",
-                    __FUNCTION__, process_sp->GetID());
-    } else {
-      if (log)
-        log->Printf("PlatformLinux::%s pid %" PRIu64
-                    " not using process STDIO pty",
-                    __FUNCTION__, process_sp->GetID());
-    }
+      LLDB_LOG(log, "hooked up STDIO pty to process");
+    } else
+      LLDB_LOG(log, "not using process STDIO pty");
   } else {
-    if (log)
-      log->Printf("PlatformLinux::%s process launch failed: %s", __FUNCTION__,
-                  error.AsCString());
+    LLDB_LOG(log, "process launch failed: {0}", error);
     // FIXME figure out appropriate cleanup here.  Do we delete the target? Do
     // we delete the process?  Does our caller do that?
   }

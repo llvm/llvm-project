@@ -869,3 +869,35 @@ entry:
   store i64 %conv75, i64* %dst, align 8
   ret void
 }
+
+declare i16 @llvm.bswap.i16(i16)
+
+; i16* p;
+; (i32) bswap(p[1]) | (i32) bswap(p[0] << 16)
+define i32 @load_i32_by_bswap_i16(i32* %arg) {
+; CHECK-LABEL: load_i32_by_bswap_i16:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    movl (%eax), %eax
+; CHECK-NEXT:    bswapl %eax
+; CHECK-NEXT:    retl
+;
+; CHECK64-LABEL: load_i32_by_bswap_i16:
+; CHECK64:       # BB#0:
+; CHECK64-NEXT:    movl (%rdi), %eax
+; CHECK64-NEXT:    bswapl %eax
+; CHECK64-NEXT:    retq
+
+
+  %tmp = bitcast i32* %arg to i16*
+  %tmp1 = load i16, i16* %tmp, align 4
+  %tmp11 = call i16 @llvm.bswap.i16(i16 %tmp1)
+  %tmp2 = zext i16 %tmp11 to i32
+  %tmp3 = getelementptr inbounds i16, i16* %tmp, i32 1
+  %tmp4 = load i16, i16* %tmp3, align 1
+  %tmp41 = call i16 @llvm.bswap.i16(i16 %tmp4)
+  %tmp5 = zext i16 %tmp41 to i32
+  %tmp6 = shl nuw nsw i32 %tmp2, 16
+  %tmp7 = or i32 %tmp6, %tmp5
+  ret i32 %tmp7
+}

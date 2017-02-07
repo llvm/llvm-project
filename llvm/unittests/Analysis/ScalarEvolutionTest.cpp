@@ -549,7 +549,11 @@ TEST_F(ScalarEvolutionsTest, SCEVAddExpr) {
   Instruction *Add1 = BinaryOperator::CreateAdd(Mul1, Trunc, "", EntryBB);
   Mul1 = BinaryOperator::CreateMul(Add1, Trunc, "", EntryBB);
   Instruction *Add2 = BinaryOperator::CreateAdd(Mul1, Add1, "", EntryBB);
-  for (int i = 0; i < 1000; i++) {
+  // FIXME: The size of this is arbitrary and doesn't seem to change the
+  // result, but SCEV will do quadratic work for these so a large number here
+  // will be extremely slow. We should revisit what and how this is testing
+  // SCEV.
+  for (int i = 0; i < 10; i++) {
     Mul1 = BinaryOperator::CreateMul(Add2, Add1, "", EntryBB);
     Add1 = Add2;
     Add2 = BinaryOperator::CreateAdd(Mul1, Add1, "", EntryBB);

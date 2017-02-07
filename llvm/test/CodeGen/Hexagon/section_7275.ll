@@ -8,13 +8,13 @@
 ; RUN: llc -march=hexagon < %s | FileCheck %s
 ; CHECK-LABEL: foo
 ; CHECK-DAG: memw(##b)
-; CHECK-DAG: memw(#d)
+; CHECK-DAG: memw(gp+#d)
 ; CHECK-DAG: memw(##g)
-; CHECK-DAG: memw(#h)
-; CHECK-DAG: memw(#f)
+; CHECK-DAG: memw(gp+#h)
+; CHECK-DAG: memw(gp+#f)
 ; CHECK-DAG: memw(##e)
-; CHECK-DAG: memw(#a)
-; CHECK-DAG: memw(#c)
+; CHECK-DAG: memw(gp+#a)
+; CHECK-DAG: memw(gp+#c)
 ; CHECK-LABEL: bar
 ; CHECK: memw(##b)
 

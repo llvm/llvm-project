@@ -116,6 +116,9 @@ public:
   // visit - Finally, code to visit an instruction...
   //
   RetTy visit(Instruction &I) {
+    static_assert(std::is_base_of<InstVisitor, SubClass>::value,
+                  "Must pass the derived type to this template!");
+
     switch (I.getOpcode()) {
     default: llvm_unreachable("Unknown instruction type encountered!");
       // Build the switch statement using the Instruction.def file...

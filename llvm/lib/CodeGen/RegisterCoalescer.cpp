@@ -1810,6 +1810,11 @@ bool RegisterCoalescer::joinReservedPhysReg(CoalescerPair &CP) {
       return false;
     }
 
+    if (!LIS->intervalIsInOneMBB(RHS)) {
+      DEBUG(dbgs() << "\t\tComplex control flow!\n");
+      return false;
+    }
+
     MachineInstr &DestMI = *MRI->getVRegDef(SrcReg);
     CopyMI = &*MRI->use_instr_nodbg_begin(SrcReg);
     SlotIndex CopyRegIdx = LIS->getInstructionIndex(*CopyMI).getRegSlot();

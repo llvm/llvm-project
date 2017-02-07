@@ -351,6 +351,8 @@ template <typename IRUnitT, typename... ExtraArgTs> class AnalysisManager;
 template <typename DerivedT> struct PassInfoMixin {
   /// Gets the name of the pass we are mixed into.
   static StringRef name() {
+    static_assert(std::is_base_of<PassInfoMixin, DerivedT>::value,
+                  "Must pass the derived type as the template argument!");
     StringRef Name = getTypeName<DerivedT>();
     if (Name.startswith("llvm::"))
       Name = Name.drop_front(strlen("llvm::"));
@@ -379,7 +381,11 @@ struct AnalysisInfoMixin : PassInfoMixin<DerivedT> {
   /// known platform with this limitation is Windows DLL builds, specifically
   /// building each part of LLVM as a DLL. If we ever remove that build
   /// configuration, this mixin can provide the static key as well.
-  static AnalysisKey *ID() { return &DerivedT::Key; }
+  static AnalysisKey *ID() {
+    static_assert(std::is_base_of<AnalysisInfoMixin, DerivedT>::value,
+                  "Must pass the derived type as the template argument!");
+    return &DerivedT::Key;
+  }
 };
 
 /// \brief Manages a sequence of passes over a particular unit of IR.
@@ -1028,7 +1034,7 @@ extern template class InnerAnalysisManagerProxy<FunctionAnalysisManager,
 template <typename AnalysisManagerT, typename IRUnitT, typename... ExtraArgTs>
 class OuterAnalysisManagerProxy
     : public AnalysisInfoMixin<
-          OuterAnalysisManagerProxy<AnalysisManagerT, IRUnitT>> {
+          OuterAnalysisManagerProxy<AnalysisManagerT, IRUnitT, ExtraArgTs...>> {
 public:
   /// \brief Result proxy object for \c OuterAnalysisManagerProxy.
   class Result {
@@ -1090,7 +1096,7 @@ public:
 
 private:
   friend AnalysisInfoMixin<
-      OuterAnalysisManagerProxy<AnalysisManagerT, IRUnitT>>;
+      OuterAnalysisManagerProxy<AnalysisManagerT, IRUnitT, ExtraArgTs...>>;
   static AnalysisKey Key;
 
   const AnalysisManagerT *AM;

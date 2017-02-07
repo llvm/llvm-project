@@ -449,3 +449,37 @@ define i32 @load_i32_by_i8_neg_offset_bswap(i32* %arg) {
   %tmp18 = or i32 %tmp13, %tmp17
   ret i32 %tmp18
 }
+
+declare i16 @llvm.bswap.i16(i16)
+
+; i16* p; // p is 4 byte aligned
+; (i32) bswap(p[0]) | (i32) bswap(p[1] << 16)
+define i32 @load_i32_by_bswap_i16(i32* %arg) {
+; CHECK-LABEL: load_i32_by_bswap_i16:
+; CHECK: ldr r0, [r0]
+; CHECK-NEXT: mov r1, #65280
+; CHECK-NEXT: mov r2, #16711680
+; CHECK-NEXT: and r1, r1, r0, lsr #8
+; CHECK-NEXT: and r2, r2, r0, lsl #8
+; CHECK-NEXT: orr r1, r1, r0, lsr #24
+; CHECK-NEXT: orr r0, r2, r0, lsl #24
+; CHECK-NEXT: orr r0, r0, r1
+; CHECK-NEXT: mov pc, lr
+
+; CHECK-ARMv6-LABEL: load_i32_by_bswap_i16:
+; CHECK-ARMv6: ldr  r0, [r0]
+; CHECK-ARMv6-NEXT: rev r0, r0
+; CHECK-ARMv6-NEXT: bx  lr
+
+  %tmp = bitcast i32* %arg to i16*
+  %tmp1 = load i16, i16* %tmp, align 4
+  %tmp11 = call i16 @llvm.bswap.i16(i16 %tmp1)
+  %tmp2 = zext i16 %tmp11 to i32
+  %tmp3 = getelementptr inbounds i16, i16* %tmp, i32 1
+  %tmp4 = load i16, i16* %tmp3, align 1
+  %tmp41 = call i16 @llvm.bswap.i16(i16 %tmp4)
+  %tmp5 = zext i16 %tmp41 to i32
+  %tmp6 = shl nuw nsw i32 %tmp5, 16
+  %tmp7 = or i32 %tmp6, %tmp2
+  ret i32 %tmp7
+}

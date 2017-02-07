@@ -318,3 +318,26 @@ define i32 @load_i32_by_i8_neg_offset_bswap(i32* %arg) {
   %tmp18 = or i32 %tmp13, %tmp17
   ret i32 %tmp18
 }
+
+declare i16 @llvm.bswap.i16(i16)
+
+; i16* p; // p is 4 byte aligned
+; (i32) bswap(p[1]) | (i32) bswap(p[0] << 16)
+define i32 @load_i32_by_bswap_i16(i32* %arg) {
+; CHECK-LABEL: load_i32_by_bswap_i16:
+; CHECK: ldr    w8, [x0]
+; CHECK-NEXT: rev w0, w8
+; CHECK-NEXT: ret
+
+  %tmp = bitcast i32* %arg to i16*
+  %tmp1 = load i16, i16* %tmp, align 4
+  %tmp11 = call i16 @llvm.bswap.i16(i16 %tmp1)
+  %tmp2 = zext i16 %tmp11 to i32
+  %tmp3 = getelementptr inbounds i16, i16* %tmp, i32 1
+  %tmp4 = load i16, i16* %tmp3, align 1
+  %tmp41 = call i16 @llvm.bswap.i16(i16 %tmp4)
+  %tmp5 = zext i16 %tmp41 to i32
+  %tmp6 = shl nuw nsw i32 %tmp2, 16
+  %tmp7 = or i32 %tmp6, %tmp5
+  ret i32 %tmp7
+}

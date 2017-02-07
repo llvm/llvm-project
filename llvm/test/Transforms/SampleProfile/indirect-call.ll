@@ -12,16 +12,16 @@ define void @test(void ()*) !dbg !3 {
 
 ; CHECK-LABEL: @test_inline
 ; If the indirect call is promoted and inlined in profile, we should promote and inline it.
-define void @test_inline(void ()*) !dbg !3 {
-  %2 = alloca void ()*
-  store void ()* %0, void ()** %2
-  %3 = load void ()*, void ()** %2
+define void @test_inline(i64* (i32*)*, i32* %x) !dbg !3 {
+  %2 = alloca i64* (i32*)*
+  store i64* (i32*)* %0, i64* (i32*)** %2
+  %3 = load i64* (i32*)*, i64* (i32*)** %2
 ; CHECK: icmp {{.*}} @foo_inline
 ; CHECK: if.true.direct_targ:
 ; CHECK-NOT: call
 ; CHECK: if.false.orig_indirect:
 ; CHECK: call
-  call void %3(), !dbg !5
+  call i64* %3(i32* %x), !dbg !5
   ret void
 }
 
@@ -37,13 +37,30 @@ define void @test_noinline(void ()*) !dbg !3 {
   ret void
 }
 
-define void @foo_inline() !dbg !3 {
-  ret void
+@x = global i32 0, align 4
+
+define i32* @foo_inline(i32* %x) !dbg !3 {
+  ret i32* %x
 }
 
 define i32 @foo_noinline(i32 %x) !dbg !3 {
   ret i32 %x
 }
+
+define void @foo_direct() !dbg !3 {
+  ret void
+}
+
+; CHECK-LABEL: @test_direct
+; We should not promote a direct call.
+define void @test_direct() !dbg !3 {
+; CHECK-NOT: icmp
+; CHECK: call
+  call void @foo_alias(), !dbg !5
+  ret void
+}
+
+@foo_alias = alias void (), void ()* @foo_direct
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!2}

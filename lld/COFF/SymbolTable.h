@@ -74,6 +74,7 @@ public:
   // BitcodeFiles and add them to the symbol table. Called after all files are
   // added and before the writer writes results to a file.
   void addCombinedLTOObjects();
+  std::vector<StringRef> compileBitcodeFiles();
 
   // The writer needs to handle DLL import libraries specially in
   // order to create the import descriptor table.

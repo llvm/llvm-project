@@ -351,19 +351,22 @@ SymbolBody *SymbolTable::addUndefined(StringRef Name) {
   return addUndefined(Name, nullptr, false)->body();
 }
 
-void SymbolTable::addCombinedLTOObjects() {
-  if (BitcodeFiles.empty())
-    return;
-
+std::vector<StringRef> SymbolTable::compileBitcodeFiles() {
   LTO.reset(new BitcodeCompiler);
   for (BitcodeFile *F : BitcodeFiles)
     LTO->add(*F);
+  return LTO->compile();
+}
 
-  for (auto *File : LTO->compile()) {
-    auto *Obj = cast<ObjectFile>(File);
-    ObjectFiles.push_back(Obj);
+void SymbolTable::addCombinedLTOObjects() {
+  if (BitcodeFiles.empty())
+    return;
+  for (StringRef Object : compileBitcodeFiles()) {
+    auto *Obj = make<ObjectFile>(MemoryBufferRef(Object, "lto.tmp"));
     Obj->parse();
+    ObjectFiles.push_back(Obj);
   }
 }
+
 } // namespace coff
 } // namespace lld

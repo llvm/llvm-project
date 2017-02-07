@@ -138,10 +138,9 @@ define i128 @knownbits_mask_addc_shl(i64 %a0, i64 %a1, i64 %a2) nounwind {
 ; X32-NEXT:    adcl $0, %ecx
 ; X32-NEXT:    shldl $22, %edx, %ecx
 ; X32-NEXT:    shldl $22, %esi, %edx
-; X32-NEXT:    shll $22, %esi
-; X32-NEXT:    movl %esi, 4(%eax)
 ; X32-NEXT:    movl %edx, 8(%eax)
 ; X32-NEXT:    movl %ecx, 12(%eax)
+; X32-NEXT:    movl $0, 4(%eax)
 ; X32-NEXT:    movl $0, (%eax)
 ; X32-NEXT:    popl %esi
 ; X32-NEXT:    popl %edi
@@ -155,8 +154,7 @@ define i128 @knownbits_mask_addc_shl(i64 %a0, i64 %a1, i64 %a2) nounwind {
 ; X64-NEXT:    sbbq %rax, %rax
 ; X64-NEXT:    subl %eax, %edx
 ; X64-NEXT:    shldq $54, %rsi, %rdx
-; X64-NEXT:    shlq $54, %rsi
-; X64-NEXT:    movq %rsi, %rax
+; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    retq
   %1 = and i64 %a0, -1024
   %2 = zext i64 %1 to i128

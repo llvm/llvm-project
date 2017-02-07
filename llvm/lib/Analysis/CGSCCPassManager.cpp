@@ -24,7 +24,7 @@ template class PassManager<LazyCallGraph::SCC, CGSCCAnalysisManager,
                            LazyCallGraph &, CGSCCUpdateResult &>;
 template class InnerAnalysisManagerProxy<CGSCCAnalysisManager, Module>;
 template class OuterAnalysisManagerProxy<ModuleAnalysisManager,
-                                         LazyCallGraph::SCC>;
+                                         LazyCallGraph::SCC, LazyCallGraph &>;
 template class OuterAnalysisManagerProxy<CGSCCAnalysisManager, Function>;
 
 /// Explicitly specialize the pass manager run method to handle call graph
@@ -117,6 +117,7 @@ bool CGSCCAnalysisManagerModuleProxy::Result::invalidate(
       PA.allAnalysesInSetPreserved<AllAnalysesOn<LazyCallGraph::SCC>>();
 
   // Ok, we have a graph, so we can propagate the invalidation down into it.
+  G->buildRefSCCs();
   for (auto &RC : G->postorder_ref_sccs())
     for (auto &C : RC) {
       Optional<PreservedAnalyses> InnerPA;

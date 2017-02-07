@@ -44,7 +44,7 @@ public:
   ~BitcodeCompiler();
 
   void add(BitcodeFile &F);
-  std::vector<InputFile *> compile();
+  std::vector<StringRef> compile();
 
 private:
   std::unique_ptr<llvm::lto::LTO> LTOObj;

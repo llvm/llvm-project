@@ -2506,6 +2506,7 @@ void SelectionDAG::computeKnownBits(SDValue Op, APInt &KnownZero,
     LLVM_FALLTHROUGH;
   }
   case ISD::ADD:
+  case ISD::ADDC:
   case ISD::ADDE: {
     // Output known-0 bits are known if clear or set in both the low clear bits
     // common to both LHS & RHS.  For example, 8+(X<<3) is known to have the
@@ -2526,7 +2527,7 @@ void SelectionDAG::computeKnownBits(SDValue Op, APInt &KnownZero,
     KnownZeroLow = std::min(KnownZeroLow,
                             KnownZero2.countTrailingOnes());
 
-    if (Opcode == ISD::ADD) {
+    if (Opcode == ISD::ADD || Opcode == ISD::ADDC) {
       KnownZero |= APInt::getLowBitsSet(BitWidth, KnownZeroLow);
       if (KnownZeroHigh > 1)
         KnownZero |= APInt::getHighBitsSet(BitWidth, KnownZeroHigh - 1);
@@ -2756,6 +2757,27 @@ void SelectionDAG::computeKnownBits(SDValue Op, APInt &KnownZero,
   assert((KnownZero & KnownOne) == 0 && "Bits known to be one AND zero?");
 }
 
+SelectionDAG::OverflowKind SelectionDAG::computeOverflowKind(SDValue N0,
+                                                             SDValue N1) const {
+  // X + 0 never overflow
+  if (isNullConstant(N1))
+    return OFK_Never;
+
+  APInt N1Zero, N1One;
+  computeKnownBits(N1, N1Zero, N1One);
+  if (N1Zero.getBoolValue()) {
+    APInt N0Zero, N0One;
+    computeKnownBits(N0, N0Zero, N0One);
+
+    bool overflow;
+    (~N0Zero).uadd_ov(~N1Zero, overflow);
+    if (!overflow)
+      return OFK_Never;
+  }
+
+  return OFK_Sometime;
+}
+
 bool SelectionDAG::isKnownToBeAPowerOfTwo(SDValue Val) const {
   EVT OpVT = Val.getValueType();
   unsigned BitWidth = OpVT.getScalarSizeInBits();
@@ -2924,6 +2946,7 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, unsigned Depth) const {
     }
     break;
   case ISD::ADD:
+  case ISD::ADDC:
     // Add can have at most one carry bit.  Thus we know that the output
     // is, at worst, one more bit than the inputs.
     Tmp = ComputeNumSignBits(Op.getOperand(0), Depth+1);

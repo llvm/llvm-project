@@ -2264,6 +2264,7 @@ ASTNodeImporter::ImportDeclarationNameLoc(const DeclarationNameInfo &From,
   case DeclarationName::ObjCOneArgSelector:
   case DeclarationName::ObjCMultiArgSelector:
   case DeclarationName::CXXUsingDirective:
+  case DeclarationName::CXXDeductionGuideName:
     return;
 
   case DeclarationName::CXXOperatorName: {
@@ -7446,6 +7447,14 @@ DeclarationName ASTImporter::Import(DeclarationName FromName) {
 
     return ToContext.DeclarationNames.getCXXDestructorName(
                                                ToContext.getCanonicalType(T));
+  }
+
+  case DeclarationName::CXXDeductionGuideName: {
+    TemplateDecl *Template = cast_or_null<TemplateDecl>(
+        Import(FromName.getCXXDeductionGuideTemplate()));
+    if (!Template)
+      return DeclarationName();
+    return ToContext.DeclarationNames.getCXXDeductionGuideName(Template);
   }
 
   case DeclarationName::CXXConversionFunctionName: {

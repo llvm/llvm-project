@@ -24,6 +24,7 @@
 #include "llvm/Analysis/CaptureTracking.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
+#include "llvm/Analysis/OptimizationDiagnosticInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/ConstantRange.h"
@@ -4452,7 +4453,8 @@ Value *llvm::SimplifyCall(Value *V, ArrayRef<Value *> Args,
 /// If not, this returns null.
 Value *llvm::SimplifyInstruction(Instruction *I, const DataLayout &DL,
                                  const TargetLibraryInfo *TLI,
-                                 const DominatorTree *DT, AssumptionCache *AC) {
+                                 const DominatorTree *DT, AssumptionCache *AC,
+                                 OptimizationRemarkEmitter *ORE) {
   Value *Result;
 
   switch (I->getOpcode()) {
@@ -4601,7 +4603,7 @@ Value *llvm::SimplifyInstruction(Instruction *I, const DataLayout &DL,
     unsigned BitWidth = I->getType()->getScalarSizeInBits();
     APInt KnownZero(BitWidth, 0);
     APInt KnownOne(BitWidth, 0);
-    computeKnownBits(I, KnownZero, KnownOne, DL, /*Depth*/0, AC, I, DT);
+    computeKnownBits(I, KnownZero, KnownOne, DL, /*Depth*/0, AC, I, DT, ORE);
     if ((KnownZero | KnownOne).isAllOnesValue())
       Result = ConstantInt::get(I->getType(), KnownOne);
   }
