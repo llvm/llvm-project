@@ -781,6 +781,10 @@ def int_memcpy_element_atomic  : Intrinsic<[],
                                  [IntrArgMemOnly, NoCapture<0>, NoCapture<1>,
                                   WriteOnly<0>, ReadOnly<1>]>;
 
+//===----- Intrinsics that are used to provide predicate information -----===//
+
+def int_ssa_copy : Intrinsic<[llvm_any_ty], [LLVMMatchType<0>],
+			     [IntrNoMem, Returned<0>]>;
 //===----------------------------------------------------------------------===//
 // Target-specific intrinsics
 //===----------------------------------------------------------------------===//

@@ -47,12 +47,17 @@ The format of this section is
     uint32 : NumFaultingPCs
     uint32 : Reserved (expected to be 0)
     FunctionFaultInfo[NumFaultingPCs] {
-      uint32  : FaultKind = FaultMaps::FaultingLoad (only legal value currently)
+      uint32  : FaultKind
       uint32  : FaultingPCOffset
       uint32  : HandlerPCOffset
     }
   }
 
+FailtKind describes the reason of expected fault.
+Currently three kind of faults are supported:
+  1. FaultingLoad - fault due to load from memory.
+  2. FaultingLoadStore - fault due to instruction load and store.
+  3. FaultingStore - fault due to store to memory.
 
 The ``ImplicitNullChecks`` pass
 ===============================

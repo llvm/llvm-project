@@ -894,30 +894,34 @@ void X86AsmPrinter::LowerSTATEPOINT(const MachineInstr &MI,
   SM.recordStatepoint(MI);
 }
 
-void X86AsmPrinter::LowerFAULTING_LOAD_OP(const MachineInstr &MI,
-                                       X86MCInstLower &MCIL) {
-  // FAULTING_LOAD_OP <def>, <MBB handler>, <load opcode>, <load operands>
+void X86AsmPrinter::LowerFAULTING_OP(const MachineInstr &FaultingMI,
+                                     X86MCInstLower &MCIL) {
+  // FAULTING_LOAD_OP <def>, <faltinf type>, <MBB handler>,
+  //                  <opcode>, <operands>
 
-  unsigned LoadDefRegister = MI.getOperand(0).getReg();
-  MCSymbol *HandlerLabel = MI.getOperand(1).getMBB()->getSymbol();
-  unsigned LoadOpcode = MI.getOperand(2).getImm();
-  unsigned LoadOperandsBeginIdx = 3;
+  unsigned DefRegister = FaultingMI.getOperand(0).getReg();
+  FaultMaps::FaultKind FK =
+      static_cast<FaultMaps::FaultKind>(FaultingMI.getOperand(1).getImm());
+  MCSymbol *HandlerLabel = FaultingMI.getOperand(2).getMBB()->getSymbol();
+  unsigned Opcode = FaultingMI.getOperand(3).getImm();
+  unsigned OperandsBeginIdx = 4;
 
-  FM.recordFaultingOp(FaultMaps::FaultingLoad, HandlerLabel);
+  assert(FK < FaultMaps::FaultKindMax && "Invalid Faulting Kind!");
+  FM.recordFaultingOp(FK, HandlerLabel);
 
-  MCInst LoadMI;
-  LoadMI.setOpcode(LoadOpcode);
+  MCInst MI;
+  MI.setOpcode(Opcode);
 
-  if (LoadDefRegister != X86::NoRegister)
-    LoadMI.addOperand(MCOperand::createReg(LoadDefRegister));
+  if (DefRegister != X86::NoRegister)
+    MI.addOperand(MCOperand::createReg(DefRegister));
 
-  for (auto I = MI.operands_begin() + LoadOperandsBeginIdx,
-            E = MI.operands_end();
+  for (auto I = FaultingMI.operands_begin() + OperandsBeginIdx,
+            E = FaultingMI.operands_end();
        I != E; ++I)
-    if (auto MaybeOperand = MCIL.LowerMachineOperand(&MI, *I))
-      LoadMI.addOperand(MaybeOperand.getValue());
+    if (auto MaybeOperand = MCIL.LowerMachineOperand(&FaultingMI, *I))
+      MI.addOperand(MaybeOperand.getValue());
 
-  OutStreamer->EmitInstruction(LoadMI, getSubtargetInfo());
+  OutStreamer->EmitInstruction(MI, getSubtargetInfo());
 }
 
 void X86AsmPrinter::LowerFENTRY_CALL(const MachineInstr &MI,
@@ -1388,8 +1392,8 @@ void X86AsmPrinter::EmitInstruction(const MachineInstr *MI) {
   case TargetOpcode::STATEPOINT:
     return LowerSTATEPOINT(*MI, MCInstLowering);
 
-  case TargetOpcode::FAULTING_LOAD_OP:
-    return LowerFAULTING_LOAD_OP(*MI, MCInstLowering);
+  case TargetOpcode::FAULTING_OP:
+    return LowerFAULTING_OP(*MI, MCInstLowering);
 
   case TargetOpcode::FENTRY_CALL:
     return LowerFENTRY_CALL(*MI, MCInstLowering);

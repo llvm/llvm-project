@@ -24,82 +24,77 @@
 #ifndef LLVM_SUPPORT_GENERICDOMTREECONSTRUCTION_H
 #define LLVM_SUPPORT_GENERICDOMTREECONSTRUCTION_H
 
+#include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/GenericDomTree.h"
 
 namespace llvm {
 
+// External storage for depth first iterator that reuses the info lookup map
+// domtree already has.  We don't have a set, but a map instead, so we are
+// converting the one argument insert calls.
+template <class NodeRef, class InfoType> struct df_iterator_dom_storage {
+public:
+  typedef DenseMap<NodeRef, InfoType> BaseSet;
+  df_iterator_dom_storage(BaseSet &Storage) : Storage(Storage) {}
+
+  typedef typename BaseSet::iterator iterator;
+  std::pair<iterator, bool> insert(NodeRef N) {
+    return Storage.insert({N, InfoType()});
+  }
+  void completed(NodeRef) {}
+
+private:
+  BaseSet &Storage;
+};
+
+template <class GraphT>
+unsigned ReverseDFSPass(DominatorTreeBaseByGraphTraits<GraphT> &DT,
+                        typename GraphT::NodeRef V, unsigned N) {
+  df_iterator_dom_storage<
+      typename GraphT::NodeRef,
+      typename DominatorTreeBaseByGraphTraits<GraphT>::InfoRec>
+      DFStorage(DT.Info);
+  bool IsChildOfArtificialExit = (N != 0);
+  for (auto I = idf_ext_begin(V, DFStorage), E = idf_ext_end(V, DFStorage);
+       I != E; ++I) {
+    typename GraphT::NodeRef BB = *I;
+    auto &BBInfo = DT.Info[BB];
+    BBInfo.DFSNum = BBInfo.Semi = ++N;
+    BBInfo.Label = BB;
+    // Set the parent to the top of the visited stack.  The stack includes us,
+    // and is 1 based, so we subtract to account for both of these.
+    if (I.getPathLength() > 1)
+      BBInfo.Parent = DT.Info[I.getPath(I.getPathLength() - 2)].DFSNum;
+    DT.Vertex.push_back(BB); // Vertex[n] = V;
+
+    if (IsChildOfArtificialExit)
+      BBInfo.Parent = 1;
+
+    IsChildOfArtificialExit = false;
+  }
+  return N;
+}
 template <class GraphT>
 unsigned DFSPass(DominatorTreeBaseByGraphTraits<GraphT> &DT,
                  typename GraphT::NodeRef V, unsigned N) {
-  // This is more understandable as a recursive algorithm, but we can't use the
-  // recursive algorithm due to stack depth issues.  Keep it here for
-  // documentation purposes.
-#if 0
-  InfoRec &VInfo = DT.Info[DT.Roots[i]];
-  VInfo.DFSNum = VInfo.Semi = ++N;
-  VInfo.Label = V;
-
-  Vertex.push_back(V);        // Vertex[n] = V;
-
-  for (succ_iterator SI = succ_begin(V), E = succ_end(V); SI != E; ++SI) {
-    InfoRec &SuccVInfo = DT.Info[*SI];
-    if (SuccVInfo.Semi == 0) {
-      SuccVInfo.Parent = V;
-      N = DTDFSPass(DT, *SI, N);
-    }
-  }
-#else
-  bool IsChildOfArtificialExit = (N != 0);
-
-  SmallVector<
-      std::pair<typename GraphT::NodeRef, typename GraphT::ChildIteratorType>,
-      32>
-      Worklist;
-  Worklist.push_back(std::make_pair(V, GraphT::child_begin(V)));
-  while (!Worklist.empty()) {
-    typename GraphT::NodeRef BB = Worklist.back().first;
-    typename GraphT::ChildIteratorType NextSucc = Worklist.back().second;
-
+  df_iterator_dom_storage<
+      typename GraphT::NodeRef,
+      typename DominatorTreeBaseByGraphTraits<GraphT>::InfoRec>
+      DFStorage(DT.Info);
+  for (auto I = df_ext_begin(V, DFStorage), E = df_ext_end(V, DFStorage);
+       I != E; ++I) {
+    typename GraphT::NodeRef BB = *I;
     auto &BBInfo = DT.Info[BB];
-
-    // First time we visited this BB?
-    if (NextSucc == GraphT::child_begin(BB)) {
-      BBInfo.DFSNum = BBInfo.Semi = ++N;
-      BBInfo.Label = BB;
-
-      DT.Vertex.push_back(BB);       // Vertex[n] = V;
-
-      if (IsChildOfArtificialExit)
-        BBInfo.Parent = 1;
-
-      IsChildOfArtificialExit = false;
-    }
-
-    // store the DFS number of the current BB - the reference to BBInfo might
-    // get invalidated when processing the successors.
-    unsigned BBDFSNum = BBInfo.DFSNum;
-
-    // If we are done with this block, remove it from the worklist.
-    if (NextSucc == GraphT::child_end(BB)) {
-      Worklist.pop_back();
-      continue;
-    }
-
-    // Increment the successor number for the next time we get to it.
-    ++Worklist.back().second;
-
-    // Visit the successor next, if it isn't already visited.
-    typename GraphT::NodeRef Succ = *NextSucc;
-
-    auto &SuccVInfo = DT.Info[Succ];
-    if (SuccVInfo.Semi == 0) {
-      SuccVInfo.Parent = BBDFSNum;
-      Worklist.push_back(std::make_pair(Succ, GraphT::child_begin(Succ)));
-    }
+    BBInfo.DFSNum = BBInfo.Semi = ++N;
+    BBInfo.Label = BB;
+    // Set the parent to the top of the visited stack.  The stack includes us,
+    // and is 1 based, so we subtract to account for both of these.
+    if (I.getPathLength() > 1)
+      BBInfo.Parent = DT.Info[I.getPath(I.getPathLength() - 2)].DFSNum;
+    DT.Vertex.push_back(BB); // Vertex[n] = V;
   }
-#endif
-    return N;
+  return N;
 }
 
 template <class GraphT>
@@ -163,9 +158,13 @@ void Calculate(DominatorTreeBaseByGraphTraits<GraphTraits<NodeT>> &DT,
 
   // Step #1: Number blocks in depth-first order and initialize variables used
   // in later stages of the algorithm.
-  for (unsigned i = 0, e = static_cast<unsigned>(DT.Roots.size());
-       i != e; ++i)
-    N = DFSPass<GraphT>(DT, DT.Roots[i], N);
+  if (DT.isPostDominator()){
+    for (unsigned i = 0, e = static_cast<unsigned>(DT.Roots.size());
+         i != e; ++i)
+      N = ReverseDFSPass<GraphT>(DT, DT.Roots[i], N);
+  } else {
+    N = DFSPass<GraphT>(DT, DT.Roots[0], N);
+  }
 
   // it might be that some blocks did not get a DFS number (e.g., blocks of
   // infinite loops). In these cases an artificial exit node is required.

@@ -195,9 +195,9 @@ namespace llvm {
       /// Blend where the selector is an immediate.
       BLENDI,
 
-      /// Blend where the condition has been shrunk.
-      /// This is used to emphasize that the condition mask is
-      /// no more valid for generic VSELECT optimizations.
+      /// Dynamic (non-constant condition) vector blend where only the sign bits
+      /// of the condition elements are used. This is used to enforce that the
+      /// condition mask is not valid for generic VSELECT optimizations.
       SHRUNKBLEND,
 
       /// Combined add and sub on an FP vector.

@@ -28,7 +28,7 @@ public:
   static StringRef skipSpace(StringRef S);
   bool atEOF();
   StringRef next();
-  StringRef peek();
+  StringRef peek(unsigned N = 0);
   void skip();
   bool consume(StringRef Tok);
   void expect(StringRef Expect);
