@@ -798,12 +798,9 @@ void LinkerScript<ELFT>::assignAddresses(std::vector<PhdrEntry> &Phdrs) {
   }
 
   uintX_t MinVA = std::numeric_limits<uintX_t>::max();
-  for (OutputSectionBase *Sec : *OutputSections) {
+  for (OutputSectionBase *Sec : *OutputSections)
     if (Sec->Flags & SHF_ALLOC)
       MinVA = std::min<uint64_t>(MinVA, Sec->Addr);
-    else
-      Sec->Addr = 0;
-  }
 
   allocateHeaders<ELFT>(Phdrs, *OutputSections, MinVA);
 }
@@ -1991,7 +1988,7 @@ std::vector<SymbolVersion> ScriptParser::readSymbols() {
       continue;
     }
 
-    if (peek() == "}" || peek() == "local" || Error)
+    if (peek() == "}" || (peek() == "local" && peek(1) == ":") || Error)
       break;
     StringRef Tok = next();
     Ret.push_back({unquote(Tok), false, hasWildcard(Tok)});

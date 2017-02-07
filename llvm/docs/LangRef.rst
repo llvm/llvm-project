@@ -12700,6 +12700,33 @@ sufficient overall improvement in code quality. For this reason,
 that the optimizer can otherwise deduce or facts that are of little use to the
 optimizer.
 
+.. _int_ssa_copy:
+
+'``llvm.ssa_copy``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare type @llvm.ssa_copy(type %operand) returned(1) readnone
+
+Arguments:
+""""""""""
+
+The first argument is an operand which is used as the returned value.
+
+Overview:
+""""""""""
+
+The ``llvm.ssa_copy`` intrinsic can be used to attach information to
+operations by copying them and giving them new names.  For example,
+the PredicateInfo utility uses it to build Extended SSA form, and
+attach various forms of information to operands that dominate specific
+uses.  It is not meant for general use, only for building temporary
+renaming forms that require value splits at certain points.
+
 .. _type.test:
 
 '``llvm.type.test``' Intrinsic

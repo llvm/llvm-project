@@ -579,6 +579,10 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
       MIRBuilder.buildDirectDbgValue(Reg, DI.getVariable(), DI.getExpression());
     return true;
   }
+  case Intrinsic::vaend:
+    // No target I know of cares about va_end. Certainly no in-tree target
+    // does. Simplest intrinsic ever!
+    return true;
   case Intrinsic::dbg_value: {
     // This form of DBG_VALUE is target-independent.
     const DbgValueInst &DI = cast<DbgValueInst>(CI);

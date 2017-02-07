@@ -282,6 +282,36 @@ void HexagonAsmPrinter::HexagonProcessInstruction(MCInst &Inst,
     break;
   }
 
+  case Hexagon::A2_tfrf: {
+    Inst.setOpcode(Hexagon::A2_paddif);
+    Inst.addOperand(MCOperand::createExpr(MCConstantExpr::create(0, OutContext)));
+    break;
+  }
+
+  case Hexagon::A2_tfrt: {
+    Inst.setOpcode(Hexagon::A2_paddit);
+    Inst.addOperand(MCOperand::createExpr(MCConstantExpr::create(0, OutContext)));
+    break;
+  }
+
+  case Hexagon::A2_tfrfnew: {
+    Inst.setOpcode(Hexagon::A2_paddifnew);
+    Inst.addOperand(MCOperand::createExpr(MCConstantExpr::create(0, OutContext)));
+    break;
+  }
+
+  case Hexagon::A2_tfrtnew: {
+    Inst.setOpcode(Hexagon::A2_padditnew);
+    Inst.addOperand(MCOperand::createExpr(MCConstantExpr::create(0, OutContext)));
+    break;
+  }
+
+  case Hexagon::A2_zxtb: {
+    Inst.setOpcode(Hexagon::A2_andir);
+    Inst.addOperand(MCOperand::createExpr(MCConstantExpr::create(255, OutContext)));
+    break;
+  }
+
   // "$dst = CONST64(#$src1)",
   case Hexagon::CONST64:
     if (!OutStreamer->hasRawTextSupport()) {
@@ -376,6 +406,9 @@ void HexagonAsmPrinter::HexagonProcessInstruction(MCInst &Inst,
     Rs.setReg(getHexagonRegisterPair(Rs.getReg(), RI));
     return;
   }
+  case Hexagon::PS_call_nr:
+    Inst.setOpcode(Hexagon::J2_call);
+    break;
   case Hexagon::S5_asrhub_rnd_sat_goodsyntax: {
     MCOperand &MO = MappedInst.getOperand(2);
     int64_t Imm;

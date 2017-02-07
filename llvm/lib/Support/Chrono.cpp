@@ -16,6 +16,13 @@ namespace llvm {
 
 using namespace sys;
 
+const char detail::unit<std::ratio<3600>>::value[] = "h";
+const char detail::unit<std::ratio<60>>::value[] = "m";
+const char detail::unit<std::ratio<1>>::value[] = "s";
+const char detail::unit<std::milli>::value[] = "ms";
+const char detail::unit<std::micro>::value[] = "us";
+const char detail::unit<std::nano>::value[] = "ns";
+
 static inline struct tm getStructTM(TimePoint<> TP) {
   struct tm Storage;
   std::time_t OurTime = toTimeT(TP);

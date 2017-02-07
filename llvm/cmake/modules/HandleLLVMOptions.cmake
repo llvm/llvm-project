@@ -12,6 +12,30 @@ include(AddLLVMDefinitions)
 include(CheckCCompilerFlag)
 include(CheckCXXCompilerFlag)
 
+# Ninja Job Pool support
+# The following only works with the Ninja generator in CMake >= 3.0.
+set(LLVM_PARALLEL_COMPILE_JOBS "" CACHE STRING
+  "Define the maximum number of concurrent compilation jobs.")
+if(LLVM_PARALLEL_COMPILE_JOBS)
+  if(NOT CMAKE_MAKE_PROGRAM MATCHES "ninja")
+    message(WARNING "Job pooling is only available with Ninja generators.")
+  else()
+    set_property(GLOBAL APPEND PROPERTY JOB_POOLS compile_job_pool=${LLVM_PARALLEL_COMPILE_JOBS})
+    set(CMAKE_JOB_POOL_COMPILE compile_job_pool)
+  endif()
+endif()
+
+set(LLVM_PARALLEL_LINK_JOBS "" CACHE STRING
+  "Define the maximum number of concurrent link jobs.")
+if(LLVM_PARALLEL_LINK_JOBS)
+  if(NOT CMAKE_MAKE_PROGRAM MATCHES "ninja")
+    message(WARNING "Job pooling is only available with Ninja generators.")
+  else()
+    set_property(GLOBAL APPEND PROPERTY JOB_POOLS link_job_pool=${LLVM_PARALLEL_LINK_JOBS})
+    set(CMAKE_JOB_POOL_LINK link_job_pool)
+  endif()
+endif()
+
 
 if (CMAKE_LINKER MATCHES "lld-link.exe")
   # Pass /MANIFEST:NO so that CMake doesn't run mt.exe on our binaries.  Adding

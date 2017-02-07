@@ -7,7 +7,9 @@
 // Source Licenses. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
+
 // UNSUPPORTED: libcpp-no-exceptions
+// MODULES_DEFINES: _LIBCPP_DEBUG=0
 
 // Test that the default debug handler can be overridden and test the
 // throwing debug handler.

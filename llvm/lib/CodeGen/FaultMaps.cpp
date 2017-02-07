@@ -110,6 +110,10 @@ const char *FaultMaps::faultTypeToString(FaultMaps::FaultKind FT) {
 
   case FaultMaps::FaultingLoad:
     return "FaultingLoad";
+  case FaultMaps::FaultingLoadStore:
+    return "FaultingLoadStore";
+  case FaultMaps::FaultingStore:
+    return "FaultingStore";
   }
 }
 

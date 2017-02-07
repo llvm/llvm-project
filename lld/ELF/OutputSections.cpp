@@ -57,7 +57,7 @@ void OutputSectionBase::writeHeaderTo(typename ELFT::Shdr *Shdr) {
   Shdr->sh_flags = Flags;
   Shdr->sh_info = Info;
   Shdr->sh_link = Link;
-  Shdr->sh_addr = Addr;
+  Shdr->sh_addr = (Flags & SHF_ALLOC) ? Addr : 0;
   Shdr->sh_size = Size;
   Shdr->sh_name = ShName;
 }

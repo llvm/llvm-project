@@ -17,6 +17,7 @@
 
 #include <algorithm>
 #include <functional>
+#include <random>
 #include <cassert>
 #ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
 #include <memory>
@@ -30,12 +31,14 @@ struct indirect_less
 
 #endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
 
+std::mt19937 randomness;
+
 void test(int N)
 {
     int* ia = new int [N];
     for (int i = 0; i < N; ++i)
         ia[i] = i;
-    std::random_shuffle(ia, ia+N);
+    std::shuffle(ia, ia+N, randomness);
     for (int i = 0; i <= N; ++i)
     {
         std::push_heap(ia, ia+i, std::greater<int>());
@@ -54,7 +57,7 @@ int main()
     std::unique_ptr<int>* ia = new std::unique_ptr<int> [N];
     for (int i = 0; i < N; ++i)
         ia[i].reset(new int(i));
-    std::random_shuffle(ia, ia+N);
+    std::shuffle(ia, ia+N, randomness);
     for (int i = 0; i <= N; ++i)
     {
         std::push_heap(ia, ia+i, indirect_less());

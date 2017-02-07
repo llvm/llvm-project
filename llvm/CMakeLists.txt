@@ -132,18 +132,6 @@ foreach(proj ${LLVM_ENABLE_PROJECTS})
   endif()
 endforeach()
 
-# The following only works with the Ninja generator in CMake >= 3.0.
-set(LLVM_PARALLEL_COMPILE_JOBS "" CACHE STRING
-  "Define the maximum number of concurrent compilation jobs.")
-if(LLVM_PARALLEL_COMPILE_JOBS)
-  if(NOT CMAKE_MAKE_PROGRAM MATCHES "ninja")
-    message(WARNING "Job pooling is only available with Ninja generators.")
-  else()
-    set_property(GLOBAL APPEND PROPERTY JOB_POOLS compile_job_pool=${LLVM_PARALLEL_COMPILE_JOBS})
-    set(CMAKE_JOB_POOL_COMPILE compile_job_pool)
-  endif()
-endif()
-
 # Build llvm with ccache if the package is present
 set(LLVM_CCACHE_BUILD OFF CACHE BOOL "Set to ON for a ccache enabled build")
 if(LLVM_CCACHE_BUILD)
@@ -181,17 +169,6 @@ endif()
 option(LLVM_BUILD_GLOBAL_ISEL "Experimental: Build GlobalISel" ON)
 if(LLVM_BUILD_GLOBAL_ISEL)
   add_definitions(-DLLVM_BUILD_GLOBAL_ISEL)
-endif()
-
-set(LLVM_PARALLEL_LINK_JOBS "" CACHE STRING
-  "Define the maximum number of concurrent link jobs.")
-if(LLVM_PARALLEL_LINK_JOBS)
-  if(NOT CMAKE_MAKE_PROGRAM MATCHES "ninja")
-    message(WARNING "Job pooling is only available with Ninja generators.")
-  else()
-    set_property(GLOBAL APPEND PROPERTY JOB_POOLS link_job_pool=${LLVM_PARALLEL_LINK_JOBS})
-    set(CMAKE_JOB_POOL_LINK link_job_pool)
-  endif()
 endif()
 
 # Add path for custom modules

@@ -16,6 +16,7 @@
 //   inplace_merge(Iter first, Iter middle, Iter last);
 
 #include <algorithm>
+#include <random>
 #include <cassert>
 
 #include "test_iterators.h"
@@ -42,6 +43,8 @@ struct S {
 	};
 #endif
 
+std::mt19937 randomness;
+
 template <class Iter>
 void
 test_one(unsigned N, unsigned M)
@@ -51,7 +54,7 @@ test_one(unsigned N, unsigned M)
     value_type* ia = new value_type[N];
     for (unsigned i = 0; i < N; ++i)
         ia[i] = i;
-    std::random_shuffle(ia, ia+N);
+    std::shuffle(ia, ia+N, randomness);
     std::sort(ia, ia+M);
     std::sort(ia+M, ia+N);
     std::inplace_merge(Iter(ia), Iter(ia+M), Iter(ia+N));

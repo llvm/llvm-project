@@ -138,7 +138,6 @@ public:
 
   // Methods for support type inquiry through isa, cast, and
   // dyn_cast
-  static inline bool classof(const MemoryAccess *) { return true; }
   static inline bool classof(const Value *V) {
     unsigned ID = V->getValueID();
     return ID == MemoryUseVal || ID == MemoryPhiVal || ID == MemoryDefVal;
@@ -243,7 +242,6 @@ public:
   /// \brief Get the access that produces the memory state used by this Use.
   MemoryAccess *getDefiningAccess() const { return getOperand(0); }
 
-  static inline bool classof(const MemoryUseOrDef *) { return true; }
   static inline bool classof(const Value *MA) {
     return MA->getValueID() == MemoryUseVal || MA->getValueID() == MemoryDefVal;
   }
@@ -284,7 +282,6 @@ public:
   void *operator new(size_t s) { return User::operator new(s, 1); }
   void *operator new(size_t, unsigned) = delete;
 
-  static inline bool classof(const MemoryUse *) { return true; }
   static inline bool classof(const Value *MA) {
     return MA->getValueID() == MemoryUseVal;
   }
@@ -342,7 +339,6 @@ public:
   void *operator new(size_t s) { return User::operator new(s, 1); }
   void *operator new(size_t, unsigned) = delete;
 
-  static inline bool classof(const MemoryDef *) { return true; }
   static inline bool classof(const Value *MA) {
     return MA->getValueID() == MemoryDefVal;
   }
@@ -501,7 +497,6 @@ public:
     return getIncomingValue(Idx);
   }
 
-  static inline bool classof(const MemoryPhi *) { return true; }
   static inline bool classof(const Value *V) {
     return V->getValueID() == MemoryPhiVal;
   }

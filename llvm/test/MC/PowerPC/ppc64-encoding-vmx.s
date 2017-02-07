@@ -550,6 +550,9 @@
 # CHECK-BE: vnor 2, 3, 4                    # encoding: [0x10,0x43,0x25,0x04]
 # CHECK-LE: vnor 2, 3, 4                    # encoding: [0x04,0x25,0x43,0x10]
             vnor 2, 3, 4
+# CHECK-BE: vnot 2, 3                       # encoding: [0x10,0x43,0x1d,0x04]
+# CHECK-LE: vnot 2, 3                       # encoding: [0x04,0x1d,0x43,0x10]
+            vnot 2, 3
 # CHECK-BE: vor 2, 3, 4                     # encoding: [0x10,0x43,0x24,0x84]
 # CHECK-LE: vor 2, 3, 4                     # encoding: [0x84,0x24,0x43,0x10]
             vor 2, 3, 4
