@@ -291,7 +291,11 @@ namespace ARMII {
 
     /// MO_OPTION_MASK - Most flags are mutually exclusive; this mask selects
     /// just that part of the flag set.
-    MO_OPTION_MASK = 0x1f,
+    MO_OPTION_MASK = 0x0f,
+
+    /// MO_SBREL - On a symbol operand, this represents a static base relative
+    /// relocation. Used in movw and movt instructions.
+    MO_SBREL = 0x10,
 
     /// MO_DLLIMPORT - On a symbol operand, this represents that the reference
     /// to the symbol is for an import stub.  This is used for DLL import

@@ -82,6 +82,10 @@ static cl::opt<bool>
 EnableExpensiveCombines("expensive-combines",
                         cl::desc("Enable expensive instruction combines"));
 
+static cl::opt<unsigned>
+MaxArraySize("instcombine-maxarray-size", cl::init(1024),
+             cl::desc("Maximum array size considered when doing a combine"));
+
 Value *InstCombiner::EmitGEPOffset(User *GEP) {
   return llvm::EmitGEPOffset(Builder, DL, GEP);
 }
@@ -3148,6 +3152,7 @@ combineInstructionsOverFunction(Function &F, InstCombineWorklist &Worklist,
 
     InstCombiner IC(Worklist, &Builder, F.optForMinSize(), ExpensiveCombines,
                     AA, AC, TLI, DT, DL, LI);
+    IC.MaxArraySizeForCombine = MaxArraySize;
     Changed |= IC.run();
 
     if (!Changed)

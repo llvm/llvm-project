@@ -10,7 +10,6 @@
 #include "NoAssemblerCheck.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
-#include "clang/Lex/Lexer.h"
 
 using namespace clang::ast_matchers;
 
@@ -33,7 +32,7 @@ void NoAssemblerCheck::registerMatchers(MatchFinder *Finder) {
 }
 
 void NoAssemblerCheck::check(const MatchFinder::MatchResult &Result) {
-  Optional<SourceLocation> ASMLocation;
+  SourceLocation ASMLocation;
   if (const auto *ASM = Result.Nodes.getNodeAs<AsmStmt>("asm-stmt"))
     ASMLocation = ASM->getAsmLoc();
   else if (const auto *ASM =
@@ -44,7 +43,7 @@ void NoAssemblerCheck::check(const MatchFinder::MatchResult &Result) {
   else
     llvm_unreachable("Unhandled case in matcher.");
 
-  diag(*ASMLocation, "do not use inline assembler in safety-critical code");
+  diag(ASMLocation, "do not use inline assembler in safety-critical code");
 }
 
 } // namespace safety

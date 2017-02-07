@@ -17,15 +17,18 @@ class IType<bits<6> t> {
   bits<6> Value = t;
 }
 def TypePSEUDO : IType<0>;
-def TypeALU32  : IType<1>;
 def TypeCR     : IType<2>;
-def TypeJR     : IType<3>;
 def TypeJ      : IType<4>;
 def TypeLD     : IType<5>;
 def TypeST     : IType<6>;
-def TypeSYSTEM : IType<7>;
-def TypeXTYPE  : IType<8>;
-def TypeENDLOOP: IType<31>;
+def TypeENDLOOP: IType<40>;
+def TypeS_2op: IType<41>;
+def TypeS_3op: IType<42>;
+def TypeALU64: IType<43>;
+def TypeM: IType<44>;
+def TypeALU32_2op: IType<45>;
+def TypeALU32_3op: IType<46>;
+def TypeALU32_ADDI: IType<47>;
 
 // Maintain list of valid subtargets for each instruction.
 class SubTarget<bits<6> value> {
@@ -274,14 +277,20 @@ class STInstPost<dag outs, dag ins, string asmstr, list<dag> pattern = [],
 // In V2/V3 we used ST for this but in v4 ST can take SLOT0 or SLOT1.
 class SYSInst<dag outs, dag ins, string asmstr, list<dag> pattern = [],
               string cstr = "",  InstrItinClass itin = ST_tc_3stall_SLOT0>
-  : InstHexagon<outs, ins, asmstr, pattern, cstr, itin, TypeSYSTEM>,
+  : InstHexagon<outs, ins, asmstr, pattern, cstr, itin, TypeST>,
     OpcodeHexagon;
 
 // ALU32 Instruction Class in V2/V3/V4.
 // Definition of the instruction class NOT CHANGED.
 class ALU32Inst<dag outs, dag ins, string asmstr, list<dag> pattern = [],
                 string cstr = "", InstrItinClass itin = ALU32_2op_tc_1_SLOT0123>
- : InstHexagon<outs, ins, asmstr, pattern, cstr, itin, TypeALU32>, OpcodeHexagon;
+ : InstHexagon<outs, ins, asmstr, pattern, cstr, itin, TypeALU32_2op>, OpcodeHexagon;
+
+// ALU32 Instruction Class in V2/V3/V4.
+// Definition of the instruction class NOT CHANGED.
+class ALU32Inst_NoOpcode<dag outs, dag ins, string asmstr, list<dag> pattern = [],
+                string cstr = "", InstrItinClass itin = ALU32_2op_tc_1_SLOT0123>
+ : InstHexagon<outs, ins, asmstr, pattern, cstr, itin, TypeALU32_2op>;
 
 // ALU64 Instruction Class in V2/V3.
 // XTYPE Instruction Class in V4.
@@ -289,8 +298,17 @@ class ALU32Inst<dag outs, dag ins, string asmstr, list<dag> pattern = [],
 // Name of the Instruction Class changed from ALU64 to XTYPE from V2/V3 to V4.
 class ALU64Inst<dag outs, dag ins, string asmstr, list<dag> pattern = [],
                 string cstr = "", InstrItinClass itin = ALU64_tc_2_SLOT23>
-   : InstHexagon<outs, ins, asmstr, pattern, cstr, itin, TypeXTYPE>,
+   : InstHexagon<outs, ins, asmstr, pattern, cstr, itin, TypeALU64>,
      OpcodeHexagon;
+
+// ALU64 Instruction Class in V2/V3.
+// XTYPE Instruction Class in V4.
+// Definition of the instruction class NOT CHANGED.
+// Name of the Instruction Class changed from ALU64 to XTYPE from V2/V3 to V4.
+class ALU64Inst_NoOpcode<dag outs, dag ins, string asmstr, list<dag> pattern = [],
+                string cstr = "", InstrItinClass itin = ALU64_tc_2_SLOT23>
+   : InstHexagon<outs, ins, asmstr, pattern, cstr, itin, TypeALU64>;
+
 
 class ALU64_acc<dag outs, dag ins, string asmstr, list<dag> pattern = [],
                 string cstr = "", InstrItinClass itin = ALU64_tc_2_SLOT23>
@@ -303,13 +321,13 @@ class ALU64_acc<dag outs, dag ins, string asmstr, list<dag> pattern = [],
 // Name of the Instruction Class changed from M to XTYPE from V2/V3 to V4.
 class MInst<dag outs, dag ins, string asmstr, list<dag> pattern = [],
             string cstr = "", InstrItinClass itin = M_tc_3x_SLOT23>
-  : InstHexagon<outs, ins, asmstr, pattern, cstr, itin, TypeXTYPE>,
+  : InstHexagon<outs, ins, asmstr, pattern, cstr, itin, TypeM>,
     OpcodeHexagon;
 
 // Same as above but doesn't derive from OpcodeHexagon
 class MInst2<dag outs, dag ins, string asmstr, list<dag> pattern = [],
             string cstr = "", InstrItinClass itin = M_tc_3x_SLOT23>
-  : InstHexagon<outs, ins, asmstr, pattern, cstr, itin, TypeXTYPE>;
+  : InstHexagon<outs, ins, asmstr, pattern, cstr, itin, TypeM>;
 
 // M Instruction Class in V2/V3.
 // XTYPE Instruction Class in V4.
@@ -325,12 +343,16 @@ class MInst_acc<dag outs, dag ins, string asmstr, list<dag> pattern = [],
 // Name of the Instruction Class changed from S to XTYPE from V2/V3 to V4.
 class SInst<dag outs, dag ins, string asmstr, list<dag> pattern = [],
             string cstr = "", InstrItinClass itin = S_2op_tc_1_SLOT23>
-  : InstHexagon<outs, ins, asmstr, pattern, cstr, itin, TypeXTYPE>,
+  : InstHexagon<outs, ins, asmstr, pattern, cstr, itin, TypeS_2op>,
     OpcodeHexagon;
+
+class SInst_NoOpcode<dag outs, dag ins, string asmstr, list<dag> pattern = [],
+            string cstr = "", InstrItinClass itin = S_2op_tc_1_SLOT23>
+  : InstHexagon<outs, ins, asmstr, pattern, cstr, itin, TypeS_2op>;
 
 class SInst2<dag outs, dag ins, string asmstr, list<dag> pattern = [],
             string cstr = "", InstrItinClass itin = S_2op_tc_1_SLOT23>
-  : InstHexagon<outs, ins, asmstr, pattern, cstr, itin, TypeXTYPE>;
+  : InstHexagon<outs, ins, asmstr, pattern, cstr, itin, TypeS_2op>;
 
 // S Instruction Class in V2/V3.
 // XTYPE Instruction Class in V4.
@@ -338,7 +360,9 @@ class SInst2<dag outs, dag ins, string asmstr, list<dag> pattern = [],
 // Name of the Instruction Class changed from S to XTYPE from V2/V3 to V4.
 class SInst_acc<dag outs, dag ins, string asmstr, list<dag> pattern = [],
                 string cstr = "", InstrItinClass itin = S_3op_tc_1_SLOT23>
-  : SInst<outs, ins, asmstr, pattern, cstr, itin>;
+  : SInst<outs, ins, asmstr, pattern, cstr, itin> {
+  let Type = TypeS_3op;
+}
 
 // J Instruction Class in V2/V3/V4.
 // Definition of the instruction class NOT CHANGED.
@@ -354,7 +378,7 @@ class JInst_CJUMP_UCJUMP<dag outs, dag ins, string asmstr, list<dag> pattern = [
 // Definition of the instruction class NOT CHANGED.
 class JRInst<dag outs, dag ins, string asmstr, list<dag> pattern = [],
              string cstr = "", InstrItinClass itin = J_tc_2early_SLOT2>
-  : InstHexagon<outs, ins, asmstr, pattern, cstr, itin, TypeJR>, OpcodeHexagon;
+  : InstHexagon<outs, ins, asmstr, pattern, cstr, itin, TypeJ>, OpcodeHexagon;
 
 // CR Instruction Class in V2/V3/V4.
 // Definition of the instruction class NOT CHANGED.

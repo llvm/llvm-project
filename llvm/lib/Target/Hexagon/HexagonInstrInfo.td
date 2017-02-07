@@ -62,6 +62,7 @@ class T_ALU32_3op<string mnemonic, bits<3> MajOp, bits<3> MinOp, bit OpsRev,
   let isCommutable = IsComm;
   let BaseOpcode = mnemonic#_rr;
   let CextOpcode = mnemonic;
+  let Type = TypeALU32_3op;
 
   bits<5> Rs;
   bits<5> Rt;
@@ -88,6 +89,7 @@ class T_ALU32_3op_pred<string mnemonic, bits<3> MajOp, bits<3> MinOp,
   let isPredicatedNew = PredNew;
   let BaseOpcode = mnemonic#_rr;
   let CextOpcode = mnemonic;
+  let Type = TypeALU32_3op;
 
   bits<2> Pu;
   bits<5> Rs;
@@ -183,6 +185,7 @@ class T_ALU32_3op_cmp<string mnemonic, bits<2> MinOp, bit IsNeg, bit IsComm>
              [], "", ALU32_3op_tc_1_SLOT0123>, ImmRegRel {
   let CextOpcode = mnemonic;
   let isCommutable = IsComm;
+  let Type = TypeALU32_3op;
   bits<5> Rs;
   bits<5> Rt;
   bits<2> Pd;
@@ -216,6 +219,7 @@ def C2_mux: ALU32_rr<(outs IntRegs:$Rd),
   let InputType = "reg";
   let hasSideEffects = 0;
   let IClass = 0b1111;
+  let Type = TypeALU32_3op;
 
   let Inst{27-24} = 0b0100;
   let Inst{20-16} = Rs;
@@ -280,6 +284,7 @@ class T_Addri <Operand immOp>
   : ALU32_ri <(outs IntRegs:$Rd),
               (ins IntRegs:$Rs, immOp:$s16),
   "$Rd = add($Rs, #$s16)", [], "", ALU32_ADDI_tc_1_SLOT0123> {
+    let Type = TypeALU32_ADDI;
     bits<5> Rd;
     bits<5> Rs;
     bits<16> s16;
@@ -401,13 +406,12 @@ def A2_tfril: T_tfr16<0>;
 def A2_tfrih: T_tfr16<1>;
 
 // Conditional transfer is an alias to conditional "Rd = add(Rs, #0)".
-let isPredicated = 1, hasNewValue = 1, opNewValue = 0 in
+let isPredicated = 1, hasNewValue = 1, isCodeGenOnly = 1, opNewValue = 0,
+    isPseudo = 1 in
 class T_tfr_pred<bit isPredNot, bit isPredNew>
   : ALU32Inst<(outs IntRegs:$dst),
               (ins PredRegs:$src1, IntRegs:$src2),
-              "if ("#!if(isPredNot, "!", "")#
-              "$src1"#!if(isPredNew, ".new", "")#
-              ") $dst = $src2"> {
+              ""> {
     bits<5> dst;
     bits<2> src1;
     bits<5> src2;
@@ -486,6 +490,11 @@ multiclass TFR64_base<string BaseName> {
     def fnew : T_tfrp_pred <1, 1>;
   }
 }
+
+def A2_tfrfAlias : InstAlias<"if (!$Pu4) $Rd32=$Rs32", (A2_paddif IntRegs:$Rd32, PredRegs:$Pu4, IntRegs:$Rs32, 0)>;
+def A2_tfrfnewAlias : InstAlias<"if (!$Pu4.new) $Rd32=$Rs32", (A2_paddifnew IntRegs:$Rd32, PredRegs:$Pu4, IntRegs:$Rs32, 0)>;
+def A2_tfrtAlias : InstAlias<"if ($Pu4) $Rd32=$Rs32", (A2_paddit IntRegs:$Rd32, PredRegs:$Pu4, IntRegs:$Rs32, 0)>;
+def A2_tfrtnewAlias : InstAlias<"if ($Pu4.new) $Rd32=$Rs32", (A2_padditnew IntRegs:$Rd32, PredRegs:$Pu4, IntRegs:$Rs32, 0)>;
 
 let InputType = "imm", isExtendable = 1, isExtentSigned = 1, opExtentBits = 12,
     isMoveImm = 1, opExtendable = 2, BaseOpcode = "TFRI", CextOpcode = "TFR",
@@ -699,19 +708,7 @@ defm zxth : ALU32_2op_base<"zxth", 0b110>, PredNewRel;
 
 let hasNewValue = 1, opNewValue = 0 in
 class T_ZXTB: ALU32Inst < (outs IntRegs:$Rd), (ins IntRegs:$Rs),
-  "$Rd = zxtb($Rs)", [] > { // Rd = and(Rs,255)
-    bits<5> Rd;
-    bits<5> Rs;
-    bits<10> s10 = 255;
-
-    let IClass = 0b0111;
-
-    let Inst{27-22} = 0b011000;
-    let Inst{4-0} = Rd;
-    let Inst{20-16} = Rs;
-    let Inst{21} = s10{9};
-    let Inst{13-5} = s10{8-0};
-}
+  "$Rd=zxtb($Rs)", [] >;
 
 //Rd=zxtb(Rs): assembler mapped to "Rd=and(Rs,#255)
 multiclass ZXTB_base <string mnemonic, bits<3> minOp> {

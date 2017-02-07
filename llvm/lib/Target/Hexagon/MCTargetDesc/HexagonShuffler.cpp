@@ -239,13 +239,19 @@ unsigned countNeitherAnorX(MCInstrInfo const &MCII, MCInst const &ID) {
   unsigned Result = 0;
   unsigned Type = HexagonMCInstrInfo::getType(MCII, ID);
   if (Type == HexagonII::TypeDUPLEX) {
-      unsigned subInst0Opcode = ID.getOperand(0).getInst()->getOpcode();
-      unsigned subInst1Opcode = ID.getOperand(1).getInst()->getOpcode();
-      Result += !isDuplexAGroup(subInst0Opcode);
-      Result += !isDuplexAGroup(subInst1Opcode);
+    unsigned subInst0Opcode = ID.getOperand(0).getInst()->getOpcode();
+    unsigned subInst1Opcode = ID.getOperand(1).getInst()->getOpcode();
+    Result += !isDuplexAGroup(subInst0Opcode);
+    Result += !isDuplexAGroup(subInst1Opcode);
   } else
-    Result += Type != HexagonII::TypeALU32 &&
-              Type != HexagonII::TypeXTYPE;
+    Result += Type != HexagonII::TypeALU32_2op &&
+              Type != HexagonII::TypeALU32_3op &&
+              Type != HexagonII::TypeALU32_ADDI &&
+              Type != HexagonII::TypeS_2op &&
+              Type != HexagonII::TypeS_3op &&
+              Type != HexagonII::TypeALU64 &&
+              (Type != HexagonII::TypeM ||
+               HexagonMCInstrInfo::isFloat(MCII, ID));
   return Result;
 }
 }
@@ -303,7 +309,9 @@ bool HexagonShuffler::check() {
       ++jump1;
 
     switch (HexagonMCInstrInfo::getType(MCII, ID)) {
-    case HexagonII::TypeXTYPE:
+    case HexagonII::TypeS_2op:
+    case HexagonII::TypeS_3op:
+    case HexagonII::TypeALU64:
       if (HexagonMCInstrInfo::isFloat(MCII, ID))
         ++xtypeFloat;
       break;
@@ -424,7 +432,9 @@ bool HexagonShuffler::check() {
         ISJ->Core.setUnits(ISJ->Core.getUnits() & ~slotOne);
 
     // Exclude from slot #1 any insn but A-type.
-    if (HexagonMCInstrInfo::getType(MCII, ID) != HexagonII::TypeALU32)
+    if (HexagonMCInstrInfo::getType(MCII, ID) != HexagonII::TypeALU32_2op &&
+        HexagonMCInstrInfo::getType(MCII, ID) != HexagonII::TypeALU32_3op &&
+        HexagonMCInstrInfo::getType(MCII, ID) != HexagonII::TypeALU32_ADDI)
       if (onlyAin1)
         ISJ->Core.setUnits(ISJ->Core.getUnits() & ~slotOne);
 

@@ -2198,6 +2198,11 @@ int HexagonAsmParser::processInstruction(MCInst &Inst,
     if (!HexagonMCInstrInfo::mustExtend(*Inst.getOperand(0).getExpr()))
       Inst.setOpcode(Hexagon::S2_storerinewgp);
     break;
+  case Hexagon::A2_zxtb: {
+    Inst.setOpcode(Hexagon::A2_andir);
+    Inst.addOperand(MCOperand::createExpr(MCConstantExpr::create(255, Context)));
+    break;
+  }
   } // switch
 
   return Match_Success;

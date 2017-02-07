@@ -74,7 +74,9 @@ bool HexagonCallMutation::shouldTFRICallBind(const HexagonInstrInfo &HII,
     return false;
 
   // TypeXTYPE are 64 bit operations.
-  if (HII.getType(*Inst2.getInstr()) == HexagonII::TypeXTYPE)
+  unsigned Type = HII.getType(*Inst2.getInstr());
+  if (Type == HexagonII::TypeS_2op || Type == HexagonII::TypeS_3op ||
+    Type == HexagonII::TypeALU64 || Type == HexagonII::TypeM)
     return true;
   return false;
 }

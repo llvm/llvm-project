@@ -21,7 +21,7 @@ def TypeV4LDST   : IType<9>;
 def TypeNCJ      : IType<10>;
 def TypeDUPLEX   : IType<11>;
 def TypeCJ       : IType<12>;
-def TypeEXTENDER   : IType<30>;
+def TypeEXTENDER   : IType<39>;
 
 //                      Duplex Instruction Class Declaration
 //===----------------------------------------------------------------------===//

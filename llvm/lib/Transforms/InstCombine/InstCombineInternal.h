@@ -513,6 +513,9 @@ public:
     return llvm::computeOverflowForUnsignedAdd(LHS, RHS, DL, &AC, CxtI, &DT);
   }
 
+  /// Maximum size of array considered when transforming.
+  int MaxArraySizeForCombine;
+
 private:
   /// \brief Performs a few simplifications for operators which are associative
   /// or commutative.

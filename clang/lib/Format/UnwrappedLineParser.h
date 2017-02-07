@@ -100,7 +100,10 @@ private:
   void parseAccessSpecifier();
   bool parseEnum();
   void parseJavaEnumBody();
-  void parseRecord();
+  // Parses a record (aka class) as a top level element. If ParseAsExpr is true,
+  // parses the record as a child block, i.e. if the class declaration is an
+  // expression.
+  void parseRecord(bool ParseAsExpr = false);
   void parseObjCProtocolList();
   void parseObjCUntilAtEnd();
   void parseObjCInterfaceOrImplementation();
@@ -162,7 +165,7 @@ private:
 
   const FormatStyle &Style;
   const AdditionalKeywords &Keywords;
-  
+
   llvm::Regex CommentPragmasRegex;
 
   FormatTokenSource *Tokens;

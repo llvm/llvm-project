@@ -260,9 +260,7 @@ void SISubtarget::overrideSchedPolicy(MachineSchedPolicy &Policy,
   Policy.OnlyTopDown = false;
   Policy.OnlyBottomUp = false;
 
-  // Enabling ShouldTrackLaneMasks crashes the SI Machine Scheduler.
-  if (!enableSIScheduler())
-    Policy.ShouldTrackLaneMasks = true;
+  Policy.ShouldTrackLaneMasks = enableSubRegLiveness();
 }
 
 bool SISubtarget::isVGPRSpillingEnabled(const Function& F) const {

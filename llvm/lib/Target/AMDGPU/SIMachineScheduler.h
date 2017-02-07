@@ -440,7 +440,8 @@ public:
 
   // To init Block's RPTracker.
   void initRPTracker(RegPressureTracker &RPTracker) {
-    RPTracker.init(&MF, RegClassInfo, LIS, BB, RegionBegin, false, false);
+    RPTracker.init(&MF, RegClassInfo, LIS, BB, RegionBegin,
+     MF.getSubtarget().enableSubRegLiveness(), false);
   }
 
   MachineBasicBlock *getBB() { return BB; }

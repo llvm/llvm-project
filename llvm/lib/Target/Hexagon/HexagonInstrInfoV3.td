@@ -61,7 +61,7 @@ multiclass T_Calls<bit CSR, string ExtStr> {
 defm J2_call: T_Calls<1, "">, PredRel;
 
 let isCodeGenOnly = 1, isCall = 1, hasSideEffects = 1,
-    Defs = VolatileV3.Regs in
+    Defs = VolatileV3.Regs, isPseudo = 1 in
 def PS_call_nr : T_Call<1, "">, PredRel;
 
 let isCodeGenOnly = 1, isCall = 1, hasSideEffects = 1,

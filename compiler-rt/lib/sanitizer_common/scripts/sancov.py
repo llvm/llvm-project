@@ -68,8 +68,10 @@ def ReadOneFile(path):
       raise Exception('File %s is short (< 8 bytes)' % path)
     bits = ReadMagicAndReturnBitness(f, path)
     size -= 8
-    s = struct.unpack_from(TypeCodeForStruct(bits) * (size * 8 / bits), f.read(size))
-  print >>sys.stderr, "%s: read %d %d-bit PCs from %s" % (prog_name, size * 8 / bits, bits, path)
+    w = size * 8 // bits
+    s = struct.unpack_from(TypeCodeForStruct(bits) * (w), f.read(size))
+  sys.stderr.write(
+    "%s: read %d %d-bit PCs from %s\n" % (prog_name, w, bits, path))
   return s
 
 def Merge(files):
@@ -111,7 +113,7 @@ def UnpackOneFile(path):
       if len(header) < 12:
         break
       pid, module_length, blob_size = struct.unpack('iII', header)
-      module = f.read(module_length)
+      module = f.read(module_length).decode('utf-8')
       blob = f.read(blob_size)
       assert(len(module) == module_length)
       assert(len(blob) == blob_size)
@@ -152,7 +154,7 @@ def UnpackOneRawFile(path, map_path):
     f.seek(0, 2)
     size = f.tell()
     f.seek(0, 0)
-    pcs = struct.unpack_from(TypeCodeForStruct(bits) * (size * 8 / bits), f.read(size))
+    pcs = struct.unpack_from(TypeCodeForStruct(bits) * (size * 8 // bits), f.read(size))
     mem_map_pcs = [[] for i in range(0, len(mem_map))]
 
     for pc in pcs:

@@ -29,9 +29,11 @@ define <8 x i16> @combine_v8i16_abs_abs(<8 x i16> %a) {
 ; CHECK-NEXT:    vpabsw %xmm0, %xmm0
 ; CHECK-NEXT:    vpabsw %xmm0, %xmm0
 ; CHECK-NEXT:    retq
-  %1 = call <8 x i16> @llvm.x86.ssse3.pabs.w.128(<8 x i16> %a)
-  %2 = call <8 x i16> @llvm.x86.ssse3.pabs.w.128(<8 x i16> %1)
-  ret <8 x i16> %2
+  %a1 = call <8 x i16> @llvm.x86.ssse3.pabs.w.128(<8 x i16> %a)
+  %n2 = sub <8 x i16> zeroinitializer, %a1
+  %c2 = icmp slt <8 x i16> %a1, zeroinitializer
+  %a2 = select <8 x i1> %c2, <8 x i16> %n2, <8 x i16> %a1
+  ret <8 x i16> %a2
 }
 
 define <32 x i8> @combine_v32i8_abs_abs(<32 x i8> %a) {
@@ -40,9 +42,32 @@ define <32 x i8> @combine_v32i8_abs_abs(<32 x i8> %a) {
 ; CHECK-NEXT:    vpabsb %ymm0, %ymm0
 ; CHECK-NEXT:    vpabsb %ymm0, %ymm0
 ; CHECK-NEXT:    retq
-  %1 = call <32 x i8> @llvm.x86.avx2.pabs.b(<32 x i8> %a)
-  %2 = call <32 x i8> @llvm.x86.avx2.pabs.b(<32 x i8> %1)
-  ret <32 x i8> %2
+  %n1 = sub <32 x i8> zeroinitializer, %a
+  %b1 = icmp slt <32 x i8> %a, zeroinitializer
+  %a1 = select <32 x i1> %b1, <32 x i8> %n1, <32 x i8> %a
+  %a2 = call <32 x i8> @llvm.x86.avx2.pabs.b(<32 x i8> %a1)
+  ret <32 x i8> %a2
+}
+
+define <4 x i64> @combine_v4i64_abs_abs(<4 x i64> %a) {
+; CHECK-LABEL: combine_v4i64_abs_abs:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    vpsrad $31, %ymm0, %ymm1
+; CHECK-NEXT:    vpshufd {{.*#+}} ymm1 = ymm1[1,1,3,3,5,5,7,7]
+; CHECK-NEXT:    vpaddq %ymm1, %ymm0, %ymm0
+; CHECK-NEXT:    vpxor %ymm1, %ymm0, %ymm0
+; CHECK-NEXT:    vpsrad $31, %ymm0, %ymm1
+; CHECK-NEXT:    vpshufd {{.*#+}} ymm1 = ymm1[1,1,3,3,5,5,7,7]
+; CHECK-NEXT:    vpaddq %ymm1, %ymm0, %ymm0
+; CHECK-NEXT:    vpxor %ymm1, %ymm0, %ymm0
+; CHECK-NEXT:    retq
+  %n1 = sub <4 x i64> zeroinitializer, %a
+  %b1 = icmp slt <4 x i64> %a, zeroinitializer
+  %a1 = select <4 x i1> %b1, <4 x i64> %n1, <4 x i64> %a
+  %n2 = sub <4 x i64> zeroinitializer, %a1
+  %b2 = icmp sgt <4 x i64> %a1, zeroinitializer
+  %a2 = select <4 x i1> %b2, <4 x i64> %a1, <4 x i64> %n2
+  ret <4 x i64> %a2
 }
 
 ; fold (abs x) -> x iff not-negative

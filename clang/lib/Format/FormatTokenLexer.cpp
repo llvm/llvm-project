@@ -157,7 +157,9 @@ bool FormatTokenLexer::canPrecedeRegexLiteral(FormatToken *Prev) {
   // postfix unary operators. If the '++' is followed by a non-operand
   // introducing token, the slash here is the operand and not the start of a
   // regex.
-  if (Prev->isOneOf(tok::plusplus, tok::minusminus))
+  // `!` is an unary prefix operator, but also a post-fix operator that casts
+  // away nullability, so the same check applies.
+  if (Prev->isOneOf(tok::plusplus, tok::minusminus, tok::exclaim))
     return (Tokens.size() < 3 || precedesOperand(Tokens[Tokens.size() - 3]));
 
   // The previous token must introduce an operand location where regex

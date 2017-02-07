@@ -16,6 +16,13 @@ namespace llvm {
 
 using namespace sys;
 
+constexpr char detail::unit<std::ratio<3600>>::value[];
+constexpr char detail::unit<std::ratio<60>>::value[];
+constexpr char detail::unit<std::ratio<1>>::value[];
+constexpr char detail::unit<std::milli>::value[];
+constexpr char detail::unit<std::micro>::value[];
+constexpr char detail::unit<std::nano>::value[];
+
 static inline struct tm getStructTM(TimePoint<> TP) {
   struct tm Storage;
   std::time_t OurTime = toTimeT(TP);

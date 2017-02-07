@@ -38,8 +38,12 @@ using namespace llvm;
 
 MCOperand ARMAsmPrinter::GetSymbolRef(const MachineOperand &MO,
                                       const MCSymbol *Symbol) {
+  MCSymbolRefExpr::VariantKind SymbolVariant = MCSymbolRefExpr::VK_None;
+  if (MO.getTargetFlags() & ARMII::MO_SBREL)
+    SymbolVariant = MCSymbolRefExpr::VK_ARM_SBREL;
+
   const MCExpr *Expr =
-      MCSymbolRefExpr::create(Symbol, MCSymbolRefExpr::VK_None, OutContext);
+      MCSymbolRefExpr::create(Symbol, SymbolVariant, OutContext);
   switch (MO.getTargetFlags() & ARMII::MO_OPTION_MASK) {
   default:
     llvm_unreachable("Unknown target flag on symbol operand");
@@ -47,12 +51,12 @@ MCOperand ARMAsmPrinter::GetSymbolRef(const MachineOperand &MO,
     break;
   case ARMII::MO_LO16:
     Expr =
-        MCSymbolRefExpr::create(Symbol, MCSymbolRefExpr::VK_None, OutContext);
+        MCSymbolRefExpr::create(Symbol, SymbolVariant, OutContext);
     Expr = ARMMCExpr::createLower16(Expr, OutContext);
     break;
   case ARMII::MO_HI16:
     Expr =
-        MCSymbolRefExpr::create(Symbol, MCSymbolRefExpr::VK_None, OutContext);
+        MCSymbolRefExpr::create(Symbol, SymbolVariant, OutContext);
     Expr = ARMMCExpr::createUpper16(Expr, OutContext);
     break;
   }
