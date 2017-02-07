@@ -491,11 +491,13 @@ int64_t X86TargetInfo::getImplicitAddend(const uint8_t *Buf,
   default:
     return 0;
   case R_386_8:
-  case R_386_PC8:
     return *Buf;
+  case R_386_PC8:
+    return SignExtend64<8>(*Buf);
   case R_386_16:
-  case R_386_PC16:
     return read16le(Buf);
+  case R_386_PC16:
+    return SignExtend64<16>(read16le(Buf));
   case R_386_32:
   case R_386_GOT32:
   case R_386_GOT32X:

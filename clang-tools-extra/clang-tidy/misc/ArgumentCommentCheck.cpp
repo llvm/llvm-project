@@ -147,33 +147,43 @@ static bool sameName(StringRef InComment, StringRef InDecl, bool StrictMode) {
   return InComment.compare_lower(InDecl) == 0;
 }
 
+static bool looksLikeExpectMethod(const CXXMethodDecl *Expect) {
+  return Expect != nullptr && Expect->getLocation().isMacroID() &&
+         Expect->getNameInfo().getName().isIdentifier() &&
+         Expect->getName().startswith("gmock_");
+}
+static bool areMockAndExpectMethods(const CXXMethodDecl *Mock,
+                                    const CXXMethodDecl *Expect) {
+  assert(looksLikeExpectMethod(Expect));
+  return Mock != nullptr && Mock->getNextDeclInContext() == Expect &&
+         Mock->getNumParams() == Expect->getNumParams() &&
+         Mock->getLocation().isMacroID() &&
+         Mock->getNameInfo().getName().isIdentifier() &&
+         Mock->getName() == Expect->getName().substr(strlen("gmock_"));
+}
+
 // This uses implementation details of MOCK_METHODx_ macros: for each mocked
 // method M it defines M() with appropriate signature and a method used to set
 // up expectations - gmock_M() - with each argument's type changed the
-// corresponding matcher. This function finds M by gmock_M.
-static const CXXMethodDecl *
-findMockedMethod(const CXXMethodDecl *ExpectMethod) {
-  if (!ExpectMethod->getNameInfo().getName().isIdentifier())
-    return nullptr;
-  StringRef Name = ExpectMethod->getName();
-  if (!Name.startswith("gmock_"))
-    return nullptr;
-  Name = Name.substr(strlen("gmock_"));
-
-  const DeclContext *Ctx = ExpectMethod->getDeclContext();
-  if (Ctx == nullptr || !Ctx->isRecord())
-    return nullptr;
-  for (const auto *D : Ctx->decls()) {
-    if (const auto *Method = dyn_cast<CXXMethodDecl>(D)) {
-      if (Method->getName() != Name)
-        continue;
-      // Sanity check the mocked method.
-      if (Method->getNextDeclInContext() == ExpectMethod &&
-          Method->getLocation().isMacroID() &&
-          Method->getNumParams() == ExpectMethod->getNumParams()) {
-        return Method;
+// corresponding matcher. This function returns M when given either M or
+// gmock_M.
+static const CXXMethodDecl *findMockedMethod(const CXXMethodDecl *Method) {
+  if (looksLikeExpectMethod(Method)) {
+    const DeclContext *Ctx = Method->getDeclContext();
+    if (Ctx == nullptr || !Ctx->isRecord())
+      return nullptr;
+    for (const auto *D : Ctx->decls()) {
+      if (D->getNextDeclInContext() == Method) {
+        const auto *Previous = dyn_cast<CXXMethodDecl>(D);
+        return areMockAndExpectMethods(Previous, Method) ? Previous : nullptr;
       }
     }
+    return nullptr;
+  }
+  if (const auto *Next = dyn_cast_or_null<CXXMethodDecl>(
+                 Method->getNextDeclInContext())) {
+    if (looksLikeExpectMethod(Next) && areMockAndExpectMethods(Method, Next))
+      return Method;
   }
   return nullptr;
 }

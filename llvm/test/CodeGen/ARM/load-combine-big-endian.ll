@@ -483,3 +483,135 @@ define i32 @load_i32_by_bswap_i16(i32* %arg) {
   %tmp7 = or i32 %tmp6, %tmp2
   ret i32 %tmp7
 }
+
+; i16* p; // p is 4 byte aligned
+; (i32) p[1] | (sext(p[0] << 16) to i32)
+define i32 @load_i32_by_sext_i16(i32* %arg) {
+; CHECK-LABEL: load_i32_by_sext_i16:
+; CHECK: ldrh  r1, [r0]
+; CHECK-NEXT: ldrh  r0, [r0, #2]
+; CHECK-NEXT: orr r0, r0, r1, lsl #16
+; CHECK-NEXT: mov pc, lr
+
+; CHECK-ARMv6-LABEL: load_i32_by_sext_i16:
+; CHECK-ARMv6: ldrh  r1, [r0]
+; CHECK-ARMv6-NEXT: ldrh  r0, [r0, #2]
+; CHECK-ARMv6-NEXT: orr r0, r0, r1, lsl #16
+; CHECK-ARMv6-NEXT: bx  lr
+  
+  %tmp = bitcast i32* %arg to i16*
+  %tmp1 = load i16, i16* %tmp, align 4
+  %tmp2 = sext i16 %tmp1 to i32
+  %tmp3 = getelementptr inbounds i16, i16* %tmp, i32 1
+  %tmp4 = load i16, i16* %tmp3, align 1
+  %tmp5 = zext i16 %tmp4 to i32
+  %tmp6 = shl nuw nsw i32 %tmp2, 16
+  %tmp7 = or i32 %tmp6, %tmp5
+  ret i32 %tmp7
+}
+
+; i8* arg; i32 i;
+; p = arg + 12;
+; (i32) p[i] | ((i32) p[i + 1] << 8) | ((i32) p[i + 2] << 16) | ((i32) p[i + 3] << 24)
+define i32 @load_i32_by_i8_base_offset_index(i8* %arg, i32 %i) {
+; CHECK-LABEL: load_i32_by_i8_base_offset_index:
+; CHECK: add r0, r0, r1
+; CHECK-NEXT: mov r1, #65280
+; CHECK-NEXT: mov r2, #16711680
+; CHECK-NEXT: ldr r0, [r0, #12]
+; CHECK-NEXT: and r1, r1, r0, lsr #8
+; CHECK-NEXT: and r2, r2, r0, lsl #8
+; CHECK-NEXT: orr r1, r1, r0, lsr #24
+; CHECK-NEXT: orr r0, r2, r0, lsl #24
+; CHECK-NEXT: orr r0, r0, r1
+; CHECK-NEXT: mov pc, lr
+;
+; CHECK-ARMv6-LABEL: load_i32_by_i8_base_offset_index:
+; CHECK-ARMv6: add r0, r0, r1
+; CHECK-ARMv6-NEXT: ldr r0, [r0, #12]
+; CHECK-ARMv6-NEXT: rev r0, r0
+; CHECK-ARMv6-NEXT: bx  lr
+  %tmp = add nuw nsw i32 %i, 3
+  %tmp2 = add nuw nsw i32 %i, 2
+  %tmp3 = add nuw nsw i32 %i, 1
+  %tmp4 = getelementptr inbounds i8, i8* %arg, i64 12
+  %tmp5 = zext i32 %i to i64
+  %tmp6 = getelementptr inbounds i8, i8* %tmp4, i64 %tmp5
+  %tmp7 = load i8, i8* %tmp6, align 4
+  %tmp8 = zext i8 %tmp7 to i32
+  %tmp9 = zext i32 %tmp3 to i64
+  %tmp10 = getelementptr inbounds i8, i8* %tmp4, i64 %tmp9
+  %tmp11 = load i8, i8* %tmp10, align 1
+  %tmp12 = zext i8 %tmp11 to i32
+  %tmp13 = shl nuw nsw i32 %tmp12, 8
+  %tmp14 = or i32 %tmp13, %tmp8
+  %tmp15 = zext i32 %tmp2 to i64
+  %tmp16 = getelementptr inbounds i8, i8* %tmp4, i64 %tmp15
+  %tmp17 = load i8, i8* %tmp16, align 1
+  %tmp18 = zext i8 %tmp17 to i32
+  %tmp19 = shl nuw nsw i32 %tmp18, 16
+  %tmp20 = or i32 %tmp14, %tmp19
+  %tmp21 = zext i32 %tmp to i64
+  %tmp22 = getelementptr inbounds i8, i8* %tmp4, i64 %tmp21
+  %tmp23 = load i8, i8* %tmp22, align 1
+  %tmp24 = zext i8 %tmp23 to i32
+  %tmp25 = shl nuw i32 %tmp24, 24
+  %tmp26 = or i32 %tmp20, %tmp25
+  ret i32 %tmp26
+}
+
+; i8* arg; i32 i;
+; p = arg + 12;
+; (i32) p[i + 1] | ((i32) p[i + 2] << 8) | ((i32) p[i + 3] << 16) | ((i32) p[i + 4] << 24)
+define i32 @load_i32_by_i8_base_offset_index_2(i8* %arg, i32 %i) {
+; CHECK-LABEL: load_i32_by_i8_base_offset_index_2:
+; CHECK: add r0, r0, r1
+; CHECK-NEXT: ldrb  r1, [r0, #13]
+; CHECK-NEXT: ldrb  r2, [r0, #14]
+; CHECK-NEXT: ldrb  r3, [r0, #15]
+; CHECK-NEXT: ldrb  r0, [r0, #16]
+; CHECK-NEXT: orr r1, r1, r2, lsl #8
+; CHECK-NEXT: orr r1, r1, r3, lsl #16
+; CHECK-NEXT: orr r0, r1, r0, lsl #24
+; CHECK-NEXT: mov pc, lr
+;
+; CHECK-ARMv6-LABEL: load_i32_by_i8_base_offset_index_2:
+; CHECK-ARMv6: add r0, r0, r1
+; CHECK-ARMv6-NEXT: ldrb  r1, [r0, #13]
+; CHECK-ARMv6-NEXT: ldrb  r2, [r0, #14]
+; CHECK-ARMv6-NEXT: ldrb  r3, [r0, #15]
+; CHECK-ARMv6-NEXT: ldrb  r0, [r0, #16]
+; CHECK-ARMv6-NEXT: orr r1, r1, r2, lsl #8
+; CHECK-ARMv6-NEXT: orr r1, r1, r3, lsl #16
+; CHECK-ARMv6-NEXT: orr r0, r1, r0, lsl #24
+; CHECK-ARMv6-NEXT: bx  lr
+
+  %tmp = add nuw nsw i32 %i, 4
+  %tmp2 = add nuw nsw i32 %i, 3
+  %tmp3 = add nuw nsw i32 %i, 2
+  %tmp4 = getelementptr inbounds i8, i8* %arg, i64 12
+  %tmp5 = add nuw nsw i32 %i, 1
+  %tmp27 = zext i32 %tmp5 to i64
+  %tmp28 = getelementptr inbounds i8, i8* %tmp4, i64 %tmp27
+  %tmp29 = load i8, i8* %tmp28, align 4
+  %tmp30 = zext i8 %tmp29 to i32
+  %tmp31 = zext i32 %tmp3 to i64
+  %tmp32 = getelementptr inbounds i8, i8* %tmp4, i64 %tmp31
+  %tmp33 = load i8, i8* %tmp32, align 1
+  %tmp34 = zext i8 %tmp33 to i32
+  %tmp35 = shl nuw nsw i32 %tmp34, 8
+  %tmp36 = or i32 %tmp35, %tmp30
+  %tmp37 = zext i32 %tmp2 to i64
+  %tmp38 = getelementptr inbounds i8, i8* %tmp4, i64 %tmp37
+  %tmp39 = load i8, i8* %tmp38, align 1
+  %tmp40 = zext i8 %tmp39 to i32
+  %tmp41 = shl nuw nsw i32 %tmp40, 16
+  %tmp42 = or i32 %tmp36, %tmp41
+  %tmp43 = zext i32 %tmp to i64
+  %tmp44 = getelementptr inbounds i8, i8* %tmp4, i64 %tmp43
+  %tmp45 = load i8, i8* %tmp44, align 1
+  %tmp46 = zext i8 %tmp45 to i32
+  %tmp47 = shl nuw i32 %tmp46, 24
+  %tmp48 = or i32 %tmp42, %tmp47
+  ret i32 %tmp48
+}

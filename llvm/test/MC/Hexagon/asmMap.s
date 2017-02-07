@@ -540,10 +540,10 @@ r5=zxtb(r20)
 	p0=cmp.eq(r0,##179976360)
 }
 
-#CHECK: 74f9c00f { if (!p3) r15{{ *}}={{ *}}r25
+#CHECK: 74f9c00f { if (!p3) r15{{ *}} ={{ *}}add(r25, #0)
 if (!p3) r15=r25
 
-#CHECK: 7425c005 { if (p1) r5{{ *}}={{ *}}r5
+#CHECK: 7425c005 { if (p1) r5{{ *}}={{ *}}add(r5, #0)
 if (p1) r5=r5
 
 #CHECK: e9badae2 { r2{{ *}}={{ *}}vrcmpys(r27:26, r27:26):<<1:rnd:sat:raw:lo
@@ -561,7 +561,7 @@ if (!p2) r3:2=r7:6
 #CHECK: fd0dcc7e { if (p3) r31:30{{ *}}={{ *}}{{r13:12|combine\(r13, *r12\)}}
 if (p3) r31:30=r13:12
 
-#CHECK: 748ae015 if (!p0.new) r21{{ *}}={{ *}}r10
+#CHECK: 748ae015 if (!p0.new) r21{{ *}}={{ *}}add(r10, #0)
 {
   p0=cmp.eq(r23,##805633208)
   if (!p0.new) r21=r10

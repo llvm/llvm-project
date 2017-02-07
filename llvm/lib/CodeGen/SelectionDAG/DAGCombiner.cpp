@@ -1834,12 +1834,6 @@ SDValue DAGCombiner::visitADDLike(SDValue N0, SDValue N1, SDNode *LocReference) 
     }
   }
 
-  // (add X, (adde Y, 0, Carry)) -> (adde X, Y, Carry)
-  if (N1.getOpcode() == ISD::ADDE && N1->hasOneUse() &&
-      isNullConstant(N1.getOperand(1)))
-    return DAG.getNode(ISD::ADDE, DL, DAG.getVTList(VT, MVT::Glue),
-                       N0, N1->getOperand(0), N1->getOperand(2));
-
   return SDValue();
 }
 

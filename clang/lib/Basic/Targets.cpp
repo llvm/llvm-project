@@ -8446,6 +8446,254 @@ public:
   }
 };
 
+/// Information about a specific microcontroller.
+struct MCUInfo {
+  const char *Name;
+  const char *DefineName;
+};
+
+// This list should be kept up-to-date with AVRDevices.td in LLVM.
+static ArrayRef<MCUInfo> AVRMcus = {
+  { "at90s1200", "__AVR_AT90S1200__" },
+  { "attiny11", "__AVR_ATtiny11" },
+  { "attiny12", "__AVR_ATtiny12" },
+  { "attiny15", "__AVR_ATtiny15" },
+  { "attiny28", "__AVR_ATtiny28" },
+  { "at90s2313", "__AVR_AT90S2313" },
+  { "at90s2323", "__AVR_AT90S2323" },
+  { "at90s2333", "__AVR_AT90S2333" },
+  { "at90s2343", "__AVR_AT90S2343" },
+  { "attiny22", "__AVR_ATtiny22" },
+  { "attiny26", "__AVR_ATtiny26" },
+  { "at86rf401", "__AVR_AT86RF401" },
+  { "at90s4414", "__AVR_AT90S4414" },
+  { "at90s4433", "__AVR_AT90S4433" },
+  { "at90s4434", "__AVR_AT90S4434" },
+  { "at90s8515", "__AVR_AT90S8515" },
+  { "at90c8534", "__AVR_AT90c8534" },
+  { "at90s8535", "__AVR_AT90S8535" },
+  { "ata5272", "__AVR_ATA5272" },
+  { "attiny13", "__AVR_ATtiny13" },
+  { "attiny13a", "__AVR_ATtiny13A" },
+  { "attiny2313", "__AVR_ATtiny2313" },
+  { "attiny2313a", "__AVR_ATtiny2313A" },
+  { "attiny24", "__AVR_ATtiny24" },
+  { "attiny24a", "__AVR_ATtiny24A" },
+  { "attiny4313", "__AVR_ATtiny4313" },
+  { "attiny44", "__AVR_ATtiny44" },
+  { "attiny44a", "__AVR_ATtiny44A" },
+  { "attiny84", "__AVR_ATtiny84" },
+  { "attiny84a", "__AVR_ATtiny84A" },
+  { "attiny25", "__AVR_ATtiny25" },
+  { "attiny45", "__AVR_ATtiny45" },
+  { "attiny85", "__AVR_ATtiny85" },
+  { "attiny261", "__AVR_ATtiny261" },
+  { "attiny261a", "__AVR_ATtiny261A" },
+  { "attiny461", "__AVR_ATtiny461" },
+  { "attiny461a", "__AVR_ATtiny461A" },
+  { "attiny861", "__AVR_ATtiny861" },
+  { "attiny861a", "__AVR_ATtiny861A" },
+  { "attiny87", "__AVR_ATtiny87" },
+  { "attiny43u", "__AVR_ATtiny43U" },
+  { "attiny48", "__AVR_ATtiny48" },
+  { "attiny88", "__AVR_ATtiny88" },
+  { "attiny828", "__AVR_ATtiny828" },
+  { "at43usb355", "__AVR_AT43USB355" },
+  { "at76c711", "__AVR_AT76C711" },
+  { "atmega103", "__AVR_ATmega103" },
+  { "at43usb320", "__AVR_AT43USB320" },
+  { "attiny167", "__AVR_ATtiny167" },
+  { "at90usb82", "__AVR_AT90USB82" },
+  { "at90usb162", "__AVR_AT90USB162" },
+  { "ata5505", "__AVR_ATA5505" },
+  { "atmega8u2", "__AVR_ATmega8U2" },
+  { "atmega16u2", "__AVR_ATmega16U2" },
+  { "atmega32u2", "__AVR_ATmega32U2" },
+  { "attiny1634", "__AVR_ATtiny1634" },
+  { "atmega8", "__AVR_ATmega8" },
+  { "ata6289", "__AVR_ATA6289" },
+  { "atmega8a", "__AVR_ATmega8A" },
+  { "ata6285", "__AVR_ATA6285" },
+  { "ata6286", "__AVR_ATA6286" },
+  { "atmega48", "__AVR_ATmega48" },
+  { "atmega48a", "__AVR_ATmega48A" },
+  { "atmega48pa", "__AVR_ATmega48PA" },
+  { "atmega48p", "__AVR_ATmega48P" },
+  { "atmega88", "__AVR_ATmega88" },
+  { "atmega88a", "__AVR_ATmega88A" },
+  { "atmega88p", "__AVR_ATmega88P" },
+  { "atmega88pa", "__AVR_ATmega88PA" },
+  { "atmega8515", "__AVR_ATmega8515" },
+  { "atmega8535", "__AVR_ATmega8535" },
+  { "atmega8hva", "__AVR_ATmega8HVA" },
+  { "at90pwm1", "__AVR_AT90PWM1" },
+  { "at90pwm2", "__AVR_AT90PWM2" },
+  { "at90pwm2b", "__AVR_AT90PWM2B" },
+  { "at90pwm3", "__AVR_AT90PWM3" },
+  { "at90pwm3b", "__AVR_AT90PWM3B" },
+  { "at90pwm81", "__AVR_AT90PWM81" },
+  { "ata5790", "__AVR_ATA5790" },
+  { "ata5795", "__AVR_ATA5795" },
+  { "atmega16", "__AVR_ATmega16" },
+  { "atmega16a", "__AVR_ATmega16A" },
+  { "atmega161", "__AVR_ATmega161" },
+  { "atmega162", "__AVR_ATmega162" },
+  { "atmega163", "__AVR_ATmega163" },
+  { "atmega164a", "__AVR_ATmega164A" },
+  { "atmega164p", "__AVR_ATmega164P" },
+  { "atmega164pa", "__AVR_ATmega164PA" },
+  { "atmega165", "__AVR_ATmega165" },
+  { "atmega165a", "__AVR_ATmega165A" },
+  { "atmega165p", "__AVR_ATmega165P" },
+  { "atmega165pa", "__AVR_ATmega165PA" },
+  { "atmega168", "__AVR_ATmega168" },
+  { "atmega168a", "__AVR_ATmega168A" },
+  { "atmega168p", "__AVR_ATmega168P" },
+  { "atmega168pa", "__AVR_ATmega168PA" },
+  { "atmega169", "__AVR_ATmega169" },
+  { "atmega169a", "__AVR_ATmega169A" },
+  { "atmega169p", "__AVR_ATmega169P" },
+  { "atmega169pa", "__AVR_ATmega169PA" },
+  { "atmega32", "__AVR_ATmega32" },
+  { "atmega32a", "__AVR_ATmega32A" },
+  { "atmega323", "__AVR_ATmega323" },
+  { "atmega324a", "__AVR_ATmega324A" },
+  { "atmega324p", "__AVR_ATmega324P" },
+  { "atmega324pa", "__AVR_ATmega324PA" },
+  { "atmega325", "__AVR_ATmega325" },
+  { "atmega325a", "__AVR_ATmega325A" },
+  { "atmega325p", "__AVR_ATmega325P" },
+  { "atmega325pa", "__AVR_ATmega325PA" },
+  { "atmega3250", "__AVR_ATmega3250" },
+  { "atmega3250a", "__AVR_ATmega3250A" },
+  { "atmega3250p", "__AVR_ATmega3250P" },
+  { "atmega3250pa", "__AVR_ATmega3250PA" },
+  { "atmega328", "__AVR_ATmega328" },
+  { "atmega328p", "__AVR_ATmega328P" },
+  { "atmega329", "__AVR_ATmega329" },
+  { "atmega329a", "__AVR_ATmega329A" },
+  { "atmega329p", "__AVR_ATmega329P" },
+  { "atmega329pa", "__AVR_ATmega329PA" },
+  { "atmega3290", "__AVR_ATmega3290" },
+  { "atmega3290a", "__AVR_ATmega3290A" },
+  { "atmega3290p", "__AVR_ATmega3290P" },
+  { "atmega3290pa", "__AVR_ATmega3290PA" },
+  { "atmega406", "__AVR_ATmega406" },
+  { "atmega64", "__AVR_ATmega64" },
+  { "atmega64a", "__AVR_ATmega64A" },
+  { "atmega640", "__AVR_ATmega640" },
+  { "atmega644", "__AVR_ATmega644" },
+  { "atmega644a", "__AVR_ATmega644A" },
+  { "atmega644p", "__AVR_ATmega644P" },
+  { "atmega644pa", "__AVR_ATmega644PA" },
+  { "atmega645", "__AVR_ATmega645" },
+  { "atmega645a", "__AVR_ATmega645A" },
+  { "atmega645p", "__AVR_ATmega645P" },
+  { "atmega649", "__AVR_ATmega649" },
+  { "atmega649a", "__AVR_ATmega649A" },
+  { "atmega649p", "__AVR_ATmega649P" },
+  { "atmega6450", "__AVR_ATmega6450" },
+  { "atmega6450a", "__AVR_ATmega6450A" },
+  { "atmega6450p", "__AVR_ATmega6450P" },
+  { "atmega6490", "__AVR_ATmega6490" },
+  { "atmega6490a", "__AVR_ATmega6490A" },
+  { "atmega6490p", "__AVR_ATmega6490P" },
+  { "atmega64rfr2", "__AVR_ATmega64RFR2" },
+  { "atmega644rfr2", "__AVR_ATmega644RFR2" },
+  { "atmega16hva", "__AVR_ATmega16HVA" },
+  { "atmega16hva2", "__AVR_ATmega16HVA2" },
+  { "atmega16hvb", "__AVR_ATmega16HVB" },
+  { "atmega16hvbrevb", "__AVR_ATmega16HVBREVB" },
+  { "atmega32hvb", "__AVR_ATmega32HVB" },
+  { "atmega32hvbrevb", "__AVR_ATmega32HVBREVB" },
+  { "atmega64hve", "__AVR_ATmega64HVE" },
+  { "at90can32", "__AVR_AT90CAN32" },
+  { "at90can64", "__AVR_AT90CAN64" },
+  { "at90pwm161", "__AVR_AT90PWM161" },
+  { "at90pwm216", "__AVR_AT90PWM216" },
+  { "at90pwm316", "__AVR_AT90PWM316" },
+  { "atmega32c1", "__AVR_ATmega32C1" },
+  { "atmega64c1", "__AVR_ATmega64C1" },
+  { "atmega16m1", "__AVR_ATmega16M1" },
+  { "atmega32m1", "__AVR_ATmega32M1" },
+  { "atmega64m1", "__AVR_ATmega64M1" },
+  { "atmega16u4", "__AVR_ATmega16U4" },
+  { "atmega32u4", "__AVR_ATmega32U4" },
+  { "atmega32u6", "__AVR_ATmega32U6" },
+  { "at90usb646", "__AVR_AT90USB646" },
+  { "at90usb647", "__AVR_AT90USB647" },
+  { "at90scr100", "__AVR_AT90SCR100" },
+  { "at94k", "__AVR_AT94K" },
+  { "m3000", "__AVR_AT000" },
+  { "atmega128", "__AVR_ATmega128" },
+  { "atmega128a", "__AVR_ATmega128A" },
+  { "atmega1280", "__AVR_ATmega1280" },
+  { "atmega1281", "__AVR_ATmega1281" },
+  { "atmega1284", "__AVR_ATmega1284" },
+  { "atmega1284p", "__AVR_ATmega1284P" },
+  { "atmega128rfa1", "__AVR_ATmega128RFA1" },
+  { "atmega128rfr2", "__AVR_ATmega128RFR2" },
+  { "atmega1284rfr2", "__AVR_ATmega1284RFR2" },
+  { "at90can128", "__AVR_AT90CAN128" },
+  { "at90usb1286", "__AVR_AT90USB1286" },
+  { "at90usb1287", "__AVR_AT90USB1287" },
+  { "atmega2560", "__AVR_ATmega2560" },
+  { "atmega2561", "__AVR_ATmega2561" },
+  { "atmega256rfr2", "__AVR_ATmega256RFR2" },
+  { "atmega2564rfr2", "__AVR_ATmega2564RFR2" },
+  { "atxmega16a4", "__AVR_ATxmega16A4" },
+  { "atxmega16a4u", "__AVR_ATxmega16a4U" },
+  { "atxmega16c4", "__AVR_ATxmega16C4" },
+  { "atxmega16d4", "__AVR_ATxmega16D4" },
+  { "atxmega32a4", "__AVR_ATxmega32A4" },
+  { "atxmega32a4u", "__AVR_ATxmega32A4U" },
+  { "atxmega32c4", "__AVR_ATxmega32C4" },
+  { "atxmega32d4", "__AVR_ATxmega32D4" },
+  { "atxmega32e5", "__AVR_ATxmega32E5" },
+  { "atxmega16e5", "__AVR_ATxmega16E5" },
+  { "atxmega8e5", "__AVR_ATxmega8E5" },
+  { "atxmega32x1", "__AVR_ATxmega32X1" },
+  { "atxmega64a3", "__AVR_ATxmega64A3" },
+  { "atxmega64a3u", "__AVR_ATxmega64A3U" },
+  { "atxmega64a4u", "__AVR_ATxmega64A4U" },
+  { "atxmega64b1", "__AVR_ATxmega64B1" },
+  { "atxmega64b3", "__AVR_ATxmega64B3" },
+  { "atxmega64c3", "__AVR_ATxmega64C3" },
+  { "atxmega64d3", "__AVR_ATxmega64D3" },
+  { "atxmega64d4", "__AVR_ATxmega64D4" },
+  { "atxmega64a1", "__AVR_ATxmega64A1" },
+  { "atxmega64a1u", "__AVR_ATxmega64A1U" },
+  { "atxmega128a3", "__AVR_ATxmega128A3" },
+  { "atxmega128a3u", "__AVR_ATxmega128A3U" },
+  { "atxmega128b1", "__AVR_ATxmega128B1" },
+  { "atxmega128b3", "__AVR_ATxmega128B3" },
+  { "atxmega128c3", "__AVR_ATxmega128C3" },
+  { "atxmega128d3", "__AVR_ATxmega128D3" },
+  { "atxmega128d4", "__AVR_ATxmega128D4" },
+  { "atxmega192a3", "__AVR_ATxmega192A3" },
+  { "atxmega192a3u", "__AVR_ATxmega192A3U" },
+  { "atxmega192c3", "__AVR_ATxmega192C3" },
+  { "atxmega192d3", "__AVR_ATxmega192D3" },
+  { "atxmega256a3", "__AVR_ATxmega256A3" },
+  { "atxmega256a3u", "__AVR_ATxmega256A3U" },
+  { "atxmega256a3b", "__AVR_ATxmega256A3B" },
+  { "atxmega256a3bu", "__AVR_ATxmega256A3BU" },
+  { "atxmega256c3", "__AVR_ATxmega256C3" },
+  { "atxmega256d3", "__AVR_ATxmega256D3" },
+  { "atxmega384c3", "__AVR_ATxmega384C3" },
+  { "atxmega384d3", "__AVR_ATxmega384D3" },
+  { "atxmega128a1", "__AVR_ATxmega128A1" },
+  { "atxmega128a1u", "__AVR_ATxmega128A1U" },
+  { "atxmega128a4u", "__AVR_ATxmega128a4U" },
+  { "attiny4", "__AVR_ATtiny4" },
+  { "attiny5", "__AVR_ATtiny5" },
+  { "attiny9", "__AVR_ATtiny9" },
+  { "attiny10", "__AVR_ATtiny10" },
+  { "attiny20", "__AVR_ATtiny20" },
+  { "attiny40", "__AVR_ATtiny40" },
+  { "attiny102", "__AVR_ATtiny102" },
+  { "attiny104", "__AVR_ATtiny104" },
+};
 
 // AVR Target
 class AVRTargetInfo : public TargetInfo {
@@ -8487,7 +8735,17 @@ public:
 
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override {
+    Builder.defineMacro("AVR");
+    Builder.defineMacro("__AVR");
     Builder.defineMacro("__AVR__");
+
+    if (!this->CPU.empty()) {
+      auto It = std::find_if(AVRMcus.begin(), AVRMcus.end(),
+        [&](const MCUInfo &Info) { return Info.Name == this->CPU; });
+
+      if (It != AVRMcus.end())
+        Builder.defineMacro(It->DefineName);
+    }
   }
 
   ArrayRef<Builtin::Info> getTargetBuiltins() const override {
@@ -8596,6 +8854,41 @@ public:
                ? (IsSigned ? SignedInt : UnsignedInt)
                : TargetInfo::getLeastIntTypeByWidth(BitWidth, IsSigned);
   }
+
+  bool setCPU(const std::string &Name) override {
+    bool IsFamily = llvm::StringSwitch<bool>(Name)
+      .Case("avr1", true)
+      .Case("avr2", true)
+      .Case("avr25", true)
+      .Case("avr3", true)
+      .Case("avr31", true)
+      .Case("avr35", true)
+      .Case("avr4", true)
+      .Case("avr5", true)
+      .Case("avr51", true)
+      .Case("avr6", true)
+      .Case("avrxmega1", true)
+      .Case("avrxmega2", true)
+      .Case("avrxmega3", true)
+      .Case("avrxmega4", true)
+      .Case("avrxmega5", true)
+      .Case("avrxmega6", true)
+      .Case("avrxmega7", true)
+      .Case("avrtiny", true)
+      .Default(false);
+
+    if (IsFamily) this->CPU = Name;
+
+    bool IsMCU = std::find_if(AVRMcus.begin(), AVRMcus.end(),
+      [&](const MCUInfo &Info) { return Info.Name == Name; }) != AVRMcus.end();
+
+    if (IsMCU) this->CPU = Name;
+
+    return IsFamily || IsMCU;
+  }
+
+protected:
+  std::string CPU;
 };
 
 } // end anonymous namespace

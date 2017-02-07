@@ -33,14 +33,10 @@ namespace HexagonII {
   // *** Must match HexagonInstrFormat*.td ***
   enum Type {
     TypePSEUDO  = 0,
-    TypeALU32   = 1,
     TypeCR      = 2,
-    TypeJR      = 3,
     TypeJ       = 4,
     TypeLD      = 5,
     TypeST      = 6,
-    TypeSYSTEM  = 7,
-    TypeXTYPE   = 8,
     TypeV4LDST  = 9,
     TypeNCJ     = 10,
     TypeDUPLEX  = 11,
@@ -63,8 +59,15 @@ namespace HexagonII {
     TypeCVI_VM_STU    = 27,
     TypeCVI_HIST      = 28,
     TypeCVI_LAST      = TypeCVI_HIST,
-    TypeEXTENDER      = 30,
-    TypeENDLOOP       = 31  // Such as end of a HW loop.
+    TypeEXTENDER  = 39,
+    TypeENDLOOP = 40,
+    TypeS_2op = 41,
+    TypeS_3op = 42,
+    TypeALU64 = 43,
+    TypeM = 44,
+    TypeALU32_2op = 45,
+    TypeALU32_3op = 46,
+    TypeALU32_ADDI = 47
   };
 
   enum SubTarget {

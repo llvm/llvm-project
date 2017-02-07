@@ -1046,7 +1046,9 @@ static bool cannotCoexistAsymm(const MachineInstr &MI, const MachineInstr &MJ,
     // XTYPE instructions.  Since there is no convenient way of identifying fp
     // XTYPE instructions, only allow grouping with ALU32 for now.
     unsigned TJ = HII.getType(MJ);
-    if (TJ != HexagonII::TypeALU32)
+    if (TJ != HexagonII::TypeALU32_2op &&
+        TJ != HexagonII::TypeALU32_3op &&
+        TJ != HexagonII::TypeALU32_ADDI)
       return true;
     break;
   }
