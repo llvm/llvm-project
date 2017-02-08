@@ -349,6 +349,9 @@ HANDLE_TARGET_OPCODE(G_FDIV)
 /// Generic FP remainder.
 HANDLE_TARGET_OPCODE(G_FREM)
 
+/// Generic FP exponentiation.
+HANDLE_TARGET_OPCODE(G_FPOW)
+
 /// Generic float to signed-int conversion
 HANDLE_TARGET_OPCODE(G_FPEXT)
 
