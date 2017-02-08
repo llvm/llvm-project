@@ -109,12 +109,13 @@ void AMDGPUAsmPrinter::EmitStartOfAsmFile(Module &M) {
   TS->EmitDirectiveHSACodeObjectVersion(2, 1);
 
   const MCSubtargetInfo *STI = TM.getMCSubtargetInfo();
-  AMDGPU::IsaVersion ISA = AMDGPU::getIsaVersion(STI->getFeatureBits());
+  AMDGPU::IsaInfo::IsaVersion ISA =
+      AMDGPU::IsaInfo::getIsaVersion(STI->getFeatureBits());
   TS->EmitDirectiveHSACodeObjectISA(ISA.Major, ISA.Minor, ISA.Stepping,
                                     "AMD", "AMDGPU");
 
   // Emit runtime metadata.
-  TS->EmitRuntimeMetadata(M);
+  TS->EmitRuntimeMetadata(STI->getFeatureBits(), M);
 }
 
 bool AMDGPUAsmPrinter::isBlockOnlyReachableByFallthrough(
@@ -473,33 +474,20 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
       ExtraSGPRs = 6;
   }
 
-  // Record first reserved register and reserved register count fields, and
-  // update max register counts if "amdgpu-debugger-reserve-regs" attribute was
-  // requested.
-  ProgInfo.ReservedVGPRFirst = STM.debuggerReserveRegs() ? MaxVGPR + 1 : 0;
-  ProgInfo.ReservedVGPRCount = RI->getNumDebuggerReservedVGPRs(STM);
-
-  // Update DebuggerWavefrontPrivateSegmentOffsetSGPR and
-  // DebuggerPrivateSegmentBufferSGPR fields if "amdgpu-debugger-emit-prologue"
-  // attribute was requested.
-  if (STM.debuggerEmitPrologue()) {
-    ProgInfo.DebuggerWavefrontPrivateSegmentOffsetSGPR =
-      RI->getHWRegIndex(MFI->getScratchWaveOffsetReg());
-    ProgInfo.DebuggerPrivateSegmentBufferSGPR =
-      RI->getHWRegIndex(MFI->getScratchRSrcReg());
-  }
+  unsigned ExtraVGPRs = STM.getReservedNumVGPRs(MF);
 
   // Check the addressable register limit before we add ExtraSGPRs.
   if (STM.getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS &&
       !STM.hasSGPRInitBug()) {
-    unsigned MaxAddressableNumSGPRs = STM.getMaxNumSGPRs();
+    unsigned MaxAddressableNumSGPRs = STM.getAddressableNumSGPRs();
     if (MaxSGPR + 1 > MaxAddressableNumSGPRs) {
       // This can happen due to a compiler bug or when using inline asm.
       LLVMContext &Ctx = MF.getFunction()->getContext();
       DiagnosticInfoResourceLimit Diag(*MF.getFunction(),
                                        "addressable scalar registers",
                                        MaxSGPR + 1, DS_Error,
-                                       DK_ResourceLimit, MaxAddressableNumSGPRs);
+                                       DK_ResourceLimit,
+                                       MaxAddressableNumSGPRs);
       Ctx.diagnose(Diag);
       MaxSGPR = MaxAddressableNumSGPRs - 1;
     }
@@ -507,41 +495,43 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
 
   // Account for extra SGPRs and VGPRs reserved for debugger use.
   MaxSGPR += ExtraSGPRs;
-  MaxVGPR += RI->getNumDebuggerReservedVGPRs(STM);
+  MaxVGPR += ExtraVGPRs;
 
   // We found the maximum register index. They start at 0, so add one to get the
   // number of registers.
-  ProgInfo.NumVGPR = MaxVGPR + 1;
   ProgInfo.NumSGPR = MaxSGPR + 1;
+  ProgInfo.NumVGPR = MaxVGPR + 1;
 
   // Adjust number of registers used to meet default/requested minimum/maximum
   // number of waves per execution unit request.
   ProgInfo.NumSGPRsForWavesPerEU = std::max(
-    ProgInfo.NumSGPR, RI->getMinNumSGPRs(STM, MFI->getMaxWavesPerEU()));
+    ProgInfo.NumSGPR, STM.getMinNumSGPRs(MFI->getMaxWavesPerEU()));
   ProgInfo.NumVGPRsForWavesPerEU = std::max(
-    ProgInfo.NumVGPR, RI->getMinNumVGPRs(MFI->getMaxWavesPerEU()));
+    ProgInfo.NumVGPR, STM.getMinNumVGPRs(MFI->getMaxWavesPerEU()));
 
   if (STM.getGeneration() <= AMDGPUSubtarget::SEA_ISLANDS ||
       STM.hasSGPRInitBug()) {
-    unsigned MaxNumSGPRs = STM.getMaxNumSGPRs();
-    if (ProgInfo.NumSGPR > MaxNumSGPRs) {
-      // This can happen due to a compiler bug or when using inline asm to use the
-      // registers which are usually reserved for vcc etc.
-
+    unsigned MaxAddressableNumSGPRs = STM.getAddressableNumSGPRs();
+    if (ProgInfo.NumSGPR > MaxAddressableNumSGPRs) {
+      // This can happen due to a compiler bug or when using inline asm to use
+      // the registers which are usually reserved for vcc etc.
       LLVMContext &Ctx = MF.getFunction()->getContext();
       DiagnosticInfoResourceLimit Diag(*MF.getFunction(),
                                        "scalar registers",
                                        ProgInfo.NumSGPR, DS_Error,
-                                       DK_ResourceLimit, MaxNumSGPRs);
+                                       DK_ResourceLimit,
+                                       MaxAddressableNumSGPRs);
       Ctx.diagnose(Diag);
-      ProgInfo.NumSGPR = MaxNumSGPRs;
-      ProgInfo.NumSGPRsForWavesPerEU = MaxNumSGPRs;
+      ProgInfo.NumSGPR = MaxAddressableNumSGPRs;
+      ProgInfo.NumSGPRsForWavesPerEU = MaxAddressableNumSGPRs;
     }
   }
 
   if (STM.hasSGPRInitBug()) {
-    ProgInfo.NumSGPR = SISubtarget::FIXED_SGPR_COUNT_FOR_INIT_BUG;
-    ProgInfo.NumSGPRsForWavesPerEU = SISubtarget::FIXED_SGPR_COUNT_FOR_INIT_BUG;
+    ProgInfo.NumSGPR =
+        AMDGPU::IsaInfo::FIXED_NUM_SGPRS_FOR_INIT_BUG;
+    ProgInfo.NumSGPRsForWavesPerEU =
+        AMDGPU::IsaInfo::FIXED_NUM_SGPRS_FOR_INIT_BUG;
   }
 
   if (MFI->NumUserSGPRs > STM.getMaxNumUserSGPRs()) {
@@ -560,13 +550,27 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
 
   // SGPRBlocks is actual number of SGPR blocks minus 1.
   ProgInfo.SGPRBlocks = alignTo(ProgInfo.NumSGPRsForWavesPerEU,
-                                RI->getSGPRAllocGranule());
-  ProgInfo.SGPRBlocks = ProgInfo.SGPRBlocks / RI->getSGPRAllocGranule() - 1;
+                                STM.getSGPREncodingGranule());
+  ProgInfo.SGPRBlocks = ProgInfo.SGPRBlocks / STM.getSGPREncodingGranule() - 1;
 
   // VGPRBlocks is actual number of VGPR blocks minus 1.
   ProgInfo.VGPRBlocks = alignTo(ProgInfo.NumVGPRsForWavesPerEU,
-                                RI->getVGPRAllocGranule());
-  ProgInfo.VGPRBlocks = ProgInfo.VGPRBlocks / RI->getVGPRAllocGranule() - 1;
+                                STM.getVGPREncodingGranule());
+  ProgInfo.VGPRBlocks = ProgInfo.VGPRBlocks / STM.getVGPREncodingGranule() - 1;
+
+  // Record first reserved VGPR and number of reserved VGPRs.
+  ProgInfo.ReservedVGPRFirst = STM.debuggerReserveRegs() ? MaxVGPR + 1 : 0;
+  ProgInfo.ReservedVGPRCount = STM.getReservedNumVGPRs(MF);
+
+  // Update DebuggerWavefrontPrivateSegmentOffsetSGPR and
+  // DebuggerPrivateSegmentBufferSGPR fields if "amdgpu-debugger-emit-prologue"
+  // attribute was requested.
+  if (STM.debuggerEmitPrologue()) {
+    ProgInfo.DebuggerWavefrontPrivateSegmentOffsetSGPR =
+      RI->getHWRegIndex(MFI->getScratchWaveOffsetReg());
+    ProgInfo.DebuggerPrivateSegmentBufferSGPR =
+      RI->getHWRegIndex(MFI->getScratchRSrcReg());
+  }
 
   // Set the value to initialize FP_ROUND and FP_DENORM parts of the mode
   // register.

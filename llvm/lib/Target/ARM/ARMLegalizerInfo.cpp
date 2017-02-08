@@ -48,5 +48,9 @@ ARMLegalizerInfo::ARMLegalizerInfo() {
       setAction({Op, 1, Ty}, Legal);
   }
 
+  // FIXME: This is a bit sloppy, but for now we'll just rely on the instruction
+  // selector to complain if it doesn't support floating point.
+  setAction({G_FADD, s32}, Legal);
+
   computeTables();
 }

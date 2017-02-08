@@ -21,16 +21,16 @@
 using namespace llvm;
 
 
-static ArrayRef<MCPhysReg> getAllSGPR128(const MachineFunction &MF,
-                                         const SIRegisterInfo *TRI) {
+static ArrayRef<MCPhysReg> getAllSGPR128(const SISubtarget &ST,
+                                         const MachineFunction &MF) {
   return makeArrayRef(AMDGPU::SGPR_128RegClass.begin(),
-                      TRI->getMaxNumSGPRs(MF) / 4);
+                      ST.getMaxNumSGPRs(MF) / 4);
 }
 
-static ArrayRef<MCPhysReg> getAllSGPRs(const MachineFunction &MF,
-                                       const SIRegisterInfo *TRI) {
+static ArrayRef<MCPhysReg> getAllSGPRs(const SISubtarget &ST,
+                                       const MachineFunction &MF) {
   return makeArrayRef(AMDGPU::SGPR_32RegClass.begin(),
-                      TRI->getMaxNumSGPRs(MF));
+                      ST.getMaxNumSGPRs(MF));
 }
 
 void SIFrameLowering::emitFlatScratchInit(const SIInstrInfo *TII,
@@ -111,7 +111,7 @@ unsigned SIFrameLowering::getReservedPrivateSegmentBufferReg(
   MachineRegisterInfo &MRI = MF.getRegInfo();
 
   unsigned NumPreloaded = (MFI->getNumPreloadedSGPRs() + 3) / 4;
-  ArrayRef<MCPhysReg> AllSGPR128s = getAllSGPR128(MF, TRI);
+  ArrayRef<MCPhysReg> AllSGPR128s = getAllSGPR128(ST, MF);
   AllSGPR128s = AllSGPR128s.slice(std::min(static_cast<unsigned>(AllSGPR128s.size()), NumPreloaded));
 
   // Skip the last 2 elements because the last one is reserved for VCC, and
@@ -146,7 +146,7 @@ unsigned SIFrameLowering::getReservedPrivateSegmentWaveByteOffsetReg(
 
   unsigned NumPreloaded = MFI->getNumPreloadedSGPRs();
 
-  ArrayRef<MCPhysReg> AllSGPRs = getAllSGPRs(MF, TRI);
+  ArrayRef<MCPhysReg> AllSGPRs = getAllSGPRs(ST, MF);
   if (NumPreloaded > AllSGPRs.size())
     return ScratchWaveOffsetReg;
 

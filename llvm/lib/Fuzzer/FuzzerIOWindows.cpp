@@ -149,6 +149,10 @@ void DiscardOutput(int Fd) {
   fclose(Temp);
 }
 
+intptr_t GetHandleFromFd(int fd) {
+  return _get_osfhandle(fd);
+}
+
 static bool IsSeparator(char C) {
   return C == '\\' || C == '/';
 }

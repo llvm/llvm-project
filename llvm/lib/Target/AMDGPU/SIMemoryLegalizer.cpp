@@ -438,7 +438,7 @@ bool SIMemoryLegalizer::runOnMachineFunction(MachineFunction &MF) {
   bool Changed = false;
 
   const SISubtarget &ST = MF.getSubtarget<SISubtarget>();
-  const IsaVersion &IV = getIsaVersion(ST.getFeatureBits());
+  const IsaInfo::IsaVersion IV = IsaInfo::getIsaVersion(ST.getFeatureBits());
 
   TII = ST.getInstrInfo();
   CTX = &MF.getFunction()->getContext();

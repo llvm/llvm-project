@@ -106,6 +106,7 @@ public:
   PredicateBase(const PredicateBase &) = delete;
   PredicateBase &operator=(const PredicateBase &) = delete;
   PredicateBase() = delete;
+  virtual ~PredicateBase() = default;
 
 protected:
   PredicateBase(PredicateType PT, Value *Op, CmpInst *Comparison)

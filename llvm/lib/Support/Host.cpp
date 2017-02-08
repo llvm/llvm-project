@@ -1369,7 +1369,6 @@ bool sys::getHostCPUFeatures(StringMap<bool> &Features) {
   Features["rdseed"] = HasLeaf7 && ((EBX >> 18) & 1);
   Features["adx"] = HasLeaf7 && ((EBX >> 19) & 1);
   Features["smap"] = HasLeaf7 && ((EBX >> 20) & 1);
-  Features["pcommit"] = HasLeaf7 && ((EBX >> 22) & 1);
   Features["clflushopt"] = HasLeaf7 && ((EBX >> 23) & 1);
   Features["clwb"] = HasLeaf7 && ((EBX >> 24) & 1);
   Features["sha"] = HasLeaf7 && ((EBX >> 29) & 1);

@@ -106,10 +106,10 @@ define <4 x float> @test_copysign_v4f32_v4f64(<4 x float> %a, <4 x double> %b) #
 ; CHECK-NEXT:    bit.16b v3, v1, v4
 ; CHECK-NEXT:    mov d1, v2[1]
 ; CHECK-NEXT:    fcvt s1, d1
-; CHECK-NEXT:    ins.s v0[1], v3[0]
-; CHECK-NEXT:    ins.s v0[2], v6[0]
+; CHECK-NEXT:    mov.s v0[1], v3[0]
+; CHECK-NEXT:    mov.s v0[2], v6[0]
 ; CHECK-NEXT:    bit.16b v7, v1, v4
-; CHECK-NEXT:    ins.s v0[3], v7[0]
+; CHECK-NEXT:    mov.s v0[3], v7[0]
 ; CHECK-NEXT:    ret
   %tmp0 = fptrunc <4 x double> %b to <4 x float>
   %r = call <4 x float> @llvm.copysign.v4f32(<4 x float> %a, <4 x float> %tmp0)

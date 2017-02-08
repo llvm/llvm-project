@@ -11,15 +11,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-
 #ifndef LLVM_MC_CONSTANTPOOLS_H
 #define LLVM_MC_CONSTANTPOOLS_H
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/SMLoc.h"
+#include <cstdint>
 
 namespace llvm {
+
 class MCContext;
 class MCExpr;
 class MCSection;
@@ -30,6 +32,7 @@ class MCSymbolRefExpr;
 struct ConstantPoolEntry {
   ConstantPoolEntry(MCSymbol *L, const MCExpr *Val, unsigned Sz, SMLoc Loc_)
     : Label(L), Value(Val), Size(Sz), Loc(Loc_) {}
+
   MCSymbol *Label;
   const MCExpr *Value;
   unsigned Size;
@@ -45,7 +48,7 @@ class ConstantPool {
 
 public:
   // Initialize a new empty constant pool
-  ConstantPool() {}
+  ConstantPool() = default;
 
   // Add a new entry to the constant pool in the next slot.
   // \param Value is the new entry to put in the constant pool.
@@ -90,6 +93,7 @@ private:
   ConstantPool *getConstantPool(MCSection *Section);
   ConstantPool &getOrCreateConstantPool(MCSection *Section);
 };
+
 } // end namespace llvm
 
-#endif
+#endif // LLVM_MC_CONSTANTPOOLS_H

@@ -2033,16 +2033,15 @@ bool CodeGenPrepare::optimizeCallInst(CallInst *CI, bool& ModifiedDT) {
     }
 
     if (TLI) {
-      // Unknown address space.
-      // TODO: Target hook to pick which address space the intrinsic cares
-      // about?
-      unsigned AddrSpace = ~0u;
       SmallVector<Value*, 2> PtrOps;
       Type *AccessTy;
-      if (TLI->GetAddrModeArguments(II, PtrOps, AccessTy, AddrSpace))
-        while (!PtrOps.empty())
-          if (optimizeMemoryInst(II, PtrOps.pop_back_val(), AccessTy, AddrSpace))
+      if (TLI->getAddrModeArguments(II, PtrOps, AccessTy))
+        while (!PtrOps.empty()) {
+          Value *PtrVal = PtrOps.pop_back_val();
+          unsigned AS = PtrVal->getType()->getPointerAddressSpace();
+          if (optimizeMemoryInst(II, PtrVal, AccessTy, AS))
             return true;
+        }
     }
   }
 

@@ -39,6 +39,8 @@ if(MSVC)
   set(CMAKE_CXX_CREATE_SHARED_LIBRARY "<CMAKE_CXX_COMPILER> ${CMAKE_CXX_FLAGS} ${CRT_FLAG} /LD <CMAKE_SHARED_LIBRARY_CXX_FLAGS> <CMAKE_SHARED_LIBRARY_CREATE_CXX_FLAGS> <CMAKE_SHARED_LIBRARY_SONAME_CXX_FLAG> <TARGET_SONAME> -o <TARGET> <OBJECTS> <LINK_LIBRARIES> /link <LINK_FLAGS>")
 endif()
 
+add_custom_target(TestBinaries)
+
 # add_libfuzzer_test(<name>
 #   SOURCES source0.cpp [source1.cpp ...]
 #   )
@@ -63,11 +65,8 @@ function(add_libfuzzer_test name)
     PROPERTIES RUNTIME_OUTPUT_DIRECTORY
     "${CMAKE_BINARY_DIR}/lib/Fuzzer/test"
     )
-  set(TestBinaries ${TestBinaries} LLVMFuzzer-${name} PARENT_SCOPE)
+  add_dependencies(TestBinaries LLVMFuzzer-${name})
 endfunction()
-
-# Variable to keep track of all test targets
-set(TestBinaries)
 
 ###############################################################################
 # Basic tests
@@ -166,13 +165,13 @@ target_include_directories(LLVMFuzzer-Unittest PRIVATE
   "${LLVM_MAIN_SRC_DIR}/utils/unittest/googletest/include"
   )
 
-set(TestBinaries ${TestBinaries} LLVMFuzzer-Unittest)
+add_dependencies(TestBinaries LLVMFuzzer-Unittest)
 set_target_properties(LLVMFuzzer-Unittest
   PROPERTIES RUNTIME_OUTPUT_DIRECTORY
   "${CMAKE_CURRENT_BINARY_DIR}"
 )
 
-set(TestBinaries ${TestBinaries} LLVMFuzzer-StandaloneInitializeTest)
+add_dependencies(TestBinaries LLVMFuzzer-StandaloneInitializeTest)
 set_target_properties(LLVMFuzzer-StandaloneInitializeTest
   PROPERTIES RUNTIME_OUTPUT_DIRECTORY
   "${CMAKE_CURRENT_BINARY_DIR}"
@@ -218,7 +217,7 @@ else(MSVC)
     LIBRARY_DIR "${CMAKE_BINARY_DIR}/lib/Fuzzer/lib")
 endif()
 
-set(TestBinaries ${TestBinaries} LLVMFuzzer-DSOTest)
+add_dependencies(TestBinaries LLVMFuzzer-DSOTest)
 
 ###############################################################################
 # Configure lit to run the tests
@@ -243,7 +242,7 @@ configure_lit_site_cfg(
 
 add_lit_testsuite(check-fuzzer "Running Fuzzer tests"
     ${CMAKE_CURRENT_BINARY_DIR}
-    DEPENDS ${TestBinaries}
+    DEPENDS TestBinaries
     )
 
 # Don't add dependencies on Windows. The linker step would fail on Windows,

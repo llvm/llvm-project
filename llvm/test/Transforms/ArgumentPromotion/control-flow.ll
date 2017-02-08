@@ -1,5 +1,4 @@
-; RUN: opt < %s -argpromotion -S | \
-; RUN:    not grep "load i32* null"
+; RUN: opt < %s -argpromotion -S | FileCheck %s
 
 ; Don't promote around control flow.
 define internal i32 @callee(i1 %C, i32* %P) {

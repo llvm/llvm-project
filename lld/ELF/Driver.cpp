@@ -519,6 +519,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->BsymbolicFunctions = Args.hasArg(OPT_Bsymbolic_functions);
   Config->Demangle = getArg(Args, OPT_demangle, OPT_no_demangle, true);
   Config->DisableVerify = Args.hasArg(OPT_disable_verify);
+  Config->EmitRelocs = Args.hasArg(OPT_emit_relocs);
   Config->EhFrameHdr = Args.hasArg(OPT_eh_frame_hdr);
   Config->EnableNewDtags = !Args.hasArg(OPT_disable_new_dtags);
   Config->ExportDynamic =

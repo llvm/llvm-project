@@ -68,7 +68,7 @@ struct ValueBitMap {
         Other.Map[i] = 0;
       }
       if (M)
-        Res += __builtin_popcountl(M);
+        Res += __builtin_popcountll(M);
     }
     NumBits = Res;
     return OldNumBits < NumBits;

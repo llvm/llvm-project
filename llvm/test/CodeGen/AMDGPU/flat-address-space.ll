@@ -19,7 +19,7 @@
 ; CHECK: flat_store_dword v{{\[}}[[LO_VREG]]:[[HI_VREG]]{{\]}}, v[[DATA]]
 define void @store_flat_i32(i32 addrspace(1)* %gptr, i32 %x) #0 {
   %fptr = addrspacecast i32 addrspace(1)* %gptr to i32 addrspace(4)*
-  store i32 %x, i32 addrspace(4)* %fptr, align 4
+  store volatile i32 %x, i32 addrspace(4)* %fptr, align 4
   ret void
 }
 
@@ -27,7 +27,7 @@ define void @store_flat_i32(i32 addrspace(1)* %gptr, i32 %x) #0 {
 ; CHECK: flat_store_dwordx2
 define void @store_flat_i64(i64 addrspace(1)* %gptr, i64 %x) #0 {
   %fptr = addrspacecast i64 addrspace(1)* %gptr to i64 addrspace(4)*
-  store i64 %x, i64 addrspace(4)* %fptr, align 8
+  store volatile i64 %x, i64 addrspace(4)* %fptr, align 8
   ret void
 }
 
@@ -35,7 +35,7 @@ define void @store_flat_i64(i64 addrspace(1)* %gptr, i64 %x) #0 {
 ; CHECK: flat_store_dwordx4
 define void @store_flat_v4i32(<4 x i32> addrspace(1)* %gptr, <4 x i32> %x) #0 {
   %fptr = addrspacecast <4 x i32> addrspace(1)* %gptr to <4 x i32> addrspace(4)*
-  store <4 x i32> %x, <4 x i32> addrspace(4)* %fptr, align 16
+  store volatile <4 x i32> %x, <4 x i32> addrspace(4)* %fptr, align 16
   ret void
 }
 
@@ -44,7 +44,7 @@ define void @store_flat_v4i32(<4 x i32> addrspace(1)* %gptr, <4 x i32> %x) #0 {
 define void @store_flat_trunc_i16(i16 addrspace(1)* %gptr, i32 %x) #0 {
   %fptr = addrspacecast i16 addrspace(1)* %gptr to i16 addrspace(4)*
   %y = trunc i32 %x to i16
-  store i16 %y, i16 addrspace(4)* %fptr, align 2
+  store volatile i16 %y, i16 addrspace(4)* %fptr, align 2
   ret void
 }
 
@@ -53,7 +53,7 @@ define void @store_flat_trunc_i16(i16 addrspace(1)* %gptr, i32 %x) #0 {
 define void @store_flat_trunc_i8(i8 addrspace(1)* %gptr, i32 %x) #0 {
   %fptr = addrspacecast i8 addrspace(1)* %gptr to i8 addrspace(4)*
   %y = trunc i32 %x to i8
-  store i8 %y, i8 addrspace(4)* %fptr, align 2
+  store volatile i8 %y, i8 addrspace(4)* %fptr, align 2
   ret void
 }
 
@@ -63,7 +63,7 @@ define void @store_flat_trunc_i8(i8 addrspace(1)* %gptr, i32 %x) #0 {
 ; CHECK: flat_load_dword
 define void @load_flat_i32(i32 addrspace(1)* noalias %out, i32 addrspace(1)* noalias %gptr) #0 {
   %fptr = addrspacecast i32 addrspace(1)* %gptr to i32 addrspace(4)*
-  %fload = load i32, i32 addrspace(4)* %fptr, align 4
+  %fload = load volatile i32, i32 addrspace(4)* %fptr, align 4
   store i32 %fload, i32 addrspace(1)* %out, align 4
   ret void
 }
@@ -72,7 +72,7 @@ define void @load_flat_i32(i32 addrspace(1)* noalias %out, i32 addrspace(1)* noa
 ; CHECK: flat_load_dwordx2
 define void @load_flat_i64(i64 addrspace(1)* noalias %out, i64 addrspace(1)* noalias %gptr) #0 {
   %fptr = addrspacecast i64 addrspace(1)* %gptr to i64 addrspace(4)*
-  %fload = load i64, i64 addrspace(4)* %fptr, align 8
+  %fload = load volatile i64, i64 addrspace(4)* %fptr, align 8
   store i64 %fload, i64 addrspace(1)* %out, align 8
   ret void
 }
@@ -81,7 +81,7 @@ define void @load_flat_i64(i64 addrspace(1)* noalias %out, i64 addrspace(1)* noa
 ; CHECK: flat_load_dwordx4
 define void @load_flat_v4i32(<4 x i32> addrspace(1)* noalias %out, <4 x i32> addrspace(1)* noalias %gptr) #0 {
   %fptr = addrspacecast <4 x i32> addrspace(1)* %gptr to <4 x i32> addrspace(4)*
-  %fload = load <4 x i32>, <4 x i32> addrspace(4)* %fptr, align 32
+  %fload = load volatile <4 x i32>, <4 x i32> addrspace(4)* %fptr, align 32
   store <4 x i32> %fload, <4 x i32> addrspace(1)* %out, align 8
   ret void
 }
@@ -90,7 +90,7 @@ define void @load_flat_v4i32(<4 x i32> addrspace(1)* noalias %out, <4 x i32> add
 ; CHECK: flat_load_sbyte
 define void @sextload_flat_i8(i32 addrspace(1)* noalias %out, i8 addrspace(1)* noalias %gptr) #0 {
   %fptr = addrspacecast i8 addrspace(1)* %gptr to i8 addrspace(4)*
-  %fload = load i8, i8 addrspace(4)* %fptr, align 4
+  %fload = load volatile i8, i8 addrspace(4)* %fptr, align 4
   %ext = sext i8 %fload to i32
   store i32 %ext, i32 addrspace(1)* %out, align 4
   ret void
@@ -100,7 +100,7 @@ define void @sextload_flat_i8(i32 addrspace(1)* noalias %out, i8 addrspace(1)* n
 ; CHECK: flat_load_ubyte
 define void @zextload_flat_i8(i32 addrspace(1)* noalias %out, i8 addrspace(1)* noalias %gptr) #0 {
   %fptr = addrspacecast i8 addrspace(1)* %gptr to i8 addrspace(4)*
-  %fload = load i8, i8 addrspace(4)* %fptr, align 4
+  %fload = load volatile i8, i8 addrspace(4)* %fptr, align 4
   %ext = zext i8 %fload to i32
   store i32 %ext, i32 addrspace(1)* %out, align 4
   ret void
@@ -110,7 +110,7 @@ define void @zextload_flat_i8(i32 addrspace(1)* noalias %out, i8 addrspace(1)* n
 ; CHECK: flat_load_sshort
 define void @sextload_flat_i16(i32 addrspace(1)* noalias %out, i16 addrspace(1)* noalias %gptr) #0 {
   %fptr = addrspacecast i16 addrspace(1)* %gptr to i16 addrspace(4)*
-  %fload = load i16, i16 addrspace(4)* %fptr, align 4
+  %fload = load volatile i16, i16 addrspace(4)* %fptr, align 4
   %ext = sext i16 %fload to i32
   store i32 %ext, i32 addrspace(1)* %out, align 4
   ret void
@@ -120,7 +120,7 @@ define void @sextload_flat_i16(i32 addrspace(1)* noalias %out, i16 addrspace(1)*
 ; CHECK: flat_load_ushort
 define void @zextload_flat_i16(i32 addrspace(1)* noalias %out, i16 addrspace(1)* noalias %gptr) #0 {
   %fptr = addrspacecast i16 addrspace(1)* %gptr to i16 addrspace(4)*
-  %fload = load i16, i16 addrspace(4)* %fptr, align 4
+  %fload = load volatile i16, i16 addrspace(4)* %fptr, align 4
   %ext = zext i16 %fload to i32
   store i32 %ext, i32 addrspace(1)* %out, align 4
   ret void

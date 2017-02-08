@@ -203,7 +203,10 @@ void DeclarationName::print(raw_ostream &OS, const PrintingPolicy &Policy) {
   }
 
   case DeclarationName::CXXDeductionGuideName:
-    return getCXXDeductionGuideTemplate()->getDeclName().print(OS, Policy);
+    OS << "<deduction guide for ";
+    getCXXDeductionGuideTemplate()->getDeclName().print(OS, Policy);
+    OS << '>';
+    return;
 
   case DeclarationName::CXXOperatorName: {
     static const char* const OperatorNames[NUM_OVERLOADED_OPERATORS] = {

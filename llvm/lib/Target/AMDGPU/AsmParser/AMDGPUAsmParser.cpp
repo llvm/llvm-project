@@ -801,14 +801,16 @@ public:
       // Currently there is none suitable machinery in the core llvm-mc for this.
       // MCSymbol::isRedefinable is intended for another purpose, and
       // AsmParser::parseDirectiveSet() cannot be specialized for specific target.
-      AMDGPU::IsaVersion Isa = AMDGPU::getIsaVersion(getSTI().getFeatureBits());
+      AMDGPU::IsaInfo::IsaVersion ISA =
+          AMDGPU::IsaInfo::getIsaVersion(getSTI().getFeatureBits());
       MCContext &Ctx = getContext();
-      MCSymbol *Sym = Ctx.getOrCreateSymbol(Twine(".option.machine_version_major"));
-      Sym->setVariableValue(MCConstantExpr::create(Isa.Major, Ctx));
+      MCSymbol *Sym =
+          Ctx.getOrCreateSymbol(Twine(".option.machine_version_major"));
+      Sym->setVariableValue(MCConstantExpr::create(ISA.Major, Ctx));
       Sym = Ctx.getOrCreateSymbol(Twine(".option.machine_version_minor"));
-      Sym->setVariableValue(MCConstantExpr::create(Isa.Minor, Ctx));
+      Sym->setVariableValue(MCConstantExpr::create(ISA.Minor, Ctx));
       Sym = Ctx.getOrCreateSymbol(Twine(".option.machine_version_stepping"));
-      Sym->setVariableValue(MCConstantExpr::create(Isa.Stepping, Ctx));
+      Sym->setVariableValue(MCConstantExpr::create(ISA.Stepping, Ctx));
     }
     KernelScope.initialize(getContext());
   }
@@ -1867,9 +1869,10 @@ bool AMDGPUAsmParser::ParseDirectiveHSACodeObjectISA() {
   // If this directive has no arguments, then use the ISA version for the
   // targeted GPU.
   if (getLexer().is(AsmToken::EndOfStatement)) {
-    AMDGPU::IsaVersion Isa = AMDGPU::getIsaVersion(getSTI().getFeatureBits());
-    getTargetStreamer().EmitDirectiveHSACodeObjectISA(Isa.Major, Isa.Minor,
-                                                      Isa.Stepping,
+    AMDGPU::IsaInfo::IsaVersion ISA =
+        AMDGPU::IsaInfo::getIsaVersion(getSTI().getFeatureBits());
+    getTargetStreamer().EmitDirectiveHSACodeObjectISA(ISA.Major, ISA.Minor,
+                                                      ISA.Stepping,
                                                       "AMD", "AMDGPU");
     return false;
   }
@@ -2455,13 +2458,14 @@ bool AMDGPUAsmParser::parseCnt(int64_t &IntVal) {
   if (getLexer().is(AsmToken::Amp) || getLexer().is(AsmToken::Comma))
     Parser.Lex();
 
-  IsaVersion IV = getIsaVersion(getSTI().getFeatureBits());
+  AMDGPU::IsaInfo::IsaVersion ISA =
+      AMDGPU::IsaInfo::getIsaVersion(getSTI().getFeatureBits());
   if (CntName == "vmcnt")
-    IntVal = encodeVmcnt(IV, IntVal, CntVal);
+    IntVal = encodeVmcnt(ISA, IntVal, CntVal);
   else if (CntName == "expcnt")
-    IntVal = encodeExpcnt(IV, IntVal, CntVal);
+    IntVal = encodeExpcnt(ISA, IntVal, CntVal);
   else if (CntName == "lgkmcnt")
-    IntVal = encodeLgkmcnt(IV, IntVal, CntVal);
+    IntVal = encodeLgkmcnt(ISA, IntVal, CntVal);
   else
     return true;
 
@@ -2470,8 +2474,9 @@ bool AMDGPUAsmParser::parseCnt(int64_t &IntVal) {
 
 OperandMatchResultTy
 AMDGPUAsmParser::parseSWaitCntOps(OperandVector &Operands) {
-  IsaVersion IV = getIsaVersion(getSTI().getFeatureBits());
-  int64_t Waitcnt = getWaitcntBitMask(IV);
+  AMDGPU::IsaInfo::IsaVersion ISA =
+      AMDGPU::IsaInfo::getIsaVersion(getSTI().getFeatureBits());
+  int64_t Waitcnt = getWaitcntBitMask(ISA);
   SMLoc S = Parser.getTok().getLoc();
 
   switch(getLexer().getKind()) {

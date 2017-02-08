@@ -55,7 +55,7 @@ std::atomic<XRayLogFlushStatus> LogFlushStatus{
 
 std::unique_ptr<FDRLoggingOptions> FDROptions;
 
-XRayLogInitStatus FDRLogging_init(std::size_t BufferSize, std::size_t BufferMax,
+XRayLogInitStatus fdrLoggingInit(std::size_t BufferSize, std::size_t BufferMax,
                                   void *Options,
                                   size_t OptionsSize) XRAY_NEVER_INSTRUMENT {
   assert(OptionsSize == sizeof(FDRLoggingOptions));
@@ -68,7 +68,7 @@ XRayLogInitStatus FDRLogging_init(std::size_t BufferSize, std::size_t BufferMax,
   FDROptions.reset(new FDRLoggingOptions());
   *FDROptions = *reinterpret_cast<FDRLoggingOptions *>(Options);
   if (FDROptions->ReportErrors)
-    SetPrintfAndReportCallback(PrintToStdErr);
+    SetPrintfAndReportCallback(printToStdErr);
 
   bool Success = false;
   BQ = std::make_shared<BufferQueue>(BufferSize, BufferMax, Success);
@@ -78,7 +78,7 @@ XRayLogInitStatus FDRLogging_init(std::size_t BufferSize, std::size_t BufferMax,
   }
 
   // Install the actual handleArg0 handler after initialising the buffers.
-  __xray_set_handler(FDRLogging_handleArg0);
+  __xray_set_handler(fdrLoggingHandleArg0);
 
   LoggingStatus.store(XRayLogInitStatus::XRAY_LOG_INITIALIZED,
                       std::memory_order_release);
@@ -86,7 +86,7 @@ XRayLogInitStatus FDRLogging_init(std::size_t BufferSize, std::size_t BufferMax,
 }
 
 // Must finalize before flushing.
-XRayLogFlushStatus FDRLogging_flush() XRAY_NEVER_INSTRUMENT {
+XRayLogFlushStatus fdrLoggingFlush() XRAY_NEVER_INSTRUMENT {
   if (LoggingStatus.load(std::memory_order_acquire) !=
       XRayLogInitStatus::XRAY_LOG_FINALIZED)
     return XRayLogFlushStatus::XRAY_LOG_NOT_FLUSHING;
@@ -142,7 +142,7 @@ XRayLogFlushStatus FDRLogging_flush() XRAY_NEVER_INSTRUMENT {
   return XRayLogFlushStatus::XRAY_LOG_FLUSHED;
 }
 
-XRayLogInitStatus FDRLogging_finalize() XRAY_NEVER_INSTRUMENT {
+XRayLogInitStatus fdrLoggingFinalize() XRAY_NEVER_INSTRUMENT {
   XRayLogInitStatus CurrentStatus = XRayLogInitStatus::XRAY_LOG_INITIALIZED;
   if (!LoggingStatus.compare_exchange_strong(
           CurrentStatus, XRayLogInitStatus::XRAY_LOG_FINALIZING,
@@ -158,7 +158,7 @@ XRayLogInitStatus FDRLogging_finalize() XRAY_NEVER_INSTRUMENT {
   return XRayLogInitStatus::XRAY_LOG_FINALIZED;
 }
 
-XRayLogInitStatus FDRLogging_reset() XRAY_NEVER_INSTRUMENT {
+XRayLogInitStatus fdrLoggingReset() XRAY_NEVER_INSTRUMENT {
   XRayLogInitStatus CurrentStatus = XRayLogInitStatus::XRAY_LOG_FINALIZED;
   if (!LoggingStatus.compare_exchange_strong(
           CurrentStatus, XRayLogInitStatus::XRAY_LOG_UNINITIALIZED,
@@ -325,7 +325,7 @@ inline bool loggingInitialized() {
 
 } // namespace
 
-void FDRLogging_handleArg0(int32_t FuncId,
+void fdrLoggingHandleArg0(int32_t FuncId,
                            XRayEntryType Entry) XRAY_NEVER_INSTRUMENT {
   // We want to get the TSC as early as possible, so that we can check whether
   // we've seen this CPU before. We also do it before we load anything else, to
@@ -534,8 +534,8 @@ static auto Unused = [] {
   using namespace __xray;
   if (flags()->xray_fdr_log) {
     XRayLogImpl Impl{
-        FDRLogging_init, FDRLogging_finalize, FDRLogging_handleArg0,
-        FDRLogging_flush,
+        fdrLoggingInit, fdrLoggingFinalize, fdrLoggingHandleArg0,
+        fdrLoggingFlush,
     };
     __xray_set_log_impl(Impl);
   }

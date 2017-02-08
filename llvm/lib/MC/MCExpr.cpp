@@ -7,28 +7,35 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/MC/MCExpr.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCAsmLayout.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCValue.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cassert>
+#include <cstdint>
+
 using namespace llvm;
 
 #define DEBUG_TYPE "mcexpr"
 
 namespace {
 namespace stats {
+
 STATISTIC(MCExprEvaluate, "Number of MCExpr evaluations");
-}
-}
+
+} // end namespace stats
+} // end anonymous namespace
 
 void MCExpr::print(raw_ostream &OS, const MCAsmInfo *MAI, bool InParens) const {
   switch (getKind()) {
@@ -44,7 +51,7 @@ void MCExpr::print(raw_ostream &OS, const MCAsmInfo *MAI, bool InParens) const {
     // Parenthesize names that start with $ so that they don't look like
     // absolute names.
     bool UseParens =
-        !InParens && Sym.getName().size() && Sym.getName()[0] == '$';
+        !InParens && !Sym.getName().empty() && Sym.getName()[0] == '$';
     if (UseParens) {
       OS << '(';
       Sym.print(OS, MAI);

@@ -706,7 +706,7 @@ defm zxth : ALU32_2op_base<"zxth", 0b110>, PredNewRel;
 // handle 'mapped' instructions, we need to encode 'zxtb' same as 'and' where
 // immediate operand is set to '255'.
 
-let hasNewValue = 1, opNewValue = 0 in
+let hasNewValue = 1, opNewValue = 0, isPseudo = 1, isCodeGenOnly = 1 in
 class T_ZXTB: ALU32Inst < (outs IntRegs:$Rd), (ins IntRegs:$Rs),
   "$Rd=zxtb($Rs)", [] >;
 

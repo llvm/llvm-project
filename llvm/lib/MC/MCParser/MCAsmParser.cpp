@@ -7,22 +7,22 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/MC/MCParser/MCAsmParser.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/MC/MCParser/MCAsmLexer.h"
+#include "llvm/MC/MCParser/MCAsmParser.h"
 #include "llvm/MC/MCParser/MCParsedAsmOperand.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/SourceMgr.h"
+#include "llvm/Support/SMLoc.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cassert>
+
 using namespace llvm;
 
-MCAsmParser::MCAsmParser()
-    : TargetParser(nullptr), ShowParsedOperands(0), HadError(false),
-      PendingErrors() {}
+MCAsmParser::MCAsmParser() : ShowParsedOperands(0) {}
 
-MCAsmParser::~MCAsmParser() {
-}
+MCAsmParser::~MCAsmParser() = default;
 
 void MCAsmParser::setTargetParser(MCTargetAsmParser &P) {
   assert(!TargetParser && "Target parser is already initialized!");
@@ -121,7 +121,7 @@ bool MCAsmParser::addErrorSuffix(const Twine &Suffix) {
 bool MCAsmParser::parseMany(function_ref<bool()> parseOne, bool hasComma) {
   if (parseOptionalToken(AsmToken::EndOfStatement))
     return false;
-  while (1) {
+  while (true) {
     if (parseOne())
       return true;
     if (parseOptionalToken(AsmToken::EndOfStatement))

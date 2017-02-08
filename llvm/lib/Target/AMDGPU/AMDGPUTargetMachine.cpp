@@ -511,6 +511,7 @@ void AMDGPUPassConfig::addIRPasses() {
   addPass(createAMDGPUOpenCLImageTypeLoweringPass());
 
   if (TM.getOptLevel() > CodeGenOpt::None) {
+    addPass(createInferAddressSpacesPass());
     addPass(createAMDGPUPromoteAlloca(&TM));
 
     if (EnableSROA)

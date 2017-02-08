@@ -5927,9 +5927,9 @@ static SDValue getShuffleScalarElt(SDNode *N, unsigned Index, SelectionDAG &DAG,
 
 /// Custom lower build_vector of v16i8.
 static SDValue LowerBuildVectorv16i8(SDValue Op, unsigned NonZeros,
-                                       unsigned NumNonZero, unsigned NumZero,
-                                       SelectionDAG &DAG,
-                                       const X86Subtarget &Subtarget) {
+                                     unsigned NumNonZero, unsigned NumZero,
+                                     SelectionDAG &DAG,
+                                     const X86Subtarget &Subtarget) {
   if (NumNonZero > 8)
     return SDValue();
 
@@ -5940,8 +5940,8 @@ static SDValue LowerBuildVectorv16i8(SDValue Op, unsigned NonZeros,
   // SSE4.1 - use PINSRB to insert each byte directly.
   if (Subtarget.hasSSE41()) {
     for (unsigned i = 0; i < 16; ++i) {
-      bool isNonZero = (NonZeros & (1 << i)) != 0;
-      if (isNonZero) {
+      bool IsNonZero = (NonZeros & (1 << i)) != 0;
+      if (IsNonZero) {
         if (First) {
           if (NumZero)
             V = getZeroVector(MVT::v16i8, Subtarget, DAG, dl);
@@ -5949,9 +5949,8 @@ static SDValue LowerBuildVectorv16i8(SDValue Op, unsigned NonZeros,
             V = DAG.getUNDEF(MVT::v16i8);
           First = false;
         }
-        V = DAG.getNode(ISD::INSERT_VECTOR_ELT, dl,
-                        MVT::v16i8, V, Op.getOperand(i),
-                        DAG.getIntPtrConstant(i, dl));
+        V = DAG.getNode(ISD::INSERT_VECTOR_ELT, dl, MVT::v16i8, V,
+                        Op.getOperand(i), DAG.getIntPtrConstant(i, dl));
       }
     }
 
@@ -5971,23 +5970,23 @@ static SDValue LowerBuildVectorv16i8(SDValue Op, unsigned NonZeros,
 
     if ((i & 1) != 0) {
       SDValue ThisElt, LastElt;
-      bool LastIsNonZero = (NonZeros & (1 << (i-1))) != 0;
+      bool LastIsNonZero = (NonZeros & (1 << (i - 1))) != 0;
       if (LastIsNonZero) {
-        LastElt = DAG.getNode(ISD::ZERO_EXTEND, dl,
-                              MVT::i16, Op.getOperand(i-1));
+        LastElt =
+            DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::i16, Op.getOperand(i - 1));
       }
       if (ThisIsNonZero) {
         ThisElt = DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::i16, Op.getOperand(i));
-        ThisElt = DAG.getNode(ISD::SHL, dl, MVT::i16,
-                              ThisElt, DAG.getConstant(8, dl, MVT::i8));
+        ThisElt = DAG.getNode(ISD::SHL, dl, MVT::i16, ThisElt,
+                              DAG.getConstant(8, dl, MVT::i8));
         if (LastIsNonZero)
           ThisElt = DAG.getNode(ISD::OR, dl, MVT::i16, ThisElt, LastElt);
       } else
         ThisElt = LastElt;
 
-      if (ThisElt.getNode())
+      if (ThisElt)
         V = DAG.getNode(ISD::INSERT_VECTOR_ELT, dl, MVT::v8i16, V, ThisElt,
-                        DAG.getIntPtrConstant(i/2, dl));
+                        DAG.getIntPtrConstant(i / 2, dl));
     }
   }
 
@@ -6006,8 +6005,8 @@ static SDValue LowerBuildVectorv8i16(SDValue Op, unsigned NonZeros,
   SDValue V;
   bool First = true;
   for (unsigned i = 0; i < 8; ++i) {
-    bool isNonZero = (NonZeros & (1 << i)) != 0;
-    if (isNonZero) {
+    bool IsNonZero = (NonZeros & (1 << i)) != 0;
+    if (IsNonZero) {
       if (First) {
         if (NumZero)
           V = getZeroVector(MVT::v8i16, Subtarget, DAG, dl);
@@ -6015,9 +6014,8 @@ static SDValue LowerBuildVectorv8i16(SDValue Op, unsigned NonZeros,
           V = DAG.getUNDEF(MVT::v8i16);
         First = false;
       }
-      V = DAG.getNode(ISD::INSERT_VECTOR_ELT, dl,
-                      MVT::v8i16, V, Op.getOperand(i),
-                      DAG.getIntPtrConstant(i, dl));
+      V = DAG.getNode(ISD::INSERT_VECTOR_ELT, dl, MVT::v8i16, V,
+                      Op.getOperand(i), DAG.getIntPtrConstant(i, dl));
     }
   }
 

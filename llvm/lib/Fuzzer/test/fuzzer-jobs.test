@@ -1,3 +1,5 @@
+REQUIRES: posix
+
 RUN: rm -rf %tmp
 RUN: mkdir %tmp && cd %tmp
 # Create a shared corpus directory

@@ -21,7 +21,7 @@
 namespace __xray {
 
 // Default implementation of the reporting interface for sanitizer errors.
-void PrintToStdErr(const char *Buffer);
+void printToStdErr(const char *Buffer);
 
 // EINTR-safe write routine, provided a file descriptor and a character range.
 void retryingWriteAll(int Fd, char *Begin, char *End);

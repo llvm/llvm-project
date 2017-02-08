@@ -35,7 +35,7 @@ define void @store_cast_0_group_to_flat_addrspacecast() #1 {
 ; GCN: v_mov_b32_e32 v[[VGPR_GS_AP:[0-9]+]], s[[SGPR_GS_AP]]
 ; GCN: flat_store_dword v{{\[}}[[OFFSET]]:[[VGPR_GS_AP]]{{\]}}, v[[VALUE]]
 define void @store_constant_cast_group_gv_to_flat() #1 {
-  store i32 7, i32 addrspace(4)* addrspacecast (i32 addrspace(3)* @lds.i32 to i32 addrspace(4)*)
+  store volatile i32 7, i32 addrspace(4)* addrspacecast (i32 addrspace(3)* @lds.i32 to i32 addrspace(4)*)
   ret void
 }
 

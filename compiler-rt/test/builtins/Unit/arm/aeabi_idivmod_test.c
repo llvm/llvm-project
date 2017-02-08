@@ -14,6 +14,7 @@
 #include "int_lib.h"
 #include <stdio.h>
 
+#if __arm__
 // Based on divmodsi4_test.c
 
 extern du_int __aeabi_idivmod(si_int a, si_int b);
@@ -38,10 +39,12 @@ int test__aeabi_idivmod(si_int a, si_int b,
 
     return 0;
 }
+#endif
 
 
 int main()
 {
+#if __arm__
     if (test__aeabi_idivmod(0, 1, 0, 0))
         return 1;
     if (test__aeabi_idivmod(0, -1, 0, 0))
@@ -69,6 +72,9 @@ int main()
         return 1;
 	if (test__aeabi_idivmod(0x80000007, 8, 0xf0000001, -1))
         return 1;
+#else
+    printf("skipped\n");
+#endif
 
     return 0;
 }

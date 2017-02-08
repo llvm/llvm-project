@@ -74,7 +74,7 @@ write32bitLoadReg(uint8_t regNo, uint32_t *Address,
 //   MOVW r0, #<lower 16 bits of the |Value|>
 //   MOVT r0, #<higher 16 bits of the |Value|>
 inline static uint32_t *
-Write32bitLoadR0(uint32_t *Address,
+write32bitLoadR0(uint32_t *Address,
                  const uint32_t Value) XRAY_NEVER_INSTRUMENT {
   return write32bitLoadReg(0, Address, Value);
 }
@@ -83,7 +83,7 @@ Write32bitLoadR0(uint32_t *Address,
 //   MOVW ip, #<lower 16 bits of the |Value|>
 //   MOVT ip, #<higher 16 bits of the |Value|>
 inline static uint32_t *
-Write32bitLoadIP(uint32_t *Address,
+write32bitLoadIP(uint32_t *Address,
                  const uint32_t Value) XRAY_NEVER_INSTRUMENT {
   return write32bitLoadReg(12, Address, Value);
 }
@@ -121,9 +121,9 @@ inline static bool patchSled(const bool Enable, const uint32_t FuncId,
   uint32_t *CurAddress = FirstAddress + 1;
   if (Enable) {
     CurAddress =
-        Write32bitLoadR0(CurAddress, reinterpret_cast<uint32_t>(FuncId));
+        write32bitLoadR0(CurAddress, reinterpret_cast<uint32_t>(FuncId));
     CurAddress =
-        Write32bitLoadIP(CurAddress, reinterpret_cast<uint32_t>(TracingHook));
+        write32bitLoadIP(CurAddress, reinterpret_cast<uint32_t>(TracingHook));
     *CurAddress = uint32_t(PatchOpcodes::PO_BlxIp);
     CurAddress++;
     *CurAddress = uint32_t(PatchOpcodes::PO_PopR0Lr);

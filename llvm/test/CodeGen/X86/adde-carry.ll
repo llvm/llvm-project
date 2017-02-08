@@ -28,8 +28,7 @@ define void @b(i32* nocapture %r, i64 %a, i64 %b, i32 %c) nounwind {
 ; CHECK-LABEL: b:
 ; CHECK:       # BB#0: # %entry
 ; CHECK-NEXT:    addq %rdx, %rsi
-; CHECK-NEXT:    sbbq %rax, %rax
-; CHECK-NEXT:    subl %eax, %ecx
+; CHECK-NEXT:    adcl $0, %ecx
 ; CHECK-NEXT:    movl %ecx, (%rdi)
 ; CHECK-NEXT:    retq
 entry:
@@ -48,8 +47,7 @@ define void @c(i16* nocapture %r, i64 %a, i64 %b, i16 %c) nounwind {
 ; CHECK-LABEL: c:
 ; CHECK:       # BB#0: # %entry
 ; CHECK-NEXT:    addq %rdx, %rsi
-; CHECK-NEXT:    sbbq %rax, %rax
-; CHECK-NEXT:    subl %eax, %ecx
+; CHECK-NEXT:    adcl $0, %ecx
 ; CHECK-NEXT:    movw %cx, (%rdi)
 ; CHECK-NEXT:    retq
 entry:
@@ -68,8 +66,7 @@ define void @d(i8* nocapture %r, i64 %a, i64 %b, i8 %c) nounwind {
 ; CHECK-LABEL: d:
 ; CHECK:       # BB#0: # %entry
 ; CHECK-NEXT:    addq %rdx, %rsi
-; CHECK-NEXT:    sbbq %rax, %rax
-; CHECK-NEXT:    subl %eax, %ecx
+; CHECK-NEXT:    adcl $0, %ecx
 ; CHECK-NEXT:    movb %cl, (%rdi)
 ; CHECK-NEXT:    retq
 entry:
@@ -165,8 +162,8 @@ define void @muladd(%accumulator* nocapture %this, i64 %arg.a, i64 %arg.b) {
 ; CHECK-NEXT:    adcq $0, %rdx
 ; CHECK-NEXT:    movq %rax, (%rdi)
 ; CHECK-NEXT:    addq 8(%rdi), %rdx
-; CHECK-NEXT:    sbbq %rax, %rax
 ; CHECK-NEXT:    movq %rdx, 8(%rdi)
+; CHECK-NEXT:    sbbl %eax, %eax
 ; CHECK-NEXT:    subl %eax, 16(%rdi)
 ; CHECK-NEXT:    retq
 entry:

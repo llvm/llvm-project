@@ -2784,8 +2784,6 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   }
   OS << "  void convertToMapAndConstraints(unsigned Kind,\n                ";
   OS << "           const OperandVector &Operands) override;\n";
-  if (HasMnemonicFirst)
-    OS << "  bool mnemonicIsValid(StringRef Mnemonic, unsigned VariantID);\n";
   OS << "  unsigned MatchInstructionImpl(const OperandVector &Operands,\n"
      << "                                MCInst &Inst,\n"
      << "                                uint64_t &ErrorInfo,"
@@ -2965,28 +2963,6 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
     }
 
     OS << "};\n\n";
-  }
-
-  // A method to determine if a mnemonic is in the list.
-  if (HasMnemonicFirst) {
-    OS << "bool " << Target.getName() << ClassName << "::\n"
-       << "mnemonicIsValid(StringRef Mnemonic, unsigned VariantID) {\n";
-    OS << "  // Find the appropriate table for this asm variant.\n";
-    OS << "  const MatchEntry *Start, *End;\n";
-    OS << "  switch (VariantID) {\n";
-    OS << "  default: llvm_unreachable(\"invalid variant!\");\n";
-    for (unsigned VC = 0; VC != VariantCount; ++VC) {
-      Record *AsmVariant = Target.getAsmParserVariant(VC);
-      int AsmVariantNo = AsmVariant->getValueAsInt("Variant");
-      OS << "  case " << AsmVariantNo << ": Start = std::begin(MatchTable" << VC
-         << "); End = std::end(MatchTable" << VC << "); break;\n";
-    }
-    OS << "  }\n";
-    OS << "  // Search the table.\n";
-    OS << "  auto MnemonicRange = ";
-    OS << "std::equal_range(Start, End, Mnemonic, LessOpcode());\n";
-    OS << "  return MnemonicRange.first != MnemonicRange.second;\n";
-    OS << "}\n\n";
   }
 
   // Finally, build the match function.

@@ -15,17 +15,26 @@
 #define LLVM_MC_MCSTREAMER_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCLinkerOptimizationHint.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCWinEH.h"
-#include "llvm/Support/DataTypes.h"
 #include "llvm/Support/SMLoc.h"
+#include <cassert>
+#include <cstdint>
+#include <memory>
 #include <string>
+#include <utility>
+#include <vector>
 
 namespace llvm {
+
+class AssemblerConstantPools;
+class formatted_raw_ostream;
 class MCAsmBackend;
 class MCCodeEmitter;
 class MCContext;
@@ -34,14 +43,10 @@ class MCInst;
 class MCInstPrinter;
 class MCSection;
 class MCStreamer;
-class MCSymbolELF;
 class MCSymbolRefExpr;
 class MCSubtargetInfo;
-class StringRef;
-class Twine;
 class raw_ostream;
-class formatted_raw_ostream;
-class AssemblerConstantPools;
+class Twine;
 
 typedef std::pair<MCSection *, const MCExpr *> MCSectionSubPair;
 
@@ -162,9 +167,6 @@ class MCStreamer {
   MCContext &Context;
   std::unique_ptr<MCTargetStreamer> TargetStreamer;
 
-  MCStreamer(const MCStreamer &) = delete;
-  MCStreamer &operator=(const MCStreamer &) = delete;
-
   std::vector<MCDwarfFrameInfo> DwarfFrameInfos;
   MCDwarfFrameInfo *getCurrentDwarfFrameInfo();
   void EnsureValidDwarfFrame();
@@ -205,6 +207,8 @@ protected:
   virtual void EmitRawTextImpl(StringRef String);
 
 public:
+  MCStreamer(const MCStreamer &) = delete;
+  MCStreamer &operator=(const MCStreamer &) = delete;
   virtual ~MCStreamer();
 
   void visitUsedExpr(const MCExpr &Expr);
@@ -282,6 +286,7 @@ public:
   /// \brief Add explicit comment T. T is required to be a valid
   /// comment in the output and does not need to be escaped.
   virtual void addExplicitComment(const Twine &T);
+
   /// \brief Emit added explicit comments.
   virtual void emitExplicitComments();
 
@@ -876,6 +881,7 @@ MCStreamer *createAsmStreamer(MCContext &Ctx,
                               bool isVerboseAsm, bool useDwarfDirectory,
                               MCInstPrinter *InstPrint, MCCodeEmitter *CE,
                               MCAsmBackend *TAB, bool ShowInst);
+
 } // end namespace llvm
 
-#endif
+#endif // LLVM_MC_MCSTREAMER_H

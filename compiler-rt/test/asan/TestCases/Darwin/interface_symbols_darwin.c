@@ -21,6 +21,7 @@
 // RUN:  %p/../../../../lib/sanitizer_common/sanitizer_common_interface.inc    \
 // RUN:  %p/../../../../lib/sanitizer_common/sanitizer_common_interface_posix.inc \
 // RUN:  %p/../../../../lib/sanitizer_common/sanitizer_coverage_interface.inc  \
+// RUN:  | grep -v "__sanitizer_weak_hook"                                     \
 // RUN:  | sed -e "s/.*(//" -e "s/).*//" > %t.imports
 //
 // RUN: cat %t.imports | sort | uniq > %t.imports-sorted

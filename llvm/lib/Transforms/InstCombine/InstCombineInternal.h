@@ -655,6 +655,8 @@ private:
   Instruction *PromoteCastOfAllocation(BitCastInst &CI, AllocaInst &AI);
   Instruction *MatchBSwap(BinaryOperator &I);
   bool SimplifyStoreAtEndOfBlock(StoreInst &SI);
+
+  Instruction *SimplifyElementAtomicMemCpy(ElementAtomicMemCpyInst *AMI);
   Instruction *SimplifyMemTransfer(MemIntrinsic *MI);
   Instruction *SimplifyMemSet(MemSetInst *MI);
 

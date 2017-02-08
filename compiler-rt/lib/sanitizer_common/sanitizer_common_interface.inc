@@ -16,6 +16,11 @@ INTERFACE_FUNCTION(__sanitizer_set_report_fd)
 INTERFACE_FUNCTION(__sanitizer_verify_contiguous_container)
 INTERFACE_WEAK_FUNCTION(__sanitizer_report_error_summary)
 INTERFACE_WEAK_FUNCTION(__sanitizer_sandbox_on_notify)
+// Sanitizer weak hooks
+INTERFACE_WEAK_FUNCTION(__sanitizer_weak_hook_memcmp)
+INTERFACE_WEAK_FUNCTION(__sanitizer_weak_hook_strcmp)
+INTERFACE_WEAK_FUNCTION(__sanitizer_weak_hook_strncmp)
+INTERFACE_WEAK_FUNCTION(__sanitizer_weak_hook_strstr)
 // Stacktrace interface.
 INTERFACE_FUNCTION(__sanitizer_get_module_and_offset_for_pc)
 INTERFACE_FUNCTION(__sanitizer_symbolize_global)

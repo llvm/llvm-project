@@ -7,17 +7,29 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/MC/MCParser/MCAsmParserExtension.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/ADT/Twine.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCParser/MCAsmLexer.h"
+#include "llvm/MC/MCParser/MCAsmParser.h"
+#include "llvm/MC/MCParser/MCAsmParserExtension.h"
+#include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCStreamer.h"
+#include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCSymbolELF.h"
+#include "llvm/MC/SectionKind.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/ELF.h"
+#include "llvm/Support/MathExtras.h"
+#include "llvm/Support/SMLoc.h"
+#include <cassert>
+#include <cstdint>
+#include <utility>
+
 using namespace llvm;
 
 namespace {
@@ -148,7 +160,7 @@ private:
   bool maybeParseUniqueID(int64_t &UniqueID);
 };
 
-}
+} // end anonymous namespace
 
 /// ParseDirectiveSymbolAttribute
 ///  ::= { ".local", ".weak", ... } [ identifier ( , identifier )* ]
@@ -162,7 +174,7 @@ bool ELFAsmParser::ParseDirectiveSymbolAttribute(StringRef Directive, SMLoc) {
     .Default(MCSA_Invalid);
   assert(Attr != MCSA_Invalid && "unexpected symbol attribute directive!");
   if (getLexer().isNot(AsmToken::EndOfStatement)) {
-    for (;;) {
+    while (true) {
       StringRef Name;
 
       if (getParser().parseIdentifier(Name))
@@ -234,8 +246,7 @@ bool ELFAsmParser::ParseSectionName(StringRef &SectionName) {
     return false;
   }
 
-  for (;;) {
-    
+  while (true) {
     SMLoc PrevLoc = getLexer().getLoc();
     if (getLexer().is(AsmToken::Comma) ||
       getLexer().is(AsmToken::EndOfStatement))
@@ -784,4 +795,4 @@ MCAsmParserExtension *createELFAsmParser() {
   return new ELFAsmParser;
 }
 
-}
+} // end namespace llvm

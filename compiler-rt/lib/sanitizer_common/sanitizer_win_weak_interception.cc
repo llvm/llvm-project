@@ -37,6 +37,18 @@ int interceptWhenPossible(uptr dll_function, const char *real_function) {
 }
 } // namespace __sanitizer
 
+// Declare weak hooks.
+extern "C" {
+void __sanitizer_weak_hook_memcmp(uptr called_pc, const void *s1,
+                                  const void *s2, uptr n, int result);
+void __sanitizer_weak_hook_strcmp(uptr called_pc, const char *s1,
+                                  const char *s2, int result);
+void __sanitizer_weak_hook_strncmp(uptr called_pc, const char *s1,
+                                   const char *s2, uptr n, int result);
+void __sanitizer_weak_hook_strstr(uptr called_pc, const char *s1,
+                                  const char *s2, char *result);
+}
+
 // Include Sanitizer Common interface.
 #define INTERFACE_FUNCTION(Name)
 #define INTERFACE_WEAK_FUNCTION(Name) INTERCEPT_SANITIZER_WEAK_FUNCTION(Name)

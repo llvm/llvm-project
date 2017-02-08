@@ -39,6 +39,10 @@ using namespace PatternMatch;
 
 #define DEBUG_TYPE "lazy-value-info"
 
+// This is the number of worklist items we will process to try to discover an
+// answer for a given value.
+static const unsigned MaxProcessedPerValue = 500;
+
 char LazyValueInfoWrapperPass::ID = 0;
 INITIALIZE_PASS_BEGIN(LazyValueInfoWrapperPass, "lazy-value-info",
                 "Lazy Value Information Analysis", false, true)
@@ -563,7 +567,7 @@ namespace {
     /// This stack holds the state of the value solver during a query.
     /// It basically emulates the callstack of the naive
     /// recursive value lookup process.
-    std::stack<std::pair<BasicBlock*, Value*> > BlockValueStack;
+    SmallVector<std::pair<BasicBlock*, Value*>, 8> BlockValueStack;
 
     /// Keeps track of which block-value pairs are in BlockValueStack.
     DenseSet<std::pair<BasicBlock*, Value*> > BlockValueSet;
@@ -576,7 +580,7 @@ namespace {
 
       DEBUG(dbgs() << "PUSH: " << *BV.second << " in " << BV.first->getName()
                    << "\n");
-      BlockValueStack.push(BV);
+      BlockValueStack.push_back(BV);
       return true;
     }
 
@@ -646,24 +650,50 @@ namespace {
 } // end anonymous namespace
 
 void LazyValueInfoImpl::solve() {
+  SmallVector<std::pair<BasicBlock *, Value *>, 8> StartingStack(
+      BlockValueStack.begin(), BlockValueStack.end());
+
+  unsigned processedCount = 0;
   while (!BlockValueStack.empty()) {
-    std::pair<BasicBlock*, Value*> &e = BlockValueStack.top();
+    processedCount++;
+    // Abort if we have to process too many values to get a result for this one.
+    // Because of the design of the overdefined cache currently being per-block
+    // to avoid naming-related issues (IE it wants to try to give different
+    // results for the same name in different blocks), overdefined results don't
+    // get cached globally, which in turn means we will often try to rediscover
+    // the same overdefined result again and again.  Once something like
+    // PredicateInfo is used in LVI or CVP, we should be able to make the
+    // overdefined cache global, and remove this throttle.
+    if (processedCount > MaxProcessedPerValue) {
+      DEBUG(dbgs() << "Giving up on stack because we are getting too deep\n");
+      // Fill in the original values
+      while (!StartingStack.empty()) {
+        std::pair<BasicBlock *, Value *> &e = StartingStack.back();
+        TheCache.insertResult(e.second, e.first,
+                              LVILatticeVal::getOverdefined());
+        StartingStack.pop_back();
+      }
+      BlockValueSet.clear();
+      BlockValueStack.clear();
+      return;
+    }
+    std::pair<BasicBlock *, Value *> &e = BlockValueStack.back();
     assert(BlockValueSet.count(e) && "Stack value should be in BlockValueSet!");
 
     if (solveBlockValue(e.second, e.first)) {
       // The work item was completely processed.
-      assert(BlockValueStack.top() == e && "Nothing should have been pushed!");
+      assert(BlockValueStack.back() == e && "Nothing should have been pushed!");
       assert(TheCache.hasCachedValueInfo(e.second, e.first) &&
              "Result should be in cache!");
 
       DEBUG(dbgs() << "POP " << *e.second << " in " << e.first->getName()
                    << " = " << TheCache.getCachedValueInfo(e.second, e.first) << "\n");
 
-      BlockValueStack.pop();
+      BlockValueStack.pop_back();
       BlockValueSet.erase(e);
     } else {
       // More work needs to be done before revisiting.
-      assert(BlockValueStack.top() != e && "Stack should have been pushed!");
+      assert(BlockValueStack.back() != e && "Stack should have been pushed!");
     }
   }
 }
