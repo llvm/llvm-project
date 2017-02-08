@@ -326,6 +326,14 @@ HANDLE_TARGET_OPCODE(G_UMULO)
 /// overflow flag.
 HANDLE_TARGET_OPCODE(G_SMULO)
 
+// Multiply two numbers at twice the incoming bit width (unsigned) and return
+// the high half of the result.
+HANDLE_TARGET_OPCODE(G_UMULH)
+
+// Multiply two numbers at twice the incoming bit width (signed) and return
+// the high half of the result.
+HANDLE_TARGET_OPCODE(G_SMULH)
+
 /// Generic FP addition.
 HANDLE_TARGET_OPCODE(G_FADD)
 
