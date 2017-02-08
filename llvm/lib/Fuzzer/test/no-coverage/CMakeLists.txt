@@ -5,7 +5,7 @@ set(CMAKE_CXX_FLAGS
   "${LIBFUZZER_FLAGS_BASE} -fno-sanitize-coverage=edge,trace-cmp,indirect-calls,8bit-counters,trace-pc-guard")
 
 set(NoCoverageTests
-  UninstrumentedTest
+  NotinstrumentedTest
   )
 
 foreach(Test ${NoCoverageTests})
@@ -25,6 +25,5 @@ if(NOT MSVC)
       "${CMAKE_BINARY_DIR}/lib/Fuzzer/test"
       )
 
-  # Propagate value into parent directory
-  set(TestBinaries ${TestBinaries} AFLDriverTest PARENT_SCOPE)
+  add_dependencies(TestBinaries AFLDriverTest)
 endif()

@@ -7,23 +7,36 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/MC/MCMachObjectWriter.h"
-#include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAsmLayout.h"
 #include "llvm/MC/MCAssembler.h"
+#include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCFixupKindInfo.h"
+#include "llvm/MC/MCFragment.h"
+#include "llvm/MC/MCMachObjectWriter.h"
 #include "llvm/MC/MCObjectWriter.h"
+#include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCSectionMachO.h"
+#include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCSymbolMachO.h"
 #include "llvm/MC/MCValue.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MachO.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
+#include <algorithm>
+#include <cassert>
+#include <cstdint>
+#include <string>
+#include <utility>
 #include <vector>
+
 using namespace llvm;
 
 #define DEBUG_TYPE "mc"

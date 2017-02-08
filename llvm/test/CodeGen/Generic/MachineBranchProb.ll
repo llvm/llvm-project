@@ -7,6 +7,9 @@
 ; to fail.
 ; XFAIL: hexagon
 
+; Bug: PR31899
+; XFAIL: avr
+
 ; Make sure we have the correct weight attached to each successor.
 define i32 @test2(i32 %x) nounwind uwtable readnone ssp {
 ; CHECK-LABEL: Machine code for function test2:

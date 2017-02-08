@@ -18479,6 +18479,11 @@ static SDValue getTargetVShiftByConstNode(unsigned Opc, const SDLoc &dl, MVT VT,
                                           SelectionDAG &DAG) {
   MVT ElementType = VT.getVectorElementType();
 
+  // Bitcast the source vector to the output type, this is mainly necessary for
+  // vXi8/vXi64 shifts.
+  if (VT != SrcOp.getSimpleValueType())
+    SrcOp = DAG.getBitcast(VT, SrcOp);
+
   // Fold this packed shift into its first operand if ShiftAmt is 0.
   if (ShiftAmt == 0)
     return SrcOp;
@@ -18495,9 +18500,8 @@ static SDValue getTargetVShiftByConstNode(unsigned Opc, const SDLoc &dl, MVT VT,
          && "Unknown target vector shift-by-constant node");
 
   // Fold this packed vector shift into a build vector if SrcOp is a
-  // vector of Constants or UNDEFs, and SrcOp valuetype is the same as VT.
-  if (VT == SrcOp.getSimpleValueType() &&
-      ISD::isBuildVectorOfConstantSDNodes(SrcOp.getNode())) {
+  // vector of Constants or UNDEFs.
+  if (ISD::isBuildVectorOfConstantSDNodes(SrcOp.getNode())) {
     SmallVector<SDValue, 8> Elts;
     unsigned NumElts = SrcOp->getNumOperands();
     ConstantSDNode *ND;
@@ -29473,8 +29477,8 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
 
   // If this is a *dynamic* select (non-constant condition) and we can match
   // this node with one of the variable blend instructions, restructure the
-  // condition so that the blends can use the high bit of each element and use
-  // SimplifyDemandedBits to simplify the condition operand.
+  // condition so that blends can use the high (sign) bit of each element and
+  // use SimplifyDemandedBits to simplify the condition operand.
   if (N->getOpcode() == ISD::VSELECT && DCI.isBeforeLegalizeOps() &&
       !DCI.isBeforeLegalize() &&
       !ISD::isBuildVectorOfConstantSDNodes(Cond.getNode())) {
@@ -29509,49 +29513,45 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
       return SDValue();
 
     assert(BitWidth >= 8 && BitWidth <= 64 && "Invalid mask size");
-    APInt DemandedMask = APInt::getHighBitsSet(BitWidth, 1);
-
+    APInt DemandedMask(APInt::getSignBit(BitWidth));
     APInt KnownZero, KnownOne;
     TargetLowering::TargetLoweringOpt TLO(DAG, DCI.isBeforeLegalize(),
                                           DCI.isBeforeLegalizeOps());
     if (TLO.ShrinkDemandedConstant(Cond, DemandedMask) ||
         TLI.SimplifyDemandedBits(Cond, DemandedMask, KnownZero, KnownOne,
                                  TLO)) {
-      // If we changed the computation somewhere in the DAG, this change
-      // will affect all users of Cond.
-      // Make sure it is fine and update all the nodes so that we do not
-      // use the generic VSELECT anymore. Otherwise, we may perform
-      // wrong optimizations as we messed up with the actual expectation
+      // If we changed the computation somewhere in the DAG, this change will
+      // affect all users of Cond. Make sure it is fine and update all the nodes
+      // so that we do not use the generic VSELECT anymore. Otherwise, we may
+      // perform wrong optimizations as we messed with the actual expectation
       // for the vector boolean values.
       if (Cond != TLO.Old) {
-        // Check all uses of that condition operand to check whether it will be
-        // consumed by non-BLEND instructions, which may depend on all bits are
-        // set properly.
-        for (SDNode::use_iterator I = Cond->use_begin(), E = Cond->use_end();
-             I != E; ++I)
-          if (I->getOpcode() != ISD::VSELECT)
-            // TODO: Add other opcodes eventually lowered into BLEND.
+        // Check all uses of the condition operand to check whether it will be
+        // consumed by non-BLEND instructions. Those may require that all bits
+        // are set properly.
+        for (SDNode *U : Cond->uses()) {
+          // TODO: Add other opcodes eventually lowered into BLEND.
+          if (U->getOpcode() != ISD::VSELECT)
             return SDValue();
+        }
 
-        // Update all the users of the condition, before committing the change,
-        // so that the VSELECT optimizations that expect the correct vector
-        // boolean value will not be triggered.
-        for (SDNode::use_iterator I = Cond->use_begin(), E = Cond->use_end();
-             I != E; ++I)
-          DAG.ReplaceAllUsesOfValueWith(
-              SDValue(*I, 0),
-              DAG.getNode(X86ISD::SHRUNKBLEND, SDLoc(*I), I->getValueType(0),
-                          Cond, I->getOperand(1), I->getOperand(2)));
+        // Update all users of the condition before committing the change, so
+        // that the VSELECT optimizations that expect the correct vector boolean
+        // value will not be triggered.
+        for (SDNode *U : Cond->uses()) {
+          SDValue SB = DAG.getNode(X86ISD::SHRUNKBLEND, SDLoc(U),
+                                   U->getValueType(0), Cond, U->getOperand(1),
+                                   U->getOperand(2));
+          DAG.ReplaceAllUsesOfValueWith(SDValue(U, 0), SB);
+        }
         DCI.CommitTargetLoweringOpt(TLO);
         return SDValue();
       }
-      // At this point, only Cond is changed. Change the condition
-      // just for N to keep the opportunity to optimize all other
-      // users their own way.
-      DAG.ReplaceAllUsesOfValueWith(
-          SDValue(N, 0),
-          DAG.getNode(X86ISD::SHRUNKBLEND, SDLoc(N), N->getValueType(0),
-                      TLO.New, N->getOperand(1), N->getOperand(2)));
+      // Only Cond (rather than other nodes in the computation chain) was
+      // changed. Change the condition just for N to keep the opportunity to
+      // optimize all other users their own way.
+      SDValue SB = DAG.getNode(X86ISD::SHRUNKBLEND, DL, VT, TLO.New, LHS, RHS);
+      DAG.ReplaceAllUsesOfValueWith(SDValue(N, 0), SB);
       return SDValue();
     }
   }
@@ -30523,8 +30523,10 @@ static SDValue combineVectorShift(SDNode *N, SelectionDAG &DAG,
          "Unexpected shift opcode");
   bool LogicalShift = X86ISD::VSHLI == Opcode || X86ISD::VSRLI == Opcode;
   EVT VT = N->getValueType(0);
+  SDValue N0 = N->getOperand(0);
   unsigned NumBitsPerElt = VT.getScalarSizeInBits();
-  assert((NumBitsPerElt % 8) == 0);
+  assert(VT == N0.getValueType() && (NumBitsPerElt % 8) == 0 &&
+         "Unexpected value type");
 
   // Out of range logical bit shifts are guaranteed to be zero.
   // Out of range arithmetic bit shifts splat the sign bit.
@@ -30535,8 +30537,6 @@ static SDValue combineVectorShift(SDNode *N, SelectionDAG &DAG,
     else
       ShiftVal = NumBitsPerElt - 1;
   }
-
-  SDValue N0 = N->getOperand(0);
 
   // Shift N0 by zero -> N0.
   if (!ShiftVal)

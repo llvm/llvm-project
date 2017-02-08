@@ -10,27 +10,24 @@
 #ifndef LLVM_MC_MCELFSTREAMER_H
 #define LLVM_MC_MCELFSTREAMER_H
 
-#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCObjectStreamer.h"
-#include "llvm/MC/SectionKind.h"
-#include "llvm/Support/DataTypes.h"
 
 namespace llvm {
+
 class MCAsmBackend;
-class MCAssembler;
 class MCCodeEmitter;
 class MCExpr;
 class MCInst;
-class raw_ostream;
 
 class MCELFStreamer : public MCObjectStreamer {
 public:
   MCELFStreamer(MCContext &Context, MCAsmBackend &TAB, raw_pwrite_stream &OS,
                 MCCodeEmitter *Emitter)
-      : MCObjectStreamer(Context, TAB, OS, Emitter), SeenIdent(false) {}
+      : MCObjectStreamer(Context, TAB, OS, Emitter) {}
 
-  ~MCELFStreamer() override;
+  ~MCELFStreamer() override = default;
 
   /// state management
   void reset() override {
@@ -91,11 +88,11 @@ private:
   /// \brief Merge the content of the fragment \p EF into the fragment \p DF.
   void mergeFragment(MCDataFragment *, MCDataFragment *);
 
-  bool SeenIdent;
+  bool SeenIdent = false;
 
   /// BundleGroups - The stack of fragments holding the bundle-locked
   /// instructions.
-  llvm::SmallVector<MCDataFragment *, 4> BundleGroups;
+  SmallVector<MCDataFragment *, 4> BundleGroups;
 };
 
 MCELFStreamer *createARMELFStreamer(MCContext &Context, MCAsmBackend &TAB,
@@ -105,4 +102,4 @@ MCELFStreamer *createARMELFStreamer(MCContext &Context, MCAsmBackend &TAB,
 
 } // end namespace llvm
 
-#endif
+#endif // LLVM_MC_MCELFSTREAMER_H

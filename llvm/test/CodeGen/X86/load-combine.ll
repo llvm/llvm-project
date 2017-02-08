@@ -813,10 +813,6 @@ define i32 @load_i32_by_i8_bswap_base_index_offset(i32* %arg, i32 %arg1) {
 ; CHECK64-NEXT:    movzbl 3(%rdi,%rax), %eax
 ; CHECK64-NEXT:    orl %ecx, %eax
 ; CHECK64-NEXT:    retq
-; TODO: Currently we don't fold the pattern for x86-64 target because we don't
-; see that the loads are adjacent. It happens because BaseIndexOffset doesn't
-; look through zexts.
-
   %tmp = bitcast i32* %arg to i8*
   %tmp2 = getelementptr inbounds i8, i8* %tmp, i32 %arg1
   %tmp3 = load i8, i8* %tmp2, align 1
@@ -900,4 +896,327 @@ define i32 @load_i32_by_bswap_i16(i32* %arg) {
   %tmp6 = shl nuw nsw i32 %tmp2, 16
   %tmp7 = or i32 %tmp6, %tmp5
   ret i32 %tmp7
+}
+
+; i16* p;
+; (i32) p[0] | (sext(p[1] << 16) to i32)
+define i32 @load_i32_by_sext_i16(i32* %arg) {
+; CHECK-LABEL: load_i32_by_sext_i16:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    movzwl (%eax), %ecx
+; CHECK-NEXT:    movzwl 2(%eax), %eax
+; CHECK-NEXT:    shll $16, %eax
+; CHECK-NEXT:    orl %ecx, %eax
+; CHECK-NEXT:    retl
+;
+; CHECK64-LABEL: load_i32_by_sext_i16:
+; CHECK64:       # BB#0:
+; CHECK64-NEXT:    movzwl (%rdi), %ecx
+; CHECK64-NEXT:    movzwl 2(%rdi), %eax
+; CHECK64-NEXT:    shll $16, %eax
+; CHECK64-NEXT:    orl %ecx, %eax
+; CHECK64-NEXT:    retq
+  %tmp = bitcast i32* %arg to i16*
+  %tmp1 = load i16, i16* %tmp, align 1
+  %tmp2 = zext i16 %tmp1 to i32
+  %tmp3 = getelementptr inbounds i16, i16* %tmp, i32 1
+  %tmp4 = load i16, i16* %tmp3, align 1
+  %tmp5 = sext i16 %tmp4 to i32
+  %tmp6 = shl nuw nsw i32 %tmp5, 16
+  %tmp7 = or i32 %tmp6, %tmp2
+  ret i32 %tmp7
+}
+
+; i8* arg; i32 i;
+; p = arg + 12;
+; (i32) p[i] | ((i32) p[i + 1] << 8) | ((i32) p[i + 2] << 16) | ((i32) p[i + 3] << 24)
+define i32 @load_i32_by_i8_base_offset_index(i8* %arg, i32 %i) {
+; CHECK-LABEL: load_i32_by_i8_base_offset_index:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    pushl %esi
+; CHECK-NEXT:  .Lcfi4:
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-NEXT:  .Lcfi5:
+; CHECK-NEXT:    .cfi_offset %esi, -8
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; CHECK-NEXT:    movzbl 12(%eax,%ecx), %edx
+; CHECK-NEXT:    movzbl 13(%eax,%ecx), %esi
+; CHECK-NEXT:    shll $8, %esi
+; CHECK-NEXT:    orl %edx, %esi
+; CHECK-NEXT:    movzbl 14(%eax,%ecx), %edx
+; CHECK-NEXT:    shll $16, %edx
+; CHECK-NEXT:    orl %esi, %edx
+; CHECK-NEXT:    movzbl 15(%eax,%ecx), %eax
+; CHECK-NEXT:    shll $24, %eax
+; CHECK-NEXT:    orl %edx, %eax
+; CHECK-NEXT:    popl %esi
+; CHECK-NEXT:    retl
+;
+; CHECK64-LABEL: load_i32_by_i8_base_offset_index:
+; CHECK64:       # BB#0:
+; CHECK64-NEXT:    movl %esi, %eax
+; CHECK64-NEXT:    movl 12(%rdi,%rax), %eax
+; CHECK64-NEXT:    retq
+  %tmp = add nuw nsw i32 %i, 3
+  %tmp2 = add nuw nsw i32 %i, 2
+  %tmp3 = add nuw nsw i32 %i, 1
+  %tmp4 = getelementptr inbounds i8, i8* %arg, i64 12
+  %tmp5 = zext i32 %i to i64
+  %tmp6 = getelementptr inbounds i8, i8* %tmp4, i64 %tmp5
+  %tmp7 = load i8, i8* %tmp6, align 1
+  %tmp8 = zext i8 %tmp7 to i32
+  %tmp9 = zext i32 %tmp3 to i64
+  %tmp10 = getelementptr inbounds i8, i8* %tmp4, i64 %tmp9
+  %tmp11 = load i8, i8* %tmp10, align 1
+  %tmp12 = zext i8 %tmp11 to i32
+  %tmp13 = shl nuw nsw i32 %tmp12, 8
+  %tmp14 = or i32 %tmp13, %tmp8
+  %tmp15 = zext i32 %tmp2 to i64
+  %tmp16 = getelementptr inbounds i8, i8* %tmp4, i64 %tmp15
+  %tmp17 = load i8, i8* %tmp16, align 1
+  %tmp18 = zext i8 %tmp17 to i32
+  %tmp19 = shl nuw nsw i32 %tmp18, 16
+  %tmp20 = or i32 %tmp14, %tmp19
+  %tmp21 = zext i32 %tmp to i64
+  %tmp22 = getelementptr inbounds i8, i8* %tmp4, i64 %tmp21
+  %tmp23 = load i8, i8* %tmp22, align 1
+  %tmp24 = zext i8 %tmp23 to i32
+  %tmp25 = shl nuw i32 %tmp24, 24
+  %tmp26 = or i32 %tmp20, %tmp25
+  ret i32 %tmp26
+}
+
+; i8* arg; i32 i;
+; p = arg + 12;
+; (i32) p[i + 1] | ((i32) p[i + 2] << 8) | ((i32) p[i + 3] << 16) | ((i32) p[i + 4] << 24)
+define i32 @load_i32_by_i8_base_offset_index_2(i8* %arg, i32 %i) {
+; CHECK-LABEL: load_i32_by_i8_base_offset_index_2:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    pushl %esi
+; CHECK-NEXT:  .Lcfi6:
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-NEXT:  .Lcfi7:
+; CHECK-NEXT:    .cfi_offset %esi, -8
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; CHECK-NEXT:    movzbl 13(%eax,%ecx), %edx
+; CHECK-NEXT:    movzbl 14(%eax,%ecx), %esi
+; CHECK-NEXT:    shll $8, %esi
+; CHECK-NEXT:    orl %edx, %esi
+; CHECK-NEXT:    movzbl 15(%eax,%ecx), %edx
+; CHECK-NEXT:    shll $16, %edx
+; CHECK-NEXT:    orl %esi, %edx
+; CHECK-NEXT:    movzbl 16(%eax,%ecx), %eax
+; CHECK-NEXT:    shll $24, %eax
+; CHECK-NEXT:    orl %edx, %eax
+; CHECK-NEXT:    popl %esi
+; CHECK-NEXT:    retl
+;
+; CHECK64-LABEL: load_i32_by_i8_base_offset_index_2:
+; CHECK64:       # BB#0:
+; CHECK64-NEXT:    movl %esi, %eax
+; CHECK64-NEXT:    movzbl 13(%rdi,%rax), %ecx
+; CHECK64-NEXT:    movzbl 14(%rdi,%rax), %edx
+; CHECK64-NEXT:    shll $8, %edx
+; CHECK64-NEXT:    orl %ecx, %edx
+; CHECK64-NEXT:    movzbl 15(%rdi,%rax), %ecx
+; CHECK64-NEXT:    shll $16, %ecx
+; CHECK64-NEXT:    orl %edx, %ecx
+; CHECK64-NEXT:    movzbl 16(%rdi,%rax), %eax
+; CHECK64-NEXT:    shll $24, %eax
+; CHECK64-NEXT:    orl %ecx, %eax
+; CHECK64-NEXT:    retq
+  %tmp = add nuw nsw i32 %i, 4
+  %tmp2 = add nuw nsw i32 %i, 3
+  %tmp3 = add nuw nsw i32 %i, 2
+  %tmp4 = getelementptr inbounds i8, i8* %arg, i64 12
+  %tmp5 = add nuw nsw i32 %i, 1
+  %tmp27 = zext i32 %tmp5 to i64
+  %tmp28 = getelementptr inbounds i8, i8* %tmp4, i64 %tmp27
+  %tmp29 = load i8, i8* %tmp28, align 1
+  %tmp30 = zext i8 %tmp29 to i32
+  %tmp31 = zext i32 %tmp3 to i64
+  %tmp32 = getelementptr inbounds i8, i8* %tmp4, i64 %tmp31
+  %tmp33 = load i8, i8* %tmp32, align 1
+  %tmp34 = zext i8 %tmp33 to i32
+  %tmp35 = shl nuw nsw i32 %tmp34, 8
+  %tmp36 = or i32 %tmp35, %tmp30
+  %tmp37 = zext i32 %tmp2 to i64
+  %tmp38 = getelementptr inbounds i8, i8* %tmp4, i64 %tmp37
+  %tmp39 = load i8, i8* %tmp38, align 1
+  %tmp40 = zext i8 %tmp39 to i32
+  %tmp41 = shl nuw nsw i32 %tmp40, 16
+  %tmp42 = or i32 %tmp36, %tmp41
+  %tmp43 = zext i32 %tmp to i64
+  %tmp44 = getelementptr inbounds i8, i8* %tmp4, i64 %tmp43
+  %tmp45 = load i8, i8* %tmp44, align 1
+  %tmp46 = zext i8 %tmp45 to i32
+  %tmp47 = shl nuw i32 %tmp46, 24
+  %tmp48 = or i32 %tmp42, %tmp47
+  ret i32 %tmp48
+}
+
+; i8* arg; i32 i;
+;
+; p0 = arg;
+; p1 = arg + i + 1;
+; p2 = arg + i + 2;
+; p3 = arg + i + 3;
+;
+; (i32) p0[12] | ((i32) p1[12] << 8) | ((i32) p2[12] << 16) | ((i32) p3[12] << 24)
+;
+; This test excercises zero and any extend loads as a part of load combine pattern.
+; In order to fold the pattern above we need to reassociate the address computation
+; first. By the time the address computation is reassociated loads are combined to
+; to zext and aext loads.
+define i32 @load_i32_by_i8_zaext_loads(i8* %arg, i32 %arg1) {
+; CHECK-LABEL: load_i32_by_i8_zaext_loads:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    pushl %esi
+; CHECK-NEXT:  .Lcfi8:
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-NEXT:  .Lcfi9:
+; CHECK-NEXT:    .cfi_offset %esi, -8
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; CHECK-NEXT:    movzbl 12(%eax,%ecx), %edx
+; CHECK-NEXT:    movzbl 13(%eax,%ecx), %esi
+; CHECK-NEXT:    shll $8, %esi
+; CHECK-NEXT:    orl %edx, %esi
+; CHECK-NEXT:    movzbl 14(%eax,%ecx), %edx
+; CHECK-NEXT:    shll $16, %edx
+; CHECK-NEXT:    orl %esi, %edx
+; CHECK-NEXT:    movzbl 15(%eax,%ecx), %eax
+; CHECK-NEXT:    shll $24, %eax
+; CHECK-NEXT:    orl %edx, %eax
+; CHECK-NEXT:    popl %esi
+; CHECK-NEXT:    retl
+;
+; CHECK64-LABEL: load_i32_by_i8_zaext_loads:
+; CHECK64:       # BB#0:
+; CHECK64-NEXT:    movl %esi, %eax
+; CHECK64-NEXT:    movzbl 12(%rdi,%rax), %ecx
+; CHECK64-NEXT:    movzbl 13(%rdi,%rax), %edx
+; CHECK64-NEXT:    shll $8, %edx
+; CHECK64-NEXT:    orl %ecx, %edx
+; CHECK64-NEXT:    movzbl 14(%rdi,%rax), %ecx
+; CHECK64-NEXT:    shll $16, %ecx
+; CHECK64-NEXT:    orl %edx, %ecx
+; CHECK64-NEXT:    movzbl 15(%rdi,%rax), %eax
+; CHECK64-NEXT:    shll $24, %eax
+; CHECK64-NEXT:    orl %ecx, %eax
+; CHECK64-NEXT:    retq
+  %tmp = add nuw nsw i32 %arg1, 3
+  %tmp2 = add nuw nsw i32 %arg1, 2
+  %tmp3 = add nuw nsw i32 %arg1, 1
+  %tmp4 = zext i32 %tmp to i64
+  %tmp5 = zext i32 %tmp2 to i64
+  %tmp6 = zext i32 %tmp3 to i64
+  %tmp24 = getelementptr inbounds i8, i8* %arg, i64 %tmp4
+  %tmp30 = getelementptr inbounds i8, i8* %arg, i64 %tmp5
+  %tmp31 = getelementptr inbounds i8, i8* %arg, i64 %tmp6
+  %tmp32 = getelementptr inbounds i8, i8* %arg, i64 12
+  %tmp33 = zext i32 %arg1 to i64
+  %tmp34 = getelementptr inbounds i8, i8* %tmp32, i64 %tmp33
+  %tmp35 = load i8, i8* %tmp34, align 1
+  %tmp36 = zext i8 %tmp35 to i32
+  %tmp37 = getelementptr inbounds i8, i8* %tmp31, i64 12
+  %tmp38 = load i8, i8* %tmp37, align 1
+  %tmp39 = zext i8 %tmp38 to i32
+  %tmp40 = shl nuw nsw i32 %tmp39, 8
+  %tmp41 = or i32 %tmp40, %tmp36
+  %tmp42 = getelementptr inbounds i8, i8* %tmp30, i64 12
+  %tmp43 = load i8, i8* %tmp42, align 1
+  %tmp44 = zext i8 %tmp43 to i32
+  %tmp45 = shl nuw nsw i32 %tmp44, 16
+  %tmp46 = or i32 %tmp41, %tmp45
+  %tmp47 = getelementptr inbounds i8, i8* %tmp24, i64 12
+  %tmp48 = load i8, i8* %tmp47, align 1
+  %tmp49 = zext i8 %tmp48 to i32
+  %tmp50 = shl nuw i32 %tmp49, 24
+  %tmp51 = or i32 %tmp46, %tmp50
+  ret i32 %tmp51
+}
+
+; The same as load_i32_by_i8_zaext_loads but the last load is combined to
+; a sext load.
+;
+; i8* arg; i32 i;
+;
+; p0 = arg;
+; p1 = arg + i + 1;
+; p2 = arg + i + 2;
+; p3 = arg + i + 3;
+;
+; (i32) p0[12] | ((i32) p1[12] << 8) | ((i32) p2[12] << 16) | ((i32) p3[12] << 24)
+define i32 @load_i32_by_i8_zsext_loads(i8* %arg, i32 %arg1) {
+; CHECK-LABEL: load_i32_by_i8_zsext_loads:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    pushl %esi
+; CHECK-NEXT:  .Lcfi10:
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-NEXT:  .Lcfi11:
+; CHECK-NEXT:    .cfi_offset %esi, -8
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; CHECK-NEXT:    movzbl 12(%eax,%ecx), %edx
+; CHECK-NEXT:    movzbl 13(%eax,%ecx), %esi
+; CHECK-NEXT:    shll $8, %esi
+; CHECK-NEXT:    orl %edx, %esi
+; CHECK-NEXT:    movzbl 14(%eax,%ecx), %edx
+; CHECK-NEXT:    shll $16, %edx
+; CHECK-NEXT:    orl %esi, %edx
+; CHECK-NEXT:    movsbl 15(%eax,%ecx), %eax
+; CHECK-NEXT:    shll $24, %eax
+; CHECK-NEXT:    orl %edx, %eax
+; CHECK-NEXT:    popl %esi
+; CHECK-NEXT:    retl
+;
+; CHECK64-LABEL: load_i32_by_i8_zsext_loads:
+; CHECK64:       # BB#0:
+; CHECK64-NEXT:    movl %esi, %eax
+; CHECK64-NEXT:    movzbl 12(%rdi,%rax), %ecx
+; CHECK64-NEXT:    movzbl 13(%rdi,%rax), %edx
+; CHECK64-NEXT:    shll $8, %edx
+; CHECK64-NEXT:    orl %ecx, %edx
+; CHECK64-NEXT:    movzbl 14(%rdi,%rax), %ecx
+; CHECK64-NEXT:    shll $16, %ecx
+; CHECK64-NEXT:    orl %edx, %ecx
+; CHECK64-NEXT:    movsbl 15(%rdi,%rax), %eax
+; CHECK64-NEXT:    shll $24, %eax
+; CHECK64-NEXT:    orl %ecx, %eax
+; CHECK64-NEXT:    retq
+  %tmp = add nuw nsw i32 %arg1, 3
+  %tmp2 = add nuw nsw i32 %arg1, 2
+  %tmp3 = add nuw nsw i32 %arg1, 1
+  %tmp4 = zext i32 %tmp to i64
+  %tmp5 = zext i32 %tmp2 to i64
+  %tmp6 = zext i32 %tmp3 to i64
+  %tmp24 = getelementptr inbounds i8, i8* %arg, i64 %tmp4
+  %tmp30 = getelementptr inbounds i8, i8* %arg, i64 %tmp5
+  %tmp31 = getelementptr inbounds i8, i8* %arg, i64 %tmp6
+  %tmp32 = getelementptr inbounds i8, i8* %arg, i64 12
+  %tmp33 = zext i32 %arg1 to i64
+  %tmp34 = getelementptr inbounds i8, i8* %tmp32, i64 %tmp33
+  %tmp35 = load i8, i8* %tmp34, align 1
+  %tmp36 = zext i8 %tmp35 to i32
+  %tmp37 = getelementptr inbounds i8, i8* %tmp31, i64 12
+  %tmp38 = load i8, i8* %tmp37, align 1
+  %tmp39 = zext i8 %tmp38 to i32
+  %tmp40 = shl nuw nsw i32 %tmp39, 8
+  %tmp41 = or i32 %tmp40, %tmp36
+  %tmp42 = getelementptr inbounds i8, i8* %tmp30, i64 12
+  %tmp43 = load i8, i8* %tmp42, align 1
+  %tmp44 = zext i8 %tmp43 to i32
+  %tmp45 = shl nuw nsw i32 %tmp44, 16
+  %tmp46 = or i32 %tmp41, %tmp45
+  %tmp47 = getelementptr inbounds i8, i8* %tmp24, i64 12
+  %tmp48 = load i8, i8* %tmp47, align 1
+  %tmp49 = sext i8 %tmp48 to i16
+  %tmp50 = zext i16 %tmp49 to i32
+  %tmp51 = shl nuw i32 %tmp50, 24
+  %tmp52 = or i32 %tmp46, %tmp51
+  ret i32 %tmp52
 }

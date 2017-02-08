@@ -169,6 +169,8 @@ class MipsAsmParser : public MCTargetAsmParser {
 
   bool parseBracketSuffix(StringRef Name, OperandVector &Operands);
 
+  bool mnemonicIsValid(StringRef Mnemonic, unsigned VariantID);
+
   bool ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
                         SMLoc NameLoc, OperandVector &Operands) override;
 
@@ -6965,3 +6967,15 @@ extern "C" void LLVMInitializeMipsAsmParser() {
 #define GET_REGISTER_MATCHER
 #define GET_MATCHER_IMPLEMENTATION
 #include "MipsGenAsmMatcher.inc"
+
+bool MipsAsmParser::mnemonicIsValid(StringRef Mnemonic, unsigned VariantID) {
+  // Find the appropriate table for this asm variant.
+  const MatchEntry *Start, *End;
+  switch (VariantID) {
+  default: llvm_unreachable("invalid variant!");
+  case 0: Start = std::begin(MatchTable0); End = std::end(MatchTable0); break;
+  }
+  // Search the table.
+  auto MnemonicRange = std::equal_range(Start, End, Mnemonic, LessOpcode());
+  return MnemonicRange.first != MnemonicRange.second;
+}

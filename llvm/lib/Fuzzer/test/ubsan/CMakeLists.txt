@@ -10,6 +10,3 @@ set(UbsanTests
 foreach(Test ${UbsanTests})
   add_libfuzzer_test(${Test}-Ubsan SOURCES ../${Test}.cpp)
 endforeach()
-
-# Propagate value into parent directory
-set(TestBinaries ${TestBinaries} PARENT_SCOPE)

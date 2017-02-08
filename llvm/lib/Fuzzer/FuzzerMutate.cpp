@@ -99,8 +99,7 @@ size_t MutationDispatcher::Mutate_ShuffleBytes(uint8_t *Data, size_t Size,
       Rand(std::min(Size, (size_t)8)) + 1; // [1,8] and <= Size.
   size_t ShuffleStart = Rand(Size - ShuffleAmount);
   assert(ShuffleStart + ShuffleAmount <= Size);
-  std::random_shuffle(Data + ShuffleStart, Data + ShuffleStart + ShuffleAmount,
-                      Rand);
+  std::shuffle(Data + ShuffleStart, Data + ShuffleStart + ShuffleAmount, Rand);
   return Size;
 }
 

@@ -1,4 +1,4 @@
-//===-- MCMachOStreamer.cpp - MachO Streamer ------------------------------===//
+//===- MCMachOStreamer.cpp - MachO Streamer -------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,27 +7,35 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/MC/MCStreamer.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Triple.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"
-#include "llvm/MC/MCDwarf.h"
+#include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCExpr.h"
+#include "llvm/MC/MCFixup.h"
+#include "llvm/MC/MCFragment.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCLinkerOptimizationHint.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCObjectStreamer.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCSectionMachO.h"
+#include "llvm/MC/MCStreamer.h"
+#include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCSymbolMachO.h"
 #include "llvm/MC/MCValue.h"
-#include "llvm/Support/Dwarf.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/TargetRegistry.h"
+#include <cassert>
+#include <vector>
 
 using namespace llvm;
 
@@ -83,18 +91,23 @@ public:
   void EmitSymbolDesc(MCSymbol *Symbol, unsigned DescValue) override;
   void EmitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
                         unsigned ByteAlignment) override;
+
   void BeginCOFFSymbolDef(const MCSymbol *Symbol) override {
     llvm_unreachable("macho doesn't support this directive");
   }
+
   void EmitCOFFSymbolStorageClass(int StorageClass) override {
     llvm_unreachable("macho doesn't support this directive");
   }
+
   void EmitCOFFSymbolType(int Type) override {
     llvm_unreachable("macho doesn't support this directive");
   }
+
   void EndCOFFSymbolDef() override {
     llvm_unreachable("macho doesn't support this directive");
   }
+
   void EmitLocalCommonSymbol(MCSymbol *Symbol, uint64_t Size,
                              unsigned ByteAlignment) override;
   void EmitZerofill(MCSection *Section, MCSymbol *Symbol = nullptr,

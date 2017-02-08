@@ -97,7 +97,7 @@ class InputCorpus {
   // Hypothesis: units added to the corpus last are more likely to be
   // interesting. This function gives more weight to the more recent units.
   size_t ChooseUnitIdxToMutate(Random &Rand) {
-    size_t Idx = static_cast<size_t>(CorpusDistribution(Rand.Get_mt19937()));
+    size_t Idx = static_cast<size_t>(CorpusDistribution(Rand));
     assert(Idx < Inputs.size());
     return Idx;
   }

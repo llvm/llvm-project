@@ -609,7 +609,7 @@ static Instruction *unpackLoadToAggregate(InstCombiner &IC, LoadInst &LI) {
     // arrays of arbitrary size but this has a terrible impact on compile time.
     // The threshold here is chosen arbitrarily, maybe needs a little bit of
     // tuning.
-    if (NumElements > 1024)
+    if (NumElements > IC.MaxArraySizeForCombine)
       return nullptr;
 
     const DataLayout &DL = IC.getDataLayout();
@@ -1114,7 +1114,7 @@ static bool unpackStoreToAggregate(InstCombiner &IC, StoreInst &SI) {
     // arrays of arbitrary size but this has a terrible impact on compile time.
     // The threshold here is chosen arbitrarily, maybe needs a little bit of
     // tuning.
-    if (NumElements > 1024)
+    if (NumElements > IC.MaxArraySizeForCombine)
       return false;
 
     const DataLayout &DL = IC.getDataLayout();

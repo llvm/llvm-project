@@ -140,7 +140,7 @@ define void @use_flat_to_constant_addrspacecast(i32 addrspace(4)* %ptr) #0 {
 ; HSA: flat_store_dword v{{\[}}[[LO]]:[[HI]]{{\]}}, v[[K]]
 define void @cast_0_group_to_flat_addrspacecast() #0 {
   %cast = addrspacecast i32 addrspace(3)* null to i32 addrspace(4)*
-  store i32 7, i32 addrspace(4)* %cast
+  store volatile i32 7, i32 addrspace(4)* %cast
   ret void
 }
 
@@ -150,7 +150,7 @@ define void @cast_0_group_to_flat_addrspacecast() #0 {
 ; HSA: ds_write_b32 [[PTR]], [[K]]
 define void @cast_0_flat_to_group_addrspacecast() #0 {
   %cast = addrspacecast i32 addrspace(4)* null to i32 addrspace(3)*
-  store i32 7, i32 addrspace(3)* %cast
+  store volatile i32 7, i32 addrspace(3)* %cast
   ret void
 }
 
@@ -161,7 +161,7 @@ define void @cast_0_flat_to_group_addrspacecast() #0 {
 ; HSA: flat_store_dword v{{\[}}[[LO]]:[[HI]]{{\]}}, v[[K]]
 define void @cast_neg1_group_to_flat_addrspacecast() #0 {
   %cast = addrspacecast i32 addrspace(3)* inttoptr (i32 -1 to i32 addrspace(3)*) to i32 addrspace(4)*
-  store i32 7, i32 addrspace(4)* %cast
+  store volatile i32 7, i32 addrspace(4)* %cast
   ret void
 }
 
@@ -171,7 +171,7 @@ define void @cast_neg1_group_to_flat_addrspacecast() #0 {
 ; HSA: ds_write_b32 [[PTR]], [[K]]
 define void @cast_neg1_flat_to_group_addrspacecast() #0 {
   %cast = addrspacecast i32 addrspace(4)* inttoptr (i64 -1 to i32 addrspace(4)*) to i32 addrspace(3)*
-  store i32 7, i32 addrspace(3)* %cast
+  store volatile i32 7, i32 addrspace(3)* %cast
   ret void
 }
 
@@ -183,7 +183,7 @@ define void @cast_neg1_flat_to_group_addrspacecast() #0 {
 ; HSA: flat_store_dword v{{\[}}[[LO]]:[[HI]]{{\]}}, v[[K]]
 define void @cast_0_private_to_flat_addrspacecast() #0 {
   %cast = addrspacecast i32* null to i32 addrspace(4)*
-  store i32 7, i32 addrspace(4)* %cast
+  store volatile i32 7, i32 addrspace(4)* %cast
   ret void
 }
 
@@ -193,7 +193,7 @@ define void @cast_0_private_to_flat_addrspacecast() #0 {
 ; HSA: buffer_store_dword [[K]], [[PTR]], s{{\[[0-9]+:[0-9]+\]}}, s{{[0-9]+}} offen
 define void @cast_0_flat_to_private_addrspacecast() #0 {
   %cast = addrspacecast i32 addrspace(4)* null to i32 addrspace(0)*
-  store i32 7, i32* %cast
+  store volatile i32 7, i32* %cast
   ret void
 }
 
@@ -218,7 +218,7 @@ global:
 
 end:
   %fptr = phi i32 addrspace(4)* [ %flat_local, %local ], [ %flat_global, %global ]
-  store i32 %x, i32 addrspace(4)* %fptr, align 4
+  store volatile i32 %x, i32 addrspace(4)* %fptr, align 4
 ;  %val = load i32, i32 addrspace(4)* %fptr, align 4
 ;  store i32 %val, i32 addrspace(1)* %out, align 4
   ret void
@@ -237,11 +237,11 @@ define void @store_flat_scratch(i32 addrspace(1)* noalias %out, i32) #0 {
   %x = call i32 @llvm.amdgcn.workitem.id.x() #2
   %pptr = getelementptr i32, i32* %alloca, i32 %x
   %fptr = addrspacecast i32* %pptr to i32 addrspace(4)*
-  store i32 %x, i32 addrspace(4)* %fptr
+  store volatile i32 %x, i32 addrspace(4)* %fptr
   ; Dummy call
   call void @llvm.amdgcn.s.barrier() #1
-  %reload = load i32, i32 addrspace(4)* %fptr, align 4
-  store i32 %reload, i32 addrspace(1)* %out, align 4
+  %reload = load volatile i32, i32 addrspace(4)* %fptr, align 4
+  store volatile i32 %reload, i32 addrspace(1)* %out, align 4
   ret void
 }
 

@@ -684,6 +684,10 @@ protected:
        unsigned LastLinked);
 
   template <class GraphT>
+  friend unsigned ReverseDFSPass(DominatorTreeBaseByGraphTraits<GraphT> &DT,
+                                 typename GraphT::NodeRef V, unsigned N);
+
+  template <class GraphT>
   friend unsigned DFSPass(DominatorTreeBaseByGraphTraits<GraphT> &DT,
                           typename GraphT::NodeRef V, unsigned N);
 

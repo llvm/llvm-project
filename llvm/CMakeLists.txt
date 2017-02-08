@@ -56,17 +56,20 @@ endif()
 
 # This should only apply if you are both on an Apple host, and targeting Apple.
 if(CMAKE_HOST_APPLE AND APPLE)
-  if(NOT CMAKE_XCRUN)
-    find_program(CMAKE_XCRUN NAMES xcrun)
-  endif()
-  if(CMAKE_XCRUN)
-    execute_process(COMMAND ${CMAKE_XCRUN} -find libtool
-      OUTPUT_VARIABLE CMAKE_LIBTOOL
-      OUTPUT_STRIP_TRAILING_WHITESPACE)
-  endif()
+  # if CMAKE_LIBTOOL is not set, try and find it with xcrun or find_program
+  if(NOT CMAKE_LIBTOOL)
+    if(NOT CMAKE_XCRUN)
+      find_program(CMAKE_XCRUN NAMES xcrun)
+    endif()
+    if(CMAKE_XCRUN)
+      execute_process(COMMAND ${CMAKE_XCRUN} -find libtool
+        OUTPUT_VARIABLE CMAKE_LIBTOOL
+        OUTPUT_STRIP_TRAILING_WHITESPACE)
+    endif()
 
-  if(NOT CMAKE_LIBTOOL OR NOT EXISTS CMAKE_LIBTOOL)
-    find_program(CMAKE_LIBTOOL NAMES libtool)
+    if(NOT CMAKE_LIBTOOL OR NOT EXISTS CMAKE_LIBTOOL)
+      find_program(CMAKE_LIBTOOL NAMES libtool)
+    endif()
   endif()
 
   get_property(languages GLOBAL PROPERTY ENABLED_LANGUAGES)
@@ -132,18 +135,6 @@ foreach(proj ${LLVM_ENABLE_PROJECTS})
   endif()
 endforeach()
 
-# The following only works with the Ninja generator in CMake >= 3.0.
-set(LLVM_PARALLEL_COMPILE_JOBS "" CACHE STRING
-  "Define the maximum number of concurrent compilation jobs.")
-if(LLVM_PARALLEL_COMPILE_JOBS)
-  if(NOT CMAKE_MAKE_PROGRAM MATCHES "ninja")
-    message(WARNING "Job pooling is only available with Ninja generators.")
-  else()
-    set_property(GLOBAL APPEND PROPERTY JOB_POOLS compile_job_pool=${LLVM_PARALLEL_COMPILE_JOBS})
-    set(CMAKE_JOB_POOL_COMPILE compile_job_pool)
-  endif()
-endif()
-
 # Build llvm with ccache if the package is present
 set(LLVM_CCACHE_BUILD OFF CACHE BOOL "Set to ON for a ccache enabled build")
 if(LLVM_CCACHE_BUILD)
@@ -181,17 +172,6 @@ endif()
 option(LLVM_BUILD_GLOBAL_ISEL "Experimental: Build GlobalISel" ON)
 if(LLVM_BUILD_GLOBAL_ISEL)
   add_definitions(-DLLVM_BUILD_GLOBAL_ISEL)
-endif()
-
-set(LLVM_PARALLEL_LINK_JOBS "" CACHE STRING
-  "Define the maximum number of concurrent link jobs.")
-if(LLVM_PARALLEL_LINK_JOBS)
-  if(NOT CMAKE_MAKE_PROGRAM MATCHES "ninja")
-    message(WARNING "Job pooling is only available with Ninja generators.")
-  else()
-    set_property(GLOBAL APPEND PROPERTY JOB_POOLS link_job_pool=${LLVM_PARALLEL_LINK_JOBS})
-    set(CMAKE_JOB_POOL_LINK link_job_pool)
-  endif()
 endif()
 
 # Add path for custom modules

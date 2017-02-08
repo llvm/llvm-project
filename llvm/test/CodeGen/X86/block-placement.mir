@@ -46,7 +46,7 @@ liveins:
   - { reg: '%rdi' }
   - { reg: '%esi' }
 
-# CHECK: %eax = FAULTING_LOAD_OP %bb.3.null, 1684, killed %rdi, 1, _, 0, _ :: (load 4 from %ir.ptr)
+# CHECK: %eax = FAULTING_OP 1, %bb.3.null, 1684, killed %rdi, 1, _, 0, _ :: (load 4 from %ir.ptr)
 # CHECK-NEXT: JMP_1 %bb.2.not_null
 # CHECK: bb.3.null:
 # CHECK:  bb.4.right:
@@ -66,7 +66,7 @@ body:             |
     successors: %bb.2.null(0x7ffff800), %bb.4.not_null(0x00000800)
     liveins: %rdi
   
-    %eax = FAULTING_LOAD_OP %bb.2.null, 1684, killed %rdi, 1, _, 0, _ :: (load 4 from %ir.ptr)
+    %eax = FAULTING_OP 1, %bb.2.null, 1684, killed %rdi, 1, _, 0, _ :: (load 4 from %ir.ptr)
     JMP_1 %bb.4.not_null
   
   bb.4.not_null:

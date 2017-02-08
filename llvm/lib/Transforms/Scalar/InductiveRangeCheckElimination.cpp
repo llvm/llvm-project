@@ -446,6 +446,15 @@ struct LoopStructure {
   BasicBlock *LatchExit;
   unsigned LatchBrExitIdx;
 
+  // The loop represented by this instance of LoopStructure is semantically
+  // equivalent to:
+  //
+  // intN_ty inc = IndVarIncreasing ? 1 : -1;
+  // pred_ty predicate = IndVarIncreasing ? ICMP_SLT : ICMP_SGT;
+  //
+  // for (intN_ty iv = IndVarStart; predicate(iv, LoopExitAt); iv = IndVarNext)
+  //   ... body ...
+
   Value *IndVarNext;
   Value *IndVarStart;
   Value *LoopExitAt;
@@ -789,6 +798,10 @@ LoopStructure::parseLoopStructure(ScalarEvolution &SE, BranchProbabilityInfo &BP
     return None;
   }
 
+  const SCEV *StartNext = IndVarNext->getStart();
+  const SCEV *Addend = SE.getNegativeSCEV(IndVarNext->getStepRecurrence(SE));
+  const SCEV *IndVarStart = SE.getAddExpr(StartNext, Addend);
+
   ConstantInt *One = ConstantInt::get(IndVarTy, 1);
   // TODO: generalize the predicates here to also match their unsigned variants.
   if (IsIncreasing) {
@@ -809,10 +822,22 @@ LoopStructure::parseLoopStructure(ScalarEvolution &SE, BranchProbabilityInfo &BP
         return None;
       }
 
+      if (!SE.isLoopEntryGuardedByCond(
+              &L, CmpInst::ICMP_SLT, IndVarStart,
+              SE.getAddExpr(RightSCEV, SE.getOne(RightSCEV->getType())))) {
+        FailureReason = "Induction variable start not bounded by upper limit";
+        return None;
+      }
+
       IRBuilder<> B(Preheader->getTerminator());
       RightValue = B.CreateAdd(RightValue, One);
+    } else {
+      if (!SE.isLoopEntryGuardedByCond(&L, CmpInst::ICMP_SLT, IndVarStart,
+                                       RightSCEV)) {
+        FailureReason = "Induction variable start not bounded by upper limit";
+        return None;
+      }
     }
-
   } else {
     bool FoundExpectedPred =
         (Pred == ICmpInst::ICMP_SGT && LatchBrExitIdx == 1) ||
@@ -831,14 +856,23 @@ LoopStructure::parseLoopStructure(ScalarEvolution &SE, BranchProbabilityInfo &BP
         return None;
       }
 
+      if (!SE.isLoopEntryGuardedByCond(
+              &L, CmpInst::ICMP_SGT, IndVarStart,
+              SE.getMinusSCEV(RightSCEV, SE.getOne(RightSCEV->getType())))) {
+        FailureReason = "Induction variable start not bounded by lower limit";
+        return None;
+      }
+
       IRBuilder<> B(Preheader->getTerminator());
       RightValue = B.CreateSub(RightValue, One);
+    } else {
+      if (!SE.isLoopEntryGuardedByCond(&L, CmpInst::ICMP_SGT, IndVarStart,
+                                       RightSCEV)) {
+        FailureReason = "Induction variable start not bounded by lower limit";
+        return None;
+      }
     }
   }
-
-  const SCEV *StartNext = IndVarNext->getStart();
-  const SCEV *Addend = SE.getNegativeSCEV(IndVarNext->getStepRecurrence(SE));
-  const SCEV *IndVarStart = SE.getAddExpr(StartNext, Addend);
 
   BasicBlock *LatchExit = LatchBr->getSuccessor(LatchBrExitIdx);
 

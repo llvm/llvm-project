@@ -69,6 +69,8 @@ void RemoveFile(const std::string &Path);
 
 void DiscardOutput(int Fd);
 
+intptr_t GetHandleFromFd(int fd);
+
 }  // namespace fuzzer
 
 #endif  // LLVM_FUZZER_IO_H

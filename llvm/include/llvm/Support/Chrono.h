@@ -11,6 +11,7 @@
 #define LLVM_SUPPORT_CHRONO_H
 
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/FormatProviders.h"
 
 #include <chrono>
 #include <ctime>
@@ -49,6 +50,100 @@ toTimePoint(std::time_t T) {
 } // namespace sys
 
 raw_ostream &operator<<(raw_ostream &OS, sys::TimePoint<> TP);
+
+/// Implementation of format_provider<T> for duration types.
+///
+/// The options string of a duration  type has the grammar:
+///
+///   duration_options  ::= [unit][show_unit [number_options]]
+///   unit              ::= `h`|`m`|`s`|`ms|`us`|`ns`
+///   show_unit         ::= `+` | `-`
+///   number_options    ::= options string for a integral or floating point type
+///
+///   Examples
+///   =================================
+///   |  options  | Input | Output    |
+///   =================================
+///   | ""        | 1s    | 1 s       |
+///   | "ms"      | 1s    | 1000 ms   |
+///   | "ms-"     | 1s    | 1000      |
+///   | "ms-n"    | 1s    | 1,000     |
+///   | ""        | 1.0s  | 1.00 s    |
+///   =================================
+///
+///  If the unit of the duration type is not one of the units specified above,
+///  it is still possible to format it, provided you explicitly request a
+///  display unit or you request that the unit is not displayed.
+
+namespace detail {
+template <typename Period> struct unit { static const char value[]; };
+template <typename Period> const char unit<Period>::value[] = "";
+
+template <> struct unit<std::ratio<3600>> { static const char value[]; };
+template <> struct unit<std::ratio<60>> { static const char value[]; };
+template <> struct unit<std::ratio<1>> { static const char value[]; };
+template <> struct unit<std::milli> { static const char value[]; };
+template <> struct unit<std::micro> { static const char value[]; };
+template <> struct unit<std::nano> { static const char value[]; };
+} // namespace detail
+
+template <typename Rep, typename Period>
+struct format_provider<std::chrono::duration<Rep, Period>> {
+private:
+  typedef std::chrono::duration<Rep, Period> Dur;
+  typedef typename std::conditional<
+      std::chrono::treat_as_floating_point<Rep>::value, double, intmax_t>::type
+      InternalRep;
+
+  template <typename AsPeriod> static InternalRep getAs(const Dur &D) {
+    using namespace std::chrono;
+    return duration_cast<duration<InternalRep, AsPeriod>>(D).count();
+  }
+
+  static std::pair<InternalRep, StringRef> consumeUnit(StringRef &Style,
+                                                        const Dur &D) {
+    using namespace std::chrono;
+    if (Style.consume_front("ns"))
+      return {getAs<std::nano>(D), "ns"};
+    if (Style.consume_front("us"))
+      return {getAs<std::micro>(D), "us"};
+    if (Style.consume_front("ms"))
+      return {getAs<std::milli>(D), "ms"};
+    if (Style.consume_front("s"))
+      return {getAs<std::ratio<1>>(D), "s"};
+    if (Style.consume_front("m"))
+      return {getAs<std::ratio<60>>(D), "m"};
+    if (Style.consume_front("h"))
+      return {getAs<std::ratio<3600>>(D), "h"};
+    return {D.count(), detail::unit<Period>::value};
+  }
+
+  static bool consumeShowUnit(StringRef &Style) {
+    if (Style.empty())
+      return true;
+    if (Style.consume_front("-"))
+      return false;
+    if (Style.consume_front("+"))
+      return true;
+    assert(0 && "Unrecognised duration format");
+    return true;
+  }
+
+public:
+  static void format(const Dur &D, llvm::raw_ostream &Stream, StringRef Style) {
+    InternalRep count;
+    StringRef unit;
+    std::tie(count, unit) = consumeUnit(Style, D);
+    bool show_unit = consumeShowUnit(Style);
+
+    format_provider<InternalRep>::format(count, Stream, Style);
+
+    if (show_unit) {
+      assert(!unit.empty());
+      Stream << " " << unit;
+    }
+  }
+};
 
 } // namespace llvm
 

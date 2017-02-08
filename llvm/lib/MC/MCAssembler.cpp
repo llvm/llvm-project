@@ -7,36 +7,49 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/MC/MCAssembler.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCAsmLayout.h"
+#include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCCodeView.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCExpr.h"
+#include "llvm/MC/MCFixup.h"
 #include "llvm/MC/MCFixupKindInfo.h"
+#include "llvm/MC/MCFragment.h"
+#include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCValue.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/LEB128.h"
-#include "llvm/Support/TargetRegistry.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cstring>
+#include <cassert>
+#include <cstdint>
 #include <tuple>
+#include <utility>
+
 using namespace llvm;
 
 #define DEBUG_TYPE "assembler"
 
 namespace {
 namespace stats {
+
 STATISTIC(EmittedFragments, "Number of emitted assembler fragments - total");
 STATISTIC(EmittedRelaxableFragments,
           "Number of emitted assembler fragments - relaxable");
@@ -55,8 +68,9 @@ STATISTIC(FragmentLayouts, "Number of fragment layouts");
 STATISTIC(ObjectBytes, "Number of emitted object file bytes");
 STATISTIC(RelaxationSteps, "Number of assembler layout and relaxation steps");
 STATISTIC(RelaxedInstructions, "Number of relaxed instructions");
-}
-}
+
+} // end namespace stats
+} // end anonymous namespace
 
 // FIXME FIXME FIXME: There are number of places in this file where we convert
 // what is a 64-bit assembler value used for computation into a value in the
@@ -73,8 +87,7 @@ MCAssembler::MCAssembler(MCContext &Context, MCAsmBackend &Backend,
   VersionMinInfo.Major = 0; // Major version == 0 for "none specified"
 }
 
-MCAssembler::~MCAssembler() {
-}
+MCAssembler::~MCAssembler() = default;
 
 void MCAssembler::reset() {
   Sections.clear();
@@ -224,7 +237,6 @@ bool MCAssembler::evaluateFixup(const MCAsmLayout &Layout,
     if (Sym.isDefined())
       Value -= Layout.getSymbolOffset(Sym);
   }
-
 
   bool ShouldAlignPC = Backend.getFixupKindInfo(Fixup.getKind()).Flags &
                          MCFixupKindInfo::FKF_IsAlignedDownTo32Bits;
@@ -647,7 +659,7 @@ std::pair<uint64_t, bool> MCAssembler::handleFixup(const MCAsmLayout &Layout,
 
 void MCAssembler::layout(MCAsmLayout &Layout) {
   DEBUG_WITH_TYPE("mc-dump", {
-      llvm::errs() << "assembler backend - pre-layout\n--\n";
+      errs() << "assembler backend - pre-layout\n--\n";
       dump(); });
 
   // Create dummy fragments and assign section ordinals.
@@ -677,14 +689,14 @@ void MCAssembler::layout(MCAsmLayout &Layout) {
       return;
 
   DEBUG_WITH_TYPE("mc-dump", {
-      llvm::errs() << "assembler backend - post-relaxation\n--\n";
+      errs() << "assembler backend - post-relaxation\n--\n";
       dump(); });
 
   // Finalize the layout, including fragment lowering.
   finishLayout(Layout);
 
   DEBUG_WITH_TYPE("mc-dump", {
-      llvm::errs() << "assembler backend - final-layout\n--\n";
+      errs() << "assembler backend - final-layout\n--\n";
       dump(); });
 
   // Allow the object writer a chance to perform post-layout binding (for

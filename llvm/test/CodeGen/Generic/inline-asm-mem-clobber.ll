@@ -1,5 +1,8 @@
 ; RUN: llc -O2 -no-integrated-as < %s | FileCheck %s
 
+; Test uses 32-bit registers which aren't supported on AVR.
+; XFAIL: avr
+
 @G = common global i32 0, align 4
 
 define i32 @foo(i8* %p) nounwind uwtable {
