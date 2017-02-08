@@ -519,6 +519,33 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
     MI.eraseFromParent();
     return Legalized;
   }
+  case TargetOpcode::G_SMULO:
+  case TargetOpcode::G_UMULO: {
+    // Generate G_UMULH/G_SMULH to check for overflow and a normal G_MUL for the
+    // result.
+    unsigned Res = MI.getOperand(0).getReg();
+    unsigned Overflow = MI.getOperand(1).getReg();
+    unsigned LHS = MI.getOperand(2).getReg();
+    unsigned RHS = MI.getOperand(3).getReg();
+
+    MIRBuilder.buildMul(Res, LHS, RHS);
+
+    unsigned Opcode = MI.getOpcode() == TargetOpcode::G_SMULO
+                          ? TargetOpcode::G_SMULH
+                          : TargetOpcode::G_UMULH;
+
+    unsigned HiPart = MRI.createGenericVirtualRegister(Ty);
+    MIRBuilder.buildInstr(Opcode)
+      .addDef(HiPart)
+      .addUse(LHS)
+      .addUse(RHS);
+
+    unsigned Zero = MRI.createGenericVirtualRegister(Ty);
+    MIRBuilder.buildConstant(Zero, 0);
+    MIRBuilder.buildICmp(CmpInst::ICMP_NE, Overflow, HiPart, Zero);
+    MI.eraseFromParent();
+    return Legalized;
+  }
   }
 }
 
