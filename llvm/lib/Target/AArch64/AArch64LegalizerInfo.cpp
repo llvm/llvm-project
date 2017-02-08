@@ -78,8 +78,10 @@ AArch64LegalizerInfo::AArch64LegalizerInfo() {
     for (auto Ty : {s32, s64})
       setAction({BinOp, Ty}, Legal);
 
-  setAction({G_FREM, s32}, Libcall);
-  setAction({G_FREM, s64}, Libcall);
+  for (unsigned BinOp : {G_FREM, G_FPOW}) {
+    setAction({BinOp, s32}, Libcall);
+    setAction({BinOp, s64}, Libcall);
+  }
 
   // FIXME: what should we do about G_INSERTs with more than one source value?
   // For now the default of not specifying means we'll fall back.
