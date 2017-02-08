@@ -91,6 +91,13 @@ def G_FCONSTANT : Instruction {
   let hasSideEffects = 0;
 }
 
+def G_VASTART : Instruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins type0:$list);
+  let hasSideEffects = 0;
+  let mayStore = 1;
+}
+
 //------------------------------------------------------------------------------
 // Binary ops.
 //------------------------------------------------------------------------------
