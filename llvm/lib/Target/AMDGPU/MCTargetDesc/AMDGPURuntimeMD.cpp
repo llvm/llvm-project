@@ -16,6 +16,7 @@
 #include "AMDGPU.h"
 #include "AMDGPURuntimeMetadata.h"
 #include "MCTargetDesc/AMDGPURuntimeMD.h"
+#include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -92,9 +93,30 @@ template <> struct MappingTraits<Kernel::Metadata> {
   static const bool flow = true;
 };
 
+template <> struct MappingTraits<IsaInfo::Metadata> {
+  static void mapping(IO &YamlIO, IsaInfo::Metadata &I) {
+    YamlIO.mapRequired(KeyName::IsaInfoWavefrontSize, I.WavefrontSize);
+    YamlIO.mapRequired(KeyName::IsaInfoLocalMemorySize, I.LocalMemorySize);
+    YamlIO.mapRequired(KeyName::IsaInfoEUsPerCU, I.EUsPerCU);
+    YamlIO.mapRequired(KeyName::IsaInfoMaxWavesPerEU, I.MaxWavesPerEU);
+    YamlIO.mapRequired(KeyName::IsaInfoMaxFlatWorkGroupSize,
+        I.MaxFlatWorkGroupSize);
+    YamlIO.mapRequired(KeyName::IsaInfoSGPRAllocGranule, I.SGPRAllocGranule);
+    YamlIO.mapRequired(KeyName::IsaInfoTotalNumSGPRs, I.TotalNumSGPRs);
+    YamlIO.mapRequired(KeyName::IsaInfoAddressableNumSGPRs,
+        I.AddressableNumSGPRs);
+    YamlIO.mapRequired(KeyName::IsaInfoVGPRAllocGranule, I.VGPRAllocGranule);
+    YamlIO.mapRequired(KeyName::IsaInfoTotalNumVGPRs, I.TotalNumVGPRs);
+    YamlIO.mapRequired(KeyName::IsaInfoAddressableNumVGPRs,
+        I.AddressableNumVGPRs);
+  }
+  static const bool flow = true;
+};
+
 template <> struct MappingTraits<Program::Metadata> {
   static void mapping(IO &YamlIO, Program::Metadata &Prog) {
     YamlIO.mapRequired(KeyName::MDVersion, Prog.MDVersionSeq);
+    YamlIO.mapRequired(KeyName::IsaInfo, Prog.IsaInfo);
     YamlIO.mapOptional(KeyName::PrintfInfo, Prog.PrintfInfo);
     YamlIO.mapOptional(KeyName::Kernels, Prog.Kernels);
   }
@@ -383,10 +405,24 @@ static void checkRuntimeMDYAMLString(const std::string &YAML) {
   }
 }
 
-std::string llvm::getRuntimeMDYAMLString(Module &M) {
+std::string llvm::getRuntimeMDYAMLString(const FeatureBitset &Features,
+                                         const Module &M) {
   Program::Metadata Prog;
   Prog.MDVersionSeq.push_back(MDVersion);
   Prog.MDVersionSeq.push_back(MDRevision);
+
+  IsaInfo::Metadata &IIM = Prog.IsaInfo;
+  IIM.WavefrontSize = AMDGPU::IsaInfo::getWavefrontSize(Features);
+  IIM.LocalMemorySize = AMDGPU::IsaInfo::getLocalMemorySize(Features);
+  IIM.EUsPerCU = AMDGPU::IsaInfo::getEUsPerCU(Features);
+  IIM.MaxWavesPerEU = AMDGPU::IsaInfo::getMaxWavesPerEU(Features);
+  IIM.MaxFlatWorkGroupSize = AMDGPU::IsaInfo::getMaxFlatWorkGroupSize(Features);
+  IIM.SGPRAllocGranule = AMDGPU::IsaInfo::getSGPRAllocGranule(Features);
+  IIM.TotalNumSGPRs = AMDGPU::IsaInfo::getTotalNumSGPRs(Features);
+  IIM.AddressableNumSGPRs = AMDGPU::IsaInfo::getAddressableNumSGPRs(Features);
+  IIM.VGPRAllocGranule = AMDGPU::IsaInfo::getVGPRAllocGranule(Features);
+  IIM.TotalNumVGPRs = AMDGPU::IsaInfo::getTotalNumVGPRs(Features);
+  IIM.AddressableNumVGPRs = AMDGPU::IsaInfo::getAddressableNumVGPRs(Features);
 
   // Set PrintfInfo.
   if (auto MD = M.getNamedMetadata("llvm.printf.fmts")) {

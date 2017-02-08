@@ -53,11 +53,12 @@ The format of this section is
     }
   }
 
-FailtKind describes the reason of expected fault.
-Currently three kind of faults are supported:
-  1. FaultingLoad - fault due to load from memory.
-  2. FaultingLoadStore - fault due to instruction load and store.
-  3. FaultingStore - fault due to store to memory.
+FailtKind describes the reason of expected fault. Currently three kind
+of faults are supported:
+
+  1. ``FaultMaps::FaultingLoad`` - fault due to load from memory.
+  2. ``FaultMaps::FaultingLoadStore`` - fault due to instruction load and store.
+  3. ``FaultMaps::FaultingStore`` - fault due to store to memory.
 
 The ``ImplicitNullChecks`` pass
 ===============================

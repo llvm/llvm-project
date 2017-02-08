@@ -83,6 +83,10 @@ void DiscardOutput(int Fd) {
   fclose(Temp);
 }
 
+intptr_t GetHandleFromFd(int fd) {
+  return static_cast<intptr_t>(fd);
+}
+
 std::string DirName(const std::string &FileName) {
   char *Tmp = new char[FileName.size() + 1];
   memcpy(Tmp, FileName.c_str(), FileName.size() + 1);

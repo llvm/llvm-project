@@ -33,9 +33,11 @@ using namespace llvm;
 namespace llvm {
 namespace ARM {
 RegisterBankInfo::PartialMapping GPRPartialMapping{0, 32, GPRRegBank};
+RegisterBankInfo::PartialMapping FPRPartialMapping{0, 32, FPRRegBank};
 
 RegisterBankInfo::ValueMapping ValueMappings[] = {
-    {&GPRPartialMapping, 1}, {&GPRPartialMapping, 1}, {&GPRPartialMapping, 1}};
+    {&GPRPartialMapping, 1}, {&GPRPartialMapping, 1}, {&GPRPartialMapping, 1},
+    {&FPRPartialMapping, 1}, {&FPRPartialMapping, 1}, {&FPRPartialMapping, 1}};
 } // end namespace arm
 } // end namespace llvm
 
@@ -82,6 +84,9 @@ const RegisterBank &ARMRegisterBankInfo::getRegBankFromRegClass(
   case GPRnopcRegClassID:
   case tGPR_and_tcGPRRegClassID:
     return getRegBank(ARM::GPRRegBankID);
+  case SPR_8RegClassID:
+  case SPRRegClassID:
+    return getRegBank(ARM::FPRRegBankID);
   default:
     llvm_unreachable("Unsupported register kind");
   }
@@ -114,6 +119,9 @@ ARMRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     // FIXME: We're abusing the fact that everything lives in a GPR for now; in
     // the real world we would use different mappings.
     OperandsMapping = &ARM::ValueMappings[0];
+    break;
+  case G_FADD:
+    OperandsMapping = &ARM::ValueMappings[3];
     break;
   case G_FRAME_INDEX:
     OperandsMapping = getOperandsMapping({&ARM::ValueMappings[0], nullptr});

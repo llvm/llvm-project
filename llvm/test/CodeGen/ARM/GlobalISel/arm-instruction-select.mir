@@ -9,7 +9,11 @@
   define void @test_add_s16() { ret void }
   define void @test_add_s32() { ret void }
 
+  define void @test_fadd_s32() #0 { ret void }
+
   define void @test_load_from_stack() { ret void }
+
+  attributes #0 = { "target-features"="+vfp2,-neonfp" }
 ...
 ---
 name:            test_zext_s1
@@ -215,6 +219,39 @@ body:             |
 
     BX_RET 14, _, implicit %r0
     ; CHECK: BX_RET 14, _, implicit %r0
+...
+---
+name:            test_fadd_s32
+# CHECK-LABEL: name: test_fadd_s32
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: fprb }
+  - { id: 1, class: fprb }
+  - { id: 2, class: fprb }
+# CHECK: id: 0, class: spr
+# CHECK: id: 1, class: spr
+# CHECK: id: 2, class: spr
+body:             |
+  bb.0:
+    liveins: %s0, %s1
+
+    %0(s32) = COPY %s0
+    ; CHECK: [[VREGX:%[0-9]+]] = COPY %s0
+
+    %1(s32) = COPY %s1
+    ; CHECK: [[VREGY:%[0-9]+]] = COPY %s1
+
+    %2(s32) = G_FADD %0, %1
+    ; CHECK: [[VREGSUM:%[0-9]+]] = VADDS [[VREGX]], [[VREGY]], 14, _
+
+    %s0 = COPY %2(s32)
+    ; CHECK: %s0 = COPY [[VREGSUM]]
+
+    BX_RET 14, _, implicit %s0
+    ; CHECK: BX_RET 14, _, implicit %s0
 ...
 ---
 name:            test_load_from_stack

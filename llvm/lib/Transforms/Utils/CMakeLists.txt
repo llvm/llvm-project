@@ -38,6 +38,7 @@ add_llvm_library(LLVMTransformUtils
   MetaRenamer.cpp
   ModuleUtils.cpp
   NameAnonGlobals.cpp
+  PredicateInfo.cpp
   PromoteMemoryToRegister.cpp
   StripGCRelocates.cpp
   SSAUpdater.cpp

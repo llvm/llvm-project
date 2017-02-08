@@ -5126,6 +5126,32 @@ static void handleAnyX86InterruptAttr(Sema &S, Decl *D,
   D->addAttr(UsedAttr::CreateImplicit(S.Context));
 }
 
+static void handleAVRInterruptAttr(Sema &S, Decl *D, const AttributeList &Attr) {
+  if (!isFunctionOrMethod(D)) {
+    S.Diag(D->getLocation(), diag::warn_attribute_wrong_decl_type)
+        << "'interrupt'" << ExpectedFunction;
+    return;
+  }
+
+  if (!checkAttributeNumArgs(S, Attr, 0))
+    return;
+
+  handleSimpleAttribute<AVRInterruptAttr>(S, D, Attr);
+}
+
+static void handleAVRSignalAttr(Sema &S, Decl *D, const AttributeList &Attr) {
+  if (!isFunctionOrMethod(D)) {
+    S.Diag(D->getLocation(), diag::warn_attribute_wrong_decl_type)
+        << "'signal'" << ExpectedFunction;
+    return;
+  }
+
+  if (!checkAttributeNumArgs(S, Attr, 0))
+    return;
+
+  handleSimpleAttribute<AVRSignalAttr>(S, D, Attr);
+}
+
 static void handleInterruptAttr(Sema &S, Decl *D, const AttributeList &Attr) {
   // Dispatch the interrupt attribute based on the current target.
   switch (S.Context.getTargetInfo().getTriple().getArch()) {
@@ -5139,6 +5165,9 @@ static void handleInterruptAttr(Sema &S, Decl *D, const AttributeList &Attr) {
   case llvm::Triple::x86:
   case llvm::Triple::x86_64:
     handleAnyX86InterruptAttr(S, D, Attr);
+    break;
+  case llvm::Triple::avr:
+    handleAVRInterruptAttr(S, D, Attr);
     break;
   default:
     handleARMInterruptAttr(S, D, Attr);
@@ -5699,6 +5728,9 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
     break;
   case AttributeList::AT_AMDGPUNumVGPR:
     handleAMDGPUNumVGPRAttr(S, D, Attr);
+    break;
+  case AttributeList::AT_AVRSignal:
+    handleAVRSignalAttr(S, D, Attr);
     break;
   case AttributeList::AT_IBAction:
     handleSimpleAttribute<IBActionAttr>(S, D, Attr);

@@ -77,7 +77,13 @@ class MiDataTestCase(lldbmi_testcase.MiTestCaseBase):
         # Linux:  {address="0x0000000000400642",func-name="hello_world()",offset="18",size="5",inst="callq 0x4004d0; symbol stub for: printf"}
         # To match the escaped characters in the ouptut, we must use four backslashes per matches backslash
         # See https://docs.python.org/2/howto/regex.html#the-backslash-plague
-        self.expect(["{address=\"0x[0-9a-f]+\",func-name=\"hello_world\(\)\",offset=\"[0-9]+\",size=\"[0-9]+\",inst=\".+?; \\\\\"Hello, World!\\\\\\\\n\\\\\"\"}",
+
+        # The MIPS disassembler never prints stub name 
+        if self.isMIPS():
+            self.expect(["{address=\"0x[0-9a-f]+\",func-name=\"hello_world\(\)\",offset=\"[0-9]+\",size=\"[0-9]+\",inst=\".+?; \\\\\"Hello, World!\\\\\\\\n\\\\\"\"}",
+                     "{address=\"0x[0-9a-f]+\",func-name=\"hello_world\(\)\",offset=\"[0-9]+\",size=\"[0-9]+\",inst=\".+?\"}"])
+        else:
+            self.expect(["{address=\"0x[0-9a-f]+\",func-name=\"hello_world\(\)\",offset=\"[0-9]+\",size=\"[0-9]+\",inst=\".+?; \\\\\"Hello, World!\\\\\\\\n\\\\\"\"}",
                      "{address=\"0x[0-9a-f]+\",func-name=\"hello_world\(\)\",offset=\"[0-9]+\",size=\"[0-9]+\",inst=\".+?; symbol stub for: printf\"}"])
 
     @skipIfWindows  # llvm.org/pr24452: Get lldb-mi tests working on Windows

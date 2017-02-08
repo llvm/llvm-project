@@ -17,6 +17,7 @@ namespace llvm {
 #include "AMDGPUPTNote.h"
 
 class DataLayout;
+class FeatureBitset;
 class Function;
 class MCELFStreamer;
 class MCSymbol;
@@ -46,7 +47,8 @@ public:
 
   virtual void EmitAMDGPUHsaProgramScopeGlobal(StringRef GlobalName) = 0;
 
-  virtual void EmitRuntimeMetadata(Module &M) = 0;
+  virtual void EmitRuntimeMetadata(const FeatureBitset &Features,
+                                   const Module &M) = 0;
 
   virtual void EmitRuntimeMetadata(StringRef Metadata) = 0;
 };
@@ -70,7 +72,8 @@ public:
 
   void EmitAMDGPUHsaProgramScopeGlobal(StringRef GlobalName) override;
 
-  void EmitRuntimeMetadata(Module &M) override;
+  void EmitRuntimeMetadata(const FeatureBitset &Features,
+                           const Module &M) override;
 
   void EmitRuntimeMetadata(StringRef Metadata) override;
 };
@@ -101,7 +104,8 @@ public:
 
   void EmitAMDGPUHsaProgramScopeGlobal(StringRef GlobalName) override;
 
-  void EmitRuntimeMetadata(Module &M) override;
+  void EmitRuntimeMetadata(const FeatureBitset &Features,
+                           const Module &M) override;
 
   void EmitRuntimeMetadata(StringRef Metadata) override;
 };

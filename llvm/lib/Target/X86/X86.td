@@ -217,16 +217,12 @@ def FeaturePadShortFunctions : SubtargetFeature<"pad-short-functions",
                                      "Pad short functions">;
 def FeatureINVPCID : SubtargetFeature<"invpcid", "HasInvPCId", "true",
                                       "Invalidate Process-Context Identifier">;
-def FeatureVMFUNC  : SubtargetFeature<"vmfunc", "HasVMFUNC", "true",
-                                      "VM Functions">;
 def FeatureSMAP    : SubtargetFeature<"smap", "HasSMAP", "true",
                                       "Supervisor Mode Access Protection">;
 def FeatureSGX     : SubtargetFeature<"sgx", "HasSGX", "true",
                                       "Enable Software Guard Extensions">;
 def FeatureCLFLUSHOPT : SubtargetFeature<"clflushopt", "HasCLFLUSHOPT", "true",
                                       "Flush A Cache Line Optimized">;
-def FeaturePCOMMIT : SubtargetFeature<"pcommit", "HasPCOMMIT", "true",
-                                      "Enable Persistent Commit">;
 def FeatureCLWB    : SubtargetFeature<"clwb", "HasCLWB", "true",
                                       "Cache Line Write Back">;
 // TODO: This feature ought to be renamed.
@@ -499,7 +495,6 @@ def HSWFeatures : ProcessorFeatures<IVBFeatures.Value, [
   FeatureLZCNT,
   FeatureMOVBE,
   FeatureINVPCID,
-  FeatureVMFUNC,
   FeatureRTM,
   FeatureHLE,
   FeatureSlowIncDec
@@ -558,7 +553,6 @@ def SKXFeatures : ProcessorFeatures<SKLFeatures.Value, [
   FeatureBWI,
   FeatureVLX,
   FeaturePKU,
-  FeaturePCOMMIT,
   FeatureCLWB
 ]>;
 

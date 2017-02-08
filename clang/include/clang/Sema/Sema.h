@@ -10074,6 +10074,11 @@ private:
   void CheckBitFieldInitialization(SourceLocation InitLoc, FieldDecl *Field,
                                    Expr *Init);
 
+  /// Check if there is a field shadowing.
+  void CheckShadowInheritedFields(const SourceLocation &Loc,
+                                  DeclarationName FieldName,
+                                  const CXXRecordDecl *RD);
+
   /// \brief Check if the given expression contains 'break' or 'continue'
   /// statement that produces control flow different from GCC.
   void CheckBreakContinueBinding(Expr *E);

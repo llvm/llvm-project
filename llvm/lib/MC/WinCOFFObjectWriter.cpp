@@ -1,4 +1,4 @@
-//===-- llvm/MC/WinCOFFObjectWriter.cpp -------------------------*- C++ -*-===//
+//===- llvm/MC/WinCOFFObjectWriter.cpp ------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -11,37 +11,48 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/MC/MCWinCOFFObjectWriter.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
-#include "llvm/Config/config.h"
 #include "llvm/MC/MCAsmLayout.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
-#include "llvm/MC/MCObjectFileInfo.h"
+#include "llvm/MC/MCFixup.h"
+#include "llvm/MC/MCFragment.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCSectionCOFF.h"
+#include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCSymbolCOFF.h"
 #include "llvm/MC/MCValue.h"
+#include "llvm/MC/MCWinCOFFObjectWriter.h"
 #include "llvm/MC/StringTableBuilder.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/COFF.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/JamCRC.h"
-#include <cstdio>
+#include "llvm/Support/MathExtras.h"
+#include "llvm/Support/raw_ostream.h"
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
+#include <cstring>
 #include <ctime>
+#include <memory>
+#include <string>
+#include <vector>
 
 using namespace llvm;
 
 #define DEBUG_TYPE "WinCOFFObjectWriter"
 
 namespace {
+
 typedef SmallString<COFF::NameSize> name;
 
 enum AuxiliaryType {
@@ -57,7 +68,6 @@ struct AuxSymbol {
   COFF::Auxiliary Aux;
 };
 
-class COFFSymbol;
 class COFFSection;
 
 class COFFSymbol {
@@ -69,13 +79,13 @@ public:
   name Name;
   int Index;
   AuxiliarySymbols Aux;
-  COFFSymbol *Other;
-  COFFSection *Section;
-  int Relocations;
-
-  const MCSymbol *MC;
+  COFFSymbol *Other = nullptr;
+  COFFSection *Section = nullptr;
+  int Relocations = 0;
+  const MCSymbol *MC = nullptr;
 
   COFFSymbol(StringRef name);
+
   void set_name_offset(uint32_t Offset);
 
   int64_t getIndex() const { return Index; }
@@ -89,9 +99,10 @@ public:
 // This class contains staging data for a COFF relocation entry.
 struct COFFRelocation {
   COFF::relocation Data;
-  COFFSymbol *Symb;
+  COFFSymbol *Symb = nullptr;
 
-  COFFRelocation() : Symb(nullptr) {}
+  COFFRelocation() = default;
+
   static size_t size() { return COFF::RelocationSize; }
 };
 
@@ -103,8 +114,8 @@ public:
 
   std::string Name;
   int Number;
-  MCSectionCOFF const *MCSection;
-  COFFSymbol *Symbol;
+  MCSectionCOFF const *MCSection = nullptr;
+  COFFSymbol *Symbol = nullptr;
   relocations Relocations;
 
   COFFSection(StringRef name);
@@ -190,7 +201,8 @@ public:
 
   void writeObject(MCAssembler &Asm, const MCAsmLayout &Layout) override;
 };
-}
+
+} // end anonymous namespace
 
 static inline void write_uint32_le(void *Data, uint32_t Value) {
   support::endian::write<uint32_t, support::little, support::unaligned>(Data,
@@ -200,9 +212,7 @@ static inline void write_uint32_le(void *Data, uint32_t Value) {
 //------------------------------------------------------------------------------
 // Symbol class implementation
 
-COFFSymbol::COFFSymbol(StringRef name)
-    : Name(name.begin(), name.end()), Other(nullptr), Section(nullptr),
-      Relocations(0), MC(nullptr) {
+COFFSymbol::COFFSymbol(StringRef name) : Name(name.begin(), name.end()) {
   memset(&Data, 0, sizeof(Data));
 }
 
@@ -217,8 +227,7 @@ void COFFSymbol::set_name_offset(uint32_t Offset) {
 //------------------------------------------------------------------------------
 // Section class implementation
 
-COFFSection::COFFSection(StringRef name)
-    : Name(name), MCSection(nullptr), Symbol(nullptr) {
+COFFSection::COFFSection(StringRef name) : Name(name) {
   memset(&Header, 0, sizeof(Header));
 }
 
@@ -938,7 +947,7 @@ void WinCOFFObjectWriter::writeObject(MCAssembler &Asm,
       offset += Sec->Header.SizeOfRawData;
     }
 
-    if (Sec->Relocations.size() > 0) {
+    if (!Sec->Relocations.empty()) {
       bool RelocationsOverflow = Sec->Relocations.size() >= 0xffff;
 
       if (RelocationsOverflow) {
@@ -1052,7 +1061,7 @@ void WinCOFFObjectWriter::writeObject(MCAssembler &Asm,
         SecDef.Aux.SectionDefinition.CheckSum = JC.getCRC();
       }
 
-      if ((*i)->Relocations.size() > 0) {
+      if (!(*i)->Relocations.empty()) {
         assert(getStream().tell() == (*i)->Header.PointerToRelocations &&
                "Section::PointerToRelocations is insane!");
 

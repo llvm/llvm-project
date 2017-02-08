@@ -399,6 +399,13 @@ elf::ObjectFile<ELFT>::createInputSection(const Elf_Shdr &Sec,
     }
     assert(isUInt<31>(NumRelocations));
     Target->NumRelocations = NumRelocations;
+
+    // Relocation sections processed by the linker are usually removed
+    // from the output, so returning `nullptr` for the normal case.
+    // However, if -emit-relocs is given, we need to leave them in the output.
+    // (Some post link analysis tools need this information.)
+    if (Config->EmitRelocs)
+      return make<InputSection<ELFT>>(this, &Sec, Name);
     return nullptr;
   }
   }

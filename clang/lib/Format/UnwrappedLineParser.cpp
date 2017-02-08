@@ -2220,13 +2220,71 @@ const FormatToken *UnwrappedLineParser::getPreviousToken() {
   return Line->Tokens.back().Tok;
 }
 
+void UnwrappedLineParser::distributeComments(
+    const SmallVectorImpl<FormatToken *> &Comments,
+    const FormatToken *NextTok) {
+  // Whether or not a line comment token continues a line is controlled by
+  // the method continuesLineComment, with the following caveat:
+  //
+  // Define a trail of Comments to be a nonempty proper postfix of Comments such
+  // that each comment line from the trail is aligned with the next token, if
+  // the next token exists. If a trail exists, the beginning of the maximal
+  // trail is marked as a start of a new comment section.
+  //
+  // For example in this code:
+  //
+  // int a; // line about a
+  //   // line 1 about b
+  //   // line 2 about b
+  //   int b;
+  //
+  // the two lines about b form a maximal trail, so there are two sections, the
+  // first one consisting of the single comment "// line about a" and the
+  // second one consisting of the next two comments.
+  if (Comments.empty())
+    return;
+  bool ShouldPushCommentsInCurrentLine = true;
+  bool HasTrailAlignedWithNextToken = false;
+  unsigned StartOfTrailAlignedWithNextToken = 0;
+  if (NextTok) {
+    // We are skipping the first element intentionally.
+    for (unsigned i = Comments.size() - 1; i > 0; --i) {
+      if (Comments[i]->OriginalColumn == NextTok->OriginalColumn) {
+        HasTrailAlignedWithNextToken = true;
+        StartOfTrailAlignedWithNextToken = i;
+      }
+    }
+  }
+  for (unsigned i = 0, e = Comments.size(); i < e; ++i) {
+    FormatToken *FormatTok = Comments[i];
+    if (HasTrailAlignedWithNextToken &&
+        i == StartOfTrailAlignedWithNextToken) {
+      FormatTok->ContinuesLineCommentSection = false;
+    } else {
+      FormatTok->ContinuesLineCommentSection =
+          continuesLineComment(*FormatTok, *Line, CommentPragmasRegex);
+    }
+    if (!FormatTok->ContinuesLineCommentSection &&
+        (isOnNewLine(*FormatTok) || FormatTok->IsFirst)) {
+      ShouldPushCommentsInCurrentLine = false;
+    }
+    if (ShouldPushCommentsInCurrentLine) {
+      pushToken(FormatTok);
+    } else {
+      CommentsBeforeNextToken.push_back(FormatTok);
+    }
+  }
+}
+
 void UnwrappedLineParser::readToken() {
-  bool CommentsInCurrentLine = true;
+  SmallVector<FormatToken *, 1> Comments;
   do {
     FormatTok = Tokens->getNextToken();
     assert(FormatTok);
     while (!Line->InPPDirective && FormatTok->Tok.is(tok::hash) &&
            (FormatTok->HasUnescapedNewline || FormatTok->IsFirst)) {
+      distributeComments(Comments, FormatTok);
+      Comments.clear();
       // If there is an unfinished unwrapped line, we flush the preprocessor
       // directives only after that unwrapped line was finished later.
       bool SwitchToPreprocessorLines = !Line->Tokens.empty();
@@ -2256,20 +2314,17 @@ void UnwrappedLineParser::readToken() {
       continue;
     }
 
-    if (!FormatTok->Tok.is(tok::comment))
+    if (!FormatTok->Tok.is(tok::comment)) {
+      distributeComments(Comments, FormatTok);
+      Comments.clear();
       return;
-    FormatTok->ContinuesLineCommentSection =
-        continuesLineComment(*FormatTok, *Line, CommentPragmasRegex);
-    if (!FormatTok->ContinuesLineCommentSection &&
-        (isOnNewLine(*FormatTok) || FormatTok->IsFirst)) {
-      CommentsInCurrentLine = false;
     }
-    if (CommentsInCurrentLine) {
-      pushToken(FormatTok);
-    } else {
-      CommentsBeforeNextToken.push_back(FormatTok);
-    }
+
+    Comments.push_back(FormatTok);
   } while (!eof());
+
+  distributeComments(Comments, nullptr);
+  Comments.clear();
 }
 
 void UnwrappedLineParser::pushToken(FormatToken *Tok) {

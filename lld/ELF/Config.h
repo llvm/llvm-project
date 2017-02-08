@@ -102,6 +102,7 @@ struct Configuration {
   bool Demangle = true;
   bool DisableVerify;
   bool EhFrameHdr;
+  bool EmitRelocs;
   bool EnableNewDtags;
   bool ExportDynamic;
   bool FatalWarnings;
@@ -157,6 +158,7 @@ struct Configuration {
   unsigned LTOO;
   unsigned Optimize;
   unsigned ThinLTOJobs;
+  bool copyRelocs() { return Relocatable || EmitRelocs; };
 };
 
 // The only instance of Configuration struct.

@@ -260,7 +260,7 @@ class MiExecTestCase(lldbmi_testcase.MiTestCaseBase):
         self.expect("\^running")
         # Depending on compiler, it can stop at different line
         self.expect(
-            "\*stopped,reason=\"end-stepping-range\".+?main\.cpp\",line=\"(29|30|31)\"")
+            "\*stopped,reason=\"end-stepping-range\".+?main\.cpp\",line=\"(28|29|30|31)\"")
 
         # Test that an invalid --thread is handled
         self.runCmd("-exec-next-instruction --thread 0")
@@ -382,7 +382,17 @@ class MiExecTestCase(lldbmi_testcase.MiTestCaseBase):
 
         # Test that -exec-step-instruction steps into g_MyFunction
         # instruction (and that --thread is optional)
-        self.runCmd("-exec-step-instruction --frame 0")
+
+        # In case of MIPS, there might be more than one instruction
+        # before actual call instruction (like load, move and call instructions).
+        # The -exec-step-instruction would step one assembly instruction.
+        # Thus we may not enter into g_MyFunction function. The -exec-step would definitely
+        # step into the function.
+
+        if self.isMIPS():
+            self.runCmd("-exec-step --frame 0")
+        else:
+            self.runCmd("-exec-step-instruction --frame 0")
         self.expect("\^running")
         self.expect(
             "\*stopped,reason=\"end-stepping-range\".+?func=\"g_MyFunction.*?\"")

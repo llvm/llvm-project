@@ -2965,7 +2965,10 @@ ASTReader::ReadASTBlock(ModuleFile &F, unsigned ClientLoadCapabilities) {
         Data += Len;
         ModuleFile *OM = ModuleMgr.lookup(Name);
         if (!OM) {
-          Error("SourceLocation remap refers to unknown module");
+          std::string Msg =
+              "SourceLocation remap refers to unknown module, cannot find ";
+          Msg.append(Name);
+          Error(Msg);
           return Failure;
         }
 

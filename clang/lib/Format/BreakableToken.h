@@ -282,10 +282,6 @@ protected:
   // line.
   bool FirstInLine;
 
-  // In case of line comments, holds the original prefix, including trailing
-  // whitespace.
-  SmallVector<StringRef, 16> OriginalPrefix;
-
   // The prefix to use in front a line that has been reflown up.
   // For example, when reflowing the second line after the first here:
   // // comment 1
@@ -393,6 +389,14 @@ public:
 private:
   unsigned getContentStartColumn(unsigned LineIndex,
                                  unsigned TailOffset) const override;
+
+  // OriginalPrefix[i] contains the original prefix of line i, including
+  // trailing whitespace before the start of the content. The indentation
+  // preceding the prefix is not included.
+  // For example, if the line is:
+  // // content
+  // then the original prefix is "// ".
+  SmallVector<StringRef, 16> OriginalPrefix;
 
   // Prefix[i] contains the intended leading "//" with trailing spaces to
   // account for the indentation of content within the comment at line i after

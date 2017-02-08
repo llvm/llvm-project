@@ -14,6 +14,7 @@
 #include "int_lib.h"
 #include <stdio.h>
 
+#if __arm__
 // Based on udivmodsi4_test.c
 
 extern du_int __aeabi_uidivmod(su_int a, su_int b);
@@ -38,10 +39,12 @@ int test__aeabi_uidivmod(su_int a, su_int b,
 
     return 0;
 }
+#endif
 
 
 int main()
 {
+#if __arm__
     if (test__aeabi_uidivmod(0, 1, 0, 0))
         return 1;
 
@@ -56,6 +59,9 @@ int main()
  
  	if (test__aeabi_uidivmod(0x80000003, 8, 0x10000000, 3))
         return 1;
+#else
+    printf("skipped\n");
+#endif
 
 	return 0;
 }

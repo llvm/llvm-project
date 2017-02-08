@@ -191,6 +191,32 @@ namespace llvm {
     }
   };
 
+  /// This class represents atomic memcpy intrinsic
+  /// TODO: Integrate this class into MemIntrinsic hierarchy.
+  class ElementAtomicMemCpyInst : public IntrinsicInst {
+  public:
+    Value *getRawDest() const { return getArgOperand(0); }
+    Value *getRawSource() const { return getArgOperand(1); }
+
+    Value *getNumElements() const { return getArgOperand(2); }
+    void setNumElements(Value *V) { setArgOperand(2, V); }
+
+    uint64_t getSrcAlignment() const { return getParamAlignment(1); }
+    uint64_t getDstAlignment() const { return getParamAlignment(2); }
+
+    uint64_t getElementSizeInBytes() const {
+      Value *Arg = getArgOperand(3);
+      return cast<ConstantInt>(Arg)->getZExtValue();
+    }
+
+    static inline bool classof(const IntrinsicInst *I) {
+      return I->getIntrinsicID() == Intrinsic::memcpy_element_atomic;
+    }
+    static inline bool classof(const Value *V) {
+      return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
+    }
+  };
+
   /// This is the common base class for memset/memcpy/memmove.
   class MemIntrinsic : public IntrinsicInst {
   public:

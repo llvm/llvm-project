@@ -46,7 +46,7 @@ std::atomic<__xray::XRaySledMap> XRayInstrMap{};
 // __xray_init() will do the actual loading of the current process' memory map
 // and then proceed to look for the .xray_instr_map section/segment.
 void __xray_init() XRAY_NEVER_INSTRUMENT {
-  InitializeFlags();
+  initializeFlags();
   if (__start_xray_instr_map == nullptr) {
     Report("XRay instrumentation map missing. Not initializing XRay.\n");
     return;

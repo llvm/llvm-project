@@ -258,6 +258,7 @@ class TargetArch<list<string> arches> {
   list<string> CXXABIs;
 }
 def TargetARM : TargetArch<["arm", "thumb", "armeb", "thumbeb"]>;
+def TargetAVR : TargetArch<["avr"]>;
 def TargetMips : TargetArch<["mips", "mipsel"]>;
 def TargetMSP430 : TargetArch<["msp430"]>;
 def TargetX86 : TargetArch<["x86"]>;
@@ -478,6 +479,19 @@ def ARMInterrupt : InheritableAttr, TargetSpecificAttr<TargetARM> {
   let ParseKind = "Interrupt";
   let HasCustomParsing = 1;
   let Documentation = [ARMInterruptDocs];
+}
+
+def AVRInterrupt : InheritableAttr, TargetSpecificAttr<TargetAVR> {
+  let Spellings = [GNU<"interrupt">];
+  let Subjects = SubjectList<[Function]>;
+  let ParseKind = "Interrupt";
+  let Documentation = [AVRInterruptDocs];
+}
+
+def AVRSignal : InheritableAttr, TargetSpecificAttr<TargetAVR> {
+  let Spellings = [GNU<"signal">];
+  let Subjects = SubjectList<[Function]>;
+  let Documentation = [AVRSignalDocs];
 }
 
 def AsmLabel : InheritableAttr {

@@ -1,4 +1,4 @@
-//===- ConstantPools.cpp - ConstantPool class --*- C++ -*---------===//
+//===- ConstantPools.cpp - ConstantPool class -----------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -10,13 +10,16 @@
 // This file implements the ConstantPool and  AssemblerConstantPools classes.
 //
 //===----------------------------------------------------------------------===//
-#include "llvm/ADT/MapVector.h"
+
 #include "llvm/MC/ConstantPools.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCStreamer.h"
+#include "llvm/Support/Casting.h"
 
 using namespace llvm;
+
 //
 // ConstantPool implementation
 //
