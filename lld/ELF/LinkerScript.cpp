@@ -91,20 +91,22 @@ static bool isUnderSysroot(StringRef Path) {
   return false;
 }
 
-template <class ELFT> static void assignSymbol(SymbolAssignment *Cmd) {
-  // If there are sections, then let the value be assigned later in
-  // `assignAddresses`.
-  if (ScriptConfig->HasSections)
+// Sets value of a symbol. Two kinds of symbols are processed: synthetic
+// symbols, whose value is an offset from beginning of section and regular
+// symbols whose value is absolute.
+template <class ELFT>
+static void assignSymbol(SymbolAssignment *Cmd, typename ELFT::uint Dot = 0) {
+  if (!Cmd->Sym)
     return;
 
-  uint64_t Value = Cmd->Expression(0);
-  if (Cmd->Expression.IsAbsolute()) {
-    cast<DefinedRegular<ELFT>>(Cmd->Sym)->Value = Value;
-  } else {
-    const OutputSectionBase *Sec = Cmd->Expression.Section();
-    if (Sec)
-      cast<DefinedSynthetic>(Cmd->Sym)->Value = Value - Sec->Addr;
+  if (auto *Body = dyn_cast<DefinedSynthetic>(Cmd->Sym)) {
+    Body->Section = Cmd->Expression.Section();
+    if (Body->Section)
+      Body->Value = Cmd->Expression(Dot) - Body->Section->Addr;
+    return;
   }
+
+  cast<DefinedRegular<ELFT>>(Cmd->Sym)->Value = Cmd->Expression(Dot);
 }
 
 template <class ELFT> static void addSymbol(SymbolAssignment *Cmd) {
@@ -123,7 +125,11 @@ template <class ELFT> static void addSymbol(SymbolAssignment *Cmd) {
     Cmd->Sym = addRegular<ELFT>(Cmd);
   else
     Cmd->Sym = addSynthetic<ELFT>(Cmd);
-  assignSymbol<ELFT>(Cmd);
+
+  // If there are sections, then let the value be assigned later in
+  // `assignAddresses`.
+  if (!ScriptConfig->HasSections)
+    assignSymbol<ELFT>(Cmd);
 }
 
 bool SymbolAssignment::classof(const BaseCommand *C) {
@@ -371,25 +377,6 @@ void LinkerScript<ELFT>::addOrphanSections(
       addSection(Factory, S, getOutputSectionName(S->Name));
 }
 
-// Sets value of a section-defined symbol. Two kinds of
-// symbols are processed: synthetic symbols, whose value
-// is an offset from beginning of section and regular
-// symbols whose value is absolute.
-template <class ELFT>
-static void assignSectionSymbol(SymbolAssignment *Cmd,
-                                typename ELFT::uint Value) {
-  if (!Cmd->Sym)
-    return;
-
-  if (auto *Body = dyn_cast<DefinedSynthetic>(Cmd->Sym)) {
-    Body->Section = Cmd->Expression.Section();
-    Body->Value = Cmd->Expression(Value) - Body->Section->Addr;
-    return;
-  }
-  auto *Body = cast<DefinedRegular<ELFT>>(Cmd->Sym);
-  Body->Value = Cmd->Expression(Value);
-}
-
 template <class ELFT> static bool isTbss(OutputSectionBase *Sec) {
   return (Sec->Flags & SHF_TLS) && Sec->Type == SHT_NOBITS;
 }
@@ -472,7 +459,7 @@ template <class ELFT> void LinkerScript<ELFT>::process(BaseCommand &Base) {
       CurOutSec->Size = Dot - CurOutSec->Addr;
       return;
     }
-    assignSectionSymbol<ELFT>(AssignCmd, Dot);
+    assignSymbol<ELFT>(AssignCmd, Dot);
     return;
   }
 
@@ -569,6 +556,10 @@ void LinkerScript<ELFT>::assignOffsets(OutputSectionCommand *Cmd) {
   OutputSectionBase *Sec = findSection<ELFT>(Cmd->Name, *OutputSections);
   if (!Sec)
     return;
+
+  // Handle align (e.g. ".foo : ALIGN(16) { ... }").
+  if (Cmd->AlignExpr)
+    Sec->updateAlignment(Cmd->AlignExpr(0));
 
   // Try and find an appropriate memory region to assign offsets in.
   CurMemRegion = findMemoryRegion(Cmd, Sec);
@@ -794,7 +785,7 @@ void LinkerScript<ELFT>::assignAddresses(std::vector<PhdrEntry> &Phdrs) {
       if (Cmd->Name == ".") {
         Dot = Cmd->Expression(Dot);
       } else if (Cmd->Sym) {
-        assignSectionSymbol<ELFT>(Cmd, Dot);
+        assignSymbol<ELFT>(Cmd, Dot);
       }
       continue;
     }
@@ -811,12 +802,9 @@ void LinkerScript<ELFT>::assignAddresses(std::vector<PhdrEntry> &Phdrs) {
   }
 
   uintX_t MinVA = std::numeric_limits<uintX_t>::max();
-  for (OutputSectionBase *Sec : *OutputSections) {
+  for (OutputSectionBase *Sec : *OutputSections)
     if (Sec->Flags & SHF_ALLOC)
       MinVA = std::min<uint64_t>(MinVA, Sec->Addr);
-    else
-      Sec->Addr = 0;
-  }
 
   allocateHeaders<ELFT>(Phdrs, *OutputSections, MinVA);
 }
@@ -2004,7 +1992,7 @@ std::vector<SymbolVersion> ScriptParser::readSymbols() {
       continue;
     }
 
-    if (peek() == "}" || peek() == "local" || Error)
+    if (peek() == "}" || (peek() == "local" && peek(1) == ":") || Error)
       break;
     StringRef Tok = next();
     Ret.push_back({unquote(Tok), false, hasWildcard(Tok)});

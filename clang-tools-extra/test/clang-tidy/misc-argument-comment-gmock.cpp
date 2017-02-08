@@ -80,7 +80,7 @@ class MockStandalone {
   MOCK_METHOD2(Method, void(int aaa, int bbb));
 };
 
-void test_gmock() {
+void test_gmock_expectations() {
   MockDerived m;
   EXPECT_CALL(m, Method(/*param_one=*/1, /*param_tw=*/2));
 // CHECK-MESSAGES: [[@LINE-1]]:42: warning: argument name 'param_tw' in comment does not match parameter name 'param_two'
@@ -98,4 +98,11 @@ void test_gmock() {
 
   MockStandalone m2;
   EXPECT_CALL(m2, Method(/*aaa=*/5, /*bbc=*/6));
+}
+
+void test_gmock_direct_calls() {
+  MockDerived m;
+  m.Method(/*param_one=*/1, /*param_tw=*/2);
+// CHECK-MESSAGES: [[@LINE-1]]:29: warning: argument name 'param_tw' in comment does not match parameter name 'param_two'
+// CHECK-FIXES:   m.Method(/*param_one=*/1, /*param_two=*/2);
 }

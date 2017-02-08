@@ -16,7 +16,10 @@
 //   partial_sort(Iter first, Iter middle, Iter last);
 
 #include <algorithm>
+#include <random>
 #include <cassert>
+
+std::mt19937 randomness;
 
 void
 test_larger_sorts(int N, int M)
@@ -26,7 +29,7 @@ test_larger_sorts(int N, int M)
     int* array = new int[N];
     for (int i = 0; i < N; ++i)
         array[i] = i;
-    std::random_shuffle(array, array+N);
+    std::shuffle(array, array+N, randomness);
     std::partial_sort(array, array+M, array+N);
     for (int i = 0; i < M; ++i)
     {

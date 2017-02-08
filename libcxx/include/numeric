@@ -65,6 +65,7 @@ template <class M, class N>
 
 #include <__config>
 #include <iterator>
+#include <limits> // for numeric_limits
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header
