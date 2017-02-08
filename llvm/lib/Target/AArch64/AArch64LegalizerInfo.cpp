@@ -64,7 +64,10 @@ AArch64LegalizerInfo::AArch64LegalizerInfo() {
     for (auto Ty : { s1, s8, s16, s32, s64 })
       setAction({BinOp, Ty}, Lower);
 
-  for (unsigned Op : {G_UADDE, G_USUBE, G_SADDO, G_SSUBO, G_SMULO, G_UMULO}) {
+  for (unsigned Op : {G_SMULO, G_UMULO})
+      setAction({Op, s64}, Lower);
+
+  for (unsigned Op : {G_UADDE, G_USUBE, G_SADDO, G_SSUBO, G_SMULH, G_UMULH}) {
     for (auto Ty : { s32, s64 })
       setAction({Op, Ty}, Legal);
 
