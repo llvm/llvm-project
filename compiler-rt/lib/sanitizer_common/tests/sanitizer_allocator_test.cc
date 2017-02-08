@@ -23,6 +23,7 @@
 #include <stdlib.h>
 #include <algorithm>
 #include <vector>
+#include <random>
 #include <set>
 
 using namespace __sanitizer;
@@ -539,6 +540,7 @@ void TestCombinedAllocator() {
       Allocator;
   Allocator *a = new Allocator;
   a->Init(/* may_return_null */ true, kReleaseToOSIntervalNever);
+  std::mt19937 r;
 
   AllocatorCache cache;
   memset(&cache, 0, sizeof(cache));
@@ -570,7 +572,7 @@ void TestCombinedAllocator() {
       allocated.push_back(x);
     }
 
-    random_shuffle(allocated.begin(), allocated.end());
+    std::shuffle(allocated.begin(), allocated.end(), r);
 
     for (uptr i = 0; i < kNumAllocs; i++) {
       void *x = allocated[i];

@@ -70,6 +70,8 @@ def dynamic_list: S<"dynamic-list">,
 def eh_frame_hdr: F<"eh-frame-hdr">,
   HelpText<"Request creation of .eh_frame_hdr section and PT_GNU_EH_FRAME segment header">;
 
+def emit_relocs: F<"emit-relocs">, HelpText<"Generate relocations in output">;
+
 def enable_new_dtags: F<"enable-new-dtags">,
   HelpText<"Enable new dynamic tags">;
 
@@ -283,6 +285,7 @@ def alias_define_common_dp: F<"dp">, Alias<define_common>;
 def alias_discard_all_x: Flag<["-"], "x">, Alias<discard_all>;
 def alias_discard_locals_X: Flag<["-"], "X">, Alias<discard_locals>;
 def alias_dynamic_list: J<"dynamic-list=">, Alias<dynamic_list>;
+def alias_emit_relocs: Flag<["-"], "q">, Alias<emit_relocs>;
 def alias_entry_e: JoinedOrSeparate<["-"], "e">, Alias<entry>;
 def alias_entry_entry: J<"entry=">, Alias<entry>;
 def alias_error_limit: J<"error-limit=">, Alias<error_limit>;

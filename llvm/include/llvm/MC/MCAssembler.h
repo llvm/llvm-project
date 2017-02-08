@@ -10,33 +10,35 @@
 #ifndef LLVM_MC_MCASSEMBLER_H
 #define LLVM_MC_MCASSEMBLER_H
 
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/ilist.h"
-#include "llvm/ADT/ilist_node.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/iterator.h"
+#include "llvm/ADT/iterator_range.h"
+#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCFixup.h"
 #include "llvm/MC/MCFragment.h"
-#include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCLinkerOptimizationHint.h"
-#include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
+#include <string>
+#include <utility>
+#include <vector>
 
 namespace llvm {
-class raw_ostream;
+
+class MCAsmBackend;
 class MCAsmLayout;
-class MCAssembler;
 class MCContext;
 class MCCodeEmitter;
-class MCExpr;
 class MCFragment;
 class MCObjectWriter;
 class MCSection;
-class MCSubtargetInfo;
 class MCValue;
-class MCAsmBackend;
 
 // FIXME: This really doesn't belong here. See comments below.
 struct IndirectSymbolData {
@@ -90,9 +92,6 @@ public:
   } VersionMinInfoType;
 
 private:
-  MCAssembler(const MCAssembler &) = delete;
-  void operator=(const MCAssembler &) = delete;
-
   MCContext &Context;
 
   MCAsmBackend &Backend;
@@ -131,9 +130,9 @@ private:
   /// By default it's 0, which means bundling is disabled.
   unsigned BundleAlignSize;
 
-  unsigned RelaxAll : 1;
-  unsigned SubsectionsViaSymbols : 1;
-  unsigned IncrementalLinkerCompatible : 1;
+  bool RelaxAll : 1;
+  bool SubsectionsViaSymbols : 1;
+  bool IncrementalLinkerCompatible : 1;
 
   /// ELF specific e_header flags
   // It would be good if there were an MCELFAssembler class to hold this.
@@ -148,7 +147,6 @@ private:
 
   VersionMinInfoType VersionMinInfo;
 
-private:
   /// Evaluate a fixup to a relocatable expression and the value which should be
   /// placed into the fixup.
   ///
@@ -201,6 +199,18 @@ private:
                                         MCFragment &F, const MCFixup &Fixup);
 
 public:
+  /// Construct a new assembler instance.
+  //
+  // FIXME: How are we going to parameterize this? Two obvious options are stay
+  // concrete and require clients to pass in a target like object. The other
+  // option is to make this abstract, and have targets provide concrete
+  // implementations as we do with AsmParser.
+  MCAssembler(MCContext &Context, MCAsmBackend &Backend,
+              MCCodeEmitter &Emitter, MCObjectWriter &Writer);
+  MCAssembler(const MCAssembler &) = delete;
+  MCAssembler &operator=(const MCAssembler &) = delete;
+  ~MCAssembler();
+
   /// Compute the effective fragment size assuming it is laid out at the given
   /// \p SectionAddress and \p FragmentOffset.
   uint64_t computeFragmentSize(const MCAsmLayout &Layout,
@@ -239,17 +249,6 @@ public:
     VersionMinInfo.Minor = Minor;
     VersionMinInfo.Update = Update;
   }
-
-public:
-  /// Construct a new assembler instance.
-  //
-  // FIXME: How are we going to parameterize this? Two obvious options are stay
-  // concrete and require clients to pass in a target like object. The other
-  // option is to make this abstract, and have targets provide concrete
-  // implementations as we do with AsmParser.
-  MCAssembler(MCContext &Context, MCAsmBackend &Backend,
-              MCCodeEmitter &Emitter, MCObjectWriter &Writer);
-  ~MCAssembler();
 
   /// Reuse an assembler instance
   ///
@@ -425,4 +424,4 @@ uint64_t computeBundlePadding(const MCAssembler &Assembler, const MCFragment *F,
 
 } // end namespace llvm
 
-#endif
+#endif // LLVM_MC_MCASSEMBLER_H

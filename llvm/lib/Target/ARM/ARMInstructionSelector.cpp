@@ -54,8 +54,16 @@ static bool selectCopy(MachineInstr &I, const TargetInstrInfo &TII,
            DstSize <= SrcSize)) &&
          "Copy with different width?!");
 
-  assert(RegBank->getID() == ARM::GPRRegBankID && "Unsupported reg bank");
+  assert((RegBank->getID() == ARM::GPRRegBankID ||
+          RegBank->getID() == ARM::FPRRegBankID) &&
+         "Unsupported reg bank");
+
   const TargetRegisterClass *RC = &ARM::GPRRegClass;
+
+  if (RegBank->getID() == ARM::FPRRegBankID) {
+    assert(DstSize == 32 && "Only 32-bit FP values are supported");
+    RC = &ARM::SPRRegClass;
+  }
 
   // No need to constrain SrcReg. It will get constrained when
   // we hit another of its uses or its defs.
@@ -176,6 +184,13 @@ bool ARMInstructionSelector::select(MachineInstr &I) const {
   case G_ADD:
     I.setDesc(TII.get(ARM::ADDrr));
     MIB.add(predOps(ARMCC::AL)).add(condCodeOp());
+    break;
+  case G_FADD:
+    if (!TII.getSubtarget().hasVFP2() ||
+        TII.getSubtarget().useNEONForSinglePrecisionFP())
+      return false;
+    I.setDesc(TII.get(ARM::VADDS));
+    MIB.add(predOps(ARMCC::AL));
     break;
   case G_FRAME_INDEX:
     // Add 0 to the given frame index and hope it will eventually be folded into

@@ -11,6 +11,3 @@ set(UninstrumentedTests
 foreach(Test ${UninstrumentedTests})
   add_libfuzzer_test(${Test}-Uninstrumented SOURCES ../${Test}.cpp)
 endforeach()
-
-# Propagate value into parent directory
-set(TestBinaries ${TestBinaries} PARENT_SCOPE)

@@ -7,30 +7,29 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/MC/MCFragment.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/MC/MCAssembler.h"
-#include "llvm/MC/MCAsmBackend.h"
-#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCAsmLayout.h"
 #include "llvm/MC/MCContext.h"
-#include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCExpr.h"
-#include "llvm/MC/MCFixupKindInfo.h"
+#include "llvm/MC/MCFixup.h"
+#include "llvm/MC/MCFragment.h"
 #include "llvm/MC/MCSection.h"
-#include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCValue.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/LEB128.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cassert>
+#include <cstdint>
+#include <utility>
+
 using namespace llvm;
 
-MCAsmLayout::MCAsmLayout(MCAssembler &Asm)
-  : Assembler(Asm), LastValidFragment()
- {
+MCAsmLayout::MCAsmLayout(MCAssembler &Asm) : Assembler(Asm) {
   // Compute the section layout order. Virtual sections must go last.
   for (MCSection &Sec : Asm)
     if (!Sec.isVirtualSection())
@@ -233,7 +232,7 @@ uint64_t llvm::computeBundlePadding(const MCAssembler &Assembler,
 
 void ilist_alloc_traits<MCFragment>::deleteNode(MCFragment *V) { V->destroy(); }
 
-MCFragment::~MCFragment() { }
+MCFragment::~MCFragment() = default;
 
 MCFragment::MCFragment(FragmentType Kind, bool HasInstructions,
                        uint8_t BundlePadding, MCSection *Parent)
@@ -294,8 +293,6 @@ void MCFragment::destroy() {
   }
 }
 
-/* *** */
-
 // Debugging methods
 
 namespace llvm {
@@ -307,11 +304,11 @@ raw_ostream &operator<<(raw_ostream &OS, const MCFixup &AF) {
   return OS;
 }
 
-}
+} // end namespace llvm
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void MCFragment::dump() {
-  raw_ostream &OS = llvm::errs();
+  raw_ostream &OS = errs();
 
   OS << "<";
   switch (getKind()) {
@@ -449,7 +446,7 @@ LLVM_DUMP_METHOD void MCFragment::dump() {
 }
 
 LLVM_DUMP_METHOD void MCAssembler::dump() {
-  raw_ostream &OS = llvm::errs();
+  raw_ostream &OS = errs();
 
   OS << "<MCAssembler\n";
   OS << "  Sections:[\n    ";

@@ -1,4 +1,8 @@
 ; RUN: llc < %s
+
+; Bug: PR31898
+; XFAIL: avr
+
 ; This caused ScheduleDAG to crash in EmitPhysRegCopy when searching
 ; the uses of a copy to a physical register without ignoring non-data
 ; dependence, PR10220.

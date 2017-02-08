@@ -132,7 +132,7 @@ E: david.majnemer@gmail.com
 D: IR Constant Folder, InstCombine
 
 N: Dylan McKay
-E: dylanmckay34@gmail.com
+E: me@dylanmckay.io
 D: AVR Backend
 
 N: Tim Northover

@@ -47,7 +47,6 @@
 #define DEBUG_TYPE "si-insert-waits"
 
 using namespace llvm;
-using namespace llvm::AMDGPU;
 
 namespace {
 
@@ -76,7 +75,7 @@ private:
   const SIInstrInfo *TII = nullptr;
   const SIRegisterInfo *TRI = nullptr;
   const MachineRegisterInfo *MRI;
-  IsaVersion IV;
+  AMDGPU::IsaInfo::IsaVersion ISA;
 
   /// \brief Constant zero value
   static const Counters ZeroCounts;
@@ -427,10 +426,10 @@ bool SIInsertWaits::insertWait(MachineBasicBlock &MBB,
 
   // Build the wait instruction
   BuildMI(MBB, I, DebugLoc(), TII->get(AMDGPU::S_WAITCNT))
-    .addImm(encodeWaitcnt(IV,
-                          Counts.Named.VM,
-                          Counts.Named.EXP,
-                          Counts.Named.LGKM));
+    .addImm(AMDGPU::encodeWaitcnt(ISA,
+                                  Counts.Named.VM,
+                                  Counts.Named.EXP,
+                                  Counts.Named.LGKM));
 
   LastOpcodeType = OTHER;
   LastInstWritesM0 = false;
@@ -458,9 +457,9 @@ void SIInsertWaits::handleExistingWait(MachineBasicBlock::iterator I) {
   unsigned Imm = I->getOperand(0).getImm();
   Counters Counts, WaitOn;
 
-  Counts.Named.VM = decodeVmcnt(IV, Imm);
-  Counts.Named.EXP = decodeExpcnt(IV, Imm);
-  Counts.Named.LGKM = decodeLgkmcnt(IV, Imm);
+  Counts.Named.VM = AMDGPU::decodeVmcnt(ISA, Imm);
+  Counts.Named.EXP = AMDGPU::decodeExpcnt(ISA, Imm);
+  Counts.Named.LGKM = AMDGPU::decodeLgkmcnt(ISA, Imm);
 
   for (unsigned i = 0; i < 3; ++i) {
     if (Counts.Array[i] <= LastIssued.Array[i])
@@ -534,12 +533,12 @@ bool SIInsertWaits::runOnMachineFunction(MachineFunction &MF) {
   TII = ST->getInstrInfo();
   TRI = &TII->getRegisterInfo();
   MRI = &MF.getRegInfo();
-  IV = getIsaVersion(ST->getFeatureBits());
+  ISA = AMDGPU::IsaInfo::getIsaVersion(ST->getFeatureBits());
   const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
 
-  HardwareLimits.Named.VM = getVmcntBitMask(IV);
-  HardwareLimits.Named.EXP = getExpcntBitMask(IV);
-  HardwareLimits.Named.LGKM = getLgkmcntBitMask(IV);
+  HardwareLimits.Named.VM = AMDGPU::getVmcntBitMask(ISA);
+  HardwareLimits.Named.EXP = AMDGPU::getExpcntBitMask(ISA);
+  HardwareLimits.Named.LGKM = AMDGPU::getLgkmcntBitMask(ISA);
 
   WaitedOn = ZeroCounts;
   DelayedWaitOn = ZeroCounts;

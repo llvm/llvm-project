@@ -59,6 +59,9 @@ namespace llvm {
     /// The SourceMgr for this object, if any.
     const SourceMgr *SrcMgr;
 
+    /// The SourceMgr for inline assembly, if any.
+    SourceMgr *InlineSrcMgr;
+
     /// The MCAsmInfo for this target.
     const MCAsmInfo *MAI;
 
@@ -242,6 +245,8 @@ namespace llvm {
     ~MCContext();
 
     const SourceMgr *getSourceManager() const { return SrcMgr; }
+
+    void setInlineSourceManager(SourceMgr *SM) { InlineSrcMgr = SM; }
 
     const MCAsmInfo *getAsmInfo() const { return MAI; }
 

@@ -24,26 +24,26 @@ namespace __xray {
 
 Flags xray_flags_dont_use_directly; // use via flags().
 
-void Flags::SetDefaults() XRAY_NEVER_INSTRUMENT {
+void Flags::setDefaults() XRAY_NEVER_INSTRUMENT {
 #define XRAY_FLAG(Type, Name, DefaultValue, Description) Name = DefaultValue;
 #include "xray_flags.inc"
 #undef XRAY_FLAG
 }
 
-static void RegisterXRayFlags(FlagParser *P, Flags *F) XRAY_NEVER_INSTRUMENT {
+static void registerXRayFlags(FlagParser *P, Flags *F) XRAY_NEVER_INSTRUMENT {
 #define XRAY_FLAG(Type, Name, DefaultValue, Description)                       \
   RegisterFlag(P, #Name, Description, &F->Name);
 #include "xray_flags.inc"
 #undef XRAY_FLAG
 }
 
-void InitializeFlags() XRAY_NEVER_INSTRUMENT {
+void initializeFlags() XRAY_NEVER_INSTRUMENT {
   SetCommonFlagsDefaults();
   auto *F = flags();
-  F->SetDefaults();
+  F->setDefaults();
 
   FlagParser XRayParser;
-  RegisterXRayFlags(&XRayParser, F);
+  registerXRayFlags(&XRayParser, F);
   RegisterCommonFlags(&XRayParser);
 
   // Override from command line.

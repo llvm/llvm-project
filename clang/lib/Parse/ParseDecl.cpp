@@ -4675,6 +4675,10 @@ bool Parser::isConstructorDeclarator(bool IsUnqualified, bool DeductionGuide) {
     return false;
   }
 
+  // There may be attributes here, appertaining to the constructor name or type
+  // we just stepped past.
+  SkipCXX11Attributes();
+
   // Current class name must be followed by a left parenthesis.
   if (Tok.isNot(tok::l_paren)) {
     TPA.Revert();
@@ -4742,18 +4746,24 @@ bool Parser::isConstructorDeclarator(bool IsUnqualified, bool DeductionGuide) {
 
     case tok::r_paren:
       // C(X   )
+
+      // Skip past the right-paren and any following attributes to get to
+      // the function body or trailing-return-type.
+      ConsumeParen();
+      SkipCXX11Attributes();
+
       if (DeductionGuide) {
         // C(X) -> ... is a deduction guide.
-        IsConstructor = NextToken().is(tok::arrow);
+        IsConstructor = Tok.is(tok::arrow);
         break;
       }
-      if (NextToken().is(tok::colon) || NextToken().is(tok::kw_try)) {
+      if (Tok.is(tok::colon) || Tok.is(tok::kw_try)) {
         // Assume these were meant to be constructors:
         //   C(X)   :    (the name of a bit-field cannot be parenthesized).
         //   C(X)   try  (this is otherwise ill-formed).
         IsConstructor = true;
       }
-      if (NextToken().is(tok::semi) || NextToken().is(tok::l_brace)) {
+      if (Tok.is(tok::semi) || Tok.is(tok::l_brace)) {
         // If we have a constructor name within the class definition,
         // assume these were meant to be constructors:
         //   C(X)   {

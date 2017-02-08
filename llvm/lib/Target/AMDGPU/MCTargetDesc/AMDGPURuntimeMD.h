@@ -17,10 +17,12 @@
 #include <string>
 
 namespace llvm {
+class FeatureBitset;
 class Module;
 
 // Get runtime metadata as YAML string.
-std::string getRuntimeMDYAMLString(Module &M);
+std::string getRuntimeMDYAMLString(const FeatureBitset &Features,
+                                   const Module &M);
 
 }
 #endif

@@ -209,7 +209,7 @@ private:
 
 public:
   AsmParser(SourceMgr &SM, MCContext &Ctx, MCStreamer &Out,
-            const MCAsmInfo &MAI);
+            const MCAsmInfo &MAI, unsigned CB);
   ~AsmParser() override;
 
   bool Run(bool NoInitialTextSection, bool NoFinalize = false) override;
@@ -572,9 +572,9 @@ extern MCAsmParserExtension *createCOFFAsmParser();
 enum { DEFAULT_ADDRSPACE = 0 };
 
 AsmParser::AsmParser(SourceMgr &SM, MCContext &Ctx, MCStreamer &Out,
-                     const MCAsmInfo &MAI)
+                     const MCAsmInfo &MAI, unsigned CB = 0)
     : Lexer(MAI), Ctx(Ctx), Out(Out), MAI(MAI), SrcMgr(SM),
-      PlatformParser(nullptr), CurBuffer(SM.getMainFileID()),
+      PlatformParser(nullptr), CurBuffer(CB ? CB : SM.getMainFileID()),
       MacrosEnabledFlag(true), CppHashInfo(), AssemblerDialect(~0U),
       IsDarwin(false), ParsingInlineAsm(false) {
   HadError = false;
@@ -608,6 +608,10 @@ AsmParser::AsmParser(SourceMgr &SM, MCContext &Ctx, MCStreamer &Out,
 AsmParser::~AsmParser() {
   assert((HadError || ActiveMacros.empty()) &&
          "Unexpected active macro instantiation!");
+
+  // Restore the saved diagnostics handler and context for use during
+  // finalization.
+  SrcMgr.setDiagHandler(SavedDiagHandler, SavedDiagContext);
 }
 
 void AsmParser::printMacroInstantiations() {
@@ -5520,6 +5524,7 @@ bool parseAssignmentExpression(StringRef Name, bool allow_redef,
 
 /// \brief Create an MCAsmParser instance.
 MCAsmParser *llvm::createMCAsmParser(SourceMgr &SM, MCContext &C,
-                                     MCStreamer &Out, const MCAsmInfo &MAI) {
-  return new AsmParser(SM, C, Out, MAI);
+                                     MCStreamer &Out, const MCAsmInfo &MAI,
+                                     unsigned CB) {
+  return new AsmParser(SM, C, Out, MAI, CB);
 }

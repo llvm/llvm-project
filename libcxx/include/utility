@@ -959,13 +959,14 @@ struct __murmur2_or_cityhash;
 template <class _Size>
 struct __murmur2_or_cityhash<_Size, 32>
 {
-    _Size operator()(const void* __key, _Size __len);
+    inline _Size operator()(const void* __key, _Size __len)
+         _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK;
 };
 
 // murmur2
 template <class _Size>
 _Size
-__murmur2_or_cityhash<_Size, 32>::operator()(const void* __key, _Size __len) _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK
+__murmur2_or_cityhash<_Size, 32>::operator()(const void* __key, _Size __len)
 {
     const _Size __m = 0x5bd1e995;
     const _Size __r = 24;
@@ -999,7 +1000,7 @@ __murmur2_or_cityhash<_Size, 32>::operator()(const void* __key, _Size __len) _LI
 template <class _Size>
 struct __murmur2_or_cityhash<_Size, 64>
 {
-    _Size operator()(const void* __key, _Size __len);
+    inline _Size operator()(const void* __key, _Size __len)  _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK;
 
  private:
   // Some primes between 2^63 and 2^64.
@@ -1020,7 +1021,9 @@ struct __murmur2_or_cityhash<_Size, 64>
     return __val ^ (__val >> 47);
   }
 
-  static _Size __hash_len_16(_Size __u, _Size __v) {
+  static _Size __hash_len_16(_Size __u, _Size __v)
+     _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK
+  {
     const _Size __mul = 0x9ddfea08eb382d69ULL;
     _Size __a = (__u ^ __v) * __mul;
     __a ^= (__a >> 47);
@@ -1030,7 +1033,9 @@ struct __murmur2_or_cityhash<_Size, 64>
     return __b;
   }
 
-  static _Size __hash_len_0_to_16(const char* __s, _Size __len) {
+  static _Size __hash_len_0_to_16(const char* __s, _Size __len)
+     _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK
+  {
     if (__len > 8) {
       const _Size __a = __loadword<_Size>(__s);
       const _Size __b = __loadword<_Size>(__s + __len - 8);
@@ -1053,7 +1058,9 @@ struct __murmur2_or_cityhash<_Size, 64>
     return __k2;
   }
 
-  static _Size __hash_len_17_to_32(const char *__s, _Size __len) {
+  static _Size __hash_len_17_to_32(const char *__s, _Size __len)
+     _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK
+  {
     const _Size __a = __loadword<_Size>(__s) * __k1;
     const _Size __b = __loadword<_Size>(__s + 8);
     const _Size __c = __loadword<_Size>(__s + __len - 8) * __k2;
@@ -1065,7 +1072,9 @@ struct __murmur2_or_cityhash<_Size, 64>
   // Return a 16-byte hash for 48 bytes.  Quick and dirty.
   // Callers do best to use "random-looking" values for a and b.
   static pair<_Size, _Size> __weak_hash_len_32_with_seeds(
-      _Size __w, _Size __x, _Size __y, _Size __z, _Size __a, _Size __b) {
+      _Size __w, _Size __x, _Size __y, _Size __z, _Size __a, _Size __b)
+        _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK
+  {
     __a += __w;
     __b = __rotate(__b + __a + __z, 21);
     const _Size __c = __a;
@@ -1077,7 +1086,9 @@ struct __murmur2_or_cityhash<_Size, 64>
 
   // Return a 16-byte hash for s[0] ... s[31], a, and b.  Quick and dirty.
   static pair<_Size, _Size> __weak_hash_len_32_with_seeds(
-      const char* __s, _Size __a, _Size __b) {
+      const char* __s, _Size __a, _Size __b)
+    _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK
+  {
     return __weak_hash_len_32_with_seeds(__loadword<_Size>(__s),
                                          __loadword<_Size>(__s + 8),
                                          __loadword<_Size>(__s + 16),
@@ -1087,7 +1098,9 @@ struct __murmur2_or_cityhash<_Size, 64>
   }
 
   // Return an 8-byte hash for 33 to 64 bytes.
-  static _Size __hash_len_33_to_64(const char *__s, size_t __len) {
+  static _Size __hash_len_33_to_64(const char *__s, size_t __len)
+    _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK
+  {
     _Size __z = __loadword<_Size>(__s + 24);
     _Size __a = __loadword<_Size>(__s) +
                 (__len + __loadword<_Size>(__s + __len - 16)) * __k0;
@@ -1115,7 +1128,7 @@ struct __murmur2_or_cityhash<_Size, 64>
 // cityhash64
 template <class _Size>
 _Size
-__murmur2_or_cityhash<_Size, 64>::operator()(const void* __key, _Size __len) _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK
+__murmur2_or_cityhash<_Size, 64>::operator()(const void* __key, _Size __len)
 {
   const char* __s = static_cast<const char*>(__key);
   if (__len <= 32) {

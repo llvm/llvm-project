@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <stdint.h>
 #include <assert.h>
+#include <random>
 
 #include <sanitizer/asan_interface.h>
 
@@ -19,9 +20,10 @@ void MallocReleaseStress() {
   const size_t kAllocSize = 100;
   const size_t kNumIter = 100;
   uintptr_t *chunks[kNumChunks] = {0};
+  std::mt19937 r;
 
   for (size_t iter = 0; iter < kNumIter; iter++) {
-    std::random_shuffle(chunks, chunks + kNumChunks);
+    std::shuffle(chunks, chunks + kNumChunks, r);
     size_t to_replace = rand() % kNumChunks;
     for (size_t i = 0; i < kNumChunks; i++) {
       if (chunks[i])

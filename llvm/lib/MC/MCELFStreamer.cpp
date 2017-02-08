@@ -11,38 +11,36 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/MC/MCELFStreamer.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/MC/MCAsmBackend.h"
-#include "llvm/MC/MCAsmLayout.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCELFStreamer.h"
 #include "llvm/MC/MCExpr.h"
-#include "llvm/MC/MCInst.h"
+#include "llvm/MC/MCFixup.h"
+#include "llvm/MC/MCFragment.h"
 #include "llvm/MC/MCObjectFileInfo.h"
-#include "llvm/MC/MCObjectStreamer.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCSectionELF.h"
+#include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbolELF.h"
 #include "llvm/MC/MCSymbol.h"
-#include "llvm/MC/MCValue.h"
-#include "llvm/Support/Debug.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/ELF.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cassert>
+#include <cstdint>
 
 using namespace llvm;
 
 bool MCELFStreamer::isBundleLocked() const {
   return getCurrentSectionOnly()->isBundleLocked();
-}
-
-MCELFStreamer::~MCELFStreamer() {
 }
 
 void MCELFStreamer::mergeFragment(MCDataFragment *DF,
@@ -621,15 +619,6 @@ void MCELFStreamer::FinishImpl() {
   this->MCObjectStreamer::FinishImpl();
 }
 
-MCStreamer *llvm::createELFStreamer(MCContext &Context, MCAsmBackend &MAB,
-                                    raw_pwrite_stream &OS, MCCodeEmitter *CE,
-                                    bool RelaxAll) {
-  MCELFStreamer *S = new MCELFStreamer(Context, MAB, OS, CE);
-  if (RelaxAll)
-    S->getAssembler().setRelaxAll(true);
-  return S;
-}
-
 void MCELFStreamer::EmitThumbFunc(MCSymbol *Func) {
   llvm_unreachable("Generic ELF doesn't support this directive");
 }
@@ -662,4 +651,13 @@ void MCELFStreamer::EmitZerofill(MCSection *Section, MCSymbol *Symbol,
 void MCELFStreamer::EmitTBSSSymbol(MCSection *Section, MCSymbol *Symbol,
                                    uint64_t Size, unsigned ByteAlignment) {
   llvm_unreachable("ELF doesn't support this directive");
+}
+
+MCStreamer *llvm::createELFStreamer(MCContext &Context, MCAsmBackend &MAB,
+                                    raw_pwrite_stream &OS, MCCodeEmitter *CE,
+                                    bool RelaxAll) {
+  MCELFStreamer *S = new MCELFStreamer(Context, MAB, OS, CE);
+  if (RelaxAll)
+    S->getAssembler().setRelaxAll(true);
+  return S;
 }

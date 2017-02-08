@@ -1,6 +1,9 @@
 ; RUN: llc < %s -debug-only=isel -o /dev/null 2>&1 | FileCheck %s
 ; REQUIRES: asserts
 
+; Bug: PR31898
+; XFAIL: avr
+
 @a = global [1024 x i32] zeroinitializer, align 16
 
 define i32 @reduce_add() {

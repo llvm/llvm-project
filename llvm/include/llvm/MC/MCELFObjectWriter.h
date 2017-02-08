@@ -1,4 +1,4 @@
-//===-- llvm/MC/MCELFObjectWriter.h - ELF Object Writer ---------*- C++ -*-===//
+//===- llvm/MC/MCELFObjectWriter.h - ELF Object Writer ----------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -11,22 +11,21 @@
 #define LLVM_MC_MCELFOBJECTWRITER_H
 
 #include "llvm/ADT/Triple.h"
-#include "llvm/MC/MCValue.h"
-#include "llvm/Support/DataTypes.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/ELF.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cstdint>
 #include <vector>
 
 namespace llvm {
+
 class MCAssembler;
 class MCContext;
 class MCFixup;
-class MCFragment;
 class MCObjectWriter;
 class MCSymbol;
 class MCSymbolELF;
 class MCValue;
-class raw_pwrite_stream;
 
 struct ELFRelocationEntry {
   uint64_t Offset; // Where is the relocation.
@@ -47,6 +46,7 @@ struct ELFRelocationEntry {
         << ", Addend=" << Addend << ", OriginalSymbol=" << OriginalSymbol
         << ", OriginalAddend=" << OriginalAddend;
   }
+
   void dump() const { print(errs()); }
 };
 
@@ -58,12 +58,12 @@ class MCELFObjectTargetWriter {
   const unsigned IsN64 : 1;
 
 protected:
-
-  MCELFObjectTargetWriter(bool Is64Bit_, uint8_t OSABI_,
-                          uint16_t EMachine_,  bool HasRelocationAddend,
-                          bool IsN64=false);
+  MCELFObjectTargetWriter(bool Is64Bit_, uint8_t OSABI_, uint16_t EMachine_,
+                          bool HasRelocationAddend, bool IsN64 = false);
 
 public:
+  virtual ~MCELFObjectTargetWriter() = default;
+
   static uint8_t getOSABI(Triple::OSType OSType) {
     switch (OSType) {
       case Triple::CloudABI:
@@ -75,8 +75,6 @@ public:
         return ELF::ELFOSABI_NONE;
     }
   }
-
-  virtual ~MCELFObjectTargetWriter() {}
 
   virtual unsigned getRelocType(MCContext &Ctx, const MCValue &Target,
                                 const MCFixup &Fixup, bool IsPCRel) const = 0;
@@ -144,6 +142,7 @@ public:
 MCObjectWriter *createELFObjectWriter(MCELFObjectTargetWriter *MOTW,
                                       raw_pwrite_stream &OS,
                                       bool IsLittleEndian);
-} // End llvm namespace
 
-#endif
+} // end namespace llvm
+
+#endif // LLVM_MC_MCELFOBJECTWRITER_H

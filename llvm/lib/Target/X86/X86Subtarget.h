@@ -274,9 +274,6 @@ protected:
   /// Processor supports Invalidate Process-Context Identifier
   bool HasInvPCId;
 
-  /// Processor has VM Functions
-  bool HasVMFUNC;
-
   /// Processor has Supervisor Mode Access Protection
   bool HasSMAP;
 
@@ -285,9 +282,6 @@ protected:
 
   /// Processor supports Flush Cache Line instruction
   bool HasCLFLUSHOPT;
-
-  /// Processor has Persistent Commit feature
-  bool HasPCOMMIT;
 
   /// Processor supports Cache Line Write Back instruction
   bool HasCLWB;
@@ -493,6 +487,7 @@ public:
   bool hasVLX() const { return HasVLX; }
   bool hasPKU() const { return HasPKU; }
   bool hasMPX() const { return HasMPX; }
+  bool hasCLFLUSHOPT() const { return HasCLFLUSHOPT; }
 
   bool isXRaySupported() const override { return is64Bit(); }
 

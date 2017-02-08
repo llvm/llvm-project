@@ -1057,27 +1057,28 @@ void AMDGPUInstPrinter::printSendMsg(const MCInst *MI, unsigned OpNo,
 void AMDGPUInstPrinter::printWaitFlag(const MCInst *MI, unsigned OpNo,
                                       const MCSubtargetInfo &STI,
                                       raw_ostream &O) {
-  IsaVersion IV = getIsaVersion(STI.getFeatureBits());
+  AMDGPU::IsaInfo::IsaVersion ISA =
+      AMDGPU::IsaInfo::getIsaVersion(STI.getFeatureBits());
 
   unsigned SImm16 = MI->getOperand(OpNo).getImm();
   unsigned Vmcnt, Expcnt, Lgkmcnt;
-  decodeWaitcnt(IV, SImm16, Vmcnt, Expcnt, Lgkmcnt);
+  decodeWaitcnt(ISA, SImm16, Vmcnt, Expcnt, Lgkmcnt);
 
   bool NeedSpace = false;
 
-  if (Vmcnt != getVmcntBitMask(IV)) {
+  if (Vmcnt != getVmcntBitMask(ISA)) {
     O << "vmcnt(" << Vmcnt << ')';
     NeedSpace = true;
   }
 
-  if (Expcnt != getExpcntBitMask(IV)) {
+  if (Expcnt != getExpcntBitMask(ISA)) {
     if (NeedSpace)
       O << ' ';
     O << "expcnt(" << Expcnt << ')';
     NeedSpace = true;
   }
 
-  if (Lgkmcnt != getLgkmcntBitMask(IV)) {
+  if (Lgkmcnt != getLgkmcntBitMask(ISA)) {
     if (NeedSpace)
       O << ' ';
     O << "lgkmcnt(" << Lgkmcnt << ')';

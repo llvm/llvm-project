@@ -417,6 +417,11 @@ private:
   }
 };
 
+// Handler traits for free functions.
+template <typename RetT, typename... ArgTs>
+class HandlerTraits<RetT(*)(ArgTs...)>
+  : public HandlerTraits<RetT(ArgTs...)> {};
+
 // Handler traits for class methods (especially call operators for lambdas).
 template <typename Class, typename RetT, typename... ArgTs>
 class HandlerTraits<RetT (Class::*)(ArgTs...)>

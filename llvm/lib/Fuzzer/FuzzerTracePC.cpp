@@ -273,7 +273,7 @@ ATTRIBUTE_TARGET_POPCNT ALWAYS_INLINE
 ATTRIBUTE_NO_SANITIZE_ALL
 void TracePC::HandleCmp(uintptr_t PC, T Arg1, T Arg2) {
   uint64_t ArgXor = Arg1 ^ Arg2;
-  uint64_t ArgDistance = __builtin_popcountl(ArgXor) + 1; // [1,65]
+  uint64_t ArgDistance = __builtin_popcountll(ArgXor) + 1; // [1,65]
   uintptr_t Idx = ((PC & 4095) + 1) * ArgDistance;
   if (sizeof(T) == 4)
       TORC4.Insert(ArgXor, Arg1, Arg2);

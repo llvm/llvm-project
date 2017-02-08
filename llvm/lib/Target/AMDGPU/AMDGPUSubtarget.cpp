@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPUSubtarget.h"
+#include "SIMachineFunctionInfo.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/Target/TargetFrameLowering.h"
@@ -268,7 +269,7 @@ bool SISubtarget::isVGPRSpillingEnabled(const Function& F) const {
 }
 
 unsigned SISubtarget::getKernArgSegmentSize(const MachineFunction &MF,
-					    unsigned ExplicitArgBytes) const {
+                                            unsigned ExplicitArgBytes) const {
   unsigned ImplicitBytes = getImplicitArgNumBytes(MF);
   if (ImplicitBytes == 0)
     return ExplicitArgBytes;
@@ -322,12 +323,100 @@ unsigned SISubtarget::getOccupancyWithNumVGPRs(unsigned VGPRs) const {
   return 1;
 }
 
-unsigned SISubtarget::getMaxNumSGPRs() const {
+unsigned SISubtarget::getReservedNumSGPRs(const MachineFunction &MF) const {
+  const SIMachineFunctionInfo &MFI = *MF.getInfo<SIMachineFunctionInfo>();
+  if (MFI.hasFlatScratchInit()) {
+    if (getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS)
+      return 6; // FLAT_SCRATCH, XNACK, VCC (in that order).
+    if (getGeneration() == AMDGPUSubtarget::SEA_ISLANDS)
+      return 4; // FLAT_SCRATCH, VCC (in that order).
+  }
+
+  if (isXNACKEnabled())
+    return 4; // XNACK, VCC (in that order).
+  return 2; // VCC.
+}
+
+unsigned SISubtarget::getMaxNumSGPRs(const MachineFunction &MF) const {
+  const Function &F = *MF.getFunction();
+  const SIMachineFunctionInfo &MFI = *MF.getInfo<SIMachineFunctionInfo>();
+
+  // Compute maximum number of SGPRs function can use using default/requested
+  // minimum number of waves per execution unit.
+  std::pair<unsigned, unsigned> WavesPerEU = MFI.getWavesPerEU();
+  unsigned MaxNumSGPRs = getMaxNumSGPRs(WavesPerEU.first, false);
+  unsigned MaxAddressableNumSGPRs = getMaxNumSGPRs(WavesPerEU.first, true);
+
+  // Check if maximum number of SGPRs was explicitly requested using
+  // "amdgpu-num-sgpr" attribute.
+  if (F.hasFnAttribute("amdgpu-num-sgpr")) {
+    unsigned Requested = AMDGPU::getIntegerAttribute(
+      F, "amdgpu-num-sgpr", MaxNumSGPRs);
+
+    // Make sure requested value does not violate subtarget's specifications.
+    if (Requested && (Requested <= getReservedNumSGPRs(MF)))
+      Requested = 0;
+
+    // If more SGPRs are required to support the input user/system SGPRs,
+    // increase to accommodate them.
+    //
+    // FIXME: This really ends up using the requested number of SGPRs + number
+    // of reserved special registers in total. Theoretically you could re-use
+    // the last input registers for these special registers, but this would
+    // require a lot of complexity to deal with the weird aliasing.
+    unsigned InputNumSGPRs = MFI.getNumPreloadedSGPRs();
+    if (Requested && Requested < InputNumSGPRs)
+      Requested = InputNumSGPRs;
+
+    // Make sure requested value is compatible with values implied by
+    // default/requested minimum/maximum number of waves per execution unit.
+    if (Requested && Requested > getMaxNumSGPRs(WavesPerEU.first, false))
+      Requested = 0;
+    if (WavesPerEU.second &&
+        Requested && Requested < getMinNumSGPRs(WavesPerEU.second))
+      Requested = 0;
+
+    if (Requested)
+      MaxNumSGPRs = Requested;
+  }
+
   if (hasSGPRInitBug())
-    return SISubtarget::FIXED_SGPR_COUNT_FOR_INIT_BUG;
+    MaxNumSGPRs = AMDGPU::IsaInfo::FIXED_NUM_SGPRS_FOR_INIT_BUG;
 
-  if (getGeneration() >= VOLCANIC_ISLANDS)
-    return 102;
+  return std::min(MaxNumSGPRs - getReservedNumSGPRs(MF),
+                  MaxAddressableNumSGPRs);
+}
 
-  return 104;
+unsigned SISubtarget::getMaxNumVGPRs(const MachineFunction &MF) const {
+  const Function &F = *MF.getFunction();
+  const SIMachineFunctionInfo &MFI = *MF.getInfo<SIMachineFunctionInfo>();
+
+  // Compute maximum number of VGPRs function can use using default/requested
+  // minimum number of waves per execution unit.
+  std::pair<unsigned, unsigned> WavesPerEU = MFI.getWavesPerEU();
+  unsigned MaxNumVGPRs = getMaxNumVGPRs(WavesPerEU.first);
+
+  // Check if maximum number of VGPRs was explicitly requested using
+  // "amdgpu-num-vgpr" attribute.
+  if (F.hasFnAttribute("amdgpu-num-vgpr")) {
+    unsigned Requested = AMDGPU::getIntegerAttribute(
+      F, "amdgpu-num-vgpr", MaxNumVGPRs);
+
+    // Make sure requested value does not violate subtarget's specifications.
+    if (Requested && Requested <= getReservedNumVGPRs(MF))
+      Requested = 0;
+
+    // Make sure requested value is compatible with values implied by
+    // default/requested minimum/maximum number of waves per execution unit.
+    if (Requested && Requested > getMaxNumVGPRs(WavesPerEU.first))
+      Requested = 0;
+    if (WavesPerEU.second &&
+        Requested && Requested < getMinNumVGPRs(WavesPerEU.second))
+      Requested = 0;
+
+    if (Requested)
+      MaxNumVGPRs = Requested;
+  }
+
+  return MaxNumVGPRs - getReservedNumVGPRs(MF);
 }

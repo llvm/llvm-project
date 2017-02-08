@@ -7866,6 +7866,18 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
       SimplifyDemandedBits(SDValue(N, 0)))
     return SDValue(N, 0);
 
+  // (trunc adde(X, Y, Carry)) -> (adde trunc(X), trunc(Y), Carry)
+  // When the adde's carry is not used.
+  if (N0.getOpcode() == ISD::ADDE && N0.hasOneUse() &&
+      !N0.getNode()->hasAnyUseOfValue(1) &&
+      (!LegalOperations || TLI.isOperationLegal(ISD::ADDE, VT))) {
+    SDLoc SL(N);
+    auto X = DAG.getNode(ISD::TRUNCATE, SL, VT, N0.getOperand(0));
+    auto Y = DAG.getNode(ISD::TRUNCATE, SL, VT, N0.getOperand(1));
+    return DAG.getNode(ISD::ADDE, SL, DAG.getVTList(VT, MVT::Glue),
+                       X, Y, N0.getOperand(2));
+  }
+
   return SDValue();
 }
 

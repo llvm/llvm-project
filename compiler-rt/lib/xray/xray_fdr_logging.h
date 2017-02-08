@@ -83,12 +83,12 @@ struct FDRLoggingOptions {
 };
 
 // Flight Data Recorder mode implementation interfaces.
-XRayLogInitStatus FDRLogging_init(size_t BufferSize, size_t BufferMax,
+XRayLogInitStatus fdrLoggingInit(size_t BufferSize, size_t BufferMax,
                                   void *Options, size_t OptionsSize);
-XRayLogInitStatus FDRLogging_finalize();
-void FDRLogging_handleArg0(int32_t FuncId, XRayEntryType Entry);
-XRayLogFlushStatus FDRLogging_flush();
-XRayLogInitStatus FDRLogging_reset();
+XRayLogInitStatus fdrLoggingFinalize();
+void fdrLoggingHandleArg0(int32_t FuncId, XRayEntryType Entry);
+XRayLogFlushStatus fdrLoggingFlush();
+XRayLogInitStatus fdrLoggingReset();
 
 } // namespace __xray
 

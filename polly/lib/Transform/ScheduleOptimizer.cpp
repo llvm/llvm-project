@@ -1179,7 +1179,7 @@ ScheduleTreeOptimizer::optimizeBand(__isl_take isl_schedule_node *Node,
   MatMulInfoTy MMI;
   if (PMBasedOpts && User && isMatrMultPattern(Node, OAI->D, MMI)) {
     DEBUG(dbgs() << "The matrix multiplication pattern was detected\n");
-    Node = optimizeMatMulPattern(Node, OAI->TTI, MMI);
+    return optimizeMatMulPattern(Node, OAI->TTI, MMI);
   }
 
   return standardBandOpts(Node, User);

@@ -50,14 +50,14 @@ TEST(FDRLoggingTest, Simple) {
   char TmpFilename[] = "fdr-logging-test.XXXXXX";
   Options.Fd = mkstemp(TmpFilename);
   ASSERT_NE(Options.Fd, -1);
-  ASSERT_EQ(FDRLogging_init(kBufferSize, kBufferMax, &Options,
+  ASSERT_EQ(fdrLoggingInit(kBufferSize, kBufferMax, &Options,
                             sizeof(FDRLoggingOptions)),
             XRayLogInitStatus::XRAY_LOG_INITIALIZED);
-  FDRLogging_handleArg0(1, XRayEntryType::ENTRY);
-  FDRLogging_handleArg0(1, XRayEntryType::EXIT);
-  ASSERT_EQ(FDRLogging_finalize(), XRayLogInitStatus::XRAY_LOG_FINALIZED);
-  ASSERT_EQ(FDRLogging_flush(), XRayLogFlushStatus::XRAY_LOG_FLUSHED);
-  ASSERT_EQ(FDRLogging_reset(), XRayLogInitStatus::XRAY_LOG_UNINITIALIZED);
+  fdrLoggingHandleArg0(1, XRayEntryType::ENTRY);
+  fdrLoggingHandleArg0(1, XRayEntryType::EXIT);
+  ASSERT_EQ(fdrLoggingFinalize(), XRayLogInitStatus::XRAY_LOG_FINALIZED);
+  ASSERT_EQ(fdrLoggingFlush(), XRayLogFlushStatus::XRAY_LOG_FLUSHED);
+  ASSERT_EQ(fdrLoggingReset(), XRayLogInitStatus::XRAY_LOG_UNINITIALIZED);
 
   // To do this properly, we have to close the file descriptor then re-open the
   // file for reading this time.
@@ -89,16 +89,16 @@ TEST(FDRLoggingTest, Multiple) {
   char TmpFilename[] = "fdr-logging-test.XXXXXX";
   Options.Fd = mkstemp(TmpFilename);
   ASSERT_NE(Options.Fd, -1);
-  ASSERT_EQ(FDRLogging_init(kBufferSize, kBufferMax, &Options,
+  ASSERT_EQ(fdrLoggingInit(kBufferSize, kBufferMax, &Options,
                             sizeof(FDRLoggingOptions)),
             XRayLogInitStatus::XRAY_LOG_INITIALIZED);
   for (uint64_t I = 0; I < 100; ++I) {
-    FDRLogging_handleArg0(1, XRayEntryType::ENTRY);
-    FDRLogging_handleArg0(1, XRayEntryType::EXIT);
+    fdrLoggingHandleArg0(1, XRayEntryType::ENTRY);
+    fdrLoggingHandleArg0(1, XRayEntryType::EXIT);
   }
-  ASSERT_EQ(FDRLogging_finalize(), XRayLogInitStatus::XRAY_LOG_FINALIZED);
-  ASSERT_EQ(FDRLogging_flush(), XRayLogFlushStatus::XRAY_LOG_FLUSHED);
-  ASSERT_EQ(FDRLogging_reset(), XRayLogInitStatus::XRAY_LOG_UNINITIALIZED);
+  ASSERT_EQ(fdrLoggingFinalize(), XRayLogInitStatus::XRAY_LOG_FINALIZED);
+  ASSERT_EQ(fdrLoggingFlush(), XRayLogFlushStatus::XRAY_LOG_FLUSHED);
+  ASSERT_EQ(fdrLoggingReset(), XRayLogInitStatus::XRAY_LOG_UNINITIALIZED);
 
   // To do this properly, we have to close the file descriptor then re-open the
   // file for reading this time.

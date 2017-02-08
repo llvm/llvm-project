@@ -69,7 +69,7 @@ struct ValueDFS {
   PredicateBase *PInfo = nullptr;
   // Only one of Def or Use will be set.
   Value *Def = nullptr;
-  Use *Use = nullptr;
+  Use *U = nullptr;
 };
 
 // This compares ValueDFS structures, creating OrderedBasicBlocks where
@@ -91,8 +91,8 @@ struct ValueDFS_Compare {
     bool SameBlock = std::tie(A.DFSIn, A.DFSOut) == std::tie(B.DFSIn, B.DFSOut);
 
     if (!SameBlock || A.LocalNum != LN_Middle || B.LocalNum != LN_Middle)
-      return std::tie(A.DFSIn, A.DFSOut, A.LocalNum, A.Def, A.Use) <
-             std::tie(B.DFSIn, B.DFSOut, B.LocalNum, B.Def, B.Use);
+      return std::tie(A.DFSIn, A.DFSOut, A.LocalNum, A.Def, A.U) <
+             std::tie(B.DFSIn, B.DFSOut, B.LocalNum, B.Def, B.U);
     return localComesBefore(A, B);
   }
 
@@ -106,7 +106,7 @@ struct ValueDFS_Compare {
     // up here, beause we need to order the def we will place relative to the
     // assume.  So for the purpose of ordering, we pretend the def is the assume
     // because that is where we will insert the info.
-    if (!VD.Use) {
+    if (!VD.U) {
       assert(VD.PInfo &&
              "No def, no use, and no predicateinfo should not occur");
       assert(isa<PredicateAssume>(VD.PInfo) &&
@@ -118,10 +118,10 @@ struct ValueDFS_Compare {
 
   // Return either the Def, if it's not null, or the user of the Use, if the def
   // is null.
-  const Instruction *getDefOrUser(const Value *Def, const Use *Use) const {
+  const Instruction *getDefOrUser(const Value *Def, const Use *U) const {
     if (Def)
       return cast<Instruction>(Def);
-    return cast<Instruction>(Use->getUser());
+    return cast<Instruction>(U->getUser());
   }
 
   // This performs the necessary local basic block ordering checks to tell
@@ -143,8 +143,8 @@ struct ValueDFS_Compare {
     if (ArgA && ArgB)
       return ArgA->getArgNo() < ArgB->getArgNo();
 
-    auto *AInst = getDefOrUser(ADef, A.Use);
-    auto *BInst = getDefOrUser(BDef, B.Use);
+    auto *AInst = getDefOrUser(ADef, A.U);
+    auto *BInst = getDefOrUser(BDef, B.U);
 
     auto *BB = AInst->getParent();
     auto LookupResult = OBBMap.find(BB);
@@ -154,7 +154,7 @@ struct ValueDFS_Compare {
       auto Result = OBBMap.insert({BB, make_unique<OrderedBasicBlock>(BB)});
       return Result.first->second->dominates(AInst, BInst);
     }
-    return std::tie(ADef, A.Use) < std::tie(BDef, B.Use);
+    return std::tie(ADef, A.U) < std::tie(BDef, B.U);
   }
 };
 
@@ -199,7 +199,7 @@ void PredicateInfo::convertUsesToDFSOrdered(
         continue;
       VD.DFSIn = DomNode->getDFSNumIn();
       VD.DFSOut = DomNode->getDFSNumOut();
-      VD.Use = &U;
+      VD.U = &U;
       DFSOrderedSet.push_back(VD);
     }
   }
@@ -517,10 +517,10 @@ void PredicateInfo::renameUses(SmallPtrSetImpl<Value *> &OpsToRename) {
         Result.Def = materializeStack(Counter, RenameStack, Op);
 
       DEBUG(dbgs() << "Found replacement " << *Result.Def << " for "
-                   << *VD.Use->get() << " in " << *(VD.Use->getUser()) << "\n");
-      assert(DT.dominates(cast<Instruction>(Result.Def), *VD.Use) &&
+                   << *VD.U->get() << " in " << *(VD.U->getUser()) << "\n");
+      assert(DT.dominates(cast<Instruction>(Result.Def), *VD.U) &&
              "Predicateinfo def should have dominated this use");
-      VD.Use->set(Result.Def);
+      VD.U->set(Result.Def);
     }
   }
 }

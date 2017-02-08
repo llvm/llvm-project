@@ -34,7 +34,7 @@
 
 namespace __xray {
 
-void PrintToStdErr(const char *Buffer) XRAY_NEVER_INSTRUMENT {
+void printToStdErr(const char *Buffer) XRAY_NEVER_INSTRUMENT {
   fprintf(stderr, "%s", Buffer);
 }
 
@@ -132,7 +132,7 @@ long long getCPUFrequency() XRAY_NEVER_INSTRUMENT {
 
 int getLogFD() XRAY_NEVER_INSTRUMENT {
   // FIXME: Figure out how to make this less stderr-dependent.
-  SetPrintfAndReportCallback(PrintToStdErr);
+  SetPrintfAndReportCallback(printToStdErr);
   // Open a temporary file once for the log.
   static char TmpFilename[256] = {};
   static char TmpWildcardPattern[] = "XXXXXX";

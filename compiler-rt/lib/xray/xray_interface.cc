@@ -115,14 +115,14 @@ public:
 };
 
 template <class Function>
-CleanupInvoker<Function> ScopeCleanup(Function Fn) XRAY_NEVER_INSTRUMENT {
+CleanupInvoker<Function> scopeCleanup(Function Fn) XRAY_NEVER_INSTRUMENT {
   return CleanupInvoker<Function>{Fn};
 }
 
-// ControlPatching implements the common internals of the patching/unpatching
+// controlPatching implements the common internals of the patching/unpatching
 // implementation. |Enable| defines whether we're enabling or disabling the
 // runtime XRay instrumentation.
-XRayPatchingStatus ControlPatching(bool Enable) XRAY_NEVER_INSTRUMENT {
+XRayPatchingStatus controlPatching(bool Enable) XRAY_NEVER_INSTRUMENT {
   if (!XRayInitialized.load(std::memory_order_acquire))
     return XRayPatchingStatus::NOT_INITIALIZED; // Not initialized.
 
@@ -134,7 +134,7 @@ XRayPatchingStatus ControlPatching(bool Enable) XRAY_NEVER_INSTRUMENT {
   }
 
   bool PatchingSuccess = false;
-  auto XRayPatchingStatusResetter = ScopeCleanup([&PatchingSuccess] {
+  auto XRayPatchingStatusResetter = scopeCleanup([&PatchingSuccess] {
     if (!PatchingSuccess) {
       XRayPatching.store(false, std::memory_order_release);
     }
@@ -199,9 +199,9 @@ XRayPatchingStatus ControlPatching(bool Enable) XRAY_NEVER_INSTRUMENT {
 }
 
 XRayPatchingStatus __xray_patch() XRAY_NEVER_INSTRUMENT {
-  return ControlPatching(true);
+  return controlPatching(true);
 }
 
 XRayPatchingStatus __xray_unpatch() XRAY_NEVER_INSTRUMENT {
-  return ControlPatching(false);
+  return controlPatching(false);
 }

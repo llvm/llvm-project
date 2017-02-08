@@ -1,6 +1,9 @@
 ; Test that vectors are scalarized/lowered correctly.
 ; RUN: llc < %s
 
+; Bug: PR31898
+; XFAIL: avr
+
 %d8 = type <8 x double>
 %f1 = type <1 x float>
 %f2 = type <2 x float>

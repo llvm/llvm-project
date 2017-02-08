@@ -713,7 +713,7 @@ static GlobalValue *ExtractSymbol(const SCEV *&S, ScalarEvolution &SE) {
 static bool isAddressUse(Instruction *Inst, Value *OperandVal) {
   bool isAddress = isa<LoadInst>(Inst);
   if (StoreInst *SI = dyn_cast<StoreInst>(Inst)) {
-    if (SI->getOperand(1) == OperandVal)
+    if (SI->getPointerOperand() == OperandVal)
       isAddress = true;
   } else if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(Inst)) {
     // Addressing modes can also be folded into prefetches and a variety
@@ -725,6 +725,12 @@ static bool isAddressUse(Instruction *Inst, Value *OperandVal) {
           isAddress = true;
         break;
     }
+  } else if (AtomicRMWInst *RMW = dyn_cast<AtomicRMWInst>(Inst)) {
+    if (RMW->getPointerOperand() == OperandVal)
+      isAddress = true;
+  } else if (AtomicCmpXchgInst *CmpX = dyn_cast<AtomicCmpXchgInst>(Inst)) {
+    if (CmpX->getPointerOperand() == OperandVal)
+      isAddress = true;
   }
   return isAddress;
 }
@@ -737,6 +743,10 @@ static MemAccessTy getAccessType(const Instruction *Inst) {
     AccessTy.AddrSpace = SI->getPointerAddressSpace();
   } else if (const LoadInst *LI = dyn_cast<LoadInst>(Inst)) {
     AccessTy.AddrSpace = LI->getPointerAddressSpace();
+  } else if (const AtomicRMWInst *RMW = dyn_cast<AtomicRMWInst>(Inst)) {
+    AccessTy.AddrSpace = RMW->getPointerAddressSpace();
+  } else if (const AtomicCmpXchgInst *CmpX = dyn_cast<AtomicCmpXchgInst>(Inst)) {
+    AccessTy.AddrSpace = CmpX->getPointerAddressSpace();
   }
 
   // All pointers have the same requirements, so canonicalize them to an

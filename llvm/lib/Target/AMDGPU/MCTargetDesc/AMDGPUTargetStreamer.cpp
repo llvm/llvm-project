@@ -93,9 +93,10 @@ void AMDGPUTargetAsmStreamer::EmitAMDGPUHsaProgramScopeGlobal(
   OS << "\t.amdgpu_hsa_program_global " << GlobalName << '\n';
 }
 
-void AMDGPUTargetAsmStreamer::EmitRuntimeMetadata(Module &M) {
+void AMDGPUTargetAsmStreamer::EmitRuntimeMetadata(const FeatureBitset &Features,
+                                                  const Module &M) {
   OS << "\t.amdgpu_runtime_metadata\n";
-  OS << getRuntimeMDYAMLString(M);
+  OS << getRuntimeMDYAMLString(Features, M);
   OS << "\n\t.end_amdgpu_runtime_metadata\n";
 }
 
@@ -236,6 +237,7 @@ void AMDGPUTargetELFStreamer::EmitRuntimeMetadata(StringRef Metadata) {
   );
 }
 
-void AMDGPUTargetELFStreamer::EmitRuntimeMetadata(Module &M) {
-  EmitRuntimeMetadata(getRuntimeMDYAMLString(M));
+void AMDGPUTargetELFStreamer::EmitRuntimeMetadata(const FeatureBitset &Features,
+                                                  const Module &M) {
+  EmitRuntimeMetadata(getRuntimeMDYAMLString(Features, M));
 }

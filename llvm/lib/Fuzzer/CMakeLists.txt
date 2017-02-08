@@ -22,6 +22,7 @@ if( LLVM_USE_SANITIZE_COVERAGE )
     FuzzerMutate.cpp
     FuzzerSHA1.cpp
     FuzzerShmemPosix.cpp
+    FuzzerShmemWindows.cpp
     FuzzerTracePC.cpp
     FuzzerTraceState.cpp
     FuzzerUtil.cpp
