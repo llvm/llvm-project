@@ -75,7 +75,7 @@ def create_fifo(source):
 
 
 def create_socket(source):
-    mode = 0600|stat.S_IFSOCK
+    mode = 0o600 | stat.S_IFSOCK
     os.mknod(sanitize(source), mode)
 
 

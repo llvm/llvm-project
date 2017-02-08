@@ -7,6 +7,9 @@
 // Source Licenses. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
+
+// MODULES_DEFINES: _LIBCPP_DEBUG=0
+
 // Test that the default debug handler aborts the program.
 
 #define _LIBCPP_DEBUG 0

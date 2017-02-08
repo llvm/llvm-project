@@ -178,9 +178,12 @@ void coff::createPDB(StringRef Path, SymbolTable *Symtab,
 
   // Add an Info stream.
   auto &InfoBuilder = Builder.getInfoBuilder();
-  InfoBuilder.setAge(DI->PDB70.Age);
-  InfoBuilder.setGuid(
-      *reinterpret_cast<const pdb::PDB_UniqueId *>(&DI->PDB70.Signature));
+  InfoBuilder.setAge(DI ? DI->PDB70.Age : 0);
+
+  pdb::PDB_UniqueId uuid{};
+  if (DI)
+    memcpy(&uuid, &DI->PDB70.Signature, sizeof(uuid));
+  InfoBuilder.setGuid(uuid);
   // Should be the current time, but set 0 for reproducibilty.
   InfoBuilder.setSignature(0);
   InfoBuilder.setVersion(pdb::PdbRaw_ImplVer::PdbImplVC70);

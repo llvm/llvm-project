@@ -406,7 +406,8 @@ static unsigned parseDebugType(StringRef Arg) {
     DebugTypes |= StringSwitch<unsigned>(Type.lower())
                       .Case("cv", static_cast<unsigned>(DebugType::CV))
                       .Case("pdata", static_cast<unsigned>(DebugType::PData))
-                      .Case("fixup", static_cast<unsigned>(DebugType::Fixup));
+                      .Case("fixup", static_cast<unsigned>(DebugType::Fixup))
+                      .Default(0);
   return DebugTypes;
 }
 

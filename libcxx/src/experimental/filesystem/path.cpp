@@ -56,13 +56,13 @@ public:
   }
 
   PosPtr peek() const noexcept {
-    auto End = &Path.back() + 1;
     auto TkEnd = getNextTokenStartPos();
+    auto End = getAfterBack();
     return TkEnd == End ? nullptr : TkEnd;
   }
 
   void increment() noexcept {
-    const PosPtr End = &Path.back() + 1;
+    const PosPtr End = getAfterBack();
     const PosPtr Start = getNextTokenStartPos();
     if (Start == End)
       return makeState(PS_AtEnd);
@@ -109,7 +109,7 @@ public:
   }
 
   void decrement() noexcept {
-    const PosPtr REnd = &Path.front() - 1;
+    const PosPtr REnd = getBeforeFront();
     const PosPtr RStart = getCurrentTokenStartPos() - 1;
 
     switch (State) {
@@ -195,19 +195,27 @@ private:
     RawEntry = {};
   }
 
+  PosPtr getAfterBack() const noexcept {
+    return Path.data() + Path.size();
+  }
+
+  PosPtr getBeforeFront() const noexcept {
+    return Path.data() - 1;
+  }
+
   /// \brief Return a pointer to the first character after the currently
   ///   lexed element.
   PosPtr getNextTokenStartPos() const noexcept {
     switch (State) {
     case PS_BeforeBegin:
-      return &Path.front();
+      return Path.data();
     case PS_InRootName:
     case PS_InRootDir:
     case PS_InFilenames:
       return &RawEntry.back() + 1;
     case PS_InTrailingSep:
     case PS_AtEnd:
-      return &Path.back() + 1;
+      return getAfterBack();
     }
     _LIBCPP_UNREACHABLE();
   }
