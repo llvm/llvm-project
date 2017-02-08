@@ -8,6 +8,8 @@
 #include "irif.h"
 #include "ockl.h"
 
+#pragma OPENCL EXTENSION cl_khr_fp16 : enable
+
 #define CATTR __attribute__((always_inline, const))
 #define AS_UCHAR4(X) __builtin_astype(X, uchar4)
 
@@ -61,25 +63,37 @@ OCKL_MANGLE_U32(lerp)(uint a, uint b, uint c)
 CATTR float
 OCKL_MANGLE_F32(max3)(float a, float b, float c)
 {
-    // TODO check that this results in v_max3_f32
     return __llvm_maxnum_f32(__llvm_maxnum_f32(a, b), c);
 }
 
 CATTR float
 OCKL_MANGLE_F32(median3)(float a, float b, float c)
 {
-    // TODO check that this results in v_med3_f32
-    float a1 = __llvm_minnum_f32(a, b);
-    float b1 = __llvm_maxnum_f32(a, b);
-    float c1 = __llvm_maxnum_f32(a1, c);
-    return __llvm_minnum_f32(b1, c1);
+    return __llvm_amdgcn_fmed3_f32(a, b, c);
 }
 
 CATTR float
 OCKL_MANGLE_F32(min3)(float a, float b, float c)
 {
-    // TODO check that this results in v_min3_f32
     return __llvm_minnum_f32(__llvm_minnum_f32(a, b), c);
+}
+
+CATTR half
+OCKL_MANGLE_F16(max3)(half a, half b, half c)
+{
+    return __llvm_maxnum_f16(__llvm_maxnum_f16(a, b), c);
+}
+
+CATTR half
+OCKL_MANGLE_F16(median3)(half a, half b, half c)
+{
+    return __llvm_amdgcn_fmed3_f16(a, b, c);
+}
+
+CATTR half
+OCKL_MANGLE_F16(min3)(half a, half b, half c)
+{
+    return __llvm_minnum_f16(__llvm_minnum_f16(a, b), c);
 }
 
 CATTR int
