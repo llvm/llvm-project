@@ -435,6 +435,9 @@ public:
     return true;
   }
 
+  /// Returns the size of the platform's va_list object.
+  unsigned getVaListSizeInBits(const DataLayout &DL) const override;
+
 private:
   bool isExtFreeImpl(const Instruction *Ext) const override;
 

@@ -14,6 +14,7 @@
 
 #include "AArch64InstructionSelector.h"
 #include "AArch64InstrInfo.h"
+#include "AArch64MachineFunctionInfo.h"
 #include "AArch64RegisterBankInfo.h"
 #include "AArch64RegisterInfo.h"
 #include "AArch64Subtarget.h"
@@ -438,6 +439,38 @@ static void changeFCMPPredToAArch64CC(CmpInst::Predicate P,
     CondCode = AArch64CC::NE;
     break;
   }
+}
+
+bool AArch64InstructionSelector::selectVaStartAAPCS(
+    MachineInstr &I, MachineFunction &MF, MachineRegisterInfo &MRI) const {
+  return false;
+}
+
+bool AArch64InstructionSelector::selectVaStartDarwin(
+    MachineInstr &I, MachineFunction &MF, MachineRegisterInfo &MRI) const {
+  AArch64FunctionInfo *FuncInfo = MF.getInfo<AArch64FunctionInfo>();
+  unsigned ListReg = I.getOperand(0).getReg();
+
+  unsigned ArgsAddrReg = MRI.createVirtualRegister(&AArch64::GPR64RegClass);
+
+  auto MIB =
+      BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(AArch64::ADDXri))
+          .addDef(ArgsAddrReg)
+          .addFrameIndex(FuncInfo->getVarArgsStackIndex())
+          .addImm(0)
+          .addImm(0);
+
+  constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
+
+  MIB = BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(AArch64::STRXui))
+            .addUse(ArgsAddrReg)
+            .addUse(ListReg)
+            .addImm(0)
+            .addMemOperand(*I.memoperands_begin());
+
+  constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
+  I.eraseFromParent();
+  return true;
 }
 
 bool AArch64InstructionSelector::select(MachineInstr &I) const {
@@ -1125,6 +1158,9 @@ bool AArch64InstructionSelector::select(MachineInstr &I) const {
     I.eraseFromParent();
     return true;
   }
+  case TargetOpcode::G_VASTART:
+    return STI.isTargetDarwin() ? selectVaStartDarwin(I, MF, MRI)
+                                : selectVaStartAAPCS(I, MF, MRI);
   }
 
   return false;

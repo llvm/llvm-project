@@ -1,4 +1,4 @@
-//===-- llvm/lib/Target/AArch64/AArch64CallLowering.cpp - Call lowering ---===//
+//===--- AArch64CallLowering.cpp - Call lowering --------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -15,15 +15,36 @@
 
 #include "AArch64CallLowering.h"
 #include "AArch64ISelLowering.h"
-
+#include "AArch64MachineFunctionInfo.h"
+#include "AArch64Subtarget.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/Analysis.h"
+#include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
-#include "llvm/CodeGen/GlobalISel/RegisterBankInfo.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
+#include "llvm/CodeGen/LowLevelType.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineMemOperand.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/MachineValueType.h"
+#include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/IR/Argument.h"
+#include "llvm/IR/Attributes.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/Type.h"
+#include "llvm/IR/Value.h"
 #include "llvm/Target/TargetRegisterInfo.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
+#include <algorithm>
+#include <cassert>
+#include <cstdint>
+#include <iterator>
+
 using namespace llvm;
 
 #ifndef LLVM_BUILD_GLOBAL_ISEL
@@ -31,13 +52,12 @@ using namespace llvm;
 #endif
 
 AArch64CallLowering::AArch64CallLowering(const AArch64TargetLowering &TLI)
-  : CallLowering(&TLI) {
-}
+  : CallLowering(&TLI) {}
 
 struct IncomingArgHandler : public CallLowering::ValueHandler {
   IncomingArgHandler(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,
                      CCAssignFn *AssignFn)
-      : ValueHandler(MIRBuilder, MRI, AssignFn) {}
+      : ValueHandler(MIRBuilder, MRI, AssignFn), StackUsed(0) {}
 
   unsigned getStackAddress(uint64_t Size, int64_t Offset,
                            MachinePointerInfo &MPO) override {
@@ -46,6 +66,7 @@ struct IncomingArgHandler : public CallLowering::ValueHandler {
     MPO = MachinePointerInfo::getFixedStack(MIRBuilder.getMF(), FI);
     unsigned AddrReg = MRI.createGenericVirtualRegister(LLT::pointer(0, 64));
     MIRBuilder.buildFrameIndex(AddrReg, FI);
+    StackUsed = std::max(StackUsed, Size + Offset);
     return AddrReg;
   }
 
@@ -68,6 +89,8 @@ struct IncomingArgHandler : public CallLowering::ValueHandler {
   /// parameters (it's a basic-block live-in), and a call instruction
   /// (it's an implicit-def of the BL).
   virtual void markPhysRegUsed(unsigned PhysReg) = 0;
+
+  uint64_t StackUsed;
 };
 
 struct FormalArgHandler : public IncomingArgHandler {
@@ -131,10 +154,10 @@ struct OutgoingArgHandler : public CallLowering::ValueHandler {
     MIRBuilder.buildStore(ValVReg, Addr, *MMO);
   }
 
-  virtual bool assignArg(unsigned ValNo, MVT ValVT, MVT LocVT,
-                         CCValAssign::LocInfo LocInfo,
-                         const CallLowering::ArgInfo &Info,
-                         CCState &State) override {
+  bool assignArg(unsigned ValNo, MVT ValVT, MVT LocVT,
+                 CCValAssign::LocInfo LocInfo,
+                 const CallLowering::ArgInfo &Info,
+                 CCState &State) override {
     if (Info.IsFixed)
       return AssignFn(ValNo, ValVT, LocVT, LocInfo, Info.Flags, State);
     return  AssignFnVarArg(ValNo, ValVT, LocVT, LocInfo, Info.Flags, State);
@@ -246,6 +269,21 @@ bool AArch64CallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
   FormalArgHandler Handler(MIRBuilder, MRI, AssignFn);
   if (!handleAssignments(MIRBuilder, SplitArgs, Handler))
     return false;
+
+  if (F.isVarArg()) {
+    if (!MF.getSubtarget<AArch64Subtarget>().isTargetDarwin()) {
+      // FIXME: we need to reimplement saveVarArgsRegisters from
+      // AArch64ISelLowering.
+      return false;
+    }
+
+    // We currently pass all varargs at 8-byte alignment.
+    uint64_t StackOffset = alignTo(Handler.StackUsed, 8);
+
+    auto &MFI = MIRBuilder.getMF().getFrameInfo();
+    AArch64FunctionInfo *FuncInfo = MF.getInfo<AArch64FunctionInfo>();
+    FuncInfo->setVarArgsStackIndex(MFI.CreateFixedObject(4, StackOffset, true));
+  }
 
   // Move back to the end of the basic block.
   MIRBuilder.setMBB(MBB);
