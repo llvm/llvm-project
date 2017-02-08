@@ -2163,6 +2163,10 @@ X86
 
 .. option:: -mbmi2, -mno-bmi2
 
+.. option:: -mclflushopt, -mno-clflushopt
+
+.. option:: -mclwb, -mno-clwb
+
 .. option:: -mcx16, -mno-cx16
 
 .. option:: -mf16c, -mno-f16c
@@ -2179,6 +2183,10 @@ X86
 
 .. option:: -mmmx, -mno-mmx
 
+.. option:: -mmovbe, -mno-movbe
+
+.. option:: -mmpx, -mno-mpx
+
 .. option:: -mmwaitx, -mno-mwaitx
 
 .. option:: -mpclmul, -mno-pclmul
@@ -2187,6 +2195,8 @@ X86
 
 .. option:: -mpopcnt, -mno-popcnt
 
+.. option:: -mprefetchwt1, -mno-prefetchwt1
+
 .. option:: -mprfchw, -mno-prfchw
 
 .. option:: -mrdrnd, -mno-rdrnd
@@ -2194,6 +2204,8 @@ X86
 .. option:: -mrdseed, -mno-rdseed
 
 .. option:: -mrtm, -mno-rtm
+
+.. option:: -msgx, -mno-sgx
 
 .. option:: -msha, -mno-sha
 

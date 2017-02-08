@@ -21,9 +21,9 @@ void __native_client__defined() {}
 void __x86_64__defined() {}
 #endif
 
-// CHECK: __unix__defined
-#ifdef __unix__
-void __unix__defined() {}
+// CHECK: unixdefined
+#ifdef unix
+void unixdefined() {}
 #endif
 
 // CHECK: __ELF__defined

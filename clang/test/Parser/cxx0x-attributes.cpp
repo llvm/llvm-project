@@ -99,11 +99,13 @@ void fn_with_structs() {
 }
 [[]];
 struct ctordtor {
-  [[]] ctordtor();
-  [[]] ~ctordtor();
+  [[]] ctordtor [[]] () [[]];
+  ctordtor (C) [[]];
+  [[]] ~ctordtor [[]] () [[]];
 };
-[[]] ctordtor::ctordtor() {}
-[[]] ctordtor::~ctordtor() {}
+[[]] ctordtor::ctordtor [[]] () [[]] {}
+[[]] ctordtor::ctordtor (C) [[]] try {} catch (...) {}
+[[]] ctordtor::~ctordtor [[]] () [[]] {}
 extern "C++" [[]] int extern_attr;
 template <typename T> [[]] void template_attr ();
 [[]] [[]] int [[]] [[]] multi_attr [[]] [[]];

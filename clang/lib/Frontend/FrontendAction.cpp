@@ -352,8 +352,9 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
         goto failure;
       CI.setModuleManager(static_cast<ASTReader *>(FinalReader.get()));
       CI.getASTContext().setExternalSource(source);
-    } else if (!CI.getPreprocessorOpts().ImplicitPCHInclude.empty()) {
-      // Use PCH.
+    } else if (CI.getLangOpts().Modules ||
+               !CI.getPreprocessorOpts().ImplicitPCHInclude.empty()) {
+      // Use PCM or PCH.
       assert(hasPCHSupport() && "This action does not have PCH support!");
       ASTDeserializationListener *DeserialListener =
           Consumer->GetASTDeserializationListener();
@@ -370,13 +371,24 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
             DeserialListener, DeleteDeserialListener);
         DeleteDeserialListener = true;
       }
-      CI.createPCHExternalASTSource(
-          CI.getPreprocessorOpts().ImplicitPCHInclude,
-          CI.getPreprocessorOpts().DisablePCHValidation,
+      if (!CI.getPreprocessorOpts().ImplicitPCHInclude.empty()) {
+        CI.createPCHExternalASTSource(
+            CI.getPreprocessorOpts().ImplicitPCHInclude,
+            CI.getPreprocessorOpts().DisablePCHValidation,
           CI.getPreprocessorOpts().AllowPCHWithCompilerErrors, DeserialListener,
-          DeleteDeserialListener);
-      if (!CI.getASTContext().getExternalSource())
-        goto failure;
+            DeleteDeserialListener);
+        if (!CI.getASTContext().getExternalSource())
+          goto failure;
+      }
+      // If modules are enabled, create the module manager before creating
+      // any builtins, so that all declarations know that they might be
+      // extended by an external source.
+      if (CI.getLangOpts().Modules || !CI.hasASTContext() ||
+          !CI.getASTContext().getExternalSource()) {
+        CI.createModuleManager();
+        CI.getModuleManager()->setDeserializationListener(DeserialListener,
+                                                        DeleteDeserialListener);
+      }
     }
 
     CI.setASTConsumer(std::move(Consumer));
@@ -386,15 +398,9 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
 
   // Initialize built-in info as long as we aren't using an external AST
   // source.
-  if (!CI.hasASTContext() || !CI.getASTContext().getExternalSource()) {
+  if (CI.getLangOpts().Modules || !CI.hasASTContext() ||
+      !CI.getASTContext().getExternalSource()) {
     Preprocessor &PP = CI.getPreprocessor();
-
-    // If modules are enabled, create the module manager before creating
-    // any builtins, so that all declarations know that they might be
-    // extended by an external source.
-    if (CI.getLangOpts().Modules)
-      CI.createModuleManager();
-
     PP.getBuiltinInfo().initializeBuiltins(PP.getIdentifierTable(),
                                            PP.getLangOpts());
   } else {

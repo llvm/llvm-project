@@ -240,6 +240,18 @@ TEST_F(FormatTestJS, ContainerLiterals) {
                "};");
   verifyFormat("var x = {y: (a) => a};");
 
+  // Methods in object literals.
+  verifyFormat("var x = {\n"
+               "  y(a: string): number {\n"
+               "    return a;\n"
+               "  }\n"
+               "};");
+  verifyFormat("var x = {\n"
+               "  y(a: string) {\n"
+               "    return a;\n"
+               "  }\n"
+               "};");
+
   // Computed keys.
   verifyFormat("var x = {[a]: 1, b: 2, [c]: 3};");
   verifyFormat("var x = {\n"
@@ -941,6 +953,7 @@ TEST_F(FormatTestJS, RegexLiteralClassification) {
   verifyFormat("var x = a ? /abc/ : /abc/;");
   verifyFormat("for (var i = 0; /abc/.test(s[i]); i++) {\n}");
   verifyFormat("var x = !/abc/.test(y);");
+  verifyFormat("var x = foo()! / 10;");
   verifyFormat("var x = a && /abc/.test(y);");
   verifyFormat("var x = a || /abc/.test(y);");
   verifyFormat("var x = a + /abc/.search(y);");
@@ -1109,6 +1122,10 @@ TEST_F(FormatTestJS, ClassDeclarations) {
   verifyFormat("class C {\n  static x(): string {\n    return 'asd';\n  }\n}");
   verifyFormat("class C extends P implements I {}");
   verifyFormat("class C extends p.P implements i.I {}");
+  verifyFormat(
+      "x(class {\n"
+      "  a(): A {}\n"
+      "});");
   verifyFormat("class Test {\n"
                "  aaaaaaaaaaaaaaaa(aaaaaaaaaaaaaaa: aaaaaaaaaaaaaaaaaaaa):\n"
                "      aaaaaaaaaaaaaaaaaaaaaa {}\n"

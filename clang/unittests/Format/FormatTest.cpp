@@ -6934,6 +6934,11 @@ TEST_F(FormatTest, BreaksLongVariableDeclarations) {
                "    LoooooooooooooooooooooooooooooooooooooooongVariable({});");
   verifyFormat("LoooooooooooooooooooooooooooooooooooooooongType\n"
                "    LoooooooooooooooooooooooooooooooooooooongVariable([A a]);");
+
+  // Lambdas should not confuse the variable declaration heuristic.
+  verifyFormat("LooooooooooooooooongType\n"
+               "    variable(nullptr, [](A *a) {});",
+               getLLVMStyleWithColumns(40));
 }
 
 TEST_F(FormatTest, BreaksLongDeclarations) {
@@ -11924,6 +11929,122 @@ TEST_F(FormatTest, AlignTrailingComments) {
                    "\n"
                    "// long",
                    getLLVMStyleWithColumns(15)));
+
+  // Align comment line sections aligned with the next token with the next
+  // token.
+  EXPECT_EQ("class A {\n"
+            "public: // public comment\n"
+            "  // comment about a\n"
+            "  int a;\n"
+            "};",
+            format("class A {\n"
+                   "public: // public comment\n"
+                   "  // comment about a\n"
+                   "  int a;\n"
+                   "};",
+                   getLLVMStyleWithColumns(40)));
+  EXPECT_EQ("class A {\n"
+            "public: // public comment 1\n"
+            "        // public comment 2\n"
+            "  // comment 1 about a\n"
+            "  // comment 2 about a\n"
+            "  int a;\n"
+            "};",
+            format("class A {\n"
+                   "public: // public comment 1\n"
+                   "   // public comment 2\n"
+                   "  // comment 1 about a\n"
+                   "  // comment 2 about a\n"
+                   "  int a;\n"
+                   "};",
+                   getLLVMStyleWithColumns(40)));
+  EXPECT_EQ("int f(int n) { // comment line 1 on f\n"
+            "               // comment line 2 on f\n"
+            "  // comment line 1 before return\n"
+            "  // comment line 2 before return\n"
+            "  return n; // comment line 1 on return\n"
+            "            // comment line 2 on return\n"
+            "  // comment line 1 after return\n"
+            "}",
+            format("int f(int n) { // comment line 1 on f\n"
+                   "   // comment line 2 on f\n"
+                   "  // comment line 1 before return\n"
+                   "  // comment line 2 before return\n"
+                   "  return n; // comment line 1 on return\n"
+                   "   // comment line 2 on return\n"
+                   "  // comment line 1 after return\n"
+                   "}",
+                   getLLVMStyleWithColumns(40)));
+  EXPECT_EQ("int f(int n) {\n"
+            "  switch (n) { // comment line 1 on switch\n"
+            "               // comment line 2 on switch\n"
+            "  // comment line 1 before case 1\n"
+            "  // comment line 2 before case 1\n"
+            "  case 1: // comment line 1 on case 1\n"
+            "          // comment line 2 on case 1\n"
+            "    // comment line 1 before return 1\n"
+            "    // comment line 2 before return 1\n"
+            "    return 1; // comment line 1 on return 1\n"
+            "              // comment line 2 on return 1\n"
+            "  // comment line 1 before default\n"
+            "  // comment line 2 before default\n"
+            "  default: // comment line 1 on default\n"
+            "           // comment line 2 on default\n"
+            "    // comment line 1 before return 2\n"
+            "    return 2 * f(n - 1); // comment line 1 on return 2\n"
+            "                         // comment line 2 on return 2\n"
+            "    // comment line 1 after return\n"
+            "    // comment line 2 after return\n"
+            "  }\n"
+            "}",
+            format("int f(int n) {\n"
+                   "  switch (n) { // comment line 1 on switch\n"
+                   "              // comment line 2 on switch\n"
+                   "    // comment line 1 before case 1\n"
+                   "    // comment line 2 before case 1\n"
+                   "    case 1: // comment line 1 on case 1\n"
+                   "              // comment line 2 on case 1\n"
+                   "    // comment line 1 before return 1\n"
+                   "    // comment line 2 before return 1\n"
+                   "    return 1;  // comment line 1 on return 1\n"
+                   "             // comment line 2 on return 1\n"
+                   "    // comment line 1 before default\n"
+                   "    // comment line 2 before default\n"
+                   "    default:   // comment line 1 on default\n"
+                   "                // comment line 2 on default\n"
+                   "    // comment line 1 before return 2\n"
+                   "    return 2 * f(n - 1); // comment line 1 on return 2\n"
+                   "                        // comment line 2 on return 2\n"
+                   "    // comment line 1 after return\n"
+                   "     // comment line 2 after return\n"
+                   "  }\n"
+                   "}",
+                   getLLVMStyleWithColumns(80)));
+
+  // If all the lines in a sequence of line comments are aligned with the next
+  // token, the first line belongs to the previous token and the other lines
+  // belong to the next token.
+  EXPECT_EQ("int a; // line about a\n"
+            "long b;",
+            format("int a; // line about a\n"
+                   "       long b;",
+                   getLLVMStyleWithColumns(80)));
+  EXPECT_EQ("int a; // line about a\n"
+            "// line about b\n"
+            "long b;",
+            format("int a; // line about a\n"
+                   "       // line about b\n"
+                   "       long b;",
+                   getLLVMStyleWithColumns(80)));
+  EXPECT_EQ("int a; // line about a\n"
+            "// line 1 about b\n"
+            "// line 2 about b\n"
+            "long b;",
+            format("int a; // line about a\n"
+                   "       // line 1 about b\n"
+                   "       // line 2 about b\n"
+                   "       long b;",
+                   getLLVMStyleWithColumns(80)));
 }
 } // end namespace
 } // end namespace format

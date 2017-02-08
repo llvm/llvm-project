@@ -2544,7 +2544,8 @@ unsigned ASTWriter::getLocalOrImportedSubmoduleID(Module *Mod) {
 
   auto *Top = Mod->getTopLevelModule();
   if (Top != WritingModule &&
-      !Top->fullModuleNameIs(StringRef(getLangOpts().CurrentModule)))
+      (getLangOpts().CompilingPCH ||
+       !Top->fullModuleNameIs(StringRef(getLangOpts().CurrentModule))))
     return 0;
 
   return SubmoduleIDs[Mod] = NextSubmoduleID++;

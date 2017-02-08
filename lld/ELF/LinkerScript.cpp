@@ -1247,10 +1247,10 @@ void ScriptParser::readOutput() {
 }
 
 void ScriptParser::readOutputArch() {
-  // Error checking only for now.
+  // OUTPUT_ARCH is ignored for now.
   expect("(");
-  skip();
-  expect(")");
+  while (!Error && !consume(")"))
+    skip();
 }
 
 void ScriptParser::readOutputFormat() {

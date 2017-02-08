@@ -60,9 +60,9 @@ void __le32__defined() {}
 void __pnacl__defined() {}
 #endif
 
-// CHECK: __unix__defined
-#ifdef __unix__
-void __unix__defined() {}
+// CHECK: unixdefined
+#ifdef unix
+void unixdefined() {}
 #endif
 
 // CHECK: __ELF__defined
