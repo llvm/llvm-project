@@ -1133,3 +1133,14 @@ define void @test_va_end(i8* %list) {
   call void @llvm.va_end(i8* %list)
   ret void
 }
+
+declare float @llvm.pow.f32(float, float)
+define float @test_pow_intrin(float %l, float %r) {
+; CHECK-LABEL: name: test_pow_intrin
+; CHECK: [[LHS:%[0-9]+]](s32) = COPY %s0
+; CHECK: [[RHS:%[0-9]+]](s32) = COPY %s1
+; CHECK: [[RES:%[0-9]+]](s32) = G_FPOW [[LHS]], [[RHS]]
+; CHECK: %s0 = COPY [[RES]]
+  %res = call float @llvm.pow.f32(float %l, float %r)
+  ret float %res
+}

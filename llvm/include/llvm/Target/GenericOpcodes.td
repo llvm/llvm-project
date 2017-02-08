@@ -380,6 +380,13 @@ def G_FREM : Instruction {
   let hasSideEffects = 0;
 }
 
+// Floating point exponentiation.
+def G_FPOW : Instruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1, type0:$src2);
+  let hasSideEffects = 0;
+}
+
 //------------------------------------------------------------------------------
 // Memory ops
 //------------------------------------------------------------------------------
