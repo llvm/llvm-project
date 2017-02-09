@@ -17,6 +17,9 @@ typedef unsigned int uint32_t;
 typedef long int64_t;
 typedef unsigned long uint64_t;
 
+#ifdef __LP64__
+#undef __LP64__
+#endif
 #define __LP64__
 #define DEVICE_COMPILER
 #define LITTLEENDIAN_CPU
