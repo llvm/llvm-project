@@ -434,6 +434,13 @@ template <class ELFT> static void addCopyRelSymbol(SharedSymbol<ELFT> *SS) {
   CopySec->updateAlignment(Alignment);
   uintX_t Shndx = SS->Sym.st_shndx;
   uintX_t Value = SS->Sym.st_value;
+
+  // Create a SyntheticSection in CopySec to hold the .bss and the Copy Reloc
+  auto *CopyISec = make<CopyRelSection<ELFT>>(IsReadOnly, Alignment, SymSize);
+  CopyISec->OutSecOff = Off;
+  CopyISec->OutSec = CopySec;
+  CopySec->Sections.push_back(CopyISec);
+
   // Look through the DSO's dynamic symbol table for aliases and create a
   // dynamic symbol for each one. This causes the copy relocation to correctly
   // interpose any aliases.
@@ -444,12 +451,11 @@ template <class ELFT> static void addCopyRelSymbol(SharedSymbol<ELFT> *SS) {
         Symtab<ELFT>::X->find(check(S.getName(SS->file()->getStringTable()))));
     if (!Alias)
       continue;
-    Alias->CopyIsInBssRelRo = IsReadOnly;
-    Alias->CopyOffset = Off;
+    Alias->CopySection = CopyISec;
     Alias->NeedsCopyOrPltAddr = true;
     Alias->symbol()->IsUsedInRegularObj = true;
   }
-  In<ELFT>::RelaDyn->addReloc({Target->CopyRel, CopySec, Off, false, SS, 0});
+  In<ELFT>::RelaDyn->addReloc({Target->CopyRel, CopyISec, 0, false, SS, 0});
 }
 
 template <class ELFT>

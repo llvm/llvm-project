@@ -677,7 +677,7 @@ void LazyValueInfoImpl::solve() {
       BlockValueStack.clear();
       return;
     }
-    std::pair<BasicBlock *, Value *> &e = BlockValueStack.back();
+    std::pair<BasicBlock *, Value *> e = BlockValueStack.back();
     assert(BlockValueSet.count(e) && "Stack value should be in BlockValueSet!");
 
     if (solveBlockValue(e.second, e.first)) {

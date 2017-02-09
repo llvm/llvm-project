@@ -468,6 +468,25 @@ RUN lines:
 
    Expands to the path separator, i.e. ``:`` (or ``;`` on Windows).
 
+``%/s, %/S, %/t, %/T:``
+
+  Act like the corresponding substitution above but replace any ``\``
+  character with a ``/``. This is useful to normalize path separators.
+
+   Example: ``%s:  C:\Desktop Files/foo_test.s.tmp``
+   
+   Example: ``%/s: C:/Desktop Files/foo_test.s.tmp``
+
+``%:s, %:S, %:t, %:T:``
+
+  Act like the corresponding substitution above but remove colons at
+  the beginning of Windows paths. This is useful to allow concatenation
+  of absolute paths on Windows to produce a legal path.
+
+   Example: ``%s:  C:\Desktop Files\foo_test.s.tmp``
+
+   Example: ``%:s: C\Desktop Files\foo_test.s.tmp``
+
 
 **LLVM-specific substitutions:**
 

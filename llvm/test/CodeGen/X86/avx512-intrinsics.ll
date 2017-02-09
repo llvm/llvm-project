@@ -1062,7 +1062,7 @@ define <8 x i8> @test_cmp_q_512(<8 x i64> %a0, <8 x i64> %a1) {
 ; CHECK-NEXT:    vpcmpordq %zmm1, %zmm0, %k0
 ; CHECK-NEXT:    kmovw %k4, %eax
 ; CHECK-NEXT:    kmovw %k3, %ecx
-; CHECK-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
+; CHECK-NEXT:    vmovd %ecx, %xmm0
 ; CHECK-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
 ; CHECK-NEXT:    kmovw %k5, %eax
 ; CHECK-NEXT:    vpinsrb $4, %eax, %xmm0, %xmm0
@@ -1110,7 +1110,7 @@ define <8 x i8> @test_mask_cmp_q_512(<8 x i64> %a0, <8 x i64> %a1, i8 %mask) {
 ; CHECK-NEXT:    vpcmpordq %zmm1, %zmm0, %k3 {%k3}
 ; CHECK-NEXT:    kmovw %k5, %eax
 ; CHECK-NEXT:    kmovw %k4, %ecx
-; CHECK-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
+; CHECK-NEXT:    vmovd %ecx, %xmm0
 ; CHECK-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
 ; CHECK-NEXT:    kmovw %k6, %eax
 ; CHECK-NEXT:    vpinsrb $4, %eax, %xmm0, %xmm0
@@ -1159,7 +1159,7 @@ define <8 x i8> @test_ucmp_q_512(<8 x i64> %a0, <8 x i64> %a1) {
 ; CHECK-NEXT:    vpcmporduq %zmm1, %zmm0, %k0
 ; CHECK-NEXT:    kmovw %k4, %eax
 ; CHECK-NEXT:    kmovw %k3, %ecx
-; CHECK-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
+; CHECK-NEXT:    vmovd %ecx, %xmm0
 ; CHECK-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
 ; CHECK-NEXT:    kmovw %k5, %eax
 ; CHECK-NEXT:    vpinsrb $4, %eax, %xmm0, %xmm0
@@ -1207,7 +1207,7 @@ define <8 x i8> @test_mask_ucmp_q_512(<8 x i64> %a0, <8 x i64> %a1, i8 %mask) {
 ; CHECK-NEXT:    vpcmporduq %zmm1, %zmm0, %k3 {%k3}
 ; CHECK-NEXT:    kmovw %k5, %eax
 ; CHECK-NEXT:    kmovw %k4, %ecx
-; CHECK-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
+; CHECK-NEXT:    vmovd %ecx, %xmm0
 ; CHECK-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
 ; CHECK-NEXT:    kmovw %k6, %eax
 ; CHECK-NEXT:    vpinsrb $4, %eax, %xmm0, %xmm0

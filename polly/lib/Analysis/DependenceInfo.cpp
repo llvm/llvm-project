@@ -123,12 +123,12 @@ static void collectInfo(Scop &S, isl_union_map **Read, isl_union_map **Write,
   *AccessSchedule = isl_union_map_empty(isl_space_copy(Space));
   *StmtSchedule = isl_union_map_empty(Space);
 
-  SmallPtrSet<const Value *, 8> ReductionBaseValues;
+  SmallPtrSet<const ScopArrayInfo *, 8> ReductionArrays;
   if (UseReductions)
     for (ScopStmt &Stmt : S)
       for (MemoryAccess *MA : Stmt)
         if (MA->isReductionLike())
-          ReductionBaseValues.insert(MA->getBaseAddr());
+          ReductionArrays.insert(MA->getScopArrayInfo());
 
   for (ScopStmt &Stmt : S) {
     for (MemoryAccess *MA : Stmt) {
@@ -137,7 +137,7 @@ static void collectInfo(Scop &S, isl_union_map **Read, isl_union_map **Write,
 
       accdom = isl_map_intersect_domain(accdom, domcp);
 
-      if (ReductionBaseValues.count(MA->getBaseAddr())) {
+      if (ReductionArrays.count(MA->getScopArrayInfo())) {
         // Wrap the access domain and adjust the schedule accordingly.
         //
         // An access domain like
@@ -178,7 +178,7 @@ static void collectInfo(Scop &S, isl_union_map **Read, isl_union_map **Write,
         *Write = isl_union_map_add_map(*Write, accdom);
     }
 
-    if (!ReductionBaseValues.empty() && Level == Dependences::AL_Statement)
+    if (!ReductionArrays.empty() && Level == Dependences::AL_Statement)
       *StmtSchedule = isl_union_map_add_map(*StmtSchedule, Stmt.getSchedule());
   }
 

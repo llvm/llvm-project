@@ -424,7 +424,7 @@ void swap(thread& __x, thread& __y) _NOEXCEPT {__x.swap(__y);}
 namespace this_thread
 {
 
-_LIBCPP_FUNC_VIS void sleep_for(const chrono::nanoseconds& ns);
+_LIBCPP_FUNC_VIS void sleep_for(const chrono::nanoseconds& __ns);
 
 template <class _Rep, class _Period>
 void

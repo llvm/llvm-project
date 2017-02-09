@@ -274,23 +274,19 @@ define i64 @load_i64_by_i8(i64* %arg) {
 ; (i32) p[1] | ((i32) p[2] << 8) | ((i32) p[3] << 16) | ((i32) p[4] << 24)
 define i32 @load_i32_by_i8_nonzero_offset(i32* %arg) {
 ; CHECK-LABEL: load_i32_by_i8_nonzero_offset:
-; CHECK: ldrb  r1, [r0, #1]
-; CHECK-NEXT: ldrb  r2, [r0, #2]
-; CHECK-NEXT: ldrb  r3, [r0, #3]
-; CHECK-NEXT: ldrb  r0, [r0, #4]
-; CHECK-NEXT: orr r1, r1, r2, lsl #8
-; CHECK-NEXT: orr r1, r1, r3, lsl #16
-; CHECK-NEXT: orr r0, r1, r0, lsl #24
+; CHECK: ldr r0, [r0, #1]
+; CHECK-NEXT: mov r1, #65280
+; CHECK-NEXT: mov r2, #16711680
+; CHECK-NEXT: and r1, r1, r0, lsr #8
+; CHECK-NEXT: and r2, r2, r0, lsl #8
+; CHECK-NEXT: orr r1, r1, r0, lsr #24
+; CHECK-NEXT: orr r0, r2, r0, lsl #24
+; CHECK-NEXT: orr r0, r0, r1
 ; CHECK-NEXT: mov pc, lr
 
 ; CHECK-ARMv6-LABEL: load_i32_by_i8_nonzero_offset:
-; CHECK-ARMv6: ldrb  r1, [r0, #1]
-; CHECK-ARMv6-NEXT: ldrb  r2, [r0, #2]
-; CHECK-ARMv6-NEXT: ldrb  r3, [r0, #3]
-; CHECK-ARMv6-NEXT: ldrb  r0, [r0, #4]
-; CHECK-ARMv6-NEXT: orr r1, r1, r2, lsl #8
-; CHECK-ARMv6-NEXT: orr r1, r1, r3, lsl #16
-; CHECK-ARMv6-NEXT: orr r0, r1, r0, lsl #24
+; CHECK-ARMv6: ldr r0, [r0, #1]
+; CHECK-ARMv6-NEXT: rev r0, r0
 ; CHECK-ARMv6-NEXT: bx  lr
 
   %tmp = bitcast i32* %arg to i8*
@@ -319,23 +315,19 @@ define i32 @load_i32_by_i8_nonzero_offset(i32* %arg) {
 ; (i32) p[-4] | ((i32) p[-3] << 8) | ((i32) p[-2] << 16) | ((i32) p[-1] << 24)
 define i32 @load_i32_by_i8_neg_offset(i32* %arg) {
 ; CHECK-LABEL: load_i32_by_i8_neg_offset:
-; CHECK: ldrb  r1, [r0, #-4]
-; CHECK-NEXT: ldrb  r2, [r0, #-3]
-; CHECK-NEXT: ldrb  r3, [r0, #-2]
-; CHECK-NEXT: ldrb  r0, [r0, #-1]
-; CHECK-NEXT: orr r1, r1, r2, lsl #8
-; CHECK-NEXT: orr r1, r1, r3, lsl #16
-; CHECK-NEXT: orr r0, r1, r0, lsl #24
+; CHECK: ldr r0, [r0, #-4]
+; CHECK-NEXT: mov r1, #65280
+; CHECK-NEXT: mov r2, #16711680
+; CHECK-NEXT: and r1, r1, r0, lsr #8
+; CHECK-NEXT: and r2, r2, r0, lsl #8
+; CHECK-NEXT: orr r1, r1, r0, lsr #24
+; CHECK-NEXT: orr r0, r2, r0, lsl #24
+; CHECK-NEXT: orr r0, r0, r1
 ; CHECK-NEXT: mov pc, lr
 
 ; CHECK-ARMv6-LABEL: load_i32_by_i8_neg_offset:
-; CHECK-ARMv6: ldrb  r1, [r0, #-4]
-; CHECK-ARMv6-NEXT: ldrb  r2, [r0, #-3]
-; CHECK-ARMv6-NEXT: ldrb  r3, [r0, #-2]
-; CHECK-ARMv6-NEXT: ldrb  r0, [r0, #-1]
-; CHECK-ARMv6-NEXT: orr r1, r1, r2, lsl #8
-; CHECK-ARMv6-NEXT: orr r1, r1, r3, lsl #16
-; CHECK-ARMv6-NEXT: orr r0, r1, r0, lsl #24
+; CHECK-ARMv6: ldr r0, [r0, #-4]
+; CHECK-ARMv6-NEXT: rev r0, r0
 ; CHECK-ARMv6-NEXT: bx  lr
 
   %tmp = bitcast i32* %arg to i8*
@@ -364,23 +356,11 @@ define i32 @load_i32_by_i8_neg_offset(i32* %arg) {
 ; (i32) p[4] | ((i32) p[3] << 8) | ((i32) p[2] << 16) | ((i32) p[1] << 24)
 define i32 @load_i32_by_i8_nonzero_offset_bswap(i32* %arg) {
 ; CHECK-LABEL: load_i32_by_i8_nonzero_offset_bswap:
-; CHECK: ldrb  r1, [r0, #1]
-; CHECK-NEXT: ldrb  r2, [r0, #2]
-; CHECK-NEXT: ldrb  r3, [r0, #3]
-; CHECK-NEXT: ldrb  r0, [r0, #4]
-; CHECK-NEXT: orr r0, r0, r3, lsl #8
-; CHECK-NEXT: orr r0, r0, r2, lsl #16
-; CHECK-NEXT: orr r0, r0, r1, lsl #24
+; CHECK: ldr r0, [r0, #1]
 ; CHECK-NEXT: mov pc, lr
 
 ; CHECK-ARMv6-LABEL: load_i32_by_i8_nonzero_offset_bswap:
-; CHECK-ARMv6: ldrb  r1, [r0, #1]
-; CHECK-ARMv6-NEXT: ldrb  r2, [r0, #2]
-; CHECK-ARMv6-NEXT: ldrb  r3, [r0, #3]
-; CHECK-ARMv6-NEXT: ldrb  r0, [r0, #4]
-; CHECK-ARMv6-NEXT: orr r0, r0, r3, lsl #8
-; CHECK-ARMv6-NEXT: orr r0, r0, r2, lsl #16
-; CHECK-ARMv6-NEXT: orr r0, r0, r1, lsl #24
+; CHECK-ARMv6: ldr r0, [r0, #1]
 ; CHECK-ARMv6-NEXT: bx  lr
 
   %tmp = bitcast i32* %arg to i8*
@@ -409,23 +389,11 @@ define i32 @load_i32_by_i8_nonzero_offset_bswap(i32* %arg) {
 ; (i32) p[-1] | ((i32) p[-2] << 8) | ((i32) p[-3] << 16) | ((i32) p[-4] << 24)
 define i32 @load_i32_by_i8_neg_offset_bswap(i32* %arg) {
 ; CHECK-LABEL: load_i32_by_i8_neg_offset_bswap:
-; CHECK: ldrb  r1, [r0, #-4]
-; CHECK-NEXT: ldrb  r2, [r0, #-3]
-; CHECK-NEXT: ldrb  r3, [r0, #-2]
-; CHECK-NEXT: ldrb  r0, [r0, #-1]
-; CHECK-NEXT: orr r0, r0, r3, lsl #8
-; CHECK-NEXT: orr r0, r0, r2, lsl #16
-; CHECK-NEXT: orr r0, r0, r1, lsl #24
+; CHECK: ldr r0, [r0, #-4]
 ; CHECK-NEXT: mov pc, lr
 
 ; CHECK-ARMv6-LABEL: load_i32_by_i8_neg_offset_bswap:
-; CHECK-ARMv6: ldrb  r1, [r0, #-4]
-; CHECK-ARMv6-NEXT: ldrb  r2, [r0, #-3]
-; CHECK-ARMv6-NEXT: ldrb  r3, [r0, #-2]
-; CHECK-ARMv6-NEXT: ldrb  r0, [r0, #-1]
-; CHECK-ARMv6-NEXT: orr r0, r0, r3, lsl #8
-; CHECK-ARMv6-NEXT: orr r0, r0, r2, lsl #16
-; CHECK-ARMv6-NEXT: orr r0, r0, r1, lsl #24
+; CHECK-ARMv6: ldr r0, [r0, #-4]
 ; CHECK-ARMv6-NEXT: bx  lr
 
   %tmp = bitcast i32* %arg to i8*
@@ -566,24 +534,20 @@ define i32 @load_i32_by_i8_base_offset_index(i8* %arg, i32 %i) {
 define i32 @load_i32_by_i8_base_offset_index_2(i8* %arg, i32 %i) {
 ; CHECK-LABEL: load_i32_by_i8_base_offset_index_2:
 ; CHECK: add r0, r0, r1
-; CHECK-NEXT: ldrb  r1, [r0, #13]
-; CHECK-NEXT: ldrb  r2, [r0, #14]
-; CHECK-NEXT: ldrb  r3, [r0, #15]
-; CHECK-NEXT: ldrb  r0, [r0, #16]
-; CHECK-NEXT: orr r1, r1, r2, lsl #8
-; CHECK-NEXT: orr r1, r1, r3, lsl #16
-; CHECK-NEXT: orr r0, r1, r0, lsl #24
+; CHECK-NEXT: mov r1, #65280
+; CHECK-NEXT: mov r2, #16711680
+; CHECK-NEXT: ldr r0, [r0, #13]
+; CHECK-NEXT: and r1, r1, r0, lsr #8
+; CHECK-NEXT: and r2, r2, r0, lsl #8
+; CHECK-NEXT: orr r1, r1, r0, lsr #24
+; CHECK-NEXT: orr r0, r2, r0, lsl #24
+; CHECK-NEXT: orr r0, r0, r1
 ; CHECK-NEXT: mov pc, lr
 ;
 ; CHECK-ARMv6-LABEL: load_i32_by_i8_base_offset_index_2:
 ; CHECK-ARMv6: add r0, r0, r1
-; CHECK-ARMv6-NEXT: ldrb  r1, [r0, #13]
-; CHECK-ARMv6-NEXT: ldrb  r2, [r0, #14]
-; CHECK-ARMv6-NEXT: ldrb  r3, [r0, #15]
-; CHECK-ARMv6-NEXT: ldrb  r0, [r0, #16]
-; CHECK-ARMv6-NEXT: orr r1, r1, r2, lsl #8
-; CHECK-ARMv6-NEXT: orr r1, r1, r3, lsl #16
-; CHECK-ARMv6-NEXT: orr r0, r1, r0, lsl #24
+; CHECK-ARMv6-NEXT: ldr r0, [r0, #13]
+; CHECK-ARMv6-NEXT: rev r0, r0
 ; CHECK-ARMv6-NEXT: bx  lr
 
   %tmp = add nuw nsw i32 %i, 4

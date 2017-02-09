@@ -154,9 +154,6 @@ protected:
   /// Processor has RTM instructions.
   bool HasRTM;
 
-  /// Processor has HLE.
-  bool HasHLE;
-
   /// Processor has ADX instructions.
   bool HasADX;
 
@@ -273,12 +270,6 @@ protected:
 
   /// Processor supports MPX - Memory Protection Extensions
   bool HasMPX;
-
-  /// Processor supports Invalidate Process-Context Identifier
-  bool HasInvPCId;
-
-  /// Processor has Supervisor Mode Access Protection
-  bool HasSMAP;
 
   /// Processor has Software Guard Extensions
   bool HasSGX;
@@ -456,7 +447,6 @@ public:
   bool hasVBMI() const { return HasVBMI; }
   bool hasIFMA() const { return HasIFMA; }
   bool hasRTM() const { return HasRTM; }
-  bool hasHLE() const { return HasHLE; }
   bool hasADX() const { return HasADX; }
   bool hasSHA() const { return HasSHA; }
   bool hasPRFCHW() const { return HasPRFCHW; }

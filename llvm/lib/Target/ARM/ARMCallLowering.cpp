@@ -35,7 +35,7 @@ ARMCallLowering::ARMCallLowering(const ARMTargetLowering &TLI)
 static bool isSupportedType(const DataLayout &DL, const ARMTargetLowering &TLI,
                             Type *T) {
   EVT VT = TLI.getValueType(DL, T, true);
-  if (!VT.isSimple() || !VT.isInteger() || VT.isVector())
+  if (!VT.isSimple() || VT.isVector())
     return false;
 
   unsigned VTSize = VT.getSimpleVT().getSizeInBits();
@@ -205,7 +205,13 @@ bool ARMCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
   auto DL = MF.getDataLayout();
   auto &TLI = *getTLI<ARMTargetLowering>();
 
-  if (TLI.getSubtarget()->isThumb())
+  auto Subtarget = TLI.getSubtarget();
+
+  if (Subtarget->isThumb())
+    return false;
+
+  // FIXME: Support soft float (when we're ready to generate libcalls)
+  if (Subtarget->useSoftFloat() || !Subtarget->hasVFP2())
     return false;
 
   auto &Args = F.getArgumentList();
