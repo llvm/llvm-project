@@ -106,3 +106,27 @@ define <2 x i1> @slt_zero_add_nsw_splat_vec(<2 x i8> %a) {
   ret <2 x i1> %cmp
 }
 
+; FIXME: InstCombine should not lose wrapping information by changing the add to xor.
+
+define i1 @slt_zero_add_nsw_signbit(i8 %x) {
+; CHECK-LABEL: @slt_zero_add_nsw_signbit(
+; CHECK-NEXT:    [[Z:%.*]] = icmp sgt i8 %x, -1
+; CHECK-NEXT:    ret i1 [[Z]]
+;
+  %y = add nsw i8 %x, -128
+  %z = icmp slt i8 %y, 0
+  ret i1 %z
+}
+
+; FIXME: InstCombine should not lose wrapping information by changing the add to xor.
+
+define i1 @slt_zero_add_nuw_signbit(i8 %x) {
+; CHECK-LABEL: @slt_zero_add_nuw_signbit(
+; CHECK-NEXT:    [[Z:%.*]] = icmp sgt i8 %x, -1
+; CHECK-NEXT:    ret i1 [[Z]]
+;
+  %y = add nuw i8 %x, 128
+  %z = icmp slt i8 %y, 0
+  ret i1 %z
+}
+

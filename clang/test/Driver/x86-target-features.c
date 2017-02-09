@@ -79,3 +79,8 @@
 // RUN: %clang -target i386-unknown-linux-gnu -march=i386 -mno-prefetchwt1 %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-PREFETCHWT1 %s
 // PREFETCHWT1: "-target-feature" "+prefetchwt1"
 // NO-PREFETCHWT1: "-target-feature" "-prefetchwt1"
+
+// RUN: %clang -target i386-unknown-linux-gnu -march=i386 -mclzero %s -### -o %t.o 2>&1 | FileCheck -check-prefix=CLZERO %s
+// RUN: %clang -target i386-unknown-linux-gnu -march=i386 -mno-clzero %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-CLZERO %s
+// CLZERO: "-target-feature" "+clzero"
+// NO-CLZERO: "-target-feature" "-clzero"

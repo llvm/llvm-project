@@ -12,6 +12,8 @@
 #define _LIBCPP_THREADING_SUPPORT
 
 #include <__config>
+#include <chrono>
+#include <errno.h>
 
 #ifndef _LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER
 #pragma GCC system_header
@@ -28,8 +30,6 @@
 #include <Windows.h>
 #include <process.h>
 #include <fibersapi.h>
-
-#include <chrono>
 #endif
 
 #if defined(_LIBCPP_HAS_THREAD_LIBRARY_EXTERNAL) || \
@@ -182,6 +182,9 @@ int __libcpp_thread_detach(__libcpp_thread_t *__t);
 
 _LIBCPP_THREAD_ABI_VISIBILITY
 void __libcpp_thread_yield();
+
+_LIBCPP_THREAD_ABI_VISIBILITY
+void __libcpp_thread_sleep_for(const chrono::nanoseconds& ns);
 
 // Thread local storage
 _LIBCPP_THREAD_ABI_VISIBILITY
@@ -343,6 +346,28 @@ int __libcpp_thread_detach(__libcpp_thread_t *__t)
 void __libcpp_thread_yield()
 {
   sched_yield();
+}
+
+void __libcpp_thread_sleep_for(const chrono::nanoseconds& __ns)
+{
+   using namespace chrono;
+   seconds __s = duration_cast<seconds>(__ns);
+   timespec __ts;
+   typedef decltype(__ts.tv_sec) ts_sec;
+   _LIBCPP_CONSTEXPR ts_sec __ts_sec_max = numeric_limits<ts_sec>::max();
+
+   if (__s.count() < __ts_sec_max)
+   {
+     __ts.tv_sec = static_cast<ts_sec>(__s.count());
+     __ts.tv_nsec = static_cast<decltype(__ts.tv_nsec)>((__ns - __s).count());
+   }
+   else
+   {
+     __ts.tv_sec = __ts_sec_max;
+     __ts.tv_nsec = 999999999; // (10^9 - 1)
+   }
+
+   while (nanosleep(&__ts, &__ts) == -1 && errno == EINTR);
 }
 
 // Thread local storage
@@ -560,6 +585,14 @@ int __libcpp_thread_detach(__libcpp_thread_t *__t)
 void __libcpp_thread_yield()
 {
   SwitchToThread();
+}
+
+void __libcpp_thread_sleep_for(const chrono::nanoseconds& __ns)
+{
+  using namespace chrono;
+  // round-up to the nearest milisecond
+  milliseconds __ms = duration_cast<milliseconds>(__ns + 999999);
+  Sleep(__ms.count());
 }
 
 // Thread Local Storage

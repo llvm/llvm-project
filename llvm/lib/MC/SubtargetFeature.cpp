@@ -11,16 +11,24 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/MC/SubtargetFeature.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Triple.h"
+#include "llvm/MC/SubtargetFeature.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
-#include <cctype>
-#include <cstdlib>
+#include <cstddef>
+#include <cstring>
+#include <iterator>
+#include <string>
+#include <vector>
+
 using namespace llvm;
 
 //===----------------------------------------------------------------------===//
@@ -123,7 +131,6 @@ SubtargetFeatures::SubtargetFeatures(StringRef Initial) {
   Split(Features, Initial);
 }
 
-
 std::string SubtargetFeatures::getString() const {
   return join(Features.begin(), Features.end(), ",");
 }
@@ -165,7 +172,6 @@ void ClearImpliedBits(FeatureBitset &Bits,
 void
 SubtargetFeatures::ToggleFeature(FeatureBitset &Bits, StringRef Feature,
                                  ArrayRef<SubtargetFeatureKV> FeatureTable) {
-
   // Find feature in table.
   const SubtargetFeatureKV *FeatureEntry =
       Find(StripFlag(Feature), FeatureTable);
@@ -190,7 +196,6 @@ SubtargetFeatures::ToggleFeature(FeatureBitset &Bits, StringRef Feature,
 
 void SubtargetFeatures::ApplyFeatureFlag(FeatureBitset &Bits, StringRef Feature,
                                     ArrayRef<SubtargetFeatureKV> FeatureTable) {
-
   assert(hasFlag(Feature));
 
   // Find feature in table.
@@ -217,14 +222,12 @@ void SubtargetFeatures::ApplyFeatureFlag(FeatureBitset &Bits, StringRef Feature,
   }
 }
 
-
 /// getFeatureBits - Get feature bits a CPU.
 ///
 FeatureBitset
 SubtargetFeatures::getFeatureBits(StringRef CPU,
                                   ArrayRef<SubtargetFeatureKV> CPUTable,
                                   ArrayRef<SubtargetFeatureKV> FeatureTable) {
-
   if (CPUTable.empty() || FeatureTable.empty())
     return FeatureBitset();
 

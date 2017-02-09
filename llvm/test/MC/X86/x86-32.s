@@ -444,6 +444,14 @@ cmovnae	%bx,%bx
 // CHECK:  encoding: [0x0f,0x21,0xf8]
         movl %dr7,%eax
 
+// CHECK:       clzero
+// CHECK:  encoding: [0x0f,0x01,0xfc]
+                clzero
+
+// CHECK:       clzero
+// CHECK:  encoding: [0x0f,0x01,0xfc]
+                clzero %eax
+
 // radr://8017522
 // CHECK: wait
 // CHECK:  encoding: [0x9b]

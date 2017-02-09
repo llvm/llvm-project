@@ -1,4 +1,4 @@
-//===-- MCCodeEmitter.cpp - Instruction Encoding --------------------------===//
+//===- MCCodeEmitter.cpp - Instruction Encoding ---------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -11,8 +11,6 @@
 
 using namespace llvm;
 
-MCCodeEmitter::MCCodeEmitter() {
-}
+MCCodeEmitter::MCCodeEmitter() = default;
 
-MCCodeEmitter::~MCCodeEmitter() {
-}
+MCCodeEmitter::~MCCodeEmitter() = default;

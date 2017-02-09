@@ -122,7 +122,7 @@ public:
   /// input ranges.
   bool LeadingEmptyLinesAffected;
 
-  /// \c True if a one of this line's children intersects with an input range.
+  /// \c True if one of this line's children intersects with an input range.
   bool ChildrenAffected;
 
 private:

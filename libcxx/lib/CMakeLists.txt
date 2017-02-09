@@ -89,9 +89,9 @@ add_library_flags_if(LIBCXX_HAVE_CXX_ATOMICS_WITH_LIB atomic)
 
 # Add the unwinder library.
 if (LIBCXXABI_USE_LLVM_UNWINDER)
-  if (TARGET unwind_shared)
+  if (NOT LIBCXXABI_ENABLE_STATIC_UNWINDER AND (TARGET unwind_shared OR HAVE_LIBUNWIND))
     add_interface_library(unwind_shared)
-  elseif (TARGET unwind_static)
+  elseif (LIBCXXABI_ENABLE_STATIC_UNWINDER AND (TARGET unwind_static OR HAVE_LIBUNWIND))
     add_interface_library(unwind_static)
   else()
     add_interface_library(unwind)

@@ -6495,3 +6495,10 @@ let TargetPrefix = "x86" in {
       : GCCBuiltin<"__builtin_ia32_mwaitx">,
         Intrinsic<[], [ llvm_i32_ty, llvm_i32_ty, llvm_i32_ty ], []>;
 }
+
+//===----------------------------------------------------------------------===//
+// Cache-line zero
+let TargetPrefix = "x86" in {
+  def int_x86_clzero : GCCBuiltin<"__builtin_ia32_clzero">,
+      Intrinsic<[], [llvm_ptr_ty], []>;
+}

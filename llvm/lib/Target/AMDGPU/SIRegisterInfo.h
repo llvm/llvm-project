@@ -205,6 +205,12 @@ public:
                       unsigned DstSubReg,
                       const TargetRegisterClass *NewRC) const override;
 
+  unsigned getRegPressureLimit(const TargetRegisterClass *RC,
+                               MachineFunction &MF) const override;
+
+  unsigned getRegPressureSetLimit(const MachineFunction &MF,
+                                  unsigned Idx) const override;
+
 private:
   void buildSpillLoadStore(MachineBasicBlock::iterator MI,
                            unsigned LoadStoreOp,

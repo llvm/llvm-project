@@ -316,6 +316,10 @@ writeSymbolTable(raw_fd_ostream &Out, object::Archive::Kind Kind,
   if (HeaderStartOffset == 0)
     return 0;
 
+  if (Kind == object::Archive::K_BSD)
+    for (unsigned P = OffsetToAlignment(NameOS.tell(), sizeof(int32_t)); P--;)
+      NameOS << '\0';
+
   StringRef StringTable = NameOS.str();
   if (Kind == object::Archive::K_BSD)
     print32(Out, Kind, StringTable.size()); // byte count of the string table

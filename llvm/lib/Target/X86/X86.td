@@ -187,8 +187,6 @@ def FeatureBMI2    : SubtargetFeature<"bmi2", "HasBMI2", "true",
                                       "Support BMI2 instructions">;
 def FeatureRTM     : SubtargetFeature<"rtm", "HasRTM", "true",
                                       "Support RTM instructions">;
-def FeatureHLE     : SubtargetFeature<"hle", "HasHLE", "true",
-                                      "Support HLE">;
 def FeatureADX     : SubtargetFeature<"adx", "HasADX", "true",
                                       "Support ADX instructions">;
 def FeatureSHA     : SubtargetFeature<"sha", "HasSHA", "true",
@@ -202,6 +200,8 @@ def FeatureLAHFSAHF : SubtargetFeature<"sahf", "HasLAHFSAHF", "true",
                                        "Support LAHF and SAHF instructions">;
 def FeatureMWAITX  : SubtargetFeature<"mwaitx", "HasMWAITX", "true",
                                       "Enable MONITORX/MWAITX timer functionality">;
+def FeatureCLZERO  : SubtargetFeature<"clzero", "HasCLZERO", "true",
+                                      "Enable Cache Line Zero">;
 def FeatureMPX     : SubtargetFeature<"mpx", "HasMPX", "true",
                                       "Support MPX instructions">;
 def FeatureLEAForSP : SubtargetFeature<"lea-sp", "UseLeaForSP", "true",
@@ -215,10 +215,6 @@ def FeatureSlowDivide64 : SubtargetFeature<"idivq-to-divl",
 def FeaturePadShortFunctions : SubtargetFeature<"pad-short-functions",
                                      "PadShortFunctions", "true",
                                      "Pad short functions">;
-def FeatureINVPCID : SubtargetFeature<"invpcid", "HasInvPCId", "true",
-                                      "Invalidate Process-Context Identifier">;
-def FeatureSMAP    : SubtargetFeature<"smap", "HasSMAP", "true",
-                                      "Supervisor Mode Access Protection">;
 def FeatureSGX     : SubtargetFeature<"sgx", "HasSGX", "true",
                                       "Enable Software Guard Extensions">;
 def FeatureCLFLUSHOPT : SubtargetFeature<"clflushopt", "HasCLFLUSHOPT", "true",
@@ -494,9 +490,7 @@ def HSWFeatures : ProcessorFeatures<IVBFeatures.Value, [
   FeatureFMA,
   FeatureLZCNT,
   FeatureMOVBE,
-  FeatureINVPCID,
   FeatureRTM,
-  FeatureHLE,
   FeatureSlowIncDec
 ]>;
 
@@ -507,8 +501,7 @@ def : HaswellProc<"core-avx2">; // Legacy alias.
 
 def BDWFeatures : ProcessorFeatures<HSWFeatures.Value, [
   FeatureADX,
-  FeatureRDSEED,
-  FeatureSMAP
+  FeatureRDSEED
 ]>;
 class BroadwellProc<string Name> : ProcModel<Name, HaswellModel,
                                              BDWFeatures.Value, []>;
@@ -765,6 +758,7 @@ def: ProcessorModel<"znver1", BtVer2Model, [
   FeatureBMI,
   FeatureBMI2,
   FeatureCLFLUSHOPT,
+  FeatureCLZERO,
   FeatureCMPXCHG16B,
   FeatureF16C,
   FeatureFMA,
@@ -782,7 +776,6 @@ def: ProcessorModel<"znver1", BtVer2Model, [
   FeatureRDRAND,
   FeatureRDSEED,
   FeatureSHA,
-  FeatureSMAP,
   FeatureSSE4A,
   FeatureSlowSHLD,
   FeatureX87,

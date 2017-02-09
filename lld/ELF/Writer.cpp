@@ -426,9 +426,9 @@ template <class ELFT> void Writer<ELFT>::createSyntheticSections() {
       false /*Sort*/);
   Add(In<ELFT>::RelaIplt);
 
-  In<ELFT>::Plt = make<PltSection<ELFT>>();
+  In<ELFT>::Plt = make<PltSection<ELFT>>(Target->PltHeaderSize);
   Add(In<ELFT>::Plt);
-  In<ELFT>::Iplt = make<IpltSection<ELFT>>();
+  In<ELFT>::Iplt = make<PltSection<ELFT>>(0);
   Add(In<ELFT>::Iplt);
 
   if (Config->EhFrameHdr) {

@@ -636,6 +636,12 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
     return translateOverflowIntrinsic(CI, TargetOpcode::G_UMULO, MIRBuilder);
   case Intrinsic::smul_with_overflow:
     return translateOverflowIntrinsic(CI, TargetOpcode::G_SMULO, MIRBuilder);
+  case Intrinsic::pow:
+    MIRBuilder.buildInstr(TargetOpcode::G_FPOW)
+        .addDef(getOrCreateVReg(CI))
+        .addUse(getOrCreateVReg(*CI.getArgOperand(0)))
+        .addUse(getOrCreateVReg(*CI.getArgOperand(1)));
+    return true;
   case Intrinsic::memcpy:
   case Intrinsic::memmove:
   case Intrinsic::memset:

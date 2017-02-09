@@ -80,6 +80,10 @@
 #include <mwaitxintrin.h>
 #endif
 
+#if !defined(_MSC_VER) || __has_feature(modules) || defined(__CLZERO__)
+#include <clzerointrin.h>
+#endif
+
 /* FIXME: LWP */
 
 #endif /* __X86INTRIN_H */

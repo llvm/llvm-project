@@ -7,13 +7,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/MC/MCSymbol.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
+#include "llvm/MC/MCFragment.h"
+#include "llvm/MC/MCSymbol.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cassert>
+#include <cstddef>
+
 using namespace llvm;
 
 // Only the address of this fragment is ever actually used.

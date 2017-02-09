@@ -31,6 +31,7 @@ add_lldb_library(lldbCommands
   CommandObjectLanguage.cpp
 
   LINK_LIBS
+    lldbBase
     lldbBreakpoint
     lldbCore
     lldbDataFormatters

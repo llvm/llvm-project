@@ -3,8 +3,8 @@
 target datalayout = "e-p:64:64"
 target triple = "x86_64-unknown-linux-gnu"
 
-@vt1 = global [1 x i8*] [i8* bitcast (i32 (i8*, i32)* @vf1 to i8*)], !type !0
-@vt2 = global [1 x i8*] [i8* bitcast (i32 (i8*, i32)* @vf2 to i8*)], !type !0
+@vt1 = constant [1 x i8*] [i8* bitcast (i32 (i8*, i32)* @vf1 to i8*)], !type !0
+@vt2 = constant [1 x i8*] [i8* bitcast (i32 (i8*, i32)* @vf2 to i8*)], !type !0
 
 define i32 @vf1(i8* %this, i32 %arg) {
   ret i32 %arg

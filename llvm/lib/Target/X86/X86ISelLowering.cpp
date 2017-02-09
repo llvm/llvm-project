@@ -24418,6 +24418,26 @@ static MachineBasicBlock *emitMonitor(MachineInstr &MI, MachineBasicBlock *BB,
   return BB;
 }
 
+static MachineBasicBlock *emitClzero(MachineInstr *MI, MachineBasicBlock *BB,
+                                      const X86Subtarget &Subtarget) {
+  DebugLoc dl = MI->getDebugLoc();
+  const TargetInstrInfo *TII = Subtarget.getInstrInfo();
+  // Address into RAX/EAX
+  unsigned MemOpc = Subtarget.is64Bit() ? X86::LEA64r : X86::LEA32r;
+  unsigned MemReg = Subtarget.is64Bit() ? X86::RAX : X86::EAX;
+  MachineInstrBuilder MIB = BuildMI(*BB, MI, dl, TII->get(MemOpc), MemReg);
+  for (int i = 0; i < X86::AddrNumOperands; ++i)
+    MIB.add(MI->getOperand(i));
+
+  // The instruction doesn't actually take any operands though.
+  BuildMI(*BB, MI, dl, TII->get(X86::CLZEROr));
+
+  MI->eraseFromParent(); // The pseudo is gone now.
+  return BB;
+}
+
+
+
 MachineBasicBlock *
 X86TargetLowering::EmitVAARG64WithCustomInserter(MachineInstr &MI,
                                                  MachineBasicBlock *MBB) const {
@@ -26038,6 +26058,11 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     return emitMonitor(MI, BB, Subtarget, X86::MONITORrrr);
   case X86::MONITORX:
     return emitMonitor(MI, BB, Subtarget, X86::MONITORXrrr);
+
+  // Cache line zero
+  case X86::CLZERO:
+    return emitClzero(&MI, BB, Subtarget);
+
   // PKU feature
   case X86::WRPKRU:
     return emitWRPKRU(MI, BB, Subtarget);

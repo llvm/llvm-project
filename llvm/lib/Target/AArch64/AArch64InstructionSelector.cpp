@@ -715,6 +715,34 @@ bool AArch64InstructionSelector::select(MachineInstr &I) const {
     return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
   }
 
+  case TargetOpcode::G_SMULH:
+  case TargetOpcode::G_UMULH: {
+    // Reject the various things we don't support yet.
+    if (unsupportedBinOp(I, RBI, MRI, TRI))
+      return false;
+
+    const unsigned DefReg = I.getOperand(0).getReg();
+    const RegisterBank &RB = *RBI.getRegBank(DefReg, MRI, TRI);
+
+    if (RB.getID() != AArch64::GPRRegBankID) {
+      DEBUG(dbgs() << "G_[SU]MULH on bank: " << RB << ", expected: GPR\n");
+      return false;
+    }
+
+    if (Ty != LLT::scalar(64)) {
+      DEBUG(dbgs() << "G_[SU]MULH has type: " << Ty
+                   << ", expected: " << LLT::scalar(64) << '\n');
+      return false;
+    }
+
+    unsigned NewOpc = I.getOpcode() == TargetOpcode::G_SMULH ? AArch64::SMULHrr
+                                                             : AArch64::UMULHrr;
+    I.setDesc(TII.get(NewOpc));
+
+    // Now that we selected an opcode, we need to constrain the register
+    // operands to use appropriate classes.
+    return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
+  }
   case TargetOpcode::G_MUL: {
     // Reject the various things we don't support yet.
     if (unsupportedBinOp(I, RBI, MRI, TRI))
