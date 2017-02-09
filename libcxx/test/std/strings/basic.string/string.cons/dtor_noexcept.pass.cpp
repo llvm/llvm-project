@@ -42,8 +42,10 @@ int main()
         typedef std::basic_string<char, std::char_traits<char>, test_allocator<char>> C;
         static_assert(std::is_nothrow_destructible<C>::value, "");
     }
+#if defined(_LIBCPP_VERSION)
     {
         typedef std::basic_string<char, std::char_traits<char>, some_alloc<char>> C;
-        LIBCPP_STATIC_ASSERT(!std::is_nothrow_destructible<C>::value, "");
+        static_assert(!std::is_nothrow_destructible<C>::value, "");
     }
+#endif // _LIBCPP_VERSION
 }

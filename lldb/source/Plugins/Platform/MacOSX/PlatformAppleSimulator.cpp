@@ -242,8 +242,8 @@ FileSpec PlatformAppleSimulator::GetCoreSimulatorPath() {
 
 void PlatformAppleSimulator::LoadCoreSimulator() {
 #if defined(__APPLE__)
-  static std::once_flag g_load_core_sim_flag;
-  std::call_once(g_load_core_sim_flag, [this] {
+  static llvm::once_flag g_load_core_sim_flag;
+  llvm::call_once(g_load_core_sim_flag, [this] {
     const std::string core_sim_path(GetCoreSimulatorPath().GetPath());
     if (core_sim_path.size())
       dlopen(core_sim_path.c_str(), RTLD_LAZY);

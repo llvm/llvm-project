@@ -53,13 +53,15 @@ int main()
                           std::equal_to<MoveOnly>, other_allocator<std::pair<const MoveOnly, MoveOnly>>> C;
         static_assert(std::is_nothrow_destructible<C>::value, "");
     }
+#if defined(_LIBCPP_VERSION)
     {
         typedef std::unordered_map<MoveOnly, MoveOnly, some_hash<MoveOnly>> C;
-        LIBCPP_STATIC_ASSERT(!std::is_nothrow_destructible<C>::value, "");
+        static_assert(!std::is_nothrow_destructible<C>::value, "");
     }
     {
         typedef std::unordered_map<MoveOnly, MoveOnly, std::hash<MoveOnly>,
                                                          some_comp<MoveOnly>> C;
-        LIBCPP_STATIC_ASSERT(!std::is_nothrow_destructible<C>::value, "");
+        static_assert(!std::is_nothrow_destructible<C>::value, "");
     }
+#endif // _LIBCPP_VERSION
 }

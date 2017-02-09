@@ -30,7 +30,7 @@ namespace lld {
 namespace coff {
 
 StringRef SymbolBody::getName() {
-  // DefinedCOFF names are read lazily for a performance reason.
+  // COFF symbol names are read lazily for a performance reason.
   // Non-external symbol names are never used by the linker except for logging
   // or debugging. Their internal references are resolved not by name but by
   // symbol index. And because they are not external, no one can refer them by
@@ -39,7 +39,7 @@ StringRef SymbolBody::getName() {
   // is a waste of time.
   if (Name.empty()) {
     auto *D = cast<DefinedCOFF>(this);
-    D->File->getCOFFObj()->getSymbolName(D->Sym, Name);
+    cast<ObjectFile>(D->File)->getCOFFObj()->getSymbolName(D->Sym, Name);
   }
   return Name;
 }
@@ -47,15 +47,14 @@ StringRef SymbolBody::getName() {
 InputFile *SymbolBody::getFile() {
   if (auto *Sym = dyn_cast<DefinedCOFF>(this))
     return Sym->File;
-  if (auto *Sym = dyn_cast<DefinedBitcode>(this))
-    return Sym->File;
   if (auto *Sym = dyn_cast<Lazy>(this))
     return Sym->File;
   return nullptr;
 }
 
 COFFSymbolRef DefinedCOFF::getCOFFSymbol() {
-  size_t SymSize = File->getCOFFObj()->getSymbolTableEntrySize();
+  size_t SymSize =
+      cast<ObjectFile>(File)->getCOFFObj()->getSymbolTableEntrySize();
   if (SymSize == sizeof(coff_symbol16))
     return COFFSymbolRef(reinterpret_cast<const coff_symbol16 *>(Sym));
   assert(SymSize == sizeof(coff_symbol32));

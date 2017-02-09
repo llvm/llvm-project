@@ -18,8 +18,8 @@
 #include <type_traits>
 
 // system_clock is used because it meets the requirements of TrivialClock,
-// and it's resolution and range of system_clock should match the operating
-// systems file time type.
+// and the resolution and range of system_clock should match the operating
+// system's file time type.
 typedef std::chrono::system_clock              ExpectedClock;
 typedef std::chrono::time_point<ExpectedClock> ExpectedTimePoint;
 

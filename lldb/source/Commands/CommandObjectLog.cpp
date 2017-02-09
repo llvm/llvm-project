@@ -133,6 +133,7 @@ public:
         break;
       case 'F':
         log_options |= LLDB_LOG_OPTION_PREPEND_FILE_FUNCTION;
+        break;
       default:
         error.SetErrorStringWithFormat("unrecognized option '%c'",
                                        short_option);

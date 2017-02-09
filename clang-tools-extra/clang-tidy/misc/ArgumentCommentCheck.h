@@ -43,8 +43,6 @@ private:
   const bool StrictMode;
   llvm::Regex IdentRE;
 
-  bool isLikelyTypo(llvm::ArrayRef<ParmVarDecl *> Params, StringRef ArgName,
-                    unsigned ArgIndex);
   void checkCallArgs(ASTContext *Ctx, const FunctionDecl *Callee,
                      SourceLocation ArgBeginLoc,
                      llvm::ArrayRef<const Expr *> Args);

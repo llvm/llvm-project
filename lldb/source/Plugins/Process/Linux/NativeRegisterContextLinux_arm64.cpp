@@ -116,7 +116,6 @@ NativeRegisterContextLinux *
 NativeRegisterContextLinux::CreateHostNativeRegisterContextLinux(
     const ArchSpec &target_arch, NativeThreadProtocol &native_thread,
     uint32_t concrete_frame_idx) {
-  Log *log = ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_REGISTERS);
   switch (target_arch.GetMachine()) {
   case llvm::Triple::arm:
     return new NativeRegisterContextLinux_arm(target_arch, native_thread,
@@ -125,12 +124,7 @@ NativeRegisterContextLinux::CreateHostNativeRegisterContextLinux(
     return new NativeRegisterContextLinux_arm64(target_arch, native_thread,
                                                 concrete_frame_idx);
   default:
-    if (log)
-      log->Printf("NativeRegisterContextLinux::%s() have no register context "
-                  "for architecture: %s\n",
-                  __FUNCTION__,
-                  target_arch.GetTriple().getArchName().str().c_str());
-    return nullptr;
+    llvm_unreachable("have no register context for architecture");
   }
 }
 
@@ -152,7 +146,7 @@ NativeRegisterContextLinux_arm64::NativeRegisterContextLinux_arm64(
     m_reg_info.gpr_flags = gpr_cpsr_arm64;
     break;
   default:
-    assert(false && "Unhandled target architecture.");
+    llvm_unreachable("Unhandled target architecture.");
     break;
   }
 
@@ -369,15 +363,11 @@ bool NativeRegisterContextLinux_arm64::IsFPR(unsigned reg) const {
 uint32_t
 NativeRegisterContextLinux_arm64::SetHardwareBreakpoint(lldb::addr_t addr,
                                                         size_t size) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_WATCHPOINTS));
-
-  if (log)
-    log->Printf("NativeRegisterContextLinux_arm64::%s()", __FUNCTION__);
-
-  Error error;
+  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_WATCHPOINTS));
+  LLDB_LOG(log, "addr: {0:x}, size: {1:x}", addr, size);
 
   // Read hardware breakpoint and watchpoint information.
-  error = ReadHardwareDebugInfo();
+  Error error = ReadHardwareDebugInfo();
 
   if (error.Fail())
     return LLDB_INVALID_INDEX32;
@@ -438,15 +428,11 @@ NativeRegisterContextLinux_arm64::SetHardwareBreakpoint(lldb::addr_t addr,
 
 bool NativeRegisterContextLinux_arm64::ClearHardwareBreakpoint(
     uint32_t hw_idx) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_WATCHPOINTS));
-
-  if (log)
-    log->Printf("NativeRegisterContextLinux_arm64::%s()", __FUNCTION__);
-
-  Error error;
+  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_WATCHPOINTS));
+  LLDB_LOG(log, "hw_idx: {0}", hw_idx);
 
   // Read hardware breakpoint and watchpoint information.
-  error = ReadHardwareDebugInfo();
+  Error error = ReadHardwareDebugInfo();
 
   if (error.Fail())
     return false;
@@ -486,33 +472,26 @@ bool NativeRegisterContextLinux_arm64::ClearHardwareBreakpoint(
 }
 
 uint32_t NativeRegisterContextLinux_arm64::NumSupportedHardwareWatchpoints() {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_WATCHPOINTS));
-
-  if (log)
-    log->Printf("NativeRegisterContextLinux_arm64::%s()", __FUNCTION__);
-
-  Error error;
+  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_WATCHPOINTS));
 
   // Read hardware breakpoint and watchpoint information.
-  error = ReadHardwareDebugInfo();
+  Error error = ReadHardwareDebugInfo();
 
   if (error.Fail())
     return 0;
 
+  LLDB_LOG(log, "{0}", m_max_hwp_supported);
   return m_max_hwp_supported;
 }
 
 uint32_t NativeRegisterContextLinux_arm64::SetHardwareWatchpoint(
     lldb::addr_t addr, size_t size, uint32_t watch_flags) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_WATCHPOINTS));
-
-  if (log)
-    log->Printf("NativeRegisterContextLinux_arm64::%s()", __FUNCTION__);
-
-  Error error;
+  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_WATCHPOINTS));
+  LLDB_LOG(log, "addr: {0:x}, size: {1:x} watch_flags: {2:x}", addr, size,
+           watch_flags);
 
   // Read hardware breakpoint and watchpoint information.
-  error = ReadHardwareDebugInfo();
+  Error error = ReadHardwareDebugInfo();
 
   if (error.Fail())
     return LLDB_INVALID_INDEX32;
@@ -595,15 +574,11 @@ uint32_t NativeRegisterContextLinux_arm64::SetHardwareWatchpoint(
 
 bool NativeRegisterContextLinux_arm64::ClearHardwareWatchpoint(
     uint32_t wp_index) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_WATCHPOINTS));
-
-  if (log)
-    log->Printf("NativeRegisterContextLinux_arm64::%s()", __FUNCTION__);
-
-  Error error;
+  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_WATCHPOINTS));
+  LLDB_LOG(log, "wp_index: {0}", wp_index);
 
   // Read hardware breakpoint and watchpoint information.
-  error = ReadHardwareDebugInfo();
+  Error error = ReadHardwareDebugInfo();
 
   if (error.Fail())
     return false;
@@ -633,15 +608,8 @@ bool NativeRegisterContextLinux_arm64::ClearHardwareWatchpoint(
 }
 
 Error NativeRegisterContextLinux_arm64::ClearAllHardwareWatchpoints() {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_WATCHPOINTS));
-
-  if (log)
-    log->Printf("NativeRegisterContextLinux_arm64::%s()", __FUNCTION__);
-
-  Error error;
-
   // Read hardware breakpoint and watchpoint information.
-  error = ReadHardwareDebugInfo();
+  Error error = ReadHardwareDebugInfo();
 
   if (error.Fail())
     return error;
@@ -676,10 +644,9 @@ Error NativeRegisterContextLinux_arm64::ClearAllHardwareWatchpoints() {
 
 uint32_t
 NativeRegisterContextLinux_arm64::GetWatchpointSize(uint32_t wp_index) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_WATCHPOINTS));
+  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_WATCHPOINTS));
+  LLDB_LOG(log, "wp_index: {0}", wp_index);
 
-  if (log)
-    log->Printf("NativeRegisterContextLinux_arm64::%s()", __FUNCTION__);
   switch ((m_hwp_regs[wp_index].control >> 5) & 0xff) {
   case 0x01:
     return 1;
@@ -694,10 +661,8 @@ NativeRegisterContextLinux_arm64::GetWatchpointSize(uint32_t wp_index) {
   }
 }
 bool NativeRegisterContextLinux_arm64::WatchpointIsEnabled(uint32_t wp_index) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_WATCHPOINTS));
-
-  if (log)
-    log->Printf("NativeRegisterContextLinux_arm64::%s()", __FUNCTION__);
+  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_WATCHPOINTS));
+  LLDB_LOG(log, "wp_index: {0}", wp_index);
 
   if ((m_hwp_regs[wp_index].control & 0x1) == 0x1)
     return true;
@@ -707,10 +672,8 @@ bool NativeRegisterContextLinux_arm64::WatchpointIsEnabled(uint32_t wp_index) {
 
 Error NativeRegisterContextLinux_arm64::GetWatchpointHitIndex(
     uint32_t &wp_index, lldb::addr_t trap_addr) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_WATCHPOINTS));
-
-  if (log)
-    log->Printf("NativeRegisterContextLinux_arm64::%s()", __FUNCTION__);
+  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_WATCHPOINTS));
+  LLDB_LOG(log, "wp_index: {0}, trap_addr: {1:x}", wp_index, trap_addr);
 
   uint32_t watch_size;
   lldb::addr_t watch_addr;
@@ -732,10 +695,8 @@ Error NativeRegisterContextLinux_arm64::GetWatchpointHitIndex(
 
 lldb::addr_t
 NativeRegisterContextLinux_arm64::GetWatchpointAddress(uint32_t wp_index) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_WATCHPOINTS));
-
-  if (log)
-    log->Printf("NativeRegisterContextLinux_arm64::%s()", __FUNCTION__);
+  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_WATCHPOINTS));
+  LLDB_LOG(log, "wp_index: {0}", wp_index);
 
   if (wp_index >= m_max_hwp_supported)
     return LLDB_INVALID_ADDRESS;
@@ -748,10 +709,8 @@ NativeRegisterContextLinux_arm64::GetWatchpointAddress(uint32_t wp_index) {
 
 lldb::addr_t
 NativeRegisterContextLinux_arm64::GetWatchpointHitAddress(uint32_t wp_index) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_WATCHPOINTS));
-
-  if (log)
-    log->Printf("NativeRegisterContextLinux_arm64::%s()", __FUNCTION__);
+  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_WATCHPOINTS));
+  LLDB_LOG(log, "wp_index: {0}", wp_index);
 
   if (wp_index >= m_max_hwp_supported)
     return LLDB_INVALID_ADDRESS;

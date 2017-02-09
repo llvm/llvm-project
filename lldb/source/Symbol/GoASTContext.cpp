@@ -25,6 +25,8 @@
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Target.h"
 
+#include "llvm/Support/Threading.h"
+
 #include "Plugins/ExpressionParser/Go/GoUserExpression.h"
 #include "Plugins/SymbolFile/DWARF/DWARFASTParserGo.h"
 
@@ -593,8 +595,8 @@ GoASTContext::GetBasicTypeEnumeration(lldb::opaque_compiler_type_t type) {
   if (name) {
     typedef UniqueCStringMap<lldb::BasicType> TypeNameToBasicTypeMap;
     static TypeNameToBasicTypeMap g_type_map;
-    static std::once_flag g_once_flag;
-    std::call_once(g_once_flag, []() {
+    static llvm::once_flag g_once_flag;
+    llvm::call_once(g_once_flag, []() {
       // "void"
       g_type_map.Append(ConstString("void").GetStringRef(), eBasicTypeVoid);
       // "int"

@@ -17,61 +17,19 @@
 # CHECK-NEXT:   ]
 # CHECK-NEXT:   Address: 0x[[ADDR1:.*]]
 # CHECK-NEXT:   Offset: 0x[[ADDR1]]
-# CHECK-NEXT:   Size: 4
-# CHECK-NEXT:   Link: 0
-# CHECK-NEXT:   Info: 0
-# CHECK-NEXT:   AddressAlignment: 1
-# CHECK-NEXT:   EntrySize: 1
-# CHECK-NEXT: }
-# CHECK-NEXT: Section {
-# CHECK-NEXT:   Index:
-# CHECK-NEXT:   Name: .foo
-# CHECK-NEXT:   Type: SHT_PROGBITS
-# CHECK-NEXT:   Flags [
-# CHECK-NEXT:     SHF_ALLOC
-# CHECK-NEXT:     SHF_MERGE
-# CHECK-NEXT:   ]
-# CHECK-NEXT:   Address: 0x
-# CHECK-NEXT:   Offset: 0x
-# CHECK-NEXT:   Size: 1
-# CHECK-NEXT:   Link: 0
-# CHECK-NEXT:   Info: 0
-# CHECK-NEXT:   AddressAlignment: 1
-# CHECK-NEXT:   EntrySize: 1
-# CHECK-NEXT: }
-# CHECK-NEXT: Section {
-# CHECK-NEXT:   Index:
-# CHECK-NEXT:   Name: .foo
-# CHECK-NEXT:   Type: SHT_PROGBITS
-# CHECK-NEXT:   Flags [
-# CHECK-NEXT:     SHF_ALLOC
-# CHECK-NEXT:     SHF_MERGE
-# CHECK-NEXT:   ]
-# CHECK-NEXT:   Address: 0x
-# CHECK-NEXT:   Offset: 0x
-# CHECK-NEXT:   Size: 2
+# CHECK-NEXT:   Size: 14
 # CHECK-NEXT:   Link: 0
 # CHECK-NEXT:   Info: 0
 # CHECK-NEXT:   AddressAlignment: 2
-# CHECK-NEXT:   EntrySize: 2
+# CHECK-NEXT:   EntrySize: 0
 # CHECK-NEXT: }
-# CHECK-NEXT: Section {
-# CHECK-NEXT:   Index:
-# CHECK-NEXT:   Name:
-# CHECK-NEXT:   Type:
-# CHECK-NEXT:   Flags [
-# CHECK-NEXT:     SHF_ALLOC
-# CHECK-NEXT:     SHF_EXECINSTR
-# CHECK-NEXT:   ]
-# CHECK-NEXT:   Address: 0x[[ADDR2:.*]]
-# CHECK-NEXT:   Offset: 0x[[ADDR2]]
-
 
 # CHECK:      Name: begin
 # CHECK-NEXT: Value: 0x[[ADDR1]]
 
 # CHECK:      Name: end
-# CHECK-NEXT: Value: 0x[[ADDR2]]
+# 0x19E = begin + sizeof(.foo) = 0x190 + 0xE
+# CHECK-NEXT: Value: 0x19E
 
 .section        .foo.1a,"aMS",@progbits,1
 .asciz "foo"

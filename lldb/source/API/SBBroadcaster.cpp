@@ -22,25 +22,15 @@ SBBroadcaster::SBBroadcaster() : m_opaque_sp(), m_opaque_ptr(NULL) {}
 SBBroadcaster::SBBroadcaster(const char *name)
     : m_opaque_sp(new Broadcaster(NULL, name)), m_opaque_ptr(NULL) {
   m_opaque_ptr = m_opaque_sp.get();
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API |
-                                                  LIBLLDB_LOG_VERBOSE));
-
-  if (log)
-    log->Printf(
-        "SBBroadcaster::SBBroadcaster (name=\"%s\") => SBBroadcaster(%p)", name,
-        static_cast<void *>(m_opaque_ptr));
+  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
+  LLDB_LOGV(log, "(name=\"{0}\") => SBBroadcaster({1})", name, m_opaque_ptr);
 }
 
 SBBroadcaster::SBBroadcaster(lldb_private::Broadcaster *broadcaster, bool owns)
     : m_opaque_sp(owns ? broadcaster : NULL), m_opaque_ptr(broadcaster) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API |
-                                                  LIBLLDB_LOG_VERBOSE));
-
-  if (log)
-    log->Printf("SBBroadcaster::SBBroadcaster (broadcaster=%p, bool owns=%i) "
-                "=> SBBroadcaster(%p)",
-                static_cast<void *>(broadcaster), owns,
-                static_cast<void *>(m_opaque_ptr));
+  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
+  LLDB_LOGV(log, "(broadcaster={0}, owns={1}) => SBBroadcaster({2})",
+            broadcaster, owns, m_opaque_ptr);
 }
 
 SBBroadcaster::SBBroadcaster(const SBBroadcaster &rhs)

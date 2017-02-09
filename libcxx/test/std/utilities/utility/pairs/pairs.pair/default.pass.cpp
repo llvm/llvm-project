@@ -49,7 +49,7 @@ int main()
         using P = std::pair<int, NoDefault>;
         static_assert(!std::is_default_constructible<P>::value, "");
         using P2 = std::pair<NoDefault, int>;
-        static_assert(!std::is_default_constructible<P>::value, "");
+        static_assert(!std::is_default_constructible<P2>::value, "");
     }
 #endif
 }

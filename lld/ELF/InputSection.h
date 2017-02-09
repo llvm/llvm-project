@@ -28,6 +28,7 @@ class SymbolBody;
 struct SectionPiece;
 
 template <class ELFT> class DefinedRegular;
+template <class ELFT> class MergeSyntheticSection;
 template <class ELFT> class ObjectFile;
 template <class ELFT> class OutputSection;
 class OutputSectionBase;
@@ -130,6 +131,8 @@ public:
   // Returns the size of this section (even if this is a common or BSS.)
   size_t getSize() const;
 
+  OutputSectionBase *getOutputSection() const;
+
   ObjectFile<ELFT> *getFile() const { return File; }
   llvm::object::ELFFile<ELFT> getObj() const { return File->getObj(); }
   uintX_t getOffset(const DefinedRegular<ELFT> &Sym) const;
@@ -205,6 +208,11 @@ public:
   // Returns the SectionPiece at a given input section offset.
   SectionPiece *getSectionPiece(uintX_t Offset);
   const SectionPiece *getSectionPiece(uintX_t Offset) const;
+
+  // MergeInputSections are aggregated to a synthetic input sections,
+  // and then added to an OutputSection. This pointer points to a
+  // synthetic MergeSyntheticSection which this section belongs to.
+  MergeSyntheticSection<ELFT> *MergeSec = nullptr;
 
 private:
   void splitStrings(ArrayRef<uint8_t> A, size_t Size);

@@ -40,6 +40,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/Error.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/Threading.h"
 
 #if defined(__APPLE__)
 #include <TargetConditionals.h> // for TARGET_OS_TV, TARGET_OS_WATCH
@@ -487,34 +488,6 @@ PlatformDarwin::GetSoftwareBreakpointTrapOpcode(Target &target,
       return trap_opcode_size;
   }
   return 0;
-}
-
-bool PlatformDarwin::GetProcessInfo(lldb::pid_t pid,
-                                    ProcessInstanceInfo &process_info) {
-  bool success = false;
-  if (IsHost()) {
-    success = Platform::GetProcessInfo(pid, process_info);
-  } else {
-    if (m_remote_platform_sp)
-      success = m_remote_platform_sp->GetProcessInfo(pid, process_info);
-  }
-  return success;
-}
-
-uint32_t
-PlatformDarwin::FindProcesses(const ProcessInstanceInfoMatch &match_info,
-                              ProcessInstanceInfoList &process_infos) {
-  uint32_t match_count = 0;
-  if (IsHost()) {
-    // Let the base class figure out the host details
-    match_count = Platform::FindProcesses(match_info, process_infos);
-  } else {
-    // If we are remote, we can only return results if we are connected
-    if (m_remote_platform_sp)
-      match_count =
-          m_remote_platform_sp->FindProcesses(match_info, process_infos);
-  }
-  return match_count;
 }
 
 bool PlatformDarwin::ModuleIsExcludedForUnconstrainedSearches(
@@ -1338,8 +1311,8 @@ static FileSpec CheckPathForXcode(const FileSpec &fspec) {
 
 static FileSpec GetXcodeContentsPath() {
   static FileSpec g_xcode_filespec;
-  static std::once_flag g_once_flag;
-  std::call_once(g_once_flag, []() {
+  static llvm::once_flag g_once_flag;
+  llvm::call_once(g_once_flag, []() {
 
     FileSpec fspec;
 
@@ -1721,8 +1694,8 @@ lldb_private::FileSpec PlatformDarwin::LocateExecutable(const char *basename) {
 
   // Find the global list of directories that we will search for
   // executables once so we don't keep doing the work over and over.
-  static std::once_flag g_once_flag;
-  std::call_once(g_once_flag, []() {
+  static llvm::once_flag g_once_flag;
+  llvm::call_once(g_once_flag, []() {
 
     // When locating executables, trust the DEVELOPER_DIR first if it is set
     FileSpec xcode_contents_dir = GetXcodeContentsPath();

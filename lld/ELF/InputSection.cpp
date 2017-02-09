@@ -76,12 +76,6 @@ InputSectionBase<ELFT>::InputSectionBase(elf::ObjectFile<ELFT> *File,
   if (V > UINT32_MAX)
     fatal(toString(File) + ": section sh_addralign is too large");
   Alignment = V;
-
-  // If it is not a mergeable section, overwrite the flag so that the flag
-  // is consistent with the class. This inconsistency could occur when
-  // string merging is disabled using -O0 flag.
-  if (!Config->Relocatable && !isa<MergeInputSection<ELFT>>(this))
-    this->Flags &= ~(SHF_MERGE | SHF_STRINGS);
 }
 
 template <class ELFT>
@@ -118,9 +112,19 @@ typename ELFT::uint InputSectionBase<ELFT>::getOffset(uintX_t Offset) const {
     // identify the start of the output .eh_frame.
     return Offset;
   case Merge:
-    return cast<MergeInputSection<ELFT>>(this)->getOffset(Offset);
+    const MergeInputSection<ELFT> *MS = cast<MergeInputSection<ELFT>>(this);
+    if (MS->MergeSec)
+      return MS->MergeSec->OutSecOff + MS->getOffset(Offset);
+    return MS->getOffset(Offset);
   }
   llvm_unreachable("invalid section kind");
+}
+
+template <class ELFT>
+OutputSectionBase *InputSectionBase<ELFT>::getOutputSection() const {
+  if (auto *MS = dyn_cast<MergeInputSection<ELFT>>(this))
+    return MS->MergeSec ? MS->MergeSec->OutSec : nullptr;
+  return OutSec;
 }
 
 // Uncompress section contents. Note that this function is called

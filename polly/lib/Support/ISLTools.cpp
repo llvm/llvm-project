@@ -260,3 +260,126 @@ void polly::simplify(IslPtr<isl_union_map> &UMap) {
   UMap = give(isl_union_map_detect_equalities(UMap.take()));
   UMap = give(isl_union_map_coalesce(UMap.take()));
 }
+
+IslPtr<isl_union_map>
+polly::computeReachingWrite(IslPtr<isl_union_map> Schedule,
+                            IslPtr<isl_union_map> Writes, bool Reverse,
+                            bool InclPrevDef, bool InclNextDef) {
+
+  // { Scatter[] }
+  auto ScatterSpace = getScatterSpace(Schedule);
+
+  // { ScatterRead[] -> ScatterWrite[] }
+  IslPtr<isl_map> Relation;
+  if (Reverse)
+    Relation = give(InclPrevDef ? isl_map_lex_lt(ScatterSpace.take())
+                                : isl_map_lex_le(ScatterSpace.take()));
+  else
+    Relation = give(InclNextDef ? isl_map_lex_gt(ScatterSpace.take())
+                                : isl_map_lex_ge(ScatterSpace.take()));
+
+  // { ScatterWrite[] -> [ScatterRead[] -> ScatterWrite[]] }
+  auto RelationMap = give(isl_map_reverse(isl_map_range_map(Relation.take())));
+
+  // { Element[] -> ScatterWrite[] }
+  auto WriteAction =
+      give(isl_union_map_apply_domain(Schedule.copy(), Writes.take()));
+
+  // { ScatterWrite[] -> Element[] }
+  auto WriteActionRev = give(isl_union_map_reverse(WriteAction.copy()));
+
+  // { Element[] -> [ScatterUse[] -> ScatterWrite[]] }
+  auto DefSchedRelation = give(isl_union_map_apply_domain(
+      isl_union_map_from_map(RelationMap.take()), WriteActionRev.take()));
+
+  // For each element, at every point in time, map to the times of previous
+  // definitions. { [Element[] -> ScatterRead[]] -> ScatterWrite[] }
+  auto ReachableWrites = give(isl_union_map_uncurry(DefSchedRelation.take()));
+  if (Reverse)
+    ReachableWrites = give(isl_union_map_lexmin(ReachableWrites.copy()));
+  else
+    ReachableWrites = give(isl_union_map_lexmax(ReachableWrites.copy()));
+
+  // { [Element[] -> ScatterWrite[]] -> ScatterWrite[] }
+  auto SelfUse = give(isl_union_map_range_map(WriteAction.take()));
+
+  if (InclPrevDef && InclNextDef) {
+    // Add the Def itself to the solution.
+    ReachableWrites =
+        give(isl_union_map_union(ReachableWrites.take(), SelfUse.take()));
+    ReachableWrites = give(isl_union_map_coalesce(ReachableWrites.take()));
+  } else if (!InclPrevDef && !InclNextDef) {
+    // Remove Def itself from the solution.
+    ReachableWrites =
+        give(isl_union_map_subtract(ReachableWrites.take(), SelfUse.take()));
+  }
+
+  // { [Element[] -> ScatterRead[]] -> Domain[] }
+  auto ReachableWriteDomain = give(isl_union_map_apply_range(
+      ReachableWrites.take(), isl_union_map_reverse(Schedule.take())));
+
+  return ReachableWriteDomain;
+}
+
+IslPtr<isl_union_map> polly::computeArrayUnused(IslPtr<isl_union_map> Schedule,
+                                                IslPtr<isl_union_map> Writes,
+                                                IslPtr<isl_union_map> Reads,
+                                                bool ReadEltInSameInst,
+                                                bool IncludeLastRead,
+                                                bool IncludeWrite) {
+  // { Element[] -> Scatter[] }
+  auto ReadActions =
+      give(isl_union_map_apply_domain(Schedule.copy(), Reads.take()));
+  auto WriteActions =
+      give(isl_union_map_apply_domain(Schedule.copy(), Writes.copy()));
+
+  // { [Element[] -> Scatter[] }
+  auto AfterReads = afterScatter(ReadActions, ReadEltInSameInst);
+  auto WritesBeforeAnyReads =
+      give(isl_union_map_subtract(WriteActions.take(), AfterReads.take()));
+  auto BeforeWritesBeforeAnyReads =
+      beforeScatter(WritesBeforeAnyReads, !IncludeWrite);
+
+  // { [Element[] -> DomainWrite[]] -> Scatter[] }
+  auto EltDomWrites = give(isl_union_map_apply_range(
+      isl_union_map_range_map(isl_union_map_reverse(Writes.copy())),
+      Schedule.copy()));
+
+  // { [Element[] -> Scatter[]] -> DomainWrite[] }
+  auto ReachingOverwrite = computeReachingWrite(
+      Schedule, Writes, true, ReadEltInSameInst, !ReadEltInSameInst);
+
+  // { [Element[] -> Scatter[]] -> DomainWrite[] }
+  auto ReadsOverwritten = give(isl_union_map_intersect_domain(
+      ReachingOverwrite.take(), isl_union_map_wrap(ReadActions.take())));
+
+  // { [Element[] -> DomainWrite[]] -> Scatter[] }
+  auto ReadsOverwrittenRotated = give(isl_union_map_reverse(
+      isl_union_map_curry(reverseDomain(ReadsOverwritten).take())));
+  auto LastOverwrittenRead =
+      give(isl_union_map_lexmax(ReadsOverwrittenRotated.take()));
+
+  // { [Element[] -> DomainWrite[]] -> Scatter[] }
+  auto BetweenLastReadOverwrite = betweenScatter(
+      LastOverwrittenRead, EltDomWrites, IncludeLastRead, IncludeWrite);
+
+  return give(isl_union_map_union(
+      BeforeWritesBeforeAnyReads.take(),
+      isl_union_map_domain_factor_domain(BetweenLastReadOverwrite.take())));
+}
+
+IslPtr<isl_union_set> polly::convertZoneToTimepoints(IslPtr<isl_union_set> Zone,
+                                                     bool InclStart,
+                                                     bool InclEnd) {
+  if (!InclStart && InclEnd)
+    return Zone;
+
+  auto ShiftedZone = shiftDim(Zone, -1, -1);
+  if (InclStart && !InclEnd)
+    return ShiftedZone;
+  else if (!InclStart && !InclEnd)
+    return give(isl_union_set_intersect(Zone.take(), ShiftedZone.take()));
+
+  assert(InclStart && InclEnd);
+  return give(isl_union_set_union(Zone.take(), ShiftedZone.take()));
+}

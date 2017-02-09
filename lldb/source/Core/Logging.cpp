@@ -44,11 +44,6 @@ uint32_t lldb_private::GetLogMask() {
   return 0;
 }
 
-bool lldb_private::IsLogVerbose() {
-  uint32_t mask = GetLogMask();
-  return (mask & LIBLLDB_LOG_VERBOSE);
-}
-
 Log *lldb_private::GetLogIfAllCategoriesSet(uint32_t mask) {
   Log *log(GetLog());
   if (log && mask) {
@@ -130,8 +125,6 @@ void lldb_private::DisableLog(const char **categories, Stream *feedback_strm) {
           flag_bits &= ~LIBLLDB_LOG_THREAD;
         else if (0 == ::strcasecmp(arg, "target"))
           flag_bits &= ~LIBLLDB_LOG_TARGET;
-        else if (0 == ::strcasecmp(arg, "verbose"))
-          flag_bits &= ~LIBLLDB_LOG_VERBOSE;
         else if (0 == ::strncasecmp(arg, "watch", 5))
           flag_bits &= ~LIBLLDB_LOG_WATCHPOINTS;
         else if (0 == ::strncasecmp(arg, "temp", 4))
@@ -257,8 +250,6 @@ Log *lldb_private::EnableLog(StreamSP &log_stream_sp, uint32_t log_options,
         flag_bits |= LIBLLDB_LOG_TYPES;
       else if (0 == ::strncasecmp(arg, "unwind", 6))
         flag_bits |= LIBLLDB_LOG_UNWIND;
-      else if (0 == ::strcasecmp(arg, "verbose"))
-        flag_bits |= LIBLLDB_LOG_VERBOSE;
       else if (0 == ::strncasecmp(arg, "watch", 5))
         flag_bits |= LIBLLDB_LOG_WATCHPOINTS;
       else if (0 == ::strcasecmp(arg, "jit"))

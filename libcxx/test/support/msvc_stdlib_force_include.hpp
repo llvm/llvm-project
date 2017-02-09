@@ -13,6 +13,9 @@
 // This header is force-included when running the libc++ tests against the
 // MSVC standard library.
 
+// Silence warnings about CRT machinery.
+#define _CRT_SECURE_NO_WARNINGS
+
 // Avoid assertion dialogs.
 #define _CRT_SECURE_INVALID_PARAMETER(EXPR) ::abort()
 
@@ -20,7 +23,7 @@
 #include <stdlib.h>
 
 #if defined(_LIBCPP_VERSION)
-#error This header may not be used when targeting libc++
+    #error This header may not be used when targeting libc++
 #endif
 
 struct AssertionDialogAvoider {
@@ -35,27 +38,24 @@ struct AssertionDialogAvoider {
 
 const AssertionDialogAvoider assertion_dialog_avoider{};
 
-
 // MSVC frontend only configurations
 #if !defined(__clang__)
+    #define TEST_STD_VER 17
 
-#define TEST_STD_VER 17
+    // Simulate feature-test macros.
+    #define __has_feature(X) _MSVC_HAS_FEATURE_ ## X
+    #define _MSVC_HAS_FEATURE_cxx_exceptions    1
+    #define _MSVC_HAS_FEATURE_cxx_rtti          1
+    #define _MSVC_HAS_FEATURE_address_sanitizer 0
+    #define _MSVC_HAS_FEATURE_memory_sanitizer  0
+    #define _MSVC_HAS_FEATURE_thread_sanitizer  0
 
-// Simulate feature-test macros.
-#define __has_feature(X) _MSVC_HAS_FEATURE_ ## X
-#define _MSVC_HAS_FEATURE_cxx_exceptions    1
-#define _MSVC_HAS_FEATURE_cxx_rtti          1
-#define _MSVC_HAS_FEATURE_address_sanitizer 0
-#define _MSVC_HAS_FEATURE_memory_sanitizer  0
-#define _MSVC_HAS_FEATURE_thread_sanitizer  0
-
-// Silence compiler warnings.
-#pragma warning(disable: 4180) // qualifier applied to function type has no meaning; ignored
-#pragma warning(disable: 4521) // multiple copy constructors specified
-#pragma warning(disable: 4702) // unreachable code
-#pragma warning(disable: 6294) // Ill-defined for-loop:  initial condition does not satisfy test.  Loop body not executed.
-#pragma warning(disable: 28251) // Inconsistent annotation for 'new': this instance has no annotations.
-
+    // Silence compiler warnings.
+    #pragma warning(disable: 4180) // qualifier applied to function type has no meaning; ignored
+    #pragma warning(disable: 4521) // multiple copy constructors specified
+    #pragma warning(disable: 4702) // unreachable code
+    #pragma warning(disable: 6294) // Ill-defined for-loop:  initial condition does not satisfy test.  Loop body not executed.
+    #pragma warning(disable: 28251) // Inconsistent annotation for 'new': this instance has no annotations.
 #endif // !defined(__clang__)
 
 // MSVC doesn't have __int128_t.

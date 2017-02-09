@@ -199,7 +199,7 @@ template <class Value, class Hash, class Pred, class Alloc>
 #include <ext/__hash>
 
 #if __DEPRECATED
-#if defined(_MSC_VER) && ! defined(__clang__)
+#if defined(_LIBCPP_MSVC)
     _LIBCPP_WARNING("Use of the header <ext/hash_set> is deprecated.  Migrate to <unordered_set>")
 #else
 #   warning Use of the header <ext/hash_set> is deprecated.  Migrate to <unordered_set>
