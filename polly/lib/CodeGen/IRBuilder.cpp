@@ -58,22 +58,16 @@ void ScopAnnotator::buildAliasScopes(Scop &S) {
   AliasScopeMap.clear();
   OtherAliasScopeListMap.clear();
 
-  SetVector<Value *> BasePtrs;
-  for (ScopStmt &Stmt : S)
-    for (MemoryAccess *MA : Stmt)
-      if (!Stmt.isCopyStmt())
-        BasePtrs.insert(MA->getBaseAddr());
-
   std::string AliasScopeStr = "polly.alias.scope.";
-  for (Value *BasePtr : BasePtrs)
-    AliasScopeMap[BasePtr] = getID(
-        Ctx, AliasScopeDomain,
-        MDString::get(Ctx, (AliasScopeStr + BasePtr->getName()).str().c_str()));
+  for (const ScopArrayInfo *Array : S.arrays())
+    AliasScopeMap[Array->getBasePtr()] =
+        getID(Ctx, AliasScopeDomain,
+              MDString::get(Ctx, (AliasScopeStr + Array->getName()).c_str()));
 
-  for (Value *BasePtr : BasePtrs) {
+  for (const ScopArrayInfo *Array : S.arrays()) {
     MDNode *AliasScopeList = MDNode::get(Ctx, {});
     for (const auto &AliasScopePair : AliasScopeMap) {
-      if (BasePtr == AliasScopePair.first)
+      if (Array->getBasePtr() == AliasScopePair.first)
         continue;
 
       Metadata *Args = {AliasScopePair.second};
@@ -81,7 +75,7 @@ void ScopAnnotator::buildAliasScopes(Scop &S) {
           MDNode::concatenate(AliasScopeList, MDNode::get(Ctx, Args));
     }
 
-    OtherAliasScopeListMap[BasePtr] = AliasScopeList;
+    OtherAliasScopeListMap[Array->getBasePtr()] = AliasScopeList;
   }
 }
 

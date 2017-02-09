@@ -124,7 +124,7 @@ static const std::string getBrokenReductionsStr(__isl_keep isl_ast_node *Node) {
   for (MemoryAccess *MA : *BrokenReductions)
     if (MA->isWrite())
       Clauses[MA->getReductionType()] +=
-          ", " + MA->getBaseAddr()->getName().str();
+          ", " + MA->getScopArrayInfo()->getName();
 
   // Now print the reductions sorted by type. Each type will cause a clause
   // like:  reduction (+ : sum0, sum1, sum2)

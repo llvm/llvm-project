@@ -252,10 +252,11 @@ size_t MemoryCache::Read(addr_t addr, void *dst, size_t dst_len, Error &error) {
 
 AllocatedBlock::AllocatedBlock(lldb::addr_t addr, uint32_t byte_size,
                                uint32_t permissions, uint32_t chunk_size)
-    : m_addr(addr), m_byte_size(byte_size), m_permissions(permissions),
-      m_chunk_size(chunk_size), m_offset_to_chunk_size()
-//    m_allocated (byte_size / chunk_size)
+    : m_range(addr, byte_size), m_permissions(permissions),
+      m_chunk_size(chunk_size)
 {
+  // The entire address range is free to start with.
+  m_free_blocks.Append(m_range);
   assert(byte_size > chunk_size);
 }
 
@@ -264,109 +265,43 @@ AllocatedBlock::~AllocatedBlock() {}
 lldb::addr_t AllocatedBlock::ReserveBlock(uint32_t size) {
   addr_t addr = LLDB_INVALID_ADDRESS;
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
-  if (size <= m_byte_size) {
-    const uint32_t needed_chunks = CalculateChunksNeededForSize(size);
-
-    if (m_offset_to_chunk_size.empty()) {
-      m_offset_to_chunk_size[0] = needed_chunks;
-      LLDB_LOGV(log,
-                "[1] ({0}) (size = {1} ({1:x})) => offset = {2:x}, {3} "
-                "{4} bit chunks",
-                this, size, 0, needed_chunks, m_chunk_size);
-      addr = m_addr;
-    } else {
-      uint32_t last_offset = 0;
-      OffsetToChunkSize::const_iterator pos = m_offset_to_chunk_size.begin();
-      OffsetToChunkSize::const_iterator end = m_offset_to_chunk_size.end();
-      while (pos != end) {
-        if (pos->first > last_offset) {
-          const uint32_t bytes_available = pos->first - last_offset;
-          const uint32_t num_chunks =
-              CalculateChunksNeededForSize(bytes_available);
-          if (num_chunks >= needed_chunks) {
-            m_offset_to_chunk_size[last_offset] = needed_chunks;
-            LLDB_LOGV(log,
-                      "[2] ({0}) (size = {1} ({1:x})) => offset = {2:x}, "
-                      "{3} {4} bit chunks- num_chunks {5}",
-                      this, size, last_offset, needed_chunks, m_chunk_size,
-                      m_offset_to_chunk_size.size());
-            addr = m_addr + last_offset;
-            break;
-          }
-        }
-
-        last_offset = pos->first + pos->second * m_chunk_size;
-
-        if (++pos == end) {
-          // Last entry...
-          const uint32_t chunks_left =
-              CalculateChunksNeededForSize(m_byte_size - last_offset);
-          if (chunks_left >= needed_chunks) {
-            m_offset_to_chunk_size[last_offset] = needed_chunks;
-            LLDB_LOGV(log,
-                      "[3] ({0}) (size = {1} ({1:x})) => offset = {2:x}, "
-                      "{3} {4} bit chunks- num_chunks {5}",
-                      this, size, last_offset, needed_chunks, m_chunk_size,
-                      m_offset_to_chunk_size.size());
-            addr = m_addr + last_offset;
-            break;
-          }
-        }
+  
+  const size_t free_count = m_free_blocks.GetSize();
+  for (size_t i=0; i<free_count; ++i)
+  {
+    auto &free_block = m_free_blocks.GetEntryRef(i);
+    const lldb::addr_t range_size = free_block.GetByteSize();
+    if (range_size >= size)
+    {
+      // We found a free block that is big enough for our data. Figure out how
+      // many chunks we will need and calculate the resulting block size we will
+      // reserve.
+      addr = free_block.GetRangeBase();
+      size_t num_chunks = CalculateChunksNeededForSize(size);
+      lldb::addr_t block_size = num_chunks * m_chunk_size;
+      lldb::addr_t bytes_left = range_size - block_size;
+      if (bytes_left == 0)
+      {
+        // The newly allocated block will take all of the bytes in this
+        // available block, so we can just add it to the allocated ranges and
+        // remove the range from the free ranges.
+        m_reserved_blocks.Insert(free_block, false);
+        m_free_blocks.RemoveEntryAtIndex(i);
+      }
+      else
+      {
+        // Make the new allocated range and add it to the allocated ranges.
+        Range<lldb::addr_t, uint32_t> reserved_block(free_block);
+        reserved_block.SetByteSize(block_size);
+        // Insert the reserved range and don't combine it with other blocks
+        // in the reserved blocks list.
+        m_reserved_blocks.Insert(reserved_block, false);
+        // Adjust the free range in place since we won't change the sorted
+        // ordering of the m_free_blocks list.
+        free_block.SetRangeBase(reserved_block.GetRangeEnd());
+        free_block.SetByteSize(bytes_left);
       }
     }
-    //        const uint32_t total_chunks = m_allocated.size ();
-    //        uint32_t unallocated_idx = 0;
-    //        uint32_t allocated_idx = m_allocated.find_first();
-    //        uint32_t first_chunk_idx = UINT32_MAX;
-    //        uint32_t num_chunks;
-    //        while (1)
-    //        {
-    //            if (allocated_idx == UINT32_MAX)
-    //            {
-    //                // No more bits are set starting from unallocated_idx, so
-    //                we
-    //                // either have enough chunks for the request, or we don't.
-    //                // Either way we break out of the while loop...
-    //                num_chunks = total_chunks - unallocated_idx;
-    //                if (needed_chunks <= num_chunks)
-    //                    first_chunk_idx = unallocated_idx;
-    //                break;
-    //            }
-    //            else if (allocated_idx > unallocated_idx)
-    //            {
-    //                // We have some allocated chunks, check if there are
-    //                enough
-    //                // free chunks to satisfy the request?
-    //                num_chunks = allocated_idx - unallocated_idx;
-    //                if (needed_chunks <= num_chunks)
-    //                {
-    //                    // Yep, we have enough!
-    //                    first_chunk_idx = unallocated_idx;
-    //                    break;
-    //                }
-    //            }
-    //
-    //            while (unallocated_idx < total_chunks)
-    //            {
-    //                if (m_allocated[unallocated_idx])
-    //                    ++unallocated_idx;
-    //                else
-    //                    break;
-    //            }
-    //
-    //            if (unallocated_idx >= total_chunks)
-    //                break;
-    //
-    //            allocated_idx = m_allocated.find_next(unallocated_idx);
-    //        }
-    //
-    //        if (first_chunk_idx != UINT32_MAX)
-    //        {
-    //            const uint32_t end_bit_idx = unallocated_idx + needed_chunks;
-    //            for (uint32_t idx = first_chunk_idx; idx < end_bit_idx; ++idx)
-    //                m_allocated.set(idx);
-    //            return m_addr + m_chunk_size * first_chunk_idx;
-    //        }
   }
 
   LLDB_LOGV(log, "({0}) (size = {1} ({1:x})) => {2:x}", this, size, addr);
@@ -374,16 +309,16 @@ lldb::addr_t AllocatedBlock::ReserveBlock(uint32_t size) {
 }
 
 bool AllocatedBlock::FreeBlock(addr_t addr) {
-  uint32_t offset = addr - m_addr;
-  OffsetToChunkSize::iterator pos = m_offset_to_chunk_size.find(offset);
   bool success = false;
-  if (pos != m_offset_to_chunk_size.end()) {
-    m_offset_to_chunk_size.erase(pos);
+  auto entry_idx = m_reserved_blocks.FindEntryIndexThatContains(addr);
+  if (entry_idx != UINT32_MAX)
+  {
+    m_free_blocks.Insert(m_reserved_blocks.GetEntryRef(entry_idx), true);
+    m_reserved_blocks.RemoveEntryAtIndex(entry_idx);
     success = true;
   }
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
-  LLDB_LOGV(log, "({0}) (addr = {1:x}) => {2}, num_chunks: {3}", this, addr,
-            success, m_offset_to_chunk_size.size());
+  LLDB_LOGV(log, "({0}) (addr = {1:x}) => {2}", this, addr, success);
   return success;
 }
 

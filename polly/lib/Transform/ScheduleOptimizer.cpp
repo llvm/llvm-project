@@ -238,14 +238,22 @@ static cl::opt<bool> OptimizedScops(
 /// Create an isl_union_set, which describes the isolate option based on
 /// IsoalteDomain.
 ///
-/// @param IsolateDomain An isl_set whose last dimension is the only one that
-///                      should belong to the current band node.
+/// @param IsolateDomain An isl_set whose @p OutDimsNum last dimensions should
+///                      belong to the current band node.
+/// @param OutDimsNum    A number of dimensions that should belong to
+///                      the current band node.
 static __isl_give isl_union_set *
-getIsolateOptions(__isl_take isl_set *IsolateDomain) {
+getIsolateOptions(__isl_take isl_set *IsolateDomain, unsigned OutDimsNum) {
   auto Dims = isl_set_dim(IsolateDomain, isl_dim_set);
+  assert(OutDimsNum <= Dims &&
+         "The isl_set IsolateDomain is used to describe the range of schedule "
+         "dimensions values, which should be isolated. Consequently, the "
+         "number of its dimensions should be greater than or equal to the "
+         "number of the schedule dimensions.");
   auto *IsolateRelation = isl_map_from_domain(IsolateDomain);
-  IsolateRelation = isl_map_move_dims(IsolateRelation, isl_dim_out, 0,
-                                      isl_dim_in, Dims - 1, 1);
+  IsolateRelation =
+      isl_map_move_dims(IsolateRelation, isl_dim_out, 0, isl_dim_in,
+                        Dims - OutDimsNum, OutDimsNum);
   auto *IsolateOption = isl_map_wrap(IsolateRelation);
   auto *Id = isl_id_alloc(isl_set_get_ctx(IsolateOption), "isolate", nullptr);
   return isl_union_set_from_set(isl_set_set_tuple_id(IsolateOption, Id));
@@ -262,6 +270,22 @@ static __isl_give isl_union_set *getAtomicOptions(__isl_take isl_ctx *Ctx) {
   auto *AtomicOption = isl_set_universe(Space);
   auto *Id = isl_id_alloc(Ctx, "atomic", nullptr);
   return isl_union_set_from_set(isl_set_set_tuple_id(AtomicOption, Id));
+}
+
+/// Create an isl_union_set, which describes the option of the form
+/// [isolate[] -> unroll[x]].
+///
+/// @param Ctx An isl_ctx, which is used to create the isl_union_set.
+static __isl_give isl_union_set *getUnrollIsolatedSetOptions(isl_ctx *Ctx) {
+  auto *Space = isl_space_alloc(Ctx, 0, 0, 1);
+  auto *UnrollIsolatedSetOption = isl_map_universe(Space);
+  auto *DimInId = isl_id_alloc(Ctx, "isolate", nullptr);
+  auto *DimOutId = isl_id_alloc(Ctx, "unroll", nullptr);
+  UnrollIsolatedSetOption =
+      isl_map_set_tuple_id(UnrollIsolatedSetOption, isl_dim_in, DimInId);
+  UnrollIsolatedSetOption =
+      isl_map_set_tuple_id(UnrollIsolatedSetOption, isl_dim_out, DimOutId);
+  return isl_union_set_from_set(isl_map_wrap(UnrollIsolatedSetOption));
 }
 
 /// Make the last dimension of Set to take values from 0 to VectorWidth - 1.
@@ -324,7 +348,7 @@ __isl_give isl_schedule_node *ScheduleTreeOptimizer::isolateFullPartialTiles(
   auto *ScheduleRange = isl_map_range(ScheduleRelation);
   auto *IsolateDomain = getPartialTilePrefixes(ScheduleRange, VectorWidth);
   auto *AtomicOption = getAtomicOptions(isl_set_get_ctx(IsolateDomain));
-  auto *IsolateOption = getIsolateOptions(IsolateDomain);
+  auto *IsolateOption = getIsolateOptions(IsolateDomain, 1);
   Node = isl_schedule_node_parent(Node);
   Node = isl_schedule_node_parent(Node);
   auto *Options = isl_union_set_union(IsolateOption, AtomicOption);
@@ -1119,6 +1143,47 @@ getInductionVariablesSubstitution(__isl_take isl_schedule_node *Node,
   return MapOldIndVar;
 }
 
+/// Isolate a set of partial tile prefixes and unroll the isolated part.
+///
+/// The set should ensure that it contains only partial tile prefixes that have
+/// exactly Mr x Nr iterations of the two innermost loops produced by
+/// the optimization of the matrix multiplication. Mr and Nr are parameters of
+/// the micro-kernel.
+///
+/// In case of parametric bounds, this helps to auto-vectorize the unrolled
+/// innermost loops, using the SLP vectorizer.
+///
+/// @param Node              The schedule node to be modified.
+/// @param MicroKernelParams Parameters of the micro-kernel
+///                          to be taken into account.
+/// @return The modified isl_schedule_node.
+static __isl_give isl_schedule_node *
+isolateAndUnrollMatMulInnerLoops(__isl_take isl_schedule_node *Node,
+                                 struct MicroKernelParamsTy MicroKernelParams) {
+  auto *Child = isl_schedule_node_get_child(Node, 0);
+  auto *UnMapOldIndVar = isl_schedule_node_get_prefix_schedule_relation(Child);
+  isl_schedule_node_free(Child);
+  auto *Prefix = isl_map_range(isl_map_from_union_map(UnMapOldIndVar));
+  auto Dims = isl_set_dim(Prefix, isl_dim_set);
+  Prefix = isl_set_project_out(Prefix, isl_dim_set, Dims - 1, 1);
+  Prefix = getPartialTilePrefixes(Prefix, MicroKernelParams.Nr);
+  Prefix = getPartialTilePrefixes(Prefix, MicroKernelParams.Mr);
+  auto *IsolateOption = getIsolateOptions(
+      isl_set_add_dims(isl_set_copy(Prefix), isl_dim_set, 3), 3);
+  auto *Ctx = isl_schedule_node_get_ctx(Node);
+  auto *AtomicOption = getAtomicOptions(Ctx);
+  auto *Options =
+      isl_union_set_union(IsolateOption, isl_union_set_copy(AtomicOption));
+  Options = isl_union_set_union(Options, getUnrollIsolatedSetOptions(Ctx));
+  Node = isl_schedule_node_band_set_ast_build_options(Node, Options);
+  Node = isl_schedule_node_parent(isl_schedule_node_parent(Node));
+  IsolateOption = getIsolateOptions(Prefix, 3);
+  Options = isl_union_set_union(IsolateOption, AtomicOption);
+  Node = isl_schedule_node_band_set_ast_build_options(Node, Options);
+  Node = isl_schedule_node_child(isl_schedule_node_child(Node, 0), 0);
+  return Node;
+}
+
 __isl_give isl_schedule_node *ScheduleTreeOptimizer::optimizeMatMulPattern(
     __isl_take isl_schedule_node *Node, const llvm::TargetTransformInfo *TTI,
     MatMulInfoTy &MMI) {
@@ -1144,6 +1209,7 @@ __isl_give isl_schedule_node *ScheduleTreeOptimizer::optimizeMatMulPattern(
       Node, MicroKernelParams, MacroKernelParams);
   if (!MapOldIndVar)
     return Node;
+  Node = isolateAndUnrollMatMulInnerLoops(Node, MicroKernelParams);
   return optimizeDataLayoutMatrMulPattern(Node, MapOldIndVar, MicroKernelParams,
                                           MacroKernelParams, MMI);
 }
