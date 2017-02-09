@@ -106,9 +106,8 @@ protected:
   uint32_t CalculateChunksNeededForSize(uint32_t size) const {
     return (size + m_chunk_size - 1) / m_chunk_size;
   }
-  typedef Range<lldb::addr_t, uint32_t> Range;
   // Base address of this block of memory 4GB of chunk should be enough.
-  Range m_range;
+  Range<lldb::addr_t, uint32_t> m_range;
   // Permissions for this memory (logical OR of lldb::Permissions bits)
   const uint32_t m_permissions;
   // The size of chunks that the memory at m_addr is divied up into.

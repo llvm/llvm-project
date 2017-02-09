@@ -269,7 +269,7 @@ lldb::addr_t AllocatedBlock::ReserveBlock(uint32_t size) {
   const size_t free_count = m_free_blocks.GetSize();
   for (size_t i=0; i<free_count; ++i)
   {
-    Range &free_block = m_free_blocks.GetEntryRef(i);
+    auto &free_block = m_free_blocks.GetEntryRef(i);
     const lldb::addr_t range_size = free_block.GetByteSize();
     if (range_size >= size)
     {
@@ -291,7 +291,7 @@ lldb::addr_t AllocatedBlock::ReserveBlock(uint32_t size) {
       else
       {
         // Make the new allocated range and add it to the allocated ranges.
-        Range reserved_block(free_block);
+        Range<lldb::addr_t, uint32_t> reserved_block(free_block);
         reserved_block.SetByteSize(block_size);
         // Insert the reserved range and don't combine it with other blocks
         // in the reserved blocks list.
