@@ -24,6 +24,7 @@
 namespace clang { 
 
 class GlobalModuleIndex;
+class MemoryBufferCache;
 class ModuleMap;
 class PCHContainerReader;
 
@@ -50,6 +51,9 @@ class ModuleManager {
   /// \brief FileManager that handles translating between filenames and
   /// FileEntry *.
   FileManager &FileMgr;
+
+  /// Cache of PCM files.
+  IntrusiveRefCntPtr<MemoryBufferCache> PCMCache;
 
   /// \brief Knows how to unwrap module containers.
   const PCHContainerReader &PCHContainerRdr;
@@ -123,7 +127,7 @@ public:
       ModuleReverseIterator;
   typedef std::pair<uint32_t, StringRef> ModuleOffset;
 
-  explicit ModuleManager(FileManager &FileMgr,
+  explicit ModuleManager(FileManager &FileMgr, MemoryBufferCache &PCMCache,
                          const PCHContainerReader &PCHContainerRdr);
   ~ModuleManager();
 
@@ -290,6 +294,8 @@ public:
 
   /// \brief View the graphviz representation of the module graph.
   void viewGraph();
+
+  MemoryBufferCache &getPCMCache() const { return *PCMCache; }
 };
 
 } } // end namespace clang::serialization
