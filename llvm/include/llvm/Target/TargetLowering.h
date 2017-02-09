@@ -987,6 +987,11 @@ public:
     return GatherAllAliasesMaxDepth;
   }
 
+  /// Returns the size of the platform's va_list object.
+  virtual unsigned getVaListSizeInBits(const DataLayout &DL) const {
+    return getPointerTy(DL).getSizeInBits();
+  }
+
   /// \brief Get maximum # of store operations permitted for llvm.memset
   ///
   /// This function returns the maximum number of store operations permitted

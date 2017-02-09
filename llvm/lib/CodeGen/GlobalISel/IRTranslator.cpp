@@ -583,6 +583,17 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
     // No target I know of cares about va_end. Certainly no in-tree target
     // does. Simplest intrinsic ever!
     return true;
+  case Intrinsic::vastart: {
+    auto &TLI = *MF->getSubtarget().getTargetLowering();
+    Value *Ptr = CI.getArgOperand(0);
+    unsigned ListSize = TLI.getVaListSizeInBits(*DL) / 8;
+
+    MIRBuilder.buildInstr(TargetOpcode::G_VASTART)
+        .addUse(getOrCreateVReg(*Ptr))
+        .addMemOperand(MF->getMachineMemOperand(
+            MachinePointerInfo(Ptr), MachineMemOperand::MOStore, ListSize, 0));
+    return true;
+  }
   case Intrinsic::dbg_value: {
     // This form of DBG_VALUE is target-independent.
     const DbgValueInst &DI = cast<DbgValueInst>(CI);

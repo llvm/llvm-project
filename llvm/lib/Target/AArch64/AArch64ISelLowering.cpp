@@ -10702,3 +10702,11 @@ bool AArch64TargetLowering::isIntDivCheap(EVT VT, AttributeSet Attr) const {
       Attr.hasAttribute(AttributeSet::FunctionIndex, Attribute::MinSize);
   return OptSize && !VT.isVector();
 }
+
+unsigned
+AArch64TargetLowering::getVaListSizeInBits(const DataLayout &DL) const {
+  if (Subtarget->isTargetDarwin())
+    return getPointerTy(DL).getSizeInBits();
+
+  return 3 * getPointerTy(DL).getSizeInBits() + 2 * 32;
+}

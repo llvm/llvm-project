@@ -385,6 +385,18 @@ namespace MemberTemplatesWithDeduction {
 }
 }
 
+namespace NNS {
+  int n;
+  decltype(auto) i();
+  decltype(n) j();
+  struct X {
+    // We resolve a wording bug here: 'decltype(auto)::' should not be parsed
+    // as a nested-name-specifier.
+    friend decltype(auto) ::NNS::i();
+    friend decltype(n) ::NNS::j(); // expected-error {{not a class}}
+  };
+}
+
 namespace CurrentInstantiation {
   // PR16875
   template<typename T> struct S {

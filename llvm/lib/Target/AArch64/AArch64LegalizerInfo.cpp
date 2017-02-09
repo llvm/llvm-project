@@ -225,5 +225,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo() {
     setAction({G_BITCAST, 1, LLT::vector(32/EltSize, EltSize)}, Legal);
   }
 
+  setAction({G_VASTART, p0}, Legal);
+
   computeTables();
 }

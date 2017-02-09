@@ -489,7 +489,7 @@ void DIEInteger::print(raw_ostream &O) const {
 /// EmitValue - Emit expression value.
 ///
 void DIEExpr::EmitValue(const AsmPrinter *AP, dwarf::Form Form) const {
-  AP->EmitDebugValue(Expr, SizeOf(AP, Form));
+  AP->EmitDebugThreadLocal(Expr, SizeOf(AP, Form));
 }
 
 /// SizeOf - Determine size of expression value in bytes.

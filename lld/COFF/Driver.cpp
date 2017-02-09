@@ -622,6 +622,10 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
     }
   }
 
+  // Handle /lldsavetemps
+  if (Args.hasArg(OPT_lldsavetemps))
+    Config->SaveTemps = true;
+
   // Handle /failifmismatch
   for (auto *Arg : Args.filtered(OPT_failifmismatch))
     checkFailIfMismatch(Arg->getValue());

@@ -3,13 +3,18 @@ set(LLVM_BINARY_DIR "${LLVM_BINARY_DIR}")
 set(LLVM_BUILD_MODE "%(build_mode)s")
 set(LLVM_TOOLS_DIR "${LLVM_TOOLS_BINARY_DIR}/%(build_config)s")
 set(LLVM_LIBS_DIR "${LLVM_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX}/%(build_config)s")
-set(CLANG_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/..")
-set(CLANG_BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}/..")
-if(BUILD_SHARED_LIBS)
-  set(ENABLE_SHARED 1)
-else()
-  set(ENABLE_SHARED 0)
-endif(BUILD_SHARED_LIBS)
+
+if(LLD_BUILT_STANDALONE)
+  # Set HAVE_LIBZ according to recorded LLVM_ENABLE_ZLIB value. This
+  # value is forced to 0 if zlib was not found, so it is fine to use it
+  # instead of HAVE_LIBZ (not recorded).
+  if(LLVM_ENABLE_ZLIB)
+    set(HAVE_LIBZ 1)
+  endif()
+endif()
+
+llvm_canonicalize_cmake_booleans(
+  HAVE_LIBZ)
 
 configure_lit_site_cfg(
   ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.in

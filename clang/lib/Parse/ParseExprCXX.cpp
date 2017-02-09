@@ -216,7 +216,10 @@ bool Parser::ParseOptionalCXXScopeSpecifier(CXXScopeSpec &SS,
     SourceLocation EndLoc  = ParseDecltypeSpecifier(DS);
 
     SourceLocation CCLoc;
-    if (!TryConsumeToken(tok::coloncolon, CCLoc)) {
+    // Work around a standard defect: 'decltype(auto)::' is not a
+    // nested-name-specifier.
+    if (DS.getTypeSpecType() == DeclSpec::TST_decltype_auto ||
+        !TryConsumeToken(tok::coloncolon, CCLoc)) {
       AnnotateExistingDecltypeSpecifier(DS, DeclLoc, EndLoc);
       return false;
     }

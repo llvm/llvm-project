@@ -158,6 +158,8 @@ cl::opt<bool>
 llvm::NoShowRawInsn("no-show-raw-insn", cl::desc("When disassembling "
                                                  "instructions, do not print "
                                                  "the instruction bytes."));
+cl::opt<bool>
+llvm::NoLeadingAddr("no-leading-addr", cl::desc("Print no leading address"));
 
 cl::opt<bool>
 llvm::UnwindInfo("unwind-info", cl::desc("Display unwind information"));
@@ -510,7 +512,8 @@ public:
                          MCSubtargetInfo const &STI, SourcePrinter *SP) {
     if (SP && (PrintSource || PrintLines))
       SP->printSourceLine(OS, Address);
-    OS << format("%8" PRIx64 ":", Address);
+    if (!NoLeadingAddr)
+      OS << format("%8" PRIx64 ":", Address);
     if (!NoShowRawInsn) {
       OS << "\t";
       dumpBytes(Bytes, OS);
@@ -528,7 +531,8 @@ public:
                  raw_ostream &OS) {
     uint32_t opcode =
       (Bytes[3] << 24) | (Bytes[2] << 16) | (Bytes[1] << 8) | Bytes[0];
-    OS << format("%8" PRIx64 ":", Address);
+    if (!NoLeadingAddr)
+      OS << format("%8" PRIx64 ":", Address);
     if (!NoShowRawInsn) {
       OS << "\t";
       dumpBytes(Bytes.slice(0, 4), OS);
@@ -620,7 +624,8 @@ public:
                  MCSubtargetInfo const &STI, SourcePrinter *SP) override {
     if (SP && (PrintSource || PrintLines))
       SP->printSourceLine(OS, Address);
-    OS << format("%8" PRId64 ":", Address / 8);
+    if (!NoLeadingAddr)
+      OS << format("%8" PRId64 ":", Address / 8);
     if (!NoShowRawInsn) {
       OS << "\t";
       dumpBytes(Bytes, OS);
