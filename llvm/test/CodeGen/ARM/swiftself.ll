@@ -63,3 +63,20 @@ define i8* @swiftself_notail(i8* swiftself %addr0, i8* %addr1) nounwind "no-fram
   %res = tail call i8* @swiftself_param(i8* swiftself %addr1)
   ret i8* %res
 }
+
+; We cannot pretend that 'r0' is alive across the thisreturn_attribute call as
+; we normally would. We marked the first parameter with swiftself which means it
+; will no longer be passed in r0.
+declare swiftcc i8* @thisreturn_attribute(i8* returned swiftself)
+; OPT-LABEL: swiftself_nothisreturn:
+; OPT-DAG: mov [[CSREG:r[1-9].*]], r0
+; OPT-DAG: ldr r10, [r10]
+; OPT: bl  {{_?}}thisreturn_attribute
+; OPT: str r0, {{\[}}[[CSREG]]
+define hidden swiftcc void @swiftself_nothisreturn(i8** noalias nocapture sret, i8** noalias nocapture readonly swiftself) {
+entry:
+  %2 = load i8*, i8** %1, align 8
+  %3 = tail call swiftcc i8* @thisreturn_attribute(i8* swiftself %2)
+  store i8* %3, i8** %0, align 8
+  ret void
+}
