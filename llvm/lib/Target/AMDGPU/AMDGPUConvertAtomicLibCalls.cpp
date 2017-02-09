@@ -471,8 +471,6 @@ static const Entry Table[] = {{"add", RMW, AtomicRMWInst::Add, 2},
                         {"dec", RMW, AtomicRMWInst::Sub, 1},
                         {"min", RMW, AtomicRMWInst::Min, 2},
                         {"max", RMW, AtomicRMWInst::Max, 2},
-                        {"min", RMW, AtomicRMWInst::UMin, 2},
-                        {"max", RMW, AtomicRMWInst::UMax, 2},
                         {"and", RMW, AtomicRMWInst::And, 2},
                         {"or", RMW, AtomicRMWInst::Or, 2},
                         {"xor", RMW, AtomicRMWInst::Xor, 2},
@@ -489,19 +487,23 @@ bool ParseOCL1XAtomic(StringRef N, InstType &TP, AtomicRMWInst::BinOp &OP,
   if (Pos != StringRef::npos) {
     StringRef Needle = N.substr(Pos + Len, N.size());
     int I;
-    int N = array_lengthof(Table);
-    for (I = 0; I < N; ++I) {
+    int Num = array_lengthof(Table);
+    for (I = 0; I < Num; ++I) {
       if (Needle.startswith(Table[I].Name)) {
         break;
       }
     }
 
-    if (I == N) {
+    if (I == Num) {
       return false; // we have a user-defined function that has 'atomic_' in it's name
     } else {
       OP = Table[I].Op;
       TP = Table[I].Type;
       NOP = Table[I].Nop;
+      // Need to determine min/max or umin/umax
+      if ((OP == AtomicRMWInst::Min || OP == AtomicRMWInst::Max) &&
+          isMangledTypeUnsigned(N[N.size()-1]))
+        OP = (OP == AtomicRMWInst::Min) ? AtomicRMWInst::UMin : AtomicRMWInst::UMax;
       return true;
     }
   }
