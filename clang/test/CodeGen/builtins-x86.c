@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -DUSE_64 -triple x86_64-unknown-unknown -target-feature +fxsr -target-feature +avx -target-feature +xsaveopt -target-feature +xsaves -target-feature +xsavec -target-feature +mwaitx -emit-llvm -o %t %s
-// RUN: %clang_cc1 -DUSE_ALL -triple x86_64-unknown-unknown -target-feature +fxsr -target-feature +avx -target-feature +xsaveopt -target-feature +xsaves -target-feature +xsavec -target-feature +mwaitx -fsyntax-only -o %t %s
+// RUN: %clang_cc1 -DUSE_64 -triple x86_64-unknown-unknown -target-feature +fxsr -target-feature +avx -target-feature +xsaveopt -target-feature +xsaves -target-feature +xsavec -target-feature +mwaitx -target-feature +clzero -emit-llvm -o %t %s
+// RUN: %clang_cc1 -DUSE_ALL -triple x86_64-unknown-unknown -target-feature +fxsr -target-feature +avx -target-feature +xsaveopt -target-feature +xsaves -target-feature +xsavec -target-feature +mwaitx -target-feature +clzero -fsyntax-only -o %t %s
 
 #ifdef USE_ALL
 #define USE_3DNOW
@@ -285,6 +285,7 @@ void f0() {
 
   (void) __builtin_ia32_monitorx(tmp_vp, tmp_Ui, tmp_Ui);
   (void) __builtin_ia32_mwaitx(tmp_Ui, tmp_Ui, tmp_Ui);
+  (void) __builtin_ia32_clzero(tmp_vp);
 
   tmp_V4f = __builtin_ia32_cvtpi2ps(tmp_V4f, tmp_V2i);
   tmp_V2i = __builtin_ia32_cvtps2pi(tmp_V4f);

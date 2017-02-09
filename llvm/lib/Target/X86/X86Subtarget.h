@@ -175,6 +175,9 @@ protected:
   /// Processor has MONITORX/MWAITX instructions.
   bool HasMWAITX;
 
+  /// Processor has Cache Line Zero instruction
+  bool HasCLZERO;
+
   /// Processor has Prefetch with intent to Write instruction
   bool HasPFPREFETCHWT1;
 
@@ -460,6 +463,7 @@ public:
   bool hasRDSEED() const { return HasRDSEED; }
   bool hasLAHFSAHF() const { return HasLAHFSAHF; }
   bool hasMWAITX() const { return HasMWAITX; }
+  bool hasCLZERO() const { return HasCLZERO; }
   bool isBTMemSlow() const { return IsBTMemSlow; }
   bool isSHLDSlow() const { return IsSHLDSlow; }
   bool isPMULLDSlow() const { return IsPMULLDSlow; }
