@@ -16,6 +16,8 @@ if (LLDB_BUILD_FRAMEWORK AND NOT APPLE)
   message(FATAL_ERROR "LLDB.framework cannot be generated unless targeting Apple platforms.")
 endif()
 
+get_property(LLDB_ALL_PLUGINS GLOBAL PROPERTY LLDB_PLUGINS)
+
 add_lldb_library(liblldb SHARED
   SBAddress.cpp
   SBAttachInfo.cpp
@@ -80,6 +82,21 @@ add_lldb_library(liblldb SHARED
   SBUnixSignals.cpp
   SystemInitializerFull.cpp
   ${LLDB_WRAP_PYTHON}
+
+  LINK_LIBS
+    lldbBase
+    lldbBreakpoint
+    lldbCore
+    lldbDataFormatters
+    lldbExpression
+    lldbHost
+    lldbInitialization
+    lldbInterpreter
+    lldbSymbol
+    lldbTarget
+    ${LLDB_ALL_PLUGINS}
+  LINK_COMPONENTS
+    Support
   )
 
 if (LLVM_ENABLE_WERROR)

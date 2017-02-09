@@ -57,7 +57,7 @@ void OutputSectionBase::writeHeaderTo(typename ELFT::Shdr *Shdr) {
   Shdr->sh_flags = Flags;
   Shdr->sh_info = Info;
   Shdr->sh_link = Link;
-  Shdr->sh_addr = (Flags & SHF_ALLOC) ? Addr : 0;
+  Shdr->sh_addr = Addr;
   Shdr->sh_size = Size;
   Shdr->sh_name = ShName;
 }
@@ -116,7 +116,7 @@ template <class ELFT> void OutputSection<ELFT>::finalize() {
   }
 
   uint32_t Type = this->Type;
-  if (!Config->Relocatable || (Type != SHT_RELA && Type != SHT_REL))
+  if (!Config->copyRelocs() || (Type != SHT_RELA && Type != SHT_REL))
     return;
 
   this->Link = In<ELFT>::SymTab->OutSec->SectionIndex;
