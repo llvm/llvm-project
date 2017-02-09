@@ -5,6 +5,7 @@
 # RUN: llvm-objdump -m -objc-meta-data %p/Inputs/Objc1.32bit.exe.macho-i386 | FileCheck %s -check-prefix=OBJC1_32BIT_EXE
 # RUN: llvm-objdump -m -objc-meta-data %p/Inputs/Objc1.32bit.obj.macho-i386 | FileCheck %s -check-prefix=OBJC1_32BIT_OBJ
 # RUN: llvm-objdump -m -section __OBJC,__protocol %p/Inputs/Objc1.32bit.exe.macho-i386 | FileCheck %s -check-prefix=PROTOCOL
+# RUN: llvm-objdump -m -objc-meta-data %p/Inputs/Objc2.64bit.obj.dylib-x86_64 | FileCheck %s -check-prefix=OBJC2_64BIT_DYLIB
 
 OBJC2_64BIT_EXE: Contents of (__DATA,__objc_classlist) section
 OBJC2_64BIT_EXE: 0000000100002028 0x1000029f0
@@ -1037,3 +1038,64 @@ PROTOCOL:                 types 0x00002e04 @8@0:4
 PROTOCOL:         class_methods 0x00000000 (not in an __OBJC section)
 PROTOCOL:  instance_methods 0x00000000 (not in an __OBJC section)
 PROTOCOL:     class_methods 0x00000000 (not in an __OBJC section)
+
+OBJC2_64BIT_DYLIB: Contents of (__DATA_CONST,__objc_classlist) section
+OBJC2_64BIT_DYLIB: 000000000000c038 0x8030 _OBJC_CLASS_$_Test
+OBJC2_64BIT_DYLIB:            isa 0x8008 _OBJC_METACLASS_$_Test
+OBJC2_64BIT_DYLIB:     superclass 0x0
+OBJC2_64BIT_DYLIB:          cache 0x0
+OBJC2_64BIT_DYLIB:         vtable 0x0
+OBJC2_64BIT_DYLIB:           data 0xc120 (struct class_ro_t *)
+OBJC2_64BIT_DYLIB:                     flags 0x0
+OBJC2_64BIT_DYLIB:             instanceStart 8
+OBJC2_64BIT_DYLIB:              instanceSize 16
+OBJC2_64BIT_DYLIB:                  reserved 0x0
+OBJC2_64BIT_DYLIB:                ivarLayout 0x0
+OBJC2_64BIT_DYLIB:                      name 0x4f59 Test
+OBJC2_64BIT_DYLIB:               baseMethods 0xc090 (struct method_list_t *)
+OBJC2_64BIT_DYLIB: 		   entsize 24
+OBJC2_64BIT_DYLIB: 		     count 3
+OBJC2_64BIT_DYLIB: 		      name 0x4f5e testMethod
+OBJC2_64BIT_DYLIB: 		     types 0x4f89 v16@0:8
+OBJC2_64BIT_DYLIB: 		       imp -[Test testMethod]
+OBJC2_64BIT_DYLIB: 		      name 0x4f69 testProp
+OBJC2_64BIT_DYLIB: 		     types 0x4f91 Q16@0:8
+OBJC2_64BIT_DYLIB: 		       imp -[Test testProp]
+OBJC2_64BIT_DYLIB: 		      name 0x4f72 setTestProp:
+OBJC2_64BIT_DYLIB: 		     types 0x4f99 v24@0:8Q16
+OBJC2_64BIT_DYLIB: 		       imp -[Test setTestProp:]
+OBJC2_64BIT_DYLIB:             baseProtocols 0x0
+OBJC2_64BIT_DYLIB:                     ivars 0xc0e0
+OBJC2_64BIT_DYLIB:                     entsize 32
+OBJC2_64BIT_DYLIB:                       count 1
+OBJC2_64BIT_DYLIB: 			   offset 0x8000 8
+OBJC2_64BIT_DYLIB: 			     name 0x4f7f _testProp
+OBJC2_64BIT_DYLIB: 			     type 0x4fa4 Q
+OBJC2_64BIT_DYLIB: 			alignment 3
+OBJC2_64BIT_DYLIB: 			     size 8
+OBJC2_64BIT_DYLIB:            weakIvarLayout 0x0
+OBJC2_64BIT_DYLIB:            baseProperties 0xc108
+OBJC2_64BIT_DYLIB:                     entsize 16
+OBJC2_64BIT_DYLIB:                       count 1
+OBJC2_64BIT_DYLIB: 			     name 0x4f42 testProp
+OBJC2_64BIT_DYLIB: 			attributes 0x4f4b TQ,V_testProp
+OBJC2_64BIT_DYLIB: Meta Class
+OBJC2_64BIT_DYLIB:            isa 0x0
+OBJC2_64BIT_DYLIB:     superclass 0x0
+OBJC2_64BIT_DYLIB:          cache 0x0
+OBJC2_64BIT_DYLIB:         vtable 0x0
+OBJC2_64BIT_DYLIB:           data 0xc048 (struct class_ro_t *)
+OBJC2_64BIT_DYLIB:                     flags 0x1 RO_META
+OBJC2_64BIT_DYLIB:             instanceStart 40
+OBJC2_64BIT_DYLIB:              instanceSize 40
+OBJC2_64BIT_DYLIB:                  reserved 0x0
+OBJC2_64BIT_DYLIB:                ivarLayout 0x0
+OBJC2_64BIT_DYLIB:                      name 0x4f59 Test
+OBJC2_64BIT_DYLIB:               baseMethods 0x0 (struct method_list_t *)
+OBJC2_64BIT_DYLIB:             baseProtocols 0x0
+OBJC2_64BIT_DYLIB:                     ivars 0x0
+OBJC2_64BIT_DYLIB:            weakIvarLayout 0x0
+OBJC2_64BIT_DYLIB:            baseProperties 0x0
+OBJC2_64BIT_DYLIB: Contents of (__DATA_CONST,__objc_imageinfo) section
+OBJC2_64BIT_DYLIB:   version 0
+OBJC2_64BIT_DYLIB:     flags 0x40
