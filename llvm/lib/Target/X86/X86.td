@@ -202,6 +202,8 @@ def FeatureLAHFSAHF : SubtargetFeature<"sahf", "HasLAHFSAHF", "true",
                                        "Support LAHF and SAHF instructions">;
 def FeatureMWAITX  : SubtargetFeature<"mwaitx", "HasMWAITX", "true",
                                       "Enable MONITORX/MWAITX timer functionality">;
+def FeatureCLZERO  : SubtargetFeature<"clzero", "HasCLZERO", "true",
+                                      "Enable Cache Line Zero">;
 def FeatureMPX     : SubtargetFeature<"mpx", "HasMPX", "true",
                                       "Support MPX instructions">;
 def FeatureLEAForSP : SubtargetFeature<"lea-sp", "UseLeaForSP", "true",
@@ -765,6 +767,7 @@ def: ProcessorModel<"znver1", BtVer2Model, [
   FeatureBMI,
   FeatureBMI2,
   FeatureCLFLUSHOPT,
+  FeatureCLZERO,
   FeatureCMPXCHG16B,
   FeatureF16C,
   FeatureFMA,

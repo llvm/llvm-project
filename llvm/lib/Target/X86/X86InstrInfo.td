@@ -859,6 +859,7 @@ def HasRDSEED    : Predicate<"Subtarget->hasRDSEED()">;
 def HasPrefetchW : Predicate<"Subtarget->hasPRFCHW()">;
 def HasLAHFSAHF  : Predicate<"Subtarget->hasLAHFSAHF()">;
 def HasMWAITX    : Predicate<"Subtarget->hasMWAITX()">;
+def HasCLZERO    : Predicate<"Subtarget->hasCLZERO()">;
 def FPStackf32   : Predicate<"!Subtarget->hasSSE1()">;
 def FPStackf64   : Predicate<"!Subtarget->hasSSE2()">;
 def HasMPX       : Predicate<"Subtarget->hasMPX()">;
@@ -2456,8 +2457,19 @@ def : InstAlias<"monitorx\t{%rax, %rcx, %rdx|rdx, rcx, rax}", (MONITORXrrr)>,
 //===----------------------------------------------------------------------===//
 // CLZERO Instruction
 //
-let Uses = [EAX] in
-def CLZEROr : I<0x01, MRM_FC, (outs), (ins), "clzero", []>, TB;
+let SchedRW = [WriteSystem] in {
+  let Uses = [EAX] in
+  def CLZEROr : I<0x01, MRM_FC, (outs), (ins), "clzero", [], IIC_SSE_CLZERO>,
+                TB, Requires<[HasCLZERO]>;
+
+  let usesCustomInserter = 1 in {
+  def CLZERO : PseudoI<(outs), (ins i32mem:$src1),
+                       [(int_x86_clzero addr:$src1)]>, Requires<[HasCLZERO]>;
+  }
+} // SchedRW
+
+def : InstAlias<"clzero\t{%eax|eax}", (CLZEROr)>, Requires<[Not64BitMode]>;
+def : InstAlias<"clzero\t{%rax|rax}", (CLZEROr)>, Requires<[In64BitMode]>;
 
 //===----------------------------------------------------------------------===//
 // Pattern fragments to auto generate TBM instructions.

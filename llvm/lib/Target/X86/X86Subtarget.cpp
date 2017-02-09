@@ -289,6 +289,7 @@ void X86Subtarget::initializeEnvironment() {
   HasRDSEED = false;
   HasLAHFSAHF = false;
   HasMWAITX = false;
+  HasCLZERO = false;
   HasMPX = false;
   IsBTMemSlow = false;
   IsPMULLDSlow = false;
