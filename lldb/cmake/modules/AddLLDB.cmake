@@ -1,22 +1,3 @@
-function(lldb_link_common_libs name targetkind)
-  if (NOT LLDB_USED_LIBS)
-    return()
-  endif()
-
-  if(${targetkind} MATCHES "SHARED")
-    set(LINK_KEYWORD PRIVATE)
-  endif()
-
-  if(${targetkind} MATCHES "SHARED" OR ${targetkind} MATCHES "EXE")
-    if (LLDB_LINKER_SUPPORTS_GROUPS)
-      target_link_libraries(${name} ${LINK_KEYWORD}
-                            -Wl,--start-group ${LLDB_USED_LIBS} -Wl,--end-group)
-    else()
-      target_link_libraries(${name} ${LINK_KEYWORD} ${LLDB_USED_LIBS})
-    endif()
-  endif()
-endfunction(lldb_link_common_libs)
-
 function(add_lldb_library name)
   # only supported parameters to this macro are the optional
   # MODULE;SHARED;STATIC library type and source files
@@ -61,17 +42,7 @@ function(add_lldb_library name)
   if (PARAM_OBJECT)
     add_library(${name} ${libkind} ${srcs})
   else()
-    if (PARAM_SHARED AND LLDB_LINKER_SUPPORTS_GROUPS)
-      set(start_group -Wl,--start-group)
-      set(end_group -Wl,--end-group)
-    endif()
     llvm_add_library(${name} ${libkind} ${srcs} LINK_LIBS
-                                ${start_group}
-                                ${LLDB_USED_LIBS}
-                                ${end_group}
-                                ${start_group}
-                                ${CLANG_USED_LIBS}
-                                ${end_group}
                                 ${PARAM_LINK_LIBS}
                                 DEPENDS ${PARAM_DEPENDS})
 

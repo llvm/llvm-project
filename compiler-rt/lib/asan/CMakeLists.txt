@@ -180,7 +180,7 @@ else()
     if (MSVC)
       add_compiler_rt_object_libraries(AsanWeakInterception
         ${SANITIZER_COMMON_SUPPORTED_OS}
-        ARCHS ${ASAN_SUPPORTED_ARCH}
+        ARCHS ${arch}
         SOURCES asan_win_weak_interception.cc
         CFLAGS ${ASAN_CFLAGS} -DSANITIZER_DYNAMIC
         DEFS ${ASAN_COMMON_DEFINITIONS})
@@ -223,7 +223,7 @@ else()
     if (WIN32)
       add_compiler_rt_object_libraries(AsanDllThunk
         ${SANITIZER_COMMON_SUPPORTED_OS}
-        ARCHS ${ASAN_SUPPORTED_ARCH}
+        ARCHS ${arch}
         SOURCES asan_globals_win.cc
                 asan_win_dll_thunk.cc
         CFLAGS ${ASAN_CFLAGS} -DSANITIZER_DLL_THUNK
@@ -248,7 +248,7 @@ else()
 
       add_compiler_rt_object_libraries(AsanDynamicRuntimeThunk
         ${SANITIZER_COMMON_SUPPORTED_OS}
-        ARCHS ${ASAN_SUPPORTED_ARCH}
+        ARCHS ${arch}
         SOURCES asan_globals_win.cc
                 asan_win_dynamic_runtime_thunk.cc
         CFLAGS ${ASAN_CFLAGS} ${DYNAMIC_RUNTIME_THUNK_CFLAGS}

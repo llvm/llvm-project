@@ -72,7 +72,7 @@ void DefinitionsInHeadersCheck::registerMatchers(MatchFinder *Finder) {
 
 void DefinitionsInHeadersCheck::check(const MatchFinder::MatchResult &Result) {
   // Don't run the check in failing TUs.
-  if (Result.Context->getDiagnostics().hasErrorOccurred())
+  if (Result.Context->getDiagnostics().hasUncompilableErrorOccurred())
     return;
 
   // C++ [basic.def.odr] p6:

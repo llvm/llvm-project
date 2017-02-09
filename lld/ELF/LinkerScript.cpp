@@ -101,8 +101,12 @@ static void assignSymbol(SymbolAssignment *Cmd, typename ELFT::uint Dot = 0) {
 
   if (auto *Body = dyn_cast<DefinedSynthetic>(Cmd->Sym)) {
     Body->Section = Cmd->Expression.Section();
-    if (Body->Section)
-      Body->Value = Cmd->Expression(Dot) - Body->Section->Addr;
+    if (Body->Section) {
+      uint64_t VA = 0;
+      if (Body->Section->Flags & SHF_ALLOC)
+        VA = Body->Section->Addr;
+      Body->Value = Cmd->Expression(Dot) - VA;
+    }
     return;
   }
 
@@ -802,9 +806,12 @@ void LinkerScript<ELFT>::assignAddresses(std::vector<PhdrEntry> &Phdrs) {
   }
 
   uintX_t MinVA = std::numeric_limits<uintX_t>::max();
-  for (OutputSectionBase *Sec : *OutputSections)
+  for (OutputSectionBase *Sec : *OutputSections) {
     if (Sec->Flags & SHF_ALLOC)
       MinVA = std::min<uint64_t>(MinVA, Sec->Addr);
+    else
+      Sec->Addr = 0;
+  }
 
   allocateHeaders<ELFT>(Phdrs, *OutputSections, MinVA);
 }

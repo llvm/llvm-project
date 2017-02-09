@@ -449,9 +449,9 @@ static bool shouldKeepInSymtab(InputSectionBase<ELFT> *Sec, StringRef SymName,
   if (B.isFile())
     return false;
 
-  // We keep sections in symtab for relocatable output.
+  // We keep sections in symtab for relocatable output and --emit-reloc.
   if (B.isSection())
-    return Config->Relocatable;
+    return Config->copyRelocs();
 
   // If sym references a section in a discarded group, don't keep it.
   if (Sec == &InputSection<ELFT>::Discarded)
