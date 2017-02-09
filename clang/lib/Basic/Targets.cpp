@@ -2489,6 +2489,7 @@ class X86TargetInfo : public TargetInfo {
   bool HasXSAVEC = false;
   bool HasXSAVES = false;
   bool HasMWAITX = false;
+  bool HasCLZERO = false;
   bool HasPKU = false;
   bool HasCLFLUSHOPT = false;
   bool HasCLWB = false;
@@ -3201,6 +3202,7 @@ bool X86TargetInfo::initFeatureMap(
     setFeatureEnabledImpl(Features, "bmi", true);
     setFeatureEnabledImpl(Features, "bmi2", true);
     setFeatureEnabledImpl(Features, "clflushopt", true);
+    setFeatureEnabledImpl(Features, "clzero", true);
     setFeatureEnabledImpl(Features, "cx16", true);
     setFeatureEnabledImpl(Features, "f16c", true);
     setFeatureEnabledImpl(Features, "fma", true);
@@ -3560,6 +3562,8 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasCLWB = true;
     } else if (Feature == "+prefetchwt1") {
       HasPREFETCHWT1 = true;
+    } else if (Feature == "+clzero") {
+      HasCLZERO = true;
     }
 
     X86SSEEnum Level = llvm::StringSwitch<X86SSEEnum>(Feature)
@@ -3887,6 +3891,8 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__SGX__");
   if (HasPREFETCHWT1)
     Builder.defineMacro("__PREFETCHWT1__");
+  if (HasCLZERO)
+    Builder.defineMacro("__CLZERO__");
 
   // Each case falls through to the previous one here.
   switch (SSELevel) {
@@ -3973,6 +3979,7 @@ bool X86TargetInfo::hasFeature(StringRef Feature) const {
       .Case("bmi2", HasBMI2)
       .Case("clflushopt", HasCLFLUSHOPT)
       .Case("clwb", HasCLWB)
+      .Case("clzero", HasCLZERO)
       .Case("cx16", HasCX16)
       .Case("f16c", HasF16C)
       .Case("fma", HasFMA)

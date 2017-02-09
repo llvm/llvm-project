@@ -385,6 +385,33 @@ namespace MemberTemplatesWithDeduction {
 }
 }
 
+// We resolve a wording bug here: 'decltype(auto)' should not be modeled as a
+// decltype-specifier, just as a simple-type-specifier. All the extra places
+// where a decltype-specifier can appear make no sense for 'decltype(auto)'.
+namespace DecltypeAutoShouldNotBeADecltypeSpecifier {
+  namespace NNS {
+    int n;
+    decltype(auto) i();
+    decltype(n) j();
+    struct X {
+      friend decltype(auto) ::DecltypeAutoShouldNotBeADecltypeSpecifier::NNS::i();
+      friend decltype(n) ::DecltypeAutoShouldNotBeADecltypeSpecifier::NNS::j(); // expected-error {{not a class}}
+    };
+  }
+
+  namespace Dtor {
+    struct A {};
+    void f(A a) { a.~decltype(auto)(); } // expected-error {{'decltype(auto)' not allowed here}}
+  }
+
+  namespace BaseClass {
+    struct A : decltype(auto) {}; // expected-error {{'decltype(auto)' not allowed here}}
+    struct B {
+      B() : decltype(auto)() {} // expected-error {{'decltype(auto)' not allowed here}}
+    };
+  }
+}
+
 namespace CurrentInstantiation {
   // PR16875
   template<typename T> struct S {

@@ -1089,8 +1089,13 @@ void CodeGenFunction::GenerateCode(GlobalDecl GD, llvm::Function *Fn,
   if (FD->hasAttr<NoDebugAttr>())
     DebugInfo = nullptr; // disable debug info indefinitely for this function
 
+  // The function might not have a body if we're generating thunks for a
+  // function declaration.
   SourceRange BodyRange;
-  if (Stmt *Body = FD->getBody()) BodyRange = Body->getSourceRange();
+  if (Stmt *Body = FD->getBody())
+    BodyRange = Body->getSourceRange();
+  else
+    BodyRange = FD->getLocation();
   CurEHLocation = BodyRange.getEnd();
 
   // Use the location of the start of the function to determine where
