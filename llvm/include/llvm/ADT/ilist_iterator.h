@@ -102,10 +102,23 @@ public:
     return *this;
   }
 
-  /// Convert from an iterator to its reverse.
+  /// Explicit conversion between forward/reverse iterators.
   ///
-  /// TODO: Roll this into the implicit constructor once we're sure that no one
-  /// is relying on the std::reverse_iterator off-by-one semantics.
+  /// Translate between forward and reverse iterators without changing range
+  /// boundaries.  The resulting iterator will dereference (and have a handle)
+  /// to the previous node, which is somewhat unexpected; but converting the
+  /// two endpoints in a range will give the same range in reverse.
+  ///
+  /// This matches std::reverse_iterator conversions.
+  explicit ilist_iterator(
+      const ilist_iterator<OptionsT, !IsReverse, IsConst> &RHS)
+      : ilist_iterator(++RHS.getReverse()) {}
+
+  /// Get a reverse iterator to the same node.
+  ///
+  /// Gives a reverse iterator that will dereference (and have a handle) to the
+  /// same node.  Converting the endpoint iterators in a range will give a
+  /// different range; for range operations, use the explicit conversions.
   ilist_iterator<OptionsT, !IsReverse, IsConst> getReverse() const {
     if (NodePtr)
       return ilist_iterator<OptionsT, !IsReverse, IsConst>(*NodePtr);
