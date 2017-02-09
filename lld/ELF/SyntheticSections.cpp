@@ -362,6 +362,15 @@ void BuildIdSection<ELFT>::computeHash(
 }
 
 template <class ELFT>
+CopyRelSection<ELFT>::CopyRelSection(bool ReadOnly, uintX_t AddrAlign, size_t S)
+    : SyntheticSection<ELFT>(SHF_ALLOC, SHT_NOBITS, AddrAlign,
+                             ReadOnly ? ".bss.rel.ro" : ".bss"),
+      Size(S) {
+  if (!ReadOnly)
+    this->Flags |= SHF_WRITE;
+}
+
+template <class ELFT>
 void BuildIdSection<ELFT>::writeBuildId(ArrayRef<uint8_t> Buf) {
   switch (Config->BuildId) {
   case BuildIdKind::Fast:
@@ -965,8 +974,6 @@ template <class ELFT> void DynamicSection<ELFT>::writeTo(uint8_t *Buf) {
 
 template <class ELFT>
 typename ELFT::uint DynamicReloc<ELFT>::getOffset() const {
-  if (OutputSec)
-    return OutputSec->Addr + OffsetInSec;
   return InputSec->OutSec->Addr + InputSec->getOffset(OffsetInSec);
 }
 
@@ -1228,7 +1235,7 @@ SymbolTableSection<ELFT>::getOutputSection(SymbolBody *Sym) {
   case SymbolBody::SharedKind: {
     auto &SS = cast<SharedSymbol<ELFT>>(*Sym);
     if (SS.needsCopy())
-      return SS.getBssSectionForCopy();
+      return SS.getBssSectionForCopy()->OutSec;
     break;
   }
   case SymbolBody::UndefinedKind:
@@ -1427,19 +1434,23 @@ template <class ELFT> void HashTableSection<ELFT>::writeTo(uint8_t *Buf) {
 }
 
 template <class ELFT>
-PltSection<ELFT>::PltSection()
+PltSection<ELFT>::PltSection(size_t S)
     : SyntheticSection<ELFT>(SHF_ALLOC | SHF_EXECINSTR, SHT_PROGBITS, 16,
-                             ".plt") {}
+                             ".plt"),
+      HeaderSize(S) {}
 
 template <class ELFT> void PltSection<ELFT>::writeTo(uint8_t *Buf) {
-  // At beginning of PLT, we have code to call the dynamic linker
-  // to resolve dynsyms at runtime. Write such code.
-  Target->writePltHeader(Buf);
-  size_t Off = Target->PltHeaderSize;
+  // At beginning of PLT but not the IPLT, we have code to call the dynamic
+  // linker to resolve dynsyms at runtime. Write such code.
+  if (HeaderSize != 0)
+    Target->writePltHeader(Buf);
+  size_t Off = HeaderSize;
+  // The IPlt is immediately after the Plt, account for this in RelOff
+  unsigned PltOff = getPltRelocOff();
 
   for (auto &I : Entries) {
     const SymbolBody *B = I.first;
-    unsigned RelOff = I.second;
+    unsigned RelOff = I.second + PltOff;
     uint64_t Got = B->getGotPltVA<ELFT>();
     uint64_t Plt = this->getVA() + Off;
     Target->writePlt(Buf + Off, Got, Plt, B->PltIndex, RelOff);
@@ -1449,61 +1460,34 @@ template <class ELFT> void PltSection<ELFT>::writeTo(uint8_t *Buf) {
 
 template <class ELFT> void PltSection<ELFT>::addEntry(SymbolBody &Sym) {
   Sym.PltIndex = Entries.size();
-  unsigned RelOff = In<ELFT>::RelaPlt->getRelocOffset();
+  RelocationSection<ELFT> *PltRelocSection = In<ELFT>::RelaPlt;
+  if (HeaderSize == 0) {
+    PltRelocSection = In<ELFT>::RelaIplt;
+    Sym.IsInIplt = true;
+  }
+  unsigned RelOff = PltRelocSection->getRelocOffset();
   Entries.push_back(std::make_pair(&Sym, RelOff));
 }
 
 template <class ELFT> size_t PltSection<ELFT>::getSize() const {
-  return Target->PltHeaderSize + Entries.size() * Target->PltEntrySize;
+  return HeaderSize + Entries.size() * Target->PltEntrySize;
 }
 
 // Some architectures such as additional symbols in the PLT section. For
 // example ARM uses mapping symbols to aid disassembly
 template <class ELFT> void PltSection<ELFT>::addSymbols() {
-  Target->addPltHeaderSymbols(this);
-  size_t Off = Target->PltHeaderSize;
+  // The PLT may have symbols defined for the Header, the IPLT has no header
+  if (HeaderSize != 0)
+    Target->addPltHeaderSymbols(this);
+  size_t Off = HeaderSize;
   for (size_t I = 0; I < Entries.size(); ++I) {
     Target->addPltSymbols(this, Off);
     Off += Target->PltEntrySize;
   }
 }
 
-template <class ELFT>
-IpltSection<ELFT>::IpltSection()
-    : SyntheticSection<ELFT>(SHF_ALLOC | SHF_EXECINSTR, SHT_PROGBITS, 16,
-                             ".plt") {}
-
-template <class ELFT> void IpltSection<ELFT>::writeTo(uint8_t *Buf) {
-  // The IRelative relocations do not support lazy binding so no header is
-  // needed
-  size_t Off = 0;
-  for (auto &I : Entries) {
-    const SymbolBody *B = I.first;
-    unsigned RelOff = I.second + In<ELFT>::Plt->getSize();
-    uint64_t Got = B->getGotPltVA<ELFT>();
-    uint64_t Plt = this->getVA() + Off;
-    Target->writePlt(Buf + Off, Got, Plt, B->PltIndex, RelOff);
-    Off += Target->PltEntrySize;
-  }
-}
-
-template <class ELFT> void IpltSection<ELFT>::addEntry(SymbolBody &Sym) {
-  Sym.PltIndex = Entries.size();
-  Sym.IsInIplt = true;
-  unsigned RelOff = In<ELFT>::RelaIplt->getRelocOffset();
-  Entries.push_back(std::make_pair(&Sym, RelOff));
-}
-
-template <class ELFT> size_t IpltSection<ELFT>::getSize() const {
-  return Entries.size() * Target->PltEntrySize;
-}
-
-template <class ELFT> void IpltSection<ELFT>::addSymbols() {
-  size_t Off = 0;
-  for (size_t I = 0; I < Entries.size(); ++I) {
-    Target->addPltSymbols(this, Off);
-    Off += Target->PltEntrySize;
-  }
+template <class ELFT> unsigned PltSection<ELFT>::getPltRelocOff() const {
+  return (HeaderSize == 0) ? In<ELFT>::Plt->getSize() : 0;
 }
 
 template <class ELFT>
@@ -2051,6 +2035,11 @@ template class elf::BuildIdSection<ELF32BE>;
 template class elf::BuildIdSection<ELF64LE>;
 template class elf::BuildIdSection<ELF64BE>;
 
+template class elf::CopyRelSection<ELF32LE>;
+template class elf::CopyRelSection<ELF32BE>;
+template class elf::CopyRelSection<ELF64LE>;
+template class elf::CopyRelSection<ELF64BE>;
+
 template class elf::GotSection<ELF32LE>;
 template class elf::GotSection<ELF32BE>;
 template class elf::GotSection<ELF64LE>;
@@ -2105,11 +2094,6 @@ template class elf::PltSection<ELF32LE>;
 template class elf::PltSection<ELF32BE>;
 template class elf::PltSection<ELF64LE>;
 template class elf::PltSection<ELF64BE>;
-
-template class elf::IpltSection<ELF32LE>;
-template class elf::IpltSection<ELF32BE>;
-template class elf::IpltSection<ELF64LE>;
-template class elf::IpltSection<ELF64BE>;
 
 template class elf::GdbIndexSection<ELF32LE>;
 template class elf::GdbIndexSection<ELF32BE>;

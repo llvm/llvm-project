@@ -348,20 +348,16 @@ BlockingMutex::BlockingMutex() {
 void BlockingMutex::Lock() {
   CHECK(sizeof(OSSpinLock) <= sizeof(opaque_storage_));
   CHECK_EQ(OS_SPINLOCK_INIT, 0);
-  CHECK_NE(owner_, (uptr)pthread_self());
+  CHECK_EQ(owner_, 0);
   OSSpinLockLock((OSSpinLock*)&opaque_storage_);
-  CHECK(!owner_);
-  owner_ = (uptr)pthread_self();
 }
 
 void BlockingMutex::Unlock() {
-  CHECK(owner_ == (uptr)pthread_self());
-  owner_ = 0;
   OSSpinLockUnlock((OSSpinLock*)&opaque_storage_);
 }
 
 void BlockingMutex::CheckLocked() {
-  CHECK_EQ((uptr)pthread_self(), owner_);
+  CHECK_NE(*(OSSpinLock*)&opaque_storage_, 0);
 }
 
 u64 NanoTime() {

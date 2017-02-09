@@ -167,6 +167,9 @@ template <class ELFT> static bool isReserved(InputSectionBase<ELFT> *Sec) {
   case SHT_PREINIT_ARRAY:
     return true;
   default:
+    if (Sec->Flags & SHF_LINK_ORDER)
+      return false;
+
     if (!(Sec->Flags & SHF_ALLOC))
       return true;
 

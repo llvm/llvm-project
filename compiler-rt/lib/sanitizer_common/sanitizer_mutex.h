@@ -83,6 +83,14 @@ class BlockingMutex {
   BlockingMutex();
   void Lock();
   void Unlock();
+
+  // This function does not guarantee an explicit check that the calling thread
+  // is the thread which owns the mutex. This behavior, while more strictly
+  // correct, causes problems in cases like StopTheWorld, where a parent thread
+  // owns the mutex but a child checks that it is locked. Rather than
+  // maintaining complex state to work around those situations, the check only
+  // checks that the mutex is owned, and assumes callers to be generally
+  // well-behaved.
   void CheckLocked();
  private:
   uptr opaque_storage_[10];

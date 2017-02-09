@@ -283,9 +283,20 @@ void test_exceptions() {
 #endif
 }
 
+// See http://llvm.org/PR31916
+void test_caller_accepts_nonconst() {
+  struct A {};
+  struct Visitor {
+    void operator()(A&) {}
+  };
+  std::variant<A> v;
+  std::visit(Visitor{}, v);
+}
+
 int main() {
   test_call_operator_forwarding();
   test_argument_forwarding();
   test_constexpr();
   test_exceptions();
+  test_caller_accepts_nonconst();
 }
