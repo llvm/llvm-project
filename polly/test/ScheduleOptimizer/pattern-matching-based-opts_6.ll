@@ -8,16 +8,16 @@
 ; RUN: -polly-target-2nd-cache-level-size=262144 < %s \
 ; RUN: | FileCheck %s
 ;
-; RUN: opt %loadPolly -polly-opt-isl -polly-pattern-matching-based-opts=true \
-; RUN: -polly-target-throughput-vector-fma=1 \
-; RUN: -polly-target-latency-vector-fma=8 \
-; RUN: -polly-codegen -polly-target-1st-cache-level-associativity=8 \
-; RUN: -polly-target-2nd-cache-level-associativity=8 \
-; RUN: -polly-target-1st-cache-level-size=32768 \
-; RUN: -polly-target-vector-register-bitwidth=256 \
-; RUN: -polly-target-2nd-cache-level-size=262144 -gvn -licm -slp-vectorizer \
-; RUN: -mcpu=corei7 -stats -S < %s 2>&1 | FileCheck %s \
-; RUN: --check-prefix=AUTO-VECTORIZATION
+;  opt %loadPolly -polly-opt-isl -polly-pattern-matching-based-opts=true \
+;  -polly-target-throughput-vector-fma=1 \
+;  -polly-target-latency-vector-fma=8 \
+;  -polly-codegen -polly-target-1st-cache-level-associativity=8 \
+;  -polly-target-2nd-cache-level-associativity=8 \
+;  -polly-target-1st-cache-level-size=32768 \
+;  -polly-target-vector-register-bitwidth=256 \
+;  -polly-target-2nd-cache-level-size=262144 -gvn -licm -slp-vectorizer \
+;  -mcpu=corei7 -stats -S < %s 2>&1 | FileCheck %s \
+; --check-prefix=AUTO-VECTORIZATION
 ;
 ;
 ;    /* We isolate a set of partial tile prefixes, which contains only partial

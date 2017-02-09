@@ -19,6 +19,7 @@
 #include "llvm/Analysis/TypeMetadataUtils.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
@@ -261,6 +262,7 @@ void splitAndWriteThinLTOBitcode(raw_ostream &OS, Module &M) {
 
   ValueToValueMapTy VMap;
   std::unique_ptr<Module> MergedM(CloneModule(&M, VMap, IsInMergedM));
+  StripDebugInfo(*MergedM);
 
   filterModule(&M, [&](const GlobalValue *GV) { return !IsInMergedM(GV); });
 

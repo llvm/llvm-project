@@ -1,4 +1,4 @@
-//===- InstrumentationMap.h - XRay Instrumentation Map --------------------===//
+//===- InstrumentationMap.h - XRay Instrumentation Map ----------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -15,17 +15,16 @@
 #ifndef LLVM_XRAY_INSTRUMENTATION_MAP_H
 #define LLVM_XRAY_INSTRUMENTATION_MAP_H
 
-#include <vector>
-#include <string>
-#include <unordered_map>
-
 #include "llvm/ADT/Optional.h"
-#include "llvm/ADT/iterator_range.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/YAMLTraits.h"
-#include "llvm/Support/raw_ostream.h"
+#include <cstdint>
+#include <unordered_map>
+#include <vector>
 
 namespace llvm {
+
 namespace xray {
 
 // Forward declare to make a friend.
@@ -37,7 +36,6 @@ Expected<InstrumentationMap> loadInstrumentationMap(StringRef Filename);
 
 /// Represents an XRay instrumentation sled entry from an object file.
 struct SledEntry {
-
   /// Each entry here represents the kinds of supported instrumentation map
   /// entries.
   enum class FunctionKinds { ENTRY, EXIT, TAIL };
@@ -98,10 +96,8 @@ public:
   const SledContainer &sleds() const { return Sleds; };
 };
 
-} // namespace xray
-} // namespace llvm
+} // end namespace xray
 
-namespace llvm {
 namespace yaml {
 
 template <> struct ScalarEnumerationTraits<xray::SledEntry::FunctionKinds> {
@@ -123,8 +119,10 @@ template <> struct MappingTraits<xray::YAMLXRaySledEntry> {
 
   static constexpr bool flow = true;
 };
-} // namespace yaml
-} // namespace llvm
+
+} // end namespace yaml
+
+} // end namespace llvm
 
 LLVM_YAML_IS_SEQUENCE_VECTOR(xray::YAMLXRaySledEntry)
 

@@ -2303,6 +2303,20 @@ def SEQIMacro : MipsAsmPseudoInst<(outs GPR32Opnd:$rd),
 def : MipsInstAlias<"seq $rd, $imm",
                     (SEQIMacro GPR32Opnd:$rd, GPR32Opnd:$rd, simm32:$imm), 0>,
                     NOT_ASE_CNMIPS;
+
+def MULImmMacro : MipsAsmPseudoInst<(outs), (ins GPR32Opnd:$rd, GPR32Opnd:$rs,
+                                                 simm32_relaxed:$imm),
+                                    "mul\t$rd, $rs, $imm">,
+                  ISA_MIPS1_NOT_32R6_64R6;
+def MULOMacro : MipsAsmPseudoInst<(outs), (ins GPR32Opnd:$rd, GPR32Opnd:$rs,
+                                               GPR32Opnd:$rt),
+                                  "mulo\t$rd, $rs, $rt">,
+                ISA_MIPS1_NOT_32R6_64R6;
+def MULOUMacro : MipsAsmPseudoInst<(outs), (ins GPR32Opnd:$rd, GPR32Opnd:$rs,
+                                                GPR32Opnd:$rt),
+                                   "mulou\t$rd, $rs, $rt">,
+                 ISA_MIPS1_NOT_32R6_64R6;
+
 //===----------------------------------------------------------------------===//
 // Instruction aliases
 //===----------------------------------------------------------------------===//
@@ -2467,6 +2481,14 @@ let AdditionalPredicates = [NotInMicroMips] in {
 def : MipsInstAlias<"sdbbp", (SDBBP 0)>, ISA_MIPS32_NOT_32R6_64R6;
 def : MipsInstAlias<"sync",
                     (SYNC 0), 1>, ISA_MIPS2;
+
+def : MipsInstAlias<"mulo $rs, $rt",
+                    (MULOMacro GPR32Opnd:$rs, GPR32Opnd:$rs, GPR32Opnd:$rt), 0>,
+                    ISA_MIPS1_NOT_32R6_64R6;
+def : MipsInstAlias<"mulou $rs, $rt",
+                    (MULOUMacro GPR32Opnd:$rs, GPR32Opnd:$rs, GPR32Opnd:$rt), 0>,
+                    ISA_MIPS1_NOT_32R6_64R6;
+
 //===----------------------------------------------------------------------===//
 // Assembler Pseudo Instructions
 //===----------------------------------------------------------------------===//

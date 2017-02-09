@@ -9,6 +9,8 @@
 
   define void @test_load_from_stack() { ret void }
   define void @test_legal_loads() { ret void }
+
+  define void @test_fadd_s32() { ret void }
 ...
 ---
 name:            test_sext_s8
@@ -189,4 +191,29 @@ body:             |
     %4(s1)  = G_LOAD %0(p0)
     %5(p0)  = G_LOAD %0(p0)
     BX_RET 14, _
+...
+---
+name:            test_fadd_s32
+# CHECK-LABEL: name: test_fadd_s32
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+body:             |
+  bb.0:
+    liveins: %r0, %r1
+
+    %0(s32) = COPY %r0
+    %1(s32) = COPY %r1
+    %2(s32) = G_FADD %0, %1
+    ; G_FADD with s32 is legal, so we should find it unchanged in the output
+    ; CHECK: {{%[0-9]+}}(s32) = G_FADD {{%[0-9]+, %[0-9]+}}
+    %r0 = COPY %2(s32)
+    BX_RET 14, _, implicit %r0
+
 ...

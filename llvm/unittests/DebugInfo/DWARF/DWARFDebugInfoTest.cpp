@@ -8,18 +8,27 @@
 //===----------------------------------------------------------------------===//
 
 #include "DwarfGenerator.h"
-#include "llvm/DebugInfo/DWARF/DWARFAbbreviationDeclaration.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/Optional.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Triple.h"
+#include "llvm/Config/llvm-config.h"
+#include "llvm/DebugInfo/DWARF/DWARFCompileUnit.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
-#include "llvm/DebugInfo/DWARF/DWARFUnit.h"
+#include "llvm/Object/ObjectFile.h"
 #include "llvm/ObjectYAML/DWARFYAML.h"
 #include "llvm/ObjectYAML/DWARFEmitter.h"
 #include "llvm/Support/Dwarf.h"
-#include "llvm/Support/Host.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/TargetSelect.h"
 #include "gtest/gtest.h"
 #include <climits>
+#include <cstdint>
+#include <cstring>
+#include <string>
 
 using namespace llvm;
 using namespace dwarf;
@@ -54,7 +63,7 @@ Triple getHostTripleForAddrSize(uint8_t AddrSize) {
 template <typename T>
 static bool HandleExpectedError(T &Expected) {
   std::string ErrorMsg;
-  handleAllErrors(Expected.takeError(), [&](const llvm::ErrorInfoBase &EI) {
+  handleAllErrors(Expected.takeError(), [&](const ErrorInfoBase &EI) {
     ErrorMsg = EI.message();
   });
   if (!ErrorMsg.empty()) {
@@ -853,8 +862,7 @@ template <uint16_t Version, class AddrType> void TestAddresses() {
   OptU64 = SubprogramDieNoPC.getHighPC(ActualLowPC);
   EXPECT_FALSE((bool)OptU64);
   EXPECT_FALSE(SubprogramDieNoPC.getLowAndHighPC(LowPC, HighPC));
-  
-  
+ 
   // Verify the that our subprogram with only a low PC value succeeds when
   // we ask for the Low PC, but fails appropriately when asked for the high PC
   // or both low and high PC values.
@@ -872,7 +880,6 @@ template <uint16_t Version, class AddrType> void TestAddresses() {
   EXPECT_FALSE((bool)OptU64);
   EXPECT_FALSE(SubprogramDieLowPC.getLowAndHighPC(LowPC, HighPC));
 
-  
   // Verify the that our subprogram with only a low PC value succeeds when
   // we ask for the Low PC, but fails appropriately when asked for the high PC
   // or both low and high PC values.
@@ -1075,7 +1082,6 @@ TEST(DWARFDebugInfo, TestRelations) {
 }
 
 TEST(DWARFDebugInfo, TestDWARFDie) {
-
   // Make sure a default constructed DWARFDie doesn't have any parent, sibling
   // or child;
   DWARFDie DefaultDie;
@@ -1365,7 +1371,6 @@ TEST(DWARFDebugInfo, TestDwarfToFunctions) {
   EXPECT_EQ(InvalidU64, toSectionOffset(FormValOpt, InvalidU64));
   EXPECT_EQ(InvalidS64, toSigned(FormValOpt, InvalidS64));
 
-  
   // Test successful and unsuccessful address decoding.
   uint64_t Address = 0x100000000ULL;
   FormVal.setForm(DW_FORM_addr);
@@ -1536,7 +1541,6 @@ TEST(DWARFDebugInfo, TestFindAttrs) {
   auto NameOpt = FuncDie.findRecursively(Attrs);
   EXPECT_TRUE(NameOpt.hasValue());
   EXPECT_EQ(DieMangled, toString(NameOpt, ""));
-  
 }
 
 } // end anonymous namespace

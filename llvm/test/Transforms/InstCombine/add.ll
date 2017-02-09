@@ -244,14 +244,49 @@ define i32 @test19(i1 %C) {
   ret i32 %V
 }
 
+; Add of sign bit -> xor of sign bit.
+
 define i32 @test20(i32 %x) {
 ; CHECK-LABEL: @test20(
 ; CHECK-NEXT:    ret i32 %x
 ;
-  %tmp.2 = xor i32 %x, -2147483648
-  ;; Add of sign bit -> xor of sign bit.
-  %tmp.4 = add i32 %tmp.2, -2147483648
-  ret i32 %tmp.4
+  %y = xor i32 %x, -2147483648
+  %z = add nsw i32 %y, -2147483648
+  ret i32 %z
+}
+
+define i32 @xor_sign_bit(i32 %x) {
+; CHECK-LABEL: @xor_sign_bit(
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 %x, -2147483606
+; CHECK-NEXT:    ret i32 [[ADD]]
+;
+  %xor = xor i32 %x, 2147483648
+  %add = add i32 %xor, 42
+  ret i32 %add
+}
+
+; Lose no-wrap info by converting to xor? %x is known non-negative
+; here, but not after converting to xor.
+
+define i8 @add_nsw_signbit(i8 %x) {
+; CHECK-LABEL: @add_nsw_signbit(
+; CHECK-NEXT:    [[Y:%.*]] = xor i8 %x, -128
+; CHECK-NEXT:    ret i8 [[Y]]
+;
+  %y = add nsw i8 %x, -128
+  ret i8 %y
+}
+
+; Lose no-wrap info by converting to xor? %x is known non-negative
+; (x < 128 unsigned), but not after converting to xor.
+
+define i8 @add_nuw_signbit(i8 %x) {
+; CHECK-LABEL: @add_nuw_signbit(
+; CHECK-NEXT:    [[Y:%.*]] = xor i8 %x, -128
+; CHECK-NEXT:    ret i8 [[Y]]
+;
+  %y = add nuw i8 %x, 128
+  ret i8 %y
 }
 
 define i1 @test21(i32 %x) {

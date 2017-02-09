@@ -48,13 +48,3 @@ define i32 @test3(i32 %x) {
   ret i32 %add
 }
 
-define i32 @test4(i32 %x) {
-; CHECK-LABEL: @test4(
-; CHECK-NEXT:    [[ADD:%.*]] = add i32 %x, -2147483606
-; CHECK-NEXT:    ret i32 [[ADD]]
-;
-  %sub = xor i32 %x, 2147483648
-  %add = add i32 %sub, 42
-  ret i32 %add
-}
-

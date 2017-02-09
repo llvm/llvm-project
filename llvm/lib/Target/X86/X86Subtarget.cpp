@@ -275,7 +275,6 @@ void X86Subtarget::initializeEnvironment() {
   HasVBMI = false;
   HasIFMA = false;
   HasRTM = false;
-  HasHLE = false;
   HasERI = false;
   HasCDI = false;
   HasPFI = false;
@@ -289,6 +288,7 @@ void X86Subtarget::initializeEnvironment() {
   HasRDSEED = false;
   HasLAHFSAHF = false;
   HasMWAITX = false;
+  HasCLZERO = false;
   HasMPX = false;
   IsBTMemSlow = false;
   IsPMULLDSlow = false;

@@ -2231,16 +2231,6 @@ define i1 @icmp_sge_zero_add_nsw(i32 %a) {
   ret i1 %cmp
 }
 
-define i1 @icmp_slt_zero_add_nsw(i32 %a) {
-; CHECK-LABEL: @icmp_slt_zero_add_nsw(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 %a, -1
-; CHECK-NEXT:    ret i1 [[CMP]]
-;
-  %add = add nsw i32 %a, 1
-  %cmp = icmp slt i32 %add, 0
-  ret i1 %cmp
-}
-
 define i1 @icmp_sle_zero_add_nsw(i32 %a) {
 ; CHECK-LABEL: @icmp_sle_zero_add_nsw(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 %a, 0

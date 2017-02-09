@@ -816,3 +816,22 @@ def LoadAddrReg64 : MipsAsmPseudoInst<(outs GPR64Opnd:$rt), (ins mem:$addr),
                                        "dla\t$rt, $addr">;
 def LoadAddrImm64 : MipsAsmPseudoInst<(outs GPR64Opnd:$rt), (ins imm64:$imm64),
                                        "dla\t$rt, $imm64">;
+
+def DMULImmMacro : MipsAsmPseudoInst<(outs), (ins GPR64Opnd:$rs, GPR64Opnd:$rt,
+                                                  simm32_relaxed:$imm),
+                                     "dmul\t$rs, $rt, $imm">,
+                   ISA_MIPS3_NOT_32R6_64R6;
+def DMULOMacro : MipsAsmPseudoInst<(outs), (ins GPR64Opnd:$rs, GPR64Opnd:$rt,
+                                                GPR64Opnd:$rd),
+                                   "dmulo\t$rs, $rt, $rd">,
+                 ISA_MIPS3_NOT_32R6_64R6;
+def DMULOUMacro : MipsAsmPseudoInst<(outs), (ins GPR64Opnd:$rs, GPR64Opnd:$rt,
+                                                 GPR64Opnd:$rd),
+                                    "dmulou\t$rs, $rt, $rd">,
+                  ISA_MIPS3_NOT_32R6_64R6;
+
+def DMULMacro : MipsAsmPseudoInst<(outs), (ins GPR64Opnd:$rs, GPR64Opnd:$rt,
+                                               GPR64Opnd:$rd),
+                                  "dmul\t$rs, $rt, $rd"> {
+  let InsnPredicates = [HasMips3, NotMips64r6, NotCnMips];
+}

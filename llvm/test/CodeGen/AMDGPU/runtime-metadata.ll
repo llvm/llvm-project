@@ -1,4 +1,5 @@
-; RUN: llc -mtriple=amdgcn--amdhsa -filetype=obj -o - < %s | llvm-readobj -amdgpu-runtime-metadata -elf-output-style=GNU -notes | FileCheck %s --check-prefix=NOTES
+; RUN: llc -mtriple=amdgcn--amdhsa -filetype=obj -o - < %s | llvm-readobj -amdgpu-runtime-metadata -elf-output-style=GNU -notes | FileCheck %s --check-prefix=NOTES --check-prefix=SI
+; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=fiji -filetype=obj -o - < %s | llvm-readobj -amdgpu-runtime-metadata -elf-output-style=GNU -notes | FileCheck %s --check-prefix=NOTES --check-prefix=VI
 ; RUN: llc -mtriple=amdgcn--amdhsa -filetype=obj -amdgpu-dump-rtmd -amdgpu-check-rtmd-parser %s -o - 2>&1 | FileCheck --check-prefix=CHECK --check-prefix=PARSER %s
 
 %struct.A = type { i8, float }
@@ -11,9 +12,10 @@
 %opencl.clk_event_t = type opaque
 
 ; CHECK: ---
-; CHECK-NEXT: { amd.MDVersion: [ 2, 0 ], amd.PrintfInfo: [ '1:1:4:%d\n', '2:1:8:%g\n' ], amd.Kernels: 
+; SI: { amd.MDVersion: [ 2, 1 ], amd.IsaInfo: { amd.IsaInfoWavefrontSize: 64, amd.IsaInfoLocalMemorySize: 65536, amd.IsaInfoEUsPerCU: 4, amd.IsaInfoMaxWavesPerEU: 10, amd.IsaInfoMaxFlatWorkGroupSize: 2048, amd.IsaInfoSGPRAllocGranule: 8, amd.IsaInfoTotalNumSGPRs: 512, amd.IsaInfoAddressableNumSGPRs: 104, amd.IsaInfoVGPRAllocGranule: 4, amd.IsaInfoTotalNumVGPRs: 256, amd.IsaInfoAddressableNumVGPRs: 256 }, amd.PrintfInfo: [ '1:1:4:%d\n', '2:1:8:%g\n' ], amd.Kernels: 
+; VI: { amd.MDVersion: [ 2, 1 ], amd.IsaInfo: { amd.IsaInfoWavefrontSize: 64, amd.IsaInfoLocalMemorySize: 65536, amd.IsaInfoEUsPerCU: 4, amd.IsaInfoMaxWavesPerEU: 10, amd.IsaInfoMaxFlatWorkGroupSize: 2048, amd.IsaInfoSGPRAllocGranule: 16, amd.IsaInfoTotalNumSGPRs: 800, amd.IsaInfoAddressableNumSGPRs: 102, amd.IsaInfoVGPRAllocGranule: 4, amd.IsaInfoTotalNumVGPRs: 256, amd.IsaInfoAddressableNumVGPRs: 256 }, amd.PrintfInfo: [ '1:1:4:%d\n', '2:1:8:%g\n' ], amd.Kernels: 
 
-; CHECK-NEXT:   - { amd.KernelName: test_char, amd.Language: OpenCL C, amd.LanguageVersion: [ 2, 0 ], amd.Args: 
+; CHECK:   - { amd.KernelName: test_char, amd.Language: OpenCL C, amd.LanguageVersion: [ 2, 0 ], amd.Args: 
 ; CHECK-NEXT:       - { amd.ArgSize: 1, amd.ArgAlign: 1, amd.ArgKind: 0, amd.ArgValueType: 1, amd.ArgTypeName: char, amd.ArgAccQual: 0 }
 ; CHECK-NEXT:       - { amd.ArgSize: 8, amd.ArgAlign: 8, amd.ArgKind: 7, amd.ArgValueType: 9 }
 ; CHECK-NEXT:       - { amd.ArgSize: 8, amd.ArgAlign: 8, amd.ArgKind: 8, amd.ArgValueType: 9 }
@@ -345,7 +347,9 @@ define amdgpu_kernel void @test_pointee_align(i64 addrspace(1)* %a, i8 addrspace
 ; NOTES-NEXT: Owner    Data size    Description
 ; NOTES-NEXT: AMD      0x00000008   Unknown note type: (0x00000001)
 ; NOTES-NEXT: AMD      0x0000001b   Unknown note type: (0x00000003)
-; NOTES-NEXT: AMD      0x00005196   Unknown note type: (0x00000008)
+
+; SI:         AMD      0x0000530d   Unknown note type: (0x00000008)
+; VI:         AMD      0x0000530e   Unknown note type: (0x00000008)
 
 !llvm.printf.fmts = !{!100, !101}
 

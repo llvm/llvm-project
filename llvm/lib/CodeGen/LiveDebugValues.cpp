@@ -131,11 +131,13 @@ private:
       if (int RegNo = isDbgValueDescribedByReg(MI)) {
         Kind = RegisterKind;
         Loc.RegisterLoc.RegNo = RegNo;
-        uint64_t Offset =
+        int64_t Offset =
             MI.isIndirectDebugValue() ? MI.getOperand(1).getImm() : 0;
         // We don't support offsets larger than 4GiB here. They are
         // slated to be replaced with DIExpressions anyway.
-        if (Offset >= (1ULL << 32))
+        // With indirect debug values used for spill locations, Offset 
+        // can be negative.
+        if (Offset == INT64_MIN || std::abs(Offset) >= (1LL << 32))
           Kind = InvalidKind;
         else
           Loc.RegisterLoc.Offset = Offset;

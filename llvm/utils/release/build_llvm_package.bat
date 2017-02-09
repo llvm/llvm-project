@@ -70,12 +70,22 @@ mkdir build32
 cd build32
 set CC=..\build32_stage0\bin\clang-cl
 set CXX=..\build32_stage0\bin\clang-cl
-cmake -GNinja %cmake_flags% -DBUILD_CLANG_FORMAT_VS_PLUGIN=ON -DPYTHON_HOME=%python32_dir% ..\llvm || exit /b
+cmake -GNinja %cmake_flags% -DPYTHON_HOME=%python32_dir% ..\llvm || exit /b
 ninja all || exit /b
 ninja check || ninja check || ninja check || exit /b
 ninja check-clang || ninja check-clang || ninja check-clang ||  exit /b
 copy ..\llvm\tools\clang\tools\clang-format-vs\ClangFormat\bin\Release\ClangFormat.vsix ClangFormat-r%revision%.vsix
 ninja package || exit /b
+cd ..
+
+REM The plug-in is built separately as it uses a statically linked clang-cl.exe.
+mkdir build_vsix
+cd build_vsix
+set CC=..\build32_stage0\bin\clang-cl
+set CXX=..\build32_stage0\bin\clang-cl
+cmake -GNinja %cmake_flags% -DLLVM_USE_CRT_RELEASE=MT -DBUILD_CLANG_FORMAT_VS_PLUGIN=ON -DPYTHON_HOME=%python32_dir% ..\llvm || exit /b
+ninja clang_format_vsix || exit /b
+copy ..\llvm\tools\clang\tools\clang-format-vs\ClangFormat\bin\Release\ClangFormat.vsix ClangFormat-r%revision%.vsix
 cd ..
 
 

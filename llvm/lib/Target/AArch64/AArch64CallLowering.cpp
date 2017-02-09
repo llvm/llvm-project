@@ -15,6 +15,8 @@
 
 #include "AArch64CallLowering.h"
 #include "AArch64ISelLowering.h"
+#include "AArch64MachineFunctionInfo.h"
+#include "AArch64Subtarget.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/Analysis.h"
@@ -55,7 +57,7 @@ AArch64CallLowering::AArch64CallLowering(const AArch64TargetLowering &TLI)
 struct IncomingArgHandler : public CallLowering::ValueHandler {
   IncomingArgHandler(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,
                      CCAssignFn *AssignFn)
-      : ValueHandler(MIRBuilder, MRI, AssignFn) {}
+      : ValueHandler(MIRBuilder, MRI, AssignFn), StackUsed(0) {}
 
   unsigned getStackAddress(uint64_t Size, int64_t Offset,
                            MachinePointerInfo &MPO) override {
@@ -64,6 +66,7 @@ struct IncomingArgHandler : public CallLowering::ValueHandler {
     MPO = MachinePointerInfo::getFixedStack(MIRBuilder.getMF(), FI);
     unsigned AddrReg = MRI.createGenericVirtualRegister(LLT::pointer(0, 64));
     MIRBuilder.buildFrameIndex(AddrReg, FI);
+    StackUsed = std::max(StackUsed, Size + Offset);
     return AddrReg;
   }
 
@@ -86,6 +89,8 @@ struct IncomingArgHandler : public CallLowering::ValueHandler {
   /// parameters (it's a basic-block live-in), and a call instruction
   /// (it's an implicit-def of the BL).
   virtual void markPhysRegUsed(unsigned PhysReg) = 0;
+
+  uint64_t StackUsed;
 };
 
 struct FormalArgHandler : public IncomingArgHandler {
@@ -264,6 +269,21 @@ bool AArch64CallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
   FormalArgHandler Handler(MIRBuilder, MRI, AssignFn);
   if (!handleAssignments(MIRBuilder, SplitArgs, Handler))
     return false;
+
+  if (F.isVarArg()) {
+    if (!MF.getSubtarget<AArch64Subtarget>().isTargetDarwin()) {
+      // FIXME: we need to reimplement saveVarArgsRegisters from
+      // AArch64ISelLowering.
+      return false;
+    }
+
+    // We currently pass all varargs at 8-byte alignment.
+    uint64_t StackOffset = alignTo(Handler.StackUsed, 8);
+
+    auto &MFI = MIRBuilder.getMF().getFrameInfo();
+    AArch64FunctionInfo *FuncInfo = MF.getInfo<AArch64FunctionInfo>();
+    FuncInfo->setVarArgsStackIndex(MFI.CreateFixedObject(4, StackOffset, true));
+  }
 
   // Move back to the end of the basic block.
   MIRBuilder.setMBB(MBB);
