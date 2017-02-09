@@ -92,6 +92,16 @@ void LegalizerHelper::extractParts(unsigned Reg, LLT Ty, int NumParts,
   MIRBuilder.buildExtract(VRegs, Indexes, Reg);
 }
 
+static RTLIB::Libcall getRTLibDesc(unsigned Opcode, unsigned Size) {
+  switch (Opcode) {
+  case TargetOpcode::G_FREM:
+    return Size == 64 ? RTLIB::REM_F64 : RTLIB::REM_F32;
+  case TargetOpcode::G_FPOW:
+    return Size == 64 ? RTLIB::POW_F64 : RTLIB::POW_F32;
+  }
+  llvm_unreachable("Unknown libcall function");
+}
+
 LegalizerHelper::LegalizeResult
 LegalizerHelper::libcall(MachineInstr &MI) {
   LLT Ty = MRI.getType(MI.getOperand(0).getReg());
@@ -101,14 +111,13 @@ LegalizerHelper::libcall(MachineInstr &MI) {
   switch (MI.getOpcode()) {
   default:
     return UnableToLegalize;
+  case TargetOpcode::G_FPOW:
   case TargetOpcode::G_FREM: {
     auto &Ctx = MIRBuilder.getMF().getFunction()->getContext();
     Type *Ty = Size == 64 ? Type::getDoubleTy(Ctx) : Type::getFloatTy(Ctx);
     auto &CLI = *MIRBuilder.getMF().getSubtarget().getCallLowering();
     auto &TLI = *MIRBuilder.getMF().getSubtarget().getTargetLowering();
-    const char *Name =
-        TLI.getLibcallName(Size == 64 ? RTLIB::REM_F64 : RTLIB::REM_F32);
-
+    const char *Name = TLI.getLibcallName(getRTLibDesc(MI.getOpcode(), Size));
     CLI.lowerCall(
         MIRBuilder, MachineOperand::CreateES(Name),
         {MI.getOperand(0).getReg(), Ty},
@@ -516,6 +525,33 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
     MIRBuilder.buildMul(ProdReg, QuotReg, MI.getOperand(2).getReg());
     MIRBuilder.buildSub(MI.getOperand(0).getReg(), MI.getOperand(1).getReg(),
                         ProdReg);
+    MI.eraseFromParent();
+    return Legalized;
+  }
+  case TargetOpcode::G_SMULO:
+  case TargetOpcode::G_UMULO: {
+    // Generate G_UMULH/G_SMULH to check for overflow and a normal G_MUL for the
+    // result.
+    unsigned Res = MI.getOperand(0).getReg();
+    unsigned Overflow = MI.getOperand(1).getReg();
+    unsigned LHS = MI.getOperand(2).getReg();
+    unsigned RHS = MI.getOperand(3).getReg();
+
+    MIRBuilder.buildMul(Res, LHS, RHS);
+
+    unsigned Opcode = MI.getOpcode() == TargetOpcode::G_SMULO
+                          ? TargetOpcode::G_SMULH
+                          : TargetOpcode::G_UMULH;
+
+    unsigned HiPart = MRI.createGenericVirtualRegister(Ty);
+    MIRBuilder.buildInstr(Opcode)
+      .addDef(HiPart)
+      .addUse(LHS)
+      .addUse(RHS);
+
+    unsigned Zero = MRI.createGenericVirtualRegister(Ty);
+    MIRBuilder.buildConstant(Zero, 0);
+    MIRBuilder.buildICmp(CmpInst::ICMP_NE, Overflow, HiPart, Zero);
     MI.eraseFromParent();
     return Legalized;
   }

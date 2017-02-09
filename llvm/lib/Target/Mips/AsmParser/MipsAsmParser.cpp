@@ -276,6 +276,18 @@ class MipsAsmParser : public MCTargetAsmParser {
   bool expandAbs(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
                  const MCSubtargetInfo *STI);
 
+  bool expandMulImm(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
+                    const MCSubtargetInfo *STI);
+
+  bool expandMulO(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
+                  const MCSubtargetInfo *STI);
+
+  bool expandMulOU(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
+                   const MCSubtargetInfo *STI);
+
+  bool expandDMULMacro(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
+                       const MCSubtargetInfo *STI);
+
   bool expandLoadStoreDMacro(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
                              const MCSubtargetInfo *STI, bool IsLoad);
 
@@ -2332,6 +2344,17 @@ MipsAsmParser::tryExpandInstruction(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
     return expandDRotationImm(Inst, IDLoc, Out, STI) ? MER_Fail : MER_Success;
   case Mips::ABSMacro:
     return expandAbs(Inst, IDLoc, Out, STI) ? MER_Fail : MER_Success;
+  case Mips::MULImmMacro:
+  case Mips::DMULImmMacro:
+    return expandMulImm(Inst, IDLoc, Out, STI) ? MER_Fail : MER_Success;
+  case Mips::MULOMacro:
+  case Mips::DMULOMacro:
+    return expandMulO(Inst, IDLoc, Out, STI) ? MER_Fail : MER_Success;
+  case Mips::MULOUMacro:
+  case Mips::DMULOUMacro:
+    return expandMulOU(Inst, IDLoc, Out, STI) ? MER_Fail : MER_Success;
+  case Mips::DMULMacro:
+    return expandDMULMacro(Inst, IDLoc, Out, STI) ? MER_Fail : MER_Success;
   case Mips::LDMacro:
   case Mips::SDMacro:
     return expandLoadStoreDMacro(Inst, IDLoc, Out, STI,
@@ -4056,6 +4079,119 @@ bool MipsAsmParser::expandAbs(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
   else
     TOut.emitEmptyDelaySlot(false, IDLoc, STI);
   TOut.emitRRR(Mips::SUB, FirstRegOp, Mips::ZERO, SecondRegOp, IDLoc, STI);
+
+  return false;
+}
+
+bool MipsAsmParser::expandMulImm(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
+                                 const MCSubtargetInfo *STI) {
+  MipsTargetStreamer &TOut = getTargetStreamer();
+  unsigned ATReg = Mips::NoRegister;
+  unsigned DstReg = Inst.getOperand(0).getReg();
+  unsigned SrcReg = Inst.getOperand(1).getReg();
+  int32_t ImmValue = Inst.getOperand(2).getImm();
+
+  ATReg = getATReg(IDLoc);
+  if (!ATReg)
+    return true;
+
+  loadImmediate(ImmValue, ATReg, Mips::NoRegister, true, false, IDLoc, Out, STI);
+
+  TOut.emitRR(Inst.getOpcode() == Mips::MULImmMacro ? Mips::MULT : Mips::DMULT,
+              SrcReg, ATReg, IDLoc, STI);
+
+  TOut.emitR(Mips::MFLO, DstReg, IDLoc, STI);
+
+  return false;
+}
+
+bool MipsAsmParser::expandMulO(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
+                               const MCSubtargetInfo *STI) {
+  MipsTargetStreamer &TOut = getTargetStreamer();
+  unsigned ATReg = Mips::NoRegister;
+  unsigned DstReg = Inst.getOperand(0).getReg();
+  unsigned SrcReg = Inst.getOperand(1).getReg();
+  unsigned TmpReg = Inst.getOperand(2).getReg();
+
+  ATReg = getATReg(Inst.getLoc());
+  if (!ATReg)
+    return true;
+
+  TOut.emitRR(Inst.getOpcode() == Mips::MULOMacro ? Mips::MULT : Mips::DMULT,
+              SrcReg, TmpReg, IDLoc, STI);
+
+  TOut.emitR(Mips::MFLO, DstReg, IDLoc, STI);
+
+  TOut.emitRRI(Inst.getOpcode() == Mips::MULOMacro ? Mips::SRA : Mips::DSRA32,
+               DstReg, DstReg, 0x1F, IDLoc, STI);
+
+  TOut.emitR(Mips::MFHI, ATReg, IDLoc, STI);
+
+  if (useTraps()) {
+    TOut.emitRRI(Mips::TNE, DstReg, ATReg, 6, IDLoc, STI);
+  } else {
+    MCContext & Context = TOut.getStreamer().getContext();
+    MCSymbol * BrTarget = Context.createTempSymbol();
+    MCOperand LabelOp =
+        MCOperand::createExpr(MCSymbolRefExpr::create(BrTarget, Context));
+
+    TOut.emitRRX(Mips::BEQ, DstReg, ATReg, LabelOp, IDLoc, STI);
+    if (AssemblerOptions.back()->isReorder())
+      TOut.emitNop(IDLoc, STI);
+    TOut.emitII(Mips::BREAK, 6, 0, IDLoc, STI);
+
+    TOut.getStreamer().EmitLabel(BrTarget);
+  }
+  TOut.emitR(Mips::MFLO, DstReg, IDLoc, STI);
+
+  return false;
+}
+
+bool MipsAsmParser::expandMulOU(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
+                                const MCSubtargetInfo *STI) {
+  MipsTargetStreamer &TOut = getTargetStreamer();
+  unsigned ATReg = Mips::NoRegister;
+  unsigned DstReg = Inst.getOperand(0).getReg();
+  unsigned SrcReg = Inst.getOperand(1).getReg();
+  unsigned TmpReg = Inst.getOperand(2).getReg();
+
+  ATReg = getATReg(IDLoc);
+  if (!ATReg)
+    return true;
+
+  TOut.emitRR(Inst.getOpcode() == Mips::MULOUMacro ? Mips::MULTu : Mips::DMULTu,
+              SrcReg, TmpReg, IDLoc, STI);
+
+  TOut.emitR(Mips::MFHI, ATReg, IDLoc, STI);
+  TOut.emitR(Mips::MFLO, DstReg, IDLoc, STI);
+  if (useTraps()) {
+    TOut.emitRRI(Mips::TNE, ATReg, Mips::ZERO, 6, IDLoc, STI);
+  } else {
+    MCContext & Context = TOut.getStreamer().getContext();
+    MCSymbol * BrTarget = Context.createTempSymbol();
+    MCOperand LabelOp =
+        MCOperand::createExpr(MCSymbolRefExpr::create(BrTarget, Context));
+
+    TOut.emitRRX(Mips::BEQ, ATReg, Mips::ZERO, LabelOp, IDLoc, STI);
+    if (AssemblerOptions.back()->isReorder())
+      TOut.emitNop(IDLoc, STI);
+    TOut.emitII(Mips::BREAK, 6, 0, IDLoc, STI);
+
+    TOut.getStreamer().EmitLabel(BrTarget);
+  }
+
+  return false;
+}
+
+bool MipsAsmParser::expandDMULMacro(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
+                                    const MCSubtargetInfo *STI) {
+  MipsTargetStreamer &TOut = getTargetStreamer();
+  unsigned DstReg = Inst.getOperand(0).getReg();
+  unsigned SrcReg = Inst.getOperand(1).getReg();
+  unsigned TmpReg = Inst.getOperand(2).getReg();
+
+  TOut.emitRR(Mips::DMULTu, SrcReg, TmpReg, IDLoc, STI);
+  TOut.emitR(Mips::MFLO, DstReg, IDLoc, STI);
 
   return false;
 }

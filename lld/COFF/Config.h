@@ -105,6 +105,8 @@ struct Configuration {
   std::map<std::string, int> DLLOrder;
   SymbolBody *DelayLoadHelper = nullptr;
 
+  bool SaveTemps = false;
+
   // Used for SafeSEH.
   Symbol *SEHTable = nullptr;
   Symbol *SEHCount = nullptr;

@@ -355,7 +355,8 @@ The compler will also insert a module constructor that will call
 .. code-block:: c++
 
    // The guards are [start, stop).
-   // This function may be called multiple times with the same values of start/stop.
+   // This function will be called at least once per DSO and may be called
+   // more than once with the same values of start/stop.
    __sanitizer_cov_trace_pc_guard_init(uint32_t *start, uint32_t *stop);
 
 With `trace-pc-guards,indirect-calls`
@@ -373,10 +374,10 @@ Example:
   #include <sanitizer/coverage_interface.h>
 
   // This callback is inserted by the compiler as a module constructor
-  // into every compilation unit. 'start' and 'stop' correspond to the
+  // into every DSO. 'start' and 'stop' correspond to the
   // beginning and end of the section with the guards for the entire
-  // binary (executable or DSO) and so it will be called multiple times
-  // with the same parameters.
+  // binary (executable or DSO). The callback will be called at least
+  // once per DSO and may be called multiple times with the same parameters.
   extern "C" void __sanitizer_cov_trace_pc_guard_init(uint32_t *start,
                                                       uint32_t *stop) {
     static uint64_t N;  // Counter for the guards.

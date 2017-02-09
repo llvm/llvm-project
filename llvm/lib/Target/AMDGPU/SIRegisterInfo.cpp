@@ -1298,3 +1298,34 @@ bool SIRegisterInfo::shouldCoalesce(MachineInstr *MI,
 
   return NewSize <= DstSize || NewSize <= SrcSize;
 }
+
+unsigned SIRegisterInfo::getRegPressureLimit(const TargetRegisterClass *RC,
+                                             MachineFunction &MF) const {
+
+  const SISubtarget &ST = MF.getSubtarget<SISubtarget>();
+  const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
+
+  unsigned Occupancy = ST.getOccupancyWithLocalMemSize(MFI->getLDSSize(),
+                                                       *MF.getFunction());
+  switch (RC->getID()) {
+  default:
+    return AMDGPURegisterInfo::getRegPressureLimit(RC, MF);
+  case AMDGPU::VGPR_32RegClassID:
+    return std::min(ST.getMaxNumVGPRs(Occupancy), ST.getMaxNumVGPRs(MF));
+  case AMDGPU::SGPR_32RegClassID:
+    return std::min(ST.getMaxNumSGPRs(Occupancy, true), ST.getMaxNumSGPRs(MF));
+  }
+}
+
+unsigned SIRegisterInfo::getRegPressureSetLimit(const MachineFunction &MF,
+                                                unsigned Idx) const {
+  if (Idx == getVGPRPressureSet())
+    return getRegPressureLimit(&AMDGPU::VGPR_32RegClass,
+                               const_cast<MachineFunction &>(MF));
+
+  if (Idx == getSGPRPressureSet())
+    return getRegPressureLimit(&AMDGPU::SGPR_32RegClass,
+                               const_cast<MachineFunction &>(MF));
+
+  return AMDGPURegisterInfo::getRegPressureSetLimit(MF, Idx);
+}

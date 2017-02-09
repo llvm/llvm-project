@@ -1,7 +1,7 @@
 # REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t1.o
 # RUN: ld.lld --emit-relocs %t1.o -o %t
-# RUN: llvm-readobj -t -r %t1 | FileCheck %s
+# RUN: llvm-readobj -t -r %t | FileCheck %s
 
 ## Check single dash form.
 # RUN: ld.lld -emit-relocs %t1.o -o %t1

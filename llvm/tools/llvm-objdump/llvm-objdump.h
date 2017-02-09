@@ -35,6 +35,7 @@ extern cl::list<std::string> FilterSections;
 extern cl::opt<bool> Disassemble;
 extern cl::opt<bool> DisassembleAll;
 extern cl::opt<bool> NoShowRawInsn;
+extern cl::opt<bool> NoLeadingAddr;
 extern cl::opt<bool> PrivateHeaders;
 extern cl::opt<bool> FirstPrivateHeader;
 extern cl::opt<bool> ExportsTrie;

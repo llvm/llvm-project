@@ -14,23 +14,21 @@
 #ifndef LLVM_MC_MCSECTION_H
 #define LLVM_MC_MCSECTION_H
 
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/ilist.h"
-#include "llvm/ADT/ilist_node.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/MC/MCFragment.h"
 #include "llvm/MC/SectionKind.h"
-#include "llvm/Support/Compiler.h"
+#include <cassert>
+#include <utility>
 
 namespace llvm {
+
 class MCAsmInfo;
-class MCAssembler;
 class MCContext;
 class MCExpr;
-class MCFragment;
-class MCSection;
 class MCSymbol;
-class Triple;
 class raw_ostream;
+class Triple;
 
 template <> struct ilist_alloc_traits<MCFragment> {
   static void deleteNode(MCFragment *V);
@@ -58,9 +56,6 @@ public:
   typedef FragmentListType::reverse_iterator reverse_iterator;
 
 private:
-  MCSection(const MCSection &) = delete;
-  void operator=(const MCSection &) = delete;
-
   MCSymbol *Begin;
   MCSymbol *End = nullptr;
   /// The alignment requirement of this section.
@@ -78,12 +73,12 @@ private:
 
   /// \brief We've seen a bundle_lock directive but not its first instruction
   /// yet.
-  unsigned BundleGroupBeforeFirstInst : 1;
+  bool BundleGroupBeforeFirstInst : 1;
 
   /// Whether this section has had instructions emitted into it.
-  unsigned HasInstructions : 1;
+  bool HasInstructions : 1;
 
-  unsigned IsRegistered : 1;
+  bool IsRegistered : 1;
 
   MCDummyFragment DummyFragment;
 
@@ -94,12 +89,16 @@ private:
   SmallVector<std::pair<unsigned, MCFragment *>, 1> SubsectionFragmentMap;
 
 protected:
-  MCSection(SectionVariant V, SectionKind K, MCSymbol *Begin);
   SectionVariant Variant;
   SectionKind Kind;
+
+  MCSection(SectionVariant V, SectionKind K, MCSymbol *Begin);
   ~MCSection();
 
 public:
+  MCSection(const MCSection &) = delete;
+  MCSection &operator=(const MCSection &) = delete;
+
   SectionKind getKind() const { return Kind; }
 
   SectionVariant getVariant() const { return Variant; }
@@ -185,4 +184,4 @@ public:
 
 } // end namespace llvm
 
-#endif
+#endif // LLVM_MC_MCSECTION_H

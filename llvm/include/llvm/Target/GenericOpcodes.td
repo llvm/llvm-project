@@ -91,6 +91,13 @@ def G_FCONSTANT : Instruction {
   let hasSideEffects = 0;
 }
 
+def G_VASTART : Instruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins type0:$list);
+  let hasSideEffects = 0;
+  let mayStore = 1;
+}
+
 //------------------------------------------------------------------------------
 // Binary ops.
 //------------------------------------------------------------------------------
@@ -273,6 +280,24 @@ def G_SMULO : Instruction {
   let isCommutable = 1;
 }
 
+// Multiply two numbers at twice the incoming bit width (unsigned) and return
+// the high half of the result.
+def G_UMULH : Instruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1, type0:$src2);
+  let hasSideEffects = 0;
+  let isCommutable = 1;
+}
+
+// Multiply two numbers at twice the incoming bit width (signed) and return
+// the high half of the result.
+def G_SMULH : Instruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1, type0:$src2);
+  let hasSideEffects = 0;
+  let isCommutable = 1;
+}
+
 //------------------------------------------------------------------------------
 // Floating Point Unary Ops.
 //------------------------------------------------------------------------------
@@ -350,6 +375,13 @@ def G_FDIV : Instruction {
 
 // Generic FP remainder.
 def G_FREM : Instruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1, type0:$src2);
+  let hasSideEffects = 0;
+}
+
+// Floating point exponentiation.
+def G_FPOW : Instruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1, type0:$src2);
   let hasSideEffects = 0;

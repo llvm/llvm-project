@@ -26,3 +26,10 @@ define i8* @f() {
 
 ; M1: !0 = !{i32 0, !"typeid"}
 !0 = !{i32 0, !"typeid"}
+
+; M0: !llvm.dbg.cu
+; M1-NOT: !llvm.dbg.cu
+!llvm.dbg.cu = !{}
+
+!1 = !{i32 2, !"Debug Info Version", i32 3}
+!llvm.module.flags = !{!1}

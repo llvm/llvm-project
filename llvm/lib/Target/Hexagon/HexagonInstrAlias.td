@@ -436,6 +436,8 @@ def : InstAlias<"$Pd=cmp.ltu($Rs, $Rt)",
 // Rd=neg(Rs) is aliased to Rd=sub(#0,Rs)
 def : InstAlias<"$Rd = neg($Rs)",
       (A2_subri IntRegs:$Rd, 0, IntRegs:$Rs), 0>;
+def : InstAlias<"$Rd=zxtb($Rs)",
+      (A2_andir IntRegs:$Rd, IntRegs:$Rs, 255)>;
 
 def : InstAlias<"m0 = $Rs", (A2_tfrrcr C6, IntRegs:$Rs)>;
 def : InstAlias<"$Rd = m0", (A2_tfrcrr IntRegs:$Rd, C6)>;

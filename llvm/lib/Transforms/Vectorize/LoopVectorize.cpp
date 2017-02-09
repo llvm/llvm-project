@@ -317,6 +317,10 @@ static GetElementPtrInst *getGEPInstruction(Value *Ptr) {
   return nullptr;
 }
 
+// FIXME: The following helper functions have multiple implementations
+// in the project. They can be effectively organized in a common Load/Store
+// utilities unit.
+
 /// A helper function that returns the pointer operand of a load or store
 /// instruction.
 static Value *getPointerOperand(Value *I) {
@@ -325,6 +329,34 @@ static Value *getPointerOperand(Value *I) {
   if (auto *SI = dyn_cast<StoreInst>(I))
     return SI->getPointerOperand();
   return nullptr;
+}
+
+/// A helper function that returns the type of loaded or stored value.
+static Type *getMemInstValueType(Value *I) {
+  assert((isa<LoadInst>(I) || isa<StoreInst>(I)) &&
+         "Expected Load or Store instruction");
+  if (auto *LI = dyn_cast<LoadInst>(I))
+    return LI->getType();
+  return cast<StoreInst>(I)->getValueOperand()->getType();
+}
+
+/// A helper function that returns the alignment of load or store instruction.
+static unsigned getMemInstAlignment(Value *I) {
+  assert((isa<LoadInst>(I) || isa<StoreInst>(I)) &&
+         "Expected Load or Store instruction");
+  if (auto *LI = dyn_cast<LoadInst>(I))
+    return LI->getAlignment();
+  return cast<StoreInst>(I)->getAlignment();
+}
+
+/// A helper function that returns the address space of the pointer operand of
+/// load or store instruction.
+static unsigned getMemInstAddressSpace(Value *I) {
+  assert((isa<LoadInst>(I) || isa<StoreInst>(I)) &&
+         "Expected Load or Store instruction");
+  if (auto *LI = dyn_cast<LoadInst>(I))
+    return LI->getPointerAddressSpace();
+  return cast<StoreInst>(I)->getPointerAddressSpace();
 }
 
 /// A helper function that returns true if the given type is irregular. The
@@ -1612,12 +1644,6 @@ public:
   /// Returns true if the value V is uniform within the loop.
   bool isUniform(Value *V);
 
-  /// Returns true if \p I is known to be uniform after vectorization.
-  bool isUniformAfterVectorization(Instruction *I) { return Uniforms.count(I); }
-
-  /// Returns true if \p I is known to be scalar after vectorization.
-  bool isScalarAfterVectorization(Instruction *I) { return Scalars.count(I); }
-
   /// Returns the information that we collected about runtime memory check.
   const RuntimePointerChecking *getRuntimePointerChecking() const {
     return LAI->getRuntimePointerChecking();
@@ -1694,15 +1720,9 @@ public:
   /// instructions that may divide by zero.
   bool isScalarWithPredication(Instruction *I);
 
-  /// Returns true if \p I is a memory instruction that has a consecutive or
-  /// consecutive-like pointer operand. Consecutive-like pointers are pointers
-  /// that are treated like consecutive pointers during vectorization. The
-  /// pointer operands of interleaved accesses are an example.
-  bool hasConsecutiveLikePtrOperand(Instruction *I);
-
-  /// Returns true if \p I is a memory instruction that must be scalarized
-  /// during vectorization.
-  bool memoryInstructionMustBeScalarized(Instruction *I, unsigned VF = 1);
+  /// Returns true if \p I is a memory instruction with consecutive memory
+  /// access that can be widened.
+  bool memoryInstructionCanBeWidened(Instruction *I, unsigned VF = 1);
 
 private:
   /// Check if a single basic block loop is vectorizable.
@@ -1719,24 +1739,6 @@ private:
   /// Return true if we can vectorize this loop using the IF-conversion
   /// transformation.
   bool canVectorizeWithIfConvert();
-
-  /// Collect the instructions that are uniform after vectorization. An
-  /// instruction is uniform if we represent it with a single scalar value in
-  /// the vectorized loop corresponding to each vector iteration. Examples of
-  /// uniform instructions include pointer operands of consecutive or
-  /// interleaved memory accesses. Note that although uniformity implies an
-  /// instruction will be scalar, the reverse is not true. In general, a
-  /// scalarized instruction will be represented by VF scalar values in the
-  /// vectorized loop, each corresponding to an iteration of the original
-  /// scalar loop.
-  void collectLoopUniforms();
-
-  /// Collect the instructions that are scalar after vectorization. An
-  /// instruction is scalar if it is known to be uniform or will be scalarized
-  /// during vectorization. Non-uniform scalarized instructions will be
-  /// represented by VF values in the vectorized loop, each corresponding to an
-  /// iteration of the original scalar loop.
-  void collectLoopScalars();
 
   /// Return true if all of the instructions in the block can be speculatively
   /// executed. \p SafePtrs is a list of addresses that are known to be legal
@@ -1827,12 +1829,6 @@ private:
   /// vars which can be accessed from outside the loop.
   SmallPtrSet<Value *, 4> AllowedExit;
 
-  /// Holds the instructions known to be uniform after vectorization.
-  SmallPtrSet<Instruction *, 4> Uniforms;
-
-  /// Holds the instructions known to be scalar after vectorization.
-  SmallPtrSet<Instruction *, 4> Scalars;
-
   /// Can we assume the absence of NaNs.
   bool HasFunNoNaNAttr;
 
@@ -1889,6 +1885,15 @@ public:
   unsigned selectInterleaveCount(bool OptForSize, unsigned VF,
                                  unsigned LoopCost);
 
+  /// Memory access instruction may be vectorized in more than one way.
+  /// Form of instruction after vectorization depends on cost.
+  /// This function takes cost-based decisions for Load/Store instructions
+  /// and collects them in a map. This decisions map is used for building
+  /// the lists of loop-uniform and loop-scalar instructions.
+  /// The calculated cost is saved with widening decision in order to
+  /// avoid redundant calculations.
+  void setCostBasedWideningDecision(unsigned VF);
+
   /// \brief A struct that represents some properties of the register usage
   /// of a loop.
   struct RegisterUsage {
@@ -1923,11 +1928,84 @@ public:
     return Scalars->second.count(I);
   }
 
+  /// Returns true if \p I is known to be uniform after vectorization.
+  bool isUniformAfterVectorization(Instruction *I, unsigned VF) const {
+    if (VF == 1)
+      return true;
+    assert(Uniforms.count(VF) && "VF not yet analyzed for uniformity");
+    auto UniformsPerVF = Uniforms.find(VF);
+    return UniformsPerVF->second.count(I);
+  }
+
+  /// Returns true if \p I is known to be scalar after vectorization.
+  bool isScalarAfterVectorization(Instruction *I, unsigned VF) const {
+    if (VF == 1)
+      return true;
+    assert(Scalars.count(VF) && "Scalar values are not calculated for VF");
+    auto ScalarsPerVF = Scalars.find(VF);
+    return ScalarsPerVF->second.count(I);
+  }
+
   /// \returns True if instruction \p I can be truncated to a smaller bitwidth
   /// for vectorization factor \p VF.
   bool canTruncateToMinimalBitwidth(Instruction *I, unsigned VF) const {
     return VF > 1 && MinBWs.count(I) && !isProfitableToScalarize(I, VF) &&
-           !Legal->isScalarAfterVectorization(I);
+           !isScalarAfterVectorization(I, VF);
+  }
+
+  /// Decision that was taken during cost calculation for memory instruction.
+  enum InstWidening {
+    CM_Unknown,
+    CM_Widen,
+    CM_Interleave,
+    CM_GatherScatter,
+    CM_Scalarize
+  };
+
+  /// Save vectorization decision \p W and \p Cost taken by the cost model for
+  /// instruction \p I and vector width \p VF.
+  void setWideningDecision(Instruction *I, unsigned VF, InstWidening W,
+                           unsigned Cost) {
+    assert(VF >= 2 && "Expected VF >=2");
+    WideningDecisions[std::make_pair(I, VF)] = std::make_pair(W, Cost);
+  }
+
+  /// Save vectorization decision \p W and \p Cost taken by the cost model for
+  /// interleaving group \p Grp and vector width \p VF.
+  void setWideningDecision(const InterleaveGroup *Grp, unsigned VF,
+                           InstWidening W, unsigned Cost) {
+    assert(VF >= 2 && "Expected VF >=2");
+    /// Broadcast this decicion to all instructions inside the group.
+    /// But the cost will be assigned to one instruction only.
+    for (unsigned i = 0; i < Grp->getFactor(); ++i) {
+      if (auto *I = Grp->getMember(i)) {
+        if (Grp->getInsertPos() == I)
+          WideningDecisions[std::make_pair(I, VF)] = std::make_pair(W, Cost);
+        else
+          WideningDecisions[std::make_pair(I, VF)] = std::make_pair(W, 0);
+      }
+    }
+  }
+
+  /// Return the cost model decision for the given instruction \p I and vector
+  /// width \p VF. Return CM_Unknown if this instruction did not pass
+  /// through the cost modeling.
+  InstWidening getWideningDecision(Instruction *I, unsigned VF) {
+    assert(VF >= 2 && "Expected VF >=2");
+    std::pair<Instruction *, unsigned> InstOnVF = std::make_pair(I, VF);
+    auto Itr = WideningDecisions.find(InstOnVF);
+    if (Itr == WideningDecisions.end())
+      return CM_Unknown;
+    return Itr->second.first;
+  }
+
+  /// Return the vectorization cost for the given instruction \p I and vector
+  /// width \p VF.
+  unsigned getWideningCost(Instruction *I, unsigned VF) {
+    assert(VF >= 2 && "Expected VF >=2");
+    std::pair<Instruction *, unsigned> InstOnVF = std::make_pair(I, VF);
+    assert(WideningDecisions.count(InstOnVF) && "The cost is not calculated");
+    return WideningDecisions[InstOnVF].second;
   }
 
 private:
@@ -1953,6 +2031,26 @@ private:
   /// The cost-computation logic from getInstructionCost which provides
   /// the vector type as an output parameter.
   unsigned getInstructionCost(Instruction *I, unsigned VF, Type *&VectorTy);
+
+  /// Calculate vectorization cost of memory instruction \p I.
+  unsigned getMemoryInstructionCost(Instruction *I, unsigned VF);
+
+  /// The cost computation for scalarized memory instruction.
+  unsigned getMemInstScalarizationCost(Instruction *I, unsigned VF);
+
+  /// The cost computation for interleaving group of memory instructions.
+  unsigned getInterleaveGroupCost(Instruction *I, unsigned VF);
+
+  /// The cost computation for Gather/Scatter instruction.
+  unsigned getGatherScatterCost(Instruction *I, unsigned VF);
+
+  /// The cost computation for widening instruction \p I with consecutive
+  /// memory access.
+  unsigned getConsecutiveMemOpCost(Instruction *I, unsigned VF);
+
+  /// The cost calculation for Load instruction \p I with uniform pointer -
+  /// scalar load + broadcast.
+  unsigned getUniformMemOpCost(Instruction *I, unsigned VF);
 
   /// Returns whether the instruction is a load or store and will be a emitted
   /// as a vector operation.
@@ -1983,6 +2081,14 @@ private:
   /// vectorization factor. The entries are VF-ScalarCostTy pairs.
   DenseMap<unsigned, ScalarCostsTy> InstsToScalarize;
 
+  /// Holds the instructions known to be uniform after vectorization.
+  /// The data is collected per VF.
+  DenseMap<unsigned, SmallPtrSet<Instruction *, 4>> Uniforms;
+
+  /// Holds the instructions known to be scalar after vectorization.
+  /// The data is collected per VF.
+  DenseMap<unsigned, SmallPtrSet<Instruction *, 4>> Scalars;
+
   /// Returns the expected difference in cost from scalarizing the expression
   /// feeding a predicated instruction \p PredInst. The instructions to
   /// scalarize and their scalar costs are collected in \p ScalarCosts. A
@@ -1994,6 +2100,44 @@ private:
   /// Collects the instructions to scalarize for each predicated instruction in
   /// the loop.
   void collectInstsToScalarize(unsigned VF);
+
+  /// Collect the instructions that are uniform after vectorization. An
+  /// instruction is uniform if we represent it with a single scalar value in
+  /// the vectorized loop corresponding to each vector iteration. Examples of
+  /// uniform instructions include pointer operands of consecutive or
+  /// interleaved memory accesses. Note that although uniformity implies an
+  /// instruction will be scalar, the reverse is not true. In general, a
+  /// scalarized instruction will be represented by VF scalar values in the
+  /// vectorized loop, each corresponding to an iteration of the original
+  /// scalar loop.
+  void collectLoopUniforms(unsigned VF);
+
+  /// Collect the instructions that are scalar after vectorization. An
+  /// instruction is scalar if it is known to be uniform or will be scalarized
+  /// during vectorization. Non-uniform scalarized instructions will be
+  /// represented by VF values in the vectorized loop, each corresponding to an
+  /// iteration of the original scalar loop.
+  void collectLoopScalars(unsigned VF);
+
+  /// Collect Uniform and Scalar values for the given \p VF.
+  /// The sets depend on CM decision for Load/Store instructions
+  /// that may be vectorized as interleave, gather-scatter or scalarized.
+  void collectUniformsAndScalars(unsigned VF) {
+    // Do the analysis once.
+    if (VF == 1 || Uniforms.count(VF))
+      return;
+    setCostBasedWideningDecision(VF);
+    collectLoopUniforms(VF);
+    collectLoopScalars(VF);
+  }
+
+  /// Keeps cost model vectorization decision and cost for instructions.
+  /// Right now it is used for memory instructions only.
+  typedef DenseMap<std::pair<Instruction *, unsigned>,
+                   std::pair<InstWidening, unsigned>>
+      DecisionList;
+
+  DecisionList WideningDecisions;
 
 public:
   /// The loop that we evaluate.
@@ -2228,7 +2372,7 @@ void InnerLoopVectorizer::createVectorIntInductionPHI(
 }
 
 bool InnerLoopVectorizer::shouldScalarizeInstruction(Instruction *I) const {
-  return Legal->isScalarAfterVectorization(I) ||
+  return Cost->isScalarAfterVectorization(I, VF) ||
          Cost->isProfitableToScalarize(I, VF);
 }
 
@@ -2404,7 +2548,7 @@ void InnerLoopVectorizer::buildScalarSteps(Value *ScalarIV, Value *Step,
   // iteration. If EntryVal is uniform, we only need to generate the first
   // lane. Otherwise, we generate all VF values.
   unsigned Lanes =
-      Legal->isUniformAfterVectorization(cast<Instruction>(EntryVal)) ? 1 : VF;
+    Cost->isUniformAfterVectorization(cast<Instruction>(EntryVal), VF) ? 1 : VF;
 
   // Compute the scalar steps and save the results in VectorLoopValueMap.
   ScalarParts Entry(UF);
@@ -2472,7 +2616,7 @@ InnerLoopVectorizer::getVectorValue(Value *V) {
     // known to be uniform after vectorization, this corresponds to lane zero
     // of the last unroll iteration. Otherwise, the last instruction is the one
     // we created for the last vector lane of the last unroll iteration.
-    unsigned LastLane = Legal->isUniformAfterVectorization(I) ? 0 : VF - 1;
+    unsigned LastLane = Cost->isUniformAfterVectorization(I, VF) ? 0 : VF - 1;
     auto *LastInst = cast<Instruction>(getScalarValue(V, UF - 1, LastLane));
 
     // Set the insert point after the last scalarized instruction. This ensures
@@ -2489,7 +2633,7 @@ InnerLoopVectorizer::getVectorValue(Value *V) {
     // VectorLoopValueMap, we will only generate the insertelements once.
     for (unsigned Part = 0; Part < UF; ++Part) {
       Value *VectorValue = nullptr;
-      if (Legal->isUniformAfterVectorization(I)) {
+      if (Cost->isUniformAfterVectorization(I, VF)) {
         VectorValue = getBroadcastInstrs(getScalarValue(V, Part, 0));
       } else {
         VectorValue = UndefValue::get(VectorType::get(V->getType(), VF));
@@ -2518,8 +2662,9 @@ Value *InnerLoopVectorizer::getScalarValue(Value *V, unsigned Part,
   if (OrigLoop->isLoopInvariant(V))
     return V;
 
-  assert(Lane > 0 ? !Legal->isUniformAfterVectorization(cast<Instruction>(V))
-                  : true && "Uniform values only have lane zero");
+  assert(Lane > 0 ?
+         !Cost->isUniformAfterVectorization(cast<Instruction>(V), VF)
+         : true && "Uniform values only have lane zero");
 
   // If the value from the original loop has not been vectorized, it is
   // represented by UF x VF scalar values in the new loop. Return the requested
@@ -2590,15 +2735,13 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(Instruction *Instr) {
   if (Instr != Group->getInsertPos())
     return;
 
-  LoadInst *LI = dyn_cast<LoadInst>(Instr);
-  StoreInst *SI = dyn_cast<StoreInst>(Instr);
   Value *Ptr = getPointerOperand(Instr);
 
   // Prepare for the vector type of the interleaved load/store.
-  Type *ScalarTy = LI ? LI->getType() : SI->getValueOperand()->getType();
+  Type *ScalarTy = getMemInstValueType(Instr);
   unsigned InterleaveFactor = Group->getFactor();
   Type *VecTy = VectorType::get(ScalarTy, InterleaveFactor * VF);
-  Type *PtrTy = VecTy->getPointerTo(Ptr->getType()->getPointerAddressSpace());
+  Type *PtrTy = VecTy->getPointerTo(getMemInstAddressSpace(Instr));
 
   // Prepare for the new pointers.
   setDebugLocFromInst(Builder, Ptr);
@@ -2638,7 +2781,7 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(Instruction *Instr) {
   Value *UndefVec = UndefValue::get(VecTy);
 
   // Vectorize the interleaved load group.
-  if (LI) {
+  if (isa<LoadInst>(Instr)) {
 
     // For each unroll part, create a wide load for the group.
     SmallVector<Value *, 2> NewLoads;
@@ -2723,33 +2866,34 @@ void InnerLoopVectorizer::vectorizeMemoryInstruction(Instruction *Instr) {
 
   assert((LI || SI) && "Invalid Load/Store instruction");
 
-  // Try to vectorize the interleave group if this access is interleaved.
-  if (Legal->isAccessInterleaved(Instr))
+  LoopVectorizationCostModel::InstWidening Decision =
+      Cost->getWideningDecision(Instr, VF);
+  assert(Decision != LoopVectorizationCostModel::CM_Unknown &&
+         "CM decision should be taken at this point");
+  if (Decision == LoopVectorizationCostModel::CM_Interleave)
     return vectorizeInterleaveGroup(Instr);
 
-  Type *ScalarDataTy = LI ? LI->getType() : SI->getValueOperand()->getType();
+  Type *ScalarDataTy = getMemInstValueType(Instr);
   Type *DataTy = VectorType::get(ScalarDataTy, VF);
   Value *Ptr = getPointerOperand(Instr);
-  unsigned Alignment = LI ? LI->getAlignment() : SI->getAlignment();
+  unsigned Alignment = getMemInstAlignment(Instr);
   // An alignment of 0 means target abi alignment. We need to use the scalar's
   // target abi alignment in such a case.
   const DataLayout &DL = Instr->getModule()->getDataLayout();
   if (!Alignment)
     Alignment = DL.getABITypeAlignment(ScalarDataTy);
-  unsigned AddressSpace = Ptr->getType()->getPointerAddressSpace();
+  unsigned AddressSpace = getMemInstAddressSpace(Instr);
 
   // Scalarize the memory instruction if necessary.
-  if (Legal->memoryInstructionMustBeScalarized(Instr, VF))
+  if (Decision == LoopVectorizationCostModel::CM_Scalarize)
     return scalarizeInstruction(Instr, Legal->isScalarWithPredication(Instr));
 
   // Determine if the pointer operand of the access is either consecutive or
   // reverse consecutive.
   int ConsecutiveStride = Legal->isConsecutivePtr(Ptr);
   bool Reverse = ConsecutiveStride < 0;
-
-  // Determine if either a gather or scatter operation is legal.
   bool CreateGatherScatter =
-      !ConsecutiveStride && Legal->isLegalGatherOrScatter(Instr);
+      (Decision == LoopVectorizationCostModel::CM_GatherScatter);
 
   VectorParts VectorGep;
 
@@ -2934,7 +3078,7 @@ void InnerLoopVectorizer::scalarizeInstruction(Instruction *Instr,
   // Determine the number of scalars we need to generate for each unroll
   // iteration. If the instruction is uniform, we only need to generate the
   // first lane. Otherwise, we generate all VF values.
-  unsigned Lanes = Legal->isUniformAfterVectorization(Instr) ? 1 : VF;
+  unsigned Lanes = Cost->isUniformAfterVectorization(Instr, VF) ? 1 : VF;
 
   // For each vector unroll 'part':
   for (unsigned Part = 0; Part < UF; ++Part) {
@@ -4516,7 +4660,7 @@ void InnerLoopVectorizer::widenPHIInstruction(Instruction *PN, unsigned UF,
     // Determine the number of scalars we need to generate for each unroll
     // iteration. If the instruction is uniform, we only need to generate the
     // first lane. Otherwise, we generate all VF values.
-    unsigned Lanes = Legal->isUniformAfterVectorization(P) ? 1 : VF;
+    unsigned Lanes = Cost->isUniformAfterVectorization(P, VF) ? 1 : VF;
     // These are the scalar results. Notice that we don't generate vector GEPs
     // because scalar GEPs result in better code.
     ScalarParts Entry(UF);
@@ -5020,12 +5164,6 @@ bool LoopVectorizationLegality::canVectorize() {
   if (UseInterleaved)
     InterleaveInfo.analyzeInterleaving(*getSymbolicStrides());
 
-  // Collect all instructions that are known to be uniform after vectorization.
-  collectLoopUniforms();
-
-  // Collect all instructions that are known to be scalar after vectorization.
-  collectLoopScalars();
-
   unsigned SCEVThreshold = VectorizeSCEVCheckThreshold;
   if (Hints->getForce() == LoopVectorizeHints::FK_Enabled)
     SCEVThreshold = PragmaVectorizeSCEVCheckThreshold;
@@ -5291,10 +5429,18 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
   return true;
 }
 
-void LoopVectorizationLegality::collectLoopScalars() {
+void LoopVectorizationCostModel::collectLoopScalars(unsigned VF) {
+
+  // We should not collect Scalars more than once per VF. Right now,
+  // this function is called from collectUniformsAndScalars(), which 
+  // already does this check. Collecting Scalars for VF=1 does not make any
+  // sense.
+
+  assert(VF >= 2 && !Scalars.count(VF) &&
+         "This function should not be visited twice for the same VF");
 
   // If an instruction is uniform after vectorization, it will remain scalar.
-  Scalars.insert(Uniforms.begin(), Uniforms.end());
+  Scalars[VF].insert(Uniforms[VF].begin(), Uniforms[VF].end());
 
   // Collect the getelementptr instructions that will not be vectorized. A
   // getelementptr instruction is only vectorized if it is used for a legal
@@ -5302,21 +5448,21 @@ void LoopVectorizationLegality::collectLoopScalars() {
   for (auto *BB : TheLoop->blocks())
     for (auto &I : *BB) {
       if (auto *GEP = dyn_cast<GetElementPtrInst>(&I)) {
-        Scalars.insert(GEP);
+        Scalars[VF].insert(GEP);
         continue;
       }
       auto *Ptr = getPointerOperand(&I);
       if (!Ptr)
         continue;
       auto *GEP = getGEPInstruction(Ptr);
-      if (GEP && isLegalGatherOrScatter(&I))
-        Scalars.erase(GEP);
+      if (GEP && getWideningDecision(&I, VF) == CM_GatherScatter)
+        Scalars[VF].erase(GEP);
     }
 
   // An induction variable will remain scalar if all users of the induction
   // variable and induction variable update remain scalar.
   auto *Latch = TheLoop->getLoopLatch();
-  for (auto &Induction : *getInductionVars()) {
+  for (auto &Induction : *Legal->getInductionVars()) {
     auto *Ind = Induction.first;
     auto *IndUpdate = cast<Instruction>(Ind->getIncomingValueForBlock(Latch));
 
@@ -5324,7 +5470,7 @@ void LoopVectorizationLegality::collectLoopScalars() {
     // vectorization.
     auto ScalarInd = all_of(Ind->users(), [&](User *U) -> bool {
       auto *I = cast<Instruction>(U);
-      return I == IndUpdate || !TheLoop->contains(I) || Scalars.count(I);
+      return I == IndUpdate || !TheLoop->contains(I) || Scalars[VF].count(I);
     });
     if (!ScalarInd)
       continue;
@@ -5333,23 +5479,15 @@ void LoopVectorizationLegality::collectLoopScalars() {
     // scalar after vectorization.
     auto ScalarIndUpdate = all_of(IndUpdate->users(), [&](User *U) -> bool {
       auto *I = cast<Instruction>(U);
-      return I == Ind || !TheLoop->contains(I) || Scalars.count(I);
+      return I == Ind || !TheLoop->contains(I) || Scalars[VF].count(I);
     });
     if (!ScalarIndUpdate)
       continue;
 
     // The induction variable and its update instruction will remain scalar.
-    Scalars.insert(Ind);
-    Scalars.insert(IndUpdate);
+    Scalars[VF].insert(Ind);
+    Scalars[VF].insert(IndUpdate);
   }
-}
-
-bool LoopVectorizationLegality::hasConsecutiveLikePtrOperand(Instruction *I) {
-  if (isAccessInterleaved(I))
-    return true;
-  if (auto *Ptr = getPointerOperand(I))
-    return isConsecutivePtr(Ptr);
-  return false;
 }
 
 bool LoopVectorizationLegality::isScalarWithPredication(Instruction *I) {
@@ -5369,48 +5507,48 @@ bool LoopVectorizationLegality::isScalarWithPredication(Instruction *I) {
   return false;
 }
 
-bool LoopVectorizationLegality::memoryInstructionMustBeScalarized(
-    Instruction *I, unsigned VF) {
-
-  // If the memory instruction is in an interleaved group, it will be
-  // vectorized and its pointer will remain uniform.
-  if (isAccessInterleaved(I))
-    return false;
-
+bool LoopVectorizationLegality::memoryInstructionCanBeWidened(Instruction *I,
+                                                              unsigned VF) {
   // Get and ensure we have a valid memory instruction.
   LoadInst *LI = dyn_cast<LoadInst>(I);
   StoreInst *SI = dyn_cast<StoreInst>(I);
   assert((LI || SI) && "Invalid memory instruction");
 
-  // If the pointer operand is uniform (loop invariant), the memory instruction
-  // will be scalarized.
   auto *Ptr = getPointerOperand(I);
-  if (LI && isUniform(Ptr))
-    return true;
 
-  // If the pointer operand is non-consecutive and neither a gather nor a
-  // scatter operation is legal, the memory instruction will be scalarized.
-  if (!isConsecutivePtr(Ptr) && !isLegalGatherOrScatter(I))
-    return true;
+  // In order to be widened, the pointer should be consecutive, first of all.
+  if (!isConsecutivePtr(Ptr))
+    return false;
 
   // If the instruction is a store located in a predicated block, it will be
   // scalarized.
   if (isScalarWithPredication(I))
-    return true;
+    return false;
 
   // If the instruction's allocated size doesn't equal it's type size, it
   // requires padding and will be scalarized.
   auto &DL = I->getModule()->getDataLayout();
   auto *ScalarTy = LI ? LI->getType() : SI->getValueOperand()->getType();
   if (hasIrregularType(ScalarTy, DL, VF))
-    return true;
+    return false;
 
-  // Otherwise, the memory instruction should be vectorized if the rest of the
-  // loop is.
-  return false;
+  return true;
 }
 
-void LoopVectorizationLegality::collectLoopUniforms() {
+void LoopVectorizationCostModel::collectLoopUniforms(unsigned VF) {
+
+  // We should not collect Uniforms more than once per VF. Right now,
+  // this function is called from collectUniformsAndScalars(), which 
+  // already does this check. Collecting Uniforms for VF=1 does not make any
+  // sense.
+
+  assert(VF >= 2 && !Uniforms.count(VF) &&
+         "This function should not be visited twice for the same VF");
+
+  // Visit the list of Uniforms. If we'll not find any uniform value, we'll 
+  // not analyze again.  Uniforms.count(VF) will return 1.
+  Uniforms[VF].clear();
+
   // We now know that the loop is vectorizable!
   // Collect instructions inside the loop that will remain uniform after
   // vectorization.
@@ -5443,6 +5581,14 @@ void LoopVectorizationLegality::collectLoopUniforms() {
   // Holds pointer operands of instructions that are possibly non-uniform.
   SmallPtrSet<Instruction *, 8> PossibleNonUniformPtrs;
 
+  auto isUniformDecision = [&](Instruction *I, unsigned VF) {
+    InstWidening WideningDecision = getWideningDecision(I, VF);
+    assert(WideningDecision != CM_Unknown &&
+           "Widening decision should be ready at this moment");
+
+    return (WideningDecision == CM_Widen ||
+            WideningDecision == CM_Interleave);
+  };
   // Iterate over the instructions in the loop, and collect all
   // consecutive-like pointer operands in ConsecutiveLikePtrs. If it's possible
   // that a consecutive-like pointer operand will be scalarized, we collect it
@@ -5465,25 +5611,18 @@ void LoopVectorizationLegality::collectLoopUniforms() {
         return getPointerOperand(U) == Ptr;
       });
 
-      // Ensure the memory instruction will not be scalarized, making its
-      // pointer operand non-uniform. If the pointer operand is used by some
-      // instruction other than a memory access, we're not going to check if
-      // that other instruction may be scalarized here. Thus, conservatively
-      // assume the pointer operand may be non-uniform.
-      if (!UsersAreMemAccesses || memoryInstructionMustBeScalarized(&I))
+      // Ensure the memory instruction will not be scalarized or used by
+      // gather/scatter, making its pointer operand non-uniform. If the pointer
+      // operand is used by any instruction other than a memory access, we
+      // conservatively assume the pointer operand may be non-uniform.
+      if (!UsersAreMemAccesses || !isUniformDecision(&I, VF))
         PossibleNonUniformPtrs.insert(Ptr);
 
       // If the memory instruction will be vectorized and its pointer operand
-      // is consecutive-like, the pointer operand should remain uniform.
-      else if (hasConsecutiveLikePtrOperand(&I))
-        ConsecutiveLikePtrs.insert(Ptr);
-
-      // Otherwise, if the memory instruction will be vectorized and its
-      // pointer operand is non-consecutive-like, the memory instruction should
-      // be a gather or scatter operation. Its pointer operand will be
-      // non-uniform.
+      // is consecutive-like, or interleaving - the pointer operand should
+      // remain uniform.
       else
-        PossibleNonUniformPtrs.insert(Ptr);
+        ConsecutiveLikePtrs.insert(Ptr);
     }
 
   // Add to the Worklist all consecutive and consecutive-like pointers that
@@ -5518,7 +5657,7 @@ void LoopVectorizationLegality::collectLoopUniforms() {
   // Returns true if Ptr is the pointer operand of a memory access instruction
   // I, and I is known to not require scalarization.
   auto isVectorizedMemAccessUse = [&](Instruction *I, Value *Ptr) -> bool {
-    return getPointerOperand(I) == Ptr && !memoryInstructionMustBeScalarized(I);
+    return getPointerOperand(I) == Ptr && isUniformDecision(I, VF);
   };
 
   // For an instruction to be added into Worklist above, all its users inside
@@ -5527,7 +5666,7 @@ void LoopVectorizationLegality::collectLoopUniforms() {
   // nodes separately. An induction variable will remain uniform if all users
   // of the induction variable and induction variable update remain uniform.
   // The code below handles both pointer and non-pointer induction variables.
-  for (auto &Induction : Inductions) {
+  for (auto &Induction : *Legal->getInductionVars()) {
     auto *Ind = Induction.first;
     auto *IndUpdate = cast<Instruction>(Ind->getIncomingValueForBlock(Latch));
 
@@ -5558,7 +5697,7 @@ void LoopVectorizationLegality::collectLoopUniforms() {
     DEBUG(dbgs() << "LV: Found uniform instruction: " << *IndUpdate << "\n");
   }
 
-  Uniforms.insert(Worklist.begin(), Worklist.end());
+  Uniforms[VF].insert(Worklist.begin(), Worklist.end());
 }
 
 bool LoopVectorizationLegality::canVectorizeMemory() {
@@ -5698,7 +5837,7 @@ void InterleavedAccessInfo::collectConstStrideAccesses(
       uint64_t Size = DL.getTypeAllocSize(PtrTy->getElementType());
 
       // An alignment of 0 means target ABI alignment.
-      unsigned Align = LI ? LI->getAlignment() : SI->getAlignment();
+      unsigned Align = getMemInstAlignment(&I);
       if (!Align)
         Align = DL.getABITypeAlignment(PtrTy->getElementType());
 
@@ -5940,8 +6079,7 @@ void InterleavedAccessInfo::analyzeInterleaving(
                         "last group member potentially pointer-wrapping.\n");
         releaseGroup(Group);
       }
-    }
-    else {
+    } else {
       // Case 3: A non-reversed interleaved load group with gaps: We need
       // to execute at least one scalar epilogue iteration. This will ensure 
       // we don't speculatively access memory out-of-bounds. We only need
@@ -6071,6 +6209,8 @@ LoopVectorizationCostModel::selectVectorizationFactor(bool OptForSize) {
     DEBUG(dbgs() << "LV: Using user VF " << UserVF << ".\n");
 
     Factor.Width = UserVF;
+
+    collectUniformsAndScalars(UserVF);
     collectInstsToScalarize(UserVF);
     return Factor;
   }
@@ -6437,12 +6577,13 @@ LoopVectorizationCostModel::calculateRegisterUsage(ArrayRef<unsigned> VFs) {
         MaxUsages[j] = std::max(MaxUsages[j], OpenIntervals.size());
         continue;
       }
-
+      collectUniformsAndScalars(VFs[j]);
       // Count the number of live intervals.
       unsigned RegUsage = 0;
       for (auto Inst : OpenIntervals) {
         // Skip ignored values for VF > 1.
-        if (VecValuesToIgnore.count(Inst))
+        if (VecValuesToIgnore.count(Inst) ||
+            isScalarAfterVectorization(Inst, VFs[j]))
           continue;
         RegUsage += GetRegUsage(Inst->getType(), VFs[j]);
       }
@@ -6511,7 +6652,7 @@ int LoopVectorizationCostModel::computePredInstDiscount(
     Instruction *PredInst, DenseMap<Instruction *, unsigned> &ScalarCosts,
     unsigned VF) {
 
-  assert(!Legal->isUniformAfterVectorization(PredInst) &&
+  assert(!isUniformAfterVectorization(PredInst, VF) &&
          "Instruction marked uniform-after-vectorization will be predicated");
 
   // Initialize the discount to zero, meaning that the scalar version and the
@@ -6532,7 +6673,7 @@ int LoopVectorizationCostModel::computePredInstDiscount(
     // already be scalar to avoid traversing chains that are unlikely to be
     // beneficial.
     if (!I->hasOneUse() || PredInst->getParent() != I->getParent() ||
-        Legal->isScalarAfterVectorization(I))
+        isScalarAfterVectorization(I, VF))
       return false;
 
     // If the instruction is scalar with predication, it will be analyzed
@@ -6552,7 +6693,7 @@ int LoopVectorizationCostModel::computePredInstDiscount(
     // the lane zero values for uniforms rather than asserting.
     for (Use &U : I->operands())
       if (auto *J = dyn_cast<Instruction>(U.get()))
-        if (Legal->isUniformAfterVectorization(J))
+        if (isUniformAfterVectorization(J, VF))
           return false;
 
     // Otherwise, we can scalarize the instruction.
@@ -6565,7 +6706,7 @@ int LoopVectorizationCostModel::computePredInstDiscount(
   // and their return values are inserted into vectors. Thus, an extract would
   // still be required.
   auto needsExtract = [&](Instruction *I) -> bool {
-    return TheLoop->contains(I) && !Legal->isScalarAfterVectorization(I);
+    return TheLoop->contains(I) && !isScalarAfterVectorization(I, VF);
   };
 
   // Compute the expected cost discount from scalarizing the entire expression
@@ -6627,6 +6768,9 @@ int LoopVectorizationCostModel::computePredInstDiscount(
 LoopVectorizationCostModel::VectorizationCostTy
 LoopVectorizationCostModel::expectedCost(unsigned VF) {
   VectorizationCostTy Cost;
+
+  // Collect Uniform and Scalar instructions after vectorization with VF.
+  collectUniformsAndScalars(VF);
 
   // Collect the instructions (and their associated costs) that will be more
   // profitable to scalarize.
@@ -6707,11 +6851,141 @@ static bool isStrideMul(Instruction *I, LoopVectorizationLegality *Legal) {
          Legal->hasStride(I->getOperand(1));
 }
 
+unsigned LoopVectorizationCostModel::getMemInstScalarizationCost(Instruction *I,
+                                                                 unsigned VF) {
+  Type *ValTy = getMemInstValueType(I);
+  auto SE = PSE.getSE();
+
+  unsigned Alignment = getMemInstAlignment(I);
+  unsigned AS = getMemInstAddressSpace(I);
+  Value *Ptr = getPointerOperand(I);
+  Type *PtrTy = ToVectorTy(Ptr->getType(), VF);
+
+  // Figure out whether the access is strided and get the stride value
+  // if it's known in compile time
+  const SCEV *PtrSCEV = getAddressAccessSCEV(Ptr, Legal, SE, TheLoop);
+
+  // Get the cost of the scalar memory instruction and address computation.
+  unsigned Cost = VF * TTI.getAddressComputationCost(PtrTy, SE, PtrSCEV);
+
+  Cost += VF *
+          TTI.getMemoryOpCost(I->getOpcode(), ValTy->getScalarType(), Alignment,
+                              AS);
+
+  // Get the overhead of the extractelement and insertelement instructions
+  // we might create due to scalarization.
+  Cost += getScalarizationOverhead(I, VF, TTI);
+
+  // If we have a predicated store, it may not be executed for each vector
+  // lane. Scale the cost by the probability of executing the predicated
+  // block.
+  if (Legal->isScalarWithPredication(I))
+    Cost /= getReciprocalPredBlockProb();
+
+  return Cost;
+}
+
+unsigned LoopVectorizationCostModel::getConsecutiveMemOpCost(Instruction *I,
+                                                             unsigned VF) {
+  Type *ValTy = getMemInstValueType(I);
+  Type *VectorTy = ToVectorTy(ValTy, VF);
+  unsigned Alignment = getMemInstAlignment(I);
+  Value *Ptr = getPointerOperand(I);
+  unsigned AS = getMemInstAddressSpace(I);
+  int ConsecutiveStride = Legal->isConsecutivePtr(Ptr);
+
+  assert((ConsecutiveStride == 1 || ConsecutiveStride == -1) &&
+         "Stride should be 1 or -1 for consecutive memory access");
+  unsigned Cost = 0;
+  if (Legal->isMaskRequired(I))
+    Cost += TTI.getMaskedMemoryOpCost(I->getOpcode(), VectorTy, Alignment, AS);
+  else
+    Cost += TTI.getMemoryOpCost(I->getOpcode(), VectorTy, Alignment, AS);
+
+  bool Reverse = ConsecutiveStride < 0;
+  if (Reverse)
+    Cost += TTI.getShuffleCost(TargetTransformInfo::SK_Reverse, VectorTy, 0);
+  return Cost;
+}
+
+unsigned LoopVectorizationCostModel::getUniformMemOpCost(Instruction *I,
+                                                         unsigned VF) {
+  LoadInst *LI = cast<LoadInst>(I);
+  Type *ValTy = LI->getType();
+  Type *VectorTy = ToVectorTy(ValTy, VF);
+  unsigned Alignment = LI->getAlignment();
+  unsigned AS = LI->getPointerAddressSpace();
+
+  return TTI.getAddressComputationCost(ValTy) +
+         TTI.getMemoryOpCost(Instruction::Load, ValTy, Alignment, AS) +
+         TTI.getShuffleCost(TargetTransformInfo::SK_Broadcast, VectorTy);
+}
+
+unsigned LoopVectorizationCostModel::getGatherScatterCost(Instruction *I,
+                                                          unsigned VF) {
+  Type *ValTy = getMemInstValueType(I);
+  Type *VectorTy = ToVectorTy(ValTy, VF);
+  unsigned Alignment = getMemInstAlignment(I);
+  Value *Ptr = getPointerOperand(I);
+
+  return TTI.getAddressComputationCost(VectorTy) +
+         TTI.getGatherScatterOpCost(I->getOpcode(), VectorTy, Ptr,
+                                    Legal->isMaskRequired(I), Alignment);
+}
+
+unsigned LoopVectorizationCostModel::getInterleaveGroupCost(Instruction *I,
+                                                            unsigned VF) {
+  Type *ValTy = getMemInstValueType(I);
+  Type *VectorTy = ToVectorTy(ValTy, VF);
+  unsigned AS = getMemInstAddressSpace(I);
+
+  auto Group = Legal->getInterleavedAccessGroup(I);
+  assert(Group && "Fail to get an interleaved access group.");
+
+  unsigned InterleaveFactor = Group->getFactor();
+  Type *WideVecTy = VectorType::get(ValTy, VF * InterleaveFactor);
+
+  // Holds the indices of existing members in an interleaved load group.
+  // An interleaved store group doesn't need this as it doesn't allow gaps.
+  SmallVector<unsigned, 4> Indices;
+  if (isa<LoadInst>(I)) {
+    for (unsigned i = 0; i < InterleaveFactor; i++)
+      if (Group->getMember(i))
+        Indices.push_back(i);
+  }
+
+  // Calculate the cost of the whole interleaved group.
+  unsigned Cost = TTI.getInterleavedMemoryOpCost(I->getOpcode(), WideVecTy,
+                                                 Group->getFactor(), Indices,
+                                                 Group->getAlignment(), AS);
+
+  if (Group->isReverse())
+    Cost += Group->getNumMembers() *
+            TTI.getShuffleCost(TargetTransformInfo::SK_Reverse, VectorTy, 0);
+  return Cost;
+}
+
+unsigned LoopVectorizationCostModel::getMemoryInstructionCost(Instruction *I,
+                                                              unsigned VF) {
+
+  // Calculate scalar cost only. Vectorization cost should be ready at this
+  // moment.
+  if (VF == 1) {
+    Type *ValTy = getMemInstValueType(I);
+    unsigned Alignment = getMemInstAlignment(I);
+    unsigned AS = getMemInstAlignment(I);
+
+    return TTI.getAddressComputationCost(ValTy) +
+           TTI.getMemoryOpCost(I->getOpcode(), ValTy, Alignment, AS);
+  }
+  return getWideningCost(I, VF);
+}
+
 LoopVectorizationCostModel::VectorizationCostTy
 LoopVectorizationCostModel::getInstructionCost(Instruction *I, unsigned VF) {
   // If we know that this instruction will remain uniform, check the cost of
   // the scalar version.
-  if (Legal->isUniformAfterVectorization(I))
+  if (isUniformAfterVectorization(I, VF))
     VF = 1;
 
   if (VF > 1 && isProfitableToScalarize(I, VF))
@@ -6723,6 +6997,79 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I, unsigned VF) {
   bool TypeNotScalarized =
       VF > 1 && !VectorTy->isVoidTy() && TTI.getNumberOfParts(VectorTy) < VF;
   return VectorizationCostTy(C, TypeNotScalarized);
+}
+
+void LoopVectorizationCostModel::setCostBasedWideningDecision(unsigned VF) {
+  if (VF == 1)
+    return;
+  for (BasicBlock *BB : TheLoop->blocks()) {
+    // For each instruction in the old loop.
+    for (Instruction &I : *BB) {
+      Value *Ptr = getPointerOperand(&I);
+      if (!Ptr)
+        continue;
+
+      if (isa<LoadInst>(&I) && Legal->isUniform(Ptr)) {
+        // Scalar load + broadcast
+        unsigned Cost = getUniformMemOpCost(&I, VF);
+        setWideningDecision(&I, VF, CM_Scalarize, Cost);
+        continue;
+      }
+
+      // We assume that widening is the best solution when possible.
+      if (Legal->memoryInstructionCanBeWidened(&I, VF)) {
+        unsigned Cost = getConsecutiveMemOpCost(&I, VF);
+        setWideningDecision(&I, VF, CM_Widen, Cost);
+        continue;
+      }
+
+      // Choose between Interleaving, Gather/Scatter or Scalarization.
+      unsigned InterleaveCost = UINT_MAX;
+      unsigned NumAccesses = 1;
+      if (Legal->isAccessInterleaved(&I)) {
+        auto Group = Legal->getInterleavedAccessGroup(&I);
+        assert(Group && "Fail to get an interleaved access group.");
+
+        // Make one decision for the whole group.
+        if (getWideningDecision(&I, VF) != CM_Unknown)
+          continue;
+
+        NumAccesses = Group->getNumMembers();
+        InterleaveCost = getInterleaveGroupCost(&I, VF);
+      }
+
+      unsigned GatherScatterCost =
+          Legal->isLegalGatherOrScatter(&I)
+              ? getGatherScatterCost(&I, VF) * NumAccesses
+              : UINT_MAX;
+
+      unsigned ScalarizationCost =
+          getMemInstScalarizationCost(&I, VF) * NumAccesses;
+
+      // Choose better solution for the current VF,
+      // write down this decision and use it during vectorization.
+      unsigned Cost;
+      InstWidening Decision;
+      if (InterleaveCost <= GatherScatterCost &&
+          InterleaveCost < ScalarizationCost) {
+        Decision = CM_Interleave;
+        Cost = InterleaveCost;
+      } else if (GatherScatterCost < ScalarizationCost) {
+        Decision = CM_GatherScatter;
+        Cost = GatherScatterCost;
+      } else {
+        Decision = CM_Scalarize;
+        Cost = ScalarizationCost;
+      }
+      // If the instructions belongs to an interleave group, the whole group
+      // receives the same decision. The whole group receives the cost, but
+      // the cost will actually be assigned to one instruction.
+      if (auto Group = Legal->getInterleavedAccessGroup(&I))
+        setWideningDecision(Group, VF, Decision, Cost);
+      else
+        setWideningDecision(&I, VF, Decision, Cost);
+    }
+  }
 }
 
 unsigned LoopVectorizationCostModel::getInstructionCost(Instruction *I,
@@ -6857,126 +7204,8 @@ unsigned LoopVectorizationCostModel::getInstructionCost(Instruction *I,
   }
   case Instruction::Store:
   case Instruction::Load: {
-    StoreInst *SI = dyn_cast<StoreInst>(I);
-    LoadInst *LI = dyn_cast<LoadInst>(I);
-    Type *ValTy = (SI ? SI->getValueOperand()->getType() : LI->getType());
-    VectorTy = ToVectorTy(ValTy, VF);
-
-    unsigned Alignment = SI ? SI->getAlignment() : LI->getAlignment();
-    unsigned AS =
-        SI ? SI->getPointerAddressSpace() : LI->getPointerAddressSpace();
-    Value *Ptr = getPointerOperand(I);
-    // We add the cost of address computation here instead of with the gep
-    // instruction because only here we know whether the operation is
-    // scalarized.
-    if (VF == 1)
-      return TTI.getAddressComputationCost(VectorTy) +
-             TTI.getMemoryOpCost(I->getOpcode(), VectorTy, Alignment, AS);
-
-    if (LI && Legal->isUniform(Ptr)) {
-      // Scalar load + broadcast
-      unsigned Cost = TTI.getAddressComputationCost(ValTy->getScalarType());
-      Cost += TTI.getMemoryOpCost(I->getOpcode(), ValTy->getScalarType(),
-                                  Alignment, AS);
-      return Cost +
-             TTI.getShuffleCost(TargetTransformInfo::SK_Broadcast, ValTy);
-    }
-
-    // For an interleaved access, calculate the total cost of the whole
-    // interleave group.
-    if (Legal->isAccessInterleaved(I)) {
-      auto Group = Legal->getInterleavedAccessGroup(I);
-      assert(Group && "Fail to get an interleaved access group.");
-
-      // Only calculate the cost once at the insert position.
-      if (Group->getInsertPos() != I)
-        return 0;
-
-      unsigned InterleaveFactor = Group->getFactor();
-      Type *WideVecTy =
-          VectorType::get(VectorTy->getVectorElementType(),
-                          VectorTy->getVectorNumElements() * InterleaveFactor);
-
-      // Holds the indices of existing members in an interleaved load group.
-      // An interleaved store group doesn't need this as it doesn't allow gaps.
-      SmallVector<unsigned, 4> Indices;
-      if (LI) {
-        for (unsigned i = 0; i < InterleaveFactor; i++)
-          if (Group->getMember(i))
-            Indices.push_back(i);
-      }
-
-      // Calculate the cost of the whole interleaved group.
-      unsigned Cost = TTI.getInterleavedMemoryOpCost(
-          I->getOpcode(), WideVecTy, Group->getFactor(), Indices,
-          Group->getAlignment(), AS);
-
-      if (Group->isReverse())
-        Cost +=
-            Group->getNumMembers() *
-            TTI.getShuffleCost(TargetTransformInfo::SK_Reverse, VectorTy, 0);
-
-      // FIXME: The interleaved load group with a huge gap could be even more
-      // expensive than scalar operations. Then we could ignore such group and
-      // use scalar operations instead.
-      return Cost;
-    }
-
-    // Check if the memory instruction will be scalarized.
-    if (Legal->memoryInstructionMustBeScalarized(I, VF)) {
-      unsigned Cost = 0;
-      Type *PtrTy = ToVectorTy(Ptr->getType(), VF);
-
-      // Figure out whether the access is strided and get the stride value
-      // if it's known in compile time
-      const SCEV *PtrSCEV = getAddressAccessSCEV(Ptr, Legal, SE, TheLoop); 
-
-      // Get the cost of the scalar memory instruction and address computation.
-      Cost += VF * TTI.getAddressComputationCost(PtrTy, SE, PtrSCEV);
-      Cost += VF *
-              TTI.getMemoryOpCost(I->getOpcode(), ValTy->getScalarType(),
-                                  Alignment, AS);
-
-      // Get the overhead of the extractelement and insertelement instructions
-      // we might create due to scalarization.
-      Cost += getScalarizationOverhead(I, VF, TTI);
-
-      // If we have a predicated store, it may not be executed for each vector
-      // lane. Scale the cost by the probability of executing the predicated
-      // block.
-      if (Legal->isScalarWithPredication(I))
-        Cost /= getReciprocalPredBlockProb();
-
-      return Cost;
-    }
-
-    // Determine if the pointer operand of the access is either consecutive or
-    // reverse consecutive.
-    int ConsecutiveStride = Legal->isConsecutivePtr(Ptr);
-    bool Reverse = ConsecutiveStride < 0;
-
-    // Determine if either a gather or scatter operation is legal.
-    bool UseGatherOrScatter =
-        !ConsecutiveStride && Legal->isLegalGatherOrScatter(I);
-
-    unsigned Cost = TTI.getAddressComputationCost(VectorTy);
-    if (UseGatherOrScatter) {
-      assert(ConsecutiveStride == 0 &&
-             "Gather/Scatter are not used for consecutive stride");
-      return Cost +
-             TTI.getGatherScatterOpCost(I->getOpcode(), VectorTy, Ptr,
-                                        Legal->isMaskRequired(I), Alignment);
-    }
-    // Wide load/stores.
-    if (Legal->isMaskRequired(I))
-      Cost +=
-          TTI.getMaskedMemoryOpCost(I->getOpcode(), VectorTy, Alignment, AS);
-    else
-      Cost += TTI.getMemoryOpCost(I->getOpcode(), VectorTy, Alignment, AS);
-
-    if (Reverse)
-      Cost += TTI.getShuffleCost(TargetTransformInfo::SK_Reverse, VectorTy, 0);
-    return Cost;
+    VectorTy = ToVectorTy(getMemInstValueType(I), VF);
+    return getMemoryInstructionCost(I, VF);
   }
   case Instruction::ZExt:
   case Instruction::SExt:
@@ -7079,19 +7308,6 @@ void LoopVectorizationCostModel::collectValuesToIgnore() {
     SmallPtrSetImpl<Instruction *> &Casts = RedDes.getCastInsts();
     VecValuesToIgnore.insert(Casts.begin(), Casts.end());
   }
-
-  // Insert values known to be scalar into VecValuesToIgnore. This is a
-  // conservative estimation of the values that will later be scalarized.
-  //
-  // FIXME: Even though an instruction is not scalar-after-vectoriztion, it may
-  //        still be scalarized. For example, we may find an instruction to be
-  //        more profitable for a given vectorization factor if it were to be
-  //        scalarized. But at this point, we haven't yet computed the
-  //        vectorization factor.
-  for (auto *BB : TheLoop->getBlocks())
-    for (auto &I : *BB)
-      if (Legal->isScalarAfterVectorization(&I))
-        VecValuesToIgnore.insert(&I);
 }
 
 void InnerLoopUnroller::scalarizeInstruction(Instruction *Instr,

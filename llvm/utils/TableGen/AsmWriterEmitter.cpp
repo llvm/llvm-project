@@ -820,8 +820,8 @@ void AsmWriterEmitter::EmitPrintAliasInstruction(raw_ostream &O) {
       }
 
       unsigned NumMIOps = 0;
-      for (auto &Operand : CGA.ResultInst->Operands.OperandList)
-        NumMIOps += Operand.MINumOperands;
+      for (auto &Operand : CGA.ResultOperands)
+        NumMIOps += Operand.getMINumOperands();
 
       std::string Cond;
       Cond = std::string("MI->getNumOperands() == ") + utostr(NumMIOps);
@@ -831,11 +831,6 @@ void AsmWriterEmitter::EmitPrintAliasInstruction(raw_ostream &O) {
 
       unsigned MIOpNum = 0;
       for (unsigned i = 0, e = LastOpNo; i != e; ++i) {
-        // Skip over tied operands as they're not part of an alias declaration.
-        if (CGA.ResultInst->Operands[MIOpNum].MINumOperands == 1 &&
-            CGA.ResultInst->Operands[MIOpNum].getTiedRegister() != -1)
-          ++MIOpNum;
-
         std::string Op = "MI->getOperand(" + utostr(MIOpNum) + ")";
 
         const CodeGenInstAlias::ResultOperand &RO = CGA.ResultOperands[i];

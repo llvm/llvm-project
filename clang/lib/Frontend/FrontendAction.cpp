@@ -225,6 +225,9 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
     CI.setFileManager(&AST->getFileManager());
     CI.setSourceManager(&AST->getSourceManager());
     CI.setPreprocessor(AST->getPreprocessorPtr());
+    Preprocessor &PP = CI.getPreprocessor();
+    PP.getBuiltinInfo().initializeBuiltins(PP.getIdentifierTable(),
+                                           PP.getLangOpts());
     CI.setASTContext(&AST->getASTContext());
 
     setCurrentInput(Input, std::move(AST));

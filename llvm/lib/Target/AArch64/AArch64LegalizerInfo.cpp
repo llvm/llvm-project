@@ -64,7 +64,10 @@ AArch64LegalizerInfo::AArch64LegalizerInfo() {
     for (auto Ty : { s1, s8, s16, s32, s64 })
       setAction({BinOp, Ty}, Lower);
 
-  for (unsigned Op : {G_UADDE, G_USUBE, G_SADDO, G_SSUBO, G_SMULO, G_UMULO}) {
+  for (unsigned Op : {G_SMULO, G_UMULO})
+      setAction({Op, s64}, Lower);
+
+  for (unsigned Op : {G_UADDE, G_USUBE, G_SADDO, G_SSUBO, G_SMULH, G_UMULH}) {
     for (auto Ty : { s32, s64 })
       setAction({Op, Ty}, Legal);
 
@@ -75,8 +78,10 @@ AArch64LegalizerInfo::AArch64LegalizerInfo() {
     for (auto Ty : {s32, s64})
       setAction({BinOp, Ty}, Legal);
 
-  setAction({G_FREM, s32}, Libcall);
-  setAction({G_FREM, s64}, Libcall);
+  for (unsigned BinOp : {G_FREM, G_FPOW}) {
+    setAction({BinOp, s32}, Libcall);
+    setAction({BinOp, s64}, Libcall);
+  }
 
   // FIXME: what should we do about G_INSERTs with more than one source value?
   // For now the default of not specifying means we'll fall back.
@@ -224,6 +229,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo() {
     setAction({G_BITCAST, 0, LLT::vector(32/EltSize, EltSize)}, Legal);
     setAction({G_BITCAST, 1, LLT::vector(32/EltSize, EltSize)}, Legal);
   }
+
+  setAction({G_VASTART, p0}, Legal);
 
   computeTables();
 }
