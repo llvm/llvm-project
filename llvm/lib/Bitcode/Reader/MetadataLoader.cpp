@@ -1437,6 +1437,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     } else if (Version == 0) {
       // Upgrade old metadata, which stored a global variable reference or a
       // ConstantInt here.
+      NeedUpgradeToDIGlobalVariableExpression = true;
       Metadata *Expr = getMDOrNull(Record[9]);
       uint32_t AlignInBits = 0;
       if (Record.size() > 11) {
@@ -1467,8 +1468,6 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
       DIGlobalVariableExpression *DGVE = nullptr;
       if (Attach || Expr)
         DGVE = DIGlobalVariableExpression::getDistinct(Context, DGV, Expr);
-      else
-        NeedUpgradeToDIGlobalVariableExpression = true;
       if (Attach)
         Attach->addDebugInfo(DGVE);
 

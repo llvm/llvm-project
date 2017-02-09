@@ -4374,8 +4374,8 @@ struct ByteProvider {
   }
   static ByteProvider getConstantZero() { return ByteProvider(nullptr, 0); }
 
-  bool isConstantZero() { return !Load; }
-  bool isMemory() { return Load; }
+  bool isConstantZero() const { return !Load; }
+  bool isMemory() const { return Load; }
 
   bool operator==(const ByteProvider &Other) const {
     return Other.Load == Load && Other.ByteOffset == ByteOffset;

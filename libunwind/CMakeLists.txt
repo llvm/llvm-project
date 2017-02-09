@@ -282,4 +282,23 @@ endif()
 
 include_directories(include)
 
+find_path(
+  LIBUNWIND_LIBCXX_INCLUDES_INTERNAL
+  __libcpp_version
+  PATHS ${LLVM_MAIN_SRC_DIR}/projects/libcxx/include
+        ${LLVM_MAIN_SRC_DIR}/runtimes/libcxx/include
+  NO_DEFAULT_PATH
+)
+if ((NOT LIBUNWIND_STANDALONE_BUILD OR HAVE_LIBCXX) AND
+    IS_DIRECTORY "${LIBUNWIND_LIBCXX_INCLUDES_INTERNAL}")
+  set(LIBUNWIND_CXX_INCLUDE_PATHS_DEFAULT "${LIBUNWIND_LIBCXX_INCLUDES_INTERNAL}")
+endif()
+
+set(LIBUNWIND_CXX_INCLUDE_PATHS "${LIBUNWIND_CXX_INCLUDE_PATHS_DEFAULT}" CACHE PATH
+    "Paths to C++ header directories separated by ';'.")
+
+if (NOT LIBUNWIND_CXX_INCLUDE_PATHS STREQUAL "")
+  include_directories("${LIBUNWIND_CXX_INCLUDE_PATHS}")
+endif()
+
 add_subdirectory(src)

@@ -83,3 +83,50 @@ define <2 x i1> @test4vec(<2 x i32> %a) {
   ret <2 x i1> %c
 }
 
+define i1 @slt_zero_add_nsw(i32 %a) {
+; CHECK-LABEL: @slt_zero_add_nsw(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 %a, -1
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %add = add nsw i32 %a, 1
+  %cmp = icmp slt i32 %add, 0
+  ret i1 %cmp
+}
+
+; FIXME: The same fold should work with vectors.
+
+define <2 x i1> @slt_zero_add_nsw_splat_vec(<2 x i8> %a) {
+; CHECK-LABEL: @slt_zero_add_nsw_splat_vec(
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw <2 x i8> %a, <i8 1, i8 1>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt <2 x i8> [[ADD]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %add = add nsw <2 x i8> %a, <i8 1, i8 1>
+  %cmp = icmp slt <2 x i8> %add, zeroinitializer
+  ret <2 x i1> %cmp
+}
+
+; FIXME: InstCombine should not lose wrapping information by changing the add to xor.
+
+define i1 @slt_zero_add_nsw_signbit(i8 %x) {
+; CHECK-LABEL: @slt_zero_add_nsw_signbit(
+; CHECK-NEXT:    [[Z:%.*]] = icmp sgt i8 %x, -1
+; CHECK-NEXT:    ret i1 [[Z]]
+;
+  %y = add nsw i8 %x, -128
+  %z = icmp slt i8 %y, 0
+  ret i1 %z
+}
+
+; FIXME: InstCombine should not lose wrapping information by changing the add to xor.
+
+define i1 @slt_zero_add_nuw_signbit(i8 %x) {
+; CHECK-LABEL: @slt_zero_add_nuw_signbit(
+; CHECK-NEXT:    [[Z:%.*]] = icmp sgt i8 %x, -1
+; CHECK-NEXT:    ret i1 [[Z]]
+;
+  %y = add nuw i8 %x, 128
+  %z = icmp slt i8 %y, 0
+  ret i1 %z
+}
+

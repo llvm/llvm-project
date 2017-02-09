@@ -1944,6 +1944,8 @@ def err_auto_bitfield : Error<
   "cannot pass bit-field as __auto_type initializer in C">;
 
 // C++1y decltype(auto) type
+def err_decltype_auto_invalid : Error<
+  "'decltype(auto)' not allowed here">;
 def err_decltype_auto_cannot_be_combined : Error<
   "'decltype(auto)' cannot be combined with other type specifiers">;
 def err_decltype_auto_function_declarator_not_declaration : Error<

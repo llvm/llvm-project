@@ -1,4 +1,4 @@
-//===-- llvm/MC/SubtargetFeature.h - CPU characteristics --------*- C++ -*-===//
+//===- llvm/MC/SubtargetFeature.h - CPU characteristics ---------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -18,15 +18,17 @@
 #ifndef LLVM_MC_SUBTARGETFEATURE_H
 #define LLVM_MC_SUBTARGETFEATURE_H
 
-#include "llvm/ADT/Triple.h"
-#include "llvm/Support/DataTypes.h"
+#include "llvm/ADT/StringRef.h"
 #include <bitset>
+#include <initializer_list>
+#include <string>
 #include <vector>
 
 namespace llvm {
+
 template <typename T> class ArrayRef;
-  class raw_ostream;
-  class StringRef;
+class raw_ostream;
+class Triple;
 
 // A container class for subtarget features.
 // This is convenient because std::bitset does not have a constructor
@@ -35,11 +37,11 @@ const unsigned MAX_SUBTARGET_FEATURES = 128;
 class FeatureBitset : public std::bitset<MAX_SUBTARGET_FEATURES> {
 public:
   // Cannot inherit constructors because it's not supported by VC++..
-  FeatureBitset() : bitset() {}
+  FeatureBitset() = default;
 
   FeatureBitset(const bitset<MAX_SUBTARGET_FEATURES>& B) : bitset(B) {}
 
-  FeatureBitset(std::initializer_list<unsigned> Init) : bitset() {
+  FeatureBitset(std::initializer_list<unsigned> Init) {
     for (auto I : Init)
       set(I);
   }
@@ -95,6 +97,7 @@ struct SubtargetInfoKV {
 
 class SubtargetFeatures {
   std::vector<std::string> Features;    // Subtarget features as a vector
+
 public:
   explicit SubtargetFeatures(StringRef Initial = "");
 
@@ -127,6 +130,6 @@ public:
   void getDefaultSubtargetFeatures(const Triple& Triple);
 };
 
-} // End namespace llvm
+} // end namespace llvm
 
-#endif
+#endif // LLVM_MC_SUBTARGETFEATURE_H

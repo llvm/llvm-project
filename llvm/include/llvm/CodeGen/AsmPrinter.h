@@ -498,7 +498,7 @@ public:
   ///
   /// \p Value - The value to emit.
   /// \p Size - The size of the integer (in bytes) to emit.
-  virtual void EmitDebugValue(const MCExpr *Value, unsigned Size) const;
+  virtual void EmitDebugThreadLocal(const MCExpr *Value, unsigned Size) const;
 
   //===------------------------------------------------------------------===//
   // Dwarf Lowering Routines

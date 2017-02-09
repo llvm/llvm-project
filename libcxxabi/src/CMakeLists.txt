@@ -61,9 +61,9 @@ if (LIBCXXABI_USE_LLVM_UNWINDER)
   # Prefer using the in-tree version of libunwind, either shared or static. If
   # none are found fall back to using -lunwind.
   # FIXME: Is it correct to prefer the static version of libunwind?
-  if (TARGET unwind_shared)
+  if (NOT LIBCXXABI_ENABLE_STATIC_UNWINDER AND (TARGET unwind_shared OR HAVE_LIBUNWIND))
     list(APPEND libraries unwind_shared)
-  elseif(TARGET unwind_static)
+  elseif (LIBCXXABI_ENABLE_STATIC_UNWINDER AND (TARGET unwind_static OR HAVE_LIBUNWIND))
     list(APPEND libraries unwind_static)
   else()
     list(APPEND libraries unwind)

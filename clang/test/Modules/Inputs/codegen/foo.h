@@ -1,10 +1,4 @@
-void f1(int &);
-static void f2() {}
-inline void foo() {
-  static int i;
-  f1(i);
-  f2();
+inline void f1(const char* fmt, ...) {
+  __builtin_va_list args;
+  __builtin_va_start(args, fmt);
 }
-inline void foo2() {
-}
-void foo_ext() {}

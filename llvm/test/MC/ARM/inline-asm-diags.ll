@@ -1,4 +1,4 @@
-; RUN: not llc -march=arm -filetype=obj < %s 2>&1 -o /dev/null | FileCheck %s
+; RUN: not llc -mtriple=armv7-linux -filetype=obj < %s 2>&1 -o /dev/null | FileCheck %s
 
 module asm ".word 0x10"
 module asm ".word -bar"

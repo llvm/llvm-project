@@ -68,9 +68,6 @@ static cl::opt<std::string> DSYMFile("dsym",
 static cl::opt<bool> FullLeadingAddr("full-leading-addr",
                                      cl::desc("Print full leading address"));
 
-static cl::opt<bool> NoLeadingAddr("no-leading-addr",
-                                   cl::desc("Print no leading address"));
-
 static cl::opt<bool> NoLeadingHeaders("no-leading-headers",
                                       cl::desc("Print no leading headers"));
 

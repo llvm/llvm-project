@@ -17,8 +17,14 @@
 #ifndef LLVM_OBJECT_WASM_H
 #define LLVM_OBJECT_WASM_H
 
+#include "llvm/Object/Binary.h"
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Wasm.h"
+#include <cstddef>
+#include <cstdint>
+#include <vector>
 
 namespace llvm {
 namespace object {
@@ -26,8 +32,10 @@ namespace object {
 class WasmObjectFile : public ObjectFile {
 public:
   WasmObjectFile(MemoryBufferRef Object, Error &Err);
+
   const wasm::WasmObjectHeader &getHeader() const;
   const wasm::WasmSection *getWasmSection(const SectionRef &Section) const;
+
   static bool classof(const Binary *v) { return v->isWasm(); }
 
 protected:
@@ -93,7 +101,8 @@ private:
   wasm::WasmObjectHeader Header;
   std::vector<wasm::WasmSection> Sections;
 };
-}
-}
 
-#endif
+} // end namespace object
+} // end namespace llvm
+
+#endif // LLVM_OBJECT_WASM_H

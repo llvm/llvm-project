@@ -87,10 +87,10 @@ define <4 x half> @d_to_h(<4 x double> %a) {
 ; CHECK-DAG: fcvt
 ; CHECK-DAG: fcvt
 ; CHECK-DAG: fcvt
-; CHECK-DAG: mov
-; CHECK-DAG: mov
-; CHECK-DAG: mov
-; CHECK-DAG: mov
+; CHECK-DAG: ins
+; CHECK-DAG: ins
+; CHECK-DAG: ins
+; CHECK-DAG: ins
   %1 = fptrunc <4 x double> %a to <4 x half>
   ret <4 x half> %1
 }
@@ -108,10 +108,10 @@ define <4 x double> @h_to_d(<4 x half> %a) {
 ; CHECK-DAG: fcvt
 ; CHECK-DAG: fcvt
 ; CHECK-DAG: fcvt
-; CHECK-DAG: mov
-; CHECK-DAG: mov
-; CHECK-DAG: mov
-; CHECK-DAG: mov
+; CHECK-DAG: ins
+; CHECK-DAG: ins
+; CHECK-DAG: ins
+; CHECK-DAG: ins
   %1 = fpext <4 x half> %a to <4 x double>
   ret <4 x double> %1
 }
