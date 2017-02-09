@@ -75,6 +75,21 @@ Non-comprehensive list of changes in this release
    * Significant build-time and binary-size improvements when compiling with
      debug info (-g).
 
+Code Generation Testing
+-----------------------
+
+Passes that work on the machine instruction representation can be tested with
+the .mir serialization format. ``llc`` supports the ``-run-pass``,
+``-stop-after``, ``-stop-before``, ``-start-after``, ``-start-before`` to to
+run a single pass of the code generation pipeline, or to stop or start the code
+generation pipeline at a given point.
+
+Additional information can be found in the :doc:`MIRLangRef`. The format is
+used by the tests ending in ``.mir`` in the ``test/CodeGen`` directory.
+
+This feature is available since 2015. It is used more often lately and was not
+mentioned in the release notes yet.
+
 Intrusive list API overhaul
 ---------------------------
 
