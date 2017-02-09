@@ -25,9 +25,9 @@ def XBEGIN : I<0, Pseudo, (outs GR32:$dst), (ins),
 
 let isBranch = 1, isTerminator = 1, Defs = [EAX] in {
 def XBEGIN_2 : Ii16PCRel<0xc7, MRM_F8, (outs), (ins brtarget16:$dst),
-                         "xbegin\t$dst", []>, OpSize16, Requires<[HasRTM]>;
+                         "xbegin\t$dst", []>, OpSize16;
 def XBEGIN_4 : Ii32PCRel<0xc7, MRM_F8, (outs), (ins brtarget32:$dst),
-                         "xbegin\t$dst", []>, OpSize32, Requires<[HasRTM]>;
+                         "xbegin\t$dst", []>, OpSize32;
 }
 
 def XEND : I<0x01, MRM_D5, (outs), (ins),
@@ -35,7 +35,7 @@ def XEND : I<0x01, MRM_D5, (outs), (ins),
 
 let Defs = [EFLAGS] in
 def XTEST : I<0x01, MRM_D6, (outs), (ins),
-              "xtest", [(set EFLAGS, (X86xtest))]>, TB, Requires<[HasTSX]>;
+              "xtest", [(set EFLAGS, (X86xtest))]>, TB, Requires<[HasRTM]>;
 
 def XABORT : Ii8<0xc6, MRM_F8, (outs), (ins i8imm:$imm),
                  "xabort\t$imm",
@@ -44,7 +44,7 @@ def XABORT : Ii8<0xc6, MRM_F8, (outs), (ins i8imm:$imm),
 // HLE prefixes
 
 let isAsmParserOnly = 1 in {
-def XACQUIRE_PREFIX : I<0xF2, RawFrm, (outs), (ins), "xacquire", []>, Requires<[HasHLE]>;
-def XRELEASE_PREFIX : I<0xF3, RawFrm, (outs), (ins), "xrelease", []>, Requires<[HasHLE]>;
+def XACQUIRE_PREFIX : I<0xF2, RawFrm, (outs), (ins), "xacquire", []>;
+def XRELEASE_PREFIX : I<0xF3, RawFrm, (outs), (ins), "xrelease", []>;
 }
 

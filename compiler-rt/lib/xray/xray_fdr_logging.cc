@@ -459,7 +459,7 @@ void fdrLoggingHandleArg0(int32_t FuncId,
   FuncRecord.Type = RecordType::Function;
 
   // Only get the lower 28 bits of the function id.
-  FuncRecord.FuncId = FuncId | ~(0x03 << 28);
+  FuncRecord.FuncId = FuncId & ~(0x0F << 28);
 
   // Here we compute the TSC Delta. There are a few interesting situations we
   // need to account for:
