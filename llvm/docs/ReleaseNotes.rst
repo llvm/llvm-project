@@ -75,6 +75,80 @@ Non-comprehensive list of changes in this release
    * Significant build-time and binary-size improvements when compiling with
      debug info (-g).
 
+Intrusive list API overhaul
+---------------------------
+
+The intrusive list infrastructure was substantially rewritten over the last
+couple of releases, primarily to excise undefined behaviour.  The biggest
+changes landed in this release.
+
+* ``simple_ilist<T>`` is a lower-level intrusive list that never takes
+  ownership of its nodes.  New intrusive-list clients should consider using it
+  instead of ``ilist<T>``.
+
+  * ``ilist_tag<class>`` allows a single data type to be inserted into two
+    parallel intrusive lists.  A type can inherit twice from ``ilist_node``,
+    first using ``ilist_node<T,ilist_tag<A>>`` (enabling insertion into
+    ``simple_ilist<T,ilist_tag<A>>``) and second using
+    ``ilist_node<T,ilist_tag<B>>`` (enabling insertion into
+    ``simple_ilist<T,ilist_tag<B>>``), where ``A`` and ``B`` are arbitrary
+    types.
+
+  * ``ilist_sentinel_tracking<bool>`` controls whether an iterator knows
+    whether it's pointing at the sentinel (``end()``).  By default, sentinel
+    tracking is on when ABI-breaking checks are enabled, and off otherwise;
+    this is used for an assertion when dereferencing ``end()`` (this assertion
+    triggered often in practice, and many backend bugs were fixed).  Explicitly
+    turning on sentinel tracking also enables ``iterator::isEnd()``.  This is
+    used by ``MachineInstrBundleIterator`` to iterate over bundles.
+
+* ``ilist<T>`` is built on top of ``simple_ilist<T>``, and supports the same
+  configuration options.  As before (and unlike ``simple_ilist<T>``),
+  ``ilist<T>`` takes ownership of its nodes.  However, it no longer supports
+  *allocating* nodes, and is now equivalent to ``iplist<T>``.  ``iplist<T>``
+  will likely be removed in the future.
+
+  * ``ilist<T>`` now always uses ``ilist_traits<T>``.  Instead of passing a
+    custom traits class in via a template parameter, clients that want to
+    customize the traits should specialize ``ilist_traits<T>``.  Clients that
+    want to avoid ownership can specialize ``ilist_alloc_traits<T>`` to inherit
+    from ``ilist_noalloc_traits<T>`` (or to do something funky); clients that
+    need callbacks can specialize ``ilist_callback_traits<T>`` directly.
+
+* The underlying data structure is now a simple recursive linked list.  The
+  sentinel node contains only a "next" (``begin()``) and "prev" (``rbegin()``)
+  pointer and is stored in the same allocation as ``simple_ilist<T>``.
+  Previously, it was malloc-allocated on-demand by default, although the
+  now-defunct ``ilist_sentinel_traits<T>`` was sometimes specialized to avoid
+  this.
+
+* The ``reverse_iterator`` class no longer uses ``std::reverse_iterator``.
+  Instead, it now has a handle to the same node that it dereferences to.
+  Reverse iterators now have the same iterator invalidation semantics as
+  forward iterators.
+
+  * ``iterator`` and ``reverse_iterator`` have explicit conversion constructors
+    that match ``std::reverse_iterator``'s off-by-one semantics, so that
+    reversing the end points of an iterator range results in the same range
+    (albeit in reverse).  I.e., ``reverse_iterator(begin())`` equals
+    ``rend()``.
+
+  * ``iterator::getReverse()`` and ``reverse_iterator::getReverse()`` return an
+    iterator that dereferences to the *same* node.  I.e.,
+    ``begin().getReverse()`` equals ``--rend()``.
+
+  * ``ilist_node<T>::getIterator()`` and
+    ``ilist_node<T>::getReverseIterator()`` return the forward and reverse
+    iterators that dereference to the current node.  I.e.,
+    ``begin()->getIterator()`` equals ``begin()`` and
+    ``rbegin()->getReverseIterator()`` equals ``rbegin()``.
+
+* ``iterator`` now stores an ``ilist_node_base*`` instead of a ``T*``.  The
+  implicit conversions between ``ilist<T>::iterator`` and ``T*`` have been
+  removed.  Clients may use ``N->getIterator()`` (if not ``nullptr``) or
+  ``&*I`` (if not ``end()``); alternatively, clients may refactor to use
+  references for known-good nodes.
+
 Changes to the LLVM IR
 ----------------------
 

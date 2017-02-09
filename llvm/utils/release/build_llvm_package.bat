@@ -47,7 +47,6 @@ svn.exe export -r %revision% http://llvm.org/svn/llvm-project/clang-tools-extra/
 svn.exe export -r %revision% http://llvm.org/svn/llvm-project/lld/%branch% llvm/tools/lld || exit /b
 svn.exe export -r %revision% http://llvm.org/svn/llvm-project/compiler-rt/%branch% llvm/projects/compiler-rt || exit /b
 svn.exe export -r %revision% http://llvm.org/svn/llvm-project/openmp/%branch% llvm/projects/openmp || exit /b
-svn.exe export -r %revision% http://llvm.org/svn/llvm-project/lldb/%branch% llvm/tools/lldb || exit /b
 
 
 REM Setting CMAKE_CL_SHOWINCLUDES_PREFIX to work around PR27226.

@@ -153,6 +153,18 @@ public:
       : MII(I.getInstrIterator()) {}
   MachineInstrBundleIterator() : MII(nullptr) {}
 
+  /// Explicit conversion between forward/reverse iterators.
+  ///
+  /// Translate between forward and reverse iterators without changing range
+  /// boundaries.  The resulting iterator will dereference (and have a handle)
+  /// to the previous node, which is somewhat unexpected; but converting the
+  /// two endpoints in a range will give the same range in reverse.
+  ///
+  /// This matches std::reverse_iterator conversions.
+  explicit MachineInstrBundleIterator(
+      const MachineInstrBundleIterator<Ty, !IsReverse> &I)
+      : MachineInstrBundleIterator(++I.getReverse()) {}
+
   /// Get the bundle iterator for the given instruction's bundle.
   static MachineInstrBundleIterator getAtBundleBegin(instr_iterator MI) {
     return MachineInstrBundleIteratorHelper<IsReverse>::getBundleBegin(MI);
@@ -258,6 +270,11 @@ public:
 
   nonconst_iterator getNonConstIterator() const { return MII.getNonConst(); }
 
+  /// Get a reverse iterator to the same node.
+  ///
+  /// Gives a reverse iterator that will dereference (and have a handle) to the
+  /// same node.  Converting the endpoint iterators in a range will give a
+  /// different range; for range operations, use the explicit conversions.
   reverse_iterator getReverse() const { return MII.getReverse(); }
 };
 
