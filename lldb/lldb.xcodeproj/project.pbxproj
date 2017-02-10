@@ -136,7 +136,6 @@
 		23A452091DBFF6AB00E44395 /* StructuredDataTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23A452051DBFF69800E44395 /* StructuredDataTest.cpp */; };
 		23A4520D1DBFF77400E44395 /* CMakeLists.txt in Copy Files */ = {isa = PBXBuildFile; fileRef = 23A4520B1DBFF77400E44395 /* CMakeLists.txt */; };
 		23A4520F1DBFF77700E44395 /* MinidumpParserTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23A4520C1DBFF77400E44395 /* MinidumpParserTest.cpp */; };
-		23A4521B1DBFF82100E44395 /* SymbolFilePDBTests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23CB15141D66CF8700EDDDE1 /* SymbolFilePDBTests.cpp */; };
 		23A4521C1DBFF84500E44395 /* ModuleCacheTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23CB15011D66CD8400EDDDE1 /* ModuleCacheTest.cpp */; };
 		23A4522E1DC00D5D00E44395 /* MinidumpParser.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23A452211DC00D2F00E44395 /* MinidumpParser.cpp */; };
 		23A4522F1DC00D5D00E44395 /* MinidumpTypes.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23A452231DC00D2F00E44395 /* MinidumpTypes.cpp */; };
@@ -7476,7 +7475,6 @@
 				23CB153B1D66DA9300EDDDE1 /* SocketTest.cpp in Sources */,
 				23CB153C1D66DA9300EDDDE1 /* TestArgs.cpp in Sources */,
 				23A452081DBFF6A500E44395 /* ArchSpecTest.cpp in Sources */,
-				23A4521B1DBFF82100E44395 /* SymbolFilePDBTests.cpp in Sources */,
 				23CB153D1D66DA9300EDDDE1 /* GDBRemoteCommunicationClientTest.cpp in Sources */,
 				23CB153E1D66DA9300EDDDE1 /* PythonDataObjectsTests.cpp in Sources */,
 				23CB153F1D66DA9300EDDDE1 /* SymbolsTest.cpp in Sources */,
