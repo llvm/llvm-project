@@ -4,7 +4,7 @@
 ; CHECK-LABEL: {{^}}empty_exactly_1:
 ; CHECK: SGPRBlocks: 12
 ; CHECK: VGPRBlocks: 32
-; CHECK: NumSGPRsForWavesPerEU: 97
+; CHECK: NumSGPRsForWavesPerEU: 102
 ; CHECK: NumVGPRsForWavesPerEU: 129
 define void @empty_exactly_1() #0 {
 entry:
@@ -16,7 +16,7 @@ attributes #0 = {"amdgpu-waves-per-eu"="1,1"}
 ; CHECK-LABEL: {{^}}empty_exactly_5:
 ; CHECK: SGPRBlocks: 12
 ; CHECK: VGPRBlocks: 10
-; CHECK: NumSGPRsForWavesPerEU: 97
+; CHECK: NumSGPRsForWavesPerEU: 102
 ; CHECK: NumVGPRsForWavesPerEU: 41
 define void @empty_exactly_5() #1 {
 entry:
@@ -78,7 +78,7 @@ attributes #5 = {"amdgpu-waves-per-eu"="10"}
 ; CHECK-LABEL: {{^}}empty_at_most_5:
 ; CHECK: SGPRBlocks: 12
 ; CHECK: VGPRBlocks: 10
-; CHECK: NumSGPRsForWavesPerEU: 97
+; CHECK: NumSGPRsForWavesPerEU: 102
 ; CHECK: NumVGPRsForWavesPerEU: 41
 define void @empty_at_most_5() #6 {
 entry:

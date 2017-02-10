@@ -59,6 +59,18 @@ template <typename B, typename S> struct Range {
 
   void Slide(BaseType slide) { base += slide; }
 
+  bool Union(const Range &rhs)
+  {
+    if (DoesAdjoinOrIntersect(rhs))
+    {
+      auto new_end = std::max<BaseType>(GetRangeEnd(), rhs.GetRangeEnd());
+      base = std::min<BaseType>(base, rhs.base);
+      size = new_end - base;
+      return true;
+    }
+    return false;
+  }
+
   BaseType GetRangeEnd() const { return base + size; }
 
   void SetRangeEnd(BaseType end) {
@@ -348,7 +360,33 @@ public:
 
   void Append(B base, S size) { m_entries.emplace_back(base, size); }
 
-  bool RemoveEntrtAtIndex(uint32_t idx) {
+  // Insert an item into a sorted list and optionally combine it with any
+  // adjacent blocks if requested.
+  void Insert(const Entry &entry, bool combine) {
+    if (m_entries.empty()) {
+      m_entries.push_back(entry);
+      return;
+    }
+    auto begin = m_entries.begin();
+    auto end = m_entries.end();
+    auto pos = std::lower_bound(begin, end, entry);
+    if (combine) {
+      if (pos != end && pos->Union(entry)) {
+        CombinePrevAndNext(pos);
+        return;
+      }
+      if (pos != begin) {
+        auto prev = pos - 1;
+        if (prev->Union(entry)) {
+          CombinePrevAndNext(prev);
+          return;
+        }
+      }
+    }
+    m_entries.insert(pos, entry);
+  }
+
+  bool RemoveEntryAtIndex(uint32_t idx) {
     if (idx < m_entries.size()) {
       m_entries.erase(m_entries.begin() + idx);
       return true;
@@ -458,6 +496,7 @@ public:
 
   // Clients must ensure that "i" is a valid index prior to calling this
   // function
+  Entry &GetEntryRef(size_t i) { return m_entries[i]; }
   const Entry &GetEntryRef(size_t i) const { return m_entries[i]; }
 
   Entry *Back() { return (m_entries.empty() ? nullptr : &m_entries.back()); }
@@ -538,6 +577,28 @@ public:
   }
 
 protected:
+  
+  void CombinePrevAndNext(typename Collection::iterator pos) {
+    // Check if the prev or next entries in case they need to be unioned with
+    // the entry pointed to by "pos".
+    if (pos != m_entries.begin()) {
+      auto prev = pos - 1;
+      if (prev->Union(*pos))
+        m_entries.erase(pos);
+      pos = prev;
+    }
+    
+    auto end = m_entries.end();
+    if (pos != end) {
+      auto next = pos + 1;
+      if (next != end) {
+        if (pos->Union(*next))
+          m_entries.erase(next);
+      }
+    }
+    return;
+  }
+
   Collection m_entries;
 };
 

@@ -1638,10 +1638,12 @@ void SelectionDAGBuilder::FindMergedConditions(const Value *Cond,
   // Skip over not part of the tree and remember to invert op and operands at
   // next level.
   if (BinaryOperator::isNot(Cond) && Cond->hasOneUse()) {
-    Cond = cast<Instruction>(Cond)->getOperand(0);
-    FindMergedConditions(Cond, TBB, FBB, CurBB, SwitchBB, Opc, TProb, FProb,
-                         !InvertCond);
-    return;
+    const Value *CondOp = BinaryOperator::getNotArgument(Cond);
+    if (InBlock(CondOp, CurBB->getBasicBlock())) {
+      FindMergedConditions(CondOp, TBB, FBB, CurBB, SwitchBB, Opc, TProb, FProb,
+                           !InvertCond);
+      return;
+    }
   }
 
   const Instruction *BOp = dyn_cast<Instruction>(Cond);

@@ -75,4 +75,5 @@ if(NOT TARGET LLVMSupport)
   @llvm_config_include_buildtree_only_exports@
 endif()
 
+set_property(GLOBAL PROPERTY LLVM_TARGETS_CONFIGURED On)
 include(${LLVM_CMAKE_DIR}/LLVM-Config.cmake)

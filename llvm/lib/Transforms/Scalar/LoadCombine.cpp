@@ -245,11 +245,15 @@ bool LoadCombine::runOnBasicBlock(BasicBlock &BB) {
   bool Combined = false;
   unsigned Index = 0;
   for (auto &I : BB) {
-    if (I.mayThrow() || (I.mayWriteToMemory() && AST.containsUnknown(&I))) {
+    if (I.mayThrow() || AST.containsUnknown(&I)) {
       if (combineLoads(LoadMap))
         Combined = true;
       LoadMap.clear();
       AST.clear();
+      continue;
+    }
+    if (I.mayWriteToMemory()) {
+      AST.add(&I);
       continue;
     }
     LoadInst *LI = dyn_cast<LoadInst>(&I);

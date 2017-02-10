@@ -358,13 +358,14 @@ MCSectionELF *MCContext::getELFNamedSection(const Twine &Prefix,
 
 MCSectionELF *MCContext::getELFSection(const Twine &Section, unsigned Type,
                                        unsigned Flags, unsigned EntrySize,
-                                       const Twine &Group, unsigned UniqueID) {
+                                       const Twine &Group, unsigned UniqueID,
+                                       const MCSectionELF *Associated) {
   MCSymbolELF *GroupSym = nullptr;
   if (!Group.isTriviallyEmpty() && !Group.str().empty())
     GroupSym = cast<MCSymbolELF>(getOrCreateSymbol(Group));
 
   return getELFSection(Section, Type, Flags, EntrySize, GroupSym, UniqueID,
-                       nullptr);
+                       Associated);
 }
 
 MCSectionELF *MCContext::getELFSection(const Twine &Section, unsigned Type,

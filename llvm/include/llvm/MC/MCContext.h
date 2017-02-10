@@ -357,7 +357,15 @@ namespace llvm {
 
     MCSectionELF *getELFSection(const Twine &Section, unsigned Type,
                                 unsigned Flags, unsigned EntrySize,
-                                const Twine &Group, unsigned UniqueID);
+                                const Twine &Group, unsigned UniqueID) {
+      return getELFSection(Section, Type, Flags, EntrySize, Group, UniqueID,
+                           nullptr);
+    }
+
+    MCSectionELF *getELFSection(const Twine &Section, unsigned Type,
+                                unsigned Flags, unsigned EntrySize,
+                                const Twine &Group, unsigned UniqueID,
+                                const MCSectionELF *Associated);
 
     MCSectionELF *getELFSection(const Twine &Section, unsigned Type,
                                 unsigned Flags, unsigned EntrySize,

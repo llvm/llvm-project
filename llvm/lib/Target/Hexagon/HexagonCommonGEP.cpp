@@ -315,11 +315,8 @@ void HexagonCommonGEP::getBlockTraversalOrder(BasicBlock *Root,
   // visited".
 
   Order.push_back(Root);
-  DomTreeNode *DTN = DT->getNode(Root);
-  typedef GraphTraits<DomTreeNode*> GTN;
-  typedef GTN::ChildIteratorType Iter;
-  for (Iter I = GTN::child_begin(DTN), E = GTN::child_end(DTN); I != E; ++I)
-    getBlockTraversalOrder((*I)->getBlock(), Order);
+  for (auto *DTN : children<DomTreeNode*>(DT->getNode(Root)))
+    getBlockTraversalOrder(DTN->getBlock(), Order);
 }
 
 bool HexagonCommonGEP::isHandledGepForm(GetElementPtrInst *GepI) {
@@ -1235,11 +1232,8 @@ void HexagonCommonGEP::removeDeadCode() {
 
   for (unsigned i = 0; i < BO.size(); ++i) {
     BasicBlock *B = cast<BasicBlock>(BO[i]);
-    DomTreeNode *N = DT->getNode(B);
-    typedef GraphTraits<DomTreeNode*> GTN;
-    typedef GTN::ChildIteratorType Iter;
-    for (Iter I = GTN::child_begin(N), E = GTN::child_end(N); I != E; ++I)
-      BO.push_back((*I)->getBlock());
+    for (auto DTN : children<DomTreeNode*>(DT->getNode(B)))
+      BO.push_back(DTN->getBlock());
   }
 
   for (unsigned i = BO.size(); i > 0; --i) {

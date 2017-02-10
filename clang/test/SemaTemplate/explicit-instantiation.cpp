@@ -103,8 +103,8 @@ namespace PR7622 {
 // Test that we do not crash.
 class TC1 {
   class TC2 {
-    template // FIXME: error here.
-    void foo() { }
+    template
+    void foo() { } // expected-error{{expected '<' after 'template'}}
    };
 };
 

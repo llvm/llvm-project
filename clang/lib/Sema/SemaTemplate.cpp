@@ -1802,8 +1802,9 @@ static SourceRange getRangeOfTypeInNestedNameSpecifier(ASTContext &Context,
 /// matching template parameters to scope specifiers in friend
 /// declarations.
 ///
-/// \param IsExplicitSpecialization will be set true if the entity being
-/// declared is an explicit specialization, false otherwise.
+/// \param IsMemberSpecialization will be set true if the scope specifier
+/// denotes a fully-specialized type, and therefore this is a declaration of
+/// a member specialization.
 ///
 /// \returns the template parameter list, if any, that corresponds to the
 /// name that is preceded by the scope specifier @p SS. This template
@@ -1815,8 +1816,8 @@ TemplateParameterList *Sema::MatchTemplateParametersToScopeSpecifier(
     SourceLocation DeclStartLoc, SourceLocation DeclLoc, const CXXScopeSpec &SS,
     TemplateIdAnnotation *TemplateId,
     ArrayRef<TemplateParameterList *> ParamLists, bool IsFriend,
-    bool &IsExplicitSpecialization, bool &Invalid) {
-  IsExplicitSpecialization = false;
+    bool &IsMemberSpecialization, bool &Invalid) {
+  IsMemberSpecialization = false;
   Invalid = false;
 
   // The sequence of nested types to which we will match up the template
@@ -1926,7 +1927,7 @@ TemplateParameterList *Sema::MatchTemplateParametersToScopeSpecifier(
       Diag(DeclLoc, diag::err_specialize_member_of_template)
         << !Recovery << Range;
       Invalid = true;
-      IsExplicitSpecialization = false;
+      IsMemberSpecialization = false;
       return true;
     }
 
@@ -1996,7 +1997,7 @@ TemplateParameterList *Sema::MatchTemplateParametersToScopeSpecifier(
         if (Record->getTemplateSpecializationKind()
                                                 != TSK_ExplicitSpecialization &&
             TypeIdx == NumTypes - 1)
-          IsExplicitSpecialization = true;
+          IsMemberSpecialization = true;
 
         continue;
       }
@@ -2030,9 +2031,9 @@ TemplateParameterList *Sema::MatchTemplateParametersToScopeSpecifier(
 
     if (NeedEmptyTemplateHeader) {
       // If we're on the last of the types, and we need a 'template<>' header
-      // here, then it's an explicit specialization.
+      // here, then it's a member specialization.
       if (TypeIdx == NumTypes - 1)
-        IsExplicitSpecialization = true;
+        IsMemberSpecialization = true;
 
       if (ParamIdx < ParamLists.size()) {
         if (ParamLists[ParamIdx]->size() > 0) {
@@ -2105,7 +2106,6 @@ TemplateParameterList *Sema::MatchTemplateParametersToScopeSpecifier(
     if (TemplateId && !IsFriend) {
       // We don't have a template header for the declaration itself, but we
       // should.
-      IsExplicitSpecialization = true;
       DiagnoseMissingExplicitSpecialization(SourceRange(TemplateId->LAngleLoc,
                                                         TemplateId->RAngleLoc));
 
@@ -6581,7 +6581,7 @@ Sema::ActOnClassTemplateSpecialization(Scope *S, unsigned TagSpec,
     return true;
   }
 
-  bool isExplicitSpecialization = false;
+  bool isMemberSpecialization = false;
   bool isPartialSpecialization = false;
 
   // Check the validity of the template headers that introduce this
@@ -6592,7 +6592,7 @@ Sema::ActOnClassTemplateSpecialization(Scope *S, unsigned TagSpec,
   TemplateParameterList *TemplateParams =
       MatchTemplateParametersToScopeSpecifier(
           KWLoc, TemplateNameLoc, SS, &TemplateId,
-          TemplateParameterLists, TUK == TUK_Friend, isExplicitSpecialization,
+          TemplateParameterLists, TUK == TUK_Friend, isMemberSpecialization,
           Invalid);
   if (Invalid)
     return true;
@@ -6642,8 +6642,6 @@ Sema::ActOnClassTemplateSpecialization(Scope *S, unsigned TagSpec,
                                 SourceRange(TemplateParams->getTemplateLoc(),
                                             TemplateParams->getRAngleLoc()))
         << SourceRange(LAngleLoc, RAngleLoc);
-    else
-      isExplicitSpecialization = true;
   } else {
     assert(TUK == TUK_Friend && "should have a 'template<>' for this decl");
   }

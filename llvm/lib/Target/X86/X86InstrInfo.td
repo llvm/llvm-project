@@ -933,6 +933,15 @@ def i32immSExt8  : ImmLeaf<i32, [{ return isInt<8>(Imm); }]>;
 def i64immSExt8  : ImmLeaf<i64, [{ return isInt<8>(Imm); }]>;
 def i64immSExt32 : ImmLeaf<i64, [{ return isInt<32>(Imm); }]>;
 
+// FIXME: Ideally we would just replace the above i*immSExt* matchers with
+// relocImm-based matchers, but then FastISel would be unable to use them.
+def i64relocImmSExt8 : PatLeaf<(i64 relocImm), [{
+  return isSExtRelocImm<8>(N);
+}]>;
+def i64relocImmSExt32 : PatLeaf<(i64 relocImm), [{
+  return isSExtRelocImm<32>(N);
+}]>;
+
 // If we have multiple users of an immediate, it's much smaller to reuse
 // the register, rather than encode the immediate in every instruction.
 // This has the risk of increasing register pressure from stretched live
@@ -970,6 +979,13 @@ def i32immSExt8_su : PatLeaf<(i32immSExt8), [{
     return !shouldAvoidImmediateInstFormsForSize(N);
 }]>;
 def i64immSExt8_su : PatLeaf<(i64immSExt8), [{
+    return !shouldAvoidImmediateInstFormsForSize(N);
+}]>;
+
+def i64relocImmSExt8_su : PatLeaf<(i64relocImmSExt8), [{
+    return !shouldAvoidImmediateInstFormsForSize(N);
+}]>;
+def i64relocImmSExt32_su : PatLeaf<(i64relocImmSExt32), [{
     return !shouldAvoidImmediateInstFormsForSize(N);
 }]>;
 

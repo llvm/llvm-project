@@ -30,18 +30,20 @@ static bool ShrinkDemandedConstant(Instruction *I, unsigned OpNo,
   assert(I && "No instruction?");
   assert(OpNo < I->getNumOperands() && "Operand index too large");
 
-  // If the operand is not a constant integer, nothing to do.
-  ConstantInt *OpC = dyn_cast<ConstantInt>(I->getOperand(OpNo));
-  if (!OpC) return false;
+  // The operand must be a constant integer or splat integer.
+  Value *Op = I->getOperand(OpNo);
+  const APInt *C;
+  if (!match(Op, m_APInt(C)))
+    return false;
 
   // If there are no bits set that aren't demanded, nothing to do.
-  Demanded = Demanded.zextOrTrunc(OpC->getValue().getBitWidth());
-  if ((~Demanded & OpC->getValue()) == 0)
+  Demanded = Demanded.zextOrTrunc(C->getBitWidth());
+  if ((~Demanded & *C) == 0)
     return false;
 
   // This instruction is producing bits that are not demanded. Shrink the RHS.
-  Demanded &= OpC->getValue();
-  I->setOperand(OpNo, ConstantInt::get(OpC->getType(), Demanded));
+  Demanded &= *C;
+  I->setOperand(OpNo, ConstantInt::get(Op->getType(), Demanded));
 
   return true;
 }
@@ -114,9 +116,10 @@ Value *InstCombiner::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
       KnownOne.getBitWidth() == BitWidth &&
       "Value *V, DemandedMask, KnownZero and KnownOne "
       "must have same BitWidth");
-  if (ConstantInt *CI = dyn_cast<ConstantInt>(V)) {
-    // We know all of the bits for a constant!
-    KnownOne = CI->getValue() & DemandedMask;
+  const APInt *C;
+  if (match(V, m_APInt(C))) {
+    // We know all of the bits for a scalar constant or a splat vector constant!
+    KnownOne = *C & DemandedMask;
     KnownZero = ~KnownOne & DemandedMask;
     return nullptr;
   }

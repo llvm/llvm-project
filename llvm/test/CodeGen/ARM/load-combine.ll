@@ -232,23 +232,11 @@ define i64 @load_i64_by_i8_bswap(i64* %arg) {
 ; (i32) p[1] | ((i32) p[2] << 8) | ((i32) p[3] << 16) | ((i32) p[4] << 24)
 define i32 @load_i32_by_i8_nonzero_offset(i32* %arg) {
 ; CHECK-LABEL: load_i32_by_i8_nonzero_offset:
-; CHECK: ldrb  r1, [r0, #1]
-; CHECK-NEXT: ldrb  r2, [r0, #2]
-; CHECK-NEXT: ldrb  r3, [r0, #3]
-; CHECK-NEXT: ldrb  r0, [r0, #4]
-; CHECK-NEXT: orr r1, r1, r2, lsl #8
-; CHECK-NEXT: orr r1, r1, r3, lsl #16
-; CHECK-NEXT: orr r0, r1, r0, lsl #24
+; CHECK: ldr r0, [r0, #1]
 ; CHECK-NEXT: mov pc, lr
 
 ; CHECK-ARMv6-LABEL: load_i32_by_i8_nonzero_offset:
-; CHECK-ARMv6: ldrb  r1, [r0, #1]
-; CHECK-ARMv6-NEXT: ldrb  r2, [r0, #2]
-; CHECK-ARMv6-NEXT: ldrb  r3, [r0, #3]
-; CHECK-ARMv6-NEXT: ldrb  r0, [r0, #4]
-; CHECK-ARMv6-NEXT: orr r1, r1, r2, lsl #8
-; CHECK-ARMv6-NEXT: orr r1, r1, r3, lsl #16
-; CHECK-ARMv6-NEXT: orr r0, r1, r0, lsl #24
+; CHECK-ARMv6: ldr r0, [r0, #1]
 ; CHECK-ARMv6-NEXT: bx  lr
 
   %tmp = bitcast i32* %arg to i8*
@@ -277,23 +265,11 @@ define i32 @load_i32_by_i8_nonzero_offset(i32* %arg) {
 ; (i32) p[-4] | ((i32) p[-3] << 8) | ((i32) p[-2] << 16) | ((i32) p[-1] << 24)
 define i32 @load_i32_by_i8_neg_offset(i32* %arg) {
 ; CHECK-LABEL: load_i32_by_i8_neg_offset:
-; CHECK: ldrb  r1, [r0, #-4]
-; CHECK-NEXT: ldrb  r2, [r0, #-3]
-; CHECK-NEXT: ldrb  r3, [r0, #-2]
-; CHECK-NEXT: ldrb  r0, [r0, #-1]
-; CHECK-NEXT: orr r1, r1, r2, lsl #8
-; CHECK-NEXT: orr r1, r1, r3, lsl #16
-; CHECK-NEXT: orr r0, r1, r0, lsl #24
+; CHECK: ldr r0, [r0, #-4]
 ; CHECK-NEXT: mov pc, lr
 
 ; CHECK-ARMv6-LABEL: load_i32_by_i8_neg_offset:
-; CHECK-ARMv6: ldrb  r1, [r0, #-4]
-; CHECK-ARMv6-NEXT: ldrb  r2, [r0, #-3]
-; CHECK-ARMv6-NEXT: ldrb  r3, [r0, #-2]
-; CHECK-ARMv6-NEXT: ldrb  r0, [r0, #-1]
-; CHECK-ARMv6-NEXT: orr r1, r1, r2, lsl #8
-; CHECK-ARMv6-NEXT: orr r1, r1, r3, lsl #16
-; CHECK-ARMv6-NEXT: orr r0, r1, r0, lsl #24
+; CHECK-ARMv6: ldr r0, [r0, #-4]
 ; CHECK-ARMv6-NEXT: bx  lr
 
   %tmp = bitcast i32* %arg to i8*
@@ -322,23 +298,19 @@ define i32 @load_i32_by_i8_neg_offset(i32* %arg) {
 ; (i32) p[4] | ((i32) p[3] << 8) | ((i32) p[2] << 16) | ((i32) p[1] << 24)
 define i32 @load_i32_by_i8_nonzero_offset_bswap(i32* %arg) {
 ; CHECK-LABEL: load_i32_by_i8_nonzero_offset_bswap:
-; CHECK: ldrb  r1, [r0, #1]
-; CHECK-NEXT: ldrb  r2, [r0, #2]
-; CHECK-NEXT: ldrb  r3, [r0, #3]
-; CHECK-NEXT: ldrb  r0, [r0, #4]
-; CHECK-NEXT: orr r0, r0, r3, lsl #8
-; CHECK-NEXT: orr r0, r0, r2, lsl #16
-; CHECK-NEXT: orr r0, r0, r1, lsl #24
+; CHECK: ldr r0, [r0, #1]
+; CHECK-NEXT: mov r1, #65280
+; CHECK-NEXT: mov r2, #16711680
+; CHECK-NEXT: and r1, r1, r0, lsr #8
+; CHECK-NEXT: and r2, r2, r0, lsl #8
+; CHECK-NEXT: orr r1, r1, r0, lsr #24
+; CHECK-NEXT: orr r0, r2, r0, lsl #24
+; CHECK-NEXT: orr r0, r0, r1
 ; CHECK-NEXT: mov pc, lr
 
 ; CHECK-ARMv6-LABEL: load_i32_by_i8_nonzero_offset_bswap:
-; CHECK-ARMv6: ldrb  r1, [r0, #1]
-; CHECK-ARMv6-NEXT: ldrb  r2, [r0, #2]
-; CHECK-ARMv6-NEXT: ldrb  r3, [r0, #3]
-; CHECK-ARMv6-NEXT: ldrb  r0, [r0, #4]
-; CHECK-ARMv6-NEXT: orr r0, r0, r3, lsl #8
-; CHECK-ARMv6-NEXT: orr r0, r0, r2, lsl #16
-; CHECK-ARMv6-NEXT: orr r0, r0, r1, lsl #24
+; CHECK-ARMv6: ldr r0, [r0, #1]
+; CHECK-ARMv6-NEXT: rev r0, r0
 ; CHECK-ARMv6-NEXT: bx  lr
 
   %tmp = bitcast i32* %arg to i8*
@@ -367,23 +339,19 @@ define i32 @load_i32_by_i8_nonzero_offset_bswap(i32* %arg) {
 ; (i32) p[-1] | ((i32) p[-2] << 8) | ((i32) p[-3] << 16) | ((i32) p[-4] << 24)
 define i32 @load_i32_by_i8_neg_offset_bswap(i32* %arg) {
 ; CHECK-LABEL: load_i32_by_i8_neg_offset_bswap:
-; CHECK: ldrb  r1, [r0, #-4]
-; CHECK-NEXT: ldrb  r2, [r0, #-3]
-; CHECK-NEXT: ldrb  r3, [r0, #-2]
-; CHECK-NEXT: ldrb  r0, [r0, #-1]
-; CHECK-NEXT: orr r0, r0, r3, lsl #8
-; CHECK-NEXT: orr r0, r0, r2, lsl #16
-; CHECK-NEXT: orr r0, r0, r1, lsl #24
+; CHECK: ldr r0, [r0, #-4]
+; CHECK-NEXT: mov r1, #65280
+; CHECK-NEXT: mov r2, #16711680
+; CHECK-NEXT: and r1, r1, r0, lsr #8
+; CHECK-NEXT: and r2, r2, r0, lsl #8
+; CHECK-NEXT: orr r1, r1, r0, lsr #24
+; CHECK-NEXT: orr r0, r2, r0, lsl #24
+; CHECK-NEXT: orr r0, r0, r1
 ; CHECK-NEXT: mov pc, lr
 
 ; CHECK-ARMv6-LABEL: load_i32_by_i8_neg_offset_bswap:
-; CHECK-ARMv6: ldrb  r1, [r0, #-4]
-; CHECK-ARMv6-NEXT: ldrb  r2, [r0, #-3]
-; CHECK-ARMv6-NEXT: ldrb  r3, [r0, #-2]
-; CHECK-ARMv6-NEXT: ldrb  r0, [r0, #-1]
-; CHECK-ARMv6-NEXT: orr r0, r0, r3, lsl #8
-; CHECK-ARMv6-NEXT: orr r0, r0, r2, lsl #16
-; CHECK-ARMv6-NEXT: orr r0, r0, r1, lsl #24
+; CHECK-ARMv6: ldr r0, [r0, #-4]
+; CHECK-ARMv6-NEXT: rev r0, r0
 ; CHECK-ARMv6-NEXT: bx  lr
 
   %tmp = bitcast i32* %arg to i8*
@@ -517,24 +485,12 @@ define i32 @load_i32_by_i8_base_offset_index(i8* %arg, i32 %i) {
 define i32 @load_i32_by_i8_base_offset_index_2(i8* %arg, i32 %i) {
 ; CHECK-LABEL: load_i32_by_i8_base_offset_index_2:
 ; CHECK: add r0, r0, r1
-; CHECK-NEXT: ldrb  r1, [r0, #13]
-; CHECK-NEXT: ldrb  r2, [r0, #14]
-; CHECK-NEXT: ldrb  r3, [r0, #15]
-; CHECK-NEXT: ldrb  r0, [r0, #16]
-; CHECK-NEXT: orr r1, r1, r2, lsl #8
-; CHECK-NEXT: orr r1, r1, r3, lsl #16
-; CHECK-NEXT: orr r0, r1, r0, lsl #24
+; CHECK-NEXT: ldr r0, [r0, #13]
 ; CHECK-NEXT: mov pc, lr
 ;
 ; CHECK-ARMv6-LABEL: load_i32_by_i8_base_offset_index_2:
 ; CHECK-ARMv6: add r0, r0, r1
-; CHECK-ARMv6-NEXT: ldrb  r1, [r0, #13]
-; CHECK-ARMv6-NEXT: ldrb  r2, [r0, #14]
-; CHECK-ARMv6-NEXT: ldrb  r3, [r0, #15]
-; CHECK-ARMv6-NEXT: ldrb  r0, [r0, #16]
-; CHECK-ARMv6-NEXT: orr r1, r1, r2, lsl #8
-; CHECK-ARMv6-NEXT: orr r1, r1, r3, lsl #16
-; CHECK-ARMv6-NEXT: orr r0, r1, r0, lsl #24
+; CHECK-ARMv6-NEXT: ldr r0, [r0, #13]
 ; CHECK-ARMv6-NEXT: bx  lr
 
   %tmp = add nuw nsw i32 %i, 4
@@ -565,4 +521,178 @@ define i32 @load_i32_by_i8_base_offset_index_2(i8* %arg, i32 %i) {
   %tmp47 = shl nuw i32 %tmp46, 24
   %tmp48 = or i32 %tmp42, %tmp47
   ret i32 %tmp48
+}
+
+; i8* p; // p is 2 byte aligned
+; (i32) p[0] | ((i32) p[1] << 8)
+define i32 @zext_load_i32_by_i8(i32* %arg) {
+; CHECK-LABEL: zext_load_i32_by_i8:
+; CHECK: ldrb  r1, [r0]
+; CHECK-NEXT: ldrb  r0, [r0, #1]
+; CHECK-NEXT: orr r0, r1, r0, lsl #8
+; CHECK-NEXT: mov pc, lr
+;
+; CHECK-ARMv6-LABEL: zext_load_i32_by_i8:
+; CHECK-ARMv6: ldrb  r1, [r0]
+; CHECK-ARMv6-NEXT: ldrb  r0, [r0, #1]
+; CHECK-ARMv6-NEXT: orr r0, r1, r0, lsl #8
+; CHECK-ARMv6-NEXT: bx  lr
+
+  %tmp = bitcast i32* %arg to i8*
+  %tmp1 = getelementptr inbounds i8, i8* %tmp, i32 0
+  %tmp2 = load i8, i8* %tmp1, align 2
+  %tmp3 = zext i8 %tmp2 to i32
+  %tmp4 = getelementptr inbounds i8, i8* %tmp, i32 1
+  %tmp5 = load i8, i8* %tmp4, align 1
+  %tmp6 = zext i8 %tmp5 to i32
+  %tmp7 = shl nuw nsw i32 %tmp6, 8
+  %tmp8 = or i32 %tmp7, %tmp3
+  ret i32 %tmp8
+}
+
+; i8* p; // p is 2 byte aligned
+; ((i32) p[0] << 8) | ((i32) p[1] << 16)
+define i32 @zext_load_i32_by_i8_shl_8(i32* %arg) {
+; CHECK-LABEL: zext_load_i32_by_i8_shl_8:
+; CHECK: ldrb  r1, [r0]
+; CHECK-NEXT: ldrb  r0, [r0, #1]
+; CHECK-NEXT: lsl r0, r0, #16
+; CHECK-NEXT: orr r0, r0, r1, lsl #8
+; CHECK-NEXT: mov pc, lr
+;
+; CHECK-ARMv6-LABEL: zext_load_i32_by_i8_shl_8:
+; CHECK-ARMv6: ldrb  r1, [r0]
+; CHECK-ARMv6-NEXT: ldrb  r0, [r0, #1]
+; CHECK-ARMv6-NEXT: lsl r0, r0, #16
+; CHECK-ARMv6-NEXT: orr r0, r0, r1, lsl #8
+; CHECK-ARMv6-NEXT: bx  lr
+
+  %tmp = bitcast i32* %arg to i8*
+  %tmp1 = getelementptr inbounds i8, i8* %tmp, i32 0
+  %tmp2 = load i8, i8* %tmp1, align 2
+  %tmp3 = zext i8 %tmp2 to i32
+  %tmp30 = shl nuw nsw i32 %tmp3, 8
+  %tmp4 = getelementptr inbounds i8, i8* %tmp, i32 1
+  %tmp5 = load i8, i8* %tmp4, align 1
+  %tmp6 = zext i8 %tmp5 to i32
+  %tmp7 = shl nuw nsw i32 %tmp6, 16
+  %tmp8 = or i32 %tmp7, %tmp30
+  ret i32 %tmp8
+}
+
+; i8* p; // p is 2 byte aligned
+; ((i32) p[0] << 16) | ((i32) p[1] << 24)
+define i32 @zext_load_i32_by_i8_shl_16(i32* %arg) {
+; CHECK-LABEL: zext_load_i32_by_i8_shl_16:
+; CHECK: ldrb  r1, [r0]
+; CHECK-NEXT: ldrb  r0, [r0, #1]
+; CHECK-NEXT: lsl r0, r0, #24
+; CHECK-NEXT: orr r0, r0, r1, lsl #16
+; CHECK-NEXT: mov pc, lr
+;
+; CHECK-ARMv6-LABEL: zext_load_i32_by_i8_shl_16:
+; CHECK-ARMv6: ldrb  r1, [r0]
+; CHECK-ARMv6-NEXT: ldrb  r0, [r0, #1]
+; CHECK-ARMv6-NEXT: lsl r0, r0, #24
+; CHECK-ARMv6-NEXT: orr r0, r0, r1, lsl #16
+; CHECK-ARMv6-NEXT: bx  lr
+
+  %tmp = bitcast i32* %arg to i8*
+  %tmp1 = getelementptr inbounds i8, i8* %tmp, i32 0
+  %tmp2 = load i8, i8* %tmp1, align 2
+  %tmp3 = zext i8 %tmp2 to i32
+  %tmp30 = shl nuw nsw i32 %tmp3, 16
+  %tmp4 = getelementptr inbounds i8, i8* %tmp, i32 1
+  %tmp5 = load i8, i8* %tmp4, align 1
+  %tmp6 = zext i8 %tmp5 to i32
+  %tmp7 = shl nuw nsw i32 %tmp6, 24
+  %tmp8 = or i32 %tmp7, %tmp30
+  ret i32 %tmp8
+}
+
+; i8* p; // p is 2 byte aligned
+; (i32) p[1] | ((i32) p[0] << 8)
+define i32 @zext_load_i32_by_i8_bswap(i32* %arg) {
+; CHECK-LABEL: zext_load_i32_by_i8_bswap:
+; CHECK: ldrb  r1, [r0]
+; CHECK-NEXT: ldrb  r0, [r0, #1]
+; CHECK-NEXT: orr r0, r0, r1, lsl #8
+; CHECK-NEXT: mov pc, lr
+;
+; CHECK-ARMv6-LABEL: zext_load_i32_by_i8_bswap:
+; CHECK-ARMv6: ldrb  r1, [r0]
+; CHECK-ARMv6-NEXT: ldrb  r0, [r0, #1]
+; CHECK-ARMv6-NEXT: orr r0, r0, r1, lsl #8
+; CHECK-ARMv6-NEXT: bx  lr
+
+  %tmp = bitcast i32* %arg to i8*
+  %tmp1 = getelementptr inbounds i8, i8* %tmp, i32 1
+  %tmp2 = load i8, i8* %tmp1, align 1
+  %tmp3 = zext i8 %tmp2 to i32
+  %tmp4 = getelementptr inbounds i8, i8* %tmp, i32 0
+  %tmp5 = load i8, i8* %tmp4, align 2
+  %tmp6 = zext i8 %tmp5 to i32
+  %tmp7 = shl nuw nsw i32 %tmp6, 8
+  %tmp8 = or i32 %tmp7, %tmp3
+  ret i32 %tmp8
+}
+
+; i8* p; // p is 2 byte aligned
+; ((i32) p[1] << 8) | ((i32) p[0] << 16)
+define i32 @zext_load_i32_by_i8_bswap_shl_8(i32* %arg) {
+; CHECK-LABEL: zext_load_i32_by_i8_bswap_shl_8:
+; CHECK: ldrb  r1, [r0]
+; CHECK-NEXT: ldrb  r0, [r0, #1]
+; CHECK-NEXT: lsl r1, r1, #16
+; CHECK-NEXT: orr r0, r1, r0, lsl #8
+; CHECK-NEXT: mov pc, lr
+;
+; CHECK-ARMv6-LABEL: zext_load_i32_by_i8_bswap_shl_8:
+; CHECK-ARMv6: ldrb  r1, [r0]
+; CHECK-ARMv6-NEXT: ldrb  r0, [r0, #1]
+; CHECK-ARMv6-NEXT: lsl r1, r1, #16
+; CHECK-ARMv6-NEXT: orr r0, r1, r0, lsl #8
+; CHECK-ARMv6-NEXT: bx  lr
+
+  %tmp = bitcast i32* %arg to i8*
+  %tmp1 = getelementptr inbounds i8, i8* %tmp, i32 1
+  %tmp2 = load i8, i8* %tmp1, align 1
+  %tmp3 = zext i8 %tmp2 to i32
+  %tmp30 = shl nuw nsw i32 %tmp3, 8
+  %tmp4 = getelementptr inbounds i8, i8* %tmp, i32 0
+  %tmp5 = load i8, i8* %tmp4, align 2
+  %tmp6 = zext i8 %tmp5 to i32
+  %tmp7 = shl nuw nsw i32 %tmp6, 16
+  %tmp8 = or i32 %tmp7, %tmp30
+  ret i32 %tmp8
+}
+
+; i8* p; // p is 2 byte aligned
+; ((i32) p[1] << 16) | ((i32) p[0] << 24)
+define i32 @zext_load_i32_by_i8_bswap_shl_16(i32* %arg) {
+; CHECK-LABEL: zext_load_i32_by_i8_bswap_shl_16:
+; CHECK: ldrb  r1, [r0]
+; CHECK-NEXT: ldrb  r0, [r0, #1]
+; CHECK-NEXT: lsl r1, r1, #24
+; CHECK-NEXT: orr r0, r1, r0, lsl #16
+; CHECK-NEXT: mov pc, lr
+;
+; CHECK-ARMv6-LABEL: zext_load_i32_by_i8_bswap_shl_16:
+; CHECK-ARMv6: ldrb  r1, [r0]
+; CHECK-ARMv6-NEXT: ldrb  r0, [r0, #1]
+; CHECK-ARMv6-NEXT: lsl r1, r1, #24
+; CHECK-ARMv6-NEXT: orr r0, r1, r0, lsl #16
+; CHECK-ARMv6-NEXT: bx  lr
+
+  %tmp = bitcast i32* %arg to i8*
+  %tmp1 = getelementptr inbounds i8, i8* %tmp, i32 1
+  %tmp2 = load i8, i8* %tmp1, align 1
+  %tmp3 = zext i8 %tmp2 to i32
+  %tmp30 = shl nuw nsw i32 %tmp3, 16
+  %tmp4 = getelementptr inbounds i8, i8* %tmp, i32 0
+  %tmp5 = load i8, i8* %tmp4, align 2
+  %tmp6 = zext i8 %tmp5 to i32
+  %tmp7 = shl nuw nsw i32 %tmp6, 24
+  %tmp8 = or i32 %tmp7, %tmp30
+  ret i32 %tmp8
 }

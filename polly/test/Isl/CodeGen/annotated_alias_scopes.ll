@@ -10,13 +10,13 @@
 ; SCOPES:      %[[AIdx:[._a-zA-Z0-9]*]] = getelementptr{{.*}} i32* %A, i64 %polly.indvar
 ; SCOPES:      store i32 %{{[._a-zA-Z0-9]*}}, i32* %[[AIdx]], align 4, !alias.scope ![[AliasScopeA:[0-9]*]], !noalias ![[NoAliasA:[0-9]*]]
 ;
-; SCOPES:      ![[AliasScopeB]] = distinct !{![[AliasScopeB]], !{{[0-9]*}}, !"polly.alias.scope.B"}
+; SCOPES:      ![[AliasScopeB]] = distinct !{![[AliasScopeB]], !{{[0-9]*}}, !"polly.alias.scope.MemRef_B"}
 ; SCOPES:      ![[NoAliasB]] = !{
 ; SCOPES-DAG:     ![[AliasScopeA]]
 ; SCOPES-DAG:     ![[AliasScopeC]]
 ; SCOPES:       }
-; SCOPES-DAG:  ![[AliasScopeA]] = distinct !{![[AliasScopeA]], !{{[0-9]*}}, !"polly.alias.scope.A"}
-; SCOPES-DAG:  ![[AliasScopeC]] = distinct !{![[AliasScopeC]], !{{[0-9]*}}, !"polly.alias.scope.C"}
+; SCOPES-DAG:  ![[AliasScopeA]] = distinct !{![[AliasScopeA]], !{{[0-9]*}}, !"polly.alias.scope.MemRef_A"}
+; SCOPES-DAG:  ![[AliasScopeC]] = distinct !{![[AliasScopeC]], !{{[0-9]*}}, !"polly.alias.scope.MemRef_C"}
 ; SCOPES:      ![[NoAliasC]] = !{
 ; SCOPES-DAG:     ![[AliasScopeA]]
 ; SCOPES-DAG:     ![[AliasScopeB]]

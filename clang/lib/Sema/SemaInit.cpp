@@ -5914,7 +5914,8 @@ PerformConstructorInitialization(Sema &S,
     S.MarkFunctionReferenced(Loc, Constructor);
 
     CurInit = new (S.Context) CXXTemporaryObjectExpr(
-        S.Context, Constructor, TSInfo,
+        S.Context, Constructor,
+        Entity.getType().getNonLValueExprType(S.Context), TSInfo,
         ConstructorArgs, ParenOrBraceRange, HadMultipleCandidates,
         IsListInitialization, IsStdInitListInitialization,
         ConstructorInitRequiresZeroInit);
@@ -6982,7 +6983,7 @@ InitializationSequence::Perform(Sema &S,
                                                     Kind.getRange().getBegin());
 
         CurInit = new (S.Context) CXXScalarValueInitExpr(
-            TSInfo->getType().getNonLValueExprType(S.Context), TSInfo,
+            Entity.getType().getNonLValueExprType(S.Context), TSInfo,
             Kind.getRange().getEnd());
       } else {
         CurInit = new (S.Context) ImplicitValueInitExpr(Step->Type);
@@ -7755,7 +7756,8 @@ bool InitializationSequence::Diagnose(Sema &S,
     (void)Ovl;
     assert(Ovl == OR_Success && "Inconsistent overload resolution");
     CXXConstructorDecl *CtorDecl = cast<CXXConstructorDecl>(Best->Function);
-    S.Diag(CtorDecl->getLocation(), diag::note_constructor_declared_here);
+    S.Diag(CtorDecl->getLocation(),
+           diag::note_explicit_ctor_deduction_guide_here) << false;
     break;
   }
   }
@@ -8218,4 +8220,216 @@ Sema::PerformCopyInitialization(const InitializedEntity &Entity,
   ExprResult Result = Seq.Perform(*this, Entity, Kind, InitE);
 
   return Result;
+}
+
+QualType Sema::DeduceTemplateSpecializationFromInitializer(
+    TypeSourceInfo *TSInfo, const InitializedEntity &Entity,
+    const InitializationKind &Kind, MultiExprArg Inits) {
+  auto *DeducedTST = dyn_cast<DeducedTemplateSpecializationType>(
+      TSInfo->getType()->getContainedDeducedType());
+  assert(DeducedTST && "not a deduced template specialization type");
+
+  // We can only perform deduction for class templates.
+  auto TemplateName = DeducedTST->getTemplateName();
+  auto *Template =
+      dyn_cast_or_null<ClassTemplateDecl>(TemplateName.getAsTemplateDecl());
+  if (!Template) {
+    Diag(Kind.getLocation(),
+         diag::err_deduced_non_class_template_specialization_type)
+      << (int)getTemplateNameKindForDiagnostics(TemplateName) << TemplateName;
+    if (auto *TD = TemplateName.getAsTemplateDecl())
+      Diag(TD->getLocation(), diag::note_template_decl_here);
+    return QualType();
+  }
+
+  // FIXME: Perform "exact type" matching first, per CWG discussion?
+  //        Or implement this via an implied 'T(T) -> T' deduction guide?
+
+  // FIXME: Do we need/want a std::initializer_list<T> special case?
+
+  // C++1z [over.match.class.deduct]p1:
+  //   A set of functions and function templates is formed comprising:
+  bool HasDefaultConstructor = false;
+  SmallVector<DeclAccessPair, 16> CtorsAndGuides;
+  CXXRecordDecl *Primary = Template->getTemplatedDecl();
+  bool Complete = isCompleteType(TSInfo->getTypeLoc().getEndLoc(),
+                                 Context.getTypeDeclType(Primary));
+  if (Complete) {
+    for (NamedDecl *D : LookupConstructors(Template->getTemplatedDecl())) {
+      //   - For each constructor of the class template designated by the
+      //     template-name, a function template [...]
+      auto Info = getConstructorInfo(D);
+      if (!Info.Constructor || Info.Constructor->isInvalidDecl())
+        continue;
+
+      // FIXME: Synthesize a deduction guide.
+
+      if (Info.Constructor->isDefaultConstructor())
+        HasDefaultConstructor = true;
+    }
+  }
+
+  //  - For each deduction-guide, a function or function template [...]
+  DeclarationNameInfo NameInfo(
+      Context.DeclarationNames.getCXXDeductionGuideName(Template),
+      TSInfo->getTypeLoc().getEndLoc());
+  LookupResult Guides(*this, NameInfo, LookupOrdinaryName);
+  LookupQualifiedName(Guides, Template->getDeclContext());
+  for (auto I = Guides.begin(), E = Guides.end(); I != E; ++I) {
+    auto *FD = dyn_cast<FunctionDecl>(*I);
+    if (FD && FD->getMinRequiredArguments() == 0)
+      HasDefaultConstructor = true;
+    CtorsAndGuides.push_back(I.getPair());
+  }
+
+  // FIXME: Do not diagnose inaccessible deduction guides. The standard isn't
+  // clear on this, but they're not found by name so access does not apply.
+  Guides.suppressDiagnostics();
+
+  // Figure out if this is list-initialization.
+  InitListExpr *ListInit =
+      (Inits.size() == 1 && Kind.getKind() != InitializationKind::IK_Direct)
+          ? dyn_cast<InitListExpr>(Inits[0])
+          : nullptr;
+
+  // C++1z [over.match.class.deduct]p1:
+  //   Initialization and overload resolution are performed as described in
+  //   [dcl.init] and [over.match.ctor], [over.match.copy], or [over.match.list]
+  //   (as appropriate for the type of initialization performed) for an object
+  //   of a hypothetical class type, where the selected functions and function
+  //   templates are considered to be the constructors of that class type
+  //
+  // Since we know we're initializing a class type of a type unrelated to that
+  // of the initializer, this reduces to something fairly reasonable.
+  OverloadCandidateSet Candidates(Kind.getLocation(),
+                                  OverloadCandidateSet::CSK_Normal);
+  OverloadCandidateSet::iterator Best;
+  auto tryToResolveOverload =
+      [&](bool OnlyListConstructors) -> OverloadingResult {
+    Candidates.clear();
+    for (DeclAccessPair Pair : CtorsAndGuides) {
+      NamedDecl *D = Pair.getDecl()->getUnderlyingDecl();
+      if (D->isInvalidDecl())
+        continue;
+
+      FunctionTemplateDecl *TD = dyn_cast<FunctionTemplateDecl>(D);
+      FunctionDecl *FD =
+          TD ? TD->getTemplatedDecl() : dyn_cast<FunctionDecl>(D);
+      if (!FD)
+        continue;
+
+      // C++ [over.match.ctor]p1: (non-list copy-initialization from non-class)
+      //   For copy-initialization, the candidate functions are all the
+      //   converting constructors (12.3.1) of that class.
+      // C++ [over.match.copy]p1: (non-list copy-initialization from class)
+      //   The converting constructors of T are candidate functions.
+      if (Kind.isCopyInit() && !ListInit) {
+        // FIXME: if (FD->isExplicit()) continue;
+
+        // When looking for a converting constructor, deduction guides that
+        // could never be called with one argument are not interesting.
+        if (FD->getMinRequiredArguments() > 1 ||
+            (FD->getNumParams() == 0 && !FD->isVariadic()))
+          continue;
+      }
+
+      // C++ [over.match.list]p1.1: (first phase list initialization)
+      //   Initially, the candidate functions are the initializer-list
+      //   constructors of the class T
+      if (OnlyListConstructors && !isInitListConstructor(FD))
+        continue;
+
+      // C++ [over.match.list]p1.2: (second phase list initialization)
+      //   the candidate functions are all the constructors of the class T
+      // C++ [over.match.ctor]p1: (all other cases)
+      //   the candidate functions are all the constructors of the class of
+      //   the object being initialized
+
+      // C++ [over.best.ics]p4:
+      //   When [...] the constructor [...] is a candidate by
+      //    - [over.match.copy] (in all cases)
+      // FIXME: The "second phase of [over.match.list] case can also
+      // theoretically happen here, but it's not clear whether we can
+      // ever have a parameter of the right type.
+      bool SuppressUserConversions = Kind.isCopyInit();
+
+      // FIXME: These are definitely wrong in the non-deduction-guide case.
+      if (TD)
+        AddTemplateOverloadCandidate(TD, Pair, /*ExplicitArgs*/ nullptr, Inits,
+                                     Candidates, SuppressUserConversions);
+      else
+        AddOverloadCandidate(FD, Pair, Inits, Candidates,
+                             SuppressUserConversions);
+    }
+    return Candidates.BestViableFunction(*this, Kind.getLocation(), Best);
+  };
+
+  OverloadingResult Result = OR_No_Viable_Function;
+
+  // C++11 [over.match.list]p1, per DR1467: for list-initialization, first
+  // try initializer-list constructors.
+  if (ListInit) {
+    if (ListInit->getNumInits() || !HasDefaultConstructor)
+      Result = tryToResolveOverload(/*OnlyListConstructor*/true);
+    // Then unwrap the initializer list and try again considering all
+    // constructors.
+    Inits = MultiExprArg(ListInit->getInits(), ListInit->getNumInits());
+  }
+
+  // If list-initialization fails, or if we're doing any other kind of
+  // initialization, we (eventually) consider constructors.
+  if (Result == OR_No_Viable_Function)
+    Result = tryToResolveOverload(/*OnlyListConstructor*/false);
+
+  switch (Result) {
+  case OR_Ambiguous:
+    Diag(Kind.getLocation(), diag::err_deduced_class_template_ctor_ambiguous)
+      << TemplateName;
+    // FIXME: For list-initialization candidates, it'd usually be better to
+    // list why they were not viable when given the initializer list itself as
+    // an argument.
+    Candidates.NoteCandidates(*this, OCD_ViableCandidates, Inits);
+    return QualType();
+
+  case OR_No_Viable_Function:
+    Diag(Kind.getLocation(),
+         Complete ? diag::err_deduced_class_template_ctor_no_viable
+                  : diag::err_deduced_class_template_incomplete)
+      << TemplateName << !CtorsAndGuides.empty();
+    Candidates.NoteCandidates(*this, OCD_AllCandidates, Inits);
+    return QualType();
+
+  case OR_Deleted: {
+    Diag(Kind.getLocation(), diag::err_deduced_class_template_deleted)
+      << TemplateName;
+    NoteDeletedFunction(Best->Function);
+    return QualType();
+  }
+
+  case OR_Success:
+    // C++ [over.match.list]p1:
+    //   In copy-list-initialization, if an explicit constructor is chosen, the
+    //   initialization is ill-formed.
+    if (Kind.isCopyInit() && ListInit &&
+        false /*FIXME: Best->Function->isExplicit()*/) {
+      bool IsDeductionGuide = !Best->Function->isImplicit();
+      Diag(Kind.getLocation(), diag::err_deduced_class_template_explicit)
+          << TemplateName << IsDeductionGuide;
+      Diag(Best->Function->getLocation(),
+           diag::note_explicit_ctor_deduction_guide_here)
+          << IsDeductionGuide;
+      return QualType();
+    }
+
+    // Make sure we didn't select an unusable deduction guide, and mark it
+    // as referenced.
+    DiagnoseUseOfDecl(Best->Function, Kind.getLocation());
+    MarkFunctionReferenced(Kind.getLocation(), Best->Function);
+    break;
+  }
+
+  // C++ [dcl.type.class.deduct]p1:
+  //  The placeholder is replaced by the return type of the function selected
+  //  by overload resolution for class template deduction.
+  return SubstAutoType(TSInfo->getType(), Best->Function->getReturnType());
 }

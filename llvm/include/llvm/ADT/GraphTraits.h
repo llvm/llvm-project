@@ -18,6 +18,8 @@
 #ifndef LLVM_ADT_GRAPHTRAITS_H
 #define LLVM_ADT_GRAPHTRAITS_H
 
+#include "llvm/ADT/iterator_range.h"
+
 namespace llvm {
 
 // GraphTraits - This class should be specialized by different graph types...
@@ -86,6 +88,33 @@ struct Inverse {
 // inverse falls back to the original graph.
 template <class T> struct GraphTraits<Inverse<Inverse<T>>> : GraphTraits<T> {};
 
+// Provide iterator ranges for the graph traits nodes and children
+template <class GraphType>
+iterator_range<typename GraphTraits<GraphType>::nodes_iterator>
+nodes(const GraphType &G) {
+  return make_range(GraphTraits<GraphType>::nodes_begin(G),
+                    GraphTraits<GraphType>::nodes_end(G));
+}
+template <class GraphType>
+iterator_range<typename GraphTraits<Inverse<GraphType>>::nodes_iterator>
+inverse_nodes(const GraphType &G) {
+  return make_range(GraphTraits<Inverse<GraphType>>::nodes_begin(G),
+                    GraphTraits<Inverse<GraphType>>::nodes_end(G));
+}
+
+template <class GraphType>
+iterator_range<typename GraphTraits<GraphType>::ChildIteratorType>
+children(const typename GraphTraits<GraphType>::NodeRef &G) {
+  return make_range(GraphTraits<GraphType>::child_begin(G),
+                    GraphTraits<GraphType>::child_end(G));
+}
+
+template <class GraphType>
+iterator_range<typename GraphTraits<Inverse<GraphType>>::ChildIteratorType>
+inverse_children(const typename GraphTraits<GraphType>::NodeRef &G) {
+  return make_range(GraphTraits<Inverse<GraphType>>::child_begin(G),
+                    GraphTraits<Inverse<GraphType>>::child_end(G));
+}
 } // End llvm namespace
 
 #endif

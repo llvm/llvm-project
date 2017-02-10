@@ -114,33 +114,9 @@ namespace this_thread
 void
 sleep_for(const chrono::nanoseconds& ns)
 {
-    using namespace chrono;
-    if (ns > nanoseconds::zero())
+    if (ns > chrono::nanoseconds::zero())
     {
-#if defined(_LIBCPP_WIN32API)
-        milliseconds ms = duration_cast<milliseconds>(ns);
-        if (ms.count() == 0 || ns > duration_cast<nanoseconds>(ms))
-          ++ms;
-        Sleep(ms.count());
-#else
-        seconds s = duration_cast<seconds>(ns);
-        timespec ts;
-        typedef decltype(ts.tv_sec) ts_sec;
-        _LIBCPP_CONSTEXPR ts_sec ts_sec_max = numeric_limits<ts_sec>::max();
-        if (s.count() < ts_sec_max)
-        {
-            ts.tv_sec = static_cast<ts_sec>(s.count());
-            ts.tv_nsec = static_cast<decltype(ts.tv_nsec)>((ns-s).count());
-        }
-        else
-        {
-            ts.tv_sec = ts_sec_max;
-            ts.tv_nsec = giga::num - 1;
-        }
-
-        while (nanosleep(&ts, &ts) == -1 && errno == EINTR)
-            ;
-#endif
+        __libcpp_thread_sleep_for(ns);
     }
 }
 

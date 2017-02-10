@@ -578,7 +578,7 @@ private:
     constexpr decltype(auto) operator()(_Alts&&... __alts) const {
       __std_visit_exhaustive_visitor_check<
           _Visitor,
-          decltype(_VSTD::forward<_Alts>(__alts).__value)...>();
+          decltype((_VSTD::forward<_Alts>(__alts).__value))...>();
       return __invoke_constexpr(_VSTD::forward<_Visitor>(__visitor),
                                 _VSTD::forward<_Alts>(__alts).__value...);
     }

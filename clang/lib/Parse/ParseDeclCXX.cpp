@@ -2459,9 +2459,10 @@ Parser::ParseCXXClassMemberDeclaration(AccessSpecifier AS,
   if (Tok.is(tok::kw_template)) {
     assert(!TemplateInfo.TemplateParams &&
            "Nested template improperly parsed?");
+    ObjCDeclContextSwitch ObjCDC(*this);
     SourceLocation DeclEnd;
     return DeclGroupPtrTy::make(
-        DeclGroupRef(ParseDeclarationStartingWithTemplate(
+        DeclGroupRef(ParseTemplateDeclarationOrSpecialization(
             Declarator::MemberContext, DeclEnd, AS, AccessAttrs)));
   }
 

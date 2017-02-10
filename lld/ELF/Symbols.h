@@ -122,11 +122,6 @@ public:
   // True if this symbol is in the Igot sub-section of the .got.plt or .got.
   unsigned IsInIgot : 1;
 
-  // True if this is a shared symbol in a read-only segment which requires a
-  // copy relocation. This causes space for the symbol to be allocated in the
-  // .bss.rel.ro section.
-  unsigned CopyIsInBssRelRo : 1;
-
   // The following fields have the same meaning as the ELF symbol attributes.
   uint8_t Type;    // symbol type
   uint8_t StOther; // st_other field value
@@ -276,12 +271,11 @@ public:
   // This field is a pointer to the symbol's version definition.
   const Elf_Verdef *Verdef;
 
-  // CopyOffset is significant only when needsCopy() is true.
-  uintX_t CopyOffset = 0;
-
+  // CopySection is significant only when needsCopy() is true.
+  InputSection<ELFT> *CopySection = nullptr;
   bool needsCopy() const { return this->NeedsCopyOrPltAddr && !this->isFunc(); }
 
-  OutputSection<ELFT> *getBssSectionForCopy() const;
+  InputSection<ELFT> *getBssSectionForCopy() const;
 };
 
 // This class represents a symbol defined in an archive file. It is

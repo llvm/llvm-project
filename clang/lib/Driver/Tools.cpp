@@ -5013,6 +5013,11 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   RenderDebugEnablingArgs(Args, CmdArgs, DebugInfoKind, DwarfVersion,
                           DebuggerTuning);
 
+  // -fdebug-macro turns on macro debug info generation.
+  if (Args.hasFlag(options::OPT_fdebug_macro, options::OPT_fno_debug_macro,
+                   false))
+    CmdArgs.push_back("-debug-info-macro");
+
   // -ggnu-pubnames turns on gnu style pubnames in the backend.
   if (Args.hasArg(options::OPT_ggnu_pubnames)) {
     CmdArgs.push_back("-backend-option");
@@ -11006,13 +11011,14 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     } else if (DLL) {
       CmdArgs.push_back(TC.getCompilerRTArgString(Args, "asan_dll_thunk"));
     } else {
-      for (const auto &Lib : {"asan", "asan_cxx"})
+      for (const auto &Lib : {"asan", "asan_cxx"}) {
         CmdArgs.push_back(TC.getCompilerRTArgString(Args, Lib));
-      // Make sure the linker consider all object files from the static library.
-      // This is necessary because instrumented dlls need access to all the
-      // interface exported by the static lib in the main executable.
-      CmdArgs.push_back(Args.MakeArgString(std::string("-wholearchive:") +
-          TC.getCompilerRT(Args, "asan")));
+        // Make sure the linker consider all object files from the static lib.
+        // This is necessary because instrumented dlls need access to all the
+        // interface exported by the static lib in the main executable.
+        CmdArgs.push_back(Args.MakeArgString(std::string("-wholearchive:") +
+            TC.getCompilerRT(Args, Lib)));
+      }
     }
   }
 
