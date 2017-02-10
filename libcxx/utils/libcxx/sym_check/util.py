@@ -9,64 +9,9 @@
 
 import ast
 import distutils.spawn
-import signal
-import subprocess
 import sys
 import re
-
-def to_bytes(str):
-    # Encode to UTF-8 to get binary data.
-    if isinstance(str, bytes):
-        return str
-    return str.encode('utf-8')
-
-def to_string(bytes):
-    if isinstance(bytes, str):
-        return bytes
-    return to_bytes(bytes)
-
-def convert_string(bytes):
-    try:
-        return to_string(bytes.decode('utf-8'))
-    except AttributeError: # 'str' object has no attribute 'decode'.
-        return str(bytes)
-    except UnicodeError:
-        return str(bytes)
-
-def execute_command(cmd, input_str=None):
-    """
-    Execute a command, capture and return its output.
-    """
-    kwargs = {
-        'stdin': subprocess.PIPE,
-        'stdout': subprocess.PIPE,
-        'stderr': subprocess.PIPE,
-    }
-    p = subprocess.Popen(cmd, **kwargs)
-    out, err = p.communicate(input=input_str)
-    exitCode = p.wait()
-    if exitCode == -signal.SIGINT:
-        raise KeyboardInterrupt
-    out = convert_string(out)
-    err = convert_string(err)
-    return out, err, exitCode
-
-
-def execute_command_verbose(cmd, input_str=None):
-    """
-    Execute a command and print its output on failure.
-    """
-    out, err, exitCode = execute_command(cmd, input_str=input_str)
-    if exitCode != 0:
-        report = "Command: %s\n" % ' '.join(["'%s'" % a for a in cmd])
-        report += "Exit Code: %d\n" % exitCode
-        if out:
-            report += "Standard Output:\n--\n%s--" % out
-        if err:
-            report += "Standard Error:\n--\n%s--" % err
-        report += "\n\nFailed!"
-        sys.stderr.write('%s\n' % report)
-    return out, err, exitCode
+import libcxx.util
 
 
 def read_syms_from_list(slist):
@@ -118,8 +63,8 @@ _cppfilt_exe = distutils.spawn.find_executable('c++filt')
 def demangle_symbol(symbol):
     if _cppfilt_exe is None:
         return symbol
-    out, _, exit_code = execute_command_verbose(
-        [_cppfilt_exe], input_str=symbol)
+    out, _, exit_code = libcxx.util.executeCommandVerbose(
+        [_cppfilt_exe], input=symbol)
     if exit_code != 0:
         return symbol
     return out
@@ -152,9 +97,9 @@ def is_library_file(filename):
 
 
 def extract_or_load(filename):
-    import sym_check.extract
+    import libcxx.sym_check.extract
     if is_library_file(filename):
-        return sym_check.extract.extract_symbols(filename)
+        return libcxx.sym_check.extract.extract_symbols(filename)
     return read_syms_from_file(filename)
 
 def adjust_mangled_name(name):

@@ -2419,6 +2419,21 @@ llvm::DIType *CGDebugInfo::CreateTypeDefinition(const EnumType *Ty) {
                                         FullName);
 }
 
+llvm::DIMacro *CGDebugInfo::CreateMacro(llvm::DIMacroFile *Parent,
+                                        unsigned MType, SourceLocation LineLoc,
+                                        StringRef Name, StringRef Value) {
+  unsigned Line = LineLoc.isInvalid() ? 0 : getLineNumber(LineLoc);
+  return DBuilder.createMacro(Parent, Line, MType, Name, Value);
+}
+
+llvm::DIMacroFile *CGDebugInfo::CreateTempMacroFile(llvm::DIMacroFile *Parent,
+                                                    SourceLocation LineLoc,
+                                                    SourceLocation FileLoc) {
+  llvm::DIFile *FName = getOrCreateFile(FileLoc);
+  unsigned Line = LineLoc.isInvalid() ? 0 : getLineNumber(LineLoc);
+  return DBuilder.createTempMacroFile(Parent, Line, FName);
+}
+
 static QualType UnwrapTypeForDebugInfo(QualType T, const ASTContext &C) {
   Qualifiers Quals;
   do {

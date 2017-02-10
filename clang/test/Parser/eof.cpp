@@ -1,6 +1,6 @@
 // RUN: not %clang_cc1 %s -fsyntax-only 2>&1 | FileCheck %s
 
-// CHECK: error: expected member name or ';' after declaration specifiers
+// CHECK: error: expected '<' after 'template'
 // CHECK: error: expected '}'
 // CHECK: note: to match this '{'
 // CHECK: error: expected ';' after class

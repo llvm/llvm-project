@@ -2161,12 +2161,8 @@ class CXXConstructorDecl final
   /// \{
   /// \brief The arguments used to initialize the base or member.
   LazyCXXCtorInitializersPtr CtorInitializers;
-  unsigned NumCtorInitializers : 30;
+  unsigned NumCtorInitializers : 31;
   /// \}
-
-  /// \brief Whether this constructor declaration has the \c explicit keyword
-  /// specified.
-  unsigned IsExplicitSpecified : 1;
 
   /// \brief Whether this constructor declaration is an implicitly-declared
   /// inheriting constructor.
@@ -2181,11 +2177,12 @@ class CXXConstructorDecl final
     : CXXMethodDecl(CXXConstructor, C, RD, StartLoc, NameInfo, T, TInfo,
                     SC_None, isInline, isConstexpr, SourceLocation()),
       CtorInitializers(nullptr), NumCtorInitializers(0),
-      IsExplicitSpecified(isExplicitSpecified),
       IsInheritingConstructor((bool)Inherited) {
     setImplicit(isImplicitlyDeclared);
     if (Inherited)
       *getTrailingObjects<InheritedConstructor>() = Inherited;
+    if (isExplicitSpecified)
+      setExplicitSpecified();
   }
 
 public:
@@ -2197,15 +2194,6 @@ public:
          bool isExplicit, bool isInline, bool isImplicitlyDeclared,
          bool isConstexpr,
          InheritedConstructor Inherited = InheritedConstructor());
-
-  /// \brief Determine whether this constructor declaration has the
-  /// \c explicit keyword specified.
-  bool isExplicitSpecified() const { return IsExplicitSpecified; }
-
-  /// \brief Determine whether this constructor was marked "explicit" or not.
-  bool isExplicit() const {
-    return cast<CXXConstructorDecl>(getFirstDecl())->isExplicitSpecified();
-  }
 
   /// \brief Iterates through the member/base initializer list.
   typedef CXXCtorInitializer **init_iterator;
@@ -2428,19 +2416,17 @@ public:
 /// \endcode
 class CXXConversionDecl : public CXXMethodDecl {
   void anchor() override;
-  /// Whether this conversion function declaration is marked
-  /// "explicit", meaning that it can only be applied when the user
-  /// explicitly wrote a cast. This is a C++11 feature.
-  bool IsExplicitSpecified : 1;
 
   CXXConversionDecl(ASTContext &C, CXXRecordDecl *RD, SourceLocation StartLoc,
-                    const DeclarationNameInfo &NameInfo,
-                    QualType T, TypeSourceInfo *TInfo,
-                    bool isInline, bool isExplicitSpecified,
-                    bool isConstexpr, SourceLocation EndLocation)
-    : CXXMethodDecl(CXXConversion, C, RD, StartLoc, NameInfo, T, TInfo,
-                    SC_None, isInline, isConstexpr, EndLocation),
-      IsExplicitSpecified(isExplicitSpecified) { }
+                    const DeclarationNameInfo &NameInfo, QualType T,
+                    TypeSourceInfo *TInfo, bool isInline,
+                    bool isExplicitSpecified, bool isConstexpr,
+                    SourceLocation EndLocation)
+      : CXXMethodDecl(CXXConversion, C, RD, StartLoc, NameInfo, T, TInfo,
+                      SC_None, isInline, isConstexpr, EndLocation) {
+    if (isExplicitSpecified)
+      setExplicitSpecified();
+  }
 
 public:
   static CXXConversionDecl *Create(ASTContext &C, CXXRecordDecl *RD,
@@ -2451,19 +2437,6 @@ public:
                                    bool isConstexpr,
                                    SourceLocation EndLocation);
   static CXXConversionDecl *CreateDeserialized(ASTContext &C, unsigned ID);
-
-  /// Whether this conversion function declaration is marked
-  /// "explicit", meaning that it can only be used for direct initialization
-  /// (including explitly written casts).  This is a C++11 feature.
-  bool isExplicitSpecified() const { return IsExplicitSpecified; }
-
-  /// \brief Whether this is an explicit conversion operator (C++11 and later).
-  ///
-  /// Explicit conversion operators are only considered for direct
-  /// initialization, e.g., when the user has explicitly written a cast.
-  bool isExplicit() const {
-    return cast<CXXConversionDecl>(getFirstDecl())->isExplicitSpecified();
-  }
 
   /// \brief Returns the type that this conversion function is converting to.
   QualType getConversionType() const {

@@ -773,6 +773,7 @@ LANGBUILTIN(_rotr,   "UiUii",     "n", ALL_MS_LANGUAGES)
 LANGBUILTIN(_lrotr,  "ULiULii",   "n", ALL_MS_LANGUAGES)
 LANGBUILTIN(_rotr64, "ULLiULLii", "n", ALL_MS_LANGUAGES)
 LANGBUILTIN(__va_start,       "vc**.", "nt", ALL_MS_LANGUAGES)
+LANGBUILTIN(__fastfail, "vUi",    "nr", ALL_MS_LANGUAGES)
 
 // Microsoft library builtins.
 LIBBUILTIN(_setjmpex, "iJ", "fj",   "setjmpex.h", ALL_MS_LANGUAGES)

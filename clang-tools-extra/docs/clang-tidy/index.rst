@@ -537,6 +537,12 @@ YAML format:
 Testing Checks
 --------------
 
+To run tests for :program:`clang-tidy` use the command:
+
+.. code-block:: console
+
+  $ ninja check-clang-tools
+
 :program:`clang-tidy` checks can be tested using either unit tests or
 `lit`_ tests. Unit tests may be more convenient to test complex replacements
 with strict checks. `Lit`_ tests allow using partial text matching and regular

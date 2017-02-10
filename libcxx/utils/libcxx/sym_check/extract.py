@@ -14,7 +14,8 @@ import distutils.spawn
 import sys
 import re
 
-from sym_check import util
+import libcxx.util
+from libcxx.sym_check import util
 
 extract_ignore_names = ['_init', '_fini']
 
@@ -48,7 +49,7 @@ class NMExtractor(object):
         parsed symbols.
         """
         cmd = [self.nm_exe] + self.flags + [lib]
-        out, _, exit_code = util.execute_command_verbose(cmd)
+        out, _, exit_code = util.executeCommandVerbose(cmd)
         if exit_code != 0:
             raise RuntimeError('Failed to run %s on %s' % (self.nm_exe, lib))
         fmt_syms = (self._extract_sym(l)
@@ -134,7 +135,7 @@ class ReadElfExtractor(object):
         parsed symbols.
         """
         cmd = [self.tool] + self.flags + [lib]
-        out, _, exit_code = util.execute_command_verbose(cmd)
+        out, _, exit_code = libcxx.util.executeCommandVerbose(cmd)
         if exit_code != 0:
             raise RuntimeError('Failed to run %s on %s' % (self.nm_exe, lib))
         dyn_syms = self.get_dynsym_table(out)

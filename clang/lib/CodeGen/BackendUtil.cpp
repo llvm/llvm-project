@@ -73,7 +73,6 @@ class EmitAssemblyHelper {
 
   std::unique_ptr<raw_pwrite_stream> OS;
 
-private:
   TargetIRAnalysis getTargetIRAnalysis() const {
     if (TM)
       return TM->getTargetIRAnalysis();

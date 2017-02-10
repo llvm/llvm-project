@@ -274,15 +274,18 @@ public:
   
   /// \brief Create the initialization entity for a temporary.
   static InitializedEntity InitializeTemporary(QualType Type) {
-    InitializedEntity Result(EK_Temporary, SourceLocation(), Type);
-    Result.TypeInfo = nullptr;
-    return Result;
+    return InitializeTemporary(nullptr, Type);
   }
 
   /// \brief Create the initialization entity for a temporary.
   static InitializedEntity InitializeTemporary(TypeSourceInfo *TypeInfo) {
-    InitializedEntity Result(EK_Temporary, SourceLocation(), 
-                             TypeInfo->getType());
+    return InitializeTemporary(TypeInfo, TypeInfo->getType());
+  }
+  
+  /// \brief Create the initialization entity for a temporary.
+  static InitializedEntity InitializeTemporary(TypeSourceInfo *TypeInfo,
+                                               QualType Type) {
+    InitializedEntity Result(EK_Temporary, SourceLocation(), Type);
     Result.TypeInfo = TypeInfo;
     return Result;
   }
@@ -578,6 +581,16 @@ public:
                                         bool isImplicit = false) {
     return InitializationKind(IK_Value, isImplicit ? IC_Implicit : IC_Normal,
                               InitLoc, LParenLoc, RParenLoc);
+  }
+
+  /// \brief Create an initialization from an initializer (which, for direct
+  /// initialization from a parenthesized list, will be a ParenListExpr).
+  static InitializationKind CreateForInit(SourceLocation Loc, bool DirectInit,
+                                          Expr *Init) {
+    if (!Init) return CreateDefault(Loc);
+    if (!DirectInit) return CreateCopy(Loc, Init->getLocStart());
+    if (isa<InitListExpr>(Init)) return CreateDirectList(Loc);
+    return CreateDirect(Loc, Init->getLocStart(), Init->getLocEnd());
   }
   
   /// \brief Determine the initialization kind.

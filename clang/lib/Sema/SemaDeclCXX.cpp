@@ -647,6 +647,16 @@ bool Sema::MergeCXXFunctionDecl(FunctionDecl *New, FunctionDecl *Old,
     Invalid = true;
   }
 
+  // FIXME: It's not clear what should happen if multiple declarations of a
+  // deduction guide have different explicitness. For now at least we simply
+  // reject any case where the explicitness changes.
+  if (New->isDeductionGuide() &&
+      New->isExplicitSpecified() != Old->isExplicitSpecified()) {
+    Diag(New->getLocation(), diag::err_deduction_guide_explicit_mismatch)
+      << New->isExplicitSpecified();
+    Diag(Old->getLocation(), diag::note_previous_declaration);
+  }
+
   // C++11 [dcl.fct.default]p4: If a friend declaration specifies a default
   // argument expression, that declaration shall be a definition and shall be
   // the only declaration of the function or function template in the
@@ -8557,7 +8567,7 @@ QualType Sema::BuildStdInitializerList(QualType Element, SourceLocation Loc) {
       CheckTemplateIdType(TemplateName(StdInitializerList), Loc, Args));
 }
 
-bool Sema::isInitListConstructor(const CXXConstructorDecl* Ctor) {
+bool Sema::isInitListConstructor(const FunctionDecl *Ctor) {
   // C++ [dcl.init.list]p2:
   //   A constructor is an initializer-list constructor if its first parameter
   //   is of type std::initializer_list<E> or reference to possibly cv-qualified
@@ -10146,7 +10156,7 @@ void Sema::CheckImplicitSpecialMemberDeclaration(Scope *S, FunctionDecl *FD) {
   R.resolveKind();
   R.suppressDiagnostics();
 
-  CheckFunctionDeclaration(S, FD, R, /*IsExplicitSpecialization*/false);
+  CheckFunctionDeclaration(S, FD, R, /*IsMemberSpecialization*/false);
 }
 
 CXXConstructorDecl *Sema::DeclareImplicitDefaultConstructor(
@@ -13481,13 +13491,13 @@ Decl *Sema::ActOnTemplatedFriendTag(Scope *S, SourceLocation FriendLoc,
                                     MultiTemplateParamsArg TempParamLists) {
   TagTypeKind Kind = TypeWithKeyword::getTagTypeKindForTypeSpec(TagSpec);
 
-  bool isExplicitSpecialization = false;
+  bool IsMemberSpecialization = false;
   bool Invalid = false;
 
   if (TemplateParameterList *TemplateParams =
           MatchTemplateParametersToScopeSpecifier(
               TagLoc, NameLoc, SS, nullptr, TempParamLists, /*friend*/ true,
-              isExplicitSpecialization, Invalid)) {
+              IsMemberSpecialization, Invalid)) {
     if (TemplateParams->size() > 0) {
       // This is a declaration of a class template.
       if (Invalid)
@@ -13502,7 +13512,7 @@ Decl *Sema::ActOnTemplatedFriendTag(Scope *S, SourceLocation FriendLoc,
       // The "template<>" header is extraneous.
       Diag(TemplateParams->getTemplateLoc(), diag::err_template_tag_noparams)
         << TypeWithKeyword::getTagTypeKindName(Kind) << Name;
-      isExplicitSpecialization = true;
+      IsMemberSpecialization = true;
     }
   }
 

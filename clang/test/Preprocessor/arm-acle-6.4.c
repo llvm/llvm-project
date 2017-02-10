@@ -120,6 +120,21 @@
 
 // CHECK-V7A-NO-IDIV-NOT: __ARM_FEATURE_IDIV
 
+// RUN: %clang -target arm-none-linux-eabi -march=armv7ve -x c -E -dM %s -o - | FileCheck %s -check-prefix CHECK-V7VE
+
+// CHECK-V7VE: __ARM_ARCH 7
+// CHECK-V7VE: __ARM_ARCH_ISA_ARM 1
+// CHECK-V7VE: __ARM_ARCH_ISA_THUMB 2
+// CHECK-V7VE: __ARM_ARCH_PROFILE 'A'
+// CHECK-V7VE: __ARM_FEATURE_CLZ 1
+// CHECK-V7VE: __ARM_FEATURE_DSP 1
+// CHECK-V7VE: __ARM_FEATURE_IDIV 1
+// CHECK-V7VE: __ARM_FEATURE_LDREX 0xF
+// CHECK-V7VE: __ARM_FEATURE_QBIT 1
+// CHECK-V7VE: __ARM_FEATURE_SAT 1
+// CHECK-V7VE: __ARM_FEATURE_SIMD32 1
+// CHECK-V7VE: __ARM_FEATURE_UNALIGNED 1
+
 // RUN: %clang -target arm-none-linux-eabi -march=armv7-r -x c -E -dM %s -o - | FileCheck %s -check-prefix CHECK-V7R
 
 // CHECK-V7R: __ARM_ARCH 7

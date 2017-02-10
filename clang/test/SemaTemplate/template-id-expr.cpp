@@ -98,7 +98,11 @@ void f5() {
 template void f5<0>(); // expected-note {{in instantiation of function template specialization 'f5<0>' requested here}}
 
 class C {};
-template <template <typename> class D>  // expected-note{{previous use is here}}
+template <template <typename> class D>
 class E {
-  template class D<C>;  // expected-error {{template template argument 'D' cannot be referenced with a class specifier}}
+  template class D<C>;  // expected-error {{expected '<' after 'template'}}
+  template<> class D<C>;  // expected-error {{cannot specialize a template template parameter}}
+  friend class D<C>; // expected-error {{type alias template 'D' cannot be referenced with a class specifier}}
 };
+template<typename T> using D = int; // expected-note {{declared here}} expected-warning {{extension}}
+E<D> ed; // expected-note {{instantiation of}}

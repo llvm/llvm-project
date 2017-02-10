@@ -214,3 +214,9 @@
 // BADSTRING1: error: invalid value 'watkind' in '-debug-info-kind=watkind'
 // RUN: not %clang -cc1 -debugger-tuning=gmodal 2>&1 | FileCheck -check-prefix=BADSTRING2 %s
 // BADSTRING2: error: invalid value 'gmodal' in '-debugger-tuning=gmodal'
+
+// RUN: %clang -### -fdebug-macro    %s 2>&1 | FileCheck -check-prefix=MACRO %s
+// RUN: %clang -### -fno-debug-macro %s 2>&1 | FileCheck -check-prefix=NOMACRO %s
+// RUN: %clang -###                  %s 2>&1 | FileCheck -check-prefix=NOMACRO %s
+// MACRO: "-debug-info-macro"
+// NOMACRO-NOT: "-debug-info-macro"

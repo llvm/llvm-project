@@ -2290,13 +2290,13 @@ public:
   /// for all memory accesses inside the Scop. For each alias set we then map
   /// the aliasing pointers back to the memory accesses we know, thus obtain
   /// groups of memory accesses which might alias. We also collect the set of
-  /// base pointers through which memory is written.
+  /// arrays through which memory is written.
   ///
   /// @param AA A reference to the alias analysis.
   ///
-  /// @returns A pair consistent of a vector of alias groups and a set of values
-  ///          that are used as base pointers for write accesses.
-  std::tuple<AliasGroupVectorTy, DenseSet<Value *>>
+  /// @returns A pair consistent of a vector of alias groups and a set of arrays
+  ///          through which memory is written.
+  std::tuple<AliasGroupVectorTy, DenseSet<const ScopArrayInfo *>>
   buildAliasGroupsForAccesses(AliasAnalysis &AA);
 
   ///  Split alias groups by iteration domains.
@@ -2311,12 +2311,12 @@ public:
   /// Build a given alias group and its access data.
   ///
   /// @param AliasGroup     The alias group to build.
-  /// @param HasWriteAccess A set of base pointer values for through which
-  ///                       memory is not only read, but also written.
+  /// @param HasWriteAccess A set of arrays through which memory is not only
+  ///                       read, but also written.
   ///
   /// @returns True if __no__ error occurred, false otherwise.
   bool buildAliasGroup(Scop::AliasGroupTy &AliasGroup,
-                       DenseSet<Value *> HasWriteAccess);
+                       DenseSet<const ScopArrayInfo *> HasWriteAccess);
 
   /// Return all alias groups for this SCoP.
   const MinMaxVectorPairVectorTy &getAliasGroups() const {
