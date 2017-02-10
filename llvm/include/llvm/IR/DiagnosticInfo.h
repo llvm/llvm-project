@@ -77,6 +77,7 @@ enum DiagnosticKind {
   DK_MIRParser,
   DK_PGOProfile,
   DK_Unsupported,
+  DK_SSPReason,
   DK_FirstPluginKind
 };
 

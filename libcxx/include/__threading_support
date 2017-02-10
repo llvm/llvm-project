@@ -184,7 +184,7 @@ _LIBCPP_THREAD_ABI_VISIBILITY
 void __libcpp_thread_yield();
 
 _LIBCPP_THREAD_ABI_VISIBILITY
-void __libcpp_thread_sleep_for(const chrono::nanoseconds& ns);
+void __libcpp_thread_sleep_for(const chrono::nanoseconds& __ns);
 
 // Thread local storage
 _LIBCPP_THREAD_ABI_VISIBILITY

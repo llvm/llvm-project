@@ -131,10 +131,10 @@ define i24 @or_i24_as_v8i3(i24 %a, i24 %b) nounwind {
 define <3 x i8> @and_v3i8_as_i24(<3 x i8> %a, <3 x i8> %b) nounwind {
 ; X32-SSE-LABEL: and_v3i8_as_i24:
 ; X32-SSE:       # BB#0:
-; X32-SSE-NEXT:    pinsrb $0, {{[0-9]+}}(%esp), %xmm0
+; X32-SSE-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X32-SSE-NEXT:    pinsrb $4, {{[0-9]+}}(%esp), %xmm0
 ; X32-SSE-NEXT:    pinsrb $8, {{[0-9]+}}(%esp), %xmm0
-; X32-SSE-NEXT:    pinsrb $0, {{[0-9]+}}(%esp), %xmm1
+; X32-SSE-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; X32-SSE-NEXT:    pinsrb $4, {{[0-9]+}}(%esp), %xmm1
 ; X32-SSE-NEXT:    pinsrb $8, {{[0-9]+}}(%esp), %xmm1
 ; X32-SSE-NEXT:    pand %xmm0, %xmm1
@@ -172,10 +172,10 @@ define <3 x i8> @and_v3i8_as_i24(<3 x i8> %a, <3 x i8> %b) nounwind {
 define <3 x i8> @xor_v3i8_as_i24(<3 x i8> %a, <3 x i8> %b) nounwind {
 ; X32-SSE-LABEL: xor_v3i8_as_i24:
 ; X32-SSE:       # BB#0:
-; X32-SSE-NEXT:    pinsrb $0, {{[0-9]+}}(%esp), %xmm0
+; X32-SSE-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X32-SSE-NEXT:    pinsrb $4, {{[0-9]+}}(%esp), %xmm0
 ; X32-SSE-NEXT:    pinsrb $8, {{[0-9]+}}(%esp), %xmm0
-; X32-SSE-NEXT:    pinsrb $0, {{[0-9]+}}(%esp), %xmm1
+; X32-SSE-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; X32-SSE-NEXT:    pinsrb $4, {{[0-9]+}}(%esp), %xmm1
 ; X32-SSE-NEXT:    pinsrb $8, {{[0-9]+}}(%esp), %xmm1
 ; X32-SSE-NEXT:    pxor %xmm0, %xmm1
@@ -213,10 +213,10 @@ define <3 x i8> @xor_v3i8_as_i24(<3 x i8> %a, <3 x i8> %b) nounwind {
 define <3 x i8> @or_v3i8_as_i24(<3 x i8> %a, <3 x i8> %b) nounwind {
 ; X32-SSE-LABEL: or_v3i8_as_i24:
 ; X32-SSE:       # BB#0:
-; X32-SSE-NEXT:    pinsrb $0, {{[0-9]+}}(%esp), %xmm0
+; X32-SSE-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X32-SSE-NEXT:    pinsrb $4, {{[0-9]+}}(%esp), %xmm0
 ; X32-SSE-NEXT:    pinsrb $8, {{[0-9]+}}(%esp), %xmm0
-; X32-SSE-NEXT:    pinsrb $0, {{[0-9]+}}(%esp), %xmm1
+; X32-SSE-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; X32-SSE-NEXT:    pinsrb $4, {{[0-9]+}}(%esp), %xmm1
 ; X32-SSE-NEXT:    pinsrb $8, {{[0-9]+}}(%esp), %xmm1
 ; X32-SSE-NEXT:    por %xmm0, %xmm1

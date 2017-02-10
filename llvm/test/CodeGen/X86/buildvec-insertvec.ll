@@ -270,6 +270,7 @@ define <8 x i16> @test_buildvector_v8i16_register(i16 %a0, i16 %a1, i16 %a2, i16
 define <8 x i16> @test_buildvector_v8i16_partial(i16 %a1, i16 %a3, i16 %a4, i16 %a5) {
 ; CHECK-LABEL: test_buildvector_v8i16_partial:
 ; CHECK:       # BB#0:
+; CHECK-NEXT:    pxor %xmm0, %xmm0
 ; CHECK-NEXT:    pinsrw $1, %edi, %xmm0
 ; CHECK-NEXT:    pinsrw $3, %esi, %xmm0
 ; CHECK-NEXT:    pinsrw $4, %edx, %xmm0
@@ -419,6 +420,7 @@ define <16 x i8> @test_buildvector_v16i8_partial(i8 %a2, i8 %a6, i8 %a8, i8 %a11
 ;
 ; SSE41-LABEL: test_buildvector_v16i8_partial:
 ; SSE41:       # BB#0:
+; SSE41-NEXT:    pxor %xmm0, %xmm0
 ; SSE41-NEXT:    pinsrb $2, %edi, %xmm0
 ; SSE41-NEXT:    pinsrb $6, %esi, %xmm0
 ; SSE41-NEXT:    pinsrb $8, %edx, %xmm0
@@ -448,10 +450,9 @@ define <16 x i8> @test_buildvector_v16i8_partial(i8 %a2, i8 %a6, i8 %a8, i8 %a11
 define <16 x i8> @test_buildvector_v16i8_register_zero(i8 %a0, i8 %a4, i8 %a6, i8 %a8, i8 %a11, i8 %a12, i8 %a15) {
 ; SSE2-LABEL: test_buildvector_v16i8_register_zero:
 ; SSE2:       # BB#0:
-; SSE2-NEXT:    movzbl %dil, %eax
-; SSE2-NEXT:    pxor %xmm0, %xmm0
-; SSE2-NEXT:    pinsrw $0, %eax, %xmm0
 ; SSE2-NEXT:    movzbl %sil, %eax
+; SSE2-NEXT:    movzbl %dil, %esi
+; SSE2-NEXT:    movd %esi, %xmm0
 ; SSE2-NEXT:    pinsrw $2, %eax, %xmm0
 ; SSE2-NEXT:    movzbl %dl, %eax
 ; SSE2-NEXT:    pinsrw $3, %eax, %xmm0

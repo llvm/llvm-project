@@ -4533,6 +4533,7 @@ SDValue DAGCombiner::MatchLoadCombine(SDNode *N) {
 
   SmallSet<LoadSDNode *, 8> Loads;
   LoadSDNode *FirstLoad = nullptr;
+  int64_t FirstOffset = INT64_MAX;
 
   bool IsBigEndianTarget = DAG.getDataLayout().isBigEndian();
   auto ByteAt = IsBigEndianTarget ? BigEndianByteAt : LittleEndianByteAt;
@@ -4575,21 +4576,25 @@ SDValue DAGCombiner::MatchLoadCombine(SDNode *N) {
     ByteOffsets[i] = ByteOffsetFromBase;
 
     // Remember the first byte load
-    if (ByteOffsetFromBase == 0)
+    if (ByteOffsetFromBase < FirstOffset) {
       FirstLoad = L;
+      FirstOffset = ByteOffsetFromBase;
+    }
 
     Loads.insert(L);
   }
   assert(Loads.size() > 0 && "All the bytes of the value must be loaded from "
          "memory, so there must be at least one load which produces the value");
   assert(Base && "Base address of the accessed memory location must be set");
+  assert(FirstOffset != INT64_MAX && "First byte offset must be set");
 
   // Check if the bytes of the OR we are looking at match with either big or
   // little endian value load
   bool BigEndian = true, LittleEndian = true;
   for (unsigned i = 0; i < ByteWidth; i++) {
-    LittleEndian &= ByteOffsets[i] == LittleEndianByteAt(ByteWidth, i);
-    BigEndian &= ByteOffsets[i] == BigEndianByteAt(ByteWidth, i);
+    int64_t CurrentByteOffset = ByteOffsets[i] - FirstOffset;
+    LittleEndian &= CurrentByteOffset == LittleEndianByteAt(ByteWidth, i);
+    BigEndian &= CurrentByteOffset == BigEndianByteAt(ByteWidth, i);
     if (!BigEndian && !LittleEndian)
       return SDValue();
   }
