@@ -228,9 +228,23 @@ Changes to the AMDGPU Target
 Changes to the AVR Target
 -----------------------------
 
-* The entire backend has been merged in-tree with all tests passing. All of
-  the instruction selection code and the machine code backend has landed
-  recently and is fully usable.
+This marks the first release where the AVR backend has been completely merged
+from a fork into LLVM trunk. The backend is still marked experimental, but
+is generally quite usable. All downstream development has halted on
+`GitHub <https://github.com/avr-llvm/llvm>`_, and changes now go directly into
+LLVM trunk.
+
+* Instruction selector and pseudo instruction expansion pass landed
+* `read_register` and `write_register` intrinsics are now supported
+* Support stack stores greater than 63-bytes from the bottom of the stack
+* A number of assertion errors have been fixed
+* Support stores to `undef` locations
+* Very basic support for the target has been added to clang
+* Small optimizations to some 16-bit boolean expressions
+
+Most of the work behind the scenes has been on correctness of generated
+assembly, and also fixing some assertions we would hit on some well-formed
+inputs.
 
 Changes to the OCaml bindings
 -----------------------------
