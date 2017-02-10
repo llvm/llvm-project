@@ -31,7 +31,7 @@ public:
   const_iterator end();
   RecordStreamer(MCContext &Context);
   void EmitInstruction(const MCInst &Inst, const MCSubtargetInfo &STI) override;
-  void EmitLabel(MCSymbol *Symbol) override;
+  void EmitLabel(MCSymbol *Symbol, SMLoc Loc = SMLoc()) override;
   void EmitAssignment(MCSymbol *Symbol, const MCExpr *Value) override;
   bool EmitSymbolAttribute(MCSymbol *Symbol, MCSymbolAttr Attribute) override;
   void EmitZerofill(MCSection *Section, MCSymbol *Symbol, uint64_t Size,
