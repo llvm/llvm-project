@@ -734,23 +734,23 @@ CXXBindTemporaryExpr *CXXBindTemporaryExpr::Create(const ASTContext &C,
 
 CXXTemporaryObjectExpr::CXXTemporaryObjectExpr(const ASTContext &C,
                                                CXXConstructorDecl *Cons,
-                                               TypeSourceInfo *Type,
+                                               QualType Type,
+                                               TypeSourceInfo *TSI,
                                                ArrayRef<Expr*> Args,
                                                SourceRange ParenOrBraceRange,
                                                bool HadMultipleCandidates,
                                                bool ListInitialization,
                                                bool StdInitListInitialization,
                                                bool ZeroInitialization)
-  : CXXConstructExpr(C, CXXTemporaryObjectExprClass, 
-                     Type->getType().getNonReferenceType(), 
-                     Type->getTypeLoc().getBeginLoc(),
+  : CXXConstructExpr(C, CXXTemporaryObjectExprClass, Type,
+                     TSI->getTypeLoc().getBeginLoc(),
                      Cons, false, Args,
                      HadMultipleCandidates,
                      ListInitialization,
                      StdInitListInitialization,
                      ZeroInitialization,
                      CXXConstructExpr::CK_Complete, ParenOrBraceRange),
-    Type(Type) {
+    Type(TSI) {
 }
 
 SourceLocation CXXTemporaryObjectExpr::getLocStart() const {

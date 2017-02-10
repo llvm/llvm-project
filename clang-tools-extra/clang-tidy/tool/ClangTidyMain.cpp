@@ -188,6 +188,15 @@ code with clang-apply-replacements.
                                         cl::value_desc("filename"),
                                         cl::cat(ClangTidyCategory));
 
+static cl::opt<bool> Quiet("quiet", cl::desc(R"(
+Run clang-tidy in quiet mode.  This suppresses
+printing statistics about ignored warnings and
+warnings treated as errors if the respective
+options are specified.
+)"),
+                           cl::init(false),
+                           cl::cat(ClangTidyCategory));
+
 namespace clang {
 namespace tidy {
 
@@ -406,19 +415,23 @@ static int clangTidyMain(int argc, const char **argv) {
     exportReplacements(FilePath.str(), Errors, OS);
   }
 
-  printStats(Stats);
-  if (DisableFixes)
-    llvm::errs()
-        << "Found compiler errors, but -fix-errors was not specified.\n"
-           "Fixes have NOT been applied.\n\n";
+  if (!Quiet) {
+    printStats(Stats);
+    if (DisableFixes)
+      llvm::errs()
+          << "Found compiler errors, but -fix-errors was not specified.\n"
+             "Fixes have NOT been applied.\n\n";
+  }
 
   if (EnableCheckProfile)
     printProfileData(Profile, llvm::errs());
 
   if (WErrorCount) {
-    StringRef Plural = WErrorCount == 1 ? "" : "s";
-    llvm::errs() << WErrorCount << " warning" << Plural << " treated as error"
-                 << Plural << "\n";
+    if (!Quiet) {
+      StringRef Plural = WErrorCount == 1 ? "" : "s";
+      llvm::errs() << WErrorCount << " warning" << Plural << " treated as error"
+                   << Plural << "\n";
+    }
     return WErrorCount;
   }
 

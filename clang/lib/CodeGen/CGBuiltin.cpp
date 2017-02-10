@@ -482,10 +482,11 @@ enum class CodeGenFunction::MSVCIntrin {
   _InterlockedIncrement,
   _InterlockedOr,
   _InterlockedXor,
+  __fastfail,
 };
 
 Value *CodeGenFunction::EmitMSVCBuiltinExpr(MSVCIntrin BuiltinID,
-  const CallExpr *E) {
+                                            const CallExpr *E) {
   switch (BuiltinID) {
   case MSVCIntrin::_BitScanForward:
   case MSVCIntrin::_BitScanReverse: {
@@ -565,6 +566,37 @@ Value *CodeGenFunction::EmitMSVCBuiltinExpr(MSVCIntrin BuiltinID,
       ConstantInt::get(IntTy, 1),
       llvm::AtomicOrdering::SequentiallyConsistent);
     return Builder.CreateAdd(RMWI, ConstantInt::get(IntTy, 1));
+  }
+
+  case MSVCIntrin::__fastfail: {
+    // Request immediate process termination from the kernel. The instruction
+    // sequences to do this are documented on MSDN:
+    // https://msdn.microsoft.com/en-us/library/dn774154.aspx
+    llvm::Triple::ArchType ISA = getTarget().getTriple().getArch();
+    StringRef Asm, Constraints;
+    switch (ISA) {
+    default:
+      ErrorUnsupported(E, "__fastfail call for this architecture");
+      break;
+    case llvm::Triple::x86:
+    case llvm::Triple::x86_64:
+      Asm = "int $$0x29";
+      Constraints = "{cx}";
+      break;
+    case llvm::Triple::thumb:
+      Asm = "udf #251";
+      Constraints = "{r0}";
+      break;
+    }
+    llvm::FunctionType *FTy = llvm::FunctionType::get(VoidTy, {Int32Ty}, false);
+    llvm::InlineAsm *IA =
+        llvm::InlineAsm::get(FTy, Asm, Constraints, /*SideEffects=*/true);
+    llvm::AttributeSet NoReturnAttr =
+        AttributeSet::get(getLLVMContext(), llvm::AttributeSet::FunctionIndex,
+                          llvm::Attribute::NoReturn);
+    CallSite CS = Builder.CreateCall(IA, EmitScalarExpr(E->getArg(0)));
+    CS.setAttributes(NoReturnAttr);
+    return CS.getInstruction();
   }
   }
   llvm_unreachable("Incorrect MSVC intrinsic!");
@@ -2273,6 +2305,11 @@ RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
     if (llvm::GlobalVariable *GV =
             CGM.getCXXABI().getThrowInfo(FD->getParamDecl(0)->getType()))
       return RValue::get(llvm::ConstantExpr::getBitCast(GV, CGM.Int8PtrTy));
+    break;
+  }
+
+  case Builtin::BI__fastfail: {
+    return RValue::get(EmitMSVCBuiltinExpr(MSVCIntrin::__fastfail, E));
     break;
   }
 

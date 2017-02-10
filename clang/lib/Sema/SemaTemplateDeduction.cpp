@@ -4019,17 +4019,26 @@ Sema::TemplateDeductionResult Sema::DeduceTemplateArguments(
 }
 
 namespace {
-  /// Substitute the 'auto' type specifier within a type for a given replacement
-  /// type.
-  class SubstituteAutoTransform :
-    public TreeTransform<SubstituteAutoTransform> {
+  /// Substitute the 'auto' specifier or deduced template specialization type
+  /// specifier within a type for a given replacement type.
+  class SubstituteDeducedTypeTransform :
+      public TreeTransform<SubstituteDeducedTypeTransform> {
     QualType Replacement;
-    bool UseAutoSugar;
+    bool UseTypeSugar;
   public:
-    SubstituteAutoTransform(Sema &SemaRef, QualType Replacement,
-                            bool UseAutoSugar = true)
-        : TreeTransform<SubstituteAutoTransform>(SemaRef),
-          Replacement(Replacement), UseAutoSugar(UseAutoSugar) {}
+    SubstituteDeducedTypeTransform(Sema &SemaRef, QualType Replacement,
+                            bool UseTypeSugar = true)
+        : TreeTransform<SubstituteDeducedTypeTransform>(SemaRef),
+          Replacement(Replacement), UseTypeSugar(UseTypeSugar) {}
+
+    QualType TransformDesugared(TypeLocBuilder &TLB, DeducedTypeLoc TL) {
+      assert(isa<TemplateTypeParmType>(Replacement) &&
+             "unexpected unsugared replacement kind");
+      QualType Result = Replacement;
+      TemplateTypeParmTypeLoc NewTL = TLB.push<TemplateTypeParmTypeLoc>(Result);
+      NewTL.setNameLoc(TL.getNameLoc());
+      return Result;
+    }
 
     QualType TransformAutoType(TypeLocBuilder &TLB, AutoTypeLoc TL) {
       // If we're building the type pattern to deduce against, don't wrap the
@@ -4039,21 +4048,29 @@ namespace {
       //   auto &&lref = lvalue;
       // must transform into "rvalue reference to T" not "rvalue reference to
       // auto type deduced as T" in order for [temp.deduct.call]p3 to apply.
-      if (!UseAutoSugar) {
-        assert(isa<TemplateTypeParmType>(Replacement) &&
-               "unexpected unsugared replacement kind");
-        QualType Result = Replacement;
-        TemplateTypeParmTypeLoc NewTL =
-          TLB.push<TemplateTypeParmTypeLoc>(Result);
-        NewTL.setNameLoc(TL.getNameLoc());
-        return Result;
-      } else {
-        QualType Result = SemaRef.Context.getAutoType(
-            Replacement, TL.getTypePtr()->getKeyword(), Replacement.isNull());
-        AutoTypeLoc NewTL = TLB.push<AutoTypeLoc>(Result);
-        NewTL.setNameLoc(TL.getNameLoc());
-        return Result;
-      }
+      //
+      // FIXME: Is this still necessary?
+      if (!UseTypeSugar)
+        return TransformDesugared(TLB, TL);
+
+      QualType Result = SemaRef.Context.getAutoType(
+          Replacement, TL.getTypePtr()->getKeyword(), Replacement.isNull());
+      auto NewTL = TLB.push<AutoTypeLoc>(Result);
+      NewTL.setNameLoc(TL.getNameLoc());
+      return Result;
+    }
+
+    QualType TransformDeducedTemplateSpecializationType(
+        TypeLocBuilder &TLB, DeducedTemplateSpecializationTypeLoc TL) {
+      if (!UseTypeSugar)
+        return TransformDesugared(TLB, TL);
+
+      QualType Result = SemaRef.Context.getDeducedTemplateSpecializationType(
+          TL.getTypePtr()->getTemplateName(),
+          Replacement, Replacement.isNull());
+      auto NewTL = TLB.push<DeducedTemplateSpecializationTypeLoc>(Result);
+      NewTL.setNameLoc(TL.getNameLoc());
+      return Result;
     }
 
     ExprResult TransformLambdaExpr(LambdaExpr *E) {
@@ -4104,7 +4121,7 @@ Sema::DeduceAutoType(TypeLoc Type, Expr *&Init, QualType &Result,
 
   if (!DependentDeductionDepth &&
       (Type.getType()->isDependentType() || Init->isTypeDependent())) {
-    Result = SubstituteAutoTransform(*this, QualType()).Apply(Type);
+    Result = SubstituteDeducedTypeTransform(*this, QualType()).Apply(Type);
     assert(!Result.isNull() && "substituting DependentTy can't fail");
     return DAR_Succeeded;
   }
@@ -4127,7 +4144,7 @@ Sema::DeduceAutoType(TypeLoc Type, Expr *&Init, QualType &Result,
         return DAR_FailedAlreadyDiagnosed;
       // FIXME: Support a non-canonical deduced type for 'auto'.
       Deduced = Context.getCanonicalType(Deduced);
-      Result = SubstituteAutoTransform(*this, Deduced).Apply(Type);
+      Result = SubstituteDeducedTypeTransform(*this, Deduced).Apply(Type);
       if (Result.isNull())
         return DAR_FailedAlreadyDiagnosed;
       return DAR_Succeeded;
@@ -4152,7 +4169,7 @@ Sema::DeduceAutoType(TypeLoc Type, Expr *&Init, QualType &Result,
       Loc, Loc, TemplParamPtr, Loc, nullptr);
 
   QualType FuncParam =
-      SubstituteAutoTransform(*this, TemplArg, /*UseAutoSugar*/false)
+      SubstituteDeducedTypeTransform(*this, TemplArg, /*UseTypeSugar*/false)
           .Apply(Type);
   assert(!FuncParam.isNull() &&
          "substituting template parameter for 'auto' failed");
@@ -4167,7 +4184,7 @@ Sema::DeduceAutoType(TypeLoc Type, Expr *&Init, QualType &Result,
   // might acquire a matching type in the instantiation.
   auto DeductionFailed = [&]() -> DeduceAutoResult {
     if (Init->isTypeDependent()) {
-      Result = SubstituteAutoTransform(*this, QualType()).Apply(Type);
+      Result = SubstituteDeducedTypeTransform(*this, QualType()).Apply(Type);
       assert(!Result.isNull() && "substituting DependentTy can't fail");
       return DAR_Succeeded;
     }
@@ -4215,7 +4232,7 @@ Sema::DeduceAutoType(TypeLoc Type, Expr *&Init, QualType &Result,
       return DAR_FailedAlreadyDiagnosed;
   }
 
-  Result = SubstituteAutoTransform(*this, DeducedType).Apply(Type);
+  Result = SubstituteDeducedTypeTransform(*this, DeducedType).Apply(Type);
   if (Result.isNull())
     return DAR_FailedAlreadyDiagnosed;
 
@@ -4238,22 +4255,22 @@ QualType Sema::SubstAutoType(QualType TypeWithAuto,
                              QualType TypeToReplaceAuto) {
   if (TypeToReplaceAuto->isDependentType())
     TypeToReplaceAuto = QualType();
-  return SubstituteAutoTransform(*this, TypeToReplaceAuto)
+  return SubstituteDeducedTypeTransform(*this, TypeToReplaceAuto)
       .TransformType(TypeWithAuto);
 }
 
-TypeSourceInfo* Sema::SubstAutoTypeSourceInfo(TypeSourceInfo *TypeWithAuto,
-                             QualType TypeToReplaceAuto) {
+TypeSourceInfo *Sema::SubstAutoTypeSourceInfo(TypeSourceInfo *TypeWithAuto,
+                                              QualType TypeToReplaceAuto) {
   if (TypeToReplaceAuto->isDependentType())
     TypeToReplaceAuto = QualType();
-  return SubstituteAutoTransform(*this, TypeToReplaceAuto)
+  return SubstituteDeducedTypeTransform(*this, TypeToReplaceAuto)
       .TransformType(TypeWithAuto);
 }
 
 QualType Sema::ReplaceAutoType(QualType TypeWithAuto,
                                QualType TypeToReplaceAuto) {
-  return SubstituteAutoTransform(*this, TypeToReplaceAuto,
-                                 /*UseAutoSugar*/ false)
+  return SubstituteDeducedTypeTransform(*this, TypeToReplaceAuto,
+                                        /*UseTypeSugar*/ false)
       .TransformType(TypeWithAuto);
 }
 

@@ -1470,7 +1470,8 @@ class CXXTemporaryObjectExpr : public CXXConstructExpr {
 public:
   CXXTemporaryObjectExpr(const ASTContext &C,
                          CXXConstructorDecl *Cons,
-                         TypeSourceInfo *Type,
+                         QualType Type,
+                         TypeSourceInfo *TSI,
                          ArrayRef<Expr *> Args,
                          SourceRange ParenOrBraceRange,
                          bool HadMultipleCandidates,

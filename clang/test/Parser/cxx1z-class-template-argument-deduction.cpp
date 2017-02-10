@@ -1,6 +1,12 @@
 // RUN: %clang_cc1 -std=c++1z -fcxx-exceptions -verify %s
 
-template<typename T> struct A {}; // expected-note 35{{declared here}}
+template <typename T> struct A { // expected-note 35{{declared here}}
+  constexpr A() {}
+  constexpr A(int) {}
+  constexpr operator int() { return 0; }
+};
+A() -> A<int>;
+A(int) -> A<int>;
 
 // Make sure we still correctly parse cases where a template can appear without arguments.
 namespace template_template_arg {
@@ -18,7 +24,7 @@ namespace template_template_arg {
   template<typename = ::A> struct YCCD {}; // expected-error {{requires template arguments}}
 
   // FIXME: replacing the invalid type with 'int' here is horrible
-  template <A a = A<int>()> class C { }; // expected-error {{requires template arguments}} expected-error {{not implicitly convertible to 'int'}}
+  template <A a = A<int>()> class C { }; // expected-error {{requires template arguments}}
   template<typename T = A> struct G { }; // expected-error {{requires template arguments}}
 }
 
@@ -27,7 +33,7 @@ namespace injected_class_name {
     A(T);
     void f(int) {
       A a = 1;
-      injected_class_name::A b = 1; // expected-error {{not yet supported}}
+      injected_class_name::A b = 1; // expected-error {{no viable constructor or deduction guide}}
     }
     void f(T);
   };
@@ -46,8 +52,8 @@ struct member {
 
   operator A(); // expected-error {{requires template arguments; argument deduction not allowed in conversion function type}}
 
-  static A x; // expected-error {{requires an initializer}}
-  static A y = 0; // expected-error {{not yet supported}}
+  static A x; // FIXME: We deduce A<int> from the initializer despite this not being a definition!
+  static constexpr A y = 0;
 };
 
 namespace in_typedef {
@@ -67,18 +73,18 @@ namespace stmt {
     // simple-declaration or cast. We also permit it in conditions,
     // for-range-declarations, member-declarations for static data members, and
     // new-expressions, because not doing so would be bizarre.
-    A local = 0; // expected-error {{not yet supported}}
-    static A local_static = 0; // expected-error {{not yet supported}}
-    static thread_local A thread_local_static = 0; // expected-error {{not yet supported}}
-    if (A a = 0) {} // expected-error {{not yet supported}}
-    if (A a = 0; a) {} // expected-error {{not yet supported}}
-    switch (A a = 0) {} // expected-error {{not yet supported}}
-    switch (A a = 0; a) {} // expected-error {{not yet supported}}
-    for (A a = 0; a; /**/) {} // expected-error {{not yet supported}}
-    for (/**/; A a = 0; /**/) {} // expected-error {{not yet supported}}
-    while (A a = 0) {} // expected-error {{not yet supported}}
+    A local = 0;
+    static A local_static = 0;
+    static thread_local A thread_local_static = 0;
+    if (A a = 0) {}
+    if (A a = 0; a) {}
+    switch (A a = 0) {} // expected-warning {{no case matching constant switch condition '0'}}
+    switch (A a = 0; a) {} // expected-warning {{no case matching constant switch condition '0'}}
+    for (A a = 0; a; /**/) {}
+    for (/**/; A a = 0; /**/) {}
+    while (A a = 0) {}
     int arr[3];
-    for (A a : arr) {} // expected-error {{not yet supported}}
+    for (A a : arr) {}
   }
 
   namespace std {
@@ -104,12 +110,12 @@ namespace expr {
     (void)(A)(n); // expected-error{{requires template arguments; argument deduction not allowed here}}
     (void)(A){n}; // expected-error{{requires template arguments; argument deduction not allowed here}}
 
-    (void)A(n); // expected-error {{not yet supported}}
-    (void)A{n}; // expected-error {{not yet supported}}
-    (void)new A(n); // expected-error {{not yet supported}}
-    (void)new A{n}; // expected-error {{not yet supported}}
+    (void)A(n);
+    (void)A{n};
+    (void)new A(n);
+    (void)new A{n};
     // FIXME: We should diagnose the lack of an initializer here.
-    (void)new A; // expected-error {{not yet supported}}
+    (void)new A;
   }
 }
 
@@ -121,55 +127,57 @@ namespace decl {
 
   auto k() -> A; // expected-error{{requires template arguments}}
 
-  A a; // expected-error {{requires an initializer}}
-  A b = 0; // expected-error {{not yet supported}}
-  const A c = 0; // expected-error {{not yet supported}}
+  A a; // FIXME: This is (technically) syntactically invalid.
+  A b = 0;
+  const A c = 0;
   A (parens) = 0; // expected-error {{cannot use parentheses when declaring variable with deduced class template specialization type}}
   A *p = 0; // expected-error {{cannot form pointer to deduced class template specialization type}}
   A &r = *p; // expected-error {{cannot form reference to deduced class template specialization type}}
   A arr[3] = 0; // expected-error {{cannot form array of deduced class template specialization type}}
   A F::*pm = 0; // expected-error {{cannot form pointer to deduced class template specialization type}}
   A (*fp)() = 0; // expected-error {{cannot form function returning deduced class template specialization type}}
-  A [x, y] = 0; // expected-error {{cannot be declared with type 'A'}} expected-error {{not yet supported}}
+  A [x, y] = 0; // expected-error {{cannot be declared with type 'A'}} expected-error {{type 'A<int>' decomposes into 0 elements, but 2 names were provided}}
 }
 
 namespace typename_specifier {
   struct F {};
 
   void e() {
-    (void) typename ::A(0); // expected-error {{not yet supported}}
-    (void) typename ::A{0}; // expected-error {{not yet supported}}
-    new typename ::A(0); // expected-error {{not yet supported}}
-    new typename ::A{0}; // expected-error {{not yet supported}}
-    typename ::A a = 0; // expected-error {{not yet supported}}
-    const typename ::A b = 0; // expected-error {{not yet supported}}
-    if (typename ::A a = 0) {} // expected-error {{not yet supported}}
-    for (typename ::A a = 0; typename ::A b = 0; /**/) {} // expected-error 2{{not yet supported}}
+    (void) typename ::A(0);
+    (void) typename ::A{0};
+    new typename ::A(0);
+    new typename ::A{0};
+    typename ::A a = 0;
+    const typename ::A b = 0;
+    if (typename ::A a = 0) {}
+    for (typename ::A a = 0; typename ::A b = 0; /**/) {}
 
     (void)(typename ::A)(0); // expected-error{{requires template arguments; argument deduction not allowed here}}
     (void)(typename ::A){0}; // expected-error{{requires template arguments; argument deduction not allowed here}}
   }
-  typename ::A a = 0; // expected-error {{not yet supported}}
-  const typename ::A b = 0; // expected-error {{not yet supported}}
+  typename ::A a = 0;
+  const typename ::A b = 0;
   typename ::A (parens) = 0; // expected-error {{cannot use parentheses when declaring variable with deduced class template specialization type}}
   typename ::A *p = 0; // expected-error {{cannot form pointer to deduced class template specialization type}}
   typename ::A &r = *p; // expected-error {{cannot form reference to deduced class template specialization type}}
   typename ::A arr[3] = 0; // expected-error {{cannot form array of deduced class template specialization type}}
   typename ::A F::*pm = 0; // expected-error {{cannot form pointer to deduced class template specialization type}}
   typename ::A (*fp)() = 0; // expected-error {{cannot form function returning deduced class template specialization type}}
-  typename ::A [x, y] = 0; // expected-error {{cannot be declared with type 'typename ::A'}} expected-error {{not yet supported}}
+  typename ::A [x, y] = 0; // expected-error {{cannot be declared with type 'typename ::A'}} expected-error {{type 'typename ::A<int>' (aka 'A<int>') decomposes into 0}}
 
   struct X { template<typename T> struct A {}; }; // expected-note 8{{template}}
 
+  // FIXME: We do not yet properly support class template argument deduction
+  // during template instantiation.
   template<typename T> void f() {
-    (void) typename T::A(0); // expected-error {{not yet supported}}
-    (void) typename T::A{0}; // expected-error {{not yet supported}}
-    new typename T::A(0); // expected-error {{not yet supported}}
-    new typename T::A{0}; // expected-error {{not yet supported}}
-    typename T::A a = 0; // expected-error {{not yet supported}}
-    const typename T::A b = 0; // expected-error {{not yet supported}}
-    if (typename T::A a = 0) {} // expected-error {{not yet supported}}
-    for (typename T::A a = 0; typename T::A b = 0; /**/) {} // expected-error 2{{not yet supported}}
+    (void) typename T::A(0); // expected-error {{no viable}}
+    (void) typename T::A{0}; // expected-error {{no viable}}
+    new typename T::A(0); // expected-error {{no viable}}
+    new typename T::A{0}; // expected-error {{no viable}}
+    typename T::A a = 0; // expected-error {{no viable}}
+    const typename T::A b = 0; // expected-error {{no viable}}
+    if (typename T::A a = 0) {} // expected-error {{no viable}}
+    for (typename T::A a = 0; typename T::A b = 0; /**/) {} // expected-error 2{{no viable}}
 
     {(void)(typename T::A)(0);} // expected-error{{refers to class template member}}
     {(void)(typename T::A){0};} // expected-error{{refers to class template member}}
@@ -179,7 +187,7 @@ namespace typename_specifier {
     {typename T::A arr[3] = 0;} // expected-error {{refers to class template member}}
     {typename T::A F::*pm = 0;} // expected-error {{refers to class template member}}
     {typename T::A (*fp)() = 0;} // expected-error {{refers to class template member}}
-    {typename T::A [x, y] = 0;} // expected-error {{cannot be declared with type 'typename T::A'}} expected-error {{not yet supported}}
+    {typename T::A [x, y] = 0;} // expected-error {{cannot be declared with type 'typename T::A'}} expected-error {{no viable}}
   }
   template void f<X>(); // expected-note {{instantiation of}}
 

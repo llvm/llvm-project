@@ -718,8 +718,8 @@ ModulePassManager PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
   // CFI is disabled.
   // Enable once we add support for the summary in the new PM.
 #if 0
-  MPM.addPass(LowerTypeTestsPass(Summary ? LowerTypeTestsSummaryAction::Export :
-                                           LowerTypeTestsSummaryAction::None,
+  MPM.addPass(LowerTypeTestsPass(Summary ? PassSummaryAction::Export :
+                                           PassSummaryAction::None,
                                 Summary));
 #endif
 

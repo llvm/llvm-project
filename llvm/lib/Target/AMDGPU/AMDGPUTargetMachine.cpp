@@ -108,6 +108,7 @@ extern "C" void LLVMInitializeAMDGPUTarget() {
   initializeSILoadStoreOptimizerPass(*PR);
   initializeAMDGPUAnnotateKernelFeaturesPass(*PR);
   initializeAMDGPUAnnotateUniformValuesPass(*PR);
+  initializeAMDGPULowerIntrinsicsPass(*PR);
   initializeAMDGPUPromoteAllocaPass(*PR);
   initializeAMDGPUCodeGenPreparePass(*PR);
   initializeAMDGPUUnifyMetadataPass(*PR);
@@ -487,6 +488,7 @@ void AMDGPUPassConfig::addIRPasses() {
 
   // this pass should be performed on linked module
   addPass(createAMDGPULowerKernelCallsPass());
+  addPass(createAMDGPULowerIntrinsicsPass());
 
   // Function calls are not supported, so make sure we inline everything.
   addPass(createAMDGPUAlwaysInlinePass());

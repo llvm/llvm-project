@@ -190,7 +190,7 @@ std::pair<unsigned, unsigned> AMDGPUSubtarget::getFlatWorkGroupSizes(
 std::pair<unsigned, unsigned> AMDGPUSubtarget::getWavesPerEU(
   const Function &F) const {
   // Default minimum/maximum number of waves per execution unit.
-  std::pair<unsigned, unsigned> Default(1, 0);
+  std::pair<unsigned, unsigned> Default(1, getMaxWavesPerEU());
 
   // Default/requested minimum/maximum flat work group sizes.
   std::pair<unsigned, unsigned> FlatWorkGroupSizes = getFlatWorkGroupSizes(F);

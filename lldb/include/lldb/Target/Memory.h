@@ -75,6 +75,8 @@ private:
   DISALLOW_COPY_AND_ASSIGN(MemoryCache);
 };
 
+    
+
 class AllocatedBlock {
 public:
   AllocatedBlock(lldb::addr_t addr, uint32_t byte_size, uint32_t permissions,
@@ -86,32 +88,34 @@ public:
 
   bool FreeBlock(lldb::addr_t addr);
 
-  lldb::addr_t GetBaseAddress() const { return m_addr; }
+  lldb::addr_t GetBaseAddress() const { return m_range.GetRangeBase(); }
 
-  uint32_t GetByteSize() const { return m_byte_size; }
+  uint32_t GetByteSize() const { return m_range.GetByteSize(); }
 
   uint32_t GetPermissions() const { return m_permissions; }
 
   uint32_t GetChunkSize() const { return m_chunk_size; }
 
   bool Contains(lldb::addr_t addr) const {
-    return ((addr >= m_addr) && addr < (m_addr + m_byte_size));
+    return m_range.Contains(addr);
   }
 
 protected:
-  uint32_t TotalChunks() const { return m_byte_size / m_chunk_size; }
+  uint32_t TotalChunks() const { return GetByteSize() / GetChunkSize(); }
 
   uint32_t CalculateChunksNeededForSize(uint32_t size) const {
     return (size + m_chunk_size - 1) / m_chunk_size;
   }
-  const lldb::addr_t m_addr;    // Base address of this block of memory
-  const uint32_t m_byte_size;   // 4GB of chunk should be enough...
-  const uint32_t m_permissions; // Permissions for this memory (logical OR of
-                                // lldb::Permissions bits)
-  const uint32_t m_chunk_size;  // The size of chunks that the memory at m_addr
-                                // is divied up into
-  typedef std::map<uint32_t, uint32_t> OffsetToChunkSize;
-  OffsetToChunkSize m_offset_to_chunk_size;
+  // Base address of this block of memory 4GB of chunk should be enough.
+  Range<lldb::addr_t, uint32_t> m_range;
+  // Permissions for this memory (logical OR of lldb::Permissions bits)
+  const uint32_t m_permissions;
+  // The size of chunks that the memory at m_addr is divied up into.
+  const uint32_t m_chunk_size;
+  // A sorted list of free address ranges.
+  RangeVector<lldb::addr_t, uint32_t> m_free_blocks;
+  // A sorted list of reserved address.
+  RangeVector<lldb::addr_t, uint32_t> m_reserved_blocks;
 };
 
 //----------------------------------------------------------------------

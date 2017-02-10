@@ -6701,6 +6701,7 @@ static SDValue buildFromShuffleMostly(SDValue Op, SelectionDAG &DAG) {
 
     SDValue ExtractedFromVec = Op.getOperand(i).getOperand(0);
     SDValue ExtIdx = Op.getOperand(i).getOperand(1);
+
     // Quit if non-constant index.
     if (!isa<ConstantSDNode>(ExtIdx))
       return SDValue();
@@ -6731,11 +6732,10 @@ static SDValue buildFromShuffleMostly(SDValue Op, SelectionDAG &DAG) {
 
   VecIn2 = VecIn2.getNode() ? VecIn2 : DAG.getUNDEF(VT);
   SDValue NV = DAG.getVectorShuffle(VT, DL, VecIn1, VecIn2, Mask);
-  for (unsigned i = 0, e = InsertIndices.size(); i != e; ++i) {
-    unsigned Idx = InsertIndices[i];
+
+  for (unsigned Idx : InsertIndices)
     NV = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, VT, NV, Op.getOperand(Idx),
                      DAG.getIntPtrConstant(Idx, DL));
-  }
 
   return NV;
 }
@@ -23800,7 +23800,6 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case X86ISD::INSERTPS:           return "X86ISD::INSERTPS";
   case X86ISD::PINSRB:             return "X86ISD::PINSRB";
   case X86ISD::PINSRW:             return "X86ISD::PINSRW";
-  case X86ISD::MMX_PINSRW:         return "X86ISD::MMX_PINSRW";
   case X86ISD::PSHUFB:             return "X86ISD::PSHUFB";
   case X86ISD::ANDNP:              return "X86ISD::ANDNP";
   case X86ISD::BLENDI:             return "X86ISD::BLENDI";
@@ -31166,7 +31165,7 @@ static SDValue combineOrCmpEqZeroToCtlzSrl(SDNode *N, SelectionDAG &DAG,
     return N->getOpcode() == X86ISD::SETCC && N->hasOneUse() &&
            X86::CondCode(N->getConstantOperandVal(0)) == X86::COND_E &&
            N->getOperand(1).getOpcode() == X86ISD::CMP &&
-           N->getOperand(1).getConstantOperandVal(1) == 0 &&
+           isNullConstant(N->getOperand(1).getOperand(1)) &&
            N->getOperand(1).getValueType().bitsGE(MVT::i32);
   };
 

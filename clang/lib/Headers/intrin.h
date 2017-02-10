@@ -69,7 +69,6 @@ static __inline__
 __int64 __emul(int, int);
 static __inline__
 unsigned __int64 __emulu(unsigned int, unsigned int);
-void __cdecl __fastfail(unsigned int);
 unsigned int __getcallerseflags(void);
 static __inline__
 void __halt(void);

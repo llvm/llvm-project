@@ -1849,8 +1849,8 @@ def warn_cxx98_compat_temp_copy : Warning<
   InGroup<CXX98CompatBindToTemporaryCopy>, DefaultIgnore;
 def err_selected_explicit_constructor : Error<
   "chosen constructor is explicit in copy-initialization">;
-def note_constructor_declared_here : Note<
-  "constructor declared here">;
+def note_explicit_ctor_deduction_guide_here : Note<
+  "explicit %select{constructor|deduction guide}0 declared here">;
 
 // C++11 decltype
 def err_decltype_in_declarator : Error<
@@ -1961,8 +1961,23 @@ def err_deduced_class_template_compound_type : Error<
   "cannot %select{form pointer to|form reference to|form array of|"
   "form function returning|use parentheses when declaring variable with}0 "
   "deduced class template specialization type">;
-def err_deduced_class_template_not_supported : Error<
-  "deduction of template arguments for class templates is not yet supported">;
+def err_deduced_non_class_template_specialization_type : Error<
+  "%select{<error>|function template|variable template|alias template|"
+  "template template parameter|template}0 %1 requires template arguments; "
+  "argument deduction only allowed for class templates">;
+def err_deduced_class_template_ctor_ambiguous : Error<
+  "ambiguous deduction for template arguments of %0">;
+def err_deduced_class_template_ctor_no_viable : Error<
+  "no viable constructor or deduction guide for deduction of "
+  "template arguments of %0">;
+def err_deduced_class_template_incomplete : Error<
+  "template %0 has no definition and no %select{|viable }1deduction guides "
+  "for deduction of template arguments">;
+def err_deduced_class_template_deleted : Error<
+  "class template argument deduction for %0 selected a deleted constructor">;
+def err_deduced_class_template_explicit : Error<
+  "class template argument deduction for %0 selected an explicit "
+  "%select{constructor|deduction guide}1 for copy-list-initialization">;
 def err_deduction_guide_no_trailing_return_type : Error<
   "deduction guide declaration without trailing return type">;
 def err_deduction_guide_with_complex_decl : Error<

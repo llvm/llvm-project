@@ -382,6 +382,18 @@ define i32 @test31(i1 %X) {
   ret i32 %A
 }
 
+; Demanded bit analysis allows us to eliminate the add.
+
+define <2 x i32> @and_demanded_bits_splat_vec(<2 x i32> %x) {
+; CHECK-LABEL: @and_demanded_bits_splat_vec(
+; CHECK-NEXT:    [[Z:%.*]] = and <2 x i32> %x, <i32 7, i32 7>
+; CHECK-NEXT:    ret <2 x i32> [[Z]]
+;
+  %y = add <2 x i32> %x, <i32 8, i32 8>
+  %z = and <2 x i32> %y, <i32 7, i32 7>
+  ret <2 x i32> %z
+}
+
 define i32 @test32(i32 %In) {
 ; CHECK-LABEL: @test32(
 ; CHECK-NEXT:    ret i32 0

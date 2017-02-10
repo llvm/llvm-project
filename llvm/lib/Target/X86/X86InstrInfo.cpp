@@ -6486,12 +6486,14 @@ bool X86InstrInfo::analyzeCompare(const MachineInstr &MI, unsigned &SrcReg,
   case X86::CMP16ri:
   case X86::CMP16ri8:
   case X86::CMP8ri:
-    if (!MI.getOperand(1).isImm())
-      return false;
     SrcReg = MI.getOperand(0).getReg();
     SrcReg2 = 0;
-    CmpMask = ~0;
-    CmpValue = MI.getOperand(1).getImm();
+    if (MI.getOperand(1).isImm()) {
+      CmpMask = ~0;
+      CmpValue = MI.getOperand(1).getImm();
+    } else {
+      CmpMask = CmpValue = 0;
+    }
     return true;
   // A SUB can be used to perform comparison.
   case X86::SUB64rm:
@@ -6500,7 +6502,7 @@ bool X86InstrInfo::analyzeCompare(const MachineInstr &MI, unsigned &SrcReg,
   case X86::SUB8rm:
     SrcReg = MI.getOperand(1).getReg();
     SrcReg2 = 0;
-    CmpMask = ~0;
+    CmpMask = 0;
     CmpValue = 0;
     return true;
   case X86::SUB64rr:
@@ -6509,7 +6511,7 @@ bool X86InstrInfo::analyzeCompare(const MachineInstr &MI, unsigned &SrcReg,
   case X86::SUB8rr:
     SrcReg = MI.getOperand(1).getReg();
     SrcReg2 = MI.getOperand(2).getReg();
-    CmpMask = ~0;
+    CmpMask = 0;
     CmpValue = 0;
     return true;
   case X86::SUB64ri32:
@@ -6519,12 +6521,14 @@ bool X86InstrInfo::analyzeCompare(const MachineInstr &MI, unsigned &SrcReg,
   case X86::SUB16ri:
   case X86::SUB16ri8:
   case X86::SUB8ri:
-    if (!MI.getOperand(2).isImm())
-      return false;
     SrcReg = MI.getOperand(1).getReg();
     SrcReg2 = 0;
-    CmpMask = ~0;
-    CmpValue = MI.getOperand(2).getImm();
+    if (MI.getOperand(2).isImm()) {
+      CmpMask = ~0;
+      CmpValue = MI.getOperand(2).getImm();
+    } else {
+      CmpMask = CmpValue = 0;
+    }
     return true;
   case X86::CMP64rr:
   case X86::CMP32rr:
@@ -6532,7 +6536,7 @@ bool X86InstrInfo::analyzeCompare(const MachineInstr &MI, unsigned &SrcReg,
   case X86::CMP8rr:
     SrcReg = MI.getOperand(0).getReg();
     SrcReg2 = MI.getOperand(1).getReg();
-    CmpMask = ~0;
+    CmpMask = 0;
     CmpValue = 0;
     return true;
   case X86::TEST8rr:
@@ -6558,8 +6562,8 @@ bool X86InstrInfo::analyzeCompare(const MachineInstr &MI, unsigned &SrcReg,
 /// SrcReg, SrcRegs: register operands for FlagI.
 /// ImmValue: immediate for FlagI if it takes an immediate.
 inline static bool isRedundantFlagInstr(MachineInstr &FlagI, unsigned SrcReg,
-                                        unsigned SrcReg2, int ImmValue,
-                                        MachineInstr &OI) {
+                                        unsigned SrcReg2, int ImmMask,
+                                        int ImmValue, MachineInstr &OI) {
   if (((FlagI.getOpcode() == X86::CMP64rr && OI.getOpcode() == X86::SUB64rr) ||
        (FlagI.getOpcode() == X86::CMP32rr && OI.getOpcode() == X86::SUB32rr) ||
        (FlagI.getOpcode() == X86::CMP16rr && OI.getOpcode() == X86::SUB16rr) ||
@@ -6570,7 +6574,8 @@ inline static bool isRedundantFlagInstr(MachineInstr &FlagI, unsigned SrcReg,
         OI.getOperand(2).getReg() == SrcReg)))
     return true;
 
-  if (((FlagI.getOpcode() == X86::CMP64ri32 &&
+  if (ImmMask != 0 &&
+      ((FlagI.getOpcode() == X86::CMP64ri32 &&
         OI.getOpcode() == X86::SUB64ri32) ||
        (FlagI.getOpcode() == X86::CMP64ri8 &&
         OI.getOpcode() == X86::SUB64ri8) ||
@@ -6757,7 +6762,7 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, unsigned SrcReg,
 
   // If we are comparing against zero, check whether we can use MI to update
   // EFLAGS. If MI is not in the same BB as CmpInstr, do not optimize.
-  bool IsCmpZero = (SrcReg2 == 0 && CmpValue == 0);
+  bool IsCmpZero = (CmpMask != 0 && CmpValue == 0);
   if (IsCmpZero && MI->getParent() != CmpInstr.getParent())
     return false;
 
@@ -6807,8 +6812,8 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, unsigned SrcReg,
   for (; RI != RE; ++RI) {
     MachineInstr &Instr = *RI;
     // Check whether CmpInstr can be made redundant by the current instruction.
-    if (!IsCmpZero &&
-        isRedundantFlagInstr(CmpInstr, SrcReg, SrcReg2, CmpValue, Instr)) {
+    if (!IsCmpZero && isRedundantFlagInstr(CmpInstr, SrcReg, SrcReg2, CmpMask,
+                                           CmpValue, Instr)) {
       Sub = &Instr;
       break;
     }

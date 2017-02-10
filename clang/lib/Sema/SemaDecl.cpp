@@ -6108,7 +6108,7 @@ NamedDecl *Sema::ActOnVariableDeclarator(
     }
   }
 
-  bool IsExplicitSpecialization = false;
+  bool IsMemberSpecialization = false;
   bool IsVariableTemplateSpecialization = false;
   bool IsPartialSpecialization = false;
   bool IsVariableTemplate = false;
@@ -6186,7 +6186,7 @@ NamedDecl *Sema::ActOnVariableDeclarator(
             ? D.getName().TemplateId
             : nullptr,
         TemplateParamLists,
-        /*never a friend*/ false, IsExplicitSpecialization, Invalid);
+        /*never a friend*/ false, IsMemberSpecialization, Invalid);
 
     if (TemplateParams) {
       if (!TemplateParams->size() &&
@@ -6412,7 +6412,7 @@ NamedDecl *Sema::ActOnVariableDeclarator(
           << (IsPartialSpecialization ? 1 : 0)
           << FixItHint::CreateRemoval(
                  D.getDeclSpec().getModulePrivateSpecLoc());
-    else if (IsExplicitSpecialization)
+    else if (IsMemberSpecialization)
       Diag(NewVD->getLocation(), diag::err_module_private_specialization)
         << 2
         << FixItHint::CreateRemoval(D.getDeclSpec().getModulePrivateSpecLoc());
@@ -6527,7 +6527,7 @@ NamedDecl *Sema::ActOnVariableDeclarator(
   // declaration has linkage).
   FilterLookupForScope(Previous, OriginalDC, S, shouldConsiderLinkage(NewVD),
                        D.getCXXScopeSpec().isNotEmpty() ||
-                       IsExplicitSpecialization ||
+                       IsMemberSpecialization ||
                        IsVariableTemplateSpecialization);
 
   // Check whether the previous declaration is in the same block scope. This
@@ -6542,7 +6542,7 @@ NamedDecl *Sema::ActOnVariableDeclarator(
     D.setRedeclaration(CheckVariableDeclaration(NewVD, Previous));
   } else {
     // If this is an explicit specialization of a static data member, check it.
-    if (IsExplicitSpecialization && !NewVD->isInvalidDecl() &&
+    if (IsMemberSpecialization && !NewVD->isInvalidDecl() &&
         CheckMemberSpecialization(NewVD, Previous))
       NewVD->setInvalidDecl();
 
@@ -6657,7 +6657,7 @@ NamedDecl *Sema::ActOnVariableDeclarator(
   if (D.isRedeclaration() && !Previous.empty()) {
     checkDLLAttributeRedeclaration(
         *this, dyn_cast<NamedDecl>(Previous.getRepresentativeDecl()), NewVD,
-        IsExplicitSpecialization, D.isFunctionDefinition());
+        IsMemberSpecialization, D.isFunctionDefinition());
   }
 
   if (NewTemplate) {
@@ -7936,7 +7936,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
 
   bool isFriend = false;
   FunctionTemplateDecl *FunctionTemplate = nullptr;
-  bool isExplicitSpecialization = false;
+  bool isMemberSpecialization = false;
   bool isFunctionTemplateSpecialization = false;
 
   bool isDependentClassScopeExplicitSpecialization = false;
@@ -7992,7 +7992,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
     }
 
     SetNestedNameSpecifier(NewFD, D);
-    isExplicitSpecialization = false;
+    isMemberSpecialization = false;
     isFunctionTemplateSpecialization = false;
     if (D.isInvalidType())
       NewFD->setInvalidDecl();
@@ -8007,7 +8007,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
                 D.getName().getKind() == UnqualifiedId::IK_TemplateId
                     ? D.getName().TemplateId
                     : nullptr,
-                TemplateParamLists, isFriend, isExplicitSpecialization,
+                TemplateParamLists, isFriend, isMemberSpecialization,
                 Invalid)) {
       if (TemplateParams->size() > 0) {
         // This is a function template
@@ -8340,7 +8340,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
   // Filter out previous declarations that don't match the scope.
   FilterLookupForScope(Previous, OriginalDC, S, shouldConsiderLinkage(NewFD),
                        D.getCXXScopeSpec().isNotEmpty() ||
-                       isExplicitSpecialization ||
+                       isMemberSpecialization ||
                        isFunctionTemplateSpecialization);
 
   // Handle GNU asm-label extension (encoded as an attribute).
@@ -8490,7 +8490,6 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
 
   if (!getLangOpts().CPlusPlus) {
     // Perform semantic checking on the function declaration.
-    bool isExplicitSpecialization=false;
     if (!NewFD->isInvalidDecl() && NewFD->isMain())
       CheckMain(NewFD, D.getDeclSpec());
 
@@ -8499,7 +8498,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
 
     if (!NewFD->isInvalidDecl())
       D.setRedeclaration(CheckFunctionDeclaration(S, NewFD, Previous,
-                                                  isExplicitSpecialization));
+                                                  isMemberSpecialization));
     else if (!Previous.empty())
       // Recover gracefully from an invalid redeclaration.
       D.setRedeclaration(true);
@@ -8634,7 +8633,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
             << FixItHint::CreateRemoval(
                                       D.getDeclSpec().getStorageClassSpecLoc());
       }
-    } else if (isExplicitSpecialization && isa<CXXMethodDecl>(NewFD)) {
+    } else if (isMemberSpecialization && isa<CXXMethodDecl>(NewFD)) {
       if (CheckMemberSpecialization(NewFD, Previous))
           NewFD->setInvalidDecl();
     }
@@ -8649,7 +8648,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
 
       if (!NewFD->isInvalidDecl())
         D.setRedeclaration(CheckFunctionDeclaration(S, NewFD, Previous,
-                                                    isExplicitSpecialization));
+                                                    isMemberSpecialization));
       else if (!Previous.empty())
         // Recover gracefully from an invalid redeclaration.
         D.setRedeclaration(true);
@@ -8755,7 +8754,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
     } else if (!D.isFunctionDefinition() &&
                isa<CXXMethodDecl>(NewFD) && NewFD->isOutOfLine() &&
                !isFriend && !isFunctionTemplateSpecialization &&
-               !isExplicitSpecialization) {
+               !isMemberSpecialization) {
       // An out-of-line member function declaration must also be a
       // definition (C++ [class.mfct]p2).
       // Note that this is not the case for explicit specializations of
@@ -8816,7 +8815,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
   if (D.isRedeclaration() && !Previous.empty()) {
     checkDLLAttributeRedeclaration(
         *this, dyn_cast<NamedDecl>(Previous.getRepresentativeDecl()), NewFD,
-        isExplicitSpecialization || isFunctionTemplateSpecialization,
+        isMemberSpecialization || isFunctionTemplateSpecialization,
         D.isFunctionDefinition());
   }
 
@@ -8941,15 +8940,16 @@ bool Sema::shouldLinkDependentDeclWithPrevious(Decl *D, Decl *PrevDecl) {
 /// that have been instantiated via C++ template instantiation (called
 /// via InstantiateDecl).
 ///
-/// \param IsExplicitSpecialization whether this new function declaration is
-/// an explicit specialization of the previous declaration.
+/// \param IsMemberSpecialization whether this new function declaration is
+/// a member specialization (that replaces any definition provided by the
+/// previous declaration).
 ///
 /// This sets NewFD->isInvalidDecl() to true if there was an error.
 ///
 /// \returns true if the function declaration is a redeclaration.
 bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
                                     LookupResult &Previous,
-                                    bool IsExplicitSpecialization) {
+                                    bool IsMemberSpecialization) {
   assert(!NewFD->getReturnType()->isVariablyModifiedType() &&
          "Variably modified return types are not handled here");
 
@@ -9099,7 +9099,7 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
 
       // If this is an explicit specialization of a member that is a function
       // template, mark it as a member specialization.
-      if (IsExplicitSpecialization &&
+      if (IsMemberSpecialization &&
           NewTemplateDecl->getInstantiatedFromMemberTemplate()) {
         NewTemplateDecl->setMemberSpecialization();
         assert(OldTemplateDecl->isMemberSpecialization());
@@ -9807,16 +9807,33 @@ QualType Sema::deduceVarTypeFromInitializer(VarDecl *VDecl,
   DeducedType *Deduced = Type->getContainedDeducedType();
   assert(Deduced && "deduceVarTypeFromInitializer for non-deduced type");
 
+  ArrayRef<Expr*> DeduceInits = Init ? ArrayRef<Expr*>(Init) : None;
+  if (DirectInit) {
+    if (auto *PL = dyn_cast_or_null<ParenListExpr>(Init))
+      DeduceInits = PL->exprs();
+  }
+
   if (isa<DeducedTemplateSpecializationType>(Deduced)) {
-    Diag(Init->getLocStart(), diag::err_deduced_class_template_not_supported);
+    assert(VDecl && "non-auto type for init capture deduction?");
+    InitializedEntity Entity = InitializedEntity::InitializeVariable(VDecl);
+    InitializationKind Kind = InitializationKind::CreateForInit(
+        VDecl->getLocation(), DirectInit, Init);
+    // FIXME: Initialization should not be taking a mutable list of inits. 
+    SmallVector<Expr*, 8> InitsCopy(DeduceInits.begin(), DeduceInits.end());
+    return DeduceTemplateSpecializationFromInitializer(TSI, Entity, Kind,
+                                                       InitsCopy);
+  }
+
+  // C++11 [dcl.spec.auto]p3
+  if (!Init) {
+    assert(VDecl && "no init for init capture deduction?");
+    Diag(VDecl->getLocation(), diag::err_auto_var_requires_init)
+      << VDecl->getDeclName() << Type;
     return QualType();
   }
 
-  ArrayRef<Expr *> DeduceInits = Init;
   if (DirectInit) {
-    if (auto *PL = dyn_cast<ParenListExpr>(Init))
-      DeduceInits = PL->exprs();
-    else if (auto *IL = dyn_cast<InitListExpr>(Init))
+    if (auto *IL = dyn_cast<InitListExpr>(Init))
       DeduceInits = IL->inits();
   }
 
@@ -9902,6 +9919,36 @@ QualType Sema::deduceVarTypeFromInitializer(VarDecl *VDecl,
   return DeducedType;
 }
 
+bool Sema::DeduceVariableDeclarationType(VarDecl *VDecl, bool DirectInit,
+                                         Expr *Init) {
+  QualType DeducedType = deduceVarTypeFromInitializer(
+      VDecl, VDecl->getDeclName(), VDecl->getType(), VDecl->getTypeSourceInfo(),
+      VDecl->getSourceRange(), DirectInit, Init);
+  if (DeducedType.isNull()) {
+    VDecl->setInvalidDecl();
+    return true;
+  }
+
+  VDecl->setType(DeducedType);
+  assert(VDecl->isLinkageValid());
+
+  // In ARC, infer lifetime.
+  if (getLangOpts().ObjCAutoRefCount && inferObjCARCLifetime(VDecl))
+    VDecl->setInvalidDecl();
+
+  // If this is a redeclaration, check that the type we just deduced matches
+  // the previously declared type.
+  if (VarDecl *Old = VDecl->getPreviousDecl()) {
+    // We never need to merge the type, because we cannot form an incomplete
+    // array of auto, nor deduce such a type.
+    MergeVarDeclTypes(VDecl, Old, /*MergeTypeWithPrevious*/ false);
+  }
+
+  // Check the deduced type is valid for a variable declaration.
+  CheckVariableDeclarationType(VDecl);
+  return VDecl->isInvalidDecl();
+}
+
 /// AddInitializerToDecl - Adds the initializer Init to the
 /// declaration dcl. If DirectInit is true, this is C++ direct
 /// initialization rather than copy initialization.
@@ -9941,32 +9988,7 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
     }
     Init = Res.get();
 
-    QualType DeducedType = deduceVarTypeFromInitializer(
-        VDecl, VDecl->getDeclName(), VDecl->getType(),
-        VDecl->getTypeSourceInfo(), VDecl->getSourceRange(), DirectInit, Init);
-    if (DeducedType.isNull()) {
-      RealDecl->setInvalidDecl();
-      return;
-    }
-
-    VDecl->setType(DeducedType);
-    assert(VDecl->isLinkageValid());
-
-    // In ARC, infer lifetime.
-    if (getLangOpts().ObjCAutoRefCount && inferObjCARCLifetime(VDecl))
-      VDecl->setInvalidDecl();
-
-    // If this is a redeclaration, check that the type we just deduced matches
-    // the previously declared type.
-    if (VarDecl *Old = VDecl->getPreviousDecl()) {
-      // We never need to merge the type, because we cannot form an incomplete
-      // array of auto, nor deduce such a type.
-      MergeVarDeclTypes(VDecl, Old, /*MergeTypeWithPrevious*/ false);
-    }
-
-    // Check the deduced type is valid for a variable declaration.
-    CheckVariableDeclarationType(VDecl);
-    if (VDecl->isInvalidDecl())
+    if (DeduceVariableDeclarationType(VDecl, DirectInit, Init))
       return;
   }
 
@@ -10085,15 +10107,8 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
       }
 
     InitializedEntity Entity = InitializedEntity::InitializeVariable(VDecl);
-    InitializationKind Kind =
-        DirectInit
-            ? CXXDirectInit
-                  ? InitializationKind::CreateDirect(VDecl->getLocation(),
-                                                     Init->getLocStart(),
-                                                     Init->getLocEnd())
-                  : InitializationKind::CreateDirectList(VDecl->getLocation())
-            : InitializationKind::CreateCopy(VDecl->getLocation(),
-                                             Init->getLocStart());
+    InitializationKind Kind = InitializationKind::CreateForInit(
+        VDecl->getLocation(), DirectInit, Init);
 
     MultiExprArg Args = Init;
     if (CXXDirectInit)
@@ -10417,13 +10432,9 @@ void Sema::ActOnUninitializedDecl(Decl *RealDecl) {
       return;
     }
 
-    // C++11 [dcl.spec.auto]p3
-    if (Type->isUndeducedType()) {
-      Diag(Var->getLocation(), diag::err_auto_var_requires_init)
-        << Var->getDeclName() << Type;
-      Var->setInvalidDecl();
+    if (Type->isUndeducedType() &&
+        DeduceVariableDeclarationType(Var, false, nullptr))
       return;
-    }
 
     // C++11 [class.static.data]p3: A static data member can be declared with
     // the constexpr specifier; if so, its declaration shall specify
@@ -12832,8 +12843,8 @@ Decl *Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK,
   TagTypeKind Kind = TypeWithKeyword::getTagTypeKindForTypeSpec(TagSpec);
   bool ScopedEnum = ScopedEnumKWLoc.isValid();
 
-  // FIXME: Check explicit specializations more carefully.
-  bool isExplicitSpecialization = false;
+  // FIXME: Check member specializations more carefully.
+  bool isMemberSpecialization = false;
   bool Invalid = false;
 
   // We only need to do this matching if we have template parameters
@@ -12844,7 +12855,7 @@ Decl *Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK,
     if (TemplateParameterList *TemplateParams =
             MatchTemplateParametersToScopeSpecifier(
                 KWLoc, NameLoc, SS, nullptr, TemplateParameterLists,
-                TUK == TUK_Friend, isExplicitSpecialization, Invalid)) {
+                TUK == TUK_Friend, isMemberSpecialization, Invalid)) {
       if (Kind == TTK_Enum) {
         Diag(KWLoc, diag::err_enum_template);
         return nullptr;
@@ -12871,7 +12882,7 @@ Decl *Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK,
         // The "template<>" header is extraneous.
         Diag(TemplateParams->getTemplateLoc(), diag::err_template_tag_noparams)
           << TypeWithKeyword::getTagTypeKindName(Kind) << Name;
-        isExplicitSpecialization = true;
+        isMemberSpecialization = true;
       }
     }
   }
@@ -13191,7 +13202,7 @@ Decl *Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK,
     if (auto *Shadow = dyn_cast<UsingShadowDecl>(DirectPrevDecl)) {
       auto *OldTag = dyn_cast<TagDecl>(PrevDecl);
       if (SS.isEmpty() && TUK != TUK_Reference && TUK != TUK_Friend &&
-          isDeclInScope(Shadow, SearchDC, S, isExplicitSpecialization) &&
+          isDeclInScope(Shadow, SearchDC, S, isMemberSpecialization) &&
           !(OldTag && isAcceptableTagRedeclContext(
                           *this, OldTag->getDeclContext(), SearchDC))) {
         Diag(KWLoc, diag::err_using_decl_conflict_reverse);
@@ -13211,7 +13222,7 @@ Decl *Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK,
       // rementions the tag), reuse the decl.
       if (TUK == TUK_Reference || TUK == TUK_Friend ||
           isDeclInScope(DirectPrevDecl, SearchDC, S,
-                        SS.isNotEmpty() || isExplicitSpecialization)) {
+                        SS.isNotEmpty() || isMemberSpecialization)) {
         // Make sure that this wasn't declared as an enum and now used as a
         // struct or something similar.
         if (!isAcceptableTagRedeclaration(PrevTagDecl, Kind,
@@ -13316,7 +13327,7 @@ Decl *Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK,
               // is from an implicit instantiation, don't emit an error
               // here; we'll catch this in the general case below.
               bool IsExplicitSpecializationAfterInstantiation = false;
-              if (isExplicitSpecialization) {
+              if (isMemberSpecialization) {
                 if (CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(Def))
                   IsExplicitSpecializationAfterInstantiation =
                     RD->getTemplateSpecializationKind() !=
@@ -13410,7 +13421,7 @@ Decl *Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK,
 
       // Otherwise, only diagnose if the declaration is in scope.
       } else if (!isDeclInScope(DirectPrevDecl, SearchDC, S,
-                                SS.isNotEmpty() || isExplicitSpecialization)) {
+                                SS.isNotEmpty() || isMemberSpecialization)) {
         // do nothing
 
       // Diagnose implicit declarations introduced by elaborated types.
@@ -13542,7 +13553,7 @@ CreateNewDecl:
       // for explicit specializations, because they have similar checking
       // (with more specific diagnostics) in the call to
       // CheckMemberSpecialization, below.
-      if (!isExplicitSpecialization &&
+      if (!isMemberSpecialization &&
           (TUK == TUK_Definition || TUK == TUK_Declaration) &&
           diagnoseQualifiedDeclaration(SS, DC, OrigName, Loc))
         Invalid = true;
@@ -13573,7 +13584,7 @@ CreateNewDecl:
   }
 
   if (ModulePrivateLoc.isValid()) {
-    if (isExplicitSpecialization)
+    if (isMemberSpecialization)
       Diag(New->getLocation(), diag::err_module_private_specialization)
         << 2
         << FixItHint::CreateRemoval(ModulePrivateLoc);
@@ -13586,7 +13597,7 @@ CreateNewDecl:
 
   // If this is a specialization of a member class (of a class template),
   // check the specialization.
-  if (isExplicitSpecialization && CheckMemberSpecialization(New, Previous))
+  if (isMemberSpecialization && CheckMemberSpecialization(New, Previous))
     Invalid = true;
 
   // If we're declaring or defining a tag in function prototype scope in C,

@@ -46,7 +46,7 @@
               built with a custom version of clang, do:
             </p>
             <code>
-              <br />&gt; cmake -DLLDB_TEST_ARGS="-A i386 -C /path/to/custom/clang" -G Ninja
+              <br />&gt; cmake -DLLDB_TEST_USER_ARGS="-A i386 -C /path/to/custom/clang" -G Ninja
               <br />&gt; ninja check-lldb
             </code>
             <p>Note that multiple -A and -C flags can be specified to <tt>LLDB_TEST_USER_ARGS</tt>.</p>

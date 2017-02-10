@@ -209,52 +209,27 @@ unsigned getAddressableNumSGPRs(const FeatureBitset &Features) {
 }
 
 unsigned getMinNumSGPRs(const FeatureBitset &Features, unsigned WavesPerEU) {
-  IsaVersion Version = getIsaVersion(Features);
-  if (Version.Major >= 8) {
-    switch (WavesPerEU) {
-      case 0:  return 0;
-      case 10: return 0;
-      case 9:  return 0;
-      case 8:  return 81;
-      default: return 97;
-    }
-  } else {
-    switch (WavesPerEU) {
-      case 0:  return 0;
-      case 10: return 0;
-      case 9:  return 49;
-      case 8:  return 57;
-      case 7:  return 65;
-      case 6:  return 73;
-      case 5:  return 81;
-      default: return 97;
-    }
-  }
+  assert(WavesPerEU != 0);
+
+  if (WavesPerEU >= getMaxWavesPerEU(Features))
+    return 0;
+  unsigned MinNumSGPRs =
+      alignDown(getTotalNumSGPRs(Features) / (WavesPerEU + 1),
+                getSGPRAllocGranule(Features)) + 1;
+  return std::min(MinNumSGPRs, getAddressableNumSGPRs(Features));
 }
 
 unsigned getMaxNumSGPRs(const FeatureBitset &Features, unsigned WavesPerEU,
                         bool Addressable) {
+  assert(WavesPerEU != 0);
+
   IsaVersion Version = getIsaVersion(Features);
-  if (Version.Major >= 8) {
-    switch (WavesPerEU) {
-      case 0:  return 80;
-      case 10: return 80;
-      case 9:  return 80;
-      case 8:  return 96;
-      default: return Addressable ? getAddressableNumSGPRs(Features) : 112;
-    }
-  } else {
-    switch (WavesPerEU) {
-      case 0:  return 48;
-      case 10: return 48;
-      case 9:  return 56;
-      case 8:  return 64;
-      case 7:  return 72;
-      case 6:  return 80;
-      case 5:  return 96;
-      default: return getAddressableNumSGPRs(Features);
-    }
-  }
+  unsigned MaxNumSGPRs = alignDown(getTotalNumSGPRs(Features) / WavesPerEU,
+                                   getSGPRAllocGranule(Features));
+  unsigned AddressableNumSGPRs = getAddressableNumSGPRs(Features);
+  if (Version.Major >= 8 && !Addressable)
+    AddressableNumSGPRs = 112;
+  return std::min(MaxNumSGPRs, AddressableNumSGPRs);
 }
 
 unsigned getVGPRAllocGranule(const FeatureBitset &Features) {
@@ -274,35 +249,23 @@ unsigned getAddressableNumVGPRs(const FeatureBitset &Features) {
 }
 
 unsigned getMinNumVGPRs(const FeatureBitset &Features, unsigned WavesPerEU) {
-  switch (WavesPerEU) {
-    case 0:  return 0;
-    case 10: return 0;
-    case 9:  return 25;
-    case 8:  return 29;
-    case 7:  return 33;
-    case 6:  return 37;
-    case 5:  return 41;
-    case 4:  return 49;
-    case 3:  return 65;
-    case 2:  return 85;
-    default: return 129;
-  }
+  assert(WavesPerEU != 0);
+
+  if (WavesPerEU >= getMaxWavesPerEU(Features))
+    return 0;
+  unsigned MinNumVGPRs =
+      alignDown(getTotalNumVGPRs(Features) / (WavesPerEU + 1),
+                getVGPRAllocGranule(Features)) + 1;
+  return std::min(MinNumVGPRs, getAddressableNumVGPRs(Features));
 }
 
 unsigned getMaxNumVGPRs(const FeatureBitset &Features, unsigned WavesPerEU) {
-  switch (WavesPerEU) {
-    case 0:  return 24;
-    case 10: return 24;
-    case 9:  return 28;
-    case 8:  return 32;
-    case 7:  return 36;
-    case 6:  return 40;
-    case 5:  return 48;
-    case 4:  return 64;
-    case 3:  return 84;
-    case 2:  return 128;
-    default: return getTotalNumVGPRs(Features);
-  }
+  assert(WavesPerEU != 0);
+
+  unsigned MaxNumVGPRs = alignDown(getTotalNumVGPRs(Features) / WavesPerEU,
+                                   getVGPRAllocGranule(Features));
+  unsigned AddressableNumVGPRs = getAddressableNumVGPRs(Features);
+  return std::min(MaxNumVGPRs, AddressableNumVGPRs);
 }
 
 } // namespace IsaInfo

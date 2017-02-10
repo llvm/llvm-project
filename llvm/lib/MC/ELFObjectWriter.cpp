@@ -1157,8 +1157,7 @@ void ELFObjectWriter::writeSection(const SectionIndexMapTy &SectionIndexMap,
     break;
   }
 
-  if (TargetObjectWriter->getEMachine() == ELF::EM_ARM &&
-      Section.getType() == ELF::SHT_ARM_EXIDX)
+  if (Section.getFlags() & ELF::SHF_LINK_ORDER)
     sh_link = SectionIndexMap.lookup(Section.getAssociatedSection());
 
   WriteSecHdrEntry(StrTabBuilder.getOffset(Section.getSectionName()),

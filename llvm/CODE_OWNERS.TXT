@@ -176,9 +176,8 @@ E: alexei.starovoitov@gmail.com
 D: BPF backend
 
 N: Tom Stellard
-E: thomas.stellard@amd.com
-E: mesa-dev@lists.freedesktop.org
-D: Release manager for the 3.5 and 3.6 branches, R600 Backend, libclc
+E: tstellar@redhat.com
+D: Stable release management (x.y.[1-9] releases), AMDGPU Backend, libclc
 
 N: Evgeniy Stepanov
 E: eugenis@google.com
