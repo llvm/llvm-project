@@ -221,4 +221,3 @@ def make_target_info(full_config):
     if target_system == 'Linux':   return LinuxLocalTI(full_config)
     if target_system == 'Windows': return WindowsLocalTI(full_config)
     return DefaultTargetInfo(full_config)
-

@@ -52,7 +52,8 @@ public:
 
   void Delete();
 
-  bool Enable(lldb::StreamSP &log_stream_sp, uint32_t log_options,
+  bool Enable(const std::shared_ptr<llvm::raw_ostream> &log_stream_sp,
+              uint32_t log_options,
               lldb_private::Stream
                   *feedback_strm, // Feedback stream for argument errors etc
               const char **categories) override; // The categories to enable

@@ -10,14 +10,9 @@
 #ifndef utility_UriParser_h_
 #define utility_UriParser_h_
 
-// C Includes
-// C++ Includes
-
-// Other libraries and framework includes
 #include "llvm/ADT/StringRef.h"
 
-// Project includes
-
+namespace lldb_private {
 class UriParser {
 public:
   // Parses
@@ -32,5 +27,6 @@ public:
                     llvm::StringRef &hostname, int &port,
                     llvm::StringRef &path);
 };
+}
 
 #endif // utility_UriParser_h_

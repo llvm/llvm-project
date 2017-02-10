@@ -11,7 +11,7 @@
 diff - A set of functions for diff-ing two symbol lists.
 """
 
-from sym_check import util
+from libcxx.sym_check import util
 
 
 def _symbol_difference(lhs, rhs):

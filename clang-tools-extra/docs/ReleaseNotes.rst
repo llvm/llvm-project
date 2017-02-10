@@ -11,8 +11,8 @@ Written by the `LLVM Team <http://llvm.org/>`_
 .. warning::
 
    These are in-progress notes for the upcoming Extra Clang Tools 5 release.
-   You may prefer the `Extra Clang Tools 4 Release Notes
-   <http://llvm.org/releases/4.0.0/tools/clang/tools/extra/docs/ReleaseNotes.html>`_.
+   Release notes for previous releases can be found on
+   `the Download Page <http://releases.llvm.org/download.html>`_.
 
 Introduction
 ============

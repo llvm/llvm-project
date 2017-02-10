@@ -8,7 +8,6 @@
 //===----------------------------------------------------------------------===//
 //
 // UNSUPPORTED: c++98, c++03, c++11, c++14
-// XFAIL: ubsan
 // <numeric>
 
 // template<class _M, class _N>
@@ -132,8 +131,9 @@ int main()
 
 //  LWG#2837
     {
-        auto res = std::lcm((int64_t)1234, (int32_t)-2147483648);
-        static_assert( std::is_same<decltype(res), std::common_type<int64_t, int32_t>::type>::value, "");
-        assert(res == -1324997410816LL);
+    auto res1 = std::lcm((int64_t)1234, (int32_t)-2147483648);
+    (void) std::lcm<int, unsigned long>(INT_MIN, 2);	// this used to trigger UBSAN
+    static_assert( std::is_same<decltype(res1), std::common_type<int64_t, int32_t>::type>::value, "");
+	assert(res1 == 1324997410816LL);
     }
 }

@@ -15,10 +15,11 @@
 using namespace clang;
 using namespace clangd;
 
-void Handler::writeMessage(const Twine &Message) {
+void JSONOutput::writeMessage(const Twine &Message) {
   llvm::SmallString<128> Storage;
   StringRef M = Message.toStringRef(Storage);
 
+  std::lock_guard<std::mutex> Guard(StreamMutex);
   // Log without headers.
   Logs << "--> " << M << '\n';
   Logs.flush();
@@ -29,7 +30,7 @@ void Handler::writeMessage(const Twine &Message) {
 }
 
 void Handler::handleMethod(llvm::yaml::MappingNode *Params, StringRef ID) {
-  Logs << "Method ignored.\n";
+  Output.logs() << "Method ignored.\n";
   // Return that this method is unsupported.
   writeMessage(
       R"({"jsonrpc":"2.0","id":)" + ID +
@@ -37,7 +38,7 @@ void Handler::handleMethod(llvm::yaml::MappingNode *Params, StringRef ID) {
 }
 
 void Handler::handleNotification(llvm::yaml::MappingNode *Params) {
-  Logs << "Notification ignored.\n";
+  Output.logs() << "Notification ignored.\n";
 }
 
 void JSONRPCDispatcher::registerHandler(StringRef Method,

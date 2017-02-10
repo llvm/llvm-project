@@ -17,8 +17,6 @@ import lit.Test        # pylint: disable=import-error
 import lit.TestRunner  # pylint: disable=import-error
 from lit.TestRunner import ParserKind, IntegratedTestKeywordParser  \
     # pylint: disable=import-error
-import lit.util        # pylint: disable=import-error
-
 
 from libcxx.test.executor import LocalExecutor as LocalExecutor
 import libcxx.util
@@ -164,7 +162,7 @@ class LibcxxTestFormat(object):
         exec_path = tmpBase + '.exe'
         object_path = tmpBase + '.o'
         # Create the output directory if it does not already exist.
-        lit.util.mkdir_p(os.path.dirname(tmpBase))
+        libcxx.util.mkdir_p(os.path.dirname(tmpBase))
         try:
             # Compile the test
             cmd, out, err, rc = test_cxx.compileLinkTwoSteps(

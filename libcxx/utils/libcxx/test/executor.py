@@ -11,8 +11,7 @@ import platform
 import os
 
 from libcxx.test import tracing
-
-from lit.util import executeCommand  # pylint: disable=import-error
+from libcxx.util import executeCommand
 
 
 class Executor(object):
