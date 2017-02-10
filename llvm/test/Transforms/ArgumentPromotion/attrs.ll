@@ -1,4 +1,5 @@
 ; RUN: opt < %s -argpromotion -S | FileCheck %s
+; RUN: opt < %s -passes=argpromotion -S | FileCheck %s
 
 %struct.ss = type { i32, i64 }
 

@@ -743,6 +743,7 @@ void ASTDeclReader::VisitFunctionDecl(FunctionDecl *FD) {
   FD->SClass = (StorageClass)Record.readInt();
   FD->IsInline = Record.readInt();
   FD->IsInlineSpecified = Record.readInt();
+  FD->IsExplicitSpecified = Record.readInt();
   FD->IsVirtualAsWritten = Record.readInt();
   FD->IsPure = Record.readInt();
   FD->HasInheritedPrototype = Record.readInt();
@@ -1809,8 +1810,6 @@ void ASTDeclReader::VisitCXXConstructorDecl(CXXConstructorDecl *D) {
   }
 
   VisitCXXMethodDecl(D);
-
-  D->IsExplicitSpecified = Record.readInt();
 }
 
 void ASTDeclReader::VisitCXXDestructorDecl(CXXDestructorDecl *D) {
@@ -1826,7 +1825,6 @@ void ASTDeclReader::VisitCXXDestructorDecl(CXXDestructorDecl *D) {
 
 void ASTDeclReader::VisitCXXConversionDecl(CXXConversionDecl *D) {
   VisitCXXMethodDecl(D);
-  D->IsExplicitSpecified = Record.readInt();
 }
 
 void ASTDeclReader::VisitImportDecl(ImportDecl *D) {

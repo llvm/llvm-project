@@ -63,6 +63,8 @@ def main():
                       action='append', default=[],
                       help='Additional argument to prepend to the compiler '
                       'command line.')
+  parser.add_argument('-quiet', action='store_true', default=False,
+                      help='Run clang-tidy in quiet mode')
   clang_tidy_args = []
   argv = sys.argv[1:]
   if '--' in argv:
@@ -120,6 +122,8 @@ def main():
     command.append('-fix')
   if args.checks != '':
     command.append('-checks=' + quote + args.checks + quote)
+  if args.quiet:
+    command.append('-quiet')
   command.extend(lines_by_file.keys())
   for arg in args.extra_arg:
       command.append('-extra-arg=%s' % arg)

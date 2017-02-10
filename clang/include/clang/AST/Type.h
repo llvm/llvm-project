@@ -4115,7 +4115,10 @@ class DeducedType : public Type {
 protected:
   DeducedType(TypeClass TC, QualType DeducedAsType, bool IsDependent,
               bool IsInstantiationDependent, bool ContainsParameterPack)
-      : Type(TC, DeducedAsType.isNull() ? QualType(this, 0) : DeducedAsType,
+      : Type(TC,
+             // FIXME: Retain the sugared deduced type?
+             DeducedAsType.isNull() ? QualType(this, 0)
+                                    : DeducedAsType.getCanonicalType(),
              IsDependent, IsInstantiationDependent,
              /*VariablyModified=*/false, ContainsParameterPack) {
     if (!DeducedAsType.isNull()) {

@@ -2798,7 +2798,8 @@ Error Process::Launch(ProcessLaunchInfo &launch_info) {
             if (system_runtime)
               system_runtime->DidLaunch();
 
-            LoadOperatingSystemPlugin(false);
+            if (!m_os_ap)
+                LoadOperatingSystemPlugin(false);
 
             // Note, the stop event was consumed above, but not handled. This
             // was done
@@ -2862,7 +2863,9 @@ Error Process::LoadCore() {
     if (system_runtime)
       system_runtime->DidAttach();
 
-    m_os_ap.reset(OperatingSystem::FindPlugin(this, nullptr));
+    if (!m_os_ap)
+      LoadOperatingSystemPlugin(false);
+
     // We successfully loaded a core file, now pretend we stopped so we can
     // show all of the threads in the core file and explore the crashed
     // state.
@@ -3205,7 +3208,8 @@ void Process::CompleteAttach() {
     }
   }
 
-  m_os_ap.reset(OperatingSystem::FindPlugin(this, nullptr));
+  if (!m_os_ap)
+    LoadOperatingSystemPlugin(false);
   // Figure out which one is the executable, and set that in our target:
   const ModuleList &target_modules = GetTarget().GetImages();
   std::lock_guard<std::recursive_mutex> guard(target_modules.GetMutex());

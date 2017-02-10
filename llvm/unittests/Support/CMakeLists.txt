@@ -64,4 +64,4 @@ add_llvm_unittest(SupportTests
   )
 
 # ManagedStatic.cpp uses <pthread>.
-target_link_libraries(SupportTests ${PTHREAD_LIB})
+target_link_libraries(SupportTests ${LLVM_PTHREAD_LIB})

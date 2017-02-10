@@ -26,7 +26,6 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DerivedTypes.h"
-#include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
@@ -52,7 +51,7 @@ static cl::opt<bool> EnableSelectionDAGSP("enable-selectiondag-sp",
 
 char StackProtector::ID = 0;
 INITIALIZE_TM_PASS(StackProtector, "stack-protector", "Insert stack protectors",
-                   false, true)
+                false, true)
 
 FunctionPass *llvm::createStackProtectorPass(const TargetMachine *TM) {
   return new StackProtector(TM);
@@ -224,8 +223,6 @@ bool StackProtector::RequiresStackProtector() {
     return false;
 
   if (F->hasFnAttribute(Attribute::StackProtectReq)) {
-    F->getContext().diagnose(
-        DiagnosticInfoSSP(*F, DiagnosticInfoSSP::SSPReason::Attribute));
     NeedsProtector = true;
     Strong = true; // Use the same heuristic as strong to determine SSPLayout
   } else if (F->hasFnAttribute(Attribute::StackProtectStrong))
@@ -244,21 +241,15 @@ bool StackProtector::RequiresStackProtector() {
               // A call to alloca with size >= SSPBufferSize requires
               // stack protectors.
               Layout.insert(std::make_pair(AI, SSPLK_LargeArray));
-              F->getContext().diagnose(
-                  DiagnosticInfoSSP(*F, DiagnosticInfoSSP::SSPReason::Alloca));
               NeedsProtector = true;
             } else if (Strong) {
               // Require protectors for all alloca calls in strong mode.
               Layout.insert(std::make_pair(AI, SSPLK_SmallArray));
-              F->getContext().diagnose(
-                  DiagnosticInfoSSP(*F, DiagnosticInfoSSP::SSPReason::Alloca));
               NeedsProtector = true;
             }
           } else {
             // A call to alloca with a variable size requires protectors.
             Layout.insert(std::make_pair(AI, SSPLK_LargeArray));
-            F->getContext().diagnose(
-                DiagnosticInfoSSP(*F, DiagnosticInfoSSP::SSPReason::Alloca));
             NeedsProtector = true;
           }
           continue;
@@ -268,8 +259,6 @@ bool StackProtector::RequiresStackProtector() {
         if (ContainsProtectableArray(AI->getAllocatedType(), IsLarge, Strong)) {
           Layout.insert(std::make_pair(AI, IsLarge ? SSPLK_LargeArray
                                                    : SSPLK_SmallArray));
-          F->getContext().diagnose(DiagnosticInfoSSP(
-              *F, DiagnosticInfoSSP::SSPReason::BufferOrStruct));
           NeedsProtector = true;
           continue;
         }
@@ -277,8 +266,6 @@ bool StackProtector::RequiresStackProtector() {
         if (Strong && HasAddressTaken(AI)) {
           ++NumAddrTaken;
           Layout.insert(std::make_pair(AI, SSPLK_AddrOf));
-          F->getContext().diagnose(DiagnosticInfoSSP(
-              *F, DiagnosticInfoSSP::SSPReason::AddressTaken));
           NeedsProtector = true;
         }
       }
@@ -476,31 +463,4 @@ BasicBlock *StackProtector::CreateFailBB() {
 
 bool StackProtector::shouldEmitSDCheck(const BasicBlock &BB) const {
   return HasPrologue && !HasIRCheck && dyn_cast<ReturnInst>(BB.getTerminator());
-}
-
-void DiagnosticInfoSSP::print(DiagnosticPrinter &DP) const {
-  std::string Str;
-  raw_string_ostream OS(Str);
-
-  StringRef ReasonStr;
-  switch (Reason())
-  {
-  case Alloca:
-      ReasonStr = "a call to alloca or use of a variable length array";
-      break;
-  case BufferOrStruct:
-      ReasonStr = "a stack allocated buffer or struct containing a buffer";
-      break;
-  case AddressTaken:
-      ReasonStr = "the address of a local variable being taken";
-      break;
-  case Attribute:
-      ReasonStr = "a function attribute or command-line switch";
-      break;
-  }
-
-  OS << getLocationStr() << ": SSP applied to function " << Func.getName()
-     << " due to " << ReasonStr << '\n';
-  OS.flush();
-  DP << Str;
 }

@@ -32,10 +32,12 @@ RUN: llvm-ar --format=bsd rc %t.a 0123456789abcde 0123456789abcdef
 RUN: cat %t.a | FileCheck -strict-whitespace --check-prefix=BSD %s
 
 BSD:      !<arch>
-BSD-NEXT: #1/20           0           0     0     644     24        `
-BSD-NEXT: 0123456789abcde{{.....}}bar.
-BSD-SAME: #1/16           0           0     0     644     20        `
-BSD-NEXT: 0123456789abcdefzed.
+BSD-NEXT: #1/20           0           0     0     644     28        `
+Each [[:space:]] matches a newline.  We explicitly match 3 newlines, as the
+fourth newline is implicitly consumed by FileCheck and cannot be matched.
+BSD-NEXT: 0123456789abcde{{.....}}bar.{{[[:space:]][[:space:]][[:space:]]}}
+BSD-NEXT: #1/20           0           0     0     644     28        `
+BSD-NEXT: 0123456789abcdef{{....}}zed.
 
 RUN: rm -f test.a
 RUN: llvm-ar --format=gnu rcT test.a 0123456789abcde 0123456789abcdef

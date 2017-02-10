@@ -1,4 +1,4 @@
-//===-- llvm/MC/MCAsmLexer.h - Abstract Asm Lexer Interface -----*- C++ -*-===//
+//===- llvm/MC/MCAsmLexer.h - Abstract Asm Lexer Interface ------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -14,10 +14,12 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/Compiler.h"
-#include "llvm/Support/DataTypes.h"
 #include "llvm/Support/SMLoc.h"
-#include <utility>
+#include <algorithm>
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
+#include <string>
 
 namespace llvm {
 
@@ -76,7 +78,7 @@ private:
   APInt IntVal;
 
 public:
-  AsmToken() {}
+  AsmToken() = default;
   AsmToken(TokenKind Kind, StringRef Str, APInt IntVal)
       : Kind(Kind), Str(Str), IntVal(std::move(IntVal)) {}
   AsmToken(TokenKind Kind, StringRef Str, int64_t IntVal = 0)
@@ -132,7 +134,7 @@ public:
 /// it is lexed.
 class AsmCommentConsumer {
 public:
-  virtual ~AsmCommentConsumer() {};
+  virtual ~AsmCommentConsumer() = default;
 
   /// Callback function for when a comment is lexed. Loc is the start of the
   /// comment text (excluding the comment-start marker). CommentText is the text
@@ -152,14 +154,12 @@ class MCAsmLexer {
   SMLoc ErrLoc;
   std::string Err;
 
-  MCAsmLexer(const MCAsmLexer &) = delete;
-  void operator=(const MCAsmLexer &) = delete;
 protected: // Can only create subclasses.
-  const char *TokStart;
-  bool SkipSpace;
+  const char *TokStart = nullptr;
+  bool SkipSpace = true;
   bool AllowAtInIdentifier;
-  bool IsAtStartOfStatement;
-  AsmCommentConsumer *CommentConsumer;
+  bool IsAtStartOfStatement = true;
+  AsmCommentConsumer *CommentConsumer = nullptr;
 
   MCAsmLexer();
 
@@ -171,6 +171,8 @@ protected: // Can only create subclasses.
   }
 
 public:
+  MCAsmLexer(const MCAsmLexer &) = delete;
+  MCAsmLexer &operator=(const MCAsmLexer &) = delete;
   virtual ~MCAsmLexer();
 
   /// Consume the next token from the input stream and return it.
@@ -255,6 +257,6 @@ public:
   }
 };
 
-} // End llvm namespace
+} // end namespace llvm
 
-#endif
+#endif // LLVM_MC_MCPARSER_MCASMLEXER_H

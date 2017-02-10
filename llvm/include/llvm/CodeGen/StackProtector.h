@@ -19,7 +19,6 @@
 
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/Triple.h"
-#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/ValueMap.h"
 #include "llvm/Pass.h"
@@ -134,36 +133,6 @@ public:
   void adjustForColoring(const AllocaInst *From, const AllocaInst *To);
 
   bool runOnFunction(Function &Fn) override;
-};
-
-/// Diagnostic information for why SSP was applied.
-class DiagnosticInfoSSP : public DiagnosticInfoWithDebugLocBase {
-public:
-  enum SSPReason {
-    Alloca = 0,
-    BufferOrStruct = 1,
-    AddressTaken = 2,
-    Attribute = 3,
-    LastUsedValue = 3
-  };
-
-  /// \p Fn is the function where the diagnostic is being emitted. \p Reason is
-  /// an enum value representing why the function has stack protection.
-  DiagnosticInfoSSP(const Function &Fn, SSPReason Reason)
-      : DiagnosticInfoWithDebugLocBase(DK_SSPReason, DS_Remark, Fn, DebugLoc()),
-        Func(Fn), Why(Reason) {}
-
-  static bool classof(const DiagnosticInfo *DI) {
-    return DI->getKind() == DK_SSPReason;
-  }
-
-  void print(DiagnosticPrinter &DP) const override;
-
-  SSPReason Reason() const { return Why; }
-
-private:
-  const Function &Func;
-  const SSPReason Why;
 };
 } // end namespace llvm
 

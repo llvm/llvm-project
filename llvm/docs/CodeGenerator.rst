@@ -1005,7 +1005,7 @@ The TableGen DAG instruction selector generator reads the instruction patterns
 in the ``.td`` file and automatically builds parts of the pattern matching code
 for your target.  It has the following strengths:
 
-* At compiler-compiler time, it analyzes your instruction patterns and tells you
+* At compiler-compile time, it analyzes your instruction patterns and tells you
   if your patterns make sense or not.
 
 * It can handle arbitrary constraints on operands for the pattern match.  In
@@ -1026,7 +1026,7 @@ for your target.  It has the following strengths:
 
 * Targets can define their own (and rely on built-in) "pattern fragments".
   Pattern fragments are chunks of reusable patterns that get inlined into your
-  patterns during compiler-compiler time.  For example, the integer "``(not
+  patterns during compiler-compile time.  For example, the integer "``(not
   x)``" operation is actually defined as a pattern fragment that expands as
   "``(xor x, -1)``", since the SelectionDAG does not have a native '``not``'
   operation.  Targets can define their own short-hand fragments as they see fit.

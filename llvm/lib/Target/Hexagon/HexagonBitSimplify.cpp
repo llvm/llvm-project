@@ -249,8 +249,6 @@ INITIALIZE_PASS_END(HexagonBitSimplify, "hexbit",
 
 bool HexagonBitSimplify::visitBlock(MachineBasicBlock &B, Transformation &T,
       RegisterSet &AVs) {
-  MachineDomTreeNode *N = MDT->getNode(&B);
-  typedef GraphTraits<MachineDomTreeNode*> GTN;
   bool Changed = false;
 
   if (T.TopDown)
@@ -262,10 +260,9 @@ bool HexagonBitSimplify::visitBlock(MachineBasicBlock &B, Transformation &T,
   RegisterSet NewAVs = AVs;
   NewAVs.insert(Defs);
 
-  for (auto I = GTN::child_begin(N), E = GTN::child_end(N); I != E; ++I) {
-    MachineBasicBlock *SB = (*I)->getBlock();
-    Changed |= visitBlock(*SB, T, NewAVs);
-  }
+  for (auto *DTN : children<MachineDomTreeNode*>(MDT->getNode(&B)))
+    Changed |= visitBlock(*(DTN->getBlock()), T, NewAVs);
+
   if (!T.TopDown)
     Changed |= T.processBlock(B, AVs);
 
@@ -984,9 +981,9 @@ bool DeadCodeElimination::isDead(unsigned R) const {
 
 bool DeadCodeElimination::runOnNode(MachineDomTreeNode *N) {
   bool Changed = false;
-  typedef GraphTraits<MachineDomTreeNode*> GTN;
-  for (auto I = GTN::child_begin(N), E = GTN::child_end(N); I != E; ++I)
-    Changed |= runOnNode(*I);
+
+  for (auto *DTN : children<MachineDomTreeNode*>(N))
+    Changed |= runOnNode(DTN);
 
   MachineBasicBlock *B = N->getBlock();
   std::vector<MachineInstr*> Instrs;

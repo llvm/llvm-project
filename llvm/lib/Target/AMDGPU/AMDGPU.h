@@ -51,6 +51,10 @@ ModulePass *createAMDGPUAnnotateKernelFeaturesPass();
 void initializeAMDGPUAnnotateKernelFeaturesPass(PassRegistry &);
 extern char &AMDGPUAnnotateKernelFeaturesID;
 
+ModulePass *createAMDGPULowerIntrinsicsPass();
+void initializeAMDGPULowerIntrinsicsPass(PassRegistry &);
+extern char &AMDGPULowerIntrinsicsID;
+
 void initializeSIFoldOperandsPass(PassRegistry &);
 extern char &SIFoldOperandsID;
 

@@ -27,7 +27,7 @@ endif()
 
 if (LIBCXX_HAS_ABILIST_CONFIGURATION)
     set(ABILIST_FILE "${CMAKE_CURRENT_LIST_DIR}/${GENERIC_TARGET_TRIPLE}.abilist")
-    set(SYMDIFF_EXE "${LIBCXX_SOURCE_DIR}/utils/sym_check/sym_diff.py")
+    set(SYMDIFF_EXE "${LIBCXX_SOURCE_DIR}/utils/sym_diff.py")
     add_custom_target(check-cxx-abilist
             ${SYMDIFF_EXE} --only-stdlib-symbols --strict ${ABILIST_FILE}
             $<TARGET_SONAME_FILE:cxx_shared>

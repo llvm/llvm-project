@@ -6701,6 +6701,7 @@ static SDValue buildFromShuffleMostly(SDValue Op, SelectionDAG &DAG) {
 
     SDValue ExtractedFromVec = Op.getOperand(i).getOperand(0);
     SDValue ExtIdx = Op.getOperand(i).getOperand(1);
+
     // Quit if non-constant index.
     if (!isa<ConstantSDNode>(ExtIdx))
       return SDValue();
@@ -6731,11 +6732,10 @@ static SDValue buildFromShuffleMostly(SDValue Op, SelectionDAG &DAG) {
 
   VecIn2 = VecIn2.getNode() ? VecIn2 : DAG.getUNDEF(VT);
   SDValue NV = DAG.getVectorShuffle(VT, DL, VecIn1, VecIn2, Mask);
-  for (unsigned i = 0, e = InsertIndices.size(); i != e; ++i) {
-    unsigned Idx = InsertIndices[i];
+
+  for (unsigned Idx : InsertIndices)
     NV = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, VT, NV, Op.getOperand(Idx),
                      DAG.getIntPtrConstant(Idx, DL));
-  }
 
   return NV;
 }
@@ -23800,7 +23800,6 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case X86ISD::INSERTPS:           return "X86ISD::INSERTPS";
   case X86ISD::PINSRB:             return "X86ISD::PINSRB";
   case X86ISD::PINSRW:             return "X86ISD::PINSRW";
-  case X86ISD::MMX_PINSRW:         return "X86ISD::MMX_PINSRW";
   case X86ISD::PSHUFB:             return "X86ISD::PSHUFB";
   case X86ISD::ANDNP:              return "X86ISD::ANDNP";
   case X86ISD::BLENDI:             return "X86ISD::BLENDI";
@@ -28792,12 +28791,13 @@ static SDValue combineExtractVectorElt(SDNode *N, SelectionDAG &DAG,
   if (SDValue NewOp = XFormVExtractWithShuffleIntoLoad(N, DAG, DCI))
     return NewOp;
 
+  EVT VT = N->getValueType(0);
   SDValue InputVector = N->getOperand(0);
   SDLoc dl(InputVector);
+
   // Detect mmx to i32 conversion through a v2i32 elt extract.
   if (InputVector.getOpcode() == ISD::BITCAST && InputVector.hasOneUse() &&
-      N->getValueType(0) == MVT::i32 &&
-      InputVector.getValueType() == MVT::v2i32 &&
+      VT == MVT::i32 && InputVector.getValueType() == MVT::v2i32 &&
       isa<ConstantSDNode>(N->getOperand(1)) &&
       N->getConstantOperandVal(1) == 0) {
     SDValue MMXSrc = InputVector.getOperand(0);
@@ -28806,8 +28806,6 @@ static SDValue combineExtractVectorElt(SDNode *N, SelectionDAG &DAG,
     if (MMXSrc.getValueType() == MVT::x86mmx)
       return DAG.getNode(X86ISD::MMX_MOVD2W, dl, MVT::i32, MMXSrc);
   }
-
-  EVT VT = N->getValueType(0);
 
   if (VT == MVT::i1 && isa<ConstantSDNode>(N->getOperand(1)) &&
       InputVector.getOpcode() == ISD::BITCAST &&

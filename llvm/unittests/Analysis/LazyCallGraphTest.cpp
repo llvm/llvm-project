@@ -225,29 +225,29 @@ TEST(LazyCallGraphTest, BasicGraphFormation) {
   // the IR, and everything in our module is an entry node, so just directly
   // build variables for each node.
   auto I = CG.begin();
-  LazyCallGraph::Node &A1 = (I++)->getNode(CG);
+  LazyCallGraph::Node &A1 = (I++)->getNode();
   EXPECT_EQ("a1", A1.getFunction().getName());
-  LazyCallGraph::Node &A2 = (I++)->getNode(CG);
+  LazyCallGraph::Node &A2 = (I++)->getNode();
   EXPECT_EQ("a2", A2.getFunction().getName());
-  LazyCallGraph::Node &A3 = (I++)->getNode(CG);
+  LazyCallGraph::Node &A3 = (I++)->getNode();
   EXPECT_EQ("a3", A3.getFunction().getName());
-  LazyCallGraph::Node &B1 = (I++)->getNode(CG);
+  LazyCallGraph::Node &B1 = (I++)->getNode();
   EXPECT_EQ("b1", B1.getFunction().getName());
-  LazyCallGraph::Node &B2 = (I++)->getNode(CG);
+  LazyCallGraph::Node &B2 = (I++)->getNode();
   EXPECT_EQ("b2", B2.getFunction().getName());
-  LazyCallGraph::Node &B3 = (I++)->getNode(CG);
+  LazyCallGraph::Node &B3 = (I++)->getNode();
   EXPECT_EQ("b3", B3.getFunction().getName());
-  LazyCallGraph::Node &C1 = (I++)->getNode(CG);
+  LazyCallGraph::Node &C1 = (I++)->getNode();
   EXPECT_EQ("c1", C1.getFunction().getName());
-  LazyCallGraph::Node &C2 = (I++)->getNode(CG);
+  LazyCallGraph::Node &C2 = (I++)->getNode();
   EXPECT_EQ("c2", C2.getFunction().getName());
-  LazyCallGraph::Node &C3 = (I++)->getNode(CG);
+  LazyCallGraph::Node &C3 = (I++)->getNode();
   EXPECT_EQ("c3", C3.getFunction().getName());
-  LazyCallGraph::Node &D1 = (I++)->getNode(CG);
+  LazyCallGraph::Node &D1 = (I++)->getNode();
   EXPECT_EQ("d1", D1.getFunction().getName());
-  LazyCallGraph::Node &D2 = (I++)->getNode(CG);
+  LazyCallGraph::Node &D2 = (I++)->getNode();
   EXPECT_EQ("d2", D2.getFunction().getName());
-  LazyCallGraph::Node &D3 = (I++)->getNode(CG);
+  LazyCallGraph::Node &D3 = (I++)->getNode();
   EXPECT_EQ("d3", D3.getFunction().getName());
   EXPECT_EQ(CG.end(), I);
 
@@ -255,7 +255,7 @@ TEST(LazyCallGraphTest, BasicGraphFormation) {
   // independent of order.
   std::vector<std::string> Nodes;
 
-  for (LazyCallGraph::Edge &E : A1)
+  for (LazyCallGraph::Edge &E : A1.populate())
     Nodes.push_back(E.getFunction().getName());
   std::sort(Nodes.begin(), Nodes.end());
   EXPECT_EQ("a2", Nodes[0]);
@@ -263,41 +263,50 @@ TEST(LazyCallGraphTest, BasicGraphFormation) {
   EXPECT_EQ("c3", Nodes[2]);
   Nodes.clear();
 
-  EXPECT_EQ(A2.end(), std::next(A2.begin()));
-  EXPECT_EQ("a3", A2.begin()->getFunction().getName());
-  EXPECT_EQ(A3.end(), std::next(A3.begin()));
-  EXPECT_EQ("a1", A3.begin()->getFunction().getName());
+  A2.populate();
+  EXPECT_EQ(A2->end(), std::next(A2->begin()));
+  EXPECT_EQ("a3", A2->begin()->getFunction().getName());
+  A3.populate();
+  EXPECT_EQ(A3->end(), std::next(A3->begin()));
+  EXPECT_EQ("a1", A3->begin()->getFunction().getName());
 
-  for (LazyCallGraph::Edge &E : B1)
+  for (LazyCallGraph::Edge &E : B1.populate())
     Nodes.push_back(E.getFunction().getName());
   std::sort(Nodes.begin(), Nodes.end());
   EXPECT_EQ("b2", Nodes[0]);
   EXPECT_EQ("d3", Nodes[1]);
   Nodes.clear();
 
-  EXPECT_EQ(B2.end(), std::next(B2.begin()));
-  EXPECT_EQ("b3", B2.begin()->getFunction().getName());
-  EXPECT_EQ(B3.end(), std::next(B3.begin()));
-  EXPECT_EQ("b1", B3.begin()->getFunction().getName());
+  B2.populate();
+  EXPECT_EQ(B2->end(), std::next(B2->begin()));
+  EXPECT_EQ("b3", B2->begin()->getFunction().getName());
+  B3.populate();
+  EXPECT_EQ(B3->end(), std::next(B3->begin()));
+  EXPECT_EQ("b1", B3->begin()->getFunction().getName());
 
-  for (LazyCallGraph::Edge &E : C1)
+  for (LazyCallGraph::Edge &E : C1.populate())
     Nodes.push_back(E.getFunction().getName());
   std::sort(Nodes.begin(), Nodes.end());
   EXPECT_EQ("c2", Nodes[0]);
   EXPECT_EQ("d2", Nodes[1]);
   Nodes.clear();
 
-  EXPECT_EQ(C2.end(), std::next(C2.begin()));
-  EXPECT_EQ("c3", C2.begin()->getFunction().getName());
-  EXPECT_EQ(C3.end(), std::next(C3.begin()));
-  EXPECT_EQ("c1", C3.begin()->getFunction().getName());
+  C2.populate();
+  EXPECT_EQ(C2->end(), std::next(C2->begin()));
+  EXPECT_EQ("c3", C2->begin()->getFunction().getName());
+  C3.populate();
+  EXPECT_EQ(C3->end(), std::next(C3->begin()));
+  EXPECT_EQ("c1", C3->begin()->getFunction().getName());
 
-  EXPECT_EQ(D1.end(), std::next(D1.begin()));
-  EXPECT_EQ("d2", D1.begin()->getFunction().getName());
-  EXPECT_EQ(D2.end(), std::next(D2.begin()));
-  EXPECT_EQ("d3", D2.begin()->getFunction().getName());
-  EXPECT_EQ(D3.end(), std::next(D3.begin()));
-  EXPECT_EQ("d1", D3.begin()->getFunction().getName());
+  D1.populate();
+  EXPECT_EQ(D1->end(), std::next(D1->begin()));
+  EXPECT_EQ("d2", D1->begin()->getFunction().getName());
+  D2.populate();
+  EXPECT_EQ(D2->end(), std::next(D2->begin()));
+  EXPECT_EQ("d3", D2->begin()->getFunction().getName());
+  D3.populate();
+  EXPECT_EQ(D3->end(), std::next(D3->begin()));
+  EXPECT_EQ("d1", D3->begin()->getFunction().getName());
 
   // Now lets look at the RefSCCs and SCCs.
   CG.buildRefSCCs();
@@ -402,32 +411,35 @@ TEST(LazyCallGraphTest, BasicGraphMutation) {
 
   LazyCallGraph::Node &A = CG.get(lookupFunction(*M, "a"));
   LazyCallGraph::Node &B = CG.get(lookupFunction(*M, "b"));
-  EXPECT_EQ(2, std::distance(A.begin(), A.end()));
-  EXPECT_EQ(0, std::distance(B.begin(), B.end()));
+  A.populate();
+  EXPECT_EQ(2, std::distance(A->begin(), A->end()));
+  B.populate();
+  EXPECT_EQ(0, std::distance(B->begin(), B->end()));
 
-  CG.insertEdge(B, lookupFunction(*M, "c"), LazyCallGraph::Edge::Call);
-  EXPECT_EQ(1, std::distance(B.begin(), B.end()));
-  LazyCallGraph::Node &C = B.begin()->getNode(CG);
-  EXPECT_EQ(0, std::distance(C.begin(), C.end()));
+  LazyCallGraph::Node &C = CG.get(lookupFunction(*M, "c"));
+  C.populate();
+  CG.insertEdge(B, C, LazyCallGraph::Edge::Call);
+  EXPECT_EQ(1, std::distance(B->begin(), B->end()));
+  EXPECT_EQ(0, std::distance(C->begin(), C->end()));
 
-  CG.insertEdge(C, B.getFunction(), LazyCallGraph::Edge::Call);
-  EXPECT_EQ(1, std::distance(C.begin(), C.end()));
-  EXPECT_EQ(&B, C.begin()->getNode());
+  CG.insertEdge(C, B, LazyCallGraph::Edge::Call);
+  EXPECT_EQ(1, std::distance(C->begin(), C->end()));
+  EXPECT_EQ(&B, &C->begin()->getNode());
 
-  CG.insertEdge(C, C.getFunction(), LazyCallGraph::Edge::Call);
-  EXPECT_EQ(2, std::distance(C.begin(), C.end()));
-  EXPECT_EQ(&B, C.begin()->getNode());
-  EXPECT_EQ(&C, std::next(C.begin())->getNode());
+  CG.insertEdge(C, C, LazyCallGraph::Edge::Call);
+  EXPECT_EQ(2, std::distance(C->begin(), C->end()));
+  EXPECT_EQ(&B, &C->begin()->getNode());
+  EXPECT_EQ(&C, &std::next(C->begin())->getNode());
 
-  CG.removeEdge(C, B.getFunction());
-  EXPECT_EQ(1, std::distance(C.begin(), C.end()));
-  EXPECT_EQ(&C, C.begin()->getNode());
+  CG.removeEdge(C, B);
+  EXPECT_EQ(1, std::distance(C->begin(), C->end()));
+  EXPECT_EQ(&C, &C->begin()->getNode());
 
-  CG.removeEdge(C, C.getFunction());
-  EXPECT_EQ(0, std::distance(C.begin(), C.end()));
+  CG.removeEdge(C, C);
+  EXPECT_EQ(0, std::distance(C->begin(), C->end()));
 
-  CG.removeEdge(B, C.getFunction());
-  EXPECT_EQ(0, std::distance(B.begin(), B.end()));
+  CG.removeEdge(B, C);
+  EXPECT_EQ(0, std::distance(B->begin(), B->end()));
 }
 
 TEST(LazyCallGraphTest, InnerSCCFormation) {
@@ -437,8 +449,11 @@ TEST(LazyCallGraphTest, InnerSCCFormation) {
 
   // Now mutate the graph to connect every node into a single RefSCC to ensure
   // that our inner SCC formation handles the rest.
-  CG.insertEdge(lookupFunction(*M, "d1"), lookupFunction(*M, "a1"),
-                LazyCallGraph::Edge::Ref);
+  LazyCallGraph::Node &D1 = CG.get(lookupFunction(*M, "d1"));
+  LazyCallGraph::Node &A1 = CG.get(lookupFunction(*M, "a1"));
+  A1.populate();
+  D1.populate();
+  CG.insertEdge(D1, A1, LazyCallGraph::Edge::Ref);
 
   // Build vectors and sort them for the rest of the assertions to make them
   // independent of order.
@@ -614,13 +629,13 @@ TEST(LazyCallGraphTest, OutgoingEdgeMutation) {
   EXPECT_TRUE(DRC.isChildOf(CRC));
   EXPECT_TRUE(DC.isChildOf(CC));
 
-  EXPECT_EQ(2, std::distance(A.begin(), A.end()));
+  EXPECT_EQ(2, std::distance(A->begin(), A->end()));
   ARC.insertOutgoingEdge(A, D, LazyCallGraph::Edge::Call);
-  EXPECT_EQ(3, std::distance(A.begin(), A.end()));
-  const LazyCallGraph::Edge &NewE = A[D];
+  EXPECT_EQ(3, std::distance(A->begin(), A->end()));
+  const LazyCallGraph::Edge &NewE = (*A)[D];
   EXPECT_TRUE(NewE);
   EXPECT_TRUE(NewE.isCall());
-  EXPECT_EQ(&D, NewE.getNode());
+  EXPECT_EQ(&D, &NewE.getNode());
 
   // Only the parent and child tests sholud have changed. The rest of the graph
   // remains the same.
@@ -684,7 +699,7 @@ TEST(LazyCallGraphTest, OutgoingEdgeMutation) {
   EXPECT_EQ(&DRC, CG.lookupRefSCC(D));
 
   ARC.removeOutgoingEdge(A, D);
-  EXPECT_EQ(2, std::distance(A.begin(), A.end()));
+  EXPECT_EQ(2, std::distance(A->begin(), A->end()));
 
   // Now the parent and child tests fail again but the rest remains the same.
   EXPECT_FALSE(ARC.isParentOf(DRC));
@@ -755,7 +770,7 @@ TEST(LazyCallGraphTest, IncomingEdgeInsertion) {
   ASSERT_EQ(&CRC, CG.lookupRefSCC(C3));
   ASSERT_EQ(&DRC, CG.lookupRefSCC(D2));
   ASSERT_EQ(&DRC, CG.lookupRefSCC(D3));
-  ASSERT_EQ(1, std::distance(D2.begin(), D2.end()));
+  ASSERT_EQ(1, std::distance(D2->begin(), D2->end()));
 
   // Add an edge to make the graph:
   //
@@ -772,10 +787,10 @@ TEST(LazyCallGraphTest, IncomingEdgeInsertion) {
   //      a3--a2        |
   auto MergedRCs = CRC.insertIncomingRefEdge(D2, C2);
   // Make sure we connected the nodes.
-  for (LazyCallGraph::Edge E : D2) {
-    if (E.getNode() == &D3)
+  for (LazyCallGraph::Edge E : *D2) {
+    if (&E.getNode() == &D3)
       continue;
-    EXPECT_EQ(&C2, E.getNode());
+    EXPECT_EQ(&C2, &E.getNode());
   }
   // And marked the D ref-SCC as no longer valid.
   EXPECT_EQ(1u, MergedRCs.size());
@@ -847,7 +862,7 @@ TEST(LazyCallGraphTest, IncomingEdgeInsertionRefGraph) {
   ASSERT_EQ(&CRC, CG.lookupRefSCC(C3));
   ASSERT_EQ(&DRC, CG.lookupRefSCC(D2));
   ASSERT_EQ(&DRC, CG.lookupRefSCC(D3));
-  ASSERT_EQ(1, std::distance(D2.begin(), D2.end()));
+  ASSERT_EQ(1, std::distance(D2->begin(), D2->end()));
 
   // Add an edge to make the graph:
   //
@@ -864,10 +879,10 @@ TEST(LazyCallGraphTest, IncomingEdgeInsertionRefGraph) {
   //      a3--a2        |
   auto MergedRCs = CRC.insertIncomingRefEdge(D2, C2);
   // Make sure we connected the nodes.
-  for (LazyCallGraph::Edge E : D2) {
-    if (E.getNode() == &D3)
+  for (LazyCallGraph::Edge E : *D2) {
+    if (&E.getNode() == &D3)
       continue;
-    EXPECT_EQ(&C2, E.getNode());
+    EXPECT_EQ(&C2, &E.getNode());
   }
   // And marked the D ref-SCC as no longer valid.
   EXPECT_EQ(1u, MergedRCs.size());
@@ -946,8 +961,8 @@ TEST(LazyCallGraphTest, IncomingEdgeInsertionLargeCallCycle) {
   // Connect the top to the bottom forming a large RefSCC made up mostly of calls.
   auto MergedRCs = ARC.insertIncomingRefEdge(D, A);
   // Make sure we connected the nodes.
-  EXPECT_NE(D.begin(), D.end());
-  EXPECT_EQ(&A, D.begin()->getNode());
+  EXPECT_NE(D->begin(), D->end());
+  EXPECT_EQ(&A, &D->begin()->getNode());
 
   // Check that we have the dead RCs, but ignore the order.
   EXPECT_EQ(3u, MergedRCs.size());
@@ -1020,8 +1035,8 @@ TEST(LazyCallGraphTest, IncomingEdgeInsertionLargeRefCycle) {
   // references.
   auto MergedRCs = ARC.insertIncomingRefEdge(D, A);
   // Make sure we connected the nodes.
-  EXPECT_NE(D.begin(), D.end());
-  EXPECT_EQ(&A, D.begin()->getNode());
+  EXPECT_NE(D->begin(), D->end());
+  EXPECT_EQ(&A, &D->begin()->getNode());
 
   // Check that we have the dead RCs, but ignore the order.
   EXPECT_EQ(3u, MergedRCs.size());
@@ -1093,7 +1108,7 @@ TEST(LazyCallGraphTest, InlineAndDeleteFunction) {
   ASSERT_EQ(&CRC, CG.lookupRefSCC(C3));
   ASSERT_EQ(&DRC, CG.lookupRefSCC(D2));
   ASSERT_EQ(&DRC, CG.lookupRefSCC(D3));
-  ASSERT_EQ(1, std::distance(D2.begin(), D2.end()));
+  ASSERT_EQ(1, std::distance(D2->begin(), D2->end()));
 
   // Delete d2 from the graph, as if it had been inlined.
   //
@@ -1227,7 +1242,7 @@ TEST(LazyCallGraphTest, InternalEdgeMutation) {
 
   // Insert an edge from 'a' to 'c'. Nothing changes about the graph.
   RC.insertInternalRefEdge(A, C);
-  EXPECT_EQ(2, std::distance(A.begin(), A.end()));
+  EXPECT_EQ(2, std::distance(A->begin(), A->end()));
   EXPECT_EQ(&RC, CG.lookupRefSCC(A));
   EXPECT_EQ(&RC, CG.lookupRefSCC(B));
   EXPECT_EQ(&RC, CG.lookupRefSCC(C));
@@ -1884,4 +1899,165 @@ TEST(LazyCallGraphTest, HandleBlockAddress) {
   EXPECT_TRUE(GRC.isParentOf(FRC));
 }
 
+TEST(LazyCallGraphTest, ReplaceNodeFunction) {
+  LLVMContext Context;
+  // A graph with several different kinds of edges pointing at a particular
+  // function.
+  std::unique_ptr<Module> M =
+      parseAssembly(Context,
+                    "define void @a(i8** %ptr) {\n"
+                    "entry:\n"
+                    "  store i8* bitcast (void(i8**)* @d to i8*), i8** %ptr\n"
+                    "  ret void\n"
+                    "}\n"
+                    "define void @b(i8** %ptr) {\n"
+                    "entry:\n"
+                    "  store i8* bitcast (void(i8**)* @d to i8*), i8** %ptr\n"
+                    "  store i8* bitcast (void(i8**)* @d to i8*), i8** %ptr\n"
+                    "  call void @d(i8** %ptr)"
+                    "  ret void\n"
+                    "}\n"
+                    "define void @c(i8** %ptr) {\n"
+                    "entry:\n"
+                    "  call void @d(i8** %ptr)"
+                    "  call void @d(i8** %ptr)"
+                    "  store i8* bitcast (void(i8**)* @d to i8*), i8** %ptr\n"
+                    "  ret void\n"
+                    "}\n"
+                    "define void @d(i8** %ptr) {\n"
+                    "entry:\n"
+                    "  store i8* bitcast (void(i8**)* @b to i8*), i8** %ptr\n"
+                    "  call void @c(i8** %ptr)"
+                    "  call void @d(i8** %ptr)"
+                    "  store i8* bitcast (void(i8**)* @d to i8*), i8** %ptr\n"
+                    "  ret void\n"
+                    "}\n");
+  LazyCallGraph CG(*M);
+
+  // Force the graph to be fully expanded.
+  CG.buildRefSCCs();
+  auto I = CG.postorder_ref_scc_begin();
+  LazyCallGraph::RefSCC &RC1 = *I++;
+  LazyCallGraph::RefSCC &RC2 = *I++;
+  EXPECT_EQ(CG.postorder_ref_scc_end(), I);
+
+  ASSERT_EQ(2u, RC1.size());
+  LazyCallGraph::SCC &C1 = RC1[0];
+  LazyCallGraph::SCC &C2 = RC1[1];
+
+  LazyCallGraph::Node &AN = *CG.lookup(lookupFunction(*M, "a"));
+  LazyCallGraph::Node &BN = *CG.lookup(lookupFunction(*M, "b"));
+  LazyCallGraph::Node &CN = *CG.lookup(lookupFunction(*M, "c"));
+  LazyCallGraph::Node &DN = *CG.lookup(lookupFunction(*M, "d"));
+  EXPECT_EQ(&C1, CG.lookupSCC(DN));
+  EXPECT_EQ(&C1, CG.lookupSCC(CN));
+  EXPECT_EQ(&C2, CG.lookupSCC(BN));
+  EXPECT_EQ(&RC1, CG.lookupRefSCC(DN));
+  EXPECT_EQ(&RC1, CG.lookupRefSCC(CN));
+  EXPECT_EQ(&RC1, CG.lookupRefSCC(BN));
+  EXPECT_EQ(&RC2, CG.lookupRefSCC(AN));
+
+  // Now we need to build a new function 'e' with the same signature as 'd'.
+  Function &D = DN.getFunction();
+  Function &E = *Function::Create(D.getFunctionType(), D.getLinkage(), "e");
+  D.getParent()->getFunctionList().insert(D.getIterator(), &E);
+
+  // Change each use of 'd' to use 'e'. This is particularly easy as they have
+  // the same type.
+  D.replaceAllUsesWith(&E);
+
+  // Splice the body of the old function into the new one.
+  E.getBasicBlockList().splice(E.begin(), D.getBasicBlockList());
+  // And fix up the one argument.
+  D.arg_begin()->replaceAllUsesWith(&*E.arg_begin());
+  E.arg_begin()->takeName(&*D.arg_begin());
+
+  // Now replace the function in the graph.
+  RC1.replaceNodeFunction(DN, E);
+
+  EXPECT_EQ(&E, &DN.getFunction());
+  EXPECT_EQ(&DN, &(*CN)[DN].getNode());
+  EXPECT_EQ(&DN, &(*BN)[DN].getNode());
+}
+
+TEST(LazyCallGraphTest, RemoveFunctionWithSpurriousRef) {
+  LLVMContext Context;
+  // A graph with a couple of RefSCCs.
+  std::unique_ptr<Module> M =
+      parseAssembly(Context,
+                    "define void @a(i8** %ptr) {\n"
+                    "entry:\n"
+                    "  store i8* bitcast (void(i8**)* @d to i8*), i8** %ptr\n"
+                    "  ret void\n"
+                    "}\n"
+                    "define void @b(i8** %ptr) {\n"
+                    "entry:\n"
+                    "  store i8* bitcast (void(i8**)* @c to i8*), i8** %ptr\n"
+                    "  ret void\n"
+                    "}\n"
+                    "define void @c(i8** %ptr) {\n"
+                    "entry:\n"
+                    "  call void @d(i8** %ptr)"
+                    "  ret void\n"
+                    "}\n"
+                    "define void @d(i8** %ptr) {\n"
+                    "entry:\n"
+                    "  call void @c(i8** %ptr)"
+                    "  store i8* bitcast (void(i8**)* @b to i8*), i8** %ptr\n"
+                    "  ret void\n"
+                    "}\n"
+                    "define void @dead() {\n"
+                    "entry:\n"
+                    "  ret void\n"
+                    "}\n");
+  LazyCallGraph CG(*M);
+
+  // Insert spurious ref edges.
+  LazyCallGraph::Node &AN = CG.get(lookupFunction(*M, "a"));
+  LazyCallGraph::Node &BN = CG.get(lookupFunction(*M, "b"));
+  LazyCallGraph::Node &CN = CG.get(lookupFunction(*M, "c"));
+  LazyCallGraph::Node &DN = CG.get(lookupFunction(*M, "d"));
+  LazyCallGraph::Node &DeadN = CG.get(lookupFunction(*M, "dead"));
+  AN.populate();
+  BN.populate();
+  CN.populate();
+  DN.populate();
+  DeadN.populate();
+  CG.insertEdge(AN, DeadN, LazyCallGraph::Edge::Ref);
+  CG.insertEdge(BN, DeadN, LazyCallGraph::Edge::Ref);
+  CG.insertEdge(CN, DeadN, LazyCallGraph::Edge::Ref);
+  CG.insertEdge(DN, DeadN, LazyCallGraph::Edge::Ref);
+
+  // Force the graph to be fully expanded.
+  CG.buildRefSCCs();
+  auto I = CG.postorder_ref_scc_begin();
+  LazyCallGraph::RefSCC &DeadRC = *I++;
+  LazyCallGraph::RefSCC &RC1 = *I++;
+  LazyCallGraph::RefSCC &RC2 = *I++;
+  EXPECT_EQ(CG.postorder_ref_scc_end(), I);
+
+  ASSERT_EQ(2u, RC1.size());
+  LazyCallGraph::SCC &C1 = RC1[0];
+  LazyCallGraph::SCC &C2 = RC1[1];
+
+  EXPECT_EQ(&DeadRC, CG.lookupRefSCC(DeadN));
+  EXPECT_EQ(&C1, CG.lookupSCC(DN));
+  EXPECT_EQ(&C1, CG.lookupSCC(CN));
+  EXPECT_EQ(&C2, CG.lookupSCC(BN));
+  EXPECT_EQ(&RC1, CG.lookupRefSCC(DN));
+  EXPECT_EQ(&RC1, CG.lookupRefSCC(CN));
+  EXPECT_EQ(&RC1, CG.lookupRefSCC(BN));
+  EXPECT_EQ(&RC2, CG.lookupRefSCC(AN));
+
+  // Now delete 'dead'. There are no uses of this function but there are
+  // spurious references.
+  CG.removeDeadFunction(DeadN.getFunction());
+
+  // The only observable change should be that the RefSCC is gone from the
+  // postorder sequence.
+  I = CG.postorder_ref_scc_begin();
+  EXPECT_EQ(&RC1, &*I++);
+  EXPECT_EQ(&RC2, &*I++);
+  EXPECT_EQ(CG.postorder_ref_scc_end(), I);
+}
 }

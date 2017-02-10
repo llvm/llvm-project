@@ -10,6 +10,7 @@
 #include "clang/CodeGen/CodeGenAction.h"
 #include "CodeGenModule.h"
 #include "CoverageMappingGen.h"
+#include "MacroPPCallbacks.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclCXX.h"
@@ -96,6 +97,8 @@ namespace clang {
     std::unique_ptr<llvm::Module> takeModule() {
       return std::unique_ptr<llvm::Module>(Gen->ReleaseModule());
     }
+
+    CodeGenerator *getCodeGenerator() { return Gen.get(); }
 
     void HandleCXXStaticMemberVarInstantiation(VarDecl *VD) override {
       Gen->HandleCXXStaticMemberVarInstantiation(VD);
@@ -830,6 +833,17 @@ CodeGenAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
       CI.getLangOpts(), CI.getFrontendOpts().ShowTimers, InFile,
       std::move(LinkModules), std::move(OS), *VMContext, CoverageInfo));
   BEConsumer = Result.get();
+
+  // Enable generating macro debug info only when debug info is not disabled and
+  // also macro debug info is enabled.
+  if (CI.getCodeGenOpts().getDebugInfo() != codegenoptions::NoDebugInfo &&
+      CI.getCodeGenOpts().MacroDebugInfo) {
+    std::unique_ptr<PPCallbacks> Callbacks =
+        llvm::make_unique<MacroPPCallbacks>(BEConsumer->getCodeGenerator(),
+                                            CI.getPreprocessor());
+    CI.getPreprocessor().addPPCallbacks(std::move(Callbacks));
+  }
+
   return std::move(Result);
 }
 

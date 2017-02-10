@@ -102,6 +102,7 @@
 #include <clc/math/native_powr.h>
 #include <clc/math/native_sin.h>
 #include <clc/math/native_sqrt.h>
+#include <clc/math/native_rsqrt.h>
 #include <clc/math/rsqrt.h>
 
 /* 6.11.2.1 Floating-point macros */

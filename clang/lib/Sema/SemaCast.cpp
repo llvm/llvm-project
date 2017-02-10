@@ -2627,11 +2627,12 @@ ExprResult Sema::BuildCStyleCastExpr(SourceLocation LPLoc,
 }
 
 ExprResult Sema::BuildCXXFunctionalCastExpr(TypeSourceInfo *CastTypeInfo,
+                                            QualType Type,
                                             SourceLocation LPLoc,
                                             Expr *CastExpr,
                                             SourceLocation RPLoc) {
   assert(LPLoc.isValid() && "List-initialization shouldn't get here.");
-  CastOperation Op(*this, CastTypeInfo->getType(), CastExpr);
+  CastOperation Op(*this, Type, CastExpr);
   Op.DestRange = CastTypeInfo->getTypeLoc().getSourceRange();
   Op.OpRange = SourceRange(Op.DestRange.getBegin(), CastExpr->getLocEnd());
 

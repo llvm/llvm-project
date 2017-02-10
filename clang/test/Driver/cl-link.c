@@ -14,8 +14,9 @@
 // ASAN: "-debug"
 // ASAN: "-incremental:no"
 // ASAN: "{{[^"]*}}clang_rt.asan-i386.lib"
-// ASAN: "{{.*}}clang_rt.asan_cxx-i386.lib"
 // ASAN: "-wholearchive:{{.*}}clang_rt.asan-i386.lib"
+// ASAN: "{{[^"]*}}clang_rt.asan_cxx-i386.lib"
+// ASAN: "-wholearchive:{{.*}}clang_rt.asan_cxx-i386.lib"
 // ASAN: "{{.*}}cl-link{{.*}}.obj"
 
 // RUN: %clang_cl -m32 -arch:IA32 --target=i386-pc-win32 /MD /Tc%s -### -fsanitize=address 2>&1 | FileCheck --check-prefix=ASAN-MD %s

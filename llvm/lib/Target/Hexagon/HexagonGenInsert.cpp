@@ -947,11 +947,8 @@ void HexagonGenInsert::collectInBlock(MachineBasicBlock *B,
     BlockDefs.insert(InsDefs);
   }
 
-  MachineDomTreeNode *N = MDT->getNode(B);
-  typedef GraphTraits<MachineDomTreeNode*> GTN;
-  typedef GTN::ChildIteratorType ChildIter;
-  for (ChildIter I = GTN::child_begin(N), E = GTN::child_end(N); I != E; ++I) {
-    MachineBasicBlock *SB = (*I)->getBlock();
+  for (auto *DTN : children<MachineDomTreeNode*>(MDT->getNode(B))) {
+    MachineBasicBlock *SB = DTN->getBlock();
     collectInBlock(SB, AVs);
   }
 
@@ -1422,9 +1419,9 @@ bool HexagonGenInsert::generateInserts() {
 
 bool HexagonGenInsert::removeDeadCode(MachineDomTreeNode *N) {
   bool Changed = false;
-  typedef GraphTraits<MachineDomTreeNode*> GTN;
-  for (auto I = GTN::child_begin(N), E = GTN::child_end(N); I != E; ++I)
-    Changed |= removeDeadCode(*I);
+
+  for (auto *DTN : children<MachineDomTreeNode*>(N))
+    Changed |= removeDeadCode(DTN);
 
   MachineBasicBlock *B = N->getBlock();
   std::vector<MachineInstr*> Instrs;

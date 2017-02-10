@@ -83,6 +83,93 @@ define <2 x i1> @test4vec(<2 x i32> %a) {
   ret <2 x i1> %c
 }
 
+; icmp Pred (add nsw X, C2), C --> icmp Pred X, (C - C2), when C - C2 does not overflow.
+; This becomes equality because it's at the limit.
+
+define i1 @nsw_slt1(i8 %a) {
+; CHECK-LABEL: @nsw_slt1(
+; CHECK-NEXT:    [[B:%.*]] = add nsw i8 %a, 100
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i8 [[B]], -27
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %b = add nsw i8 %a, 100
+  %c = icmp slt i8 %b, -27
+  ret i1 %c
+}
+
+; icmp Pred (add nsw X, C2), C --> icmp Pred X, (C - C2), when C - C2 does not overflow.
+; This becomes equality because it's at the limit.
+
+define i1 @nsw_slt2(i8 %a) {
+; CHECK-LABEL: @nsw_slt2(
+; CHECK-NEXT:    [[B:%.*]] = add nsw i8 %a, -100
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i8 [[B]], 27
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %b = add nsw i8 %a, -100
+  %c = icmp slt i8 %b, 27
+  ret i1 %c
+}
+
+; icmp Pred (add nsw X, C2), C --> icmp Pred X, (C - C2), when C - C2 does not overflow.
+; Less than the limit, so the predicate doesn't change.
+
+define i1 @nsw_slt3(i8 %a) {
+; CHECK-LABEL: @nsw_slt3(
+; CHECK-NEXT:    [[B:%.*]] = add nsw i8 %a, 100
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i8 [[B]], -26
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %b = add nsw i8 %a, 100
+  %c = icmp slt i8 %b, -26
+  ret i1 %c
+}
+
+; icmp Pred (add nsw X, C2), C --> icmp Pred X, (C - C2), when C - C2 does not overflow.
+; Less than the limit, so the predicate doesn't change.
+
+define i1 @nsw_slt4(i8 %a) {
+; CHECK-LABEL: @nsw_slt4(
+; CHECK-NEXT:    [[B:%.*]] = add nsw i8 %a, -100
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i8 [[B]], 26
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %b = add nsw i8 %a, -100
+  %c = icmp slt i8 %b, 26
+  ret i1 %c
+}
+
+; icmp Pred (add nsw X, C2), C --> icmp Pred X, (C - C2), when C - C2 does not overflow.
+; Try sgt to make sure that works too.
+
+define i1 @nsw_sgt1(i8 %a) {
+; CHECK-LABEL: @nsw_sgt1(
+; CHECK-NEXT:    [[B:%.*]] = add nsw i8 %a, -100
+; CHECK-NEXT:    [[C:%.*]] = icmp sgt i8 [[B]], 26
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %b = add nsw i8 %a, -100
+  %c = icmp sgt i8 %b, 26
+  ret i1 %c
+}
+
+; icmp Pred (add nsw X, C2), C --> icmp Pred X, (C - C2), when C - C2 does not overflow.
+; Try a vector type to make sure that works too.
+
+define <2 x i1> @nsw_sgt2_splat_vec(<2 x i8> %a) {
+; CHECK-LABEL: @nsw_sgt2_splat_vec(
+; CHECK-NEXT:    [[B:%.*]] = add nsw <2 x i8> %a, <i8 100, i8 100>
+; CHECK-NEXT:    [[C:%.*]] = icmp sgt <2 x i8> [[B]], <i8 -26, i8 -26>
+; CHECK-NEXT:    ret <2 x i1> [[C]]
+;
+  %b = add nsw <2 x i8> %a, <i8 100, i8 100>
+  %c = icmp sgt <2 x i8> %b, <i8 -26, i8 -26>
+  ret <2 x i1> %c
+}
+
+; icmp Pred (add nsw X, C2), C --> icmp Pred X, (C - C2), when C - C2 does not overflow.
+; Comparison with 0 doesn't need special-casing.
+
 define i1 @slt_zero_add_nsw(i32 %a) {
 ; CHECK-LABEL: @slt_zero_add_nsw(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 %a, -1
@@ -104,6 +191,42 @@ define <2 x i1> @slt_zero_add_nsw_splat_vec(<2 x i8> %a) {
   %add = add nsw <2 x i8> %a, <i8 1, i8 1>
   %cmp = icmp slt <2 x i8> %add, zeroinitializer
   ret <2 x i1> %cmp
+}
+
+; Test the edges - instcombine should not interfere with simplification to constants.
+; Constant subtraction does not overflow, but this is false.
+
+define i1 @nsw_slt3_ov_no(i8 %a) {
+; CHECK-LABEL: @nsw_slt3_ov_no(
+; CHECK-NEXT:    ret i1 false
+;
+  %b = add nsw i8 %a, 100
+  %c = icmp slt i8 %b, -28
+  ret i1 %c
+}
+
+; Test the edges - instcombine should not interfere with simplification to constants.
+; Constant subtraction overflows. This is false.
+
+define i1 @nsw_slt4_ov(i8 %a) {
+; CHECK-LABEL: @nsw_slt4_ov(
+; CHECK-NEXT:    ret i1 false
+;
+  %b = add nsw i8 %a, 100
+  %c = icmp slt i8 %b, -29
+  ret i1 %c
+}
+
+; Test the edges - instcombine should not interfere with simplification to constants.
+; Constant subtraction overflows. This is true.
+
+define i1 @nsw_slt5_ov(i8 %a) {
+; CHECK-LABEL: @nsw_slt5_ov(
+; CHECK-NEXT:    ret i1 true
+;
+  %b = add nsw i8 %a, -100
+  %c = icmp slt i8 %b, 28
+  ret i1 %c
 }
 
 ; FIXME: InstCombine should not lose wrapping information by changing the add to xor.

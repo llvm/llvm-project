@@ -10,12 +10,18 @@
 ; RUN:     FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-HWDIV
 ; RUN: llc < %s -mtriple=arm-none-eabi -mcpu=cortex-a8    | \
 ; RUN:     FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-EABI
+; RUN: llc < %s -mtriple=armv7ve-none-linux-gnu           | \
+; RUN:     FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-HWDIV
+; RUN: llc < %s -mtriple=thumbv7ve-none-linux-gnu         | \
+; RUN:     FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-HWDIV \
+; RUN:                  -check-prefix=CHECK-THUMB
 
 define i32 @f1(i32 %a, i32 %b) {
 entry:
 ; CHECK-LABEL: f1
 ; CHECK-SWDIV: __divsi3
 
+; CHECK-THUMB: .thumb_func
 ; CHECK-HWDIV: sdiv
 
 ; CHECK-EABI: __aeabi_idiv
@@ -28,6 +34,7 @@ entry:
 ; CHECK-LABEL: f2
 ; CHECK-SWDIV: __udivsi3
 
+; CHECK-THUMB: .thumb_func
 ; CHECK-HWDIV: udiv
 
 ; CHECK-EABI: __aeabi_uidiv
@@ -40,6 +47,7 @@ entry:
 ; CHECK-LABEL: f3
 ; CHECK-SWDIV: __modsi3
 
+; CHECK-THUMB: .thumb_func
 ; CHECK-HWDIV: sdiv
 ; CHECK-HWDIV: mls
 
@@ -55,6 +63,7 @@ entry:
 ; CHECK-LABEL: f4
 ; CHECK-SWDIV: __umodsi3
 
+; CHECK-THUMB: .thumb_func
 ; CHECK-HWDIV: udiv
 ; CHECK-HWDIV: mls
 

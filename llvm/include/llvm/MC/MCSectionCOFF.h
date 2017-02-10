@@ -16,8 +16,11 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCSection.h"
+#include "llvm/MC/SectionKind.h"
+#include <cassert>
 
 namespace llvm {
+
 class MCSymbol;
 
 /// This represents a section on Windows
@@ -94,4 +97,4 @@ public:
 
 } // end namespace llvm
 
-#endif
+#endif // LLVM_MC_MCSECTIONCOFF_H

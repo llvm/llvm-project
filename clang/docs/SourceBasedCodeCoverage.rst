@@ -18,6 +18,7 @@ Clang ships two other code coverage implementations:
   various sanitizers. It can provide up to edge-level coverage.
 
 * gcov - A GCC-compatible coverage implementation which operates on DebugInfo.
+  This is enabled by ``-ftest-coverage`` or ``--coverage``.
 
 From this point onwards "code coverage" will refer to the source-based kind.
 

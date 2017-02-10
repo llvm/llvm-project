@@ -251,3 +251,7 @@ for name in os.listdir(command_guide_path):
 
 # FIXME: Define intersphinx configuration.
 intersphinx_mapping = {}
+
+# Pygment lexer are sometimes out of date (when parsing LLVM for example) or
+# wrong. Suppress the warning so the build doesn't abort.
+suppress_warnings = [ 'misc.highlighting_failure' ]
