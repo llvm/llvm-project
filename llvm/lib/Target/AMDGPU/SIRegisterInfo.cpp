@@ -1329,3 +1329,11 @@ unsigned SIRegisterInfo::getRegPressureSetLimit(const MachineFunction &MF,
 
   return AMDGPURegisterInfo::getRegPressureSetLimit(MF, Idx);
 }
+
+const int *SIRegisterInfo::getRegUnitPressureSets(unsigned RegUnit) const {
+  static const int Empty[] = { -1 };
+
+  if (hasRegUnit(AMDGPU::M0, RegUnit))
+    return Empty;
+  return AMDGPURegisterInfo::getRegUnitPressureSets(RegUnit);
+}

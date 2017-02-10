@@ -341,3 +341,34 @@ entry:
   %lor.ext = zext i1 %0 to i32
   ret i32 %lor.ext
 }
+
+; PR31902 Fix a crash in combineOrCmpEqZeroToCtlzSrl under fast math.
+define i32 @test_zext_cmp11(double %a, double %b) "no-nans-fp-math"="true" {
+; CHECK-LABEL: test_zext_cmp11:
+; CHECK:       # BB#0: # %entry
+; CHECK-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; CHECK-NEXT:    vucomisd %xmm2, %xmm0
+; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    vucomisd %xmm2, %xmm1
+; CHECK-NEXT:    sete %cl
+; CHECK-NEXT:    orb %al, %cl
+; CHECK-NEXT:    movzbl %cl, %eax
+; CHECK-NEXT:    retq
+;
+; NOFASTLZCNT-LABEL: test_zext_cmp11:
+; NOFASTLZCNT:       # BB#0: # %entry
+; NOFASTLZCNT-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; NOFASTLZCNT-NEXT:    vucomisd %xmm2, %xmm0
+; NOFASTLZCNT-NEXT:    sete %al
+; NOFASTLZCNT-NEXT:    vucomisd %xmm2, %xmm1
+; NOFASTLZCNT-NEXT:    sete %cl
+; NOFASTLZCNT-NEXT:    orb %al, %cl
+; NOFASTLZCNT-NEXT:    movzbl %cl, %eax
+; NOFASTLZCNT-NEXT:    retq
+entry:
+  %cmp = fcmp fast oeq double %a, 0.000000e+00
+  %cmp1 = fcmp fast oeq double %b, 0.000000e+00
+  %0 = or i1 %cmp, %cmp1
+  %conv = zext i1 %0 to i32
+  ret i32 %conv
+}

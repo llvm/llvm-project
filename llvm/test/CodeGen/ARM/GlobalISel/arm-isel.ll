@@ -1,4 +1,4 @@
-; RUN: llc -mtriple arm-unknown -global-isel %s -o - | FileCheck %s
+; RUN: llc -mtriple arm-unknown -mattr=+vfp2 -global-isel %s -o - | FileCheck %s
 
 define void @test_void_return() {
 ; CHECK-LABEL: test_void_return:
@@ -138,4 +138,25 @@ define i8* @test_ptr_ret(i8** %p) {
 entry:
   %v = load i8*, i8** %p
   ret i8* %v
+}
+
+define arm_aapcs_vfpcc float @test_float_hard(float %f0, float %f1) {
+; CHECK-LABEL: test_float_hard:
+; CHECK: vadd.f32 s0, s0, s1
+; CHECK: bx lr
+entry:
+  %v = fadd float %f0, %f1
+  ret float %v
+}
+
+define arm_aapcscc float @test_float_softfp(float %f0, float %f1) {
+; CHECK-LABEL: test_float_softfp:
+; CHECK-DAG: vmov [[F0:s[0-9]+]], r0
+; CHECK-DAG: vmov [[F1:s[0-9]+]], r1
+; CHECK: vadd.f32 [[FV:s[0-9]+]], [[F0]], [[F1]]
+; CHECK: vmov r0, [[FV]]
+; CHECK: bx lr
+entry:
+  %v = fadd float %f0, %f1
+  ret float %v
 }

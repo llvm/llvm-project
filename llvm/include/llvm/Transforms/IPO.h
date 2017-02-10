@@ -215,11 +215,11 @@ ModulePass *createMetaRenamerPass();
 /// manager.
 ModulePass *createBarrierNoopPass();
 
-/// What to do with the summary when running the LowerTypeTests pass.
-enum class LowerTypeTestsSummaryAction {
+/// What to do with the summary when running passes that operate on it.
+enum class PassSummaryAction {
   None,   ///< Do nothing.
-  Import, ///< Import typeid resolutions from summary and globals.
-  Export, ///< Export typeid resolutions to summary and globals.
+  Import, ///< Import information from summary.
+  Export, ///< Export information to summary.
 };
 
 /// \brief This pass lowers type metadata and the llvm.type.test intrinsic to
@@ -227,7 +227,7 @@ enum class LowerTypeTestsSummaryAction {
 /// \param Action What to do with the summary passed as Index.
 /// \param Index The summary to use for importing or exporting, this can be null
 ///              when Action is None.
-ModulePass *createLowerTypeTestsPass(LowerTypeTestsSummaryAction Action,
+ModulePass *createLowerTypeTestsPass(PassSummaryAction Action,
                                      ModuleSummaryIndex *Index);
 
 /// \brief This pass export CFI checks for use by external modules.

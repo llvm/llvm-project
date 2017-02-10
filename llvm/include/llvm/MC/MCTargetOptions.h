@@ -1,4 +1,4 @@
-//===- MCTargetOptions.h - MC Target Options -------------------*- C++ -*-===//
+//===- MCTargetOptions.h - MC Target Options --------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -51,12 +51,8 @@ public:
   /// Preserve Comments in Assembly.
   bool PreserveAsmComments : 1;
 
-  int DwarfVersion;
+  int DwarfVersion = 0;
 
-  /// getABIName - If this returns a non-empty string this represents the
-  /// textual name of the ABI that we want the backend to use, e.g. o32, or
-  /// aapcs-linux.
-  StringRef getABIName() const;
   std::string ABIName;
 
   /// Additional paths to search for `.include` directives when using the
@@ -64,6 +60,11 @@ public:
   std::vector<std::string> IASSearchPaths;
 
   MCTargetOptions();
+
+  /// getABIName - If this returns a non-empty string this represents the
+  /// textual name of the ABI that we want the backend to use, e.g. o32, or
+  /// aapcs-linux.
+  StringRef getABIName() const;
 };
 
 inline bool operator==(const MCTargetOptions &LHS, const MCTargetOptions &RHS) {
@@ -93,4 +94,4 @@ inline bool operator!=(const MCTargetOptions &LHS, const MCTargetOptions &RHS) {
 
 } // end namespace llvm
 
-#endif
+#endif // LLVM_MC_MCTARGETOPTIONS_H

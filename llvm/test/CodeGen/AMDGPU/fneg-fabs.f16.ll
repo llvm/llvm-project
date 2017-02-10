@@ -6,7 +6,7 @@
 ; CI: v_cvt_f32_f16_e64 [[CVT_ABS_X:v[0-9]+]], |v{{[0-9]+}}|
 ; CI: v_subrev_f32_e32 v{{[0-9]+}}, [[CVT_ABS_X]], v{{[0-9]+}}
 
-; VI-NOT: and
+; VI-NOT: _and
 ; VI: v_sub_f16_e64 {{v[0-9]+}}, {{v[0-9]+}}, |{{v[0-9]+}}|
 define void @fneg_fabs_fadd_f16(half addrspace(1)* %out, half %x, half %y) {
   %fabs = call half @llvm.fabs.f16(half %x)
@@ -22,7 +22,7 @@ define void @fneg_fabs_fadd_f16(half addrspace(1)* %out, half %x, half %y) {
 ; CI: v_mul_f32_e32 {{v[0-9]+}}, [[CVT_NEG_ABS_X]], {{v[0-9]+}}
 ; CI: v_cvt_f16_f32_e32
 
-; VI-NOT: and
+; VI-NOT: _and
 ; VI: v_mul_f16_e64 [[MUL:v[0-9]+]], {{v[0-9]+}}, -|{{v[0-9]+}}|
 ; VI-NOT: [[MUL]]
 ; VI: flat_store_short v{{\[[0-9]+:[0-9]+\]}}, [[MUL]]

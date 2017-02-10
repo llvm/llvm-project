@@ -111,8 +111,7 @@ def V_MOV_B64_PSEUDO : VPseudoInstSI <(outs VReg_64:$vdst),
                                       (ins VSrc_b64:$src0)>;
 } // End let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Uses = [EXEC]
 
-def S_TRAP_PSEUDO : VPseudoInstSI <(outs), (ins),
-  [(trap)]> {
+def S_TRAP_PSEUDO : SPseudoInstSI <(outs), (ins i16imm:$simm16)> {
   let hasSideEffects = 1;
   let SALU = 1;
   let usesCustomInserter = 1;
@@ -390,6 +389,15 @@ def SI_PC_ADD_REL_OFFSET : SPseudoInstSI <
 } // End SubtargetPredicate = isGCN
 
 let Predicates = [isGCN] in {
+def : Pat<
+  (trap),
+  (S_TRAP_PSEUDO TRAPTYPE.LLVM_TRAP)
+>;
+
+def : Pat<
+  (debugtrap),
+  (S_TRAP_PSEUDO TRAPTYPE.LLVM_DEBUG_TRAP)
+>;
 
 def : Pat<
   (int_amdgcn_else i64:$src, bb:$target),

@@ -274,9 +274,9 @@ LazyCallGraph::SCC &llvm::updateCGAndAnalysisManagerForFunctionPass(
   // demoted edges.
   SmallVector<Constant *, 16> Worklist;
   SmallPtrSet<Constant *, 16> Visited;
-  SmallPtrSet<Function *, 16> RetainedEdges;
-  SmallSetVector<Function *, 4> PromotedRefTargets;
-  SmallSetVector<Function *, 4> DemotedCallTargets;
+  SmallPtrSet<Node *, 16> RetainedEdges;
+  SmallSetVector<Node *, 4> PromotedRefTargets;
+  SmallSetVector<Node *, 4> DemotedCallTargets;
 
   // First walk the function and handle all called functions. We do this first
   // because if there is a single call edge, whether there are ref edges is
@@ -285,7 +285,8 @@ LazyCallGraph::SCC &llvm::updateCGAndAnalysisManagerForFunctionPass(
     if (auto CS = CallSite(&I))
       if (Function *Callee = CS.getCalledFunction())
         if (Visited.insert(Callee).second && !Callee->isDeclaration()) {
-          const Edge *E = N.lookup(*Callee);
+          Node &CalleeN = *G.lookup(*Callee);
+          Edge *E = N->lookup(CalleeN);
           // FIXME: We should really handle adding new calls. While it will
           // make downstream usage more complex, there is no fundamental
           // limitation and it will allow passes within the CGSCC to be a bit
@@ -294,9 +295,9 @@ LazyCallGraph::SCC &llvm::updateCGAndAnalysisManagerForFunctionPass(
           assert(E && "No function transformations should introduce *new* "
                       "call edges! Any new calls should be modeled as "
                       "promoted existing ref edges!");
-          RetainedEdges.insert(Callee);
+          RetainedEdges.insert(&CalleeN);
           if (!E->isCall())
-            PromotedRefTargets.insert(Callee);
+            PromotedRefTargets.insert(&CalleeN);
         }
 
   // Now walk all references.
@@ -307,24 +308,25 @@ LazyCallGraph::SCC &llvm::updateCGAndAnalysisManagerForFunctionPass(
           Worklist.push_back(C);
 
   LazyCallGraph::visitReferences(Worklist, Visited, [&](Function &Referee) {
-    const Edge *E = N.lookup(Referee);
+    Node &RefereeN = *G.lookup(Referee);
+    Edge *E = N->lookup(RefereeN);
     // FIXME: Similarly to new calls, we also currently preclude
     // introducing new references. See above for details.
     assert(E && "No function transformations should introduce *new* ref "
                 "edges! Any new ref edges would require IPO which "
                 "function passes aren't allowed to do!");
-    RetainedEdges.insert(&Referee);
+    RetainedEdges.insert(&RefereeN);
     if (E->isCall())
-      DemotedCallTargets.insert(&Referee);
+      DemotedCallTargets.insert(&RefereeN);
   });
 
   // First remove all of the edges that are no longer present in this function.
   // We have to build a list of dead targets first and then remove them as the
   // data structures will all be invalidated by removing them.
   SmallVector<PointerIntPair<Node *, 1, Edge::Kind>, 4> DeadTargets;
-  for (Edge &E : N)
-    if (!RetainedEdges.count(&E.getFunction()))
-      DeadTargets.push_back({E.getNode(), E.getKind()});
+  for (Edge &E : *N)
+    if (!RetainedEdges.count(&E.getNode()))
+      DeadTargets.push_back({&E.getNode(), E.getKind()});
   for (auto DeadTarget : DeadTargets) {
     Node &TargetN = *DeadTarget.getPointer();
     bool IsCall = DeadTarget.getInt() == Edge::Call;
@@ -398,9 +400,8 @@ LazyCallGraph::SCC &llvm::updateCGAndAnalysisManagerForFunctionPass(
   // Next demote all the call edges that are now ref edges. This helps make
   // the SCCs small which should minimize the work below as we don't want to
   // form cycles that this would break.
-  for (Function *RefTarget : DemotedCallTargets) {
-    Node &TargetN = *G.lookup(*RefTarget);
-    SCC &TargetC = *G.lookupSCC(TargetN);
+  for (Node *RefTarget : DemotedCallTargets) {
+    SCC &TargetC = *G.lookupSCC(*RefTarget);
     RefSCC &TargetRC = TargetC.getOuterRefSCC();
 
     // The easy case is when the target RefSCC is not this RefSCC. This is
@@ -408,10 +409,10 @@ LazyCallGraph::SCC &llvm::updateCGAndAnalysisManagerForFunctionPass(
     if (&TargetRC != RC) {
       assert(RC->isAncestorOf(TargetRC) &&
              "Cannot potentially form RefSCC cycles here!");
-      RC->switchOutgoingEdgeToRef(N, TargetN);
+      RC->switchOutgoingEdgeToRef(N, *RefTarget);
       if (DebugLogging)
         dbgs() << "Switch outgoing call edge to a ref edge from '" << N
-               << "' to '" << TargetN << "'\n";
+               << "' to '" << *RefTarget << "'\n";
       continue;
     }
 
@@ -419,7 +420,7 @@ LazyCallGraph::SCC &llvm::updateCGAndAnalysisManagerForFunctionPass(
     // some SCCs.
     if (C != &TargetC) {
       // For separate SCCs this is trivial.
-      RC->switchTrivialInternalEdgeToRef(N, TargetN);
+      RC->switchTrivialInternalEdgeToRef(N, *RefTarget);
       continue;
     }
 
@@ -431,14 +432,13 @@ LazyCallGraph::SCC &llvm::updateCGAndAnalysisManagerForFunctionPass(
     // structure is changed.
     AM.invalidate(*C, PreservedAnalyses::none());
     // Now update the call graph.
-    C = incorporateNewSCCRange(RC->switchInternalEdgeToRef(N, TargetN), G,
-                               N, C, AM, UR, DebugLogging);
+    C = incorporateNewSCCRange(RC->switchInternalEdgeToRef(N, *RefTarget), G, N,
+                               C, AM, UR, DebugLogging);
   }
 
   // Now promote ref edges into call edges.
-  for (Function *CallTarget : PromotedRefTargets) {
-    Node &TargetN = *G.lookup(*CallTarget);
-    SCC &TargetC = *G.lookupSCC(TargetN);
+  for (Node *CallTarget : PromotedRefTargets) {
+    SCC &TargetC = *G.lookupSCC(*CallTarget);
     RefSCC &TargetRC = TargetC.getOuterRefSCC();
 
     // The easy case is when the target RefSCC is not this RefSCC. This is
@@ -446,22 +446,22 @@ LazyCallGraph::SCC &llvm::updateCGAndAnalysisManagerForFunctionPass(
     if (&TargetRC != RC) {
       assert(RC->isAncestorOf(TargetRC) &&
              "Cannot potentially form RefSCC cycles here!");
-      RC->switchOutgoingEdgeToCall(N, TargetN);
+      RC->switchOutgoingEdgeToCall(N, *CallTarget);
       if (DebugLogging)
         dbgs() << "Switch outgoing ref edge to a call edge from '" << N
-               << "' to '" << TargetN << "'\n";
+               << "' to '" << *CallTarget << "'\n";
       continue;
     }
     if (DebugLogging)
       dbgs() << "Switch an internal ref edge to a call edge from '" << N
-             << "' to '" << TargetN << "'\n";
+             << "' to '" << *CallTarget << "'\n";
 
     // Otherwise we are switching an internal ref edge to a call edge. This
     // may merge away some SCCs, and we add those to the UpdateResult. We also
     // need to make sure to update the worklist in the event SCCs have moved
     // before the current one in the post-order sequence.
     auto InitialSCCIndex = RC->find(*C) - RC->begin();
-    auto InvalidatedSCCs = RC->switchInternalEdgeToCall(N, TargetN);
+    auto InvalidatedSCCs = RC->switchInternalEdgeToCall(N, *CallTarget);
     if (!InvalidatedSCCs.empty()) {
       C = &TargetC;
       assert(G.lookupSCC(N) == C && "Failed to update current SCC!");

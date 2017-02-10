@@ -1,4 +1,5 @@
 ; RUN: opt -S < %s -inline -argpromotion | FileCheck %s
+; RUN: opt -S < %s -passes=inline,argpromotion | FileCheck %s
 
 %S = type { %S* }
 

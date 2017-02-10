@@ -13,45 +13,27 @@
 
 #include "new"
 
-#if defined(_LIBCPP_ABI_MICROSOFT)
-// nothing todo
-#elif defined(LIBCXX_BUILDING_LIBCXXABI)
-#include <cxxabi.h>
-#elif defined(LIBCXXRT)
-#include <cxxabi.h>
-#include "new_handler_fallback.ipp"
-#elif defined(__GLIBCXX__)
-// nothing todo
-#elif defined(_LIBCPP_BUILDING_NO_ABI_LIBRARY)
-// nothing todo
-#else
-#error UNSUPPORTED configuration
-#endif
+#if defined(__APPLE__) && !defined(LIBCXXRT) && \
+    !defined(_LIBCPP_BUILDING_HAS_NO_ABI_LIBRARY)
+    #include <cxxabi.h>
 
-namespace std
-{
+    #ifndef _LIBCPPABI_VERSION
+        // On Darwin, there are two STL shared libraries and a lower level ABI
+        // shared library.  The global holding the current new handler is
+        // in the ABI library and named __cxa_new_handler.
+        #define __new_handler __cxxabiapple::__cxa_new_handler
+    #endif
+#else  // __APPLE__
+    #if defined(LIBCXXRT) || defined(LIBCXX_BUILDING_LIBCXXABI)
+        #include <cxxabi.h>
+    #endif  // defined(LIBCXX_BUILDING_LIBCXXABI)
+    #if defined(_LIBCPP_BUILDING_HAS_NO_ABI_LIBRARY) || \
+        (!defined(_LIBCPPABI_VERSION) && !defined(__GLIBCXX__))
+        static std::new_handler __new_handler;
+    #endif  // _LIBCPPABI_VERSION
+#endif
 
 #ifndef __GLIBCXX__
-const nothrow_t nothrow = {};
-#endif
-
-#ifndef LIBSTDCXX
-
-void
-__throw_bad_alloc()
-{
-#ifndef _LIBCPP_NO_EXCEPTIONS
-    throw bad_alloc();
-#else
-    _VSTD::abort();
-#endif
-}
-
-#endif // !LIBSTDCXX
-
-}  // std
-
-#if !defined(__GLIBCXX__) && !defined(_LIBCPP_ABI_MICROSOFT)
 
 // Implement all new and delete operators as weak definitions
 // in this shared library, so that they can be overridden by programs
@@ -295,5 +277,107 @@ operator delete[] (void* ptr, size_t, std::align_val_t alignment) _NOEXCEPT
     ::operator delete[](ptr, alignment);
 }
 
-#endif // !_LIBCPP_HAS_NO_ALIGNED_ALLOCATION
-#endif // !__GLIBCXX__ && !_LIBCPP_ABI_MICROSOFT
+#endif // !defined(_LIBCPP_HAS_NO_ALIGNED_ALLOCATION)
+
+#endif // !__GLIBCXX__
+
+namespace std
+{
+
+#ifndef __GLIBCXX__
+const nothrow_t nothrow = {};
+#endif
+
+#ifndef _LIBCPPABI_VERSION
+
+#ifndef __GLIBCXX__
+
+new_handler
+set_new_handler(new_handler handler) _NOEXCEPT
+{
+    return __sync_lock_test_and_set(&__new_handler, handler);
+}
+
+new_handler
+get_new_handler() _NOEXCEPT
+{
+    return __sync_fetch_and_add(&__new_handler, nullptr);
+}
+
+#endif // !__GLIBCXX__
+
+#ifndef LIBCXXRT
+
+bad_alloc::bad_alloc() _NOEXCEPT
+{
+}
+
+#ifndef __GLIBCXX__
+
+bad_alloc::~bad_alloc() _NOEXCEPT
+{
+}
+
+const char*
+bad_alloc::what() const _NOEXCEPT
+{
+    return "std::bad_alloc";
+}
+
+#endif // !__GLIBCXX__
+
+bad_array_new_length::bad_array_new_length() _NOEXCEPT
+{
+}
+
+#ifndef __GLIBCXX__
+
+bad_array_new_length::~bad_array_new_length() _NOEXCEPT
+{
+}
+
+const char*
+bad_array_new_length::what() const _NOEXCEPT
+{
+    return "bad_array_new_length";
+}
+
+#endif // !__GLIBCXX__
+
+#endif //LIBCXXRT
+
+bad_array_length::bad_array_length() _NOEXCEPT
+{
+}
+
+#ifndef __GLIBCXX__
+
+bad_array_length::~bad_array_length() _NOEXCEPT
+{
+}
+
+const char*
+bad_array_length::what() const _NOEXCEPT
+{
+    return "bad_array_length";
+}
+
+#endif // !__GLIBCXX__
+
+#endif // _LIBCPPABI_VERSION
+
+#ifndef LIBSTDCXX
+
+void
+__throw_bad_alloc()
+{
+#ifndef _LIBCPP_NO_EXCEPTIONS
+    throw bad_alloc();
+#else
+    _VSTD::abort();
+#endif
+}
+
+#endif // !LIBSTDCXX
+
+}  // std

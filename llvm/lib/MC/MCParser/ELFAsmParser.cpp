@@ -157,6 +157,7 @@ private:
   bool maybeParseSectionType(StringRef &TypeName);
   bool parseMergeSize(int64_t &Size);
   bool parseGroup(StringRef &GroupName);
+  bool parseMetadataSym(MCSectionELF *&Associated);
   bool maybeParseUniqueID(int64_t &UniqueID);
 };
 
@@ -297,6 +298,9 @@ static unsigned parseSectionFlags(StringRef flagsStr, bool *UseLastGroup) {
     case 'w':
       flags |= ELF::SHF_WRITE;
       break;
+    case 'm':
+      flags |= ELF::SHF_LINK_ORDER;
+      break;
     case 'M':
       flags |= ELF::SHF_MERGE;
       break;
@@ -425,6 +429,21 @@ bool ELFAsmParser::parseGroup(StringRef &GroupName) {
   return false;
 }
 
+bool ELFAsmParser::parseMetadataSym(MCSectionELF *&Associated) {
+  MCAsmLexer &L = getLexer();
+  if (L.isNot(AsmToken::Comma))
+    return TokError("expected metadata symbol");
+  Lex();
+  StringRef Name;
+  if (getParser().parseIdentifier(Name))
+    return true;
+  MCSymbol *Sym = getContext().lookupSymbol(Name);
+  if (!Sym || !Sym->isInSection())
+    return TokError("symbol is not in a section: " + Name);
+  Associated = cast<MCSectionELF>(&Sym->getSection());
+  return false;
+}
+
 bool ELFAsmParser::maybeParseUniqueID(int64_t &UniqueID) {
   MCAsmLexer &L = getLexer();
   if (L.isNot(AsmToken::Comma))
@@ -460,6 +479,7 @@ bool ELFAsmParser::ParseSectionArguments(bool IsPush, SMLoc loc) {
   const MCExpr *Subsection = nullptr;
   bool UseLastGroup = false;
   StringRef UniqueStr;
+  MCSectionELF *Associated = nullptr;
   int64_t UniqueID = ~0;
 
   // Set the defaults first.
@@ -522,6 +542,9 @@ bool ELFAsmParser::ParseSectionArguments(bool IsPush, SMLoc loc) {
     if (Group)
       if (parseGroup(GroupName))
         return true;
+    if (Flags & ELF::SHF_LINK_ORDER)
+      if (parseMetadataSym(Associated))
+        return true;
     if (maybeParseUniqueID(UniqueID))
       return true;
   }
@@ -571,8 +594,8 @@ EndStmt:
       }
   }
 
-  MCSection *ELFSection = getContext().getELFSection(SectionName, Type, Flags,
-                                                     Size, GroupName, UniqueID);
+  MCSection *ELFSection = getContext().getELFSection(
+      SectionName, Type, Flags, Size, GroupName, UniqueID, Associated);
   getStreamer().SwitchSection(ELFSection, Subsection);
 
   if (getContext().getGenDwarfForAssembly()) {

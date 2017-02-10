@@ -1,0 +1,33 @@
+# RUN: llvm-dsymutil -f -o - -oso-prepend-path=%p/.. -y %s | llvm-dwarfdump - | FileCheck %s
+
+# This test on links the Dwarf for an LTO binary and on purpose doesn't retain
+# any symbol in the second CU out of 3. This is the only case where dsymutil
+# will generate an empty CU and it requires special handling.
+
+---
+triple:          'x86_64-apple-darwin'
+objects:
+  - filename:        /Inputs/basic-lto.macho.x86_64.o
+    timestamp:       1417654896
+    symbols:
+      - { sym: _main, objAddr: 0x0000000000000000, binAddr: 0x0000000100000F40, size: 0x00000010 }
+      - { sym: _bar, objAddr: 0x0000000000000050, binAddr: 0x0000000100000F90, size: 0x00000024 }
+...
+
+.debug_info contents:
+CHECK: Compile Unit: length = 0x0000007d version = 0x0002 abbr_offset = 0x0000 addr_size = 0x08 (next unit at 0x00000081)
+
+CHECK: DW_TAG_compile_unit
+CHECK:        DW_AT_name {{.*}} "basic1.c"
+CHECK:   DW_TAG_subprogram
+                DW_AT_name {{.*}} "main"
+
+CHECK: Compile Unit: length = 0x00000007 version = 0x0002 abbr_offset = 0x0000 addr_size = 0x08 (next unit at 0x0000008c)
+
+CHECK: Compile Unit: length = 0x00000089 version = 0x0002 abbr_offset = 0x0000 addr_size = 0x08 (next unit at 0x00000119)
+
+CHECK: DW_TAG_compile_unit
+CHECK:        DW_AT_name {{.*}} "basic3.c"
+
+CHECK:   DW_TAG_subprogram [7] *
+CHECK:          DW_AT_name {{.*}} = "bar"

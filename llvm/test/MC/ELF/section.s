@@ -149,3 +149,69 @@ bar:
 // CHECK:          Name: bar-"foo"
 // CHECK:        Section {
 // CHECK:          Name: foo
+
+// Test SHF_LINK_ORDER
+
+.section .shf_metadata_target1, "a"
+        .quad 0
+.section .shf_metadata_target2, "a", @progbits, unique, 1
+.Lshf_metadata_target2_1:
+        .quad 0
+.section .shf_metadata_target2, "a", @progbits, unique, 2
+.Lshf_metadata_target2_2:
+        .quad 0
+
+.section .shf_metadata1,"am",@progbits,.Lshf_metadata_target2_1
+.section .shf_metadata2,"am",@progbits,.Lshf_metadata_target2_2
+.section .shf_metadata3,"am",@progbits,.shf_metadata_target1
+
+// CHECK:      Section {
+// CHECK:        Index: 22
+// CHECK-NEXT:   Name: .shf_metadata_target1
+
+// CHECK:      Section {
+// CHECK:        Index: 23
+// CHECK-NEXT:   Name: .shf_metadata_target2
+
+// CHECK:      Section {
+// CHECK:        Index: 24
+// CHECK-NEXT:   Name: .shf_metadata_target2
+
+// CHECK:      Section {
+// CHECK:        Name: .shf_metadata1
+// CHECK-NEXT:   Type: SHT_PROGBITS
+// CHECK-NEXT:   Flags [
+// CHECK-NEXT:     SHF_ALLOC
+// CHECK-NEXT:     SHF_LINK_ORDER
+// CHECK-NEXT:   ]
+// CHECK-NEXT:   Address:
+// CHECK-NEXT:   Offset:
+// CHECK-NEXT:   Size:
+// CHECK-NEXT:   Link:    23
+// CHECK-NEXT:   Info:    0
+
+// CHECK:      Section {
+// CHECK:        Name: .shf_metadata2
+// CHECK-NEXT:   Type: SHT_PROGBITS
+// CHECK-NEXT:   Flags [
+// CHECK-NEXT:     SHF_ALLOC
+// CHECK-NEXT:     SHF_LINK_ORDER
+// CHECK-NEXT:   ]
+// CHECK-NEXT:   Address:
+// CHECK-NEXT:   Offset:
+// CHECK-NEXT:   Size:
+// CHECK-NEXT:   Link:    24
+// CHECK-NEXT:   Info:    0
+
+// CHECK:      Section {
+// CHECK:        Name: .shf_metadata3
+// CHECK-NEXT:   Type: SHT_PROGBITS
+// CHECK-NEXT:   Flags [
+// CHECK-NEXT:     SHF_ALLOC
+// CHECK-NEXT:     SHF_LINK_ORDER
+// CHECK-NEXT:   ]
+// CHECK-NEXT:   Address:
+// CHECK-NEXT:   Offset:
+// CHECK-NEXT:   Size:
+// CHECK-NEXT:   Link:    22
+// CHECK-NEXT:   Info:    0

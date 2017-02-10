@@ -179,7 +179,7 @@ namespace llvm {
 
       /// Insert the lower 16-bits of a 32-bit value to a vector,
       /// corresponds to X86::PINSRW.
-      PINSRW, MMX_PINSRW,
+      PINSRW,
 
       /// Shuffle 16 8-bit values within a vector.
       PSHUFB,

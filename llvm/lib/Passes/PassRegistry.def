@@ -85,6 +85,7 @@ CGSCC_ANALYSIS("fam-proxy", FunctionAnalysisManagerCGSCCProxy())
 #ifndef CGSCC_PASS
 #define CGSCC_PASS(NAME, CREATE_PASS)
 #endif
+CGSCC_PASS("argpromotion", ArgumentPromotionPass())
 CGSCC_PASS("invalidate<all>", InvalidateAllAnalysesPass())
 CGSCC_PASS("function-attrs", PostOrderFunctionAttrsPass())
 CGSCC_PASS("inline", InlinerPass())

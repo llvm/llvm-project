@@ -7,19 +7,27 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/MC/MCParser/MCAsmParserExtension.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Triple.h"
 #include "llvm/ADT/Twine.h"
-#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
-#include "llvm/MC/MCExpr.h"
+#include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCParser/MCAsmLexer.h"
+#include "llvm/MC/MCParser/MCAsmParserExtension.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSectionCOFF.h"
 #include "llvm/MC/MCStreamer.h"
+#include "llvm/MC/SectionKind.h"
 #include "llvm/Support/COFF.h"
+#include "llvm/Support/SMLoc.h"
+#include <cassert>
+#include <cstdint>
+#include <limits>
+#include <utility>
+
 using namespace llvm;
 
 namespace {
@@ -98,12 +106,14 @@ class COFFAsmParser : public MCAsmParserExtension {
                             | COFF::IMAGE_SCN_MEM_READ,
                               SectionKind::getText());
   }
+
   bool ParseSectionDirectiveData(StringRef, SMLoc) {
     return ParseSectionSwitch(".data", COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
                                            COFF::IMAGE_SCN_MEM_READ |
                                            COFF::IMAGE_SCN_MEM_WRITE,
                               SectionKind::getData());
   }
+
   bool ParseSectionDirectiveBSS(StringRef, SMLoc) {
     return ParseSectionSwitch(".bss",
                               COFF::IMAGE_SCN_CNT_UNINITIALIZED_DATA
@@ -141,8 +151,9 @@ class COFFAsmParser : public MCAsmParserExtension {
   bool ParseAtUnwindOrAtExcept(bool &unwind, bool &except);
   bool ParseSEHRegisterNumber(unsigned &RegNo);
   bool ParseDirectiveSymbolAttribute(StringRef Directive, SMLoc);
+
 public:
-  COFFAsmParser() {}
+  COFFAsmParser() = default;
 };
 
 } // end annonomous namespace.
@@ -277,7 +288,7 @@ bool COFFAsmParser::ParseDirectiveSymbolAttribute(StringRef Directive, SMLoc) {
     .Default(MCSA_Invalid);
   assert(Attr != MCSA_Invalid && "unexpected symbol attribute directive!");
   if (getLexer().isNot(AsmToken::EndOfStatement)) {
-    for (;;) {
+    while (true) {
       StringRef Name;
 
       if (getParser().parseIdentifier(Name))
@@ -466,10 +477,11 @@ bool COFFAsmParser::ParseDirectiveSecRel32(StringRef, SMLoc) {
   if (getLexer().isNot(AsmToken::EndOfStatement))
     return TokError("unexpected token in directive");
 
-  if (Offset < 0 || Offset > UINT32_MAX)
-    return Error(OffsetLoc,
-                 "invalid '.secrel32' directive offset, can't be less "
-                 "than zero or greater than UINT32_MAX");
+  if (Offset < 0 || Offset > std::numeric_limits<uint32_t>::max())
+    return Error(
+        OffsetLoc,
+        "invalid '.secrel32' directive offset, can't be less "
+        "than zero or greater than std::numeric_limits<uint32_t>::max()");
 
   MCSymbol *Symbol = getContext().getOrCreateSymbol(SymbolID);
 
@@ -817,4 +829,4 @@ MCAsmParserExtension *createCOFFAsmParser() {
   return new COFFAsmParser;
 }
 
-}
+} // end namespace llvm

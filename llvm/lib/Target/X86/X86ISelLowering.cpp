@@ -5942,12 +5942,21 @@ static SDValue LowerBuildVectorv16i8(SDValue Op, unsigned NonZeros,
     for (unsigned i = 0; i < 16; ++i) {
       bool IsNonZero = (NonZeros & (1 << i)) != 0;
       if (IsNonZero) {
+        // If the build vector contains zeros or our first insertion is not the
+        // first index then insert into zero vector to break any register
+        // dependency else use SCALAR_TO_VECTOR/VZEXT_MOVL.
         if (First) {
-          if (NumZero)
-            V = getZeroVector(MVT::v16i8, Subtarget, DAG, dl);
-          else
-            V = DAG.getUNDEF(MVT::v16i8);
           First = false;
+          if (NumZero || 0 != i)
+            V = getZeroVector(MVT::v16i8, Subtarget, DAG, dl);
+          else {
+            assert(0 == i && "Expected insertion into zero-index");
+            V = DAG.getAnyExtOrTrunc(Op.getOperand(i), dl, MVT::i32);
+            V = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, MVT::v4i32, V);
+            V = DAG.getNode(X86ISD::VZEXT_MOVL, dl, MVT::v4i32, V);
+            V = DAG.getBitcast(MVT::v16i8, V);
+            continue;
+          }
         }
         V = DAG.getNode(ISD::INSERT_VECTOR_ELT, dl, MVT::v16i8, V,
                         Op.getOperand(i), DAG.getIntPtrConstant(i, dl));
@@ -5969,6 +5978,8 @@ static SDValue LowerBuildVectorv16i8(SDValue Op, unsigned NonZeros,
     }
 
     if ((i & 1) != 0) {
+      // FIXME: Investigate extending to i32 instead of just i16.
+      // FIXME: Investigate combining the first 4 bytes as a i32 instead.
       SDValue ThisElt, LastElt;
       bool LastIsNonZero = (NonZeros & (1 << (i - 1))) != 0;
       if (LastIsNonZero) {
@@ -5984,9 +5995,18 @@ static SDValue LowerBuildVectorv16i8(SDValue Op, unsigned NonZeros,
       } else
         ThisElt = LastElt;
 
-      if (ThisElt)
-        V = DAG.getNode(ISD::INSERT_VECTOR_ELT, dl, MVT::v8i16, V, ThisElt,
-                        DAG.getIntPtrConstant(i / 2, dl));
+      if (ThisElt) {
+        if (1 == i) {
+          V = NumZero ? DAG.getZExtOrTrunc(ThisElt, dl, MVT::i32)
+                      : DAG.getAnyExtOrTrunc(ThisElt, dl, MVT::i32);
+          V = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, MVT::v4i32, V);
+          V = DAG.getNode(X86ISD::VZEXT_MOVL, dl, MVT::v4i32, V);
+          V = DAG.getBitcast(MVT::v8i16, V);
+        } else {
+          V = DAG.getNode(ISD::INSERT_VECTOR_ELT, dl, MVT::v8i16, V, ThisElt,
+                          DAG.getIntPtrConstant(i / 2, dl));
+        }
+      }
     }
   }
 
@@ -6007,12 +6027,21 @@ static SDValue LowerBuildVectorv8i16(SDValue Op, unsigned NonZeros,
   for (unsigned i = 0; i < 8; ++i) {
     bool IsNonZero = (NonZeros & (1 << i)) != 0;
     if (IsNonZero) {
+      // If the build vector contains zeros or our first insertion is not the
+      // first index then insert into zero vector to break any register
+      // dependency else use SCALAR_TO_VECTOR/VZEXT_MOVL.
       if (First) {
-        if (NumZero)
-          V = getZeroVector(MVT::v8i16, Subtarget, DAG, dl);
-        else
-          V = DAG.getUNDEF(MVT::v8i16);
         First = false;
+        if (NumZero || 0 != i)
+          V = getZeroVector(MVT::v8i16, Subtarget, DAG, dl);
+        else {
+          assert(0 == i && "Expected insertion into zero-index");
+          V = DAG.getAnyExtOrTrunc(Op.getOperand(i), dl, MVT::i32);
+          V = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, MVT::v4i32, V);
+          V = DAG.getNode(X86ISD::VZEXT_MOVL, dl, MVT::v4i32, V);
+          V = DAG.getBitcast(MVT::v8i16, V);
+          continue;
+        }
       }
       V = DAG.getNode(ISD::INSERT_VECTOR_ELT, dl, MVT::v8i16, V,
                       Op.getOperand(i), DAG.getIntPtrConstant(i, dl));
@@ -6672,6 +6701,7 @@ static SDValue buildFromShuffleMostly(SDValue Op, SelectionDAG &DAG) {
 
     SDValue ExtractedFromVec = Op.getOperand(i).getOperand(0);
     SDValue ExtIdx = Op.getOperand(i).getOperand(1);
+
     // Quit if non-constant index.
     if (!isa<ConstantSDNode>(ExtIdx))
       return SDValue();
@@ -6702,11 +6732,10 @@ static SDValue buildFromShuffleMostly(SDValue Op, SelectionDAG &DAG) {
 
   VecIn2 = VecIn2.getNode() ? VecIn2 : DAG.getUNDEF(VT);
   SDValue NV = DAG.getVectorShuffle(VT, DL, VecIn1, VecIn2, Mask);
-  for (unsigned i = 0, e = InsertIndices.size(); i != e; ++i) {
-    unsigned Idx = InsertIndices[i];
+
+  for (unsigned Idx : InsertIndices)
     NV = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, VT, NV, Op.getOperand(Idx),
                      DAG.getIntPtrConstant(Idx, DL));
-  }
 
   return NV;
 }
@@ -23771,7 +23800,6 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case X86ISD::INSERTPS:           return "X86ISD::INSERTPS";
   case X86ISD::PINSRB:             return "X86ISD::PINSRB";
   case X86ISD::PINSRW:             return "X86ISD::PINSRW";
-  case X86ISD::MMX_PINSRW:         return "X86ISD::MMX_PINSRW";
   case X86ISD::PSHUFB:             return "X86ISD::PSHUFB";
   case X86ISD::ANDNP:              return "X86ISD::ANDNP";
   case X86ISD::BLENDI:             return "X86ISD::BLENDI";
@@ -28763,12 +28791,13 @@ static SDValue combineExtractVectorElt(SDNode *N, SelectionDAG &DAG,
   if (SDValue NewOp = XFormVExtractWithShuffleIntoLoad(N, DAG, DCI))
     return NewOp;
 
+  EVT VT = N->getValueType(0);
   SDValue InputVector = N->getOperand(0);
   SDLoc dl(InputVector);
+
   // Detect mmx to i32 conversion through a v2i32 elt extract.
   if (InputVector.getOpcode() == ISD::BITCAST && InputVector.hasOneUse() &&
-      N->getValueType(0) == MVT::i32 &&
-      InputVector.getValueType() == MVT::v2i32 &&
+      VT == MVT::i32 && InputVector.getValueType() == MVT::v2i32 &&
       isa<ConstantSDNode>(N->getOperand(1)) &&
       N->getConstantOperandVal(1) == 0) {
     SDValue MMXSrc = InputVector.getOperand(0);
@@ -28777,8 +28806,6 @@ static SDValue combineExtractVectorElt(SDNode *N, SelectionDAG &DAG,
     if (MMXSrc.getValueType() == MVT::x86mmx)
       return DAG.getNode(X86ISD::MMX_MOVD2W, dl, MVT::i32, MMXSrc);
   }
-
-  EVT VT = N->getValueType(0);
 
   if (VT == MVT::i1 && isa<ConstantSDNode>(N->getOperand(1)) &&
       InputVector.getOpcode() == ISD::BITCAST &&
@@ -31137,7 +31164,7 @@ static SDValue combineOrCmpEqZeroToCtlzSrl(SDNode *N, SelectionDAG &DAG,
     return N->getOpcode() == X86ISD::SETCC && N->hasOneUse() &&
            X86::CondCode(N->getConstantOperandVal(0)) == X86::COND_E &&
            N->getOperand(1).getOpcode() == X86ISD::CMP &&
-           N->getOperand(1).getConstantOperandVal(1) == 0 &&
+           isNullConstant(N->getOperand(1).getOperand(1)) &&
            N->getOperand(1).getValueType().bitsGE(MVT::i32);
   };
 

@@ -571,12 +571,12 @@ bool DevirtModule::tryVirtualConstProp(
   if (BitWidth > 64)
     return false;
 
-  // Make sure that each function does not access memory, takes at least one
-  // argument, does not use its first argument (which we assume is 'this'),
-  // and has the same return type.
+  // Make sure that each function is defined, does not access memory, takes at
+  // least one argument, does not use its first argument (which we assume is
+  // 'this'), and has the same return type.
   for (VirtualCallTarget &Target : TargetsForSlot) {
-    if (!Target.Fn->doesNotAccessMemory() || Target.Fn->arg_empty() ||
-        !Target.Fn->arg_begin()->use_empty() ||
+    if (Target.Fn->isDeclaration() || !Target.Fn->doesNotAccessMemory() ||
+        Target.Fn->arg_empty() || !Target.Fn->arg_begin()->use_empty() ||
         Target.Fn->getReturnType() != RetType)
       return false;
   }

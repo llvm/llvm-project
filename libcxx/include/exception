@@ -82,10 +82,6 @@ template <class E> void rethrow_if_nested(const E& e);
 #include <cstdlib>
 #include <type_traits>
 
-#if defined(_LIBCPP_ABI_MICROSOFT)
-#include <vcruntime_exception.h>
-#endif
-
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header
 #endif
@@ -93,7 +89,6 @@ template <class E> void rethrow_if_nested(const E& e);
 namespace std  // purposefully not using versioning namespace
 {
 
-#if !defined(_LIBCPP_ABI_MICROSOFT)
 class _LIBCPP_EXCEPTION_ABI exception
 {
 public:
@@ -110,7 +105,6 @@ public:
     virtual ~bad_exception() _NOEXCEPT;
     virtual const char* what() const _NOEXCEPT;
 };
-#endif // !_LIBCPP_ABI_MICROSOFT
 
 typedef void (*unexpected_handler)();
 _LIBCPP_FUNC_VIS unexpected_handler set_unexpected(unexpected_handler) _NOEXCEPT;

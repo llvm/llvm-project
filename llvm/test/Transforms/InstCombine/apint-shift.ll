@@ -63,6 +63,8 @@ define i55 @test6(i55 %A) {
   ret i55 %C
 }
 
+; (X * C2) << C1 --> X * (C2 << C1)
+
 define i55 @test6a(i55 %A) {
 ; CHECK-LABEL: @test6a(
 ; CHECK-NEXT:    [[C:%.*]] = mul i55 %A, 6
@@ -71,6 +73,18 @@ define i55 @test6a(i55 %A) {
   %B = mul i55 %A, 3
   %C = shl i55 %B, 1
   ret i55 %C
+}
+
+; (X * C2) << C1 --> X * (C2 << C1)
+
+define <2 x i55> @test6a_vec(<2 x i55> %A) {
+; CHECK-LABEL: @test6a_vec(
+; CHECK-NEXT:    [[C:%.*]] = mul <2 x i55> %A, <i55 6, i55 48>
+; CHECK-NEXT:    ret <2 x i55> [[C]]
+;
+  %B = mul <2 x i55> %A, <i55 3, i55 12>
+  %C = shl <2 x i55> %B, <i55 1, i55 2>
+  ret <2 x i55> %C
 }
 
 define i29 @test7(i8 %X) {

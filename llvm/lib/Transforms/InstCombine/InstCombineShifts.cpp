@@ -335,13 +335,6 @@ Instruction *InstCombiner::FoldShiftByConstant(Value *Op0, Constant *Op1,
   assert(!Op1C->uge(TypeBits) &&
          "Shift over the type width should have been removed already");
 
-  // ((X*C1) << C2) == (X * (C1 << C2))
-  if (BinaryOperator *BO = dyn_cast<BinaryOperator>(Op0))
-    if (BO->getOpcode() == Instruction::Mul && isLeftShift)
-      if (Constant *BOOp = dyn_cast<Constant>(BO->getOperand(1)))
-        return BinaryOperator::CreateMul(BO->getOperand(0),
-                                         ConstantExpr::getShl(BOOp, Op1));
-
   if (Instruction *FoldedShift = foldOpWithConstantIntoOperand(I))
     return FoldedShift;
 
@@ -604,12 +597,18 @@ Instruction *InstCombiner::visitShl(BinaryOperator &I) {
     }
   }
 
-  // (C1 << A) << C2 -> (C1 << C2) << A
-  Constant *C1, *C2;
-  Value *A;
-  if (match(Op0, m_OneUse(m_Shl(m_Constant(C1), m_Value(A)))) &&
-      match(Op1, m_Constant(C2)))
-    return BinaryOperator::CreateShl(ConstantExpr::getShl(C1, C2), A);
+  Constant *C1;
+  if (match(Op1, m_Constant(C1))) {
+    Constant *C2;
+    Value *X;
+    // (C2 << X) << C1 --> (C2 << C1) << X
+    if (match(Op0, m_OneUse(m_Shl(m_Constant(C2), m_Value(X)))))
+      return BinaryOperator::CreateShl(ConstantExpr::getShl(C2, C1), X);
+
+    // (X * C2) << C1 --> X * (C2 << C1)
+    if (match(Op0, m_Mul(m_Value(X), m_Constant(C2))))
+      return BinaryOperator::CreateMul(X, ConstantExpr::getShl(C2, C1));
+  }
 
   return nullptr;
 }

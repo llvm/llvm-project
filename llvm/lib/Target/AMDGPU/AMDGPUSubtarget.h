@@ -66,6 +66,22 @@ public:
     ISAVersion8_1_0,
   };
 
+  enum TrapHandlerAbi {
+    TrapHandlerAbiNone = 0,
+    TrapHandlerAbiHsa = 1
+  };
+
+  enum TrapCode {
+    TrapCodeBreakPoint = 0,
+    TrapCodeLLVMTrap = 1,
+    TrapCodeLLVMDebugTrap = 2,
+    TrapCodeHSADebugTrap = 3
+  };
+
+  enum TrapRegValues {
+    TrapCodeLLVMTrapRegValue = 1
+  };
+
 protected:
   // Basic subtarget description.
   Triple TargetTriple;
@@ -88,6 +104,7 @@ protected:
   bool UnalignedScratchAccess;
   bool UnalignedBufferAccess;
   bool EnableXNACK;
+  bool TrapHandler;
   bool DebuggerInsertNops;
   bool DebuggerReserveRegs;
   bool DebuggerEmitPrologue;
@@ -256,6 +273,10 @@ public:
     return CaymanISA;
   }
 
+  TrapHandlerAbi getTrapHandlerAbi() const {
+    return isAmdHsaOS() ? TrapHandlerAbiHsa : TrapHandlerAbiNone;
+  }
+
   bool isPromoteAllocaEnabled() const {
     return EnablePromoteAlloca;
   }
@@ -307,6 +328,10 @@ public:
 
   bool hasUnalignedScratchAccess() const {
     return UnalignedScratchAccess;
+  }
+
+  bool isTrapHandlerEnabled() const {
+    return TrapHandler;
   }
 
   bool isXNACKEnabled() const {

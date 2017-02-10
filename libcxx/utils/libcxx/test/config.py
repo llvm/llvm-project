@@ -462,13 +462,17 @@ class Configuration(object):
         gcc_toolchain = self.get_lit_conf('gcc_toolchain')
         if gcc_toolchain:
             self.cxx.flags += ['-gcc-toolchain', gcc_toolchain]
+        # NOTE: the _DEBUG definition must preceed the triple check because for
+        # the Windows build of libc++, the forced inclusion of a header requires
+        # that _DEBUG is defined.  Incorrect ordering will result in -target
+        # being elided.
+        if self.is_windows and self.debug_build:
+            self.cxx.compile_flags += ['-D_DEBUG']
         if self.use_target:
             if not self.cxx.addFlagIfSupported(
                     ['-target', self.config.target_triple]):
                 self.lit_config.warning('use_target is true but -target is '\
                         'not supported by the compiler')
-        if self.is_windows and self.debug_build:
-            self.cxx.compile_flags += ['-D_DEBUG']
 
     def configure_compile_flags_header_includes(self):
         support_path = os.path.join(self.libcxx_src_root, 'test', 'support')
@@ -887,8 +891,9 @@ class Configuration(object):
 
     def configure_substitutions(self):
         sub = self.config.substitutions
+        cxx_path = pipes.quote(self.cxx.path)
         # Configure compiler substitutions
-        sub.append(('%cxx', self.cxx.path))
+        sub.append(('%cxx', cxx_path))
         # Configure flags substitutions
         flags_str = ' '.join([pipes.quote(f) for f in self.cxx.flags])
         compile_flags_str = ' '.join([pipes.quote(f) for f in self.cxx.compile_flags])
@@ -902,12 +907,12 @@ class Configuration(object):
             verify_str = ' ' + ' '.join(self.cxx.verify_flags) + ' '
             sub.append(('%verify', verify_str))
         # Add compile and link shortcuts
-        compile_str = (self.cxx.path + ' -o %t.o %s -c ' + flags_str
+        compile_str = (cxx_path + ' -o %t.o %s -c ' + flags_str
                        + ' ' + compile_flags_str)
-        link_str = (self.cxx.path + ' -o %t.exe %t.o ' + flags_str + ' '
+        link_str = (cxx_path + ' -o %t.exe %t.o ' + flags_str + ' '
                     + link_flags_str)
         assert type(link_str) is str
-        build_str = self.cxx.path + ' -o %t.exe %s ' + all_flags
+        build_str = cxx_path + ' -o %t.exe %s ' + all_flags
         if self.cxx.use_modules:
             sub.append(('%compile_module', compile_str))
             sub.append(('%build_module', build_str))
@@ -933,7 +938,7 @@ class Configuration(object):
         sub.append(('%run', exec_str + ' %t.exe'))
         # Configure not program substitutions
         not_py = os.path.join(self.libcxx_src_root, 'utils', 'not.py')
-        not_str = '%s %s ' % (sys.executable, not_py)
+        not_str = '%s %s ' % (pipes.quote(sys.executable), pipes.quote(not_py))
         sub.append(('not ', not_str))
 
     def configure_triple(self):

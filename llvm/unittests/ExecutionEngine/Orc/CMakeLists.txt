@@ -21,4 +21,4 @@ add_llvm_unittest(OrcJITTests
   RPCUtilsTest.cpp
   )
 
-target_link_libraries(OrcJITTests ${PTHREAD_LIB})
+target_link_libraries(OrcJITTests ${LLVM_PTHREAD_LIB})

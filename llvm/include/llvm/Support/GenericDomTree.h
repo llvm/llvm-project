@@ -782,11 +782,9 @@ public:
       Calculate<FT, NodeT *>(*this, F);
     } else {
       // Initialize the roots list
-      for (typename TraitsTy::nodes_iterator I = TraitsTy::nodes_begin(&F),
-                                             E = TraitsTy::nodes_end(&F);
-           I != E; ++I)
-        if (TraitsTy::child_begin(*I) == TraitsTy::child_end(*I))
-          addRoot(*I);
+      for (auto *Node : nodes(&F))
+        if (TraitsTy::child_begin(Node) == TraitsTy::child_end(Node))
+          addRoot(Node);
 
       Calculate<FT, Inverse<NodeT *>>(*this, F);
     }

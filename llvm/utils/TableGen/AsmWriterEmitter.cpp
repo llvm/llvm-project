@@ -741,7 +741,7 @@ struct AliasPriorityComparator {
     if (LHS.second ==  RHS.second) {
       // We don't actually care about the order, but for consistency it
       // shouldn't depend on pointer comparisons.
-      return LHS.first.TheDef->getName() < RHS.first.TheDef->getName();
+      return LessRecordByID()(LHS.first.TheDef, RHS.first.TheDef);
     }
 
     // Aliases with larger priorities should be considered first.

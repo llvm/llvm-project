@@ -61,6 +61,7 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/GCOVProfiler.h"
 #include "llvm/Transforms/IPO/AlwaysInliner.h"
+#include "llvm/Transforms/IPO/ArgumentPromotion.h"
 #include "llvm/Transforms/IPO/ConstantMerge.h"
 #include "llvm/Transforms/IPO/CrossDSOCFI.h"
 #include "llvm/Transforms/IPO/DeadArgumentElimination.h"
@@ -332,6 +333,9 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
   LPM2.addPass(LoopDeletionPass());
   LPM2.addPass(LoopUnrollPass::createFull());
 
+  // We provide the opt remark emitter pass for LICM to use. We only need to do
+  // this once as it is immutable.
+  FPM.addPass(RequireAnalysisPass<OptimizationRemarkEmitterAnalysis, Function>());
   FPM.addPass(createFunctionToLoopPassAdaptor(std::move(LPM1)));
   FPM.addPass(SimplifyCFGPass());
   FPM.addPass(InstCombinePass());
@@ -452,6 +456,11 @@ PassBuilder::buildPerModuleDefaultPipeline(OptimizationLevel Level,
   // Now deduce any function attributes based in the current code.
   MainCGPipeline.addPass(PostOrderFunctionAttrsPass());
 
+  // When at O3 add argument promotion to the pass pipeline.
+  // FIXME: It isn't at all clear why this should be limited to O3.
+  if (Level == O3)
+    MainCGPipeline.addPass(ArgumentPromotionPass());
+
   // Lastly, add the core function simplification pipeline nested inside the
   // CGSCC walk.
   MainCGPipeline.addPass(createCGSCCToFunctionPassAdaptor(
@@ -533,6 +542,7 @@ PassBuilder::buildPerModuleDefaultPipeline(OptimizationLevel Level,
   // across the loop nests.
   OptimizePM.addPass(createFunctionToLoopPassAdaptor(LoopUnrollPass::create()));
   OptimizePM.addPass(InstCombinePass());
+  OptimizePM.addPass(RequireAnalysisPass<OptimizationRemarkEmitterAnalysis, Function>());
   OptimizePM.addPass(createFunctionToLoopPassAdaptor(LICMPass()));
 
   // Now that we've vectorized and unrolled loops, we may have more refined
@@ -718,8 +728,8 @@ ModulePassManager PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
   // CFI is disabled.
   // Enable once we add support for the summary in the new PM.
 #if 0
-  MPM.addPass(LowerTypeTestsPass(Summary ? LowerTypeTestsSummaryAction::Export :
-                                           LowerTypeTestsSummaryAction::None,
+  MPM.addPass(LowerTypeTestsPass(Summary ? PassSummaryAction::Export :
+                                           PassSummaryAction::None,
                                 Summary));
 #endif
 

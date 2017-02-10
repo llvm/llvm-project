@@ -830,8 +830,7 @@ void PassManagerBuilder::populateThinLTOPassManager(
     PM.add(createVerifierPass());
 
   if (Summary)
-    PM.add(
-        createLowerTypeTestsPass(LowerTypeTestsSummaryAction::Import, Summary));
+    PM.add(createLowerTypeTestsPass(PassSummaryAction::Import, Summary));
 
   populateModulePassManager(PM);
 
@@ -857,9 +856,8 @@ void PassManagerBuilder::populateLTOPassManager(legacy::PassManagerBase &PM) {
   // Lower type metadata and the type.test intrinsic. This pass supports Clang's
   // control flow integrity mechanisms (-fsanitize=cfi*) and needs to run at
   // link time if CFI is enabled. The pass does nothing if CFI is disabled.
-  PM.add(createLowerTypeTestsPass(Summary ? LowerTypeTestsSummaryAction::Export
-                                          : LowerTypeTestsSummaryAction::None,
-                                  Summary));
+  PM.add(createLowerTypeTestsPass(
+      Summary ? PassSummaryAction::Export : PassSummaryAction::None, Summary));
 
   if (OptLevel != 0)
     addLateLTOOptimizationPasses(PM);

@@ -186,6 +186,8 @@
 ; ARMv7a
 ; RUN: llc < %s -mtriple=armv7-none-linux-gnueabi -mcpu=cortex-a7 | FileCheck %s --check-prefix=NO-STRICT-ALIGN
 ; RUN: llc < %s -mtriple=armv7-none-linux-gnueabi -mcpu=cortex-a7 -mattr=+strict-align | FileCheck %s --check-prefix=STRICT-ALIGN
+; ARMv7ve
+; RUN: llc < %s -mtriple=armv7ve-none-linux-gnueabi | FileCheck %s --check-prefix=V7VE
 ; ARMv7r
 ; RUN: llc < %s -mtriple=armv7r-none-linux-gnueabi -mcpu=cortex-r5 | FileCheck %s --check-prefix=NO-STRICT-ALIGN
 ; RUN: llc < %s -mtriple=armv7r-none-linux-gnueabi -mcpu=cortex-r5 -mattr=+strict-align | FileCheck %s --check-prefix=STRICT-ALIGN
@@ -378,6 +380,22 @@
 ; V7-FAST-NOT:   .eabi_attribute 21
 ; V7-FAST-NOT:   .eabi_attribute 22
 ; V7-FAST:   .eabi_attribute 23, 1
+
+; V7VE:      .syntax unified
+; V7VE: .eabi_attribute 6, 10   @ Tag_CPU_arch
+; V7VE: .eabi_attribute 7, 65   @ Tag_CPU_arch_profile
+; V7VE: .eabi_attribute 8, 1    @ Tag_ARM_ISA_use
+; V7VE: .eabi_attribute 9, 2    @ Tag_THUMB_ISA_use
+; V7VE: .eabi_attribute 17, 1   @ Tag_ABI_PCS_GOT_use
+; V7VE: .eabi_attribute 20, 1   @ Tag_ABI_FP_denormal
+; V7VE: .eabi_attribute 21, 1   @ Tag_ABI_FP_exceptions
+; V7VE: .eabi_attribute 23, 3   @ Tag_ABI_FP_number_model
+; V7VE: .eabi_attribute 24, 1   @ Tag_ABI_align_needed
+; V7VE: .eabi_attribute 25, 1   @ Tag_ABI_align_preserved
+; V7VE: .eabi_attribute 38, 1   @ Tag_ABI_FP_16bit_format
+; V7VE: .eabi_attribute 42, 1   @ Tag_MPextension_use
+; V7VE: .eabi_attribute 44, 2   @ Tag_DIV_use
+; V7VE: .eabi_attribute 68, 3   @ Tag_Virtualization_use
 
 ; V8:      .syntax unified
 ; V8: .eabi_attribute 67, "2.09"

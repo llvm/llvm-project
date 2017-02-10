@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TRANSFORMS_UTILS_INTEGERDIVISION_H
-#define LLVM_TRANSFORMS_UTILS_INTEGERDIVISION_H
+#ifndef LLVM_TRANSFORMS_UTILS_LOWERMEMINTRINSICS_H
+#define LLVM_TRANSFORMS_UTILS_LOWERMEMINTRINSICS_H
 
 namespace llvm {
 

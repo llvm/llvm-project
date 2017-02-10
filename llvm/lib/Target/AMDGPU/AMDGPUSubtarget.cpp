@@ -44,7 +44,7 @@ AMDGPUSubtarget::initializeSubtargetDependencies(const Triple &TT,
 
   SmallString<256> FullFS("+promote-alloca,+fp64-fp16-denormals,+load-store-opt,");
   if (isAmdHsaOS()) // Turn on FlatForGlobal for HSA.
-    FullFS += "+flat-for-global,+unaligned-buffer-access,";
+    FullFS += "+flat-for-global,+unaligned-buffer-access,+trap-handler,";
 
   FullFS += FS;
 
@@ -94,6 +94,7 @@ AMDGPUSubtarget::AMDGPUSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
     UnalignedBufferAccess(false),
 
     EnableXNACK(false),
+    TrapHandler(false),
     DebuggerInsertNops(false),
     DebuggerReserveRegs(false),
     DebuggerEmitPrologue(false),
@@ -190,7 +191,7 @@ std::pair<unsigned, unsigned> AMDGPUSubtarget::getFlatWorkGroupSizes(
 std::pair<unsigned, unsigned> AMDGPUSubtarget::getWavesPerEU(
   const Function &F) const {
   // Default minimum/maximum number of waves per execution unit.
-  std::pair<unsigned, unsigned> Default(1, 0);
+  std::pair<unsigned, unsigned> Default(1, getMaxWavesPerEU());
 
   // Default/requested minimum/maximum flat work group sizes.
   std::pair<unsigned, unsigned> FlatWorkGroupSizes = getFlatWorkGroupSizes(F);

@@ -200,17 +200,12 @@ void Calculate(DominatorTreeBaseByGraphTraits<GraphTraits<NodeT>> &DT,
 
     // initialize the semi dominator to point to the parent node
     WInfo.Semi = WInfo.Parent;
-    typedef GraphTraits<Inverse<NodeT> > InvTraits;
-    for (typename InvTraits::ChildIteratorType CI =
-         InvTraits::child_begin(W),
-         E = InvTraits::child_end(W); CI != E; ++CI) {
-      typename InvTraits::NodeRef N = *CI;
-      if (DT.Info.count(N)) {  // Only if this predecessor is reachable!
+    for (const auto &N : inverse_children<NodeT>(W))
+      if (DT.Info.count(N)) { // Only if this predecessor is reachable!
         unsigned SemiU = DT.Info[Eval<GraphT>(DT, N, i + 1)].Semi;
         if (SemiU < WInfo.Semi)
           WInfo.Semi = SemiU;
       }
-    }
 
     // If V is a non-root vertex and sdom(V) = parent(V), then idom(V) is
     // necessarily parent(V). In this case, set idom(V) here and avoid placing

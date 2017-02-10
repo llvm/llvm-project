@@ -110,6 +110,7 @@ public:
     ARMSubArch_v7m,
     ARMSubArch_v7s,
     ARMSubArch_v7k,
+    ARMSubArch_v7ve,
     ARMSubArch_v6,
     ARMSubArch_v6m,
     ARMSubArch_v6k,

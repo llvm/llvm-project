@@ -211,6 +211,8 @@ public:
   unsigned getRegPressureSetLimit(const MachineFunction &MF,
                                   unsigned Idx) const override;
 
+  const int *getRegUnitPressureSets(unsigned RegUnit) const override;
+
 private:
   void buildSpillLoadStore(MachineBasicBlock::iterator MI,
                            unsigned LoadStoreOp,

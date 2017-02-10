@@ -1,4 +1,4 @@
-; RUN: llc -mtriple arm-unknown -global-isel -stop-after=irtranslator %s -o - | FileCheck %s
+; RUN: llc -mtriple arm-unknown -mattr=+vfp2 -global-isel -stop-after=irtranslator %s -o - | FileCheck %s
 
 define void @test_void_return() {
 ; CHECK-LABEL: name: test_void_return
@@ -172,3 +172,51 @@ entry:
   %v = load i32, i32* %p
   ret i32 %v
 }
+
+define arm_aapcscc float @test_float_aapcscc(float %p0, float %p1, float %p2,
+                                             float %p3, float %p4, float %p5) {
+; CHECK-LABEL: name: test_float_aapcscc
+; CHECK: fixedStack:
+; CHECK-DAG: id: [[P4:[0-9]+]]{{.*}}offset: 0{{.*}}size: 4
+; CHECK-DAG: id: [[P5:[0-9]+]]{{.*}}offset: 4{{.*}}size: 4
+; CHECK: liveins: %r0, %r1, %r2, %r3
+; CHECK: [[VREGP1:%[0-9]+]](s32) = COPY %r1
+; CHECK: [[FIP5:%[0-9]+]](p0) = G_FRAME_INDEX %fixed-stack.[[P5]]
+; CHECK: [[VREGP5:%[0-9]+]](s32) = G_LOAD [[FIP5]](p0)
+; CHECK: [[VREGV:%[0-9]+]](s32) = G_FADD [[VREGP1]], [[VREGP5]]
+; CHECK: %r0 = COPY [[VREGV]]
+; CHECK: BX_RET 14, _, implicit %r0
+entry:
+  %v = fadd float %p1, %p5
+  ret float %v
+}
+
+define arm_aapcs_vfpcc float @test_float_vfpcc(float %p0, float %p1, float %p2,
+                                               float %p3, float %p4, float %p5,
+                                               float %ridiculous,
+                                               float %number,
+                                               float %of,
+                                               float %parameters,
+                                               float %that,
+                                               float %should,
+                                               float %never,
+                                               float %exist,
+                                               float %in,
+                                               float %practice,
+                                               float %q0, float %q1) {
+; CHECK-LABEL: name: test_float_vfpcc
+; CHECK: fixedStack:
+; CHECK-DAG: id: [[Q0:[0-9]+]]{{.*}}offset: 0{{.*}}size: 4
+; CHECK-DAG: id: [[Q1:[0-9]+]]{{.*}}offset: 4{{.*}}size: 4
+; CHECK: liveins: %s0, %s1, %s2, %s3, %s4, %s5, %s6, %s7, %s8, %s9, %s10, %s11, %s12, %s13, %s14, %s15
+; CHECK: [[VREGP1:%[0-9]+]](s32) = COPY %s1
+; CHECK: [[FIQ1:%[0-9]+]](p0) = G_FRAME_INDEX %fixed-stack.[[Q1]]
+; CHECK: [[VREGQ1:%[0-9]+]](s32) = G_LOAD [[FIQ1]](p0)
+; CHECK: [[VREGV:%[0-9]+]](s32) = G_FADD [[VREGP1]], [[VREGQ1]]
+; CHECK: %s0 = COPY [[VREGV]]
+; CHECK: BX_RET 14, _, implicit %s0
+entry:
+  %v = fadd float %p1, %q1
+  ret float %v
+}
+

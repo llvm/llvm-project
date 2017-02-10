@@ -29,7 +29,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Transforms/IPO/ArgumentPromotion.h"
 #include "llvm/ADT/DepthFirstIterator.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/AliasAnalysis.h"
@@ -37,6 +39,7 @@
 #include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/CallGraphSCCPass.h"
+#include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/IR/CFG.h"
@@ -67,9 +70,11 @@ typedef std::vector<uint64_t> IndicesVector;
 /// DoPromotion - This method actually performs the promotion of the specified
 /// arguments, and returns the new function.  At this point, we know that it's
 /// safe to do so.
-static CallGraphNode *
+static Function *
 doPromotion(Function *F, SmallPtrSetImpl<Argument *> &ArgsToPromote,
-            SmallPtrSetImpl<Argument *> &ByValArgsToTransform, CallGraph &CG) {
+            SmallPtrSetImpl<Argument *> &ByValArgsToTransform,
+            Optional<function_ref<void(CallSite OldCS, CallSite NewCS)>>
+                ReplaceCallSite) {
 
   // Start by computing a new prototype for the function, which is the same as
   // the old function, but has modified arguments.
@@ -207,9 +212,6 @@ doPromotion(Function *F, SmallPtrSetImpl<Argument *> &ArgsToPromote,
   F->getParent()->getFunctionList().insert(F->getIterator(), NF);
   NF->takeName(F);
 
-  // Get a new callgraph node for NF.
-  CallGraphNode *NF_CGN = CG.getOrInsertFunction(NF);
-
   // Loop over all of the callers of the function, transforming the call sites
   // to pass in the loaded pointers.
   //
@@ -334,8 +336,8 @@ doPromotion(Function *F, SmallPtrSetImpl<Argument *> &ArgsToPromote,
     AttributesVec.clear();
 
     // Update the callgraph to know that the callsite has been transformed.
-    CallGraphNode *CalleeNode = CG[Call->getParent()->getParent()];
-    CalleeNode->replaceCallEdge(CS, CallSite(New), NF_CGN);
+    if (ReplaceCallSite)
+      (*ReplaceCallSite)(CS, CallSite(New));
 
     if (!Call->use_empty()) {
       Call->replaceAllUsesWith(New);
@@ -463,18 +465,7 @@ doPromotion(Function *F, SmallPtrSetImpl<Argument *> &ArgsToPromote,
     std::advance(I2, ArgIndices.size());
   }
 
-  NF_CGN->stealCalledFunctionsFrom(CG[F]);
-
-  // Now that the old function is dead, delete it.  If there is a dangling
-  // reference to the CallgraphNode, just leave the dead function around for
-  // someone else to nuke.
-  CallGraphNode *CGN = CG[F];
-  if (CGN->getNumReferences() == 0)
-    delete CG.removeFunctionFromModule(CGN);
-  else
-    F->setLinkage(Function::ExternalLinkage);
-
-  return NF_CGN;
+  return NF;
 }
 
 /// AllCallersPassInValidPointerForArgument - Return true if we can prove that
@@ -818,14 +809,13 @@ static bool canPaddingBeAccessed(Argument *arg) {
 /// example, all callers are direct).  If safe to promote some arguments, it
 /// calls the DoPromotion method.
 ///
-static CallGraphNode *
-promoteArguments(CallGraphNode *CGN, CallGraph &CG,
-                 function_ref<AAResults &(Function &F)> AARGetter,
-                 unsigned MaxElements) {
-  Function *F = CGN->getFunction();
-
+static Function *
+promoteArguments(Function *F, function_ref<AAResults &(Function &F)> AARGetter,
+                 unsigned MaxElements,
+                 Optional<function_ref<void(CallSite OldCS, CallSite NewCS)>>
+                     ReplaceCallSite) {
   // Make sure that it is local to this module.
-  if (!F || !F->hasLocalLinkage())
+  if (!F->hasLocalLinkage())
     return nullptr;
 
   // Don't promote arguments for variadic functions. Adding, removing, or
@@ -950,7 +940,52 @@ promoteArguments(CallGraphNode *CGN, CallGraph &CG,
   if (ArgsToPromote.empty() && ByValArgsToTransform.empty())
     return nullptr;
 
-  return doPromotion(F, ArgsToPromote, ByValArgsToTransform, CG);
+  return doPromotion(F, ArgsToPromote, ByValArgsToTransform, ReplaceCallSite);
+}
+
+PreservedAnalyses ArgumentPromotionPass::run(LazyCallGraph::SCC &C,
+                                             CGSCCAnalysisManager &AM,
+                                             LazyCallGraph &CG,
+                                             CGSCCUpdateResult &UR) {
+  bool Changed = false, LocalChange;
+
+  // Iterate until we stop promoting from this SCC.
+  do {
+    LocalChange = false;
+
+    for (LazyCallGraph::Node &N : C) {
+      Function &OldF = N.getFunction();
+
+      FunctionAnalysisManager &FAM =
+          AM.getResult<FunctionAnalysisManagerCGSCCProxy>(C, CG).getManager();
+      // FIXME: This lambda must only be used with this function. We should
+      // skip the lambda and just get the AA results directly.
+      auto AARGetter = [&](Function &F) -> AAResults & {
+        assert(&F == &OldF && "Called with an unexpected function!");
+        return FAM.getResult<AAManager>(F);
+      };
+
+      Function *NewF = promoteArguments(&OldF, AARGetter, 3u, None);
+      if (!NewF)
+        continue;
+      LocalChange = true;
+
+      // Directly substitute the functions in the call graph. Note that this
+      // requires the old function to be completely dead and completely
+      // replaced by the new function. It does no call graph updates, it merely
+      // swaps out the particular function mapped to a particular node in the
+      // graph.
+      C.getOuterRefSCC().replaceNodeFunction(N, *NewF);
+      OldF.eraseFromParent();
+    }
+
+    Changed |= LocalChange;
+  } while (LocalChange);
+
+  if (!Changed)
+    return PreservedAnalyses::all();
+
+  return PreservedAnalyses::none();
 }
 
 namespace {
@@ -1001,16 +1036,7 @@ bool ArgPromotion::runOnSCC(CallGraphSCC &SCC) {
   // changes.
   CallGraph &CG = getAnalysis<CallGraphWrapperPass>().getCallGraph();
 
-  // We compute dedicated AA results for each function in the SCC as needed. We
-  // use a lambda referencing external objects so that they live long enough to
-  // be queried, but we re-use them each time.
-  Optional<BasicAAResult> BAR;
-  Optional<AAResults> AAR;
-  auto AARGetter = [&](Function &F) -> AAResults & {
-    BAR.emplace(createLegacyPMBasicAAResult(*this, F));
-    AAR.emplace(createLegacyPMAAResults(*this, F, *BAR));
-    return *AAR;
-  };
+  LegacyAARGetter AARGetter(*this);
 
   bool Changed = false, LocalChange;
 
@@ -1019,9 +1045,31 @@ bool ArgPromotion::runOnSCC(CallGraphSCC &SCC) {
     LocalChange = false;
     // Attempt to promote arguments from all functions in this SCC.
     for (CallGraphNode *OldNode : SCC) {
-      if (CallGraphNode *NewNode =
-              promoteArguments(OldNode, CG, AARGetter, MaxElements)) {
+      Function *OldF = OldNode->getFunction();
+      if (!OldF)
+        continue;
+
+      auto ReplaceCallSite = [&](CallSite OldCS, CallSite NewCS) {
+        Function *Caller = OldCS.getInstruction()->getParent()->getParent();
+        CallGraphNode *NewCalleeNode =
+            CG.getOrInsertFunction(NewCS.getCalledFunction());
+        CallGraphNode *CallerNode = CG[Caller];
+        CallerNode->replaceCallEdge(OldCS, NewCS, NewCalleeNode);
+      };
+
+      if (Function *NewF = promoteArguments(OldF, AARGetter, MaxElements,
+                                            {ReplaceCallSite})) {
         LocalChange = true;
+
+        // Update the call graph for the newly promoted function.
+        CallGraphNode *NewNode = CG.getOrInsertFunction(NewF);
+        NewNode->stealCalledFunctionsFrom(OldNode);
+        if (OldNode->getNumReferences() == 0)
+          delete CG.removeFunctionFromModule(OldNode);
+        else
+          OldF->setLinkage(Function::ExternalLinkage);
+
+        // And updat ethe SCC we're iterating as well.
         SCC.ReplaceNode(OldNode, NewNode);
       }
     }
