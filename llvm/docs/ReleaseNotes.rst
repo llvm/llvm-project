@@ -55,6 +55,12 @@ Non-comprehensive list of changes in this release
 * LLVM now handles invariant.group across different basic blocks, which makes
   it possible to devirtualize virtual calls inside loops.
 
+* The aggressive dead code elimination phase ("adce") now remove
+  branches which do not effect program behavior. Loops are retained by
+  default since they may be infinite but these can also be removed
+  with LLVM option -adce-remove-loops when the loop body otherwise has
+  no live operations.
+
 * ... next change ...
 
 .. NOTE
