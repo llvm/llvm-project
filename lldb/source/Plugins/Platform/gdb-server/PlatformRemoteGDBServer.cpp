@@ -30,8 +30,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/Error.h"
 #include "lldb/Utility/StreamString.h"
-
-#include "Utility/UriParser.h"
+#include "lldb/Utility/UriParser.h"
 
 #include "Plugins/Process/Utility/GDBRemoteSignals.h"
 

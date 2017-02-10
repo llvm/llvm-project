@@ -17,26 +17,45 @@ using namespace llvm;
 namespace {
 
 TEST(LEB128Test, EncodeSLEB128) {
-#define EXPECT_SLEB128_EQ(EXPECTED, VALUE) \
+#define EXPECT_SLEB128_EQ(EXPECTED, VALUE, PAD) \
   do { \
-    /* encodeSLEB128(uint64_t, raw_ostream &) */ \
     std::string Expected(EXPECTED, sizeof(EXPECTED) - 1); \
-    std::string Actual; \
-    raw_string_ostream Stream(Actual); \
-    encodeSLEB128(VALUE, Stream); \
+    \
+    /* encodeSLEB128(uint64_t, raw_ostream &, unsigned) */ \
+    std::string Actual1; \
+    raw_string_ostream Stream(Actual1); \
+    encodeSLEB128(VALUE, Stream, PAD); \
     Stream.flush(); \
-    EXPECT_EQ(Expected, Actual); \
+    EXPECT_EQ(Expected, Actual1); \
+    \
+    /* encodeSLEB128(uint64_t, uint8_t *, unsigned) */ \
+    uint8_t Buffer[32]; \
+    unsigned Size = encodeSLEB128(VALUE, Buffer, PAD); \
+    std::string Actual2(reinterpret_cast<const char *>(Buffer), Size); \
+    EXPECT_EQ(Expected, Actual2); \
   } while (0)
 
   // Encode SLEB128
-  EXPECT_SLEB128_EQ("\x00", 0);
-  EXPECT_SLEB128_EQ("\x01", 1);
-  EXPECT_SLEB128_EQ("\x7f", -1);
-  EXPECT_SLEB128_EQ("\x3f", 63);
-  EXPECT_SLEB128_EQ("\x41", -63);
-  EXPECT_SLEB128_EQ("\x40", -64);
-  EXPECT_SLEB128_EQ("\xbf\x7f", -65);
-  EXPECT_SLEB128_EQ("\xc0\x00", 64);
+  EXPECT_SLEB128_EQ("\x00", 0, 0);
+  EXPECT_SLEB128_EQ("\x01", 1, 0);
+  EXPECT_SLEB128_EQ("\x7f", -1, 0);
+  EXPECT_SLEB128_EQ("\x3f", 63, 0);
+  EXPECT_SLEB128_EQ("\x41", -63, 0);
+  EXPECT_SLEB128_EQ("\x40", -64, 0);
+  EXPECT_SLEB128_EQ("\xbf\x7f", -65, 0);
+  EXPECT_SLEB128_EQ("\xc0\x00", 64, 0);
+
+  // Encode SLEB128 with some extra padding bytes
+  EXPECT_SLEB128_EQ("\x80\x00", 0, 1);
+  EXPECT_SLEB128_EQ("\x80\x80\x00", 0, 2);
+  EXPECT_SLEB128_EQ("\xff\x80\x00", 0x7f, 1);
+  EXPECT_SLEB128_EQ("\xff\x80\x80\x00", 0x7f, 2);
+  EXPECT_SLEB128_EQ("\x80\x81\x00", 0x80, 1);
+  EXPECT_SLEB128_EQ("\x80\x81\x80\x00", 0x80, 2);
+  EXPECT_SLEB128_EQ("\xc0\x7f", -0x40, 1);
+  EXPECT_SLEB128_EQ("\xc0\xff\x7f", -0x40, 2);
+  EXPECT_SLEB128_EQ("\x80\xff\x7f", -0x80, 1);
+  EXPECT_SLEB128_EQ("\x80\xff\xff\x7f", -0x80, 2);
 
 #undef EXPECT_SLEB128_EQ
 }

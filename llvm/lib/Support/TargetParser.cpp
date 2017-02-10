@@ -725,6 +725,7 @@ unsigned llvm::ARM::parseArchProfile(StringRef Arch) {
   case ARM::AK_ARMV8R:
     return ARM::PK_R;
   case ARM::AK_ARMV7A:
+  case ARM::AK_ARMV7VE:
   case ARM::AK_ARMV7K:
   case ARM::AK_ARMV8A:
   case ARM::AK_ARMV8_1A:
@@ -761,6 +762,7 @@ unsigned llvm::ARM::parseArchVersion(StringRef Arch) {
   case ARM::AK_ARMV6M:
     return 6;
   case ARM::AK_ARMV7A:
+  case ARM::AK_ARMV7VE:
   case ARM::AK_ARMV7R:
   case ARM::AK_ARMV7M:
   case ARM::AK_ARMV7S:

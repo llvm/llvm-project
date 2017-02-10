@@ -77,19 +77,6 @@ static cl::opt<unsigned>
 Threshold("loop-unswitch-threshold", cl::desc("Max loop size to unswitch"),
           cl::init(100), cl::Hidden);
 
-static cl::opt<bool>
-LoopUnswitchWithBlockFrequency("loop-unswitch-with-block-frequency",
-    cl::init(false), cl::Hidden,
-    cl::desc("Enable the use of the block frequency analysis to access PGO "
-             "heuristics to minimize code growth in cold regions."));
-
-static cl::opt<unsigned>
-ColdnessThreshold("loop-unswitch-coldness-threshold", cl::init(1), cl::Hidden,
-    cl::desc("Coldness threshold in percentage. The loop header frequency "
-             "(relative to the entry frequency) is compared with this "
-             "threshold to determine if non-trivial unswitching should be "
-             "enabled."));
-
 namespace {
 
   class LUAnalysisCache {
@@ -173,13 +160,6 @@ namespace {
     std::vector<Loop*> LoopProcessWorklist;
 
     LUAnalysisCache BranchesInfo;
-
-    bool EnabledPGO;
-
-    // BFI and ColdEntryFreq are only used when PGO and
-    // LoopUnswitchWithBlockFrequency are enabled.
-    BlockFrequencyInfo BFI;
-    BlockFrequency ColdEntryFreq;
 
     bool OptimizeForSize;
     bool redoLoop;
@@ -457,19 +437,6 @@ bool LoopUnswitch::runOnLoop(Loop *L, LPPassManager &LPM_Ref) {
   if (SanitizeMemory)
     computeLoopSafetyInfo(&SafetyInfo, L);
 
-  EnabledPGO = F->getEntryCount().hasValue();
-
-  if (LoopUnswitchWithBlockFrequency && EnabledPGO) {
-    BranchProbabilityInfo BPI(*F, *LI);
-    BFI.calculate(*L->getHeader()->getParent(), BPI, *LI);
-
-    // Use BranchProbability to compute a minimum frequency based on
-    // function entry baseline frequency. Loops with headers below this
-    // frequency are considered as cold.
-    const BranchProbability ColdProb(ColdnessThreshold, 100);
-    ColdEntryFreq = BlockFrequency(BFI.getEntryFreq()) * ColdProb;
-  }
-
   bool Changed = false;
   do {
     assert(currentLoop->isLCSSAForm(*DT));
@@ -580,16 +547,6 @@ bool LoopUnswitch::processCurrentLoop() {
   if (OptimizeForSize ||
       loopHeader->getParent()->hasFnAttribute(Attribute::OptimizeForSize))
     return false;
-
-  if (LoopUnswitchWithBlockFrequency && EnabledPGO) {
-    // Compute the weighted frequency of the hottest block in the
-    // loop (loopHeader in this case since inner loops should be
-    // processed before outer loop). If it is less than ColdFrequency,
-    // we should not unswitch.
-    BlockFrequency LoopEntryFreq = BFI.getBlockFreq(loopHeader);
-    if (LoopEntryFreq < ColdEntryFreq)
-      return false;
-  }
 
   for (IntrinsicInst *Guard : Guards) {
     Value *LoopCond =

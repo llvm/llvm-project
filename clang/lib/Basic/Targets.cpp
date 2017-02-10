@@ -5063,6 +5063,8 @@ class ARMTargetInfo : public TargetInfo {
       return "7M";
     case llvm::ARM::AK_ARMV7EM:
       return "7EM";
+    case llvm::ARM::AK_ARMV7VE:
+      return "7VE";
     case llvm::ARM::AK_ARMV8A:
       return "8A";
     case llvm::ARM::AK_ARMV8_1A:

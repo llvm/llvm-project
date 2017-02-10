@@ -45,8 +45,9 @@ public:
 
   static void DisableLog(const char **categories, Stream *feedback_strm);
 
-  static Log *EnableLog(lldb::StreamSP &log_stream_sp, uint32_t log_options,
-                        const char **categories, Stream *feedback_strm);
+  static Log *EnableLog(const std::shared_ptr<llvm::raw_ostream> &log_stream_sp,
+                        uint32_t log_options, const char **categories,
+                        Stream *feedback_strm);
 
   static void ListLogCategories(Stream *strm);
 

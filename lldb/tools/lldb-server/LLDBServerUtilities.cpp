@@ -16,25 +16,32 @@
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/FileSystem.h"
 
 using namespace lldb;
 using namespace lldb_private::lldb_server;
 using namespace llvm;
 
+static std::shared_ptr<raw_ostream> GetLogStream(StringRef log_file) {
+  if (!log_file.empty()) {
+    std::error_code EC;
+    std::shared_ptr<raw_ostream> stream_sp = std::make_shared<raw_fd_ostream>(
+        log_file, EC, sys::fs::F_Text | sys::fs::F_Append);
+    if (!EC)
+      return stream_sp;
+    errs() << llvm::formatv(
+        "Failed to open log file `{0}`: {1}\nWill log to stderr instead.\n",
+        log_file, EC.message());
+  }
+  // No need to delete the stderr stream.
+  return std::shared_ptr<raw_ostream>(&errs(), [](raw_ostream *) {});
+}
+
 bool LLDBServerUtilities::SetupLogging(const std::string &log_file,
                                        const StringRef &log_channels,
                                        uint32_t log_options) {
-  lldb::StreamSP log_stream_sp;
-  if (log_file.empty()) {
-    log_stream_sp.reset(new StreamFile(stdout, false));
-  } else {
-    uint32_t options = File::eOpenOptionWrite | File::eOpenOptionCanCreate |
-                       File::eOpenOptionCloseOnExec | File::eOpenOptionAppend;
-    if (!(log_options & LLDB_LOG_OPTION_APPEND))
-      options |= File::eOpenOptionTruncate;
 
-    log_stream_sp.reset(new StreamFile(log_file.c_str(), options));
-  }
+  auto log_stream_sp = GetLogStream(log_file);
 
   SmallVector<StringRef, 32> channel_array;
   log_channels.split(channel_array, ":", /*MaxSplit*/ -1, /*KeepEmpty*/ false);

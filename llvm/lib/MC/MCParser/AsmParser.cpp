@@ -35,6 +35,7 @@
 #include "llvm/MC/MCParser/AsmLexer.h"
 #include "llvm/MC/MCParser/MCAsmLexer.h"
 #include "llvm/MC/MCParser/MCAsmParser.h"
+#include "llvm/MC/MCParser/MCAsmParserExtension.h"
 #include "llvm/MC/MCParser/MCAsmParserUtils.h"
 #include "llvm/MC/MCParser/MCParsedAsmOperand.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
@@ -42,6 +43,7 @@
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
@@ -55,6 +57,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cctype>
+#include <climits>
 #include <cstddef>
 #include <cstdint>
 #include <deque>
@@ -67,7 +70,7 @@
 
 using namespace llvm;
 
-MCAsmParserSemaCallback::~MCAsmParserSemaCallback() {}
+MCAsmParserSemaCallback::~MCAsmParserSemaCallback() = default;
 
 static cl::opt<unsigned> AsmMacroMaxNestingDepth(
      "asm-macro-max-nesting-depth", cl::init(20), cl::Hidden,
@@ -82,10 +85,10 @@ typedef std::vector<MCAsmMacroArgument> MCAsmMacroArguments;
 struct MCAsmMacroParameter {
   StringRef Name;
   MCAsmMacroArgument Value;
-  bool Required;
-  bool Vararg;
+  bool Required = false;
+  bool Vararg = false;
 
-  MCAsmMacroParameter() : Required(false), Vararg(false) {}
+  MCAsmMacroParameter() = default;
 };
 
 typedef std::vector<MCAsmMacroParameter> MCAsmMacroParameters;
@@ -124,23 +127,20 @@ struct ParseStatementInfo {
   SmallVector<std::unique_ptr<MCParsedAsmOperand>, 8> ParsedOperands;
 
   /// \brief The opcode from the last parsed instruction.
-  unsigned Opcode;
+  unsigned Opcode = ~0U;
 
   /// \brief Was there an error parsing the inline assembly?
-  bool ParseError;
+  bool ParseError = false;
 
-  SmallVectorImpl<AsmRewrite> *AsmRewrites;
+  SmallVectorImpl<AsmRewrite> *AsmRewrites = nullptr;
 
-  ParseStatementInfo() : Opcode(~0U), ParseError(false), AsmRewrites(nullptr) {}
+  ParseStatementInfo() = default;
   ParseStatementInfo(SmallVectorImpl<AsmRewrite> *rewrites)
-    : Opcode(~0), ParseError(false), AsmRewrites(rewrites) {}
+    : AsmRewrites(rewrites) {}
 };
 
 /// \brief The concrete assembly parser instance.
 class AsmParser : public MCAsmParser {
-  AsmParser(const AsmParser &) = delete;
-  void operator=(const AsmParser &) = delete;
-
 private:
   AsmLexer Lexer;
   MCContext &Ctx;
@@ -199,17 +199,19 @@ private:
   unsigned LastQueryLine;
 
   /// AssemblerDialect. ~OU means unset value and use value provided by MAI.
-  unsigned AssemblerDialect;
+  unsigned AssemblerDialect = ~0U;
 
   /// \brief is Darwin compatibility enabled?
-  bool IsDarwin;
+  bool IsDarwin = false;
 
   /// \brief Are we parsing ms-style inline assembly?
-  bool ParsingInlineAsm;
+  bool ParsingInlineAsm = false;
 
 public:
   AsmParser(SourceMgr &SM, MCContext &Ctx, MCStreamer &Out,
             const MCAsmInfo &MAI, unsigned CB);
+  AsmParser(const AsmParser &) = delete;
+  AsmParser &operator=(const AsmParser &) = delete;
   ~AsmParser() override;
 
   bool Run(bool NoInitialTextSection, bool NoFinalize = false) override;
@@ -223,7 +225,6 @@ public:
     DirectiveKindMap[Directive] = DirectiveKindMap[Alias];
   }
 
-public:
   /// @name MCAsmParser Interface
   /// {
 
@@ -258,7 +259,7 @@ public:
 
   bool parseMSInlineAsm(void *AsmLoc, std::string &AsmString,
                         unsigned &NumOutputs, unsigned &NumInputs,
-                        SmallVectorImpl<std::pair<void *,bool> > &OpDecls,
+                        SmallVectorImpl<std::pair<void *,bool>> &OpDecls,
                         SmallVectorImpl<std::string> &Constraints,
                         SmallVectorImpl<std::string> &Clobbers,
                         const MCInstrInfo *MII, const MCInstPrinter *IP,
@@ -574,9 +575,7 @@ enum { DEFAULT_ADDRSPACE = 0 };
 AsmParser::AsmParser(SourceMgr &SM, MCContext &Ctx, MCStreamer &Out,
                      const MCAsmInfo &MAI, unsigned CB = 0)
     : Lexer(MAI), Ctx(Ctx), Out(Out), MAI(MAI), SrcMgr(SM),
-      PlatformParser(nullptr), CurBuffer(CB ? CB : SM.getMainFileID()),
-      MacrosEnabledFlag(true), CppHashInfo(), AssemblerDialect(~0U),
-      IsDarwin(false), ParsingInlineAsm(false) {
+      CurBuffer(CB ? CB : SM.getMainFileID()), MacrosEnabledFlag(true) {
   HadError = false;
   // Save the old handler.
   SavedDiagHandler = SrcMgr.getDiagHandler();
@@ -983,7 +982,7 @@ bool AsmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc) {
     MCSymbolRefExpr::VariantKind Variant = MCSymbolRefExpr::VK_None;
 
     // Lookup the symbol variant if used.
-    if (Split.second.size()) {
+    if (!Split.second.empty()) {
       Variant = MCSymbolRefExpr::getVariantKindForName(Split.second);
       if (Variant != MCSymbolRefExpr::VK_Invalid) {
         SymbolName = Split.first;
@@ -1622,7 +1621,7 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
       if (ParsingInlineAsm && SI) {
         StringRef RewrittenLabel =
             SI->LookupInlineAsmLabel(IDVal, getSourceManager(), IDLoc, true);
-        assert(RewrittenLabel.size() &&
+        assert(!RewrittenLabel.empty() &&
                "We should have an internal name here.");
         Info.AsmRewrites->emplace_back(AOK_Label, IDLoc, IDVal.size(),
                                        RewrittenLabel);
@@ -2030,7 +2029,7 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
     // If we previously parsed a cpp hash file line comment then make sure the
     // current Dwarf File is for the CppHashFilename if not then emit the
     // Dwarf File table for it and adjust the line number for the .loc.
-    if (CppHashInfo.Filename.size()) {
+    if (!CppHashInfo.Filename.empty()) {
       unsigned FileNumber = getStreamer().EmitDwarfFileDirective(
           0, StringRef(), CppHashInfo.Filename);
       getContext().setGenDwarfFileNumber(FileNumber);
@@ -4196,7 +4195,6 @@ bool AsmParser::parseDirectiveBundleUnlock() {
 /// parseDirectiveSpace
 /// ::= (.skip | .space) expression [ , expression ]
 bool AsmParser::parseDirectiveSpace(StringRef IDVal) {
-
   SMLoc NumBytesLoc = Lexer.getLoc();
   const MCExpr *NumBytes;
   if (checkForValidSection() || parseExpression(NumBytes))
@@ -4292,7 +4290,6 @@ bool AsmParser::parseDirectiveRealDCB(StringRef IDVal, const fltSemantics &Seman
 /// parseDirectiveDS
 /// ::= .ds.{b, d, l, p, s, w, x} expression
 bool AsmParser::parseDirectiveDS(StringRef IDVal, unsigned Size) {
-
   SMLoc NumValuesLoc = Lexer.getLoc();
   int64_t NumValues;
   if (checkForValidSection() || parseAbsoluteExpression(NumValues))
@@ -5214,7 +5211,7 @@ static int rewritesSort(const AsmRewrite *AsmRewriteA,
 
 bool AsmParser::parseMSInlineAsm(
     void *AsmLoc, std::string &AsmString, unsigned &NumOutputs,
-    unsigned &NumInputs, SmallVectorImpl<std::pair<void *, bool> > &OpDecls,
+    unsigned &NumInputs, SmallVectorImpl<std::pair<void *, bool>> &OpDecls,
     SmallVectorImpl<std::string> &Constraints,
     SmallVectorImpl<std::string> &Clobbers, const MCInstrInfo *MII,
     const MCInstPrinter *IP, MCAsmParserSemaCallback &SI) {

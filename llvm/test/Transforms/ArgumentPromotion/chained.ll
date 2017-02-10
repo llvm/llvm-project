@@ -1,4 +1,5 @@
 ; RUN: opt < %s -argpromotion -S | FileCheck %s
+; RUN: opt < %s -passes=argpromotion -S | FileCheck %s
 
 @G1 = constant i32 0
 @G2 = constant i32* @G1

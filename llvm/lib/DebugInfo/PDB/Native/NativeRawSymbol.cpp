@@ -12,14 +12,14 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/DebugInfo/PDB/IPDBEnumChildren.h"
 #include "llvm/DebugInfo/PDB/PDBExtras.h"
+#include "llvm/DebugInfo/PDB/Native/NativeSession.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 using namespace llvm::pdb;
 
-NativeRawSymbol::NativeRawSymbol(const NativeSession &PDBSession)
-  : Session(PDBSession) {}
+NativeRawSymbol::NativeRawSymbol(const NativeSession &PDBSession) {}
 
 void NativeRawSymbol::dump(raw_ostream &OS, int Indent) const {}
 
@@ -328,7 +328,7 @@ PDB_SymType NativeRawSymbol::getSymTag() const {
 }
 
 PDB_UniqueId NativeRawSymbol::getGuid() const {
-  return {0, 0, 0, 0};
+  return {{0}};
 }
 
 int32_t NativeRawSymbol::getOffset() const {

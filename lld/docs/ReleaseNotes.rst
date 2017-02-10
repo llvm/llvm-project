@@ -7,6 +7,8 @@ LLD 5.0.0 Release Notes
 
 .. warning::
    These are in-progress notes for the upcoming LLVM 5.0.0 release.
+   Release notes for previous releases can be found on
+   `the Download Page <http://releases.llvm.org/download.html>`_.
 
 Introduction
 ============

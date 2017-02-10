@@ -1,4 +1,5 @@
 ; RUN: opt < %s -argpromotion -S | FileCheck %s
+; RUN: opt < %s -passes=argpromotion -S | FileCheck %s
 
 ; Unused arguments from variadic functions cannot be eliminated as that changes
 ; their classiciation according to the SysV amd64 ABI. Clang and other frontends

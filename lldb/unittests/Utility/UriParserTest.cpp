@@ -1,9 +1,7 @@
-#include "Utility/UriParser.h"
+#include "lldb/Utility/UriParser.h"
 #include "gtest/gtest.h"
 
-namespace {
-class UriParserTest : public ::testing::Test {};
-}
+using namespace lldb_private;
 
 // result strings (scheme/hostname/port/path) passed into UriParser::Parse
 // are initialized to kAsdf so we can verify that they are unmodified if the
@@ -41,12 +39,12 @@ public:
   EXPECT_EQ(testCase.m_port, port);                                            \
   EXPECT_STREQ(testCase.m_path, path.str().c_str());
 
-TEST_F(UriParserTest, Minimal) {
+TEST(UriParserTest, Minimal) {
   const UriTestCase testCase("x://y", "x", "y", -1, "/");
   VALIDATE
 }
 
-TEST_F(UriParserTest, MinimalPort) {
+TEST(UriParserTest, MinimalPort) {
   const UriTestCase testCase("x://y:1", "x", "y", 1, "/");
   llvm::StringRef scheme(kAsdf);
   llvm::StringRef hostname(kAsdf);
@@ -61,28 +59,28 @@ TEST_F(UriParserTest, MinimalPort) {
   EXPECT_STREQ(testCase.m_path, path.str().c_str());
 }
 
-TEST_F(UriParserTest, MinimalPath) {
+TEST(UriParserTest, MinimalPath) {
   const UriTestCase testCase("x://y/", "x", "y", -1, "/");
   VALIDATE
 }
 
-TEST_F(UriParserTest, MinimalPortPath) {
+TEST(UriParserTest, MinimalPortPath) {
   const UriTestCase testCase("x://y:1/", "x", "y", 1, "/");
   VALIDATE
 }
 
-TEST_F(UriParserTest, LongPath) {
+TEST(UriParserTest, LongPath) {
   const UriTestCase testCase("x://y/abc/def/xyz", "x", "y", -1, "/abc/def/xyz");
   VALIDATE
 }
 
-TEST_F(UriParserTest, TypicalPortPath) {
+TEST(UriParserTest, TypicalPortPath) {
   const UriTestCase testCase("connect://192.168.100.132:5432/", "connect",
                              "192.168.100.132", 5432, "/");
   VALIDATE;
 }
 
-TEST_F(UriParserTest, BracketedHostnamePort) {
+TEST(UriParserTest, BracketedHostnamePort) {
   const UriTestCase testCase("connect://[192.168.100.132]:5432/", "connect",
                              "192.168.100.132", 5432, "/");
   llvm::StringRef scheme(kAsdf);
@@ -98,54 +96,54 @@ TEST_F(UriParserTest, BracketedHostnamePort) {
   EXPECT_STREQ(testCase.m_path, path.str().c_str());
 }
 
-TEST_F(UriParserTest, BracketedHostname) {
+TEST(UriParserTest, BracketedHostname) {
   const UriTestCase testCase("connect://[192.168.100.132]", "connect",
                              "192.168.100.132", -1, "/");
   VALIDATE
 }
 
-TEST_F(UriParserTest, BracketedHostnameWithColon) {
+TEST(UriParserTest, BracketedHostnameWithColon) {
   const UriTestCase testCase("connect://[192.168.100.132:5555]:1234", "connect",
                              "192.168.100.132:5555", 1234, "/");
   VALIDATE
 }
 
-TEST_F(UriParserTest, SchemeHostSeparator) {
+TEST(UriParserTest, SchemeHostSeparator) {
   const UriTestCase testCase("x:/y");
   VALIDATE
 }
 
-TEST_F(UriParserTest, SchemeHostSeparator2) {
+TEST(UriParserTest, SchemeHostSeparator2) {
   const UriTestCase testCase("x:y");
   VALIDATE
 }
 
-TEST_F(UriParserTest, SchemeHostSeparator3) {
+TEST(UriParserTest, SchemeHostSeparator3) {
   const UriTestCase testCase("x//y");
   VALIDATE
 }
 
-TEST_F(UriParserTest, SchemeHostSeparator4) {
+TEST(UriParserTest, SchemeHostSeparator4) {
   const UriTestCase testCase("x/y");
   VALIDATE
 }
 
-TEST_F(UriParserTest, BadPort) {
+TEST(UriParserTest, BadPort) {
   const UriTestCase testCase("x://y:a/");
   VALIDATE
 }
 
-TEST_F(UriParserTest, BadPort2) {
+TEST(UriParserTest, BadPort2) {
   const UriTestCase testCase("x://y:5432a/");
   VALIDATE
 }
 
-TEST_F(UriParserTest, Empty) {
+TEST(UriParserTest, Empty) {
   const UriTestCase testCase("");
   VALIDATE
 }
 
-TEST_F(UriParserTest, PortOverflow) {
+TEST(UriParserTest, PortOverflow) {
   const UriTestCase testCase("x://"
                              "y:"
                              "0123456789012345678901234567890123456789012345678"

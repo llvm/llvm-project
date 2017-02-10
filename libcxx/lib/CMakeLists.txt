@@ -332,7 +332,7 @@ if (LIBCXX_ENABLE_SHARED AND LIBCXX_ENABLE_ABI_LINKER_SCRIPT)
   # after cxx builds.
   add_custom_command(TARGET cxx_shared POST_BUILD
     COMMAND
-      ${PYTHON_EXECUTABLE} ${LIBCXX_SOURCE_DIR}/utils/gen_link_script/gen_link_script.py
+      ${PYTHON_EXECUTABLE} ${LIBCXX_SOURCE_DIR}/utils/gen_link_script.py
     ARGS
       "$<TARGET_LINKER_FILE:cxx_shared>"
       ${LIBCXX_INTERFACE_LIBRARY_NAMES}

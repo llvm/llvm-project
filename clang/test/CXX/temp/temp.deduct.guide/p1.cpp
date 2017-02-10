@@ -86,3 +86,23 @@ A(int(&)[43]) -> A<int> try {} catch (...) {} // expected-error {{deduction guid
 #ifdef CLASS
 };
 #endif
+
+namespace ExplicitInst {
+  // Explicit instantiation / specialization is not permitted.
+  template<typename T> struct B {};
+  template<typename T> B(T) -> B<T>;
+  template<> B(int) -> B<int>; // expected-error {{deduction guide cannot be explicitly specialized}}
+  extern template B(float) -> B<float>; // expected-error {{deduction guide cannot be explicitly instantiated}}
+  template B(char) -> B<char>; // expected-error {{deduction guide cannot be explicitly instantiated}}
+
+  // An attempt at partial specialization doesn't even parse as a deduction-guide.
+  template<typename T> B<T*>(T*) -> B<T*>; // expected-error 1+{{}} expected-note 0+{{}}
+
+  struct X {
+    template<typename T> struct C {};
+    template<typename T> C(T) -> C<T>;
+    template<> C(int) -> C<int>; // expected-error {{explicit specialization of '<deduction guide for C>' in class scope}}
+    extern template C(float) -> C<float>; // expected-error {{expected member name or ';'}}
+    template C(char) -> C<char>; // expected-error {{expected '<' after 'template'}}
+  };
+}

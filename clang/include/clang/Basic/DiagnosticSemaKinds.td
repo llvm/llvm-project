@@ -1923,8 +1923,9 @@ def err_auto_var_deduction_failure_from_init_list : Error<
 def err_auto_new_deduction_failure : Error<
   "new expression for type %0 has incompatible constructor argument of type %1">;
 def err_auto_different_deductions : Error<
-  "'%select{auto|decltype(auto)|__auto_type}0' deduced as %1 in declaration "
-  "of %2 and deduced as %3 in declaration of %4">;
+  "%select{'auto'|'decltype(auto)'|'__auto_type'|template arguments}0 "
+  "deduced as %1 in declaration of %2 and "
+  "deduced as %3 in declaration of %4">;
 def err_auto_non_deduced_not_alone : Error<
   "%select{function with deduced return type|"
   "declaration with trailing return type}0 "
@@ -1991,6 +1992,11 @@ def err_deduction_guide_name_not_class_template : Error<
   "template template parameter|dependent template name}0 %1">;
 def err_deduction_guide_defines_function : Error<
   "deduction guide cannot have a function definition">;
+def err_deduction_guide_explicit_mismatch : Error<
+  "deduction guide is %select{not |}0declared 'explicit' but "
+  "previous declaration was%select{ not|}0">;
+def err_deduction_guide_specialized : Error<"deduction guide cannot be "
+  "%select{explicitly instantiated|explicitly specialized}0">;
 
 // C++1y deduced return types
 def err_auto_fn_deduction_failure : Error<
@@ -2281,6 +2287,9 @@ def err_concept_specified_specialization : Error<
 def err_concept_specialized : Error<
   "%select{function|variable}0 concept cannot be "
   "%select{explicitly instantiated|explicitly specialized|partially specialized}1">;
+
+def err_template_different_associated_constraints : Error<
+  "associated constraints differ in template redeclaration">;
 
 // C++11 char16_t/char32_t
 def warn_cxx98_compat_unicode_type : Warning<

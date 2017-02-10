@@ -76,6 +76,9 @@ ARM_ARCH("armv6-m", AK_ARMV6M, "6-M", "v6m", ARMBuildAttrs::CPUArch::v6_M,
           FK_NONE, ARM::AEK_NONE)
 ARM_ARCH("armv7-a", AK_ARMV7A, "7-A", "v7", ARMBuildAttrs::CPUArch::v7,
           FK_NEON, ARM::AEK_DSP)
+ARM_ARCH("armv7ve", AK_ARMV7VE, "7VE", "v7ve", ARMBuildAttrs::CPUArch::v7,
+          FK_NEON, (ARM::AEK_SEC | ARM::AEK_MP | ARM::AEK_VIRT |
+          ARM::AEK_HWDIVARM | ARM::AEK_HWDIV | ARM::AEK_DSP))
 ARM_ARCH("armv7-r", AK_ARMV7R, "7-R", "v7r", ARMBuildAttrs::CPUArch::v7,
           FK_NONE, (ARM::AEK_HWDIV | ARM::AEK_DSP))
 ARM_ARCH("armv7-m", AK_ARMV7M, "7-M", "v7m", ARMBuildAttrs::CPUArch::v7,

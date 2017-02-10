@@ -87,7 +87,7 @@ COMPPGM1(enable_ieee_mode,                compute_pgm_rsrc1_ieee_mode,      IEEE
 // TODO: cdbg_user
 COMPPGM2(enable_sgpr_private_segment_wave_byte_offset, compute_pgm_rsrc2_scratch_en, SCRATCH_EN),
 COMPPGM2(user_sgpr_count,                 compute_pgm_rsrc2_user_sgpr,      USER_SGPR),
-// TODO: enable_trap_handler
+COMPPGM2(enable_trap_handler,             compute_pgm_rsrc2_trap_handler,   TRAP_HANDLER),
 COMPPGM2(enable_sgpr_workgroup_id_x,      compute_pgm_rsrc2_tgid_x_en,      TGID_X_EN),
 COMPPGM2(enable_sgpr_workgroup_id_y,      compute_pgm_rsrc2_tgid_y_en,      TGID_Y_EN),
 COMPPGM2(enable_sgpr_workgroup_id_z,      compute_pgm_rsrc2_tgid_z_en,      TGID_Z_EN),

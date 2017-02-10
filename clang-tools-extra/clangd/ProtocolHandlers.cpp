@@ -17,7 +17,7 @@ void TextDocumentDidOpenHandler::handleNotification(
     llvm::yaml::MappingNode *Params) {
   auto DOTDP = DidOpenTextDocumentParams::parse(Params);
   if (!DOTDP) {
-    Logs << "Failed to decode DidOpenTextDocumentParams!\n";
+    Output.logs() << "Failed to decode DidOpenTextDocumentParams!\n";
     return;
   }
   Store.addDocument(DOTDP->textDocument.uri, DOTDP->textDocument.text);
@@ -27,7 +27,7 @@ void TextDocumentDidChangeHandler::handleNotification(
     llvm::yaml::MappingNode *Params) {
   auto DCTDP = DidChangeTextDocumentParams::parse(Params);
   if (!DCTDP || DCTDP->contentChanges.size() != 1) {
-    Logs << "Failed to decode DidChangeTextDocumentParams!\n";
+    Output.logs() << "Failed to decode DidChangeTextDocumentParams!\n";
     return;
   }
   // We only support full syncing right now.
@@ -91,7 +91,7 @@ void TextDocumentRangeFormattingHandler::handleMethod(
     llvm::yaml::MappingNode *Params, StringRef ID) {
   auto DRFP = DocumentRangeFormattingParams::parse(Params);
   if (!DRFP) {
-    Logs << "Failed to decode DocumentRangeFormattingParams!\n";
+    Output.logs() << "Failed to decode DocumentRangeFormattingParams!\n";
     return;
   }
 
@@ -108,7 +108,7 @@ void TextDocumentFormattingHandler::handleMethod(
     llvm::yaml::MappingNode *Params, StringRef ID) {
   auto DFP = DocumentFormattingParams::parse(Params);
   if (!DFP) {
-    Logs << "Failed to decode DocumentFormattingParams!\n";
+    Output.logs() << "Failed to decode DocumentFormattingParams!\n";
     return;
   }
 

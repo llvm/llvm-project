@@ -300,6 +300,9 @@ enum DstUnused {
 #define   S_00B84C_USER_SGPR(x)                                       (((x) & 0x1F) << 1)
 #define   G_00B84C_USER_SGPR(x)                                       (((x) >> 1) & 0x1F)
 #define   C_00B84C_USER_SGPR                                          0xFFFFFFC1
+#define   S_00B84C_TRAP_HANDLER(x)                                    (((x) & 0x1) << 6)
+#define   G_00B84C_TRAP_HANDLER(x)                                    (((x) >> 6) & 0x1)
+#define   C_00B84C_TRAP_HANDLER                                       0xFFFFFFBF
 #define   S_00B84C_TGID_X_EN(x)                                       (((x) & 0x1) << 7)
 #define   G_00B84C_TGID_X_EN(x)                                       (((x) >> 7) & 0x1)
 #define   C_00B84C_TGID_X_EN                                          0xFFFFFF7F
@@ -387,7 +390,6 @@ enum DstUnused {
 
 #define R_SPILLED_SGPRS         0x4
 #define R_SPILLED_VGPRS         0x8
-
 } // End namespace llvm
 
 #endif

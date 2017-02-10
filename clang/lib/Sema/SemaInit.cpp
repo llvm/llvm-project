@@ -8324,10 +8324,13 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
       // C++ [over.match.copy]p1: (non-list copy-initialization from class)
       //   The converting constructors of T are candidate functions.
       if (Kind.isCopyInit() && !ListInit) {
-        // FIXME: if (FD->isExplicit()) continue;
+        // Only consider converting constructors.
+        if (FD->isExplicit())
+          continue;
 
         // When looking for a converting constructor, deduction guides that
-        // could never be called with one argument are not interesting.
+        // could never be called with one argument are not interesting to
+        // check or note.
         if (FD->getMinRequiredArguments() > 1 ||
             (FD->getNumParams() == 0 && !FD->isVariadic()))
           continue;
@@ -8353,7 +8356,6 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
       // ever have a parameter of the right type.
       bool SuppressUserConversions = Kind.isCopyInit();
 
-      // FIXME: These are definitely wrong in the non-deduction-guide case.
       if (TD)
         AddTemplateOverloadCandidate(TD, Pair, /*ExplicitArgs*/ nullptr, Inits,
                                      Candidates, SuppressUserConversions);
@@ -8410,8 +8412,7 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
     // C++ [over.match.list]p1:
     //   In copy-list-initialization, if an explicit constructor is chosen, the
     //   initialization is ill-formed.
-    if (Kind.isCopyInit() && ListInit &&
-        false /*FIXME: Best->Function->isExplicit()*/) {
+    if (Kind.isCopyInit() && ListInit && Best->Function->isExplicit()) {
       bool IsDeductionGuide = !Best->Function->isImplicit();
       Diag(Kind.getLocation(), diag::err_deduced_class_template_explicit)
           << TemplateName << IsDeductionGuide;

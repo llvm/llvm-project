@@ -50,9 +50,9 @@ public:
   //------------------------------------------------------------------
   typedef void (*DisableCallback)(const char **categories,
                                   Stream *feedback_strm);
-  typedef Log *(*EnableCallback)(lldb::StreamSP &log_stream_sp,
-                                 uint32_t log_options, const char **categories,
-                                 Stream *feedback_strm);
+  typedef Log *(*EnableCallback)(
+      const std::shared_ptr<llvm::raw_ostream> &log_stream_sp,
+      uint32_t log_options, const char **categories, Stream *feedback_strm);
   typedef void (*ListCategoriesCallback)(Stream *strm);
 
   struct Callbacks {
@@ -72,14 +72,15 @@ public:
   static bool GetLogChannelCallbacks(const ConstString &channel,
                                      Log::Callbacks &log_callbacks);
 
-  static bool EnableLogChannel(lldb::StreamSP &log_stream_sp,
-                               uint32_t log_options, const char *channel,
-                               const char **categories, Stream &error_stream);
+  static bool
+  EnableLogChannel(const std::shared_ptr<llvm::raw_ostream> &log_stream_sp,
+                   uint32_t log_options, const char *channel,
+                   const char **categories, Stream &error_stream);
 
-  static void EnableAllLogChannels(lldb::StreamSP &log_stream_sp,
-                                   uint32_t log_options,
-                                   const char **categories,
-                                   Stream *feedback_strm);
+  static void
+  EnableAllLogChannels(const std::shared_ptr<llvm::raw_ostream> &log_stream_sp,
+                       uint32_t log_options, const char **categories,
+                       Stream *feedback_strm);
 
   static void DisableAllLogChannels(Stream *feedback_strm);
 
@@ -100,7 +101,7 @@ public:
   //------------------------------------------------------------------
   Log();
 
-  Log(const lldb::StreamSP &stream_sp);
+  Log(const std::shared_ptr<llvm::raw_ostream> &stream_sp);
 
   ~Log();
 
@@ -143,13 +144,15 @@ public:
 
   bool GetDebug() const;
 
-  void SetStream(const lldb::StreamSP &stream_sp) { m_stream_sp = stream_sp; }
+  void SetStream(const std::shared_ptr<llvm::raw_ostream> &stream_sp) {
+    m_stream_sp = stream_sp;
+  }
 
 protected:
   //------------------------------------------------------------------
   // Member variables
   //------------------------------------------------------------------
-  lldb::StreamSP m_stream_sp;
+  std::shared_ptr<llvm::raw_ostream> m_stream_sp;
   Flags m_options;
   Flags m_mask_bits;
 
@@ -176,7 +179,8 @@ public:
   virtual void Disable(const char **categories, Stream *feedback_strm) = 0;
 
   virtual bool
-  Enable(lldb::StreamSP &log_stream_sp, uint32_t log_options,
+  Enable(const std::shared_ptr<llvm::raw_ostream> &log_stream_sp,
+         uint32_t log_options,
          Stream *feedback_strm, // Feedback stream for argument errors etc
          const char **categories) = 0; // The categories to enable within this
                                        // logging stream, if empty, enable

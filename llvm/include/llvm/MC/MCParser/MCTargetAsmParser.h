@@ -1,4 +1,4 @@
-//===-- llvm/MC/MCTargetAsmParser.h - Target Assembly Parser ----*- C++ -*-===//
+//===- llvm/MC/MCTargetAsmParser.h - Target Assembly Parser -----*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -10,19 +10,21 @@
 #ifndef LLVM_MC_MCPARSER_MCTARGETASMPARSER_H
 #define LLVM_MC_MCPARSER_MCTARGETASMPARSER_H
 
+#include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCExpr.h"
+#include "llvm/MC/MCParser/MCAsmLexer.h"
 #include "llvm/MC/MCParser/MCAsmParserExtension.h"
 #include "llvm/MC/MCTargetOptions.h"
+#include "llvm/Support/SMLoc.h"
+#include <cstdint>
 #include <memory>
 
 namespace llvm {
-class AsmToken;
+
 class MCInst;
 class MCParsedAsmOperand;
 class MCStreamer;
 class MCSubtargetInfo;
-class SMLoc;
-class StringRef;
 template <typename T> class SmallVectorImpl;
 
 typedef SmallVectorImpl<std::unique_ptr<MCParsedAsmOperand>> OperandVector;
@@ -66,6 +68,7 @@ struct AsmRewrite {
   unsigned Len;
   unsigned Val;
   StringRef Label;
+
 public:
   AsmRewrite(AsmRewriteKind kind, SMLoc loc, unsigned len = 0, unsigned val = 0)
     : Kind(kind), Loc(loc), Len(len), Val(val) {}
@@ -74,10 +77,9 @@ public:
 };
 
 struct ParseInstructionInfo {
+  SmallVectorImpl<AsmRewrite> *AsmRewrites = nullptr;
 
-  SmallVectorImpl<AsmRewrite> *AsmRewrites;
-
-  ParseInstructionInfo() : AsmRewrites(nullptr) {}
+  ParseInstructionInfo() = default;
   ParseInstructionInfo(SmallVectorImpl<AsmRewrite> *rewrites)
     : AsmRewrites(rewrites) {}
 };
@@ -99,9 +101,6 @@ public:
     FIRST_TARGET_MATCH_RESULT_TY
   };
 
-private:
-  MCTargetAsmParser(const MCTargetAsmParser &) = delete;
-  void operator=(const MCTargetAsmParser &) = delete;
 protected: // Can only create subclasses.
   MCTargetAsmParser(MCTargetOptions const &, const MCSubtargetInfo &STI);
 
@@ -109,10 +108,10 @@ protected: // Can only create subclasses.
   MCSubtargetInfo &copySTI();
 
   /// AvailableFeatures - The current set of available features.
-  uint64_t AvailableFeatures;
+  uint64_t AvailableFeatures = 0;
 
   /// ParsingInlineAsm - Are we parsing ms-style inline assembly?
-  bool ParsingInlineAsm;
+  bool ParsingInlineAsm = false;
 
   /// SemaCallback - The Sema callback implementation.  Must be set when parsing
   /// ms-style inline assembly.
@@ -125,6 +124,9 @@ protected: // Can only create subclasses.
   const MCSubtargetInfo *STI;
 
 public:
+  MCTargetAsmParser(const MCTargetAsmParser &) = delete;
+  MCTargetAsmParser &operator=(const MCTargetAsmParser &) = delete;
+
   ~MCTargetAsmParser() override;
 
   const MCSubtargetInfo &getSTI() const;
@@ -229,11 +231,11 @@ public:
     return nullptr;
   }
 
-  virtual void onLabelParsed(MCSymbol *Symbol) { }
+  virtual void onLabelParsed(MCSymbol *Symbol) {}
 
   /// Ensure that all previously parsed instructions have been emitted to the
   /// output streamer, if the target does not emit them immediately.
-  virtual void flushPendingInstructions(MCStreamer &Out) { }
+  virtual void flushPendingInstructions(MCStreamer &Out) {}
 
   virtual const MCExpr *createTargetUnaryExpr(const MCExpr *E,
                                               AsmToken::TokenKind OperatorToken,
@@ -242,6 +244,6 @@ public:
   }
 };
 
-} // End llvm namespace
+} // end namespace llvm
 
-#endif
+#endif // LLVM_MC_MCPARSER_MCTARGETASMPARSER_H

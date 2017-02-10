@@ -11,12 +11,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/MC/MCParser/AsmLexer.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/MC/MCAsmInfo.h"
+#include "llvm/MC/MCParser/AsmLexer.h"
 #include "llvm/MC/MCParser/MCAsmLexer.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/SaveAndRestore.h"
@@ -30,15 +30,11 @@
 
 using namespace llvm;
 
-AsmLexer::AsmLexer(const MCAsmInfo &MAI)
-    : MAI(MAI), CurPtr(nullptr), IsAtStartOfLine(true),
-      IsAtStartOfStatement(true), IsParsingMSInlineAsm(false),
-      IsPeeking(false) {
+AsmLexer::AsmLexer(const MCAsmInfo &MAI) : MAI(MAI) {
   AllowAtInIdentifier = !StringRef(MAI.getCommentString()).startswith("@");
 }
 
-AsmLexer::~AsmLexer() {
-}
+AsmLexer::~AsmLexer() = default;
 
 void AsmLexer::setBuffer(StringRef Buf, const char *ptr) {
   CurBuf = Buf;
