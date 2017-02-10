@@ -647,6 +647,16 @@ bool Sema::MergeCXXFunctionDecl(FunctionDecl *New, FunctionDecl *Old,
     Invalid = true;
   }
 
+  // FIXME: It's not clear what should happen if multiple declarations of a
+  // deduction guide have different explicitness. For now at least we simply
+  // reject any case where the explicitness changes.
+  if (New->isDeductionGuide() &&
+      New->isExplicitSpecified() != Old->isExplicitSpecified()) {
+    Diag(New->getLocation(), diag::err_deduction_guide_explicit_mismatch)
+      << New->isExplicitSpecified();
+    Diag(Old->getLocation(), diag::note_previous_declaration);
+  }
+
   // C++11 [dcl.fct.default]p4: If a friend declaration specifies a default
   // argument expression, that declaration shall be a definition and shall be
   // the only declaration of the function or function template in the

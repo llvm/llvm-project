@@ -183,7 +183,7 @@ class SourceFileRenderer:
 </html>
             '''.format(filename), file=self.stream)
 
-        self.html_formatter = HtmlFormatter()
+        self.html_formatter = HtmlFormatter(encoding='utf-8')
         self.cpp_lexer = CppLexer()
 
     def render_source_line(self, linenum, line):

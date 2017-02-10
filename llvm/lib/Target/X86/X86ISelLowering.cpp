@@ -28791,12 +28791,13 @@ static SDValue combineExtractVectorElt(SDNode *N, SelectionDAG &DAG,
   if (SDValue NewOp = XFormVExtractWithShuffleIntoLoad(N, DAG, DCI))
     return NewOp;
 
+  EVT VT = N->getValueType(0);
   SDValue InputVector = N->getOperand(0);
   SDLoc dl(InputVector);
+
   // Detect mmx to i32 conversion through a v2i32 elt extract.
   if (InputVector.getOpcode() == ISD::BITCAST && InputVector.hasOneUse() &&
-      N->getValueType(0) == MVT::i32 &&
-      InputVector.getValueType() == MVT::v2i32 &&
+      VT == MVT::i32 && InputVector.getValueType() == MVT::v2i32 &&
       isa<ConstantSDNode>(N->getOperand(1)) &&
       N->getConstantOperandVal(1) == 0) {
     SDValue MMXSrc = InputVector.getOperand(0);
@@ -28805,8 +28806,6 @@ static SDValue combineExtractVectorElt(SDNode *N, SelectionDAG &DAG,
     if (MMXSrc.getValueType() == MVT::x86mmx)
       return DAG.getNode(X86ISD::MMX_MOVD2W, dl, MVT::i32, MMXSrc);
   }
-
-  EVT VT = N->getValueType(0);
 
   if (VT == MVT::i1 && isa<ConstantSDNode>(N->getOperand(1)) &&
       InputVector.getOpcode() == ISD::BITCAST &&

@@ -834,11 +834,17 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
   }
 
   if (Changed) {
+    DEBUG(dbgs() << "Vector-legalized selection DAG: BB#" << BlockNumber
+          << " '" << BlockName << "'\n"; CurDAG->dump());
+
     {
       NamedRegionTimer T("legalize_types2", "Type Legalization 2", GroupName,
                          GroupDescription, TimePassesIsEnabled);
       CurDAG->LegalizeTypes();
     }
+
+    DEBUG(dbgs() << "Vector/type-legalized selection DAG: BB#" << BlockNumber
+          << " '" << BlockName << "'\n"; CurDAG->dump());
 
     if (ViewDAGCombineLT && MatchFilterBB)
       CurDAG->viewGraph("dag-combine-lv input for " + BlockName);

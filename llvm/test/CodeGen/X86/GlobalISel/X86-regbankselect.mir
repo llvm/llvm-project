@@ -1,0 +1,137 @@
+# RUN: llc -mtriple=x86_64-linux-gnu -global-isel -run-pass=regbankselect %s -o - | FileCheck %s
+
+--- |
+  ; ModuleID = 'tmp.ll'
+  source_filename = "tmp.ll"
+  target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
+  target triple = "x86_64--linux-gnu"
+  
+  define i8 @test_add_i8(i8 %arg1, i8 %arg2) {
+    %ret = add i8 %arg1, %arg2
+    ret i8 %ret
+  }
+  
+  define i16 @test_add_i16(i16 %arg1, i16 %arg2) {
+    %ret = add i16 %arg1, %arg2
+    ret i16 %ret
+  }
+  
+  define i32 @test_add_i32(i32 %arg1, i32 %arg2) {
+    %ret = add i32 %arg1, %arg2
+    ret i32 %ret
+  }
+  
+  define i64 @test_add_i64(i64 %arg1, i64 %arg2) {
+    %ret = add i64 %arg1, %arg2
+    ret i64 %ret
+  }
+
+...
+---
+name:            test_add_i8
+alignment:       4
+legalized:       true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+# CHECK-LABEL: name:            test_add_i8
+# CHECK: registers:
+# CHECK:  - { id: 0, class: gpr }
+# CHECK:  - { id: 1, class: gpr }
+# CHECK:  - { id: 2, class: gpr }
+registers:       
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %edi, %esi
+  
+    %0(s8) = COPY %edi
+    %1(s8) = COPY %esi
+    %2(s8) = G_ADD %0, %1
+    %al = COPY %2(s8)
+    RET 0, implicit %al
+
+...
+---
+name:            test_add_i16
+alignment:       4
+legalized:       true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+# CHECK-LABEL: name:            test_add_i16
+# CHECK: registers:
+# CHECK:  - { id: 0, class: gpr }
+# CHECK:  - { id: 1, class: gpr }
+# CHECK:  - { id: 2, class: gpr }
+registers:       
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %edi, %esi
+  
+    %0(s16) = COPY %edi
+    %1(s16) = COPY %esi
+    %2(s16) = G_ADD %0, %1
+    %ax = COPY %2(s16)
+    RET 0, implicit %ax
+
+...
+---
+name:            test_add_i32
+alignment:       4
+legalized:       true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+# CHECK-LABEL: name:            test_add_i32
+# CHECK: registers:
+# CHECK:  - { id: 0, class: gpr }
+# CHECK:  - { id: 1, class: gpr }
+# CHECK:  - { id: 2, class: gpr }
+registers:       
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %edi, %esi
+  
+    %0(s32) = COPY %edi
+    %1(s32) = COPY %esi
+    %2(s32) = G_ADD %0, %1
+    %eax = COPY %2(s32)
+    RET 0, implicit %eax
+
+...
+---
+name:            test_add_i64
+alignment:       4
+legalized:       true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+# CHECK-LABEL: name:            test_add_i64
+# CHECK: registers:
+# CHECK:  - { id: 0, class: gpr }
+# CHECK:  - { id: 1, class: gpr }
+# CHECK:  - { id: 2, class: gpr }
+registers:       
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %rdi, %rsi
+  
+    %0(s64) = COPY %rdi
+    %1(s64) = COPY %rsi
+    %2(s64) = G_ADD %0, %1
+    %rax = COPY %2(s64)
+    RET 0, implicit %rax
+
+...

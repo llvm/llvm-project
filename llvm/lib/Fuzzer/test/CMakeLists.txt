@@ -142,6 +142,18 @@ foreach(Test ${Tests})
   add_libfuzzer_test(${Test} SOURCES ${Test}.cpp)
 endforeach()
 
+function(test_export_symbol target symbol)
+  if(MSVC)
+    set_target_properties(LLVMFuzzer-${target} PROPERTIES LINK_FLAGS
+        "-export:${symbol}")
+  endif()
+endfunction()
+
+test_export_symbol(InitializeTest "LLVMFuzzerInitialize")
+test_export_symbol(BogusInitializeTest "LLVMFuzzerInitialize")
+test_export_symbol(CustomCrossOverTest "LLVMFuzzerCustomCrossOver")
+test_export_symbol(CustomMutatorTest "LLVMFuzzerCustomMutator")
+
 ###############################################################################
 # Unit tests
 ###############################################################################

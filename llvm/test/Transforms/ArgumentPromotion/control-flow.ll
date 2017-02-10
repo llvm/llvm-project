@@ -1,4 +1,5 @@
 ; RUN: opt < %s -argpromotion -S | FileCheck %s
+; RUN: opt < %s -passes=argpromotion -S | FileCheck %s
 
 ; Don't promote around control flow.
 define internal i32 @callee(i1 %C, i32* %P) {

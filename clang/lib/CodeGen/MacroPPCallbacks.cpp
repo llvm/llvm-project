@@ -61,19 +61,17 @@ void MacroPPCallbacks::writeMacroDefinition(const IdentifierInfo &II,
 MacroPPCallbacks::MacroPPCallbacks(CodeGenerator *Gen, Preprocessor &PP)
     : Gen(Gen), PP(PP), Status(NoScope) {}
 
-/*
-  This is the expected flow of enter/exit compiler and user files:
-  - Main File Enter
-    - <built-in> file enter
-      {Compiler macro definitions} - (Line=0, no scope)
-      - (Optional) <command line> file enter
-      {Command line macro definitions} - (Line=0, no scope)
-      - (Optional) <command line> file exit
-      {Command line file includes} - (Line=0, Main file scope)
-        {macro definitions and file includes} - (Line!=0, Parent scope)
-    - <built-in> file exit
-    {User code macro definitions and file includes} - (Line!=0, Parent scope)
-*/
+// This is the expected flow of enter/exit compiler and user files:
+// - Main File Enter
+//   - <built-in> file enter
+//     {Compiler macro definitions} - (Line=0, no scope)
+//     - (Optional) <command line> file enter
+//     {Command line macro definitions} - (Line=0, no scope)
+//     - (Optional) <command line> file exit
+//     {Command line file includes} - (Line=0, Main file scope)
+//       {macro definitions and file includes} - (Line!=0, Parent scope)
+//   - <built-in> file exit
+//   {User code macro definitions and file includes} - (Line!=0, Parent scope)
 
 llvm::DIMacroFile *MacroPPCallbacks::getCurrentScope() {
   if (Status == MainFileScope || Status == CommandLineIncludeScope)
@@ -122,8 +120,6 @@ void MacroPPCallbacks::updateStatusToNextScope() {
 void MacroPPCallbacks::FileEntered(SourceLocation Loc) {
   SourceLocation LineLoc = getCorrectLocation(LastHashLoc);
   switch (Status) {
-  default:
-    llvm_unreachable("Do not expect to enter a file from current scope");
   case NoScope:
     updateStatusToNextScope();
     break;

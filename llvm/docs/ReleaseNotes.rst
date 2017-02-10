@@ -6,9 +6,9 @@ LLVM 5.0.0 Release Notes
     :local:
 
 .. warning::
-   These are in-progress notes for the upcoming LLVM 5 release.  You may
-   prefer the `LLVM 4 Release Notes <http://llvm.org/releases/4.0.0/docs
-   /ReleaseNotes.html>`_.
+   These are in-progress notes for the upcoming LLVM 5 release.
+   Release notes for previous releases can be found on
+   `the Download Page <http://releases.llvm.org/download.html>`_.
 
 
 Introduction

@@ -276,6 +276,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   // On SI this is s_memtime and s_memrealtime on VI.
   setOperationAction(ISD::READCYCLECOUNTER, MVT::i64, Legal);
   setOperationAction(ISD::TRAP, MVT::Other, Legal);
+  setOperationAction(ISD::DEBUGTRAP, MVT::Other, Legal);
 
   setOperationAction(ISD::FMINNUM, MVT::f64, Legal);
   setOperationAction(ISD::FMAXNUM, MVT::f64, Legal);
@@ -1779,29 +1780,50 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
   }
 
   switch (MI.getOpcode()) {
-   case AMDGPU::S_TRAP_PSEUDO: {
-	DebugLoc DL = MI.getDebugLoc();
-	BuildMI(*BB, MI, DL, TII->get(AMDGPU::V_MOV_B32_e32), AMDGPU::VGPR0)
-     .addImm(1);
+  case AMDGPU::S_TRAP_PSEUDO: {
+    const DebugLoc &DL = MI.getDebugLoc();
+    const int TrapType = MI.getOperand(0).getImm();
 
-    MachineFunction *MF = BB->getParent();
-    SIMachineFunctionInfo *Info = MF->getInfo<SIMachineFunctionInfo>();
-    unsigned UserSGPR = Info->getQueuePtrUserSGPR();
-    assert(UserSGPR != AMDGPU::NoRegister);
+    if (Subtarget->getTrapHandlerAbi() == SISubtarget::TrapHandlerAbiHsa &&
+        Subtarget->isTrapHandlerEnabled()) {
 
-    if (!BB->isLiveIn(UserSGPR))
-      BB->addLiveIn(UserSGPR);
+      MachineFunction *MF = BB->getParent();
+      SIMachineFunctionInfo *Info = MF->getInfo<SIMachineFunctionInfo>();
+      unsigned UserSGPR = Info->getQueuePtrUserSGPR();
+      assert(UserSGPR != AMDGPU::NoRegister);
 
-    BuildMI(*BB, MI, DL, TII->get(AMDGPU::COPY), AMDGPU::SGPR0_SGPR1)
-     .addReg(UserSGPR);
-    BuildMI(*BB, MI, DL, TII->get(AMDGPU::S_TRAP)).addImm(0x1)
-     .addReg(AMDGPU::VGPR0, RegState::Implicit)
-     .addReg(AMDGPU::SGPR0_SGPR1, RegState::Implicit);
+      if (!BB->isLiveIn(UserSGPR))
+        BB->addLiveIn(UserSGPR);
+
+      BuildMI(*BB, MI, DL, TII->get(AMDGPU::COPY), AMDGPU::SGPR0_SGPR1)
+        .addReg(UserSGPR);
+      BuildMI(*BB, MI, DL, TII->get(AMDGPU::S_TRAP))
+        .addImm(TrapType)
+        .addReg(AMDGPU::SGPR0_SGPR1, RegState::Implicit);
+    } else {
+      switch (TrapType) {
+      case SISubtarget::TrapCodeLLVMTrap:
+        BuildMI(*BB, MI, DL, TII->get(AMDGPU::S_ENDPGM));
+        break;
+      case SISubtarget::TrapCodeLLVMDebugTrap: {
+        DiagnosticInfoUnsupported NoTrap(*MF->getFunction(),
+                                         "debugtrap handler not supported",
+                                         DL,
+                                         DS_Warning);
+        LLVMContext &C = MF->getFunction()->getContext();
+        C.diagnose(NoTrap);
+        BuildMI(*BB, MI, DL, TII->get(AMDGPU::S_NOP))
+          .addImm(0);
+        break;
+      }
+      default:
+        llvm_unreachable("unsupported trap handler type!");
+      }
+    }
 
     MI.eraseFromParent();
     return BB;
   }
-
   case AMDGPU::SI_INIT_M0:
     BuildMI(*BB, MI.getIterator(), MI.getDebugLoc(),
             TII->get(AMDGPU::S_MOV_B32), AMDGPU::M0)

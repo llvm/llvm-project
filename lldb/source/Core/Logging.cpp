@@ -167,14 +167,15 @@ void lldb_private::DisableLog(const char **categories, Stream *feedback_strm) {
     }
     log->GetMask().Reset(flag_bits);
     if (flag_bits == 0) {
-      log->SetStream(lldb::StreamSP());
+      log->SetStream(nullptr);
       g_log_enabled = false;
     }
   }
 }
 
-Log *lldb_private::EnableLog(StreamSP &log_stream_sp, uint32_t log_options,
-                             const char **categories, Stream *feedback_strm) {
+Log *lldb_private::EnableLog(
+    const std::shared_ptr<llvm::raw_ostream> &log_stream_sp,
+    uint32_t log_options, const char **categories, Stream *feedback_strm) {
   // Try see if there already is a log - that way we can reuse its settings.
   // We could reuse the log in toto, but we don't know that the stream is the
   // same.

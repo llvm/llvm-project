@@ -174,7 +174,7 @@ static MemoryAccessKind checkFunctionMemoryAccess(Function &F, AAResults &AAR,
 
 /// Deduce readonly/readnone attributes for the SCC.
 template <typename AARGetterT>
-static bool addReadAttrs(const SCCNodeSet &SCCNodes, AARGetterT AARGetter) {
+static bool addReadAttrs(const SCCNodeSet &SCCNodes, AARGetterT &&AARGetter) {
   // Check if any of the functions in the SCC read or write memory.  If they
   // write memory then they can't be marked readnone or readonly.
   bool ReadsMemory = false;
@@ -1163,19 +1163,7 @@ static bool runImpl(CallGraphSCC &SCC, AARGetterT AARGetter) {
 bool PostOrderFunctionAttrsLegacyPass::runOnSCC(CallGraphSCC &SCC) {
   if (skipSCC(SCC))
     return false;
-
-  // We compute dedicated AA results for each function in the SCC as needed. We
-  // use a lambda referencing external objects so that they live long enough to
-  // be queried, but we re-use them each time.
-  Optional<BasicAAResult> BAR;
-  Optional<AAResults> AAR;
-  auto AARGetter = [&](Function &F) -> AAResults & {
-    BAR.emplace(createLegacyPMBasicAAResult(*this, F));
-    AAR.emplace(createLegacyPMAAResults(*this, F, *BAR));
-    return *AAR;
-  };
-
-  return runImpl(SCC, AARGetter);
+  return runImpl(SCC, LegacyAARGetter(*this));
 }
 
 namespace {

@@ -10,32 +10,23 @@
 #ifndef liblldb_StreamCallback_h_
 #define liblldb_StreamCallback_h_
 
-#include <mutex>
+#include "lldb/lldb-types.h"
+#include "llvm/Support/raw_ostream.h"
 #include <string>
-
-#include "lldb/Utility/Stream.h"
-#include "lldb/Utility/StreamString.h"
 
 namespace lldb_private {
 
-class StreamCallback : public Stream {
+class StreamCallback : public llvm::raw_ostream {
 public:
   StreamCallback(lldb::LogOutputCallback callback, void *baton);
-
-  ~StreamCallback() override;
-
-  void Flush() override;
-
-  size_t Write(const void *src, size_t src_len) override;
+  ~StreamCallback() override = default;
 
 private:
-  typedef std::map<lldb::tid_t, StreamString> collection;
   lldb::LogOutputCallback m_callback;
   void *m_baton;
-  collection m_accumulated_data;
-  std::mutex m_collection_mutex;
 
-  StreamString &FindStreamForThread(lldb::tid_t cur_tid);
+  void write_impl(const char *Ptr, size_t Size) override;
+  uint64_t current_pos() const override;
 };
 
 } // namespace lldb_private

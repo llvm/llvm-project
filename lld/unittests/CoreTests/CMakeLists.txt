@@ -3,5 +3,5 @@ add_lld_unittest(CoreTests
   )
 
 target_link_libraries(CoreTests
-  ${PTHREAD_LIB}
+  ${LLVM_PTHREAD_LIB}
   )

@@ -196,9 +196,6 @@ public:
   bool isVolatileType() const override;
   bool wasInlined() const override;
   std::string getUnused() const override;
-
-private:
-  const NativeSession &Session;
 };
 
 }

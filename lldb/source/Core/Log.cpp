@@ -38,7 +38,7 @@ using namespace lldb_private;
 
 Log::Log() : m_stream_sp(), m_options(0), m_mask_bits(0) {}
 
-Log::Log(const StreamSP &stream_sp)
+Log::Log(const std::shared_ptr<llvm::raw_ostream> &stream_sp)
     : m_stream_sp(stream_sp), m_options(0), m_mask_bits(0) {}
 
 Log::~Log() = default;
@@ -202,9 +202,10 @@ bool Log::GetLogChannelCallbacks(const ConstString &channel,
   return false;
 }
 
-bool Log::EnableLogChannel(lldb::StreamSP &log_stream_sp, uint32_t log_options,
-                           const char *channel, const char **categories,
-                           Stream &error_stream) {
+bool Log::EnableLogChannel(
+    const std::shared_ptr<llvm::raw_ostream> &log_stream_sp,
+    uint32_t log_options, const char *channel, const char **categories,
+    Stream &error_stream) {
   Log::Callbacks log_callbacks;
   if (Log::GetLogChannelCallbacks(ConstString(channel), log_callbacks)) {
     log_callbacks.enable(log_stream_sp, log_options, categories, &error_stream);
@@ -226,8 +227,9 @@ bool Log::EnableLogChannel(lldb::StreamSP &log_stream_sp, uint32_t log_options,
   }
 }
 
-void Log::EnableAllLogChannels(StreamSP &log_stream_sp, uint32_t log_options,
-                               const char **categories, Stream *feedback_strm) {
+void Log::EnableAllLogChannels(
+    const std::shared_ptr<llvm::raw_ostream> &log_stream_sp,
+    uint32_t log_options, const char **categories, Stream *feedback_strm) {
   CallbackMap &callback_map = GetCallbackMap();
   CallbackMapIter pos, end = callback_map.end();
 
@@ -355,18 +357,18 @@ void Log::WriteHeader(llvm::raw_ostream &OS, llvm::StringRef file,
 void Log::WriteMessage(const std::string &message) {
   // Make a copy of our stream shared pointer in case someone disables our
   // log while we are logging and releases the stream
-  StreamSP stream_sp(m_stream_sp);
+  auto stream_sp = m_stream_sp;
   if (!stream_sp)
     return;
 
   if (m_options.Test(LLDB_LOG_OPTION_THREADSAFE)) {
     static std::recursive_mutex g_LogThreadedMutex;
     std::lock_guard<std::recursive_mutex> guard(g_LogThreadedMutex);
-    stream_sp->PutCString(message.c_str());
-    stream_sp->Flush();
+    *stream_sp << message;
+    stream_sp->flush();
   } else {
-    stream_sp->PutCString(message.c_str());
-    stream_sp->Flush();
+    *stream_sp << message;
+    stream_sp->flush();
   }
 }
 

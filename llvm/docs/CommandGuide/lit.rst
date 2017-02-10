@@ -56,7 +56,7 @@ GENERAL OPTIONS
  Search for :file:`{NAME}.cfg` and :file:`{NAME}.site.cfg` when searching for
  test suites, instead of :file:`lit.cfg` and :file:`lit.site.cfg`.
 
-.. option:: -D NAME, -D NAME=VALUE, --param NAME, --param NAME=VALUE
+.. option:: -D NAME[=VALUE], --param NAME[=VALUE]
 
  Add a user defined parameter ``NAME`` with the given ``VALUE`` (or the empty
  string if not given).  The meaning and use of these parameters is test suite

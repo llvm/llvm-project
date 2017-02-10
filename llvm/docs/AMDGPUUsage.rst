@@ -261,6 +261,45 @@ VOP_SDWA examples:
 
 For full list of supported instructions, refer to "Vector ALU instructions".
 
+Trap Handler ABI
+--------------------------
+The Trap Handler suppored is implemented differently based on the host OS. OS
+is obtained from the appropriate element of the target triple HSA OS:
+
+.. code-block:: c++
+  enum TrapHandlerAbi {
+    TrapHandlerAbiNone = 0,
+    TrapHandlerAbiHsa = 1
+  };
+
+  TrapHandlerAbi getTrapHandlerAbi() const {
+    return isAmdHsaOS() ? TrapHandlerAbiHsa : TrapHandlerAbiNone;
+  }
+
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+For HSA OS, a trap handler is always enabled and that the following S_TRAP immediate
+operand codes are supported:
+.. code-block:: c++
+  enum TrapCode {
+    TrapCodeBreakPoint = 0,
+    TrapCodeLLVMTrap = 1,
+    TrapCodeLLVMDebugTrap = 2,
+    TrapCodeHSADebugTrap = 3
+  };
+
+- 0: Used for debugger breakpoint. If debugger is not installed causes dispatch
+to be terminated and its associated queue put into the error state.
+- 1: Used for llvm.trap..queue_ptr is in SGPR0-1. Causes dispatch to be
+terminated and its associated queue put into the error state.
+- 2: Used for llvm.debugtrap. queue_ptr is in SGPR0-1. If debugger not installed
+handled same as llvm.trap.
+- 3: Used for HSA DEBUGTRAP. queue_ptr is in SGPR0-1, the user code is in VGPR0.
+
+Graphics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+For Graphics, S_ENDPGM is generated for llvm.trap. S_NOP is generated for
+llvm.debugtrap together with a warning that there is no trap handler installed.
+
 HSA Code Object Directives
 --------------------------
 
