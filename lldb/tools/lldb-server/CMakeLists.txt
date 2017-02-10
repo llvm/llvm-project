@@ -51,6 +51,7 @@ set( LLDB_USED_LIBS
   lldbPluginObjCLanguage
   lldbPluginObjCPlusPlusLanguage
   lldbPluginOCamlLanguage
+  lldbPluginSwiftLanguage
 
   lldbPluginObjectFileELF
   lldbPluginObjectFileJIT
