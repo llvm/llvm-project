@@ -60,3 +60,8 @@ void foo10(p, p2) void *p; {} // expected-warning {{old-style function definitio
 // K&R function definition with previous prototype declared is not diagnosed.
 void foo11(int p, int p2);
 void foo11(p, p2) int p; int p2; {}
+
+// PR31020
+void __attribute__((cdecl)) foo12(d) // expected-warning {{this old-style function definition is not preceded by a prototype}}
+  short d;
+{}

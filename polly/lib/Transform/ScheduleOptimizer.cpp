@@ -265,7 +265,7 @@ getIsolateOptions(__isl_take isl_set *IsolateDomain, unsigned OutDimsNum) {
 /// It may help to reduce the size of generated code.
 ///
 /// @param Ctx An isl_ctx, which is used to create the isl_union_set.
-static __isl_give isl_union_set *getAtomicOptions(__isl_take isl_ctx *Ctx) {
+static __isl_give isl_union_set *getAtomicOptions(isl_ctx *Ctx) {
   auto *Space = isl_space_set_alloc(Ctx, 0, 1);
   auto *AtomicOption = isl_set_universe(Space);
   auto *Id = isl_id_alloc(Ctx, "atomic", nullptr);
@@ -765,28 +765,29 @@ static bool containsOnlyMatMulDep(__isl_keep isl_map *Schedule,
     return false;
   }
   isl_union_map_free(WAR);
-  auto *RAW = D->getDependences(Dependences::TYPE_RAW);
-  auto *Domain = isl_map_domain(isl_map_copy(Schedule));
-  auto *Space = isl_space_map_from_domain_and_range(isl_set_get_space(Domain),
-                                                    isl_set_get_space(Domain));
-  isl_set_free(Domain);
-  auto *Deltas = isl_map_deltas(isl_union_map_extract_map(RAW, Space));
+  auto *Dep = D->getDependences(Dependences::TYPE_RAW);
+  auto *Red = D->getDependences(Dependences::TYPE_RED);
+  if (Red)
+    Dep = isl_union_map_union(Dep, Red);
+  auto *DomainSpace = isl_space_domain(isl_map_get_space(Schedule));
+  auto *Space = isl_space_map_from_domain_and_range(isl_space_copy(DomainSpace),
+                                                    DomainSpace);
+  auto *Deltas = isl_map_deltas(isl_union_map_extract_map(Dep, Space));
+  isl_union_map_free(Dep);
   int DeltasDimNum = isl_set_dim(Deltas, isl_dim_set);
+  isl_set_free(Deltas);
   for (int i = 0; i < DeltasDimNum; i++) {
     auto *Val = isl_set_plain_get_val_if_fixed(Deltas, isl_dim_set, i);
-    if (Pos < 0 && isl_val_is_one(Val))
-      Pos = i;
+    Pos = Pos < 0 && isl_val_is_one(Val) ? i : Pos;
     if (isl_val_is_nan(Val) ||
         !(isl_val_is_zero(Val) || (i == Pos && isl_val_is_one(Val)))) {
       isl_val_free(Val);
-      isl_union_map_free(RAW);
-      isl_set_free(Deltas);
       return false;
     }
     isl_val_free(Val);
   }
-  isl_union_map_free(RAW);
-  isl_set_free(Deltas);
+  if (DeltasDimNum == 0 || Pos < 0)
+    return false;
   return true;
 }
 

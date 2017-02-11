@@ -70,6 +70,13 @@ public:
     return t;
   }
 
+  /// \brief Convert to the specified TypeLoc type, returning a null TypeLoc if
+  /// this TypeLock is not of the desired type. It will consider type
+  /// adjustments from a type that wad written as a T to another type that is
+  /// still canonically a T (ignores parens, attributes, elaborated types, etc).
+  template <typename T>
+  T getAsAdjusted() const;
+
   /// The kinds of TypeLocs.  Equivalent to the Type::TypeClass enum,
   /// except it also defines a Qualified enum that corresponds to the
   /// QualifiedLoc class.
@@ -2188,6 +2195,24 @@ public:
 
   QualType getInnerType() const { return this->getTypePtr()->getElementType(); }
 };
+
+template <typename T>
+inline T TypeLoc::getAsAdjusted() const {
+  TypeLoc Cur = *this;
+  while (!T::isKind(Cur)) {
+    if (auto PTL = Cur.getAs<ParenTypeLoc>())
+      Cur = PTL.getInnerLoc();
+    else if (auto ATL = Cur.getAs<AttributedTypeLoc>())
+      Cur = ATL.getModifiedLoc();
+    else if (auto ETL = Cur.getAs<ElaboratedTypeLoc>())
+      Cur = ETL.getNamedTypeLoc();
+    else if (auto ATL = Cur.getAs<AdjustedTypeLoc>())
+      Cur = ATL.getOriginalLoc();
+    else
+      break;
+  }
+  return Cur.getAs<T>();
+}
 }
 
 #endif

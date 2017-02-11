@@ -1888,6 +1888,13 @@ public:
   /// immediately following this class.
   template <typename T> const T *getAs() const;
 
+  /// Member-template getAsAdjusted<specific type>. Look through specific kinds
+  /// of sugar (parens, attributes, etc) for an instance of \<specific type>.
+  /// This is used when you need to walk over sugar nodes that represent some
+  /// kind of type adjustment from a type that was written as a \<specific type>
+  /// to another type that is still canonically a \<specific type>.
+  template <typename T> const T *getAsAdjusted() const;
+
   /// A variant of getAs<> for array types which silently discards
   /// qualifiers from the outermost type.
   const ArrayType *getAsArrayTypeUnsafe() const;
@@ -6006,6 +6013,38 @@ template <typename T> const T *Type::getAs() const {
   // If this is a typedef for the type, strip the typedef off without
   // losing all typedef information.
   return cast<T>(getUnqualifiedDesugaredType());
+}
+
+template <typename T> const T *Type::getAsAdjusted() const {
+  static_assert(!TypeIsArrayType<T>::value, "ArrayType cannot be used with getAsAdjusted!");
+
+  // If this is directly a T type, return it.
+  if (const T *Ty = dyn_cast<T>(this))
+    return Ty;
+
+  // If the canonical form of this type isn't the right kind, reject it.
+  if (!isa<T>(CanonicalType))
+    return nullptr;
+
+  // Strip off type adjustments that do not modify the underlying nature of the
+  // type.
+  const Type *Ty = this;
+  while (Ty) {
+    if (const auto *A = dyn_cast<AttributedType>(Ty))
+      Ty = A->getModifiedType().getTypePtr();
+    else if (const auto *E = dyn_cast<ElaboratedType>(Ty))
+      Ty = E->desugar().getTypePtr();
+    else if (const auto *P = dyn_cast<ParenType>(Ty))
+      Ty = P->desugar().getTypePtr();
+    else if (const auto *A = dyn_cast<AdjustedType>(Ty))
+      Ty = A->desugar().getTypePtr();
+    else
+      break;
+  }
+
+  // Just because the canonical type is correct does not mean we can use cast<>,
+  // since we may not have stripped off all the sugar down to the base type.
+  return dyn_cast<T>(Ty);
 }
 
 inline const ArrayType *Type::getAsArrayTypeUnsafe() const {

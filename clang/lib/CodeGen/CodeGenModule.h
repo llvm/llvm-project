@@ -166,7 +166,7 @@ struct ObjCEntrypoints {
   /// void objc_release(id);
   llvm::Constant *objc_release;
 
-  /// id objc_storeStrong(id*, id);
+  /// void objc_storeStrong(id*, id);
   llvm::Constant *objc_storeStrong;
 
   /// id objc_storeWeak(id*, id);
