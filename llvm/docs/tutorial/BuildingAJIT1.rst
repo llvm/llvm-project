@@ -125,14 +125,12 @@ usual include guards and #includes [2]_, we get to the definition of our class:
 
   class KaleidoscopeJIT {
   private:
-
     std::unique_ptr<TargetMachine> TM;
     const DataLayout DL;
     ObjectLinkingLayer<> ObjectLayer;
     IRCompileLayer<decltype(ObjectLayer)> CompileLayer;
 
   public:
-
     typedef decltype(CompileLayer)::ModuleSetHandleT ModuleHandleT;
 
 Our class begins with four members: A TargetMachine, TM, which will be used
@@ -152,16 +150,16 @@ compiling it, and passing the resulting in-memory object files down to the
 object linking layer below.
 
 That's it for member variables, after that we have a single typedef:
-ModuleHandle. This is the handle type that will be returned from our JIT's
+ModuleHandleT. This is the handle type that will be returned from our JIT's
 addModule method, and can be passed to the removeModule method to remove a
 module. The IRCompileLayer class already provides a convenient handle type
-(IRCompileLayer::ModuleSetHandleT), so we just alias our ModuleHandle to this.
+(IRCompileLayer::ModuleSetHandleT), so we just alias our ModuleHandleT to this.
 
 .. code-block:: c++
 
   KaleidoscopeJIT()
       : TM(EngineBuilder().selectTarget()), DL(TM->createDataLayout()),
-    CompileLayer(ObjectLayer, SimpleCompiler(*TM)) {
+        CompileLayer(ObjectLayer, SimpleCompiler(*TM)) {
     llvm::sys::DynamicLibrary::LoadLibraryPermanently(nullptr);
   }
 
@@ -200,7 +198,7 @@ available for execution.
           return JITSymbol(nullptr);
         });
 
-    // Build a singlton module set to hold our module.
+    // Build a singleton module set to hold our module.
     std::vector<std::unique_ptr<Module>> Ms;
     Ms.push_back(std::move(M));
 
@@ -259,16 +257,16 @@ were linked into a single, ever-growing logical dylib. To implement this our
 first lambda (the one defining findSymbolInLogicalDylib) will just search for
 JIT'd code by calling the CompileLayer's findSymbol method. If we don't find a
 symbol in the JIT itself we'll fall back to our second lambda, which implements
-findSymbol. This will use the RTDyldMemoyrManager::getSymbolAddressInProcess
+findSymbol. This will use the RTDyldMemoryManager::getSymbolAddressInProcess
 method to search for the symbol within the program itself. If we can't find a
-symbol definition via either of these paths the JIT will refuse to accept our
+symbol definition via either of these paths, the JIT will refuse to accept our
 module, returning a "symbol not found" error.
 
-Now that we've built our symbol resolver we're ready to add our module to the
+Now that we've built our symbol resolver, we're ready to add our module to the
 JIT. We do this by calling the CompileLayer's addModuleSet method [4]_. Since
 we only have a single Module and addModuleSet expects a collection, we will
 create a vector of modules and add our module as the only member. Since we
-have already typedef'd our ModuleHandle type to be the same as the
+have already typedef'd our ModuleHandleT type to be the same as the
 CompileLayer's handle type, we can return the handle from addModuleSet
 directly from our addModule method.
 
@@ -304,7 +302,7 @@ treated as a duplicate definition when the next top-level expression is
 entered. It is generally good to free any module that you know you won't need
 to call further, just to free up the resources dedicated to it. However, you
 don't strictly need to do this: All resources will be cleaned up when your
-JIT class is destructed, if the haven't been freed before then.
+JIT class is destructed, if they haven't been freed before then.
 
 This brings us to the end of Chapter 1 of Building a JIT. You now have a basic
 but fully functioning JIT stack that you can use to take LLVM IR and make it

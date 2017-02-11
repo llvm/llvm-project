@@ -9,13 +9,20 @@
 
 ; Test 128-bit vectors for all legal element types.
 
+; FIXME: Why didn't AVX-512 optimize too?
+
 define <16 x i8> @signbit_sel_v16i8(<16 x i8> %x, <16 x i8> %y, <16 x i8> %mask) {
-; AVX-LABEL: signbit_sel_v16i8:
-; AVX:       # BB#0:
-; AVX-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; AVX-NEXT:    vpcmpgtb %xmm2, %xmm3, %xmm2
-; AVX-NEXT:    vpblendvb %xmm2, %xmm0, %xmm1, %xmm0
-; AVX-NEXT:    retq
+; AVX12-LABEL: signbit_sel_v16i8:
+; AVX12:       # BB#0:
+; AVX12-NEXT:    vpblendvb %xmm2, %xmm0, %xmm1, %xmm0
+; AVX12-NEXT:    retq
+;
+; AVX512-LABEL: signbit_sel_v16i8:
+; AVX512:       # BB#0:
+; AVX512-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; AVX512-NEXT:    vpcmpgtb %xmm2, %xmm3, %xmm2
+; AVX512-NEXT:    vpblendvb %xmm2, %xmm0, %xmm1, %xmm0
+; AVX512-NEXT:    retq
   %tr = icmp slt <16 x i8> %mask, zeroinitializer
   %z = select <16 x i1> %tr, <16 x i8> %x, <16 x i8> %y
   ret <16 x i8> %z
@@ -49,8 +56,6 @@ define <8 x i16> @signbit_sel_v8i16(<8 x i16> %x, <8 x i16> %y, <8 x i16> %mask)
 define <4 x i32> @signbit_sel_v4i32(<4 x i32> %x, <4 x i32> %y, <4 x i32> %mask) {
 ; AVX12F-LABEL: signbit_sel_v4i32:
 ; AVX12F:       # BB#0:
-; AVX12F-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; AVX12F-NEXT:    vpcmpgtd %xmm2, %xmm3, %xmm2
 ; AVX12F-NEXT:    vblendvps %xmm2, %xmm0, %xmm1, %xmm0
 ; AVX12F-NEXT:    retq
 ;
@@ -68,8 +73,6 @@ define <4 x i32> @signbit_sel_v4i32(<4 x i32> %x, <4 x i32> %y, <4 x i32> %mask)
 define <2 x i64> @signbit_sel_v2i64(<2 x i64> %x, <2 x i64> %y, <2 x i64> %mask) {
 ; AVX12F-LABEL: signbit_sel_v2i64:
 ; AVX12F:       # BB#0:
-; AVX12F-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; AVX12F-NEXT:    vpcmpgtq %xmm2, %xmm3, %xmm2
 ; AVX12F-NEXT:    vblendvpd %xmm2, %xmm0, %xmm1, %xmm0
 ; AVX12F-NEXT:    retq
 ;
@@ -87,8 +90,6 @@ define <2 x i64> @signbit_sel_v2i64(<2 x i64> %x, <2 x i64> %y, <2 x i64> %mask)
 define <4 x float> @signbit_sel_v4f32(<4 x float> %x, <4 x float> %y, <4 x i32> %mask) {
 ; AVX12F-LABEL: signbit_sel_v4f32:
 ; AVX12F:       # BB#0:
-; AVX12F-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; AVX12F-NEXT:    vpcmpgtd %xmm2, %xmm3, %xmm2
 ; AVX12F-NEXT:    vblendvps %xmm2, %xmm0, %xmm1, %xmm0
 ; AVX12F-NEXT:    retq
 ;
@@ -106,8 +107,6 @@ define <4 x float> @signbit_sel_v4f32(<4 x float> %x, <4 x float> %y, <4 x i32> 
 define <2 x double> @signbit_sel_v2f64(<2 x double> %x, <2 x double> %y, <2 x i64> %mask) {
 ; AVX12F-LABEL: signbit_sel_v2f64:
 ; AVX12F:       # BB#0:
-; AVX12F-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; AVX12F-NEXT:    vpcmpgtq %xmm2, %xmm3, %xmm2
 ; AVX12F-NEXT:    vblendvpd %xmm2, %xmm0, %xmm1, %xmm0
 ; AVX12F-NEXT:    retq
 ;
@@ -139,8 +138,6 @@ define <32 x i8> @signbit_sel_v32i8(<32 x i8> %x, <32 x i8> %y, <32 x i8> %mask)
 ;
 ; AVX2-LABEL: signbit_sel_v32i8:
 ; AVX2:       # BB#0:
-; AVX2-NEXT:    vpxor %ymm3, %ymm3, %ymm3
-; AVX2-NEXT:    vpcmpgtb %ymm2, %ymm3, %ymm2
 ; AVX2-NEXT:    vpblendvb %ymm2, %ymm0, %ymm1, %ymm0
 ; AVX2-NEXT:    retq
 ;
@@ -202,22 +199,10 @@ define <16 x i16> @signbit_sel_v16i16(<16 x i16> %x, <16 x i16> %y, <16 x i16> %
 }
 
 define <8 x i32> @signbit_sel_v8i32(<8 x i32> %x, <8 x i32> %y, <8 x i32> %mask) {
-; AVX1-LABEL: signbit_sel_v8i32:
-; AVX1:       # BB#0:
-; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm3
-; AVX1-NEXT:    vpxor %xmm4, %xmm4, %xmm4
-; AVX1-NEXT:    vpcmpgtd %xmm3, %xmm4, %xmm3
-; AVX1-NEXT:    vpcmpgtd %xmm2, %xmm4, %xmm2
-; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm2, %ymm2
-; AVX1-NEXT:    vblendvps %ymm2, %ymm0, %ymm1, %ymm0
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: signbit_sel_v8i32:
-; AVX2:       # BB#0:
-; AVX2-NEXT:    vpxor %ymm3, %ymm3, %ymm3
-; AVX2-NEXT:    vpcmpgtd %ymm2, %ymm3, %ymm2
-; AVX2-NEXT:    vblendvps %ymm2, %ymm0, %ymm1, %ymm0
-; AVX2-NEXT:    retq
+; AVX12-LABEL: signbit_sel_v8i32:
+; AVX12:       # BB#0:
+; AVX12-NEXT:    vblendvps %ymm2, %ymm0, %ymm1, %ymm0
+; AVX12-NEXT:    retq
 ;
 ; AVX512F-LABEL: signbit_sel_v8i32:
 ; AVX512F:       # BB#0:
@@ -242,29 +227,10 @@ define <8 x i32> @signbit_sel_v8i32(<8 x i32> %x, <8 x i32> %y, <8 x i32> %mask)
 }
 
 define <4 x i64> @signbit_sel_v4i64(<4 x i64> %x, <4 x i64> %y, <4 x i64> %mask) {
-; AVX1-LABEL: signbit_sel_v4i64:
-; AVX1:       # BB#0:
-; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm3
-; AVX1-NEXT:    vpxor %xmm4, %xmm4, %xmm4
-; AVX1-NEXT:    vpcmpgtq %xmm3, %xmm4, %xmm3
-; AVX1-NEXT:    vpcmpgtq %xmm2, %xmm4, %xmm2
-; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm2, %ymm2
-; AVX1-NEXT:    vblendvpd %ymm2, %ymm0, %ymm1, %ymm0
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: signbit_sel_v4i64:
-; AVX2:       # BB#0:
-; AVX2-NEXT:    vpxor %ymm3, %ymm3, %ymm3
-; AVX2-NEXT:    vpcmpgtq %ymm2, %ymm3, %ymm2
-; AVX2-NEXT:    vblendvpd %ymm2, %ymm0, %ymm1, %ymm0
-; AVX2-NEXT:    retq
-;
-; AVX512F-LABEL: signbit_sel_v4i64:
-; AVX512F:       # BB#0:
-; AVX512F-NEXT:    vpxor %ymm3, %ymm3, %ymm3
-; AVX512F-NEXT:    vpcmpgtq %ymm2, %ymm3, %ymm2
-; AVX512F-NEXT:    vblendvpd %ymm2, %ymm0, %ymm1, %ymm0
-; AVX512F-NEXT:    retq
+; AVX12F-LABEL: signbit_sel_v4i64:
+; AVX12F:       # BB#0:
+; AVX12F-NEXT:    vblendvpd %ymm2, %ymm0, %ymm1, %ymm0
+; AVX12F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: signbit_sel_v4i64:
 ; AVX512VL:       # BB#0:
@@ -278,29 +244,10 @@ define <4 x i64> @signbit_sel_v4i64(<4 x i64> %x, <4 x i64> %y, <4 x i64> %mask)
 }
 
 define <4 x double> @signbit_sel_v4f64(<4 x double> %x, <4 x double> %y, <4 x i64> %mask) {
-; AVX1-LABEL: signbit_sel_v4f64:
-; AVX1:       # BB#0:
-; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm3
-; AVX1-NEXT:    vpxor %xmm4, %xmm4, %xmm4
-; AVX1-NEXT:    vpcmpgtq %xmm3, %xmm4, %xmm3
-; AVX1-NEXT:    vpcmpgtq %xmm2, %xmm4, %xmm2
-; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm2, %ymm2
-; AVX1-NEXT:    vblendvpd %ymm2, %ymm0, %ymm1, %ymm0
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: signbit_sel_v4f64:
-; AVX2:       # BB#0:
-; AVX2-NEXT:    vpxor %ymm3, %ymm3, %ymm3
-; AVX2-NEXT:    vpcmpgtq %ymm2, %ymm3, %ymm2
-; AVX2-NEXT:    vblendvpd %ymm2, %ymm0, %ymm1, %ymm0
-; AVX2-NEXT:    retq
-;
-; AVX512F-LABEL: signbit_sel_v4f64:
-; AVX512F:       # BB#0:
-; AVX512F-NEXT:    vpxor %ymm3, %ymm3, %ymm3
-; AVX512F-NEXT:    vpcmpgtq %ymm2, %ymm3, %ymm2
-; AVX512F-NEXT:    vblendvpd %ymm2, %ymm0, %ymm1, %ymm0
-; AVX512F-NEXT:    retq
+; AVX12F-LABEL: signbit_sel_v4f64:
+; AVX12F:       # BB#0:
+; AVX12F-NEXT:    vblendvpd %ymm2, %ymm0, %ymm1, %ymm0
+; AVX12F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: signbit_sel_v4f64:
 ; AVX512VL:       # BB#0:
@@ -329,16 +276,12 @@ define <4 x double> @signbit_sel_v4f64_small_mask(<4 x double> %x, <4 x double> 
 ;
 ; AVX2-LABEL: signbit_sel_v4f64_small_mask:
 ; AVX2:       # BB#0:
-; AVX2-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; AVX2-NEXT:    vpcmpgtd %xmm2, %xmm3, %xmm2
 ; AVX2-NEXT:    vpmovsxdq %xmm2, %ymm2
 ; AVX2-NEXT:    vblendvpd %ymm2, %ymm0, %ymm1, %ymm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: signbit_sel_v4f64_small_mask:
 ; AVX512F:       # BB#0:
-; AVX512F-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; AVX512F-NEXT:    vpcmpgtd %xmm2, %xmm3, %xmm2
 ; AVX512F-NEXT:    vpmovsxdq %xmm2, %ymm2
 ; AVX512F-NEXT:    vblendvpd %ymm2, %ymm0, %ymm1, %ymm0
 ; AVX512F-NEXT:    retq
@@ -357,29 +300,11 @@ define <4 x double> @signbit_sel_v4f64_small_mask(<4 x double> %x, <4 x double> 
 ; Try a 512-bit vector to make sure AVX-512 is handled as expected.
 
 define <8 x double> @signbit_sel_v8f64(<8 x double> %x, <8 x double> %y, <8 x i64> %mask) {
-; AVX1-LABEL: signbit_sel_v8f64:
-; AVX1:       # BB#0:
-; AVX1-NEXT:    vextractf128 $1, %ymm5, %xmm6
-; AVX1-NEXT:    vpxor %xmm7, %xmm7, %xmm7
-; AVX1-NEXT:    vpcmpgtq %xmm6, %xmm7, %xmm6
-; AVX1-NEXT:    vpcmpgtq %xmm5, %xmm7, %xmm5
-; AVX1-NEXT:    vinsertf128 $1, %xmm6, %ymm5, %ymm5
-; AVX1-NEXT:    vextractf128 $1, %ymm4, %xmm6
-; AVX1-NEXT:    vpcmpgtq %xmm6, %xmm7, %xmm6
-; AVX1-NEXT:    vpcmpgtq %xmm4, %xmm7, %xmm4
-; AVX1-NEXT:    vinsertf128 $1, %xmm6, %ymm4, %ymm4
-; AVX1-NEXT:    vblendvpd %ymm4, %ymm0, %ymm2, %ymm0
-; AVX1-NEXT:    vblendvpd %ymm5, %ymm1, %ymm3, %ymm1
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: signbit_sel_v8f64:
-; AVX2:       # BB#0:
-; AVX2-NEXT:    vpxor %ymm6, %ymm6, %ymm6
-; AVX2-NEXT:    vpcmpgtq %ymm5, %ymm6, %ymm5
-; AVX2-NEXT:    vpcmpgtq %ymm4, %ymm6, %ymm4
-; AVX2-NEXT:    vblendvpd %ymm4, %ymm0, %ymm2, %ymm0
-; AVX2-NEXT:    vblendvpd %ymm5, %ymm1, %ymm3, %ymm1
-; AVX2-NEXT:    retq
+; AVX12-LABEL: signbit_sel_v8f64:
+; AVX12:       # BB#0:
+; AVX12-NEXT:    vblendvpd %ymm4, %ymm0, %ymm2, %ymm0
+; AVX12-NEXT:    vblendvpd %ymm5, %ymm1, %ymm3, %ymm1
+; AVX12-NEXT:    retq
 ;
 ; AVX512-LABEL: signbit_sel_v8f64:
 ; AVX512:       # BB#0:

@@ -131,33 +131,29 @@ for us:
 
     void InitializeModuleAndPassManager(void) {
       // Open a new module.
-      Context LLVMContext;
-      TheModule = llvm::make_unique<Module>("my cool jit", LLVMContext);
-      TheModule->setDataLayout(TheJIT->getTargetMachine().createDataLayout());
+      TheModule = llvm::make_unique<Module>("my cool jit", TheContext);
 
       // Create a new pass manager attached to it.
       TheFPM = llvm::make_unique<FunctionPassManager>(TheModule.get());
 
-      // Provide basic AliasAnalysis support for GVN.
-      TheFPM.add(createBasicAliasAnalysisPass());
       // Do simple "peephole" optimizations and bit-twiddling optzns.
-      TheFPM.add(createInstructionCombiningPass());
+      TheFPM->add(createInstructionCombiningPass());
       // Reassociate expressions.
-      TheFPM.add(createReassociatePass());
+      TheFPM->add(createReassociatePass());
       // Eliminate Common SubExpressions.
-      TheFPM.add(createGVNPass());
+      TheFPM->add(createGVNPass());
       // Simplify the control flow graph (deleting unreachable blocks, etc).
-      TheFPM.add(createCFGSimplificationPass());
+      TheFPM->add(createCFGSimplificationPass());
 
-      TheFPM.doInitialization();
+      TheFPM->doInitialization();
     }
 
 This code initializes the global module ``TheModule``, and the function pass
 manager ``TheFPM``, which is attached to ``TheModule``. Once the pass manager is
 set up, we use a series of "add" calls to add a bunch of LLVM passes.
 
-In this case, we choose to add five passes: one analysis pass (alias analysis),
-and four optimization passes. The passes we choose here are a pretty standard set
+In this case, we choose to add four optimization passes.
+The passes we choose here are a pretty standard set
 of "cleanup" optimizations that are useful for a wide variety of code. I won't
 delve into what they do but, believe me, they are a good starting place :).
 
@@ -227,8 +223,10 @@ expressions they type in. For example, if they type in "1 + 2;", we
 should evaluate and print out 3. If they define a function, they should
 be able to call it from the command line.
 
-In order to do this, we first declare and initialize the JIT. This is
-done by adding a global variable ``TheJIT``, and initializing it in
+In order to do this, we first prepare the environment to create code for
+the current native target and declare and initialize the JIT. This is
+done by calling some ``InitializeNativeTarget\*`` functions and
+adding a global variable ``TheJIT``, and initializing it in
 ``main``:
 
 .. code-block:: c++
@@ -236,7 +234,21 @@ done by adding a global variable ``TheJIT``, and initializing it in
     static std::unique_ptr<KaleidoscopeJIT> TheJIT;
     ...
     int main() {
-      ..
+      InitializeNativeTarget();
+      InitializeNativeTargetAsmPrinter();
+      InitializeNativeTargetAsmParser();
+
+      // Install standard binary operators.
+      // 1 is lowest precedence.
+      BinopPrecedence['<'] = 10;
+      BinopPrecedence['+'] = 20;
+      BinopPrecedence['-'] = 20;
+      BinopPrecedence['*'] = 40; // highest.
+
+      // Prime the first token.
+      fprintf(stderr, "ready> ");
+      getNextToken();
+
       TheJIT = llvm::make_unique<KaleidoscopeJIT>();
 
       // Run the main "interpreter loop" now.
@@ -245,9 +257,24 @@ done by adding a global variable ``TheJIT``, and initializing it in
       return 0;
     }
 
+We also need to setup the data layout for the JIT:
+
+.. code-block:: c++
+
+    void InitializeModuleAndPassManager(void) {
+      // Open a new module.
+      TheModule = llvm::make_unique<Module>("my cool jit", TheContext);
+      TheModule->setDataLayout(TheJIT->getTargetMachine().createDataLayout());
+
+      // Create a new pass manager attached to it.
+      TheFPM = llvm::make_unique<FunctionPassManager>(TheModule.get());
+      ...
+
 The KaleidoscopeJIT class is a simple JIT built specifically for these
-tutorials. In later chapters we will look at how it works and extend it with
-new features, but for now we will take it as given. Its API is very simple::
+tutorials, available inside the LLVM source code
+at llvm-src/examples/Kaleidoscope/include/KaleidoscopeJIT.h.
+In later chapters we will look at how it works and extend it with
+new features, but for now we will take it as given. Its API is very simple:
 ``addModule`` adds an LLVM IR module to the JIT, making its functions
 available for execution; ``removeModule`` removes a module, freeing any
 memory associated with the code in that module; and ``findSymbol`` allows us
@@ -554,7 +581,10 @@ most recent to the oldest, to find the newest definition. If no definition is
 found inside the JIT, it falls back to calling "``dlsym("sin")``" on the
 Kaleidoscope process itself. Since "``sin``" is defined within the JIT's
 address space, it simply patches up calls in the module to call the libm
-version of ``sin`` directly.
+version of ``sin`` directly. But in some cases this even goes further:
+as sin and cos are names of standard math functions, the constant folder
+will directly evaluate the function calls to the correct result when called
+with constants like in the "``sin(1.0)``" above.
 
 In the future we'll see how tweaking this symbol resolution rule can be used to
 enable all sorts of useful features, from security (restricting the set of
@@ -567,11 +597,20 @@ if we add:
 
 .. code-block:: c++
 
+    #ifdef LLVM_ON_WIN32
+    #define DLLEXPORT __declspec(dllexport)
+    #else
+    #define DLLEXPORT
+    #endif
+
     /// putchard - putchar that takes a double and returns 0.
-    extern "C" double putchard(double X) {
+    extern "C" DLLEXPORT double putchard(double X) {
       fputc((char)X, stderr);
       return 0;
     }
+
+Note, that for Windows we need to actually export the functions because
+the dynamic symbol loader will use GetProcAddress to find the symbols.
 
 Now we can produce simple output to the console by using things like:
 "``extern putchard(x); putchard(120);``", which prints a lowercase 'x'

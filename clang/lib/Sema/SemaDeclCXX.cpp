@@ -3018,10 +3018,7 @@ Sema::ActOnCXXMemberDeclarator(Scope *S, AccessSpecifier AS, Declarator &D,
         return nullptr;
     }
 
-    // Check for any possible shadowed member variables
-    if (const auto *RD = cast<CXXRecordDecl>(CurContext))
-      CheckShadowInheritedFields(Loc, Name, RD);
-
+    CheckShadowInheritedFields(Loc, Name, cast<CXXRecordDecl>(CurContext));
   } else {
     Member = HandleDeclarator(S, D, TemplateParameterLists);
     if (!Member)

@@ -7564,11 +7564,12 @@ static FunctionDecl* CreateNewFunctionDecl(Sema &SemaRef, Declarator &D,
     // Determine whether the function was written with a
     // prototype. This true when:
     //   - there is a prototype in the declarator, or
-    //   - the type R of the function is some kind of typedef or other reference
-    //     to a type name (which eventually refers to a function type).
+    //   - the type R of the function is some kind of typedef or other non-
+    //     attributed reference to a type name (which eventually refers to a
+    //     function type).
     bool HasPrototype =
       (D.isFunctionDeclarator() && D.getFunctionTypeInfo().hasPrototype) ||
-      (!isa<FunctionType>(R.getTypePtr()) && R->isFunctionProtoType());
+      (!R->getAsAdjusted<FunctionType>() && R->isFunctionProtoType());
 
     NewFD = FunctionDecl::Create(SemaRef.Context, DC,
                                  D.getLocStart(), NameInfo, R,
@@ -12104,7 +12105,7 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
           !LangOpts.CPlusPlus) {
         TypeSourceInfo *TI = FD->getTypeSourceInfo();
         TypeLoc TL = TI->getTypeLoc();
-        FunctionTypeLoc FTL = TL.castAs<FunctionTypeLoc>();
+        FunctionTypeLoc FTL = TL.getAsAdjusted<FunctionTypeLoc>();
         Diag(FTL.getLParenLoc(), diag::warn_strict_prototypes) << 1;
       }
     }
