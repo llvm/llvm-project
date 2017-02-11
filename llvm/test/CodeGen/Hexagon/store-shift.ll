@@ -1,12 +1,12 @@
 ; RUN: llc -march=hexagon < %s | FileCheck %s
 
 ; CHECK-DAG: r[[BASE:[0-9]+]] += add
-; CHECK-DAG: r[[IDX0:[0-9]+]] = add(r2, #5)
-; CHECK-DAG: r[[IDX1:[0-9]+]] = add(r2, #6)
-; CHECK-DAG: memw(r0 + r[[IDX0]]<<#2) = r3
-; CHECK-DAG: memw(r0 + r[[IDX1]]<<#2) = r3
-; CHECK-DAG: memw(r[[BASE]] + r[[IDX0]]<<#2) = r[[IDX0]]
-; CHECK-DAG: memw(r[[BASE]] + r[[IDX1]]<<#2) = r[[IDX0]]
+; CHECK-DAG: r[[IDX0:[0-9]+]] = add(r2,#5)
+; CHECK-DAG: r[[IDX1:[0-9]+]] = add(r2,#6)
+; CHECK-DAG: memw(r0+r[[IDX0]]<<#2) = r3
+; CHECK-DAG: memw(r0+r[[IDX1]]<<#2) = r3
+; CHECK-DAG: memw(r[[BASE]]+r[[IDX0]]<<#2) = r[[IDX0]]
+; CHECK-DAG: memw(r[[BASE]]+r[[IDX1]]<<#2) = r[[IDX0]]
 
 target triple = "hexagon"
 

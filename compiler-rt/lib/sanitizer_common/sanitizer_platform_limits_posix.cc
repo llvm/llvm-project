@@ -23,11 +23,6 @@
 #ifdef _FILE_OFFSET_BITS
 #undef _FILE_OFFSET_BITS
 #endif
-#if SANITIZER_FREEBSD
-#define _WANT_RTENTRY
-#include <sys/param.h>
-#include <sys/socketvar.h>
-#endif
 #include <arpa/inet.h>
 #include <dirent.h>
 #include <errno.h>
@@ -433,6 +428,7 @@ unsigned struct_ElfW_Phdr_sz = sizeof(Elf_Phdr);
   unsigned struct_input_absinfo_sz = sizeof(struct input_absinfo);
   unsigned struct_input_id_sz = sizeof(struct input_id);
   unsigned struct_mtpos_sz = sizeof(struct mtpos);
+  unsigned struct_rtentry_sz = sizeof(struct rtentry);
   unsigned struct_termio_sz = sizeof(struct termio);
   unsigned struct_vt_consize_sz = sizeof(struct vt_consize);
   unsigned struct_vt_sizes_sz = sizeof(struct vt_sizes);
@@ -452,7 +448,6 @@ unsigned struct_ElfW_Phdr_sz = sizeof(Elf_Phdr);
   unsigned struct_midi_info_sz = sizeof(struct midi_info);
   unsigned struct_mtget_sz = sizeof(struct mtget);
   unsigned struct_mtop_sz = sizeof(struct mtop);
-  unsigned struct_rtentry_sz = sizeof(struct rtentry);
   unsigned struct_sbi_instrument_sz = sizeof(struct sbi_instrument);
   unsigned struct_seq_event_rec_sz = sizeof(struct seq_event_rec);
   unsigned struct_synth_info_sz = sizeof(struct synth_info);

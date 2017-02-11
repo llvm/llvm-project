@@ -2,6 +2,7 @@
 ; with -lto-pass-remarks-with-hotness.
 
 ; RUN: llvm-as < %s >%t.bc
+; RUN: rm -f %t.yaml
 ; RUN: llvm-lto -lto-pass-remarks-output=%t.yaml \
 ; RUN:          -lto-pass-remarks-with-hotness \
 ; RUN:          -exported-symbol _func2 \

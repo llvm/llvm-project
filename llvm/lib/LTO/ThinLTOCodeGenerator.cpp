@@ -73,27 +73,6 @@ namespace {
 static cl::opt<int>
     ThreadCount("threads", cl::init(llvm::heavyweight_hardware_concurrency()));
 
-Expected<std::unique_ptr<tool_output_file>>
-setupOptimizationRemarks(LLVMContext &Ctx, int Count) {
-  if (LTOPassRemarksWithHotness)
-    Ctx.setDiagnosticHotnessRequested(true);
-
-  if (LTORemarksFilename.empty())
-    return nullptr;
-
-  std::string FileName =
-      LTORemarksFilename + ".thin." + llvm::utostr(Count) + ".yaml";
-  std::error_code EC;
-  auto DiagnosticOutputFile =
-      llvm::make_unique<tool_output_file>(FileName, EC, sys::fs::F_None);
-  if (EC)
-    return errorCodeToError(EC);
-  Ctx.setDiagnosticsOutputFile(
-      llvm::make_unique<yaml::Output>(DiagnosticOutputFile->os()));
-  DiagnosticOutputFile->keep();
-  return std::move(DiagnosticOutputFile);
-}
-
 // Simple helper to save temporary files for debug.
 static void saveTempBitcode(const Module &TheModule, StringRef TempDir,
                             unsigned count, StringRef Suffix) {
@@ -988,7 +967,8 @@ void ThinLTOCodeGenerator::run() {
         LLVMContext Context;
         Context.setDiscardValueNames(LTODiscardValueNames);
         Context.enableDebugTypeODRUniquing();
-        auto DiagFileOrErr = setupOptimizationRemarks(Context, count);
+        auto DiagFileOrErr = lto::setupOptimizationRemarks(
+            Context, LTORemarksFilename, LTOPassRemarksWithHotness, count);
         if (!DiagFileOrErr) {
           errs() << "Error: " << toString(DiagFileOrErr.takeError()) << "\n";
           report_fatal_error("ThinLTO: Can't get an output file for the "

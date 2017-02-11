@@ -616,6 +616,10 @@ protected:
   /// vector of instructions.
   void addMetadata(ArrayRef<Value *> To, Instruction *From);
 
+  /// \brief Set the debug location in the builder using the debug location in
+  /// the instruction.
+  void setDebugLocFromInst(IRBuilder<> &B, const Value *Ptr);
+
   /// This is a helper class for maintaining vectorization state. It's used for
   /// mapping values from the original loop to their corresponding values in
   /// the new loop. Two mappings are maintained: one for vectorized values and
@@ -865,12 +869,14 @@ static Instruction *getDebugLocFromInstOrOperands(Instruction *I) {
   return I;
 }
 
-/// \brief Set the debug location in the builder using the debug location in the
-/// instruction.
-static void setDebugLocFromInst(IRBuilder<> &B, const Value *Ptr) {
-  if (const Instruction *Inst = dyn_cast_or_null<Instruction>(Ptr))
-    B.SetCurrentDebugLocation(Inst->getDebugLoc());
-  else
+void InnerLoopVectorizer::setDebugLocFromInst(IRBuilder<> &B, const Value *Ptr) {
+  if (const Instruction *Inst = dyn_cast_or_null<Instruction>(Ptr)) {
+    const DILocation *DIL = Inst->getDebugLoc();
+    if (DIL && Inst->getFunction()->isDebugInfoForProfiling())
+      B.SetCurrentDebugLocation(DIL->cloneWithDuplicationFactor(UF * VF));
+    else
+      B.SetCurrentDebugLocation(DIL);
+  } else
     B.SetCurrentDebugLocation(DebugLoc());
 }
 
@@ -2421,8 +2427,7 @@ void InnerLoopVectorizer::widenIntInduction(PHINode *IV, TruncInst *Trunc) {
   // Try to create a new independent vector induction variable. If we can't
   // create the phi node, we will splat the scalar induction variable in each
   // loop iteration.
-  if (VF > 1 && IV->getType() == Induction->getType() && Step &&
-      !shouldScalarizeInstruction(EntryVal)) {
+  if (VF > 1 && Step && !shouldScalarizeInstruction(EntryVal)) {
     createVectorIntInductionPHI(ID, EntryVal);
     VectorizedIV = true;
   }

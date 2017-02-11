@@ -136,6 +136,18 @@ static bool FixedCVE_2016_2143() {
   if (ptr[0] == '.')
     patch = internal_simple_strtoll(ptr+1, &ptr, 10);
   if (major < 3) {
+    if (major == 2 && minor == 6 && patch == 32 && ptr[0] == '-' &&
+        internal_strstr(ptr, ".el6")) {
+      // Check RHEL6
+      int r1 = internal_simple_strtoll(ptr+1, &ptr, 10);
+      if (r1 >= 657) // 2.6.32-657.el6 or later
+        return true;
+      if (r1 == 642 && ptr[0] == '.') {
+        int r2 = internal_simple_strtoll(ptr+1, &ptr, 10);
+        if (r2 >= 9) // 2.6.32-642.9.1.el6 or later
+          return true;
+      }
+    }
     // <3.0 is bad.
     return false;
   } else if (major == 3) {
@@ -145,6 +157,18 @@ static bool FixedCVE_2016_2143() {
     // 3.12.58+ is OK.
     if (minor == 12 && patch >= 58)
       return true;
+    if (minor == 10 && patch == 0 && ptr[0] == '-' &&
+        internal_strstr(ptr, ".el7")) {
+      // Check RHEL7
+      int r1 = internal_simple_strtoll(ptr+1, &ptr, 10);
+      if (r1 >= 426) // 3.10.0-426.el7 or later
+        return true;
+      if (r1 == 327 && ptr[0] == '.') {
+        int r2 = internal_simple_strtoll(ptr+1, &ptr, 10);
+        if (r2 >= 27) // 3.10.0-327.27.1.el7 or later
+          return true;
+      }
+    }
     // Otherwise, bad.
     return false;
   } else if (major == 4) {

@@ -987,3 +987,27 @@ Error LTO::runThinLTO(AddStreamFn AddStream, NativeObjectCache Cache,
 
   return BackendProc->wait();
 }
+
+Expected<std::unique_ptr<tool_output_file>>
+lto::setupOptimizationRemarks(LLVMContext &Context,
+                              StringRef LTORemarksFilename,
+                              bool LTOPassRemarksWithHotness, int Count) {
+  if (LTORemarksFilename.empty())
+    return nullptr;
+
+  std::string Filename = LTORemarksFilename;
+  if (Count != -1)
+    Filename += ".thin." + llvm::utostr(Count) + ".yaml";
+
+  std::error_code EC;
+  auto DiagnosticFile =
+      llvm::make_unique<tool_output_file>(Filename, EC, sys::fs::F_None);
+  if (EC)
+    return errorCodeToError(EC);
+  Context.setDiagnosticsOutputFile(
+      llvm::make_unique<yaml::Output>(DiagnosticFile->os()));
+  if (LTOPassRemarksWithHotness)
+    Context.setDiagnosticHotnessRequested(true);
+  DiagnosticFile->keep();
+  return std::move(DiagnosticFile);
+}

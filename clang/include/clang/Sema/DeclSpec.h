@@ -519,7 +519,7 @@ public:
   SourceRange getTypeofParensRange() const { return TypeofParensRange; }
   void setTypeofParensRange(SourceRange range) { TypeofParensRange = range; }
 
-  bool containsPlaceholderType() const {
+  bool hasAutoTypeSpec() const {
     return (TypeSpecType == TST_auto || TypeSpecType == TST_auto_type ||
             TypeSpecType == TST_decltype_auto);
   }

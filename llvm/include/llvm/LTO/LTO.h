@@ -26,6 +26,7 @@
 #include "llvm/Linker/IRMover.h"
 #include "llvm/Object/IRObjectFile.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/thread.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Transforms/IPO/FunctionImport.h"
@@ -68,6 +69,11 @@ namespace lto {
 std::string getThinLTOOutputFile(const std::string &Path,
                                  const std::string &OldPrefix,
                                  const std::string &NewPrefix);
+
+/// Setup optimization remarks.
+Expected<std::unique_ptr<tool_output_file>>
+setupOptimizationRemarks(LLVMContext &Context, StringRef LTORemarksFilename,
+                         bool LTOPassRemarksWithHotness, int Count = -1);
 
 class LTO;
 struct SymbolResolution;

@@ -3762,7 +3762,7 @@ SDValue SelectionDAG::FoldConstantVectorArithmetic(unsigned Opcode,
   // Find legal integer scalar type for constant promotion and
   // ensure that its scalar size is at least as large as source.
   EVT LegalSVT = VT.getScalarType();
-  if (LegalSVT.isInteger()) {
+  if (NewNodesMustHaveLegalTypes && LegalSVT.isInteger()) {
     LegalSVT = TLI->getTypeToTransformTo(*getContext(), LegalSVT);
     if (LegalSVT.bitsLT(VT.getScalarType()))
       return SDValue();

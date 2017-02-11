@@ -123,6 +123,7 @@ syn keyword llvmKeyword
       \ readnone
       \ readonly
       \ release
+      \ returned
       \ returns_twice
       \ sanitize_address
       \ sanitize_memory

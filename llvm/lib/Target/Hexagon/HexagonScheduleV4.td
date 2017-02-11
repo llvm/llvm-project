@@ -61,15 +61,21 @@ def J_tc_2early_SLOT23       : InstrItinClass;
 def J_tc_2early_CJUMP_UCJUMP_ARCHDEPSLOT       : InstrItinClass;
 def J_tc_2early_SLOT2        : InstrItinClass;
 def LD_tc_ld_SLOT01          : InstrItinClass;
+def LD_tc_ld_pi_SLOT01          : InstrItinClass;
 def LD_tc_ld_SLOT0           : InstrItinClass;
 def LD_tc_3or4stall_SLOT0    : InstrItinClass;
 def M_tc_2_SLOT23            : InstrItinClass;
+def M_tc_2_acc_SLOT23        : InstrItinClass;
 def M_tc_3_SLOT23            : InstrItinClass;
 def M_tc_1_SLOT23            : InstrItinClass;
 def M_tc_3x_SLOT23           : InstrItinClass;
+def M_tc_3x_acc_SLOT23       : InstrItinClass;
 def M_tc_3or4x_SLOT23        : InstrItinClass;
+def M_tc_3or4x_acc_SLOT23    : InstrItinClass;
 def ST_tc_st_SLOT01          : InstrItinClass;
+def ST_tc_st_pi_SLOT01       : InstrItinClass;
 def ST_tc_st_SLOT0           : InstrItinClass;
+def ST_tc_st_pi_SLOT0        : InstrItinClass;
 def ST_tc_ld_SLOT0           : InstrItinClass;
 def ST_tc_3stall_SLOT0       : InstrItinClass;
 def S_2op_tc_1_SLOT23        : InstrItinClass;
@@ -131,21 +137,27 @@ def HexagonItinerariesV4 :
 
         //Load
         InstrItinData<LD_tc_ld_SLOT01        , [InstrStage<1, [SLOT0, SLOT1]>]>,
+        InstrItinData<LD_tc_ld_pi_SLOT01     , [InstrStage<1, [SLOT0, SLOT1]>]>,
         InstrItinData<LD_tc_ld_SLOT0         , [InstrStage<1, [SLOT0]>]>,
         InstrItinData<LD_tc_3or4stall_SLOT0  , [InstrStage<1, [SLOT0]>]>,
 
         // M
         InstrItinData<M_tc_1_SLOT23          , [InstrStage<1, [SLOT2, SLOT3]>]>,
         InstrItinData<M_tc_2_SLOT23          , [InstrStage<1, [SLOT2, SLOT3]>]>,
+        InstrItinData<M_tc_2_acc_SLOT23      , [InstrStage<1, [SLOT2, SLOT3]>]>,
         InstrItinData<M_tc_3_SLOT23          , [InstrStage<1, [SLOT2, SLOT3]>]>,
         InstrItinData<M_tc_3x_SLOT23         , [InstrStage<1, [SLOT2, SLOT3]>]>,
+        InstrItinData<M_tc_3x_acc_SLOT23     , [InstrStage<1, [SLOT2, SLOT3]>]>,
         InstrItinData<M_tc_3or4x_SLOT23      , [InstrStage<1, [SLOT2, SLOT3]>]>,
+        InstrItinData<M_tc_3or4x_acc_SLOT23  , [InstrStage<1, [SLOT2, SLOT3]>]>,
 
         // Store
         // ST
         InstrItinData<ST_tc_st_SLOT01        , [InstrStage<1, [SLOT0, SLOT1]>]>,
+        InstrItinData<ST_tc_st_pi_SLOT01     , [InstrStage<1, [SLOT0, SLOT1]>]>,
         // ST0
         InstrItinData<ST_tc_st_SLOT0         , [InstrStage<1, [SLOT0]>]>,
+        InstrItinData<ST_tc_st_pi_SLOT0      , [InstrStage<1, [SLOT0]>]>,
         InstrItinData<ST_tc_ld_SLOT0         , [InstrStage<1, [SLOT0]>]>,
 
         // S

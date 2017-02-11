@@ -21,4 +21,12 @@ include "HexagonScheduleV55.td"
 //===----------------------------------------------------------------------===//
 
 include "HexagonScheduleV60.td"
+include "HexagonIICScalar.td"
+include "HexagonIICHVX.td"
+
+//===----------------------------------------------------------------------===//
+// V62 Machine Info +
+//===----------------------------------------------------------------------===//
+
+include "HexagonScheduleV62.td"
 

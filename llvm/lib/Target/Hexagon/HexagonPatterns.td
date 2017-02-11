@@ -153,8 +153,12 @@ def: Pat<(sub s32_0ImmPred:$s10, IntRegs:$Rs),
 def: Pat<(not I32:$src1),
          (A2_subri -1, IntRegs:$src1)>;
 
+def TruncI64ToI32: SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(N->getSExtValue(), SDLoc(N), MVT::i32);
+}]>;
+
 def: Pat<(s32_0ImmPred:$s16), (A2_tfrsi imm:$s16)>;
-def: Pat<(s8_0Imm64Pred:$s8), (A2_tfrpi imm:$s8)>;
+def: Pat<(s8_0Imm64Pred:$s8), (A2_tfrpi (TruncI64ToI32 $s8))>;
 
 def : Pat<(select I1:$Pu, s32_0ImmPred:$s8, I32:$Rs),
           (C2_muxri I1:$Pu, imm:$s8, I32:$Rs)>;
@@ -274,7 +278,7 @@ def retflag : SDNode<"HexagonISD::RET_FLAG", SDTNone,
                      [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
 def eh_return: SDNode<"HexagonISD::EH_RETURN", SDTNone, [SDNPHasChain]>;
 
-def: Pat<(br bb:$dst),                  (J2_jump brtarget:$dst)>;
+def: Pat<(br bb:$dst),                  (J2_jump b30_2Imm:$dst)>;
 def: Pat<(brcond I1:$src1, bb:$block),  (J2_jumpt PredRegs:$src1, bb:$block)>;
 def: Pat<(brind I32:$dst),              (J2_jumpr IntRegs:$dst)>;
 
@@ -695,8 +699,8 @@ def HexagonCONST32    : SDNode<"HexagonISD::CONST32",    SDTHexagonCONST32>;
 def HexagonCONST32_GP : SDNode<"HexagonISD::CONST32_GP", SDTHexagonCONST32>;
 
 // Map TLS addressses to A2_tfrsi.
-def: Pat<(HexagonCONST32 tglobaltlsaddr:$addr), (A2_tfrsi s16_0Ext:$addr)>;
-def: Pat<(HexagonCONST32 bbl:$label),           (A2_tfrsi s16_0Ext:$label)>;
+def: Pat<(HexagonCONST32 tglobaltlsaddr:$addr), (A2_tfrsi s32_0Imm:$addr)>;
+def: Pat<(HexagonCONST32 bbl:$label),           (A2_tfrsi s32_0Imm:$label)>;
 
 def: Pat<(i64 imm:$v), (CONST64 imm:$v)>;
 def: Pat<(i1 0), (PS_false)>;
@@ -2718,17 +2722,6 @@ def unalignedstore : PatFrag<(ops node:$val, node:$addr), (store $val, $addr), [
 }]>;
 
 
-def s4_6ImmPred: PatLeaf<(i32 imm), [{
-  int64_t V = N->getSExtValue();
-  return isShiftedInt<4,6>(V);
-}]>;
-
-def s4_7ImmPred: PatLeaf<(i32 imm), [{
-  int64_t V = N->getSExtValue();
-  return isShiftedInt<4,7>(V);
-}]>;
-
-
 multiclass vS32b_ai_pats <ValueType VTSgl, ValueType VTDbl> {
   // Aligned stores
   def : Pat<(alignedstore (VTSgl VectorRegs:$src1), IntRegs:$addr),
@@ -3253,8 +3246,8 @@ def vmpyh: OutPatFrag<(ops node:$Rs, node:$Rt),
                       (M2_vmpy2s_s0 (i32 $Rs), (i32 $Rt))>;
 
 def: Pat<(v2i16 (mul V2I16:$Rs, V2I16:$Rt)),
-         (LoReg (S2_vtrunewh (v2i32 (A2_combineii 0, 0)),
-                             (v2i32 (vmpyh V2I16:$Rs, V2I16:$Rt))))>;
+         (LoReg (S2_vtrunewh (A2_combineii 0, 0),
+                             (vmpyh V2I16:$Rs, V2I16:$Rt)))>;
 
 // Multiplies two v4i16 vectors.
 def: Pat<(v4i16 (mul V4I16:$Rs, V4I16:$Rt)),

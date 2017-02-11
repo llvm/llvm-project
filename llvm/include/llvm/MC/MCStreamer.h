@@ -398,7 +398,7 @@ public:
   /// used in an assignment.
   // FIXME: These emission are non-const because we mutate the symbol to
   // add the section we're emitting it to later.
-  virtual void EmitLabel(MCSymbol *Symbol);
+  virtual void EmitLabel(MCSymbol *Symbol, SMLoc Loc = SMLoc());
 
   virtual void EmitEHSymAttributes(const MCSymbol *Symbol, MCSymbol *EHSymbol);
 

@@ -30,8 +30,9 @@ int main(int argc, char *argv[]) {
   JSONRPCDispatcher Dispatcher(llvm::make_unique<Handler>(Out));
   Dispatcher.registerHandler("initialize",
                              llvm::make_unique<InitializeHandler>(Out));
-  Dispatcher.registerHandler("shutdown",
-                             llvm::make_unique<ShutdownHandler>(Out));
+  auto ShutdownPtr = llvm::make_unique<ShutdownHandler>(Out);
+  auto *ShutdownHandler = ShutdownPtr.get();
+  Dispatcher.registerHandler("shutdown",std::move(ShutdownPtr));
   Dispatcher.registerHandler(
       "textDocument/didOpen",
       llvm::make_unique<TextDocumentDidOpenHandler>(Out, Store));
@@ -92,7 +93,7 @@ int main(int argc, char *argv[]) {
         Logs << "JSON dispatch failed!\n";
 
       // If we're done, exit the loop.
-      if (Out.isDone())
+      if (ShutdownHandler->isDone())
         break;
     }
   }

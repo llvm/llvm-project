@@ -10,4 +10,4 @@ define void @prefetch(i8* %a) {
   call void @llvm.hexagon.prefetch(i8* %a)
   ret void
 }
-; CHECK: dcfetch({{.*}} + #0)
+; CHECK: dcfetch({{.*}}+#0)

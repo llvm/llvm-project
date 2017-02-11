@@ -6,7 +6,7 @@ target triple = "hexagon"
 
 ; CHECK-LABEL: foo
 ; CHECK: memw(r29+#4) =
-; CHECK: = memw(r29 + #4)
+; CHECK: = memw(r29+#4)
 define i32 @foo(i32 %a) #0 {
 entry:
   %x = alloca i32, align 4

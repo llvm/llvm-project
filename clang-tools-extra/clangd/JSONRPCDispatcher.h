@@ -31,16 +31,9 @@ public:
   /// Get the logging stream.
   llvm::raw_ostream &logs() { return Logs; }
 
-  /// Use this to indicate that the output stream should be closed and the
-  /// process should terminate.
-  void setDone() { Done = true; }
-  bool isDone() const { return Done; }
-
 private:
   llvm::raw_ostream &Outs;
   llvm::raw_ostream &Logs;
-
-  bool Done = false;
 
   std::mutex StreamMutex;
 };

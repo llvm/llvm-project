@@ -73,14 +73,26 @@ void AvoidCStyleCastsCheck::check(const MatchFinder::MatchResult &Result) {
   QualType SourceType = CastExpr->getSubExprAsWritten()->getType();
   QualType DestType = CastExpr->getTypeAsWritten();
 
-  if (SourceType == DestType) {
+  auto isFunction = [](QualType T) {
+    T = T.getCanonicalType().getNonReferenceType();
+    return T->isFunctionType() || T->isFunctionPointerType() ||
+           T->isMemberFunctionPointerType();
+  };
+
+  bool FnToFnCast = isFunction(SourceType) && isFunction(DestType);
+
+  // Function pointer/reference casts may be needed to resolve ambiguities in
+  // case of overloaded functions, so detection of redundant casts is trickier
+  // in this case. Don't emit "redundant cast" warnings for function
+  // pointer/reference types.
+  if (SourceType == DestType && !FnToFnCast) {
     diag(CastExpr->getLocStart(), "redundant cast to the same type")
         << FixItHint::CreateRemoval(ParenRange);
     return;
   }
   SourceType = SourceType.getCanonicalType();
   DestType = DestType.getCanonicalType();
-  if (SourceType == DestType) {
+  if (SourceType == DestType && !FnToFnCast) {
     diag(CastExpr->getLocStart(),
          "possibly redundant cast between typedefs of the same type");
     return;
@@ -111,27 +123,34 @@ void AvoidCStyleCastsCheck::check(const MatchFinder::MatchResult &Result) {
                                CastExpr->getRParenLoc().getLocWithOffset(-1)),
                            SM, getLangOpts());
 
-  auto diag_builder =
+  auto Diag =
       diag(CastExpr->getLocStart(), "C-style casts are discouraged; use %0");
 
   auto ReplaceWithCast = [&](StringRef CastType) {
-    diag_builder << CastType;
+    Diag << CastType;
 
     const Expr *SubExpr = CastExpr->getSubExprAsWritten()->IgnoreImpCasts();
     std::string CastText = (CastType + "<" + DestTypeString + ">").str();
     if (!isa<ParenExpr>(SubExpr)) {
       CastText.push_back('(');
-      diag_builder << FixItHint::CreateInsertion(
+      Diag << FixItHint::CreateInsertion(
           Lexer::getLocForEndOfToken(SubExpr->getLocEnd(), 0, SM,
                                      getLangOpts()),
           ")");
     }
-    diag_builder << FixItHint::CreateReplacement(ParenRange, CastText);
+    Diag << FixItHint::CreateReplacement(ParenRange, CastText);
   };
 
   // Suggest appropriate C++ cast. See [expr.cast] for cast notation semantics.
   switch (CastExpr->getCastKind()) {
+  case CK_FunctionToPointerDecay:
+    ReplaceWithCast("static_cast");
+    return;
   case CK_NoOp:
+    if (FnToFnCast) {
+      ReplaceWithCast("static_cast");
+      return;
+    }
     if (needsConstCast(SourceType, DestType) &&
         pointedTypesAreEqual(SourceType, DestType)) {
       ReplaceWithCast("const_cast");
@@ -166,7 +185,7 @@ void AvoidCStyleCastsCheck::check(const MatchFinder::MatchResult &Result) {
     break;
   }
 
-  diag_builder << "static_cast/const_cast/reinterpret_cast";
+  Diag << "static_cast/const_cast/reinterpret_cast";
 }
 
 } // namespace readability

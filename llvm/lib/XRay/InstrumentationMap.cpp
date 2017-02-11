@@ -55,7 +55,8 @@ loadELF64(StringRef Filename, object::OwningBinary<object::ObjectFile> &ObjFile,
 
   // Find the section named "xray_instr_map".
   if (!ObjFile.getBinary()->isELF() ||
-      ObjFile.getBinary()->getArch() != Triple::x86_64)
+      !(ObjFile.getBinary()->getArch() == Triple::x86_64 ||
+        ObjFile.getBinary()->getArch() == Triple::ppc64le))
     return make_error<StringError>(
         "File format not supported (only does ELF little endian 64-bit).",
         std::make_error_code(std::errc::not_supported));

@@ -9687,7 +9687,16 @@ static SDValue lowerVectorShuffleAsBroadcast(const SDLoc &DL, MVT VT,
     if (((BroadcastIdx * EltSize) % 128) != 0)
       return SDValue();
 
-    MVT ExtVT = MVT::getVectorVT(VT.getScalarType(), 128 / EltSize);
+    // The shuffle input might have been a bitcast we looked through; look at
+    // the original input vector.  Emit an EXTRACT_SUBVECTOR of that type; we'll
+    // later bitcast it to BroadcastVT.
+    MVT SrcVT = V.getSimpleValueType();
+    assert(SrcVT.getScalarSizeInBits() == BroadcastVT.getScalarSizeInBits() &&
+           "Unexpected vector element size");
+    assert(SrcVT.getVectorNumElements() == BroadcastVT.getVectorNumElements() &&
+           "Unexpected vector num elements");
+
+    MVT ExtVT = MVT::getVectorVT(SrcVT.getScalarType(), 128 / EltSize);
     V = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, ExtVT, V,
                     DAG.getIntPtrConstant(BroadcastIdx, DL));
   }

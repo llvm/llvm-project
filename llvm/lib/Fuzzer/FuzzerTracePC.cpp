@@ -138,7 +138,7 @@ void TracePC::PrintCoverage() {
             sizeof(ModulePathRaw), &OffsetRaw))
       continue;
     std::string Module = ModulePathRaw;
-    uintptr_t FixedPC = std::stol(FixedPCStr, 0, 16);
+    uintptr_t FixedPC = std::stoull(FixedPCStr, 0, 16);
     uintptr_t PcOffset = reinterpret_cast<uintptr_t>(OffsetRaw);
     ModuleOffsets[Module] = FixedPC - PcOffset;
     CoveredPCsPerModule[Module].push_back(PcOffset);
@@ -183,7 +183,7 @@ void TracePC::PrintCoverage() {
       if (PcOffsetEnd == std::string::npos)
         continue;
       S.resize(PcOffsetEnd);
-      uintptr_t PcOffset = std::stol(S, 0, 16);
+      uintptr_t PcOffset = std::stoull(S, 0, 16);
       if (!std::binary_search(CoveredOffsets.begin(), CoveredOffsets.end(),
                               PcOffset)) {
         uintptr_t PC = ModuleOffset + PcOffset;

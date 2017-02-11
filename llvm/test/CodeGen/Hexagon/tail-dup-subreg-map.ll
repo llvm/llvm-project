@@ -5,7 +5,7 @@
 ; subregisters were dropped by the tail duplicator, resulting in invalid
 ; COPY instructions being generated.
 
-; CHECK: = extractu(r{{[0-9]+}}, #15, #17)
+; CHECK: = extractu(r{{[0-9]+}},#15,#17)
 
 target triple = "hexagon"
 

@@ -42,8 +42,13 @@ struct ShutdownHandler : Handler {
   ShutdownHandler(JSONOutput &Output) : Handler(Output) {}
 
   void handleMethod(llvm::yaml::MappingNode *Params, StringRef ID) override {
-    Output.setDone();
+    IsDone = true;
   }
+
+  bool isDone() const { return IsDone; }
+
+private:
+  bool IsDone = false;
 };
 
 struct TextDocumentDidOpenHandler : Handler {

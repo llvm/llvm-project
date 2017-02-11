@@ -26,7 +26,7 @@ entry:
   %0 = bitcast i16* %arrayidx to i8*
   %sub = sub i32 13, %shr2
   %shl = shl i32 1, %sub
-; CHECK: memd(r{{[0-9]*}} ++ m{{[0-1]}}:brev)
+; CHECK: memd(r{{[0-9]*}}++m{{[0-1]}}:brev)
   %1 = tail call i8* @llvm.hexagon.brev.std(i8* %0, i64 undef, i32 %shl)
   ret i64 0
 }
@@ -42,7 +42,7 @@ entry:
   %0 = bitcast i16* %arrayidx to i8*
   %sub = sub i32 14, %shr1
   %shl = shl i32 1, %sub
-; CHECK: memw(r{{[0-9]*}} ++ m{{[0-1]}}:brev)
+; CHECK: memw(r{{[0-9]*}}++m{{[0-1]}}:brev)
   %1 = tail call i8* @llvm.hexagon.brev.stw(i8* %0, i32 undef, i32 %shl)
   ret i32 0
 }
@@ -58,7 +58,7 @@ entry:
   %0 = bitcast i16* %arrayidx to i8*
   %sub = sub i32 15, %shr2
   %shl = shl i32 1, %sub
-; CHECK: memh(r{{[0-9]*}} ++ m{{[0-1]}}:brev)
+; CHECK: memh(r{{[0-9]*}}++m{{[0-1]}}:brev)
   %1 = tail call i8* @llvm.hexagon.brev.sth(i8* %0, i32 0, i32 %shl)
   ret i16 0
 }
@@ -74,7 +74,7 @@ entry:
   %0 = bitcast i16* %arrayidx to i8*
   %sub = sub i32 15, %shr2
   %shl = shl i32 1, %sub
-; CHECK: memh(r{{[0-9]*}} ++ m{{[0-1]}}:brev){{ *}}={{ *}}r{{[0-9]*}}.h
+; CHECK: memh(r{{[0-9]*}}++m{{[0-1]}}:brev) = r{{[0-9]*}}.h
   %1 = tail call i8* @llvm.hexagon.brev.sthhi(i8* %0, i32 0, i32 %shl)
   ret i16 0
 }
@@ -89,7 +89,7 @@ entry:
   %arrayidx = getelementptr inbounds i16, i16* %filtMemLR, i32 %idxprom
   %0 = bitcast i16* %arrayidx to i8*
   %sub = sub nsw i32 16, %shr2
-  ; CHECK: memb(r{{[0-9]*}} ++ m{{[0-1]}}:brev)
+  ; CHECK: memb(r{{[0-9]*}}++m{{[0-1]}}:brev)
   %shl = shl i32 1, %sub
   %1 = tail call i8* @llvm.hexagon.brev.stb(i8* %0, i32 0, i32 %shl)
   ret i8 0

@@ -87,3 +87,33 @@ namespace deprecated {
   [[deprecated]] A(int) -> A<void>; // expected-note {{marked deprecated here}}
   A a = 0; // expected-warning {{'<deduction guide for A>' is deprecated}}
 }
+
+namespace dependent {
+  template<template<typename...> typename A> decltype(auto) a = A{1, 2, 3};
+  static_assert(has_type<vector<int>>(a<vector>));
+  static_assert(has_type<tuple<int, int, int>>(a<tuple>));
+
+  struct B {
+    template<typename T> struct X { X(T); };
+    X(int) -> X<int>;
+    template<typename T> using Y = X<T>; // expected-note {{template}}
+  };
+  template<typename T> void f() {
+    typename T::X tx = 0;
+    typename T::Y ty = 0; // expected-error {{alias template 'Y' requires template arguments; argument deduction only allowed for class templates}}
+  }
+  template void f<B>(); // expected-note {{in instantiation of}}
+
+  template<typename T> struct C { C(T); };
+  template<typename T> C(T) -> C<T>;
+  template<typename T> void g(T a) {
+    C b = 0;
+    C c = a;
+    using U = decltype(b); // expected-note {{previous}}
+    using U = decltype(c); // expected-error {{different types ('C<const char *>' vs 'C<int>')}}
+  }
+  void h() {
+    g(0);
+    g("foo"); // expected-note {{instantiation of}}
+  }
+}

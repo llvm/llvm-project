@@ -11,7 +11,7 @@ define float @F2_sfadd(float %a, float %b) {
   %z = call float @llvm.hexagon.F2.sfadd(float %a, float %b)
   ret float %z
 }
-; CHECK: = sfadd({{.*}}, {{.*}})
+; CHECK: = sfadd({{.*}},{{.*}})
 
 ; Classify floating-point value
 declare i32 @llvm.hexagon.F2.sfclass(float, i32)
@@ -19,14 +19,14 @@ define i32 @F2_sfclass(float %a) {
   %z = call i32 @llvm.hexagon.F2.sfclass(float %a, i32 0)
   ret i32 %z
 }
-; CHECK: = sfclass({{.*}}, #0)
+; CHECK: = sfclass({{.*}},#0)
 
 declare i32 @llvm.hexagon.F2.dfclass(double, i32)
 define i32 @F2_dfclass(double %a) {
   %z = call i32 @llvm.hexagon.F2.dfclass(double %a, i32 0)
   ret i32 %z
 }
-; CHECK: = dfclass({{.*}}, #0)
+; CHECK: = dfclass({{.*}},#0)
 
 ; Compare floating-point value
 declare i32 @llvm.hexagon.F2.sfcmpge(float, float)
@@ -34,56 +34,56 @@ define i32 @F2_sfcmpge(float %a, float %b) {
   %z = call i32 @llvm.hexagon.F2.sfcmpge(float %a, float %b)
   ret i32 %z
 }
-; CHECK: = sfcmp.ge({{.*}}, {{.*}})
+; CHECK: = sfcmp.ge({{.*}},{{.*}})
 
 declare i32 @llvm.hexagon.F2.sfcmpuo(float, float)
 define i32 @F2_sfcmpuo(float %a, float %b) {
   %z = call i32 @llvm.hexagon.F2.sfcmpuo(float %a, float %b)
   ret i32 %z
 }
-; CHECK: = sfcmp.uo({{.*}}, {{.*}})
+; CHECK: = sfcmp.uo({{.*}},{{.*}})
 
 declare i32 @llvm.hexagon.F2.sfcmpeq(float, float)
 define i32 @F2_sfcmpeq(float %a, float %b) {
   %z = call i32 @llvm.hexagon.F2.sfcmpeq(float %a, float %b)
   ret i32 %z
 }
-; CHECK: = sfcmp.eq({{.*}}, {{.*}})
+; CHECK: = sfcmp.eq({{.*}},{{.*}})
 
 declare i32 @llvm.hexagon.F2.sfcmpgt(float, float)
 define i32 @F2_sfcmpgt(float %a, float %b) {
   %z = call i32 @llvm.hexagon.F2.sfcmpgt(float %a, float %b)
   ret i32 %z
 }
-; CHECK: = sfcmp.gt({{.*}}, {{.*}})
+; CHECK: = sfcmp.gt({{.*}},{{.*}})
 
 declare i32 @llvm.hexagon.F2.dfcmpge(double, double)
 define i32 @F2_dfcmpge(double %a, double %b) {
   %z = call i32 @llvm.hexagon.F2.dfcmpge(double %a, double %b)
   ret i32 %z
 }
-; CHECK: = dfcmp.ge({{.*}}, {{.*}})
+; CHECK: = dfcmp.ge({{.*}},{{.*}})
 
 declare i32 @llvm.hexagon.F2.dfcmpuo(double, double)
 define i32 @F2_dfcmpuo(double %a, double %b) {
   %z = call i32 @llvm.hexagon.F2.dfcmpuo(double %a, double %b)
   ret i32 %z
 }
-; CHECK: = dfcmp.uo({{.*}}, {{.*}})
+; CHECK: = dfcmp.uo({{.*}},{{.*}})
 
 declare i32 @llvm.hexagon.F2.dfcmpeq(double, double)
 define i32 @F2_dfcmpeq(double %a, double %b) {
   %z = call i32 @llvm.hexagon.F2.dfcmpeq(double %a, double %b)
   ret i32 %z
 }
-; CHECK: = dfcmp.eq({{.*}}, {{.*}})
+; CHECK: = dfcmp.eq({{.*}},{{.*}})
 
 declare i32 @llvm.hexagon.F2.dfcmpgt(double, double)
 define i32 @F2_dfcmpgt(double %a, double %b) {
   %z = call i32 @llvm.hexagon.F2.dfcmpgt(double %a, double %b)
   ret i32 %z
 }
-; CHECK: = dfcmp.gt({{.*}}, {{.*}})
+; CHECK: = dfcmp.gt({{.*}},{{.*}})
 
 ; Convert floating-point value to other format
 declare double @llvm.hexagon.F2.conv.sf2df(float)
@@ -283,14 +283,14 @@ define float @F2_sffixupn(float %a, float %b) {
   %z = call float @llvm.hexagon.F2.sffixupn(float %a, float %b)
   ret float %z
 }
-; CHECK: = sffixupn({{.*}}, {{.*}})
+; CHECK: = sffixupn({{.*}},{{.*}})
 
 declare float @llvm.hexagon.F2.sffixupd(float, float)
 define float @F2_sffixupd(float %a, float %b) {
   %z = call float @llvm.hexagon.F2.sffixupd(float %a, float %b)
   ret float %z
 }
-; CHECK: = sffixupd({{.*}}, {{.*}})
+; CHECK: = sffixupd({{.*}},{{.*}})
 
 ; Floating point fused multiply-add
 declare float @llvm.hexagon.F2.sffma(float, float, float)
@@ -298,14 +298,14 @@ define float @F2_sffma(float %a, float %b, float %c) {
   %z = call float @llvm.hexagon.F2.sffma(float %a, float %b, float %c)
   ret float %z
 }
-; CHECK: += sfmpy({{.*}}, {{.*}})
+; CHECK: += sfmpy({{.*}},{{.*}})
 
 declare float @llvm.hexagon.F2.sffms(float, float, float)
 define float @F2_sffms(float %a, float %b, float %c) {
   %z = call float @llvm.hexagon.F2.sffms(float %a, float %b, float %c)
   ret float %z
 }
-; CHECK: -= sfmpy({{.*}}, {{.*}})
+; CHECK: -= sfmpy({{.*}},{{.*}})
 
 ; Floating point fused multiply-add with scaling
 declare float @llvm.hexagon.F2.sffma.sc(float, float, float, i32)
@@ -313,7 +313,7 @@ define float @F2_sffma_sc(float %a, float %b, float %c, i32 %d) {
   %z = call float @llvm.hexagon.F2.sffma.sc(float %a, float %b, float %c, i32 %d)
   ret float %z
 }
-; CHECK: += sfmpy({{.*}}, {{.*}}, {{.*}}):scale
+; CHECK: += sfmpy({{.*}},{{.*}},{{.*}}):scale
 
 ; Floating point fused multiply-add for library routines
 declare float @llvm.hexagon.F2.sffma.lib(float, float, float)
@@ -321,14 +321,14 @@ define float @F2_sffma_lib(float %a, float %b, float %c) {
   %z = call float @llvm.hexagon.F2.sffma.lib(float %a, float %b, float %c)
   ret float %z
 }
-; CHECK: += sfmpy({{.*}}, {{.*}}):lib
+; CHECK: += sfmpy({{.*}},{{.*}}):lib
 
 declare float @llvm.hexagon.F2.sffms.lib(float, float, float)
 define float @F2_sffms_lib(float %a, float %b, float %c) {
   %z = call float @llvm.hexagon.F2.sffms.lib(float %a, float %b, float %c)
   ret float %z
 }
-; CHECK: -= sfmpy({{.*}}, {{.*}}):lib
+; CHECK: -= sfmpy({{.*}},{{.*}}):lib
 
 ; Create floating-point constant
 declare float @llvm.hexagon.F2.sfimm.p(i32)
@@ -365,7 +365,7 @@ define float @F2_sfmax(float %a, float %b) {
   %z = call float @llvm.hexagon.F2.sfmax(float %a, float %b)
   ret float %z
 }
-; CHECK: = sfmax({{.*}}, {{.*}})
+; CHECK: = sfmax({{.*}},{{.*}})
 
 ; Floating point minimum
 declare float @llvm.hexagon.F2.sfmin(float, float)
@@ -373,7 +373,7 @@ define float @F2_sfmin(float %a, float %b) {
   %z = call float @llvm.hexagon.F2.sfmin(float %a, float %b)
   ret float %z
 }
-; CHECK: = sfmin({{.*}}, {{.*}})
+; CHECK: = sfmin({{.*}},{{.*}})
 
 ; Floating point multiply
 declare float @llvm.hexagon.F2.sfmpy(float, float)
@@ -381,7 +381,7 @@ define float @F2_sfmpy(float %a, float %b) {
   %z = call float @llvm.hexagon.F2.sfmpy(float %a, float %b)
   ret float %z
 }
-; CHECK: = sfmpy({{.*}}, {{.*}})
+; CHECK: = sfmpy({{.*}},{{.*}})
 
 ; Floating point subtraction
 declare float @llvm.hexagon.F2.sfsub(float, float)
@@ -389,4 +389,4 @@ define float @F2_sfsub(float %a, float %b) {
   %z = call float @llvm.hexagon.F2.sfsub(float %a, float %b)
   ret float %z
 }
-; CHECK: = sfsub({{.*}}, {{.*}})
+; CHECK: = sfsub({{.*}},{{.*}})

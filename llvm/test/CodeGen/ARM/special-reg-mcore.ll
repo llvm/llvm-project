@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=thumb-none-eabi -mcpu=cortex-m4 2>&1 | FileCheck %s --check-prefix=MCORE
+; RUN: llc < %s -mtriple=thumb-none-eabi -mcpu=cortex-m4 --show-mc-encoding 2>&1 | FileCheck %s --check-prefix=MCORE
 ; RUN: not llc < %s -mtriple=thumb-none-eabi -mcpu=cortex-m3 2>&1 | FileCheck %s --check-prefix=M3CORE
 ; RUN: not llc < %s -mtriple=arm-none-eabi -mcpu=cortex-a8 2>&1 | FileCheck %s --check-prefix=ACORE
 
@@ -8,20 +8,20 @@
 define i32 @read_mclass_registers() nounwind {
 entry:
   ; MCORE-LABEL: read_mclass_registers:
-  ; MCORE:   mrs r0, apsr
-  ; MCORE:   mrs r1, iapsr
-  ; MCORE:   mrs r1, eapsr
-  ; MCORE:   mrs r1, xpsr
-  ; MCORE:   mrs r1, ipsr
-  ; MCORE:   mrs r1, epsr
-  ; MCORE:   mrs r1, iepsr
-  ; MCORE:   mrs r1, msp
-  ; MCORE:   mrs r1, psp
-  ; MCORE:   mrs r1, primask
-  ; MCORE:   mrs r1, basepri
-  ; MCORE:   mrs r1, basepri_max
-  ; MCORE:   mrs r1, faultmask
-  ; MCORE:   mrs r1, control
+  ; MCORE:   mrs r0, apsr        @ encoding: [0xef,0xf3,0x00,0x80]
+  ; MCORE:   mrs r1, iapsr       @ encoding: [0xef,0xf3,0x01,0x81]
+  ; MCORE:   mrs r1, eapsr       @ encoding: [0xef,0xf3,0x02,0x81]
+  ; MCORE:   mrs r1, xpsr        @ encoding: [0xef,0xf3,0x03,0x81]
+  ; MCORE:   mrs r1, ipsr        @ encoding: [0xef,0xf3,0x05,0x81]
+  ; MCORE:   mrs r1, epsr        @ encoding: [0xef,0xf3,0x06,0x81]
+  ; MCORE:   mrs r1, iepsr       @ encoding: [0xef,0xf3,0x07,0x81]
+  ; MCORE:   mrs r1, msp         @ encoding: [0xef,0xf3,0x08,0x81]
+  ; MCORE:   mrs r1, psp         @ encoding: [0xef,0xf3,0x09,0x81]
+  ; MCORE:   mrs r1, primask     @ encoding: [0xef,0xf3,0x10,0x81]
+  ; MCORE:   mrs r1, basepri     @ encoding: [0xef,0xf3,0x11,0x81]
+  ; MCORE:   mrs r1, basepri_max @ encoding: [0xef,0xf3,0x12,0x81]
+  ; MCORE:   mrs r1, faultmask   @ encoding: [0xef,0xf3,0x13,0x81]
+  ; MCORE:   mrs r1, control     @ encoding: [0xef,0xf3,0x14,0x81]
 
   %0 = call i32 @llvm.read_register.i32(metadata !0)
   %1 = call i32 @llvm.read_register.i32(metadata !4)
@@ -56,32 +56,32 @@ entry:
 define void @write_mclass_registers(i32 %x) nounwind {
 entry:
   ; MCORE-LABEL: write_mclass_registers:
-  ; MCORE:   msr apsr_nzcvqg, r0
-  ; MCORE:   msr apsr_nzcvq, r0
-  ; MCORE:   msr apsr_g, r0
-  ; MCORE:   msr apsr_nzcvqg, r0
-  ; MCORE:   msr iapsr_nzcvqg, r0
-  ; MCORE:   msr iapsr_nzcvq, r0
-  ; MCORE:   msr iapsr_g, r0
-  ; MCORE:   msr iapsr_nzcvqg, r0
-  ; MCORE:   msr eapsr_nzcvqg, r0
-  ; MCORE:   msr eapsr_nzcvq, r0
-  ; MCORE:   msr eapsr_g, r0
-  ; MCORE:   msr eapsr_nzcvqg, r0
-  ; MCORE:   msr xpsr_nzcvqg, r0
-  ; MCORE:   msr xpsr_nzcvq, r0
-  ; MCORE:   msr xpsr_g, r0
-  ; MCORE:   msr xpsr_nzcvqg, r0
-  ; MCORE:   msr ipsr, r0
-  ; MCORE:   msr epsr, r0
-  ; MCORE:   msr iepsr, r0
-  ; MCORE:   msr msp, r0
-  ; MCORE:   msr psp, r0
-  ; MCORE:   msr primask, r0
-  ; MCORE:   msr basepri, r0
-  ; MCORE:   msr basepri_max, r0
-  ; MCORE:   msr faultmask, r0
-  ; MCORE:   msr control, r0
+  ; MCORE:   msr apsr_nzcvq, r0   @ encoding: [0x80,0xf3,0x00,0x88]
+  ; MCORE:   msr apsr_nzcvq, r0   @ encoding: [0x80,0xf3,0x00,0x88]
+  ; MCORE:   msr apsr_g, r0       @ encoding: [0x80,0xf3,0x00,0x84]
+  ; MCORE:   msr apsr_nzcvqg, r0  @ encoding: [0x80,0xf3,0x00,0x8c]
+  ; MCORE:   msr iapsr_nzcvq, r0  @ encoding: [0x80,0xf3,0x01,0x88]
+  ; MCORE:   msr iapsr_nzcvq, r0  @ encoding: [0x80,0xf3,0x01,0x88]
+  ; MCORE:   msr iapsr_g, r0      @ encoding: [0x80,0xf3,0x01,0x84]
+  ; MCORE:   msr iapsr_nzcvqg, r0 @ encoding: [0x80,0xf3,0x01,0x8c]
+  ; MCORE:   msr eapsr_nzcvq, r0  @ encoding: [0x80,0xf3,0x02,0x88]
+  ; MCORE:   msr eapsr_nzcvq, r0  @ encoding: [0x80,0xf3,0x02,0x88]
+  ; MCORE:   msr eapsr_g, r0      @ encoding: [0x80,0xf3,0x02,0x84]
+  ; MCORE:   msr eapsr_nzcvqg, r0 @ encoding: [0x80,0xf3,0x02,0x8c]
+  ; MCORE:   msr xpsr_nzcvq, r0   @ encoding: [0x80,0xf3,0x03,0x88]
+  ; MCORE:   msr xpsr_nzcvq, r0   @ encoding: [0x80,0xf3,0x03,0x88]
+  ; MCORE:   msr xpsr_g, r0       @ encoding: [0x80,0xf3,0x03,0x84]
+  ; MCORE:   msr xpsr_nzcvqg, r0  @ encoding: [0x80,0xf3,0x03,0x8c]
+  ; MCORE:   msr ipsr, r0         @ encoding: [0x80,0xf3,0x05,0x88]
+  ; MCORE:   msr epsr, r0         @ encoding: [0x80,0xf3,0x06,0x88]
+  ; MCORE:   msr iepsr, r0        @ encoding: [0x80,0xf3,0x07,0x88]
+  ; MCORE:   msr msp, r0          @ encoding: [0x80,0xf3,0x08,0x88]
+  ; MCORE:   msr psp, r0          @ encoding: [0x80,0xf3,0x09,0x88]
+  ; MCORE:   msr primask, r0      @ encoding: [0x80,0xf3,0x10,0x88]
+  ; MCORE:   msr basepri, r0      @ encoding: [0x80,0xf3,0x11,0x88]
+  ; MCORE:   msr basepri_max, r0  @ encoding: [0x80,0xf3,0x12,0x88]
+  ; MCORE:   msr faultmask, r0    @ encoding: [0x80,0xf3,0x13,0x88]
+  ; MCORE:   msr control, r0      @ encoding: [0x80,0xf3,0x14,0x88]
 
   call void @llvm.write_register.i32(metadata !0, i32 %x)
   call void @llvm.write_register.i32(metadata !1, i32 %x)

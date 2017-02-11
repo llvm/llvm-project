@@ -36,9 +36,6 @@ std::pair<ssize_t, bool> retryingReadSome(int Fd, char *Begin, char *End);
 // file.
 int getLogFD();
 
-// EINTR-safe read of CPU frquency for the current CPU.
-long long getCPUFrequency();
-
 } // namespace __xray
 
 #endif // XRAY_UTILS_H

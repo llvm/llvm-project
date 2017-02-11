@@ -67,6 +67,9 @@ static cl::opt<bool> HexagonV55ArchVariant("mv55", cl::Hidden, cl::init(false),
 static cl::opt<bool> HexagonV60ArchVariant("mv60", cl::Hidden, cl::init(false),
   cl::desc("Build for Hexagon V60"));
 
+static cl::opt<bool> HexagonV62ArchVariant("mv62", cl::Hidden, cl::init(false),
+  cl::desc("Build for Hexagon V62"));
+
 static StringRef DefaultArch = "hexagonv60";
 
 static StringRef HexagonGetArchVariant() {
@@ -78,6 +81,8 @@ static StringRef HexagonGetArchVariant() {
     return "hexagonv55";
   if (HexagonV60ArchVariant)
     return "hexagonv60";
+  if (HexagonV62ArchVariant)
+    return "hexagonv62";
   return "";
 }
 
@@ -247,7 +252,7 @@ static bool LLVM_ATTRIBUTE_UNUSED checkFeature(MCSubtargetInfo* STI, uint64_t F)
 StringRef Hexagon_MC::ParseHexagonTriple(const Triple &TT, StringRef CPU) {
   StringRef CPUName = Hexagon_MC::selectHexagonCPU(TT, CPU);
   StringRef FS = "";
-  if (CPUName.equals_lower("hexagonv60"))
+  if (CPUName.equals_lower("hexagonv60") || CPUName.equals_lower("hexagonv62"))
     FS = "+hvx";
   return FS;
 }
@@ -260,6 +265,7 @@ static bool isCPUValid(std::string CPU)
     "hexagonv5",
     "hexagonv55",
     "hexagonv60",
+    "hexagonv62",
   };
 
   return std::find(table.begin(), table.end(), CPU) != table.end();
@@ -270,9 +276,9 @@ MCSubtargetInfo *Hexagon_MC::createHexagonMCSubtargetInfo(const Triple &TT,
                                                           StringRef FS) {
   StringRef ArchFS = (FS.size()) ? FS : Hexagon_MC::ParseHexagonTriple(TT, CPU);
   StringRef CPUName = Hexagon_MC::selectHexagonCPU(TT, CPU);
-  if (!isCPUValid(CPUName.str()))
-  {
-    errs() << "error: invalid CPU \"" << CPUName.str().c_str() << "\" specified\n";
+  if (!isCPUValid(CPUName.str())) {
+    errs() << "error: invalid CPU \"" << CPUName.str().c_str()
+           << "\" specified\n";
     return nullptr;
   }
 
@@ -290,6 +296,7 @@ unsigned Hexagon_MC::GetELFFlags(const MCSubtargetInfo &STI) {
     {"hexagonv5",  ELF::EF_HEXAGON_MACH_V5},
     {"hexagonv55", ELF::EF_HEXAGON_MACH_V55},
     {"hexagonv60", ELF::EF_HEXAGON_MACH_V60},
+    {"hexagonv62", ELF::EF_HEXAGON_MACH_V62},
   };
 
   auto F = ElfFlags.find(STI.getCPU());
