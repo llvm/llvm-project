@@ -1,47 +1,39 @@
 digraph "Scop Graph for 'init_array' function" {
 	label="Scop Graph for 'init_array' function";
 
-	Node0x17d4370 [shape=record,label="{entry}"];
-	Node0x17d4370 -> Node0x17d9de0;
-	Node0x17d9de0 [shape=record,label="{for.cond}"];
-	Node0x17d9de0 -> Node0x17d9e40;
-	Node0x17d9de0 -> Node0x17d9ea0;
-	Node0x17d9e40 [shape=record,label="{for.body}"];
-	Node0x17d9e40 -> Node0x17d9f90;
-	Node0x17d9f90 [shape=record,label="{for.cond1}"];
-	Node0x17d9f90 -> Node0x17d9ff0;
-	Node0x17d9f90 -> Node0x17da050;
-	Node0x17d9ff0 [shape=record,label="{for.body3}"];
-	Node0x17d9ff0 -> Node0x17d9f00;
-	Node0x17d9f00 [shape=record,label="{for.inc}"];
-	Node0x17d9f00 -> Node0x17d9f90[constraint=false];
-	Node0x17da050 [shape=record,label="{for.end}"];
-	Node0x17da050 -> Node0x17da200;
-	Node0x17da200 [shape=record,label="{for.inc17}"];
-	Node0x17da200 -> Node0x17d9de0[constraint=false];
-	Node0x17d9ea0 [shape=record,label="{for.end19}"];
+	Node0x5ae2570 [shape=record,label="{entry}"];
+	Node0x5ae2570 -> Node0x5ae4e90;
+	Node0x5ae4e90 [shape=record,label="{entry.split}"];
+	Node0x5ae4e90 -> Node0x5ae4f50;
+	Node0x5ae4f50 [shape=record,label="{for.cond1.preheader}"];
+	Node0x5ae4f50 -> Node0x5ae50e0;
+	Node0x5ae50e0 [shape=record,label="{for.body3}"];
+	Node0x5ae50e0 -> Node0x5ae50e0[constraint=false];
+	Node0x5ae50e0 -> Node0x5ae5100;
+	Node0x5ae5100 [shape=record,label="{for.inc17}"];
+	Node0x5ae5100 -> Node0x5ae4f50[constraint=false];
+	Node0x5ae5100 -> Node0x5ae4ff0;
+	Node0x5ae4ff0 [shape=record,label="{for.end19}"];
 	colorscheme = "paired12"
-        subgraph cluster_0x17d3a30 {
+        subgraph cluster_0x5ad2dd0 {
           label = "";
           style = solid;
           color = 1
-          subgraph cluster_0x17d4ec0 {
-            label = "";
-            style = filled;
-            color = 3            subgraph cluster_0x17d4180 {
+          subgraph cluster_0x5ad2f50 {
+            label = "Region can not profitably be optimized!";
+            style = solid;
+            color = 6
+            subgraph cluster_0x5ad30d0 {
               label = "";
               style = solid;
               color = 5
-              Node0x17d9f90;
-              Node0x17d9ff0;
-              Node0x17d9f00;
+              Node0x5ae50e0;
             }
-            Node0x17d9de0;
-            Node0x17d9e40;
-            Node0x17da050;
-            Node0x17da200;
+            Node0x5ae4f50;
+            Node0x5ae5100;
           }
-          Node0x17d4370;
-          Node0x17d9ea0;
+          Node0x5ae2570;
+          Node0x5ae4e90;
+          Node0x5ae4ff0;
         }
 }

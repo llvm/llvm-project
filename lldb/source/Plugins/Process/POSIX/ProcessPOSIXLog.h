@@ -62,9 +62,10 @@ public:
   static void DisableLog(const char **args,
                          lldb_private::Stream *feedback_strm);
 
-  static lldb_private::Log *EnableLog(lldb::StreamSP &log_stream_sp,
-                                      uint32_t log_options, const char **args,
-                                      lldb_private::Stream *feedback_strm);
+  static lldb_private::Log *
+  EnableLog(const std::shared_ptr<llvm::raw_ostream> &log_stream_sp,
+            uint32_t log_options, const char **args,
+            lldb_private::Stream *feedback_strm);
 
   static void ListLogCategories(lldb_private::Stream *strm);
 

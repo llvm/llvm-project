@@ -45,18 +45,23 @@ inline namespace fundamentals_v2 {
 
 _LIBCPP_BEGIN_NAMESPACE_LFTS_V2
 
-template <typename _Tp, bool _IsSigned = is_signed<_Tp>::value> struct __abs;
+template <typename _Result, typename _Source, bool _IsSigned = is_signed<_Source>::value> struct __abs;
 
-template <typename _Tp>
-struct __abs<_Tp, true> {
+template <typename _Result, typename _Source>
+struct __abs<_Result, _Source, true> {
     _LIBCPP_CONSTEXPR _LIBCPP_INLINE_VISIBILITY
-    _Tp operator()(_Tp __t) const noexcept { return __t >= 0 ? __t : -__t; }
+    _Result operator()(_Source __t) const noexcept
+    {
+    if (__t >= 0) return __t;
+    if (__t == numeric_limits<_Source>::min()) return -static_cast<_Result>(__t);
+    return -__t;
+    }
 };
 
-template <typename _Tp>
-struct __abs<_Tp, false> {
+template <typename _Result, typename _Source>
+struct __abs<_Result, _Source, false> {
     _LIBCPP_CONSTEXPR _LIBCPP_INLINE_VISIBILITY
-    _Tp operator()(_Tp __t) const noexcept { return __t; }
+    _Result operator()(_Source __t) const noexcept { return __t; }
 };
 
 
@@ -79,8 +84,8 @@ gcd(_Tp __m, _Up __n)
     static_assert((!is_same<typename remove_cv<_Up>::type, bool>::value), "Second argument to gcd cannot be bool" );
     using _Rp = common_type_t<_Tp,_Up>;
     using _Wp = make_unsigned_t<_Rp>;
-    return static_cast<_Rp>(__gcd(static_cast<_Wp>(__abs<_Tp>()(__m)),
-                                  static_cast<_Wp>(__abs<_Up>()(__n))));
+    return static_cast<_Rp>(__gcd(static_cast<_Wp>(__abs<_Rp, _Tp>()(__m)),
+                                  static_cast<_Wp>(__abs<_Rp, _Up>()(__n))));
 }
 
 template<class _Tp, class _Up>
@@ -95,8 +100,8 @@ lcm(_Tp __m, _Up __n)
         return 0;
 
     using _Rp = common_type_t<_Tp,_Up>;
-    _Rp __val1 = __abs<_Tp>()(__m) / gcd(__m,__n);
-    _Up __val2 = __abs<_Up>()(__n);
+    _Rp __val1 = __abs<_Rp, _Tp>()(__m) / gcd(__m, __n);
+    _Rp __val2 = __abs<_Rp, _Up>()(__n);
     _LIBCPP_ASSERT((numeric_limits<_Rp>::max() / __val1 > __val2), "Overflow in lcm");
     return __val1 * __val2;
 }

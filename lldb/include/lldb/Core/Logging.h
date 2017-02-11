@@ -10,11 +10,10 @@
 #ifndef liblldb_Core_Logging_h_
 #define liblldb_Core_Logging_h_
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
 // Project includes
 #include "lldb/lldb-private.h"
+// Other libraries and framework includes
+#include "llvm/Support/raw_ostream.h"
 
 //----------------------------------------------------------------------
 // Log Bits specific to logging in lldb
@@ -70,8 +69,9 @@ uint32_t GetLogMask();
 
 void DisableLog(const char **categories, Stream *feedback_strm);
 
-Log *EnableLog(lldb::StreamSP &log_stream_sp, uint32_t log_options,
-               const char **categories, Stream *feedback_strm);
+Log *EnableLog(const std::shared_ptr<llvm::raw_ostream> &log_stream_sp,
+               uint32_t log_options, const char **categories,
+               Stream *feedback_strm);
 
 void ListLogCategories(Stream *strm);
 

@@ -17,6 +17,7 @@
 // Other libraries and framework includes
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/DynamicLibrary.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Threading.h"
 
 // Project includes
@@ -1241,25 +1242,34 @@ void Debugger::SetLoggingCallback(lldb::LogOutputCallback log_callback,
 bool Debugger::EnableLog(const char *channel, const char **categories,
                          const char *log_file, uint32_t log_options,
                          Stream &error_stream) {
-  StreamSP log_stream_sp;
+  const bool should_close = true;
+  const bool unbuffered = true;
+
+  std::shared_ptr<llvm::raw_ostream> log_stream_sp;
   if (m_log_callback_stream_sp) {
     log_stream_sp = m_log_callback_stream_sp;
     // For now when using the callback mode you always get thread & timestamp.
     log_options |=
         LLDB_LOG_OPTION_PREPEND_TIMESTAMP | LLDB_LOG_OPTION_PREPEND_THREAD_NAME;
   } else if (log_file == nullptr || *log_file == '\0') {
-    log_stream_sp = GetOutputFile();
+    log_stream_sp = std::make_shared<llvm::raw_fd_ostream>(
+        GetOutputFile()->GetFile().GetDescriptor(), !should_close, unbuffered);
   } else {
-    LogStreamMap::iterator pos = m_log_streams.find(log_file);
+    auto pos = m_log_streams.find(log_file);
     if (pos != m_log_streams.end())
       log_stream_sp = pos->second.lock();
     if (!log_stream_sp) {
-      uint32_t options = File::eOpenOptionWrite | File::eOpenOptionCanCreate |
-                         File::eOpenOptionCloseOnExec | File::eOpenOptionAppend;
-      if (!(log_options & LLDB_LOG_OPTION_APPEND))
-        options |= File::eOpenOptionTruncate;
-
-      log_stream_sp.reset(new StreamFile(log_file, options));
+      llvm::sys::fs::OpenFlags flags = llvm::sys::fs::F_Text;
+      if (log_options & LLDB_LOG_OPTION_APPEND)
+        flags |= llvm::sys::fs::F_Append;
+      int FD;
+      if (std::error_code ec =
+              llvm::sys::fs::openFileForWrite(log_file, FD, flags)) {
+        error_stream.Format("Unable to open log file: {0}", ec.message());
+        return false;
+      }
+      log_stream_sp.reset(
+          new llvm::raw_fd_ostream(FD, should_close, unbuffered));
       m_log_streams[log_file] = log_stream_sp;
     }
   }

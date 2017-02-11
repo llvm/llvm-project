@@ -2190,23 +2190,19 @@ void GDBRemoteCommunicationClient::TestPacketSpeed(const uint32_t num_packets,
         const duration<float> standard_deviation =
             calculate_standard_deviation(packet_times);
         if (json) {
-          strm.Printf("%s\n     {\"send_size\" : %6" PRIu32
-                      ", \"recv_size\" : %6" PRIu32
-                      ", \"total_time_nsec\" : %12" PRIu64
-                      ", \"standard_deviation_nsec\" : %9" PRIu64 " }",
+          strm.Format("{0}\n     {{\"send_size\" : {1,6}, \"recv_size\" : "
+                      "{2,6}, \"total_time_nsec\" : {3,12:ns-}, "
+                      "\"standard_deviation_nsec\" : {4,9:ns-f0}}",
                       result_idx > 0 ? "," : "", send_size, recv_size,
-                      duration_cast<nanoseconds>(total_time).count(),
-                      duration_cast<nanoseconds>(standard_deviation).count());
+                      total_time, standard_deviation);
           ++result_idx;
         } else {
-          strm.Printf(
-              "qSpeedTest(send=%-7u, recv=%-7u) in %.9f"
-              " sec for %9.2f packets/sec (%10.6f ms per packet) with standard "
-              "deviation of %10.6f ms\n",
-              send_size, recv_size, duration<float>(total_time).count(),
-              packets_per_second,
-              duration<float, std::milli>(average_per_packet).count(),
-              duration<float, std::milli>(standard_deviation).count());
+          strm.Format("qSpeedTest(send={0,7}, recv={1,7}) in {2:s+f9} for "
+                      "{3,9:f2} packets/s ({4,10:ms+f6} per packet) with "
+                      "standard deviation of {5,10:ms+f6}\n",
+                      send_size, recv_size, duration<float>(total_time),
+                      packets_per_second, duration<float>(average_per_packet),
+                      standard_deviation);
         }
         strm.Flush();
       }
@@ -2249,21 +2245,18 @@ void GDBRemoteCommunicationClient::TestPacketSpeed(const uint32_t num_packets,
         const auto average_per_packet = total_time / packet_count;
 
         if (json) {
-          strm.Printf("%s\n     {\"send_size\" : %6" PRIu32
-                      ", \"recv_size\" : %6" PRIu32
-                      ", \"total_time_nsec\" : %12" PRIu64 " }",
+          strm.Format("{0}\n     {{\"send_size\" : {1,6}, \"recv_size\" : "
+                      "{2,6}, \"total_time_nsec\" : {3,12:ns-}}",
                       result_idx > 0 ? "," : "", send_size, recv_size,
-                      duration_cast<nanoseconds>(total_time).count());
+                      total_time);
           ++result_idx;
         } else {
-          strm.Printf("qSpeedTest(send=%-7u, recv=%-7u) %6u packets needed to "
-                      "receive %2.1fMB in %.9f"
-                      " sec for %f MB/sec for %9.2f packets/sec (%10.6f ms per "
-                      "packet)\n",
+          strm.Format("qSpeedTest(send={0,7}, recv={1,7}) {2,6} packets needed "
+                      "to receive {3:f1}MB in {4:s+f9} for {5} MB/sec for "
+                      "{6,9:f2} packets/sec ({7,10:ms+f6} per packet)\n",
                       send_size, recv_size, packet_count, k_recv_amount_mb,
-                      duration<float>(total_time).count(), mb_second,
-                      packets_per_second,
-                      duration<float, std::milli>(average_per_packet).count());
+                      duration<float>(total_time), mb_second,
+                      packets_per_second, duration<float>(average_per_packet));
         }
         strm.Flush();
       }

@@ -298,6 +298,7 @@ TEST_F(GDBRemoteCommunicationClientTest, TestPacketSpeedJSON) {
   client.Disconnect();
   server_thread.join();
 
+  GTEST_LOG_(INFO) << "Formatted output: " << ss.GetData();
   auto object_sp = StructuredData::ParseJSON(ss.GetString());
   ASSERT_TRUE(bool(object_sp));
   auto dict_sp = object_sp->GetAsDictionary();

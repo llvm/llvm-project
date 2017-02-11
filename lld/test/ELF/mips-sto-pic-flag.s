@@ -19,8 +19,8 @@
 # CHECK-NEXT:   Other: 0
 # CHECK-NEXT:   Section: .text
 # CHECK-NEXT: }
-# CHECK-NEXT: Symbol {
-# CHECK-NEXT:   Name: foo1a
+# CHECK:      Symbol {
+# CHECK:        Name: foo1a
 # CHECK-NEXT:   Value:
 # CHECK-NEXT:   Size:
 # CHECK-NEXT:   Binding: Global

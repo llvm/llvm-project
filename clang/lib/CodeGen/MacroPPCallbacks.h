@@ -78,12 +78,11 @@ class MacroPPCallbacks : public PPCallbacks {
   /// Handle the case when entering a file.
   ///
   /// \param Loc Indicates the new location.
-  /// \Return true if file scope status should be updated.
   void FileEntered(SourceLocation Loc);
 
   /// Handle the case when exiting a file.
   ///
-  /// \Return true if file scope status should be updated.
+  /// \param Loc Indicates the new location.
   void FileExited(SourceLocation Loc);
 
 public:

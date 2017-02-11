@@ -1,47 +1,39 @@
 digraph "Scop Graph for 'init_array' function" {
 	label="Scop Graph for 'init_array' function";
 
-	Node0x17d4370 [shape=record,label="{entry:\l  br label %for.cond\l}"];
-	Node0x17d4370 -> Node0x17da5d0;
-	Node0x17da5d0 [shape=record,label="{for.cond:                                         \l  %0 = phi i64 [ %indvar.next2, %for.inc17 ], [ 0, %entry ]\l  %exitcond3 = icmp ne i64 %0, 1536\l  br i1 %exitcond3, label %for.body, label %for.end19\l}"];
-	Node0x17da5d0 -> Node0x17da5f0;
-	Node0x17da5d0 -> Node0x17da650;
-	Node0x17da5f0 [shape=record,label="{for.body:                                         \l  br label %for.cond1\l}"];
-	Node0x17da5f0 -> Node0x17da900;
-	Node0x17da900 [shape=record,label="{for.cond1:                                        \l  %indvar = phi i64 [ %indvar.next, %for.inc ], [ 0, %for.body ]\l  %arrayidx6 = getelementptr [1536 x [1536 x float]]* @A, i64 0, i64 %0, i64 %indvar\l  %arrayidx16 = getelementptr [1536 x [1536 x float]]* @B, i64 0, i64 %0, i64 %indvar\l  %1 = mul i64 %0, %indvar\l  %mul = trunc i64 %1 to i32\l  %exitcond = icmp ne i64 %indvar, 1536\l  br i1 %exitcond, label %for.body3, label %for.end\l}"];
-	Node0x17da900 -> Node0x17da670;
-	Node0x17da900 -> Node0x17da9a0;
-	Node0x17da670 [shape=record,label="{for.body3:                                        \l  %rem = srem i32 %mul, 1024\l  %add = add nsw i32 1, %rem\l  %conv = sitofp i32 %add to double\l  %div = fdiv double %conv, 2.000000e+00\l  %conv4 = fptrunc double %div to float\l  store float %conv4, float* %arrayidx6, align 4\l  %rem8 = srem i32 %mul, 1024\l  %add9 = add nsw i32 1, %rem8\l  %conv10 = sitofp i32 %add9 to double\l  %div11 = fdiv double %conv10, 2.000000e+00\l  %conv12 = fptrunc double %div11 to float\l  store float %conv12, float* %arrayidx16, align 4\l  br label %for.inc\l}"];
-	Node0x17da670 -> Node0x17da8e0;
-	Node0x17da8e0 [shape=record,label="{for.inc:                                          \l  %indvar.next = add i64 %indvar, 1\l  br label %for.cond1\l}"];
-	Node0x17da8e0 -> Node0x17da900[constraint=false];
-	Node0x17da9a0 [shape=record,label="{for.end:                                          \l  br label %for.inc17\l}"];
-	Node0x17da9a0 -> Node0x17d9e70;
-	Node0x17d9e70 [shape=record,label="{for.inc17:                                        \l  %indvar.next2 = add i64 %0, 1\l  br label %for.cond\l}"];
-	Node0x17d9e70 -> Node0x17da5d0[constraint=false];
-	Node0x17da650 [shape=record,label="{for.end19:                                        \l  ret void\l}"];
+	Node0x5b5b5a0 [shape=record,label="{entry:\l  br label %entry.split\l}"];
+	Node0x5b5b5a0 -> Node0x5b5de30;
+	Node0x5b5de30 [shape=record,label="{entry.split:                                      \l  br label %for.cond1.preheader\l}"];
+	Node0x5b5de30 -> Node0x5b5de50;
+	Node0x5b5de50 [shape=record,label="{for.cond1.preheader:                              \l  %indvars.iv5 = phi i64 [ 0, %entry.split ], [ %indvars.iv.next6, %for.inc17 ]\l  br label %for.body3\l}"];
+	Node0x5b5de50 -> Node0x5b5b570;
+	Node0x5b5b570 [shape=record,label="{for.body3:                                        \l  %indvars.iv = phi i64 [ 0, %for.cond1.preheader ], [ %indvars.iv.next,\l... %for.body3 ]\l  %0 = mul nuw nsw i64 %indvars.iv, %indvars.iv5\l  %1 = trunc i64 %0 to i32\l  %rem = srem i32 %1, 1024\l  %add = add nsw i32 %rem, 1\l  %conv = sitofp i32 %add to double\l  %div = fmul double %conv, 5.000000e-01\l  %conv4 = fptrunc double %div to float\l  %arrayidx6 = getelementptr inbounds [1536 x [1536 x float]], [1536 x [1536 x\l... float]]* @A, i64 0, i64 %indvars.iv5, i64 %indvars.iv\l  store float %conv4, float* %arrayidx6, align 4\l  %2 = mul nuw nsw i64 %indvars.iv, %indvars.iv5\l  %3 = trunc i64 %2 to i32\l  %rem8 = srem i32 %3, 1024\l  %add9 = add nsw i32 %rem8, 1\l  %conv10 = sitofp i32 %add9 to double\l  %div11 = fmul double %conv10, 5.000000e-01\l  %conv12 = fptrunc double %div11 to float\l  %arrayidx16 = getelementptr inbounds [1536 x [1536 x float]], [1536 x [1536\l... x float]]* @B, i64 0, i64 %indvars.iv5, i64 %indvars.iv\l  store float %conv12, float* %arrayidx16, align 4\l  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1\l  %exitcond = icmp ne i64 %indvars.iv.next, 1536\l  br i1 %exitcond, label %for.body3, label %for.inc17\l}"];
+	Node0x5b5b570 -> Node0x5b5b570[constraint=false];
+	Node0x5b5b570 -> Node0x5b5df30;
+	Node0x5b5df30 [shape=record,label="{for.inc17:                                        \l  %indvars.iv.next6 = add nuw nsw i64 %indvars.iv5, 1\l  %exitcond7 = icmp ne i64 %indvars.iv.next6, 1536\l  br i1 %exitcond7, label %for.cond1.preheader, label %for.end19\l}"];
+	Node0x5b5df30 -> Node0x5b5de50[constraint=false];
+	Node0x5b5df30 -> Node0x5b5df90;
+	Node0x5b5df90 [shape=record,label="{for.end19:                                        \l  ret void\l}"];
 	colorscheme = "paired12"
-        subgraph cluster_0x17d3a30 {
+        subgraph cluster_0x5b4bdd0 {
           label = "";
           style = solid;
           color = 1
-          subgraph cluster_0x17d4ec0 {
-            label = "";
-            style = filled;
-            color = 3            subgraph cluster_0x17d4180 {
+          subgraph cluster_0x5b4bf50 {
+            label = "Region can not profitably be optimized!";
+            style = solid;
+            color = 6
+            subgraph cluster_0x5b4c0d0 {
               label = "";
               style = solid;
               color = 5
-              Node0x17da900;
-              Node0x17da670;
-              Node0x17da8e0;
+              Node0x5b5b570;
             }
-            Node0x17da5d0;
-            Node0x17da5f0;
-            Node0x17da9a0;
-            Node0x17d9e70;
+            Node0x5b5de50;
+            Node0x5b5df30;
           }
-          Node0x17d4370;
-          Node0x17da650;
+          Node0x5b5b5a0;
+          Node0x5b5de30;
+          Node0x5b5df90;
         }
 }

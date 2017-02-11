@@ -25,8 +25,7 @@ namespace clangd {
 class DocumentStore;
 
 struct InitializeHandler : Handler {
-  InitializeHandler(llvm::raw_ostream &Outs, llvm::raw_ostream &Logs)
-      : Handler(Outs, Logs) {}
+  InitializeHandler(JSONOutput &Output) : Handler(Output) {}
 
   void handleMethod(llvm::yaml::MappingNode *Params, StringRef ID) override {
     writeMessage(
@@ -40,19 +39,21 @@ struct InitializeHandler : Handler {
 };
 
 struct ShutdownHandler : Handler {
-  ShutdownHandler(llvm::raw_ostream &Outs, llvm::raw_ostream &Logs)
-      : Handler(Outs, Logs) {}
+  ShutdownHandler(JSONOutput &Output) : Handler(Output) {}
 
   void handleMethod(llvm::yaml::MappingNode *Params, StringRef ID) override {
-    // FIXME: Calling exit is rude, can we communicate to main somehow?
-    exit(0);
+    IsDone = true;
   }
+
+  bool isDone() const { return IsDone; }
+
+private:
+  bool IsDone = false;
 };
 
 struct TextDocumentDidOpenHandler : Handler {
-  TextDocumentDidOpenHandler(llvm::raw_ostream &Outs, llvm::raw_ostream &Logs,
-                             DocumentStore &Store)
-      : Handler(Outs, Logs), Store(Store) {}
+  TextDocumentDidOpenHandler(JSONOutput &Output, DocumentStore &Store)
+      : Handler(Output), Store(Store) {}
 
   void handleNotification(llvm::yaml::MappingNode *Params) override;
 
@@ -61,9 +62,8 @@ private:
 };
 
 struct TextDocumentDidChangeHandler : Handler {
-  TextDocumentDidChangeHandler(llvm::raw_ostream &Outs, llvm::raw_ostream &Logs,
-                               DocumentStore &Store)
-      : Handler(Outs, Logs), Store(Store) {}
+  TextDocumentDidChangeHandler(JSONOutput &Output, DocumentStore &Store)
+      : Handler(Output), Store(Store) {}
 
   void handleNotification(llvm::yaml::MappingNode *Params) override;
 
@@ -72,10 +72,8 @@ private:
 };
 
 struct TextDocumentRangeFormattingHandler : Handler {
-  TextDocumentRangeFormattingHandler(llvm::raw_ostream &Outs,
-                                     llvm::raw_ostream &Logs,
-                                     DocumentStore &Store)
-      : Handler(Outs, Logs), Store(Store) {}
+  TextDocumentRangeFormattingHandler(JSONOutput &Output, DocumentStore &Store)
+      : Handler(Output), Store(Store) {}
 
   void handleMethod(llvm::yaml::MappingNode *Params, StringRef ID) override;
 
@@ -84,9 +82,8 @@ private:
 };
 
 struct TextDocumentFormattingHandler : Handler {
-  TextDocumentFormattingHandler(llvm::raw_ostream &Outs,
-                                llvm::raw_ostream &Logs, DocumentStore &Store)
-      : Handler(Outs, Logs), Store(Store) {}
+  TextDocumentFormattingHandler(JSONOutput &Output, DocumentStore &Store)
+      : Handler(Output), Store(Store) {}
 
   void handleMethod(llvm::yaml::MappingNode *Params, StringRef ID) override;
 

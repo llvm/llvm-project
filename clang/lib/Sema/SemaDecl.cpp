@@ -6126,7 +6126,7 @@ NamedDecl *Sema::ActOnVariableDeclarator(
                             D.getIdentifierLoc(), II,
                             R, TInfo, SC);
 
-    if (D.getDeclSpec().containsPlaceholderType() && R->getContainedAutoType())
+    if (R->getContainedDeducedType())
       ParsingInitForAutoVars.insert(NewVD);
 
     if (D.isInvalidType())
@@ -6262,7 +6262,7 @@ NamedDecl *Sema::ActOnVariableDeclarator(
 
     // If this decl has an auto type in need of deduction, make a note of the
     // Decl so we can diagnose uses of it in its own initializer.
-    if (D.getDeclSpec().containsPlaceholderType() && R->getContainedAutoType())
+    if (R->getContainedDeducedType())
       ParsingInitForAutoVars.insert(NewVD);
 
     if (D.isInvalidType() || Invalid) {
@@ -9822,7 +9822,15 @@ QualType Sema::deduceVarTypeFromInitializer(VarDecl *VDecl,
   DeducedType *Deduced = Type->getContainedDeducedType();
   assert(Deduced && "deduceVarTypeFromInitializer for non-deduced type");
 
-  ArrayRef<Expr*> DeduceInits = Init ? ArrayRef<Expr*>(Init) : None;
+  // C++11 [dcl.spec.auto]p3
+  if (!Init) {
+    assert(VDecl && "no init for init capture deduction?");
+    Diag(VDecl->getLocation(), diag::err_auto_var_requires_init)
+      << VDecl->getDeclName() << Type;
+    return QualType();
+  }
+
+  ArrayRef<Expr*> DeduceInits = Init;
   if (DirectInit) {
     if (auto *PL = dyn_cast_or_null<ParenListExpr>(Init))
       DeduceInits = PL->exprs();
@@ -9837,14 +9845,6 @@ QualType Sema::deduceVarTypeFromInitializer(VarDecl *VDecl,
     SmallVector<Expr*, 8> InitsCopy(DeduceInits.begin(), DeduceInits.end());
     return DeduceTemplateSpecializationFromInitializer(TSI, Entity, Kind,
                                                        InitsCopy);
-  }
-
-  // C++11 [dcl.spec.auto]p3
-  if (!Init) {
-    assert(VDecl && "no init for init capture deduction?");
-    Diag(VDecl->getLocation(), diag::err_auto_var_requires_init)
-      << VDecl->getDeclName() << Type;
-    return QualType();
   }
 
   if (DirectInit) {
@@ -11208,7 +11208,7 @@ Sema::DeclGroupPtrTy Sema::FinalizeDeclaratorGroup(Scope *S, const DeclSpec &DS,
           FirstDeclaratorInGroup = DD;
         if (!FirstDecompDeclaratorInGroup)
           FirstDecompDeclaratorInGroup = dyn_cast<DecompositionDecl>(D);
-        if (!FirstNonDeducedAutoInGroup && DS.containsPlaceholderType() &&
+        if (!FirstNonDeducedAutoInGroup && DS.hasAutoTypeSpec() &&
             !hasDeducedAuto(DD))
           FirstNonDeducedAutoInGroup = DD;
 
@@ -11949,7 +11949,7 @@ bool Sema::canDelayFunctionBody(const Declarator &D) {
 
   // We can't delay parsing the body of a function template with a deduced
   // return type (yet).
-  if (D.getDeclSpec().containsPlaceholderType()) {
+  if (D.getDeclSpec().hasAutoTypeSpec()) {
     // If the placeholder introduces a non-deduced trailing return type,
     // we can still delay parsing it.
     if (D.getNumTypeObjects()) {

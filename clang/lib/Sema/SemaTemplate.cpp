@@ -242,6 +242,37 @@ TemplateNameKind Sema::isTemplateName(Scope *S,
   return TemplateKind;
 }
 
+bool Sema::isDeductionGuideName(Scope *S, const IdentifierInfo &Name,
+                                SourceLocation NameLoc,
+                                ParsedTemplateTy *Template) {
+  CXXScopeSpec SS;
+  bool MemberOfUnknownSpecialization = false;
+
+  // We could use redeclaration lookup here, but we don't need to: the
+  // syntactic form of a deduction guide is enough to identify it even
+  // if we can't look up the template name at all.
+  LookupResult R(*this, DeclarationName(&Name), NameLoc, LookupOrdinaryName);
+  LookupTemplateName(R, S, SS, /*ObjectType*/QualType(),
+                     /*EnteringContext*/false, MemberOfUnknownSpecialization);
+
+  if (R.empty()) return false;
+  if (R.isAmbiguous()) {
+    // FIXME: Diagnose an ambiguity if we find at least one template.
+    R.suppressDiagnostics();
+    return false;
+  }
+
+  // We only treat template-names that name type templates as valid deduction
+  // guide names.
+  TemplateDecl *TD = R.getAsSingle<TemplateDecl>();
+  if (!TD || !getAsTypeTemplateDecl(TD))
+    return false;
+
+  if (Template)
+    *Template = TemplateTy::make(TemplateName(TD));
+  return true;
+}
+
 bool Sema::DiagnoseUnknownTemplateName(const IdentifierInfo &II,
                                        SourceLocation IILoc,
                                        Scope *S,

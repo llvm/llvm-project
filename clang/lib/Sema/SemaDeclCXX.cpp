@@ -8137,6 +8137,20 @@ struct BadSpecifierDiagnoser {
 /// grammar.
 void Sema::CheckDeductionGuideDeclarator(Declarator &D, QualType &R,
                                          StorageClass &SC) {
+  TemplateName GuidedTemplate = D.getName().TemplateName.get().get();
+  TemplateDecl *GuidedTemplateDecl = GuidedTemplate.getAsTemplateDecl();
+  assert(GuidedTemplateDecl && "missing template decl for deduction guide");
+
+  // C++ [temp.deduct.guide]p3:
+  //   A deduction-gide shall be declared in the same scope as the
+  //   corresponding class template.
+  if (!CurContext->getRedeclContext()->Equals(
+          GuidedTemplateDecl->getDeclContext()->getRedeclContext())) {
+    Diag(D.getIdentifierLoc(), diag::err_deduction_guide_wrong_scope)
+      << GuidedTemplateDecl;
+    Diag(GuidedTemplateDecl->getLocation(), diag::note_template_decl_here);
+  }
+
   auto &DS = D.getMutableDeclSpec();
   // We leave 'friend' and 'virtual' to be rejected in the normal way.
   if (DS.hasTypeSpecifier() || DS.getTypeQualifiers() ||
@@ -8192,11 +8206,44 @@ void Sema::CheckDeductionGuideDeclarator(Declarator &D, QualType &R,
            diag::err_deduction_guide_no_trailing_return_type);
       break;
     }
+
+    // Check that the return type is written as a specialization of
+    // the template specified as the deduction-guide's name.
+    ParsedType TrailingReturnType = Chunk.Fun.getTrailingReturnType();
+    TypeSourceInfo *TSI = nullptr;
+    QualType RetTy = GetTypeFromParser(TrailingReturnType, &TSI);
+    assert(TSI && "deduction guide has valid type but invalid return type?");
+    bool AcceptableReturnType = false;
+    bool MightInstantiateToSpecialization = false;
+    if (auto RetTST =
+            TSI->getTypeLoc().getAs<TemplateSpecializationTypeLoc>()) {
+      TemplateName SpecifiedName = RetTST.getTypePtr()->getTemplateName();
+      bool TemplateMatches =
+          Context.hasSameTemplateName(SpecifiedName, GuidedTemplate);
+      if (SpecifiedName.getKind() == TemplateName::Template && TemplateMatches)
+        AcceptableReturnType = true;
+      else {
+        // This could still instantiate to the right type, unless we know it
+        // names the wrong class template.
+        auto *TD = SpecifiedName.getAsTemplateDecl();
+        MightInstantiateToSpecialization = !(TD && isa<ClassTemplateDecl>(TD) &&
+                                             !TemplateMatches);
+      }
+    } else if (!RetTy.hasQualifiers() && RetTy->isDependentType()) {
+      MightInstantiateToSpecialization = true;
+    }
+
+    if (!AcceptableReturnType) {
+      Diag(TSI->getTypeLoc().getLocStart(),
+           diag::err_deduction_guide_bad_trailing_return_type)
+        << GuidedTemplate << TSI->getType() << MightInstantiateToSpecialization
+        << TSI->getTypeLoc().getSourceRange();
+    }
+
+    // Keep going to check that we don't have any inner declarator pieces (we
+    // could still have a function returning a pointer to a function).
     FoundFunction = true;
   }
-
-  // FIXME: Check that the return type can instantiate to a specialization of
-  // the template specified as the deduction-guide's name.
 
   if (D.isFunctionDefinition())
     Diag(D.getIdentifierLoc(), diag::err_deduction_guide_defines_function);

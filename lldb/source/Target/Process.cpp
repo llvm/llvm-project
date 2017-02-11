@@ -982,10 +982,7 @@ StateType Process::WaitForProcessToStop(const Timeout<std::micro> &timeout,
     return state;
 
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
-  if (log)
-    log->Printf(
-        "Process::%s (timeout = %llu)", __FUNCTION__,
-        static_cast<unsigned long long>(timeout ? timeout->count() : -1));
+  LLDB_LOG(log, "timeout = {0}", timeout);
 
   if (!wait_always && StateIsStoppedState(state, true) &&
       StateIsStoppedState(GetPrivateState(), true)) {
@@ -1261,11 +1258,7 @@ StateType Process::GetStateChangedEvents(EventSP &event_sp,
                                          const Timeout<std::micro> &timeout,
                                          ListenerSP hijack_listener_sp) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
-
-  if (log)
-    log->Printf(
-        "Process::%s (timeout = %llu, event_sp)...", __FUNCTION__,
-        static_cast<unsigned long long>(timeout ? timeout->count() : -1));
+  LLDB_LOG(log, "timeout = {0}, event_sp)...", timeout);
 
   ListenerSP listener_sp = hijack_listener_sp;
   if (!listener_sp)
@@ -1277,15 +1270,11 @@ StateType Process::GetStateChangedEvents(EventSP &event_sp,
           timeout)) {
     if (event_sp && event_sp->GetType() == eBroadcastBitStateChanged)
       state = Process::ProcessEventData::GetStateFromEvent(event_sp.get());
-    else if (log)
-      log->Printf("Process::%s got no event or was interrupted.", __FUNCTION__);
+    else
+      LLDB_LOG(log, "got no event or was interrupted.");
   }
 
-  if (log)
-    log->Printf(
-        "Process::%s (timeout = %llu, event_sp) => %s", __FUNCTION__,
-        static_cast<unsigned long long>(timeout ? timeout->count() : -1),
-        StateAsCString(state));
+  LLDB_LOG(log, "timeout = {0}, event_sp) => {1}", timeout, state);
   return state;
 }
 
@@ -1314,11 +1303,7 @@ StateType
 Process::GetStateChangedEventsPrivate(EventSP &event_sp,
                                       const Timeout<std::micro> &timeout) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
-
-  if (log)
-    log->Printf(
-        "Process::%s (timeout = %llu, event_sp)...", __FUNCTION__,
-        static_cast<unsigned long long>(timeout ? timeout->count() : -1));
+  LLDB_LOG(log, "timeout = {0}, event_sp)...", timeout);
 
   StateType state = eStateInvalid;
   if (m_private_state_listener_sp->GetEventForBroadcasterWithType(
@@ -1328,14 +1313,8 @@ Process::GetStateChangedEventsPrivate(EventSP &event_sp,
     if (event_sp && event_sp->GetType() == eBroadcastBitStateChanged)
       state = Process::ProcessEventData::GetStateFromEvent(event_sp.get());
 
-  // This is a bit of a hack, but when we wait here we could very well return
-  // to the command-line, and that could disable the log, which would render the
-  // log we got above invalid.
-  if (log)
-    log->Printf(
-        "Process::%s (timeout = %llu, event_sp) => %s", __FUNCTION__,
-        static_cast<unsigned long long>(timeout ? timeout->count() : -1),
-        state == eStateInvalid ? "TIMEOUT" : StateAsCString(state));
+  LLDB_LOG(log, "timeout = {0}, event_sp) => {1}", timeout,
+           state == eStateInvalid ? "TIMEOUT" : StateAsCString(state));
   return state;
 }
 
@@ -1343,11 +1322,7 @@ bool Process::GetEventsPrivate(EventSP &event_sp,
                                const Timeout<std::micro> &timeout,
                                bool control_only) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
-
-  if (log)
-    log->Printf(
-        "Process::%s (timeout = %llu, event_sp)...", __FUNCTION__,
-        static_cast<unsigned long long>(timeout ? timeout->count() : -1));
+  LLDB_LOG(log, "timeout = {0}, event_sp)...", timeout);
 
   if (control_only)
     return m_private_state_listener_sp->GetEventForBroadcaster(
@@ -5352,19 +5327,16 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
         if (log) {
           if (options.GetTryAllThreads()) {
             if (before_first_timeout) {
-              log->Printf("Process::RunThreadPlan(): Running function with "
-                          "one thread timeout timed out.");
+              LLDB_LOG(log,
+                       "Running function with one thread timeout timed out.");
             } else
-              log->Printf("Process::RunThreadPlan(): Restarting function with "
-                          "all threads enabled "
-                          "and timeout: %" PRIu64
-                          " timed out, abandoning execution.",
-                          timeout ? timeout->count() : -1);
+              LLDB_LOG(log, "Restarting function with all threads enabled and "
+                            "timeout: {0} timed out, abandoning execution.",
+                       timeout);
           } else
-            log->Printf("Process::RunThreadPlan(): Running function with "
-                        "timeout: %" PRIu64 " timed out, "
-                        "abandoning execution.",
-                        timeout ? timeout->count() : -1);
+            LLDB_LOG(log, "Running function with timeout: {0} timed out, "
+                          "abandoning execution.",
+                     timeout);
         }
 
         // It is possible that between the time we issued the Halt, and we get

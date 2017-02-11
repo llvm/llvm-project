@@ -18,12 +18,14 @@ using namespace lldb_private;
 
 static std::string GetLogString(uint32_t log_options, const char *format,
                                 int arg) {
-  std::shared_ptr<StreamString> stream_sp(new StreamString());
+  std::string stream_string;
+  std::shared_ptr<llvm::raw_string_ostream> stream_sp(
+      new llvm::raw_string_ostream(stream_string));
   Log log_(stream_sp);
   log_.GetOptions().Reset(log_options);
   Log *log = &log_;
   LLDB_LOG(log, format, arg);
-  return stream_sp->GetString();
+  return stream_sp->str();
 }
 
 TEST(LogTest, LLDB_LOG_nullptr) {

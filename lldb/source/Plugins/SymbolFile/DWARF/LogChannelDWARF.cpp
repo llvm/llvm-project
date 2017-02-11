@@ -95,7 +95,8 @@ void LogChannelDWARF::Disable(const char **categories, Stream *feedback_strm) {
 }
 
 bool LogChannelDWARF::Enable(
-    StreamSP &log_stream_sp, uint32_t log_options,
+    const std::shared_ptr<llvm::raw_ostream> &log_stream_sp,
+    uint32_t log_options,
     Stream *feedback_strm,  // Feedback stream for argument errors etc
     const char **categories // The categories to enable within this logging
                             // stream, if empty, enable default set

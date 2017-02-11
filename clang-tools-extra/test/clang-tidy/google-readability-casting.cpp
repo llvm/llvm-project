@@ -148,3 +148,77 @@ struct A {
   static const E ee = e;
 };
 struct B : public A<E1> {};
+
+
+void overloaded_function();
+void overloaded_function(int);
+
+template<typename Fn>
+void g(Fn fn) {
+  fn();
+}
+
+void function_casts() {
+  typedef void (*FnPtrVoid)();
+  typedef void (&FnRefVoid)();
+  typedef void (&FnRefInt)(int);
+
+  g((void (*)())overloaded_function);
+  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: C-style casts are discouraged; use static_cast [
+  // CHECK-FIXES: g(static_cast<void (*)()>(overloaded_function));
+  g((void (*)())&overloaded_function);
+  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: C-style casts are discouraged; use static_cast [
+  // CHECK-FIXES: g(static_cast<void (*)()>(&overloaded_function));
+  g((void (&)())overloaded_function);
+  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: C-style casts are discouraged; use static_cast [
+  // CHECK-FIXES: g(static_cast<void (&)()>(overloaded_function));
+
+  g((FnPtrVoid)overloaded_function);
+  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: C-style casts are discouraged; use static_cast [
+  // CHECK-FIXES: g(static_cast<FnPtrVoid>(overloaded_function));
+  g((FnPtrVoid)&overloaded_function);
+  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: C-style casts are discouraged; use static_cast [
+  // CHECK-FIXES: g(static_cast<FnPtrVoid>(&overloaded_function));
+  g((FnRefVoid)overloaded_function);
+  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: C-style casts are discouraged; use static_cast [
+  // CHECK-FIXES: g(static_cast<FnRefVoid>(overloaded_function));
+
+  FnPtrVoid fn0 = (void (*)())&overloaded_function;
+  // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: C-style casts are discouraged; use static_cast [
+  // CHECK-FIXES: FnPtrVoid fn0 = static_cast<void (*)()>(&overloaded_function);
+  FnPtrVoid fn1 = (void (*)())overloaded_function;
+  // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: C-style casts are discouraged; use static_cast [
+  // CHECK-FIXES: FnPtrVoid fn1 = static_cast<void (*)()>(overloaded_function);
+  FnPtrVoid fn1a = (FnPtrVoid)overloaded_function;
+  // CHECK-MESSAGES: :[[@LINE-1]]:20: warning: C-style casts are discouraged; use static_cast [
+  // CHECK-FIXES: FnPtrVoid fn1a = static_cast<FnPtrVoid>(overloaded_function);
+  FnRefInt fn2 = (void (&)(int))overloaded_function;
+  // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: C-style casts are discouraged; use static_cast [
+  // CHECK-FIXES: FnRefInt fn2 = static_cast<void (&)(int)>(overloaded_function);
+  auto fn3 = (void (*)())&overloaded_function;
+  // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: C-style casts are discouraged; use static_cast [
+  // CHECK-FIXES: auto fn3 = static_cast<void (*)()>(&overloaded_function);
+  auto fn4 = (void (*)())overloaded_function;
+  // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: C-style casts are discouraged; use static_cast [
+  // CHECK-FIXES: auto fn4 = static_cast<void (*)()>(overloaded_function);
+  auto fn5 = (void (&)(int))overloaded_function;
+  // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: C-style casts are discouraged; use static_cast [
+  // CHECK-FIXES: auto fn5 = static_cast<void (&)(int)>(overloaded_function);
+
+  void (*fn6)() = (void (*)())&overloaded_function;
+  // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: C-style casts are discouraged; use static_cast [
+  // CHECK-FIXES: void (*fn6)() = static_cast<void (*)()>(&overloaded_function);
+  void (*fn7)() = (void (*)())overloaded_function;
+  // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: C-style casts are discouraged; use static_cast [
+  // CHECK-FIXES: void (*fn7)() = static_cast<void (*)()>(overloaded_function);
+  void (*fn8)() = (FnPtrVoid)overloaded_function;
+  // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: C-style casts are discouraged; use static_cast [
+  // CHECK-FIXES: void (*fn8)() = static_cast<FnPtrVoid>(overloaded_function);
+  void (&fn9)(int) = (void (&)(int))overloaded_function;
+  // CHECK-MESSAGES: :[[@LINE-1]]:22: warning: C-style casts are discouraged; use static_cast [
+  // CHECK-FIXES: void (&fn9)(int) = static_cast<void (&)(int)>(overloaded_function);
+
+  void (*correct1)() = static_cast<void (*)()>(overloaded_function);
+  FnPtrVoid correct2 = static_cast<void (*)()>(&overloaded_function);
+  FnRefInt correct3 = static_cast<void (&)(int)>(overloaded_function);
+}
