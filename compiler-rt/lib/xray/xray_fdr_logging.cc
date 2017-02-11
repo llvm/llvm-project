@@ -32,15 +32,8 @@
 #include "xray_buffer_queue.h"
 #include "xray_defs.h"
 #include "xray_flags.h"
+#include "xray_tsc.h"
 #include "xray_utils.h"
-
-#if defined(__x86_64__)
-#include "xray_x86_64.h"
-#elif defined(__arm__) || defined(__aarch64__)
-#include "xray_emulate_tsc.h"
-#else
-#error "Unsupported CPU Architecture"
-#endif /* CPU architecture */
 
 namespace __xray {
 
@@ -123,9 +116,9 @@ XRayLogFlushStatus fdrLoggingFlush() XRAY_NEVER_INSTRUMENT {
   XRayFileHeader Header;
   Header.Version = 1;
   Header.Type = FileTypes::FDR_LOG;
-  auto CPUFrequency = getCPUFrequency();
+  auto TSCFrequency = getTSCFrequency();
   Header.CycleFrequency =
-      CPUFrequency == -1 ? 0 : static_cast<uint64_t>(CPUFrequency);
+      TSCFrequency == -1 ? 0 : static_cast<uint64_t>(TSCFrequency);
   // FIXME: Actually check whether we have 'constant_tsc' and 'nonstop_tsc'
   // before setting the values in the header.
   Header.ConstantTSC = 1;

@@ -4003,7 +4003,9 @@ DICompileUnit
 ``retainedTypes:``, ``subprograms:``, ``globals:``, ``imports:`` and ``macros:``
 fields are tuples containing the debug info to be emitted along with the compile
 unit, regardless of code optimizations (some nodes are only emitted if there are
-references to them from instructions).
+references to them from instructions). The ``debugInfoForProfiling:`` field is a
+boolean indicating whether or not line-table discriminators are updated to
+provide more-accurate debug info for profiling results.
 
 .. code-block:: text
 

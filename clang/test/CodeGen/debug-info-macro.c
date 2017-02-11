@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -emit-llvm -debug-info-kind=line-tables-only -debug-info-macro %s -o - "-DC1(x)=( x  + 5 )" -DA -include %S/include/debug-info-macro.h -UC1 | FileCheck -check-prefixes=CHECK,NO_PCH %s 
-// RUN: %clang_cc1 -emit-llvm -debug-info-kind=limited          -debug-info-macro %s -o - "-DC1(x)=( x  + 5 )" -DA -include %S/include/debug-info-macro.h -UC1 | FileCheck -check-prefixes=CHECK,NO_PCH %s 
-// RUN: %clang_cc1 -emit-llvm -debug-info-kind=standalone       -debug-info-macro %s -o - "-DC1(x)=( x  + 5 )" -DA -include %S/include/debug-info-macro.h -UC1 | FileCheck -check-prefixes=CHECK,NO_PCH %s 
-// RUN: %clang_cc1 -emit-llvm                                   -debug-info-macro %s -o - "-DC1(x)=( x  + 5 )" -DA -include %S/include/debug-info-macro.h -UC1 | FileCheck -check-prefixes=NO_MACRO %s 
+// RUN: %clang_cc1 -emit-llvm -debug-info-kind=line-tables-only -debug-info-macro %s -o - "-DC1(x)=( x  + 5 )" -DA -include %S/Inputs/debug-info-macro.h -UC1 | FileCheck -check-prefixes=CHECK,NO_PCH %s 
+// RUN: %clang_cc1 -emit-llvm -debug-info-kind=limited          -debug-info-macro %s -o - "-DC1(x)=( x  + 5 )" -DA -include %S/Inputs/debug-info-macro.h -UC1 | FileCheck -check-prefixes=CHECK,NO_PCH %s 
+// RUN: %clang_cc1 -emit-llvm -debug-info-kind=standalone       -debug-info-macro %s -o - "-DC1(x)=( x  + 5 )" -DA -include %S/Inputs/debug-info-macro.h -UC1 | FileCheck -check-prefixes=CHECK,NO_PCH %s 
+// RUN: %clang_cc1 -emit-llvm                                   -debug-info-macro %s -o - "-DC1(x)=( x  + 5 )" -DA -include %S/Inputs/debug-info-macro.h -UC1 | FileCheck -check-prefixes=NO_MACRO %s 
 
-// RUN: %clang_cc1 -emit-llvm -debug-info-kind=limited -debug-info-macro %S/include/debug-info-macro.h -emit-pch -o %t.pch -DC3
-// RUN: %clang_cc1 -emit-llvm -debug-info-kind=limited -debug-info-macro %s -o - -include-pch %t.pch "-DC1(x)=( x  + 5 )" -DA -include %S/include/debug-info-macro.h -UC1 | FileCheck -check-prefixes=CHECK,PCH %s 
+// RUN: %clang_cc1 -emit-llvm -debug-info-kind=limited -debug-info-macro %S/Inputs/debug-info-macro.h -emit-pch -o %t.pch -DC3
+// RUN: %clang_cc1 -emit-llvm -debug-info-kind=limited -debug-info-macro %s -o - -include-pch %t.pch "-DC1(x)=( x  + 5 )" -DA -include %S/Inputs/debug-info-macro.h -UC1 | FileCheck -check-prefixes=CHECK,PCH %s 
 
 // This test checks that macro Debug info is correctly generated.
 
@@ -13,10 +13,10 @@
 
 #line 15
 /*Line 15*/ #define D1 1
-/*Line 16*/ #include  "include/debug-info-macro.h"
+/*Line 16*/ #include  "Inputs/debug-info-macro.h"
 /*Line 17*/ #undef D1
 /*Line 18*/ #define D2 2
-/*Line 19*/ #include  "include/debug-info-macro.h"
+/*Line 19*/ #include  "Inputs/debug-info-macro.h"
 /*Line 20*/ #undef D2
 
 // NO_MACRO-NOT: macros

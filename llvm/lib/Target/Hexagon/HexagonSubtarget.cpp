@@ -88,6 +88,7 @@ HexagonSubtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS) {
     { "hexagonv5", V5 },
     { "hexagonv55", V55 },
     { "hexagonv60", V60 },
+    { "hexagonv62", V62 },
   };
 
   auto foundIt = CpuTable.find(CPUString);

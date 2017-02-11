@@ -140,43 +140,54 @@ let Namespace = "Hexagon" in {
   }
 
   // Control registers.
-  def SA0  : Rc<0,  "sa0",       ["c0"]>,   DwarfRegNum<[67]>;
-  def LC0  : Rc<1,  "lc0",       ["c1"]>,   DwarfRegNum<[68]>;
-  def SA1  : Rc<2,  "sa1",       ["c2"]>,   DwarfRegNum<[69]>;
-  def LC1  : Rc<3,  "lc1",       ["c3"]>,   DwarfRegNum<[70]>;
-  def P3_0 : Rc<4,  "p3:0",      ["c4"], [P0, P1, P2, P3]>,
-                                            DwarfRegNum<[71]>;
+  def SA0:        Rc<0,  "sa0",        ["c0"]>,    DwarfRegNum<[67]>;
+  def LC0:        Rc<1,  "lc0",        ["c1"]>,    DwarfRegNum<[68]>;
+  def SA1:        Rc<2,  "sa1",        ["c2"]>,    DwarfRegNum<[69]>;
+  def LC1:        Rc<3,  "lc1",        ["c3"]>,    DwarfRegNum<[70]>;
+  def P3_0:       Rc<4,  "p3:0",       ["c4"], [P0, P1, P2, P3]>,
+                                                   DwarfRegNum<[71]>;
   // When defining more Cn registers, make sure to explicitly mark them
   // as reserved in HexagonRegisterInfo.cpp.
-  def C5   : Rc<5,  "c5",        ["c5"]>,   DwarfRegNum<[72]>; // future use
-  def C6   : Rc<6,  "c6",        [], [M0]>, DwarfRegNum<[73]>;
-  def C7   : Rc<7,  "c7",        [], [M1]>, DwarfRegNum<[74]>;
+  def C5:         Rc<5,  "c5",         ["c5"]>,    DwarfRegNum<[72]>;
+  def C6:         Rc<6,  "c6",         [], [M0]>,  DwarfRegNum<[73]>;
+  def C7:         Rc<7,  "c7",         [], [M1]>,  DwarfRegNum<[74]>;
   // Define C8 separately and make it aliased with USR.
   // The problem is that USR has subregisters (e.g. overflow). If USR was
   // specified as a subregister of C9_8, it would imply that subreg_overflow
   // and isub_lo can be composed, which leads to all kinds of issues
   // with lane masks.
-  def C8   : Rc<8,  "c8",       [], [USR]>, DwarfRegNum<[75]>;
-  def PC   : Rc<9,  "pc">,                  DwarfRegNum<[76]>;
-  def UGP  : Rc<10, "ugp",       ["c10"]>,  DwarfRegNum<[77]>;
-  def GP   : Rc<11, "gp",        ["c11"]>,  DwarfRegNum<[78]>;
-  def CS0  : Rc<12, "cs0",       ["c12"]>,  DwarfRegNum<[79]>;
-  def CS1  : Rc<13, "cs1",       ["c13"]>,  DwarfRegNum<[80]>;
-  def UPCL : Rc<14, "upcyclelo", ["c14"]>,  DwarfRegNum<[81]>;
-  def UPCH : Rc<15, "upcyclehi", ["c15"]>,  DwarfRegNum<[82]>;
+  def C8:         Rc<8,  "c8",         [], [USR]>, DwarfRegNum<[75]>;
+  def PC:         Rc<9,  "pc">,                    DwarfRegNum<[76]>;
+  def UGP:        Rc<10, "ugp",        ["c10"]>,   DwarfRegNum<[77]>;
+  def GP:         Rc<11, "gp",         ["c11"]>,   DwarfRegNum<[78]>;
+  def CS0:        Rc<12, "cs0",        ["c12"]>,   DwarfRegNum<[79]>;
+  def CS1:        Rc<13, "cs1",        ["c13"]>,   DwarfRegNum<[80]>;
+  def UPCL:       Rc<14, "upcyclelo",  ["c14"]>,   DwarfRegNum<[81]>;
+  def UPCH:       Rc<15, "upcyclehi",  ["c15"]>,   DwarfRegNum<[82]>;
+  def FRAMELIMIT: Rc<16, "framelimit", ["c16"]>,   DwarfRegNum<[83]>;
+  def FRAMEKEY:   Rc<17, "framekey",   ["c17"]>,   DwarfRegNum<[84]>;
+  def PKTCOUNTLO: Rc<18, "pktcountlo", ["c18"]>,   DwarfRegNum<[85]>;
+  def PKTCOUNTHI: Rc<19, "pktcounthi", ["c19"]>,   DwarfRegNum<[86]>;
+  def UTIMERLO:   Rc<30, "utimerlo",   ["c30"]>,   DwarfRegNum<[97]>;
+  def UTIMERHI:   Rc<31, "utimerhi",   ["c31"]>,   DwarfRegNum<[98]>;
 }
 
   // Control registers pairs.
   let SubRegIndices = [isub_lo, isub_hi], CoveredBySubRegs = 1 in {
-    def C1_0   : Rcc<0,   "c1:0",  [SA0, LC0], ["lc0:sa0"]>, DwarfRegNum<[67]>;
-    def C3_2   : Rcc<2,   "c3:2",  [SA1, LC1], ["lc1:sa1"]>, DwarfRegNum<[69]>;
-    def C5_4   : Rcc<4,   "c5:4",  [P3_0, C5]>,              DwarfRegNum<[71]>;
-    def C7_6   : Rcc<6,   "c7:6",  [C6, C7],   ["m1:0"]>,    DwarfRegNum<[72]>;
+    def C1_0:     Rcc<0,  "c1:0",   [SA0, LC0], ["lc0:sa0"]>, DwarfRegNum<[67]>;
+    def C3_2:     Rcc<2,  "c3:2",   [SA1, LC1], ["lc1:sa1"]>, DwarfRegNum<[69]>;
+    def C5_4:     Rcc<4,  "c5:4",   [P3_0, C5]>,              DwarfRegNum<[71]>;
+    def C7_6:     Rcc<6,  "c7:6",   [C6, C7],   ["m1:0"]>,    DwarfRegNum<[72]>;
     // Use C8 instead of USR as a subregister of C9_8.
-    def C9_8   : Rcc<8,   "c9:8",  [C8, PC]>,                DwarfRegNum<[74]>;
-    def C11_10 : Rcc<10, "c11:10", [UGP, GP]>,               DwarfRegNum<[76]>;
-    def CS     : Rcc<12, "c13:12", [CS0, CS1], ["cs1:0"]>,   DwarfRegNum<[78]>;
-    def UPC    : Rcc<14, "c15:14", [UPCL, UPCH]>,            DwarfRegNum<[80]>;
+    def C9_8:     Rcc<8,  "c9:8",   [C8, PC]>,                DwarfRegNum<[74]>;
+    def C11_10:   Rcc<10, "c11:10", [UGP, GP]>,               DwarfRegNum<[76]>;
+    def CS:       Rcc<12, "c13:12", [CS0, CS1], ["cs1:0"]>,   DwarfRegNum<[78]>;
+    def UPC:      Rcc<14, "c15:14", [UPCL, UPCH]>,            DwarfRegNum<[80]>;
+    def C17_16:   Rcc<16, "c17:16", [FRAMELIMIT, FRAMEKEY]>,  DwarfRegNum<[83]>;
+    def PKTCOUNT: Rcc<18, "c19:18", [PKTCOUNTLO, PKTCOUNTHI], ["pktcount"]>,
+                                                              DwarfRegNum<[85]>;
+    def UTIMER:   Rcc<30, "c31:30", [UTIMERLO, UTIMERHI], ["utimer"]>,
+                                                              DwarfRegNum<[97]>;
   }
 
   foreach i = 0-31 in {
@@ -269,17 +280,26 @@ def ModRegs : RegisterClass<"Hexagon", [i32], 32, (add M0, M1)>;
 
 let Size = 32, isAllocatable = 0 in
 def CtrRegs : RegisterClass<"Hexagon", [i32], 32,
-                            (add LC0, SA0, LC1, SA1,
-                                 P3_0, C5,
-                                 M0, M1, C6, C7, C8, CS0, CS1, UPCL, UPCH,
-                                 USR, UGP, GP, PC)>;
+  (add LC0, SA0, LC1, SA1, P3_0, C5, C6, C7,
+       C8, PC, UGP, GP, CS0, CS1, UPCL, UPCH,
+       FRAMELIMIT, FRAMEKEY, PKTCOUNTLO, PKTCOUNTHI, UTIMERLO, UTIMERHI,
+       M0, M1, USR)>;
 
 let isAllocatable = 0 in
 def UsrBits : RegisterClass<"Hexagon", [i1], 0, (add USR_OVF)>;
 
 let Size = 64, isAllocatable = 0 in
 def CtrRegs64 : RegisterClass<"Hexagon", [i64], 64,
-                              (add C1_0, C3_2, C7_6, C9_8, C11_10, CS, UPC)>;
+  (add C1_0, C3_2, C5_4, C7_6, C9_8, C11_10, CS, UPC, C17_16,
+       PKTCOUNT, UTIMER)>;
+
+// These registers are new for v62 and onward.
+// The function RegisterMatchesArch() uses this list for validation.
+let isAllocatable = 0 in
+def V62Regs : RegisterClass<"Hexagon", [i32], 32,
+                            (add FRAMELIMIT, FRAMEKEY,   C17_16,
+                                 PKTCOUNTLO, PKTCOUNTHI, PKTCOUNT,
+                                 UTIMERLO,   UTIMERHI,   UTIMER)>;
 
 def VolatileV3 {
   list<Register> Regs = [D0, D1, D2, D3, D4, D5, D6, D7,

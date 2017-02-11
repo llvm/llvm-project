@@ -3247,6 +3247,17 @@ let opNewValue = 0;
 let prefersSlot3 = 1;
 let Defs = [USR_OVF];
 }
+def A6_vminub_RdP : HInst<
+(outs DoubleRegs:$Rdd32, PredRegs:$Pe4),
+(ins DoubleRegs:$Rtt32, DoubleRegs:$Rss32),
+"$Rdd32,$Pe4 = vminub($Rtt32,$Rss32)",
+M_tc_2_SLOT23, TypeM>, Enc_766909, Requires<[HasV62T]> {
+let Inst{7-7} = 0b0;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b11101010111;
+let isPredicateLate = 1;
+let prefersSlot3 = 1;
+}
 def C2_all8 : HInst<
 (outs PredRegs:$Pd4),
 (ins PredRegs:$Ps4),
@@ -16939,6 +16950,26 @@ let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101000100;
 let prefersSlot3 = 1;
 }
+def M6_vabsdiffb : HInst<
+(outs DoubleRegs:$Rdd32),
+(ins DoubleRegs:$Rtt32, DoubleRegs:$Rss32),
+"$Rdd32 = vabsdiffb($Rtt32,$Rss32)",
+M_tc_2_SLOT23, TypeM>, Enc_11687333, Requires<[HasV62T]> {
+let Inst{7-5} = 0b000;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b11101000111;
+let prefersSlot3 = 1;
+}
+def M6_vabsdiffub : HInst<
+(outs DoubleRegs:$Rdd32),
+(ins DoubleRegs:$Rtt32, DoubleRegs:$Rss32),
+"$Rdd32 = vabsdiffub($Rtt32,$Rss32)",
+M_tc_2_SLOT23, TypeM>, Enc_11687333, Requires<[HasV62T]> {
+let Inst{7-5} = 0b000;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b11101000101;
+let prefersSlot3 = 1;
+}
 def PS_loadrbabs : HInst<
 (outs IntRegs:$Rd32),
 (ins u32_0Imm:$Ii),
@@ -24687,6 +24718,32 @@ let opNewValue = 0;
 let prefersSlot3 = 1;
 let Constraints = "$Rx32 = $Rx32in";
 }
+def S6_vsplatrbp : HInst<
+(outs DoubleRegs:$Rdd32),
+(ins IntRegs:$Rs32),
+"$Rdd32 = vsplatb($Rs32)",
+S_2op_tc_1_SLOT23, TypeS_2op>, Enc_4030179, Requires<[HasV62T]> {
+let Inst{13-5} = 0b000000100;
+let Inst{31-21} = 0b10000100010;
+}
+def S6_vtrunehb_ppp : HInst<
+(outs DoubleRegs:$Rdd32),
+(ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
+"$Rdd32 = vtrunehb($Rss32,$Rtt32)",
+S_3op_tc_1_SLOT23, TypeS_3op>, Enc_8333157, Requires<[HasV62T]> {
+let Inst{7-5} = 0b011;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b11000001100;
+}
+def S6_vtrunohb_ppp : HInst<
+(outs DoubleRegs:$Rdd32),
+(ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
+"$Rdd32 = vtrunohb($Rss32,$Rtt32)",
+S_3op_tc_1_SLOT23, TypeS_3op>, Enc_8333157, Requires<[HasV62T]> {
+let Inst{7-5} = 0b101;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b11000001100;
+}
 def SA1_addi : HInst<
 (outs GeneralSubRegs:$Rx16),
 (ins IntRegs:$Rx16in, s32_0Imm:$Ii),
@@ -25867,6 +25924,52 @@ let isPseudo = 1;
 let DecoderNamespace = "EXT_mmvec";
 let isCodeGenOnly = 1;
 }
+def V6_lvsplatb : HInst<
+(outs VectorRegs:$Vd32),
+(ins IntRegs:$Rt32),
+"$Vd32.b = vsplat($Rt32)",
+CVI_VX, TypeCVI_VX>, Enc_9768377, Requires<[HasV62T,UseHVX]> {
+let Inst{13-5} = 0b000000010;
+let Inst{31-21} = 0b00011001110;
+let hasNewValue = 1;
+let opNewValue = 0;
+let DecoderNamespace = "EXT_mmvec";
+}
+def V6_lvsplatb_128B : HInst<
+(outs VectorRegs128B:$Vd32),
+(ins IntRegs:$Rt32),
+"$Vd32.b = vsplat($Rt32)",
+CVI_VX, TypeCVI_VX>, Enc_9768377, Requires<[HasV62T,UseHVX]> {
+let Inst{13-5} = 0b000000010;
+let Inst{31-21} = 0b00011001110;
+let hasNewValue = 1;
+let opNewValue = 0;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+}
+def V6_lvsplath : HInst<
+(outs VectorRegs:$Vd32),
+(ins IntRegs:$Rt32),
+"$Vd32.h = vsplat($Rt32)",
+CVI_VX, TypeCVI_VX>, Enc_9768377, Requires<[HasV62T,UseHVX]> {
+let Inst{13-5} = 0b000000001;
+let Inst{31-21} = 0b00011001110;
+let hasNewValue = 1;
+let opNewValue = 0;
+let DecoderNamespace = "EXT_mmvec";
+}
+def V6_lvsplath_128B : HInst<
+(outs VectorRegs128B:$Vd32),
+(ins IntRegs:$Rt32),
+"$Vd32.h = vsplat($Rt32)",
+CVI_VX, TypeCVI_VX>, Enc_9768377, Requires<[HasV62T,UseHVX]> {
+let Inst{13-5} = 0b000000001;
+let Inst{31-21} = 0b00011001110;
+let hasNewValue = 1;
+let opNewValue = 0;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+}
 def V6_lvsplatw : HInst<
 (outs VectorRegs:$Vd32),
 (ins IntRegs:$Rt32),
@@ -26046,6 +26149,29 @@ let opNewValue = 0;
 let DecoderNamespace = "EXT_mmvec";
 let isCodeGenOnly = 1;
 }
+def V6_pred_scalar2v2 : HInst<
+(outs VecPredRegs:$Qd4),
+(ins IntRegs:$Rt32),
+"$Qd4 = vsetq2($Rt32)",
+CVI_VP_LONG, TypeCVI_VP>, Enc_12781442, Requires<[HasV62T,UseHVX]> {
+let Inst{13-2} = 0b000000010011;
+let Inst{31-21} = 0b00011001101;
+let hasNewValue = 1;
+let opNewValue = 0;
+let DecoderNamespace = "EXT_mmvec";
+}
+def V6_pred_scalar2v2_128B : HInst<
+(outs VecPredRegs128B:$Qd4),
+(ins IntRegs:$Rt32),
+"$Qd4 = vsetq2($Rt32)",
+CVI_VP_LONG, TypeCVI_VP>, Enc_12781442, Requires<[HasV62T,UseHVX]> {
+let Inst{13-2} = 0b000000010011;
+let Inst{31-21} = 0b00011001101;
+let hasNewValue = 1;
+let opNewValue = 0;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+}
 def V6_pred_xor : HInst<
 (outs VecPredRegs:$Qd4),
 (ins VecPredRegs:$Qs4, VecPredRegs:$Qt4),
@@ -26065,6 +26191,60 @@ def V6_pred_xor_128B : HInst<
 "$Qd4 = xor($Qs4,$Qt4)",
 CVI_VA_DV, TypeCVI_VA_DV>, Enc_6091631, Requires<[HasV60T,UseHVX]> {
 let Inst{7-2} = 0b000011;
+let Inst{13-10} = 0b0000;
+let Inst{21-16} = 0b000011;
+let Inst{31-24} = 0b00011110;
+let hasNewValue = 1;
+let opNewValue = 0;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+}
+def V6_shuffeqh : HInst<
+(outs VecPredRegs:$Qd4),
+(ins VecPredRegs:$Qs4, VecPredRegs:$Qt4),
+"$Qd4.b = vshuffe($Qs4.h,$Qt4.h)",
+CVI_VA_DV, TypeCVI_VA_DV>, Enc_6091631, Requires<[HasV62T,UseHVX]> {
+let Inst{7-2} = 0b000110;
+let Inst{13-10} = 0b0000;
+let Inst{21-16} = 0b000011;
+let Inst{31-24} = 0b00011110;
+let hasNewValue = 1;
+let opNewValue = 0;
+let DecoderNamespace = "EXT_mmvec";
+}
+def V6_shuffeqh_128B : HInst<
+(outs VecPredRegs128B:$Qd4),
+(ins VecPredRegs128B:$Qs4, VecPredRegs128B:$Qt4),
+"$Qd4.b = vshuffe($Qs4.h,$Qt4.h)",
+CVI_VA_DV, TypeCVI_VA_DV>, Enc_6091631, Requires<[HasV62T,UseHVX]> {
+let Inst{7-2} = 0b000110;
+let Inst{13-10} = 0b0000;
+let Inst{21-16} = 0b000011;
+let Inst{31-24} = 0b00011110;
+let hasNewValue = 1;
+let opNewValue = 0;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+}
+def V6_shuffeqw : HInst<
+(outs VecPredRegs:$Qd4),
+(ins VecPredRegs:$Qs4, VecPredRegs:$Qt4),
+"$Qd4.h = vshuffe($Qs4.w,$Qt4.w)",
+CVI_VA_DV, TypeCVI_VA_DV>, Enc_6091631, Requires<[HasV62T,UseHVX]> {
+let Inst{7-2} = 0b000111;
+let Inst{13-10} = 0b0000;
+let Inst{21-16} = 0b000011;
+let Inst{31-24} = 0b00011110;
+let hasNewValue = 1;
+let opNewValue = 0;
+let DecoderNamespace = "EXT_mmvec";
+}
+def V6_shuffeqw_128B : HInst<
+(outs VecPredRegs128B:$Qd4),
+(ins VecPredRegs128B:$Qs4, VecPredRegs128B:$Qt4),
+"$Qd4.h = vshuffe($Qs4.w,$Qt4.w)",
+CVI_VA_DV, TypeCVI_VA_DV>, Enc_6091631, Requires<[HasV62T,UseHVX]> {
+let Inst{7-2} = 0b000111;
 let Inst{13-10} = 0b0000;
 let Inst{21-16} = 0b000011;
 let Inst{31-24} = 0b00011110;
@@ -26531,6 +26711,117 @@ let mayLoad = 1;
 let DecoderNamespace = "EXT_mmvec";
 let isCodeGenOnly = 1;
 }
+def V6_vL32b_cur_npred_ai : HInst<
+(outs VectorRegs:$Vd32),
+(ins PredRegs:$Pv4, IntRegs:$Rt32, s4_6Imm:$Ii),
+"if (!$Pv4) $Vd32.cur = vmem($Rt32+#$Ii)",
+CVI_VM_CUR_LD, TypeCVI_VM_CUR_LD>, Enc_13338314, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b101;
+let Inst{31-21} = 0b00101000100;
+let isPredicated = 1;
+let isPredicatedFalse = 1;
+let hasNewValue = 1;
+let opNewValue = 0;
+let addrMode = BaseImmOffset;
+let accessSize = Vector64Access;
+let isCVLoad = 1;
+let mayLoad = 1;
+let DecoderNamespace = "EXT_mmvec";
+}
+def V6_vL32b_cur_npred_ai_128B : HInst<
+(outs VectorRegs128B:$Vd32),
+(ins PredRegs:$Pv4, IntRegs:$Rt32, s4_7Imm:$Ii),
+"if (!$Pv4) $Vd32.cur = vmem($Rt32+#$Ii)",
+CVI_VM_CUR_LD, TypeCVI_VM_CUR_LD>, Enc_738356, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b101;
+let Inst{31-21} = 0b00101000100;
+let isPredicated = 1;
+let isPredicatedFalse = 1;
+let hasNewValue = 1;
+let opNewValue = 0;
+let addrMode = BaseImmOffset;
+let accessSize = Vector128Access;
+let isCVLoad = 1;
+let mayLoad = 1;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+}
+def V6_vL32b_cur_npred_pi : HInst<
+(outs VectorRegs:$Vd32, IntRegs:$Rx32),
+(ins PredRegs:$Pv4, IntRegs:$Rx32in, s3_6Imm:$Ii),
+"if (!$Pv4) $Vd32.cur = vmem($Rx32++#$Ii)",
+CVI_VM_CUR_LD, TypeCVI_VM_CUR_LD>, Enc_14560494, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b101;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b00101001100;
+let isPredicated = 1;
+let isPredicatedFalse = 1;
+let hasNewValue = 1;
+let opNewValue = 0;
+let addrMode = PostInc;
+let accessSize = Vector64Access;
+let isCVLoad = 1;
+let mayLoad = 1;
+let DecoderNamespace = "EXT_mmvec";
+let Constraints = "$Rx32 = $Rx32in";
+}
+def V6_vL32b_cur_npred_pi_128B : HInst<
+(outs VectorRegs128B:$Vd32, IntRegs:$Rx32),
+(ins PredRegs:$Pv4, IntRegs:$Rx32in, s3_7Imm:$Ii),
+"if (!$Pv4) $Vd32.cur = vmem($Rx32++#$Ii)",
+CVI_VM_CUR_LD, TypeCVI_VM_CUR_LD>, Enc_15560488, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b101;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b00101001100;
+let isPredicated = 1;
+let isPredicatedFalse = 1;
+let hasNewValue = 1;
+let opNewValue = 0;
+let addrMode = PostInc;
+let accessSize = Vector128Access;
+let isCVLoad = 1;
+let mayLoad = 1;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+let Constraints = "$Rx32 = $Rx32in";
+}
+def V6_vL32b_cur_npred_ppu : HInst<
+(outs VectorRegs:$Vd32, IntRegs:$Rx32),
+(ins PredRegs:$Pv4, IntRegs:$Rx32in, ModRegs:$Mu2),
+"if (!$Pv4) $Vd32.cur = vmem($Rx32++$Mu2)",
+CVI_VM_CUR_LD, TypeCVI_VM_CUR_LD>, Enc_3158657, Requires<[HasV62T,UseHVX]> {
+let Inst{10-5} = 0b000101;
+let Inst{31-21} = 0b00101011100;
+let isPredicated = 1;
+let isPredicatedFalse = 1;
+let hasNewValue = 1;
+let opNewValue = 0;
+let addrMode = PostInc;
+let accessSize = Vector64Access;
+let isCVLoad = 1;
+let mayLoad = 1;
+let DecoderNamespace = "EXT_mmvec";
+let Constraints = "$Rx32 = $Rx32in";
+}
+def V6_vL32b_cur_npred_ppu_128B : HInst<
+(outs VectorRegs128B:$Vd32, IntRegs:$Rx32),
+(ins PredRegs:$Pv4, IntRegs:$Rx32in, ModRegs:$Mu2),
+"if (!$Pv4) $Vd32.cur = vmem($Rx32++$Mu2)",
+CVI_VM_CUR_LD, TypeCVI_VM_CUR_LD>, Enc_3158657, Requires<[HasV62T,UseHVX]> {
+let Inst{10-5} = 0b000101;
+let Inst{31-21} = 0b00101011100;
+let isPredicated = 1;
+let isPredicatedFalse = 1;
+let hasNewValue = 1;
+let opNewValue = 0;
+let addrMode = PostInc;
+let accessSize = Vector128Access;
+let isCVLoad = 1;
+let mayLoad = 1;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+let Constraints = "$Rx32 = $Rx32in";
+}
 def V6_vL32b_cur_pi : HInst<
 (outs VectorRegs:$Vd32, IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, s3_6Imm:$Ii),
@@ -26589,6 +26880,222 @@ def V6_vL32b_cur_ppu_128B : HInst<
 CVI_VM_CUR_LD, TypeCVI_VM_CUR_LD>, Enc_15949334, Requires<[HasV60T,UseHVX]> {
 let Inst{12-5} = 0b00000001;
 let Inst{31-21} = 0b00101011000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let addrMode = PostInc;
+let accessSize = Vector128Access;
+let isCVLoad = 1;
+let mayLoad = 1;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+let Constraints = "$Rx32 = $Rx32in";
+}
+def V6_vL32b_cur_pred_ai : HInst<
+(outs VectorRegs:$Vd32),
+(ins PredRegs:$Pv4, IntRegs:$Rt32, s4_6Imm:$Ii),
+"if ($Pv4) $Vd32.cur = vmem($Rt32+#$Ii)",
+CVI_VM_CUR_LD, TypeCVI_VM_CUR_LD>, Enc_13338314, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b100;
+let Inst{31-21} = 0b00101000100;
+let isPredicated = 1;
+let hasNewValue = 1;
+let opNewValue = 0;
+let addrMode = BaseImmOffset;
+let accessSize = Vector64Access;
+let isCVLoad = 1;
+let mayLoad = 1;
+let DecoderNamespace = "EXT_mmvec";
+}
+def V6_vL32b_cur_pred_ai_128B : HInst<
+(outs VectorRegs128B:$Vd32),
+(ins PredRegs:$Pv4, IntRegs:$Rt32, s4_7Imm:$Ii),
+"if ($Pv4) $Vd32.cur = vmem($Rt32+#$Ii)",
+CVI_VM_CUR_LD, TypeCVI_VM_CUR_LD>, Enc_738356, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b100;
+let Inst{31-21} = 0b00101000100;
+let isPredicated = 1;
+let hasNewValue = 1;
+let opNewValue = 0;
+let addrMode = BaseImmOffset;
+let accessSize = Vector128Access;
+let isCVLoad = 1;
+let mayLoad = 1;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+}
+def V6_vL32b_cur_pred_pi : HInst<
+(outs VectorRegs:$Vd32, IntRegs:$Rx32),
+(ins PredRegs:$Pv4, IntRegs:$Rx32in, s3_6Imm:$Ii),
+"if ($Pv4) $Vd32.cur = vmem($Rx32++#$Ii)",
+CVI_VM_CUR_LD, TypeCOPROC_VMEM>, Enc_14560494, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b100;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b00101001100;
+let isPredicated = 1;
+let hasNewValue = 1;
+let opNewValue = 0;
+let addrMode = PostInc;
+let accessSize = Vector64Access;
+let isCVLoad = 1;
+let mayLoad = 1;
+let DecoderNamespace = "EXT_mmvec";
+let Constraints = "$Rx32 = $Rx32in";
+}
+def V6_vL32b_cur_pred_pi_128B : HInst<
+(outs VectorRegs128B:$Vd32, IntRegs:$Rx32),
+(ins PredRegs:$Pv4, IntRegs:$Rx32in, s3_7Imm:$Ii),
+"if ($Pv4) $Vd32.cur = vmem($Rx32++#$Ii)",
+CVI_VM_CUR_LD, TypeCOPROC_VMEM>, Enc_15560488, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b100;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b00101001100;
+let isPredicated = 1;
+let hasNewValue = 1;
+let opNewValue = 0;
+let addrMode = PostInc;
+let accessSize = Vector128Access;
+let isCVLoad = 1;
+let mayLoad = 1;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+let Constraints = "$Rx32 = $Rx32in";
+}
+def V6_vL32b_cur_pred_ppu : HInst<
+(outs VectorRegs:$Vd32, IntRegs:$Rx32),
+(ins PredRegs:$Pv4, IntRegs:$Rx32in, ModRegs:$Mu2),
+"if ($Pv4) $Vd32.cur = vmem($Rx32++$Mu2)",
+CVI_VM_CUR_LD, TypeCVI_VM_CUR_LD>, Enc_3158657, Requires<[HasV62T,UseHVX]> {
+let Inst{10-5} = 0b000100;
+let Inst{31-21} = 0b00101011100;
+let isPredicated = 1;
+let hasNewValue = 1;
+let opNewValue = 0;
+let addrMode = PostInc;
+let accessSize = Vector64Access;
+let isCVLoad = 1;
+let mayLoad = 1;
+let DecoderNamespace = "EXT_mmvec";
+let Constraints = "$Rx32 = $Rx32in";
+}
+def V6_vL32b_cur_pred_ppu_128B : HInst<
+(outs VectorRegs128B:$Vd32, IntRegs:$Rx32),
+(ins PredRegs:$Pv4, IntRegs:$Rx32in, ModRegs:$Mu2),
+"if ($Pv4) $Vd32.cur = vmem($Rx32++$Mu2)",
+CVI_VM_CUR_LD, TypeCVI_VM_CUR_LD>, Enc_3158657, Requires<[HasV62T,UseHVX]> {
+let Inst{10-5} = 0b000100;
+let Inst{31-21} = 0b00101011100;
+let isPredicated = 1;
+let hasNewValue = 1;
+let opNewValue = 0;
+let addrMode = PostInc;
+let accessSize = Vector128Access;
+let isCVLoad = 1;
+let mayLoad = 1;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+let Constraints = "$Rx32 = $Rx32in";
+}
+def V6_vL32b_npred_ai : HInst<
+(outs VectorRegs:$Vd32),
+(ins PredRegs:$Pv4, IntRegs:$Rt32, s4_6Imm:$Ii),
+"if (!$Pv4) $Vd32 = vmem($Rt32+#$Ii)",
+CVI_VM_LD, TypeCVI_VM_LD>, Enc_13338314, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b011;
+let Inst{31-21} = 0b00101000100;
+let isPredicated = 1;
+let isPredicatedFalse = 1;
+let hasNewValue = 1;
+let opNewValue = 0;
+let addrMode = BaseImmOffset;
+let accessSize = Vector64Access;
+let isCVLoad = 1;
+let mayLoad = 1;
+let DecoderNamespace = "EXT_mmvec";
+}
+def V6_vL32b_npred_ai_128B : HInst<
+(outs VectorRegs128B:$Vd32),
+(ins PredRegs:$Pv4, IntRegs:$Rt32, s4_7Imm:$Ii),
+"if (!$Pv4) $Vd32 = vmem($Rt32+#$Ii)",
+CVI_VM_LD, TypeCVI_VM_LD>, Enc_738356, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b011;
+let Inst{31-21} = 0b00101000100;
+let isPredicated = 1;
+let isPredicatedFalse = 1;
+let hasNewValue = 1;
+let opNewValue = 0;
+let addrMode = BaseImmOffset;
+let accessSize = Vector128Access;
+let isCVLoad = 1;
+let mayLoad = 1;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+}
+def V6_vL32b_npred_pi : HInst<
+(outs VectorRegs:$Vd32, IntRegs:$Rx32),
+(ins PredRegs:$Pv4, IntRegs:$Rx32in, s3_6Imm:$Ii),
+"if (!$Pv4) $Vd32 = vmem($Rx32++#$Ii)",
+CVI_VM_LD, TypeCVI_VM_LD>, Enc_14560494, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b011;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b00101001100;
+let isPredicated = 1;
+let isPredicatedFalse = 1;
+let hasNewValue = 1;
+let opNewValue = 0;
+let addrMode = PostInc;
+let accessSize = Vector64Access;
+let isCVLoad = 1;
+let mayLoad = 1;
+let DecoderNamespace = "EXT_mmvec";
+let Constraints = "$Rx32 = $Rx32in";
+}
+def V6_vL32b_npred_pi_128B : HInst<
+(outs VectorRegs128B:$Vd32, IntRegs:$Rx32),
+(ins PredRegs:$Pv4, IntRegs:$Rx32in, s3_7Imm:$Ii),
+"if (!$Pv4) $Vd32 = vmem($Rx32++#$Ii)",
+CVI_VM_LD, TypeCVI_VM_LD>, Enc_15560488, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b011;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b00101001100;
+let isPredicated = 1;
+let isPredicatedFalse = 1;
+let hasNewValue = 1;
+let opNewValue = 0;
+let addrMode = PostInc;
+let accessSize = Vector128Access;
+let isCVLoad = 1;
+let mayLoad = 1;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+let Constraints = "$Rx32 = $Rx32in";
+}
+def V6_vL32b_npred_ppu : HInst<
+(outs VectorRegs:$Vd32, IntRegs:$Rx32),
+(ins PredRegs:$Pv4, IntRegs:$Rx32in, ModRegs:$Mu2),
+"if (!$Pv4) $Vd32 = vmem($Rx32++$Mu2)",
+CVI_VM_LD, TypeCVI_VM_LD>, Enc_3158657, Requires<[HasV62T,UseHVX]> {
+let Inst{10-5} = 0b000011;
+let Inst{31-21} = 0b00101011100;
+let isPredicated = 1;
+let isPredicatedFalse = 1;
+let hasNewValue = 1;
+let opNewValue = 0;
+let addrMode = PostInc;
+let accessSize = Vector64Access;
+let isCVLoad = 1;
+let mayLoad = 1;
+let DecoderNamespace = "EXT_mmvec";
+let Constraints = "$Rx32 = $Rx32in";
+}
+def V6_vL32b_npred_ppu_128B : HInst<
+(outs VectorRegs128B:$Vd32, IntRegs:$Rx32),
+(ins PredRegs:$Pv4, IntRegs:$Rx32in, ModRegs:$Mu2),
+"if (!$Pv4) $Vd32 = vmem($Rx32++$Mu2)",
+CVI_VM_LD, TypeCVI_VM_LD>, Enc_3158657, Requires<[HasV62T,UseHVX]> {
+let Inst{10-5} = 0b000011;
+let Inst{31-21} = 0b00101011100;
+let isPredicated = 1;
+let isPredicatedFalse = 1;
 let hasNewValue = 1;
 let opNewValue = 0;
 let addrMode = PostInc;
@@ -26671,6 +27178,123 @@ let mayLoad = 1;
 let DecoderNamespace = "EXT_mmvec";
 let isCodeGenOnly = 1;
 }
+def V6_vL32b_nt_cur_npred_ai : HInst<
+(outs VectorRegs:$Vd32),
+(ins PredRegs:$Pv4, IntRegs:$Rt32, s4_6Imm:$Ii),
+"if (!$Pv4) $Vd32.cur = vmem($Rt32+#$Ii):nt",
+CVI_VM_CUR_LD, TypeCVI_VM_CUR_LD>, Enc_13338314, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b101;
+let Inst{31-21} = 0b00101000110;
+let isPredicated = 1;
+let isPredicatedFalse = 1;
+let hasNewValue = 1;
+let opNewValue = 0;
+let addrMode = BaseImmOffset;
+let accessSize = Vector64Access;
+let isCVLoad = 1;
+let isNonTemporal = 1;
+let mayLoad = 1;
+let DecoderNamespace = "EXT_mmvec";
+}
+def V6_vL32b_nt_cur_npred_ai_128B : HInst<
+(outs VectorRegs128B:$Vd32),
+(ins PredRegs:$Pv4, IntRegs:$Rt32, s4_7Imm:$Ii),
+"if (!$Pv4) $Vd32.cur = vmem($Rt32+#$Ii):nt",
+CVI_VM_CUR_LD, TypeCVI_VM_CUR_LD>, Enc_738356, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b101;
+let Inst{31-21} = 0b00101000110;
+let isPredicated = 1;
+let isPredicatedFalse = 1;
+let hasNewValue = 1;
+let opNewValue = 0;
+let addrMode = BaseImmOffset;
+let accessSize = Vector128Access;
+let isCVLoad = 1;
+let isNonTemporal = 1;
+let mayLoad = 1;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+}
+def V6_vL32b_nt_cur_npred_pi : HInst<
+(outs VectorRegs:$Vd32, IntRegs:$Rx32),
+(ins PredRegs:$Pv4, IntRegs:$Rx32in, s3_6Imm:$Ii),
+"if (!$Pv4) $Vd32.cur = vmem($Rx32++#$Ii):nt",
+CVI_VM_CUR_LD, TypeCVI_VM_CUR_LD>, Enc_14560494, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b101;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b00101001110;
+let isPredicated = 1;
+let isPredicatedFalse = 1;
+let hasNewValue = 1;
+let opNewValue = 0;
+let addrMode = PostInc;
+let accessSize = Vector64Access;
+let isCVLoad = 1;
+let isNonTemporal = 1;
+let mayLoad = 1;
+let DecoderNamespace = "EXT_mmvec";
+let Constraints = "$Rx32 = $Rx32in";
+}
+def V6_vL32b_nt_cur_npred_pi_128B : HInst<
+(outs VectorRegs128B:$Vd32, IntRegs:$Rx32),
+(ins PredRegs:$Pv4, IntRegs:$Rx32in, s3_7Imm:$Ii),
+"if (!$Pv4) $Vd32.cur = vmem($Rx32++#$Ii):nt",
+CVI_VM_CUR_LD, TypeCVI_VM_CUR_LD>, Enc_15560488, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b101;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b00101001110;
+let isPredicated = 1;
+let isPredicatedFalse = 1;
+let hasNewValue = 1;
+let opNewValue = 0;
+let addrMode = PostInc;
+let accessSize = Vector128Access;
+let isCVLoad = 1;
+let isNonTemporal = 1;
+let mayLoad = 1;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+let Constraints = "$Rx32 = $Rx32in";
+}
+def V6_vL32b_nt_cur_npred_ppu : HInst<
+(outs VectorRegs:$Vd32, IntRegs:$Rx32),
+(ins PredRegs:$Pv4, IntRegs:$Rx32in, ModRegs:$Mu2),
+"if (!$Pv4) $Vd32.cur = vmem($Rx32++$Mu2):nt",
+CVI_VM_CUR_LD, TypeCVI_VM_CUR_LD>, Enc_3158657, Requires<[HasV62T,UseHVX]> {
+let Inst{10-5} = 0b000101;
+let Inst{31-21} = 0b00101011110;
+let isPredicated = 1;
+let isPredicatedFalse = 1;
+let hasNewValue = 1;
+let opNewValue = 0;
+let addrMode = PostInc;
+let accessSize = Vector64Access;
+let isCVLoad = 1;
+let isNonTemporal = 1;
+let mayLoad = 1;
+let DecoderNamespace = "EXT_mmvec";
+let Constraints = "$Rx32 = $Rx32in";
+}
+def V6_vL32b_nt_cur_npred_ppu_128B : HInst<
+(outs VectorRegs128B:$Vd32, IntRegs:$Rx32),
+(ins PredRegs:$Pv4, IntRegs:$Rx32in, ModRegs:$Mu2),
+"if (!$Pv4) $Vd32.cur = vmem($Rx32++$Mu2):nt",
+CVI_VM_CUR_LD, TypeCVI_VM_CUR_LD>, Enc_3158657, Requires<[HasV62T,UseHVX]> {
+let Inst{10-5} = 0b000101;
+let Inst{31-21} = 0b00101011110;
+let isPredicated = 1;
+let isPredicatedFalse = 1;
+let hasNewValue = 1;
+let opNewValue = 0;
+let addrMode = PostInc;
+let accessSize = Vector128Access;
+let isCVLoad = 1;
+let isNonTemporal = 1;
+let mayLoad = 1;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+let Constraints = "$Rx32 = $Rx32in";
+}
 def V6_vL32b_nt_cur_pi : HInst<
 (outs VectorRegs:$Vd32, IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, s3_6Imm:$Ii),
@@ -26732,6 +27356,234 @@ def V6_vL32b_nt_cur_ppu_128B : HInst<
 CVI_VM_CUR_LD, TypeCVI_VM_CUR_LD>, Enc_15949334, Requires<[HasV60T,UseHVX]> {
 let Inst{12-5} = 0b00000001;
 let Inst{31-21} = 0b00101011010;
+let hasNewValue = 1;
+let opNewValue = 0;
+let addrMode = PostInc;
+let accessSize = Vector128Access;
+let isCVLoad = 1;
+let isNonTemporal = 1;
+let mayLoad = 1;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+let Constraints = "$Rx32 = $Rx32in";
+}
+def V6_vL32b_nt_cur_pred_ai : HInst<
+(outs VectorRegs:$Vd32),
+(ins PredRegs:$Pv4, IntRegs:$Rt32, s4_6Imm:$Ii),
+"if ($Pv4) $Vd32.cur = vmem($Rt32+#$Ii):nt",
+CVI_VM_CUR_LD, TypeCVI_VM_CUR_LD>, Enc_13338314, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b100;
+let Inst{31-21} = 0b00101000110;
+let isPredicated = 1;
+let hasNewValue = 1;
+let opNewValue = 0;
+let addrMode = BaseImmOffset;
+let accessSize = Vector64Access;
+let isCVLoad = 1;
+let isNonTemporal = 1;
+let mayLoad = 1;
+let DecoderNamespace = "EXT_mmvec";
+}
+def V6_vL32b_nt_cur_pred_ai_128B : HInst<
+(outs VectorRegs128B:$Vd32),
+(ins PredRegs:$Pv4, IntRegs:$Rt32, s4_7Imm:$Ii),
+"if ($Pv4) $Vd32.cur = vmem($Rt32+#$Ii):nt",
+CVI_VM_CUR_LD, TypeCVI_VM_CUR_LD>, Enc_738356, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b100;
+let Inst{31-21} = 0b00101000110;
+let isPredicated = 1;
+let hasNewValue = 1;
+let opNewValue = 0;
+let addrMode = BaseImmOffset;
+let accessSize = Vector128Access;
+let isCVLoad = 1;
+let isNonTemporal = 1;
+let mayLoad = 1;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+}
+def V6_vL32b_nt_cur_pred_pi : HInst<
+(outs VectorRegs:$Vd32, IntRegs:$Rx32),
+(ins PredRegs:$Pv4, IntRegs:$Rx32in, s3_6Imm:$Ii),
+"if ($Pv4) $Vd32.cur = vmem($Rx32++#$Ii):nt",
+CVI_VM_CUR_LD, TypeCVI_VM_CUR_LD>, Enc_14560494, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b100;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b00101001110;
+let isPredicated = 1;
+let hasNewValue = 1;
+let opNewValue = 0;
+let addrMode = PostInc;
+let accessSize = Vector64Access;
+let isCVLoad = 1;
+let isNonTemporal = 1;
+let mayLoad = 1;
+let DecoderNamespace = "EXT_mmvec";
+let Constraints = "$Rx32 = $Rx32in";
+}
+def V6_vL32b_nt_cur_pred_pi_128B : HInst<
+(outs VectorRegs128B:$Vd32, IntRegs:$Rx32),
+(ins PredRegs:$Pv4, IntRegs:$Rx32in, s3_7Imm:$Ii),
+"if ($Pv4) $Vd32.cur = vmem($Rx32++#$Ii):nt",
+CVI_VM_CUR_LD, TypeCVI_VM_CUR_LD>, Enc_15560488, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b100;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b00101001110;
+let isPredicated = 1;
+let hasNewValue = 1;
+let opNewValue = 0;
+let addrMode = PostInc;
+let accessSize = Vector128Access;
+let isCVLoad = 1;
+let isNonTemporal = 1;
+let mayLoad = 1;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+let Constraints = "$Rx32 = $Rx32in";
+}
+def V6_vL32b_nt_cur_pred_ppu : HInst<
+(outs VectorRegs:$Vd32, IntRegs:$Rx32),
+(ins PredRegs:$Pv4, IntRegs:$Rx32in, ModRegs:$Mu2),
+"if ($Pv4) $Vd32.cur = vmem($Rx32++$Mu2):nt",
+CVI_VM_CUR_LD, TypeCOPROC_VMEM>, Enc_3158657, Requires<[HasV62T,UseHVX]> {
+let Inst{10-5} = 0b000100;
+let Inst{31-21} = 0b00101011110;
+let isPredicated = 1;
+let hasNewValue = 1;
+let opNewValue = 0;
+let addrMode = PostInc;
+let accessSize = Vector64Access;
+let isCVLoad = 1;
+let isNonTemporal = 1;
+let mayLoad = 1;
+let DecoderNamespace = "EXT_mmvec";
+let Constraints = "$Rx32 = $Rx32in";
+}
+def V6_vL32b_nt_cur_pred_ppu_128B : HInst<
+(outs VectorRegs128B:$Vd32, IntRegs:$Rx32),
+(ins PredRegs:$Pv4, IntRegs:$Rx32in, ModRegs:$Mu2),
+"if ($Pv4) $Vd32.cur = vmem($Rx32++$Mu2):nt",
+CVI_VM_CUR_LD, TypeCOPROC_VMEM>, Enc_3158657, Requires<[HasV62T,UseHVX]> {
+let Inst{10-5} = 0b000100;
+let Inst{31-21} = 0b00101011110;
+let isPredicated = 1;
+let hasNewValue = 1;
+let opNewValue = 0;
+let addrMode = PostInc;
+let accessSize = Vector128Access;
+let isCVLoad = 1;
+let isNonTemporal = 1;
+let mayLoad = 1;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+let Constraints = "$Rx32 = $Rx32in";
+}
+def V6_vL32b_nt_npred_ai : HInst<
+(outs VectorRegs:$Vd32),
+(ins PredRegs:$Pv4, IntRegs:$Rt32, s4_6Imm:$Ii),
+"if (!$Pv4) $Vd32 = vmem($Rt32+#$Ii):nt",
+CVI_VM_LD, TypeCVI_VM_LD>, Enc_13338314, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b011;
+let Inst{31-21} = 0b00101000110;
+let isPredicated = 1;
+let isPredicatedFalse = 1;
+let hasNewValue = 1;
+let opNewValue = 0;
+let addrMode = BaseImmOffset;
+let accessSize = Vector64Access;
+let isCVLoad = 1;
+let isNonTemporal = 1;
+let mayLoad = 1;
+let DecoderNamespace = "EXT_mmvec";
+}
+def V6_vL32b_nt_npred_ai_128B : HInst<
+(outs VectorRegs128B:$Vd32),
+(ins PredRegs:$Pv4, IntRegs:$Rt32, s4_7Imm:$Ii),
+"if (!$Pv4) $Vd32 = vmem($Rt32+#$Ii):nt",
+CVI_VM_LD, TypeCVI_VM_LD>, Enc_738356, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b011;
+let Inst{31-21} = 0b00101000110;
+let isPredicated = 1;
+let isPredicatedFalse = 1;
+let hasNewValue = 1;
+let opNewValue = 0;
+let addrMode = BaseImmOffset;
+let accessSize = Vector128Access;
+let isCVLoad = 1;
+let isNonTemporal = 1;
+let mayLoad = 1;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+}
+def V6_vL32b_nt_npred_pi : HInst<
+(outs VectorRegs:$Vd32, IntRegs:$Rx32),
+(ins PredRegs:$Pv4, IntRegs:$Rx32in, s3_6Imm:$Ii),
+"if (!$Pv4) $Vd32 = vmem($Rx32++#$Ii):nt",
+CVI_VM_LD, TypeCVI_VM_LD>, Enc_14560494, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b011;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b00101001110;
+let isPredicated = 1;
+let isPredicatedFalse = 1;
+let hasNewValue = 1;
+let opNewValue = 0;
+let addrMode = PostInc;
+let accessSize = Vector64Access;
+let isCVLoad = 1;
+let isNonTemporal = 1;
+let mayLoad = 1;
+let DecoderNamespace = "EXT_mmvec";
+let Constraints = "$Rx32 = $Rx32in";
+}
+def V6_vL32b_nt_npred_pi_128B : HInst<
+(outs VectorRegs128B:$Vd32, IntRegs:$Rx32),
+(ins PredRegs:$Pv4, IntRegs:$Rx32in, s3_7Imm:$Ii),
+"if (!$Pv4) $Vd32 = vmem($Rx32++#$Ii):nt",
+CVI_VM_LD, TypeCVI_VM_LD>, Enc_15560488, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b011;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b00101001110;
+let isPredicated = 1;
+let isPredicatedFalse = 1;
+let hasNewValue = 1;
+let opNewValue = 0;
+let addrMode = PostInc;
+let accessSize = Vector128Access;
+let isCVLoad = 1;
+let isNonTemporal = 1;
+let mayLoad = 1;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+let Constraints = "$Rx32 = $Rx32in";
+}
+def V6_vL32b_nt_npred_ppu : HInst<
+(outs VectorRegs:$Vd32, IntRegs:$Rx32),
+(ins PredRegs:$Pv4, IntRegs:$Rx32in, ModRegs:$Mu2),
+"if (!$Pv4) $Vd32 = vmem($Rx32++$Mu2):nt",
+CVI_VM_LD, TypeCVI_VM_LD>, Enc_3158657, Requires<[HasV62T,UseHVX]> {
+let Inst{10-5} = 0b000011;
+let Inst{31-21} = 0b00101011110;
+let isPredicated = 1;
+let isPredicatedFalse = 1;
+let hasNewValue = 1;
+let opNewValue = 0;
+let addrMode = PostInc;
+let accessSize = Vector64Access;
+let isCVLoad = 1;
+let isNonTemporal = 1;
+let mayLoad = 1;
+let DecoderNamespace = "EXT_mmvec";
+let Constraints = "$Rx32 = $Rx32in";
+}
+def V6_vL32b_nt_npred_ppu_128B : HInst<
+(outs VectorRegs128B:$Vd32, IntRegs:$Rx32),
+(ins PredRegs:$Pv4, IntRegs:$Rx32in, ModRegs:$Mu2),
+"if (!$Pv4) $Vd32 = vmem($Rx32++$Mu2):nt",
+CVI_VM_LD, TypeCVI_VM_LD>, Enc_3158657, Requires<[HasV62T,UseHVX]> {
+let Inst{10-5} = 0b000011;
+let Inst{31-21} = 0b00101011110;
+let isPredicated = 1;
+let isPredicatedFalse = 1;
 let hasNewValue = 1;
 let opNewValue = 0;
 let addrMode = PostInc;
@@ -26819,6 +27671,117 @@ let DecoderNamespace = "EXT_mmvec";
 let isCodeGenOnly = 1;
 let Constraints = "$Rx32 = $Rx32in";
 }
+def V6_vL32b_nt_pred_ai : HInst<
+(outs VectorRegs:$Vd32),
+(ins PredRegs:$Pv4, IntRegs:$Rt32, s4_6Imm:$Ii),
+"if ($Pv4) $Vd32 = vmem($Rt32+#$Ii):nt",
+CVI_VM_LD, TypeCVI_VM_LD>, Enc_13338314, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b010;
+let Inst{31-21} = 0b00101000110;
+let isPredicated = 1;
+let hasNewValue = 1;
+let opNewValue = 0;
+let addrMode = BaseImmOffset;
+let accessSize = Vector64Access;
+let isCVLoad = 1;
+let isNonTemporal = 1;
+let mayLoad = 1;
+let DecoderNamespace = "EXT_mmvec";
+}
+def V6_vL32b_nt_pred_ai_128B : HInst<
+(outs VectorRegs128B:$Vd32),
+(ins PredRegs:$Pv4, IntRegs:$Rt32, s4_7Imm:$Ii),
+"if ($Pv4) $Vd32 = vmem($Rt32+#$Ii):nt",
+CVI_VM_LD, TypeCVI_VM_LD>, Enc_738356, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b010;
+let Inst{31-21} = 0b00101000110;
+let isPredicated = 1;
+let hasNewValue = 1;
+let opNewValue = 0;
+let addrMode = BaseImmOffset;
+let accessSize = Vector128Access;
+let isCVLoad = 1;
+let isNonTemporal = 1;
+let mayLoad = 1;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+}
+def V6_vL32b_nt_pred_pi : HInst<
+(outs VectorRegs:$Vd32, IntRegs:$Rx32),
+(ins PredRegs:$Pv4, IntRegs:$Rx32in, s3_6Imm:$Ii),
+"if ($Pv4) $Vd32 = vmem($Rx32++#$Ii):nt",
+CVI_VM_LD, TypeCVI_VM_LD>, Enc_14560494, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b010;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b00101001110;
+let isPredicated = 1;
+let hasNewValue = 1;
+let opNewValue = 0;
+let addrMode = PostInc;
+let accessSize = Vector64Access;
+let isCVLoad = 1;
+let isNonTemporal = 1;
+let mayLoad = 1;
+let DecoderNamespace = "EXT_mmvec";
+let Constraints = "$Rx32 = $Rx32in";
+}
+def V6_vL32b_nt_pred_pi_128B : HInst<
+(outs VectorRegs128B:$Vd32, IntRegs:$Rx32),
+(ins PredRegs:$Pv4, IntRegs:$Rx32in, s3_7Imm:$Ii),
+"if ($Pv4) $Vd32 = vmem($Rx32++#$Ii):nt",
+CVI_VM_LD, TypeCVI_VM_LD>, Enc_15560488, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b010;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b00101001110;
+let isPredicated = 1;
+let hasNewValue = 1;
+let opNewValue = 0;
+let addrMode = PostInc;
+let accessSize = Vector128Access;
+let isCVLoad = 1;
+let isNonTemporal = 1;
+let mayLoad = 1;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+let Constraints = "$Rx32 = $Rx32in";
+}
+def V6_vL32b_nt_pred_ppu : HInst<
+(outs VectorRegs:$Vd32, IntRegs:$Rx32),
+(ins PredRegs:$Pv4, IntRegs:$Rx32in, ModRegs:$Mu2),
+"if ($Pv4) $Vd32 = vmem($Rx32++$Mu2):nt",
+CVI_VM_LD, TypeCVI_VM_LD>, Enc_3158657, Requires<[HasV62T,UseHVX]> {
+let Inst{10-5} = 0b000010;
+let Inst{31-21} = 0b00101011110;
+let isPredicated = 1;
+let hasNewValue = 1;
+let opNewValue = 0;
+let addrMode = PostInc;
+let accessSize = Vector64Access;
+let isCVLoad = 1;
+let isNonTemporal = 1;
+let mayLoad = 1;
+let DecoderNamespace = "EXT_mmvec";
+let Constraints = "$Rx32 = $Rx32in";
+}
+def V6_vL32b_nt_pred_ppu_128B : HInst<
+(outs VectorRegs128B:$Vd32, IntRegs:$Rx32),
+(ins PredRegs:$Pv4, IntRegs:$Rx32in, ModRegs:$Mu2),
+"if ($Pv4) $Vd32 = vmem($Rx32++$Mu2):nt",
+CVI_VM_LD, TypeCVI_VM_LD>, Enc_3158657, Requires<[HasV62T,UseHVX]> {
+let Inst{10-5} = 0b000010;
+let Inst{31-21} = 0b00101011110;
+let isPredicated = 1;
+let hasNewValue = 1;
+let opNewValue = 0;
+let addrMode = PostInc;
+let accessSize = Vector128Access;
+let isCVLoad = 1;
+let isNonTemporal = 1;
+let mayLoad = 1;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+let Constraints = "$Rx32 = $Rx32in";
+}
 def V6_vL32b_nt_tmp_ai : HInst<
 (outs VectorRegs:$Vd32),
 (ins IntRegs:$Rt32, s4_6Imm:$Ii),
@@ -26853,6 +27816,123 @@ let isNonTemporal = 1;
 let mayLoad = 1;
 let DecoderNamespace = "EXT_mmvec";
 let isCodeGenOnly = 1;
+}
+def V6_vL32b_nt_tmp_npred_ai : HInst<
+(outs VectorRegs:$Vd32),
+(ins PredRegs:$Pv4, IntRegs:$Rt32, s4_6Imm:$Ii),
+"if (!$Pv4) $Vd32.tmp = vmem($Rt32+#$Ii):nt",
+CVI_VM_TMP_LD, TypeCVI_VM_TMP_LD>, Enc_13338314, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b111;
+let Inst{31-21} = 0b00101000110;
+let isPredicated = 1;
+let isPredicatedFalse = 1;
+let hasNewValue = 1;
+let opNewValue = 0;
+let addrMode = BaseImmOffset;
+let accessSize = Vector64Access;
+let isCVLoad = 1;
+let isNonTemporal = 1;
+let mayLoad = 1;
+let DecoderNamespace = "EXT_mmvec";
+}
+def V6_vL32b_nt_tmp_npred_ai_128B : HInst<
+(outs VectorRegs128B:$Vd32),
+(ins PredRegs:$Pv4, IntRegs:$Rt32, s4_7Imm:$Ii),
+"if (!$Pv4) $Vd32.tmp = vmem($Rt32+#$Ii):nt",
+CVI_VM_TMP_LD, TypeCVI_VM_TMP_LD>, Enc_738356, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b111;
+let Inst{31-21} = 0b00101000110;
+let isPredicated = 1;
+let isPredicatedFalse = 1;
+let hasNewValue = 1;
+let opNewValue = 0;
+let addrMode = BaseImmOffset;
+let accessSize = Vector128Access;
+let isCVLoad = 1;
+let isNonTemporal = 1;
+let mayLoad = 1;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+}
+def V6_vL32b_nt_tmp_npred_pi : HInst<
+(outs VectorRegs:$Vd32, IntRegs:$Rx32),
+(ins PredRegs:$Pv4, IntRegs:$Rx32in, s3_6Imm:$Ii),
+"if (!$Pv4) $Vd32.tmp = vmem($Rx32++#$Ii):nt",
+CVI_VM_TMP_LD, TypeCVI_VM_TMP_LD>, Enc_14560494, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b111;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b00101001110;
+let isPredicated = 1;
+let isPredicatedFalse = 1;
+let hasNewValue = 1;
+let opNewValue = 0;
+let addrMode = PostInc;
+let accessSize = Vector64Access;
+let isCVLoad = 1;
+let isNonTemporal = 1;
+let mayLoad = 1;
+let DecoderNamespace = "EXT_mmvec";
+let Constraints = "$Rx32 = $Rx32in";
+}
+def V6_vL32b_nt_tmp_npred_pi_128B : HInst<
+(outs VectorRegs128B:$Vd32, IntRegs:$Rx32),
+(ins PredRegs:$Pv4, IntRegs:$Rx32in, s3_7Imm:$Ii),
+"if (!$Pv4) $Vd32.tmp = vmem($Rx32++#$Ii):nt",
+CVI_VM_TMP_LD, TypeCVI_VM_TMP_LD>, Enc_15560488, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b111;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b00101001110;
+let isPredicated = 1;
+let isPredicatedFalse = 1;
+let hasNewValue = 1;
+let opNewValue = 0;
+let addrMode = PostInc;
+let accessSize = Vector128Access;
+let isCVLoad = 1;
+let isNonTemporal = 1;
+let mayLoad = 1;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+let Constraints = "$Rx32 = $Rx32in";
+}
+def V6_vL32b_nt_tmp_npred_ppu : HInst<
+(outs VectorRegs:$Vd32, IntRegs:$Rx32),
+(ins PredRegs:$Pv4, IntRegs:$Rx32in, ModRegs:$Mu2),
+"if (!$Pv4) $Vd32.tmp = vmem($Rx32++$Mu2):nt",
+CVI_VM_TMP_LD, TypeCVI_VM_TMP_LD>, Enc_3158657, Requires<[HasV62T,UseHVX]> {
+let Inst{10-5} = 0b000111;
+let Inst{31-21} = 0b00101011110;
+let isPredicated = 1;
+let isPredicatedFalse = 1;
+let hasNewValue = 1;
+let opNewValue = 0;
+let addrMode = PostInc;
+let accessSize = Vector64Access;
+let isCVLoad = 1;
+let isNonTemporal = 1;
+let mayLoad = 1;
+let DecoderNamespace = "EXT_mmvec";
+let Constraints = "$Rx32 = $Rx32in";
+}
+def V6_vL32b_nt_tmp_npred_ppu_128B : HInst<
+(outs VectorRegs128B:$Vd32, IntRegs:$Rx32),
+(ins PredRegs:$Pv4, IntRegs:$Rx32in, ModRegs:$Mu2),
+"if (!$Pv4) $Vd32.tmp = vmem($Rx32++$Mu2):nt",
+CVI_VM_TMP_LD, TypeCVI_VM_TMP_LD>, Enc_3158657, Requires<[HasV62T,UseHVX]> {
+let Inst{10-5} = 0b000111;
+let Inst{31-21} = 0b00101011110;
+let isPredicated = 1;
+let isPredicatedFalse = 1;
+let hasNewValue = 1;
+let opNewValue = 0;
+let addrMode = PostInc;
+let accessSize = Vector128Access;
+let isCVLoad = 1;
+let isNonTemporal = 1;
+let mayLoad = 1;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+let Constraints = "$Rx32 = $Rx32in";
 }
 def V6_vL32b_nt_tmp_pi : HInst<
 (outs VectorRegs:$Vd32, IntRegs:$Rx32),
@@ -26915,6 +27995,117 @@ def V6_vL32b_nt_tmp_ppu_128B : HInst<
 CVI_VM_TMP_LD, TypeCVI_VM_TMP_LD>, Enc_15949334, Requires<[HasV60T,UseHVX]> {
 let Inst{12-5} = 0b00000010;
 let Inst{31-21} = 0b00101011010;
+let hasNewValue = 1;
+let opNewValue = 0;
+let addrMode = PostInc;
+let accessSize = Vector128Access;
+let isCVLoad = 1;
+let isNonTemporal = 1;
+let mayLoad = 1;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+let Constraints = "$Rx32 = $Rx32in";
+}
+def V6_vL32b_nt_tmp_pred_ai : HInst<
+(outs VectorRegs:$Vd32),
+(ins PredRegs:$Pv4, IntRegs:$Rt32, s4_6Imm:$Ii),
+"if ($Pv4) $Vd32.tmp = vmem($Rt32+#$Ii):nt",
+CVI_VM_TMP_LD, TypeCVI_VM_TMP_LD>, Enc_13338314, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b110;
+let Inst{31-21} = 0b00101000110;
+let isPredicated = 1;
+let hasNewValue = 1;
+let opNewValue = 0;
+let addrMode = BaseImmOffset;
+let accessSize = Vector64Access;
+let isCVLoad = 1;
+let isNonTemporal = 1;
+let mayLoad = 1;
+let DecoderNamespace = "EXT_mmvec";
+}
+def V6_vL32b_nt_tmp_pred_ai_128B : HInst<
+(outs VectorRegs128B:$Vd32),
+(ins PredRegs:$Pv4, IntRegs:$Rt32, s4_7Imm:$Ii),
+"if ($Pv4) $Vd32.tmp = vmem($Rt32+#$Ii):nt",
+CVI_VM_TMP_LD, TypeCVI_VM_TMP_LD>, Enc_738356, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b110;
+let Inst{31-21} = 0b00101000110;
+let isPredicated = 1;
+let hasNewValue = 1;
+let opNewValue = 0;
+let addrMode = BaseImmOffset;
+let accessSize = Vector128Access;
+let isCVLoad = 1;
+let isNonTemporal = 1;
+let mayLoad = 1;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+}
+def V6_vL32b_nt_tmp_pred_pi : HInst<
+(outs VectorRegs:$Vd32, IntRegs:$Rx32),
+(ins PredRegs:$Pv4, IntRegs:$Rx32in, s3_6Imm:$Ii),
+"if ($Pv4) $Vd32.tmp = vmem($Rx32++#$Ii):nt",
+CVI_VM_TMP_LD, TypeCVI_VM_TMP_LD>, Enc_14560494, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b110;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b00101001110;
+let isPredicated = 1;
+let hasNewValue = 1;
+let opNewValue = 0;
+let addrMode = PostInc;
+let accessSize = Vector64Access;
+let isCVLoad = 1;
+let isNonTemporal = 1;
+let mayLoad = 1;
+let DecoderNamespace = "EXT_mmvec";
+let Constraints = "$Rx32 = $Rx32in";
+}
+def V6_vL32b_nt_tmp_pred_pi_128B : HInst<
+(outs VectorRegs128B:$Vd32, IntRegs:$Rx32),
+(ins PredRegs:$Pv4, IntRegs:$Rx32in, s3_7Imm:$Ii),
+"if ($Pv4) $Vd32.tmp = vmem($Rx32++#$Ii):nt",
+CVI_VM_TMP_LD, TypeCVI_VM_TMP_LD>, Enc_15560488, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b110;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b00101001110;
+let isPredicated = 1;
+let hasNewValue = 1;
+let opNewValue = 0;
+let addrMode = PostInc;
+let accessSize = Vector128Access;
+let isCVLoad = 1;
+let isNonTemporal = 1;
+let mayLoad = 1;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+let Constraints = "$Rx32 = $Rx32in";
+}
+def V6_vL32b_nt_tmp_pred_ppu : HInst<
+(outs VectorRegs:$Vd32, IntRegs:$Rx32),
+(ins PredRegs:$Pv4, IntRegs:$Rx32in, ModRegs:$Mu2),
+"if ($Pv4) $Vd32.tmp = vmem($Rx32++$Mu2):nt",
+CVI_VM_TMP_LD, TypeCVI_VM_TMP_LD>, Enc_3158657, Requires<[HasV62T,UseHVX]> {
+let Inst{10-5} = 0b000110;
+let Inst{31-21} = 0b00101011110;
+let isPredicated = 1;
+let hasNewValue = 1;
+let opNewValue = 0;
+let addrMode = PostInc;
+let accessSize = Vector64Access;
+let isCVLoad = 1;
+let isNonTemporal = 1;
+let mayLoad = 1;
+let DecoderNamespace = "EXT_mmvec";
+let Constraints = "$Rx32 = $Rx32in";
+}
+def V6_vL32b_nt_tmp_pred_ppu_128B : HInst<
+(outs VectorRegs128B:$Vd32, IntRegs:$Rx32),
+(ins PredRegs:$Pv4, IntRegs:$Rx32in, ModRegs:$Mu2),
+"if ($Pv4) $Vd32.tmp = vmem($Rx32++$Mu2):nt",
+CVI_VM_TMP_LD, TypeCVI_VM_TMP_LD>, Enc_3158657, Requires<[HasV62T,UseHVX]> {
+let Inst{10-5} = 0b000110;
+let Inst{31-21} = 0b00101011110;
+let isPredicated = 1;
 let hasNewValue = 1;
 let opNewValue = 0;
 let addrMode = PostInc;
@@ -26998,6 +28189,111 @@ let DecoderNamespace = "EXT_mmvec";
 let isCodeGenOnly = 1;
 let Constraints = "$Rx32 = $Rx32in";
 }
+def V6_vL32b_pred_ai : HInst<
+(outs VectorRegs:$Vd32),
+(ins PredRegs:$Pv4, IntRegs:$Rt32, s4_6Imm:$Ii),
+"if ($Pv4) $Vd32 = vmem($Rt32+#$Ii)",
+CVI_VM_LD, TypeCVI_VM_LD>, Enc_13338314, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b010;
+let Inst{31-21} = 0b00101000100;
+let isPredicated = 1;
+let hasNewValue = 1;
+let opNewValue = 0;
+let addrMode = BaseImmOffset;
+let accessSize = Vector64Access;
+let isCVLoad = 1;
+let mayLoad = 1;
+let DecoderNamespace = "EXT_mmvec";
+}
+def V6_vL32b_pred_ai_128B : HInst<
+(outs VectorRegs128B:$Vd32),
+(ins PredRegs:$Pv4, IntRegs:$Rt32, s4_7Imm:$Ii),
+"if ($Pv4) $Vd32 = vmem($Rt32+#$Ii)",
+CVI_VM_LD, TypeCVI_VM_LD>, Enc_738356, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b010;
+let Inst{31-21} = 0b00101000100;
+let isPredicated = 1;
+let hasNewValue = 1;
+let opNewValue = 0;
+let addrMode = BaseImmOffset;
+let accessSize = Vector128Access;
+let isCVLoad = 1;
+let mayLoad = 1;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+}
+def V6_vL32b_pred_pi : HInst<
+(outs VectorRegs:$Vd32, IntRegs:$Rx32),
+(ins PredRegs:$Pv4, IntRegs:$Rx32in, s3_6Imm:$Ii),
+"if ($Pv4) $Vd32 = vmem($Rx32++#$Ii)",
+CVI_VM_LD, TypeCVI_VM_LD>, Enc_14560494, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b010;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b00101001100;
+let isPredicated = 1;
+let hasNewValue = 1;
+let opNewValue = 0;
+let addrMode = PostInc;
+let accessSize = Vector64Access;
+let isCVLoad = 1;
+let mayLoad = 1;
+let DecoderNamespace = "EXT_mmvec";
+let Constraints = "$Rx32 = $Rx32in";
+}
+def V6_vL32b_pred_pi_128B : HInst<
+(outs VectorRegs128B:$Vd32, IntRegs:$Rx32),
+(ins PredRegs:$Pv4, IntRegs:$Rx32in, s3_7Imm:$Ii),
+"if ($Pv4) $Vd32 = vmem($Rx32++#$Ii)",
+CVI_VM_LD, TypeCVI_VM_LD>, Enc_15560488, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b010;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b00101001100;
+let isPredicated = 1;
+let hasNewValue = 1;
+let opNewValue = 0;
+let addrMode = PostInc;
+let accessSize = Vector128Access;
+let isCVLoad = 1;
+let mayLoad = 1;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+let Constraints = "$Rx32 = $Rx32in";
+}
+def V6_vL32b_pred_ppu : HInst<
+(outs VectorRegs:$Vd32, IntRegs:$Rx32),
+(ins PredRegs:$Pv4, IntRegs:$Rx32in, ModRegs:$Mu2),
+"if ($Pv4) $Vd32 = vmem($Rx32++$Mu2)",
+CVI_VM_LD, TypeCVI_VM_LD>, Enc_3158657, Requires<[HasV62T,UseHVX]> {
+let Inst{10-5} = 0b000010;
+let Inst{31-21} = 0b00101011100;
+let isPredicated = 1;
+let hasNewValue = 1;
+let opNewValue = 0;
+let addrMode = PostInc;
+let accessSize = Vector64Access;
+let isCVLoad = 1;
+let mayLoad = 1;
+let DecoderNamespace = "EXT_mmvec";
+let Constraints = "$Rx32 = $Rx32in";
+}
+def V6_vL32b_pred_ppu_128B : HInst<
+(outs VectorRegs128B:$Vd32, IntRegs:$Rx32),
+(ins PredRegs:$Pv4, IntRegs:$Rx32in, ModRegs:$Mu2),
+"if ($Pv4) $Vd32 = vmem($Rx32++$Mu2)",
+CVI_VM_LD, TypeCVI_VM_LD>, Enc_3158657, Requires<[HasV62T,UseHVX]> {
+let Inst{10-5} = 0b000010;
+let Inst{31-21} = 0b00101011100;
+let isPredicated = 1;
+let hasNewValue = 1;
+let opNewValue = 0;
+let addrMode = PostInc;
+let accessSize = Vector128Access;
+let isCVLoad = 1;
+let mayLoad = 1;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+let Constraints = "$Rx32 = $Rx32in";
+}
 def V6_vL32b_tmp_ai : HInst<
 (outs VectorRegs:$Vd32),
 (ins IntRegs:$Rt32, s4_6Imm:$Ii),
@@ -27030,6 +28326,117 @@ let isCVLoad = 1;
 let mayLoad = 1;
 let DecoderNamespace = "EXT_mmvec";
 let isCodeGenOnly = 1;
+}
+def V6_vL32b_tmp_npred_ai : HInst<
+(outs VectorRegs:$Vd32),
+(ins PredRegs:$Pv4, IntRegs:$Rt32, s4_6Imm:$Ii),
+"if (!$Pv4) $Vd32.tmp = vmem($Rt32+#$Ii)",
+CVI_VM_TMP_LD, TypeCVI_VM_TMP_LD>, Enc_13338314, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b111;
+let Inst{31-21} = 0b00101000100;
+let isPredicated = 1;
+let isPredicatedFalse = 1;
+let hasNewValue = 1;
+let opNewValue = 0;
+let addrMode = BaseImmOffset;
+let accessSize = Vector64Access;
+let isCVLoad = 1;
+let mayLoad = 1;
+let DecoderNamespace = "EXT_mmvec";
+}
+def V6_vL32b_tmp_npred_ai_128B : HInst<
+(outs VectorRegs128B:$Vd32),
+(ins PredRegs:$Pv4, IntRegs:$Rt32, s4_7Imm:$Ii),
+"if (!$Pv4) $Vd32.tmp = vmem($Rt32+#$Ii)",
+CVI_VM_TMP_LD, TypeCVI_VM_TMP_LD>, Enc_738356, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b111;
+let Inst{31-21} = 0b00101000100;
+let isPredicated = 1;
+let isPredicatedFalse = 1;
+let hasNewValue = 1;
+let opNewValue = 0;
+let addrMode = BaseImmOffset;
+let accessSize = Vector128Access;
+let isCVLoad = 1;
+let mayLoad = 1;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+}
+def V6_vL32b_tmp_npred_pi : HInst<
+(outs VectorRegs:$Vd32, IntRegs:$Rx32),
+(ins PredRegs:$Pv4, IntRegs:$Rx32in, s3_6Imm:$Ii),
+"if (!$Pv4) $Vd32.tmp = vmem($Rx32++#$Ii)",
+CVI_VM_TMP_LD, TypeCVI_VM_TMP_LD>, Enc_14560494, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b111;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b00101001100;
+let isPredicated = 1;
+let isPredicatedFalse = 1;
+let hasNewValue = 1;
+let opNewValue = 0;
+let addrMode = PostInc;
+let accessSize = Vector64Access;
+let isCVLoad = 1;
+let mayLoad = 1;
+let DecoderNamespace = "EXT_mmvec";
+let Constraints = "$Rx32 = $Rx32in";
+}
+def V6_vL32b_tmp_npred_pi_128B : HInst<
+(outs VectorRegs128B:$Vd32, IntRegs:$Rx32),
+(ins PredRegs:$Pv4, IntRegs:$Rx32in, s3_7Imm:$Ii),
+"if (!$Pv4) $Vd32.tmp = vmem($Rx32++#$Ii)",
+CVI_VM_TMP_LD, TypeCVI_VM_TMP_LD>, Enc_15560488, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b111;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b00101001100;
+let isPredicated = 1;
+let isPredicatedFalse = 1;
+let hasNewValue = 1;
+let opNewValue = 0;
+let addrMode = PostInc;
+let accessSize = Vector128Access;
+let isCVLoad = 1;
+let mayLoad = 1;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+let Constraints = "$Rx32 = $Rx32in";
+}
+def V6_vL32b_tmp_npred_ppu : HInst<
+(outs VectorRegs:$Vd32, IntRegs:$Rx32),
+(ins PredRegs:$Pv4, IntRegs:$Rx32in, ModRegs:$Mu2),
+"if (!$Pv4) $Vd32.tmp = vmem($Rx32++$Mu2)",
+CVI_VM_TMP_LD, TypeCVI_VM_TMP_LD>, Enc_3158657, Requires<[HasV62T,UseHVX]> {
+let Inst{10-5} = 0b000111;
+let Inst{31-21} = 0b00101011100;
+let isPredicated = 1;
+let isPredicatedFalse = 1;
+let hasNewValue = 1;
+let opNewValue = 0;
+let addrMode = PostInc;
+let accessSize = Vector64Access;
+let isCVLoad = 1;
+let mayLoad = 1;
+let DecoderNamespace = "EXT_mmvec";
+let Constraints = "$Rx32 = $Rx32in";
+}
+def V6_vL32b_tmp_npred_ppu_128B : HInst<
+(outs VectorRegs128B:$Vd32, IntRegs:$Rx32),
+(ins PredRegs:$Pv4, IntRegs:$Rx32in, ModRegs:$Mu2),
+"if (!$Pv4) $Vd32.tmp = vmem($Rx32++$Mu2)",
+CVI_VM_TMP_LD, TypeCVI_VM_TMP_LD>, Enc_3158657, Requires<[HasV62T,UseHVX]> {
+let Inst{10-5} = 0b000111;
+let Inst{31-21} = 0b00101011100;
+let isPredicated = 1;
+let isPredicatedFalse = 1;
+let hasNewValue = 1;
+let opNewValue = 0;
+let addrMode = PostInc;
+let accessSize = Vector128Access;
+let isCVLoad = 1;
+let mayLoad = 1;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+let Constraints = "$Rx32 = $Rx32in";
 }
 def V6_vL32b_tmp_pi : HInst<
 (outs VectorRegs:$Vd32, IntRegs:$Rx32),
@@ -27089,6 +28496,111 @@ def V6_vL32b_tmp_ppu_128B : HInst<
 CVI_VM_TMP_LD, TypeCVI_VM_TMP_LD>, Enc_15949334, Requires<[HasV60T,UseHVX]> {
 let Inst{12-5} = 0b00000010;
 let Inst{31-21} = 0b00101011000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let addrMode = PostInc;
+let accessSize = Vector128Access;
+let isCVLoad = 1;
+let mayLoad = 1;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+let Constraints = "$Rx32 = $Rx32in";
+}
+def V6_vL32b_tmp_pred_ai : HInst<
+(outs VectorRegs:$Vd32),
+(ins PredRegs:$Pv4, IntRegs:$Rt32, s4_6Imm:$Ii),
+"if ($Pv4) $Vd32.tmp = vmem($Rt32+#$Ii)",
+CVI_VM_TMP_LD, TypeCVI_VM_TMP_LD>, Enc_13338314, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b110;
+let Inst{31-21} = 0b00101000100;
+let isPredicated = 1;
+let hasNewValue = 1;
+let opNewValue = 0;
+let addrMode = BaseImmOffset;
+let accessSize = Vector64Access;
+let isCVLoad = 1;
+let mayLoad = 1;
+let DecoderNamespace = "EXT_mmvec";
+}
+def V6_vL32b_tmp_pred_ai_128B : HInst<
+(outs VectorRegs128B:$Vd32),
+(ins PredRegs:$Pv4, IntRegs:$Rt32, s4_7Imm:$Ii),
+"if ($Pv4) $Vd32.tmp = vmem($Rt32+#$Ii)",
+CVI_VM_TMP_LD, TypeCVI_VM_TMP_LD>, Enc_738356, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b110;
+let Inst{31-21} = 0b00101000100;
+let isPredicated = 1;
+let hasNewValue = 1;
+let opNewValue = 0;
+let addrMode = BaseImmOffset;
+let accessSize = Vector128Access;
+let isCVLoad = 1;
+let mayLoad = 1;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+}
+def V6_vL32b_tmp_pred_pi : HInst<
+(outs VectorRegs:$Vd32, IntRegs:$Rx32),
+(ins PredRegs:$Pv4, IntRegs:$Rx32in, s3_6Imm:$Ii),
+"if ($Pv4) $Vd32.tmp = vmem($Rx32++#$Ii)",
+CVI_VM_TMP_LD, TypeCVI_VM_TMP_LD>, Enc_14560494, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b110;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b00101001100;
+let isPredicated = 1;
+let hasNewValue = 1;
+let opNewValue = 0;
+let addrMode = PostInc;
+let accessSize = Vector64Access;
+let isCVLoad = 1;
+let mayLoad = 1;
+let DecoderNamespace = "EXT_mmvec";
+let Constraints = "$Rx32 = $Rx32in";
+}
+def V6_vL32b_tmp_pred_pi_128B : HInst<
+(outs VectorRegs128B:$Vd32, IntRegs:$Rx32),
+(ins PredRegs:$Pv4, IntRegs:$Rx32in, s3_7Imm:$Ii),
+"if ($Pv4) $Vd32.tmp = vmem($Rx32++#$Ii)",
+CVI_VM_TMP_LD, TypeCVI_VM_TMP_LD>, Enc_15560488, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b110;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b00101001100;
+let isPredicated = 1;
+let hasNewValue = 1;
+let opNewValue = 0;
+let addrMode = PostInc;
+let accessSize = Vector128Access;
+let isCVLoad = 1;
+let mayLoad = 1;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+let Constraints = "$Rx32 = $Rx32in";
+}
+def V6_vL32b_tmp_pred_ppu : HInst<
+(outs VectorRegs:$Vd32, IntRegs:$Rx32),
+(ins PredRegs:$Pv4, IntRegs:$Rx32in, ModRegs:$Mu2),
+"if ($Pv4) $Vd32.tmp = vmem($Rx32++$Mu2)",
+CVI_VM_TMP_LD, TypeCVI_VM_TMP_LD>, Enc_3158657, Requires<[HasV62T,UseHVX]> {
+let Inst{10-5} = 0b000110;
+let Inst{31-21} = 0b00101011100;
+let isPredicated = 1;
+let hasNewValue = 1;
+let opNewValue = 0;
+let addrMode = PostInc;
+let accessSize = Vector64Access;
+let isCVLoad = 1;
+let mayLoad = 1;
+let DecoderNamespace = "EXT_mmvec";
+let Constraints = "$Rx32 = $Rx32in";
+}
+def V6_vL32b_tmp_pred_ppu_128B : HInst<
+(outs VectorRegs128B:$Vd32, IntRegs:$Rx32),
+(ins PredRegs:$Pv4, IntRegs:$Rx32in, ModRegs:$Mu2),
+"if ($Pv4) $Vd32.tmp = vmem($Rx32++$Mu2)",
+CVI_VM_TMP_LD, TypeCVI_VM_TMP_LD>, Enc_3158657, Requires<[HasV62T,UseHVX]> {
+let Inst{10-5} = 0b000110;
+let Inst{31-21} = 0b00101011100;
+let isPredicated = 1;
 let hasNewValue = 1;
 let opNewValue = 0;
 let addrMode = PostInc;
@@ -29642,6 +31154,183 @@ let DecoderNamespace = "EXT_mmvec";
 let isCodeGenOnly = 1;
 let Constraints = "$Vx32 = $Vx32in";
 }
+def V6_vaddbsat : HInst<
+(outs VectorRegs:$Vd32),
+(ins VectorRegs:$Vu32, VectorRegs:$Vv32),
+"$Vd32.b = vadd($Vu32.b,$Vv32.b):sat",
+CVI_VA, TypeCVI_VA>, Enc_6223403, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b000;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b00011111000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let DecoderNamespace = "EXT_mmvec";
+}
+def V6_vaddbsat_128B : HInst<
+(outs VectorRegs128B:$Vd32),
+(ins VectorRegs128B:$Vu32, VectorRegs128B:$Vv32),
+"$Vd32.b = vadd($Vu32.b,$Vv32.b):sat",
+CVI_VA, TypeCVI_VA>, Enc_6223403, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b000;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b00011111000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+}
+def V6_vaddbsat_alt : HInst<
+(outs VectorRegs:$Vd32),
+(ins VectorRegs:$Vu32, VectorRegs:$Vv32),
+"$Vd32 = vaddb($Vu32,$Vv32):sat",
+PSEUDO, TypeMAPPING>, Requires<[HasV62T,UseHVX]> {
+let hasNewValue = 1;
+let opNewValue = 0;
+let isPseudo = 1;
+let isCodeGenOnly = 1;
+let DecoderNamespace = "EXT_mmvec";
+}
+def V6_vaddbsat_alt_128B : HInst<
+(outs VectorRegs128B:$Vd32),
+(ins VectorRegs128B:$Vu32, VectorRegs128B:$Vv32),
+"$Vd32 = vaddb($Vu32,$Vv32):sat",
+PSEUDO, TypeMAPPING>, Requires<[HasV62T,UseHVX]> {
+let hasNewValue = 1;
+let opNewValue = 0;
+let isPseudo = 1;
+let isCodeGenOnly = 1;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+}
+def V6_vaddbsat_dv : HInst<
+(outs VecDblRegs:$Vdd32),
+(ins VecDblRegs:$Vuu32, VecDblRegs:$Vvv32),
+"$Vdd32.b = vadd($Vuu32.b,$Vvv32.b):sat",
+CVI_VA_DV, TypeCVI_VA_DV>, Enc_13211717, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b000;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b00011110101;
+let hasNewValue = 1;
+let opNewValue = 0;
+let DecoderNamespace = "EXT_mmvec";
+}
+def V6_vaddbsat_dv_128B : HInst<
+(outs VecDblRegs128B:$Vdd32),
+(ins VecDblRegs128B:$Vuu32, VecDblRegs128B:$Vvv32),
+"$Vdd32.b = vadd($Vuu32.b,$Vvv32.b):sat",
+CVI_VA_DV, TypeCVI_VA_DV>, Enc_13211717, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b000;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b00011110101;
+let hasNewValue = 1;
+let opNewValue = 0;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+}
+def V6_vaddbsat_dv_alt : HInst<
+(outs VecDblRegs:$Vdd32),
+(ins VecDblRegs:$Vuu32, VecDblRegs:$Vvv32),
+"$Vdd32 = vaddb($Vuu32,$Vvv32):sat",
+PSEUDO, TypeMAPPING>, Requires<[HasV62T,UseHVX]> {
+let hasNewValue = 1;
+let opNewValue = 0;
+let isPseudo = 1;
+let isCodeGenOnly = 1;
+let DecoderNamespace = "EXT_mmvec";
+}
+def V6_vaddbsat_dv_alt_128B : HInst<
+(outs VecDblRegs128B:$Vdd32),
+(ins VecDblRegs128B:$Vuu32, VecDblRegs128B:$Vvv32),
+"$Vdd32 = vaddb($Vuu32,$Vvv32):sat",
+PSEUDO, TypeMAPPING>, Requires<[HasV62T,UseHVX]> {
+let hasNewValue = 1;
+let opNewValue = 0;
+let isPseudo = 1;
+let isCodeGenOnly = 1;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+}
+def V6_vaddcarry : HInst<
+(outs VectorRegs:$Vd32, VecPredRegs:$Qx4),
+(ins VectorRegs:$Vu32, VectorRegs:$Vv32, VecPredRegs:$Qx4in),
+"$Vd32.w = vadd($Vu32.w,$Vv32.w,$Qx4):carry",
+CVI_VA, TypeCVI_VA>, Enc_13691337, Requires<[HasV62T,UseHVX]> {
+let Inst{7-7} = 0b0;
+let Inst{13-13} = 0b1;
+let Inst{31-21} = 0b00011100101;
+let hasNewValue = 1;
+let opNewValue = 0;
+let hasNewValue2 = 1;
+let opNewValue2 = 1;
+let DecoderNamespace = "EXT_mmvec";
+let Constraints = "$Qx4 = $Qx4in";
+}
+def V6_vaddcarry_128B : HInst<
+(outs VectorRegs128B:$Vd32, VecPredRegs128B:$Qx4),
+(ins VectorRegs128B:$Vu32, VectorRegs128B:$Vv32, VecPredRegs128B:$Qx4in),
+"$Vd32.w = vadd($Vu32.w,$Vv32.w,$Qx4):carry",
+CVI_VA, TypeCVI_VA>, Enc_13691337, Requires<[HasV62T,UseHVX]> {
+let Inst{7-7} = 0b0;
+let Inst{13-13} = 0b1;
+let Inst{31-21} = 0b00011100101;
+let hasNewValue = 1;
+let opNewValue = 0;
+let hasNewValue2 = 1;
+let opNewValue2 = 1;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+let Constraints = "$Qx4 = $Qx4in";
+}
+def V6_vaddclbh : HInst<
+(outs VectorRegs:$Vd32),
+(ins VectorRegs:$Vu32, VectorRegs:$Vv32),
+"$Vd32.h = vadd(vclb($Vu32.h),$Vv32.h)",
+CVI_VS, TypeCVI_VS>, Enc_6223403, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b000;
+let Inst{13-13} = 0b1;
+let Inst{31-21} = 0b00011111000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let DecoderNamespace = "EXT_mmvec";
+}
+def V6_vaddclbh_128B : HInst<
+(outs VectorRegs128B:$Vd32),
+(ins VectorRegs128B:$Vu32, VectorRegs128B:$Vv32),
+"$Vd32.h = vadd(vclb($Vu32.h),$Vv32.h)",
+CVI_VS, TypeCVI_VS>, Enc_6223403, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b000;
+let Inst{13-13} = 0b1;
+let Inst{31-21} = 0b00011111000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+}
+def V6_vaddclbw : HInst<
+(outs VectorRegs:$Vd32),
+(ins VectorRegs:$Vu32, VectorRegs:$Vv32),
+"$Vd32.w = vadd(vclb($Vu32.w),$Vv32.w)",
+CVI_VS, TypeCVI_VS>, Enc_6223403, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b001;
+let Inst{13-13} = 0b1;
+let Inst{31-21} = 0b00011111000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let DecoderNamespace = "EXT_mmvec";
+}
+def V6_vaddclbw_128B : HInst<
+(outs VectorRegs128B:$Vd32),
+(ins VectorRegs128B:$Vu32, VectorRegs128B:$Vv32),
+"$Vd32.w = vadd(vclb($Vu32.w),$Vv32.w)",
+CVI_VS, TypeCVI_VS>, Enc_6223403, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b001;
+let Inst{13-13} = 0b1;
+let Inst{31-21} = 0b00011111000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+}
 def V6_vaddh : HInst<
 (outs VectorRegs:$Vd32),
 (ins VectorRegs:$Vu32, VectorRegs:$Vv32),
@@ -29975,6 +31664,62 @@ let opNewValue = 0;
 let DecoderNamespace = "EXT_mmvec";
 let isCodeGenOnly = 1;
 }
+def V6_vaddhw_acc : HInst<
+(outs VecDblRegs:$Vxx32),
+(ins VecDblRegs:$Vxx32in, VectorRegs:$Vu32, VectorRegs:$Vv32),
+"$Vxx32.w += vadd($Vu32.h,$Vv32.h)",
+CVI_VX_DV_LONG, TypeCVI_VX_DV>, Enc_5972412, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b010;
+let Inst{13-13} = 0b1;
+let Inst{31-21} = 0b00011100001;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isAccumulator = 1;
+let DecoderNamespace = "EXT_mmvec";
+let Constraints = "$Vxx32 = $Vxx32in";
+}
+def V6_vaddhw_acc_128B : HInst<
+(outs VecDblRegs128B:$Vxx32),
+(ins VecDblRegs128B:$Vxx32in, VectorRegs128B:$Vu32, VectorRegs128B:$Vv32),
+"$Vxx32.w += vadd($Vu32.h,$Vv32.h)",
+CVI_VX_DV_LONG, TypeCVI_VX_DV>, Enc_5972412, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b010;
+let Inst{13-13} = 0b1;
+let Inst{31-21} = 0b00011100001;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isAccumulator = 1;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+let Constraints = "$Vxx32 = $Vxx32in";
+}
+def V6_vaddhw_acc_alt : HInst<
+(outs VecDblRegs:$Vxx32),
+(ins VecDblRegs:$Vxx32in, VectorRegs:$Vu32, VectorRegs:$Vv32),
+"$Vxx32 += vaddh($Vu32,$Vv32)",
+PSEUDO, TypeMAPPING>, Requires<[HasV62T,UseHVX]> {
+let hasNewValue = 1;
+let opNewValue = 0;
+let isAccumulator = 1;
+let isPseudo = 1;
+let isCodeGenOnly = 1;
+let DecoderNamespace = "EXT_mmvec";
+let Constraints = "$Vxx32 = $Vxx32in";
+}
+def V6_vaddhw_acc_alt_128B : HInst<
+(outs VecDblRegs128B:$Vxx32),
+(ins VecDblRegs128B:$Vxx32in, VectorRegs128B:$Vu32, VectorRegs128B:$Vv32),
+"$Vxx32 += vaddh($Vu32,$Vv32)",
+PSEUDO, TypeMAPPING>, Requires<[HasV62T,UseHVX]> {
+let hasNewValue = 1;
+let opNewValue = 0;
+let isAccumulator = 1;
+let isPseudo = 1;
+let isCodeGenOnly = 1;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+let Constraints = "$Vxx32 = $Vxx32in";
+}
 def V6_vaddhw_alt : HInst<
 (outs VecDblRegs:$Vdd32),
 (ins VectorRegs:$Vu32, VectorRegs:$Vv32),
@@ -30022,6 +31767,62 @@ let hasNewValue = 1;
 let opNewValue = 0;
 let DecoderNamespace = "EXT_mmvec";
 let isCodeGenOnly = 1;
+}
+def V6_vaddubh_acc : HInst<
+(outs VecDblRegs:$Vxx32),
+(ins VecDblRegs:$Vxx32in, VectorRegs:$Vu32, VectorRegs:$Vv32),
+"$Vxx32.h += vadd($Vu32.ub,$Vv32.ub)",
+CVI_VX_DV_LONG, TypeCVI_VX_DV>, Enc_5972412, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b101;
+let Inst{13-13} = 0b1;
+let Inst{31-21} = 0b00011100010;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isAccumulator = 1;
+let DecoderNamespace = "EXT_mmvec";
+let Constraints = "$Vxx32 = $Vxx32in";
+}
+def V6_vaddubh_acc_128B : HInst<
+(outs VecDblRegs128B:$Vxx32),
+(ins VecDblRegs128B:$Vxx32in, VectorRegs128B:$Vu32, VectorRegs128B:$Vv32),
+"$Vxx32.h += vadd($Vu32.ub,$Vv32.ub)",
+CVI_VX_DV_LONG, TypeCVI_VX_DV>, Enc_5972412, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b101;
+let Inst{13-13} = 0b1;
+let Inst{31-21} = 0b00011100010;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isAccumulator = 1;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+let Constraints = "$Vxx32 = $Vxx32in";
+}
+def V6_vaddubh_acc_alt : HInst<
+(outs VecDblRegs:$Vxx32),
+(ins VecDblRegs:$Vxx32in, VectorRegs:$Vu32, VectorRegs:$Vv32),
+"$Vxx32 += vaddub($Vu32,$Vv32)",
+PSEUDO, TypeMAPPING>, Requires<[HasV62T,UseHVX]> {
+let hasNewValue = 1;
+let opNewValue = 0;
+let isAccumulator = 1;
+let isPseudo = 1;
+let isCodeGenOnly = 1;
+let DecoderNamespace = "EXT_mmvec";
+let Constraints = "$Vxx32 = $Vxx32in";
+}
+def V6_vaddubh_acc_alt_128B : HInst<
+(outs VecDblRegs128B:$Vxx32),
+(ins VecDblRegs128B:$Vxx32in, VectorRegs128B:$Vu32, VectorRegs128B:$Vv32),
+"$Vxx32 += vaddub($Vu32,$Vv32)",
+PSEUDO, TypeMAPPING>, Requires<[HasV62T,UseHVX]> {
+let hasNewValue = 1;
+let opNewValue = 0;
+let isAccumulator = 1;
+let isPseudo = 1;
+let isCodeGenOnly = 1;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+let Constraints = "$Vxx32 = $Vxx32in";
 }
 def V6_vaddubh_alt : HInst<
 (outs VecDblRegs:$Vdd32),
@@ -30139,6 +31940,31 @@ let hasNewValue = 1;
 let opNewValue = 0;
 let isPseudo = 1;
 let isCodeGenOnly = 1;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+}
+def V6_vaddububb_sat : HInst<
+(outs VectorRegs:$Vd32),
+(ins VectorRegs:$Vu32, VectorRegs:$Vv32),
+"$Vd32.ub = vadd($Vu32.ub,$Vv32.b):sat",
+CVI_VA, TypeCVI_VA>, Enc_6223403, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b100;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b00011110101;
+let hasNewValue = 1;
+let opNewValue = 0;
+let DecoderNamespace = "EXT_mmvec";
+}
+def V6_vaddububb_sat_128B : HInst<
+(outs VectorRegs128B:$Vd32),
+(ins VectorRegs128B:$Vu32, VectorRegs128B:$Vv32),
+"$Vd32.ub = vadd($Vu32.ub,$Vv32.b):sat",
+CVI_VA, TypeCVI_VA>, Enc_6223403, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b100;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b00011110101;
+let hasNewValue = 1;
+let opNewValue = 0;
 let DecoderNamespace = "EXT_mmvec";
 let isCodeGenOnly = 1;
 }
@@ -30263,6 +32089,62 @@ let opNewValue = 0;
 let DecoderNamespace = "EXT_mmvec";
 let isCodeGenOnly = 1;
 }
+def V6_vadduhw_acc : HInst<
+(outs VecDblRegs:$Vxx32),
+(ins VecDblRegs:$Vxx32in, VectorRegs:$Vu32, VectorRegs:$Vv32),
+"$Vxx32.w += vadd($Vu32.uh,$Vv32.uh)",
+CVI_VX_DV_LONG, TypeCVI_VX_DV>, Enc_5972412, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b100;
+let Inst{13-13} = 0b1;
+let Inst{31-21} = 0b00011100010;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isAccumulator = 1;
+let DecoderNamespace = "EXT_mmvec";
+let Constraints = "$Vxx32 = $Vxx32in";
+}
+def V6_vadduhw_acc_128B : HInst<
+(outs VecDblRegs128B:$Vxx32),
+(ins VecDblRegs128B:$Vxx32in, VectorRegs128B:$Vu32, VectorRegs128B:$Vv32),
+"$Vxx32.w += vadd($Vu32.uh,$Vv32.uh)",
+CVI_VX_DV_LONG, TypeCVI_VX_DV>, Enc_5972412, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b100;
+let Inst{13-13} = 0b1;
+let Inst{31-21} = 0b00011100010;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isAccumulator = 1;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+let Constraints = "$Vxx32 = $Vxx32in";
+}
+def V6_vadduhw_acc_alt : HInst<
+(outs VecDblRegs:$Vxx32),
+(ins VecDblRegs:$Vxx32in, VectorRegs:$Vu32, VectorRegs:$Vv32),
+"$Vxx32 += vadduh($Vu32,$Vv32)",
+PSEUDO, TypeMAPPING>, Requires<[HasV62T,UseHVX]> {
+let hasNewValue = 1;
+let opNewValue = 0;
+let isAccumulator = 1;
+let isPseudo = 1;
+let isCodeGenOnly = 1;
+let DecoderNamespace = "EXT_mmvec";
+let Constraints = "$Vxx32 = $Vxx32in";
+}
+def V6_vadduhw_acc_alt_128B : HInst<
+(outs VecDblRegs128B:$Vxx32),
+(ins VecDblRegs128B:$Vxx32in, VectorRegs128B:$Vu32, VectorRegs128B:$Vv32),
+"$Vxx32 += vadduh($Vu32,$Vv32)",
+PSEUDO, TypeMAPPING>, Requires<[HasV62T,UseHVX]> {
+let hasNewValue = 1;
+let opNewValue = 0;
+let isAccumulator = 1;
+let isPseudo = 1;
+let isCodeGenOnly = 1;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+let Constraints = "$Vxx32 = $Vxx32in";
+}
 def V6_vadduhw_alt : HInst<
 (outs VecDblRegs:$Vdd32),
 (ins VectorRegs:$Vu32, VectorRegs:$Vv32),
@@ -30279,6 +32161,102 @@ def V6_vadduhw_alt_128B : HInst<
 (ins VectorRegs128B:$Vu32, VectorRegs128B:$Vv32),
 "$Vdd32 = vadduh($Vu32,$Vv32)",
 PSEUDO, TypeMAPPING>, Requires<[HasV60T,UseHVX]> {
+let hasNewValue = 1;
+let opNewValue = 0;
+let isPseudo = 1;
+let isCodeGenOnly = 1;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+}
+def V6_vadduwsat : HInst<
+(outs VectorRegs:$Vd32),
+(ins VectorRegs:$Vu32, VectorRegs:$Vv32),
+"$Vd32.uw = vadd($Vu32.uw,$Vv32.uw):sat",
+CVI_VA, TypeCVI_VA>, Enc_6223403, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b001;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b00011111011;
+let hasNewValue = 1;
+let opNewValue = 0;
+let DecoderNamespace = "EXT_mmvec";
+}
+def V6_vadduwsat_128B : HInst<
+(outs VectorRegs128B:$Vd32),
+(ins VectorRegs128B:$Vu32, VectorRegs128B:$Vv32),
+"$Vd32.uw = vadd($Vu32.uw,$Vv32.uw):sat",
+CVI_VA, TypeCVI_VA>, Enc_6223403, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b001;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b00011111011;
+let hasNewValue = 1;
+let opNewValue = 0;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+}
+def V6_vadduwsat_alt : HInst<
+(outs VectorRegs:$Vd32),
+(ins VectorRegs:$Vu32, VectorRegs:$Vv32),
+"$Vd32 = vadduw($Vu32,$Vv32):sat",
+PSEUDO, TypeMAPPING>, Requires<[HasV62T,UseHVX]> {
+let hasNewValue = 1;
+let opNewValue = 0;
+let isPseudo = 1;
+let isCodeGenOnly = 1;
+let DecoderNamespace = "EXT_mmvec";
+}
+def V6_vadduwsat_alt_128B : HInst<
+(outs VectorRegs128B:$Vd32),
+(ins VectorRegs128B:$Vu32, VectorRegs128B:$Vv32),
+"$Vd32 = vadduw($Vu32,$Vv32):sat",
+PSEUDO, TypeMAPPING>, Requires<[HasV62T,UseHVX]> {
+let hasNewValue = 1;
+let opNewValue = 0;
+let isPseudo = 1;
+let isCodeGenOnly = 1;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+}
+def V6_vadduwsat_dv : HInst<
+(outs VecDblRegs:$Vdd32),
+(ins VecDblRegs:$Vuu32, VecDblRegs:$Vvv32),
+"$Vdd32.uw = vadd($Vuu32.uw,$Vvv32.uw):sat",
+CVI_VA_DV, TypeCVI_VA_DV>, Enc_13211717, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b010;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b00011110101;
+let hasNewValue = 1;
+let opNewValue = 0;
+let DecoderNamespace = "EXT_mmvec";
+}
+def V6_vadduwsat_dv_128B : HInst<
+(outs VecDblRegs128B:$Vdd32),
+(ins VecDblRegs128B:$Vuu32, VecDblRegs128B:$Vvv32),
+"$Vdd32.uw = vadd($Vuu32.uw,$Vvv32.uw):sat",
+CVI_VA_DV, TypeCVI_VA_DV>, Enc_13211717, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b010;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b00011110101;
+let hasNewValue = 1;
+let opNewValue = 0;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+}
+def V6_vadduwsat_dv_alt : HInst<
+(outs VecDblRegs:$Vdd32),
+(ins VecDblRegs:$Vuu32, VecDblRegs:$Vvv32),
+"$Vdd32 = vadduw($Vuu32,$Vvv32):sat",
+PSEUDO, TypeMAPPING>, Requires<[HasV62T,UseHVX]> {
+let hasNewValue = 1;
+let opNewValue = 0;
+let isPseudo = 1;
+let isCodeGenOnly = 1;
+let DecoderNamespace = "EXT_mmvec";
+}
+def V6_vadduwsat_dv_alt_128B : HInst<
+(outs VecDblRegs128B:$Vdd32),
+(ins VecDblRegs128B:$Vuu32, VecDblRegs128B:$Vvv32),
+"$Vdd32 = vadduw($Vuu32,$Vvv32):sat",
+PSEUDO, TypeMAPPING>, Requires<[HasV62T,UseHVX]> {
 let hasNewValue = 1;
 let opNewValue = 0;
 let isPseudo = 1;
@@ -30667,6 +32645,110 @@ let opNewValue = 0;
 let DecoderNamespace = "EXT_mmvec";
 let isCodeGenOnly = 1;
 }
+def V6_vandnqrt : HInst<
+(outs VectorRegs:$Vd32),
+(ins VecPredRegs:$Qu4, IntRegs:$Rt32),
+"$Vd32 = vand(!$Qu4,$Rt32)",
+CVI_VX, TypeCVI_VX>, Enc_4711514, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b101;
+let Inst{13-10} = 0b0001;
+let Inst{31-21} = 0b00011001101;
+let hasNewValue = 1;
+let opNewValue = 0;
+let DecoderNamespace = "EXT_mmvec";
+}
+def V6_vandnqrt_128B : HInst<
+(outs VectorRegs128B:$Vd32),
+(ins VecPredRegs128B:$Qu4, IntRegs:$Rt32),
+"$Vd32 = vand(!$Qu4,$Rt32)",
+CVI_VX, TypeCVI_VX>, Enc_4711514, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b101;
+let Inst{13-10} = 0b0001;
+let Inst{31-21} = 0b00011001101;
+let hasNewValue = 1;
+let opNewValue = 0;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+}
+def V6_vandnqrt_acc : HInst<
+(outs VectorRegs:$Vx32),
+(ins VectorRegs:$Vx32in, VecPredRegs:$Qu4, IntRegs:$Rt32),
+"$Vx32 |= vand(!$Qu4,$Rt32)",
+CVI_VX, TypeCVI_VX>, Enc_4944558, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b011;
+let Inst{13-10} = 0b1001;
+let Inst{31-21} = 0b00011001011;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isAccumulator = 1;
+let DecoderNamespace = "EXT_mmvec";
+let Constraints = "$Vx32 = $Vx32in";
+}
+def V6_vandnqrt_acc_128B : HInst<
+(outs VectorRegs128B:$Vx32),
+(ins VectorRegs128B:$Vx32in, VecPredRegs128B:$Qu4, IntRegs:$Rt32),
+"$Vx32 |= vand(!$Qu4,$Rt32)",
+CVI_VX, TypeCVI_VX>, Enc_4944558, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b011;
+let Inst{13-10} = 0b1001;
+let Inst{31-21} = 0b00011001011;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isAccumulator = 1;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+let Constraints = "$Vx32 = $Vx32in";
+}
+def V6_vandnqrt_acc_alt : HInst<
+(outs VectorRegs:$Vx32),
+(ins VectorRegs:$Vx32in, VecPredRegs:$Qu4, IntRegs:$Rt32),
+"$Vx32.ub |= vand(!$Qu4.ub,$Rt32.ub)",
+PSEUDO, TypeMAPPING>, Requires<[HasV62T,UseHVX]> {
+let hasNewValue = 1;
+let opNewValue = 0;
+let isAccumulator = 1;
+let isPseudo = 1;
+let isCodeGenOnly = 1;
+let DecoderNamespace = "EXT_mmvec";
+let Constraints = "$Vx32 = $Vx32in";
+}
+def V6_vandnqrt_acc_alt_128B : HInst<
+(outs VectorRegs128B:$Vx32),
+(ins VectorRegs128B:$Vx32in, VecPredRegs128B:$Qu4, IntRegs:$Rt32),
+"$Vx32.ub |= vand(!$Qu4.ub,$Rt32.ub)",
+PSEUDO, TypeMAPPING>, Requires<[HasV62T,UseHVX]> {
+let hasNewValue = 1;
+let opNewValue = 0;
+let isAccumulator = 1;
+let isPseudo = 1;
+let isCodeGenOnly = 1;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+let Constraints = "$Vx32 = $Vx32in";
+}
+def V6_vandnqrt_alt : HInst<
+(outs VectorRegs:$Vd32),
+(ins VecPredRegs:$Qu4, IntRegs:$Rt32),
+"$Vd32.ub = vand(!$Qu4.ub,$Rt32.ub)",
+PSEUDO, TypeMAPPING>, Requires<[HasV62T,UseHVX]> {
+let hasNewValue = 1;
+let opNewValue = 0;
+let isPseudo = 1;
+let isCodeGenOnly = 1;
+let DecoderNamespace = "EXT_mmvec";
+}
+def V6_vandnqrt_alt_128B : HInst<
+(outs VectorRegs128B:$Vd32),
+(ins VecPredRegs128B:$Qu4, IntRegs:$Rt32),
+"$Vd32.ub = vand(!$Qu4.ub,$Rt32.ub)",
+PSEUDO, TypeMAPPING>, Requires<[HasV62T,UseHVX]> {
+let hasNewValue = 1;
+let opNewValue = 0;
+let isPseudo = 1;
+let isCodeGenOnly = 1;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+}
 def V6_vandqrt : HInst<
 (outs VectorRegs:$Vd32),
 (ins VecPredRegs:$Qu4, IntRegs:$Rt32),
@@ -30768,6 +32850,60 @@ let hasNewValue = 1;
 let opNewValue = 0;
 let isPseudo = 1;
 let isCodeGenOnly = 1;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+}
+def V6_vandvnqv : HInst<
+(outs VectorRegs:$Vd32),
+(ins VecPredRegs:$Qv4, VectorRegs:$Vu32),
+"$Vd32 = vand(!$Qv4,$Vu32)",
+CVI_VA, TypeCVI_VA>, Enc_1220199, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b001;
+let Inst{13-13} = 0b1;
+let Inst{21-16} = 0b000011;
+let Inst{31-24} = 0b00011110;
+let hasNewValue = 1;
+let opNewValue = 0;
+let DecoderNamespace = "EXT_mmvec";
+}
+def V6_vandvnqv_128B : HInst<
+(outs VectorRegs128B:$Vd32),
+(ins VecPredRegs128B:$Qv4, VectorRegs128B:$Vu32),
+"$Vd32 = vand(!$Qv4,$Vu32)",
+CVI_VA, TypeCVI_VA>, Enc_1220199, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b001;
+let Inst{13-13} = 0b1;
+let Inst{21-16} = 0b000011;
+let Inst{31-24} = 0b00011110;
+let hasNewValue = 1;
+let opNewValue = 0;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+}
+def V6_vandvqv : HInst<
+(outs VectorRegs:$Vd32),
+(ins VecPredRegs:$Qv4, VectorRegs:$Vu32),
+"$Vd32 = vand($Qv4,$Vu32)",
+CVI_VA, TypeCVI_VA>, Enc_1220199, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b000;
+let Inst{13-13} = 0b1;
+let Inst{21-16} = 0b000011;
+let Inst{31-24} = 0b00011110;
+let hasNewValue = 1;
+let opNewValue = 0;
+let DecoderNamespace = "EXT_mmvec";
+}
+def V6_vandvqv_128B : HInst<
+(outs VectorRegs128B:$Vd32),
+(ins VecPredRegs128B:$Qv4, VectorRegs128B:$Vu32),
+"$Vd32 = vand($Qv4,$Vu32)",
+CVI_VA, TypeCVI_VA>, Enc_1220199, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b000;
+let Inst{13-13} = 0b1;
+let Inst{21-16} = 0b000011;
+let Inst{31-24} = 0b00011110;
+let hasNewValue = 1;
+let opNewValue = 0;
 let DecoderNamespace = "EXT_mmvec";
 let isCodeGenOnly = 1;
 }
@@ -31206,6 +33342,31 @@ let opNewValue = 0;
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 }
+def V6_vasrhbsat : HInst<
+(outs VectorRegs:$Vd32),
+(ins VectorRegs:$Vu32, VectorRegs:$Vv32, IntRegsLow8:$Rt8),
+"$Vd32.b = vasr($Vu32.h,$Vv32.h,$Rt8):sat",
+CVI_VS, TypeCVI_VS>, Enc_11083408, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b000;
+let Inst{13-13} = 0b0;
+let Inst{31-24} = 0b00011000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let DecoderNamespace = "EXT_mmvec";
+}
+def V6_vasrhbsat_128B : HInst<
+(outs VectorRegs128B:$Vd32),
+(ins VectorRegs128B:$Vu32, VectorRegs128B:$Vv32, IntRegsLow8:$Rt8),
+"$Vd32.b = vasr($Vu32.h,$Vv32.h,$Rt8):sat",
+CVI_VS, TypeCVI_VS>, Enc_11083408, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b000;
+let Inst{13-13} = 0b0;
+let Inst{31-24} = 0b00011000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+}
 def V6_vasrhubrndsat : HInst<
 (outs VectorRegs:$Vd32),
 (ins VectorRegs:$Vu32, VectorRegs:$Vv32, IntRegsLow8:$Rt8),
@@ -31321,6 +33482,31 @@ let hasNewValue = 1;
 let opNewValue = 0;
 let isPseudo = 1;
 let isCodeGenOnly = 1;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+}
+def V6_vasruwuhrndsat : HInst<
+(outs VectorRegs:$Vd32),
+(ins VectorRegs:$Vu32, VectorRegs:$Vv32, IntRegsLow8:$Rt8),
+"$Vd32.uh = vasr($Vu32.uw,$Vv32.uw,$Rt8):rnd:sat",
+CVI_VS, TypeCVI_VS>, Enc_11083408, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b001;
+let Inst{13-13} = 0b0;
+let Inst{31-24} = 0b00011000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let DecoderNamespace = "EXT_mmvec";
+}
+def V6_vasruwuhrndsat_128B : HInst<
+(outs VectorRegs128B:$Vd32),
+(ins VectorRegs128B:$Vu32, VectorRegs128B:$Vv32, IntRegsLow8:$Rt8),
+"$Vd32.uh = vasr($Vu32.uw,$Vv32.uw,$Rt8):rnd:sat",
+CVI_VS, TypeCVI_VS>, Enc_11083408, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b001;
+let Inst{13-13} = 0b0;
+let Inst{31-24} = 0b00011000;
+let hasNewValue = 1;
+let opNewValue = 0;
 let DecoderNamespace = "EXT_mmvec";
 let isCodeGenOnly = 1;
 }
@@ -31531,6 +33717,31 @@ PSEUDO, TypeMAPPING>, Requires<[HasV60T]> {
 let hasNewValue = 1;
 let opNewValue = 0;
 let isPseudo = 1;
+let isCodeGenOnly = 1;
+}
+def V6_vasrwuhrndsat : HInst<
+(outs VectorRegs:$Vd32),
+(ins VectorRegs:$Vu32, VectorRegs:$Vv32, IntRegsLow8:$Rt8),
+"$Vd32.uh = vasr($Vu32.w,$Vv32.w,$Rt8):rnd:sat",
+CVI_VS, TypeCVI_VS>, Enc_11083408, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b010;
+let Inst{13-13} = 0b0;
+let Inst{31-24} = 0b00011000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let DecoderNamespace = "EXT_mmvec";
+}
+def V6_vasrwuhrndsat_128B : HInst<
+(outs VectorRegs128B:$Vd32),
+(ins VectorRegs128B:$Vu32, VectorRegs128B:$Vv32, IntRegsLow8:$Rt8),
+"$Vd32.uh = vasr($Vu32.w,$Vv32.w,$Rt8):rnd:sat",
+CVI_VS, TypeCVI_VS>, Enc_11083408, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b010;
+let Inst{13-13} = 0b0;
+let Inst{31-24} = 0b00011000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let DecoderNamespace = "EXT_mmvec";
 let isCodeGenOnly = 1;
 }
 def V6_vasrwuhsat : HInst<
@@ -34596,6 +36807,31 @@ let opNewValue = 0;
 let DecoderNamespace = "EXT_mmvec";
 let isCodeGenOnly = 1;
 }
+def V6_vlsrb : HInst<
+(outs VectorRegs:$Vd32),
+(ins VectorRegs:$Vu32, IntRegs:$Rt32),
+"$Vd32.ub = vlsr($Vu32.ub,$Rt32)",
+CVI_VS, TypeCVI_VS>, Enc_16214129, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b011;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b00011001100;
+let hasNewValue = 1;
+let opNewValue = 0;
+let DecoderNamespace = "EXT_mmvec";
+}
+def V6_vlsrb_128B : HInst<
+(outs VectorRegs128B:$Vd32),
+(ins VectorRegs128B:$Vu32, IntRegs:$Rt32),
+"$Vd32.ub = vlsr($Vu32.ub,$Rt32)",
+CVI_VS, TypeCVI_VS>, Enc_16214129, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b011;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b00011001100;
+let hasNewValue = 1;
+let opNewValue = 0;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+}
 def V6_vlsrh : HInst<
 (outs VectorRegs:$Vd32),
 (ins VectorRegs:$Vu32, IntRegs:$Rt32),
@@ -34813,6 +37049,31 @@ let opNewValue = 0;
 let DecoderNamespace = "EXT_mmvec";
 let isCodeGenOnly = 1;
 }
+def V6_vlutvvb_nm : HInst<
+(outs VectorRegs:$Vd32),
+(ins VectorRegs:$Vu32, VectorRegs:$Vv32, IntRegsLow8:$Rt8),
+"$Vd32.b = vlut32($Vu32.b,$Vv32.b,$Rt8):nomatch",
+CVI_VP_LONG, TypeCVI_VP>, Enc_11083408, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b011;
+let Inst{13-13} = 0b0;
+let Inst{31-24} = 0b00011000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let DecoderNamespace = "EXT_mmvec";
+}
+def V6_vlutvvb_nm_128B : HInst<
+(outs VectorRegs128B:$Vd32),
+(ins VectorRegs128B:$Vu32, VectorRegs128B:$Vv32, IntRegsLow8:$Rt8),
+"$Vd32.b = vlut32($Vu32.b,$Vv32.b,$Rt8):nomatch",
+CVI_VP_LONG, TypeCVI_VP>, Enc_11083408, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b011;
+let Inst{13-13} = 0b0;
+let Inst{31-24} = 0b00011000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+}
 def V6_vlutvvb_oracc : HInst<
 (outs VectorRegs:$Vx32),
 (ins VectorRegs:$Vx32in, VectorRegs:$Vu32, VectorRegs:$Vv32, IntRegsLow8:$Rt8),
@@ -34842,6 +37103,56 @@ let DecoderNamespace = "EXT_mmvec";
 let isCodeGenOnly = 1;
 let Constraints = "$Vx32 = $Vx32in";
 }
+def V6_vlutvvb_oracci : HInst<
+(outs VectorRegs:$Vx32),
+(ins VectorRegs:$Vx32in, VectorRegs:$Vu32, VectorRegs:$Vv32, u3_0Imm:$Ii),
+"$Vx32.b |= vlut32($Vu32.b,$Vv32.b,#$Ii)",
+CVI_VP_VS_LONG, TypeCVI_VP_VS>, Enc_8280533, Requires<[HasV62T,UseHVX]> {
+let Inst{13-13} = 0b1;
+let Inst{31-21} = 0b00011100110;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isAccumulator = 1;
+let DecoderNamespace = "EXT_mmvec";
+let Constraints = "$Vx32 = $Vx32in";
+}
+def V6_vlutvvb_oracci_128B : HInst<
+(outs VectorRegs128B:$Vx32),
+(ins VectorRegs128B:$Vx32in, VectorRegs128B:$Vu32, VectorRegs128B:$Vv32, u3_0Imm:$Ii),
+"$Vx32.b |= vlut32($Vu32.b,$Vv32.b,#$Ii)",
+CVI_VP_VS_LONG, TypeCVI_VP_VS>, Enc_8280533, Requires<[HasV62T,UseHVX]> {
+let Inst{13-13} = 0b1;
+let Inst{31-21} = 0b00011100110;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isAccumulator = 1;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+let Constraints = "$Vx32 = $Vx32in";
+}
+def V6_vlutvvbi : HInst<
+(outs VectorRegs:$Vd32),
+(ins VectorRegs:$Vu32, VectorRegs:$Vv32, u3_0Imm:$Ii),
+"$Vd32.b = vlut32($Vu32.b,$Vv32.b,#$Ii)",
+CVI_VP_LONG, TypeCVI_VP>, Enc_7171569, Requires<[HasV62T,UseHVX]> {
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b00011110001;
+let hasNewValue = 1;
+let opNewValue = 0;
+let DecoderNamespace = "EXT_mmvec";
+}
+def V6_vlutvvbi_128B : HInst<
+(outs VectorRegs128B:$Vd32),
+(ins VectorRegs128B:$Vu32, VectorRegs128B:$Vv32, u3_0Imm:$Ii),
+"$Vd32.b = vlut32($Vu32.b,$Vv32.b,#$Ii)",
+CVI_VP_LONG, TypeCVI_VP>, Enc_7171569, Requires<[HasV62T,UseHVX]> {
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b00011110001;
+let hasNewValue = 1;
+let opNewValue = 0;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+}
 def V6_vlutvwh : HInst<
 (outs VecDblRegs:$Vdd32),
 (ins VectorRegs:$Vu32, VectorRegs:$Vv32, IntRegsLow8:$Rt8),
@@ -34862,6 +37173,31 @@ CVI_VP_VS_LONG, TypeCVI_VP_VS>, Enc_14767681, Requires<[HasV60T,UseHVX]> {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b1;
 let Inst{31-24} = 0b00011011;
+let hasNewValue = 1;
+let opNewValue = 0;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+}
+def V6_vlutvwh_nm : HInst<
+(outs VecDblRegs:$Vdd32),
+(ins VectorRegs:$Vu32, VectorRegs:$Vv32, IntRegsLow8:$Rt8),
+"$Vdd32.h = vlut16($Vu32.b,$Vv32.h,$Rt8):nomatch",
+CVI_VP_VS_LONG, TypeCVI_VP_VS>, Enc_14767681, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b100;
+let Inst{13-13} = 0b0;
+let Inst{31-24} = 0b00011000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let DecoderNamespace = "EXT_mmvec";
+}
+def V6_vlutvwh_nm_128B : HInst<
+(outs VecDblRegs128B:$Vdd32),
+(ins VectorRegs128B:$Vu32, VectorRegs128B:$Vv32, IntRegsLow8:$Rt8),
+"$Vdd32.h = vlut16($Vu32.b,$Vv32.h,$Rt8):nomatch",
+CVI_VP_VS_LONG, TypeCVI_VP_VS>, Enc_14767681, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b100;
+let Inst{13-13} = 0b0;
+let Inst{31-24} = 0b00011000;
 let hasNewValue = 1;
 let opNewValue = 0;
 let DecoderNamespace = "EXT_mmvec";
@@ -34895,6 +37231,104 @@ let isAccumulator = 1;
 let DecoderNamespace = "EXT_mmvec";
 let isCodeGenOnly = 1;
 let Constraints = "$Vxx32 = $Vxx32in";
+}
+def V6_vlutvwh_oracci : HInst<
+(outs VecDblRegs:$Vxx32),
+(ins VecDblRegs:$Vxx32in, VectorRegs:$Vu32, VectorRegs:$Vv32, u3_0Imm:$Ii),
+"$Vxx32.h |= vlut16($Vu32.b,$Vv32.h,#$Ii)",
+CVI_VP_VS_LONG, TypeCVI_VP_VS>, Enc_3457570, Requires<[HasV62T,UseHVX]> {
+let Inst{13-13} = 0b1;
+let Inst{31-21} = 0b00011100111;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isAccumulator = 1;
+let DecoderNamespace = "EXT_mmvec";
+let Constraints = "$Vxx32 = $Vxx32in";
+}
+def V6_vlutvwh_oracci_128B : HInst<
+(outs VecDblRegs128B:$Vxx32),
+(ins VecDblRegs128B:$Vxx32in, VectorRegs128B:$Vu32, VectorRegs128B:$Vv32, u3_0Imm:$Ii),
+"$Vxx32.h |= vlut16($Vu32.b,$Vv32.h,#$Ii)",
+CVI_VP_VS_LONG, TypeCVI_VP_VS>, Enc_3457570, Requires<[HasV62T,UseHVX]> {
+let Inst{13-13} = 0b1;
+let Inst{31-21} = 0b00011100111;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isAccumulator = 1;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+let Constraints = "$Vxx32 = $Vxx32in";
+}
+def V6_vlutvwhi : HInst<
+(outs VecDblRegs:$Vdd32),
+(ins VectorRegs:$Vu32, VectorRegs:$Vv32, u3_0Imm:$Ii),
+"$Vdd32.h = vlut16($Vu32.b,$Vv32.h,#$Ii)",
+CVI_VP_VS_LONG, TypeCVI_VP_VS>, Enc_13261538, Requires<[HasV62T,UseHVX]> {
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b00011110011;
+let hasNewValue = 1;
+let opNewValue = 0;
+let DecoderNamespace = "EXT_mmvec";
+}
+def V6_vlutvwhi_128B : HInst<
+(outs VecDblRegs128B:$Vdd32),
+(ins VectorRegs128B:$Vu32, VectorRegs128B:$Vv32, u3_0Imm:$Ii),
+"$Vdd32.h = vlut16($Vu32.b,$Vv32.h,#$Ii)",
+CVI_VP_VS_LONG, TypeCVI_VP_VS>, Enc_13261538, Requires<[HasV62T,UseHVX]> {
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b00011110011;
+let hasNewValue = 1;
+let opNewValue = 0;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+}
+def V6_vmaxb : HInst<
+(outs VectorRegs:$Vd32),
+(ins VectorRegs:$Vu32, VectorRegs:$Vv32),
+"$Vd32.b = vmax($Vu32.b,$Vv32.b)",
+CVI_VA, TypeCVI_VA>, Enc_6223403, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b101;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b00011111001;
+let hasNewValue = 1;
+let opNewValue = 0;
+let DecoderNamespace = "EXT_mmvec";
+}
+def V6_vmaxb_128B : HInst<
+(outs VectorRegs128B:$Vd32),
+(ins VectorRegs128B:$Vu32, VectorRegs128B:$Vv32),
+"$Vd32.b = vmax($Vu32.b,$Vv32.b)",
+CVI_VA, TypeCVI_VA>, Enc_6223403, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b101;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b00011111001;
+let hasNewValue = 1;
+let opNewValue = 0;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+}
+def V6_vmaxb_alt : HInst<
+(outs VectorRegs:$Vd32),
+(ins VectorRegs:$Vu32, VectorRegs:$Vv32),
+"$Vd32 = vmaxb($Vu32,$Vv32)",
+PSEUDO, TypeMAPPING>, Requires<[HasV62T,UseHVX]> {
+let hasNewValue = 1;
+let opNewValue = 0;
+let isPseudo = 1;
+let isCodeGenOnly = 1;
+let DecoderNamespace = "EXT_mmvec";
+}
+def V6_vmaxb_alt_128B : HInst<
+(outs VectorRegs128B:$Vd32),
+(ins VectorRegs128B:$Vu32, VectorRegs128B:$Vv32),
+"$Vd32 = vmaxb($Vu32,$Vv32)",
+PSEUDO, TypeMAPPING>, Requires<[HasV62T,UseHVX]> {
+let hasNewValue = 1;
+let opNewValue = 0;
+let isPseudo = 1;
+let isCodeGenOnly = 1;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
 }
 def V6_vmaxh : HInst<
 (outs VectorRegs:$Vd32),
@@ -35081,6 +37515,54 @@ def V6_vmaxw_alt_128B : HInst<
 (ins VectorRegs128B:$Vu32, VectorRegs128B:$Vv32),
 "$Vd32 = vmaxw($Vu32,$Vv32)",
 PSEUDO, TypeMAPPING>, Requires<[HasV60T,UseHVX]> {
+let hasNewValue = 1;
+let opNewValue = 0;
+let isPseudo = 1;
+let isCodeGenOnly = 1;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+}
+def V6_vminb : HInst<
+(outs VectorRegs:$Vd32),
+(ins VectorRegs:$Vu32, VectorRegs:$Vv32),
+"$Vd32.b = vmin($Vu32.b,$Vv32.b)",
+CVI_VA, TypeCVI_VA>, Enc_6223403, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b100;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b00011111001;
+let hasNewValue = 1;
+let opNewValue = 0;
+let DecoderNamespace = "EXT_mmvec";
+}
+def V6_vminb_128B : HInst<
+(outs VectorRegs128B:$Vd32),
+(ins VectorRegs128B:$Vu32, VectorRegs128B:$Vv32),
+"$Vd32.b = vmin($Vu32.b,$Vv32.b)",
+CVI_VA, TypeCVI_VA>, Enc_6223403, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b100;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b00011111001;
+let hasNewValue = 1;
+let opNewValue = 0;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+}
+def V6_vminb_alt : HInst<
+(outs VectorRegs:$Vd32),
+(ins VectorRegs:$Vu32, VectorRegs:$Vv32),
+"$Vd32 = vminb($Vu32,$Vv32)",
+PSEUDO, TypeMAPPING>, Requires<[HasV62T,UseHVX]> {
+let hasNewValue = 1;
+let opNewValue = 0;
+let isPseudo = 1;
+let isCodeGenOnly = 1;
+let DecoderNamespace = "EXT_mmvec";
+}
+def V6_vminb_alt_128B : HInst<
+(outs VectorRegs128B:$Vd32),
+(ins VectorRegs128B:$Vu32, VectorRegs128B:$Vv32),
+"$Vd32 = vminb($Vu32,$Vv32)",
+PSEUDO, TypeMAPPING>, Requires<[HasV62T,UseHVX]> {
 let hasNewValue = 1;
 let opNewValue = 0;
 let isPseudo = 1;
@@ -35584,6 +38066,110 @@ let isCodeGenOnly = 1;
 let DecoderNamespace = "EXT_mmvec";
 let isCodeGenOnly = 1;
 }
+def V6_vmpauhb : HInst<
+(outs VecDblRegs:$Vdd32),
+(ins VecDblRegs:$Vuu32, IntRegs:$Rt32),
+"$Vdd32.w = vmpa($Vuu32.uh,$Rt32.b)",
+CVI_VX_DV_LONG, TypeCVI_VX_DV>, Enc_5023792, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b101;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b00011001100;
+let hasNewValue = 1;
+let opNewValue = 0;
+let DecoderNamespace = "EXT_mmvec";
+}
+def V6_vmpauhb_128B : HInst<
+(outs VecDblRegs128B:$Vdd32),
+(ins VecDblRegs128B:$Vuu32, IntRegs:$Rt32),
+"$Vdd32.w = vmpa($Vuu32.uh,$Rt32.b)",
+CVI_VX_DV_LONG, TypeCVI_VX_DV>, Enc_5023792, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b101;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b00011001100;
+let hasNewValue = 1;
+let opNewValue = 0;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+}
+def V6_vmpauhb_acc : HInst<
+(outs VecDblRegs:$Vxx32),
+(ins VecDblRegs:$Vxx32in, VecDblRegs:$Vuu32, IntRegs:$Rt32),
+"$Vxx32.w += vmpa($Vuu32.uh,$Rt32.b)",
+CVI_VX_DV_LONG, TypeCVI_VX_DV>, Enc_4327792, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b010;
+let Inst{13-13} = 0b1;
+let Inst{31-21} = 0b00011001100;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isAccumulator = 1;
+let DecoderNamespace = "EXT_mmvec";
+let Constraints = "$Vxx32 = $Vxx32in";
+}
+def V6_vmpauhb_acc_128B : HInst<
+(outs VecDblRegs128B:$Vxx32),
+(ins VecDblRegs128B:$Vxx32in, VecDblRegs128B:$Vuu32, IntRegs:$Rt32),
+"$Vxx32.w += vmpa($Vuu32.uh,$Rt32.b)",
+CVI_VX_DV_LONG, TypeCVI_VX_DV>, Enc_4327792, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b010;
+let Inst{13-13} = 0b1;
+let Inst{31-21} = 0b00011001100;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isAccumulator = 1;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+let Constraints = "$Vxx32 = $Vxx32in";
+}
+def V6_vmpauhb_acc_alt : HInst<
+(outs VecDblRegs:$Vxx32),
+(ins VecDblRegs:$Vxx32in, VecDblRegs:$Vuu32, IntRegs:$Rt32),
+"$Vxx32 += vmpauhb($Vuu32,$Rt32)",
+PSEUDO, TypeMAPPING>, Requires<[HasV62T,UseHVX]> {
+let hasNewValue = 1;
+let opNewValue = 0;
+let isAccumulator = 1;
+let isPseudo = 1;
+let isCodeGenOnly = 1;
+let DecoderNamespace = "EXT_mmvec";
+let Constraints = "$Vxx32 = $Vxx32in";
+}
+def V6_vmpauhb_acc_alt_128B : HInst<
+(outs VecDblRegs128B:$Vxx32),
+(ins VecDblRegs128B:$Vxx32in, VecDblRegs128B:$Vuu32, IntRegs:$Rt32),
+"$Vxx32 += vmpauhb($Vuu32,$Rt32)",
+PSEUDO, TypeMAPPING>, Requires<[HasV62T,UseHVX]> {
+let hasNewValue = 1;
+let opNewValue = 0;
+let isAccumulator = 1;
+let isPseudo = 1;
+let isCodeGenOnly = 1;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+let Constraints = "$Vxx32 = $Vxx32in";
+}
+def V6_vmpauhb_alt : HInst<
+(outs VecDblRegs:$Vdd32),
+(ins VecDblRegs:$Vuu32, IntRegs:$Rt32),
+"$Vdd32 = vmpauhb($Vuu32,$Rt32)",
+PSEUDO, TypeMAPPING>, Requires<[HasV62T,UseHVX]> {
+let hasNewValue = 1;
+let opNewValue = 0;
+let isPseudo = 1;
+let isCodeGenOnly = 1;
+let DecoderNamespace = "EXT_mmvec";
+}
+def V6_vmpauhb_alt_128B : HInst<
+(outs VecDblRegs128B:$Vdd32),
+(ins VecDblRegs128B:$Vuu32, IntRegs:$Rt32),
+"$Vdd32 = vmpauhb($Vuu32,$Rt32)",
+PSEUDO, TypeMAPPING>, Requires<[HasV62T,UseHVX]> {
+let hasNewValue = 1;
+let opNewValue = 0;
+let isPseudo = 1;
+let isCodeGenOnly = 1;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+}
 def V6_vmpybus : HInst<
 (outs VecDblRegs:$Vdd32),
 (ins VectorRegs:$Vu32, IntRegs:$Rt32),
@@ -35916,6 +38502,31 @@ CVI_VX_DV, TypeCVI_VX_DV>, Enc_6223403, Requires<[HasV60T,UseHVX]> {
 let Inst{7-5} = 0b101;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011111111;
+let hasNewValue = 1;
+let opNewValue = 0;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+}
+def V6_vmpyewuh_64 : HInst<
+(outs VecDblRegs:$Vdd32),
+(ins VectorRegs:$Vu32, VectorRegs:$Vv32),
+"$Vdd32 = vmpye($Vu32.w,$Vv32.uh)",
+CVI_VX_DV_LONG, TypeCVI_VX_DV>, Enc_15290236, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b110;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b00011110101;
+let hasNewValue = 1;
+let opNewValue = 0;
+let DecoderNamespace = "EXT_mmvec";
+}
+def V6_vmpyewuh_64_128B : HInst<
+(outs VecDblRegs128B:$Vdd32),
+(ins VectorRegs128B:$Vu32, VectorRegs128B:$Vv32),
+"$Vdd32 = vmpye($Vu32.w,$Vv32.uh)",
+CVI_VX_DV_LONG, TypeCVI_VX_DV>, Enc_15290236, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b110;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b00011110101;
 let hasNewValue = 1;
 let opNewValue = 0;
 let DecoderNamespace = "EXT_mmvec";
@@ -37049,6 +39660,110 @@ let isCodeGenOnly = 1;
 let DecoderNamespace = "EXT_mmvec";
 let isCodeGenOnly = 1;
 }
+def V6_vmpyiwub : HInst<
+(outs VectorRegs:$Vd32),
+(ins VectorRegs:$Vu32, IntRegs:$Rt32),
+"$Vd32.w = vmpyi($Vu32.w,$Rt32.ub)",
+CVI_VX_LONG, TypeCVI_VX>, Enc_16214129, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b110;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b00011001100;
+let hasNewValue = 1;
+let opNewValue = 0;
+let DecoderNamespace = "EXT_mmvec";
+}
+def V6_vmpyiwub_128B : HInst<
+(outs VectorRegs128B:$Vd32),
+(ins VectorRegs128B:$Vu32, IntRegs:$Rt32),
+"$Vd32.w = vmpyi($Vu32.w,$Rt32.ub)",
+CVI_VX_LONG, TypeCVI_VX>, Enc_16214129, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b110;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b00011001100;
+let hasNewValue = 1;
+let opNewValue = 0;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+}
+def V6_vmpyiwub_acc : HInst<
+(outs VectorRegs:$Vx32),
+(ins VectorRegs:$Vx32in, VectorRegs:$Vu32, IntRegs:$Rt32),
+"$Vx32.w += vmpyi($Vu32.w,$Rt32.ub)",
+CVI_VX_LONG, TypeCVI_VX>, Enc_10058269, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b001;
+let Inst{13-13} = 0b1;
+let Inst{31-21} = 0b00011001100;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isAccumulator = 1;
+let DecoderNamespace = "EXT_mmvec";
+let Constraints = "$Vx32 = $Vx32in";
+}
+def V6_vmpyiwub_acc_128B : HInst<
+(outs VectorRegs128B:$Vx32),
+(ins VectorRegs128B:$Vx32in, VectorRegs128B:$Vu32, IntRegs:$Rt32),
+"$Vx32.w += vmpyi($Vu32.w,$Rt32.ub)",
+CVI_VX_LONG, TypeCVI_VX>, Enc_10058269, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b001;
+let Inst{13-13} = 0b1;
+let Inst{31-21} = 0b00011001100;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isAccumulator = 1;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+let Constraints = "$Vx32 = $Vx32in";
+}
+def V6_vmpyiwub_acc_alt : HInst<
+(outs VectorRegs:$Vx32),
+(ins VectorRegs:$Vx32in, VectorRegs:$Vu32, IntRegs:$Rt32),
+"$Vx32 += vmpyiwub($Vu32,$Rt32)",
+PSEUDO, TypeMAPPING>, Requires<[HasV62T,UseHVX]> {
+let hasNewValue = 1;
+let opNewValue = 0;
+let isAccumulator = 1;
+let isPseudo = 1;
+let isCodeGenOnly = 1;
+let DecoderNamespace = "EXT_mmvec";
+let Constraints = "$Vx32 = $Vx32in";
+}
+def V6_vmpyiwub_acc_alt_128B : HInst<
+(outs VectorRegs128B:$Vx32),
+(ins VectorRegs128B:$Vx32in, VectorRegs128B:$Vu32, IntRegs:$Rt32),
+"$Vx32 += vmpyiwub($Vu32,$Rt32)",
+PSEUDO, TypeMAPPING>, Requires<[HasV62T,UseHVX]> {
+let hasNewValue = 1;
+let opNewValue = 0;
+let isAccumulator = 1;
+let isPseudo = 1;
+let isCodeGenOnly = 1;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+let Constraints = "$Vx32 = $Vx32in";
+}
+def V6_vmpyiwub_alt : HInst<
+(outs VectorRegs:$Vd32),
+(ins VectorRegs:$Vu32, IntRegs:$Rt32),
+"$Vd32 = vmpyiwub($Vu32,$Rt32)",
+PSEUDO, TypeMAPPING>, Requires<[HasV62T,UseHVX]> {
+let hasNewValue = 1;
+let opNewValue = 0;
+let isPseudo = 1;
+let isCodeGenOnly = 1;
+let DecoderNamespace = "EXT_mmvec";
+}
+def V6_vmpyiwub_alt_128B : HInst<
+(outs VectorRegs128B:$Vd32),
+(ins VectorRegs128B:$Vu32, IntRegs:$Rt32),
+"$Vd32 = vmpyiwub($Vu32,$Rt32)",
+PSEUDO, TypeMAPPING>, Requires<[HasV62T,UseHVX]> {
+let hasNewValue = 1;
+let opNewValue = 0;
+let isPseudo = 1;
+let isCodeGenOnly = 1;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+}
 def V6_vmpyowh : HInst<
 (outs VectorRegs:$Vd32),
 (ins VectorRegs:$Vu32, VectorRegs:$Vv32),
@@ -37073,6 +39788,35 @@ let hasNewValue = 1;
 let opNewValue = 0;
 let DecoderNamespace = "EXT_mmvec";
 let isCodeGenOnly = 1;
+}
+def V6_vmpyowh_64_acc : HInst<
+(outs VecDblRegs:$Vxx32),
+(ins VecDblRegs:$Vxx32in, VectorRegs:$Vu32, VectorRegs:$Vv32),
+"$Vxx32 += vmpyo($Vu32.w,$Vv32.h)",
+CVI_VX_DV_LONG, TypeCVI_VX_DV>, Enc_5972412, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b011;
+let Inst{13-13} = 0b1;
+let Inst{31-21} = 0b00011100001;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isAccumulator = 1;
+let DecoderNamespace = "EXT_mmvec";
+let Constraints = "$Vxx32 = $Vxx32in";
+}
+def V6_vmpyowh_64_acc_128B : HInst<
+(outs VecDblRegs128B:$Vxx32),
+(ins VecDblRegs128B:$Vxx32in, VectorRegs128B:$Vu32, VectorRegs128B:$Vv32),
+"$Vxx32 += vmpyo($Vu32.w,$Vv32.h)",
+CVI_VX_DV_LONG, TypeCVI_VX_DV>, Enc_5972412, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b011;
+let Inst{13-13} = 0b1;
+let Inst{31-21} = 0b00011100001;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isAccumulator = 1;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+let Constraints = "$Vxx32 = $Vxx32in";
 }
 def V6_vmpyowh_alt : HInst<
 (outs VectorRegs:$Vd32),
@@ -39348,6 +42092,102 @@ let isCodeGenOnly = 1;
 let DecoderNamespace = "EXT_mmvec";
 let isCodeGenOnly = 1;
 }
+def V6_vrounduhub : HInst<
+(outs VectorRegs:$Vd32),
+(ins VectorRegs:$Vu32, VectorRegs:$Vv32),
+"$Vd32.ub = vround($Vu32.uh,$Vv32.uh):sat",
+CVI_VS, TypeCVI_VS>, Enc_6223403, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b011;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b00011111111;
+let hasNewValue = 1;
+let opNewValue = 0;
+let DecoderNamespace = "EXT_mmvec";
+}
+def V6_vrounduhub_128B : HInst<
+(outs VectorRegs128B:$Vd32),
+(ins VectorRegs128B:$Vu32, VectorRegs128B:$Vv32),
+"$Vd32.ub = vround($Vu32.uh,$Vv32.uh):sat",
+CVI_VS, TypeCVI_VS>, Enc_6223403, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b011;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b00011111111;
+let hasNewValue = 1;
+let opNewValue = 0;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+}
+def V6_vrounduhub_alt : HInst<
+(outs VectorRegs:$Vd32),
+(ins VectorRegs:$Vu32, VectorRegs:$Vv32),
+"$Vd32 = vrounduhub($Vu32,$Vv32):sat",
+PSEUDO, TypeMAPPING>, Requires<[HasV62T,UseHVX]> {
+let hasNewValue = 1;
+let opNewValue = 0;
+let isPseudo = 1;
+let isCodeGenOnly = 1;
+let DecoderNamespace = "EXT_mmvec";
+}
+def V6_vrounduhub_alt_128B : HInst<
+(outs VectorRegs128B:$Vd32),
+(ins VectorRegs128B:$Vu32, VectorRegs128B:$Vv32),
+"$Vd32 = vrounduhub($Vu32,$Vv32):sat",
+PSEUDO, TypeMAPPING>, Requires<[HasV62T,UseHVX]> {
+let hasNewValue = 1;
+let opNewValue = 0;
+let isPseudo = 1;
+let isCodeGenOnly = 1;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+}
+def V6_vrounduwuh : HInst<
+(outs VectorRegs:$Vd32),
+(ins VectorRegs:$Vu32, VectorRegs:$Vv32),
+"$Vd32.uh = vround($Vu32.uw,$Vv32.uw):sat",
+CVI_VS, TypeCVI_VS>, Enc_6223403, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b100;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b00011111111;
+let hasNewValue = 1;
+let opNewValue = 0;
+let DecoderNamespace = "EXT_mmvec";
+}
+def V6_vrounduwuh_128B : HInst<
+(outs VectorRegs128B:$Vd32),
+(ins VectorRegs128B:$Vu32, VectorRegs128B:$Vv32),
+"$Vd32.uh = vround($Vu32.uw,$Vv32.uw):sat",
+CVI_VS, TypeCVI_VS>, Enc_6223403, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b100;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b00011111111;
+let hasNewValue = 1;
+let opNewValue = 0;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+}
+def V6_vrounduwuh_alt : HInst<
+(outs VectorRegs:$Vd32),
+(ins VectorRegs:$Vu32, VectorRegs:$Vv32),
+"$Vd32 = vrounduwuh($Vu32,$Vv32):sat",
+PSEUDO, TypeMAPPING>, Requires<[HasV62T,UseHVX]> {
+let hasNewValue = 1;
+let opNewValue = 0;
+let isPseudo = 1;
+let isCodeGenOnly = 1;
+let DecoderNamespace = "EXT_mmvec";
+}
+def V6_vrounduwuh_alt_128B : HInst<
+(outs VectorRegs128B:$Vd32),
+(ins VectorRegs128B:$Vu32, VectorRegs128B:$Vv32),
+"$Vd32 = vrounduwuh($Vu32,$Vv32):sat",
+PSEUDO, TypeMAPPING>, Requires<[HasV62T,UseHVX]> {
+let hasNewValue = 1;
+let opNewValue = 0;
+let isPseudo = 1;
+let isCodeGenOnly = 1;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+}
 def V6_vroundwh : HInst<
 (outs VectorRegs:$Vd32),
 (ins VectorRegs:$Vu32, VectorRegs:$Vv32),
@@ -39589,6 +42429,54 @@ def V6_vsathub_alt_128B : HInst<
 (ins VectorRegs128B:$Vu32, VectorRegs128B:$Vv32),
 "$Vd32 = vsathub($Vu32,$Vv32)",
 PSEUDO, TypeMAPPING>, Requires<[HasV60T,UseHVX]> {
+let hasNewValue = 1;
+let opNewValue = 0;
+let isPseudo = 1;
+let isCodeGenOnly = 1;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+}
+def V6_vsatuwuh : HInst<
+(outs VectorRegs:$Vd32),
+(ins VectorRegs:$Vu32, VectorRegs:$Vv32),
+"$Vd32.uh = vsat($Vu32.uw,$Vv32.uw)",
+CVI_VA, TypeCVI_VA>, Enc_6223403, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b110;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b00011111001;
+let hasNewValue = 1;
+let opNewValue = 0;
+let DecoderNamespace = "EXT_mmvec";
+}
+def V6_vsatuwuh_128B : HInst<
+(outs VectorRegs128B:$Vd32),
+(ins VectorRegs128B:$Vu32, VectorRegs128B:$Vv32),
+"$Vd32.uh = vsat($Vu32.uw,$Vv32.uw)",
+CVI_VA, TypeCVI_VA>, Enc_6223403, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b110;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b00011111001;
+let hasNewValue = 1;
+let opNewValue = 0;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+}
+def V6_vsatuwuh_alt : HInst<
+(outs VectorRegs:$Vd32),
+(ins VectorRegs:$Vu32, VectorRegs:$Vv32),
+"$Vd32 = vsatuwuh($Vu32,$Vv32)",
+PSEUDO, TypeMAPPING>, Requires<[HasV62T,UseHVX]> {
+let hasNewValue = 1;
+let opNewValue = 0;
+let isPseudo = 1;
+let isCodeGenOnly = 1;
+let DecoderNamespace = "EXT_mmvec";
+}
+def V6_vsatuwuh_alt_128B : HInst<
+(outs VectorRegs128B:$Vd32),
+(ins VectorRegs128B:$Vu32, VectorRegs128B:$Vv32),
+"$Vd32 = vsatuwuh($Vu32,$Vv32)",
+PSEUDO, TypeMAPPING>, Requires<[HasV62T,UseHVX]> {
 let hasNewValue = 1;
 let opNewValue = 0;
 let isPseudo = 1;
@@ -40384,6 +43272,133 @@ let DecoderNamespace = "EXT_mmvec";
 let isCodeGenOnly = 1;
 let Constraints = "$Vx32 = $Vx32in";
 }
+def V6_vsubbsat : HInst<
+(outs VectorRegs:$Vd32),
+(ins VectorRegs:$Vu32, VectorRegs:$Vv32),
+"$Vd32.b = vsub($Vu32.b,$Vv32.b):sat",
+CVI_VA, TypeCVI_VA>, Enc_6223403, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b010;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b00011111001;
+let hasNewValue = 1;
+let opNewValue = 0;
+let DecoderNamespace = "EXT_mmvec";
+}
+def V6_vsubbsat_128B : HInst<
+(outs VectorRegs128B:$Vd32),
+(ins VectorRegs128B:$Vu32, VectorRegs128B:$Vv32),
+"$Vd32.b = vsub($Vu32.b,$Vv32.b):sat",
+CVI_VA, TypeCVI_VA>, Enc_6223403, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b010;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b00011111001;
+let hasNewValue = 1;
+let opNewValue = 0;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+}
+def V6_vsubbsat_alt : HInst<
+(outs VectorRegs:$Vd32),
+(ins VectorRegs:$Vu32, VectorRegs:$Vv32),
+"$Vd32 = vsubb($Vu32,$Vv32):sat",
+PSEUDO, TypeMAPPING>, Requires<[HasV62T,UseHVX]> {
+let hasNewValue = 1;
+let opNewValue = 0;
+let isPseudo = 1;
+let isCodeGenOnly = 1;
+let DecoderNamespace = "EXT_mmvec";
+}
+def V6_vsubbsat_alt_128B : HInst<
+(outs VectorRegs128B:$Vd32),
+(ins VectorRegs128B:$Vu32, VectorRegs128B:$Vv32),
+"$Vd32 = vsubb($Vu32,$Vv32):sat",
+PSEUDO, TypeMAPPING>, Requires<[HasV62T,UseHVX]> {
+let hasNewValue = 1;
+let opNewValue = 0;
+let isPseudo = 1;
+let isCodeGenOnly = 1;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+}
+def V6_vsubbsat_dv : HInst<
+(outs VecDblRegs:$Vdd32),
+(ins VecDblRegs:$Vuu32, VecDblRegs:$Vvv32),
+"$Vdd32.b = vsub($Vuu32.b,$Vvv32.b):sat",
+CVI_VA_DV, TypeCVI_VA_DV>, Enc_13211717, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b001;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b00011110101;
+let hasNewValue = 1;
+let opNewValue = 0;
+let DecoderNamespace = "EXT_mmvec";
+}
+def V6_vsubbsat_dv_128B : HInst<
+(outs VecDblRegs128B:$Vdd32),
+(ins VecDblRegs128B:$Vuu32, VecDblRegs128B:$Vvv32),
+"$Vdd32.b = vsub($Vuu32.b,$Vvv32.b):sat",
+CVI_VA_DV, TypeCVI_VA_DV>, Enc_13211717, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b001;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b00011110101;
+let hasNewValue = 1;
+let opNewValue = 0;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+}
+def V6_vsubbsat_dv_alt : HInst<
+(outs VecDblRegs:$Vdd32),
+(ins VecDblRegs:$Vuu32, VecDblRegs:$Vvv32),
+"$Vdd32 = vsubb($Vuu32,$Vvv32):sat",
+PSEUDO, TypeMAPPING>, Requires<[HasV62T,UseHVX]> {
+let hasNewValue = 1;
+let opNewValue = 0;
+let isPseudo = 1;
+let isCodeGenOnly = 1;
+let DecoderNamespace = "EXT_mmvec";
+}
+def V6_vsubbsat_dv_alt_128B : HInst<
+(outs VecDblRegs128B:$Vdd32),
+(ins VecDblRegs128B:$Vuu32, VecDblRegs128B:$Vvv32),
+"$Vdd32 = vsubb($Vuu32,$Vvv32):sat",
+PSEUDO, TypeMAPPING>, Requires<[HasV62T,UseHVX]> {
+let hasNewValue = 1;
+let opNewValue = 0;
+let isPseudo = 1;
+let isCodeGenOnly = 1;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+}
+def V6_vsubcarry : HInst<
+(outs VectorRegs:$Vd32, VecPredRegs:$Qx4),
+(ins VectorRegs:$Vu32, VectorRegs:$Vv32, VecPredRegs:$Qx4in),
+"$Vd32.w = vsub($Vu32.w,$Vv32.w,$Qx4):carry",
+CVI_VA, TypeCVI_VA>, Enc_13691337, Requires<[HasV62T,UseHVX]> {
+let Inst{7-7} = 0b1;
+let Inst{13-13} = 0b1;
+let Inst{31-21} = 0b00011100101;
+let hasNewValue = 1;
+let opNewValue = 0;
+let hasNewValue2 = 1;
+let opNewValue2 = 1;
+let DecoderNamespace = "EXT_mmvec";
+let Constraints = "$Qx4 = $Qx4in";
+}
+def V6_vsubcarry_128B : HInst<
+(outs VectorRegs128B:$Vd32, VecPredRegs128B:$Qx4),
+(ins VectorRegs128B:$Vu32, VectorRegs128B:$Vv32, VecPredRegs128B:$Qx4in),
+"$Vd32.w = vsub($Vu32.w,$Vv32.w,$Qx4):carry",
+CVI_VA, TypeCVI_VA>, Enc_13691337, Requires<[HasV62T,UseHVX]> {
+let Inst{7-7} = 0b1;
+let Inst{13-13} = 0b1;
+let Inst{31-21} = 0b00011100101;
+let hasNewValue = 1;
+let opNewValue = 0;
+let hasNewValue2 = 1;
+let opNewValue2 = 1;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+let Constraints = "$Qx4 = $Qx4in";
+}
 def V6_vsubh : HInst<
 (outs VectorRegs:$Vd32),
 (ins VectorRegs:$Vu32, VectorRegs:$Vv32),
@@ -40876,6 +43891,31 @@ let isCodeGenOnly = 1;
 let DecoderNamespace = "EXT_mmvec";
 let isCodeGenOnly = 1;
 }
+def V6_vsubububb_sat : HInst<
+(outs VectorRegs:$Vd32),
+(ins VectorRegs:$Vu32, VectorRegs:$Vv32),
+"$Vd32.ub = vsub($Vu32.ub,$Vv32.b):sat",
+CVI_VA, TypeCVI_VA>, Enc_6223403, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b101;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b00011110101;
+let hasNewValue = 1;
+let opNewValue = 0;
+let DecoderNamespace = "EXT_mmvec";
+}
+def V6_vsubububb_sat_128B : HInst<
+(outs VectorRegs128B:$Vd32),
+(ins VectorRegs128B:$Vu32, VectorRegs128B:$Vv32),
+"$Vd32.ub = vsub($Vu32.ub,$Vv32.b):sat",
+CVI_VA, TypeCVI_VA>, Enc_6223403, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b101;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b00011110101;
+let hasNewValue = 1;
+let opNewValue = 0;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+}
 def V6_vsubuhsat : HInst<
 (outs VectorRegs:$Vd32),
 (ins VectorRegs:$Vu32, VectorRegs:$Vv32),
@@ -41013,6 +44053,102 @@ def V6_vsubuhw_alt_128B : HInst<
 (ins VectorRegs128B:$Vu32, VectorRegs128B:$Vv32),
 "$Vdd32 = vsubuh($Vu32,$Vv32)",
 PSEUDO, TypeMAPPING>, Requires<[HasV60T,UseHVX]> {
+let hasNewValue = 1;
+let opNewValue = 0;
+let isPseudo = 1;
+let isCodeGenOnly = 1;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+}
+def V6_vsubuwsat : HInst<
+(outs VectorRegs:$Vd32),
+(ins VectorRegs:$Vu32, VectorRegs:$Vv32),
+"$Vd32.uw = vsub($Vu32.uw,$Vv32.uw):sat",
+CVI_VA, TypeCVI_VA>, Enc_6223403, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b100;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b00011111110;
+let hasNewValue = 1;
+let opNewValue = 0;
+let DecoderNamespace = "EXT_mmvec";
+}
+def V6_vsubuwsat_128B : HInst<
+(outs VectorRegs128B:$Vd32),
+(ins VectorRegs128B:$Vu32, VectorRegs128B:$Vv32),
+"$Vd32.uw = vsub($Vu32.uw,$Vv32.uw):sat",
+CVI_VA, TypeCVI_VA>, Enc_6223403, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b100;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b00011111110;
+let hasNewValue = 1;
+let opNewValue = 0;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+}
+def V6_vsubuwsat_alt : HInst<
+(outs VectorRegs:$Vd32),
+(ins VectorRegs:$Vu32, VectorRegs:$Vv32),
+"$Vd32 = vsubuw($Vu32,$Vv32):sat",
+PSEUDO, TypeMAPPING>, Requires<[HasV62T,UseHVX]> {
+let hasNewValue = 1;
+let opNewValue = 0;
+let isPseudo = 1;
+let isCodeGenOnly = 1;
+let DecoderNamespace = "EXT_mmvec";
+}
+def V6_vsubuwsat_alt_128B : HInst<
+(outs VectorRegs128B:$Vd32),
+(ins VectorRegs128B:$Vu32, VectorRegs128B:$Vv32),
+"$Vd32 = vsubuw($Vu32,$Vv32):sat",
+PSEUDO, TypeMAPPING>, Requires<[HasV62T,UseHVX]> {
+let hasNewValue = 1;
+let opNewValue = 0;
+let isPseudo = 1;
+let isCodeGenOnly = 1;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+}
+def V6_vsubuwsat_dv : HInst<
+(outs VecDblRegs:$Vdd32),
+(ins VecDblRegs:$Vuu32, VecDblRegs:$Vvv32),
+"$Vdd32.uw = vsub($Vuu32.uw,$Vvv32.uw):sat",
+CVI_VA_DV, TypeCVI_VA_DV>, Enc_13211717, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b011;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b00011110101;
+let hasNewValue = 1;
+let opNewValue = 0;
+let DecoderNamespace = "EXT_mmvec";
+}
+def V6_vsubuwsat_dv_128B : HInst<
+(outs VecDblRegs128B:$Vdd32),
+(ins VecDblRegs128B:$Vuu32, VecDblRegs128B:$Vvv32),
+"$Vdd32.uw = vsub($Vuu32.uw,$Vvv32.uw):sat",
+CVI_VA_DV, TypeCVI_VA_DV>, Enc_13211717, Requires<[HasV62T,UseHVX]> {
+let Inst{7-5} = 0b011;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b00011110101;
+let hasNewValue = 1;
+let opNewValue = 0;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+}
+def V6_vsubuwsat_dv_alt : HInst<
+(outs VecDblRegs:$Vdd32),
+(ins VecDblRegs:$Vuu32, VecDblRegs:$Vvv32),
+"$Vdd32 = vsubuw($Vuu32,$Vvv32):sat",
+PSEUDO, TypeMAPPING>, Requires<[HasV62T,UseHVX]> {
+let hasNewValue = 1;
+let opNewValue = 0;
+let isPseudo = 1;
+let isCodeGenOnly = 1;
+let DecoderNamespace = "EXT_mmvec";
+}
+def V6_vsubuwsat_dv_alt_128B : HInst<
+(outs VecDblRegs128B:$Vdd32),
+(ins VecDblRegs128B:$Vuu32, VecDblRegs128B:$Vvv32),
+"$Vdd32 = vsubuw($Vuu32,$Vvv32):sat",
+PSEUDO, TypeMAPPING>, Requires<[HasV62T,UseHVX]> {
 let hasNewValue = 1;
 let opNewValue = 0;
 let isPseudo = 1;
@@ -41985,6 +45121,170 @@ let hasNewValue = 1;
 let opNewValue = 0;
 let isPseudo = 1;
 let isCodeGenOnly = 1;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+}
+def V6_vwhist128 : HInst<
+(outs),
+(ins),
+"vwhist128",
+CVI_HIST, TypeCVI_HIST>, Enc_0, Requires<[HasV62T,UseHVX]> {
+let Inst{13-0} = 0b10010010000000;
+let Inst{31-16} = 0b0001111000000000;
+let DecoderNamespace = "EXT_mmvec";
+}
+def V6_vwhist128_128B : HInst<
+(outs),
+(ins),
+"vwhist128",
+CVI_HIST, TypeCVI_HIST>, Enc_0, Requires<[HasV62T,UseHVX]> {
+let Inst{13-0} = 0b10010010000000;
+let Inst{31-16} = 0b0001111000000000;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+}
+def V6_vwhist128m : HInst<
+(outs),
+(ins u1_0Imm:$Ii),
+"vwhist128(#$Ii)",
+CVI_HIST, TypeCVI_HIST>, Enc_1291652, Requires<[HasV62T,UseHVX]> {
+let Inst{7-0} = 0b10000000;
+let Inst{13-9} = 0b10011;
+let Inst{31-16} = 0b0001111000000000;
+let DecoderNamespace = "EXT_mmvec";
+}
+def V6_vwhist128m_128B : HInst<
+(outs),
+(ins u1_0Imm:$Ii),
+"vwhist128(#$Ii)",
+CVI_HIST, TypeCVI_HIST>, Enc_1291652, Requires<[HasV62T,UseHVX]> {
+let Inst{7-0} = 0b10000000;
+let Inst{13-9} = 0b10011;
+let Inst{31-16} = 0b0001111000000000;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+}
+def V6_vwhist128q : HInst<
+(outs),
+(ins VecPredRegs:$Qv4),
+"vwhist128($Qv4)",
+CVI_HIST, TypeCVI_HIST>, Enc_4109168, Requires<[HasV62T,UseHVX]> {
+let Inst{13-0} = 0b10010010000000;
+let Inst{21-16} = 0b000010;
+let Inst{31-24} = 0b00011110;
+let DecoderNamespace = "EXT_mmvec";
+}
+def V6_vwhist128q_128B : HInst<
+(outs),
+(ins VecPredRegs128B:$Qv4),
+"vwhist128($Qv4)",
+CVI_HIST, TypeCVI_HIST>, Enc_4109168, Requires<[HasV62T,UseHVX]> {
+let Inst{13-0} = 0b10010010000000;
+let Inst{21-16} = 0b000010;
+let Inst{31-24} = 0b00011110;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+}
+def V6_vwhist128qm : HInst<
+(outs),
+(ins VecPredRegs:$Qv4, u1_0Imm:$Ii),
+"vwhist128($Qv4,#$Ii)",
+CVI_HIST, TypeCVI_HIST>, Enc_7978128, Requires<[HasV62T,UseHVX]> {
+let Inst{7-0} = 0b10000000;
+let Inst{13-9} = 0b10011;
+let Inst{21-16} = 0b000010;
+let Inst{31-24} = 0b00011110;
+let DecoderNamespace = "EXT_mmvec";
+}
+def V6_vwhist128qm_128B : HInst<
+(outs),
+(ins VecPredRegs128B:$Qv4, u1_0Imm:$Ii),
+"vwhist128($Qv4,#$Ii)",
+CVI_HIST, TypeCVI_HIST>, Enc_7978128, Requires<[HasV62T,UseHVX]> {
+let Inst{7-0} = 0b10000000;
+let Inst{13-9} = 0b10011;
+let Inst{21-16} = 0b000010;
+let Inst{31-24} = 0b00011110;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+}
+def V6_vwhist256 : HInst<
+(outs),
+(ins),
+"vwhist256",
+CVI_HIST, TypeCVI_HIST>, Enc_0, Requires<[HasV62T,UseHVX]> {
+let Inst{13-0} = 0b10001010000000;
+let Inst{31-16} = 0b0001111000000000;
+let DecoderNamespace = "EXT_mmvec";
+}
+def V6_vwhist256_128B : HInst<
+(outs),
+(ins),
+"vwhist256",
+CVI_HIST, TypeCVI_HIST>, Enc_0, Requires<[HasV62T,UseHVX]> {
+let Inst{13-0} = 0b10001010000000;
+let Inst{31-16} = 0b0001111000000000;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+}
+def V6_vwhist256_sat : HInst<
+(outs),
+(ins),
+"vwhist256:sat",
+CVI_HIST, TypeCVI_HIST>, Enc_0, Requires<[HasV62T,UseHVX]> {
+let Inst{13-0} = 0b10001110000000;
+let Inst{31-16} = 0b0001111000000000;
+let DecoderNamespace = "EXT_mmvec";
+}
+def V6_vwhist256_sat_128B : HInst<
+(outs),
+(ins),
+"vwhist256:sat",
+CVI_HIST, TypeCVI_HIST>, Enc_0, Requires<[HasV62T,UseHVX]> {
+let Inst{13-0} = 0b10001110000000;
+let Inst{31-16} = 0b0001111000000000;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+}
+def V6_vwhist256q : HInst<
+(outs),
+(ins VecPredRegs:$Qv4),
+"vwhist256($Qv4)",
+CVI_HIST, TypeCVI_HIST>, Enc_4109168, Requires<[HasV62T,UseHVX]> {
+let Inst{13-0} = 0b10001010000000;
+let Inst{21-16} = 0b000010;
+let Inst{31-24} = 0b00011110;
+let DecoderNamespace = "EXT_mmvec";
+}
+def V6_vwhist256q_128B : HInst<
+(outs),
+(ins VecPredRegs128B:$Qv4),
+"vwhist256($Qv4)",
+CVI_HIST, TypeCVI_HIST>, Enc_4109168, Requires<[HasV62T,UseHVX]> {
+let Inst{13-0} = 0b10001010000000;
+let Inst{21-16} = 0b000010;
+let Inst{31-24} = 0b00011110;
+let DecoderNamespace = "EXT_mmvec";
+let isCodeGenOnly = 1;
+}
+def V6_vwhist256q_sat : HInst<
+(outs),
+(ins VecPredRegs:$Qv4),
+"vwhist256($Qv4):sat",
+CVI_HIST, TypeCVI_HIST>, Enc_4109168, Requires<[HasV62T,UseHVX]> {
+let Inst{13-0} = 0b10001110000000;
+let Inst{21-16} = 0b000010;
+let Inst{31-24} = 0b00011110;
+let DecoderNamespace = "EXT_mmvec";
+}
+def V6_vwhist256q_sat_128B : HInst<
+(outs),
+(ins VecPredRegs128B:$Qv4),
+"vwhist256($Qv4):sat",
+CVI_HIST, TypeCVI_HIST>, Enc_4109168, Requires<[HasV62T,UseHVX]> {
+let Inst{13-0} = 0b10001110000000;
+let Inst{21-16} = 0b000010;
+let Inst{31-24} = 0b00011110;
 let DecoderNamespace = "EXT_mmvec";
 let isCodeGenOnly = 1;
 }

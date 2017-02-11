@@ -8137,6 +8137,20 @@ struct BadSpecifierDiagnoser {
 /// grammar.
 void Sema::CheckDeductionGuideDeclarator(Declarator &D, QualType &R,
                                          StorageClass &SC) {
+  TemplateName GuidedTemplate = D.getName().TemplateName.get().get();
+  TemplateDecl *GuidedTemplateDecl = GuidedTemplate.getAsTemplateDecl();
+  assert(GuidedTemplateDecl && "missing template decl for deduction guide");
+
+  // C++ [temp.deduct.guide]p3:
+  //   A deduction-gide shall be declared in the same scope as the
+  //   corresponding class template.
+  if (!CurContext->getRedeclContext()->Equals(
+          GuidedTemplateDecl->getDeclContext()->getRedeclContext())) {
+    Diag(D.getIdentifierLoc(), diag::err_deduction_guide_wrong_scope)
+      << GuidedTemplateDecl;
+    Diag(GuidedTemplateDecl->getLocation(), diag::note_template_decl_here);
+  }
+
   auto &DS = D.getMutableDeclSpec();
   // We leave 'friend' and 'virtual' to be rejected in the normal way.
   if (DS.hasTypeSpecifier() || DS.getTypeQualifiers() ||
@@ -8196,7 +8210,6 @@ void Sema::CheckDeductionGuideDeclarator(Declarator &D, QualType &R,
     // Check that the return type is written as a specialization of
     // the template specified as the deduction-guide's name.
     ParsedType TrailingReturnType = Chunk.Fun.getTrailingReturnType();
-    TemplateName GuidedTemplate = D.getName().TemplateName.get().get();
     TypeSourceInfo *TSI = nullptr;
     QualType RetTy = GetTypeFromParser(TrailingReturnType, &TSI);
     assert(TSI && "deduction guide has valid type but invalid return type?");

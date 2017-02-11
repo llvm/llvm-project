@@ -16,12 +16,12 @@
 namespace llvm {
 
 template <typename T> class ArrayRef;
-class MCInst;
-class raw_ostream;
 class MCAsmInfo;
+class MCInst;
 class MCInstrInfo;
 class MCRegisterInfo;
 class MCSubtargetInfo;
+class raw_ostream;
 class StringRef;
 
 /// Convert `Bytes' to a hex string and output to `OS'
@@ -43,28 +43,26 @@ protected:
   /// \brief A stream that comments can be emitted to if desired.  Each comment
   /// must end with a newline.  This will be null if verbose assembly emission
   /// is disable.
-  raw_ostream *CommentStream;
+  raw_ostream *CommentStream = nullptr;
   const MCAsmInfo &MAI;
   const MCInstrInfo &MII;
   const MCRegisterInfo &MRI;
 
   /// True if we are printing marked up assembly.
-  bool UseMarkup;
+  bool UseMarkup = false;
 
   /// True if we are printing immediates as hex.
-  bool PrintImmHex;
+  bool PrintImmHex = false;
 
   /// Which style to use for printing hexadecimal values.
-  HexStyle::Style PrintHexStyle;
+  HexStyle::Style PrintHexStyle = HexStyle::C;
 
   /// Utility function for printing annotations.
   void printAnnotation(raw_ostream &OS, StringRef Annot);
 
 public:
   MCInstPrinter(const MCAsmInfo &mai, const MCInstrInfo &mii,
-                const MCRegisterInfo &mri)
-      : CommentStream(nullptr), MAI(mai), MII(mii), MRI(mri), UseMarkup(false),
-        PrintImmHex(false), PrintHexStyle(HexStyle::C) {}
+                const MCRegisterInfo &mri) : MAI(mai), MII(mii), MRI(mri) {}
 
   virtual ~MCInstPrinter();
 

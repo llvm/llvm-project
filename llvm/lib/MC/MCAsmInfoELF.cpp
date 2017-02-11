@@ -1,4 +1,4 @@
-//===-- MCAsmInfoELF.cpp - ELF asm properties -------------------*- C++ -*-===//
+//===- MCAsmInfoELF.cpp - ELF asm properties ------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -16,9 +16,10 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/Support/ELF.h"
+
 using namespace llvm;
 
-void MCAsmInfoELF::anchor() { }
+void MCAsmInfoELF::anchor() {}
 
 MCSection *MCAsmInfoELF::getNonexecutableStackSection(MCContext &Ctx) const {
   if (!UsesNonexecutableStackSection)
@@ -31,5 +32,4 @@ MCAsmInfoELF::MCAsmInfoELF() {
   WeakRefDirective = "\t.weak\t";
   PrivateGlobalPrefix = ".L";
   PrivateLabelPrefix = ".L";
-  UsesNonexecutableStackSection = true;
 }

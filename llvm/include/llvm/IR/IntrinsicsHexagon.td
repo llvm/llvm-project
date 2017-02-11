@@ -5659,22 +5659,6 @@ class Hexagon_v2048v2048v1024v1024i_Intrinsic<string GCCIntSuffix>
                           [IntrNoMem]>;
 
 //
-// Hexagon_LLiLLiLLi_Intrinsic<string GCCIntSuffix>
-// tag : M6_vabsdiffb
-class Hexagon_LLiLLiLLi_Intrinsic<string GCCIntSuffix>
- : Hexagon_Intrinsic<GCCIntSuffix,
-                          [llvm_i64_ty], [llvm_i64_ty,llvm_i64_ty],
-                          [IntrNoMem]>;
-
-//
-// Hexagon_LLii_Intrinsic<string GCCIntSuffix>
-// tag : S6_vsplatrbp
-class Hexagon_LLii_Intrinsic<string GCCIntSuffix>
- : Hexagon_Intrinsic<GCCIntSuffix,
-                          [llvm_i64_ty], [llvm_i32_ty],
-                          [IntrNoMem]>;
-
-//
 // BUILTIN_INFO(HEXAGON.S6_rol_i_r,SI_ftype_SISI,2)
 // tag : S6_rol_i_r
 def int_hexagon_S6_rol_i_r :
@@ -9342,6 +9326,274 @@ Hexagon_v1024v1024v512v512i_Intrinsic<"HEXAGON_V6_vlutvwh_oracc">;
 def int_hexagon_V6_vlutvwh_oracc_128B :
 Hexagon_v2048v2048v1024v1024i_Intrinsic<"HEXAGON_V6_vlutvwh_oracc_128B">;
 
+///
+/// HexagonV62 intrinsics
+///
+
+//
+// Hexagon_LLiLLiLLi_Intrinsic<string GCCIntSuffix>
+// tag : M6_vabsdiffb
+class Hexagon_LLiLLiLLi_Intrinsic<string GCCIntSuffix>
+ : Hexagon_Intrinsic<GCCIntSuffix,
+                          [llvm_i64_ty], [llvm_i64_ty,llvm_i64_ty],
+                          [IntrNoMem]>;
+
+//
+// Hexagon_LLii_Intrinsic<string GCCIntSuffix>
+// tag : S6_vsplatrbp
+class Hexagon_LLii_Intrinsic<string GCCIntSuffix>
+ : Hexagon_Intrinsic<GCCIntSuffix,
+                          [llvm_i64_ty], [llvm_i32_ty],
+                          [IntrNoMem]>;
+
+//
+// Hexagon_V62_v512v512i_Intrinsic<string GCCIntSuffix>
+// tag : V6_vlsrb
+class Hexagon_V62_v512v512i_Intrinsic<string GCCIntSuffix>
+ : Hexagon_Intrinsic<GCCIntSuffix,
+                          [llvm_v16i32_ty], [llvm_v16i32_ty,llvm_i32_ty],
+                          [IntrNoMem]>;
+
+//
+// Hexagon_V62_v1024v1024i_Intrinsic<string GCCIntSuffix>
+// tag : V6_vlsrb_128B
+class Hexagon_V62_v1024v1024i_Intrinsic<string GCCIntSuffix>
+ : Hexagon_Intrinsic<GCCIntSuffix,
+                          [llvm_v32i32_ty], [llvm_v32i32_ty,llvm_i32_ty],
+                          [IntrNoMem]>;
+
+//
+// Hexagon_V62_v512v512v512i_Intrinsic<string GCCIntSuffix>
+// tag : V6_vasrwuhrndsat
+class Hexagon_V62_v512v512v512i_Intrinsic<string GCCIntSuffix>
+ : Hexagon_Intrinsic<GCCIntSuffix,
+                          [llvm_v16i32_ty], [llvm_v16i32_ty,llvm_v16i32_ty,llvm_i32_ty],
+                          [IntrNoMem]>;
+
+//
+// Hexagon_V62_v1024v1024v1024i_Intrinsic<string GCCIntSuffix>
+// tag : V6_vasrwuhrndsat_128B
+class Hexagon_V62_v1024v1024v1024i_Intrinsic<string GCCIntSuffix>
+ : Hexagon_Intrinsic<GCCIntSuffix,
+                          [llvm_v32i32_ty], [llvm_v32i32_ty,llvm_v32i32_ty,llvm_i32_ty],
+                          [IntrNoMem]>;
+
+//
+// Hexagon_V62_v512v512v512_Intrinsic<string GCCIntSuffix>
+// tag : V6_vrounduwuh
+class Hexagon_V62_v512v512v512_Intrinsic<string GCCIntSuffix>
+ : Hexagon_Intrinsic<GCCIntSuffix,
+                          [llvm_v16i32_ty], [llvm_v16i32_ty,llvm_v16i32_ty],
+                          [IntrNoMem]>;
+
+//
+// Hexagon_V62_v1024v1024v1024_Intrinsic<string GCCIntSuffix>
+// tag : V6_vrounduwuh_128B
+class Hexagon_V62_v1024v1024v1024_Intrinsic<string GCCIntSuffix>
+ : Hexagon_Intrinsic<GCCIntSuffix,
+                          [llvm_v32i32_ty], [llvm_v32i32_ty,llvm_v32i32_ty],
+                          [IntrNoMem]>;
+
+//
+// Hexagon_V62_v2048v2048v2048_Intrinsic<string GCCIntSuffix>
+// tag : V6_vadduwsat_dv_128B
+class Hexagon_V62_v2048v2048v2048_Intrinsic<string GCCIntSuffix>
+ : Hexagon_Intrinsic<GCCIntSuffix,
+                          [llvm_v64i32_ty], [llvm_v64i32_ty,llvm_v64i32_ty],
+                          [IntrNoMem]>;
+
+//
+// Hexagon_V62_v1024v1024v512v512_Intrinsic<string GCCIntSuffix>
+// tag : V6_vaddhw_acc
+class Hexagon_V62_v1024v1024v512v512_Intrinsic<string GCCIntSuffix>
+ : Hexagon_Intrinsic<GCCIntSuffix,
+                          [llvm_v32i32_ty], [llvm_v32i32_ty,llvm_v16i32_ty,llvm_v16i32_ty],
+                          [IntrNoMem]>;
+
+//
+// Hexagon_V62_v2048v2048v1024v1024_Intrinsic<string GCCIntSuffix>
+// tag : V6_vaddhw_acc_128B
+class Hexagon_V62_v2048v2048v1024v1024_Intrinsic<string GCCIntSuffix>
+ : Hexagon_Intrinsic<GCCIntSuffix,
+                          [llvm_v64i32_ty], [llvm_v64i32_ty,llvm_v32i32_ty,llvm_v32i32_ty],
+                          [IntrNoMem]>;
+
+//
+// Hexagon_V62_v1024v512v512_Intrinsic<string GCCIntSuffix>
+// tag : V6_vmpyewuh_64
+class Hexagon_V62_v1024v512v512_Intrinsic<string GCCIntSuffix>
+ : Hexagon_Intrinsic<GCCIntSuffix,
+                          [llvm_v32i32_ty], [llvm_v16i32_ty,llvm_v16i32_ty],
+                          [IntrNoMem]>;
+
+//
+// Hexagon_V62_v2048v1024v1024_Intrinsic<string GCCIntSuffix>
+// tag : V6_vmpyewuh_64_128B
+class Hexagon_V62_v2048v1024v1024_Intrinsic<string GCCIntSuffix>
+ : Hexagon_Intrinsic<GCCIntSuffix,
+                          [llvm_v64i32_ty], [llvm_v32i32_ty,llvm_v32i32_ty],
+                          [IntrNoMem]>;
+
+//
+// Hexagon_V62_v2048v2048i_Intrinsic<string GCCIntSuffix>
+// tag : V6_vmpauhb_128B
+class Hexagon_V62_v2048v2048i_Intrinsic<string GCCIntSuffix>
+ : Hexagon_Intrinsic<GCCIntSuffix,
+                          [llvm_v64i32_ty], [llvm_v64i32_ty,llvm_i32_ty],
+                          [IntrNoMem]>;
+
+//
+// Hexagon_V62_v2048v2048v2048i_Intrinsic<string GCCIntSuffix>
+// tag : V6_vmpauhb_acc_128B
+class Hexagon_V62_v2048v2048v2048i_Intrinsic<string GCCIntSuffix>
+ : Hexagon_Intrinsic<GCCIntSuffix,
+                          [llvm_v64i32_ty], [llvm_v64i32_ty,llvm_v64i32_ty,llvm_i32_ty],
+                          [IntrNoMem]>;
+
+//
+// Hexagon_V62_v512v64ii_Intrinsic<string GCCIntSuffix>
+// tag : V6_vandnqrt
+class Hexagon_V62_v512v64ii_Intrinsic<string GCCIntSuffix>
+ : Hexagon_Intrinsic<GCCIntSuffix,
+                          [llvm_v16i32_ty], [llvm_v512i1_ty,llvm_i32_ty],
+                          [IntrNoMem]>;
+
+//
+// Hexagon_V62_v1024v128ii_Intrinsic<string GCCIntSuffix>
+// tag : V6_vandnqrt_128B
+class Hexagon_V62_v1024v128ii_Intrinsic<string GCCIntSuffix>
+ : Hexagon_Intrinsic<GCCIntSuffix,
+                          [llvm_v32i32_ty], [llvm_v1024i1_ty,llvm_i32_ty],
+                          [IntrNoMem]>;
+
+//
+// Hexagon_V62_v512v512v64ii_Intrinsic<string GCCIntSuffix>
+// tag : V6_vandnqrt_acc
+class Hexagon_V62_v512v512v64ii_Intrinsic<string GCCIntSuffix>
+ : Hexagon_Intrinsic<GCCIntSuffix,
+                          [llvm_v16i32_ty], [llvm_v16i32_ty,llvm_v512i1_ty,llvm_i32_ty],
+                          [IntrNoMem]>;
+
+//
+// Hexagon_V62_v1024v1024v128ii_Intrinsic<string GCCIntSuffix>
+// tag : V6_vandnqrt_acc_128B
+class Hexagon_V62_v1024v1024v128ii_Intrinsic<string GCCIntSuffix>
+ : Hexagon_Intrinsic<GCCIntSuffix,
+                          [llvm_v32i32_ty], [llvm_v32i32_ty,llvm_v1024i1_ty,llvm_i32_ty],
+                          [IntrNoMem]>;
+
+//
+// Hexagon_V62_v512v64iv512_Intrinsic<string GCCIntSuffix>
+// tag : V6_vandvqv
+class Hexagon_V62_v512v64iv512_Intrinsic<string GCCIntSuffix>
+ : Hexagon_Intrinsic<GCCIntSuffix,
+                          [llvm_v16i32_ty], [llvm_v512i1_ty,llvm_v16i32_ty],
+                          [IntrNoMem]>;
+
+//
+// Hexagon_V62_v1024v128iv1024_Intrinsic<string GCCIntSuffix>
+// tag : V6_vandvqv_128B
+class Hexagon_V62_v1024v128iv1024_Intrinsic<string GCCIntSuffix>
+ : Hexagon_Intrinsic<GCCIntSuffix,
+                          [llvm_v32i32_ty], [llvm_v1024i1_ty,llvm_v32i32_ty],
+                          [IntrNoMem]>;
+
+//
+// Hexagon_V62_v64ii_Intrinsic<string GCCIntSuffix>
+// tag : V6_pred_scalar2v2
+class Hexagon_V62_v64ii_Intrinsic<string GCCIntSuffix>
+ : Hexagon_Intrinsic<GCCIntSuffix,
+                          [llvm_v512i1_ty], [llvm_i32_ty],
+                          [IntrNoMem]>;
+
+//
+// Hexagon_V62_v128ii_Intrinsic<string GCCIntSuffix>
+// tag : V6_pred_scalar2v2_128B
+class Hexagon_V62_v128ii_Intrinsic<string GCCIntSuffix>
+ : Hexagon_Intrinsic<GCCIntSuffix,
+                          [llvm_v1024i1_ty], [llvm_i32_ty],
+                          [IntrNoMem]>;
+
+//
+// Hexagon_V62_v64iv64iv64i_Intrinsic<string GCCIntSuffix>
+// tag : V6_shuffeqw
+class Hexagon_V62_v64iv64iv64i_Intrinsic<string GCCIntSuffix>
+ : Hexagon_Intrinsic<GCCIntSuffix,
+                          [llvm_v512i1_ty], [llvm_v512i1_ty,llvm_v512i1_ty],
+                          [IntrNoMem]>;
+
+//
+// Hexagon_V62_v128iv128iv128i_Intrinsic<string GCCIntSuffix>
+// tag : V6_shuffeqw_128B
+class Hexagon_V62_v128iv128iv128i_Intrinsic<string GCCIntSuffix>
+ : Hexagon_Intrinsic<GCCIntSuffix,
+                          [llvm_v1024i1_ty], [llvm_v1024i1_ty,llvm_v1024i1_ty],
+                          [IntrNoMem]>;
+
+//
+// Hexagon_V62_v512i_Intrinsic<string GCCIntSuffix>
+// tag : V6_lvsplath
+class Hexagon_V62_v512i_Intrinsic<string GCCIntSuffix>
+ : Hexagon_Intrinsic<GCCIntSuffix,
+                          [llvm_v16i32_ty], [llvm_i32_ty],
+                          [IntrNoMem]>;
+
+//
+// Hexagon_V62_v1024i_Intrinsic<string GCCIntSuffix>
+// tag : V6_lvsplath_128B
+class Hexagon_V62_v1024i_Intrinsic<string GCCIntSuffix>
+ : Hexagon_Intrinsic<GCCIntSuffix,
+                          [llvm_v32i32_ty], [llvm_i32_ty],
+                          [IntrNoMem]>;
+
+//
+// Hexagon_V62_v512v512v512v512i_Intrinsic<string GCCIntSuffix>
+// tag : V6_vlutvvb_oracci
+class Hexagon_V62_v512v512v512v512i_Intrinsic<string GCCIntSuffix>
+ : Hexagon_Intrinsic<GCCIntSuffix,
+                          [llvm_v16i32_ty], [llvm_v16i32_ty,llvm_v16i32_ty,llvm_v16i32_ty,llvm_i32_ty],
+                          [IntrNoMem]>;
+
+//
+// Hexagon_V62_v1024v1024v1024v1024i_Intrinsic<string GCCIntSuffix>
+// tag : V6_vlutvvb_oracci_128B
+class Hexagon_V62_v1024v1024v1024v1024i_Intrinsic<string GCCIntSuffix>
+ : Hexagon_Intrinsic<GCCIntSuffix,
+                          [llvm_v32i32_ty], [llvm_v32i32_ty,llvm_v32i32_ty,llvm_v32i32_ty,llvm_i32_ty],
+                          [IntrNoMem]>;
+
+//
+// Hexagon_V62_v1024v512v512i_Intrinsic<string GCCIntSuffix>
+// tag : V6_vlutvwhi
+class Hexagon_V62_v1024v512v512i_Intrinsic<string GCCIntSuffix>
+ : Hexagon_Intrinsic<GCCIntSuffix,
+                          [llvm_v32i32_ty], [llvm_v16i32_ty,llvm_v16i32_ty,llvm_i32_ty],
+                          [IntrNoMem]>;
+
+//
+// Hexagon_V62_v2048v1024v1024i_Intrinsic<string GCCIntSuffix>
+// tag : V6_vlutvwhi_128B
+class Hexagon_V62_v2048v1024v1024i_Intrinsic<string GCCIntSuffix>
+ : Hexagon_Intrinsic<GCCIntSuffix,
+                          [llvm_v64i32_ty], [llvm_v32i32_ty,llvm_v32i32_ty,llvm_i32_ty],
+                          [IntrNoMem]>;
+
+//
+// Hexagon_V62_v1024v1024v512v512i_Intrinsic<string GCCIntSuffix>
+// tag : V6_vlutvwh_oracci
+class Hexagon_V62_v1024v1024v512v512i_Intrinsic<string GCCIntSuffix>
+ : Hexagon_Intrinsic<GCCIntSuffix,
+                          [llvm_v32i32_ty], [llvm_v32i32_ty,llvm_v16i32_ty,llvm_v16i32_ty,llvm_i32_ty],
+                          [IntrNoMem]>;
+
+//
+// Hexagon_V62_v2048v2048v1024v1024i_Intrinsic<string GCCIntSuffix>
+// tag : V6_vlutvwh_oracci_128B
+class Hexagon_V62_v2048v2048v1024v1024i_Intrinsic<string GCCIntSuffix>
+ : Hexagon_Intrinsic<GCCIntSuffix,
+                          [llvm_v64i32_ty], [llvm_v64i32_ty,llvm_v32i32_ty,llvm_v32i32_ty,llvm_i32_ty],
+                          [IntrNoMem]>;
+
 //
 // BUILTIN_INFO(HEXAGON.M6_vabsdiffb,DI_ftype_DIDI,2)
 // tag : M6_vabsdiffb
@@ -9355,12 +9607,6 @@ def int_hexagon_M6_vabsdiffub :
 Hexagon_LLiLLiLLi_Intrinsic<"HEXAGON_M6_vabsdiffub">;
 
 //
-// BUILTIN_INFO(HEXAGON.S6_vsplatrbp,DI_ftype_SI,1)
-// tag : S6_vsplatrbp
-def int_hexagon_S6_vsplatrbp :
-Hexagon_LLii_Intrinsic<"HEXAGON_S6_vsplatrbp">;
-
-//
 // BUILTIN_INFO(HEXAGON.S6_vtrunehb_ppp,DI_ftype_DIDI,2)
 // tag : S6_vtrunehb_ppp
 def int_hexagon_S6_vtrunehb_ppp :
@@ -9371,3 +9617,550 @@ Hexagon_LLiLLiLLi_Intrinsic<"HEXAGON_S6_vtrunehb_ppp">;
 // tag : S6_vtrunohb_ppp
 def int_hexagon_S6_vtrunohb_ppp :
 Hexagon_LLiLLiLLi_Intrinsic<"HEXAGON_S6_vtrunohb_ppp">;
+
+//
+// BUILTIN_INFO(HEXAGON.S6_vsplatrbp,DI_ftype_SI,1)
+// tag : S6_vsplatrbp
+def int_hexagon_S6_vsplatrbp :
+Hexagon_LLii_Intrinsic<"HEXAGON_S6_vsplatrbp">;
+
+//
+// BUILTIN_INFO(HEXAGON.V6_vlsrb,VI_ftype_VISI,2)
+// tag : V6_vlsrb
+def int_hexagon_V6_vlsrb :
+Hexagon_V62_v512v512i_Intrinsic<"HEXAGON_V6_vlsrb">;
+
+//
+// BUILTIN_INFO(HEXAGON.V6_vlsrb_128B,VI_ftype_VISI,2)
+// tag : V6_vlsrb_128B
+def int_hexagon_V6_vlsrb_128B :
+Hexagon_V62_v1024v1024i_Intrinsic<"HEXAGON_V6_vlsrb_128B">;
+
+//
+// BUILTIN_INFO(HEXAGON.V6_vasrwuhrndsat,VI_ftype_VIVISI,3)
+// tag : V6_vasrwuhrndsat
+def int_hexagon_V6_vasrwuhrndsat :
+Hexagon_V62_v512v512v512i_Intrinsic<"HEXAGON_V6_vasrwuhrndsat">;
+
+//
+// BUILTIN_INFO(HEXAGON.V6_vasrwuhrndsat_128B,VI_ftype_VIVISI,3)
+// tag : V6_vasrwuhrndsat_128B
+def int_hexagon_V6_vasrwuhrndsat_128B :
+Hexagon_V62_v1024v1024v1024i_Intrinsic<"HEXAGON_V6_vasrwuhrndsat_128B">;
+
+//
+// BUILTIN_INFO(HEXAGON.V6_vasruwuhrndsat,VI_ftype_VIVISI,3)
+// tag : V6_vasruwuhrndsat
+def int_hexagon_V6_vasruwuhrndsat :
+Hexagon_V62_v512v512v512i_Intrinsic<"HEXAGON_V6_vasruwuhrndsat">;
+
+//
+// BUILTIN_INFO(HEXAGON.V6_vasruwuhrndsat_128B,VI_ftype_VIVISI,3)
+// tag : V6_vasruwuhrndsat_128B
+def int_hexagon_V6_vasruwuhrndsat_128B :
+Hexagon_V62_v1024v1024v1024i_Intrinsic<"HEXAGON_V6_vasruwuhrndsat_128B">;
+
+//
+// BUILTIN_INFO(HEXAGON.V6_vasrhbsat,VI_ftype_VIVISI,3)
+// tag : V6_vasrhbsat
+def int_hexagon_V6_vasrhbsat :
+Hexagon_V62_v512v512v512i_Intrinsic<"HEXAGON_V6_vasrhbsat">;
+
+//
+// BUILTIN_INFO(HEXAGON.V6_vasrhbsat_128B,VI_ftype_VIVISI,3)
+// tag : V6_vasrhbsat_128B
+def int_hexagon_V6_vasrhbsat_128B :
+Hexagon_V62_v1024v1024v1024i_Intrinsic<"HEXAGON_V6_vasrhbsat_128B">;
+
+//
+// BUILTIN_INFO(HEXAGON.V6_vrounduwuh,VI_ftype_VIVI,2)
+// tag : V6_vrounduwuh
+def int_hexagon_V6_vrounduwuh :
+Hexagon_V62_v512v512v512_Intrinsic<"HEXAGON_V6_vrounduwuh">;
+
+//
+// BUILTIN_INFO(HEXAGON.V6_vrounduwuh_128B,VI_ftype_VIVI,2)
+// tag : V6_vrounduwuh_128B
+def int_hexagon_V6_vrounduwuh_128B :
+Hexagon_V62_v1024v1024v1024_Intrinsic<"HEXAGON_V6_vrounduwuh_128B">;
+
+//
+// BUILTIN_INFO(HEXAGON.V6_vrounduhub,VI_ftype_VIVI,2)
+// tag : V6_vrounduhub
+def int_hexagon_V6_vrounduhub :
+Hexagon_V62_v512v512v512_Intrinsic<"HEXAGON_V6_vrounduhub">;
+
+//
+// BUILTIN_INFO(HEXAGON.V6_vrounduhub_128B,VI_ftype_VIVI,2)
+// tag : V6_vrounduhub_128B
+def int_hexagon_V6_vrounduhub_128B :
+Hexagon_V62_v1024v1024v1024_Intrinsic<"HEXAGON_V6_vrounduhub_128B">;
+
+//
+// BUILTIN_INFO(HEXAGON.V6_vadduwsat,VI_ftype_VIVI,2)
+// tag : V6_vadduwsat
+def int_hexagon_V6_vadduwsat :
+Hexagon_V62_v512v512v512_Intrinsic<"HEXAGON_V6_vadduwsat">;
+
+//
+// BUILTIN_INFO(HEXAGON.V6_vadduwsat_128B,VI_ftype_VIVI,2)
+// tag : V6_vadduwsat_128B
+def int_hexagon_V6_vadduwsat_128B :
+Hexagon_V62_v1024v1024v1024_Intrinsic<"HEXAGON_V6_vadduwsat_128B">;
+
+//
+// BUILTIN_INFO(HEXAGON.V6_vadduwsat_dv,VD_ftype_VDVD,2)
+// tag : V6_vadduwsat_dv
+def int_hexagon_V6_vadduwsat_dv :
+Hexagon_V62_v1024v1024v1024_Intrinsic<"HEXAGON_V6_vadduwsat_dv">;
+
+//
+// BUILTIN_INFO(HEXAGON.V6_vadduwsat_dv_128B,VD_ftype_VDVD,2)
+// tag : V6_vadduwsat_dv_128B
+def int_hexagon_V6_vadduwsat_dv_128B :
+Hexagon_V62_v2048v2048v2048_Intrinsic<"HEXAGON_V6_vadduwsat_dv_128B">;
+
+//
+// BUILTIN_INFO(HEXAGON.V6_vsubuwsat,VI_ftype_VIVI,2)
+// tag : V6_vsubuwsat
+def int_hexagon_V6_vsubuwsat :
+Hexagon_V62_v512v512v512_Intrinsic<"HEXAGON_V6_vsubuwsat">;
+
+//
+// BUILTIN_INFO(HEXAGON.V6_vsubuwsat_128B,VI_ftype_VIVI,2)
+// tag : V6_vsubuwsat_128B
+def int_hexagon_V6_vsubuwsat_128B :
+Hexagon_V62_v1024v1024v1024_Intrinsic<"HEXAGON_V6_vsubuwsat_128B">;
+
+//
+// BUILTIN_INFO(HEXAGON.V6_vsubuwsat_dv,VD_ftype_VDVD,2)
+// tag : V6_vsubuwsat_dv
+def int_hexagon_V6_vsubuwsat_dv :
+Hexagon_V62_v1024v1024v1024_Intrinsic<"HEXAGON_V6_vsubuwsat_dv">;
+
+//
+// BUILTIN_INFO(HEXAGON.V6_vsubuwsat_dv_128B,VD_ftype_VDVD,2)
+// tag : V6_vsubuwsat_dv_128B
+def int_hexagon_V6_vsubuwsat_dv_128B :
+Hexagon_V62_v2048v2048v2048_Intrinsic<"HEXAGON_V6_vsubuwsat_dv_128B">;
+
+//
+// BUILTIN_INFO(HEXAGON.V6_vaddbsat,VI_ftype_VIVI,2)
+// tag : V6_vaddbsat
+def int_hexagon_V6_vaddbsat :
+Hexagon_V62_v512v512v512_Intrinsic<"HEXAGON_V6_vaddbsat">;
+
+//
+// BUILTIN_INFO(HEXAGON.V6_vaddbsat_128B,VI_ftype_VIVI,2)
+// tag : V6_vaddbsat_128B
+def int_hexagon_V6_vaddbsat_128B :
+Hexagon_V62_v1024v1024v1024_Intrinsic<"HEXAGON_V6_vaddbsat_128B">;
+
+//
+// BUILTIN_INFO(HEXAGON.V6_vaddbsat_dv,VD_ftype_VDVD,2)
+// tag : V6_vaddbsat_dv
+def int_hexagon_V6_vaddbsat_dv :
+Hexagon_V62_v1024v1024v1024_Intrinsic<"HEXAGON_V6_vaddbsat_dv">;
+
+//
+// BUILTIN_INFO(HEXAGON.V6_vaddbsat_dv_128B,VD_ftype_VDVD,2)
+// tag : V6_vaddbsat_dv_128B
+def int_hexagon_V6_vaddbsat_dv_128B :
+Hexagon_V62_v2048v2048v2048_Intrinsic<"HEXAGON_V6_vaddbsat_dv_128B">;
+
+//
+// BUILTIN_INFO(HEXAGON.V6_vsubbsat,VI_ftype_VIVI,2)
+// tag : V6_vsubbsat
+def int_hexagon_V6_vsubbsat :
+Hexagon_V62_v512v512v512_Intrinsic<"HEXAGON_V6_vsubbsat">;
+
+//
+// BUILTIN_INFO(HEXAGON.V6_vsubbsat_128B,VI_ftype_VIVI,2)
+// tag : V6_vsubbsat_128B
+def int_hexagon_V6_vsubbsat_128B :
+Hexagon_V62_v1024v1024v1024_Intrinsic<"HEXAGON_V6_vsubbsat_128B">;
+
+//
+// BUILTIN_INFO(HEXAGON.V6_vsubbsat_dv,VD_ftype_VDVD,2)
+// tag : V6_vsubbsat_dv
+def int_hexagon_V6_vsubbsat_dv :
+Hexagon_V62_v1024v1024v1024_Intrinsic<"HEXAGON_V6_vsubbsat_dv">;
+
+//
+// BUILTIN_INFO(HEXAGON.V6_vsubbsat_dv_128B,VD_ftype_VDVD,2)
+// tag : V6_vsubbsat_dv_128B
+def int_hexagon_V6_vsubbsat_dv_128B :
+Hexagon_V62_v2048v2048v2048_Intrinsic<"HEXAGON_V6_vsubbsat_dv_128B">;
+
+//
+// BUILTIN_INFO(HEXAGON.V6_vaddububb_sat,VI_ftype_VIVI,2)
+// tag : V6_vaddububb_sat
+def int_hexagon_V6_vaddububb_sat :
+Hexagon_V62_v512v512v512_Intrinsic<"HEXAGON_V6_vaddububb_sat">;
+
+//
+// BUILTIN_INFO(HEXAGON.V6_vaddububb_sat_128B,VI_ftype_VIVI,2)
+// tag : V6_vaddububb_sat_128B
+def int_hexagon_V6_vaddububb_sat_128B :
+Hexagon_V62_v1024v1024v1024_Intrinsic<"HEXAGON_V6_vaddububb_sat_128B">;
+
+//
+// BUILTIN_INFO(HEXAGON.V6_vsubububb_sat,VI_ftype_VIVI,2)
+// tag : V6_vsubububb_sat
+def int_hexagon_V6_vsubububb_sat :
+Hexagon_V62_v512v512v512_Intrinsic<"HEXAGON_V6_vsubububb_sat">;
+
+//
+// BUILTIN_INFO(HEXAGON.V6_vsubububb_sat_128B,VI_ftype_VIVI,2)
+// tag : V6_vsubububb_sat_128B
+def int_hexagon_V6_vsubububb_sat_128B :
+Hexagon_V62_v1024v1024v1024_Intrinsic<"HEXAGON_V6_vsubububb_sat_128B">;
+
+//
+// BUILTIN_INFO(HEXAGON.V6_vaddhw_acc,VD_ftype_VDVIVI,3)
+// tag : V6_vaddhw_acc
+def int_hexagon_V6_vaddhw_acc :
+Hexagon_V62_v1024v1024v512v512_Intrinsic<"HEXAGON_V6_vaddhw_acc">;
+
+//
+// BUILTIN_INFO(HEXAGON.V6_vaddhw_acc_128B,VD_ftype_VDVIVI,3)
+// tag : V6_vaddhw_acc_128B
+def int_hexagon_V6_vaddhw_acc_128B :
+Hexagon_V62_v2048v2048v1024v1024_Intrinsic<"HEXAGON_V6_vaddhw_acc_128B">;
+
+//
+// BUILTIN_INFO(HEXAGON.V6_vadduhw_acc,VD_ftype_VDVIVI,3)
+// tag : V6_vadduhw_acc
+def int_hexagon_V6_vadduhw_acc :
+Hexagon_V62_v1024v1024v512v512_Intrinsic<"HEXAGON_V6_vadduhw_acc">;
+
+//
+// BUILTIN_INFO(HEXAGON.V6_vadduhw_acc_128B,VD_ftype_VDVIVI,3)
+// tag : V6_vadduhw_acc_128B
+def int_hexagon_V6_vadduhw_acc_128B :
+Hexagon_V62_v2048v2048v1024v1024_Intrinsic<"HEXAGON_V6_vadduhw_acc_128B">;
+
+//
+// BUILTIN_INFO(HEXAGON.V6_vaddubh_acc,VD_ftype_VDVIVI,3)
+// tag : V6_vaddubh_acc
+def int_hexagon_V6_vaddubh_acc :
+Hexagon_V62_v1024v1024v512v512_Intrinsic<"HEXAGON_V6_vaddubh_acc">;
+
+//
+// BUILTIN_INFO(HEXAGON.V6_vaddubh_acc_128B,VD_ftype_VDVIVI,3)
+// tag : V6_vaddubh_acc_128B
+def int_hexagon_V6_vaddubh_acc_128B :
+Hexagon_V62_v2048v2048v1024v1024_Intrinsic<"HEXAGON_V6_vaddubh_acc_128B">;
+
+//
+// BUILTIN_INFO(HEXAGON.V6_vmpyewuh_64,VD_ftype_VIVI,2)
+// tag : V6_vmpyewuh_64
+def int_hexagon_V6_vmpyewuh_64 :
+Hexagon_V62_v1024v512v512_Intrinsic<"HEXAGON_V6_vmpyewuh_64">;
+
+//
+// BUILTIN_INFO(HEXAGON.V6_vmpyewuh_64_128B,VD_ftype_VIVI,2)
+// tag : V6_vmpyewuh_64_128B
+def int_hexagon_V6_vmpyewuh_64_128B :
+Hexagon_V62_v2048v1024v1024_Intrinsic<"HEXAGON_V6_vmpyewuh_64_128B">;
+
+//
+// BUILTIN_INFO(HEXAGON.V6_vmpyowh_64_acc,VD_ftype_VDVIVI,3)
+// tag : V6_vmpyowh_64_acc
+def int_hexagon_V6_vmpyowh_64_acc :
+Hexagon_V62_v1024v1024v512v512_Intrinsic<"HEXAGON_V6_vmpyowh_64_acc">;
+
+//
+// BUILTIN_INFO(HEXAGON.V6_vmpyowh_64_acc_128B,VD_ftype_VDVIVI,3)
+// tag : V6_vmpyowh_64_acc_128B
+def int_hexagon_V6_vmpyowh_64_acc_128B :
+Hexagon_V62_v2048v2048v1024v1024_Intrinsic<"HEXAGON_V6_vmpyowh_64_acc_128B">;
+
+//
+// BUILTIN_INFO(HEXAGON.V6_vmpauhb,VD_ftype_VDSI,2)
+// tag : V6_vmpauhb
+def int_hexagon_V6_vmpauhb :
+Hexagon_V62_v1024v1024i_Intrinsic<"HEXAGON_V6_vmpauhb">;
+
+//
+// BUILTIN_INFO(HEXAGON.V6_vmpauhb_128B,VD_ftype_VDSI,2)
+// tag : V6_vmpauhb_128B
+def int_hexagon_V6_vmpauhb_128B :
+Hexagon_V62_v2048v2048i_Intrinsic<"HEXAGON_V6_vmpauhb_128B">;
+
+//
+// BUILTIN_INFO(HEXAGON.V6_vmpauhb_acc,VD_ftype_VDVDSI,3)
+// tag : V6_vmpauhb_acc
+def int_hexagon_V6_vmpauhb_acc :
+Hexagon_V62_v1024v1024v1024i_Intrinsic<"HEXAGON_V6_vmpauhb_acc">;
+
+//
+// BUILTIN_INFO(HEXAGON.V6_vmpauhb_acc_128B,VD_ftype_VDVDSI,3)
+// tag : V6_vmpauhb_acc_128B
+def int_hexagon_V6_vmpauhb_acc_128B :
+Hexagon_V62_v2048v2048v2048i_Intrinsic<"HEXAGON_V6_vmpauhb_acc_128B">;
+
+//
+// BUILTIN_INFO(HEXAGON.V6_vmpyiwub,VI_ftype_VISI,2)
+// tag : V6_vmpyiwub
+def int_hexagon_V6_vmpyiwub :
+Hexagon_V62_v512v512i_Intrinsic<"HEXAGON_V6_vmpyiwub">;
+
+//
+// BUILTIN_INFO(HEXAGON.V6_vmpyiwub_128B,VI_ftype_VISI,2)
+// tag : V6_vmpyiwub_128B
+def int_hexagon_V6_vmpyiwub_128B :
+Hexagon_V62_v1024v1024i_Intrinsic<"HEXAGON_V6_vmpyiwub_128B">;
+
+//
+// BUILTIN_INFO(HEXAGON.V6_vmpyiwub_acc,VI_ftype_VIVISI,3)
+// tag : V6_vmpyiwub_acc
+def int_hexagon_V6_vmpyiwub_acc :
+Hexagon_V62_v512v512v512i_Intrinsic<"HEXAGON_V6_vmpyiwub_acc">;
+
+//
+// BUILTIN_INFO(HEXAGON.V6_vmpyiwub_acc_128B,VI_ftype_VIVISI,3)
+// tag : V6_vmpyiwub_acc_128B
+def int_hexagon_V6_vmpyiwub_acc_128B :
+Hexagon_V62_v1024v1024v1024i_Intrinsic<"HEXAGON_V6_vmpyiwub_acc_128B">;
+
+//
+// BUILTIN_INFO(HEXAGON.V6_vandnqrt,VI_ftype_QVSI,2)
+// tag : V6_vandnqrt
+def int_hexagon_V6_vandnqrt :
+Hexagon_V62_v512v64ii_Intrinsic<"HEXAGON_V6_vandnqrt">;
+
+//
+// BUILTIN_INFO(HEXAGON.V6_vandnqrt_128B,VI_ftype_QVSI,2)
+// tag : V6_vandnqrt_128B
+def int_hexagon_V6_vandnqrt_128B :
+Hexagon_V62_v1024v128ii_Intrinsic<"HEXAGON_V6_vandnqrt_128B">;
+
+//
+// BUILTIN_INFO(HEXAGON.V6_vandnqrt_acc,VI_ftype_VIQVSI,3)
+// tag : V6_vandnqrt_acc
+def int_hexagon_V6_vandnqrt_acc :
+Hexagon_V62_v512v512v64ii_Intrinsic<"HEXAGON_V6_vandnqrt_acc">;
+
+//
+// BUILTIN_INFO(HEXAGON.V6_vandnqrt_acc_128B,VI_ftype_VIQVSI,3)
+// tag : V6_vandnqrt_acc_128B
+def int_hexagon_V6_vandnqrt_acc_128B :
+Hexagon_V62_v1024v1024v128ii_Intrinsic<"HEXAGON_V6_vandnqrt_acc_128B">;
+
+//
+// BUILTIN_INFO(HEXAGON.V6_vandvqv,VI_ftype_QVVI,2)
+// tag : V6_vandvqv
+def int_hexagon_V6_vandvqv :
+Hexagon_V62_v512v64iv512_Intrinsic<"HEXAGON_V6_vandvqv">;
+
+//
+// BUILTIN_INFO(HEXAGON.V6_vandvqv_128B,VI_ftype_QVVI,2)
+// tag : V6_vandvqv_128B
+def int_hexagon_V6_vandvqv_128B :
+Hexagon_V62_v1024v128iv1024_Intrinsic<"HEXAGON_V6_vandvqv_128B">;
+
+//
+// BUILTIN_INFO(HEXAGON.V6_vandvnqv,VI_ftype_QVVI,2)
+// tag : V6_vandvnqv
+def int_hexagon_V6_vandvnqv :
+Hexagon_V62_v512v64iv512_Intrinsic<"HEXAGON_V6_vandvnqv">;
+
+//
+// BUILTIN_INFO(HEXAGON.V6_vandvnqv_128B,VI_ftype_QVVI,2)
+// tag : V6_vandvnqv_128B
+def int_hexagon_V6_vandvnqv_128B :
+Hexagon_V62_v1024v128iv1024_Intrinsic<"HEXAGON_V6_vandvnqv_128B">;
+
+//
+// BUILTIN_INFO(HEXAGON.V6_pred_scalar2v2,QV_ftype_SI,1)
+// tag : V6_pred_scalar2v2
+def int_hexagon_V6_pred_scalar2v2 :
+Hexagon_V62_v64ii_Intrinsic<"HEXAGON_V6_pred_scalar2v2">;
+
+//
+// BUILTIN_INFO(HEXAGON.V6_pred_scalar2v2_128B,QV_ftype_SI,1)
+// tag : V6_pred_scalar2v2_128B
+def int_hexagon_V6_pred_scalar2v2_128B :
+Hexagon_V62_v128ii_Intrinsic<"HEXAGON_V6_pred_scalar2v2_128B">;
+
+//
+// BUILTIN_INFO(HEXAGON.V6_shuffeqw,QV_ftype_QVQV,2)
+// tag : V6_shuffeqw
+def int_hexagon_V6_shuffeqw :
+Hexagon_V62_v64iv64iv64i_Intrinsic<"HEXAGON_V6_shuffeqw">;
+
+//
+// BUILTIN_INFO(HEXAGON.V6_shuffeqw_128B,QV_ftype_QVQV,2)
+// tag : V6_shuffeqw_128B
+def int_hexagon_V6_shuffeqw_128B :
+Hexagon_V62_v128iv128iv128i_Intrinsic<"HEXAGON_V6_shuffeqw_128B">;
+
+//
+// BUILTIN_INFO(HEXAGON.V6_shuffeqh,QV_ftype_QVQV,2)
+// tag : V6_shuffeqh
+def int_hexagon_V6_shuffeqh :
+Hexagon_V62_v64iv64iv64i_Intrinsic<"HEXAGON_V6_shuffeqh">;
+
+//
+// BUILTIN_INFO(HEXAGON.V6_shuffeqh_128B,QV_ftype_QVQV,2)
+// tag : V6_shuffeqh_128B
+def int_hexagon_V6_shuffeqh_128B :
+Hexagon_V62_v128iv128iv128i_Intrinsic<"HEXAGON_V6_shuffeqh_128B">;
+
+//
+// BUILTIN_INFO(HEXAGON.V6_vmaxb,VI_ftype_VIVI,2)
+// tag : V6_vmaxb
+def int_hexagon_V6_vmaxb :
+Hexagon_V62_v512v512v512_Intrinsic<"HEXAGON_V6_vmaxb">;
+
+//
+// BUILTIN_INFO(HEXAGON.V6_vmaxb_128B,VI_ftype_VIVI,2)
+// tag : V6_vmaxb_128B
+def int_hexagon_V6_vmaxb_128B :
+Hexagon_V62_v1024v1024v1024_Intrinsic<"HEXAGON_V6_vmaxb_128B">;
+
+//
+// BUILTIN_INFO(HEXAGON.V6_vminb,VI_ftype_VIVI,2)
+// tag : V6_vminb
+def int_hexagon_V6_vminb :
+Hexagon_V62_v512v512v512_Intrinsic<"HEXAGON_V6_vminb">;
+
+//
+// BUILTIN_INFO(HEXAGON.V6_vminb_128B,VI_ftype_VIVI,2)
+// tag : V6_vminb_128B
+def int_hexagon_V6_vminb_128B :
+Hexagon_V62_v1024v1024v1024_Intrinsic<"HEXAGON_V6_vminb_128B">;
+
+//
+// BUILTIN_INFO(HEXAGON.V6_vsatuwuh,VI_ftype_VIVI,2)
+// tag : V6_vsatuwuh
+def int_hexagon_V6_vsatuwuh :
+Hexagon_V62_v512v512v512_Intrinsic<"HEXAGON_V6_vsatuwuh">;
+
+//
+// BUILTIN_INFO(HEXAGON.V6_vsatuwuh_128B,VI_ftype_VIVI,2)
+// tag : V6_vsatuwuh_128B
+def int_hexagon_V6_vsatuwuh_128B :
+Hexagon_V62_v1024v1024v1024_Intrinsic<"HEXAGON_V6_vsatuwuh_128B">;
+
+//
+// BUILTIN_INFO(HEXAGON.V6_lvsplath,VI_ftype_SI,1)
+// tag : V6_lvsplath
+def int_hexagon_V6_lvsplath :
+Hexagon_V62_v512i_Intrinsic<"HEXAGON_V6_lvsplath">;
+
+//
+// BUILTIN_INFO(HEXAGON.V6_lvsplath_128B,VI_ftype_SI,1)
+// tag : V6_lvsplath_128B
+def int_hexagon_V6_lvsplath_128B :
+Hexagon_V62_v1024i_Intrinsic<"HEXAGON_V6_lvsplath_128B">;
+
+//
+// BUILTIN_INFO(HEXAGON.V6_lvsplatb,VI_ftype_SI,1)
+// tag : V6_lvsplatb
+def int_hexagon_V6_lvsplatb :
+Hexagon_V62_v512i_Intrinsic<"HEXAGON_V6_lvsplatb">;
+
+//
+// BUILTIN_INFO(HEXAGON.V6_lvsplatb_128B,VI_ftype_SI,1)
+// tag : V6_lvsplatb_128B
+def int_hexagon_V6_lvsplatb_128B :
+Hexagon_V62_v1024i_Intrinsic<"HEXAGON_V6_lvsplatb_128B">;
+
+//
+// BUILTIN_INFO(HEXAGON.V6_vaddclbw,VI_ftype_VIVI,2)
+// tag : V6_vaddclbw
+def int_hexagon_V6_vaddclbw :
+Hexagon_V62_v512v512v512_Intrinsic<"HEXAGON_V6_vaddclbw">;
+
+//
+// BUILTIN_INFO(HEXAGON.V6_vaddclbw_128B,VI_ftype_VIVI,2)
+// tag : V6_vaddclbw_128B
+def int_hexagon_V6_vaddclbw_128B :
+Hexagon_V62_v1024v1024v1024_Intrinsic<"HEXAGON_V6_vaddclbw_128B">;
+
+//
+// BUILTIN_INFO(HEXAGON.V6_vaddclbh,VI_ftype_VIVI,2)
+// tag : V6_vaddclbh
+def int_hexagon_V6_vaddclbh :
+Hexagon_V62_v512v512v512_Intrinsic<"HEXAGON_V6_vaddclbh">;
+
+//
+// BUILTIN_INFO(HEXAGON.V6_vaddclbh_128B,VI_ftype_VIVI,2)
+// tag : V6_vaddclbh_128B
+def int_hexagon_V6_vaddclbh_128B :
+Hexagon_V62_v1024v1024v1024_Intrinsic<"HEXAGON_V6_vaddclbh_128B">;
+
+//
+// BUILTIN_INFO(HEXAGON.V6_vlutvvbi,VI_ftype_VIVISI,3)
+// tag : V6_vlutvvbi
+def int_hexagon_V6_vlutvvbi :
+Hexagon_V62_v512v512v512i_Intrinsic<"HEXAGON_V6_vlutvvbi">;
+
+//
+// BUILTIN_INFO(HEXAGON.V6_vlutvvbi_128B,VI_ftype_VIVISI,3)
+// tag : V6_vlutvvbi_128B
+def int_hexagon_V6_vlutvvbi_128B :
+Hexagon_V62_v1024v1024v1024i_Intrinsic<"HEXAGON_V6_vlutvvbi_128B">;
+
+//
+// BUILTIN_INFO(HEXAGON.V6_vlutvvb_oracci,VI_ftype_VIVIVISI,4)
+// tag : V6_vlutvvb_oracci
+def int_hexagon_V6_vlutvvb_oracci :
+Hexagon_V62_v512v512v512v512i_Intrinsic<"HEXAGON_V6_vlutvvb_oracci">;
+
+//
+// BUILTIN_INFO(HEXAGON.V6_vlutvvb_oracci_128B,VI_ftype_VIVIVISI,4)
+// tag : V6_vlutvvb_oracci_128B
+def int_hexagon_V6_vlutvvb_oracci_128B :
+Hexagon_V62_v1024v1024v1024v1024i_Intrinsic<"HEXAGON_V6_vlutvvb_oracci_128B">;
+
+//
+// BUILTIN_INFO(HEXAGON.V6_vlutvwhi,VD_ftype_VIVISI,3)
+// tag : V6_vlutvwhi
+def int_hexagon_V6_vlutvwhi :
+Hexagon_V62_v1024v512v512i_Intrinsic<"HEXAGON_V6_vlutvwhi">;
+
+//
+// BUILTIN_INFO(HEXAGON.V6_vlutvwhi_128B,VD_ftype_VIVISI,3)
+// tag : V6_vlutvwhi_128B
+def int_hexagon_V6_vlutvwhi_128B :
+Hexagon_V62_v2048v1024v1024i_Intrinsic<"HEXAGON_V6_vlutvwhi_128B">;
+
+//
+// BUILTIN_INFO(HEXAGON.V6_vlutvwh_oracci,VD_ftype_VDVIVISI,4)
+// tag : V6_vlutvwh_oracci
+def int_hexagon_V6_vlutvwh_oracci :
+Hexagon_V62_v1024v1024v512v512i_Intrinsic<"HEXAGON_V6_vlutvwh_oracci">;
+
+//
+// BUILTIN_INFO(HEXAGON.V6_vlutvwh_oracci_128B,VD_ftype_VDVIVISI,4)
+// tag : V6_vlutvwh_oracci_128B
+def int_hexagon_V6_vlutvwh_oracci_128B :
+Hexagon_V62_v2048v2048v1024v1024i_Intrinsic<"HEXAGON_V6_vlutvwh_oracci_128B">;
+
+//
+// BUILTIN_INFO(HEXAGON.V6_vlutvvb_nm,VI_ftype_VIVISI,3)
+// tag : V6_vlutvvb_nm
+def int_hexagon_V6_vlutvvb_nm :
+Hexagon_V62_v512v512v512i_Intrinsic<"HEXAGON_V6_vlutvvb_nm">;
+
+//
+// BUILTIN_INFO(HEXAGON.V6_vlutvvb_nm_128B,VI_ftype_VIVISI,3)
+// tag : V6_vlutvvb_nm_128B
+def int_hexagon_V6_vlutvvb_nm_128B :
+Hexagon_V62_v1024v1024v1024i_Intrinsic<"HEXAGON_V6_vlutvvb_nm_128B">;
+
+//
+// BUILTIN_INFO(HEXAGON.V6_vlutvwh_nm,VD_ftype_VIVISI,3)
+// tag : V6_vlutvwh_nm
+def int_hexagon_V6_vlutvwh_nm :
+Hexagon_V62_v1024v512v512i_Intrinsic<"HEXAGON_V6_vlutvwh_nm">;
+
+//
+// BUILTIN_INFO(HEXAGON.V6_vlutvwh_nm_128B,VD_ftype_VIVISI,3)
+// tag : V6_vlutvwh_nm_128B
+def int_hexagon_V6_vlutvwh_nm_128B :
+Hexagon_V62_v2048v1024v1024i_Intrinsic<"HEXAGON_V6_vlutvwh_nm_128B">;
+

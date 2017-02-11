@@ -1537,7 +1537,7 @@ Sema::ActOnCXXNew(SourceLocation StartLoc, bool UseGlobal,
   if (D.getNumTypeObjects() > 0 &&
       D.getTypeObject(0).Kind == DeclaratorChunk::Array) {
     DeclaratorChunk &Chunk = D.getTypeObject(0);
-    if (D.getDeclSpec().containsPlaceholderType())
+    if (D.getDeclSpec().hasAutoTypeSpec())
       return ExprError(Diag(Chunk.Loc, diag::err_new_array_of_auto)
         << D.getSourceRange());
     if (Chunk.Arr.hasStatic)

@@ -1095,17 +1095,16 @@ void Cost::RateRegister(const SCEV *Reg,
                         const Loop *L,
                         ScalarEvolution &SE, DominatorTree &DT) {
   if (const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(Reg)) {
-    // If this is an addrec for another loop, don't second-guess its addrec phi
-    // nodes. LSR isn't currently smart enough to reason about more than one
-    // loop at a time. LSR has already run on inner loops, will not run on outer
-    // loops, and cannot be expected to change sibling loops.
+    // If this is an addrec for another loop, it should be an invariant
+    // with respect to L since L is the innermost loop (at least
+    // for now LSR only handles innermost loops).
     if (AR->getLoop() != L) {
       // If the AddRec exists, consider it's register free and leave it alone.
       if (isExistingPhi(AR, SE))
         return;
 
-      // Otherwise, do not consider this formula at all.
-      Lose();
+      // Otherwise, it will be an invariant with respect to Loop L.
+      ++NumRegs;
       return;
     }
     AddRecCost += 1; /// TODO: This should be a function of the stride.

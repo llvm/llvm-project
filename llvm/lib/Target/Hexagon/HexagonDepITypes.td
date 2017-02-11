@@ -13,6 +13,7 @@ def TypeALU32_3op : IType<1>;
 def TypeALU32_ADDI : IType<2>;
 def TypeALU64 : IType<3>;
 def TypeCJ : IType<4>;
+def TypeCOPROC_VMEM : IType<5>;
 def TypeCR : IType<7>;
 def TypeCVI_HIST : IType<10>;
 def TypeCVI_VA : IType<16>;

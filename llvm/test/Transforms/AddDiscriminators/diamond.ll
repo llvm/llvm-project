@@ -10,7 +10,7 @@
 ; #6 }
 
 ; bar(5):     discriminator 0
-; bar(3):     discriminator 1
+; bar(3):     discriminator 2
 
 ; Function Attrs: uwtable
 define void @_Z3fooi(i32 %i) #0 !dbg !4 {
@@ -69,4 +69,4 @@ attributes #2 = { "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-
 !20 = !DILocation(line: 6, column: 1, scope: !4)
 
 ; CHECK: ![[ELSE]] = !DILocation(line: 5, column: 18, scope: ![[ELSEBLOCK:[0-9]+]])
-; CHECK: ![[ELSEBLOCK]] = !DILexicalBlockFile({{.*}} discriminator: 1)
+; CHECK: ![[ELSEBLOCK]] = !DILexicalBlockFile({{.*}} discriminator: 2)

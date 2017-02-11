@@ -157,6 +157,7 @@ bool XRayInstrumentation::runOnMachineFunction(MachineFunction &MF) {
   case Triple::ArchType::arm:
   case Triple::ArchType::thumb:
   case Triple::ArchType::aarch64:
+  case Triple::ArchType::ppc64le:
     // For the architectures which don't have a single return instruction
     prependRetWithPatchableExit(MF, TII);
     break;

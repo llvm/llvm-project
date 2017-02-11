@@ -16,20 +16,22 @@
 #ifndef LLVM_MC_MCASMINFO_H
 #define LLVM_MC_MCASMINFO_H
 
+#include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCTargetOptions.h"
-#include <cassert>
 #include <vector>
 
 namespace llvm {
+
+class MCContext;
 class MCExpr;
 class MCSection;
 class MCStreamer;
 class MCSymbol;
-class MCContext;
 
 namespace WinEH {
+
 enum class EncodingType {
   Invalid, /// Invalid
   Alpha,   /// Windows Alpha
@@ -40,11 +42,14 @@ enum class EncodingType {
   X86,     /// Windows x86, uses no CFI, just EH tables
   MIPS = Alpha,
 };
-}
+
+} // end namespace WinEH
 
 namespace LCOMM {
+
 enum LCOMMType { NoAlignment, ByteAlignment, Log2Alignment };
-}
+
+} // end namespace LCOMM
 
 enum class DebugCompressionType {
   DCT_None,    // no compression
@@ -61,41 +66,41 @@ protected:
   //
 
   /// Pointer size in bytes.  Default is 4.
-  unsigned PointerSize;
+  unsigned PointerSize = 4;
 
   /// Size of the stack slot reserved for callee-saved registers, in bytes.
   /// Default is same as pointer size.
-  unsigned CalleeSaveStackSlotSize;
+  unsigned CalleeSaveStackSlotSize = 4;
 
   /// True if target is little endian.  Default is true.
-  bool IsLittleEndian;
+  bool IsLittleEndian = true;
 
   /// True if target stack grow up.  Default is false.
-  bool StackGrowsUp;
+  bool StackGrowsUp = false;
 
   /// True if this target has the MachO .subsections_via_symbols directive.
   /// Default is false.
-  bool HasSubsectionsViaSymbols;
+  bool HasSubsectionsViaSymbols = false;
 
   /// True if this is a MachO target that supports the macho-specific .zerofill
   /// directive for emitting BSS Symbols.  Default is false.
-  bool HasMachoZeroFillDirective;
+  bool HasMachoZeroFillDirective = false;
 
   /// True if this is a MachO target that supports the macho-specific .tbss
   /// directive for emitting thread local BSS Symbols.  Default is false.
-  bool HasMachoTBSSDirective;
+  bool HasMachoTBSSDirective = false;
 
   /// This is the maximum possible length of an instruction, which is needed to
   /// compute the size of an inline asm.  Defaults to 4.
-  unsigned MaxInstLength;
+  unsigned MaxInstLength = 4;
 
   /// Every possible instruction length is a multiple of this value.  Factored
   /// out in .debug_frame and .debug_line.  Defaults to 1.
-  unsigned MinInstAlignment;
+  unsigned MinInstAlignment = 1;
 
   /// The '$' token, when not referencing an identifier or constant, refers to
   /// the current PC.  Defaults to false.
-  bool DollarIsPC;
+  bool DollarIsPC = false;
 
   /// This string, if specified, is used to separate instructions from each
   /// other when on the same line.  Defaults to ';'
@@ -109,10 +114,10 @@ protected:
   const char *LabelSuffix;
 
   // Print the EH begin symbol with an assignment. Defaults to false.
-  bool UseAssignmentForEHBegin;
+  bool UseAssignmentForEHBegin = false;
 
   // Do we need to create a local symbol for .size?
-  bool NeedsLocalForSize;
+  bool NeedsLocalForSize = false;
 
   /// This prefix is used for globals like constant pool entries that are
   /// completely private to the .s file and should not have names in the .o
@@ -142,20 +147,20 @@ protected:
   const char *Code64Directive;
 
   /// Which dialect of an assembler variant to use.  Defaults to 0
-  unsigned AssemblerDialect;
+  unsigned AssemblerDialect = 0;
 
   /// This is true if the assembler allows @ characters in symbol names.
   /// Defaults to false.
-  bool AllowAtInName;
+  bool AllowAtInName = false;
 
   /// If this is true, symbol names with invalid characters will be printed in
   /// quotes.
-  bool SupportsQuotedNames;
+  bool SupportsQuotedNames = true;
 
   /// This is true if data region markers should be printed as
   /// ".data_region/.end_data_region" directives. If false, use "$d/$a" labels
   /// instead.
-  bool UseDataRegionDirectives;
+  bool UseDataRegionDirectives = false;
 
   //===--- Data Emission Directives -------------------------------------===//
 
@@ -185,13 +190,13 @@ protected:
 
   /// If non-null, a directive that is used to emit a word which should be
   /// relocated as a 64-bit GP-relative offset, e.g. .gpdword on Mips.  Defaults
-  /// to NULL.
-  const char *GPRel64Directive;
+  /// to nullptr.
+  const char *GPRel64Directive = nullptr;
 
   /// If non-null, a directive that is used to emit a word which should be
   /// relocated as a 32-bit GP-relative offset, e.g. .gpword on Mips or .gprel32
-  /// on Alpha.  Defaults to NULL.
-  const char *GPRel32Directive;
+  /// on Alpha.  Defaults to nullptr.
+  const char *GPRel32Directive = nullptr;
 
   /// If non-null, directives that are used to emit a word/dword which should
   /// be relocated as a 32/64-bit DTP/TP-relative offset, e.g. .dtprelword/
@@ -204,14 +209,14 @@ protected:
   /// This is true if this target uses "Sun Style" syntax for section switching
   /// ("#alloc,#write" etc) instead of the normal ELF syntax (,"a,w") in
   /// .section directives.  Defaults to false.
-  bool SunStyleELFSectionSwitchSyntax;
+  bool SunStyleELFSectionSwitchSyntax = false;
 
   /// This is true if this target uses ELF '.section' directive before the
   /// '.bss' one. It's used for PPC/Linux which doesn't support the '.bss'
   /// directive only.  Defaults to false.
-  bool UsesELFSectionDirectiveForBSS;
+  bool UsesELFSectionDirectiveForBSS = false;
 
-  bool NeedsDwarfSectionOffsetDirective;
+  bool NeedsDwarfSectionOffsetDirective = false;
 
   //===--- Alignment Information ----------------------------------------===//
 
@@ -219,11 +224,11 @@ protected:
   /// directives, where N is the number of bytes to align to.  Otherwise, it
   /// emits ".align log2(N)", e.g. 3 to align to an 8 byte boundary.  Defaults
   /// to true.
-  bool AlignmentIsInBytes;
+  bool AlignmentIsInBytes = true;
 
   /// If non-zero, this is used to fill the executable space created as the
   /// result of a alignment directive.  Defaults to 0
-  unsigned TextAlignFillValue;
+  unsigned TextAlignFillValue = 0;
 
   //===--- Global Variable Emission Directives --------------------------===//
 
@@ -236,7 +241,7 @@ protected:
   /// uses a relocation but it can be suppressed by writing
   ///   a = f - g
   ///   .long a
-  bool SetDirectiveSuppressesReloc;
+  bool SetDirectiveSuppressesReloc = false;
 
   /// False if the assembler requires that we use
   /// \code
@@ -251,98 +256,98 @@ protected:
   /// \endcode
   ///
   ///  Defaults to true.
-  bool HasAggressiveSymbolFolding;
+  bool HasAggressiveSymbolFolding = true;
 
   /// True is .comm's and .lcomms optional alignment is to be specified in bytes
   /// instead of log2(n).  Defaults to true.
-  bool COMMDirectiveAlignmentIsInBytes;
+  bool COMMDirectiveAlignmentIsInBytes = true;
 
   /// Describes if the .lcomm directive for the target supports an alignment
   /// argument and how it is interpreted.  Defaults to NoAlignment.
-  LCOMM::LCOMMType LCOMMDirectiveAlignmentType;
+  LCOMM::LCOMMType LCOMMDirectiveAlignmentType = LCOMM::NoAlignment;
 
   // True if the target allows .align directives on functions. This is true for
   // most targets, so defaults to true.
-  bool HasFunctionAlignment;
+  bool HasFunctionAlignment = true;
 
   /// True if the target has .type and .size directives, this is true for most
   /// ELF targets.  Defaults to true.
-  bool HasDotTypeDotSizeDirective;
+  bool HasDotTypeDotSizeDirective = true;
 
   /// True if the target has a single parameter .file directive, this is true
   /// for ELF targets.  Defaults to true.
-  bool HasSingleParameterDotFile;
+  bool HasSingleParameterDotFile = true;
 
   /// True if the target has a .ident directive, this is true for ELF targets.
   /// Defaults to false.
-  bool HasIdentDirective;
+  bool HasIdentDirective = false;
 
   /// True if this target supports the MachO .no_dead_strip directive.  Defaults
   /// to false.
-  bool HasNoDeadStrip;
+  bool HasNoDeadStrip = false;
 
   /// True if this target supports the MachO .alt_entry directive.  Defaults to
   /// false.
-  bool HasAltEntry;
+  bool HasAltEntry = false;
 
   /// Used to declare a global as being a weak symbol. Defaults to ".weak".
   const char *WeakDirective;
 
   /// This directive, if non-null, is used to declare a global as being a weak
-  /// undefined symbol.  Defaults to NULL.
-  const char *WeakRefDirective;
+  /// undefined symbol.  Defaults to nullptr.
+  const char *WeakRefDirective = nullptr;
 
   /// True if we have a directive to declare a global as being a weak defined
   /// symbol.  Defaults to false.
-  bool HasWeakDefDirective;
+  bool HasWeakDefDirective = false;
 
   /// True if we have a directive to declare a global as being a weak defined
   /// symbol that can be hidden (unexported).  Defaults to false.
-  bool HasWeakDefCanBeHiddenDirective;
+  bool HasWeakDefCanBeHiddenDirective = false;
 
   /// True if we have a .linkonce directive.  This is used on cygwin/mingw.
   /// Defaults to false.
-  bool HasLinkOnceDirective;
+  bool HasLinkOnceDirective = false;
 
   /// This attribute, if not MCSA_Invalid, is used to declare a symbol as having
   /// hidden visibility.  Defaults to MCSA_Hidden.
-  MCSymbolAttr HiddenVisibilityAttr;
+  MCSymbolAttr HiddenVisibilityAttr = MCSA_Hidden;
 
   /// This attribute, if not MCSA_Invalid, is used to declare an undefined
   /// symbol as having hidden visibility. Defaults to MCSA_Hidden.
-  MCSymbolAttr HiddenDeclarationVisibilityAttr;
+  MCSymbolAttr HiddenDeclarationVisibilityAttr = MCSA_Hidden;
 
   /// This attribute, if not MCSA_Invalid, is used to declare a symbol as having
   /// protected visibility.  Defaults to MCSA_Protected
-  MCSymbolAttr ProtectedVisibilityAttr;
+  MCSymbolAttr ProtectedVisibilityAttr = MCSA_Protected;
 
   //===--- Dwarf Emission Directives -----------------------------------===//
 
   /// True if target supports emission of debugging information.  Defaults to
   /// false.
-  bool SupportsDebugInformation;
+  bool SupportsDebugInformation = false;
 
   /// Exception handling format for the target.  Defaults to None.
-  ExceptionHandling ExceptionsType;
+  ExceptionHandling ExceptionsType = ExceptionHandling::None;
 
   /// Windows exception handling data (.pdata) encoding.  Defaults to Invalid.
-  WinEH::EncodingType WinEHEncodingType;
+  WinEH::EncodingType WinEHEncodingType = WinEH::EncodingType::Invalid;
 
   /// True if Dwarf2 output generally uses relocations for references to other
   /// .debug_* sections.
-  bool DwarfUsesRelocationsAcrossSections;
+  bool DwarfUsesRelocationsAcrossSections = true;
 
   /// True if DWARF FDE symbol reference relocations should be replaced by an
   /// absolute difference.
-  bool DwarfFDESymbolsUseAbsDiff;
+  bool DwarfFDESymbolsUseAbsDiff = false;
 
   /// True if dwarf register numbers are printed instead of symbolic register
   /// names in .cfi_* directives.  Defaults to false.
-  bool DwarfRegNumForCFI;
+  bool DwarfRegNumForCFI = false;
 
   /// True if target uses parens to indicate the symbol variant instead of @.
   /// For example, foo(plt) instead of foo@plt.  Defaults to false.
-  bool UseParensForSymbolVariant;
+  bool UseParensForSymbolVariant = false;
 
   //===--- Prologue State ----------------------------------------------===//
 
@@ -361,11 +366,11 @@ protected:
   bool PreserveAsmComments;
 
   /// Compress DWARF debug sections. Defaults to no compression.
-  DebugCompressionType CompressDebugSections;
+  DebugCompressionType CompressDebugSections = DebugCompressionType::DCT_None;
 
   /// True if the integrated assembler should interpret 'a >> b' constant
   /// expressions as logical rather than arithmetic.
-  bool UseLogicalShr;
+  bool UseLogicalShr = true;
 
   // If true, emit GOTPCRELX/REX_GOTPCRELX instead of GOTPCREL, on
   // X86_64 ELF.
@@ -475,14 +480,17 @@ public:
   bool needsLocalForSize() const { return NeedsLocalForSize; }
   StringRef getPrivateGlobalPrefix() const { return PrivateGlobalPrefix; }
   StringRef getPrivateLabelPrefix() const { return PrivateLabelPrefix; }
+
   bool hasLinkerPrivateGlobalPrefix() const {
     return LinkerPrivateGlobalPrefix[0] != '\0';
   }
+
   StringRef getLinkerPrivateGlobalPrefix() const {
     if (hasLinkerPrivateGlobalPrefix())
       return LinkerPrivateGlobalPrefix;
     return getPrivateGlobalPrefix();
   }
+
   const char *getInlineAsmStart() const { return InlineAsmStart; }
   const char *getInlineAsmEnd() const { return InlineAsmEnd; }
   const char *getCode16Directive() const { return Code16Directive; }
@@ -491,25 +499,32 @@ public:
   unsigned getAssemblerDialect() const { return AssemblerDialect; }
   bool doesAllowAtInName() const { return AllowAtInName; }
   bool supportsNameQuoting() const { return SupportsQuotedNames; }
+
   bool doesSupportDataRegionDirectives() const {
     return UseDataRegionDirectives;
   }
+
   const char *getZeroDirective() const { return ZeroDirective; }
   const char *getAsciiDirective() const { return AsciiDirective; }
   const char *getAscizDirective() const { return AscizDirective; }
   bool getAlignmentIsInBytes() const { return AlignmentIsInBytes; }
   unsigned getTextAlignFillValue() const { return TextAlignFillValue; }
   const char *getGlobalDirective() const { return GlobalDirective; }
+
   bool doesSetDirectiveSuppressReloc() const {
     return SetDirectiveSuppressesReloc;
   }
+
   bool hasAggressiveSymbolFolding() const { return HasAggressiveSymbolFolding; }
+
   bool getCOMMDirectiveAlignmentIsInBytes() const {
     return COMMDirectiveAlignmentIsInBytes;
   }
+
   LCOMM::LCOMMType getLCOMMDirectiveAlignmentType() const {
     return LCOMMDirectiveAlignmentType;
   }
+
   bool hasFunctionAlignment() const { return HasFunctionAlignment; }
   bool hasDotTypeDotSizeDirective() const { return HasDotTypeDotSizeDirective; }
   bool hasSingleParameterDotFile() const { return HasSingleParameterDotFile; }
@@ -519,22 +534,29 @@ public:
   const char *getWeakDirective() const { return WeakDirective; }
   const char *getWeakRefDirective() const { return WeakRefDirective; }
   bool hasWeakDefDirective() const { return HasWeakDefDirective; }
+
   bool hasWeakDefCanBeHiddenDirective() const {
     return HasWeakDefCanBeHiddenDirective;
   }
+
   bool hasLinkOnceDirective() const { return HasLinkOnceDirective; }
 
   MCSymbolAttr getHiddenVisibilityAttr() const { return HiddenVisibilityAttr; }
+
   MCSymbolAttr getHiddenDeclarationVisibilityAttr() const {
     return HiddenDeclarationVisibilityAttr;
   }
+
   MCSymbolAttr getProtectedVisibilityAttr() const {
     return ProtectedVisibilityAttr;
   }
+
   bool doesSupportDebugInformation() const { return SupportsDebugInformation; }
+
   bool doesSupportExceptionHandling() const {
     return ExceptionsType != ExceptionHandling::None;
   }
+
   ExceptionHandling getExceptionHandlingType() const { return ExceptionsType; }
   WinEH::EncodingType getWinEHEncodingType() const { return WinEHEncodingType; }
 
@@ -558,6 +580,7 @@ public:
   bool doesDwarfUseRelocationsAcrossSections() const {
     return DwarfUsesRelocationsAcrossSections;
   }
+
   bool doDwarfFDESymbolsUseAbsDiff() const { return DwarfFDESymbolsUseAbsDiff; }
   bool useDwarfRegNumForCFI() const { return DwarfRegNumForCFI; }
   bool useParensForSymbolVariant() const { return UseParensForSymbolVariant; }
@@ -600,6 +623,7 @@ public:
   void setRelaxELFRelocations(bool V) { RelaxELFRelocations = V; }
   bool hasMipsExpressions() const { return HasMipsExpressions; }
 };
-}
 
-#endif
+} // end namespace llvm
+
+#endif // LLVM_MC_MCASMINFO_H

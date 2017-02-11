@@ -907,6 +907,9 @@ bool HexagonAsmParser::ParseDirectiveComm(bool IsLocal, SMLoc Loc) {
 
 // validate register against architecture
 bool HexagonAsmParser::RegisterMatchesArch(unsigned MatchNum) const {
+  if (HexagonMCRegisterClasses[Hexagon::V62RegsRegClassID].contains(MatchNum))
+    if (!getSTI().getFeatureBits()[Hexagon::ArchV62])
+      return false;
   return true;
 }
 
@@ -1012,10 +1015,14 @@ bool HexagonAsmParser::parseOperand(OperandVector &Operands) {
 bool HexagonAsmParser::isLabel(AsmToken &Token) {
   MCAsmLexer &Lexer = getLexer();
   AsmToken const &Second = Lexer.getTok();
-  AsmToken Third = Lexer.peekTok();  
+  AsmToken Third = Lexer.peekTok();
   StringRef String = Token.getString();
   if (Token.is(AsmToken::TokenKind::LCurly) ||
       Token.is(AsmToken::TokenKind::RCurly))
+    return false;
+  // special case for parsing vwhist256:sat
+  if (String.lower() == "vwhist256" && Second.is(AsmToken::Colon) &&
+      Third.getString().lower() == "sat")
     return false;
   if (!Token.is(AsmToken::TokenKind::Identifier))
     return true;

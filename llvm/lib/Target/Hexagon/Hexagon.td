@@ -252,6 +252,7 @@ include "HexagonPatterns.td"
 include "HexagonDepMappings.td"
 include "HexagonIntrinsics.td"
 include "HexagonIntrinsicsDerived.td"
+include "HexagonMapAsm2IntrinV62.gen.td"
 
 def HexagonInstrInfo : InstrInfo;
 
@@ -271,6 +272,8 @@ def : Proc<"hexagonv55", HexagonModelV55,
            [ArchV4, ArchV5, ArchV55]>;
 def : Proc<"hexagonv60", HexagonModelV60,
            [ArchV4, ArchV5, ArchV55, ArchV60, ExtensionHVX]>;
+def : Proc<"hexagonv62", HexagonModelV62,
+           [ArchV4, ArchV5, ArchV55, ArchV60, ArchV62, ExtensionHVX]>;
 
 //===----------------------------------------------------------------------===//
 // Declare the target which we are implementing

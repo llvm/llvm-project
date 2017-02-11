@@ -15,6 +15,7 @@ enum Type {
   TypeALU32_ADDI = 2,
   TypeALU64 = 3,
   TypeCJ = 4,
+  TypeCOPROC_VMEM = 5,
   TypeCR = 7,
   TypeCVI_HIST = 10,
   TypeCVI_VA = 16,

@@ -551,19 +551,23 @@ static DecodeStatus DecodeVecPredRegsRegisterClass(MCInst &Inst, unsigned RegNo,
 static DecodeStatus DecodeCtrRegsRegisterClass(MCInst &Inst, unsigned RegNo,
                                                uint64_t /*Address*/,
                                                const void *Decoder) {
+  using namespace Hexagon;
   static const MCPhysReg CtrlRegDecoderTable[] = {
-    Hexagon::SA0,        Hexagon::LC0,        Hexagon::SA1,
-    Hexagon::LC1,        Hexagon::P3_0,       Hexagon::C5,
-    Hexagon::C6,         Hexagon::C7,         Hexagon::USR,
-    Hexagon::PC,         Hexagon::UGP,        Hexagon::GP,
-    Hexagon::CS0,        Hexagon::CS1,        Hexagon::UPCL,
-    Hexagon::UPC
+    /*  0 */  SA0,        LC0,        SA1,        LC1,
+    /*  4 */  P3_0,       C5,         C6,         C7,
+    /*  8 */  USR,        PC,         UGP,        GP,
+    /* 12 */  CS0,        CS1,        UPCL,       UPCH,
+    /* 16 */  FRAMELIMIT, FRAMEKEY,   PKTCOUNTLO, PKTCOUNTHI,
+    /* 20 */  0,          0,          0,          0,
+    /* 24 */  0,          0,          0,          0,
+    /* 28 */  0,          0,          UTIMERLO,   UTIMERHI
   };
 
   if (RegNo >= array_lengthof(CtrlRegDecoderTable))
     return MCDisassembler::Fail;
 
-  if (CtrlRegDecoderTable[RegNo] == Hexagon::NoRegister)
+  static_assert(NoRegister == 0, "Expecting NoRegister to be 0");
+  if (CtrlRegDecoderTable[RegNo] == NoRegister)
     return MCDisassembler::Fail;
 
   unsigned Register = CtrlRegDecoderTable[RegNo];
@@ -574,19 +578,23 @@ static DecodeStatus DecodeCtrRegsRegisterClass(MCInst &Inst, unsigned RegNo,
 static DecodeStatus DecodeCtrRegs64RegisterClass(MCInst &Inst, unsigned RegNo,
                                                  uint64_t /*Address*/,
                                                  const void *Decoder) {
+  using namespace Hexagon;
   static const MCPhysReg CtrlReg64DecoderTable[] = {
-    Hexagon::C1_0,       Hexagon::NoRegister, Hexagon::C3_2,
-    Hexagon::NoRegister,
-    Hexagon::C7_6,       Hexagon::NoRegister, Hexagon::C9_8,
-    Hexagon::NoRegister, Hexagon::C11_10,     Hexagon::NoRegister,
-    Hexagon::CS,         Hexagon::NoRegister, Hexagon::UPC,
-    Hexagon::NoRegister
+    /*  0 */  C1_0,       0,          C3_2,       0,
+    /*  4 */  C5_4,       0,          C7_6,       0,
+    /*  8 */  C9_8,       0,          C11_10,     0,
+    /* 12 */  CS,         0,          UPC,        0,
+    /* 16 */  C17_16,     0,          PKTCOUNT,   0,
+    /* 20 */  0,          0,          0,          0,
+    /* 24 */  0,          0,          0,          0,
+    /* 28 */  0,          0,          UTIMER,     0
   };
 
   if (RegNo >= array_lengthof(CtrlReg64DecoderTable))
     return MCDisassembler::Fail;
 
-  if (CtrlReg64DecoderTable[RegNo] == Hexagon::NoRegister)
+  static_assert(NoRegister == 0, "Expecting NoRegister to be 0");
+  if (CtrlReg64DecoderTable[RegNo] == NoRegister)
     return MCDisassembler::Fail;
 
   unsigned Register = CtrlReg64DecoderTable[RegNo];

@@ -52,7 +52,7 @@ struct member {
 
   operator A(); // expected-error {{requires template arguments; argument deduction not allowed in conversion function type}}
 
-  static A x; // FIXME: We deduce A<int> from the initializer despite this not being a definition!
+  static A x; // expected-error {{declaration of variable 'x' with deduced type 'A' requires an initializer}}
   static constexpr A y = 0;
 };
 
@@ -127,7 +127,7 @@ namespace decl {
 
   auto k() -> A; // expected-error{{requires template arguments}}
 
-  A a; // FIXME: This is (technically) syntactically invalid.
+  A a; // expected-error {{declaration of variable 'a' with deduced type 'A' requires an initializer}}
   A b = 0;
   const A c = 0;
   A (parens) = 0; // expected-error {{cannot use parentheses when declaring variable with deduced class template specialization type}}

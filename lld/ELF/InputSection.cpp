@@ -236,6 +236,22 @@ void InputSection<ELFT>::copyRelocations(uint8_t *Buf, ArrayRef<RelTy> Rels) {
     if (Config->Rela)
       P->r_addend = getAddend<ELFT>(Rel);
 
+    if (Body.Type == STT_SECTION) {
+      // We combine multiple section symbols into only one per
+      // section. This means we have to update the addend. That is
+      // trivial for Elf_Rela, but for Elf_Rel we have to write to the
+      // section data. We do that by adding to the Relocation vector.
+      if (Config->Rela) {
+        P->r_addend += Body.getVA<ELFT>() -
+                       cast<DefinedRegular<ELFT>>(Body).Section->OutSec->Addr;
+      } else if (Config->Relocatable) {
+        const uint8_t *BufLoc = RelocatedSection->Data.begin() + Rel.r_offset;
+        uint64_t Implicit = Target->getImplicitAddend(BufLoc, Type);
+        RelocatedSection->Relocations.push_back(
+            {R_ABS, Type, Rel.r_offset, Implicit, &Body});
+      }
+    }
+
     // Output section VA is zero for -r, so r_offset is an offset within the
     // section, but for --emit-relocs it is an virtual address.
     P->r_offset = RelocatedSection->OutSec->Addr +

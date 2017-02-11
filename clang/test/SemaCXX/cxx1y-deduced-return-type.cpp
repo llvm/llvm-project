@@ -314,7 +314,7 @@ namespace NoReturn {
 }
 
 namespace UseBeforeComplete {
-  auto n = n; // expected-error {{variable 'n' declared with 'auto' type cannot appear in its own initializer}}
+  auto n = n; // expected-error {{variable 'n' declared with deduced type 'auto' cannot appear in its own initializer}}
   auto f(); // expected-note {{declared here}}
   void g() { &f; } // expected-error {{function 'f' with deduced return type cannot be used before it is defined}}
   auto sum(int i) {

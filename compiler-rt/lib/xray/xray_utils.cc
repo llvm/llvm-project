@@ -24,14 +24,6 @@
 #include <unistd.h>
 #include <utility>
 
-#if defined(__x86_64__)
-#include "xray_x86_64.h"
-#elif defined(__arm__) || defined(__aarch64__)
-#include "xray_emulate_tsc.h"
-#else
-#error "Unsupported CPU Architecture"
-#endif /* CPU architecture */
-
 namespace __xray {
 
 void printToStdErr(const char *Buffer) XRAY_NEVER_INSTRUMENT {
@@ -97,37 +89,6 @@ bool readValueFromFile(const char *Filename,
     Result = true;
   }
   return Result;
-}
-
-long long getCPUFrequency() XRAY_NEVER_INSTRUMENT {
-  // Get the cycle frequency from SysFS on Linux.
-  long long CPUFrequency = -1;
-#if defined(__x86_64__)
-  if (readValueFromFile("/sys/devices/system/cpu/cpu0/tsc_freq_khz",
-                        &CPUFrequency)) {
-    CPUFrequency *= 1000;
-  } else if (readValueFromFile(
-                 "/sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq",
-                 &CPUFrequency)) {
-    CPUFrequency *= 1000;
-  } else {
-    Report("Unable to determine CPU frequency for TSC accounting.\n");
-  }
-#elif defined(__arm__) || defined(__aarch64__)
-  // There is no instruction like RDTSCP in user mode on ARM. ARM's CP15 does
-  //   not have a constant frequency like TSC on x86(_64), it may go faster
-  //   or slower depending on CPU turbo or power saving mode. Furthermore,
-  //   to read from CP15 on ARM a kernel modification or a driver is needed.
-  //   We can not require this from users of compiler-rt.
-  // So on ARM we use clock_gettime() which gives the result in nanoseconds.
-  //   To get the measurements per second, we scale this by the number of
-  //   nanoseconds per second, pretending that the TSC frequency is 1GHz and
-  //   one TSC tick is 1 nanosecond.
-  CPUFrequency = NanosecondsPerSecond;
-#else
-#error "Unsupported CPU Architecture"
-#endif /* CPU architecture */
-  return CPUFrequency;
 }
 
 int getLogFD() XRAY_NEVER_INSTRUMENT {

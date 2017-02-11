@@ -4160,7 +4160,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
       if (!D.isInvalidType()) {
         // trailing-return-type is only required if we're declaring a function,
         // and not, for instance, a pointer to a function.
-        if (D.getDeclSpec().containsPlaceholderType() &&
+        if (D.getDeclSpec().hasAutoTypeSpec() &&
             !FTI.hasTrailingReturnType() && chunkIndex == 0 &&
             !S.getLangOpts().CPlusPlus14) {
           S.Diag(D.getDeclSpec().getTypeSpecTypeLoc(),
