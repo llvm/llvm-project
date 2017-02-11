@@ -65,9 +65,10 @@ MCAsmBackend *createHexagonAsmBackend(const Target &T,
 
 MCObjectWriter *createHexagonELFObjectWriter(raw_pwrite_stream &OS,
                                              uint8_t OSABI, StringRef CPU);
-} // End llvm namespace
 
 unsigned HexagonGetLastSlot();
+
+} // End llvm namespace
 
 // Define symbolic names for Hexagon registers.  This defines a mapping from
 // register name to register number.

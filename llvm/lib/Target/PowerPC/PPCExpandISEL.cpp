@@ -42,6 +42,7 @@ static cl::opt<bool>
                  cl::desc("Enable generating the ISEL instruction."),
                  cl::init(true), cl::Hidden);
 
+namespace {
 class PPCExpandISEL : public MachineFunctionPass {
   DebugLoc dl;
   MachineFunction *MF;
@@ -143,6 +144,7 @@ public:
     return true;
   }
 };
+} // end anonymous namespace
 
 void PPCExpandISEL::initialize(MachineFunction &MFParam) {
   MF = &MFParam;

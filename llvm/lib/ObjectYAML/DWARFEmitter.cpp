@@ -24,14 +24,14 @@
 using namespace llvm;
 
 template <typename T>
-void writeInteger(T Integer, raw_ostream &OS, bool IsLittleEndian) {
+static void writeInteger(T Integer, raw_ostream &OS, bool IsLittleEndian) {
   if (IsLittleEndian != sys::IsLittleEndianHost)
     sys::swapByteOrder(Integer);
   OS.write(reinterpret_cast<char *>(&Integer), sizeof(T));
 }
 
-void writeVariableSizedInteger(uint64_t Integer, size_t Size, raw_ostream &OS,
-                               bool IsLittleEndian) {
+static void writeVariableSizedInteger(uint64_t Integer, size_t Size,
+                                      raw_ostream &OS, bool IsLittleEndian) {
   if (8 == Size)
     writeInteger((uint64_t)Integer, OS, IsLittleEndian);
   else if (4 == Size)
@@ -44,7 +44,7 @@ void writeVariableSizedInteger(uint64_t Integer, size_t Size, raw_ostream &OS,
     assert(false && "Invalid integer write size.");
 }
 
-void ZeroFillBytes(raw_ostream &OS, size_t Size) {
+static void ZeroFillBytes(raw_ostream &OS, size_t Size) {
   std::vector<uint8_t> FillData;
   FillData.insert(FillData.begin(), Size, 0);
   OS.write(reinterpret_cast<char *>(FillData.data()), Size);
@@ -236,7 +236,7 @@ void DWARFYAML::EmitDebugInfo(raw_ostream &OS, const DWARFYAML::Data &DI) {
   }
 }
 
-void EmitFileEntry(raw_ostream &OS, const DWARFYAML::File &File) {
+static void EmitFileEntry(raw_ostream &OS, const DWARFYAML::File &File) {
   OS.write(File.Name.data(), File.Name.size());
   OS.write('\0');
   encodeULEB128(File.DirIdx, OS);
@@ -245,7 +245,7 @@ void EmitFileEntry(raw_ostream &OS, const DWARFYAML::File &File) {
 }
 
 void DWARFYAML::EmitDebugLine(raw_ostream &OS, const DWARFYAML::Data &DI) {
-  for (const auto LineTable : DI.DebugLines) {
+  for (const auto &LineTable : DI.DebugLines) {
     writeInteger((uint32_t)LineTable.TotalLength, OS, DI.IsLittleEndian);
     uint64_t SizeOfPrologueLength = 4;
     if (LineTable.TotalLength == UINT32_MAX) {
@@ -333,9 +333,10 @@ void DWARFYAML::EmitDebugLine(raw_ostream &OS, const DWARFYAML::Data &DI) {
 
 typedef void (*EmitFuncType)(raw_ostream &, const DWARFYAML::Data &);
 
-void EmitDebugSectionImpl(
-    const DWARFYAML::Data &DI, EmitFuncType EmitFunc, StringRef Sec,
-    StringMap<std::unique_ptr<MemoryBuffer>> &OutputBuffers) {
+static void
+EmitDebugSectionImpl(const DWARFYAML::Data &DI, EmitFuncType EmitFunc,
+                     StringRef Sec,
+                     StringMap<std::unique_ptr<MemoryBuffer>> &OutputBuffers) {
   std::string Data;
   raw_string_ostream DebugInfoStream(Data);
   EmitFunc(DebugInfoStream, DI);

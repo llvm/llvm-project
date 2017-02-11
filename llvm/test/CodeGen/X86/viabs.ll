@@ -611,8 +611,8 @@ define <8 x i64> @test_abs_le_v8i64_fold(<8 x i64>* %a.ptr) nounwind {
 ;
 ; AVX1-LABEL: test_abs_le_v8i64_fold:
 ; AVX1:       # BB#0:
-; AVX1-NEXT:    vmovups (%rdi), %ymm0
-; AVX1-NEXT:    vmovups 32(%rdi), %ymm1
+; AVX1-NEXT:    vmovdqu (%rdi), %ymm0
+; AVX1-NEXT:    vmovdqu 32(%rdi), %ymm1
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
 ; AVX1-NEXT:    vpsrad $31, %xmm2, %xmm3
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm3 = xmm3[1,1,3,3]

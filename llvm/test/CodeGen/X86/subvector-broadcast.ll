@@ -1298,7 +1298,7 @@ define void @fallback_broadcast_v4i64_to_v8i64(<4 x i64> %a, <8 x i64> %b) {
 ; X32-AVX1-LABEL: fallback_broadcast_v4i64_to_v8i64:
 ; X32-AVX1:       ## BB#0: ## %entry
 ; X32-AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
-; X32-AVX1-NEXT:    vmovaps {{.*#+}} ymm4 = [1,0,2,0,3,0,4,0]
+; X32-AVX1-NEXT:    vmovdqa {{.*#+}} ymm4 = [1,0,2,0,3,0,4,0]
 ; X32-AVX1-NEXT:    vextractf128 $1, %ymm4, %xmm5
 ; X32-AVX1-NEXT:    vpaddq %xmm5, %xmm3, %xmm3
 ; X32-AVX1-NEXT:    vpaddq %xmm4, %xmm0, %xmm0

@@ -86,8 +86,7 @@ static int __xray_OpenLogFile() XRAY_NEVER_INSTRUMENT {
   XRayFileHeader Header;
   Header.Version = 1;
   Header.Type = FileTypes::NAIVE_LOG;
-  Header.CycleFrequency =
-      TSCFrequency == -1 ? 0 : static_cast<uint64_t>(TSCFrequency);
+  Header.CycleFrequency = TSCFrequency;
 
   // FIXME: Actually check whether we have 'constant_tsc' and 'nonstop_tsc'
   // before setting the values in the header.

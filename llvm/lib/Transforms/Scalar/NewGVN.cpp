@@ -200,6 +200,7 @@ template <> struct DenseMapInfo<const Expression *> {
 };
 } // end namespace llvm
 
+namespace {
 class NewGVN : public FunctionPass {
   DominatorTree *DT;
   const DataLayout *DL;
@@ -380,6 +381,7 @@ private:
   void verifyMemoryCongruency() const;
   bool singleReachablePHIPath(const MemoryAccess *, const MemoryAccess *) const;
 };
+} // end anonymous namespace
 
 char NewGVN::ID = 0;
 
@@ -747,15 +749,6 @@ const StoreExpression *NewGVN::createStoreExpression(StoreInst *SI,
   // things alias analysis can't on it's own (IE that a store and a
   // load have the same value, and thus, it isn't clobbering the load).
   return E;
-}
-
-// Utility function to check whether the congruence class has a member other
-// than the given instruction.
-bool hasMemberOtherThanUs(const CongruenceClass *CC, Instruction *I) {
-  // Either it has more than one store, in which case it must contain something
-  // other than us (because it's indexed by value), or if it only has one store
-  // right now, that member should not be us.
-  return CC->StoreCount > 1 || CC->Members.count(I) == 0;
 }
 
 const Expression *NewGVN::performSymbolicStoreEvaluation(Instruction *I) {

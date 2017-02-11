@@ -567,7 +567,7 @@ public:
   void shrinkTo(unsigned N) { MetadataList.shrinkTo(N); }
 };
 
-Error error(const Twine &Message) {
+static Error error(const Twine &Message) {
   return make_error<StringError>(
       Message, make_error_code(BitcodeError::CorruptedBitcode));
 }

@@ -4847,6 +4847,10 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(
   // "OriginalName" attachement.
   GlobalValueSummary *LastSeenSummary = nullptr;
   bool Combined = false;
+
+  // We can expect to see any number of type ID information records before
+  // each function summary records; these variables store the information
+  // collected so far so that it can be used to create the summary object.
   std::vector<GlobalValue::GUID> PendingTypeTests;
   std::vector<FunctionSummary::VFuncId> PendingTypeTestAssumeVCalls,
       PendingTypeCheckedLoadVCalls;
