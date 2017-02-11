@@ -1,4 +1,4 @@
-//===-- StringTableBuilder.h - String table building utility ------*- C++ -*-=//
+//===- StringTableBuilder.h - String table building utility -----*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -12,9 +12,12 @@
 
 #include "llvm/ADT/CachedHashString.h"
 #include "llvm/ADT/DenseMap.h"
-#include <cassert>
+#include "llvm/ADT/StringRef.h"
+#include <cstddef>
+#include <cstdint>
 
 namespace llvm {
+
 class raw_ostream;
 
 /// \brief Utility for building string tables with deduplicated suffixes.
@@ -67,6 +70,6 @@ private:
   bool isFinalized() const { return Finalized; }
 };
 
-} // end llvm namespace
+} // end namespace llvm
 
-#endif
+#endif // LLVM_MC_STRINGTABLEBUILDER_H

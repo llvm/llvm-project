@@ -99,9 +99,10 @@ def MergeAndPrint(files):
   bits = 32
   if max(s) > 0xFFFFFFFF:
     bits = 64
-  array.array('I', MagicForBits(bits)).tofile(sys.stdout)
+  stdout_buf = getattr(sys.stdout, 'buffer', sys.stdout)
+  array.array('I', MagicForBits(bits)).tofile(stdout_buf)
   a = struct.pack(TypeCodeForStruct(bits) * len(s), *s)
-  sys.stdout.write(a)
+  stdout_buf.write(a)
 
 
 def UnpackOneFile(path):

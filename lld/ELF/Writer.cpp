@@ -51,6 +51,7 @@ public:
 private:
   void createSyntheticSections();
   void copyLocalSymbols();
+  void addSectionSymbols();
   void addReservedSymbols();
   void addInputSec(InputSectionBase<ELFT> *S);
   void createSections();
@@ -227,6 +228,9 @@ template <class ELFT> void Writer<ELFT>::run() {
 
   if (Config->Discard != DiscardPolicy::All)
     copyLocalSymbols();
+
+  if (Config->copyRelocs())
+    addSectionSymbols();
 
   // Now that we have a complete set of output sections. This function
   // completes section contents. For example, we need to add strings
@@ -446,12 +450,8 @@ template <class ELFT> void Writer<ELFT>::createSyntheticSections() {
 template <class ELFT>
 static bool shouldKeepInSymtab(InputSectionBase<ELFT> *Sec, StringRef SymName,
                                const SymbolBody &B) {
-  if (B.isFile())
+  if (B.isFile() || B.isSection())
     return false;
-
-  // We keep sections in symtab for relocatable output and --emit-reloc.
-  if (B.isSection())
-    return Config->copyRelocs();
 
   // If sym references a section in a discarded group, don't keep it.
   if (Sec == &InputSection<ELFT>::Discarded)
@@ -515,6 +515,27 @@ template <class ELFT> void Writer<ELFT>::copyLocalSymbols() {
         continue;
       In<ELFT>::SymTab->addLocal(B);
     }
+  }
+}
+
+template <class ELFT> void Writer<ELFT>::addSectionSymbols() {
+  // Create one STT_SECTION symbol for each output section we might
+  // have a relocation with.
+  for (OutputSectionBase *Sec : OutputSections) {
+    InputSectionData *First = nullptr;
+    Sec->forEachInputSection([&](InputSectionData *D) {
+      if (!First)
+        First = D;
+    });
+    auto *IS = dyn_cast_or_null<InputSection<ELFT>>(First);
+    if (!IS || isa<SyntheticSection<ELFT>>(IS) || IS->Type == SHT_REL ||
+        IS->Type == SHT_RELA)
+      continue;
+    auto *B = new (BAlloc)
+        DefinedRegular<ELFT>("", /*IsLocal=*/true, /*StOther*/ 0, STT_SECTION,
+                             /*Value*/ 0, /*Size*/ 0, IS, nullptr);
+
+    In<ELFT>::SymTab->addLocal(B);
   }
 }
 
@@ -1782,8 +1803,17 @@ template <class ELFT> void Writer<ELFT>::writeSections() {
 
   OutputSectionBase *EhFrameHdr =
       In<ELFT>::EhFrameHdr ? In<ELFT>::EhFrameHdr->OutSec : nullptr;
+
+  // In -r or -emit-relocs mode, write the relocation sections first as in
+  // ELf_Rel targets we might find out that we need to modify the relocated
+  // section while doing it.
   for (OutputSectionBase *Sec : OutputSections)
-    if (Sec != Out<ELFT>::Opd && Sec != EhFrameHdr)
+    if (Sec->Type == SHT_REL || Sec->Type == SHT_RELA)
+      Sec->writeTo(Buf + Sec->Offset);
+
+  for (OutputSectionBase *Sec : OutputSections)
+    if (Sec != Out<ELFT>::Opd && Sec != EhFrameHdr && Sec->Type != SHT_REL &&
+        Sec->Type != SHT_RELA)
       Sec->writeTo(Buf + Sec->Offset);
 
   // The .eh_frame_hdr depends on .eh_frame section contents, therefore

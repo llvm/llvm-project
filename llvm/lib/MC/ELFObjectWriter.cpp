@@ -11,30 +11,49 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/MC/MCELFObjectWriter.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallString.h"
-#include "llvm/ADT/StringMap.h"
-#include "llvm/MC/MCAsmBackend.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCAsmLayout.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCExpr.h"
-#include "llvm/MC/MCFixupKindInfo.h"
+#include "llvm/MC/MCFixup.h"
+#include "llvm/MC/MCFragment.h"
 #include "llvm/MC/MCObjectWriter.h"
+#include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCSectionELF.h"
+#include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCSymbolELF.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/MC/StringTableBuilder.h"
+#include "llvm/Support/Allocator.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Compression.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/ELF.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/Host.h"
+#include "llvm/Support/MathExtras.h"
+#include "llvm/Support/SMLoc.h"
 #include "llvm/Support/StringSaver.h"
+#include "llvm/Support/SwapByteOrder.h"
+#include "llvm/Support/raw_ostream.h"
+#include <algorithm>
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
+#include <map>
+#include <memory>
+#include <string>
+#include <utility>
 #include <vector>
 
 using namespace llvm;
@@ -43,6 +62,7 @@ using namespace llvm;
 #define DEBUG_TYPE "reloc-info"
 
 namespace {
+
 typedef DenseMap<const MCSectionELF *, uint32_t> SectionIndexMapTy;
 
 class ELFObjectWriter;
@@ -100,8 +120,7 @@ class ELFObjectWriter : public MCObjectWriter {
 
   DenseMap<const MCSymbolELF *, const MCSymbolELF *> Renames;
 
-  llvm::DenseMap<const MCSectionELF *, std::vector<ELFRelocationEntry>>
-      Relocations;
+  DenseMap<const MCSectionELF *, std::vector<ELFRelocationEntry>> Relocations;
 
   /// @}
   /// @name Symbol Table Data
@@ -145,6 +164,8 @@ public:
                   bool IsLittleEndian)
       : MCObjectWriter(OS, IsLittleEndian), TargetObjectWriter(MOTW) {}
 
+  ~ELFObjectWriter() override = default;
+
   void reset() override {
     Renames.clear();
     Relocations.clear();
@@ -152,8 +173,6 @@ public:
     SectionTable.clear();
     MCObjectWriter::reset();
   }
-
-  ~ELFObjectWriter() override;
 
   void WriteWord(uint64_t W) {
     if (is64Bit())
@@ -235,6 +254,7 @@ public:
                     uint32_t GroupSymbolIndex, uint64_t Offset, uint64_t Size,
                     const MCSectionELF &Section);
 };
+
 } // end anonymous namespace
 
 void ELFObjectWriter::align(unsigned Alignment) {
@@ -297,9 +317,6 @@ void SymbolTableWriter::writeSymbol(uint32_t name, uint8_t info, uint64_t value,
 
   ++NumWritten;
 }
-
-ELFObjectWriter::~ELFObjectWriter()
-{}
 
 // Emit the ELF header.
 void ELFObjectWriter::writeHeader(const MCAssembler &Asm) {

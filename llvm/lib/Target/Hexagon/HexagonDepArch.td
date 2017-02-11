@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+def ArchV62: SubtargetFeature<"v62", "HexagonArchVersion", "V62", "Enable Hexagon V62 architecture">;
+def HasV62T : Predicate<"HST->hasV62TOps()">, AssemblerPredicate<"ArchV62">;
 def ArchV60: SubtargetFeature<"v60", "HexagonArchVersion", "V60", "Enable Hexagon V60 architecture">;
 def HasV60T : Predicate<"HST->hasV60TOps()">, AssemblerPredicate<"ArchV60">;
 def ArchV55: SubtargetFeature<"v55", "HexagonArchVersion", "V55", "Enable Hexagon V55 architecture">;

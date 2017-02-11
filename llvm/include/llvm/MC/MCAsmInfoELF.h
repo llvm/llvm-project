@@ -1,4 +1,4 @@
-//===-- llvm/MC/MCAsmInfoELF.h - ELF Asm info -------------------*- C++ -*-===//
+//===- llvm/MC/MCAsmInfoELF.h - ELF Asm info --------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -13,6 +13,7 @@
 #include "llvm/MC/MCAsmInfo.h"
 
 namespace llvm {
+
 class MCAsmInfoELF : public MCAsmInfo {
   virtual void anchor();
   MCSection *getNonexecutableStackSection(MCContext &Ctx) const final;
@@ -20,10 +21,11 @@ class MCAsmInfoELF : public MCAsmInfo {
 protected:
   /// Targets which have non-executable stacks by default can set this to false
   /// to disable the special section which requests a non-executable stack.
-  bool UsesNonexecutableStackSection;
+  bool UsesNonexecutableStackSection = true;
 
   MCAsmInfoELF();
 };
-}
 
-#endif
+} // end namespace llvm
+
+#endif // LLVM_MC_MCASMINFOELF_H

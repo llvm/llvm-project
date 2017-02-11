@@ -207,7 +207,6 @@ private:
   void emitError(const std::string &ErrMsg);
   void emitWarning(const std::string &ErrMsg);
 
-  Expected<std::unique_ptr<tool_output_file>> setupOptimizationRemarks();
   void finishOptimizationRemarks();
 
   LLVMContext &Context;

@@ -228,12 +228,15 @@ const CompileUnit *Function::GetCompileUnit() const { return m_comp_unit; }
 
 void Function::GetDescription(Stream *s, lldb::DescriptionLevel level,
                               Target *target) {
-  Type *func_type = GetType();
-  const char *name = func_type ? func_type->GetName().AsCString() : "<unknown>";
+  ConstString name = GetName();
+  ConstString mangled = m_mangled.GetMangledName();
 
-  *s << "id = " << (const UserID &)*this << ", name = \"" << name
-     << "\", range = ";
-
+  *s << "id = " << (const UserID &)*this;
+  if (name)
+    *s << ", name = \"" << name.GetCString() << '"';
+  if (mangled)
+    *s << ", mangled = \"" << mangled.GetCString() << '"';
+  *s << ", range = ";
   Address::DumpStyle fallback_style;
   if (level == eDescriptionLevelVerbose)
     fallback_style = Address::DumpStyleModuleWithFileAddress;

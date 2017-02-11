@@ -125,6 +125,7 @@ HexagonRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   case HexagonSubtarget::V5:
   case HexagonSubtarget::V55:
   case HexagonSubtarget::V60:
+  case HexagonSubtarget::V62:
     return HasEHReturn ? CalleeSavedRegsV3EHReturn : CalleeSavedRegsV3;
   }
 
@@ -139,17 +140,26 @@ BitVector HexagonRegisterInfo::getReservedRegs(const MachineFunction &MF)
   Reserved.set(Hexagon::R29);
   Reserved.set(Hexagon::R30);
   Reserved.set(Hexagon::R31);
-  Reserved.set(Hexagon::SA0); // C0
-  Reserved.set(Hexagon::LC0); // C1
-  Reserved.set(Hexagon::SA1); // C2
-  Reserved.set(Hexagon::LC1); // C3
-  Reserved.set(Hexagon::USR); // C8
-  Reserved.set(Hexagon::PC);  // C9
-  Reserved.set(Hexagon::UGP); // C10
-  Reserved.set(Hexagon::GP);  // C11
-  Reserved.set(Hexagon::CS0); // C12
-  Reserved.set(Hexagon::CS1); // C13
-
+  // Control registers.
+  Reserved.set(Hexagon::SA0);         // C0
+  Reserved.set(Hexagon::LC0);         // C1
+  Reserved.set(Hexagon::SA1);         // C2
+  Reserved.set(Hexagon::LC1);         // C3
+  Reserved.set(Hexagon::P3_0);        // C4
+  Reserved.set(Hexagon::USR);         // C8
+  Reserved.set(Hexagon::PC);          // C9
+  Reserved.set(Hexagon::UGP);         // C10
+  Reserved.set(Hexagon::GP);          // C11
+  Reserved.set(Hexagon::CS0);         // C12
+  Reserved.set(Hexagon::CS1);         // C13
+  Reserved.set(Hexagon::UPCL);        // C14
+  Reserved.set(Hexagon::UPCH);        // C15
+  Reserved.set(Hexagon::FRAMELIMIT);  // C16
+  Reserved.set(Hexagon::FRAMEKEY);    // C17
+  Reserved.set(Hexagon::PKTCOUNTLO);  // C18
+  Reserved.set(Hexagon::PKTCOUNTHI);  // C19
+  Reserved.set(Hexagon::UTIMERLO);    // C30
+  Reserved.set(Hexagon::UTIMERHI);    // C31
   // Out of the control registers, only C8 is explicitly defined in
   // HexagonRegisterInfo.td. If others are defined, make sure to add
   // them here as well.

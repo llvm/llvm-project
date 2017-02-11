@@ -556,6 +556,7 @@ enum {
   EF_HEXAGON_MACH_V5 = 0x00000004,  // Hexagon V5
   EF_HEXAGON_MACH_V55 = 0x00000005, // Hexagon V55
   EF_HEXAGON_MACH_V60 = 0x00000060, // Hexagon V60
+  EF_HEXAGON_MACH_V62 = 0x00000062, // Hexagon V62
 
   // Highest ISA version flags
   EF_HEXAGON_ISA_MACH = 0x00000000, // Same as specified in bits[11:0]
@@ -566,6 +567,7 @@ enum {
   EF_HEXAGON_ISA_V5 = 0x00000040,   // Hexagon V5 ISA
   EF_HEXAGON_ISA_V55 = 0x00000050,  // Hexagon V55 ISA
   EF_HEXAGON_ISA_V60 = 0x00000060,  // Hexagon V60 ISA
+  EF_HEXAGON_ISA_V62 = 0x00000062,  // Hexagon V62 ISA
 };
 
 // Hexagon-specific section indexes for common small data
