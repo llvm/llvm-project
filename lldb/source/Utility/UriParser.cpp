@@ -7,16 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Utility/UriParser.h"
-
-// C Includes
-
-// C++ Includes
-#include <cstring>
-
-// Other libraries and framework includes
-// Project includes
-#include "lldb/Host/StringConvert.h"
+#include "lldb/Utility/UriParser.h"
 
 using namespace lldb_private;
 

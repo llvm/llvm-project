@@ -1,5 +1,5 @@
 ; RUN: llc -march=hexagon < %s | FileCheck %s
-; CHECK: r{{[0-9]+}} = add(r{{[0-9]+}}.{{L|l}}, r{{[0-9]+}}.{{L|l}}):<<16
+; CHECK: r{{[0-9]+}} = add(r{{[0-9]+}}.{{L|l}},r{{[0-9]+}}.{{L|l}}):<<16
 
 define i64 @test_cast(i64 %arg0, i16 zeroext %arg1, i16 zeroext %arg2) nounwind readnone {
 entry:

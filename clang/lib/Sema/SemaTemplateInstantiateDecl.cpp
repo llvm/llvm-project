@@ -1610,6 +1610,10 @@ Decl *TemplateDeclInstantiator::VisitFunctionDecl(FunctionDecl *D,
   if (D->isInlined())
     Function->setImplicitlyInline();
 
+  // A deduction-guide could be explicit.
+  if (D->isExplicitSpecified())
+    Function->setExplicitSpecified();
+
   if (QualifierLoc)
     Function->setQualifierInfo(QualifierLoc);
 

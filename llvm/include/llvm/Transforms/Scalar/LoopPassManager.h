@@ -263,9 +263,6 @@ public:
     // manager handles all the invalidation at that layer.
     PreservedAnalyses PA = LoopCanonicalizationFPM.run(F, AM);
 
-    // Setup the loop analysis manager from its proxy.
-    LoopAnalysisManager &LAM =
-        AM.getResult<LoopAnalysisManagerFunctionProxy>(F).getManager();
     // Get the loop structure for this function
     LoopInfo &LI = AM.getResult<LoopAnalysis>(F);
 
@@ -281,6 +278,14 @@ public:
                                        AM.getResult<ScalarEvolutionAnalysis>(F),
                                        AM.getResult<TargetLibraryAnalysis>(F),
                                        AM.getResult<TargetIRAnalysis>(F)};
+
+    // Setup the loop analysis manager from its proxy. It is important that
+    // this is only done when there are loops to process and we have built the
+    // LoopStandardAnalysisResults object. The loop analyses cached in this
+    // manager have access to those analysis results and so it must invalidate
+    // itself when they go away.
+    LoopAnalysisManager &LAM =
+        AM.getResult<LoopAnalysisManagerFunctionProxy>(F).getManager();
 
     // A postorder worklist of loops to process.
     SmallPriorityWorklist<Loop *, 4> Worklist;

@@ -901,23 +901,21 @@ define <16 x i16> @_clearupper16xi16b(<16 x i16>) nounwind {
 ;
 ; AVX1-LABEL: _clearupper16xi16b:
 ; AVX1:       # BB#0:
-; AVX1-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm1
-; AVX1-NEXT:    xorl %eax, %eax
-; AVX1-NEXT:    vpinsrb $15, %eax, %xmm1, %xmm1
-; AVX1-NEXT:    vblendpd {{.*#+}} ymm0 = ymm1[0,1],ymm0[2,3]
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX1-NEXT:    vandpd {{.*}}(%rip), %xmm1, %xmm1
+; AVX1-NEXT:    vmovapd {{.*#+}} xmm1 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
+; AVX1-NEXT:    vandpd %xmm1, %xmm0, %xmm2
+; AVX1-NEXT:    vblendpd {{.*#+}} ymm0 = ymm2[0,1],ymm0[2,3]
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
+; AVX1-NEXT:    vandpd %xmm1, %xmm2, %xmm1
 ; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: _clearupper16xi16b:
 ; AVX2:       # BB#0:
-; AVX2-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm1
-; AVX2-NEXT:    xorl %eax, %eax
-; AVX2-NEXT:    vpinsrb $15, %eax, %xmm1, %xmm1
-; AVX2-NEXT:    vpblendd {{.*#+}} ymm0 = ymm1[0,1,2,3],ymm0[4,5,6,7]
-; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX2-NEXT:    vpand {{.*}}(%rip), %xmm1, %xmm1
+; AVX2-NEXT:    vmovdqa {{.*#+}} xmm1 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
+; AVX2-NEXT:    vpand %xmm1, %xmm0, %xmm2
+; AVX2-NEXT:    vpblendd {{.*#+}} ymm0 = ymm2[0,1,2,3],ymm0[4,5,6,7]
+; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm2
+; AVX2-NEXT:    vpand %xmm1, %xmm2, %xmm1
 ; AVX2-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
   %x8 = bitcast <16 x i16> %0 to <32 x i8>

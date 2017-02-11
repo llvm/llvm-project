@@ -32,11 +32,9 @@ template<template<typename> typename TT> struct E { // expected-note 2{{template
   TT(int) -> TT<int>; // expected-error 2{{cannot specify deduction guide for template template parameter 'TT'}} expected-error {{requires an identifier}}
 };
 
-// FIXME: Even if the DR is applied as we hope, we should still warn if the
-// trailing-return-type can obviously never produce a specialization of the
-// named template.
-A(int) -> int;
-template<typename T> A(T) -> T*;
+A(int) -> int; // expected-error {{deduced type 'int' of deduction guide is not a specialization of template 'A'}}
+template<typename T> A(T) -> B<T>; // expected-error {{deduced type 'B<T>' (aka 'A<type-parameter-0-0>') of deduction guide is not written as a specialization of template 'A'}}
+template<typename T> A(T*) -> const A<T>; // expected-error {{deduced type 'const A<T>' of deduction guide is not a specialization of template 'A'}}
 
 // A deduction-guide shall be declared in the same scope as the corresponding
 // class template.

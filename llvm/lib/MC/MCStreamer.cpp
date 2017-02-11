@@ -298,10 +298,17 @@ void MCStreamer::AssignFragment(MCSymbol *Symbol, MCFragment *Fragment) {
   SymbolOrdering[Symbol] = 1 + SymbolOrdering.size();
 }
 
-void MCStreamer::EmitLabel(MCSymbol *Symbol) {
+void MCStreamer::EmitLabel(MCSymbol *Symbol, SMLoc Loc) {
+  Symbol->redefineIfPossible();
+
+  if (!Symbol->isUndefined() || Symbol->isVariable())
+    return getContext().reportError(Loc, "invalid symbol redefinition");
+
   assert(!Symbol->isVariable() && "Cannot emit a variable symbol!");
   assert(getCurrentSectionOnly() && "Cannot emit before setting section!");
   assert(!Symbol->getFragment() && "Unexpected fragment on symbol data!");
+  assert(Symbol->isUndefined() && "Cannot define a symbol twice!");
+
   Symbol->setFragment(&getCurrentSectionOnly()->getDummyFragment());
 
   MCTargetStreamer *TS = getTargetStreamer();

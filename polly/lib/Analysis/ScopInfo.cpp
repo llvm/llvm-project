@@ -1164,8 +1164,8 @@ void ScopStmt::buildAccessRelations() {
     else
       Ty = MemoryKind::Array;
 
-    auto *SAI = S.getOrCreateScopArrayInfo(Access->getBaseAddr(), ElementType,
-                                           Access->Sizes, Ty);
+    auto *SAI = S.getOrCreateScopArrayInfo(Access->getOriginalBaseAddr(),
+                                           ElementType, Access->Sizes, Ty);
     Access->buildAccessRelation(SAI);
   }
 }
@@ -1188,7 +1188,7 @@ void ScopStmt::addAccess(MemoryAccess *Access) {
 
     ValueReads[AccessVal] = Access;
   } else if (Access->isAnyPHIKind() && Access->isWrite()) {
-    PHINode *PHI = cast<PHINode>(Access->getOriginalBaseAddr());
+    PHINode *PHI = cast<PHINode>(Access->getAccessValue());
     assert(!PHIWrites.lookup(PHI));
 
     PHIWrites[PHI] = Access;

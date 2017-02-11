@@ -57,6 +57,3 @@ syncht
 
 # CHECK: 18 df 00 54
 trap0(#254)
-
-# CHECK: 14 df 80 54
-trap1(#253)

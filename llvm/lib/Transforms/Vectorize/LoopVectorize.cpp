@@ -2421,8 +2421,7 @@ void InnerLoopVectorizer::widenIntInduction(PHINode *IV, TruncInst *Trunc) {
   // Try to create a new independent vector induction variable. If we can't
   // create the phi node, we will splat the scalar induction variable in each
   // loop iteration.
-  if (VF > 1 && IV->getType() == Induction->getType() && Step &&
-      !shouldScalarizeInstruction(EntryVal)) {
+  if (VF > 1 && Step && !shouldScalarizeInstruction(EntryVal)) {
     createVectorIntInductionPHI(ID, EntryVal);
     VectorizedIV = true;
   }

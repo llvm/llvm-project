@@ -23,7 +23,7 @@ class VOP1e <bits<8> op, VOPProfile P> : Enc32 {
 
 class VOP1_SDWAe <bits<8> op, VOPProfile P> : VOP_SDWAe <P> {
   bits<8> vdst;
-  
+
   let Inst{8-0}   = 0xf9; // sdwa
   let Inst{16-9}  = op;
   let Inst{24-17} = !if(P.EmitDst, vdst{7-0}, 0);

@@ -243,6 +243,9 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
       OutStreamer->emitRawComment(" COMPUTE_PGM_RSRC2:USER_SGPR: " +
                                   Twine(G_00B84C_USER_SGPR(KernelInfo.ComputePGMRSrc2)),
                                   false);
+      OutStreamer->emitRawComment(" COMPUTE_PGM_RSRC2:TRAP_HANDLER: " +
+                                  Twine(G_00B84C_TRAP_HANDLER(KernelInfo.ComputePGMRSrc2)),
+                                  false);
       OutStreamer->emitRawComment(" COMPUTE_PGM_RSRC2:TGID_X_EN: " +
                                   Twine(G_00B84C_TGID_X_EN(KernelInfo.ComputePGMRSrc2)),
                                   false);
@@ -634,6 +637,7 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
   ProgInfo.ComputePGMRSrc2 =
       S_00B84C_SCRATCH_EN(ProgInfo.ScratchBlocks > 0) |
       S_00B84C_USER_SGPR(MFI->getNumUserSGPRs()) |
+      S_00B84C_TRAP_HANDLER(STM.isTrapHandlerEnabled()) |
       S_00B84C_TGID_X_EN(MFI->hasWorkGroupIDX()) |
       S_00B84C_TGID_Y_EN(MFI->hasWorkGroupIDY()) |
       S_00B84C_TGID_Z_EN(MFI->hasWorkGroupIDZ()) |

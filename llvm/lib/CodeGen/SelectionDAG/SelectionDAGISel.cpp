@@ -763,6 +763,10 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
   int BlockNumber = -1;
   (void)BlockNumber;
   bool MatchFilterBB = false; (void)MatchFilterBB;
+
+  // Pre-type legalization allow creation of any node types.
+  CurDAG->NewNodesMustHaveLegalTypes = false;
+
 #ifndef NDEBUG
   MatchFilterBB = (FilterDAGBasicBlockName.empty() ||
                    FilterDAGBasicBlockName ==
@@ -809,6 +813,7 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
   DEBUG(dbgs() << "Type-legalized selection DAG: BB#" << BlockNumber
         << " '" << BlockName << "'\n"; CurDAG->dump());
 
+  // Only allow creation of legal node types.
   CurDAG->NewNodesMustHaveLegalTypes = true;
 
   if (Changed) {
@@ -834,11 +839,17 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
   }
 
   if (Changed) {
+    DEBUG(dbgs() << "Vector-legalized selection DAG: BB#" << BlockNumber
+          << " '" << BlockName << "'\n"; CurDAG->dump());
+
     {
       NamedRegionTimer T("legalize_types2", "Type Legalization 2", GroupName,
                          GroupDescription, TimePassesIsEnabled);
       CurDAG->LegalizeTypes();
     }
+
+    DEBUG(dbgs() << "Vector/type-legalized selection DAG: BB#" << BlockNumber
+          << " '" << BlockName << "'\n"; CurDAG->dump());
 
     if (ViewDAGCombineLT && MatchFilterBB)
       CurDAG->viewGraph("dag-combine-lv input for " + BlockName);

@@ -38,9 +38,7 @@ class HexagonSubtarget : public HexagonGenSubtargetInfo {
   bool ModeIEEERndNear;
 
 public:
-  enum HexagonArchEnum {
-    V4, V5, V55, V60
-  };
+#include "HexagonDepArch.h"
 
   HexagonArchEnum HexagonArchVersion;
   /// True if the target should use Back-Skip-Back scheduling. This is the

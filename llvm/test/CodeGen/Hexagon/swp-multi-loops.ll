@@ -5,15 +5,15 @@
 ; Check if the first loop is pipelined.
 ; CHECK: loop0(.LBB0_[[LOOP:.]],
 ; CHECK: .LBB0_[[LOOP]]:
-; CHECK: add(r{{[0-9]+}}, r{{[0-9]+}})
-; CHECK-NEXT: memw(r{{[0-9]+}}{{.*}}++{{.*}}#4)
+; CHECK: add(r{{[0-9]+}},r{{[0-9]+}})
+; CHECK-NEXT: memw(r{{[0-9]+}}++#4)
 ; CHECK-NEXT: endloop0
 
 ; Check if the second loop is pipelined.
 ; CHECK: loop0(.LBB0_[[LOOP:.]],
 ; CHECK: .LBB0_[[LOOP]]:
-; CHECK: add(r{{[0-9]+}}, r{{[0-9]+}})
-; CHECK-NEXT: memw(r{{[0-9]+}}{{.*}}++{{.*}}#4)
+; CHECK: add(r{{[0-9]+}},r{{[0-9]+}})
+; CHECK-NEXT: memw(r{{[0-9]+}}++#4)
 ; CHECK-NEXT: endloop0
 
 define i32 @test(i32* %a, i32 %n, i32 %l) {

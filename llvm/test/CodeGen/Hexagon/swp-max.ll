@@ -15,8 +15,8 @@ for.body.preheader:
 
 ; CHECK: loop0(.LBB0_[[LOOP:.]],
 ; CHECK: .LBB0_[[LOOP]]:
-; CHECK: [[REG1:(r[0-9]+)]] = max(r{{[0-9]+}}, [[REG1]])
-; CHECK: [[REG0:(r[0-9]+)]] = add([[REG2:(r[0-9]+)]], [[REG0]])
+; CHECK: [[REG1:(r[0-9]+)]] = max(r{{[0-9]+}},[[REG1]])
+; CHECK: [[REG0:(r[0-9]+)]] = add([[REG2:(r[0-9]+)]],[[REG0]])
 ; CHECK: [[REG2]] = memw
 ; CHECK: endloop0
 

@@ -78,7 +78,7 @@ public:
   /// @{
 
   void ChangeSection(MCSection *Sect, const MCExpr *Subsect) override;
-  void EmitLabel(MCSymbol *Symbol) override;
+  void EmitLabel(MCSymbol *Symbol, SMLoc Loc = SMLoc()) override;
   void EmitAssignment(MCSymbol *Symbol, const MCExpr *Value) override;
   void EmitEHSymAttributes(const MCSymbol *Symbol, MCSymbol *EHSymbol) override;
   void EmitAssemblerFlag(MCAssemblerFlag Flag) override;
@@ -194,15 +194,13 @@ void MCMachOStreamer::EmitEHSymAttributes(const MCSymbol *Symbol,
     EmitSymbolAttribute(EHSymbol, MCSA_PrivateExtern);
 }
 
-void MCMachOStreamer::EmitLabel(MCSymbol *Symbol) {
-  assert(Symbol->isUndefined() && "Cannot define a symbol twice!");
-
+void MCMachOStreamer::EmitLabel(MCSymbol *Symbol, SMLoc Loc) {
   // We have to create a new fragment if this is an atom defining symbol,
   // fragments cannot span atoms.
   if (getAssembler().isSymbolLinkerVisible(*Symbol))
     insert(new MCDataFragment());
 
-  MCObjectStreamer::EmitLabel(Symbol);
+  MCObjectStreamer::EmitLabel(Symbol, Loc);
 
   // This causes the reference type flag to be cleared. Darwin 'as' was "trying"
   // to clear the weak reference and weak definition bits too, but the

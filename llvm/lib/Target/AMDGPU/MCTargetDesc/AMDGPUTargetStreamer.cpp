@@ -160,7 +160,7 @@ AMDGPUTargetELFStreamer::EmitDirectiveHSACodeObjectISA(uint32_t Major,
                                                        StringRef ArchName) {
   uint16_t VendorNameSize = VendorName.size() + 1;
   uint16_t ArchNameSize = ArchName.size() + 1;
-  
+
   unsigned DescSZ = sizeof(VendorNameSize) + sizeof(ArchNameSize) +
     sizeof(Major) + sizeof(Minor) + sizeof(Stepping) +
     VendorNameSize + ArchNameSize;

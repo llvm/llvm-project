@@ -5364,6 +5364,11 @@ TEST_F(FormatTest, HandlesIncludeDirectives) {
 
   verifyFormat("#define MY_IMPORT <a/b>");
 
+  verifyFormat("#if __has_include(<a/b>)");
+  verifyFormat("#if __has_include_next(<a/b>)");
+  verifyFormat("#define F __has_include(<a/b>)");
+  verifyFormat("#define F __has_include_next(<a/b>)");
+
   // Protocol buffer definition or missing "#".
   verifyFormat("import \"aaaaaaaaaaaaaaaaa/aaaaaaaaaaaaaaa\";",
                getLLVMStyleWithColumns(30));

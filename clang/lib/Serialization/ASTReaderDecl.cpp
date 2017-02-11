@@ -1876,6 +1876,7 @@ DeclID ASTDeclReader::VisitTemplateDecl(TemplateDecl *D) {
   DeclID PatternID = ReadDeclID();
   NamedDecl *TemplatedDecl = cast_or_null<NamedDecl>(Reader.GetDecl(PatternID));
   TemplateParameterList *TemplateParams = Record.readTemplateParameterList();
+  // FIXME handle associated constraints
   D->init(TemplatedDecl, TemplateParams);
 
   return PatternID;

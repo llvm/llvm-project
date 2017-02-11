@@ -15,145 +15,145 @@
 0x00 0xc1 0x89 0x11
 # CHECK: p0 = cmp.gt(r17,#-1); if (p0.new) jump:nt
 0x00 0xc3 0x89 0x11
-# CHECK: p0 = tstbit(r17, #0); if (p0.new) jump:nt
+# CHECK: p0 = tstbit(r17,#0); if (p0.new) jump:nt
 0x00 0xe0 0x89 0x11
 # CHECK: p0 = cmp.eq(r17,#-1); if (p0.new) jump:t
 0x00 0xe1 0x89 0x11
 # CHECK: p0 = cmp.gt(r17,#-1); if (p0.new) jump:t
 0x00 0xe3 0x89 0x11
-# CHECK: p0 = tstbit(r17, #0); if (p0.new) jump:t
+# CHECK: p0 = tstbit(r17,#0); if (p0.new) jump:t
 0x00 0xc0 0xc9 0x11
 # CHECK: p0 = cmp.eq(r17,#-1); if (!p0.new) jump:nt
 0x00 0xc1 0xc9 0x11
 # CHECK: p0 = cmp.gt(r17,#-1); if (!p0.new) jump:nt
 0x00 0xc3 0xc9 0x11
-# CHECK: p0 = tstbit(r17, #0); if (!p0.new) jump:nt
+# CHECK: p0 = tstbit(r17,#0); if (!p0.new) jump:nt
 0x00 0xe0 0xc9 0x11
 # CHECK: p0 = cmp.eq(r17,#-1); if (!p0.new) jump:t
 0x00 0xe1 0xc9 0x11
 # CHECK: p0 = cmp.gt(r17,#-1); if (!p0.new) jump:t
 0x00 0xe3 0xc9 0x11
-# CHECK: p0 = tstbit(r17, #0); if (!p0.new) jump:t
+# CHECK: p0 = tstbit(r17,#0); if (!p0.new) jump:t
 0x00 0xd5 0x09 0x10
-# CHECK: p0 = cmp.eq(r17, #21); if (p0.new) jump:nt
+# CHECK: p0 = cmp.eq(r17,#21); if (p0.new) jump:nt
 0x00 0xf5 0x09 0x10
-# CHECK: p0 = cmp.eq(r17, #21); if (p0.new) jump:t
+# CHECK: p0 = cmp.eq(r17,#21); if (p0.new) jump:t
 0x00 0xd5 0x49 0x10
-# CHECK: p0 = cmp.eq(r17, #21); if (!p0.new) jump:nt
+# CHECK: p0 = cmp.eq(r17,#21); if (!p0.new) jump:nt
 0x00 0xf5 0x49 0x10
-# CHECK: p0 = cmp.eq(r17, #21); if (!p0.new) jump:t
+# CHECK: p0 = cmp.eq(r17,#21); if (!p0.new) jump:t
 0x00 0xd5 0x89 0x10
-# CHECK: p0 = cmp.gt(r17, #21); if (p0.new) jump:nt
+# CHECK: p0 = cmp.gt(r17,#21); if (p0.new) jump:nt
 0x00 0xf5 0x89 0x10
-# CHECK: p0 = cmp.gt(r17, #21); if (p0.new) jump:t
+# CHECK: p0 = cmp.gt(r17,#21); if (p0.new) jump:t
 0x00 0xd5 0xc9 0x10
-# CHECK: p0 = cmp.gt(r17, #21); if (!p0.new) jump:nt
+# CHECK: p0 = cmp.gt(r17,#21); if (!p0.new) jump:nt
 0x00 0xf5 0xc9 0x10
-# CHECK: p0 = cmp.gt(r17, #21); if (!p0.new) jump:t
+# CHECK: p0 = cmp.gt(r17,#21); if (!p0.new) jump:t
 0x00 0xd5 0x09 0x11
-# CHECK: p0 = cmp.gtu(r17, #21); if (p0.new) jump:nt
+# CHECK: p0 = cmp.gtu(r17,#21); if (p0.new) jump:nt
 0x00 0xf5 0x09 0x11
-# CHECK: p0 = cmp.gtu(r17, #21); if (p0.new) jump:t
+# CHECK: p0 = cmp.gtu(r17,#21); if (p0.new) jump:t
 0x00 0xd5 0x49 0x11
-# CHECK: p0 = cmp.gtu(r17, #21); if (!p0.new) jump:nt
+# CHECK: p0 = cmp.gtu(r17,#21); if (!p0.new) jump:nt
 0x00 0xf5 0x49 0x11
-# CHECK: p0 = cmp.gtu(r17, #21); if (!p0.new) jump:t
+# CHECK: p0 = cmp.gtu(r17,#21); if (!p0.new) jump:t
 0x00 0xc0 0x89 0x13
 # CHECK: p1 = cmp.eq(r17,#-1); if (p1.new) jump:nt
 0x00 0xc1 0x89 0x13
 # CHECK: p1 = cmp.gt(r17,#-1); if (p1.new) jump:nt
 0x00 0xc3 0x89 0x13
-# CHECK: p1 = tstbit(r17, #0); if (p1.new) jump:nt
+# CHECK: p1 = tstbit(r17,#0); if (p1.new) jump:nt
 0x00 0xe0 0x89 0x13
 # CHECK: p1 = cmp.eq(r17,#-1); if (p1.new) jump:t
 0x00 0xe1 0x89 0x13
 # CHECK: p1 = cmp.gt(r17,#-1); if (p1.new) jump:t
 0x00 0xe3 0x89 0x13
-# CHECK: p1 = tstbit(r17, #0); if (p1.new) jump:t
+# CHECK: p1 = tstbit(r17,#0); if (p1.new) jump:t
 0x00 0xc0 0xc9 0x13
 # CHECK: p1 = cmp.eq(r17,#-1); if (!p1.new) jump:nt
 0x00 0xc1 0xc9 0x13
 # CHECK: p1 = cmp.gt(r17,#-1); if (!p1.new) jump:nt
 0x00 0xc3 0xc9 0x13
-# CHECK: p1 = tstbit(r17, #0); if (!p1.new) jump:nt
+# CHECK: p1 = tstbit(r17,#0); if (!p1.new) jump:nt
 0x00 0xe0 0xc9 0x13
 # CHECK: p1 = cmp.eq(r17,#-1); if (!p1.new) jump:t
 0x00 0xe1 0xc9 0x13
 # CHECK: p1 = cmp.gt(r17,#-1); if (!p1.new) jump:t
 0x00 0xe3 0xc9 0x13
-# CHECK: p1 = tstbit(r17, #0); if (!p1.new) jump:t
+# CHECK: p1 = tstbit(r17,#0); if (!p1.new) jump:t
 0x00 0xd5 0x09 0x12
-# CHECK: p1 = cmp.eq(r17, #21); if (p1.new) jump:nt
+# CHECK: p1 = cmp.eq(r17,#21); if (p1.new) jump:nt
 0x00 0xf5 0x09 0x12
-# CHECK: p1 = cmp.eq(r17, #21); if (p1.new) jump:t
+# CHECK: p1 = cmp.eq(r17,#21); if (p1.new) jump:t
 0x00 0xd5 0x49 0x12
-# CHECK: p1 = cmp.eq(r17, #21); if (!p1.new) jump:nt
+# CHECK: p1 = cmp.eq(r17,#21); if (!p1.new) jump:nt
 0x00 0xf5 0x49 0x12
-# CHECK: p1 = cmp.eq(r17, #21); if (!p1.new) jump:t
+# CHECK: p1 = cmp.eq(r17,#21); if (!p1.new) jump:t
 0x00 0xd5 0x89 0x12
-# CHECK: p1 = cmp.gt(r17, #21); if (p1.new) jump:nt
+# CHECK: p1 = cmp.gt(r17,#21); if (p1.new) jump:nt
 0x00 0xf5 0x89 0x12
-# CHECK: p1 = cmp.gt(r17, #21); if (p1.new) jump:t
+# CHECK: p1 = cmp.gt(r17,#21); if (p1.new) jump:t
 0x00 0xd5 0xc9 0x12
-# CHECK: p1 = cmp.gt(r17, #21); if (!p1.new) jump:nt
+# CHECK: p1 = cmp.gt(r17,#21); if (!p1.new) jump:nt
 0x00 0xf5 0xc9 0x12
-# CHECK: p1 = cmp.gt(r17, #21); if (!p1.new) jump:t
+# CHECK: p1 = cmp.gt(r17,#21); if (!p1.new) jump:t
 0x00 0xd5 0x09 0x13
-# CHECK: p1 = cmp.gtu(r17, #21); if (p1.new) jump:nt
+# CHECK: p1 = cmp.gtu(r17,#21); if (p1.new) jump:nt
 0x00 0xf5 0x09 0x13
-# CHECK: p1 = cmp.gtu(r17, #21); if (p1.new) jump:t
+# CHECK: p1 = cmp.gtu(r17,#21); if (p1.new) jump:t
 0x00 0xd5 0x49 0x13
-# CHECK: p1 = cmp.gtu(r17, #21); if (!p1.new) jump:nt
+# CHECK: p1 = cmp.gtu(r17,#21); if (!p1.new) jump:nt
 0x00 0xf5 0x49 0x13
-# CHECK: p1 = cmp.gtu(r17, #21); if (!p1.new) jump:t
+# CHECK: p1 = cmp.gtu(r17,#21); if (!p1.new) jump:t
 0x00 0xcd 0x09 0x14
-# CHECK: p0 = cmp.eq(r17, r21); if (p0.new) jump:nt
+# CHECK: p0 = cmp.eq(r17,r21); if (p0.new) jump:nt
 0x00 0xdd 0x09 0x14
-# CHECK: p1 = cmp.eq(r17, r21); if (p1.new) jump:nt
+# CHECK: p1 = cmp.eq(r17,r21); if (p1.new) jump:nt
 0x00 0xed 0x09 0x14
-# CHECK: p0 = cmp.eq(r17, r21); if (p0.new) jump:t
+# CHECK: p0 = cmp.eq(r17,r21); if (p0.new) jump:t
 0x00 0xfd 0x09 0x14
-# CHECK: p1 = cmp.eq(r17, r21); if (p1.new) jump:t
+# CHECK: p1 = cmp.eq(r17,r21); if (p1.new) jump:t
 0x00 0xcd 0x49 0x14
-# CHECK: p0 = cmp.eq(r17, r21); if (!p0.new) jump:nt
+# CHECK: p0 = cmp.eq(r17,r21); if (!p0.new) jump:nt
 0x00 0xdd 0x49 0x14
-# CHECK: p1 = cmp.eq(r17, r21); if (!p1.new) jump:nt
+# CHECK: p1 = cmp.eq(r17,r21); if (!p1.new) jump:nt
 0x00 0xed 0x49 0x14
-# CHECK: p0 = cmp.eq(r17, r21); if (!p0.new) jump:t
+# CHECK: p0 = cmp.eq(r17,r21); if (!p0.new) jump:t
 0x00 0xfd 0x49 0x14
-# CHECK: p1 = cmp.eq(r17, r21); if (!p1.new) jump:t
+# CHECK: p1 = cmp.eq(r17,r21); if (!p1.new) jump:t
 0x00 0xcd 0x89 0x14
-# CHECK: p0 = cmp.gt(r17, r21); if (p0.new) jump:nt
+# CHECK: p0 = cmp.gt(r17,r21); if (p0.new) jump:nt
 0x00 0xdd 0x89 0x14
-# CHECK: p1 = cmp.gt(r17, r21); if (p1.new) jump:nt
+# CHECK: p1 = cmp.gt(r17,r21); if (p1.new) jump:nt
 0x00 0xed 0x89 0x14
-# CHECK: p0 = cmp.gt(r17, r21); if (p0.new) jump:t
+# CHECK: p0 = cmp.gt(r17,r21); if (p0.new) jump:t
 0x00 0xfd 0x89 0x14
-# CHECK: p1 = cmp.gt(r17, r21); if (p1.new) jump:t
+# CHECK: p1 = cmp.gt(r17,r21); if (p1.new) jump:t
 0x00 0xcd 0xc9 0x14
-# CHECK: p0 = cmp.gt(r17, r21); if (!p0.new) jump:nt
+# CHECK: p0 = cmp.gt(r17,r21); if (!p0.new) jump:nt
 0x00 0xdd 0xc9 0x14
-# CHECK: p1 = cmp.gt(r17, r21); if (!p1.new) jump:nt
+# CHECK: p1 = cmp.gt(r17,r21); if (!p1.new) jump:nt
 0x00 0xed 0xc9 0x14
-# CHECK: p0 = cmp.gt(r17, r21); if (!p0.new) jump:t
+# CHECK: p0 = cmp.gt(r17,r21); if (!p0.new) jump:t
 0x00 0xfd 0xc9 0x14
-# CHECK: p1 = cmp.gt(r17, r21); if (!p1.new) jump:t
+# CHECK: p1 = cmp.gt(r17,r21); if (!p1.new) jump:t
 0x00 0xcd 0x09 0x15
-# CHECK: p0 = cmp.gtu(r17, r21); if (p0.new) jump:nt
+# CHECK: p0 = cmp.gtu(r17,r21); if (p0.new) jump:nt
 0x00 0xdd 0x09 0x15
-# CHECK: p1 = cmp.gtu(r17, r21); if (p1.new) jump:nt
+# CHECK: p1 = cmp.gtu(r17,r21); if (p1.new) jump:nt
 0x00 0xed 0x09 0x15
-# CHECK: p0 = cmp.gtu(r17, r21); if (p0.new) jump:t
+# CHECK: p0 = cmp.gtu(r17,r21); if (p0.new) jump:t
 0x00 0xfd 0x09 0x15
-# CHECK: p1 = cmp.gtu(r17, r21); if (p1.new) jump:t
+# CHECK: p1 = cmp.gtu(r17,r21); if (p1.new) jump:t
 0x00 0xcd 0x49 0x15
-# CHECK: p0 = cmp.gtu(r17, r21); if (!p0.new) jump:nt
+# CHECK: p0 = cmp.gtu(r17,r21); if (!p0.new) jump:nt
 0x00 0xdd 0x49 0x15
-# CHECK: p1 = cmp.gtu(r17, r21); if (!p1.new) jump:nt
+# CHECK: p1 = cmp.gtu(r17,r21); if (!p1.new) jump:nt
 0x00 0xed 0x49 0x15
-# CHECK: p0 = cmp.gtu(r17, r21); if (!p0.new) jump:t
+# CHECK: p0 = cmp.gtu(r17,r21); if (!p0.new) jump:t
 0x00 0xfd 0x49 0x15
-# CHECK: p1 = cmp.gtu(r17, r21); if (!p1.new) jump:t
+# CHECK: p1 = cmp.gtu(r17,r21); if (!p1.new) jump:t
 
 # Jump to address
 0x22 0xc0 0x00 0x58

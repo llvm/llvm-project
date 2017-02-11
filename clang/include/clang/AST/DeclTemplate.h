@@ -344,6 +344,32 @@ public:
 // Kinds of Templates
 //===----------------------------------------------------------------------===//
 
+/// \brief Stores the template parameter list and associated constraints for
+/// \c TemplateDecl objects that track associated constraints.
+class ConstrainedTemplateDeclInfo {
+  friend TemplateDecl;
+
+public:
+  ConstrainedTemplateDeclInfo() : TemplateParams(), AssociatedConstraints() {}
+
+  TemplateParameterList *getTemplateParameters() const {
+    return TemplateParams;
+  }
+
+  Expr *getAssociatedConstraints() const { return AssociatedConstraints; }
+
+protected:
+  void setTemplateParameters(TemplateParameterList *TParams) {
+    TemplateParams = TParams;
+  }
+
+  void setAssociatedConstraints(Expr *AC) { AssociatedConstraints = AC; }
+
+  TemplateParameterList *TemplateParams;
+  Expr *AssociatedConstraints;
+};
+
+
 /// \brief The base class of all kinds of template declarations (e.g.,
 /// class, function, etc.).
 ///
@@ -352,33 +378,53 @@ public:
 class TemplateDecl : public NamedDecl {
   void anchor() override;
 protected:
-  // This is probably never used.
-  TemplateDecl(Kind DK, DeclContext *DC, SourceLocation L, DeclarationName Name)
-      : NamedDecl(DK, DC, L, Name), TemplatedDecl(nullptr, false),
-        TemplateParams(nullptr) {}
-
   // Construct a template decl with the given name and parameters.
-  // Used when there is not templated element (tt-params).
-  TemplateDecl(Kind DK, DeclContext *DC, SourceLocation L, DeclarationName Name,
+  // Used when there is no templated element (e.g., for tt-params).
+  TemplateDecl(ConstrainedTemplateDeclInfo *CTDI, Kind DK, DeclContext *DC,
+               SourceLocation L, DeclarationName Name,
                TemplateParameterList *Params)
       : NamedDecl(DK, DC, L, Name), TemplatedDecl(nullptr, false),
-        TemplateParams(Params) {}
+        TemplateParams(CTDI) {
+    this->setTemplateParameters(Params);
+  }
+
+  TemplateDecl(Kind DK, DeclContext *DC, SourceLocation L, DeclarationName Name,
+               TemplateParameterList *Params)
+      : TemplateDecl(nullptr, DK, DC, L, Name, Params) {}
 
   // Construct a template decl with name, parameters, and templated element.
-  TemplateDecl(Kind DK, DeclContext *DC, SourceLocation L, DeclarationName Name,
+  TemplateDecl(ConstrainedTemplateDeclInfo *CTDI, Kind DK, DeclContext *DC,
+               SourceLocation L, DeclarationName Name,
                TemplateParameterList *Params, NamedDecl *Decl)
       : NamedDecl(DK, DC, L, Name), TemplatedDecl(Decl, false),
-        TemplateParams(Params) {}
+        TemplateParams(CTDI) {
+    this->setTemplateParameters(Params);
+  }
+
+  TemplateDecl(Kind DK, DeclContext *DC, SourceLocation L, DeclarationName Name,
+               TemplateParameterList *Params, NamedDecl *Decl)
+      : TemplateDecl(nullptr, DK, DC, L, Name, Params, Decl) {}
 
 public:
   /// Get the list of template parameters
   TemplateParameterList *getTemplateParameters() const {
-    return TemplateParams;
+    const auto *const CTDI =
+        TemplateParams.dyn_cast<ConstrainedTemplateDeclInfo *>();
+    return CTDI ? CTDI->getTemplateParameters()
+                : TemplateParams.get<TemplateParameterList *>();
   }
 
   /// Get the constraint-expression from the associated requires-clause (if any)
   const Expr *getRequiresClause() const {
-    return TemplateParams ? TemplateParams->getRequiresClause() : nullptr;
+    const TemplateParameterList *const TP = getTemplateParameters();
+    return TP ? TP->getRequiresClause() : nullptr;
+  }
+
+  Expr *getAssociatedConstraints() const {
+    const TemplateDecl *const C = cast<TemplateDecl>(getCanonicalDecl());
+    const auto *const CTDI =
+        C->TemplateParams.dyn_cast<ConstrainedTemplateDeclInfo *>();
+    return CTDI ? CTDI->getAssociatedConstraints() : nullptr;
   }
 
   /// Get the underlying, templated declaration.
@@ -391,7 +437,7 @@ public:
   }
 
   SourceRange getSourceRange() const override LLVM_READONLY {
-    return SourceRange(TemplateParams->getTemplateLoc(),
+    return SourceRange(getTemplateParameters()->getTemplateLoc(),
                        TemplatedDecl.getPointer()->getSourceRange().getEnd());
   }
 
@@ -407,7 +453,29 @@ protected:
   /// (function or variable) is a concept.
   llvm::PointerIntPair<NamedDecl *, 1, bool> TemplatedDecl;
 
-  TemplateParameterList* TemplateParams;
+  /// \brief The template parameter list and optional requires-clause
+  /// associated with this declaration; alternatively, a
+  /// \c ConstrainedTemplateDeclInfo if the associated constraints of the
+  /// template are being tracked by this particular declaration.
+  llvm::PointerUnion<TemplateParameterList *,
+                     ConstrainedTemplateDeclInfo *>
+      TemplateParams;
+
+  void setTemplateParameters(TemplateParameterList *TParams) {
+    if (auto *const CTDI =
+            TemplateParams.dyn_cast<ConstrainedTemplateDeclInfo *>()) {
+      CTDI->setTemplateParameters(TParams);
+    } else {
+      TemplateParams = TParams;
+    }
+  }
+
+  void setAssociatedConstraints(Expr *AC) {
+    assert(isCanonicalDecl() &&
+           "Attaching associated constraints to non-canonical Decl");
+    TemplateParams.get<ConstrainedTemplateDeclInfo *>()
+        ->setAssociatedConstraints(AC);
+  }
 
 public:
   /// \brief Initialize the underlying templated declaration and
@@ -737,11 +805,17 @@ protected:
   virtual CommonBase *newCommon(ASTContext &C) const = 0;
 
   // Construct a template decl with name, parameters, and templated element.
+  RedeclarableTemplateDecl(ConstrainedTemplateDeclInfo *CTDI, Kind DK,
+                           ASTContext &C, DeclContext *DC, SourceLocation L,
+                           DeclarationName Name, TemplateParameterList *Params,
+                           NamedDecl *Decl)
+      : TemplateDecl(CTDI, DK, DC, L, Name, Params, Decl), redeclarable_base(C),
+        Common() {}
+
   RedeclarableTemplateDecl(Kind DK, ASTContext &C, DeclContext *DC,
                            SourceLocation L, DeclarationName Name,
                            TemplateParameterList *Params, NamedDecl *Decl)
-      : TemplateDecl(DK, DC, L, Name, Params, Decl), redeclarable_base(C),
-        Common() {}
+      : RedeclarableTemplateDecl(nullptr, DK, C, DC, L, Name, Params, Decl) {}
 
 public:
   template <class decl_type> friend class RedeclarableTemplate;
@@ -1997,10 +2071,16 @@ protected:
   llvm::FoldingSetVector<ClassTemplatePartialSpecializationDecl> &
   getPartialSpecializations();
 
+  ClassTemplateDecl(ConstrainedTemplateDeclInfo *CTDI, ASTContext &C,
+                    DeclContext *DC, SourceLocation L, DeclarationName Name,
+                    TemplateParameterList *Params, NamedDecl *Decl)
+      : RedeclarableTemplateDecl(CTDI, ClassTemplate, C, DC, L, Name, Params,
+                                 Decl) {}
+
   ClassTemplateDecl(ASTContext &C, DeclContext *DC, SourceLocation L,
                     DeclarationName Name, TemplateParameterList *Params,
                     NamedDecl *Decl)
-      : RedeclarableTemplateDecl(ClassTemplate, C, DC, L, Name, Params, Decl) {}
+      : ClassTemplateDecl(nullptr, C, DC, L, Name, Params, Decl) {}
 
   CommonBase *newCommon(ASTContext &C) const override;
 
@@ -2023,12 +2103,14 @@ public:
     return getTemplatedDecl()->isThisDeclarationADefinition();
   }
 
+  // FIXME: remove default argument for AssociatedConstraints
   /// \brief Create a class template node.
   static ClassTemplateDecl *Create(ASTContext &C, DeclContext *DC,
                                    SourceLocation L,
                                    DeclarationName Name,
                                    TemplateParameterList *Params,
-                                   NamedDecl *Decl);
+                                   NamedDecl *Decl,
+                                   Expr *AssociatedConstraints = nullptr);
 
   /// \brief Create an empty class template node.
   static ClassTemplateDecl *CreateDeserialized(ASTContext &C, unsigned ID);

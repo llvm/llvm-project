@@ -35,9 +35,14 @@ static_assert(has_type<vector<char>>(v2));
 vector v3(5, 5);
 static_assert(has_type<vector<int>>(v3));
 
+vector v4 = {it, end};
+static_assert(has_type<vector<iter>>(v4));
+
+vector v5{it, end};
+static_assert(has_type<vector<iter>>(v5));
 
 template<typename ...T> struct tuple { tuple(T...); };
-template<typename ...T> explicit tuple(T ...t) -> tuple<T...>;
+template<typename ...T> explicit tuple(T ...t) -> tuple<T...>; // expected-note {{declared}}
 // FIXME: Remove
 template<typename ...T> tuple(tuple<T...>) -> tuple<T...>;
 
@@ -46,14 +51,14 @@ tuple ta = tuple{1, 'a', "foo", n};
 static_assert(has_type<tuple<int, char, const char*, int>>(ta));
 
 tuple tb{ta};
-static_assert(has_type<tuple<int, char, const char*, int>>(ta));
+static_assert(has_type<tuple<int, char, const char*, int>>(tb));
 
-// FIXME: This should be tuple<tuple<...>>;
+// FIXME: This should be tuple<tuple<...>>; when the above guide is removed.
 tuple tc = {ta};
-static_assert(has_type<tuple<int, char, const char*, int>>(ta));
+static_assert(has_type<tuple<int, char, const char*, int>>(tc));
 
-tuple td = {1, 2, 3};
-static_assert(has_type<tuple<int, char, const char*, int>>(ta));
+tuple td = {1, 2, 3}; // expected-error {{selected an explicit deduction guide}}
+static_assert(has_type<tuple<int, char, const char*, int>>(td));
 
 // FIXME: This is a GCC extension for now; if CWG don't allow this, at least
 // add a warning for it.

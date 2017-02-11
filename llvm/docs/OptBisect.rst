@@ -60,11 +60,14 @@ like this:
   clang -O2 -mllvm -opt-bisect-limit=256 my_file.c
 
 The -opt-bisect-limit option may also be applied to link-time optimizations by
-using a prefix to indicate that this is a plug-in option for the linker.  The
+using a prefix to indicate that this is a plug-in option for the linker. The
 following syntax will set a bisect limit for LTO transformations:
 
 ::
 
+  # When using lld, or ld64 (macOS)
+  clang -flto -Wl,-mllvm,-opt-bisect-limit=256 my_file.o my_other_file.o
+  # When using Gold
   clang -flto -Wl,-plugin-opt,-opt-bisect-limit=256 my_file.o my_other_file.o
 
 LTO passes are run by a library instance invoked by the linker. Therefore any

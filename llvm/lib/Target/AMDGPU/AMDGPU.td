@@ -67,6 +67,12 @@ def FeatureUnalignedBufferAccess : SubtargetFeature<"unaligned-buffer-access",
   "Support unaligned global loads and stores"
 >;
 
+def FeatureTrapHandler: SubtargetFeature<"trap-handler",
+  "TrapHandler",
+  "true",
+  "Trap handler support"
+>;
+
 def FeatureUnalignedScratchAccess : SubtargetFeature<"unaligned-scratch-access",
   "UnalignedScratchAccess",
   "true",

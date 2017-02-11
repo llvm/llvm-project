@@ -15,9 +15,9 @@ namespace std_example {
   A a4 = {0, i}; // expected-error {{no viable constructor or deduction guide}}
 
   template <class T> A(const T &, const T &) -> A<T &>;
-  template <class T> explicit A(T &&, T &&) -> A<T>;
+  template <class T> explicit A(T &&, T &&) -> A<T>; // expected-note {{explicit deduction guide declared here}}
 
-  A a5 = {0, 1}; // FIXME: Should be invalid, explicit deduction guide selected in copy-list-init
+  A a5 = {0, 1}; // expected-error {{class template argument deduction for 'A' selected an explicit deduction guide}}
   A a6{0, 1};
   A a7 = {0, i}; // expected-note {{in instantiation of}}
   A a8{0, i}; // expected-error {{no matching constructor}}

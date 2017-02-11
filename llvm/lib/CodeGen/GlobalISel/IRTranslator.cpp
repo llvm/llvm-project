@@ -555,6 +555,14 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
   switch (ID) {
   default:
     break;
+  case Intrinsic::lifetime_start:
+  case Intrinsic::lifetime_end:
+    // Stack coloring is not enabled in O0 (which we care about now) so we can
+    // drop these. Make sure someone notices when we start compiling at higher
+    // opts though.
+    if (MF->getTarget().getOptLevel() != CodeGenOpt::None)
+      return false;
+    return true;
   case Intrinsic::dbg_declare: {
     const DbgDeclareInst &DI = cast<DbgDeclareInst>(CI);
     assert(DI.getVariable() && "Missing variable");

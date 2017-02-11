@@ -7,7 +7,7 @@
 ; CHECK-DAG: [[REG0:(r[0-9]+)]] = memub(r{{[0-9]+}}++#1)
 ; CHECK-DAG: loop0(.LBB0_[[LOOP:.]],
 ; CHECK: .LBB0_[[LOOP]]:
-; CHECK: = and([[REG0]], #255)
+; CHECK: = and([[REG0]],#255)
 ; CHECK: [[REG0]]{{[:0-9]*}} =
 ; CHECK: endloop
 

@@ -1258,23 +1258,8 @@ define <2 x i64> @foldv2i64() nounwind {
 ;
 ; X32-SSE-LABEL: foldv2i64:
 ; X32-SSE:       # BB#0:
-; X32-SSE-NEXT:    movdqa {{.*#+}} xmm0 = [256,0,4294967295,4294967295]
-; X32-SSE-NEXT:    pxor %xmm1, %xmm1
-; X32-SSE-NEXT:    pxor %xmm2, %xmm2
-; X32-SSE-NEXT:    psubq %xmm0, %xmm2
-; X32-SSE-NEXT:    pand %xmm0, %xmm2
-; X32-SSE-NEXT:    psubq {{\.LCPI.*}}, %xmm2
-; X32-SSE-NEXT:    movdqa {{.*#+}} xmm3 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
-; X32-SSE-NEXT:    movdqa %xmm2, %xmm4
-; X32-SSE-NEXT:    pand %xmm3, %xmm4
-; X32-SSE-NEXT:    movdqa {{.*#+}} xmm0 = [0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4]
-; X32-SSE-NEXT:    movdqa %xmm0, %xmm5
-; X32-SSE-NEXT:    pshufb %xmm4, %xmm5
-; X32-SSE-NEXT:    psrlw $4, %xmm2
-; X32-SSE-NEXT:    pand %xmm3, %xmm2
-; X32-SSE-NEXT:    pshufb %xmm2, %xmm0
-; X32-SSE-NEXT:    paddb %xmm5, %xmm0
-; X32-SSE-NEXT:    psadbw %xmm1, %xmm0
+; X32-SSE-NEXT:    movl $8, %eax
+; X32-SSE-NEXT:    movd %eax, %xmm0
 ; X32-SSE-NEXT:    retl
   %out = call <2 x i64> @llvm.cttz.v2i64(<2 x i64> <i64 256, i64 -1>, i1 0)
   ret <2 x i64> %out
@@ -1295,23 +1280,8 @@ define <2 x i64> @foldv2i64u() nounwind {
 ;
 ; X32-SSE-LABEL: foldv2i64u:
 ; X32-SSE:       # BB#0:
-; X32-SSE-NEXT:    movdqa {{.*#+}} xmm0 = [256,0,4294967295,4294967295]
-; X32-SSE-NEXT:    pxor %xmm1, %xmm1
-; X32-SSE-NEXT:    pxor %xmm2, %xmm2
-; X32-SSE-NEXT:    psubq %xmm0, %xmm2
-; X32-SSE-NEXT:    pand %xmm0, %xmm2
-; X32-SSE-NEXT:    psubq {{\.LCPI.*}}, %xmm2
-; X32-SSE-NEXT:    movdqa {{.*#+}} xmm3 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
-; X32-SSE-NEXT:    movdqa %xmm2, %xmm4
-; X32-SSE-NEXT:    pand %xmm3, %xmm4
-; X32-SSE-NEXT:    movdqa {{.*#+}} xmm0 = [0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4]
-; X32-SSE-NEXT:    movdqa %xmm0, %xmm5
-; X32-SSE-NEXT:    pshufb %xmm4, %xmm5
-; X32-SSE-NEXT:    psrlw $4, %xmm2
-; X32-SSE-NEXT:    pand %xmm3, %xmm2
-; X32-SSE-NEXT:    pshufb %xmm2, %xmm0
-; X32-SSE-NEXT:    paddb %xmm5, %xmm0
-; X32-SSE-NEXT:    psadbw %xmm1, %xmm0
+; X32-SSE-NEXT:    movl $8, %eax
+; X32-SSE-NEXT:    movd %eax, %xmm0
 ; X32-SSE-NEXT:    retl
   %out = call <2 x i64> @llvm.cttz.v2i64(<2 x i64> <i64 256, i64 -1>, i1 -1)
   ret <2 x i64> %out

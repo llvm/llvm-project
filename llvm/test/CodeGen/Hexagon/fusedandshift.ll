@@ -2,7 +2,7 @@
 ; Check that we generate fused logical and with shift instruction.
 ; Disable "extract" generation, since it may eliminate the and/lsr.
 
-; CHECK: r{{[0-9]+}} = and(#15, lsr(r{{[0-9]+}}, #{{[0-9]+}})
+; CHECK: r{{[0-9]+}} = and(#15,lsr(r{{[0-9]+}},#{{[0-9]+}})
 
 define i32 @main(i16* %a, i16* %b) nounwind {
   entry:

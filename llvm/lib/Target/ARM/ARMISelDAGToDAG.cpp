@@ -4123,11 +4123,10 @@ static inline int getMClassRegisterSYSmValueMask(StringRef RegString) {
 // The flags here are common to those allowed for apsr in the A class cores and
 // those allowed for the special registers in the M class cores. Returns a
 // value representing which flags were present, -1 if invalid.
-static inline int getMClassFlagsMask(StringRef Flags, bool hasDSP) {
-  if (Flags.empty())
-    return 0x2 | (int)hasDSP;
-
+static inline int getMClassFlagsMask(StringRef Flags) {
   return StringSwitch<int>(Flags)
+          .Case("", 0x2) // no flags means nzcvq for psr registers, and 0x2 is
+                         // correct when flags are not permitted
           .Case("g", 0x1)
           .Case("nzcvq", 0x2)
           .Case("nzcvqg", 0x3)
@@ -4170,7 +4169,7 @@ static int getMClassRegisterMask(StringRef Reg, StringRef Flags, bool IsRead,
   }
 
   // We know we are now handling a write so need to get the mask for the flags.
-  int Mask = getMClassFlagsMask(Flags, Subtarget->hasDSP());
+  int Mask = getMClassFlagsMask(Flags);
 
   // Only apsr, iapsr, eapsr, xpsr can have flags. The other register values
   // shouldn't have flags present.
@@ -4185,10 +4184,7 @@ static int getMClassRegisterMask(StringRef Reg, StringRef Flags, bool IsRead,
   // The register was valid so need to put the mask in the correct place
   // (the flags need to be in bits 11-10) and combine with the SYSmvalue to
   // construct the operand for the instruction node.
-  if (SYSmvalue < 0x4)
-    return SYSmvalue | Mask << 10;
-
-  return SYSmvalue;
+  return SYSmvalue | Mask << 10;
 }
 
 static int getARClassRegisterMask(StringRef Reg, StringRef Flags) {
@@ -4201,7 +4197,7 @@ static int getARClassRegisterMask(StringRef Reg, StringRef Flags) {
     // The flags permitted for apsr are the same flags that are allowed in
     // M class registers. We get the flag value and then shift the flags into
     // the correct place to combine with the mask.
-    Mask = getMClassFlagsMask(Flags, true);
+    Mask = getMClassFlagsMask(Flags);
     if (Mask == -1)
       return -1;
     return Mask << 2;

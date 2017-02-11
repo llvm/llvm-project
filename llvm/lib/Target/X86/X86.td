@@ -811,6 +811,7 @@ def : ProcessorModel<"x86-64", SandyBridgeModel,
 //===----------------------------------------------------------------------===//
 
 include "X86RegisterInfo.td"
+include "X86RegisterBanks.td"
 
 //===----------------------------------------------------------------------===//
 // Instruction Descriptions

@@ -45,6 +45,26 @@ clang::getTemplateParamsRange(TemplateParameterList const * const *Ps,
   return SourceRange(Ps[0]->getTemplateLoc(), Ps[N-1]->getRAngleLoc());
 }
 
+namespace clang {
+/// \brief [temp.constr.decl]p2: A template's associated constraints are
+/// defined as a single constraint-expression derived from the introduced
+/// constraint-expressions [ ... ].
+///
+/// \param Params The template parameter list and optional requires-clause.
+///
+/// \param FD The underlying templated function declaration for a function
+/// template.
+static Expr *formAssociatedConstraints(TemplateParameterList *Params,
+                                       FunctionDecl *FD);
+}
+
+static Expr *clang::formAssociatedConstraints(TemplateParameterList *Params,
+                                              FunctionDecl *FD) {
+  // FIXME: Concepts: collect additional introduced constraint-expressions
+  assert(!FD && "Cannot collect constraints from function declaration yet.");
+  return Params->getRequiresClause();
+}
+
 /// \brief Determine whether the declaration found is acceptable as the name
 /// of a template and, if so, return that template declaration. Otherwise,
 /// returns NULL.
@@ -1137,6 +1157,9 @@ Sema::CheckClassTemplate(Scope *S, unsigned TagSpec, TagUseKind TUK,
     }
   }
 
+  // TODO Memory management; associated constraints are not always stored.
+  Expr *const CurAC = formAssociatedConstraints(TemplateParams, nullptr);
+
   if (PrevClassTemplate) {
     // Ensure that the template parameter lists are compatible. Skip this check
     // for a friend in a dependent context: the template parameter list itself
@@ -1147,6 +1170,29 @@ Sema::CheckClassTemplate(Scope *S, unsigned TagSpec, TagUseKind TUK,
                                         /*Complain=*/true,
                                         TPL_TemplateMatch))
       return true;
+
+    // Check for matching associated constraints on redeclarations.
+    const Expr *const PrevAC = PrevClassTemplate->getAssociatedConstraints();
+    const bool RedeclACMismatch = [&] {
+      if (!(CurAC || PrevAC))
+        return false; // Nothing to check; no mismatch.
+      if (CurAC && PrevAC) {
+        llvm::FoldingSetNodeID CurACInfo, PrevACInfo;
+        CurAC->Profile(CurACInfo, Context, /*Canonical=*/true);
+        PrevAC->Profile(PrevACInfo, Context, /*Canonical=*/true);
+        if (CurACInfo == PrevACInfo)
+          return false; // All good; no mismatch.
+      }
+      return true;
+    }();
+
+    if (RedeclACMismatch) {
+      Diag(CurAC ? CurAC->getLocStart() : NameLoc,
+           diag::err_template_different_associated_constraints);
+      Diag(PrevAC ? PrevAC->getLocStart() : PrevClassTemplate->getLocation(),
+           diag::note_template_prev_declaration) << /*declaration*/0;
+      return true;
+    }
 
     // C++ [temp.class]p4:
     //   In a redeclaration, partial specialization, explicit
@@ -1250,10 +1296,15 @@ Sema::CheckClassTemplate(Scope *S, unsigned TagSpec, TagUseKind TUK,
     AddMsStructLayoutForRecord(NewClass);
   }
 
+  // Attach the associated constraints when the declaration will not be part of
+  // a decl chain.
+  Expr *const ACtoAttach =
+      PrevClassTemplate && ShouldAddRedecl ? nullptr : CurAC;
+
   ClassTemplateDecl *NewTemplate
     = ClassTemplateDecl::Create(Context, SemanticContext, NameLoc,
                                 DeclarationName(Name), TemplateParams,
-                                NewClass);
+                                NewClass, ACtoAttach);
 
   if (ShouldAddRedecl)
     NewTemplate->setPreviousDecl(PrevClassTemplate);
