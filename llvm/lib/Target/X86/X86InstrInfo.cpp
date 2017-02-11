@@ -1923,6 +1923,10 @@ X86InstrInfo::X86InstrInfo(X86Subtarget &STI)
     { X86::VPERMPSZrr,        X86::VPERMPSZrm,          0 },
     { X86::VPERMQZrr,         X86::VPERMQZrm,           0 },
     { X86::VPERMWZrr,         X86::VPERMWZrm,           0 },
+    { X86::VPINSRBZrr,        X86::VPINSRBZrm,          0 },
+    { X86::VPINSRDZrr,        X86::VPINSRDZrm,          0 },
+    { X86::VPINSRQZrr,        X86::VPINSRQZrm,          0 },
+    { X86::VPINSRWZrr,        X86::VPINSRWZrm,          0 },
     { X86::VPMADDUBSWZrr,     X86::VPMADDUBSWZrm,       0 },
     { X86::VPMADDWDZrr,       X86::VPMADDWDZrm,         0 },
     { X86::VPMAXSDZrr,        X86::VPMAXSDZrm,          0 },
@@ -4808,6 +4812,18 @@ MachineInstr *X86InstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
     WorkingMI.getOperand(3).setImm(Size - Amt);
     return TargetInstrInfo::commuteInstructionImpl(WorkingMI, /*NewMI=*/false,
                                                    OpIdx1, OpIdx2);
+  }
+  case X86::PFSUBrr:
+  case X86::PFSUBRrr: {
+    // PFSUB  x, y: x = x - y
+    // PFSUBR x, y: x = y - x
+    unsigned Opc =
+        (X86::PFSUBRrr == MI.getOpcode() ? X86::PFSUBrr : X86::PFSUBRrr);
+    auto &WorkingMI = cloneIfNew(MI);
+    WorkingMI.setDesc(get(Opc));
+    return TargetInstrInfo::commuteInstructionImpl(WorkingMI, /*NewMI=*/false,
+                                                   OpIdx1, OpIdx2);
+    break;
   }
   case X86::BLENDPDrri:
   case X86::BLENDPSrri:

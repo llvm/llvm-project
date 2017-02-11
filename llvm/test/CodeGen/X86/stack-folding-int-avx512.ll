@@ -583,6 +583,38 @@ define <32 x i16> @stack_fold_permwvar_maskz(<32 x i16> %a0, <32 x i16> %a1, i32
   ret <32 x i16> %4
 }
 
+define <16 x i8> @stack_fold_pinsrb(<16 x i8> %a0, i8 %a1) {
+  ;CHECK-LABEL: stack_fold_pinsrb
+  ;CHECK:       vpinsrb $1, {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}} {{.*#+}} 4-byte Folded Reload
+  %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{rax},~{rbx},~{rcx},~{rdx},~{rsi},~{rdi},~{rbp},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15}"()
+  %2 = insertelement <16 x i8> %a0, i8 %a1, i32 1
+  ret <16 x i8> %2
+}
+
+define <4 x i32> @stack_fold_pinsrd(<4 x i32> %a0, i32 %a1) {
+  ;CHECK-LABEL: stack_fold_pinsrd
+  ;CHECK:       vpinsrd $1, {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}} {{.*#+}} 4-byte Folded Reload
+  %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{rax},~{rbx},~{rcx},~{rdx},~{rsi},~{rdi},~{rbp},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15}"()
+  %2 = insertelement <4 x i32> %a0, i32 %a1, i32 1
+  ret <4 x i32> %2
+}
+
+define <2 x i64> @stack_fold_pinsrq(<2 x i64> %a0, i64 %a1) {
+  ;CHECK-LABEL: stack_fold_pinsrq
+  ;CHECK:       vpinsrq $1, {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}} {{.*#+}} 8-byte Folded Reload
+  %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{rax},~{rbx},~{rcx},~{rdx},~{rsi},~{rdi},~{rbp},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15}"()
+  %2 = insertelement <2 x i64> %a0, i64 %a1, i32 1
+  ret <2 x i64> %2
+}
+
+define <8 x i16> @stack_fold_pinsrw(<8 x i16> %a0, i16 %a1) {
+  ;CHECK-LABEL: stack_fold_pinsrw
+  ;CHECK:       vpinsrw $1, {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}} {{.*#+}} 4-byte Folded Reload
+  %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{rax},~{rbx},~{rcx},~{rdx},~{rsi},~{rdi},~{rbp},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15}"()
+  %2 = insertelement <8 x i16> %a0, i16 %a1, i32 1
+  ret <8 x i16> %2
+}
+
 define <32 x i16> @stack_fold_pmaddubsw_zmm(<64 x i8> %a0, <64 x i8> %a1) {
   ;CHECK-LABEL: stack_fold_pmaddubsw_zmm
   ;CHECK:       vpmaddubsw {{-?[0-9]*}}(%rsp), {{%zmm[0-9][0-9]*}}, {{%zmm[0-9][0-9]*}} {{.*#+}} 64-byte Folded Reload

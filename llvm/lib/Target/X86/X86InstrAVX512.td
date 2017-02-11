@@ -3339,7 +3339,7 @@ defm VMOVSSZrr_REV : AVX512_maskable_in_asm<0x11, MRMDestReg, f32x_info,
                            XS, EVEX_4V, VEX_LIG;
 
 let hasSideEffects = 0 in
-defm VMOVSSDrr_REV : AVX512_maskable_in_asm<0x11, MRMDestReg, f64x_info,
+defm VMOVSDZrr_REV : AVX512_maskable_in_asm<0x11, MRMDestReg, f64x_info,
                            (outs VR128X:$dst), (ins VR128X:$src1, VR128X:$src2),
                            "vmovsd.s", "$src2, $src1", "$src1, $src2", []>,
                            XD, EVEX_4V, VEX_LIG, VEX_W;

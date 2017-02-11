@@ -19,6 +19,7 @@
 
 using namespace llvm;
 
+namespace {
 /// \brief This class holds necessary information to represent an interleaved
 /// access group and supports utilities to lower the group into
 /// X86-specific instructions/intrinsics.
@@ -27,7 +28,6 @@ using namespace llvm;
 ///        %wide.vec = load <8 x i32>, <8 x i32>* %ptr
 ///        %v0 = shuffle <8 x i32> %wide.vec, <8 x i32> undef, <0, 2, 4, 6>
 ///        %v1 = shuffle <8 x i32> %wide.vec, <8 x i32> undef, <1, 3, 5, 7>
-
 class X86InterleavedAccessGroup {
   /// \brief Reference to the wide-load instruction of an interleaved access
   /// group.
@@ -95,6 +95,7 @@ public:
   /// instructions/intrinsics.
   bool lowerIntoOptimizedSequence();
 };
+} // end anonymous namespace
 
 bool X86InterleavedAccessGroup::isSupported() const {
   VectorType *ShuffleVecTy = Shuffles[0]->getType();
