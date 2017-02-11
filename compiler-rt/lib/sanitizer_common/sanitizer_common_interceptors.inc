@@ -4608,11 +4608,15 @@ void *__tls_get_addr_opt(void *arg);
 //   descriptor offset as an argument instead of a pointer.  GOT address
 //   is passed in r12, so it's necessary to write it in assembly.  This is
 //   the function used by the compiler.
-#define INIT_TLS_GET_ADDR COMMON_INTERCEPT_FUNCTION(__tls_get_addr_internal)
+extern "C" uptr __tls_get_offset_wrapper(void *arg, uptr (*fn)(void *arg));
+#define INIT_TLS_GET_ADDR COMMON_INTERCEPT_FUNCTION(__tls_get_offset)
+DEFINE_REAL(uptr, __tls_get_offset, void *arg)
+extern "C" uptr __tls_get_offset(void *arg);
+extern "C" uptr __interceptor___tls_get_offset(void *arg);
 INTERCEPTOR(uptr, __tls_get_addr_internal, void *arg) {
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, __tls_get_addr_internal, arg);
-  uptr res = REAL(__tls_get_addr_internal)(arg);
+  uptr res = __tls_get_offset_wrapper(arg, REAL(__tls_get_offset));
   uptr tp = reinterpret_cast<uptr>(__builtin_thread_pointer());
   void *ptr = reinterpret_cast<void *>(res + tp);
   uptr tls_begin, tls_end;
@@ -4624,32 +4628,43 @@ INTERCEPTOR(uptr, __tls_get_addr_internal, void *arg) {
   }
   return res;
 }
-// We need a protected symbol aliasing the above, so that we can jump
+// We need a hidden symbol aliasing the above, so that we can jump
 // directly to it from the assembly below.
 extern "C" __attribute__((alias("__interceptor___tls_get_addr_internal"),
-                          visibility("protected")))
-uptr __interceptor___tls_get_addr_internal_protected(void *arg);
+                          visibility("hidden")))
+uptr __tls_get_addr_hidden(void *arg);
 // Now carefully intercept __tls_get_offset.
 asm(
   ".text\n"
-  ".global __tls_get_offset\n"
-  "__tls_get_offset:\n"
 // The __intercept_ version has to exist, so that gen_dynamic_list.py
 // exports our symbol.
+  ".weak __tls_get_offset\n"
+  ".type __tls_get_offset, @function\n"
+  "__tls_get_offset:\n"
   ".global __interceptor___tls_get_offset\n"
+  ".type __interceptor___tls_get_offset, @function\n"
   "__interceptor___tls_get_offset:\n"
 #ifdef __s390x__
   "la %r2, 0(%r2,%r12)\n"
-  "jg __interceptor___tls_get_addr_internal_protected\n"
+  "jg __tls_get_addr_hidden\n"
 #else
   "basr %r3,0\n"
   "0: la %r2,0(%r2,%r12)\n"
   "l %r4,1f-0b(%r3)\n"
   "b 0(%r4,%r3)\n"
-  "1: .long __interceptor___tls_get_addr_internal_protected - 0b\n"
+  "1: .long __tls_get_addr_hidden - 0b\n"
 #endif
-  ".type __tls_get_offset, @function\n"
-  ".size __tls_get_offset, .-__tls_get_offset\n"
+  ".size __interceptor___tls_get_offset, .-__interceptor___tls_get_offset\n"
+// Assembly wrapper to call REAL(__tls_get_offset)(arg)
+  ".type __tls_get_offset_wrapper, @function\n"
+  "__tls_get_offset_wrapper:\n"
+#ifdef __s390x__
+  "sgr %r2,%r12\n"
+#else
+  "sr %r2,%r12\n"
+#endif
+  "br %r3\n"
+  ".size __tls_get_offset_wrapper, .-__tls_get_offset_wrapper\n"
 );
 #endif // SANITIZER_S390
 #else
