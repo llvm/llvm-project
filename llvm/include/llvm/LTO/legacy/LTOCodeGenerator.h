@@ -41,6 +41,7 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
@@ -206,7 +207,7 @@ private:
   void emitError(const std::string &ErrMsg);
   void emitWarning(const std::string &ErrMsg);
 
-  bool setupOptimizationRemarks();
+  Expected<std::unique_ptr<tool_output_file>> setupOptimizationRemarks();
   void finishOptimizationRemarks();
 
   LLVMContext &Context;

@@ -318,6 +318,8 @@ public:
   /// classifyGlobalReference - Classify a global variable reference for the
   /// current subtarget accourding to how we should reference it.
   unsigned char classifyGlobalReference(const GlobalValue *GV) const;
+
+  bool isXRaySupported() const override { return IsPPC64 && IsLittleEndian; }
 };
 } // End llvm namespace
 

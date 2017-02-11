@@ -362,7 +362,6 @@ int HexagonMCInstrInfo::getSubTarget(MCInstrInfo const &MCII,
 unsigned HexagonMCInstrInfo::getUnits(MCInstrInfo const &MCII,
                                       MCSubtargetInfo const &STI,
                                       MCInst const &MCI) {
-
   const InstrItinerary *II = STI.getSchedModel().InstrItineraries;
   int SchedClass = HexagonMCInstrInfo::getDesc(MCII, MCI).getSchedClass();
   return ((II[SchedClass].FirstStage + HexagonStages)->getUnits());
@@ -758,22 +757,8 @@ void HexagonMCInstrInfo::padEndloop(MCInst &MCB, MCContext &Context) {
 
 bool HexagonMCInstrInfo::prefersSlot3(MCInstrInfo const &MCII,
                                       MCInst const &MCI) {
-  if (HexagonMCInstrInfo::getType(MCII, MCI) == HexagonII::TypeCR)
-    return false;
-
-  unsigned SchedClass = HexagonMCInstrInfo::getDesc(MCII, MCI).getSchedClass();
-  switch (SchedClass) {
-  case Hexagon::Sched::ALU32_3op_tc_2_SLOT0123:
-  case Hexagon::Sched::ALU64_tc_2_SLOT23:
-  case Hexagon::Sched::ALU64_tc_3x_SLOT23:
-  case Hexagon::Sched::M_tc_2_SLOT23:
-  case Hexagon::Sched::M_tc_3x_SLOT23:
-  case Hexagon::Sched::S_2op_tc_2_SLOT23:
-  case Hexagon::Sched::S_3op_tc_2_SLOT23:
-  case Hexagon::Sched::S_3op_tc_3x_SLOT23:
-    return true;
-  }
-  return false;
+  const uint64_t F = HexagonMCInstrInfo::getDesc(MCII, MCI).TSFlags;
+  return (F >> HexagonII::PrefersSlot3Pos) & HexagonII::PrefersSlot3Mask;
 }
 
 void HexagonMCInstrInfo::replaceDuplex(MCContext &Context, MCInst &MCB,

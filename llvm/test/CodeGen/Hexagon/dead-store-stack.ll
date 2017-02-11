@@ -1,6 +1,6 @@
 ; RUN: llc -O2 -march=hexagon < %s | FileCheck %s
 ; CHECK: ParseFunc:
-; CHECK: r[[ARG0:[0-9]+]] = memuh(r[[ARG1:[0-9]+]] + #[[OFFSET:[0-9]+]])
+; CHECK: r[[ARG0:[0-9]+]] = memuh(r[[ARG1:[0-9]+]]+#[[OFFSET:[0-9]+]])
 ; CHECK: memw(r[[ARG1]]+#[[OFFSET]]) = r[[ARG0]]
 
 @.str.3 = external unnamed_addr constant [8 x i8], align 1

@@ -21,4 +21,3 @@ include "HexagonScheduleV55.td"
 //===----------------------------------------------------------------------===//
 
 include "HexagonScheduleV60.td"
-

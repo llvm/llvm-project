@@ -13,15 +13,35 @@
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/YAMLParser.h"
+#include <mutex>
 
 namespace clang {
 namespace clangd {
 
+/// Encapsulates output and logs streams and provides thread-safe access to
+/// them.
+class JSONOutput {
+public:
+  JSONOutput(llvm::raw_ostream &Outs, llvm::raw_ostream &Logs)
+      : Outs(Outs), Logs(Logs) {}
+
+  /// Emit a JSONRPC message.
+  void writeMessage(const Twine &Message);
+
+  /// Get the logging stream.
+  llvm::raw_ostream &logs() { return Logs; }
+
+private:
+  llvm::raw_ostream &Outs;
+  llvm::raw_ostream &Logs;
+
+  std::mutex StreamMutex;
+};
+
 /// Callback for messages sent to the server, called by the JSONRPCDispatcher.
 class Handler {
 public:
-  Handler(llvm::raw_ostream &Outs, llvm::raw_ostream &Logs)
-      : Outs(Outs), Logs(Logs) {}
+  Handler(JSONOutput &Output) : Output(Output) {}
   virtual ~Handler() = default;
 
   /// Called when the server receives a method call. This is supposed to return
@@ -33,11 +53,10 @@ public:
   virtual void handleNotification(llvm::yaml::MappingNode *Params);
 
 protected:
-  llvm::raw_ostream &Outs;
-  llvm::raw_ostream &Logs;
+  JSONOutput &Output;
 
-  /// Helper to write a JSONRPC result to Outs.
-  void writeMessage(const Twine &Message);
+  /// Helper to write a JSONRPC result to Output.
+  void writeMessage(const Twine &Message) { Output.writeMessage(Message); }
 };
 
 /// Main JSONRPC entry point. This parses the JSONRPC "header" and calls the

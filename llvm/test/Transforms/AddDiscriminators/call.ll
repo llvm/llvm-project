@@ -5,7 +5,7 @@
 ; #1 void bar();
 ; #2
 ; #3 void foo() {
-; #4  bar();bar()/*discriminator 1*/;bar()/*discriminator 2*/;
+; #4  bar();bar()/*discriminator 2*/;bar()/*discriminator 4*/;
 ; #5 }
 
 ; Function Attrs: uwtable
@@ -49,6 +49,6 @@ attributes #1 = { "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-
 !13 = !DILocation(line: 5, column: 1, scope: !4)
 
 ; CHECK: ![[CALL1]] = !DILocation(line: 4, column: 9, scope: ![[CALL1BLOCK:[0-9]+]])
-; CHECK: ![[CALL1BLOCK]] = !DILexicalBlockFile({{.*}} discriminator: 1)
+; CHECK: ![[CALL1BLOCK]] = !DILexicalBlockFile({{.*}} discriminator: 2)
 ; CHECK: ![[CALL2]] = !DILocation(line: 4, column: 15, scope: ![[CALL2BLOCK:[0-9]+]])
-; CHECK: ![[CALL2BLOCK]] = !DILexicalBlockFile({{.*}} discriminator: 2)
+; CHECK: ![[CALL2BLOCK]] = !DILexicalBlockFile({{.*}} discriminator: 4)

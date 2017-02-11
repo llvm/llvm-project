@@ -322,6 +322,11 @@ public:
   bool replacedSelectWithOperand(SelectInst *SI, const ICmpInst *Icmp,
                                  const unsigned SIOpd);
 
+  /// Try to replace instruction \p I with value \p V which are pointers
+  /// in different address space.
+  /// \return true if successful.
+  bool replacePointer(Instruction &I, Value *V);
+
 private:
   bool shouldChangeType(unsigned FromBitWidth, unsigned ToBitWidth) const;
   bool shouldChangeType(Type *From, Type *To) const;

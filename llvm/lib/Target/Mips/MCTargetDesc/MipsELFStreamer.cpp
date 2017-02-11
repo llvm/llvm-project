@@ -55,7 +55,7 @@ void MipsELFStreamer::createPendingLabelRelocs() {
   Labels.clear();
 }
 
-void MipsELFStreamer::EmitLabel(MCSymbol *Symbol) {
+void MipsELFStreamer::EmitLabel(MCSymbol *Symbol, SMLoc Loc) {
   MCELFStreamer::EmitLabel(Symbol);
   Labels.push_back(Symbol);
 }

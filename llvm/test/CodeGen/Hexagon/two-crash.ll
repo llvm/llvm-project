@@ -1,7 +1,7 @@
 ; RUN: llc -march=hexagon < %s | FileCheck %s
 ; This testcase crashed, because we propagated a reg:sub into a tied use.
 ; The two-address pass rewrote it in a way that generated incorrect code.
-; CHECK: r{{[0-9]+}} += lsr(r{{[0-9]+}}, #16)
+; CHECK: r{{[0-9]+}} += lsr(r{{[0-9]+}},#16)
 
 target triple = "hexagon"
 

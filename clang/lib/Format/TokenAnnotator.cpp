@@ -684,6 +684,12 @@ private:
       if (Contexts.back().IsForEachMacro)
         Contexts.back().IsExpression = true;
       break;
+    case tok::identifier:
+      if (Tok->isOneOf(Keywords.kw___has_include,
+                       Keywords.kw___has_include_next)) {
+        parseHasInclude();
+      }
+      break;
     default:
       break;
     }
@@ -725,6 +731,14 @@ private:
         next();
       }
     }
+  }
+
+  void parseHasInclude() {
+    if (!CurrentToken || !CurrentToken->is(tok::l_paren))
+      return;
+    next();  // '('
+    parseIncludeDirective();
+    next();  // ')'
   }
 
   LineType parsePreprocessorDirective() {
@@ -777,8 +791,14 @@ private:
     default:
       break;
     }
-    while (CurrentToken)
+    while (CurrentToken) {
+      FormatToken *Tok = CurrentToken;
       next();
+      if (Tok->isOneOf(Keywords.kw___has_include,
+                       Keywords.kw___has_include_next)) {
+        parseHasInclude();
+      }
+    }
     return Type;
   }
 

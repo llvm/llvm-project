@@ -34,7 +34,7 @@ void HexagonMCShuffler::init(MCInst &MCB) {
     // Copy the bundle for the shuffling.
     for (const auto &I : HexagonMCInstrInfo::bundleInstructions(MCB)) {
       MCInst &MI = *const_cast<MCInst *>(I.getInst());
-      DEBUG(dbgs() << "Shuffling: " << MCII.getName(MI.getOpcode()));
+      DEBUG(dbgs() << "Shuffling: " << MCII.getName(MI.getOpcode()) << '\n');
       assert(!HexagonMCInstrInfo::getDesc(MCII, MI).isPseudo());
 
       if (!HexagonMCInstrInfo::isImmext(MI)) {

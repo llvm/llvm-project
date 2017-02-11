@@ -1315,10 +1315,48 @@ public:
   ///
   /// DWARF discriminators distinguish identical file locations between
   /// instructions that are on different basic blocks.
+  ///
+  /// There are 3 components stored in discriminator, from lower bits:
+  ///
+  /// Base discriminator: assigned by AddDiscriminators pass to identify IRs
+  ///                     that are defined by the same source line, but
+  ///                     different basic blocks.
+  /// Duplication factor: assigned by optimizations that will scale down
+  ///                     the execution frequency of the original IR.
+  /// Copy Identifier: assigned by optimizations that clones the IR.
+  ///                  Each copy of the IR will be assigned an identifier.
+  ///
+  /// Encoding:
+  ///
+  /// The above 3 components are encoded into a 32bit unsigned integer in
+  /// order. If the lowest bit is 1, the current component is empty, and the
+  /// next component will start in the next bit. Otherwise, the the current
+  /// component is non-empty, and its content starts in the next bit. The
+  /// length of each components is either 5 bit or 12 bit: if the 7th bit
+  /// is 0, the bit 2~6 (5 bits) are used to represent the component; if the
+  /// 7th bit is 1, the bit 2~6 (5 bits) and 8~14 (7 bits) are combined to
+  /// represent the component.
+
   inline unsigned getDiscriminator() const;
 
   /// Returns a new DILocation with updated \p Discriminator.
-  inline DILocation *cloneWithDiscriminator(unsigned Discriminator) const;
+  inline const DILocation *cloneWithDiscriminator(unsigned Discriminator) const;
+
+  /// Returns a new DILocation with updated base discriminator \p BD.
+  inline const DILocation *setBaseDiscriminator(unsigned BD) const;
+
+  /// Returns the duplication factor stored in the discriminator.
+  inline unsigned getDuplicationFactor() const;
+
+  /// Returns the copy identifier stored in the discriminator.
+  inline unsigned getCopyIdentifier() const;
+
+  /// Returns the base discriminator stored in the discriminator.
+  inline unsigned getBaseDiscriminator() const;
+
+  /// Returns a new DILocation with duplication factor \p DF encoded in the
+  /// discriminator.
+  inline const DILocation *cloneWithDuplicationFactor(unsigned DF) const;
 
   /// When two instructions are combined into a single instruction we also
   /// need to combine the original locations into a single location.
@@ -1350,6 +1388,28 @@ public:
 
   static bool classof(const Metadata *MD) {
     return MD->getMetadataID() == DILocationKind;
+  }
+
+  /// With a give unsigned int \p U, use up to 13 bits to represent it.
+  /// old_bit 1~5  --> new_bit 1~5
+  /// old_bit 6~12 --> new_bit 7~13
+  /// new_bit_6 is 0 if higher bits (7~13) are all 0
+  static unsigned getPrefixEncodingFromUnsigned(unsigned U) {
+    U &= 0xfff;
+    return U > 0x1f ? (((U & 0xfe0) << 1) | (U & 0x1f) | 0x20) : U;
+  }
+
+  /// Reverse transformation as getPrefixEncodingFromUnsigned.
+  static unsigned getUnsignedFromPrefixEncoding(unsigned U) {
+    return (U & 0x20) ? (((U >> 1) & 0xfe0) | (U & 0x1f)) : (U & 0x1f);
+  }
+
+  /// Returns the next component stored in discriminator.
+  static unsigned getNextComponentInDiscriminator(unsigned D) {
+    if ((D & 1) == 0)
+      return D >> ((D & 0x40) ? 14 : 7);
+    else
+      return D >> 1;
   }
 };
 
@@ -1684,7 +1744,8 @@ unsigned DILocation::getDiscriminator() const {
   return 0;
 }
 
-DILocation *DILocation::cloneWithDiscriminator(unsigned Discriminator) const {
+const DILocation *
+DILocation::cloneWithDiscriminator(unsigned Discriminator) const {
   DIScope *Scope = getScope();
   // Skip all parent DILexicalBlockFile that already have a discriminator
   // assigned. We do not want to have nested DILexicalBlockFiles that have
@@ -1698,6 +1759,52 @@ DILocation *DILocation::cloneWithDiscriminator(unsigned Discriminator) const {
       DILexicalBlockFile::get(getContext(), Scope, getFile(), Discriminator);
   return DILocation::get(getContext(), getLine(), getColumn(), NewScope,
                          getInlinedAt());
+}
+
+unsigned DILocation::getBaseDiscriminator() const {
+  unsigned D = getDiscriminator();
+  if ((D & 1) == 0)
+    return getUnsignedFromPrefixEncoding(D >> 1);
+  else
+    return 0;
+}
+
+unsigned DILocation::getDuplicationFactor() const {
+  unsigned D = getDiscriminator();
+  D = getNextComponentInDiscriminator(D);
+  if (D == 0 || (D & 1))
+    return 1;
+  else
+    return getUnsignedFromPrefixEncoding(D >> 1);
+}
+
+unsigned DILocation::getCopyIdentifier() const {
+  return getUnsignedFromPrefixEncoding(getNextComponentInDiscriminator(
+      getNextComponentInDiscriminator(getDiscriminator())));
+}
+
+const DILocation *DILocation::setBaseDiscriminator(unsigned D) const {
+  if (D == 0)
+    return this;
+  else
+    return cloneWithDiscriminator(getPrefixEncodingFromUnsigned(D) << 1);
+}
+
+const DILocation *DILocation::cloneWithDuplicationFactor(unsigned DF) const {
+  DF *= getDuplicationFactor();
+  if (DF <= 1)
+    return this;
+
+  unsigned BD = getBaseDiscriminator();
+  unsigned CI = getCopyIdentifier() << (DF > 0x1f ? 14 : 7);
+  unsigned D = CI | (getPrefixEncodingFromUnsigned(DF) << 1);
+
+  if (BD == 0)
+    D = (D << 1) | 1;
+  else
+    D = (D << (BD > 0x1f ? 14 : 7)) | (getPrefixEncodingFromUnsigned(BD) << 1);
+
+  return cloneWithDiscriminator(D);
 }
 
 class DINamespace : public DIScope {

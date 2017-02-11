@@ -57,19 +57,19 @@ static bool readValueFromFile(const char *Filename,
   return Result;
 }
 
-uint64_t cycleFrequency() XRAY_NEVER_INSTRUMENT {
-  long long CPUFrequency = -1;
+uint64_t getTSCFrequency() XRAY_NEVER_INSTRUMENT {
+  long long TSCFrequency = -1;
   if (readValueFromFile("/sys/devices/system/cpu/cpu0/tsc_freq_khz",
-                        &CPUFrequency)) {
-    CPUFrequency *= 1000;
+                        &TSCFrequency)) {
+    TSCFrequency *= 1000;
   } else if (readValueFromFile(
                  "/sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq",
-                 &CPUFrequency)) {
-    CPUFrequency *= 1000;
+                 &TSCFrequency)) {
+    TSCFrequency *= 1000;
   } else {
     Report("Unable to determine CPU frequency for TSC accounting.\n");
   }
-  return CPUFrequency == -1 ? 0 : static_cast<uint64_t>(CPUFrequency);
+  return TSCFrequency == -1 ? 0 : static_cast<uint64_t>(TSCFrequency);
 }
 
 static constexpr uint8_t CallOpCode = 0xe8;

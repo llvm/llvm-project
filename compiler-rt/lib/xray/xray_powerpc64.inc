@@ -1,4 +1,4 @@
-//===-- xray_x86_64.h -------------------------------------------*- C++ -*-===//
+//===-- xray_x86_64.inc -----------------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -10,26 +10,28 @@
 // This file is a part of XRay, a dynamic runtime instrumentation system.
 //
 //===----------------------------------------------------------------------===//
-#ifndef XRAY_X86_64_H
-#define XRAY_X86_64_H
 
 #include <cstdint>
-#include <x86intrin.h>
+#include <mutex>
+#include <sys/platform/ppc.h>
 
-#include "sanitizer_common/sanitizer_internal_defs.h"
 #include "xray_defs.h"
 
 namespace __xray {
 
 ALWAYS_INLINE uint64_t readTSC(uint8_t &CPU) XRAY_NEVER_INSTRUMENT {
-  unsigned LongCPU;
-  uint64_t TSC = __rdtscp(&LongCPU);
-  CPU = LongCPU;
-  return TSC;
+  CPU = 0;
+  return __ppc_get_timebase();
 }
 
-bool probeRequiredCPUFeatures();
+inline uint64_t getTSCFrequency() XRAY_NEVER_INSTRUMENT {
+  static std::mutex M;
+  std::lock_guard<std::mutex> Guard(M);
+  return __ppc_get_timebase_freq();
+}
+
+inline bool probeRequiredCPUFeatures() XRAY_NEVER_INSTRUMENT {
+  return true;
+}
 
 } // namespace __xray
-
-#endif // XRAY_X86_64_H

@@ -5212,6 +5212,23 @@ static bool getTargetConstantBitsFromNode(SDValue Op, unsigned EltSizeInBits,
     return false;
   };
 
+  // Extract constant bits from build vector.
+  if (ISD::isBuildVectorOfConstantSDNodes(Op.getNode())) {
+    unsigned SrcEltSizeInBits = VT.getScalarSizeInBits();
+    for (unsigned i = 0, e = Op.getNumOperands(); i != e; ++i) {
+      const SDValue &Src = Op.getOperand(i);
+      if (Src.isUndef()) {
+        APInt Undefs = APInt::getLowBitsSet(SizeInBits, SrcEltSizeInBits);
+        UndefBits |= Undefs.shl(i * SrcEltSizeInBits);
+        continue;
+      }
+      auto *Cst = cast<ConstantSDNode>(Src);
+      APInt Bits = Cst->getAPIntValue().zextOrTrunc(SrcEltSizeInBits);
+      MaskBits |= Bits.zext(SizeInBits).shl(i * SrcEltSizeInBits);
+    }
+    return SplitBitData();
+  }
+
   // Extract constant bits from constant pool vector.
   if (auto *Cst = getTargetConstantFromNode(Op)) {
     Type *CstTy = Cst->getType();
@@ -9670,7 +9687,16 @@ static SDValue lowerVectorShuffleAsBroadcast(const SDLoc &DL, MVT VT,
     if (((BroadcastIdx * EltSize) % 128) != 0)
       return SDValue();
 
-    MVT ExtVT = MVT::getVectorVT(VT.getScalarType(), 128 / EltSize);
+    // The shuffle input might have been a bitcast we looked through; look at
+    // the original input vector.  Emit an EXTRACT_SUBVECTOR of that type; we'll
+    // later bitcast it to BroadcastVT.
+    MVT SrcVT = V.getSimpleValueType();
+    assert(SrcVT.getScalarSizeInBits() == BroadcastVT.getScalarSizeInBits() &&
+           "Unexpected vector element size");
+    assert(SrcVT.getVectorNumElements() == BroadcastVT.getVectorNumElements() &&
+           "Unexpected vector num elements");
+
+    MVT ExtVT = MVT::getVectorVT(SrcVT.getScalarType(), 128 / EltSize);
     V = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, ExtVT, V,
                     DAG.getIntPtrConstant(BroadcastIdx, DL));
   }
@@ -26759,6 +26785,8 @@ static bool matchBinaryPermuteVectorShuffle(MVT MaskVT, ArrayRef<int> Mask,
       (MaskVT == MVT::v16f32 && Subtarget.hasAVX512())) {
     SmallVector<int, 4> RepeatedMask;
     if (isRepeatedTargetShuffleMask(128, MaskVT, Mask, RepeatedMask)) {
+      // Match each half of the repeated mask, to determine if its just
+      // referencing one of the vectors, is zeroable or entirely undef.
       auto MatchHalf = [&](unsigned Offset, int &S0, int &S1) {
         int M0 = RepeatedMask[Offset];
         int M1 = RepeatedMask[Offset + 1];
@@ -28807,13 +28835,11 @@ static SDValue combineExtractVectorElt(SDNode *N, SelectionDAG &DAG,
       return DAG.getNode(X86ISD::MMX_MOVD2W, dl, MVT::i32, MMXSrc);
   }
 
-  if (VT == MVT::i1 && isa<ConstantSDNode>(N->getOperand(1)) &&
-      InputVector.getOpcode() == ISD::BITCAST &&
+  if (VT == MVT::i1 && InputVector.getOpcode() == ISD::BITCAST &&
+      isa<ConstantSDNode>(N->getOperand(1)) &&
       isa<ConstantSDNode>(InputVector.getOperand(0))) {
-    uint64_t ExtractedElt =
-        cast<ConstantSDNode>(N->getOperand(1))->getZExtValue();
-    uint64_t InputValue =
-        cast<ConstantSDNode>(InputVector.getOperand(0))->getZExtValue();
+    uint64_t ExtractedElt = N->getConstantOperandVal(1);
+    uint64_t InputValue = InputVector.getConstantOperandVal(0);
     uint64_t Res = (InputValue >> ExtractedElt) & 1;
     return DAG.getConstant(Res, dl, MVT::i1);
   }
@@ -28858,9 +28884,7 @@ static SDValue combineExtractVectorElt(SDNode *N, SelectionDAG &DAG,
       return SDValue();
 
     // Record which element was extracted.
-    ExtractedElements |=
-      1 << cast<ConstantSDNode>(Extract->getOperand(1))->getZExtValue();
-
+    ExtractedElements |= 1 << Extract->getConstantOperandVal(1);
     Uses.push_back(Extract);
   }
 
@@ -28920,8 +28944,7 @@ static SDValue combineExtractVectorElt(SDNode *N, SelectionDAG &DAG,
     UE = Uses.end(); UI != UE; ++UI) {
     SDNode *Extract = *UI;
 
-    SDValue Idx = Extract->getOperand(1);
-    uint64_t IdxVal = cast<ConstantSDNode>(Idx)->getZExtValue();
+    uint64_t IdxVal = Extract->getConstantOperandVal(1);
     DAG.ReplaceAllUsesOfValueWith(SDValue(Extract, 0), Vals[IdxVal]);
   }
 

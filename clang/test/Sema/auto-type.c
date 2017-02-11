@@ -7,7 +7,7 @@ __auto_type b = 5.0;
 __auto_type c = &b;
 __auto_type d = (struct {int a;}) {5};
 _Static_assert(__builtin_types_compatible_p(__typeof(a), int), "");
-__auto_type e = e; // expected-error {{variable 'e' declared with '__auto_type' type cannot appear in its own initializer}}
+__auto_type e = e; // expected-error {{variable 'e' declared with deduced type '__auto_type' cannot appear in its own initializer}}
 
 struct s { __auto_type a; }; // expected-error {{'__auto_type' not allowed in struct member}}
 

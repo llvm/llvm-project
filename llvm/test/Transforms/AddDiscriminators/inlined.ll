@@ -62,8 +62,8 @@ attributes #3 = { nounwind readnone }
 !12 = distinct !DISubprogram(name: "g", scope: !1, file: !1, line: 1, type: !8, isLocal: false, isDefinition: true, scopeLine: 1, isOptimized: true, unit: !0, variables: !2)
 !13 = distinct !DILocation(line: 1, column: 17, scope: !14)
 ; CHECK: ![[BF:.*]] = !DILexicalBlockFile(scope: ![[LB1:[0-9]+]],
-; CHECK-SAME:                             discriminator: 1)
-!14 = !DILexicalBlockFile(scope: !15, file: !1, discriminator: 1)
+; CHECK-SAME:                             discriminator: 2)
+!14 = !DILexicalBlockFile(scope: !15, file: !1, discriminator: 2)
 ; CHECK: ![[LB1]] = distinct !DILexicalBlock(scope: ![[LB2:[0-9]+]],
 ; CHECK-SAME:                                line: 1, column: 16)
 !15 = distinct !DILexicalBlock(scope: !16, file: !1, line: 1, column: 16)

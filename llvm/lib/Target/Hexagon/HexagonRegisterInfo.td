@@ -221,12 +221,20 @@ def IntRegs : RegisterClass<"Hexagon", [i32, f32, v4i8, v2i16], 32,
 }
 
 // Registers are listed in reverse order for allocation preference reasons.
+def GeneralSubRegs : RegisterClass<"Hexagon", [i32], 32,
+                                   (add R23, R22, R21, R20, R19, R18, R17,
+                                        R16, R7, R6, R5, R4, R3, R2, R1, R0)>;
+
 def IntRegsLow8 : RegisterClass<"Hexagon", [i32], 32,
                                 (add R7, R6, R5, R4, R3, R2, R1, R0)> ;
 
 def DoubleRegs : RegisterClass<"Hexagon", [i64, f64, v8i8, v4i16, v2i32], 64,
                                (add (sequence "D%u", 0, 4),
                                     (sequence "D%u", 6, 13), D5, D14, D15)>;
+
+def GeneralDoubleLow8Regs : RegisterClass<"Hexagon", [i64], 64,
+                                          (add D11, D10, D9, D8, D3, D2, D1,
+                                               D0)>;
 
 def VectorRegs : RegisterClass<"Hexagon", [v64i8, v32i16, v16i32, v8i64], 512,
                                (add (sequence "V%u", 0, 31))>;

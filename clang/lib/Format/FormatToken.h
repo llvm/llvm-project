@@ -630,6 +630,8 @@ struct AdditionalKeywords {
     kw_synchronized = &IdentTable.get("synchronized");
     kw_throws = &IdentTable.get("throws");
     kw___except = &IdentTable.get("__except");
+    kw___has_include = &IdentTable.get("__has_include");
+    kw___has_include_next = &IdentTable.get("__has_include_next");
 
     kw_mark = &IdentTable.get("mark");
 
@@ -656,6 +658,8 @@ struct AdditionalKeywords {
   IdentifierInfo *kw_NS_ENUM;
   IdentifierInfo *kw_NS_OPTIONS;
   IdentifierInfo *kw___except;
+  IdentifierInfo *kw___has_include;
+  IdentifierInfo *kw___has_include_next;
 
   // JavaScript keywords.
   IdentifierInfo *kw_as;

@@ -22,6 +22,7 @@
 #include "MCTargetDesc/HexagonMCInstrInfo.h"
 #include "HexagonShuffler.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/Format.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -361,6 +362,21 @@ bool HexagonShuffler::check() {
       if (HexagonMCInstrInfo::getDesc(MCII, ID).isBranch()) {
         ++jumps, ++jump1;
         foundBranches.push_back(ISJ);
+      }
+      break;
+    case HexagonII::TypeV2LDST:
+      if(HexagonMCInstrInfo::getDesc(MCII, ID).mayLoad()) {
+        ++loads;
+        ++memory;
+        if (ISJ->Core.getUnits() == slotSingleLoad ||
+            HexagonMCInstrInfo::getType(MCII,ID) ==
+                HexagonII::TypeCVI_VM_VP_LDU)
+          ++load0;
+      }
+      else {
+        assert(HexagonMCInstrInfo::getDesc(MCII, ID).mayStore());
+        ++memory;
+        ++stores;
       }
       break;
     case HexagonII::TypeCR:

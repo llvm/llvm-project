@@ -5831,17 +5831,7 @@ public:
   /// deduction-guide declaration.
   bool isDeductionGuideName(Scope *S, const IdentifierInfo &Name,
                             SourceLocation NameLoc,
-                            ParsedTemplateTy *Template = nullptr) {
-    CXXScopeSpec SS;
-    UnqualifiedId Id;
-    Id.setIdentifier(&Name, NameLoc);
-    TemplateTy TemplateFallback;
-    bool MemberOfUnknownSpecialization;
-    // FIXME: Use redeclaration lookup!
-    return isTemplateName(S, SS, false, Id, ParsedType(), false,
-                          Template ? *Template : TemplateFallback,
-                          MemberOfUnknownSpecialization) == TNK_Type_template;
-  }
+                            ParsedTemplateTy *Template = nullptr);
 
   bool DiagnoseUnknownTemplateName(const IdentifierInfo &II,
                                    SourceLocation IILoc,

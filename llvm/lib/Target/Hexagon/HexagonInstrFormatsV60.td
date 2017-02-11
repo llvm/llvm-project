@@ -12,28 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 //----------------------------------------------------------------------------//
-//                         Hexagon Instruction Flags +
-//
-//                        *** Must match BaseInfo.h ***
-//----------------------------------------------------------------------------//
-
-def TypeCVI_VA         : IType<13>;
-def TypeCVI_VA_DV      : IType<14>;
-def TypeCVI_VX         : IType<15>;
-def TypeCVI_VX_DV      : IType<16>;
-def TypeCVI_VP         : IType<17>;
-def TypeCVI_VP_VS      : IType<18>;
-def TypeCVI_VS         : IType<19>;
-def TypeCVI_VINLANESAT : IType<20>;
-def TypeCVI_VM_LD      : IType<21>;
-def TypeCVI_VM_TMP_LD  : IType<22>;
-def TypeCVI_VM_CUR_LD  : IType<23>;
-def TypeCVI_VM_VP_LDU  : IType<24>;
-def TypeCVI_VM_ST      : IType<25>;
-def TypeCVI_VM_NEW_ST  : IType<26>;
-def TypeCVI_VM_STU     : IType<27>;
-def TypeCVI_HIST       : IType<28>;
-//----------------------------------------------------------------------------//
 //                         Instruction Classes Definitions +
 //----------------------------------------------------------------------------//
 

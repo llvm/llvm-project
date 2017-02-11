@@ -15,8 +15,7 @@
 #include "lldb/Host/ConnectionFileDescriptor.h"
 #include "lldb/Host/common/TCPSocket.h"
 #include "lldb/Utility/StreamString.h"
-
-#include "Utility/UriParser.h"
+#include "lldb/Utility/UriParser.h"
 
 using namespace lldb;
 using namespace lldb_private;

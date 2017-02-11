@@ -32,38 +32,36 @@ template<template<typename> typename TT> struct E { // expected-note 2{{template
   TT(int) -> TT<int>; // expected-error 2{{cannot specify deduction guide for template template parameter 'TT'}} expected-error {{requires an identifier}}
 };
 
-// FIXME: Even if the DR is applied as we hope, we should still warn if the
-// trailing-return-type can obviously never produce a specialization of the
-// named template.
-A(int) -> int;
-template<typename T> A(T) -> T*;
+A(int) -> int; // expected-error {{deduced type 'int' of deduction guide is not a specialization of template 'A'}}
+template<typename T> A(T) -> B<T>; // expected-error {{deduced type 'B<T>' (aka 'A<type-parameter-0-0>') of deduction guide is not written as a specialization of template 'A'}}
+template<typename T> A(T*) -> const A<T>; // expected-error {{deduced type 'const A<T>' of deduction guide is not a specialization of template 'A'}}
 
 // A deduction-guide shall be declared in the same scope as the corresponding
 // class template.
 namespace WrongScope {
   namespace {
-    template<typename T> struct AnonNS1 {};
+    template<typename T> struct AnonNS1 {}; // expected-note {{here}}
     AnonNS1(float) -> AnonNS1<float>; // ok
   }
-  AnonNS1(int) -> AnonNS1<int>; // FIXME
-  template<typename T> struct AnonNS2 {};
+  AnonNS1(int) -> AnonNS1<int>; // expected-error {{deduction guide must be declared in the same scope as template 'WrongScope::}}
+  template<typename T> struct AnonNS2 {}; // expected-note {{here}}
   namespace {
     AnonNS1(char) -> AnonNS1<char>; // ok
-    AnonNS2(int) -> AnonNS2<int>; // FIXME
+    AnonNS2(int) -> AnonNS2<int>; // expected-error {{deduction guide must be declared in the same scope as template 'WrongScope::AnonNS2'}}
   }
   namespace N {
-    template<typename T> struct NamedNS1 {};
-    template<typename T> struct NamedNS2 {};
+    template<typename T> struct NamedNS1 {}; // expected-note {{here}}
+    template<typename T> struct NamedNS2 {}; // expected-note {{here}}
   }
   using N::NamedNS1;
-  NamedNS1(int) -> NamedNS1<int>; // FIXME
+  NamedNS1(int) -> NamedNS1<int>; // expected-error {{deduction guide must be declared in the same scope as template}}
   using namespace N;
-  NamedNS2(int) -> NamedNS2<int>; // FIXME
+  NamedNS2(int) -> NamedNS2<int>; // expected-error {{deduction guide must be declared in the same scope as template}}
   struct ClassMemberA {
-    template<typename T> struct X {};
+    template<typename T> struct X {}; // expected-note {{here}}
   };
   struct ClassMemberB : ClassMemberA {
-    X(int) -> X<int>; // FIXME
+    X(int) -> X<int>; // expected-error {{deduction guide must be declared in the same scope as template 'WrongScope::ClassMemberA::X'}}
   };
   template<typename T> struct Local {};
   void f() {

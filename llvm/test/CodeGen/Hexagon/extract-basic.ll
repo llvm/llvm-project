@@ -1,8 +1,8 @@
 ; RUN: llc -O2 -march=hexagon < %s | FileCheck %s
 
-; CHECK-DAG: extractu(r{{[0-9]*}}, #3, #4)
-; CHECK-DAG: extractu(r{{[0-9]*}}, #8, #7)
-; CHECK-DAG: extractu(r{{[0-9]*}}, #8, #16)
+; CHECK-DAG: extractu(r{{[0-9]*}},#3,#4)
+; CHECK-DAG: extractu(r{{[0-9]*}},#8,#7)
+; CHECK-DAG: extractu(r{{[0-9]*}},#8,#16)
 
 ; C source:
 ; typedef struct {

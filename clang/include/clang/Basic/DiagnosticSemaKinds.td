@@ -1861,8 +1861,8 @@ def warn_cxx98_compat_auto_type_specifier : Warning<
   "'auto' type specifier is incompatible with C++98">,
   InGroup<CXX98Compat>, DefaultIgnore;
 def err_auto_variable_cannot_appear_in_own_initializer : Error<
-  "variable %0 declared with %select{'auto'|'decltype(auto)'|'__auto_type'}1 "
-  "type cannot appear in its own initializer">;
+  "variable %0 declared with deduced type %1 "
+  "cannot appear in its own initializer">;
 def err_binding_cannot_appear_in_own_initializer : Error<
   "binding %0 cannot appear in the initializer of its own "
   "decomposition declaration">;
@@ -1893,7 +1893,7 @@ def err_dependent_deduced_tst : Error<
 def err_auto_not_allowed_var_inst : Error<
   "'auto' variable template instantiation is not allowed">;
 def err_auto_var_requires_init : Error<
-  "declaration of variable %0 with type %1 requires an initializer">;
+  "declaration of variable %0 with deduced type %1 requires an initializer">;
 def err_auto_new_requires_ctor_arg : Error<
   "new expression for type %0 requires a constructor argument">;
 def err_auto_new_list_init : Error<
@@ -1981,6 +1981,9 @@ def err_deduced_class_template_explicit : Error<
   "%select{constructor|deduction guide}1 for copy-list-initialization">;
 def err_deduction_guide_no_trailing_return_type : Error<
   "deduction guide declaration without trailing return type">;
+def err_deduction_guide_bad_trailing_return_type : Error<
+  "deduced type %1 of deduction guide is not %select{|written as }2"
+  "a specialization of template %0">;
 def err_deduction_guide_with_complex_decl : Error<
   "cannot specify any part of a return type in the "
   "declaration of a deduction guide">;
@@ -1990,6 +1993,8 @@ def err_deduction_guide_name_not_class_template : Error<
   "cannot specify deduction guide for "
   "%select{<error>|function template|variable template|alias template|"
   "template template parameter|dependent template name}0 %1">;
+def err_deduction_guide_wrong_scope : Error<
+  "deduction guide must be declared in the same scope as template %q0">;
 def err_deduction_guide_defines_function : Error<
   "deduction guide cannot have a function definition">;
 def err_deduction_guide_explicit_mismatch : Error<
