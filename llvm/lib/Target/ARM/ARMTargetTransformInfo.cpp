@@ -533,7 +533,8 @@ int ARMTTIImpl::getInterleavedMemoryOpCost(unsigned Opcode, Type *VecTy,
     unsigned SubVecSize = DL.getTypeSizeInBits(SubVecTy);
 
     // vldN/vstN only support legal vector types of size 64 or 128 in bits.
-    if (NumElts % Factor == 0 && (SubVecSize == 64 || SubVecSize == 128))
+    if (NumElts % Factor == 0 && (SubVecSize == 64 || SubVecSize == 128) &&
+        !VecTy->getScalarType()->isHalfTy())
       return Factor;
   }
 

@@ -6,8 +6,8 @@ define <4 x i64> @testv4i64(<4 x i64> %in) nounwind {
 ; AVX1-LABEL: testv4i64:
 ; AVX1:       # BB#0:
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX1-NEXT:    vmovaps {{.*#+}} xmm2 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
-; AVX1-NEXT:    vandps %xmm2, %xmm1, %xmm3
+; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
+; AVX1-NEXT:    vpand %xmm2, %xmm1, %xmm3
 ; AVX1-NEXT:    vmovdqa {{.*#+}} xmm4 = [0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4]
 ; AVX1-NEXT:    vpshufb %xmm3, %xmm4, %xmm3
 ; AVX1-NEXT:    vpsrlw $4, %xmm1, %xmm1
@@ -16,7 +16,7 @@ define <4 x i64> @testv4i64(<4 x i64> %in) nounwind {
 ; AVX1-NEXT:    vpaddb %xmm3, %xmm1, %xmm1
 ; AVX1-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; AVX1-NEXT:    vpsadbw %xmm3, %xmm1, %xmm1
-; AVX1-NEXT:    vandps %xmm2, %xmm0, %xmm5
+; AVX1-NEXT:    vpand %xmm2, %xmm0, %xmm5
 ; AVX1-NEXT:    vpshufb %xmm5, %xmm4, %xmm5
 ; AVX1-NEXT:    vpsrlw $4, %xmm0, %xmm0
 ; AVX1-NEXT:    vpand %xmm2, %xmm0, %xmm0
@@ -47,8 +47,8 @@ define <8 x i32> @testv8i32(<8 x i32> %in) nounwind {
 ; AVX1-LABEL: testv8i32:
 ; AVX1:       # BB#0:
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX1-NEXT:    vmovaps {{.*#+}} xmm2 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
-; AVX1-NEXT:    vandps %xmm2, %xmm1, %xmm3
+; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
+; AVX1-NEXT:    vpand %xmm2, %xmm1, %xmm3
 ; AVX1-NEXT:    vmovdqa {{.*#+}} xmm4 = [0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4]
 ; AVX1-NEXT:    vpshufb %xmm3, %xmm4, %xmm3
 ; AVX1-NEXT:    vpsrlw $4, %xmm1, %xmm1
@@ -61,7 +61,7 @@ define <8 x i32> @testv8i32(<8 x i32> %in) nounwind {
 ; AVX1-NEXT:    vpmovzxdq {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero
 ; AVX1-NEXT:    vpsadbw %xmm3, %xmm1, %xmm1
 ; AVX1-NEXT:    vpackuswb %xmm5, %xmm1, %xmm1
-; AVX1-NEXT:    vandps %xmm2, %xmm0, %xmm5
+; AVX1-NEXT:    vpand %xmm2, %xmm0, %xmm5
 ; AVX1-NEXT:    vpshufb %xmm5, %xmm4, %xmm5
 ; AVX1-NEXT:    vpsrlw $4, %xmm0, %xmm0
 ; AVX1-NEXT:    vpand %xmm2, %xmm0, %xmm0
@@ -145,15 +145,15 @@ define <32 x i8> @testv32i8(<32 x i8> %in) nounwind {
 ; AVX1-LABEL: testv32i8:
 ; AVX1:       # BB#0:
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX1-NEXT:    vmovaps {{.*#+}} xmm2 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
-; AVX1-NEXT:    vandps %xmm2, %xmm1, %xmm3
+; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
+; AVX1-NEXT:    vpand %xmm2, %xmm1, %xmm3
 ; AVX1-NEXT:    vmovdqa {{.*#+}} xmm4 = [0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4]
 ; AVX1-NEXT:    vpshufb %xmm3, %xmm4, %xmm3
 ; AVX1-NEXT:    vpsrlw $4, %xmm1, %xmm1
 ; AVX1-NEXT:    vpand %xmm2, %xmm1, %xmm1
 ; AVX1-NEXT:    vpshufb %xmm1, %xmm4, %xmm1
 ; AVX1-NEXT:    vpaddb %xmm3, %xmm1, %xmm1
-; AVX1-NEXT:    vandps %xmm2, %xmm0, %xmm3
+; AVX1-NEXT:    vpand %xmm2, %xmm0, %xmm3
 ; AVX1-NEXT:    vpshufb %xmm3, %xmm4, %xmm3
 ; AVX1-NEXT:    vpsrlw $4, %xmm0, %xmm0
 ; AVX1-NEXT:    vpand %xmm2, %xmm0, %xmm0

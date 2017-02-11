@@ -621,22 +621,22 @@ define <16 x i8> @trunc_add_const_v16i64_v16i8(<16 x i64> %a0) nounwind {
 ; AVX1-LABEL: trunc_add_const_v16i64_v16i8:
 ; AVX1:       # BB#0:
 ; AVX1-NEXT:    vextractf128 $1, %ymm3, %xmm4
-; AVX1-NEXT:    vmovaps {{.*#+}} xmm5 = [255,0,0,0,0,0,0,0,255,0,0,0,0,0,0,0]
-; AVX1-NEXT:    vandps %xmm5, %xmm4, %xmm4
-; AVX1-NEXT:    vandps %xmm5, %xmm3, %xmm3
+; AVX1-NEXT:    vmovdqa {{.*#+}} xmm5 = [255,0,0,0,0,0,0,0,255,0,0,0,0,0,0,0]
+; AVX1-NEXT:    vpand %xmm5, %xmm4, %xmm4
+; AVX1-NEXT:    vpand %xmm5, %xmm3, %xmm3
 ; AVX1-NEXT:    vpackuswb %xmm4, %xmm3, %xmm3
 ; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm4
-; AVX1-NEXT:    vandps %xmm5, %xmm4, %xmm4
-; AVX1-NEXT:    vandps %xmm5, %xmm2, %xmm2
+; AVX1-NEXT:    vpand %xmm5, %xmm4, %xmm4
+; AVX1-NEXT:    vpand %xmm5, %xmm2, %xmm2
 ; AVX1-NEXT:    vpackuswb %xmm4, %xmm2, %xmm2
 ; AVX1-NEXT:    vpackuswb %xmm3, %xmm2, %xmm2
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm3
-; AVX1-NEXT:    vandps %xmm5, %xmm3, %xmm3
-; AVX1-NEXT:    vandps %xmm5, %xmm1, %xmm1
+; AVX1-NEXT:    vpand %xmm5, %xmm3, %xmm3
+; AVX1-NEXT:    vpand %xmm5, %xmm1, %xmm1
 ; AVX1-NEXT:    vpackuswb %xmm3, %xmm1, %xmm1
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
-; AVX1-NEXT:    vandps %xmm5, %xmm3, %xmm3
-; AVX1-NEXT:    vandps %xmm5, %xmm0, %xmm0
+; AVX1-NEXT:    vpand %xmm5, %xmm3, %xmm3
+; AVX1-NEXT:    vpand %xmm5, %xmm0, %xmm0
 ; AVX1-NEXT:    vpackuswb %xmm3, %xmm0, %xmm0
 ; AVX1-NEXT:    vpackuswb %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vpackuswb %xmm2, %xmm0, %xmm0
@@ -717,13 +717,13 @@ define <16 x i8> @trunc_add_const_v16i32_v16i8(<16 x i32> %a0) nounwind {
 ; AVX1-LABEL: trunc_add_const_v16i32_v16i8:
 ; AVX1:       # BB#0:
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; AVX1-NEXT:    vmovaps {{.*#+}} xmm3 = [255,0,0,0,255,0,0,0,255,0,0,0,255,0,0,0]
-; AVX1-NEXT:    vandps %xmm3, %xmm2, %xmm2
-; AVX1-NEXT:    vandps %xmm3, %xmm1, %xmm1
+; AVX1-NEXT:    vmovdqa {{.*#+}} xmm3 = [255,0,0,0,255,0,0,0,255,0,0,0,255,0,0,0]
+; AVX1-NEXT:    vpand %xmm3, %xmm2, %xmm2
+; AVX1-NEXT:    vpand %xmm3, %xmm1, %xmm1
 ; AVX1-NEXT:    vpackuswb %xmm2, %xmm1, %xmm1
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; AVX1-NEXT:    vandps %xmm3, %xmm2, %xmm2
-; AVX1-NEXT:    vandps %xmm3, %xmm0, %xmm0
+; AVX1-NEXT:    vpand %xmm3, %xmm2, %xmm2
+; AVX1-NEXT:    vpand %xmm3, %xmm0, %xmm0
 ; AVX1-NEXT:    vpackuswb %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vpackuswb %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vpaddb {{.*}}(%rip), %xmm0, %xmm0
@@ -3401,22 +3401,22 @@ define <16 x i8> @trunc_and_const_v16i64_v16i8(<16 x i64> %a0) nounwind {
 ; AVX1-LABEL: trunc_and_const_v16i64_v16i8:
 ; AVX1:       # BB#0:
 ; AVX1-NEXT:    vextractf128 $1, %ymm3, %xmm4
-; AVX1-NEXT:    vmovaps {{.*#+}} xmm5 = [255,0,0,0,0,0,0,0,255,0,0,0,0,0,0,0]
-; AVX1-NEXT:    vandps %xmm5, %xmm4, %xmm4
-; AVX1-NEXT:    vandps %xmm5, %xmm3, %xmm3
+; AVX1-NEXT:    vmovdqa {{.*#+}} xmm5 = [255,0,0,0,0,0,0,0,255,0,0,0,0,0,0,0]
+; AVX1-NEXT:    vpand %xmm5, %xmm4, %xmm4
+; AVX1-NEXT:    vpand %xmm5, %xmm3, %xmm3
 ; AVX1-NEXT:    vpackuswb %xmm4, %xmm3, %xmm3
 ; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm4
-; AVX1-NEXT:    vandps %xmm5, %xmm4, %xmm4
-; AVX1-NEXT:    vandps %xmm5, %xmm2, %xmm2
+; AVX1-NEXT:    vpand %xmm5, %xmm4, %xmm4
+; AVX1-NEXT:    vpand %xmm5, %xmm2, %xmm2
 ; AVX1-NEXT:    vpackuswb %xmm4, %xmm2, %xmm2
 ; AVX1-NEXT:    vpackuswb %xmm3, %xmm2, %xmm2
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm3
-; AVX1-NEXT:    vandps %xmm5, %xmm3, %xmm3
-; AVX1-NEXT:    vandps %xmm5, %xmm1, %xmm1
+; AVX1-NEXT:    vpand %xmm5, %xmm3, %xmm3
+; AVX1-NEXT:    vpand %xmm5, %xmm1, %xmm1
 ; AVX1-NEXT:    vpackuswb %xmm3, %xmm1, %xmm1
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
-; AVX1-NEXT:    vandps %xmm5, %xmm3, %xmm3
-; AVX1-NEXT:    vandps %xmm5, %xmm0, %xmm0
+; AVX1-NEXT:    vpand %xmm5, %xmm3, %xmm3
+; AVX1-NEXT:    vpand %xmm5, %xmm0, %xmm0
 ; AVX1-NEXT:    vpackuswb %xmm3, %xmm0, %xmm0
 ; AVX1-NEXT:    vpackuswb %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vpackuswb %xmm2, %xmm0, %xmm0
@@ -3497,13 +3497,13 @@ define <16 x i8> @trunc_and_const_v16i32_v16i8(<16 x i32> %a0) nounwind {
 ; AVX1-LABEL: trunc_and_const_v16i32_v16i8:
 ; AVX1:       # BB#0:
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; AVX1-NEXT:    vmovaps {{.*#+}} xmm3 = [255,0,0,0,255,0,0,0,255,0,0,0,255,0,0,0]
-; AVX1-NEXT:    vandps %xmm3, %xmm2, %xmm2
-; AVX1-NEXT:    vandps %xmm3, %xmm1, %xmm1
+; AVX1-NEXT:    vmovdqa {{.*#+}} xmm3 = [255,0,0,0,255,0,0,0,255,0,0,0,255,0,0,0]
+; AVX1-NEXT:    vpand %xmm3, %xmm2, %xmm2
+; AVX1-NEXT:    vpand %xmm3, %xmm1, %xmm1
 ; AVX1-NEXT:    vpackuswb %xmm2, %xmm1, %xmm1
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; AVX1-NEXT:    vandps %xmm3, %xmm2, %xmm2
-; AVX1-NEXT:    vandps %xmm3, %xmm0, %xmm0
+; AVX1-NEXT:    vpand %xmm3, %xmm2, %xmm2
+; AVX1-NEXT:    vpand %xmm3, %xmm0, %xmm0
 ; AVX1-NEXT:    vpackuswb %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vpackuswb %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
@@ -4137,22 +4137,22 @@ define <16 x i8> @trunc_xor_const_v16i64_v16i8(<16 x i64> %a0) nounwind {
 ; AVX1-LABEL: trunc_xor_const_v16i64_v16i8:
 ; AVX1:       # BB#0:
 ; AVX1-NEXT:    vextractf128 $1, %ymm3, %xmm4
-; AVX1-NEXT:    vmovaps {{.*#+}} xmm5 = [255,0,0,0,0,0,0,0,255,0,0,0,0,0,0,0]
-; AVX1-NEXT:    vandps %xmm5, %xmm4, %xmm4
-; AVX1-NEXT:    vandps %xmm5, %xmm3, %xmm3
+; AVX1-NEXT:    vmovdqa {{.*#+}} xmm5 = [255,0,0,0,0,0,0,0,255,0,0,0,0,0,0,0]
+; AVX1-NEXT:    vpand %xmm5, %xmm4, %xmm4
+; AVX1-NEXT:    vpand %xmm5, %xmm3, %xmm3
 ; AVX1-NEXT:    vpackuswb %xmm4, %xmm3, %xmm3
 ; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm4
-; AVX1-NEXT:    vandps %xmm5, %xmm4, %xmm4
-; AVX1-NEXT:    vandps %xmm5, %xmm2, %xmm2
+; AVX1-NEXT:    vpand %xmm5, %xmm4, %xmm4
+; AVX1-NEXT:    vpand %xmm5, %xmm2, %xmm2
 ; AVX1-NEXT:    vpackuswb %xmm4, %xmm2, %xmm2
 ; AVX1-NEXT:    vpackuswb %xmm3, %xmm2, %xmm2
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm3
-; AVX1-NEXT:    vandps %xmm5, %xmm3, %xmm3
-; AVX1-NEXT:    vandps %xmm5, %xmm1, %xmm1
+; AVX1-NEXT:    vpand %xmm5, %xmm3, %xmm3
+; AVX1-NEXT:    vpand %xmm5, %xmm1, %xmm1
 ; AVX1-NEXT:    vpackuswb %xmm3, %xmm1, %xmm1
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
-; AVX1-NEXT:    vandps %xmm5, %xmm3, %xmm3
-; AVX1-NEXT:    vandps %xmm5, %xmm0, %xmm0
+; AVX1-NEXT:    vpand %xmm5, %xmm3, %xmm3
+; AVX1-NEXT:    vpand %xmm5, %xmm0, %xmm0
 ; AVX1-NEXT:    vpackuswb %xmm3, %xmm0, %xmm0
 ; AVX1-NEXT:    vpackuswb %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vpackuswb %xmm2, %xmm0, %xmm0
@@ -4233,13 +4233,13 @@ define <16 x i8> @trunc_xor_const_v16i32_v16i8(<16 x i32> %a0) nounwind {
 ; AVX1-LABEL: trunc_xor_const_v16i32_v16i8:
 ; AVX1:       # BB#0:
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; AVX1-NEXT:    vmovaps {{.*#+}} xmm3 = [255,0,0,0,255,0,0,0,255,0,0,0,255,0,0,0]
-; AVX1-NEXT:    vandps %xmm3, %xmm2, %xmm2
-; AVX1-NEXT:    vandps %xmm3, %xmm1, %xmm1
+; AVX1-NEXT:    vmovdqa {{.*#+}} xmm3 = [255,0,0,0,255,0,0,0,255,0,0,0,255,0,0,0]
+; AVX1-NEXT:    vpand %xmm3, %xmm2, %xmm2
+; AVX1-NEXT:    vpand %xmm3, %xmm1, %xmm1
 ; AVX1-NEXT:    vpackuswb %xmm2, %xmm1, %xmm1
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; AVX1-NEXT:    vandps %xmm3, %xmm2, %xmm2
-; AVX1-NEXT:    vandps %xmm3, %xmm0, %xmm0
+; AVX1-NEXT:    vpand %xmm3, %xmm2, %xmm2
+; AVX1-NEXT:    vpand %xmm3, %xmm0, %xmm0
 ; AVX1-NEXT:    vpackuswb %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vpackuswb %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vpxor {{.*}}(%rip), %xmm0, %xmm0
@@ -4873,22 +4873,22 @@ define <16 x i8> @trunc_or_const_v16i64_v16i8(<16 x i64> %a0) nounwind {
 ; AVX1-LABEL: trunc_or_const_v16i64_v16i8:
 ; AVX1:       # BB#0:
 ; AVX1-NEXT:    vextractf128 $1, %ymm3, %xmm4
-; AVX1-NEXT:    vmovaps {{.*#+}} xmm5 = [255,0,0,0,0,0,0,0,255,0,0,0,0,0,0,0]
-; AVX1-NEXT:    vandps %xmm5, %xmm4, %xmm4
-; AVX1-NEXT:    vandps %xmm5, %xmm3, %xmm3
+; AVX1-NEXT:    vmovdqa {{.*#+}} xmm5 = [255,0,0,0,0,0,0,0,255,0,0,0,0,0,0,0]
+; AVX1-NEXT:    vpand %xmm5, %xmm4, %xmm4
+; AVX1-NEXT:    vpand %xmm5, %xmm3, %xmm3
 ; AVX1-NEXT:    vpackuswb %xmm4, %xmm3, %xmm3
 ; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm4
-; AVX1-NEXT:    vandps %xmm5, %xmm4, %xmm4
-; AVX1-NEXT:    vandps %xmm5, %xmm2, %xmm2
+; AVX1-NEXT:    vpand %xmm5, %xmm4, %xmm4
+; AVX1-NEXT:    vpand %xmm5, %xmm2, %xmm2
 ; AVX1-NEXT:    vpackuswb %xmm4, %xmm2, %xmm2
 ; AVX1-NEXT:    vpackuswb %xmm3, %xmm2, %xmm2
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm3
-; AVX1-NEXT:    vandps %xmm5, %xmm3, %xmm3
-; AVX1-NEXT:    vandps %xmm5, %xmm1, %xmm1
+; AVX1-NEXT:    vpand %xmm5, %xmm3, %xmm3
+; AVX1-NEXT:    vpand %xmm5, %xmm1, %xmm1
 ; AVX1-NEXT:    vpackuswb %xmm3, %xmm1, %xmm1
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
-; AVX1-NEXT:    vandps %xmm5, %xmm3, %xmm3
-; AVX1-NEXT:    vandps %xmm5, %xmm0, %xmm0
+; AVX1-NEXT:    vpand %xmm5, %xmm3, %xmm3
+; AVX1-NEXT:    vpand %xmm5, %xmm0, %xmm0
 ; AVX1-NEXT:    vpackuswb %xmm3, %xmm0, %xmm0
 ; AVX1-NEXT:    vpackuswb %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vpackuswb %xmm2, %xmm0, %xmm0
@@ -4969,13 +4969,13 @@ define <16 x i8> @trunc_or_const_v16i32_v16i8(<16 x i32> %a0) nounwind {
 ; AVX1-LABEL: trunc_or_const_v16i32_v16i8:
 ; AVX1:       # BB#0:
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; AVX1-NEXT:    vmovaps {{.*#+}} xmm3 = [255,0,0,0,255,0,0,0,255,0,0,0,255,0,0,0]
-; AVX1-NEXT:    vandps %xmm3, %xmm2, %xmm2
-; AVX1-NEXT:    vandps %xmm3, %xmm1, %xmm1
+; AVX1-NEXT:    vmovdqa {{.*#+}} xmm3 = [255,0,0,0,255,0,0,0,255,0,0,0,255,0,0,0]
+; AVX1-NEXT:    vpand %xmm3, %xmm2, %xmm2
+; AVX1-NEXT:    vpand %xmm3, %xmm1, %xmm1
 ; AVX1-NEXT:    vpackuswb %xmm2, %xmm1, %xmm1
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; AVX1-NEXT:    vandps %xmm3, %xmm2, %xmm2
-; AVX1-NEXT:    vandps %xmm3, %xmm0, %xmm0
+; AVX1-NEXT:    vpand %xmm3, %xmm2, %xmm2
+; AVX1-NEXT:    vpand %xmm3, %xmm0, %xmm0
 ; AVX1-NEXT:    vpackuswb %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vpackuswb %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vpor {{.*}}(%rip), %xmm0, %xmm0

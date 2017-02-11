@@ -1,4 +1,4 @@
-//===-- llvm/MC/MCInst.h - MCInst class -------------------------*- C++ -*-===//
+//===- llvm/MC/MCInst.h - MCInst class --------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -18,15 +18,17 @@
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/DataTypes.h"
 #include "llvm/Support/SMLoc.h"
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
 
 namespace llvm {
-class raw_ostream;
-class MCAsmInfo;
-class MCInstPrinter;
+
 class MCExpr;
 class MCInst;
+class MCInstPrinter;
+class raw_ostream;
 
 /// \brief Instances of this class represent operands of the MCInst class.
 /// This is a simple discriminated union.
@@ -39,7 +41,7 @@ class MCOperand {
     kExpr,        ///< Relocatable immediate operand.
     kInst         ///< Sub-instruction operand.
   };
-  MachineOperandType Kind;
+  MachineOperandType Kind = kInvalid;
 
   union {
     unsigned RegVal;
@@ -50,7 +52,7 @@ class MCOperand {
   };
 
 public:
-  MCOperand() : Kind(kInvalid), FPImmVal(0.0) {}
+  MCOperand() : FPImmVal(0.0) {}
 
   bool isValid() const { return Kind != kInvalid; }
   bool isReg() const { return Kind == kRegister; }
@@ -75,6 +77,7 @@ public:
     assert(isImm() && "This is not an immediate");
     return ImmVal;
   }
+
   void setImm(int64_t Val) {
     assert(isImm() && "This is not an immediate");
     ImmVal = Val;
@@ -94,6 +97,7 @@ public:
     assert(isExpr() && "This is not an expression");
     return ExprVal;
   }
+
   void setExpr(const MCExpr *Val) {
     assert(isExpr() && "This is not an expression");
     ExprVal = Val;
@@ -103,6 +107,7 @@ public:
     assert(isInst() && "This is not a sub-instruction");
     return InstVal;
   }
+
   void setInst(const MCInst *Val) {
     assert(isInst() && "This is not a sub-instruction");
     InstVal = Val;
@@ -114,24 +119,28 @@ public:
     Op.RegVal = Reg;
     return Op;
   }
+
   static MCOperand createImm(int64_t Val) {
     MCOperand Op;
     Op.Kind = kImmediate;
     Op.ImmVal = Val;
     return Op;
   }
+
   static MCOperand createFPImm(double Val) {
     MCOperand Op;
     Op.Kind = kFPImmediate;
     Op.FPImmVal = Val;
     return Op;
   }
+
   static MCOperand createExpr(const MCExpr *Val) {
     MCOperand Op;
     Op.Kind = kExpr;
     Op.ExprVal = Val;
     return Op;
   }
+
   static MCOperand createInst(const MCInst *Val) {
     MCOperand Op;
     Op.Kind = kInst;
@@ -148,12 +157,12 @@ template <> struct isPodLike<MCOperand> { static const bool value = true; };
 /// \brief Instances of this class represent a single low-level machine
 /// instruction.
 class MCInst {
-  unsigned Opcode;
+  unsigned Opcode = 0;
   SMLoc Loc;
   SmallVector<MCOperand, 8> Operands;
 
 public:
-  MCInst() : Opcode(0) {}
+  MCInst() = default;
 
   void setOpcode(unsigned Op) { Opcode = Op; }
   unsigned getOpcode() const { return Opcode; }
@@ -176,6 +185,7 @@ public:
   const_iterator begin() const { return Operands.begin(); }
   iterator end() { return Operands.end(); }
   const_iterator end() const { return Operands.end(); }
+
   iterator insert(iterator I, const MCOperand &Op) {
     return Operands.insert(I, Op);
   }
@@ -202,4 +212,4 @@ inline raw_ostream& operator<<(raw_ostream &OS, const MCInst &MI) {
 
 } // end namespace llvm
 
-#endif
+#endif // LLVM_MC_MCINST_H

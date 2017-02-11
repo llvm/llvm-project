@@ -1127,8 +1127,16 @@ template <class ELFT> void SymbolTableSection<ELFT>::addLocal(SymbolBody *B) {
 
 template <class ELFT>
 size_t SymbolTableSection<ELFT>::getSymbolIndex(SymbolBody *Body) {
-  auto I = llvm::find_if(
-      Symbols, [&](const SymbolTableEntry &E) { return E.Symbol == Body; });
+  auto I = llvm::find_if(Symbols, [&](const SymbolTableEntry &E) {
+    if (E.Symbol == Body)
+      return true;
+    // This is used for -r, so we have to handle multiple section
+    // symbols being combined.
+    if (Body->Type == STT_SECTION && E.Symbol->Type == STT_SECTION)
+      return cast<DefinedRegular<ELFT>>(Body)->Section->OutSec ==
+             cast<DefinedRegular<ELFT>>(E.Symbol)->Section->OutSec;
+    return false;
+  });
   if (I == Symbols.end())
     return 0;
   return I - Symbols.begin() + 1;

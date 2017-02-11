@@ -1,4 +1,4 @@
-//===-- llvm/MC/MCInstrItineraries.h - Scheduling ---------------*- C++ -*-===//
+//===- llvm/MC/MCInstrItineraries.h - Scheduling ----------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -88,7 +88,6 @@ struct InstrStage {
   }
 };
 
-
 //===----------------------------------------------------------------------===//
 /// An itinerary represents the scheduling information for an instruction.
 /// This includes a set of stages occupied by the instruction and the pipeline
@@ -102,23 +101,20 @@ struct InstrItinerary {
   unsigned LastOperandCycle;   ///< Index of last + 1 operand rd/wr
 };
 
-
 //===----------------------------------------------------------------------===//
 /// Itinerary data supplied by a subtarget to be used by a target.
 ///
 class InstrItineraryData {
 public:
-  MCSchedModel          SchedModel;     ///< Basic machine properties.
-  const InstrStage     *Stages;         ///< Array of stages selected
-  const unsigned       *OperandCycles;  ///< Array of operand cycles selected
-  const unsigned       *Forwardings;    ///< Array of pipeline forwarding paths
-  const InstrItinerary *Itineraries;    ///< Array of itineraries selected
+  MCSchedModel SchedModel =
+      MCSchedModel::GetDefaultSchedModel(); ///< Basic machine properties.
+  const InstrStage *Stages = nullptr;       ///< Array of stages selected
+  const unsigned *OperandCycles = nullptr; ///< Array of operand cycles selected
+  const unsigned *Forwardings = nullptr; ///< Array of pipeline forwarding paths
+  const InstrItinerary *Itineraries =
+      nullptr; ///< Array of itineraries selected
 
-  /// Ctors.
-  InstrItineraryData() : SchedModel(MCSchedModel::GetDefaultSchedModel()),
-                         Stages(nullptr), OperandCycles(nullptr),
-                         Forwardings(nullptr), Itineraries(nullptr) {}
-
+  InstrItineraryData() = default;
   InstrItineraryData(const MCSchedModel &SM, const InstrStage *S,
                      const unsigned *OS, const unsigned *F)
     : SchedModel(SM), Stages(S), OperandCycles(OS), Forwardings(F),
@@ -234,6 +230,6 @@ public:
   }
 };
 
-} // End llvm namespace
+} // end namespace llvm
 
-#endif
+#endif // LLVM_MC_MCINSTRITINERARIES_H

@@ -928,6 +928,15 @@ define <8 x i64> @stack_fold_pmovzxwq_maskz_zmm(<8 x i16> %a0, i8 %mask) {
   ret <8 x i64> %4
 }
 
+define <8 x i64> @stack_fold_psadbw(<64 x i8> %a0, <64 x i8> %a1) {
+  ;CHECK-LABEL: stack_fold_psadbw
+  ;CHECK:       vpsadbw {{-?[0-9]*}}(%rsp), {{%zmm[0-9][0-9]*}}, {{%zmm[0-9][0-9]*}} {{.*#+}} 64-byte Folded Reload
+  %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
+  %2 = call <8 x i64> @llvm.x86.avx512.psad.bw.512(<64 x i8> %a0, <64 x i8> %a1)
+  ret <8 x i64> %2
+}
+declare <8 x i64> @llvm.x86.avx512.psad.bw.512(<64 x i8>, <64 x i8>) nounwind readnone
+
 define <64 x i8> @stack_fold_pshufb_zmm(<64 x i8> %a0, <64 x i8> %a1) {
   ;CHECK-LABEL: stack_fold_pshufb_zmm
   ;CHECK:       vpshufb {{-?[0-9]*}}(%rsp), {{%zmm[0-9][0-9]*}}, {{%zmm[0-9][0-9]*}} {{.*#+}} 64-byte Folded Reload
