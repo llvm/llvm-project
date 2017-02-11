@@ -35,6 +35,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/LTO/LTO.h"
 #include "llvm/LTO/legacy/LTOModule.h"
 #include "llvm/LTO/legacy/UpdateCompilerUsed.h"
 #include "llvm/Linker/Linker.h"
@@ -506,25 +507,6 @@ void LTOCodeGenerator::verifyMergedModuleOnce() {
     report_fatal_error("Broken module found, compilation aborted!");
 }
 
-bool LTOCodeGenerator::setupOptimizationRemarks() {
-  if (LTORemarksFilename != "") {
-    std::error_code EC;
-    DiagnosticOutputFile = llvm::make_unique<tool_output_file>(
-        LTORemarksFilename, EC, sys::fs::F_None);
-    if (EC) {
-      emitError(EC.message());
-      return false;
-    }
-    Context.setDiagnosticsOutputFile(
-        llvm::make_unique<yaml::Output>(DiagnosticOutputFile->os()));
-  }
-
-  if (LTOPassRemarksWithHotness)
-    Context.setDiagnosticHotnessRequested(true);
-
-  return true;
-}
-
 void LTOCodeGenerator::finishOptimizationRemarks() {
   if (DiagnosticOutputFile) {
     DiagnosticOutputFile->keep();
@@ -540,8 +522,13 @@ bool LTOCodeGenerator::optimize(bool DisableVerify, bool DisableInline,
   if (!this->determineTarget())
     return false;
 
-  if (!setupOptimizationRemarks())
-    return false;
+  auto DiagFileOrErr = lto::setupOptimizationRemarks(
+      Context, LTORemarksFilename, LTOPassRemarksWithHotness);
+  if (!DiagFileOrErr) {
+    errs() << "Error: " << toString(DiagFileOrErr.takeError()) << "\n";
+    report_fatal_error("Can't get an output file for the remarks");
+  }
+  DiagnosticOutputFile = std::move(*DiagFileOrErr);
 
   // We always run the verifier once on the merged module, the `DisableVerify`
   // parameter only applies to subsequent verify.

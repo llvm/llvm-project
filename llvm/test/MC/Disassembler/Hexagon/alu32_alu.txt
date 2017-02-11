@@ -3,27 +3,27 @@
 
 # Add
 0xf1 0xc3 0x15 0xb0
-# CHECK: r17 = add(r21, #31)
+# CHECK: r17 = add(r21,#31)
 0x11 0xdf 0x15 0xf3
-# CHECK: r17 = add(r21, r31)
+# CHECK: r17 = add(r21,r31)
 0x11 0xdf 0x55 0xf6
-# CHECK: r17 = add(r21, r31):sat
+# CHECK: r17 = add(r21,r31):sat
 
 # And
 0xf1 0xc3 0x15 0x76
-# CHECK: r17 = and(r21, #31)
+# CHECK: r17 = and(r21,#31)
 0xf1 0xc3 0x95 0x76
-# CHECK: r17 = or(r21, #31)
+# CHECK: r17 = or(r21,#31)
 0x11 0xdf 0x15 0xf1
-# CHECK: r17 = and(r21, r31)
+# CHECK: r17 = and(r21,r31)
 0x11 0xdf 0x35 0xf1
-# CHECK: r17 = or(r21, r31)
+# CHECK: r17 = or(r21,r31)
 0x11 0xdf 0x75 0xf1
-# CHECK: r17 = xor(r21, r31)
+# CHECK: r17 = xor(r21,r31)
 0x11 0xd5 0x9f 0xf1
-# CHECK: r17 = and(r21, ~r31)
+# CHECK: r17 = and(r21,~r31)
 0x11 0xd5 0xbf 0xf1
-# CHECK: r17 = or(r21, ~r31)
+# CHECK: r17 = or(r21,~r31)
 
 # Nop
 0x00 0xc0 0x00 0x7f
@@ -31,11 +31,11 @@
 
 # Subtract
 0xb1 0xc2 0x5f 0x76
-# CHECK: r17 = sub(#21, r31)
+# CHECK: r17 = sub(#21,r31)
 0x11 0xdf 0x35 0xf3
-# CHECK: r17 = sub(r31, r21)
+# CHECK: r17 = sub(r31,r21)
 0x11 0xdf 0xd5 0xf6
-# CHECK: r17 = sub(r31, r21):sat
+# CHECK: r17 = sub(r31,r21):sat
 
 # Sign extend
 0x11 0xc0 0xbf 0x70
@@ -57,27 +57,27 @@
 
 # Vector add halfwords
 0x11 0xdf 0x15 0xf6
-# CHECK: r17 = vaddh(r21, r31)
+# CHECK: r17 = vaddh(r21,r31)
 0x11 0xdf 0x35 0xf6
-# CHECK: r17 = vaddh(r21, r31):sat
+# CHECK: r17 = vaddh(r21,r31):sat
 0x11 0xdf 0x75 0xf6
-# CHECK: r17 = vadduh(r21, r31):sat
+# CHECK: r17 = vadduh(r21,r31):sat
 
 # Vector average halfwords
 0x11 0xdf 0x15 0xf7
-# CHECK: r17 = vavgh(r21, r31)
+# CHECK: r17 = vavgh(r21,r31)
 0x11 0xdf 0x35 0xf7
-# CHECK: r17 = vavgh(r21, r31):rnd
+# CHECK: r17 = vavgh(r21,r31):rnd
 0x11 0xdf 0x75 0xf7
-# CHECK: r17 = vnavgh(r31, r21)
+# CHECK: r17 = vnavgh(r31,r21)
 
 # Vector subtract halfwords
 0x11 0xdf 0x95 0xf6
-# CHECK: r17 = vsubh(r31, r21)
+# CHECK: r17 = vsubh(r31,r21)
 0x11 0xdf 0xb5 0xf6
-# CHECK: r17 = vsubh(r31, r21):sat
+# CHECK: r17 = vsubh(r31,r21):sat
 0x11 0xdf 0xf5 0xf6
-# CHECK: r17 = vsubuh(r31, r21):sat
+# CHECK: r17 = vsubuh(r31,r21):sat
 
 # Zero extend
 0x11 0xc0 0xd5 0x70

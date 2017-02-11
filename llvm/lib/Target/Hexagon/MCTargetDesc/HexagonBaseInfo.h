@@ -17,6 +17,7 @@
 #ifndef LLVM_LIB_TARGET_HEXAGON_MCTARGETDESC_HEXAGONBASEINFO_H
 #define LLVM_LIB_TARGET_HEXAGON_MCTARGETDESC_HEXAGONBASEINFO_H
 
+#include "HexagonDepITypes.h"
 #include "HexagonMCTargetDesc.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <stdint.h>
@@ -27,48 +28,8 @@ namespace llvm {
 /// instruction info tracks.
 ///
 namespace HexagonII {
-  // *** The code below must match HexagonInstrFormat*.td *** //
-
-  // Insn types.
-  // *** Must match HexagonInstrFormat*.td ***
-  enum Type {
-    TypePSEUDO  = 0,
-    TypeCR      = 2,
-    TypeJ       = 4,
-    TypeLD      = 5,
-    TypeST      = 6,
-    TypeV4LDST  = 9,
-    TypeNCJ     = 10,
-    TypeDUPLEX  = 11,
-    TypeCJ      = 12,
-    TypeCVI_FIRST     = 13,
-    TypeCVI_VA        = TypeCVI_FIRST,
-    TypeCVI_VA_DV     = 14,
-    TypeCVI_VX        = 15,
-    TypeCVI_VX_DV     = 16,
-    TypeCVI_VP        = 17,
-    TypeCVI_VP_VS     = 18,
-    TypeCVI_VS        = 19,
-    TypeCVI_VINLANESAT= 20,
-    TypeCVI_VM_LD     = 21,
-    TypeCVI_VM_TMP_LD = 22,
-    TypeCVI_VM_CUR_LD = 23,
-    TypeCVI_VM_VP_LDU = 24,
-    TypeCVI_VM_ST     = 25,
-    TypeCVI_VM_NEW_ST = 26,
-    TypeCVI_VM_STU    = 27,
-    TypeCVI_HIST      = 28,
-    TypeCVI_LAST      = TypeCVI_HIST,
-    TypeEXTENDER  = 39,
-    TypeENDLOOP = 40,
-    TypeS_2op = 41,
-    TypeS_3op = 42,
-    TypeALU64 = 43,
-    TypeM = 44,
-    TypeALU32_2op = 45,
-    TypeALU32_3op = 46,
-    TypeALU32_ADDI = 47
-  };
+  unsigned const TypeCVI_FIRST = TypeCVI_HIST;
+  unsigned const TypeCVI_LAST = TypeCVI_VX_DV;
 
   enum SubTarget {
     HasV4SubT     = 0x3f,

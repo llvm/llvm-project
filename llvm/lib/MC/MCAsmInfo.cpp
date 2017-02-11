@@ -1,4 +1,4 @@
-//===-- MCAsmInfo.cpp - Asm Info -------------------------------------------==//
+//===- MCAsmInfo.cpp - Asm Info -------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -16,29 +16,14 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCStreamer.h"
-#include "llvm/Support/DataTypes.h"
 #include "llvm/Support/Dwarf.h"
-#include <cctype>
-#include <cstring>
+
 using namespace llvm;
 
 MCAsmInfo::MCAsmInfo() {
-  PointerSize = 4;
-  CalleeSaveStackSlotSize = 4;
-
-  IsLittleEndian = true;
-  StackGrowsUp = false;
-  HasSubsectionsViaSymbols = false;
-  HasMachoZeroFillDirective = false;
-  HasMachoTBSSDirective = false;
-  MaxInstLength = 4;
-  MinInstAlignment = 1;
-  DollarIsPC = false;
   SeparatorString = ";";
   CommentString = "#";
   LabelSuffix = ":";
-  UseAssignmentForEHBegin = false;
-  NeedsLocalForSize = false;
   PrivateGlobalPrefix = "L";
   PrivateLabelPrefix = PrivateGlobalPrefix;
   LinkerPrivateGlobalPrefix = "";
@@ -47,10 +32,6 @@ MCAsmInfo::MCAsmInfo() {
   Code16Directive = ".code16";
   Code32Directive = ".code32";
   Code64Directive = ".code64";
-  AssemblerDialect = 0;
-  AllowAtInName = false;
-  SupportsQuotedNames = true;
-  UseDataRegionDirectives = false;
   ZeroDirective = "\t.zero\t";
   AsciiDirective = "\t.ascii\t";
   AscizDirective = "\t.asciz\t";
@@ -58,40 +39,8 @@ MCAsmInfo::MCAsmInfo() {
   Data16bitsDirective = "\t.short\t";
   Data32bitsDirective = "\t.long\t";
   Data64bitsDirective = "\t.quad\t";
-  SunStyleELFSectionSwitchSyntax = false;
-  UsesELFSectionDirectiveForBSS = false;
-  AlignmentIsInBytes = true;
-  TextAlignFillValue = 0;
-  GPRel64Directive = nullptr;
-  GPRel32Directive = nullptr;
   GlobalDirective = "\t.globl\t";
-  SetDirectiveSuppressesReloc = false;
-  HasAggressiveSymbolFolding = true;
-  COMMDirectiveAlignmentIsInBytes = true;
-  LCOMMDirectiveAlignmentType = LCOMM::NoAlignment;
-  HasFunctionAlignment = true;
-  HasDotTypeDotSizeDirective = true;
-  HasSingleParameterDotFile = true;
-  HasIdentDirective = false;
-  HasNoDeadStrip = false;
-  HasAltEntry = false;
   WeakDirective = "\t.weak\t";
-  WeakRefDirective = nullptr;
-  HasWeakDefDirective = false;
-  HasWeakDefCanBeHiddenDirective = false;
-  HasLinkOnceDirective = false;
-  HiddenVisibilityAttr = MCSA_Hidden;
-  HiddenDeclarationVisibilityAttr = MCSA_Hidden;
-  ProtectedVisibilityAttr = MCSA_Protected;
-  SupportsDebugInformation = false;
-  ExceptionsType = ExceptionHandling::None;
-  WinEHEncodingType = WinEH::EncodingType::Invalid;
-  DwarfUsesRelocationsAcrossSections = true;
-  DwarfFDESymbolsUseAbsDiff = false;
-  DwarfRegNumForCFI = false;
-  NeedsDwarfSectionOffsetDirective = false;
-  UseParensForSymbolVariant = false;
-  UseLogicalShr = true;
 
   // FIXME: Clang's logic should be synced with the logic used to initialize
   //        this member and the two implementations should be merged.
@@ -107,12 +56,9 @@ MCAsmInfo::MCAsmInfo() {
   //   - The target subclasses for AArch64, ARM, and X86 handle these cases
   UseIntegratedAssembler = false;
   PreserveAsmComments = true;
-
-  CompressDebugSections = DebugCompressionType::DCT_None;
 }
 
-MCAsmInfo::~MCAsmInfo() {
-}
+MCAsmInfo::~MCAsmInfo() = default;
 
 bool MCAsmInfo::isSectionAtomizableBySymbols(const MCSection &Section) const {
   return false;

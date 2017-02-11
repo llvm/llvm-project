@@ -7,4 +7,4 @@
 }
 
 # CHECK: 289808ba
-# CHECK: r16 = memuh(r17 + #0);{{ *}}r18 = memuh(r19 + #0)
+# CHECK: r16 = memuh(r17+#0);{{ *}}r18 = memuh(r19+#0)

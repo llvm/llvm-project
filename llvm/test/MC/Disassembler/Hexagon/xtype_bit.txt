@@ -11,9 +11,9 @@
 0x11 0xc0 0x74 0x88
 # CHECK: r17 = normamt(r21:20)
 0x51 0xd7 0x74 0x88
-# CHECK: r17 = add(clb(r21:20), #23)
+# CHECK: r17 = add(clb(r21:20),#23)
 0x11 0xd7 0x35 0x8c
-# CHECK: r17 = add(clb(r21), #23)
+# CHECK: r17 = add(clb(r21),#23)
 0x91 0xc0 0x15 0x8c
 # CHECK: r17 = clb(r21)
 0xb1 0xc0 0x15 0x8c
@@ -39,31 +39,31 @@
 
 # Extract bitfield
 0xf0 0xdf 0x54 0x81
-# CHECK: r17:16 = extractu(r21:20, #31, #23)
+# CHECK: r17:16 = extractu(r21:20,#31,#23)
 0xf0 0xdf 0x54 0x8a
-# CHECK: r17:16 = extract(r21:20, #31, #23)
+# CHECK: r17:16 = extract(r21:20,#31,#23)
 0xf1 0xdf 0x55 0x8d
-# CHECK: r17 = extractu(r21, #31, #23)
+# CHECK: r17 = extractu(r21,#31,#23)
 0xf1 0xdf 0xd5 0x8d
-# CHECK: r17 = extract(r21, #31, #23)
+# CHECK: r17 = extract(r21,#31,#23)
 0x10 0xde 0x14 0xc1
-# CHECK: r17:16 = extractu(r21:20, r31:30)
+# CHECK: r17:16 = extractu(r21:20,r31:30)
 0x90 0xde 0xd4 0xc1
-# CHECK: r17:16 = extract(r21:20, r31:30)
+# CHECK: r17:16 = extract(r21:20,r31:30)
 0x11 0xde 0x15 0xc9
-# CHECK: r17 = extractu(r21, r31:30)
+# CHECK: r17 = extractu(r21,r31:30)
 0x51 0xde 0x15 0xc9
-# CHECK: r17 = extract(r21, r31:30)
+# CHECK: r17 = extract(r21,r31:30)
 
 # Insert bitfield
 0xf0 0xdf 0x54 0x83
-# CHECK: r17:16 = insert(r21:20, #31, #23)
+# CHECK: r17:16 = insert(r21:20,#31,#23)
 0xf1 0xdf 0x55 0x8f
-# CHECK: r17 = insert(r21, #31, #23)
+# CHECK: r17 = insert(r21,#31,#23)
 0x11 0xde 0x15 0xc8
-# CHECK: r17 = insert(r21, r31:30)
+# CHECK: r17 = insert(r21,r31:30)
 0x10 0xde 0x14 0xca
-# CHECK: r17:16 = insert(r21:20, r31:30)
+# CHECK: r17:16 = insert(r21:20,r31:30)
 
 # Interleave/deinterleave
 0x90 0xc0 0xd4 0x80
@@ -73,13 +73,13 @@
 
 # Linear feedback-shift iteration
 0xd0 0xde 0x94 0xc1
-# CHECK: r17:16 = lfs(r21:20, r31:30)
+# CHECK: r17:16 = lfs(r21:20,r31:30)
 
 # Masked parity
 0x11 0xde 0x14 0xd0
-# CHECK: r17 = parity(r21:20, r31:30)
+# CHECK: r17 = parity(r21:20,r31:30)
 0x11 0xdf 0xf5 0xd5
-# CHECK: r17 = parity(r21, r31)
+# CHECK: r17 = parity(r21,r31)
 
 # Bit reverse
 0xd0 0xc0 0xd4 0x80
@@ -89,30 +89,30 @@
 
 # Set/clear/toggle bit
 0x11 0xdf 0xd5 0x8c
-# CHECK: r17 = setbit(r21, #31)
+# CHECK: r17 = setbit(r21,#31)
 0x31 0xdf 0xd5 0x8c
-# CHECK: r17 = clrbit(r21, #31)
+# CHECK: r17 = clrbit(r21,#31)
 0x51 0xdf 0xd5 0x8c
-# CHECK: r17 = togglebit(r21, #31)
+# CHECK: r17 = togglebit(r21,#31)
 0x11 0xdf 0x95 0xc6
-# CHECK: r17 = setbit(r21, r31)
+# CHECK: r17 = setbit(r21,r31)
 0x51 0xdf 0x95 0xc6
-# CHECK: r17 = clrbit(r21, r31)
+# CHECK: r17 = clrbit(r21,r31)
 0x91 0xdf 0x95 0xc6
-# CHECK: r17 = togglebit(r21, r31)
+# CHECK: r17 = togglebit(r21,r31)
 
 # Split bitfield
 0x90 0xdf 0xd5 0x88
-# CHECK: r17:16 = bitsplit(r21, #31)
+# CHECK: r17:16 = bitsplit(r21,#31)
 0x10 0xdf 0x35 0xd4
-# CHECK: r17:16 = bitsplit(r21, r31)
+# CHECK: r17:16 = bitsplit(r21,r31)
 
 # Table index
 0xf1 0xcd 0x15 0x87
-# CHECK: r17 = tableidxb(r21, #7, #13):raw
+# CHECK: r17 = tableidxb(r21,#7,#13):raw
 0xf1 0xcd 0x55 0x87
-# CHECK: r17 = tableidxh(r21, #7, #13):raw
+# CHECK: r17 = tableidxh(r21,#7,#13):raw
 0xf1 0xcd 0x95 0x87
-# CHECK: r17 = tableidxw(r21, #7, #13):raw
+# CHECK: r17 = tableidxw(r21,#7,#13):raw
 0xf1 0xcd 0xd5 0x87
-# CHECK: r17 = tableidxd(r21, #7, #13):raw
+# CHECK: r17 = tableidxd(r21,#7,#13):raw

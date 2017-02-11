@@ -3,25 +3,25 @@
 
 # Conditional add
 0xf1 0xc3 0x75 0x74
-# CHECK: if (p3) r17 = add(r21, #31)
+# CHECK: if (p3) r17 = add(r21,#31)
 0x03 0x40 0x45 0x85 0xf1 0xe3 0x75 0x74
 # CHECK: p3 = r5
-# CHECK-NEXT: if (p3.new) r17 = add(r21, #31)
+# CHECK-NEXT: if (p3.new) r17 = add(r21,#31)
 0xf1 0xc3 0xf5 0x74
-# CHECK: if (!p3) r17 = add(r21, #31)
+# CHECK: if (!p3) r17 = add(r21,#31)
 0x03 0x40 0x45 0x85 0xf1 0xe3 0xf5 0x74
 # CHECK: p3 = r5
-# CHECK-NEXT: if (!p3.new) r17 = add(r21, #31)
+# CHECK-NEXT: if (!p3.new) r17 = add(r21,#31)
 0x71 0xdf 0x15 0xfb
-# CHECK: if (p3) r17 = add(r21, r31)
+# CHECK: if (p3) r17 = add(r21,r31)
 0x03 0x40 0x45 0x85 0x71 0xff 0x15 0xfb
 # CHECK: p3 = r5
-# CHECK-NEXT: if (p3.new) r17 = add(r21, r31)
+# CHECK-NEXT: if (p3.new) r17 = add(r21,r31)
 0xf1 0xdf 0x15 0xfb
-# CHECK: if (!p3) r17 = add(r21, r31)
+# CHECK: if (!p3) r17 = add(r21,r31)
 0x03 0x40 0x45 0x85 0xf1 0xff 0x15 0xfb
 # CHECK: p3 = r5
-# CHECK-NEXT: if (!p3.new) r17 = add(r21, r31)
+# CHECK-NEXT: if (!p3.new) r17 = add(r21,r31)
 
 # Conditional shift halfword
 0x11 0xe3 0x15 0x70
@@ -47,59 +47,59 @@
 
 # Conditional combine
 0x70 0xdf 0x15 0xfd
-# CHECK: if (p3) r17:16 = combine(r21, r31)
+# CHECK: if (p3) r17:16 = combine(r21,r31)
 0xf0 0xdf 0x15 0xfd
-# CHECK: if (!p3) r17:16 = combine(r21, r31)
+# CHECK: if (!p3) r17:16 = combine(r21,r31)
 0x03 0x40 0x45 0x85 0x70 0xff 0x15 0xfd
 # CHECK: p3 = r5
-# CHECK-NEXT: if (p3.new) r17:16 = combine(r21, r31)
+# CHECK-NEXT: if (p3.new) r17:16 = combine(r21,r31)
 0x03 0x40 0x45 0x85 0xf0 0xff 0x15 0xfd
 # CHECK: p3 = r5
-# CHECK-NEXT: if (!p3.new) r17:16 = combine(r21, r31)
+# CHECK-NEXT: if (!p3.new) r17:16 = combine(r21,r31)
 
 # Conditional logical operations
 0x71 0xdf 0x15 0xf9
-# CHECK: if (p3) r17 = and(r21, r31)
+# CHECK: if (p3) r17 = and(r21,r31)
 0xf1 0xdf 0x15 0xf9
-# CHECK: if (!p3) r17 = and(r21, r31)
+# CHECK: if (!p3) r17 = and(r21,r31)
 0x03 0x40 0x45 0x85 0x71 0xff 0x15 0xf9
 # CHECK: p3 = r5
-# CHECK-NEXT: if (p3.new) r17 = and(r21, r31)
+# CHECK-NEXT: if (p3.new) r17 = and(r21,r31)
 0x03 0x40 0x45 0x85 0xf1 0xff 0x15 0xf9
 # CHECK: p3 = r5
-# CHECK-NEXT: if (!p3.new) r17 = and(r21, r31)
+# CHECK-NEXT: if (!p3.new) r17 = and(r21,r31)
 0x71 0xdf 0x35 0xf9
-# CHECK: if (p3) r17 = or(r21, r31)
+# CHECK: if (p3) r17 = or(r21,r31)
 0xf1 0xdf 0x35 0xf9
-# CHECK: if (!p3) r17 = or(r21, r31)
+# CHECK: if (!p3) r17 = or(r21,r31)
 0x03 0x40 0x45 0x85 0x71 0xff 0x35 0xf9
 # CHECK: p3 = r5
-# CHECK-NEXT: if (p3.new) r17 = or(r21, r31)
+# CHECK-NEXT: if (p3.new) r17 = or(r21,r31)
 0x03 0x40 0x45 0x85 0xf1 0xff 0x35 0xf9
 # CHECK: p3 = r5
-# CHECK-NEXT: if (!p3.new) r17 = or(r21, r31)
+# CHECK-NEXT: if (!p3.new) r17 = or(r21,r31)
 0x71 0xdf 0x75 0xf9
-# CHECK: if (p3) r17 = xor(r21, r31)
+# CHECK: if (p3) r17 = xor(r21,r31)
 0xf1 0xdf 0x75 0xf9
-# CHECK: if (!p3) r17 = xor(r21, r31)
+# CHECK: if (!p3) r17 = xor(r21,r31)
 0x03 0x40 0x45 0x85 0x71 0xff 0x75 0xf9
 # CHECK: p3 = r5
-# CHECK-NEXT: if (p3.new) r17 = xor(r21, r31)
+# CHECK-NEXT: if (p3.new) r17 = xor(r21,r31)
 0x03 0x40 0x45 0x85 0xf1 0xff 0x75 0xf9
 # CHECK: p3 = r5
-# CHECK-NEXT: if (!p3.new) r17 = xor(r21, r31)
+# CHECK-NEXT: if (!p3.new) r17 = xor(r21,r31)
 
 # Conditional subtract
 0x71 0xdf 0x35 0xfb
-# CHECK: if (p3) r17 = sub(r31, r21)
+# CHECK: if (p3) r17 = sub(r31,r21)
 0xf1 0xdf 0x35 0xfb
-# CHECK: if (!p3) r17 = sub(r31, r21)
+# CHECK: if (!p3) r17 = sub(r31,r21)
 0x03 0x40 0x45 0x85 0x71 0xff 0x35 0xfb
 # CHECK: p3 = r5
-# CHECK-NEXT: if (p3.new) r17 = sub(r31, r21)
+# CHECK-NEXT: if (p3.new) r17 = sub(r31,r21)
 0x03 0x40 0x45 0x85 0xf1 0xff 0x35 0xfb
 # CHECK: p3 = r5
-# CHECK-NEXT: if (!p3.new) r17 = sub(r31, r21)
+# CHECK-NEXT: if (!p3.new) r17 = sub(r31,r21)
 
 # Conditional sign extend
 0x11 0xe3 0xb5 0x70
@@ -159,36 +159,36 @@
 
 # Compare
 0xe3 0xc3 0x15 0x75
-# CHECK: p3 = cmp.eq(r21, #31)
+# CHECK: p3 = cmp.eq(r21,#31)
 0xf3 0xc3 0x15 0x75
-# CHECK: p3 = !cmp.eq(r21, #31)
+# CHECK: p3 = !cmp.eq(r21,#31)
 0xe3 0xc3 0x55 0x75
-# CHECK: p3 = cmp.gt(r21, #31)
+# CHECK: p3 = cmp.gt(r21,#31)
 0xf3 0xc3 0x55 0x75
-# CHECK: p3 = !cmp.gt(r21, #31)
+# CHECK: p3 = !cmp.gt(r21,#31)
 0xe3 0xc3 0x95 0x75
-# CHECK: p3 = cmp.gtu(r21, #31)
+# CHECK: p3 = cmp.gtu(r21,#31)
 0xf3 0xc3 0x95 0x75
-# CHECK: p3 = !cmp.gtu(r21, #31)
+# CHECK: p3 = !cmp.gtu(r21,#31)
 0x03 0xdf 0x15 0xf2
-# CHECK: p3 = cmp.eq(r21, r31)
+# CHECK: p3 = cmp.eq(r21,r31)
 0x13 0xdf 0x15 0xf2
-# CHECK: p3 = !cmp.eq(r21, r31)
+# CHECK: p3 = !cmp.eq(r21,r31)
 0x03 0xdf 0x55 0xf2
-# CHECK: p3 = cmp.gt(r21, r31)
+# CHECK: p3 = cmp.gt(r21,r31)
 0x13 0xdf 0x55 0xf2
-# CHECK: p3 = !cmp.gt(r21, r31)
+# CHECK: p3 = !cmp.gt(r21,r31)
 0x03 0xdf 0x75 0xf2
-# CHECK: p3 = cmp.gtu(r21, r31)
+# CHECK: p3 = cmp.gtu(r21,r31)
 0x13 0xdf 0x75 0xf2
-# CHECK: p3 = !cmp.gtu(r21, r31)
+# CHECK: p3 = !cmp.gtu(r21,r31)
 
 # Compare to general register
 0xf1 0xe3 0x55 0x73
-# CHECK: r17 = cmp.eq(r21, #31)
+# CHECK: r17 = cmp.eq(r21,#31)
 0xf1 0xe3 0x75 0x73
-# CHECK: r17 = !cmp.eq(r21, #31)
+# CHECK: r17 = !cmp.eq(r21,#31)
 0x11 0xdf 0x55 0xf3
-# CHECK: r17 = cmp.eq(r21, r31)
+# CHECK: r17 = cmp.eq(r21,r31)
 0x11 0xdf 0x75 0xf3
-# CHECK: r17 = !cmp.eq(r21, r31)
+# CHECK: r17 = !cmp.eq(r21,r31)

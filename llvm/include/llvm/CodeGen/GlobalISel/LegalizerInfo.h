@@ -96,6 +96,7 @@ public:
   };
 
   LegalizerInfo();
+  virtual ~LegalizerInfo() = default;
 
   /// Compute any ancillary tables needed to quickly decide how an operation
   /// should be handled. This must be called after all "set*Action"methods but

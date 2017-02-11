@@ -82,7 +82,11 @@ template <> struct CustomMappingTraits<GlobalValueSummaryMapTy> {
                                           false);
       Elem.push_back(llvm::make_unique<FunctionSummary>(
           GVFlags, 0, ArrayRef<ValueInfo>{},
-          ArrayRef<FunctionSummary::EdgeTy>{}, std::move(FSum.TypeTests)));
+          ArrayRef<FunctionSummary::EdgeTy>{}, std::move(FSum.TypeTests),
+          ArrayRef<FunctionSummary::VFuncId>{},
+          ArrayRef<FunctionSummary::VFuncId>{},
+          ArrayRef<FunctionSummary::ConstVCall>{},
+          ArrayRef<FunctionSummary::ConstVCall>{}));
     }
   }
   static void output(IO &io, GlobalValueSummaryMapTy &V) {

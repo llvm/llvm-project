@@ -3419,7 +3419,9 @@ int HexagonInstrInfo::getDotNewOp(const MachineInstr &MI) const {
     return NVOpcode;
 
   switch (MI.getOpcode()) {
-  default: llvm_unreachable("Unknown .new type");
+  default:
+    llvm::report_fatal_error(std::string("Unknown .new type: ") +
+      std::to_string(MI.getOpcode()).c_str());
   case Hexagon::S4_storerb_ur:
     return Hexagon::S4_storerbnew_ur;
 

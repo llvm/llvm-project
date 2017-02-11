@@ -4,7 +4,7 @@
 ; CHECK-DAG: cl0({{r[0-9]*:[0-9]*}})
 ; CHECK-DAG: ct0({{r[0-9]*}})
 ; CHECK-DAG: cl0({{r[0-9]*}})
-; CHECK-DAG: r{{[0-9]+}} += lsr(r{{[0-9]+}}, #4)
+; CHECK-DAG: r{{[0-9]+}} += lsr(r{{[0-9]+}},#4)
 
 define i32 @foo(i64 %a, i32 %b) nounwind  {
 entry:

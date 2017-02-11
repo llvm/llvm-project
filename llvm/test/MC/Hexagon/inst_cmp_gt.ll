@@ -7,6 +7,6 @@ define i1 @foo (i32 %a, i32 %b)
   ret i1 %1
 }
 
-; CHECK: p0 = cmp.gt(r0, r1)
+; CHECK: p0 = cmp.gt(r0,r1)
 ; CHECK: r0 = p0
 ; CHECK: jumpr r31 }

@@ -21,13 +21,14 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cassert>
+#include <cstdint>
 
 namespace llvm {
 
-// Forward declarations.
+class MachObjectWriter;
 class MCAsmLayout;
 class MCSymbol;
-class MachObjectWriter;
 
 /// Linker Optimization Hint Type.
 enum MCLOHType {
@@ -133,7 +134,7 @@ public:
 
 class MCLOHContainer {
   /// Keep track of the emit size of all the LOHs.
-  mutable uint64_t EmitSize;
+  mutable uint64_t EmitSize = 0;
 
   /// Keep track of all LOH directives.
   SmallVector<MCLOHDirective, 32> Directives;
@@ -141,7 +142,7 @@ class MCLOHContainer {
 public:
   typedef SmallVectorImpl<MCLOHDirective> LOHDirectives;
 
-  MCLOHContainer() : EmitSize(0) {}
+  MCLOHContainer() = default;
 
   /// Const accessor to the directives.
   const LOHDirectives &getDirectives() const {
@@ -183,4 +184,4 @@ typedef MCLOHContainer::LOHDirectives MCLOHDirectives;
 
 } // end namespace llvm
 
-#endif
+#endif // LLVM_MC_MCLINKEROPTIMIZATIONHINT_H

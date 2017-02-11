@@ -763,6 +763,10 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
   int BlockNumber = -1;
   (void)BlockNumber;
   bool MatchFilterBB = false; (void)MatchFilterBB;
+
+  // Pre-type legalization allow creation of any node types.
+  CurDAG->NewNodesMustHaveLegalTypes = false;
+
 #ifndef NDEBUG
   MatchFilterBB = (FilterDAGBasicBlockName.empty() ||
                    FilterDAGBasicBlockName ==
@@ -809,6 +813,7 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
   DEBUG(dbgs() << "Type-legalized selection DAG: BB#" << BlockNumber
         << " '" << BlockName << "'\n"; CurDAG->dump());
 
+  // Only allow creation of legal node types.
   CurDAG->NewNodesMustHaveLegalTypes = true;
 
   if (Changed) {

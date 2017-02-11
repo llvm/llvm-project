@@ -1,4 +1,4 @@
-//===-- MCAsmInfoCOFF.h - COFF asm properties -------------------*- C++ -*-===//
+//===- MCAsmInfoCOFF.h - COFF asm properties --------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -13,24 +13,28 @@
 #include "llvm/MC/MCAsmInfo.h"
 
 namespace llvm {
-  class MCAsmInfoCOFF : public MCAsmInfo {
-    virtual void anchor();
-  protected:
-    explicit MCAsmInfoCOFF();
-  };
 
-  class MCAsmInfoMicrosoft : public MCAsmInfoCOFF {
-    void anchor() override;
-  protected:
-    explicit MCAsmInfoMicrosoft();
-  };
+class MCAsmInfoCOFF : public MCAsmInfo {
+  virtual void anchor();
 
-  class MCAsmInfoGNUCOFF : public MCAsmInfoCOFF {
-    void anchor() override;
-  protected:
-    explicit MCAsmInfoGNUCOFF();
-  };
-}
+protected:
+  explicit MCAsmInfoCOFF();
+};
 
+class MCAsmInfoMicrosoft : public MCAsmInfoCOFF {
+  void anchor() override;
+
+protected:
+  explicit MCAsmInfoMicrosoft();
+};
+
+class MCAsmInfoGNUCOFF : public MCAsmInfoCOFF {
+  void anchor() override;
+
+protected:
+  explicit MCAsmInfoGNUCOFF();
+};
+
+} // end namespace llvm
 
 #endif // LLVM_MC_MCASMINFOCOFF_H

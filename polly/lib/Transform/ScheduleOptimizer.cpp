@@ -900,6 +900,36 @@ __isl_give isl_schedule_node *ScheduleTreeOptimizer::createMacroKernel(
   return isl_schedule_node_child(isl_schedule_node_child(Node, 0), 0);
 }
 
+/// Get the size of the widest type of the matrix multiplication operands
+/// in bytes, including alignment padding.
+///
+/// @param MMI Parameters of the matrix multiplication operands.
+/// @return The size of the widest type of the matrix multiplication operands
+///         in bytes, including alignment padding.
+static uint64_t getMatMulAlignTypeSize(MatMulInfoTy MMI) {
+  auto *S = MMI.A->getStatement()->getParent();
+  auto &DL = S->getFunction().getParent()->getDataLayout();
+  auto ElementSizeA = DL.getTypeAllocSize(MMI.A->getElementType());
+  auto ElementSizeB = DL.getTypeAllocSize(MMI.B->getElementType());
+  auto ElementSizeC = DL.getTypeAllocSize(MMI.WriteToC->getElementType());
+  return std::max({ElementSizeA, ElementSizeB, ElementSizeC});
+}
+
+/// Get the size of the widest type of the matrix multiplication operands
+/// in bits.
+///
+/// @param MMI Parameters of the matrix multiplication operands.
+/// @return The size of the widest type of the matrix multiplication operands
+///         in bits.
+static uint64_t getMatMulTypeSize(MatMulInfoTy MMI) {
+  auto *S = MMI.A->getStatement()->getParent();
+  auto &DL = S->getFunction().getParent()->getDataLayout();
+  auto ElementSizeA = DL.getTypeSizeInBits(MMI.A->getElementType());
+  auto ElementSizeB = DL.getTypeSizeInBits(MMI.B->getElementType());
+  auto ElementSizeC = DL.getTypeSizeInBits(MMI.WriteToC->getElementType());
+  return std::max({ElementSizeA, ElementSizeB, ElementSizeC});
+}
+
 /// Get parameters of the BLIS micro kernel.
 ///
 /// We choose the Mr and Nr parameters of the micro kernel to be large enough
@@ -909,10 +939,11 @@ __isl_give isl_schedule_node *ScheduleTreeOptimizer::createMacroKernel(
 /// release more registers for entries of multiplied matrices.
 ///
 /// @param TTI Target Transform Info.
+/// @param MMI Parameters of the matrix multiplication operands.
 /// @return The structure of type MicroKernelParamsTy.
 /// @see MicroKernelParamsTy
 static struct MicroKernelParamsTy
-getMicroKernelParams(const llvm::TargetTransformInfo *TTI) {
+getMicroKernelParams(const llvm::TargetTransformInfo *TTI, MatMulInfoTy MMI) {
   assert(TTI && "The target transform info should be provided.");
 
   // Nvec - Number of double-precision floating-point numbers that can be hold
@@ -921,7 +952,10 @@ getMicroKernelParams(const llvm::TargetTransformInfo *TTI) {
 
   if (RegisterBitwidth == -1)
     RegisterBitwidth = TTI->getRegisterBitWidth(true);
-  auto Nvec = RegisterBitwidth / 64;
+  auto ElementSize = getMatMulTypeSize(MMI);
+  assert(ElementSize > 0 && "The element size of the matrix multiplication "
+                            "operands should be greater than zero.");
+  auto Nvec = RegisterBitwidth / ElementSize;
   if (Nvec == 0)
     Nvec = 2;
   int Nr =
@@ -940,11 +974,13 @@ getMicroKernelParams(const llvm::TargetTransformInfo *TTI) {
 ///
 /// @param MicroKernelParams Parameters of the micro-kernel
 ///                          to be taken into account.
+/// @param MMI Parameters of the matrix multiplication operands.
 /// @return The structure of type MacroKernelParamsTy.
 /// @see MacroKernelParamsTy
 /// @see MicroKernelParamsTy
 static struct MacroKernelParamsTy
-getMacroKernelParams(const MicroKernelParamsTy &MicroKernelParams) {
+getMacroKernelParams(const MicroKernelParamsTy &MicroKernelParams,
+                     MatMulInfoTy MMI) {
   // According to www.cs.utexas.edu/users/flame/pubs/TOMS-BLIS-Analytical.pdf,
   // it requires information about the first two levels of a cache to determine
   // all the parameters of a macro-kernel. It also checks that an associativity
@@ -960,10 +996,14 @@ getMacroKernelParams(const MicroKernelParamsTy &MicroKernelParams) {
   int Car = floor(
       (FirstCacheLevelAssociativity - 1) /
       (1 + static_cast<double>(MicroKernelParams.Nr) / MicroKernelParams.Mr));
+  auto ElementSize = getMatMulAlignTypeSize(MMI);
+  assert(ElementSize > 0 && "The element size of the matrix multiplication "
+                            "operands should be greater than zero.");
   int Kc = (Car * FirstCacheLevelSize) /
-           (MicroKernelParams.Mr * FirstCacheLevelAssociativity * 8);
-  double Cac = static_cast<double>(Kc * 8 * SecondCacheLevelAssociativity) /
-               SecondCacheLevelSize;
+           (MicroKernelParams.Mr * FirstCacheLevelAssociativity * ElementSize);
+  double Cac =
+      static_cast<double>(Kc * ElementSize * SecondCacheLevelAssociativity) /
+      SecondCacheLevelSize;
   int Mc = floor((SecondCacheLevelAssociativity - 2) / Cac);
   int Nc = PollyPatternMatchingNcQuotient * MicroKernelParams.Nr;
   return {Mc, Nc, Kc};
@@ -1198,8 +1238,8 @@ __isl_give isl_schedule_node *ScheduleTreeOptimizer::optimizeMatMulPattern(
   Node = permuteBandNodeDimensions(Node, NewJ, DimOutNum - 2);
   NewK = MMI.k == DimOutNum - 2 ? MMI.j : MMI.k;
   Node = permuteBandNodeDimensions(Node, NewK, DimOutNum - 1);
-  auto MicroKernelParams = getMicroKernelParams(TTI);
-  auto MacroKernelParams = getMacroKernelParams(MicroKernelParams);
+  auto MicroKernelParams = getMicroKernelParams(TTI, MMI);
+  auto MacroKernelParams = getMacroKernelParams(MicroKernelParams, MMI);
   Node = createMacroKernel(Node, MacroKernelParams);
   Node = createMicroKernel(Node, MicroKernelParams);
   if (MacroKernelParams.Mc == 1 || MacroKernelParams.Nc == 1 ||

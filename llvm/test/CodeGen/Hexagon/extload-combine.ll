@@ -15,8 +15,8 @@
 
 ; Function Attrs: nounwind
 define i64 @short_test1() #0 {
-; CHECK: [[VAR:r[0-9]+]]{{ *}}={{ *}}memuh(##
-; CHECK: combine(#0, [[VAR]])
+; CHECK: [[VAR:r[0-9]+]] = memuh(##
+; CHECK: combine(#0,[[VAR]])
 entry:
   store i16 0, i16* @a, align 2
   %0 = load i16, i16* @b, align 2
@@ -26,7 +26,7 @@ entry:
 
 ; Function Attrs: nounwind
 define i64 @short_test2() #0 {
-; CHECK: [[VAR1:r[0-9]+]]{{ *}}={{ *}}memh(##
+; CHECK: [[VAR1:r[0-9]+]] = memh(##
 ; CHECK: sxtw([[VAR1]])
 entry:
   store i16 0, i16* @a, align 2
@@ -37,8 +37,8 @@ entry:
 
 ; Function Attrs: nounwind
 define i64 @char_test1() #0 {
-; CHECK: [[VAR2:r[0-9]+]]{{ *}}={{ *}}memub(##
-; CHECK: combine(#0, [[VAR2]])
+; CHECK: [[VAR2:r[0-9]+]] = memub(##
+; CHECK: combine(#0,[[VAR2]])
 entry:
   store i8 0, i8* @char_a, align 1
   %0 = load i8, i8* @char_b, align 1
@@ -48,7 +48,7 @@ entry:
 
 ; Function Attrs: nounwind
 define i64 @char_test2() #0 {
-; CHECK: [[VAR3:r[0-9]+]]{{ *}}={{ *}}memb(##
+; CHECK: [[VAR3:r[0-9]+]] = memb(##
 ; CHECK: sxtw([[VAR3]])
 entry:
   store i8 0, i8* @char_a, align 1
@@ -59,8 +59,8 @@ entry:
 
 ; Function Attrs: nounwind
 define i64 @int_test1() #0 {
-; CHECK: [[VAR4:r[0-9]+]]{{ *}}={{ *}}memw(##
-; CHECK: combine(#0, [[VAR4]])
+; CHECK: [[VAR4:r[0-9]+]] = memw(##
+; CHECK: combine(#0,[[VAR4]])
 entry:
   store i32 0, i32* @int_a, align 4
   %0 = load i32, i32* @int_b, align 4
@@ -70,7 +70,7 @@ entry:
 
 ; Function Attrs: nounwind
 define i64 @int_test2() #0 {
-; CHECK: [[VAR5:r[0-9]+]]{{ *}}={{ *}}memw(##
+; CHECK: [[VAR5:r[0-9]+]] = memw(##
 ; CHECK: sxtw([[VAR5]])
 entry:
   store i32 0, i32* @int_a, align 4

@@ -12,8 +12,8 @@
 ; Test that we don't generate a new value compare if the operands are
 ; the same register.
 
-; CHECK-NOT: cmp.eq([[REG0:(r[0-9]+)]].new, [[REG0]])
-; CHECK: cmp.eq([[REG1:(r[0-9]+)]], [[REG1]])
+; CHECK-NOT: cmp.eq([[REG0:(r[0-9]+)]].new,[[REG0]])
+; CHECK: cmp.eq([[REG1:(r[0-9]+)]],[[REG1]])
 
 ; Function Attrs: nounwind
 declare void @fprintf(%struct._Dnk_filet.1* nocapture, i8* nocapture readonly, ...) #1

@@ -359,7 +359,7 @@ define <4 x i64> @test_rem7_4i64(<4 x i64> %a) nounwind {
 define <8 x i32> @test_rem7_8i32(<8 x i32> %a) nounwind {
 ; AVX1-LABEL: test_rem7_8i32:
 ; AVX1:       # BB#0:
-; AVX1-NEXT:    vmovaps {{.*#+}} ymm1 = [613566757,613566757,613566757,613566757,613566757,613566757,613566757,613566757]
+; AVX1-NEXT:    vmovdqa {{.*#+}} ymm1 = [613566757,613566757,613566757,613566757,613566757,613566757,613566757,613566757]
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm2
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm3 = xmm2[1,1,3,3]
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm4

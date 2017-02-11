@@ -1,7 +1,7 @@
 ; RUN: llc -march=hexagon -mcpu=hexagonv5  < %s | FileCheck %s
 ; Check that we generate single precision floating point multiply in V5.
 
-; CHECK: r{{[0-9]+}} = sfmpy(r{{[0-9]+}}, r{{[0-9]+}})
+; CHECK: r{{[0-9]+}} = sfmpy(r{{[0-9]+}},r{{[0-9]+}})
 
 
 define i32 @main() nounwind {

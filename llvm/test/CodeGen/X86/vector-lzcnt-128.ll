@@ -1596,35 +1596,8 @@ define <2 x i64> @foldv2i64() nounwind {
 ;
 ; X32-SSE-LABEL: foldv2i64:
 ; X32-SSE:       # BB#0:
-; X32-SSE-NEXT:    movdqa {{.*#+}} xmm2 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
-; X32-SSE-NEXT:    movdqa {{.*#+}} xmm1 = [256,0,4294967295,4294967295]
-; X32-SSE-NEXT:    movdqa %xmm1, %xmm0
-; X32-SSE-NEXT:    pand %xmm2, %xmm0
-; X32-SSE-NEXT:    movdqa {{.*#+}} xmm3 = [4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0]
-; X32-SSE-NEXT:    movdqa %xmm3, %xmm4
-; X32-SSE-NEXT:    pshufb %xmm0, %xmm4
-; X32-SSE-NEXT:    movdqa %xmm1, %xmm0
-; X32-SSE-NEXT:    psrlw $4, %xmm0
-; X32-SSE-NEXT:    pand %xmm2, %xmm0
-; X32-SSE-NEXT:    pxor %xmm2, %xmm2
-; X32-SSE-NEXT:    pshufb %xmm0, %xmm3
-; X32-SSE-NEXT:    pcmpeqb %xmm2, %xmm0
-; X32-SSE-NEXT:    pand %xmm4, %xmm0
-; X32-SSE-NEXT:    paddb %xmm3, %xmm0
-; X32-SSE-NEXT:    movdqa %xmm1, %xmm3
-; X32-SSE-NEXT:    pcmpeqb %xmm2, %xmm3
-; X32-SSE-NEXT:    psrlw $8, %xmm3
-; X32-SSE-NEXT:    pand %xmm0, %xmm3
-; X32-SSE-NEXT:    psrlw $8, %xmm0
-; X32-SSE-NEXT:    paddw %xmm3, %xmm0
-; X32-SSE-NEXT:    pcmpeqw %xmm2, %xmm1
-; X32-SSE-NEXT:    psrld $16, %xmm1
-; X32-SSE-NEXT:    pand %xmm0, %xmm1
-; X32-SSE-NEXT:    psrld $16, %xmm0
-; X32-SSE-NEXT:    paddd %xmm1, %xmm0
-; X32-SSE-NEXT:    pblendw {{.*#+}} xmm2 = xmm0[0,1],xmm2[2,3,4,5,6,7]
-; X32-SSE-NEXT:    psrlq $32, %xmm0
-; X32-SSE-NEXT:    paddq %xmm2, %xmm0
+; X32-SSE-NEXT:    movl $55, %eax
+; X32-SSE-NEXT:    movd %eax, %xmm0
 ; X32-SSE-NEXT:    retl
   %out = call <2 x i64> @llvm.ctlz.v2i64(<2 x i64> <i64 256, i64 -1>, i1 0)
   ret <2 x i64> %out
@@ -1651,35 +1624,8 @@ define <2 x i64> @foldv2i64u() nounwind {
 ;
 ; X32-SSE-LABEL: foldv2i64u:
 ; X32-SSE:       # BB#0:
-; X32-SSE-NEXT:    movdqa {{.*#+}} xmm2 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
-; X32-SSE-NEXT:    movdqa {{.*#+}} xmm1 = [256,0,4294967295,4294967295]
-; X32-SSE-NEXT:    movdqa %xmm1, %xmm0
-; X32-SSE-NEXT:    pand %xmm2, %xmm0
-; X32-SSE-NEXT:    movdqa {{.*#+}} xmm3 = [4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0]
-; X32-SSE-NEXT:    movdqa %xmm3, %xmm4
-; X32-SSE-NEXT:    pshufb %xmm0, %xmm4
-; X32-SSE-NEXT:    movdqa %xmm1, %xmm0
-; X32-SSE-NEXT:    psrlw $4, %xmm0
-; X32-SSE-NEXT:    pand %xmm2, %xmm0
-; X32-SSE-NEXT:    pxor %xmm2, %xmm2
-; X32-SSE-NEXT:    pshufb %xmm0, %xmm3
-; X32-SSE-NEXT:    pcmpeqb %xmm2, %xmm0
-; X32-SSE-NEXT:    pand %xmm4, %xmm0
-; X32-SSE-NEXT:    paddb %xmm3, %xmm0
-; X32-SSE-NEXT:    movdqa %xmm1, %xmm3
-; X32-SSE-NEXT:    pcmpeqb %xmm2, %xmm3
-; X32-SSE-NEXT:    psrlw $8, %xmm3
-; X32-SSE-NEXT:    pand %xmm0, %xmm3
-; X32-SSE-NEXT:    psrlw $8, %xmm0
-; X32-SSE-NEXT:    paddw %xmm3, %xmm0
-; X32-SSE-NEXT:    pcmpeqw %xmm2, %xmm1
-; X32-SSE-NEXT:    psrld $16, %xmm1
-; X32-SSE-NEXT:    pand %xmm0, %xmm1
-; X32-SSE-NEXT:    psrld $16, %xmm0
-; X32-SSE-NEXT:    paddd %xmm1, %xmm0
-; X32-SSE-NEXT:    pblendw {{.*#+}} xmm2 = xmm0[0,1],xmm2[2,3,4,5,6,7]
-; X32-SSE-NEXT:    psrlq $32, %xmm0
-; X32-SSE-NEXT:    paddq %xmm2, %xmm0
+; X32-SSE-NEXT:    movl $55, %eax
+; X32-SSE-NEXT:    movd %eax, %xmm0
 ; X32-SSE-NEXT:    retl
   %out = call <2 x i64> @llvm.ctlz.v2i64(<2 x i64> <i64 256, i64 -1>, i1 -1)
   ret <2 x i64> %out

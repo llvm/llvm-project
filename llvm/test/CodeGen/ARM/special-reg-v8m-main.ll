@@ -90,19 +90,19 @@ entry:
 define void @write_mclass_registers(i32 %x) nounwind {
 entry:
   ; MAINLINE-LABEL: write_mclass_registers:
-  ; MAINLINE:   msr apsr_nzcvqg, r0
+  ; MAINLINE:   msr apsr_nzcvq, r0
   ; MAINLINE:   msr apsr_nzcvq, r0
   ; MAINLINE:   msr apsr_g, r0
   ; MAINLINE:   msr apsr_nzcvqg, r0
-  ; MAINLINE:   msr iapsr_nzcvqg, r0
+  ; MAINLINE:   msr iapsr_nzcvq, r0
   ; MAINLINE:   msr iapsr_nzcvq, r0
   ; MAINLINE:   msr iapsr_g, r0
   ; MAINLINE:   msr iapsr_nzcvqg, r0
-  ; MAINLINE:   msr eapsr_nzcvqg, r0
+  ; MAINLINE:   msr eapsr_nzcvq, r0
   ; MAINLINE:   msr eapsr_nzcvq, r0
   ; MAINLINE:   msr eapsr_g, r0
   ; MAINLINE:   msr eapsr_nzcvqg, r0
-  ; MAINLINE:   msr xpsr_nzcvqg, r0
+  ; MAINLINE:   msr xpsr_nzcvq, r0
   ; MAINLINE:   msr xpsr_nzcvq, r0
   ; MAINLINE:   msr xpsr_g, r0
   ; MAINLINE:   msr xpsr_nzcvqg, r0

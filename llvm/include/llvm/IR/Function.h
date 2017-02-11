@@ -671,6 +671,9 @@ public:
   /// to \a DISubprogram.
   DISubprogram *getSubprogram() const;
 
+  /// Returns true if we should emit debug info for profiling.
+  bool isDebugInfoForProfiling() const;
+
 private:
   void allocHungoffUselist();
   template<int Idx> void setHungoffOperand(Constant *C);

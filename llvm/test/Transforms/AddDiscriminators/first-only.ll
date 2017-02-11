@@ -69,7 +69,7 @@ attributes #0 = { nounwind uwtable "less-precise-fpmad"="false" "no-frame-pointe
 !12 = !DILocation(line: 3, scope: !13)
 
 !13 = distinct !DILexicalBlock(line: 3, column: 0, file: !1, scope: !11)
-; CHECK: !DILexicalBlockFile(scope: ![[BLOCK2:[0-9]+]],{{.*}} discriminator: 1)
+; CHECK: !DILexicalBlockFile(scope: ![[BLOCK2:[0-9]+]],{{.*}} discriminator: 2)
 
 !14 = !DILocation(line: 4, scope: !13)
 ; CHECK: ![[BLOCK2]] = distinct !DILexicalBlock(scope: ![[BLOCK1]],{{.*}} line: 3)

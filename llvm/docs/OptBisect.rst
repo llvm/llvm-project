@@ -65,10 +65,10 @@ following syntax will set a bisect limit for LTO transformations:
 
 ::
 
-  # When using Gold or lld
-  clang -flto -Wl,-plugin-opt,-opt-bisect-limit=256 my_file.o my_other_file.o
-  # When using ld64 (macOS)
+  # When using lld, or ld64 (macOS)
   clang -flto -Wl,-mllvm,-opt-bisect-limit=256 my_file.o my_other_file.o
+  # When using Gold
+  clang -flto -Wl,-plugin-opt,-opt-bisect-limit=256 my_file.o my_other_file.o
 
 LTO passes are run by a library instance invoked by the linker. Therefore any
 passes run in the primary driver compilation phase are not affected by options

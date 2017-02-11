@@ -1630,12 +1630,6 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
       Sym = getContext().getOrCreateSymbol(IDVal);
     } else
       Sym = Ctx.createDirectionalLocalSymbol(LocalLabelVal);
-
-    Sym->redefineIfPossible();
-
-    if (!Sym->isUndefined() || Sym->isVariable())
-      return Error(IDLoc, "invalid symbol redefinition");
-
     // End of Labels should be treated as end of line for lexing
     // purposes but that information is not available to the Lexer who
     // does not understand Labels. This may cause us to see a Hash
@@ -1654,7 +1648,7 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
 
     // Emit the label.
     if (!ParsingInlineAsm)
-      Out.EmitLabel(Sym);
+      Out.EmitLabel(Sym, IDLoc);
 
     // If we are generating dwarf for assembly source files then gather the
     // info to make a dwarf label entry for this label if needed.

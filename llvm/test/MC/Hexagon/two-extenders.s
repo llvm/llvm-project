@@ -19,7 +19,7 @@
         if (p3.new) r23 = memb(##2164335510)
         p3 = or(p2,or(p3, p0))
 }
-# CHECK: { p3 = or(p2, or(p3, p0))
+# CHECK: { p3 = or(p2,or(p3,p0))
 # CHECK:   immext(#2164335488)
 # CHECK:   if (p3.new) r23 = memb(##2164335510) }
 

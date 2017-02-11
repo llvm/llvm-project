@@ -11,7 +11,7 @@
 ; CHECK: [[REG0:(r[0-9]+)]] = memh
 ; CHECK: [[REG1:(r[0-9]+)]] = memh
 ; CHECK: += mpyi
-; CHECK: [[REG2]] = mpyi([[REG0]], [[REG1]])
+; CHECK: [[REG2]] = mpyi([[REG0]],[[REG1]])
 ; CHECK: endloop0
 
 %union_h2_sem_t = type { i32 }
