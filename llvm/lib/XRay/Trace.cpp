@@ -24,8 +24,8 @@ using llvm::yaml::Input;
 using XRayRecordStorage =
     std::aligned_storage<sizeof(XRayRecord), alignof(XRayRecord)>::type;
 
-Error NaiveLogLoader(StringRef Data, XRayFileHeader &FileHeader,
-                     std::vector<XRayRecord> &Records) {
+static Error NaiveLogLoader(StringRef Data, XRayFileHeader &FileHeader,
+                            std::vector<XRayRecord> &Records) {
   // FIXME: Maybe deduce whether the data is little or big-endian using some
   // magic bytes in the beginning of the file?
 
@@ -98,8 +98,8 @@ Error NaiveLogLoader(StringRef Data, XRayFileHeader &FileHeader,
   return Error::success();
 }
 
-Error YAMLLogLoader(StringRef Data, XRayFileHeader &FileHeader,
-                    std::vector<XRayRecord> &Records) {
+static Error YAMLLogLoader(StringRef Data, XRayFileHeader &FileHeader,
+                           std::vector<XRayRecord> &Records) {
 
   // Load the documents from the MappedFile.
   YAMLXRayTrace Trace;

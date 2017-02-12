@@ -31,7 +31,7 @@ User-defined Operators: the Idea
 ================================
 
 The "operator overloading" that we will add to Kaleidoscope is more
-general than languages like C++. In C++, you are only allowed to
+general than in languages like C++. In C++, you are only allowed to
 redefine existing operators: you can't programmatically change the
 grammar, introduce new operators, change precedence levels, etc. In this
 chapter, we will add this capability to Kaleidoscope, which will let the
@@ -41,8 +41,8 @@ The point of going into user-defined operators in a tutorial like this
 is to show the power and flexibility of using a hand-written parser.
 Thus far, the parser we have been implementing uses recursive descent
 for most parts of the grammar and operator precedence parsing for the
-expressions. See `Chapter 2 <LangImpl2.html>`_ for details. Without
-using operator precedence parsing, it would be very difficult to allow
+expressions. See `Chapter 2 <LangImpl2.html>`_ for details. By
+using operator precedence parsing, it is very easy to allow
 the programmer to introduce new operators into the grammar: the grammar
 is dynamically extensible as the JIT runs.
 
@@ -143,17 +143,18 @@ this:
       : Name(name), Args(std::move(Args)), IsOperator(IsOperator),
         Precedence(Prec) {}
 
+      Function *codegen();
+      const std::string &getName() const { return Name; }
+
       bool isUnaryOp() const { return IsOperator && Args.size() == 1; }
       bool isBinaryOp() const { return IsOperator && Args.size() == 2; }
 
       char getOperatorName() const {
         assert(isUnaryOp() || isBinaryOp());
-        return Name[Name.size()-1];
+        return Name[Name.size() - 1];
       }
 
       unsigned getBinaryPrecedence() const { return Precedence; }
-
-      Function *codegen();
     };
 
 Basically, in addition to knowing a name for the prototype, we now keep
@@ -194,7 +195,7 @@ user-defined operator, we need to parse it:
         // Read the precedence if present.
         if (CurTok == tok_number) {
           if (NumVal < 1 || NumVal > 100)
-            return LogErrorP("Invalid precedecnce: must be 1..100");
+            return LogErrorP("Invalid precedence: must be 1..100");
           BinaryPrecedence = (unsigned)NumVal;
           getNextToken();
         }
@@ -225,7 +226,7 @@ This is all fairly straightforward parsing code, and we have already
 seen a lot of similar code in the past. One interesting part about the
 code above is the couple lines that set up ``FnName`` for binary
 operators. This builds names like "binary@" for a newly defined "@"
-operator. This then takes advantage of the fact that symbol names in the
+operator. It then takes advantage of the fact that symbol names in the
 LLVM symbol table are allowed to have any character in them, including
 embedded nul characters.
 
@@ -251,7 +252,7 @@ default case for our existing binary operator node:
       case '<':
         L = Builder.CreateFCmpULT(L, R, "cmptmp");
         // Convert bool 0/1 to double 0.0 or 1.0
-        return Builder.CreateUIToFP(L, Type::getDoubleTy(LLVMContext),
+        return Builder.CreateUIToFP(L, Type::getDoubleTy(TheContext),
                                     "booltmp");
       default:
         break;
@@ -259,7 +260,7 @@ default case for our existing binary operator node:
 
       // If it wasn't a builtin binary operator, it must be a user defined one. Emit
       // a call to it.
-      Function *F = TheModule->getFunction(std::string("binary") + Op);
+      Function *F = getFunction(std::string("binary") + Op);
       assert(F && "binary operator not found!");
 
       Value *Ops[2] = { L, R };
@@ -277,22 +278,21 @@ The final piece of code we are missing, is a bit of top-level magic:
 .. code-block:: c++
 
     Function *FunctionAST::codegen() {
-      NamedValues.clear();
-
-      Function *TheFunction = Proto->codegen();
+      // Transfer ownership of the prototype to the FunctionProtos map, but keep a
+      // reference to it for use below.
+      auto &P = *Proto;
+      FunctionProtos[Proto->getName()] = std::move(Proto);
+      Function *TheFunction = getFunction(P.getName());
       if (!TheFunction)
         return nullptr;
 
       // If this is an operator, install it.
-      if (Proto->isBinaryOp())
-        BinopPrecedence[Proto->getOperatorName()] = Proto->getBinaryPrecedence();
+      if (P.isBinaryOp())
+        BinopPrecedence[P.getOperatorName()] = P.getBinaryPrecedence();
 
       // Create a new basic block to start insertion into.
-      BasicBlock *BB = BasicBlock::Create(LLVMContext, "entry", TheFunction);
-      Builder.SetInsertPoint(BB);
-
-      if (Value *RetVal = Body->codegen()) {
-        ...
+      BasicBlock *BB = BasicBlock::Create(TheContext, "entry", TheFunction);
+      ...
 
 Basically, before codegening a function, if it is a user-defined
 operator, we register it in the precedence table. This allows the binary
@@ -323,7 +323,8 @@ that, we need an AST node:
     public:
       UnaryExprAST(char Opcode, std::unique_ptr<ExprAST> Operand)
         : Opcode(Opcode), Operand(std::move(Operand)) {}
-      virtual Value *codegen();
+
+      Value *codegen() override;
     };
 
 This AST node is very simple and obvious by now. It directly mirrors the
@@ -345,7 +346,7 @@ simple: we'll add a new function to do it:
       int Opc = CurTok;
       getNextToken();
       if (auto Operand = ParseUnary())
-        return llvm::unique_ptr<UnaryExprAST>(Opc, std::move(Operand));
+        return llvm::make_unique<UnaryExprAST>(Opc, std::move(Operand));
       return nullptr;
     }
 
@@ -433,7 +434,7 @@ unary operators. It looks like this:
       if (!OperandV)
         return nullptr;
 
-      Function *F = TheModule->getFunction(std::string("unary")+Opcode);
+      Function *F = getFunction(std::string("unary") + Opcode);
       if (!F)
         return LogErrorV("Unknown unary operator");
 
@@ -461,7 +462,7 @@ newline):
     declare double @printd(double)
 
     ready> def binary : 1 (x y) 0;  # Low-precedence operator that ignores operands.
-    ..
+    ...
     ready> printd(123) : printd(456) : printd(789);
     123.000000
     456.000000
@@ -518,10 +519,9 @@ denser the character:
 
 ::
 
-    ready>
-
-    extern putchard(char)
-    def printdensity(d)
+    ready> extern putchard(char);
+    ...
+    ready> def printdensity(d)
       if d > 8 then
         putchard(32)  # ' '
       else if d > 4 then
@@ -538,9 +538,9 @@ denser the character:
     Evaluated to 0.000000
 
 Based on these simple primitive operations, we can start to define more
-interesting things. For example, here's a little function that solves
-for the number of iterations it takes a function in the complex plane to
-converge:
+interesting things. For example, here's a little function that determines
+the number of iterations it takes for a certain function in the complex
+plane to diverge:
 
 ::
 
@@ -742,7 +742,7 @@ Full Code Listing
 =================
 
 Here is the complete code listing for our running example, enhanced with
-the if/then/else and for expressions.. To build this example, use:
+the support for user-defined operators. To build this example, use:
 
 .. code-block:: bash
 

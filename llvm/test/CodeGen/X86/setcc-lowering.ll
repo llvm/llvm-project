@@ -20,6 +20,19 @@ define <8 x i16> @pr25080(<8 x i32> %a) {
 ; AVX-NEXT:    vpsraw $15, %xmm0, %xmm0
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
+;
+; KNL-32-LABEL: pr25080:
+; KNL-32:       # BB#0: # %entry
+; KNL-32-NEXT:    vpbroadcastd {{\.LCPI.*}}, %ymm1
+; KNL-32-NEXT:    vpand %ymm1, %ymm0, %ymm0
+; KNL-32-NEXT:    vpxor %ymm1, %ymm1, %ymm1
+; KNL-32-NEXT:    vpcmpeqd %zmm1, %zmm0, %k0
+; KNL-32-NEXT:    movb $15, %al
+; KNL-32-NEXT:    kmovw %eax, %k1
+; KNL-32-NEXT:    korw %k1, %k0, %k1
+; KNL-32-NEXT:    vpternlogq $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
+; KNL-32-NEXT:    vpmovqw %zmm0, %xmm0
+; KNL-32-NEXT:    retl
 entry:
   %0 = trunc <8 x i32> %a to <8 x i23>
   %1 = icmp eq <8 x i23> %0, zeroinitializer
@@ -29,6 +42,18 @@ entry:
 }
 
 define void @pr26232(i64 %a) {
+; AVX-LABEL: pr26232:
+; AVX:       # BB#0: # %for_loop599.preheader
+; AVX-NEXT:    .p2align 4, 0x90
+; AVX-NEXT:  .LBB1_1: # %for_loop599
+; AVX-NEXT:    # =>This Inner Loop Header: Depth=1
+; AVX-NEXT:    cmpq $65536, %rdi # imm = 0x10000
+; AVX-NEXT:    setl -{{[0-9]+}}(%rsp)
+; AVX-NEXT:    cmpw $0, -{{[0-9]+}}(%rsp)
+; AVX-NEXT:    jne .LBB1_1
+; AVX-NEXT:  # BB#2: # %for_exit600
+; AVX-NEXT:    retq
+;
 ; KNL-32-LABEL: pr26232:
 ; KNL-32:       # BB#0: # %for_loop599.preheader
 ; KNL-32-NEXT:    pushl %esi

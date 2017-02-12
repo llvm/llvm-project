@@ -112,7 +112,7 @@
 ; NONAFFINE-NEXT:            ReadAccess :=	[Reduction Type: NONE] [Scalar: 1]
 ; NONAFFINE-NEXT:                [tmp9, tmp14] -> { Stmt_bb17[i0, i1] -> MemRef_tmp8[] };
 ; NONAFFINE-NEXT:            MayWriteAccess :=	[Reduction Type: NONE] [Scalar: 0]
-; NONAFFINE-NEXT:                [tmp9, tmp14] -> { Stmt_bb17[i0, i1] -> MemRef_arg4[o0] : -1152921504606846976 <= o0 <= 1152921504606846975 };
+; NONAFFINE-NEXT:                [tmp9, tmp14] -> { Stmt_bb17[i0, i1] -> MemRef_arg4[o0] };
 ; NONAFFINE-NEXT:            ReadAccess :=	[Reduction Type: NONE] [Scalar: 0]
 ; NONAFFINE-NEXT:                [tmp9, tmp14] -> { Stmt_bb17[i0, i1] -> MemRef_arg1[o0] };
 ; NONAFFINE-NEXT:            ReadAccess :=	[Reduction Type: NONE] [Scalar: 0]

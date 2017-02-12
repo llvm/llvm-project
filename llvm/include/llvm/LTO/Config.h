@@ -68,6 +68,12 @@ struct Config {
   /// Sample PGO profile path.
   std::string SampleProfile;
 
+  /// Optimization remarks file path.
+  std::string RemarksFilename = "";
+
+  /// Whether to emit optimization remarks with hotness informations.
+  bool RemarksWithHotness = false;
+
   bool ShouldDiscardValueNames = true;
   DiagnosticHandlerFunction DiagHandler;
 

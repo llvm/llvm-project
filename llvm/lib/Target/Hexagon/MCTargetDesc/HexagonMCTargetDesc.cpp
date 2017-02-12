@@ -101,10 +101,7 @@ StringRef Hexagon_MC::selectHexagonCPU(const Triple &TT, StringRef CPU) {
   return ArchV;
 }
 
-unsigned HexagonGetLastSlot() {
-  return HexagonItinerariesV4FU::SLOT3;
-}
-
+unsigned llvm::HexagonGetLastSlot() { return HexagonItinerariesV4FU::SLOT3; }
 
 namespace {
 

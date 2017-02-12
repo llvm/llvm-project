@@ -1698,6 +1698,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   setTargetDAGCombine(ISD::ANY_EXTEND);
   setTargetDAGCombine(ISD::SIGN_EXTEND);
   setTargetDAGCombine(ISD::SIGN_EXTEND_INREG);
+  setTargetDAGCombine(ISD::SIGN_EXTEND_VECTOR_INREG);
+  setTargetDAGCombine(ISD::ZERO_EXTEND_VECTOR_INREG);
   setTargetDAGCombine(ISD::SINT_TO_FP);
   setTargetDAGCombine(ISD::UINT_TO_FP);
   setTargetDAGCombine(ISD::SETCC);
@@ -5151,7 +5153,8 @@ static const Constant *getTargetConstantFromNode(SDValue Op) {
 // Extract raw constant bits from constant pools.
 static bool getTargetConstantBitsFromNode(SDValue Op, unsigned EltSizeInBits,
                                           SmallBitVector &UndefElts,
-                                          SmallVectorImpl<APInt> &EltBits) {
+                                          SmallVectorImpl<APInt> &EltBits,
+                                          bool AllowUndefs = true) {
   assert(UndefElts.empty() && "Expected an empty UndefElts vector");
   assert(EltBits.empty() && "Expected an empty EltBits vector");
 
@@ -5162,12 +5165,19 @@ static bool getTargetConstantBitsFromNode(SDValue Op, unsigned EltSizeInBits,
   assert((SizeInBits % EltSizeInBits) == 0 && "Can't split constant!");
   unsigned NumElts = SizeInBits / EltSizeInBits;
 
+  unsigned SrcEltSizeInBits = VT.getScalarSizeInBits();
+  unsigned NumSrcElts = SizeInBits / SrcEltSizeInBits;
+
   // Extract all the undef/constant element data and pack into single bitsets.
   APInt UndefBits(SizeInBits, 0);
   APInt MaskBits(SizeInBits, 0);
 
   // Split the undef/constant single bitset data into the target elements.
   auto SplitBitData = [&]() {
+    // Don't split if we don't allow undef bits.
+    if (UndefBits.getBoolValue() && !AllowUndefs)
+      return false;
+
     UndefElts = SmallBitVector(NumElts, false);
     EltBits.resize(NumElts, APInt(EltSizeInBits, 0));
 
@@ -5214,7 +5224,6 @@ static bool getTargetConstantBitsFromNode(SDValue Op, unsigned EltSizeInBits,
 
   // Extract constant bits from build vector.
   if (ISD::isBuildVectorOfConstantSDNodes(Op.getNode())) {
-    unsigned SrcEltSizeInBits = VT.getScalarSizeInBits();
     for (unsigned i = 0, e = Op.getNumOperands(); i != e; ++i) {
       const SDValue &Src = Op.getOperand(i);
       if (Src.isUndef()) {
@@ -5249,104 +5258,47 @@ static bool getTargetConstantBitsFromNode(SDValue Op, unsigned EltSizeInBits,
 
   // Extract constant bits from a broadcasted constant pool scalar.
   if (Op.getOpcode() == X86ISD::VBROADCAST &&
-      EltSizeInBits <= Op.getScalarValueSizeInBits()) {
+      EltSizeInBits <= SrcEltSizeInBits) {
     if (auto *Broadcast = getTargetConstantFromNode(Op.getOperand(0))) {
       APInt Bits, Undefs;
       if (ExtractConstantBits(Broadcast, Bits, Undefs)) {
-        unsigned NumBroadcastBits = Op.getScalarValueSizeInBits();
-        unsigned NumBroadcastElts = SizeInBits / NumBroadcastBits;
-        for (unsigned i = 0; i != NumBroadcastElts; ++i) {
-          MaskBits |= Bits.shl(i * NumBroadcastBits);
-          UndefBits |= Undefs.shl(i * NumBroadcastBits);
+        for (unsigned i = 0; i != NumSrcElts; ++i) {
+          MaskBits |= Bits.shl(i * SrcEltSizeInBits);
+          UndefBits |= Undefs.shl(i * SrcEltSizeInBits);
         }
         return SplitBitData();
       }
     }
   }
 
+  // Extract a rematerialized scalar constant insertion.
+  if (Op.getOpcode() == X86ISD::VZEXT_MOVL &&
+      Op.getOperand(0).getOpcode() == ISD::SCALAR_TO_VECTOR &&
+      isa<ConstantSDNode>(Op.getOperand(0).getOperand(0))) {
+    auto *CN = cast<ConstantSDNode>(Op.getOperand(0).getOperand(0));
+    MaskBits = CN->getAPIntValue().zextOrTrunc(SrcEltSizeInBits);
+    MaskBits = MaskBits.zext(SizeInBits);
+    return SplitBitData();
+  }
+
   return false;
 }
 
-// TODO: Merge more of this with getTargetConstantBitsFromNode.
 static bool getTargetShuffleMaskIndices(SDValue MaskNode,
                                         unsigned MaskEltSizeInBits,
                                         SmallVectorImpl<uint64_t> &RawMask) {
-  MaskNode = peekThroughBitcasts(MaskNode);
+  SmallBitVector UndefElts;
+  SmallVector<APInt, 64> EltBits;
 
-  MVT VT = MaskNode.getSimpleValueType();
-  assert(VT.isVector() && "Can't produce a non-vector with a build_vector!");
-  unsigned NumMaskElts = VT.getSizeInBits() / MaskEltSizeInBits;
-
-  // Split an APInt element into MaskEltSizeInBits sized pieces and
-  // insert into the shuffle mask.
-  auto SplitElementToMask = [&](APInt Element) {
-    // Note that this is x86 and so always little endian: the low byte is
-    // the first byte of the mask.
-    int Split = VT.getScalarSizeInBits() / MaskEltSizeInBits;
-    for (int i = 0; i < Split; ++i) {
-      APInt RawElt = Element.getLoBits(MaskEltSizeInBits);
-      Element = Element.lshr(MaskEltSizeInBits);
-      RawMask.push_back(RawElt.getZExtValue());
-    }
-  };
-
-  if (MaskNode.getOpcode() == X86ISD::VBROADCAST) {
-    // TODO: Handle (MaskEltSizeInBits % VT.getScalarSizeInBits()) == 0
-    // TODO: Handle (VT.getScalarSizeInBits() % MaskEltSizeInBits) == 0
-    if (VT.getScalarSizeInBits() != MaskEltSizeInBits)
-      return false;
-    if (auto *CN = dyn_cast<ConstantSDNode>(MaskNode.getOperand(0))) {
-      const APInt &MaskElement = CN->getAPIntValue();
-      for (unsigned i = 0, e = VT.getVectorNumElements(); i != e; ++i) {
-        APInt RawElt = MaskElement.getLoBits(MaskEltSizeInBits);
-        RawMask.push_back(RawElt.getZExtValue());
-      }
-    }
-    return false;
-  }
-
-  if (MaskNode.getOpcode() == X86ISD::VZEXT_MOVL &&
-      MaskNode.getOperand(0).getOpcode() == ISD::SCALAR_TO_VECTOR) {
-    SDValue MaskOp = MaskNode.getOperand(0).getOperand(0);
-    if (auto *CN = dyn_cast<ConstantSDNode>(MaskOp)) {
-      if ((MaskEltSizeInBits % VT.getScalarSizeInBits()) == 0) {
-        RawMask.push_back(CN->getZExtValue());
-        RawMask.append(NumMaskElts - 1, 0);
-        return true;
-      }
-
-      if ((VT.getScalarSizeInBits() % MaskEltSizeInBits) == 0) {
-        unsigned ElementSplit = VT.getScalarSizeInBits() / MaskEltSizeInBits;
-        SplitElementToMask(CN->getAPIntValue());
-        RawMask.append((VT.getVectorNumElements() - 1) * ElementSplit, 0);
-        return true;
-      }
-    }
-    return false;
-  }
-
-  if (MaskNode.getOpcode() != ISD::BUILD_VECTOR)
+  // Extract the raw target constant bits.
+  // FIXME: We currently don't support UNDEF bits or mask entries.
+  if (!getTargetConstantBitsFromNode(MaskNode, MaskEltSizeInBits, UndefElts,
+                                     EltBits, /* AllowUndefs */ false))
     return false;
 
-  // We can always decode if the buildvector is all zero constants,
-  // but can't use isBuildVectorAllZeros as it might contain UNDEFs.
-  if (all_of(MaskNode->ops(), X86::isZeroNode)) {
-    RawMask.append(NumMaskElts, 0);
-    return true;
-  }
-
-  // TODO: Handle (MaskEltSizeInBits % VT.getScalarSizeInBits()) == 0
-  if ((VT.getScalarSizeInBits() % MaskEltSizeInBits) != 0)
-    return false;
-
-  for (SDValue Op : MaskNode->ops()) {
-    if (auto *CN = dyn_cast<ConstantSDNode>(Op.getNode()))
-      SplitElementToMask(CN->getAPIntValue());
-    else if (auto *CFN = dyn_cast<ConstantFPSDNode>(Op.getNode()))
-      SplitElementToMask(CFN->getValueAPF().bitcastToAPInt());
-    else
-      return false;
-  }
+  // Insert the extracted elements into the mask.
+  for (APInt Elt : EltBits)
+    RawMask.push_back(Elt.getZExtValue());
 
   return true;
 }
@@ -22120,10 +22072,10 @@ static SDValue LowerXALUO(SDValue Op, SelectionDAG &DAG) {
     // A subtract of one will be selected as a INC. Note that INC doesn't
     // set CF, so we can't do this for UADDO.
     if (isOneConstant(RHS)) {
-        BaseOp = X86ISD::INC;
-        Cond = X86::COND_O;
-        break;
-      }
+      BaseOp = X86ISD::INC;
+      Cond = X86::COND_O;
+      break;
+    }
     BaseOp = X86ISD::ADD;
     Cond = X86::COND_O;
     break;
@@ -22135,10 +22087,10 @@ static SDValue LowerXALUO(SDValue Op, SelectionDAG &DAG) {
     // A subtract of one will be selected as a DEC. Note that DEC doesn't
     // set CF, so we can't do this for USUBO.
     if (isOneConstant(RHS)) {
-        BaseOp = X86ISD::DEC;
-        Cond = X86::COND_O;
-        break;
-      }
+      BaseOp = X86ISD::DEC;
+      Cond = X86::COND_O;
+      break;
+    }
     BaseOp = X86ISD::SUB;
     Cond = X86::COND_O;
     break;
@@ -26734,10 +26686,11 @@ static bool matchBinaryPermuteVectorShuffle(MVT MaskVT, ArrayRef<int> Mask,
         int M = Mask[i];
         if (M == SM_SentinelUndef)
           continue;
-        else if (M == SM_SentinelZero)
+        if ((M == SM_SentinelZero) ||
+            ((M != i) && (M != (i + (int)NumMaskElts)))) {
           MatchBlend = false;
-        else if ((M != i) && (M != (i + (int)NumMaskElts)))
-          MatchBlend = false;
+          break;
+        }
       }
 
       if (MatchBlend) {
@@ -34045,30 +33998,38 @@ static SDValue combineSub(SDNode *N, SelectionDAG &DAG,
 static SDValue combineVSZext(SDNode *N, SelectionDAG &DAG,
                              TargetLowering::DAGCombinerInfo &DCI,
                              const X86Subtarget &Subtarget) {
+  if (DCI.isBeforeLegalize())
+    return SDValue();
+
   SDLoc DL(N);
   unsigned Opcode = N->getOpcode();
   MVT VT = N->getSimpleValueType(0);
   MVT SVT = VT.getVectorElementType();
+  unsigned NumElts = VT.getVectorNumElements();
+  unsigned EltSizeInBits = SVT.getSizeInBits();
+
   SDValue Op = N->getOperand(0);
   MVT OpVT = Op.getSimpleValueType();
   MVT OpEltVT = OpVT.getVectorElementType();
-  unsigned InputBits = OpEltVT.getSizeInBits() * VT.getVectorNumElements();
+  unsigned OpEltSizeInBits = OpEltVT.getSizeInBits();
+  unsigned InputBits = OpEltSizeInBits * NumElts;
 
   // Perform any constant folding.
   // FIXME: Reduce constant pool usage and don't fold when OptSize is enabled.
-  if (ISD::isBuildVectorOfConstantSDNodes(Op.getNode())) {
-    unsigned NumDstElts = VT.getVectorNumElements();
-    SmallBitVector Undefs(NumDstElts, false);
-    SmallVector<APInt, 4> Vals(NumDstElts, APInt(SVT.getSizeInBits(), 0));
-    for (unsigned i = 0; i != NumDstElts; ++i) {
-      SDValue OpElt = Op.getOperand(i);
-      if (OpElt.getOpcode() == ISD::UNDEF) {
+  SmallBitVector UndefElts;
+  SmallVector<APInt, 64> EltBits;
+  if (getTargetConstantBitsFromNode(Op, OpEltSizeInBits, UndefElts, EltBits)) {
+    SmallBitVector Undefs(NumElts, false);
+    SmallVector<APInt, 4> Vals(NumElts, APInt(EltSizeInBits, 0));
+    bool IsZEXT =
+        (Opcode == X86ISD::VZEXT) || (Opcode == ISD::ZERO_EXTEND_VECTOR_INREG);
+    for (unsigned i = 0; i != NumElts; ++i) {
+      if (UndefElts[i]) {
         Undefs[i] = true;
         continue;
       }
-      APInt Cst = cast<ConstantSDNode>(OpElt.getNode())->getAPIntValue();
-      Vals[i] = Opcode == X86ISD::VZEXT ? Cst.zextOrTrunc(SVT.getSizeInBits())
-                                        : Cst.sextOrTrunc(SVT.getSizeInBits());
+      Vals[i] = IsZEXT ? EltBits[i].zextOrTrunc(EltSizeInBits)
+                       : EltBits[i].sextOrTrunc(EltSizeInBits);
     }
     return getConstVector(Vals, Undefs, VT, DAG, DL);
   }
@@ -34190,33 +34151,6 @@ static SDValue combineInsertSubvector(SDNode *N, SelectionDAG &DAG,
   unsigned IdxVal = cast<ConstantSDNode>(Idx)->getZExtValue();
   MVT OpVT = N->getSimpleValueType(0);
   MVT SubVecVT = SubVec.getSimpleValueType();
-
-  // For insertion into the zero index (low half) of a 256-bit vector, it is
-  // more efficient to generate a blend with immediate instead of an insert*128.
-  // We are still creating an INSERT_SUBVECTOR below with an undef node to
-  // extend the subvector to the size of the result vector. Make sure that
-  // we are not recursing on that node by checking for undef here.
-  if (IdxVal == 0 && OpVT.is256BitVector() && !Vec.isUndef()) {
-    SDValue Vec256 = DAG.getNode(ISD::INSERT_SUBVECTOR, dl, OpVT,
-                                 DAG.getUNDEF(OpVT), SubVec, N->getOperand(2));
-
-    // Integers must be cast to 32-bit because there is only vpblendd;
-    // vpblendw can't be used for this because it has a handicapped mask.
-    // If we don't have AVX2, then cast to float. Using a wrong domain blend
-    // is still more efficient than using the wrong domain vinsertf128 that
-    // will be created by InsertSubVector().
-    MVT CastVT = OpVT;
-    if (OpVT.isInteger())
-      CastVT = Subtarget.hasAVX2() ? MVT::v8i32 : MVT::v8f32;
-
-    // The blend instruction, and therefore its mask, depend on the data type.
-    unsigned MaskVal = CastVT.getScalarSizeInBits() == 64 ? 0x03 : 0x0f;
-    SDValue Mask = DAG.getConstant(MaskVal, dl, MVT::i8);
-    Vec = DAG.getBitcast(CastVT, Vec);
-    Vec256 = DAG.getBitcast(CastVT, Vec256);
-    Vec256 = DAG.getNode(X86ISD::BLENDI, dl, CastVT, Vec, Vec256, Mask);
-    return DAG.getBitcast(OpVT, Vec256);
-  }
 
   // If we're inserting into the upper half of a 256-bit vector with a vector
   // that was extracted from the upper half of a 256-bit vector, we should
@@ -34353,6 +34287,8 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case X86ISD::VSHLI:
   case X86ISD::VSRAI:
   case X86ISD::VSRLI:       return combineVectorShift(N, DAG, DCI, Subtarget);
+  case ISD::SIGN_EXTEND_VECTOR_INREG:
+  case ISD::ZERO_EXTEND_VECTOR_INREG:
   case X86ISD::VSEXT:
   case X86ISD::VZEXT:       return combineVSZext(N, DAG, DCI, Subtarget);
   case X86ISD::PINSRB:

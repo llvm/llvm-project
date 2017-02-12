@@ -228,8 +228,8 @@ bb23:                                             ; preds = %bb4
 }
 
 ;; This is an irreducible test case that will cause a memoryphi node loop
-;; in the two block.
-;; it's equivalent to something like
+;; in the two blocks.
+;; It's equivalent to something like
 ;; *a = 0
 ;; if (<....>) goto loopmiddle
 ;; loopstart:
@@ -245,8 +245,8 @@ bb23:                                             ; preds = %bb4
 ;; Both loads should equal 0, but it requires being
 ;; completely optimistic about MemoryPhis, otherwise
 ;; we will not be able to see through the cycle.
-define i8 @quux(i8* noalias %arg, i8* noalias %arg2) {
-; CHECK-LABEL: @quux(
+define i8 @irreducible_memoryphi(i8* noalias %arg, i8* noalias %arg2) {
+; CHECK-LABEL: @irreducible_memoryphi(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    store i8 0, i8* [[ARG:%.*]]
 ; CHECK-NEXT:    br i1 undef, label [[BB2:%.*]], label [[BB1:%.*]]
@@ -273,6 +273,40 @@ bb3:                                              ; preds = %bb2
   %tmp = load i8, i8* %arg
   %tmp3 = add i8 %tmp, %tmp2
   ret i8 %tmp3
+}
+;; This is an irreducible test case that will cause a phi node loop
+;; in the two blocks
+;;
+;; It should return 0, but it requires being
+;; completely optimistic about phis, otherwise
+;; we will not be able to see through the cycle.
+define i32 @irreducible_phi(i32 %arg) {
+; CHECK-LABEL: @irreducible_phi(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    br i1 undef, label [[BB2:%.*]], label [[BB1:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    br label [[BB2]]
+; CHECK:       bb2:
+; CHECK-NEXT:    br i1 undef, label [[BB1]], label [[BB3:%.*]]
+; CHECK:       bb3:
+; CHECK-NEXT:    ret i32 0
+;
+bb:
+  %tmp = add i32 0, %arg
+  br i1 undef, label %bb2, label %bb1
+
+bb1:                                              ; preds = %bb2, %bb
+  %phi1 = phi i32 [%tmp, %bb], [%phi2, %bb2]
+  br label %bb2
+
+bb2:                                              ; preds = %bb1, %bb
+  %phi2 = phi i32 [%tmp, %bb], [%phi1, %bb1]
+  br i1 undef, label %bb1, label %bb3
+
+bb3:                                              ; preds = %bb2
+  ; This should be zero
+  %tmp3 = sub i32 %tmp, %phi2
+  ret i32 %tmp3
 }
 attributes #0 = { nounwind ssp uwtable "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
 
