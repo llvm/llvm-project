@@ -14587,23 +14587,16 @@ SDValue DAGCombiner::visitINSERT_SUBVECTOR(SDNode *N) {
     }
   }
 
-  if (N0.getValueType() != N1.getValueType())
-    return SDValue();
-
   // If the input vector is a concatenation, and the insert replaces
-  // one of the halves, we can optimize into a single concat_vectors.
-  if (N0.getOpcode() == ISD::CONCAT_VECTORS && N0->getNumOperands() == 2) {
-    // Lower half: fold (insert_subvector (concat_vectors X, Y), Z) ->
-    // (concat_vectors Z, Y)
-    if (InsIdx == 0)
-      return DAG.getNode(ISD::CONCAT_VECTORS, SDLoc(N), VT, N1,
-                         N0.getOperand(1));
+  // one of the pieces, we can optimize into a single concat_vectors.
+  if (N0.getOpcode() == ISD::CONCAT_VECTORS && N0.hasOneUse() &&
+      N0.getOperand(0).getValueType() == N1.getValueType()) {
+    unsigned Factor = N1.getValueType().getVectorNumElements();
 
-    // Upper half: fold (insert_subvector (concat_vectors X, Y), Z) ->
-    // (concat_vectors X, Z)
-    if (InsIdx == VT.getVectorNumElements() / 2)
-      return DAG.getNode(ISD::CONCAT_VECTORS, SDLoc(N), VT, N0.getOperand(0),
-                         N1);
+    SmallVector<SDValue, 8> Ops(N0->op_begin(), N0->op_end());
+    Ops[cast<ConstantSDNode>(N2)->getZExtValue() / Factor] = N1;
+
+    return DAG.getNode(ISD::CONCAT_VECTORS, SDLoc(N), VT, Ops);
   }
 
   return SDValue();

@@ -1698,6 +1698,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   setTargetDAGCombine(ISD::ANY_EXTEND);
   setTargetDAGCombine(ISD::SIGN_EXTEND);
   setTargetDAGCombine(ISD::SIGN_EXTEND_INREG);
+  setTargetDAGCombine(ISD::SIGN_EXTEND_VECTOR_INREG);
+  setTargetDAGCombine(ISD::ZERO_EXTEND_VECTOR_INREG);
   setTargetDAGCombine(ISD::SINT_TO_FP);
   setTargetDAGCombine(ISD::UINT_TO_FP);
   setTargetDAGCombine(ISD::SETCC);
@@ -33996,30 +33998,38 @@ static SDValue combineSub(SDNode *N, SelectionDAG &DAG,
 static SDValue combineVSZext(SDNode *N, SelectionDAG &DAG,
                              TargetLowering::DAGCombinerInfo &DCI,
                              const X86Subtarget &Subtarget) {
+  if (DCI.isBeforeLegalize())
+    return SDValue();
+
   SDLoc DL(N);
   unsigned Opcode = N->getOpcode();
   MVT VT = N->getSimpleValueType(0);
   MVT SVT = VT.getVectorElementType();
+  unsigned NumElts = VT.getVectorNumElements();
+  unsigned EltSizeInBits = SVT.getSizeInBits();
+
   SDValue Op = N->getOperand(0);
   MVT OpVT = Op.getSimpleValueType();
   MVT OpEltVT = OpVT.getVectorElementType();
-  unsigned InputBits = OpEltVT.getSizeInBits() * VT.getVectorNumElements();
+  unsigned OpEltSizeInBits = OpEltVT.getSizeInBits();
+  unsigned InputBits = OpEltSizeInBits * NumElts;
 
   // Perform any constant folding.
   // FIXME: Reduce constant pool usage and don't fold when OptSize is enabled.
-  if (ISD::isBuildVectorOfConstantSDNodes(Op.getNode())) {
-    unsigned NumDstElts = VT.getVectorNumElements();
-    SmallBitVector Undefs(NumDstElts, false);
-    SmallVector<APInt, 4> Vals(NumDstElts, APInt(SVT.getSizeInBits(), 0));
-    for (unsigned i = 0; i != NumDstElts; ++i) {
-      SDValue OpElt = Op.getOperand(i);
-      if (OpElt.getOpcode() == ISD::UNDEF) {
+  SmallBitVector UndefElts;
+  SmallVector<APInt, 64> EltBits;
+  if (getTargetConstantBitsFromNode(Op, OpEltSizeInBits, UndefElts, EltBits)) {
+    SmallBitVector Undefs(NumElts, false);
+    SmallVector<APInt, 4> Vals(NumElts, APInt(EltSizeInBits, 0));
+    bool IsZEXT =
+        (Opcode == X86ISD::VZEXT) || (Opcode == ISD::ZERO_EXTEND_VECTOR_INREG);
+    for (unsigned i = 0; i != NumElts; ++i) {
+      if (UndefElts[i]) {
         Undefs[i] = true;
         continue;
       }
-      APInt Cst = cast<ConstantSDNode>(OpElt.getNode())->getAPIntValue();
-      Vals[i] = Opcode == X86ISD::VZEXT ? Cst.zextOrTrunc(SVT.getSizeInBits())
-                                        : Cst.sextOrTrunc(SVT.getSizeInBits());
+      Vals[i] = IsZEXT ? EltBits[i].zextOrTrunc(EltSizeInBits)
+                       : EltBits[i].sextOrTrunc(EltSizeInBits);
     }
     return getConstVector(Vals, Undefs, VT, DAG, DL);
   }
@@ -34141,33 +34151,6 @@ static SDValue combineInsertSubvector(SDNode *N, SelectionDAG &DAG,
   unsigned IdxVal = cast<ConstantSDNode>(Idx)->getZExtValue();
   MVT OpVT = N->getSimpleValueType(0);
   MVT SubVecVT = SubVec.getSimpleValueType();
-
-  // For insertion into the zero index (low half) of a 256-bit vector, it is
-  // more efficient to generate a blend with immediate instead of an insert*128.
-  // We are still creating an INSERT_SUBVECTOR below with an undef node to
-  // extend the subvector to the size of the result vector. Make sure that
-  // we are not recursing on that node by checking for undef here.
-  if (IdxVal == 0 && OpVT.is256BitVector() && !Vec.isUndef()) {
-    SDValue Vec256 = DAG.getNode(ISD::INSERT_SUBVECTOR, dl, OpVT,
-                                 DAG.getUNDEF(OpVT), SubVec, N->getOperand(2));
-
-    // Integers must be cast to 32-bit because there is only vpblendd;
-    // vpblendw can't be used for this because it has a handicapped mask.
-    // If we don't have AVX2, then cast to float. Using a wrong domain blend
-    // is still more efficient than using the wrong domain vinsertf128 that
-    // will be created by InsertSubVector().
-    MVT CastVT = OpVT;
-    if (OpVT.isInteger())
-      CastVT = Subtarget.hasAVX2() ? MVT::v8i32 : MVT::v8f32;
-
-    // The blend instruction, and therefore its mask, depend on the data type.
-    unsigned MaskVal = CastVT.getScalarSizeInBits() == 64 ? 0x03 : 0x0f;
-    SDValue Mask = DAG.getConstant(MaskVal, dl, MVT::i8);
-    Vec = DAG.getBitcast(CastVT, Vec);
-    Vec256 = DAG.getBitcast(CastVT, Vec256);
-    Vec256 = DAG.getNode(X86ISD::BLENDI, dl, CastVT, Vec, Vec256, Mask);
-    return DAG.getBitcast(OpVT, Vec256);
-  }
 
   // If we're inserting into the upper half of a 256-bit vector with a vector
   // that was extracted from the upper half of a 256-bit vector, we should
@@ -34304,6 +34287,8 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case X86ISD::VSHLI:
   case X86ISD::VSRAI:
   case X86ISD::VSRLI:       return combineVectorShift(N, DAG, DCI, Subtarget);
+  case ISD::SIGN_EXTEND_VECTOR_INREG:
+  case ISD::ZERO_EXTEND_VECTOR_INREG:
   case X86ISD::VSEXT:
   case X86ISD::VZEXT:       return combineVSZext(N, DAG, DCI, Subtarget);
   case X86ISD::PINSRB:
