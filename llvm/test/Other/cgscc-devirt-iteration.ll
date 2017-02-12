@@ -7,6 +7,9 @@
 ; RUN: opt -aa-pipeline=basic-aa -passes='cgscc(function-attrs,function(gvn,instcombine))' -S < %s | FileCheck %s --check-prefix=CHECK --check-prefix=BEFORE
 ; RUN: opt -aa-pipeline=basic-aa -passes='cgscc(devirt<1>(function-attrs,function(gvn,instcombine)))' -S < %s | FileCheck %s --check-prefix=CHECK --check-prefix=AFTER --check-prefix=AFTER1
 ; RUN: opt -aa-pipeline=basic-aa -passes='cgscc(devirt<2>(function-attrs,function(gvn,instcombine)))' -S < %s | FileCheck %s --check-prefix=CHECK --check-prefix=AFTER --check-prefix=AFTER2
+;
+; We also verify that the real O2 pipeline catches these cases.
+; RUN: opt -aa-pipeline=basic-aa -passes='default<O2>' -S < %s | FileCheck %s --check-prefix=CHECK --check-prefix=AFTER --check-prefix=AFTER2
 
 declare void @readnone() readnone
 ; CHECK: Function Attrs: readnone
@@ -93,8 +96,7 @@ entry:
 }
 
 declare i8* @memcpy(i8*, i8*, i64)
-; CHECK-NOT: Function Attrs
-; CHECK: declare i8* @memcpy(i8*, i8*, i64)
+; CHECK: declare i8* @memcpy(
 
 ; The @test3 function checks that when we refine an indirect call to an
 ; intrinsic we still revisit the SCC pass. This also covers cases where the
@@ -110,5 +112,17 @@ define void @test3(i8* %src, i8* %dest, i64 %size) {
   %f = load i8* (i8*, i8*, i64)*, i8* (i8*, i8*, i64)** %fptr
   call i8* %f(i8* %dest, i8* %src, i64 %size)
 ; CHECK: call void @llvm.memcpy
+  ret void
+}
+
+; A boring function that just keeps our declarations around.
+define void @keep(i8** %sink) {
+; CHECK-NOT: Function Attrs
+; CHECK: define void @keep(
+entry:
+  store volatile i8* bitcast (void ()* @readnone to i8*), i8** %sink
+  store volatile i8* bitcast (void ()* @unknown to i8*), i8** %sink
+  store volatile i8* bitcast (i8* (i8*, i8*, i64)* @memcpy to i8*), i8** %sink
+  call void @unknown()
   ret void
 }

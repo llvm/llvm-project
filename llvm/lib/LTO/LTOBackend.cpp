@@ -366,6 +366,12 @@ Error lto::backend(Config &C, AddStreamFn AddStream,
 
   handleAsmUndefinedRefs(*Mod, *TM);
 
+  // Setup optimization remarks.
+  auto DiagFileOrErr = lto::setupOptimizationRemarks(
+      Mod->getContext(), C.RemarksFilename, C.RemarksWithHotness);
+  if (!DiagFileOrErr)
+    return DiagFileOrErr.takeError();
+
   if (!C.CodeGenOnly)
     if (!opt(C, TM.get(), 0, *Mod, /*IsThinLTO=*/false, CombinedIndex))
       return Error::success();

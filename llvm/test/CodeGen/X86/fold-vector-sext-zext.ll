@@ -300,10 +300,9 @@ define <4 x i32> @test_zext_4i8_4i32_undef() {
 define <4 x i64> @test_zext_4i8_4i64_undef() {
 ; X32-LABEL: test_zext_4i8_4i64_undef:
 ; X32:       # BB#0:
-; X32-NEXT:    vmovaps {{.*#+}} xmm0 = [255,0,255,0]
+; X32-NEXT:    vmovaps {{.*#+}} xmm0 = <u,u,255,0>
 ; X32-NEXT:    movl $2, %eax
 ; X32-NEXT:    vmovd %eax, %xmm1
-; X32-NEXT:    vpmovzxbq {{.*#+}} xmm1 = xmm1[0],zero,zero,zero,zero,zero,zero,zero,xmm1[1],zero,zero,zero,zero,zero,zero,zero
 ; X32-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; X32-NEXT:    retl
 ;

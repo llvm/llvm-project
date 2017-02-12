@@ -90,11 +90,20 @@ static cl::opt<std::string> DefaultTriple(
     cl::desc(
         "Replace unspecified target triples in input files with this triple"));
 
+static cl::opt<std::string>
+    OptRemarksOutput("pass-remarks-output",
+                     cl::desc("YAML output file for optimization remarks"));
+
+static cl::opt<bool> OptRemarksWithsHotness(
+    "pass-remarks-with-hotness",
+    cl::desc("Whether to include hotness informations in the remarks.\n"
+             "Has effect only if -pass-remarks-output is specified."));
+
 static void check(Error E, std::string Msg) {
   if (!E)
     return;
   handleAllErrors(std::move(E), [&](ErrorInfoBase &EIB) {
-    errs() << "llvm-lto: " << Msg << ": " << EIB.message().c_str() << '\n';
+    errs() << "llvm-lto2: " << Msg << ": " << EIB.message().c_str() << '\n';
   });
   exit(1);
 }
@@ -175,6 +184,10 @@ int main(int argc, char **argv) {
   if (SaveTemps)
     check(Conf.addSaveTemps(OutputFilename + "."),
           "Config::addSaveTemps failed");
+
+  // Optimization remarks.
+  Conf.RemarksFilename = OptRemarksOutput;
+  Conf.RemarksWithHotness = OptRemarksWithsHotness;
 
   // Run a custom pipeline, if asked for.
   Conf.OptPipeline = OptPipeline;
