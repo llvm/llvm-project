@@ -13,9 +13,9 @@
 ;	int v3[Z][Z];
 ; } s;
 ;
-; void slow_function (s* const obj) {
+; void slow_function (s* const obj, int z) {
 ;    for (int j=0; j<Z; j++) {
-;        for (int k=0; k<Z; k++) {
+;        for (int k=0; k<z; k++) {
 ;            int x = obj->v1[k] + obj->v2[j];
 ;            obj->v3[j][k] += x;
 ;        }
@@ -35,7 +35,7 @@ target triple = "x86_64-unknown-linux-gnu"
 
 %struct.s = type { [32 x i32], [32 x i32], [32 x [32 x i32]] }
 
-define void @Test(%struct.s* nocapture %obj) #0 {
+define void @Test(%struct.s* nocapture %obj, i64 %z) #0 {
   br label %.outer.preheader
 
 
@@ -63,6 +63,6 @@ define void @Test(%struct.s* nocapture %obj) #0 {
   %8 = add nsw i32 %5, %7
   store i32 %8, i32* %6  
   %j.next = add nuw nsw i64 %j, 1
-  %exitcond.inner = icmp eq i64 %j.next, 32
+  %exitcond.inner = icmp eq i64 %j.next, %z
   br i1 %exitcond.inner, label %.outer, label %.inner
 }

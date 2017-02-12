@@ -26264,7 +26264,8 @@ bool X86TargetLowering::isGAPlusOffset(SDNode *N,
 // instructions.
 // TODO: Investigate sharing more of this with shuffle lowering.
 static bool matchUnaryVectorShuffle(MVT MaskVT, ArrayRef<int> Mask,
-                                    bool FloatDomain,
+                                    bool FloatDomain, SDValue &V1, SDLoc &DL,
+                                    SelectionDAG &DAG,
                                     const X86Subtarget &Subtarget,
                                     unsigned &Shuffle, MVT &SrcVT, MVT &DstVT) {
   unsigned NumMaskElts = Mask.size();
@@ -26280,8 +26281,9 @@ static bool matchUnaryVectorShuffle(MVT MaskVT, ArrayRef<int> Mask,
   }
 
   // Match against a VZEXT instruction.
-  // TODO: Add 256/512-bit vector support.
-  if (!FloatDomain && MaskVT.is128BitVector() && Subtarget.hasSSE41()) {
+  // TODO: Add 512-bit vector support (split AVX512F and AVX512BW).
+  if (!FloatDomain && ((MaskVT.is128BitVector() && Subtarget.hasSSE41()) ||
+                       (MaskVT.is256BitVector() && Subtarget.hasInt256()))) {
     unsigned MaxScale = 64 / MaskEltSize;
     for (unsigned Scale = 2; Scale <= MaxScale; Scale *= 2) {
       bool Match = true;
@@ -26291,7 +26293,10 @@ static bool matchUnaryVectorShuffle(MVT MaskVT, ArrayRef<int> Mask,
         Match &= isUndefOrZeroInRange(Mask, (i * Scale) + 1, Scale - 1);
       }
       if (Match) {
-        SrcVT = MaskVT;
+        unsigned SrcSize = std::max(128u, NumDstElts * MaskEltSize);
+        SrcVT = MVT::getVectorVT(MaskVT.getScalarType(), SrcSize / MaskEltSize);
+        if (SrcVT != MaskVT)
+          V1 = extractSubVector(V1, 0, DAG, DL, SrcSize);
         DstVT = MVT::getIntegerVT(Scale * MaskEltSize);
         DstVT = MVT::getVectorVT(DstVT, NumDstElts);
         Shuffle = X86ISD::VZEXT;
@@ -26908,8 +26913,8 @@ static bool combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
       }
     }
 
-    if (matchUnaryVectorShuffle(MaskVT, Mask, FloatDomain, Subtarget, Shuffle,
-                                ShuffleSrcVT, ShuffleVT)) {
+    if (matchUnaryVectorShuffle(MaskVT, Mask, FloatDomain, V1, DL, DAG,
+                                Subtarget, Shuffle, ShuffleSrcVT, ShuffleVT)) {
       if (Depth == 1 && Root.getOpcode() == Shuffle)
         return false; // Nothing to do!
       if (IsEVEXShuffle && (NumRootElts != ShuffleVT.getVectorNumElements()))
