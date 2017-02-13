@@ -864,7 +864,7 @@ static void LoadCoreMediaFormatters(TypeCategoryImplSP objc_category_sp) {
 }
 
 lldb::TypeCategoryImplSP ObjCLanguage::GetFormatters() {
-  static llvm::once_flag g_initialize;
+  static std::once_flag g_initialize;
   static TypeCategoryImplSP g_category;
 
   llvm::call_once(g_initialize, [this]() -> void {

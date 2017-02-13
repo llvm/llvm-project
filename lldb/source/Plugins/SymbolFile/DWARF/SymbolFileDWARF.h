@@ -317,7 +317,7 @@ protected:
   typedef llvm::DenseMap<lldb::opaque_compiler_type_t, DIERef> ClangTypeToDIE;
 
   struct DWARFDataSegment {
-    llvm::once_flag m_flag;
+    std::once_flag m_flag;
     lldb_private::DWARFDataExtractor m_data;
   };
 

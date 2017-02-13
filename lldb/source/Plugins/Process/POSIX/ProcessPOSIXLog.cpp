@@ -35,7 +35,7 @@ static Log *GetLog() {
 }
 
 void ProcessPOSIXLog::Initialize(ConstString name) {
-  static llvm::once_flag g_once_flag;
+  static std::once_flag g_once_flag;
 
   llvm::call_once(g_once_flag, [name]() {
     Log::Callbacks log_callbacks = {DisableLog, EnableLog, ListLogCategories};

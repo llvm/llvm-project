@@ -1311,7 +1311,7 @@ static FileSpec CheckPathForXcode(const FileSpec &fspec) {
 
 static FileSpec GetXcodeContentsPath() {
   static FileSpec g_xcode_filespec;
-  static llvm::once_flag g_once_flag;
+  static std::once_flag g_once_flag;
   llvm::call_once(g_once_flag, []() {
 
     FileSpec fspec;
@@ -1694,7 +1694,7 @@ lldb_private::FileSpec PlatformDarwin::LocateExecutable(const char *basename) {
 
   // Find the global list of directories that we will search for
   // executables once so we don't keep doing the work over and over.
-  static llvm::once_flag g_once_flag;
+  static std::once_flag g_once_flag;
   llvm::call_once(g_once_flag, []() {
 
     // When locating executables, trust the DEVELOPER_DIR first if it is set

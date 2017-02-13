@@ -82,7 +82,7 @@ void HostInfoBase::Terminate() {
 }
 
 uint32_t HostInfoBase::GetNumberCPUS() {
-  static llvm::once_flag g_once_flag;
+  static std::once_flag g_once_flag;
   llvm::call_once(g_once_flag, []() {
     g_fields->m_number_cpus = std::thread::hardware_concurrency();
   });
@@ -92,7 +92,7 @@ uint32_t HostInfoBase::GetNumberCPUS() {
 uint32_t HostInfoBase::GetMaxThreadNameLength() { return 0; }
 
 llvm::StringRef HostInfoBase::GetVendorString() {
-  static llvm::once_flag g_once_flag;
+  static std::once_flag g_once_flag;
   llvm::call_once(g_once_flag, []() {
     g_fields->m_vendor_string =
         HostInfo::GetArchitecture().GetTriple().getVendorName().str();
@@ -101,7 +101,7 @@ llvm::StringRef HostInfoBase::GetVendorString() {
 }
 
 llvm::StringRef HostInfoBase::GetOSString() {
-  static llvm::once_flag g_once_flag;
+  static std::once_flag g_once_flag;
   llvm::call_once(g_once_flag, []() {
     g_fields->m_os_string =
         std::move(HostInfo::GetArchitecture().GetTriple().getOSName());
@@ -110,7 +110,7 @@ llvm::StringRef HostInfoBase::GetOSString() {
 }
 
 llvm::StringRef HostInfoBase::GetTargetTriple() {
-  static llvm::once_flag g_once_flag;
+  static std::once_flag g_once_flag;
   llvm::call_once(g_once_flag, []() {
     g_fields->m_host_triple =
         HostInfo::GetArchitecture().GetTriple().getTriple();
@@ -119,7 +119,7 @@ llvm::StringRef HostInfoBase::GetTargetTriple() {
 }
 
 const ArchSpec &HostInfoBase::GetArchitecture(ArchitectureKind arch_kind) {
-  static llvm::once_flag g_once_flag;
+  static std::once_flag g_once_flag;
   llvm::call_once(g_once_flag, []() {
     HostInfo::ComputeHostArchitectureSupport(g_fields->m_host_arch_32,
                                              g_fields->m_host_arch_64);
@@ -147,7 +147,7 @@ bool HostInfoBase::GetLLDBPath(lldb::PathType type, FileSpec &file_spec) {
   FileSpec *result = nullptr;
   switch (type) {
   case lldb::ePathTypeLLDBShlibDir: {
-    static llvm::once_flag g_once_flag;
+    static std::once_flag g_once_flag;
     static bool success = false;
     llvm::call_once(g_once_flag, []() {
       success =
@@ -161,7 +161,7 @@ bool HostInfoBase::GetLLDBPath(lldb::PathType type, FileSpec &file_spec) {
       result = &g_fields->m_lldb_so_dir;
   } break;
   case lldb::ePathTypeSupportExecutableDir: {
-    static llvm::once_flag g_once_flag;
+    static std::once_flag g_once_flag;
     static bool success = false;
     llvm::call_once(g_once_flag, []() {
       success = HostInfo::ComputeSupportExeDirectory(
@@ -191,7 +191,7 @@ bool HostInfoBase::GetLLDBPath(lldb::PathType type, FileSpec &file_spec) {
       result = &g_fields->m_lldb_support_file_dir;
   } break;
   case lldb::ePathTypeHeaderDir: {
-    static llvm::once_flag g_once_flag;
+    static std::once_flag g_once_flag;
     static bool success = false;
     llvm::call_once(g_once_flag, []() {
       success = HostInfo::ComputeHeaderDirectory(g_fields->m_lldb_headers_dir);
@@ -204,7 +204,7 @@ bool HostInfoBase::GetLLDBPath(lldb::PathType type, FileSpec &file_spec) {
       result = &g_fields->m_lldb_headers_dir;
   } break;
   case lldb::ePathTypePythonDir: {
-    static llvm::once_flag g_once_flag;
+    static std::once_flag g_once_flag;
     static bool success = false;
     llvm::call_once(g_once_flag, []() {
       success = HostInfo::ComputePythonDirectory(g_fields->m_lldb_python_dir);
@@ -217,7 +217,7 @@ bool HostInfoBase::GetLLDBPath(lldb::PathType type, FileSpec &file_spec) {
       result = &g_fields->m_lldb_python_dir;
   } break;
   case lldb::ePathTypeClangDir: {
-    static llvm::once_flag g_once_flag;
+    static std::once_flag g_once_flag;
     static bool success = false;
     llvm::call_once(g_once_flag, []() {
       success =
@@ -247,7 +247,7 @@ bool HostInfoBase::GetLLDBPath(lldb::PathType type, FileSpec &file_spec) {
       result = &g_fields->m_lldb_swift_resource_dir;
   } break;
   case lldb::ePathTypeLLDBSystemPlugins: {
-    static llvm::once_flag g_once_flag;
+    static std::once_flag g_once_flag;
     static bool success = false;
     llvm::call_once(g_once_flag, []() {
       success = HostInfo::ComputeSystemPluginsDirectory(
@@ -262,7 +262,7 @@ bool HostInfoBase::GetLLDBPath(lldb::PathType type, FileSpec &file_spec) {
       result = &g_fields->m_lldb_system_plugin_dir;
   } break;
   case lldb::ePathTypeLLDBUserPlugins: {
-    static llvm::once_flag g_once_flag;
+    static std::once_flag g_once_flag;
     static bool success = false;
     llvm::call_once(g_once_flag, []() {
       success = HostInfo::ComputeUserPluginsDirectory(
@@ -277,7 +277,7 @@ bool HostInfoBase::GetLLDBPath(lldb::PathType type, FileSpec &file_spec) {
       result = &g_fields->m_lldb_user_plugin_dir;
   } break;
   case lldb::ePathTypeLLDBTempSystemDir: {
-    static llvm::once_flag g_once_flag;
+    static std::once_flag g_once_flag;
     static bool success = false;
     llvm::call_once(g_once_flag, []() {
       success = HostInfo::ComputeProcessTempFileDirectory(
@@ -292,7 +292,7 @@ bool HostInfoBase::GetLLDBPath(lldb::PathType type, FileSpec &file_spec) {
       result = &g_fields->m_lldb_process_tmp_dir;
   } break;
   case lldb::ePathTypeGlobalLLDBTempSystemDir: {
-    static llvm::once_flag g_once_flag;
+    static std::once_flag g_once_flag;
     static bool success = false;
     llvm::call_once(g_once_flag, []() {
       success = HostInfo::ComputeGlobalTempFileDirectory(

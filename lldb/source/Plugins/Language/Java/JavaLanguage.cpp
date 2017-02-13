@@ -65,7 +65,7 @@ bool JavaLanguage::IsNilReference(ValueObject &valobj) {
 }
 
 lldb::TypeCategoryImplSP JavaLanguage::GetFormatters() {
-  static llvm::once_flag g_initialize;
+  static std::once_flag g_initialize;
   static TypeCategoryImplSP g_category;
 
   llvm::call_once(g_initialize, [this]() -> void {

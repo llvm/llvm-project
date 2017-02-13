@@ -125,7 +125,7 @@ bool ValueObjectDynamicValue::UpdateValue() {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
 
   Log *verbose_log(
-      GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES | LIBLLDB_LOG_VERBOSE));
+      GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
 
   SetValueIsValid(false);
   m_error.Clear();

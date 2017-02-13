@@ -26,7 +26,7 @@ using namespace lldb_private;
 static bool g_log_enabled = false;
 static Log *g_log = nullptr;
 
-static llvm::ManagedStatic<llvm::once_flag> g_once_flag;
+static llvm::ManagedStatic<std::once_flag> g_once_flag;
 
 void ProcessWindowsLog::Initialize() {
   static ConstString g_name("windows");
