@@ -17,6 +17,7 @@
 #include <dlfcn.h>
 #include <pthread.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 struct MyObject;
 typedef MyObject *MyObjectRef;
