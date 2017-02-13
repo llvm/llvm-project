@@ -330,6 +330,10 @@ public:
   /// \brief Vectorize the tree that starts with the elements in \p VL.
   /// Returns the vectorized root.
   Value *vectorizeTree();
+  /// Vectorize the tree but with the list of externally used values \p
+  /// ExternallyUsedValues. Values in this MapVector can be replaced but the
+  /// generated extractvalue instructions.
+  Value *vectorizeTree(MapVector<Value *, DebugLoc> &ExternallyUsedValues);
 
   /// \returns the cost incurred by unwanted spills and fills, caused by
   /// holding live values over call sites.
@@ -342,6 +346,13 @@ public:
   /// Construct a vectorizable tree that starts at \p Roots, ignoring users for
   /// the purpose of scheduling and extraction in the \p UserIgnoreLst.
   void buildTree(ArrayRef<Value *> Roots,
+                 ArrayRef<Value *> UserIgnoreLst = None);
+  /// Construct a vectorizable tree that starts at \p Roots, ignoring users for
+  /// the purpose of scheduling and extraction in the \p UserIgnoreLst taking
+  /// into account (anf updating it, if required) list of externally used
+  /// values stored in \p ExternallyUsedValues.
+  void buildTree(ArrayRef<Value *> Roots,
+                 MapVector<Value *, DebugLoc> &ExternallyUsedValues,
                  ArrayRef<Value *> UserIgnoreLst = None);
 
   /// Clear the internal data structures that are created by 'buildTree'.
@@ -576,7 +587,9 @@ private:
   SmallVector<std::unique_ptr<Instruction>, 8> DeletedInstructions;
 
   /// A list of values that need to extracted out of the tree.
-  /// This list holds pairs of (Internal Scalar : External User).
+  /// This list holds pairs of (Internal Scalar : External User). External User
+  /// can be nullptr, it means that this Internal Scalar will be used later,
+  /// after vectorization.
   UserList ExternalUses;
 
   /// Values used only by @llvm.assume calls.
@@ -940,6 +953,12 @@ private:
 
 void BoUpSLP::buildTree(ArrayRef<Value *> Roots,
                         ArrayRef<Value *> UserIgnoreLst) {
+  MapVector<Value *, DebugLoc> ExternallyUsedValues;
+  buildTree(Roots, ExternallyUsedValues, UserIgnoreLst);
+}
+void BoUpSLP::buildTree(ArrayRef<Value *> Roots,
+                        MapVector<Value *, DebugLoc> &ExternallyUsedValues,
+                        ArrayRef<Value *> UserIgnoreLst) {
   deleteTree();
   UserIgnoreList = UserIgnoreLst;
   if (!allSameType(Roots))
@@ -958,6 +977,14 @@ void BoUpSLP::buildTree(ArrayRef<Value *> Roots,
       if (Entry->NeedToGather)
         continue;
 
+      // Check if the scalar is externally used as an extra arg.
+      auto ExtI = ExternallyUsedValues.find(Scalar);
+      if (ExtI != ExternallyUsedValues.end()) {
+        DEBUG(dbgs() << "SLP: Need to extract: Extra arg from lane " <<
+              Lane << " from " << *Scalar << ".\n");
+        ExternalUses.emplace_back(Scalar, nullptr, Lane);
+        continue;
+      }
       for (User *U : Scalar->users()) {
         DEBUG(dbgs() << "SLP: Checking user:" << *U << ".\n");
 
@@ -2768,6 +2795,12 @@ Value *BoUpSLP::vectorizeTree(ArrayRef<Value *> VL, TreeEntry *E) {
 }
 
 Value *BoUpSLP::vectorizeTree() {
+  MapVector<Value *, DebugLoc> ExternallyUsedValues;
+  return vectorizeTree(ExternallyUsedValues);
+}
+
+Value *
+BoUpSLP::vectorizeTree(MapVector<Value *, DebugLoc> &ExternallyUsedValues) {
 
   // All blocks must be scheduled before any instructions are inserted.
   for (auto &BSIter : BlocksSchedules) {
@@ -2810,7 +2843,7 @@ Value *BoUpSLP::vectorizeTree() {
 
     // Skip users that we already RAUW. This happens when one instruction
     // has multiple uses of the same value.
-    if (!is_contained(Scalar->users(), User))
+    if (User && !is_contained(Scalar->users(), User))
       continue;
     assert(ScalarToTreeEntry.count(Scalar) && "Invalid scalar");
 
@@ -2822,6 +2855,28 @@ Value *BoUpSLP::vectorizeTree() {
     assert(Vec && "Can't find vectorizable value");
 
     Value *Lane = Builder.getInt32(ExternalUse.Lane);
+    // If User == nullptr, the Scalar is used as extra arg. Generate
+    // ExtractElement instruction and update the record for this scalar in
+    // ExternallyUsedValues.
+    if (!User) {
+      assert(ExternallyUsedValues.count(Scalar) &&
+             "Scalar with nullptr as an external user must be registered in "
+             "ExternallyUsedValues map");
+      DebugLoc DL = ExternallyUsedValues[Scalar];
+      if (auto *VecI = dyn_cast<Instruction>(Vec)) {
+        Builder.SetInsertPoint(VecI->getParent(),
+                               std::next(VecI->getIterator()));
+      } else {
+        Builder.SetInsertPoint(&F->getEntryBlock().front());
+      }
+      Value *Ex = Builder.CreateExtractElement(Vec, Lane);
+      Ex = extend(ScalarRoot, Ex, Scalar->getType());
+      CSEBlocks.insert(cast<Instruction>(Scalar)->getParent());
+      ExternallyUsedValues.erase(Scalar);
+      ExternallyUsedValues[Ex] = DL;
+      continue;
+    }
+
     // Generate extracts for out-of-tree users.
     // Find the insertion point for the extractelement lane.
     if (auto *VecI = dyn_cast<Instruction>(Vec)) {
@@ -4189,6 +4244,8 @@ namespace {
 class HorizontalReduction {
   SmallVector<Value *, 16> ReductionOps;
   SmallVector<Value *, 32> ReducedVals;
+  // Use map vector to make stable output.
+  MapVector<Instruction *, Value *> ExtraArgs;
 
   BinaryOperator *ReductionRoot = nullptr;
   // After successfull horizontal reduction vectorization attempt for PHI node
@@ -4207,6 +4264,26 @@ class HorizontalReduction {
   /// Should we model this reduction as a pairwise reduction tree or a tree that
   /// splits the vector in halves and adds those halves.
   bool IsPairwiseReduction = false;
+
+  /// Checks if the ParentStackElem.first should be marked as a reduction
+  /// operation with an extra argument or as extra argument itself.
+  void markExtraArg(std::pair<Instruction *, unsigned> &ParentStackElem,
+                    Value *ExtraArg) {
+    if (ExtraArgs.count(ParentStackElem.first)) {
+      ExtraArgs[ParentStackElem.first] = nullptr;
+      // We ran into something like:
+      // ParentStackElem.first = ExtraArgs[ParentStackElem.first] + ExtraArg.
+      // The whole ParentStackElem.first should be considered as an extra value
+      // in this case.
+      // Do not perform analysis of remaining operands of ParentStackElem.first
+      // instruction, this whole instruction is an extra argument.
+      ParentStackElem.second = ParentStackElem.first->getNumOperands();
+    } else {
+      // We ran into something like:
+      // ParentStackElem.first += ... + ExtraArg + ...
+      ExtraArgs[ParentStackElem.first] = ExtraArg;
+    }
+  }
 
 public:
   HorizontalReduction() = default;
@@ -4260,8 +4337,23 @@ public:
       if (EdgeToVist == 2 || IsReducedValue) {
         if (IsReducedValue)
           ReducedVals.push_back(TreeN);
-        else
-          ReductionOps.push_back(TreeN);
+        else {
+          auto I = ExtraArgs.find(TreeN);
+          if (I != ExtraArgs.end() && !I->second) {
+            // Check if TreeN is an extra argument of its parent operation.
+            if (Stack.size() <= 1) {
+              // TreeN can't be an extra argument as it is a root reduction
+              // operation.
+              return false;
+            }
+            // Yes, TreeN is an extra argument, do not add it to a list of
+            // reduction operations.
+            // Stack[Stack.size() - 2] always points to the parent operation.
+            markExtraArg(Stack[Stack.size() - 2], TreeN);
+            ExtraArgs.erase(TreeN);
+          } else
+            ReductionOps.push_back(TreeN);
+        }
         // Retract.
         Stack.pop_back();
         continue;
@@ -4278,30 +4370,42 @@ public:
         if (I && (!ReducedValueOpcode || I->getOpcode() == ReducedValueOpcode ||
                   I->getOpcode() == ReductionOpcode)) {
           // Only handle trees in the current basic block.
-          if (I->getParent() != B->getParent())
-            return false;
+          if (I->getParent() != B->getParent()) {
+            // I is an extra argument for TreeN (its parent operation).
+            markExtraArg(Stack.back(), I);
+            continue;
+          }
 
           // Each tree node needs to have one user except for the ultimate
           // reduction.
-          if (!I->hasOneUse() && I != B)
-            return false;
+          if (!I->hasOneUse() && I != B) {
+            // I is an extra argument for TreeN (its parent operation).
+            markExtraArg(Stack.back(), I);
+            continue;
+          }
 
           if (I->getOpcode() == ReductionOpcode) {
             // We need to be able to reassociate the reduction operations.
-            if (!I->isAssociative())
-              return false;
+            if (!I->isAssociative()) {
+              // I is an extra argument for TreeN (its parent operation).
+              markExtraArg(Stack.back(), I);
+              continue;
+            }
           } else if (ReducedValueOpcode &&
                      ReducedValueOpcode != I->getOpcode()) {
             // Make sure that the opcodes of the operations that we are going to
             // reduce match.
-            return false;
+            // I is an extra argument for TreeN (its parent operation).
+            markExtraArg(Stack.back(), I);
+            continue;
           } else if (!ReducedValueOpcode)
             ReducedValueOpcode = I->getOpcode();
 
           Stack.push_back(std::make_pair(I, 0));
           continue;
         }
-        return false;
+        // NextV is an extra argument for TreeN (its parent operation).
+        markExtraArg(Stack.back(), NextV);
       }
     }
     return true;
@@ -4329,12 +4433,15 @@ public:
     Builder.setFastMathFlags(Unsafe);
     unsigned i = 0;
 
+    MapVector<Value *, DebugLoc> ExternallyUsedValues;
+    for (auto &Pair : ExtraArgs)
+      ExternallyUsedValues[Pair.second] = Pair.first->getDebugLoc();
     while (i < NumReducedVals - ReduxWidth + 1 && ReduxWidth > 2) {
       auto VL = makeArrayRef(&ReducedVals[i], ReduxWidth);
-      V.buildTree(VL, ReductionOps);
+      V.buildTree(VL, ExternallyUsedValues, ReductionOps);
       if (V.shouldReorder()) {
         SmallVector<Value *, 8> Reversed(VL.rbegin(), VL.rend());
-        V.buildTree(Reversed, ReductionOps);
+        V.buildTree(Reversed, ExternallyUsedValues, ReductionOps);
       }
       if (V.isTreeTinyAndNotFullyVectorizable())
         break;
@@ -4352,7 +4459,7 @@ public:
 
       // Vectorize a tree.
       DebugLoc Loc = cast<Instruction>(ReducedVals[i])->getDebugLoc();
-      Value *VectorizedRoot = V.vectorizeTree();
+      Value *VectorizedRoot = V.vectorizeTree(ExternallyUsedValues);
 
       // Emit a reduction.
       Value *ReducedSubTree =
@@ -4370,10 +4477,15 @@ public:
     if (VectorizedTree) {
       // Finish the reduction.
       for (; i < NumReducedVals; ++i) {
-        Builder.SetCurrentDebugLocation(
-          cast<Instruction>(ReducedVals[i])->getDebugLoc());
+        auto *I = cast<Instruction>(ReducedVals[i]);
+        Builder.SetCurrentDebugLocation(I->getDebugLoc());
+        VectorizedTree =
+            Builder.CreateBinOp(ReductionOpcode, VectorizedTree, I);
+      }
+      for (auto &Pair : ExternallyUsedValues) {
+        Builder.SetCurrentDebugLocation(Pair.second);
         VectorizedTree = Builder.CreateBinOp(ReductionOpcode, VectorizedTree,
-                                             ReducedVals[i]);
+                                             Pair.first, "bin.extra");
       }
       // Update users.
       if (ReductionPHI && !isa<UndefValue>(ReductionPHI)) {

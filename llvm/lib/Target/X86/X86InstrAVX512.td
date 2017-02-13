@@ -69,6 +69,9 @@ class X86VectorVTInfo<int numelts, ValueType eltvt, RegisterClass rc,
   // The corresponding memory operand, e.g. i512mem for VR512.
   X86MemOperand MemOp = !cast<X86MemOperand>(TypeVariantName # Size # "mem");
   X86MemOperand ScalarMemOp = !cast<X86MemOperand>(EltVT # "mem");
+  // FP scalar memory operand for intrinsics - ssmem/sdmem.
+  Operand IntScalarMemOp = !if (!eq (EltTypeName, "f32"), !cast<Operand>("ssmem"),
+                           !if (!eq (EltTypeName, "f64"), !cast<Operand>("sdmem"), ?));
 
   // Load patterns
   // Note: For 128/256-bit integer VT we choose loadv2i64/loadv4i64
@@ -484,7 +487,7 @@ multiclass vinsert_for_size<int Opcode, X86VectorVTInfo From, X86VectorVTInfo To
                                                        PatFrag vinsert_insert> {
   let ExeDomain = To.ExeDomain in {
     defm rr : AVX512_maskable<Opcode, MRMSrcReg, To, (outs To.RC:$dst),
-                   (ins To.RC:$src1, From.RC:$src2, i32u8imm:$src3),
+                   (ins To.RC:$src1, From.RC:$src2, u8imm:$src3),
                    "vinsert" # From.EltTypeName # "x" # From.NumElts,
                    "$src3, $src2, $src1", "$src1, $src2, $src3",
                    (vinsert_insert:$src3 (To.VT To.RC:$src1),
@@ -492,7 +495,7 @@ multiclass vinsert_for_size<int Opcode, X86VectorVTInfo From, X86VectorVTInfo To
                                          (iPTR imm))>, AVX512AIi8Base, EVEX_4V;
 
     defm rm : AVX512_maskable<Opcode, MRMSrcMem, To, (outs To.RC:$dst),
-                   (ins To.RC:$src1, From.MemOp:$src2, i32u8imm:$src3),
+                   (ins To.RC:$src1, From.MemOp:$src2, u8imm:$src3),
                    "vinsert" # From.EltTypeName # "x" # From.NumElts,
                    "$src3, $src2, $src1", "$src1, $src2, $src3",
                    (vinsert_insert:$src3 (To.VT To.RC:$src1),
@@ -625,14 +628,14 @@ multiclass vextract_for_size<int Opcode,
     // vextract_extract), we interesting only in patterns without mask,
     // intrinsics pattern match generated bellow.
     defm rr : AVX512_maskable_in_asm<Opcode, MRMDestReg, To, (outs To.RC:$dst),
-                (ins From.RC:$src1, i32u8imm:$idx),
+                (ins From.RC:$src1, u8imm:$idx),
                 "vextract" # To.EltTypeName # "x" # To.NumElts,
                 "$idx, $src1", "$src1, $idx",
                 [(set To.RC:$dst, (vextract_extract:$idx (From.VT From.RC:$src1),
                                                          (iPTR imm)))]>,
               AVX512AIi8Base, EVEX;
     def mr  : AVX512AIi8<Opcode, MRMDestMem, (outs),
-                    (ins To.MemOp:$dst, From.RC:$src1, i32u8imm:$idx),
+                    (ins To.MemOp:$dst, From.RC:$src1, u8imm:$idx),
                     "vextract" # To.EltTypeName # "x" # To.NumElts #
                         "\t{$idx, $src1, $dst|$dst, $src1, $idx}",
                     [(store (To.VT (vextract_extract:$idx
@@ -642,7 +645,7 @@ multiclass vextract_for_size<int Opcode,
     let mayStore = 1, hasSideEffects = 0 in
     def mrk : AVX512AIi8<Opcode, MRMDestMem, (outs),
                     (ins To.MemOp:$dst, To.KRCWM:$mask,
-                                        From.RC:$src1, i32u8imm:$idx),
+                                        From.RC:$src1, u8imm:$idx),
                      "vextract" # To.EltTypeName # "x" # To.NumElts #
                           "\t{$idx, $src1, $dst {${mask}}|"
                           "$dst {${mask}}, $src1, $idx}",
@@ -3338,13 +3341,13 @@ def : Pat<(int_x86_avx512_mask_store_ss addr:$dst, VR128X:$src, GR8:$mask),
 
 let hasSideEffects = 0 in
 defm VMOVSSZrr_REV : AVX512_maskable_in_asm<0x11, MRMDestReg, f32x_info,
-                           (outs VR128X:$dst), (ins VR128X:$src1, VR128X:$src2),
+                           (outs VR128X:$dst), (ins VR128X:$src1, FR32X:$src2),
                            "vmovss.s", "$src2, $src1", "$src1, $src2", []>,
                            XS, EVEX_4V, VEX_LIG;
 
 let hasSideEffects = 0 in
 defm VMOVSDZrr_REV : AVX512_maskable_in_asm<0x11, MRMDestReg, f64x_info,
-                           (outs VR128X:$dst), (ins VR128X:$src1, VR128X:$src2),
+                           (outs VR128X:$dst), (ins VR128X:$src1, FR64X:$src2),
                            "vmovsd.s", "$src2, $src1", "$src1, $src2", []>,
                            XD, EVEX_4V, VEX_LIG, VEX_W;
 
@@ -5924,7 +5927,7 @@ let Predicates = [HasAVX512] in {
                                     EVEX,VEX_LIG , EVEX_B;
     let mayLoad = 1, hasSideEffects = 0 in
       def rm_Int : AVX512<opc, MRMSrcMem, (outs _DstRC.RC:$dst),
-                  (ins _SrcRC.MemOp:$src),
+                  (ins _SrcRC.IntScalarMemOp:$src),
                   !strconcat(asm,"\t{$src, $dst|$dst, $src}"),
                   []>, EVEX, VEX_LIG;
 
@@ -5961,20 +5964,20 @@ defm VCVTTSD2USI64Z: avx512_cvt_s_all<0x78, "vcvttsd2usi", f64x_info, i64x_info,
 let Predicates = [HasAVX512] in {
   def : Pat<(i32 (int_x86_sse_cvttss2si (v4f32 VR128X:$src))),
             (VCVTTSS2SIZrr_Int VR128X:$src)>;
-  def : Pat<(i32 (int_x86_sse_cvttss2si (sse_load_f32 addr:$src))),
-            (VCVTTSS2SIZrm_Int addr:$src)>;
+  def : Pat<(i32 (int_x86_sse_cvttss2si sse_load_f32:$src)),
+            (VCVTTSS2SIZrm_Int ssmem:$src)>;
   def : Pat<(i64 (int_x86_sse_cvttss2si64 (v4f32 VR128X:$src))),
             (VCVTTSS2SI64Zrr_Int VR128X:$src)>;
-  def : Pat<(i64 (int_x86_sse_cvttss2si64 (sse_load_f32 addr:$src))),
-            (VCVTTSS2SI64Zrm_Int addr:$src)>;
+  def : Pat<(i64 (int_x86_sse_cvttss2si64 sse_load_f32:$src)),
+            (VCVTTSS2SI64Zrm_Int ssmem:$src)>;
   def : Pat<(i32 (int_x86_sse2_cvttsd2si (v2f64 VR128X:$src))),
             (VCVTTSD2SIZrr_Int VR128X:$src)>;
-  def : Pat<(i32 (int_x86_sse2_cvttsd2si (sse_load_f64 addr:$src))),
-            (VCVTTSD2SIZrm_Int addr:$src)>;
+  def : Pat<(i32 (int_x86_sse2_cvttsd2si sse_load_f64:$src)),
+            (VCVTTSD2SIZrm_Int sdmem:$src)>;
   def : Pat<(i64 (int_x86_sse2_cvttsd2si64 (v2f64 VR128X:$src))),
             (VCVTTSD2SI64Zrr_Int VR128X:$src)>;
-  def : Pat<(i64 (int_x86_sse2_cvttsd2si64 (sse_load_f64 addr:$src))),
-            (VCVTTSD2SI64Zrm_Int addr:$src)>;
+  def : Pat<(i64 (int_x86_sse2_cvttsd2si64 sse_load_f64:$src)),
+            (VCVTTSD2SI64Zrm_Int sdmem:$src)>;
 } // HasAVX512
 //===----------------------------------------------------------------------===//
 // AVX-512  Convert form float to double and back
@@ -6714,7 +6717,7 @@ let Predicates = [HasAVX512] in {
   let Predicates = [HasVLX] in {
     defm VCVTPS2PHZ256 : avx512_cvtps2ph<v8i16x_info, v8f32x_info, f128mem>,
                         EVEX, EVEX_V256, EVEX_CD8<32, CD8VH>;
-    defm VCVTPS2PHZ128 : avx512_cvtps2ph<v8i16x_info, v4f32x_info, f128mem>,
+    defm VCVTPS2PHZ128 : avx512_cvtps2ph<v8i16x_info, v4f32x_info, f64mem>,
                         EVEX, EVEX_V128, EVEX_CD8<32, CD8VH>;
   }
 }

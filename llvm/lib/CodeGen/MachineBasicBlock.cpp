@@ -23,6 +23,7 @@
 #include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/ModuleSlotTracker.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
@@ -423,7 +424,7 @@ void MachineBasicBlock::updateTerminator() {
 
   MachineBasicBlock *TBB = nullptr, *FBB = nullptr;
   SmallVector<MachineOperand, 4> Cond;
-  DebugLoc DL;  // FIXME: this is nowhere
+  DebugLoc DL = findBranchDebugLoc();
   bool B = TII->analyzeBranch(*this, TBB, FBB, Cond);
   (void) B;
   assert(!B && "UpdateTerminators requires analyzable predecessors!");
@@ -491,7 +492,7 @@ void MachineBasicBlock::updateTerminator() {
       // FIXME: This does not seem like a reasonable pattern to support, but it
       // has been seen in the wild coming out of degenerate ARM test cases.
       TII->removeBranch(*this);
-  
+
       // Finally update the unconditional successor to be reached via a branch if
       // it would not be reached by fallthrough.
       if (!isLayoutSuccessor(TBB))
@@ -1148,6 +1149,24 @@ MachineBasicBlock::findDebugLoc(instr_iterator MBBI) {
   if (MBBI != instr_end())
     return MBBI->getDebugLoc();
   return {};
+}
+
+/// Find and return the merged DebugLoc of the branch instructions of the block.
+/// Return UnknownLoc if there is none.
+DebugLoc
+MachineBasicBlock::findBranchDebugLoc() {
+  DebugLoc DL {};
+  auto TI = getFirstTerminator();
+  while (TI != end() && !TI->isBranch())
+    ++TI;
+
+  if (TI != end()) {
+    DL = TI->getDebugLoc();
+    for (++TI ; TI != end() ; ++TI)
+      if (TI->isBranch())
+        DL = DILocation::getMergedLocation(DL, TI->getDebugLoc());
+  }
+  return DL;
 }
 
 /// Return probability of the edge from this block to MBB.

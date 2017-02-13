@@ -3128,9 +3128,8 @@ bool RSModuleDescriptor::ParseRSInfo() {
     // in numeric fields at the moment
     uint64_t n_lines;
     if (val.getAsInteger(10, n_lines)) {
-      if (log)
-        log->Debug("Failed to parse non-numeric '.rs.info' section %s",
-                   line->str().c_str());
+      LLDB_LOGV(log, "Failed to parse non-numeric '.rs.info' section {0}",
+                line->str());
       continue;
     }
     if (info_lines.end() - (line + 1) < (ptrdiff_t)n_lines)

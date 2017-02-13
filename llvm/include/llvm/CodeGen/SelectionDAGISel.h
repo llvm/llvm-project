@@ -53,6 +53,7 @@ public:
   CodeGenOpt::Level OptLevel;
   const TargetInstrInfo *TII;
   const TargetLowering *TLI;
+  bool FastISelFailed;
 
   static char ID;
 

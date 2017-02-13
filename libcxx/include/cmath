@@ -398,7 +398,7 @@ using ::cbrtf;
 using ::copysign;
 using ::copysignf;
 
-#ifndef _LIBCPP_MSVCRT
+#if !defined(_LIBCPP_MSVCRT) || ((_VC_CRT_NAJOR_VERSION-0) >= 14)
 using ::erf;
 using ::erff;
 using ::erfc;

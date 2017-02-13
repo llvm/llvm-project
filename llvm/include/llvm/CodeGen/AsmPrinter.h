@@ -141,7 +141,7 @@ private:
 public:
   struct SrcMgrDiagInfo {
     SourceMgr SrcMgr;
-    const MDNode *LocInfo;
+    std::vector<const MDNode *> LocInfos;
     LLVMContext::InlineAsmDiagHandlerTy DiagHandler;
     void *DiagContext;
   };

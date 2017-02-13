@@ -1,4 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -Wformat-nonliteral -Wformat-non-iso -fblocks %s
+// RUN: %clang_cc1 -fsyntax-only -verify -Wformat-nonliteral -Wformat-non-iso -fblocks -std=c++98 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -Wformat-nonliteral -Wformat-non-iso -fblocks -std=c++11 %s
 
 #include <stdarg.h>
 
@@ -9,9 +11,13 @@ extern int vprintf(const char *restrict, va_list);
 }
 
 void f(char **sp, float *fp) {
-  scanf("%as", sp); // expected-warning{{'a' length modifier is not supported by ISO C}}
+  scanf("%as", sp);
+#if __cplusplus <= 199711L
+  // expected-warning@-2 {{'a' length modifier is not supported by ISO C}}
+#else
+  // expected-warning@-4 {{format specifies type 'float *' but the argument has type 'char **'}}
+#endif
 
-  // TODO: Warn that the 'a' conversion specifier is a C++11 feature.
   printf("%a", 1.0);
   scanf("%afoobar", fp);
 }
@@ -46,11 +52,19 @@ void h(int *i) {
 // Test handling __null for format string literal checking.
 extern "C" {
   int test_null_format(const char *format, ...) __attribute__((__format__ (__printf__, 1, 2)));
+#if __cplusplus >= 201103L
+  // expected-note@-2 {{candidate function not viable: no known conversion from 'bool' to 'const char *' for 1st argument}}
+#endif
 }
 
 void rdar8269537(const char *f)
 {
-  test_null_format(false); // expected-warning {{null from a constant boolean}}
+  test_null_format(false);
+#if __cplusplus <= 199711L
+  // expected-warning@-2 {{null from a constant boolean}}
+#else
+  // expected-error@-4 {{no matching function for call to 'test_null_format'}}
+#endif
   test_null_format(0); // no-warning
   test_null_format(__null); // no-warning
   test_null_format(f); // expected-warning {{not a string literal}}

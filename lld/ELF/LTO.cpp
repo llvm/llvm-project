@@ -81,6 +81,10 @@ static std::unique_ptr<lto::LTO> createLTO() {
   Conf.OptPipeline = Config->LTONewPmPasses;
   Conf.AAPipeline = Config->LTOAAPipeline;
 
+  // Set up optimization remarks if we've been asked to.
+  Conf.RemarksFilename = Config->OptRemarksFilename;
+  Conf.RemarksWithHotness = Config->OptRemarksWithHotness;
+
   if (Config->SaveTemps)
     checkError(Conf.addSaveTemps(std::string(Config->OutputFile) + ".",
                                  /*UseInputModulePath*/ true));
