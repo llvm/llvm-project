@@ -69,8 +69,10 @@ add_lldb_library(lldbTarget
     lldbSymbol
     lldbUtility
     lldbPluginExpressionParserClang
+    lldbPluginExpressionParserSwift
     lldbPluginCPlusPlusLanguage
     lldbPluginObjCLanguage
+    lldbPluginSwiftLanguage
     lldbPluginProcessUtility
 
   LINK_COMPONENTS

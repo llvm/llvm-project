@@ -9,17 +9,23 @@ if ( CMAKE_SYSTEM_NAME MATCHES "Windows" )
 endif ()
 
 set(SWIFT_ALL_LIBS
-  swiftBasic
-  swiftAST
-  swiftIDE
-  swiftFrontend
-  swiftSerialization
-  swiftClangImporter
-  swiftParse
-  swiftSIL
-  swiftSILOptimizer
-  swiftASTSectionImporter
-  swiftRemoteAST
+    swiftBasic
+    swiftAST
+    swiftIDE
+    swiftIRGen
+    swiftFrontend
+    swiftSerialization
+    swiftClangImporter
+    swiftMarkup
+    swiftParse
+    swiftSema
+    swiftSIL
+    swiftSILGen
+    swiftSILOptimizer
+    swiftASTSectionImporter
+    swiftRemoteAST
+    swiftLLVMPasses
+    swiftOption
   )
 
 if (NOT LLDB_DISABLE_LIBEDIT)

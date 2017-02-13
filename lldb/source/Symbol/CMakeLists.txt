@@ -40,6 +40,7 @@ add_lldb_library(lldbSymbol
   VerifyDecl.cpp
 
   LINK_LIBS
+    swiftBasic
     clangAST
     clangBasic
     clangFrontend
@@ -51,6 +52,7 @@ add_lldb_library(lldbSymbol
     lldbUtility
     lldbPluginExpressionParserClang
     lldbPluginExpressionParserGo
+    lldbPluginExpressionParserSwift
     lldbPluginSymbolFileDWARF
     lldbPluginSymbolFilePDB
     lldbPluginObjectContainerBSDArchive

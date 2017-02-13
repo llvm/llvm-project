@@ -13,5 +13,19 @@ add_lldb_library(lldbPluginSwiftLanguage
   SwiftOptionSet.cpp
   SwiftOptional.cpp
   SwiftSet.cpp
+
+  LINK_LIBS
+    lldbCore
+    lldbDataFormatters
+    lldbSymbol
+    lldbTarget
+    lldbUtility
+    lldbPluginObjCLanguage
+    swiftAST
+    swiftClangImporter
+    clangAST
+
+  LINK_COMPONENTS
+    Support
 )
 
