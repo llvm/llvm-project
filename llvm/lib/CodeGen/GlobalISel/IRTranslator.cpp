@@ -271,10 +271,6 @@ bool IRTranslator::translateIndirectBr(const User &U,
 bool IRTranslator::translateLoad(const User &U, MachineIRBuilder &MIRBuilder) {
   const LoadInst &LI = cast<LoadInst>(U);
 
-  if (!TPC->isGlobalISelAbortEnabled() && LI.isAtomic())
-    return false;
-
-  assert(!LI.isAtomic() && "only non-atomic loads are supported at the moment");
   auto Flags = LI.isVolatile() ? MachineMemOperand::MOVolatile
                                : MachineMemOperand::MONone;
   Flags |= MachineMemOperand::MOLoad;
@@ -286,17 +282,13 @@ bool IRTranslator::translateLoad(const User &U, MachineIRBuilder &MIRBuilder) {
       Res, Addr,
       *MF->getMachineMemOperand(MachinePointerInfo(LI.getPointerOperand()),
                                 Flags, DL->getTypeStoreSize(LI.getType()),
-                                getMemOpAlignment(LI)));
+                                getMemOpAlignment(LI), AAMDNodes(), nullptr,
+                                LI.getSynchScope(), LI.getOrdering()));
   return true;
 }
 
 bool IRTranslator::translateStore(const User &U, MachineIRBuilder &MIRBuilder) {
   const StoreInst &SI = cast<StoreInst>(U);
-
-  if (!TPC->isGlobalISelAbortEnabled() && SI.isAtomic())
-    return false;
-
-  assert(!SI.isAtomic() && "only non-atomic stores supported at the moment");
   auto Flags = SI.isVolatile() ? MachineMemOperand::MOVolatile
                                : MachineMemOperand::MONone;
   Flags |= MachineMemOperand::MOStore;
@@ -311,7 +303,8 @@ bool IRTranslator::translateStore(const User &U, MachineIRBuilder &MIRBuilder) {
       *MF->getMachineMemOperand(
           MachinePointerInfo(SI.getPointerOperand()), Flags,
           DL->getTypeStoreSize(SI.getValueOperand()->getType()),
-          getMemOpAlignment(SI)));
+          getMemOpAlignment(SI), AAMDNodes(), nullptr, SI.getSynchScope(),
+          SI.getOrdering()));
   return true;
 }
 
