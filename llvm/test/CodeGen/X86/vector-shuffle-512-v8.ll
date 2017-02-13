@@ -48,6 +48,24 @@ define <8 x double> @shuffle_v8f64_44444444(<8 x double> %a, <8 x double> %b) {
   ret <8 x double> %shuffle
 }
 
+define <8 x double> @shuffle_v8f64_44444444_bc(<8 x i64> %a, <8 x i64> %b) {
+; AVX512F-LABEL: shuffle_v8f64_44444444_bc:
+; AVX512F:       # BB#0:
+; AVX512F-NEXT:    vextracti32x4 $2, %zmm0, %xmm0
+; AVX512F-NEXT:    vpbroadcastq %xmm0, %zmm0
+; AVX512F-NEXT:    retq
+;
+; AVX512F-32-LABEL: shuffle_v8f64_44444444_bc:
+; AVX512F-32:       # BB#0:
+; AVX512F-32-NEXT:    vextracti32x4 $2, %zmm0, %xmm0
+; AVX512F-32-NEXT:    vpbroadcastq %xmm0, %zmm0
+; AVX512F-32-NEXT:    retl
+  %tmp0 = bitcast <8 x i64> %a to <8 x double>
+  %tmp1 = bitcast <8 x i64> %b to <8 x double>
+  %shuffle = shufflevector <8 x double> %tmp0, <8 x double> %tmp1, <8 x i32> <i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4>
+  ret <8 x double> %shuffle
+}
+
 define <8 x double> @shuffle_v8f64_00000010(<8 x double> %a, <8 x double> %b) {
 ; AVX512F-LABEL: shuffle_v8f64_00000010:
 ; AVX512F:       # BB#0:
