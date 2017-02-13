@@ -1,4 +1,3 @@
-; XFAIL: *
 ; RUN: opt -newgvn -S < %s | FileCheck %s
 
 declare void @use(i1)

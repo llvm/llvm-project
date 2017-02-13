@@ -571,7 +571,7 @@ const Expression *NewGVN::createExpression(Instruction *I) {
     // numbers.  Since all commutative instructions have two operands it is more
     // efficient to sort by hand rather than using, say, std::sort.
     assert(I->getNumOperands() == 2 && "Unsupported commutative instruction!");
-    if (E->getOperand(0) > E->getOperand(1))
+    if (shouldSwapOperands(E->getOperand(0), E->getOperand(1)))
       E->swapOperands(0, 1);
   }
 
@@ -2059,31 +2059,34 @@ void NewGVN::convertDenseToLoadsAndStores(
 }
 
 static void patchReplacementInstruction(Instruction *I, Value *Repl) {
+  auto *ReplInst = dyn_cast<Instruction>(Repl);
+  if (!ReplInst)
+    return;
+
   // Patch the replacement so that it is not more restrictive than the value
   // being replaced.
-  auto *Op = dyn_cast<BinaryOperator>(I);
-  auto *ReplOp = dyn_cast<BinaryOperator>(Repl);
+  // Note that if 'I' is a load being replaced by some operation,
+  // for example, by an arithmetic operation, then andIRFlags()
+  // would just erase all math flags from the original arithmetic
+  // operation, which is clearly not wanted and not needed.
+  if (!isa<LoadInst>(I))
+    ReplInst->andIRFlags(I);
 
-  if (Op && ReplOp)
-    ReplOp->andIRFlags(Op);
+  // FIXME: If both the original and replacement value are part of the
+  // same control-flow region (meaning that the execution of one
+  // guarantees the execution of the other), then we can combine the
+  // noalias scopes here and do better than the general conservative
+  // answer used in combineMetadata().
 
-  if (auto *ReplInst = dyn_cast<Instruction>(Repl)) {
-    // FIXME: If both the original and replacement value are part of the
-    // same control-flow region (meaning that the execution of one
-    // guarentees the executation of the other), then we can combine the
-    // noalias scopes here and do better than the general conservative
-    // answer used in combineMetadata().
-
-    // In general, GVN unifies expressions over different control-flow
-    // regions, and so we need a conservative combination of the noalias
-    // scopes.
-    unsigned KnownIDs[] = {
-        LLVMContext::MD_tbaa,           LLVMContext::MD_alias_scope,
-        LLVMContext::MD_noalias,        LLVMContext::MD_range,
-        LLVMContext::MD_fpmath,         LLVMContext::MD_invariant_load,
-        LLVMContext::MD_invariant_group};
-    combineMetadata(ReplInst, I, KnownIDs);
-  }
+  // In general, GVN unifies expressions over different control-flow
+  // regions, and so we need a conservative combination of the noalias
+  // scopes.
+  static const unsigned KnownIDs[] = {
+      LLVMContext::MD_tbaa,           LLVMContext::MD_alias_scope,
+      LLVMContext::MD_noalias,        LLVMContext::MD_range,
+      LLVMContext::MD_fpmath,         LLVMContext::MD_invariant_load,
+      LLVMContext::MD_invariant_group};
+  combineMetadata(ReplInst, I, KnownIDs);
 }
 
 static void patchAndReplaceAllUsesWith(Instruction *I, Value *Repl) {
@@ -2217,7 +2220,7 @@ bool NewGVN::eliminateInstructions(Function &F) {
     }
   }
 
-  for (CongruenceClass *CC : CongruenceClasses) {
+  for (CongruenceClass *CC : reverse(CongruenceClasses)) {
     // Track the equivalent store info so we can decide whether to try
     // dead store elimination.
     SmallVector<ValueDFS, 8> PossibleDeadStores;
