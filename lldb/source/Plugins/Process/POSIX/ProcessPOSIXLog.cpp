@@ -184,15 +184,4 @@ void ProcessPOSIXLog::ListLogCategories(Stream *strm) {
       ProcessPOSIXLog::m_pluginname);
 }
 
-void ProcessPOSIXLog::LogIf(uint32_t mask, const char *format, ...) {
-  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(mask));
-  if (log) {
-    va_list args;
-    va_start(args, format);
-    log->VAPrintf(format, args);
-    va_end(args);
-  }
-}
-
-int ProcessPOSIXLog::m_nestinglevel;
 const char *ProcessPOSIXLog::m_pluginname = "";

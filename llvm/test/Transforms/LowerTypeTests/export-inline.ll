@@ -27,7 +27,9 @@
 ; SUMMARY-NEXT:     TTRes:
 ; SUMMARY-NEXT:       Kind:            Inline
 ; SUMMARY-NEXT:       SizeM1BitWidth:  5
+; SUMMARY-NEXT:     WPDRes:
 ; SUMMARY-NEXT:   typeid2:
 ; SUMMARY-NEXT:     TTRes:
 ; SUMMARY-NEXT:       Kind:            Inline
 ; SUMMARY-NEXT:       SizeM1BitWidth:  6
+; SUMMARY-NEXT:     WPDRes:

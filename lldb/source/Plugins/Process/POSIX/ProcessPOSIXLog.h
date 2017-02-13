@@ -40,7 +40,6 @@
 #define POSIX_LOG_MEMORY_SHORT_BYTES (4 * sizeof(ptrdiff_t))
 
 class ProcessPOSIXLog {
-  static int m_nestinglevel;
   static const char *m_pluginname;
 
 public:
@@ -68,35 +67,6 @@ public:
             lldb_private::Stream *feedback_strm);
 
   static void ListLogCategories(lldb_private::Stream *strm);
-
-  static void LogIf(uint32_t mask, const char *format, ...);
-
-  // The following functions can be used to enable the client to limit
-  // logging to only the top level function calls.  This is useful for
-  // recursive functions.  FIXME: not thread safe!
-  //     Example:
-  //     void NestingFunc() {
-  //         LogSP log
-  //         (ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_ALL));
-  //         if (log)
-  //         {
-  //             ProcessPOSIXLog::IncNestLevel();
-  //             if (ProcessPOSIXLog::AtTopNestLevel())
-  //                 log->Print(msg);
-  //         }
-  //         NestingFunc();
-  //         if (log)
-  //             ProcessPOSIXLog::DecNestLevel();
-  //     }
-
-  static bool AtTopNestLevel() { return m_nestinglevel == 1; }
-
-  static void IncNestLevel() { ++m_nestinglevel; }
-
-  static void DecNestLevel() {
-    --m_nestinglevel;
-    assert(m_nestinglevel >= 0);
-  }
 };
 
 #endif // liblldb_ProcessPOSIXLog_h_

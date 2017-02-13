@@ -613,8 +613,8 @@ define <32 x i8> @test_bitreverse_v32i8(<32 x i8> %a) nounwind {
 ; AVX1-LABEL: test_bitreverse_v32i8:
 ; AVX1:       # BB#0:
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX1-NEXT:    vmovaps {{.*#+}} xmm2 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
-; AVX1-NEXT:    vandps %xmm2, %xmm1, %xmm3
+; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
+; AVX1-NEXT:    vpand %xmm2, %xmm1, %xmm3
 ; AVX1-NEXT:    vmovdqa {{.*#+}} xmm4 = [0,128,64,192,32,160,96,224,16,144,80,208,48,176,112,240]
 ; AVX1-NEXT:    vpshufb %xmm3, %xmm4, %xmm3
 ; AVX1-NEXT:    vpsrlw $4, %xmm1, %xmm1
@@ -622,7 +622,7 @@ define <32 x i8> @test_bitreverse_v32i8(<32 x i8> %a) nounwind {
 ; AVX1-NEXT:    vmovdqa {{.*#+}} xmm5 = [0,8,4,12,2,10,6,14,1,9,5,13,3,11,7,15]
 ; AVX1-NEXT:    vpshufb %xmm1, %xmm5, %xmm1
 ; AVX1-NEXT:    vpor %xmm1, %xmm3, %xmm1
-; AVX1-NEXT:    vandps %xmm2, %xmm0, %xmm3
+; AVX1-NEXT:    vpand %xmm2, %xmm0, %xmm3
 ; AVX1-NEXT:    vpshufb %xmm3, %xmm4, %xmm3
 ; AVX1-NEXT:    vpsrlw $4, %xmm0, %xmm0
 ; AVX1-NEXT:    vpand %xmm2, %xmm0, %xmm0
@@ -1361,8 +1361,8 @@ define <64 x i8> @test_bitreverse_v64i8(<64 x i8> %a) nounwind {
 ; AVX1-LABEL: test_bitreverse_v64i8:
 ; AVX1:       # BB#0:
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; AVX1-NEXT:    vmovaps {{.*#+}} xmm3 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
-; AVX1-NEXT:    vandps %xmm3, %xmm2, %xmm4
+; AVX1-NEXT:    vmovdqa {{.*#+}} xmm3 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
+; AVX1-NEXT:    vpand %xmm3, %xmm2, %xmm4
 ; AVX1-NEXT:    vmovdqa {{.*#+}} xmm5 = [0,128,64,192,32,160,96,224,16,144,80,208,48,176,112,240]
 ; AVX1-NEXT:    vpshufb %xmm4, %xmm5, %xmm4
 ; AVX1-NEXT:    vpsrlw $4, %xmm2, %xmm2
@@ -1370,7 +1370,7 @@ define <64 x i8> @test_bitreverse_v64i8(<64 x i8> %a) nounwind {
 ; AVX1-NEXT:    vmovdqa {{.*#+}} xmm6 = [0,8,4,12,2,10,6,14,1,9,5,13,3,11,7,15]
 ; AVX1-NEXT:    vpshufb %xmm2, %xmm6, %xmm2
 ; AVX1-NEXT:    vpor %xmm2, %xmm4, %xmm2
-; AVX1-NEXT:    vandps %xmm3, %xmm0, %xmm4
+; AVX1-NEXT:    vpand %xmm3, %xmm0, %xmm4
 ; AVX1-NEXT:    vpshufb %xmm4, %xmm5, %xmm4
 ; AVX1-NEXT:    vpsrlw $4, %xmm0, %xmm0
 ; AVX1-NEXT:    vpand %xmm3, %xmm0, %xmm0
@@ -1378,13 +1378,13 @@ define <64 x i8> @test_bitreverse_v64i8(<64 x i8> %a) nounwind {
 ; AVX1-NEXT:    vpor %xmm0, %xmm4, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; AVX1-NEXT:    vandps %xmm3, %xmm2, %xmm4
+; AVX1-NEXT:    vpand %xmm3, %xmm2, %xmm4
 ; AVX1-NEXT:    vpshufb %xmm4, %xmm5, %xmm4
 ; AVX1-NEXT:    vpsrlw $4, %xmm2, %xmm2
 ; AVX1-NEXT:    vpand %xmm3, %xmm2, %xmm2
 ; AVX1-NEXT:    vpshufb %xmm2, %xmm6, %xmm2
 ; AVX1-NEXT:    vpor %xmm2, %xmm4, %xmm2
-; AVX1-NEXT:    vandps %xmm3, %xmm1, %xmm4
+; AVX1-NEXT:    vpand %xmm3, %xmm1, %xmm4
 ; AVX1-NEXT:    vpshufb %xmm4, %xmm5, %xmm4
 ; AVX1-NEXT:    vpsrlw $4, %xmm1, %xmm1
 ; AVX1-NEXT:    vpand %xmm3, %xmm1, %xmm1

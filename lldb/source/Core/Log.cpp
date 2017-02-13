@@ -85,20 +85,6 @@ void Log::VAPrintf(const char *format, va_list args) {
 }
 
 //----------------------------------------------------------------------
-// Print debug strings if and only if the global debug option is set to
-// a non-zero value.
-//----------------------------------------------------------------------
-void Log::Debug(const char *format, ...) {
-  if (!GetOptions().Test(LLDB_LOG_OPTION_DEBUG))
-    return;
-
-  va_list args;
-  va_start(args, format);
-  VAPrintf(format, args);
-  va_end(args);
-}
-
-//----------------------------------------------------------------------
 // Log only if all of the bits are set
 //----------------------------------------------------------------------
 void Log::LogIf(uint32_t bits, const char *format, ...) {
@@ -307,14 +293,6 @@ void Log::ListAllLogChannels(Stream *strm) {
 }
 
 bool Log::GetVerbose() const { return m_options.Test(LLDB_LOG_OPTION_VERBOSE); }
-
-//------------------------------------------------------------------
-// Returns true if the debug flag bit is set in this stream.
-//------------------------------------------------------------------
-bool Log::GetDebug() const {
-  // TODO: remove and clean up callers
-  return false;
-}
 
 void Log::WriteHeader(llvm::raw_ostream &OS, llvm::StringRef file,
                       llvm::StringRef function) {

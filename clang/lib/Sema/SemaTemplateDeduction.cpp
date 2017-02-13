@@ -2336,7 +2336,7 @@ static Sema::TemplateDeductionResult ConvertDeducedTemplateArguments(
   return Sema::TDK_Success;
 }
 
-DeclContext *getAsDeclContextOrEnclosing(Decl *D) {
+static DeclContext *getAsDeclContextOrEnclosing(Decl *D) {
   if (auto *DC = dyn_cast<DeclContext>(D))
     return DC;
   return D->getDeclContext();
@@ -2436,7 +2436,7 @@ FinishTemplateArgumentDeduction(
 /// Complete template argument deduction for a class or variable template,
 /// when partial ordering against a partial specialization.
 // FIXME: Factor out duplication with partial specialization version above.
-Sema::TemplateDeductionResult FinishTemplateArgumentDeduction(
+static Sema::TemplateDeductionResult FinishTemplateArgumentDeduction(
     Sema &S, TemplateDecl *Template, bool PartialOrdering,
     const TemplateArgumentList &TemplateArgs,
     SmallVectorImpl<DeducedTemplateArgument> &Deduced,

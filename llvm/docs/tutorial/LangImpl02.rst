@@ -119,6 +119,8 @@ way to talk about functions themselves:
     public:
       PrototypeAST(const std::string &name, std::vector<std::string> Args)
         : Name(name), Args(std::move(Args)) {}
+
+      const std::string &getName() const { return Name; }
     };
 
     /// FunctionAST - This class represents a function definition itself.

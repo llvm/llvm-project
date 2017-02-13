@@ -147,6 +147,9 @@
 
 using namespace llvm;
 
+static cl::opt<unsigned> MaxDevirtIterations("pm-max-devirt-iterations",
+                                             cl::ReallyHidden, cl::init(4));
+
 static Regex DefaultAliasRegex("^(default|lto-pre-link|lto)<(O[0123sz])>$");
 
 static bool isOptimizingForSize(PassBuilder::OptimizationLevel Level) {
@@ -381,6 +384,56 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
   return FPM;
 }
 
+static void addPGOInstrPasses(ModulePassManager &MPM, bool DebugLogging,
+                              PassBuilder::OptimizationLevel Level,
+                              bool RunProfileGen, std::string ProfileGenFile,
+                              std::string ProfileUseFile) {
+  // Generally running simplification passes and the inliner with an high
+  // threshold results in smaller executables, but there may be cases where
+  // the size grows, so let's be conservative here and skip this simplification
+  // at -Os/Oz.
+  if (!isOptimizingForSize(Level)) {
+    InlineParams IP;
+
+    // In the old pass manager, this is a cl::opt. Should still this be one?
+    IP.DefaultThreshold = 75;
+
+    // FIXME: The hint threshold has the same value used by the regular inliner.
+    // This should probably be lowered after performance testing.
+    // FIXME: this comment is cargo culted from the old pass manager, revisit).
+    IP.HintThreshold = 325;
+
+    CGSCCPassManager CGPipeline(DebugLogging);
+
+    CGPipeline.addPass(InlinerPass(IP));
+
+    FunctionPassManager FPM;
+    FPM.addPass(SROA());
+    FPM.addPass(EarlyCSEPass());    // Catch trivial redundancies.
+    FPM.addPass(SimplifyCFGPass()); // Merge & remove basic blocks.
+    FPM.addPass(InstCombinePass()); // Combine silly sequences.
+
+    // FIXME: Here the old pass manager inserts peephole extensions.
+    // Add them when they're supported.
+    CGPipeline.addPass(createCGSCCToFunctionPassAdaptor(std::move(FPM)));
+
+    MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(std::move(CGPipeline)));
+  }
+
+  if (RunProfileGen) {
+    MPM.addPass(PGOInstrumentationGen());
+
+    // Add the profile lowering pass.
+    InstrProfOptions Options;
+    if (!ProfileGenFile.empty())
+      Options.InstrProfileOutput = ProfileGenFile;
+    MPM.addPass(InstrProfiling(Options));
+  }
+
+  if (!ProfileUseFile.empty())
+    MPM.addPass(PGOInstrumentationUse(ProfileUseFile));
+}
+
 ModulePassManager
 PassBuilder::buildPerModuleDefaultPipeline(OptimizationLevel Level,
                                            bool DebugLogging) {
@@ -431,10 +484,19 @@ PassBuilder::buildPerModuleDefaultPipeline(OptimizationLevel Level,
   GlobalCleanupPM.addPass(SimplifyCFGPass());
   MPM.addPass(createModuleToFunctionPassAdaptor(std::move(GlobalCleanupPM)));
 
-  // FIXME: Enable this when cross-IR-unit analysis invalidation is working.
-#if 0
-  MPM.addPass(RequireAnalysisPass<GlobalsAA>());
-#endif
+  // Add all the requested passes for PGO Instrumentation, if requested.
+  if (PGOOpt) {
+    assert(PGOOpt->RunProfileGen || !PGOOpt->ProfileUseFile.empty());
+    addPGOInstrPasses(MPM, DebugLogging, Level, PGOOpt->RunProfileGen,
+                      PGOOpt->ProfileGenFile, PGOOpt->ProfileUseFile);
+  }
+
+  // Indirect call promotion that promotes intra-module targes only.
+  MPM.addPass(PGOIndirectCallPromotion());
+
+  // Require the GlobalsAA analysis for the module so we can query it within
+  // the CGSCC pipeline.
+  MPM.addPass(RequireAnalysisPass<GlobalsAA, Module>());
 
   // Now begin the main postorder CGSCC pipeline.
   // FIXME: The current CGSCC pipeline has its origins in the legacy pass
@@ -466,8 +528,14 @@ PassBuilder::buildPerModuleDefaultPipeline(OptimizationLevel Level,
   MainCGPipeline.addPass(createCGSCCToFunctionPassAdaptor(
       buildFunctionSimplificationPipeline(Level, DebugLogging)));
 
+  // We wrap the CGSCC pipeline in a devirtualization repeater. This will try
+  // to detect when we devirtualize indirect calls and iterate the SCC passes
+  // in that case to try and catch knock-on inlining or function attrs
+  // opportunities. Then we add it to the module pipeline by walking the SCCs
+  // in postorder (or bottom-up).
   MPM.addPass(
-      createModuleToPostOrderCGSCCPassAdaptor(std::move(MainCGPipeline)));
+      createModuleToPostOrderCGSCCPassAdaptor(createDevirtSCCRepeatedPass(
+          std::move(MainCGPipeline), MaxDevirtIterations, DebugLogging)));
 
   // This ends the canonicalization and simplification phase of the pipeline.
   // At this point, we expect to have canonical and simple IR which we begin
@@ -482,17 +550,14 @@ PassBuilder::buildPerModuleDefaultPipeline(OptimizationLevel Level,
   // FIXME: Is this really an optimization rather than a canonicalization?
   MPM.addPass(ReversePostOrderFunctionAttrsPass());
 
-  // Recompute GloblasAA here prior to function passes. This is particularly
+  // Re-require GloblasAA here prior to function passes. This is particularly
   // useful as the above will have inlined, DCE'ed, and function-attr
   // propagated everything. We should at this point have a reasonably minimal
   // and richly annotated call graph. By computing aliasing and mod/ref
   // information for all local globals here, the late loop passes and notably
   // the vectorizer will be able to use them to help recognize vectorizable
   // memory operations.
-  // FIXME: Enable this once analysis invalidation is fully supported.
-#if 0
-  MPM.addPass(Require<GlobalsAA>());
-#endif
+  MPM.addPass(RequireAnalysisPass<GlobalsAA, Module>());
 
   FunctionPassManager OptimizePM(DebugLogging);
   OptimizePM.addPass(Float2IntPass());
@@ -766,12 +831,8 @@ AAManager PassBuilder::buildDefaultAAPipeline() {
   // Add support for querying global aliasing information when available.
   // Because the `AAManager` is a function analysis and `GlobalsAA` is a module
   // analysis, all that the `AAManager` can do is query for any *cached*
-  // results from `GlobalsAA` through a readonly proxy..
-#if 0
-  // FIXME: Enable once the invalidation logic supports this. Currently, the
-  // `AAManager` will hold stale references to the module analyses.
+  // results from `GlobalsAA` through a readonly proxy.
   AA.registerModuleAnalysis<GlobalsAA>();
-#endif
 
   return AA;
 }

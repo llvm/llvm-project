@@ -923,7 +923,7 @@ define void @interleave_24i16_out(<24 x i16>* %p, <8 x i16>* %q1, <8 x i16>* %q2
 ; AVX1-LABEL: interleave_24i16_out:
 ; AVX1:       # BB#0:
 ; AVX1-NEXT:    vmovdqu 32(%rdi), %xmm0
-; AVX1-NEXT:    vmovups (%rdi), %ymm1
+; AVX1-NEXT:    vmovdqu (%rdi), %ymm1
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm2
 ; AVX1-NEXT:    vpblendw {{.*#+}} xmm3 = xmm1[0],xmm2[1],xmm1[2,3],xmm2[4],xmm1[5,6],xmm2[7]
 ; AVX1-NEXT:    vpshufb {{.*#+}} xmm3 = xmm3[0,1,6,7,12,13,2,3,8,9,14,15,12,13,14,15]
@@ -1445,8 +1445,8 @@ define <2 x double> @wrongorder(<4 x double> %A, <8 x double>* %P) #0 {
 ; AVX1:       # BB#0:
 ; AVX1-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm1
-; AVX1-NEXT:    vmovapd %ymm1, 32(%rdi)
-; AVX1-NEXT:    vmovapd %ymm1, (%rdi)
+; AVX1-NEXT:    vmovaps %ymm1, 32(%rdi)
+; AVX1-NEXT:    vmovaps %ymm1, (%rdi)
 ; AVX1-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq

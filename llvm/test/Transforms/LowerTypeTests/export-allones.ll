@@ -153,7 +153,9 @@
 ; SUMMARY-NEXT:     TTRes:
 ; SUMMARY-NEXT:       Kind:            AllOnes
 ; SUMMARY-NEXT:       SizeM1BitWidth:  7
+; SUMMARY-NEXT:     WPDRes:
 ; SUMMARY-NEXT:   typeid2:
 ; SUMMARY-NEXT:     TTRes:
 ; SUMMARY-NEXT:       Kind:            AllOnes
 ; SUMMARY-NEXT:       SizeM1BitWidth:  32
+; SUMMARY-NEXT:     WPDRes:

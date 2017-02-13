@@ -4739,12 +4739,12 @@ def MOVPQIto64rr : RS2I<0x7E, MRMDestReg, (outs GR64:$dst), (ins VR128:$src),
 } //SchedRW
 
 let isCodeGenOnly = 1, ForceDisassemble = 1, hasSideEffects = 0, mayStore = 1 in
-def VMOVPQIto64rm : VRS2I<0x7E, MRMDestMem, (outs),
+def VMOVPQIto64mr : VRS2I<0x7E, MRMDestMem, (outs),
                           (ins i64mem:$dst, VR128:$src),
                           "movq\t{$src, $dst|$dst, $src}",
                           [], IIC_SSE_MOVDQ>, VEX, Sched<[WriteStore]>;
 let isCodeGenOnly = 1, ForceDisassemble = 1, hasSideEffects = 0, mayStore = 1 in
-def MOVPQIto64rm : RS2I<0x7E, MRMDestMem, (outs), (ins i64mem:$dst, VR128:$src),
+def MOVPQIto64mr : RS2I<0x7E, MRMDestMem, (outs), (ins i64mem:$dst, VR128:$src),
                         "mov{d|q}\t{$src, $dst|$dst, $src}",
                         [], IIC_SSE_MOVDQ>, Sched<[WriteStore]>;
 } // ExeDomain = SSEPackedInt
@@ -6984,6 +6984,19 @@ let Constraints = "$src1 = $dst" in {
                                   SSE_DPPD_ITINS>;
 }
 
+// For insertion into the zero index (low half) of a 256-bit vector, it is
+// more efficient to generate a blend with immediate instead of an insert*128.
+let Predicates = [HasAVX] in {
+def : Pat<(insert_subvector (v4f64 VR256:$src1), (v2f64 VR128:$src2), (iPTR 0)),
+          (VBLENDPDYrri VR256:$src1,
+                        (INSERT_SUBREG (v4f64 (IMPLICIT_DEF)),
+                                       VR128:$src2, sub_xmm), 0x3)>;
+def : Pat<(insert_subvector (v8f32 VR256:$src1), (v4f32 VR128:$src2), (iPTR 0)),
+          (VBLENDPSYrri VR256:$src1,
+                        (INSERT_SUBREG (v8f32 (IMPLICIT_DEF)),
+                                       VR128:$src2, sub_xmm), 0xf)>;
+}
+
 /// SS41I_quaternary_int_avx - AVX SSE 4.1 with 4 operators
 multiclass SS41I_quaternary_int_avx<bits<8> opc, string OpcodeStr,
                                     RegisterClass RC, X86MemOperand x86memop,
@@ -8177,6 +8190,46 @@ defm VPBLENDD : AVX2_binop_rmi<0x02, "vpblendd", X86Blendi, v4i32,
                                VR128, loadv2i64, i128mem>;
 defm VPBLENDDY : AVX2_binop_rmi<0x02, "vpblendd", X86Blendi, v8i32,
                                 VR256, loadv4i64, i256mem>, VEX_L;
+
+// For insertion into the zero index (low half) of a 256-bit vector, it is
+// more efficient to generate a blend with immediate instead of an insert*128.
+let Predicates = [HasAVX2] in {
+def : Pat<(insert_subvector (v8i32 VR256:$src1), (v4i32 VR128:$src2), (iPTR 0)),
+          (VPBLENDDYrri VR256:$src1,
+                        (INSERT_SUBREG (v8i32 (IMPLICIT_DEF)),
+                                       VR128:$src2, sub_xmm), 0xf)>;
+def : Pat<(insert_subvector (v4i64 VR256:$src1), (v2i64 VR128:$src2), (iPTR 0)),
+          (VPBLENDDYrri VR256:$src1,
+                        (INSERT_SUBREG (v8i32 (IMPLICIT_DEF)),
+                                       VR128:$src2, sub_xmm), 0xf)>;
+def : Pat<(insert_subvector (v16i16 VR256:$src1), (v8i16 VR128:$src2), (iPTR 0)),
+          (VPBLENDDYrri VR256:$src1,
+                        (INSERT_SUBREG (v8i32 (IMPLICIT_DEF)),
+                                       VR128:$src2, sub_xmm), 0xf)>;
+def : Pat<(insert_subvector (v32i8 VR256:$src1), (v16i8 VR128:$src2), (iPTR 0)),
+          (VPBLENDDYrri VR256:$src1,
+                        (INSERT_SUBREG (v8i32 (IMPLICIT_DEF)),
+                                       VR128:$src2, sub_xmm), 0xf)>;
+}
+
+let Predicates = [HasAVX1Only] in {
+def : Pat<(insert_subvector (v8i32 VR256:$src1), (v4i32 VR128:$src2), (iPTR 0)),
+          (VBLENDPSYrri VR256:$src1,
+                        (INSERT_SUBREG (v8i32 (IMPLICIT_DEF)),
+                                       VR128:$src2, sub_xmm), 0xf)>;
+def : Pat<(insert_subvector (v4i64 VR256:$src1), (v2i64 VR128:$src2), (iPTR 0)),
+          (VBLENDPSYrri VR256:$src1,
+                        (INSERT_SUBREG (v8i32 (IMPLICIT_DEF)),
+                                       VR128:$src2, sub_xmm), 0xf)>;
+def : Pat<(insert_subvector (v16i16 VR256:$src1), (v8i16 VR128:$src2), (iPTR 0)),
+          (VBLENDPSYrri VR256:$src1,
+                        (INSERT_SUBREG (v8i32 (IMPLICIT_DEF)),
+                                       VR128:$src2, sub_xmm), 0xf)>;
+def : Pat<(insert_subvector (v32i8 VR256:$src1), (v16i8 VR128:$src2), (iPTR 0)),
+          (VBLENDPSYrri VR256:$src1,
+                        (INSERT_SUBREG (v8i32 (IMPLICIT_DEF)),
+                                       VR128:$src2, sub_xmm), 0xf)>;
+}
 
 //===----------------------------------------------------------------------===//
 // VPBROADCAST - Load from memory and broadcast to all elements of the

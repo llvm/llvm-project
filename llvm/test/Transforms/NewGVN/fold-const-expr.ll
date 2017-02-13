@@ -5,7 +5,7 @@
 ; This test checks that we are folding constant expression
 ; PR 28418
 ; RUN: opt -newgvn -S < %s | FileCheck %s
-
+;; NewGVN fails this due to not having load coercion
 %2 = type { i32, i32, i32, i32, i32 }
 define i32 @_Z16vector3util_mainv(i32 %x, i32 %y)  {
   %tmp1 = alloca %2, align 4

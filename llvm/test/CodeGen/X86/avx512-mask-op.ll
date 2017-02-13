@@ -542,8 +542,7 @@ define <64 x i8> @test16(i64 %x) {
 ; SKX-NEXT:    movl $32, %eax
 ; SKX-NEXT:    kmovd %eax, %k1
 ; SKX-NEXT:    vpblendmb %ymm0, %ymm1, %ymm0 {%k1}
-; SKX-NEXT:    vextracti64x4 $1, %zmm1, %ymm1
-; SKX-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
+; SKX-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,2,3],zmm1[4,5,6,7]
 ; SKX-NEXT:    vpmovb2m %zmm0, %k0
 ; SKX-NEXT:    vpmovm2b %k0, %zmm0
 ; SKX-NEXT:    retq
@@ -609,8 +608,7 @@ define <64 x i8> @test17(i64 %x, i32 %y, i32 %z) {
 ; SKX-NEXT:    movl $32, %eax
 ; SKX-NEXT:    kmovd %eax, %k1
 ; SKX-NEXT:    vpblendmb %ymm0, %ymm1, %ymm0 {%k1}
-; SKX-NEXT:    vextracti64x4 $1, %zmm1, %ymm1
-; SKX-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
+; SKX-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,2,3],zmm1[4,5,6,7]
 ; SKX-NEXT:    vpmovb2m %zmm0, %k0
 ; SKX-NEXT:    vpmovm2b %k0, %zmm0
 ; SKX-NEXT:    retq
@@ -927,14 +925,8 @@ define void @store_i8_i1(i8 %x, i1 *%y) {
 define <32 x i16> @test_build_vec_v32i1(<32 x i16> %x) {
 ; KNL-LABEL: test_build_vec_v32i1:
 ; KNL:       ## BB#0:
-; KNL-NEXT:    vpmovzxbw {{.*#+}} ymm2 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero,mem[8],zero,mem[9],zero,mem[10],zero,mem[11],zero,mem[12],zero,mem[13],zero,mem[14],zero,mem[15],zero
-; KNL-NEXT:    vpsllw $15, %ymm2, %ymm2
-; KNL-NEXT:    vpsraw $15, %ymm2, %ymm2
-; KNL-NEXT:    vpand %ymm0, %ymm2, %ymm0
-; KNL-NEXT:    vpmovzxbw {{.*#+}} ymm2 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero,mem[8],zero,mem[9],zero,mem[10],zero,mem[11],zero,mem[12],zero,mem[13],zero,mem[14],zero,mem[15],zero
-; KNL-NEXT:    vpsllw $15, %ymm2, %ymm2
-; KNL-NEXT:    vpsraw $15, %ymm2, %ymm2
-; KNL-NEXT:    vpand %ymm1, %ymm2, %ymm1
+; KNL-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm0
+; KNL-NEXT:    vandps {{.*}}(%rip), %ymm1, %ymm1
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: test_build_vec_v32i1:

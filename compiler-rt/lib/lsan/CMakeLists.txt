@@ -5,7 +5,8 @@ append_rtti_flag(OFF LSAN_CFLAGS)
 
 set(LSAN_COMMON_SOURCES
   lsan_common.cc
-  lsan_common_linux.cc)
+  lsan_common_linux.cc
+  lsan_common_mac.cc)
 
 set(LSAN_SOURCES
   lsan.cc

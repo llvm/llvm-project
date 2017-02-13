@@ -203,7 +203,7 @@ define <16 x i8> @test_div7_16i8(<16 x i8> %a) nounwind {
 ; SSE41-LABEL: test_div7_16i8:
 ; SSE41:       # BB#0:
 ; SSE41-NEXT:    pmovsxbw %xmm0, %xmm1
-; SSE41-NEXT:    pmovsxbw {{.*}}(%rip), %xmm2
+; SSE41-NEXT:    movdqa {{.*#+}} xmm2 = [65427,65427,65427,65427,65427,65427,65427,65427]
 ; SSE41-NEXT:    pmullw %xmm2, %xmm1
 ; SSE41-NEXT:    psrlw $8, %xmm1
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[2,3,0,1]
@@ -227,7 +227,7 @@ define <16 x i8> @test_div7_16i8(<16 x i8> %a) nounwind {
 ; AVX1-LABEL: test_div7_16i8:
 ; AVX1:       # BB#0:
 ; AVX1-NEXT:    vpmovsxbw %xmm0, %xmm1
-; AVX1-NEXT:    vpmovsxbw {{.*}}(%rip), %xmm2
+; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [65427,65427,65427,65427,65427,65427,65427,65427]
 ; AVX1-NEXT:    vpmullw %xmm2, %xmm1, %xmm1
 ; AVX1-NEXT:    vpsrlw $8, %xmm1, %xmm1
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm3 = xmm0[2,3,0,1]
@@ -249,8 +249,7 @@ define <16 x i8> @test_div7_16i8(<16 x i8> %a) nounwind {
 ; AVX2-LABEL: test_div7_16i8:
 ; AVX2:       # BB#0:
 ; AVX2-NEXT:    vpmovsxbw %xmm0, %ymm1
-; AVX2-NEXT:    vpmovsxbw {{.*}}(%rip), %ymm2
-; AVX2-NEXT:    vpmullw %ymm2, %ymm1, %ymm1
+; AVX2-NEXT:    vpmullw {{.*}}(%rip), %ymm1, %ymm1
 ; AVX2-NEXT:    vpsrlw $8, %ymm1, %ymm1
 ; AVX2-NEXT:    vextracti128 $1, %ymm1, %xmm2
 ; AVX2-NEXT:    vpackuswb %xmm2, %xmm1, %xmm1
@@ -522,7 +521,7 @@ define <16 x i8> @test_rem7_16i8(<16 x i8> %a) nounwind {
 ; SSE41-LABEL: test_rem7_16i8:
 ; SSE41:       # BB#0:
 ; SSE41-NEXT:    pmovsxbw %xmm0, %xmm1
-; SSE41-NEXT:    pmovsxbw {{.*}}(%rip), %xmm2
+; SSE41-NEXT:    movdqa {{.*#+}} xmm2 = [65427,65427,65427,65427,65427,65427,65427,65427]
 ; SSE41-NEXT:    pmullw %xmm2, %xmm1
 ; SSE41-NEXT:    psrlw $8, %xmm1
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[2,3,0,1]
@@ -556,7 +555,7 @@ define <16 x i8> @test_rem7_16i8(<16 x i8> %a) nounwind {
 ; AVX1-LABEL: test_rem7_16i8:
 ; AVX1:       # BB#0:
 ; AVX1-NEXT:    vpmovsxbw %xmm0, %xmm1
-; AVX1-NEXT:    vpmovsxbw {{.*}}(%rip), %xmm2
+; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [65427,65427,65427,65427,65427,65427,65427,65427]
 ; AVX1-NEXT:    vpmullw %xmm2, %xmm1, %xmm1
 ; AVX1-NEXT:    vpsrlw $8, %xmm1, %xmm1
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm3 = xmm0[2,3,0,1]
@@ -589,8 +588,7 @@ define <16 x i8> @test_rem7_16i8(<16 x i8> %a) nounwind {
 ; AVX2-LABEL: test_rem7_16i8:
 ; AVX2:       # BB#0:
 ; AVX2-NEXT:    vpmovsxbw %xmm0, %ymm1
-; AVX2-NEXT:    vpmovsxbw {{.*}}(%rip), %ymm2
-; AVX2-NEXT:    vpmullw %ymm2, %ymm1, %ymm1
+; AVX2-NEXT:    vpmullw {{.*}}(%rip), %ymm1, %ymm1
 ; AVX2-NEXT:    vpsrlw $8, %ymm1, %ymm1
 ; AVX2-NEXT:    vextracti128 $1, %ymm1, %xmm2
 ; AVX2-NEXT:    vpackuswb %xmm2, %xmm1, %xmm1

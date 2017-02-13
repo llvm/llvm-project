@@ -103,7 +103,8 @@ To represent the new expression we add a new AST node for it:
       IfExprAST(std::unique_ptr<ExprAST> Cond, std::unique_ptr<ExprAST> Then,
                 std::unique_ptr<ExprAST> Else)
         : Cond(std::move(Cond)), Then(std::move(Then)), Else(std::move(Else)) {}
-      virtual Value *codegen();
+
+      Value *codegen() override;
     };
 
 The AST node just has pointers to the various subexpressions.
@@ -290,9 +291,9 @@ for ``IfExprAST``:
       if (!CondV)
         return nullptr;
 
-      // Convert condition to a bool by comparing equal to 0.0.
+      // Convert condition to a bool by comparing non-equal to 0.0.
       CondV = Builder.CreateFCmpONE(
-          CondV, ConstantFP::get(LLVMContext, APFloat(0.0)), "ifcond");
+          CondV, ConstantFP::get(TheContext, APFloat(0.0)), "ifcond");
 
 This code is straightforward and similar to what we saw before. We emit
 the expression for the condition, then compare that value to zero to get
@@ -305,9 +306,9 @@ a truth value as a 1-bit (bool) value.
       // Create blocks for the then and else cases.  Insert the 'then' block at the
       // end of the function.
       BasicBlock *ThenBB =
-          BasicBlock::Create(LLVMContext, "then", TheFunction);
-      BasicBlock *ElseBB = BasicBlock::Create(LLVMContext, "else");
-      BasicBlock *MergeBB = BasicBlock::Create(LLVMContext, "ifcont");
+          BasicBlock::Create(TheContext, "then", TheFunction);
+      BasicBlock *ElseBB = BasicBlock::Create(TheContext, "else");
+      BasicBlock *MergeBB = BasicBlock::Create(TheContext, "ifcont");
 
       Builder.CreateCondBr(CondV, ThenBB, ElseBB);
 
@@ -400,7 +401,7 @@ code:
       TheFunction->getBasicBlockList().push_back(MergeBB);
       Builder.SetInsertPoint(MergeBB);
       PHINode *PN =
-        Builder.CreatePHI(Type::getDoubleTy(LLVMContext), 2, "iftmp");
+        Builder.CreatePHI(Type::getDoubleTy(TheContext), 2, "iftmp");
 
       PN->addIncoming(ThenV, ThenBB);
       PN->addIncoming(ElseV, ElseBB);
@@ -433,7 +434,7 @@ something more aggressive, a 'for' expression:
 
 ::
 
-     extern putchard(char)
+     extern putchard(char);
      def printstar(n)
        for i = 1, i < n, 1.0 in
          putchard(42);  # ascii 42 = '*'
@@ -500,7 +501,8 @@ variable name and the constituent expressions in the node.
                  std::unique_ptr<ExprAST> Body)
         : VarName(VarName), Start(std::move(Start)), End(std::move(End)),
           Step(std::move(Step)), Body(std::move(Body)) {}
-      virtual Value *codegen();
+
+      Value *codegen() override;
     };
 
 Parser Extensions for the 'for' Loop
@@ -561,6 +563,27 @@ value to null in the AST node:
                                            std::move(Body));
     }
 
+And again we hook it up as a primary expression:
+
+.. code-block:: c++
+
+    static std::unique_ptr<ExprAST> ParsePrimary() {
+      switch (CurTok) {
+      default:
+        return LogError("unknown token when expecting an expression");
+      case tok_identifier:
+        return ParseIdentifierExpr();
+      case tok_number:
+        return ParseNumberExpr();
+      case '(':
+        return ParseParenExpr();
+      case tok_if:
+        return ParseIfExpr();
+      case tok_for:
+        return ParseForExpr();
+      }
+    }
+
 LLVM IR for the 'for' Loop
 --------------------------
 
@@ -610,7 +633,8 @@ expression for the loop value:
     Value *ForExprAST::codegen() {
       // Emit the start code first, without 'variable' in scope.
       Value *StartVal = Start->codegen();
-      if (StartVal == 0) return 0;
+      if (!StartVal)
+        return nullptr;
 
 With this out of the way, the next step is to set up the LLVM basic
 block for the start of the loop body. In the case above, the whole loop
@@ -625,7 +649,7 @@ expression).
       Function *TheFunction = Builder.GetInsertBlock()->getParent();
       BasicBlock *PreheaderBB = Builder.GetInsertBlock();
       BasicBlock *LoopBB =
-          BasicBlock::Create(LLVMContext, "loop", TheFunction);
+          BasicBlock::Create(TheContext, "loop", TheFunction);
 
       // Insert an explicit fall through from the current block to the LoopBB.
       Builder.CreateBr(LoopBB);
@@ -642,7 +666,7 @@ the two blocks.
       Builder.SetInsertPoint(LoopBB);
 
       // Start the PHI node with an entry for Start.
-      PHINode *Variable = Builder.CreatePHI(Type::getDoubleTy(LLVMContext),
+      PHINode *Variable = Builder.CreatePHI(Type::getDoubleTy(TheContext),
                                             2, VarName.c_str());
       Variable->addIncoming(StartVal, PreheaderBB);
 
@@ -693,7 +717,7 @@ table.
           return nullptr;
       } else {
         // If not specified, use 1.0.
-        StepVal = ConstantFP::get(LLVMContext, APFloat(1.0));
+        StepVal = ConstantFP::get(TheContext, APFloat(1.0));
       }
 
       Value *NextVar = Builder.CreateFAdd(Variable, StepVal, "nextvar");
@@ -710,9 +734,9 @@ iteration of the loop.
       if (!EndCond)
         return nullptr;
 
-      // Convert condition to a bool by comparing equal to 0.0.
+      // Convert condition to a bool by comparing non-equal to 0.0.
       EndCond = Builder.CreateFCmpONE(
-          EndCond, ConstantFP::get(LLVMContext, APFloat(0.0)), "loopcond");
+          EndCond, ConstantFP::get(TheContext, APFloat(0.0)), "loopcond");
 
 Finally, we evaluate the exit value of the loop, to determine whether
 the loop should exit. This mirrors the condition evaluation for the
@@ -723,7 +747,7 @@ if/then/else statement.
       // Create the "after loop" block and insert it.
       BasicBlock *LoopEndBB = Builder.GetInsertBlock();
       BasicBlock *AfterBB =
-          BasicBlock::Create(LLVMContext, "afterloop", TheFunction);
+          BasicBlock::Create(TheContext, "afterloop", TheFunction);
 
       // Insert the conditional branch into the end of LoopEndBB.
       Builder.CreateCondBr(EndCond, LoopBB, AfterBB);
@@ -751,7 +775,7 @@ insertion position to it.
         NamedValues.erase(VarName);
 
       // for expr always returns 0.0.
-      return Constant::getNullValue(Type::getDoubleTy(LLVMContext));
+      return Constant::getNullValue(Type::getDoubleTy(TheContext));
     }
 
 The final code handles various cleanups: now that we have the "NextVar"
@@ -772,7 +796,7 @@ Full Code Listing
 =================
 
 Here is the complete code listing for our running example, enhanced with
-the if/then/else and for expressions.. To build this example, use:
+the if/then/else and for expressions. To build this example, use:
 
 .. code-block:: bash
 

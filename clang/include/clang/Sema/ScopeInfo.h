@@ -157,7 +157,7 @@ public:
   SmallVector<ReturnStmt*, 4> Returns;
 
   /// \brief The promise object for this coroutine, if any.
-  VarDecl *CoroutinePromise;
+  VarDecl *CoroutinePromise = nullptr;
 
   /// \brief The list of coroutine control flow constructs (co_await, co_yield,
   /// co_return) that occur within the function or block. Empty if and only if

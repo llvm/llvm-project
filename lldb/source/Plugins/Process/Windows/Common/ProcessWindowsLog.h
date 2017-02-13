@@ -76,10 +76,6 @@ public:
   WINLOGF_IF(Flags, LogMaskReq::Any, Verbose, __VA_ARGS__)
 #define WINLOGV_IFALL(Flags, ...)                                              \
   WINLOGF_IF(Flags, LogMaskReq::All, Verbose, __VA_ARGS__)
-#define WINLOGD_IFANY(Flags, ...)                                              \
-  WINLOGF_IF(Flags, LogMaskReq::Any, Debug, __VA_ARGS__)
-#define WINLOGD_IFALL(Flags, ...)                                              \
-  WINLOGF_IF(Flags, LogMaskReq::All, Debug, __VA_ARGS__)
 #define WINERR_IFANY(Flags, ...)                                               \
   WINLOGF_IF(Flags, LogMaskReq::Any, Error, __VA_ARGS__)
 #define WINERR_IFALL(Flags, ...)                                               \

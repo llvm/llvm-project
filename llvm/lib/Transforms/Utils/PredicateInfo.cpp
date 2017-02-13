@@ -66,10 +66,12 @@ struct ValueDFS {
   int DFSIn = 0;
   int DFSOut = 0;
   unsigned int LocalNum = LN_Middle;
-  PredicateBase *PInfo = nullptr;
   // Only one of Def or Use will be set.
   Value *Def = nullptr;
   Use *U = nullptr;
+  // Neither PInfo nor PhiOnly participate in the ordering
+  PredicateBase *PInfo = nullptr;
+  bool PhiOnly = false;
 };
 
 // This compares ValueDFS structures, creating OrderedBasicBlocks where
@@ -90,10 +92,37 @@ struct ValueDFS_Compare {
 
     bool SameBlock = std::tie(A.DFSIn, A.DFSOut) == std::tie(B.DFSIn, B.DFSOut);
 
+    // We want to put the def that will get used for a given set of phi uses,
+    // before those phi uses.
+    // So we sort by edge, then by def.
+    // Note that only phi nodes uses and defs can come last.
+    if (SameBlock && A.LocalNum == LN_Last && B.LocalNum == LN_Last)
+      return comparePHIRelated(A, B);
+
     if (!SameBlock || A.LocalNum != LN_Middle || B.LocalNum != LN_Middle)
       return std::tie(A.DFSIn, A.DFSOut, A.LocalNum, A.Def, A.U) <
              std::tie(B.DFSIn, B.DFSOut, B.LocalNum, B.Def, B.U);
     return localComesBefore(A, B);
+  }
+
+  // For a phi use, or a non-materialized def, return the edge it represents.
+  const std::pair<const BasicBlock *, const BasicBlock *>
+  getBlockEdge(const ValueDFS &VD) const {
+    if (!VD.Def && VD.U) {
+      auto *PHI = cast<PHINode>(VD.U->getUser());
+      return std::make_pair(PHI->getIncomingBlock(*VD.U), PHI->getParent());
+    }
+    // This is really a non-materialized def.
+    auto *PBranch = cast<PredicateBranch>(VD.PInfo);
+    return std::make_pair(PBranch->BranchBB, PBranch->SplitBB);
+  }
+
+  // For two phi related values, return the ordering.
+  bool comparePHIRelated(const ValueDFS &A, const ValueDFS &B) const {
+    auto &ABlockEdge = getBlockEdge(A);
+    auto &BBlockEdge = getBlockEdge(B);
+    // Now sort by block edge and then defs before uses.
+    return std::tie(ABlockEdge, A.Def, A.U) < std::tie(BBlockEdge, B.Def, B.U);
   }
 
   // Get the definition of an instruction that occurs in the middle of a block.
@@ -160,16 +189,37 @@ struct ValueDFS_Compare {
 
 } // namespace PredicateInfoClasses
 
-bool PredicateInfo::stackIsInScope(const ValueDFSStack &Stack, int DFSIn,
-                                   int DFSOut) const {
+bool PredicateInfo::stackIsInScope(const ValueDFSStack &Stack,
+                                   const ValueDFS &VDUse) const {
   if (Stack.empty())
     return false;
-  return DFSIn >= Stack.back().DFSIn && DFSOut <= Stack.back().DFSOut;
+  // If it's a phi only use, make sure it's for this phi node edge, and that the
+  // use is in a phi node.  If it's anything else, and the top of the stack is
+  // phionly, we need to pop the stack.  We deliberately sort phi uses next to
+  // the defs they must go with so that we can know it's time to pop the stack
+  // when we hit the end of the phi uses for a given def.
+  if (Stack.back().PhiOnly) {
+    if (!VDUse.U)
+      return false;
+    auto *PHI = dyn_cast<PHINode>(VDUse.U->getUser());
+    if (!PHI)
+      return false;
+    // The only phionly defs should be branch info.
+    auto *PBranch = dyn_cast<PredicateBranch>(Stack.back().PInfo);
+    assert(PBranch && "Only branches should have PHIOnly defs");
+    // Check edge
+    BasicBlock *EdgePred = PHI->getIncomingBlock(*VDUse.U);
+    if (EdgePred != PBranch->BranchBB)
+      return false;
+  }
+
+  return (VDUse.DFSIn >= Stack.back().DFSIn &&
+          VDUse.DFSOut <= Stack.back().DFSOut);
 }
 
-void PredicateInfo::popStackUntilDFSScope(ValueDFSStack &Stack, int DFSIn,
-                                          int DFSOut) {
-  while (!Stack.empty() && !stackIsInScope(Stack, DFSIn, DFSOut))
+void PredicateInfo::popStackUntilDFSScope(ValueDFSStack &Stack,
+                                          const ValueDFS &VD) {
+  while (!Stack.empty() && !stackIsInScope(Stack, VD))
     Stack.pop_back();
 }
 
@@ -271,20 +321,11 @@ void PredicateInfo::processBranch(BranchInst *BI, BasicBlock *BranchBB,
   SmallVector<Value *, 8> CmpOperands;
   BasicBlock *FirstBB = BI->getSuccessor(0);
   BasicBlock *SecondBB = BI->getSuccessor(1);
-  bool FirstSinglePred = FirstBB->getSinglePredecessor();
-  bool SecondSinglePred = SecondBB->getSinglePredecessor();
   SmallVector<BasicBlock *, 2> SuccsToProcess;
   bool isAnd = false;
   bool isOr = false;
-  // First make sure we have single preds for these successors, as we can't
-  // usefully propagate true/false info to them if there are multiple paths to
-  // them.
-  if (FirstSinglePred)
-    SuccsToProcess.push_back(FirstBB);
-  if (SecondSinglePred)
-    SuccsToProcess.push_back(SecondBB);
-  if (SuccsToProcess.empty())
-    return;
+  SuccsToProcess.push_back(FirstBB);
+  SuccsToProcess.push_back(SecondBB);
   // Second, see if we have a comparison we support
   SmallVector<Value *, 2> ComparisonsToProcess;
   CmpInst::Predicate Pred;
@@ -321,6 +362,8 @@ void PredicateInfo::processBranch(BranchInst *BI, BasicBlock *BranchBB,
               new PredicateBranch(Op, BranchBB, Succ, Cmp, TakenEdge);
           AllInfos.push_back(PB);
           OperandInfo.Infos.push_back(PB);
+          if (!Succ->getSinglePredecessor())
+            PhiUsesOnly.insert({BranchBB, Succ});
         }
       }
       CmpOperands.clear();
@@ -368,29 +411,14 @@ Value *PredicateInfo::materializeStack(unsigned int &Counter,
         RenameIter == RenameStack.begin() ? OrigOp : (RenameIter - 1)->Def;
     ValueDFS &Result = *RenameIter;
     auto *ValInfo = Result.PInfo;
-    // For branches, we can just place the operand in the split block.  For
-    // assume, we have to place it right before the assume to ensure we dominate
-    // all of our uses.
+    // For branches, we can just place the operand in the branch block before
+    // the terminator.  For assume, we have to place it right before the assume
+    // to ensure we dominate all of our uses.  Always insert right before the
+    // relevant instruction (terminator, assume), so that we insert in proper
+    // order in the case of multiple predicateinfo in the same block.
     if (isa<PredicateBranch>(ValInfo)) {
       auto *PBranch = cast<PredicateBranch>(ValInfo);
-      // It's possible we are trying to insert multiple predicateinfos in the
-      // same block at the beginning of the block.  When we do this, we need to
-      // insert them one after the other, not one before the other. To see if we
-      // have already inserted predicateinfo into this block, we see if Op !=
-      // OrigOp && Op->getParent() == PBranch->SplitBB.  Op must be an
-      // instruction we inserted if it's not the original op.
-      BasicBlock::iterator InsertPt;
-      if (Op == OrigOp ||
-          cast<Instruction>(Op)->getParent() != PBranch->SplitBB) {
-        InsertPt = PBranch->SplitBB->begin();
-        // Insert after last phi node.
-        while (isa<PHINode>(InsertPt))
-          ++InsertPt;
-      } else {
-        // Insert after op.
-        InsertPt = ++(cast<Instruction>(Op)->getIterator());
-      }
-      IRBuilder<> B(PBranch->SplitBB, InsertPt);
+      IRBuilder<> B(PBranch->BranchBB->getTerminator());
       Function *IF = Intrinsic::getDeclaration(
           F.getParent(), Intrinsic::ssa_copy, Op->getType());
       Value *PIC = B.CreateCall(IF, Op, Op->getName() + "." + Twine(Counter++));
@@ -400,12 +428,7 @@ Value *PredicateInfo::materializeStack(unsigned int &Counter,
       auto *PAssume = dyn_cast<PredicateAssume>(ValInfo);
       assert(PAssume &&
              "Should not have gotten here without it being an assume");
-      // Unlike above, this should already insert in the right order when we
-      // insert multiple predicateinfos in the same block.  Because we are
-      // always inserting right before the assume (instead of the beginning of a
-      // block), newer insertions will end up after older ones.
-      IRBuilder<> B(PAssume->AssumeInst->getParent(),
-                    PAssume->AssumeInst->getIterator());
+      IRBuilder<> B(PAssume->AssumeInst);
       Function *IF = Intrinsic::getDeclaration(
           F.getParent(), Intrinsic::ssa_copy, Op->getType());
       Value *PIC = B.CreateCall(IF, Op);
@@ -447,28 +470,49 @@ void PredicateInfo::renameUses(SmallPtrSetImpl<Value *> &OpsToRename) {
     // created otherwise.
     for (auto &PossibleCopy : ValueInfo.Infos) {
       ValueDFS VD;
-      BasicBlock *CopyBB = nullptr;
       // Determine where we are going to place the copy by the copy type.
       // The predicate info for branches always come first, they will get
       // materialized in the split block at the top of the block.
       // The predicate info for assumes will be somewhere in the middle,
       // it will get materialized in front of the assume.
-      if (const auto *PBranch = dyn_cast<PredicateBranch>(PossibleCopy)) {
-        CopyBB = PBranch->SplitBB;
-        VD.LocalNum = LN_First;
-      } else if (const auto *PAssume =
-                     dyn_cast<PredicateAssume>(PossibleCopy)) {
-        CopyBB = PAssume->AssumeInst->getParent();
+      if (const auto *PAssume = dyn_cast<PredicateAssume>(PossibleCopy)) {
         VD.LocalNum = LN_Middle;
-      } else
-        llvm_unreachable("Unhandled predicate info type");
-      DomTreeNode *DomNode = DT.getNode(CopyBB);
-      if (!DomNode)
-        continue;
-      VD.DFSIn = DomNode->getDFSNumIn();
-      VD.DFSOut = DomNode->getDFSNumOut();
-      VD.PInfo = PossibleCopy;
-      OrderedUses.push_back(VD);
+        DomTreeNode *DomNode = DT.getNode(PAssume->AssumeInst->getParent());
+        if (!DomNode)
+          continue;
+        VD.DFSIn = DomNode->getDFSNumIn();
+        VD.DFSOut = DomNode->getDFSNumOut();
+        VD.PInfo = PossibleCopy;
+        OrderedUses.push_back(VD);
+      } else if (const auto *PBranch =
+                     dyn_cast<PredicateBranch>(PossibleCopy)) {
+        // If we can only do phi uses, we treat it like it's in the branch
+        // block, and handle it specially. We know that it goes last, and only
+        // dominate phi uses.
+        if (PhiUsesOnly.count({PBranch->BranchBB, PBranch->SplitBB})) {
+          VD.LocalNum = LN_Last;
+          auto *DomNode = DT.getNode(PBranch->BranchBB);
+          if (DomNode) {
+            VD.DFSIn = DomNode->getDFSNumIn();
+            VD.DFSOut = DomNode->getDFSNumOut();
+            VD.PInfo = PossibleCopy;
+            VD.PhiOnly = true;
+            OrderedUses.push_back(VD);
+          }
+        } else {
+          // Otherwise, we are in the split block (even though we perform
+          // insertion in the branch block).
+          // Insert a possible copy at the split block and before the branch.
+          VD.LocalNum = LN_First;
+          auto *DomNode = DT.getNode(PBranch->SplitBB);
+          if (DomNode) {
+            VD.DFSIn = DomNode->getDFSNumIn();
+            VD.DFSOut = DomNode->getDFSNumOut();
+            VD.PInfo = PossibleCopy;
+            OrderedUses.push_back(VD);
+          }
+        }
+      }
     }
 
     convertUsesToDFSOrdered(Op, OrderedUses);
@@ -492,10 +536,10 @@ void PredicateInfo::renameUses(SmallPtrSetImpl<Value *> &OpsToRename) {
                    << VD.DFSOut << ")\n");
 
       bool ShouldPush = (VD.Def || PossibleCopy);
-      bool OutOfScope = !stackIsInScope(RenameStack, VD.DFSIn, VD.DFSOut);
+      bool OutOfScope = !stackIsInScope(RenameStack, VD);
       if (OutOfScope || ShouldPush) {
         // Sync to our current scope.
-        popStackUntilDFSScope(RenameStack, VD.DFSIn, VD.DFSOut);
+        popStackUntilDFSScope(RenameStack, VD);
         ShouldPush |= (VD.Def || PossibleCopy);
         if (ShouldPush) {
           RenameStack.push_back(VD);

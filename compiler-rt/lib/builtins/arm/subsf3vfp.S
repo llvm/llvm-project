@@ -21,7 +21,7 @@
 DEFINE_COMPILERRT_FUNCTION(__subsf3vfp)
 #if defined(COMPILER_RT_ARMHF_TARGET)
 	vsub.f32 s0, s0, s1
-#elsee
+#else
 	vmov	s14, r0		// move first param from r0 into float register
 	vmov	s15, r1		// move second param from r1 into float register
 	vsub.f32 s14, s14, s15

@@ -1511,7 +1511,7 @@ bool HexagonHardwareLoops::checkForImmediate(const MachineOperand &MO,
       int64_t V1, V2;
       if (!checkForImmediate(S1, V1) || !checkForImmediate(S2, V2))
         return false;
-      TV = V2 | (V1 << 32);
+      TV = V2 | (static_cast<uint64_t>(V1) << 32);
       break;
     }
     case TargetOpcode::REG_SEQUENCE: {

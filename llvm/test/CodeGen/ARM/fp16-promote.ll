@@ -161,14 +161,14 @@ define void @test_select(half* %p, half* %q, i1 zeroext %c) #0 {
   ret void
 }
 
-; Test only two variants of fcmp.  These get translated to f32 vcmpe
+; Test only two variants of fcmp.  These get translated to f32 vcmp
 ; instructions anyway.
 ; CHECK-ALL-LABEL: test_fcmp_une:
 ; CHECK-FP16: vcvtb.f32.f16
 ; CHECK-FP16: vcvtb.f32.f16
 ; CHECK-LIBCALL: bl __aeabi_h2f
 ; CHECK-LIBCALL: bl __aeabi_h2f
-; CHECK-VFP: vcmpe.f32
+; CHECK-VFP: vcmp.f32
 ; CHECK-NOVFP: bl __aeabi_fcmpeq
 ; CHECK-FP16: vmrs APSR_nzcv, fpscr
 ; CHECK-ALL: movw{{ne|eq}}
@@ -184,7 +184,7 @@ define i1 @test_fcmp_une(half* %p, half* %q) #0 {
 ; CHECK-FP16: vcvtb.f32.f16
 ; CHECK-LIBCALL: bl __aeabi_h2f
 ; CHECK-LIBCALL: bl __aeabi_h2f
-; CHECK-VFP: vcmpe.f32
+; CHECK-VFP: vcmp.f32
 ; CHECK-NOVFP: bl __aeabi_fcmpeq
 ; CHECK-FP16: vmrs APSR_nzcv, fpscr
 ; CHECK-LIBCALL: movw{{ne|eq}}

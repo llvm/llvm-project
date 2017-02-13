@@ -1,5 +1,6 @@
 ; XFAIL: *
 ; RUN: opt -disable-basicaa -newgvn -S < %s | FileCheck %s
+; NewGVN fails this due to missing load coercion
 target datalayout = "e-p:32:32:32"
 target triple = "i386-pc-linux-gnu"
 define <2 x i32> @test1() {

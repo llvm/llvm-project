@@ -200,6 +200,7 @@ template <> struct DenseMapInfo<const Expression *> {
 };
 } // end namespace llvm
 
+namespace {
 class NewGVN : public FunctionPass {
   DominatorTree *DT;
   const DataLayout *DL;
@@ -211,7 +212,15 @@ class NewGVN : public FunctionPass {
   BumpPtrAllocator ExpressionAllocator;
   ArrayRecycler<Value *> ArgRecycler;
 
+  // Number of function arguments, used by ranking
+  unsigned int NumFuncArgs;
+
   // Congruence class info.
+
+  // This class is called INITIAL in the paper. It is the class everything
+  // startsout in, and represents any value. Being an optimistic analysis,
+  // anything in the INITIAL class has the value TOP, which is indeterminate and
+  // equivalent to everything.
   CongruenceClass *InitialClass;
   std::vector<CongruenceClass *> CongruenceClasses;
   unsigned NextCongruenceNum;
@@ -347,6 +356,10 @@ private:
   MemoryAccess *lookupMemoryAccessEquiv(MemoryAccess *) const;
   bool isMemoryAccessTop(const MemoryAccess *) const;
 
+  // Ranking
+  unsigned int getRank(const Value *) const;
+  bool shouldSwapOperands(const Value *, const Value *) const;
+
   // Reachability handling.
   void updateReachableEdge(BasicBlock *, BasicBlock *);
   void processOutgoingEdges(TerminatorInst *, BasicBlock *);
@@ -380,6 +393,7 @@ private:
   void verifyMemoryCongruency() const;
   bool singleReachablePHIPath(const MemoryAccess *, const MemoryAccess *) const;
 };
+} // end anonymous namespace
 
 char NewGVN::ID = 0;
 
@@ -489,7 +503,7 @@ const Expression *NewGVN::createBinaryExpression(unsigned Opcode, Type *T,
     // of their operands get the same value number by sorting the operand value
     // numbers.  Since all commutative instructions have two operands it is more
     // efficient to sort by hand rather than using, say, std::sort.
-    if (Arg1 > Arg2)
+    if (shouldSwapOperands(Arg1, Arg2))
       std::swap(Arg1, Arg2);
   }
   E->op_push_back(lookupOperandLeader(Arg1));
@@ -557,7 +571,7 @@ const Expression *NewGVN::createExpression(Instruction *I) {
     // numbers.  Since all commutative instructions have two operands it is more
     // efficient to sort by hand rather than using, say, std::sort.
     assert(I->getNumOperands() == 2 && "Unsupported commutative instruction!");
-    if (E->getOperand(0) > E->getOperand(1))
+    if (shouldSwapOperands(E->getOperand(0), E->getOperand(1)))
       E->swapOperands(0, 1);
   }
 
@@ -573,7 +587,7 @@ const Expression *NewGVN::createExpression(Instruction *I) {
     // Sort the operand value numbers so x<y and y>x get the same value
     // number.
     CmpInst::Predicate Predicate = CI->getPredicate();
-    if (E->getOperand(0) > E->getOperand(1)) {
+    if (shouldSwapOperands(E->getOperand(0), E->getOperand(1))) {
       E->swapOperands(0, 1);
       Predicate = CmpInst::getSwappedPredicate(Predicate);
     }
@@ -689,8 +703,15 @@ const CallExpression *NewGVN::createCallExpression(CallInst *CI,
 // return it. Otherwise, return the operand itself.
 Value *NewGVN::lookupOperandLeader(Value *V) const {
   CongruenceClass *CC = ValueToClass.lookup(V);
-  if (CC && (CC != InitialClass))
+  if (CC) {
+    // Everything in INITIAL is represneted by undef, as it can be any value.
+    // We do have to make sure we get the type right though, so we can't set the
+    // RepLeader to undef.
+    if (CC == InitialClass)
+      return UndefValue::get(V->getType());
     return CC->RepStoredValue ? CC->RepStoredValue : CC->RepLeader;
+  }
+
   return V;
 }
 
@@ -747,15 +768,6 @@ const StoreExpression *NewGVN::createStoreExpression(StoreInst *SI,
   // things alias analysis can't on it's own (IE that a store and a
   // load have the same value, and thus, it isn't clobbering the load).
   return E;
-}
-
-// Utility function to check whether the congruence class has a member other
-// than the given instruction.
-bool hasMemberOtherThanUs(const CongruenceClass *CC, Instruction *I) {
-  // Either it has more than one store, in which case it must contain something
-  // other than us (because it's indexed by value), or if it only has one store
-  // right now, that member should not be us.
-  return CC->StoreCount > 1 || CC->Members.count(I) == 0;
 }
 
 const Expression *NewGVN::performSymbolicStoreEvaluation(Instruction *I) {
@@ -964,9 +976,8 @@ const Expression *NewGVN::performSymbolicAggrValueEvaluation(Instruction *I) {
         // expression.
         assert(II->getNumArgOperands() == 2 &&
                "Expect two args for recognised intrinsics.");
-        return createBinaryExpression(Opcode, EI->getType(),
-                                      II->getArgOperand(0),
-                                      II->getArgOperand(1));
+        return createBinaryExpression(
+            Opcode, EI->getType(), II->getArgOperand(0), II->getArgOperand(1));
       }
     }
   }
@@ -1207,7 +1218,7 @@ void NewGVN::moveValueToNewCongruenceClass(Instruction *I,
     }
 
     // We don't need to sort members if there is only 1, and we don't care about
-    // sorting the initial class because everything either gets out of it or is
+    // sorting the INITIAL class because everything either gets out of it or is
     // unreachable.
     if (OldClass->Members.size() == 1 || OldClass == InitialClass) {
       OldClass->RepLeader = *(OldClass->Members.begin());
@@ -1236,7 +1247,7 @@ void NewGVN::moveValueToNewCongruenceClass(Instruction *I,
 void NewGVN::performCongruenceFinding(Instruction *I, const Expression *E) {
   ValueToExpression[I] = E;
   // This is guaranteed to return something, since it will at least find
-  // INITIAL.
+  // TOP.
 
   CongruenceClass *IClass = ValueToClass[I];
   assert(IClass && "Should have found a IClass");
@@ -1425,8 +1436,7 @@ void NewGVN::processOutgoingEdges(TerminatorInst *TI, BasicBlock *B) {
 }
 
 // The algorithm initially places the values of the routine in the INITIAL
-// congruence
-// class. The leader of INITIAL is the undetermined value `TOP`.
+// congruence class. The leader of INITIAL is the undetermined value `TOP`.
 // When the algorithm has finished, values still in INITIAL are unreachable.
 void NewGVN::initializeCongruenceClasses(Function &F) {
   // FIXME now i can't remember why this is 2
@@ -1440,8 +1450,13 @@ void NewGVN::initializeCongruenceClasses(Function &F) {
       MemoryAccessToClass[MP] = InitialClass;
 
     for (auto &I : B) {
+      // Don't insert void terminators into the class. We don't value number
+      // them, and they just end up sitting in INITIAL.
+      if (isa<TerminatorInst>(I) && I.getType()->isVoidTy())
+        continue;
       InitialValues.insert(&I);
       ValueToClass[&I] = InitialClass;
+
       // All memory accesses are equivalent to live on entry to start. They must
       // be initialized to something so that initial changes are noticed. For
       // the maximal answer, we initialize them all to be the same as
@@ -1592,7 +1607,8 @@ void NewGVN::valueNumberInstruction(Instruction *I) {
     performCongruenceFinding(I, Symbolized);
   } else {
     // Handle terminators that return values. All of them produce values we
-    // don't currently understand.
+    // don't currently understand.  We don't place non-value producing
+    // terminators in a class.
     if (!I->getType()->isVoidTy()) {
       auto *Symbolized = createUnknownExpression(I);
       performCongruenceFinding(I, Symbolized);
@@ -1696,6 +1712,7 @@ bool NewGVN::runGVN(Function &F, DominatorTree *_DT, AssumptionCache *_AC,
                     TargetLibraryInfo *_TLI, AliasAnalysis *_AA,
                     MemorySSA *_MSSA) {
   bool Changed = false;
+  NumFuncArgs = F.arg_size();
   DT = _DT;
   AC = _AC;
   TLI = _TLI;
@@ -2042,31 +2059,34 @@ void NewGVN::convertDenseToLoadsAndStores(
 }
 
 static void patchReplacementInstruction(Instruction *I, Value *Repl) {
+  auto *ReplInst = dyn_cast<Instruction>(Repl);
+  if (!ReplInst)
+    return;
+
   // Patch the replacement so that it is not more restrictive than the value
   // being replaced.
-  auto *Op = dyn_cast<BinaryOperator>(I);
-  auto *ReplOp = dyn_cast<BinaryOperator>(Repl);
+  // Note that if 'I' is a load being replaced by some operation,
+  // for example, by an arithmetic operation, then andIRFlags()
+  // would just erase all math flags from the original arithmetic
+  // operation, which is clearly not wanted and not needed.
+  if (!isa<LoadInst>(I))
+    ReplInst->andIRFlags(I);
 
-  if (Op && ReplOp)
-    ReplOp->andIRFlags(Op);
+  // FIXME: If both the original and replacement value are part of the
+  // same control-flow region (meaning that the execution of one
+  // guarantees the execution of the other), then we can combine the
+  // noalias scopes here and do better than the general conservative
+  // answer used in combineMetadata().
 
-  if (auto *ReplInst = dyn_cast<Instruction>(Repl)) {
-    // FIXME: If both the original and replacement value are part of the
-    // same control-flow region (meaning that the execution of one
-    // guarentees the executation of the other), then we can combine the
-    // noalias scopes here and do better than the general conservative
-    // answer used in combineMetadata().
-
-    // In general, GVN unifies expressions over different control-flow
-    // regions, and so we need a conservative combination of the noalias
-    // scopes.
-    unsigned KnownIDs[] = {
-        LLVMContext::MD_tbaa,           LLVMContext::MD_alias_scope,
-        LLVMContext::MD_noalias,        LLVMContext::MD_range,
-        LLVMContext::MD_fpmath,         LLVMContext::MD_invariant_load,
-        LLVMContext::MD_invariant_group};
-    combineMetadata(ReplInst, I, KnownIDs);
-  }
+  // In general, GVN unifies expressions over different control-flow
+  // regions, and so we need a conservative combination of the noalias
+  // scopes.
+  static const unsigned KnownIDs[] = {
+      LLVMContext::MD_tbaa,           LLVMContext::MD_alias_scope,
+      LLVMContext::MD_noalias,        LLVMContext::MD_range,
+      LLVMContext::MD_fpmath,         LLVMContext::MD_invariant_load,
+      LLVMContext::MD_invariant_group};
+  combineMetadata(ReplInst, I, KnownIDs);
 }
 
 static void patchAndReplaceAllUsesWith(Instruction *I, Value *Repl) {
@@ -2200,17 +2220,25 @@ bool NewGVN::eliminateInstructions(Function &F) {
     }
   }
 
-  for (CongruenceClass *CC : CongruenceClasses) {
+  for (CongruenceClass *CC : reverse(CongruenceClasses)) {
     // Track the equivalent store info so we can decide whether to try
     // dead store elimination.
     SmallVector<ValueDFS, 8> PossibleDeadStores;
 
-    // FIXME: We should eventually be able to replace everything still
-    // in the initial class with undef, as they should be unreachable.
-    // Right now, initial still contains some things we skip value
-    // numbering of (UNREACHABLE's, for example).
-    if (CC == InitialClass || CC->Dead)
+    if (CC->Dead)
       continue;
+    // Everything still in the INITIAL class is unreachable or dead.
+    if (CC == InitialClass) {
+#ifndef NDEBUG
+      for (auto M : CC->Members)
+        assert((!ReachableBlocks.count(cast<Instruction>(M)->getParent()) ||
+                InstructionsToErase.count(cast<Instruction>(M))) &&
+               "Everything in INITIAL should be unreachable or dead at this "
+               "point");
+#endif
+      continue;
+    }
+
     assert(CC->RepLeader && "We should have had a leader");
 
     // If this is a leader that is always available, and it's a
@@ -2392,4 +2420,35 @@ bool NewGVN::eliminateInstructions(Function &F) {
   }
 
   return AnythingReplaced;
+}
+
+// This function provides global ranking of operations so that we can place them
+// in a canonical order.  Note that rank alone is not necessarily enough for a
+// complete ordering, as constants all have the same rank.  However, generally,
+// we will simplify an operation with all constants so that it doesn't matter
+// what order they appear in.
+unsigned int NewGVN::getRank(const Value *V) const {
+  if (isa<Constant>(V))
+    return 0;
+  else if (auto *A = dyn_cast<Argument>(V))
+    return 1 + A->getArgNo();
+
+  // Need to shift the instruction DFS by number of arguments + 2 to account for
+  // the constant and argument ranking above.
+  unsigned Result = InstrDFS.lookup(V);
+  if (Result > 0)
+    return 2 + NumFuncArgs + Result;
+  // Unreachable or something else, just return a really large number.
+  return ~0;
+}
+
+// This is a function that says whether two commutative operations should
+// have their order swapped when canonicalizing.
+bool NewGVN::shouldSwapOperands(const Value *A, const Value *B) const {
+  // Because we only care about a total ordering, and don't rewrite expressions
+  // in this order, we order by rank, which will give a strict weak ordering to
+  // everything but constants, and then we order by pointer address.  This is
+  // not deterministic for constants, but it should not matter because any
+  // operation with only constants will be folded (except, usually, for undef).
+  return std::make_pair(getRank(B), B) > std::make_pair(getRank(A), A);
 }

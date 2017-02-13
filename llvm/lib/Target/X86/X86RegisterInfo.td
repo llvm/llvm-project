@@ -189,22 +189,22 @@ def XMM13: X86Reg<"xmm13", 13>, DwarfRegNum<[30, -2, -2]>;
 def XMM14: X86Reg<"xmm14", 14>, DwarfRegNum<[31, -2, -2]>;
 def XMM15: X86Reg<"xmm15", 15>, DwarfRegNum<[32, -2, -2]>;
 
-def XMM16:  X86Reg<"xmm16", 16>, DwarfRegNum<[60, -2, -2]>;
-def XMM17:  X86Reg<"xmm17", 17>, DwarfRegNum<[61, -2, -2]>;
-def XMM18:  X86Reg<"xmm18", 18>, DwarfRegNum<[62, -2, -2]>;
-def XMM19:  X86Reg<"xmm19", 19>, DwarfRegNum<[63, -2, -2]>;
-def XMM20:  X86Reg<"xmm20", 20>, DwarfRegNum<[64, -2, -2]>;
-def XMM21:  X86Reg<"xmm21", 21>, DwarfRegNum<[65, -2, -2]>;
-def XMM22:  X86Reg<"xmm22", 22>, DwarfRegNum<[66, -2, -2]>;
-def XMM23:  X86Reg<"xmm23", 23>, DwarfRegNum<[67, -2, -2]>;
-def XMM24:  X86Reg<"xmm24", 24>, DwarfRegNum<[68, -2, -2]>;
-def XMM25:  X86Reg<"xmm25", 25>, DwarfRegNum<[69, -2, -2]>;
-def XMM26:  X86Reg<"xmm26", 26>, DwarfRegNum<[70, -2, -2]>;
-def XMM27:  X86Reg<"xmm27", 27>, DwarfRegNum<[71, -2, -2]>;
-def XMM28:  X86Reg<"xmm28", 28>, DwarfRegNum<[72, -2, -2]>;
-def XMM29:  X86Reg<"xmm29", 29>, DwarfRegNum<[73, -2, -2]>;
-def XMM30:  X86Reg<"xmm30", 30>, DwarfRegNum<[74, -2, -2]>;
-def XMM31:  X86Reg<"xmm31", 31>, DwarfRegNum<[75, -2, -2]>;
+def XMM16:  X86Reg<"xmm16", 16>, DwarfRegNum<[67, -2, -2]>;
+def XMM17:  X86Reg<"xmm17", 17>, DwarfRegNum<[68, -2, -2]>;
+def XMM18:  X86Reg<"xmm18", 18>, DwarfRegNum<[69, -2, -2]>;
+def XMM19:  X86Reg<"xmm19", 19>, DwarfRegNum<[70, -2, -2]>;
+def XMM20:  X86Reg<"xmm20", 20>, DwarfRegNum<[71, -2, -2]>;
+def XMM21:  X86Reg<"xmm21", 21>, DwarfRegNum<[72, -2, -2]>;
+def XMM22:  X86Reg<"xmm22", 22>, DwarfRegNum<[73, -2, -2]>;
+def XMM23:  X86Reg<"xmm23", 23>, DwarfRegNum<[74, -2, -2]>;
+def XMM24:  X86Reg<"xmm24", 24>, DwarfRegNum<[75, -2, -2]>;
+def XMM25:  X86Reg<"xmm25", 25>, DwarfRegNum<[76, -2, -2]>;
+def XMM26:  X86Reg<"xmm26", 26>, DwarfRegNum<[77, -2, -2]>;
+def XMM27:  X86Reg<"xmm27", 27>, DwarfRegNum<[78, -2, -2]>;
+def XMM28:  X86Reg<"xmm28", 28>, DwarfRegNum<[79, -2, -2]>;
+def XMM29:  X86Reg<"xmm29", 29>, DwarfRegNum<[80, -2, -2]>;
+def XMM30:  X86Reg<"xmm30", 30>, DwarfRegNum<[81, -2, -2]>;
+def XMM31:  X86Reg<"xmm31", 31>, DwarfRegNum<[82, -2, -2]>;
 
 } // CostPerUse
 

@@ -129,6 +129,11 @@ static cl::opt<bool> EnablePhiElim(
   "enable-lsr-phielim", cl::Hidden, cl::init(true),
   cl::desc("Enable LSR phi elimination"));
 
+// The flag adds instruction count to solutions cost comparision.
+static cl::opt<bool> InsnsCost(
+  "lsr-insns-cost", cl::Hidden, cl::init(false),
+  cl::desc("Add instruction count to a LSR cost model"));
+
 #ifndef NDEBUG
 // Stress test IV chain generation.
 static cl::opt<bool> StressIVChain(
@@ -325,6 +330,8 @@ struct Formula {
 
   bool unscale();
 
+  bool hasZeroEnd() const;
+
   size_t getNumRegs() const;
   Type *getType() const;
 
@@ -456,6 +463,14 @@ bool Formula::unscale() {
   Scale = 0;
   BaseRegs.push_back(ScaledReg);
   ScaledReg = nullptr;
+  return true;
+}
+
+bool Formula::hasZeroEnd() const {
+  if (UnfoldedOffset || BaseOffset)
+    return false;
+  if (BaseRegs.size() != 1 || ScaledReg)
+    return false;
   return true;
 }
 
@@ -895,6 +910,7 @@ namespace {
 class Cost {
   /// TODO: Some of these could be merged. Also, a lexical ordering
   /// isn't always optimal.
+  unsigned Insns;
   unsigned NumRegs;
   unsigned AddRecCost;
   unsigned NumIVMuls;
@@ -905,8 +921,8 @@ class Cost {
 
 public:
   Cost()
-    : NumRegs(0), AddRecCost(0), NumIVMuls(0), NumBaseAdds(0), ImmCost(0),
-      SetupCost(0), ScaleCost(0) {}
+    : Insns(0), NumRegs(0), AddRecCost(0), NumIVMuls(0), NumBaseAdds(0),
+      ImmCost(0), SetupCost(0), ScaleCost(0) {}
 
   bool operator<(const Cost &Other) const;
 
@@ -915,9 +931,9 @@ public:
 #ifndef NDEBUG
   // Once any of the metrics loses, they must all remain losers.
   bool isValid() {
-    return ((NumRegs | AddRecCost | NumIVMuls | NumBaseAdds
+    return ((Insns | NumRegs | AddRecCost | NumIVMuls | NumBaseAdds
              | ImmCost | SetupCost | ScaleCost) != ~0u)
-      || ((NumRegs & AddRecCost & NumIVMuls & NumBaseAdds
+      || ((Insns & NumRegs & AddRecCost & NumIVMuls & NumBaseAdds
            & ImmCost & SetupCost & ScaleCost) == ~0u);
   }
 #endif
@@ -1163,6 +1179,9 @@ void Cost::RateFormula(const TargetTransformInfo &TTI,
                        SmallPtrSetImpl<const SCEV *> *LoserRegs) {
   assert(F.isCanonical() && "Cost is accurate only for canonical formula");
   // Tally up the registers.
+  unsigned PrevAddRecCost = AddRecCost;
+  unsigned PrevNumRegs = NumRegs;
+  unsigned PrevNumBaseAdds = NumBaseAdds;
   if (const SCEV *ScaledReg = F.ScaledReg) {
     if (VisitedRegs.count(ScaledReg)) {
       Lose();
@@ -1180,6 +1199,18 @@ void Cost::RateFormula(const TargetTransformInfo &TTI,
     RatePrimaryRegister(BaseReg, Regs, L, SE, DT, LoserRegs);
     if (isLoser())
       return;
+  }
+
+  // Treat every new register that exceeds TTI.getNumberOfRegisters() - 1 as
+  // additional instruction (at least fill).
+  unsigned TTIRegNum = TTI.getNumberOfRegisters(false) - 1;
+  if (NumRegs > TTIRegNum) {
+    // Cost already exceeded TTIRegNum, then only newly added register can add
+    // new instructions.
+    if (PrevNumRegs > TTIRegNum)
+      Insns += (NumRegs - PrevNumRegs);
+    else
+      Insns += (NumRegs - TTIRegNum);
   }
 
   // Determine how many (unfolded) adds we'll need inside the loop.
@@ -1210,11 +1241,30 @@ void Cost::RateFormula(const TargetTransformInfo &TTI,
         !TTI.isFoldableMemAccessOffset(Fixup.UserInst, Offset))
       NumBaseAdds++;
   }
+
+  // If ICmpZero formula ends with not 0, it could not be replaced by
+  // just add or sub. We'll need to compare final result of AddRec.
+  // That means we'll need an additional instruction.
+  // For -10 + {0, +, 1}:
+  // i = i + 1;
+  // cmp i, 10
+  //
+  // For {-10, +, 1}:
+  // i = i + 1;
+  if (LU.Kind == LSRUse::ICmpZero && !F.hasZeroEnd())
+    Insns++;
+  // Each new AddRec adds 1 instruction to calculation.
+  Insns += (AddRecCost - PrevAddRecCost);
+
+  // BaseAdds adds instructions for unfolded registers.
+  if (LU.Kind != LSRUse::ICmpZero)
+    Insns += NumBaseAdds - PrevNumBaseAdds;
   assert(isValid() && "invalid cost");
 }
 
 /// Set this cost to a losing value.
 void Cost::Lose() {
+  Insns = ~0u;
   NumRegs = ~0u;
   AddRecCost = ~0u;
   NumIVMuls = ~0u;
@@ -1226,6 +1276,8 @@ void Cost::Lose() {
 
 /// Choose the lower cost.
 bool Cost::operator<(const Cost &Other) const {
+  if (InsnsCost && Insns != Other.Insns)
+    return Insns < Other.Insns;
   return std::tie(NumRegs, AddRecCost, NumIVMuls, NumBaseAdds, ScaleCost,
                   ImmCost, SetupCost) <
          std::tie(Other.NumRegs, Other.AddRecCost, Other.NumIVMuls,
@@ -1234,6 +1286,7 @@ bool Cost::operator<(const Cost &Other) const {
 }
 
 void Cost::print(raw_ostream &OS) const {
+  OS << Insns << " instruction" << (Insns == 1 ? " " : "s ");
   OS << NumRegs << " reg" << (NumRegs == 1 ? "" : "s");
   if (AddRecCost != 0)
     OS << ", with addrec cost " << AddRecCost;

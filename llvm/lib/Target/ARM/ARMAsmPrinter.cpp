@@ -1142,6 +1142,11 @@ void ARMAsmPrinter::EmitJumpTableInsts(const MachineInstr *MI) {
   const MachineOperand &MO1 = MI->getOperand(1);
   unsigned JTI = MO1.getIndex();
 
+  // Make sure the Thumb jump table is 4-byte aligned. This will be a nop for
+  // ARM mode tables.
+  EmitAlignment(2);
+
+  // Emit a label for the jump table.
   MCSymbol *JTISymbol = GetARMJTIPICJumpTableLabel(JTI);
   OutStreamer->EmitLabel(JTISymbol);
 

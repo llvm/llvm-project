@@ -3739,7 +3739,7 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
 
 /// Create the "IDENTIFICATION_BLOCK_ID" containing a single string with the
 /// current llvm version, and a record for the epoch number.
-void writeIdentificationBlock(BitstreamWriter &Stream) {
+static void writeIdentificationBlock(BitstreamWriter &Stream) {
   Stream.EnterSubblock(bitc::IDENTIFICATION_BLOCK_ID, 5);
 
   // Write the "user readable" string identifying the bitcode producer

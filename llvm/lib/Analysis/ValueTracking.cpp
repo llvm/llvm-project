@@ -1824,10 +1824,12 @@ static bool rangeMetadataExcludesValue(const MDNode* Ranges, const APInt& Value)
   return true;
 }
 
-/// Return true if the given value is known to be non-zero when defined.
-/// For vectors return true if every element is known to be non-zero when
-/// defined. Supports values with integer or pointer type and vectors of
-/// integers.
+/// Return true if the given value is known to be non-zero when defined. For
+/// vectors, return true if every element is known to be non-zero when
+/// defined. For pointers, if the context instruction and dominator tree are
+/// specified, perform context-sensitive analysis and return true if the
+/// pointer couldn't possibly be null at the specified instruction.
+/// Supports values with integer or pointer type and vectors of integers.
 bool isKnownNonZero(const Value *V, unsigned Depth, const Query &Q) {
   if (auto *C = dyn_cast<Constant>(V)) {
     if (C->isNullValue())
@@ -1870,7 +1872,7 @@ bool isKnownNonZero(const Value *V, unsigned Depth, const Query &Q) {
 
   // Check for pointer simplifications.
   if (V->getType()->isPointerTy()) {
-    if (isKnownNonNull(V))
+    if (isKnownNonNullAt(V, Q.CxtI, Q.DT))
       return true;
     if (const GEPOperator *GEP = dyn_cast<GEPOperator>(V))
       if (isGEPKnownNonNull(GEP, Depth, Q))
@@ -3473,6 +3475,16 @@ static bool isKnownNonNullFromDominatingCondition(const Value *V,
     if (NumUsesExplored >= DomConditionsMaxUses)
       break;
     NumUsesExplored++;
+
+    // If the value is used as an argument to a call or invoke, then argument
+    // attributes may provide an answer about null-ness.
+    if (auto CS = ImmutableCallSite(U))
+      if (auto *CalledFunc = CS.getCalledFunction())
+        for (const Argument &Arg : CalledFunc->args())
+          if (CS.getArgOperand(Arg.getArgNo()) == V &&
+              Arg.hasNonNullAttr() && DT->dominates(CS.getInstruction(), CtxI))
+            return true;
+
     // Consider only compare instructions uniquely controlling a branch
     CmpInst::Predicate Pred;
     if (!match(const_cast<User *>(U),

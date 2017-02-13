@@ -1472,22 +1472,34 @@ static ARMCC::CondCodes IntCCToARMCC(ISD::CondCode CC) {
 
 /// FPCCToARMCC - Convert a DAG fp condition code to an ARM CC.
 static void FPCCToARMCC(ISD::CondCode CC, ARMCC::CondCodes &CondCode,
-                        ARMCC::CondCodes &CondCode2) {
+                        ARMCC::CondCodes &CondCode2, bool &InvalidOnQNaN) {
   CondCode2 = ARMCC::AL;
+  InvalidOnQNaN = true;
   switch (CC) {
   default: llvm_unreachable("Unknown FP condition!");
   case ISD::SETEQ:
-  case ISD::SETOEQ: CondCode = ARMCC::EQ; break;
+  case ISD::SETOEQ:
+    CondCode = ARMCC::EQ;
+    InvalidOnQNaN = false;
+    break;
   case ISD::SETGT:
   case ISD::SETOGT: CondCode = ARMCC::GT; break;
   case ISD::SETGE:
   case ISD::SETOGE: CondCode = ARMCC::GE; break;
   case ISD::SETOLT: CondCode = ARMCC::MI; break;
   case ISD::SETOLE: CondCode = ARMCC::LS; break;
-  case ISD::SETONE: CondCode = ARMCC::MI; CondCode2 = ARMCC::GT; break;
+  case ISD::SETONE:
+    CondCode = ARMCC::MI;
+    CondCode2 = ARMCC::GT;
+    InvalidOnQNaN = false;
+    break;
   case ISD::SETO:   CondCode = ARMCC::VC; break;
   case ISD::SETUO:  CondCode = ARMCC::VS; break;
-  case ISD::SETUEQ: CondCode = ARMCC::EQ; CondCode2 = ARMCC::VS; break;
+  case ISD::SETUEQ:
+    CondCode = ARMCC::EQ;
+    CondCode2 = ARMCC::VS;
+    InvalidOnQNaN = false;
+    break;
   case ISD::SETUGT: CondCode = ARMCC::HI; break;
   case ISD::SETUGE: CondCode = ARMCC::PL; break;
   case ISD::SETLT:
@@ -1495,7 +1507,10 @@ static void FPCCToARMCC(ISD::CondCode CC, ARMCC::CondCodes &CondCode,
   case ISD::SETLE:
   case ISD::SETULE: CondCode = ARMCC::LE; break;
   case ISD::SETNE:
-  case ISD::SETUNE: CondCode = ARMCC::NE; break;
+  case ISD::SETUNE:
+    CondCode = ARMCC::NE;
+    InvalidOnQNaN = false;
+    break;
   }
 }
 
@@ -3772,13 +3787,15 @@ SDValue ARMTargetLowering::getARMCmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
 
 /// Returns a appropriate VFP CMP (fcmp{s|d}+fmstat) for the given operands.
 SDValue ARMTargetLowering::getVFPCmp(SDValue LHS, SDValue RHS,
-                                     SelectionDAG &DAG, const SDLoc &dl) const {
+                                     SelectionDAG &DAG, const SDLoc &dl,
+                                     bool InvalidOnQNaN) const {
   assert(!Subtarget->isFPOnlySP() || RHS.getValueType() != MVT::f64);
   SDValue Cmp;
+  SDValue C = DAG.getConstant(InvalidOnQNaN, dl, MVT::i32);
   if (!isFloatingPointZero(RHS))
-    Cmp = DAG.getNode(ARMISD::CMPFP, dl, MVT::Glue, LHS, RHS);
+    Cmp = DAG.getNode(ARMISD::CMPFP, dl, MVT::Glue, LHS, RHS, C);
   else
-    Cmp = DAG.getNode(ARMISD::CMPFPw0, dl, MVT::Glue, LHS);
+    Cmp = DAG.getNode(ARMISD::CMPFPw0, dl, MVT::Glue, LHS, C);
   return DAG.getNode(ARMISD::FMSTAT, dl, MVT::Glue, Cmp);
 }
 
@@ -3795,10 +3812,12 @@ ARMTargetLowering::duplicateCmp(SDValue Cmp, SelectionDAG &DAG) const {
   Cmp = Cmp.getOperand(0);
   Opc = Cmp.getOpcode();
   if (Opc == ARMISD::CMPFP)
-    Cmp = DAG.getNode(Opc, DL, MVT::Glue, Cmp.getOperand(0),Cmp.getOperand(1));
+    Cmp = DAG.getNode(Opc, DL, MVT::Glue, Cmp.getOperand(0),
+                      Cmp.getOperand(1), Cmp.getOperand(2));
   else {
     assert(Opc == ARMISD::CMPFPw0 && "unexpected operand of FMSTAT");
-    Cmp = DAG.getNode(Opc, DL, MVT::Glue, Cmp.getOperand(0));
+    Cmp = DAG.getNode(Opc, DL, MVT::Glue, Cmp.getOperand(0),
+                      Cmp.getOperand(1));
   }
   return DAG.getNode(ARMISD::FMSTAT, DL, MVT::Glue, Cmp);
 }
@@ -4198,7 +4217,8 @@ SDValue ARMTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
   }
 
   ARMCC::CondCodes CondCode, CondCode2;
-  FPCCToARMCC(CC, CondCode, CondCode2);
+  bool InvalidOnQNaN;
+  FPCCToARMCC(CC, CondCode, CondCode2, InvalidOnQNaN);
 
   // Try to generate VMAXNM/VMINNM on ARMv8.
   if (Subtarget->hasFPARMv8() && (TrueVal.getValueType() == MVT::f32 ||
@@ -4217,13 +4237,13 @@ SDValue ARMTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
   }
 
   SDValue ARMcc = DAG.getConstant(CondCode, dl, MVT::i32);
-  SDValue Cmp = getVFPCmp(LHS, RHS, DAG, dl);
+  SDValue Cmp = getVFPCmp(LHS, RHS, DAG, dl, InvalidOnQNaN);
   SDValue CCR = DAG.getRegister(ARM::CPSR, MVT::i32);
   SDValue Result = getCMOV(dl, VT, FalseVal, TrueVal, ARMcc, CCR, Cmp, DAG);
   if (CondCode2 != ARMCC::AL) {
     SDValue ARMcc2 = DAG.getConstant(CondCode2, dl, MVT::i32);
     // FIXME: Needs another CMP because flag can have but one use.
-    SDValue Cmp2 = getVFPCmp(LHS, RHS, DAG, dl);
+    SDValue Cmp2 = getVFPCmp(LHS, RHS, DAG, dl, InvalidOnQNaN);
     Result = getCMOV(dl, VT, Result, TrueVal, ARMcc2, CCR, Cmp2, DAG);
   }
   return Result;
@@ -4384,10 +4404,11 @@ SDValue ARMTargetLowering::LowerBR_CC(SDValue Op, SelectionDAG &DAG) const {
   }
 
   ARMCC::CondCodes CondCode, CondCode2;
-  FPCCToARMCC(CC, CondCode, CondCode2);
+  bool InvalidOnQNaN;
+  FPCCToARMCC(CC, CondCode, CondCode2, InvalidOnQNaN);
 
   SDValue ARMcc = DAG.getConstant(CondCode, dl, MVT::i32);
-  SDValue Cmp = getVFPCmp(LHS, RHS, DAG, dl);
+  SDValue Cmp = getVFPCmp(LHS, RHS, DAG, dl, InvalidOnQNaN);
   SDValue CCR = DAG.getRegister(ARM::CPSR, MVT::i32);
   SDVTList VTList = DAG.getVTList(MVT::Other, MVT::Glue);
   SDValue Ops[] = { Chain, Dest, ARMcc, CCR, Cmp };
@@ -13290,6 +13311,11 @@ bool ARMTargetLowering::lowerInterleavedLoad(
   if (!Subtarget->hasNEON() || (VecSize != 64 && VecSize != 128) || EltIs64Bits)
     return false;
 
+  // Skip if the vector has f16 elements: even though we could do an i16 vldN,
+  // we can't hold the f16 vectors and will end up converting via f32.
+  if (EltTy->isHalfTy())
+    return false;
+
   // A pointer vector can not be the return type of the ldN intrinsics. Need to
   // load integer vectors first and then convert to pointer vectors.
   if (EltTy->isPointerTy())
@@ -13306,6 +13332,8 @@ bool ARMTargetLowering::lowerInterleavedLoad(
   Type *Int8Ptr = Builder.getInt8PtrTy(LI->getPointerAddressSpace());
   Ops.push_back(Builder.CreateBitCast(LI->getPointerOperand(), Int8Ptr));
   Ops.push_back(Builder.getInt32(LI->getAlignment()));
+
+  assert(isTypeLegal(EVT::getEVT(VecTy)) && "Illegal vldN vector type!");
 
   Type *Tys[] = { VecTy, Int8Ptr };
   Function *VldnFunc =
@@ -13380,6 +13408,11 @@ bool ARMTargetLowering::lowerInterleavedStore(StoreInst *SI,
       EltIs64Bits)
     return false;
 
+  // Skip if the vector has f16 elements: even though we could do an i16 vldN,
+  // we can't hold the f16 vectors and will end up converting via f32.
+  if (EltTy->isHalfTy())
+    return false;
+
   Value *Op0 = SVI->getOperand(0);
   Value *Op1 = SVI->getOperand(1);
   IRBuilder<> Builder(SI);
@@ -13405,6 +13438,8 @@ bool ARMTargetLowering::lowerInterleavedStore(StoreInst *SI,
 
   Type *Int8Ptr = Builder.getInt8PtrTy(SI->getPointerAddressSpace());
   Ops.push_back(Builder.CreateBitCast(SI->getPointerOperand(), Int8Ptr));
+
+  assert(isTypeLegal(EVT::getEVT(SubVecTy)) && "Illegal vstN vector type!");
 
   Type *Tys[] = { Int8Ptr, SubVecTy };
   Function *VstNFunc = Intrinsic::getDeclaration(
