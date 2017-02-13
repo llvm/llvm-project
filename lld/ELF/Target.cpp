@@ -650,6 +650,7 @@ RelExpr X86_64TargetInfo<ELFT>::getRelExpr(uint32_t Type,
                                            const SymbolBody &S) const {
   switch (Type) {
   case R_X86_64_8:
+  case R_X86_64_16:
   case R_X86_64_32:
   case R_X86_64_32S:
   case R_X86_64_64:
@@ -878,6 +879,10 @@ void X86_64TargetInfo<ELFT>::relocateOne(uint8_t *Loc, uint32_t Type,
   case R_X86_64_8:
     checkUInt<8>(Loc, Val, Type);
     *Loc = Val;
+    break;
+  case R_X86_64_16:
+    checkUInt<16>(Loc, Val, Type);
+    write16le(Loc, Val);
     break;
   case R_X86_64_32:
     checkUInt<32>(Loc, Val, Type);

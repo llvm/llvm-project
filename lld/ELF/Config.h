@@ -82,6 +82,7 @@ struct Configuration {
   llvm::StringRef LTONewPmPasses;
   llvm::StringRef MapFile;
   llvm::StringRef OutputFile;
+  llvm::StringRef OptRemarksFilename;
   llvm::StringRef SoName;
   llvm::StringRef Sysroot;
   std::string RPath;
@@ -117,6 +118,7 @@ struct Configuration {
   bool Nostdlib;
   bool OFormatBinary;
   bool OMagic;
+  bool OptRemarksWithHotness;
   bool Pic;
   bool Pie;
   bool PrintGcSections;

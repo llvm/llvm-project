@@ -99,6 +99,7 @@ add_lldb_library(liblldb SHARED
     lldbInterpreter
     lldbSymbol
     lldbTarget
+    lldbUtility
     ${LLDB_ALL_PLUGINS}
   LINK_COMPONENTS
     Support
