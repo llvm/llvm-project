@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fsyntax-only -Wstrict-prototypes -verify %s
-// RUN: %clang_cc1 -fsyntax-only -Wstrict-prototypes -fdiagnostics-parseable-fixits %s 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -triple i386-pc-unknown -fsyntax-only -Wstrict-prototypes -verify %s
+// RUN: %clang_cc1 -triple i386-pc-unknown -fsyntax-only -Wstrict-prototypes -fdiagnostics-parseable-fixits %s 2>&1 | FileCheck %s
 
 // function declaration with unspecified params
 void foo1(); // expected-warning {{this function declaration is not a prototype}}

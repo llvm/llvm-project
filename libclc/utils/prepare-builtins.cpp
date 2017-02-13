@@ -36,10 +36,10 @@ int main(int argc, char **argv) {
   {
     ErrorOr<std::unique_ptr<MemoryBuffer>> BufferOrErr =
       MemoryBuffer::getFile(InputFilename);
-    std::unique_ptr<MemoryBuffer> &BufferPtr = BufferOrErr.get();
-    if (std::error_code  ec = BufferOrErr.getError())
+    if (std::error_code  ec = BufferOrErr.getError()) {
       ErrorMessage = ec.message();
-    else {
+    } else {
+      std::unique_ptr<MemoryBuffer> &BufferPtr = BufferOrErr.get();
       ErrorOr<std::unique_ptr<Module>> ModuleOrErr =
           expectedToErrorOrAndEmitErrors(Context,
           parseBitcodeFile(BufferPtr.get()->getMemBufferRef(), Context));
