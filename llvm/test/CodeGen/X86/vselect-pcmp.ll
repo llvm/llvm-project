@@ -317,3 +317,27 @@ define <8 x double> @signbit_sel_v8f64(<8 x double> %x, <8 x double> %y, <8 x i6
   ret <8 x double> %z
 }
 
+; If we have a floating-point compare:
+; (1) Don't die.
+; (2) FIXME: If we don't care about signed-zero (and NaN?), the compare should still get folded.
+
+define <4 x float> @signbit_sel_v4f32_fcmp(<4 x float> %x, <4 x float> %y, <4 x float> %mask) #0 {
+; AVX12F-LABEL: signbit_sel_v4f32_fcmp:
+; AVX12F:       # BB#0:
+; AVX12F-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; AVX12F-NEXT:    vcmpltps %xmm2, %xmm0, %xmm2
+; AVX12F-NEXT:    vblendvps %xmm2, %xmm0, %xmm1, %xmm0
+; AVX12F-NEXT:    retq
+;
+; AVX512VL-LABEL: signbit_sel_v4f32_fcmp:
+; AVX512VL:       # BB#0:
+; AVX512VL-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512VL-NEXT:    vcmpltps %xmm2, %xmm0, %k1
+; AVX512VL-NEXT:    vblendmps %xmm0, %xmm1, %xmm0 {%k1}
+; AVX512VL-NEXT:    retq
+  %cmp = fcmp olt <4 x float> %x, zeroinitializer
+  %sel = select <4 x i1> %cmp, <4 x float> %x, <4 x float> %y
+  ret <4 x float> %sel
+}
+
+attributes #0 = { "no-nans-fp-math"="true" }

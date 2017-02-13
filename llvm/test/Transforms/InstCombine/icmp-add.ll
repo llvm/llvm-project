@@ -88,8 +88,7 @@ define <2 x i1> @test4vec(<2 x i32> %a) {
 
 define i1 @nsw_slt1(i8 %a) {
 ; CHECK-LABEL: @nsw_slt1(
-; CHECK-NEXT:    [[B:%.*]] = add nsw i8 %a, 100
-; CHECK-NEXT:    [[C:%.*]] = icmp slt i8 [[B]], -27
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 %a, -128
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %b = add nsw i8 %a, 100
@@ -102,8 +101,7 @@ define i1 @nsw_slt1(i8 %a) {
 
 define i1 @nsw_slt2(i8 %a) {
 ; CHECK-LABEL: @nsw_slt2(
-; CHECK-NEXT:    [[B:%.*]] = add nsw i8 %a, -100
-; CHECK-NEXT:    [[C:%.*]] = icmp slt i8 [[B]], 27
+; CHECK-NEXT:    [[C:%.*]] = icmp ne i8 %a, 127
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %b = add nsw i8 %a, -100
@@ -116,8 +114,7 @@ define i1 @nsw_slt2(i8 %a) {
 
 define i1 @nsw_slt3(i8 %a) {
 ; CHECK-LABEL: @nsw_slt3(
-; CHECK-NEXT:    [[B:%.*]] = add nsw i8 %a, 100
-; CHECK-NEXT:    [[C:%.*]] = icmp slt i8 [[B]], -26
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i8 %a, -126
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %b = add nsw i8 %a, 100
@@ -130,8 +127,7 @@ define i1 @nsw_slt3(i8 %a) {
 
 define i1 @nsw_slt4(i8 %a) {
 ; CHECK-LABEL: @nsw_slt4(
-; CHECK-NEXT:    [[B:%.*]] = add nsw i8 %a, -100
-; CHECK-NEXT:    [[C:%.*]] = icmp slt i8 [[B]], 26
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i8 %a, 126
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %b = add nsw i8 %a, -100
@@ -144,8 +140,7 @@ define i1 @nsw_slt4(i8 %a) {
 
 define i1 @nsw_sgt1(i8 %a) {
 ; CHECK-LABEL: @nsw_sgt1(
-; CHECK-NEXT:    [[B:%.*]] = add nsw i8 %a, -100
-; CHECK-NEXT:    [[C:%.*]] = icmp sgt i8 [[B]], 26
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 %a, 127
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %b = add nsw i8 %a, -100
@@ -155,11 +150,11 @@ define i1 @nsw_sgt1(i8 %a) {
 
 ; icmp Pred (add nsw X, C2), C --> icmp Pred X, (C - C2), when C - C2 does not overflow.
 ; Try a vector type to make sure that works too.
+; FIXME: This should be 'eq 127' as above.
 
 define <2 x i1> @nsw_sgt2_splat_vec(<2 x i8> %a) {
 ; CHECK-LABEL: @nsw_sgt2_splat_vec(
-; CHECK-NEXT:    [[B:%.*]] = add nsw <2 x i8> %a, <i8 100, i8 100>
-; CHECK-NEXT:    [[C:%.*]] = icmp sgt <2 x i8> [[B]], <i8 -26, i8 -26>
+; CHECK-NEXT:    [[C:%.*]] = icmp sgt <2 x i8> %a, <i8 -126, i8 -126>
 ; CHECK-NEXT:    ret <2 x i1> [[C]]
 ;
   %b = add nsw <2 x i8> %a, <i8 100, i8 100>
@@ -180,12 +175,11 @@ define i1 @slt_zero_add_nsw(i32 %a) {
   ret i1 %cmp
 }
 
-; FIXME: The same fold should work with vectors.
+; The same fold should work with vectors.
 
 define <2 x i1> @slt_zero_add_nsw_splat_vec(<2 x i8> %a) {
 ; CHECK-LABEL: @slt_zero_add_nsw_splat_vec(
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw <2 x i8> %a, <i8 1, i8 1>
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt <2 x i8> [[ADD]], zeroinitializer
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt <2 x i8> %a, <i8 -1, i8 -1>
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %add = add nsw <2 x i8> %a, <i8 1, i8 1>

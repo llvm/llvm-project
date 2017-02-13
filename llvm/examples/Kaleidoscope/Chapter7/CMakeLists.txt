@@ -7,6 +7,7 @@ set(LLVM_LINK_COMPONENTS
   RuntimeDyld
   ScalarOpts
   Support
+  TransformUtils
   native
   )
 

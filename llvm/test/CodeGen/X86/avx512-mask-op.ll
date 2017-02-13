@@ -542,8 +542,7 @@ define <64 x i8> @test16(i64 %x) {
 ; SKX-NEXT:    movl $32, %eax
 ; SKX-NEXT:    kmovd %eax, %k1
 ; SKX-NEXT:    vpblendmb %ymm0, %ymm1, %ymm0 {%k1}
-; SKX-NEXT:    vextracti64x4 $1, %zmm1, %ymm1
-; SKX-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
+; SKX-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,2,3],zmm1[4,5,6,7]
 ; SKX-NEXT:    vpmovb2m %zmm0, %k0
 ; SKX-NEXT:    vpmovm2b %k0, %zmm0
 ; SKX-NEXT:    retq
@@ -609,8 +608,7 @@ define <64 x i8> @test17(i64 %x, i32 %y, i32 %z) {
 ; SKX-NEXT:    movl $32, %eax
 ; SKX-NEXT:    kmovd %eax, %k1
 ; SKX-NEXT:    vpblendmb %ymm0, %ymm1, %ymm0 {%k1}
-; SKX-NEXT:    vextracti64x4 $1, %zmm1, %ymm1
-; SKX-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
+; SKX-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,2,3],zmm1[4,5,6,7]
 ; SKX-NEXT:    vpmovb2m %zmm0, %k0
 ; SKX-NEXT:    vpmovm2b %k0, %zmm0
 ; SKX-NEXT:    retq

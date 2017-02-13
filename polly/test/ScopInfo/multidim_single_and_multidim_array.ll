@@ -33,7 +33,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 ; NONAFFINE-NEXT:         Schedule :=
 ; NONAFFINE-NEXT:             [n, p_1] -> { Stmt_for_i_1[i0] -> [0, i0] };
 ; NONAFFINE-NEXT:         MayWriteAccess :=    [Reduction Type: NONE] [Scalar: 0]
-; NONAFFINE-NEXT:             [n, p_1] -> { Stmt_for_i_1[i0] -> MemRef_X[o0] : -2305843009213693952 <= o0 <= 2305843009213693951 };
+; NONAFFINE-NEXT:             [n, p_1] -> { Stmt_for_i_1[i0] -> MemRef_X[o0] };
 ; NONAFFINE-NEXT:     Stmt_for_i_2
 ; NONAFFINE-NEXT:         Domain :=
 ; NONAFFINE-NEXT:             [n, p_1] -> { Stmt_for_i_2[i0] : 0 <= i0 < n };

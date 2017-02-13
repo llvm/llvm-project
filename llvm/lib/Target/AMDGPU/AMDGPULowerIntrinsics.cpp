@@ -51,7 +51,7 @@ static bool shouldExpandOperationWithSize(Value *Size) {
 
 static bool expandMemIntrinsicUses(Function &F) {
   Intrinsic::ID ID = F.getIntrinsicID();
-  bool Changed;
+  bool Changed = false;
 
   for (auto I = F.user_begin(), E = F.user_end(); I != E;) {
     Instruction *Inst = cast<Instruction>(*I);

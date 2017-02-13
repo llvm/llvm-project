@@ -5791,37 +5791,38 @@ static bool getFauxShuffleMask(SDValue N, SmallVectorImpl<int> &Mask,
   return false;
 }
 
-/// Removes unused shuffle source ops and adjusts the shuffle mask accordingly.
-static void resolveTargetShuffleInputsAndMask(SmallVectorImpl<SDValue> &Ops,
+/// Removes unused shuffle source inputs and adjusts the shuffle mask accordingly.
+static void resolveTargetShuffleInputsAndMask(SmallVectorImpl<SDValue> &Inputs,
                                               SmallVectorImpl<int> &Mask) {
   int MaskWidth = Mask.size();
-  SmallVector<SDValue, 8> UsedOps;
-  for (int i = 0, e = Ops.size(); i < e; ++i) {
-    int lo = UsedOps.size() * MaskWidth;
+  SmallVector<SDValue, 8> UsedInputs;
+  for (int i = 0, e = Inputs.size(); i < e; ++i) {
+    int lo = UsedInputs.size() * MaskWidth;
     int hi = lo + MaskWidth;
     if (any_of(Mask, [lo, hi](int i) { return (lo <= i) && (i < hi); })) {
-      UsedOps.push_back(Ops[i]);
+      UsedInputs.push_back(Inputs[i]);
       continue;
     }
     for (int &M : Mask)
       if (lo <= M)
         M -= MaskWidth;
   }
-  Ops = UsedOps;
+  Inputs = UsedInputs;
 }
 
 /// Calls setTargetShuffleZeroElements to resolve a target shuffle mask's inputs
 /// and set the SM_SentinelUndef and SM_SentinelZero values. Then check the
 /// remaining input indices in case we now have a unary shuffle and adjust the
-/// Op0/Op1 inputs accordingly.
+/// inputs accordingly.
 /// Returns true if the target shuffle mask was decoded.
-static bool resolveTargetShuffleInputs(SDValue Op, SmallVectorImpl<SDValue> &Ops,
+static bool resolveTargetShuffleInputs(SDValue Op,
+                                       SmallVectorImpl<SDValue> &Inputs,
                                        SmallVectorImpl<int> &Mask) {
-  if (!setTargetShuffleZeroElements(Op, Mask, Ops))
-    if (!getFauxShuffleMask(Op, Mask, Ops))
+  if (!setTargetShuffleZeroElements(Op, Mask, Inputs))
+    if (!getFauxShuffleMask(Op, Mask, Inputs))
       return false;
 
-  resolveTargetShuffleInputsAndMask(Ops, Mask);
+  resolveTargetShuffleInputsAndMask(Inputs, Mask);
   return true;
 }
 
@@ -8188,7 +8189,7 @@ static SDValue getMaskNode(SDValue Mask, MVT MaskVT,
 // Function convertBitVectorToUnsigned - The function gets SmallBitVector
 // as argument and convert him to unsigned.
 // The output of the function is not(zeroable)
-static unsigned convertBitVectorToUnsiged(const SmallBitVector &Zeroable) {
+static unsigned convertBitVectorToUnsigned(const SmallBitVector &Zeroable) {
   unsigned convertBit = 0;
   for (int i = 0, e = Zeroable.size(); i < e; i++)
     convertBit |= !(Zeroable[i]) << i;
@@ -8205,7 +8206,7 @@ static SDValue lowerVectorShuffleToEXPAND(const SDLoc &DL, MVT VT,
   if (!isNonZeroElementsInOrder(Zeroable, Mask, V1.getValueType(),
                                 IsLeftZeroSide))
     return SDValue();
-  unsigned VEXPANDMask = convertBitVectorToUnsiged(Zeroable);
+  unsigned VEXPANDMask = convertBitVectorToUnsigned(Zeroable);
   MVT IntegerType =
       MVT::getIntegerVT(std::max((int)VT.getVectorNumElements(), 8));
   SDValue MaskNode = DAG.getConstant(VEXPANDMask, DL, IntegerType);
@@ -14009,12 +14010,14 @@ static SDValue LowerEXTRACT_SUBVECTOR(SDValue Op, const X86Subtarget &Subtarget,
           In.getSimpleValueType().is512BitVector()) &&
          "Can only extract from 256-bit or 512-bit vectors");
 
-  if (ResVT.is128BitVector())
-    return extract128BitVector(In, IdxVal, DAG, dl);
-  if (ResVT.is256BitVector())
-    return extract256BitVector(In, IdxVal, DAG, dl);
+  // If the input is a buildvector just emit a smaller one.
+  unsigned ElemsPerChunk = ResVT.getVectorNumElements();
+  if (In.getOpcode() == ISD::BUILD_VECTOR)
+    return DAG.getNode(ISD::BUILD_VECTOR, dl, ResVT,
+                       makeArrayRef(In->op_begin() + IdxVal, ElemsPerChunk));
 
-  llvm_unreachable("Unimplemented!");
+  // Everything else is legal.
+  return Op;
 }
 
 static bool areOnlyUsersOf(SDNode *N, ArrayRef<SDValue> ValidUsers) {
@@ -26264,7 +26267,8 @@ bool X86TargetLowering::isGAPlusOffset(SDNode *N,
 // instructions.
 // TODO: Investigate sharing more of this with shuffle lowering.
 static bool matchUnaryVectorShuffle(MVT MaskVT, ArrayRef<int> Mask,
-                                    bool FloatDomain,
+                                    bool FloatDomain, SDValue &V1, SDLoc &DL,
+                                    SelectionDAG &DAG,
                                     const X86Subtarget &Subtarget,
                                     unsigned &Shuffle, MVT &SrcVT, MVT &DstVT) {
   unsigned NumMaskElts = Mask.size();
@@ -26280,8 +26284,9 @@ static bool matchUnaryVectorShuffle(MVT MaskVT, ArrayRef<int> Mask,
   }
 
   // Match against a VZEXT instruction.
-  // TODO: Add 256/512-bit vector support.
-  if (!FloatDomain && MaskVT.is128BitVector() && Subtarget.hasSSE41()) {
+  // TODO: Add 512-bit vector support (split AVX512F and AVX512BW).
+  if (!FloatDomain && ((MaskVT.is128BitVector() && Subtarget.hasSSE41()) ||
+                       (MaskVT.is256BitVector() && Subtarget.hasInt256()))) {
     unsigned MaxScale = 64 / MaskEltSize;
     for (unsigned Scale = 2; Scale <= MaxScale; Scale *= 2) {
       bool Match = true;
@@ -26291,7 +26296,10 @@ static bool matchUnaryVectorShuffle(MVT MaskVT, ArrayRef<int> Mask,
         Match &= isUndefOrZeroInRange(Mask, (i * Scale) + 1, Scale - 1);
       }
       if (Match) {
-        SrcVT = MaskVT;
+        unsigned SrcSize = std::max(128u, NumDstElts * MaskEltSize);
+        SrcVT = MVT::getVectorVT(MaskVT.getScalarType(), SrcSize / MaskEltSize);
+        if (SrcVT != MaskVT)
+          V1 = extractSubVector(V1, 0, DAG, DL, SrcSize);
         DstVT = MVT::getIntegerVT(Scale * MaskEltSize);
         DstVT = MVT::getVectorVT(DstVT, NumDstElts);
         Shuffle = X86ISD::VZEXT;
@@ -26908,8 +26916,8 @@ static bool combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
       }
     }
 
-    if (matchUnaryVectorShuffle(MaskVT, Mask, FloatDomain, Subtarget, Shuffle,
-                                ShuffleSrcVT, ShuffleVT)) {
+    if (matchUnaryVectorShuffle(MaskVT, Mask, FloatDomain, V1, DL, DAG,
+                                Subtarget, Shuffle, ShuffleSrcVT, ShuffleVT)) {
       if (Depth == 1 && Root.getOpcode() == Shuffle)
         return false; // Nothing to do!
       if (IsEVEXShuffle && (NumRootElts != ShuffleVT.getVectorNumElements()))
@@ -34152,28 +34160,25 @@ static SDValue combineInsertSubvector(SDNode *N, SelectionDAG &DAG,
   MVT OpVT = N->getSimpleValueType(0);
   MVT SubVecVT = SubVec.getSimpleValueType();
 
-  // If we're inserting into the upper half of a 256-bit vector with a vector
-  // that was extracted from the upper half of a 256-bit vector, we should
-  // use a blend instead.
-  if (SubVec.getOpcode() == ISD::EXTRACT_SUBVECTOR && OpVT.is256BitVector() &&
+  // If this is an insert of an extract, combine to a shuffle. Don't do this
+  // if the insert or extract can be represented with a subvector operation.
+  if (SubVec.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
       SubVec.getOperand(0).getSimpleValueType() == OpVT &&
-      Idx == SubVec.getOperand(1) && IdxVal == OpVT.getVectorNumElements()/2) {
+      (IdxVal != 0 || !Vec.isUndef())) {
+    int ExtIdxVal = cast<ConstantSDNode>(SubVec.getOperand(1))->getZExtValue();
+    if (ExtIdxVal != 0) {
+      int VecNumElts = OpVT.getVectorNumElements();
+      int SubVecNumElts = SubVecVT.getVectorNumElements();
+      SmallVector<int, 64> Mask(VecNumElts);
+      // First create an identity shuffle mask.
+      for (int i = 0; i != VecNumElts; ++i)
+        Mask[i] = i;
+      // Now insert the extracted portion.
+      for (int i = 0; i != SubVecNumElts; ++i)
+        Mask[i + IdxVal] = i + ExtIdxVal + VecNumElts;
 
-    // Integers must be cast to 32-bit because there is only vpblendd;
-    // vpblendw can't be used for this because it has a handicapped mask.
-    // If we don't have AVX2, then cast to float. Using a wrong domain blend
-    // is still more efficient than using the wrong domain vinsertf128 that
-    // will be created by InsertSubVector().
-    MVT CastVT = OpVT;
-    if (OpVT.isInteger())
-      CastVT = Subtarget.hasAVX2() ? MVT::v8i32 : MVT::v8f32;
-
-    // The blend instruction, and therefore its mask, depend on the data type.
-    unsigned MaskVal = CastVT.getScalarSizeInBits() == 64 ? 0x0c : 0xf0;
-    SDValue Mask = DAG.getConstant(MaskVal, dl, MVT::i8);
-    Vec = DAG.getNode(X86ISD::BLENDI, dl, CastVT, DAG.getBitcast(CastVT, Vec),
-                      DAG.getBitcast(CastVT, SubVec.getOperand(0)), Mask);
-    return DAG.getBitcast(OpVT, Vec);
+      return DAG.getVectorShuffle(OpVT, dl, Vec, SubVec.getOperand(0), Mask);
+    }
   }
 
   // Fold two 16-byte or 32-byte subvector loads into one 32-byte or 64-byte

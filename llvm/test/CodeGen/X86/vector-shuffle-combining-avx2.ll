@@ -480,14 +480,12 @@ define <8 x float> @combine_permps_as_permpd(<8 x float> %a) {
 define <4 x i64> @combine_pshufb_as_zext(<32 x i8> %a0) {
 ; X32-LABEL: combine_pshufb_as_zext:
 ; X32:       # BB#0:
-; X32-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[1,0,0,1]
-; X32-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[8,9],zero,zero,zero,zero,zero,zero,ymm0[10,11],zero,zero,zero,zero,zero,zero,ymm0[20,21],zero,zero,zero,zero,zero,zero,ymm0[22,23],zero,zero,zero,zero,zero,zero
+; X32-NEXT:    vpmovzxwq {{.*#+}} ymm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: combine_pshufb_as_zext:
 ; X64:       # BB#0:
-; X64-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[1,0,0,1]
-; X64-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[8,9],zero,zero,zero,zero,zero,zero,ymm0[10,11],zero,zero,zero,zero,zero,zero,ymm0[20,21],zero,zero,zero,zero,zero,zero,ymm0[22,23],zero,zero,zero,zero,zero,zero
+; X64-NEXT:    vpmovzxwq {{.*#+}} ymm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
 ; X64-NEXT:    retq
   %1 = shufflevector <32 x i8> %a0, <32 x i8> undef, <32 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   %2 = call <32 x i8> @llvm.x86.avx2.pshuf.b(<32 x i8> %1, <32 x i8> <i8 8, i8 9, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 10, i8 11, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 4, i8 5, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 6, i8 7, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>)

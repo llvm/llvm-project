@@ -53,6 +53,7 @@
 #define LLVM_TRANSFORMS_UTILS_PREDICATEINFO_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/ilist.h"
@@ -193,8 +194,8 @@ private:
   typedef SmallVectorImpl<ValueDFS> ValueDFSStack;
   void convertUsesToDFSOrdered(Value *, SmallVectorImpl<ValueDFS> &);
   Value *materializeStack(unsigned int &, ValueDFSStack &, Value *);
-  bool stackIsInScope(const ValueDFSStack &, int DFSIn, int DFSOut) const;
-  void popStackUntilDFSScope(ValueDFSStack &, int DFSIn, int DFSOut);
+  bool stackIsInScope(const ValueDFSStack &, const ValueDFS &) const;
+  void popStackUntilDFSScope(ValueDFSStack &, const ValueDFS &);
   ValueInfo &getOrCreateValueInfo(Value *);
   const ValueInfo &getValueInfo(Value *) const;
   Function &F;
@@ -214,6 +215,9 @@ private:
   DenseMap<Value *, unsigned int> ValueInfoNums;
   // OrderedBasicBlocks used during sorting uses
   DenseMap<const BasicBlock *, std::unique_ptr<OrderedBasicBlock>> OBBMap;
+  // The set of edges along which we can only handle phi uses, due to critical
+  // edges.
+  DenseSet<BasicBlockEdge> PhiUsesOnly;
 };
 
 // This pass does eager building and then printing of PredicateInfo. It is used

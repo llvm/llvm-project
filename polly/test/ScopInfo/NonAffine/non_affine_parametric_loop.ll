@@ -35,5 +35,5 @@ for.end:
 ; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
 ; CHECK-NEXT:             [n] -> { Stmt_for_body[i0] -> MemRef_INDEX[i0] };
 ; CHECK-NEXT:         MayWriteAccess :=    [Reduction Type: NONE] [Scalar: 0]
-; CHECK-NEXT:             [n] -> { Stmt_for_body[i0] -> MemRef_A[o0] : -1152921504606846976 <= o0 <= 1152921504606846975 };
+; CHECK-NEXT:             [n] -> { Stmt_for_body[i0] -> MemRef_A[o0] };
 ; CHECK-NEXT: }

@@ -443,7 +443,7 @@ std::string ReportAlias::formatInvalidAlias(std::string Prefix,
     assert(V && "Diagnostic info does not match found LLVM-IR anymore.");
 
     if (V->getName().size() == 0)
-      OS << "\"" << *V << "\"";
+      OS << "\" <unknown> \"";
     else
       OS << "\"" << V->getName() << "\"";
 

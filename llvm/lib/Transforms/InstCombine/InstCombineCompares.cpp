@@ -2373,6 +2373,22 @@ Instruction *InstCombiner::foldICmpAddConstant(ICmpInst &Cmp,
   Value *X = Add->getOperand(0);
   Type *Ty = Add->getType();
   CmpInst::Predicate Pred = Cmp.getPredicate();
+
+  // If the add does not wrap, we can always adjust the compare by subtracting
+  // the constants. Equality comparisons are handled elsewhere. SGE/SLE are
+  // canonicalized to SGT/SLT.
+  if (Add->hasNoSignedWrap() &&
+      (Pred == ICmpInst::ICMP_SGT || Pred == ICmpInst::ICMP_SLT)) {
+    bool Overflow;
+    APInt NewC = C->ssub_ov(*C2, Overflow);
+    // If there is overflow, the result must be true or false.
+    // TODO: Can we assert there is no overflow because InstSimplify always
+    // handles those cases?
+    if (!Overflow)
+      // icmp Pred (add nsw X, C2), C --> icmp Pred X, (C - C2)
+      return new ICmpInst(Pred, X, ConstantInt::get(Ty, NewC));
+  }
+
   auto CR = ConstantRange::makeExactICmpRegion(Pred, *C).subtract(*C2);
   const APInt &Upper = CR.getUpper();
   const APInt &Lower = CR.getLower();
@@ -2794,12 +2810,6 @@ Instruction *InstCombiner::foldICmpBinOp(ICmpInst &I) {
     C = BO1->getOperand(0);
     D = BO1->getOperand(1);
   }
-
-  // icmp (X+cst) < 0 --> X < -cst
-  if (NoOp0WrapProblem && ICmpInst::isSigned(Pred) && match(Op1, m_Zero()))
-    if (ConstantInt *RHSC = dyn_cast_or_null<ConstantInt>(B))
-      if (!RHSC->isMinValue(/*isSigned=*/true))
-        return new ICmpInst(Pred, A, ConstantExpr::getNeg(RHSC));
 
   // icmp (X+Y), X -> icmp Y, 0 for equalities or if there is no overflow.
   if ((A == Op1 || B == Op1) && NoOp0WrapProblem)
