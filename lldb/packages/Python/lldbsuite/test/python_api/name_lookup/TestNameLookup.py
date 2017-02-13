@@ -43,7 +43,7 @@ class TestNameLookup(TestBase):
         for i in range(num_symbols):
             symbol = exe_module.GetSymbolAtIndex(i);
             name = symbol.GetName()
-            if 'unique_function_name' in name:
+            if name and 'unique_function_name' in name:
                 mangled = symbol.GetMangledName()
                 if mangled:
                     mangled_to_symbol[mangled] = symbol
