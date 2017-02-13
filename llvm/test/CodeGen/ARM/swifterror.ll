@@ -513,3 +513,18 @@ define swiftcc { i32, i32, i32, i32} @params_and_return_in_reg(i32, i32, i32, i3
 }
 
 declare swiftcc { i32, i32, i32, i32 } @params_and_return_in_reg2(i32, i32, i32, i32, i8* swiftself, %swift_error** nocapture swifterror %err)
+
+
+declare void @acallee(i8*)
+
+; Make sure we don't tail call if the caller returns a swifterror value. We
+; would have to move into the swifterror register before the tail call.
+; CHECK-APPLE: tailcall_from_swifterror:
+; CHECK-APPLE-NOT: b _acallee
+; CHECK-APPLE: bl _acallee
+
+define swiftcc void @tailcall_from_swifterror(%swift_error** swifterror %error_ptr_ref) {
+entry:
+  tail call void @acallee(i8* null)
+  ret void
+}
