@@ -957,9 +957,7 @@ static Error getXPCAuthorization(ProcessLaunchInfo &launch_info) {
     if (createStatus != errAuthorizationSuccess) {
       error.SetError(1, eErrorTypeGeneric);
       error.SetErrorString("Can't create authorizationRef.");
-      if (log) {
-        error.PutToLog(log, "%s", error.AsCString());
-      }
+      LLDB_LOG(log, "error: {0}", error);
       return error;
     }
 
@@ -1012,9 +1010,7 @@ static Error getXPCAuthorization(ProcessLaunchInfo &launch_info) {
       error.SetError(2, eErrorTypeGeneric);
       error.SetErrorStringWithFormat(
           "Launching as root needs root authorization.");
-      if (log) {
-        error.PutToLog(log, "%s", error.AsCString());
-      }
+      LLDB_LOG(log, "error: {0}", error);
 
       if (authorizationRef) {
         AuthorizationFree(authorizationRef, kAuthorizationFlagDefaults);
@@ -1050,9 +1046,7 @@ static Error LaunchProcessXPC(const char *exe_path,
       error.SetError(3, eErrorTypeGeneric);
       error.SetErrorStringWithFormat("Launching root via XPC needs to "
                                      "externalize authorization reference.");
-      if (log) {
-        error.PutToLog(log, "%s", error.AsCString());
-      }
+      LLDB_LOG(log, "error: {0}", error);
       return error;
     }
     xpc_service = LaunchUsingXPCRightName;
@@ -1060,9 +1054,7 @@ static Error LaunchProcessXPC(const char *exe_path,
     error.SetError(4, eErrorTypeGeneric);
     error.SetErrorStringWithFormat(
         "Launching via XPC is only currently available for root.");
-    if (log) {
-      error.PutToLog(log, "%s", error.AsCString());
-    }
+    LLDB_LOG(log, "error: {0}", error);
     return error;
   }
 
@@ -1146,9 +1138,7 @@ static Error LaunchProcessXPC(const char *exe_path,
       error.SetErrorStringWithFormat(
           "Problems with launching via XPC. Error type : %i, code : %i",
           errorType, errorCode);
-      if (log) {
-        error.PutToLog(log, "%s", error.AsCString());
-      }
+      LLDB_LOG(log, "error: {0}", error);
 
       if (authorizationRef) {
         AuthorizationFree(authorizationRef, kAuthorizationFlagDefaults);
@@ -1160,9 +1150,7 @@ static Error LaunchProcessXPC(const char *exe_path,
     error.SetErrorStringWithFormat(
         "Problems with launching via XPC. XPC error : %s",
         xpc_dictionary_get_string(reply, XPC_ERROR_KEY_DESCRIPTION));
-    if (log) {
-      error.PutToLog(log, "%s", error.AsCString());
-    }
+    LLDB_LOG(log, "error: {0}", error);
   }
 
   return error;

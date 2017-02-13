@@ -11,7 +11,8 @@
 #define liblldb_Timeout_h_
 
 #include "llvm/ADT/Optional.h"
-#include <chrono>
+#include "llvm/Support/Chrono.h"
+#include "llvm/Support/FormatProviders.h"
 
 namespace lldb_private {
 
@@ -51,5 +52,20 @@ public:
 };
 
 } // namespace lldb_private
+
+namespace llvm {
+template<typename Ratio>
+struct format_provider<lldb_private::Timeout<Ratio>, void> {
+  static void format(const lldb_private::Timeout<Ratio> &timeout,
+                     raw_ostream &OS, StringRef Options) {
+    typedef typename lldb_private::Timeout<Ratio>::value_type Dur;
+
+    if (!timeout)
+      OS << "<infinite>";
+    else
+      format_provider<Dur>::format(*timeout, OS, Options);
+  }
+};
+}
 
 #endif // liblldb_Timeout_h_

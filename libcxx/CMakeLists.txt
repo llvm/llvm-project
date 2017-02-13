@@ -125,6 +125,9 @@ if (LIBCXX_CXX_ABI STREQUAL "default")
     if (LIBCXX_TARGETING_MSVC)
       # FIXME: Figure out how to configure the ABI library on Windows.
       set(LIBCXX_CXX_ABI_LIBNAME "vcruntime")
+    elseif(APPLE)
+      set(LIBCXX_CXX_ABI_LIBNAME "libcxxabi")
+      set(LIBCXX_CXX_ABI_SYSTEM 1)
     else()
       set(LIBCXX_CXX_ABI_LIBNAME "default")
     endif()
@@ -158,6 +161,7 @@ option(LIBCXX_ENABLE_ABI_LINKER_SCRIPT
 # Build libc++abi with libunwind. We need this option to determine whether to
 # link with libunwind or libgcc_s while running the test cases.
 option(LIBCXXABI_USE_LLVM_UNWINDER "Build and use the LLVM unwinder." OFF)
+option(LIBCXXABI_ENABLE_STATIC_UNWINDER "Statically link the LLVM unwinder." OFF)
 
 # Target options --------------------------------------------------------------
 option(LIBCXX_BUILD_32_BITS "Build 32 bit libc++." ${LLVM_BUILD_32_BITS})

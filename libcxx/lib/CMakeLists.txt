@@ -89,9 +89,9 @@ add_library_flags_if(LIBCXX_HAVE_CXX_ATOMICS_WITH_LIB atomic)
 
 # Add the unwinder library.
 if (LIBCXXABI_USE_LLVM_UNWINDER)
-  if (TARGET unwind_shared)
+  if (NOT LIBCXXABI_ENABLE_STATIC_UNWINDER AND (TARGET unwind_shared OR HAVE_LIBUNWIND))
     add_interface_library(unwind_shared)
-  elseif (TARGET unwind_static)
+  elseif (LIBCXXABI_ENABLE_STATIC_UNWINDER AND (TARGET unwind_static OR HAVE_LIBUNWIND))
     add_interface_library(unwind_static)
   else()
     add_interface_library(unwind)
@@ -332,7 +332,7 @@ if (LIBCXX_ENABLE_SHARED AND LIBCXX_ENABLE_ABI_LINKER_SCRIPT)
   # after cxx builds.
   add_custom_command(TARGET cxx_shared POST_BUILD
     COMMAND
-      ${PYTHON_EXECUTABLE} ${LIBCXX_SOURCE_DIR}/utils/gen_link_script/gen_link_script.py
+      ${PYTHON_EXECUTABLE} ${LIBCXX_SOURCE_DIR}/utils/gen_link_script.py
     ARGS
       "$<TARGET_LINKER_FILE:cxx_shared>"
       ${LIBCXX_INTERFACE_LIBRARY_NAMES}

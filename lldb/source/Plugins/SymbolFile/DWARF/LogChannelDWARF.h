@@ -16,7 +16,6 @@
 // Project includes
 #include "lldb/Core/Log.h"
 
-#define DWARF_LOG_VERBOSE (1u << 0)
 #define DWARF_LOG_DEBUG_INFO (1u << 1)
 #define DWARF_LOG_DEBUG_LINE (1u << 2)
 #define DWARF_LOG_DEBUG_PUBNAMES (1u << 3)
@@ -53,7 +52,8 @@ public:
 
   void Delete();
 
-  bool Enable(lldb::StreamSP &log_stream_sp, uint32_t log_options,
+  bool Enable(const std::shared_ptr<llvm::raw_ostream> &log_stream_sp,
+              uint32_t log_options,
               lldb_private::Stream
                   *feedback_strm, // Feedback stream for argument errors etc
               const char **categories) override; // The categories to enable

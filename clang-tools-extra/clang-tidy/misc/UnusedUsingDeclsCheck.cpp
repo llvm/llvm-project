@@ -48,6 +48,9 @@ void UnusedUsingDeclsCheck::registerMatchers(MatchFinder *Finder) {
 }
 
 void UnusedUsingDeclsCheck::check(const MatchFinder::MatchResult &Result) {
+  if (Result.Context->getDiagnostics().hasUncompilableErrorOccurred())
+    return;
+
   if (const auto *Using = Result.Nodes.getNodeAs<UsingDecl>("using")) {
     // Ignores using-declarations defined in macros.
     if (Using->getLocation().isMacroID())

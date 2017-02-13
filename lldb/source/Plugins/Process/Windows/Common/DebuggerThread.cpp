@@ -282,7 +282,7 @@ void DebuggerThread::DebugLoop() {
   bool should_debug = true;
   WINLOG_IFALL(WINDOWS_LOG_EVENT, "Entering WaitForDebugEvent loop");
   while (should_debug) {
-    WINLOGD_IFALL(WINDOWS_LOG_EVENT, "Calling WaitForDebugEvent");
+    WINLOGV_IFALL(WINDOWS_LOG_EVENT, "Calling WaitForDebugEvent");
     BOOL wait_result = WaitForDebugEvent(&dbe, INFINITE);
     if (wait_result) {
       DWORD continue_status = DBG_CONTINUE;
@@ -331,7 +331,7 @@ void DebuggerThread::DebugLoop() {
         break;
       }
 
-      WINLOGD_IFALL(
+      WINLOGV_IFALL(
           WINDOWS_LOG_EVENT,
           "DebugLoop calling ContinueDebugEvent(%lu, %lu, %lu) on thread %lu.",
           dbe.dwProcessId, dbe.dwThreadId, continue_status,

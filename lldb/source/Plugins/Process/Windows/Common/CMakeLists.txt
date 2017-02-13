@@ -28,6 +28,8 @@ add_lldb_library(lldbPluginProcessWindowsCommon PLUGIN
     lldbHost
     lldbInterpreter
     lldbTarget
+    ws2_32
+    rpcrt4
   LINK_COMPONENTS
     Support
   )

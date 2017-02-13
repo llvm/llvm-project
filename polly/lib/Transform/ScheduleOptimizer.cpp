@@ -238,14 +238,22 @@ static cl::opt<bool> OptimizedScops(
 /// Create an isl_union_set, which describes the isolate option based on
 /// IsoalteDomain.
 ///
-/// @param IsolateDomain An isl_set whose last dimension is the only one that
-///                      should belong to the current band node.
+/// @param IsolateDomain An isl_set whose @p OutDimsNum last dimensions should
+///                      belong to the current band node.
+/// @param OutDimsNum    A number of dimensions that should belong to
+///                      the current band node.
 static __isl_give isl_union_set *
-getIsolateOptions(__isl_take isl_set *IsolateDomain) {
+getIsolateOptions(__isl_take isl_set *IsolateDomain, unsigned OutDimsNum) {
   auto Dims = isl_set_dim(IsolateDomain, isl_dim_set);
+  assert(OutDimsNum <= Dims &&
+         "The isl_set IsolateDomain is used to describe the range of schedule "
+         "dimensions values, which should be isolated. Consequently, the "
+         "number of its dimensions should be greater than or equal to the "
+         "number of the schedule dimensions.");
   auto *IsolateRelation = isl_map_from_domain(IsolateDomain);
-  IsolateRelation = isl_map_move_dims(IsolateRelation, isl_dim_out, 0,
-                                      isl_dim_in, Dims - 1, 1);
+  IsolateRelation =
+      isl_map_move_dims(IsolateRelation, isl_dim_out, 0, isl_dim_in,
+                        Dims - OutDimsNum, OutDimsNum);
   auto *IsolateOption = isl_map_wrap(IsolateRelation);
   auto *Id = isl_id_alloc(isl_set_get_ctx(IsolateOption), "isolate", nullptr);
   return isl_union_set_from_set(isl_set_set_tuple_id(IsolateOption, Id));
@@ -257,11 +265,27 @@ getIsolateOptions(__isl_take isl_set *IsolateDomain) {
 /// It may help to reduce the size of generated code.
 ///
 /// @param Ctx An isl_ctx, which is used to create the isl_union_set.
-static __isl_give isl_union_set *getAtomicOptions(__isl_take isl_ctx *Ctx) {
+static __isl_give isl_union_set *getAtomicOptions(isl_ctx *Ctx) {
   auto *Space = isl_space_set_alloc(Ctx, 0, 1);
   auto *AtomicOption = isl_set_universe(Space);
   auto *Id = isl_id_alloc(Ctx, "atomic", nullptr);
   return isl_union_set_from_set(isl_set_set_tuple_id(AtomicOption, Id));
+}
+
+/// Create an isl_union_set, which describes the option of the form
+/// [isolate[] -> unroll[x]].
+///
+/// @param Ctx An isl_ctx, which is used to create the isl_union_set.
+static __isl_give isl_union_set *getUnrollIsolatedSetOptions(isl_ctx *Ctx) {
+  auto *Space = isl_space_alloc(Ctx, 0, 0, 1);
+  auto *UnrollIsolatedSetOption = isl_map_universe(Space);
+  auto *DimInId = isl_id_alloc(Ctx, "isolate", nullptr);
+  auto *DimOutId = isl_id_alloc(Ctx, "unroll", nullptr);
+  UnrollIsolatedSetOption =
+      isl_map_set_tuple_id(UnrollIsolatedSetOption, isl_dim_in, DimInId);
+  UnrollIsolatedSetOption =
+      isl_map_set_tuple_id(UnrollIsolatedSetOption, isl_dim_out, DimOutId);
+  return isl_union_set_from_set(isl_map_wrap(UnrollIsolatedSetOption));
 }
 
 /// Make the last dimension of Set to take values from 0 to VectorWidth - 1.
@@ -324,7 +348,7 @@ __isl_give isl_schedule_node *ScheduleTreeOptimizer::isolateFullPartialTiles(
   auto *ScheduleRange = isl_map_range(ScheduleRelation);
   auto *IsolateDomain = getPartialTilePrefixes(ScheduleRange, VectorWidth);
   auto *AtomicOption = getAtomicOptions(isl_set_get_ctx(IsolateDomain));
-  auto *IsolateOption = getIsolateOptions(IsolateDomain);
+  auto *IsolateOption = getIsolateOptions(IsolateDomain, 1);
   Node = isl_schedule_node_parent(Node);
   Node = isl_schedule_node_parent(Node);
   auto *Options = isl_union_set_union(IsolateOption, AtomicOption);
@@ -741,28 +765,29 @@ static bool containsOnlyMatMulDep(__isl_keep isl_map *Schedule,
     return false;
   }
   isl_union_map_free(WAR);
-  auto *RAW = D->getDependences(Dependences::TYPE_RAW);
-  auto *Domain = isl_map_domain(isl_map_copy(Schedule));
-  auto *Space = isl_space_map_from_domain_and_range(isl_set_get_space(Domain),
-                                                    isl_set_get_space(Domain));
-  isl_set_free(Domain);
-  auto *Deltas = isl_map_deltas(isl_union_map_extract_map(RAW, Space));
+  auto *Dep = D->getDependences(Dependences::TYPE_RAW);
+  auto *Red = D->getDependences(Dependences::TYPE_RED);
+  if (Red)
+    Dep = isl_union_map_union(Dep, Red);
+  auto *DomainSpace = isl_space_domain(isl_map_get_space(Schedule));
+  auto *Space = isl_space_map_from_domain_and_range(isl_space_copy(DomainSpace),
+                                                    DomainSpace);
+  auto *Deltas = isl_map_deltas(isl_union_map_extract_map(Dep, Space));
+  isl_union_map_free(Dep);
   int DeltasDimNum = isl_set_dim(Deltas, isl_dim_set);
+  isl_set_free(Deltas);
   for (int i = 0; i < DeltasDimNum; i++) {
     auto *Val = isl_set_plain_get_val_if_fixed(Deltas, isl_dim_set, i);
-    if (Pos < 0 && isl_val_is_one(Val))
-      Pos = i;
+    Pos = Pos < 0 && isl_val_is_one(Val) ? i : Pos;
     if (isl_val_is_nan(Val) ||
         !(isl_val_is_zero(Val) || (i == Pos && isl_val_is_one(Val)))) {
       isl_val_free(Val);
-      isl_union_map_free(RAW);
-      isl_set_free(Deltas);
       return false;
     }
     isl_val_free(Val);
   }
-  isl_union_map_free(RAW);
-  isl_set_free(Deltas);
+  if (DeltasDimNum == 0 || Pos < 0)
+    return false;
   return true;
 }
 
@@ -876,6 +901,36 @@ __isl_give isl_schedule_node *ScheduleTreeOptimizer::createMacroKernel(
   return isl_schedule_node_child(isl_schedule_node_child(Node, 0), 0);
 }
 
+/// Get the size of the widest type of the matrix multiplication operands
+/// in bytes, including alignment padding.
+///
+/// @param MMI Parameters of the matrix multiplication operands.
+/// @return The size of the widest type of the matrix multiplication operands
+///         in bytes, including alignment padding.
+static uint64_t getMatMulAlignTypeSize(MatMulInfoTy MMI) {
+  auto *S = MMI.A->getStatement()->getParent();
+  auto &DL = S->getFunction().getParent()->getDataLayout();
+  auto ElementSizeA = DL.getTypeAllocSize(MMI.A->getElementType());
+  auto ElementSizeB = DL.getTypeAllocSize(MMI.B->getElementType());
+  auto ElementSizeC = DL.getTypeAllocSize(MMI.WriteToC->getElementType());
+  return std::max({ElementSizeA, ElementSizeB, ElementSizeC});
+}
+
+/// Get the size of the widest type of the matrix multiplication operands
+/// in bits.
+///
+/// @param MMI Parameters of the matrix multiplication operands.
+/// @return The size of the widest type of the matrix multiplication operands
+///         in bits.
+static uint64_t getMatMulTypeSize(MatMulInfoTy MMI) {
+  auto *S = MMI.A->getStatement()->getParent();
+  auto &DL = S->getFunction().getParent()->getDataLayout();
+  auto ElementSizeA = DL.getTypeSizeInBits(MMI.A->getElementType());
+  auto ElementSizeB = DL.getTypeSizeInBits(MMI.B->getElementType());
+  auto ElementSizeC = DL.getTypeSizeInBits(MMI.WriteToC->getElementType());
+  return std::max({ElementSizeA, ElementSizeB, ElementSizeC});
+}
+
 /// Get parameters of the BLIS micro kernel.
 ///
 /// We choose the Mr and Nr parameters of the micro kernel to be large enough
@@ -885,10 +940,11 @@ __isl_give isl_schedule_node *ScheduleTreeOptimizer::createMacroKernel(
 /// release more registers for entries of multiplied matrices.
 ///
 /// @param TTI Target Transform Info.
+/// @param MMI Parameters of the matrix multiplication operands.
 /// @return The structure of type MicroKernelParamsTy.
 /// @see MicroKernelParamsTy
 static struct MicroKernelParamsTy
-getMicroKernelParams(const llvm::TargetTransformInfo *TTI) {
+getMicroKernelParams(const llvm::TargetTransformInfo *TTI, MatMulInfoTy MMI) {
   assert(TTI && "The target transform info should be provided.");
 
   // Nvec - Number of double-precision floating-point numbers that can be hold
@@ -897,7 +953,10 @@ getMicroKernelParams(const llvm::TargetTransformInfo *TTI) {
 
   if (RegisterBitwidth == -1)
     RegisterBitwidth = TTI->getRegisterBitWidth(true);
-  auto Nvec = RegisterBitwidth / 64;
+  auto ElementSize = getMatMulTypeSize(MMI);
+  assert(ElementSize > 0 && "The element size of the matrix multiplication "
+                            "operands should be greater than zero.");
+  auto Nvec = RegisterBitwidth / ElementSize;
   if (Nvec == 0)
     Nvec = 2;
   int Nr =
@@ -916,11 +975,13 @@ getMicroKernelParams(const llvm::TargetTransformInfo *TTI) {
 ///
 /// @param MicroKernelParams Parameters of the micro-kernel
 ///                          to be taken into account.
+/// @param MMI Parameters of the matrix multiplication operands.
 /// @return The structure of type MacroKernelParamsTy.
 /// @see MacroKernelParamsTy
 /// @see MicroKernelParamsTy
 static struct MacroKernelParamsTy
-getMacroKernelParams(const MicroKernelParamsTy &MicroKernelParams) {
+getMacroKernelParams(const MicroKernelParamsTy &MicroKernelParams,
+                     MatMulInfoTy MMI) {
   // According to www.cs.utexas.edu/users/flame/pubs/TOMS-BLIS-Analytical.pdf,
   // it requires information about the first two levels of a cache to determine
   // all the parameters of a macro-kernel. It also checks that an associativity
@@ -936,10 +997,14 @@ getMacroKernelParams(const MicroKernelParamsTy &MicroKernelParams) {
   int Car = floor(
       (FirstCacheLevelAssociativity - 1) /
       (1 + static_cast<double>(MicroKernelParams.Nr) / MicroKernelParams.Mr));
+  auto ElementSize = getMatMulAlignTypeSize(MMI);
+  assert(ElementSize > 0 && "The element size of the matrix multiplication "
+                            "operands should be greater than zero.");
   int Kc = (Car * FirstCacheLevelSize) /
-           (MicroKernelParams.Mr * FirstCacheLevelAssociativity * 8);
-  double Cac = static_cast<double>(Kc * 8 * SecondCacheLevelAssociativity) /
-               SecondCacheLevelSize;
+           (MicroKernelParams.Mr * FirstCacheLevelAssociativity * ElementSize);
+  double Cac =
+      static_cast<double>(Kc * ElementSize * SecondCacheLevelAssociativity) /
+      SecondCacheLevelSize;
   int Mc = floor((SecondCacheLevelAssociativity - 2) / Cac);
   int Nc = PollyPatternMatchingNcQuotient * MicroKernelParams.Nr;
   return {Mc, Nc, Kc};
@@ -1119,6 +1184,47 @@ getInductionVariablesSubstitution(__isl_take isl_schedule_node *Node,
   return MapOldIndVar;
 }
 
+/// Isolate a set of partial tile prefixes and unroll the isolated part.
+///
+/// The set should ensure that it contains only partial tile prefixes that have
+/// exactly Mr x Nr iterations of the two innermost loops produced by
+/// the optimization of the matrix multiplication. Mr and Nr are parameters of
+/// the micro-kernel.
+///
+/// In case of parametric bounds, this helps to auto-vectorize the unrolled
+/// innermost loops, using the SLP vectorizer.
+///
+/// @param Node              The schedule node to be modified.
+/// @param MicroKernelParams Parameters of the micro-kernel
+///                          to be taken into account.
+/// @return The modified isl_schedule_node.
+static __isl_give isl_schedule_node *
+isolateAndUnrollMatMulInnerLoops(__isl_take isl_schedule_node *Node,
+                                 struct MicroKernelParamsTy MicroKernelParams) {
+  auto *Child = isl_schedule_node_get_child(Node, 0);
+  auto *UnMapOldIndVar = isl_schedule_node_get_prefix_schedule_relation(Child);
+  isl_schedule_node_free(Child);
+  auto *Prefix = isl_map_range(isl_map_from_union_map(UnMapOldIndVar));
+  auto Dims = isl_set_dim(Prefix, isl_dim_set);
+  Prefix = isl_set_project_out(Prefix, isl_dim_set, Dims - 1, 1);
+  Prefix = getPartialTilePrefixes(Prefix, MicroKernelParams.Nr);
+  Prefix = getPartialTilePrefixes(Prefix, MicroKernelParams.Mr);
+  auto *IsolateOption = getIsolateOptions(
+      isl_set_add_dims(isl_set_copy(Prefix), isl_dim_set, 3), 3);
+  auto *Ctx = isl_schedule_node_get_ctx(Node);
+  auto *AtomicOption = getAtomicOptions(Ctx);
+  auto *Options =
+      isl_union_set_union(IsolateOption, isl_union_set_copy(AtomicOption));
+  Options = isl_union_set_union(Options, getUnrollIsolatedSetOptions(Ctx));
+  Node = isl_schedule_node_band_set_ast_build_options(Node, Options);
+  Node = isl_schedule_node_parent(isl_schedule_node_parent(Node));
+  IsolateOption = getIsolateOptions(Prefix, 3);
+  Options = isl_union_set_union(IsolateOption, AtomicOption);
+  Node = isl_schedule_node_band_set_ast_build_options(Node, Options);
+  Node = isl_schedule_node_child(isl_schedule_node_child(Node, 0), 0);
+  return Node;
+}
+
 __isl_give isl_schedule_node *ScheduleTreeOptimizer::optimizeMatMulPattern(
     __isl_take isl_schedule_node *Node, const llvm::TargetTransformInfo *TTI,
     MatMulInfoTy &MMI) {
@@ -1133,8 +1239,8 @@ __isl_give isl_schedule_node *ScheduleTreeOptimizer::optimizeMatMulPattern(
   Node = permuteBandNodeDimensions(Node, NewJ, DimOutNum - 2);
   NewK = MMI.k == DimOutNum - 2 ? MMI.j : MMI.k;
   Node = permuteBandNodeDimensions(Node, NewK, DimOutNum - 1);
-  auto MicroKernelParams = getMicroKernelParams(TTI);
-  auto MacroKernelParams = getMacroKernelParams(MicroKernelParams);
+  auto MicroKernelParams = getMicroKernelParams(TTI, MMI);
+  auto MacroKernelParams = getMacroKernelParams(MicroKernelParams, MMI);
   Node = createMacroKernel(Node, MacroKernelParams);
   Node = createMicroKernel(Node, MicroKernelParams);
   if (MacroKernelParams.Mc == 1 || MacroKernelParams.Nc == 1 ||
@@ -1144,6 +1250,7 @@ __isl_give isl_schedule_node *ScheduleTreeOptimizer::optimizeMatMulPattern(
       Node, MicroKernelParams, MacroKernelParams);
   if (!MapOldIndVar)
     return Node;
+  Node = isolateAndUnrollMatMulInnerLoops(Node, MicroKernelParams);
   return optimizeDataLayoutMatrMulPattern(Node, MapOldIndVar, MicroKernelParams,
                                           MacroKernelParams, MMI);
 }
@@ -1179,7 +1286,7 @@ ScheduleTreeOptimizer::optimizeBand(__isl_take isl_schedule_node *Node,
   MatMulInfoTy MMI;
   if (PMBasedOpts && User && isMatrMultPattern(Node, OAI->D, MMI)) {
     DEBUG(dbgs() << "The matrix multiplication pattern was detected\n");
-    Node = optimizeMatMulPattern(Node, OAI->TTI, MMI);
+    return optimizeMatMulPattern(Node, OAI->TTI, MMI);
   }
 
   return standardBandOpts(Node, User);

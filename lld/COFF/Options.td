@@ -28,6 +28,8 @@ def heap    : P<"heap", "Size of the heap">;
 def implib  : P<"implib", "Import library name">;
 def libpath : P<"libpath", "Additional library search path">;
 def linkrepro : P<"linkrepro", "Dump linker invocation and input files for debugging">;
+def lldsavetemps : F<"lldsavetemps">,
+    HelpText<"Save temporary files instead of deleting them">;
 def machine : P<"machine", "Specify target platform">;
 def merge   : P<"merge", "Combine sections">;
 def mllvm   : P<"mllvm", "Options to pass to LLVM">;
@@ -92,6 +94,7 @@ def help_q : Flag<["/?", "-?"], "">, Alias<help>;
 
 // LLD extensions
 def nosymtab : F<"nosymtab">;
+def msvclto : F<"msvclto">;
 
 // Flags for debugging
 def debugpdb : F<"debugpdb">;

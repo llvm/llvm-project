@@ -51,9 +51,10 @@ public:
   static void DisableLog(const char **args,
                          lldb_private::Stream *feedback_strm);
 
-  static lldb_private::Log *EnableLog(lldb::StreamSP &log_stream_sp,
-                                      uint32_t log_options, const char **args,
-                                      lldb_private::Stream *feedback_strm);
+  static lldb_private::Log *
+  EnableLog(const std::shared_ptr<llvm::raw_ostream> &log_stream_sp,
+            uint32_t log_options, const char **args,
+            lldb_private::Stream *feedback_strm);
 
   static void ListLogCategories(lldb_private::Stream *strm);
 };
@@ -75,10 +76,6 @@ public:
   WINLOGF_IF(Flags, LogMaskReq::Any, Verbose, __VA_ARGS__)
 #define WINLOGV_IFALL(Flags, ...)                                              \
   WINLOGF_IF(Flags, LogMaskReq::All, Verbose, __VA_ARGS__)
-#define WINLOGD_IFANY(Flags, ...)                                              \
-  WINLOGF_IF(Flags, LogMaskReq::Any, Debug, __VA_ARGS__)
-#define WINLOGD_IFALL(Flags, ...)                                              \
-  WINLOGF_IF(Flags, LogMaskReq::All, Debug, __VA_ARGS__)
 #define WINERR_IFANY(Flags, ...)                                               \
   WINLOGF_IF(Flags, LogMaskReq::Any, Error, __VA_ARGS__)
 #define WINERR_IFALL(Flags, ...)                                               \

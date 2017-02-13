@@ -725,7 +725,11 @@ void MemoryAccess::computeBoundsOnAccessRelation(unsigned ElementSize) {
   if (Range.isFullSet())
     return;
 
+  if (Range.isWrappedSet())
+    return;
+
   bool isWrapping = Range.isSignWrappedSet();
+
   unsigned BW = Range.getBitWidth();
   const auto One = APInt(BW, 1);
   const auto LB = isWrapping ? Range.getLower() : Range.getSignedMin();
@@ -733,6 +737,8 @@ void MemoryAccess::computeBoundsOnAccessRelation(unsigned ElementSize) {
 
   auto Min = LB.sdiv(APInt(BW, ElementSize));
   auto Max = UB.sdiv(APInt(BW, ElementSize)) + One;
+
+  assert(Min.sle(Max) && "Minimum expected to be less or equal than max");
 
   isl_set *AccessRange = isl_map_range(isl_map_copy(AccessRelation));
   AccessRange =
@@ -1164,8 +1170,8 @@ void ScopStmt::buildAccessRelations() {
     else
       Ty = MemoryKind::Array;
 
-    auto *SAI = S.getOrCreateScopArrayInfo(Access->getBaseAddr(), ElementType,
-                                           Access->Sizes, Ty);
+    auto *SAI = S.getOrCreateScopArrayInfo(Access->getOriginalBaseAddr(),
+                                           ElementType, Access->Sizes, Ty);
     Access->buildAccessRelation(SAI);
   }
 }
@@ -1188,7 +1194,7 @@ void ScopStmt::addAccess(MemoryAccess *Access) {
 
     ValueReads[AccessVal] = Access;
   } else if (Access->isAnyPHIKind() && Access->isWrite()) {
-    PHINode *PHI = cast<PHINode>(Access->getBaseAddr());
+    PHINode *PHI = cast<PHINode>(Access->getAccessValue());
     assert(!PHIWrites.lookup(PHI));
 
     PHIWrites[PHI] = Access;
@@ -2836,12 +2842,9 @@ bool Scop::addLoopBoundsToHeaderDomain(Loop *L, LoopInfo &LI) {
 }
 
 MemoryAccess *Scop::lookupBasePtrAccess(MemoryAccess *MA) {
-  auto *BaseAddr = SE->getSCEV(MA->getBaseAddr());
-  auto *PointerBase = dyn_cast<SCEVUnknown>(SE->getPointerBase(BaseAddr));
-  if (!PointerBase)
-    return nullptr;
+  Value *PointerBase = MA->getOriginalBaseAddr();
 
-  auto *PointerBaseInst = dyn_cast<Instruction>(PointerBase->getValue());
+  auto *PointerBaseInst = dyn_cast<Instruction>(PointerBase);
   if (!PointerBaseInst)
     return nullptr;
 
@@ -2861,9 +2864,8 @@ bool Scop::hasNonHoistableBasePtrInScop(MemoryAccess *MA,
     return !Hoistable;
   }
 
-  auto *BaseAddr = SE->getSCEV(MA->getBaseAddr());
-  auto *PointerBase = dyn_cast<SCEVUnknown>(SE->getPointerBase(BaseAddr));
-  if (auto *BasePtrInst = dyn_cast<Instruction>(PointerBase->getValue()))
+  Value *BaseAddr = MA->getOriginalBaseAddr();
+  if (auto *BasePtrInst = dyn_cast<Instruction>(BaseAddr))
     if (!isa<LoadInst>(BasePtrInst))
       return contains(BasePtrInst);
 
@@ -2896,12 +2898,12 @@ bool Scop::buildAliasChecks(AliasAnalysis &AA) {
   return false;
 }
 
-std::tuple<Scop::AliasGroupVectorTy, DenseSet<Value *>>
+std::tuple<Scop::AliasGroupVectorTy, DenseSet<const ScopArrayInfo *>>
 Scop::buildAliasGroupsForAccesses(AliasAnalysis &AA) {
   AliasSetTracker AST(AA);
 
   DenseMap<Value *, MemoryAccess *> PtrToAcc;
-  DenseSet<Value *> HasWriteAccess;
+  DenseSet<const ScopArrayInfo *> HasWriteAccess;
   for (ScopStmt &Stmt : *this) {
 
     isl_set *StmtDomain = Stmt.getDomain();
@@ -2916,7 +2918,7 @@ Scop::buildAliasGroupsForAccesses(AliasAnalysis &AA) {
       if (MA->isScalarKind())
         continue;
       if (!MA->isRead())
-        HasWriteAccess.insert(MA->getBaseAddr());
+        HasWriteAccess.insert(MA->getScopArrayInfo());
       MemAccInst Acc(MA->getAccessInstruction());
       if (MA->isRead() && isa<MemTransferInst>(Acc))
         PtrToAcc[cast<MemTransferInst>(Acc)->getRawSource()] = MA;
@@ -2972,7 +2974,7 @@ bool Scop::buildAliasGroups(AliasAnalysis &AA) {
   //      and maximal accesses to each array of a group in read only and non
   //      read only partitions separately.
   AliasGroupVectorTy AliasGroups;
-  DenseSet<Value *> HasWriteAccess;
+  DenseSet<const ScopArrayInfo *> HasWriteAccess;
 
   std::tie(AliasGroups, HasWriteAccess) = buildAliasGroupsForAccesses(AA);
 
@@ -2988,10 +2990,10 @@ bool Scop::buildAliasGroups(AliasAnalysis &AA) {
 }
 
 bool Scop::buildAliasGroup(Scop::AliasGroupTy &AliasGroup,
-                           DenseSet<Value *> HasWriteAccess) {
+                           DenseSet<const ScopArrayInfo *> HasWriteAccess) {
   AliasGroupTy ReadOnlyAccesses;
   AliasGroupTy ReadWriteAccesses;
-  SmallPtrSet<const Value *, 4> ReadWriteBaseValues;
+  SmallPtrSet<const ScopArrayInfo *, 4> ReadWriteArrays;
 
   auto &F = getFunction();
 
@@ -3004,9 +3006,9 @@ bool Scop::buildAliasGroup(Scop::AliasGroupTy &AliasGroup,
         Access->getAccessInstruction()->getDebugLoc(),
         "Possibly aliasing pointer, use restrict keyword.");
 
-    Value *BaseAddr = Access->getBaseAddr();
-    if (HasWriteAccess.count(BaseAddr)) {
-      ReadWriteBaseValues.insert(BaseAddr);
+    const ScopArrayInfo *Array = Access->getScopArrayInfo();
+    if (HasWriteAccess.count(Array)) {
+      ReadWriteArrays.insert(Array);
       ReadWriteAccesses.push_back(Access);
     } else {
       ReadOnlyAccesses.push_back(Access);
@@ -3015,11 +3017,11 @@ bool Scop::buildAliasGroup(Scop::AliasGroupTy &AliasGroup,
 
   // If there are no read-only pointers, and less than two read-write pointers,
   // no alias check is needed.
-  if (ReadOnlyAccesses.empty() && ReadWriteBaseValues.size() <= 1)
+  if (ReadOnlyAccesses.empty() && ReadWriteArrays.size() <= 1)
     return true;
 
   // If there is no read-write pointer, no alias check is needed.
-  if (ReadWriteBaseValues.empty())
+  if (ReadWriteArrays.empty())
     return true;
 
   // For non-affine accesses, no alias check can be generated as we cannot
@@ -3331,20 +3333,21 @@ Scop::~Scop() {
 void Scop::updateAccessDimensionality() {
   // Check all array accesses for each base pointer and find a (virtual) element
   // size for the base pointer that divides all access functions.
-  for (auto &Stmt : *this)
-    for (auto *Access : Stmt) {
+  for (ScopStmt &Stmt : *this)
+    for (MemoryAccess *Access : Stmt) {
       if (!Access->isArrayKind())
         continue;
-      auto &SAI = ScopArrayInfoMap[std::make_pair(Access->getBaseAddr(),
-                                                  MemoryKind::Array)];
-      if (SAI->getNumberOfDimensions() != 1)
+      ScopArrayInfo *Array =
+          const_cast<ScopArrayInfo *>(Access->getScopArrayInfo());
+
+      if (Array->getNumberOfDimensions() != 1)
         continue;
-      unsigned DivisibleSize = SAI->getElemSizeInBytes();
-      auto *Subscript = Access->getSubscript(0);
+      unsigned DivisibleSize = Array->getElemSizeInBytes();
+      const SCEV *Subscript = Access->getSubscript(0);
       while (!isDivisible(Subscript, DivisibleSize, *SE))
         DivisibleSize /= 2;
       auto *Ty = IntegerType::get(SE->getContext(), DivisibleSize * 8);
-      SAI->updateElementType(Ty);
+      Array->updateElementType(Ty);
     }
 
   for (auto &Stmt : *this)

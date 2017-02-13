@@ -7,11 +7,7 @@ if ( CMAKE_SYSTEM_NAME MATCHES "Linux|Android|FreeBSD|NetBSD" )
 endif()
 
 if ( CMAKE_SYSTEM_NAME MATCHES "Windows" )
-  list(APPEND LLDB_USED_LIBS
-    lldbPluginProcessWindowsCommon
-    ws2_32
-    rpcrt4
-    )
+  list(APPEND EXTRA_PLUGINS lldbPluginProcessWindowsCommon)
 endif ()
 
 add_lldb_library(lldbInitialization
@@ -31,6 +27,7 @@ add_lldb_library(lldbInitialization
     lldbPluginObjectFilePECOFF
     lldbPluginProcessGDBRemote
     ${EXTRA_PLUGINS}
+    ${LLDB_SYSTEM_LIBS}
   LINK_COMPONENTS
     Support
   )

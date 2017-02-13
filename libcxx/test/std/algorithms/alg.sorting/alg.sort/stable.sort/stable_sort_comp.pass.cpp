@@ -18,6 +18,7 @@
 #include <algorithm>
 #include <functional>
 #include <vector>
+#include <random>
 #include <cassert>
 #include <cstddef>
 #ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
@@ -31,6 +32,8 @@ struct indirect_less
 };
 
 #endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
+
+std::mt19937 randomness;
 
 struct first_only
 {
@@ -59,7 +62,7 @@ void test()
     }
     for (int i = 0; i < N - M; i += M)
     {
-        std::random_shuffle(v.begin() + i, v.begin() + i + M);
+        std::shuffle(v.begin() + i, v.begin() + i + M, randomness);
     }
     std::stable_sort(v.begin(), v.end(), first_only());
     assert(std::is_sorted(v.begin(), v.end()));

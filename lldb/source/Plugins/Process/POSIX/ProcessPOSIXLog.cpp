@@ -84,8 +84,6 @@ static uint32_t GetFlagBits(const char *arg) {
     return POSIX_LOG_STEP;
   else if (::strcasecmp(arg, "thread") == 0)
     return POSIX_LOG_THREAD;
-  else if (::strcasecmp(arg, "verbose") == 0)
-    return POSIX_LOG_VERBOSE;
   else if (::strncasecmp(arg, "watch", 5) == 0)
     return POSIX_LOG_WATCHPOINTS;
   return 0;
@@ -117,8 +115,9 @@ void ProcessPOSIXLog::DisableLog(const char **args, Stream *feedback_strm) {
   return;
 }
 
-Log *ProcessPOSIXLog::EnableLog(StreamSP &log_stream_sp, uint32_t log_options,
-                                const char **args, Stream *feedback_strm) {
+Log *ProcessPOSIXLog::EnableLog(
+    const std::shared_ptr<llvm::raw_ostream> &log_stream_sp,
+    uint32_t log_options, const char **args, Stream *feedback_strm) {
   // Try see if there already is a log - that way we can reuse its settings.
   // We could reuse the log in toto, but we don't know that the stream is the
   // same.
@@ -185,15 +184,4 @@ void ProcessPOSIXLog::ListLogCategories(Stream *strm) {
       ProcessPOSIXLog::m_pluginname);
 }
 
-void ProcessPOSIXLog::LogIf(uint32_t mask, const char *format, ...) {
-  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(mask));
-  if (log) {
-    va_list args;
-    va_start(args, format);
-    log->VAPrintf(format, args);
-    va_end(args);
-  }
-}
-
-int ProcessPOSIXLog::m_nestinglevel;
 const char *ProcessPOSIXLog::m_pluginname = "";

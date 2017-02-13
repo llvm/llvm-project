@@ -32,6 +32,8 @@
 #include "lldb/Host/ThreadLauncher.h"
 #include "lldb/Host/common/NativeBreakpoint.h"
 #include "lldb/Host/common/NativeRegisterContext.h"
+#include "lldb/Host/linux/Ptrace.h"
+#include "lldb/Host/linux/Uio.h"
 #include "lldb/Host/posix/ProcessLauncherPosixFork.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/Process.h"
@@ -47,19 +49,14 @@
 #include "ProcFileReader.h"
 #include "Procfs.h"
 
-// System includes - They have to be included after framework includes because
-// they define some
-// macros which collide with variable names in other modules
+#include "llvm/Support/Threading.h"
+
 #include <linux/unistd.h>
 #include <sys/socket.h>
-
 #include <sys/syscall.h>
 #include <sys/types.h>
 #include <sys/user.h>
 #include <sys/wait.h>
-
-#include "lldb/Host/linux/Ptrace.h"
-#include "lldb/Host/linux/Uio.h"
 
 // Support hardware breakpoints in case it has not been defined
 #ifndef TRAP_HWBKPT
@@ -143,8 +140,7 @@ void DisplayBytes(StreamString &s, void *bytes, uint32_t count) {
 }
 
 void PtraceDisplayBytes(int &req, void *data, size_t data_size) {
-  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_PTRACE |
-                                                     POSIX_LOG_VERBOSE));
+  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_PTRACE));
   if (!log)
     return;
   StreamString buf;
@@ -152,38 +148,38 @@ void PtraceDisplayBytes(int &req, void *data, size_t data_size) {
   switch (req) {
   case PTRACE_POKETEXT: {
     DisplayBytes(buf, &data, 8);
-    LLDB_LOG(log, "PTRACE_POKETEXT {0}", buf.GetData());
+    LLDB_LOGV(log, "PTRACE_POKETEXT {0}", buf.GetData());
     break;
   }
   case PTRACE_POKEDATA: {
     DisplayBytes(buf, &data, 8);
-    LLDB_LOG(log, "PTRACE_POKEDATA {0}", buf.GetData());
+    LLDB_LOGV(log, "PTRACE_POKEDATA {0}", buf.GetData());
     break;
   }
   case PTRACE_POKEUSER: {
     DisplayBytes(buf, &data, 8);
-    LLDB_LOG(log, "PTRACE_POKEUSER {0}", buf.GetData());
+    LLDB_LOGV(log, "PTRACE_POKEUSER {0}", buf.GetData());
     break;
   }
   case PTRACE_SETREGS: {
     DisplayBytes(buf, data, data_size);
-    LLDB_LOG(log, "PTRACE_SETREGS {0}", buf.GetData());
+    LLDB_LOGV(log, "PTRACE_SETREGS {0}", buf.GetData());
     break;
   }
   case PTRACE_SETFPREGS: {
     DisplayBytes(buf, data, data_size);
-    LLDB_LOG(log, "PTRACE_SETFPREGS {0}", buf.GetData());
+    LLDB_LOGV(log, "PTRACE_SETFPREGS {0}", buf.GetData());
     break;
   }
   case PTRACE_SETSIGINFO: {
     DisplayBytes(buf, data, sizeof(siginfo_t));
-    LLDB_LOG(log, "PTRACE_SETSIGINFO {0}", buf.GetData());
+    LLDB_LOGV(log, "PTRACE_SETSIGINFO {0}", buf.GetData());
     break;
   }
   case PTRACE_SETREGSET: {
     // Extract iov_base from data, which is a pointer to the struct IOVEC
     DisplayBytes(buf, *(void **)data, data_size);
-    LLDB_LOG(log, "PTRACE_SETREGSET {0}", buf.GetData());
+    LLDB_LOGV(log, "PTRACE_SETREGSET {0}", buf.GetData());
     break;
   }
   default: {}

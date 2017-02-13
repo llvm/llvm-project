@@ -18,6 +18,7 @@
 #include <algorithm>
 #include <vector>
 #include <functional>
+#include <random>
 #include <cassert>
 #include <cstddef>
 #ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
@@ -32,6 +33,8 @@ struct indirect_less
 
 #endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
 
+std::mt19937 randomness;
+
 void
 test_larger_sorts(int N, int M)
 {
@@ -40,7 +43,7 @@ test_larger_sorts(int N, int M)
     int* array = new int[N];
     for (int i = 0; i < N; ++i)
         array[i] = i;
-    std::random_shuffle(array, array+N);
+    std::shuffle(array, array+N, randomness);
     std::partial_sort(array, array+M, array+N, std::greater<int>());
     for (int i = 0; i < M; ++i)
     {

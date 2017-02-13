@@ -12,9 +12,9 @@
 #include "lldb/Host/ConnectionFileDescriptor.h"
 #include "lldb/Host/common/TCPSocket.h"
 #include "lldb/Utility/Error.h"
+#include "lldb/Utility/UriParser.h"
 
 #include "PlatformAndroidRemoteGDBServer.h"
-#include "Utility/UriParser.h"
 
 #include <sstream>
 

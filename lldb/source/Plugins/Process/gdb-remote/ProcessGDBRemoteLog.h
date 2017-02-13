@@ -17,7 +17,6 @@
 // Project includes
 #include "lldb/Core/Log.h"
 
-#define GDBR_LOG_VERBOSE (1u << 0)
 #define GDBR_LOG_PROCESS (1u << 1)
 #define GDBR_LOG_THREAD (1u << 2)
 #define GDBR_LOG_PACKETS (1u << 3)
@@ -46,8 +45,9 @@ public:
 
   static void DisableLog(const char **categories, Stream *feedback_strm);
 
-  static Log *EnableLog(lldb::StreamSP &log_stream_sp, uint32_t log_options,
-                        const char **categories, Stream *feedback_strm);
+  static Log *EnableLog(const std::shared_ptr<llvm::raw_ostream> &log_stream_sp,
+                        uint32_t log_options, const char **categories,
+                        Stream *feedback_strm);
 
   static void ListLogCategories(Stream *strm);
 

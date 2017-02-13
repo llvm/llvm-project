@@ -50,10 +50,18 @@ public:
   void add(const char *S) { Args.push_back(Saver.save(S).data()); }
 
   void run() {
+    if (Config->Verbose) {
+      outs() << Prog;
+      for (const char *Arg : Args)
+        outs() << " " << Arg;
+      outs() << '\n';
+    }
+
     ErrorOr<std::string> ExeOrErr = sys::findProgramByName(Prog);
     if (auto EC = ExeOrErr.getError())
       fatal(EC, "unable to find " + Prog + " in PATH: ");
     const char *Exe = Saver.save(*ExeOrErr).data();
+
     Args.insert(Args.begin(), Exe);
     Args.push_back(nullptr);
     if (sys::ExecuteAndWait(Args[0], Args.data()) != 0) {
@@ -282,11 +290,19 @@ static void quoteAndPrint(raw_ostream &Out, StringRef S) {
 namespace {
 class TemporaryFile {
 public:
-  TemporaryFile(StringRef Prefix, StringRef Extn) {
+  TemporaryFile(StringRef Prefix, StringRef Extn, StringRef Contents = "") {
     SmallString<128> S;
     if (auto EC = sys::fs::createTemporaryFile("lld-" + Prefix, Extn, S))
       fatal(EC, "cannot create a temporary file");
     Path = S.str();
+
+    if (!Contents.empty()) {
+      std::error_code EC;
+      raw_fd_ostream OS(Path, EC, sys::fs::F_None);
+      if (EC)
+        fatal(EC, "failed to open " + Path);
+      OS << Contents;
+    }
   }
 
   TemporaryFile(TemporaryFile &&Obj) {
@@ -615,6 +631,60 @@ convertResToCOFF(const std::vector<MemoryBufferRef> &MBs) {
 
   E.run();
   return File.getMemoryBuffer();
+}
+
+static bool isBitcodeFile(StringRef Path) {
+  std::unique_ptr<MemoryBuffer> MB = check(
+      MemoryBuffer::getFile(Path, -1, false, true), "could not open " + Path);
+  StringRef Buf = MB->getBuffer();
+  return sys::fs::identify_magic(Buf) == sys::fs::file_magic::bitcode;
+}
+
+// Run MSVC link.exe for given in-memory object files.
+// Command line options are copied from those given to LLD.
+// This is for the /msvclto option.
+void runMSVCLinker(opt::InputArgList &Args, ArrayRef<StringRef> Objects) {
+  // Write the in-memory object files to disk.
+  std::vector<TemporaryFile> Temps;
+  for (StringRef S : Objects)
+    Temps.emplace_back("lto", "obj", S);
+
+  // Create a response file.
+  std::string Rsp = "/nologo ";
+  for (TemporaryFile &T : Temps)
+    Rsp += quote(T.Path) + " ";
+
+  for (auto *Arg : Args) {
+    switch (Arg->getOption().getID()) {
+    case OPT_linkrepro:
+    case OPT_lldmap:
+    case OPT_lldmap_file:
+    case OPT_msvclto:
+      // LLD-specific options are stripped.
+      break;
+    case OPT_opt:
+      if (!StringRef(Arg->getValue()).startswith("lld"))
+        Rsp += toString(Arg) + " ";
+      break;
+    case OPT_INPUT:
+      // Bitcode files are stripped as they've been compiled to
+      // native object files.
+      if (!isBitcodeFile(Arg->getValue()))
+        Rsp += quote(Arg->getValue()) + " ";
+      break;
+    default:
+      Rsp += toString(Arg) + " ";
+    }
+  }
+
+  if (Config->Verbose)
+    outs() << "link.exe " << Rsp << "\n";
+
+  // Run MSVC link.exe.
+  Temps.emplace_back("lto", "rsp", Rsp);
+  Executor E("link.exe");
+  E.add(Twine("@" + Temps.back().Path));
+  E.run();
 }
 
 // Create OptTable

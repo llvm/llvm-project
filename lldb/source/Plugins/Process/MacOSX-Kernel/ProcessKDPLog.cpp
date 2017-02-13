@@ -73,8 +73,6 @@ void ProcessKDPLog::DisableLog(const char **categories, Stream *feedback_strm) {
           flag_bits &= ~KDP_LOG_STEP;
         else if (::strcasecmp(arg, "thread") == 0)
           flag_bits &= ~KDP_LOG_THREAD;
-        else if (::strcasecmp(arg, "verbose") == 0)
-          flag_bits &= ~KDP_LOG_VERBOSE;
         else if (::strncasecmp(arg, "watch", 5) == 0)
           flag_bits &= ~KDP_LOG_WATCHPOINTS;
         else {
@@ -92,8 +90,9 @@ void ProcessKDPLog::DisableLog(const char **categories, Stream *feedback_strm) {
   return;
 }
 
-Log *ProcessKDPLog::EnableLog(StreamSP &log_stream_sp, uint32_t log_options,
-                              const char **categories, Stream *feedback_strm) {
+Log *ProcessKDPLog::EnableLog(
+    const std::shared_ptr<llvm::raw_ostream> &log_stream_sp,
+    uint32_t log_options, const char **categories, Stream *feedback_strm) {
   // Try see if there already is a log - that way we can reuse its settings.
   // We could reuse the log in toto, but we don't know that the stream is the
   // same.
@@ -138,8 +137,6 @@ Log *ProcessKDPLog::EnableLog(StreamSP &log_stream_sp, uint32_t log_options,
         flag_bits |= KDP_LOG_STEP;
       else if (::strcasecmp(arg, "thread") == 0)
         flag_bits |= KDP_LOG_THREAD;
-      else if (::strcasecmp(arg, "verbose") == 0)
-        flag_bits |= KDP_LOG_VERBOSE;
       else if (::strncasecmp(arg, "watch", 5) == 0)
         flag_bits |= KDP_LOG_WATCHPOINTS;
       else {

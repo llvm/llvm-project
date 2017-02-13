@@ -15,9 +15,12 @@
 //   minmax_element(Iter first, Iter last);
 
 #include <algorithm>
+#include <random>
 #include <cassert>
 
 #include "test_iterators.h"
+
+std::mt19937 randomness;
 
 template <class Iter>
 void
@@ -46,7 +49,7 @@ test(int N)
     int* a = new int[N];
     for (int i = 0; i < N; ++i)
         a[i] = i;
-    std::random_shuffle(a, a+N);
+    std::shuffle(a, a+N, randomness);
     test(Iter(a), Iter(a+N));
     delete [] a;
 }
@@ -66,7 +69,7 @@ test()
     int* a = new int[N];
     for (int i = 0; i < N; ++i)
         a[i] = 5;
-    std::random_shuffle(a, a+N);
+    std::shuffle(a, a+N, randomness);
     std::pair<Iter, Iter> p = std::minmax_element(Iter(a), Iter(a+N));
     assert(base(p.first) == a);
     assert(base(p.second) == a+N-1);

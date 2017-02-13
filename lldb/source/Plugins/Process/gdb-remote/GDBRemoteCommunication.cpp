@@ -321,8 +321,7 @@ GDBRemoteCommunication::WaitForPacketNoLock(StringExtractorGDBRemote &packet,
   uint8_t buffer[8192];
   Error error;
 
-  Log *log(ProcessGDBRemoteLog::GetLogIfAllCategoriesSet(GDBR_LOG_PACKETS |
-                                                         GDBR_LOG_VERBOSE));
+  Log *log(ProcessGDBRemoteLog::GetLogIfAllCategoriesSet(GDBR_LOG_PACKETS));
 
   // Check for a packet from our cache first without trying any reading...
   if (CheckForPacket(NULL, 0, packet) != PacketType::Invalid)
@@ -334,12 +333,11 @@ GDBRemoteCommunication::WaitForPacketNoLock(StringExtractorGDBRemote &packet,
     lldb::ConnectionStatus status = eConnectionStatusNoConnection;
     size_t bytes_read = Read(buffer, sizeof(buffer), timeout, status, &error);
 
-    if (log)
-      log->Printf("%s: Read (buffer, (sizeof(buffer), timeout = %ld us, "
-                  "status = %s, error = %s) => bytes_read = %" PRIu64,
-                  LLVM_PRETTY_FUNCTION, long(timeout ? timeout->count() : -1),
-                  Communication::ConnectionStatusAsCString(status),
-                  error.AsCString(), (uint64_t)bytes_read);
+    LLDB_LOGV(log,
+              "Read(buffer, sizeof(buffer), timeout = {0}, "
+              "status = {1}, error = {2}) => bytes_read = {3}",
+              timeout, Communication::ConnectionStatusAsCString(status), error,
+              bytes_read);
 
     if (bytes_read > 0) {
       if (CheckForPacket(buffer, bytes_read, packet) != PacketType::Invalid)

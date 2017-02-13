@@ -78,8 +78,6 @@ void LogChannelDWARF::Disable(const char **categories, Stream *feedback_strm) {
       flag_bits &= ~DWARF_LOG_DEBUG_MAP;
     else if (::strcasecmp(arg, "default") == 0)
       flag_bits &= ~DWARF_LOG_DEFAULT;
-    else if (::strcasecmp(arg, "verbose") == 0)
-      flag_bits &= ~DWARF_LOG_VERBOSE;
     else if (::strncasecmp(arg, "comp", 4) == 0)
       flag_bits &= ~DWARF_LOG_TYPE_COMPLETION;
     else {
@@ -97,7 +95,8 @@ void LogChannelDWARF::Disable(const char **categories, Stream *feedback_strm) {
 }
 
 bool LogChannelDWARF::Enable(
-    StreamSP &log_stream_sp, uint32_t log_options,
+    const std::shared_ptr<llvm::raw_ostream> &log_stream_sp,
+    uint32_t log_options,
     Stream *feedback_strm,  // Feedback stream for argument errors etc
     const char **categories // The categories to enable within this logging
                             // stream, if empty, enable default set
@@ -133,8 +132,6 @@ bool LogChannelDWARF::Enable(
       flag_bits |= DWARF_LOG_DEBUG_MAP;
     else if (::strcasecmp(arg, "default") == 0)
       flag_bits |= DWARF_LOG_DEFAULT;
-    else if (::strcasecmp(arg, "verbose") == 0)
-      flag_bits |= DWARF_LOG_VERBOSE;
     else if (::strncasecmp(arg, "comp", 4) == 0)
       flag_bits |= DWARF_LOG_TYPE_COMPLETION;
     else {

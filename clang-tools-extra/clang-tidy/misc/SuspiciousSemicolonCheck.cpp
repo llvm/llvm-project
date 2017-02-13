@@ -30,7 +30,7 @@ void SuspiciousSemicolonCheck::registerMatchers(MatchFinder *Finder) {
 }
 
 void SuspiciousSemicolonCheck::check(const MatchFinder::MatchResult &Result) {
-  if (Result.Context->getDiagnostics().hasErrorOccurred())
+  if (Result.Context->getDiagnostics().hasUncompilableErrorOccurred())
     return;
 
   const auto *Semicolon = Result.Nodes.getNodeAs<NullStmt>("semi");

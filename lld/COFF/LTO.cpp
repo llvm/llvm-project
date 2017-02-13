@@ -54,6 +54,14 @@ static void checkError(Error E) {
   });
 }
 
+static void saveBuffer(StringRef Buffer, const Twine &Path) {
+  std::error_code EC;
+  raw_fd_ostream OS(Path.str(), EC, sys::fs::OpenFlags::F_None);
+  if (EC)
+    error("cannot create " + Path + ": " + EC.message());
+  OS << Buffer;
+}
+
 static std::unique_ptr<lto::LTO> createLTO() {
   lto::Config Conf;
   Conf.Options = InitTargetOptionsFromCodeGenFlags();
@@ -61,6 +69,9 @@ static std::unique_ptr<lto::LTO> createLTO() {
   Conf.DisableVerify = true;
   Conf.DiagHandler = diagnosticHandler;
   Conf.OptLevel = Config->LTOOptLevel;
+  if (Config->SaveTemps)
+    checkError(Conf.addSaveTemps(std::string(Config->OutputFile) + ".",
+                                 /*UseInputModulePath*/ true));
   lto::ThinBackend Backend;
   if (Config->LTOJobs != -1u)
     Backend = lto::createInProcessThinBackend(Config->LTOJobs);
@@ -105,9 +116,8 @@ void BitcodeCompiler::add(BitcodeFile &F) {
 }
 
 // Merge all the bitcode files we have seen, codegen the result
-// and return the resulting ObjectFile(s).
-std::vector<InputFile *> BitcodeCompiler::compile() {
-  std::vector<InputFile *> Ret;
+// and return the resulting objects.
+std::vector<StringRef> BitcodeCompiler::compile() {
   unsigned MaxTasks = LTOObj->getMaxTasks();
   Buff.resize(MaxTasks);
 
@@ -116,10 +126,17 @@ std::vector<InputFile *> BitcodeCompiler::compile() {
         llvm::make_unique<raw_svector_ostream>(Buff[Task]));
   }));
 
+  std::vector<StringRef> Ret;
   for (unsigned I = 0; I != MaxTasks; ++I) {
     if (Buff[I].empty())
       continue;
-    Ret.push_back(make<ObjectFile>(MemoryBufferRef(Buff[I], "lto.tmp")));
+    if (Config->SaveTemps) {
+      if (I == 0)
+        saveBuffer(Buff[I], Config->OutputFile + ".lto.obj");
+      else
+        saveBuffer(Buff[I], Config->OutputFile + Twine(I) + ".lto.obj");
+    }
+    Ret.emplace_back(Buff[I].data(), Buff[I].size());
   }
   return Ret;
 }

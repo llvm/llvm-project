@@ -22,22 +22,34 @@
 #include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Breakpoint/BreakpointSite.h"
 #include "lldb/Core/Debugger.h"
-#include "lldb/Core/Module.h"
-#include "lldb/Core/ModuleSpec.h"
+#include "lldb/Core/Log.h"
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Host/Host.h"
+#include "lldb/Core/State.h"
+#include "lldb/Host/FileSpec.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Target/Process.h"
+#include "lldb/Target/Target.h"
 #include "lldb/Utility/Error.h"
+#include "lldb/Utility/StreamString.h"
+
+// Define these constants from FreeBSD mman.h for use when targeting
+// remote FreeBSD systems even when host has different values.
+#define MAP_PRIVATE 0x0002
+#define MAP_ANON 0x1000
 
 using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::platform_freebsd;
 
+static uint32_t g_initialize_count = 0;
+
+//------------------------------------------------------------------
+
 PlatformSP PlatformFreeBSD::CreateInstance(bool force, const ArchSpec *arch) {
-  // The only time we create an instance is when we are creating a remote
-  // freebsd platform
-  const bool is_host = false;
+  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PLATFORM));
+  LLDB_LOG(log, "force = {0}, arch=({1}, {2})", force,
+           arch ? arch->GetArchitectureName() : "<null>",
+           arch ? arch->GetTriple().getTriple() : "<null>");
 
   bool create = force;
   if (create == false && arch && arch->IsValid()) {
@@ -59,8 +71,10 @@ PlatformSP PlatformFreeBSD::CreateInstance(bool force, const ArchSpec *arch) {
       break;
     }
   }
-  if (create)
-    return PlatformSP(new PlatformFreeBSD(is_host));
+  LLDB_LOG(log, "create = {0}", create);
+  if (create) {
+    return PlatformSP(new PlatformFreeBSD(false));
+  }
   return PlatformSP();
 }
 
@@ -74,221 +88,51 @@ ConstString PlatformFreeBSD::GetPluginNameStatic(bool is_host) {
   }
 }
 
-const char *PlatformFreeBSD::GetDescriptionStatic(bool is_host) {
+const char *PlatformFreeBSD::GetPluginDescriptionStatic(bool is_host) {
   if (is_host)
     return "Local FreeBSD user platform plug-in.";
   else
     return "Remote FreeBSD user platform plug-in.";
 }
 
-static uint32_t g_initialize_count = 0;
+ConstString PlatformFreeBSD::GetPluginName() {
+  return GetPluginNameStatic(IsHost());
+}
 
 void PlatformFreeBSD::Initialize() {
   Platform::Initialize();
 
   if (g_initialize_count++ == 0) {
 #if defined(__FreeBSD__)
-    // Force a host flag to true for the default platform object.
     PlatformSP default_platform_sp(new PlatformFreeBSD(true));
     default_platform_sp->SetSystemArchitecture(HostInfo::GetArchitecture());
     Platform::SetHostPlatform(default_platform_sp);
 #endif
-    PluginManager::RegisterPlugin(PlatformFreeBSD::GetPluginNameStatic(false),
-                                  PlatformFreeBSD::GetDescriptionStatic(false),
-                                  PlatformFreeBSD::CreateInstance);
+    PluginManager::RegisterPlugin(
+        PlatformFreeBSD::GetPluginNameStatic(false),
+        PlatformFreeBSD::GetPluginDescriptionStatic(false),
+        PlatformFreeBSD::CreateInstance, nullptr);
   }
 }
 
 void PlatformFreeBSD::Terminate() {
-  if (g_initialize_count > 0 && --g_initialize_count == 0)
-    PluginManager::UnregisterPlugin(PlatformFreeBSD::CreateInstance);
-
-  Platform::Terminate();
-}
-
-bool PlatformFreeBSD::GetModuleSpec(const FileSpec &module_file_spec,
-                                    const ArchSpec &arch,
-                                    ModuleSpec &module_spec) {
-  if (m_remote_platform_sp)
-    return m_remote_platform_sp->GetModuleSpec(module_file_spec, arch,
-                                               module_spec);
-
-  return Platform::GetModuleSpec(module_file_spec, arch, module_spec);
-}
-
-Error PlatformFreeBSD::RunShellCommand(const char *command,
-                                       const FileSpec &working_dir,
-                                       int *status_ptr, int *signo_ptr,
-                                       std::string *command_output,
-                                       uint32_t timeout_sec) {
-  if (IsHost())
-    return Host::RunShellCommand(command, working_dir, status_ptr, signo_ptr,
-                                 command_output, timeout_sec);
-  else {
-    if (m_remote_platform_sp)
-      return m_remote_platform_sp->RunShellCommand(command, working_dir,
-                                                   status_ptr, signo_ptr,
-                                                   command_output, timeout_sec);
-    else
-      return Error("unable to run a remote command without a platform");
+  if (g_initialize_count > 0) {
+    if (--g_initialize_count == 0) {
+      PluginManager::UnregisterPlugin(PlatformFreeBSD::CreateInstance);
+    }
   }
+
+  PlatformPOSIX::Terminate();
 }
 
 //------------------------------------------------------------------
 /// Default Constructor
 //------------------------------------------------------------------
 PlatformFreeBSD::PlatformFreeBSD(bool is_host)
-    : Platform(is_host), m_remote_platform_sp() {}
+    : PlatformPOSIX(is_host) // This is the local host platform
+{}
 
-//------------------------------------------------------------------
-/// Destructor.
-///
-/// The destructor is virtual since this class is designed to be
-/// inherited from by the plug-in instance.
-//------------------------------------------------------------------
-PlatformFreeBSD::~PlatformFreeBSD() {}
-
-// TODO:VK: inherit PlatformPOSIX
-
-bool PlatformFreeBSD::GetRemoteOSVersion() {
-  if (m_remote_platform_sp)
-    return m_remote_platform_sp->GetOSVersion(
-        m_major_os_version, m_minor_os_version, m_update_os_version);
-  return false;
-}
-
-bool PlatformFreeBSD::GetRemoteOSBuildString(std::string &s) {
-  if (m_remote_platform_sp)
-    return m_remote_platform_sp->GetRemoteOSBuildString(s);
-  s.clear();
-  return false;
-}
-
-bool PlatformFreeBSD::GetRemoteOSKernelDescription(std::string &s) {
-  if (m_remote_platform_sp)
-    return m_remote_platform_sp->GetRemoteOSKernelDescription(s);
-  s.clear();
-  return false;
-}
-
-// Remote Platform subclasses need to override this function
-ArchSpec PlatformFreeBSD::GetRemoteSystemArchitecture() {
-  if (m_remote_platform_sp)
-    return m_remote_platform_sp->GetRemoteSystemArchitecture();
-  return ArchSpec();
-}
-
-const char *PlatformFreeBSD::GetHostname() {
-  if (IsHost())
-    return Platform::GetHostname();
-
-  if (m_remote_platform_sp)
-    return m_remote_platform_sp->GetHostname();
-  return NULL;
-}
-
-bool PlatformFreeBSD::IsConnected() const {
-  if (IsHost())
-    return true;
-  else if (m_remote_platform_sp)
-    return m_remote_platform_sp->IsConnected();
-  return false;
-}
-
-Error PlatformFreeBSD::ConnectRemote(Args &args) {
-  Error error;
-  if (IsHost()) {
-    error.SetErrorStringWithFormat(
-        "can't connect to the host platform '%s', always connected",
-        GetPluginName().GetCString());
-  } else {
-    if (!m_remote_platform_sp)
-      m_remote_platform_sp =
-          Platform::Create(ConstString("remote-gdb-server"), error);
-
-    if (m_remote_platform_sp) {
-      if (error.Success()) {
-        if (m_remote_platform_sp) {
-          error = m_remote_platform_sp->ConnectRemote(args);
-        } else {
-          error.SetErrorString(
-              "\"platform connect\" takes a single argument: <connect-url>");
-        }
-      }
-    } else
-      error.SetErrorString("failed to create a 'remote-gdb-server' platform");
-
-    if (error.Fail())
-      m_remote_platform_sp.reset();
-  }
-
-  return error;
-}
-
-Error PlatformFreeBSD::DisconnectRemote() {
-  Error error;
-
-  if (IsHost()) {
-    error.SetErrorStringWithFormat(
-        "can't disconnect from the host platform '%s', always connected",
-        GetPluginName().GetCString());
-  } else {
-    if (m_remote_platform_sp)
-      error = m_remote_platform_sp->DisconnectRemote();
-    else
-      error.SetErrorString("the platform is not currently connected");
-  }
-  return error;
-}
-
-const char *PlatformFreeBSD::GetUserName(uint32_t uid) {
-  // Check the cache in Platform in case we have already looked this uid up
-  const char *user_name = Platform::GetUserName(uid);
-  if (user_name)
-    return user_name;
-
-  if (IsRemote() && m_remote_platform_sp)
-    return m_remote_platform_sp->GetUserName(uid);
-  return NULL;
-}
-
-const char *PlatformFreeBSD::GetGroupName(uint32_t gid) {
-  const char *group_name = Platform::GetGroupName(gid);
-  if (group_name)
-    return group_name;
-
-  if (IsRemote() && m_remote_platform_sp)
-    return m_remote_platform_sp->GetGroupName(gid);
-  return NULL;
-}
-
-Error PlatformFreeBSD::GetSharedModule(
-    const ModuleSpec &module_spec, Process *process, ModuleSP &module_sp,
-    const FileSpecList *module_search_paths_ptr, ModuleSP *old_module_sp_ptr,
-    bool *did_create_ptr) {
-  Error error;
-  module_sp.reset();
-
-  if (IsRemote()) {
-    // If we have a remote platform always, let it try and locate
-    // the shared module first.
-    if (m_remote_platform_sp) {
-      error = m_remote_platform_sp->GetSharedModule(
-          module_spec, process, module_sp, module_search_paths_ptr,
-          old_module_sp_ptr, did_create_ptr);
-    }
-  }
-
-  if (!module_sp) {
-    // Fall back to the local platform and find the file locally
-    error = Platform::GetSharedModule(module_spec, process, module_sp,
-                                      module_search_paths_ptr,
-                                      old_module_sp_ptr, did_create_ptr);
-  }
-  if (module_sp)
-    module_sp->SetPlatformFileSpec(module_spec.GetFileSpec());
-  return error;
-}
+PlatformFreeBSD::~PlatformFreeBSD() = default;
 
 bool PlatformFreeBSD::GetSupportedArchitectureAtIndex(uint32_t idx,
                                                       ArchSpec &arch) {
@@ -359,26 +203,23 @@ bool PlatformFreeBSD::GetSupportedArchitectureAtIndex(uint32_t idx,
 }
 
 void PlatformFreeBSD::GetStatus(Stream &strm) {
-#ifndef LLDB_DISABLE_POSIX
-  struct utsname un;
-
-  strm << "      Host: ";
-
-  ::memset(&un, 0, sizeof(utsname));
-  if (uname(&un) == -1)
-    strm << "FreeBSD" << '\n';
-
-  strm << un.sysname << ' ' << un.release;
-  if (un.nodename[0] != '\0')
-    strm << " (" << un.nodename << ')';
-  strm << '\n';
-
-  // Dump a common information about the platform status.
-  strm << "Host: " << un.sysname << ' ' << un.release << ' ' << un.version
-       << '\n';
-#endif
-
   Platform::GetStatus(strm);
+
+#ifndef LLDB_DISABLE_POSIX
+  // Display local kernel information only when we are running in host mode.
+  // Otherwise, we would end up printing non-FreeBSD information (when running
+  // on Mac OS for example).
+  if (IsHost()) {
+    struct utsname un;
+
+    if (uname(&un))
+      return;
+
+    strm.Printf("    Kernel: %s\n", un.sysname);
+    strm.Printf("   Release: %s\n", un.release);
+    strm.Printf("   Version: %s\n", un.version);
+  }
+#endif
 }
 
 size_t
@@ -412,10 +253,6 @@ PlatformFreeBSD::GetSoftwareBreakpointTrapOpcode(Target &target,
   default:
     return Platform::GetSoftwareBreakpointTrapOpcode(target, bp_site);
   }
-}
-
-void PlatformFreeBSD::CalculateTrapHandlerSymbolNames() {
-  m_trap_handlers.push_back(ConstString("_sigtramp"));
 }
 
 Error PlatformFreeBSD::LaunchProcess(ProcessLaunchInfo &launch_info) {
@@ -466,4 +303,24 @@ lldb::ProcessSP PlatformFreeBSD::Attach(ProcessAttachInfo &attach_info,
       error.SetErrorString("the platform is not currently connected");
   }
   return process_sp;
+}
+
+// FreeBSD processes cannot yet be launched by spawning and attaching.
+bool PlatformFreeBSD::CanDebugProcess() {
+  return false;
+}
+
+void PlatformFreeBSD::CalculateTrapHandlerSymbolNames() {
+  m_trap_handlers.push_back(ConstString("_sigtramp"));
+}
+
+uint64_t PlatformFreeBSD::ConvertMmapFlagsToPlatform(const ArchSpec &arch,
+                                                     unsigned flags) {
+  uint64_t flags_platform = 0;
+
+  if (flags & eMmapFlagsPrivate)
+    flags_platform |= MAP_PRIVATE;
+  if (flags & eMmapFlagsAnon)
+    flags_platform |= MAP_ANON;
+  return flags_platform;
 }

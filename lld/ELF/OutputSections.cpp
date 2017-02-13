@@ -116,7 +116,7 @@ template <class ELFT> void OutputSection<ELFT>::finalize() {
   }
 
   uint32_t Type = this->Type;
-  if (!Config->Relocatable || (Type != SHT_RELA && Type != SHT_REL))
+  if (!Config->copyRelocs() || (Type != SHT_RELA && Type != SHT_REL))
     return;
 
   this->Link = In<ELFT>::SymTab->OutSec->SectionIndex;

@@ -518,8 +518,7 @@ bool ProcessKDP::UpdateThreadList(ThreadList &old_thread_list,
                                   ThreadList &new_thread_list) {
   // locker will keep a mutex locked until it goes out of scope
   Log *log(ProcessKDPLog::GetLogIfAllCategoriesSet(KDP_LOG_THREAD));
-  if (log && log->GetMask().Test(KDP_LOG_VERBOSE))
-    log->Printf("ProcessKDP::%s (pid = %" PRIu64 ")", __FUNCTION__, GetID());
+  LLDB_LOGV(log, "pid = {0}", GetID());
 
   // Even though there is a CPU mask, it doesn't mean we can see each CPU
   // individually, there is really only one. Lets call this thread 1.

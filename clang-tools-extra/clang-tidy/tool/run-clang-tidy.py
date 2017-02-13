@@ -59,7 +59,7 @@ def find_compilation_database(path):
 
 
 def get_tidy_invocation(f, clang_tidy_binary, checks, tmpdir, build_path,
-                        header_filter, extra_arg, extra_arg_before):
+                        header_filter, extra_arg, extra_arg_before, quiet):
   """Gets a command line for clang-tidy."""
   start = [clang_tidy_binary]
   if header_filter is not None:
@@ -81,6 +81,8 @@ def get_tidy_invocation(f, clang_tidy_binary, checks, tmpdir, build_path,
   for arg in extra_arg_before:
       start.append('-extra-arg-before=%s' % arg)
   start.append('-p=' + build_path)
+  if quiet:
+      start.append('-quiet')
   start.append(f)
   return start
 
@@ -101,7 +103,8 @@ def run_tidy(args, tmpdir, build_path, queue):
     name = queue.get()
     invocation = get_tidy_invocation(name, args.clang_tidy_binary, args.checks,
                                      tmpdir, build_path, args.header_filter,
-                                     args.extra_arg, args.extra_arg_before)
+                                     args.extra_arg, args.extra_arg_before,
+                                     args.quiet)
     sys.stdout.write(' '.join(invocation) + '\n')
     subprocess.call(invocation)
     queue.task_done()
@@ -143,6 +146,8 @@ def main():
                       action='append', default=[],
                       help='Additional argument to prepend to the compiler '
                       'command line.')
+  parser.add_argument('-quiet', action='store_true',
+                      help='Run clang-tidy in quiet mode')
   args = parser.parse_args()
 
   db_path = 'compile_commands.json'

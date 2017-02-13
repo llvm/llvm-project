@@ -290,8 +290,7 @@ Error ProcessFreeBSD::DoAttachToProcessWithID(
   assert(m_monitor == NULL);
 
   Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_PROCESS));
-  if (log && log->GetMask().Test(POSIX_LOG_VERBOSE))
-    log->Printf("ProcessFreeBSD::%s(pid = %" PRIi64 ")", __FUNCTION__, GetID());
+  LLDB_LOGV(log, "pid = {0}", GetID());
 
   m_monitor = new ProcessMonitor(this, pid, error);
 
@@ -537,9 +536,7 @@ ProcessFreeBSD::CreateNewFreeBSDThread(lldb_private::Process &process,
 
 void ProcessFreeBSD::RefreshStateAfterStop() {
   Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_PROCESS));
-  if (log && log->GetMask().Test(POSIX_LOG_VERBOSE))
-    log->Printf("ProcessFreeBSD::%s(), message_queue size = %d", __FUNCTION__,
-                (int)m_message_queue.size());
+  LLDB_LOGV(log, "message_queue size = {0}", m_message_queue.size());
 
   std::lock_guard<std::recursive_mutex> guard(m_message_mutex);
 
@@ -551,10 +548,8 @@ void ProcessFreeBSD::RefreshStateAfterStop() {
 
     // Resolve the thread this message corresponds to and pass it along.
     lldb::tid_t tid = message.GetTID();
-    if (log)
-      log->Printf(
-          "ProcessFreeBSD::%s(), message_queue size = %d, pid = %" PRIi64,
-          __FUNCTION__, (int)m_message_queue.size(), tid);
+    LLDB_LOGV(log, " message_queue size = {0}, pid = {1}",
+              m_message_queue.size(), tid);
 
     m_thread_list.RefreshStateAfterStop();
 
@@ -566,10 +561,7 @@ void ProcessFreeBSD::RefreshStateAfterStop() {
     if (message.GetKind() == ProcessMessage::eExitMessage) {
       // FIXME: We should tell the user about this, but the limbo message is
       // probably better for that.
-      if (log)
-        log->Printf("ProcessFreeBSD::%s() removing thread, tid = %" PRIi64,
-                    __FUNCTION__, tid);
-
+      LLDB_LOG(log, "removing thread, tid = {0}", tid);
       std::lock_guard<std::recursive_mutex> guard(m_thread_list.GetMutex());
 
       ThreadSP thread_sp = m_thread_list.RemoveThreadByID(tid, false);

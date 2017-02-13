@@ -43,7 +43,7 @@ add_lld_library(lldCOFF
 
   LINK_LIBS
   lldCore
-  ${PTHREAD_LIB}
+  ${LLVM_PTHREAD_LIB}
 
   DEPENDS
   COFFOptionsTableGen

@@ -12,6 +12,7 @@
 // TODO(EricWF) Investigate why typeid(...).name() returns a different string
 // on GCC 4.9 but not newer GCCs.
 // XFAIL: gcc-4.9
+// XFAIL: windows
 
 // THIS TESTS C++03 EXTENSIONS.
 

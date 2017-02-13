@@ -130,72 +130,6 @@ ErrorType Error::GetType() const { return m_type; }
 bool Error::Fail() const { return m_code != 0; }
 
 //----------------------------------------------------------------------
-// Log the error given a string with format. If the this object
-// contains an error code, update the error string to contain the
-// "error: " followed by the formatted string, followed by the error
-// value and any string that describes the current error. This
-// allows more context to be given to an error string that remains
-// cached in this object. Logging always occurs even when the error
-// code contains a non-error value.
-//----------------------------------------------------------------------
-void Error::PutToLog(Log *log, const char *format, ...) {
-  char *arg_msg = nullptr;
-  va_list args;
-  va_start(args, format);
-  ::vasprintf(&arg_msg, format, args);
-  va_end(args);
-
-  if (arg_msg != nullptr) {
-    if (Fail()) {
-      const char *err_str = AsCString();
-      if (err_str == nullptr)
-        err_str = "???";
-
-      SetErrorStringWithFormat("error: %s err = %s (0x%8.8x)", arg_msg, err_str,
-                               m_code);
-      if (log != nullptr)
-        log->Error("%s", m_string.c_str());
-    } else {
-      if (log != nullptr)
-        log->Printf("%s err = 0x%8.8x", arg_msg, m_code);
-    }
-    ::free(arg_msg);
-  }
-}
-
-//----------------------------------------------------------------------
-// Log the error given a string with format. If the this object
-// contains an error code, update the error string to contain the
-// "error: " followed by the formatted string, followed by the error
-// value and any string that describes the current error. This
-// allows more context to be given to an error string that remains
-// cached in this object. Logging only occurs even when the error
-// code contains a error value.
-//----------------------------------------------------------------------
-void Error::LogIfError(Log *log, const char *format, ...) {
-  if (Fail()) {
-    char *arg_msg = nullptr;
-    va_list args;
-    va_start(args, format);
-    ::vasprintf(&arg_msg, format, args);
-    va_end(args);
-
-    if (arg_msg != nullptr) {
-      const char *err_str = AsCString();
-      if (err_str == nullptr)
-        err_str = "???";
-
-      SetErrorStringWithFormat("%s err = %s (0x%8.8x)", arg_msg, err_str,
-                               m_code);
-      if (log != nullptr)
-        log->Error("%s", m_string.c_str());
-
-      ::free(arg_msg);
-    }
-  }
-}
-
-//----------------------------------------------------------------------
 // Set accesssor for the error value to "err" and the type to
 // "eErrorTypeMachKernel"
 //----------------------------------------------------------------------
@@ -333,4 +267,11 @@ bool Error::Success() const { return m_code == 0; }
 
 bool Error::WasInterrupted() const {
   return (m_type == eErrorTypePOSIX && m_code == EINTR);
+}
+
+void llvm::format_provider<lldb_private::Error>::format(
+    const lldb_private::Error &error, llvm::raw_ostream &OS,
+    llvm::StringRef Options) {
+  llvm::format_provider<llvm::StringRef>::format(error.AsCString(), OS,
+                                                 Options);
 }

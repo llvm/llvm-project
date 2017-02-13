@@ -91,20 +91,26 @@ static bool isUnderSysroot(StringRef Path) {
   return false;
 }
 
-template <class ELFT> static void assignSymbol(SymbolAssignment *Cmd) {
-  // If there are sections, then let the value be assigned later in
-  // `assignAddresses`.
-  if (ScriptConfig->HasSections)
+// Sets value of a symbol. Two kinds of symbols are processed: synthetic
+// symbols, whose value is an offset from beginning of section and regular
+// symbols whose value is absolute.
+template <class ELFT>
+static void assignSymbol(SymbolAssignment *Cmd, typename ELFT::uint Dot = 0) {
+  if (!Cmd->Sym)
     return;
 
-  uint64_t Value = Cmd->Expression(0);
-  if (Cmd->Expression.IsAbsolute()) {
-    cast<DefinedRegular<ELFT>>(Cmd->Sym)->Value = Value;
-  } else {
-    const OutputSectionBase *Sec = Cmd->Expression.Section();
-    if (Sec)
-      cast<DefinedSynthetic>(Cmd->Sym)->Value = Value - Sec->Addr;
+  if (auto *Body = dyn_cast<DefinedSynthetic>(Cmd->Sym)) {
+    Body->Section = Cmd->Expression.Section();
+    if (Body->Section) {
+      uint64_t VA = 0;
+      if (Body->Section->Flags & SHF_ALLOC)
+        VA = Body->Section->Addr;
+      Body->Value = Cmd->Expression(Dot) - VA;
+    }
+    return;
   }
+
+  cast<DefinedRegular<ELFT>>(Cmd->Sym)->Value = Cmd->Expression(Dot);
 }
 
 template <class ELFT> static void addSymbol(SymbolAssignment *Cmd) {
@@ -123,7 +129,11 @@ template <class ELFT> static void addSymbol(SymbolAssignment *Cmd) {
     Cmd->Sym = addRegular<ELFT>(Cmd);
   else
     Cmd->Sym = addSynthetic<ELFT>(Cmd);
-  assignSymbol<ELFT>(Cmd);
+
+  // If there are sections, then let the value be assigned later in
+  // `assignAddresses`.
+  if (!ScriptConfig->HasSections)
+    assignSymbol<ELFT>(Cmd);
 }
 
 bool SymbolAssignment::classof(const BaseCommand *C) {
@@ -371,25 +381,6 @@ void LinkerScript<ELFT>::addOrphanSections(
       addSection(Factory, S, getOutputSectionName(S->Name));
 }
 
-// Sets value of a section-defined symbol. Two kinds of
-// symbols are processed: synthetic symbols, whose value
-// is an offset from beginning of section and regular
-// symbols whose value is absolute.
-template <class ELFT>
-static void assignSectionSymbol(SymbolAssignment *Cmd,
-                                typename ELFT::uint Value) {
-  if (!Cmd->Sym)
-    return;
-
-  if (auto *Body = dyn_cast<DefinedSynthetic>(Cmd->Sym)) {
-    Body->Section = Cmd->Expression.Section();
-    Body->Value = Cmd->Expression(Value) - Body->Section->Addr;
-    return;
-  }
-  auto *Body = cast<DefinedRegular<ELFT>>(Cmd->Sym);
-  Body->Value = Cmd->Expression(Value);
-}
-
 template <class ELFT> static bool isTbss(OutputSectionBase *Sec) {
   return (Sec->Flags & SHF_TLS) && Sec->Type == SHT_NOBITS;
 }
@@ -472,7 +463,7 @@ template <class ELFT> void LinkerScript<ELFT>::process(BaseCommand &Base) {
       CurOutSec->Size = Dot - CurOutSec->Addr;
       return;
     }
-    assignSectionSymbol<ELFT>(AssignCmd, Dot);
+    assignSymbol<ELFT>(AssignCmd, Dot);
     return;
   }
 
@@ -569,6 +560,10 @@ void LinkerScript<ELFT>::assignOffsets(OutputSectionCommand *Cmd) {
   OutputSectionBase *Sec = findSection<ELFT>(Cmd->Name, *OutputSections);
   if (!Sec)
     return;
+
+  // Handle align (e.g. ".foo : ALIGN(16) { ... }").
+  if (Cmd->AlignExpr)
+    Sec->updateAlignment(Cmd->AlignExpr(0));
 
   // Try and find an appropriate memory region to assign offsets in.
   CurMemRegion = findMemoryRegion(Cmd, Sec);
@@ -776,12 +771,25 @@ void LinkerScript<ELFT>::assignAddresses(std::vector<PhdrEntry> &Phdrs) {
   // Assign addresses as instructed by linker script SECTIONS sub-commands.
   Dot = 0;
 
+  // A symbol can be assigned before any section is mentioned in the linker
+  // script. In an DSO, the symbol values are addresses, so the only important
+  // section values are:
+  // * SHN_UNDEF
+  // * SHN_ABS
+  // * Any value meaning a regular section.
+  // To handle that, create a dummy aether section that fills the void before
+  // the linker scripts switches to another section. It has an index of one
+  // which will map to whatever the first actual section is.
+  auto *Aether = make<OutputSectionBase>("", 0, SHF_ALLOC);
+  Aether->SectionIndex = 1;
+  switchTo(Aether);
+
   for (const std::unique_ptr<BaseCommand> &Base : Opt.Commands) {
     if (auto *Cmd = dyn_cast<SymbolAssignment>(Base.get())) {
       if (Cmd->Name == ".") {
         Dot = Cmd->Expression(Dot);
       } else if (Cmd->Sym) {
-        assignSectionSymbol<ELFT>(Cmd, Dot);
+        assignSymbol<ELFT>(Cmd, Dot);
       }
       continue;
     }
@@ -973,14 +981,9 @@ template <class ELFT> bool LinkerScript<ELFT>::isAbsolute(StringRef S) {
 // to find suitable section for it as well.
 template <class ELFT>
 const OutputSectionBase *LinkerScript<ELFT>::getSymbolSection(StringRef S) {
-  SymbolBody *Sym = Symtab<ELFT>::X->find(S);
-  if (!Sym) {
-    if (OutputSections->empty())
-      return nullptr;
-    return CurOutSec ? CurOutSec : (*OutputSections)[0];
-  }
-
-  return SymbolTableSection<ELFT>::getOutputSection(Sym);
+  if (SymbolBody *Sym = Symtab<ELFT>::X->find(S))
+    return SymbolTableSection<ELFT>::getOutputSection(Sym);
+  return CurOutSec;
 }
 
 // Returns indices of ELF headers containing specific section, identified
@@ -1251,10 +1254,10 @@ void ScriptParser::readOutput() {
 }
 
 void ScriptParser::readOutputArch() {
-  // Error checking only for now.
+  // OUTPUT_ARCH is ignored for now.
   expect("(");
-  skip();
-  expect(")");
+  while (!Error && !consume(")"))
+    skip();
 }
 
 void ScriptParser::readOutputFormat() {
@@ -1996,7 +1999,7 @@ std::vector<SymbolVersion> ScriptParser::readSymbols() {
       continue;
     }
 
-    if (peek() == "}" || peek() == "local" || Error)
+    if (peek() == "}" || (peek() == "local" && peek(1) == ":") || Error)
       break;
     StringRef Tok = next();
     Ret.push_back({unquote(Tok), false, hasWildcard(Tok)});
