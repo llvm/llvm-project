@@ -26,6 +26,7 @@ add_lldb_library(lldbInitialization
     lldbPluginObjectFileELF
     lldbPluginObjectFilePECOFF
     lldbPluginProcessGDBRemote
+    lldbPluginExpressionParserSwift
     ${EXTRA_PLUGINS}
     ${LLDB_SYSTEM_LIBS}
   LINK_COMPONENTS

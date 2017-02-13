@@ -100,6 +100,7 @@ add_lldb_library(liblldb SHARED
     lldbSymbol
     lldbTarget
     ${LLDB_ALL_PLUGINS}
+    ${SWIFT_ALL_LIBS}
   LINK_COMPONENTS
     Support
   )
