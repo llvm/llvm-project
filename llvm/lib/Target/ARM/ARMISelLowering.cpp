@@ -13183,6 +13183,11 @@ bool ARMTargetLowering::lowerInterleavedLoad(
   if (!Subtarget->hasNEON() || (VecSize != 64 && VecSize != 128) || EltIs64Bits)
     return false;
 
+  // Skip if the vector has f16 elements: even though we could do an i16 vldN,
+  // we can't hold the f16 vectors and will end up converting via f32.
+  if (EltTy->isHalfTy())
+    return false;
+
   // A pointer vector can not be the return type of the ldN intrinsics. Need to
   // load integer vectors first and then convert to pointer vectors.
   if (EltTy->isPointerTy())
@@ -13199,6 +13204,8 @@ bool ARMTargetLowering::lowerInterleavedLoad(
   Type *Int8Ptr = Builder.getInt8PtrTy(LI->getPointerAddressSpace());
   Ops.push_back(Builder.CreateBitCast(LI->getPointerOperand(), Int8Ptr));
   Ops.push_back(Builder.getInt32(LI->getAlignment()));
+
+  assert(isTypeLegal(EVT::getEVT(VecTy)) && "Illegal vldN vector type!");
 
   Type *Tys[] = { VecTy, Int8Ptr };
   Function *VldnFunc =
@@ -13285,6 +13292,11 @@ bool ARMTargetLowering::lowerInterleavedStore(StoreInst *SI,
       EltIs64Bits)
     return false;
 
+  // Skip if the vector has f16 elements: even though we could do an i16 vldN,
+  // we can't hold the f16 vectors and will end up converting via f32.
+  if (EltTy->isHalfTy())
+    return false;
+
   Value *Op0 = SVI->getOperand(0);
   Value *Op1 = SVI->getOperand(1);
   IRBuilder<> Builder(SI);
@@ -13310,6 +13322,8 @@ bool ARMTargetLowering::lowerInterleavedStore(StoreInst *SI,
 
   Type *Int8Ptr = Builder.getInt8PtrTy(SI->getPointerAddressSpace());
   Ops.push_back(Builder.CreateBitCast(SI->getPointerOperand(), Int8Ptr));
+
+  assert(isTypeLegal(EVT::getEVT(SubVecTy)) && "Illegal vstN vector type!");
 
   Type *Tys[] = { Int8Ptr, SubVecTy };
   Function *VstNFunc = Intrinsic::getDeclaration(

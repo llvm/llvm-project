@@ -387,6 +387,27 @@ define void @store_address_space(<4 x i32> addrspace(1)* %ptr, <2 x i32> %v0, <2
   ret void
 }
 
+define void @load_f16_factor2(<8 x half>* %ptr) {
+; ALL-LABEL: @load_f16_factor2(
+; ALL-NOT:     @llvm.arm.neon
+; ALL:         ret void
+;
+  %interleaved.vec = load <8 x half>, <8 x half>* %ptr, align 4
+  %v0 = shufflevector <8 x half> %interleaved.vec, <8 x half> undef, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+  %v1 = shufflevector <8 x half> %interleaved.vec, <8 x half> undef, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+  ret void
+}
+
+define void @store_f16_factor2(<8 x half>* %ptr, <4 x half> %v0, <4 x half> %v1) {
+; ALL-LABEL: @store_f16_factor2(
+; ALL-NOT:     @llvm.arm.neon
+; ALL:         ret void
+;
+  %interleaved.vec = shufflevector <4 x half> %v0, <4 x half> %v1, <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
+  store <8 x half> %interleaved.vec, <8 x half>* %ptr, align 4
+  ret void
+}
+
 define void @load_illegal_factor2(<3 x float>* %ptr) nounwind {
 ; ALL-LABEL:    @load_illegal_factor2(
 ; ALL-NOT:        @llvm.arm.neon
