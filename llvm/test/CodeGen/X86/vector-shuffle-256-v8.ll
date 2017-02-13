@@ -2048,6 +2048,24 @@ define <8 x i32> @shuffle_v8i32_44444444(<8 x i32> %a, <8 x i32> %b) {
   ret <8 x i32> %shuffle
 }
 
+define <8 x i32> @shuffle_v8i32_44444444_bc(<8 x float> %a, <8 x float> %b) {
+; AVX1-LABEL: shuffle_v8i32_44444444_bc:
+; AVX1:       # BB#0:
+; AVX1-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[0,0,0,0,4,4,4,4]
+; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3,2,3]
+; AVX1-NEXT:    retq
+;
+; AVX2OR512VL-LABEL: shuffle_v8i32_44444444_bc:
+; AVX2OR512VL:       # BB#0:
+; AVX2OR512VL-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; AVX2OR512VL-NEXT:    vbroadcastss %xmm0, %ymm0
+; AVX2OR512VL-NEXT:    retq
+  %tmp0 = bitcast <8 x float> %a to <8 x i32>
+  %tmp1 = bitcast <8 x float> %b to <8 x i32>
+  %shuffle = shufflevector <8 x i32> %tmp0, <8 x i32> %tmp1, <8 x i32> <i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4>
+  ret <8 x i32> %shuffle
+}
+
 define <8 x i32> @shuffle_v8i32_5555uuuu(<8 x i32> %a, <8 x i32> %b) {
 ; AVX1-LABEL: shuffle_v8i32_5555uuuu:
 ; AVX1:       # BB#0:

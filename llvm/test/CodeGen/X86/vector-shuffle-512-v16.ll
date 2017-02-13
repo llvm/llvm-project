@@ -23,6 +23,18 @@ define <16 x float> @shuffle_v16f32_08_08_08_08_08_08_08_08_08_08_08_08_08_08_08
   ret <16 x float> %shuffle
 }
 
+define <16 x float> @shuffle_v16f32_08_08_08_08_08_08_08_08_08_08_08_08_08_08_08_08_bc(<16 x i32> %a, <16 x i32> %b) {
+; ALL-LABEL: shuffle_v16f32_08_08_08_08_08_08_08_08_08_08_08_08_08_08_08_08_bc:
+; ALL:       # BB#0:
+; ALL-NEXT:    vextracti32x4 $2, %zmm0, %xmm0
+; ALL-NEXT:    vpbroadcastd %xmm0, %zmm0
+; ALL-NEXT:    retq
+  %tmp0 = bitcast <16 x i32> %a to <16 x float>
+  %tmp1 = bitcast <16 x i32> %b to <16 x float>
+  %shuffle = shufflevector <16 x float> %tmp0, <16 x float> %tmp1, <16 x i32><i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8>
+  ret <16 x float> %shuffle
+}
+
 define <16 x float> @shuffle_v16f32_00_10_01_11_04_14_05_15_08_18_09_19_0c_1c_0d_1d(<16 x float> %a, <16 x float> %b) {
 ; ALL-LABEL: shuffle_v16f32_00_10_01_11_04_14_05_15_08_18_09_19_0c_1c_0d_1d:
 ; ALL:       # BB#0:
