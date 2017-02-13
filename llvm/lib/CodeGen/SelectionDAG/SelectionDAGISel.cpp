@@ -51,6 +51,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugLoc.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/InstrTypes.h"
@@ -208,6 +209,11 @@ static cl::opt<int> EnableFastISelAbort(
              "abort but for args, calls and terminators, 2 will also "
              "abort for argument lowering, and 3 will never fallback "
              "to SelectionDAG."));
+
+static cl::opt<bool> EnableFastISelFallbackReport(
+    "fast-isel-report-on-fallback", cl::Hidden,
+    cl::desc("Emit a diagnostic when \"fast\" instruction selection "
+             "falls back to SelectionDAG."));
 
 static cl::opt<bool>
 UseMBPI("use-mbpi",
@@ -534,6 +540,10 @@ bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
     TLI->initializeSplitCSR(EntryMBB);
 
   SelectAllBasicBlocks(Fn);
+  if (FastISelFailed && EnableFastISelFallbackReport) {
+    DiagnosticInfoISelFallback DiagFallback(Fn);
+    Fn.getContext().diagnose(DiagFallback);
+  }
 
   // If the first basic block in the function has live ins that need to be
   // copied into vregs, emit the copies into the top of the block before
@@ -1445,6 +1455,7 @@ static void propagateSwiftErrorVRegs(FunctionLoweringInfo *FuncInfo) {
 }
 
 void SelectionDAGISel::SelectAllBasicBlocks(const Function &Fn) {
+  FastISelFailed = false;
   // Initialize the Fast-ISel state, if needed.
   FastISel *FastIS = nullptr;
   if (TM.Options.EnableFastISel)
@@ -1469,6 +1480,7 @@ void SelectionDAGISel::SelectAllBasicBlocks(const Function &Fn) {
     // See if fast isel can lower the arguments.
     FastIS->startNewBlock();
     if (!FastIS->lowerArguments()) {
+      FastISelFailed = true;
       // Fast isel failed to lower these arguments
       ++NumFastIselFailLowerArguments;
       if (EnableFastISelAbort > 1)
@@ -1557,6 +1569,7 @@ void SelectionDAGISel::SelectAllBasicBlocks(const Function &Fn) {
 
         // Try to select the instruction with FastISel.
         if (FastIS->selectInstruction(Inst)) {
+          FastISelFailed = true;
           --NumFastIselRemaining;
           ++NumFastIselSuccess;
           // If fast isel succeeded, skip over all the folded instructions, and

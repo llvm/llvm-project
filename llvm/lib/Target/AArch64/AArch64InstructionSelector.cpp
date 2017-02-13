@@ -691,6 +691,12 @@ bool AArch64InstructionSelector::select(MachineInstr &I) const {
       return false;
     }
 
+    auto &MemOp = **I.memoperands_begin();
+    if (MemOp.getOrdering() != AtomicOrdering::NotAtomic) {
+      DEBUG(dbgs() << "Atomic load/store not supported yet\n");
+      return false;
+    }
+
 #ifndef NDEBUG
     // Sanity-check the pointer register.
     const unsigned PtrReg = I.getOperand(1).getReg();

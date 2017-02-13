@@ -1942,7 +1942,8 @@ void ScriptParser::readAnonymousDeclaration() {
   if (peek() != "local") {
     if (consume("global"))
       expect(":");
-    Config->VersionScriptGlobals = readSymbols();
+    for (SymbolVersion V : readSymbols())
+      Config->VersionScriptGlobals.push_back(V);
   }
   readLocals();
   expect("}");

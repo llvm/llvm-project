@@ -1891,6 +1891,8 @@ bool ASTUnit::LoadFromCompilerInvocation(
     PreambleRebuildCounter = PrecompilePreambleAfterNParses;
     OverrideMainBuffer =
         getMainBufferWithPrecompiledPreamble(PCHContainerOps, *Invocation);
+    getDiagnostics().Reset();
+    ProcessWarningOptions(getDiagnostics(), Invocation->getDiagnosticOpts());
   }
   
   SimpleTimer ParsingTimer(WantTiming);

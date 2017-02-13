@@ -3812,10 +3812,12 @@ ARMTargetLowering::duplicateCmp(SDValue Cmp, SelectionDAG &DAG) const {
   Cmp = Cmp.getOperand(0);
   Opc = Cmp.getOpcode();
   if (Opc == ARMISD::CMPFP)
-    Cmp = DAG.getNode(Opc, DL, MVT::Glue, Cmp.getOperand(0),Cmp.getOperand(1));
+    Cmp = DAG.getNode(Opc, DL, MVT::Glue, Cmp.getOperand(0),
+                      Cmp.getOperand(1), Cmp.getOperand(2));
   else {
     assert(Opc == ARMISD::CMPFPw0 && "unexpected operand of FMSTAT");
-    Cmp = DAG.getNode(Opc, DL, MVT::Glue, Cmp.getOperand(0));
+    Cmp = DAG.getNode(Opc, DL, MVT::Glue, Cmp.getOperand(0),
+                      Cmp.getOperand(1));
   }
   return DAG.getNode(ARMISD::FMSTAT, DL, MVT::Glue, Cmp);
 }

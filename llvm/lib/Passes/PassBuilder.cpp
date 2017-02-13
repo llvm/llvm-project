@@ -384,6 +384,56 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
   return FPM;
 }
 
+static void addPGOInstrPasses(ModulePassManager &MPM, bool DebugLogging,
+                              PassBuilder::OptimizationLevel Level,
+                              bool RunProfileGen, std::string ProfileGenFile,
+                              std::string ProfileUseFile) {
+  // Generally running simplification passes and the inliner with an high
+  // threshold results in smaller executables, but there may be cases where
+  // the size grows, so let's be conservative here and skip this simplification
+  // at -Os/Oz.
+  if (!isOptimizingForSize(Level)) {
+    InlineParams IP;
+
+    // In the old pass manager, this is a cl::opt. Should still this be one?
+    IP.DefaultThreshold = 75;
+
+    // FIXME: The hint threshold has the same value used by the regular inliner.
+    // This should probably be lowered after performance testing.
+    // FIXME: this comment is cargo culted from the old pass manager, revisit).
+    IP.HintThreshold = 325;
+
+    CGSCCPassManager CGPipeline(DebugLogging);
+
+    CGPipeline.addPass(InlinerPass(IP));
+
+    FunctionPassManager FPM;
+    FPM.addPass(SROA());
+    FPM.addPass(EarlyCSEPass());    // Catch trivial redundancies.
+    FPM.addPass(SimplifyCFGPass()); // Merge & remove basic blocks.
+    FPM.addPass(InstCombinePass()); // Combine silly sequences.
+
+    // FIXME: Here the old pass manager inserts peephole extensions.
+    // Add them when they're supported.
+    CGPipeline.addPass(createCGSCCToFunctionPassAdaptor(std::move(FPM)));
+
+    MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(std::move(CGPipeline)));
+  }
+
+  if (RunProfileGen) {
+    MPM.addPass(PGOInstrumentationGen());
+
+    // Add the profile lowering pass.
+    InstrProfOptions Options;
+    if (!ProfileGenFile.empty())
+      Options.InstrProfileOutput = ProfileGenFile;
+    MPM.addPass(InstrProfiling(Options));
+  }
+
+  if (!ProfileUseFile.empty())
+    MPM.addPass(PGOInstrumentationUse(ProfileUseFile));
+}
+
 ModulePassManager
 PassBuilder::buildPerModuleDefaultPipeline(OptimizationLevel Level,
                                            bool DebugLogging) {
@@ -433,6 +483,16 @@ PassBuilder::buildPerModuleDefaultPipeline(OptimizationLevel Level,
   GlobalCleanupPM.addPass(InstCombinePass());
   GlobalCleanupPM.addPass(SimplifyCFGPass());
   MPM.addPass(createModuleToFunctionPassAdaptor(std::move(GlobalCleanupPM)));
+
+  // Add all the requested passes for PGO Instrumentation, if requested.
+  if (PGOOpt) {
+    assert(PGOOpt->RunProfileGen || !PGOOpt->ProfileUseFile.empty());
+    addPGOInstrPasses(MPM, DebugLogging, Level, PGOOpt->RunProfileGen,
+                      PGOOpt->ProfileGenFile, PGOOpt->ProfileUseFile);
+  }
+
+  // Indirect call promotion that promotes intra-module targes only.
+  MPM.addPass(PGOIndirectCallPromotion());
 
   // Require the GlobalsAA analysis for the module so we can query it within
   // the CGSCC pipeline.

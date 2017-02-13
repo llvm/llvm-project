@@ -917,6 +917,12 @@ def : MipsInstAlias<"jrc $rs", (JIC GPR32Opnd:$rs, 0), 1>, ISA_MIPS32R6, GPR_32;
 let AdditionalPredicates = [NotInMicroMips] in {
 def : MipsInstAlias<"jalrc $rs", (JIALC GPR32Opnd:$rs, 0), 1>, ISA_MIPS32R6, GPR_32;
 }
+
+def : MipsInstAlias<"div $rs, $rt", (DIV GPR32Opnd:$rs, GPR32Opnd:$rs,
+                                         GPR32Opnd:$rt)>, ISA_MIPS32R6;
+def : MipsInstAlias<"divu $rs, $rt", (DIVU GPR32Opnd:$rs, GPR32Opnd:$rs,
+                                           GPR32Opnd:$rt)>, ISA_MIPS32R6;
+
 //===----------------------------------------------------------------------===//
 //
 // Patterns and Pseudo Instructions

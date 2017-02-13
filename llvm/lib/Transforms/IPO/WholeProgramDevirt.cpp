@@ -54,10 +54,13 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/ModuleSummaryIndexYAML.h"
 #include "llvm/Pass.h"
 #include "llvm/PassRegistry.h"
 #include "llvm/PassSupport.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/Utils/Evaluator.h"
@@ -71,6 +74,26 @@ using namespace llvm;
 using namespace wholeprogramdevirt;
 
 #define DEBUG_TYPE "wholeprogramdevirt"
+
+static cl::opt<PassSummaryAction> ClSummaryAction(
+    "wholeprogramdevirt-summary-action",
+    cl::desc("What to do with the summary when running this pass"),
+    cl::values(clEnumValN(PassSummaryAction::None, "none", "Do nothing"),
+               clEnumValN(PassSummaryAction::Import, "import",
+                          "Import typeid resolutions from summary and globals"),
+               clEnumValN(PassSummaryAction::Export, "export",
+                          "Export typeid resolutions to summary and globals")),
+    cl::Hidden);
+
+static cl::opt<std::string> ClReadSummary(
+    "wholeprogramdevirt-read-summary",
+    cl::desc("Read summary from given YAML file before running pass"),
+    cl::Hidden);
+
+static cl::opt<std::string> ClWriteSummary(
+    "wholeprogramdevirt-write-summary",
+    cl::desc("Write summary to given YAML file after running pass"),
+    cl::Hidden);
 
 // Find the minimum offset that we may store a value of size Size bits at. If
 // IsAfter is set, look for an offset before the object, otherwise look for an
@@ -261,6 +284,10 @@ struct VirtualCallSite {
 
 struct DevirtModule {
   Module &M;
+
+  PassSummaryAction Action;
+  ModuleSummaryIndex *Summary;
+
   IntegerType *Int8Ty;
   PointerType *Int8PtrTy;
   IntegerType *Int32Ty;
@@ -279,8 +306,9 @@ struct DevirtModule {
   // true.
   std::map<CallInst *, unsigned> NumUnsafeUsesForTypeTest;
 
-  DevirtModule(Module &M)
-      : M(M), Int8Ty(Type::getInt8Ty(M.getContext())),
+  DevirtModule(Module &M, PassSummaryAction Action, ModuleSummaryIndex *Summary)
+      : M(M), Action(Action), Summary(Summary),
+        Int8Ty(Type::getInt8Ty(M.getContext())),
         Int8PtrTy(Type::getInt8PtrTy(M.getContext())),
         Int32Ty(Type::getInt32Ty(M.getContext())),
         RemarksEnabled(areRemarksEnabled()) {}
@@ -315,20 +343,35 @@ struct DevirtModule {
   void rebuildGlobal(VTableBits &B);
 
   bool run();
+
+  // Lower the module using the action and summary passed as command line
+  // arguments. For testing purposes only.
+  static bool runForTesting(Module &M);
 };
 
 struct WholeProgramDevirt : public ModulePass {
   static char ID;
 
-  WholeProgramDevirt() : ModulePass(ID) {
+  bool UseCommandLine = false;
+
+  PassSummaryAction Action;
+  ModuleSummaryIndex *Summary;
+
+  WholeProgramDevirt() : ModulePass(ID), UseCommandLine(true) {
+    initializeWholeProgramDevirtPass(*PassRegistry::getPassRegistry());
+  }
+
+  WholeProgramDevirt(PassSummaryAction Action, ModuleSummaryIndex *Summary)
+      : ModulePass(ID), Action(Action), Summary(Summary) {
     initializeWholeProgramDevirtPass(*PassRegistry::getPassRegistry());
   }
 
   bool runOnModule(Module &M) override {
     if (skipModule(M))
       return false;
-
-    return DevirtModule(M).run();
+    if (UseCommandLine)
+      return DevirtModule::runForTesting(M);
+    return DevirtModule(M, Action, Summary).run();
   }
 };
 
@@ -338,15 +381,48 @@ INITIALIZE_PASS(WholeProgramDevirt, "wholeprogramdevirt",
                 "Whole program devirtualization", false, false)
 char WholeProgramDevirt::ID = 0;
 
-ModulePass *llvm::createWholeProgramDevirtPass() {
-  return new WholeProgramDevirt;
+ModulePass *llvm::createWholeProgramDevirtPass(PassSummaryAction Action,
+                                               ModuleSummaryIndex *Summary) {
+  return new WholeProgramDevirt(Action, Summary);
 }
 
 PreservedAnalyses WholeProgramDevirtPass::run(Module &M,
                                               ModuleAnalysisManager &) {
-  if (!DevirtModule(M).run())
+  if (!DevirtModule(M, PassSummaryAction::None, nullptr).run())
     return PreservedAnalyses::all();
   return PreservedAnalyses::none();
+}
+
+bool DevirtModule::runForTesting(Module &M) {
+  ModuleSummaryIndex Summary;
+
+  // Handle the command-line summary arguments. This code is for testing
+  // purposes only, so we handle errors directly.
+  if (!ClReadSummary.empty()) {
+    ExitOnError ExitOnErr("-wholeprogramdevirt-read-summary: " + ClReadSummary +
+                          ": ");
+    auto ReadSummaryFile =
+        ExitOnErr(errorOrToExpected(MemoryBuffer::getFile(ClReadSummary)));
+
+    yaml::Input In(ReadSummaryFile->getBuffer());
+    In >> Summary;
+    ExitOnErr(errorCodeToError(In.error()));
+  }
+
+  bool Changed = DevirtModule(M, ClSummaryAction, &Summary).run();
+
+  if (!ClWriteSummary.empty()) {
+    ExitOnError ExitOnErr(
+        "-wholeprogramdevirt-write-summary: " + ClWriteSummary + ": ");
+    std::error_code EC;
+    raw_fd_ostream OS(ClWriteSummary, EC, sys::fs::F_Text);
+    ExitOnErr(errorCodeToError(EC));
+
+    yaml::Output Out(OS);
+    Out << Summary;
+  }
+
+  return Changed;
 }
 
 void DevirtModule::buildTypeIdentifierMap(

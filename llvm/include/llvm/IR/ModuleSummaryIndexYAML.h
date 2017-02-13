@@ -33,14 +33,106 @@ template <> struct MappingTraits<TypeTestResolution> {
   }
 };
 
+template <>
+struct ScalarEnumerationTraits<WholeProgramDevirtResolution::ByArg::Kind> {
+  static void enumeration(IO &io,
+                          WholeProgramDevirtResolution::ByArg::Kind &value) {
+    io.enumCase(value, "Indir", WholeProgramDevirtResolution::ByArg::Indir);
+    io.enumCase(value, "UniformRetVal",
+                WholeProgramDevirtResolution::ByArg::UniformRetVal);
+    io.enumCase(value, "UniqueRetVal",
+                WholeProgramDevirtResolution::ByArg::UniqueRetVal);
+    io.enumCase(value, "VirtualConstProp",
+                WholeProgramDevirtResolution::ByArg::VirtualConstProp);
+  }
+};
+
+template <> struct MappingTraits<WholeProgramDevirtResolution::ByArg> {
+  static void mapping(IO &io, WholeProgramDevirtResolution::ByArg &res) {
+    io.mapOptional("Kind", res.TheKind);
+    io.mapOptional("Info", res.Info);
+  }
+};
+
+template <>
+struct CustomMappingTraits<
+    std::map<std::vector<uint64_t>, WholeProgramDevirtResolution::ByArg>> {
+  static void inputOne(
+      IO &io, StringRef Key,
+      std::map<std::vector<uint64_t>, WholeProgramDevirtResolution::ByArg> &V) {
+    std::vector<uint64_t> Args;
+    std::pair<StringRef, StringRef> P = {"", Key};
+    while (!P.second.empty()) {
+      P = P.second.split(',');
+      uint64_t Arg;
+      if (P.first.getAsInteger(0, Arg)) {
+        io.setError("key not an integer");
+        return;
+      }
+      Args.push_back(Arg);
+    }
+    io.mapRequired(Key.str().c_str(), V[Args]);
+  }
+  static void output(
+      IO &io,
+      std::map<std::vector<uint64_t>, WholeProgramDevirtResolution::ByArg> &V) {
+    for (auto &P : V) {
+      std::string Key;
+      for (uint64_t Arg : P.first) {
+        if (!Key.empty())
+          Key += ',';
+        Key += llvm::utostr(Arg);
+      }
+      io.mapRequired(Key.c_str(), P.second);
+    }
+  }
+};
+
+template <> struct ScalarEnumerationTraits<WholeProgramDevirtResolution::Kind> {
+  static void enumeration(IO &io, WholeProgramDevirtResolution::Kind &value) {
+    io.enumCase(value, "Indir", WholeProgramDevirtResolution::Indir);
+    io.enumCase(value, "SingleImpl", WholeProgramDevirtResolution::SingleImpl);
+  }
+};
+
+template <> struct MappingTraits<WholeProgramDevirtResolution> {
+  static void mapping(IO &io, WholeProgramDevirtResolution &res) {
+    io.mapOptional("Kind", res.TheKind);
+    io.mapOptional("SingleImplName", res.SingleImplName);
+    io.mapOptional("ResByArg", res.ResByArg);
+  }
+};
+
+template <>
+struct CustomMappingTraits<std::map<uint64_t, WholeProgramDevirtResolution>> {
+  static void inputOne(IO &io, StringRef Key,
+                       std::map<uint64_t, WholeProgramDevirtResolution> &V) {
+    uint64_t KeyInt;
+    if (Key.getAsInteger(0, KeyInt)) {
+      io.setError("key not an integer");
+      return;
+    }
+    io.mapRequired(Key.str().c_str(), V[KeyInt]);
+  }
+  static void output(IO &io, std::map<uint64_t, WholeProgramDevirtResolution> &V) {
+    for (auto &P : V)
+      io.mapRequired(llvm::utostr(P.first).c_str(), P.second);
+  }
+};
+
 template <> struct MappingTraits<TypeIdSummary> {
   static void mapping(IO &io, TypeIdSummary& summary) {
     io.mapOptional("TTRes", summary.TTRes);
+    io.mapOptional("WPDRes", summary.WPDRes);
   }
 };
 
 struct FunctionSummaryYaml {
   std::vector<uint64_t> TypeTests;
+  std::vector<FunctionSummary::VFuncId> TypeTestAssumeVCalls,
+      TypeCheckedLoadVCalls;
+  std::vector<FunctionSummary::ConstVCall> TypeTestAssumeConstVCalls,
+      TypeCheckedLoadConstVCalls;
 };
 
 } // End yaml namespace
@@ -51,9 +143,38 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(uint64_t)
 namespace llvm {
 namespace yaml {
 
+template <> struct MappingTraits<FunctionSummary::VFuncId> {
+  static void mapping(IO &io, FunctionSummary::VFuncId& id) {
+    io.mapOptional("GUID", id.GUID);
+    io.mapOptional("Offset", id.Offset);
+  }
+};
+
+template <> struct MappingTraits<FunctionSummary::ConstVCall> {
+  static void mapping(IO &io, FunctionSummary::ConstVCall& id) {
+    io.mapOptional("VFunc", id.VFunc);
+    io.mapOptional("Args", id.Args);
+  }
+};
+
+} // End yaml namespace
+} // End llvm namespace
+
+LLVM_YAML_IS_SEQUENCE_VECTOR(FunctionSummary::VFuncId)
+LLVM_YAML_IS_SEQUENCE_VECTOR(FunctionSummary::ConstVCall)
+
+namespace llvm {
+namespace yaml {
+
 template <> struct MappingTraits<FunctionSummaryYaml> {
   static void mapping(IO &io, FunctionSummaryYaml& summary) {
     io.mapOptional("TypeTests", summary.TypeTests);
+    io.mapOptional("TypeTestAssumeVCalls", summary.TypeTestAssumeVCalls);
+    io.mapOptional("TypeCheckedLoadVCalls", summary.TypeCheckedLoadVCalls);
+    io.mapOptional("TypeTestAssumeConstVCalls",
+                   summary.TypeTestAssumeConstVCalls);
+    io.mapOptional("TypeCheckedLoadConstVCalls",
+                   summary.TypeCheckedLoadConstVCalls);
   }
 };
 
@@ -83,10 +204,10 @@ template <> struct CustomMappingTraits<GlobalValueSummaryMapTy> {
       Elem.push_back(llvm::make_unique<FunctionSummary>(
           GVFlags, 0, ArrayRef<ValueInfo>{},
           ArrayRef<FunctionSummary::EdgeTy>{}, std::move(FSum.TypeTests),
-          ArrayRef<FunctionSummary::VFuncId>{},
-          ArrayRef<FunctionSummary::VFuncId>{},
-          ArrayRef<FunctionSummary::ConstVCall>{},
-          ArrayRef<FunctionSummary::ConstVCall>{}));
+          std::move(FSum.TypeTestAssumeVCalls),
+          std::move(FSum.TypeCheckedLoadVCalls),
+          std::move(FSum.TypeTestAssumeConstVCalls),
+          std::move(FSum.TypeCheckedLoadConstVCalls)));
     }
   }
   static void output(IO &io, GlobalValueSummaryMapTy &V) {
@@ -94,7 +215,11 @@ template <> struct CustomMappingTraits<GlobalValueSummaryMapTy> {
       std::vector<FunctionSummaryYaml> FSums;
       for (auto &Sum : P.second) {
         if (auto *FSum = dyn_cast<FunctionSummary>(Sum.get()))
-          FSums.push_back(FunctionSummaryYaml{FSum->type_tests()});
+          FSums.push_back(FunctionSummaryYaml{
+              FSum->type_tests(), FSum->type_test_assume_vcalls(),
+              FSum->type_checked_load_vcalls(),
+              FSum->type_test_assume_const_vcalls(),
+              FSum->type_checked_load_const_vcalls()});
       }
       if (!FSums.empty())
         io.mapRequired(llvm::utostr(P.first).c_str(), FSums);

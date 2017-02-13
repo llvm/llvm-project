@@ -25,6 +25,7 @@ set(SANITIZER_SOURCES_NOTERMINATION
   sanitizer_stackdepot.cc
   sanitizer_stacktrace.cc
   sanitizer_stacktrace_printer.cc
+  sanitizer_stoptheworld_mac.cc
   sanitizer_suppressions.cc
   sanitizer_symbolizer.cc
   sanitizer_symbolizer_libbacktrace.cc

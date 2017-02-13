@@ -7963,7 +7963,7 @@ static bool isShuffleEquivalent(SDValue V1, SDValue V2, ArrayRef<int> Mask,
               ExpectedBV->getOperand(ExpectedMask[i] % Size))
         return false;
     }
-}
+  }
 
   return true;
 }
