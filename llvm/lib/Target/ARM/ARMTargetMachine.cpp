@@ -87,6 +87,7 @@ extern "C" void LLVMInitializeARMTarget() {
   initializeGlobalISel(Registry);
   initializeARMLoadStoreOptPass(Registry);
   initializeARMPreAllocLoadStoreOptPass(Registry);
+  initializeARMConstantIslandsPass(Registry);
 }
 
 static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {

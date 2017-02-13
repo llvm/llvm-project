@@ -650,7 +650,7 @@ abs(long double __lcpp_x) _NOEXCEPT {return ::fabsl(__lcpp_x);}
 
 // acos
 
-#if !(defined(_LIBCPP_MSVCRT) || defined(_AIX) || defined(__sun__))
+#if !((defined(_LIBCPP_MSVCRT) && (_VC_CRT_MAJOR_VERSION-0) < 14) || defined(_AIX) || defined(__sun__))
 inline _LIBCPP_INLINE_VISIBILITY float       acos(float __lcpp_x) _NOEXCEPT       {return ::acosf(__lcpp_x);}
 inline _LIBCPP_INLINE_VISIBILITY long double acos(long double __lcpp_x) _NOEXCEPT {return ::acosl(__lcpp_x);}
 #endif
@@ -662,7 +662,7 @@ acos(_A1 __lcpp_x) _NOEXCEPT {return ::acos((double)__lcpp_x);}
 
 // asin
 
-#if !(defined(_LIBCPP_MSVCRT) || defined(_AIX) || defined(__sun__))
+#if !((defined(_LIBCPP_MSVCRT) && (_VC_CRT_MAJOR_VERSION-0) < 14) || defined(_AIX) || defined(__sun__))
 inline _LIBCPP_INLINE_VISIBILITY float       asin(float __lcpp_x) _NOEXCEPT       {return ::asinf(__lcpp_x);}
 inline _LIBCPP_INLINE_VISIBILITY long double asin(long double __lcpp_x) _NOEXCEPT {return ::asinl(__lcpp_x);}
 #endif
@@ -674,7 +674,7 @@ asin(_A1 __lcpp_x) _NOEXCEPT {return ::asin((double)__lcpp_x);}
 
 // atan
 
-#if !(defined(_LIBCPP_MSVCRT) || defined(_AIX) || defined(__sun__))
+#if !((defined(_LIBCPP_MSVCRT) && (_VC_CRT_MAJOR_VERSION-0) < 14) || defined(_AIX) || defined(__sun__))
 inline _LIBCPP_INLINE_VISIBILITY float       atan(float __lcpp_x) _NOEXCEPT       {return ::atanf(__lcpp_x);}
 inline _LIBCPP_INLINE_VISIBILITY long double atan(long double __lcpp_x) _NOEXCEPT {return ::atanl(__lcpp_x);}
 #endif
@@ -686,7 +686,7 @@ atan(_A1 __lcpp_x) _NOEXCEPT {return ::atan((double)__lcpp_x);}
 
 // atan2
 
-#if !(defined(_LIBCPP_MSVCRT) || defined(_AIX) || defined(__sun__))
+#if !((defined(_LIBCPP_MSVCRT) && (_VC_CRT_MAJOR_VERSION-0) < 14) || defined(_AIX) || defined(__sun__))
 inline _LIBCPP_INLINE_VISIBILITY float       atan2(float __lcpp_y, float __lcpp_x) _NOEXCEPT             {return ::atan2f(__lcpp_y, __lcpp_x);}
 inline _LIBCPP_INLINE_VISIBILITY long double atan2(long double __lcpp_y, long double __lcpp_x) _NOEXCEPT {return ::atan2l(__lcpp_y, __lcpp_x);}
 #endif
@@ -709,7 +709,7 @@ atan2(_A1 __lcpp_y, _A2 __lcpp_x) _NOEXCEPT
 
 // ceil
 
-#if !(defined(_LIBCPP_MSVCRT) || defined(_AIX) || defined(__sun__))
+#if !((defined(_LIBCPP_MSVCRT) && (_VC_CRT_MAJOR_VERSION-0) < 14) || defined(_AIX) || defined(__sun__))
 inline _LIBCPP_INLINE_VISIBILITY float       ceil(float __lcpp_x) _NOEXCEPT       {return ::ceilf(__lcpp_x);}
 inline _LIBCPP_INLINE_VISIBILITY long double ceil(long double __lcpp_x) _NOEXCEPT {return ::ceill(__lcpp_x);}
 #endif
@@ -721,7 +721,7 @@ ceil(_A1 __lcpp_x) _NOEXCEPT {return ::ceil((double)__lcpp_x);}
 
 // cos
 
-#if !(defined(_LIBCPP_MSVCRT) || defined(_AIX) || defined(__sun__))
+#if !((defined(_LIBCPP_MSVCRT) && (_VC_CRT_MAJOR_VERSION-0) < 14) || defined(_AIX) || defined(__sun__))
 inline _LIBCPP_INLINE_VISIBILITY float       cos(float __lcpp_x) _NOEXCEPT       {return ::cosf(__lcpp_x);}
 inline _LIBCPP_INLINE_VISIBILITY long double cos(long double __lcpp_x) _NOEXCEPT {return ::cosl(__lcpp_x);}
 #endif
@@ -733,7 +733,7 @@ cos(_A1 __lcpp_x) _NOEXCEPT {return ::cos((double)__lcpp_x);}
 
 // cosh
 
-#if !(defined(_LIBCPP_MSVCRT) || defined(_AIX) || defined(__sun__))
+#if !((defined(_LIBCPP_MSVCRT) && (_VC_CRT_MAJOR_VERSION-0) < 14) || defined(_AIX) || defined(__sun__))
 inline _LIBCPP_INLINE_VISIBILITY float       cosh(float __lcpp_x) _NOEXCEPT       {return ::coshf(__lcpp_x);}
 inline _LIBCPP_INLINE_VISIBILITY long double cosh(long double __lcpp_x) _NOEXCEPT {return ::coshl(__lcpp_x);}
 #endif
@@ -745,7 +745,7 @@ cosh(_A1 __lcpp_x) _NOEXCEPT {return ::cosh((double)__lcpp_x);}
 
 // exp
 
-#if !(defined(_LIBCPP_MSVCRT) || defined(_AIX) || defined(__sun__))
+#if !((defined(_LIBCPP_MSVCRT) && (_VC_CRT_MAJOR_VERSION-0) < 14) || defined(_AIX) || defined(__sun__))
 inline _LIBCPP_INLINE_VISIBILITY float       exp(float __lcpp_x) _NOEXCEPT       {return ::expf(__lcpp_x);}
 inline _LIBCPP_INLINE_VISIBILITY long double exp(long double __lcpp_x) _NOEXCEPT {return ::expl(__lcpp_x);}
 #endif
@@ -757,7 +757,7 @@ exp(_A1 __lcpp_x) _NOEXCEPT {return ::exp((double)__lcpp_x);}
 
 // fabs
 
-#if !(defined(_LIBCPP_MSVCRT) || defined(_AIX) || defined(__sun__))
+#if !((defined(_LIBCPP_MSVCRT) && (_VC_CRT_MAJOR_VERSION-0) < 14) || defined(_AIX) || defined(__sun__))
 inline _LIBCPP_INLINE_VISIBILITY float       fabs(float __lcpp_x) _NOEXCEPT       {return ::fabsf(__lcpp_x);}
 inline _LIBCPP_INLINE_VISIBILITY long double fabs(long double __lcpp_x) _NOEXCEPT {return ::fabsl(__lcpp_x);}
 #endif
@@ -769,7 +769,7 @@ fabs(_A1 __lcpp_x) _NOEXCEPT {return ::fabs((double)__lcpp_x);}
 
 // floor
 
-#if !(defined(_LIBCPP_MSVCRT) || defined(_AIX) || defined(__sun__))
+#if !((defined(_LIBCPP_MSVCRT) && (_VC_CRT_MAJOR_VERSION-0) < 14) || defined(_AIX) || defined(__sun__))
 inline _LIBCPP_INLINE_VISIBILITY float       floor(float __lcpp_x) _NOEXCEPT       {return ::floorf(__lcpp_x);}
 inline _LIBCPP_INLINE_VISIBILITY long double floor(long double __lcpp_x) _NOEXCEPT {return ::floorl(__lcpp_x);}
 #endif
@@ -781,7 +781,7 @@ floor(_A1 __lcpp_x) _NOEXCEPT {return ::floor((double)__lcpp_x);}
 
 // fmod
 
-#if !(defined(_LIBCPP_MSVCRT) || defined(_AIX) || defined(__sun__))
+#if !((defined(_LIBCPP_MSVCRT) && (_VC_CRT_MAJOR_VERSION-0) < 14) || defined(_AIX) || defined(__sun__))
 inline _LIBCPP_INLINE_VISIBILITY float       fmod(float __lcpp_x, float __lcpp_y) _NOEXCEPT             {return ::fmodf(__lcpp_x, __lcpp_y);}
 inline _LIBCPP_INLINE_VISIBILITY long double fmod(long double __lcpp_x, long double __lcpp_y) _NOEXCEPT {return ::fmodl(__lcpp_x, __lcpp_y);}
 #endif
@@ -804,7 +804,7 @@ fmod(_A1 __lcpp_x, _A2 __lcpp_y) _NOEXCEPT
 
 // frexp
 
-#if !(defined(_LIBCPP_MSVCRT) || defined(_AIX) || defined(__sun__))
+#if !((defined(_LIBCPP_MSVCRT) && (_VC_CRT_MAJOR_VERSION-0) < 14) || defined(_AIX) || defined(__sun__))
 inline _LIBCPP_INLINE_VISIBILITY float       frexp(float __lcpp_x, int* __lcpp_e) _NOEXCEPT       {return ::frexpf(__lcpp_x, __lcpp_e);}
 inline _LIBCPP_INLINE_VISIBILITY long double frexp(long double __lcpp_x, int* __lcpp_e) _NOEXCEPT {return ::frexpl(__lcpp_x, __lcpp_e);}
 #endif
@@ -816,7 +816,7 @@ frexp(_A1 __lcpp_x, int* __lcpp_e) _NOEXCEPT {return ::frexp((double)__lcpp_x, _
 
 // ldexp
 
-#if !(defined(_LIBCPP_MSVCRT) || defined(_AIX) || defined(__sun__))
+#if !((defined(_LIBCPP_MSVCRT) && (_VC_CRT_MAJOR_VERSION-0) < 14) || defined(_AIX) || defined(__sun__))
 inline _LIBCPP_INLINE_VISIBILITY float       ldexp(float __lcpp_x, int __lcpp_e) _NOEXCEPT       {return ::ldexpf(__lcpp_x, __lcpp_e);}
 inline _LIBCPP_INLINE_VISIBILITY long double ldexp(long double __lcpp_x, int __lcpp_e) _NOEXCEPT {return ::ldexpl(__lcpp_x, __lcpp_e);}
 #endif
@@ -828,7 +828,7 @@ ldexp(_A1 __lcpp_x, int __lcpp_e) _NOEXCEPT {return ::ldexp((double)__lcpp_x, __
 
 // log
 
-#if !(defined(_LIBCPP_MSVCRT) || defined(_AIX) || defined(__sun__))
+#if !((defined(_LIBCPP_MSVCRT) && (_VC_CRT_MAJOR_VERSION-0) < 14) || defined(_AIX) || defined(__sun__))
 inline _LIBCPP_INLINE_VISIBILITY float       log(float __lcpp_x) _NOEXCEPT       {return ::logf(__lcpp_x);}
 inline _LIBCPP_INLINE_VISIBILITY long double log(long double __lcpp_x) _NOEXCEPT {return ::logl(__lcpp_x);}
 #endif
@@ -840,7 +840,7 @@ log(_A1 __lcpp_x) _NOEXCEPT {return ::log((double)__lcpp_x);}
 
 // log10
 
-#if !(defined(_LIBCPP_MSVCRT) || defined(_AIX) || defined(__sun__))
+#if !((defined(_LIBCPP_MSVCRT) && (_VC_CRT_MAJOR_VERSION-0) < 14) || defined(_AIX) || defined(__sun__))
 inline _LIBCPP_INLINE_VISIBILITY float       log10(float __lcpp_x) _NOEXCEPT       {return ::log10f(__lcpp_x);}
 inline _LIBCPP_INLINE_VISIBILITY long double log10(long double __lcpp_x) _NOEXCEPT {return ::log10l(__lcpp_x);}
 #endif
@@ -852,14 +852,14 @@ log10(_A1 __lcpp_x) _NOEXCEPT {return ::log10((double)__lcpp_x);}
 
 // modf
 
-#if !(defined(_LIBCPP_MSVCRT) || defined(_AIX) || defined(__sun__))
+#if !((defined(_LIBCPP_MSVCRT) && (_VC_CRT_MAJOR_VERSION-0) < 14) || defined(_AIX) || defined(__sun__))
 inline _LIBCPP_INLINE_VISIBILITY float       modf(float __lcpp_x, float* __lcpp_y) _NOEXCEPT             {return ::modff(__lcpp_x, __lcpp_y);}
 inline _LIBCPP_INLINE_VISIBILITY long double modf(long double __lcpp_x, long double* __lcpp_y) _NOEXCEPT {return ::modfl(__lcpp_x, __lcpp_y);}
 #endif
 
 // pow
 
-#if !(defined(_LIBCPP_MSVCRT) || defined(_AIX) || defined(__sun__))
+#if !((defined(_LIBCPP_MSVCRT) && (_VC_CRT_MAJOR_VERSION-0) < 14) || defined(_AIX) || defined(__sun__))
 inline _LIBCPP_INLINE_VISIBILITY float       pow(float __lcpp_x, float __lcpp_y) _NOEXCEPT             {return ::powf(__lcpp_x, __lcpp_y);}
 inline _LIBCPP_INLINE_VISIBILITY long double pow(long double __lcpp_x, long double __lcpp_y) _NOEXCEPT {return ::powl(__lcpp_x, __lcpp_y);}
 #endif
@@ -882,7 +882,7 @@ pow(_A1 __lcpp_x, _A2 __lcpp_y) _NOEXCEPT
 
 // sin
 
-#if !(defined(_LIBCPP_MSVCRT) || defined(_AIX) || defined(__sun__))
+#if !((defined(_LIBCPP_MSVCRT) && (_VC_CRT_MAJOR_VERSION-0) < 14) || defined(_AIX) || defined(__sun__))
 inline _LIBCPP_INLINE_VISIBILITY float       sin(float __lcpp_x) _NOEXCEPT       {return ::sinf(__lcpp_x);}
 inline _LIBCPP_INLINE_VISIBILITY long double sin(long double __lcpp_x) _NOEXCEPT {return ::sinl(__lcpp_x);}
 #endif
@@ -894,7 +894,7 @@ sin(_A1 __lcpp_x) _NOEXCEPT {return ::sin((double)__lcpp_x);}
 
 // sinh
 
-#if !(defined(_LIBCPP_MSVCRT) || defined(_AIX) || defined(__sun__))
+#if !((defined(_LIBCPP_MSVCRT) && (_VC_CRT_MAJOR_VERSION-0) < 14) || defined(_AIX) || defined(__sun__))
 inline _LIBCPP_INLINE_VISIBILITY float       sinh(float __lcpp_x) _NOEXCEPT       {return ::sinhf(__lcpp_x);}
 inline _LIBCPP_INLINE_VISIBILITY long double sinh(long double __lcpp_x) _NOEXCEPT {return ::sinhl(__lcpp_x);}
 #endif
@@ -906,7 +906,7 @@ sinh(_A1 __lcpp_x) _NOEXCEPT {return ::sinh((double)__lcpp_x);}
 
 // sqrt
 
-#if !(defined(_LIBCPP_MSVCRT) || defined(_AIX) || defined(__sun__))
+#if !((defined(_LIBCPP_MSVCRT) && (_VC_CRT_MAJOR_VERSION-0) < 14) || defined(_AIX) || defined(__sun__))
 inline _LIBCPP_INLINE_VISIBILITY float       sqrt(float __lcpp_x) _NOEXCEPT       {return ::sqrtf(__lcpp_x);}
 inline _LIBCPP_INLINE_VISIBILITY long double sqrt(long double __lcpp_x) _NOEXCEPT {return ::sqrtl(__lcpp_x);}
 #endif
@@ -918,7 +918,7 @@ sqrt(_A1 __lcpp_x) _NOEXCEPT {return ::sqrt((double)__lcpp_x);}
 
 // tan
 
-#if !(defined(_LIBCPP_MSVCRT) || defined(_AIX) || defined(__sun__))
+#if !((defined(_LIBCPP_MSVCRT) && (_VC_CRT_MAJOR_VERSION-0) < 14) || defined(_AIX) || defined(__sun__))
 inline _LIBCPP_INLINE_VISIBILITY float       tan(float __lcpp_x) _NOEXCEPT       {return ::tanf(__lcpp_x);}
 inline _LIBCPP_INLINE_VISIBILITY long double tan(long double __lcpp_x) _NOEXCEPT {return ::tanl(__lcpp_x);}
 #endif
@@ -930,7 +930,7 @@ tan(_A1 __lcpp_x) _NOEXCEPT {return ::tan((double)__lcpp_x);}
 
 // tanh
 
-#if !(defined(_LIBCPP_MSVCRT) || defined(_AIX) || defined(__sun__))
+#if !((defined(_LIBCPP_MSVCRT) && (_VC_CRT_MAJOR_VERSION-0) < 14) || defined(_AIX) || defined(__sun__))
 inline _LIBCPP_INLINE_VISIBILITY float       tanh(float __lcpp_x) _NOEXCEPT       {return ::tanhf(__lcpp_x);}
 inline _LIBCPP_INLINE_VISIBILITY long double tanh(long double __lcpp_x) _NOEXCEPT {return ::tanhl(__lcpp_x);}
 #endif
@@ -942,7 +942,7 @@ tanh(_A1 __lcpp_x) _NOEXCEPT {return ::tanh((double)__lcpp_x);}
 
 // acosh
 
-#ifndef _LIBCPP_MSVCRT
+#if !(defined(_LIBCPP_MSVCRT) && (_VC_CRT_MAJOR_VERSION-0) < 14)
 inline _LIBCPP_INLINE_VISIBILITY float       acosh(float __lcpp_x) _NOEXCEPT       {return ::acoshf(__lcpp_x);}
 inline _LIBCPP_INLINE_VISIBILITY long double acosh(long double __lcpp_x) _NOEXCEPT {return ::acoshl(__lcpp_x);}
 
@@ -954,7 +954,7 @@ acosh(_A1 __lcpp_x) _NOEXCEPT {return ::acosh((double)__lcpp_x);}
 
 // asinh
 
-#ifndef _LIBCPP_MSVCRT
+#if !(defined(_LIBCPP_MSVCRT) && (_VC_CRT_MAJOR_VERSION-0) < 14)
 inline _LIBCPP_INLINE_VISIBILITY float       asinh(float __lcpp_x) _NOEXCEPT       {return ::asinhf(__lcpp_x);}
 inline _LIBCPP_INLINE_VISIBILITY long double asinh(long double __lcpp_x) _NOEXCEPT {return ::asinhl(__lcpp_x);}
 
@@ -966,7 +966,7 @@ asinh(_A1 __lcpp_x) _NOEXCEPT {return ::asinh((double)__lcpp_x);}
 
 // atanh
 
-#ifndef _LIBCPP_MSVCRT
+#if !(defined(_LIBCPP_MSVCRT) && (_VC_CRT_MAJOR_VERSION-0) < 14)
 inline _LIBCPP_INLINE_VISIBILITY float       atanh(float __lcpp_x) _NOEXCEPT       {return ::atanhf(__lcpp_x);}
 inline _LIBCPP_INLINE_VISIBILITY long double atanh(long double __lcpp_x) _NOEXCEPT {return ::atanhl(__lcpp_x);}
 
@@ -978,7 +978,7 @@ atanh(_A1 __lcpp_x) _NOEXCEPT {return ::atanh((double)__lcpp_x);}
 
 // cbrt
 
-#ifndef _LIBCPP_MSVCRT
+#if !(defined(_LIBCPP_MSVCRT) && (_VC_CRT_MAJOR_VERSION-0) < 14)
 inline _LIBCPP_INLINE_VISIBILITY float       cbrt(float __lcpp_x) _NOEXCEPT       {return ::cbrtf(__lcpp_x);}
 inline _LIBCPP_INLINE_VISIBILITY long double cbrt(long double __lcpp_x) _NOEXCEPT {return ::cbrtl(__lcpp_x);}
 
@@ -1017,7 +1017,7 @@ copysign(_A1 __lcpp_x, _A2 __lcpp_y) _NOEXCEPT
     return ::copysign((__result_type)__lcpp_x, (__result_type)__lcpp_y);
 }
 
-#ifndef _LIBCPP_MSVCRT
+#if !defined(_LIBCPP_MSVCRT) || ((_VC_CRT_MAJOR_VERSION-0) >= 14)
 
 // erf
 
@@ -1401,7 +1401,7 @@ inline _LIBCPP_INLINE_VISIBILITY
 typename std::enable_if<std::is_integral<_A1>::value, double>::type
 trunc(_A1 __lcpp_x) _NOEXCEPT {return ::trunc((double)__lcpp_x);}
 
-#endif // !_LIBCPP_MSVCRT
+#endif // !defined(_LIBCPP_MSVCRT) || ((_VC_CRT_MAJOR_VERSION-0) >= 14)
 
 } // extern "C++"
 

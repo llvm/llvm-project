@@ -240,6 +240,7 @@ namespace clang {
     /// \brief Determine whether this declaration has a pending body.
     bool hasPendingBody() const { return HasPendingBody; }
 
+    void ReadFunctionDefinition(FunctionDecl *FD);
     void Visit(Decl *D);
 
     void UpdateDecl(Decl *D);
@@ -421,6 +422,17 @@ uint64_t ASTDeclReader::GetCurrentCursorOffset() {
   return Loc.F->DeclsCursor.GetCurrentBitNo() + Loc.F->GlobalBitOffset;
 }
 
+void ASTDeclReader::ReadFunctionDefinition(FunctionDecl *FD) {
+  if (auto *CD = dyn_cast<CXXConstructorDecl>(FD)) {
+    CD->NumCtorInitializers = Record.readInt();
+    if (CD->NumCtorInitializers)
+      CD->CtorInitializers = ReadGlobalOffset();
+  }
+  // Store the offset of the body so we can lazily load it later.
+  Reader.PendingBodies[FD] = GetCurrentCursorOffset();
+  HasPendingBody = true;
+}
+
 void ASTDeclReader::Visit(Decl *D) {
   DeclVisitor<ASTDeclReader, void>::Visit(D);
 
@@ -457,15 +469,8 @@ void ASTDeclReader::Visit(Decl *D) {
     // We only read it if FD doesn't already have a body (e.g., from another
     // module).
     // FIXME: Can we diagnose ODR violations somehow?
-    if (Record.readInt()) {
-      if (auto *CD = dyn_cast<CXXConstructorDecl>(FD)) {
-        CD->NumCtorInitializers = Record.readInt();
-        if (CD->NumCtorInitializers)
-          CD->CtorInitializers = ReadGlobalOffset();
-      }
-      Reader.PendingBodies[FD] = GetCurrentCursorOffset();
-      HasPendingBody = true;
-    }
+    if (Record.readInt())
+      ReadFunctionDefinition(FD);
   }
 }
 
@@ -3861,14 +3866,7 @@ void ASTDeclReader::UpdateDecl(Decl *D) {
         });
       }
       FD->setInnerLocStart(ReadSourceLocation());
-      if (auto *CD = dyn_cast<CXXConstructorDecl>(FD)) {
-        CD->NumCtorInitializers = Record.readInt();
-        if (CD->NumCtorInitializers)
-          CD->CtorInitializers = ReadGlobalOffset();
-      }
-      // Store the offset of the body so we can lazily load it later.
-      Reader.PendingBodies[FD] = GetCurrentCursorOffset();
-      HasPendingBody = true;
+      ReadFunctionDefinition(FD);
       assert(Record.getIdx() == Record.size() && "lazy body must be last");
       break;
     }

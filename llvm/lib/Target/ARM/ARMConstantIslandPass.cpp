@@ -56,6 +56,8 @@ using namespace llvm;
 
 #define DEBUG_TYPE "arm-cp-islands"
 
+#define ARM_CP_ISLANDS_OPT_NAME \
+  "ARM constant island placement and branch shortening pass"
 STATISTIC(NumCPEs,       "Number of constpool entries");
 STATISTIC(NumSplit,      "Number of uncond branches inserted");
 STATISTIC(NumCBrFixed,   "Number of cond branches fixed");
@@ -230,7 +232,7 @@ namespace {
     }
 
     StringRef getPassName() const override {
-      return "ARM constant island placement and branch shortening pass";
+      return ARM_CP_ISLANDS_OPT_NAME;
     }
 
   private:
@@ -2007,6 +2009,16 @@ static bool jumpTableFollowsTB(MachineInstr *JTMI, MachineInstr *CPEMI) {
          &*MBB->begin() == CPEMI;
 }
 
+static bool registerDefinedBetween(unsigned Reg,
+                                   MachineBasicBlock::iterator From,
+                                   MachineBasicBlock::iterator To,
+                                   const TargetRegisterInfo *TRI) {
+  for (auto I = From; I != To; ++I)
+    if (I->modifiesRegister(Reg, TRI))
+      return true;
+  return false;
+}
+
 /// optimizeThumb2JumpTables - Use tbb / tbh instructions to generate smaller
 /// jumptables when it's possible.
 bool ARMConstantIslands::optimizeThumb2JumpTables() {
@@ -2093,6 +2105,7 @@ bool ARMConstantIslands::optimizeThumb2JumpTables() {
         continue;
 
       // If we're in PIC mode, there should be another ADD following.
+      auto *TRI = STI->getRegisterInfo();
       if (isPositionIndependentOrROPI) {
         MachineInstr *Add = Load->getNextNode();
         if (Add->getOpcode() != ARM::tADDrr ||
@@ -2102,11 +2115,16 @@ bool ARMConstantIslands::optimizeThumb2JumpTables() {
           continue;
         if (Add->getOperand(0).getReg() != MI->getOperand(0).getReg())
           continue;
-
+        if (registerDefinedBetween(IdxReg, Add->getNextNode(), MI, TRI))
+          // IdxReg gets redefined in the middle of the sequence.
+          continue;
         Add->eraseFromParent();
         DeadSize += 2;
       } else {
         if (Load->getOperand(0).getReg() != MI->getOperand(0).getReg())
+          continue;
+        if (registerDefinedBetween(IdxReg, Load->getNextNode(), MI, TRI))
+          // IdxReg gets redefined in the middle of the sequence.
           continue;
       }
       
@@ -2283,3 +2301,6 @@ adjustJTTargetBlockForward(MachineBasicBlock *BB, MachineBasicBlock *JTBB) {
 FunctionPass *llvm::createARMConstantIslandPass() {
   return new ARMConstantIslands();
 }
+
+INITIALIZE_PASS(ARMConstantIslands, "arm-cp-islands", ARM_CP_ISLANDS_OPT_NAME,
+                false, false)

@@ -4739,12 +4739,12 @@ def MOVPQIto64rr : RS2I<0x7E, MRMDestReg, (outs GR64:$dst), (ins VR128:$src),
 } //SchedRW
 
 let isCodeGenOnly = 1, ForceDisassemble = 1, hasSideEffects = 0, mayStore = 1 in
-def VMOVPQIto64rm : VRS2I<0x7E, MRMDestMem, (outs),
+def VMOVPQIto64mr : VRS2I<0x7E, MRMDestMem, (outs),
                           (ins i64mem:$dst, VR128:$src),
                           "movq\t{$src, $dst|$dst, $src}",
                           [], IIC_SSE_MOVDQ>, VEX, Sched<[WriteStore]>;
 let isCodeGenOnly = 1, ForceDisassemble = 1, hasSideEffects = 0, mayStore = 1 in
-def MOVPQIto64rm : RS2I<0x7E, MRMDestMem, (outs), (ins i64mem:$dst, VR128:$src),
+def MOVPQIto64mr : RS2I<0x7E, MRMDestMem, (outs), (ins i64mem:$dst, VR128:$src),
                         "mov{d|q}\t{$src, $dst|$dst, $src}",
                         [], IIC_SSE_MOVDQ>, Sched<[WriteStore]>;
 } // ExeDomain = SSEPackedInt

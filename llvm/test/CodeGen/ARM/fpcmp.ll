@@ -12,7 +12,7 @@ entry:
 
 define i32 @f2(float %a) {
 ;CHECK-LABEL: f2:
-;CHECK: vcmpe.f32
+;CHECK: vcmp.f32
 ;CHECK: moveq
 entry:
         %tmp = fcmp oeq float %a, 1.000000e+00          ; <i1> [#uses=1]
@@ -52,7 +52,7 @@ entry:
 
 define i32 @f6(float %a) {
 ;CHECK-LABEL: f6:
-;CHECK: vcmpe.f32
+;CHECK: vcmp.f32
 ;CHECK: movne
 entry:
         %tmp = fcmp une float %a, 1.000000e+00          ; <i1> [#uses=1]
