@@ -110,13 +110,6 @@ def G_ADD : Instruction {
   let isCommutable = 1;
 }
 
-// Generic pointer offset.
-def G_GEP : Instruction {
-  let OutOperandList = (outs type0:$dst);
-  let InOperandList = (ins type0:$src1, type1:$src2);
-  let hasSideEffects = 0;
-}
-
 // Generic subtraction.
 def G_SUB : Instruction {
   let OutOperandList = (outs type0:$dst);
@@ -228,6 +221,19 @@ def G_FCMP : Instruction {
 def G_SELECT : Instruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type1:$tst, type0:$src1, type0:$src2);
+  let hasSideEffects = 0;
+}
+
+// Generic pointer offset.
+def G_GEP : Instruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1, type1:$src2);
+  let hasSideEffects = 0;
+}
+
+def G_PTR_MASK : Instruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src, unknown:$bits);
   let hasSideEffects = 0;
 }
 
