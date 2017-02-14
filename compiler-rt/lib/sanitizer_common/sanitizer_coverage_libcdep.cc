@@ -171,7 +171,11 @@ class CoverageData {
   //   - not thread-safe;
   //   - does not support long traces;
   //   - not tuned for performance.
-  static const uptr kTrEventArrayMaxSize = FIRST_32_SECOND_64(1 << 22, 1 << 30);
+  // Windows doesn't do overcommit (committed virtual memory costs swap), so
+  // programs can't reliably map such large amounts of virtual memory.
+  // TODO(etienneb): Find a way to support coverage of larger executable
+static const uptr kTrEventArrayMaxSize =
+    (SANITIZER_WORDSIZE == 32 || SANITIZER_WINDOWS) ? 1 << 22 : 1 << 30;
   u32 *tr_event_array;
   uptr tr_event_array_size;
   u32 *tr_event_pointer;
