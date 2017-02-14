@@ -522,6 +522,8 @@ static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
     Builder.defineMacro("__cpp_structured_bindings", "201606");
     Builder.defineMacro("__cpp_nontype_template_args", "201411");
     Builder.defineMacro("__cpp_fold_expressions", "201603");
+    // FIXME: This is not yet listed in SD-6.
+    Builder.defineMacro("__cpp_deduction_guides", "201611");
   }
   if (LangOpts.AlignedAllocation)
     Builder.defineMacro("__cpp_aligned_new", "201606");

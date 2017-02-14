@@ -3553,6 +3553,8 @@ TemplateDeclInstantiator::InitFunctionInstantiation(FunctionDecl *New,
   if (Tmpl->isDeleted())
     New->setDeletedAsWritten();
 
+  New->setImplicit(Tmpl->isImplicit());
+
   // Forward the mangling number from the template to the instantiated decl.
   SemaRef.Context.setManglingNumber(New,
                                     SemaRef.Context.getManglingNumber(Tmpl));
@@ -4950,6 +4952,21 @@ NamedDecl *Sema::FindInstantiatedDecl(SourceLocation Loc, NamedDecl *D,
       if (FunctionDecl *FD = dyn_cast<FunctionDecl>(DC)) {
         if (FD->getFriendObjectKind() && FD->getDeclContext()->isFileContext()){
           DC = FD->getLexicalDeclContext();
+          continue;
+        }
+        // An implicit deduction guide acts as if it's within the class template
+        // specialization described by its name and first N template params.
+        if (FD->isDeductionGuide() && FD->isImplicit()) {
+          TemplateDecl *TD = FD->getDeclName().getCXXDeductionGuideTemplate();
+          TemplateArgumentListInfo Args(Loc, Loc);
+          for (auto Arg : TemplateArgs.getInnermost().take_front(
+                                      TD->getTemplateParameters()->size()))
+            Args.addArgument(
+                getTrivialTemplateArgumentLoc(Arg, QualType(), Loc));
+          QualType T = CheckTemplateIdType(TemplateName(TD), Loc, Args);
+          if (T.isNull())
+            return nullptr;
+          DC = T->getAsCXXRecordDecl();
           continue;
         }
       }

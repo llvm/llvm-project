@@ -49,31 +49,35 @@ STATISTIC(NumNoAlias, "Number of function returns marked noalias");
 STATISTIC(NumNonNullReturn, "Number of function returns marked nonnull");
 STATISTIC(NumNoRecurse, "Number of functions marked as norecurse");
 
+// FIXME: This is disabled by default to avoid exposing security vulnerabilities
+// in C/C++ code compiled by clang:
+// http://lists.llvm.org/pipermail/cfe-dev/2017-January/052066.html
+static cl::opt<bool> EnableNonnullArgPropagation(
+    "enable-nonnull-arg-prop", cl::Hidden,
+    cl::desc("Try to propagate nonnull argument attributes from callsites to "
+             "caller functions."));
+
 namespace {
 typedef SmallSetVector<Function *, 8> SCCNodeSet;
 }
 
-namespace {
-/// The three kinds of memory access relevant to 'readonly' and
-/// 'readnone' attributes.
-enum MemoryAccessKind {
-  MAK_ReadNone = 0,
-  MAK_ReadOnly = 1,
-  MAK_MayWrite = 2
-};
-}
-
-static MemoryAccessKind checkFunctionMemoryAccess(Function &F, AAResults &AAR,
+/// Returns the memory access attribute for function F using AAR for AA results,
+/// where SCCNodes is the current SCC.
+///
+/// If ThisBody is true, this function may examine the function body and will
+/// return a result pertaining to this copy of the function. If it is false, the
+/// result will be based only on AA results for the function declaration; it
+/// will be assumed that some other (perhaps less optimized) version of the
+/// function may be selected at link time.
+static MemoryAccessKind checkFunctionMemoryAccess(Function &F, bool ThisBody,
+                                                  AAResults &AAR,
                                                   const SCCNodeSet &SCCNodes) {
   FunctionModRefBehavior MRB = AAR.getModRefBehavior(&F);
   if (MRB == FMRB_DoesNotAccessMemory)
     // Already perfect!
     return MAK_ReadNone;
 
-  // Non-exact function definitions may not be selected at link time, and an
-  // alternative version that writes to memory may be selected.  See the comment
-  // on GlobalValue::isDefinitionExact for more details.
-  if (!F.hasExactDefinition()) {
+  if (!ThisBody) {
     if (AliasAnalysis::onlyReadsMemory(MRB))
       return MAK_ReadOnly;
 
@@ -172,6 +176,11 @@ static MemoryAccessKind checkFunctionMemoryAccess(Function &F, AAResults &AAR,
   return ReadsMemory ? MAK_ReadOnly : MAK_ReadNone;
 }
 
+MemoryAccessKind llvm::computeFunctionBodyMemoryAccess(Function &F,
+                                                       AAResults &AAR) {
+  return checkFunctionMemoryAccess(F, /*ThisBody=*/true, AAR, {});
+}
+
 /// Deduce readonly/readnone attributes for the SCC.
 template <typename AARGetterT>
 static bool addReadAttrs(const SCCNodeSet &SCCNodes, AARGetterT &&AARGetter) {
@@ -182,7 +191,11 @@ static bool addReadAttrs(const SCCNodeSet &SCCNodes, AARGetterT &&AARGetter) {
     // Call the callable parameter to look up AA results for this function.
     AAResults &AAR = AARGetter(*F);
 
-    switch (checkFunctionMemoryAccess(*F, AAR, SCCNodes)) {
+    // Non-exact function definitions may not be selected at link time, and an
+    // alternative version that writes to memory may be selected.  See the
+    // comment on GlobalValue::isDefinitionExact for more details.
+    switch (checkFunctionMemoryAccess(*F, F->hasExactDefinition(),
+                                      AAR, SCCNodes)) {
     case MAK_MayWrite:
       return false;
     case MAK_ReadOnly:
@@ -531,6 +544,49 @@ static bool addArgumentReturnedAttrs(const SCCNodeSet &SCCNodes) {
   return Changed;
 }
 
+/// If a callsite has arguments that are also arguments to the parent function,
+/// try to propagate attributes from the callsite's arguments to the parent's
+/// arguments. This may be important because inlining can cause information loss
+/// when attribute knowledge disappears with the inlined call.
+static bool addArgumentAttrsFromCallsites(Function &F) {
+  if (!EnableNonnullArgPropagation)
+    return false;
+
+  bool Changed = false;
+
+  // For an argument attribute to transfer from a callsite to the parent, the
+  // call must be guaranteed to execute every time the parent is called.
+  // Conservatively, just check for calls in the entry block that are guaranteed
+  // to execute.
+  // TODO: This could be enhanced by testing if the callsite post-dominates the
+  // entry block or by doing simple forward walks or backward walks to the
+  // callsite.
+  BasicBlock &Entry = F.getEntryBlock();
+  for (Instruction &I : Entry) {
+    if (auto CS = CallSite(&I)) {
+      if (auto *CalledFunc = CS.getCalledFunction()) {
+        for (auto &CSArg : CalledFunc->args()) {
+          if (!CSArg.hasNonNullAttr())
+            continue;
+
+          // If the non-null callsite argument operand is an argument to 'F'
+          // (the caller) and the call is guaranteed to execute, then the value
+          // must be non-null throughout 'F'.
+          auto *FArg = dyn_cast<Argument>(CS.getArgOperand(CSArg.getArgNo()));
+          if (FArg && !FArg->hasNonNullAttr()) {
+            FArg->addAttr(Attribute::NonNull);
+            Changed = true;
+          }
+        }
+      }
+    }
+    if (!isGuaranteedToTransferExecutionToSuccessor(&I))
+      break;
+  }
+  
+  return Changed;
+}
+
 /// Deduce nocapture attributes for the SCC.
 static bool addArgumentAttrs(const SCCNodeSet &SCCNodes) {
   bool Changed = false;
@@ -548,6 +604,8 @@ static bool addArgumentAttrs(const SCCNodeSet &SCCNodes) {
     // For more details, see GlobalValue::mayBeDerefined.
     if (!F->hasExactDefinition())
       continue;
+
+    Changed |= addArgumentAttrsFromCallsites(*F);
 
     // Functions that are readonly (or readnone) and nounwind and don't return
     // a value can't capture arguments. Don't analyze them.

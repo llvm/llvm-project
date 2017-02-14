@@ -1,4 +1,4 @@
-//===-- ErlangGCPrinter.cpp - Erlang/OTP frametable emitter -----*- C++ -*-===//
+//===- ErlangGCPrinter.cpp - Erlang/OTP frametable emitter ----------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -14,21 +14,19 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/AsmPrinter.h"
+#include "llvm/CodeGen/GCMetadata.h"
 #include "llvm/CodeGen/GCMetadataPrinter.h"
+#include "llvm/CodeGen/GCStrategy.h"
 #include "llvm/CodeGen/GCs.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/Instruction.h"
-#include "llvm/IR/IntrinsicInst.h"
-#include "llvm/IR/Metadata.h"
-#include "llvm/MC/MCAsmInfo.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
-#include "llvm/Target/TargetLoweringObjectFile.h"
-#include "llvm/Target/TargetMachine.h"
-#include "llvm/Target/TargetSubtargetInfo.h"
+#include "llvm/Target/TargetLoweringObjectFile.h" 
+#include "llvm/Support/ELF.h"
 
 using namespace llvm;
 
@@ -38,12 +36,11 @@ class ErlangGCPrinter : public GCMetadataPrinter {
 public:
   void finishAssembly(Module &M, GCModuleInfo &Info, AsmPrinter &AP) override;
 };
-}
+
+} // end anonymous namespace
 
 static GCMetadataPrinterRegistry::Add<ErlangGCPrinter>
     X("erlang", "erlang-compatible garbage collector");
-
-void llvm::linkErlangGCPrinter() {}
 
 void ErlangGCPrinter::finishAssembly(Module &M, GCModuleInfo &Info,
                                      AsmPrinter &AP) {
@@ -121,3 +118,5 @@ void ErlangGCPrinter::finishAssembly(Module &M, GCModuleInfo &Info,
     }
   }
 }
+
+void llvm::linkErlangGCPrinter() {}

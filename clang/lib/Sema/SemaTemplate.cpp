@@ -1415,6 +1415,360 @@ Sema::CheckClassTemplate(Scope *S, unsigned TagSpec, TagUseKind TUK,
   return NewTemplate;
 }
 
+namespace {
+/// Transform to convert portions of a constructor declaration into the
+/// corresponding deduction guide, per C++1z [over.match.class.deduct]p1.
+struct ConvertConstructorToDeductionGuideTransform {
+  ConvertConstructorToDeductionGuideTransform(Sema &S,
+                                              ClassTemplateDecl *Template)
+      : SemaRef(S), Template(Template) {}
+
+  Sema &SemaRef;
+  ClassTemplateDecl *Template;
+
+  DeclContext *DC = Template->getDeclContext();
+  CXXRecordDecl *Primary = Template->getTemplatedDecl();
+  DeclarationName DeductionGuideName =
+      SemaRef.Context.DeclarationNames.getCXXDeductionGuideName(Template);
+
+  QualType DeducedType = SemaRef.Context.getTypeDeclType(Primary);
+
+  // Index adjustment to apply to convert depth-1 template parameters into
+  // depth-0 template parameters.
+  unsigned Depth1IndexAdjustment = Template->getTemplateParameters()->size();
+
+  /// Transform a constructor declaration into a deduction guide.
+  NamedDecl *transformConstructor(FunctionTemplateDecl *FTD, FunctionDecl *FD) {
+    SmallVector<TemplateArgument, 16> SubstArgs;
+
+    // C++ [over.match.class.deduct]p1:
+    // -- For each constructor of the class template designated by the
+    //    template-name, a function template with the following properties:
+
+    //    -- The template parameters are the template parameters of the class
+    //       template followed by the template parameters (including default
+    //       template arguments) of the constructor, if any.
+    TemplateParameterList *TemplateParams = Template->getTemplateParameters();
+    if (FTD) {
+      TemplateParameterList *InnerParams = FTD->getTemplateParameters();
+      SmallVector<NamedDecl *, 16> AllParams;
+      AllParams.reserve(TemplateParams->size() + InnerParams->size());
+      AllParams.insert(AllParams.begin(),
+                       TemplateParams->begin(), TemplateParams->end());
+      SubstArgs.reserve(InnerParams->size());
+
+      // Later template parameters could refer to earlier ones, so build up
+      // a list of substituted template arguments as we go.
+      for (NamedDecl *Param : *InnerParams) {
+        MultiLevelTemplateArgumentList Args;
+        Args.addOuterTemplateArguments(SubstArgs);
+        Args.addOuterTemplateArguments(None);
+        NamedDecl *NewParam = transformTemplateParameter(Param, Args);
+        if (!NewParam)
+          return nullptr;
+        AllParams.push_back(NewParam);
+        SubstArgs.push_back(SemaRef.Context.getCanonicalTemplateArgument(
+            SemaRef.Context.getInjectedTemplateArg(NewParam)));
+      }
+      TemplateParams = TemplateParameterList::Create(
+          SemaRef.Context, InnerParams->getTemplateLoc(),
+          InnerParams->getLAngleLoc(), AllParams, InnerParams->getRAngleLoc(),
+          /*FIXME: RequiresClause*/ nullptr);
+    }
+
+    // If we built a new template-parameter-list, track that we need to
+    // substitute references to the old parameters into references to the
+    // new ones.
+    MultiLevelTemplateArgumentList Args;
+    if (FTD) {
+      Args.addOuterTemplateArguments(SubstArgs);
+      Args.addOuterTemplateArguments(None);
+    }
+
+    FunctionProtoTypeLoc FPTL = FD->getTypeSourceInfo()->getTypeLoc()
+                                   .getAsAdjusted<FunctionProtoTypeLoc>();
+    assert(FPTL && "no prototype for constructor declaration");
+
+    // Transform the type of the function, adjusting the return type and
+    // replacing references to the old parameters with references to the
+    // new ones.
+    TypeLocBuilder TLB;
+    SmallVector<ParmVarDecl*, 8> Params;
+    QualType NewType = transformFunctionProtoType(TLB, FPTL, Params, Args);
+    if (NewType.isNull())
+      return nullptr;
+    TypeSourceInfo *NewTInfo = TLB.getTypeSourceInfo(SemaRef.Context, NewType);
+
+    return buildDeductionGuide(TemplateParams, FD->isExplicit(), NewTInfo,
+                               FD->getLocStart(), FD->getLocation(),
+                               FD->getLocEnd());
+  }
+
+  /// Build a deduction guide with the specified parameter types.
+  NamedDecl *buildSimpleDeductionGuide(MutableArrayRef<QualType> ParamTypes) {
+    SourceLocation Loc = Template->getLocation();
+
+    // Build the requested type.
+    FunctionProtoType::ExtProtoInfo EPI;
+    EPI.HasTrailingReturn = true;
+    QualType Result = SemaRef.BuildFunctionType(DeducedType, ParamTypes, Loc,
+                                                DeductionGuideName, EPI);
+    TypeSourceInfo *TSI = SemaRef.Context.getTrivialTypeSourceInfo(Result, Loc);
+
+    FunctionProtoTypeLoc FPTL =
+        TSI->getTypeLoc().castAs<FunctionProtoTypeLoc>();
+
+    // Build the parameters, needed during deduction / substitution.
+    SmallVector<ParmVarDecl*, 4> Params;
+    for (auto T : ParamTypes) {
+      ParmVarDecl *NewParam = ParmVarDecl::Create(
+          SemaRef.Context, DC, Loc, Loc, nullptr, T,
+          SemaRef.Context.getTrivialTypeSourceInfo(T, Loc), SC_None, nullptr);
+      NewParam->setScopeInfo(0, Params.size());
+      FPTL.setParam(Params.size(), NewParam);
+      Params.push_back(NewParam);
+    }
+
+    return buildDeductionGuide(Template->getTemplateParameters(), false, TSI,
+                               Loc, Loc, Loc);
+  }
+
+private:
+  /// Transform a constructor template parameter into a deduction guide template
+  /// parameter, rebuilding any internal references to earlier parameters and
+  /// renumbering as we go.
+  NamedDecl *transformTemplateParameter(NamedDecl *TemplateParam,
+                                        MultiLevelTemplateArgumentList &Args) {
+    if (auto *TTP = dyn_cast<TemplateTypeParmDecl>(TemplateParam)) {
+      // TemplateTypeParmDecl's index cannot be changed after creation, so
+      // substitute it directly.
+      auto *NewTTP = TemplateTypeParmDecl::Create(
+          SemaRef.Context, DC, TTP->getLocStart(), TTP->getLocation(),
+          /*Depth*/0, Depth1IndexAdjustment + TTP->getIndex(),
+          TTP->getIdentifier(), TTP->wasDeclaredWithTypename(),
+          TTP->isParameterPack());
+      if (TTP->hasDefaultArgument()) {
+        TypeSourceInfo *InstantiatedDefaultArg =
+            SemaRef.SubstType(TTP->getDefaultArgumentInfo(), Args,
+                              TTP->getDefaultArgumentLoc(), TTP->getDeclName());
+        if (InstantiatedDefaultArg)
+          NewTTP->setDefaultArgument(InstantiatedDefaultArg);
+      }
+      return NewTTP;
+    }
+
+    if (auto *TTP = dyn_cast<TemplateTemplateParmDecl>(TemplateParam))
+      return transformTemplateParameterImpl(TTP, Args);
+
+    return transformTemplateParameterImpl(
+        cast<NonTypeTemplateParmDecl>(TemplateParam), Args);
+  }
+  template<typename TemplateParmDecl>
+  TemplateParmDecl *
+  transformTemplateParameterImpl(TemplateParmDecl *OldParam,
+                                 MultiLevelTemplateArgumentList &Args) {
+    // Ask the template instantiator to do the heavy lifting for us, then adjust
+    // the index of the parameter once it's done.
+    auto *NewParam =
+        cast_or_null<TemplateParmDecl>(SemaRef.SubstDecl(OldParam, DC, Args));
+    assert(NewParam->getDepth() == 0 && "unexpected template param depth");
+    NewParam->setPosition(NewParam->getPosition() + Depth1IndexAdjustment);
+    return NewParam;
+  }
+
+  QualType transformFunctionProtoType(TypeLocBuilder &TLB,
+                                      FunctionProtoTypeLoc TL,
+                                      SmallVectorImpl<ParmVarDecl*> &Params,
+                                      MultiLevelTemplateArgumentList &Args) {
+    SmallVector<QualType, 4> ParamTypes;
+    const FunctionProtoType *T = TL.getTypePtr();
+
+    //    -- The types of the function parameters are those of the constructor.
+    for (auto *OldParam : TL.getParams()) {
+      ParmVarDecl *NewParam = transformFunctionTypeParam(OldParam, Args);
+      if (!NewParam)
+        return QualType();
+      ParamTypes.push_back(NewParam->getType());
+      Params.push_back(NewParam);
+    }
+
+    //    -- The return type is the class template specialization designated by
+    //       the template-name and template arguments corresponding to the
+    //       template parameters obtained from the class template.
+    //
+    // We use the injected-class-name type of the primary template instead.
+    // This has the convenient property that it is different from any type that
+    // the user can write in a deduction-guide (because they cannot enter the
+    // context of the template), so implicit deduction guides can never collide
+    // with explicit ones.
+    QualType ReturnType = DeducedType;
+    TLB.pushTypeSpec(ReturnType).setNameLoc(Primary->getLocation());
+
+    // Resolving a wording defect, we also inherit the variadicness of the
+    // constructor.
+    FunctionProtoType::ExtProtoInfo EPI;
+    EPI.Variadic = T->isVariadic();
+    EPI.HasTrailingReturn = true;
+
+    QualType Result = SemaRef.BuildFunctionType(
+        ReturnType, ParamTypes, TL.getLocStart(), DeductionGuideName, EPI);
+    if (Result.isNull())
+      return QualType();
+
+    FunctionProtoTypeLoc NewTL = TLB.push<FunctionProtoTypeLoc>(Result);
+    NewTL.setLocalRangeBegin(TL.getLocalRangeBegin());
+    NewTL.setLParenLoc(TL.getLParenLoc());
+    NewTL.setRParenLoc(TL.getRParenLoc());
+    NewTL.setExceptionSpecRange(SourceRange());
+    NewTL.setLocalRangeEnd(TL.getLocalRangeEnd());
+    for (unsigned I = 0, E = NewTL.getNumParams(); I != E; ++I)
+      NewTL.setParam(I, Params[I]);
+
+    return Result;
+  }
+
+  ParmVarDecl *
+  transformFunctionTypeParam(ParmVarDecl *OldParam,
+                             MultiLevelTemplateArgumentList &Args) {
+    TypeSourceInfo *OldDI = OldParam->getTypeSourceInfo();
+    TypeSourceInfo *NewDI =
+        Args.getNumLevels()
+            ? SemaRef.SubstType(OldDI, Args, OldParam->getLocation(),
+                                OldParam->getDeclName())
+            : OldDI;
+    if (!NewDI)
+      return nullptr;
+
+    // Canonicalize the type. This (for instance) replaces references to
+    // typedef members of the current instantiations with the definitions of
+    // those typedefs, avoiding triggering instantiation of the deduced type
+    // during deduction.
+    // FIXME: It would be preferable to retain type sugar and source
+    // information here (and handle this in substitution instead).
+    NewDI = SemaRef.Context.getTrivialTypeSourceInfo(
+        SemaRef.Context.getCanonicalType(NewDI->getType()),
+        OldParam->getLocation());
+
+    // Resolving a wording defect, we also inherit default arguments from the
+    // constructor.
+    ExprResult NewDefArg;
+    if (OldParam->hasDefaultArg()) {
+      NewDefArg = Args.getNumLevels()
+                      ? SemaRef.SubstExpr(OldParam->getDefaultArg(), Args)
+                      : OldParam->getDefaultArg();
+      if (NewDefArg.isInvalid())
+        return nullptr;
+    }
+
+    ParmVarDecl *NewParam = ParmVarDecl::Create(SemaRef.Context, DC,
+                                                OldParam->getInnerLocStart(),
+                                                OldParam->getLocation(),
+                                                OldParam->getIdentifier(),
+                                                NewDI->getType(),
+                                                NewDI,
+                                                OldParam->getStorageClass(),
+                                                NewDefArg.get());
+    NewParam->setScopeInfo(OldParam->getFunctionScopeDepth(),
+                           OldParam->getFunctionScopeIndex());
+    return NewParam;
+  }
+
+  NamedDecl *buildDeductionGuide(TemplateParameterList *TemplateParams,
+                                 bool Explicit, TypeSourceInfo *TInfo,
+                                 SourceLocation LocStart, SourceLocation Loc,
+                                 SourceLocation LocEnd) {
+    // Build the implicit deduction guide template.
+    auto *Guide = FunctionDecl::Create(SemaRef.Context, DC, LocStart, Loc,
+                                       DeductionGuideName, TInfo->getType(),
+                                       TInfo, SC_None);
+    Guide->setImplicit();
+    if (Explicit)
+      Guide->setExplicitSpecified();
+    Guide->setRangeEnd(LocEnd);
+    Guide->setParams(
+        TInfo->getTypeLoc().castAs<FunctionProtoTypeLoc>().getParams());
+
+    auto *GuideTemplate = FunctionTemplateDecl::Create(
+        SemaRef.Context, DC, Loc, DeductionGuideName, TemplateParams, Guide);
+    GuideTemplate->setImplicit();
+    Guide->setDescribedFunctionTemplate(GuideTemplate);
+
+    if (isa<CXXRecordDecl>(DC)) {
+      Guide->setAccess(AS_public);
+      GuideTemplate->setAccess(AS_public);
+    }
+
+    DC->addDecl(GuideTemplate);
+    return GuideTemplate;
+  }
+};
+}
+
+void Sema::DeclareImplicitDeductionGuides(TemplateDecl *Template,
+                                          SourceLocation Loc) {
+  DeclContext *DC = Template->getDeclContext();
+  if (DC->isDependentContext())
+    return;
+
+  ConvertConstructorToDeductionGuideTransform Transform(
+      *this, cast<ClassTemplateDecl>(Template));
+  if (!isCompleteType(Loc, Transform.DeducedType))
+    return;
+
+  // Check whether we've already declared deduction guides for this template.
+  // FIXME: Consider storing a flag on the template to indicate this.
+  auto Existing = DC->lookup(Transform.DeductionGuideName);
+  for (auto *D : Existing)
+    if (D->isImplicit())
+      return;
+
+  // In case we were expanding a pack when we attempted to declare deduction
+  // guides, turn off pack expansion for everything we're about to do.
+  ArgumentPackSubstitutionIndexRAII SubstIndex(*this, -1);
+  // Create a template instantiation record to track the "instantiation" of
+  // constructors into deduction guides.
+  // FIXME: Add a kind for this to give more meaningful diagnostics. But can
+  // this substitution process actually fail?
+  InstantiatingTemplate BuildingDeductionGuides(*this, Loc, Template);
+
+  // Convert declared constructors into deduction guide templates.
+  // FIXME: Skip constructors for which deduction must necessarily fail (those
+  // for which some class template parameter without a default argument never
+  // appears in a deduced context).
+  bool AddedAny = false;
+  bool AddedCopyOrMove = false;
+  for (NamedDecl *D : LookupConstructors(Transform.Primary)) {
+    D = D->getUnderlyingDecl();
+    if (D->isInvalidDecl() || D->isImplicit())
+      continue;
+    D = cast<NamedDecl>(D->getCanonicalDecl());
+
+    auto *FTD = dyn_cast<FunctionTemplateDecl>(D);
+    auto *FD = FTD ? FTD->getTemplatedDecl() : dyn_cast<FunctionDecl>(D);
+    // Class-scope explicit specializations (MS extension) do not result in
+    // deduction guides.
+    if (!FD || (!FTD && FD->isFunctionTemplateSpecialization()))
+      continue;
+
+    Transform.transformConstructor(FTD, FD);
+    AddedAny = true;
+
+    CXXConstructorDecl *CD = cast<CXXConstructorDecl>(FD);
+    AddedCopyOrMove |= CD->isCopyOrMoveConstructor();
+  }
+
+  // Synthesize an X() -> X<...> guide if there were no declared constructors.
+  // FIXME: The standard doesn't say (how) to do this.
+  if (!AddedAny)
+    Transform.buildSimpleDeductionGuide(None);
+
+  // Synthesize an X(X<...>) -> X<...> guide if there was no declared constructor
+  // resembling a copy or move constructor.
+  // FIXME: The standard doesn't say (how) to do this.
+  if (!AddedCopyOrMove)
+    Transform.buildSimpleDeductionGuide(Transform.DeducedType);
+}
+
 /// \brief Diagnose the presence of a default template argument on a
 /// template parameter, which is ill-formed in certain contexts.
 ///

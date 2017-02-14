@@ -378,6 +378,33 @@ exit:
   ret i32 %ret
 }
 
+define void @test10(i32 %i) {
+Entry:
+  br label %Loop
+; CHECK-LABEL: @test10(
+; CHECK: Entry:
+; CHECK-NEXT:   load atomic i32, i32* @X unordered, align 4
+; CHECK-NEXT:   br label %Loop
+
+
+Loop:   ; preds = %Loop, %0
+  %j = phi i32 [ 0, %Entry ], [ %Next, %Loop ]    ; <i32> [#uses=1]
+  %x = load atomic i32, i32* @X unordered, align 4
+  %x2 = add i32 %x, 1
+  store atomic i32 %x2, i32* @X unordered, align 4
+  %Next = add i32 %j, 1
+  %cond = icmp eq i32 %Next, 0
+  br i1 %cond, label %Out, label %Loop
+
+Out:
+  ret void
+; CHECK: Out:
+; CHECK-NEXT:   %[[LCSSAPHI:.*]] = phi i32 [ %x2
+; CHECK-NEXT:   store atomic i32 %[[LCSSAPHI]], i32* @X unordered, align 4
+; CHECK-NEXT:   ret void
+
+}
+
 !0 = !{!4, !4, i64 0}
 !1 = !{!"omnipotent char", !2}
 !2 = !{!"Simple C/C++ TBAA"}

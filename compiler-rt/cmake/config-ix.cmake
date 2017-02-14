@@ -164,7 +164,15 @@ set(ALL_SANITIZER_COMMON_SUPPORTED_ARCH ${X86} ${X86_64} ${PPC64}
 set(ALL_ASAN_SUPPORTED_ARCH ${X86} ${X86_64} ${ARM32} ${ARM64}
     ${MIPS32} ${MIPS64} ${PPC64} ${S390X})
 set(ALL_DFSAN_SUPPORTED_ARCH ${X86_64} ${MIPS64} ${ARM64})
-set(ALL_LSAN_SUPPORTED_ARCH ${X86} ${X86_64} ${MIPS64} ${ARM64})
+
+# Darwin does not support 32-bit thread-local storage on ios versions
+# below 9.0. Until the min ios version is bumped to 9.0, lsan will
+# not build for 32-bit darwin targets.
+if(APPLE)
+  set(ALL_LSAN_SUPPORTED_ARCH ${X86_64} ${ARM64})
+else()
+  set(ALL_LSAN_SUPPORTED_ARCH ${X86} ${X86_64} ${MIPS64} ${ARM64})
+endif()
 set(ALL_MSAN_SUPPORTED_ARCH ${X86_64} ${MIPS64} ${ARM64} ${PPC64})
 set(ALL_PROFILE_SUPPORTED_ARCH ${X86} ${X86_64} ${ARM32} ${ARM64} ${PPC64}
     ${MIPS32} ${MIPS64} ${S390X})
@@ -175,7 +183,7 @@ set(ALL_SAFESTACK_SUPPORTED_ARCH ${X86} ${X86_64} ${ARM64} ${MIPS32} ${MIPS64})
 set(ALL_CFI_SUPPORTED_ARCH ${X86} ${X86_64} ${MIPS64})
 set(ALL_ESAN_SUPPORTED_ARCH ${X86_64} ${MIPS64})
 set(ALL_SCUDO_SUPPORTED_ARCH ${X86} ${X86_64} ${ARM32} ${ARM64})
-set(ALL_XRAY_SUPPORTED_ARCH ${X86_64} ${ARM32} ${ARM64})
+set(ALL_XRAY_SUPPORTED_ARCH ${X86_64} ${ARM32} ${ARM64} powerpc64le)
 
 if(APPLE)
   include(CompilerRTDarwinUtils)
@@ -475,6 +483,13 @@ if (COMPILER_RT_HAS_SANITIZER_COMMON AND LSAN_SUPPORTED_ARCH AND
   set(COMPILER_RT_HAS_LSAN TRUE)
 else()
   set(COMPILER_RT_HAS_LSAN FALSE)
+endif()
+
+if(APPLE)
+  option(COMPILER_RT_ENABLE_LSAN_OSX "Enable building LSan for OS X - Experimental" Off)
+  if(COMPILER_RT_ENABLE_LSAN_OSX)
+    set(COMPILER_RT_HAS_LSAN TRUE)
+  endif()
 endif()
 
 if (COMPILER_RT_HAS_SANITIZER_COMMON AND MSAN_SUPPORTED_ARCH AND

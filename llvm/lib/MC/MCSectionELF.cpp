@@ -7,23 +7,22 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/MC/MCSectionELF.h"
+#include "llvm/ADT/Triple.h"
 #include "llvm/MC/MCAsmInfo.h"
-#include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
-#include "llvm/MC/MCSymbol.h"
+#include "llvm/MC/MCSectionELF.h"
 #include "llvm/Support/ELF.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cassert>
 
 using namespace llvm;
 
-MCSectionELF::~MCSectionELF() {} // anchor.
+MCSectionELF::~MCSectionELF() = default; // anchor.
 
 // Decides whether a '.section' directive
 // should be printed before the section name.
 bool MCSectionELF::ShouldOmitSectionDirective(StringRef Name,
                                               const MCAsmInfo &MAI) const {
-
   if (isUnique())
     return false;
 
@@ -56,7 +55,6 @@ static void printName(raw_ostream &OS, StringRef Name) {
 void MCSectionELF::PrintSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
                                         raw_ostream &OS,
                                         const MCExpr *Subsection) const {
-
   if (ShouldOmitSectionDirective(SectionName, MAI)) {
     OS << '\t' << getSectionName();
     if (Subsection) {

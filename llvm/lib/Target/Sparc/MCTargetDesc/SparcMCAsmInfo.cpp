@@ -1,4 +1,4 @@
-//===-- SparcMCAsmInfo.cpp - Sparc asm properties -------------------------===//
+//===- SparcMCAsmInfo.cpp - Sparc asm properties --------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -14,7 +14,10 @@
 #include "SparcMCAsmInfo.h"
 #include "SparcMCExpr.h"
 #include "llvm/ADT/Triple.h"
+#include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCStreamer.h"
+#include "llvm/MC/MCTargetOptions.h"
+#include "llvm/Support/Dwarf.h"
 
 using namespace llvm;
 
