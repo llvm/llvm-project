@@ -504,7 +504,7 @@ struct MCDwarfFrameInfo {
   const MCSymbol *Lsda = nullptr;
   std::vector<MCCFIInstruction> Instructions;
   unsigned CurrentCfaRegister = 0;
-  unsigned PersonalityEncoding;
+  unsigned PersonalityEncoding = 0;
   unsigned LsdaEncoding = 0;
   uint32_t CompactUnwindEncoding = 0;
   bool IsSignalFrame = false;

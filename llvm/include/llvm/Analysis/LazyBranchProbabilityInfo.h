@@ -105,5 +105,17 @@ public:
 
 /// \brief Helper for client passes to initialize dependent passes for LBPI.
 void initializeLazyBPIPassPass(PassRegistry &Registry);
+
+/// \brief Simple trait class that provides a mapping between BPI passes and the
+/// corresponding BPInfo.
+template <typename PassT> struct BPIPassTrait {
+  static PassT &getBPI(PassT *P) { return *P; }
+};
+
+template <> struct BPIPassTrait<LazyBranchProbabilityInfoPass> {
+  static BranchProbabilityInfo &getBPI(LazyBranchProbabilityInfoPass *P) {
+    return P->getBPI();
+  }
+};
 }
 #endif

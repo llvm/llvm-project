@@ -18,12 +18,16 @@ import os.path
 import json
 import argparse
 import logging
+import tempfile
 import subprocess
 import multiprocessing
-from libscanbuild import initialize_logging, tempdir, command_entry_point
+import contextlib
+import datetime
+from libscanbuild import initialize_logging, tempdir, command_entry_point, \
+    run_build
 from libscanbuild.runner import run
 from libscanbuild.intercept import capture
-from libscanbuild.report import report_directory, document
+from libscanbuild.report import document
 from libscanbuild.clang import get_checkers
 from libscanbuild.compilation import split_command
 
@@ -70,9 +74,7 @@ def analyze_build_main(bin_dir, from_build_command):
             # run the build command with compiler wrappers which
             # execute the analyzer too. (interposition)
             environment = setup_environment(args, target_dir, bin_dir)
-            logging.debug('run build in environment: %s', environment)
-            exit_code = subprocess.call(args.build, env=environment)
-            logging.debug('build finished with exit code: %d', exit_code)
+            exit_code = run_build(args.build, env=environment)
             # cover report generation and bug counting
             number_of_bugs = document(args, target_dir, False)
             # set exit status as it was requested
@@ -189,6 +191,39 @@ def analyze_build_wrapper(cplusplus):
     except Exception:
         logging.exception("run analyzer inside compiler wrapper failed.")
     return result
+
+
+@contextlib.contextmanager
+def report_directory(hint, keep):
+    """ Responsible for the report directory.
+
+    hint -- could specify the parent directory of the output directory.
+    keep -- a boolean value to keep or delete the empty report directory. """
+
+    stamp_format = 'scan-build-%Y-%m-%d-%H-%M-%S-%f-'
+    stamp = datetime.datetime.now().strftime(stamp_format)
+    parent_dir = os.path.abspath(hint)
+    if not os.path.exists(parent_dir):
+        os.makedirs(parent_dir)
+    name = tempfile.mkdtemp(prefix=stamp, dir=parent_dir)
+
+    logging.info('Report directory created: %s', name)
+
+    try:
+        yield name
+    finally:
+        if os.listdir(name):
+            msg = "Run 'scan-view %s' to examine bug reports."
+            keep = True
+        else:
+            if keep:
+                msg = "Report directory '%s' contains no report, but kept."
+            else:
+                msg = "Removing directory '%s' because it contains no report."
+        logging.warning(msg, name)
+
+        if not keep:
+            os.rmdir(name)
 
 
 def analyzer_params(args):

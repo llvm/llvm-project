@@ -9,7 +9,7 @@
 //
 // This is an alternative analysis pass to BlockFrequencyInfoWrapperPass.  The
 // difference is that with this pass the block frequencies are not computed when
-// the analysis pass is executed but rather when the BFI results is explicitly
+// the analysis pass is executed but rather when the BFI result is explicitly
 // requested by the analysis client.
 //
 //===----------------------------------------------------------------------===//
@@ -27,10 +27,58 @@ class BranchProbabilityInfo;
 class Function;
 class LoopInfo;
 
+/// Wraps a BFI to allow lazy computation of the block frequencies.
+///
+/// A pass that only conditionally uses BFI can uncondtionally require the
+/// analysis without paying for the overhead if BFI doesn't end up being used.
+template <typename FunctionT, typename BranchProbabilityInfoPassT,
+          typename LoopInfoT, typename BlockFrequencyInfoT>
+class LazyBlockFrequencyInfo {
+public:
+  LazyBlockFrequencyInfo()
+      : Calculated(false), F(nullptr), BPIPass(nullptr), LI(nullptr) {}
+
+  /// Set up the per-function input.
+  void setAnalysis(const FunctionT *F, BranchProbabilityInfoPassT *BPIPass,
+                   const LoopInfoT *LI) {
+    this->F = F;
+    this->BPIPass = BPIPass;
+    this->LI = LI;
+  }
+
+  /// Retrieve the BFI with the block frequencies computed.
+  BlockFrequencyInfoT &getCalculated() {
+    if (!Calculated) {
+      assert(F && BPIPass && LI && "call setAnalysis");
+      BFI.calculate(
+          *F, BPIPassTrait<BranchProbabilityInfoPassT>::getBPI(BPIPass), *LI);
+      Calculated = true;
+    }
+    return BFI;
+  }
+
+  const BlockFrequencyInfoT &getCalculated() const {
+    return const_cast<LazyBlockFrequencyInfo *>(this)->getCalculated();
+  }
+
+  void releaseMemory() {
+    BFI.releaseMemory();
+    Calculated = false;
+    setAnalysis(nullptr, nullptr, nullptr);
+  }
+
+private:
+  BlockFrequencyInfoT BFI;
+  bool Calculated;
+  const FunctionT *F;
+  BranchProbabilityInfoPassT *BPIPass;
+  const LoopInfoT *LI;
+};
+
 /// \brief This is an alternative analysis pass to
 /// BlockFrequencyInfoWrapperPass.  The difference is that with this pass the
 /// block frequencies are not computed when the analysis pass is executed but
-/// rather when the BFI results is explicitly requested by the analysis client.
+/// rather when the BFI result is explicitly requested by the analysis client.
 ///
 /// There are some additional requirements for any client pass that wants to use
 /// the analysis:
@@ -49,54 +97,12 @@ class LoopInfo;
 ///
 /// Note that it is expected that we wouldn't need this functionality for the
 /// new PM since with the new PM, analyses are executed on demand.
+
 class LazyBlockFrequencyInfoPass : public FunctionPass {
-
-  /// Wraps a BFI to allow lazy computation of the block frequencies.
-  ///
-  /// A pass that only conditionally uses BFI can uncondtionally require the
-  /// analysis without paying for the overhead if BFI doesn't end up being used.
-  class LazyBlockFrequencyInfo {
-  public:
-    LazyBlockFrequencyInfo()
-        : Calculated(false), F(nullptr), BPIPass(nullptr), LI(nullptr) {}
-
-    /// Set up the per-function input.
-    void setAnalysis(const Function *F, LazyBranchProbabilityInfoPass *BPIPass,
-                     const LoopInfo *LI) {
-      this->F = F;
-      this->BPIPass = BPIPass;
-      this->LI = LI;
-    }
-
-    /// Retrieve the BFI with the block frequencies computed.
-    BlockFrequencyInfo &getCalculated() {
-      if (!Calculated) {
-        assert(F && BPIPass && LI && "call setAnalysis");
-        BFI.calculate(*F, BPIPass->getBPI(), *LI);
-        Calculated = true;
-      }
-      return BFI;
-    }
-
-    const BlockFrequencyInfo &getCalculated() const {
-      return const_cast<LazyBlockFrequencyInfo *>(this)->getCalculated();
-    }
-
-    void releaseMemory() {
-      BFI.releaseMemory();
-      Calculated = false;
-      setAnalysis(nullptr, nullptr, nullptr);
-    }
-
-  private:
-    BlockFrequencyInfo BFI;
-    bool Calculated;
-    const Function *F;
-    LazyBranchProbabilityInfoPass *BPIPass;
-    const LoopInfo *LI;
-  };
-
-  LazyBlockFrequencyInfo LBFI;
+private:
+  LazyBlockFrequencyInfo<Function, LazyBranchProbabilityInfoPass, LoopInfo,
+                         BlockFrequencyInfo>
+      LBFI;
 
 public:
   static char ID;

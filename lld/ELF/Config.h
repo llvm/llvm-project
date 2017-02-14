@@ -163,7 +163,7 @@ struct Configuration {
   // Returns true if we need to pass through relocations in input
   // files to the output file. Usually false because we consume
   // relocations.
-  bool copyRelocs() const { return Relocatable || EmitRelocs; };
+  bool copyRelocs() const { return Relocatable || EmitRelocs; }
 
   // Returns true if we are creating position-independent code.
   bool pic() const { return Pie || Shared; }

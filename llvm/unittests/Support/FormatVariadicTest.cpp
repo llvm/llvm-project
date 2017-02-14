@@ -324,11 +324,13 @@ TEST(FormatVariadicTest, StringFormatting) {
   const char FooArray[] = "FooArray";
   const char *FooPtr = "FooPtr";
   llvm::StringRef FooRef("FooRef");
+  constexpr StringLiteral FooLiteral("FooLiteral");
   std::string FooString("FooString");
   // 1. Test that we can print various types of strings.
   EXPECT_EQ(FooArray, formatv("{0}", FooArray).str());
   EXPECT_EQ(FooPtr, formatv("{0}", FooPtr).str());
   EXPECT_EQ(FooRef, formatv("{0}", FooRef).str());
+  EXPECT_EQ(FooLiteral, formatv("{0}", FooLiteral).str());
   EXPECT_EQ(FooString, formatv("{0}", FooString).str());
 
   // 2. Test that the precision specifier prints the correct number of
