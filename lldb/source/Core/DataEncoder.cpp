@@ -19,7 +19,7 @@
 
 // Project includes
 #include "lldb/Core/DataBuffer.h"
-#include "lldb/Host/Endian.h"
+#include "lldb/Utility/Endian.h"
 
 using namespace lldb;
 using namespace lldb_private;

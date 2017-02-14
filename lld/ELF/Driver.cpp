@@ -600,9 +600,6 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   if (!Config->Relocatable)
     Config->Strip = getStripOption(Args);
 
-  // Config->Pic is true if we are generating position-independent code.
-  Config->Pic = Config->Pie || Config->Shared;
-
   if (auto *Arg = Args.getLastArg(OPT_hash_style)) {
     StringRef S = Arg->getValue();
     if (S == "gnu") {
@@ -772,7 +769,7 @@ static uint64_t getImageBase(opt::InputArgList &Args) {
   // has to be called after the variable is initialized.
   auto *Arg = Args.getLastArg(OPT_image_base);
   if (!Arg)
-    return Config->Pic ? 0 : Target->DefaultImageBase;
+    return Config->pic() ? 0 : Target->DefaultImageBase;
 
   StringRef S = Arg->getValue();
   uint64_t V;

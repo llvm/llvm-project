@@ -19,7 +19,8 @@
 // C++ Includes
 // Other libraries and framework includes
 // Project includes
-#include "lldb/Core/Flags.h"
+#include "lldb/Utility/Flags.h"
+
 #include "lldb/Core/StructuredData.h"
 #include "lldb/Host/File.h"
 #include "lldb/Interpreter/OptionValue.h"

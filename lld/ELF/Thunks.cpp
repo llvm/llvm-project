@@ -244,12 +244,12 @@ static Thunk<ELFT> *addThunkArm(uint32_t Reloc, SymbolBody &S) {
   case R_ARM_PC24:
   case R_ARM_PLT32:
   case R_ARM_JUMP24:
-    if (Config->Pic)
+    if (Config->pic())
       return make<ARMToThumbV7PILongThunk<ELFT>>(S);
     return make<ARMToThumbV7ABSLongThunk<ELFT>>(S);
   case R_ARM_THM_JUMP19:
   case R_ARM_THM_JUMP24:
-    if (Config->Pic)
+    if (Config->pic())
       return make<ThumbToARMV7PILongThunk<ELFT>>(S);
     return make<ThumbToARMV7ABSLongThunk<ELFT>>(S);
   }

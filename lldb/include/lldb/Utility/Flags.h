@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_Flags_h_
-#define liblldb_Flags_h_
+#ifndef LLDB_UTILITY_FLAGS_H
+#define LLDB_UTILITY_FLAGS_H
 
 #include <cstddef>
 #include <cstdint>
@@ -16,7 +16,7 @@
 namespace lldb_private {
 
 //----------------------------------------------------------------------
-/// @class Flags Flags.h "lldb/Core/Flags.h"
+/// @class Flags Flags.h "lldb/Utility/Flags.h"
 /// @brief A class to manage flags.
 ///
 /// The Flags class managed flag bits and allows testing and

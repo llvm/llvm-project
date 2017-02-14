@@ -18,8 +18,8 @@
 #include "lldb/Core/Event.h"
 #include "lldb/Core/Log.h"
 #include "lldb/Core/State.h"
-#include "lldb/Host/Endian.h"
 #include "lldb/Target/Process.h"
+#include "lldb/Utility/Endian.h"
 #include "lldb/Utility/Stream.h"
 
 using namespace lldb;
