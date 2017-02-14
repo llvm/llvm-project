@@ -52,6 +52,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo() {
   for (auto Ty : {s1, s8, s16, s32})
     setAction({G_GEP, 1, Ty}, WidenScalar);
 
+  setAction({G_PTR_MASK, p0}, Legal);
+
   for (unsigned BinOp : {G_LSHR, G_ASHR, G_SDIV, G_UDIV}) {
     for (auto Ty : {s32, s64})
       setAction({BinOp, Ty}, Legal);

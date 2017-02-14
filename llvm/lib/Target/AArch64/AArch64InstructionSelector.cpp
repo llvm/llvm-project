@@ -816,6 +816,17 @@ bool AArch64InstructionSelector::select(MachineInstr &I) const {
     return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
   }
 
+  case TargetOpcode::G_PTR_MASK: {
+    uint64_t Align = I.getOperand(2).getImm();
+    if (Align >= 64 || Align == 0)
+      return false;
+
+    uint64_t Mask = ~((1ULL << Align) - 1);
+    I.setDesc(TII.get(AArch64::ANDXri));
+    I.getOperand(2).setImm(AArch64_AM::encodeLogicalImmediate(Mask, 64));
+
+    return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
+  }
   case TargetOpcode::G_PTRTOINT:
   case TargetOpcode::G_TRUNC: {
     const LLT DstTy = MRI.getType(I.getOperand(0).getReg());
