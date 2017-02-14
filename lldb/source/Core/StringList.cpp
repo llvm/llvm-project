@@ -267,5 +267,5 @@ void StringList::LogDump(Log *log, const char *name) {
   if (name)
     strm.Printf("End %s.\n", name);
 
-  log->Debug("%s", strm.GetData());
+  LLDB_LOGV(log, "{0}", strm.GetData());
 }

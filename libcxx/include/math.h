@@ -293,6 +293,9 @@ long double    truncl(long double x);
 */
 
 #include <__config>
+#if defined(_LIBCPP_MSVCRT)
+#include <crtversion.h>
+#endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header

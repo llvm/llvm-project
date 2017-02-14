@@ -269,16 +269,16 @@ void ClangTidyDiagnosticConsumer::finalizeLastError() {
 static bool LineIsMarkedWithNOLINT(SourceManager &SM, SourceLocation Loc) {
   bool Invalid;
   const char *CharacterData = SM.getCharacterData(Loc, &Invalid);
-  if (!Invalid) {
-    const char *P = CharacterData;
-    while (*P != '\0' && *P != '\r' && *P != '\n')
-      ++P;
-    StringRef RestOfLine(CharacterData, P - CharacterData + 1);
-    // FIXME: Handle /\bNOLINT\b(\([^)]*\))?/ as cpplint.py does.
-    if (RestOfLine.find("NOLINT") != StringRef::npos) {
-      return true;
-    }
-  }
+  if (Invalid)
+    return false;
+
+  const char *P = CharacterData;
+  while (*P != '\0' && *P != '\r' && *P != '\n')
+    ++P;
+  StringRef RestOfLine(CharacterData, P - CharacterData + 1);
+  // FIXME: Handle /\bNOLINT\b(\([^)]*\))?/ as cpplint.py does.
+  if (RestOfLine.find("NOLINT") != StringRef::npos)
+    return true;
   return false;
 }
 

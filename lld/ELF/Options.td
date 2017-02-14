@@ -385,5 +385,9 @@ def lto_partitions: J<"lto-partitions=">,
   HelpText<"Number of LTO codegen partitions">;
 def disable_verify: F<"disable-verify">;
 def mllvm: S<"mllvm">;
+def opt_remarks_filename: S<"opt-remarks-filename">,
+  HelpText<"YAML output file for optimization remarks">;
+def opt_remarks_with_hotness: F<"opt-remarks-with-hotness">,
+  HelpText<"Include hotness informations in the optimization remarks file">;
 def save_temps: F<"save-temps">;
 def thinlto_jobs: J<"thinlto-jobs=">, HelpText<"Number of ThinLTO jobs">;

@@ -51,6 +51,10 @@
 # RUN: echo "{ foo1; foo2; foo31; };" > %t.list
 # RUN: ld.lld --dynamic-list %t.list %t %t2.so -o %t.exe
 # RUN: llvm-readobj -dyn-symbols %t.exe | FileCheck -check-prefix=CHECK2 %s
+# RUN: echo "{ foo1; foo2; };" > %t1.list
+# RUN: echo "{ foo31; };" > %t2.list
+# RUN: ld.lld --dynamic-list %t1.list --dynamic-list %t2.list %t %t2.so -o %t.exe
+# RUN: llvm-readobj -dyn-symbols %t.exe | FileCheck -check-prefix=CHECK2 %s
 
 # CHECK2:      DynamicSymbols [
 # CHECK2-NEXT:   Symbol {

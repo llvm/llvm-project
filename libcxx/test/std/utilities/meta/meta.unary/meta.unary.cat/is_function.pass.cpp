@@ -13,6 +13,7 @@
 
 #include <type_traits>
 #include <cstddef>        // for std::nullptr_t
+
 #include "test_macros.h"
 
 template <class T>
@@ -79,22 +80,27 @@ int main()
 	test_is_function<int(Abstract *)>();
 	test_is_function<void(...)>();
 
-    test_is_not_function<std::nullptr_t>();
-    test_is_not_function<void>();
-    test_is_not_function<int>();
-    test_is_not_function<int&>();
-    test_is_not_function<int&&>();
-    test_is_not_function<int*>();
-    test_is_not_function<double>();
-    test_is_not_function<char[3]>();
-    test_is_not_function<char[]>();
-    test_is_not_function<Union>();
-    test_is_not_function<Enum>();
-    test_is_not_function<FunctionPtr>(); // function pointer is not a function
-    test_is_not_function<Empty>();
-    test_is_not_function<bit_zero>();
-    test_is_not_function<NotEmpty>();
-    test_is_not_function<Abstract>();
-    test_is_not_function<Abstract*>();
-    test_is_not_function<incomplete_type>();
+  test_is_not_function<std::nullptr_t>();
+  test_is_not_function<void>();
+  test_is_not_function<int>();
+  test_is_not_function<int&>();
+  test_is_not_function<int&&>();
+  test_is_not_function<int*>();
+  test_is_not_function<double>();
+  test_is_not_function<char[3]>();
+  test_is_not_function<char[]>();
+  test_is_not_function<Union>();
+  test_is_not_function<Enum>();
+  test_is_not_function<FunctionPtr>(); // function pointer is not a function
+  test_is_not_function<Empty>();
+  test_is_not_function<bit_zero>();
+  test_is_not_function<NotEmpty>();
+  test_is_not_function<Abstract>();
+  test_is_not_function<Abstract*>();
+  test_is_not_function<incomplete_type>();
+
+#if TEST_STD_VER >= 11
+  test_is_function<void() noexcept>();
+  test_is_function<void() const && noexcept>();
+#endif
 }

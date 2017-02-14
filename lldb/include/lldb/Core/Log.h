@@ -29,7 +29,6 @@
 //----------------------------------------------------------------------
 #define LLDB_LOG_OPTION_THREADSAFE (1u << 0)
 #define LLDB_LOG_OPTION_VERBOSE (1u << 1)
-#define LLDB_LOG_OPTION_DEBUG (1u << 2)
 #define LLDB_LOG_OPTION_PREPEND_SEQUENCE (1u << 3)
 #define LLDB_LOG_OPTION_PREPEND_TIMESTAMP (1u << 4)
 #define LLDB_LOG_OPTION_PREPEND_PROC_AND_THREAD (1u << 5)
@@ -122,8 +121,6 @@ public:
   void LogIf(uint32_t mask, const char *fmt, ...)
       __attribute__((format(printf, 3, 4)));
 
-  void Debug(const char *fmt, ...) __attribute__((format(printf, 2, 3)));
-
   void Error(const char *fmt, ...) __attribute__((format(printf, 2, 3)));
 
   void VAError(const char *format, va_list args);
@@ -141,8 +138,6 @@ public:
   const Flags &GetMask() const;
 
   bool GetVerbose() const;
-
-  bool GetDebug() const;
 
   void SetStream(const std::shared_ptr<llvm::raw_ostream> &stream_sp) {
     m_stream_sp = stream_sp;
