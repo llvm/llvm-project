@@ -146,7 +146,7 @@ $builtin_logger_initialize()
   } else if (repl) {
     if (pound_file && pound_line) {
       wrapped_stream.Printf("#sourceLocation(file: \"%s\", line:  %u)\n%s\n",
-                            llvm::sys::path::filename(pound_file),
+                            llvm::sys::path::filename(pound_file).str().c_str(),
                             pound_line, orig_text);
     } else {
       wrapped_stream.Printf("%s", orig_text);
