@@ -39,6 +39,19 @@ def tempdir():
     return os.getenv('TMPDIR', os.getenv('TEMP', os.getenv('TMP', '/tmp')))
 
 
+def run_build(command, *args, **kwargs):
+    """ Run and report build command execution
+
+    :param command: array of tokens
+    :return: exit code of the process
+    """
+    environment = kwargs.get('env', os.environ)
+    logging.debug('run build %s, in environment: %s', command, environment)
+    exit_code = subprocess.call(command, *args, **kwargs)
+    logging.debug('build finished with exit code: %d', exit_code)
+    return exit_code
+
+
 def run_command(command, cwd=None):
     """ Run a given command and report the execution.
 

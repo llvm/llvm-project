@@ -92,6 +92,14 @@
 #error "wrong value for __cpp_nontype_template_args"
 #endif
 
+#if check(template_template_args, 0, 0, 0, 0) // FIXME: should be 201611 when feature is enabled
+#error "wrong value for __cpp_template_template_args"
+#endif
+
+#if check(deduction_guides, 0, 0, 0, 201611) // FIXME: provisional name
+#error "wrong value for __cpp_deduction_guides"
+#endif
+
 // --- C++14 features ---
 
 #if check(binary_literals, 0, 0, 201304, 201304)

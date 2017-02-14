@@ -1890,14 +1890,18 @@ void MicrosoftCXXNameMangler::mangleFunctionType(const FunctionType *T,
   // <return-type> ::= <type>
   //               ::= @ # structors (they have no declared return type)
   if (IsStructor) {
-    if (isa<CXXDestructorDecl>(D) && isStructorDecl(D) &&
-        StructorType == Dtor_Deleting) {
-      // The scalar deleting destructor takes an extra int argument.
-      // However, the FunctionType generated has 0 arguments.
-      // FIXME: This is a temporary hack.
-      // Maybe should fix the FunctionType creation instead?
-      Out << (PointersAre64Bit ? "PEAXI@Z" : "PAXI@Z");
-      return;
+    if (isa<CXXDestructorDecl>(D) && isStructorDecl(D)) {
+      // The scalar deleting destructor takes an extra int argument which is not
+      // reflected in the AST.
+      if (StructorType == Dtor_Deleting) {
+        Out << (PointersAre64Bit ? "PEAXI@Z" : "PAXI@Z");
+        return;
+      }
+      // The vbase destructor returns void which is not reflected in the AST.
+      if (StructorType == Dtor_Complete) {
+        Out << "XXZ";
+        return;
+      }
     }
     if (IsCtorClosure) {
       // Default constructor closure and copy constructor closure both return
@@ -2005,13 +2009,20 @@ void MicrosoftCXXNameMangler::mangleFunctionClass(const FunctionDecl *FD) {
   // <global-function> ::= Y # global near
   //                   ::= Z # global far
   if (const CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(FD)) {
+    bool IsVirtual = MD->isVirtual();
+    // When mangling vbase destructor variants, ignore whether or not the
+    // underlying destructor was defined to be virtual.
+    if (isa<CXXDestructorDecl>(MD) && isStructorDecl(MD) &&
+        StructorType == Dtor_Complete) {
+      IsVirtual = false;
+    }
     switch (MD->getAccess()) {
       case AS_none:
         llvm_unreachable("Unsupported access specifier");
       case AS_private:
         if (MD->isStatic())
           Out << 'C';
-        else if (MD->isVirtual())
+        else if (IsVirtual)
           Out << 'E';
         else
           Out << 'A';
@@ -2019,7 +2030,7 @@ void MicrosoftCXXNameMangler::mangleFunctionClass(const FunctionDecl *FD) {
       case AS_protected:
         if (MD->isStatic())
           Out << 'K';
-        else if (MD->isVirtual())
+        else if (IsVirtual)
           Out << 'M';
         else
           Out << 'I';
@@ -2027,7 +2038,7 @@ void MicrosoftCXXNameMangler::mangleFunctionClass(const FunctionDecl *FD) {
       case AS_public:
         if (MD->isStatic())
           Out << 'S';
-        else if (MD->isVirtual())
+        else if (IsVirtual)
           Out << 'U';
         else
           Out << 'Q';

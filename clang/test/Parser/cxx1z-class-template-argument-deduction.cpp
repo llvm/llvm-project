@@ -31,11 +31,11 @@ namespace template_template_arg {
 namespace injected_class_name {
   template<typename T> struct A {
     A(T);
-    void f(int) {
+    void f(int) { // expected-note {{previous}}
       A a = 1;
-      injected_class_name::A b = 1; // expected-error {{no viable constructor or deduction guide}}
+      injected_class_name::A b = 1; // expected-note {{in instantiation of template class 'injected_class_name::A<int>'}}
     }
-    void f(T);
+    void f(T); // expected-error {{multiple overloads of 'f' instantiate to the same signature 'void (int)}}
   };
   A<short> ai = 1;
   A<double>::A b(1); // expected-error {{constructor name}}
@@ -165,19 +165,17 @@ namespace typename_specifier {
   typename ::A (*fp)() = 0; // expected-error {{cannot form function returning deduced class template specialization type}}
   typename ::A [x, y] = 0; // expected-error {{cannot be declared with type 'typename ::A'}} expected-error {{type 'typename ::A<int>' (aka 'A<int>') decomposes into 0}}
 
-  struct X { template<typename T> struct A {}; }; // expected-note 8{{template}}
+  struct X { template<typename T> struct A { A(T); }; }; // expected-note 8{{declared here}}
 
-  // FIXME: We do not yet properly support class template argument deduction
-  // during template instantiation.
   template<typename T> void f() {
-    (void) typename T::A(0); // expected-error {{no viable}}
-    (void) typename T::A{0}; // expected-error {{no viable}}
-    new typename T::A(0); // expected-error {{no viable}}
-    new typename T::A{0}; // expected-error {{no viable}}
-    typename T::A a = 0; // expected-error {{no viable}}
-    const typename T::A b = 0; // expected-error {{no viable}}
-    if (typename T::A a = 0) {} // expected-error {{no viable}}
-    for (typename T::A a = 0; typename T::A b = 0; /**/) {} // expected-error 2{{no viable}}
+    (void) typename T::A(0);
+    (void) typename T::A{0};
+    new typename T::A(0);
+    new typename T::A{0};
+    typename T::A a = 0;
+    const typename T::A b = 0;
+    if (typename T::A a = 0) {} // expected-error {{value of type 'typename X::A<int>' (aka 'typename_specifier::X::A<int>') is not contextually convertible to 'bool'}}
+    for (typename T::A a = 0; typename T::A b = 0; /**/) {} // expected-error {{value of type 'typename X::A<int>' (aka 'typename_specifier::X::A<int>') is not contextually convertible to 'bool'}}
 
     {(void)(typename T::A)(0);} // expected-error{{refers to class template member}}
     {(void)(typename T::A){0};} // expected-error{{refers to class template member}}
@@ -187,7 +185,7 @@ namespace typename_specifier {
     {typename T::A arr[3] = 0;} // expected-error {{refers to class template member}}
     {typename T::A F::*pm = 0;} // expected-error {{refers to class template member}}
     {typename T::A (*fp)() = 0;} // expected-error {{refers to class template member}}
-    {typename T::A [x, y] = 0;} // expected-error {{cannot be declared with type 'typename T::A'}} expected-error {{no viable}}
+    {typename T::A [x, y] = 0;} // expected-error {{cannot be declared with type 'typename T::A'}} expected-error {{type 'typename X::A<int>' (aka 'typename_specifier::X::A<int>') decomposes into 0}}
   }
   template void f<X>(); // expected-note {{instantiation of}}
 

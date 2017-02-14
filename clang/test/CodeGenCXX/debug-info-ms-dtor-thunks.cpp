@@ -5,10 +5,10 @@ struct __declspec(dllexport) T { virtual ~T(); };
 struct __declspec(dllexport) U : S, T { virtual ~U(); };
 
 // CHECK-LABEL: define {{.*}} @"\01??_GS@@UAEPAXI@Z"
-// CHECK: call x86_thiscallcc void @"\01??_DS@@UAE@XZ"(%struct.S* %this1){{.*}}!dbg !{{[0-9]+}}
+// CHECK: call x86_thiscallcc void @"\01??_DS@@QAEXXZ"(%struct.S* %this1){{.*}}!dbg !{{[0-9]+}}
 
 // CHECK-LABEL: define {{.*}} @"\01??_GT@@UAEPAXI@Z"
-// CHECK: call x86_thiscallcc void @"\01??_DT@@UAE@XZ"(%struct.T* %this1){{.*}}!dbg !{{[0-9]+}}
+// CHECK: call x86_thiscallcc void @"\01??_DT@@QAEXXZ"(%struct.T* %this1){{.*}}!dbg !{{[0-9]+}}
 
 // CHECK-LABEL: define {{.*}} @"\01??_GU@@UAEPAXI@Z"
-// CHECK: call x86_thiscallcc void @"\01??_DU@@UAE@XZ"(%struct.U* %this1){{.*}}!dbg !{{[0-9]+}}
+// CHECK: call x86_thiscallcc void @"\01??_DU@@QAEXXZ"(%struct.U* %this1){{.*}}!dbg !{{[0-9]+}}

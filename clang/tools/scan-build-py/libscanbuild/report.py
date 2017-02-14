@@ -13,54 +13,15 @@ import os
 import os.path
 import sys
 import shutil
-import time
-import tempfile
 import itertools
 import plistlib
 import glob
 import json
 import logging
-import contextlib
-import datetime
 from libscanbuild import duplicate_check
 from libscanbuild.clang import get_version
 
-__all__ = ['report_directory', 'document']
-
-
-@contextlib.contextmanager
-def report_directory(hint, keep):
-    """ Responsible for the report directory.
-
-    hint -- could specify the parent directory of the output directory.
-    keep -- a boolean value to keep or delete the empty report directory. """
-
-    stamp_format = 'scan-build-%Y-%m-%d-%H-%M-%S-%f-'
-    stamp = datetime.datetime.now().strftime(stamp_format)
-
-    parentdir = os.path.abspath(hint)
-    if not os.path.exists(parentdir):
-        os.makedirs(parentdir)
-
-    name = tempfile.mkdtemp(prefix=stamp, dir=parentdir)
-
-    logging.info('Report directory created: %s', name)
-
-    try:
-        yield name
-    finally:
-        if os.listdir(name):
-            msg = "Run 'scan-view %s' to examine bug reports."
-            keep = True
-        else:
-            if keep:
-                msg = "Report directory '%s' contans no report, but kept."
-            else:
-                msg = "Removing directory '%s' because it contains no report."
-        logging.warning(msg, name)
-
-        if not keep:
-            os.rmdir(name)
+__all__ = ['document']
 
 
 def document(args, output_dir, use_cdb):
