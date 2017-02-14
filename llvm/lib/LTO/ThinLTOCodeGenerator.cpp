@@ -150,13 +150,13 @@ static void computePrevailingCopies(
 }
 
 static StringMap<MemoryBufferRef>
-generateModuleMap(const std::vector<MemoryBufferRef> &Modules) {
+generateModuleMap(const std::vector<ThinLTOBuffer> &Modules) {
   StringMap<MemoryBufferRef> ModuleMap;
   for (auto &ModuleBuffer : Modules) {
     assert(ModuleMap.find(ModuleBuffer.getBufferIdentifier()) ==
                ModuleMap.end() &&
            "Expect unique Buffer Identifier");
-    ModuleMap[ModuleBuffer.getBufferIdentifier()] = ModuleBuffer;
+    ModuleMap[ModuleBuffer.getBufferIdentifier()] = ModuleBuffer.getMemBuffer();
   }
   return ModuleMap;
 }
@@ -522,13 +522,13 @@ static void initTMBuilder(TargetMachineBuilder &TMBuilder,
 } // end anonymous namespace
 
 void ThinLTOCodeGenerator::addModule(StringRef Identifier, StringRef Data) {
-  MemoryBufferRef Buffer(Data, Identifier);
+  ThinLTOBuffer Buffer(Data, Identifier);
   if (Modules.empty()) {
     // First module added, so initialize the triple and some options
     LLVMContext Context;
     StringRef TripleStr;
-    ErrorOr<std::string> TripleOrErr =
-        expectedToErrorOrAndEmitErrors(Context, getBitcodeTargetTriple(Buffer));
+    ErrorOr<std::string> TripleOrErr = expectedToErrorOrAndEmitErrors(
+        Context, getBitcodeTargetTriple(Buffer.getMemBuffer()));
     if (TripleOrErr)
       TripleStr = *TripleOrErr;
     Triple TheTriple(TripleStr);
@@ -538,8 +538,8 @@ void ThinLTOCodeGenerator::addModule(StringRef Identifier, StringRef Data) {
   else {
     LLVMContext Context;
     StringRef TripleStr;
-    ErrorOr<std::string> TripleOrErr =
-        expectedToErrorOrAndEmitErrors(Context, getBitcodeTargetTriple(Buffer));
+    ErrorOr<std::string> TripleOrErr = expectedToErrorOrAndEmitErrors(
+        Context, getBitcodeTargetTriple(Buffer.getMemBuffer()));
     if (TripleOrErr)
       TripleStr = *TripleOrErr;
     assert(TMBuilder.TheTriple.str() == TripleStr &&
@@ -588,7 +588,8 @@ std::unique_ptr<ModuleSummaryIndex> ThinLTOCodeGenerator::linkCombinedIndex() {
   uint64_t NextModuleId = 0;
   for (auto &ModuleBuffer : Modules) {
     Expected<std::unique_ptr<object::ModuleSummaryIndexObjectFile>> ObjOrErr =
-        object::ModuleSummaryIndexObjectFile::create(ModuleBuffer);
+        object::ModuleSummaryIndexObjectFile::create(
+            ModuleBuffer.getMemBuffer());
     if (!ObjOrErr) {
       // FIXME diagnose
       logAllUnhandledErrors(
@@ -852,8 +853,9 @@ void ThinLTOCodeGenerator::run() {
         Context.setDiscardValueNames(LTODiscardValueNames);
 
         // Parse module now
-        auto TheModule = loadModuleFromBuffer(ModuleBuffer, Context, false,
-                                              /*IsImporting*/ false);
+        auto TheModule =
+            loadModuleFromBuffer(ModuleBuffer.getMemBuffer(), Context, false,
+                                 /*IsImporting*/ false);
 
         // CodeGen
         auto OutputBuffer = codegen(*TheModule);
@@ -943,8 +945,8 @@ void ThinLTOCodeGenerator::run() {
   std::iota(ModulesOrdering.begin(), ModulesOrdering.end(), 0);
   std::sort(ModulesOrdering.begin(), ModulesOrdering.end(),
             [&](int LeftIndex, int RightIndex) {
-              auto LSize = Modules[LeftIndex].getBufferSize();
-              auto RSize = Modules[RightIndex].getBufferSize();
+              auto LSize = Modules[LeftIndex].getBuffer().size();
+              auto RSize = Modules[RightIndex].getBuffer().size();
               return LSize > RSize;
             });
 
@@ -996,8 +998,9 @@ void ThinLTOCodeGenerator::run() {
         }
 
         // Parse module now
-        auto TheModule = loadModuleFromBuffer(ModuleBuffer, Context, false,
-                                              /*IsImporting*/ false);
+        auto TheModule =
+            loadModuleFromBuffer(ModuleBuffer.getMemBuffer(), Context, false,
+                                 /*IsImporting*/ false);
 
         // Save temps: original file.
         saveTempBitcode(*TheModule, SaveTempsDir, count, ".0.original.bc");
