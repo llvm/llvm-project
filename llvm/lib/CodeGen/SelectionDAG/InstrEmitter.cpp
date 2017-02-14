@@ -235,7 +235,6 @@ void InstrEmitter::CreateVirtualRegisters(SDNode *Node,
 
     if (II.OpInfo[i].isOptionalDef()) {
       // Optional def must be a physical register.
-      unsigned NumResults = CountResults(Node);
       VRBase = cast<RegisterSDNode>(Node->getOperand(i-NumResults))->getReg();
       assert(TargetRegisterInfo::isPhysicalRegister(VRBase));
       MIB.addReg(VRBase, RegState::Define);

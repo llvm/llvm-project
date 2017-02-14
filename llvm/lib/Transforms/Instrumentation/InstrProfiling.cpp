@@ -532,6 +532,9 @@ void InstrProfiling::emitNameData() {
   NamesSize = CompressedNameStr.size();
   NamesVar->setSection(getNameSection());
   UsedVars.push_back(NamesVar);
+
+  for (auto *NamePtr : ReferencedNames)
+    NamePtr->eraseFromParent();
 }
 
 void InstrProfiling::emitRegistration() {

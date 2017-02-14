@@ -446,7 +446,7 @@ bool X86TargetInfo::isTlsInitialExecRel(uint32_t Type) const {
 void X86TargetInfo::writePltHeader(uint8_t *Buf) const {
   // Executable files and shared object files have
   // separate procedure linkage tables.
-  if (Config->Pic) {
+  if (Config->pic()) {
     const uint8_t V[] = {
         0xff, 0xb3, 0x04, 0x00, 0x00, 0x00, // pushl 4(%ebx)
         0xff, 0xa3, 0x08, 0x00, 0x00, 0x00, // jmp   *8(%ebx)
@@ -478,7 +478,7 @@ void X86TargetInfo::writePlt(uint8_t *Buf, uint64_t GotEntryAddr,
   memcpy(Buf, Inst, sizeof(Inst));
 
   // jmp *foo@GOT(%ebx) or jmp *foo_in_GOT
-  Buf[1] = Config->Pic ? 0xa3 : 0x25;
+  Buf[1] = Config->pic() ? 0xa3 : 0x25;
   uint32_t Got = In<ELF32LE>::GotPlt->getVA();
   write32le(Buf + 2, Config->Shared ? GotEntryAddr - Got : GotEntryAddr);
   write32le(Buf + 7, RelOff);
@@ -491,11 +491,9 @@ int64_t X86TargetInfo::getImplicitAddend(const uint8_t *Buf,
   default:
     return 0;
   case R_386_8:
-    return *Buf;
   case R_386_PC8:
     return SignExtend64<8>(*Buf);
   case R_386_16:
-    return read16le(Buf);
   case R_386_PC16:
     return SignExtend64<16>(read16le(Buf));
   case R_386_32:
@@ -506,7 +504,7 @@ int64_t X86TargetInfo::getImplicitAddend(const uint8_t *Buf,
   case R_386_PC32:
   case R_386_PLT32:
   case R_386_TLS_LE:
-    return read32le(Buf);
+    return SignExtend64<32>(read32le(Buf));
   }
 }
 
@@ -946,7 +944,7 @@ RelExpr X86_64TargetInfo<ELFT>::adjustRelaxExpr(uint32_t Type,
   // We also don't relax test/binop instructions without REX byte,
   // they are 32bit operations and not common to have.
   assert(Type == R_X86_64_REX_GOTPCRELX);
-  return Config->Pic ? RelExpr : R_RELAX_GOT_PC_NOPIC;
+  return Config->pic() ? RelExpr : R_RELAX_GOT_PC_NOPIC;
 }
 
 // A subset of relaxations can only be applied for no-PIC. This method
@@ -1033,7 +1031,7 @@ void X86_64TargetInfo<ELFT>::relaxGot(uint8_t *Loc, uint64_t Val) const {
   if (Op != 0xff) {
     // We are relaxing a rip relative to an absolute, so compensate
     // for the old -4 addend.
-    assert(!Config->Pic);
+    assert(!Config->pic());
     relaxGotNoPic(Loc, Val + 4, Op, ModRm);
     return;
   }
@@ -2264,7 +2262,7 @@ int64_t MipsTargetInfo<ELFT>::getImplicitAddend(const uint8_t *Buf,
   case R_MIPS_GPREL32:
   case R_MIPS_TLS_DTPREL32:
   case R_MIPS_TLS_TPREL32:
-    return read32<E>(Buf);
+    return SignExtend64<32>(read32<E>(Buf));
   case R_MIPS_26:
     // FIXME (simon): If the relocation target symbol is not a PLT entry
     // we should use another expression for calculation:

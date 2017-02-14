@@ -1,4 +1,4 @@
-// RUN: %clang_cl_asan %s -Fe%t.exe
+// RUN: %clang_cl_asan %s -Fe%t.exe /MD
 // RUN: %run %t.exe | FileCheck %s
 
 // CHECK: my_thread_callback

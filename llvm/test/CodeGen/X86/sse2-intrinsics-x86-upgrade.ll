@@ -147,7 +147,6 @@ define <16 x i8> @max_epu8(<16 x i8> %a0, <16 x i8> %a1) {
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    pmaxub %xmm1, %xmm0
 ; CHECK-NEXT:    retl
-;
   %res = call <16 x i8> @llvm.x86.sse2.pmaxu.b(<16 x i8> %a0, <16 x i8> %a1)
   ret <16 x i8> %res
 }
@@ -158,7 +157,6 @@ define <16 x i8> @min_epu8(<16 x i8> %a0, <16 x i8> %a1) {
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    pminub %xmm1, %xmm0
 ; CHECK-NEXT:    retl
-;
   %res = call <16 x i8> @llvm.x86.sse2.pminu.b(<16 x i8> %a0, <16 x i8> %a1)
   ret <16 x i8> %res
 }
@@ -169,7 +167,6 @@ define <8 x i16> @max_epi16(<8 x i16> %a0, <8 x i16> %a1) {
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    pmaxsw %xmm1, %xmm0
 ; CHECK-NEXT:    retl
-;
   %res = call <8 x i16> @llvm.x86.sse2.pmaxs.w(<8 x i16> %a0, <8 x i16> %a1)
   ret <8 x i16> %res
 }
@@ -180,7 +177,6 @@ define <8 x i16> @min_epi16(<8 x i16> %a0, <8 x i16> %a1) {
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    pminsw %xmm1, %xmm0
 ; CHECK-NEXT:    retl
-;
   %res = call <8 x i16> @llvm.x86.sse2.pmins.w(<8 x i16> %a0, <8 x i16> %a1)
   ret <8 x i16> %res
 }

@@ -2559,7 +2559,12 @@ static Value *getWideOperand(Value *Oper) {
 static bool isCompatibleIVType(Value *LVal, Value *RVal) {
   Type *LType = LVal->getType();
   Type *RType = RVal->getType();
-  return (LType == RType) || (LType->isPointerTy() && RType->isPointerTy());
+  return (LType == RType) || (LType->isPointerTy() && RType->isPointerTy() &&
+                              // Different address spaces means (possibly)
+                              // different types of the pointer implementation,
+                              // e.g. i16 vs i32 so disallow that.
+                              (LType->getPointerAddressSpace() ==
+                               RType->getPointerAddressSpace()));
 }
 
 /// Return an approximation of this SCEV expression's "base", or NULL for any

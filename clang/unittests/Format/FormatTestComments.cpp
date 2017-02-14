@@ -20,7 +20,6 @@
 #define DEBUG_TYPE "format-test"
 
 using clang::tooling::ReplacementTest;
-using clang::tooling::toReplacements;
 
 namespace clang {
 namespace format {
@@ -65,12 +64,6 @@ protected:
   void verifyFormat(llvm::StringRef Code,
                     const FormatStyle &Style = getLLVMStyle()) {
     EXPECT_EQ(Code.str(), format(test::messUp(Code), Style));
-  }
-
-  void verifyIncompleteFormat(llvm::StringRef Code,
-                              const FormatStyle &Style = getLLVMStyle()) {
-    EXPECT_EQ(Code.str(),
-              format(test::messUp(Code), Style, IC_ExpectIncomplete));
   }
 
   void verifyGoogleFormat(llvm::StringRef Code) {

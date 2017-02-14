@@ -1660,7 +1660,13 @@ int BoUpSLP::getEntryCost(TreeEntry *E) {
         int DeadCost = 0;
         for (unsigned i = 0, e = VL.size(); i < e; ++i) {
           Instruction *E = cast<Instruction>(VL[i]);
-          if (E->hasOneUse())
+          // If all users are going to be vectorized, instruction can be
+          // considered as dead.
+          // The same, if have only one user, it will be vectorized for sure.
+          if (E->hasOneUse() ||
+              std::all_of(E->user_begin(), E->user_end(), [this](User *U) {
+                return ScalarToTreeEntry.count(U) > 0;
+              }))
             // Take credit for instruction that will become dead.
             DeadCost +=
                 TTI->getVectorInstrCost(Instruction::ExtractElement, VecTy, i);

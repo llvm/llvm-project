@@ -174,6 +174,8 @@ if(LLVM_BUILD_GLOBAL_ISEL)
   add_definitions(-DLLVM_BUILD_GLOBAL_ISEL)
 endif()
 
+option(LLVM_ENABLE_DAGISEL_COV "Debug: Prints tablegen patterns that were used for selecting" OFF)
+
 # Add path for custom modules
 set(CMAKE_MODULE_PATH
   ${CMAKE_MODULE_PATH}

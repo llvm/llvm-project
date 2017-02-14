@@ -23,6 +23,7 @@ namespace llvm {
 
 class MachineBasicBlock;
 class MachineBranchProbabilityInfo;
+class MachineLoopInfo;
 template <class BlockT> class BlockFrequencyInfoImpl;
 
 /// MachineBlockFrequencyInfo pass uses BlockFrequencyInfoImpl implementation
@@ -41,6 +42,11 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 
   bool runOnMachineFunction(MachineFunction &F) override;
+
+  /// calculate - compute block frequency info for the given function.
+  void calculate(const MachineFunction &F,
+                 const MachineBranchProbabilityInfo &MBPI,
+                 const MachineLoopInfo &MLI);
 
   void releaseMemory() override;
 

@@ -639,10 +639,6 @@ unsigned HexagonInstrInfo::insertBranch(MachineBasicBlock &MBB,
     SmallPtrSet<MachineBasicBlock *, 8> VisitedBBs;
     MachineInstr *Loop = findLoopInstr(TBB, EndLoopOp, Cond[1].getMBB(),
                                        VisitedBBs);
-if (Loop == 0) {
-  MachineFunction &MF = *MBB.getParent();
-  MF.print(dbgs(), 0);
-}
     assert(Loop != 0 && "Inserting an ENDLOOP without a LOOP");
     Loop->getOperand(0).setMBB(TBB);
     // Add the ENDLOOP after the finding the LOOP0.

@@ -8224,23 +8224,36 @@ static SDValue lowerVectorShuffleToEXPAND(const SDLoc &DL, MVT VT,
 
 static bool matchVectorShuffleWithUNPCK(MVT VT, SDValue &V1, SDValue &V2,
                                         unsigned &UnpackOpcode, bool IsUnary,
-                                        ArrayRef<int> TargetMask) {
+                                        ArrayRef<int> TargetMask,
+                                        SelectionDAG &DAG) {
+  int NumElts = VT.getVectorNumElements();
+
+  bool Undef1 = true, Undef2 = true;
+  for (int i = 0; (i != NumElts) && (Undef1 || Undef2); i += 2) {
+    Undef1 &= (SM_SentinelUndef == TargetMask[i + 0]);
+    Undef2 &= (SM_SentinelUndef == TargetMask[i + 1]);
+  }
+
   // Attempt to match the target mask against the unpack lo/hi mask patterns.
   SmallVector<int, 64> Unpckl, Unpckh;
   createUnpackShuffleMask(VT, Unpckl, /* Lo = */ true, IsUnary);
   if (isTargetShuffleEquivalent(TargetMask, Unpckl)) {
     UnpackOpcode = X86ISD::UNPCKL;
+    V2 = (Undef2 ? DAG.getUNDEF(VT) : (IsUnary ? V1 : V2));
+    V1 = (Undef1 ? DAG.getUNDEF(VT) : V1);
     return true;
   }
 
   createUnpackShuffleMask(VT, Unpckh, /* Lo = */ false, IsUnary);
   if (isTargetShuffleEquivalent(TargetMask, Unpckh)) {
     UnpackOpcode = X86ISD::UNPCKH;
+    V2 = (Undef2 ? DAG.getUNDEF(VT) : (IsUnary ? V1 : V2));
+    V1 = (Undef1 ? DAG.getUNDEF(VT) : V1);
     return true;
   }
 
-  // If a binary shuffle, commute and try again.
   if (!IsUnary) {
+    // If a binary shuffle, commute and try again.
     ShuffleVectorSDNode::commuteMask(Unpckl);
     if (isTargetShuffleEquivalent(TargetMask, Unpckl)) {
       UnpackOpcode = X86ISD::UNPCKL;
@@ -26569,6 +26582,7 @@ static bool matchUnaryPermuteVectorShuffle(MVT MaskVT, ArrayRef<int> Mask,
 // TODO: Investigate sharing more of this with shuffle lowering.
 static bool matchBinaryVectorShuffle(MVT MaskVT, ArrayRef<int> Mask,
                                      bool FloatDomain, SDValue &V1, SDValue &V2,
+                                     SelectionDAG &DAG,
                                      const X86Subtarget &Subtarget,
                                      unsigned &Shuffle, MVT &ShuffleVT,
                                      bool IsUnary) {
@@ -26608,15 +26622,11 @@ static bool matchBinaryVectorShuffle(MVT MaskVT, ArrayRef<int> Mask,
       (MaskVT.is256BitVector() && 32 <= EltSizeInBits && Subtarget.hasAVX()) ||
       (MaskVT.is256BitVector() && Subtarget.hasAVX2()) ||
       (MaskVT.is512BitVector() && Subtarget.hasAVX512())) {
-    MVT LegalVT = MaskVT;
-    if (LegalVT.is256BitVector() && !Subtarget.hasAVX2())
-      LegalVT = (32 == EltSizeInBits ? MVT::v8f32 : MVT::v4f64);
-
-    if (matchVectorShuffleWithUNPCK(MaskVT, V1, IsUnary ? V1 : V2, Shuffle,
-                                    IsUnary, Mask)) {
-      if (IsUnary)
-        V2 = V1;
-      ShuffleVT = LegalVT;
+    if (matchVectorShuffleWithUNPCK(MaskVT, V1, V2, Shuffle, IsUnary, Mask,
+                                    DAG)) {
+      ShuffleVT = MaskVT;
+      if (ShuffleVT.is256BitVector() && !Subtarget.hasAVX2())
+        ShuffleVT = (32 == EltSizeInBits ? MVT::v8f32 : MVT::v4f64);
       return true;
     }
   }
@@ -26944,8 +26954,8 @@ static bool combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
     }
   }
 
-  if (matchBinaryVectorShuffle(MaskVT, Mask, FloatDomain, V1, V2, Subtarget,
-                               Shuffle, ShuffleVT, UnaryShuffle)) {
+  if (matchBinaryVectorShuffle(MaskVT, Mask, FloatDomain, V1, V2, DAG,
+                               Subtarget, Shuffle, ShuffleVT, UnaryShuffle)) {
     if (Depth == 1 && Root.getOpcode() == Shuffle)
       return false; // Nothing to do!
     if (IsEVEXShuffle && (NumRootElts != ShuffleVT.getVectorNumElements()))

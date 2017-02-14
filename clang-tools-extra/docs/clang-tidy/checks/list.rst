@@ -139,6 +139,7 @@ Clang-Tidy Checks
    readability-identifier-naming
    readability-implicit-bool-cast
    readability-inconsistent-declaration-parameter-name
+   readability-misleading-indentation
    readability-misplaced-array-index
    readability-named-parameter
    readability-non-const-parameter

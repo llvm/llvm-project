@@ -662,6 +662,47 @@ define <32 x i8> @combine_pshufb_not_as_pshufw(<32 x i8> %a0) {
   ret <32 x i8> %res1
 }
 
+define <32 x i8> @combine_pshufb_as_unpacklo_undef(<32 x i8> %a0) {
+; X32-LABEL: combine_pshufb_as_unpacklo_undef:
+; X32:       # BB#0:
+; X32-NEXT:    retl
+;
+; X64-LABEL: combine_pshufb_as_unpacklo_undef:
+; X64:       # BB#0:
+; X64-NEXT:    retq
+  %1 = tail call <32 x i8> @llvm.x86.avx2.pshuf.b(<32 x i8> %a0, <32 x i8> <i8 undef, i8 0, i8 undef, i8 1, i8 undef, i8 2, i8 undef, i8 3, i8 undef, i8 4, i8 undef, i8 5, i8 undef, i8 6, i8 undef, i8 7, i8 undef, i8 16, i8 undef, i8 17, i8 undef, i8 18, i8 undef, i8 19, i8 undef, i8 20, i8 undef, i8 21, i8 undef, i8 22, i8 undef, i8 23>)
+  %2 = shufflevector <32 x i8> %1, <32 x i8> undef, <32 x i32> <i32 0, i32 0, i32 2, i32 2, i32 4, i32 4, i32 6, i32 6, i32 8, i32 8, i32 10, i32 10, i32 12, i32 12, i32 14, i32 14, i32 16, i32 16, i32 18, i32 18, i32 20, i32 20, i32 22, i32 22, i32 24, i32 24, i32 26, i32 26, i32 28, i32 28, i32 30, i32 30>
+  ret <32 x i8> %2
+}
+
+define <32 x i8> @combine_pshufb_as_unpacklo_zero(<32 x i8> %a0) {
+; X32-LABEL: combine_pshufb_as_unpacklo_zero:
+; X32:       # BB#0:
+; X32-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1],zero,zero,ymm0[2,3],zero,zero,ymm0[4,5],zero,zero,ymm0[6,7],zero,zero,ymm0[16,17],zero,zero,ymm0[18,19],zero,zero,ymm0[20,21],zero,zero,ymm0[22,23],zero,zero
+; X32-NEXT:    retl
+;
+; X64-LABEL: combine_pshufb_as_unpacklo_zero:
+; X64:       # BB#0:
+; X64-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1],zero,zero,ymm0[2,3],zero,zero,ymm0[4,5],zero,zero,ymm0[6,7],zero,zero,ymm0[16,17],zero,zero,ymm0[18,19],zero,zero,ymm0[20,21],zero,zero,ymm0[22,23],zero,zero
+; X64-NEXT:    retq
+  %1 = tail call <32 x i8> @llvm.x86.avx2.pshuf.b(<32 x i8> %a0, <32 x i8> <i8 0, i8 1, i8 -1, i8 -1, i8 2, i8 3, i8 -1, i8 -1, i8 4, i8 5, i8 -1, i8 -1, i8 6, i8 7, i8 -1, i8 -1, i8 16, i8 17, i8 -1, i8 -1, i8 18, i8 19, i8 -1, i8 -1, i8 20, i8 21, i8 -1, i8 -1, i8 22, i8 23, i8 -1, i8 -1>)
+  ret <32 x i8> %1
+}
+
+define <32 x i8> @combine_pshufb_as_unpackhi_zero(<32 x i8> %a0) {
+; X32-LABEL: combine_pshufb_as_unpackhi_zero:
+; X32:       # BB#0:
+; X32-NEXT:    vpshufb {{.*#+}} ymm0 = zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero,ymm0[24],zero,ymm0[25],zero,ymm0[26],zero,ymm0[27],zero,ymm0[28],zero,ymm0[29],zero,ymm0[30],zero,ymm0[31]
+; X32-NEXT:    retl
+;
+; X64-LABEL: combine_pshufb_as_unpackhi_zero:
+; X64:       # BB#0:
+; X64-NEXT:    vpshufb {{.*#+}} ymm0 = zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero,ymm0[24],zero,ymm0[25],zero,ymm0[26],zero,ymm0[27],zero,ymm0[28],zero,ymm0[29],zero,ymm0[30],zero,ymm0[31]
+; X64-NEXT:    retq
+  %1 = tail call <32 x i8> @llvm.x86.avx2.pshuf.b(<32 x i8> %a0, <32 x i8> <i8 -1, i8 8, i8 -1, i8 9, i8 -1, i8 10, i8 -1, i8 11, i8 -1, i8 12, i8 -1, i8 13, i8 -1, i8 14, i8 -1, i8 15, i8 -1, i8 24, i8 -1, i8 25, i8 -1, i8 26, i8 -1, i8 27, i8 -1, i8 28, i8 -1, i8 29, i8 -1, i8 30, i8 -1, i8 31>)
+  ret <32 x i8> %1
+}
+
 define <32 x i8> @combine_psrlw_pshufb(<16 x i16> %a0) {
 ; X32-LABEL: combine_psrlw_pshufb:
 ; X32:       # BB#0:

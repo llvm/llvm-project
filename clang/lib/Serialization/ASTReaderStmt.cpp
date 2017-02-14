@@ -2914,7 +2914,7 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
   llvm::BitstreamCursor &Cursor = F.DeclsCursor;
 
   // Map of offset to previously deserialized stmt. The offset points
-  /// just after the stmt record.
+  // just after the stmt record.
   llvm::DenseMap<uint64_t, Stmt *> StmtEntries;
 
 #ifndef NDEBUG
