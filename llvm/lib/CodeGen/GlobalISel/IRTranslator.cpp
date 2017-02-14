@@ -870,7 +870,7 @@ bool IRTranslator::translateAlloca(const User &U,
 
   unsigned AllocSize = MRI->createGenericVirtualRegister(IntPtrTy);
   unsigned TySize = MRI->createGenericVirtualRegister(IntPtrTy);
-  MIRBuilder.buildConstant(TySize, DL->getTypeAllocSize(Ty));
+  MIRBuilder.buildConstant(TySize, -DL->getTypeAllocSize(Ty));
   MIRBuilder.buildMul(AllocSize, NumElts, TySize);
 
   LLT PtrTy = LLT{*AI.getType(), *DL};
@@ -880,11 +880,8 @@ bool IRTranslator::translateAlloca(const User &U,
   unsigned SPTmp = MRI->createGenericVirtualRegister(PtrTy);
   MIRBuilder.buildCopy(SPTmp, SPReg);
 
-  unsigned SPInt = MRI->createGenericVirtualRegister(IntPtrTy);
-  MIRBuilder.buildInstr(TargetOpcode::G_PTRTOINT).addDef(SPInt).addUse(SPTmp);
-
-  unsigned AllocInt = MRI->createGenericVirtualRegister(IntPtrTy);
-  MIRBuilder.buildSub(AllocInt, SPInt, AllocSize);
+  unsigned AllocTmp = MRI->createGenericVirtualRegister(PtrTy);
+  MIRBuilder.buildGEP(AllocTmp, SPTmp, AllocSize);
 
   // Handle alignment. We have to realign if the allocation granule was smaller
   // than stack alignment, or the specific alloca requires more than stack
@@ -896,25 +893,13 @@ bool IRTranslator::translateAlloca(const User &U,
     // Round the size of the allocation up to the stack alignment size
     // by add SA-1 to the size. This doesn't overflow because we're computing
     // an address inside an alloca.
-    unsigned TmpSize = MRI->createGenericVirtualRegister(IntPtrTy);
-    unsigned AlignMinus1 = MRI->createGenericVirtualRegister(IntPtrTy);
-    MIRBuilder.buildConstant(AlignMinus1, Align - 1);
-    MIRBuilder.buildSub(TmpSize, AllocInt, AlignMinus1);
-
-    unsigned AlignedAlloc = MRI->createGenericVirtualRegister(IntPtrTy);
-    unsigned AlignMask = MRI->createGenericVirtualRegister(IntPtrTy);
-    MIRBuilder.buildConstant(AlignMask, -(uint64_t)Align);
-    MIRBuilder.buildAnd(AlignedAlloc, TmpSize, AlignMask);
-
-    AllocInt = AlignedAlloc;
+    unsigned AlignedAlloc = MRI->createGenericVirtualRegister(PtrTy);
+    MIRBuilder.buildPtrMask(AlignedAlloc, AllocTmp, Log2_32(Align));
+    AllocTmp = AlignedAlloc;
   }
 
-  unsigned DstReg = getOrCreateVReg(AI);
-  MIRBuilder.buildInstr(TargetOpcode::G_INTTOPTR)
-      .addDef(DstReg)
-      .addUse(AllocInt);
-
-  MIRBuilder.buildCopy(SPReg, DstReg);
+  MIRBuilder.buildCopy(SPReg, AllocTmp);
+  MIRBuilder.buildCopy(getOrCreateVReg(AI), AllocTmp);
 
   MF->getFrameInfo().CreateVariableSizedObject(Align ? Align : 1, &AI);
   assert(MF->getFrameInfo().hasVarSizedObjects());
