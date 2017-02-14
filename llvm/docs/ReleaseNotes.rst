@@ -84,6 +84,18 @@ Non-comprehensive list of changes in this release
    * Significant build-time and binary-size improvements when compiling with
      debug info (-g).
 
+LLVM Coroutines
+---------------
+
+Experimental support for :doc:`Coroutines` was added, which can be enabled
+with ``-enable-coroutines`` in ``opt`` command tool or using
+``addCoroutinePassesToExtensionPoints`` API when building the optimization
+pipeline.
+
+For more information on LLVM Coroutines and the LLVM implementation, see
+`2016 LLVM Developers’ Meeting talk on LLVM Coroutines
+<http://llvm.org/devmtg/2016-11/#talk4>`_.
+
 Code Generation Testing
 -----------------------
 
