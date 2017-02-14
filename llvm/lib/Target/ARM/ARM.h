@@ -53,6 +53,7 @@ std::vector<BasicBlockInfo> computeAllBlockSizes(MachineFunction *MF);
 
 void initializeARMLoadStoreOptPass(PassRegistry &);
 void initializeARMPreAllocLoadStoreOptPass(PassRegistry &);
+void initializeARMConstantIslandsPass(PassRegistry &);
 
 } // end namespace llvm
 

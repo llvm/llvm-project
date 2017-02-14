@@ -968,6 +968,16 @@ public:
   /// Render the operand to an MCInst as a GPR32
   /// Asserts if the wrong number of operands are requested, or the operand
   /// is not a k_RegisterIndex compatible with RegKind_GPR
+  void addGPR32ZeroAsmRegOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    Inst.addOperand(MCOperand::createReg(getGPR32Reg()));
+  }
+
+  void addGPR32NonZeroAsmRegOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    Inst.addOperand(MCOperand::createReg(getGPR32Reg()));
+  }
+
   void addGPR32AsmRegOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
     Inst.addOperand(MCOperand::createReg(getGPR32Reg()));
@@ -1524,6 +1534,15 @@ public:
     return Op;
   }
 
+ bool isGPRZeroAsmReg() const {
+    return isRegIdx() && RegIdx.Kind & RegKind_GPR && RegIdx.Index == 0;
+  }
+
+ bool isGPRNonZeroAsmReg() const {
+   return isRegIdx() && RegIdx.Kind & RegKind_GPR && RegIdx.Index > 0 &&
+          RegIdx.Index <= 31;
+  }
+
   bool isGPRAsmReg() const {
     return isRegIdx() && RegIdx.Kind & RegKind_GPR && RegIdx.Index <= 31;
   }
@@ -1881,6 +1900,61 @@ bool MipsAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
           return Error(IDLoc, "immediate operand value out of range");
         break;
     }
+  }
+
+  // Warn on division by zero. We're checking here as all instructions get
+  // processed here, not just the macros that need expansion.
+  //
+  // The MIPS backend models most of the divison instructions and macros as
+  // three operand instructions. The pre-R6 divide instructions however have
+  // two operands and explicitly define HI/LO as part of the instruction,
+  // not in the operands.
+  unsigned FirstOp = 1;
+  unsigned SecondOp = 2;
+  switch (Inst.getOpcode()) {
+  default:
+    break;
+  case Mips::SDivIMacro:
+  case Mips::UDivIMacro:
+  case Mips::DSDivIMacro:
+  case Mips::DUDivIMacro:
+    if (Inst.getOperand(2).getImm() == 0) {
+      if (Inst.getOperand(1).getReg() == Mips::ZERO ||
+          Inst.getOperand(1).getReg() == Mips::ZERO_64)
+        Warning(IDLoc, "dividing zero by zero");
+      else
+        Warning(IDLoc, "division by zero");
+    }
+    break;
+  case Mips::DSDIV:
+  case Mips::SDIV:
+  case Mips::UDIV:
+  case Mips::DUDIV:
+  case Mips::UDIV_MM:
+  case Mips::SDIV_MM:
+    FirstOp = 0;
+    SecondOp = 1;
+  case Mips::SDivMacro:
+  case Mips::DSDivMacro:
+  case Mips::UDivMacro:
+  case Mips::DUDivMacro:
+  case Mips::DIV:
+  case Mips::DIVU:
+  case Mips::DDIV:
+  case Mips::DDIVU:
+  case Mips::DIVU_MMR6:
+  case Mips::DDIVU_MM64R6:
+  case Mips::DIV_MMR6:
+  case Mips::DDIV_MM64R6:
+    if (Inst.getOperand(SecondOp).getReg() == Mips::ZERO ||
+        Inst.getOperand(SecondOp).getReg() == Mips::ZERO_64) {
+      if (Inst.getOperand(FirstOp).getReg() == Mips::ZERO ||
+          Inst.getOperand(FirstOp).getReg() == Mips::ZERO_64)
+        Warning(IDLoc, "dividing zero by zero");
+      else
+        Warning(IDLoc, "division by zero");
+    }
+    break;
   }
 
   // For PIC code convert unconditional jump to unconditional branch.
@@ -3360,6 +3434,14 @@ bool MipsAsmParser::expandCondBranches(MCInst &Inst, SMLoc IDLoc,
   return false;
 }
 
+// Expand a integer division macro.
+//
+// Notably we don't have to emit a warning when encountering $rt as the $zero
+// register, or 0 as an immediate. processInstruction() has already done that.
+//
+// The destination register can only be $zero when expanding (S)DivIMacro or
+// D(S)DivMacro.
+
 bool MipsAsmParser::expandDiv(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
                               const MCSubtargetInfo *STI, const bool IsMips64,
                               const bool Signed) {
@@ -3408,10 +3490,6 @@ bool MipsAsmParser::expandDiv(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
       return true;
 
     if (ImmValue == 0) {
-      if (RsReg == Mips::ZERO || RsReg == Mips::ZERO_64)
-        Warning(IDLoc, "dividing zero by zero");
-      else
-        Warning(IDLoc, "division by zero");
       if (UseTraps)
         TOut.emitRRI(Mips::TEQ, ZeroReg, ZeroReg, 0x7, IDLoc, STI);
       else
@@ -3420,10 +3498,10 @@ bool MipsAsmParser::expandDiv(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
     }
 
     if (ImmValue == 1) {
-      TOut.emitRRR(Mips::ADDu, RdReg, RsReg, Mips::ZERO, IDLoc, STI);
+      TOut.emitRRR(Mips::OR, RdReg, RsReg, Mips::ZERO, IDLoc, STI);
       return false;
     } else if (Signed && ImmValue == -1) {
-      TOut.emitRRR(SubOp, RdReg, Mips::ZERO, RsReg, IDLoc, STI);
+      TOut.emitRRR(SubOp, RdReg, ZeroReg, RsReg, IDLoc, STI);
       return false;
     } else {
       if (loadImmediate(ImmValue, ATReg, Mips::NoRegister, isInt<32>(ImmValue),
@@ -3436,51 +3514,31 @@ bool MipsAsmParser::expandDiv(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
     return true;
   }
 
-  if (RsReg == Mips::ZERO || RsReg == Mips::ZERO_64) {
-    if (RtReg == Mips::ZERO || RtReg == Mips::ZERO_64)
-      Warning(IDLoc, "dividing zero by zero");
-    if (IsMips64) {
-      if (Signed && (RtReg == Mips::ZERO || RtReg == Mips::ZERO_64)) {
-        if (UseTraps) {
-          TOut.emitRRI(Mips::TEQ, RtReg, ZeroReg, 0x7, IDLoc, STI);
-          return false;
-        }
-
-        TOut.emitII(Mips::BREAK, 0x7, 0, IDLoc, STI);
-        return false;
-      }
-    } else {
-      TOut.emitRR(DivOp, RsReg, RtReg, IDLoc, STI);
-      return false;
-    }
-  }
-
+  // If the macro expansion of (d)div(u) would always trap or break, insert
+  // the trap/break and exit. This gives a different result to GAS. GAS has
+  // an inconsistency/missed optimization in that not all cases are handled
+  // equivalently. As the observed behaviour is the same, we're ok.
   if (RtReg == Mips::ZERO || RtReg == Mips::ZERO_64) {
-    Warning(IDLoc, "division by zero");
-    if (Signed) {
-      if (UseTraps) {
-        TOut.emitRRI(Mips::TEQ, RtReg, ZeroReg, 0x7, IDLoc, STI);
-        return false;
-      }
-
-      TOut.emitII(Mips::BREAK, 0x7, 0, IDLoc, STI);
+    if (UseTraps) {
+      TOut.emitRRI(Mips::TEQ, ZeroReg, ZeroReg, 0x7, IDLoc, STI);
       return false;
     }
+    TOut.emitII(Mips::BREAK, 0x7, 0, IDLoc, STI);
+    return false;
   }
 
-  // FIXME: The values for these two BranchTarget variables may be different in
-  // micromips. These magic numbers need to be removed.
-  unsigned BranchTargetNoTraps;
-  unsigned BranchTarget;
+  // Temporary label for first branch traget
+  MCContext &Context = TOut.getStreamer().getContext();
+  MCSymbol *BrTarget;
+  MCOperand LabelOp;
 
   if (UseTraps) {
-    BranchTarget = IsMips64 ? 12 : 8;
     TOut.emitRRI(Mips::TEQ, RtReg, ZeroReg, 0x7, IDLoc, STI);
   } else {
-    BranchTarget = IsMips64 ? 20 : 16;
-    BranchTargetNoTraps = 8;
     // Branch to the li instruction.
-    TOut.emitRRI(Mips::BNE, RtReg, ZeroReg, BranchTargetNoTraps, IDLoc, STI);
+    BrTarget = Context.createTempSymbol();
+    LabelOp = MCOperand::createExpr(MCSymbolRefExpr::create(BrTarget, Context));
+    TOut.emitRRX(Mips::BNE, RtReg, ZeroReg, LabelOp, IDLoc, STI);
   }
 
   TOut.emitRR(DivOp, RsReg, RtReg, IDLoc, STI);
@@ -3489,6 +3547,9 @@ bool MipsAsmParser::expandDiv(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
     TOut.emitII(Mips::BREAK, 0x7, 0, IDLoc, STI);
 
   if (!Signed) {
+    if (!UseTraps)
+      TOut.getStreamer().EmitLabel(BrTarget);
+
     TOut.emitR(Mips::MFLO, RdReg, IDLoc, STI);
     return false;
   }
@@ -3497,15 +3558,23 @@ bool MipsAsmParser::expandDiv(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
   if (!ATReg)
     return true;
 
+  if (!UseTraps)
+    TOut.getStreamer().EmitLabel(BrTarget);
+
   TOut.emitRRI(Mips::ADDiu, ATReg, ZeroReg, -1, IDLoc, STI);
+
+  // Temporary label for the second branch target.
+  MCSymbol *BrTargetEnd = Context.createTempSymbol();
+  MCOperand LabelOpEnd =
+      MCOperand::createExpr(MCSymbolRefExpr::create(BrTargetEnd, Context));
+
+  // Branch to the mflo instruction.
+  TOut.emitRRX(Mips::BNE, RtReg, ATReg, LabelOpEnd, IDLoc, STI);
+
   if (IsMips64) {
-    // Branch to the mflo instruction.
-    TOut.emitRRI(Mips::BNE, RtReg, ATReg, BranchTarget, IDLoc, STI);
     TOut.emitRRI(Mips::ADDiu, ATReg, ZeroReg, 1, IDLoc, STI);
     TOut.emitRRI(Mips::DSLL32, ATReg, ATReg, 0x1f, IDLoc, STI);
   } else {
-    // Branch to the mflo instruction.
-    TOut.emitRRI(Mips::BNE, RtReg, ATReg, BranchTarget, IDLoc, STI);
     TOut.emitRI(Mips::LUi, ATReg, (uint16_t)0x8000, IDLoc, STI);
   }
 
@@ -3513,10 +3582,12 @@ bool MipsAsmParser::expandDiv(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
     TOut.emitRRI(Mips::TEQ, RsReg, ATReg, 0x6, IDLoc, STI);
   else {
     // Branch to the mflo instruction.
-    TOut.emitRRI(Mips::BNE, RsReg, ATReg, BranchTargetNoTraps, IDLoc, STI);
+    TOut.emitRRX(Mips::BNE, RsReg, ATReg, LabelOpEnd, IDLoc, STI);
     TOut.emitRRI(Mips::SLL, ZeroReg, ZeroReg, 0, IDLoc, STI);
     TOut.emitII(Mips::BREAK, 0x6, 0, IDLoc, STI);
   }
+
+  TOut.getStreamer().EmitLabel(BrTargetEnd);
   TOut.emitR(Mips::MFLO, RdReg, IDLoc, STI);
   return false;
 }

@@ -1155,3 +1155,24 @@ define void @test_lifetime_intrin() {
   call void @llvm.lifetime.end(i64 0, i8* %slot)
   ret void
 }
+
+define void @test_load_store_atomics(i8* %addr) {
+; CHECK-LABEL: name: test_load_store_atomics
+; CHECK: [[ADDR:%[0-9]+]](p0) = COPY %x0
+; CHECK: [[V0:%[0-9]+]](s8) = G_LOAD [[ADDR]](p0) :: (load unordered 1 from %ir.addr)
+; CHECK: G_STORE [[V0]](s8), [[ADDR]](p0) :: (store monotonic 1 into %ir.addr)
+; CHECK: [[V1:%[0-9]+]](s8) = G_LOAD [[ADDR]](p0) :: (load acquire 1 from %ir.addr)
+; CHECK: G_STORE [[V1]](s8), [[ADDR]](p0) :: (store release 1 into %ir.addr)
+; CHECK: [[V2:%[0-9]+]](s8) = G_LOAD [[ADDR]](p0) :: (load singlethread seq_cst 1 from %ir.addr)
+; CHECK: G_STORE [[V2]](s8), [[ADDR]](p0) :: (store singlethread monotonic 1 into %ir.addr)
+  %v0 = load atomic i8, i8* %addr unordered, align 1
+  store atomic i8 %v0, i8* %addr monotonic, align 1
+
+  %v1 = load atomic i8, i8* %addr acquire, align 1
+  store atomic i8 %v1, i8* %addr release, align 1
+
+  %v2 = load atomic i8, i8* %addr singlethread seq_cst, align 1
+  store atomic i8 %v2, i8* %addr singlethread monotonic, align 1
+
+  ret void
+}

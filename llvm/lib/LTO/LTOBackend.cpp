@@ -340,6 +340,16 @@ Expected<const Target *> initAndLookupTarget(Config &C, Module &Mod) {
 
 }
 
+static void
+finalizeOptimizationRemarks(std::unique_ptr<tool_output_file> DiagOutputFile) {
+  // Make sure we flush the diagnostic remarks file in case the linker doesn't
+  // call the global destructors before exiting.
+  if (!DiagOutputFile)
+    return;
+  DiagOutputFile->keep();
+  DiagOutputFile->os().flush();
+}
+
 static void handleAsmUndefinedRefs(Module &Mod, TargetMachine &TM) {
   // Collect the list of undefined symbols used in asm and update
   // llvm.compiler.used to prevent optimization to drop these from the output.
@@ -371,10 +381,14 @@ Error lto::backend(Config &C, AddStreamFn AddStream,
       Mod->getContext(), C.RemarksFilename, C.RemarksWithHotness);
   if (!DiagFileOrErr)
     return DiagFileOrErr.takeError();
+  auto DiagnosticOutputFile = std::move(*DiagFileOrErr);
 
-  if (!C.CodeGenOnly)
-    if (!opt(C, TM.get(), 0, *Mod, /*IsThinLTO=*/false, CombinedIndex))
+  if (!C.CodeGenOnly) {
+    if (!opt(C, TM.get(), 0, *Mod, /*IsThinLTO=*/false, CombinedIndex)) {
+      finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
       return Error::success();
+    }
+  }
 
   if (ParallelCodeGenParallelismLevel == 1) {
     codegen(C, TM.get(), AddStream, 0, *Mod);
@@ -382,6 +396,7 @@ Error lto::backend(Config &C, AddStreamFn AddStream,
     splitCodeGen(C, TM.get(), AddStream, ParallelCodeGenParallelismLevel,
                  std::move(Mod));
   }
+  finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
   return Error::success();
 }
 

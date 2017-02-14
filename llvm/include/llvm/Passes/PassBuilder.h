@@ -27,6 +27,13 @@ class StringRef;
 class AAManager;
 class TargetMachine;
 
+/// A struct capturing PGO tunables.
+struct PGOOptions {
+  std::string ProfileGenFile = "";
+  std::string ProfileUseFile = "";
+  bool RunProfileGen = false;
+};
+
 /// \brief This class provides access to building LLVM's passes.
 ///
 /// It's members provide the baseline state available to passes during their
@@ -35,6 +42,7 @@ class TargetMachine;
 /// construction.
 class PassBuilder {
   TargetMachine *TM;
+  Optional<PGOOptions> PGOOpt;
 
 public:
   /// \brief LLVM-provided high-level optimization levels.
@@ -123,7 +131,9 @@ public:
     Oz
   };
 
-  explicit PassBuilder(TargetMachine *TM = nullptr) : TM(TM) {}
+  explicit PassBuilder(TargetMachine *TM = nullptr,
+                       Optional<PGOOptions> PGOOpt = None)
+      : TM(TM), PGOOpt(PGOOpt) {}
 
   /// \brief Cross register the analysis managers through their proxies.
   ///

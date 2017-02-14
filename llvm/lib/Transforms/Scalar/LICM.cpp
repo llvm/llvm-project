@@ -917,6 +917,7 @@ class LoopPromoter : public LoadAndStorePromoter {
   LoopInfo &LI;
   DebugLoc DL;
   int Alignment;
+  bool UnorderedAtomic;
   AAMDNodes AATags;
 
   Value *maybeInsertLCSSAPHI(Value *V, BasicBlock *BB) const {
@@ -940,10 +941,11 @@ public:
                SmallVectorImpl<BasicBlock *> &LEB,
                SmallVectorImpl<Instruction *> &LIP, PredIteratorCache &PIC,
                AliasSetTracker &ast, LoopInfo &li, DebugLoc dl, int alignment,
-               const AAMDNodes &AATags)
+               bool UnorderedAtomic, const AAMDNodes &AATags)
       : LoadAndStorePromoter(Insts, S), SomePtr(SP), PointerMustAliases(PMA),
         LoopExitBlocks(LEB), LoopInsertPts(LIP), PredCache(PIC), AST(ast),
-        LI(li), DL(std::move(dl)), Alignment(alignment), AATags(AATags) {}
+        LI(li), DL(std::move(dl)), Alignment(alignment),
+        UnorderedAtomic(UnorderedAtomic),AATags(AATags) {}
 
   bool isInstInList(Instruction *I,
                     const SmallVectorImpl<Instruction *> &) const override {
@@ -967,6 +969,8 @@ public:
       Value *Ptr = maybeInsertLCSSAPHI(SomePtr, ExitBlock);
       Instruction *InsertPos = LoopInsertPts[i];
       StoreInst *NewSI = new StoreInst(LiveInValue, Ptr, InsertPos);
+      if (UnorderedAtomic)
+        NewSI->setOrdering(AtomicOrdering::Unordered);
       NewSI->setAlignment(Alignment);
       NewSI->setDebugLoc(DL);
       if (AATags)
@@ -1057,6 +1061,9 @@ bool llvm::promoteLoopAccessesToScalars(
   // We start with an alignment of one and try to find instructions that allow
   // us to prove better alignment.
   unsigned Alignment = 1;
+  // Keep track of which types of access we see
+  bool SawUnorderedAtomic = false; 
+  bool SawNotAtomic = false;
   AAMDNodes AATags;
 
   const DataLayout &MDL = Preheader->getModule()->getDataLayout();
@@ -1114,8 +1121,11 @@ bool llvm::promoteLoopAccessesToScalars(
       // it.
       if (LoadInst *Load = dyn_cast<LoadInst>(UI)) {
         assert(!Load->isVolatile() && "AST broken");
-        if (!Load->isSimple())
+        if (!Load->isUnordered())
           return false;
+        
+        SawUnorderedAtomic |= Load->isAtomic();
+        SawNotAtomic |= !Load->isAtomic();
 
         if (!DereferenceableInPH)
           DereferenceableInPH = isSafeToExecuteUnconditionally(
@@ -1126,8 +1136,11 @@ bool llvm::promoteLoopAccessesToScalars(
         if (UI->getOperand(1) != ASIV)
           continue;
         assert(!Store->isVolatile() && "AST broken");
-        if (!Store->isSimple())
+        if (!Store->isUnordered())
           return false;
+
+        SawUnorderedAtomic |= Store->isAtomic();
+        SawNotAtomic |= !Store->isAtomic();
 
         // If the store is guaranteed to execute, both properties are satisfied.
         // We may want to check if a store is guaranteed to execute even if we
@@ -1181,6 +1194,12 @@ bool llvm::promoteLoopAccessesToScalars(
     }
   }
 
+  // If we found both an unordered atomic instruction and a non-atomic memory
+  // access, bail.  We can't blindly promote non-atomic to atomic since we
+  // might not be able to lower the result.  We can't downgrade since that
+  // would violate memory model.  Also, align 0 is an error for atomics.
+  if (SawUnorderedAtomic && SawNotAtomic)
+    return false;
 
   // If we couldn't prove we can hoist the load, bail.
   if (!DereferenceableInPH)
@@ -1224,12 +1243,15 @@ bool llvm::promoteLoopAccessesToScalars(
   SmallVector<PHINode *, 16> NewPHIs;
   SSAUpdater SSA(&NewPHIs);
   LoopPromoter Promoter(SomePtr, LoopUses, SSA, PointerMustAliases, ExitBlocks,
-                        InsertPts, PIC, *CurAST, *LI, DL, Alignment, AATags);
+                        InsertPts, PIC, *CurAST, *LI, DL, Alignment,
+                        SawUnorderedAtomic, AATags);
 
   // Set up the preheader to have a definition of the value.  It is the live-out
   // value from the preheader that uses in the loop will use.
   LoadInst *PreheaderLoad = new LoadInst(
       SomePtr, SomePtr->getName() + ".promoted", Preheader->getTerminator());
+  if (SawUnorderedAtomic)
+    PreheaderLoad->setOrdering(AtomicOrdering::Unordered);
   PreheaderLoad->setAlignment(Alignment);
   PreheaderLoad->setDebugLoc(DL);
   if (AATags)

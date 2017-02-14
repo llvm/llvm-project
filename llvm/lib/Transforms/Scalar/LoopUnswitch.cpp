@@ -875,7 +875,7 @@ bool LoopUnswitch::TryTrivialLoopUnswitch(bool &Changed) {
         break;
       // Find the target block we are definitely going to.
       CurrentBB = SI->findCaseValue(Cond).getCaseSuccessor();
-    } else { 
+    } else {
       // We do not understand these terminator instructions.
       break;
     }

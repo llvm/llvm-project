@@ -8,7 +8,7 @@
 # RUN: FileCheck %s --check-prefix=NOT-R6
 
   .text
-  div $25, $11
+  div $25, 11
   # R6: :[[@LINE-1]]:3: error: instruction requires a CPU feature not currently enabled
 
   div $25, $0

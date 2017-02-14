@@ -1474,8 +1474,10 @@ example:
     any mutable state (e.g. memory, control registers, etc) visible to
     caller functions. It does not write through any pointer arguments
     (including ``byval`` arguments) and never changes any state visible
-    to callers. This means that it cannot unwind exceptions by calling
-    the ``C++`` exception throwing methods.
+    to callers. This means while it cannot unwind exceptions by calling
+    the ``C++`` exception throwing methods (since they write to memory), there may
+    be non-``C++`` mechanisms that throw exceptions without writing to LLVM
+    visible memory.
 
     On an argument, this attribute indicates that the function does not
     dereference that pointer argument, even though it may read or write the
@@ -1487,9 +1489,10 @@ example:
     caller functions. It may dereference pointer arguments and read
     state that may be set in the caller. A readonly function always
     returns the same value (or unwinds an exception identically) when
-    called with the same set of arguments and global state. It cannot
-    unwind an exception by calling the ``C++`` exception throwing
-    methods.
+    called with the same set of arguments and global state.  This means while it
+    cannot unwind exceptions by calling the ``C++`` exception throwing methods
+    (since they write to memory), there may be non-``C++`` mechanisms that throw
+    exceptions without writing to LLVM visible memory.
 
     On an argument, this attribute indicates that the function does not write
     through this pointer argument, even though it may write to the memory that
@@ -4433,37 +4436,156 @@ appear in the included source file.
 ^^^^^^^^^^^^^^^^^^^
 
 In LLVM IR, memory does not have types, so LLVM's own type system is not
-suitable for doing TBAA. Instead, metadata is added to the IR to
-describe a type system of a higher level language. This can be used to
-implement typical C/C++ TBAA, but it can also be used to implement
-custom alias analysis behavior for other languages.
+suitable for doing type based alias analysis (TBAA). Instead, metadata is
+added to the IR to describe a type system of a higher level language. This
+can be used to implement C/C++ strict type aliasing rules, but it can also
+be used to implement custom alias analysis behavior for other languages.
 
-The current metadata format is very simple. TBAA metadata nodes have up
-to three fields, e.g.:
+This description of LLVM's TBAA system is broken into two parts:
+:ref:`Semantics<tbaa_node_semantics>` talks about high level issues, and
+:ref:`Representation<tbaa_node_representation>` talks about the metadata
+encoding of various entities.
 
-.. code-block:: llvm
+It is always possible to trace any TBAA node to a "root" TBAA node (details
+in the :ref:`Representation<tbaa_node_representation>` section).  TBAA
+nodes with different roots have an unknown aliasing relationship, and LLVM
+conservatively infers ``MayAlias`` between them.  The rules mentioned in
+this section only pertain to TBAA nodes living under the same root.
 
-    !0 = !{ !"an example type tree" }
-    !1 = !{ !"int", !0 }
-    !2 = !{ !"float", !0 }
-    !3 = !{ !"const float", !2, i64 1 }
+.. _tbaa_node_semantics:
 
-The first field is an identity field. It can be any value, usually a
-metadata string, which uniquely identifies the type. The most important
-name in the tree is the name of the root node. Two trees with different
-root node names are entirely disjoint, even if they have leaves with
-common names.
+Semantics
+"""""""""
 
-The second field identifies the type's parent node in the tree, or is
-null or omitted for a root node. A type is considered to alias all of
-its descendants and all of its ancestors in the tree. Also, a type is
-considered to alias all types in other trees, so that bitcode produced
-from multiple front-ends is handled conservatively.
+The TBAA metadata system, referred to as "struct path TBAA" (not to be
+confused with ``tbaa.struct``), consists of the following high level
+concepts: *Type Descriptors*, further subdivided into scalar type
+descriptors and struct type descriptors; and *Access Tags*.
 
-If the third field is present, it's an integer which if equal to 1
-indicates that the type is "constant" (meaning
+**Type descriptors** describe the type system of the higher level language
+being compiled.  **Scalar type descriptors** describe types that do not
+contain other types.  Each scalar type has a parent type, which must also
+be a scalar type or the TBAA root.  Via this parent relation, scalar types
+within a TBAA root form a tree.  **Struct type descriptors** denote types
+that contain a sequence of other type descriptors, at known offsets.  These
+contained type descriptors can either be struct type descriptors themselves
+or scalar type descriptors.
+
+**Access tags** are metadata nodes attached to load and store instructions.
+Access tags use type descriptors to describe the *location* being accessed
+in terms of the type system of the higher level language.  Access tags are
+tuples consisting of a base type, an access type and an offset.  The base
+type is a scalar type descriptor or a struct type descriptor, the access
+type is a scalar type descriptor, and the offset is a constant integer.
+
+The access tag ``(BaseTy, AccessTy, Offset)`` can describe one of two
+things:
+
+ * If ``BaseTy`` is a struct type, the tag describes a memory access (load
+   or store) of a value of type ``AccessTy`` contained in the struct type
+   ``BaseTy`` at offset ``Offset``.
+
+ * If ``BaseTy`` is a scalar type, ``Offset`` must be 0 and ``BaseTy`` and
+   ``AccessTy`` must be the same; and the access tag describes a scalar
+   access with scalar type ``AccessTy``.
+
+We first define an ``ImmediateParent`` relation on ``(BaseTy, Offset)``
+tuples this way:
+
+ * If ``BaseTy`` is a scalar type then ``ImmediateParent(BaseTy, 0)`` is
+   ``(ParentTy, 0)`` where ``ParentTy`` is the parent of the scalar type as
+   described in the TBAA metadata.  ``ImmediateParent(BaseTy, Offset)`` is
+   undefined if ``Offset`` is non-zero.
+
+ * If ``BaseTy`` is a struct type then ``ImmediateParent(BaseTy, Offset)``
+   is ``(NewTy, NewOffset)`` where ``NewTy`` is the type contained in
+   ``BaseTy`` at offset ``Offset`` and ``NewOffset`` is ``Offset`` adjusted
+   to be relative within that inner type.
+
+A memory access with an access tag ``(BaseTy1, AccessTy1, Offset1)``
+aliases a memory access with an access tag ``(BaseTy2, AccessTy2,
+Offset2)`` if either ``(BaseTy1, Offset1)`` is reachable from ``(Base2,
+Offset2)`` via the ``Parent`` relation or vice versa.
+
+As a concrete example, the type descriptor graph for the following program
+
+.. code-block:: c
+
+    struct Inner {
+      int i;    // offset 0
+      float f;  // offset 4
+    };
+    
+    struct Outer {
+      float f;  // offset 0
+      double d; // offset 4
+      struct Inner inner_a;  // offset 12
+    };
+    
+    void f(struct Outer* outer, struct Inner* inner, float* f, int* i, char* c) {
+      outer->f = 0;            // tag0: (OuterStructTy, FloatScalarTy, 0)
+      outer->inner_a.i = 0;    // tag1: (OuterStructTy, IntScalarTy, 12)
+      outer->inner_a.f = 0.0;  // tag2: (OuterStructTy, IntScalarTy, 16)
+      *f = 0.0;                // tag3: (FloatScalarTy, FloatScalarTy, 0)
+    }
+
+is (note that in C and C++, ``char`` can be used to access any arbitrary
+type):
+
+.. code-block:: text
+
+    Root = "TBAA Root"
+    CharScalarTy = ("char", Root, 0)
+    FloatScalarTy = ("float", CharScalarTy, 0)
+    DoubleScalarTy = ("double", CharScalarTy, 0)
+    IntScalarTy = ("int", CharScalarTy, 0)
+    InnerStructTy = {"Inner" (IntScalarTy, 0), (FloatScalarTy, 4)}
+    OuterStructTy = {"Outer", (FloatScalarTy, 0), (DoubleScalarTy, 4),
+                     (InnerStructTy, 12)}
+
+
+with (e.g.) ``ImmediateParent(OuterStructTy, 12)`` = ``(InnerStructTy,
+0)``, ``ImmediateParent(InnerStructTy, 0)`` = ``(IntScalarTy, 0)``, and
+``ImmediateParent(IntScalarTy, 0)`` = ``(CharScalarTy, 0)``.
+
+.. _tbaa_node_representation:
+
+Representation
+""""""""""""""
+
+The root node of a TBAA type hierarchy is an ``MDNode`` with 0 operands or
+with exactly one ``MDString`` operand.
+
+Scalar type descriptors are represented as an ``MDNode`` s with two
+operands.  The first operand is an ``MDString`` denoting the name of the
+struct type.  LLVM does not assign meaning to the value of this operand, it
+only cares about it being an ``MDString``.  The second operand is an
+``MDNode`` which points to the parent for said scalar type descriptor,
+which is either another scalar type descriptor or the TBAA root.  Scalar
+type descriptors can have an optional third argument, but that must be the
+constant integer zero.
+
+Struct type descriptors are represented as ``MDNode`` s with an odd number
+of operands greater than 1.  The first operand is an ``MDString`` denoting
+the name of the struct type.  Like in scalar type descriptors the actual
+value of this name operand is irrelevant to LLVM.  After the name operand,
+the struct type descriptors have a sequence of alternating ``MDNode`` and
+``ConstantInt`` operands.  With N starting from 1, the 2N - 1 th operand,
+an ``MDNode``, denotes a contained field, and the 2N th operand, a
+``ConstantInt``, is the offset of the said contained field.  The offsets
+must be in non-decreasing order.
+
+Access tags are represented as ``MDNode`` s with either 3 or 4 operands.
+The first operand is an ``MDNode`` pointing to the node representing the
+base type.  The second operand is an ``MDNode`` pointing to the node
+representing the access type.  The third operand is a ``ConstantInt`` that
+states the offset of the access.  If a fourth field is present, it must be
+a ``ConstantInt`` valued at 0 or 1.  If it is 1 then the access tag states
+that the location being accessed is "constant" (meaning
 ``pointsToConstantMemory`` should return true; see `other useful
-AliasAnalysis methods <AliasAnalysis.html#OtherItfs>`_).
+AliasAnalysis methods <AliasAnalysis.html#OtherItfs>`_).  The TBAA root of
+the access type and the base type of an access tag must be the same, and
+that is the TBAA root of the access tag.
 
 '``tbaa.struct``' Metadata
 ^^^^^^^^^^^^^^^^^^^^^^^^^^

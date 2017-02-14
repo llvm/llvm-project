@@ -20,6 +20,19 @@
 
 namespace llvm {
 
+class AAResults;
+
+/// The three kinds of memory access relevant to 'readonly' and
+/// 'readnone' attributes.
+enum MemoryAccessKind {
+  MAK_ReadNone = 0,
+  MAK_ReadOnly = 1,
+  MAK_MayWrite = 2
+};
+
+/// Returns the memory access properties of this copy of the function.
+MemoryAccessKind computeFunctionBodyMemoryAccess(Function &F, AAResults &AAR);
+
 /// Computes function attributes in post-order over the call graph.
 ///
 /// By operating in post-order, this pass computes precise attributes for

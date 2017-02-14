@@ -7963,7 +7963,7 @@ static bool isShuffleEquivalent(SDValue V1, SDValue V2, ArrayRef<int> Mask,
               ExpectedBV->getOperand(ExpectedMask[i] % Size))
         return false;
     }
-}
+  }
 
   return true;
 }
@@ -8220,6 +8220,43 @@ static SDValue lowerVectorShuffleToEXPAND(const SDLoc &DL, MVT VT,
   return DAG.getNode(ISD::VSELECT, DL, VT, VMask,
                      DAG.getNode(X86ISD::EXPAND, DL, VT, ExpandedVector),
                      ZeroVector);
+}
+
+static bool matchVectorShuffleWithUNPCK(MVT VT, SDValue &V1, SDValue &V2,
+                                        unsigned &UnpackOpcode, bool IsUnary,
+                                        ArrayRef<int> TargetMask) {
+  // Attempt to match the target mask against the unpack lo/hi mask patterns.
+  SmallVector<int, 64> Unpckl, Unpckh;
+  createUnpackShuffleMask(VT, Unpckl, /* Lo = */ true, IsUnary);
+  if (isTargetShuffleEquivalent(TargetMask, Unpckl)) {
+    UnpackOpcode = X86ISD::UNPCKL;
+    return true;
+  }
+
+  createUnpackShuffleMask(VT, Unpckh, /* Lo = */ false, IsUnary);
+  if (isTargetShuffleEquivalent(TargetMask, Unpckh)) {
+    UnpackOpcode = X86ISD::UNPCKH;
+    return true;
+  }
+
+  // If a binary shuffle, commute and try again.
+  if (!IsUnary) {
+    ShuffleVectorSDNode::commuteMask(Unpckl);
+    if (isTargetShuffleEquivalent(TargetMask, Unpckl)) {
+      UnpackOpcode = X86ISD::UNPCKL;
+      std::swap(V1, V2);
+      return true;
+    }
+
+    ShuffleVectorSDNode::commuteMask(Unpckh);
+    if (isTargetShuffleEquivalent(TargetMask, Unpckh)) {
+      UnpackOpcode = X86ISD::UNPCKH;
+      std::swap(V1, V2);
+      return true;
+    }
+  }
+
+  return false;
 }
 
 // X86 has dedicated unpack instructions that can handle specific blend
@@ -26575,53 +26612,12 @@ static bool matchBinaryVectorShuffle(MVT MaskVT, ArrayRef<int> Mask,
     if (LegalVT.is256BitVector() && !Subtarget.hasAVX2())
       LegalVT = (32 == EltSizeInBits ? MVT::v8f32 : MVT::v4f64);
 
-    SmallVector<int, 64> Unpckl, Unpckh;
-    if (IsUnary) {
-      createUnpackShuffleMask(MaskVT, Unpckl, true, true);
-      if (isTargetShuffleEquivalent(Mask, Unpckl)) {
+    if (matchVectorShuffleWithUNPCK(MaskVT, V1, IsUnary ? V1 : V2, Shuffle,
+                                    IsUnary, Mask)) {
+      if (IsUnary)
         V2 = V1;
-        Shuffle = X86ISD::UNPCKL;
-        ShuffleVT = LegalVT;
-        return true;
-      }
-
-      createUnpackShuffleMask(MaskVT, Unpckh, false, true);
-      if (isTargetShuffleEquivalent(Mask, Unpckh)) {
-        V2 = V1;
-        Shuffle = X86ISD::UNPCKH;
-        ShuffleVT = LegalVT;
-        return true;
-      }
-    } else {
-      createUnpackShuffleMask(MaskVT, Unpckl, true, false);
-      if (isTargetShuffleEquivalent(Mask, Unpckl)) {
-        Shuffle = X86ISD::UNPCKL;
-        ShuffleVT = LegalVT;
-        return true;
-      }
-
-      createUnpackShuffleMask(MaskVT, Unpckh, false, false);
-      if (isTargetShuffleEquivalent(Mask, Unpckh)) {
-        Shuffle = X86ISD::UNPCKH;
-        ShuffleVT = LegalVT;
-        return true;
-      }
-
-      ShuffleVectorSDNode::commuteMask(Unpckl);
-      if (isTargetShuffleEquivalent(Mask, Unpckl)) {
-        std::swap(V1, V2);
-        Shuffle = X86ISD::UNPCKL;
-        ShuffleVT = LegalVT;
-        return true;
-      }
-
-      ShuffleVectorSDNode::commuteMask(Unpckh);
-      if (isTargetShuffleEquivalent(Mask, Unpckh)) {
-        std::swap(V1, V2);
-        Shuffle = X86ISD::UNPCKH;
-        ShuffleVT = LegalVT;
-        return true;
-      }
+      ShuffleVT = LegalVT;
+      return true;
     }
   }
 

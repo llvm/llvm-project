@@ -72,10 +72,10 @@ entry:
   %4 = fcmp une float %3, 0.000000e+00
 ; ARM: ldr r[[R:[0-9]+]], [r0, #2]
 ; ARM: vmov s0, r[[R]]
-; ARM: vcmpe.f32 s0, #0
+; ARM: vcmp.f32 s0, #0
 ; THUMB: ldr.w r[[R:[0-9]+]], [r0, #2]
 ; THUMB: vmov s0, r[[R]]
-; THUMB: vcmpe.f32 s0, #0
+; THUMB: vcmp.f32 s0, #0
   ret i1 %4
 }
 

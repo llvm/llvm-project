@@ -700,7 +700,8 @@ void PassManagerBuilder::addLTOOptimizationPasses(legacy::PassManagerBase &PM) {
   PM.add(createGlobalSplitPass());
 
   // Apply whole-program devirtualization and virtual constant propagation.
-  PM.add(createWholeProgramDevirtPass());
+  PM.add(createWholeProgramDevirtPass(
+      Summary ? PassSummaryAction::Export : PassSummaryAction::None, Summary));
 
   // That's all we need at opt level 1.
   if (OptLevel == 1)

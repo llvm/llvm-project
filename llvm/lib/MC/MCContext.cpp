@@ -7,30 +7,41 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/MC/MCContext.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/MC/MCAsmInfo.h"
-#include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCCodeView.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDwarf.h"
+#include "llvm/MC/MCExpr.h"
+#include "llvm/MC/MCFragment.h"
 #include "llvm/MC/MCLabel.h"
 #include "llvm/MC/MCObjectFileInfo.h"
-#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSectionCOFF.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCSectionMachO.h"
 #include "llvm/MC/MCStreamer.h"
+#include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCSymbolCOFF.h"
 #include "llvm/MC/MCSymbolELF.h"
 #include "llvm/MC/MCSymbolMachO.h"
+#include "llvm/MC/SectionKind.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/COFF.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ELF.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/SourceMgr.h"
+#include <cassert>
+#include <cstdlib>
+#include <tuple>
+#include <utility>
 
 using namespace llvm;
 
@@ -40,19 +51,13 @@ AsSecureLogFileName("as-secure-log-file-name",
                  "AS_SECURE_LOG_FILE env variable)"),
         cl::init(getenv("AS_SECURE_LOG_FILE")), cl::Hidden);
 
-
 MCContext::MCContext(const MCAsmInfo *mai, const MCRegisterInfo *mri,
                      const MCObjectFileInfo *mofi, const SourceMgr *mgr,
                      bool DoAutoReset)
-    : SrcMgr(mgr), MAI(mai), MRI(mri), MOFI(mofi), Allocator(),
-      Symbols(Allocator), UsedNames(Allocator),
-      CurrentDwarfLoc(0, 0, 0, DWARF2_FLAG_IS_STMT, 0, 0), DwarfLocSeen(false),
-      GenDwarfForAssembly(false), GenDwarfFileNumber(0), DwarfVersion(4),
-      AllowTemporaryLabels(true), DwarfCompileUnitID(0),
-      AutoReset(DoAutoReset), HadError(false) {
+    : SrcMgr(mgr), MAI(mai), MRI(mri), MOFI(mofi), Symbols(Allocator),
+      UsedNames(Allocator), CurrentDwarfLoc(0, 0, 0, DWARF2_FLAG_IS_STMT, 0, 0),
+      AutoReset(DoAutoReset) {
   SecureLogFile = AsSecureLogFileName;
-  SecureLog = nullptr;
-  SecureLogUsed = false;
 
   if (SrcMgr && SrcMgr->getNumBuffers())
     MainFileName =
@@ -169,7 +174,7 @@ MCSymbol *MCContext::createSymbol(StringRef Name, bool AlwaysAddSuffix,
   SmallString<128> NewName = Name;
   bool AddSuffix = AlwaysAddSuffix;
   unsigned &NextUniqueID = NextID[Name];
-  for (;;) {
+  while (true) {
     if (AddSuffix) {
       NewName.resize(Name.size());
       raw_svector_ostream(NewName) << NextUniqueID++;
@@ -262,7 +267,6 @@ MCSectionMachO *MCContext::getMachOSection(StringRef Segment, StringRef Section,
                                            unsigned TypeAndAttributes,
                                            unsigned Reserved2, SectionKind Kind,
                                            const char *BeginSymName) {
-
   // We unique sections by their segment/section pair.  The returned section
   // may not have the same flags as the requested section, if so this should be
   // diagnosed by the client as an error.
@@ -309,7 +313,6 @@ MCSectionELF *MCContext::createELFSectionImpl(StringRef Section, unsigned Type,
                                               const MCSymbolELF *Group,
                                               unsigned UniqueID,
                                               const MCSectionELF *Associated) {
-
   MCSymbolELF *R;
   MCSymbol *&Sym = Symbols[Section];
   if (Sym && Sym->isUndefined()) {

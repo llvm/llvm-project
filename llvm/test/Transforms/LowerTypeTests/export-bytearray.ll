@@ -32,7 +32,9 @@
 ; SUMMARY-NEXT:     TTRes:
 ; SUMMARY-NEXT:       Kind:            ByteArray
 ; SUMMARY-NEXT:       SizeM1BitWidth:  7
+; SUMMARY-NEXT:     WPDRes:
 ; SUMMARY-NEXT:   typeid2:
 ; SUMMARY-NEXT:     TTRes:
 ; SUMMARY-NEXT:       Kind:            ByteArray
 ; SUMMARY-NEXT:       SizeM1BitWidth:  32
+; SUMMARY-NEXT:     WPDRes:
