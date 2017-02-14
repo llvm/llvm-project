@@ -275,7 +275,7 @@ bool isNestedDeclContext(const DeclContext *D, const DeclContext *Context) {
 // Returns true if \p D is visible at \p Loc with DeclContext \p DeclCtx.
 bool isDeclVisibleAtLocation(const SourceManager &SM, const Decl *D,
                              const DeclContext *DeclCtx, SourceLocation Loc) {
-  SourceLocation DeclLoc = SM.getSpellingLoc(D->getLocation());
+  SourceLocation DeclLoc = SM.getSpellingLoc(D->getLocStart());
   Loc = SM.getSpellingLoc(Loc);
   return SM.isBeforeInTranslationUnit(DeclLoc, Loc) &&
          (SM.getFileID(DeclLoc) == SM.getFileID(Loc) &&

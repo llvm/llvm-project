@@ -59,6 +59,16 @@ void f() {
   } else {
     c2 = c;
   }
+  struct A {
+    void foo() {
+      if (mp) // #6
+        delete mp;
+      // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: 'if' statement is unnecessary; deleting null pointer has no effect [readability-delete-null-pointer]
+      // CHECK-FIXES: {{^      }}// #6
+      // CHECK-FIXES-NEXT: delete mp;
+    }
+    int *mp;
+  };
 }
 
 void g() {

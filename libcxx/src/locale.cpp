@@ -579,10 +579,8 @@ locale::global(const locale& loc)
     locale& g = __global();
     locale r = g;
     g = loc;
-#ifndef __CloudABI__
     if (g.name() != "*")
         setlocale(LC_ALL, g.name().c_str());
-#endif
     return r;
 }
 

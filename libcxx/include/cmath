@@ -398,7 +398,7 @@ using ::cbrtf;
 using ::copysign;
 using ::copysignf;
 
-#ifndef _LIBCPP_MSVCRT
+#if !defined(_LIBCPP_MSVCRT) || ((_VC_CRT_NAJOR_VERSION-0) >= 14)
 using ::erf;
 using ::erff;
 using ::erfc;
@@ -495,7 +495,7 @@ using ::cbrtl;
 
 using ::copysignl;
 
-#ifndef _LIBCPP_MSVCRT
+#if !defined(_LIBCPP_MSVCRT) || (_VC_CRT_MAJOR_VERSION-0) >= 14
 using ::erfl;
 using ::erfcl;
 using ::exp2l;
@@ -526,7 +526,7 @@ using ::scalblnl;
 using ::scalbnl;
 using ::tgammal;
 using ::truncl;
-#endif // !_LIBCPP_MSVCRT
+#endif // !defined(_LIBCPP_MSVCRT) || (_VC_CRT_MAJOR_VERSION-0) >= 14
 
 #if _LIBCPP_STD_VER > 14
 inline _LIBCPP_INLINE_VISIBILITY float       hypot(       float x,       float y,       float z ) { return sqrt(x*x + y*y + z*z); }

@@ -27,6 +27,7 @@ add_lldb_library(lldbBreakpoint
     lldbInterpreter
     lldbSymbol
     lldbTarget
+    lldbUtility
     lldbPluginCPlusPlusLanguage
     lldbPluginObjCLanguage
 

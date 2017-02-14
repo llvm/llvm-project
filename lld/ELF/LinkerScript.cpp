@@ -17,7 +17,7 @@
 #include "InputSection.h"
 #include "Memory.h"
 #include "OutputSections.h"
-#include "ScriptParser.h"
+#include "ScriptLexer.h"
 #include "Strings.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
@@ -1016,12 +1016,12 @@ size_t LinkerScript<ELFT>::getPhdrIndex(const Twine &Loc, StringRef PhdrName) {
   return 0;
 }
 
-class elf::ScriptParser final : public ScriptParserBase {
+class elf::ScriptParser final : public ScriptLexer {
   typedef void (ScriptParser::*Handler)();
 
 public:
   ScriptParser(MemoryBufferRef MB)
-      : ScriptParserBase(MB),
+      : ScriptLexer(MB),
         IsUnderSysroot(isUnderSysroot(MB.getBufferIdentifier())) {}
 
   void readLinkerScript();
@@ -1942,7 +1942,8 @@ void ScriptParser::readAnonymousDeclaration() {
   if (peek() != "local") {
     if (consume("global"))
       expect(":");
-    Config->VersionScriptGlobals = readSymbols();
+    for (SymbolVersion V : readSymbols())
+      Config->VersionScriptGlobals.push_back(V);
   }
   readLocals();
   expect("}");

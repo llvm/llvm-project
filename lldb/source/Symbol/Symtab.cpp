@@ -328,6 +328,11 @@ void Symtab::InitNameIndexes() {
                 } else {
                   // No context for this function so this has to be a basename
                   m_basename_to_index.Append(entry);
+                  // If there is no context (no namespaces or class scopes that
+                  // come before the function name) then this also could be a
+                  // fullname.
+                  if (cxx_method.GetContext().empty())
+                    m_name_to_index.Append(entry);
                 }
               }
             }

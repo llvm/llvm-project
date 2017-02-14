@@ -41,7 +41,6 @@ static OptionDefinition g_log_options[] = {
   { LLDB_OPT_SET_1, false, "file",       'f', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeFilename, "Set the destination file to log to." },
   { LLDB_OPT_SET_1, false, "threadsafe", 't', OptionParser::eNoArgument,       nullptr, nullptr, 0, eArgTypeNone,     "Enable thread safe logging to avoid interweaved log lines." },
   { LLDB_OPT_SET_1, false, "verbose",    'v', OptionParser::eNoArgument,       nullptr, nullptr, 0, eArgTypeNone,     "Enable verbose logging." },
-  { LLDB_OPT_SET_1, false, "debug",      'g', OptionParser::eNoArgument,       nullptr, nullptr, 0, eArgTypeNone,     "Enable debug logging." },
   { LLDB_OPT_SET_1, false, "sequence",   's', OptionParser::eNoArgument,       nullptr, nullptr, 0, eArgTypeNone,     "Prepend all log lines with an increasing integer sequence id." },
   { LLDB_OPT_SET_1, false, "timestamp",  'T', OptionParser::eNoArgument,       nullptr, nullptr, 0, eArgTypeNone,     "Prepend all log lines with a timestamp." },
   { LLDB_OPT_SET_1, false, "pid-tid",    'p', OptionParser::eNoArgument,       nullptr, nullptr, 0, eArgTypeNone,     "Prepend all log lines with the process and thread ID that generates the log line." },
@@ -109,9 +108,6 @@ public:
         break;
       case 'v':
         log_options |= LLDB_LOG_OPTION_VERBOSE;
-        break;
-      case 'g':
-        log_options |= LLDB_LOG_OPTION_DEBUG;
         break;
       case 's':
         log_options |= LLDB_LOG_OPTION_PREPEND_SEQUENCE;

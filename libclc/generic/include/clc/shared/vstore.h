@@ -29,7 +29,7 @@
     _CLC_VECTOR_VSTORE_PRIM3(_half, half, float)
 
 #ifdef cl_khr_fp64
-#pragma cl_khr_fp64: enable
+#pragma OPENCL EXTENSION cl_khr_fp64: enable
   _CLC_VECTOR_VSTORE_PRIM1(double)
   _CLC_VECTOR_VSTORE_PRIM3(_half, half, double)
   _CLC_VSTORE_DECL(_half, half, double, , __private)

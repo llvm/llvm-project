@@ -24,8 +24,15 @@ void DeleteNullPointerCheck::registerMatchers(MatchFinder *Finder) {
                         to(decl(equalsBoundNode("deletedPointer"))))))))
           .bind("deleteExpr");
 
-  const auto PointerExpr =
-      ignoringImpCasts(declRefExpr(to(decl().bind("deletedPointer"))));
+  const auto DeleteMemberExpr =
+      cxxDeleteExpr(has(castExpr(has(memberExpr(hasDeclaration(
+                        fieldDecl(equalsBoundNode("deletedMemberPointer"))))))))
+          .bind("deleteMemberExpr");
+
+  const auto PointerExpr = ignoringImpCasts(anyOf(
+      declRefExpr(to(decl().bind("deletedPointer"))),
+      memberExpr(hasDeclaration(fieldDecl().bind("deletedMemberPointer")))));
+
   const auto PointerCondition = castExpr(hasCastKind(CK_PointerToBoolean),
                                          hasSourceExpression(PointerExpr));
   const auto BinaryPointerCheckCondition =
@@ -34,9 +41,11 @@ void DeleteNullPointerCheck::registerMatchers(MatchFinder *Finder) {
 
   Finder->addMatcher(
       ifStmt(hasCondition(anyOf(PointerCondition, BinaryPointerCheckCondition)),
-             hasThen(anyOf(DeleteExpr,
-                           compoundStmt(has(DeleteExpr), statementCountIs(1))
-                               .bind("compound"))))
+             hasThen(anyOf(
+                 DeleteExpr, DeleteMemberExpr,
+                 compoundStmt(anyOf(has(DeleteExpr), has(DeleteMemberExpr)),
+                              statementCountIs(1))
+                     .bind("compound"))))
           .bind("ifWithDelete"),
       this);
 }

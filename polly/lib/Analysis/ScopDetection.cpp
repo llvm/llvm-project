@@ -221,6 +221,9 @@ STATISTIC(NumProfScopsDepthFive,
 STATISTIC(NumProfScopsDepthLarger,
           "Number of scops with maximal loop depth 6 and larger "
           "(profitable scops only)");
+STATISTIC(MaxNumLoopsInScop, "Maximal number of loops in scops");
+STATISTIC(MaxNumLoopsInProfScop,
+          "Maximal number of loops in scops (profitable scops only)");
 
 class DiagnosticScopFound : public DiagnosticInfo {
 private:
@@ -1550,6 +1553,8 @@ void updateLoopCountStatistic(ScopDetection::LoopStats Stats,
                               bool OnlyProfitable) {
   if (!OnlyProfitable) {
     NumLoopsInScop += Stats.NumLoops;
+    MaxNumLoopsInScop =
+        std::max(MaxNumLoopsInScop.getValue(), (unsigned)Stats.NumLoops);
     if (Stats.MaxDepth == 1)
       NumScopsDepthOne++;
     else if (Stats.MaxDepth == 2)
@@ -1564,6 +1569,8 @@ void updateLoopCountStatistic(ScopDetection::LoopStats Stats,
       NumScopsDepthLarger++;
   } else {
     NumLoopsInProfScop += Stats.NumLoops;
+    MaxNumLoopsInProfScop =
+        std::max(MaxNumLoopsInProfScop.getValue(), (unsigned)Stats.NumLoops);
     if (Stats.MaxDepth == 1)
       NumProfScopsDepthOne++;
     else if (Stats.MaxDepth == 2)
