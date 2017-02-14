@@ -452,7 +452,8 @@ void InputSection<ELFT>::relocateNonAlloc(uint8_t *Buf, ArrayRef<RelTy> Rels) {
       Addend += Target->getImplicitAddend(BufLoc, Type);
 
     SymbolBody &Sym = this->File->getRelocTargetSym(Rel);
-    if (Target->getRelExpr(Type, Sym) != R_ABS) {
+    RelExpr E = Target->getRelExpr(Type, Sym);
+    if (E != R_ABS && E != R_PC) {
       error(this->getLocation(Offset) + ": has non-ABS reloc");
       return;
     }
@@ -461,7 +462,7 @@ void InputSection<ELFT>::relocateNonAlloc(uint8_t *Buf, ArrayRef<RelTy> Rels) {
     uint64_t SymVA = 0;
     if (!Sym.isTls() || Out<ELFT>::TlsPhdr)
       SymVA = SignExtend64<sizeof(uintX_t) * 8>(
-          getRelocTargetVA<ELFT>(Type, Addend, AddrLoc, Sym, R_ABS));
+          getRelocTargetVA<ELFT>(Type, Addend, AddrLoc, Sym, E));
     Target->relocateOne(BufLoc, Type, SymVA);
   }
 }

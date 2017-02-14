@@ -491,11 +491,9 @@ int64_t X86TargetInfo::getImplicitAddend(const uint8_t *Buf,
   default:
     return 0;
   case R_386_8:
-    return *Buf;
   case R_386_PC8:
     return SignExtend64<8>(*Buf);
   case R_386_16:
-    return read16le(Buf);
   case R_386_PC16:
     return SignExtend64<16>(read16le(Buf));
   case R_386_32:
@@ -506,7 +504,7 @@ int64_t X86TargetInfo::getImplicitAddend(const uint8_t *Buf,
   case R_386_PC32:
   case R_386_PLT32:
   case R_386_TLS_LE:
-    return read32le(Buf);
+    return SignExtend64<32>(read32le(Buf));
   }
 }
 
@@ -2264,7 +2262,7 @@ int64_t MipsTargetInfo<ELFT>::getImplicitAddend(const uint8_t *Buf,
   case R_MIPS_GPREL32:
   case R_MIPS_TLS_DTPREL32:
   case R_MIPS_TLS_TPREL32:
-    return read32<E>(Buf);
+    return SignExtend64<32>(read32<E>(Buf));
   case R_MIPS_26:
     // FIXME (simon): If the relocation target symbol is not a PLT entry
     // we should use another expression for calculation:

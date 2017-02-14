@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef utility_ModuleCache_h_
-#define utility_ModuleCache_h_
+#ifndef LLDB_TARGET_MODULECACHE_H
+#define LLDB_TARGET_MODULECACHE_H
 
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-types.h"
@@ -27,7 +27,7 @@ class Module;
 class UUID;
 
 //----------------------------------------------------------------------
-/// @class ModuleCache ModuleCache.h "Utility/ModuleCache.h"
+/// @class ModuleCache ModuleCache.h "lldb/Target/ModuleCache.h"
 /// @brief A module cache class.
 ///
 /// Caches locally modules that are downloaded from remote targets.

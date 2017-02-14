@@ -23,7 +23,8 @@
 
 // Project includes
 #include "lldb/Core/DataExtractor.h"
-#include "lldb/Core/Flags.h"
+#include "lldb/Utility/Flags.h"
+
 #include "lldb/Core/UserID.h"
 #include "lldb/Core/Value.h"
 #include "lldb/Symbol/CompilerType.h"

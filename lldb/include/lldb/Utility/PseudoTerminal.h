@@ -19,7 +19,7 @@
 namespace lldb_utility {
 
 //----------------------------------------------------------------------
-/// @class PseudoTerminal PseudoTerminal.h "lldb/Core/PseudoTerminal.h"
+/// @class PseudoTerminal PseudoTerminal.h "lldb/Utility/PseudoTerminal.h"
 /// @brief A pseudo terminal helper class.
 ///
 /// The pseudo terminal class abstracts the use of pseudo terminals on

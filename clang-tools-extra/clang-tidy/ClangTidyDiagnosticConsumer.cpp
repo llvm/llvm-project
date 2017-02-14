@@ -272,6 +272,7 @@ static bool LineIsMarkedWithNOLINT(SourceManager &SM, SourceLocation Loc) {
   if (Invalid)
     return false;
 
+  // Check if there's a NOLINT on this line.
   const char *P = CharacterData;
   while (*P != '\0' && *P != '\r' && *P != '\n')
     ++P;
@@ -279,6 +280,34 @@ static bool LineIsMarkedWithNOLINT(SourceManager &SM, SourceLocation Loc) {
   // FIXME: Handle /\bNOLINT\b(\([^)]*\))?/ as cpplint.py does.
   if (RestOfLine.find("NOLINT") != StringRef::npos)
     return true;
+
+  // Check if there's a NOLINTNEXTLINE on the previous line.
+  const char *BufBegin =
+      SM.getCharacterData(SM.getLocForStartOfFile(SM.getFileID(Loc)), &Invalid);
+  if (Invalid || P == BufBegin)
+    return false;
+
+  // Scan backwards over the current line.
+  P = CharacterData;
+  while (P != BufBegin && *P != '\n')
+    --P;
+
+  // If we reached the begin of the file there is no line before it.
+  if (P == BufBegin)
+    return false;
+
+  // Skip over the newline.
+  --P;
+  const char *LineEnd = P;
+
+  // Now we're on the previous line. Skip to the beginning of it.
+  while (P != BufBegin && *P != '\n')
+    --P;
+
+  RestOfLine = StringRef(P, LineEnd - P + 1);
+  if (RestOfLine.find("NOLINTNEXTLINE") != StringRef::npos)
+    return true;
+
   return false;
 }
 

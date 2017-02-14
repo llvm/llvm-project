@@ -11,7 +11,8 @@
 #define liblldb_Section_h_
 
 #include "lldb/Core/AddressRange.h"
-#include "lldb/Core/Flags.h"
+#include "lldb/Utility/Flags.h"
+
 #include "lldb/Core/ModuleChild.h"
 #include "lldb/Core/RangeMap.h"
 #include "lldb/Core/UserID.h"

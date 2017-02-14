@@ -20,9 +20,9 @@
 
 // Project includes
 #include "lldb/Core/DataExtractor.h"
-#include "lldb/Host/Endian.h"
 #include "lldb/Host/StringConvert.h"
 #include "lldb/Interpreter/Args.h"
+#include "lldb/Utility/Endian.h"
 #include "lldb/Utility/Error.h"
 #include "lldb/Utility/Stream.h"
 
