@@ -2258,15 +2258,12 @@ non-block type [*]_.  Equivalent to the following code:
 
 .. code-block:: objc
 
-  id objc_storeStrong(id *object, id value) {
-    value = [value retain];
+  void objc_storeStrong(id *object, id value) {
     id oldValue = *object;
+    value = [value retain];
     *object = value;
     [oldValue release];
-    return value;
   }
-
-Always returns ``value``.
 
 .. [*] This does not imply that a ``__strong`` object of block type is an
    invalid argument to this function. Rather it implies that an ``objc_retain``
