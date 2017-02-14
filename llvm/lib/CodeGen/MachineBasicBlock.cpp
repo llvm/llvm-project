@@ -1155,7 +1155,7 @@ MachineBasicBlock::findDebugLoc(instr_iterator MBBI) {
 /// Return UnknownLoc if there is none.
 DebugLoc
 MachineBasicBlock::findBranchDebugLoc() {
-  DebugLoc DL {};
+  DebugLoc DL;
   auto TI = getFirstTerminator();
   while (TI != end() && !TI->isBranch())
     ++TI;

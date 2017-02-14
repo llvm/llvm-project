@@ -15,6 +15,8 @@
 
 #if defined(__x86_64__)
 #include "xray_x86_64.inc"
+#elif defined(__powerpc64__)
+#include "xray_powerpc64.inc"
 #elif defined(__arm__) || defined(__aarch64__)
 // Emulated TSC.
 // There is no instruction like RDTSCP in user mode on ARM. ARM's CP15 does

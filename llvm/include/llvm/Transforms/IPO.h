@@ -235,7 +235,8 @@ ModulePass *createCrossDSOCFIPass();
 
 /// \brief This pass implements whole-program devirtualization using type
 /// metadata.
-ModulePass *createWholeProgramDevirtPass();
+ModulePass *createWholeProgramDevirtPass(PassSummaryAction Action,
+                                         ModuleSummaryIndex *Index);
 
 /// This pass splits globals into pieces for the benefit of whole-program
 /// devirtualization and control-flow integrity.

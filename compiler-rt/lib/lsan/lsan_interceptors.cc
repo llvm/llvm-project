@@ -110,11 +110,16 @@ INTERCEPTOR(void *, __libc_memalign, uptr alignment, uptr size) {
 #define LSAN_MAYBE_INTERCEPT___LIBC_MEMALIGN
 #endif // SANITIZER_INTERCEPT_MEMALIGN
 
+#if SANITIZER_INTERCEPT_ALIGNED_ALLOC
 INTERCEPTOR(void*, aligned_alloc, uptr alignment, uptr size) {
   ENSURE_LSAN_INITED;
   GET_STACK_TRACE_MALLOC;
   return Allocate(stack, size, alignment, kAlwaysClearMemory);
 }
+#define LSAN_MAYBE_INTERCEPT_ALIGNED_ALLOC INTERCEPT_FUNCTION(aligned_alloc)
+#else
+#define LSAN_MAYBE_INTERCEPT_ALIGNED_ALLOC
+#endif
 
 INTERCEPTOR(int, posix_memalign, void **memptr, uptr alignment, uptr size) {
   ENSURE_LSAN_INITED;
@@ -132,10 +137,16 @@ INTERCEPTOR(void*, valloc, uptr size) {
   return Allocate(stack, size, GetPageSizeCached(), kAlwaysClearMemory);
 }
 
+#if SANITIZER_INTERCEPT_MALLOC_USABLE_SIZE
 INTERCEPTOR(uptr, malloc_usable_size, void *ptr) {
   ENSURE_LSAN_INITED;
   return GetMallocUsableSize(ptr);
 }
+#define LSAN_MAYBE_INTERCEPT_MALLOC_USABLE_SIZE \
+        INTERCEPT_FUNCTION(malloc_usable_size)
+#else
+#define LSAN_MAYBE_INTERCEPT_MALLOC_USABLE_SIZE
+#endif
 
 #if SANITIZER_INTERCEPT_MALLOPT_AND_MALLINFO
 struct fake_mallinfo {
@@ -309,11 +320,11 @@ void InitializeInterceptors() {
   INTERCEPT_FUNCTION(realloc);
   LSAN_MAYBE_INTERCEPT_MEMALIGN;
   LSAN_MAYBE_INTERCEPT___LIBC_MEMALIGN;
-  INTERCEPT_FUNCTION(aligned_alloc);
+  LSAN_MAYBE_INTERCEPT_ALIGNED_ALLOC;
   INTERCEPT_FUNCTION(posix_memalign);
   INTERCEPT_FUNCTION(valloc);
   LSAN_MAYBE_INTERCEPT_PVALLOC;
-  INTERCEPT_FUNCTION(malloc_usable_size);
+  LSAN_MAYBE_INTERCEPT_MALLOC_USABLE_SIZE;
   LSAN_MAYBE_INTERCEPT_MALLINFO;
   LSAN_MAYBE_INTERCEPT_MALLOPT;
   INTERCEPT_FUNCTION(pthread_create);

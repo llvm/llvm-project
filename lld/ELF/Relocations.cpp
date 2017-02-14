@@ -100,7 +100,7 @@ static unsigned handleNoRelaxTlsRelocation(
     // if we know that we are linking an executable. For ARM we resolve the
     // relocation when writing the Got. MIPS has a custom Got implementation
     // that writes the Module index in directly.
-    if (!Body.isPreemptible() && !Config->Pic && Config->EMachine == EM_ARM)
+    if (!Body.isPreemptible() && !Config->pic() && Config->EMachine == EM_ARM)
       Got->Relocations.push_back(
           {R_ABS, Target->TlsModuleIndexRel, Off, 0, &Body});
     else {
@@ -110,7 +110,7 @@ static unsigned handleNoRelaxTlsRelocation(
     }
   };
   if (Expr == R_MIPS_TLSLD || Expr == R_TLSLD_PC) {
-    if (Got->addTlsIndex() && (Config->Pic || Config->EMachine == EM_ARM))
+    if (Got->addTlsIndex() && (Config->pic() || Config->EMachine == EM_ARM))
       addModuleReloc(Body, Got, Got->getTlsIndexOff(), true);
     C.Relocations.push_back({Expr, Type, Offset, Addend, &Body});
     return 1;
@@ -327,12 +327,12 @@ static bool isStaticLinkTimeConstant(RelExpr E, uint32_t Type,
   // These never do, except if the entire file is position dependent or if
   // only the low bits are used.
   if (E == R_GOT || E == R_PLT || E == R_TLSDESC)
-    return Target->usesOnlyLowPageBits(Type) || !Config->Pic;
+    return Target->usesOnlyLowPageBits(Type) || !Config->pic();
 
   if (isPreemptible(Body, Type))
     return false;
 
-  if (!Config->Pic)
+  if (!Config->pic())
     return true;
 
   bool AbsVal = isAbsoluteValue<ELFT>(Body);
@@ -479,7 +479,7 @@ static RelExpr adjustExpr(const elf::ObjectFile<ELFT> &File, SymbolBody &Body,
   // This relocation would require the dynamic linker to write a value to read
   // only memory. We can hack around it if we are producing an executable and
   // the refered symbol can be preemepted to refer to the executable.
-  if (Config->Shared || (Config->Pic && !isRelExpr(Expr))) {
+  if (Config->Shared || (Config->pic() && !isRelExpr(Expr))) {
     error(S.getLocation(RelOff) + ": can't create dynamic relocation " +
           toString(Type) + " against " +
           (Body.getName().empty() ? "local symbol in readonly segment"
@@ -553,7 +553,7 @@ static typename ELFT::uint computeAddend(const elf::ObjectFile<ELFT> &File,
     if (Expr == R_MIPS_GOTREL && Body.isLocal())
       Addend += File.MipsGp0;
   }
-  if (Config->Pic && Config->EMachine == EM_PPC64 && Type == R_PPC64_TOC)
+  if (Config->pic() && Config->EMachine == EM_PPC64 && Type == R_PPC64_TOC)
     Addend += getPPC64TocBase();
   return Addend;
 }
@@ -785,13 +785,14 @@ static void scanRelocs(InputSectionBase<ELFT> &C, ArrayRef<RelTy> Rels) {
       if (Body.isTls()) {
         DynType = Target->TlsGotRel;
         GotRE = R_TLS;
-      } else if (!Preemptible && Config->Pic && !isAbsolute<ELFT>(Body))
+      } else if (!Preemptible && Config->pic() && !isAbsolute<ELFT>(Body))
         DynType = Target->RelativeRel;
       else
         DynType = Target->GotRel;
 
       // FIXME: this logic is almost duplicated above.
-      bool Constant = !Preemptible && !(Config->Pic && !isAbsolute<ELFT>(Body));
+      bool Constant =
+          !Preemptible && !(Config->pic() && !isAbsolute<ELFT>(Body));
       if (!Constant)
         AddDyn({DynType, In<ELFT>::Got, Off, !Preemptible, &Body, 0});
       if (Constant || (!RelTy::IsRela && !Preemptible))

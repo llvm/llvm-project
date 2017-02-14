@@ -119,7 +119,6 @@ struct Configuration {
   bool OFormatBinary;
   bool OMagic;
   bool OptRemarksWithHotness;
-  bool Pic;
   bool Pie;
   bool PrintGcSections;
   bool Rela;
@@ -160,7 +159,14 @@ struct Configuration {
   unsigned LTOO;
   unsigned Optimize;
   unsigned ThinLTOJobs;
-  bool copyRelocs() { return Relocatable || EmitRelocs; };
+
+  // Returns true if we need to pass through relocations in input
+  // files to the output file. Usually false because we consume
+  // relocations.
+  bool copyRelocs() const { return Relocatable || EmitRelocs; };
+
+  // Returns true if we are creating position-independent code.
+  bool pic() const { return Pie || Shared; }
 };
 
 // The only instance of Configuration struct.

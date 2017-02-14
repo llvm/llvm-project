@@ -17,6 +17,7 @@
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCSectionMachO.h"
 #include "llvm/Support/COFF.h"
+#include "llvm/Support/ELF.h"
 
 using namespace llvm;
 

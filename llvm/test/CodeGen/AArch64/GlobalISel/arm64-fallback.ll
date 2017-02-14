@@ -90,3 +90,12 @@ define void @legal_default([8 x i8] %in) {
 define i128 @sequence_sizes([8 x i8] %in) {
   ret i128 undef
 }
+
+; Just to make sure we don't accidentally emit a normal load/store.
+; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for atomic_ops
+; FALLBACK-WITH-REPORT-LABEL: atomic_ops:
+define i64 @atomic_ops(i64* %addr) {
+  store atomic i64 0, i64* %addr unordered, align 8
+  %res = load atomic i64, i64* %addr seq_cst, align 8
+  ret i64 %res
+}

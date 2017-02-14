@@ -14,12 +14,10 @@
 #ifndef LLVM_MC_MCSECTIONELF_H
 #define LLVM_MC_MCSECTIONELF_H
 
-#include "llvm/ADT/Twine.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCSymbolELF.h"
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/ELF.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvm/MC/SectionKind.h"
 
 namespace llvm {
 
@@ -52,6 +50,7 @@ class MCSectionELF final : public MCSection {
 
 private:
   friend class MCContext;
+
   MCSectionELF(StringRef Section, unsigned type, unsigned flags, SectionKind K,
                unsigned entrySize, const MCSymbolELF *group, unsigned UniqueID,
                MCSymbol *Begin, const MCSectionELF *Associated)
@@ -96,4 +95,4 @@ public:
 
 } // end namespace llvm
 
-#endif
+#endif // LLVM_MC_MCSECTIONELF_H

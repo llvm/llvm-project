@@ -47,8 +47,8 @@ public:
   // CHECK-LIN-DAG: define linkonce_odr x86_regcallcc void @_ZN10test_classD2Ev
   // CHECK-LIN-DAG: define linkonce_odr x86_regcallcc void @_ZN10test_classD1Ev
   // Windows ignores calling convention on constructor/destructors.
-  // CHECK-WIN64-DAG: define linkonce_odr void @"\01??_Dtest_class@@QEAA@XZ"
-  // CHECK-WIN32-DAG: define linkonce_odr x86_thiscallcc void @"\01??_Dtest_class@@QAE@XZ"
+  // CHECK-WIN64-DAG: define linkonce_odr void @"\01??_Dtest_class@@QEAAXXZ"
+  // CHECK-WIN32-DAG: define linkonce_odr x86_thiscallcc void @"\01??_Dtest_class@@QAEXXZ"
   
   test_class& __regcall operator+=(const test_class&){
     return *this;

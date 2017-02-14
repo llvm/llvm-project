@@ -7,27 +7,41 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/MC/MCDwarf.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Hashing.h"
-#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/None.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Config/config.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCObjectStreamer.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSection.h"
+#include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
-#include "llvm/Support/Debug.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/Dwarf.h"
+#include "llvm/Support/Endian.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/LEB128.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cassert>
+#include <cstdint>
+#include <string>
+#include <utility>
+#include <vector>
 
 using namespace llvm;
 
@@ -592,7 +606,6 @@ static void EmitGenDwarfAranges(MCStreamer *MCOS,
   // And the pair of terminating zeros.
   Length += 2 * AddrSize;
 
-
   // Emit the header for this section.
   // The 4 byte length not including the 4 byte value for the length.
   MCOS->EmitIntValue(Length - 4, 4);
@@ -885,7 +898,7 @@ void MCGenDwarfInfo::Emit(MCStreamer *MCOS) {
     }
   }
 
-  assert((RangesSectionSymbol != NULL) || !UseRangesSection);
+  assert((RangesSectionSymbol != nullptr) || !UseRangesSection);
 
   MCOS->SwitchSection(context.getObjectFileInfo()->getDwarfARangesSection());
 
@@ -1003,6 +1016,7 @@ static void EmitPersonality(MCStreamer &streamer, const MCSymbol &symbol,
 }
 
 namespace {
+
 class FrameEmitterImpl {
   int CFAOffset = 0;
   int InitialCFAOffset = 0;
@@ -1050,10 +1064,10 @@ void FrameEmitterImpl::EmitCFIInstruction(const MCCFIInstruction &Instr) {
     Streamer.EmitULEB128IntValue(Reg2);
     return;
   }
-  case MCCFIInstruction::OpWindowSave: {
+  case MCCFIInstruction::OpWindowSave:
     Streamer.EmitIntValue(dwarf::DW_CFA_GNU_window_save, 1);
     return;
-  }
+
   case MCCFIInstruction::OpUndefined: {
     unsigned Reg = Instr.getRegister();
     Streamer.EmitIntValue(dwarf::DW_CFA_undefined, 1);
@@ -1087,7 +1101,6 @@ void FrameEmitterImpl::EmitCFIInstruction(const MCCFIInstruction &Instr) {
 
     return;
   }
-
   case MCCFIInstruction::OpDefCfaRegister: {
     unsigned Reg = Instr.getRegister();
     if (!IsEH)
@@ -1097,7 +1110,6 @@ void FrameEmitterImpl::EmitCFIInstruction(const MCCFIInstruction &Instr) {
 
     return;
   }
-
   case MCCFIInstruction::OpOffset:
   case MCCFIInstruction::OpRelOffset: {
     const bool IsRelative =
@@ -1145,11 +1157,11 @@ void FrameEmitterImpl::EmitCFIInstruction(const MCCFIInstruction &Instr) {
     Streamer.EmitIntValue(dwarf::DW_CFA_restore | Reg, 1);
     return;
   }
-  case MCCFIInstruction::OpGnuArgsSize: {
+  case MCCFIInstruction::OpGnuArgsSize:
     Streamer.EmitIntValue(dwarf::DW_CFA_GNU_args_size, 1);
     Streamer.EmitULEB128IntValue(Instr.getOffset());
     return;
-  }
+
   case MCCFIInstruction::OpEscape:
     Streamer.EmitBytes(Instr.getValues());
     return;
@@ -1444,10 +1456,12 @@ void FrameEmitterImpl::EmitFDE(const MCSymbol &cieStart,
 }
 
 namespace {
+
 struct CIEKey {
   static const CIEKey getEmptyKey() {
     return CIEKey(nullptr, 0, -1, false, false);
   }
+
   static const CIEKey getTombstoneKey() {
     return CIEKey(nullptr, -1, 0, false, false);
   }
@@ -1457,23 +1471,28 @@ struct CIEKey {
       : Personality(Personality), PersonalityEncoding(PersonalityEncoding),
         LsdaEncoding(LsdaEncoding), IsSignalFrame(IsSignalFrame),
         IsSimple(IsSimple) {}
+
   const MCSymbol *Personality;
   unsigned PersonalityEncoding;
   unsigned LsdaEncoding;
   bool IsSignalFrame;
   bool IsSimple;
 };
-} // anonymous namespace
+
+} // end anonymous namespace
 
 namespace llvm {
+
 template <> struct DenseMapInfo<CIEKey> {
   static CIEKey getEmptyKey() { return CIEKey::getEmptyKey(); }
   static CIEKey getTombstoneKey() { return CIEKey::getTombstoneKey(); }
+
   static unsigned getHashValue(const CIEKey &Key) {
     return static_cast<unsigned>(
         hash_combine(Key.Personality, Key.PersonalityEncoding, Key.LsdaEncoding,
                      Key.IsSignalFrame, Key.IsSimple));
   }
+
   static bool isEqual(const CIEKey &LHS, const CIEKey &RHS) {
     return LHS.Personality == RHS.Personality &&
            LHS.PersonalityEncoding == RHS.PersonalityEncoding &&
@@ -1482,7 +1501,8 @@ template <> struct DenseMapInfo<CIEKey> {
            LHS.IsSimple == RHS.IsSimple;
   }
 };
-} // namespace llvm
+
+} // end namespace llvm
 
 void MCDwarfFrameEmitter::Emit(MCObjectStreamer &Streamer, MCAsmBackend *MAB,
                                bool IsEH) {

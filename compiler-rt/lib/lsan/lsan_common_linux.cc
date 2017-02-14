@@ -34,6 +34,17 @@ static bool IsLinker(const char* full_name) {
   return LibraryNameIs(full_name, kLinkerName);
 }
 
+__attribute__((tls_model("initial-exec")))
+THREADLOCAL int disable_counter;
+bool DisabledInThisThread() { return disable_counter > 0; }
+void DisableInThisThread() { disable_counter++; }
+void EnableInThisThread() {
+  if (disable_counter == 0) {
+    DisableCounterUnderflow();
+  }
+  disable_counter--;
+}
+
 void InitializePlatformSpecificModules() {
   ListOfModules modules;
   modules.init();

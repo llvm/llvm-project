@@ -55,12 +55,12 @@ void test_cleanup() {
 // CHECK:           to label %[[LEAVE_FUNC:.*]] unwind label %[[CLEANUP:.*]]
 
 // CHECK: [[LEAVE_FUNC]]
-// CHECK:   call x86_thiscallcc void @"\01??_DCleanup@@QAE@XZ"(
+// CHECK:   call x86_thiscallcc void @"\01??_DCleanup@@QAEXXZ"(
 // CHECK:   ret void
 
 // CHECK: [[CLEANUP]]
 // CHECK:   %[[CLEANUPPAD:.*]] = cleanuppad within none []
-// CHECK:   call x86_thiscallcc void @"\01??_DCleanup@@QAE@XZ"(
+// CHECK:   call x86_thiscallcc void @"\01??_DCleanup@@QAEXXZ"(
 // CHECK:   cleanupret from %[[CLEANUPPAD]] unwind to caller
 
 

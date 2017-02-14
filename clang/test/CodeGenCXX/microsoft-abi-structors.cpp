@@ -207,7 +207,7 @@ F::~F() {
 void foo() {
   F f;
 }
-// DTORS3-LABEL: define linkonce_odr x86_thiscallcc void @"\01??_DF@test2@@UAE@XZ"({{.*}} {{.*}} comdat
+// DTORS3-LABEL: define linkonce_odr x86_thiscallcc void @"\01??_DF@test2@@QAEXXZ"({{.*}} {{.*}} comdat
 //      Do an adjustment from C* to F*.
 // DTORS3:   getelementptr i8, i8* %{{.*}}, i32 20
 // DTORS3:   bitcast i8* %{{.*}} to %"struct.test2::F"*
@@ -361,12 +361,12 @@ struct D : B, C { ~D(); };
 void call_vbase_complete(D *d) {
   d->~D();
 // CHECK: define void @"\01?call_vbase_complete@dtors@@YAXPAUD@1@@Z"
-// CHECK: call x86_thiscallcc void @"\01??_DD@dtors@@QAE@XZ"(%"struct.dtors::D"* %{{[^,]+}})
+// CHECK: call x86_thiscallcc void @"\01??_DD@dtors@@QAEXXZ"(%"struct.dtors::D"* %{{[^,]+}})
 // CHECK: ret
 }
 
 // The complete dtor should call the base dtors for D and the vbase A (once).
-// CHECK: define linkonce_odr x86_thiscallcc void @"\01??_DD@dtors@@QAE@XZ"({{.*}}) {{.*}} comdat
+// CHECK: define linkonce_odr x86_thiscallcc void @"\01??_DD@dtors@@QAEXXZ"({{.*}}) {{.*}} comdat
 // CHECK-NOT: call
 // CHECK: call x86_thiscallcc void @"\01??1D@dtors@@QAE@XZ"
 // CHECK-NOT: call
@@ -377,7 +377,7 @@ void call_vbase_complete(D *d) {
 void destroy_d_complete() {
   D d;
 // CHECK: define void @"\01?destroy_d_complete@dtors@@YAXXZ"
-// CHECK: call x86_thiscallcc void @"\01??_DD@dtors@@QAE@XZ"(%"struct.dtors::D"* %{{[^,]+}})
+// CHECK: call x86_thiscallcc void @"\01??_DD@dtors@@QAEXXZ"(%"struct.dtors::D"* %{{[^,]+}})
 // CHECK: ret
 }
 
@@ -387,7 +387,7 @@ void destroy_d_complete() {
 void call_nv_deleting_dtor(D *d) {
   delete d;
 // CHECK: define void @"\01?call_nv_deleting_dtor@dtors@@YAXPAUD@1@@Z"
-// CHECK: call x86_thiscallcc void @"\01??_DD@dtors@@QAE@XZ"(%"struct.dtors::D"* %{{[^,]+}})
+// CHECK: call x86_thiscallcc void @"\01??_DD@dtors@@QAEXXZ"(%"struct.dtors::D"* %{{[^,]+}})
 // CHECK: call void @"\01??3@YAXPAX@Z"
 // CHECK: ret
 }
