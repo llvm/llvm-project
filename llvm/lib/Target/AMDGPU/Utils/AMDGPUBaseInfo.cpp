@@ -1,4 +1,4 @@
-//===-- AMDGPUBaseInfo.cpp - AMDGPU Base encoding information--------------===//
+//===- AMDGPUBaseInfo.cpp - AMDGPU Base encoding information --------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -6,20 +6,34 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-#include "AMDGPUBaseInfo.h"
+
 #include "AMDGPU.h"
+#include "AMDGPUBaseInfo.h"
 #include "SIDefines.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Triple.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
+#include "llvm/IR/Attributes.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/MC/MCContext.h"
-#include "llvm/MC/MCInstrInfo.h"
+#include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/SubtargetFeature.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/ELF.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MathExtras.h"
+#include <algorithm>
+#include <cassert>
+#include <cstdint>
+#include <cstring>
+#include <utility>
 
 #define GET_SUBTARGETINFO_ENUM
 #include "AMDGPUGenSubtargetInfo.inc"
@@ -76,7 +90,7 @@ unsigned getLgkmcntBitShift() { return 8; }
 /// \returns Lgkmcnt bit width.
 unsigned getLgkmcntBitWidth() { return 4; }
 
-} // namespace anonymous
+} // end namespace anonymous
 
 namespace llvm {
 namespace AMDGPU {
@@ -268,7 +282,7 @@ unsigned getMaxNumVGPRs(const FeatureBitset &Features, unsigned WavesPerEU) {
   return std::min(MaxNumVGPRs, AddressableNumVGPRs);
 }
 
-} // namespace IsaInfo
+} // end namespace IsaInfo
 
 void initDefaultAMDKernelCodeT(amd_kernel_code_t &Header,
                                const FeatureBitset &Features) {
@@ -371,7 +385,7 @@ std::pair<int, int> getIntegerPairAttribute(const Function &F,
     return Default;
   }
   if (Strs.second.trim().getAsInteger(0, Ints.second)) {
-    if (!OnlyFirstRequired || Strs.second.trim().size()) {
+    if (!OnlyFirstRequired || !Strs.second.trim().empty()) {
       Ctx.emitError("can't parse second integer attribute " + Name);
       return Default;
     }
@@ -655,5 +669,5 @@ bool isLegalSMRDImmOffset(const MCSubtargetInfo &ST, int64_t ByteOffset) {
                                 isUInt<20>(EncodedOffset);
 }
 
-} // End namespace AMDGPU
-} // End namespace llvm
+} // end namespace AMDGPU
+} // end namespace llvm

@@ -8991,6 +8991,14 @@ bool clang::isBetterOverloadCandidate(Sema &S, const OverloadCandidate &Cand1,
     // C++14 [over.match.best]p1 section 2 bullet 3.
   }
 
+  //    -- F1 is generated from a deduction-guide and F2 is not
+  if (Cand1.Function && Cand2.Function && Cand1.Function->isDeductionGuide() &&
+      Cand1.Function->isImplicit() != Cand2.Function->isImplicit()) {
+    assert(Cand2.Function->isDeductionGuide() &&
+           "comparing deduction guide with non-deduction-guide");
+    return Cand2.Function->isImplicit();
+  }
+
   //    -- F1 is a non-template function and F2 is a function template
   //       specialization, or, if not that,
   bool Cand1IsSpecialization = Cand1.Function &&

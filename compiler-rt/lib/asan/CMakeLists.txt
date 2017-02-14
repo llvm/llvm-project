@@ -36,6 +36,11 @@ set(ASAN_PREINIT_SOURCES
 include_directories(..)
 
 set(ASAN_CFLAGS ${SANITIZER_COMMON_CFLAGS})
+
+# FIXME(fjricci) - remove this once lsan for darwin is fully enabled
+if(APPLE AND COMPILER_RT_HAS_LSAN)
+  set(ASAN_CFLAGS ${ASAN_CFLAGS} -DCAN_SANITIZE_LEAKS_MAC=1)
+endif()
 append_rtti_flag(OFF ASAN_CFLAGS)
 
 set(ASAN_DYNAMIC_LINK_FLAGS)
@@ -107,6 +112,7 @@ add_compiler_rt_component(asan)
 
 if(APPLE)
   add_weak_symbols("asan" WEAK_SYMBOL_LINK_FLAGS)
+  add_weak_symbols("lsan" WEAK_SYMBOL_LINK_FLAGS)
   add_weak_symbols("ubsan" WEAK_SYMBOL_LINK_FLAGS)
   add_weak_symbols("sanitizer_common" WEAK_SYMBOL_LINK_FLAGS)
 

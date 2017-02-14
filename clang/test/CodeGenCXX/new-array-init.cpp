@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -std=c++11 -triple i386-unknown-unknown %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -std=c++11 -triple i386-unknown-unknown %s -emit-llvm -fsanitize=signed-integer-overflow -o - | FileCheck --check-prefix=SIO %s
 
 // CHECK: @[[ABC4:.*]] = {{.*}} constant [4 x i8] c"abc\00"
 // CHECK: @[[ABC15:.*]] = {{.*}} constant [15 x i8] c"abc\00\00\00\00
@@ -115,4 +116,10 @@ void aggr_sufficient(int n) {
   // CHECK: call void @llvm.memset{{.*}}(i8* %[[MEM]], i8 0, i32 %[[REMAIN]],
   struct Aggr { int a, b; };
   new Aggr[n] { 1, 2, 3 };
+}
+
+// SIO-LABEL: define void @_Z14constexpr_testv
+void constexpr_test() {
+  // SIO: call i8* @_Zna{{.}}(i32 4)
+  new int[0+1]{0};
 }

@@ -937,8 +937,6 @@ SpecEntryTraits<FunctionTemplateSpecializationInfo> {
 
 /// Declaration of a template function.
 class FunctionTemplateDecl : public RedeclarableTemplateDecl {
-  static void DeallocateCommon(void *Ptr);
-
 protected:
   /// \brief Data that is common to all of the declarations of a given
   /// function template.
@@ -1482,6 +1480,7 @@ public:
   
   using TemplateParmPosition::getDepth;
   using TemplateParmPosition::getPosition;
+  using TemplateParmPosition::setPosition;
   using TemplateParmPosition::getIndex;
 
   /// \brief Whether this template template parameter is a template
@@ -2034,8 +2033,6 @@ public:
 
 /// Declaration of a class template.
 class ClassTemplateDecl : public RedeclarableTemplateDecl {
-  static void DeallocateCommon(void *Ptr);
-
 protected:
   /// \brief Data that is common to all of the declarations of a given
   /// class template.
@@ -2329,8 +2326,6 @@ public:
 /// template \<typename T> using V = std::map<T*, int, MyCompare<T>>;
 /// \endcode
 class TypeAliasTemplateDecl : public RedeclarableTemplateDecl {
-  static void DeallocateCommon(void *Ptr);
-
 protected:
   typedef CommonBase Common;
 
@@ -2855,8 +2850,6 @@ public:
 
 /// Declaration of a variable template.
 class VarTemplateDecl : public RedeclarableTemplateDecl {
-  static void DeallocateCommon(void *Ptr);
-
 protected:
   /// \brief Data that is common to all of the declarations of a given
   /// variable template.

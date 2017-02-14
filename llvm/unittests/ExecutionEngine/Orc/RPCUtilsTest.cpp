@@ -146,15 +146,15 @@ private:
 
 
 void freeVoidBool(bool B) {
-};
+}
 
 TEST(DummyRPC, TestFreeFunctionHandler) {
   Queue Q1, Q2;
   DummyRPCEndpoint Server(Q2, Q1);
   Server.addHandler<DummyRPCAPI::VoidBool>(freeVoidBool);
-};
+}
 
-TEST(DummyRPC, TestAsyncVoidBool) {
+TEST(DummyRPC, TestCallAsyncVoidBool) {
   Queue Q1, Q2;
   DummyRPCEndpoint Client(Q1, Q2);
   DummyRPCEndpoint Server(Q2, Q1);
@@ -198,7 +198,7 @@ TEST(DummyRPC, TestAsyncVoidBool) {
   ServerThread.join();
 }
 
-TEST(DummyRPC, TestAsyncIntInt) {
+TEST(DummyRPC, TestCallAsyncIntInt) {
   Queue Q1, Q2;
   DummyRPCEndpoint Client(Q1, Q2);
   DummyRPCEndpoint Server(Q2, Q1);
@@ -222,6 +222,52 @@ TEST(DummyRPC, TestAsyncIntInt) {
         EXPECT_FALSE(!!Err) << "Server failed to handle call to int(int)";
       }
     });
+
+  {
+    auto Err = Client.callAsync<DummyRPCAPI::IntInt>(
+        [](Expected<int> Result) {
+          EXPECT_TRUE(!!Result) << "Async int(int) response handler failed";
+          EXPECT_EQ(*Result, 42)
+            << "Async int(int) response handler received incorrect result";
+          return Error::success();
+        }, 21);
+    EXPECT_FALSE(!!Err) << "Client.callAsync failed for int(int)";
+  }
+
+  {
+    // Poke the client to process the result.
+    auto Err = Client.handleOne();
+    EXPECT_FALSE(!!Err) << "Client failed to handle response from void(bool)";
+  }
+
+  ServerThread.join();
+}
+
+TEST(DummyRPC, TestAsyncIntIntHandler) {
+  Queue Q1, Q2;
+  DummyRPCEndpoint Client(Q1, Q2);
+  DummyRPCEndpoint Server(Q2, Q1);
+
+  std::thread ServerThread([&]() {
+      Server.addAsyncHandler<DummyRPCAPI::IntInt>(
+          [](std::function<Error(Expected<int32_t>)> SendResult,
+             int32_t X) {
+            EXPECT_EQ(X, 21) << "Server int(int) receieved unexpected result";
+            return SendResult(2 * X);
+          });
+
+      {
+        // Poke the server to handle the negotiate call.
+        auto Err = Server.handleOne();
+        EXPECT_FALSE(!!Err) << "Server failed to handle call to negotiate";
+      }
+
+      {
+        // Poke the server to handle the VoidBool call.
+        auto Err = Server.handleOne();
+        EXPECT_FALSE(!!Err) << "Server failed to handle call to void(bool)";
+      }
+  });
 
   {
     auto Err = Client.callAsync<DummyRPCAPI::IntInt>(

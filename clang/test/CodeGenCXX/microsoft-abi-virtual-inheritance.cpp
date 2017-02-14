@@ -84,7 +84,7 @@ B::~B() {
 
   // CHECK: ret
 
-  // CHECK2-LABEL: define linkonce_odr x86_thiscallcc void @"\01??_DB@@UAE@XZ"(%struct.B*
+  // CHECK2-LABEL: define linkonce_odr x86_thiscallcc void @"\01??_DB@@QAEXXZ"(%struct.B*
   // CHECK2: %[[THIS:.*]] = load %struct.B*, %struct.B** {{.*}}
   // CHECK2: %[[THIS_i8:.*]] = bitcast %struct.B* %[[THIS]] to i8*
   // CHECK2: %[[B_i8:.*]] = getelementptr i8, i8* %[[THIS_i8]], i32 8
@@ -102,7 +102,7 @@ B::~B() {
   // CHECK2:   %[[THIS:.*]] = bitcast i8* %[[THIS_i8]] to %struct.B*
   // CHECK2:   store %struct.B* %[[THIS]], %struct.B** %[[THIS_ADDR:.*]], align 4
   // CHECK2:   %[[THIS:.*]] = load %struct.B*, %struct.B** %[[THIS_ADDR]]
-  // CHECK2:   call x86_thiscallcc void @"\01??_DB@@UAE@XZ"(%struct.B* %[[THIS]])
+  // CHECK2:   call x86_thiscallcc void @"\01??_DB@@QAEXXZ"(%struct.B* %[[THIS]])
   // ...
   // CHECK2: ret
 }
@@ -208,7 +208,7 @@ void call_complete_dtor() {
   B b;
   // CHECK: call x86_thiscallcc %struct.B* @"\01??0B@@QAE@XZ"(%struct.B* %[[B:.*]], i32 1)
   // CHECK-NOT: getelementptr
-  // CHECK: call x86_thiscallcc void @"\01??_DB@@UAE@XZ"(%struct.B* %[[B]])
+  // CHECK: call x86_thiscallcc void @"\01??_DB@@QAEXXZ"(%struct.B* %[[B]])
   // CHECK: ret
 }
 

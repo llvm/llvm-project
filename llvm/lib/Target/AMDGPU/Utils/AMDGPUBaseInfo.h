@@ -1,4 +1,4 @@
-//===-- AMDGPUBaseInfo.h - Top level definitions for AMDGPU -----*- C++ -*-===//
+//===- AMDGPUBaseInfo.h - Top level definitions for AMDGPU ------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -11,9 +11,14 @@
 #define LLVM_LIB_TARGET_AMDGPU_UTILS_AMDGPUBASEINFO_H
 
 #include "AMDKernelCodeT.h"
-#include "llvm/IR/CallingConv.h"
-
 #include "SIDefines.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/IR/CallingConv.h"
+#include "llvm/MC/MCInstrDesc.h"
+#include "llvm/Support/Compiler.h"
+#include "llvm/Support/ErrorHandling.h"
+#include <cstdint>
+#include <utility>
 
 #define GET_INSTRINFO_OPERAND_ENUM
 #include "AMDGPUGenInstrInfo.inc"
@@ -26,14 +31,13 @@ class Function;
 class GlobalValue;
 class MachineMemOperand;
 class MCContext;
-class MCInstrDesc;
 class MCRegisterClass;
 class MCRegisterInfo;
 class MCSection;
 class MCSubtargetInfo;
+class Triple;
 
 namespace AMDGPU {
-
 namespace IsaInfo {
 
 enum {
@@ -141,7 +145,7 @@ unsigned getMinNumVGPRs(const FeatureBitset &Features, unsigned WavesPerEU);
 /// execution unit requirement for given subtarget \p Features.
 unsigned getMaxNumVGPRs(const FeatureBitset &Features, unsigned WavesPerEU);
 
-} // namespace IsaInfo
+} // end namespace IsaInfo
 
 LLVM_READONLY
 int16_t getNamedOperandIdx(uint16_t Opcode, uint16_t NamedIdx);
@@ -330,4 +334,4 @@ bool isLegalSMRDImmOffset(const MCSubtargetInfo &ST, int64_t ByteOffset);
 } // end namespace AMDGPU
 } // end namespace llvm
 
-#endif
+#endif // LLVM_LIB_TARGET_AMDGPU_UTILS_AMDGPUBASEINFO_H

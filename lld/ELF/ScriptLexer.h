@@ -1,4 +1,4 @@
-//===- ScriptParser.h -------------------------------------------*- C++ -*-===//
+//===- ScriptLexer.h --------------------------------------------*- C++ -*-===//
 //
 //                             The LLVM Linker
 //
@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLD_ELF_SCRIPT_PARSER_H
-#define LLD_ELF_SCRIPT_PARSER_H
+#ifndef LLD_ELF_SCRIPT_LEXER_H
+#define LLD_ELF_SCRIPT_LEXER_H
 
 #include "lld/Core/LLVM.h"
 #include "llvm/ADT/StringRef.h"
@@ -19,9 +19,9 @@
 namespace lld {
 namespace elf {
 
-class ScriptParserBase {
+class ScriptLexer {
 public:
-  explicit ScriptParserBase(MemoryBufferRef MB);
+  explicit ScriptLexer(MemoryBufferRef MB);
 
   void setError(const Twine &Msg);
   void tokenize(MemoryBufferRef MB);

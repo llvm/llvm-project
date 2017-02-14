@@ -17,6 +17,10 @@ set(LSAN_SOURCES
 
 set(LSAN_SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
+# FIXME(fjricci) - remove this once lsan for darwin is fully enabled
+if(APPLE AND COMPILER_RT_HAS_LSAN)
+  set(LSAN_CFLAGS ${LSAN_CFLAGS} -DCAN_SANITIZE_LEAKS_MAC=1)
+endif()
 add_compiler_rt_object_libraries(RTLSanCommon
     OS ${SANITIZER_COMMON_SUPPORTED_OS}
     ARCHS ${LSAN_COMMON_SUPPORTED_ARCH}
@@ -25,16 +29,34 @@ add_compiler_rt_object_libraries(RTLSanCommon
 
 if(COMPILER_RT_HAS_LSAN)
   add_compiler_rt_component(lsan)
-  foreach(arch ${LSAN_SUPPORTED_ARCH})
+  if(APPLE)
+    add_weak_symbols("lsan" WEAK_SYMBOL_LINK_FLAGS)
+    add_weak_symbols("sanitizer_common" WEAK_SYMBOL_LINK_FLAGS)
+
     add_compiler_rt_runtime(clang_rt.lsan
-      STATIC
-      ARCHS ${arch}
+      SHARED
+      OS ${SANITIZER_COMMON_SUPPORTED_OS}
+      ARCHS ${LSAN_SUPPORTED_ARCH}
       SOURCES ${LSAN_SOURCES}
-              $<TARGET_OBJECTS:RTInterception.${arch}>
-              $<TARGET_OBJECTS:RTSanitizerCommon.${arch}>
-              $<TARGET_OBJECTS:RTSanitizerCommonLibc.${arch}>
-              $<TARGET_OBJECTS:RTLSanCommon.${arch}>
+      OBJECT_LIBS RTLSanCommon
+                  RTInterception
+                  RTSanitizerCommon
+                  RTSanitizerCommonLibc
       CFLAGS ${LSAN_CFLAGS}
+      LINK_FLAGS ${WEAK_SYMBOL_LINK_FLAGS}
       PARENT_TARGET lsan)
-  endforeach()
+  else()
+    foreach(arch ${LSAN_SUPPORTED_ARCH})
+      add_compiler_rt_runtime(clang_rt.lsan
+        STATIC
+        ARCHS ${arch}
+        SOURCES ${LSAN_SOURCES}
+                $<TARGET_OBJECTS:RTInterception.${arch}>
+                $<TARGET_OBJECTS:RTSanitizerCommon.${arch}>
+                $<TARGET_OBJECTS:RTSanitizerCommonLibc.${arch}>
+                $<TARGET_OBJECTS:RTLSanCommon.${arch}>
+        CFLAGS ${LSAN_CFLAGS}
+        PARENT_TARGET lsan)
+    endforeach()
+  endif()
 endif()

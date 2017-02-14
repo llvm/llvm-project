@@ -39,10 +39,12 @@ void foo() {
   // CHECK-CC1-NEXT: COMPLETION: Pattern : [#size_t#]sizeof(<#expression-or-type#>)
   // CHECK-CC1-NEXT: COMPLETION: Pattern : [#size_t#]sizeof...(<#parameter-pack#>)
   // CHECK-CC1-NEXT: COMPLETION: static
+  // CHECK-CC1-NEXT: COMPLETION: Pattern : static_assert(<#expression#>, <#message#>)
   // CHECK-CC1-NEXT: COMPLETION: Pattern : static_cast<<#type#>>(<#expression#>)
   // CHECK-CC1-NEXT: COMPLETION: struct
   // CHECK-CC1-NEXT: COMPLETION: Pattern : switch(<#condition#>){
   // CHECK-CC1: COMPLETION: t : t
+  // CHECK-CC1-NEXT: COMPLETION: thread_local
   // CHECK-CC1-NEXT: COMPLETION: Pattern : [#void#]throw <#expression#>
   // CHECK-CC1-NEXT: COMPLETION: Pattern : [#bool#]true
   // CHECK-CC1-NEXT: COMPLETION: Pattern : try{<#statements#>
@@ -72,6 +74,7 @@ void foo() {
   // CHECK-CC2-NEXT: COMPLETION: char32
   // CHECK-CC2-NEXT: COMPLETION: class
   // CHECK-CC2-NEXT: COMPLETION: const
+  // CHECK-CC2-NEXT: COMPLETION: constexpr
   // CHECK-CC2-NEXT: COMPLETION: Pattern : decltype(<#expression#>)
   // CHECK-CC2-NEXT: COMPLETION: double
   // CHECK-CC2-NEXT: COMPLETION: enum
@@ -86,10 +89,12 @@ void foo() {
   // CHECK-CC2-NEXT: COMPLETION: short
   // CHECK-CC2-NEXT: COMPLETION: signed
   // CHECK-CC2-NEXT: COMPLETION: static
+  // CHECK-CC2-NEXT: COMPLETION: Pattern : static_assert(<#expression#>, <#message#>)
   // CHECK-CC2-NEXT: COMPLETION: struct
   // CHECK-CC2-NEXT: COMPLETION: t : t
   // CHECK-CC2-NEXT: COMPLETION: Pattern : template <#declaration#>
   // CHECK-CC2-NEXT: COMPLETION: Pattern : template<<#parameters#>>
+  // CHECK-CC2-NEXT: COMPLETION: thread_local
   // CHECK-CC2-NEXT: COMPLETION: TYPEDEF : TYPEDEF
   // CHECK-CC2-NEXT: COMPLETION: Pattern : typedef <#type#> <#name#>
   // CHECK-CC2-NEXT: COMPLETION: Pattern : typename <#qualifier#>::<#name#>
@@ -111,6 +116,7 @@ void foo() {
   // CHECK-CC3-NEXT: COMPLETION: char32_t
   // CHECK-CC3-NEXT: COMPLETION: class
   // CHECK-CC3-NEXT: COMPLETION: const
+  // CHECK-CC3-NEXT: COMPLETION: constexpr
   // CHECK-CC3-NEXT: COMPLETION: Pattern : decltype(<#expression#>)
   // CHECK-CC3-NEXT: COMPLETION: double
   // CHECK-CC3-NEXT: COMPLETION: enum
@@ -129,8 +135,10 @@ void foo() {
   // CHECK-CC3-NEXT: COMPLETION: short
   // CHECK-CC3-NEXT: COMPLETION: signed
   // CHECK-CC3-NEXT: COMPLETION: static
+  // CHECK-CC3-NEXT: COMPLETION: Pattern : static_assert(<#expression#>, <#message#>)
   // CHECK-CC3-NEXT: COMPLETION: struct
   // CHECK-CC3-NEXT: COMPLETION: Pattern : template<<#parameters#>>
+  // CHECK-CC3-NEXT: COMPLETION: thread_local
   // CHECK-CC3-NEXT: COMPLETION: Pattern : typedef <#type#> <#name#>
   // CHECK-CC3-NEXT: COMPLETION: Pattern : typename <#qualifier#>::<#name#>
   // CHECK-CC3-NEXT: COMPLETION: Pattern : typeof <#expression#>
@@ -227,6 +235,7 @@ void foo() {
   // CHECK-NO-RTTI-NEXT: COMPLETION: Pattern : [#size_t#]sizeof(<#expression-or-type#>)
   // CHECK-NO-RTTI-NEXT: COMPLETION: Pattern : [#size_t#]sizeof...(<#parameter-pack#>)
   // CHECK-NO-RTTI-NEXT: COMPLETION: static
+  // CHECK-NO-RTTI-NEXT: COMPLETION: Pattern : static_assert(<#expression#>, <#message#>)
   // CHECK-NO-RTTI-NEXT: COMPLETION: Pattern : static_cast<<#type#>>(<#expression#>)
   // CHECK-NO-RTTI-NEXT: COMPLETION: struct
   // CHECK-NO-RTTI-NEXT: COMPLETION: Pattern : switch(<#condition#>){

@@ -22,7 +22,7 @@ add_lld_library(lldELF
   Mips.cpp
   OutputSections.cpp
   Relocations.cpp
-  ScriptParser.cpp
+  ScriptLexer.cpp
   Strings.cpp
   SymbolTable.cpp
   Symbols.cpp
