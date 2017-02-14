@@ -847,7 +847,7 @@ static bool hoist(Instruction &I, const DominatorTree *DT, const Loop *CurLoop,
   DEBUG(dbgs() << "LICM hoisting to " << Preheader->getName() << ": " << I
                << "\n");
   ORE->emit(OptimizationRemark(DEBUG_TYPE, "Hoisted", &I)
-            << "hosting " << ore::NV("Inst", &I));
+            << "hoisting " << ore::NV("Inst", &I));
 
   // Metadata can be dependent on conditions we are hoisting above.
   // Conservatively strip all metadata on the instruction unless we were

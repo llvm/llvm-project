@@ -367,17 +367,20 @@ elf::ObjectFile<ELFT>::createInputSection(const Elf_Shdr &Sec,
     return &InputSection<ELFT>::Discarded;
   case SHT_RELA:
   case SHT_REL: {
+    // Find the relocation target section and associate this
+    // section with it. Target can be discarded, for example
+    // if it is a duplicated member of SHT_GROUP section, we
+    // do not create or proccess relocatable sections then.
+    InputSectionBase<ELFT> *Target = getRelocTarget(Sec);
+    if (!Target)
+      return nullptr;
+
     // This section contains relocation information.
     // If -r is given, we do not interpret or apply relocation
     // but just copy relocation sections to output.
     if (Config->Relocatable)
       return make<InputSection<ELFT>>(this, &Sec, Name);
 
-    // Find the relocation target section and associate this
-    // section with it.
-    InputSectionBase<ELFT> *Target = getRelocTarget(Sec);
-    if (!Target)
-      return nullptr;
     if (Target->FirstRelocation)
       fatal(toString(this) +
             ": multiple relocation sections to one section are not supported");

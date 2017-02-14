@@ -316,8 +316,8 @@ def _render_file(source_dir, output_dir, ctx, entry):
     SourceFileRenderer(source_dir, output_dir, filename).render(remarks)
 
 
-def gather_results(pool, filenames):
-    remarks = pool.map(get_remarks, filenames)
+def gather_results(pmap, filenames):
+    remarks = pmap(get_remarks, filenames)
 
     def merge_file_remarks(file_remarks_job, all_remarks, merged):
         for filename, d in file_remarks_job.iteritems():
@@ -348,7 +348,7 @@ def map_remarks(all_remarks):
                     context.caller_loc[caller] = arg['DebugLoc']
 
 
-def generate_report(pool, all_remarks, file_remarks, source_dir, output_dir):
+def generate_report(pmap, all_remarks, file_remarks, source_dir, output_dir):
     try:
         os.makedirs(output_dir)
     except OSError as e:
@@ -358,7 +358,7 @@ def generate_report(pool, all_remarks, file_remarks, source_dir, output_dir):
             raise
 
     _render_file_bound = functools.partial(_render_file, source_dir, output_dir, context)
-    pool.map(_render_file_bound, file_remarks.items())
+    pmap(_render_file_bound, file_remarks.items())
 
     if context.should_display_hotness():
         sorted_remarks = sorted(all_remarks.itervalues(), key=lambda r: (r.Hotness, r.__dict__), reverse=True)
@@ -391,9 +391,14 @@ if __name__ == '__main__':
         parser.print_help()
         sys.exit(1)
 
-    pool = Pool(processes=args.jobs)
-    all_remarks, file_remarks = gather_results(pool, args.yaml_files)
+    if args.jobs == 1:
+        pmap = map
+    else:
+        pool = Pool(processes=args.jobs)
+        pmap = pool.map
+
+    all_remarks, file_remarks = gather_results(pmap, args.yaml_files)
 
     map_remarks(all_remarks)
 
-    generate_report(pool, all_remarks, file_remarks, args.source_dir, args.output_dir)
+    generate_report(pmap, all_remarks, file_remarks, args.source_dir, args.output_dir)

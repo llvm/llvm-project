@@ -773,3 +773,34 @@ for.body:
 exit:
   ret void
 }
+
+; CHECK-LABEL: @non_primary_iv_trunc(
+; CHECK:       vector.body:
+; CHECK-NEXT:    %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
+; CHECK:         [[VEC_IND:%.*]] = phi <2 x i32> [ <i32 0, i32 2>, %vector.ph ], [ [[VEC_IND_NEXT:%.*]], %vector.body ]
+; CHECK:         [[TMP3:%.*]] = add i64 %index, 0
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, i32* %a, i64 [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i32, i32* [[TMP4]], i32 0
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i32* [[TMP5]] to <2 x i32>*
+; CHECK-NEXT:    store <2 x i32> [[VEC_IND]], <2 x i32>* [[TMP6]], align 4
+; CHECK-NEXT:    %index.next = add i64 %index, 2
+; CHECK:         [[VEC_IND_NEXT]] = add <2 x i32> [[VEC_IND]], <i32 4, i32 4>
+; CHECK:         br i1 {{.*}}, label %middle.block, label %vector.body
+define void @non_primary_iv_trunc(i32* %a, i64 %n) {
+entry:
+  br label %for.body
+
+for.body:
+  %i = phi i64 [ %i.next, %for.body ], [ 0, %entry ]
+  %j = phi i64 [ %j.next, %for.body ], [ 0, %entry ]
+  %tmp0 = getelementptr inbounds i32, i32* %a, i64 %i
+  %tmp1 = trunc i64 %j to i32
+  store i32 %tmp1, i32* %tmp0, align 4
+  %i.next = add nuw nsw i64 %i, 1
+  %j.next = add nuw nsw i64 %j, 2
+  %cond = icmp slt i64 %i.next, %n
+  br i1 %cond, label %for.body, label %for.end
+
+for.end:
+  ret void
+}

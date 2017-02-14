@@ -57,6 +57,11 @@ The improvements are...
 Improvements to clang-tidy
 --------------------------
 
+- New `readability-misleading-indentation
+  <http://clang.llvm.org/extra/clang-tidy/checks/readability-misleading-indentation.html>`_ check
+
+  Finds misleading indentation where braces should be introduced or the code should be reformatted.
+
 - New `safety-no-assembler
   <http://clang.llvm.org/extra/clang-tidy/checks/safety-no-assembler.html>`_ check
 

@@ -1983,14 +1983,13 @@ void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
           Path.size() <= Filename.size() ? Filename[Path.size()-1] :
             (isAngled ? '>' : '"'));
       }
-      auto Replacement = Path.str().str();
       // For user files and known standard headers, by default we issue a diagnostic.
       // For other system headers, we don't. They can be controlled separately.
       auto DiagId = (FileCharacter == SrcMgr::C_User || warnByDefaultOnWrongCase(Name)) ?
           diag::pp_nonportable_path : diag::pp_nonportable_system_path;
       SourceRange Range(FilenameTok.getLocation(), CharEnd);
-      Diag(FilenameTok, DiagId) << Replacement <<
-        FixItHint::CreateReplacement(Range, Replacement);
+      Diag(FilenameTok, DiagId) << Path <<
+        FixItHint::CreateReplacement(Range, Path);
     }
   }
 
