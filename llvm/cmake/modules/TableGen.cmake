@@ -23,6 +23,13 @@ function(tablegen project ofn)
     set(LLVM_TARGET_DEFINITIONS_ABSOLUTE
       ${CMAKE_CURRENT_SOURCE_DIR}/${LLVM_TARGET_DEFINITIONS})
   endif()
+  if (LLVM_ENABLE_DAGISEL_COV)
+    list(FIND ARGN "-gen-dag-isel" idx)
+    if( NOT idx EQUAL -1 )
+      list(APPEND LLVM_TABLEGEN_FLAGS "-instrument-coverage")
+    endif()
+  endif()
+
   add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${ofn}.tmp
     # Generate tablegen output in a temporary file.
     COMMAND ${${project}_TABLEGEN_EXE} ${ARGN} -I ${CMAKE_CURRENT_SOURCE_DIR}
