@@ -449,9 +449,11 @@ bool SwiftUserExpression::Parse(DiagnosticManager &diagnostic_manager,
   const lldb::LanguageType lang_type = lldb::eLanguageTypeSwift;
 
   m_options.SetLanguage(lang_type);
+  uint32_t first_body_line = 0;
 
   if (!source_code->GetText(m_transformed_text, lang_type, m_language_flags,
-                            m_options, m_swift_generic_info, exe_ctx)) {
+                            m_options, m_swift_generic_info, exe_ctx,
+                            first_body_line)) {
     diagnostic_manager.PutString(eDiagnosticSeverityError,
                                   "couldn't construct expression body");
     return false;
@@ -512,7 +514,8 @@ bool SwiftUserExpression::Parse(DiagnosticManager &diagnostic_manager,
       new SwiftExpressionParser(exe_scope, *this, m_options));
 
   unsigned num_errors = parser->Parse(
-      diagnostic_manager, 0, source_code->GetNumBodyLines(), line_offset);
+      diagnostic_manager, first_body_line, 
+      first_body_line + source_code->GetNumBodyLines(), line_offset);
 
   if (num_errors) {
     // Calculate the fixed expression string at this point:

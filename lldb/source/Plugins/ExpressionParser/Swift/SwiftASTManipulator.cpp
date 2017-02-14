@@ -108,7 +108,9 @@ bool SwiftASTManipulator::VariableInfo::GetIsCaptureList() const {
 void SwiftASTManipulator::WrapExpression(
     lldb_private::Stream &wrapped_stream, const char *orig_text,
     uint32_t language_flags, const EvaluateExpressionOptions &options,
-    const Expression::SwiftGenericInfo &generic_info) {
+    const Expression::SwiftGenericInfo &generic_info,
+    uint32_t &first_body_line) {
+    first_body_line = 0; // set to invalid
   // TODO make the extension private so we're not polluting the class
   static unsigned int counter = 0;
   unsigned int current_counter = counter++;
@@ -135,8 +137,10 @@ $builtin_logger_initialize()
       wrapped_stream.Printf("%s#sourceLocation(file: \"%s\", line: %u)\n%s\n",
                             playground_prefix, pound_file, pound_line,
                             orig_text);
+      first_body_line = 1;
     } else {
       wrapped_stream.Printf("%s%s", playground_prefix, orig_text);
+      first_body_line = 7;
     }
     return;
   } else if (repl) {
@@ -147,6 +151,7 @@ $builtin_logger_initialize()
     } else {
       wrapped_stream.Printf("%s", orig_text);
     }
+    first_body_line = 1;
     return;
   }
 
@@ -239,6 +244,7 @@ $builtin_logger_initialize()
             "    )                                                  \n"
             "  }                                                    \n"
             "}                                                      \n");
+        first_body_line = 5;
       } else {
         wrapped_stream.Printf(
             "extension %s$__lldb_context {                            \n"
@@ -260,6 +266,7 @@ $builtin_logger_initialize()
             optional_extension, func_decorator, current_counter,
             wrapped_expr_text.GetData(), current_counter);
 
+        first_body_line = 5;
       }
     } else {
       if (generic_info.function_bindings.size()) {
@@ -291,6 +298,7 @@ $builtin_logger_initialize()
             "    )                                                  \n"
             "  }                                                    \n"
             "}                                                      \n");
+        first_body_line = 5;
 
       } else {
         wrapped_stream.Printf(
@@ -312,6 +320,8 @@ $builtin_logger_initialize()
             "}                                                      \n",
             optional_extension, func_decorator, current_counter,
             wrapped_expr_text.GetData(), current_counter);
+
+        first_body_line = 5;
       }
     }
   } else {
@@ -340,6 +350,7 @@ $builtin_logger_initialize()
           "    )                                                  \n"
           "  }                                                    \n"
           "}                                                      \n");
+      first_body_line = 4;
     } else {
       wrapped_stream.Printf(
           "@LLDBDebuggerFunction                                  \n"
@@ -349,6 +360,7 @@ $builtin_logger_initialize()
                // needs.
           "}                                                      \n",
           wrapped_expr_text.GetData());
+      first_body_line = 4;
     }
   }
 }

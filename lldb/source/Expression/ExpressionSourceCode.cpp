@@ -259,7 +259,9 @@ bool ExpressionSourceCode::SaveExpressionTextToTempFile(
 bool ExpressionSourceCode::GetText(
     std::string &text, lldb::LanguageType wrapping_language,
     uint32_t language_flags, const EvaluateExpressionOptions &options,
-    const Expression::SwiftGenericInfo &generic_info, ExecutionContext &exe_ctx) const {
+    const Expression::SwiftGenericInfo &generic_info, ExecutionContext &exe_ctx,
+    uint32_t &first_body_line) const {
+  first_body_line = 0;
 
   const char *target_specific_defines = "typedef signed char BOOL;\n";
   std::string module_macros;
@@ -448,7 +450,8 @@ bool ExpressionSourceCode::GetText(
       break;
     case lldb::eLanguageTypeSwift: {
       SwiftASTManipulator::WrapExpression(wrap_stream, m_body.c_str(),
-                                          language_flags, options, generic_info);
+                                          language_flags, options, generic_info,
+                                          first_body_line);
     }
     }
 
