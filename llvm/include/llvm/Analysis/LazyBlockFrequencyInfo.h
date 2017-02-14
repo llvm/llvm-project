@@ -50,7 +50,8 @@ public:
   BlockFrequencyInfoT &getCalculated() {
     if (!Calculated) {
       assert(F && BPIPass && LI && "call setAnalysis");
-      BFI.calculate(*F, BPIPass->getBPI(), *LI);
+      BFI.calculate(
+          *F, BPIPassTrait<BranchProbabilityInfoPassT>::getBPI(BPIPass), *LI);
       Calculated = true;
     }
     return BFI;

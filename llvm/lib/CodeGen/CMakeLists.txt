@@ -36,6 +36,7 @@ add_llvm_library(LLVMCodeGen
   InterleavedAccessPass.cpp
   IntrinsicLowering.cpp
   LatencyPriorityQueue.cpp
+  LazyMachineBlockFrequencyInfo.cpp
   LexicalScopes.cpp
   LiveDebugValues.cpp
   LiveDebugVariables.cpp

@@ -173,6 +173,7 @@ void initializeLCSSAVerificationPassPass(PassRegistry&);
 void initializeLegacyLICMPassPass(PassRegistry&);
 void initializeLegacyLoopSinkPassPass(PassRegistry&);
 void initializeLazyBranchProbabilityInfoPassPass(PassRegistry&);
+void initializeLazyMachineBlockFrequencyInfoPassPass(PassRegistry&);
 void initializeLazyBlockFrequencyInfoPassPass(PassRegistry&);
 void initializeLazyValueInfoWrapperPassPass(PassRegistry&);
 void initializeLegalizerPass(PassRegistry&);
