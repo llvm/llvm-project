@@ -1013,7 +1013,9 @@ bool AddressSanitizer::isInterestingAlloca(const AllocaInst &AI) {
        (!ClSkipPromotableAllocas || !isAllocaPromotable(&AI)) &&
        // inalloca allocas are not treated as static, and we don't want
        // dynamic alloca instrumentation for them as well.
-       !AI.isUsedWithInAlloca());
+       !AI.isUsedWithInAlloca() &&
+       // swifterror allocas are register promoted by ISel
+       !AI.isSwiftError());
 
   ProcessedAllocas[&AI] = IsInteresting;
   return IsInteresting;
@@ -1088,11 +1090,18 @@ Value *AddressSanitizer::isInterestingMemoryAccess(Instruction *I,
     }
   }
 
-  // Do not instrument acesses from different address spaces; we cannot deal
-  // with them.
   if (PtrOperand) {
+    // Do not instrument acesses from different address spaces; we cannot deal
+    // with them.
     Type *PtrTy = cast<PointerType>(PtrOperand->getType()->getScalarType());
     if (PtrTy->getPointerAddressSpace() != 0)
+      return nullptr;
+
+    // Ignore swifterror addresses.
+    // swifterror memory addresses are mem2reg promoted by instruction
+    // selection. As such they cannot have regular uses like an instrumentation
+    // function and it makes no sense to track them as memory.
+    if (PtrOperand->isSwiftError())
       return nullptr;
   }
 
