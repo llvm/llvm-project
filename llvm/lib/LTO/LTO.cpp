@@ -98,6 +98,7 @@ static void computeCacheKey(
   AddUnsigned(Conf.RelocModel);
   AddUnsigned(Conf.CodeModel);
   AddUnsigned(Conf.CGOptLevel);
+  AddUnsigned(Conf.CGFileType);
   AddUnsigned(Conf.OptLevel);
   AddString(Conf.OptPipeline);
   AddString(Conf.AAPipeline);

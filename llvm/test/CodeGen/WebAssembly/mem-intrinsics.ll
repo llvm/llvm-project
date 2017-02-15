@@ -1,4 +1,4 @@
-; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -tail-dup-placement=0| FileCheck %s
+; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -tail-dup-placement=0 | FileCheck %s
 
 ; Test memcpy, memmove, and memset intrinsics.
 

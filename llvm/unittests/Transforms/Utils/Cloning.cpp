@@ -201,53 +201,6 @@ TEST_F(CloneInstruction, CallingConvention) {
   delete F2;
 }
 
-TEST_F(CloneInstruction, DuplicateInstructionsToSplit) {
-  Type *ArgTy1[] = {Type::getInt32PtrTy(context)};
-  FunctionType *FT = FunctionType::get(Type::getVoidTy(context), ArgTy1, false);
-  V = new Argument(Type::getInt32Ty(context));
-
-  Function *F = Function::Create(FT, Function::ExternalLinkage);
-
-  BasicBlock *BB1 = BasicBlock::Create(context, "", F);
-  IRBuilder<> Builder1(BB1);
-
-  BasicBlock *BB2 = BasicBlock::Create(context, "", F);
-  IRBuilder<> Builder2(BB2);
-
-  Builder1.CreateBr(BB2);
-
-  Instruction *AddInst = cast<Instruction>(Builder2.CreateAdd(V, V));
-  Instruction *MulInst = cast<Instruction>(Builder2.CreateMul(AddInst, V));
-  Instruction *SubInst = cast<Instruction>(Builder2.CreateSub(MulInst, V));
-  Builder2.CreateRetVoid();
-
-  ValueToValueMapTy Mapping;
-
-  auto Split = DuplicateInstructionsInSplitBetween(BB2, BB1, SubInst, Mapping);
-
-  EXPECT_TRUE(Split);
-  EXPECT_EQ(Mapping.size(), 2u);
-  EXPECT_TRUE(Mapping.find(AddInst) != Mapping.end());
-  EXPECT_TRUE(Mapping.find(MulInst) != Mapping.end());
-
-  auto AddSplit = dyn_cast<Instruction>(Mapping[AddInst]);
-  EXPECT_TRUE(AddSplit);
-  EXPECT_EQ(AddSplit->getOperand(0), V);
-  EXPECT_EQ(AddSplit->getOperand(1), V);
-  EXPECT_EQ(AddSplit->getParent(), Split);
-
-  auto MulSplit = dyn_cast<Instruction>(Mapping[MulInst]);
-  EXPECT_TRUE(MulSplit);
-  EXPECT_EQ(MulSplit->getOperand(0), AddSplit);
-  EXPECT_EQ(MulSplit->getOperand(1), V);
-  EXPECT_EQ(MulSplit->getParent(), Split);
-
-  EXPECT_EQ(AddSplit->getNextNode(), MulSplit);
-  EXPECT_EQ(MulSplit->getNextNode(), Split->getTerminator());
-
-  delete F;
-}
-
 class CloneFunc : public ::testing::Test {
 protected:
   void SetUp() override {

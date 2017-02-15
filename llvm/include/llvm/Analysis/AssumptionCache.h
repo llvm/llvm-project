@@ -202,7 +202,10 @@ public:
   AssumptionCacheTracker();
   ~AssumptionCacheTracker() override;
 
-  void releaseMemory() override { AssumptionCaches.shrink_and_clear(); }
+  void releaseMemory() override {
+    verifyAnalysis();
+    AssumptionCaches.shrink_and_clear();
+  }
 
   void verifyAnalysis() const override;
   bool doFinalization(Module &) override {

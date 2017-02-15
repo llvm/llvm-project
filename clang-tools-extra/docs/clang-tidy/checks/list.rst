@@ -109,6 +109,7 @@ Clang-Tidy Checks
    modernize-raw-string-literal
    modernize-redundant-void-arg
    modernize-replace-auto-ptr
+   modernize-return-braced-init-list
    modernize-shrink-to-fit
    modernize-use-auto
    modernize-use-bool-literals

@@ -13374,9 +13374,15 @@ SDValue DAGCombiner::createBuildVecShuffle(const SDLoc &DL, SDNode *N,
             !TLI.isOperationLegal(ISD::VECTOR_SHUFFLE, InVT1))
           return SDValue();
 
-        if (InVT1 != InVT2)
+        // Legalizing INSERT_SUBVECTOR is tricky - you basically have to
+        // lower it back into a BUILD_VECTOR. So if the inserted type is
+        // illegal, don't even try.
+        if (InVT1 != InVT2) {
+          if (!TLI.isTypeLegal(InVT2))
+            return SDValue();
           VecIn2 = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, InVT1,
                                DAG.getUNDEF(InVT1), VecIn2, ZeroIdx);
+        }
         ShuffleNumElems = NumElems * 2;
       } else {
         // Both VecIn1 and VecIn2 are wider than the output, and VecIn2 is wider

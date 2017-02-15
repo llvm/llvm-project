@@ -1961,7 +1961,7 @@ void MicrosoftCXXNameMangler::mangleFunctionType(const FunctionType *T,
     // Happens for function pointer type arguments for example.
     for (unsigned I = 0, E = Proto->getNumParams(); I != E; ++I) {
       mangleArgumentType(Proto->getParamType(I), Range);
-      // Mangle each pass_object_size parameter as if it's a paramater of enum
+      // Mangle each pass_object_size parameter as if it's a parameter of enum
       // type passed directly after the parameter with the pass_object_size
       // attribute. The aforementioned enum's name is __pass_object_size, and we
       // pretend it resides in a top-level namespace called __clang.

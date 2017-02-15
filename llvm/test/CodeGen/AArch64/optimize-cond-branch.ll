@@ -11,7 +11,7 @@ target triple = "arm64--"
 ;
 ; CHECK-LABEL: func
 ; CHECK-NOT: and
-; CHECK: tbnz
+; CHECK: tbz
 define void @func() {
   %c0 = icmp sgt i64 0, 0
   br i1 %c0, label %b1, label %b6

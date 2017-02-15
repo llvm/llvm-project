@@ -33,8 +33,8 @@ define i1 @call1(i8* %obj) {
   ret i1 %result
 }
 
-; CHECK: define i32 @call2
-define i32 @call2(i8* %obj) {
+; CHECK: define i1 @call2
+define i1 @call2(i8* %obj) {
   %vtableptr = bitcast i8* %obj to [1 x i8*]**
   %vtable = load [1 x i8*]*, [1 x i8*]** %vtableptr
   ; CHECK: [[VT2:%[^ ]*]] = bitcast [1 x i8*]* {{.*}} to i8*
@@ -43,13 +43,10 @@ define i32 @call2(i8* %obj) {
   call void @llvm.assume(i1 %p)
   %fptrptr = getelementptr [1 x i8*], [1 x i8*]* %vtable, i32 0, i32 0
   %fptr = load i8*, i8** %fptrptr
-  ; Intentional type mismatch to test zero extend.
-  %fptr_casted = bitcast i8* %fptr to i32 (i8*)*
-  ; CHECK: [[RES2:%[^ ]*]] = icmp ne i8* [[VT1]], bitcast ([1 x i8*]* @vt2 to i8*)
-  %result = call i32 %fptr_casted(i8* %obj)
-  ; CHECK: [[ZEXT2:%[^ ]*]] = zext i1 [[RES2]] to i32
-  ; CHECK: ret i32 [[ZEXT2:%[^ ]*]]
-  ret i32 %result
+  %fptr_casted = bitcast i8* %fptr to i1 (i8*)*
+  ; CHECK: [[RES1:%[^ ]*]] = icmp ne i8* [[VT1]], bitcast ([1 x i8*]* @vt2 to i8*)
+  %result = call i1 %fptr_casted(i8* %obj)
+  ret i1 %result
 }
 
 declare i1 @llvm.type.test(i8*, metadata)

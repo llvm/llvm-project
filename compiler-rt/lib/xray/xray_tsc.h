@@ -15,7 +15,7 @@
 
 #if defined(__x86_64__)
 #include "xray_x86_64.inc"
-#elif defined(__arm__) || defined(__aarch64__)
+#elif defined(__arm__) || defined(__aarch64__) || defined(__mips__)
 // Emulated TSC.
 // There is no instruction like RDTSCP in user mode on ARM. ARM's CP15 does
 //   not have a constant frequency like TSC on x86(_64), it may go faster

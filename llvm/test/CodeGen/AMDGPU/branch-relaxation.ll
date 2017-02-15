@@ -491,7 +491,8 @@ ret:
 
 ; GCN-LABEL: {{^}}long_branch_hang:
 ; GCN: s_cmp_lt_i32 s{{[0-9]+}}, 6
-; GCN-NEXT: s_cbranch_scc0 [[LONG_BR_0:BB[0-9]+_[0-9]+]]
+; GCN-NEXT: s_cbranch_scc1 {{BB[0-9]+_[0-9]+}}
+; GCN-NEXT: s_branch [[LONG_BR_0:BB[0-9]+_[0-9]+]]
 ; GCN-NEXT: BB{{[0-9]+_[0-9]+}}:
 
 ; GCN: s_add_u32 vcc_lo, vcc_lo, [[LONG_BR_DEST0:BB[0-9]+_[0-9]+]]-(

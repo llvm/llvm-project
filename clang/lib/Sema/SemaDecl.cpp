@@ -11692,8 +11692,6 @@ void
 Sema::CheckForFunctionRedefinition(FunctionDecl *FD,
                                    const FunctionDecl *EffectiveDefinition,
                                    SkipBodyInfo *SkipBody) {
-  // Don't complain if we're in GNU89 mode and the previous definition
-  // was an extern inline function.
   const FunctionDecl *Definition = EffectiveDefinition;
   if (!Definition)
     if (!FD->isDefined(Definition))

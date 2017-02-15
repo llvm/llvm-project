@@ -13,11 +13,13 @@ define void @max_9_sgprs(i32 addrspace(1)* %out1,
                           i32 addrspace(1)* %out2,
                           i32 addrspace(1)* %out3,
                           i32 addrspace(1)* %out4,
-                          i32 %one, i32 %two, i32 %three, i32 %four) #0 {
+                          i32 addrspace(1)* %out5,
+                          i32 %one, i32 %two, i32 %three, i32 %four, i32 %five) #0 {
   store i32 %one, i32 addrspace(1)* %out1
   store i32 %two, i32 addrspace(1)* %out2
   store i32 %three, i32 addrspace(1)* %out3
   store i32 %four, i32 addrspace(1)* %out4
+  store i32 %five, i32 addrspace(1)* %out5
   ret void
 }
 
@@ -52,18 +54,21 @@ define void @max_12_sgprs_14_input_sgprs(i32 addrspace(1)* %out1,
                                         i32 addrspace(1)* %out3,
                                         i32 addrspace(1)* %out4,
                                         i32 %one, i32 %two, i32 %three, i32 %four) #2 {
-  store volatile i32 0, i32* undef
   %x.0 = call i32 @llvm.amdgcn.workgroup.id.x()
-  store volatile i32 %x.0, i32 addrspace(1)* undef
   %x.1 = call i32 @llvm.amdgcn.workgroup.id.y()
-  store volatile i32 %x.0, i32 addrspace(1)* undef
   %x.2 = call i32 @llvm.amdgcn.workgroup.id.z()
-  store volatile i32 %x.0, i32 addrspace(1)* undef
   %x.3 = call i64 @llvm.amdgcn.dispatch.id()
-  store volatile i64 %x.3, i64 addrspace(1)* undef
   %x.4 = call i8 addrspace(2)* @llvm.amdgcn.dispatch.ptr()
-  store volatile i8 addrspace(2)* %x.4, i8 addrspace(2)* addrspace(1)* undef
   %x.5 = call i8 addrspace(2)* @llvm.amdgcn.queue.ptr()
+  store volatile i32 0, i32* undef
+  br label %stores
+
+stores:
+  store volatile i32 %x.0, i32 addrspace(1)* undef
+  store volatile i32 %x.0, i32 addrspace(1)* undef
+  store volatile i32 %x.0, i32 addrspace(1)* undef
+  store volatile i64 %x.3, i64 addrspace(1)* undef
+  store volatile i8 addrspace(2)* %x.4, i8 addrspace(2)* addrspace(1)* undef
   store volatile i8 addrspace(2)* %x.5, i8 addrspace(2)* addrspace(1)* undef
 
   store i32 %one, i32 addrspace(1)* %out1

@@ -42,7 +42,7 @@ macro(add_xray_unittest testname)
         list(APPEND TEST_DEPS gtest_main xray)
       endif()
       if(NOT APPLE)
-        add_compiler_rt_test(XRayUnitTests ${testname}
+        add_compiler_rt_test(XRayUnitTests ${testname}-${arch}
           OBJECTS ${TEST_OBJECTS}
           DEPS ${TEST_DEPS}
           LINK_FLAGS ${TARGET_LINK_FLAGS}

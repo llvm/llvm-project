@@ -2,7 +2,7 @@
 ; RUN: llc -march=amdgcn -verify-machineinstrs -O0 < %s
 
 ; GCN-LABEL: {{^}}test_loop:
-; GCN: [[LABEL:BB[0-9+]_[0-9]+]]:
+; GCN: [[LABEL:BB[0-9+]_[0-9]+]]: ; %for.body{{$}}
 ; GCN: ds_read_b32
 ; GCN: ds_write_b32
 ; GCN: s_branch [[LABEL]]

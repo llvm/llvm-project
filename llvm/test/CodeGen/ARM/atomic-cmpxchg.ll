@@ -66,14 +66,14 @@ entry:
 ; CHECK-ARMV7-NEXT: [[HEAD:.LBB[0-9_]+]]:
 ; CHECK-ARMV7-NEXT: strexb [[SUCCESS:r[0-9]+]], r2, [r0]
 ; CHECK-ARMV7-NEXT: cmp [[SUCCESS]], #0
-; CHECK-ARMV7-NEXT: moveq [[RES:r[0-9]+]], #1
+; CHECK-ARMV7-NEXT: moveq r0, #1
 ; CHECK-ARMV7-NEXT: bxeq lr
 ; CHECK-ARMV7-NEXT: [[TRY]]:
-; CHECK-ARMV7-NEXT: ldrexb [[LD:r[0-9]+]], [r0]
-; CHECK-ARMV7-NEXT: cmp [[LD]], [[DESIRED]]
+; CHECK-ARMV7-NEXT: ldrexb [[SUCCESS]], [r0]
+; CHECK-ARMV7-NEXT: cmp [[SUCCESS]], r1
 ; CHECK-ARMV7-NEXT: beq [[HEAD]]
 ; CHECK-ARMV7-NEXT: clrex
-; CHECK-ARMV7-NEXT: mov [[RES]], #0
+; CHECK-ARMV7-NEXT: mov r0, #0
 ; CHECK-ARMV7-NEXT: bx lr
 
 ; CHECK-THUMBV7-LABEL: test_cmpxchg_res_i8:

@@ -1254,6 +1254,28 @@ class DILocation : public MDNode {
                    static_cast<Metadata *>(InlinedAt), Storage, ShouldCreate);
   }
 
+  /// With a given unsigned int \p U, use up to 13 bits to represent it.
+  /// old_bit 1~5  --> new_bit 1~5
+  /// old_bit 6~12 --> new_bit 7~13
+  /// new_bit_6 is 0 if higher bits (7~13) are all 0
+  static unsigned getPrefixEncodingFromUnsigned(unsigned U) {
+    U &= 0xfff;
+    return U > 0x1f ? (((U & 0xfe0) << 1) | (U & 0x1f) | 0x20) : U;
+  }
+
+  /// Reverse transformation as getPrefixEncodingFromUnsigned.
+  static unsigned getUnsignedFromPrefixEncoding(unsigned U) {
+    return (U & 0x20) ? (((U >> 1) & 0xfe0) | (U & 0x1f)) : (U & 0x1f);
+  }
+
+  /// Returns the next component stored in discriminator.
+  static unsigned getNextComponentInDiscriminator(unsigned D) {
+    if ((D & 1) == 0)
+      return D >> ((D & 0x40) ? 14 : 7);
+    else
+      return D >> 1;
+  }
+
   TempDILocation cloneImpl() const {
     // Get the raw scope/inlinedAt since it is possible to invoke this on
     // a DILocation containing temporary metadata.
@@ -1379,6 +1401,30 @@ public:
     return nullptr;
   }
 
+  /// Returns the base discriminator for a given encoded discriminator \p D.
+  static unsigned getBaseDiscriminatorFromDiscriminator(unsigned D) {
+    if ((D & 1) == 0)
+      return getUnsignedFromPrefixEncoding(D >> 1);
+    else
+      return 0;
+  }
+
+  /// Returns the duplication factor for a given encoded discriminator \p D.
+  static unsigned getDuplicationFactorFromDiscriminator(unsigned D) {
+    D = getNextComponentInDiscriminator(D);
+    if (D == 0 || (D & 1))
+      return 1;
+    else
+      return getUnsignedFromPrefixEncoding(D >> 1);
+  }
+
+  /// Returns the copy identifier for a given encoded discriminator \p D.
+  static unsigned getCopyIdentifierFromDiscriminator(unsigned D) {
+    return getUnsignedFromPrefixEncoding(getNextComponentInDiscriminator(
+        getNextComponentInDiscriminator(D)));
+  }
+
+
   Metadata *getRawScope() const { return getOperand(0); }
   Metadata *getRawInlinedAt() const {
     if (getNumOperands() == 2)
@@ -1390,27 +1436,6 @@ public:
     return MD->getMetadataID() == DILocationKind;
   }
 
-  /// With a give unsigned int \p U, use up to 13 bits to represent it.
-  /// old_bit 1~5  --> new_bit 1~5
-  /// old_bit 6~12 --> new_bit 7~13
-  /// new_bit_6 is 0 if higher bits (7~13) are all 0
-  static unsigned getPrefixEncodingFromUnsigned(unsigned U) {
-    U &= 0xfff;
-    return U > 0x1f ? (((U & 0xfe0) << 1) | (U & 0x1f) | 0x20) : U;
-  }
-
-  /// Reverse transformation as getPrefixEncodingFromUnsigned.
-  static unsigned getUnsignedFromPrefixEncoding(unsigned U) {
-    return (U & 0x20) ? (((U >> 1) & 0xfe0) | (U & 0x1f)) : (U & 0x1f);
-  }
-
-  /// Returns the next component stored in discriminator.
-  static unsigned getNextComponentInDiscriminator(unsigned D) {
-    if ((D & 1) == 0)
-      return D >> ((D & 0x40) ? 14 : 7);
-    else
-      return D >> 1;
-  }
 };
 
 /// Subprogram description.
@@ -1762,25 +1787,15 @@ DILocation::cloneWithDiscriminator(unsigned Discriminator) const {
 }
 
 unsigned DILocation::getBaseDiscriminator() const {
-  unsigned D = getDiscriminator();
-  if ((D & 1) == 0)
-    return getUnsignedFromPrefixEncoding(D >> 1);
-  else
-    return 0;
+  return getBaseDiscriminatorFromDiscriminator(getDiscriminator());
 }
 
 unsigned DILocation::getDuplicationFactor() const {
-  unsigned D = getDiscriminator();
-  D = getNextComponentInDiscriminator(D);
-  if (D == 0 || (D & 1))
-    return 1;
-  else
-    return getUnsignedFromPrefixEncoding(D >> 1);
+  return getDuplicationFactorFromDiscriminator(getDiscriminator());
 }
 
 unsigned DILocation::getCopyIdentifier() const {
-  return getUnsignedFromPrefixEncoding(getNextComponentInDiscriminator(
-      getNextComponentInDiscriminator(getDiscriminator())));
+  return getCopyIdentifierFromDiscriminator(getDiscriminator());
 }
 
 const DILocation *DILocation::setBaseDiscriminator(unsigned D) const {

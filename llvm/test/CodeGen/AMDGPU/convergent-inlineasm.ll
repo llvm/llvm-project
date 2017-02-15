@@ -29,6 +29,7 @@ bb5:                                              ; preds = %bb3, %bb
 ; GCN: v_cmp_ne_u32_e64
 
 ; GCN: BB{{[0-9]+_[0-9]+}}:
+
 define void @nonconvergent_inlineasm(i64 addrspace(1)* nocapture %arg) {
 bb:
   %tmp = call i32 @llvm.amdgcn.workitem.id.x()

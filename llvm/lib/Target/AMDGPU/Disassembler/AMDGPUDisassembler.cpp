@@ -138,7 +138,8 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
   CommentStream = &CS;
 
   // ToDo: AMDGPUDisassembler supports only VI ISA.
-  assert(AMDGPU::isVI(STI) && "Can disassemble only VI ISA.");
+  if (!STI.getFeatureBits()[AMDGPU::FeatureGCN3Encoding])
+    report_fatal_error("Disassembly not yet supported for subtarget");
 
   const unsigned MaxInstBytesNum = (std::min)((size_t)8, Bytes_.size());
   Bytes = Bytes_.slice(0, MaxInstBytesNum);

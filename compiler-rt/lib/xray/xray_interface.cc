@@ -35,6 +35,10 @@ static const int16_t cSledLength = 12;
 static const int16_t cSledLength = 32;
 #elif defined(__arm__)
 static const int16_t cSledLength = 28;
+#elif SANITIZER_MIPS32
+static const int16_t cSledLength = 48;
+#elif SANITIZER_MIPS64
+static const int16_t cSledLength = 64;
 #else
 #error "Unsupported CPU Architecture"
 #endif /* CPU architecture */

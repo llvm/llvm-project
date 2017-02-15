@@ -29,6 +29,26 @@ set(aarch64_SOURCES
   xray_trampoline_AArch64.S
   ${XRAY_SOURCES})
 
+set(mips_SOURCES
+    xray_mips.cc
+    xray_trampoline_mips.S
+    ${XRAY_SOURCES})
+
+set(mipsel_SOURCES
+    xray_mips.cc
+    xray_trampoline_mips.S
+    ${XRAY_SOURCES})
+
+set(mips64_SOURCES
+    xray_mips64.cc
+    xray_trampoline_mips64.S
+    ${XRAY_SOURCES})
+
+set(mips64el_SOURCES
+    xray_mips64.cc
+    xray_trampoline_mips64.S
+    ${XRAY_SOURCES})
+
 include_directories(..)
 include_directories(../../include)
 
