@@ -61,6 +61,9 @@ Non-comprehensive list of changes in this release
   with LLVM option -adce-remove-loops when the loop body otherwise has
   no live operations.
 
+ * The llvm-cov tool can now export coverage data as json. Its html output mode
+   has also improved.
+
 * ... next change ...
 
 .. NOTE
@@ -80,6 +83,18 @@ Non-comprehensive list of changes in this release
      cross-module indirect call promotion.
    * Significant build-time and binary-size improvements when compiling with
      debug info (-g).
+
+LLVM Coroutines
+---------------
+
+Experimental support for :doc:`Coroutines` was added, which can be enabled
+with ``-enable-coroutines`` in ``opt`` command tool or using
+``addCoroutinePassesToExtensionPoints`` API when building the optimization
+pipeline.
+
+For more information on LLVM Coroutines and the LLVM implementation, see
+`2016 LLVM Developers’ Meeting talk on LLVM Coroutines
+<http://llvm.org/devmtg/2016-11/#talk4>`_.
 
 Code Generation Testing
 -----------------------
