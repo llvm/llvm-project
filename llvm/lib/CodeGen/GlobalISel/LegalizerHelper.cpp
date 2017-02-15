@@ -50,6 +50,9 @@ LegalizerHelper::legalizeInstrStep(MachineInstr &MI,
     return lower(MI, std::get<1>(Action), std::get<2>(Action));
   case LegalizerInfo::FewerElements:
     return fewerElementsVector(MI, std::get<1>(Action), std::get<2>(Action));
+  case LegalizerInfo::Custom:
+    return LegalizerInfo.legalizeCustom(MI, MRI, MIRBuilder) ? Legalized
+                                                             : UnableToLegalize;
   default:
     return UnableToLegalize;
   }
