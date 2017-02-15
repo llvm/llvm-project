@@ -1812,13 +1812,16 @@ __kmp_resume_monitor()
 void
 __kmp_yield( int cond )
 {
-    if (cond
+    if (!cond)
+        return;
 #if KMP_USE_MONITOR
-        && __kmp_yielding_on
+    if (!__kmp_yielding_on)
+        return;
+#else
+    if (__kmp_yield_cycle && !KMP_YIELD_NOW())
+        return;
 #endif
-    ) {
-        sched_yield();
-    }
+    sched_yield();
 }
 
 /* ------------------------------------------------------------------------ */

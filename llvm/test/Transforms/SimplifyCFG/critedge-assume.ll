@@ -1,4 +1,4 @@
-; RUN: opt -o %t %s -instcombine -simplifycfg -thinlto-bc
+; RUN: opt -o %t %s -instcombine -simplifycfg -thinlto-bc -verify-assumption-cache
 ; RUN: llvm-dis -o - %t | FileCheck %s
 
 ; Test that the simplifycfg pass correctly updates the assumption cache

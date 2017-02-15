@@ -894,15 +894,19 @@ extern int __kmp_place_num_threads_per_core;
    // HW TSC is used to reduce overhead (clock tick instead of nanosecond).
    extern double __kmp_ticks_per_nsec;
 #  define KMP_NOW() __kmp_hardware_timestamp()
+#  define KMP_NOW_MSEC() ((kmp_uint64)(KMP_NOW()/__kmp_ticks_per_nsec)/KMP_USEC_PER_SEC)
 #  define KMP_BLOCKTIME_INTERVAL() (__kmp_dflt_blocktime * KMP_USEC_PER_SEC * __kmp_ticks_per_nsec)
 #  define KMP_BLOCKING(goal, count) ((goal) > KMP_NOW())
 # else
    // System time is retrieved sporadically while blocking.
    extern kmp_uint64 __kmp_now_nsec();
 #  define KMP_NOW() __kmp_now_nsec()
+#  define KMP_NOW_MSEC() (KMP_NOW()/KMP_USEC_PER_SEC)
 #  define KMP_BLOCKTIME_INTERVAL() (__kmp_dflt_blocktime * KMP_USEC_PER_SEC)
 #  define KMP_BLOCKING(goal, count) ((count) % 1000 != 0 || (goal) > KMP_NOW())
 # endif
+# define KMP_YIELD_NOW() (KMP_NOW_MSEC() / KMP_MAX(__kmp_dflt_blocktime, 1)  \
+                         % (__kmp_yield_on_count + __kmp_yield_off_count) < (kmp_uint32)__kmp_yield_on_count)
 #endif // KMP_USE_MONITOR
 
 #define KMP_MIN_STATSCOLS       40
@@ -2674,10 +2678,10 @@ extern kmp_uint32 __kmp_yield_next;
 
 #if KMP_USE_MONITOR
 extern kmp_uint32 __kmp_yielding_on;
+#endif
 extern kmp_uint32 __kmp_yield_cycle;
 extern kmp_int32  __kmp_yield_on_count;
 extern kmp_int32  __kmp_yield_off_count;
-#endif
 
 /* ------------------------------------------------------------------------- */
 extern int        __kmp_allThreadsSpecified;

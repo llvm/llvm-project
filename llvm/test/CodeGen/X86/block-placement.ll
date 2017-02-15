@@ -314,7 +314,7 @@ exit:
 define void @unnatural_cfg1() {
 ; Test that we can handle a loop with an inner unnatural loop at the end of
 ; a function. This is a gross CFG reduced out of the single source GCC.
-; CHECK: unnatural_cfg1
+; CHECK-LABEL: unnatural_cfg1
 ; CHECK: %entry
 ; CHECK: %loop.body1
 ; CHECK: %loop.body2
@@ -352,17 +352,15 @@ define void @unnatural_cfg2() {
 ; Test that we can handle a loop with a nested natural loop *and* an unnatural
 ; loop. This was reduced from a crash on block placement when run over
 ; single-source GCC.
-; CHECK: unnatural_cfg2
+; CHECK-LABEL: unnatural_cfg2
 ; CHECK: %entry
 ; CHECK: %loop.body1
 ; CHECK: %loop.body2
-; CHECK: %loop.body3
-; CHECK: %loop.inner1.begin
-; The end block is folded with %loop.body3...
-; CHECK-NOT: %loop.inner1.end
 ; CHECK: %loop.body4
 ; CHECK: %loop.inner2.begin
-; The loop.inner2.end block is folded
+; CHECK: %loop.inner2.begin
+; CHECK: %loop.body3
+; CHECK: %loop.inner1.begin
 ; CHECK: %loop.header
 ; CHECK: %bail
 
@@ -559,7 +557,7 @@ define void @test_eh_lpad_successor() personality i8* bitcast (i32 (...)* @__gxx
 ; didn't correctly locate the fallthrough successor, assuming blindly that the
 ; first one was the fallthrough successor. As a result, we would add an
 ; erroneous jump to the landing pad thinking *that* was the default successor.
-; CHECK: test_eh_lpad_successor
+; CHECK-LABEL: test_eh_lpad_successor
 ; CHECK: %entry
 ; CHECK-NOT: jmp
 ; CHECK: %loop
@@ -587,7 +585,7 @@ define void @test_eh_throw() personality i8* bitcast (i32 (...)* @__gxx_personal
 ; fallthrough simply won't occur. Make sure we don't crash trying to update
 ; terminators for such constructs.
 ;
-; CHECK: test_eh_throw
+; CHECK-LABEL: test_eh_throw
 ; CHECK: %entry
 ; CHECK: %cleanup
 
@@ -609,7 +607,7 @@ define void @test_unnatural_cfg_backwards_inner_loop() {
 ; attempt to merge onto the wrong end of the inner loop just because we find it
 ; first. This was reduced from a crasher in GCC's single source.
 ;
-; CHECK: test_unnatural_cfg_backwards_inner_loop
+; CHECK-LABEL: test_unnatural_cfg_backwards_inner_loop
 ; CHECK: %entry
 ; CHECK: %loop2b
 ; CHECK: %loop1
@@ -649,7 +647,7 @@ define void @unanalyzable_branch_to_loop_header() {
 ; fallthrough because that happens to always produce unanalyzable branches on
 ; x86.
 ;
-; CHECK: unanalyzable_branch_to_loop_header
+; CHECK-LABEL: unanalyzable_branch_to_loop_header
 ; CHECK: %entry
 ; CHECK: %loop
 ; CHECK: %exit
@@ -673,7 +671,7 @@ define void @unanalyzable_branch_to_best_succ(i1 %cond) {
 ; This branch is now analyzable and hence the destination block becomes the
 ; hotter one. The right order is entry->bar->exit->foo.
 ;
-; CHECK: unanalyzable_branch_to_best_succ
+; CHECK-LABEL: unanalyzable_branch_to_best_succ
 ; CHECK: %entry
 ; CHECK: %bar
 ; CHECK: %exit
@@ -699,7 +697,7 @@ define void @unanalyzable_branch_to_free_block(float %x) {
 ; Ensure that we can handle unanalyzable branches where the destination block
 ; gets selected as the best free block in the CFG.
 ;
-; CHECK: unanalyzable_branch_to_free_block
+; CHECK-LABEL: unanalyzable_branch_to_free_block
 ; CHECK: %entry
 ; CHECK: %a
 ; CHECK: %b
@@ -729,7 +727,7 @@ define void @many_unanalyzable_branches() {
 ; Ensure that we don't crash as we're building up many unanalyzable branches,
 ; blocks, and loops.
 ;
-; CHECK: many_unanalyzable_branches
+; CHECK-LABEL: many_unanalyzable_branches
 ; CHECK: %entry
 ; CHECK: %exit
 
@@ -948,7 +946,7 @@ define void @benchmark_heapsort(i32 %n, double* nocapture %ra) {
 ;    strange layouts that are siginificantly less efficient, often times maing
 ;    it discontiguous.
 ;
-; CHECK: @benchmark_heapsort
+; CHECK-LABEL: @benchmark_heapsort
 ; CHECK: %entry
 ; First rotated loop top.
 ; CHECK: .p2align

@@ -2936,16 +2936,13 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     return DAG.getNode(Opc, DL, Op->getVTList(), Ops);
   }
   case Intrinsic::amdgcn_s_sendmsg:
+  case Intrinsic::amdgcn_s_sendmsghalt:
   case AMDGPUIntrinsic::SI_sendmsg: {
+    unsigned NodeOp = (IntrinsicID == Intrinsic::amdgcn_s_sendmsghalt) ?
+      AMDGPUISD::SENDMSGHALT : AMDGPUISD::SENDMSG;
     Chain = copyToM0(DAG, Chain, DL, Op.getOperand(3));
     SDValue Glue = Chain.getValue(1);
-    return DAG.getNode(AMDGPUISD::SENDMSG, DL, MVT::Other, Chain,
-                       Op.getOperand(2), Glue);
-  }
-  case Intrinsic::amdgcn_s_sendmsghalt: {
-    Chain = copyToM0(DAG, Chain, DL, Op.getOperand(3));
-    SDValue Glue = Chain.getValue(1);
-    return DAG.getNode(AMDGPUISD::SENDMSGHALT, DL, MVT::Other, Chain,
+    return DAG.getNode(NodeOp, DL, MVT::Other, Chain,
                        Op.getOperand(2), Glue);
   }
   case AMDGPUIntrinsic::SI_tbuffer_store: {

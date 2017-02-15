@@ -181,7 +181,7 @@ void MachineBlockFrequencyInfo::calculate(
   if (ViewMachineBlockFreqPropagationDAG != GVDT_None &&
       (ViewBlockFreqFuncName.empty() ||
        F.getName().equals(ViewBlockFreqFuncName))) {
-    view();
+    view("MachineBlockFrequencyDAGS." + F.getName());
   }
 }
 
@@ -197,10 +197,9 @@ void MachineBlockFrequencyInfo::releaseMemory() { MBFI.reset(); }
 
 /// Pop up a ghostview window with the current block frequency propagation
 /// rendered using dot.
-void MachineBlockFrequencyInfo::view(bool isSimple) const {
-// This code is only for debugging.
-  ViewGraph(const_cast<MachineBlockFrequencyInfo *>(this),
-            "MachineBlockFrequencyDAGs", isSimple);
+void MachineBlockFrequencyInfo::view(const Twine &Name, bool isSimple) const {
+  // This code is only for debugging.
+  ViewGraph(const_cast<MachineBlockFrequencyInfo *>(this), Name, isSimple);
 }
 
 BlockFrequency

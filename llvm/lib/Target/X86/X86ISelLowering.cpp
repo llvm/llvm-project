@@ -5618,10 +5618,16 @@ static bool setTargetShuffleZeroElements(SDValue N,
     }
 
     // SCALAR_TO_VECTOR - only the first element is defined, and the rest UNDEF.
+    // TODO: We currently only set UNDEF for integer types - floats use the same
+    // registers as vectors and many of the scalar folded loads rely on the
+    // SCALAR_TO_VECTOR pattern.
     if (V.getOpcode() == ISD::SCALAR_TO_VECTOR &&
         (Size % V.getValueType().getVectorNumElements()) == 0) {
       int Scale = Size / V.getValueType().getVectorNumElements();
-      if (((M / Scale) == 0) && X86::isZeroNode(V.getOperand(0)))
+      int Idx = M / Scale;
+      if (Idx != 0 && !VT.isFloatingPoint())
+        Mask[i] = SM_SentinelUndef;
+      else if (Idx == 0 && X86::isZeroNode(V.getOperand(0)))
         Mask[i] = SM_SentinelZero;
       continue;
     }
@@ -28354,11 +28360,18 @@ static SDValue combineShuffle(SDNode *N, SelectionDAG &DAG,
   // load4, <0, 1, 2, 3> into a 128-bit load if the load addresses are
   // consecutive, non-overlapping, and in the right order.
   SmallVector<SDValue, 16> Elts;
-  for (unsigned i = 0, e = VT.getVectorNumElements(); i != e; ++i)
-    Elts.push_back(getShuffleScalarElt(N, i, DAG, 0));
+  for (unsigned i = 0, e = VT.getVectorNumElements(); i != e; ++i) {
+    if (SDValue Elt = getShuffleScalarElt(N, i, DAG, 0)) {
+      Elts.push_back(Elt);
+      continue;
+    }
+    Elts.clear();
+    break;
+  }
 
-  if (SDValue LD = EltsFromConsecutiveLoads(VT, Elts, dl, DAG, true))
-    return LD;
+  if (Elts.size() == VT.getVectorNumElements())
+    if (SDValue LD = EltsFromConsecutiveLoads(VT, Elts, dl, DAG, true))
+      return LD;
 
   // For AVX2, we sometimes want to combine
   // (vector_shuffle <mask> (concat_vectors t1, undef)

@@ -105,6 +105,7 @@ class VectorLegalizer {
   SDValue ExpandLoad(SDValue Op);
   SDValue ExpandStore(SDValue Op);
   SDValue ExpandFNEG(SDValue Op);
+  SDValue ExpandFSUB(SDValue Op);
   SDValue ExpandBITREVERSE(SDValue Op);
   SDValue ExpandCTLZ(SDValue Op);
   SDValue ExpandCTTZ_ZERO_UNDEF(SDValue Op);
@@ -691,6 +692,8 @@ SDValue VectorLegalizer::Expand(SDValue Op) {
     return ExpandUINT_TO_FLOAT(Op);
   case ISD::FNEG:
     return ExpandFNEG(Op);
+  case ISD::FSUB:
+    return ExpandFSUB(Op);
   case ISD::SETCC:
     return UnrollVSETCC(Op);
   case ISD::BITREVERSE:
@@ -1018,6 +1021,18 @@ SDValue VectorLegalizer::ExpandFNEG(SDValue Op) {
     return DAG.getNode(ISD::FSUB, DL, Op.getValueType(),
                        Zero, Op.getOperand(0));
   }
+  return DAG.UnrollVectorOp(Op.getNode());
+}
+
+SDValue VectorLegalizer::ExpandFSUB(SDValue Op) {
+  // For floating-point values, (a-b) is the same as a+(-b). If FNEG is legal,
+  // we can defer this to operation legalization where it will be lowered as
+  // a+(-b).
+  EVT VT = Op.getValueType();
+  if (TLI.isOperationLegalOrCustom(ISD::FNEG, VT) &&
+      TLI.isOperationLegalOrCustom(ISD::FADD, VT))
+    return Op; // Defer to LegalizeDAG
+
   return DAG.UnrollVectorOp(Op.getNode());
 }
 
