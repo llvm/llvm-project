@@ -1,4 +1,5 @@
-; RUN: llc -mtriple=aarch64-linux-gnu -aarch64-enable-atomic-cfg-tidy=0 -disable-lsr -verify-machineinstrs -o - %s | FileCheck %s
+; RUN: llc -mtriple=aarch64-linux-gnu -aarch64-enable-atomic-cfg-tidy=0 -disable-lsr -verify-machineinstrs -o - %s | FileCheck --check-prefix=CHECK --check-prefix=NOSTRICTALIGN %s
+; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+strict-align -aarch64-enable-atomic-cfg-tidy=0 -disable-lsr -verify-machineinstrs -o - %s | FileCheck --check-prefix=CHECK --check-prefix=STRICTALIGN %s
 
 ; This file contains tests for the AArch64 load/store optimizer.
 
@@ -119,7 +120,7 @@ define void @load-pre-indexed-doubleword(%struct.doubleword* %ptr) nounwind {
 ; CHECK: ldr x{{[0-9]+}}, [x{{[0-9]+}}, #32]!
 entry:
   %a = getelementptr inbounds %struct.doubleword, %struct.doubleword* %ptr, i64 0, i32 1, i32 0
-  %add = load i64, i64* %a, align 4
+  %add = load i64, i64* %a, align 8
   br label %bar
 bar:
   %c = getelementptr inbounds %struct.doubleword, %struct.doubleword* %ptr, i64 0, i32 1
@@ -132,7 +133,7 @@ define void @store-pre-indexed-doubleword(%struct.doubleword* %ptr, i64 %val) no
 ; CHECK: str x{{[0-9]+}}, [x{{[0-9]+}}, #32]!
 entry:
   %a = getelementptr inbounds %struct.doubleword, %struct.doubleword* %ptr, i64 0, i32 1, i32 0
-  store i64 %val, i64* %a, align 4
+  store i64 %val, i64* %a, align 8
   br label %bar
 bar:
   %c = getelementptr inbounds %struct.doubleword, %struct.doubleword* %ptr, i64 0, i32 1
@@ -147,7 +148,7 @@ define void @load-pre-indexed-quadword(%struct.quadword* %ptr) nounwind {
 ; CHECK: ldr q{{[0-9]+}}, [x{{[0-9]+}}, #32]!
 entry:
   %a = getelementptr inbounds %struct.quadword, %struct.quadword* %ptr, i64 0, i32 1, i32 0
-  %add = load fp128, fp128* %a, align 4
+  %add = load fp128, fp128* %a, align 16
   br label %bar
 bar:
   %c = getelementptr inbounds %struct.quadword, %struct.quadword* %ptr, i64 0, i32 1
@@ -160,7 +161,7 @@ define void @store-pre-indexed-quadword(%struct.quadword* %ptr, fp128 %val) noun
 ; CHECK: str q{{[0-9]+}}, [x{{[0-9]+}}, #32]!
 entry:
   %a = getelementptr inbounds %struct.quadword, %struct.quadword* %ptr, i64 0, i32 1, i32 0
-  store fp128 %val, fp128* %a, align 4
+  store fp128 %val, fp128* %a, align 16
   br label %bar
 bar:
   %c = getelementptr inbounds %struct.quadword, %struct.quadword* %ptr, i64 0, i32 1
@@ -203,7 +204,7 @@ define void @load-pre-indexed-double(%struct.double* %ptr) nounwind {
 ; CHECK: ldr d{{[0-9]+}}, [x{{[0-9]+}}, #32]!
 entry:
   %a = getelementptr inbounds %struct.double, %struct.double* %ptr, i64 0, i32 1, i32 0
-  %add = load double, double* %a, align 4
+  %add = load double, double* %a, align 8
   br label %bar
 bar:
   %c = getelementptr inbounds %struct.double, %struct.double* %ptr, i64 0, i32 1
@@ -216,7 +217,7 @@ define void @store-pre-indexed-double(%struct.double* %ptr, double %val) nounwin
 ; CHECK: str d{{[0-9]+}}, [x{{[0-9]+}}, #32]!
 entry:
   %a = getelementptr inbounds %struct.double, %struct.double* %ptr, i64 0, i32 1, i32 0
-  store double %val, double* %a, align 4
+  store double %val, double* %a, align 8
   br label %bar
 bar:
   %c = getelementptr inbounds %struct.double, %struct.double* %ptr, i64 0, i32 1
@@ -1340,7 +1341,8 @@ end:
 define void @merge_zr32(i32* %p) {
 ; CHECK-LABEL: merge_zr32:
 ; CHECK: // %entry
-; CHECK-NEXT: str xzr, [x{{[0-9]+}}]
+; NOSTRICTALIGN-NEXT: str xzr, [x{{[0-9]+}}]
+; STRICTALIGN-NEXT: stp wzr, wzr, [x{{[0-9]+}}]
 ; CHECK-NEXT: ret
 entry:
   store i32 0, i32* %p
@@ -1349,11 +1351,13 @@ entry:
   ret void
 }
 
-; Same sa merge_zr32 but the merged stores should also get paried.
+; Same as merge_zr32 but the merged stores should also get paried.
 define void @merge_zr32_2(i32* %p) {
 ; CHECK-LABEL: merge_zr32_2:
 ; CHECK: // %entry
-; CHECK-NEXT: stp xzr, xzr, [x{{[0-9]+}}]
+; NOSTRICTALIGN-NEXT: stp xzr, xzr, [x{{[0-9]+}}]
+; STRICTALIGN-NEXT: stp wzr, wzr, [x{{[0-9]+}}]
+; STRICTALIGN-NEXT: stp wzr, wzr, [x{{[0-9]+}}, #8]
 ; CHECK-NEXT: ret
 entry:
   store i32 0, i32* %p
@@ -1370,7 +1374,11 @@ entry:
 define void @merge_zr32_2_offset(i32* %p) {
 ; CHECK-LABEL: merge_zr32_2_offset:
 ; CHECK: // %entry
-; CHECK-NEXT: stp xzr, xzr, [x{{[0-9]+}}, #504]
+; NOSTRICTALIGN-NEXT: stp xzr, xzr, [x{{[0-9]+}}, #504]
+; STRICTALIGN-NEXT: str wzr, [x{{[0-9]+}}, #504]
+; STRICTALIGN-NEXT: str wzr, [x{{[0-9]+}}, #508]
+; STRICTALIGN-NEXT: str wzr, [x{{[0-9]+}}, #512]
+; STRICTALIGN-NEXT: str wzr, [x{{[0-9]+}}, #516]
 ; CHECK-NEXT: ret
 entry:
   %p0 = getelementptr i32, i32* %p, i32 126
@@ -1390,8 +1398,12 @@ entry:
 define void @no_merge_zr32_2_offset(i32* %p) {
 ; CHECK-LABEL: no_merge_zr32_2_offset:
 ; CHECK: // %entry
-; CHECK-NEXT: movi v[[REG:[0-9]]].2d, #0000000000000000
-; CHECK-NEXT: str q[[REG]], [x{{[0-9]+}}, #4096]
+; NOSTRICTALIGN-NEXT: movi v[[REG:[0-9]]].2d, #0000000000000000
+; NOSTRICTALIGN-NEXT: str q[[REG]], [x{{[0-9]+}}, #4096]
+; STRICTALIGN-NEXT: str wzr, [x{{[0-9]+}}, #4096]
+; STRICTALIGN-NEXT: str wzr, [x{{[0-9]+}}, #4100]
+; STRICTALIGN-NEXT: str wzr, [x{{[0-9]+}}, #4104]
+; STRICTALIGN-NEXT: str wzr, [x{{[0-9]+}}, #4108]
 ; CHECK-NEXT: ret
 entry:
   %p0 = getelementptr i32, i32* %p, i32 1024
@@ -1411,8 +1423,12 @@ entry:
 define void @merge_zr32_3(i32* %p) {
 ; CHECK-LABEL: merge_zr32_3:
 ; CHECK: // %entry
-; CHECK-NEXT: movi v[[REG:[0-9]]].2d, #0000000000000000
-; CHECK-NEXT: stp q[[REG]], q[[REG]], [x{{[0-9]+}}]
+; NOSTRICTALIGN-NEXT: movi v[[REG:[0-9]]].2d, #0000000000000000
+; NOSTRICTALIGN-NEXT: stp q[[REG]], q[[REG]], [x{{[0-9]+}}]
+; STRICTALIGN-NEXT: stp wzr, wzr, [x{{[0-9]+}}]
+; STRICTALIGN-NEXT: stp wzr, wzr, [x{{[0-9]+}}, #8]
+; STRICTALIGN-NEXT: stp wzr, wzr, [x{{[0-9]+}}, #16]
+; STRICTALIGN-NEXT: stp wzr, wzr, [x{{[0-9]+}}, #24]
 ; CHECK-NEXT: ret
 entry:
   store i32 0, i32* %p
@@ -1437,7 +1453,8 @@ entry:
 define void @merge_zr32_2vec(<2 x i32>* %p) {
 ; CHECK-LABEL: merge_zr32_2vec:
 ; CHECK: // %entry
-; CHECK-NEXT: str xzr, [x{{[0-9]+}}]
+; NOSTRICTALIGN-NEXT: str xzr, [x{{[0-9]+}}]
+; STRICTALIGN-NEXT: stp wzr, wzr, [x{{[0-9]+}}]
 ; CHECK-NEXT: ret
 entry:
   store <2 x i32> zeroinitializer, <2 x i32>* %p
@@ -1448,8 +1465,10 @@ entry:
 define void @merge_zr32_3vec(<3 x i32>* %p) {
 ; CHECK-LABEL: merge_zr32_3vec:
 ; CHECK: // %entry
-; CHECK-NEXT: str xzr, [x{{[0-9]+}}]
-; CHECK-NEXT: str wzr, [x{{[0-9]+}}, #8]
+; NOSTRICTALIGN-NEXT: str xzr, [x{{[0-9]+}}]
+; NOSTRICTALIGN-NEXT: str wzr, [x{{[0-9]+}}, #8]
+; STRICTALIGN-NEXT: stp wzr, wzr, [x{{[0-9]+}}]
+; STRICTALIGN-NEXT: str wzr, [x{{[0-9]+}}, #8]
 ; CHECK-NEXT: ret
 entry:
   store <3 x i32> zeroinitializer, <3 x i32>* %p
@@ -1460,7 +1479,9 @@ entry:
 define void @merge_zr32_4vec(<4 x i32>* %p) {
 ; CHECK-LABEL: merge_zr32_4vec:
 ; CHECK: // %entry
-; CHECK-NEXT: stp xzr, xzr, [x{{[0-9]+}}]
+; NOSTRICTALIGN-NEXT: stp xzr, xzr, [x{{[0-9]+}}]
+; STRICTALIGN-NEXT: stp wzr, wzr, [x{{[0-9]+}}]
+; STRICTALIGN-NEXT: stp wzr, wzr, [x{{[0-9]+}}, #8]
 ; CHECK-NEXT: ret
 entry:
   store <4 x i32> zeroinitializer, <4 x i32>* %p
@@ -1471,7 +1492,8 @@ entry:
 define void @merge_zr32_2vecf(<2 x float>* %p) {
 ; CHECK-LABEL: merge_zr32_2vecf:
 ; CHECK: // %entry
-; CHECK-NEXT: str xzr, [x{{[0-9]+}}]
+; NOSTRICTALIGN-NEXT: str xzr, [x{{[0-9]+}}]
+; STRICTALIGN-NEXT: stp wzr, wzr, [x{{[0-9]+}}]
 ; CHECK-NEXT: ret
 entry:
   store <2 x float> zeroinitializer, <2 x float>* %p
@@ -1482,7 +1504,9 @@ entry:
 define void @merge_zr32_4vecf(<4 x float>* %p) {
 ; CHECK-LABEL: merge_zr32_4vecf:
 ; CHECK: // %entry
-; CHECK-NEXT: stp xzr, xzr, [x{{[0-9]+}}]
+; NOSTRICTALIGN-NEXT: stp xzr, xzr, [x{{[0-9]+}}]
+; STRICTALIGN-NEXT: stp wzr, wzr, [x{{[0-9]+}}]
+; STRICTALIGN-NEXT: stp wzr, wzr, [x{{[0-9]+}}, #8]
 ; CHECK-NEXT: ret
 entry:
   store <4 x float> zeroinitializer, <4 x float>* %p
@@ -1502,13 +1526,42 @@ entry:
   ret void
 }
 
+; Similar to merge_zr32, but for 64-bit values and with unaligned stores.
+define void @merge_zr64_unalign(<2 x i64>* %p) {
+; CHECK-LABEL: merge_zr64_unalign:
+; CHECK: // %entry
+; NOSTRICTALIGN-NEXT: stp xzr, xzr, [x{{[0-9]+}}]
+; STRICTALIGN: strb wzr,
+; STRICTALIGN: strb
+; STRICTALIGN: strb
+; STRICTALIGN: strb
+; STRICTALIGN: strb
+; STRICTALIGN: strb
+; STRICTALIGN: strb
+; STRICTALIGN: strb
+; STRICTALIGN: strb
+; STRICTALIGN: strb
+; STRICTALIGN: strb
+; STRICTALIGN: strb
+; STRICTALIGN: strb
+; STRICTALIGN: strb
+; STRICTALIGN: strb
+; STRICTALIGN: strb
+; CHECK-NEXT: ret
+entry:
+  store <2 x i64> zeroinitializer, <2 x i64>* %p, align 1
+  ret void
+}
+
 ; Similar to merge_zr32_3, replaceZeroVectorStore should not split the
 ; vector store since the zero constant vector has multiple uses.
 define void @merge_zr64_2(i64* %p) {
 ; CHECK-LABEL: merge_zr64_2:
 ; CHECK: // %entry
-; CHECK-NEXT: movi v[[REG:[0-9]]].2d, #0000000000000000
-; CHECK-NEXT: stp q[[REG]], q[[REG]], [x{{[0-9]+}}]
+; NOSTRICTALIGN-NEXT: movi v[[REG:[0-9]]].2d, #0000000000000000
+; NOSTRICTALIGN-NEXT: stp q[[REG]], q[[REG]], [x{{[0-9]+}}]
+; STRICTALIGN-NEXT: stp xzr, xzr, [x{{[0-9]+}}]
+; STRICTALIGN-NEXT: stp xzr, xzr, [x{{[0-9]+}}, #16]
 ; CHECK-NEXT: ret
 entry:
   store i64 0, i64* %p
