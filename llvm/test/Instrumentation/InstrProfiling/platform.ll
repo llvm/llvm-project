@@ -12,8 +12,8 @@
 ; RUN: opt < %s -mtriple=x86_64-pc-solaris -passes=instrprof -S | FileCheck %s -check-prefix=SOLARIS
 
 @__profn_foo = hidden constant [3 x i8] c"foo"
-; MACHO: @__profn_foo = private constant [3 x i8] c"foo"
-; ELF: @__profn_foo = private constant [3 x i8] c"foo"
+; MACHO-NOT: __profn_foo
+; ELF-NOT: __profn_foo
 
 ; MACHO: @__profc_foo = hidden global [1 x i64] zeroinitializer, section "__DATA,__llvm_prf_cnts", align 8
 ; ELF: @__profc_foo = hidden global [1 x i64] zeroinitializer, section "__llvm_prf_cnts", align 8
