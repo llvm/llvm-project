@@ -1,4 +1,4 @@
-add_lldb_library(lldbPluginExpressionParserSwift
+add_lldb_library(lldbPluginExpressionParserSwift PLUGIN
   SwiftASTManipulator.cpp
   SwiftExpressionParser.cpp
   SwiftExpressionVariable.cpp
