@@ -25,6 +25,7 @@
 namespace llvm {
 class LLVMContext;
 class MachineInstr;
+class MachineIRBuilder;
 class MachineRegisterInfo;
 class Type;
 class VectorType;
@@ -96,6 +97,7 @@ public:
   };
 
   LegalizerInfo();
+  virtual ~LegalizerInfo() = default;
 
   /// Compute any ancillary tables needed to quickly decide how an operation
   /// should be handled. This must be called after all "set*Action"methods but
@@ -185,6 +187,10 @@ public:
   }
 
   bool isLegal(const MachineInstr &MI, const MachineRegisterInfo &MRI) const;
+
+  virtual bool legalizeCustom(MachineInstr &MI,
+                              MachineRegisterInfo &MRI,
+                              MachineIRBuilder &MIRBuilder) const;
 
 private:
   static const int FirstOp = TargetOpcode::PRE_ISEL_GENERIC_OPCODE_START;
