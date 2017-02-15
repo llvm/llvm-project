@@ -3104,14 +3104,10 @@ void SelectionDAGBuilder::visitShuffleVector(const User &I) {
 
   if (SrcNumElts > MaskNumElts) {
     // Analyze the access pattern of the vector to see if we can extract
-    // two subvectors and do the shuffle. The analysis is done by calculating
-    // the range of elements the mask access on both vectors.
-    int MinRange[2] = { static_cast<int>(SrcNumElts),
-                        static_cast<int>(SrcNumElts)};
-    int MaxRange[2] = {-1, -1};
-
-    for (unsigned i = 0; i != MaskNumElts; ++i) {
-      int Idx = Mask[i];
+    // two subvectors and do the shuffle.
+    int StartIdx[2] = { -1, -1 };  // StartIdx to extract from
+    bool CanExtract = true;
+    for (int Idx : Mask) {
       unsigned Input = 0;
       if (Idx < 0)
         continue;
@@ -3120,41 +3116,28 @@ void SelectionDAGBuilder::visitShuffleVector(const User &I) {
         Input = 1;
         Idx -= SrcNumElts;
       }
-      if (Idx > MaxRange[Input])
-        MaxRange[Input] = Idx;
-      if (Idx < MinRange[Input])
-        MinRange[Input] = Idx;
+
+      // If all the indices come from the same MaskNumElts sized portion of
+      // the sources we can use extract. Also make sure the extract wouldn't
+      // extract past the end of the source.
+      int NewStartIdx = alignDown(Idx, MaskNumElts);
+      if (NewStartIdx + MaskNumElts > SrcNumElts ||
+          (StartIdx[Input] >= 0 && StartIdx[Input] != NewStartIdx))
+        CanExtract = false;
+      // Make sure we always update StartIdx as we use it to track if all
+      // elements are undef.
+      StartIdx[Input] = NewStartIdx;
     }
 
-    // Check if the access is smaller than the vector size and can we find
-    // a reasonable extract index.
-    int RangeUse[2] = { -1, -1 };  // 0 = Unused, 1 = Extract, -1 = Can not
-                                   // Extract.
-    int StartIdx[2];  // StartIdx to extract from
-    for (unsigned Input = 0; Input < 2; ++Input) {
-      if (MinRange[Input] >= (int)SrcNumElts && MaxRange[Input] < 0) {
-        RangeUse[Input] = 0; // Unused
-        StartIdx[Input] = 0;
-        continue;
-      }
-
-      // Find a good start index that is a multiple of the mask length. Then
-      // see if the rest of the elements are in range.
-      StartIdx[Input] = (MinRange[Input]/MaskNumElts)*MaskNumElts;
-      if (MaxRange[Input] - StartIdx[Input] < (int)MaskNumElts &&
-          StartIdx[Input] + MaskNumElts <= SrcNumElts)
-        RangeUse[Input] = 1; // Extract from a multiple of the mask length.
-    }
-
-    if (RangeUse[0] == 0 && RangeUse[1] == 0) {
+    if (StartIdx[0] < 0 && StartIdx[1] < 0) {
       setValue(&I, DAG.getUNDEF(VT)); // Vectors are not used.
       return;
     }
-    if (RangeUse[0] >= 0 && RangeUse[1] >= 0) {
+    if (CanExtract) {
       // Extract appropriate subvector and generate a vector shuffle
       for (unsigned Input = 0; Input < 2; ++Input) {
         SDValue &Src = Input == 0 ? Src1 : Src2;
-        if (RangeUse[Input] == 0)
+        if (StartIdx[Input] < 0)
           Src = DAG.getUNDEF(VT);
         else {
           Src = DAG.getNode(
@@ -3165,16 +3148,12 @@ void SelectionDAGBuilder::visitShuffleVector(const User &I) {
       }
 
       // Calculate new mask.
-      SmallVector<int, 8> MappedOps;
-      for (unsigned i = 0; i != MaskNumElts; ++i) {
-        int Idx = Mask[i];
-        if (Idx >= 0) {
-          if (Idx < (int)SrcNumElts)
-            Idx -= StartIdx[0];
-          else
-            Idx -= SrcNumElts + StartIdx[1] - MaskNumElts;
-        }
-        MappedOps.push_back(Idx);
+      SmallVector<int, 8> MappedOps(Mask.begin(), Mask.end());
+      for (int &Idx : MappedOps) {
+        if (Idx >= (int)SrcNumElts)
+          Idx -= SrcNumElts + StartIdx[1] - MaskNumElts;
+        else if (Idx >= 0)
+          Idx -= StartIdx[0];
       }
 
       setValue(&I, DAG.getVectorShuffle(VT, DL, Src1, Src2, MappedOps));
@@ -3188,8 +3167,7 @@ void SelectionDAGBuilder::visitShuffleVector(const User &I) {
   EVT EltVT = VT.getVectorElementType();
   EVT IdxVT = TLI.getVectorIdxTy(DAG.getDataLayout());
   SmallVector<SDValue,8> Ops;
-  for (unsigned i = 0; i != MaskNumElts; ++i) {
-    int Idx = Mask[i];
+  for (int Idx : Mask) {
     SDValue Res;
 
     if (Idx < 0) {

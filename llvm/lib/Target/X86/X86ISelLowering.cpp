@@ -5394,8 +5394,18 @@ static bool getTargetShuffleMask(SDNode *N, MVT VT, bool AllowSentinelZero,
     IsUnary = true;
     break;
   case X86ISD::VBROADCAST: {
-    // We only decode broadcasts of same-sized vectors at the moment.
-    if (N->getOperand(0).getValueType() == VT) {
+    SDValue N0 = N->getOperand(0);
+    // See if we're broadcasting from index 0 of an EXTRACT_SUBVECTOR. If so,
+    // add the pre-extracted value to the Ops vector.
+    if (N0.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
+        N0.getOperand(0).getValueType() == VT &&
+        N0.getConstantOperandVal(1) == 0)
+      Ops.push_back(N0.getOperand(0));
+
+    // We only decode broadcasts of same-sized vectors, unless the broadcast
+    // came from an extract from the original width. If we found one, we
+    // pushed it the Ops vector above.
+    if (N0.getValueType() == VT || !Ops.empty()) {
       DecodeVectorBroadcast(VT, Mask);
       IsUnary = true;
       break;
@@ -9728,6 +9738,12 @@ static SDValue lowerVectorShuffleAsBroadcast(const SDLoc &DL, MVT VT,
     unsigned NumBroadcastElts = BroadcastVT.getVectorNumElements();
     BroadcastVT = MVT::getVectorVT(MVT::f64, NumBroadcastElts);
   }
+
+  // We only support broadcasting from 128-bit vectors to minimize the
+  // number of patterns we need to deal with in isel. So extract down to
+  // 128-bits.
+  if (SrcVT.getSizeInBits() > 128)
+    V = extract128BitVector(V, 0, DAG, DL);
 
   return DAG.getBitcast(VT, DAG.getNode(Opcode, DL, BroadcastVT, V));
 }

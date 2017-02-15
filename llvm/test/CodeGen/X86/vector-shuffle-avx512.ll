@@ -126,7 +126,6 @@ define <8 x i32> @expand3(<4 x i32> %a ) {
 ;
 ; KNL64-LABEL: expand3:
 ; KNL64:       # BB#0:
-; KNL64-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<def>
 ; KNL64-NEXT:    vpbroadcastq %xmm0, %ymm0
 ; KNL64-NEXT:    vpxor %ymm1, %ymm1, %ymm1
 ; KNL64-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0],ymm1[1,2,3,4,5,6],ymm0[7]
@@ -142,7 +141,6 @@ define <8 x i32> @expand3(<4 x i32> %a ) {
 ;
 ; KNL32-LABEL: expand3:
 ; KNL32:       # BB#0:
-; KNL32-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<def>
 ; KNL32-NEXT:    vpbroadcastq %xmm0, %ymm0
 ; KNL32-NEXT:    vpxor %ymm1, %ymm1, %ymm1
 ; KNL32-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0],ymm1[1,2,3,4,5,6],ymm0[7]
