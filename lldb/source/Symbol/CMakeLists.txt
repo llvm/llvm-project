@@ -40,7 +40,15 @@ add_lldb_library(lldbSymbol
   VerifyDecl.cpp
 
   LINK_LIBS
+    swiftAST
+    swiftASTSectionImporter
     swiftBasic
+    swiftClangImporter
+    swiftDriver
+    swiftFrontend
+    swiftIDE
+    swiftSIL
+    swiftSerialization
     clangAST
     clangBasic
     clangFrontend
