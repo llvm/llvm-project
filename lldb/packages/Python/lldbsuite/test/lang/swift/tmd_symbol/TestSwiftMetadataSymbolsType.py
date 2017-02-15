@@ -25,6 +25,7 @@ class TestSwiftMetadataSymbol(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @decorators.swiftTest
+    @decorators.expectedFailureAll(oslist=["linux"], bugnumber="rdar://30525567")
     def test_swift_metadata_symbol(self):
         """Test that metadata symbols are properly resolved as such"""
         self.build()
