@@ -14,12 +14,9 @@
 #include <mach/mach_time.h>
 #endif
 
-// forces loading of libswiftCore
-extern int swift_retain;
-
-int __attribute__ ((used)) _repl_swift_caller() {
-  return swift_retain;
-}
+#ifdef __APPLE__
+#include <dlfcn.h>
+#endif
 
 #define REPL_MAIN _TF10repl_swift9repl_mainFT_Si
 
@@ -28,8 +25,10 @@ int REPL_MAIN() {
 }
 
 int main() {
-  volatile int _repl_swift_result = _repl_swift_caller();
-  (void)_repl_swift_result;
+#ifdef __APPLE__
+  // Force loading of libswiftCore.dylib, which is not linked at build time.
+  dlopen("@rpath/libswiftCore.dylib", RTLD_LAZY);
+#endif
   
 #ifdef __APPLE__
   // This code will be run when running the REPL. A breakpoint will be set at
