@@ -1,4 +1,5 @@
 // Test that lsan reports a proper error when running under strace.
+// REQUIRES: strace
 // RUN: %clangxx_lsan %s -o %t
 // RUN: not strace -o /dev/null %run %t 2>&1 | FileCheck %s
 
