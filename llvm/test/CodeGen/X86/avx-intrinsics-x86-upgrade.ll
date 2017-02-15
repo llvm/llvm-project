@@ -403,8 +403,8 @@ define void @test_x86_sse2_storeu_pd(i8* %a0, <2 x double> %a1) {
 ; CHECK-LABEL: test_x86_sse2_storeu_pd:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; CHECK-NEXT:    vpslldq {{.*#+}} xmm1 = zero,zero,zero,zero,zero,zero,zero,zero,xmm1[0,1,2,3,4,5,6,7]
+; CHECK-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
+; CHECK-NEXT:    vmovhpd {{.*#+}} xmm1 = xmm1[0],mem[0]
 ; CHECK-NEXT:    vaddpd %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    vmovupd %xmm0, (%eax)
 ; CHECK-NEXT:    retl

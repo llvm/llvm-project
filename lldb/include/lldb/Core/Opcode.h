@@ -18,7 +18,7 @@
 #include "llvm/Support/MathExtras.h"
 
 // Project includes
-#include "lldb/Host/Endian.h"
+#include "lldb/Utility/Endian.h"
 #include "lldb/lldb-public.h"
 
 namespace lldb {

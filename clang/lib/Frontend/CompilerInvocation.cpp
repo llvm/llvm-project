@@ -1535,13 +1535,6 @@ static void ParseHeaderSearchArgs(HeaderSearchOptions &Opts, ArgList &Args) {
     Opts.AddVFSOverlayFile(A->getValue());
 }
 
-static bool isOpenCL(LangStandard::Kind LangStd) {
-  return LangStd == LangStandard::lang_opencl ||
-         LangStd == LangStandard::lang_opencl11 ||
-         LangStd == LangStandard::lang_opencl12 ||
-         LangStd == LangStandard::lang_opencl20;
-}
-
 void CompilerInvocation::setLangDefaults(LangOptions &Opts, InputKind IK,
                                          const llvm::Triple &T,
                                          PreprocessorOptions &PPOpts,
@@ -1612,7 +1605,7 @@ void CompilerInvocation::setLangDefaults(LangOptions &Opts, InputKind IK,
   Opts.ImplicitInt = Std.hasImplicitInt();
 
   // Set OpenCL Version.
-  Opts.OpenCL = isOpenCL(LangStd) || IK == IK_OpenCL;
+  Opts.OpenCL = Std.isOpenCL() || IK == IK_OpenCL;
   if (LangStd == LangStandard::lang_opencl)
     Opts.OpenCLVersion = 100;
   else if (LangStd == LangStandard::lang_opencl11)
@@ -1681,6 +1674,63 @@ static Visibility parseVisibility(Arg *arg, ArgList &args,
   return DefaultVisibility;
 }
 
+/// Check if input file kind and language standard are compatible.
+static bool IsInputCompatibleWithStandard(InputKind IK,
+                                          const LangStandard &S) {
+  switch (IK) {
+  case IK_C:
+  case IK_ObjC:
+  case IK_PreprocessedC:
+  case IK_PreprocessedObjC:
+    if (S.isC89() || S.isC99())
+      return true;
+    break;
+  case IK_CXX:
+  case IK_ObjCXX:
+  case IK_PreprocessedCXX:
+  case IK_PreprocessedObjCXX:
+    if (S.isCPlusPlus())
+      return true;
+    break;
+  case IK_OpenCL:
+    if (S.isOpenCL())
+      return true;
+    break;
+  case IK_CUDA:
+  case IK_PreprocessedCuda:
+    if (S.isCPlusPlus())
+      return true;
+    break;
+  default:
+    // For other inputs, accept (and ignore) all -std= values.
+    return true;
+  }
+  return false;
+}
+
+/// Get language name for given input kind.
+static const StringRef GetInputKindName(InputKind IK) {
+  switch (IK) {
+  case IK_C:
+  case IK_ObjC:
+  case IK_PreprocessedC:
+  case IK_PreprocessedObjC:
+    return "C/ObjC";
+  case IK_CXX:
+  case IK_ObjCXX:
+  case IK_PreprocessedCXX:
+  case IK_PreprocessedObjCXX:
+    return "C++/ObjC++";
+  case IK_OpenCL:
+    return "OpenCL";
+  case IK_CUDA:
+  case IK_PreprocessedCuda:
+    return "CUDA";
+  default:
+    llvm_unreachable("Cannot decide on name for InputKind!");
+  }
+}
+
 static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
                           const TargetOptions &TargetOpts,
                           PreprocessorOptions &PPOpts,
@@ -1695,43 +1745,27 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
       .Case(alias, LangStandard::lang_##id)
 #include "clang/Frontend/LangStandards.def"
       .Default(LangStandard::lang_unspecified);
-    if (LangStd == LangStandard::lang_unspecified)
+    if (LangStd == LangStandard::lang_unspecified) {
       Diags.Report(diag::err_drv_invalid_value)
         << A->getAsString(Args) << A->getValue();
-    else {
+      // Report supported standards with short description.
+      for (unsigned KindValue = 0;
+           KindValue != LangStandard::lang_unspecified;
+           ++KindValue) {
+        const LangStandard &Std = LangStandard::getLangStandardForKind(
+          static_cast<LangStandard::Kind>(KindValue));
+        if (IsInputCompatibleWithStandard(IK, Std)) {
+          Diags.Report(diag::note_drv_use_standard)
+            << Std.getName() << Std.getDescription();
+        }
+      }
+    } else {
       // Valid standard, check to make sure language and standard are
       // compatible.
       const LangStandard &Std = LangStandard::getLangStandardForKind(LangStd);
-      switch (IK) {
-      case IK_C:
-      case IK_ObjC:
-      case IK_PreprocessedC:
-      case IK_PreprocessedObjC:
-        if (!(Std.isC89() || Std.isC99()))
-          Diags.Report(diag::err_drv_argument_not_allowed_with)
-            << A->getAsString(Args) << "C/ObjC";
-        break;
-      case IK_CXX:
-      case IK_ObjCXX:
-      case IK_PreprocessedCXX:
-      case IK_PreprocessedObjCXX:
-        if (!Std.isCPlusPlus())
-          Diags.Report(diag::err_drv_argument_not_allowed_with)
-            << A->getAsString(Args) << "C++/ObjC++";
-        break;
-      case IK_OpenCL:
-        if (!isOpenCL(LangStd))
-          Diags.Report(diag::err_drv_argument_not_allowed_with)
-            << A->getAsString(Args) << "OpenCL";
-        break;
-      case IK_CUDA:
-      case IK_PreprocessedCuda:
-        if (!Std.isCPlusPlus())
-          Diags.Report(diag::err_drv_argument_not_allowed_with)
-            << A->getAsString(Args) << "CUDA";
-        break;
-      default:
-        break;
+      if (!IsInputCompatibleWithStandard(IK, Std)) {
+        Diags.Report(diag::err_drv_argument_not_allowed_with)
+          << A->getAsString(Args) << GetInputKindName(IK);
       }
     }
   }
@@ -1740,16 +1774,16 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
   // Override the -std option in this case.
   if (const Arg *A = Args.getLastArg(OPT_cl_std_EQ)) {
     LangStandard::Kind OpenCLLangStd
-    = llvm::StringSwitch<LangStandard::Kind>(A->getValue())
-    .Cases("cl", "CL", LangStandard::lang_opencl)
-    .Cases("cl1.1", "CL1.1", LangStandard::lang_opencl11)
-    .Cases("cl1.2", "CL1.2", LangStandard::lang_opencl12)
-    .Cases("cl2.0", "CL2.0", LangStandard::lang_opencl20)
-    .Default(LangStandard::lang_unspecified);
+      = llvm::StringSwitch<LangStandard::Kind>(A->getValue())
+        .Cases("cl", "CL", LangStandard::lang_opencl)
+        .Cases("cl1.1", "CL1.1", LangStandard::lang_opencl11)
+        .Cases("cl1.2", "CL1.2", LangStandard::lang_opencl12)
+        .Cases("cl2.0", "CL2.0", LangStandard::lang_opencl20)
+        .Default(LangStandard::lang_unspecified);
 
     if (OpenCLLangStd == LangStandard::lang_unspecified) {
       Diags.Report(diag::err_drv_invalid_value)
-      << A->getAsString(Args) << A->getValue();
+        << A->getAsString(Args) << A->getValue();
     }
     else
       LangStd = OpenCLLangStd;
@@ -1850,8 +1884,8 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
 
   if (Args.hasArg(OPT_fgnu89_inline)) {
     if (Opts.CPlusPlus)
-      Diags.Report(diag::err_drv_argument_not_allowed_with) << "-fgnu89-inline"
-                                                            << "C++/ObjC++";
+      Diags.Report(diag::err_drv_argument_not_allowed_with)
+        << "-fgnu89-inline" << GetInputKindName(IK);
     else
       Opts.GNUInline = 1;
   }

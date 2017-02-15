@@ -3,11 +3,9 @@ add_lldb_library(lldbUtility
   Error.cpp
   JSON.cpp
   LLDBAssert.cpp
-  ModuleCache.cpp
   NameMatches.cpp
   PseudoTerminal.cpp
   Range.cpp
-  RegisterNumber.cpp
   RegularExpression.cpp
   SelectHelper.cpp
   SharingPtr.cpp
@@ -20,9 +18,7 @@ add_lldb_library(lldbUtility
   UriParser.cpp
 
   LINK_LIBS
-    lldbCore
     lldbHost
-    lldbTarget
 
   LINK_COMPONENTS
     Support

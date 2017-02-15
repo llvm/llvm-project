@@ -22,6 +22,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/EHPersonalities.h"
 #include "llvm/Analysis/InstructionSimplify.h"
@@ -2150,7 +2151,8 @@ static bool BlockIsSimpleEnoughToThreadThrough(BasicBlock *BB) {
 /// If we have a conditional branch on a PHI node value that is defined in the
 /// same block as the branch and if any PHI entries are constants, thread edges
 /// corresponding to that entry to be branches to their ultimate destination.
-static bool FoldCondBranchOnPHI(BranchInst *BI, const DataLayout &DL) {
+static bool FoldCondBranchOnPHI(BranchInst *BI, const DataLayout &DL,
+                                AssumptionCache *AC) {
   BasicBlock *BB = BI->getParent();
   PHINode *PN = dyn_cast<PHINode>(BI->getCondition());
   // NOTE: we currently cannot transform this case if the PHI node is used
@@ -2242,6 +2244,11 @@ static bool FoldCondBranchOnPHI(BranchInst *BI, const DataLayout &DL) {
       // Insert the new instruction into its new home.
       if (N)
         EdgeBB->getInstList().insert(InsertPt, N);
+
+      // Register the new instruction with the assumption cache if necessary.
+      if (auto *II = dyn_cast_or_null<IntrinsicInst>(N))
+        if (II->getIntrinsicID() == Intrinsic::assume)
+          AC->registerAssumption(II);
     }
 
     // Loop over all of the edges from PredBB to BB, changing them to branch
@@ -2254,7 +2261,7 @@ static bool FoldCondBranchOnPHI(BranchInst *BI, const DataLayout &DL) {
       }
 
     // Recurse, simplifying any other constants.
-    return FoldCondBranchOnPHI(BI, DL) | true;
+    return FoldCondBranchOnPHI(BI, DL, AC) | true;
   }
 
   return false;
@@ -5836,7 +5843,7 @@ bool SimplifyCFGOpt::SimplifyCondBranch(BranchInst *BI, IRBuilder<> &Builder) {
   // through this block if any PHI node entries are constants.
   if (PHINode *PN = dyn_cast<PHINode>(BI->getCondition()))
     if (PN->getParent() == BI->getParent())
-      if (FoldCondBranchOnPHI(BI, DL))
+      if (FoldCondBranchOnPHI(BI, DL, AC))
         return SimplifyCFG(BB, TTI, BonusInstThreshold, AC) | true;
 
   // Scan predecessor blocks for conditional branches.

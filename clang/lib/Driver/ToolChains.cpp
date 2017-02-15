@@ -2732,45 +2732,58 @@ void Generic_GCC::GCCInstallationDetector::ScanLibDirForGCCTriple(
     const llvm::Triple &TargetTriple, const ArgList &Args,
     const std::string &LibDir, StringRef CandidateTriple,
     bool NeedsBiarchSuffix) {
-  llvm::Triple::ArchType TargetArch = TargetTriple.getArch();
-  // There are various different suffixes involving the triple we
-  // check for. We also record what is necessary to walk from each back
-  // up to the lib directory. Specifically, the number of "up" steps
-  // in the second half of each row is 1 + the number of path separators
-  // in the first half.
-  const std::string LibAndInstallSuffixes[][2] = {
-      {"/gcc/" + CandidateTriple.str(), "/../../.."},
-
-      // Debian puts cross-compilers in gcc-cross
-      {"/gcc-cross/" + CandidateTriple.str(), "/../../.."},
-
-      {"/" + CandidateTriple.str() + "/gcc/" + CandidateTriple.str(),
-       "/../../../.."},
-
-      // The Freescale PPC SDK has the gcc libraries in
-      // <sysroot>/usr/lib/<triple>/x.y.z so have a look there as well.
-      {"/" + CandidateTriple.str(), "/../.."},
-
-      // Ubuntu has a strange mis-matched pair of triples that this happens to
-      // match.
-      // FIXME: It may be worthwhile to generalize this and look for a second
-      // triple.
-      {"/i386-linux-gnu/gcc/" + CandidateTriple.str(), "/../../../.."}};
-
   if (TargetTriple.getOS() == llvm::Triple::Solaris) {
     scanLibDirForGCCTripleSolaris(TargetTriple, Args, LibDir, CandidateTriple,
                                   NeedsBiarchSuffix);
     return;
   }
 
-  // Only look at the final, weird Ubuntu suffix for i386-linux-gnu.
-  const unsigned NumLibSuffixes = (llvm::array_lengthof(LibAndInstallSuffixes) -
-                                   (TargetArch != llvm::Triple::x86));
-  for (unsigned i = 0; i < NumLibSuffixes; ++i) {
-    StringRef LibSuffix = LibAndInstallSuffixes[i][0];
+  llvm::Triple::ArchType TargetArch = TargetTriple.getArch();
+  // Locations relative to the system lib directory where GCC's triple-specific
+  // directories might reside.
+  struct GCCLibSuffix {
+    // Path from system lib directory to GCC triple-specific directory.
+    std::string LibSuffix;
+    // Path from GCC triple-specific directory back to system lib directory.
+    // This is one '..' component per component in LibSuffix.
+    StringRef ReversePath;
+    // Whether this library suffix is relevant for the triple.
+    bool Active;
+  } Suffixes[] = {
+    // This is the normal place.
+    {"gcc/" + CandidateTriple.str(), "../..", true},
+
+    // Debian puts cross-compilers in gcc-cross.
+    {"gcc-cross/" + CandidateTriple.str(), "../..", true},
+
+    // The Freescale PPC SDK has the gcc libraries in
+    // <sysroot>/usr/lib/<triple>/x.y.z so have a look there as well. Only do
+    // this on Freescale triples, though, since some systems put a *lot* of
+    // files in that location, not just GCC installation data.
+    {CandidateTriple.str(), "..",
+      TargetTriple.getVendor() == llvm::Triple::Freescale},
+
+    // Natively multiarch systems sometimes put the GCC triple-specific
+    // directory within their multiarch lib directory, resulting in the
+    // triple appearing twice.
+    {CandidateTriple.str() + "/gcc/" + CandidateTriple.str(), "../../..", true},
+
+    // Deal with cases (on Ubuntu) where the system architecture could be i386
+    // but the GCC target architecture could be (say) i686.
+    // FIXME: It may be worthwhile to generalize this and look for a second
+    // triple.
+    {"i386-linux-gnu/gcc/" + CandidateTriple.str(), "../../..",
+      TargetArch == llvm::Triple::x86}
+  };
+
+  for (auto &Suffix : Suffixes) {
+    if (!Suffix.Active)
+      continue;
+
+    StringRef LibSuffix = Suffix.LibSuffix;
     std::error_code EC;
     for (vfs::directory_iterator
-             LI = D.getVFS().dir_begin(LibDir + LibSuffix, EC),
+             LI = D.getVFS().dir_begin(LibDir + "/" + LibSuffix, EC),
              LE;
          !EC && LI != LE; LI = LI.increment(EC)) {
       StringRef VersionText = llvm::sys::path::filename(LI->getName());
@@ -2792,9 +2805,8 @@ void Generic_GCC::GCCInstallationDetector::ScanLibDirForGCCTriple(
       // FIXME: We hack together the directory name here instead of
       // using LI to ensure stable path separators across Windows and
       // Linux.
-      GCCInstallPath =
-          LibDir + LibAndInstallSuffixes[i][0] + "/" + VersionText.str();
-      GCCParentLibPath = GCCInstallPath + LibAndInstallSuffixes[i][1];
+      GCCInstallPath = (LibDir + "/" + LibSuffix + "/" + VersionText).str();
+      GCCParentLibPath = (GCCInstallPath + "/../" + Suffix.ReversePath).str();
       IsValid = true;
     }
   }

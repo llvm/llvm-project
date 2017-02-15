@@ -71,7 +71,8 @@
 #include "Plugins/ExpressionParser/Clang/ClangUserExpression.h"
 #include "Plugins/ExpressionParser/Clang/ClangUtilityFunction.h"
 #include "lldb/Core/ArchSpec.h"
-#include "lldb/Core/Flags.h"
+#include "lldb/Utility/Flags.h"
+
 #include "lldb/Core/Log.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"

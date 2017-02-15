@@ -69,7 +69,8 @@ entry:
 }
 
 ; ALL-LABEL: @occupancy_0(
-; ALL: alloca [5 x i32]
+; CI-NOT: alloca [5 x i32]
+; SI: alloca [5 x i32]
 define void @occupancy_0(i32 addrspace(1)* nocapture %out, i32 addrspace(1)* nocapture %in) #3 {
 entry:
   %stack = alloca [5 x i32], align 4
@@ -91,7 +92,8 @@ entry:
 }
 
 ; ALL-LABEL: @occupancy_max(
-; ALL: alloca [5 x i32]
+; CI-NOT: alloca [5 x i32]
+; SI: alloca [5 x i32]
 define void @occupancy_max(i32 addrspace(1)* nocapture %out, i32 addrspace(1)* nocapture %in) #4 {
 entry:
   %stack = alloca [5 x i32], align 4

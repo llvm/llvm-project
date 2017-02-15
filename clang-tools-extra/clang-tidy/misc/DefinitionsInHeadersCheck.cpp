@@ -104,8 +104,8 @@ void DefinitionsInHeadersCheck::check(const MatchFinder::MatchResult &Result) {
     // Function templates are allowed.
     if (FD->getTemplatedKind() == FunctionDecl::TK_FunctionTemplate)
       return;
-    // Function template full specialization is prohibited in header file.
-    if (FD->getTemplateSpecializationKind() == TSK_ImplicitInstantiation)
+    // Ignore instantiated functions.
+    if (FD->isTemplateInstantiation())
       return;
     // Member function of a class template and member function of a nested class
     // in a class template are allowed.
@@ -133,7 +133,8 @@ void DefinitionsInHeadersCheck::check(const MatchFinder::MatchResult &Result) {
     // Static data members of a class template are allowed.
     if (VD->getDeclContext()->isDependentContext() && VD->isStaticDataMember())
       return;
-    if (VD->getTemplateSpecializationKind() == TSK_ImplicitInstantiation)
+    // Ignore instantiated static data members of classes.
+    if (isTemplateInstantiation(VD->getTemplateSpecializationKind()))
       return;
     // Ignore variable definition within function scope.
     if (VD->hasLocalStorage() || VD->isStaticLocal())

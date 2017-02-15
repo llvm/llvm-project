@@ -31,11 +31,10 @@ namespace llvm {
 /// \brief A cache of @llvm.assume calls within a function.
 ///
 /// This cache provides fast lookup of assumptions within a function by caching
-/// them and amortizing the cost of scanning for them across all queries. The
-/// cache is also conservatively self-updating so that it will never return
-/// incorrect results about a function even as the function is being mutated.
-/// However, flushing the cache and rebuilding it (or explicitly updating it)
-/// may allow it to discover new assumptions.
+/// them and amortizing the cost of scanning for them across all queries. Passes
+/// that create new assumptions are required to call registerAssumption() to
+/// register any new @llvm.assume calls that they create. Deletions of
+/// @llvm.assume calls do not require special handling.
 class AssumptionCache {
   /// \brief The function for which this cache is handling assumptions.
   ///

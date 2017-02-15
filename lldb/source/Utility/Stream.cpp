@@ -8,8 +8,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Utility/Stream.h"
-#include "lldb/Host/Endian.h"
 #include "lldb/Host/PosixApi.h"
+#include "lldb/Utility/Endian.h"
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>

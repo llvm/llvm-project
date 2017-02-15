@@ -678,12 +678,14 @@ define <32 x i8> @combine_pshufb_as_unpacklo_undef(<32 x i8> %a0) {
 define <32 x i8> @combine_pshufb_as_unpacklo_zero(<32 x i8> %a0) {
 ; X32-LABEL: combine_pshufb_as_unpacklo_zero:
 ; X32:       # BB#0:
-; X32-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1],zero,zero,ymm0[2,3],zero,zero,ymm0[4,5],zero,zero,ymm0[6,7],zero,zero,ymm0[16,17],zero,zero,ymm0[18,19],zero,zero,ymm0[20,21],zero,zero,ymm0[22,23],zero,zero
+; X32-NEXT:    vpxor %ymm1, %ymm1, %ymm1
+; X32-NEXT:    vpunpcklwd {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[8],ymm1[8],ymm0[9],ymm1[9],ymm0[10],ymm1[10],ymm0[11],ymm1[11]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: combine_pshufb_as_unpacklo_zero:
 ; X64:       # BB#0:
-; X64-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1],zero,zero,ymm0[2,3],zero,zero,ymm0[4,5],zero,zero,ymm0[6,7],zero,zero,ymm0[16,17],zero,zero,ymm0[18,19],zero,zero,ymm0[20,21],zero,zero,ymm0[22,23],zero,zero
+; X64-NEXT:    vpxor %ymm1, %ymm1, %ymm1
+; X64-NEXT:    vpunpcklwd {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[8],ymm1[8],ymm0[9],ymm1[9],ymm0[10],ymm1[10],ymm0[11],ymm1[11]
 ; X64-NEXT:    retq
   %1 = tail call <32 x i8> @llvm.x86.avx2.pshuf.b(<32 x i8> %a0, <32 x i8> <i8 0, i8 1, i8 -1, i8 -1, i8 2, i8 3, i8 -1, i8 -1, i8 4, i8 5, i8 -1, i8 -1, i8 6, i8 7, i8 -1, i8 -1, i8 16, i8 17, i8 -1, i8 -1, i8 18, i8 19, i8 -1, i8 -1, i8 20, i8 21, i8 -1, i8 -1, i8 22, i8 23, i8 -1, i8 -1>)
   ret <32 x i8> %1
@@ -692,12 +694,14 @@ define <32 x i8> @combine_pshufb_as_unpacklo_zero(<32 x i8> %a0) {
 define <32 x i8> @combine_pshufb_as_unpackhi_zero(<32 x i8> %a0) {
 ; X32-LABEL: combine_pshufb_as_unpackhi_zero:
 ; X32:       # BB#0:
-; X32-NEXT:    vpshufb {{.*#+}} ymm0 = zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero,ymm0[24],zero,ymm0[25],zero,ymm0[26],zero,ymm0[27],zero,ymm0[28],zero,ymm0[29],zero,ymm0[30],zero,ymm0[31]
+; X32-NEXT:    vpxor %ymm1, %ymm1, %ymm1
+; X32-NEXT:    vpunpckhbw {{.*#+}} ymm0 = ymm1[8],ymm0[8],ymm1[9],ymm0[9],ymm1[10],ymm0[10],ymm1[11],ymm0[11],ymm1[12],ymm0[12],ymm1[13],ymm0[13],ymm1[14],ymm0[14],ymm1[15],ymm0[15],ymm1[24],ymm0[24],ymm1[25],ymm0[25],ymm1[26],ymm0[26],ymm1[27],ymm0[27],ymm1[28],ymm0[28],ymm1[29],ymm0[29],ymm1[30],ymm0[30],ymm1[31],ymm0[31]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: combine_pshufb_as_unpackhi_zero:
 ; X64:       # BB#0:
-; X64-NEXT:    vpshufb {{.*#+}} ymm0 = zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero,ymm0[24],zero,ymm0[25],zero,ymm0[26],zero,ymm0[27],zero,ymm0[28],zero,ymm0[29],zero,ymm0[30],zero,ymm0[31]
+; X64-NEXT:    vpxor %ymm1, %ymm1, %ymm1
+; X64-NEXT:    vpunpckhbw {{.*#+}} ymm0 = ymm1[8],ymm0[8],ymm1[9],ymm0[9],ymm1[10],ymm0[10],ymm1[11],ymm0[11],ymm1[12],ymm0[12],ymm1[13],ymm0[13],ymm1[14],ymm0[14],ymm1[15],ymm0[15],ymm1[24],ymm0[24],ymm1[25],ymm0[25],ymm1[26],ymm0[26],ymm1[27],ymm0[27],ymm1[28],ymm0[28],ymm1[29],ymm0[29],ymm1[30],ymm0[30],ymm1[31],ymm0[31]
 ; X64-NEXT:    retq
   %1 = tail call <32 x i8> @llvm.x86.avx2.pshuf.b(<32 x i8> %a0, <32 x i8> <i8 -1, i8 8, i8 -1, i8 9, i8 -1, i8 10, i8 -1, i8 11, i8 -1, i8 12, i8 -1, i8 13, i8 -1, i8 14, i8 -1, i8 15, i8 -1, i8 24, i8 -1, i8 25, i8 -1, i8 26, i8 -1, i8 27, i8 -1, i8 28, i8 -1, i8 29, i8 -1, i8 30, i8 -1, i8 31>)
   ret <32 x i8> %1

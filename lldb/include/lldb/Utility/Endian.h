@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_host_endian_h_
-#define liblldb_host_endian_h_
+#ifndef LLDB_UTILITY_ENDIAN_H
+#define LLDB_UTILITY_ENDIAN_H
 
 #include "lldb/lldb-enumerations.h"
 

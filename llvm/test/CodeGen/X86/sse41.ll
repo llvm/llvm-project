@@ -544,13 +544,15 @@ define <4 x float> @shuf_X00X(<4 x float> %x, <4 x float> %a) {
 define <4 x float> @shuf_X0YC(<4 x float> %x, <4 x float> %a) {
 ; X32-LABEL: shuf_X0YC:
 ; X32:       ## BB#0:
-; X32-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
+; X32-NEXT:    xorps %xmm2, %xmm2
+; X32-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
 ; X32-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1,2],xmm1[2]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: shuf_X0YC:
 ; X64:       ## BB#0:
-; X64-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
+; X64-NEXT:    xorps %xmm2, %xmm2
+; X64-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
 ; X64-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1,2],xmm1[2]
 ; X64-NEXT:    retq
   %vecext = extractelement <4 x float> %x, i32 0

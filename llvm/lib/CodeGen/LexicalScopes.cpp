@@ -181,10 +181,9 @@ LexicalScopes::getOrCreateInlinedScope(const DILocalScope *Scope,
   else
     Parent = getOrCreateLexicalScope(InlinedAt);
 
-  I = InlinedLexicalScopeMap.emplace(std::piecewise_construct,
-                                     std::forward_as_tuple(P),
-                                     std::forward_as_tuple(Parent, Scope,
-                                                           InlinedAt, false))
+  I = InlinedLexicalScopeMap
+          .emplace(std::piecewise_construct, std::forward_as_tuple(P),
+                   std::forward_as_tuple(Parent, Scope, InlinedAt, false))
           .first;
   return &I->second;
 }

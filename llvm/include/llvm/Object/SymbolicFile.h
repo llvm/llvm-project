@@ -16,6 +16,7 @@
 
 #include "llvm/Object/Binary.h"
 #include "llvm/Support/Format.h"
+#include <cinttypes>
 #include <utility>
 
 namespace llvm {
@@ -33,7 +34,8 @@ union DataRefImpl {
 
 template <typename OStream>
 OStream& operator<<(OStream &OS, const DataRefImpl &D) {
-  OS << "(" << format("0x%x8", D.p) << " (" << format("0x%x8", D.d.a) << ", " << format("0x%x8", D.d.b) << "))";
+  OS << "(" << format("0x%08" PRIxPTR, D.p) << " (" << format("0x%08x", D.d.a)
+     << ", " << format("0x%08x", D.d.b) << "))";
   return OS;
 }
 

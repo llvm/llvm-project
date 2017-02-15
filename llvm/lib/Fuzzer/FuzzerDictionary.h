@@ -51,7 +51,7 @@ private:
   uint8_t Data[kMaxSize];
 };
 
-typedef FixedWord<27> Word; // 28 bytes.
+typedef FixedWord<64> Word;
 
 class DictionaryEntry {
  public:

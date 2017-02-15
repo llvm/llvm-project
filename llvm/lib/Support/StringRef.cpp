@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/edit_distance.h"
@@ -595,6 +596,18 @@ bool StringRef::getAsInteger(unsigned Radix, APInt &Result) const {
   return false;
 }
 
+bool StringRef::getAsDouble(double &Result, bool AllowInexact) const {
+  APFloat F(0.0);
+  APFloat::opStatus Status =
+      F.convertFromString(*this, APFloat::rmNearestTiesToEven);
+  if (Status != APFloat::opOK) {
+    if (!AllowInexact || Status != APFloat::opInexact)
+      return true;
+  }
+
+  Result = F.convertToDouble();
+  return false;
+}
 
 // Implementation of StringRef hashing.
 hash_code llvm::hash_value(StringRef S) {

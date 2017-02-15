@@ -236,14 +236,32 @@ void InputSection<ELFT>::copyRelocations(uint8_t *Buf, ArrayRef<RelTy> Rels) {
     if (Config->Rela)
       P->r_addend = getAddend<ELFT>(Rel);
 
+    // Output section VA is zero for -r, so r_offset is an offset within the
+    // section, but for --emit-relocs it is an virtual address.
+    P->r_offset = RelocatedSection->OutSec->Addr +
+                  RelocatedSection->getOffset(Rel.r_offset);
+    P->setSymbolAndType(In<ELFT>::SymTab->getSymbolIndex(&Body), Type,
+                        Config->Mips64EL);
+
     if (Body.Type == STT_SECTION) {
       // We combine multiple section symbols into only one per
       // section. This means we have to update the addend. That is
       // trivial for Elf_Rela, but for Elf_Rel we have to write to the
       // section data. We do that by adding to the Relocation vector.
+
+      // .eh_frame is horribly special and can reference discarded sections. To
+      // avoid having to parse and recreate .eh_frame, we just replace any
+      // relocation in it pointing to discarded sections with R_*_NONE, which
+      // hopefully creates a frame that is ignored at runtime.
+      InputSectionBase<ELFT> *Section =
+          cast<DefinedRegular<ELFT>>(Body).Section;
+      if (Section == &InputSection<ELFT>::Discarded) {
+        P->setSymbolAndType(0, 0, false);
+        continue;
+      }
+
       if (Config->Rela) {
-        P->r_addend += Body.getVA<ELFT>() -
-                       cast<DefinedRegular<ELFT>>(Body).Section->OutSec->Addr;
+        P->r_addend += Body.getVA<ELFT>() - Section->OutSec->Addr;
       } else if (Config->Relocatable) {
         const uint8_t *BufLoc = RelocatedSection->Data.begin() + Rel.r_offset;
         uint64_t Implicit = Target->getImplicitAddend(BufLoc, Type);
@@ -252,12 +270,6 @@ void InputSection<ELFT>::copyRelocations(uint8_t *Buf, ArrayRef<RelTy> Rels) {
       }
     }
 
-    // Output section VA is zero for -r, so r_offset is an offset within the
-    // section, but for --emit-relocs it is an virtual address.
-    P->r_offset = RelocatedSection->OutSec->Addr +
-                  RelocatedSection->getOffset(Rel.r_offset);
-    P->setSymbolAndType(In<ELFT>::SymTab->getSymbolIndex(&Body), Type,
-                        Config->Mips64EL);
   }
 }
 

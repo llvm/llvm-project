@@ -48,6 +48,7 @@
 #include <vector>
 
 using namespace llvm;
+using llvm::support::endian::write32le;
 
 #define DEBUG_TYPE "WinCOFFObjectWriter"
 
@@ -72,7 +73,7 @@ class COFFSection;
 
 class COFFSymbol {
 public:
-  COFF::symbol Data;
+  COFF::symbol Data = {};
 
   typedef SmallVector<AuxSymbol, 1> AuxiliarySymbols;
 
@@ -84,7 +85,7 @@ public:
   int Relocations = 0;
   const MCSymbol *MC = nullptr;
 
-  COFFSymbol(StringRef name);
+  COFFSymbol(StringRef Name) : Name(Name) {}
 
   void set_name_offset(uint32_t Offset);
 
@@ -110,7 +111,7 @@ typedef std::vector<COFFRelocation> relocations;
 
 class COFFSection {
 public:
-  COFF::section Header;
+  COFF::section Header = {};
 
   std::string Name;
   int Number;
@@ -118,7 +119,7 @@ public:
   COFFSymbol *Symbol = nullptr;
   relocations Relocations;
 
-  COFFSection(StringRef name);
+  COFFSection(StringRef Name) : Name(Name) {}
 };
 
 class WinCOFFObjectWriter : public MCObjectWriter {
@@ -132,7 +133,7 @@ public:
   std::unique_ptr<MCWinCOFFObjectTargetWriter> TargetObjectWriter;
 
   // Root level file contents.
-  COFF::header Header;
+  COFF::header Header = {};
   sections Sections;
   symbols Symbols;
   StringTableBuilder Strings{StringTableBuilder::WinCOFF};
@@ -159,9 +160,6 @@ public:
   COFFSymbol *createSymbol(StringRef Name);
   COFFSymbol *GetOrCreateCOFFSymbol(const MCSymbol *Symbol);
   COFFSection *createSection(StringRef Name);
-
-  template <typename object_t, typename list_t>
-  object_t *createCOFFEntity(StringRef Name, list_t &List);
 
   void defineSection(MCSectionCOFF const &Sec);
 
@@ -204,31 +202,15 @@ public:
 
 } // end anonymous namespace
 
-static inline void write_uint32_le(void *Data, uint32_t Value) {
-  support::endian::write<uint32_t, support::little, support::unaligned>(Data,
-                                                                        Value);
-}
-
 //------------------------------------------------------------------------------
 // Symbol class implementation
-
-COFFSymbol::COFFSymbol(StringRef name) : Name(name.begin(), name.end()) {
-  memset(&Data, 0, sizeof(Data));
-}
 
 // In the case that the name does not fit within 8 bytes, the offset
 // into the string table is stored in the last 4 bytes instead, leaving
 // the first 4 bytes as 0.
 void COFFSymbol::set_name_offset(uint32_t Offset) {
-  write_uint32_le(Data.Name + 0, 0);
-  write_uint32_le(Data.Name + 4, Offset);
-}
-
-//------------------------------------------------------------------------------
-// Section class implementation
-
-COFFSection::COFFSection(StringRef name) : Name(name) {
-  memset(&Header, 0, sizeof(Header));
+  write32le(Data.Name + 0, 0);
+  write32le(Data.Name + 4, Offset);
 }
 
 //------------------------------------------------------------------------------
@@ -237,115 +219,92 @@ COFFSection::COFFSection(StringRef name) : Name(name) {
 WinCOFFObjectWriter::WinCOFFObjectWriter(MCWinCOFFObjectTargetWriter *MOTW,
                                          raw_pwrite_stream &OS)
     : MCObjectWriter(OS, true), TargetObjectWriter(MOTW) {
-  memset(&Header, 0, sizeof(Header));
-
   Header.Machine = TargetObjectWriter->getMachine();
 }
 
 COFFSymbol *WinCOFFObjectWriter::createSymbol(StringRef Name) {
-  return createCOFFEntity<COFFSymbol>(Name, Symbols);
+  Symbols.push_back(make_unique<COFFSymbol>(Name));
+  return Symbols.back().get();
 }
 
 COFFSymbol *WinCOFFObjectWriter::GetOrCreateCOFFSymbol(const MCSymbol *Symbol) {
-  symbol_map::iterator i = SymbolMap.find(Symbol);
-  if (i != SymbolMap.end())
-    return i->second;
-  COFFSymbol *RetSymbol =
-      createCOFFEntity<COFFSymbol>(Symbol->getName(), Symbols);
-  SymbolMap[Symbol] = RetSymbol;
-  return RetSymbol;
+  COFFSymbol *&Ret = SymbolMap[Symbol];
+  if (!Ret)
+    Ret = createSymbol(Symbol->getName());
+  return Ret;
 }
 
 COFFSection *WinCOFFObjectWriter::createSection(StringRef Name) {
-  return createCOFFEntity<COFFSection>(Name, Sections);
+  Sections.emplace_back(make_unique<COFFSection>(Name));
+  return Sections.back().get();
 }
 
-/// A template used to lookup or create a symbol/section, and initialize it if
-/// needed.
-template <typename object_t, typename list_t>
-object_t *WinCOFFObjectWriter::createCOFFEntity(StringRef Name, list_t &List) {
-  List.push_back(make_unique<object_t>(Name));
-
-  return List.back().get();
+static uint32_t getAlignment(const MCSectionCOFF &Sec) {
+  switch (Sec.getAlignment()) {
+  case 1:
+    return COFF::IMAGE_SCN_ALIGN_1BYTES;
+  case 2:
+    return COFF::IMAGE_SCN_ALIGN_2BYTES;
+  case 4:
+    return COFF::IMAGE_SCN_ALIGN_4BYTES;
+  case 8:
+    return COFF::IMAGE_SCN_ALIGN_8BYTES;
+  case 16:
+    return COFF::IMAGE_SCN_ALIGN_16BYTES;
+  case 32:
+    return COFF::IMAGE_SCN_ALIGN_32BYTES;
+  case 64:
+    return COFF::IMAGE_SCN_ALIGN_64BYTES;
+  case 128:
+    return COFF::IMAGE_SCN_ALIGN_128BYTES;
+  case 256:
+    return COFF::IMAGE_SCN_ALIGN_256BYTES;
+  case 512:
+    return COFF::IMAGE_SCN_ALIGN_512BYTES;
+  case 1024:
+    return COFF::IMAGE_SCN_ALIGN_1024BYTES;
+  case 2048:
+    return COFF::IMAGE_SCN_ALIGN_2048BYTES;
+  case 4096:
+    return COFF::IMAGE_SCN_ALIGN_4096BYTES;
+  case 8192:
+    return COFF::IMAGE_SCN_ALIGN_8192BYTES;
+  }
+  llvm_unreachable("unsupported section alignment");
 }
 
 /// This function takes a section data object from the assembler
 /// and creates the associated COFF section staging object.
-void WinCOFFObjectWriter::defineSection(MCSectionCOFF const &Sec) {
-  COFFSection *coff_section = createSection(Sec.getSectionName());
-  COFFSymbol *coff_symbol = createSymbol(Sec.getSectionName());
-  if (Sec.getSelection() != COFF::IMAGE_COMDAT_SELECT_ASSOCIATIVE) {
-    if (const MCSymbol *S = Sec.getCOMDATSymbol()) {
+void WinCOFFObjectWriter::defineSection(const MCSectionCOFF &MCSec) {
+  COFFSection *Section = createSection(MCSec.getSectionName());
+  COFFSymbol *Symbol = createSymbol(MCSec.getSectionName());
+  Section->Symbol = Symbol;
+  Symbol->Section = Section;
+  Symbol->Data.StorageClass = COFF::IMAGE_SYM_CLASS_STATIC;
+
+  // Create a COMDAT symbol if needed.
+  if (MCSec.getSelection() != COFF::IMAGE_COMDAT_SELECT_ASSOCIATIVE) {
+    if (const MCSymbol *S = MCSec.getCOMDATSymbol()) {
       COFFSymbol *COMDATSymbol = GetOrCreateCOFFSymbol(S);
       if (COMDATSymbol->Section)
         report_fatal_error("two sections have the same comdat");
-      COMDATSymbol->Section = coff_section;
+      COMDATSymbol->Section = Section;
     }
   }
 
-  coff_section->Symbol = coff_symbol;
-  coff_symbol->Section = coff_section;
-  coff_symbol->Data.StorageClass = COFF::IMAGE_SYM_CLASS_STATIC;
-
   // In this case the auxiliary symbol is a Section Definition.
-  coff_symbol->Aux.resize(1);
-  memset(&coff_symbol->Aux[0], 0, sizeof(coff_symbol->Aux[0]));
-  coff_symbol->Aux[0].AuxType = ATSectionDefinition;
-  coff_symbol->Aux[0].Aux.SectionDefinition.Selection = Sec.getSelection();
+  Symbol->Aux.resize(1);
+  Symbol->Aux[0] = {};
+  Symbol->Aux[0].AuxType = ATSectionDefinition;
+  Symbol->Aux[0].Aux.SectionDefinition.Selection = MCSec.getSelection();
 
-  coff_section->Header.Characteristics = Sec.getCharacteristics();
-
-  uint32_t &Characteristics = coff_section->Header.Characteristics;
-  switch (Sec.getAlignment()) {
-  case 1:
-    Characteristics |= COFF::IMAGE_SCN_ALIGN_1BYTES;
-    break;
-  case 2:
-    Characteristics |= COFF::IMAGE_SCN_ALIGN_2BYTES;
-    break;
-  case 4:
-    Characteristics |= COFF::IMAGE_SCN_ALIGN_4BYTES;
-    break;
-  case 8:
-    Characteristics |= COFF::IMAGE_SCN_ALIGN_8BYTES;
-    break;
-  case 16:
-    Characteristics |= COFF::IMAGE_SCN_ALIGN_16BYTES;
-    break;
-  case 32:
-    Characteristics |= COFF::IMAGE_SCN_ALIGN_32BYTES;
-    break;
-  case 64:
-    Characteristics |= COFF::IMAGE_SCN_ALIGN_64BYTES;
-    break;
-  case 128:
-    Characteristics |= COFF::IMAGE_SCN_ALIGN_128BYTES;
-    break;
-  case 256:
-    Characteristics |= COFF::IMAGE_SCN_ALIGN_256BYTES;
-    break;
-  case 512:
-    Characteristics |= COFF::IMAGE_SCN_ALIGN_512BYTES;
-    break;
-  case 1024:
-    Characteristics |= COFF::IMAGE_SCN_ALIGN_1024BYTES;
-    break;
-  case 2048:
-    Characteristics |= COFF::IMAGE_SCN_ALIGN_2048BYTES;
-    break;
-  case 4096:
-    Characteristics |= COFF::IMAGE_SCN_ALIGN_4096BYTES;
-    break;
-  case 8192:
-    Characteristics |= COFF::IMAGE_SCN_ALIGN_8192BYTES;
-    break;
-  default:
-    llvm_unreachable("unsupported section alignment");
-  }
+  // Set section alignment.
+  Section->Header.Characteristics = MCSec.getCharacteristics();
+  Section->Header.Characteristics |= getAlignment(MCSec);
 
   // Bind internal COFF section to MC section.
-  coff_section->MCSection = &Sec;
-  SectionMap[&Sec] = coff_section;
+  Section->MCSection = &MCSec;
+  SectionMap[&MCSec] = Section;
 }
 
 static uint64_t getSymbolValue(const MCSymbol &Symbol,
@@ -377,25 +336,25 @@ COFFSymbol *WinCOFFObjectWriter::getLinkedSymbol(const MCSymbol &Symbol) {
 
 /// This function takes a symbol data object from the assembler
 /// and creates the associated COFF symbol staging object.
-void WinCOFFObjectWriter::DefineSymbol(const MCSymbol &Symbol,
+void WinCOFFObjectWriter::DefineSymbol(const MCSymbol &MCSym,
                                        MCAssembler &Assembler,
                                        const MCAsmLayout &Layout) {
-  COFFSymbol *coff_symbol = GetOrCreateCOFFSymbol(&Symbol);
-  const MCSymbol *Base = Layout.getBaseSymbol(Symbol);
+  COFFSymbol *Sym = GetOrCreateCOFFSymbol(&MCSym);
+  const MCSymbol *Base = Layout.getBaseSymbol(MCSym);
   COFFSection *Sec = nullptr;
   if (Base && Base->getFragment()) {
     Sec = SectionMap[Base->getFragment()->getParent()];
-    if (coff_symbol->Section && coff_symbol->Section != Sec)
+    if (Sym->Section && Sym->Section != Sec)
       report_fatal_error("conflicting sections for symbol");
   }
 
   COFFSymbol *Local = nullptr;
-  if (cast<MCSymbolCOFF>(Symbol).isWeakExternal()) {
-    coff_symbol->Data.StorageClass = COFF::IMAGE_SYM_CLASS_WEAK_EXTERNAL;
+  if (cast<MCSymbolCOFF>(MCSym).isWeakExternal()) {
+    Sym->Data.StorageClass = COFF::IMAGE_SYM_CLASS_WEAK_EXTERNAL;
 
-    COFFSymbol *WeakDefault = getLinkedSymbol(Symbol);
+    COFFSymbol *WeakDefault = getLinkedSymbol(MCSym);
     if (!WeakDefault) {
-      std::string WeakName = (".weak." + Symbol.getName() + ".default").str();
+      std::string WeakName = (".weak." + MCSym.getName() + ".default").str();
       WeakDefault = createSymbol(WeakName);
       if (!Sec)
         WeakDefault->Data.SectionNumber = COFF::IMAGE_SYM_ABSOLUTE;
@@ -404,41 +363,41 @@ void WinCOFFObjectWriter::DefineSymbol(const MCSymbol &Symbol,
       Local = WeakDefault;
     }
 
-    coff_symbol->Other = WeakDefault;
+    Sym->Other = WeakDefault;
 
     // Setup the Weak External auxiliary symbol.
-    coff_symbol->Aux.resize(1);
-    memset(&coff_symbol->Aux[0], 0, sizeof(coff_symbol->Aux[0]));
-    coff_symbol->Aux[0].AuxType = ATWeakExternal;
-    coff_symbol->Aux[0].Aux.WeakExternal.TagIndex = 0;
-    coff_symbol->Aux[0].Aux.WeakExternal.Characteristics =
+    Sym->Aux.resize(1);
+    memset(&Sym->Aux[0], 0, sizeof(Sym->Aux[0]));
+    Sym->Aux[0].AuxType = ATWeakExternal;
+    Sym->Aux[0].Aux.WeakExternal.TagIndex = 0;
+    Sym->Aux[0].Aux.WeakExternal.Characteristics =
         COFF::IMAGE_WEAK_EXTERN_SEARCH_LIBRARY;
   } else {
     if (!Base)
-      coff_symbol->Data.SectionNumber = COFF::IMAGE_SYM_ABSOLUTE;
+      Sym->Data.SectionNumber = COFF::IMAGE_SYM_ABSOLUTE;
     else
-      coff_symbol->Section = Sec;
-    Local = coff_symbol;
+      Sym->Section = Sec;
+    Local = Sym;
   }
 
   if (Local) {
-    Local->Data.Value = getSymbolValue(Symbol, Layout);
+    Local->Data.Value = getSymbolValue(MCSym, Layout);
 
-    const MCSymbolCOFF &SymbolCOFF = cast<MCSymbolCOFF>(Symbol);
+    const MCSymbolCOFF &SymbolCOFF = cast<MCSymbolCOFF>(MCSym);
     Local->Data.Type = SymbolCOFF.getType();
     Local->Data.StorageClass = SymbolCOFF.getClass();
 
     // If no storage class was specified in the streamer, define it here.
     if (Local->Data.StorageClass == COFF::IMAGE_SYM_CLASS_NULL) {
-      bool IsExternal = Symbol.isExternal() ||
-                        (!Symbol.getFragment() && !Symbol.isVariable());
+      bool IsExternal = MCSym.isExternal() ||
+                        (!MCSym.getFragment() && !MCSym.isVariable());
 
       Local->Data.StorageClass = IsExternal ? COFF::IMAGE_SYM_CLASS_EXTERNAL
                                             : COFF::IMAGE_SYM_CLASS_STATIC;
     }
   }
 
-  coff_symbol->MC = &Symbol;
+  Sym->MC = &MCSym;
 }
 
 // Maximum offsets for different string table entry encodings.
@@ -468,24 +427,25 @@ static void encodeBase64StringEntry(char *Buffer, uint64_t Value) {
 }
 
 void WinCOFFObjectWriter::SetSectionName(COFFSection &S) {
-  if (S.Name.size() > COFF::NameSize) {
-    uint64_t StringTableEntry = Strings.getOffset(S.Name);
-
-    if (StringTableEntry <= Max7DecimalOffset) {
-      SmallVector<char, COFF::NameSize> Buffer;
-      Twine('/').concat(Twine(StringTableEntry)).toVector(Buffer);
-      assert(Buffer.size() <= COFF::NameSize && Buffer.size() >= 2);
-
-      std::memcpy(S.Header.Name, Buffer.data(), Buffer.size());
-    } else if (StringTableEntry <= MaxBase64Offset) {
-      // Starting with 10,000,000, offsets are encoded as base64.
-      encodeBase64StringEntry(S.Header.Name, StringTableEntry);
-    } else {
-      report_fatal_error("COFF string table is greater than 64 GB.");
-    }
-  } else {
+  if (S.Name.size() <= COFF::NameSize) {
     std::memcpy(S.Header.Name, S.Name.c_str(), S.Name.size());
+    return;
   }
+
+  uint64_t StringTableEntry = Strings.getOffset(S.Name);
+  if (StringTableEntry <= Max7DecimalOffset) {
+    SmallVector<char, COFF::NameSize> Buffer;
+    Twine('/').concat(Twine(StringTableEntry)).toVector(Buffer);
+    assert(Buffer.size() <= COFF::NameSize && Buffer.size() >= 2);
+    std::memcpy(S.Header.Name, Buffer.data(), Buffer.size());
+    return;
+  }
+  if (StringTableEntry <= MaxBase64Offset) {
+    // Starting with 10,000,000, offsets are encoded as base64.
+    encodeBase64StringEntry(S.Header.Name, StringTableEntry);
+    return;
+  }
+  report_fatal_error("COFF string table is greater than 64 GB.");
 }
 
 void WinCOFFObjectWriter::SetSymbolName(COFFSymbol &S) {

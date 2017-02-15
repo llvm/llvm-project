@@ -295,7 +295,9 @@ void InstrProfiling::lowerCoverageData(GlobalVariable *CoverageNamesVar) {
 
     Name->setLinkage(GlobalValue::PrivateLinkage);
     ReferencedNames.push_back(Name);
+    NC->dropAllReferences();
   }
+  CoverageNamesVar->eraseFromParent();
 }
 
 /// Get the name of a profiling variable for a particular function.

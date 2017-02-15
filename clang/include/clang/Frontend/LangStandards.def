@@ -142,16 +142,16 @@ LANGSTANDARD(gnucxx1z, "gnu++1z",
 // OpenCL
 LANGSTANDARD(opencl, "cl",
              "OpenCL 1.0",
-             LineComment | C99 | Digraphs | HexFloat)
+             LineComment | C99 | Digraphs | HexFloat | OpenCL)
 LANGSTANDARD(opencl11, "cl1.1",
              "OpenCL 1.1",
-             LineComment | C99 | Digraphs | HexFloat)
+             LineComment | C99 | Digraphs | HexFloat | OpenCL)
 LANGSTANDARD(opencl12, "cl1.2",
              "OpenCL 1.2",
-             LineComment | C99 | Digraphs | HexFloat)
+             LineComment | C99 | Digraphs | HexFloat | OpenCL)
 LANGSTANDARD(opencl20, "cl2.0",
              "OpenCL 2.0",
-             LineComment | C99 | Digraphs | HexFloat)
+             LineComment | C99 | Digraphs | HexFloat | OpenCL)
 
 LANGSTANDARD_ALIAS(opencl, "CL")
 LANGSTANDARD_ALIAS(opencl11, "CL1.1")

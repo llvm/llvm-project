@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ModuleCache.h"
+#include "lldb/Target/ModuleCache.h"
 
 #include "lldb/Core/Log.h"
 #include "lldb/Core/Module.h"
