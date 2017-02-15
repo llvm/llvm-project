@@ -605,11 +605,10 @@ namespace {
       EM_PotentialConstantExpressionUnevaluated,
 
       /// Evaluate as a constant expression. In certain scenarios, if:
-      /// - We find a MemberExpr with a base that can't be evaluated, or
-      /// - We find a variable initialized with a call to a function that has
+      /// - we find a MemberExpr with a base that can't be evaluated, or
+      /// - we find a variable initialized with a call to a function that has
       ///   the alloc_size attribute on it
-      ///
-      /// Then we may consider evaluation to have succeeded.
+      /// then we may consider evaluation to have succeeded.
       ///
       /// In either case, the LValue returned shall have an invalid base; in the
       /// former, the base will be the invalid MemberExpr, in the latter, the
