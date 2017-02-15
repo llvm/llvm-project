@@ -57,9 +57,6 @@ private:
       CompilationDatabases;
   std::shared_ptr<clang::PCHContainerOperations> PCHs;
 
-  /// We run parsing on a separate thread. This thread looks into PendingRequest
-  /// as a 'one element work queue' as long as RequestIsPending is true.
-  std::thread ClangWorker;
   /// Queue of requests.
   std::deque<std::string> RequestQueue;
   /// Setting Done to true will make the worker thread terminate.
@@ -68,6 +65,10 @@ private:
   std::condition_variable ClangRequestCV;
   /// Lock for accesses to RequestQueue and Done.
   std::mutex RequestLock;
+
+  /// We run parsing on a separate thread. This thread looks into PendingRequest
+  /// as a 'one element work queue' as the queue is non-empty.
+  std::thread ClangWorker;
 };
 
 } // namespace clangd

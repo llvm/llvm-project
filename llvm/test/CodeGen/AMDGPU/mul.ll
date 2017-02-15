@@ -234,23 +234,23 @@ define void @s_mul_i128(i128 addrspace(1)* %out, i128 %a, i128 %b) nounwind #0 {
 ; SI: {{buffer|flat}}_load_dwordx4
 ; SI: {{buffer|flat}}_load_dwordx4
 
-; SI: v_mul_lo_i32
-; SI: v_mul_hi_u32
-; SI: v_mul_hi_u32
-; SI: v_mul_lo_i32
-; SI: v_mul_hi_u32
-; SI: v_mul_hi_u32
-; SI: v_mul_lo_i32
-; SI: v_mul_lo_i32
+; SI-DAG: v_mul_lo_i32
+; SI-DAG: v_mul_hi_u32
+; SI-DAG: v_mul_hi_u32
+; SI-DAG: v_mul_lo_i32
+; SI-DAG: v_mul_hi_u32
+; SI-DAG: v_mul_hi_u32
+; SI-DAG: v_mul_lo_i32
+; SI-DAG: v_mul_lo_i32
 ; SI: v_add_i32_e32
-; SI: v_mul_hi_u32
-; SI: v_mul_lo_i32
-; SI: v_mul_hi_u32
-; SI: v_mul_lo_i32
-; SI: v_mul_lo_i32
-; SI: v_mul_lo_i32
-; SI: v_mul_lo_i32
-; SI: v_mul_lo_i32
+; SI-DAG: v_mul_hi_u32
+; SI-DAG: v_mul_lo_i32
+; SI-DAG: v_mul_hi_u32
+; SI-DAG: v_mul_lo_i32
+; SI-DAG: v_mul_lo_i32
+; SI-DAG: v_mul_lo_i32
+; SI-DAG: v_mul_lo_i32
+; SI-DAG: v_mul_lo_i32
 
 ; SI: {{buffer|flat}}_store_dwordx4
 define void @v_mul_i128(i128 addrspace(1)* %out, i128 addrspace(1)* %aptr, i128 addrspace(1)* %bptr) #0 {

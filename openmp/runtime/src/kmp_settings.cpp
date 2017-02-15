@@ -3798,7 +3798,6 @@ __kmp_stg_print_par_range_env( kmp_str_buf_t * buffer, char const * name, void *
     }
 } // __kmp_stg_print_par_range_env
 
-#if KMP_USE_MONITOR
 // -------------------------------------------------------------------------------------------------
 // KMP_YIELD_CYCLE, KMP_YIELD_ON, KMP_YIELD_OFF
 // -------------------------------------------------------------------------------------------------
@@ -3834,7 +3833,6 @@ static void
 __kmp_stg_print_yield_off( kmp_str_buf_t * buffer, char const * name, void * data ) {
     __kmp_stg_print_int( buffer, name, __kmp_yield_off_count );
 } // __kmp_stg_print_yield_off
-#endif // KMP_USE_MONITOR
 
 #endif
 
@@ -4740,11 +4738,9 @@ static kmp_setting_t __kmp_stg_table[] = {
     { "KMP_DIAG",                          __kmp_stg_parse_diag,               __kmp_stg_print_diag,               NULL, 0, 0 },
 
     { "KMP_PAR_RANGE",                     __kmp_stg_parse_par_range_env,      __kmp_stg_print_par_range_env,      NULL, 0, 0 },
-#if KMP_USE_MONITOR
     { "KMP_YIELD_CYCLE",                   __kmp_stg_parse_yield_cycle,        __kmp_stg_print_yield_cycle,        NULL, 0, 0 },
     { "KMP_YIELD_ON",                      __kmp_stg_parse_yield_on,           __kmp_stg_print_yield_on,           NULL, 0, 0 },
     { "KMP_YIELD_OFF",                     __kmp_stg_parse_yield_off,          __kmp_stg_print_yield_off,          NULL, 0, 0 },
-#endif
 #endif // KMP_DEBUG
 
     { "KMP_ALIGN_ALLOC",                   __kmp_stg_parse_align_alloc,        __kmp_stg_print_align_alloc,        NULL, 0, 0 },

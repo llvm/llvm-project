@@ -212,6 +212,9 @@ int main(int argc, char **argv) {
     return 1;
   }
 
+  if (FileType.getNumOccurrences())
+    Conf.CGFileType = FileType;
+
   Conf.OverrideTriple = OverrideTriple;
   Conf.DefaultTriple = DefaultTriple;
 

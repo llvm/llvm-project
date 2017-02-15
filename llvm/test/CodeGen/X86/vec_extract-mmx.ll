@@ -150,7 +150,7 @@ define i32 @test4(x86_mmx %a) nounwind {
 ; X32-NEXT:    subl $8, %esp
 ; X32-NEXT:    movq %mm0, (%esp)
 ; X32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; X32-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,3,0,1]
+; X32-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,0,1]
 ; X32-NEXT:    movd %xmm0, %eax
 ; X32-NEXT:    movl %ebp, %esp
 ; X32-NEXT:    popl %ebp

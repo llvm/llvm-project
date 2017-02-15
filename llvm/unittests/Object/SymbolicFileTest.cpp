@@ -26,15 +26,13 @@ TEST(Object, DataRefImplOstream) {
 
   char const *Expected;
 
-  if (llvm::sys::IsLittleEndianHost) {
-    Expected = sizeof Data.p == sizeof(uint64_t)
+  if (sizeof Data.p == sizeof(uint64_t)) {
+    Expected = llvm::sys::IsLittleEndianHost
                              ? "(0xffffeeee0000 (0xeeee0000, 0x0000ffff))"
-                             : "(0xeeee0000 (0xeeee0000, 0x0000ffff))";
+                             : "(0xeeee00000000ffff (0xeeee0000, 0x0000ffff))";
   }
   else {
-    Expected = sizeof Data.p == sizeof(uint64_t)
-                             ? "(0xeeee00000000ffff (0xeeee0000, 0x0000ffff))"
-                             : "(0x0000ffff (0xeeee0000, 0x0000ffff))";
+    Expected = "(0xeeee0000 (0xeeee0000, 0x0000ffff))";
   }
 
   OS << Data;

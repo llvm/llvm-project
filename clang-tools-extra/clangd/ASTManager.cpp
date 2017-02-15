@@ -51,6 +51,7 @@ static int getSeverity(DiagnosticsEngine::Level L) {
   case DiagnosticsEngine::Ignored:
     return 0;
   }
+  llvm_unreachable("Unknown diagnostic level!");
 }
 
 ASTManager::ASTManager(JSONOutput &Output, DocumentStore &Store)
@@ -150,7 +151,7 @@ ASTManager::getOrCreateCompilationDatabaseForFile(StringRef Uri) {
 
   std::string Error;
   I = tooling::CompilationDatabase::autoDetectFromSource(Uri, Error);
-  Output.logs() << "Failed to load compilation database: " << Error << '\n';
+  Output.log("Failed to load compilation database: " + Twine(Error) + "\n");
   return I.get();
 }
 

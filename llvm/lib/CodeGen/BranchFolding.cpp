@@ -497,7 +497,9 @@ BranchFolder::MBFIWrapper::printBlockFreq(raw_ostream &OS,
   return MBFI.printBlockFreq(OS, Freq);
 }
 
-void BranchFolder::MBFIWrapper::view(bool isSimple) { MBFI.view(isSimple); }
+void BranchFolder::MBFIWrapper::view(const Twine &Name, bool isSimple) {
+  MBFI.view(Name, isSimple);
+}
 
 uint64_t
 BranchFolder::MBFIWrapper::getEntryFreq() const {

@@ -60,7 +60,13 @@ define <4 x float> @vselect(<4 x float>*%p, <4 x i32> %q) {
 ; X32-NEXT:    xorps %xmm1, %xmm1
 ; X32-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
 ; X32-NEXT:    jne .LBB1_5
-; X32-NEXT:    jmp .LBB1_4
+; X32-NEXT:  .LBB1_4:
+; X32-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; X32-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
+; X32-NEXT:    jne .LBB1_8
+; X32-NEXT:  .LBB1_7:
+; X32-NEXT:    movss {{.*#+}} xmm3 = mem[0],zero,zero,zero
+; X32-NEXT:    jmp .LBB1_9
 ; X32-NEXT:  .LBB1_1:
 ; X32-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; X32-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
@@ -68,17 +74,9 @@ define <4 x float> @vselect(<4 x float>*%p, <4 x i32> %q) {
 ; X32-NEXT:  .LBB1_5: # %entry
 ; X32-NEXT:    xorps %xmm2, %xmm2
 ; X32-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
-; X32-NEXT:    jne .LBB1_8
-; X32-NEXT:    jmp .LBB1_7
-; X32-NEXT:  .LBB1_4:
-; X32-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; X32-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
 ; X32-NEXT:    je .LBB1_7
 ; X32-NEXT:  .LBB1_8: # %entry
 ; X32-NEXT:    xorps %xmm3, %xmm3
-; X32-NEXT:    jmp .LBB1_9
-; X32-NEXT:  .LBB1_7:
-; X32-NEXT:    movss {{.*#+}} xmm3 = mem[0],zero,zero,zero
 ; X32-NEXT:  .LBB1_9: # %entry
 ; X32-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
 ; X32-NEXT:    unpcklps {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1]
@@ -99,7 +97,13 @@ define <4 x float> @vselect(<4 x float>*%p, <4 x i32> %q) {
 ; X64-NEXT:    xorps %xmm1, %xmm1
 ; X64-NEXT:    testl %edx, %edx
 ; X64-NEXT:    jne .LBB1_5
-; X64-NEXT:    jmp .LBB1_4
+; X64-NEXT:  .LBB1_4:
+; X64-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; X64-NEXT:    testl %r8d, %r8d
+; X64-NEXT:    jne .LBB1_8
+; X64-NEXT:  .LBB1_7:
+; X64-NEXT:    movss {{.*#+}} xmm3 = mem[0],zero,zero,zero
+; X64-NEXT:    jmp .LBB1_9
 ; X64-NEXT:  .LBB1_1:
 ; X64-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; X64-NEXT:    testl %edx, %edx
@@ -107,17 +111,9 @@ define <4 x float> @vselect(<4 x float>*%p, <4 x i32> %q) {
 ; X64-NEXT:  .LBB1_5: # %entry
 ; X64-NEXT:    xorps %xmm2, %xmm2
 ; X64-NEXT:    testl %r8d, %r8d
-; X64-NEXT:    jne .LBB1_8
-; X64-NEXT:    jmp .LBB1_7
-; X64-NEXT:  .LBB1_4:
-; X64-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; X64-NEXT:    testl %r8d, %r8d
 ; X64-NEXT:    je .LBB1_7
 ; X64-NEXT:  .LBB1_8: # %entry
 ; X64-NEXT:    xorps %xmm3, %xmm3
-; X64-NEXT:    jmp .LBB1_9
-; X64-NEXT:  .LBB1_7:
-; X64-NEXT:    movss {{.*#+}} xmm3 = mem[0],zero,zero,zero
 ; X64-NEXT:  .LBB1_9: # %entry
 ; X64-NEXT:    testl %esi, %esi
 ; X64-NEXT:    unpcklps {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1]
@@ -215,7 +211,7 @@ define <4 x i32> @PR30512(<4 x i32> %x, <4 x i32> %y) nounwind {
   ret <4 x i32> %zext
 }
 
-; Fragile test warning - we need to induce the generation of a vselect 
+; Fragile test warning - we need to induce the generation of a vselect
 ; post-legalization to cause the crash seen in:
 ; https://llvm.org/bugs/show_bug.cgi?id=31672
 ; Is there a way to do that without an unsafe/fast sqrt intrinsic call?

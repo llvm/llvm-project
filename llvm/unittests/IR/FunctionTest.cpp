@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/Function.h"
+#include "llvm/IR/Module.h"
 #include "gtest/gtest.h"
 using namespace llvm;
 
@@ -107,6 +108,26 @@ TEST(FunctionTest, stealArgumentListFrom) {
   F1->stealArgumentListFrom(*F2);
   EXPECT_TRUE(F1->hasLazyArguments());
   EXPECT_TRUE(F2->hasLazyArguments());
+}
+
+// Test setting and removing section information
+TEST(FunctionTest, setSection) {
+  LLVMContext C;
+  Module M("test", C);
+
+  llvm::Function *F =
+      Function::Create(llvm::FunctionType::get(llvm::Type::getVoidTy(C), false),
+                       llvm::GlobalValue::ExternalLinkage, "F", &M);
+
+  F->setSection(".text.test");
+  EXPECT_TRUE(F->getSection() == ".text.test");
+  EXPECT_TRUE(F->hasSection());
+  F->setSection("");
+  EXPECT_FALSE(F->hasSection());
+  F->setSection(".text.test");
+  F->setSection(".text.test2");
+  EXPECT_TRUE(F->getSection() == ".text.test2");
+  EXPECT_TRUE(F->hasSection());
 }
 
 } // end namespace

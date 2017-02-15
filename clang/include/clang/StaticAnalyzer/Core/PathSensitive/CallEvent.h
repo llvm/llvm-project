@@ -55,6 +55,7 @@ class CallEventManager;
 class CallDescription {
   friend CallEvent;
   mutable IdentifierInfo *II;
+  mutable bool IsLookupDone;
   StringRef FuncName;
   unsigned RequiredArgs;
 
@@ -68,7 +69,8 @@ public:
   /// call. Omit this parameter to match every occurance of call with a given
   /// name regardless the number of arguments.
   CallDescription(StringRef FuncName, unsigned RequiredArgs = NoArgRequirement)
-      : II(nullptr), FuncName(FuncName), RequiredArgs(RequiredArgs) {}
+      : II(nullptr), IsLookupDone(false), FuncName(FuncName),
+        RequiredArgs(RequiredArgs) {}
 
   /// \brief Get the name of the function that this object matches.
   StringRef getFunctionName() const { return FuncName; }

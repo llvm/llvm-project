@@ -1610,9 +1610,7 @@ SymbolAssignment *ScriptParser::readAssignment(StringRef Name) {
   Expr E;
   assert(Op == "=" || Op == "+=");
   if (consume("ABSOLUTE")) {
-    // The RHS may be something like "ABSOLUTE(.) & 0xff".
-    // Call readExpr1 to read the whole expression.
-    E = readExpr1(readParenExpr(), 0);
+    E = readExpr();
     E.IsAbsolute = [] { return true; };
   } else {
     E = readExpr();
@@ -1628,7 +1626,15 @@ SymbolAssignment *ScriptParser::readAssignment(StringRef Name) {
 
 // This is an operator-precedence parser to parse a linker
 // script expression.
-Expr ScriptParser::readExpr() { return readExpr1(readPrimary(), 0); }
+Expr ScriptParser::readExpr() {
+  // Our lexer is context-aware. Set the in-expression bit so that
+  // they apply different tokenization rules.
+  bool Orig = InExpr;
+  InExpr = true;
+  Expr E = readExpr1(readPrimary(), 0);
+  InExpr = Orig;
+  return E;
+}
 
 static Expr combine(StringRef Op, Expr L, Expr R) {
   auto IsAbs = [=] { return L.IsAbsolute() && R.IsAbsolute(); };

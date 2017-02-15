@@ -294,13 +294,23 @@ class MachineBlockPlacement : public MachineFunctionPass {
 
   /// Pair struct containing basic block and taildup profitiability
   struct BlockAndTailDupResult {
-    MachineBasicBlock * BB;
+    MachineBasicBlock *BB;
     bool ShouldTailDup;
+  };
+
+  /// Triple struct containing edge weight and the edge.
+  struct WeightedEdge {
+    BlockFrequency Weight;
+    MachineBasicBlock *Src;
+    MachineBasicBlock *Dest;
   };
 
   /// \brief work lists of blocks that are ready to be laid out
   SmallVector<MachineBasicBlock *, 16> BlockWorkList;
   SmallVector<MachineBasicBlock *, 16> EHPadWorkList;
+
+  /// Edges that have already been computed as optimal by the trellis code.
+  DenseMap<const MachineBasicBlock *, MachineBasicBlock *> ComputedTrellisEdges;
 
   /// \brief Machine Function
   MachineFunction *F;
@@ -440,6 +450,8 @@ class MachineBlockPlacement : public MachineFunctionPass {
   void buildCFGChains();
   void optimizeBranches();
   void alignBlocks();
+  /// Returns true if a block should be tail-duplicated to increase fallthrough
+  /// opportunities.
   bool shouldTailDuplicate(MachineBasicBlock *BB);
   /// Check the edge frequencies to see if tail duplication will increase
   /// fallthroughs.
@@ -447,6 +459,20 @@ class MachineBlockPlacement : public MachineFunctionPass {
     const MachineBasicBlock *BB, const MachineBasicBlock *Succ,
     BranchProbability AdjustedSumProb,
     const BlockChain &Chain, const BlockFilterSet *BlockFilter);
+  /// Check for a trellis layout.
+  bool isTrellis(const MachineBasicBlock *BB,
+                 const SmallVectorImpl<MachineBasicBlock *> &ViableSuccs,
+                 const BlockChain &Chain, const BlockFilterSet *BlockFilter);
+  /// Get the best successor given a trellis layout.
+  BlockAndTailDupResult getBestTrellisSuccessor(
+      const MachineBasicBlock *BB,
+      const SmallVectorImpl<MachineBasicBlock *> &ViableSuccs,
+      BranchProbability AdjustedSumProb, const BlockChain &Chain,
+      const BlockFilterSet *BlockFilter);
+  /// Get the best pair of non-conflicting edges.
+  static std::pair<WeightedEdge, WeightedEdge> getBestNonConflictingEdges(
+      const MachineBasicBlock *BB,
+      SmallVector<SmallVector<WeightedEdge, 8>, 2> &Edges);
   /// Returns true if a block can tail duplicate into all unplaced
   /// predecessors. Filters based on loop.
   bool canTailDuplicateUnplacedPreds(
@@ -614,7 +640,23 @@ getAdjustedProbability(BranchProbability OrigProb,
   return SuccProb;
 }
 
-/// Check if a block should be tail duplicated.
+/// Check if \p BB has exactly the successors in \p Successors.
+static bool
+hasSameSuccessors(MachineBasicBlock &BB,
+                  SmallPtrSetImpl<const MachineBasicBlock *> &Successors) {
+  if (BB.succ_size() != Successors.size())
+    return false;
+  // We don't want to count self-loops
+  if (Successors.count(&BB))
+    return false;
+  for (MachineBasicBlock *Succ : BB.successors())
+    if (!Successors.count(Succ))
+      return false;
+  return true;
+}
+
+/// Check if a block should be tail duplicated to increase fallthrough
+/// opportunities.
 /// \p BB Block to check.
 bool MachineBlockPlacement::shouldTailDuplicate(MachineBasicBlock *BB) {
   // Blocks with single successors don't create additional fallthrough
@@ -724,24 +766,22 @@ bool MachineBlockPlacement::isProfitableToTailDup(
   //    | /       |     C' (+Succ)
   //    Succ      Succ /|
   //    / \       |  \/ |
-  //  U/   =V     =  /= =
+  //  U/   =V     |  == |
   //  /     \     | /  \|
   //  D      E    D     E
   //  '=' : Branch taken for that CFG edge
   //  Cost in the first case is: P + V
   //  For this calculation, we always assume P > Qout. If Qout > P
   //  The result of this function will be ignored at the caller.
-  //  Cost in the second case is: Qout + Qin * V + P * U + P * V
-  //  TODO(iteratee): If we lay out D after Succ, the P * U term
-  //  goes away. This logic is coming in D28522.
+  //  Cost in the second case is: Qout + Qin * U + P * V
 
   if (PDom == nullptr || !Succ->isSuccessor(PDom)) {
     BranchProbability UProb = BestSuccSucc;
     BranchProbability VProb = AdjustedSuccSumProb - UProb;
     BlockFrequency V = SuccFreq * VProb;
-    BlockFrequency QinV = Qin * VProb;
+    BlockFrequency QinU = Qin * UProb;
     BlockFrequency BaseCost = P + V;
-    BlockFrequency DupCost = Qout + QinV + P * AdjustedSuccSumProb;
+    BlockFrequency DupCost = Qout + QinU + P * VProb;
     return greaterWithBias(BaseCost, DupCost, EntryFreq);
   }
   BranchProbability UProb = MBPI->getEdgeProbability(Succ, PDom);
@@ -758,7 +798,7 @@ bool MachineBlockPlacement::isProfitableToTailDup(
   // Succ       Succ /|            Succ        Succ /|
   // | \  V     |  \/ |            | \  V      |  \/ |
   // |U \       |U /\ |            |U =        |U /\ |
-  // =   D      = =  =|            |   D       | =  =|
+  // =   D      = =  \=            |   D       | =  =|
   // |  /       |/    D            |  /        |/    D
   // | /        |    /             | =         |    /
   // |/         |   /              |/          |   =
@@ -768,25 +808,201 @@ bool MachineBlockPlacement::isProfitableToTailDup(
   // The cost in the second case (assuming independence), given the layout:
   // BB, Succ, (C+Succ), D, Dom
   // is Qout + P * V + Qin * U
-  // compare P + U vs Qout + P + Qin * U.
+  // compare P + U vs Qout + P * U + Qin.
   //
   // The 3rd and 4th cases cover when Dom would be chosen to follow Succ.
   //
   // For the 3rd case, the cost is P + 2 * V
   // For the 4th case, the cost is Qout + Qin * U + P * V + V
   // We choose 4 over 3 when (P + V) > Qout + Qin * U + P * V
-  if (UProb > AdjustedSuccSumProb / 2
-      && !hasBetterLayoutPredecessor(Succ, PDom, *BlockToChain[PDom],
-                                     UProb, UProb, Chain, BlockFilter)) {
+  if (UProb > AdjustedSuccSumProb / 2 &&
+      !hasBetterLayoutPredecessor(Succ, PDom, *BlockToChain[PDom], UProb, UProb,
+                                  Chain, BlockFilter))
     // Cases 3 & 4
     return greaterWithBias((P + V), (Qout + Qin * UProb + P * VProb),
                            EntryFreq);
-  }
   // Cases 1 & 2
   return greaterWithBias(
-      (P + U), (Qout + Qin * UProb + P * AdjustedSuccSumProb), EntryFreq);
+      (P + U), (Qout + Qin * AdjustedSuccSumProb + P * UProb), EntryFreq);
 }
 
+/// Check for a trellis layout. \p BB is the upper part of a trellis if its
+/// successors form the lower part of a trellis. A successor set S forms the
+/// lower part of a trellis if all of the predecessors of S are either in S or
+/// have all of S as successors. We ignore trellises where BB doesn't have 2
+/// successors because for fewer than 2, it's trivial, and for 3 or greater they
+/// are very uncommon and complex to compute optimally. Allowing edges within S
+/// is not strictly a trellis, but the same algorithm works, so we allow it.
+bool MachineBlockPlacement::isTrellis(
+    const MachineBasicBlock *BB,
+    const SmallVectorImpl<MachineBasicBlock *> &ViableSuccs,
+    const BlockChain &Chain, const BlockFilterSet *BlockFilter) {
+  // Technically BB could form a trellis with branching factor higher than 2.
+  // But that's extremely uncommon.
+  if (BB->succ_size() != 2 || ViableSuccs.size() != 2)
+    return false;
+
+  SmallPtrSet<const MachineBasicBlock *, 2> Successors(BB->succ_begin(),
+                                                       BB->succ_end());
+  // To avoid reviewing the same predecessors twice.
+  SmallPtrSet<const MachineBasicBlock *, 8> SeenPreds;
+
+  for (MachineBasicBlock *Succ : ViableSuccs) {
+    int PredCount = 0;
+    for (auto SuccPred : Succ->predecessors()) {
+      // Allow triangle successors, but don't count them.
+      if (Successors.count(SuccPred))
+        continue;
+      const BlockChain *PredChain = BlockToChain[SuccPred];
+      if (SuccPred == BB || (BlockFilter && !BlockFilter->count(SuccPred)) ||
+          PredChain == &Chain || PredChain == BlockToChain[Succ])
+        continue;
+      ++PredCount;
+      // Perform the successor check only once.
+      if (!SeenPreds.insert(SuccPred).second)
+        continue;
+      if (!hasSameSuccessors(*SuccPred, Successors))
+        return false;
+    }
+    // If one of the successors has only BB as a predecessor, it is not a
+    // trellis.
+    if (PredCount < 1)
+      return false;
+  }
+  return true;
+}
+
+/// Pick the highest total weight pair of edges that can both be laid out.
+/// The edges in \p Edges[0] are assumed to have a different destination than
+/// the edges in \p Edges[1]. Simple counting shows that the best pair is either
+/// the individual highest weight edges to the 2 different destinations, or in
+/// case of a conflict, one of them should be replaced with a 2nd best edge.
+std::pair<MachineBlockPlacement::WeightedEdge,
+          MachineBlockPlacement::WeightedEdge>
+MachineBlockPlacement::getBestNonConflictingEdges(
+    const MachineBasicBlock *BB,
+    SmallVector<SmallVector<MachineBlockPlacement::WeightedEdge, 8>, 2>
+        &Edges) {
+  // Sort the edges, and then for each successor, find the best incoming
+  // predecessor. If the best incoming predecessors aren't the same,
+  // then that is clearly the best layout. If there is a conflict, one of the
+  // successors will have to fallthrough from the second best predecessor. We
+  // compare which combination is better overall.
+
+  // Sort for highest frequency.
+  auto Cmp = [](WeightedEdge A, WeightedEdge B) { return A.Weight > B.Weight; };
+
+  std::stable_sort(Edges[0].begin(), Edges[0].end(), Cmp);
+  std::stable_sort(Edges[1].begin(), Edges[1].end(), Cmp);
+  auto BestA = Edges[0].begin();
+  auto BestB = Edges[1].begin();
+  // Arrange for the correct answer to be in BestA and BestB
+  // If the 2 best edges don't conflict, the answer is already there.
+  if (BestA->Src == BestB->Src) {
+    // Compare the total fallthrough of (Best + Second Best) for both pairs
+    auto SecondBestA = std::next(BestA);
+    auto SecondBestB = std::next(BestB);
+    BlockFrequency BestAScore = BestA->Weight + SecondBestB->Weight;
+    BlockFrequency BestBScore = BestB->Weight + SecondBestA->Weight;
+    if (BestAScore < BestBScore)
+      BestA = SecondBestA;
+    else
+      BestB = SecondBestB;
+  }
+  // Arrange for the BB edge to be in BestA if it exists.
+  if (BestB->Src == BB)
+    std::swap(BestA, BestB);
+  return std::make_pair(*BestA, *BestB);
+}
+
+/// Get the best successor from \p BB based on \p BB being part of a trellis.
+/// We only handle trellises with 2 successors, so the algorithm is
+/// straightforward: Find the best pair of edges that don't conflict. We find
+/// the best incoming edge for each successor in the trellis. If those conflict,
+/// we consider which of them should be replaced with the second best.
+/// Upon return the two best edges will be in \p BestEdges. If one of the edges
+/// comes from \p BB, it will be in \p BestEdges[0]
+MachineBlockPlacement::BlockAndTailDupResult
+MachineBlockPlacement::getBestTrellisSuccessor(
+    const MachineBasicBlock *BB,
+    const SmallVectorImpl<MachineBasicBlock *> &ViableSuccs,
+    BranchProbability AdjustedSumProb, const BlockChain &Chain,
+    const BlockFilterSet *BlockFilter) {
+
+  BlockAndTailDupResult Result = {nullptr, false};
+  SmallPtrSet<const MachineBasicBlock *, 4> Successors(BB->succ_begin(),
+                                                       BB->succ_end());
+
+  // We assume size 2 because it's common. For general n, we would have to do
+  // the Hungarian algorithm, but it's not worth the complexity because more
+  // than 2 successors is fairly uncommon, and a trellis even more so.
+  if (Successors.size() != 2 || ViableSuccs.size() != 2)
+    return Result;
+
+  // Collect the edge frequencies of all edges that form the trellis.
+  SmallVector<SmallVector<WeightedEdge, 8>, 2> Edges(2);
+  int SuccIndex = 0;
+  for (auto Succ : ViableSuccs) {
+    for (MachineBasicBlock *SuccPred : Succ->predecessors()) {
+      // Skip any placed predecessors that are not BB
+      if (SuccPred != BB)
+        if ((BlockFilter && !BlockFilter->count(SuccPred)) ||
+            BlockToChain[SuccPred] == &Chain ||
+            BlockToChain[SuccPred] == BlockToChain[Succ])
+          continue;
+      BlockFrequency EdgeFreq = MBFI->getBlockFreq(SuccPred) *
+                                MBPI->getEdgeProbability(SuccPred, Succ);
+      Edges[SuccIndex].push_back({EdgeFreq, SuccPred, Succ});
+    }
+    ++SuccIndex;
+  }
+
+  // Pick the best combination of 2 edges from all the edges in the trellis.
+  WeightedEdge BestA, BestB;
+  std::tie(BestA, BestB) = getBestNonConflictingEdges(BB, Edges);
+
+  if (BestA.Src != BB) {
+    // If we have a trellis, and BB doesn't have the best fallthrough edges,
+    // we shouldn't choose any successor. We've already looked and there's a
+    // better fallthrough edge for all the successors.
+    DEBUG(dbgs() << "Trellis, but not one of the chosen edges.\n");
+    return Result;
+  }
+
+  // Did we pick the triangle edge? If tail-duplication is profitable, do
+  // that instead. Otherwise merge the triangle edge now while we know it is
+  // optimal.
+  if (BestA.Dest == BestB.Src) {
+    // The edges are BB->Succ1->Succ2, and we're looking to see if BB->Succ2
+    // would be better.
+    MachineBasicBlock *Succ1 = BestA.Dest;
+    MachineBasicBlock *Succ2 = BestB.Dest;
+    // Check to see if tail-duplication would be profitable.
+    if (TailDupPlacement && shouldTailDuplicate(Succ2) &&
+        canTailDuplicateUnplacedPreds(BB, Succ2, Chain, BlockFilter) &&
+        isProfitableToTailDup(BB, Succ2, MBPI->getEdgeProbability(BB, Succ1),
+                              Chain, BlockFilter)) {
+      DEBUG(BranchProbability Succ2Prob = getAdjustedProbability(
+                MBPI->getEdgeProbability(BB, Succ2), AdjustedSumProb);
+            dbgs() << "    Selected: " << getBlockName(Succ2)
+                   << ", probability: " << Succ2Prob << " (Tail Duplicate)\n");
+      Result.BB = Succ2;
+      Result.ShouldTailDup = true;
+      return Result;
+    }
+  }
+  // We have already computed the optimal edge for the other side of the
+  // trellis.
+  ComputedTrellisEdges[BestB.Src] = BestB.Dest;
+
+  auto TrellisSucc = BestA.Dest;
+  DEBUG(BranchProbability SuccProb = getAdjustedProbability(
+            MBPI->getEdgeProbability(BB, TrellisSucc), AdjustedSumProb);
+        dbgs() << "    Selected: " << getBlockName(TrellisSucc)
+               << ", probability: " << SuccProb << " (Trellis)\n");
+  Result.BB = TrellisSucc;
+  return Result;
+}
 
 /// When the option TailDupPlacement is on, this method checks if the
 /// fallthrough candidate block \p Succ (of block \p BB) can be tail-duplicated
@@ -797,6 +1013,9 @@ bool MachineBlockPlacement::canTailDuplicateUnplacedPreds(
   if (!shouldTailDuplicate(Succ))
     return false;
 
+  // For CFG checking.
+  SmallPtrSet<const MachineBasicBlock *, 4> Successors(BB->succ_begin(),
+                                                       BB->succ_end());
   for (MachineBasicBlock *Pred : Succ->predecessors()) {
     // Make sure all unplaced and unfiltered predecessors can be
     // tail-duplicated into.
@@ -804,8 +1023,44 @@ bool MachineBlockPlacement::canTailDuplicateUnplacedPreds(
     if (Pred == BB || (BlockFilter && !BlockFilter->count(Pred))
         || BlockToChain[Pred] == &Chain)
       continue;
-    if (!TailDup.canTailDuplicate(Succ, Pred))
+    if (!TailDup.canTailDuplicate(Succ, Pred)) {
+      if (Successors.size() > 1 && hasSameSuccessors(*Pred, Successors))
+        // This will result in a trellis after tail duplication, so we don't
+        // need to copy Succ into this predecessor. In the presence
+        // of a trellis tail duplication can continue to be profitable.
+        // For example:
+        // A            A
+        // |\           |\
+        // | \          | \
+        // |  C         |  C+BB
+        // | /          |  |
+        // |/           |  |
+        // BB    =>     BB |
+        // |\           |\/|
+        // | \          |/\|
+        // |  D         |  D
+        // | /          | /
+        // |/           |/
+        // Succ         Succ
+        //
+        // After BB was duplicated into C, the layout looks like the one on the
+        // right. BB and C now have the same successors. When considering
+        // whether Succ can be duplicated into all its unplaced predecessors, we
+        // ignore C.
+        // We can do this because C already has a profitable fallthrough, namely
+        // D. TODO(iteratee): ignore sufficiently cold predecessors for
+        // duplication and for this test.
+        //
+        // This allows trellises to be laid out in 2 separate chains
+        // (A,B,Succ,...) and later (C,D,...) This is a reasonable heuristic
+        // because it allows the creation of 2 fallthrough paths with links
+        // between them, and we correctly identify the best layout for these
+        // CFGs. We want to extend trellises that the user created in addition
+        // to trellises created by tail-duplication, so we just look for the
+        // CFG.
+        continue;
       return false;
+    }
   }
   return true;
 }
@@ -990,11 +1245,12 @@ bool MachineBlockPlacement::hasBetterLayoutPredecessor(
   //  |  Pred----|                     |  S1----
   //  |  |                             |       |
   //  --(S1 or S2)                     ---Pred--
+  //                                        |
+  //                                       S2
   //
   // topo-cost = freq(S->Pred) + freq(BB->S1) + freq(BB->S2)
   //    + min(freq(Pred->S1), freq(Pred->S2))
   // Non-topo-order cost:
-  // In the worst case, S2 will not get laid out after Pred.
   // non-topo-cost = 2 * freq(S->Pred) + freq(BB->S2).
   // To be conservative, we can assume that min(freq(Pred->S1), freq(Pred->S2))
   // is 0. Then the non topo layout is better when
@@ -1072,6 +1328,26 @@ MachineBlockPlacement::selectBestSuccessor(
       collectViableSuccessors(BB, Chain, BlockFilter, Successors);
 
   DEBUG(dbgs() << "Selecting best successor for: " << getBlockName(BB) << "\n");
+
+  // if we already precomputed the best successor for BB as part of a trellis we
+  // saw earlier, return that if still applicable.
+  auto FoundEdge = ComputedTrellisEdges.find(BB);
+  if (FoundEdge != ComputedTrellisEdges.end()) {
+    MachineBasicBlock *Succ = FoundEdge->second;
+    ComputedTrellisEdges.erase(FoundEdge);
+    BlockChain *SuccChain = BlockToChain[Succ];
+    if (BB->isSuccessor(Succ) && (!BlockFilter || BlockFilter->count(Succ)) &&
+        SuccChain != &Chain && Succ == *SuccChain->begin()) {
+      BestSucc.BB = Succ;
+      return BestSucc;
+    }
+  }
+
+  // if BB is part of a trellis, Use the trellis to determine the optimal
+  // fallthrough edges
+  if (isTrellis(BB, Successors, Chain, BlockFilter))
+    return getBestTrellisSuccessor(BB, Successors, AdjustedSumProb, Chain,
+                                   BlockFilter);
 
   // For blocks with CFG violations, we may be able to lay them out anyway with
   // tail-duplication. We keep this vector so we can perform the probability
@@ -2381,7 +2657,7 @@ bool MachineBlockPlacement::runOnMachineFunction(MachineFunction &MF) {
   if (ViewBlockLayoutWithBFI != GVDT_None &&
       (ViewBlockFreqFuncName.empty() ||
        F->getFunction()->getName().equals(ViewBlockFreqFuncName))) {
-    MBFI->view(false);
+    MBFI->view("MBP." + MF.getName(), false);
   }
 
 

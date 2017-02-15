@@ -30,13 +30,11 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Metadata.h"
-#include "llvm/IR/PatternMatch.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
-#include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/SSAUpdater.h"
 #include <algorithm>
@@ -171,9 +169,6 @@ bool JumpThreadingPass::runImpl(Function &F, TargetLibraryInfo *TLI_,
   // When profile data is available, we need to update edge weights after
   // successful jump threading, which requires both BPI and BFI being available.
   HasProfileData = HasProfileData_;
-  auto *GuardDecl = F.getParent()->getFunction(
-      Intrinsic::getName(Intrinsic::experimental_guard));
-  HasGuards = GuardDecl && !GuardDecl->use_empty();
   if (HasProfileData) {
     BPI = std::move(BPI_);
     BFI = std::move(BFI_);
@@ -243,13 +238,10 @@ bool JumpThreadingPass::runImpl(Function &F, TargetLibraryInfo *TLI_,
   return EverChanged;
 }
 
-/// Return the cost of duplicating a piece of this block from first non-phi
-/// and before StopAt instruction to thread across it. Stop scanning the block
-/// when exceeding the threshold. If duplication is impossible, returns ~0U.
-static unsigned getJumpThreadDuplicationCost(BasicBlock *BB,
-                                             Instruction *StopAt,
+/// getJumpThreadDuplicationCost - Return the cost of duplicating this block to
+/// thread across it. Stop scanning the block when passing the threshold.
+static unsigned getJumpThreadDuplicationCost(const BasicBlock *BB,
                                              unsigned Threshold) {
-  assert(StopAt->getParent() == BB && "Not an instruction from proper BB?");
   /// Ignore PHI nodes, these will be flattened when duplication happens.
   BasicBlock::const_iterator I(BB->getFirstNonPHI());
 
@@ -257,17 +249,15 @@ static unsigned getJumpThreadDuplicationCost(BasicBlock *BB,
   // branch, so they shouldn't count against the duplication cost.
 
   unsigned Bonus = 0;
-  if (BB->getTerminator() == StopAt) {
-    // Threading through a switch statement is particularly profitable.  If this
-    // block ends in a switch, decrease its cost to make it more likely to
-    // happen.
-    if (isa<SwitchInst>(StopAt))
-      Bonus = 6;
+  const TerminatorInst *BBTerm = BB->getTerminator();
+  // Threading through a switch statement is particularly profitable.  If this
+  // block ends in a switch, decrease its cost to make it more likely to happen.
+  if (isa<SwitchInst>(BBTerm))
+    Bonus = 6;
 
-    // The same holds for indirect branches, but slightly more so.
-    if (isa<IndirectBrInst>(StopAt))
-      Bonus = 8;
-  }
+  // The same holds for indirect branches, but slightly more so.
+  if (isa<IndirectBrInst>(BBTerm))
+    Bonus = 8;
 
   // Bump the threshold up so the early exit from the loop doesn't skip the
   // terminator-based Size adjustment at the end.
@@ -276,7 +266,7 @@ static unsigned getJumpThreadDuplicationCost(BasicBlock *BB,
   // Sum up the cost of each instruction until we get to the terminator.  Don't
   // include the terminator because the copy won't include it.
   unsigned Size = 0;
-  for (; &*I != StopAt; ++I) {
+  for (; !isa<TerminatorInst>(I); ++I) {
 
     // Stop scanning the block if we've reached the threshold.
     if (Size > Threshold)
@@ -720,10 +710,6 @@ bool JumpThreadingPass::ProcessBlock(BasicBlock *BB) {
   }
 
   if (TryToUnfoldSelectInCurrBB(BB))
-    return true;
-
-  // Look if we can propagate guards to predecessors.
-  if (HasGuards && ProcessGuards(BB))
     return true;
 
   // What kind of constant we're looking for.
@@ -1480,8 +1466,7 @@ bool JumpThreadingPass::ThreadEdge(BasicBlock *BB,
     return false;
   }
 
-  unsigned JumpThreadCost =
-      getJumpThreadDuplicationCost(BB, BB->getTerminator(), BBDupThreshold);
+  unsigned JumpThreadCost = getJumpThreadDuplicationCost(BB, BBDupThreshold);
   if (JumpThreadCost > BBDupThreshold) {
     DEBUG(dbgs() << "  Not threading BB '" << BB->getName()
           << "' - Cost is too high: " << JumpThreadCost << "\n");
@@ -1769,8 +1754,7 @@ bool JumpThreadingPass::DuplicateCondBranchOnPHIIntoPred(
     return false;
   }
 
-  unsigned DuplicationCost =
-      getJumpThreadDuplicationCost(BB, BB->getTerminator(), BBDupThreshold);
+  unsigned DuplicationCost = getJumpThreadDuplicationCost(BB, BBDupThreshold);
   if (DuplicationCost > BBDupThreshold) {
     DEBUG(dbgs() << "  Not duplicating BB '" << BB->getName()
           << "' - Cost is too high: " << DuplicationCost << "\n");
@@ -2034,125 +2018,4 @@ bool JumpThreadingPass::TryToUnfoldSelectInCurrBB(BasicBlock *BB) {
   }
   
   return false;
-}
-
-/// Try to propagate a guard from the current BB into one of its predecessors
-/// in case if another branch of execution implies that the condition of this
-/// guard is always true. Currently we only process the simplest case that
-/// looks like:
-///
-/// Start:
-///   %cond = ...
-///   br i1 %cond, label %T1, label %F1
-/// T1:
-///   br label %Merge
-/// F1:
-///   br label %Merge
-/// Merge:
-///   %condGuard = ...
-///   call void(i1, ...) @llvm.experimental.guard( i1 %condGuard )[ "deopt"() ]
-///
-/// And cond either implies condGuard or !condGuard. In this case all the
-/// instructions before the guard can be duplicated in both branches, and the
-/// guard is then threaded to one of them.
-bool JumpThreadingPass::ProcessGuards(BasicBlock *BB) {
-  using namespace PatternMatch;
-  // We only want to deal with two predecessors.
-  BasicBlock *Pred1, *Pred2;
-  auto PI = pred_begin(BB), PE = pred_end(BB);
-  if (PI == PE)
-    return false;
-  Pred1 = *PI++;
-  if (PI == PE)
-    return false;
-  Pred2 = *PI++;
-  if (PI != PE)
-    return false;
-
-  // Try to thread one of the guards of the block.
-  // TODO: Look up deeper than to immediate predecessor?
-  if (auto Parent = Pred1->getSinglePredecessor())
-    if (Parent == Pred2->getSinglePredecessor())
-      if (BranchInst *BI = dyn_cast<BranchInst>(Parent->getTerminator()))
-        for (auto &I : *BB)
-          if (match(&I, m_Intrinsic<Intrinsic::experimental_guard>()))
-            if (ThreadGuard(BB, cast<IntrinsicInst>(&I), BI))
-              return true;
-
-  return false;
-}
-
-/// Try to propagate the guard from BB which is the lower block of a diamond
-/// to one of its branches, in case if diamond's condition implies guard's
-/// condition.
-bool JumpThreadingPass::ThreadGuard(BasicBlock *BB, IntrinsicInst *Guard,
-                                    BranchInst *BI) {
-  Value *GuardCond = Guard->getArgOperand(0);
-  Value *BranchCond = BI->getCondition();
-  BasicBlock *TrueDest = BI->getSuccessor(0);
-  BasicBlock *FalseDest = BI->getSuccessor(1);
-
-  auto &DL = BB->getModule()->getDataLayout();
-  bool TrueDestIsSafe = false;
-  bool FalseDestIsSafe = false;
-
-  // True dest is safe if BranchCond => GuardCond.
-  auto Impl = isImpliedCondition(BranchCond, GuardCond, DL);
-  if (Impl && *Impl)
-    TrueDestIsSafe = true;
-  else {
-    // False dest is safe if !BranchCond => GuardCond.
-    Impl =
-        isImpliedCondition(BranchCond, GuardCond, DL, /* InvertAPred */ true);
-    if (Impl && *Impl)
-      FalseDestIsSafe = true;
-  }
-
-  if (!TrueDestIsSafe && !FalseDestIsSafe)
-    return false;
-
-  BasicBlock *UnguardedBlock = TrueDestIsSafe ? TrueDest : FalseDest;
-  BasicBlock *GuardedBlock = FalseDestIsSafe ? TrueDest : FalseDest;
-
-  ValueToValueMapTy UnguardedMapping, GuardedMapping;
-  Instruction *AfterGuard = Guard->getNextNode();
-  unsigned Cost = getJumpThreadDuplicationCost(BB, AfterGuard, BBDupThreshold);
-  if (Cost > BBDupThreshold)
-    return false;
-  // Duplicate all instructions before the guard and the guard itself to the
-  // branch where implication is not proved.
-  GuardedBlock = DuplicateInstructionsInSplitBetween(
-      BB, GuardedBlock, AfterGuard, GuardedMapping);
-  assert(GuardedBlock && "Could not create the guarded block?");
-  // Duplicate all instructions before the guard in the unguarded branch.
-  // Since we have successfully duplicated the guarded block and this block
-  // has fewer instructions, we expect it to succeed.
-  UnguardedBlock = DuplicateInstructionsInSplitBetween(BB, UnguardedBlock,
-                                                       Guard, UnguardedMapping);
-  assert(UnguardedBlock && "Could not create the unguarded block?");
-  DEBUG(dbgs() << "Moved guard " << *Guard << " to block "
-               << GuardedBlock->getName() << "\n");
-
-  // Some instructions before the guard may still have uses. For them, we need
-  // to create Phi nodes merging their copies in both guarded and unguarded
-  // branches. Those instructions that have no uses can be just removed.
-  SmallVector<Instruction *, 4> ToRemove;
-  for (auto BI = BB->begin(); &*BI != AfterGuard; ++BI)
-    if (!isa<PHINode>(&*BI))
-      ToRemove.push_back(&*BI);
-
-  Instruction *InsertionPoint = &*BB->getFirstInsertionPt();
-  assert(InsertionPoint && "Empty block?");
-  // Substitute with Phis & remove.
-  for (auto *Inst : reverse(ToRemove)) {
-    if (!Inst->use_empty()) {
-      PHINode *NewPN = PHINode::Create(Inst->getType(), 2);
-      NewPN->addIncoming(UnguardedMapping[Inst], UnguardedBlock);
-      NewPN->addIncoming(GuardedMapping[Inst], GuardedBlock);
-      NewPN->insertBefore(InsertionPoint);
-      Inst->replaceAllUsesWith(NewPN);
-    }
-    Inst->eraseFromParent();
-  }
-  return true;
 }

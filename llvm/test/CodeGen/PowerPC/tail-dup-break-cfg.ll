@@ -16,14 +16,14 @@ target triple = "powerpc64le-grtev4-linux-gnu"
 ;CHECK-NEXT: bc 12, 1, [[BODY1LABEL:[._0-9A-Za-z]+]]
 ;CHECK-NEXT: # %test2
 ;CHECK-NEXT: rlwinm. {{[0-9]+}}, [[TAGREG]], 0, 30, 30
-;CHECK-NEXT: beq 0, [[EXITLABEL:[._0-9A-Za-z]+]]
-;CHECK-NEXT: b [[BODY2LABEL:[._0-9A-Za-z]+]]
+;CHECK-NEXT: bne 0, [[BODY2LABEL:[._0-9A-Za-z]+]]
+;CHECK: [[EXITLABEL:[._0-9A-Za-z]+]]: # %exit
+;CHECK: blr
 ;CHECK-NEXT: [[BODY1LABEL]]
 ;CHECK: rlwinm. {{[0-9]+}}, [[TAGREG]], 0, 30, 30
 ;CHECK-NEXT: beq 0, [[EXITLABEL]]
-;CHECK-NEXT: [[BODY2LABEL]]
-;CHECK: [[EXITLABEL:[._0-9A-Za-z]+]]: # %exit
-;CHECK: blr
+;CHECK-NEXT: [[BODY2LABEL:[._0-9A-Za-z]+]]:
+;CHECK: b [[EXITLABEL]]
 define void @tail_dup_break_cfg(i32 %tag) {
 entry:
   br label %test1
@@ -79,7 +79,7 @@ body1:
 test2:
   %tagbit2 = and i32 %tag, 2
   %tagbit2eq0 = icmp ne i32 %tagbit2, 0
-  br i1 %tagbit2eq0, label %body2, label %exit, !prof !1 ; %body2 more likely
+  br i1 %tagbit2eq0, label %body2, label %exit, !prof !3 ; %body2 more likely
 body2:
   call void @b()
   call void @b()
@@ -137,4 +137,4 @@ ret:
 
 !1 = !{!"branch_weights", i32 5, i32 3}
 !2 = !{!"branch_weights", i32 95, i32 5}
-!3 = !{!"branch_weights", i32 7, i32 3}
+!3 = !{!"branch_weights", i32 8, i32 3}

@@ -94,16 +94,6 @@ def AMDGPUfmul_legacy : SDNode<"AMDGPUISD::FMUL_LEGACY", SDTFPBinOp,
 
 def AMDGPUclamp : SDNode<"AMDGPUISD::CLAMP", SDTFPTernaryOp, []>;
 
-// out = max(a, b) a and b are signed ints
-def AMDGPUsmax : SDNode<"AMDGPUISD::SMAX", SDTIntBinOp,
-  [SDNPCommutative, SDNPAssociative]
->;
-
-// out = max(a, b) a and b are unsigned ints
-def AMDGPUumax : SDNode<"AMDGPUISD::UMAX", SDTIntBinOp,
-  [SDNPCommutative, SDNPAssociative]
->;
-
 // out = min(a, b) a and b are floats, where a nan comparison fails.
 def AMDGPUfmin_legacy : SDNode<"AMDGPUISD::FMIN_LEGACY", SDTFPBinOp,
   []
