@@ -621,10 +621,11 @@ StmtResult Parser::ParseMicrosoftAsmStatement(SourceLocation AsmLoc) {
                                MII.get(), IP.get(), Callback))
     return StmtError();
 
-  // Filter out "fpsw".  Clang doesn't accept it, and it always lists flags and
-  // fpsr as clobbers.
-  auto End = std::remove(Clobbers.begin(), Clobbers.end(), "fpsw");
-  Clobbers.erase(End, Clobbers.end());
+  // Filter out "fpsw" and "mxcsr". They aren't valid GCC asm clobber
+  // constraints. Clang always adds fpsr to the clobber list anyway.
+  llvm::erase_if(Clobbers, [](const std::string &C) {
+    return C == "fpsw" || C == "mxcsr";
+  });
 
   // Build the vector of clobber StringRefs.
   ClobberRefs.insert(ClobberRefs.end(), Clobbers.begin(), Clobbers.end());

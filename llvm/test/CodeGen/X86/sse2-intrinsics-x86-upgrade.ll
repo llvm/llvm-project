@@ -98,8 +98,8 @@ define void @test_x86_sse2_storeu_pd(i8* %a0, <2 x double> %a1) {
 ; CHECK-LABEL: test_x86_sse2_storeu_pd:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
-; CHECK-NEXT:    pslldq {{.*#+}} xmm1 = zero,zero,zero,zero,zero,zero,zero,zero,xmm1[0,1,2,3,4,5,6,7]
+; CHECK-NEXT:    xorpd %xmm1, %xmm1
+; CHECK-NEXT:    movhpd {{.*#+}} xmm1 = xmm1[0],mem[0]
 ; CHECK-NEXT:    addpd %xmm0, %xmm1
 ; CHECK-NEXT:    movupd %xmm1, (%eax)
 ; CHECK-NEXT:    retl

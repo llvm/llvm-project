@@ -23,7 +23,8 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/Threading.h"
 
-#include "lldb/Core/Flags.h"
+#include "lldb/Utility/Flags.h"
+
 #include "lldb/Core/RangeMap.h"
 #include "lldb/Core/UniqueCStringMap.h"
 #include "lldb/Core/dwarf.h"

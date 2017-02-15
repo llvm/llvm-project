@@ -17,7 +17,9 @@
 
 /* Define to disable the link-time checking of mismatch for
    LLVM_ENABLE_ABI_BREAKING_CHECKS */
+#ifndef LLVM_DISABLE_ABI_BREAKING_CHECKS_ENFORCING
 #cmakedefine01 LLVM_DISABLE_ABI_BREAKING_CHECKS_ENFORCING
+#endif
 #if !LLVM_DISABLE_ABI_BREAKING_CHECKS_ENFORCING
 
 // ABI_BREAKING_CHECKS protection: provides link-time failure when clients build

@@ -17,8 +17,8 @@
 #include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/IRExecutionUnit.h"
 #include "lldb/Expression/IRMemoryMap.h"
-#include "lldb/Host/Endian.h"
 #include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/Endian.h"
 #include "lldb/Utility/Error.h"
 #include "lldb/Utility/StreamString.h"
 

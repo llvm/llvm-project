@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "ASTManager.h"
 #include "DocumentStore.h"
 #include "JSONRPCDispatcher.h"
 #include "ProtocolHandlers.h"
@@ -27,6 +28,8 @@ int main(int argc, char *argv[]) {
   // Set up a document store and intialize all the method handlers for JSONRPC
   // dispatching.
   DocumentStore Store;
+  ASTManager AST(Out, Store);
+  Store.addListener(&AST);
   JSONRPCDispatcher Dispatcher(llvm::make_unique<Handler>(Out));
   Dispatcher.registerHandler("initialize",
                              llvm::make_unique<InitializeHandler>(Out));

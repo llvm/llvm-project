@@ -27,8 +27,8 @@
 #include "Plugins/ExpressionParser/Clang/ClangExpressionDeclMap.h"
 #include "Plugins/ExpressionParser/Clang/ClangExpressionVariable.h"
 
-#include "lldb/Host/Endian.h"
 #include "lldb/Host/Host.h"
+#include "lldb/Utility/Endian.h"
 
 #include "lldb/Symbol/Function.h"
 

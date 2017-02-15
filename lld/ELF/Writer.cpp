@@ -1508,33 +1508,33 @@ static uintX_t getFileAlignment(uintX_t Off, OutputSectionBase *Sec) {
 }
 
 template <class ELFT, class uintX_t>
-void setOffset(OutputSectionBase *Sec, uintX_t &Off) {
+uintX_t setOffset(OutputSectionBase *Sec, uintX_t Off) {
   if (Sec->Type == SHT_NOBITS) {
     Sec->Offset = Off;
-    return;
+    return Off;
   }
 
   Off = getFileAlignment<ELFT>(Off, Sec);
   Sec->Offset = Off;
-  Off += Sec->Size;
+  return Off + Sec->Size;
 }
 
 template <class ELFT> void Writer<ELFT>::assignFileOffsetsBinary() {
   uintX_t Off = 0;
   for (OutputSectionBase *Sec : OutputSections)
     if (Sec->Flags & SHF_ALLOC)
-      setOffset<ELFT>(Sec, Off);
+      Off = setOffset<ELFT>(Sec, Off);
   FileSize = alignTo(Off, sizeof(uintX_t));
 }
 
 // Assign file offsets to output sections.
 template <class ELFT> void Writer<ELFT>::assignFileOffsets() {
   uintX_t Off = 0;
-  setOffset<ELFT>(Out<ELFT>::ElfHeader, Off);
-  setOffset<ELFT>(Out<ELFT>::ProgramHeaders, Off);
+  Off = setOffset<ELFT>(Out<ELFT>::ElfHeader, Off);
+  Off = setOffset<ELFT>(Out<ELFT>::ProgramHeaders, Off);
 
   for (OutputSectionBase *Sec : OutputSections)
-    setOffset<ELFT>(Sec, Off);
+    Off = setOffset<ELFT>(Sec, Off);
 
   SectionHeaderOff = alignTo(Off, sizeof(uintX_t));
   FileSize = SectionHeaderOff + (OutputSections.size() + 1) * sizeof(Elf_Shdr);

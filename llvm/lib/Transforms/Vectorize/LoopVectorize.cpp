@@ -1589,7 +1589,7 @@ public:
       LoopVectorizeHints *H)
       : NumPredStores(0), TheLoop(L), PSE(PSE), TLI(TLI), TTI(TTI), DT(DT),
         GetLAA(GetLAA), LAI(nullptr), ORE(ORE), InterleaveInfo(PSE, L, DT, LI),
-        Induction(nullptr), WidestIndTy(nullptr), HasFunNoNaNAttr(false),
+        PrimaryInduction(nullptr), WidestIndTy(nullptr), HasFunNoNaNAttr(false),
         Requirements(R), Hints(H) {}
 
   /// ReductionList contains the reduction descriptors for all
@@ -1609,8 +1609,8 @@ public:
   /// loop, only that it is legal to do so.
   bool canVectorize();
 
-  /// Returns the Induction variable.
-  PHINode *getInduction() { return Induction; }
+  /// Returns the primary induction variable.
+  PHINode *getPrimaryInduction() { return PrimaryInduction; }
 
   /// Returns the reduction variables found in the loop.
   ReductionList *getReductionVars() { return &Reductions; }
@@ -1817,9 +1817,9 @@ private:
 
   //  ---  vectorization state --- //
 
-  /// Holds the integer induction variable. This is the counter of the
+  /// Holds the primary induction variable. This is the counter of the
   /// loop.
-  PHINode *Induction;
+  PHINode *PrimaryInduction;
   /// Holds the reduction variables.
   ReductionList Reductions;
   /// Holds all of the induction variables that we found in the loop.
@@ -2034,7 +2034,7 @@ public:
     // check the primary induction variable since it will need an update
     // instruction regardless.
     Value *Op = Trunc->getOperand(0);
-    if (Op != Legal->getInduction() && TTI.isTruncateFree(SrcTy, DestTy))
+    if (Op != Legal->getPrimaryInduction() && TTI.isTruncateFree(SrcTy, DestTy))
       return false;
 
     // If the truncated value is not an induction variable, return false.
@@ -3438,7 +3438,7 @@ void InnerLoopVectorizer::createEmptyLoop() {
   //   - counts from zero, stepping by one
   //   - is the size of the widest induction variable type
   // then we create a new one.
-  OldInduction = Legal->getInduction();
+  OldInduction = Legal->getPrimaryInduction();
   Type *IdxTy = Legal->getWidestInductionType();
 
   // Split the single block loop into the two loop structure described above.
@@ -5287,8 +5287,8 @@ void LoopVectorizationLegality::addInductionPhi(
     // one if there are multiple (no good reason for doing this other
     // than it is expedient). We've checked that it begins at zero and
     // steps by one, so this is a canonical induction variable.
-    if (!Induction || PhiTy == WidestIndTy)
-      Induction = Phi;
+    if (!PrimaryInduction || PhiTy == WidestIndTy)
+      PrimaryInduction = Phi;
   }
 
   // Both the PHI node itself, and the "post-increment" value feeding
@@ -5451,7 +5451,7 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
     } // next instr.
   }
 
-  if (!Induction) {
+  if (!PrimaryInduction) {
     DEBUG(dbgs() << "LV: Did not find one integer induction var.\n");
     if (Inductions.empty()) {
       ORE->emit(createMissedAnalysis("NoInductionVariable")
@@ -5463,8 +5463,8 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
   // Now we know the widest induction type, check if our found induction
   // is the same size. If it's not, unset it here and InnerLoopVectorizer
   // will create another.
-  if (Induction && WidestIndTy != Induction->getType())
-    Induction = nullptr;
+  if (PrimaryInduction && WidestIndTy != PrimaryInduction->getType())
+    PrimaryInduction = nullptr;
 
   return true;
 }

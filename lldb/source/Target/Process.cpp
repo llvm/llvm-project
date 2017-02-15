@@ -5227,15 +5227,9 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
                   do_resume = false;
                   handle_running_event = true;
                 } else {
-                  StopInfoSP stop_info_sp(thread_sp->GetStopInfo());
-                  StopReason stop_reason = eStopReasonInvalid;
-                  if (stop_info_sp)
-                    stop_reason = stop_info_sp->GetStopReason();
+                  ThreadPlanSP plan = thread->GetCompletedPlan();
+                  if (plan == thread_plan_sp && plan->PlanSucceeded()) {
 
-                  // FIXME: We only check if the stop reason is plan complete,
-                  // should we make sure that
-                  // it is OUR plan that is complete?
-                  if (stop_reason == eStopReasonPlanComplete) {
                     if (log)
                       log->PutCString("Process::RunThreadPlan(): execution "
                                       "completed successfully.");
@@ -5246,9 +5240,11 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
 
                     return_value = eExpressionCompleted;
                   } else {
+                    StopInfoSP stop_info_sp = thread_sp->GetStopInfo();
                     // Something restarted the target, so just wait for it to
                     // stop for real.
-                    if (stop_reason == eStopReasonBreakpoint) {
+                    if (stop_info_sp &&
+                        stop_info_sp->GetStopReason() == eStopReasonBreakpoint) {
                       if (log)
                         log->Printf("Process::RunThreadPlan() stopped for "
                                     "breakpoint: %s.",

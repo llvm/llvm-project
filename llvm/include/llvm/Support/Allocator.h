@@ -357,7 +357,7 @@ private:
 };
 
 /// \brief The standard BumpPtrAllocator which just uses the default template
-/// paramaters.
+/// parameters.
 typedef BumpPtrAllocatorImpl<> BumpPtrAllocator;
 
 /// \brief A BumpPtrAllocator that allows only elements of a specific type to be

@@ -51,14 +51,12 @@ define <8 x float> @load_splat_8f32_4f32_01010101(<4 x float>* %ptr) nounwind uw
 ;
 ; AVX2-LABEL: load_splat_8f32_4f32_01010101:
 ; AVX2:       # BB#0: # %entry
-; AVX2-NEXT:    vmovaps (%rdi), %xmm0
-; AVX2-NEXT:    vbroadcastsd %xmm0, %ymm0
+; AVX2-NEXT:    vbroadcastsd (%rdi), %ymm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: load_splat_8f32_4f32_01010101:
 ; AVX512:       # BB#0: # %entry
-; AVX512-NEXT:    vmovaps (%rdi), %xmm0
-; AVX512-NEXT:    vbroadcastsd %xmm0, %ymm0
+; AVX512-NEXT:    vbroadcastsd (%rdi), %ymm0
 ; AVX512-NEXT:    retq
 entry:
   %ld = load <4 x float>, <4 x float>* %ptr
@@ -131,14 +129,12 @@ define <8 x i32> @load_splat_8i32_4i32_01010101(<4 x i32>* %ptr) nounwind uwtabl
 ;
 ; AVX2-LABEL: load_splat_8i32_4i32_01010101:
 ; AVX2:       # BB#0: # %entry
-; AVX2-NEXT:    vmovaps (%rdi), %xmm0
-; AVX2-NEXT:    vbroadcastsd %xmm0, %ymm0
+; AVX2-NEXT:    vbroadcastsd (%rdi), %ymm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: load_splat_8i32_4i32_01010101:
 ; AVX512:       # BB#0: # %entry
-; AVX512-NEXT:    vmovaps (%rdi), %xmm0
-; AVX512-NEXT:    vbroadcastsd %xmm0, %ymm0
+; AVX512-NEXT:    vbroadcastsd (%rdi), %ymm0
 ; AVX512-NEXT:    retq
 entry:
   %ld = load <4 x i32>, <4 x i32>* %ptr
@@ -242,14 +238,12 @@ define <16 x i16> @load_splat_16i16_8i16_0101010101010101(<8 x i16>* %ptr) nounw
 ;
 ; AVX2-LABEL: load_splat_16i16_8i16_0101010101010101:
 ; AVX2:       # BB#0: # %entry
-; AVX2-NEXT:    vmovaps (%rdi), %xmm0
-; AVX2-NEXT:    vbroadcastss %xmm0, %ymm0
+; AVX2-NEXT:    vbroadcastss (%rdi), %ymm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: load_splat_16i16_8i16_0101010101010101:
 ; AVX512:       # BB#0: # %entry
-; AVX512-NEXT:    vmovaps (%rdi), %xmm0
-; AVX512-NEXT:    vbroadcastss %xmm0, %ymm0
+; AVX512-NEXT:    vbroadcastss (%rdi), %ymm0
 ; AVX512-NEXT:    retq
 entry:
   %ld = load <8 x i16>, <8 x i16>* %ptr
@@ -272,14 +266,12 @@ define <16 x i16> @load_splat_16i16_8i16_0123012301230123(<8 x i16>* %ptr) nounw
 ;
 ; AVX2-LABEL: load_splat_16i16_8i16_0123012301230123:
 ; AVX2:       # BB#0: # %entry
-; AVX2-NEXT:    vmovaps (%rdi), %xmm0
-; AVX2-NEXT:    vbroadcastsd %xmm0, %ymm0
+; AVX2-NEXT:    vbroadcastsd (%rdi), %ymm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: load_splat_16i16_8i16_0123012301230123:
 ; AVX512:       # BB#0: # %entry
-; AVX512-NEXT:    vmovaps (%rdi), %xmm0
-; AVX512-NEXT:    vbroadcastsd %xmm0, %ymm0
+; AVX512-NEXT:    vbroadcastsd (%rdi), %ymm0
 ; AVX512-NEXT:    retq
 entry:
   %ld = load <8 x i16>, <8 x i16>* %ptr
@@ -442,14 +434,12 @@ define <32 x i8> @load_splat_32i8_16i8_01010101010101010101010101010101(<16 x i8
 ;
 ; AVX2-LABEL: load_splat_32i8_16i8_01010101010101010101010101010101:
 ; AVX2:       # BB#0: # %entry
-; AVX2-NEXT:    vmovdqa (%rdi), %xmm0
-; AVX2-NEXT:    vpbroadcastw %xmm0, %ymm0
+; AVX2-NEXT:    vpbroadcastw (%rdi), %ymm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: load_splat_32i8_16i8_01010101010101010101010101010101:
 ; AVX512:       # BB#0: # %entry
-; AVX512-NEXT:    vmovdqa (%rdi), %xmm0
-; AVX512-NEXT:    vpbroadcastw %xmm0, %ymm0
+; AVX512-NEXT:    vpbroadcastw (%rdi), %ymm0
 ; AVX512-NEXT:    retq
 entry:
   %ld = load <16 x i8>, <16 x i8>* %ptr
@@ -472,14 +462,12 @@ define <32 x i8> @load_splat_32i8_16i8_01230123012301230123012301230123(<16 x i8
 ;
 ; AVX2-LABEL: load_splat_32i8_16i8_01230123012301230123012301230123:
 ; AVX2:       # BB#0: # %entry
-; AVX2-NEXT:    vmovaps (%rdi), %xmm0
-; AVX2-NEXT:    vbroadcastss %xmm0, %ymm0
+; AVX2-NEXT:    vbroadcastss (%rdi), %ymm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: load_splat_32i8_16i8_01230123012301230123012301230123:
 ; AVX512:       # BB#0: # %entry
-; AVX512-NEXT:    vmovaps (%rdi), %xmm0
-; AVX512-NEXT:    vbroadcastss %xmm0, %ymm0
+; AVX512-NEXT:    vbroadcastss (%rdi), %ymm0
 ; AVX512-NEXT:    retq
 entry:
   %ld = load <16 x i8>, <16 x i8>* %ptr
@@ -502,14 +490,12 @@ define <32 x i8> @load_splat_32i8_16i8_01234567012345670123456701234567(<16 x i8
 ;
 ; AVX2-LABEL: load_splat_32i8_16i8_01234567012345670123456701234567:
 ; AVX2:       # BB#0: # %entry
-; AVX2-NEXT:    vmovaps (%rdi), %xmm0
-; AVX2-NEXT:    vbroadcastsd %xmm0, %ymm0
+; AVX2-NEXT:    vbroadcastsd (%rdi), %ymm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: load_splat_32i8_16i8_01234567012345670123456701234567:
 ; AVX512:       # BB#0: # %entry
-; AVX512-NEXT:    vmovaps (%rdi), %xmm0
-; AVX512-NEXT:    vbroadcastsd %xmm0, %ymm0
+; AVX512-NEXT:    vbroadcastsd (%rdi), %ymm0
 ; AVX512-NEXT:    retq
 entry:
   %ld = load <16 x i8>, <16 x i8>* %ptr

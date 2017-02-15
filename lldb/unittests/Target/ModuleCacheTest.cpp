@@ -5,11 +5,11 @@
 #include "llvm/Support/Path.h"
 
 #include "Plugins/ObjectFile/ELF/ObjectFileELF.h"
-#include "Utility/ModuleCache.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Symbol/SymbolContext.h"
+#include "lldb/Target/ModuleCache.h"
 
 extern const char *TestMainArgv0;
 

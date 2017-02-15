@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Utility/UriParser.h"
+#include <cstring>
 
 using namespace lldb_private;
 

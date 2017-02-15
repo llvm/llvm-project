@@ -654,20 +654,19 @@ public:
   /// a precompiled header or module) rather than having been parsed.
   bool isFromASTFile() const { return FromASTFile; }
 
-  /// \brief Retrieve the global declaration ID associated with this 
-  /// declaration, which specifies where in the 
-  unsigned getGlobalID() const { 
+  /// \brief Retrieve the global declaration ID associated with this
+  /// declaration, which specifies where this Decl was loaded from.
+  unsigned getGlobalID() const {
     if (isFromASTFile())
       return *((const unsigned*)this - 1);
     return 0;
   }
-  
+
   /// \brief Retrieve the global ID of the module that owns this particular
   /// declaration.
   unsigned getOwningModuleID() const {
     if (isFromASTFile())
       return *((const unsigned*)this - 2);
-    
     return 0;
   }
 

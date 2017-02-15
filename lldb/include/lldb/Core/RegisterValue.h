@@ -19,7 +19,7 @@
 
 // Project includes
 #include "lldb/Core/Scalar.h"
-#include "lldb/Host/Endian.h"
+#include "lldb/Utility/Endian.h"
 #include "lldb/lldb-private.h"
 #include "lldb/lldb-public.h"
 

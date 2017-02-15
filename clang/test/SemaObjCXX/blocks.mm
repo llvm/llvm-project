@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify -fblocks -Wno-objc-root-class %s
+// RUN: %clang_cc1 -fsyntax-only -verify -fblocks -Wno-objc-root-class -std=c++11 %s
 @protocol NSObject;
 
 void bar(id(^)(void));
@@ -143,4 +143,18 @@ namespace DependentReturn {
   bool operator!=(X, X);
 
   template void f<X>(X);
+}
+
+namespace MoveBlockVariable {
+struct B0 {
+};
+
+struct B1 { // expected-note 2 {{candidate constructor (the implicit}}
+  B1(B0&&); // expected-note {{candidate constructor not viable}}
+};
+
+B1 test_move() {
+  __block B0 b;
+  return b; // expected-error {{no viable conversion from returned value of type 'MoveBlockVariable::B0' to function return type 'MoveBlockVariable::B1'}}
+}
 }

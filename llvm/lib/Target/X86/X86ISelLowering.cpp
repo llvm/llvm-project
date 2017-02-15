@@ -5394,8 +5394,18 @@ static bool getTargetShuffleMask(SDNode *N, MVT VT, bool AllowSentinelZero,
     IsUnary = true;
     break;
   case X86ISD::VBROADCAST: {
-    // We only decode broadcasts of same-sized vectors at the moment.
-    if (N->getOperand(0).getValueType() == VT) {
+    SDValue N0 = N->getOperand(0);
+    // See if we're broadcasting from index 0 of an EXTRACT_SUBVECTOR. If so,
+    // add the pre-extracted value to the Ops vector.
+    if (N0.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
+        N0.getOperand(0).getValueType() == VT &&
+        N0.getConstantOperandVal(1) == 0)
+      Ops.push_back(N0.getOperand(0));
+
+    // We only decode broadcasts of same-sized vectors, unless the broadcast
+    // came from an extract from the original width. If we found one, we
+    // pushed it the Ops vector above.
+    if (N0.getValueType() == VT || !Ops.empty()) {
       DecodeVectorBroadcast(VT, Mask);
       IsUnary = true;
       break;
@@ -8224,15 +8234,22 @@ static SDValue lowerVectorShuffleToEXPAND(const SDLoc &DL, MVT VT,
 
 static bool matchVectorShuffleWithUNPCK(MVT VT, SDValue &V1, SDValue &V2,
                                         unsigned &UnpackOpcode, bool IsUnary,
-                                        ArrayRef<int> TargetMask,
-                                        SelectionDAG &DAG) {
+                                        ArrayRef<int> TargetMask, SDLoc &DL,
+                                        SelectionDAG &DAG,
+                                        const X86Subtarget &Subtarget) {
   int NumElts = VT.getVectorNumElements();
 
-  bool Undef1 = true, Undef2 = true;
-  for (int i = 0; (i != NumElts) && (Undef1 || Undef2); i += 2) {
-    Undef1 &= (SM_SentinelUndef == TargetMask[i + 0]);
-    Undef2 &= (SM_SentinelUndef == TargetMask[i + 1]);
+  bool Undef1 = true, Undef2 = true, Zero1 = true, Zero2 = true;
+  for (int i = 0; i != NumElts; i += 2) {
+    int M1 = TargetMask[i + 0];
+    int M2 = TargetMask[i + 1];
+    Undef1 &= (SM_SentinelUndef == M1);
+    Undef2 &= (SM_SentinelUndef == M2);
+    Zero1 &= isUndefOrZero(M1);
+    Zero2 &= isUndefOrZero(M2);
   }
+  assert(!((Undef1 || Zero1) && (Undef2 || Zero2)) &&
+         "Zeroable shuffle detected");
 
   // Attempt to match the target mask against the unpack lo/hi mask patterns.
   SmallVector<int, 64> Unpckl, Unpckh;
@@ -8252,8 +8269,36 @@ static bool matchVectorShuffleWithUNPCK(MVT VT, SDValue &V1, SDValue &V2,
     return true;
   }
 
+  // If an unary shuffle, attempt to match as an unpack lo/hi with zero.
+  if (IsUnary && (Zero1 || Zero2)) {
+    // Don't bother if we can blend instead.
+    if ((Subtarget.hasSSE41() || VT == MVT::v2i64 || VT == MVT::v2f64) &&
+        isSequentialOrUndefOrZeroInRange(TargetMask, 0, NumElts, 0))
+      return false;
+
+    bool MatchLo = true, MatchHi = true;
+    for (int i = 0; (i != NumElts) && (MatchLo || MatchHi); ++i) {
+      int M = TargetMask[i];
+
+      // Ignore if the input is known to be zero or the index is undef.
+      if ((((i & 1) == 0) && Zero1) || (((i & 1) == 1) && Zero2) ||
+          (M == SM_SentinelUndef))
+        continue;
+
+      MatchLo &= (M == Unpckl[i]);
+      MatchHi &= (M == Unpckh[i]);
+    }
+
+    if (MatchLo || MatchHi) {
+      UnpackOpcode = MatchLo ? X86ISD::UNPCKL : X86ISD::UNPCKH;
+      V2 = Zero2 ? getZeroVector(VT, Subtarget, DAG, DL) : V1;
+      V1 = Zero1 ? getZeroVector(VT, Subtarget, DAG, DL) : V1;
+      return true;
+    }
+  }
+
+  // If a binary shuffle, commute and try again.
   if (!IsUnary) {
-    // If a binary shuffle, commute and try again.
     ShuffleVectorSDNode::commuteMask(Unpckl);
     if (isTargetShuffleEquivalent(TargetMask, Unpckl)) {
       UnpackOpcode = X86ISD::UNPCKL;
@@ -9728,6 +9773,12 @@ static SDValue lowerVectorShuffleAsBroadcast(const SDLoc &DL, MVT VT,
     unsigned NumBroadcastElts = BroadcastVT.getVectorNumElements();
     BroadcastVT = MVT::getVectorVT(MVT::f64, NumBroadcastElts);
   }
+
+  // We only support broadcasting from 128-bit vectors to minimize the
+  // number of patterns we need to deal with in isel. So extract down to
+  // 128-bits.
+  if (SrcVT.getSizeInBits() > 128)
+    V = extract128BitVector(V, 0, DAG, DL);
 
   return DAG.getBitcast(VT, DAG.getNode(Opcode, DL, BroadcastVT, V));
 }
@@ -26582,7 +26633,7 @@ static bool matchUnaryPermuteVectorShuffle(MVT MaskVT, ArrayRef<int> Mask,
 // TODO: Investigate sharing more of this with shuffle lowering.
 static bool matchBinaryVectorShuffle(MVT MaskVT, ArrayRef<int> Mask,
                                      bool FloatDomain, SDValue &V1, SDValue &V2,
-                                     SelectionDAG &DAG,
+                                     SDLoc &DL, SelectionDAG &DAG,
                                      const X86Subtarget &Subtarget,
                                      unsigned &Shuffle, MVT &ShuffleVT,
                                      bool IsUnary) {
@@ -26622,8 +26673,8 @@ static bool matchBinaryVectorShuffle(MVT MaskVT, ArrayRef<int> Mask,
       (MaskVT.is256BitVector() && 32 <= EltSizeInBits && Subtarget.hasAVX()) ||
       (MaskVT.is256BitVector() && Subtarget.hasAVX2()) ||
       (MaskVT.is512BitVector() && Subtarget.hasAVX512())) {
-    if (matchVectorShuffleWithUNPCK(MaskVT, V1, V2, Shuffle, IsUnary, Mask,
-                                    DAG)) {
+    if (matchVectorShuffleWithUNPCK(MaskVT, V1, V2, Shuffle, IsUnary, Mask, DL,
+                                    DAG, Subtarget)) {
       ShuffleVT = MaskVT;
       if (ShuffleVT.is256BitVector() && !Subtarget.hasAVX2())
         ShuffleVT = (32 == EltSizeInBits ? MVT::v8f32 : MVT::v4f64);
@@ -26954,7 +27005,7 @@ static bool combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
     }
   }
 
-  if (matchBinaryVectorShuffle(MaskVT, Mask, FloatDomain, V1, V2, DAG,
+  if (matchBinaryVectorShuffle(MaskVT, Mask, FloatDomain, V1, V2, DL, DAG,
                                Subtarget, Shuffle, ShuffleVT, UnaryShuffle)) {
     if (Depth == 1 && Root.getOpcode() == Shuffle)
       return false; // Nothing to do!

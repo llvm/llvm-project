@@ -229,6 +229,22 @@ public:
   MachineInstrBuilder buildGEP(unsigned Res, unsigned Op0,
                                unsigned Op1);
 
+  /// Build and insert \p Res<def> = G_PTR_MASK \p Op0, \p NumBits
+  ///
+  /// G_PTR_MASK clears the low bits of a pointer operand without destroying its
+  /// pointer properties. This has the effect of rounding the address *down* to
+  /// a specified alignment in bits.
+  ///
+  /// \pre setBasicBlock or setMI must have been called.
+  /// \pre \p Res and \p Op0 must be generic virtual registers with pointer
+  ///      type.
+  /// \pre \p NumBits must be an integer representing the number of low bits to
+  ///      be cleared in \p Op0.
+  ///
+  /// \return a MachineInstrBuilder for the newly created instruction.
+  MachineInstrBuilder buildPtrMask(unsigned Res, unsigned Op0,
+                                   uint32_t NumBits);
+
   /// Build and insert \p Res<def>, \p CarryOut<def> = G_UADDE \p Op0,
   /// \p Op1, \p CarryIn
   ///

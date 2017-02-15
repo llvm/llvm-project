@@ -378,6 +378,10 @@ HANDLE_TARGET_OPCODE(G_UITOFP)
 /// Generic pointer offset
 HANDLE_TARGET_OPCODE(G_GEP)
 
+/// Clear the specified number of low bits in a pointer. This rounds the value
+/// *down* to the given alignment.
+HANDLE_TARGET_OPCODE(G_PTR_MASK)
+
 /// Generic BRANCH instruction. This is an unconditional branch.
 HANDLE_TARGET_OPCODE(G_BR)
 

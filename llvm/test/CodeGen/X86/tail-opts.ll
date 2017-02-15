@@ -299,33 +299,35 @@ declare void @func()
 ; one - One instruction may be tail-duplicated even with optsize.
 
 ; CHECK-LABEL: one:
-; CHECK: movl $0, XYZ(%rip)
-; CHECK: movl $0, XYZ(%rip)
+; CHECK: j{{.*}} tail_call_me
+; CHECK: j{{.*}} tail_call_me
 
 @XYZ = external global i32
 
-define void @one() nounwind optsize {
+declare void @tail_call_me()
+
+define void @one(i32 %v) nounwind optsize {
 entry:
-  %0 = icmp eq i32 undef, 0
+  %0 = icmp eq i32 %v, 0
   br i1 %0, label %bbx, label %bby
 
 bby:
-  switch i32 undef, label %bb7 [
+  switch i32 %v, label %bb7 [
     i32 16, label %return
   ]
 
 bb7:
-  store volatile i32 0, i32* @XYZ
-  unreachable
+  tail call void @tail_call_me()
+  ret void
 
 bbx:
-  switch i32 undef, label %bb12 [
+  switch i32 %v, label %bb12 [
     i32 128, label %return
   ]
 
 bb12:
-  store volatile i32 0, i32* @XYZ
-  unreachable
+  tail call void @tail_call_me()
+  ret void
 
 return:
   ret void
@@ -414,9 +416,9 @@ return:
 
 ; CHECK-LABEL: two_nosize:
 ; CHECK: movl $0, XYZ(%rip)
-; CHECK: movl $1, XYZ(%rip)
+; CHECK: jmp tail_call_me
 ; CHECK: movl $0, XYZ(%rip)
-; CHECK: movl $1, XYZ(%rip)
+; CHECK: jmp tail_call_me
 
 define void @two_nosize() nounwind {
 entry:
@@ -430,8 +432,8 @@ bby:
 
 bb7:
   store volatile i32 0, i32* @XYZ
-  store volatile i32 1, i32* @XYZ
-  unreachable
+  tail call void @tail_call_me()
+  ret void
 
 bbx:
   switch i32 undef, label %bb12 [
@@ -440,8 +442,8 @@ bbx:
 
 bb12:
   store volatile i32 0, i32* @XYZ
-  store volatile i32 1, i32* @XYZ
-  unreachable
+  tail call void @tail_call_me()
+  ret void
 
 return:
   ret void
@@ -468,4 +470,89 @@ bb.nph:                                           ; preds = %entry
 
 for.end:                                          ; preds = %entry
   ret i64 %varx.0
+}
+
+; We should tail merge small blocks that don't end in a tail call or return
+; instruction. Those blocks are typically unreachable and will be placed
+; out-of-line after the main return, so we should try to eliminate as many of
+; them as possible.
+
+; CHECK-LABEL: merge_aborts:
+; CHECK-NOT: callq abort
+; CHECK: ret
+; CHECK: callq abort
+; CHECK-NOT: callq abort
+; CHECK: .Lfunc_end{{.*}}:
+
+declare void @abort()
+define void @merge_aborts() {
+entry:
+  %c1 = call i1 @qux()
+  br i1 %c1, label %cont1, label %abort1
+abort1:
+  call void @abort()
+  unreachable
+cont1:
+  %c2 = call i1 @qux()
+  br i1 %c2, label %cont2, label %abort2
+abort2:
+  call void @abort()
+  unreachable
+cont2:
+  %c3 = call i1 @qux()
+  br i1 %c3, label %cont3, label %abort3
+abort3:
+  call void @abort()
+  unreachable
+cont3:
+  %c4 = call i1 @qux()
+  br i1 %c4, label %cont4, label %abort4
+abort4:
+  call void @abort()
+  unreachable
+cont4:
+  ret void
+}
+
+; Use alternating abort functions so that the blocks we wish to merge are not
+; layout successors during branch folding.
+
+; CHECK-LABEL: merge_alternating_aborts:
+; CHECK-NOT: callq abort
+; CHECK: ret
+; CHECK: callq abort
+; CHECK: callq alt_abort
+; CHECK-NOT: callq abort
+; CHECK-NOT: callq alt_abort
+; CHECK: .Lfunc_end{{.*}}:
+
+declare void @alt_abort()
+
+define void @merge_alternating_aborts() {
+entry:
+  %c1 = call i1 @qux()
+  br i1 %c1, label %cont1, label %abort1
+abort1:
+  call void @abort()
+  unreachable
+cont1:
+  %c2 = call i1 @qux()
+  br i1 %c2, label %cont2, label %abort2
+abort2:
+  call void @alt_abort()
+  unreachable
+cont2:
+  %c3 = call i1 @qux()
+  br i1 %c3, label %cont3, label %abort3
+abort3:
+  call void @abort()
+  unreachable
+cont3:
+  %c4 = call i1 @qux()
+  br i1 %c4, label %cont4, label %abort4
+abort4:
+  call void @alt_abort()
+  unreachable
+cont4:
+  ret void
 }

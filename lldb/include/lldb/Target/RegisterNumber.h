@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_RegisterNumber_h
-#define liblldb_RegisterNumber_h
+#ifndef LLDB_TARGET_REGISTERNUMBER_H
+#define LLDB_TARGET_REGISTERNUMBER_H
 
 #include "lldb/lldb-private.h"
 #include <map>

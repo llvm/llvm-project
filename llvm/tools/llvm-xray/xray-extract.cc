@@ -60,7 +60,7 @@ void exportAsYAML(const InstrumentationMap &Map, raw_ostream &OS) {
     YAMLSleds.push_back({*FuncId, Sled.Address, Sled.Function, Sled.Kind,
                          Sled.AlwaysInstrument});
   }
-  Output Out(OS);
+  Output Out(OS, nullptr, 0);
   Out << YAMLSleds;
 }
 

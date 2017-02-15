@@ -17,7 +17,8 @@
 
 // Other libraries and framework includes
 // Project includes
-#include "lldb/Core/Flags.h"
+#include "lldb/Utility/Flags.h"
+
 #include "lldb/Core/Scalar.h"
 #include "lldb/Core/UserID.h"
 #include "lldb/Core/ValueObjectList.h"

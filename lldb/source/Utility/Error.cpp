@@ -20,7 +20,6 @@
 #include "llvm/ADT/SmallVector.h"
 
 // Project includes
-#include "lldb/Core/Log.h"
 #include "lldb/Host/PosixApi.h"
 #include "lldb/Utility/Error.h"
 

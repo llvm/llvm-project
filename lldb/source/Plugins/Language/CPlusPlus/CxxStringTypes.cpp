@@ -17,14 +17,14 @@
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/DataFormatters/StringPrinter.h"
 #include "lldb/DataFormatters/TypeSummary.h"
-#include "lldb/Host/Endian.h"
 #include "lldb/Host/Time.h"
 #include "lldb/Symbol/ClangASTContext.h"
+#include "lldb/Target/ProcessStructReader.h"
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
+#include "lldb/Utility/Endian.h"
 #include "lldb/Utility/Error.h"
-#include "lldb/Utility/ProcessStructReader.h"
 #include "lldb/Utility/Stream.h"
 
 #include <algorithm>

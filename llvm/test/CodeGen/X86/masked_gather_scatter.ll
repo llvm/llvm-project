@@ -714,8 +714,7 @@ define <16 x float> @test13(float* %base, <16 x i32> %ind) {
 define <16 x float> @test14(float* %base, i32 %ind, <16 x float*> %vec) {
 ; KNL_64-LABEL: test14:
 ; KNL_64:       # BB#0:
-; KNL_64-NEXT:    vpinsrq $1, %rdi, %xmm0, %xmm1
-; KNL_64-NEXT:    vinserti32x4 $0, %xmm1, %zmm0, %zmm0
+; KNL_64-NEXT:    vpinsrq $1, %rdi, %xmm0, %xmm0
 ; KNL_64-NEXT:    vpbroadcastq %xmm0, %zmm0
 ; KNL_64-NEXT:    vmovd %esi, %xmm1
 ; KNL_64-NEXT:    vpbroadcastd %xmm1, %ymm1
@@ -731,8 +730,7 @@ define <16 x float> @test14(float* %base, i32 %ind, <16 x float*> %vec) {
 ;
 ; KNL_32-LABEL: test14:
 ; KNL_32:       # BB#0:
-; KNL_32-NEXT:    vpinsrd $1, {{[0-9]+}}(%esp), %xmm0, %xmm1
-; KNL_32-NEXT:    vinserti32x4 $0, %xmm1, %zmm0, %zmm0
+; KNL_32-NEXT:    vpinsrd $1, {{[0-9]+}}(%esp), %xmm0, %xmm0
 ; KNL_32-NEXT:    vpbroadcastd %xmm0, %zmm0
 ; KNL_32-NEXT:    vpslld $2, {{[0-9]+}}(%esp){1to16}, %zmm1
 ; KNL_32-NEXT:    vpaddd %zmm1, %zmm0, %zmm1
@@ -742,8 +740,7 @@ define <16 x float> @test14(float* %base, i32 %ind, <16 x float*> %vec) {
 ;
 ; SKX-LABEL: test14:
 ; SKX:       # BB#0:
-; SKX-NEXT:    vpinsrq $1, %rdi, %xmm0, %xmm1
-; SKX-NEXT:    vinserti64x2 $0, %xmm1, %zmm0, %zmm0
+; SKX-NEXT:    vpinsrq $1, %rdi, %xmm0, %xmm0
 ; SKX-NEXT:    vpbroadcastq %xmm0, %zmm0
 ; SKX-NEXT:    vpbroadcastd %esi, %ymm1
 ; SKX-NEXT:    vpmovsxdq %ymm1, %zmm1
@@ -758,8 +755,7 @@ define <16 x float> @test14(float* %base, i32 %ind, <16 x float*> %vec) {
 ;
 ; SKX_32-LABEL: test14:
 ; SKX_32:       # BB#0:
-; SKX_32-NEXT:    vpinsrd $1, {{[0-9]+}}(%esp), %xmm0, %xmm1
-; SKX_32-NEXT:    vinserti32x4 $0, %xmm1, %zmm0, %zmm0
+; SKX_32-NEXT:    vpinsrd $1, {{[0-9]+}}(%esp), %xmm0, %xmm0
 ; SKX_32-NEXT:    vpbroadcastd %xmm0, %zmm0
 ; SKX_32-NEXT:    vpslld $2, {{[0-9]+}}(%esp){1to16}, %zmm1
 ; SKX_32-NEXT:    vpaddd %zmm1, %zmm0, %zmm1

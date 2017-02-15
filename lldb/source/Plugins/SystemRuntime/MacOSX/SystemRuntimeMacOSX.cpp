@@ -21,11 +21,11 @@
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Target/Process.h"
+#include "lldb/Target/ProcessStructReader.h"
 #include "lldb/Target/Queue.h"
 #include "lldb/Target/QueueList.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
-#include "lldb/Utility/ProcessStructReader.h"
 #include "lldb/Utility/StreamString.h"
 
 #include "SystemRuntimeMacOSX.h"

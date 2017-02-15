@@ -187,6 +187,17 @@ MachineInstrBuilder MachineIRBuilder::buildGEP(unsigned Res, unsigned Op0,
       .addUse(Op1);
 }
 
+MachineInstrBuilder MachineIRBuilder::buildPtrMask(unsigned Res, unsigned Op0,
+                                                   uint32_t NumBits) {
+  assert(MRI->getType(Res).isPointer() &&
+         MRI->getType(Res) == MRI->getType(Op0) && "type mismatch");
+
+  return buildInstr(TargetOpcode::G_PTR_MASK)
+      .addDef(Res)
+      .addUse(Op0)
+      .addImm(NumBits);
+}
+
 MachineInstrBuilder MachineIRBuilder::buildSub(unsigned Res, unsigned Op0,
                                                unsigned Op1) {
   assert((MRI->getType(Res).isScalar() || MRI->getType(Res).isVector()) &&
