@@ -543,6 +543,12 @@ private:
   /// predicate by splitting it into a set of independent predicates.
   bool ProvingSplitPredicate;
 
+  /// Memoized values for the GetMinTrailingZeros
+  DenseMap<const SCEV *, uint32_t> MinTrailingZerosCache;
+
+  /// Private helper method for the GetMinTrailingZeros method
+  uint32_t GetMinTrailingZerosImpl(const SCEV *S);
+
   /// Information about the number of loop iterations for which a loop exit's
   /// branch condition evaluates to the not-taken path.  This is a temporary
   /// pair of exact and max expressions that are eventually summarized in

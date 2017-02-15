@@ -567,7 +567,7 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
   F->Loop();
 
   if (Flags.verbosity)
-    Printf("Done %d runs in %zd second(s)\n", F->getTotalNumberOfRuns(),
+    Printf("Done %zd runs in %zd second(s)\n", F->getTotalNumberOfRuns(),
            F->secondsSinceProcessStartUp());
   F->PrintFinalStats();
 

@@ -45,9 +45,8 @@ struct is_cstring
 
 template <typename T>
 struct use_string_formatter
-    : public std::integral_constant<
-          bool, is_one_of<T, llvm::StringRef, std::string>::value ||
-                    is_cstring<T>::value> {};
+    : public std::integral_constant<bool,
+                                    std::is_convertible<T, llvm::StringRef>::value> {};
 
 template <typename T>
 struct use_pointer_formatter
@@ -205,7 +204,7 @@ struct format_provider<
     if (!Style.empty() && Style.getAsInteger(10, N)) {
       assert(false && "Style is not a valid integer");
     }
-    llvm::StringRef S(V);
+    llvm::StringRef S = V;
     Stream << S.substr(0, N);
   }
 };

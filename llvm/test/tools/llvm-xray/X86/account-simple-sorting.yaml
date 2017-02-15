@@ -17,27 +17,17 @@ header:
   cycle-frequency: 1
 records:
   # Function id: 1
-  - { type: 0, func-id: 1, cpu: 1, thread: 111, kind: function-enter,
-    tsc: 10001 }
-  - { type: 0, func-id: 1, cpu: 1, thread: 111, kind: function-exit,
-    tsc: 10100 }
-  - { type: 0, func-id: 1, cpu: 1, thread: 111, kind: function-enter,
-    tsc: 10101 }
-  - { type: 0, func-id: 1, cpu: 1, thread: 111, kind: function-exit,
-    tsc: 10200 }
-  - { type: 0, func-id: 1, cpu: 1, thread: 111, kind: function-enter,
-    tsc: 10201 }
-  - { type: 0, func-id: 1, cpu: 1, thread: 111, kind: function-exit,
-    tsc: 10300 }
+  - { type: 0, func-id: 1, cpu: 1, thread: 111, kind: function-enter, tsc: 10001 }
+  - { type: 0, func-id: 1, cpu: 1, thread: 111, kind: function-exit, tsc: 10100 }
+  - { type: 0, func-id: 1, cpu: 1, thread: 111, kind: function-enter, tsc: 10101 }
+  - { type: 0, func-id: 1, cpu: 1, thread: 111, kind: function-exit, tsc: 10200 }
+  - { type: 0, func-id: 1, cpu: 1, thread: 111, kind: function-enter, tsc: 10201 }
+  - { type: 0, func-id: 1, cpu: 1, thread: 111, kind: function-exit, tsc: 10300 }
   # Function id: 2
-  - { type: 0, func-id: 2, cpu: 1, thread: 222, kind: function-enter,
-    tsc: 10001 }
-  - { type: 0, func-id: 2, cpu: 1, thread: 222, kind: function-exit,
-    tsc: 10002 }
-  - { type: 0, func-id: 2, cpu: 1, thread: 222, kind: function-enter,
-    tsc: 10101 }
-  - { type: 0, func-id: 2, cpu: 1, thread: 222, kind: function-exit,
-    tsc: 10102 }
+  - { type: 0, func-id: 2, cpu: 1, thread: 222, kind: function-enter, tsc: 10001 }
+  - { type: 0, func-id: 2, cpu: 1, thread: 222, kind: function-exit, tsc: 10002 }
+  - { type: 0, func-id: 2, cpu: 1, thread: 222, kind: function-enter, tsc: 10101 }
+  - { type: 0, func-id: 2, cpu: 1, thread: 222, kind: function-exit, tsc: 10102 }
 
 #DEFAULT:       Functions with latencies: 2
 #DEFAULT-NEXT:  funcid  count  [ min, med, 90p, 99p, max] sum function

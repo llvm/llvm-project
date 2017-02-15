@@ -523,6 +523,17 @@ static unsigned CountTerminators(MachineBasicBlock *MBB,
   return NumTerms;
 }
 
+/// A no successor, non-return block probably ends in unreachable and is cold.
+/// Also consider a block that ends in an indirect branch to be a return block,
+/// since many targets use plain indirect branches to return.
+static bool blockEndsInUnreachable(const MachineBasicBlock *MBB) {
+  if (!MBB->succ_empty())
+    return false;
+  if (MBB->empty())
+    return true;
+  return !(MBB->back().isReturn() || MBB->back().isIndirectBranch());
+}
+
 /// ProfitableToMerge - Check if two machine basic blocks have a common tail
 /// and decide if it would be profitable to merge those tails.  Return the
 /// length of the common tail and iterators to the first common instruction
@@ -576,6 +587,15 @@ ProfitableToMerge(MachineBasicBlock *MBB1, MachineBasicBlock *MBB2,
     if (CommonTailLen > NumTerms)
       return true;
   }
+
+  // If these are identical non-return blocks with no successors, merge them.
+  // Such blocks are typically cold calls to noreturn functions like abort, and
+  // are unlikely to become a fallthrough target after machine block placement.
+  // Tail merging these blocks is unlikely to create additional unconditional
+  // branches, and will reduce the size of this cold code.
+  if (I1 == MBB1->begin() && I2 == MBB2->begin() &&
+      blockEndsInUnreachable(MBB1) && blockEndsInUnreachable(MBB2))
+    return true;
 
   // If one of the blocks can be completely merged and happens to be in
   // a position where the other could fall through into it, merge any number

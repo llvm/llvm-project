@@ -1411,9 +1411,16 @@ static void updateCallerBFI(BasicBlock *CallSiteBlock,
       continue;
     auto *OrigBB = cast<BasicBlock>(Entry.first);
     auto *ClonedBB = cast<BasicBlock>(Entry.second);
-    ClonedBBs.insert(ClonedBB);
-    CallerBFI->setBlockFreq(ClonedBB,
-                            CalleeBFI->getBlockFreq(OrigBB).getFrequency());
+    uint64_t Freq = CalleeBFI->getBlockFreq(OrigBB).getFrequency();
+    if (!ClonedBBs.insert(ClonedBB).second) {
+      // Multiple blocks in the callee might get mapped to one cloned block in
+      // the caller since we prune the callee as we clone it. When that happens,
+      // we want to use the maximum among the original blocks' frequencies.
+      uint64_t NewFreq = CallerBFI->getBlockFreq(ClonedBB).getFrequency();
+      if (NewFreq > Freq)
+        Freq = NewFreq;
+    }
+    CallerBFI->setBlockFreq(ClonedBB, Freq);
   }
   BasicBlock *EntryClone = cast<BasicBlock>(VMap.lookup(&CalleeEntryBlock));
   CallerBFI->setBlockFreqAndScale(

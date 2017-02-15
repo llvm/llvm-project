@@ -1589,7 +1589,7 @@ public:
       LoopVectorizeHints *H)
       : NumPredStores(0), TheLoop(L), PSE(PSE), TLI(TLI), TTI(TTI), DT(DT),
         GetLAA(GetLAA), LAI(nullptr), ORE(ORE), InterleaveInfo(PSE, L, DT, LI),
-        Induction(nullptr), WidestIndTy(nullptr), HasFunNoNaNAttr(false),
+        PrimaryInduction(nullptr), WidestIndTy(nullptr), HasFunNoNaNAttr(false),
         Requirements(R), Hints(H) {}
 
   /// ReductionList contains the reduction descriptors for all
@@ -1609,8 +1609,8 @@ public:
   /// loop, only that it is legal to do so.
   bool canVectorize();
 
-  /// Returns the Induction variable.
-  PHINode *getInduction() { return Induction; }
+  /// Returns the primary induction variable.
+  PHINode *getPrimaryInduction() { return PrimaryInduction; }
 
   /// Returns the reduction variables found in the loop.
   ReductionList *getReductionVars() { return &Reductions; }
@@ -1817,9 +1817,9 @@ private:
 
   //  ---  vectorization state --- //
 
-  /// Holds the integer induction variable. This is the counter of the
+  /// Holds the primary induction variable. This is the counter of the
   /// loop.
-  PHINode *Induction;
+  PHINode *PrimaryInduction;
   /// Holds the reduction variables.
   ReductionList Reductions;
   /// Holds all of the induction variables that we found in the loop.
@@ -2012,6 +2012,42 @@ public:
     std::pair<Instruction *, unsigned> InstOnVF = std::make_pair(I, VF);
     assert(WideningDecisions.count(InstOnVF) && "The cost is not calculated");
     return WideningDecisions[InstOnVF].second;
+  }
+
+  /// Return True if instruction \p I is an optimizable truncate whose operand
+  /// is an induction variable. Such a truncate will be removed by adding a new
+  /// induction variable with the destination type.
+  bool isOptimizableIVTruncate(Instruction *I, unsigned VF) {
+
+    // If the instruction is not a truncate, return false.
+    auto *Trunc = dyn_cast<TruncInst>(I);
+    if (!Trunc)
+      return false;
+
+    // Get the source and destination types of the truncate.
+    Type *SrcTy = ToVectorTy(cast<CastInst>(I)->getSrcTy(), VF);
+    Type *DestTy = ToVectorTy(cast<CastInst>(I)->getDestTy(), VF);
+
+    // If the truncate is free for the given types, return false. Replacing a
+    // free truncate with an induction variable would add an induction variable
+    // update instruction to each iteration of the loop. We exclude from this
+    // check the primary induction variable since it will need an update
+    // instruction regardless.
+    Value *Op = Trunc->getOperand(0);
+    if (Op != Legal->getPrimaryInduction() && TTI.isTruncateFree(SrcTy, DestTy))
+      return false;
+
+    // If the truncated value is not an induction variable, return false.
+    if (!Legal->isInductionVariable(Op))
+      return false;
+
+    // Lastly, we only consider an induction variable truncate to be
+    // optimizable if it has a constant step.
+    //
+    // TODO: Expand optimizable truncates to include truncations of induction
+    //       variables having loop-invariant steps.
+    auto ID = Legal->getInductionVars()->lookup(cast<PHINode>(Op));
+    return ID.getConstIntStepValue();
   }
 
 private:
@@ -3402,7 +3438,7 @@ void InnerLoopVectorizer::createEmptyLoop() {
   //   - counts from zero, stepping by one
   //   - is the size of the widest induction variable type
   // then we create a new one.
-  OldInduction = Legal->getInduction();
+  OldInduction = Legal->getPrimaryInduction();
   Type *IdxTy = Legal->getWidestInductionType();
 
   // Split the single block loop into the two loop structure described above.
@@ -4879,10 +4915,9 @@ void InnerLoopVectorizer::vectorizeBlockInLoop(BasicBlock *BB, PhiVector *PV) {
       // induction variable. Notice that we can only optimize the 'trunc' case
       // because (a) FP conversions lose precision, (b) sext/zext may wrap, and
       // (c) other casts depend on pointer size.
-      auto ID = Legal->getInductionVars()->lookup(OldInduction);
-      if (isa<TruncInst>(CI) && CI->getOperand(0) == OldInduction &&
-          ID.getConstIntStepValue()) {
-        widenIntInduction(OldInduction, cast<TruncInst>(CI));
+      if (Cost->isOptimizableIVTruncate(CI, VF)) {
+        widenIntInduction(cast<PHINode>(CI->getOperand(0)),
+                          cast<TruncInst>(CI));
         break;
       }
 
@@ -5252,8 +5287,8 @@ void LoopVectorizationLegality::addInductionPhi(
     // one if there are multiple (no good reason for doing this other
     // than it is expedient). We've checked that it begins at zero and
     // steps by one, so this is a canonical induction variable.
-    if (!Induction || PhiTy == WidestIndTy)
-      Induction = Phi;
+    if (!PrimaryInduction || PhiTy == WidestIndTy)
+      PrimaryInduction = Phi;
   }
 
   // Both the PHI node itself, and the "post-increment" value feeding
@@ -5416,7 +5451,7 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
     } // next instr.
   }
 
-  if (!Induction) {
+  if (!PrimaryInduction) {
     DEBUG(dbgs() << "LV: Did not find one integer induction var.\n");
     if (Inductions.empty()) {
       ORE->emit(createMissedAnalysis("NoInductionVariable")
@@ -5428,8 +5463,8 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
   // Now we know the widest induction type, check if our found induction
   // is the same size. If it's not, unset it here and InnerLoopVectorizer
   // will create another.
-  if (Induction && WidestIndTy != Induction->getType())
-    Induction = nullptr;
+  if (PrimaryInduction && WidestIndTy != PrimaryInduction->getType())
+    PrimaryInduction = nullptr;
 
   return true;
 }
@@ -7224,12 +7259,14 @@ unsigned LoopVectorizationCostModel::getInstructionCost(Instruction *I,
   case Instruction::Trunc:
   case Instruction::FPTrunc:
   case Instruction::BitCast: {
-    // We optimize the truncation of induction variable.
-    // The cost of these is the same as the scalar operation.
-    if (I->getOpcode() == Instruction::Trunc &&
-        Legal->isInductionVariable(I->getOperand(0)))
-      return TTI.getCastInstrCost(I->getOpcode(), I->getType(),
-                                  I->getOperand(0)->getType());
+    // We optimize the truncation of induction variables having constant
+    // integer steps. The cost of these truncations is the same as the scalar
+    // operation.
+    if (isOptimizableIVTruncate(I, VF)) {
+      auto *Trunc = cast<TruncInst>(I);
+      return TTI.getCastInstrCost(Instruction::Trunc, Trunc->getDestTy(),
+                                  Trunc->getSrcTy());
+    }
 
     Type *SrcScalarTy = I->getOperand(0)->getType();
     Type *SrcVecTy = ToVectorTy(SrcScalarTy, VF);

@@ -766,6 +766,7 @@ def JrRa16: FRR16_JALRC_RA_only_ins<0, 0, "jr", IIM16Alu> {
   let hasDelaySlot = 1;
   let isTerminator=1;
   let isBarrier=1;
+  let isReturn=1;
 }
 
 def JrcRa16: FRR16_JALRC_RA_only_ins<1, 1, "jrc", IIM16Alu> {
@@ -773,6 +774,7 @@ def JrcRa16: FRR16_JALRC_RA_only_ins<1, 1, "jrc", IIM16Alu> {
   let isIndirectBranch = 1;
   let isTerminator=1;
   let isBarrier=1;
+  let isReturn=1;
 }
 
 def JrcRx16: FRR16_JALRC_ins<1, 1, 0, "jrc", IIM16Alu> {
