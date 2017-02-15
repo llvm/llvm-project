@@ -560,7 +560,6 @@ unsigned ContinuationIndenter::addTokenOnNewLine(LineState &State,
   // and we need to avoid bin packing there.
   bool NestedBlockSpecialCase =
       Style.Language != FormatStyle::LK_Cpp &&
-      Style.Language != FormatStyle::LK_ObjC &&
       Current.is(tok::r_brace) && State.Stack.size() > 1 &&
       State.Stack[State.Stack.size() - 2].NestedBlockInlined;
   if (!NestedBlockSpecialCase)
