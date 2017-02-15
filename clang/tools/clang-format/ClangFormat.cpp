@@ -249,8 +249,7 @@ static bool format(StringRef FileName) {
   if (fillRanges(Code.get(), Ranges))
     return true;
   StringRef AssumedFileName = (FileName == "-") ? AssumeFileName : FileName;
-  FormatStyle FormatStyle =
-      getStyle(Style, AssumedFileName, FallbackStyle, Code->getBuffer());
+  FormatStyle FormatStyle = getStyle(Style, AssumedFileName, FallbackStyle);
   if (SortIncludes.getNumOccurrences() != 0)
     FormatStyle.SortIncludes = SortIncludes;
   unsigned CursorPosition = Cursor;
