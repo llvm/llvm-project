@@ -130,6 +130,7 @@ else()
       linux/ProcessLauncherLinux.cpp
       linux/ThisThread.cpp
       )
+    list(APPEND LLDB_PLUGINS lldbPluginProcessLinux)
 
   elseif (CMAKE_SYSTEM_NAME MATCHES "FreeBSD")
     add_host_subdirectory(freebsd
