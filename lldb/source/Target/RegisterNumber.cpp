@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Utility/RegisterNumber.h"
+#include "lldb/Target/RegisterNumber.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/Thread.h"
 

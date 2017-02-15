@@ -151,7 +151,11 @@ unsigned getMaxWorkGroupsPerCU(const FeatureBitset &Features,
                                unsigned FlatWorkGroupSize) {
   if (!Features.test(FeatureGCN))
     return 8;
-  return getWavesPerWorkGroup(Features, FlatWorkGroupSize) == 1 ? 40 : 16;
+  unsigned N = getWavesPerWorkGroup(Features, FlatWorkGroupSize);
+  if (N == 1)
+    return 40;
+  N = 40 / N;
+  return std::min(N, 16u);
 }
 
 unsigned getMaxWavesPerCU(const FeatureBitset &Features) {

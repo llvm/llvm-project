@@ -4603,8 +4603,15 @@ TreeTransform<Derived>::TransformVariableArrayType(TypeLocBuilder &TLB,
   if (ElementType.isNull())
     return QualType();
 
-  ExprResult SizeResult
-    = getDerived().TransformExpr(T->getSizeExpr());
+  ExprResult SizeResult;
+  {
+    EnterExpressionEvaluationContext Context(SemaRef,
+                                             Sema::PotentiallyEvaluated);
+    SizeResult = getDerived().TransformExpr(T->getSizeExpr());
+  }
+  if (SizeResult.isInvalid())
+    return QualType();
+  SizeResult = SemaRef.ActOnFinishFullExpr(SizeResult.get());
   if (SizeResult.isInvalid())
     return QualType();
 

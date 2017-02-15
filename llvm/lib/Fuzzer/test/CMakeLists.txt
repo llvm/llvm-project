@@ -90,6 +90,7 @@ set(Tests
   FourIndependentBranchesTest
   FullCoverageSetTest
   InitializeTest
+  Memcmp64BytesTest
   MemcmpTest
   LeakTest
   LeakTimeoutTest

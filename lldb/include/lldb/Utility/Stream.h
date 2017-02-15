@@ -16,7 +16,8 @@
 // C++ Includes
 // Other libraries and framework includes
 // Project includes
-#include "lldb/Core/Flags.h"
+#include "lldb/Utility/Flags.h"
+
 #include "lldb/lldb-private.h"
 
 #include "llvm/Support/FormatVariadic.h"

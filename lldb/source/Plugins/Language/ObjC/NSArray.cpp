@@ -21,11 +21,11 @@
 #include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/Expression/FunctionCaller.h"
-#include "lldb/Host/Endian.h"
 #include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Target/Language.h"
 #include "lldb/Target/ObjCLanguageRuntime.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/Endian.h"
 #include "lldb/Utility/Error.h"
 #include "lldb/Utility/Stream.h"
 

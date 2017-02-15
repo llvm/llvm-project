@@ -339,6 +339,8 @@ public:
   using Type = Error;
 };
 
+// Traits class that strips the response function from the list of handler
+// arguments.
 template <typename FnT> class AsyncHandlerTraits;
 
 template <typename ResultT, typename... ArgTs>
@@ -354,6 +356,11 @@ public:
   using Type = Error(ArgTs...);
   using ResultType = Error;
 };
+
+template <typename ResponseHandlerT, typename... ArgTs>
+class AsyncHandlerTraits<Error(ResponseHandlerT, ArgTs...)> :
+    public AsyncHandlerTraits<Error(typename std::decay<ResponseHandlerT>::type,
+                                    ArgTs...)> {};
 
 // This template class provides utilities related to RPC function handlers.
 // The base case applies to non-function types (the template class is

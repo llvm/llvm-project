@@ -3505,6 +3505,15 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
       RecordedNodes.push_back(std::pair<SDValue,SDNode*>(Res, nullptr));
       continue;
     }
+    case OPC_Coverage: {
+      // This is emitted right before MorphNode/EmitNode.
+      // So it should be safe to assume that this node has been selected
+      unsigned index = MatcherTable[MatcherIndex++];
+      index |= (MatcherTable[MatcherIndex++] << 8);
+      dbgs() << "COVERED: " << getPatternForIndex(index) << "\n";
+      dbgs() << "INCLUDED: " << getIncludePathForIndex(index) << "\n";
+      continue;
+    }
 
     case OPC_EmitNode:     case OPC_MorphNodeTo:
     case OPC_EmitNode0:    case OPC_EmitNode1:    case OPC_EmitNode2:

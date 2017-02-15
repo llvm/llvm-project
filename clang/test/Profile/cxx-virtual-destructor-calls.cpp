@@ -13,15 +13,6 @@ struct B : A {
   virtual ~B();
 };
 
-// Base dtor
-// CHECK: @__profn__ZN1BD2Ev = private constant [9 x i8] c"_ZN1BD2Ev"
-
-// Complete dtor must not be instrumented
-// CHECK-NOT: @__profn__ZN1BD1Ev = private constant [9 x i8] c"_ZN1BD1Ev"
-
-// Deleting dtor must not be instrumented
-// CHECK-NOT: @__profn__ZN1BD0Ev = private constant [9 x i8] c"_ZN1BD0Ev"
-
 // Base dtor counters and profile data
 // CHECK: @__profc__ZN1BD2Ev = private global [1 x i64] zeroinitializer
 // CHECK: @__profd__ZN1BD2Ev =

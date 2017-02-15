@@ -316,7 +316,7 @@ bool EhOutputSection<ELFT>::isFdeLive(EhSectionPiece &Piece,
   auto *Sec = cast<EhInputSection<ELFT>>(Piece.ID);
   unsigned FirstRelI = Piece.FirstRelocation;
   if (FirstRelI == (unsigned)-1)
-    fatal(toString(Sec) + ": FDE doesn't reference another section");
+    return false;
   const RelTy &Rel = Rels[FirstRelI];
   SymbolBody &B = Sec->getFile()->getRelocTargetSym(Rel);
   auto *D = dyn_cast<DefinedRegular<ELFT>>(&B);

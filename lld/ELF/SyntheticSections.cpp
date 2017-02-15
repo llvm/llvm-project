@@ -768,7 +768,10 @@ template <class ELFT>
 StringTableSection<ELFT>::StringTableSection(StringRef Name, bool Dynamic)
     : SyntheticSection<ELFT>(Dynamic ? (uintX_t)SHF_ALLOC : 0, SHT_STRTAB, 1,
                              Name),
-      Dynamic(Dynamic) {}
+      Dynamic(Dynamic) {
+  // ELF string tables start with a NUL byte.
+  addString("");
+}
 
 // Adds a string to the string table. If HashIt is true we hash and check for
 // duplicates. It is optional because the name of global symbols are already
@@ -788,8 +791,6 @@ unsigned StringTableSection<ELFT>::addString(StringRef S, bool HashIt) {
 }
 
 template <class ELFT> void StringTableSection<ELFT>::writeTo(uint8_t *Buf) {
-  // ELF string tables start with NUL byte, so advance the pointer by one.
-  ++Buf;
   for (StringRef S : Strings) {
     memcpy(Buf, S.data(), S.size());
     Buf += S.size() + 1;

@@ -9,7 +9,9 @@
 
 #include "lldb/Utility/JSON.h"
 
-#include "lldb/Host/StringConvert.h"
+#include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/StringRef.h"
+
 #include "lldb/Utility/StreamString.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <limits.h>
@@ -512,23 +514,20 @@ JSONValue::SP JSONParser::ParseJSONValue() {
 
   case JSONParser::Token::Integer: {
     if (value.front() == '-') {
-      bool success = false;
-      int64_t sval = StringConvert::ToSInt64(value.c_str(), 0, 0, &success);
-      if (success)
+      int64_t sval = 0;
+      if (!llvm::StringRef(value).getAsInteger(0, sval))
         return JSONValue::SP(new JSONNumber(sval));
     } else {
-      bool success = false;
-      uint64_t uval = StringConvert::ToUInt64(value.c_str(), 0, 0, &success);
-      if (success)
+      uint64_t uval = 0;
+      if (!llvm::StringRef(value).getAsInteger(0, uval))
         return JSONValue::SP(new JSONNumber(uval));
     }
   } break;
 
   case JSONParser::Token::Float: {
-    bool success = false;
-    double val = StringConvert::ToDouble(value.c_str(), 0.0, &success);
-    if (success)
-      return JSONValue::SP(new JSONNumber(val));
+    double D;
+    if (!llvm::StringRef(value).getAsDouble(D))
+      return JSONValue::SP(new JSONNumber(D));
   } break;
 
   case JSONParser::Token::String:

@@ -3864,6 +3864,8 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
     if (Body.isInvalid())
       Function->setInvalidDecl();
 
+    // FIXME: finishing the function body while in an expression evaluation
+    // context seems wrong. Investigate more.
     ActOnFinishFunctionBody(Function, Body.get(),
                             /*IsInstantiation=*/true);
 

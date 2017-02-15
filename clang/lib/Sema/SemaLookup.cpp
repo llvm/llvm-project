@@ -2838,6 +2838,9 @@ Sema::SpecialMemberOverloadResult *Sema::LookupSpecialMember(CXXRecordDecl *RD,
     assert((SM != CXXDefaultConstructor && SM != CXXDestructor) &&
            "parameter-less special members can't have qualified arguments");
 
+  // FIXME: Get the caller to pass in a location for the lookup.
+  SourceLocation LookupLoc = RD->getLocation();
+
   llvm::FoldingSetNodeID ID;
   ID.AddPointer(RD);
   ID.AddInteger(SM);
@@ -2919,7 +2922,7 @@ Sema::SpecialMemberOverloadResult *Sema::LookupSpecialMember(CXXRecordDecl *RD,
       VK = VK_RValue;
   }
 
-  OpaqueValueExpr FakeArg(SourceLocation(), ArgType, VK);
+  OpaqueValueExpr FakeArg(LookupLoc, ArgType, VK);
 
   if (SM != CXXDefaultConstructor) {
     NumArgs = 1;
@@ -2933,13 +2936,13 @@ Sema::SpecialMemberOverloadResult *Sema::LookupSpecialMember(CXXRecordDecl *RD,
   if (VolatileThis)
     ThisTy.addVolatile();
   Expr::Classification Classification =
-    OpaqueValueExpr(SourceLocation(), ThisTy,
+    OpaqueValueExpr(LookupLoc, ThisTy,
                     RValueThis ? VK_RValue : VK_LValue).Classify(Context);
 
   // Now we perform lookup on the name we computed earlier and do overload
   // resolution. Lookup is only performed directly into the class since there
   // will always be a (possibly implicit) declaration to shadow any others.
-  OverloadCandidateSet OCS(RD->getLocation(), OverloadCandidateSet::CSK_Normal);
+  OverloadCandidateSet OCS(LookupLoc, OverloadCandidateSet::CSK_Normal);
   DeclContext::lookup_result R = RD->lookup(Name);
 
   if (R.empty()) {
@@ -2994,7 +2997,7 @@ Sema::SpecialMemberOverloadResult *Sema::LookupSpecialMember(CXXRecordDecl *RD,
   }
 
   OverloadCandidateSet::iterator Best;
-  switch (OCS.BestViableFunction(*this, SourceLocation(), Best)) {
+  switch (OCS.BestViableFunction(*this, LookupLoc, Best)) {
     case OR_Success:
       Result->setMethod(cast<CXXMethodDecl>(Best->Function));
       Result->setKind(SpecialMemberOverloadResult::Success);

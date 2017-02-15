@@ -1232,6 +1232,11 @@ void PPCTargetInfo::getTargetDefines(const LangOptions &Opts,
   if (LongDoubleWidth == 128)
     Builder.defineMacro("__LONG_DOUBLE_128__");
 
+  // Define this for elfv2 (64-bit only) or 64-bit darwin.
+  if (ABI == "elfv2" ||
+      (getTriple().getOS() == llvm::Triple::Darwin && PointerWidth == 64))
+    Builder.defineMacro("__STRUCT_PARM_ALIGN__", "16");
+
   if (Opts.AltiVec) {
     Builder.defineMacro("__VEC__", "10206");
     Builder.defineMacro("__ALTIVEC__");

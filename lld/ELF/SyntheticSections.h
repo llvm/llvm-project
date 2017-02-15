@@ -266,8 +266,7 @@ public:
 private:
   const bool Dynamic;
 
-  // ELF string tables start with a NUL byte, so 1.
-  uintX_t Size = 1;
+  uintX_t Size = 0;
 
   llvm::DenseMap<StringRef, unsigned> StringMap;
   std::vector<StringRef> Strings;

@@ -17,7 +17,7 @@
 #include "lldb/Core/Log.h"
 #include "lldb/Core/RegisterValue.h"
 #include "lldb/Core/Scalar.h"
-#include "lldb/Host/Endian.h"
+#include "lldb/Utility/Endian.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Compiler.h"
 

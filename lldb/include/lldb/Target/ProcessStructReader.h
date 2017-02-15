@@ -1,5 +1,4 @@
-//===---------------------ProcessStructReader.h ------------------*- C++
-//-*-===//
+//===---------------------ProcessStructReader.h ------------------*- C++-*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -8,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef utility_ProcessStructReader_h_
-#define utility_ProcessStructReader_h_
+#ifndef LLDB_TARGET_PROCESSSTRUCTREADER_H
+#define LLDB_TARGET_PROCESSSTRUCTREADER_H
 
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-types.h"
