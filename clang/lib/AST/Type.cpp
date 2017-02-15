@@ -3012,10 +3012,8 @@ static TagDecl *getInterestingTagDecl(TagDecl *decl) {
     if (I->isCompleteDefinition() || I->isBeingDefined())
       return I;
   }
-  // If there's no definition (not even in progress), return the most recent
-  // declaration. This is important for template specializations, in order to
-  // pick the declaration with the most complete TemplateSpecializationKind.
-  return decl->getMostRecentDecl();
+  // If there's no definition (not even in progress), return what we have.
+  return decl;
 }
 
 TagDecl *TagType::getDecl() const {

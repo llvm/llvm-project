@@ -5065,6 +5065,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       case llvm::Triple::arm:
       case llvm::Triple::aarch64:
       case llvm::Triple::ppc64le:
+      case llvm::Triple::mips:
+      case llvm::Triple::mipsel:
+      case llvm::Triple::mips64:
+      case llvm::Triple::mips64el:
         // Supported.
         break;
       default:

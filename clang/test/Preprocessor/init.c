@@ -5635,6 +5635,7 @@
 // PPC64LE:#define __SIZE_MAX__ 18446744073709551615UL
 // PPC64LE:#define __SIZE_TYPE__ long unsigned int
 // PPC64LE:#define __SIZE_WIDTH__ 64
+// PPC64LE:#define __STRUCT_PARM_ALIGN__ 16
 // PPC64LE:#define __UINT16_C_SUFFIX__
 // PPC64LE:#define __UINT16_MAX__ 65535
 // PPC64LE:#define __UINT16_TYPE__ unsigned short

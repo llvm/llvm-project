@@ -57,14 +57,3 @@ template<typename T> struct Helper {
 template<typename T> void Helper<T>::func<2>() {} // expected-error {{cannot specialize a member}} \
                                                   // expected-error {{no function template matches}}
 }
-
-namespace b35070233 {
-  template <typename T> struct Cls {
-    static void f() {}
-  };
-
-  void g(Cls<int>);
-
-  template<> struct Cls<int>; // expected-note {{forward declaration}}
-  template<> void Cls<int>::f(); // expected-error {{incomplete type}}
-}
