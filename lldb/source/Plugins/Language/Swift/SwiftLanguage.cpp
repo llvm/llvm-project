@@ -37,6 +37,7 @@
 #include "swift/AST/Module.h"
 #include "swift/AST/Type.h"
 #include "swift/AST/Types.h"
+#include "swift/Basic/ManglingMacros.h"
 #include "llvm/Support/ConvertUTF.h"
 
 #include "Plugins/Language/ObjC/Cocoa.h"
@@ -60,9 +61,14 @@ void SwiftLanguage::Initialize() {
       "_TtCSs29_NativeDictionaryStorageOwner");
   static ConstString g_NSDictionaryClass2(
       "_TtCs29_NativeDictionaryStorageOwner");
-  static ConstString g_NSDictionaryClass3(
+  static ConstString g_NSDictionaryClass3Old(
       "_TtGCs29_NativeDictionaryStorageOwner");
-  static ConstString g_NSDictionaryClass4("_TtGCs26_SwiftDeferredNSDictionary");
+  static ConstString g_NSDictionaryClass3(
+      MANGLING_PREFIX_STR "s29_NativeDictionaryStorageOwner");
+  static ConstString g_NSDictionaryClass4Old(
+      "_TtGCs26_SwiftDeferredNSDictionary");
+  static ConstString g_NSDictionaryClass4(
+      MANGLING_PREFIX_STR "s26_SwiftDeferredNSDictionary");
 
   static ConstString g_NSSetClass1("_TtCSs22_NativeSetStorageOwner");
   static ConstString g_NSSetClass2("_TtCs22_NativeSetStorageOwner");
@@ -87,8 +93,18 @@ void SwiftLanguage::Initialize() {
   lldb_private::formatters::NSDictionary_Additionals::GetAdditionalSummaries()
   .push_back({lldb_private::formatters::NSDictionary_Additionals::
     AdditionalFormatterMatching()
+    .GetPrefixMatch(g_NSDictionaryClass3Old),
+    lldb_private::formatters::swift::Dictionary_SummaryProvider});
+  lldb_private::formatters::NSDictionary_Additionals::GetAdditionalSummaries()
+  .push_back({lldb_private::formatters::NSDictionary_Additionals::
+    AdditionalFormatterMatching()
     .GetPrefixMatch(g_NSDictionaryClass3),
     lldb_private::formatters::swift::Dictionary_SummaryProvider});
+  lldb_private::formatters::NSDictionary_Additionals::GetAdditionalSummaries()
+      .push_back({lldb_private::formatters::NSDictionary_Additionals::
+                      AdditionalFormatterMatching()
+                          .GetPrefixMatch(g_NSDictionaryClass4Old),
+                  lldb_private::formatters::swift::Dictionary_SummaryProvider});
   lldb_private::formatters::NSDictionary_Additionals::GetAdditionalSummaries()
       .push_back({lldb_private::formatters::NSDictionary_Additionals::
                       AdditionalFormatterMatching()
@@ -109,9 +125,21 @@ void SwiftLanguage::Initialize() {
   lldb_private::formatters::NSDictionary_Additionals::GetAdditionalSynthetics()
   .push_back({lldb_private::formatters::NSDictionary_Additionals::
     AdditionalFormatterMatching()
+    .GetPrefixMatch(g_NSDictionaryClass3Old),
+    lldb_private::formatters::swift::
+    DictionarySyntheticFrontEndCreator});
+  lldb_private::formatters::NSDictionary_Additionals::GetAdditionalSynthetics()
+  .push_back({lldb_private::formatters::NSDictionary_Additionals::
+    AdditionalFormatterMatching()
     .GetPrefixMatch(g_NSDictionaryClass3),
     lldb_private::formatters::swift::
     DictionarySyntheticFrontEndCreator});
+  lldb_private::formatters::NSDictionary_Additionals::GetAdditionalSynthetics()
+      .push_back({lldb_private::formatters::NSDictionary_Additionals::
+                      AdditionalFormatterMatching()
+                          .GetPrefixMatch(g_NSDictionaryClass4Old),
+                  lldb_private::formatters::swift::
+                      DictionarySyntheticFrontEndCreator});
   lldb_private::formatters::NSDictionary_Additionals::GetAdditionalSynthetics()
       .push_back({lldb_private::formatters::NSDictionary_Additionals::
                       AdditionalFormatterMatching()
