@@ -171,7 +171,7 @@ const std::string DiagnosticInfoWithDebugLocBase::getLocationStr() const {
   return (Filename + ":" + Twine(Line) + ":" + Twine(Column)).str();
 }
 
-DiagnosticInfoOptimizationBase::Argument::Argument(StringRef Key, Value *V)
+DiagnosticInfoOptimizationBase::Argument::Argument(StringRef Key, const Value *V)
     : Key(Key) {
   if (auto *F = dyn_cast<Function>(V)) {
     if (DISubprogram *SP = F->getSubprogram())
@@ -191,7 +191,7 @@ DiagnosticInfoOptimizationBase::Argument::Argument(StringRef Key, Value *V)
     Val = I->getOpcodeName();
 }
 
-DiagnosticInfoOptimizationBase::Argument::Argument(StringRef Key, Type *T)
+DiagnosticInfoOptimizationBase::Argument::Argument(StringRef Key, const Type *T)
     : Key(Key) {
   raw_string_ostream OS(Val);
   OS << *T;
