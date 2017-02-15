@@ -488,6 +488,13 @@ bool ThreadSanitizer::instrumentLoadOrStore(Instruction *I,
   Value *Addr = IsWrite
       ? cast<StoreInst>(I)->getPointerOperand()
       : cast<LoadInst>(I)->getPointerOperand();
+
+  // swifterror memory addresses are mem2reg promoted by instruction selection.
+  // As such they cannot have regular uses like an instrumentation function and
+  // it makes no sense to track them as memory.
+  if (Addr->isSwiftError())
+    return false;
+
   int Idx = getMemoryAccessFuncIndex(Addr, DL);
   if (Idx < 0)
     return false;
