@@ -3181,15 +3181,15 @@ bool SwiftASTContext::AddFrameworkSearchPath(const char *path) {
     swift::ASTContext *ast = GetASTContext();
     std::string path_str(path);
     bool add_search_path = true;
-    for (std::string swift_path : ast->SearchPathOpts.FrameworkSearchPaths) {
-      if (swift_path == path_str) {
+    for (const auto &swift_path : ast->SearchPathOpts.FrameworkSearchPaths) {
+      if (swift_path.Path == path_str) {
         add_search_path = false;
         break;
       }
     }
 
     if (add_search_path) {
-      ast->SearchPathOpts.FrameworkSearchPaths.push_back(path);
+      ast->SearchPathOpts.FrameworkSearchPaths.push_back({path, /*isSystem=*/false});
       return true;
     }
   }
@@ -3277,7 +3277,7 @@ const char *SwiftASTContext::GetFrameworkSearchPathAtIndex(size_t idx) const {
 
   if (m_ast_context_ap.get()) {
     if (idx < m_ast_context_ap->SearchPathOpts.FrameworkSearchPaths.size())
-      return m_ast_context_ap->SearchPathOpts.FrameworkSearchPaths[idx].c_str();
+      return m_ast_context_ap->SearchPathOpts.FrameworkSearchPaths[idx].Path.c_str();
   }
   return NULL;
 }
@@ -3681,17 +3681,17 @@ void SwiftASTContext::LoadModule(swift::ModuleDecl *swift_module,
 
       // And then in the various framework search paths.
       std::unordered_set<std::string> seen_paths;
-      for (const std::string &framework_search_dir :
+      for (const auto &framework_search_dir :
            swift_module->getASTContext().SearchPathOpts.FrameworkSearchPaths) {
         // The framework search dir as it comes from the AST context often has
         // duplicate entries, don't try to load along the same path twice.
 
         std::pair<std::unordered_set<std::string>::iterator, bool>
-            insert_result = seen_paths.insert(framework_search_dir);
+            insert_result = seen_paths.insert(framework_search_dir.Path);
         if (!insert_result.second)
           continue;
 
-        framework_path = framework_search_dir;
+        framework_path = framework_search_dir.Path;
         framework_path.append("/");
         framework_path.append(library_name);
         framework_path.append(".framework/");
@@ -4936,9 +4936,9 @@ void SwiftASTContext::DumpConfiguration(Log *log) {
   log->Printf("  Framework search paths       : (%llu items)",
               (unsigned long long)
                   m_ast_context_ap->SearchPathOpts.FrameworkSearchPaths.size());
-  for (std::string &framework_search_path :
+  for (const auto &framework_search_path :
        m_ast_context_ap->SearchPathOpts.FrameworkSearchPaths) {
-    log->Printf("    %s", framework_search_path.c_str());
+    log->Printf("    %s", framework_search_path.Path.c_str());
   }
 
   log->Printf("  Import search paths          : (%llu items)",
