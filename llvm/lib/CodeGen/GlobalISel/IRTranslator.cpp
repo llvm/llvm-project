@@ -906,6 +906,18 @@ bool IRTranslator::translateAlloca(const User &U,
   return true;
 }
 
+bool IRTranslator::translateVAArg(const User &U, MachineIRBuilder &MIRBuilder) {
+  // FIXME: We may need more info about the type. Because of how LLT works,
+  // we're completely discarding the i64/double distinction here (amongst
+  // others). Fortunately the ABIs I know of where that matters don't use va_arg
+  // anyway but that's not guaranteed.
+  MIRBuilder.buildInstr(TargetOpcode::G_VAARG)
+    .addDef(getOrCreateVReg(U))
+    .addUse(getOrCreateVReg(*U.getOperand(0)))
+    .addImm(DL->getABITypeAlignment(U.getType()));
+  return true;
+}
+
 bool IRTranslator::translatePHI(const User &U, MachineIRBuilder &MIRBuilder) {
   const PHINode &PI = cast<PHINode>(U);
   auto MIB = MIRBuilder.buildInstr(TargetOpcode::PHI);
