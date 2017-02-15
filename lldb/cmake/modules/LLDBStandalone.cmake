@@ -128,10 +128,12 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     message("-- Found PythonInterp: ${PYTHON_EXECUTABLE}")
   endif()
 
-  # Import CMake library targets from LLVM and Clang.
-  if (EXISTS "${LLDB_PATH_TO_CLANG_BUILD}/lib/cmake/clang/ClangConfig.cmake")
-      include("${LLDB_PATH_TO_CLANG_BUILD}/lib/cmake/clang/ClangConfig.cmake")
-  endif()
+  # Start Swift Mods
+  find_package(Clang REQUIRED CONFIG
+    HINTS "${LLDB_PATH_TO_CLANG_BUILD}" NO_DEFAULT_PATH)
+  find_package(Swift REQUIRED CONFIG
+    HINTS "${PATH_TO_SWIFT_BUILD}" NO_DEFAULT_PATH)
+  # End Swift Mods
 
   set(PACKAGE_VERSION "${LLVM_PACKAGE_VERSION}")
 
@@ -151,10 +153,6 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
                       "${PATH_TO_SWIFT_BUILD}/include"
                       "${SWIFT_MAIN_INCLUDE_DIR}"
                       "${CMAKE_CURRENT_SOURCE_DIR}/source")
-  link_directories("${LLVM_LIBRARY_DIR}"
-                   "${PATH_TO_CLANG_BUILD}/lib${LLVM_LIBDIR_SUFFIX}"
-                   "${PATH_TO_SWIFT_BUILD}/lib${LLVM_LIBDIR_SUFFIX}"
-                   "${PATH_TO_CMARK_BUILD}/src")
 
   set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
   set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX})
