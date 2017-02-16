@@ -89,8 +89,9 @@ struct ReportThread {
   int id;
   uptr os_id;
   bool running;
+  bool workerthread;
   char *name;
-  int parent_tid;
+  u32 parent_tid;
   ReportStack *stack;
 };
 

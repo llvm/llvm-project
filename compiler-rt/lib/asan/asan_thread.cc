@@ -239,7 +239,8 @@ void AsanThread::Init() {
 thread_return_t AsanThread::ThreadStart(
     uptr os_id, atomic_uintptr_t *signal_thread_is_registered) {
   Init();
-  asanThreadRegistry().StartThread(tid(), os_id, nullptr);
+  asanThreadRegistry().StartThread(tid(), os_id, /*workerthread*/ false,
+                                   nullptr);
   if (signal_thread_is_registered)
     atomic_store(signal_thread_is_registered, 1, memory_order_release);
 
