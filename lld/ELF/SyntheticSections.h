@@ -129,11 +129,11 @@ public:
   size_t getSize() const override { return Size; }
   void finalize() override;
   bool empty() const override;
-  void addEntry(SymbolBody &Sym, uintX_t Addend, RelExpr Expr);
+  void addEntry(SymbolBody &Sym, int64_t Addend, RelExpr Expr);
   bool addDynTlsEntry(SymbolBody &Sym);
   bool addTlsIndex();
-  uintX_t getPageEntryOffset(const SymbolBody &B, uintX_t Addend) const;
-  uintX_t getBodyEntryOffset(const SymbolBody &B, uintX_t Addend) const;
+  uintX_t getPageEntryOffset(const SymbolBody &B, int64_t Addend) const;
+  uintX_t getBodyEntryOffset(const SymbolBody &B, int64_t Addend) const;
   uintX_t getGlobalDynOffset(const SymbolBody &B) const;
 
   // Returns the symbol which corresponds to the first entry of the global part
@@ -266,8 +266,7 @@ public:
 private:
   const bool Dynamic;
 
-  // ELF string tables start with a NUL byte, so 1.
-  uintX_t Size = 1;
+  uintX_t Size = 0;
 
   llvm::DenseMap<StringRef, unsigned> StringMap;
   std::vector<StringRef> Strings;
@@ -279,12 +278,12 @@ template <class ELFT> class DynamicReloc {
 public:
   DynamicReloc(uint32_t Type, const InputSectionBase<ELFT> *InputSec,
                uintX_t OffsetInSec, bool UseSymVA, SymbolBody *Sym,
-               uintX_t Addend)
+               int64_t Addend)
       : Type(Type), Sym(Sym), InputSec(InputSec), OffsetInSec(OffsetInSec),
         UseSymVA(UseSymVA), Addend(Addend) {}
 
   uintX_t getOffset() const;
-  uintX_t getAddend() const;
+  int64_t getAddend() const;
   uint32_t getSymIndex() const;
   const InputSectionBase<ELFT> *getInputSec() const { return InputSec; }
 
@@ -295,7 +294,7 @@ private:
   const InputSectionBase<ELFT> *InputSec = nullptr;
   uintX_t OffsetInSec;
   bool UseSymVA;
-  uintX_t Addend;
+  int64_t Addend;
 };
 
 template <class ELFT>

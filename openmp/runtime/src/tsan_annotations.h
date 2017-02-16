@@ -82,19 +82,10 @@ void AnnotateMemoryIsInitialized(const char *f, int l, uptr mem, uptr sz);
 #define ANNOTATE_RWLOCK_CREATE(lck) AnnotateRWLockCreate(__FILE__, __LINE__, (uptr)lck)
 #define ANNOTATE_RWLOCK_RELEASED(lck) AnnotateRWLockAcquired(__FILE__, __LINE__, (uptr)lck, 1)
 #define ANNOTATE_RWLOCK_ACQUIRED(lck) AnnotateRWLockReleased(__FILE__, __LINE__, (uptr)lck, 1)
-
-/* new higher level barrier annotations */
-#define ANNOTATE_NEW_BARRIER_BEGIN(addr) AnnotateHappensBefore(__FILE__, __LINE__, (uptr)addr)
-#define ANNOTATE_NEW_BARRIER_END(addr) AnnotateHappensAfter(__FILE__, __LINE__, (uptr)addr)
-// #define ANNOTATE_NEW_BARRIER_BEGIN(addr)
-// #define ANNOTATE_NEW_BARRIER_END(addr)
-
-
+#define ANNOTATE_BARRIER_BEGIN(addr) AnnotateHappensBefore(__FILE__, __LINE__, (uptr)addr)
+#define ANNOTATE_BARRIER_END(addr) AnnotateHappensAfter(__FILE__, __LINE__, (uptr)addr)
 #define ANNOTATE_REDUCE_AFTER(addr) AnnotateHappensAfter(__FILE__, __LINE__, (uptr)addr)
 #define ANNOTATE_REDUCE_BEFORE(addr) AnnotateHappensBefore(__FILE__, __LINE__, (uptr)addr)
-// #define ANNOTATE_REDUCE_AFTER(addr)
-// #define ANNOTATE_REDUCE_BEFORE(addr)
-
 #else
 #define ANNOTATE_HAPPENS_AFTER(addr)
 #define ANNOTATE_HAPPENS_BEFORE(addr)
@@ -103,8 +94,8 @@ void AnnotateMemoryIsInitialized(const char *f, int l, uptr mem, uptr sz);
 #define ANNOTATE_RWLOCK_CREATE(lck)
 #define ANNOTATE_RWLOCK_RELEASED(lck)
 #define ANNOTATE_RWLOCK_ACQUIRED(lck)
-#define ANNOTATE_NEW_BARRIER_BEGIN(addr)
-#define ANNOTATE_NEW_BARRIER_END(addr)
+#define ANNOTATE_BARRIER_BEGIN(addr)
+#define ANNOTATE_BARRIER_END(addr)
 #define ANNOTATE_REDUCE_AFTER(addr)
 #define ANNOTATE_REDUCE_BEFORE(addr)
 #endif

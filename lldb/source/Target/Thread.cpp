@@ -380,24 +380,32 @@ lldb::StopInfoSP Thread::GetStopInfo() {
   if (m_destroy_called)
     return m_stop_info_sp;
 
-  ThreadPlanSP plan_sp(GetCompletedPlan());
+  ThreadPlanSP completed_plan_sp(GetCompletedPlan());
   ProcessSP process_sp(GetProcess());
   const uint32_t stop_id = process_sp ? process_sp->GetStopID() : UINT32_MAX;
-  if (plan_sp && plan_sp->PlanSucceeded()) {
-    return StopInfo::CreateStopReasonWithPlan(plan_sp, GetReturnValueObject(),
-                                              GetExpressionVariable());
+
+  // Here we select the stop info according to priorirty:
+  // - m_stop_info_sp (if not trace) - preset value
+  // - completed plan stop info - new value with plan from completed plan stack
+  // - m_stop_info_sp (trace stop reason is OK now)
+  // - ask GetPrivateStopInfo to set stop info
+
+  bool have_valid_stop_info = m_stop_info_sp &&
+      m_stop_info_sp ->IsValid() &&
+      m_stop_info_stop_id == stop_id;
+  bool have_valid_completed_plan = completed_plan_sp && completed_plan_sp->PlanSucceeded();
+  bool plan_overrides_trace =
+    have_valid_stop_info && have_valid_completed_plan
+    && (m_stop_info_sp->GetStopReason() == eStopReasonTrace);
+    
+  if (have_valid_stop_info && !plan_overrides_trace) {
+    return m_stop_info_sp;
+  } else if (have_valid_completed_plan) {
+    return StopInfo::CreateStopReasonWithPlan(
+        completed_plan_sp, GetReturnValueObject(), GetExpressionVariable());
   } else {
-    if ((m_stop_info_stop_id == stop_id) || // Stop info is valid, just return
-                                            // what we have (even if empty)
-        (m_stop_info_sp &&
-         m_stop_info_sp
-             ->IsValid())) // Stop info is valid, just return what we have
-    {
-      return m_stop_info_sp;
-    } else {
-      GetPrivateStopInfo();
-      return m_stop_info_sp;
-    }
+    GetPrivateStopInfo();
+    return m_stop_info_sp;
   }
 }
 
@@ -457,6 +465,12 @@ bool Thread::StopInfoIsUpToDate() const {
   else
     return true; // Process is no longer around so stop info is always up to
                  // date...
+}
+
+void Thread::ResetStopInfo() {
+  if (m_stop_info_sp) {
+    m_stop_info_sp.reset();
+  }
 }
 
 void Thread::SetStopInfo(const lldb::StopInfoSP &stop_info_sp) {
@@ -526,7 +540,8 @@ bool Thread::CheckpointThreadState(ThreadStateCheckpoint &saved_state) {
   if (process_sp)
     saved_state.orig_stop_id = process_sp->GetStopID();
   saved_state.current_inlined_depth = GetCurrentInlinedDepth();
-
+  saved_state.m_completed_plan_stack = m_completed_plan_stack;
+	
   return true;
 }
 
@@ -559,6 +574,7 @@ bool Thread::RestoreThreadStateFromCheckpoint(
   SetStopInfo(saved_state.stop_info_sp);
   GetStackFrameList()->SetCurrentInlinedDepth(
       saved_state.current_inlined_depth);
+  m_completed_plan_stack = saved_state.m_completed_plan_stack;
   return true;
 }
 
@@ -895,6 +911,9 @@ bool Thread::ShouldStop(Event *event_ptr) {
 
   if (should_stop) {
     ThreadPlan *plan_ptr = GetCurrentPlan();
+
+    // Discard the stale plans and all plans below them in the stack,
+    // plus move the completed plans to the completed plan stack
     while (!PlanIsBasePlan(plan_ptr)) {
       bool stale = plan_ptr->IsPlanStale();
       ThreadPlan *examined_plan = plan_ptr;
@@ -905,7 +924,15 @@ bool Thread::ShouldStop(Event *event_ptr) {
           log->Printf(
               "Plan %s being discarded in cleanup, it says it is already done.",
               examined_plan->GetName());
-        DiscardThreadPlansUpToPlan(examined_plan);
+        while (GetCurrentPlan() != examined_plan) {
+          DiscardPlan();
+        }
+        if (examined_plan->IsPlanComplete()) {
+          // plan is complete but does not explain the stop (example: step to a line
+          // with breakpoint), let us move the plan to completed_plan_stack anyway
+          PopPlan();
+        } else
+          DiscardPlan();
       }
     }
   }
@@ -1131,6 +1158,10 @@ bool Thread::WasThreadPlanDiscarded(ThreadPlan *plan) {
     }
   }
   return false;
+}
+
+bool Thread::CompletedPlanOverridesBreakpoint() {
+  return (!m_completed_plan_stack.empty()) ;
 }
 
 ThreadPlan *Thread::GetPreviousPlan(ThreadPlan *current_plan) {

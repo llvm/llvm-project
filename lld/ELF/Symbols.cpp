@@ -29,8 +29,7 @@ using namespace lld;
 using namespace lld::elf;
 
 template <class ELFT>
-static typename ELFT::uint getSymVA(const SymbolBody &Body,
-                                    typename ELFT::uint &Addend) {
+static typename ELFT::uint getSymVA(const SymbolBody &Body, int64_t &Addend) {
   typedef typename ELFT::uint uintX_t;
 
   switch (Body.kind()) {
@@ -135,7 +134,7 @@ bool SymbolBody::isPreemptible() const {
 }
 
 template <class ELFT>
-typename ELFT::uint SymbolBody::getVA(typename ELFT::uint Addend) const {
+typename ELFT::uint SymbolBody::getVA(int64_t Addend) const {
   typename ELFT::uint OutVA = getSymVA<ELFT>(*this, Addend);
   return OutVA + Addend;
 }
@@ -322,10 +321,10 @@ std::string lld::toString(const SymbolBody &B) {
   return B.getName();
 }
 
-template uint32_t SymbolBody::template getVA<ELF32LE>(uint32_t) const;
-template uint32_t SymbolBody::template getVA<ELF32BE>(uint32_t) const;
-template uint64_t SymbolBody::template getVA<ELF64LE>(uint64_t) const;
-template uint64_t SymbolBody::template getVA<ELF64BE>(uint64_t) const;
+template uint32_t SymbolBody::template getVA<ELF32LE>(int64_t) const;
+template uint32_t SymbolBody::template getVA<ELF32BE>(int64_t) const;
+template uint64_t SymbolBody::template getVA<ELF64LE>(int64_t) const;
+template uint64_t SymbolBody::template getVA<ELF64BE>(int64_t) const;
 
 template uint32_t SymbolBody::template getGotVA<ELF32LE>() const;
 template uint32_t SymbolBody::template getGotVA<ELF32BE>() const;

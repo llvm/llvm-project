@@ -91,9 +91,11 @@ static bool isPreemptible(const SymbolBody &Body, uint32_t Type) {
 // handling in to the separate function we can simplify the code and do not
 // pollute `handleTlsRelocation` by ARM and MIPS `ifs` statements.
 template <class ELFT, class GOT>
-static unsigned handleNoRelaxTlsRelocation(
-    GOT *Got, uint32_t Type, SymbolBody &Body, InputSectionBase<ELFT> &C,
-    typename ELFT::uint Offset, typename ELFT::uint Addend, RelExpr Expr) {
+static unsigned handleNoRelaxTlsRelocation(GOT *Got, uint32_t Type,
+                                           SymbolBody &Body,
+                                           InputSectionBase<ELFT> &C,
+                                           typename ELFT::uint Offset,
+                                           int64_t Addend, RelExpr Expr) {
   typedef typename ELFT::uint uintX_t;
   auto addModuleReloc = [](SymbolBody &Body, GOT *Got, uintX_t Off, bool LD) {
     // The Dynamic TLS Module Index Relocation can be statically resolved to 1
@@ -133,10 +135,9 @@ static unsigned handleNoRelaxTlsRelocation(
 
 // Returns the number of relocations processed.
 template <class ELFT>
-static unsigned handleTlsRelocation(uint32_t Type, SymbolBody &Body,
-                                    InputSectionBase<ELFT> &C,
-                                    typename ELFT::uint Offset,
-                                    typename ELFT::uint Addend, RelExpr Expr) {
+static unsigned
+handleTlsRelocation(uint32_t Type, SymbolBody &Body, InputSectionBase<ELFT> &C,
+                    typename ELFT::uint Offset, int64_t Addend, RelExpr Expr) {
   if (!(C.Flags & SHF_ALLOC))
     return 0;
 
@@ -530,14 +531,11 @@ static RelExpr adjustExpr(const elf::ObjectFile<ELFT> &File, SymbolBody &Body,
 }
 
 template <class ELFT, class RelTy>
-static typename ELFT::uint computeAddend(const elf::ObjectFile<ELFT> &File,
-                                         const uint8_t *SectionData,
-                                         const RelTy *End, const RelTy &RI,
-                                         RelExpr Expr, SymbolBody &Body) {
-  typedef typename ELFT::uint uintX_t;
-
+static int64_t computeAddend(const elf::ObjectFile<ELFT> &File,
+                             const uint8_t *SectionData, const RelTy *End,
+                             const RelTy &RI, RelExpr Expr, SymbolBody &Body) {
   uint32_t Type = RI.getType(Config->Mips64EL);
-  uintX_t Addend = getAddend<ELFT>(RI);
+  int64_t Addend = getAddend<ELFT>(RI);
   const uint8_t *BufLoc = SectionData + RI.r_offset;
   if (!RelTy::IsRela)
     Addend += Target->getImplicitAddend(BufLoc, Type);
@@ -675,7 +673,7 @@ static void scanRelocs(InputSectionBase<ELFT> &C, ArrayRef<RelTy> Rels) {
         Expr == R_GOTREL || Expr == R_GOTREL_FROM_END || Expr == R_PPC_TOC)
       In<ELFT>::Got->HasGotOffRel = true;
 
-    uintX_t Addend = computeAddend(*File, Buf, E, RI, Expr, Body);
+    int64_t Addend = computeAddend(*File, Buf, E, RI, Expr, Body);
 
     if (unsigned Processed =
             handleTlsRelocation<ELFT>(Type, Body, C, Offset, Addend, Expr)) {

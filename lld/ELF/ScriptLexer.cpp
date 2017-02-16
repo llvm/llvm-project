@@ -26,18 +26,9 @@
 // lookahead is labels in version scripts, where we need to parse "local :"
 // as if "local:".
 //
-// Overall, this lexer works fine for most linker scripts. There's room
-// for improving compatibility, but that's probably not at the top of our
-// todo list.
-//
-// A caveat: This lexer splits an input string into tokens ahead of time,
-// so the lexer is not context aware. There's one known corner case. Let's
-// say the next string is "val*3" (without quotes). In the context where
-// the parser is expecting an expression, that should be tokenizes to
-// "val", "*" and "3". In other context, it should be just a single
-// token. (If it is in a filename context, it'll be interpeted as a glob
-// pattern, for example.)  We want to fix this, but it probably needs a
-// redesign of this lexer.
+// Overall, this lexer works fine for most linker scripts. There might
+// be room for improving compatibility, but that's probably not at the
+// top of our todo list.
 //
 //===----------------------------------------------------------------------===//
 
@@ -175,7 +166,60 @@ StringRef ScriptLexer::skipSpace(StringRef S) {
 // An erroneous token is handled as if it were the last token before EOF.
 bool ScriptLexer::atEOF() { return Error || Tokens.size() == Pos; }
 
+// Split a given string as an expression.
+// This function returns "3", "*" and "5" for "3*5" for example.
+static std::vector<StringRef> tokenizeExpr(StringRef S) {
+  StringRef Ops = "+-*/"; // List of operators
+
+  // Quoted strings are literal strings, so we don't want to split it.
+  if (S.startswith("\""))
+    return {S};
+
+  // Split S with +-*/ as separators.
+  std::vector<StringRef> Ret;
+  while (!S.empty()) {
+    size_t E = S.find_first_of(Ops);
+
+    // No need to split if there is no operator.
+    if (E == StringRef::npos) {
+      Ret.push_back(S);
+      break;
+    }
+
+    // Get a token before the opreator.
+    if (E != 0)
+      Ret.push_back(S.substr(0, E));
+
+    // Get the operator as a token.
+    Ret.push_back(S.substr(E, 1));
+    S = S.substr(E + 1);
+  }
+  return Ret;
+}
+
+// In contexts where expressions are expected, the lexer should apply
+// different tokenization rules than the default one. By default,
+// arithmetic operator characters are regular characters, but in the
+// expression context, they should be independent tokens.
+//
+// For example, "foo*3" should be tokenized to "foo", "*" and "3" only
+// in the expression context.
+//
+// This function may split the current token into multiple tokens.
+void ScriptLexer::maybeSplitExpr() {
+  if (!InExpr || Error || atEOF())
+    return;
+
+  std::vector<StringRef> V = tokenizeExpr(Tokens[Pos]);
+  if (V.size() == 1)
+    return;
+  Tokens.erase(Tokens.begin() + Pos);
+  Tokens.insert(Tokens.begin() + Pos, V.begin(), V.end());
+}
+
 StringRef ScriptLexer::next() {
+  maybeSplitExpr();
+
   if (Error)
     return "";
   if (atEOF()) {

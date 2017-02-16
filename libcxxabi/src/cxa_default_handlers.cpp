@@ -90,7 +90,7 @@ static std::terminate_handler default_terminate_handler = demangling_terminate_h
 static std::terminate_handler default_unexpected_handler = demangling_unexpected_handler;
 #else
 static std::terminate_handler default_terminate_handler = std::abort;
-static std::terminate_handler default_unexpected_handler = std::abort;
+static std::terminate_handler default_unexpected_handler = std::terminate;
 #endif
 
 //

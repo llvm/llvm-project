@@ -1,4 +1,5 @@
 add_clang_executable(clangd
+  ASTManager.cpp
   ClangDMain.cpp
   JSONRPCDispatcher.cpp
   Protocol.cpp
@@ -8,5 +9,7 @@ add_clang_executable(clangd
 target_link_libraries(clangd
   clangBasic
   clangFormat
+  clangFrontend
+  clangTooling
   LLVMSupport
   )
