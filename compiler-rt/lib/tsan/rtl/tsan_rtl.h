@@ -713,7 +713,7 @@ void FuncEntry(ThreadState *thr, uptr pc);
 void FuncExit(ThreadState *thr);
 
 int ThreadCreate(ThreadState *thr, uptr pc, uptr uid, bool detached);
-void ThreadStart(ThreadState *thr, int tid, uptr os_id);
+void ThreadStart(ThreadState *thr, int tid, uptr os_id, bool workerthread);
 void ThreadFinish(ThreadState *thr);
 int ThreadTid(ThreadState *thr, uptr pc, uptr uid);
 void ThreadJoin(ThreadState *thr, uptr pc, int tid);
