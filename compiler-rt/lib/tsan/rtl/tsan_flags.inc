@@ -79,7 +79,7 @@ TSAN_FLAG(bool, die_after_fork, true,
 TSAN_FLAG(const char *, suppressions, "", "Suppressions file name.")
 TSAN_FLAG(bool, ignore_interceptors_accesses, false,
           "Ignore reads and writes from all interceptors.")
-TSAN_FLAG(bool, ignore_noninstrumented_modules, false,
+TSAN_FLAG(bool, ignore_noninstrumented_modules, SANITIZER_MAC ? true : false,
           "Interceptors should only detect races when called from instrumented "
           "modules.")
 TSAN_FLAG(bool, shared_ptr_interceptor, true,
