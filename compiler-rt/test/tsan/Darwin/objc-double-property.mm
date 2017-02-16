@@ -1,7 +1,7 @@
-// RUN: %clangxx_tsan -O0 %s -o %t -framework Foundation && %env_tsan_opts=ignore_interceptors_accesses=1 %run %t 2>&1 | FileCheck %s
-// RUN: %clangxx_tsan -O1 %s -o %t -framework Foundation && %env_tsan_opts=ignore_interceptors_accesses=1 %run %t 2>&1 | FileCheck %s
-// RUN: %clangxx_tsan -O2 %s -o %t -framework Foundation && %env_tsan_opts=ignore_interceptors_accesses=1 %run %t 2>&1 | FileCheck %s
-// RUN: %clangxx_tsan -O3 %s -o %t -framework Foundation && %env_tsan_opts=ignore_interceptors_accesses=1 %run %t 2>&1 | FileCheck %s
+// RUN: %clangxx_tsan -O0 %s -o %t -framework Foundation && %run %t 2>&1 | FileCheck %s
+// RUN: %clangxx_tsan -O1 %s -o %t -framework Foundation && %run %t 2>&1 | FileCheck %s
+// RUN: %clangxx_tsan -O2 %s -o %t -framework Foundation && %run %t 2>&1 | FileCheck %s
+// RUN: %clangxx_tsan -O3 %s -o %t -framework Foundation && %run %t 2>&1 | FileCheck %s
 
 #import <Foundation/Foundation.h>
 
