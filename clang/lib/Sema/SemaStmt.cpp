@@ -2743,14 +2743,16 @@ bool Sema::isCopyElisionCandidate(QualType ReturnType, const VarDecl *VD,
   // ...automatic...
   if (!VD->hasLocalStorage()) return false;
 
+  // Return false if VD is a __block variable. We don't want to implicitly move
+  // out of a __block variable during a return because we cannot assume the
+  // variable will no longer be used.
+  if (VD->hasAttr<BlocksAttr>()) return false;
+
   if (AllowParamOrMoveConstructible)
     return true;
 
   // ...non-volatile...
   if (VD->getType().isVolatileQualified()) return false;
-
-  // __block variables can't be allocated in a way that permits NRVO.
-  if (VD->hasAttr<BlocksAttr>()) return false;
 
   // Variables with higher required alignment than their type's ABI
   // alignment cannot use NRVO.
