@@ -176,6 +176,16 @@ static int doProfileMerging(FILE *ProfileFile) {
   return 0;
 }
 
+/* Create the directory holding the file, if needed. */
+static void createProfileDir(const char *Filename) {
+  size_t Length = strlen(Filename);
+  if (lprofFindFirstDirSeparator(Filename)) {
+    char *Copy = (char *)COMPILER_RT_ALLOCA(Length + 1);
+    strncpy(Copy, Filename, Length + 1);
+    __llvm_profile_recursive_mkdir(Copy);
+  }
+}
+
 /* Open the profile data for merging. It opens the file in r+b mode with
  * file locking.  If the file has content which is compatible with the
  * current process, it also reads in the profile data in the file and merge
@@ -188,6 +198,7 @@ static FILE *openFileForMerging(const char *ProfileFileName) {
   FILE *ProfileFile;
   int rc;
 
+  createProfileDir(ProfileFileName);
   ProfileFile = lprofOpenFileEx(ProfileFileName);
   if (!ProfileFile)
     return NULL;
@@ -237,17 +248,12 @@ static void truncateCurrentFile(void) {
   if (!Filename)
     return;
 
-  /* Create the directory holding the file, if needed. */
-  if (lprofFindFirstDirSeparator(Filename)) {
-    char *Copy = (char *)COMPILER_RT_ALLOCA(Length + 1);
-    strncpy(Copy, Filename, Length + 1);
-    __llvm_profile_recursive_mkdir(Copy);
-  }
-
   /* By pass file truncation to allow online raw profile
    * merging. */
   if (lprofCurFilename.MergePoolSize)
     return;
+
+  createProfileDir(Filename);
 
   /* Truncate the file.  Later we'll reopen and append. */
   File = fopen(Filename, "w");
@@ -586,6 +592,7 @@ int __llvm_profile_write_file(void) {
   int rc, Length;
   const char *Filename;
   char *FilenameBuf;
+  int PDeathSig = 0;
 
   if (lprofProfileDumped()) {
     PROF_NOTE("Profile data not written to file: %s.\n", 
@@ -612,10 +619,18 @@ int __llvm_profile_write_file(void) {
     return -1;
   }
 
+  // Temporarily suspend getting SIGKILL when the parent exits.
+  PDeathSig = lprofSuspendSigKill();
+
   /* Write profile data to the file. */
   rc = writeFile(Filename);
   if (rc)
     PROF_ERR("Failed to write file \"%s\": %s\n", Filename, strerror(errno));
+
+  // Restore SIGKILL.
+  if (PDeathSig == 1)
+    lprofRestoreSigKill();
+
   return rc;
 }
 
