@@ -49,6 +49,12 @@ set(mips64el_SOURCES
     xray_trampoline_mips64.S
     ${XRAY_SOURCES})
 
+set(powerpc64le_SOURCES
+        xray_powerpc64.cc
+        xray_trampoline_powerpc64.cc
+        xray_trampoline_powerpc64.S
+        ${XRAY_SOURCES})
+
 include_directories(..)
 include_directories(../../include)
 

@@ -91,9 +91,11 @@ static bool isPreemptible(const SymbolBody &Body, uint32_t Type) {
 // handling in to the separate function we can simplify the code and do not
 // pollute `handleTlsRelocation` by ARM and MIPS `ifs` statements.
 template <class ELFT, class GOT>
-static unsigned handleNoRelaxTlsRelocation(
-    GOT *Got, uint32_t Type, SymbolBody &Body, InputSectionBase<ELFT> &C,
-    typename ELFT::uint Offset, typename ELFT::uint Addend, RelExpr Expr) {
+static unsigned handleNoRelaxTlsRelocation(GOT *Got, uint32_t Type,
+                                           SymbolBody &Body,
+                                           InputSectionBase<ELFT> &C,
+                                           typename ELFT::uint Offset,
+                                           int64_t Addend, RelExpr Expr) {
   typedef typename ELFT::uint uintX_t;
   auto addModuleReloc = [](SymbolBody &Body, GOT *Got, uintX_t Off, bool LD) {
     // The Dynamic TLS Module Index Relocation can be statically resolved to 1
@@ -109,7 +111,7 @@ static unsigned handleNoRelaxTlsRelocation(
           {Target->TlsModuleIndexRel, Got, Off, false, Dest, 0});
     }
   };
-  if (Expr == R_MIPS_TLSLD || Expr == R_TLSLD_PC) {
+  if (isRelExprOneOf<R_MIPS_TLSLD, R_TLSLD_PC>(Expr)) {
     if (Got->addTlsIndex() && (Config->pic() || Config->EMachine == EM_ARM))
       addModuleReloc(Body, Got, Got->getTlsIndexOff(), true);
     C.Relocations.push_back({Expr, Type, Offset, Addend, &Body});
@@ -133,10 +135,9 @@ static unsigned handleNoRelaxTlsRelocation(
 
 // Returns the number of relocations processed.
 template <class ELFT>
-static unsigned handleTlsRelocation(uint32_t Type, SymbolBody &Body,
-                                    InputSectionBase<ELFT> &C,
-                                    typename ELFT::uint Offset,
-                                    typename ELFT::uint Addend, RelExpr Expr) {
+static unsigned
+handleTlsRelocation(uint32_t Type, SymbolBody &Body, InputSectionBase<ELFT> &C,
+                    typename ELFT::uint Offset, int64_t Addend, RelExpr Expr) {
   if (!(C.Flags & SHF_ALLOC))
     return 0;
 
@@ -153,7 +154,7 @@ static unsigned handleTlsRelocation(uint32_t Type, SymbolBody &Body,
                                             Offset, Addend, Expr);
 
   bool IsPreemptible = isPreemptible(Body, Type);
-  if ((Expr == R_TLSDESC || Expr == R_TLSDESC_PAGE || Expr == R_TLSDESC_CALL) &&
+  if (isRelExprOneOf<R_TLSDESC, R_TLSDESC_PAGE, R_TLSDESC_CALL>(Expr) &&
       Config->Shared) {
     if (In<ELFT>::Got->addDynTlsEntry(Body)) {
       uintX_t Off = In<ELFT>::Got->getGlobalDynOffset(Body);
@@ -165,7 +166,7 @@ static unsigned handleTlsRelocation(uint32_t Type, SymbolBody &Body,
     return 1;
   }
 
-  if (Expr == R_TLSLD_PC || Expr == R_TLSLD) {
+  if (isRelExprOneOf<R_TLSLD_PC, R_TLSLD>(Expr)) {
     // Local-Dynamic relocs can be relaxed to Local-Exec.
     if (!Config->Shared) {
       C.Relocations.push_back(
@@ -187,7 +188,7 @@ static unsigned handleTlsRelocation(uint32_t Type, SymbolBody &Body,
     return 1;
   }
 
-  if (Expr == R_TLSDESC_PAGE || Expr == R_TLSDESC || Expr == R_TLSDESC_CALL ||
+  if (isRelExprOneOf<R_TLSDESC_PAGE, R_TLSDESC, R_TLSDESC_CALL>(Expr) ||
       Target->isTlsGlobalDynamicRel(Type)) {
     if (Config->Shared) {
       if (In<ELFT>::Got->addDynTlsEntry(Body)) {
@@ -412,10 +413,30 @@ template <class ELFT> static bool isReadOnly(SharedSymbol<ELFT> *SS) {
   return false;
 }
 
+// Returns symbols at the same offset as a given symbol.
+//
+// If two or more symbols are at the same offset, and at least one of
+// them are copied by a copy relocation, all of them need to be copied.
+// Otherwise, they would refer different places at runtime.
+template <class ELFT>
+static std::vector<SharedSymbol<ELFT> *> getAliases(SharedSymbol<ELFT> *SS) {
+  typedef typename ELFT::Sym Elf_Sym;
+
+  std::vector<SharedSymbol<ELFT> *> Ret;
+  for (const Elf_Sym &S : SS->file()->getGlobalSymbols()) {
+    if (S.st_shndx != SS->Sym.st_shndx || S.st_value != SS->Sym.st_value)
+      continue;
+    StringRef Name = check(S.getName(SS->file()->getStringTable()));
+    SymbolBody *Sym = Symtab<ELFT>::X->find(Name);
+    if (auto *Alias = dyn_cast_or_null<SharedSymbol<ELFT>>(Sym))
+      Ret.push_back(Alias);
+  }
+  return Ret;
+}
+
 // Reserve space in .bss or .bss.rel.ro for copy relocation.
 template <class ELFT> static void addCopyRelSymbol(SharedSymbol<ELFT> *SS) {
   typedef typename ELFT::uint uintX_t;
-  typedef typename ELFT::Sym Elf_Sym;
 
   // Copy relocation against zero-sized symbol doesn't make sense.
   uintX_t SymSize = SS->template getSize<ELFT>();
@@ -425,37 +446,23 @@ template <class ELFT> static void addCopyRelSymbol(SharedSymbol<ELFT> *SS) {
   // See if this symbol is in a read-only segment. If so, preserve the symbol's
   // memory protection by reserving space in the .bss.rel.ro section.
   bool IsReadOnly = isReadOnly(SS);
-  OutputSection<ELFT> *CopySec =
-      IsReadOnly ? Out<ELFT>::BssRelRo : Out<ELFT>::Bss;
+  OutputSection<ELFT> *OSec = IsReadOnly ? Out<ELFT>::BssRelRo : Out<ELFT>::Bss;
 
-  uintX_t Alignment = getAlignment(SS);
-  uintX_t Off = alignTo(CopySec->Size, Alignment);
-  CopySec->Size = Off + SymSize;
-  CopySec->updateAlignment(Alignment);
-  uintX_t Shndx = SS->Sym.st_shndx;
-  uintX_t Value = SS->Sym.st_value;
-
-  // Create a SyntheticSection in CopySec to hold the .bss and the Copy Reloc
-  auto *CopyISec = make<CopyRelSection<ELFT>>(IsReadOnly, Alignment, SymSize);
-  CopyISec->OutSecOff = Off;
-  CopyISec->OutSec = CopySec;
-  CopySec->Sections.push_back(CopyISec);
+  // Create a SyntheticSection in Out to hold the .bss and the Copy Reloc.
+  auto *ISec =
+      make<CopyRelSection<ELFT>>(IsReadOnly, getAlignment(SS), SymSize);
+  OSec->addSection(ISec);
 
   // Look through the DSO's dynamic symbol table for aliases and create a
   // dynamic symbol for each one. This causes the copy relocation to correctly
   // interpose any aliases.
-  for (const Elf_Sym &S : SS->file()->getGlobalSymbols()) {
-    if (S.st_shndx != Shndx || S.st_value != Value)
-      continue;
-    auto *Alias = dyn_cast_or_null<SharedSymbol<ELFT>>(
-        Symtab<ELFT>::X->find(check(S.getName(SS->file()->getStringTable()))));
-    if (!Alias)
-      continue;
-    Alias->CopySection = CopyISec;
-    Alias->NeedsCopyOrPltAddr = true;
+  for (SharedSymbol<ELFT> *Alias : getAliases(SS)) {
+    Alias->NeedsCopy = true;
+    Alias->Section = ISec;
     Alias->symbol()->IsUsedInRegularObj = true;
   }
-  In<ELFT>::RelaDyn->addReloc({Target->CopyRel, CopyISec, 0, false, SS, 0});
+
+  In<ELFT>::RelaDyn->addReloc({Target->CopyRel, ISec, 0, false, SS, 0});
 }
 
 template <class ELFT>
@@ -495,7 +502,7 @@ static RelExpr adjustExpr(const elf::ObjectFile<ELFT> &File, SymbolBody &Body,
   if (Body.isObject()) {
     // Produce a copy relocation.
     auto *B = cast<SharedSymbol<ELFT>>(&Body);
-    if (!B->needsCopy())
+    if (!B->NeedsCopy)
       addCopyRelSymbol(B);
     return Expr;
   }
@@ -520,7 +527,7 @@ static RelExpr adjustExpr(const elf::ObjectFile<ELFT> &File, SymbolBody &Body,
     // that points to the real function is a dedicated got entry used by the
     // plt. That is identified by special relocation types (R_X86_64_JUMP_SLOT,
     // R_386_JMP_SLOT, etc).
-    Body.NeedsCopyOrPltAddr = true;
+    Body.NeedsPltAddr = true;
     return toPlt(Expr);
   }
   error("symbol '" + toString(Body) + "' defined in " + toString(Body.File) +
@@ -530,14 +537,11 @@ static RelExpr adjustExpr(const elf::ObjectFile<ELFT> &File, SymbolBody &Body,
 }
 
 template <class ELFT, class RelTy>
-static typename ELFT::uint computeAddend(const elf::ObjectFile<ELFT> &File,
-                                         const uint8_t *SectionData,
-                                         const RelTy *End, const RelTy &RI,
-                                         RelExpr Expr, SymbolBody &Body) {
-  typedef typename ELFT::uint uintX_t;
-
+static int64_t computeAddend(const elf::ObjectFile<ELFT> &File,
+                             const uint8_t *SectionData, const RelTy *End,
+                             const RelTy &RI, RelExpr Expr, SymbolBody &Body) {
   uint32_t Type = RI.getType(Config->Mips64EL);
-  uintX_t Addend = getAddend<ELFT>(RI);
+  int64_t Addend = getAddend<ELFT>(RI);
   const uint8_t *BufLoc = SectionData + RI.r_offset;
   if (!RelTy::IsRela)
     Addend += Target->getImplicitAddend(BufLoc, Type);
@@ -671,11 +675,11 @@ static void scanRelocs(InputSectionBase<ELFT> &C, ArrayRef<RelTy> Rels) {
 
     // This relocation does not require got entry, but it is relative to got and
     // needs it to be created. Here we request for that.
-    if (Expr == R_GOTONLY_PC || Expr == R_GOTONLY_PC_FROM_END ||
-        Expr == R_GOTREL || Expr == R_GOTREL_FROM_END || Expr == R_PPC_TOC)
+    if (isRelExprOneOf<R_GOTONLY_PC, R_GOTONLY_PC_FROM_END, R_GOTREL,
+                       R_GOTREL_FROM_END, R_PPC_TOC>(Expr))
       In<ELFT>::Got->HasGotOffRel = true;
 
-    uintX_t Addend = computeAddend(*File, Buf, E, RI, Expr, Body);
+    int64_t Addend = computeAddend(*File, Buf, E, RI, Expr, Body);
 
     if (unsigned Processed =
             handleTlsRelocation<ELFT>(Type, Body, C, Offset, Addend, Expr)) {

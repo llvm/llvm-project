@@ -1,5 +1,4 @@
-; RUN: llc -march=amdgcn < %s | FileCheck %s
-; REQUIRES: asserts
+; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck %s
 ;
 ; This testcase used to cause the following crash:
 ;
@@ -18,14 +17,16 @@
 ;
 ; Test for a valid output:
 ; CHECK: image_sample_c_d_o
-
-target triple = "amdgcn--"
-
 define amdgpu_ps <{ i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, float, float, float, float, float, float, float, float, float, float, float, float, float, float }> @main([17 x <16 x i8>] addrspace(2)* byval dereferenceable(18446744073709551615) %arg, [16 x <16 x i8>] addrspace(2)* byval dereferenceable(18446744073709551615) %arg1, [32 x <8 x i32>] addrspace(2)* byval dereferenceable(18446744073709551615) %arg2, [16 x <8 x i32>] addrspace(2)* byval dereferenceable(18446744073709551615) %arg3, [16 x <4 x i32>] addrspace(2)* byval dereferenceable(18446744073709551615) %arg4, float inreg %arg5, i32 inreg %arg6, <2 x i32> %arg7, <2 x i32> %arg8, <2 x i32> %arg9, <3 x i32> %arg10, <2 x i32> %arg11, <2 x i32> %arg12, <2 x i32> %arg13, float %arg14, float %arg15, float %arg16, float %arg17, float %arg18, i32 %arg19, i32 %arg20, float %arg21, i32 %arg22) #0 {
 main_body:
-  %tmp = call float @llvm.SI.fs.interp(i32 3, i32 0, i32 %arg6, <2 x i32> %arg8)
-  %tmp23 = fadd float %tmp, 0xBFA99999A0000000
-  %tmp24 = fadd float %tmp, 0x3FA99999A0000000
+  %i.i = extractelement <2 x i32> %arg8, i32 0
+  %j.i = extractelement <2 x i32> %arg8, i32 1
+  %i.f.i = bitcast i32 %i.i to float
+  %j.f.i = bitcast i32 %j.i to float
+  %p1.i = call float @llvm.amdgcn.interp.p1(float %i.f.i, i32 3, i32 0, i32 %arg6) #1
+  %p2.i = call float @llvm.amdgcn.interp.p2(float %p1.i, float %j.f.i, i32 3, i32 0, i32 %arg6) #1
+  %tmp23 = fadd float %p2.i, 0xBFA99999A0000000
+  %tmp24 = fadd float %p2.i, 0x3FA99999A0000000
   %tmp25 = bitcast float %tmp23 to i32
   %tmp26 = insertelement <16 x i32> <i32 212739, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>, i32 %tmp25, i32 1
   %tmp27 = insertelement <16 x i32> %tmp26, i32 undef, i32 2
@@ -54,9 +55,20 @@ main_body:
   ret <{ i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, float, float, float, float, float, float, float, float, float, float, float, float, float, float }> %tmp49
 }
 
-declare float @llvm.SI.fs.interp(i32, i32, i32, <2 x i32>) #1
-declare float @llvm.SI.load.const(<16 x i8>, i32) #1
-declare <4 x float> @llvm.SI.image.sample.c.d.o.v16i32(<16 x i32>, <8 x i32>, <4 x i32>, i32, i32, i32, i32, i32, i32, i32, i32) #1
+; Function Attrs: nounwind readnone
+declare float @llvm.SI.load.const(<16 x i8>, i32) #0
 
-attributes #0 = { "InitialPSInputAddr"="36983" "target-cpu"="tonga" }
-attributes #1 = { nounwind readnone }
+; Function Attrs: nounwind readnone
+declare <4 x float> @llvm.SI.image.sample.c.d.o.v16i32(<16 x i32>, <8 x i32>, <4 x i32>, i32, i32, i32, i32, i32, i32, i32, i32) #0
+
+; Function Attrs: nounwind readnone
+declare float @llvm.amdgcn.interp.p1(float, i32, i32, i32) #0
+
+; Function Attrs: nounwind readnone
+declare float @llvm.amdgcn.interp.p2(float, float, i32, i32, i32) #0
+
+; Function Attrs: nounwind readnone
+declare float @llvm.amdgcn.interp.mov(i32, i32, i32, i32) #0
+
+attributes #0 = { nounwind readnone }
+attributes #1 = { nounwind }

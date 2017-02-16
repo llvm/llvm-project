@@ -9152,13 +9152,15 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
     } else if (CXXConversionDecl *Conversion
                = dyn_cast<CXXConversionDecl>(NewFD)) {
       ActOnConversionDeclarator(Conversion);
-    } else if (NewFD->isDeductionGuide() &&
-               NewFD->getTemplateSpecializationKind() ==
-                   TSK_ExplicitSpecialization) {
+    } else if (NewFD->isDeductionGuide()) {
+      if (auto *TD = NewFD->getDescribedFunctionTemplate())
+        CheckDeductionGuideTemplate(TD);
+
       // A deduction guide is not on the list of entities that can be
       // explicitly specialized.
-      Diag(NewFD->getLocStart(), diag::err_deduction_guide_specialized)
-        << /*explicit specialization*/ 1;
+      if (NewFD->getTemplateSpecializationKind() == TSK_ExplicitSpecialization)
+        Diag(NewFD->getLocStart(), diag::err_deduction_guide_specialized)
+            << /*explicit specialization*/ 1;
     }
 
     // Find any virtual functions that this function overrides.
@@ -13773,8 +13775,11 @@ void Sema::ActOnTagFinishDefinition(Scope *S, Decl *TagD,
       RD->completeDefinition();
   }
 
-  if (isa<CXXRecordDecl>(Tag))
+  if (auto *RD = dyn_cast<CXXRecordDecl>(Tag)) {
     FieldCollector->FinishClass();
+    if (Context.getLangOpts().Modules)
+      RD->computeODRHash();
+  }
 
   // Exit this scope of this tag's definition.
   PopDeclContext();

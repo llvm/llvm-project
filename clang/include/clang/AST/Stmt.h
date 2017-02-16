@@ -39,6 +39,7 @@ namespace clang {
   class Expr;
   class IdentifierInfo;
   class LabelDecl;
+  class ODRHash;
   class ParmVarDecl;
   class PrinterHelper;
   struct PrintingPolicy;
@@ -436,6 +437,8 @@ public:
   /// written in the source.
   void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context,
                bool Canonical) const;
+
+  void ProcessODRHash(llvm::FoldingSetNodeID &ID, ODRHash& Hash) const;
 };
 
 /// DeclStmt - Adaptor class for mixing declarations with statements and

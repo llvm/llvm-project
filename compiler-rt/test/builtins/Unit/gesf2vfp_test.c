@@ -19,7 +19,7 @@
 
 extern int __gesf2vfp(float a, float b);
 
-#if __arm__
+#if __arm__ && __VFP_FP__
 int test__gesf2vfp(float a, float b)
 {
     int actual = __gesf2vfp(a, b);
@@ -33,7 +33,7 @@ int test__gesf2vfp(float a, float b)
 
 int main()
 {
-#if __arm__
+#if __arm__ && __VFP_FP__
     if (test__gesf2vfp(0.0, 0.0))
         return 1;
     if (test__gesf2vfp(1.1, 1.0))

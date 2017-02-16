@@ -830,8 +830,22 @@ void PassManagerBuilder::populateThinLTOPassManager(
   if (VerifyInput)
     PM.add(createVerifierPass());
 
-  if (Summary)
+  if (Summary) {
+    // These passes import type identifier resolutions for whole-program
+    // devirtualization and CFI. They must run early because other passes may
+    // disturb the specific instruction patterns that these passes look for,
+    // creating dependencies on resolutions that may not appear in the summary.
+    //
+    // For example, GVN may transform the pattern assume(type.test) appearing in
+    // two basic blocks into assume(phi(type.test, type.test)), which would
+    // transform a dependency on a WPD resolution into a dependency on a type
+    // identifier resolution for CFI.
+    //
+    // Also, WPD has access to more precise information than ICP and can
+    // devirtualize more effectively, so it should operate on the IR first.
+    PM.add(createWholeProgramDevirtPass(PassSummaryAction::Import, Summary));
     PM.add(createLowerTypeTestsPass(PassSummaryAction::Import, Summary));
+  }
 
   populateModulePassManager(PM);
 

@@ -117,6 +117,70 @@ def note_module_odr_violation_different_definitions : Note<
 def err_module_odr_violation_different_instantiations : Error<
   "instantiation of %q0 is different in different modules">;
 
+def err_module_odr_violation_mismatch_decl : Error<
+  "%q0 has different definitions in different modules; first difference is "
+  "%select{definition in module '%2'|defined here}1 found "
+  "%select{end of class|public access specifier|private access specifier|"
+  "protected access specifier|friend declaration|enum|"
+  "static assert|typedef|type alias|method|constructor|destructor|"
+  "conversion operator|field|other}3">;
+def note_module_odr_violation_mismatch_decl : Note<"but in '%0' found "
+  "%select{end of class|public access specifier|private access specifier|"
+  "protected access specifier|friend declaration|enum|"
+  "static assert|typedef|type alias|method|constructor|destructor|"
+  "conversion operator|field|other}1">;
+
+def err_module_odr_violation_mismatch_decl_diff : Error<
+  "%q0 has different definitions in different modules; first difference is "
+  "%select{definition in module '%2'|defined here}1 found "
+  "%select{friend %4|enum %4|element %4 in enum %5|"
+  "element %4 in enum %5 with initializer|"
+  "element %4 in enum %5 with no initializer|"
+  "element %4 in enum %5 with initializer|"
+  "enum %4 has %5 element%s5|"
+  "static assert with condition|"
+  "static assert with message|"
+  "static assert with %select{|no}4 message|"
+  "%select{typedef|type alias}4 name %5|"
+  "method named %4|"
+  "method %4 is %select{non-|}5static|"
+  "method %4 is %select{not |}5inline|"
+  "method %4 is %select{not |}5const|"
+  "method %4 has %5 parameter%s5|"
+  "method %4 has %ordinal5 parameter %select{named %7|with no name}6|"
+  "method %4 has %ordinal5 parameter with type %6|"
+  "method %4 has %ordinal5 parameter with default argument|"
+  "method %4 has %ordinal5 parameter with %select{no |}6 default argument|"
+  "method %4 has %select{|no }5body|"
+  "method %4 has different body|"
+  "field %4|"
+  "%select{field|bitfield}5 %4|"
+  "%select{non-mutable|mutable}5 %4}3">;
+def note_module_odr_violation_mismatch_decl_diff : Note<"but in '%0' found "
+  "%select{other friend %2|other enum %2|different element %2 in enum %3|"
+  "element %2 in enum %3 with initializer|"
+  "element %2 in enum %3 with no initializer|"
+  "element %2 in enum %3 with different initializer|"
+  "enum %2 has %3 element%s3|"
+  "static assert with different condition|"
+  "static assert with different message|"
+  "static assert with %select{|no}2 message|"
+  "different %select{typedef|type alias}2 name %3|"
+  "method named %2|"
+  "method %2 is %select{non-|}3static|"
+  "method %2 is %select{not |}3inline|"
+  "method %2 is %select{not |}3const|"
+  "method %2 has %3 parameter%s3|"
+  "method %2 has %ordinal3 parameter %select{named %5|with no name}4|"
+  "method %2 has %ordinal3 parameter with type %4|"
+  "method %2 has %ordinal3 parameter with different default argument|"
+  "method %2 has %ordinal3 parameter with %select{no |}4default argument|"
+  "method %2 has %select{|no }3body|"
+  "method %2 has different body|"
+  "field %2|"
+  "%select{field|bitfield}3 %2|"
+  "%select{non-mutable|mutable}3 %2}1">;
+
 def warn_module_uses_date_time : Warning<
   "%select{precompiled header|module}0 uses __DATE__ or __TIME__">,
   InGroup<DiagGroup<"pch-date-time">>;

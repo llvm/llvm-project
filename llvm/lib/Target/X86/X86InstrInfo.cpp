@@ -5794,6 +5794,96 @@ bool X86InstrInfo::isUnpredicatedTerminator(const MachineInstr &MI) const {
   return !isPredicated(MI);
 }
 
+bool X86InstrInfo::isUnconditionalTailCall(const MachineInstr &MI) const {
+  switch (MI.getOpcode()) {
+  case X86::TCRETURNdi:
+  case X86::TCRETURNri:
+  case X86::TCRETURNmi:
+  case X86::TCRETURNdi64:
+  case X86::TCRETURNri64:
+  case X86::TCRETURNmi64:
+    return true;
+  default:
+    return false;
+  }
+}
+
+bool X86InstrInfo::canMakeTailCallConditional(
+    SmallVectorImpl<MachineOperand> &BranchCond,
+    const MachineInstr &TailCall) const {
+  if (TailCall.getOpcode() != X86::TCRETURNdi &&
+      TailCall.getOpcode() != X86::TCRETURNdi64) {
+    // Only direct calls can be done with a conditional branch.
+    return false;
+  }
+
+  if (Subtarget.isTargetWin64()) {
+    // Conditional tail calls confuse the Win64 unwinder.
+    // TODO: Allow them for "leaf" functions; PR30337.
+    return false;
+  }
+
+  assert(BranchCond.size() == 1);
+  if (BranchCond[0].getImm() > X86::LAST_VALID_COND) {
+    // Can't make a conditional tail call with this condition.
+    return false;
+  }
+
+  const X86MachineFunctionInfo *X86FI =
+      TailCall.getParent()->getParent()->getInfo<X86MachineFunctionInfo>();
+  if (X86FI->getTCReturnAddrDelta() != 0 ||
+      TailCall.getOperand(1).getImm() != 0) {
+    // A conditional tail call cannot do any stack adjustment.
+    return false;
+  }
+
+  return true;
+}
+
+void X86InstrInfo::replaceBranchWithTailCall(
+    MachineBasicBlock &MBB, SmallVectorImpl<MachineOperand> &BranchCond,
+    const MachineInstr &TailCall) const {
+  assert(canMakeTailCallConditional(BranchCond, TailCall));
+
+  MachineBasicBlock::iterator I = MBB.end();
+  while (I != MBB.begin()) {
+    --I;
+    if (I->isDebugValue())
+      continue;
+    if (!I->isBranch())
+      assert(0 && "Can't find the branch to replace!");
+
+    X86::CondCode CC = getCondFromBranchOpc(I->getOpcode());
+    assert(BranchCond.size() == 1);
+    if (CC != BranchCond[0].getImm())
+      continue;
+
+    break;
+  }
+
+  unsigned Opc = TailCall.getOpcode() == X86::TCRETURNdi ? X86::TCRETURNdicc
+                                                         : X86::TCRETURNdi64cc;
+
+  auto MIB = BuildMI(MBB, I, MBB.findDebugLoc(I), get(Opc));
+  MIB->addOperand(TailCall.getOperand(0)); // Destination.
+  MIB.addImm(0); // Stack offset (not used).
+  MIB->addOperand(BranchCond[0]); // Condition.
+  MIB.copyImplicitOps(TailCall); // Regmask and (imp-used) parameters.
+
+  // Add implicit uses and defs of all live regs potentially clobbered by the
+  // call. This way they still appear live across the call.
+  LivePhysRegs LiveRegs(&getRegisterInfo());
+  LiveRegs.addLiveOuts(MBB);
+  SmallVector<std::pair<unsigned, const MachineOperand *>, 8> Clobbers;
+  LiveRegs.stepForward(*MIB, Clobbers);
+  for (const auto &C : Clobbers) {
+    MIB.addReg(C.first, RegState::Implicit);
+    MIB.addReg(C.first, RegState::Implicit | RegState::Define);
+  }
+
+  I->eraseFromParent();
+}
+
 // Given a MBB and its TBB, find the FBB which was a fallthrough MBB (it may
 // not be a fallthrough MBB now due to layout changes). Return nullptr if the
 // fallthrough MBB cannot be identified.

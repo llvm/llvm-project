@@ -17,7 +17,7 @@
 #include <math.h>
 
 
-#if __arm__
+#if __arm__ && __VFP_FP__
 extern COMPILER_RT_ABI double __negdf2vfp(double a);
 
 int test__negdf2vfp(double a)
@@ -33,7 +33,7 @@ int test__negdf2vfp(double a)
 
 int main()
 {
-#if __arm__
+#if __arm__ && __VFP_FP__
     if (test__negdf2vfp(1.0))
         return 1;
     if (test__negdf2vfp(HUGE_VALF))

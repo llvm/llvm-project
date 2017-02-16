@@ -150,35 +150,44 @@ namespace cxx1z_direct_enum_init {
 
     void f(T);
     f(T{0});
+
+    char c;
+    auto t3 = T{c};
   }
 #if __cplusplus <= 201402L
-  // expected-error@-15 5{{cannot initialize}}
-  // expected-error@-15 5{{cannot initialize}}
-  // expected-error@-15 5{{cannot initialize}}
+  // expected-error@-18 5{{cannot initialize}}
+  // expected-error@-18 5{{cannot initialize}}
+  // expected-error@-18 5{{cannot initialize}}
   //
   //
-  // expected-error@-15 5{{cannot initialize}}
+  // expected-error@-18 5{{cannot initialize}}
   //
-  // expected-error@-15 5{{cannot initialize}}
+  // expected-error@-18 5{{cannot initialize}}
   //
-  // expected-error@-15 5{{cannot initialize}}
+  // expected-error@-18 5{{cannot initialize}}
   //
   //
-  // expected-error@-15 5{{cannot initialize}}
+  // expected-error@-18 5{{cannot initialize}}
+  //
+  //
+  // expected-error@-18 5{{cannot initialize}}
 #else
-  // expected-error@-29 {{cannot initialize}}
-  // expected-error@-29 {{cannot initialize}}
-  // expected-error@-29 {{cannot initialize}}
+  // expected-error@-35 {{cannot initialize}}
+  // expected-error@-35 {{cannot initialize}}
+  // expected-error@-35 {{cannot initialize}}
   //
   //
-  // expected-error@-29 {{cannot initialize}}
+  // expected-error@-35 {{cannot initialize}}
   //
-  // expected-error@-29 {{cannot initialize}}
+  // expected-error@-35 {{cannot initialize}}
   //
-  // expected-error@-29 {{cannot initialize}}
+  // expected-error@-35 {{cannot initialize}}
   //
   //
-  // expected-error@-29 {{cannot initialize}}
+  // expected-error@-35 {{cannot initialize}}
+  //
+  //
+  // expected-error@-35 {{cannot initialize}}
 #endif
 
   template<typename T> void bad() {
@@ -252,4 +261,12 @@ namespace cxx1z_direct_enum_init {
     (void)B{0.0}; // expected-error {{type 'double' cannot be narrowed}}
 #endif
   }
+
+#if __cplusplus > 201402L
+  enum class F : unsigned {};
+  F f1(unsigned x) { return F{x}; }
+  F f2(const unsigned x) { return F{x}; }
+  F f3(bool x) { return F{x}; }
+  F f4(const bool x) { return F{x}; }
+#endif
 }

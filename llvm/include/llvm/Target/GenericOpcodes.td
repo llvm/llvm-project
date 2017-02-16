@@ -98,6 +98,14 @@ def G_VASTART : Instruction {
   let mayStore = 1;
 }
 
+def G_VAARG : Instruction {
+  let OutOperandList = (outs type0:$val);
+  let InOperandList = (ins type1:$list, unknown:$align);
+  let hasSideEffects = 0;
+  let mayLoad = 1;
+  let mayStore = 1;
+}
+
 //------------------------------------------------------------------------------
 // Binary ops.
 //------------------------------------------------------------------------------
