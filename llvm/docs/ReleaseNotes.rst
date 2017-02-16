@@ -96,6 +96,25 @@ For more information on LLVM Coroutines and the LLVM implementation, see
 `2016 LLVM Developers’ Meeting talk on LLVM Coroutines
 <http://llvm.org/devmtg/2016-11/#talk4>`_.
 
+Regcall and Vectorcall Calling Conventions
+--------------------------------------------------
+
+Support was added for _regcall calling convention.
+Existing __vectorcall calling convention support was extended to include
+correct handling of HVAs.
+
+The __vectorcall calling convention was introduced by Microsoft to
+enhance register usage when passing parameters.
+For more information please read `__vectorcall documentation
+<https://msdn.microsoft.com/en-us/library/dn375768.aspx>`_.
+
+The __regcall calling convention was introduced by Intel to 
+optimize parameter transfer on function call.
+This calling convention ensures that as many values as possible are 
+passed or returned in registers.
+For more information please read `__regcall documentation
+<https://software.intel.com/en-us/node/693069>`_.
+
 Code Generation Testing
 -----------------------
 
