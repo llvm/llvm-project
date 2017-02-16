@@ -1527,7 +1527,6 @@ void ASTDeclReader::ReadCXXDefinitionData(
   Data.ImplicitCopyAssignmentHasConstParam = Record.readInt();
   Data.HasDeclaredCopyConstructorWithConstParam = Record.readInt();
   Data.HasDeclaredCopyAssignmentWithConstParam = Record.readInt();
-  Data.ODRHash = Record.readInt();
 
   Data.NumBases = Record.readInt();
   if (Data.NumBases)
@@ -1658,7 +1657,6 @@ void ASTDeclReader::MergeDefinitionData(
   OR_FIELD(HasDeclaredCopyConstructorWithConstParam)
   OR_FIELD(HasDeclaredCopyAssignmentWithConstParam)
   MATCH_FIELD(IsLambda)
-  MATCH_FIELD(ODRHash)
 #undef OR_FIELD
 #undef MATCH_FIELD
 

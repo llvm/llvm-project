@@ -234,6 +234,11 @@ void LinkerScript<ELFT>::computeInputSections(InputSectionDescription *I) {
     for (InputSectionBase<ELFT> *S : Symtab<ELFT>::X->Sections) {
       if (!S->Live || S->Assigned)
         continue;
+      // For -emit-relocs we have to ignore entries like
+      //   .rela.dyn : { *(.rela.data) }
+      // which are common because they are in the default bfd script.
+      if (S->Type == SHT_REL || S->Type == SHT_RELA)
+        continue;
 
       StringRef Filename = basename(S);
       if (!I->FilePat.match(Filename) || Pat.ExcludedFilePat.match(Filename))

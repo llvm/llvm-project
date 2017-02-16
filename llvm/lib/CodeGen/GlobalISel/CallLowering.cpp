@@ -132,8 +132,16 @@ bool CallLowering::handleAssignments(MachineIRBuilder &MIRBuilder,
       return false;
   }
 
-  for (unsigned i = 0, e = Args.size(); i != e; ++i) {
-    CCValAssign &VA = ArgLocs[i];
+  for (unsigned i = 0, e = Args.size(), j = 0; i != e; ++i, ++j) {
+    assert(j < ArgLocs.size() && "Skipped too many arg locs");
+
+    CCValAssign &VA = ArgLocs[j];
+    assert(VA.getValNo() == i && "Location doesn't correspond to current arg");
+
+    if (VA.needsCustom()) {
+      j += Handler.assignCustomValue(Args[i], makeArrayRef(ArgLocs).slice(j));
+      continue;
+    }
 
     if (VA.isRegLoc())
       Handler.assignValueToReg(Args[i].Reg, VA.getLocReg(), VA);

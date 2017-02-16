@@ -882,8 +882,8 @@ define <8 x i16> @test_mask_packs_epi32_rr_128(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    vpackssdw %xmm1, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0x6b,0xc1]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
-  %res = call <8 x i16> @llvm.x86.avx512.mask.packssdw.128(<4 x i32> %a, <4 x i32> %b, <8 x i16> zeroinitializer, i8 -1)
-  ret <8 x i16> %res
+  %1 = call <8 x i16> @llvm.x86.sse2.packssdw.128(<4 x i32> %a, <4 x i32> %b)
+  ret <8 x i16> %1
 }
 
 define <8 x i16> @test_mask_packs_epi32_rrk_128(<4 x i32> %a, <4 x i32> %b, <8 x i16> %passThru, i8 %mask) {
@@ -893,8 +893,10 @@ define <8 x i16> @test_mask_packs_epi32_rrk_128(<4 x i32> %a, <4 x i32> %b, <8 x
 ; CHECK-NEXT:    vpackssdw %xmm1, %xmm0, %xmm2 {%k1} ## encoding: [0x62,0xf1,0x7d,0x09,0x6b,0xd1]
 ; CHECK-NEXT:    vmovdqa %xmm2, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0x6f,0xc2]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
-  %res = call <8 x i16> @llvm.x86.avx512.mask.packssdw.128(<4 x i32> %a, <4 x i32> %b, <8 x i16> %passThru, i8 %mask)
-  ret <8 x i16> %res
+  %1 = call <8 x i16> @llvm.x86.sse2.packssdw.128(<4 x i32> %a, <4 x i32> %b)
+  %2 = bitcast i8 %mask to <8 x i1>
+  %3 = select <8 x i1> %2, <8 x i16> %1, <8 x i16> %passThru
+  ret <8 x i16> %3
 }
 
 define <8 x i16> @test_mask_packs_epi32_rrkz_128(<4 x i32> %a, <4 x i32> %b, i8 %mask) {
@@ -903,8 +905,10 @@ define <8 x i16> @test_mask_packs_epi32_rrkz_128(<4 x i32> %a, <4 x i32> %b, i8 
 ; CHECK-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
 ; CHECK-NEXT:    vpackssdw %xmm1, %xmm0, %xmm0 {%k1} {z} ## encoding: [0x62,0xf1,0x7d,0x89,0x6b,0xc1]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
-  %res = call <8 x i16> @llvm.x86.avx512.mask.packssdw.128(<4 x i32> %a, <4 x i32> %b, <8 x i16> zeroinitializer, i8 %mask)
-  ret <8 x i16> %res
+  %1 = call <8 x i16> @llvm.x86.sse2.packssdw.128(<4 x i32> %a, <4 x i32> %b)
+  %2 = bitcast i8 %mask to <8 x i1>
+  %3 = select <8 x i1> %2, <8 x i16> %1, <8 x i16> zeroinitializer
+  ret <8 x i16> %3
 }
 
 define <8 x i16> @test_mask_packs_epi32_rm_128(<4 x i32> %a, <4 x i32>* %ptr_b) {
@@ -913,8 +917,8 @@ define <8 x i16> @test_mask_packs_epi32_rm_128(<4 x i32> %a, <4 x i32>* %ptr_b) 
 ; CHECK-NEXT:    vpackssdw (%rdi), %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0x6b,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %b = load <4 x i32>, <4 x i32>* %ptr_b
-  %res = call <8 x i16> @llvm.x86.avx512.mask.packssdw.128(<4 x i32> %a, <4 x i32> %b, <8 x i16> zeroinitializer, i8 -1)
-  ret <8 x i16> %res
+  %1 = call <8 x i16> @llvm.x86.sse2.packssdw.128(<4 x i32> %a, <4 x i32> %b)
+  ret <8 x i16> %1
 }
 
 define <8 x i16> @test_mask_packs_epi32_rmk_128(<4 x i32> %a, <4 x i32>* %ptr_b, <8 x i16> %passThru, i8 %mask) {
@@ -925,8 +929,10 @@ define <8 x i16> @test_mask_packs_epi32_rmk_128(<4 x i32> %a, <4 x i32>* %ptr_b,
 ; CHECK-NEXT:    vmovdqa %xmm1, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0x6f,0xc1]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %b = load <4 x i32>, <4 x i32>* %ptr_b
-  %res = call <8 x i16> @llvm.x86.avx512.mask.packssdw.128(<4 x i32> %a, <4 x i32> %b, <8 x i16> %passThru, i8 %mask)
-  ret <8 x i16> %res
+  %1 = call <8 x i16> @llvm.x86.sse2.packssdw.128(<4 x i32> %a, <4 x i32> %b)
+  %2 = bitcast i8 %mask to <8 x i1>
+  %3 = select <8 x i1> %2, <8 x i16> %1, <8 x i16> %passThru
+  ret <8 x i16> %3
 }
 
 define <8 x i16> @test_mask_packs_epi32_rmkz_128(<4 x i32> %a, <4 x i32>* %ptr_b, i8 %mask) {
@@ -936,8 +942,10 @@ define <8 x i16> @test_mask_packs_epi32_rmkz_128(<4 x i32> %a, <4 x i32>* %ptr_b
 ; CHECK-NEXT:    vpackssdw (%rdi), %xmm0, %xmm0 {%k1} {z} ## encoding: [0x62,0xf1,0x7d,0x89,0x6b,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %b = load <4 x i32>, <4 x i32>* %ptr_b
-  %res = call <8 x i16> @llvm.x86.avx512.mask.packssdw.128(<4 x i32> %a, <4 x i32> %b, <8 x i16> zeroinitializer, i8 %mask)
-  ret <8 x i16> %res
+  %1 = call <8 x i16> @llvm.x86.sse2.packssdw.128(<4 x i32> %a, <4 x i32> %b)
+  %2 = bitcast i8 %mask to <8 x i1>
+  %3 = select <8 x i1> %2, <8 x i16> %1, <8 x i16> zeroinitializer
+  ret <8 x i16> %3
 }
 
 define <8 x i16> @test_mask_packs_epi32_rmb_128(<4 x i32> %a, i32* %ptr_b) {
@@ -948,8 +956,8 @@ define <8 x i16> @test_mask_packs_epi32_rmb_128(<4 x i32> %a, i32* %ptr_b) {
   %q = load i32, i32* %ptr_b
   %vecinit.i = insertelement <4 x i32> undef, i32 %q, i32 0
   %b = shufflevector <4 x i32> %vecinit.i, <4 x i32> undef, <4 x i32> zeroinitializer
-  %res = call <8 x i16> @llvm.x86.avx512.mask.packssdw.128(<4 x i32> %a, <4 x i32> %b, <8 x i16> zeroinitializer, i8 -1)
-  ret <8 x i16> %res
+  %1 = call <8 x i16> @llvm.x86.sse2.packssdw.128(<4 x i32> %a, <4 x i32> %b)
+  ret <8 x i16> %1
 }
 
 define <8 x i16> @test_mask_packs_epi32_rmbk_128(<4 x i32> %a, i32* %ptr_b, <8 x i16> %passThru, i8 %mask) {
@@ -962,8 +970,10 @@ define <8 x i16> @test_mask_packs_epi32_rmbk_128(<4 x i32> %a, i32* %ptr_b, <8 x
   %q = load i32, i32* %ptr_b
   %vecinit.i = insertelement <4 x i32> undef, i32 %q, i32 0
   %b = shufflevector <4 x i32> %vecinit.i, <4 x i32> undef, <4 x i32> zeroinitializer
-  %res = call <8 x i16> @llvm.x86.avx512.mask.packssdw.128(<4 x i32> %a, <4 x i32> %b, <8 x i16> %passThru, i8 %mask)
-  ret <8 x i16> %res
+  %1 = call <8 x i16> @llvm.x86.sse2.packssdw.128(<4 x i32> %a, <4 x i32> %b)
+  %2 = bitcast i8 %mask to <8 x i1>
+  %3 = select <8 x i1> %2, <8 x i16> %1, <8 x i16> %passThru
+  ret <8 x i16> %3
 }
 
 define <8 x i16> @test_mask_packs_epi32_rmbkz_128(<4 x i32> %a, i32* %ptr_b, i8 %mask) {
@@ -975,19 +985,21 @@ define <8 x i16> @test_mask_packs_epi32_rmbkz_128(<4 x i32> %a, i32* %ptr_b, i8 
   %q = load i32, i32* %ptr_b
   %vecinit.i = insertelement <4 x i32> undef, i32 %q, i32 0
   %b = shufflevector <4 x i32> %vecinit.i, <4 x i32> undef, <4 x i32> zeroinitializer
-  %res = call <8 x i16> @llvm.x86.avx512.mask.packssdw.128(<4 x i32> %a, <4 x i32> %b, <8 x i16> zeroinitializer, i8 %mask)
-  ret <8 x i16> %res
+  %1 = call <8 x i16> @llvm.x86.sse2.packssdw.128(<4 x i32> %a, <4 x i32> %b)
+  %2 = bitcast i8 %mask to <8 x i1>
+  %3 = select <8 x i1> %2, <8 x i16> %1, <8 x i16> zeroinitializer
+  ret <8 x i16> %3
 }
 
-declare <8 x i16> @llvm.x86.avx512.mask.packssdw.128(<4 x i32>, <4 x i32>, <8 x i16>, i8)
+declare <8 x i16> @llvm.x86.sse2.packssdw.128(<4 x i32>, <4 x i32>)
 
 define <16 x i16> @test_mask_packs_epi32_rr_256(<8 x i32> %a, <8 x i32> %b) {
 ; CHECK-LABEL: test_mask_packs_epi32_rr_256:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    vpackssdw %ymm1, %ymm0, %ymm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfd,0x6b,0xc1]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
-  %res = call <16 x i16> @llvm.x86.avx512.mask.packssdw.256(<8 x i32> %a, <8 x i32> %b, <16 x i16> zeroinitializer, i16 -1)
-  ret <16 x i16> %res
+  %1 = call <16 x i16> @llvm.x86.avx2.packssdw(<8 x i32> %a, <8 x i32> %b)
+  ret <16 x i16> %1
 }
 
 define <16 x i16> @test_mask_packs_epi32_rrk_256(<8 x i32> %a, <8 x i32> %b, <16 x i16> %passThru, i16 %mask) {
@@ -997,8 +1009,10 @@ define <16 x i16> @test_mask_packs_epi32_rrk_256(<8 x i32> %a, <8 x i32> %b, <16
 ; CHECK-NEXT:    vpackssdw %ymm1, %ymm0, %ymm2 {%k1} ## encoding: [0x62,0xf1,0x7d,0x29,0x6b,0xd1]
 ; CHECK-NEXT:    vmovdqa %ymm2, %ymm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfd,0x6f,0xc2]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
-  %res = call <16 x i16> @llvm.x86.avx512.mask.packssdw.256(<8 x i32> %a, <8 x i32> %b, <16 x i16> %passThru, i16 %mask)
-  ret <16 x i16> %res
+  %1 = call <16 x i16> @llvm.x86.avx2.packssdw(<8 x i32> %a, <8 x i32> %b)
+  %2 = bitcast i16 %mask to <16 x i1>
+  %3 = select <16 x i1> %2, <16 x i16> %1, <16 x i16> %passThru
+  ret <16 x i16> %3
 }
 
 define <16 x i16> @test_mask_packs_epi32_rrkz_256(<8 x i32> %a, <8 x i32> %b, i16 %mask) {
@@ -1007,8 +1021,10 @@ define <16 x i16> @test_mask_packs_epi32_rrkz_256(<8 x i32> %a, <8 x i32> %b, i1
 ; CHECK-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
 ; CHECK-NEXT:    vpackssdw %ymm1, %ymm0, %ymm0 {%k1} {z} ## encoding: [0x62,0xf1,0x7d,0xa9,0x6b,0xc1]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
-  %res = call <16 x i16> @llvm.x86.avx512.mask.packssdw.256(<8 x i32> %a, <8 x i32> %b, <16 x i16> zeroinitializer, i16 %mask)
-  ret <16 x i16> %res
+  %1 = call <16 x i16> @llvm.x86.avx2.packssdw(<8 x i32> %a, <8 x i32> %b)
+  %2 = bitcast i16 %mask to <16 x i1>
+  %3 = select <16 x i1> %2, <16 x i16> %1, <16 x i16> zeroinitializer
+  ret <16 x i16> %3
 }
 
 define <16 x i16> @test_mask_packs_epi32_rm_256(<8 x i32> %a, <8 x i32>* %ptr_b) {
@@ -1017,8 +1033,8 @@ define <16 x i16> @test_mask_packs_epi32_rm_256(<8 x i32> %a, <8 x i32>* %ptr_b)
 ; CHECK-NEXT:    vpackssdw (%rdi), %ymm0, %ymm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfd,0x6b,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %b = load <8 x i32>, <8 x i32>* %ptr_b
-  %res = call <16 x i16> @llvm.x86.avx512.mask.packssdw.256(<8 x i32> %a, <8 x i32> %b, <16 x i16> zeroinitializer, i16 -1)
-  ret <16 x i16> %res
+  %1 = call <16 x i16> @llvm.x86.avx2.packssdw(<8 x i32> %a, <8 x i32> %b)
+  ret <16 x i16> %1
 }
 
 define <16 x i16> @test_mask_packs_epi32_rmk_256(<8 x i32> %a, <8 x i32>* %ptr_b, <16 x i16> %passThru, i16 %mask) {
@@ -1029,8 +1045,10 @@ define <16 x i16> @test_mask_packs_epi32_rmk_256(<8 x i32> %a, <8 x i32>* %ptr_b
 ; CHECK-NEXT:    vmovdqa %ymm1, %ymm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfd,0x6f,0xc1]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %b = load <8 x i32>, <8 x i32>* %ptr_b
-  %res = call <16 x i16> @llvm.x86.avx512.mask.packssdw.256(<8 x i32> %a, <8 x i32> %b, <16 x i16> %passThru, i16 %mask)
-  ret <16 x i16> %res
+  %1 = call <16 x i16> @llvm.x86.avx2.packssdw(<8 x i32> %a, <8 x i32> %b)
+  %2 = bitcast i16 %mask to <16 x i1>
+  %3 = select <16 x i1> %2, <16 x i16> %1, <16 x i16> %passThru
+  ret <16 x i16> %3
 }
 
 define <16 x i16> @test_mask_packs_epi32_rmkz_256(<8 x i32> %a, <8 x i32>* %ptr_b, i16 %mask) {
@@ -1040,8 +1058,10 @@ define <16 x i16> @test_mask_packs_epi32_rmkz_256(<8 x i32> %a, <8 x i32>* %ptr_
 ; CHECK-NEXT:    vpackssdw (%rdi), %ymm0, %ymm0 {%k1} {z} ## encoding: [0x62,0xf1,0x7d,0xa9,0x6b,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %b = load <8 x i32>, <8 x i32>* %ptr_b
-  %res = call <16 x i16> @llvm.x86.avx512.mask.packssdw.256(<8 x i32> %a, <8 x i32> %b, <16 x i16> zeroinitializer, i16 %mask)
-  ret <16 x i16> %res
+  %1 = call <16 x i16> @llvm.x86.avx2.packssdw(<8 x i32> %a, <8 x i32> %b)
+  %2 = bitcast i16 %mask to <16 x i1>
+  %3 = select <16 x i1> %2, <16 x i16> %1, <16 x i16> zeroinitializer
+  ret <16 x i16> %3
 }
 
 define <16 x i16> @test_mask_packs_epi32_rmb_256(<8 x i32> %a, i32* %ptr_b) {
@@ -1052,8 +1072,8 @@ define <16 x i16> @test_mask_packs_epi32_rmb_256(<8 x i32> %a, i32* %ptr_b) {
   %q = load i32, i32* %ptr_b
   %vecinit.i = insertelement <8 x i32> undef, i32 %q, i32 0
   %b = shufflevector <8 x i32> %vecinit.i, <8 x i32> undef, <8 x i32> zeroinitializer
-  %res = call <16 x i16> @llvm.x86.avx512.mask.packssdw.256(<8 x i32> %a, <8 x i32> %b, <16 x i16> zeroinitializer, i16 -1)
-  ret <16 x i16> %res
+  %1 = call <16 x i16> @llvm.x86.avx2.packssdw(<8 x i32> %a, <8 x i32> %b)
+  ret <16 x i16> %1
 }
 
 define <16 x i16> @test_mask_packs_epi32_rmbk_256(<8 x i32> %a, i32* %ptr_b, <16 x i16> %passThru, i16 %mask) {
@@ -1066,8 +1086,10 @@ define <16 x i16> @test_mask_packs_epi32_rmbk_256(<8 x i32> %a, i32* %ptr_b, <16
   %q = load i32, i32* %ptr_b
   %vecinit.i = insertelement <8 x i32> undef, i32 %q, i32 0
   %b = shufflevector <8 x i32> %vecinit.i, <8 x i32> undef, <8 x i32> zeroinitializer
-  %res = call <16 x i16> @llvm.x86.avx512.mask.packssdw.256(<8 x i32> %a, <8 x i32> %b, <16 x i16> %passThru, i16 %mask)
-  ret <16 x i16> %res
+  %1 = call <16 x i16> @llvm.x86.avx2.packssdw(<8 x i32> %a, <8 x i32> %b)
+  %2 = bitcast i16 %mask to <16 x i1>
+  %3 = select <16 x i1> %2, <16 x i16> %1, <16 x i16> %passThru
+  ret <16 x i16> %3
 }
 
 define <16 x i16> @test_mask_packs_epi32_rmbkz_256(<8 x i32> %a, i32* %ptr_b, i16 %mask) {
@@ -1079,19 +1101,21 @@ define <16 x i16> @test_mask_packs_epi32_rmbkz_256(<8 x i32> %a, i32* %ptr_b, i1
   %q = load i32, i32* %ptr_b
   %vecinit.i = insertelement <8 x i32> undef, i32 %q, i32 0
   %b = shufflevector <8 x i32> %vecinit.i, <8 x i32> undef, <8 x i32> zeroinitializer
-  %res = call <16 x i16> @llvm.x86.avx512.mask.packssdw.256(<8 x i32> %a, <8 x i32> %b, <16 x i16> zeroinitializer, i16 %mask)
-  ret <16 x i16> %res
+  %1 = call <16 x i16> @llvm.x86.avx2.packssdw(<8 x i32> %a, <8 x i32> %b)
+  %2 = bitcast i16 %mask to <16 x i1>
+  %3 = select <16 x i1> %2, <16 x i16> %1, <16 x i16> zeroinitializer
+  ret <16 x i16> %3
 }
 
-declare <16 x i16> @llvm.x86.avx512.mask.packssdw.256(<8 x i32>, <8 x i32>, <16 x i16>, i16)
+declare <16 x i16> @llvm.x86.avx2.packssdw(<8 x i32>, <8 x i32>)
 
 define <16 x i8> @test_mask_packs_epi16_rr_128(<8 x i16> %a, <8 x i16> %b) {
 ; CHECK-LABEL: test_mask_packs_epi16_rr_128:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    vpacksswb %xmm1, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0x63,0xc1]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
-  %res = call <16 x i8> @llvm.x86.avx512.mask.packsswb.128(<8 x i16> %a, <8 x i16> %b, <16 x i8> zeroinitializer, i16 -1)
-  ret <16 x i8> %res
+  %1 = call <16 x i8> @llvm.x86.sse2.packsswb.128(<8 x i16> %a, <8 x i16> %b)
+  ret <16 x i8> %1
 }
 
 define <16 x i8> @test_mask_packs_epi16_rrk_128(<8 x i16> %a, <8 x i16> %b, <16 x i8> %passThru, i16 %mask) {
@@ -1101,8 +1125,10 @@ define <16 x i8> @test_mask_packs_epi16_rrk_128(<8 x i16> %a, <8 x i16> %b, <16 
 ; CHECK-NEXT:    vpacksswb %xmm1, %xmm0, %xmm2 {%k1} ## encoding: [0x62,0xf1,0x7d,0x09,0x63,0xd1]
 ; CHECK-NEXT:    vmovdqa %xmm2, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0x6f,0xc2]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
-  %res = call <16 x i8> @llvm.x86.avx512.mask.packsswb.128(<8 x i16> %a, <8 x i16> %b, <16 x i8> %passThru, i16 %mask)
-  ret <16 x i8> %res
+  %1 = call <16 x i8> @llvm.x86.sse2.packsswb.128(<8 x i16> %a, <8 x i16> %b)
+  %2 = bitcast i16 %mask to <16 x i1>
+  %3 = select <16 x i1> %2, <16 x i8> %1, <16 x i8> %passThru
+  ret <16 x i8> %3
 }
 
 define <16 x i8> @test_mask_packs_epi16_rrkz_128(<8 x i16> %a, <8 x i16> %b, i16 %mask) {
@@ -1111,8 +1137,10 @@ define <16 x i8> @test_mask_packs_epi16_rrkz_128(<8 x i16> %a, <8 x i16> %b, i16
 ; CHECK-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
 ; CHECK-NEXT:    vpacksswb %xmm1, %xmm0, %xmm0 {%k1} {z} ## encoding: [0x62,0xf1,0x7d,0x89,0x63,0xc1]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
-  %res = call <16 x i8> @llvm.x86.avx512.mask.packsswb.128(<8 x i16> %a, <8 x i16> %b, <16 x i8> zeroinitializer, i16 %mask)
-  ret <16 x i8> %res
+  %1 = call <16 x i8> @llvm.x86.sse2.packsswb.128(<8 x i16> %a, <8 x i16> %b)
+  %2 = bitcast i16 %mask to <16 x i1>
+  %3 = select <16 x i1> %2, <16 x i8> %1, <16 x i8> zeroinitializer
+  ret <16 x i8> %3
 }
 
 define <16 x i8> @test_mask_packs_epi16_rm_128(<8 x i16> %a, <8 x i16>* %ptr_b) {
@@ -1121,8 +1149,8 @@ define <16 x i8> @test_mask_packs_epi16_rm_128(<8 x i16> %a, <8 x i16>* %ptr_b) 
 ; CHECK-NEXT:    vpacksswb (%rdi), %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0x63,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %b = load <8 x i16>, <8 x i16>* %ptr_b
-  %res = call <16 x i8> @llvm.x86.avx512.mask.packsswb.128(<8 x i16> %a, <8 x i16> %b, <16 x i8> zeroinitializer, i16 -1)
-  ret <16 x i8> %res
+  %1 = call <16 x i8> @llvm.x86.sse2.packsswb.128(<8 x i16> %a, <8 x i16> %b)
+  ret <16 x i8> %1
 }
 
 define <16 x i8> @test_mask_packs_epi16_rmk_128(<8 x i16> %a, <8 x i16>* %ptr_b, <16 x i8> %passThru, i16 %mask) {
@@ -1133,8 +1161,10 @@ define <16 x i8> @test_mask_packs_epi16_rmk_128(<8 x i16> %a, <8 x i16>* %ptr_b,
 ; CHECK-NEXT:    vmovdqa %xmm1, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0x6f,0xc1]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %b = load <8 x i16>, <8 x i16>* %ptr_b
-  %res = call <16 x i8> @llvm.x86.avx512.mask.packsswb.128(<8 x i16> %a, <8 x i16> %b, <16 x i8> %passThru, i16 %mask)
-  ret <16 x i8> %res
+  %1 = call <16 x i8> @llvm.x86.sse2.packsswb.128(<8 x i16> %a, <8 x i16> %b)
+  %2 = bitcast i16 %mask to <16 x i1>
+  %3 = select <16 x i1> %2, <16 x i8> %1, <16 x i8> %passThru
+  ret <16 x i8> %3
 }
 
 define <16 x i8> @test_mask_packs_epi16_rmkz_128(<8 x i16> %a, <8 x i16>* %ptr_b, i16 %mask) {
@@ -1144,19 +1174,21 @@ define <16 x i8> @test_mask_packs_epi16_rmkz_128(<8 x i16> %a, <8 x i16>* %ptr_b
 ; CHECK-NEXT:    vpacksswb (%rdi), %xmm0, %xmm0 {%k1} {z} ## encoding: [0x62,0xf1,0x7d,0x89,0x63,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %b = load <8 x i16>, <8 x i16>* %ptr_b
-  %res = call <16 x i8> @llvm.x86.avx512.mask.packsswb.128(<8 x i16> %a, <8 x i16> %b, <16 x i8> zeroinitializer, i16 %mask)
-  ret <16 x i8> %res
+  %1 = call <16 x i8> @llvm.x86.sse2.packsswb.128(<8 x i16> %a, <8 x i16> %b)
+  %2 = bitcast i16 %mask to <16 x i1>
+  %3 = select <16 x i1> %2, <16 x i8> %1, <16 x i8> zeroinitializer
+  ret <16 x i8> %3
 }
 
-declare <16 x i8> @llvm.x86.avx512.mask.packsswb.128(<8 x i16>, <8 x i16>, <16 x i8>, i16)
+declare <16 x i8> @llvm.x86.sse2.packsswb.128(<8 x i16>, <8 x i16>)
 
 define <32 x i8> @test_mask_packs_epi16_rr_256(<16 x i16> %a, <16 x i16> %b) {
 ; CHECK-LABEL: test_mask_packs_epi16_rr_256:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    vpacksswb %ymm1, %ymm0, %ymm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfd,0x63,0xc1]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
-  %res = call <32 x i8> @llvm.x86.avx512.mask.packsswb.256(<16 x i16> %a, <16 x i16> %b, <32 x i8> zeroinitializer, i32 -1)
-  ret <32 x i8> %res
+  %1 = call <32 x i8> @llvm.x86.avx2.packsswb(<16 x i16> %a, <16 x i16> %b)
+  ret <32 x i8> %1
 }
 
 define <32 x i8> @test_mask_packs_epi16_rrk_256(<16 x i16> %a, <16 x i16> %b, <32 x i8> %passThru, i32 %mask) {
@@ -1166,8 +1198,10 @@ define <32 x i8> @test_mask_packs_epi16_rrk_256(<16 x i16> %a, <16 x i16> %b, <3
 ; CHECK-NEXT:    vpacksswb %ymm1, %ymm0, %ymm2 {%k1} ## encoding: [0x62,0xf1,0x7d,0x29,0x63,0xd1]
 ; CHECK-NEXT:    vmovdqa %ymm2, %ymm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfd,0x6f,0xc2]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
-  %res = call <32 x i8> @llvm.x86.avx512.mask.packsswb.256(<16 x i16> %a, <16 x i16> %b, <32 x i8> %passThru, i32 %mask)
-  ret <32 x i8> %res
+  %1 = call <32 x i8> @llvm.x86.avx2.packsswb(<16 x i16> %a, <16 x i16> %b)
+  %2 = bitcast i32 %mask to <32 x i1>
+  %3 = select <32 x i1> %2, <32 x i8> %1, <32 x i8> %passThru
+  ret <32 x i8> %3
 }
 
 define <32 x i8> @test_mask_packs_epi16_rrkz_256(<16 x i16> %a, <16 x i16> %b, i32 %mask) {
@@ -1176,8 +1210,10 @@ define <32 x i8> @test_mask_packs_epi16_rrkz_256(<16 x i16> %a, <16 x i16> %b, i
 ; CHECK-NEXT:    kmovd %edi, %k1 ## encoding: [0xc5,0xfb,0x92,0xcf]
 ; CHECK-NEXT:    vpacksswb %ymm1, %ymm0, %ymm0 {%k1} {z} ## encoding: [0x62,0xf1,0x7d,0xa9,0x63,0xc1]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
-  %res = call <32 x i8> @llvm.x86.avx512.mask.packsswb.256(<16 x i16> %a, <16 x i16> %b, <32 x i8> zeroinitializer, i32 %mask)
-  ret <32 x i8> %res
+  %1 = call <32 x i8> @llvm.x86.avx2.packsswb(<16 x i16> %a, <16 x i16> %b)
+  %2 = bitcast i32 %mask to <32 x i1>
+  %3 = select <32 x i1> %2, <32 x i8> %1, <32 x i8> zeroinitializer
+  ret <32 x i8> %3
 }
 
 define <32 x i8> @test_mask_packs_epi16_rm_256(<16 x i16> %a, <16 x i16>* %ptr_b) {
@@ -1186,8 +1222,8 @@ define <32 x i8> @test_mask_packs_epi16_rm_256(<16 x i16> %a, <16 x i16>* %ptr_b
 ; CHECK-NEXT:    vpacksswb (%rdi), %ymm0, %ymm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfd,0x63,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %b = load <16 x i16>, <16 x i16>* %ptr_b
-  %res = call <32 x i8> @llvm.x86.avx512.mask.packsswb.256(<16 x i16> %a, <16 x i16> %b, <32 x i8> zeroinitializer, i32 -1)
-  ret <32 x i8> %res
+  %1 = call <32 x i8> @llvm.x86.avx2.packsswb(<16 x i16> %a, <16 x i16> %b)
+  ret <32 x i8> %1
 }
 
 define <32 x i8> @test_mask_packs_epi16_rmk_256(<16 x i16> %a, <16 x i16>* %ptr_b, <32 x i8> %passThru, i32 %mask) {
@@ -1198,8 +1234,10 @@ define <32 x i8> @test_mask_packs_epi16_rmk_256(<16 x i16> %a, <16 x i16>* %ptr_
 ; CHECK-NEXT:    vmovdqa %ymm1, %ymm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfd,0x6f,0xc1]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %b = load <16 x i16>, <16 x i16>* %ptr_b
-  %res = call <32 x i8> @llvm.x86.avx512.mask.packsswb.256(<16 x i16> %a, <16 x i16> %b, <32 x i8> %passThru, i32 %mask)
-  ret <32 x i8> %res
+  %1 = call <32 x i8> @llvm.x86.avx2.packsswb(<16 x i16> %a, <16 x i16> %b)
+  %2 = bitcast i32 %mask to <32 x i1>
+  %3 = select <32 x i1> %2, <32 x i8> %1, <32 x i8> %passThru
+  ret <32 x i8> %3
 }
 
 define <32 x i8> @test_mask_packs_epi16_rmkz_256(<16 x i16> %a, <16 x i16>* %ptr_b, i32 %mask) {
@@ -1209,11 +1247,13 @@ define <32 x i8> @test_mask_packs_epi16_rmkz_256(<16 x i16> %a, <16 x i16>* %ptr
 ; CHECK-NEXT:    vpacksswb (%rdi), %ymm0, %ymm0 {%k1} {z} ## encoding: [0x62,0xf1,0x7d,0xa9,0x63,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %b = load <16 x i16>, <16 x i16>* %ptr_b
-  %res = call <32 x i8> @llvm.x86.avx512.mask.packsswb.256(<16 x i16> %a, <16 x i16> %b, <32 x i8> zeroinitializer, i32 %mask)
-  ret <32 x i8> %res
+  %1 = call <32 x i8> @llvm.x86.avx2.packsswb(<16 x i16> %a, <16 x i16> %b)
+  %2 = bitcast i32 %mask to <32 x i1>
+  %3 = select <32 x i1> %2, <32 x i8> %1, <32 x i8> zeroinitializer
+  ret <32 x i8> %3
 }
 
-declare <32 x i8> @llvm.x86.avx512.mask.packsswb.256(<16 x i16>, <16 x i16>, <32 x i8>, i32)
+declare <32 x i8> @llvm.x86.avx2.packsswb(<16 x i16>, <16 x i16>)
 
 
 define <8 x i16> @test_mask_packus_epi32_rr_128(<4 x i32> %a, <4 x i32> %b) {
@@ -1221,8 +1261,8 @@ define <8 x i16> @test_mask_packus_epi32_rr_128(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    vpackusdw %xmm1, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe2,0x79,0x2b,0xc1]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
-  %res = call <8 x i16> @llvm.x86.avx512.mask.packusdw.128(<4 x i32> %a, <4 x i32> %b, <8 x i16> zeroinitializer, i8 -1)
-  ret <8 x i16> %res
+  %1 = call <8 x i16> @llvm.x86.sse41.packusdw(<4 x i32> %a, <4 x i32> %b)
+  ret <8 x i16> %1
 }
 
 define <8 x i16> @test_mask_packus_epi32_rrk_128(<4 x i32> %a, <4 x i32> %b, <8 x i16> %passThru, i8 %mask) {
@@ -1232,8 +1272,10 @@ define <8 x i16> @test_mask_packus_epi32_rrk_128(<4 x i32> %a, <4 x i32> %b, <8 
 ; CHECK-NEXT:    vpackusdw %xmm1, %xmm0, %xmm2 {%k1} ## encoding: [0x62,0xf2,0x7d,0x09,0x2b,0xd1]
 ; CHECK-NEXT:    vmovdqa %xmm2, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0x6f,0xc2]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
-  %res = call <8 x i16> @llvm.x86.avx512.mask.packusdw.128(<4 x i32> %a, <4 x i32> %b, <8 x i16> %passThru, i8 %mask)
-  ret <8 x i16> %res
+  %1 = call <8 x i16> @llvm.x86.sse41.packusdw(<4 x i32> %a, <4 x i32> %b)
+  %2 = bitcast i8 %mask to <8 x i1>
+  %3 = select <8 x i1> %2, <8 x i16> %1, <8 x i16> %passThru
+  ret <8 x i16> %3
 }
 
 define <8 x i16> @test_mask_packus_epi32_rrkz_128(<4 x i32> %a, <4 x i32> %b, i8 %mask) {
@@ -1242,8 +1284,10 @@ define <8 x i16> @test_mask_packus_epi32_rrkz_128(<4 x i32> %a, <4 x i32> %b, i8
 ; CHECK-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
 ; CHECK-NEXT:    vpackusdw %xmm1, %xmm0, %xmm0 {%k1} {z} ## encoding: [0x62,0xf2,0x7d,0x89,0x2b,0xc1]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
-  %res = call <8 x i16> @llvm.x86.avx512.mask.packusdw.128(<4 x i32> %a, <4 x i32> %b, <8 x i16> zeroinitializer, i8 %mask)
-  ret <8 x i16> %res
+  %1 = call <8 x i16> @llvm.x86.sse41.packusdw(<4 x i32> %a, <4 x i32> %b)
+  %2 = bitcast i8 %mask to <8 x i1>
+  %3 = select <8 x i1> %2, <8 x i16> %1, <8 x i16> zeroinitializer
+  ret <8 x i16> %3
 }
 
 define <8 x i16> @test_mask_packus_epi32_rm_128(<4 x i32> %a, <4 x i32>* %ptr_b) {
@@ -1252,8 +1296,8 @@ define <8 x i16> @test_mask_packus_epi32_rm_128(<4 x i32> %a, <4 x i32>* %ptr_b)
 ; CHECK-NEXT:    vpackusdw (%rdi), %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe2,0x79,0x2b,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %b = load <4 x i32>, <4 x i32>* %ptr_b
-  %res = call <8 x i16> @llvm.x86.avx512.mask.packusdw.128(<4 x i32> %a, <4 x i32> %b, <8 x i16> zeroinitializer, i8 -1)
-  ret <8 x i16> %res
+  %1 = call <8 x i16> @llvm.x86.sse41.packusdw(<4 x i32> %a, <4 x i32> %b)
+  ret <8 x i16> %1
 }
 
 define <8 x i16> @test_mask_packus_epi32_rmk_128(<4 x i32> %a, <4 x i32>* %ptr_b, <8 x i16> %passThru, i8 %mask) {
@@ -1264,8 +1308,10 @@ define <8 x i16> @test_mask_packus_epi32_rmk_128(<4 x i32> %a, <4 x i32>* %ptr_b
 ; CHECK-NEXT:    vmovdqa %xmm1, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0x6f,0xc1]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %b = load <4 x i32>, <4 x i32>* %ptr_b
-  %res = call <8 x i16> @llvm.x86.avx512.mask.packusdw.128(<4 x i32> %a, <4 x i32> %b, <8 x i16> %passThru, i8 %mask)
-  ret <8 x i16> %res
+  %1 = call <8 x i16> @llvm.x86.sse41.packusdw(<4 x i32> %a, <4 x i32> %b)
+  %2 = bitcast i8 %mask to <8 x i1>
+  %3 = select <8 x i1> %2, <8 x i16> %1, <8 x i16> %passThru
+  ret <8 x i16> %3
 }
 
 define <8 x i16> @test_mask_packus_epi32_rmkz_128(<4 x i32> %a, <4 x i32>* %ptr_b, i8 %mask) {
@@ -1275,8 +1321,10 @@ define <8 x i16> @test_mask_packus_epi32_rmkz_128(<4 x i32> %a, <4 x i32>* %ptr_
 ; CHECK-NEXT:    vpackusdw (%rdi), %xmm0, %xmm0 {%k1} {z} ## encoding: [0x62,0xf2,0x7d,0x89,0x2b,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %b = load <4 x i32>, <4 x i32>* %ptr_b
-  %res = call <8 x i16> @llvm.x86.avx512.mask.packusdw.128(<4 x i32> %a, <4 x i32> %b, <8 x i16> zeroinitializer, i8 %mask)
-  ret <8 x i16> %res
+  %1 = call <8 x i16> @llvm.x86.sse41.packusdw(<4 x i32> %a, <4 x i32> %b)
+  %2 = bitcast i8 %mask to <8 x i1>
+  %3 = select <8 x i1> %2, <8 x i16> %1, <8 x i16> zeroinitializer
+  ret <8 x i16> %3
 }
 
 define <8 x i16> @test_mask_packus_epi32_rmb_128(<4 x i32> %a, i32* %ptr_b) {
@@ -1287,8 +1335,8 @@ define <8 x i16> @test_mask_packus_epi32_rmb_128(<4 x i32> %a, i32* %ptr_b) {
   %q = load i32, i32* %ptr_b
   %vecinit.i = insertelement <4 x i32> undef, i32 %q, i32 0
   %b = shufflevector <4 x i32> %vecinit.i, <4 x i32> undef, <4 x i32> zeroinitializer
-  %res = call <8 x i16> @llvm.x86.avx512.mask.packusdw.128(<4 x i32> %a, <4 x i32> %b, <8 x i16> zeroinitializer, i8 -1)
-  ret <8 x i16> %res
+  %1 = call <8 x i16> @llvm.x86.sse41.packusdw(<4 x i32> %a, <4 x i32> %b)
+  ret <8 x i16> %1
 }
 
 define <8 x i16> @test_mask_packus_epi32_rmbk_128(<4 x i32> %a, i32* %ptr_b, <8 x i16> %passThru, i8 %mask) {
@@ -1301,8 +1349,10 @@ define <8 x i16> @test_mask_packus_epi32_rmbk_128(<4 x i32> %a, i32* %ptr_b, <8 
   %q = load i32, i32* %ptr_b
   %vecinit.i = insertelement <4 x i32> undef, i32 %q, i32 0
   %b = shufflevector <4 x i32> %vecinit.i, <4 x i32> undef, <4 x i32> zeroinitializer
-  %res = call <8 x i16> @llvm.x86.avx512.mask.packusdw.128(<4 x i32> %a, <4 x i32> %b, <8 x i16> %passThru, i8 %mask)
-  ret <8 x i16> %res
+  %1 = call <8 x i16> @llvm.x86.sse41.packusdw(<4 x i32> %a, <4 x i32> %b)
+  %2 = bitcast i8 %mask to <8 x i1>
+  %3 = select <8 x i1> %2, <8 x i16> %1, <8 x i16> %passThru
+  ret <8 x i16> %3
 }
 
 define <8 x i16> @test_mask_packus_epi32_rmbkz_128(<4 x i32> %a, i32* %ptr_b, i8 %mask) {
@@ -1314,19 +1364,21 @@ define <8 x i16> @test_mask_packus_epi32_rmbkz_128(<4 x i32> %a, i32* %ptr_b, i8
   %q = load i32, i32* %ptr_b
   %vecinit.i = insertelement <4 x i32> undef, i32 %q, i32 0
   %b = shufflevector <4 x i32> %vecinit.i, <4 x i32> undef, <4 x i32> zeroinitializer
-  %res = call <8 x i16> @llvm.x86.avx512.mask.packusdw.128(<4 x i32> %a, <4 x i32> %b, <8 x i16> zeroinitializer, i8 %mask)
-  ret <8 x i16> %res
+  %1 = call <8 x i16> @llvm.x86.sse41.packusdw(<4 x i32> %a, <4 x i32> %b)
+  %2 = bitcast i8 %mask to <8 x i1>
+  %3 = select <8 x i1> %2, <8 x i16> %1, <8 x i16> zeroinitializer
+  ret <8 x i16> %3
 }
 
-declare <8 x i16> @llvm.x86.avx512.mask.packusdw.128(<4 x i32>, <4 x i32>, <8 x i16>, i8)
+declare <8 x i16> @llvm.x86.sse41.packusdw(<4 x i32>, <4 x i32>)
 
 define <16 x i16> @test_mask_packus_epi32_rr_256(<8 x i32> %a, <8 x i32> %b) {
 ; CHECK-LABEL: test_mask_packus_epi32_rr_256:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    vpackusdw %ymm1, %ymm0, %ymm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe2,0x7d,0x2b,0xc1]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
-  %res = call <16 x i16> @llvm.x86.avx512.mask.packusdw.256(<8 x i32> %a, <8 x i32> %b, <16 x i16> zeroinitializer, i16 -1)
-  ret <16 x i16> %res
+  %1 = call <16 x i16> @llvm.x86.avx2.packusdw(<8 x i32> %a, <8 x i32> %b)
+  ret <16 x i16> %1
 }
 
 define <16 x i16> @test_mask_packus_epi32_rrk_256(<8 x i32> %a, <8 x i32> %b, <16 x i16> %passThru, i16 %mask) {
@@ -1336,8 +1388,10 @@ define <16 x i16> @test_mask_packus_epi32_rrk_256(<8 x i32> %a, <8 x i32> %b, <1
 ; CHECK-NEXT:    vpackusdw %ymm1, %ymm0, %ymm2 {%k1} ## encoding: [0x62,0xf2,0x7d,0x29,0x2b,0xd1]
 ; CHECK-NEXT:    vmovdqa %ymm2, %ymm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfd,0x6f,0xc2]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
-  %res = call <16 x i16> @llvm.x86.avx512.mask.packusdw.256(<8 x i32> %a, <8 x i32> %b, <16 x i16> %passThru, i16 %mask)
-  ret <16 x i16> %res
+  %1 = call <16 x i16> @llvm.x86.avx2.packusdw(<8 x i32> %a, <8 x i32> %b)
+  %2 = bitcast i16 %mask to <16 x i1>
+  %3 = select <16 x i1> %2, <16 x i16> %1, <16 x i16> %passThru
+  ret <16 x i16> %3
 }
 
 define <16 x i16> @test_mask_packus_epi32_rrkz_256(<8 x i32> %a, <8 x i32> %b, i16 %mask) {
@@ -1346,8 +1400,10 @@ define <16 x i16> @test_mask_packus_epi32_rrkz_256(<8 x i32> %a, <8 x i32> %b, i
 ; CHECK-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
 ; CHECK-NEXT:    vpackusdw %ymm1, %ymm0, %ymm0 {%k1} {z} ## encoding: [0x62,0xf2,0x7d,0xa9,0x2b,0xc1]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
-  %res = call <16 x i16> @llvm.x86.avx512.mask.packusdw.256(<8 x i32> %a, <8 x i32> %b, <16 x i16> zeroinitializer, i16 %mask)
-  ret <16 x i16> %res
+  %1 = call <16 x i16> @llvm.x86.avx2.packusdw(<8 x i32> %a, <8 x i32> %b)
+  %2 = bitcast i16 %mask to <16 x i1>
+  %3 = select <16 x i1> %2, <16 x i16> %1, <16 x i16> zeroinitializer
+  ret <16 x i16> %3
 }
 
 define <16 x i16> @test_mask_packus_epi32_rm_256(<8 x i32> %a, <8 x i32>* %ptr_b) {
@@ -1356,8 +1412,8 @@ define <16 x i16> @test_mask_packus_epi32_rm_256(<8 x i32> %a, <8 x i32>* %ptr_b
 ; CHECK-NEXT:    vpackusdw (%rdi), %ymm0, %ymm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe2,0x7d,0x2b,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %b = load <8 x i32>, <8 x i32>* %ptr_b
-  %res = call <16 x i16> @llvm.x86.avx512.mask.packusdw.256(<8 x i32> %a, <8 x i32> %b, <16 x i16> zeroinitializer, i16 -1)
-  ret <16 x i16> %res
+  %1 = call <16 x i16> @llvm.x86.avx2.packusdw(<8 x i32> %a, <8 x i32> %b)
+  ret <16 x i16> %1
 }
 
 define <16 x i16> @test_mask_packus_epi32_rmk_256(<8 x i32> %a, <8 x i32>* %ptr_b, <16 x i16> %passThru, i16 %mask) {
@@ -1368,8 +1424,10 @@ define <16 x i16> @test_mask_packus_epi32_rmk_256(<8 x i32> %a, <8 x i32>* %ptr_
 ; CHECK-NEXT:    vmovdqa %ymm1, %ymm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfd,0x6f,0xc1]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %b = load <8 x i32>, <8 x i32>* %ptr_b
-  %res = call <16 x i16> @llvm.x86.avx512.mask.packusdw.256(<8 x i32> %a, <8 x i32> %b, <16 x i16> %passThru, i16 %mask)
-  ret <16 x i16> %res
+  %1 = call <16 x i16> @llvm.x86.avx2.packusdw(<8 x i32> %a, <8 x i32> %b)
+  %2 = bitcast i16 %mask to <16 x i1>
+  %3 = select <16 x i1> %2, <16 x i16> %1, <16 x i16> %passThru
+  ret <16 x i16> %3
 }
 
 define <16 x i16> @test_mask_packus_epi32_rmkz_256(<8 x i32> %a, <8 x i32>* %ptr_b, i16 %mask) {
@@ -1379,8 +1437,10 @@ define <16 x i16> @test_mask_packus_epi32_rmkz_256(<8 x i32> %a, <8 x i32>* %ptr
 ; CHECK-NEXT:    vpackusdw (%rdi), %ymm0, %ymm0 {%k1} {z} ## encoding: [0x62,0xf2,0x7d,0xa9,0x2b,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %b = load <8 x i32>, <8 x i32>* %ptr_b
-  %res = call <16 x i16> @llvm.x86.avx512.mask.packusdw.256(<8 x i32> %a, <8 x i32> %b, <16 x i16> zeroinitializer, i16 %mask)
-  ret <16 x i16> %res
+  %1 = call <16 x i16> @llvm.x86.avx2.packusdw(<8 x i32> %a, <8 x i32> %b)
+  %2 = bitcast i16 %mask to <16 x i1>
+  %3 = select <16 x i1> %2, <16 x i16> %1, <16 x i16> zeroinitializer
+  ret <16 x i16> %3
 }
 
 define <16 x i16> @test_mask_packus_epi32_rmb_256(<8 x i32> %a, i32* %ptr_b) {
@@ -1391,8 +1451,8 @@ define <16 x i16> @test_mask_packus_epi32_rmb_256(<8 x i32> %a, i32* %ptr_b) {
   %q = load i32, i32* %ptr_b
   %vecinit.i = insertelement <8 x i32> undef, i32 %q, i32 0
   %b = shufflevector <8 x i32> %vecinit.i, <8 x i32> undef, <8 x i32> zeroinitializer
-  %res = call <16 x i16> @llvm.x86.avx512.mask.packusdw.256(<8 x i32> %a, <8 x i32> %b, <16 x i16> zeroinitializer, i16 -1)
-  ret <16 x i16> %res
+  %1 = call <16 x i16> @llvm.x86.avx2.packusdw(<8 x i32> %a, <8 x i32> %b)
+  ret <16 x i16> %1
 }
 
 define <16 x i16> @test_mask_packus_epi32_rmbk_256(<8 x i32> %a, i32* %ptr_b, <16 x i16> %passThru, i16 %mask) {
@@ -1405,8 +1465,10 @@ define <16 x i16> @test_mask_packus_epi32_rmbk_256(<8 x i32> %a, i32* %ptr_b, <1
   %q = load i32, i32* %ptr_b
   %vecinit.i = insertelement <8 x i32> undef, i32 %q, i32 0
   %b = shufflevector <8 x i32> %vecinit.i, <8 x i32> undef, <8 x i32> zeroinitializer
-  %res = call <16 x i16> @llvm.x86.avx512.mask.packusdw.256(<8 x i32> %a, <8 x i32> %b, <16 x i16> %passThru, i16 %mask)
-  ret <16 x i16> %res
+  %1 = call <16 x i16> @llvm.x86.avx2.packusdw(<8 x i32> %a, <8 x i32> %b)
+  %2 = bitcast i16 %mask to <16 x i1>
+  %3 = select <16 x i1> %2, <16 x i16> %1, <16 x i16> %passThru
+  ret <16 x i16> %3
 }
 
 define <16 x i16> @test_mask_packus_epi32_rmbkz_256(<8 x i32> %a, i32* %ptr_b, i16 %mask) {
@@ -1418,19 +1480,21 @@ define <16 x i16> @test_mask_packus_epi32_rmbkz_256(<8 x i32> %a, i32* %ptr_b, i
   %q = load i32, i32* %ptr_b
   %vecinit.i = insertelement <8 x i32> undef, i32 %q, i32 0
   %b = shufflevector <8 x i32> %vecinit.i, <8 x i32> undef, <8 x i32> zeroinitializer
-  %res = call <16 x i16> @llvm.x86.avx512.mask.packusdw.256(<8 x i32> %a, <8 x i32> %b, <16 x i16> zeroinitializer, i16 %mask)
-  ret <16 x i16> %res
+  %1 = call <16 x i16> @llvm.x86.avx2.packusdw(<8 x i32> %a, <8 x i32> %b)
+  %2 = bitcast i16 %mask to <16 x i1>
+  %3 = select <16 x i1> %2, <16 x i16> %1, <16 x i16> zeroinitializer
+  ret <16 x i16> %3
 }
 
-declare <16 x i16> @llvm.x86.avx512.mask.packusdw.256(<8 x i32>, <8 x i32>, <16 x i16>, i16)
+declare <16 x i16> @llvm.x86.avx2.packusdw(<8 x i32>, <8 x i32>)
 
 define <16 x i8> @test_mask_packus_epi16_rr_128(<8 x i16> %a, <8 x i16> %b) {
 ; CHECK-LABEL: test_mask_packus_epi16_rr_128:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    vpackuswb %xmm1, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0x67,0xc1]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
-  %res = call <16 x i8> @llvm.x86.avx512.mask.packuswb.128(<8 x i16> %a, <8 x i16> %b, <16 x i8> zeroinitializer, i16 -1)
-  ret <16 x i8> %res
+  %1 = call <16 x i8> @llvm.x86.sse2.packuswb.128(<8 x i16> %a, <8 x i16> %b)
+  ret <16 x i8> %1
 }
 
 define <16 x i8> @test_mask_packus_epi16_rrk_128(<8 x i16> %a, <8 x i16> %b, <16 x i8> %passThru, i16 %mask) {
@@ -1440,8 +1504,10 @@ define <16 x i8> @test_mask_packus_epi16_rrk_128(<8 x i16> %a, <8 x i16> %b, <16
 ; CHECK-NEXT:    vpackuswb %xmm1, %xmm0, %xmm2 {%k1} ## encoding: [0x62,0xf1,0x7d,0x09,0x67,0xd1]
 ; CHECK-NEXT:    vmovdqa %xmm2, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0x6f,0xc2]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
-  %res = call <16 x i8> @llvm.x86.avx512.mask.packuswb.128(<8 x i16> %a, <8 x i16> %b, <16 x i8> %passThru, i16 %mask)
-  ret <16 x i8> %res
+  %1 = call <16 x i8> @llvm.x86.sse2.packuswb.128(<8 x i16> %a, <8 x i16> %b)
+  %2 = bitcast i16 %mask to <16 x i1>
+  %3 = select <16 x i1> %2, <16 x i8> %1, <16 x i8> %passThru
+  ret <16 x i8> %3
 }
 
 define <16 x i8> @test_mask_packus_epi16_rrkz_128(<8 x i16> %a, <8 x i16> %b, i16 %mask) {
@@ -1450,8 +1516,10 @@ define <16 x i8> @test_mask_packus_epi16_rrkz_128(<8 x i16> %a, <8 x i16> %b, i1
 ; CHECK-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
 ; CHECK-NEXT:    vpackuswb %xmm1, %xmm0, %xmm0 {%k1} {z} ## encoding: [0x62,0xf1,0x7d,0x89,0x67,0xc1]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
-  %res = call <16 x i8> @llvm.x86.avx512.mask.packuswb.128(<8 x i16> %a, <8 x i16> %b, <16 x i8> zeroinitializer, i16 %mask)
-  ret <16 x i8> %res
+  %1 = call <16 x i8> @llvm.x86.sse2.packuswb.128(<8 x i16> %a, <8 x i16> %b)
+  %2 = bitcast i16 %mask to <16 x i1>
+  %3 = select <16 x i1> %2, <16 x i8> %1, <16 x i8> zeroinitializer
+  ret <16 x i8> %3
 }
 
 define <16 x i8> @test_mask_packus_epi16_rm_128(<8 x i16> %a, <8 x i16>* %ptr_b) {
@@ -1460,8 +1528,8 @@ define <16 x i8> @test_mask_packus_epi16_rm_128(<8 x i16> %a, <8 x i16>* %ptr_b)
 ; CHECK-NEXT:    vpackuswb (%rdi), %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0x67,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %b = load <8 x i16>, <8 x i16>* %ptr_b
-  %res = call <16 x i8> @llvm.x86.avx512.mask.packuswb.128(<8 x i16> %a, <8 x i16> %b, <16 x i8> zeroinitializer, i16 -1)
-  ret <16 x i8> %res
+  %1 = call <16 x i8> @llvm.x86.sse2.packuswb.128(<8 x i16> %a, <8 x i16> %b)
+  ret <16 x i8> %1
 }
 
 define <16 x i8> @test_mask_packus_epi16_rmk_128(<8 x i16> %a, <8 x i16>* %ptr_b, <16 x i8> %passThru, i16 %mask) {
@@ -1472,8 +1540,10 @@ define <16 x i8> @test_mask_packus_epi16_rmk_128(<8 x i16> %a, <8 x i16>* %ptr_b
 ; CHECK-NEXT:    vmovdqa %xmm1, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0x6f,0xc1]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %b = load <8 x i16>, <8 x i16>* %ptr_b
-  %res = call <16 x i8> @llvm.x86.avx512.mask.packuswb.128(<8 x i16> %a, <8 x i16> %b, <16 x i8> %passThru, i16 %mask)
-  ret <16 x i8> %res
+  %1 = call <16 x i8> @llvm.x86.sse2.packuswb.128(<8 x i16> %a, <8 x i16> %b)
+  %2 = bitcast i16 %mask to <16 x i1>
+  %3 = select <16 x i1> %2, <16 x i8> %1, <16 x i8> %passThru
+  ret <16 x i8> %3
 }
 
 define <16 x i8> @test_mask_packus_epi16_rmkz_128(<8 x i16> %a, <8 x i16>* %ptr_b, i16 %mask) {
@@ -1483,19 +1553,21 @@ define <16 x i8> @test_mask_packus_epi16_rmkz_128(<8 x i16> %a, <8 x i16>* %ptr_
 ; CHECK-NEXT:    vpackuswb (%rdi), %xmm0, %xmm0 {%k1} {z} ## encoding: [0x62,0xf1,0x7d,0x89,0x67,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %b = load <8 x i16>, <8 x i16>* %ptr_b
-  %res = call <16 x i8> @llvm.x86.avx512.mask.packuswb.128(<8 x i16> %a, <8 x i16> %b, <16 x i8> zeroinitializer, i16 %mask)
-  ret <16 x i8> %res
+  %1 = call <16 x i8> @llvm.x86.sse2.packuswb.128(<8 x i16> %a, <8 x i16> %b)
+  %2 = bitcast i16 %mask to <16 x i1>
+  %3 = select <16 x i1> %2, <16 x i8> %1, <16 x i8> zeroinitializer
+  ret <16 x i8> %3
 }
 
-declare <16 x i8> @llvm.x86.avx512.mask.packuswb.128(<8 x i16>, <8 x i16>, <16 x i8>, i16)
+declare <16 x i8> @llvm.x86.sse2.packuswb.128(<8 x i16>, <8 x i16>)
 
 define <32 x i8> @test_mask_packus_epi16_rr_256(<16 x i16> %a, <16 x i16> %b) {
 ; CHECK-LABEL: test_mask_packus_epi16_rr_256:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    vpackuswb %ymm1, %ymm0, %ymm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfd,0x67,0xc1]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
-  %res = call <32 x i8> @llvm.x86.avx512.mask.packuswb.256(<16 x i16> %a, <16 x i16> %b, <32 x i8> zeroinitializer, i32 -1)
-  ret <32 x i8> %res
+  %1 = call <32 x i8> @llvm.x86.avx2.packuswb(<16 x i16> %a, <16 x i16> %b)
+  ret <32 x i8> %1
 }
 
 define <32 x i8> @test_mask_packus_epi16_rrk_256(<16 x i16> %a, <16 x i16> %b, <32 x i8> %passThru, i32 %mask) {
@@ -1505,8 +1577,10 @@ define <32 x i8> @test_mask_packus_epi16_rrk_256(<16 x i16> %a, <16 x i16> %b, <
 ; CHECK-NEXT:    vpackuswb %ymm1, %ymm0, %ymm2 {%k1} ## encoding: [0x62,0xf1,0x7d,0x29,0x67,0xd1]
 ; CHECK-NEXT:    vmovdqa %ymm2, %ymm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfd,0x6f,0xc2]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
-  %res = call <32 x i8> @llvm.x86.avx512.mask.packuswb.256(<16 x i16> %a, <16 x i16> %b, <32 x i8> %passThru, i32 %mask)
-  ret <32 x i8> %res
+  %1 = call <32 x i8> @llvm.x86.avx2.packuswb(<16 x i16> %a, <16 x i16> %b)
+  %2 = bitcast i32 %mask to <32 x i1>
+  %3 = select <32 x i1> %2, <32 x i8> %1, <32 x i8> %passThru
+  ret <32 x i8> %3
 }
 
 define <32 x i8> @test_mask_packus_epi16_rrkz_256(<16 x i16> %a, <16 x i16> %b, i32 %mask) {
@@ -1515,8 +1589,10 @@ define <32 x i8> @test_mask_packus_epi16_rrkz_256(<16 x i16> %a, <16 x i16> %b, 
 ; CHECK-NEXT:    kmovd %edi, %k1 ## encoding: [0xc5,0xfb,0x92,0xcf]
 ; CHECK-NEXT:    vpackuswb %ymm1, %ymm0, %ymm0 {%k1} {z} ## encoding: [0x62,0xf1,0x7d,0xa9,0x67,0xc1]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
-  %res = call <32 x i8> @llvm.x86.avx512.mask.packuswb.256(<16 x i16> %a, <16 x i16> %b, <32 x i8> zeroinitializer, i32 %mask)
-  ret <32 x i8> %res
+  %1 = call <32 x i8> @llvm.x86.avx2.packuswb(<16 x i16> %a, <16 x i16> %b)
+  %2 = bitcast i32 %mask to <32 x i1>
+  %3 = select <32 x i1> %2, <32 x i8> %1, <32 x i8> zeroinitializer
+  ret <32 x i8> %3
 }
 
 define <32 x i8> @test_mask_packus_epi16_rm_256(<16 x i16> %a, <16 x i16>* %ptr_b) {
@@ -1525,8 +1601,8 @@ define <32 x i8> @test_mask_packus_epi16_rm_256(<16 x i16> %a, <16 x i16>* %ptr_
 ; CHECK-NEXT:    vpackuswb (%rdi), %ymm0, %ymm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfd,0x67,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %b = load <16 x i16>, <16 x i16>* %ptr_b
-  %res = call <32 x i8> @llvm.x86.avx512.mask.packuswb.256(<16 x i16> %a, <16 x i16> %b, <32 x i8> zeroinitializer, i32 -1)
-  ret <32 x i8> %res
+  %1 = call <32 x i8> @llvm.x86.avx2.packuswb(<16 x i16> %a, <16 x i16> %b)
+  ret <32 x i8> %1
 }
 
 define <32 x i8> @test_mask_packus_epi16_rmk_256(<16 x i16> %a, <16 x i16>* %ptr_b, <32 x i8> %passThru, i32 %mask) {
@@ -1537,8 +1613,10 @@ define <32 x i8> @test_mask_packus_epi16_rmk_256(<16 x i16> %a, <16 x i16>* %ptr
 ; CHECK-NEXT:    vmovdqa %ymm1, %ymm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfd,0x6f,0xc1]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %b = load <16 x i16>, <16 x i16>* %ptr_b
-  %res = call <32 x i8> @llvm.x86.avx512.mask.packuswb.256(<16 x i16> %a, <16 x i16> %b, <32 x i8> %passThru, i32 %mask)
-  ret <32 x i8> %res
+  %1 = call <32 x i8> @llvm.x86.avx2.packuswb(<16 x i16> %a, <16 x i16> %b)
+  %2 = bitcast i32 %mask to <32 x i1>
+  %3 = select <32 x i1> %2, <32 x i8> %1, <32 x i8> %passThru
+  ret <32 x i8> %3
 }
 
 define <32 x i8> @test_mask_packus_epi16_rmkz_256(<16 x i16> %a, <16 x i16>* %ptr_b, i32 %mask) {
@@ -1548,11 +1626,13 @@ define <32 x i8> @test_mask_packus_epi16_rmkz_256(<16 x i16> %a, <16 x i16>* %pt
 ; CHECK-NEXT:    vpackuswb (%rdi), %ymm0, %ymm0 {%k1} {z} ## encoding: [0x62,0xf1,0x7d,0xa9,0x67,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %b = load <16 x i16>, <16 x i16>* %ptr_b
-  %res = call <32 x i8> @llvm.x86.avx512.mask.packuswb.256(<16 x i16> %a, <16 x i16> %b, <32 x i8> zeroinitializer, i32 %mask)
-  ret <32 x i8> %res
+  %1 = call <32 x i8> @llvm.x86.avx2.packuswb(<16 x i16> %a, <16 x i16> %b)
+  %2 = bitcast i32 %mask to <32 x i1>
+  %3 = select <32 x i1> %2, <32 x i8> %1, <32 x i8> zeroinitializer
+  ret <32 x i8> %3
 }
 
-declare <32 x i8> @llvm.x86.avx512.mask.packuswb.256(<16 x i16>, <16 x i16>, <32 x i8>, i32)
+declare <32 x i8> @llvm.x86.avx2.packuswb(<16 x i16>, <16 x i16>)
 
 define <8 x i16> @test_mask_adds_epi16_rr_128(<8 x i16> %a, <8 x i16> %b) {
 ; CHECK-LABEL: test_mask_adds_epi16_rr_128:

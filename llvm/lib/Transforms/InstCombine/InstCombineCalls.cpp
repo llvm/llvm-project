@@ -2630,7 +2630,8 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
   case Intrinsic::x86_sse2_packsswb_128:
   case Intrinsic::x86_avx2_packssdw:
   case Intrinsic::x86_avx2_packsswb:
-  // TODO Add support for Intrinsic::x86_avx512_mask_packss*
+  case Intrinsic::x86_avx512_packssdw_512:
+  case Intrinsic::x86_avx512_packsswb_512:
     if (Value *V = simplifyX86pack(*II, *this, *Builder, true))
       return replaceInstUsesWith(*II, V);
     break;
@@ -2639,7 +2640,8 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
   case Intrinsic::x86_sse41_packusdw:
   case Intrinsic::x86_avx2_packusdw:
   case Intrinsic::x86_avx2_packuswb:
-  // TODO Add support for Intrinsic::x86_avx512_mask_packus*
+  case Intrinsic::x86_avx512_packusdw_512:
+  case Intrinsic::x86_avx512_packuswb_512:
     if (Value *V = simplifyX86pack(*II, *this, *Builder, false))
       return replaceInstUsesWith(*II, V);
     break;

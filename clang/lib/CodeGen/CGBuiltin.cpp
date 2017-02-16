@@ -2529,13 +2529,14 @@ RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
     unsigned NumArgs = E->getNumArgs();
 
     llvm::Type *QueueTy = ConvertType(getContext().OCLQueueTy);
-    llvm::Type *RangeTy = ConvertType(getContext().OCLNDRangeTy);
     llvm::Type *GenericVoidPtrTy = Builder.getInt8PtrTy(
         getContext().getTargetAddressSpace(LangAS::opencl_generic));
 
     llvm::Value *Queue = EmitScalarExpr(E->getArg(0));
     llvm::Value *Flags = EmitScalarExpr(E->getArg(1));
-    llvm::Value *Range = EmitScalarExpr(E->getArg(2));
+    LValue NDRangeL = EmitAggExprToLValue(E->getArg(2));
+    llvm::Value *Range = NDRangeL.getAddress().getPointer();
+    llvm::Type *RangeTy = NDRangeL.getAddress().getType();
 
     if (NumArgs == 4) {
       // The most basic form of the call with parameters:
@@ -2548,8 +2549,16 @@ RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
       llvm::Value *Block = Builder.CreatePointerCast(
           EmitScalarExpr(E->getArg(3)), GenericVoidPtrTy);
 
-      return RValue::get(Builder.CreateCall(
-          CGM.CreateRuntimeFunction(FTy, Name), {Queue, Flags, Range, Block}));
+      AttrBuilder B;
+      B.addAttribute(Attribute::ByVal);
+      AttributeSet ByValAttrSet =
+          AttributeSet::get(CGM.getModule().getContext(), 3U, B);
+
+      auto RTCall =
+          Builder.CreateCall(CGM.CreateRuntimeFunction(FTy, Name, ByValAttrSet),
+                             {Queue, Flags, Range, Block});
+      RTCall->setAttributes(ByValAttrSet);
+      return RValue::get(RTCall);
     }
     assert(NumArgs >= 5 && "Invalid enqueue_kernel signature");
 

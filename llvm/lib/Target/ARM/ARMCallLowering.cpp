@@ -39,6 +39,11 @@ static bool isSupportedType(const DataLayout &DL, const ARMTargetLowering &TLI,
     return false;
 
   unsigned VTSize = VT.getSimpleVT().getSizeInBits();
+
+  if (VTSize == 64)
+    // FIXME: Support i64 too
+    return VT.isFloatingPoint();
+
   return VTSize == 1 || VTSize == 8 || VTSize == 16 || VTSize == 32;
 }
 
@@ -58,8 +63,8 @@ struct FuncReturnHandler : public CallLowering::ValueHandler {
     assert(VA.isRegLoc() && "Value shouldn't be assigned to reg");
     assert(VA.getLocReg() == PhysReg && "Assigning to the wrong reg?");
 
-    assert(VA.getValVT().getSizeInBits() <= 32 && "Unsupported value size");
-    assert(VA.getLocVT().getSizeInBits() == 32 && "Unsupported location size");
+    assert(VA.getValVT().getSizeInBits() <= 64 && "Unsupported value size");
+    assert(VA.getLocVT().getSizeInBits() <= 64 && "Unsupported location size");
 
     unsigned ExtReg = extendRegister(ValVReg, VA);
     MIRBuilder.buildCopy(PhysReg, ExtReg);
@@ -69,6 +74,37 @@ struct FuncReturnHandler : public CallLowering::ValueHandler {
   void assignValueToAddress(unsigned ValVReg, unsigned Addr, uint64_t Size,
                             MachinePointerInfo &MPO, CCValAssign &VA) override {
     llvm_unreachable("Don't know how to assign a value to an address yet");
+  }
+
+  unsigned assignCustomValue(const CallLowering::ArgInfo &Arg,
+                             ArrayRef<CCValAssign> VAs) override {
+    CCValAssign VA = VAs[0];
+    assert(VA.needsCustom() && "Value doesn't need custom handling");
+    assert(VA.getValVT() == MVT::f64 && "Unsupported type");
+
+    CCValAssign NextVA = VAs[1];
+    assert(NextVA.needsCustom() && "Value doesn't need custom handling");
+    assert(NextVA.getValVT() == MVT::f64 && "Unsupported type");
+
+    assert(VA.getValNo() == NextVA.getValNo() &&
+           "Values belong to different arguments");
+
+    assert(VA.isRegLoc() && "Value should be in reg");
+    assert(NextVA.isRegLoc() && "Value should be in reg");
+
+    unsigned NewRegs[] = {MRI.createGenericVirtualRegister(LLT::scalar(32)),
+                          MRI.createGenericVirtualRegister(LLT::scalar(32))};
+
+    MIRBuilder.buildExtract(NewRegs, {0, 32}, Arg.Reg);
+
+    bool IsLittle = MIRBuilder.getMF().getSubtarget<ARMSubtarget>().isLittle();
+    if (!IsLittle)
+      std::swap(NewRegs[0], NewRegs[1]);
+
+    assignValueToReg(NewRegs[0], VA.getLocReg(), VA);
+    assignValueToReg(NewRegs[1], NextVA.getLocReg(), NextVA);
+
+    return 1;
   }
 
   MachineInstrBuilder &MIB;
@@ -144,7 +180,8 @@ struct FormalArgHandler : public CallLowering::ValueHandler {
 
   unsigned getStackAddress(uint64_t Size, int64_t Offset,
                            MachinePointerInfo &MPO) override {
-    assert((Size == 1 || Size == 2 || Size == 4) && "Unsupported size");
+    assert((Size == 1 || Size == 2 || Size == 4 || Size == 8) &&
+           "Unsupported size");
 
     auto &MFI = MIRBuilder.getMF().getFrameInfo();
 
@@ -160,7 +197,8 @@ struct FormalArgHandler : public CallLowering::ValueHandler {
 
   void assignValueToAddress(unsigned ValVReg, unsigned Addr, uint64_t Size,
                             MachinePointerInfo &MPO, CCValAssign &VA) override {
-    assert((Size == 1 || Size == 2 || Size == 4) && "Unsupported size");
+    assert((Size == 1 || Size == 2 || Size == 4 || Size == 8) &&
+           "Unsupported size");
 
     if (VA.getLocInfo() == CCValAssign::SExt ||
         VA.getLocInfo() == CCValAssign::ZExt) {
@@ -181,12 +219,43 @@ struct FormalArgHandler : public CallLowering::ValueHandler {
     assert(VA.isRegLoc() && "Value shouldn't be assigned to reg");
     assert(VA.getLocReg() == PhysReg && "Assigning to the wrong reg?");
 
-    assert(VA.getValVT().getSizeInBits() <= 32 && "Unsupported value size");
-    assert(VA.getLocVT().getSizeInBits() == 32 && "Unsupported location size");
+    assert(VA.getValVT().getSizeInBits() <= 64 && "Unsupported value size");
+    assert(VA.getLocVT().getSizeInBits() <= 64 && "Unsupported location size");
 
     // The caller should handle all necesary extensions.
     MIRBuilder.getMBB().addLiveIn(PhysReg);
     MIRBuilder.buildCopy(ValVReg, PhysReg);
+  }
+
+  unsigned assignCustomValue(const llvm::ARMCallLowering::ArgInfo &Arg,
+                             ArrayRef<CCValAssign> VAs) override {
+    CCValAssign VA = VAs[0];
+    assert(VA.needsCustom() && "Value doesn't need custom handling");
+    assert(VA.getValVT() == MVT::f64 && "Unsupported type");
+
+    CCValAssign NextVA = VAs[1];
+    assert(NextVA.needsCustom() && "Value doesn't need custom handling");
+    assert(NextVA.getValVT() == MVT::f64 && "Unsupported type");
+
+    assert(VA.getValNo() == NextVA.getValNo() &&
+           "Values belong to different arguments");
+
+    assert(VA.isRegLoc() && "Value should be in reg");
+    assert(NextVA.isRegLoc() && "Value should be in reg");
+
+    unsigned NewRegs[] = {MRI.createGenericVirtualRegister(LLT::scalar(32)),
+                          MRI.createGenericVirtualRegister(LLT::scalar(32))};
+
+    assignValueToReg(NewRegs[0], VA.getLocReg(), VA);
+    assignValueToReg(NewRegs[1], NextVA.getLocReg(), NextVA);
+
+    bool IsLittle = MIRBuilder.getMF().getSubtarget<ARMSubtarget>().isLittle();
+    if (!IsLittle)
+      std::swap(NewRegs[0], NewRegs[1]);
+
+    MIRBuilder.buildSequence(Arg.Reg, NewRegs, {0, 32});
+
+    return 1;
   }
 };
 } // End anonymous namespace

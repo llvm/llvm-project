@@ -119,10 +119,14 @@ template <class ELFT> void OutputSection<ELFT>::finalize() {
   if (!Config->copyRelocs() || (Type != SHT_RELA && Type != SHT_REL))
     return;
 
+  InputSection<ELFT> *First = Sections[0];
+  if (isa<SyntheticSection<ELFT>>(First))
+    return;
+
   this->Link = In<ELFT>::SymTab->OutSec->SectionIndex;
   // sh_info for SHT_REL[A] sections should contain the section header index of
   // the section to which the relocation applies.
-  InputSectionBase<ELFT> *S = Sections[0]->getRelocatedSection();
+  InputSectionBase<ELFT> *S = First->getRelocatedSection();
   this->Info = S->OutSec->SectionIndex;
 }
 

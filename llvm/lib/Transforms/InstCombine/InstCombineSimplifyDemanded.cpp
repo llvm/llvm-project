@@ -1482,8 +1482,11 @@ Value *InstCombiner::SimplifyDemandedVectorElts(Value *V, APInt DemandedElts,
     case Intrinsic::x86_avx2_packssdw:
     case Intrinsic::x86_avx2_packsswb:
     case Intrinsic::x86_avx2_packusdw:
-    case Intrinsic::x86_avx2_packuswb: {
-      // TODO Add support for Intrinsic::x86_avx512_mask_pack*
+    case Intrinsic::x86_avx2_packuswb:
+    case Intrinsic::x86_avx512_packssdw_512:
+    case Intrinsic::x86_avx512_packsswb_512:
+    case Intrinsic::x86_avx512_packusdw_512:
+    case Intrinsic::x86_avx512_packuswb_512: {
       auto *Ty0 = II->getArgOperand(0)->getType();
       unsigned InnerVWidth = Ty0->getVectorNumElements();
       assert(VWidth == (InnerVWidth * 2) && "Unexpected input size");

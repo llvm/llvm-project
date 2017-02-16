@@ -172,4 +172,28 @@ LLVM_SYMBOLIZER_INTERCEPTOR4(pread, ssize_t(int, void *, size_t, off_t))
 LLVM_SYMBOLIZER_INTERCEPTOR4(pread64, ssize_t(int, void *, size_t, off64_t))
 LLVM_SYMBOLIZER_INTERCEPTOR2(realpath, char *(const char *, char *))
 
+LLVM_SYMBOLIZER_INTERCEPTOR1(pthread_cond_broadcast, int(pthread_cond_t *))
+LLVM_SYMBOLIZER_INTERCEPTOR2(pthread_cond_wait,
+                             int(pthread_cond_t *, pthread_mutex_t *))
+LLVM_SYMBOLIZER_INTERCEPTOR1(pthread_mutex_lock, int(pthread_mutex_t *))
+LLVM_SYMBOLIZER_INTERCEPTOR1(pthread_mutex_unlock, int(pthread_mutex_t *))
+LLVM_SYMBOLIZER_INTERCEPTOR1(pthread_mutex_destroy, int(pthread_mutex_t *))
+LLVM_SYMBOLIZER_INTERCEPTOR2(pthread_mutex_init,
+                             int(pthread_mutex_t *,
+                                 const pthread_mutexattr_t *))
+LLVM_SYMBOLIZER_INTERCEPTOR1(pthread_mutexattr_destroy,
+                             int(pthread_mutexattr_t *))
+LLVM_SYMBOLIZER_INTERCEPTOR1(pthread_mutexattr_init, int(pthread_mutexattr_t *))
+LLVM_SYMBOLIZER_INTERCEPTOR2(pthread_mutexattr_settype,
+                             int(pthread_mutexattr_t *, int))
+LLVM_SYMBOLIZER_INTERCEPTOR1(pthread_getspecific, void *(pthread_key_t))
+LLVM_SYMBOLIZER_INTERCEPTOR2(pthread_key_create,
+                             int(pthread_key_t *, void (*)(void *)))
+LLVM_SYMBOLIZER_INTERCEPTOR2(pthread_once,
+                             int(pthread_once_t *, void (*)(void)))
+LLVM_SYMBOLIZER_INTERCEPTOR2(pthread_setspecific,
+                             int(pthread_key_t, const void *))
+LLVM_SYMBOLIZER_INTERCEPTOR3(pthread_sigmask,
+                             int(int, const sigset_t *, sigset_t *))
+
 }  // extern "C"

@@ -378,6 +378,53 @@ DocumentRangeFormattingParams::parse(llvm::yaml::MappingNode *Params) {
   return Result;
 }
 
+llvm::Optional<DocumentOnTypeFormattingParams>
+DocumentOnTypeFormattingParams::parse(llvm::yaml::MappingNode *Params) {
+  DocumentOnTypeFormattingParams Result;
+  for (auto &NextKeyValue : *Params) {
+    auto *KeyString = dyn_cast<llvm::yaml::ScalarNode>(NextKeyValue.getKey());
+    if (!KeyString)
+      return llvm::None;
+
+    llvm::SmallString<10> KeyStorage;
+    StringRef KeyValue = KeyString->getValue(KeyStorage);
+
+    if (KeyValue == "ch") {
+      auto *ScalarValue =
+          dyn_cast_or_null<llvm::yaml::ScalarNode>(NextKeyValue.getValue());
+      if (!ScalarValue)
+        return llvm::None;
+      llvm::SmallString<10> Storage;
+      Result.ch = ScalarValue->getValue(Storage);
+      continue;
+    }
+
+    auto *Value =
+        dyn_cast_or_null<llvm::yaml::MappingNode>(NextKeyValue.getValue());
+    if (!Value)
+      return llvm::None;
+    if (KeyValue == "textDocument") {
+      auto Parsed = TextDocumentIdentifier::parse(Value);
+      if (!Parsed)
+        return llvm::None;
+      Result.textDocument = std::move(*Parsed);
+    } else if (KeyValue == "position") {
+      auto Parsed = Position::parse(Value);
+      if (!Parsed)
+        return llvm::None;
+      Result.position = std::move(*Parsed);
+    } else if (KeyValue == "options") {
+      auto Parsed = FormattingOptions::parse(Value);
+      if (!Parsed)
+        return llvm::None;
+      Result.options = std::move(*Parsed);
+    } else {
+      return llvm::None;
+    }
+  }
+  return Result;
+}
+
 llvm::Optional<DocumentFormattingParams>
 DocumentFormattingParams::parse(llvm::yaml::MappingNode *Params) {
   DocumentFormattingParams Result;

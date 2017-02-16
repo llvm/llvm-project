@@ -8299,6 +8299,8 @@ def err_opencl_invalid_block_declaration : Error<
   "invalid block variable declaration - must be %select{const qualified|initialized}0">;
 def err_opencl_extern_block_declaration : Error<
   "invalid block variable declaration - using 'extern' storage class is disallowed">;
+def err_opencl_block_ref_block : Error<
+  "cannot refer to a block inside block">;
 
 // OpenCL v2.0 s6.13.9 - Address space qualifier functions. 
 def err_opencl_builtin_to_addr_arg_num : Error<
