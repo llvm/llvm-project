@@ -5707,7 +5707,6 @@ void ASTRecordWriter::AddCXXDefinitionData(const CXXRecordDecl *D) {
   Record->push_back(Data.ImplicitCopyAssignmentHasConstParam);
   Record->push_back(Data.HasDeclaredCopyConstructorWithConstParam);
   Record->push_back(Data.HasDeclaredCopyAssignmentWithConstParam);
-  Record->push_back(Data.ODRHash);
   // IsLambda bit is already saved.
 
   Record->push_back(Data.NumBases);

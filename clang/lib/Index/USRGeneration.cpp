@@ -654,7 +654,6 @@ void USRGenerator::VisitType(QualType T) {
         case BuiltinType::OCLEvent:
         case BuiltinType::OCLClkEvent:
         case BuiltinType::OCLQueue:
-        case BuiltinType::OCLNDRange:
         case BuiltinType::OCLReserveID:
         case BuiltinType::OCLSampler:
           IgnoreResults = true;

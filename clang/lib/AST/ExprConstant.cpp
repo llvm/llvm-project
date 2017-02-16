@@ -6340,12 +6340,12 @@ bool RecordExprEvaluator::VisitLambdaExpr(const LambdaExpr *E) {
   
   const size_t NumFields =
       std::distance(ClosureClass->field_begin(), ClosureClass->field_end());
-  
-  assert(NumFields ==
-    std::distance(E->capture_init_begin(), E->capture_init_end()) &&
-    "The number of lambda capture initializers should equal the number of "
-    "fields within the closure type");
-  
+
+  assert(NumFields == (size_t)std::distance(E->capture_init_begin(),
+                                            E->capture_init_end()) &&
+         "The number of lambda capture initializers should equal the number of "
+         "fields within the closure type");
+
   Result = APValue(APValue::UninitStruct(), /*NumBases*/0, NumFields);
   // Iterate through all the lambda's closure object's fields and initialize
   // them.
@@ -7089,7 +7089,6 @@ static int EvaluateBuiltinClassifyType(const CallExpr *E,
     case BuiltinType::OCLEvent:
     case BuiltinType::OCLClkEvent:
     case BuiltinType::OCLQueue:
-    case BuiltinType::OCLNDRange:
     case BuiltinType::OCLReserveID:
     case BuiltinType::Dependent:
       llvm_unreachable("CallExpr::isBuiltinClassifyType(): unimplemented type");

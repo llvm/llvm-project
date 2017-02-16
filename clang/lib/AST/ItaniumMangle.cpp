@@ -2500,9 +2500,6 @@ void CXXNameMangler::mangleType(const BuiltinType *T) {
   case BuiltinType::OCLQueue:
     Out << "9ocl_queue";
     break;
-  case BuiltinType::OCLNDRange:
-    Out << "11ocl_ndrange";
-    break;
   case BuiltinType::OCLReserveID:
     Out << "13ocl_reserveid";
     break;

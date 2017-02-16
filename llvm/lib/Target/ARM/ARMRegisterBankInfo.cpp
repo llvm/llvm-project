@@ -13,6 +13,7 @@
 
 #include "ARMRegisterBankInfo.h"
 #include "ARMInstrInfo.h" // For the register classes
+#include "ARMSubtarget.h"
 #include "llvm/CodeGen/GlobalISel/RegisterBank.h"
 #include "llvm/CodeGen/GlobalISel/RegisterBankInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -33,11 +34,14 @@ using namespace llvm;
 namespace llvm {
 namespace ARM {
 RegisterBankInfo::PartialMapping GPRPartialMapping{0, 32, GPRRegBank};
-RegisterBankInfo::PartialMapping FPRPartialMapping{0, 32, FPRRegBank};
+RegisterBankInfo::PartialMapping SPRPartialMapping{0, 32, FPRRegBank};
+RegisterBankInfo::PartialMapping DPRPartialMapping{0, 64, FPRRegBank};
 
+// FIXME: Add the mapping for S(2n+1) as {32, 64, FPRRegBank}
 RegisterBankInfo::ValueMapping ValueMappings[] = {
     {&GPRPartialMapping, 1}, {&GPRPartialMapping, 1}, {&GPRPartialMapping, 1},
-    {&FPRPartialMapping, 1}, {&FPRPartialMapping, 1}, {&FPRPartialMapping, 1}};
+    {&SPRPartialMapping, 1}, {&SPRPartialMapping, 1}, {&SPRPartialMapping, 1},
+    {&DPRPartialMapping, 1}, {&DPRPartialMapping, 1}, {&DPRPartialMapping, 1}};
 } // end namespace arm
 } // end namespace llvm
 
@@ -86,6 +90,8 @@ const RegisterBank &ARMRegisterBankInfo::getRegBankFromRegClass(
     return getRegBank(ARM::GPRRegBankID);
   case SPR_8RegClassID:
   case SPRRegClassID:
+  case DPR_8RegClassID:
+  case DPRRegClassID:
     return getRegBank(ARM::FPRRegBankID);
   default:
     llvm_unreachable("Unsupported register kind");
@@ -108,27 +114,76 @@ ARMRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
 
   using namespace TargetOpcode;
 
+  const MachineFunction &MF = *MI.getParent()->getParent();
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
+  LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+
   unsigned NumOperands = MI.getNumOperands();
   const ValueMapping *OperandsMapping = &ARM::ValueMappings[0];
 
   switch (Opc) {
   case G_ADD:
-  case G_LOAD:
   case G_SEXT:
   case G_ZEXT:
     // FIXME: We're abusing the fact that everything lives in a GPR for now; in
     // the real world we would use different mappings.
     OperandsMapping = &ARM::ValueMappings[0];
     break;
+  case G_LOAD:
+    OperandsMapping = Ty.getSizeInBits() == 64
+                          ? getOperandsMapping({&ARM::ValueMappings[6],
+                                                &ARM::ValueMappings[0]})
+                          : &ARM::ValueMappings[0];
+    break;
   case G_FADD:
-    OperandsMapping = &ARM::ValueMappings[3];
+    assert((Ty.getSizeInBits() == 32 || Ty.getSizeInBits() == 64) &&
+           "Unsupported size for G_FADD");
+    OperandsMapping = Ty.getSizeInBits() == 64 ? &ARM::ValueMappings[6]
+                                               : &ARM::ValueMappings[3];
     break;
   case G_FRAME_INDEX:
     OperandsMapping = getOperandsMapping({&ARM::ValueMappings[0], nullptr});
     break;
+  case G_SEQUENCE: {
+    // We only support G_SEQUENCE for creating a double precision floating point
+    // value out of two GPRs.
+    LLT Ty1 = MRI.getType(MI.getOperand(1).getReg());
+    LLT Ty2 = MRI.getType(MI.getOperand(3).getReg());
+    if (Ty.getSizeInBits() != 64 || Ty1.getSizeInBits() != 32 ||
+        Ty2.getSizeInBits() != 32)
+      return InstructionMapping{};
+    OperandsMapping =
+        getOperandsMapping({&ARM::ValueMappings[6], &ARM::ValueMappings[0],
+                            nullptr, &ARM::ValueMappings[0], nullptr});
+    break;
+  }
+  case G_EXTRACT: {
+    // We only support G_EXTRACT for splitting a double precision floating point
+    // value into two GPRs.
+    LLT Ty1 = MRI.getType(MI.getOperand(1).getReg());
+    LLT Ty2 = MRI.getType(MI.getOperand(2).getReg());
+    if (Ty.getSizeInBits() != 32 || Ty1.getSizeInBits() != 32 ||
+        Ty2.getSizeInBits() != 64)
+      return InstructionMapping{};
+    OperandsMapping =
+        getOperandsMapping({&ARM::ValueMappings[0], &ARM::ValueMappings[0],
+                            &ARM::ValueMappings[6], nullptr, nullptr});
+    break;
+  }
   default:
     return InstructionMapping{};
   }
+
+#ifndef NDEBUG
+  for (unsigned i = 0; i < NumOperands; i++) {
+    for (const auto &Mapping : OperandsMapping[i]) {
+      assert(
+          (Mapping.RegBank->getID() != ARM::FPRRegBankID ||
+           MF.getSubtarget<ARMSubtarget>().hasVFP2()) &&
+          "Trying to use floating point register bank on target without vfp");
+    }
+  }
+#endif
 
   return InstructionMapping{DefaultMappingID, /*Cost=*/1, OperandsMapping,
                             NumOperands};

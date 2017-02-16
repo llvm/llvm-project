@@ -16748,16 +16748,12 @@ typedef int clk_profiling_info;
 
 #define MAX_WORK_DIM        3
 
-// ToDo: Remove definition of ndrange_t in Clang as an opaque type and add back
-// the following ndrange_t definition.
-#if 0
 typedef struct {
     unsigned int workDimension;
     size_t globalWorkOffset[MAX_WORK_DIM];
     size_t globalWorkSize[MAX_WORK_DIM];
     size_t localWorkSize[MAX_WORK_DIM];
 } ndrange_t;
-#endif
 
 ndrange_t __ovld ndrange_1D(size_t);
 ndrange_t __ovld ndrange_1D(size_t, size_t);

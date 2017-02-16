@@ -5,9 +5,14 @@
   define void @test_add_s8() { ret void }
   define void @test_add_s1() { ret void }
 
-  define void @test_loads() { ret void }
+  define void @test_loads() #0 { ret void }
 
-  define void @test_fadd_s32() { ret void }
+  define void @test_fadd_s32() #0 { ret void }
+  define void @test_fadd_s64() #0 { ret void }
+
+  define void @test_soft_fp_s64() #0 { ret void }
+
+  attributes #0 = { "target-features"="+vfp2"}
 ...
 ---
 name:            test_add_s32
@@ -126,6 +131,7 @@ selected:        false
 # CHECK: - { id: 3, class: gprb }
 # CHECK: - { id: 4, class: gprb }
 # CHECK: - { id: 5, class: gprb }
+# CHECK: - { id: 6, class: fprb }
 
 registers:
   - { id: 0, class: _ }
@@ -134,10 +140,12 @@ registers:
   - { id: 3, class: _ }
   - { id: 4, class: _ }
   - { id: 5, class: _ }
+  - { id: 6, class: _ }
 body:             |
   bb.0:
     liveins: %r0
     %0(p0) = COPY %r0
+    %6(s64) = G_LOAD %0
     %1(s32) = G_LOAD %0
     %2(s16) = G_LOAD %0
     %3(s8)  = G_LOAD %0
@@ -163,12 +171,70 @@ registers:
   - { id: 2, class: _ }
 body:             |
   bb.0:
-    liveins: %r0, %r1
+    liveins: %s0, %s1
 
     %0(s32) = COPY %s0
     %1(s32) = COPY %s1
     %2(s32) = G_FADD %0, %1
     %s0 = COPY %2(s32)
-    BX_RET 14, _, implicit %r0
+    BX_RET 14, _, implicit %s0
+
+...
+---
+name:            test_fadd_s64
+# CHECK-LABEL: name: test_fadd_s64
+legalized:       true
+regBankSelected: false
+selected:        false
+# CHECK: registers:
+# CHECK: - { id: 0, class: fprb }
+# CHECK: - { id: 1, class: fprb }
+# CHECK: - { id: 2, class: fprb }
+
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+body:             |
+  bb.0:
+    liveins: %d0, %d1
+
+    %0(s64) = COPY %d0
+    %1(s64) = COPY %d1
+    %2(s64) = G_FADD %0, %1
+    %d0 = COPY %2(s64)
+    BX_RET 14, _, implicit %d0
+
+...
+---
+name:            test_soft_fp_s64
+# CHECK-LABEL: name: test_soft_fp_s64
+legalized:       true
+regBankSelected: false
+selected:        false
+# CHECK: registers:
+# CHECK: - { id: 0, class: gprb }
+# CHECK: - { id: 1, class: gprb }
+# CHECK: - { id: 2, class: fprb }
+# CHECK: - { id: 3, class: gprb }
+# CHECK: - { id: 4, class: gprb }
+
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+  - { id: 3, class: _ }
+  - { id: 4, class: _ }
+body:             |
+  bb.0:
+    liveins: %r0, %r1
+
+    %0(s32) = COPY %r0
+    %1(s32) = COPY %r1
+    %2(s64) = G_SEQUENCE %0(s32), 0, %1(s32), 32
+    %3(s32), %4(s32) = G_EXTRACT %2(s64), 0, 32
+    %r0 = COPY %3(s32)
+    %r1 = COPY %4(s32)
+    BX_RET 14, _, implicit %r0, implicit %r1
 
 ...

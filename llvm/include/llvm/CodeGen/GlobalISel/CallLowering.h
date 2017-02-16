@@ -70,6 +70,17 @@ public:
                                       uint64_t Size, MachinePointerInfo &MPO,
                                       CCValAssign &VA) = 0;
 
+    /// Handle custom values, which may be passed into one or more of \p VAs.
+    /// \return The number of \p VAs that have been assigned after the first
+    ///         one, and which should therefore be skipped from further
+    ///         processing.
+    virtual unsigned assignCustomValue(const ArgInfo &Arg,
+                                       ArrayRef<CCValAssign> VAs) {
+      // This is not a pure virtual method because not all targets need to worry
+      // about custom values.
+      llvm_unreachable("Custom values not supported");
+    }
+
     unsigned extendRegister(unsigned ValReg, CCValAssign &VA);
 
     virtual bool assignArg(unsigned ValNo, MVT ValVT, MVT LocVT,

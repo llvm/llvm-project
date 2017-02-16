@@ -1800,10 +1800,6 @@ void MicrosoftCXXNameMangler::mangleType(const BuiltinType *T, Qualifiers,
     Out << "PA";
     mangleArtificalTagType(TTK_Struct, "ocl_queue");
     break;
-  case BuiltinType::OCLNDRange:
-    Out << "PA";
-    mangleArtificalTagType(TTK_Struct, "ocl_ndrange");
-    break;
   case BuiltinType::OCLReserveID:
     Out << "PA";
     mangleArtificalTagType(TTK_Struct, "ocl_reserveid");

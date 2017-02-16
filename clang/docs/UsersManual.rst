@@ -2073,6 +2073,8 @@ can be given manually.
 In this case the kernel code should contain ``#include <opencl-c.h>`` just as a
 regular C include.
 
+.. _opencl_cl_ext:
+
 .. option:: -cl-ext
 
 Disables support of OpenCL extensions. All OpenCL targets provide a list
@@ -2194,6 +2196,41 @@ To enable modules for OpenCL:
 
      $ clang -target spir-unknown-unknown -c -emit-llvm -Xclang -finclude-default-header -fmodules -fimplicit-module-maps -fmodules-cache-path=<path to the generated module> test.cl
 
+OpenCL Extensions
+-----------------
+
+All of the ``cl_khr_*`` extensions from `the official OpenCL specification
+<https://www.khronos.org/registry/OpenCL/sdk/2.0/docs/man/xhtml/EXTENSION.html>`_
+up to and including version 2.0 are available and set per target depending on the
+support available in the specific architecture.
+
+It is possible to alter the default extensions setting per target using
+``-cl-ext`` flag. (See :ref:`flags description <opencl_cl_ext>` for more details).
+
+Vendor extensions can be added flexibly by declaring the list of types and
+functions associated with each extensions enclosed within the following
+compiler pragma directives:
+
+  .. code-block:: c
+
+       #pragma OPENCL EXTENSION the_new_extension_name : begin
+       // declare types and functions associated with the extension here
+       #pragma OPENCL EXTENSION the_new_extension_name : end
+
+For example, parsing the following code adds ``my_t`` type and ``my_func``
+function to the custom ``my_ext`` extension.
+
+  .. code-block:: c
+
+       #pragma OPENCL EXTENSION my_ext : begin
+       typedef struct{
+         int a;
+       }my_t;
+       void my_func(my_t);
+       #pragma OPENCL EXTENSION my_ext : end
+
+Declaring the same types in different vendor extensions is disallowed.
+
 OpenCL Metadata
 ---------------
 
@@ -2232,7 +2269,7 @@ does not have any effect on the IR. For more details reffer to the specification
 <https://www.khronos.org/registry/cl/specs/opencl-2.0-openclc.pdf#49>`_
 
 
-opencl_hint_unroll
+opencl_unroll_hint
 ^^^^^^^^^^^^^^^^^^
 
 The implementation of this feature mirrors the unroll hint for C.
