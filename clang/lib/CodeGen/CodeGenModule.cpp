@@ -1693,6 +1693,16 @@ void CodeGenModule::EmitGlobal(GlobalDecl GD) {
   }
 }
 
+// Check if T is a class type with a destructor that's not dllimport.
+static bool HasNonDllImportDtor(QualType T) {
+  if (const auto *RT = T->getBaseElementTypeUnsafe()->getAs<RecordType>())
+    if (CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(RT->getDecl()))
+      if (RD->getDestructor() && !RD->getDestructor()->hasAttr<DLLImportAttr>())
+        return true;
+
+  return false;
+}
+
 namespace {
   struct FunctionIsDirectlyRecursive :
     public RecursiveASTVisitor<FunctionIsDirectlyRecursive> {
@@ -1726,6 +1736,7 @@ namespace {
     }
   };
 
+  // Make sure we're not referencing non-imported vars or functions.
   struct DLLImportFunctionVisitor
       : public RecursiveASTVisitor<DLLImportFunctionVisitor> {
     bool SafeToInline = true;
@@ -1733,12 +1744,25 @@ namespace {
     bool shouldVisitImplicitCode() const { return true; }
 
     bool VisitVarDecl(VarDecl *VD) {
-      // A thread-local variable cannot be imported.
-      SafeToInline = !VD->getTLSKind();
+      if (VD->getTLSKind()) {
+        // A thread-local variable cannot be imported.
+        SafeToInline = false;
+        return SafeToInline;
+      }
+
+      // A variable definition might imply a destructor call.
+      if (VD->isThisDeclarationADefinition())
+        SafeToInline = !HasNonDllImportDtor(VD->getType());
+
       return SafeToInline;
     }
 
-    // Make sure we're not referencing non-imported vars or functions.
+    bool VisitCXXBindTemporaryExpr(CXXBindTemporaryExpr *E) {
+      if (const auto *D = E->getTemporary()->getDestructor())
+        SafeToInline = D->hasAttr<DLLImportAttr>();
+      return SafeToInline;
+    }
+
     bool VisitDeclRefExpr(DeclRefExpr *E) {
       ValueDecl *VD = E->getDecl();
       if (isa<FunctionDecl>(VD))
@@ -1747,10 +1771,12 @@ namespace {
         SafeToInline = !V->hasGlobalStorage() || V->hasAttr<DLLImportAttr>();
       return SafeToInline;
     }
+
     bool VisitCXXConstructExpr(CXXConstructExpr *E) {
       SafeToInline = E->getConstructor()->hasAttr<DLLImportAttr>();
       return SafeToInline;
     }
+
     bool VisitCXXMemberCallExpr(CXXMemberCallExpr *E) {
       CXXMethodDecl *M = E->getMethodDecl();
       if (!M) {
@@ -1761,10 +1787,12 @@ namespace {
       }
       return SafeToInline;
     }
+
     bool VisitCXXDeleteExpr(CXXDeleteExpr *E) {
       SafeToInline = E->getOperatorDelete()->hasAttr<DLLImportAttr>();
       return SafeToInline;
     }
+
     bool VisitCXXNewExpr(CXXNewExpr *E) {
       SafeToInline = E->getOperatorNew()->hasAttr<DLLImportAttr>();
       return SafeToInline;
@@ -1791,16 +1819,6 @@ CodeGenModule::isTriviallyRecursive(const FunctionDecl *FD) {
   FunctionIsDirectlyRecursive Walker(Name, Context.BuiltinInfo);
   Walker.TraverseFunctionDecl(const_cast<FunctionDecl*>(FD));
   return Walker.Result;
-}
-
-// Check if T is a class type with a destructor that's not dllimport.
-static bool HasNonDllImportDtor(QualType T) {
-  if (const RecordType *RT = dyn_cast<RecordType>(T))
-    if (CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(RT->getDecl()))
-      if (RD->getDestructor() && !RD->getDestructor()->hasAttr<DLLImportAttr>())
-        return true;
-
-  return false;
 }
 
 bool CodeGenModule::shouldEmitFunction(GlobalDecl GD) {

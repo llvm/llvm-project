@@ -9158,13 +9158,15 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
     } else if (CXXConversionDecl *Conversion
                = dyn_cast<CXXConversionDecl>(NewFD)) {
       ActOnConversionDeclarator(Conversion);
-    } else if (NewFD->isDeductionGuide() &&
-               NewFD->getTemplateSpecializationKind() ==
-                   TSK_ExplicitSpecialization) {
+    } else if (NewFD->isDeductionGuide()) {
+      if (auto *TD = NewFD->getDescribedFunctionTemplate())
+        CheckDeductionGuideTemplate(TD);
+
       // A deduction guide is not on the list of entities that can be
       // explicitly specialized.
-      Diag(NewFD->getLocStart(), diag::err_deduction_guide_specialized)
-        << /*explicit specialization*/ 1;
+      if (NewFD->getTemplateSpecializationKind() == TSK_ExplicitSpecialization)
+        Diag(NewFD->getLocStart(), diag::err_deduction_guide_specialized)
+            << /*explicit specialization*/ 1;
     }
 
     // Find any virtual functions that this function overrides.
@@ -11706,8 +11708,6 @@ void
 Sema::CheckForFunctionRedefinition(FunctionDecl *FD,
                                    const FunctionDecl *EffectiveDefinition,
                                    SkipBodyInfo *SkipBody) {
-  // Don't complain if we're in GNU89 mode and the previous definition
-  // was an extern inline function.
   const FunctionDecl *Definition = EffectiveDefinition;
   if (!Definition)
     if (!FD->isDefined(Definition))

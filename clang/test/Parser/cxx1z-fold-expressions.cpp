@@ -34,3 +34,12 @@ template<int ...N> int bad9() { return (3 + ... * N); } // expected-error {{oper
 template<int ...N> int bad10() { return (3 ? ... : N); } // expected-error +{{}} expected-note {{to match}}
 template<int ...N> int bad11() { return (N + ... 0); } // expected-error {{expected a foldable binary operator}} expected-error {{expected expression}}
 template<int ...N> int bad12() { return (... N); } // expected-error {{expected expression}}
+
+template<typename ...T> void as_operand_of_cast(int a, T ...t) {
+  return
+    (int)(a + ... + undeclared_junk) + // expected-error {{undeclared}} expected-error {{does not contain any unexpanded}}
+    (int)(t + ... + undeclared_junk) + // expected-error {{undeclared}}
+    (int)(... + undeclared_junk) + // expected-error {{undeclared}} expected-error {{does not contain any unexpanded}}
+    (int)(undeclared_junk + ...) + // expected-error {{undeclared}}
+    (int)(a + ...); // expected-error {{does not contain any unexpanded}}
+}

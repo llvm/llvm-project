@@ -792,7 +792,7 @@ static void handleAllocSizeAttr(Sema &S, Decl *D, const AttributeList &Attr) {
 
   const Expr *SizeExpr = Attr.getArgAsExpr(0);
   int SizeArgNo;
-  // Paramater indices are 1-indexed, hence Index=1
+  // Parameter indices are 1-indexed, hence Index=1
   if (!checkPositiveIntArgument(S, Attr, SizeExpr, SizeArgNo, /*Index=*/1))
     return;
 
@@ -803,7 +803,7 @@ static void handleAllocSizeAttr(Sema &S, Decl *D, const AttributeList &Attr) {
   int NumberArgNo = 0;
   if (Attr.getNumArgs() == 2) {
     const Expr *NumberExpr = Attr.getArgAsExpr(1);
-    // Paramater indices are 1-based, hence Index=2
+    // Parameter indices are 1-based, hence Index=2
     if (!checkPositiveIntArgument(S, Attr, NumberExpr, NumberArgNo,
                                   /*Index=*/2))
       return;

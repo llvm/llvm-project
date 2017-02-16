@@ -150,3 +150,21 @@ namespace look_into_current_instantiation {
 
   C c = {1, 2};
 }
+
+namespace nondeducible {
+  template<typename A, typename B> struct X {};
+
+  template<typename A> // expected-note {{non-deducible template parameter 'A'}}
+  X() -> X<A, int>; // expected-error {{deduction guide template contains a template parameter that cannot be deduced}}
+
+  template<typename A> // expected-note {{non-deducible template parameter 'A'}}
+  X(typename X<A, int>::type) -> X<A, int>; // expected-error {{deduction guide template contains a template parameter that cannot be deduced}}
+
+  template<typename A = int,
+           typename B> // expected-note {{non-deducible template parameter 'B'}}
+  X(int) -> X<A, B>; // expected-error {{deduction guide template contains a template parameter that cannot be deduced}}
+
+  template<typename A = int,
+           typename ...B>
+  X(float) -> X<A, B...>; // ok
+}

@@ -2656,6 +2656,44 @@ static bool isSameTemplateParameterList(const TemplateParameterList *X,
   return true;
 }
 
+/// Determine whether the attributes we can overload on are identical for A and
+/// B. Expects A and B to (otherwise) have the same type.
+static bool hasSameOverloadableAttrs(const FunctionDecl *A,
+                                     const FunctionDecl *B) {
+  SmallVector<const EnableIfAttr *, 4> AEnableIfs;
+  // Since this is an equality check, we can ignore that enable_if attrs show up
+  // in reverse order.
+  for (const auto *EIA : A->specific_attrs<EnableIfAttr>())
+    AEnableIfs.push_back(EIA);
+
+  SmallVector<const EnableIfAttr *, 4> BEnableIfs;
+  for (const auto *EIA : B->specific_attrs<EnableIfAttr>())
+    BEnableIfs.push_back(EIA);
+
+  // Two very common cases: either we have 0 enable_if attrs, or we have an
+  // unequal number of enable_if attrs.
+  if (AEnableIfs.empty() && BEnableIfs.empty())
+    return true;
+
+  if (AEnableIfs.size() != BEnableIfs.size())
+    return false;
+
+  llvm::FoldingSetNodeID Cand1ID, Cand2ID;
+  for (unsigned I = 0, E = AEnableIfs.size(); I != E; ++I) {
+    Cand1ID.clear();
+    Cand2ID.clear();
+
+    AEnableIfs[I]->getCond()->Profile(Cand1ID, A->getASTContext(), true);
+    BEnableIfs[I]->getCond()->Profile(Cand2ID, B->getASTContext(), true);
+    if (Cand1ID != Cand2ID)
+      return false;
+  }
+
+  // FIXME: This doesn't currently consider pass_object_size attributes, since
+  // we aren't guaranteed that A and B have valid parameter lists yet.
+  return true;
+}
+
 /// \brief Determine whether the two declarations refer to the same entity.
 static bool isSameEntity(NamedDecl *X, NamedDecl *Y) {
   assert(X->getDeclName() == Y->getDeclName() && "Declaration name mismatch!");
@@ -2711,8 +2749,10 @@ static bool isSameEntity(NamedDecl *X, NamedDecl *Y) {
                         CtorY->getInheritedConstructor().getConstructor()))
         return false;
     }
-    return (FuncX->getLinkageInternal() == FuncY->getLinkageInternal()) &&
-      FuncX->getASTContext().hasSameType(FuncX->getType(), FuncY->getType());
+    return FuncX->getLinkageInternal() == FuncY->getLinkageInternal() &&
+           FuncX->getASTContext().hasSameType(FuncX->getType(),
+                                              FuncY->getType()) &&
+           hasSameOverloadableAttrs(FuncX, FuncY);
   }
 
   // Variables with the same type and linkage match.

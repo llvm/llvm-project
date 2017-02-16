@@ -5665,6 +5665,7 @@ public:
   Decl *ActOnConversionDeclarator(CXXConversionDecl *Conversion);
   void CheckDeductionGuideDeclarator(Declarator &D, QualType &R,
                                      StorageClass &SC);
+  void CheckDeductionGuideTemplate(FunctionTemplateDecl *TD);
 
   void CheckExplicitlyDefaultedSpecialMember(CXXMethodDecl *MD);
   void CheckExplicitlyDefaultedMemberExceptionSpec(CXXMethodDecl *MD,

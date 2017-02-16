@@ -2409,7 +2409,7 @@ Parser::ParseParenExpression(ParenParseOption &ExprType, bool stopIfCastExpr,
       // fold-expressions, we'll need to allow multiple ArgExprs here.
       if (ArgExprs.size() == 1 && isFoldOperator(Tok.getKind()) &&
           NextToken().is(tok::ellipsis))
-        return ParseFoldExpression(Result, T);
+        return ParseFoldExpression(ArgExprs[0], T);
 
       ExprType = SimpleExpr;
       Result = Actions.ActOnParenListExpr(OpenLoc, Tok.getLocation(),
