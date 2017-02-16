@@ -25,6 +25,7 @@
 namespace llvm {
 class LLVMContext;
 class MachineInstr;
+class MachineIRBuilder;
 class MachineRegisterInfo;
 class Type;
 class VectorType;
@@ -186,6 +187,10 @@ public:
   }
 
   bool isLegal(const MachineInstr &MI, const MachineRegisterInfo &MRI) const;
+
+  virtual bool legalizeCustom(MachineInstr &MI,
+                              MachineRegisterInfo &MRI,
+                              MachineIRBuilder &MIRBuilder) const;
 
 private:
   static const int FirstOp = TargetOpcode::PRE_ISEL_GENERIC_OPCODE_START;

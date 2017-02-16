@@ -54,5 +54,29 @@ entry:
 ; CHECK: ret void
 }
 
+; CHECK-LABEL: @SwiftError
+; CHECK-NOT: __tsan_read
+; CHECK-NOT: __tsan_write
+; CHECK: ret
+define void @SwiftError(i8** swifterror) sanitize_thread {
+  %swifterror_ptr_value = load i8*, i8** %0
+  store i8* null, i8** %0
+  %swifterror_addr = alloca swifterror i8*
+  %swifterror_ptr_value_2 = load i8*, i8** %swifterror_addr
+  store i8* null, i8** %swifterror_addr
+  ret void
+}
+
+; CHECK-LABEL: @SwiftErrorCall
+; CHECK-NOT: __tsan_read
+; CHECK-NOT: __tsan_write
+; CHECK: ret
+define void @SwiftErrorCall(i8** swifterror) sanitize_thread {
+  %swifterror_addr = alloca swifterror i8*
+  store i8* null, i8** %0
+  call void @SwiftError(i8** %0)
+  ret void
+}
+
 ; CHECK: define internal void @tsan.module_ctor()
 ; CHECK: call void @__tsan_init()

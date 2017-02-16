@@ -23,7 +23,6 @@
 #include "llvm/Analysis/LazyValueInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/ValueHandle.h"
 
 namespace llvm {
@@ -63,7 +62,6 @@ class JumpThreadingPass : public PassInfoMixin<JumpThreadingPass> {
   std::unique_ptr<BlockFrequencyInfo> BFI;
   std::unique_ptr<BranchProbabilityInfo> BPI;
   bool HasProfileData = false;
-  bool HasGuards = false;
 #ifdef NDEBUG
   SmallPtrSet<const BasicBlock *, 16> LoopHeaders;
 #else
@@ -123,9 +121,6 @@ public:
   bool SimplifyPartiallyRedundantLoad(LoadInst *LI);
   bool TryToUnfoldSelect(CmpInst *CondCmp, BasicBlock *BB);
   bool TryToUnfoldSelectInCurrBB(BasicBlock *BB);
-
-  bool ProcessGuards(BasicBlock *BB);
-  bool ThreadGuard(BasicBlock *BB, IntrinsicInst *Guard, BranchInst *BI);
 
 private:
   BasicBlock *SplitBlockPreds(BasicBlock *BB, ArrayRef<BasicBlock *> Preds,

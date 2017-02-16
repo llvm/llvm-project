@@ -2822,7 +2822,7 @@ define <8 x i16> @cvt_4f32_to_8i16_undef(<4 x float> %a0) nounwind {
 ; AVX1-NEXT:    shlq $32, %rdx
 ; AVX1-NEXT:    orq %rcx, %rdx
 ; AVX1-NEXT:    vmovq %rdx, %xmm0
-; AVX1-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
+; AVX1-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,2,2,3,4,5,6,7]
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: cvt_4f32_to_8i16_undef:
@@ -2847,7 +2847,7 @@ define <8 x i16> @cvt_4f32_to_8i16_undef(<4 x float> %a0) nounwind {
 ; AVX2-NEXT:    shlq $32, %rdx
 ; AVX2-NEXT:    orq %rcx, %rdx
 ; AVX2-NEXT:    vmovq %rdx, %xmm0
-; AVX2-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
+; AVX2-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,2,2,3,4,5,6,7]
 ; AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: cvt_4f32_to_8i16_undef:
@@ -2873,7 +2873,7 @@ define <8 x i16> @cvt_4f32_to_8i16_undef(<4 x float> %a0) nounwind {
 ; AVX512F-NEXT:    shlq $32, %rdx
 ; AVX512F-NEXT:    orq %rcx, %rdx
 ; AVX512F-NEXT:    vmovq %rdx, %xmm0
-; AVX512F-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
+; AVX512F-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,2,2,3,4,5,6,7]
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: cvt_4f32_to_8i16_undef:
@@ -2899,7 +2899,6 @@ define <8 x i16> @cvt_4f32_to_8i16_undef(<4 x float> %a0) nounwind {
 ; AVX512VL-NEXT:    orq %rcx, %rdx
 ; AVX512VL-NEXT:    vmovq %rdx, %xmm0
 ; AVX512VL-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,2,2,3,4,5,6,7]
-; AVX512VL-NEXT:    vpshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,6,6,7]
 ; AVX512VL-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
 ; AVX512VL-NEXT:    retq
   %1 = fptrunc <4 x float> %a0 to <4 x half>
@@ -2931,7 +2930,7 @@ define <8 x i16> @cvt_4f32_to_8i16_zero(<4 x float> %a0) nounwind {
 ; AVX1-NEXT:    shlq $32, %rdx
 ; AVX1-NEXT:    orq %rcx, %rdx
 ; AVX1-NEXT:    vmovq %rdx, %xmm0
-; AVX1-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,4,5,8,9,12,13],zero,zero,zero,zero,zero,zero,zero,zero
+; AVX1-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,4,5,u,u,u,u],zero,zero,zero,zero,zero,zero,zero,zero
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: cvt_4f32_to_8i16_zero:
@@ -2956,7 +2955,7 @@ define <8 x i16> @cvt_4f32_to_8i16_zero(<4 x float> %a0) nounwind {
 ; AVX2-NEXT:    shlq $32, %rdx
 ; AVX2-NEXT:    orq %rcx, %rdx
 ; AVX2-NEXT:    vmovq %rdx, %xmm0
-; AVX2-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,4,5,8,9,12,13],zero,zero,zero,zero,zero,zero,zero,zero
+; AVX2-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,4,5,u,u,u,u],zero,zero,zero,zero,zero,zero,zero,zero
 ; AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: cvt_4f32_to_8i16_zero:
@@ -2982,7 +2981,7 @@ define <8 x i16> @cvt_4f32_to_8i16_zero(<4 x float> %a0) nounwind {
 ; AVX512F-NEXT:    shlq $32, %rdx
 ; AVX512F-NEXT:    orq %rcx, %rdx
 ; AVX512F-NEXT:    vmovq %rdx, %xmm0
-; AVX512F-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,4,5,8,9,12,13],zero,zero,zero,zero,zero,zero,zero,zero
+; AVX512F-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,4,5,u,u,u,u],zero,zero,zero,zero,zero,zero,zero,zero
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: cvt_4f32_to_8i16_zero:
@@ -3008,7 +3007,6 @@ define <8 x i16> @cvt_4f32_to_8i16_zero(<4 x float> %a0) nounwind {
 ; AVX512VL-NEXT:    orq %rcx, %rdx
 ; AVX512VL-NEXT:    vmovq %rdx, %xmm0
 ; AVX512VL-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,2,2,3,4,5,6,7]
-; AVX512VL-NEXT:    vpshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,6,6,7]
 ; AVX512VL-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,0,2]
 ; AVX512VL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX512VL-NEXT:    vpunpckhqdq {{.*#+}} xmm0 = xmm0[1],xmm1[1]
@@ -3631,7 +3629,7 @@ define void @store_cvt_4f32_to_8i16_undef(<4 x float> %a0, <8 x i16>* %a1) nounw
 ; AVX1-NEXT:    shlq $32, %rdx
 ; AVX1-NEXT:    orq %rcx, %rdx
 ; AVX1-NEXT:    vmovq %rdx, %xmm0
-; AVX1-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
+; AVX1-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,2,2,3,4,5,6,7]
 ; AVX1-NEXT:    vmovdqa %xmm0, (%rdi)
 ; AVX1-NEXT:    retq
 ;
@@ -3657,7 +3655,7 @@ define void @store_cvt_4f32_to_8i16_undef(<4 x float> %a0, <8 x i16>* %a1) nounw
 ; AVX2-NEXT:    shlq $32, %rdx
 ; AVX2-NEXT:    orq %rcx, %rdx
 ; AVX2-NEXT:    vmovq %rdx, %xmm0
-; AVX2-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
+; AVX2-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,2,2,3,4,5,6,7]
 ; AVX2-NEXT:    vmovdqa %xmm0, (%rdi)
 ; AVX2-NEXT:    retq
 ;
@@ -3684,7 +3682,7 @@ define void @store_cvt_4f32_to_8i16_undef(<4 x float> %a0, <8 x i16>* %a1) nounw
 ; AVX512F-NEXT:    shlq $32, %rdx
 ; AVX512F-NEXT:    orq %rcx, %rdx
 ; AVX512F-NEXT:    vmovq %rdx, %xmm0
-; AVX512F-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
+; AVX512F-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,2,2,3,4,5,6,7]
 ; AVX512F-NEXT:    vmovdqa %xmm0, (%rdi)
 ; AVX512F-NEXT:    retq
 ;
@@ -3711,7 +3709,6 @@ define void @store_cvt_4f32_to_8i16_undef(<4 x float> %a0, <8 x i16>* %a1) nounw
 ; AVX512VL-NEXT:    orq %rcx, %rdx
 ; AVX512VL-NEXT:    vmovq %rdx, %xmm0
 ; AVX512VL-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,2,2,3,4,5,6,7]
-; AVX512VL-NEXT:    vpshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,6,6,7]
 ; AVX512VL-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
 ; AVX512VL-NEXT:    vmovdqa %xmm0, (%rdi)
 ; AVX512VL-NEXT:    retq
@@ -3745,7 +3742,7 @@ define void @store_cvt_4f32_to_8i16_zero(<4 x float> %a0, <8 x i16>* %a1) nounwi
 ; AVX1-NEXT:    shlq $32, %rdx
 ; AVX1-NEXT:    orq %rcx, %rdx
 ; AVX1-NEXT:    vmovq %rdx, %xmm0
-; AVX1-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,4,5,8,9,12,13],zero,zero,zero,zero,zero,zero,zero,zero
+; AVX1-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,4,5,u,u,u,u],zero,zero,zero,zero,zero,zero,zero,zero
 ; AVX1-NEXT:    vmovdqa %xmm0, (%rdi)
 ; AVX1-NEXT:    retq
 ;
@@ -3771,7 +3768,7 @@ define void @store_cvt_4f32_to_8i16_zero(<4 x float> %a0, <8 x i16>* %a1) nounwi
 ; AVX2-NEXT:    shlq $32, %rdx
 ; AVX2-NEXT:    orq %rcx, %rdx
 ; AVX2-NEXT:    vmovq %rdx, %xmm0
-; AVX2-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,4,5,8,9,12,13],zero,zero,zero,zero,zero,zero,zero,zero
+; AVX2-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,4,5,u,u,u,u],zero,zero,zero,zero,zero,zero,zero,zero
 ; AVX2-NEXT:    vmovdqa %xmm0, (%rdi)
 ; AVX2-NEXT:    retq
 ;
@@ -3798,7 +3795,7 @@ define void @store_cvt_4f32_to_8i16_zero(<4 x float> %a0, <8 x i16>* %a1) nounwi
 ; AVX512F-NEXT:    shlq $32, %rdx
 ; AVX512F-NEXT:    orq %rcx, %rdx
 ; AVX512F-NEXT:    vmovq %rdx, %xmm0
-; AVX512F-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,4,5,8,9,12,13],zero,zero,zero,zero,zero,zero,zero,zero
+; AVX512F-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,4,5,u,u,u,u],zero,zero,zero,zero,zero,zero,zero,zero
 ; AVX512F-NEXT:    vmovdqa %xmm0, (%rdi)
 ; AVX512F-NEXT:    retq
 ;
@@ -3825,7 +3822,6 @@ define void @store_cvt_4f32_to_8i16_zero(<4 x float> %a0, <8 x i16>* %a1) nounwi
 ; AVX512VL-NEXT:    orq %rcx, %rdx
 ; AVX512VL-NEXT:    vmovq %rdx, %xmm0
 ; AVX512VL-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,2,2,3,4,5,6,7]
-; AVX512VL-NEXT:    vpshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,6,6,7]
 ; AVX512VL-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,0,2]
 ; AVX512VL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX512VL-NEXT:    vpunpckhqdq {{.*#+}} xmm0 = xmm0[1],xmm1[1]
@@ -4477,7 +4473,7 @@ define <8 x i16> @cvt_4f64_to_8i16_undef(<4 x double> %a0) nounwind {
 ; AVX1-NEXT:    shlq $32, %rax
 ; AVX1-NEXT:    orq %r14, %rax
 ; AVX1-NEXT:    vmovq %rax, %xmm0
-; AVX1-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
+; AVX1-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,2,2,3,4,5,6,7]
 ; AVX1-NEXT:    addq $40, %rsp
 ; AVX1-NEXT:    popq %rbx
 ; AVX1-NEXT:    popq %r14
@@ -4515,7 +4511,7 @@ define <8 x i16> @cvt_4f64_to_8i16_undef(<4 x double> %a0) nounwind {
 ; AVX2-NEXT:    shlq $32, %rax
 ; AVX2-NEXT:    orq %r14, %rax
 ; AVX2-NEXT:    vmovq %rax, %xmm0
-; AVX2-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
+; AVX2-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,2,2,3,4,5,6,7]
 ; AVX2-NEXT:    addq $40, %rsp
 ; AVX2-NEXT:    popq %rbx
 ; AVX2-NEXT:    popq %r14
@@ -4550,7 +4546,7 @@ define <8 x i16> @cvt_4f64_to_8i16_undef(<4 x double> %a0) nounwind {
 ; AVX512F-NEXT:    shlq $32, %rax
 ; AVX512F-NEXT:    orq %r14, %rax
 ; AVX512F-NEXT:    vmovq %rax, %xmm0
-; AVX512F-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
+; AVX512F-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,2,2,3,4,5,6,7]
 ; AVX512F-NEXT:    addq $40, %rsp
 ; AVX512F-NEXT:    popq %rbx
 ; AVX512F-NEXT:    popq %r14
@@ -4586,7 +4582,6 @@ define <8 x i16> @cvt_4f64_to_8i16_undef(<4 x double> %a0) nounwind {
 ; AVX512VL-NEXT:    orq %r14, %rax
 ; AVX512VL-NEXT:    vmovq %rax, %xmm0
 ; AVX512VL-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,2,2,3,4,5,6,7]
-; AVX512VL-NEXT:    vpshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,6,6,7]
 ; AVX512VL-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
 ; AVX512VL-NEXT:    addq $40, %rsp
 ; AVX512VL-NEXT:    popq %rbx
@@ -4631,7 +4626,7 @@ define <8 x i16> @cvt_4f64_to_8i16_zero(<4 x double> %a0) nounwind {
 ; AVX1-NEXT:    shlq $32, %rax
 ; AVX1-NEXT:    orq %r14, %rax
 ; AVX1-NEXT:    vmovq %rax, %xmm0
-; AVX1-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,4,5,8,9,12,13],zero,zero,zero,zero,zero,zero,zero,zero
+; AVX1-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,4,5,u,u,u,u],zero,zero,zero,zero,zero,zero,zero,zero
 ; AVX1-NEXT:    addq $40, %rsp
 ; AVX1-NEXT:    popq %rbx
 ; AVX1-NEXT:    popq %r14
@@ -4669,7 +4664,7 @@ define <8 x i16> @cvt_4f64_to_8i16_zero(<4 x double> %a0) nounwind {
 ; AVX2-NEXT:    shlq $32, %rax
 ; AVX2-NEXT:    orq %r14, %rax
 ; AVX2-NEXT:    vmovq %rax, %xmm0
-; AVX2-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,4,5,8,9,12,13],zero,zero,zero,zero,zero,zero,zero,zero
+; AVX2-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,4,5,u,u,u,u],zero,zero,zero,zero,zero,zero,zero,zero
 ; AVX2-NEXT:    addq $40, %rsp
 ; AVX2-NEXT:    popq %rbx
 ; AVX2-NEXT:    popq %r14
@@ -4704,7 +4699,7 @@ define <8 x i16> @cvt_4f64_to_8i16_zero(<4 x double> %a0) nounwind {
 ; AVX512F-NEXT:    shlq $32, %rax
 ; AVX512F-NEXT:    orq %r14, %rax
 ; AVX512F-NEXT:    vmovq %rax, %xmm0
-; AVX512F-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,4,5,8,9,12,13],zero,zero,zero,zero,zero,zero,zero,zero
+; AVX512F-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,4,5,u,u,u,u],zero,zero,zero,zero,zero,zero,zero,zero
 ; AVX512F-NEXT:    addq $40, %rsp
 ; AVX512F-NEXT:    popq %rbx
 ; AVX512F-NEXT:    popq %r14
@@ -4740,7 +4735,6 @@ define <8 x i16> @cvt_4f64_to_8i16_zero(<4 x double> %a0) nounwind {
 ; AVX512VL-NEXT:    orq %r14, %rax
 ; AVX512VL-NEXT:    vmovq %rax, %xmm0
 ; AVX512VL-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,2,2,3,4,5,6,7]
-; AVX512VL-NEXT:    vpshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,6,6,7]
 ; AVX512VL-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,0,2]
 ; AVX512VL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX512VL-NEXT:    vpunpckhqdq {{.*#+}} xmm0 = xmm0[1],xmm1[1]
@@ -5250,7 +5244,7 @@ define void @store_cvt_4f64_to_8i16_undef(<4 x double> %a0, <8 x i16>* %a1) noun
 ; AVX1-NEXT:    shlq $32, %rax
 ; AVX1-NEXT:    orq %rbx, %rax
 ; AVX1-NEXT:    vmovq %rax, %xmm0
-; AVX1-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
+; AVX1-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,2,2,3,4,5,6,7]
 ; AVX1-NEXT:    vmovdqa %xmm0, (%r14)
 ; AVX1-NEXT:    addq $32, %rsp
 ; AVX1-NEXT:    popq %rbx
@@ -5292,7 +5286,7 @@ define void @store_cvt_4f64_to_8i16_undef(<4 x double> %a0, <8 x i16>* %a1) noun
 ; AVX2-NEXT:    shlq $32, %rax
 ; AVX2-NEXT:    orq %rbx, %rax
 ; AVX2-NEXT:    vmovq %rax, %xmm0
-; AVX2-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
+; AVX2-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,2,2,3,4,5,6,7]
 ; AVX2-NEXT:    vmovdqa %xmm0, (%r14)
 ; AVX2-NEXT:    addq $32, %rsp
 ; AVX2-NEXT:    popq %rbx
@@ -5331,7 +5325,7 @@ define void @store_cvt_4f64_to_8i16_undef(<4 x double> %a0, <8 x i16>* %a1) noun
 ; AVX512F-NEXT:    shlq $32, %rax
 ; AVX512F-NEXT:    orq %rbx, %rax
 ; AVX512F-NEXT:    vmovq %rax, %xmm0
-; AVX512F-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
+; AVX512F-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,2,2,3,4,5,6,7]
 ; AVX512F-NEXT:    vmovdqa %xmm0, (%r14)
 ; AVX512F-NEXT:    addq $32, %rsp
 ; AVX512F-NEXT:    popq %rbx
@@ -5371,7 +5365,6 @@ define void @store_cvt_4f64_to_8i16_undef(<4 x double> %a0, <8 x i16>* %a1) noun
 ; AVX512VL-NEXT:    orq %rbx, %rax
 ; AVX512VL-NEXT:    vmovq %rax, %xmm0
 ; AVX512VL-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,2,2,3,4,5,6,7]
-; AVX512VL-NEXT:    vpshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,6,6,7]
 ; AVX512VL-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
 ; AVX512VL-NEXT:    vmovdqa %xmm0, (%r14)
 ; AVX512VL-NEXT:    addq $32, %rsp
@@ -5421,7 +5414,7 @@ define void @store_cvt_4f64_to_8i16_zero(<4 x double> %a0, <8 x i16>* %a1) nounw
 ; AVX1-NEXT:    shlq $32, %rax
 ; AVX1-NEXT:    orq %rbx, %rax
 ; AVX1-NEXT:    vmovq %rax, %xmm0
-; AVX1-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,4,5,8,9,12,13],zero,zero,zero,zero,zero,zero,zero,zero
+; AVX1-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,4,5,u,u,u,u],zero,zero,zero,zero,zero,zero,zero,zero
 ; AVX1-NEXT:    vmovdqa %xmm0, (%r14)
 ; AVX1-NEXT:    addq $32, %rsp
 ; AVX1-NEXT:    popq %rbx
@@ -5463,7 +5456,7 @@ define void @store_cvt_4f64_to_8i16_zero(<4 x double> %a0, <8 x i16>* %a1) nounw
 ; AVX2-NEXT:    shlq $32, %rax
 ; AVX2-NEXT:    orq %rbx, %rax
 ; AVX2-NEXT:    vmovq %rax, %xmm0
-; AVX2-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,4,5,8,9,12,13],zero,zero,zero,zero,zero,zero,zero,zero
+; AVX2-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,4,5,u,u,u,u],zero,zero,zero,zero,zero,zero,zero,zero
 ; AVX2-NEXT:    vmovdqa %xmm0, (%r14)
 ; AVX2-NEXT:    addq $32, %rsp
 ; AVX2-NEXT:    popq %rbx
@@ -5502,7 +5495,7 @@ define void @store_cvt_4f64_to_8i16_zero(<4 x double> %a0, <8 x i16>* %a1) nounw
 ; AVX512F-NEXT:    shlq $32, %rax
 ; AVX512F-NEXT:    orq %rbx, %rax
 ; AVX512F-NEXT:    vmovq %rax, %xmm0
-; AVX512F-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,4,5,8,9,12,13],zero,zero,zero,zero,zero,zero,zero,zero
+; AVX512F-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,4,5,u,u,u,u],zero,zero,zero,zero,zero,zero,zero,zero
 ; AVX512F-NEXT:    vmovdqa %xmm0, (%r14)
 ; AVX512F-NEXT:    addq $32, %rsp
 ; AVX512F-NEXT:    popq %rbx
@@ -5542,7 +5535,6 @@ define void @store_cvt_4f64_to_8i16_zero(<4 x double> %a0, <8 x i16>* %a1) nounw
 ; AVX512VL-NEXT:    orq %rbx, %rax
 ; AVX512VL-NEXT:    vmovq %rax, %xmm0
 ; AVX512VL-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,2,2,3,4,5,6,7]
-; AVX512VL-NEXT:    vpshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,6,6,7]
 ; AVX512VL-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,0,2]
 ; AVX512VL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX512VL-NEXT:    vpunpckhqdq {{.*#+}} xmm0 = xmm0[1],xmm1[1]

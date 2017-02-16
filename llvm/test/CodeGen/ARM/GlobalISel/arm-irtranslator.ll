@@ -1,4 +1,5 @@
-; RUN: llc -mtriple arm-unknown -mattr=+vfp2 -global-isel -stop-after=irtranslator %s -o - | FileCheck %s
+; RUN: llc -mtriple arm-unknown -mattr=+vfp2 -global-isel -stop-after=irtranslator %s -o - | FileCheck %s -check-prefix=CHECK -check-prefix=LITTLE
+; RUN: llc -mtriple armeb-unknown -mattr=+vfp2 -global-isel -stop-after=irtranslator %s -o - | FileCheck %s -check-prefix=CHECK -check-prefix=BIG
 
 define void @test_void_return() {
 ; CHECK-LABEL: name: test_void_return
@@ -220,3 +221,117 @@ entry:
   ret float %v
 }
 
+define arm_aapcs_vfpcc double @test_double_vfpcc(double %p0, double %p1, double %p2,
+                                                 double %p3, double %p4, double %p5,
+                                                 double %reasonable,
+                                                 double %parameters,
+                                                 double %q0, double %q1) {
+; CHECK-LABEL: name: test_double_vfpcc
+; CHECK: fixedStack:
+; CHECK-DAG: id: [[Q0:[0-9]+]]{{.*}}offset: 0{{.*}}size: 8
+; CHECK-DAG: id: [[Q1:[0-9]+]]{{.*}}offset: 8{{.*}}size: 8
+; CHECK: liveins: %d0, %d1, %d2, %d3, %d4, %d5, %d6, %d7
+; CHECK: [[VREGP1:%[0-9]+]](s64) = COPY %d1
+; CHECK: [[FIQ1:%[0-9]+]](p0) = G_FRAME_INDEX %fixed-stack.[[Q1]]
+; CHECK: [[VREGQ1:%[0-9]+]](s64) = G_LOAD [[FIQ1]](p0)
+; CHECK: [[VREGV:%[0-9]+]](s64) = G_FADD [[VREGP1]], [[VREGQ1]]
+; CHECK: %d0 = COPY [[VREGV]]
+; CHECK: BX_RET 14, _, implicit %d0
+entry:
+  %v = fadd double %p1, %q1
+  ret double %v
+}
+
+define arm_aapcscc double @test_double_aapcscc(double %p0, double %p1, double %p2,
+                                               double %p3, double %p4, double %p5) {
+; CHECK-LABEL: name: test_double_aapcscc
+; CHECK: fixedStack:
+; CHECK-DAG: id: [[P2:[0-9]+]]{{.*}}offset: 0{{.*}}size: 8
+; CHECK-DAG: id: [[P3:[0-9]+]]{{.*}}offset: 8{{.*}}size: 8
+; CHECK-DAG: id: [[P4:[0-9]+]]{{.*}}offset: 16{{.*}}size: 8
+; CHECK-DAG: id: [[P5:[0-9]+]]{{.*}}offset: 24{{.*}}size: 8
+; CHECK: liveins: %r0, %r1, %r2, %r3
+; CHECK-DAG: [[VREGP1LO:%[0-9]+]](s32) = COPY %r2
+; CHECK-DAG: [[VREGP1HI:%[0-9]+]](s32) = COPY %r3
+; LITTLE: [[VREGP1:%[0-9]+]](s64) = G_SEQUENCE [[VREGP1LO]](s32), 0, [[VREGP1HI]](s32), 32
+; BIG: [[VREGP1:%[0-9]+]](s64) = G_SEQUENCE [[VREGP1HI]](s32), 0, [[VREGP1LO]](s32), 32
+; CHECK: [[FIP5:%[0-9]+]](p0) = G_FRAME_INDEX %fixed-stack.[[P5]]
+; CHECK: [[VREGP5:%[0-9]+]](s64) = G_LOAD [[FIP5]](p0)
+; CHECK: [[VREGV:%[0-9]+]](s64) = G_FADD [[VREGP1]], [[VREGP5]]
+; LITTLE: [[VREGVLO:%[0-9]+]](s32), [[VREGVHI:%[0-9]+]](s32) = G_EXTRACT [[VREGV]](s64), 0, 32
+; BIG: [[VREGVHI:%[0-9]+]](s32), [[VREGVLO:%[0-9]+]](s32) = G_EXTRACT [[VREGV]](s64), 0, 32
+; CHECK-DAG: %r0 = COPY [[VREGVLO]]
+; CHECK-DAG: %r1 = COPY [[VREGVHI]]
+; CHECK: BX_RET 14, _, implicit %r0, implicit %r1
+entry:
+  %v = fadd double %p1, %p5
+  ret double %v
+}
+
+define arm_aapcs_vfpcc double @test_double_gap_vfpcc(double %p0, float %filler,
+                                                     double %p1, double %p2,
+                                                     double %p3, double %p4,
+                                                     double %reasonable,
+                                                     double %parameters,
+                                                     double %q0, double %q1) {
+; CHECK-LABEL: name: test_double_gap_vfpcc
+; CHECK: fixedStack:
+; CHECK-DAG: id: [[Q0:[0-9]+]]{{.*}}offset: 0{{.*}}size: 8
+; CHECK-DAG: id: [[Q1:[0-9]+]]{{.*}}offset: 8{{.*}}size: 8
+; CHECK: liveins: %d0, %d2, %d3, %d4, %d5, %d6, %d7, %s2
+; CHECK: [[VREGP1:%[0-9]+]](s64) = COPY %d2
+; CHECK: [[FIQ1:%[0-9]+]](p0) = G_FRAME_INDEX %fixed-stack.[[Q1]]
+; CHECK: [[VREGQ1:%[0-9]+]](s64) = G_LOAD [[FIQ1]](p0)
+; CHECK: [[VREGV:%[0-9]+]](s64) = G_FADD [[VREGP1]], [[VREGQ1]]
+; CHECK: %d0 = COPY [[VREGV]]
+; CHECK: BX_RET 14, _, implicit %d0
+entry:
+  %v = fadd double %p1, %q1
+  ret double %v
+}
+
+define arm_aapcscc double @test_double_gap_aapcscc(float %filler, double %p0,
+                                                   double %p1) {
+; CHECK-LABEL: name: test_double_gap_aapcscc
+; CHECK: fixedStack:
+; CHECK-DAG: id: [[P1:[0-9]+]]{{.*}}offset: 0{{.*}}size: 8
+; CHECK: liveins: %r0, %r2, %r3
+; CHECK-DAG: [[VREGP0LO:%[0-9]+]](s32) = COPY %r2
+; CHECK-DAG: [[VREGP0HI:%[0-9]+]](s32) = COPY %r3
+; LITTLE: [[VREGP0:%[0-9]+]](s64) = G_SEQUENCE [[VREGP0LO]](s32), 0, [[VREGP0HI]](s32), 32
+; BIG: [[VREGP0:%[0-9]+]](s64) = G_SEQUENCE [[VREGP0HI]](s32), 0, [[VREGP0LO]](s32), 32
+; CHECK: [[FIP1:%[0-9]+]](p0) = G_FRAME_INDEX %fixed-stack.[[P1]]
+; CHECK: [[VREGP1:%[0-9]+]](s64) = G_LOAD [[FIP1]](p0)
+; CHECK: [[VREGV:%[0-9]+]](s64) = G_FADD [[VREGP0]], [[VREGP1]]
+; LITTLE: [[VREGVLO:%[0-9]+]](s32), [[VREGVHI:%[0-9]+]](s32) = G_EXTRACT [[VREGV]](s64), 0, 32
+; BIG: [[VREGVHI:%[0-9]+]](s32), [[VREGVLO:%[0-9]+]](s32) = G_EXTRACT [[VREGV]](s64), 0, 32
+; CHECK-DAG: %r0 = COPY [[VREGVLO]]
+; CHECK-DAG: %r1 = COPY [[VREGVHI]]
+; CHECK: BX_RET 14, _, implicit %r0, implicit %r1
+entry:
+  %v = fadd double %p0, %p1
+  ret double %v
+}
+
+define arm_aapcscc double @test_double_gap2_aapcscc(double %p0, float %filler,
+                                                    double %p1) {
+; CHECK-LABEL: name: test_double_gap2_aapcscc
+; CHECK: fixedStack:
+; CHECK-DAG: id: [[P1:[0-9]+]]{{.*}}offset: 0{{.*}}size: 8
+; CHECK: liveins: %r0, %r1, %r2
+; CHECK-DAG: [[VREGP0LO:%[0-9]+]](s32) = COPY %r0
+; CHECK-DAG: [[VREGP0HI:%[0-9]+]](s32) = COPY %r1
+; LITTLE: [[VREGP0:%[0-9]+]](s64) = G_SEQUENCE [[VREGP0LO]](s32), 0, [[VREGP0HI]](s32), 32
+; BIG: [[VREGP0:%[0-9]+]](s64) = G_SEQUENCE [[VREGP0HI]](s32), 0, [[VREGP0LO]](s32), 32
+; CHECK: [[FIP1:%[0-9]+]](p0) = G_FRAME_INDEX %fixed-stack.[[P1]]
+; CHECK: [[VREGP1:%[0-9]+]](s64) = G_LOAD [[FIP1]](p0)
+; CHECK: [[VREGV:%[0-9]+]](s64) = G_FADD [[VREGP0]], [[VREGP1]]
+; LITTLE: [[VREGVLO:%[0-9]+]](s32), [[VREGVHI:%[0-9]+]](s32) = G_EXTRACT [[VREGV]](s64), 0, 32
+; BIG: [[VREGVHI:%[0-9]+]](s32), [[VREGVLO:%[0-9]+]](s32) = G_EXTRACT [[VREGV]](s64), 0, 32
+; CHECK-DAG: %r0 = COPY [[VREGVLO]]
+; CHECK-DAG: %r1 = COPY [[VREGVHI]]
+; CHECK: BX_RET 14, _, implicit %r0, implicit %r1
+entry:
+  %v = fadd double %p0, %p1
+  ret double %v
+}

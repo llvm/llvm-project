@@ -33,11 +33,14 @@ using namespace llvm;
 namespace llvm {
 namespace ARM {
 RegisterBankInfo::PartialMapping GPRPartialMapping{0, 32, GPRRegBank};
-RegisterBankInfo::PartialMapping FPRPartialMapping{0, 32, FPRRegBank};
+RegisterBankInfo::PartialMapping SPRPartialMapping{0, 32, FPRRegBank};
+RegisterBankInfo::PartialMapping DPRPartialMapping{0, 64, FPRRegBank};
 
+// FIXME: Add the mapping for S(2n+1) as {32, 64, FPRRegBank}
 RegisterBankInfo::ValueMapping ValueMappings[] = {
     {&GPRPartialMapping, 1}, {&GPRPartialMapping, 1}, {&GPRPartialMapping, 1},
-    {&FPRPartialMapping, 1}, {&FPRPartialMapping, 1}, {&FPRPartialMapping, 1}};
+    {&SPRPartialMapping, 1}, {&SPRPartialMapping, 1}, {&SPRPartialMapping, 1},
+    {&DPRPartialMapping, 1}, {&DPRPartialMapping, 1}, {&DPRPartialMapping, 1}};
 } // end namespace arm
 } // end namespace llvm
 
@@ -86,6 +89,8 @@ const RegisterBank &ARMRegisterBankInfo::getRegBankFromRegClass(
     return getRegBank(ARM::GPRRegBankID);
   case SPR_8RegClassID:
   case SPRRegClassID:
+  case DPR_8RegClassID:
+  case DPRRegClassID:
     return getRegBank(ARM::FPRRegBankID);
   default:
     llvm_unreachable("Unsupported register kind");
@@ -108,20 +113,32 @@ ARMRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
 
   using namespace TargetOpcode;
 
+  const MachineFunction &MF = *MI.getParent()->getParent();
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
+  LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+
   unsigned NumOperands = MI.getNumOperands();
   const ValueMapping *OperandsMapping = &ARM::ValueMappings[0];
 
   switch (Opc) {
   case G_ADD:
-  case G_LOAD:
   case G_SEXT:
   case G_ZEXT:
     // FIXME: We're abusing the fact that everything lives in a GPR for now; in
     // the real world we would use different mappings.
     OperandsMapping = &ARM::ValueMappings[0];
     break;
+  case G_LOAD:
+    OperandsMapping = Ty.getSizeInBits() == 64
+                          ? getOperandsMapping({&ARM::ValueMappings[6],
+                                                &ARM::ValueMappings[0]})
+                          : &ARM::ValueMappings[0];
+    break;
   case G_FADD:
-    OperandsMapping = &ARM::ValueMappings[3];
+    assert((Ty.getSizeInBits() == 32 || Ty.getSizeInBits() == 64) &&
+           "Unsupported size for G_FADD");
+    OperandsMapping = Ty.getSizeInBits() == 64 ? &ARM::ValueMappings[6]
+                                               : &ARM::ValueMappings[3];
     break;
   case G_FRAME_INDEX:
     OperandsMapping = getOperandsMapping({&ARM::ValueMappings[0], nullptr});

@@ -18,10 +18,15 @@
 ; GCN-NEXT: s_or_b64 exec, exec, [[XOR_EXEC]]
 ; GCN-NEXT: [[FINAL_BB]]:
 ; GCN-NEXT: .Lfunc_end0
-define amdgpu_ps <{ i32, i32, i32, i32, i32, i32, i32, i32, i32, float, float, float, float, float, float, float, float, float, float, float, float, float, float }> @main([9 x <16 x i8>] addrspace(2)* byval, [17 x <16 x i8>] addrspace(2)* byval, [17 x <8 x i32>] addrspace(2)* byval, i32 addrspace(2)* byval, float inreg, i32 inreg, <2 x i32>, <2 x i32>, <2 x i32>, <3 x i32>, <2 x i32>, <2 x i32>, <2 x i32>, float, float, float, float, float, i32, i32, float, i32) #0 {
+define amdgpu_ps <{ i32, i32, i32, i32, i32, i32, i32, i32, i32, float, float, float, float, float, float, float, float, float, float, float, float, float, float }> @main([9 x <16 x i8>] addrspace(2)* byval %arg, [17 x <16 x i8>] addrspace(2)* byval %arg1, [17 x <8 x i32>] addrspace(2)* byval %arg2, i32 addrspace(2)* byval %arg3, float inreg %arg4, i32 inreg %arg5, <2 x i32> %arg6, <2 x i32> %arg7, <2 x i32> %arg8, <3 x i32> %arg9, <2 x i32> %arg10, <2 x i32> %arg11, <2 x i32> %arg12, float %arg13, float %arg14, float %arg15, float %arg16, float %arg17, i32 %arg18, i32 %arg19, float %arg20, i32 %arg21) #0 {
 main_body:
-  %p83 = call float @llvm.SI.fs.interp(i32 1, i32 0, i32 %5, <2 x i32> %7)
-  %p87 = fmul float undef, %p83
+  %i.i = extractelement <2 x i32> %arg7, i32 0
+  %j.i = extractelement <2 x i32> %arg7, i32 1
+  %i.f.i = bitcast i32 %i.i to float
+  %j.f.i = bitcast i32 %j.i to float
+  %p1.i = call float @llvm.amdgcn.interp.p1(float %i.f.i, i32 1, i32 0, i32 %arg5) #2
+  %p2.i = call float @llvm.amdgcn.interp.p2(float %p1.i, float %j.f.i, i32 1, i32 0, i32 %arg5) #2
+  %p87 = fmul float undef, %p2.i
   %p88 = fadd float %p87, undef
   %p93 = fadd float %p88, undef
   %p97 = fmul float %p93, undef
@@ -45,10 +50,16 @@ ENDIF69:                                          ; preds = %ELSE, %main_body
 }
 
 ; Function Attrs: nounwind readnone
-declare float @llvm.SI.load.const(<16 x i8>, i32) #1
+declare float @llvm.amdgcn.interp.p1(float, i32, i32, i32) #1
 
 ; Function Attrs: nounwind readnone
-declare float @llvm.SI.fs.interp(i32, i32, i32, <2 x i32>) #1
+declare float @llvm.amdgcn.interp.p2(float, float, i32, i32, i32) #1
+
+; Function Attrs: nounwind readnone
+declare float @llvm.amdgcn.interp.mov(i32, i32, i32, i32) #1
+
+; Function Attrs: nounwind readnone
+declare float @llvm.SI.load.const(<16 x i8>, i32) #1
 
 ; Function Attrs: nounwind readnone
 declare float @llvm.fabs.f32(float) #1
@@ -61,3 +72,4 @@ declare float @llvm.floor.f32(float) #1
 
 attributes #0 = { "InitialPSInputAddr"="36983" }
 attributes #1 = { nounwind readnone }
+attributes #2 = { nounwind }

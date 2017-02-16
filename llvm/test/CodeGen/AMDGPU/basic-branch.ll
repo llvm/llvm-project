@@ -8,13 +8,10 @@
 ; GCNNOOPT: v_writelane_b32
 ; GCN: s_cbranch_scc1 [[END:BB[0-9]+_[0-9]+]]
 
-
-; GCN: ; BB#1
 ; GCNNOOPT: v_readlane_b32
 ; GCNNOOPT: v_readlane_b32
 ; GCN: buffer_store_dword
-; GCNOPT-NEXT: s_waitcnt vmcnt(0) expcnt(0)
-; TODO: This waitcnt can be eliminated
+; GCNNOOPT: s_endpgm
 
 ; GCN: {{^}}[[END]]:
 ; GCN: s_endpgm

@@ -317,34 +317,34 @@ TEST_F(LinkModuleTest, RemangleIntrinsics) {
   const char *FooStr =
     "%struct.rtx_def = type { i16 }\n"
     "define void @foo(%struct.rtx_def* %a, i8 %b, i32 %c) {\n"
-    "  call void  @llvm.memset.p0struct.rtx_def.i32(%struct.rtx_def* %a, i8 %b, i32 %c, i32 4, i1 true)\n"
+    "  call void  @llvm.memset.p0s_struct.rtx_defs.i32(%struct.rtx_def* %a, i8 %b, i32 %c, i32 4, i1 true)\n"
     "  ret void\n"
     "}\n"
-    "declare void @llvm.memset.p0struct.rtx_def.i32(%struct.rtx_def*, i8, i32, i32, i1)\n";
+    "declare void @llvm.memset.p0s_struct.rtx_defs.i32(%struct.rtx_def*, i8, i32, i32, i1)\n";
 
   const char *BarStr =
     "%struct.rtx_def = type { i16 }\n"
     "define void @bar(%struct.rtx_def* %a, i8 %b, i32 %c) {\n"
-    "  call void  @llvm.memset.p0struct.rtx_def.i32(%struct.rtx_def* %a, i8 %b, i32 %c, i32 4, i1 true)\n"
+    "  call void  @llvm.memset.p0s_struct.rtx_defs.i32(%struct.rtx_def* %a, i8 %b, i32 %c, i32 4, i1 true)\n"
     "  ret void\n"
     "}\n"
-    "declare void @llvm.memset.p0struct.rtx_def.i32(%struct.rtx_def*, i8, i32, i32, i1)\n";
+    "declare void @llvm.memset.p0s_struct.rtx_defs.i32(%struct.rtx_def*, i8, i32, i32, i1)\n";
 
   std::unique_ptr<Module> Foo = parseAssemblyString(FooStr, Err, C);
   assert(Foo);
   ASSERT_TRUE(Foo.get());
   // Foo is loaded first, so the type and the intrinsic have theis original
   // names.
-  ASSERT_TRUE(Foo->getFunction("llvm.memset.p0struct.rtx_def.i32"));
-  ASSERT_FALSE(Foo->getFunction("llvm.memset.p0struct.rtx_def.0.i32"));
+  ASSERT_TRUE(Foo->getFunction("llvm.memset.p0s_struct.rtx_defs.i32"));
+  ASSERT_FALSE(Foo->getFunction("llvm.memset.p0s_struct.rtx_defs.0.i32"));
 
   std::unique_ptr<Module> Bar = parseAssemblyString(BarStr, Err, C);
   assert(Bar);
   ASSERT_TRUE(Bar.get());
   // Bar is loaded after Foo, so the type is renamed to struct.rtx_def.0. Check
   // that the intrinsic is also renamed.
-  ASSERT_FALSE(Bar->getFunction("llvm.memset.p0struct.rtx_def.i32"));
-  ASSERT_TRUE(Bar->getFunction("llvm.memset.p0struct.rtx_def.0.i32"));
+  ASSERT_FALSE(Bar->getFunction("llvm.memset.p0s_struct.rtx_defs.i32"));
+  ASSERT_TRUE(Bar->getFunction("llvm.memset.p0s_struct.rtx_def.0s.i32"));
 
   // Link two modules together.
   auto Dst = llvm::make_unique<Module>("Linked", C);
@@ -356,7 +356,7 @@ TEST_F(LinkModuleTest, RemangleIntrinsics) {
   // "struct.rtx_def" from Foo and "struct.rtx_def.0" from Bar are isomorphic
   // types, so they must be uniquified by linker. Check that they use the same
   // intrinsic definition.
-  Function *F = Foo->getFunction("llvm.memset.p0struct.rtx_def.i32");
+  Function *F = Foo->getFunction("llvm.memset.p0s_struct.rtx_defs.i32");
   ASSERT_EQ(F->getNumUses(), (unsigned)2);
 }
 

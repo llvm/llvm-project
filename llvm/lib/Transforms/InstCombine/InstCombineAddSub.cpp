@@ -1062,12 +1062,9 @@ Instruction *InstCombiner::visitAdd(BinaryOperator &I) {
         match(LHS, m_ZExt(m_NUWAdd(m_Value(X), m_APInt(C)))) &&
         Val->sge(-C->sext(Val->getBitWidth()))) {
       // (add (zext (add nuw X, C)), Val) -> (zext (add nuw X, C+Val))
-      return CastInst::Create(
-          Instruction::ZExt,
-          Builder->CreateNUWAdd(
-              X, Constant::getIntegerValue(X->getType(),
-                                           *C + Val->trunc(C->getBitWidth()))),
-          I.getType());
+      Constant *NewC =
+          ConstantInt::get(X->getType(), *C + Val->trunc(C->getBitWidth()));
+      return new ZExtInst(Builder->CreateNUWAdd(X, NewC), I.getType());
     }
   }
 

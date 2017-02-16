@@ -1,5 +1,4 @@
-; RUN: llc -march=amdgcn < %s | FileCheck %s
-; REQUIRES: asserts
+; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck %s
 ;
 ; This test used to crash with the following assertion:
 ; llc: include/llvm/ADT/IntervalMap.h:632: unsigned int llvm::IntervalMapImpl::LeafNode<llvm::SlotIndex, llvm::LiveInterval *, 8, llvm::IntervalMapInfo<llvm::SlotIndex> >::insertFrom(unsigned int &, unsigned int, KeyT, KeyT, ValT) [KeyT = llvm::SlotIndex, ValT = llvm::LiveInterval *, N = 8, Traits = llvm::IntervalMapInfo<llvm::SlotIndex>]: Assertion `(i == Size || Traits::stopLess(b, start(i))) && "Overlapping insert"' failed.
@@ -10,18 +9,18 @@
 ;
 ; Check for a valid output.
 ; CHECK: image_sample_c
-
-target triple = "amdgcn--"
-
-@ddxy_lds = external addrspace(3) global [64 x i32]
-
 define amdgpu_ps <{ i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, float, float, float, float, float, float, float, float, float, float, float, float, float, float }> @main([17 x <16 x i8>] addrspace(2)* byval dereferenceable(18446744073709551615) %arg, [16 x <16 x i8>] addrspace(2)* byval dereferenceable(18446744073709551615) %arg1, [32 x <8 x i32>] addrspace(2)* byval dereferenceable(18446744073709551615) %arg2, [16 x <8 x i32>] addrspace(2)* byval dereferenceable(18446744073709551615) %arg3, [16 x <4 x i32>] addrspace(2)* byval dereferenceable(18446744073709551615) %arg4, float inreg %arg5, i32 inreg %arg6, <2 x i32> %arg7, <2 x i32> %arg8, <2 x i32> %arg9, <3 x i32> %arg10, <2 x i32> %arg11, <2 x i32> %arg12, <2 x i32> %arg13, float %arg14, float %arg15, float %arg16, float %arg17, float %arg18, i32 %arg19, i32 %arg20, float %arg21, i32 %arg22) #0 {
 main_body:
-  %tmp = call float @llvm.SI.fs.interp(i32 3, i32 4, i32 %arg6, <2 x i32> %arg8)
+  %i.i = extractelement <2 x i32> %arg8, i32 0
+  %j.i = extractelement <2 x i32> %arg8, i32 1
+  %i.f.i = bitcast i32 %i.i to float
+  %j.f.i = bitcast i32 %j.i to float
+  %p1.i = call float @llvm.amdgcn.interp.p1(float %i.f.i, i32 3, i32 4, i32 %arg6) #2
+  %p2.i = call float @llvm.amdgcn.interp.p2(float %p1.i, float %j.f.i, i32 3, i32 4, i32 %arg6) #2
   %tmp23 = call <4 x float> @llvm.SI.image.sample.v2i32(<2 x i32> undef, <8 x i32> undef, <4 x i32> undef, i32 15, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0)
   %tmp24 = extractelement <4 x float> %tmp23, i32 3
   %tmp25 = fmul float %tmp24, undef
-  %tmp26 = fmul float undef, %tmp
+  %tmp26 = fmul float undef, %p2.i
   %tmp27 = fadd float %tmp26, undef
   %tmp28 = bitcast float %tmp27 to i32
   %tmp29 = insertelement <4 x i32> undef, i32 %tmp28, i32 0
@@ -105,11 +104,24 @@ ENDIF28:                                          ; preds = %LOOP
   br label %LOOP
 }
 
+; Function Attrs: nounwind readnone
 declare float @llvm.AMDGPU.clamp.(float, float, float) #1
-declare float @llvm.SI.fs.interp(i32, i32, i32, <2 x i32>) #1
+
+; Function Attrs: nounwind readnone
 declare <4 x float> @llvm.SI.image.sample.v2i32(<2 x i32>, <8 x i32>, <4 x i32>, i32, i32, i32, i32, i32, i32, i32, i32) #1
+
+; Function Attrs: nounwind readnone
 declare <4 x float> @llvm.SI.image.sample.v4i32(<4 x i32>, <8 x i32>, <4 x i32>, i32, i32, i32, i32, i32, i32, i32, i32) #1
+
+; Function Attrs: nounwind readnone
 declare <4 x float> @llvm.SI.image.sample.c.v4i32(<4 x i32>, <8 x i32>, <4 x i32>, i32, i32, i32, i32, i32, i32, i32, i32) #1
+
+; Function Attrs: nounwind readnone
+declare float @llvm.amdgcn.interp.p1(float, i32, i32, i32) #1
+
+; Function Attrs: nounwind readnone
+declare float @llvm.amdgcn.interp.p2(float, float, i32, i32, i32) #1
 
 attributes #0 = { "InitialPSInputAddr"="36983" "target-cpu"="tonga" }
 attributes #1 = { nounwind readnone }
+attributes #2 = { nounwind }

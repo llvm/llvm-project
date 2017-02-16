@@ -439,7 +439,7 @@ entry:
 ; GCN: v_mov_b32_e32 [[ONE:v[0-9]+]], 1
 ; GCN-NOHSA: buffer_store_dword [[ONE]]
 ; GCN-HSA: flat_store_dword v[{{[0-9]+:[0-9]+}}], [[ONE]]
-; GCN; {{^}}[[EXIT]]:
+; GCN: {{^}}[[EXIT]]:
 ; GCN: s_endpgm
 define void @sopc_vopc_legalize_bug(i32 %cond, i32 addrspace(1)* %out, i32 addrspace(1)* %in) {
 bb3:                                              ; preds = %bb2

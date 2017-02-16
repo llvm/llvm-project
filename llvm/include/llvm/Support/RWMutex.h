@@ -14,7 +14,7 @@
 #ifndef LLVM_SUPPORT_RWMUTEX_H
 #define LLVM_SUPPORT_RWMUTEX_H
 
-#include "llvm/Support/Compiler.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Threading.h"
 #include <cassert>
 
@@ -31,6 +31,13 @@ namespace sys {
       /// Initializes the lock but doesn't acquire it.
       /// @brief Default Constructor.
       explicit RWMutexImpl();
+
+    /// @}
+    /// @name Do Not Implement
+    /// @{
+      RWMutexImpl(const RWMutexImpl & original) = delete;
+      RWMutexImpl &operator=(const RWMutexImpl &) = delete;
+    /// @}
 
       /// Releases and removes the lock
       /// @brief Destructor
@@ -70,16 +77,8 @@ namespace sys {
     /// @{
     private:
 #if defined(LLVM_ENABLE_THREADS) && LLVM_ENABLE_THREADS != 0
-      void* data_; ///< We don't know what the data will be
+      void* data_ = nullptr; ///< We don't know what the data will be
 #endif
-
-    /// @}
-    /// @name Do Not Implement
-    /// @{
-    private:
-      RWMutexImpl(const RWMutexImpl & original) = delete;
-      void operator=(const RWMutexImpl &) = delete;
-    /// @}
     };
 
     /// SmartMutex - An R/W mutex with a compile time constant parameter that
@@ -93,6 +92,8 @@ namespace sys {
 
     public:
       explicit SmartRWMutex() = default;
+      SmartRWMutex(const SmartRWMutex<mt_only> & original) = delete;
+      SmartRWMutex<mt_only> &operator=(const SmartRWMutex<mt_only> &) = delete;
 
       bool lock_shared() {
         if (!mt_only || llvm_is_multithreaded())
@@ -136,10 +137,6 @@ namespace sys {
         --writers;
         return true;
       }
-
-    private:
-      SmartRWMutex(const SmartRWMutex<mt_only> & original);
-      void operator=(const SmartRWMutex<mt_only> &);
     };
 
     typedef SmartRWMutex<false> RWMutex;

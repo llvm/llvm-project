@@ -2661,7 +2661,7 @@ define <2 x double> @sitofp_load_2i16_to_2f64(<2 x i16> *%a) {
 ; SSE-LABEL: sitofp_load_2i16_to_2f64:
 ; SSE:       # BB#0:
 ; SSE-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; SSE-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3]
+; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,2,1,4,5,6,7]
 ; SSE-NEXT:    psrad $16, %xmm0
 ; SSE-NEXT:    cvtdq2pd %xmm0, %xmm0
 ; SSE-NEXT:    retq

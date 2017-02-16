@@ -122,7 +122,7 @@ namespace llvm {
                                   const MachineBasicBlock *MBB) const;
       raw_ostream &printBlockFreq(raw_ostream &OS,
                                   const BlockFrequency Freq) const;
-      void view(bool isSimple = true);
+      void view(const Twine &Name, bool isSimple = true);
       uint64_t getEntryFreq() const;
 
     private:

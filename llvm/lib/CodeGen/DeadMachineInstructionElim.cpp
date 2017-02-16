@@ -110,7 +110,7 @@ bool DeadMachineInstructionElim::runOnMachineFunction(MachineFunction &MF) {
     // Start out assuming that reserved registers are live out of this block.
     LivePhysRegs = MRI->getReservedRegs();
 
-    // Add live-ins from sucessors to LivePhysRegs. Normally, physregs are not
+    // Add live-ins from successors to LivePhysRegs. Normally, physregs are not
     // live across blocks, but some targets (x86) can have flags live out of a
     // block.
     for (MachineBasicBlock::succ_iterator S = MBB.succ_begin(),

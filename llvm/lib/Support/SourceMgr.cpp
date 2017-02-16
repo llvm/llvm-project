@@ -13,29 +13,42 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/SourceMgr.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/Locale.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/SMLoc.h"
+#include "llvm/Support/SourceMgr.h"
+#include <algorithm>
+#include <cassert>
+#include <cstddef>
+#include <memory>
+#include <string>
+#include <utility>
+
 using namespace llvm;
 
 static const size_t TabStop = 8;
 
 namespace {
+
   struct LineNoCacheTy {
     const char *LastQuery;
     unsigned LastQueryBufferID;
     unsigned LineNoOfQuery;
   };
-}
+
+} // end anonymous namespace
 
 static LineNoCacheTy *getCache(void *Ptr) {
   return (LineNoCacheTy*)Ptr;
 }
-
 
 SourceMgr::~SourceMgr() {
   // Delete the line # cache if allocated.
@@ -132,12 +145,10 @@ void SourceMgr::PrintIncludeStack(SMLoc IncludeLoc, raw_ostream &OS) const {
      << ":" << FindLineNumber(IncludeLoc, CurBuf) << ":\n";
 }
 
-
 SMDiagnostic SourceMgr::GetMessage(SMLoc Loc, SourceMgr::DiagKind Kind,
                                    const Twine &Msg,
                                    ArrayRef<SMRange> Ranges,
                                    ArrayRef<SMFixIt> FixIts) const {
-
   // First thing to do: find the current buffer containing the specified
   // location to pull out the source line.
   SmallVector<std::pair<unsigned, unsigned>, 4> ColRanges;
@@ -223,7 +234,7 @@ void SourceMgr::PrintMessage(raw_ostream &OS, SMLoc Loc,
 void SourceMgr::PrintMessage(SMLoc Loc, SourceMgr::DiagKind Kind,
                              const Twine &Msg, ArrayRef<SMRange> Ranges,
                              ArrayRef<SMFixIt> FixIts, bool ShowColors) const {
-  PrintMessage(llvm::errs(), Loc, Kind, Msg, Ranges, FixIts, ShowColors);
+  PrintMessage(errs(), Loc, Kind, Msg, Ranges, FixIts, ShowColors);
 }
 
 //===----------------------------------------------------------------------===//
@@ -233,7 +244,7 @@ void SourceMgr::PrintMessage(SMLoc Loc, SourceMgr::DiagKind Kind,
 SMDiagnostic::SMDiagnostic(const SourceMgr &sm, SMLoc L, StringRef FN,
                            int Line, int Col, SourceMgr::DiagKind Kind,
                            StringRef Msg, StringRef LineStr,
-                           ArrayRef<std::pair<unsigned,unsigned> > Ranges,
+                           ArrayRef<std::pair<unsigned,unsigned>> Ranges,
                            ArrayRef<SMFixIt> Hints)
   : SM(&sm), Loc(L), Filename(FN), LineNo(Line), ColumnNo(Col), Kind(Kind),
     Message(Msg), LineContents(LineStr), Ranges(Ranges.vec()),
@@ -286,7 +297,7 @@ static void buildFixItLine(std::string &CaretLine, std::string &FixItLine,
     // FIXME: This assertion is intended to catch unintended use of multibyte
     // characters in fixits. If we decide to do this, we'll have to track
     // separate byte widths for the source and fixit lines.
-    assert((size_t)llvm::sys::locale::columnWidth(I->getText()) ==
+    assert((size_t)sys::locale::columnWidth(I->getText()) ==
            I->getText().size());
 
     // This relies on one byte per column in our fixit hints.
