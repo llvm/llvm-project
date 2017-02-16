@@ -105,3 +105,31 @@ namespace PR31606 {
   // Note, we do *not* allow operator=='s argument to use the inherited A::A(Base&&) constructor to construct from B{}.
   bool b = A{} == B{}; // expected-error {{invalid operands}}
 }
+
+namespace implicit_member_srcloc {
+  template<class T>
+  struct S3 {
+  };
+
+  template<class T>
+  struct S2 {
+    S2(S3<T> &&);
+  };
+
+  template<class T>
+  struct S1 : S2<T> {
+    using S2<T>::S2;
+    S1();
+  };
+
+  template<class T>
+  struct S0 {
+    S0();
+    S0(S0&&) = default;
+    S1<T> m1;
+  };
+
+  void foo1() {
+    S0<int> s0;
+  }
+}
