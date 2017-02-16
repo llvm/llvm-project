@@ -406,8 +406,7 @@ public:
   /// \return false if \#including the file will have no effect or true
   /// if we should include it.
   bool ShouldEnterIncludeFile(Preprocessor &PP, const FileEntry *File,
-                              bool isImport, bool ModulesEnabled,
-                              Module *CorrespondingModule);
+                              bool isImport, Module *CorrespondingModule);
 
   /// \brief Return whether the specified file is a normal header,
   /// a system header, or a C++ friendly system header.
