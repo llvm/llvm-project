@@ -87,8 +87,8 @@ static void forEachSuccessor(InputSection<ELFT> &Sec,
     for (const typename ELFT::Rel &Rel : Sec.rels())
       Fn(resolveReloc(Sec, Rel));
   }
-  if (Sec.DependentSection)
-    Fn({Sec.DependentSection, 0});
+  for (InputSectionBase<ELFT> *IS : Sec.DependentSections)
+    Fn({IS, 0});
 }
 
 // The .eh_frame section is an unfortunate special case.

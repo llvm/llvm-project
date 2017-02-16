@@ -1,0 +1,17 @@
+# RUN: clangd < %s | FileCheck %s
+# It is absolutely vital that this file has CRLF line endings.
+#
+Content-Length: 125
+
+{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"processId":123,"rootPath":"clangd","capabilities":{},"trace":"off"}}
+#
+Content-Length: 152
+
+{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///foo.c","languageId":"c","version":1,"text":"void main() {}"}}}
+#
+# CHECK: {"jsonrpc":"2.0","method":"textDocument/publishDiagnostics","params":{"uri":"file:///foo.c","diagnostics":[{"range":{"start": {"line": 0, "character": 1}, "end": {"line": 0, "character": 1}},"severity":2,"message":"return type of 'main' is not 'int'"},{"range":{"start": {"line": 0, "character": 1}, "end": {"line": 0, "character": 1}},"severity":3,"message":"change return type to 'int'"}]}}
+#
+#
+Content-Length: 44
+
+{"jsonrpc":"2.0","id":5,"method":"shutdown"}

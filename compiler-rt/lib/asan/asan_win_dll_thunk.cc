@@ -100,6 +100,7 @@ INTERCEPTOR(int, _except_handler4, void *a, void *b, void *c, void *d) {
 // Window specific functions not included in asan_interface.inc.
 INTERCEPT_WRAP_W_V(__asan_should_detect_stack_use_after_return)
 INTERCEPT_WRAP_W_V(__asan_get_shadow_memory_dynamic_address)
+INTERCEPT_WRAP_W_W(__asan_unhandled_exception_filter)
 
 using namespace __sanitizer;
 

@@ -58,9 +58,9 @@ cd $BUILD_DIR
 CC=$CLANG_DIR/clang
 CXX=$CLANG_DIR/clang++
 TBLGEN=$CLANG_DIR/llvm-tblgen
-LINK=$CLANG_DIR/llvm-link
 OPT=$CLANG_DIR/opt
-AR=$CLANG_DIR/llvm-ar
+export AR=$CLANG_DIR/llvm-ar
+export LINK=$CLANG_DIR/llvm-link
 
 for F in $CC $CXX $TBLGEN $LINK $OPT $AR; do
   if [[ ! -x "$F" ]]; then
@@ -136,29 +136,26 @@ rm -rf ${SYMBOLIZER_BUILD}
 mkdir ${SYMBOLIZER_BUILD}
 cd ${SYMBOLIZER_BUILD}
 
-for A in $LIBCXX_BUILD/lib/libc++.a \
-         $LIBCXX_BUILD/lib/libc++abi.a \
-         $LLVM_BUILD/lib/libLLVMSymbolize.a \
-         $LLVM_BUILD/lib/libLLVMObject.a \
-         $LLVM_BUILD/lib/libLLVMDebugInfoDWARF.a \
-         $LLVM_BUILD/lib/libLLVMSupport.a \
-         $LLVM_BUILD/lib/libLLVMDebugInfoPDB.a \
-         $LLVM_BUILD/lib/libLLVMMC.a \
-         $ZLIB_BUILD/libz.a ; do
-  for O in $($AR t $A); do
-    $AR x $A $O
-    mv -f $O "$(basename $A).$O" # Rename to avoid collisions between libs.
-  done
-done
-
 echo "Compiling..."
 SYMBOLIZER_FLAGS="$FLAGS -std=c++11 -I${LLVM_SRC}/include -I${LLVM_BUILD}/include -I${LIBCXX_BUILD}/include/c++/v1"
 $CXX $SYMBOLIZER_FLAGS ${SRC_DIR}/sanitizer_symbolize.cc ${SRC_DIR}/sanitizer_wrappers.cc -c
+$AR rc symbolizer.a sanitizer_symbolize.o sanitizer_wrappers.o
 
 SYMBOLIZER_API_LIST=__sanitizer_symbolize_code,__sanitizer_symbolize_data,__sanitizer_symbolize_flush,__sanitizer_symbolize_demangle
 
 # Merge all the object files together and copy the resulting library back.
-$LINK *.o -o all.bc
+$SCRIPT_DIR/ar_to_bc.sh $LIBCXX_BUILD/lib/libc++.a \
+                        $LIBCXX_BUILD/lib/libc++abi.a \
+                        $LLVM_BUILD/lib/libLLVMSymbolize.a \
+                        $LLVM_BUILD/lib/libLLVMObject.a \
+                        $LLVM_BUILD/lib/libLLVMDebugInfoDWARF.a \
+                        $LLVM_BUILD/lib/libLLVMSupport.a \
+                        $LLVM_BUILD/lib/libLLVMDebugInfoPDB.a \
+                        $LLVM_BUILD/lib/libLLVMMC.a \
+                        $ZLIB_BUILD/libz.a \
+                        symbolizer.a \
+                        all.bc
+
 echo "Optimizing..."
 $OPT -internalize -internalize-public-api-list=${SYMBOLIZER_API_LIST} all.bc -o opt.bc
 $CC $FLAGS -fno-lto -c opt.bc -o symbolizer.o

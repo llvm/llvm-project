@@ -54,7 +54,8 @@ static bool FileAtPathContainsArchAndUUID(const FileSpec &file_fspec,
   if (ObjectFile::GetModuleSpecifications(file_fspec, 0, 0, module_specs)) {
     ModuleSpec spec;
     for (size_t i = 0; i < module_specs.GetSize(); ++i) {
-      assert(module_specs.GetModuleSpecAtIndex(i, spec));
+      bool got_spec = module_specs.GetModuleSpecAtIndex(i, spec);
+      assert(got_spec);
       if ((uuid == NULL || (spec.GetUUIDPtr() && spec.GetUUID() == *uuid)) &&
           (arch == NULL || (spec.GetArchitecturePtr() &&
                             spec.GetArchitecture().IsCompatibleMatch(*arch)))) {

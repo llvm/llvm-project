@@ -354,7 +354,8 @@ template <class ELFT> void Writer<ELFT>::createSyntheticSections() {
 
   // Add MIPS-specific sections.
   bool HasDynSymTab =
-      !Symtab<ELFT>::X->getSharedFiles().empty() || Config->pic();
+      !Symtab<ELFT>::X->getSharedFiles().empty() || Config->pic() ||
+      Config->ExportDynamic;
   if (Config->EMachine == EM_MIPS) {
     if (!Config->Shared && HasDynSymTab) {
       In<ELFT>::MipsRldMap = make<MipsRldMapSection<ELFT>>();
@@ -566,18 +567,27 @@ static int getMipsSectionRank(const OutputSectionBase *S) {
   return 2;
 }
 
+// Today's loaders have a feature to make segments read-only after
+// processing dynamic relocations to enhance security. PT_GNU_RELRO
+// is defined for that.
+//
+// This function returns true if a section needs to be put into a
+// PT_GNU_RELRO segment.
 template <class ELFT> bool elf::isRelroSection(const OutputSectionBase *Sec) {
   if (!Config->ZRelro)
     return false;
+
   uint64_t Flags = Sec->Flags;
   if (!(Flags & SHF_ALLOC) || !(Flags & SHF_WRITE))
     return false;
   if (Flags & SHF_TLS)
     return true;
+
   uint32_t Type = Sec->Type;
   if (Type == SHT_INIT_ARRAY || Type == SHT_FINI_ARRAY ||
       Type == SHT_PREINIT_ARRAY)
     return true;
+
   if (Sec == In<ELFT>::GotPlt->OutSec)
     return Config->ZNow;
   if (Sec == In<ELFT>::Dynamic->OutSec)
@@ -586,6 +596,7 @@ template <class ELFT> bool elf::isRelroSection(const OutputSectionBase *Sec) {
     return true;
   if (Sec == Out<ELFT>::BssRelRo)
     return true;
+
   StringRef S = Sec->getName();
   return S == ".data.rel.ro" || S == ".ctors" || S == ".dtors" || S == ".jcr" ||
          S == ".eh_frame" || S == ".openbsd.randomdata";
@@ -1183,12 +1194,19 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
 }
 
 template <class ELFT> void Writer<ELFT>::addPredefinedSections() {
-  if (Out<ELFT>::Bss->Size > 0)
-    OutputSections.push_back(Out<ELFT>::Bss);
-  if (Out<ELFT>::BssRelRo->Size > 0)
-    OutputSections.push_back(Out<ELFT>::BssRelRo);
+  // Add BSS sections.
+  auto Add = [=](OutputSection<ELFT> *Sec) {
+    if (!Sec->Sections.empty()) {
+      Sec->assignOffsets();
+      OutputSections.push_back(Sec);
+    }
+  };
+  Add(Out<ELFT>::Bss);
+  Add(Out<ELFT>::BssRelRo);
 
-  auto OS = dyn_cast_or_null<OutputSection<ELFT>>(findSection(".ARM.exidx"));
+  // ARM ABI requires .ARM.exidx to be terminated by some piece of data.
+  // We have the terminater synthetic section class. Add that at the end.
+  auto *OS = dyn_cast_or_null<OutputSection<ELFT>>(findSection(".ARM.exidx"));
   if (OS && !OS->Sections.empty() && !Config->Relocatable)
     OS->addSection(make<ARMExidxSentinelSection<ELFT>>());
 }

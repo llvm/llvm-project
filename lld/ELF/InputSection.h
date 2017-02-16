@@ -281,8 +281,8 @@ public:
   // to. The writer sets a value.
   uint64_t OutSecOff = 0;
 
-  // InputSection that is dependent on us (reverse dependency for GC)
-  InputSectionBase<ELFT> *DependentSection = nullptr;
+  // InputSections that are dependent on us (reverse dependency for GC)
+  llvm::TinyPtrVector<InputSectionBase<ELFT> *> DependentSections;
 
   static bool classof(const InputSectionData *S);
 

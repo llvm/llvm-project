@@ -105,7 +105,7 @@ struct Relocation {
   RelExpr Expr;
   uint32_t Type;
   uint64_t Offset;
-  uint64_t Addend;
+  int64_t Addend;
   SymbolBody *Sym;
 };
 
@@ -114,13 +114,14 @@ template <class ELFT> void scanRelocations(InputSectionBase<ELFT> &);
 template <class ELFT>
 void createThunks(ArrayRef<OutputSectionBase *> OutputSections);
 
+// Return a int64_t to make sure we get the sign extension out of the way as
+// early as possible.
 template <class ELFT>
-static inline typename ELFT::uint getAddend(const typename ELFT::Rel &Rel) {
+static inline int64_t getAddend(const typename ELFT::Rel &Rel) {
   return 0;
 }
-
 template <class ELFT>
-static inline typename ELFT::uint getAddend(const typename ELFT::Rela &Rel) {
+static inline int64_t getAddend(const typename ELFT::Rela &Rel) {
   return Rel.r_addend;
 }
 }

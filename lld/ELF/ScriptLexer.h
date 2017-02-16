@@ -36,10 +36,12 @@ public:
 
   std::vector<MemoryBufferRef> MBs;
   std::vector<StringRef> Tokens;
+  bool InExpr = false;
   size_t Pos = 0;
   bool Error = false;
 
 private:
+  void maybeSplitExpr();
   StringRef getLine();
   size_t getLineNumber();
   size_t getColumnNumber();
