@@ -39,6 +39,8 @@ static const int16_t cSledLength = 28;
 static const int16_t cSledLength = 48;
 #elif SANITIZER_MIPS64
 static const int16_t cSledLength = 64;
+#elif defined(__powerpc64__)
+static const int16_t cSledLength = 8;
 #else
 #error "Unsupported CPU Architecture"
 #endif /* CPU architecture */

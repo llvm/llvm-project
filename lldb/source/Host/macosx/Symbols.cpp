@@ -263,7 +263,8 @@ FileSpec Symbols::FindSymbolFileInBundle(const FileSpec &dsym_bundle_fspec,
                                                   module_specs)) {
             ModuleSpec spec;
             for (size_t i = 0; i < module_specs.GetSize(); ++i) {
-              assert(module_specs.GetModuleSpecAtIndex(i, spec));
+              bool got_spec = module_specs.GetModuleSpecAtIndex(i, spec);
+              assert(got_spec);
               if ((uuid == NULL ||
                    (spec.GetUUIDPtr() && spec.GetUUID() == *uuid)) &&
                   (arch == NULL ||

@@ -25,6 +25,13 @@ class LLVMContext;
 class AArch64LegalizerInfo : public LegalizerInfo {
 public:
   AArch64LegalizerInfo();
+
+  bool legalizeCustom(MachineInstr &MI, MachineRegisterInfo &MRI,
+                      MachineIRBuilder &MIRBuilder) const override;
+
+private:
+  bool legalizeVaArg(MachineInstr &MI, MachineRegisterInfo &MRI,
+                     MachineIRBuilder &MIRBuilder) const;
 };
 } // End llvm namespace.
 #endif

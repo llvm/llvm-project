@@ -19,7 +19,7 @@
 
 extern COMPILER_RT_ABI float __divsf3vfp(float a, float b);
 
-#if __arm__
+#if __arm__ && __VFP_FP__
 int test__divsf3vfp(float a, float b)
 {
     float actual = __divsf3vfp(a, b);
@@ -33,7 +33,7 @@ int test__divsf3vfp(float a, float b)
 
 int main()
 {
-#if __arm__
+#if __arm__ && __VFP_FP__
     if (test__divsf3vfp(1.0, 1.0))
         return 1;
     if (test__divsf3vfp(12345.678, 1.23))

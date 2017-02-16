@@ -255,16 +255,8 @@ int AMDGPUTTIImpl::getVectorInstrCost(unsigned Opcode, Type *ValTy,
   }
 }
 
-static bool isIntrinsicSourceOfDivergence(const TargetIntrinsicInfo *TII,
-                                          const IntrinsicInst *I) {
+static bool isIntrinsicSourceOfDivergence(const IntrinsicInst *I) {
   switch (I->getIntrinsicID()) {
-  default:
-    return false;
-  case Intrinsic::not_intrinsic:
-    // This means we have an intrinsic that isn't defined in
-    // IntrinsicsAMDGPU.td
-    break;
-
   case Intrinsic::amdgcn_workitem_id_x:
   case Intrinsic::amdgcn_workitem_id_y:
   case Intrinsic::amdgcn_workitem_id_z:
@@ -305,15 +297,8 @@ static bool isIntrinsicSourceOfDivergence(const TargetIntrinsicInfo *TII,
   case Intrinsic::amdgcn_ps_live:
   case Intrinsic::amdgcn_ds_swizzle:
     return true;
-  }
-
-  StringRef Name = I->getCalledFunction()->getName();
-  switch (TII->lookupName((const char *)Name.bytes_begin(), Name.size())) {
   default:
     return false;
-  case AMDGPUIntrinsic::SI_fs_interp:
-  case AMDGPUIntrinsic::SI_fs_constant:
-    return true;
   }
 }
 
@@ -357,10 +342,8 @@ bool AMDGPUTTIImpl::isSourceOfDivergence(const Value *V) const {
   if (isa<AtomicRMWInst>(V) || isa<AtomicCmpXchgInst>(V))
     return true;
 
-  if (const IntrinsicInst *Intrinsic = dyn_cast<IntrinsicInst>(V)) {
-    const TargetMachine &TM = getTLI()->getTargetMachine();
-    return isIntrinsicSourceOfDivergence(TM.getIntrinsicInfo(), Intrinsic);
-  }
+  if (const IntrinsicInst *Intrinsic = dyn_cast<IntrinsicInst>(V))
+    return isIntrinsicSourceOfDivergence(Intrinsic);
 
   // Assume all function calls are a source of divergence.
   if (isa<CallInst>(V) || isa<InvokeInst>(V))

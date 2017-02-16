@@ -3162,6 +3162,23 @@ static void checkMoreSpecializedThanPrimary(Sema &S, PartialSpecDecl *Partial) {
   S.Diag(Template->getLocation(), diag::note_template_decl_here);
 }
 
+static void
+noteNonDeducibleParameters(Sema &S, TemplateParameterList *TemplateParams,
+                           const llvm::SmallBitVector &DeducibleParams) {
+  for (unsigned I = 0, N = DeducibleParams.size(); I != N; ++I) {
+    if (!DeducibleParams[I]) {
+      NamedDecl *Param = cast<NamedDecl>(TemplateParams->getParam(I));
+      if (Param->getDeclName())
+        S.Diag(Param->getLocation(), diag::note_non_deducible_parameter)
+            << Param->getDeclName();
+      else
+        S.Diag(Param->getLocation(), diag::note_non_deducible_parameter)
+            << "(anonymous)";
+    }
+  }
+}
+
+
 template<typename PartialSpecDecl>
 static void checkTemplatePartialSpecialization(Sema &S,
                                                PartialSpecDecl *Partial) {
@@ -3189,19 +3206,7 @@ static void checkTemplatePartialSpecialization(Sema &S,
       << (NumNonDeducible > 1)
       << SourceRange(Partial->getLocation(),
                      Partial->getTemplateArgsAsWritten()->RAngleLoc);
-    for (unsigned I = 0, N = DeducibleParams.size(); I != N; ++I) {
-      if (!DeducibleParams[I]) {
-        NamedDecl *Param = cast<NamedDecl>(TemplateParams->getParam(I));
-        if (Param->getDeclName())
-          S.Diag(Param->getLocation(),
-                 diag::note_partial_spec_unused_parameter)
-            << Param->getDeclName();
-        else
-          S.Diag(Param->getLocation(),
-                 diag::note_partial_spec_unused_parameter)
-            << "(anonymous)";
-      }
-    }
+    noteNonDeducibleParameters(S, TemplateParams, DeducibleParams);
   }
 }
 
@@ -3213,6 +3218,29 @@ void Sema::CheckTemplatePartialSpecialization(
 void Sema::CheckTemplatePartialSpecialization(
     VarTemplatePartialSpecializationDecl *Partial) {
   checkTemplatePartialSpecialization(*this, Partial);
+}
+
+void Sema::CheckDeductionGuideTemplate(FunctionTemplateDecl *TD) {
+  // C++1z [temp.param]p11:
+  //   A template parameter of a deduction guide template that does not have a
+  //   default-argument shall be deducible from the parameter-type-list of the
+  //   deduction guide template.
+  auto *TemplateParams = TD->getTemplateParameters();
+  llvm::SmallBitVector DeducibleParams(TemplateParams->size());
+  MarkDeducedTemplateParameters(TD, DeducibleParams);
+  for (unsigned I = 0; I != TemplateParams->size(); ++I) {
+    // A parameter pack is deducible (to an empty pack).
+    auto *Param = TemplateParams->getParam(I);
+    if (Param->isParameterPack() || hasVisibleDefaultArgument(Param))
+      DeducibleParams[I] = true;
+  }
+
+  if (!DeducibleParams.all()) {
+    unsigned NumNonDeducible = DeducibleParams.size() - DeducibleParams.count();
+    Diag(TD->getLocation(), diag::err_deduction_guide_template_not_deducible)
+      << (NumNonDeducible > 1);
+    noteNonDeducibleParameters(*this, TemplateParams, DeducibleParams);
+  }
 }
 
 DeclResult Sema::ActOnVarTemplateSpecialization(

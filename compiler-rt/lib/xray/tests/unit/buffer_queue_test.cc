@@ -45,7 +45,8 @@ TEST(BufferQueueTest, GetUntilFailed) {
   BufferQueue::Buffer Buf0;
   EXPECT_EQ(Buffers.getBuffer(Buf0), std::error_code());
   BufferQueue::Buffer Buf1;
-  EXPECT_EQ(std::errc::not_enough_memory, Buffers.getBuffer(Buf1));
+  EXPECT_EQ(std::make_error_code(std::errc::not_enough_memory),
+            Buffers.getBuffer(Buf1));
   EXPECT_EQ(Buffers.releaseBuffer(Buf0), std::error_code());
 }
 
@@ -56,7 +57,8 @@ TEST(BufferQueueTest, ReleaseUnknown) {
   BufferQueue::Buffer Buf;
   Buf.Buffer = reinterpret_cast<void *>(0xdeadbeef);
   Buf.Size = kSize;
-  EXPECT_EQ(std::errc::argument_out_of_domain, Buffers.releaseBuffer(Buf));
+  EXPECT_EQ(std::make_error_code(std::errc::argument_out_of_domain),
+            Buffers.releaseBuffer(Buf));
 }
 
 TEST(BufferQueueTest, ErrorsWhenFinalising) {
@@ -68,8 +70,10 @@ TEST(BufferQueueTest, ErrorsWhenFinalising) {
   ASSERT_NE(nullptr, Buf.Buffer);
   ASSERT_EQ(Buffers.finalize(), std::error_code());
   BufferQueue::Buffer OtherBuf;
-  ASSERT_EQ(std::errc::state_not_recoverable, Buffers.getBuffer(OtherBuf));
-  ASSERT_EQ(std::errc::state_not_recoverable, Buffers.finalize());
+  ASSERT_EQ(std::make_error_code(std::errc::state_not_recoverable),
+            Buffers.getBuffer(OtherBuf));
+  ASSERT_EQ(std::make_error_code(std::errc::state_not_recoverable),
+            Buffers.finalize());
   ASSERT_EQ(Buffers.releaseBuffer(Buf), std::error_code());
 }
 

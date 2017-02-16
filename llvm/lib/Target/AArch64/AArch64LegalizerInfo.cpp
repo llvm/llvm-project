@@ -13,7 +13,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "AArch64LegalizerInfo.h"
+#include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/Target/TargetOpcodes.h"
@@ -234,5 +237,80 @@ AArch64LegalizerInfo::AArch64LegalizerInfo() {
 
   setAction({G_VASTART, p0}, Legal);
 
+  // va_list must be a pointer, but most sized types are pretty easy to handle
+  // as the destination.
+  setAction({G_VAARG, 1, p0}, Legal);
+
+  for (auto Ty : {s8, s16, s32, s64, p0})
+    setAction({G_VAARG, Ty}, Custom);
+
   computeTables();
+}
+
+bool AArch64LegalizerInfo::legalizeCustom(MachineInstr &MI,
+                                          MachineRegisterInfo &MRI,
+                                          MachineIRBuilder &MIRBuilder) const {
+  switch (MI.getOpcode()) {
+  default:
+    // No idea what to do.
+    return false;
+  case TargetOpcode::G_VAARG:
+    return legalizeVaArg(MI, MRI, MIRBuilder);
+  }
+
+  llvm_unreachable("expected switch to return");
+}
+
+bool AArch64LegalizerInfo::legalizeVaArg(MachineInstr &MI,
+                                         MachineRegisterInfo &MRI,
+                                         MachineIRBuilder &MIRBuilder) const {
+  MIRBuilder.setInstr(MI);
+  MachineFunction &MF = MIRBuilder.getMF();
+  unsigned Align = MI.getOperand(2).getImm();
+  unsigned Dst = MI.getOperand(0).getReg();
+  unsigned ListPtr = MI.getOperand(1).getReg();
+
+  LLT PtrTy = MRI.getType(ListPtr);
+  LLT IntPtrTy = LLT::scalar(PtrTy.getSizeInBits());
+
+  const unsigned PtrSize = PtrTy.getSizeInBits() / 8;
+  unsigned List = MRI.createGenericVirtualRegister(PtrTy);
+  MIRBuilder.buildLoad(
+      List, ListPtr,
+      *MF.getMachineMemOperand(MachinePointerInfo(), MachineMemOperand::MOLoad,
+                               PtrSize, /* Align = */ PtrSize));
+
+  unsigned DstPtr;
+  if (Align > PtrSize) {
+    // Realign the list to the actual required alignment.
+    unsigned AlignMinus1 = MRI.createGenericVirtualRegister(IntPtrTy);
+    MIRBuilder.buildConstant(AlignMinus1, Align - 1);
+
+    unsigned ListTmp = MRI.createGenericVirtualRegister(PtrTy);
+    MIRBuilder.buildGEP(ListTmp, List, AlignMinus1);
+
+    DstPtr = MRI.createGenericVirtualRegister(PtrTy);
+    MIRBuilder.buildPtrMask(DstPtr, ListTmp, Log2_64(Align));
+  } else
+    DstPtr = List;
+
+  uint64_t ValSize = MRI.getType(Dst).getSizeInBits() / 8;
+  MIRBuilder.buildLoad(
+      Dst, DstPtr,
+      *MF.getMachineMemOperand(MachinePointerInfo(), MachineMemOperand::MOLoad,
+                               ValSize, std::max(Align, PtrSize)));
+
+  unsigned SizeReg = MRI.createGenericVirtualRegister(IntPtrTy);
+  MIRBuilder.buildConstant(SizeReg, alignTo(ValSize, PtrSize));
+
+  unsigned NewList = MRI.createGenericVirtualRegister(PtrTy);
+  MIRBuilder.buildGEP(NewList, DstPtr, SizeReg);
+
+  MIRBuilder.buildStore(
+      NewList, ListPtr,
+      *MF.getMachineMemOperand(MachinePointerInfo(), MachineMemOperand::MOStore,
+                               PtrSize, /* Align = */ PtrSize));
+
+  MI.eraseFromParent();
+  return true;
 }

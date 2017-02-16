@@ -92,7 +92,7 @@ D: MCJIT, RuntimeDyld and JIT event listeners, Orcish Warchief
 
 N: Teresa Johnson
 E: tejohnson@google.com
-D: Gold plugin (tools/gold/*)
+D: Gold plugin (tools/gold/*) and IR Linker
 
 N: Galina Kistanova
 E: gkistanova@gmail.com
@@ -194,10 +194,6 @@ D: Instruction Scheduling
 N: Ulrich Weigand
 E: uweigand@de.ibm.com
 D: SystemZ Backend
-
-N: Teresa Johnson
-E: tejohnson@google.com
-D: IR Linker
 
 N: Hans Wennborg
 E: hans@chromium.org

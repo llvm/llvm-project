@@ -264,9 +264,9 @@ void InputSection<ELFT>::copyRelocations(uint8_t *Buf, ArrayRef<RelTy> Rels) {
         P->r_addend += Body.getVA<ELFT>() - Section->OutSec->Addr;
       } else if (Config->Relocatable) {
         const uint8_t *BufLoc = RelocatedSection->Data.begin() + Rel.r_offset;
-        uint64_t Implicit = Target->getImplicitAddend(BufLoc, Type);
         RelocatedSection->Relocations.push_back(
-            {R_ABS, Type, Rel.r_offset, Implicit, &Body});
+            {R_ABS, Type, Rel.r_offset, Target->getImplicitAddend(BufLoc, Type),
+             &Body});
       }
     }
 
@@ -309,7 +309,7 @@ static uint64_t getAArch64UndefinedRelativeWeakVA(uint64_t Type, uint64_t A,
 
 template <class ELFT>
 static typename ELFT::uint
-getRelocTargetVA(uint32_t Type, typename ELFT::uint A, typename ELFT::uint P,
+getRelocTargetVA(uint32_t Type, int64_t A, typename ELFT::uint P,
                  const SymbolBody &Body, RelExpr Expr) {
   switch (Expr) {
   case R_HINT:
@@ -459,7 +459,7 @@ void InputSection<ELFT>::relocateNonAlloc(uint8_t *Buf, ArrayRef<RelTy> Rels) {
     uint32_t Type = Rel.getType(Config->Mips64EL);
     uintX_t Offset = this->getOffset(Rel.r_offset);
     uint8_t *BufLoc = Buf + Offset;
-    uintX_t Addend = getAddend<ELFT>(Rel);
+    int64_t Addend = getAddend<ELFT>(Rel);
     if (!RelTy::IsRela)
       Addend += Target->getImplicitAddend(BufLoc, Type);
 
@@ -497,12 +497,11 @@ void InputSectionBase<ELFT>::relocate(uint8_t *Buf, uint8_t *BufEnd) {
     uintX_t Offset = getOffset(Rel.Offset);
     uint8_t *BufLoc = Buf + Offset;
     uint32_t Type = Rel.Type;
-    uintX_t A = Rel.Addend;
 
     uintX_t AddrLoc = OutSec->Addr + Offset;
     RelExpr Expr = Rel.Expr;
     uint64_t TargetVA = SignExtend64<Bits>(
-        getRelocTargetVA<ELFT>(Type, A, AddrLoc, *Rel.Sym, Expr));
+        getRelocTargetVA<ELFT>(Type, Rel.Addend, AddrLoc, *Rel.Sym, Expr));
 
     switch (Expr) {
     case R_RELAX_GOT_PC:
