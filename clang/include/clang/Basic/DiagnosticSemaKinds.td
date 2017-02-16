@@ -2002,6 +2002,10 @@ def err_deduction_guide_explicit_mismatch : Error<
   "previous declaration was%select{ not|}0">;
 def err_deduction_guide_specialized : Error<"deduction guide cannot be "
   "%select{explicitly instantiated|explicitly specialized}0">;
+def err_deduction_guide_template_not_deducible : Error<
+    "deduction guide template contains "
+    "%select{a template parameter|template parameters}0 that cannot be "
+    "deduced">;
 
 // C++1y deduced return types
 def err_auto_fn_deduction_failure : Error<
@@ -4146,7 +4150,7 @@ def ext_partial_specs_not_deducible : ExtWarn<
     "%select{a template parameter|template parameters}1 that cannot be "
     "deduced; this partial specialization will never be used">,
     DefaultError, InGroup<DiagGroup<"unusable-partial-specialization">>;
-def note_partial_spec_unused_parameter : Note<
+def note_non_deducible_parameter : Note<
     "non-deducible template parameter %0">;
 def err_partial_spec_ordering_ambiguous : Error<
     "ambiguous partial specializations of %0">;

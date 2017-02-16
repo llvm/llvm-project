@@ -18,6 +18,7 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/AST/ODRHash.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "llvm/ADT/STLExtras.h"
@@ -71,8 +72,8 @@ CXXRecordDecl::DefinitionData::DefinitionData(CXXRecordDecl *D)
       ImplicitCopyAssignmentHasConstParam(true),
       HasDeclaredCopyConstructorWithConstParam(false),
       HasDeclaredCopyAssignmentWithConstParam(false), IsLambda(false),
-      IsParsingBaseSpecifiers(false), NumBases(0), NumVBases(0), Bases(),
-      VBases(), Definition(D), FirstFriend() {}
+      IsParsingBaseSpecifiers(false), ODRHash(0), NumBases(0), NumVBases(0),
+      Bases(), VBases(), Definition(D), FirstFriend() {}
 
 CXXBaseSpecifier *CXXRecordDecl::DefinitionData::getBasesSlowCase() const {
   return Bases.get(Definition->getASTContext().getExternalSource());
@@ -369,6 +370,16 @@ CXXRecordDecl::setBases(CXXBaseSpecifier const * const *Bases,
   }
 
   data().IsParsingBaseSpecifiers = false;
+}
+
+void CXXRecordDecl::computeODRHash() {
+  if (!DefinitionData)
+    return;
+
+  ODRHash Hash;
+  Hash.AddCXXRecordDecl(this);
+
+  DefinitionData->ODRHash = Hash.CalculateHash();
 }
 
 void CXXRecordDecl::addedClassSubobject(CXXRecordDecl *Subobj) {

@@ -2684,35 +2684,10 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                        Op.getOperand(1),
                        Op.getOperand(2),
                        Op.getOperand(3));
-
-  case AMDGPUIntrinsic::SI_fs_constant: {
-    SDValue M0 = copyToM0(DAG, DAG.getEntryNode(), DL, Op.getOperand(3));
-    SDValue Glue = M0.getValue(1);
-    return DAG.getNode(AMDGPUISD::INTERP_MOV, DL, MVT::f32,
-                       DAG.getConstant(2, DL, MVT::i32), // P0
-                       Op.getOperand(1), Op.getOperand(2), Glue);
-  }
   case AMDGPUIntrinsic::SI_packf16:
     if (Op.getOperand(1).isUndef() && Op.getOperand(2).isUndef())
       return DAG.getUNDEF(MVT::i32);
     return Op;
-  case AMDGPUIntrinsic::SI_fs_interp: {
-    SDValue IJ = Op.getOperand(4);
-    SDValue I = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i32, IJ,
-                            DAG.getConstant(0, DL, MVT::i32));
-    SDValue J = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i32, IJ,
-                            DAG.getConstant(1, DL, MVT::i32));
-    I = DAG.getNode(ISD::BITCAST, DL, MVT::f32, I);
-    J = DAG.getNode(ISD::BITCAST, DL, MVT::f32, J);
-    SDValue M0 = copyToM0(DAG, DAG.getEntryNode(), DL, Op.getOperand(3));
-    SDValue Glue = M0.getValue(1);
-    SDValue P1 = DAG.getNode(AMDGPUISD::INTERP_P1, DL,
-                             DAG.getVTList(MVT::f32, MVT::Glue),
-                             I, Op.getOperand(1), Op.getOperand(2), Glue);
-    Glue = SDValue(P1.getNode(), 1);
-    return DAG.getNode(AMDGPUISD::INTERP_P2, DL, MVT::f32, P1, J,
-                             Op.getOperand(1), Op.getOperand(2), Glue);
-  }
   case Intrinsic::amdgcn_interp_mov: {
     SDValue M0 = copyToM0(DAG, DAG.getEntryNode(), DL, Op.getOperand(4));
     SDValue Glue = M0.getValue(1);
@@ -2936,16 +2911,12 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     return DAG.getNode(Opc, DL, Op->getVTList(), Ops);
   }
   case Intrinsic::amdgcn_s_sendmsg:
-  case AMDGPUIntrinsic::SI_sendmsg: {
-    Chain = copyToM0(DAG, Chain, DL, Op.getOperand(3));
-    SDValue Glue = Chain.getValue(1);
-    return DAG.getNode(AMDGPUISD::SENDMSG, DL, MVT::Other, Chain,
-                       Op.getOperand(2), Glue);
-  }
   case Intrinsic::amdgcn_s_sendmsghalt: {
+    unsigned NodeOp = (IntrinsicID == Intrinsic::amdgcn_s_sendmsg) ?
+      AMDGPUISD::SENDMSG : AMDGPUISD::SENDMSGHALT;
     Chain = copyToM0(DAG, Chain, DL, Op.getOperand(3));
     SDValue Glue = Chain.getValue(1);
-    return DAG.getNode(AMDGPUISD::SENDMSGHALT, DL, MVT::Other, Chain,
+    return DAG.getNode(NodeOp, DL, MVT::Other, Chain,
                        Op.getOperand(2), Glue);
   }
   case AMDGPUIntrinsic::SI_tbuffer_store: {

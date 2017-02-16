@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -std=c++1z -verify -fsyntax-only -fblocks %s
-// RUN: %clang_cc1 -std=c++1z -verify -fsyntax-only -fblocks -fdelayed-template-parsing %s 
-// RUN: %clang_cc1 -std=c++14 -verify -fsyntax-only -fblocks %s -DCPP14_AND_EARLIER
+// RUN: %clang_cc1 -std=c++1z -verify -fsyntax-only -fblocks %s -fcxx-exceptions
+// RUN: %clang_cc1 -std=c++1z -verify -fsyntax-only -fblocks -fdelayed-template-parsing %s -fcxx-exceptions
+// RUN: %clang_cc1 -std=c++14 -verify -fsyntax-only -fblocks %s -DCPP14_AND_EARLIER -fcxx-exceptions
 
 
 namespace test_lambda_is_literal {
@@ -157,18 +157,115 @@ constexpr auto M =  // expected-error{{must be initialized by}}
 
 } // end ns1_simple_lambda
 
-namespace ns1_unimplemented {
-namespace ns1_captures {
+namespace test_captures_1 {
+namespace ns1 {
 constexpr auto f(int i) {
-  double d = 3.14;
-  auto L = [=](auto a) { //expected-note{{coming soon}}
-    int Isz = i + d;
-    return sizeof(i) + sizeof(a) + sizeof(d); 
+  struct S { int x; } s = { i * 2 };
+  auto L = [=](auto a) { 
+    return i + s.x + a;
   };
   return L;
 }
-constexpr auto M = f(3);  //expected-error{{constant expression}} expected-note{{in call to}}
-} // end ns1_captures
+constexpr auto M = f(3);  
+
+static_assert(M(10) == 19);
+
+} // end test_captures_1::ns1
+
+namespace ns2 {
+
+constexpr auto foo(int n) {
+  auto L = [i = n] (auto N) mutable {
+    if (!N(i)) throw "error";
+    return [&i] {
+      return ++i;
+    };
+  };
+  auto M = L([n](int p) { return p == n; });
+  M(); M();
+  L([n](int p) { return p == n + 2; });
+  
+  return L;
+}
+
+constexpr auto L = foo(3);
+
+} // end test_captures_1::ns2
+namespace ns3 {
+
+constexpr auto foo(int n) {
+  auto L = [i = n] (auto N) mutable {
+    if (!N(i)) throw "error";
+    return [&i] {
+      return [i]() mutable {
+        return ++i;
+      };
+    };
+  };
+  auto M = L([n](int p) { return p == n; });
+  M()(); M()();
+  L([n](int p) { return p == n; });
+  
+  return L;
+}
+
+constexpr auto L = foo(3);
+} // end test_captures_1::ns3
+
+namespace ns2_capture_this_byval {
+struct S {
+  int s;
+  constexpr S(int s) : s{s} { }
+  constexpr auto f(S o) {
+    return [*this,o] (auto a) { return s + o.s + a.s; };
+  }
+};
+
+constexpr auto L = S{5}.f(S{10});
+static_assert(L(S{100}) == 115);
+} // end test_captures_1::ns2_capture_this_byval
+
+namespace ns2_capture_this_byref {
+
+struct S {
+  int s;
+  constexpr S(int s) : s{s} { }
+  constexpr auto f() const {
+    return [this] { return s; };
+  }
+};
+
+constexpr S SObj{5};
+constexpr auto L = SObj.f();
+constexpr int I = L();
+static_assert(I == 5);
+
+} // end ns2_capture_this_byref
+
+} // end test_captures_1
+
+namespace test_capture_array {
+namespace ns1 {
+constexpr auto f(int I) {
+  int arr[] = { I, I *2, I * 3 };
+  auto L1 = [&] (auto a) { return arr[a]; };
+  int r = L1(2);
+  struct X { int x, y; };
+  return [=](auto a) { return X{arr[a],r}; };
+}
+constexpr auto L = f(3);
+static_assert(L(0).x == 3);
+static_assert(L(0).y == 9);
+static_assert(L(1).x == 6);
+static_assert(L(1).y == 9);
+} // end ns1
+
+} // end test_capture_array
+namespace ns1_test_lvalue_type {
+  void f() {
+    volatile int n;
+    constexpr bool B = [&]{ return &n; }() == &n; // should be accepted
+  }
 } // end ns1_unimplemented 
 
 } // end ns test_lambda_is_cce

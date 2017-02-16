@@ -17,18 +17,24 @@
 #define LLVM_SUPPORT_SOURCEMGR_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/None.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SMLoc.h"
+#include <algorithm>
+#include <cassert>
+#include <memory>
 #include <string>
+#include <utility>
+#include <vector>
 
 namespace llvm {
-  class SourceMgr;
-  class SMDiagnostic;
-  class SMFixIt;
-  class Twine;
-  class raw_ostream;
+
+class raw_ostream;
+class SMDiagnostic;
+class SMFixIt;
 
 /// This owns the files read by a parser, handles include stacks,
 /// and handles diagnostic wrangling.
@@ -44,6 +50,7 @@ public:
   /// register a function pointer+context as a diagnostic handler.
   /// It gets called each time PrintMessage is invoked.
   typedef void (*DiagHandlerTy)(const SMDiagnostic &, void *Context);
+
 private:
   struct SrcBuffer {
     /// The memory buffer for the file.
@@ -61,18 +68,17 @@ private:
 
   /// This is a cache for line number queries, its implementation is really
   /// private to SourceMgr.cpp.
-  mutable void *LineNoCache;
+  mutable void *LineNoCache = nullptr;
 
-  DiagHandlerTy DiagHandler;
-  void *DiagContext;
+  DiagHandlerTy DiagHandler = nullptr;
+  void *DiagContext = nullptr;
 
   bool isValidBufferID(unsigned i) const { return i && i <= Buffers.size(); }
 
-  SourceMgr(const SourceMgr&) = delete;
-  void operator=(const SourceMgr&) = delete;
 public:
-  SourceMgr()
-    : LineNoCache(nullptr), DiagHandler(nullptr), DiagContext(nullptr) {}
+  SourceMgr() = default;
+  SourceMgr(const SourceMgr &) = delete;
+  SourceMgr &operator=(const SourceMgr &) = delete;
   ~SourceMgr();
 
   void setIncludeDirs(const std::vector<std::string> &Dirs) {
@@ -190,7 +196,6 @@ public:
   void PrintIncludeStack(SMLoc IncludeLoc, raw_ostream &OS) const;
 };
 
-
 /// Represents a single fixit, a replacement of one range of text with another.
 class SMFixIt {
   SMRange Range;
@@ -222,33 +227,31 @@ public:
   }
 };
 
-
 /// Instances of this class encapsulate one diagnostic report, allowing
 /// printing to a raw_ostream as a caret diagnostic.
 class SMDiagnostic {
-  const SourceMgr *SM;
+  const SourceMgr *SM = nullptr;
   SMLoc Loc;
   std::string Filename;
-  int LineNo, ColumnNo;
-  SourceMgr::DiagKind Kind;
+  int LineNo = 0;
+  int ColumnNo = 0;
+  SourceMgr::DiagKind Kind = SourceMgr::DK_Error;
   std::string Message, LineContents;
-  std::vector<std::pair<unsigned, unsigned> > Ranges;
+  std::vector<std::pair<unsigned, unsigned>> Ranges;
   SmallVector<SMFixIt, 4> FixIts;
 
 public:
   // Null diagnostic.
-  SMDiagnostic()
-    : SM(nullptr), LineNo(0), ColumnNo(0), Kind(SourceMgr::DK_Error) {}
+  SMDiagnostic() = default;
   // Diagnostic with no location (e.g. file not found, command line arg error).
   SMDiagnostic(StringRef filename, SourceMgr::DiagKind Knd, StringRef Msg)
-    : SM(nullptr), Filename(filename), LineNo(-1), ColumnNo(-1), Kind(Knd),
-      Message(Msg) {}
+    : Filename(filename), LineNo(-1), ColumnNo(-1), Kind(Knd), Message(Msg) {}
 
   // Diagnostic with a location.
   SMDiagnostic(const SourceMgr &sm, SMLoc L, StringRef FN,
                int Line, int Col, SourceMgr::DiagKind Kind,
                StringRef Msg, StringRef LineStr,
-               ArrayRef<std::pair<unsigned,unsigned> > Ranges,
+               ArrayRef<std::pair<unsigned,unsigned>> Ranges,
                ArrayRef<SMFixIt> FixIts = None);
 
   const SourceMgr *getSourceMgr() const { return SM; }
@@ -259,9 +262,7 @@ public:
   SourceMgr::DiagKind getKind() const { return Kind; }
   StringRef getMessage() const { return Message; }
   StringRef getLineContents() const { return LineContents; }
-  ArrayRef<std::pair<unsigned, unsigned> > getRanges() const {
-    return Ranges;
-  }
+  ArrayRef<std::pair<unsigned, unsigned>> getRanges() const { return Ranges; }
 
   void addFixIt(const SMFixIt &Hint) {
     FixIts.push_back(Hint);
@@ -275,6 +276,6 @@ public:
              bool ShowKindLabel = true) const;
 };
 
-}  // end llvm namespace
+} // end namespace llvm
 
-#endif
+#endif // LLVM_SUPPORT_SOURCEMGR_H

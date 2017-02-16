@@ -489,6 +489,12 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
     break;
   }
   }
+  // Remangle our intrinsic since we upgrade the mangling
+  auto Result = llvm::Intrinsic::remangleIntrinsicFunction(F);
+  if (Result != None) {
+    NewFn = Result.getValue();
+    return true;
+  }
 
   //  This may not belong here. This function is effectively being overloaded
   //  to both detect an intrinsic which needs upgrading, and to provide the
@@ -1821,8 +1827,17 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
     CI->setName(Name + ".old");
 
   switch (NewFn->getIntrinsicID()) {
-  default:
-    llvm_unreachable("Unknown function for CallInst upgrade.");
+  default: {
+    // Handle generic mangling change, but nothing else
+    assert(
+        (CI->getCalledFunction()->getName() != NewFn->getName()) &&
+        "Unknown function for CallInst upgrade and isn't just a name change");
+    SmallVector<Value *, 4> Args(CI->arg_operands().begin(),
+                                 CI->arg_operands().end());
+    CI->replaceAllUsesWith(Builder.CreateCall(NewFn, Args));
+    CI->eraseFromParent();
+    return;
+  }
 
   case Intrinsic::arm_neon_vld1:
   case Intrinsic::arm_neon_vld2:

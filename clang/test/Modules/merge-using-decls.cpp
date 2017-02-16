@@ -37,6 +37,10 @@ template int UseAll<Y>();
 // Here, we're instantiating the definition from 'A' and merging the definition
 // from 'B' into it.
 
+// expected-error@b.h:* {{'D::type' from module 'B' is not present in definition of 'D<T>' in module 'A'}}
+// expected-error@b.h:* {{'D::value' from module 'B' is not present in definition of 'D<T>' in module 'A'}}
+
+
 // expected-error@b.h:* {{'E::value' from module 'B' is not present in definition of 'E<T>' in module 'A'}}
 // expected-error@b.h:* {{'E::v' from module 'B' is not present in definition of 'E<T>' in module 'A'}}
 

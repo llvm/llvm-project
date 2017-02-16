@@ -88,9 +88,9 @@ endif:
 ; GCN-NOT: v_readlane_b32 m0
 ; GCN-NOT: s_buffer_store_dword m0
 ; GCN-NOT: s_buffer_load_dword m0
-define amdgpu_ps void @spill_kill_m0_lds(<16 x i8> addrspace(2)* inreg %arg, <16 x i8> addrspace(2)* inreg %arg1, <32 x i8> addrspace(2)* inreg %arg2, i32 inreg %arg3) #0 {
+define amdgpu_ps void @spill_kill_m0_lds(<16 x i8> addrspace(2)* inreg %arg, <16 x i8> addrspace(2)* inreg %arg1, <32 x i8> addrspace(2)* inreg %arg2, i32 inreg %m0) #0 {
 main_body:
-  %tmp = call float @llvm.SI.fs.constant(i32 0, i32 0, i32 %arg3)
+  %tmp = call float @llvm.amdgcn.interp.mov(i32 2, i32 0, i32 0, i32 %m0)
   %cmp = fcmp ueq float 0.000000e+00, %tmp
   br i1 %cmp, label %if, label %else
 
@@ -100,7 +100,7 @@ if:                                               ; preds = %main_body
   br label %endif
 
 else:                                             ; preds = %main_body
-  %interp = call float @llvm.SI.fs.constant(i32 0, i32 0, i32 %arg3)
+  %interp = call float @llvm.amdgcn.interp.mov(i32 2, i32 0, i32 0, i32 %m0)
   br label %endif
 
 endif:                                            ; preds = %else, %if
@@ -137,10 +137,10 @@ endif:                                            ; preds = %else, %if
 ; GCN-NOT: v_readlane_b32 m0
 ; GCN-NOT: s_buffer_store_dword m0
 ; GCN-NOT: s_buffer_load_dword m0
-define void @m0_unavailable_spill(i32 %arg3) #0 {
+define void @m0_unavailable_spill(i32 %m0.arg) #0 {
 main_body:
   %m0 = call i32 asm sideeffect "; def $0, 1", "={M0}"() #0
-  %tmp = call float @llvm.SI.fs.constant(i32 0, i32 0, i32 %arg3)
+  %tmp = call float @llvm.amdgcn.interp.mov(i32 2, i32 0, i32 0, i32 %m0.arg)
   call void asm sideeffect "; clobber $0", "~{M0}"() #0
   %cmp = fcmp ueq float 0.000000e+00, %tmp
    br i1 %cmp, label %if, label %else
@@ -205,10 +205,11 @@ ret:
   ret void
 }
 
-declare float @llvm.SI.fs.constant(i32, i32, i32) readnone
+declare float @llvm.amdgcn.interp.mov(i32, i32, i32, i32) #0
 
 declare i32 @llvm.SI.packf16(float, float) readnone
 
 declare void @llvm.SI.export(i32, i32, i32, i32, i32, float, float, float, float)
 
 attributes #0 = { nounwind }
+attributes #1 = { nounwind readnone }

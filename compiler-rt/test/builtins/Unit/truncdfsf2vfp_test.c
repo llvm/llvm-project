@@ -19,7 +19,7 @@
 
 extern COMPILER_RT_ABI float __truncdfsf2vfp(double a);
 
-#if __arm__
+#if __arm__ && __VFP_FP__
 int test__truncdfsf2vfp(double a)
 {
     float actual = __truncdfsf2vfp(a);
@@ -33,7 +33,7 @@ int test__truncdfsf2vfp(double a)
 
 int main()
 {
-#if __arm__
+#if __arm__ && __VFP_FP__
     if (test__truncdfsf2vfp(0.0))
         return 1;
     if (test__truncdfsf2vfp(1.0))

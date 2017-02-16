@@ -17,7 +17,7 @@
 #include <math.h>
 
 
-#if __arm__
+#if __arm__ && __VFP_FP__
 extern COMPILER_RT_ABI double __muldf3vfp(double a, double b);
 
 int test__muldf3vfp(double a, double b)
@@ -33,7 +33,7 @@ int test__muldf3vfp(double a, double b)
 
 int main()
 {
-#if __arm__
+#if __arm__ && __VFP_FP__
     if (test__muldf3vfp(0.5, 10.0))
         return 1;
     if (test__muldf3vfp(-0.5, -2.0))

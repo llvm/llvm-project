@@ -19,7 +19,7 @@
 
 extern COMPILER_RT_ABI float __floatsisfvfp(int a);
 
-#if __arm__
+#if __arm__ && __VFP_FP__
 int test__floatsisfvfp(int a)
 {
     float actual = __floatsisfvfp(a);
@@ -33,7 +33,7 @@ int test__floatsisfvfp(int a)
 
 int main()
 {
-#if __arm__
+#if __arm__ && __VFP_FP__
     if (test__floatsisfvfp(0))
         return 1;
     if (test__floatsisfvfp(1))

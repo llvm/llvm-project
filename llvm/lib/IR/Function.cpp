@@ -505,10 +505,18 @@ static std::string getMangledTypeStr(Type* Ty) {
   } else if (ArrayType* ATyp = dyn_cast<ArrayType>(Ty)) {
     Result += "a" + llvm::utostr(ATyp->getNumElements()) +
       getMangledTypeStr(ATyp->getElementType());
-  } else if (StructType* STyp = dyn_cast<StructType>(Ty)) {
-    assert(!STyp->isLiteral() && "TODO: implement literal types");
-    Result += STyp->getName();
-  } else if (FunctionType* FT = dyn_cast<FunctionType>(Ty)) {
+  } else if (StructType *STyp = dyn_cast<StructType>(Ty)) {
+    if (!STyp->isLiteral()) {
+      Result += "s_";
+      Result += STyp->getName();
+    } else {
+      Result += "sl_";
+      for (auto Elem : STyp->elements())
+        Result += getMangledTypeStr(Elem);
+    }
+    // Ensure nested structs are distinguishable.
+    Result += "s";
+  } else if (FunctionType *FT = dyn_cast<FunctionType>(Ty)) {
     Result += "f_" + getMangledTypeStr(FT->getReturnType());
     for (size_t i = 0; i < FT->getNumParams(); i++)
       Result += getMangledTypeStr(FT->getParamType(i));

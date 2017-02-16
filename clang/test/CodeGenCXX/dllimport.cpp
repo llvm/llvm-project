@@ -358,7 +358,7 @@ __declspec(dllimport) inline int *ReferencingImportedDelete() { delete (int*)nul
 USE(ReferencingImportedNew)
 USE(ReferencingImportedDelete)
 struct ClassWithDtor { ~ClassWithDtor() {} };
-struct __declspec(dllimport) ClassWithNonDllImportField { ClassWithDtor t; };
+struct __declspec(dllimport) ClassWithNonDllImportField { using X = ClassWithDtor; X t[2]; };
 struct __declspec(dllimport) ClassWithNonDllImportBase : public ClassWithDtor { };
 USECLASS(ClassWithNonDllImportField);
 USECLASS(ClassWithNonDllImportBase);
@@ -368,6 +368,13 @@ struct ClassWithCtor { ClassWithCtor() {} };
 struct __declspec(dllimport) ClassWithNonDllImportFieldWithCtor { ClassWithCtor t; };
 USECLASS(ClassWithNonDllImportFieldWithCtor);
 // MO1-DAG: declare dllimport x86_thiscallcc %struct.ClassWithNonDllImportFieldWithCtor* @"\01??0ClassWithNonDllImportFieldWithCtor@@QAE@XZ"(%struct.ClassWithNonDllImportFieldWithCtor* returned)
+struct ClassWithImplicitDtor { __declspec(dllimport) ClassWithImplicitDtor(); ClassWithDtor member; };
+__declspec(dllimport) inline void ReferencingDtorThroughDefinition() { ClassWithImplicitDtor x; };
+USE(ReferencingDtorThroughDefinition)
+// MO1-DAG: declare dllimport void @"\01?ReferencingDtorThroughDefinition@@YAXXZ"()
+__declspec(dllimport) inline void ReferencingDtorThroughTemporary() { ClassWithImplicitDtor(); };
+USE(ReferencingDtorThroughTemporary)
+// MO1-DAG: declare dllimport void @"\01?ReferencingDtorThroughTemporary@@YAXXZ"()
 
 // A dllimport function with a TLS variable must not be available_externally.
 __declspec(dllimport) inline void FunctionWithTLSVar() { static __thread int x = 42; }
