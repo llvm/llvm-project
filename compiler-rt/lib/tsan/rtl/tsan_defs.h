@@ -149,7 +149,8 @@ class RegionAlloc;
 
 // Descriptor of user's memory block.
 struct MBlock {
-  u64  siz;
+  u64  siz : 48;
+  u64  tag : 16;
   u32  stk;
   u16  tid;
 };
