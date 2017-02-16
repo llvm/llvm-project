@@ -2003,7 +2003,6 @@ void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
   bool SkipHeader = false;
   if (ShouldEnter &&
       !HeaderInfo.ShouldEnterIncludeFile(*this, File, isImport,
-                                         getLangOpts().Modules,
                                          SuggestedModule.getModule())) {
     ShouldEnter = false;
     SkipHeader = true;
