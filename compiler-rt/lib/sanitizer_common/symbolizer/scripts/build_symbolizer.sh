@@ -145,16 +145,16 @@ SYMBOLIZER_API_LIST=__sanitizer_symbolize_code,__sanitizer_symbolize_data,__sani
 
 # Merge all the object files together and copy the resulting library back.
 $SCRIPT_DIR/ar_to_bc.sh $LIBCXX_BUILD/lib/libc++.a \
-         $LIBCXX_BUILD/lib/libc++abi.a \
-         $LLVM_BUILD/lib/libLLVMSymbolize.a \
-         $LLVM_BUILD/lib/libLLVMObject.a \
-         $LLVM_BUILD/lib/libLLVMDebugInfoDWARF.a \
-         $LLVM_BUILD/lib/libLLVMSupport.a \
-         $LLVM_BUILD/lib/libLLVMDebugInfoPDB.a \
-         $LLVM_BUILD/lib/libLLVMMC.a \
-         $ZLIB_BUILD/libz.a \
-         symbolizer.a \
-         all.bc
+                        $LIBCXX_BUILD/lib/libc++abi.a \
+                        $LLVM_BUILD/lib/libLLVMSymbolize.a \
+                        $LLVM_BUILD/lib/libLLVMObject.a \
+                        $LLVM_BUILD/lib/libLLVMDebugInfoDWARF.a \
+                        $LLVM_BUILD/lib/libLLVMSupport.a \
+                        $LLVM_BUILD/lib/libLLVMDebugInfoPDB.a \
+                        $LLVM_BUILD/lib/libLLVMMC.a \
+                        $ZLIB_BUILD/libz.a \
+                        symbolizer.a \
+                        all.bc
 
 echo "Optimizing..."
 $OPT -internalize -internalize-public-api-list=${SYMBOLIZER_API_LIST} all.bc -o opt.bc

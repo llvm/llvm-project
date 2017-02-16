@@ -169,9 +169,6 @@ BUILTIN_TYPE(OCLClkEvent, OCLClkEventTy)
 // OpenCL queue_t.
 BUILTIN_TYPE(OCLQueue, OCLQueueTy)
 
-// OpenCL ndrange_t.
-BUILTIN_TYPE(OCLNDRange, OCLNDRangeTy)
-
 // OpenCL reserve_id_t.
 BUILTIN_TYPE(OCLReserveID, OCLReserveIDTy)
 

@@ -13775,11 +13775,8 @@ void Sema::ActOnTagFinishDefinition(Scope *S, Decl *TagD,
       RD->completeDefinition();
   }
 
-  if (auto *RD = dyn_cast<CXXRecordDecl>(Tag)) {
+  if (isa<CXXRecordDecl>(Tag))
     FieldCollector->FinishClass();
-    if (Context.getLangOpts().Modules)
-      RD->computeODRHash();
-  }
 
   // Exit this scope of this tag's definition.
   PopDeclContext();

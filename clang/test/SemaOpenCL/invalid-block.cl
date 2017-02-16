@@ -66,3 +66,18 @@ void f6(bl2_t *bl_ptr) { // expected-error{{pointer to type '__generic bl2_t' (a
   *bl;      // expected-error {{invalid argument type 'bl2_t' (aka 'int (__generic ^const)(int)') to unary expression}}
   &bl;      // expected-error {{invalid argument type 'bl2_t' (aka 'int (__generic ^const)(int)') to unary expression}}
 }
+// A block can't reference another block
+kernel void f7() {
+  bl2_t bl1 = ^(int i) {
+    return 1;
+  };
+  void (^bl2)(void) = ^{
+    int i = bl1(1); // expected-error {{cannot refer to a block inside block}}
+  };
+  void (^bl3)(void) = ^{
+  };
+  void (^bl4)(void) = ^{
+    bl3(); // expected-error {{cannot refer to a block inside block}}
+  };
+  return;
+}

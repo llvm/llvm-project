@@ -775,17 +775,18 @@ static bool containsOnlyMatMulDep(__isl_keep isl_map *Schedule,
   auto *Deltas = isl_map_deltas(isl_union_map_extract_map(Dep, Space));
   isl_union_map_free(Dep);
   int DeltasDimNum = isl_set_dim(Deltas, isl_dim_set);
-  isl_set_free(Deltas);
   for (int i = 0; i < DeltasDimNum; i++) {
     auto *Val = isl_set_plain_get_val_if_fixed(Deltas, isl_dim_set, i);
     Pos = Pos < 0 && isl_val_is_one(Val) ? i : Pos;
     if (isl_val_is_nan(Val) ||
         !(isl_val_is_zero(Val) || (i == Pos && isl_val_is_one(Val)))) {
       isl_val_free(Val);
+      isl_set_free(Deltas);
       return false;
     }
     isl_val_free(Val);
   }
+  isl_set_free(Deltas);
   if (DeltasDimNum == 0 || Pos < 0)
     return false;
   return true;

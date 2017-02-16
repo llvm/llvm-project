@@ -147,9 +147,6 @@ serialization::TypeIdxFromBuiltin(const BuiltinType *BT) {
   case BuiltinType::OCLQueue:
     ID = PREDEF_TYPE_QUEUE_ID;
     break;
-  case BuiltinType::OCLNDRange:
-    ID = PREDEF_TYPE_NDRANGE_ID;
-    break;
   case BuiltinType::OCLReserveID:
     ID = PREDEF_TYPE_RESERVE_ID_ID;
     break;

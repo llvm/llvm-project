@@ -10,8 +10,13 @@
   define void @test_add_s32() { ret void }
 
   define void @test_fadd_s32() #0 { ret void }
+  define void @test_fadd_s64() #0 { ret void }
 
   define void @test_load_from_stack() { ret void }
+  define void @test_load_f32() #0 { ret void }
+  define void @test_load_f64() #0 { ret void }
+
+  define void @test_soft_fp_double() #0 { ret void }
 
   attributes #0 = { "target-features"="+vfp2,-neonfp" }
 ...
@@ -254,6 +259,39 @@ body:             |
     ; CHECK: BX_RET 14, _, implicit %s0
 ...
 ---
+name:            test_fadd_s64
+# CHECK-LABEL: name: test_fadd_s64
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: fprb }
+  - { id: 1, class: fprb }
+  - { id: 2, class: fprb }
+# CHECK: id: 0, class: dpr
+# CHECK: id: 1, class: dpr
+# CHECK: id: 2, class: dpr
+body:             |
+  bb.0:
+    liveins: %d0, %d1
+
+    %0(s64) = COPY %d0
+    ; CHECK: [[VREGX:%[0-9]+]] = COPY %d0
+
+    %1(s64) = COPY %d1
+    ; CHECK: [[VREGY:%[0-9]+]] = COPY %d1
+
+    %2(s64) = G_FADD %0, %1
+    ; CHECK: [[VREGSUM:%[0-9]+]] = VADDD [[VREGX]], [[VREGY]], 14, _
+
+    %d0 = COPY %2(s64)
+    ; CHECK: %d0 = COPY [[VREGSUM]]
+
+    BX_RET 14, _, implicit %d0
+    ; CHECK: BX_RET 14, _, implicit %d0
+...
+---
 name:            test_load_from_stack
 # CHECK-LABEL: name: test_load_from_stack
 legalized:       true
@@ -293,4 +331,101 @@ body:             |
 
     BX_RET 14, _
     ; CHECK: BX_RET 14, _
+...
+---
+name:            test_load_f32
+# CHECK-LABEL: name: test_load_f32
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: fprb }
+# CHECK-DAG: id: [[P:[0-9]+]], class: gpr
+# CHECK-DAG: id: [[V:[0-9]+]], class: spr
+body:             |
+  bb.0:
+    liveins: %r0, %r1, %r2, %r3
+
+    %0(p0) = COPY %r0
+
+    %1(s32) = G_LOAD %0(p0)
+    ; CHECK: %[[V]] = VLDRS %[[P]], 0, 14, _
+
+    %s0 = COPY %1
+    ; CHECK: %s0 = COPY %[[V]]
+
+    BX_RET 14, _, implicit %s0
+    ; CHECK: BX_RET 14, _, implicit %s0
+...
+---
+name:            test_load_f64
+# CHECK-LABEL: name: test_load_f64
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: fprb }
+# CHECK-DAG: id: [[P:[0-9]+]], class: gpr
+# CHECK-DAG: id: [[V:[0-9]+]], class: dpr
+body:             |
+  bb.0:
+    liveins: %r0, %r1, %r2, %r3
+
+    %0(p0) = COPY %r0
+
+    %1(s64) = G_LOAD %0(p0)
+    ; CHECK: %[[V]] = VLDRD %[[P]], 0, 14, _
+
+    %d0 = COPY %1
+    ; CHECK: %d0 = COPY %[[V]]
+
+    BX_RET 14, _, implicit %d0
+    ; CHECK: BX_RET 14, _, implicit %d0
+...
+---
+name:            test_soft_fp_double
+# CHECK-LABEL: name: test_soft_fp_double
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+  - { id: 2, class: fprb }
+  - { id: 3, class: gprb }
+  - { id: 4, class: gprb }
+# CHECK-DAG: id: {{[0-9]+}}, class: gpr
+# CHECK-DAG: id: {{[0-9]+}}, class: gpr
+# CHECK-DAG: id: {{[0-9]+}}, class: gpr
+# CHECK-DAG: id: {{[0-9]+}}, class: gpr
+# CHECK-DAG: id: [[DREG:[0-9]+]], class: dpr
+body:             |
+  bb.0:
+    liveins: %r0, %r1, %r2, %r3
+
+    %0(s32) = COPY %r2
+    ; CHECK: [[IN1:%[0-9]+]] = COPY %r2
+
+    %1(s32) = COPY %r3
+    ; CHECK: [[IN2:%[0-9]+]] = COPY %r3
+
+    %2(s64) = G_SEQUENCE %0(s32), 0, %1(s32), 1
+    ; CHECK: %[[DREG]] = VMOVDRR [[IN1]], [[IN2]]
+
+    %3(s32), %4(s32) = G_EXTRACT %2(s64), 0, 32
+    ; CHECK: [[OUT1:%[0-9]+]], [[OUT2:%[0-9]+]] = VMOVRRD %[[DREG]]
+
+    %r0 = COPY %3
+    ; CHECK: %r0 = COPY [[OUT1]]
+
+    %r1 = COPY %4
+    ; CHECK: %r1 = COPY [[OUT2]]
+
+    BX_RET 14, _, implicit %r0, implicit %r1
+    ; CHECK: BX_RET 14, _, implicit %r0, implicit %r1
 ...

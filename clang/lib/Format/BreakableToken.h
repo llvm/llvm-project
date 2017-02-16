@@ -358,6 +358,10 @@ private:
 
   // Either "* " if all lines begin with a "*", or empty.
   StringRef Decoration;
+
+  // If this block comment has decorations, this is the column of the start of
+  // the decorations.
+  unsigned DecorationColumn;
 };
 
 class BreakableLineCommentSection : public BreakableComment {

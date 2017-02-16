@@ -144,6 +144,23 @@ struct DocumentRangeFormattingParams {
   parse(llvm::yaml::MappingNode *Params);
 };
 
+struct DocumentOnTypeFormattingParams {
+  /// The document to format.
+  TextDocumentIdentifier textDocument;
+
+  /// The position at which this request was sent.
+  Position position;
+
+  /// The character that has been typed.
+  std::string ch;
+
+  /// The format options.
+  FormattingOptions options;
+
+  static llvm::Optional<DocumentOnTypeFormattingParams>
+  parse(llvm::yaml::MappingNode *Params);
+};
+
 struct DocumentFormattingParams {
   /// The document to format.
   TextDocumentIdentifier textDocument;
