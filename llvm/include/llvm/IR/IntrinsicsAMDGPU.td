@@ -64,6 +64,10 @@ def int_r600_recipsqrt_clamped : Intrinsic<
   [llvm_anyfloat_ty], [LLVMMatchType<0>], [IntrNoMem]
 >;
 
+def int_r600_cube : Intrinsic<
+  [llvm_v4f32_ty], [llvm_v4f32_ty], [IntrNoMem]
+>;
+
 } // End TargetPrefix = "r600"
 
 let TargetPrefix = "amdgcn" in {

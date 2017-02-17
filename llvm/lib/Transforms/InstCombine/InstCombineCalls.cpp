@@ -2044,8 +2044,21 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
       return replaceInstUsesWith(*II, V);
     break;
   }
-  case Intrinsic::fma:
   case Intrinsic::fmuladd: {
+    // Canonicalize fast fmuladd to the separate fmul + fadd.
+    if (II->hasUnsafeAlgebra()) {
+      BuilderTy::FastMathFlagGuard Guard(*Builder);
+      Builder->setFastMathFlags(II->getFastMathFlags());
+      Value *Mul = Builder->CreateFMul(II->getArgOperand(0),
+                                       II->getArgOperand(1));
+      Value *Add = Builder->CreateFAdd(Mul, II->getArgOperand(2));
+      Add->takeName(II);
+      return replaceInstUsesWith(*II, Add);
+    }
+
+    LLVM_FALLTHROUGH;
+  }
+  case Intrinsic::fma: {
     Value *Src0 = II->getArgOperand(0);
     Value *Src1 = II->getArgOperand(1);
 

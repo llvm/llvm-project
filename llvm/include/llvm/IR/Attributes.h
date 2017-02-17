@@ -1,4 +1,4 @@
-//===-- llvm/Attributes.h - Container for Attributes ------------*- C++ -*-===//
+//===- llvm/Attributes.h - Container for Attributes -------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -18,14 +18,17 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/FoldingSet.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/ADT/Optional.h"
-#include "llvm/Support/Compiler.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/PointerLikeTypeTraits.h"
 #include "llvm-c/Types.h"
 #include <bitset>
 #include <cassert>
+#include <cstdint>
 #include <map>
 #include <string>
+#include <utility>
 
 namespace llvm {
 
@@ -33,7 +36,6 @@ class AttrBuilder;
 class AttributeImpl;
 class AttributeSetImpl;
 class AttributeSetNode;
-class Constant;
 template<typename T> struct DenseMapInfo;
 class Function;
 class LLVMContext;
@@ -73,11 +75,12 @@ public:
   };
 
 private:
-  AttributeImpl *pImpl;
+  AttributeImpl *pImpl = nullptr;
+
   Attribute(AttributeImpl *A) : pImpl(A) {}
 
 public:
-  Attribute() : pImpl(nullptr) {}
+  Attribute() = default;
 
   //===--------------------------------------------------------------------===//
   // Attribute Construction
@@ -211,30 +214,31 @@ private:
   friend class AttrBuilder;
   friend class AttributeSetImpl;
   friend class AttributeSetNode;
+
   template <typename Ty> friend struct DenseMapInfo;
 
   /// \brief The attributes that we are managing. This can be null to represent
   /// the empty attributes list.
-  AttributeSetImpl *pImpl;
+  AttributeSetImpl *pImpl = nullptr;
 
   /// \brief The attributes for the specified index are returned.
   AttributeSetNode *getAttributes(unsigned Index) const;
 
   /// \brief Create an AttributeSet with the specified parameters in it.
   static AttributeSet get(LLVMContext &C,
-                          ArrayRef<std::pair<unsigned, Attribute> > Attrs);
+                          ArrayRef<std::pair<unsigned, Attribute>> Attrs);
   static AttributeSet get(LLVMContext &C,
                           ArrayRef<std::pair<unsigned,
-                                             AttributeSetNode*> > Attrs);
+                                             AttributeSetNode*>> Attrs);
 
   static AttributeSet getImpl(LLVMContext &C,
                               ArrayRef<std::pair<unsigned,
-                                                 AttributeSetNode*> > Attrs);
+                                                 AttributeSetNode*>> Attrs);
 
   explicit AttributeSet(AttributeSetImpl *LI) : pImpl(LI) {}
 
 public:
-  AttributeSet() : pImpl(nullptr) {}
+  AttributeSet() = default;
 
   //===--------------------------------------------------------------------===//
   // AttributeSet Construction and Mutation
@@ -424,15 +428,18 @@ template<> struct DenseMapInfo<AttributeSet> {
     Val <<= PointerLikeTypeTraits<void*>::NumLowBitsAvailable;
     return AttributeSet(reinterpret_cast<AttributeSetImpl*>(Val));
   }
+
   static inline AttributeSet getTombstoneKey() {
     uintptr_t Val = static_cast<uintptr_t>(-2);
     Val <<= PointerLikeTypeTraits<void*>::NumLowBitsAvailable;
     return AttributeSet(reinterpret_cast<AttributeSetImpl*>(Val));
   }
+
   static unsigned getHashValue(AttributeSet AS) {
     return (unsigned((uintptr_t)AS.pImpl) >> 4) ^
            (unsigned((uintptr_t)AS.pImpl) >> 9);
   }
+
   static bool isEqual(AttributeSet LHS, AttributeSet RHS) { return LHS == RHS; }
 };
 
@@ -445,19 +452,15 @@ template<> struct DenseMapInfo<AttributeSet> {
 class AttrBuilder {
   std::bitset<Attribute::EndAttrKinds> Attrs;
   std::map<std::string, std::string> TargetDepAttrs;
-  uint64_t Alignment;
-  uint64_t StackAlignment;
-  uint64_t DerefBytes;
-  uint64_t DerefOrNullBytes;
-  uint64_t AllocSizeArgs;
+  uint64_t Alignment = 0;
+  uint64_t StackAlignment = 0;
+  uint64_t DerefBytes = 0;
+  uint64_t DerefOrNullBytes = 0;
+  uint64_t AllocSizeArgs = 0;
 
 public:
-  AttrBuilder()
-      : Attrs(0), Alignment(0), StackAlignment(0), DerefBytes(0),
-        DerefOrNullBytes(0), AllocSizeArgs(0) {}
-  AttrBuilder(const Attribute &A)
-      : Attrs(0), Alignment(0), StackAlignment(0), DerefBytes(0),
-        DerefOrNullBytes(0), AllocSizeArgs(0) {
+  AttrBuilder() = default;
+  AttrBuilder(const Attribute &A) {
     addAttribute(A);
   }
   AttrBuilder(AttributeSet AS, unsigned Idx);
@@ -562,8 +565,8 @@ public:
   typedef std::pair<std::string, std::string>                td_type;
   typedef std::map<std::string, std::string>::iterator       td_iterator;
   typedef std::map<std::string, std::string>::const_iterator td_const_iterator;
-  typedef llvm::iterator_range<td_iterator>                  td_range;
-  typedef llvm::iterator_range<td_const_iterator>            td_const_range;
+  typedef iterator_range<td_iterator>                        td_range;
+  typedef iterator_range<td_const_iterator>                  td_const_range;
 
   td_iterator td_begin()             { return TargetDepAttrs.begin(); }
   td_iterator td_end()               { return TargetDepAttrs.end(); }
@@ -600,4 +603,4 @@ void mergeAttributesForInlining(Function &Caller, const Function &Callee);
 
 } // end llvm namespace
 
-#endif
+#endif // LLVM_IR_ATTRIBUTES_H

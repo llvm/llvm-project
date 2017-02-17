@@ -230,7 +230,7 @@ void HexagonOptAddrMode::getAllRealUses(NodeAddr<StmtNode *> SA,
   for (NodeAddr<DefNode *> DA : SA.Addr->members_if(DFG->IsDef, *DFG)) {
     DEBUG(dbgs() << "\t\t[DefNode]: " << Print<NodeAddr<DefNode *>>(DA, *DFG)
                  << "\n");
-    RegisterRef DR = DFG->normalizeRef(DA.Addr->getRegRef(*DFG));
+    RegisterRef DR = DFG->getPRI().normalize(DA.Addr->getRegRef(*DFG));
 
     auto UseSet = LV->getAllReachedUses(DR, DA);
 
@@ -617,7 +617,7 @@ bool HexagonOptAddrMode::constructDefMap(MachineBasicBlock *B) {
 
   for (NodeAddr<InstrNode *> IA : BA.Addr->members(*DFG)) {
     updateMap(IA);
-    DFG->pushDefs(IA, DefM);
+    DFG->pushAllDefs(IA, DefM);
   }
 
   MachineDomTreeNode *N = MDT->getNode(B);

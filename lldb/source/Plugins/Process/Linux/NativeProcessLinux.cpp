@@ -29,6 +29,7 @@
 #include "lldb/Core/State.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostProcess.h"
+#include "lldb/Host/PseudoTerminal.h"
 #include "lldb/Host/ThreadLauncher.h"
 #include "lldb/Host/common/NativeBreakpoint.h"
 #include "lldb/Host/common/NativeRegisterContext.h"
@@ -41,7 +42,6 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/Error.h"
 #include "lldb/Utility/LLDBAssert.h"
-#include "lldb/Utility/PseudoTerminal.h"
 #include "lldb/Utility/StringExtractor.h"
 
 #include "NativeThreadLinux.h"

@@ -22,10 +22,14 @@ namespace llvm {
 
 namespace codeview {
 
+class TypeServerHandler;
+
 /// Dumper for CodeView type streams found in COFF object files and PDB files.
 class CVTypeDumper {
 public:
-  explicit CVTypeDumper(TypeDatabase &TypeDB) : TypeDB(TypeDB) {}
+  explicit CVTypeDumper(TypeDatabase &TypeDB,
+                        TypeServerHandler *Handler = nullptr)
+      : TypeDB(TypeDB), Handler(Handler) {}
 
   /// Dumps one type record.  Returns false if there was a type parsing error,
   /// and true otherwise.  This should be called in order, since the dumper
@@ -48,6 +52,7 @@ public:
 
 private:
   TypeDatabase &TypeDB;
+  TypeServerHandler *Handler;
 };
 
 } // end namespace codeview

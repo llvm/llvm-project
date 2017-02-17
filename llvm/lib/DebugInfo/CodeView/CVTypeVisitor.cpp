@@ -10,9 +10,14 @@
 #include "llvm/DebugInfo/CodeView/CVTypeVisitor.h"
 
 #include "llvm/DebugInfo/CodeView/CodeViewError.h"
+#include "llvm/DebugInfo/CodeView/TypeDatabase.h"
+#include "llvm/DebugInfo/CodeView/TypeDatabaseVisitor.h"
 #include "llvm/DebugInfo/CodeView/TypeDeserializer.h"
+#include "llvm/DebugInfo/CodeView/TypeRecordMapping.h"
+#include "llvm/DebugInfo/CodeView/TypeServerHandler.h"
 #include "llvm/DebugInfo/CodeView/TypeVisitorCallbackPipeline.h"
 #include "llvm/DebugInfo/MSF/ByteStream.h"
+#include "llvm/DebugInfo/MSF/StreamReader.h"
 
 using namespace llvm;
 using namespace llvm::codeview;
@@ -21,7 +26,8 @@ CVTypeVisitor::CVTypeVisitor(TypeVisitorCallbacks &Callbacks)
     : Callbacks(Callbacks) {}
 
 template <typename T>
-static Error visitKnownRecord(CVType &Record, TypeVisitorCallbacks &Callbacks) {
+static Error visitKnownRecord(CVTypeVisitor &Visitor, CVType &Record,
+                              TypeVisitorCallbacks &Callbacks) {
   TypeRecordKind RK = static_cast<TypeRecordKind>(Record.Type);
   T KnownRecord(RK);
   if (auto EC = Callbacks.visitKnownRecord(Record, KnownRecord))
@@ -39,7 +45,58 @@ static Error visitKnownMember(CVMemberRecord &Record,
   return Error::success();
 }
 
+static Expected<TypeServer2Record> deserializeTypeServerRecord(CVType &Record) {
+  class StealTypeServerVisitor : public TypeVisitorCallbacks {
+  public:
+    explicit StealTypeServerVisitor(TypeServer2Record &TR) : TR(TR) {}
+
+    Error visitKnownRecord(CVType &CVR, TypeServer2Record &Record) override {
+      TR = Record;
+      return Error::success();
+    }
+
+  private:
+    TypeServer2Record &TR;
+  };
+
+  TypeServer2Record R(TypeRecordKind::TypeServer2);
+  TypeDeserializer Deserializer;
+  StealTypeServerVisitor Thief(R);
+  TypeVisitorCallbackPipeline Pipeline;
+  Pipeline.addCallbackToPipeline(Deserializer);
+  Pipeline.addCallbackToPipeline(Thief);
+  CVTypeVisitor Visitor(Pipeline);
+  if (auto EC = Visitor.visitTypeRecord(Record))
+    return std::move(EC);
+
+  return R;
+}
+
+void CVTypeVisitor::addTypeServerHandler(TypeServerHandler &Handler) {
+  Handlers.push_back(&Handler);
+}
+
 Error CVTypeVisitor::visitTypeRecord(CVType &Record) {
+  if (Record.Type == TypeLeafKind::LF_TYPESERVER2 && !Handlers.empty()) {
+    auto TS = deserializeTypeServerRecord(Record);
+    if (!TS)
+      return TS.takeError();
+
+    for (auto Handler : Handlers) {
+      auto ExpectedResult = Handler->handle(*TS, Callbacks);
+      // If there was an error, return the error.
+      if (!ExpectedResult)
+        return ExpectedResult.takeError();
+
+      // If the handler processed the record, return success.
+      if (*ExpectedResult)
+        return Error::success();
+
+      // Otherwise keep searching for a handler, eventually falling out and
+      // using the default record handler.
+    }
+  }
+
   if (auto EC = Callbacks.visitTypeBegin(Record))
     return EC;
 
@@ -50,7 +107,7 @@ Error CVTypeVisitor::visitTypeRecord(CVType &Record) {
     break;
 #define TYPE_RECORD(EnumName, EnumVal, Name)                                   \
   case EnumName: {                                                             \
-    if (auto EC = visitKnownRecord<Name##Record>(Record, Callbacks))           \
+    if (auto EC = visitKnownRecord<Name##Record>(*this, Record, Callbacks))    \
       return EC;                                                               \
     break;                                                                     \
   }
@@ -102,6 +159,14 @@ Error CVTypeVisitor::visitMemberRecord(CVMemberRecord &Record) {
 
 /// Visits the type records in Data. Sets the error flag on parse failures.
 Error CVTypeVisitor::visitTypeStream(const CVTypeArray &Types) {
+  for (auto I : Types) {
+    if (auto EC = visitTypeRecord(I))
+      return EC;
+  }
+  return Error::success();
+}
+
+Error CVTypeVisitor::visitTypeStream(CVTypeRange Types) {
   for (auto I : Types) {
     if (auto EC = visitTypeRecord(I))
       return EC;

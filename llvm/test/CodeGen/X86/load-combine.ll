@@ -733,16 +733,8 @@ define i32 @load_i32_by_i8_bswap_base_index_offset(i32* %arg, i32 %arg1) {
 ; CHECK64-LABEL: load_i32_by_i8_bswap_base_index_offset:
 ; CHECK64:       # BB#0:
 ; CHECK64-NEXT:    movslq %esi, %rax
-; CHECK64-NEXT:    movzbl (%rdi,%rax), %ecx
-; CHECK64-NEXT:    shll $24, %ecx
-; CHECK64-NEXT:    movzbl 1(%rdi,%rax), %edx
-; CHECK64-NEXT:    shll $16, %edx
-; CHECK64-NEXT:    orl %ecx, %edx
-; CHECK64-NEXT:    movzbl 2(%rdi,%rax), %ecx
-; CHECK64-NEXT:    shll $8, %ecx
-; CHECK64-NEXT:    orl %edx, %ecx
-; CHECK64-NEXT:    movzbl 3(%rdi,%rax), %eax
-; CHECK64-NEXT:    orl %ecx, %eax
+; CHECK64-NEXT:    movl (%rdi,%rax), %eax
+; CHECK64-NEXT:    bswapl %eax
 ; CHECK64-NEXT:    retq
   %tmp = bitcast i32* %arg to i8*
   %tmp2 = getelementptr inbounds i8, i8* %tmp, i32 %arg1
@@ -835,18 +827,12 @@ define i32 @load_i32_by_sext_i16(i32* %arg) {
 ; CHECK-LABEL: load_i32_by_sext_i16:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    movzwl (%eax), %ecx
-; CHECK-NEXT:    movzwl 2(%eax), %eax
-; CHECK-NEXT:    shll $16, %eax
-; CHECK-NEXT:    orl %ecx, %eax
+; CHECK-NEXT:    movl (%eax), %eax
 ; CHECK-NEXT:    retl
 ;
 ; CHECK64-LABEL: load_i32_by_sext_i16:
 ; CHECK64:       # BB#0:
-; CHECK64-NEXT:    movzwl (%rdi), %ecx
-; CHECK64-NEXT:    movzwl 2(%rdi), %eax
-; CHECK64-NEXT:    shll $16, %eax
-; CHECK64-NEXT:    orl %ecx, %eax
+; CHECK64-NEXT:    movl (%rdi), %eax
 ; CHECK64-NEXT:    retq
   %tmp = bitcast i32* %arg to i16*
   %tmp1 = load i16, i16* %tmp, align 1
@@ -865,24 +851,9 @@ define i32 @load_i32_by_sext_i16(i32* %arg) {
 define i32 @load_i32_by_i8_base_offset_index(i8* %arg, i32 %i) {
 ; CHECK-LABEL: load_i32_by_i8_base_offset_index:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    pushl %esi
-; CHECK-NEXT:  .Lcfi4:
-; CHECK-NEXT:    .cfi_def_cfa_offset 8
-; CHECK-NEXT:  .Lcfi5:
-; CHECK-NEXT:    .cfi_offset %esi, -8
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; CHECK-NEXT:    movzbl 12(%eax,%ecx), %edx
-; CHECK-NEXT:    movzbl 13(%eax,%ecx), %esi
-; CHECK-NEXT:    shll $8, %esi
-; CHECK-NEXT:    orl %edx, %esi
-; CHECK-NEXT:    movzbl 14(%eax,%ecx), %edx
-; CHECK-NEXT:    shll $16, %edx
-; CHECK-NEXT:    orl %esi, %edx
-; CHECK-NEXT:    movzbl 15(%eax,%ecx), %eax
-; CHECK-NEXT:    shll $24, %eax
-; CHECK-NEXT:    orl %edx, %eax
-; CHECK-NEXT:    popl %esi
+; CHECK-NEXT:    movl 12(%eax,%ecx), %eax
 ; CHECK-NEXT:    retl
 ;
 ; CHECK64-LABEL: load_i32_by_i8_base_offset_index:
@@ -925,24 +896,9 @@ define i32 @load_i32_by_i8_base_offset_index(i8* %arg, i32 %i) {
 define i32 @load_i32_by_i8_base_offset_index_2(i8* %arg, i32 %i) {
 ; CHECK-LABEL: load_i32_by_i8_base_offset_index_2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    pushl %esi
-; CHECK-NEXT:  .Lcfi6:
-; CHECK-NEXT:    .cfi_def_cfa_offset 8
-; CHECK-NEXT:  .Lcfi7:
-; CHECK-NEXT:    .cfi_offset %esi, -8
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; CHECK-NEXT:    movzbl 13(%eax,%ecx), %edx
-; CHECK-NEXT:    movzbl 14(%eax,%ecx), %esi
-; CHECK-NEXT:    shll $8, %esi
-; CHECK-NEXT:    orl %edx, %esi
-; CHECK-NEXT:    movzbl 15(%eax,%ecx), %edx
-; CHECK-NEXT:    shll $16, %edx
-; CHECK-NEXT:    orl %esi, %edx
-; CHECK-NEXT:    movzbl 16(%eax,%ecx), %eax
-; CHECK-NEXT:    shll $24, %eax
-; CHECK-NEXT:    orl %edx, %eax
-; CHECK-NEXT:    popl %esi
+; CHECK-NEXT:    movl 13(%eax,%ecx), %eax
 ; CHECK-NEXT:    retl
 ;
 ; CHECK64-LABEL: load_i32_by_i8_base_offset_index_2:
@@ -996,39 +952,15 @@ define i32 @load_i32_by_i8_base_offset_index_2(i8* %arg, i32 %i) {
 define i32 @load_i32_by_i8_zaext_loads(i8* %arg, i32 %arg1) {
 ; CHECK-LABEL: load_i32_by_i8_zaext_loads:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    pushl %esi
-; CHECK-NEXT:  .Lcfi8:
-; CHECK-NEXT:    .cfi_def_cfa_offset 8
-; CHECK-NEXT:  .Lcfi9:
-; CHECK-NEXT:    .cfi_offset %esi, -8
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; CHECK-NEXT:    movzbl 12(%eax,%ecx), %edx
-; CHECK-NEXT:    movzbl 13(%eax,%ecx), %esi
-; CHECK-NEXT:    shll $8, %esi
-; CHECK-NEXT:    orl %edx, %esi
-; CHECK-NEXT:    movzbl 14(%eax,%ecx), %edx
-; CHECK-NEXT:    shll $16, %edx
-; CHECK-NEXT:    orl %esi, %edx
-; CHECK-NEXT:    movzbl 15(%eax,%ecx), %eax
-; CHECK-NEXT:    shll $24, %eax
-; CHECK-NEXT:    orl %edx, %eax
-; CHECK-NEXT:    popl %esi
+; CHECK-NEXT:    movl 12(%eax,%ecx), %eax
 ; CHECK-NEXT:    retl
 ;
 ; CHECK64-LABEL: load_i32_by_i8_zaext_loads:
 ; CHECK64:       # BB#0:
 ; CHECK64-NEXT:    movl %esi, %eax
-; CHECK64-NEXT:    movzbl 12(%rdi,%rax), %ecx
-; CHECK64-NEXT:    movzbl 13(%rdi,%rax), %edx
-; CHECK64-NEXT:    shll $8, %edx
-; CHECK64-NEXT:    orl %ecx, %edx
-; CHECK64-NEXT:    movzbl 14(%rdi,%rax), %ecx
-; CHECK64-NEXT:    shll $16, %ecx
-; CHECK64-NEXT:    orl %edx, %ecx
-; CHECK64-NEXT:    movzbl 15(%rdi,%rax), %eax
-; CHECK64-NEXT:    shll $24, %eax
-; CHECK64-NEXT:    orl %ecx, %eax
+; CHECK64-NEXT:    movl 12(%rdi,%rax), %eax
 ; CHECK64-NEXT:    retq
   %tmp = add nuw nsw i32 %arg1, 3
   %tmp2 = add nuw nsw i32 %arg1, 2
@@ -1076,39 +1008,15 @@ define i32 @load_i32_by_i8_zaext_loads(i8* %arg, i32 %arg1) {
 define i32 @load_i32_by_i8_zsext_loads(i8* %arg, i32 %arg1) {
 ; CHECK-LABEL: load_i32_by_i8_zsext_loads:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    pushl %esi
-; CHECK-NEXT:  .Lcfi10:
-; CHECK-NEXT:    .cfi_def_cfa_offset 8
-; CHECK-NEXT:  .Lcfi11:
-; CHECK-NEXT:    .cfi_offset %esi, -8
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; CHECK-NEXT:    movzbl 12(%eax,%ecx), %edx
-; CHECK-NEXT:    movzbl 13(%eax,%ecx), %esi
-; CHECK-NEXT:    shll $8, %esi
-; CHECK-NEXT:    orl %edx, %esi
-; CHECK-NEXT:    movzbl 14(%eax,%ecx), %edx
-; CHECK-NEXT:    shll $16, %edx
-; CHECK-NEXT:    orl %esi, %edx
-; CHECK-NEXT:    movsbl 15(%eax,%ecx), %eax
-; CHECK-NEXT:    shll $24, %eax
-; CHECK-NEXT:    orl %edx, %eax
-; CHECK-NEXT:    popl %esi
+; CHECK-NEXT:    movl 12(%eax,%ecx), %eax
 ; CHECK-NEXT:    retl
 ;
 ; CHECK64-LABEL: load_i32_by_i8_zsext_loads:
 ; CHECK64:       # BB#0:
 ; CHECK64-NEXT:    movl %esi, %eax
-; CHECK64-NEXT:    movzbl 12(%rdi,%rax), %ecx
-; CHECK64-NEXT:    movzbl 13(%rdi,%rax), %edx
-; CHECK64-NEXT:    shll $8, %edx
-; CHECK64-NEXT:    orl %ecx, %edx
-; CHECK64-NEXT:    movzbl 14(%rdi,%rax), %ecx
-; CHECK64-NEXT:    shll $16, %ecx
-; CHECK64-NEXT:    orl %edx, %ecx
-; CHECK64-NEXT:    movsbl 15(%rdi,%rax), %eax
-; CHECK64-NEXT:    shll $24, %eax
-; CHECK64-NEXT:    orl %ecx, %eax
+; CHECK64-NEXT:    movl 12(%rdi,%rax), %eax
 ; CHECK64-NEXT:    retq
   %tmp = add nuw nsw i32 %arg1, 3
   %tmp2 = add nuw nsw i32 %arg1, 2

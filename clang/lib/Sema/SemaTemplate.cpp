@@ -1677,6 +1677,9 @@ private:
                                  bool Explicit, TypeSourceInfo *TInfo,
                                  SourceLocation LocStart, SourceLocation Loc,
                                  SourceLocation LocEnd) {
+    ArrayRef<ParmVarDecl *> Params =
+        TInfo->getTypeLoc().castAs<FunctionProtoTypeLoc>().getParams();
+
     // Build the implicit deduction guide template.
     auto *Guide = FunctionDecl::Create(SemaRef.Context, DC, LocStart, Loc,
                                        DeductionGuideName, TInfo->getType(),
@@ -1685,8 +1688,10 @@ private:
     if (Explicit)
       Guide->setExplicitSpecified();
     Guide->setRangeEnd(LocEnd);
-    Guide->setParams(
-        TInfo->getTypeLoc().castAs<FunctionProtoTypeLoc>().getParams());
+    Guide->setParams(Params);
+
+    for (auto *Param : Params)
+      Param->setDeclContext(Guide);
 
     auto *GuideTemplate = FunctionTemplateDecl::Create(
         SemaRef.Context, DC, Loc, DeductionGuideName, TemplateParams, Guide);

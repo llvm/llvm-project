@@ -234,6 +234,11 @@ void LinkerScript<ELFT>::computeInputSections(InputSectionDescription *I) {
     for (InputSectionBase<ELFT> *S : Symtab<ELFT>::X->Sections) {
       if (!S->Live || S->Assigned)
         continue;
+      // For -emit-relocs we have to ignore entries like
+      //   .rela.dyn : { *(.rela.data) }
+      // which are common because they are in the default bfd script.
+      if (S->Type == SHT_REL || S->Type == SHT_RELA)
+        continue;
 
       StringRef Filename = basename(S);
       if (!I->FilePat.match(Filename) || Pat.ExcludedFilePat.match(Filename))
@@ -272,6 +277,11 @@ void LinkerScript<ELFT>::discard(ArrayRef<InputSectionBase<ELFT> *> V) {
   for (InputSectionBase<ELFT> *S : V) {
     S->Live = false;
     reportDiscarded(S);
+
+    InputSection<ELFT> *IS = dyn_cast<InputSection<ELFT>>(S);
+    if (!IS || IS->DependentSections.empty())
+      continue;
+    discard(IS->DependentSections);
   }
 }
 
@@ -290,18 +300,6 @@ LinkerScript<ELFT>::createInputSectionList(OutputSectionCommand &OutCmd) {
   }
 
   return Ret;
-}
-
-template <class ELFT>
-void LinkerScript<ELFT>::addSection(OutputSectionFactory<ELFT> &Factory,
-                                    InputSectionBase<ELFT> *Sec,
-                                    StringRef Name) {
-  OutputSectionBase *OutSec;
-  bool IsNew;
-  std::tie(OutSec, IsNew) = Factory.create(Sec, Name);
-  if (IsNew)
-    OutputSections->push_back(OutSec);
-  OutSec->addSection(Sec);
 }
 
 template <class ELFT>
@@ -367,7 +365,7 @@ void LinkerScript<ELFT>::processCommands(OutputSectionFactory<ELFT> &Factory) {
 
       // Add input sections to an output section.
       for (InputSectionBase<ELFT> *S : V)
-        addSection(Factory, S, Cmd->Name);
+        Factory.addInputSec(S, Cmd->Name);
     }
   }
 }
@@ -378,7 +376,7 @@ void LinkerScript<ELFT>::addOrphanSections(
     OutputSectionFactory<ELFT> &Factory) {
   for (InputSectionBase<ELFT> *S : Symtab<ELFT>::X->Sections)
     if (S->Live && !S->OutSec)
-      addSection(Factory, S, getOutputSectionName(S->Name));
+      Factory.addInputSec(S, getOutputSectionName(S->Name));
 }
 
 template <class ELFT> static bool isTbss(OutputSectionBase *Sec) {

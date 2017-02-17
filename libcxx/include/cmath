@@ -398,7 +398,7 @@ using ::cbrtf;
 using ::copysign;
 using ::copysignf;
 
-#if !defined(_LIBCPP_MSVCRT) || ((_VC_CRT_NAJOR_VERSION-0) >= 14)
+#if !(defined(_LIBCPP_MSVCRT) && ((_VC_CRT_NAJOR_VERSION-0) < 14))
 using ::erf;
 using ::erff;
 using ::erfc;
@@ -435,7 +435,7 @@ using ::lrint;
 using ::lrintf;
 using ::lround;
 using ::lroundf;
-#endif // _LIBCPP_MSVCRT
+#endif // !(defined(_LIBCPP_MSVCRT) && ((_VC_CRT_NAJOR_VERSION-0) < 14))
 
 using ::nan;
 using ::nanf;

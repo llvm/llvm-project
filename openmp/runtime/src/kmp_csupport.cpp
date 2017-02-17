@@ -46,10 +46,15 @@
 void
 __kmpc_begin(ident_t *loc, kmp_int32 flags)
 {
-    // By default __kmp_ignore_mppbeg() returns TRUE.
-    if (__kmp_ignore_mppbeg() == FALSE) {
+    // By default __kmpc_begin() is no-op.
+    char *env;
+    if ((env = getenv( "KMP_INITIAL_THREAD_BIND" )) != NULL &&
+        __kmp_str_match_true( env )) {
+        __kmp_middle_initialize();
+        KC_TRACE(10, ("__kmpc_begin: middle initialization called\n" ));
+    } else if (__kmp_ignore_mppbeg() == FALSE) {
+        // By default __kmp_ignore_mppbeg() returns TRUE.
         __kmp_internal_begin();
-
         KC_TRACE( 10, ("__kmpc_begin: called\n" ) );
     }
 }

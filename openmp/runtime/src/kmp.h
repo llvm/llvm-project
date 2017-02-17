@@ -1979,8 +1979,13 @@ typedef struct kmp_taskgroup {
     kmp_uint32            count;   // number of allocated and not yet complete tasks
     kmp_int32             cancel_request; // request for cancellation of this taskgroup
     struct kmp_taskgroup *parent;  // parent taskgroup
+// TODO: change to OMP_50_ENABLED, need to change build tools for this to work
+#if OMP_45_ENABLED
+    // Block of data to perform task reduction
+    void                 *reduce_data; // reduction related info
+    kmp_int32             reduce_num_data; // number of data items to reduce
+#endif
 } kmp_taskgroup_t;
-
 
 // forward declarations
 typedef union kmp_depnode       kmp_depnode_t;
@@ -3420,6 +3425,11 @@ KMP_EXPORT void __kmpc_proxy_task_completed_ooo ( kmp_task_t *ptask );
 KMP_EXPORT void __kmpc_taskloop(ident_t *loc, kmp_int32 gtid, kmp_task_t *task, kmp_int32 if_val,
                 kmp_uint64 *lb, kmp_uint64 *ub, kmp_int64 st,
                 kmp_int32 nogroup, kmp_int32 sched, kmp_uint64 grainsize, void * task_dup );
+#endif
+// TODO: change to OMP_50_ENABLED, need to change build tools for this to work
+#if OMP_45_ENABLED
+KMP_EXPORT void* __kmpc_task_reduction_init(int gtid, int num_data, void *data);
+KMP_EXPORT void* __kmpc_task_reduction_get_th_data(int gtid, void *tg, void *d);
 #endif
 
 #endif

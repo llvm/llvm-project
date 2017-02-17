@@ -53,7 +53,6 @@ private:
   void copyLocalSymbols();
   void addSectionSymbols();
   void addReservedSymbols();
-  void addInputSec(InputSectionBase<ELFT> *S);
   void createSections();
   void forEachRelSec(std::function<void(InputSectionBase<ELFT> &)> Fn);
   void sortSections();
@@ -79,7 +78,7 @@ private:
   std::unique_ptr<FileOutputBuffer> Buffer;
 
   std::vector<OutputSectionBase *> OutputSections;
-  OutputSectionFactory<ELFT> Factory;
+  OutputSectionFactory<ELFT> Factory{OutputSections};
 
   void addRelIpltSymbols();
   void addStartEndSymbols();
@@ -98,6 +97,18 @@ private:
 StringRef elf::getOutputSectionName(StringRef Name) {
   if (Config->Relocatable)
     return Name;
+
+  // If -emit-relocs is given (which is rare), we need to copy
+  // relocation sections to the output. If input section .foo is
+  // output as .bar, we want to rename .rel.foo .rel.bar as well.
+  if (Config->EmitRelocs) {
+    for (StringRef V : {".rel.", ".rela."}) {
+      if (Name.startswith(V)) {
+        StringRef Inner = getOutputSectionName(Name.substr(V.size() - 1));
+        return Saver.save(Twine(V.drop_back()) + Inner);
+      }
+    }
+  }
 
   for (StringRef V :
        {".text.", ".rodata.", ".data.rel.ro.", ".data.", ".bss.",
@@ -918,27 +929,10 @@ void Writer<ELFT>::forEachRelSec(
   }
 }
 
-template <class ELFT>
-void Writer<ELFT>::addInputSec(InputSectionBase<ELFT> *IS) {
-  if (!IS)
-    return;
-
-  if (!IS->Live) {
-    reportDiscarded(IS);
-    return;
-  }
-  OutputSectionBase *Sec;
-  bool IsNew;
-  StringRef OutsecName = getOutputSectionName(IS->Name);
-  std::tie(Sec, IsNew) = Factory.create(IS, OutsecName);
-  if (IsNew)
-    OutputSections.push_back(Sec);
-  Sec->addSection(IS);
-}
-
 template <class ELFT> void Writer<ELFT>::createSections() {
   for (InputSectionBase<ELFT> *IS : Symtab<ELFT>::X->Sections)
-    addInputSec(IS);
+    if (IS)
+      Factory.addInputSec(IS, getOutputSectionName(IS->Name));
 
   sortBySymbolsOrder<ELFT>(OutputSections);
   sortInitFini<ELFT>(findSection(".init_array"));

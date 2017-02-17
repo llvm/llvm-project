@@ -67,12 +67,6 @@ private:
   /// \brief Signal termination of Spmd mode execution.
   void emitSpmdEntryFooter(CodeGenFunction &CGF, EntryFunctionState &EST);
 
-  /// \brief Returns specified OpenMP runtime function for the current OpenMP
-  /// implementation.  Specialized for the NVPTX device.
-  /// \param Function OpenMP runtime function.
-  /// \return Specified function.
-  llvm::Constant *createNVPTXRuntimeFunction(unsigned Function);
-
   //
   // Base class overrides.
   //
@@ -248,7 +242,32 @@ public:
                         ArrayRef<llvm::Value *> CapturedVars,
                         const Expr *IfCond) override;
 
-public:
+  /// Emit a code for reduction clause.
+  ///
+  /// \param Privates List of private copies for original reduction arguments.
+  /// \param LHSExprs List of LHS in \a ReductionOps reduction operations.
+  /// \param RHSExprs List of RHS in \a ReductionOps reduction operations.
+  /// \param ReductionOps List of reduction operations in form 'LHS binop RHS'
+  /// or 'operator binop(LHS, RHS)'.
+  /// \param Options List of options for reduction codegen:
+  ///     WithNowait true if parent directive has also nowait clause, false
+  ///     otherwise.
+  ///     SimpleReduction Emit reduction operation only. Used for omp simd
+  ///     directive on the host.
+  ///     ReductionKind The kind of reduction to perform.
+  virtual void emitReduction(CodeGenFunction &CGF, SourceLocation Loc,
+                             ArrayRef<const Expr *> Privates,
+                             ArrayRef<const Expr *> LHSExprs,
+                             ArrayRef<const Expr *> RHSExprs,
+                             ArrayRef<const Expr *> ReductionOps,
+                             ReductionOptionsTy Options) override;
+
+  /// Returns specified OpenMP runtime function for the current OpenMP
+  /// implementation.  Specialized for the NVPTX device.
+  /// \param Function OpenMP runtime function.
+  /// \return Specified function.
+  llvm::Constant *createNVPTXRuntimeFunction(unsigned Function);
+
   /// Target codegen is specialized based on two programming models: the
   /// 'generic' fork-join model of OpenMP, and a more GPU efficient 'spmd'
   /// model for constructs like 'target parallel' that support it.

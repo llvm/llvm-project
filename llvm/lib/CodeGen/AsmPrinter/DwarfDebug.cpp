@@ -1129,20 +1129,9 @@ static DebugLoc findPrologueEndLoc(const MachineFunction *MF) {
 
 // Gather pre-function debug information.  Assumes being called immediately
 // after the function entry point has been emitted.
-void DwarfDebug::beginFunction(const MachineFunction *MF) {
+void DwarfDebug::beginFunctionImpl(const MachineFunction *MF) {
   CurFn = MF;
 
-  // If there's no debug info for the function we're not going to do anything.
-  if (!MMI->hasDebugInfo())
-    return;
-
-  auto DI = MF->getFunction()->getSubprogram();
-  if (!DI)
-    return;
-
-  // Grab the lexical scopes for the function, if we don't have any of those
-  // then we're not going to be able to do anything.
-  DebugHandlerBase::beginFunction(MF);
   if (LScopes.empty())
     return;
 
@@ -1181,22 +1170,20 @@ void DwarfDebug::beginFunction(const MachineFunction *MF) {
   }
 }
 
+void DwarfDebug::skippedNonDebugFunction() {
+  // If we don't have a subprogram for this function then there will be a hole
+  // in the range information. Keep note of this by setting the previously used
+  // section to nullptr.
+  PrevCU = nullptr;
+  CurFn = nullptr;
+}
+
 // Gather and emit post-function debug information.
-void DwarfDebug::endFunction(const MachineFunction *MF) {
+void DwarfDebug::endFunctionImpl(const MachineFunction *MF) {
+  const DISubprogram *SP = MF->getFunction()->getSubprogram();
+
   assert(CurFn == MF &&
       "endFunction should be called with the same function as beginFunction");
-
-  const DISubprogram *SP = MF->getFunction()->getSubprogram();
-  if (!MMI->hasDebugInfo() || !SP ||
-      SP->getUnit()->getEmissionKind() == DICompileUnit::NoDebug) {
-    // If we don't have a subprogram for this function then there will be a hole
-    // in the range information. Keep note of this by setting the previously
-    // used section to nullptr.
-    PrevCU = nullptr;
-    CurFn = nullptr;
-    DebugHandlerBase::endFunction(MF);
-    return;
-  }
 
   // Set DwarfDwarfCompileUnitID in MCContext to default value.
   Asm->OutStreamer->getContext().setDwarfCompileUnitID(0);
@@ -1220,7 +1207,6 @@ void DwarfDebug::endFunction(const MachineFunction *MF) {
     assert(InfoHolder.getScopeVariables().empty());
     PrevLabel = nullptr;
     CurFn = nullptr;
-    DebugHandlerBase::endFunction(MF);
     return;
   }
 
@@ -1256,7 +1242,6 @@ void DwarfDebug::endFunction(const MachineFunction *MF) {
   InfoHolder.getScopeVariables().clear();
   PrevLabel = nullptr;
   CurFn = nullptr;
-  DebugHandlerBase::endFunction(MF);
 }
 
 // Register a source line with debug info. Returns the  unique label that was

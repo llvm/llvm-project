@@ -617,8 +617,12 @@ bool TargetOperandInfo::isPreserving(const MachineInstr &In, unsigned OpNum)
 // Check if the definition of RR produces an unspecified value.
 bool TargetOperandInfo::isClobbering(const MachineInstr &In, unsigned OpNum)
       const {
+  const MachineOperand &Op = In.getOperand(OpNum);
+  if (Op.isRegMask())
+    return true;
+  assert(Op.isReg());
   if (In.isCall())
-    if (In.getOperand(OpNum).isImplicit())
+    if (Op.isDef() && Op.isDead())
       return true;
   return false;
 }
@@ -981,30 +985,14 @@ RegisterRef DataFlowGraph::makeRegRef(const MachineOperand &Op) const {
   return RegisterRef(PRI.getRegMaskId(Op.getRegMask()), LaneBitmask::getAll());
 }
 
-RegisterRef DataFlowGraph::normalizeRef(RegisterRef RR) const {
-  // FIXME copied from RegisterAggr
-  if (PhysicalRegisterInfo::isRegMaskId(RR.Reg))
-    return RR;
-  const TargetRegisterClass *RC = PRI.RegInfos[RR.Reg].RegClass;
-  LaneBitmask RCMask = RC != nullptr ? RC->LaneMask : LaneBitmask(0x00000001);
-  LaneBitmask Common = RR.Mask & RCMask;
-
-  RegisterId SuperReg = PRI.RegInfos[RR.Reg].MaxSuper;
-// Ex: IP/EIP/RIP
-//  assert(RC != nullptr || RR.Reg == SuperReg);
-  uint32_t Sub = PRI.getTRI().getSubRegIndex(SuperReg, RR.Reg);
-  LaneBitmask SuperMask = PRI.getTRI().composeSubRegIndexLaneMask(Sub, Common);
-  return RegisterRef(SuperReg, SuperMask);
-}
-
 RegisterRef DataFlowGraph::restrictRef(RegisterRef AR, RegisterRef BR) const {
   if (AR.Reg == BR.Reg) {
     LaneBitmask M = AR.Mask & BR.Mask;
     return M.any() ? RegisterRef(AR.Reg, M) : RegisterRef();
   }
 #ifndef NDEBUG
-  RegisterRef NAR = normalizeRef(AR);
-  RegisterRef NBR = normalizeRef(BR);
+  RegisterRef NAR = PRI.normalize(AR);
+  RegisterRef NBR = PRI.normalize(BR);
   assert(NAR.Reg != NBR.Reg);
 #endif
   // This isn't strictly correct, because the overlap may happen in the
@@ -1040,11 +1028,61 @@ void DataFlowGraph::releaseBlock(NodeId B, DefStackMap &DefM) {
 
 // Push all definitions from the instruction node IA to an appropriate
 // stack in DefM.
+void DataFlowGraph::pushAllDefs(NodeAddr<InstrNode*> IA, DefStackMap &DefM) {
+  pushClobbers(IA, DefM);
+  pushDefs(IA, DefM);
+}
+
+// Push all definitions from the instruction node IA to an appropriate
+// stack in DefM.
+void DataFlowGraph::pushClobbers(NodeAddr<InstrNode*> IA, DefStackMap &DefM) {
+  NodeSet Visited;
+  std::set<RegisterId> Defined;
+
+  // The important objectives of this function are:
+  // - to be able to handle instructions both while the graph is being
+  //   constructed, and after the graph has been constructed, and
+  // - maintain proper ordering of definitions on the stack for each
+  //   register reference:
+  //   - if there are two or more related defs in IA (i.e. coming from
+  //     the same machine operand), then only push one def on the stack,
+  //   - if there are multiple unrelated defs of non-overlapping
+  //     subregisters of S, then the stack for S will have both (in an
+  //     unspecified order), but the order does not matter from the data-
+  //     -flow perspective.
+
+  for (NodeAddr<DefNode*> DA : IA.Addr->members_if(IsDef, *this)) {
+    if (Visited.count(DA.Id))
+      continue;
+    if (!(DA.Addr->getFlags() & NodeAttrs::Clobbering))
+      continue;
+
+    NodeList Rel = getRelatedRefs(IA, DA);
+    NodeAddr<DefNode*> PDA = Rel.front();
+    RegisterRef RR = PDA.Addr->getRegRef(*this);
+
+    // Push the definition on the stack for the register and all aliases.
+    // The def stack traversal in linkNodeUp will check the exact aliasing.
+    DefM[RR.Reg].push(DA);
+    Defined.insert(RR.Reg);
+    for (RegisterId A : PRI.getAliasSet(RR.Reg)) {
+      // Check that we don't push the same def twice.
+      assert(A != RR.Reg);
+      if (!Defined.count(A))
+        DefM[A].push(DA);
+    }
+    // Mark all the related defs as visited.
+    for (NodeAddr<NodeBase*> T : Rel)
+      Visited.insert(T.Id);
+  }
+}
+
+// Push all definitions from the instruction node IA to an appropriate
+// stack in DefM.
 void DataFlowGraph::pushDefs(NodeAddr<InstrNode*> IA, DefStackMap &DefM) {
-  NodeList Defs = IA.Addr->members_if(IsDef, *this);
   NodeSet Visited;
 #ifndef NDEBUG
-  RegisterSet Defined;
+  std::set<RegisterId> Defined;
 #endif
 
   // The important objectives of this function are:
@@ -1059,8 +1097,10 @@ void DataFlowGraph::pushDefs(NodeAddr<InstrNode*> IA, DefStackMap &DefM) {
   //     unspecified order), but the order does not matter from the data-
   //     -flow perspective.
 
-  for (NodeAddr<DefNode*> DA : Defs) {
+  for (NodeAddr<DefNode*> DA : IA.Addr->members_if(IsDef, *this)) {
     if (Visited.count(DA.Id))
+      continue;
+    if (DA.Addr->getFlags() & NodeAttrs::Clobbering)
       continue;
 
     NodeList Rel = getRelatedRefs(IA, DA);
@@ -1069,7 +1109,7 @@ void DataFlowGraph::pushDefs(NodeAddr<InstrNode*> IA, DefStackMap &DefM) {
 #ifndef NDEBUG
     // Assert if the register is defined in two or more unrelated defs.
     // This could happen if there are two or more def operands defining it.
-    if (!Defined.insert(RR).second) {
+    if (!Defined.insert(RR.Reg).second) {
       MachineInstr *MI = NodeAddr<StmtNode*>(IA).Addr->getCode();
       dbgs() << "Multiple definitions of register: "
              << Print<RegisterRef>(RR, *this) << " in\n  " << *MI
@@ -1627,13 +1667,15 @@ void DataFlowGraph::linkRefUp(NodeAddr<InstrNode*> IA, NodeAddr<T> TA,
 }
 
 // Create data-flow links for all reference nodes in the statement node SA.
-void DataFlowGraph::linkStmtRefs(DefStackMap &DefM, NodeAddr<StmtNode*> SA) {
+template <typename Predicate>
+void DataFlowGraph::linkStmtRefs(DefStackMap &DefM, NodeAddr<StmtNode*> SA,
+      Predicate P) {
 #ifndef NDEBUG
   RegisterSet Defs;
 #endif
 
   // Link all nodes (upwards in the data-flow) with their reaching defs.
-  for (NodeAddr<RefNode*> RA : SA.Addr->members(*this)) {
+  for (NodeAddr<RefNode*> RA : SA.Addr->members_if(P, *this)) {
     uint16_t Kind = RA.Addr->getKind();
     assert(Kind == NodeAttrs::Def || Kind == NodeAttrs::Use);
     RegisterRef RR = RA.Addr->getRegRef(*this);
@@ -1662,6 +1704,13 @@ void DataFlowGraph::linkBlockRefs(DefStackMap &DefM, NodeAddr<BlockNode*> BA) {
   // Push block delimiters.
   markBlock(BA.Id, DefM);
 
+  auto IsClobber = [] (NodeAddr<RefNode*> RA) -> bool {
+    return IsDef(RA) && (RA.Addr->getFlags() & NodeAttrs::Clobbering);
+  };
+  auto IsNoClobber = [] (NodeAddr<RefNode*> RA) -> bool {
+    return IsDef(RA) && !(RA.Addr->getFlags() & NodeAttrs::Clobbering);
+  };
+
   assert(BA.Addr && "block node address is needed to create a data-flow link");
   // For each non-phi instruction in the block, link all the defs and uses
   // to their reaching defs. For any member of the block (including phis),
@@ -1669,10 +1718,17 @@ void DataFlowGraph::linkBlockRefs(DefStackMap &DefM, NodeAddr<BlockNode*> BA) {
   for (NodeAddr<InstrNode*> IA : BA.Addr->members(*this)) {
     // Ignore phi nodes here. They will be linked part by part from the
     // predecessors.
-    if (IA.Addr->getKind() == NodeAttrs::Stmt)
-      linkStmtRefs(DefM, IA);
+    if (IA.Addr->getKind() == NodeAttrs::Stmt) {
+      linkStmtRefs(DefM, IA, IsUse);
+      linkStmtRefs(DefM, IA, IsClobber);
+    }
 
     // Push the definitions on the stack.
+    pushClobbers(IA, DefM);
+
+    if (IA.Addr->getKind() == NodeAttrs::Stmt)
+      linkStmtRefs(DefM, IA, IsNoClobber);
+
     pushDefs(IA, DefM);
   }
 

@@ -1014,14 +1014,7 @@ void CodeViewDebug::collectVariableInfo(const DISubprogram *SP) {
   }
 }
 
-void CodeViewDebug::beginFunction(const MachineFunction *MF) {
-  assert(!CurFn && "Can't process two functions at once!");
-
-  if (!Asm || !MMI->hasDebugInfo() || !MF->getFunction()->getSubprogram())
-    return;
-
-  DebugHandlerBase::beginFunction(MF);
-
+void CodeViewDebug::beginFunctionImpl(const MachineFunction *MF) {
   const Function *GV = MF->getFunction();
   assert(FnDebugInfo.count(GV) == false);
   CurFn = &FnDebugInfo[GV];
@@ -2115,17 +2108,12 @@ void CodeViewDebug::emitLocalVariable(const LocalVariable &Var) {
   }
 }
 
-void CodeViewDebug::endFunction(const MachineFunction *MF) {
-  if (!Asm || !CurFn)  // We haven't created any debug info for this function.
-    return;
-
+void CodeViewDebug::endFunctionImpl(const MachineFunction *MF) {
   const Function *GV = MF->getFunction();
   assert(FnDebugInfo.count(GV));
   assert(CurFn == &FnDebugInfo[GV]);
 
   collectVariableInfo(GV->getSubprogram());
-
-  DebugHandlerBase::endFunction(MF);
 
   // Don't emit anything if we don't have any line tables.
   if (!CurFn->HaveLineInfo) {

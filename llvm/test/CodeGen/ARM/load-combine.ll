@@ -414,17 +414,12 @@ define i32 @load_i32_by_bswap_i16(i32* %arg) {
 ; (i32) p[0] | (sext(p[1] << 16) to i32)
 define i32 @load_i32_by_sext_i16(i32* %arg) {
 ; CHECK-LABEL: load_i32_by_sext_i16:
-; CHECK: ldrh  r1, [r0, #2]
-; CHECK-NEXT: ldrh  r0, [r0]
-; CHECK-NEXT: orr r0, r0, r1, lsl #16
+; CHECK: ldr  r0, [r0]
 ; CHECK-NEXT: mov pc, lr
 ;
 ; CHECK-ARMv6-LABEL: load_i32_by_sext_i16:
-; CHECK-ARMv6: ldrh  r1, [r0, #2]
-; CHECK-ARMv6-NEXT: ldrh  r0, [r0]
-; CHECK-ARMv6-NEXT: orr r0, r0, r1, lsl #16
-; CHECK-ARMv6-NEXT: bx  lr
-  
+; CHECK-ARMv6: ldr  r0, [r0]
+; CHECK-ARMv6-NEXT: bx lr
   %tmp = bitcast i32* %arg to i16*
   %tmp1 = load i16, i16* %tmp, align 4
   %tmp2 = zext i16 %tmp1 to i32
@@ -492,7 +487,6 @@ define i32 @load_i32_by_i8_base_offset_index_2(i8* %arg, i32 %i) {
 ; CHECK-ARMv6: add r0, r0, r1
 ; CHECK-ARMv6-NEXT: ldr r0, [r0, #13]
 ; CHECK-ARMv6-NEXT: bx  lr
-
   %tmp = add nuw nsw i32 %i, 4
   %tmp2 = add nuw nsw i32 %i, 3
   %tmp3 = add nuw nsw i32 %i, 2

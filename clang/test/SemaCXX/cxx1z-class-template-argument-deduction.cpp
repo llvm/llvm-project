@@ -168,3 +168,11 @@ namespace nondeducible {
            typename ...B>
   X(float) -> X<A, B...>; // ok
 }
+
+namespace default_args_from_ctor {
+  template <class A> struct S { S(A = 0) {} };
+  S s(0);
+
+  template <class A> struct T { template<typename B> T(A = 0, B = 0) {} };
+  T t(0, 0);
+}

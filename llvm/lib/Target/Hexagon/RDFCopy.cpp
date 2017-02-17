@@ -104,7 +104,7 @@ bool CopyPropagation::scanBlock(MachineBasicBlock *B) {
     }
 
     updateMap(IA);
-    DFG.pushDefs(IA, DefM);
+    DFG.pushAllDefs(IA, DefM);
   }
 
   MachineDomTreeNode *N = MDT.getNode(B);

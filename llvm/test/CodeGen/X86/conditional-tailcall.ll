@@ -1,5 +1,6 @@
-; RUN: llc < %s -mtriple=i686-linux -show-mc-encoding | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK32
+; RUN: llc < %s -mtriple=i686-linux   -show-mc-encoding | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK32
 ; RUN: llc < %s -mtriple=x86_64-linux -show-mc-encoding | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK64
+; RUN: llc < %s -mtriple=x86_64-win32 -show-mc-encoding | FileCheck %s --check-prefix=CHECK --check-prefix=WIN64
 
 declare void @foo()
 declare void @bar()
@@ -23,6 +24,28 @@ bb2:
 ; CHECK: jmp foo
 }
 
+define void @f_non_leaf(i32 %x, i32 %y) optsize {
+entry:
+  ; Force %ebx to be spilled on the stack, turning this into
+  ; not a "leaf" function for Win64.
+  tail call void asm sideeffect "", "~{ebx}"()
+
+	%p = icmp eq i32 %x, %y
+  br i1 %p, label %bb1, label %bb2
+bb1:
+  tail call void @foo()
+  ret void
+bb2:
+  tail call void @bar()
+  ret void
+
+; CHECK-LABEL: f_non_leaf:
+; WIN64-NOT: je foo
+; WIN64-NOT: jne bar
+; WIN64: jne
+; WIN64: jmp foo
+; WIN64: jmp bar
+}
 
 declare x86_thiscallcc zeroext i1 @baz(i8*, i32)
 define x86_thiscallcc zeroext i1 @BlockPlacementTest(i8* %this, i32 %x) optsize {
@@ -111,7 +134,7 @@ sw.bb22:                                          ; preds = %for.body
 
 ; Make sure Machine Copy Propagation doesn't delete the mov to %ecx becaue it
 ; thinks the conditional tail call clobbers it.
-; CHECK64-LABEL: .LBB2_11:
+; CHECK64-LABEL: .LBB3_11:
 ; CHECK64:       movzbl  (%rdi), %ecx
 ; CHECK64-NEXT:  addl    $-48, %ecx
 ; CHECK64-NEXT:  cmpl    $10, %ecx

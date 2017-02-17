@@ -19,10 +19,10 @@
 #include <thread>
 // Other libraries and framework includes
 // Project includes
+#include "lldb/Host/PseudoTerminal.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/Error.h"
 #include "lldb/Utility/LLDBAssert.h"
-#include "lldb/Utility/PseudoTerminal.h"
 #include "lldb/Utility/StreamString.h"
 #include "llvm/Support/Threading.h"
 

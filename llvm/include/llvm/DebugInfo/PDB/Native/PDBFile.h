@@ -42,9 +42,12 @@ class PDBFile : public msf::IMSFFile {
   friend PDBFileBuilder;
 
 public:
-  PDBFile(std::unique_ptr<msf::ReadableStream> PdbFileBuffer,
+  PDBFile(StringRef Path, std::unique_ptr<msf::ReadableStream> PdbFileBuffer,
           BumpPtrAllocator &Allocator);
   ~PDBFile() override;
+
+  StringRef getFileDirectory() const;
+  StringRef getFilePath() const;
 
   uint32_t getFreeBlockMapBlock() const;
   uint32_t getUnknown1() const;
@@ -110,6 +113,7 @@ private:
                             const msf::ReadableStream &MsfData,
                             uint32_t StreamIndex) const;
 
+  std::string FilePath;
   BumpPtrAllocator &Allocator;
 
   std::unique_ptr<msf::ReadableStream> Buffer;

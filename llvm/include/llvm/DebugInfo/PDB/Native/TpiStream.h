@@ -50,7 +50,7 @@ public:
   msf::FixedStreamArray<TypeIndexOffset> getTypeIndexOffsets() const;
   HashTable &getHashAdjusters();
 
-  iterator_range<codeview::CVTypeArray::Iterator> types(bool *HadError) const;
+  codeview::CVTypeRange types(bool *HadError) const;
 
   Error commit();
 

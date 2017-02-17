@@ -65,29 +65,36 @@ TEST_CASE(test_status_cannot_resolve)
 
     const std::error_code set_ec =
         std::make_error_code(std::errc::address_in_use);
-    const std::error_code expect_ec =
+    const std::error_code perm_ec =
         std::make_error_code(std::errc::permission_denied);
+    const std::error_code name_too_long_ec =
+        std::make_error_code(std::errc::filename_too_long);
 
-    const path cases[] = {
-        file, sym
+    struct TestCase {
+      path p;
+      std::error_code expect_ec;
+    } const TestCases[] = {
+      {file, perm_ec},
+      {sym, perm_ec},
+      {path(std::string(2500, 'a')), name_too_long_ec}
     };
-    for (auto& p : cases)
+    for (auto& TC : TestCases)
     {
         { // test non-throwing case
             std::error_code ec = set_ec;
-            file_status st = status(p, ec);
-            TEST_CHECK(ec == expect_ec);
+            file_status st = status(TC.p, ec);
+            TEST_CHECK(ec == TC.expect_ec);
             TEST_CHECK(st.type() == file_type::none);
             TEST_CHECK(st.permissions() == perms::unknown);
         }
 #ifndef TEST_HAS_NO_EXCEPTIONS
         { // test throwing case
             try {
-                status(p);
+                status(TC.p);
             } catch (filesystem_error const& err) {
-                TEST_CHECK(err.path1() == p);
+                TEST_CHECK(err.path1() == TC.p);
                 TEST_CHECK(err.path2() == "");
-                TEST_CHECK(err.code() == expect_ec);
+                TEST_CHECK(err.code() == TC.expect_ec);
             }
         }
 #endif
