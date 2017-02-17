@@ -2252,7 +2252,7 @@ public:
   /// appropriate size and alignment for an object of type \p Type.
   void EmitTypeCheck(TypeCheckKind TCK, SourceLocation Loc, llvm::Value *V,
                      QualType Type, CharUnits Alignment = CharUnits::Zero(),
-                     bool SkipNullCheck = false);
+                     SanitizerSet SkippedChecks = SanitizerSet());
 
   /// \brief Emit a check that \p Base points into an array object, which
   /// we can access at index \p Index. \p Accessed should be \c false if we

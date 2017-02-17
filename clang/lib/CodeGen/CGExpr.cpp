@@ -534,7 +534,8 @@ bool CodeGenFunction::sanitizePerformTypeCheck() const {
 
 void CodeGenFunction::EmitTypeCheck(TypeCheckKind TCK, SourceLocation Loc,
                                     llvm::Value *Ptr, QualType Ty,
-                                    CharUnits Alignment, bool SkipNullCheck) {
+                                    CharUnits Alignment,
+                                    SanitizerSet SkippedChecks) {
   if (!sanitizePerformTypeCheck())
     return;
 
@@ -552,7 +553,7 @@ void CodeGenFunction::EmitTypeCheck(TypeCheckKind TCK, SourceLocation Loc,
   bool AllowNullPointers = TCK == TCK_DowncastPointer || TCK == TCK_Upcast ||
                            TCK == TCK_UpcastToVirtualBase;
   if ((SanOpts.has(SanitizerKind::Null) || AllowNullPointers) &&
-      !SkipNullCheck) {
+      !SkippedChecks.has(SanitizerKind::Null)) {
     // The glvalue must not be an empty glvalue.
     llvm::Value *IsNonNull = Builder.CreateIsNotNull(Ptr);
 
@@ -568,7 +569,9 @@ void CodeGenFunction::EmitTypeCheck(TypeCheckKind TCK, SourceLocation Loc,
     }
   }
 
-  if (SanOpts.has(SanitizerKind::ObjectSize) && !Ty->isIncompleteType()) {
+  if (SanOpts.has(SanitizerKind::ObjectSize) &&
+      !SkippedChecks.has(SanitizerKind::ObjectSize) &&
+      !Ty->isIncompleteType()) {
     uint64_t Size = getContext().getTypeSizeInChars(Ty).getQuantity();
 
     // The glvalue must refer to a large enough storage region.
@@ -587,7 +590,8 @@ void CodeGenFunction::EmitTypeCheck(TypeCheckKind TCK, SourceLocation Loc,
 
   uint64_t AlignVal = 0;
 
-  if (SanOpts.has(SanitizerKind::Alignment)) {
+  if (SanOpts.has(SanitizerKind::Alignment) &&
+      !SkippedChecks.has(SanitizerKind::Alignment)) {
     AlignVal = Alignment.getQuantity();
     if (!Ty->isIncompleteType() && !AlignVal)
       AlignVal = getContext().getTypeAlignInChars(Ty).getQuantity();
@@ -624,6 +628,7 @@ void CodeGenFunction::EmitTypeCheck(TypeCheckKind TCK, SourceLocation Loc,
   //       or call a non-static member function
   CXXRecordDecl *RD = Ty->getAsCXXRecordDecl();
   if (SanOpts.has(SanitizerKind::Vptr) &&
+      !SkippedChecks.has(SanitizerKind::Vptr) &&
       (TCK == TCK_MemberAccess || TCK == TCK_MemberCall ||
        TCK == TCK_DowncastPointer || TCK == TCK_DowncastReference ||
        TCK == TCK_UpcastToVirtualBase) &&
