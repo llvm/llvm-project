@@ -8,10 +8,12 @@
   define void @test_add_s32() { ret void }
 
   define void @test_load_from_stack() { ret void }
-  define void @test_legal_loads() { ret void }
+  define void @test_legal_loads() #0 { ret void }
 
-  define void @test_fadd_s32() { ret void }
-  define void @test_fadd_s64() { ret void }
+  define void @test_fadd_s32() #0 { ret void }
+  define void @test_fadd_s64() #0 { ret void }
+
+  attributes #0 = { "target-features"="+vfp2" }
 ...
 ---
 name:            test_sext_s8

@@ -18297,9 +18297,6 @@ fi
 
 
 
-
-
-
 # Check whether --with-clang was given.
 if test "${with_clang+set}" = set; then :
   withval=$with_clang;
@@ -18382,7 +18379,12 @@ $as_echo "$with_clang" >&6; }
 
 case "$with_clang" in
 system)
-	{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for grep that handles long lines and -e" >&5
+
+
+
+
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for grep that handles long lines and -e" >&5
 $as_echo_n "checking for grep that handles long lines and -e... " >&6; }
 if ${ac_cv_path_GREP+:} false; then :
   $as_echo_n "(cached) " >&6
@@ -18445,7 +18447,7 @@ $as_echo "$ac_cv_path_GREP" >&6; }
  GREP="$ac_cv_path_GREP"
 
 
-	{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for a sed that does not truncate output" >&5
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for a sed that does not truncate output" >&5
 $as_echo_n "checking for a sed that does not truncate output... " >&6; }
 if ${ac_cv_path_SED+:} false; then :
   $as_echo_n "(cached) " >&6
@@ -18514,8 +18516,8 @@ $as_echo "$ac_cv_path_SED" >&6; }
  SED="$ac_cv_path_SED"
   rm -f conftest.sed
 
-	llvm_config="llvm-config"
-	# Extract the first word of ""$llvm_config"", so it can be a program name with args.
+llvm_config="llvm-config"
+# Extract the first word of ""$llvm_config"", so it can be a program name with args.
 set dummy "$llvm_config"; ac_word=$2
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
 $as_echo_n "checking for $ac_word... " >&6; }
@@ -18552,44 +18554,43 @@ $as_echo "no" >&6; }
 fi
 
 
-	if test "x$with_clang_prefix" != "x"; then
-		llvm_config="$with_clang_prefix/bin/llvm-config"
-		if test -x "$llvm_config"; then
-			llvm_config_found=yes
-		fi
+if test "x$with_clang_prefix" != "x"; then
+	llvm_config="$with_clang_prefix/bin/llvm-config"
+	if test -x "$llvm_config"; then
+		llvm_config_found=yes
 	fi
-	if test "$llvm_config_found" != yes; then
-		as_fn_error $? "llvm-config not found" "$LINENO" 5
-	fi
-	CLANG_CXXFLAGS=`$llvm_config --cxxflags | \
-		$SED -e 's/-Wcovered-switch-default//'`
-	CLANG_LDFLAGS=`$llvm_config --ldflags`
-	targets=`$llvm_config --targets-built`
-	components="$targets asmparser bitreader support mc"
-	$llvm_config --components | $GREP option > /dev/null 2> /dev/null
-	if test $? -eq 0; then
-		components="$components option"
-	fi
-	CLANG_LIBS=`$llvm_config --libs $components`
-	systemlibs=`$llvm_config --system-libs 2> /dev/null | tail -1`
-	if test $? -eq 0; then
-		CLANG_LIBS="$CLANG_LIBS $systemlibs"
-	fi
-	CLANG_PREFIX=`$llvm_config --prefix`
+fi
+if test "$llvm_config_found" != yes; then
+	as_fn_error $? "llvm-config not found" "$LINENO" 5
+fi
+CLANG_CXXFLAGS=`$llvm_config --cxxflags | \
+	$SED -e 's/-Wcovered-switch-default//'`
+CLANG_LDFLAGS=`$llvm_config --ldflags`
+targets=`$llvm_config --targets-built`
+components="$targets asmparser bitreader support mc"
+$llvm_config --components | $GREP option > /dev/null 2> /dev/null
+if test $? -eq 0; then
+	components="$components option"
+fi
+CLANG_LIBS=`$llvm_config --libs $components`
+systemlibs=`$llvm_config --system-libs 2> /dev/null | tail -1`
+if test $? -eq 0; then
+	CLANG_LIBS="$CLANG_LIBS $systemlibs"
+fi
+CLANG_PREFIX=`$llvm_config --prefix`
 
 cat >>confdefs.h <<_ACEOF
 #define CLANG_PREFIX "$CLANG_PREFIX"
 _ACEOF
 
 
-	SAVE_CPPFLAGS="$CPPFLAGS"
-	CPPFLAGS="$CLANG_CXXFLAGS $CPPFLAGS"
-	ac_ext=cpp
+SAVE_CPPFLAGS="$CPPFLAGS"
+CPPFLAGS="$CLANG_CXXFLAGS $CPPFLAGS"
+ac_ext=cpp
 ac_cpp='$CXXCPP $CPPFLAGS'
 ac_compile='$CXX -c $CXXFLAGS $CPPFLAGS conftest.$ac_ext >&5'
 ac_link='$CXX -o conftest$ac_exeext $CXXFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
 ac_compiler_gnu=$ac_cv_cxx_compiler_gnu
-
 
 ac_fn_cxx_check_header_mongrel "$LINENO" "clang/Basic/SourceLocation.h" "ac_cv_header_clang_Basic_SourceLocation_h" "$ac_includes_default"
 if test "x$ac_cv_header_clang_Basic_SourceLocation_h" = xyes; then :
@@ -18599,7 +18600,7 @@ else
 fi
 
 
-	cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 #include <llvm/Support/Host.h>
 
@@ -18614,7 +18615,7 @@ $as_echo "#define getDefaultTargetTriple getHostTriple" >>confdefs.h
 fi
 rm -f conftest*
 
-	cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 #include <clang/Basic/SourceLocation.h>
 
@@ -18629,7 +18630,7 @@ $as_echo "#define getExpansionLineNumber getInstantiationLineNumber" >>confdefs.
 fi
 rm -f conftest*
 
-	cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 #include <clang/Basic/Diagnostic.h>
 
@@ -18644,7 +18645,7 @@ $as_echo "#define DiagnosticsEngine Diagnostic" >>confdefs.h
 fi
 rm -f conftest*
 
-	cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 #include <clang/Driver/Driver.h>
 
@@ -18657,7 +18658,7 @@ $as_echo "#define USE_ARRAYREF /**/" >>confdefs.h
 fi
 rm -f conftest*
 
-	cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 #include <clang/Driver/Driver.h>
 
@@ -18670,7 +18671,7 @@ $as_echo "#define HAVE_CXXISPRODUCTION /**/" >>confdefs.h
 fi
 rm -f conftest*
 
-	cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 #include <clang/Driver/Driver.h>
 
@@ -18683,16 +18684,16 @@ $as_echo "#define HAVE_ISPRODUCTION /**/" >>confdefs.h
 fi
 rm -f conftest*
 
-	cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 #include <clang/Driver/Driver.h>
 int
 main ()
 {
 
-		using namespace clang;
-		DiagnosticsEngine *Diags;
-		new driver::Driver("", "", "", *Diags);
+	using namespace clang;
+	DiagnosticsEngine *Diags;
+	new driver::Driver("", "", "", *Diags);
 
   ;
   return 0;
@@ -18704,7 +18705,7 @@ $as_echo "#define DRIVER_CTOR_TAKES_DEFAULTIMAGENAME /**/" >>confdefs.h
 
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-	cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 #include <clang/AST/ASTConsumer.h>
 
@@ -18727,7 +18728,7 @@ $as_echo "#define HandleTopLevelDeclContinue true" >>confdefs.h
 fi
 rm -f conftest*
 
-	ac_fn_cxx_check_header_mongrel "$LINENO" "clang/Basic/DiagnosticOptions.h" "ac_cv_header_clang_Basic_DiagnosticOptions_h" "$ac_includes_default"
+ac_fn_cxx_check_header_mongrel "$LINENO" "clang/Basic/DiagnosticOptions.h" "ac_cv_header_clang_Basic_DiagnosticOptions_h" "$ac_includes_default"
 if test "x$ac_cv_header_clang_Basic_DiagnosticOptions_h" = xyes; then :
 
 $as_echo "#define HAVE_BASIC_DIAGNOSTICOPTIONS_H /**/" >>confdefs.h
@@ -18735,7 +18736,7 @@ $as_echo "#define HAVE_BASIC_DIAGNOSTICOPTIONS_H /**/" >>confdefs.h
 fi
 
 
-	ac_fn_cxx_check_header_compile "$LINENO" "clang/Lex/PreprocessorOptions.h" "ac_cv_header_clang_Lex_PreprocessorOptions_h" "#include <clang/Basic/LLVM.h>
+ac_fn_cxx_check_header_compile "$LINENO" "clang/Lex/PreprocessorOptions.h" "ac_cv_header_clang_Lex_PreprocessorOptions_h" "#include <clang/Basic/LLVM.h>
 "
 if test "x$ac_cv_header_clang_Lex_PreprocessorOptions_h" = xyes; then :
 
@@ -18744,17 +18745,17 @@ $as_echo "#define HAVE_LEX_PREPROCESSOROPTIONS_H /**/" >>confdefs.h
 fi
 
 
-	cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 #include <clang/Basic/TargetInfo.h>
 int
 main ()
 {
 
-		using namespace clang;
-		std::shared_ptr<TargetOptions> TO;
-		DiagnosticsEngine *Diags;
-		TargetInfo::CreateTargetInfo(*Diags, TO);
+	using namespace clang;
+	std::shared_ptr<TargetOptions> TO;
+	DiagnosticsEngine *Diags;
+	TargetInfo::CreateTargetInfo(*Diags, TO);
 
   ;
   return 0;
@@ -18766,17 +18767,17 @@ $as_echo "#define CREATETARGETINFO_TAKES_SHARED_PTR /**/" >>confdefs.h
 
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-	cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 #include <clang/Basic/TargetInfo.h>
 int
 main ()
 {
 
-		using namespace clang;
-		TargetOptions *TO;
-		DiagnosticsEngine *Diags;
-		TargetInfo::CreateTargetInfo(*Diags, TO);
+	using namespace clang;
+	TargetOptions *TO;
+	DiagnosticsEngine *Diags;
+	TargetInfo::CreateTargetInfo(*Diags, TO);
 
   ;
   return 0;
@@ -18788,17 +18789,17 @@ $as_echo "#define CREATETARGETINFO_TAKES_POINTER /**/" >>confdefs.h
 
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-	cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 #include <clang/Frontend/CompilerInstance.h>
 int
 main ()
 {
 
-		using namespace clang;
-		DiagnosticConsumer *client;
-		CompilerInstance *Clang;
-		Clang->createDiagnostics(client);
+	using namespace clang;
+	DiagnosticConsumer *client;
+	CompilerInstance *Clang;
+	Clang->createDiagnostics(client);
 
   ;
   return 0;
@@ -18812,16 +18813,16 @@ $as_echo "#define CREATEDIAGNOSTICS_TAKES_ARG /**/" >>confdefs.h
 
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-	cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 #include <clang/Lex/HeaderSearchOptions.h>
 int
 main ()
 {
 
-		using namespace clang;
-		HeaderSearchOptions HSO;
-		HSO.AddPath("", frontend::Angled, false, false);
+	using namespace clang;
+	HeaderSearchOptions HSO;
+	HSO.AddPath("", frontend::Angled, false, false);
 
   ;
   return 0;
@@ -18833,7 +18834,7 @@ $as_echo "#define ADDPATH_TAKES_4_ARGUMENTS /**/" >>confdefs.h
 
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-	cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 #include <clang/AST/CanonicalType.h>
 
@@ -18849,7 +18850,7 @@ $as_echo "#define getArgType getParamType" >>confdefs.h
 fi
 rm -f conftest*
 
-	cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 #include <clang/AST/CanonicalType.h>
 
@@ -18864,16 +18865,16 @@ $as_echo "#define getReturnType getResultType" >>confdefs.h
 fi
 rm -f conftest*
 
-	cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 #include <clang/Frontend/CompilerInstance.h>
 int
 main ()
 {
 
-		using namespace clang;
-		CompilerInstance *Clang;
-		Clang->createPreprocessor(TU_Complete);
+	using namespace clang;
+	CompilerInstance *Clang;
+	Clang->createPreprocessor(TU_Complete);
 
   ;
   return 0;
@@ -18885,7 +18886,7 @@ $as_echo "#define CREATEPREPROCESSOR_TAKES_TUKIND /**/" >>confdefs.h
 
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-	cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 #include <clang/Basic/SourceManager.h>
 
@@ -18898,7 +18899,7 @@ $as_echo "#define HAVE_SETMAINFILEID /**/" >>confdefs.h
 fi
 rm -f conftest*
 
-	ac_fn_cxx_check_header_mongrel "$LINENO" "llvm/ADT/OwningPtr.h" "ac_cv_header_llvm_ADT_OwningPtr_h" "$ac_includes_default"
+ac_fn_cxx_check_header_mongrel "$LINENO" "llvm/ADT/OwningPtr.h" "ac_cv_header_llvm_ADT_OwningPtr_h" "$ac_includes_default"
 if test "x$ac_cv_header_llvm_ADT_OwningPtr_h" = xyes; then :
 
 $as_echo "#define HAVE_ADT_OWNINGPTR_H /**/" >>confdefs.h
@@ -18906,7 +18907,7 @@ $as_echo "#define HAVE_ADT_OWNINGPTR_H /**/" >>confdefs.h
 fi
 
 
-	cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 #include <clang/Basic/Builtins.h>
 
@@ -18921,24 +18922,24 @@ $as_echo "#define initializeBuiltins InitializeBuiltins" >>confdefs.h
 fi
 rm -f conftest*
 
-	cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 
-		#include <clang/Basic/TargetOptions.h>
-		#include <clang/Lex/PreprocessorOptions.h>
-		#include <clang/Frontend/CompilerInstance.h>
+	#include <clang/Basic/TargetOptions.h>
+	#include <clang/Lex/PreprocessorOptions.h>
+	#include <clang/Frontend/CompilerInstance.h>
 
 int
 main ()
 {
 
-		using namespace clang;
-		CompilerInstance *Clang;
-		TargetOptions TO;
-		llvm::Triple T(TO.Triple);
-		PreprocessorOptions PO;
-		CompilerInvocation::setLangDefaults(Clang->getLangOpts(), IK_C,
-				T, PO, LangStandard::lang_unspecified);
+	using namespace clang;
+	CompilerInstance *Clang;
+	TargetOptions TO;
+	llvm::Triple T(TO.Triple);
+	PreprocessorOptions PO;
+	CompilerInvocation::setLangDefaults(Clang->getLangOpts(), IK_C,
+			T, PO, LangStandard::lang_unspecified);
 
   ;
   return 0;
@@ -18950,18 +18951,43 @@ $as_echo "#define SETLANGDEFAULTS_TAKES_5_ARGUMENTS /**/" >>confdefs.h
 
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-	ac_ext=c
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+	#include <clang/Frontend/CompilerInstance.h>
+	#include <clang/Frontend/CompilerInvocation.h>
+
+int
+main ()
+{
+
+	using namespace clang;
+	CompilerInvocation *invocation;
+	CompilerInstance *Clang;
+	Clang->setInvocation(std::make_shared<CompilerInvocation>(*invocation));
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_cxx_try_compile "$LINENO"; then :
+
+$as_echo "#define SETINVOCATION_TAKES_SHARED_PTR /**/" >>confdefs.h
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+ac_ext=c
 ac_cpp='$CPP $CPPFLAGS'
 ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
 ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
 ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
-	CPPFLAGS="$SAVE_CPPFLAGS"
+CPPFLAGS="$SAVE_CPPFLAGS"
 
-	SAVE_LDFLAGS="$LDFLAGS"
-	LDFLAGS="$CLANG_LDFLAGS $LDFLAGS"
+SAVE_LDFLAGS="$LDFLAGS"
+LDFLAGS="$CLANG_LDFLAGS $LDFLAGS"
 
-	{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for main in -lclangEdit" >&5
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for main in -lclangEdit" >&5
 $as_echo_n "checking for main in -lclangEdit... " >&6; }
 if ${ac_cv_lib_clangEdit_main+:} false; then :
   $as_echo_n "(cached) " >&6
@@ -18995,7 +19021,8 @@ if test "x$ac_cv_lib_clangEdit_main" = xyes; then :
   LIB_CLANG_EDIT=-lclangEdit
 fi
 
-	LDFLAGS="$SAVE_LDFLAGS"
+LDFLAGS="$SAVE_LDFLAGS"
+
 	;;
 esac
  if test $with_clang = system; then

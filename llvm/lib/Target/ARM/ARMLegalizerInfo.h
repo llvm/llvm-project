@@ -18,12 +18,12 @@
 
 namespace llvm {
 
-class LLVMContext;
+class ARMSubtarget;
 
 /// This class provides the information for the target register banks.
 class ARMLegalizerInfo : public LegalizerInfo {
 public:
-  ARMLegalizerInfo();
+  ARMLegalizerInfo(const ARMSubtarget &ST);
 };
 } // End llvm namespace.
 #endif

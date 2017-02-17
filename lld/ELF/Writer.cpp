@@ -1520,7 +1520,7 @@ static uintX_t getFileAlignment(uintX_t Off, OutputSectionBase *Sec) {
 }
 
 template <class ELFT, class uintX_t>
-uintX_t setOffset(OutputSectionBase *Sec, uintX_t Off) {
+static uintX_t setOffset(OutputSectionBase *Sec, uintX_t Off) {
   if (Sec->Type == SHT_NOBITS) {
     Sec->Offset = Off;
     return Off;

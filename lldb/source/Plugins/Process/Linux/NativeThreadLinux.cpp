@@ -225,7 +225,13 @@ Error NativeThreadLinux::SingleStep(uint32_t signo) {
   MaybeLogStateChange(new_state);
   m_state = new_state;
   m_stop_info.reason = StopReason::eStopReasonNone;
-  m_step_workaround = SingleStepWorkaround::Get(m_tid);
+
+  if(!m_step_workaround) {
+    // If we already hava a workaround inplace, don't reset it. Otherwise, the
+    // destructor of the existing instance will run after the new instance has
+    // fetched the cpu mask, and the thread will end up with the wrong mask.
+    m_step_workaround = SingleStepWorkaround::Get(m_tid);
+  }
 
   intptr_t data = 0;
   if (signo != LLDB_INVALID_SIGNAL_NUMBER)

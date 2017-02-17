@@ -160,3 +160,24 @@ entry:
   %v = fadd float %f0, %f1
   ret float %v
 }
+
+define arm_aapcs_vfpcc double @test_double_hard(double %f0, double %f1) {
+; CHECK-LABEL: test_double_hard:
+; CHECK: vadd.f64 d0, d0, d1
+; CHECK: bx lr
+entry:
+  %v = fadd double %f0, %f1
+  ret double %v
+}
+
+define arm_aapcscc double @test_double_softfp(double %f0, double %f1) {
+; CHECK-LABEL: test_double_softfp:
+; CHECK-DAG: vmov [[F0:d[0-9]+]], r0, r1
+; CHECK-DAG: vmov [[F1:d[0-9]+]], r2, r3
+; CHECK: vadd.f64 [[FV:d[0-9]+]], [[F0]], [[F1]]
+; CHECK: vmov r0, r1, [[FV]]
+; CHECK: bx lr
+entry:
+  %v = fadd double %f0, %f1
+  ret double %v
+}

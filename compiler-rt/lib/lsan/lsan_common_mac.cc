@@ -12,11 +12,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "sanitizer_common/sanitizer_allocator_internal.h"
 #include "sanitizer_common/sanitizer_platform.h"
 #include "lsan_common.h"
 
 #if CAN_SANITIZE_LEAKS && SANITIZER_MAC
+
+#include "sanitizer_common/sanitizer_allocator_internal.h"
+#include "lsan_allocator.h"
 
 #include <pthread.h>
 
@@ -25,6 +27,7 @@ namespace __lsan {
 typedef struct {
   int disable_counter;
   u32 current_thread_id;
+  AllocatorCache cache;
 } thread_local_data_t;
 
 static pthread_key_t key;
@@ -40,6 +43,7 @@ static thread_local_data_t *get_tls_val() {
     ptr = (thread_local_data_t *)InternalAlloc(sizeof(*ptr));
     ptr->disable_counter = 0;
     ptr->current_thread_id = kInvalidTid;
+    ptr->cache = AllocatorCache();
     pthread_setspecific(key, ptr);
   }
 
@@ -61,6 +65,8 @@ void EnableInThisThread() {
 u32 GetCurrentThread() { return get_tls_val()->current_thread_id; }
 
 void SetCurrentThread(u32 tid) { get_tls_val()->current_thread_id = tid; }
+
+AllocatorCache *GetAllocatorCache() { return &get_tls_val()->cache; }
 
 void InitializePlatformSpecificModules() {
   CHECK(0 && "unimplemented");

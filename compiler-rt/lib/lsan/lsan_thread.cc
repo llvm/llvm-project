@@ -19,6 +19,7 @@
 #include "sanitizer_common/sanitizer_thread_registry.h"
 #include "sanitizer_common/sanitizer_tls_get_addr.h"
 #include "lsan_allocator.h"
+#include "lsan_common.h"
 
 namespace __lsan {
 

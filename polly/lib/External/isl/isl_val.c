@@ -1578,31 +1578,32 @@ __isl_give isl_val *isl_val_zero_on_domain(__isl_take isl_local_space *ls)
  * This function is only meant to be used in the generic isl_multi_*
  * functions which have to deal with base objects that have an associated
  * space.  Since an isl_val does not have an associated space, this function
- * simply returns 1, except if "v" or "space" are NULL.
+ * simply returns true, except if "v" or "space" are NULL.
  */
-int isl_val_matching_params(__isl_keep isl_val *v, __isl_keep isl_space *space)
+isl_bool isl_val_matching_params(__isl_keep isl_val *v,
+	__isl_keep isl_space *space)
 {
 	if (!v || !space)
-		return -1;
-	return 1;
+		return isl_bool_error;
+	return isl_bool_true;
 }
 
 /* Check that the domain space of "v" matches "space".
- *
- * Return 0 on success and -1 on error.
  *
  * This function is only meant to be used in the generic isl_multi_*
  * functions which have to deal with base objects that have an associated
  * space.  Since an isl_val does not have an associated space, this function
  * simply returns 0, except if "v" or "space" are NULL.
  */
-int isl_val_check_match_domain_space(__isl_keep isl_val *v,
+isl_stat isl_val_check_match_domain_space(__isl_keep isl_val *v,
 	__isl_keep isl_space *space)
 {
 	if (!v || !space)
-		return -1;
-	return 0;
+		return isl_stat_error;
+	return isl_stat_ok;
 }
+
+#define isl_val_involves_nan isl_val_is_nan
 
 #undef BASE
 #define BASE val

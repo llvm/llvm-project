@@ -16,10 +16,7 @@ from lldbsuite.test import lldbutil
 class CreateDuringInstructionStepTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
-
-    def setUp(self):
-        # Call super's setUp().
-        TestBase.setUp(self)
+    NO_DEBUG_INFO_TESTCASE = True
 
     @skipUnlessPlatform(['linux'])
     @expectedFailureAndroid('llvm.org/pr24737', archs=['arm'])

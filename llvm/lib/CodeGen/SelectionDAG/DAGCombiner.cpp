@@ -6571,6 +6571,7 @@ SDValue DAGCombiner::CombineExtLoad(SDNode *N) {
 SDValue DAGCombiner::visitSIGN_EXTEND(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   EVT VT = N->getValueType(0);
+  SDLoc DL(N);
 
   if (SDNode *Res = tryToFoldExtendOfConstant(N, TLI, DAG, LegalTypes,
                                               LegalOperations))
@@ -6579,8 +6580,7 @@ SDValue DAGCombiner::visitSIGN_EXTEND(SDNode *N) {
   // fold (sext (sext x)) -> (sext x)
   // fold (sext (aext x)) -> (sext x)
   if (N0.getOpcode() == ISD::SIGN_EXTEND || N0.getOpcode() == ISD::ANY_EXTEND)
-    return DAG.getNode(ISD::SIGN_EXTEND, SDLoc(N), VT,
-                       N0.getOperand(0));
+    return DAG.getNode(ISD::SIGN_EXTEND, DL, VT, N0.getOperand(0));
 
   if (N0.getOpcode() == ISD::TRUNCATE) {
     // fold (sext (truncate (load x))) -> (sext (smaller load x))
@@ -6612,12 +6612,12 @@ SDValue DAGCombiner::visitSIGN_EXTEND(SDNode *N) {
       // Op is i32, Mid is i8, and Dest is i64.  If Op has more than 24 sign
       // bits, just sext from i32.
       if (NumSignBits > OpBits-MidBits)
-        return DAG.getNode(ISD::SIGN_EXTEND, SDLoc(N), VT, Op);
+        return DAG.getNode(ISD::SIGN_EXTEND, DL, VT, Op);
     } else {
       // Op is i64, Mid is i8, and Dest is i32.  If Op has more than 56 sign
       // bits, just truncate to i32.
       if (NumSignBits > OpBits-MidBits)
-        return DAG.getNode(ISD::TRUNCATE, SDLoc(N), VT, Op);
+        return DAG.getNode(ISD::TRUNCATE, DL, VT, Op);
     }
 
     // fold (sext (truncate x)) -> (sextinreg x).
@@ -6627,7 +6627,7 @@ SDValue DAGCombiner::visitSIGN_EXTEND(SDNode *N) {
         Op = DAG.getNode(ISD::ANY_EXTEND, SDLoc(N0), VT, Op);
       else if (OpBits > DestBits)
         Op = DAG.getNode(ISD::TRUNCATE, SDLoc(N0), VT, Op);
-      return DAG.getNode(ISD::SIGN_EXTEND_INREG, SDLoc(N), VT, Op,
+      return DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, VT, Op,
                          DAG.getValueType(N0.getValueType()));
     }
   }
@@ -6647,16 +6647,14 @@ SDValue DAGCombiner::visitSIGN_EXTEND(SDNode *N) {
       DoXform &= TLI.isVectorLoadExtDesirable(SDValue(N, 0));
     if (DoXform) {
       LoadSDNode *LN0 = cast<LoadSDNode>(N0);
-      SDValue ExtLoad = DAG.getExtLoad(ISD::SEXTLOAD, SDLoc(N), VT,
-                                       LN0->getChain(),
+      SDValue ExtLoad = DAG.getExtLoad(ISD::SEXTLOAD, DL, VT, LN0->getChain(),
                                        LN0->getBasePtr(), N0.getValueType(),
                                        LN0->getMemOperand());
       CombineTo(N, ExtLoad);
       SDValue Trunc = DAG.getNode(ISD::TRUNCATE, SDLoc(N0),
                                   N0.getValueType(), ExtLoad);
       CombineTo(N0.getNode(), Trunc, ExtLoad.getValue(1));
-      ExtendSetCCUses(SetCCs, Trunc, ExtLoad, SDLoc(N),
-                      ISD::SIGN_EXTEND);
+      ExtendSetCCUses(SetCCs, Trunc, ExtLoad, DL, ISD::SIGN_EXTEND);
       return SDValue(N, 0);   // Return N so it doesn't get rechecked!
     }
   }
@@ -6674,8 +6672,7 @@ SDValue DAGCombiner::visitSIGN_EXTEND(SDNode *N) {
     EVT MemVT = LN0->getMemoryVT();
     if ((!LegalOperations && !LN0->isVolatile()) ||
         TLI.isLoadExtLegal(ISD::SEXTLOAD, VT, MemVT)) {
-      SDValue ExtLoad = DAG.getExtLoad(ISD::SEXTLOAD, SDLoc(N), VT,
-                                       LN0->getChain(),
+      SDValue ExtLoad = DAG.getExtLoad(ISD::SEXTLOAD, DL, VT, LN0->getChain(),
                                        LN0->getBasePtr(), MemVT,
                                        LN0->getMemOperand());
       CombineTo(N, ExtLoad);
@@ -6709,7 +6706,6 @@ SDValue DAGCombiner::visitSIGN_EXTEND(SDNode *N) {
                                          LN0->getMemOperand());
         APInt Mask = cast<ConstantSDNode>(N0.getOperand(1))->getAPIntValue();
         Mask = Mask.sext(VT.getSizeInBits());
-        SDLoc DL(N);
         SDValue And = DAG.getNode(N0.getOpcode(), DL, VT,
                                   ExtLoad, DAG.getConstant(Mask, DL, VT));
         SDValue Trunc = DAG.getNode(ISD::TRUNCATE,
@@ -6717,24 +6713,27 @@ SDValue DAGCombiner::visitSIGN_EXTEND(SDNode *N) {
                                     N0.getOperand(0).getValueType(), ExtLoad);
         CombineTo(N, And);
         CombineTo(N0.getOperand(0).getNode(), Trunc, ExtLoad.getValue(1));
-        ExtendSetCCUses(SetCCs, Trunc, ExtLoad, DL,
-                        ISD::SIGN_EXTEND);
+        ExtendSetCCUses(SetCCs, Trunc, ExtLoad, DL, ISD::SIGN_EXTEND);
         return SDValue(N, 0);   // Return N so it doesn't get rechecked!
       }
     }
   }
 
   if (N0.getOpcode() == ISD::SETCC) {
-    EVT N0VT = N0.getOperand(0).getValueType();
+    SDValue N00 = N0.getOperand(0);
+    SDValue N01 = N0.getOperand(1);
+    ISD::CondCode CC = cast<CondCodeSDNode>(N0.getOperand(2))->get();
+    EVT N00VT = N0.getOperand(0).getValueType();
+
     // sext(setcc) -> sext_in_reg(vsetcc) for vectors.
     // Only do this before legalize for now.
     if (VT.isVector() && !LegalOperations &&
-        TLI.getBooleanContents(N0VT) ==
+        TLI.getBooleanContents(N00VT) ==
             TargetLowering::ZeroOrNegativeOneBooleanContent) {
       // On some architectures (such as SSE/NEON/etc) the SETCC result type is
       // of the same size as the compared operands. Only optimize sext(setcc())
       // if this is the case.
-      EVT SVT = getSetCCResultType(N0VT);
+      EVT SVT = getSetCCResultType(N00VT);
 
       // We know that the # elements of the results is the same as the
       // # elements of the compare (and the # elements of the compare result
@@ -6742,19 +6741,15 @@ SDValue DAGCombiner::visitSIGN_EXTEND(SDNode *N) {
       // we know that the element size of the sext'd result matches the
       // element size of the compare operands.
       if (VT.getSizeInBits() == SVT.getSizeInBits())
-        return DAG.getSetCC(SDLoc(N), VT, N0.getOperand(0),
-                             N0.getOperand(1),
-                             cast<CondCodeSDNode>(N0.getOperand(2))->get());
+        return DAG.getSetCC(DL, VT, N00, N01, CC);
 
       // If the desired elements are smaller or larger than the source
-      // elements we can use a matching integer vector type and then
-      // truncate/sign extend
-      EVT MatchingVectorType = N0VT.changeVectorElementTypeToInteger();
-      if (SVT == MatchingVectorType) {
-        SDValue VsetCC = DAG.getSetCC(SDLoc(N), MatchingVectorType,
-                               N0.getOperand(0), N0.getOperand(1),
-                               cast<CondCodeSDNode>(N0.getOperand(2))->get());
-        return DAG.getSExtOrTrunc(VsetCC, SDLoc(N), VT);
+      // elements, we can use a matching integer vector type and then
+      // truncate/sign extend.
+      EVT MatchingVecType = N00VT.changeVectorElementTypeToInteger();
+      if (SVT == MatchingVecType) {
+        SDValue VsetCC = DAG.getSetCC(DL, MatchingVecType, N00, N01, CC);
+        return DAG.getSExtOrTrunc(VsetCC, DL, VT);
       }
     }
 
@@ -6763,13 +6758,12 @@ SDValue DAGCombiner::visitSIGN_EXTEND(SDNode *N) {
     // getBooleanContents().
     unsigned SetCCWidth = N0.getScalarValueSizeInBits();
 
-    SDLoc DL(N);
     // To determine the "true" side of the select, we need to know the high bit
     // of the value returned by the setcc if it evaluates to true.
     // If the type of the setcc is i1, then the true case of the select is just
     // sext(i1 1), that is, -1.
     // If the type of the setcc is larger (say, i8) then the value of the high
-    // bit depends on getBooleanContents(). So, ask TLI for a real "true" value
+    // bit depends on getBooleanContents(), so ask TLI for a real "true" value
     // of the appropriate width.
     SDValue ExtTrueVal =
         (SetCCWidth == 1)
@@ -6777,22 +6771,16 @@ SDValue DAGCombiner::visitSIGN_EXTEND(SDNode *N) {
                               DL, VT)
             : TLI.getConstTrueVal(DAG, VT, DL);
 
-    if (SDValue SCC = SimplifySelectCC(
-            DL, N0.getOperand(0), N0.getOperand(1), ExtTrueVal,
-            DAG.getConstant(0, DL, VT),
-            cast<CondCodeSDNode>(N0.getOperand(2))->get(), true))
+    SDValue Zero = DAG.getConstant(0, DL, VT);
+    if (SDValue SCC =
+            SimplifySelectCC(DL, N00, N01, ExtTrueVal, Zero, CC, true))
       return SCC;
 
     if (!VT.isVector()) {
-      EVT SetCCVT = getSetCCResultType(N0.getOperand(0).getValueType());
-      if (!LegalOperations ||
-          TLI.isOperationLegal(ISD::SETCC, N0.getOperand(0).getValueType())) {
-        SDLoc DL(N);
-        ISD::CondCode CC = cast<CondCodeSDNode>(N0.getOperand(2))->get();
-        SDValue SetCC =
-            DAG.getSetCC(DL, SetCCVT, N0.getOperand(0), N0.getOperand(1), CC);
-        return DAG.getSelect(DL, VT, SetCC, ExtTrueVal,
-                             DAG.getConstant(0, DL, VT));
+      EVT SetCCVT = getSetCCResultType(N00VT);
+      if (!LegalOperations || TLI.isOperationLegal(ISD::SETCC, N00VT)) {
+        SDValue SetCC = DAG.getSetCC(DL, SetCCVT, N00, N01, CC);
+        return DAG.getSelect(DL, VT, SetCC, ExtTrueVal, Zero);
       }
     }
   }
@@ -6800,7 +6788,7 @@ SDValue DAGCombiner::visitSIGN_EXTEND(SDNode *N) {
   // fold (sext x) -> (zext x) if the sign bit is known zero.
   if ((!LegalOperations || TLI.isOperationLegal(ISD::ZERO_EXTEND, VT)) &&
       DAG.SignBitIsZero(N0))
-    return DAG.getNode(ISD::ZERO_EXTEND, SDLoc(N), VT, N0);
+    return DAG.getNode(ISD::ZERO_EXTEND, DL, VT, N0);
 
   return SDValue();
 }

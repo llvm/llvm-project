@@ -14,7 +14,7 @@
 // function(Fp);
 
 // Ensure that __not_null works for all function types.
-// See https://llvm.org/bugs/show_bug.cgi?id=23589
+// See https://bugs.llvm.org/show_bug.cgi?id=23589
 
 //------------------------------------------------------------------------------
 // TESTING std::function<...>::__not_null(Callable)
