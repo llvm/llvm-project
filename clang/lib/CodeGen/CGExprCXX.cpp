@@ -290,10 +290,15 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
   if (CE)
     CallLoc = CE->getExprLoc();
 
-  EmitTypeCheck(isa<CXXConstructorDecl>(CalleeDecl)
-                ? CodeGenFunction::TCK_ConstructorCall
-                : CodeGenFunction::TCK_MemberCall,
-                CallLoc, This.getPointer(), C.getRecordType(CalleeDecl->getParent()));
+  bool SkipNullCheck = false;
+  if (const auto *CMCE = dyn_cast<CXXMemberCallExpr>(CE))
+    SkipNullCheck =
+        CanElideObjectPointerNullCheck(CMCE->getImplicitObjectArgument());
+  EmitTypeCheck(
+      isa<CXXConstructorDecl>(CalleeDecl) ? CodeGenFunction::TCK_ConstructorCall
+                                          : CodeGenFunction::TCK_MemberCall,
+      CallLoc, This.getPointer(), C.getRecordType(CalleeDecl->getParent()),
+      /*Alignment=*/CharUnits::Zero(), SkipNullCheck);
 
   // FIXME: Uses of 'MD' past this point need to be audited. We may need to use
   // 'CalleeDecl' instead.

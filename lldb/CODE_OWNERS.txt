@@ -41,6 +41,10 @@ N: Hafiz Abid Qadeer
 E: abidh.haq@gmail.com
 D: lldb-mi
 
+N: Kamil Rytarowski
+E: kamil@netbsd.org
+D: NetBSD
+
 N: Zachary Turner
 E: zturner@google.com
 D: CMake build, Host (common+windows), Plugins/Process/Windows, Anything Windows-specific

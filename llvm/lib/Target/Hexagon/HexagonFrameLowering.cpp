@@ -301,30 +301,16 @@ static bool needsStackFrame(const MachineBasicBlock &MBB, const BitVector &CSR,
         // the frame creation/destruction instructions.
         if (MO.isFI())
           return true;
-        if (MO.isReg()) {
-          unsigned R = MO.getReg();
-          // Virtual registers will need scavenging, which then may require
-          // a stack slot.
-          if (TargetRegisterInfo::isVirtualRegister(R))
-            return true;
-          for (MCSubRegIterator S(R, &HRI, true); S.isValid(); ++S)
-            if (CSR[*S])
-              return true;
+        if (!MO.isReg())
           continue;
-        }
-        if (MO.isRegMask()) {
-          // A regmask would normally have all callee-saved registers marked
-          // as preserved, so this check would not be needed, but in case of
-          // ever having other regmasks (for other calling conventions),
-          // make sure they would be processed correctly.
-          const uint32_t *BM = MO.getRegMask();
-          for (int x = CSR.find_first(); x >= 0; x = CSR.find_next(x)) {
-            unsigned R = x;
-            // If this regmask does not preserve a CSR, a frame will be needed.
-            if (!(BM[R/32] & (1u << (R%32))))
-              return true;
-          }
-        }
+        unsigned R = MO.getReg();
+        // Virtual registers will need scavenging, which then may require
+        // a stack slot.
+        if (TargetRegisterInfo::isVirtualRegister(R))
+          return true;
+        for (MCSubRegIterator S(R, &HRI, true); S.isValid(); ++S)
+          if (CSR[*S])
+            return true;
       }
     }
     return false;
@@ -1665,7 +1651,7 @@ bool HexagonFrameLowering::expandStoreVec2(MachineBasicBlock &B,
     // Dead defs are recorded in Clobbers, but are not automatically removed
     // from the live set.
     for (auto &C : Clobbers)
-      if (C.second->isReg() && C.second->isDead())
+      if (C.second->isDead())
         LPR.removeReg(C.first);
   }
 

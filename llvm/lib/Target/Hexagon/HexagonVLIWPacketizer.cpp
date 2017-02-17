@@ -720,8 +720,6 @@ bool HexagonPacketizerList::canPromoteToNewValueStore(const MachineInstr &MI,
   // %R9<def> = ZXTH %R12, %D6<imp-use>, %R12<imp-def>
   // S2_storerh_io %R8, 2, %R12<kill>; mem:ST2[%scevgep343]
   for (auto &MO : PacketMI.operands()) {
-    if (MO.isRegMask() && MO.clobbersPhysReg(DepReg))
-      return false;
     if (!MO.isReg() || !MO.isDef() || !MO.isImplicit())
       continue;
     unsigned R = MO.getReg();
@@ -761,12 +759,9 @@ bool HexagonPacketizerList::canPromoteToNewValue(const MachineInstr &MI,
 }
 
 static bool isImplicitDependency(const MachineInstr &I, unsigned DepReg) {
-  for (auto &MO : I.operands()) {
-    if (MO.isRegMask() && MO.clobbersPhysReg(DepReg))
-      return true;
+  for (auto &MO : I.operands())
     if (MO.isReg() && MO.isDef() && (MO.getReg() == DepReg) && MO.isImplicit())
       return true;
-  }
   return false;
 }
 
@@ -1178,36 +1173,6 @@ bool HexagonPacketizerList::hasControlDependence(const MachineInstr &I,
          (J.isBranch() || J.isCall() || J.isBarrier());
 }
 
-bool HexagonPacketizerList::hasRegMaskDependence(const MachineInstr &I,
-                                                 const MachineInstr &J) {
-  // Adding I to a packet that has J.
-
-  // Regmasks are not reflected in the scheduling dependency graph, so
-  // we need to check them manually. This code assumes that regmasks only
-  // occur on calls, and the problematic case is when we add an instruction
-  // defining a register R to a packet that has a call that clobbers R via
-  // a regmask. Those cannot be packetized together, because the call will
-  // be executed last. That's also a reson why it is ok to add a call
-  // clobbering R to a packet that defines R.
-
-  // Look for regmasks in J.
-  for (const MachineOperand &OpJ : J.operands()) {
-    if (!OpJ.isRegMask())
-      continue;
-    assert((J.isCall() || HII->isTailCall(J)) && "Regmask on a non-call");
-    for (const MachineOperand &OpI : I.operands()) {
-      if (OpI.isReg()) {
-        if (OpJ.clobbersPhysReg(OpI.getReg()))
-          return true;
-      } else if (OpI.isRegMask()) {
-        // Both are regmasks. Assume that they intersect.
-        return true;
-      }
-    }
-  }
-  return false;
-}
-
 bool HexagonPacketizerList::hasV4SpecificDependence(const MachineInstr &I,
                                                     const MachineInstr &J) {
   bool SysI = isSystemInstr(I), SysJ = isSystemInstr(J);
@@ -1251,14 +1216,6 @@ bool HexagonPacketizerList::isLegalToPacketizeTogether(SUnit *SUI, SUnit *SUJ) {
     return false;
 
   Dependence = hasDeadDependence(I, J) || hasControlDependence(I, J);
-  if (Dependence)
-    return false;
-
-  // Regmasks are not accounted for in the scheduling graph, so we need
-  // to explicitly check for dependencies caused by them. They should only
-  // appear on calls, so it's not too pessimistic to reject all regmask
-  // dependencies.
-  Dependence = hasRegMaskDependence(I, J);
   if (Dependence)
     return false;
 
@@ -1510,19 +1467,13 @@ bool HexagonPacketizerList::isLegalToPacketizeTogether(SUnit *SUI, SUnit *SUJ) {
     //   R0 = ...                   ; SUI
     // Those cannot be packetized together, since the call will observe
     // the effect of the assignment to R0.
-    if ((DepType == SDep::Anti || DepType == SDep::Output) && J.isCall()) {
+    if (DepType == SDep::Anti && J.isCall()) {
       // Check if I defines any volatile register. We should also check
       // registers that the call may read, but these happen to be a
       // subset of the volatile register set.
-      for (const MachineOperand &Op : I.operands()) {
-        if (Op.isReg() && Op.isDef()) {
-          unsigned R = Op.getReg();
-          if (!J.readsRegister(R, HRI) && !J.modifiesRegister(R, HRI))
-            continue;
-        } else if (!Op.isRegMask()) {
-          // If I has a regmask assume dependency.
+      for (const MCPhysReg *P = J.getDesc().ImplicitDefs; P && *P; ++P) {
+        if (!I.modifiesRegister(*P, HRI))
           continue;
-        }
         FoundSequentialDependence = true;
         break;
       }

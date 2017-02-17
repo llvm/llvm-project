@@ -49,7 +49,7 @@ class NMExtractor(object):
         parsed symbols.
         """
         cmd = [self.nm_exe] + self.flags + [lib]
-        out, _, exit_code = util.executeCommandVerbose(cmd)
+        out, _, exit_code = libcxx.util.executeCommandVerbose(cmd)
         if exit_code != 0:
             raise RuntimeError('Failed to run %s on %s' % (self.nm_exe, lib))
         fmt_syms = (self._extract_sym(l)

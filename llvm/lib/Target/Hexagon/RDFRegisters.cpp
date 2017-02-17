@@ -70,27 +70,18 @@ std::set<RegisterId> PhysicalRegisterInfo::getAliasSet(RegisterId Reg) const {
   assert(isRegMaskId(Reg) || TargetRegisterInfo::isPhysicalRegister(Reg));
   if (isRegMaskId(Reg)) {
     // XXX SLOW
+    // XXX Add other regmasks to the set.
     const uint32_t *MB = getRegMaskBits(Reg);
     for (unsigned i = 1, e = TRI.getNumRegs(); i != e; ++i) {
       if (MB[i/32] & (1u << (i%32)))
         continue;
       AS.insert(i);
     }
-    for (const uint32_t *RM : RegMasks) {
-      RegisterId MI = getRegMaskId(RM);
-      if (MI != Reg && aliasMM(RegisterRef(Reg), RegisterRef(MI)))
-        AS.insert(MI);
-    }
     return AS;
   }
 
   for (MCRegAliasIterator AI(Reg, &TRI, false); AI.isValid(); ++AI)
     AS.insert(*AI);
-  for (const uint32_t *RM : RegMasks) {
-    RegisterId MI = getRegMaskId(RM);
-    if (aliasRM(RegisterRef(Reg), RegisterRef(MI)))
-      AS.insert(MI);
-  }
   return AS;
 }
 
@@ -162,10 +153,10 @@ bool PhysicalRegisterInfo::aliasRM(RegisterRef RR, RegisterRef RM) const {
   // is a superset of the lane mask from the register class, check the regmask
   // bit directly.
   if (RR.Mask == LaneBitmask::getAll())
-    return !Preserved;
+    return Preserved;
   const TargetRegisterClass *RC = RegInfos[RR.Reg].RegClass;
   if (RC != nullptr && (RR.Mask & RC->LaneMask) == RC->LaneMask)
-    return !Preserved;
+    return Preserved;
 
   // Otherwise, check all subregisters whose lane mask overlaps the given
   // mask. For each such register, if it is preserved by the regmask, then

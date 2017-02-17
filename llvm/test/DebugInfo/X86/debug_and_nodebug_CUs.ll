@@ -24,7 +24,7 @@
 ; Ensure we can successfully generate assembly, and check that neither
 ; "b.cpp" nor "f3" strings show up (which would be in the .debug_str
 ; section if we had generated any lexical scopes and debug for them).
-; RUN: llc %s -o - | FileCheck %s
+; RUN: llc -mtriple=x86_64-unknown-linux-gnu %s -o - | FileCheck %s
 ; CHECK-NOT: .asciz  "b.cpp"
 ; CHECK-NOT: .asciz  "f3"
 

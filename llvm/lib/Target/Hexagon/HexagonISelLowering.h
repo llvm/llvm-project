@@ -163,7 +163,7 @@ namespace HexagonISD {
     SDValue LowerToTLSLocalExecModel(GlobalAddressSDNode *GA,
         SelectionDAG &DAG) const;
     SDValue GetDynamicTLSAddr(SelectionDAG &DAG, SDValue Chain,
-        GlobalAddressSDNode *GA, SDValue InFlag, EVT PtrVT,
+        GlobalAddressSDNode *GA, SDValue *InFlag, EVT PtrVT,
         unsigned ReturnReg, unsigned char OperandFlags) const;
     SDValue LowerGLOBAL_OFFSET_TABLE(SDValue Op, SelectionDAG &DAG) const;
 

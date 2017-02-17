@@ -1413,19 +1413,9 @@ bool HexagonInstrInfo::DefinesPredicate(
   auto &HRI = getRegisterInfo();
   for (unsigned oper = 0; oper < MI.getNumOperands(); ++oper) {
     MachineOperand MO = MI.getOperand(oper);
-    if (MO.isReg()) {
-      if (!MO.isDef())
-        continue;
+    if (MO.isReg() && MO.isDef()) {
       const TargetRegisterClass* RC = HRI.getMinimalPhysRegClass(MO.getReg());
       if (RC == &Hexagon::PredRegsRegClass) {
-        Pred.push_back(MO);
-        return true;
-      }
-      continue;
-    } else if (MO.isRegMask()) {
-      for (unsigned PR : Hexagon::PredRegsRegClass) {
-        if (!MI.modifiesRegister(PR, &HRI))
-          continue;
         Pred.push_back(MO);
         return true;
       }
@@ -3019,12 +3009,10 @@ bool HexagonInstrInfo::producesStall(const MachineInstr &MI,
 
 bool HexagonInstrInfo::predCanBeUsedAsDotNew(const MachineInstr &MI,
       unsigned PredReg) const {
-  for (const MachineOperand &MO : MI.operands()) {
-    // Predicate register must be explicitly defined.
-    if (MO.isRegMask() && MO.clobbersPhysReg(PredReg))
-      return false;
+  for (unsigned opNum = 0; opNum < MI.getNumOperands(); opNum++) {
+    const MachineOperand &MO = MI.getOperand(opNum);
     if (MO.isReg() && MO.isDef() && MO.isImplicit() && (MO.getReg() == PredReg))
-      return false;
+      return false; // Predicate register must be explicitly defined.
   }
 
   // Hexagon Programmer's Reference says that decbin, memw_locked, and

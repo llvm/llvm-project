@@ -62,19 +62,9 @@ bool DeadCodeElimination::isLiveInstr(const MachineInstr *MI) const {
     return true;
   if (MI->isPHI())
     return false;
-  for (auto &Op : MI->operands()) {
+  for (auto &Op : MI->operands())
     if (Op.isReg() && MRI.isReserved(Op.getReg()))
       return true;
-    if (Op.isRegMask()) {
-      const uint32_t *BM = Op.getRegMask();
-      for (unsigned R = 0, RN = DFG.getTRI().getNumRegs(); R != RN; ++R) {
-        if (BM[R/32] & (1u << (R%32)))
-          continue;
-        if (MRI.isReserved(R))
-          return true;
-      }
-    }
-  }
   return false;
 }
 

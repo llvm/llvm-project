@@ -4665,6 +4665,7 @@ let Defs = [PC, R31];
 let BaseOpcode = "J2_call";
 let isPredicable = 1;
 let hasSideEffects = 1;
+let Defs = VolatileV3.Regs;
 let isExtendable = 1;
 let opExtendable = 0;
 let isExtentSigned = 1;
@@ -4689,6 +4690,7 @@ let Defs = [PC, R31];
 let BaseOpcode = "J2_call";
 let hasSideEffects = 1;
 let isTaken = Inst{12};
+let Defs = VolatileV3.Regs;
 let isExtendable = 1;
 let opExtendable = 1;
 let isExtentSigned = 1;
@@ -4708,6 +4710,7 @@ let prefersSlot3 = 1;
 let Uses = [R29];
 let Defs = [PC, R31];
 let hasSideEffects = 1;
+let Defs = VolatileV3.Regs;
 }
 def J2_callrf : HInst<
 (outs),
@@ -4726,6 +4729,7 @@ let Uses = [R29];
 let Defs = [PC, R31];
 let hasSideEffects = 1;
 let isTaken = Inst{12};
+let Defs = VolatileV3.Regs;
 }
 def J2_callrt : HInst<
 (outs),
@@ -4743,6 +4747,7 @@ let Uses = [R29];
 let Defs = [PC, R31];
 let hasSideEffects = 1;
 let isTaken = Inst{12};
+let Defs = VolatileV3.Regs;
 }
 def J2_callt : HInst<
 (outs),
@@ -4761,6 +4766,7 @@ let Defs = [PC, R31];
 let BaseOpcode = "J2_call";
 let hasSideEffects = 1;
 let isTaken = Inst{12};
+let Defs = VolatileV3.Regs;
 let isExtendable = 1;
 let opExtendable = 1;
 let isExtentSigned = 1;

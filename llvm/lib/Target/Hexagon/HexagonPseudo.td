@@ -141,12 +141,13 @@ defm J2_loop1 : LOOP_ri<"loop1">;
 let isCall = 1, hasSideEffects = 1, isPredicable = 0,
     isExtended = 0, isExtendable = 1, opExtendable = 0,
     isExtentSigned = 1, opExtentBits = 24, opExtentAlign = 2 in
-class T_Call<string ExtStr>
+class T_Call<bit CSR, string ExtStr>
   : JInst<(outs), (ins a30_2Imm:$dst),
       "call " # ExtStr # "$dst", [], "", J_tc_2early_SLOT23> {
   let BaseOpcode = "call";
   bits<24> dst;
 
+  let Defs = !if (CSR, VolatileV3.Regs, []);
   let IClass = 0b0101;
   let Inst{27-25} = 0b101;
   let Inst{24-16,13-1} = dst{23-2};
@@ -155,11 +156,11 @@ class T_Call<string ExtStr>
 
 let isCodeGenOnly = 1, isCall = 1, hasSideEffects = 1, Defs = [R16],
     isPredicable = 0 in
-def CALLProfile :  T_Call<"">;
+def CALLProfile :  T_Call<1, "">;
 
 let isCodeGenOnly = 1, isCall = 1, hasSideEffects = 1,
     Defs = [PC, R31, R6, R7, P0] in
-def PS_call_stk : T_Call<"">;
+def PS_call_stk : T_Call<0, "">;
 
 let isCall = 1, hasSideEffects = 1, cofMax1 = 1 in
 class JUMPR_MISC_CALLR<bit isPred, bit isPredNot,
@@ -184,11 +185,11 @@ class JUMPR_MISC_CALLR<bit isPred, bit isPredNot,
 
   }
 
-let isCodeGenOnly = 1 in {
+let isCodeGenOnly = 1, Defs = VolatileV3.Regs in {
   def PS_callr_nr : JUMPR_MISC_CALLR<0, 1>; // Call, no return.
 }
 
-let isCall = 1, hasSideEffects = 1,
+let isCall = 1, hasSideEffects = 1, Defs = VolatileV3.Regs,
     isExtended = 0, isExtendable = 1, opExtendable = 0, isCodeGenOnly = 1,
     BaseOpcode = "PS_call_nr", isExtentSigned = 1, opExtentAlign = 2,
     Itinerary = J_tc_2early_SLOT23 in
@@ -374,43 +375,43 @@ let isCall = 1, isBarrier = 1, isReturn = 1, isTerminator = 1,
 
 // Restore registers and dealloc frame before a tail call.
 let isCall = 1, Defs = [R29, R30, R31, PC], isAsmParserOnly = 1 in {
-  def RESTORE_DEALLOC_BEFORE_TAILCALL_V4 : T_Call<"">, PredRel;
+  def RESTORE_DEALLOC_BEFORE_TAILCALL_V4 : T_Call<0, "">, PredRel;
 
   let isExtended = 1, opExtendable = 0 in
-  def RESTORE_DEALLOC_BEFORE_TAILCALL_V4_EXT : T_Call<"">, PredRel;
+  def RESTORE_DEALLOC_BEFORE_TAILCALL_V4_EXT : T_Call<0, "">, PredRel;
 
   let Defs = [R14, R15, R28, R29, R30, R31, PC] in {
-    def RESTORE_DEALLOC_BEFORE_TAILCALL_V4_PIC : T_Call<"">, PredRel;
+    def RESTORE_DEALLOC_BEFORE_TAILCALL_V4_PIC : T_Call<0, "">, PredRel;
 
     let isExtended = 1, opExtendable = 0 in
-    def RESTORE_DEALLOC_BEFORE_TAILCALL_V4_EXT_PIC : T_Call<"">, PredRel;
+    def RESTORE_DEALLOC_BEFORE_TAILCALL_V4_EXT_PIC : T_Call<0, "">, PredRel;
   }
 }
 
 // Save registers function call.
 let isCall = 1, Uses = [R29, R31], isAsmParserOnly = 1 in {
-  def SAVE_REGISTERS_CALL_V4 : T_Call<"">, PredRel;
+  def SAVE_REGISTERS_CALL_V4 : T_Call<0, "">, PredRel;
 
   let isExtended = 1, opExtendable = 0 in
-  def SAVE_REGISTERS_CALL_V4_EXT : T_Call<"">, PredRel;
+  def SAVE_REGISTERS_CALL_V4_EXT : T_Call<0, "">, PredRel;
 
   let Defs = [P0] in
-  def SAVE_REGISTERS_CALL_V4STK : T_Call<"">, PredRel;
+  def SAVE_REGISTERS_CALL_V4STK : T_Call<0, "">, PredRel;
 
   let Defs = [P0], isExtended = 1, opExtendable = 0 in
-  def SAVE_REGISTERS_CALL_V4STK_EXT : T_Call<"">, PredRel;
+  def SAVE_REGISTERS_CALL_V4STK_EXT : T_Call<0, "">, PredRel;
 
   let Defs = [R14, R15, R28] in
-  def SAVE_REGISTERS_CALL_V4_PIC : T_Call<"">, PredRel;
+  def SAVE_REGISTERS_CALL_V4_PIC : T_Call<0, "">, PredRel;
 
   let Defs = [R14, R15, R28], isExtended = 1, opExtendable = 0 in
-  def SAVE_REGISTERS_CALL_V4_EXT_PIC : T_Call<"">, PredRel;
+  def SAVE_REGISTERS_CALL_V4_EXT_PIC : T_Call<0, "">, PredRel;
 
   let Defs = [R14, R15, R28, P0] in
-  def SAVE_REGISTERS_CALL_V4STK_PIC : T_Call<"">, PredRel;
+  def SAVE_REGISTERS_CALL_V4STK_PIC : T_Call<0, "">, PredRel;
 
   let Defs = [R14, R15, R28, P0], isExtended = 1, opExtendable = 0 in
-  def SAVE_REGISTERS_CALL_V4STK_EXT_PIC : T_Call<"">, PredRel;
+  def SAVE_REGISTERS_CALL_V4STK_EXT_PIC : T_Call<0, "">, PredRel;
 }
 
 // Vector load/store pseudos

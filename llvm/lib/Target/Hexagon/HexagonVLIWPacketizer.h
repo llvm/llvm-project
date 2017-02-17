@@ -112,7 +112,6 @@ protected:
   void reserveResourcesForConstExt();
   bool hasDeadDependence(const MachineInstr &I, const MachineInstr &J);
   bool hasControlDependence(const MachineInstr &I, const MachineInstr &J);
-  bool hasRegMaskDependence(const MachineInstr &I, const MachineInstr &J);
   bool hasV4SpecificDependence(const MachineInstr &I, const MachineInstr &J);
   bool producesStall(const MachineInstr &MI);
 };
