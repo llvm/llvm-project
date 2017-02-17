@@ -145,7 +145,7 @@ static __isl_give TYPE *SF(basic_map_partial_lexopt,SUFFIX)(
 	__isl_take isl_basic_map *bmap, __isl_take isl_basic_set *dom,
 	__isl_give isl_set **empty, int max)
 {
-	int par = 0;
+	isl_bool par = isl_bool_false;
 	int first, second;
 
 	if (!bmap)

@@ -568,7 +568,7 @@ static __isl_give isl_schedule_tree *read_band(isl_stream *s)
 
 		switch (key) {
 		case isl_schedule_key_schedule:
-			isl_multi_union_pw_aff_free(schedule);
+			schedule = isl_multi_union_pw_aff_free(schedule);
 			tok = isl_stream_next_token(s);
 			if (!tok) {
 				isl_stream_error(s, NULL, "unexpected EOF");

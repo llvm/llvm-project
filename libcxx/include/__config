@@ -482,14 +482,13 @@ namespace std {
 
 #endif  // __GXX_EXPERIMENTAL_CXX0X__
 
-#define _LIBCPP_BEGIN_NAMESPACE_STD namespace std { namespace _LIBCPP_NAMESPACE {
+#define _LIBCPP_BEGIN_NAMESPACE_STD namespace std { inline namespace _LIBCPP_NAMESPACE {
 #define _LIBCPP_END_NAMESPACE_STD  } }
 #define _VSTD std::_LIBCPP_NAMESPACE
 
 namespace std {
-namespace _LIBCPP_NAMESPACE {
-}
-using namespace _LIBCPP_NAMESPACE __attribute__((__strong__));
+  inline namespace _LIBCPP_NAMESPACE {
+  }
 }
 
 #if !defined(_LIBCPP_HAS_NO_ASAN) && !defined(__SANITIZE_ADDRESS__)
