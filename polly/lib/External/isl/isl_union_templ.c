@@ -1055,6 +1055,39 @@ error:
 	return isl_bool_error;
 }
 
+/* Check whether the element that "entry" points to involves any NaNs and
+ * store the result in *nan.
+ * Abort as soon as one such element has been found.
+ */
+static isl_stat FN(UNION,involves_nan_entry)(void **entry, void *user)
+{
+	isl_bool *nan = user;
+	PW *pw = *entry;
+
+	*nan = FN(PW,involves_nan)(pw);
+	if (*nan < 0 || !nan)
+		return isl_stat_error;
+
+	return isl_stat_ok;
+}
+
+/* Does "u" involve any NaNs?
+ */
+isl_bool FN(UNION,involves_nan)(__isl_keep UNION *u)
+{
+	isl_bool nan = isl_bool_false;
+
+	if (!u)
+		return isl_bool_error;
+
+	if (FN(UNION,foreach_inplace)(u,
+				    &FN(UNION,involves_nan_entry), &nan) < 0 &&
+	    !nan)
+		return isl_bool_error;
+
+	return nan;
+}
+
 /* Internal data structure for isl_union_*_drop_dims.
  * type, first and n are passed to isl_*_drop_dims.
  */

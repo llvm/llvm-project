@@ -235,6 +235,7 @@ int Error::SetErrorStringWithVarArg(const char *format, va_list args) {
 
     llvm::SmallString<1024> buf;
     VASprintf(buf, format, args);
+    m_string = buf.str();
     return buf.size();
   } else {
     m_string.clear();

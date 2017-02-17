@@ -773,9 +773,11 @@ int isl_constraint_is_div_constraint(__isl_keep isl_constraint *constraint)
 		return 0;
 	n_div = isl_constraint_dim(constraint, isl_dim_div);
 	for (i = 0; i < n_div; ++i) {
-		if (isl_local_space_is_div_constraint(constraint->ls,
-							constraint->v->el, i))
-			return 1;
+		isl_bool is_div;
+		is_div = isl_local_space_is_div_constraint(constraint->ls,
+							constraint->v->el, i);
+		if (is_div < 0 || is_div)
+			return is_div;
 	}
 
 	return 0;
@@ -845,7 +847,7 @@ error:
  *
  * If so, and if c is not NULL, then return a copy of this equality in *c.
  */
-int isl_basic_map_has_defining_equality(
+isl_bool isl_basic_map_has_defining_equality(
 	__isl_keep isl_basic_map *bmap, enum isl_dim_type type, int pos,
 	__isl_give isl_constraint **c)
 {
@@ -854,10 +856,12 @@ int isl_basic_map_has_defining_equality(
 	unsigned total;
 
 	if (!bmap)
-		return -1;
+		return isl_bool_error;
 	offset = basic_map_offset(bmap, type);
 	total = isl_basic_map_total_dim(bmap);
-	isl_assert(bmap->ctx, pos < isl_basic_map_dim(bmap, type), return -1);
+	if (pos >= isl_basic_map_dim(bmap, type))
+		isl_die(isl_basic_map_get_ctx(bmap), isl_error_invalid,
+			"invalid position", return isl_bool_error);
 	for (i = 0; i < bmap->n_eq; ++i) {
 		if (isl_int_is_zero(bmap->eq[i][offset + pos]) ||
 		    isl_seq_first_non_zero(bmap->eq[i]+offset+pos+1,
@@ -866,9 +870,9 @@ int isl_basic_map_has_defining_equality(
 		if (c)
 			*c = isl_basic_map_constraint(isl_basic_map_copy(bmap),
 								&bmap->eq[i]);
-		return 1;
+		return isl_bool_true;
 	}
-	return 0;
+	return isl_bool_false;
 }
 
 /* Is the variable of "type" at position "pos" of "bset" defined
@@ -876,7 +880,7 @@ int isl_basic_map_has_defining_equality(
  *
  * If so, and if c is not NULL, then return a copy of this equality in *c.
  */
-int isl_basic_set_has_defining_equality(
+isl_bool isl_basic_set_has_defining_equality(
 	__isl_keep isl_basic_set *bset, enum isl_dim_type type, int pos,
 	__isl_give isl_constraint **c)
 {
@@ -884,7 +888,7 @@ int isl_basic_set_has_defining_equality(
 						    type, pos, c);
 }
 
-int isl_basic_set_has_defining_inequalities(
+isl_bool isl_basic_set_has_defining_inequalities(
 	struct isl_basic_set *bset, enum isl_dim_type type, int pos,
 	struct isl_constraint **lower,
 	struct isl_constraint **upper)
@@ -896,10 +900,12 @@ int isl_basic_set_has_defining_inequalities(
 	isl_int **lower_line, **upper_line;
 
 	if (!bset)
-		return -1;
+		return isl_bool_error;
 	offset = basic_set_offset(bset, type);
 	total = isl_basic_set_total_dim(bset);
-	isl_assert(bset->ctx, pos < isl_basic_set_dim(bset, type), return -1);
+	if (pos >= isl_basic_set_dim(bset, type))
+		isl_die(isl_basic_set_get_ctx(bset), isl_error_invalid,
+			"invalid position", return isl_bool_error);
 	isl_int_init(m);
 	for (i = 0; i < bset->n_ineq; ++i) {
 		if (isl_int_is_zero(bset->ineq[i][offset + pos]))
@@ -931,13 +937,13 @@ int isl_basic_set_has_defining_inequalities(
 			*upper = isl_basic_set_constraint(
 					isl_basic_set_copy(bset), upper_line);
 			isl_int_clear(m);
-			return 1;
+			return isl_bool_true;
 		}
 	}
 	*lower = NULL;
 	*upper = NULL;
 	isl_int_clear(m);
-	return 0;
+	return isl_bool_false;
 }
 
 /* Given two constraints "a" and "b" on the variable at position "abs_pos"

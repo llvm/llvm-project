@@ -8,7 +8,7 @@
 ; CHECK:         Statements {
 ; CHECK-NEXT:    	Stmt_if_then
 ; CHECK-NEXT:            Domain :=
-; CHECK-NEXT:                [N] -> { Stmt_if_then[i0] : 2*floor((-1 + i0)/2) = -1 + i0 and 0 < i0 < N };
+; CHECK-NEXT:                [N] -> { Stmt_if_then[i0] : 2*floor((1 + i0)/2) = 1 + i0 and 0 < i0 < N }
 ; CHECK-NEXT:            Schedule :=
 ; CHECK-NEXT:                [N] -> { Stmt_if_then[i0] -> [i0] };
 ; CHECK-NEXT:            ReadAccess :=	[Reduction Type: +] [Scalar: 0]

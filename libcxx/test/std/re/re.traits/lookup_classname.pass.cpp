@@ -35,7 +35,7 @@ test(const char_type* A,
 int main()
 {
 //  if __regex_word is not distinct from all the classes, bad things happen
-//  See https://llvm.org/bugs/show_bug.cgi?id=26476 for an example.
+//  See https://bugs.llvm.org/show_bug.cgi?id=26476 for an example.
     assert((std::ctype_base::space  & std::regex_traits<char>::__regex_word) == 0);
     assert((std::ctype_base::print  & std::regex_traits<char>::__regex_word) == 0);
     assert((std::ctype_base::cntrl  & std::regex_traits<char>::__regex_word) == 0);

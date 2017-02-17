@@ -464,10 +464,15 @@ static int next_is_opposite(__isl_keep isl_basic_map *bmap, int i, int last)
 		return 0;
 	if (isl_seq_last_non_zero(bmap->ineq[i + 1], 1 + total) != last)
 		return 0;
-	if (last >= o_div &&
-	    isl_basic_map_is_div_constraint(bmap, bmap->ineq[i + 1],
-					    last - o_div))
-		return 0;
+	if (last >= o_div) {
+		isl_bool is_div;
+		is_div = isl_basic_map_is_div_constraint(bmap,
+					    bmap->ineq[i + 1], last - o_div);
+		if (is_div < 0)
+			return -1;
+		if (is_div)
+			return 0;
+	}
 	return isl_int_abs_eq(bmap->ineq[i][last], bmap->ineq[i + 1][last]) &&
 		!isl_int_eq(bmap->ineq[i][last], bmap->ineq[i + 1][last]);
 }
@@ -642,10 +647,15 @@ static __isl_give isl_printer *print_constraints(__isl_keep isl_basic_map *bmap,
 		if (l < 0)
 			continue;
 		if (!dump && l >= o_div &&
-		    can_print_div_expr(p, div, l - o_div) &&
-		    isl_basic_map_is_div_constraint(bmap, bmap->ineq[i],
-						    l - o_div))
-			continue;
+		    can_print_div_expr(p, div, l - o_div)) {
+			isl_bool is_div;
+			is_div = isl_basic_map_is_div_constraint(bmap,
+						    bmap->ineq[i], l - o_div);
+			if (is_div < 0)
+				goto error;
+			if (is_div)
+				continue;
+		}
 		s = isl_int_sgn(bmap->ineq[i][l]);
 		strict = !rational && isl_int_is_negone(bmap->ineq[i][0]);
 		if (s < 0)
@@ -1955,8 +1965,13 @@ static __isl_give isl_printer *print_constraint_c(__isl_take isl_printer *p,
 	o_div = isl_basic_set_offset(bset, isl_dim_div);
 	n_div = isl_basic_set_dim(bset, isl_dim_div);
 	div = isl_seq_last_non_zero(c + o_div, n_div);
-	if (div >= 0 && isl_basic_set_is_div_constraint(bset, c, div))
-		return p;
+	if (div >= 0) {
+		isl_bool is_div = isl_basic_set_is_div_constraint(bset, c, div);
+		if (is_div < 0)
+			return isl_printer_free(p);
+		if (is_div)
+			return p;
+	}
 
 	if (!*first)
 		p = isl_printer_print_str(p, " && ");

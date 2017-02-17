@@ -531,25 +531,25 @@ __isl_give isl_set *isl_union_set_extract_set(__isl_keep isl_union_set *uset,
 
 /* Check if umap contains a map in the given space.
  */
-__isl_give int isl_union_map_contains(__isl_keep isl_union_map *umap,
-	__isl_keep isl_space *dim)
+isl_bool isl_union_map_contains(__isl_keep isl_union_map *umap,
+	__isl_keep isl_space *space)
 {
 	uint32_t hash;
 	struct isl_hash_table_entry *entry;
 
-	if (!umap || !dim)
-		return -1;
+	if (!umap || !space)
+		return isl_bool_error;
 
-	hash = isl_space_get_hash(dim);
+	hash = isl_space_get_hash(space);
 	entry = isl_hash_table_find(umap->dim->ctx, &umap->table, hash,
-				    &has_dim, dim, 0);
+				    &has_dim, space, 0);
 	return !!entry;
 }
 
-__isl_give int isl_union_set_contains(__isl_keep isl_union_set *uset,
-	__isl_keep isl_space *dim)
+isl_bool isl_union_set_contains(__isl_keep isl_union_set *uset,
+	__isl_keep isl_space *space)
 {
-	return isl_union_map_contains(uset, dim);
+	return isl_union_map_contains(uset, space);
 }
 
 isl_stat isl_union_set_foreach_set(__isl_keep isl_union_set *uset,

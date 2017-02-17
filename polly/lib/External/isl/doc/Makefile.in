@@ -95,6 +95,7 @@ am__aclocal_m4_deps = $(top_srcdir)/m4/ax_c___attribute__.m4 \
 	$(top_srcdir)/m4/ax_compiler_vendor.m4 \
 	$(top_srcdir)/m4/ax_create_pkgconfig_info.m4 \
 	$(top_srcdir)/m4/ax_create_stdint_h.m4 \
+	$(top_srcdir)/m4/ax_detect_clang.m4 \
 	$(top_srcdir)/m4/ax_detect_git_head.m4 \
 	$(top_srcdir)/m4/ax_detect_gmp.m4 \
 	$(top_srcdir)/m4/ax_detect_imath.m4 \
