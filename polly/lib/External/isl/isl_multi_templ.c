@@ -291,7 +291,7 @@ __isl_give MULTI(BASE) *FN(FN(MULTI(BASE),set),BASE)(
 {
 	isl_space *multi_space = NULL;
 	isl_space *el_space = NULL;
-	int match;
+	isl_bool match;
 
 	multi = FN(MULTI(BASE),cow)(multi);
 	if (!multi || !el)
@@ -1440,6 +1440,26 @@ isl_bool FN(MULTI(BASE),plain_is_equal)(__isl_keep MULTI(BASE) *multi1,
 	}
 
 	return isl_bool_true;
+}
+
+/* Does "multi" involve any NaNs?
+ */
+isl_bool FN(MULTI(BASE),involves_nan)(__isl_keep MULTI(BASE) *multi)
+{
+	int i;
+
+	if (!multi)
+		return isl_bool_error;
+	if (multi->n == 0)
+		return isl_bool_false;
+
+	for (i = 0; i < multi->n; ++i) {
+		isl_bool has_nan = FN(EL,involves_nan)(multi->p[i]);
+		if (has_nan < 0 || has_nan)
+			return has_nan;
+	}
+
+	return isl_bool_false;
 }
 
 #ifndef NO_DOMAIN

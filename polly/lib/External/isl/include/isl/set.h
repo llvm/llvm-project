@@ -218,7 +218,7 @@ __isl_give isl_basic_set *isl_basic_set_from_params(
 __isl_give isl_set *isl_set_params(__isl_take isl_set *set);
 __isl_give isl_set *isl_set_from_params(__isl_take isl_set *set);
 
-int isl_basic_set_dims_get_sign(__isl_keep isl_basic_set *bset,
+isl_stat isl_basic_set_dims_get_sign(__isl_keep isl_basic_set *bset,
 	enum isl_dim_type type, unsigned pos, unsigned n, int *signs);
 
 isl_bool isl_basic_set_plain_is_universe(__isl_keep isl_basic_set *bset);
@@ -226,7 +226,7 @@ isl_bool isl_basic_set_is_universe(__isl_keep isl_basic_set *bset);
 isl_bool isl_basic_set_plain_is_empty(__isl_keep isl_basic_set *bset);
 __isl_export
 isl_bool isl_basic_set_is_empty(__isl_keep isl_basic_set *bset);
-int isl_basic_set_is_bounded(__isl_keep isl_basic_set *bset);
+isl_bool isl_basic_set_is_bounded(__isl_keep isl_basic_set *bset);
 __isl_export
 isl_bool isl_basic_set_is_subset(__isl_keep isl_basic_set *bset1,
 	__isl_keep isl_basic_set *bset2);
@@ -376,7 +376,7 @@ isl_bool isl_set_plain_is_universe(__isl_keep isl_set *set);
 isl_bool isl_set_is_params(__isl_keep isl_set *set);
 __isl_export
 isl_bool isl_set_is_empty(__isl_keep isl_set *set);
-int isl_set_is_bounded(__isl_keep isl_set *set);
+isl_bool isl_set_is_bounded(__isl_keep isl_set *set);
 __isl_export
 isl_bool isl_set_is_subset(__isl_keep isl_set *set1, __isl_keep isl_set *set2);
 __isl_export
@@ -388,8 +388,9 @@ __isl_export
 isl_bool isl_set_is_disjoint(__isl_keep isl_set *set1,
 	__isl_keep isl_set *set2);
 isl_bool isl_set_is_singleton(__isl_keep isl_set *set);
-int isl_set_is_box(__isl_keep isl_set *set);
-int isl_set_has_equal_space(__isl_keep isl_set *set1, __isl_keep isl_set *set2);
+isl_bool isl_set_is_box(__isl_keep isl_set *set);
+isl_bool isl_set_has_equal_space(__isl_keep isl_set *set1,
+	__isl_keep isl_set *set2);
 
 __isl_give isl_set *isl_set_sum(__isl_take isl_set *set1,
 	__isl_take isl_set *set2);
@@ -409,7 +410,7 @@ struct isl_set *isl_set_drop_basic_set(struct isl_set *set,
 
 __isl_give isl_val *isl_set_plain_get_val_if_fixed(__isl_keep isl_set *set,
 	enum isl_dim_type type, unsigned pos);
-int isl_set_dim_is_bounded(__isl_keep isl_set *set,
+isl_bool isl_set_dim_is_bounded(__isl_keep isl_set *set,
 	enum isl_dim_type type, unsigned pos);
 isl_bool isl_set_dim_has_lower_bound(__isl_keep isl_set *set,
 	enum isl_dim_type type, unsigned pos);

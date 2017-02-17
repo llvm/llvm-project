@@ -7,6 +7,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+// FIXME: cxa_exception.hpp directly references `std::unexpected` and friends.
+// This breaks this test when compiled in C++17. For now fix this by manually
+// re-enabling the STL functions.
+#define _LIBCPP_ENABLE_CXX17_REMOVED_UNEXPECTED_FUNCTIONS
 #include "../src/config.h"
 
 #include <cstdlib>

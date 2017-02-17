@@ -842,7 +842,7 @@ __isl_give isl_ast_build *isl_ast_build_set_loop_bounds(
 	build = update_values(build, isl_basic_set_copy(bounds));
 	if (!build)
 		goto error;
-	set = isl_set_from_basic_set(bounds);
+	set = isl_set_from_basic_set(isl_basic_set_copy(bounds));
 	if (isl_ast_build_has_affine_value(build, build->depth)) {
 		set = isl_set_eliminate(set, isl_dim_set, build->depth, 1);
 		set = isl_set_compute_divs(set);
@@ -855,6 +855,7 @@ __isl_give isl_ast_build *isl_ast_build_set_loop_bounds(
 		if (!build)
 			goto error;
 	}
+	isl_basic_set_free(bounds);
 
 	if (!build->domain || !build->pending || !build->generated)
 		return isl_ast_build_free(build);

@@ -133,16 +133,15 @@ struct isl_context_lex {
 
 /* A stack (linked list) of solutions of subtrees of the search space.
  *
- * "M" describes the solution in terms of the dimensions of "dom".
- * The number of columns of "M" is one more than the total number
- * of dimensions of "dom".
+ * "ma" describes the solution as a function of "dom".
+ * In particular, the domain space of "ma" is equal to the space of "dom".
  *
- * If "M" is NULL, then there is no solution on "dom".
+ * If "ma" is NULL, then there is no solution on "dom".
  */
 struct isl_partial_sol {
 	int level;
 	struct isl_basic_set *dom;
-	struct isl_mat *M;
+	isl_multi_aff *ma;
 
 	struct isl_partial_sol *next;
 };
@@ -156,16 +155,29 @@ struct isl_sol_callback {
 /* isl_sol is an interface for constructing a solution to
  * a parametric integer linear programming problem.
  * Every time the algorithm reaches a state where a solution
- * can be read off from the tableau (including cases where the tableau
- * is empty), the function "add" is called on the isl_sol passed
- * to find_solutions_main.
+ * can be read off from the tableau, the function "add" is called
+ * on the isl_sol passed to find_solutions_main.  In a state where
+ * the tableau is empty, "add_empty" is called instead.
+ * "free" is called to free the implementation specific fields, if any.
+ *
+ * "error" is set if some error has occurred.  This flag invalidates
+ * the remainder of the data structure.
+ * If "rational" is set, then a rational optimization is being performed.
+ * "level" is the current level in the tree with nodes for each
+ * split in the context.
+ * If "max" is set, then a maximization problem is being solved, rather than
+ * a minimization problem, which means that the variables in the
+ * tableau have value "M - x" rather than "M + x".
+ * "n_out" is the number of output dimensions in the input.
+ * "space" is the space in which the solution (and also the input) lives.
  *
  * The context tableau is owned by isl_sol and is updated incrementally.
  *
- * There are currently two implementations of this interface,
+ * There are currently three implementations of this interface,
  * isl_sol_map, which simply collects the solutions in an isl_map
  * and (optionally) the parts of the context where there is no solution
- * in an isl_set, and
+ * in an isl_set,
+ * isl_sol_pma, which collects an isl_pw_multi_aff instead, and
  * isl_sol_for, which calls a user-defined function for each part of
  * the solution.
  */
@@ -175,10 +187,11 @@ struct isl_sol {
 	int level;
 	int max;
 	int n_out;
+	isl_space *space;
 	struct isl_context *context;
 	struct isl_partial_sol *partial;
 	void (*add)(struct isl_sol *sol,
-			    struct isl_basic_set *dom, struct isl_mat *M);
+		__isl_take isl_basic_set *dom, __isl_take isl_multi_aff *ma);
 	void (*add_empty)(struct isl_sol *sol, struct isl_basic_set *bset);
 	void (*free)(struct isl_sol *sol);
 	struct isl_sol_callback	dec_level;
@@ -192,17 +205,23 @@ static void sol_free(struct isl_sol *sol)
 	for (partial = sol->partial; partial; partial = next) {
 		next = partial->next;
 		isl_basic_set_free(partial->dom);
-		isl_mat_free(partial->M);
+		isl_multi_aff_free(partial->ma);
 		free(partial);
 	}
+	isl_space_free(sol->space);
+	if (sol->context)
+		sol->context->op->free(sol->context);
 	sol->free(sol);
+	free(sol);
 }
 
-/* Push a partial solution represented by a domain and mapping M
+/* Push a partial solution represented by a domain and function "ma"
  * onto the stack of partial solutions.
+ * If "ma" is NULL, then "dom" represents a part of the domain
+ * with no solution.
  */
 static void sol_push_sol(struct isl_sol *sol,
-	struct isl_basic_set *dom, struct isl_mat *M)
+	__isl_take isl_basic_set *dom, __isl_take isl_multi_aff *ma)
 {
 	struct isl_partial_sol *partial;
 
@@ -215,7 +234,7 @@ static void sol_push_sol(struct isl_sol *sol,
 
 	partial->level = sol->level;
 	partial->dom = dom;
-	partial->M = M;
+	partial->ma = ma;
 	partial->next = sol->partial;
 
 	sol->partial = partial;
@@ -223,8 +242,108 @@ static void sol_push_sol(struct isl_sol *sol,
 	return;
 error:
 	isl_basic_set_free(dom);
-	isl_mat_free(M);
+	isl_multi_aff_free(ma);
 	sol->error = 1;
+}
+
+/* Check that the final columns of "M", starting at "first", are zero.
+ */
+static isl_stat check_final_columns_are_zero(__isl_keep isl_mat *M,
+	unsigned first)
+{
+	int i;
+	unsigned rows, cols, n;
+
+	if (!M)
+		return isl_stat_error;
+	rows = isl_mat_rows(M);
+	cols = isl_mat_cols(M);
+	n = cols - first;
+	for (i = 0; i < rows; ++i)
+		if (isl_seq_first_non_zero(M->row[i] + first, n) != -1)
+			isl_die(isl_mat_get_ctx(M), isl_error_internal,
+				"final columns should be zero",
+				return isl_stat_error);
+	return isl_stat_ok;
+}
+
+/* Set the affine expressions in "ma" according to the rows in "M", which
+ * are defined over the local space "ls".
+ * The matrix "M" may have extra (zero) columns beyond the number
+ * of variables in "ls".
+ */
+static __isl_give isl_multi_aff *set_from_affine_matrix(
+	__isl_take isl_multi_aff *ma, __isl_take isl_local_space *ls,
+	__isl_take isl_mat *M)
+{
+	int i, dim;
+	isl_aff *aff;
+
+	if (!ma || !ls || !M)
+		goto error;
+
+	dim = isl_local_space_dim(ls, isl_dim_all);
+	if (check_final_columns_are_zero(M, 1 + dim) < 0)
+		goto error;
+	for (i = 1; i < M->n_row; ++i) {
+		aff = isl_aff_alloc(isl_local_space_copy(ls));
+		if (aff) {
+			isl_int_set(aff->v->el[0], M->row[0][0]);
+			isl_seq_cpy(aff->v->el + 1, M->row[i], 1 + dim);
+		}
+		aff = isl_aff_normalize(aff);
+		ma = isl_multi_aff_set_aff(ma, i - 1, aff);
+	}
+	isl_local_space_free(ls);
+	isl_mat_free(M);
+
+	return ma;
+error:
+	isl_local_space_free(ls);
+	isl_mat_free(M);
+	isl_multi_aff_free(ma);
+	return NULL;
+}
+
+/* Push a partial solution represented by a domain and mapping M
+ * onto the stack of partial solutions.
+ *
+ * The affine matrix "M" maps the dimensions of the context
+ * to the output variables.  Convert it into an isl_multi_aff and
+ * then call sol_push_sol.
+ *
+ * Note that the description of the initial context may have involved
+ * existentially quantified variables, in which case they also appear
+ * in "dom".  These need to be removed before creating the affine
+ * expression because an affine expression cannot be defined in terms
+ * of existentially quantified variables without a known representation.
+ * Since newly added integer divisions are inserted before these
+ * existentially quantified variables, they are still in the final
+ * positions and the corresponding final columns of "M" are zero
+ * because align_context_divs adds the existentially quantified
+ * variables of the context to the main tableau without any constraints and
+ * any equality constraints that are added later on can only serve
+ * to eliminate these existentially quantified variables.
+ */
+static void sol_push_sol_mat(struct isl_sol *sol,
+	__isl_take isl_basic_set *dom, __isl_take isl_mat *M)
+{
+	isl_local_space *ls;
+	isl_multi_aff *ma;
+	int n_div, n_known;
+
+	n_div = isl_basic_set_dim(dom, isl_dim_div);
+	n_known = n_div - sol->context->n_unknown;
+
+	ma = isl_multi_aff_alloc(isl_space_copy(sol->space));
+	ls = isl_basic_set_get_local_space(dom);
+	ls = isl_local_space_drop_dims(ls, isl_dim_div,
+					n_known, n_div - n_known);
+	ma = set_from_affine_matrix(ma, ls, M);
+
+	if (!ma)
+		dom = isl_basic_set_free(dom);
+	sol_push_sol(sol, dom, ma);
 }
 
 /* Pop one partial solution from the partial solution stack and
@@ -237,8 +356,8 @@ static void sol_pop_one(struct isl_sol *sol)
 	partial = sol->partial;
 	sol->partial = partial->next;
 
-	if (partial->M)
-		sol->add(sol, partial->dom, partial->M);
+	if (partial->ma)
+		sol->add(sol, partial->dom, partial->ma);
 	else
 		sol->add_empty(sol, partial->dom);
 	free(partial);
@@ -260,33 +379,143 @@ static struct isl_basic_set *sol_domain(struct isl_sol *sol)
 	return bset;
 }
 
-/* Check whether two partial solutions have the same mapping, where n_div
- * is the number of divs that the two partial solutions have in common.
+/* Check whether two partial solutions have the same affine expressions.
  */
-static int same_solution(struct isl_partial_sol *s1, struct isl_partial_sol *s2,
-	unsigned n_div)
+static isl_bool same_solution(struct isl_partial_sol *s1,
+	struct isl_partial_sol *s2)
 {
-	int i;
-	unsigned dim;
+	if (!s1->ma != !s2->ma)
+		return isl_bool_false;
+	if (!s1->ma)
+		return isl_bool_true;
 
-	if (!s1->M != !s2->M)
-		return 0;
-	if (!s1->M)
-		return 1;
+	return isl_multi_aff_plain_is_equal(s1->ma, s2->ma);
+}
 
-	dim = isl_basic_set_total_dim(s1->dom) - s1->dom->n_div;
+/* Swap the initial two partial solutions in "sol".
+ *
+ * That is, go from
+ *
+ *	sol->partial = p1; p1->next = p2; p2->next = p3
+ *
+ * to
+ *
+ *	sol->partial = p2; p2->next = p1; p1->next = p3
+ */
+static void swap_initial(struct isl_sol *sol)
+{
+	struct isl_partial_sol *partial;
 
-	for (i = 0; i < s1->M->n_row; ++i) {
-		if (isl_seq_first_non_zero(s1->M->row[i]+1+dim+n_div,
-					    s1->M->n_col-1-dim-n_div) != -1)
-			return 0;
-		if (isl_seq_first_non_zero(s2->M->row[i]+1+dim+n_div,
-					    s2->M->n_col-1-dim-n_div) != -1)
-			return 0;
-		if (!isl_seq_eq(s1->M->row[i], s2->M->row[i], 1+dim+n_div))
-			return 0;
+	partial = sol->partial;
+	sol->partial = partial->next;
+	partial->next = partial->next->next;
+	sol->partial->next = partial;
+}
+
+/* Combine the initial two partial solution of "sol" into
+ * a partial solution with the current context domain of "sol" and
+ * the function description of the second partial solution in the list.
+ * The level of the new partial solution is set to the current level.
+ *
+ * That is, the first two partial solutions (D1,M1) and (D2,M2) are
+ * replaced by (D,M2), where D is the domain of "sol", which is assumed
+ * to be the union of D1 and D2, while M1 is assumed to be equal to M2
+ * (at least on D1).
+ */
+static isl_stat combine_initial_into_second(struct isl_sol *sol)
+{
+	struct isl_partial_sol *partial;
+	isl_basic_set *bset;
+
+	partial = sol->partial;
+
+	bset = sol_domain(sol);
+	isl_basic_set_free(partial->next->dom);
+	partial->next->dom = bset;
+	partial->next->level = sol->level;
+
+	if (!bset)
+		return isl_stat_error;
+
+	sol->partial = partial->next;
+	isl_basic_set_free(partial->dom);
+	isl_multi_aff_free(partial->ma);
+	free(partial);
+
+	return isl_stat_ok;
+}
+
+/* Are "ma1" and "ma2" equal to each other on "dom"?
+ *
+ * Combine "ma1" and "ma2" with "dom" and check if the results are the same.
+ * "dom" may have existentially quantified variables.  Eliminate them first
+ * as otherwise they would have to be eliminated twice, in a more complicated
+ * context.
+ */
+static isl_bool equal_on_domain(__isl_keep isl_multi_aff *ma1,
+	__isl_keep isl_multi_aff *ma2, __isl_keep isl_basic_set *dom)
+{
+	isl_set *set;
+	isl_pw_multi_aff *pma1, *pma2;
+	isl_bool equal;
+
+	set = isl_basic_set_compute_divs(isl_basic_set_copy(dom));
+	pma1 = isl_pw_multi_aff_alloc(isl_set_copy(set),
+					isl_multi_aff_copy(ma1));
+	pma2 = isl_pw_multi_aff_alloc(set, isl_multi_aff_copy(ma2));
+	equal = isl_pw_multi_aff_is_equal(pma1, pma2);
+	isl_pw_multi_aff_free(pma1);
+	isl_pw_multi_aff_free(pma2);
+
+	return equal;
+}
+
+/* The initial two partial solutions of "sol" are known to be at
+ * the same level.
+ * If they represent the same solution (on different parts of the domain),
+ * then combine them into a single solution at the current level.
+ * Otherwise, pop them both.
+ *
+ * Even if the two partial solution are not obviously the same,
+ * one may still be a simplification of the other over its own domain.
+ * Also check if the two sets of affine functions are equal when
+ * restricted to one of the domains.  If so, combine the two
+ * using the set of affine functions on the other domain.
+ * That is, for two partial solutions (D1,M1) and (D2,M2),
+ * if M1 = M2 on D1, then the pair of partial solutions can
+ * be replaced by (D1+D2,M2) and similarly when M1 = M2 on D2.
+ */
+static isl_stat combine_initial_if_equal(struct isl_sol *sol)
+{
+	struct isl_partial_sol *partial;
+	isl_bool same;
+
+	partial = sol->partial;
+
+	same = same_solution(partial, partial->next);
+	if (same < 0)
+		return isl_stat_error;
+	if (same)
+		return combine_initial_into_second(sol);
+	if (partial->ma && partial->next->ma) {
+		same = equal_on_domain(partial->ma, partial->next->ma,
+					partial->dom);
+		if (same < 0)
+			return isl_stat_error;
+		if (same)
+			return combine_initial_into_second(sol);
+		same = equal_on_domain(partial->ma, partial->next->ma,
+					partial->next->dom);
+		if (same) {
+			swap_initial(sol);
+			return combine_initial_into_second(sol);
+		}
 	}
-	return 1;
+
+	sol_pop_one(sol);
+	sol_pop_one(sol);
+
+	return isl_stat_ok;
 }
 
 /* Pop all solutions from the partial solution stack that were pushed onto
@@ -301,7 +530,6 @@ static int same_solution(struct isl_partial_sol *s1, struct isl_partial_sol *s2,
 static void sol_pop(struct isl_sol *sol)
 {
 	struct isl_partial_sol *partial;
-	unsigned n_div;
 
 	if (sol->error)
 		return;
@@ -320,40 +548,8 @@ static void sol_pop(struct isl_sol *sol)
 		return;
 
 	if (partial->next && partial->next->level == partial->level) {
-		n_div = isl_basic_set_dim(
-				sol->context->op->peek_basic_set(sol->context),
-				isl_dim_div);
-
-		if (!same_solution(partial, partial->next, n_div)) {
-			sol_pop_one(sol);
-			sol_pop_one(sol);
-		} else {
-			struct isl_basic_set *bset;
-			isl_mat *M;
-			unsigned n;
-
-			n = isl_basic_set_dim(partial->next->dom, isl_dim_div);
-			n -= n_div;
-			bset = sol_domain(sol);
-			isl_basic_set_free(partial->next->dom);
-			partial->next->dom = bset;
-			M = partial->next->M;
-			if (M) {
-				M = isl_mat_drop_cols(M, M->n_col - n, n);
-				partial->next->M = M;
-				if (!M)
-					goto error;
-			}
-			partial->next->level = sol->level;
-
-			if (!bset)
-				goto error;
-
-			sol->partial = partial->next;
-			isl_basic_set_free(partial->dom);
-			isl_mat_free(partial->M);
-			free(partial);
-		}
+		if (combine_initial_if_equal(sol) < 0)
+			goto error;
 	} else
 		sol_pop_one(sol);
 
@@ -377,13 +573,13 @@ static void sol_dec_level(struct isl_sol *sol)
 	sol_pop(sol);
 }
 
-static int sol_dec_level_wrap(struct isl_tab_callback *cb)
+static isl_stat sol_dec_level_wrap(struct isl_tab_callback *cb)
 {
 	struct isl_sol_callback *callback = (struct isl_sol_callback *)cb;
 
 	sol_dec_level(callback->sol);
 
-	return callback->sol->error ? -1 : 0;
+	return callback->sol->error ? isl_stat_error : isl_stat_ok;
 }
 
 /* Move down to next level and push callback onto context tableau
@@ -544,7 +740,7 @@ static void sol_add(struct isl_sol *sol, struct isl_tab *tab)
 
 	isl_int_clear(m);
 
-	sol_push_sol(sol, bset, mat);
+	sol_push_sol_mat(sol, bset, mat);
 	return;
 error2:
 	isl_int_clear(m);
@@ -560,20 +756,11 @@ struct isl_sol_map {
 	struct isl_set	*empty;
 };
 
-static void sol_map_free(struct isl_sol_map *sol_map)
+static void sol_map_free(struct isl_sol *sol)
 {
-	if (!sol_map)
-		return;
-	if (sol_map->sol.context)
-		sol_map->sol.context->op->free(sol_map->sol.context);
+	struct isl_sol_map *sol_map = (struct isl_sol_map *) sol;
 	isl_map_free(sol_map->map);
 	isl_set_free(sol_map->empty);
-	free(sol_map);
-}
-
-static void sol_map_free_wrap(struct isl_sol *sol)
-{
-	sol_map_free((struct isl_sol_map *)sol);
 }
 
 /* This function is called for parts of the context where there is
@@ -605,104 +792,35 @@ static void sol_map_add_empty_wrap(struct isl_sol *sol,
 	sol_map_add_empty((struct isl_sol_map *)sol, bset);
 }
 
-/* Given a basic set "dom" that represents the context and an affine
- * matrix "M" that maps the dimensions of the context to the
- * output variables, construct a basic map with the same parameters
- * and divs as the context, the dimensions of the context as input
- * dimensions and a number of output dimensions that is equal to
- * the number of output dimensions in the input map.
- *
- * The constraints and divs of the context are simply copied
- * from "dom".  For each row
- *	x = c + e(y)
- * an equality
- *	c + e(y) - d x = 0
- * is added, with d the common denominator of M.
+/* Given a basic set "dom" that represents the context and a tuple of
+ * affine expressions "ma" defined over this domain, construct a basic map
+ * that expresses this function on the domain.
  */
 static void sol_map_add(struct isl_sol_map *sol,
-	struct isl_basic_set *dom, struct isl_mat *M)
+	__isl_take isl_basic_set *dom, __isl_take isl_multi_aff *ma)
 {
-	int i;
-	struct isl_basic_map *bmap = NULL;
-	unsigned n_eq;
-	unsigned n_ineq;
-	unsigned nparam;
-	unsigned total;
-	unsigned n_div;
-	unsigned n_out;
+	isl_basic_map *bmap;
 
-	if (sol->sol.error || !dom || !M)
+	if (sol->sol.error || !dom || !ma)
 		goto error;
 
-	n_out = sol->sol.n_out;
-	n_eq = dom->n_eq + n_out;
-	n_ineq = dom->n_ineq;
-	n_div = dom->n_div;
-	nparam = isl_basic_set_total_dim(dom) - n_div;
-	total = isl_map_dim(sol->map, isl_dim_all);
-	bmap = isl_basic_map_alloc_space(isl_map_get_space(sol->map),
-					n_div, n_eq, 2 * n_div + n_ineq);
-	if (!bmap)
-		goto error;
-	if (sol->sol.rational)
-		ISL_F_SET(bmap, ISL_BASIC_MAP_RATIONAL);
-	for (i = 0; i < dom->n_div; ++i) {
-		int k = isl_basic_map_alloc_div(bmap);
-		if (k < 0)
-			goto error;
-		isl_seq_cpy(bmap->div[k], dom->div[i], 1 + 1 + nparam);
-		isl_seq_clr(bmap->div[k] + 1 + 1 + nparam, total - nparam);
-		isl_seq_cpy(bmap->div[k] + 1 + 1 + total,
-			    dom->div[i] + 1 + 1 + nparam, i);
-	}
-	for (i = 0; i < dom->n_eq; ++i) {
-		int k = isl_basic_map_alloc_equality(bmap);
-		if (k < 0)
-			goto error;
-		isl_seq_cpy(bmap->eq[k], dom->eq[i], 1 + nparam);
-		isl_seq_clr(bmap->eq[k] + 1 + nparam, total - nparam);
-		isl_seq_cpy(bmap->eq[k] + 1 + total,
-			    dom->eq[i] + 1 + nparam, n_div);
-	}
-	for (i = 0; i < dom->n_ineq; ++i) {
-		int k = isl_basic_map_alloc_inequality(bmap);
-		if (k < 0)
-			goto error;
-		isl_seq_cpy(bmap->ineq[k], dom->ineq[i], 1 + nparam);
-		isl_seq_clr(bmap->ineq[k] + 1 + nparam, total - nparam);
-		isl_seq_cpy(bmap->ineq[k] + 1 + total,
-			dom->ineq[i] + 1 + nparam, n_div);
-	}
-	for (i = 0; i < M->n_row - 1; ++i) {
-		int k = isl_basic_map_alloc_equality(bmap);
-		if (k < 0)
-			goto error;
-		isl_seq_cpy(bmap->eq[k], M->row[1 + i], 1 + nparam);
-		isl_seq_clr(bmap->eq[k] + 1 + nparam, n_out);
-		isl_int_neg(bmap->eq[k][1 + nparam + i], M->row[0][0]);
-		isl_seq_cpy(bmap->eq[k] + 1 + nparam + n_out,
-			    M->row[1 + i] + 1 + nparam, n_div);
-	}
-	bmap = isl_basic_map_simplify(bmap);
-	bmap = isl_basic_map_finalize(bmap);
+	bmap = isl_basic_map_from_multi_aff2(ma, sol->sol.rational);
+	bmap = isl_basic_map_intersect_domain(bmap, dom);
 	sol->map = isl_map_grow(sol->map, 1);
 	sol->map = isl_map_add_basic_map(sol->map, bmap);
-	isl_basic_set_free(dom);
-	isl_mat_free(M);
 	if (!sol->map)
 		sol->sol.error = 1;
 	return;
 error:
 	isl_basic_set_free(dom);
-	isl_mat_free(M);
-	isl_basic_map_free(bmap);
+	isl_multi_aff_free(ma);
 	sol->sol.error = 1;
 }
 
 static void sol_map_add_wrap(struct isl_sol *sol,
-	struct isl_basic_set *dom, struct isl_mat *M)
+	__isl_take isl_basic_set *dom, __isl_take isl_multi_aff *ma)
 {
-	sol_map_add((struct isl_sol_map *)sol, dom, M);
+	sol_map_add((struct isl_sol_map *)sol, dom, ma);
 }
 
 
@@ -1875,7 +1993,7 @@ static int tab_has_valid_sample(struct isl_tab *tab, isl_int *ineq, int eq)
  */
 static isl_bool context_tab_insert_div(struct isl_tab *tab, int pos,
 	__isl_keep isl_vec *div,
-	int (*add_ineq)(void *user, isl_int *), void *user)
+	isl_stat (*add_ineq)(void *user, isl_int *), void *user)
 {
 	int i;
 	int r;
@@ -2333,11 +2451,11 @@ error:
 	clex->tab = NULL;
 }
 
-static int context_lex_add_ineq_wrap(void *user, isl_int *ineq)
+static isl_stat context_lex_add_ineq_wrap(void *user, isl_int *ineq)
 {
 	struct isl_context *context = (struct isl_context *)user;
 	context_lex_add_ineq(context, ineq, 0, 0);
-	return context->op->is_ok(context) ? 0 : -1;
+	return context->op->is_ok(context) ? isl_stat_ok : isl_stat_error;
 }
 
 /* Check which signs can be obtained by "ineq" on all the currently
@@ -2637,14 +2755,12 @@ static struct isl_tab *context_tab_for_lexmin(struct isl_basic_set *bset)
 	if (!bset)
 		return NULL;
 	tab = tab_for_lexmin(bset_to_bmap(bset), NULL, 1, 0);
-	if (!tab)
-		goto error;
 	if (isl_tab_track_bset(tab, bset) < 0)
 		goto error;
 	tab = isl_tab_init_samples(tab);
 	return tab;
 error:
-	isl_basic_set_free(bset);
+	isl_tab_free(tab);
 	return NULL;
 }
 
@@ -3023,11 +3139,11 @@ error:
 	cgbr->tab = NULL;
 }
 
-static int context_gbr_add_ineq_wrap(void *user, isl_int *ineq)
+static isl_stat context_gbr_add_ineq_wrap(void *user, isl_int *ineq)
 {
 	struct isl_context *context = (struct isl_context *)user;
 	context_gbr_add_ineq(context, ineq, 0, 0);
-	return context->op->is_ok(context) ? 0 : -1;
+	return context->op->is_ok(context) ? isl_stat_ok : isl_stat_error;
 }
 
 static enum isl_tab_row_sign context_gbr_ineq_sign(struct isl_context *context,
@@ -3464,6 +3580,30 @@ static struct isl_context *isl_context_alloc(__isl_keep isl_basic_set *dom)
 	return context;
 }
 
+/* Initialize some common fields of "sol", which keeps track
+ * of the solution of an optimization problem on "bmap" over
+ * the domain "dom".
+ * If "max" is set, then a maximization problem is being solved, rather than
+ * a minimization problem, which means that the variables in the
+ * tableau have value "M - x" rather than "M + x".
+ */
+static isl_stat sol_init(struct isl_sol *sol, __isl_keep isl_basic_map *bmap,
+	__isl_keep isl_basic_set *dom, int max)
+{
+	sol->rational = ISL_F_ISSET(bmap, ISL_BASIC_MAP_RATIONAL);
+	sol->dec_level.callback.run = &sol_dec_level_wrap;
+	sol->dec_level.sol = sol;
+	sol->max = max;
+	sol->n_out = isl_basic_map_dim(bmap, isl_dim_out);
+	sol->space = isl_basic_map_get_space(bmap);
+
+	sol->context = isl_context_alloc(dom);
+	if (!sol->space || !sol->context)
+		return isl_stat_error;
+
+	return isl_stat_ok;
+}
+
 /* Construct an isl_sol_map structure for accumulating the solution.
  * If track_empty is set, then we also keep track of the parts
  * of the context where there is no solution.
@@ -3471,10 +3611,11 @@ static struct isl_context *isl_context_alloc(__isl_keep isl_basic_set *dom)
  * a minimization problem, which means that the variables in the
  * tableau have value "M - x" rather than "M + x".
  */
-static struct isl_sol *sol_map_init(struct isl_basic_map *bmap,
-	struct isl_basic_set *dom, int track_empty, int max)
+static struct isl_sol *sol_map_init(__isl_keep isl_basic_map *bmap,
+	__isl_take isl_basic_set *dom, int track_empty, int max)
 {
 	struct isl_sol_map *sol_map = NULL;
+	isl_space *space;
 
 	if (!bmap)
 		goto error;
@@ -3483,21 +3624,14 @@ static struct isl_sol *sol_map_init(struct isl_basic_map *bmap,
 	if (!sol_map)
 		goto error;
 
-	sol_map->sol.rational = ISL_F_ISSET(bmap, ISL_BASIC_MAP_RATIONAL);
-	sol_map->sol.dec_level.callback.run = &sol_dec_level_wrap;
-	sol_map->sol.dec_level.sol = &sol_map->sol;
-	sol_map->sol.max = max;
-	sol_map->sol.n_out = isl_basic_map_dim(bmap, isl_dim_out);
+	sol_map->sol.free = &sol_map_free;
+	if (sol_init(&sol_map->sol, bmap, dom, max) < 0)
+		goto error;
 	sol_map->sol.add = &sol_map_add_wrap;
 	sol_map->sol.add_empty = track_empty ? &sol_map_add_empty_wrap : NULL;
-	sol_map->sol.free = &sol_map_free_wrap;
-	sol_map->map = isl_map_alloc_space(isl_basic_map_get_space(bmap), 1,
-					    ISL_MAP_DISJOINT);
+	space = isl_space_copy(sol_map->sol.space);
+	sol_map->map = isl_map_alloc_space(space, 1, ISL_MAP_DISJOINT);
 	if (!sol_map->map)
-		goto error;
-
-	sol_map->sol.context = isl_context_alloc(dom);
-	if (!sol_map->sol.context)
 		goto error;
 
 	if (track_empty) {
@@ -3511,7 +3645,7 @@ static struct isl_sol *sol_map_init(struct isl_basic_map *bmap,
 	return &sol_map->sol;
 error:
 	isl_basic_set_free(dom);
-	sol_map_free(sol_map);
+	sol_free(&sol_map->sol);
 	return NULL;
 }
 
@@ -4345,10 +4479,10 @@ static int constraint_equal(const void *entry, const void *val)
  * of the result are usually not the same as those of the input.
  * Furthermore, check that each of the input variables that occur
  * in those constraints does not occur in any other constraint.
- * If so, return 1 and return the row indices of the two constraints
+ * If so, return true and return the row indices of the two constraints
  * in *first and *second.
  */
-static int parallel_constraints(__isl_keep isl_basic_map *bmap,
+static isl_bool parallel_constraints(__isl_keep isl_basic_map *bmap,
 	int *first, int *second)
 {
 	int i;
@@ -4407,7 +4541,7 @@ static int parallel_constraints(__isl_keep isl_basic_map *bmap,
 error:
 	isl_hash_table_free(ctx, table);
 	free(occurrences);
-	return -1;
+	return isl_bool_error;
 }
 
 /* Given a set of upper bounds in "var", add constraints to "bset"
@@ -4505,7 +4639,7 @@ error:
  * an upper bound that is different from the upper bounds on which it
  * is defined.
  */
-static int need_split_basic_map(__isl_keep isl_basic_map *bmap,
+static isl_bool need_split_basic_map(__isl_keep isl_basic_map *bmap,
 	__isl_keep isl_mat *cst)
 {
 	int i, j;
@@ -4517,29 +4651,29 @@ static int need_split_basic_map(__isl_keep isl_basic_map *bmap,
 
 	for (i = 0; i < bmap->n_div; ++i)
 		if (!isl_int_is_zero(bmap->div[i][2 + pos]))
-			return 1;
+			return isl_bool_true;
 
 	for (i = 0; i < bmap->n_eq; ++i)
 		if (!isl_int_is_zero(bmap->eq[i][1 + pos]))
-			return 1;
+			return isl_bool_true;
 
 	for (i = 0; i < bmap->n_ineq; ++i) {
 		if (isl_int_is_nonneg(bmap->ineq[i][1 + pos]))
 			continue;
 		if (!isl_int_is_negone(bmap->ineq[i][1 + pos]))
-			return 1;
+			return isl_bool_true;
 		if (isl_seq_first_non_zero(bmap->ineq[i] + 1 + pos + 1,
 					   total - pos - 1) >= 0)
-			return 1;
+			return isl_bool_true;
 
 		for (j = 0; j < cst->n_row; ++j)
 			if (isl_seq_eq(bmap->ineq[i], cst->row[j], cst->n_col))
 				break;
 		if (j >= cst->n_row)
-			return 1;
+			return isl_bool_true;
 	}
 
-	return 0;
+	return isl_bool_false;
 }
 
 /* Given that the last set variable of "bset" represents the minimum
@@ -4550,7 +4684,7 @@ static int need_split_basic_map(__isl_keep isl_basic_map *bmap,
  * the position of the minimum is computed from "cst" and not
  * from "bmap".
  */
-static int need_split_basic_set(__isl_keep isl_basic_set *bset,
+static isl_bool need_split_basic_set(__isl_keep isl_basic_set *bset,
 	__isl_keep isl_mat *cst)
 {
 	return need_split_basic_map(bset_to_bmap(bset), cst);
@@ -4560,15 +4694,19 @@ static int need_split_basic_set(__isl_keep isl_basic_set *bset,
  * of the bounds in "cst", check whether we need to split the domain
  * based on which bound attains the minimum.
  */
-static int need_split_set(__isl_keep isl_set *set, __isl_keep isl_mat *cst)
+static isl_bool need_split_set(__isl_keep isl_set *set, __isl_keep isl_mat *cst)
 {
 	int i;
 
-	for (i = 0; i < set->n; ++i)
-		if (need_split_basic_set(set->p[i], cst))
-			return 1;
+	for (i = 0; i < set->n; ++i) {
+		isl_bool split;
 
-	return 0;
+		split = need_split_basic_set(set->p[i], cst);
+		if (split < 0 || split)
+			return split;
+	}
+
+	return isl_bool_false;
 }
 
 /* Given a set of which the last set variable is the minimum
@@ -4601,10 +4739,14 @@ static __isl_give isl_set *split(__isl_take isl_set *empty,
 	res = isl_set_empty(dim);
 
 	for (i = 0; i < empty->n; ++i) {
+		isl_bool split;
 		isl_set *set;
 
 		set = isl_set_from_basic_set(isl_basic_set_copy(empty->p[i]));
-		if (need_split_basic_set(empty->p[i], cst))
+		split = need_split_basic_set(empty->p[i], cst);
+		if (split < 0)
+			set = isl_set_free(set);
+		else if (split)
 			set = isl_set_intersect(set, isl_set_copy(min_expr));
 		set = isl_set_remove_dims(set, isl_dim_set, n_in - 1, 1);
 
@@ -4648,9 +4790,13 @@ static __isl_give isl_map *split_domain(__isl_take isl_map *opt,
 
 	for (i = 0; i < opt->n; ++i) {
 		isl_map *map;
+		isl_bool split;
 
 		map = isl_map_from_basic_map(isl_basic_map_copy(opt->p[i]));
-		if (need_split_basic_map(opt->p[i], cst))
+		split = need_split_basic_map(opt->p[i], cst);
+		if (split < 0)
+			map = isl_map_free(map);
+		else if (split)
 			map = isl_map_intersect_domain(map,
 						       isl_set_copy(min_expr));
 		map = isl_map_remove_dims(map, isl_dim_in, n_in - 1, 1);
@@ -4754,26 +4900,18 @@ static __isl_give isl_basic_set *extract_domain(__isl_keep isl_basic_map *bmap,
 
 struct isl_sol_for {
 	struct isl_sol	sol;
-	int		(*fn)(__isl_take isl_basic_set *dom,
+	isl_stat	(*fn)(__isl_take isl_basic_set *dom,
 				__isl_take isl_aff_list *list, void *user);
 	void		*user;
 };
 
-static void sol_for_free(struct isl_sol_for *sol_for)
+static void sol_for_free(struct isl_sol *sol)
 {
-	if (!sol_for)
-		return;
-	if (sol_for->sol.context)
-		sol_for->sol.context->op->free(sol_for->sol.context);
-	free(sol_for);
-}
-
-static void sol_for_free_wrap(struct isl_sol *sol)
-{
-	sol_for_free((struct isl_sol_for *)sol);
 }
 
 /* Add the solution identified by the tableau and the context tableau.
+ * In particular, "dom" represents the context and "ma" expresses
+ * the solution on that context.
  *
  * See documentation of sol_add for more details.
  *
@@ -4785,30 +4923,23 @@ static void sol_for_free_wrap(struct isl_sol *sol)
  * affine expressions in the list is equal to the number of output variables.
  */
 static void sol_for_add(struct isl_sol_for *sol,
-	struct isl_basic_set *dom, struct isl_mat *M)
+	__isl_take isl_basic_set *dom, __isl_take isl_multi_aff *ma)
 {
-	int i;
+	int i, n;
 	isl_ctx *ctx;
-	isl_local_space *ls;
 	isl_aff *aff;
 	isl_aff_list *list;
 
-	if (sol->sol.error || !dom || !M)
+	if (sol->sol.error || !dom || !ma)
 		goto error;
 
 	ctx = isl_basic_set_get_ctx(dom);
-	ls = isl_basic_set_get_local_space(dom);
-	list = isl_aff_list_alloc(ctx, M->n_row - 1);
-	for (i = 1; i < M->n_row; ++i) {
-		aff = isl_aff_alloc(isl_local_space_copy(ls));
-		if (aff) {
-			isl_int_set(aff->v->el[0], M->row[0][0]);
-			isl_seq_cpy(aff->v->el + 1, M->row[i], M->n_col);
-		}
-		aff = isl_aff_normalize(aff);
+	n = isl_multi_aff_dim(ma, isl_dim_out);
+	list = isl_aff_list_alloc(ctx, n);
+	for (i = 0; i < n; ++i) {
+		aff = isl_multi_aff_get_aff(ma, i);
 		list = isl_aff_list_add(list, aff);
 	}
-	isl_local_space_free(ls);
 
 	dom = isl_basic_set_finalize(dom);
 
@@ -4816,23 +4947,23 @@ static void sol_for_add(struct isl_sol_for *sol,
 		goto error;
 
 	isl_basic_set_free(dom);
-	isl_mat_free(M);
+	isl_multi_aff_free(ma);
 	return;
 error:
 	isl_basic_set_free(dom);
-	isl_mat_free(M);
+	isl_multi_aff_free(ma);
 	sol->sol.error = 1;
 }
 
 static void sol_for_add_wrap(struct isl_sol *sol,
-	struct isl_basic_set *dom, struct isl_mat *M)
+	__isl_take isl_basic_set *dom, __isl_take isl_multi_aff *ma)
 {
-	sol_for_add((struct isl_sol_for *)sol, dom, M);
+	sol_for_add((struct isl_sol_for *)sol, dom, ma);
 }
 
-static struct isl_sol_for *sol_for_init(struct isl_basic_map *bmap, int max,
-	int (*fn)(__isl_take isl_basic_set *dom, __isl_take isl_aff_list *list,
-		  void *user),
+static struct isl_sol_for *sol_for_init(__isl_keep isl_basic_map *bmap, int max,
+	isl_stat (*fn)(__isl_take isl_basic_set *dom,
+		__isl_take isl_aff_list *list, void *user),
 	void *user)
 {
 	struct isl_sol_for *sol_for = NULL;
@@ -4846,26 +4977,19 @@ static struct isl_sol_for *sol_for_init(struct isl_basic_map *bmap, int max,
 	dom_dim = isl_space_domain(isl_space_copy(bmap->dim));
 	dom = isl_basic_set_universe(dom_dim);
 
-	sol_for->sol.rational = ISL_F_ISSET(bmap, ISL_BASIC_MAP_RATIONAL);
-	sol_for->sol.dec_level.callback.run = &sol_dec_level_wrap;
-	sol_for->sol.dec_level.sol = &sol_for->sol;
+	sol_for->sol.free = &sol_for_free;
+	if (sol_init(&sol_for->sol, bmap, dom, max) < 0)
+		goto error;
 	sol_for->fn = fn;
 	sol_for->user = user;
-	sol_for->sol.max = max;
-	sol_for->sol.n_out = isl_basic_map_dim(bmap, isl_dim_out);
 	sol_for->sol.add = &sol_for_add_wrap;
 	sol_for->sol.add_empty = NULL;
-	sol_for->sol.free = &sol_for_free_wrap;
-
-	sol_for->sol.context = isl_context_alloc(dom);
-	if (!sol_for->sol.context)
-		goto error;
 
 	isl_basic_set_free(dom);
 	return sol_for;
 error:
 	isl_basic_set_free(dom);
-	sol_for_free(sol_for);
+	sol_free(&sol_for->sol);
 	return NULL;
 }
 
@@ -4875,9 +4999,9 @@ static void sol_for_find_solutions(struct isl_sol_for *sol_for,
 	find_solutions_main(&sol_for->sol, tab);
 }
 
-int isl_basic_map_foreach_lexopt(__isl_keep isl_basic_map *bmap, int max,
-	int (*fn)(__isl_take isl_basic_set *dom, __isl_take isl_aff_list *list,
-		  void *user),
+isl_stat isl_basic_map_foreach_lexopt(__isl_keep isl_basic_map *bmap, int max,
+	isl_stat (*fn)(__isl_take isl_basic_set *dom,
+		__isl_take isl_aff_list *list, void *user),
 	void *user)
 {
 	struct isl_sol_for *sol_for = NULL;
@@ -4885,7 +5009,7 @@ int isl_basic_map_foreach_lexopt(__isl_keep isl_basic_map *bmap, int max,
 	bmap = isl_basic_map_copy(bmap);
 	bmap = isl_basic_map_detect_equalities(bmap);
 	if (!bmap)
-		return -1;
+		return isl_stat_error;
 
 	sol_for = sol_for_init(bmap, max, fn, user);
 	if (!sol_for)
@@ -4906,16 +5030,16 @@ int isl_basic_map_foreach_lexopt(__isl_keep isl_basic_map *bmap, int max,
 
 	sol_free(&sol_for->sol);
 	isl_basic_map_free(bmap);
-	return 0;
+	return isl_stat_ok;
 error:
 	sol_free(&sol_for->sol);
 	isl_basic_map_free(bmap);
-	return -1;
+	return isl_stat_error;
 }
 
-int isl_basic_set_foreach_lexopt(__isl_keep isl_basic_set *bset, int max,
-	int (*fn)(__isl_take isl_basic_set *dom, __isl_take isl_aff_list *list,
-		  void *user),
+isl_stat isl_basic_set_foreach_lexopt(__isl_keep isl_basic_set *bset, int max,
+	isl_stat (*fn)(__isl_take isl_basic_set *dom,
+		__isl_take isl_aff_list *list, void *user),
 	void *user)
 {
 	return isl_basic_map_foreach_lexopt(bset, max, fn, user);
@@ -5330,15 +5454,11 @@ struct isl_sol_pma {
 	isl_set *empty;
 };
 
-static void sol_pma_free(struct isl_sol_pma *sol_pma)
+static void sol_pma_free(struct isl_sol *sol)
 {
-	if (!sol_pma)
-		return;
-	if (sol_pma->sol.context)
-		sol_pma->sol.context->op->free(sol_pma->sol.context);
+	struct isl_sol_pma *sol_pma = (struct isl_sol_pma *) sol;
 	isl_pw_multi_aff_free(sol_pma->pma);
 	isl_set_free(sol_pma->empty);
-	free(sol_pma);
 }
 
 /* This function is called for parts of the context where there is
@@ -5363,110 +5483,22 @@ error:
 	sol->sol.error = 1;
 }
 
-/* Check that the final columns of "M", starting at "first", are zero.
- */
-static isl_stat check_final_columns_are_zero(__isl_keep isl_mat *M,
-	unsigned first)
-{
-	int i;
-	unsigned rows, cols, n;
-
-	if (!M)
-		return isl_stat_error;
-	rows = isl_mat_rows(M);
-	cols = isl_mat_cols(M);
-	n = cols - first;
-	for (i = 0; i < rows; ++i)
-		if (isl_seq_first_non_zero(M->row[i] + first, n) != -1)
-			isl_die(isl_mat_get_ctx(M), isl_error_internal,
-				"final columns should be zero",
-				return isl_stat_error);
-	return isl_stat_ok;
-}
-
-/* Set the affine expressions in "ma" according to the rows in "M", which
- * are defined over the local space "ls".
- * The matrix "M" may have extra (zero) columns beyond the number
- * of variables in "ls".
- */
-static __isl_give isl_multi_aff *set_from_affine_matrix(
-	__isl_take isl_multi_aff *ma, __isl_take isl_local_space *ls,
-	__isl_take isl_mat *M)
-{
-	int i, dim;
-	isl_aff *aff;
-
-	if (!ma || !ls || !M)
-		goto error;
-
-	dim = isl_local_space_dim(ls, isl_dim_all);
-	if (check_final_columns_are_zero(M, 1 + dim) < 0)
-		goto error;
-	for (i = 1; i < M->n_row; ++i) {
-		aff = isl_aff_alloc(isl_local_space_copy(ls));
-		if (aff) {
-			isl_int_set(aff->v->el[0], M->row[0][0]);
-			isl_seq_cpy(aff->v->el + 1, M->row[i], 1 + dim);
-		}
-		aff = isl_aff_normalize(aff);
-		ma = isl_multi_aff_set_aff(ma, i - 1, aff);
-	}
-	isl_local_space_free(ls);
-	isl_mat_free(M);
-
-	return ma;
-error:
-	isl_local_space_free(ls);
-	isl_mat_free(M);
-	isl_multi_aff_free(ma);
-	return NULL;
-}
-
-/* Given a basic set "dom" that represents the context and an affine
- * matrix "M" that maps the dimensions of the context to the
- * output variables, construct an isl_pw_multi_aff with a single
- * cell corresponding to "dom" and affine expressions copied from "M".
- *
- * Note that the description of the initial context may have involved
- * existentially quantified variables, in which case they also appear
- * in "dom".  These need to be removed before creating the affine
- * expression because an affine expression cannot be defined in terms
- * of existentially quantified variables without a known representation.
- * Since newly added integer divisions are inserted before these
- * existentially quantified variables, they are still in the final
- * positions and the corresponding final columns of "M" are zero
- * because align_context_divs adds the existentially quantified
- * variables of the context to the main tableau without any constraints and
- * any equality constraints that are added later on can only serve
- * to eliminate these existentially quantified variables.
+/* Given a basic set "dom" that represents the context and a tuple of
+ * affine expressions "maff" defined over this domain, construct
+ * an isl_pw_multi_aff with a single cell corresponding to "dom" and
+ * the affine expressions in "maff".
  */
 static void sol_pma_add(struct isl_sol_pma *sol,
-	__isl_take isl_basic_set *dom, __isl_take isl_mat *M)
+	__isl_take isl_basic_set *dom, __isl_take isl_multi_aff *maff)
 {
-	isl_local_space *ls;
-	isl_multi_aff *maff;
 	isl_pw_multi_aff *pma;
-	int n_div, n_known;
 
-	n_div = isl_basic_set_dim(dom, isl_dim_div);
-	n_known = n_div - sol->sol.context->n_unknown;
-
-	maff = isl_multi_aff_alloc(isl_pw_multi_aff_get_space(sol->pma));
-	ls = isl_basic_set_get_local_space(dom);
-	ls = isl_local_space_drop_dims(ls, isl_dim_div,
-					n_known, n_div - n_known);
-	maff = set_from_affine_matrix(maff, ls, M);
 	dom = isl_basic_set_simplify(dom);
 	dom = isl_basic_set_finalize(dom);
 	pma = isl_pw_multi_aff_alloc(isl_set_from_basic_set(dom), maff);
 	sol->pma = isl_pw_multi_aff_add_disjoint(sol->pma, pma);
 	if (!sol->pma)
 		sol->sol.error = 1;
-}
-
-static void sol_pma_free_wrap(struct isl_sol *sol)
-{
-	sol_pma_free((struct isl_sol_pma *)sol);
 }
 
 static void sol_pma_add_empty_wrap(struct isl_sol *sol,
@@ -5476,9 +5508,9 @@ static void sol_pma_add_empty_wrap(struct isl_sol *sol,
 }
 
 static void sol_pma_add_wrap(struct isl_sol *sol,
-	__isl_take isl_basic_set *dom, __isl_take isl_mat *M)
+	__isl_take isl_basic_set *dom, __isl_take isl_multi_aff *ma)
 {
-	sol_pma_add((struct isl_sol_pma *)sol, dom, M);
+	sol_pma_add((struct isl_sol_pma *)sol, dom, ma);
 }
 
 /* Construct an isl_sol_pma structure for accumulating the solution.
@@ -5492,6 +5524,7 @@ static struct isl_sol *sol_pma_init(__isl_keep isl_basic_map *bmap,
 	__isl_take isl_basic_set *dom, int track_empty, int max)
 {
 	struct isl_sol_pma *sol_pma = NULL;
+	isl_space *space;
 
 	if (!bmap)
 		goto error;
@@ -5500,20 +5533,14 @@ static struct isl_sol *sol_pma_init(__isl_keep isl_basic_map *bmap,
 	if (!sol_pma)
 		goto error;
 
-	sol_pma->sol.rational = ISL_F_ISSET(bmap, ISL_BASIC_MAP_RATIONAL);
-	sol_pma->sol.dec_level.callback.run = &sol_dec_level_wrap;
-	sol_pma->sol.dec_level.sol = &sol_pma->sol;
-	sol_pma->sol.max = max;
-	sol_pma->sol.n_out = isl_basic_map_dim(bmap, isl_dim_out);
+	sol_pma->sol.free = &sol_pma_free;
+	if (sol_init(&sol_pma->sol, bmap, dom, max) < 0)
+		goto error;
 	sol_pma->sol.add = &sol_pma_add_wrap;
 	sol_pma->sol.add_empty = track_empty ? &sol_pma_add_empty_wrap : NULL;
-	sol_pma->sol.free = &sol_pma_free_wrap;
-	sol_pma->pma = isl_pw_multi_aff_empty(isl_basic_map_get_space(bmap));
+	space = isl_space_copy(sol_pma->sol.space);
+	sol_pma->pma = isl_pw_multi_aff_empty(space);
 	if (!sol_pma->pma)
-		goto error;
-
-	sol_pma->sol.context = isl_context_alloc(dom);
-	if (!sol_pma->sol.context)
 		goto error;
 
 	if (track_empty) {
@@ -5527,7 +5554,7 @@ static struct isl_sol *sol_pma_init(__isl_keep isl_basic_map *bmap,
 	return &sol_pma->sol;
 error:
 	isl_basic_set_free(dom);
-	sol_pma_free(sol_pma);
+	sol_free(&sol_pma->sol);
 	return NULL;
 }
 
@@ -5681,9 +5708,15 @@ static __isl_give isl_pw_multi_aff *split_domain_pma(
 		if (need_substitution(opt->p[i].maff))
 			pma = isl_pw_multi_aff_substitute(pma,
 					isl_dim_in, n_in - 1, min_expr_pa);
-		else if (need_split_set(opt->p[i].set, cst))
-			pma = isl_pw_multi_aff_intersect_domain(pma,
+		else {
+			isl_bool split;
+			split = need_split_set(opt->p[i].set, cst);
+			if (split < 0)
+				pma = isl_pw_multi_aff_free(pma);
+			else if (split)
+				pma = isl_pw_multi_aff_intersect_domain(pma,
 						       isl_set_copy(min_expr));
+		}
 		pma = isl_pw_multi_aff_project_out(pma,
 						    isl_dim_in, n_in - 1, 1);
 

@@ -377,6 +377,10 @@ void MemoryAccess::wrapConstantDimensions() {
     if (!DimSizeCst)
       continue;
 
+    // This transformation is not applicable to dimensions of size zero.
+    if (DimSize->isZero())
+      continue;
+
     auto *DimSizeVal = isl_valFromAPInt(Ctx, DimSizeCst->getAPInt(), false);
     auto *Var = isl_aff_var_on_domain(isl_local_space_copy(LArraySpace),
                                       isl_dim_set, i);

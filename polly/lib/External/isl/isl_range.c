@@ -483,8 +483,9 @@ error:
 	return isl_stat_error;
 }
 
-static int qpolynomial_bound_on_domain_range(__isl_take isl_basic_set *bset,
-	__isl_take isl_qpolynomial *poly, struct range_data *data)
+static isl_stat qpolynomial_bound_on_domain_range(
+	__isl_take isl_basic_set *bset, __isl_take isl_qpolynomial *poly,
+	struct range_data *data)
 {
 	unsigned nparam = isl_basic_set_dim(bset, isl_dim_param);
 	unsigned nvar = isl_basic_set_dim(bset, isl_dim_set);
@@ -509,18 +510,18 @@ static int qpolynomial_bound_on_domain_range(__isl_take isl_basic_set *bset,
 	isl_set_free(set);
 	isl_qpolynomial_free(poly);
 
-	return 0;
+	return isl_stat_ok;
 error:
 	isl_set_free(set);
 	isl_qpolynomial_free(poly);
-	return -1;
+	return isl_stat_error;
 }
 
-int isl_qpolynomial_bound_on_domain_range(__isl_take isl_basic_set *bset,
+isl_stat isl_qpolynomial_bound_on_domain_range(__isl_take isl_basic_set *bset,
 	__isl_take isl_qpolynomial *poly, struct isl_bound *bound)
 {
 	struct range_data data;
-	int r;
+	isl_stat r;
 
 	data.pwf = bound->pwf;
 	data.pwf_tight = bound->pwf_tight;

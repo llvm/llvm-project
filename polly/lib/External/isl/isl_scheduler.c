@@ -716,16 +716,16 @@ static isl_stat compute_max_row(struct isl_sched_graph *graph,
 
 /* Does "bset" have any defining equalities for its set variables?
  */
-static int has_any_defining_equality(__isl_keep isl_basic_set *bset)
+static isl_bool has_any_defining_equality(__isl_keep isl_basic_set *bset)
 {
 	int i, n;
 
 	if (!bset)
-		return -1;
+		return isl_bool_error;
 
 	n = isl_basic_set_dim(bset, isl_dim_set);
 	for (i = 0; i < n; ++i) {
-		int has;
+		isl_bool has;
 
 		has = isl_basic_set_has_defining_equality(bset, isl_dim_set, i,
 							NULL);
@@ -733,7 +733,7 @@ static int has_any_defining_equality(__isl_keep isl_basic_set *bset)
 			return has;
 	}
 
-	return 0;
+	return isl_bool_false;
 }
 
 /* Set the entries of node->max to the value of the schedule_max_coefficient
@@ -966,7 +966,7 @@ static isl_stat add_node(struct isl_sched_graph *graph,
 static isl_stat extract_node(__isl_take isl_set *set, void *user)
 {
 	int nvar;
-	int has_equality;
+	isl_bool has_equality;
 	isl_basic_set *hull;
 	isl_set *hull_set;
 	isl_morph *morph;
@@ -2043,7 +2043,7 @@ static int edge_multiplicity(struct isl_sched_edge *edge, int carry,
  *
  * "use_coincidence" is set if we should take into account coincidence edges.
  */
-static int count_map_constraints(struct isl_sched_graph *graph,
+static isl_stat count_map_constraints(struct isl_sched_graph *graph,
 	struct isl_sched_edge *edge, __isl_take isl_map *map,
 	int *n_eq, int *n_ineq, int carry, int use_coincidence)
 {
@@ -2052,7 +2052,7 @@ static int count_map_constraints(struct isl_sched_graph *graph,
 
 	if (f == 0) {
 		isl_map_free(map);
-		return 0;
+		return isl_stat_ok;
 	}
 
 	if (edge->src == edge->dst)
@@ -2060,12 +2060,12 @@ static int count_map_constraints(struct isl_sched_graph *graph,
 	else
 		coef = inter_coefficients(graph, edge, map);
 	if (!coef)
-		return -1;
+		return isl_stat_error;
 	*n_eq += f * coef->n_eq;
 	*n_ineq += f * coef->n_ineq;
 	isl_basic_set_free(coef);
 
-	return 0;
+	return isl_stat_ok;
 }
 
 /* Count the number of equality and inequality constraints
@@ -3550,7 +3550,7 @@ static int add_inter_constraints(struct isl_sched_graph *graph,
 /* Add constraints to graph->lp that force all (conditional) validity
  * dependences to be respected and attempt to carry them.
  */
-static int add_all_constraints(struct isl_sched_graph *graph)
+static isl_stat add_all_constraints(struct isl_sched_graph *graph)
 {
 	int i, j;
 	int pos;
@@ -3571,22 +3571,22 @@ static int add_all_constraints(struct isl_sched_graph *graph)
 
 			if (edge->src == edge->dst &&
 			    add_intra_constraints(graph, edge, map, pos) < 0)
-				return -1;
+				return isl_stat_error;
 			if (edge->src != edge->dst &&
 			    add_inter_constraints(graph, edge, map, pos) < 0)
-				return -1;
+				return isl_stat_error;
 			++pos;
 		}
 	}
 
-	return 0;
+	return isl_stat_ok;
 }
 
 /* Count the number of equality and inequality constraints
  * that will be added to the carry_lp problem.
  * We count each edge exactly once.
  */
-static int count_all_constraints(struct isl_sched_graph *graph,
+static isl_stat count_all_constraints(struct isl_sched_graph *graph,
 	int *n_eq, int *n_ineq)
 {
 	int i, j;
@@ -3607,11 +3607,11 @@ static int count_all_constraints(struct isl_sched_graph *graph,
 
 			if (count_map_constraints(graph, edge, map,
 						  n_eq, n_ineq, 1, 0) < 0)
-				    return -1;
+				    return isl_stat_error;
 		}
 	}
 
-	return 0;
+	return isl_stat_ok;
 }
 
 /* Construct an LP problem for finding schedule coefficients

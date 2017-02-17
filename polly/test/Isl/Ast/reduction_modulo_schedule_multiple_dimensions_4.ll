@@ -7,10 +7,11 @@
 ; CHECK:    for (int c1 = 0; c1 < 2 * n; c1 += 1)
 ; CHECK:      #pragma simd reduction
 ; CHECK:      for (int c3 = -1023; c3 <= 1023; c3 += 1) {
-; CHECK:        if (c3 <= 0 && c3 % 2 == 0) {
-; CHECK:          Stmt_for_body3(c1, -c3);
-; CHECK:        } else if (c3 >= 1 && (c3 - 1) % 2 == 0)
+; CHECK:        if (c3 >= 1 && (c3 + 1) % 2 == 0) {
 ; CHECK:          Stmt_for_body3(c1, c3);
+; CHECK:        } else if (c3 <= 0 && c3 % 2 == 0) {
+; CHECK:          Stmt_for_body3(c1, -c3);
+; CHECK:        }
 ; CHECK:      }
 ;
 ;    void rmsmd4(int *A, long n) {

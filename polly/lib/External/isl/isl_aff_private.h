@@ -107,9 +107,9 @@ __isl_give isl_pw_aff *isl_pw_aff_scale(__isl_take isl_pw_aff *pwaff,
 __isl_give isl_pw_aff *isl_pw_aff_scale_down(__isl_take isl_pw_aff *pwaff,
 	isl_int f);
 
-int isl_aff_matching_params(__isl_keep isl_aff *aff,
+isl_bool isl_aff_matching_params(__isl_keep isl_aff *aff,
 	__isl_keep isl_space *space);
-int isl_aff_check_match_domain_space(__isl_keep isl_aff *aff,
+isl_stat isl_aff_check_match_domain_space(__isl_keep isl_aff *aff,
 	__isl_keep isl_space *space);
 
 #undef BASE
@@ -149,9 +149,9 @@ __isl_give isl_pw_multi_aff *isl_pw_multi_aff_substitute(
 	__isl_take isl_pw_multi_aff *pma, enum isl_dim_type type, unsigned pos,
 	__isl_keep isl_pw_aff *subs);
 
-int isl_pw_aff_matching_params(__isl_keep isl_pw_aff *pa,
+isl_bool isl_pw_aff_matching_params(__isl_keep isl_pw_aff *pa,
 	__isl_keep isl_space *space);
-int isl_pw_aff_check_match_domain_space(__isl_keep isl_pw_aff *pa,
+isl_stat isl_pw_aff_check_match_domain_space(__isl_keep isl_pw_aff *pa,
 	__isl_keep isl_space *space);
 
 #undef BASE

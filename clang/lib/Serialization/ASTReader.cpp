@@ -26,6 +26,7 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/NestedNameSpecifier.h"
+#include "clang/AST/ODRHash.h"
 #include "clang/AST/RawCommentList.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLocVisitor.h"
@@ -8892,21 +8893,638 @@ void ASTReader::diagnoseOdrViolations() {
     for (auto *RD : Merge.second) {
       // Multiple different declarations got merged together; tell the user
       // where they came from.
-      if (Merge.first != RD) {
-        // FIXME: Walk the definition, figure out what's different,
-        // and diagnose that.
-        if (!Diagnosed) {
-          std::string Module = getOwningModuleNameForDiagnostic(Merge.first);
-          Diag(Merge.first->getLocation(),
-               diag::err_module_odr_violation_different_definitions)
-            << Merge.first << Module.empty() << Module;
-          Diagnosed = true;
+      if (Merge.first == RD)
+        continue;
+
+      llvm::SmallVector<std::pair<Decl *, unsigned>, 4> FirstHashes;
+      llvm::SmallVector<std::pair<Decl *, unsigned>, 4> SecondHashes;
+      ODRHash Hash;
+      for (auto D : Merge.first->decls()) {
+        if (D->isImplicit())
+          continue;
+        Hash.clear();
+        Hash.AddSubDecl(D);
+        FirstHashes.emplace_back(D, Hash.CalculateHash());
+      }
+      for (auto D : RD->decls()) {
+        if (D->isImplicit())
+          continue;
+        Hash.clear();
+        Hash.AddSubDecl(D);
+        SecondHashes.emplace_back(D, Hash.CalculateHash());
+      }
+
+      // Used with err_module_odr_violation_mismatch_decl and
+      // note_module_odr_violation_mismatch_decl
+      enum {
+        EndOfClass,
+        PublicSpecifer,
+        PrivateSpecifer,
+        ProtectedSpecifer,
+        Friend,
+        Enum,
+        StaticAssert,
+        Typedef,
+        TypeAlias,
+        CXXMethod,
+        CXXConstructor,
+        CXXDestructor,
+        CXXConversion,
+        Field,
+        Other
+      } FirstDiffType = Other,
+        SecondDiffType = Other;
+
+      auto DifferenceSelector = [](Decl *D) {
+        assert(D && "valid Decl required");
+        switch (D->getKind()) {
+        default:
+          return Other;
+        case Decl::AccessSpec:
+          switch (D->getAccess()) {
+          case AS_public:
+            return PublicSpecifer;
+          case AS_private:
+            return PrivateSpecifer;
+          case AS_protected:
+            return ProtectedSpecifer;
+          case AS_none:
+            llvm_unreachable("Invalid access specifier");
+          }
+        case Decl::Friend:
+          return Friend;
+        case Decl::Enum:
+          return Enum;
+        case Decl::StaticAssert:
+          return StaticAssert;
+        case Decl::Typedef:
+          return Typedef;
+        case Decl::TypeAlias:
+          return TypeAlias;
+        case Decl::CXXMethod:
+          return CXXMethod;
+        case Decl::CXXConstructor:
+          return CXXConstructor;
+        case Decl::CXXDestructor:
+          return CXXDestructor;
+        case Decl::CXXConversion:
+          return CXXConversion;
+        case Decl::Field:
+          return Field;
         }
+      };
+      Decl *FirstDecl = nullptr;
+      Decl *SecondDecl = nullptr;
+      auto FirstIt = FirstHashes.begin();
+      auto SecondIt = SecondHashes.begin();
+
+      // If there is a diagnoseable difference, FirstDiffType and
+      // SecondDiffType will not be Other and FirstDecl and SecondDecl will be
+      // filled in if not EndOfClass.
+      while (FirstIt != FirstHashes.end() || SecondIt != SecondHashes.end()) {
+        if (FirstIt->second == SecondIt->second) {
+          ++FirstIt;
+          ++SecondIt;
+          continue;
+        }
+
+        FirstDecl = FirstIt == FirstHashes.end() ? nullptr : FirstIt->first;
+        SecondDecl = SecondIt == SecondHashes.end() ? nullptr : SecondIt->first;
+
+        FirstDiffType = FirstDecl ? DifferenceSelector(FirstDecl) : EndOfClass;
+        SecondDiffType =
+            SecondDecl ? DifferenceSelector(SecondDecl) : EndOfClass;
+
+        break;
+      }
+
+      if (FirstDiffType == Other || SecondDiffType == Other) {
+        // Reaching this point means an unexpected Decl was encountered
+        // or no difference was detected.  This causes a generic error
+        // message to be emitted.
+        std::string Module = getOwningModuleNameForDiagnostic(Merge.first);
+        Diag(Merge.first->getLocation(),
+             diag::err_module_odr_violation_different_definitions)
+            << Merge.first << Module.empty() << Module;
 
         Diag(RD->getLocation(),
              diag::note_module_odr_violation_different_definitions)
-          << getOwningModuleNameForDiagnostic(RD);
+            << getOwningModuleNameForDiagnostic(RD);
+        Diagnosed = true;
+        break;
       }
+
+      std::string FirstModule = getOwningModuleNameForDiagnostic(Merge.first);
+      std::string SecondModule = getOwningModuleNameForDiagnostic(RD);
+
+      if (FirstDiffType != SecondDiffType) {
+        SourceLocation FirstLoc;
+        SourceRange FirstRange;
+        if (FirstDiffType == EndOfClass) {
+          FirstLoc = Merge.first->getBraceRange().getEnd();
+        } else {
+          FirstLoc = FirstIt->first->getLocation();
+          FirstRange = FirstIt->first->getSourceRange();
+        }
+        Diag(FirstLoc, diag::err_module_odr_violation_mismatch_decl)
+            << Merge.first << FirstModule.empty() << FirstModule << FirstRange
+            << FirstDiffType;
+
+        SourceLocation SecondLoc;
+        SourceRange SecondRange;
+        if (SecondDiffType == EndOfClass) {
+          SecondLoc = RD->getBraceRange().getEnd();
+        } else {
+          SecondLoc = SecondDecl->getLocation();
+          SecondRange = SecondDecl->getSourceRange();
+        }
+        Diag(SecondLoc, diag::note_module_odr_violation_mismatch_decl)
+            << SecondModule << SecondRange << SecondDiffType;
+        Diagnosed = true;
+        break;
+      }
+
+      // Used with err_module_odr_violation_mismatch_decl_diff and
+      // note_module_odr_violation_mismatch_decl_diff
+      enum ODRDeclDifference{
+        FriendName,
+        EnumName,
+        EnumConstantName,
+        EnumConstantInit,
+        EnumConstantNoInit,
+        EnumConstantDiffInit,
+        EnumNumberOfConstants,
+        StaticAssertCondition,
+        StaticAssertMessage,
+        StaticAssertOnlyMessage,
+        TypedefName,
+        MethodName,
+        MethodStatic,
+        MethodInline,
+        MethodConst,
+        MethodNumParams,
+        MethodParamName,
+        MethodParamType,
+        MethodDefaultArg,
+        MethodOnlyDefaultArg,
+        MethodOnlyBody,
+        MethodBody,
+        FieldName,
+        FieldSingleBitField,
+        FieldMutable,
+      };
+
+      // These lambdas have the common portions of the ODR diagnostics.  This
+      // has the same return as Diag(), so addition parameters can be passed
+      // in with operator<<
+      auto ODRDiagError = [&Merge, &FirstModule, this](
+          SourceLocation Loc, SourceRange Range, ODRDeclDifference DiffType) {
+        return Diag(Loc, diag::err_module_odr_violation_mismatch_decl_diff)
+               << Merge.first << FirstModule.empty() << FirstModule << Range
+               << DiffType;
+      };
+      auto ODRDiagNote = [&SecondModule, this](
+          SourceLocation Loc, SourceRange Range, ODRDeclDifference DiffType) {
+        return Diag(Loc, diag::note_module_odr_violation_mismatch_decl_diff)
+               << SecondModule << Range << DiffType;
+      };
+
+      auto ComputeODRHash = [&Hash](const Stmt* S) {
+        assert(S);
+        Hash.clear();
+        Hash.AddStmt(S);
+        return Hash.CalculateHash();
+      };
+
+      // At this point, both decls are of the same type.  Dive down deeper into
+      // the Decl to determine where the first difference is located.
+      switch (FirstDiffType) {
+      case Friend: {
+        FriendDecl *FirstFriend = cast<FriendDecl>(FirstDecl);
+        FriendDecl *SecondFriend = cast<FriendDecl>(SecondDecl);
+        {
+          auto D = ODRDiagError(FirstFriend->getFriendLoc(),
+                                FirstFriend->getSourceRange(), FriendName);
+          if (TypeSourceInfo *FirstTSI = FirstFriend->getFriendType())
+            D << FirstTSI->getType();
+          else
+            D << FirstFriend->getFriendDecl();
+        }
+        {
+          auto D = ODRDiagNote(SecondFriend->getFriendLoc(),
+                               SecondFriend->getSourceRange(), FriendName);
+          if (TypeSourceInfo *SecondTSI = SecondFriend->getFriendType())
+            D << SecondTSI->getType();
+          else
+            D << SecondFriend->getFriendDecl();
+        }
+        Diagnosed = true;
+        break;
+      }
+      case Enum: {
+        EnumDecl *FirstEnum = cast<EnumDecl>(FirstDecl);
+        EnumDecl *SecondEnum = cast<EnumDecl>(SecondDecl);
+        if (FirstEnum->getName() != SecondEnum->getName()) {
+          ODRDiagError(FirstEnum->getLocStart(), FirstEnum->getSourceRange(),
+                       EnumName)
+              << FirstEnum;
+          ODRDiagNote(SecondEnum->getLocStart(), SecondEnum->getSourceRange(),
+                      EnumName)
+              << SecondEnum;
+          Diagnosed = true;
+          break;
+        }
+
+        // Don't use EnumDecl::enumerator_{begin,end}.  Decl merging can
+        // cause the iterators from them to be the same for both Decl's.
+        EnumDecl::enumerator_iterator FirstEnumIt(FirstEnum->decls_begin());
+        EnumDecl::enumerator_iterator FirstEnumEnd(FirstEnum->decls_end());
+        EnumDecl::enumerator_iterator SecondEnumIt(SecondEnum->decls_begin());
+        EnumDecl::enumerator_iterator SecondEnumEnd(SecondEnum->decls_end());
+        int NumElements = 0;
+        for (; FirstEnumIt != FirstEnumEnd && SecondEnumIt != SecondEnumEnd;
+             ++FirstEnumIt, ++SecondEnumIt, ++NumElements) {
+          if (FirstEnumIt->getName() != SecondEnumIt->getName()) {
+            ODRDiagError(FirstEnumIt->getLocStart(),
+                         FirstEnumIt->getSourceRange(), EnumConstantName)
+                << *FirstEnumIt << FirstEnum;
+            ODRDiagNote(SecondEnumIt->getLocStart(),
+                        SecondEnumIt->getSourceRange(), EnumConstantName)
+                << *SecondEnumIt << SecondEnum;
+            Diagnosed = true;
+            break;
+          }
+          Expr *FirstInit = FirstEnumIt->getInitExpr();
+          Expr *SecondInit = SecondEnumIt->getInitExpr();
+
+          if (FirstInit && !SecondInit) {
+            ODRDiagError(FirstEnumIt->getLocStart(),
+                         FirstEnumIt->getSourceRange(), EnumConstantInit)
+                << *FirstEnumIt << FirstEnum;
+
+            ODRDiagNote(SecondEnumIt->getLocStart(),
+                        SecondEnumIt->getSourceRange(), EnumConstantNoInit)
+                << *SecondEnumIt << SecondEnum;
+            Diagnosed = true;
+            break;
+          }
+
+          if (!FirstInit && SecondInit) {
+            ODRDiagError(FirstEnumIt->getLocStart(),
+                         FirstEnumIt->getSourceRange(), EnumConstantNoInit)
+                << *FirstEnumIt << FirstEnum;
+            ODRDiagNote(SecondEnumIt->getLocStart(),
+                        SecondEnumIt->getSourceRange(), EnumConstantInit)
+                << *SecondEnumIt << SecondEnum;
+            Diagnosed = true;
+            break;
+          }
+
+          if (FirstInit == SecondInit)
+            continue;
+
+          unsigned FirstODRHash = ComputeODRHash(FirstInit);
+          unsigned SecondODRHash = ComputeODRHash(SecondInit);
+
+          if (FirstODRHash != SecondODRHash) {
+            ODRDiagError(FirstEnumIt->getLocStart(),
+                         FirstEnumIt->getSourceRange(), EnumConstantDiffInit)
+                << *FirstEnumIt << FirstEnum;
+            ODRDiagNote(SecondEnumIt->getLocStart(),
+                        SecondEnumIt->getSourceRange(), EnumConstantDiffInit)
+                << *SecondEnumIt << SecondEnum;
+            Diagnosed = true;
+            break;
+          }
+        }
+
+        if (FirstEnumIt == FirstEnumEnd && SecondEnumIt != SecondEnumEnd) {
+          unsigned FirstEnumSize = NumElements;
+          unsigned SecondEnumSize = NumElements;
+          for (; SecondEnumIt != SecondEnumEnd; ++SecondEnumIt)
+            ++SecondEnumSize;
+          ODRDiagError(FirstEnum->getLocStart(), FirstEnum->getSourceRange(),
+                       EnumNumberOfConstants)
+              << FirstEnum << FirstEnumSize;
+          ODRDiagNote(SecondEnum->getLocStart(), SecondEnum->getSourceRange(),
+                      EnumNumberOfConstants)
+              << SecondEnum << SecondEnumSize;
+          Diagnosed = true;
+          break;
+        }
+
+        if (FirstEnumIt != FirstEnumEnd && SecondEnumIt == SecondEnumEnd) {
+          unsigned FirstEnumSize = NumElements;
+          unsigned SecondEnumSize = NumElements;
+          for (; FirstEnumIt != FirstEnumEnd; ++FirstEnumIt)
+            ++FirstEnumSize;
+          ODRDiagError(FirstEnum->getLocStart(), FirstEnum->getSourceRange(),
+                       EnumNumberOfConstants)
+              << FirstEnum << FirstEnumSize;
+          ODRDiagNote(SecondEnum->getLocStart(), SecondEnum->getSourceRange(),
+                      EnumNumberOfConstants)
+              << SecondEnum << SecondEnumSize;
+          Diagnosed = true;
+          break;
+        }
+
+        break;
+      }
+      case StaticAssert: {
+        StaticAssertDecl *FirstSA = cast<StaticAssertDecl>(FirstDecl);
+        StaticAssertDecl *SecondSA = cast<StaticAssertDecl>(SecondDecl);
+
+        Expr *FirstExpr = FirstSA->getAssertExpr();
+        Expr *SecondExpr = SecondSA->getAssertExpr();
+        unsigned FirstODRHash = ComputeODRHash(FirstExpr);
+        unsigned SecondODRHash = ComputeODRHash(SecondExpr);
+        if (FirstODRHash != SecondODRHash) {
+          ODRDiagError(FirstExpr->getLocStart(), FirstExpr->getSourceRange(),
+                       StaticAssertCondition);
+          ODRDiagNote(SecondExpr->getLocStart(),
+                      SecondExpr->getSourceRange(), StaticAssertCondition);
+          Diagnosed = true;
+          break;
+        }
+
+        StringLiteral *FirstStr = FirstSA->getMessage();
+        StringLiteral *SecondStr = SecondSA->getMessage();
+        if ((FirstStr && !SecondStr) || (!FirstStr && SecondStr)) {
+          SourceLocation FirstLoc, SecondLoc;
+          SourceRange FirstRange, SecondRange;
+          if (FirstStr) {
+            FirstLoc = FirstStr->getLocStart();
+            FirstRange = FirstStr->getSourceRange();
+          } else {
+            FirstLoc = FirstSA->getLocStart();
+            FirstRange = FirstSA->getSourceRange();
+          }
+          if (SecondStr) {
+            SecondLoc = SecondStr->getLocStart();
+            SecondRange = SecondStr->getSourceRange();
+          } else {
+            SecondLoc = SecondSA->getLocStart();
+            SecondRange = SecondSA->getSourceRange();
+          }
+          ODRDiagError(FirstLoc, FirstRange, StaticAssertOnlyMessage)
+              << (FirstStr == nullptr);
+          ODRDiagNote(SecondLoc, SecondRange, StaticAssertOnlyMessage)
+              << (SecondStr == nullptr);
+          Diagnosed = true;
+          break;
+        }
+
+        if (FirstStr && SecondStr &&
+            FirstStr->getString() != SecondStr->getString()) {
+          ODRDiagError(FirstStr->getLocStart(), FirstStr->getSourceRange(),
+                       StaticAssertMessage);
+          ODRDiagNote(SecondStr->getLocStart(), SecondStr->getSourceRange(),
+                      StaticAssertMessage);
+          Diagnosed = true;
+          break;
+        }
+        break;
+      }
+      case Typedef:
+      case TypeAlias: {
+        TypedefNameDecl *FirstTD = cast<TypedefNameDecl>(FirstDecl);
+        TypedefNameDecl *SecondTD = cast<TypedefNameDecl>(SecondDecl);
+        IdentifierInfo *FirstII = FirstTD->getIdentifier();
+        IdentifierInfo *SecondII = SecondTD->getIdentifier();
+        if (FirstII && SecondII && FirstII->getName() != SecondII->getName()) {
+          ODRDiagError(FirstTD->getLocation(), FirstTD->getSourceRange(),
+                       TypedefName)
+              << (FirstDiffType == TypeAlias) << FirstII;
+          ODRDiagNote(SecondTD->getLocation(), SecondTD->getSourceRange(),
+                      TypedefName)
+              << (FirstDiffType == TypeAlias) << SecondII;
+          Diagnosed = true;
+          break;
+        }
+        break;
+      }
+      case CXXMethod:
+      case CXXConstructor:
+      case CXXConversion:
+      case CXXDestructor: {
+        // TODO: Merge with existing method diff logic.
+        CXXMethodDecl *FirstMD = cast<CXXMethodDecl>(FirstDecl);
+        CXXMethodDecl *SecondMD = cast<CXXMethodDecl>(SecondDecl);
+        IdentifierInfo *FirstII = FirstMD->getIdentifier();
+        IdentifierInfo *SecondII = SecondMD->getIdentifier();
+        if (FirstII && SecondII && FirstII->getName() != SecondII->getName()) {
+          ODRDiagError(FirstMD->getLocation(), FirstMD->getSourceRange(),
+                       MethodName)
+              << FirstII;
+          ODRDiagNote(SecondMD->getLocation(), SecondMD->getSourceRange(),
+                      MethodName)
+              << SecondII;
+          Diagnosed = true;
+          break;
+        }
+
+        bool FirstStatic = FirstMD->getStorageClass() == SC_Static;
+        bool SecondStatic = SecondMD->getStorageClass() == SC_Static;
+        if (FirstStatic != SecondStatic) {
+          ODRDiagError(FirstMD->getLocation(), FirstMD->getSourceRange(),
+                       MethodStatic)
+              << FirstMD << FirstStatic;
+          ODRDiagNote(SecondMD->getLocation(), SecondMD->getSourceRange(),
+                      MethodStatic)
+              << SecondMD << SecondStatic;
+          Diagnosed = true;
+          break;
+        }
+
+        bool FirstInline = FirstMD->isInlineSpecified();
+        bool SecondInline = SecondMD->isInlineSpecified();
+        if (FirstInline != SecondInline) {
+          ODRDiagError(FirstMD->getLocation(), FirstMD->getSourceRange(),
+                       MethodInline)
+              << FirstMD << FirstInline;
+          ODRDiagNote(SecondMD->getLocation(), SecondMD->getSourceRange(),
+                      MethodInline)
+              << SecondMD << SecondInline;
+          Diagnosed = true;
+          break;
+        }
+
+        bool FirstConst = FirstMD->isConst();
+        bool SecondConst = SecondMD->isConst();
+        if (FirstConst != SecondConst) {
+          ODRDiagError(FirstMD->getLocation(), FirstMD->getSourceRange(),
+                       MethodConst)
+              << FirstMD << FirstInline;
+          ODRDiagNote(SecondMD->getLocation(), SecondMD->getSourceRange(),
+                      MethodConst)
+              << SecondMD << SecondInline;
+          Diagnosed = true;
+          break;
+        }
+
+        if (FirstMD->getNumParams() != SecondMD->getNumParams()) {
+          ODRDiagError(FirstMD->getLocation(), FirstMD->getSourceRange(),
+                       MethodNumParams)
+              << SecondMD << FirstMD->getNumParams();
+          ODRDiagNote(SecondMD->getLocation(), SecondMD->getSourceRange(),
+                      MethodNumParams)
+              << SecondMD << SecondMD->getNumParams();
+          Diagnosed = true;
+          break;
+        }
+
+        for (unsigned i = 0, e = FirstMD->getNumParams(); i < e; ++i) {
+          ParmVarDecl *FirstParam = FirstMD->getParamDecl(i);
+          ParmVarDecl *SecondParam = SecondMD->getParamDecl(i);
+          IdentifierInfo *FirstII = FirstParam->getIdentifier();
+          IdentifierInfo *SecondII = SecondParam->getIdentifier();
+          if ((!FirstII && SecondII) || (FirstII && !SecondII) ||
+              (FirstII && SecondII &&
+               FirstII->getName() != SecondII->getName())) {
+            ODRDiagError(FirstParam->getLocation(),
+                         FirstParam->getSourceRange(), MethodParamName)
+                << SecondMD << i + 1 << (FirstII == nullptr) << FirstII;
+            ODRDiagNote(SecondParam->getLocation(),
+                        SecondParam->getSourceRange(), MethodParamName)
+                << SecondMD << i + 1 << (SecondII == nullptr) << SecondII;
+            Diagnosed = true;
+            break;
+          }
+
+          if (!Context.hasSameType(FirstParam->getType(),
+                                   SecondParam->getType())) {
+            ODRDiagError(FirstParam->getLocation(),
+                         FirstParam->getSourceRange(), MethodParamType)
+                << SecondMD << i + 1 << FirstParam->getType();
+            ODRDiagNote(SecondParam->getLocation(),
+                        SecondParam->getSourceRange(), MethodParamType)
+                << SecondMD << i + 1 << SecondParam->getType();
+            Diagnosed = true;
+            break;
+          }
+
+          Expr *FirstDefaultArg = FirstParam->getDefaultArg();
+          Expr *SecondDefaultArg = SecondParam->getDefaultArg();
+          if ((!FirstDefaultArg && SecondDefaultArg) ||
+              (FirstDefaultArg && !SecondDefaultArg)) {
+            ODRDiagError(FirstParam->getLocation(),
+                         FirstParam->getSourceRange(), MethodOnlyDefaultArg)
+                << SecondMD << i + 1 << (FirstDefaultArg != nullptr);
+            ODRDiagNote(SecondParam->getLocation(),
+                        SecondParam->getSourceRange(), MethodOnlyDefaultArg)
+                << SecondMD << i + 1 << (SecondDefaultArg != nullptr);
+            Diagnosed = true;
+            break;
+          }
+
+          if (FirstDefaultArg && SecondDefaultArg) {
+            unsigned FirstODRHash = ComputeODRHash(FirstDefaultArg);
+            unsigned SecondODRHash = ComputeODRHash(SecondDefaultArg);
+            if (FirstODRHash != SecondODRHash) {
+              ODRDiagError(FirstParam->getLocation(),
+                           FirstParam->getSourceRange(), MethodDefaultArg)
+                  << SecondMD << i + 1;
+              ODRDiagNote(SecondParam->getLocation(),
+                          SecondParam->getSourceRange(), MethodDefaultArg)
+                  << SecondMD << i + 1;
+              Diagnosed = true;
+              break;
+            }
+          }
+        }
+
+        // TODO: Figure out how to diagnose different function bodies.
+        // Deserialization does not import the second function body.
+
+        break;
+      }
+      case Field: {
+        // TODO: Merge with exising field diff logic.
+        FieldDecl *FirstField = cast<FieldDecl>(FirstDecl);
+        FieldDecl *SecondField = cast<FieldDecl>(SecondDecl);
+        IdentifierInfo *FirstII = FirstField->getIdentifier();
+        IdentifierInfo *SecondII = SecondField->getIdentifier();
+        if (FirstII->getName() != SecondII->getName()) {
+          ODRDiagError(FirstField->getLocation(), FirstField->getSourceRange(),
+                       FieldName)
+              << FirstII;
+          ODRDiagNote(SecondField->getLocation(), SecondField->getSourceRange(),
+                      FieldName)
+              << SecondII;
+          Diagnosed = true;
+          break;
+        }
+
+        // This case is handled elsewhere.
+        if (!Context.hasSameType(FirstField->getType(),
+                                 SecondField->getType())) {
+          break;
+        }
+
+        bool FirstBitField = FirstField->isBitField();
+        bool SecondBitField = SecondField->isBitField();
+        if (FirstBitField != SecondBitField) {
+          ODRDiagError(FirstField->getLocation(), FirstField->getSourceRange(),
+                       FieldSingleBitField)
+              << FirstII << FirstBitField;
+          ODRDiagNote(SecondField->getLocation(), SecondField->getSourceRange(),
+                      FieldSingleBitField)
+              << SecondII << SecondBitField;
+          Diagnosed = true;
+          break;
+        }
+
+        if (FirstBitField && SecondBitField) {
+          Expr* FirstWidth = FirstField->getBitWidth();
+          Expr *SecondWidth = SecondField->getBitWidth();
+          unsigned FirstODRHash = ComputeODRHash(FirstWidth);
+          unsigned SecondODRHash = ComputeODRHash(SecondWidth);
+          if (FirstODRHash != SecondODRHash) {
+            ODRDiagError(FirstField->getLocation(),
+                         FirstField->getSourceRange(), FieldSingleBitField)
+                << FirstII << FirstBitField;
+            ODRDiagNote(SecondField->getLocation(),
+                        SecondField->getSourceRange(), FieldSingleBitField)
+                << SecondII << SecondBitField;
+            Diagnosed = true;
+            break;
+          }
+        }
+
+        bool FirstMutable = FirstField->isMutable();
+        bool SecondMutable = SecondField->isMutable();
+        if (FirstMutable != SecondMutable) {
+          ODRDiagError(FirstField->getLocation(), FirstField->getSourceRange(),
+                       FieldMutable)
+              << FirstII << FirstMutable;
+          ODRDiagNote(SecondField->getLocation(), SecondField->getSourceRange(),
+                      FieldMutable)
+              << SecondII << SecondMutable;
+          Diagnosed = true;
+          break;
+        }
+        break;
+      }
+      case Other:
+      case EndOfClass:
+      case PublicSpecifer:
+      case PrivateSpecifer:
+      case ProtectedSpecifer:
+        llvm_unreachable("Invalid diff type");
+      }
+
+      if (Diagnosed == true)
+        continue;
+
+      // Unable to find difference in Decl's, print simple different
+      // definitions diagnostic.
+      Diag(Merge.first->getLocation(),
+           diag::err_module_odr_violation_different_definitions)
+          << Merge.first << FirstModule.empty() << FirstModule;
+      Diag(RD->getLocation(),
+           diag::note_module_odr_violation_different_definitions)
+          << SecondModule;
+      Diagnosed = true;
     }
 
     if (!Diagnosed) {
