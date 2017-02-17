@@ -976,7 +976,7 @@ public:
   CanQualType SingletonId;
 #include "clang/Basic/OpenCLImageTypes.def"
   CanQualType OCLSamplerTy, OCLEventTy, OCLClkEventTy;
-  CanQualType OCLQueueTy, OCLNDRangeTy, OCLReserveIDTy;
+  CanQualType OCLQueueTy, OCLReserveIDTy;
   CanQualType OMPArraySectionTy;
 
   // Types for deductions in C++0x [stmt.ranged]'s desugaring. Built on demand.

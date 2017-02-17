@@ -408,10 +408,10 @@ static bool SemaOpenCLBuiltinEnqueueKernel(Sema &S, CallExpr *TheCall) {
   }
 
   // Third argument is always an ndrange_t type.
-  if (!Arg2->getType()->isNDRangeT()) {
+  if (Arg2->getType().getAsString() != "ndrange_t") {
     S.Diag(TheCall->getArg(2)->getLocStart(),
            diag::err_opencl_enqueue_kernel_expected_type)
-        << S.Context.OCLNDRangeTy;
+        << "'ndrange_t'";
     return true;
   }
 

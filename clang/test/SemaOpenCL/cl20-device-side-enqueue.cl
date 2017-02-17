@@ -1,6 +1,7 @@
 // RUN: %clang_cc1 %s -cl-std=CL2.0 -triple "spir-unknown-unknown" -verify -pedantic -fsyntax-only -DB32
 // RUN: %clang_cc1 %s -cl-std=CL2.0 -triple "spir64-unknown-unknown" -verify -pedantic -fsyntax-only -Wconversion -DWCONV
 
+typedef struct {int a;} ndrange_t;
 // Diagnostic tests for different overloads of enqueue_kernel from Table 6.13.17.1 of OpenCL 2.0 Spec.
 kernel void enqueue_kernel_tests() {
   queue_t default_queue;

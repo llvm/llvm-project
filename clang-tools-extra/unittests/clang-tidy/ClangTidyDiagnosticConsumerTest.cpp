@@ -67,7 +67,7 @@ TEST(GlobList, Simple) {
 }
 
 TEST(GlobList, Complex) {
-  GlobList Filter("*,-a.*,-b.*,a.1.*,-a.1.A.*,-..,-...,-..+,-*$,-*qwe*");
+  GlobList Filter("*,-a.*, -b.*,   a.1.* ,-a.1.A.*,-..,-...,-..+,-*$, -*qwe* ");
 
   EXPECT_TRUE(Filter.contains("aaa"));
   EXPECT_TRUE(Filter.contains("qqq"));

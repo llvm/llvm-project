@@ -1966,7 +1966,7 @@ TEST_F(FormatTest, EscapedNewlines) {
       format("#define A \\\nint i;\\\n  int j;", getLLVMStyleWithColumns(11)));
   EXPECT_EQ("#define A\n\nint i;", format("#define A \\\n\n int i;"));
   EXPECT_EQ("template <class T> f();", format("\\\ntemplate <class T> f();"));
-  EXPECT_EQ("/* \\  \\  \\\n*/", format("\\\n/* \\  \\  \\\n*/"));
+  EXPECT_EQ("/* \\  \\  \\\n */", format("\\\n/* \\  \\  \\\n */"));
   EXPECT_EQ("<a\n\\\\\n>", format("<a\n\\\\\n>"));
 }
 

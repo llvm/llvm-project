@@ -2030,6 +2030,9 @@ public:
   llvm::BlockAddress *GetAddrOfLabel(const LabelDecl *L);
   llvm::BasicBlock *GetIndirectGotoBlock();
 
+  /// Check if the null check for \p ObjectPointer can be skipped.
+  static bool CanElideObjectPointerNullCheck(const Expr *ObjectPointer);
+
   /// EmitNullInitialization - Generate code to set a value of the given type to
   /// null, If the type contains data member pointers, they will be initialized
   /// to -1 in accordance with the Itanium C++ ABI.
@@ -2638,7 +2641,9 @@ public:
   /// the end of the directive.
   ///
   /// \param D Directive that has at least one 'reduction' directives.
-  void EmitOMPReductionClauseFinal(const OMPExecutableDirective &D);
+  /// \param ReductionKind The kind of reduction to perform.
+  void EmitOMPReductionClauseFinal(const OMPExecutableDirective &D,
+                                   const OpenMPDirectiveKind ReductionKind);
   /// \brief Emit initial code for linear variables. Creates private copies
   /// and initializes them with the values according to OpenMP standard.
   ///

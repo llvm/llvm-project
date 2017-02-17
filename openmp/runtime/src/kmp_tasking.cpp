@@ -1596,6 +1596,204 @@ __kmpc_omp_taskyield( ident_t *loc_ref, kmp_int32 gtid, int end_part )
     return TASK_CURRENT_NOT_QUEUED;
 }
 
+// TODO: change to OMP_50_ENABLED, need to change build tools for this to work
+#if OMP_45_ENABLED
+//
+// Task Reduction implementation
+//
+
+typedef struct kmp_task_red_flags {
+    unsigned  lazy_priv : 1;  // hint: (1) use lazy allocation (big objects)
+    unsigned  reserved31 : 31;
+} kmp_task_red_flags_t;
+
+// internal structure for reduction data item related info
+typedef struct kmp_task_red_data {
+    void       *reduce_shar; // shared reduction item
+    size_t      reduce_size; // size of data item
+    void       *reduce_priv; // thread specific data
+    void       *reduce_pend; // end of private data for comparison op
+    void       *reduce_init; // data initialization routine
+    void       *reduce_fini; // data finalization routine
+    void       *reduce_comb; // data combiner routine
+    kmp_task_red_flags_t flags; // flags for additional info from compiler
+} kmp_task_red_data_t;
+
+// structure sent us by compiler - one per reduction item
+typedef struct kmp_task_red_input {
+    void       *reduce_shar; // shared reduction item
+    size_t      reduce_size; // size of data item
+    void       *reduce_init; // data initialization routine
+    void       *reduce_fini; // data finalization routine
+    void       *reduce_comb; // data combiner routine
+    kmp_task_red_flags_t flags; // flags for additional info from compiler
+} kmp_task_red_input_t;
+
+/*!
+@ingroup TASKING
+@param gtid      Global thread ID
+@param num       Number of data items to reduce
+@param data      Array of data for reduction
+@return The taskgroup identifier
+
+Initialize task reduction for the taskgroup.
+*/
+void*
+__kmpc_task_reduction_init(int gtid, int num, void *data)
+{
+    kmp_info_t * thread = __kmp_threads[gtid];
+    kmp_taskgroup_t * tg = thread->th.th_current_task->td_taskgroup;
+    kmp_int32 nth = thread->th.th_team_nproc;
+    kmp_task_red_input_t *input = (kmp_task_red_input_t*)data;
+    kmp_task_red_data_t *arr;
+
+    // check input data just in case
+    KMP_ASSERT(tg != NULL);
+    KMP_ASSERT(data != NULL);
+    KMP_ASSERT(num > 0);
+    if (nth == 1) {
+        KA_TRACE(10, ("__kmpc_task_reduction_init: T#%d, tg %p, exiting nth=1\n",
+                gtid, tg));
+        return (void*)tg;
+    }
+    KA_TRACE(10,("__kmpc_task_reduction_init: T#%d, taskgroup %p, #items %d\n",
+                 gtid, tg, num));
+    arr = (kmp_task_red_data_t*)__kmp_thread_malloc(thread, num * sizeof(kmp_task_red_data_t));
+    for (int i = 0; i < num; ++i) {
+        void(*f_init)(void*) = (void(*)(void*))(input[i].reduce_init);
+        size_t size = input[i].reduce_size - 1;
+        // round the size up to cache line per thread-specific item
+        size += CACHE_LINE - size % CACHE_LINE;
+        KMP_ASSERT(input[i].reduce_comb != NULL); // combiner is mandatory
+        arr[i].reduce_shar = input[i].reduce_shar;
+        arr[i].reduce_size = size;
+        arr[i].reduce_init = input[i].reduce_init;
+        arr[i].reduce_fini = input[i].reduce_fini;
+        arr[i].reduce_comb = input[i].reduce_comb;
+        arr[i].flags       = input[i].flags;
+        if (!input[i].flags.lazy_priv) {
+            // allocate cache-line aligned block and fill it with zeros
+            arr[i].reduce_priv = __kmp_allocate(nth * size);
+            arr[i].reduce_pend = (char*)(arr[i].reduce_priv) + nth * size;
+            if (f_init != NULL) {
+                // initialize thread-specific items
+                for (int j = 0; j < nth; ++j) {
+                    f_init((char*)(arr[i].reduce_priv) + j * size);
+                }
+            }
+        } else {
+            // only allocate space for pointers now,
+            // objects will be lazily allocated/initialized once requested
+            arr[i].reduce_priv = __kmp_allocate(nth * sizeof(void*));
+        }
+    }
+    tg->reduce_data = (void*)arr;
+    tg->reduce_num_data = num;
+    return (void*)tg;
+}
+
+/*!
+@ingroup TASKING
+@param gtid    Global thread ID
+@param tskgrp  The taskgroup ID (optional)
+@param data    Shared location of the item
+@return The pointer to per-thread data
+
+Get thread-specific location of data item
+*/
+void*
+__kmpc_task_reduction_get_th_data(int gtid, void *tskgrp, void *data)
+{
+    kmp_info_t * thread = __kmp_threads[gtid];
+    kmp_int32 nth = thread->th.th_team_nproc;
+    if (nth == 1)
+        return data; // nothing to do
+
+    kmp_taskgroup_t *tg = (kmp_taskgroup_t*)tskgrp;
+    if (tg == NULL)
+        tg = thread->th.th_current_task->td_taskgroup;
+    KMP_ASSERT(tg != NULL);
+    kmp_task_red_data_t *arr = (kmp_task_red_data_t*)(tg->reduce_data);
+    kmp_int32 num = tg->reduce_num_data;
+    kmp_int32 tid = thread->th.th_info.ds.ds_tid;
+
+    KMP_ASSERT(data != NULL);
+    while (tg != NULL) {
+      for (int i = 0; i < num; ++i) {
+        if (!arr[i].flags.lazy_priv) {
+          if (data == arr[i].reduce_shar ||
+             (data >= arr[i].reduce_priv && data < arr[i].reduce_pend))
+            return (char*)(arr[i].reduce_priv) + tid * arr[i].reduce_size;
+        } else {
+          // check shared location first
+          void **p_priv = (void**)(arr[i].reduce_priv);
+          if (data == arr[i].reduce_shar)
+            goto found;
+          // check if we get some thread specific location as parameter
+          for (int j = 0; j < nth; ++j)
+            if (data == p_priv[j])
+              goto found;
+          continue; // not found, continue search
+        found:
+          if (p_priv[tid] == NULL) {
+            // allocate thread specific object lazily
+            void(*f_init)(void*) = (void(*)(void*))(arr[i].reduce_init);
+            p_priv[tid] = __kmp_allocate(arr[i].reduce_size);
+            if (f_init != NULL) {
+              f_init(p_priv[tid]);
+            }
+          }
+          return p_priv[tid];
+        }
+      }
+      tg = tg->parent;
+      arr = (kmp_task_red_data_t*)(tg->reduce_data);
+      num = tg->reduce_num_data;
+    }
+    KMP_ASSERT2(0, "Unknown task reduction item");
+    return NULL; // ERROR, this line never executed
+}
+
+// Finalize task reduction.
+// Called from __kmpc_end_taskgroup()
+static void
+__kmp_task_reduction_fini(kmp_info_t *th, kmp_taskgroup_t *tg)
+{
+    kmp_int32 nth = th->th.th_team_nproc;
+    KMP_DEBUG_ASSERT(nth > 1); // should not be called if nth == 1
+    kmp_task_red_data_t *arr = (kmp_task_red_data_t*)tg->reduce_data;
+    kmp_int32 num = tg->reduce_num_data;
+    for (int i = 0; i < num; ++i) {
+        void *sh_data = arr[i].reduce_shar;
+        void(*f_fini)(void*) = (void(*)(void*))(arr[i].reduce_fini);
+        void(*f_comb)(void*,void*) = (void(*)(void*,void*))(arr[i].reduce_comb);
+        if (!arr[i].flags.lazy_priv) {
+            void *pr_data = arr[i].reduce_priv;
+            size_t size = arr[i].reduce_size;
+            for (int j = 0; j < nth; ++j) {
+                void * priv_data = (char*)pr_data + j * size;
+                f_comb(sh_data, priv_data); // combine results
+                if (f_fini)
+                    f_fini(priv_data); // finalize if needed
+            }
+        } else {
+            void **pr_data = (void**)(arr[i].reduce_priv);
+            for (int j = 0; j < nth; ++j) {
+                if (pr_data[j] != NULL) {
+                    f_comb(sh_data, pr_data[j]); // combine results
+                    if (f_fini)
+                        f_fini(pr_data[j]); // finalize if needed
+                    __kmp_free(pr_data[j]);
+                }
+            }
+        }
+        __kmp_free(arr[i].reduce_priv);
+    }
+    __kmp_thread_free(th, arr);
+    tg->reduce_data = NULL;
+    tg->reduce_num_data = 0;
+}
+#endif
 
 #if OMP_40_ENABLED
 //-------------------------------------------------------------------------------------
@@ -1612,6 +1810,11 @@ __kmpc_taskgroup( ident_t* loc, int gtid )
     tg_new->count = 0;
     tg_new->cancel_request = cancel_noreq;
     tg_new->parent = taskdata->td_taskgroup;
+// TODO: change to OMP_50_ENABLED, need to change build tools for this to work
+#if OMP_45_ENABLED
+    tg_new->reduce_data = NULL;
+    tg_new->reduce_num_data = 0;
+#endif
     taskdata->td_taskgroup = tg_new;
 }
 
@@ -1660,6 +1863,11 @@ __kmpc_end_taskgroup( ident_t* loc, int gtid )
     }
     KMP_DEBUG_ASSERT( taskgroup->count == 0 );
 
+// TODO: change to OMP_50_ENABLED, need to change build tools for this to work
+#if OMP_45_ENABLED
+    if( taskgroup->reduce_data != NULL ) // need to reduce?
+        __kmp_task_reduction_fini(thread, taskgroup);
+#endif
     // Restore parent taskgroup for the current task
     taskdata->td_taskgroup = taskgroup->parent;
     __kmp_thread_free( thread, taskgroup );

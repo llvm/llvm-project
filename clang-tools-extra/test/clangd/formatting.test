@@ -4,11 +4,12 @@
 Content-Length: 125
 
 {"jsonrpc":"2.0","id":0,"method":"initialize","params":{"processId":123,"rootPath":"clangd","capabilities":{},"trace":"off"}}
-# CHECK: Content-Length: 191
+# CHECK: Content-Length: 294
 # CHECK: {"jsonrpc":"2.0","id":0,"result":{"capabilities":{
 # CHECK:   "textDocumentSync": 1,
 # CHECK:   "documentFormattingProvider": true,
-# CHECK:   "documentRangeFormattingProvider": true
+# CHECK:   "documentRangeFormattingProvider": true,
+# CHECK:   "documentOnTypeFormattingProvider": {"firstTriggerCharacter":"}","moreTriggerCharacter":[]}
 # CHECK: }}}
 #
 Content-Length: 193
@@ -48,6 +49,17 @@ Content-Length: 153
 {"jsonrpc":"2.0","id":4,"method":"textDocument/formatting","params":{"textDocument":{"uri":"file:///foo.c"},"options":{"tabSize":4,"insertSpaces":true}}}
 # CHECK: {"jsonrpc":"2.0","id":4,"result":[]}
 #
+Content-Length: 193
+
+{"jsonrpc":"2.0","method":"textDocument/didChange","params":{"textDocument":{"uri":"file:///foo.c","version":5},"contentChanges":[{"text":"int foo ( int x ) {\n  x = x + 1;\n  return x;\n}"}]}}
+#
+#
+Content-Length: 204
+
+{"jsonrpc":"2.0","id":5,"method":"textDocument/onTypeFormatting","params":{"textDocument":{"uri":"file:///foo.c"},"position":{"line":3,"character":1},"ch":"}","options":{"tabSize":4,"insertSpaces":true}}}
+# CHECK: {"jsonrpc":"2.0","id":5,"result":[{"range": {"start": {"line": 0, "character": 7}, "end": {"line": 0, "character": 8}}, "newText": ""},{"range": {"start": {"line": 0, "character": 9}, "end": {"line": 0, "character": 10}}, "newText": ""},{"range": {"start": {"line": 0, "character": 15}, "end": {"line": 0, "character": 16}}, "newText": ""}]}
+#
+
 Content-Length: 44
 
-{"jsonrpc":"2.0","id":5,"method":"shutdown"}
+{"jsonrpc":"2.0","id":6,"method":"shutdown"}

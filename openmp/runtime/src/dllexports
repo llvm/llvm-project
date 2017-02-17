@@ -397,6 +397,15 @@ kmpc_set_defaults                           224
 kmpc_aligned_malloc                         265
 kmpc_set_disp_num_buffers                   267
 
+# OpenMP 5.0 entry points
+# TODO: change to OMP_50 once it is implemented
+%ifndef stub
+    %ifdef OMP_45
+        __kmpc_task_reduction_init          268
+        __kmpc_task_reduction_get_th_data   269
+    %endif
+%endif
+
 # User API entry points that have both lower- and upper- case versions for Fortran.
 # Number for lowercase version is indicated.  Number for uppercase is obtained by adding 1000.
 # User API entry points are entry points that start with 'kmp_' or 'omp_'.

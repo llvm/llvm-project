@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Utility/PseudoTerminal.h"
+#include "lldb/Host/PseudoTerminal.h"
 #include "lldb/Host/Config.h"
 
 #include <errno.h>
@@ -112,8 +112,7 @@ bool PseudoTerminal::OpenFirstAvailableMaster(int oflag, char *error_str,
   return true;
 #else
   if (error_str)
-    ::snprintf(error_str, error_len, "%s",
-               "pseudo terminal not supported");
+    ::snprintf(error_str, error_len, "%s", "pseudo terminal not supported");
   return false;
 #endif
 }

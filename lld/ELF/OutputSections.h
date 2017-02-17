@@ -202,6 +202,19 @@ struct SectionKey {
   uint64_t Flags;
   uint64_t Alignment;
 };
+}
+}
+namespace llvm {
+template <> struct DenseMapInfo<lld::elf::SectionKey> {
+  static lld::elf::SectionKey getEmptyKey();
+  static lld::elf::SectionKey getTombstoneKey();
+  static unsigned getHashValue(const lld::elf::SectionKey &Val);
+  static bool isEqual(const lld::elf::SectionKey &LHS,
+                      const lld::elf::SectionKey &RHS);
+};
+}
+namespace lld {
+namespace elf {
 
 // This class knows how to create an output section for a given
 // input section. Output section type is determined by various
@@ -212,12 +225,13 @@ template <class ELFT> class OutputSectionFactory {
   typedef typename ELFT::uint uintX_t;
 
 public:
-  OutputSectionFactory();
+  OutputSectionFactory(std::vector<OutputSectionBase *> &OutputSections);
   ~OutputSectionFactory();
-  std::pair<OutputSectionBase *, bool> create(InputSectionBase<ELFT> *C,
-                                              StringRef OutsecName);
+  void addInputSec(InputSectionBase<ELFT> *IS, StringRef OutsecName);
+
 private:
   llvm::SmallDenseMap<SectionKey, OutputSectionBase *> Map;
+  std::vector<OutputSectionBase *> &OutputSections;
 };
 
 template <class ELFT> uint64_t getHeaderSize() {

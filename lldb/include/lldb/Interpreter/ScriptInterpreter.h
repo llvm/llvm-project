@@ -22,7 +22,7 @@
 #include "lldb/Core/StructuredData.h"
 #include "lldb/Utility/Error.h"
 
-#include "lldb/Utility/PseudoTerminal.h"
+#include "lldb/Host/PseudoTerminal.h"
 
 namespace lldb_private {
 

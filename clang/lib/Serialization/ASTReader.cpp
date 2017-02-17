@@ -6380,9 +6380,6 @@ QualType ASTReader::GetType(TypeID ID) {
     case PREDEF_TYPE_QUEUE_ID:
       T = Context.OCLQueueTy;
       break;
-    case PREDEF_TYPE_NDRANGE_ID:
-      T = Context.OCLNDRangeTy;
-      break;
     case PREDEF_TYPE_RESERVE_ID_ID:
       T = Context.OCLReserveIDTy;
       break;

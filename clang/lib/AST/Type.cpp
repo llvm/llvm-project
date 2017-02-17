@@ -2637,8 +2637,6 @@ StringRef BuiltinType::getName(const PrintingPolicy &Policy) const {
     return "clk_event_t";
   case OCLQueue:
     return "queue_t";
-  case OCLNDRange:
-    return "ndrange_t";
   case OCLReserveID:
     return "reserve_id_t";
   case OMPArraySection:
@@ -3650,7 +3648,6 @@ bool Type::canHaveNullability() const {
     case BuiltinType::OCLEvent:
     case BuiltinType::OCLClkEvent:
     case BuiltinType::OCLQueue:
-    case BuiltinType::OCLNDRange:
     case BuiltinType::OCLReserveID:
     case BuiltinType::BuiltinFn:
     case BuiltinType::NullPtr:
