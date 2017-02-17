@@ -74,7 +74,8 @@ ExtractSomeIfAny(ValueObject *optional,
         lldb::addr_t original_ptr =
             value_sp->GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
         lldb::addr_t tweaked_ptr =
-            swift_runtime->MaybeMaskNonTrivialReferencePointer(original_ptr);
+            swift_runtime->MaybeMaskNonTrivialReferencePointer(original_ptr,
+                                                               strategy);
         if (original_ptr != tweaked_ptr) {
           CompilerType value_type(value_sp->GetCompilerType());
           DataBufferSP buffer_sp(

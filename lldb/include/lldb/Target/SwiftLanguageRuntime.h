@@ -354,7 +354,9 @@ public:
   // to record useful runtime information
   // This API's task is to strip those bits if necessary and return
   // a pure pointer (or a tagged pointer)
-  lldb::addr_t MaybeMaskNonTrivialReferencePointer(lldb::addr_t);
+  lldb::addr_t MaybeMaskNonTrivialReferencePointer(
+      lldb::addr_t, 
+      SwiftASTContext::NonTriviallyManagedReferenceStrategy strategy);
 
   ConstString GetErrorBackstopName();
 

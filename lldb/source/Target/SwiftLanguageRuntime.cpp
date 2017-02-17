@@ -3327,8 +3327,16 @@ SwiftLanguageRuntime::MaskMaybeBridgedPointer(lldb::addr_t addr,
 }
 
 lldb::addr_t
-SwiftLanguageRuntime::MaybeMaskNonTrivialReferencePointer(lldb::addr_t addr) {
-  if (auto objc_runtime = GetObjCRuntime()) {
+SwiftLanguageRuntime::MaybeMaskNonTrivialReferencePointer(
+    lldb::addr_t addr,
+    SwiftASTContext::NonTriviallyManagedReferenceStrategy strategy) {
+
+  if (addr == 0)
+    return addr;
+
+  AppleObjCRuntime *objc_runtime = GetObjCRuntime();
+  
+  if (objc_runtime) {
     // tagged pointers don't perform any masking
     if (objc_runtime->IsTaggedPointer(addr))
       return addr;
@@ -3372,16 +3380,77 @@ SwiftLanguageRuntime::MaybeMaskNonTrivialReferencePointer(lldb::addr_t addr) {
 
   lldb::addr_t mask = 0;
 
-  if (is_arm && is_64)
-    mask = SWIFT_ABI_ARM64_OBJC_NUM_RESERVED_LOW_BITS;
-  else if (is_intel && is_64)
-    mask = SWIFT_ABI_X86_64_OBJC_NUM_RESERVED_LOW_BITS;
-  else
-    mask = SWIFT_ABI_DEFAULT_OBJC_NUM_RESERVED_LOW_BITS;
+  if (strategy == SwiftASTContext::NonTriviallyManagedReferenceStrategy::eWeak) {
+    bool is_indirect = true;
+    
+    // On non-objc platforms, the weak reference pointer always pointed to a
+    // runtime structure.
+    // For ObjC platforms, the masked value determines whether it is indirect.
+    
+    uint32_t value = 0;
+    
+    if (objc_runtime)
+    {
+    
+      if (is_intel) {
+        if (is_64) {
+          mask = SWIFT_ABI_X86_64_OBJC_WEAK_REFERENCE_MARKER_MASK;
+          value = SWIFT_ABI_X86_64_OBJC_WEAK_REFERENCE_MARKER_VALUE;
+        } else {
+          mask = SWIFT_ABI_I386_OBJC_WEAK_REFERENCE_MARKER_MASK;
+          value = SWIFT_ABI_I386_OBJC_WEAK_REFERENCE_MARKER_VALUE;
+        }
+      } else if (is_arm) {
+        if (is_64) {
+            mask = SWIFT_ABI_ARM64_OBJC_WEAK_REFERENCE_MARKER_MASK;
+            value = SWIFT_ABI_ARM64_OBJC_WEAK_REFERENCE_MARKER_VALUE;
+        } else {
+            mask = SWIFT_ABI_ARM_OBJC_WEAK_REFERENCE_MARKER_MASK;
+            value = SWIFT_ABI_ARM_OBJC_WEAK_REFERENCE_MARKER_VALUE;
+        }
+      }
+    } else {
+        // This name is a little confusing. The "DEFAULT" marking in System.h
+        // is supposed to mean: the value for non-ObjC platforms.  So
+        // DEFAULT_OBJC here actually means "non-ObjC".
+        mask = SWIFT_ABI_DEFAULT_OBJC_WEAK_REFERENCE_MARKER_MASK;
+        value = SWIFT_ABI_DEFAULT_OBJC_WEAK_REFERENCE_MARKER_VALUE;
+    }
+    
+    is_indirect = ((addr & mask) == value);
+    
+    if (!is_indirect)
+      return addr;
+    
+    // The masked value of address is a pointer to the runtime structure.
+    // The first field of the structure is the actual pointer.
+    Process *process = GetProcess();
+    Error error;
+    
+    lldb::addr_t masked_addr = addr & ~mask;
+    lldb::addr_t isa_addr = process->ReadPointerFromMemory(masked_addr, error);
+    if (error.Fail())
+    {
+        // FIXME: do some logging here.
+        return addr;
+    }
+    return isa_addr;
+    
+      
+  } else {
+    if (is_arm && is_64)
+      mask = SWIFT_ABI_ARM64_OBJC_NUM_RESERVED_LOW_BITS;
+    else if (is_intel && is_64)
+      mask = SWIFT_ABI_X86_64_OBJC_NUM_RESERVED_LOW_BITS;
+    else
+      mask = SWIFT_ABI_DEFAULT_OBJC_NUM_RESERVED_LOW_BITS;
 
-  mask = (1 << mask) | (1 << (mask + 1));
+    mask = (1 << mask) | (1 << (mask + 1));
 
-  return addr & ~mask;
+    return addr & ~mask;
+  }
+  
+  return addr;
 }
 
 ConstString SwiftLanguageRuntime::GetErrorBackstopName() {
