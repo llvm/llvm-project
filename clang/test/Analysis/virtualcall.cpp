@@ -115,12 +115,23 @@ public:
   int foo() override;
 };
 
+// Regression test: don't crash when there's no direct callee.
+class F {
+public:
+  F() {
+    void (F::* ptr)() = &F::foo;
+    (this->*ptr)();
+  }
+  void foo();
+};
+
 int main() {
   A *a;
   B *b;
   C *c;
   D *d;
   E *e;
+  F *f;
 }
 
 #include "virtualcall.h"
