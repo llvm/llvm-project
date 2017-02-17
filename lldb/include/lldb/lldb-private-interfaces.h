@@ -45,7 +45,6 @@ typedef ObjectFile *(*ObjectFileCreateMemoryInstance)(
     const lldb::ProcessSP &process_sp, lldb::addr_t offset);
 typedef bool (*ObjectFileSaveCore)(const lldb::ProcessSP &process_sp,
                                    const FileSpec &outfile, Error &error);
-typedef LogChannel *(*LogChannelCreateInstance)();
 typedef EmulateInstruction *(*EmulateInstructionCreateInstance)(
     const ArchSpec &arch, InstructionType inst_type);
 typedef OperatingSystem *(*OperatingSystemCreateInstance)(Process *process,

@@ -56,7 +56,7 @@ int main()
         assert(seekpos_called == 2);
         assert(os.fail());
     }
-    { // See https://llvm.org/bugs/show_bug.cgi?id=21361
+    { // See https://bugs.llvm.org/show_bug.cgi?id=21361
         seekpos_called = 0;
         testbuf<char> sb;
         std::ostream os(&sb);

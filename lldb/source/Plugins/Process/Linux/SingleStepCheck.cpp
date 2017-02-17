@@ -172,8 +172,9 @@ std::unique_ptr<SingleStepWorkaround> SingleStepWorkaround::Get(::pid_t tid) {
 }
 
 SingleStepWorkaround::~SingleStepWorkaround() {
+  Log *log = ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_THREAD);
+  LLDB_LOG(log, "Removing workaround");
   if (sched_setaffinity(m_tid, sizeof m_original_set, &m_original_set) != 0) {
-    Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_THREAD));
     LLDB_LOG(log, "Unable to reset cpu affinity for thread {0}: {1}", m_tid,
              Error(errno, eErrorTypePOSIX));
   }

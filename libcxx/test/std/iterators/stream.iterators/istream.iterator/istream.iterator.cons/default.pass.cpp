@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 // Usage of is_trivially_constructible is broken with these compilers.
-// See https://llvm.org/bugs/show_bug.cgi?id=31016
+// See https://bugs.llvm.org/show_bug.cgi?id=31016
 // XFAIL: clang-3.7, apple-clang-7, apple-clang-7.0
 
 // <iterator>

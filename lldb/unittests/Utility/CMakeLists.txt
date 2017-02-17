@@ -1,5 +1,6 @@
 add_lldb_unittest(UtilityTests
   ConstStringTest.cpp
+  ErrorTest.cpp
   StringExtractorTest.cpp
   TaskPoolTest.cpp
   TimeoutTest.cpp
@@ -8,6 +9,6 @@ add_lldb_unittest(UtilityTests
 
   LINK_LIBS
       lldbUtility
-    LINK_COMPONENTS
-      Support
+  LINK_COMPONENTS
+    Support
   )

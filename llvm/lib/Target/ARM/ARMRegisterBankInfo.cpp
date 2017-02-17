@@ -33,15 +33,104 @@ using namespace llvm;
 // into an ARMGenRegisterBankInfo.def (similar to AArch64).
 namespace llvm {
 namespace ARM {
-RegisterBankInfo::PartialMapping GPRPartialMapping{0, 32, GPRRegBank};
-RegisterBankInfo::PartialMapping SPRPartialMapping{0, 32, FPRRegBank};
-RegisterBankInfo::PartialMapping DPRPartialMapping{0, 64, FPRRegBank};
+enum PartialMappingIdx {
+  PMI_GPR,
+  PMI_SPR,
+  PMI_DPR,
+  PMI_Min = PMI_GPR,
+};
 
-// FIXME: Add the mapping for S(2n+1) as {32, 64, FPRRegBank}
+RegisterBankInfo::PartialMapping PartMappings[]{
+    // GPR Partial Mapping
+    {0, 32, GPRRegBank},
+    // SPR Partial Mapping
+    {0, 32, FPRRegBank},
+    // DPR Partial Mapping
+    {0, 64, FPRRegBank},
+};
+
+#ifndef NDEBUG
+static bool checkPartMapping(const RegisterBankInfo::PartialMapping &PM,
+                             unsigned Start, unsigned Length,
+                             unsigned RegBankID) {
+  return PM.StartIdx == Start && PM.Length == Length &&
+         PM.RegBank->getID() == RegBankID;
+}
+
+static void checkPartialMappings() {
+  assert(
+      checkPartMapping(PartMappings[PMI_GPR - PMI_Min], 0, 32, GPRRegBankID) &&
+      "Wrong mapping for GPR");
+  assert(
+      checkPartMapping(PartMappings[PMI_SPR - PMI_Min], 0, 32, FPRRegBankID) &&
+      "Wrong mapping for SPR");
+  assert(
+      checkPartMapping(PartMappings[PMI_DPR - PMI_Min], 0, 64, FPRRegBankID) &&
+      "Wrong mapping for DPR");
+}
+#endif
+
+enum ValueMappingIdx {
+  InvalidIdx = 0,
+  GPR3OpsIdx = 1,
+  SPR3OpsIdx = 4,
+  DPR3OpsIdx = 7,
+};
+
 RegisterBankInfo::ValueMapping ValueMappings[] = {
-    {&GPRPartialMapping, 1}, {&GPRPartialMapping, 1}, {&GPRPartialMapping, 1},
-    {&SPRPartialMapping, 1}, {&SPRPartialMapping, 1}, {&SPRPartialMapping, 1},
-    {&DPRPartialMapping, 1}, {&DPRPartialMapping, 1}, {&DPRPartialMapping, 1}};
+    // invalid
+    {nullptr, 0},
+    // 3 ops in GPRs
+    {&PartMappings[PMI_GPR - PMI_Min], 1},
+    {&PartMappings[PMI_GPR - PMI_Min], 1},
+    {&PartMappings[PMI_GPR - PMI_Min], 1},
+    // 3 ops in SPRs
+    {&PartMappings[PMI_SPR - PMI_Min], 1},
+    {&PartMappings[PMI_SPR - PMI_Min], 1},
+    {&PartMappings[PMI_SPR - PMI_Min], 1},
+    // 3 ops in DPRs
+    {&PartMappings[PMI_DPR - PMI_Min], 1},
+    {&PartMappings[PMI_DPR - PMI_Min], 1},
+    {&PartMappings[PMI_DPR - PMI_Min], 1}};
+
+#ifndef NDEBUG
+static bool checkValueMapping(const RegisterBankInfo::ValueMapping &VM,
+                              RegisterBankInfo::PartialMapping *BreakDown) {
+  return VM.NumBreakDowns == 1 && VM.BreakDown == BreakDown;
+}
+
+static void checkValueMappings() {
+  assert(checkValueMapping(ValueMappings[GPR3OpsIdx],
+                           &PartMappings[PMI_GPR - PMI_Min]) &&
+         "Wrong value mapping for 3 GPR ops instruction");
+  assert(checkValueMapping(ValueMappings[GPR3OpsIdx + 1],
+                           &PartMappings[PMI_GPR - PMI_Min]) &&
+         "Wrong value mapping for 3 GPR ops instruction");
+  assert(checkValueMapping(ValueMappings[GPR3OpsIdx + 2],
+                           &PartMappings[PMI_GPR - PMI_Min]) &&
+         "Wrong value mapping for 3 GPR ops instruction");
+
+  assert(checkValueMapping(ValueMappings[SPR3OpsIdx],
+                           &PartMappings[PMI_SPR - PMI_Min]) &&
+         "Wrong value mapping for 3 SPR ops instruction");
+  assert(checkValueMapping(ValueMappings[SPR3OpsIdx + 1],
+                           &PartMappings[PMI_SPR - PMI_Min]) &&
+         "Wrong value mapping for 3 SPR ops instruction");
+  assert(checkValueMapping(ValueMappings[SPR3OpsIdx + 2],
+                           &PartMappings[PMI_SPR - PMI_Min]) &&
+         "Wrong value mapping for 3 SPR ops instruction");
+
+  assert(checkValueMapping(ValueMappings[DPR3OpsIdx],
+                           &PartMappings[PMI_DPR - PMI_Min]) &&
+         "Wrong value mapping for 3 DPR ops instruction");
+  assert(checkValueMapping(ValueMappings[DPR3OpsIdx + 1],
+                           &PartMappings[PMI_DPR - PMI_Min]) &&
+         "Wrong value mapping for 3 DPR ops instruction");
+  assert(checkValueMapping(ValueMappings[DPR3OpsIdx + 2],
+                           &PartMappings[PMI_DPR - PMI_Min]) &&
+         "Wrong value mapping for 3 DPR ops instruction");
+}
+#endif
 } // end namespace arm
 } // end namespace llvm
 
@@ -77,6 +166,11 @@ ARMRegisterBankInfo::ARMRegisterBankInfo(const TargetRegisterInfo &TRI)
   assert(RBGPR.covers(*TRI.getRegClass(ARM::tGPR_and_tcGPRRegClassID)) &&
          "Subclass not added?");
   assert(RBGPR.getSize() == 32 && "GPRs should hold up to 32-bit");
+
+#ifndef NDEBUG
+  ARM::checkPartialMappings();
+  ARM::checkValueMappings();
+#endif
 }
 
 const RegisterBank &ARMRegisterBankInfo::getRegBankFromRegClass(
@@ -119,7 +213,7 @@ ARMRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   LLT Ty = MRI.getType(MI.getOperand(0).getReg());
 
   unsigned NumOperands = MI.getNumOperands();
-  const ValueMapping *OperandsMapping = &ARM::ValueMappings[0];
+  const ValueMapping *OperandsMapping = &ARM::ValueMappings[ARM::GPR3OpsIdx];
 
   switch (Opc) {
   case G_ADD:
@@ -127,22 +221,25 @@ ARMRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case G_ZEXT:
     // FIXME: We're abusing the fact that everything lives in a GPR for now; in
     // the real world we would use different mappings.
-    OperandsMapping = &ARM::ValueMappings[0];
+    OperandsMapping = &ARM::ValueMappings[ARM::GPR3OpsIdx];
     break;
   case G_LOAD:
-    OperandsMapping = Ty.getSizeInBits() == 64
-                          ? getOperandsMapping({&ARM::ValueMappings[6],
-                                                &ARM::ValueMappings[0]})
-                          : &ARM::ValueMappings[0];
+    OperandsMapping =
+        Ty.getSizeInBits() == 64
+            ? getOperandsMapping({&ARM::ValueMappings[ARM::DPR3OpsIdx],
+                                  &ARM::ValueMappings[ARM::GPR3OpsIdx]})
+            : &ARM::ValueMappings[ARM::GPR3OpsIdx];
     break;
   case G_FADD:
     assert((Ty.getSizeInBits() == 32 || Ty.getSizeInBits() == 64) &&
            "Unsupported size for G_FADD");
-    OperandsMapping = Ty.getSizeInBits() == 64 ? &ARM::ValueMappings[6]
-                                               : &ARM::ValueMappings[3];
+    OperandsMapping = Ty.getSizeInBits() == 64
+                          ? &ARM::ValueMappings[ARM::DPR3OpsIdx]
+                          : &ARM::ValueMappings[ARM::SPR3OpsIdx];
     break;
   case G_FRAME_INDEX:
-    OperandsMapping = getOperandsMapping({&ARM::ValueMappings[0], nullptr});
+    OperandsMapping =
+        getOperandsMapping({&ARM::ValueMappings[ARM::GPR3OpsIdx], nullptr});
     break;
   case G_SEQUENCE: {
     // We only support G_SEQUENCE for creating a double precision floating point
@@ -153,8 +250,9 @@ ARMRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
         Ty2.getSizeInBits() != 32)
       return InstructionMapping{};
     OperandsMapping =
-        getOperandsMapping({&ARM::ValueMappings[6], &ARM::ValueMappings[0],
-                            nullptr, &ARM::ValueMappings[0], nullptr});
+        getOperandsMapping({&ARM::ValueMappings[ARM::DPR3OpsIdx],
+                            &ARM::ValueMappings[ARM::GPR3OpsIdx], nullptr,
+                            &ARM::ValueMappings[ARM::GPR3OpsIdx], nullptr});
     break;
   }
   case G_EXTRACT: {
@@ -165,9 +263,10 @@ ARMRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     if (Ty.getSizeInBits() != 32 || Ty1.getSizeInBits() != 32 ||
         Ty2.getSizeInBits() != 64)
       return InstructionMapping{};
-    OperandsMapping =
-        getOperandsMapping({&ARM::ValueMappings[0], &ARM::ValueMappings[0],
-                            &ARM::ValueMappings[6], nullptr, nullptr});
+    OperandsMapping = getOperandsMapping({&ARM::ValueMappings[ARM::GPR3OpsIdx],
+                                          &ARM::ValueMappings[ARM::GPR3OpsIdx],
+                                          &ARM::ValueMappings[ARM::DPR3OpsIdx],
+                                          nullptr, nullptr});
     break;
   }
   default:
