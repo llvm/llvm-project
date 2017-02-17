@@ -44,6 +44,7 @@ add_pdb_impl_folder(Native
   Native/NativeSession.cpp
   Native/PDBFile.cpp
   Native/PDBFileBuilder.cpp
+  Native/PDBTypeServerHandler.cpp
   Native/PublicsStream.cpp
   Native/RawError.cpp
   Native/StringTable.cpp

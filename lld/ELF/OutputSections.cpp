@@ -487,16 +487,6 @@ static typename ELFT::uint getOutFlags(InputSectionBase<ELFT> *S) {
   return S->Flags & ~SHF_GROUP & ~SHF_COMPRESSED;
 }
 
-namespace llvm {
-template <> struct DenseMapInfo<lld::elf::SectionKey> {
-  static lld::elf::SectionKey getEmptyKey();
-  static lld::elf::SectionKey getTombstoneKey();
-  static unsigned getHashValue(const lld::elf::SectionKey &Val);
-  static bool isEqual(const lld::elf::SectionKey &LHS,
-                      const lld::elf::SectionKey &RHS);
-};
-}
-
 template <class ELFT>
 static SectionKey createKey(InputSectionBase<ELFT> *C, StringRef OutsecName) {
   //  The ELF spec just says
@@ -554,10 +544,10 @@ static SectionKey createKey(InputSectionBase<ELFT> *C, StringRef OutsecName) {
   return SectionKey{OutsecName, Flags, Alignment};
 }
 
-template <class ELFT> OutputSectionFactory<ELFT>::OutputSectionFactory() {}
-
-template <class ELFT> OutputSectionFactory<ELFT>::~OutputSectionFactory() {}
-
+template <class ELFT>
+OutputSectionFactory<ELFT>::OutputSectionFactory(
+    std::vector<OutputSectionBase *> &OutputSections)
+    : OutputSections(OutputSections) {}
 
 static uint64_t getIncompatibleFlags(uint64_t Flags) {
   return Flags & (SHF_ALLOC | SHF_TLS);
@@ -576,33 +566,42 @@ static bool canMergeToProgbits(unsigned Type) {
 }
 
 template <class ELFT>
-std::pair<OutputSectionBase *, bool>
-OutputSectionFactory<ELFT>::create(InputSectionBase<ELFT> *C,
-                                   StringRef OutsecName) {
-  SectionKey Key = createKey(C, OutsecName);
-  uintX_t Flags = getOutFlags(C);
+void OutputSectionFactory<ELFT>::addInputSec(InputSectionBase<ELFT> *IS,
+                                             StringRef OutsecName) {
+  if (!IS->Live) {
+    reportDiscarded(IS);
+    return;
+  }
+
+  SectionKey Key = createKey(IS, OutsecName);
+  uintX_t Flags = getOutFlags(IS);
   OutputSectionBase *&Sec = Map[Key];
   if (Sec) {
-    if (getIncompatibleFlags(Sec->Flags) != getIncompatibleFlags(C->Flags))
+    if (getIncompatibleFlags(Sec->Flags) != getIncompatibleFlags(IS->Flags))
       error("Section has flags incompatible with others with the same name " +
-            toString(C));
-    if (Sec->Type != C->Type) {
-      if (canMergeToProgbits(Sec->Type) && canMergeToProgbits(C->Type))
+            toString(IS));
+    if (Sec->Type != IS->Type) {
+      if (canMergeToProgbits(Sec->Type) && canMergeToProgbits(IS->Type))
         Sec->Type = SHT_PROGBITS;
       else
         error("Section has different type from others with the same name " +
-              toString(C));
+              toString(IS));
     }
     Sec->Flags |= Flags;
-    return {Sec, false};
+  } else {
+    uint32_t Type = IS->Type;
+    if (IS->kind() == InputSectionBase<ELFT>::EHFrame) {
+      Out<ELFT>::EhFrame->addSection(IS);
+      return;
+    }
+    Sec = make<OutputSection<ELFT>>(Key.Name, Type, Flags);
+    OutputSections.push_back(Sec);
   }
 
-  uint32_t Type = C->Type;
-  if (C->kind() == InputSectionBase<ELFT>::EHFrame)
-    return {Out<ELFT>::EhFrame, false};
-  Sec = make<OutputSection<ELFT>>(Key.Name, Type, Flags);
-  return {Sec, true};
+  Sec->addSection(IS);
 }
+
+template <class ELFT> OutputSectionFactory<ELFT>::~OutputSectionFactory() {}
 
 SectionKey DenseMapInfo<SectionKey>::getEmptyKey() {
   return SectionKey{DenseMapInfo<StringRef>::getEmptyKey(), 0, 0};

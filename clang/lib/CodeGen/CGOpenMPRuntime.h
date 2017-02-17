@@ -893,6 +893,32 @@ public:
                                     OpenMPDirectiveKind InnermostKind,
                                     const RegionCodeGenTy &CodeGen,
                                     bool HasCancel = false);
+
+  /// Emits reduction function.
+  /// \param ArgsType Array type containing pointers to reduction variables.
+  /// \param Privates List of private copies for original reduction arguments.
+  /// \param LHSExprs List of LHS in \a ReductionOps reduction operations.
+  /// \param RHSExprs List of RHS in \a ReductionOps reduction operations.
+  /// \param ReductionOps List of reduction operations in form 'LHS binop RHS'
+  /// or 'operator binop(LHS, RHS)'.
+  llvm::Value *emitReductionFunction(CodeGenModule &CGM, llvm::Type *ArgsType,
+                                     ArrayRef<const Expr *> Privates,
+                                     ArrayRef<const Expr *> LHSExprs,
+                                     ArrayRef<const Expr *> RHSExprs,
+                                     ArrayRef<const Expr *> ReductionOps);
+
+  /// Emits single reduction combiner
+  void emitSingleReductionCombiner(CodeGenFunction &CGF,
+                                   const Expr *ReductionOp,
+                                   const Expr *PrivateRef,
+                                   const DeclRefExpr *LHS,
+                                   const DeclRefExpr *RHS);
+
+  struct ReductionOptionsTy {
+    bool WithNowait;
+    bool SimpleReduction;
+    OpenMPDirectiveKind ReductionKind;
+  };
   /// \brief Emit a code for reduction clause. Next code should be emitted for
   /// reduction:
   /// \code
@@ -929,14 +955,18 @@ public:
   /// \param RHSExprs List of RHS in \a ReductionOps reduction operations.
   /// \param ReductionOps List of reduction operations in form 'LHS binop RHS'
   /// or 'operator binop(LHS, RHS)'.
-  /// \param WithNowait true if parent directive has also nowait clause, false
-  /// otherwise.
+  /// \param Options List of options for reduction codegen:
+  ///     WithNowait true if parent directive has also nowait clause, false
+  ///     otherwise.
+  ///     SimpleReduction Emit reduction operation only. Used for omp simd
+  ///     directive on the host.
+  ///     ReductionKind The kind of reduction to perform.
   virtual void emitReduction(CodeGenFunction &CGF, SourceLocation Loc,
                              ArrayRef<const Expr *> Privates,
                              ArrayRef<const Expr *> LHSExprs,
                              ArrayRef<const Expr *> RHSExprs,
                              ArrayRef<const Expr *> ReductionOps,
-                             bool WithNowait, bool SimpleReduction);
+                             ReductionOptionsTy Options);
 
   /// \brief Emit code for 'taskwait' directive.
   virtual void emitTaskwaitCall(CodeGenFunction &CGF, SourceLocation Loc);

@@ -336,11 +336,8 @@ define i32 @load_i32_by_bswap_i16(i32* %arg) {
 ; (i32) p[1] | (sext(p[0] << 16) to i32)
 define i32 @load_i32_by_sext_i16(i32* %arg) {
 ; CHECK-LABEL: load_i32_by_sext_i16:
-; CHECK: ldrh    w8, [x0]
-; CHECK-NEXT: ldrh  w0, [x0, #2]
-; CHECK-NEXT: bfi w0, w8, #16, #16
+; CHECK: ldr   w0, [x0]
 ; CHECK-NEXT: ret
-
   %tmp = bitcast i32* %arg to i16*
   %tmp1 = load i16, i16* %tmp, align 4
   %tmp2 = sext i16 %tmp1 to i32
@@ -399,7 +396,6 @@ define i32 @load_i32_by_i8_base_offset_index_2(i8* %arg, i32 %i) {
 ; CHECK-NEXT: ldur  w8, [x8, #13]
 ; CHECK-NEXT: rev w0, w8
 ; CHECK-NEXT: ret
-
   %tmp = add nuw nsw i32 %i, 4
   %tmp2 = add nuw nsw i32 %i, 3
   %tmp3 = add nuw nsw i32 %i, 2

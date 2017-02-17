@@ -38,6 +38,10 @@ void LexicalScopes::reset() {
 
 /// initialize - Scan machine function and constuct lexical scope nest.
 void LexicalScopes::initialize(const MachineFunction &Fn) {
+  // Don't attempt any lexical scope creation for a NoDebug compile unit.
+  if (Fn.getFunction()->getSubprogram()->getUnit()->getEmissionKind() ==
+      DICompileUnit::NoDebug)
+    return;
   reset();
   MF = &Fn;
   SmallVector<InsnRange, 4> MIRanges;
@@ -127,6 +131,10 @@ LexicalScope *LexicalScopes::findLexicalScope(const DILocation *DL) {
 LexicalScope *LexicalScopes::getOrCreateLexicalScope(const DILocalScope *Scope,
                                                      const DILocation *IA) {
   if (IA) {
+    // Skip scopes inlined from a NoDebug compile unit.
+    if (Scope->getSubprogram()->getUnit()->getEmissionKind() ==
+        DICompileUnit::NoDebug)
+      return getOrCreateLexicalScope(IA);
     // Create an abstract scope for inlined function.
     getOrCreateAbstractScope(Scope);
     // Create an inlined scope for inlined function.

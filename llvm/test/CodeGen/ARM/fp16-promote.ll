@@ -847,21 +847,15 @@ define void @test_insertelement(half* %p, <4 x half>* %q, i32 %i) #0 {
 }
 
 ; CHECK-ALL-LABEL: test_extractelement:
+; CHECK-VFP: push {{{.*}}, lr}
 ; CHECK-VFP: sub sp, sp, #8
-; CHECK-VFP: ldrh
-; CHECK-VFP: ldrh
-; CHECK-VFP: orr
-; CHECK-VFP: str
-; CHECK-VFP: ldrh
-; CHECK-VFP: ldrh
-; CHECK-VFP: orr
-; CHECK-VFP: str
+; CHECK-VFP: ldrd
 ; CHECK-VFP: mov
 ; CHECK-VFP: orr
 ; CHECK-VFP: ldrh
 ; CHECK-VFP: strh
 ; CHECK-VFP: add sp, sp, #8
-; CHECK-VFP: bx lr
+; CHECK-VFP: pop {{{.*}}, pc}
 ; CHECK-NOVFP: ldrh
 ; CHECK-NOVFP: strh
 ; CHECK-NOVFP: ldrh

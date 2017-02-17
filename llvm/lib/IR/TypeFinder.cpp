@@ -1,4 +1,4 @@
-//===-- TypeFinder.cpp - Implement the TypeFinder class -------------------===//
+//===- TypeFinder.cpp - Implement the TypeFinder class --------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -11,13 +11,22 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/IR/TypeFinder.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/Constant.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/Type.h"
+#include "llvm/IR/TypeFinder.h"
+#include "llvm/IR/Use.h"
+#include "llvm/IR/User.h"
+#include "llvm/IR/Value.h"
+#include "llvm/Support/Casting.h"
+#include <utility>
+
 using namespace llvm;
 
 void TypeFinder::run(const Module &M, bool onlyNamed) {

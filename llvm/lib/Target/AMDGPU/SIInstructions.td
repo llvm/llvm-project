@@ -818,27 +818,6 @@ def : Pat <
 def : POW_Common <V_LOG_F32_e32, V_EXP_F32_e32, V_MUL_LEGACY_F32_e32>;
 
 def : Pat <
-  (int_AMDGPU_cube v4f32:$src),
-  (REG_SEQUENCE VReg_128,
-    (V_CUBETC_F32 0 /* src0_modifiers */, (f32 (EXTRACT_SUBREG $src, sub0)),
-                  0 /* src1_modifiers */, (f32 (EXTRACT_SUBREG $src, sub1)),
-                  0 /* src2_modifiers */, (f32 (EXTRACT_SUBREG $src, sub2)),
-                  0 /* clamp */, 0 /* omod */), sub0,
-    (V_CUBESC_F32 0 /* src0_modifiers */, (f32 (EXTRACT_SUBREG $src, sub0)),
-                  0 /* src1_modifiers */,(f32 (EXTRACT_SUBREG $src, sub1)),
-                  0 /* src2_modifiers */,(f32 (EXTRACT_SUBREG $src, sub2)),
-                  0 /* clamp */, 0 /* omod */), sub1,
-    (V_CUBEMA_F32 0 /* src1_modifiers */,(f32 (EXTRACT_SUBREG $src, sub0)),
-                  0 /* src1_modifiers */,(f32 (EXTRACT_SUBREG $src, sub1)),
-                  0 /* src1_modifiers */,(f32 (EXTRACT_SUBREG $src, sub2)),
-                  0 /* clamp */, 0 /* omod */), sub2,
-    (V_CUBEID_F32 0 /* src1_modifiers */,(f32 (EXTRACT_SUBREG $src, sub0)),
-                  0 /* src1_modifiers */,(f32 (EXTRACT_SUBREG $src, sub1)),
-                  0 /* src1_modifiers */,(f32 (EXTRACT_SUBREG $src, sub2)),
-                  0 /* clamp */, 0 /* omod */), sub3)
->;
-
-def : Pat <
   (i32 (sext i1:$src0)),
   (V_CNDMASK_B32_e64 (i32 0), (i32 -1), $src0)
 >;

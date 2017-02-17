@@ -595,7 +595,7 @@ private:
   /// Virtual register information.
   MachineRegisterInfo &MRI;
 
-  DFAPacketizer *Resources;
+  std::unique_ptr<DFAPacketizer> Resources;
 
 public:
   SMSchedule(MachineFunction *mf)
@@ -604,13 +604,6 @@ public:
     FirstCycle = 0;
     LastCycle = 0;
     InitiationInterval = 0;
-  }
-
-  ~SMSchedule() {
-    ScheduledInstrs.clear();
-    InstrToCycle.clear();
-    RegToStageDiff.clear();
-    delete Resources;
   }
 
   void reset() {

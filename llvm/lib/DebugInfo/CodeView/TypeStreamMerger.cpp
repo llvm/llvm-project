@@ -54,8 +54,9 @@ namespace {
 ///   existing destination type index.
 class TypeStreamMerger : public TypeVisitorCallbacks {
 public:
-  TypeStreamMerger(TypeTableBuilder &DestStream)
-      : DestStream(DestStream), FieldListBuilder(DestStream) {}
+  TypeStreamMerger(TypeTableBuilder &DestStream, TypeServerHandler *Handler)
+      : DestStream(DestStream), FieldListBuilder(DestStream), Handler(Handler) {
+  }
 
 /// TypeVisitorCallbacks overrides.
 #define TYPE_RECORD(EnumName, EnumVal, Name)                                   \
@@ -109,6 +110,7 @@ private:
 
   TypeTableBuilder &DestStream;
   FieldListRecordBuilder FieldListBuilder;
+  TypeServerHandler *Handler;
 
   bool IsInFieldList{false};
   size_t BeginIndexMapSize = 0;
@@ -175,6 +177,8 @@ Error TypeStreamMerger::mergeStream(const CVTypeArray &Types) {
   Pipeline.addCallbackToPipeline(*this);
 
   CVTypeVisitor Visitor(Pipeline);
+  if (Handler)
+    Visitor.addTypeServerHandler(*Handler);
 
   if (auto EC = Visitor.visitTypeStream(Types))
     return EC;
@@ -186,6 +190,7 @@ Error TypeStreamMerger::mergeStream(const CVTypeArray &Types) {
 }
 
 Error llvm::codeview::mergeTypeStreams(TypeTableBuilder &DestStream,
+                                       TypeServerHandler *Handler,
                                        const CVTypeArray &Types) {
-  return TypeStreamMerger(DestStream).mergeStream(Types);
+  return TypeStreamMerger(DestStream, Handler).mergeStream(Types);
 }

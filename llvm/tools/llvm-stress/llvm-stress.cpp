@@ -28,6 +28,7 @@
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include <algorithm>
+#include <random>
 #include <vector>
 
 namespace llvm {
@@ -113,6 +114,12 @@ public:
     return  Rand64() % y;
   }
 
+  /// Make this like a C++11 random device
+  typedef uint32_t result_type;
+  uint32_t operator()() { return Rand32(); }
+  static constexpr result_type min() { return 0; }
+  static constexpr result_type max() { return 0x7ffff; }
+  
 private:
   unsigned Seed;
 };
@@ -662,7 +669,7 @@ static void IntroduceControlFlow(Function *F, Random &R) {
       BoolInst.push_back(&Instr);
   }
 
-  std::random_shuffle(BoolInst.begin(), BoolInst.end(), R);
+  std::shuffle(BoolInst.begin(), BoolInst.end(), R);
 
   for (auto *Instr : BoolInst) {
     BasicBlock *Curr = Instr->getParent();

@@ -5041,7 +5041,6 @@ lldb::Encoding ClangASTContext::GetEncoding(lldb::opaque_compiler_type_t type,
     case clang::BuiltinType::Kind::OCLImage3dWO:
     case clang::BuiltinType::Kind::OCLImage3dRW:
     case clang::BuiltinType::Kind::OCLQueue:
-    case clang::BuiltinType::Kind::OCLNDRange:
     case clang::BuiltinType::Kind::OCLReserveID:
     case clang::BuiltinType::Kind::OCLSampler:
     case clang::BuiltinType::Kind::OMPArraySection:

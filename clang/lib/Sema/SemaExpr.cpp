@@ -13634,8 +13634,30 @@ static bool captureInBlock(BlockScopeInfo *BSI, VarDecl *Var,
       if (BuildAndDiagnose) {
         SourceLocation VarLoc = Var->getLocation();
         S.Diag(Loc, diag::warn_block_capture_autoreleasing);
-        S.Diag(VarLoc, diag::note_declare_parameter_autoreleasing) <<
-            FixItHint::CreateInsertion(VarLoc, "__autoreleasing");
+        {
+          auto AddAutoreleaseNote =
+              S.Diag(VarLoc, diag::note_declare_parameter_autoreleasing);
+          // Provide a fix-it for the '__autoreleasing' keyword at the
+          // appropriate location in the variable's type.
+          if (const auto *TSI = Var->getTypeSourceInfo()) {
+            PointerTypeLoc PTL =
+                TSI->getTypeLoc().getAsAdjusted<PointerTypeLoc>();
+            if (PTL) {
+              SourceLocation Loc = PTL.getPointeeLoc().getEndLoc();
+              Loc = Lexer::getLocForEndOfToken(Loc, 0, S.getSourceManager(),
+                                               S.getLangOpts());
+              if (Loc.isValid()) {
+                StringRef CharAtLoc = Lexer::getSourceText(
+                    CharSourceRange::getCharRange(Loc, Loc.getLocWithOffset(1)),
+                    S.getSourceManager(), S.getLangOpts());
+                AddAutoreleaseNote << FixItHint::CreateInsertion(
+                    Loc, CharAtLoc.empty() || !isWhitespace(CharAtLoc[0])
+                             ? " __autoreleasing "
+                             : " __autoreleasing");
+              }
+            }
+          }
+        }
         S.Diag(VarLoc, diag::note_declare_parameter_strong);
       }
     }

@@ -277,8 +277,6 @@ public:
 private:
   void computeInputSections(InputSectionDescription *);
 
-  void addSection(OutputSectionFactory<ELFT> &Factory,
-                  InputSectionBase<ELFT> *Sec, StringRef Name);
   void discard(ArrayRef<InputSectionBase<ELFT> *> V);
 
   std::vector<InputSectionBase<ELFT> *>

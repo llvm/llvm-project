@@ -586,7 +586,19 @@ IF67:                                             ; preds = %LOOP65
   %tmp449 = insertelement <4 x float> %tmp448, float %tmp445, i32 1
   %tmp450 = insertelement <4 x float> %tmp449, float %tmp447, i32 2
   %tmp451 = insertelement <4 x float> %tmp450, float %tmp194, i32 3
-  %tmp452 = call <4 x float> @llvm.AMDGPU.cube(<4 x float> %tmp451)
+
+  %tmp451.x = extractelement <4 x float> %tmp451, i32 0
+  %tmp451.y = extractelement <4 x float> %tmp451, i32 1
+  %tmp451.z = extractelement <4 x float> %tmp451, i32 2
+  %cubetc = call float @llvm.amdgcn.cubetc(float %tmp451.x, float %tmp451.y, float %tmp451.z)
+  %cubesc = call float @llvm.amdgcn.cubesc(float %tmp451.x, float %tmp451.y, float %tmp451.z)
+  %cubema = call float @llvm.amdgcn.cubema(float %tmp451.x, float %tmp451.y, float %tmp451.z)
+  %cubeid = call float @llvm.amdgcn.cubeid(float %tmp451.x, float %tmp451.y, float %tmp451.z)
+  %tmp452.0 = insertelement <4 x float> undef, float %cubetc, i32 0
+  %tmp452.1 = insertelement <4 x float> %tmp452.0, float %cubesc, i32 1
+  %tmp452.2 = insertelement <4 x float> %tmp452.1, float %cubema, i32 2
+  %tmp452 = insertelement <4 x float> %tmp452.2, float %cubeid, i32 3
+
   %tmp453 = extractelement <4 x float> %tmp452, i32 0
   %tmp454 = extractelement <4 x float> %tmp452, i32 1
   %tmp455 = extractelement <4 x float> %tmp452, i32 2
@@ -1841,9 +1853,6 @@ declare float @llvm.amdgcn.rsq.f32(float) #0
 declare <4 x float> @llvm.SI.image.sample.d.v8i32(<8 x i32>, <8 x i32>, <4 x i32>, i32, i32, i32, i32, i32, i32, i32, i32) #0
 
 ; Function Attrs: nounwind readnone
-declare <4 x float> @llvm.AMDGPU.cube(<4 x float>) #0
-
-; Function Attrs: nounwind readnone
 declare float @llvm.fabs.f32(float) #0
 
 ; Function Attrs: nounwind readnone
@@ -1862,6 +1871,11 @@ declare float @llvm.amdgcn.interp.p1(float, i32, i32, i32) #0
 
 ; Function Attrs: nounwind readnone
 declare float @llvm.amdgcn.interp.p2(float, float, i32, i32, i32) #0
+
+declare float @llvm.amdgcn.cubeid(float, float, float) #0
+declare float @llvm.amdgcn.cubesc(float, float, float) #0
+declare float @llvm.amdgcn.cubetc(float, float, float) #0
+declare float @llvm.amdgcn.cubema(float, float, float) #0
 
 attributes #0 = { nounwind readnone }
 attributes #1 = { nounwind }

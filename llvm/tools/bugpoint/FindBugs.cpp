@@ -21,6 +21,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <ctime>
+#include <random>
 using namespace llvm;
 
 Error
@@ -39,14 +40,13 @@ BugDriver::runManyPasses(const std::vector<std::string> &AllPasses) {
       return E;
   }
 
-  srand(time(nullptr));
-
+  std::mt19937 randomness(std::random_device{}());
   unsigned num = 1;
   while (1) {
     //
     // Step 1: Randomize the order of the optimizer passes.
     //
-    std::random_shuffle(PassesToRun.begin(), PassesToRun.end());
+    std::shuffle(PassesToRun.begin(), PassesToRun.end(), randomness);
 
     //
     // Step 2: Run optimizer passes on the program and check for success.

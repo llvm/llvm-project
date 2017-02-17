@@ -1119,6 +1119,13 @@ void Cost::RateRegister(const SCEV *Reg,
       if (isExistingPhi(AR, SE))
         return;
 
+      // It is bad to allow LSR for current loop to add induction variables
+      // for its sibling loops.
+      if (!AR->getLoop()->contains(L)) {
+        Lose();
+        return;
+      }
+
       // Otherwise, it will be an invariant with respect to Loop L.
       ++NumRegs;
       return;

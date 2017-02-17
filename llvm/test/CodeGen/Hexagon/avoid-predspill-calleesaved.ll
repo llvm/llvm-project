@@ -7,7 +7,6 @@
 ; without adding an extra spill of that register.
 ;
 ; CHECK: PredSpill:
-; CHECK: memd(r29{{.*}}) = r17:16
 ; CHECK-DAG: r{{[0-9]+}} = p0
 ; CHECK-DAG: p0 = r{{[0-9]+}}
 ; CHECK-NOT: = memw(r29

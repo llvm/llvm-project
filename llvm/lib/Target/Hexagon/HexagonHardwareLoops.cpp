@@ -100,6 +100,7 @@ namespace {
     MachineRegisterInfo        *MRI;
     MachineDominatorTree       *MDT;
     const HexagonInstrInfo     *TII;
+    const HexagonRegisterInfo  *TRI;
 #ifndef NDEBUG
     static int Counter;
 #endif
@@ -381,7 +382,9 @@ bool HexagonHardwareLoops::runOnMachineFunction(MachineFunction &MF) {
   MLI = &getAnalysis<MachineLoopInfo>();
   MRI = &MF.getRegInfo();
   MDT = &getAnalysis<MachineDominatorTree>();
-  TII = MF.getSubtarget<HexagonSubtarget>().getInstrInfo();
+  const HexagonSubtarget &HST = MF.getSubtarget<HexagonSubtarget>();
+  TII = HST.getInstrInfo();
+  TRI = HST.getRegisterInfo();
 
   for (auto &L : *MLI)
     if (!L->getParentLoop()) {
@@ -967,17 +970,14 @@ bool HexagonHardwareLoops::isInvalidLoopOperation(const MachineInstr *MI,
     return !TII->doesNotReturn(*MI);
 
   // Check if the instruction defines a hardware loop register.
-  for (unsigned i = 0, e = MI->getNumOperands(); i != e; ++i) {
-    const MachineOperand &MO = MI->getOperand(i);
-    if (!MO.isReg() || !MO.isDef())
-      continue;
-    unsigned R = MO.getReg();
-    if (IsInnerHWLoop && (R == Hexagon::LC0 || R == Hexagon::SA0 ||
-                          R == Hexagon::LC1 || R == Hexagon::SA1))
+  using namespace Hexagon;
+  ArrayRef<unsigned> Regs01 = { Hexagon::LC0, Hexagon::SA0,
+                                Hexagon::LC1, Hexagon::SA1 };
+  ArrayRef<unsigned> Regs1 = { Hexagon::LC1, Hexagon::SA1 };
+  for (unsigned R : IsInnerHWLoop ? Regs01 : Regs1)
+    if (MI->modifiesRegister(R, TRI))
       return true;
-    if (!IsInnerHWLoop && (R == Hexagon::LC1 || R == Hexagon::SA1))
-      return true;
-  }
+
   return false;
 }
 
