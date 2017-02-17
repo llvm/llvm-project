@@ -31,7 +31,7 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata)
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, emissionKind: FullDebug)
 !1 = !DIFile(filename: "-", directory: "/usr/local/google/home/majnemer/llvm/src")
 !3 = !{i32 2, !"CodeView", i32 1}
 !4 = !{i32 2, !"Debug Info Version", i32 3}

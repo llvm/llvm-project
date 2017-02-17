@@ -16,6 +16,7 @@
 #include "llvm/DebugInfo/MSF/MappedBlockStream.h"
 #include "llvm/DebugInfo/MSF/StreamReader.h"
 #include "llvm/DebugInfo/PDB/Native/PDBFile.h"
+#include "llvm/DebugInfo/PDB/Native/PDBTypeServerHandler.h"
 #include "llvm/DebugInfo/PDB/Native/RawConstants.h"
 #include "llvm/DebugInfo/PDB/Native/RawError.h"
 #include "llvm/DebugInfo/PDB/Native/RawTypes.h"
@@ -164,7 +165,7 @@ FixedStreamArray<TypeIndexOffset> TpiStream::getTypeIndexOffsets() const {
 
 HashTable &TpiStream::getHashAdjusters() { return HashAdjusters; }
 
-iterator_range<CVTypeArray::Iterator> TpiStream::types(bool *HadError) const {
+CVTypeRange TpiStream::types(bool *HadError) const {
   return make_range(TypeRecords.begin(HadError), TypeRecords.end());
 }
 

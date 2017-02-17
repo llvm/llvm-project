@@ -299,6 +299,13 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
 
   unsigned getPointerSizeInBytes();
 
+protected:
+  /// \brief Gather pre-function debug information.
+  void beginFunctionImpl(const MachineFunction *MF) override;
+
+  /// \brief Gather post-function debug information.
+  void endFunctionImpl(const MachineFunction *) override;
+
 public:
   CodeViewDebug(AsmPrinter *Asm);
 
@@ -306,12 +313,6 @@ public:
 
   /// \brief Emit the COFF section that holds the line table information.
   void endModule() override;
-
-  /// \brief Gather pre-function debug information.
-  void beginFunction(const MachineFunction *MF) override;
-
-  /// \brief Gather post-function debug information.
-  void endFunction(const MachineFunction *) override;
 
   /// \brief Process beginning of an instruction.
   void beginInstruction(const MachineInstr *MI) override;

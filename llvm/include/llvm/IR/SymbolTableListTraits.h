@@ -1,4 +1,4 @@
-//===-- llvm/SymbolTableListTraits.h - Traits for iplist --------*- C++ -*-===//
+//===- llvm/SymbolTableListTraits.h - Traits for iplist ---------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -26,8 +26,19 @@
 #define LLVM_IR_SYMBOLTABLELISTTRAITS_H
 
 #include "llvm/ADT/ilist.h"
+#include "llvm/ADT/simple_ilist.h"
+#include <cstddef>
 
 namespace llvm {
+
+class Argument;
+class BasicBlock;
+class Function;
+class GlobalAlias;
+class GlobalIFunc;
+class GlobalVariable;
+class Instruction;
+class Module;
 class ValueSymbolTable;
 
 /// Template metafunction to get the parent type for a symbol table list.
@@ -35,14 +46,7 @@ class ValueSymbolTable;
 /// Implementations create a typedef called \c type so that we only need a
 /// single template parameter for the list and traits.
 template <typename NodeTy> struct SymbolTableListParentType {};
-class Argument;
-class BasicBlock;
-class Function;
-class Instruction;
-class GlobalVariable;
-class GlobalAlias;
-class GlobalIFunc;
-class Module;
+
 #define DEFINE_SYMBOL_TABLE_PARENT_TYPE(NODE, PARENT)                          \
   template <> struct SymbolTableListParentType<NODE> { typedef PARENT type; };
 DEFINE_SYMBOL_TABLE_PARENT_TYPE(Instruction, BasicBlock)
@@ -67,7 +71,7 @@ class SymbolTableListTraits : public ilist_alloc_traits<ValueSubClass> {
       typename SymbolTableListParentType<ValueSubClass>::type ItemParentClass;
 
 public:
-  SymbolTableListTraits() {}
+  SymbolTableListTraits() = default;
 
 private:
   /// getListOwner - Return the object that owns this list.  If this is a list
@@ -109,6 +113,6 @@ template <class T>
 class SymbolTableList
     : public iplist_impl<simple_ilist<T>, SymbolTableListTraits<T>> {};
 
-} // End llvm namespace
+} // end namespace llvm
 
-#endif
+#endif // LLVM_IR_SYMBOLTABLELISTTRAITS_H

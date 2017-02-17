@@ -1,4 +1,4 @@
-//===-- llvm/InlineAsm.h - Class to represent inline asm strings-*- C++ -*-===//
+//===- llvm/InlineAsm.h - Class to represent inline asm strings -*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -102,12 +102,14 @@ public:
     /// input constraint is required to match it (e.g. "0").  The value is the
     /// constraint number that matches this one (for example, if this is
     /// constraint #0 and constraint #4 has the value "0", this will be 4).
-    signed char MatchingInput;
+    signed char MatchingInput = -1;
+
     /// Code - The constraint code, either the register name (in braces) or the
     /// constraint letter/number.
     ConstraintCodeVector Codes;
+
     /// Default constructor.
-    SubConstraintInfo() : MatchingInput(-1) {}
+    SubConstraintInfo() = default;
   };
 
   typedef std::vector<SubConstraintInfo> SubConstraintInfoVector;
@@ -117,17 +119,17 @@ public:
   struct ConstraintInfo {
     /// Type - The basic type of the constraint: input/output/clobber
     ///
-    ConstraintPrefix Type;
+    ConstraintPrefix Type = isInput;
 
     /// isEarlyClobber - "&": output operand writes result before inputs are all
     /// read.  This is only ever set for an output operand.
-    bool isEarlyClobber;
+    bool isEarlyClobber = false;
 
     /// MatchingInput - If this is not -1, this is an output constraint where an
     /// input constraint is required to match it (e.g. "0").  The value is the
     /// constraint number that matches this one (for example, if this is
     /// constraint #0 and constraint #4 has the value "0", this will be 4).
-    signed char MatchingInput;
+    signed char MatchingInput = -1;
 
     /// hasMatchingInput - Return true if this is an output constraint that has
     /// a matching input constraint.
@@ -135,30 +137,30 @@ public:
 
     /// isCommutative - This is set to true for a constraint that is commutative
     /// with the next operand.
-    bool isCommutative;
+    bool isCommutative = false;
 
     /// isIndirect - True if this operand is an indirect operand.  This means
     /// that the address of the source or destination is present in the call
     /// instruction, instead of it being returned or passed in explicitly.  This
     /// is represented with a '*' in the asm string.
-    bool isIndirect;
+    bool isIndirect = false;
 
     /// Code - The constraint code, either the register name (in braces) or the
     /// constraint letter/number.
     ConstraintCodeVector Codes;
 
     /// isMultipleAlternative - '|': has multiple-alternative constraints.
-    bool isMultipleAlternative;
+    bool isMultipleAlternative = false;
 
     /// multipleAlternatives - If there are multiple alternative constraints,
     /// this array will contain them.  Otherwise it will be empty.
     SubConstraintInfoVector multipleAlternatives;
 
     /// The currently selected alternative constraint index.
-    unsigned currentAlternativeIndex;
+    unsigned currentAlternativeIndex = 0;
 
     /// Default constructor.
-    ConstraintInfo();
+    ConstraintInfo() = default;
 
     /// Parse - Analyze the specified string (e.g. "=*&{eax}") and fill in the
     /// fields in this structure.  If the constraint string is not understood,

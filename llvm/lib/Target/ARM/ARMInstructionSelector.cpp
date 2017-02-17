@@ -61,8 +61,12 @@ static bool selectCopy(MachineInstr &I, const TargetInstrInfo &TII,
   const TargetRegisterClass *RC = &ARM::GPRRegClass;
 
   if (RegBank->getID() == ARM::FPRRegBankID) {
-    assert(DstSize == 32 && "Only 32-bit FP values are supported");
-    RC = &ARM::SPRRegClass;
+    if (DstSize == 32)
+      RC = &ARM::SPRRegClass;
+    else if (DstSize == 64)
+      RC = &ARM::DPRRegClass;
+    else
+      llvm_unreachable("Unsupported destination size");
   }
 
   // No need to constrain SrcReg. It will get constrained when
@@ -73,6 +77,96 @@ static bool selectCopy(MachineInstr &I, const TargetInstrInfo &TII,
                  << " operand\n");
     return false;
   }
+  return true;
+}
+
+static bool selectFAdd(MachineInstrBuilder &MIB, const ARMBaseInstrInfo &TII,
+                       MachineRegisterInfo &MRI) {
+  assert(TII.getSubtarget().hasVFP2() && "Can't select fp add without vfp");
+
+  LLT Ty = MRI.getType(MIB->getOperand(0).getReg());
+  unsigned ValSize = Ty.getSizeInBits();
+
+  if (ValSize == 32) {
+    if (TII.getSubtarget().useNEONForSinglePrecisionFP())
+      return false;
+    MIB->setDesc(TII.get(ARM::VADDS));
+  } else {
+    assert(ValSize == 64 && "Unsupported size for floating point value");
+    if (TII.getSubtarget().isFPOnlySP())
+      return false;
+    MIB->setDesc(TII.get(ARM::VADDD));
+  }
+  MIB.add(predOps(ARMCC::AL));
+
+  return true;
+}
+
+static bool selectSequence(MachineInstrBuilder &MIB,
+                           const ARMBaseInstrInfo &TII,
+                           MachineRegisterInfo &MRI,
+                           const TargetRegisterInfo &TRI,
+                           const RegisterBankInfo &RBI) {
+  assert(TII.getSubtarget().hasVFP2() && "Can't select sequence without VFP");
+
+  // We only support G_SEQUENCE as a way to stick together two scalar GPRs
+  // into one DPR.
+  unsigned VReg0 = MIB->getOperand(0).getReg();
+  (void)VReg0;
+  assert(MRI.getType(VReg0).getSizeInBits() == 64 &&
+         RBI.getRegBank(VReg0, MRI, TRI)->getID() == ARM::FPRRegBankID &&
+         "Unsupported operand for G_SEQUENCE");
+  unsigned VReg1 = MIB->getOperand(1).getReg();
+  (void)VReg1;
+  assert(MRI.getType(VReg1).getSizeInBits() == 32 &&
+         RBI.getRegBank(VReg1, MRI, TRI)->getID() == ARM::GPRRegBankID &&
+         "Unsupported operand for G_SEQUENCE");
+  unsigned VReg2 = MIB->getOperand(3).getReg();
+  (void)VReg2;
+  assert(MRI.getType(VReg2).getSizeInBits() == 32 &&
+         RBI.getRegBank(VReg2, MRI, TRI)->getID() == ARM::GPRRegBankID &&
+         "Unsupported operand for G_SEQUENCE");
+
+  // Remove the operands corresponding to the offsets.
+  MIB->RemoveOperand(4);
+  MIB->RemoveOperand(2);
+
+  MIB->setDesc(TII.get(ARM::VMOVDRR));
+  MIB.add(predOps(ARMCC::AL));
+
+  return true;
+}
+
+static bool selectExtract(MachineInstrBuilder &MIB, const ARMBaseInstrInfo &TII,
+                          MachineRegisterInfo &MRI,
+                          const TargetRegisterInfo &TRI,
+                          const RegisterBankInfo &RBI) {
+  assert(TII.getSubtarget().hasVFP2() && "Can't select extract without VFP");
+
+  // We only support G_EXTRACT as a way to break up one DPR into two GPRs.
+  unsigned VReg0 = MIB->getOperand(0).getReg();
+  (void)VReg0;
+  assert(MRI.getType(VReg0).getSizeInBits() == 32 &&
+         RBI.getRegBank(VReg0, MRI, TRI)->getID() == ARM::GPRRegBankID &&
+         "Unsupported operand for G_SEQUENCE");
+  unsigned VReg1 = MIB->getOperand(1).getReg();
+  (void)VReg1;
+  assert(MRI.getType(VReg1).getSizeInBits() == 32 &&
+         RBI.getRegBank(VReg1, MRI, TRI)->getID() == ARM::GPRRegBankID &&
+         "Unsupported operand for G_SEQUENCE");
+  unsigned VReg2 = MIB->getOperand(2).getReg();
+  (void)VReg2;
+  assert(MRI.getType(VReg2).getSizeInBits() == 64 &&
+         RBI.getRegBank(VReg2, MRI, TRI)->getID() == ARM::FPRRegBankID &&
+         "Unsupported operand for G_SEQUENCE");
+
+  // Remove the operands corresponding to the offsets.
+  MIB->RemoveOperand(4);
+  MIB->RemoveOperand(3);
+
+  MIB->setDesc(TII.get(ARM::VMOVRRD));
+  MIB.add(predOps(ARMCC::AL));
+
   return true;
 }
 
@@ -95,15 +189,27 @@ static unsigned selectSimpleExtOpc(unsigned Opc, unsigned Size) {
 
 /// Select the opcode for simple loads. For types smaller than 32 bits, the
 /// value will be zero extended.
-static unsigned selectLoadOpCode(unsigned Size) {
+static unsigned selectLoadOpCode(unsigned RegBank, unsigned Size) {
+  if (RegBank == ARM::GPRRegBankID) {
+    switch (Size) {
+    case 1:
+    case 8:
+      return ARM::LDRBi12;
+    case 16:
+      return ARM::LDRH;
+    case 32:
+      return ARM::LDRi12;
+    }
+
+    llvm_unreachable("Unsupported size");
+  }
+
+  assert(RegBank == ARM::FPRRegBankID && "Unsupported register bank");
   switch (Size) {
-  case 1:
-  case 8:
-    return ARM::LDRBi12;
-  case 16:
-    return ARM::LDRH;
   case 32:
-    return ARM::LDRi12;
+    return ARM::VLDRS;
+  case 64:
+    return ARM::VLDRD;
   }
 
   llvm_unreachable("Unsupported size");
@@ -186,11 +292,8 @@ bool ARMInstructionSelector::select(MachineInstr &I) const {
     MIB.add(predOps(ARMCC::AL)).add(condCodeOp());
     break;
   case G_FADD:
-    if (!TII.getSubtarget().hasVFP2() ||
-        TII.getSubtarget().useNEONForSinglePrecisionFP())
+    if (!selectFAdd(MIB, TII, MRI))
       return false;
-    I.setDesc(TII.get(ARM::VADDS));
-    MIB.add(predOps(ARMCC::AL));
     break;
   case G_FRAME_INDEX:
     // Add 0 to the given frame index and hope it will eventually be folded into
@@ -199,19 +302,38 @@ bool ARMInstructionSelector::select(MachineInstr &I) const {
     MIB.addImm(0).add(predOps(ARMCC::AL)).add(condCodeOp());
     break;
   case G_LOAD: {
-    LLT ValTy = MRI.getType(I.getOperand(0).getReg());
+    unsigned Reg = I.getOperand(0).getReg();
+    unsigned RegBank = RBI.getRegBank(Reg, MRI, TRI)->getID();
+
+    LLT ValTy = MRI.getType(Reg);
     const auto ValSize = ValTy.getSizeInBits();
 
-    if (ValSize != 32 && ValSize != 16 && ValSize != 8 && ValSize != 1)
+    if (ValSize != 64 && ValSize != 32 && ValSize != 16 && ValSize != 8 &&
+        ValSize != 1)
       return false;
 
-    const auto NewOpc = selectLoadOpCode(ValSize);
+    assert((ValSize != 64 || RegBank == ARM::FPRRegBankID) &&
+           "64-bit values should live in the FPR");
+    assert((ValSize != 64 || TII.getSubtarget().hasVFP2()) &&
+           "Don't know how to load 64-bit value without VFP");
+
+    const auto NewOpc = selectLoadOpCode(RegBank, ValSize);
     I.setDesc(TII.get(NewOpc));
 
     if (NewOpc == ARM::LDRH)
       // LDRH has a funny addressing mode (there's already a FIXME for it).
       MIB.addReg(0);
     MIB.addImm(0).add(predOps(ARMCC::AL));
+    break;
+  }
+  case G_SEQUENCE: {
+    if (!selectSequence(MIB, TII, MRI, TRI, RBI))
+      return false;
+    break;
+  }
+  case G_EXTRACT: {
+    if (!selectExtract(MIB, TII, MRI, TRI, RBI))
+      return false;
     break;
   }
   default:

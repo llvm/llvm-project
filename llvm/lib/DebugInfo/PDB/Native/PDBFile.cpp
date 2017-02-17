@@ -25,6 +25,7 @@
 #include "llvm/DebugInfo/PDB/Native/TpiStream.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/Path.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
@@ -38,11 +39,17 @@ namespace {
 typedef FixedStreamArray<support::ulittle32_t> ulittle_array;
 } // end anonymous namespace
 
-PDBFile::PDBFile(std::unique_ptr<ReadableStream> PdbFileBuffer,
+PDBFile::PDBFile(StringRef Path, std::unique_ptr<ReadableStream> PdbFileBuffer,
                  BumpPtrAllocator &Allocator)
-    : Allocator(Allocator), Buffer(std::move(PdbFileBuffer)) {}
+    : FilePath(Path), Allocator(Allocator), Buffer(std::move(PdbFileBuffer)) {}
 
 PDBFile::~PDBFile() = default;
+
+StringRef PDBFile::getFilePath() const { return FilePath; }
+
+StringRef PDBFile::getFileDirectory() const {
+  return sys::path::parent_path(FilePath);
+}
 
 uint32_t PDBFile::getBlockSize() const { return ContainerLayout.SB->BlockSize; }
 

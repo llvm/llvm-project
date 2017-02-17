@@ -54,8 +54,8 @@ struct XRayRecord {
   /// The type of record.
   uint16_t RecordType;
 
-  /// The CPU where the thread is running. We assume number of CPUs <= 256.
-  uint8_t CPU;
+  /// The CPU where the thread is running. We assume number of CPUs <= 65536.
+  uint16_t CPU;
 
   /// Identifies the type of record.
   RecordTypes Type;

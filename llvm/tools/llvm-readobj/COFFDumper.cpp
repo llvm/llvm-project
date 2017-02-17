@@ -43,6 +43,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/Win64EH.h"
@@ -1086,7 +1087,7 @@ void COFFDumper::mergeCodeViewTypes(TypeTableBuilder &CVTypes) {
         error(object_error::parse_failed);
       }
 
-      if (auto EC = mergeTypeStreams(CVTypes, Types)) {
+      if (auto EC = mergeTypeStreams(CVTypes, nullptr, Types)) {
         consumeError(std::move(EC));
         return error(object_error::parse_failed);
       }

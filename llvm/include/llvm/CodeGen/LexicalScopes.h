@@ -49,7 +49,11 @@ public:
                bool A)
       : Parent(P), Desc(D), InlinedAtLocation(I), AbstractScope(A),
         LastInsn(nullptr), FirstInsn(nullptr), DFSIn(0), DFSOut(0) {
-    assert((!D || D->isResolved()) && "Expected resolved node");
+    assert(D);
+    assert(D->getSubprogram()->getUnit()->getEmissionKind() !=
+           DICompileUnit::NoDebug &&
+           "Don't build lexical scopes for non-debug locations");
+    assert(D->isResolved() && "Expected resolved node");
     assert((!I || I->isResolved()) && "Expected resolved node");
     if (Parent)
       Parent->addChild(this);

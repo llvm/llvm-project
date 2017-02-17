@@ -448,6 +448,12 @@ static Value *cloneConstantExprWithNewAddressSpace(
     return ConstantExpr::getBitCast(CE->getOperand(0), TargetType);
   }
 
+  if (CE->getOpcode() == Instruction::BitCast) {
+    if (Value *NewOperand = ValueWithNewAddrSpace.lookup(CE->getOperand(0)))
+      return ConstantExpr::getBitCast(cast<Constant>(NewOperand), TargetType);
+    return ConstantExpr::getAddrSpaceCast(CE, TargetType);
+  }
+
   if (CE->getOpcode() == Instruction::Select) {
     Constant *Src0 = CE->getOperand(1);
     Constant *Src1 = CE->getOperand(2);

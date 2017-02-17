@@ -47,7 +47,7 @@ Error NativeSession::createFromPdb(StringRef Path,
   auto Stream = llvm::make_unique<MemoryBufferByteStream>(std::move(Buffer));
 
   auto Allocator = llvm::make_unique<BumpPtrAllocator>();
-  auto File = llvm::make_unique<PDBFile>(std::move(Stream), *Allocator);
+  auto File = llvm::make_unique<PDBFile>(Path, std::move(Stream), *Allocator);
   if (auto EC = File->parseFileHeaders())
     return EC;
   if (auto EC = File->parseStreamData())

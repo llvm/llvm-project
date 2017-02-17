@@ -80,6 +80,10 @@ protected:
     LabelsAfterInsn.insert(std::make_pair(MI, nullptr));
   }
 
+  virtual void beginFunctionImpl(const MachineFunction *MF) = 0;
+  virtual void endFunctionImpl(const MachineFunction *MF) = 0;
+  virtual void skippedNonDebugFunction() {}
+
   // AsmPrinterHandler overrides.
 public:
   void beginInstruction(const MachineInstr *MI) override;
