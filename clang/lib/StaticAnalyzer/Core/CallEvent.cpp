@@ -212,9 +212,12 @@ ProgramPoint CallEvent::getProgramPoint(bool IsPreVisit,
 
 bool CallEvent::isCalled(const CallDescription &CD) const {
   assert(getKind() != CE_ObjCMessage && "Obj-C methods are not supported");
-  if (!CD.II)
+  if (!CD.IsLookupDone) {
+    CD.IsLookupDone = true;
     CD.II = &getState()->getStateManager().getContext().Idents.get(CD.FuncName);
-  if (getCalleeIdentifier() != CD.II)
+  }
+  const IdentifierInfo *II = getCalleeIdentifier();
+  if (!II || II != CD.II)
     return false;
   return (CD.RequiredArgs == CallDescription::NoArgRequirement ||
           CD.RequiredArgs == getNumArgs());
