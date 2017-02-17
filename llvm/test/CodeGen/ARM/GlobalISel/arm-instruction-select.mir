@@ -133,7 +133,7 @@ body:             |
     %0(p0) = G_FRAME_INDEX %fixed-stack.2
     ; CHECK: [[FIVREG:%[0-9]+]] = ADDri %fixed-stack.[[FRAME_INDEX]], 0, 14, _, _
 
-    %1(s32) = G_LOAD %0(p0)
+    %1(s32) = G_LOAD %0(p0) :: (load 4)
     ; CHECK: {{%[0-9]+}} = LDRi12 [[FIVREG]], 0, 14, _
 
     BX_RET 14, _
