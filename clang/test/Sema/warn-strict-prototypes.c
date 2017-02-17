@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fsyntax-only -Wstrict-prototypes -verify %s
-// RUN: %clang_cc1 -fsyntax-only -Wstrict-prototypes -fdiagnostics-parseable-fixits %s 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -triple i386-pc-unknown -fsyntax-only -Wstrict-prototypes -verify %s
+// RUN: %clang_cc1 -triple i386-pc-unknown -fsyntax-only -Wstrict-prototypes -fdiagnostics-parseable-fixits %s 2>&1 | FileCheck %s
 
 // function declaration with unspecified params
 void foo1(); // expected-warning {{this function declaration is not a prototype}}
@@ -60,3 +60,8 @@ void foo10(p, p2) void *p; {} // expected-warning {{old-style function definitio
 // K&R function definition with previous prototype declared is not diagnosed.
 void foo11(int p, int p2);
 void foo11(p, p2) int p; int p2; {}
+
+// PR31020
+void __attribute__((cdecl)) foo12(d) // expected-warning {{this old-style function definition is not preceded by a prototype}}
+  short d;
+{}
