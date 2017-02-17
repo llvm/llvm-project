@@ -768,9 +768,9 @@ bool SwiftLanguageRuntime::MethodName::ExtractFunctionBasenameFromMangled(
 
       // Only demangle swift functions
       if (mangled_ref.startswith("_TF")) {
+        swift::Demangle::Context DCtx;
         swift::Demangle::NodePointer node =
-            swift::Demangle::demangleSymbolAsNode(mangled_cstr,
-                                                  mangled_cstr_len);
+            DCtx.demangleSymbolAsNode(mangled_ref);
         StreamString identifier;
         if (node) {
           switch (node->getKind()) {
@@ -2740,9 +2740,9 @@ SwiftLanguageRuntime::GetStepThroughTrampolinePlan(Thread &thread,
           // the thunk, stopping if I end up
           // in a frame with that function name.
 
+          swift::Demangle::Context DCtx;
           swift::Demangle::NodePointer demangled_nodes =
-              swift::Demangle::demangleSymbolAsNode(
-                  symbol_name, symbol_mangled_name.GetLength());
+              DCtx.demangleSymbolAsNode(symbol_mangled_name.GetStringRef());
 
           // Now find the ProtocolWitness node in the demangled result.
 
@@ -3744,7 +3744,8 @@ protected:
     for (size_t i = 0; i < command.GetArgumentCount(); i++) {
       const char *arg = command.GetArgumentAtIndex(i);
       if (arg && *arg) {
-        auto node_ptr = swift::Demangle::demangleSymbolAsNode(arg, strlen(arg));
+        swift::Demangle::Context DCtx;
+        auto node_ptr = DCtx.demangleSymbolAsNode(llvm::StringRef(arg));
         if (node_ptr) {
           if (m_options.m_expand) {
             PrintNode(node_ptr, result.GetOutputStream());

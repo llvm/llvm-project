@@ -41,7 +41,8 @@ void SwiftMangledNameVisitor::accept(swift::Demangle::NodePointer pointer) {
 #include "swift/Basic/DemangleNodes.def"
 
 void SwiftMangledNameVisitor::visit(const char *mangled_name) {
-  if (mangled_name && mangled_name[0])
-    accept(swift::Demangle::demangleSymbolAsNode(mangled_name,
-                                                 strlen(mangled_name)));
+  if (mangled_name && mangled_name[0]) {
+    swift::Demangle::Context DCtx;
+    accept(DCtx.demangleSymbolAsNode(llvm::StringRef(mangled_name)));
+  }
 }
