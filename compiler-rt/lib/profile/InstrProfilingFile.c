@@ -530,6 +530,7 @@ int __llvm_profile_write_file(void) {
   int rc, Length;
   const char *Filename;
   char *FilenameBuf;
+  int PDeathSig = 0;
 
   if (lprofProfileDumped()) {
     PROF_NOTE("Profile data not written to file: %s.\n", 
@@ -556,10 +557,18 @@ int __llvm_profile_write_file(void) {
     return -1;
   }
 
+  // Temporarily suspend getting SIGKILL when the parent exits.
+  PDeathSig = lprofSuspendSigKill();
+
   /* Write profile data to the file. */
   rc = writeFile(Filename);
   if (rc)
     PROF_ERR("Failed to write file \"%s\": %s\n", Filename, strerror(errno));
+
+  // Restore SIGKILL.
+  if (PDeathSig == 1)
+    lprofRestoreSigKill();
+
   return rc;
 }
 

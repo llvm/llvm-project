@@ -27,6 +27,7 @@ add_host_subdirectory(common
   common/OptionParser.cpp
   common/PipeBase.cpp
   common/ProcessRunLock.cpp
+  common/PseudoTerminal.cpp
   common/Socket.cpp
   common/SocketAddress.cpp
   common/SoftwareBreakpoint.cpp

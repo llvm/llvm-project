@@ -85,6 +85,10 @@ extern "C"
                                  int *running, const char **name, int *parent_tid,
                                  void **trace, unsigned long trace_size);
     int __tsan_get_report_unique_tid(void *report, unsigned long idx, int *tid);
+  
+    // TODO: dlsym won't work on Windows.
+    void *dlsym(void* handle, const char* symbol);
+    int (*ptr__tsan_get_report_loc_object_type)(void *report, unsigned long idx, const char **object_type);
 }
 
 const int REPORT_TRACE_SIZE = 128;
@@ -125,6 +129,7 @@ struct data {
         int fd;
         int suppressable;
         void *trace[REPORT_TRACE_SIZE];
+        const char *object_type;
     } locs[REPORT_ARRAY_SIZE];
     
     int mutex_count;
@@ -158,6 +163,8 @@ struct data {
 const char *thread_sanitizer_retrieve_report_data_command = R"(
 data t = {0};
 
+ptr__tsan_get_report_loc_object_type = (typeof(ptr__tsan_get_report_loc_object_type))(void *)dlsym((void*)-2 /*RTLD_DEFAULT*/, "__tsan_get_report_loc_object_type");
+
 t.report = __tsan_get_current_report();
 __tsan_get_report_data(t.report, &t.description, &t.report_count, &t.stack_count, &t.mop_count, &t.loc_count, &t.mutex_count, &t.thread_count, &t.unique_tid_count, t.sleep_trace, REPORT_TRACE_SIZE);
 
@@ -177,6 +184,8 @@ if (t.loc_count > REPORT_ARRAY_SIZE) t.loc_count = REPORT_ARRAY_SIZE;
 for (int i = 0; i < t.loc_count; i++) {
     t.locs[i].idx = i;
     __tsan_get_report_loc(t.report, i, &t.locs[i].type, &t.locs[i].addr, &t.locs[i].start, &t.locs[i].size, &t.locs[i].tid, &t.locs[i].fd, &t.locs[i].suppressable, t.locs[i].trace, REPORT_TRACE_SIZE);
+    if (ptr__tsan_get_report_loc_object_type)
+        ptr__tsan_get_report_loc_object_type(t.report, i, &t.locs[i].object_type);
 }
 
 if (t.mutex_count > REPORT_ARRAY_SIZE) t.mutex_count = REPORT_ARRAY_SIZE;
@@ -409,6 +418,8 @@ ThreadSanitizerRuntime::RetrieveReportData(ExecutionContextRef exe_ctx_ref) {
                              o->GetValueForExpressionPath(".suppressable")
                                  ->GetValueAsUnsigned(0));
         dict->AddItem("trace", StructuredData::ObjectSP(CreateStackTrace(o)));
+        dict->AddStringItem("object_type",
+                            RetrieveString(o, process_sp, ".object_type"));
       });
   dict->AddItem("locs", StructuredData::ObjectSP(locs));
 
@@ -511,6 +522,8 @@ ThreadSanitizerRuntime::FormatDescription(StructuredData::ObjectSP report) {
     return "Overwrite of errno in a signal handler";
   } else if (description == "lock-order-inversion") {
     return "Lock order inversion (potential deadlock)";
+  } else if (description == "external-race") {
+    return "Race on a library object";
   }
 
   // for unknown report codes just show the code
@@ -634,6 +647,13 @@ ThreadSanitizerRuntime::GenerateSummary(StructuredData::ObjectSP report) {
                                        ->GetValueForKey("locs")
                                        ->GetAsArray()
                                        ->GetItemAtIndex(0);
+    std::string object_type = loc->GetAsDictionary()
+                                  ->GetValueForKey("object_type")
+                                  ->GetAsString()
+                                  ->GetValue();
+    if (!object_type.empty()) {
+      summary = "Race on " + object_type + " object";
+    }
     addr_t addr = loc->GetAsDictionary()
                       ->GetValueForKey("address")
                       ->GetAsInteger()
@@ -726,8 +746,17 @@ std::string ThreadSanitizerRuntime::GetLocationDescription(
                       ->GetValueForKey("size")
                       ->GetAsInteger()
                       ->GetValue();
-      result =
-          Sprintf("Location is a %ld-byte heap object at 0x%llx", size, addr);
+      std::string object_type = loc->GetAsDictionary()
+                                    ->GetValueForKey("object_type")
+                                    ->GetAsString()
+                                    ->GetValue();
+      if (!object_type.empty()) {
+        result = Sprintf("Location is a %ld-byte %s object at 0x%llx", size,
+                         object_type.c_str(), addr);
+      } else {
+        result =
+            Sprintf("Location is a %ld-byte heap object at 0x%llx", size, addr);
+      }
     } else if (type == "stack") {
       int tid = loc->GetAsDictionary()
                     ->GetValueForKey("thread_id")

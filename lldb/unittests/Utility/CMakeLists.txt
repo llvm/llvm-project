@@ -4,9 +4,9 @@ add_lldb_unittest(UtilityTests
   TaskPoolTest.cpp
   TimeoutTest.cpp
   UriParserTest.cpp
+  VASprintfTest.cpp
 
   LINK_LIBS
-      lldbHost
       lldbUtility
     LINK_COMPONENTS
       Support

@@ -10,7 +10,7 @@ main_body:
   %tmp6 = insertelement <4 x float> %tmp5, float %tmp2, i32 1
   %tmp7 = insertelement <4 x float> %tmp6, float %tmp3, i32 2
   %tmp8 = insertelement <4 x float> %tmp7, float %tmp4, i32 3
-  %tmp9 = call <4 x float> @llvm.AMDGPU.cube(<4 x float> %tmp8)
+  %tmp9 = call <4 x float> @llvm.r600.cube(<4 x float> %tmp8)
   %tmp10 = extractelement <4 x float> %tmp9, i32 0
   %tmp11 = extractelement <4 x float> %tmp9, i32 1
   %tmp12 = extractelement <4 x float> %tmp9, i32 2
@@ -45,7 +45,7 @@ main_body:
 }
 
 ; Function Attrs: readnone
-declare <4 x float> @llvm.AMDGPU.cube(<4 x float>) #0
+declare <4 x float> @llvm.r600.cube(<4 x float>) #0
 
 ; Function Attrs: readnone
 declare float @fabs(float) #0

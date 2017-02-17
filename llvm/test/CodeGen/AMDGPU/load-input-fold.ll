@@ -97,15 +97,6 @@ main_body:
 ; Function Attrs: readnone
 declare float @llvm.r600.dot4(<4 x float>, <4 x float>) #1
 
-; Function Attrs: readonly
-declare float @fabs(float) #2
-
-; Function Attrs: readnone
-declare float @llvm.AMDGPU.rsq(float) #1
-
-; Function Attrs: readnone
-declare float @llvm.AMDGPU.clamp.f32(float, float, float) #1
-
 ; Function Attrs: nounwind readonly
 declare float @llvm.pow.f32(float, float) #3
 

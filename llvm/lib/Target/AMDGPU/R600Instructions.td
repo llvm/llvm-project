@@ -1013,7 +1013,7 @@ multiclass CUBE_Common <bits<11> inst> {
     (outs R600_Reg128:$dst),
     (ins R600_Reg128:$src0),
     "CUBE $dst $src0",
-    [(set v4f32:$dst, (int_AMDGPU_cube v4f32:$src0))],
+    [(set v4f32:$dst, (int_r600_cube v4f32:$src0))],
     VecALU
   > {
     let isPseudo = 1;

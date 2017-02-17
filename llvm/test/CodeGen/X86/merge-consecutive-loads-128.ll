@@ -1132,3 +1132,43 @@ define <4 x float> @merge_4f32_f32_X0YY(float* %ptr0, float* %ptr1) nounwind uwt
   %res3 = insertelement <4 x float> %res2, float %val1, i32 3
   ret <4 x float> %res3
 }
+
+;
+; Extension tests.
+;
+
+; FIXME: PR31309
+define <4 x i32> @load_i32_zext_i128_v4i32(i32* %ptr) {
+; SSE-LABEL: load_i32_zext_i128_v4i32:
+; SSE:       # BB#0:
+; SSE-NEXT:    movl (%rdi), %eax
+; SSE-NEXT:    movd %rax, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: load_i32_zext_i128_v4i32:
+; AVX:       # BB#0:
+; AVX-NEXT:    movl (%rdi), %eax
+; AVX-NEXT:    vmovq %rax, %xmm0
+; AVX-NEXT:    retq
+;
+; X32-SSE1-LABEL: load_i32_zext_i128_v4i32:
+; X32-SSE1:       # BB#0:
+; X32-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X32-SSE1-NEXT:    movl (%ecx), %ecx
+; X32-SSE1-NEXT:    movl %ecx, (%eax)
+; X32-SSE1-NEXT:    movl $0, 12(%eax)
+; X32-SSE1-NEXT:    movl $0, 8(%eax)
+; X32-SSE1-NEXT:    movl $0, 4(%eax)
+; X32-SSE1-NEXT:    retl $4
+;
+; X32-SSE41-LABEL: load_i32_zext_i128_v4i32:
+; X32-SSE41:       # BB#0:
+; X32-SSE41-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-SSE41-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X32-SSE41-NEXT:    retl
+  %1 = load i32, i32* %ptr
+  %2 = zext i32 %1 to i128
+  %3 = bitcast i128 %2 to <4 x i32>
+  ret <4 x i32> %3
+}

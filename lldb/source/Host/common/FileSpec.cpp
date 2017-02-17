@@ -1107,46 +1107,46 @@ FileSpec::ForEachItemInDirectory(llvm::StringRef dir_path,
         else
           child_path = llvm::join_items('/', dir_path, dp->d_name);
 
-          // Don't resolve the file type or path
-          FileSpec child_path_spec(child_path, false);
+        // Don't resolve the file type or path
+        FileSpec child_path_spec(child_path, false);
 
-          EnumerateDirectoryResult result =
-              callback(file_type, child_path_spec);
+        EnumerateDirectoryResult result =
+            callback(file_type, child_path_spec);
 
-          switch (result) {
-          case eEnumerateDirectoryResultNext:
-            // Enumerate next entry in the current directory. We just
-            // exit this switch and will continue enumerating the
-            // current directory as we currently are...
-            break;
+        switch (result) {
+        case eEnumerateDirectoryResultNext:
+          // Enumerate next entry in the current directory. We just
+          // exit this switch and will continue enumerating the
+          // current directory as we currently are...
+          break;
 
-          case eEnumerateDirectoryResultEnter: // Recurse into the current entry
-                                               // if it is a directory or
-                                               // symlink, or next if not
-            if (FileSpec::ForEachItemInDirectory(child_path, callback) ==
-                eEnumerateDirectoryResultQuit) {
-              // The subdirectory returned Quit, which means to
-              // stop all directory enumerations at all levels.
-              if (buf)
-                free(buf);
-              return eEnumerateDirectoryResultQuit;
-            }
-            break;
-
-          case eEnumerateDirectoryResultExit: // Exit from the current directory
-                                              // at the current level.
-            // Exit from this directory level and tell parent to
-            // keep enumerating.
-            if (buf)
-              free(buf);
-            return eEnumerateDirectoryResultNext;
-
-          case eEnumerateDirectoryResultQuit: // Stop directory enumerations at
-                                              // any level
+        case eEnumerateDirectoryResultEnter: // Recurse into the current entry
+                                             // if it is a directory or
+                                             // symlink, or next if not
+          if (FileSpec::ForEachItemInDirectory(child_path, callback) ==
+              eEnumerateDirectoryResultQuit) {
+            // The subdirectory returned Quit, which means to
+            // stop all directory enumerations at all levels.
             if (buf)
               free(buf);
             return eEnumerateDirectoryResultQuit;
           }
+          break;
+
+        case eEnumerateDirectoryResultExit: // Exit from the current directory
+                                            // at the current level.
+          // Exit from this directory level and tell parent to
+          // keep enumerating.
+          if (buf)
+            free(buf);
+          return eEnumerateDirectoryResultNext;
+
+        case eEnumerateDirectoryResultQuit: // Stop directory enumerations at
+                                            // any level
+          if (buf)
+            free(buf);
+          return eEnumerateDirectoryResultQuit;
+        }
       }
       if (buf) {
         free(buf);

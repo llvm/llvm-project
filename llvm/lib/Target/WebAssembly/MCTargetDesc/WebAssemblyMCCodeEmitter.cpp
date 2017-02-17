@@ -48,7 +48,9 @@ class WebAssemblyMCCodeEmitter final : public MCCodeEmitter {
 
 public:
   WebAssemblyMCCodeEmitter(const MCInstrInfo &mcii, MCContext &ctx)
-      : MCII(mcii), Ctx(ctx) {}
+      : MCII(mcii), Ctx(ctx) {
+    (void)Ctx;
+  }
 };
 } // end anonymous namespace
 

@@ -31,7 +31,7 @@ struct YAMLXRayFileHeader {
 
 struct YAMLXRayRecord {
   uint16_t RecordType;
-  uint8_t CPU;
+  uint16_t CPU;
   RecordTypes Type;
   int32_t FuncId;
   std::string Function;

@@ -81,7 +81,7 @@
 // CHECK-ERROR: error: invalid operand for instruction
 // CHECK-ERROR:         and v0.8b, v1.16b, v2.8b
 // CHECK-ERROR:                       ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: error: immediate must be an integer in range [0, 255]
 // CHECK-ERROR:         orr v0.4h, v1.4h, v2.4h
 // CHECK-ERROR:                ^
 // CHECK-ERROR: error: invalid operand for instruction
@@ -152,10 +152,10 @@
       // invalid vector type (2s, 4s, 4h, 8h)
       movi v5.8b, #1, lsl #8
 
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: error: immediate must be an integer in range [0, 255]
 // CHECK-ERROR:          movi v0.2s, #-1
 // CHECK-ERROR:                      ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: error: immediate must be an integer in range [0, 255]
 // CHECK-ERROR:         mvni v1.4s, #256
 // CHECK-ERROR:                     ^
 // CHECK-ERROR: error: invalid operand for instruction
@@ -183,10 +183,10 @@
       // invalid vector type (2s, 4s)
       movi v5.4h, #31, msl #8
 
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: error: immediate must be an integer in range [0, 255]
 // CHECK-ERROR:         movi v0.2s, #-1, msl #8
 // CHECK-ERROR:                     ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: error: immediate must be an integer in range [0, 255]
 // CHECK-ERROR:         mvni v7.4s, #256, msl #16
 // CHECK-ERROR:                     ^
 // CHECK-ERROR: error: invalid operand for instruction
@@ -206,10 +206,10 @@
         movi v0.8b, #-1
         movi v1.16b, #256
 
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: error: immediate must be an integer in range [0, 255]
 // CHECK-ERROR:         movi v0.8b, #-1
 // CHECK-ERROR:                     ^
-// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR: error: immediate must be an integer in range [0, 255]
 // CHECK-ERROR:         movi v1.16b, #256
 // CHECK-ERROR:                      ^
 

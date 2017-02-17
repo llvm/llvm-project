@@ -43,6 +43,7 @@ struct CVMemberRecord {
   ArrayRef<uint8_t> Data;
 };
 typedef msf::VarStreamArray<CVType> CVTypeArray;
+typedef iterator_range<CVTypeArray::Iterator> CVTypeRange;
 
 /// Equvalent to CV_fldattr_t in cvinfo.h.
 struct MemberAttributes {

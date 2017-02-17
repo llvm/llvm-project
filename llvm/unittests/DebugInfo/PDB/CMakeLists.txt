@@ -10,6 +10,7 @@ set(DebugInfoPDBSources
   StringTableBuilderTest.cpp
   MSFBuilderTest.cpp
   PDBApiTest.cpp
+  TypeServerHandlerTest.cpp
   )
 
 add_llvm_unittest(DebugInfoPDBTests

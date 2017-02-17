@@ -4,7 +4,6 @@ add_lldb_library(lldbUtility
   JSON.cpp
   LLDBAssert.cpp
   NameMatches.cpp
-  PseudoTerminal.cpp
   Range.cpp
   RegularExpression.cpp
   SelectHelper.cpp
@@ -16,9 +15,10 @@ add_lldb_library(lldbUtility
   StringLexer.cpp
   TaskPool.cpp
   UriParser.cpp
+  VASprintf.cpp
 
   LINK_LIBS
-    lldbHost
+  # lldbUtility cannot have any dependencies
 
   LINK_COMPONENTS
     Support

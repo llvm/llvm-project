@@ -91,6 +91,7 @@ namespace rdf {
     const uint32_t *getRegMaskBits(RegisterId R) const {
       return RegMasks.get(TargetRegisterInfo::stackSlot2Index(R));
     }
+    RegisterRef normalize(RegisterRef RR) const;
 
     bool alias(RegisterRef RA, RegisterRef RB) const {
       if (!isRegMaskId(RA.Reg))
@@ -101,7 +102,7 @@ namespace rdf {
 
     const TargetRegisterInfo &getTRI() const { return TRI; }
 
-//  private:
+  private:
     struct RegInfo {
       unsigned MaxSuper = 0;
       const TargetRegisterClass *RegClass = nullptr;
@@ -146,7 +147,6 @@ namespace rdf {
     typedef MapType::const_iterator iterator;
     iterator begin() const { return Masks.begin(); }
     iterator end() const { return Masks.end(); }
-    RegisterRef normalize(RegisterRef RR) const;
 
   private:
     MapType Masks;

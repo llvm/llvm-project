@@ -269,12 +269,11 @@ public:
 
 private:
   LLVMContext &Context;
-  uint64_t NextIndex;
+  uint64_t NextIndex = 0;
   SmallDenseMap<void *, std::pair<OwnerTy, uint64_t>, 4> UseMap;
 
 public:
-  ReplaceableMetadataImpl(LLVMContext &Context)
-      : Context(Context), NextIndex(0) {}
+  ReplaceableMetadataImpl(LLVMContext &Context) : Context(Context) {}
 
   ~ReplaceableMetadataImpl() {
     assert(UseMap.empty() && "Cannot destroy in-use replaceable metadata");
@@ -586,8 +585,9 @@ dyn_extract_or_null(Y &&MD) {
 class MDString : public Metadata {
   friend class StringMapEntry<MDString>;
 
-  StringMapEntry<MDString> *Entry;
-  MDString() : Metadata(MDStringKind, Uniqued), Entry(nullptr) {}
+  StringMapEntry<MDString> *Entry = nullptr;
+
+  MDString() : Metadata(MDStringKind, Uniqued) {}
 
 public:
   MDString(const MDString &) = delete;
@@ -1062,7 +1062,6 @@ public:
   static MDNode *getMostGenericRange(MDNode *A, MDNode *B);
   static MDNode *getMostGenericAliasScope(MDNode *A, MDNode *B);
   static MDNode *getMostGenericAlignmentOrDereferenceable(MDNode *A, MDNode *B);
-
 };
 
 /// \brief Tuple of metadata.
@@ -1284,7 +1283,7 @@ class NamedMDNode : public ilist_node<NamedMDNode> {
   friend class Module;
 
   std::string Name;
-  Module *Parent;
+  Module *Parent = nullptr;
   void *Operands; // SmallVector<TrackingMDRef, 4>
 
   void setParent(Module *M) { Parent = M; }

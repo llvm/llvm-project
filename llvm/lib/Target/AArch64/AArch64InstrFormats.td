@@ -257,6 +257,7 @@ def am_indexed7s128 : ComplexPattern<i64, 2, "SelectAddrModeIndexed7S128", []>;
 class AsmImmRange<int Low, int High> : AsmOperandClass {
   let Name = "Imm" # Low # "_" # High;
   let DiagnosticType = "InvalidImm" # Low # "_" # High;
+  let PredicateMethod = "isImmInRange<" # Low # "," # High # ">";
 }
 
 def Imm1_8Operand : AsmImmRange<1, 8>;
@@ -500,7 +501,8 @@ def imm0_65535 : Operand<i32>, ImmLeaf<i32, [{
 }
 
 // imm0_255 predicate - True if the immediate is in the range [0,255].
-def Imm0_255Operand : AsmOperandClass { let Name = "Imm0_255"; }
+def Imm0_255Operand : AsmImmRange<0,255>;
+
 def imm0_255 : Operand<i32>, ImmLeaf<i32, [{
   return ((uint32_t)Imm) < 256;
 }]> {
@@ -1166,11 +1168,12 @@ def am_tbrcond : Operand<OtherVT> {
 // AsmOperand classes to emit (or not) special diagnostics
 def TBZImm0_31Operand : AsmOperandClass {
   let Name = "TBZImm0_31";
-  let PredicateMethod = "isImm0_31";
+  let PredicateMethod = "isImmInRange<0,31>";
   let RenderMethod = "addImm0_31Operands";
 }
 def TBZImm32_63Operand : AsmOperandClass {
   let Name = "Imm32_63";
+  let PredicateMethod = "isImmInRange<32,63>";
   let DiagnosticType = "InvalidImm0_63";
 }
 

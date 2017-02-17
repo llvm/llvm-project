@@ -78,7 +78,8 @@ define float @fmuladd_fneg_x_fneg_y(float %x, float %y, float %z) {
 }
 
 ; CHECK-LABEL: @fmuladd_fneg_x_fneg_y_fast(
-; CHECK: %fmuladd = call fast float @llvm.fmuladd.f32(float %x, float %y, float %z)
+; CHECK-NEXT: %1 = fmul fast float %x, %y
+; CHECK-NEXT: %fmuladd = fadd fast float %1, %z
 define float @fmuladd_fneg_x_fneg_y_fast(float %x, float %y, float %z) {
   %x.fneg = fsub float -0.0, %x
   %y.fneg = fsub float -0.0, %y
@@ -122,7 +123,8 @@ define float @fmuladd_fabs_x_fabs_x(float %x, float %z) {
 }
 
 ; CHECK-LABEL: @fmuladd_fabs_x_fabs_x_fast(
-; CHECK: %fmuladd = call fast float @llvm.fmuladd.f32(float %x, float %x, float %z)
+; CHECK-NEXT: %1 = fmul fast float %x, %x
+; CHECK-NEXT: %fmuladd = fadd fast float %1, %z
 define float @fmuladd_fabs_x_fabs_x_fast(float %x, float %z) {
   %x.fabs = call float @llvm.fabs.f32(float %x)
   %fmuladd = call fast float @llvm.fmuladd.f32(float %x.fabs, float %x.fabs, float %z)
@@ -144,7 +146,8 @@ define float @fma_k_y_z_fast(float %y, float %z) {
 }
 
 ; CHECK-LABEL: @fmuladd_k_y_z_fast(
-; CHECK: %fmuladd = call fast float @llvm.fmuladd.f32(float %y, float 4.000000e+00, float %z)
+; CHECK: %1 = fmul fast float %y, 4.000000e+00
+; CHECK-NEXT: %fmuladd = fadd fast float %1, %z
 define float @fmuladd_k_y_z_fast(float %y, float %z) {
   %fmuladd = call fast float @llvm.fmuladd.f32(float 4.0, float %y, float %z)
   ret float %fmuladd

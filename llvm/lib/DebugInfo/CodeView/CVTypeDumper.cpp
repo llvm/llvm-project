@@ -28,6 +28,8 @@ Error CVTypeDumper::dump(const CVType &Record, TypeVisitorCallbacks &Dumper) {
   Pipeline.addCallbackToPipeline(Dumper);
 
   CVTypeVisitor Visitor(Pipeline);
+  if (Handler)
+    Visitor.addTypeServerHandler(*Handler);
 
   CVType RecordCopy = Record;
   if (auto EC = Visitor.visitTypeRecord(RecordCopy))
@@ -45,6 +47,8 @@ Error CVTypeDumper::dump(const CVTypeArray &Types,
   Pipeline.addCallbackToPipeline(Dumper);
 
   CVTypeVisitor Visitor(Pipeline);
+  if (Handler)
+    Visitor.addTypeServerHandler(*Handler);
 
   if (auto EC = Visitor.visitTypeStream(Types))
     return EC;

@@ -14127,14 +14127,6 @@ static SDValue LowerEXTRACT_SUBVECTOR(SDValue Op, const X86Subtarget &Subtarget,
   return Op;
 }
 
-static bool areOnlyUsersOf(SDNode *N, ArrayRef<SDValue> ValidUsers) {
-  for (SDNode::use_iterator I = N->use_begin(), E = N->use_end(); I != E; ++I)
-    if (llvm::all_of(ValidUsers,
-                     [&I](SDValue V) { return V.getNode() != *I; }))
-      return false;
-  return true;
-}
-
 // Lower a node with an INSERT_SUBVECTOR opcode.  This may result in a
 // simple superregister reference or explicit instructions to insert
 // the upper bits of a vector.
@@ -34291,7 +34283,7 @@ static SDValue combineInsertSubvector(SDNode *N, SelectionDAG &DAG,
       // lower to a VBROADCASTF128/VBROADCASTI128/etc.
       if (auto *Ld = dyn_cast<LoadSDNode>(peekThroughOneUseBitcasts(SubVec2))) {
         if (SubVec2 == SubVec && ISD::isNormalLoad(Ld) &&
-            areOnlyUsersOf(SubVec2.getNode(), {SDValue(N, 0), Vec})) {
+            SDNode::areOnlyUsersOf({N, Vec.getNode()}, SubVec2.getNode())) {
           return DAG.getNode(X86ISD::SUBV_BROADCAST, dl, OpVT, SubVec);
         }
       }

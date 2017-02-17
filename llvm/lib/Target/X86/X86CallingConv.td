@@ -1074,6 +1074,8 @@ def CSR_32_AllRegs_AVX512 : CalleeSavedRegs<(add CSR_32_AllRegs,
                                                  (sequence "K%u", 0, 7))>;
 
 def CSR_64_AllRegs     : CalleeSavedRegs<(add CSR_64_MostRegs, RAX)>;
+def CSR_64_AllRegs_NoSSE : CalleeSavedRegs<(add RAX, RBX, RCX, RDX, RSI, RDI, R8, R9,
+                                                R10, R11, R12, R13, R14, R15, RBP)>;
 def CSR_64_AllRegs_AVX : CalleeSavedRegs<(sub (add CSR_64_MostRegs, RAX,
                                                    (sequence "YMM%u", 0, 15)),
                                               (sequence "XMM%u", 0, 15))>;
