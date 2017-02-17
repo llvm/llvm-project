@@ -348,11 +348,11 @@ private:
 };
 
 /// Common features for diagnostics with an associated DebugLoc
-class DiagnosticInfoWithDebugLocBase : public DiagnosticInfo {
+class DiagnosticInfoWithLocationBase : public DiagnosticInfo {
 public:
   /// \p Fn is the function where the diagnostic is being emitted. \p DLoc is
   /// the location information to use in the diagnostic.
-  DiagnosticInfoWithDebugLocBase(enum DiagnosticKind Kind,
+  DiagnosticInfoWithLocationBase(enum DiagnosticKind Kind,
                                  enum DiagnosticSeverity Severity,
                                  const Function &Fn,
                                  const DebugLoc &DLoc)
@@ -383,7 +383,7 @@ private:
 
 /// \brief Common features for diagnostics dealing with optimization remarks
 /// that are used by both IR and MIR passes.
-class DiagnosticInfoOptimizationBase : public DiagnosticInfoWithDebugLocBase {
+class DiagnosticInfoOptimizationBase : public DiagnosticInfoWithLocationBase {
 public:
   /// \brief Used to set IsVerbose via the stream interface.
   struct setIsVerbose {};
@@ -419,7 +419,7 @@ public:
                                  enum DiagnosticSeverity Severity,
                                  const char *PassName, StringRef RemarkName,
                                  const Function &Fn, const DebugLoc &DLoc)
-      : DiagnosticInfoWithDebugLocBase(Kind, Severity, Fn, DLoc),
+      : DiagnosticInfoWithLocationBase(Kind, Severity, Fn, DLoc),
         PassName(PassName), RemarkName(RemarkName) {}
 
   DiagnosticInfoOptimizationBase &operator<<(StringRef S);
@@ -908,8 +908,7 @@ public:
 };
 
 /// Diagnostic information for unsupported feature in backend.
-class DiagnosticInfoUnsupported
-    : public DiagnosticInfoWithDebugLocBase {
+class DiagnosticInfoUnsupported : public DiagnosticInfoWithLocationBase {
 private:
   Twine Msg;
 
@@ -923,7 +922,7 @@ public:
   DiagnosticInfoUnsupported(const Function &Fn, const Twine &Msg,
                             DebugLoc DLoc = DebugLoc(),
                             DiagnosticSeverity Severity = DS_Error)
-      : DiagnosticInfoWithDebugLocBase(DK_Unsupported, Severity, Fn, DLoc),
+      : DiagnosticInfoWithLocationBase(DK_Unsupported, Severity, Fn, DLoc),
         Msg(Msg) {}
 
   static bool classof(const DiagnosticInfo *DI) {
