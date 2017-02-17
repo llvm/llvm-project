@@ -831,7 +831,7 @@ Bugs and Enhancements
 
 Currently known bugs and enhancements under consideration can be
 tracked by performing a `bugzilla search
-<http://llvm.org/bugs/buglist.cgi?cmdtype=runnamed&namedcmd=Statepoint%20Bugs&list_id=64342>`_
+<https://bugs.llvm.org/buglist.cgi?cmdtype=runnamed&namedcmd=Statepoint%20Bugs&list_id=64342>`_
 for [Statepoint] in the summary field. When filing new bugs, please
 use this tag so that interested parties see the newly filed bug.  As
 with most LLVM features, design discussions take place on `llvm-dev

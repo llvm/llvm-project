@@ -57,6 +57,11 @@ The improvements are...
 Improvements to clang-tidy
 --------------------------
 
+- New `cert-dcl58-cpp
+  <http://clang.llvm.org/extra/clang-tidy/checks/cert-dcl58-cpp.html>`_ check
+
+  Finds modification of the ``std`` or ``posix`` namespace.
+
 - New `readability-misleading-indentation
   <http://clang.llvm.org/extra/clang-tidy/checks/readability-misleading-indentation.html>`_ check
 

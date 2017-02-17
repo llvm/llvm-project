@@ -62,7 +62,7 @@ way to see what other people are interested in and watching the flow of the
 project as a whole.
 
 We recommend that active developers register an email account with `LLVM
-Bugzilla <http://llvm.org/bugs/>`_ and preferably subscribe to the `llvm-bugs
+Bugzilla <https://bugs.llvm.org/>`_ and preferably subscribe to the `llvm-bugs
 <http://lists.llvm.org/mailman/listinfo/llvm-bugs>`_ email list to keep track
 of bugs and enhancements occurring in LLVM.  We really appreciate people who are
 proactive at catching incoming bugs in their components and dealing with them
@@ -261,7 +261,7 @@ the future that the change is responsible for.  For example:
 * The changes should not cause performance or correctness regressions in code
   compiled by LLVM on all applicable targets.
 
-* You are expected to address any `Bugzilla bugs <http://llvm.org/bugs/>`_ that
+* You are expected to address any `Bugzilla bugs <https://bugs.llvm.org/>`_ that
   result from your change.
 
 We prefer for this to be handled before submission but understand that it isn't

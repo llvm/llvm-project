@@ -1879,7 +1879,7 @@ missing from this list, please send an e-mail to cfe-dev. This list
 currently excludes C++; see :ref:`C++ Language Features <cxx>`. Also, this
 list does not include bugs in mostly-implemented features; please see
 the `bug
-tracker <http://llvm.org/bugs/buglist.cgi?quicksearch=product%3Aclang+component%3A-New%2BBugs%2CAST%2CBasic%2CDriver%2CHeaders%2CLLVM%2BCodeGen%2Cparser%2Cpreprocessor%2CSemantic%2BAnalyzer>`_
+tracker <https://bugs.llvm.org/buglist.cgi?quicksearch=product%3Aclang+component%3A-New%2BBugs%2CAST%2CBasic%2CDriver%2CHeaders%2CLLVM%2BCodeGen%2Cparser%2Cpreprocessor%2CSemantic%2BAnalyzer>`_
 for known existing bugs (FIXME: Is there a section for bug-reporting
 guidelines somewhere?).
 
@@ -2516,7 +2516,7 @@ official `MinGW-w64 website <http://mingw-w64.sourceforge.net>`_.
 Clang expects the GCC executable "gcc.exe" compiled for
 ``i686-w64-mingw32`` (or ``x86_64-w64-mingw32``) to be present on PATH.
 
-`Some tests might fail <http://llvm.org/bugs/show_bug.cgi?id=9072>`_ on
+`Some tests might fail <https://bugs.llvm.org/show_bug.cgi?id=9072>`_ on
 ``x86_64-w64-mingw32``.
 
 .. _clang-cl:
@@ -2559,7 +2559,7 @@ options are spelled with a leading ``/``, they will be mistaken for a filename:
 
     clang-cl.exe: error: no such file or directory: '/foobar'
 
-Please `file a bug <http://llvm.org/bugs/enter_bug.cgi?product=clang&component=Driver>`_
+Please `file a bug <https://bugs.llvm.org/enter_bug.cgi?product=clang&component=Driver>`_
 for any valid cl.exe flags that clang-cl does not understand.
 
 Execute ``clang-cl /?`` to see a list of supported options:

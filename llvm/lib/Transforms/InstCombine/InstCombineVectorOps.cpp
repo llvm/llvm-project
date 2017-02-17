@@ -1209,7 +1209,6 @@ Instruction *InstCombiner::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
   if (isShuffleExtractingFromLHS(SVI, Mask)) {
     Value *V = LHS;
     unsigned MaskElems = Mask.size();
-    unsigned BegIdx = Mask.front();
     VectorType *SrcTy = cast<VectorType>(V->getType());
     unsigned VecBitWidth = SrcTy->getBitWidth();
     unsigned SrcElemBitWidth = DL.getTypeSizeInBits(SrcTy->getElementType());
@@ -1223,6 +1222,7 @@ Instruction *InstCombiner::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
           // Only visit bitcasts that weren't previously handled.
           BCs.push_back(BC);
     for (BitCastInst *BC : BCs) {
+      unsigned BegIdx = Mask.front();
       Type *TgtTy = BC->getDestTy();
       unsigned TgtElemBitWidth = DL.getTypeSizeInBits(TgtTy);
       if (!TgtElemBitWidth)

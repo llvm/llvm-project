@@ -487,20 +487,9 @@ private:
   ///                           a loop is assumed to be profitable and
   ///                           consequently is counted.
   /// returns A tuple of number of loops and their maximal depth.
-  ScopDetection::LoopStats
+  static ScopDetection::LoopStats
   countBeneficialSubLoops(Loop *L, ScalarEvolution &SE,
-                          unsigned MinProfitableTrips) const;
-
-  /// Count the number of loops and the maximal loop depth in @p R.
-  ///
-  /// @param R The region to check
-  /// @param SE The scalar evolution analysis.
-  /// @param MinProfitableTrips The minimum number of trip counts from which
-  ///                           a loop is assumed to be profitable and
-  ///                           consequently is counted.
-  /// returns A tuple of number of loops and their maximal depth.
-  ScopDetection::LoopStats
-  countBeneficialLoops(Region *R, unsigned MinProfitableTrips) const;
+                          unsigned MinProfitableTrips);
 
   /// Check if the function @p F is marked as invalid.
   ///
@@ -615,6 +604,18 @@ public:
   virtual bool runOnFunction(Function &F);
   virtual void print(raw_ostream &OS, const Module *) const;
   //@}
+
+  /// Count the number of loops and the maximal loop depth in @p R.
+  ///
+  /// @param R The region to check
+  /// @param SE The scalar evolution analysis.
+  /// @param MinProfitableTrips The minimum number of trip counts from which
+  ///                           a loop is assumed to be profitable and
+  ///                           consequently is counted.
+  /// returns A tuple of number of loops and their maximal depth.
+  static ScopDetection::LoopStats
+  countBeneficialLoops(Region *R, ScalarEvolution &SE, LoopInfo &LI,
+                       unsigned MinProfitableTrips);
 };
 
 } // end namespace polly

@@ -74,6 +74,16 @@ STATISTIC(AssumptionsInvariantLoad,
 STATISTIC(AssumptionsDelinearization,
           "Number of delinearization assumptions taken.");
 
+STATISTIC(NumLoopsInScop, "Number of loops in scops");
+STATISTIC(NumScopsDepthOne, "Number of scops with maximal loop depth 1");
+STATISTIC(NumScopsDepthTwo, "Number of scops with maximal loop depth 2");
+STATISTIC(NumScopsDepthThree, "Number of scops with maximal loop depth 3");
+STATISTIC(NumScopsDepthFour, "Number of scops with maximal loop depth 4");
+STATISTIC(NumScopsDepthFive, "Number of scops with maximal loop depth 5");
+STATISTIC(NumScopsDepthLarger,
+          "Number of scops with maximal loop depth 6 and larger");
+STATISTIC(MaxNumLoopsInScop, "Maximal number of loops in scops");
+
 // The maximal number of basic sets we allow during domain construction to
 // be created. More complex scops will result in very high compile time and
 // are also unlikely to result in good code
@@ -4539,6 +4549,26 @@ void ScopInfoRegionPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
 }
 
+void updateLoopCountStatistic(ScopDetection::LoopStats Stats) {
+  NumLoopsInScop += Stats.NumLoops;
+  MaxNumLoopsInScop =
+      std::max(MaxNumLoopsInScop.getValue(), (unsigned)Stats.NumLoops);
+
+  errs() << "MaxLoopDepth: " << Stats.MaxDepth << "\n";
+  if (Stats.MaxDepth == 1)
+    NumScopsDepthOne++;
+  else if (Stats.MaxDepth == 2)
+    NumScopsDepthTwo++;
+  else if (Stats.MaxDepth == 3)
+    NumScopsDepthThree++;
+  else if (Stats.MaxDepth == 4)
+    NumScopsDepthFour++;
+  else if (Stats.MaxDepth == 5)
+    NumScopsDepthFive++;
+  else
+    NumScopsDepthLarger++;
+}
+
 bool ScopInfoRegionPass::runOnRegion(Region *R, RGPassManager &RGM) {
   auto &SD = getAnalysis<ScopDetection>();
 
@@ -4554,6 +4584,13 @@ bool ScopInfoRegionPass::runOnRegion(Region *R, RGPassManager &RGM) {
 
   ScopBuilder SB(R, AA, DL, DT, LI, SD, SE);
   S = SB.getScop(); // take ownership of scop object
+
+  if (S) {
+    ScopDetection::LoopStats Stats =
+        ScopDetection::countBeneficialLoops(&S->getRegion(), SE, LI, 0);
+    updateLoopCountStatistic(Stats);
+  }
+
   return false;
 }
 

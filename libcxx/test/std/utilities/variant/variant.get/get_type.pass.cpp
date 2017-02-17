@@ -30,7 +30,7 @@ void test_const_lvalue_get() {
   {
     using V = std::variant<int, const long>;
     constexpr V v(42);
-#ifndef __clang__ // Avoid https://llvm.org/bugs/show_bug.cgi?id=15481
+#ifndef __clang__ // Avoid https://bugs.llvm.org/show_bug.cgi?id=15481
     ASSERT_NOEXCEPT(std::get<int>(v));
 #endif
     ASSERT_SAME_TYPE(decltype(std::get<0>(v)), const int &);
@@ -46,7 +46,7 @@ void test_const_lvalue_get() {
   {
     using V = std::variant<int, const long>;
     constexpr V v(42l);
-#ifndef __clang__ // Avoid https://llvm.org/bugs/show_bug.cgi?id=15481
+#ifndef __clang__ // Avoid https://bugs.llvm.org/show_bug.cgi?id=15481
     ASSERT_NOEXCEPT(std::get<const long>(v));
 #endif
     ASSERT_SAME_TYPE(decltype(std::get<const long>(v)), const long &);
