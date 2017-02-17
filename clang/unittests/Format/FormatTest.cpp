@@ -139,6 +139,8 @@ TEST_F(FormatTest, NestedNameSpecifiers) {
   verifyFormat("::ns::SomeFunction(::ns::SomeOtherFunction())");
   verifyFormat("static constexpr bool Bar = decltype(bar())::value;");
   verifyFormat("bool a = 2 < ::SomeFunction();");
+  verifyFormat("ALWAYS_INLINE ::std::string getName();");
+  verifyFormat("some::string getName();");
 }
 
 TEST_F(FormatTest, OnlyGeneratesNecessaryReplacements) {

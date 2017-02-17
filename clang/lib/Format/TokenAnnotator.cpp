@@ -2343,12 +2343,16 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
   if (!Style.SpaceBeforeAssignmentOperators &&
       Right.getPrecedence() == prec::Assignment)
     return false;
+  if (Right.is(tok::coloncolon) && Left.is(tok::identifier))
+    // Generally don't remove existing spaces between an identifier and "::".
+    // The identifier might actually be a macro name such as ALWAYS_INLINE. If
+    // this turns out to be too lenient, add analysis of the identifier itself.
+    return Right.WhitespaceRange.getBegin() != Right.WhitespaceRange.getEnd();
   if (Right.is(tok::coloncolon) && !Left.isOneOf(tok::l_brace, tok::comment))
     return (Left.is(TT_TemplateOpener) &&
             Style.Standard == FormatStyle::LS_Cpp03) ||
-           !(Left.isOneOf(tok::identifier, tok::l_paren, tok::r_paren,
-                          tok::l_square) ||
-             Left.isOneOf(TT_TemplateCloser, TT_TemplateOpener));
+           !(Left.isOneOf(tok::l_paren, tok::r_paren, tok::l_square,
+                          TT_TemplateCloser, TT_TemplateOpener));
   if ((Left.is(TT_TemplateOpener)) != (Right.is(TT_TemplateCloser)))
     return Style.SpacesInAngles;
   if ((Right.is(TT_BinaryOperator) && !Left.is(tok::l_paren)) ||
