@@ -13,6 +13,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "clang/StaticAnalyzer/Checkers/SValExplainer.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/Support/ScopedPrinter.h"
 
 using namespace clang;
 using namespace ento;
@@ -269,7 +270,7 @@ void ExprInspectionChecker::checkEndAnalysis(ExplodedGraph &G, BugReporter &BR,
     unsigned NumTimesReached = Item.second.NumTimesReached;
     ExplodedNode *N = Item.second.ExampleNode;
 
-    reportBug(std::to_string(NumTimesReached), BR, N);
+    reportBug(llvm::to_string(NumTimesReached), BR, N);
   }
 }
 
