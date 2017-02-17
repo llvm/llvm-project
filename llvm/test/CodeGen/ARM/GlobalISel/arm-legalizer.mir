@@ -106,6 +106,6 @@ body:             |
     ; CHECK: [[FIVREG:%[0-9]+]](p0) = G_FRAME_INDEX %fixed-stack.[[FRAME_INDEX]]
     ; CHECK: {{%[0-9]+}}(s32) = G_LOAD [[FIVREG]](p0)
     %0(p0) = G_FRAME_INDEX %fixed-stack.2
-    %1(s32) = G_LOAD %0(p0)
+    %1(s32) = G_LOAD %0(p0) :: (load 4)
     BX_RET 14, _
 ...
