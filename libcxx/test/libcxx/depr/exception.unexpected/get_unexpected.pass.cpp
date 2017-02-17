@@ -7,10 +7,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: c++98 || c++03 || c++11 || c++14
-
 // test get_unexpected
 
+
+// MODULES_DEFINES: _LIBCPP_ENABLE_CXX17_REMOVED_UNEXPECTED_FUNCTIONS
+#define _LIBCPP_ENABLE_CXX17_REMOVED_UNEXPECTED_FUNCTIONS
 #include <exception>
 #include <cassert>
 #include <cstdlib>

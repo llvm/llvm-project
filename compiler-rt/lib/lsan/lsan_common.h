@@ -55,6 +55,8 @@ enum ChunkTag {
   kIgnored = 3
 };
 
+const u32 kInvalidTid = (u32) -1;
+
 struct Flags {
 #define LSAN_FLAG(Type, Name, DefaultValue, Description) Type Name;
 #include "lsan_flags.inc"

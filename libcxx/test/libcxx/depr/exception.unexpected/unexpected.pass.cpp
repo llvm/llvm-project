@@ -7,22 +7,22 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: c++98 || c++03 || c++11 || c++14
-
 // test unexpected
 
+// MODULES_DEFINES: _LIBCPP_ENABLE_CXX17_REMOVED_UNEXPECTED_FUNCTIONS
+#define _LIBCPP_ENABLE_CXX17_REMOVED_UNEXPECTED_FUNCTIONS
 #include <exception>
 #include <cstdlib>
 #include <cassert>
 
-void f1()
+void fexit()
 {
     std::exit(0);
 }
 
 int main()
 {
-    std::set_unexpected(f1);
+    std::set_unexpected(fexit);
     std::unexpected();
     assert(false);
 }

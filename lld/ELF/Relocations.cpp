@@ -413,13 +413,13 @@ template <class ELFT> static bool isReadOnly(SharedSymbol<ELFT> *SS) {
   return false;
 }
 
-// Returns symbols at the same offset as a given symbol.
+// Returns symbols at the same offset as a given symbol, including SS itself.
 //
 // If two or more symbols are at the same offset, and at least one of
 // them are copied by a copy relocation, all of them need to be copied.
 // Otherwise, they would refer different places at runtime.
 template <class ELFT>
-static std::vector<SharedSymbol<ELFT> *> getAliases(SharedSymbol<ELFT> *SS) {
+static std::vector<SharedSymbol<ELFT> *> getSymbolsAt(SharedSymbol<ELFT> *SS) {
   typedef typename ELFT::Sym Elf_Sym;
 
   std::vector<SharedSymbol<ELFT> *> Ret;
@@ -456,7 +456,7 @@ template <class ELFT> static void addCopyRelSymbol(SharedSymbol<ELFT> *SS) {
   // Look through the DSO's dynamic symbol table for aliases and create a
   // dynamic symbol for each one. This causes the copy relocation to correctly
   // interpose any aliases.
-  for (SharedSymbol<ELFT> *Alias : getAliases(SS)) {
+  for (SharedSymbol<ELFT> *Alias : getSymbolsAt(SS)) {
     Alias->NeedsCopy = true;
     Alias->Section = ISec;
     Alias->symbol()->IsUsedInRegularObj = true;

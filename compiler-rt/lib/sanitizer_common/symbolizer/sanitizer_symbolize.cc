@@ -18,8 +18,9 @@
 #include "llvm/DebugInfo/Symbolize/Symbolize.h"
 
 static llvm::symbolize::LLVMSymbolizer *getDefaultSymbolizer() {
-  static llvm::symbolize::LLVMSymbolizer DefaultSymbolizer;
-  return &DefaultSymbolizer;
+  static llvm::symbolize::LLVMSymbolizer *DefaultSymbolizer =
+      new llvm::symbolize::LLVMSymbolizer();
+  return DefaultSymbolizer;
 }
 
 namespace __sanitizer {

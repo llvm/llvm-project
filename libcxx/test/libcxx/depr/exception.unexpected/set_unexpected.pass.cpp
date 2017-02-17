@@ -7,10 +7,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: c++98 || c++03 || c++11 || c++14
+// test set_unexpected
 
-// test get_unexpected
-
+// MODULES_DEFINES: _LIBCPP_ENABLE_CXX17_REMOVED_UNEXPECTED_FUNCTIONS
+#define _LIBCPP_ENABLE_CXX17_REMOVED_UNEXPECTED_FUNCTIONS
 #include <exception>
 #include <cassert>
 #include <cstdlib>
@@ -25,15 +25,11 @@ void f3()
 
 int main()
 {
-
-    std::unexpected_handler old = std::get_unexpected();
+    std::unexpected_handler old = std::set_unexpected(f1);
     // verify there is a previous unexpected handler
     assert(old);
-    std::set_unexpected(f1);
-    assert(std::get_unexpected() == f1);
     // verify f1 was replace with f2
-    std::set_unexpected(f2);
-    assert(std::get_unexpected() == f2);
+    assert(std::set_unexpected(f2) == f1);
     // verify calling original unexpected handler calls terminate
     std::set_terminate(f3);
     (*old)();
