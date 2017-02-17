@@ -17,7 +17,7 @@ Written by the `LLVM Team <http://llvm.org/>`_
 Introduction
 ============
 
-This document contains the release notes for the Clang C/C++/Objective-C
+This document contains the release notes for the Clang C/C++/Objective-C/OpenCL
 frontend, part of the LLVM Compiler Infrastructure, release 4.0.0. Here we
 describe the status of Clang in some detail, including major
 improvements from the previous release and new feature work. For the
@@ -139,7 +139,76 @@ Objective-C Language Changes in Clang
 OpenCL C Language Changes in Clang
 ----------------------------------
 
-...
+**The following bugs in the OpenCL header have been fixed:**
+
+* Added missing ``overloadable`` and ``convergent`` attributes.
+* Removed some erroneous extra ``native_*`` functions.
+
+**The following bugs in the generation of metadata have been fixed:**
+
+* Corrected the SPIR version depending on the OpenCL version.
+* Source level address spaces are taken from the SPIR specification.
+* Image types now contain no access qualifier.
+
+**The following bugs in the AMD target have been fixed:**
+
+* Corrected the bitwidth of ``size_t`` and NULL pointer value with respect to
+  address spaces.
+* Added ``cl_khr_subgroups``, ``cl_amd_media_ops`` and ``cl_amd_media_ops2``
+  extensions.
+* Added ``cl-denorms-are-zero`` support.
+* Changed address spaces for image objects to be ``constant``.
+* Added little-endian.
+
+**The following bugs in OpenCL 2.0 have been fixed:**
+
+* Fixed pipe builtin function return type, added extra argument to generated
+  IR intrinsics to propagate size and alignment information of the pipe packed
+  type.
+* Improved pipe type to accommodate access qualifiers.
+* Added correct address space to the ObjC block generation and ``enqueue_kernel``
+  prototype.
+* Improved handling of integer parameters of ``enqueue_kernel`` prototype. We
+  now allow ``size_t`` instead of ``int`` for specifying block parameter sizes.
+* Allow using NULL (aka ``CLK_NULL_QUEUE``) with ``queue_t``.
+
+
+**Improved the following diagnostics:**
+
+* Disallow address spaces other than ``global`` for kernel pointer parameters.
+* Correct the use of half type argument and pointer assignment with
+  dereferencing.
+* Disallow variadic arguments in functions and blocks.
+* Allow partial initializer for array and struct.
+
+**Some changes to OpenCL extensions have been made:**
+
+* Added ``cl_khr_mipmap_image``.
+* Added ``-cl-ext`` flag to allow overwriting supported extensions otherwise
+  set by the target compiled for (Example: ``-cl-ext=-all,+cl_khr_fp16``).
+* New types and functions can now be flexibly added to extensions using the
+  following pragmas instead of modifying the Clang source code:
+
+  .. code-block:: c
+
+       #pragma OPENCL EXTENSION the_new_extension_name : begin
+       // declare types and functions associated with the extension here
+       #pragma OPENCL EXTENSION the_new_extension_name : end
+
+
+**Miscellaneous changes:**
+
+* Fix ``__builtin_astype`` to cast between different address space objects.
+* Allow using ``opencl_unroll_hint`` with earlier OpenCL versions than 2.0.
+* Improved handling of floating point literal to default to single precision if
+  fp64 extension is not enabled.
+* Refactor ``sampler_t`` implementation to simplify initializer representation
+  which is now handled as a compiler builtin function with an integer value
+  passed into it.
+* Change fake address space map to use the SPIR convention.
+* Added `the OpenCL manual
+  <https://clang.llvm.org/docs/UsersManual.html#opencl-features>`_ to Clang
+  documentation.
 
 OpenMP Support in Clang
 ----------------------------------
