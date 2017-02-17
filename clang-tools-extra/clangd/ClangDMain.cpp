@@ -47,6 +47,9 @@ int main(int argc, char *argv[]) {
       "textDocument/rangeFormatting",
       llvm::make_unique<TextDocumentRangeFormattingHandler>(Out, Store));
   Dispatcher.registerHandler(
+      "textDocument/onTypeFormatting",
+      llvm::make_unique<TextDocumentOnTypeFormattingHandler>(Out, Store));
+  Dispatcher.registerHandler(
       "textDocument/formatting",
       llvm::make_unique<TextDocumentFormattingHandler>(Out, Store));
 

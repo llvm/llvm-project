@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_PseudoTerminal_h_
-#define liblldb_PseudoTerminal_h_
+#ifndef LLDB_HOST_PSEUDOTERMINAL_H
+#define LLDB_HOST_PSEUDOTERMINAL_H
 #if defined(__cplusplus)
 
 #include <fcntl.h>
@@ -19,7 +19,7 @@
 namespace lldb_utility {
 
 //----------------------------------------------------------------------
-/// @class PseudoTerminal PseudoTerminal.h "lldb/Utility/PseudoTerminal.h"
+/// @class PseudoTerminal PseudoTerminal.h "lldb/Host/PseudoTerminal.h"
 /// @brief A pseudo terminal helper class.
 ///
 /// The pseudo terminal class abstracts the use of pseudo terminals on

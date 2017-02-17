@@ -107,7 +107,8 @@ private:
   uint8_t *HashBuf;
 };
 
-// SHT_NOBITS section created for a copyReloc
+// For each copy relocation, we create an instance of this class to
+// reserve space in .bss or .bss.rel.ro.
 template <class ELFT>
 class CopyRelSection final : public SyntheticSection<ELFT> {
   typedef typename ELFT::uint uintX_t;

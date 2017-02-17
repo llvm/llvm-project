@@ -12,6 +12,7 @@
 #define _CONSTEXPR_CHAR_TRAITS
 
 #include <string>
+#include <cassert>
 
 #include "test_macros.h"
 
@@ -118,7 +119,7 @@ template <class _CharT>
 TEST_CONSTEXPR_CXX14 _CharT*
 constexpr_char_traits<_CharT>::copy(char_type* __s1, const char_type* __s2, size_t __n)
 {
-    _LIBCPP_ASSERT(__s2 < __s1 || __s2 >= __s1+__n, "char_traits::copy overlapped range");
+    assert(__s2 < __s1 || __s2 >= __s1+__n);
     char_type* __r = __s1;
     for (; __n; --__n, ++__s1, ++__s2)
         assign(*__s1, *__s2);

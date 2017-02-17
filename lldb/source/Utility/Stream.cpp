@@ -8,8 +8,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Utility/Stream.h"
-#include "lldb/Host/PosixApi.h"
+
 #include "lldb/Utility/Endian.h"
+#include "lldb/Utility/VASPrintf.h"
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -162,36 +163,14 @@ size_t Stream::Printf(const char *format, ...) {
 // Print some formatted output to the stream.
 //------------------------------------------------------------------
 size_t Stream::PrintfVarArg(const char *format, va_list args) {
-  char str[1024];
-  va_list args_copy;
+  llvm::SmallString<1024> buf;
+  VASprintf(buf, format, args);
 
-  va_copy(args_copy, args);
-
-  size_t bytes_written = 0;
-  // Try and format our string into a fixed buffer first and see if it fits
-  size_t length = ::vsnprintf(str, sizeof(str), format, args);
-  if (length < sizeof(str)) {
-    // Include the NULL termination byte for binary output
-    if (m_flags.Test(eBinary))
-      length += 1;
-    // The formatted string fit into our stack based buffer, so we can just
-    // append that to our packet
-    bytes_written = Write(str, length);
-  } else {
-    // Our stack buffer wasn't big enough to contain the entire formatted
-    // string, so lets let vasprintf create the string for us!
-    char *str_ptr = NULL;
-    length = ::vasprintf(&str_ptr, format, args_copy);
-    if (str_ptr) {
-      // Include the NULL termination byte for binary output
-      if (m_flags.Test(eBinary))
-        length += 1;
-      bytes_written = Write(str_ptr, length);
-      ::free(str_ptr);
-    }
-  }
-  va_end(args_copy);
-  return bytes_written;
+  // Include the NULL termination byte for binary output
+  size_t length = buf.size();
+  if (m_flags.Test(eBinary))
+    ++length;
+  return Write(buf.c_str(), length);
 }
 
 //------------------------------------------------------------------
@@ -358,34 +337,18 @@ lldb::ByteOrder Stream::GetByteOrder() const { return m_byte_order; }
 
 size_t Stream::PrintfAsRawHex8(const char *format, ...) {
   va_list args;
-  va_list args_copy;
   va_start(args, format);
-  va_copy(args_copy, args); // Copy this so we
 
-  char str[1024];
-  size_t bytes_written = 0;
-  // Try and format our string into a fixed buffer first and see if it fits
-  size_t length = ::vsnprintf(str, sizeof(str), format, args);
-  if (length < sizeof(str)) {
-    // The formatted string fit into our stack based buffer, so we can just
-    // append that to our packet
-    for (size_t i = 0; i < length; ++i)
-      bytes_written += _PutHex8(str[i], false);
-  } else {
-    // Our stack buffer wasn't big enough to contain the entire formatted
-    // string, so lets let vasprintf create the string for us!
-    char *str_ptr = NULL;
-    length = ::vasprintf(&str_ptr, format, args_copy);
-    if (str_ptr) {
-      for (size_t i = 0; i < length; ++i)
-        bytes_written += _PutHex8(str_ptr[i], false);
-      ::free(str_ptr);
-    }
-  }
+  llvm::SmallString<1024> buf;
+  VASprintf(buf, format, args);
+
+  size_t length = 0;
+  for (char C : buf)
+    length += _PutHex8(C, false);
+
   va_end(args);
-  va_end(args_copy);
 
-  return bytes_written;
+  return length;
 }
 
 size_t Stream::PutNHex8(size_t n, uint8_t uvalue) {

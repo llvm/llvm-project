@@ -589,11 +589,14 @@ void __libcpp_thread_yield()
 
 void __libcpp_thread_sleep_for(const chrono::nanoseconds& __ns)
 {
-  using namespace chrono;
+  using namespace _VSTD::chrono;
+
   // round-up to the nearest milisecond
   milliseconds __ms =
       duration_cast<milliseconds>(__ns + chrono::nanoseconds(999999));
-  Sleep(__ms.count());
+  auto start = system_clock::now();
+  while (::SleepEx((__ms - (system_clock::now() - start)).count(),
+                   TRUE) == WAIT_IO_COMPLETION);
 }
 
 // Thread Local Storage

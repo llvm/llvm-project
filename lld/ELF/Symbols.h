@@ -102,9 +102,13 @@ protected:
   const unsigned SymbolKind : 8;
 
 public:
-  // True if the linker has to generate a copy relocation for this shared
-  // symbol or if the symbol should point to its plt entry.
-  unsigned NeedsCopyOrPltAddr : 1;
+  // True if the linker has to generate a copy relocation.
+  // For SharedSymbol only.
+  unsigned NeedsCopy : 1;
+
+  // True the symbol should point to its PLT entry.
+  // For SharedSymbol only.
+  unsigned NeedsPltAddr : 1;
 
   // True if this is a local symbol.
   unsigned IsLocal : 1;
@@ -270,11 +274,8 @@ public:
   // This field is a pointer to the symbol's version definition.
   const Elf_Verdef *Verdef;
 
-  // CopySection is significant only when needsCopy() is true.
-  InputSection<ELFT> *CopySection = nullptr;
-  bool needsCopy() const { return this->NeedsCopyOrPltAddr && !this->isFunc(); }
-
-  InputSection<ELFT> *getBssSectionForCopy() const;
+  // Section is significant only when NeedsCopy is true.
+  InputSection<ELFT> *Section = nullptr;
 };
 
 // This class represents a symbol defined in an archive file. It is

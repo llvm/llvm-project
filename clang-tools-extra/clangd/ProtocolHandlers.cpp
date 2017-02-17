@@ -104,6 +104,27 @@ void TextDocumentRangeFormattingHandler::handleMethod(
                           {clang::tooling::Range(Begin, Len)}, ID));
 }
 
+void TextDocumentOnTypeFormattingHandler::handleMethod(
+    llvm::yaml::MappingNode *Params, StringRef ID) {
+  auto DOTFP = DocumentOnTypeFormattingParams::parse(Params);
+  if (!DOTFP) {
+    Output.log("Failed to decode DocumentOnTypeFormattingParams!\n");
+    return;
+  }
+
+  // Look for the previous opening brace from the character position and format
+  // starting from there.
+  std::string Code = Store.getDocument(DOTFP->textDocument.uri);
+  size_t CursorPos = positionToOffset(Code, DOTFP->position);
+  size_t PreviousLBracePos = StringRef(Code).find_last_of('{', CursorPos);
+  if (PreviousLBracePos == StringRef::npos)
+    PreviousLBracePos = CursorPos;
+  size_t Len = 1 + CursorPos - PreviousLBracePos;
+
+  writeMessage(formatCode(Code, DOTFP->textDocument.uri,
+                          {clang::tooling::Range(PreviousLBracePos, Len)}, ID));
+}
+
 void TextDocumentFormattingHandler::handleMethod(
     llvm::yaml::MappingNode *Params, StringRef ID) {
   auto DFP = DocumentFormattingParams::parse(Params);

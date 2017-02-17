@@ -1,10 +1,10 @@
 ; RUN: opt %loadPolly -polly-scops -analyze < %s | FileCheck %s
 ;
-; Check that the contstraints on the paramater derived from the
+; Check that the constraints on the parameter derived from the
 ; __wrapping__ range metadata (see bottom of the file) are present:
 ;
 ; CHECK: Context:
-; CHECK:   [tmp] -> {  : tmp >= 256 or tmp < 0 }
+; CHECK:   [tmp] -> {  : -2147483648 <= tmp <= 2147483647 and (tmp >= 256 or tmp < 0) }
 ;
 ;    void jd(int *A, int *p /* in [256, 0) */) {
 ;      for (int i = 0; i < 1024; i++)

@@ -1213,7 +1213,7 @@ void SymbolTableSection<ELFT>::writeGlobalSymbols(uint8_t *Buf) {
       // pointer equality by STO_MIPS_PLT flag. That is necessary to help
       // dynamic linker distinguish such symbols and MIPS lazy-binding stubs.
       // https://sourceware.org/ml/binutils/2008-07/txt00000.txt
-      if (Body->isInPlt() && Body->NeedsCopyOrPltAddr)
+      if (Body->isInPlt() && Body->NeedsPltAddr)
         ESym->st_other |= STO_MIPS_PLT;
       if (Config->Relocatable) {
         auto *D = dyn_cast<DefinedRegular<ELFT>>(Body);
@@ -1243,8 +1243,8 @@ SymbolTableSection<ELFT>::getOutputSection(SymbolBody *Sym) {
     return In<ELFT>::Common->OutSec;
   case SymbolBody::SharedKind: {
     auto &SS = cast<SharedSymbol<ELFT>>(*Sym);
-    if (SS.needsCopy())
-      return SS.getBssSectionForCopy()->OutSec;
+    if (SS.NeedsCopy)
+      return SS.Section->OutSec;
     break;
   }
   case SymbolBody::UndefinedKind:

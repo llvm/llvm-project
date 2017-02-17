@@ -33,7 +33,8 @@ struct InitializeHandler : Handler {
         R"(,"result":{"capabilities":{
           "textDocumentSync": 1,
           "documentFormattingProvider": true,
-          "documentRangeFormattingProvider": true
+          "documentRangeFormattingProvider": true,
+          "documentOnTypeFormattingProvider": {"firstTriggerCharacter":"}","moreTriggerCharacter":[]}
         }}})");
   }
 };
@@ -66,6 +67,16 @@ struct TextDocumentDidChangeHandler : Handler {
       : Handler(Output), Store(Store) {}
 
   void handleNotification(llvm::yaml::MappingNode *Params) override;
+
+private:
+  DocumentStore &Store;
+};
+
+struct TextDocumentOnTypeFormattingHandler : Handler {
+  TextDocumentOnTypeFormattingHandler(JSONOutput &Output, DocumentStore &Store)
+      : Handler(Output), Store(Store) {}
+
+  void handleMethod(llvm::yaml::MappingNode *Params, StringRef ID) override;
 
 private:
   DocumentStore &Store;
