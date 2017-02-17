@@ -1520,7 +1520,7 @@ swift::ValueDecl *SwiftASTManipulator::MakeGlobalTypealias(
 
   llvm::MutableArrayRef<swift::TypeLoc> inherited;
   swift::TypeAliasDecl *type_alias_decl = new (ast_context)
-      swift::TypeAliasDecl(source_loc, name, source_loc,
+      swift::TypeAliasDecl(source_loc, swift::SourceLoc(), name, source_loc,
                            nullptr, &m_source_file);
   type_alias_decl->setUnderlyingType(GetSwiftType(type));
 
