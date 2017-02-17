@@ -927,7 +927,7 @@ public:
     basic_string& append(__self_view __sv) { return append(__sv.data(), __sv.size()); }
     basic_string& append(const basic_string& __str, size_type __pos, size_type __n=npos);
     template <class _Tp>
-        typename enable_if
+    inline typename enable_if
         <
             __can_be_converted_to_string_view<_CharT, _Traits, _Tp>::value,
             basic_string&
@@ -939,7 +939,7 @@ public:
     template <class _ForwardIterator>
     inline basic_string& __append_forward_unsafe(_ForwardIterator, _ForwardIterator);
     template<class _InputIterator>
-        typename enable_if
+    inline typename enable_if
         <
             __is_exactly_input_iterator<_InputIterator>::value
                 || !__libcpp_string_gets_noexcept_iterator<_InputIterator>::value,
@@ -952,7 +952,7 @@ public:
       return *this;
     }
     template<class _ForwardIterator>
-        typename enable_if
+    inline typename enable_if
         <
             __is_forward_iterator<_ForwardIterator>::value
                 && __libcpp_string_gets_noexcept_iterator<_ForwardIterator>::value,

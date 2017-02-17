@@ -68,13 +68,13 @@ __isl_give isl_map *isl_map_add_constraint(__isl_take isl_map *map,
 __isl_give isl_set *isl_set_add_constraint(__isl_take isl_set *set,
 	__isl_take isl_constraint *constraint);
 
-int isl_basic_map_has_defining_equality(
+isl_bool isl_basic_map_has_defining_equality(
 	__isl_keep isl_basic_map *bmap, enum isl_dim_type type, int pos,
 	__isl_give isl_constraint **c);
-int isl_basic_set_has_defining_equality(
+isl_bool isl_basic_set_has_defining_equality(
 	struct isl_basic_set *bset, enum isl_dim_type type, int pos,
 	struct isl_constraint **constraint);
-int isl_basic_set_has_defining_inequalities(
+isl_bool isl_basic_set_has_defining_inequalities(
 	struct isl_basic_set *bset, enum isl_dim_type type, int pos,
 	struct isl_constraint **lower,
 	struct isl_constraint **upper);

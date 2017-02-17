@@ -2391,7 +2391,7 @@ _mm_mul_epu32(__m128i __a, __m128i __b)
 
 /// \brief Computes the absolute differences of corresponding 8-bit integer
 ///    values in two 128-bit vectors. Sums the first 8 absolute differences, and
-///    separately sums the second 8 absolute differences. Packss these two
+///    separately sums the second 8 absolute differences. Packs these two
 ///    unsigned 16-bit integer sums into the upper and lower elements of a
 ///    [2 x i64] vector.
 ///

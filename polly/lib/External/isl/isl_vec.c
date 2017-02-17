@@ -94,7 +94,7 @@ __isl_give isl_vec *isl_vec_expand(__isl_take isl_vec *vec, int pos, int n,
 		return NULL;
 	if (expanded < n)
 		isl_die(isl_vec_get_ctx(vec), isl_error_invalid,
-			"not an expansion", isl_vec_free(vec));
+			"not an expansion", return isl_vec_free(vec));
 	if (expanded == n)
 		return vec;
 	if (pos < 0 || n < 0 || pos + n > vec->size)

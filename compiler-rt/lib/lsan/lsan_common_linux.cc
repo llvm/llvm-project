@@ -22,6 +22,7 @@
 #include "sanitizer_common/sanitizer_flags.h"
 #include "sanitizer_common/sanitizer_linux.h"
 #include "sanitizer_common/sanitizer_stackdepot.h"
+#include "lsan_allocator.h"
 
 namespace __lsan {
 
@@ -33,6 +34,13 @@ static LoadedModule *linker = nullptr;
 static bool IsLinker(const char* full_name) {
   return LibraryNameIs(full_name, kLinkerName);
 }
+
+static THREADLOCAL u32 current_thread_tid = kInvalidTid;
+u32 GetCurrentThread() { return current_thread_tid; }
+void SetCurrentThread(u32 tid) { current_thread_tid = tid; }
+
+static THREADLOCAL AllocatorCache allocator_cache;
+AllocatorCache *GetAllocatorCache() { return &allocator_cache; }
 
 __attribute__((tls_model("initial-exec")))
 THREADLOCAL int disable_counter;

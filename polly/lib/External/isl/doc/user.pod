@@ -4046,14 +4046,40 @@ the input is itself a wrapped relation.
 
 Check whether the given expression is a constant.
 
+	#include <isl/val.h>
+	isl_bool isl_multi_val_involves_nan(
+		__isl_keep isl_multi_val *mv);
+
 	#include <isl/aff.h>
 	isl_bool isl_aff_is_nan(__isl_keep isl_aff *aff);
+	isl_bool isl_multi_aff_involves_nan(
+		__isl_keep isl_multi_aff *ma);
 	isl_bool isl_pw_aff_involves_nan(
 		__isl_keep isl_pw_aff *pa);
+	isl_bool isl_pw_multi_aff_involves_nan(
+		__isl_keep isl_pw_multi_aff *pma);
+	isl_bool isl_multi_pw_aff_involves_nan(
+		__isl_keep isl_multi_pw_aff *mpa);
+	isl_bool isl_union_pw_aff_involves_nan(
+		__isl_keep isl_union_pw_aff *upa);
+	isl_bool isl_union_pw_multi_aff_involves_nan(
+		__isl_keep isl_union_pw_multi_aff *upma);
+	isl_bool isl_multi_union_pw_aff_involves_nan(
+		__isl_keep isl_multi_union_pw_aff *mupa);
 
 	#include <isl/polynomial.h>
+	isl_bool isl_qpolynomial_is_nan(
+		__isl_keep isl_qpolynomial *qp);
 	isl_bool isl_qpolynomial_fold_is_nan(
 		__isl_keep isl_qpolynomial_fold *fold);
+	isl_bool isl_pw_qpolynomial_involves_nan(
+		__isl_keep isl_pw_qpolynomial *pwqp);
+	isl_bool isl_pw_qpolynomial_fold_involves_nan(
+		__isl_keep isl_pw_qpolynomial_fold *pwf);
+	isl_bool isl_union_pw_qpolynomial_involves_nan(
+		__isl_keep isl_union_pw_qpolynomial *upwqp);
+	isl_bool isl_union_pw_qpolynomial_fold_involves_nan(
+		__isl_keep isl_union_pw_qpolynomial_fold *upwf);
 
 Check whether the given expression is equal to or involves NaN.
 
@@ -4121,7 +4147,13 @@ return true if the objects are not the same.
 	isl_bool isl_pw_aff_plain_is_equal(
 		__isl_keep isl_pw_aff *pwaff1,
 		__isl_keep isl_pw_aff *pwaff2);
+	isl_bool isl_pw_aff_is_equal(
+		__isl_keep isl_pw_aff *pa1,
+		__isl_keep isl_pw_aff *pa2);
 	isl_bool isl_pw_multi_aff_plain_is_equal(
+		__isl_keep isl_pw_multi_aff *pma1,
+		__isl_keep isl_pw_multi_aff *pma2);
+	isl_bool isl_pw_multi_aff_is_equal(
 		__isl_keep isl_pw_multi_aff *pma1,
 		__isl_keep isl_pw_multi_aff *pma2);
 	isl_bool isl_multi_pw_aff_plain_is_equal(

@@ -799,11 +799,15 @@ static int row_abs_min_non_zero(isl_int **row, unsigned n_row, unsigned col)
 	return min;
 }
 
-static void inv_exchange(struct isl_mat *left, struct isl_mat *right,
-	unsigned i, unsigned j)
+static isl_stat inv_exchange(__isl_keep isl_mat **left,
+	__isl_keep isl_mat **right, unsigned i, unsigned j)
 {
-	left = isl_mat_swap_rows(left, i, j);
-	right = isl_mat_swap_rows(right, i, j);
+	*left = isl_mat_swap_rows(*left, i, j);
+	*right = isl_mat_swap_rows(*right, i, j);
+
+	if (!*left || !*right)
+		return isl_stat_error;
+	return isl_stat_ok;
 }
 
 static void inv_oppose(
@@ -861,7 +865,8 @@ struct isl_mat *isl_mat_inverse_product(struct isl_mat *left,
 		}
 		pivot += row;
 		if (pivot != row)
-			inv_exchange(left, right, pivot, row);
+			if (inv_exchange(&left, &right, pivot, row) < 0)
+				goto error;
 		if (isl_int_is_neg(left->row[row][row]))
 			inv_oppose(left, right, row);
 		first = row+1;
@@ -871,10 +876,12 @@ struct isl_mat *isl_mat_inverse_product(struct isl_mat *left,
 			isl_int_fdiv_q(a, left->row[first][row],
 					left->row[row][row]);
 			inv_subtract(left, right, row, first, a);
-			if (!isl_int_is_zero(left->row[first][row]))
-				inv_exchange(left, right, row, first);
-			else
+			if (!isl_int_is_zero(left->row[first][row])) {
+				if (inv_exchange(&left, &right, row, first) < 0)
+					goto error;
+			} else {
 				++first;
+			}
 		}
 		for (i = 0; i < row; ++i) {
 			if (isl_int_is_zero(left->row[i][row]))
@@ -1652,24 +1659,24 @@ error:
 	return NULL;
 }
 
-int isl_mat_is_equal(__isl_keep isl_mat *mat1, __isl_keep isl_mat *mat2)
+isl_bool isl_mat_is_equal(__isl_keep isl_mat *mat1, __isl_keep isl_mat *mat2)
 {
 	int i;
 
 	if (!mat1 || !mat2)
-		return -1;
+		return isl_bool_error;
 
 	if (mat1->n_row != mat2->n_row)
-		return 0;
+		return isl_bool_false;
 
 	if (mat1->n_col != mat2->n_col)
-		return 0;
+		return isl_bool_false;
 
 	for (i = 0; i < mat1->n_row; ++i)
 		if (!isl_seq_eq(mat1->row[i], mat2->row[i], mat1->n_col))
-			return 0;
+			return isl_bool_false;
 
-	return 1;
+	return isl_bool_true;
 }
 
 __isl_give isl_mat *isl_mat_from_row_vec(__isl_take isl_vec *vec)

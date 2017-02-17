@@ -112,10 +112,14 @@ public:
 };
 #endif // !_LIBCPP_ABI_MICROSOFT
 
+#if _LIBCPP_STD_VER <= 14 \
+    || defined(_LIBCPP_ENABLE_CXX17_REMOVED_UNEXPECTED_FUNCTIONS) \
+    || defined(_LIBCPP_BUILDING_LIBRARY)
 typedef void (*unexpected_handler)();
 _LIBCPP_FUNC_VIS unexpected_handler set_unexpected(unexpected_handler) _NOEXCEPT;
 _LIBCPP_FUNC_VIS unexpected_handler get_unexpected() _NOEXCEPT;
 _LIBCPP_NORETURN _LIBCPP_FUNC_VIS void unexpected();
+#endif
 
 typedef void (*terminate_handler)();
 _LIBCPP_FUNC_VIS terminate_handler set_terminate(terminate_handler) _NOEXCEPT;

@@ -115,7 +115,7 @@ int isl_map_find_dim_by_id(__isl_keep isl_map *map, enum isl_dim_type type,
 int isl_map_find_dim_by_name(__isl_keep isl_map *map, enum isl_dim_type type,
 	const char *name);
 
-int isl_basic_map_is_rational(__isl_keep isl_basic_map *bmap);
+isl_bool isl_basic_map_is_rational(__isl_keep isl_basic_map *bmap);
 
 __isl_give isl_basic_map *isl_basic_map_identity(__isl_take isl_space *dim);
 __isl_null isl_basic_map *isl_basic_map_free(__isl_take isl_basic_map *bmap);
@@ -285,7 +285,7 @@ __isl_give isl_val *isl_basic_map_plain_get_val_if_fixed(
 	__isl_keep isl_basic_map *bmap,
 	enum isl_dim_type type, unsigned pos);
 
-int isl_basic_map_image_is_bounded(__isl_keep isl_basic_map *bmap);
+isl_bool isl_basic_map_image_is_bounded(__isl_keep isl_basic_map *bmap);
 isl_bool isl_basic_map_plain_is_universe(__isl_keep isl_basic_map *bmap);
 isl_bool isl_basic_map_is_universe(__isl_keep isl_basic_map *bmap);
 isl_bool isl_basic_map_plain_is_empty(__isl_keep isl_basic_map *bmap);
@@ -550,7 +550,8 @@ __isl_export
 isl_bool isl_map_is_bijective(__isl_keep isl_map *map);
 isl_bool isl_map_is_identity(__isl_keep isl_map *map);
 int isl_map_is_translation(__isl_keep isl_map *map);
-int isl_map_has_equal_space(__isl_keep isl_map *map1, __isl_keep isl_map *map2);
+isl_bool isl_map_has_equal_space(__isl_keep isl_map *map1,
+	__isl_keep isl_map *map2);
 
 isl_bool isl_basic_map_can_zip(__isl_keep isl_basic_map *bmap);
 isl_bool isl_map_can_zip(__isl_keep isl_map *map);
