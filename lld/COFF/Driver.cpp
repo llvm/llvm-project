@@ -63,7 +63,7 @@ bool link(ArrayRef<const char *> Args, raw_ostream &Diag) {
       (ErrorOS == &llvm::errs() && Process::StandardErrHasColors());
   Driver = make<LinkerDriver>();
   Driver->link(Args);
-  return true;
+  return !ErrorCount;
 }
 
 // Drop directory components and replace extension with ".exe" or ".dll".
@@ -126,9 +126,10 @@ void LinkerDriver::addBuffer(std::unique_ptr<MemoryBuffer> MB) {
   if (Magic == file_magic::bitcode)
     return Symtab.addFile(make<BitcodeFile>(MBRef));
   if (Magic == file_magic::coff_cl_gl_object)
-    fatal(MBRef.getBufferIdentifier() + ": is not a native COFF file. "
+    error(MBRef.getBufferIdentifier() + ": is not a native COFF file. "
           "Recompile without /GL");
-  Symtab.addFile(make<ObjectFile>(MBRef));
+  else
+    Symtab.addFile(make<ObjectFile>(MBRef));
 }
 
 void LinkerDriver::enqueuePath(StringRef Path) {
@@ -138,8 +139,9 @@ void LinkerDriver::enqueuePath(StringRef Path) {
   enqueueTask([=]() {
     auto MBOrErr = Future->get();
     if (MBOrErr.second)
-      fatal(MBOrErr.second, "could not open " + PathStr);
-    Driver->addBuffer(std::move(MBOrErr.first));
+      error("could not open " + PathStr + ": " + MBOrErr.second.message());
+    else
+      Driver->addBuffer(std::move(MBOrErr.first));
   });
 
   if (Config->OutputFile == "")
@@ -155,12 +157,14 @@ void LinkerDriver::addArchiveBuffer(MemoryBufferRef MB, StringRef SymName,
   }
 
   InputFile *Obj;
-  if (Magic == file_magic::coff_object)
+  if (Magic == file_magic::coff_object) {
     Obj = make<ObjectFile>(MB);
-  else if (Magic == file_magic::bitcode)
+  } else if (Magic == file_magic::bitcode) {
     Obj = make<BitcodeFile>(MB);
-  else
-    fatal("unknown file type: " + MB.getBufferIdentifier());
+  } else {
+    error("unknown file type: " + MB.getBufferIdentifier());
+    return;
+  }
 
   Obj->ParentName = ParentName;
   Symtab.addFile(Obj);
@@ -238,7 +242,7 @@ void LinkerDriver::parseDirectives(StringRef S) {
     case OPT_throwingnew:
       break;
     default:
-      fatal(Arg->getSpelling() + " is not allowed in .drectve");
+      error(Arg->getSpelling() + " is not allowed in .drectve");
     }
   }
 }
@@ -456,6 +460,15 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   // Parse command line options.
   opt::InputArgList Args = Parser.parseLINK(ArgsArr.slice(1));
 
+  // Handle /errorlimit early, because error() depends on it.
+  if (auto *Arg = Args.getLastArg(OPT_errorlimit)) {
+    int N = 20;
+    StringRef S = Arg->getValue();
+    if (S.getAsInteger(10, N))
+      error(Arg->getSpelling() + " number expected, but got " + S);
+    Config->ErrorLimit = N;
+  }
+
   // Handle /help
   if (Args.hasArg(OPT_help)) {
     printHelp(ArgsArr[0]);
@@ -514,8 +527,9 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   // Handle /noentry
   if (Args.hasArg(OPT_noentry)) {
     if (!Args.hasArg(OPT_dll))
-      fatal("/noentry must be specified with /dll");
-    Config->NoEntry = true;
+      error("/noentry must be specified with /dll");
+    else
+      Config->NoEntry = true;
   }
 
   // Handle /dll
@@ -526,10 +540,12 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
 
   // Handle /fixed
   if (Args.hasArg(OPT_fixed)) {
-    if (Args.hasArg(OPT_dynamicbase))
-      fatal("/fixed must not be specified with /dynamicbase");
-    Config->Relocatable = false;
-    Config->DynamicBase = false;
+    if (Args.hasArg(OPT_dynamicbase)) {
+      error("/fixed must not be specified with /dynamicbase");
+    } else {
+      Config->Relocatable = false;
+      Config->DynamicBase = false;
+    }
   }
 
   // Handle /machine
@@ -601,24 +617,24 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
         StringRef OptLevel = StringRef(S).substr(7);
         if (OptLevel.getAsInteger(10, Config->LTOOptLevel) ||
             Config->LTOOptLevel > 3)
-          fatal("/opt:lldlto: invalid optimization level: " + OptLevel);
+          error("/opt:lldlto: invalid optimization level: " + OptLevel);
         continue;
       }
       if (StringRef(S).startswith("lldltojobs=")) {
         StringRef Jobs = StringRef(S).substr(11);
         if (Jobs.getAsInteger(10, Config->LTOJobs) || Config->LTOJobs == 0)
-          fatal("/opt:lldltojobs: invalid job count: " + Jobs);
+          error("/opt:lldltojobs: invalid job count: " + Jobs);
         continue;
       }
       if (StringRef(S).startswith("lldltopartitions=")) {
         StringRef N = StringRef(S).substr(17);
         if (N.getAsInteger(10, Config->LTOPartitions) ||
             Config->LTOPartitions == 0)
-          fatal("/opt:lldltopartitions: invalid partition count: " + N);
+          error("/opt:lldltopartitions: invalid partition count: " + N);
         continue;
       }
       if (S != "ref" && S != "lbr" && S != "nolbr")
-        fatal("/opt: unknown option: " + S);
+        error("/opt: unknown option: " + S);
     }
   }
 
@@ -686,6 +702,9 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
     if (Optional<StringRef> Path = findLib(Arg->getValue()))
       enqueuePath(*Path);
 
+  if (ErrorCount)
+    return;
+
   // Windows specific -- Create a resource file containing a manifest file.
   if (Config->Manifest == Configuration::Embed)
     addBuffer(createManifestRes());
@@ -730,11 +749,13 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
     // Windows specific -- If entry point name is not given, we need to
     // infer that from user-defined entry name.
     StringRef S = findDefaultEntry();
-    if (S.empty())
-      fatal("entry point must be defined");
-    Config->Entry = addUndefined(S);
-    if (Config->Verbose)
-      outs() << "Entry name inferred: " << S << "\n";
+    if (S.empty()) {
+      error("entry point must be defined");
+    } else {
+      Config->Entry = addUndefined(S);
+      if (Config->Verbose)
+        outs() << "Entry name inferred: " << S << "\n";
+    }
   }
 
   // Handle /export
@@ -819,6 +840,9 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
       addUndefined(mangle("_load_config_used"));
   } while (run());
 
+  if (ErrorCount)
+    return;
+
   // If /msvclto is given, we use the MSVC linker to link LTO output files.
   // This is useful because MSVC link.exe can generate complete PDBs.
   if (Args.hasArg(OPT_msvclto)) {
@@ -844,10 +868,13 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   }
 
   // Handle /safeseh.
-  if (Args.hasArg(OPT_safeseh))
+  if (Args.hasArg(OPT_safeseh)) {
     for (ObjectFile *File : Symtab.ObjectFiles)
       if (!File->SEHCompat)
-        fatal("/safeseh: " + File->getName() + " is not compatible with SEH");
+        error("/safeseh: " + File->getName() + " is not compatible with SEH");
+    if (ErrorCount)
+      return;
+  }
 
   // Windows specific -- when we are creating a .dll file, we also
   // need to create a .lib file.

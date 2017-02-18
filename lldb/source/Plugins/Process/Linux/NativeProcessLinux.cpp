@@ -2412,8 +2412,8 @@ Error NativeProcessLinux::PtraceWrapper(int req, lldb::pid_t pid, void *addr,
   if (result)
     *result = ret;
 
-  LLDB_LOG(log, "ptrace({0}, {1}, {2}, {3}, {4}, {5})={6:x}", req, pid, addr,
-           data, data_size, ret);
+  LLDB_LOG(log, "ptrace({0}, {1}, {2}, {3}, {4})={5:x}", req, pid, addr, data,
+           data_size, ret);
 
   PtraceDisplayBytes(req, data, data_size);
 
