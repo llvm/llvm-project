@@ -3036,6 +3036,9 @@ ExprResult Sema::BuildDeclarationNameExpr(
       break;
     }
 
+    case Decl::CXXDeductionGuide:
+      llvm_unreachable("building reference to deduction guide");
+
     case Decl::MSProperty:
       valueKind = VK_LValue;
       break;

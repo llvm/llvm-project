@@ -292,7 +292,7 @@ namespace clang {
     /// Get the best possible source location to represent a diagnostic that
     /// may have associated debug info.
     const FullSourceLoc
-    getBestLocationFromDebugLoc(const llvm::DiagnosticInfoWithDebugLocBase &D,
+    getBestLocationFromDebugLoc(const llvm::DiagnosticInfoWithLocationBase &D,
                                 bool &BadDebugInfo, StringRef &Filename,
                                 unsigned &Line, unsigned &Column) const;
 
@@ -493,8 +493,8 @@ BackendConsumer::StackSizeDiagHandler(const llvm::DiagnosticInfoStackSize &D) {
 }
 
 const FullSourceLoc BackendConsumer::getBestLocationFromDebugLoc(
-    const llvm::DiagnosticInfoWithDebugLocBase &D, bool &BadDebugInfo, StringRef &Filename,
-                                unsigned &Line, unsigned &Column) const {
+    const llvm::DiagnosticInfoWithLocationBase &D, bool &BadDebugInfo,
+    StringRef &Filename, unsigned &Line, unsigned &Column) const {
   SourceManager &SourceMgr = Context->getSourceManager();
   FileManager &FileMgr = SourceMgr.getFileManager();
   SourceLocation DILoc;

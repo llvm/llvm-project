@@ -1226,11 +1226,7 @@ define <2 x i64> @test46(<2 x float> %x, <2 x float> %y) #0 {
 ; KNL-LABEL: test46:
 ; KNL:       ## BB#0:
 ; KNL-NEXT:    vcmpeqps %xmm1, %xmm0, %xmm0
-; KNL-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; KNL-NEXT:    vunpcklps {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
-; KNL-NEXT:    vpsrad $31, %xmm0, %xmm1
-; KNL-NEXT:    vmovshdup {{.*#+}} xmm0 = xmm0[1,1,3,3]
-; KNL-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2],xmm1[3]
+; KNL-NEXT:    vpmovsxdq %xmm0, %xmm0
 ; KNL-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
 ; KNL-NEXT:    retq
 ;

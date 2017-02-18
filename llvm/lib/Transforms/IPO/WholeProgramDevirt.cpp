@@ -35,6 +35,8 @@
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/TypeMetadataUtils.h"
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/Constants.h"
@@ -63,6 +65,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Transforms/IPO.h"
+#include "llvm/Transforms/IPO/FunctionAttrs.h"
 #include "llvm/Transforms/Utils/Evaluator.h"
 #include <algorithm>
 #include <cstddef>
@@ -326,6 +329,7 @@ void VTableSlotInfo::addCallSite(Value *VTable, CallSite CS,
 
 struct DevirtModule {
   Module &M;
+  function_ref<AAResults &(Function &)> AARGetter;
 
   PassSummaryAction Action;
   ModuleSummaryIndex *Summary;
@@ -349,8 +353,9 @@ struct DevirtModule {
   // true.
   std::map<CallInst *, unsigned> NumUnsafeUsesForTypeTest;
 
-  DevirtModule(Module &M, PassSummaryAction Action, ModuleSummaryIndex *Summary)
-      : M(M), Action(Action), Summary(Summary),
+  DevirtModule(Module &M, function_ref<AAResults &(Function &)> AARGetter,
+               PassSummaryAction Action, ModuleSummaryIndex *Summary)
+      : M(M), AARGetter(AARGetter), Action(Action), Summary(Summary),
         Int8Ty(Type::getInt8Ty(M.getContext())),
         Int8PtrTy(Type::getInt8PtrTy(M.getContext())),
         Int32Ty(Type::getInt32Ty(M.getContext())),
@@ -401,7 +406,8 @@ struct DevirtModule {
 
   // Lower the module using the action and summary passed as command line
   // arguments. For testing purposes only.
-  static bool runForTesting(Module &M);
+  static bool runForTesting(Module &M,
+                            function_ref<AAResults &(Function &)> AARGetter);
 };
 
 struct WholeProgramDevirt : public ModulePass {
@@ -425,15 +431,24 @@ struct WholeProgramDevirt : public ModulePass {
     if (skipModule(M))
       return false;
     if (UseCommandLine)
-      return DevirtModule::runForTesting(M);
-    return DevirtModule(M, Action, Summary).run();
+      return DevirtModule::runForTesting(M, LegacyAARGetter(*this));
+    return DevirtModule(M, LegacyAARGetter(*this), Action, Summary).run();
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<AssumptionCacheTracker>();
+    AU.addRequired<TargetLibraryInfoWrapperPass>();
   }
 };
 
 } // end anonymous namespace
 
-INITIALIZE_PASS(WholeProgramDevirt, "wholeprogramdevirt",
-                "Whole program devirtualization", false, false)
+INITIALIZE_PASS_BEGIN(WholeProgramDevirt, "wholeprogramdevirt",
+                      "Whole program devirtualization", false, false)
+INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
+INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
+INITIALIZE_PASS_END(WholeProgramDevirt, "wholeprogramdevirt",
+                    "Whole program devirtualization", false, false)
 char WholeProgramDevirt::ID = 0;
 
 ModulePass *llvm::createWholeProgramDevirtPass(PassSummaryAction Action,
@@ -442,13 +457,18 @@ ModulePass *llvm::createWholeProgramDevirtPass(PassSummaryAction Action,
 }
 
 PreservedAnalyses WholeProgramDevirtPass::run(Module &M,
-                                              ModuleAnalysisManager &) {
-  if (!DevirtModule(M, PassSummaryAction::None, nullptr).run())
+                                              ModuleAnalysisManager &AM) {
+  auto &FAM = AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+  auto AARGetter = [&](Function &F) -> AAResults & {
+    return FAM.getResult<AAManager>(F);
+  };
+  if (!DevirtModule(M, AARGetter, PassSummaryAction::None, nullptr).run())
     return PreservedAnalyses::all();
   return PreservedAnalyses::none();
 }
 
-bool DevirtModule::runForTesting(Module &M) {
+bool DevirtModule::runForTesting(
+    Module &M, function_ref<AAResults &(Function &)> AARGetter) {
   ModuleSummaryIndex Summary;
 
   // Handle the command-line summary arguments. This code is for testing
@@ -464,7 +484,7 @@ bool DevirtModule::runForTesting(Module &M) {
     ExitOnErr(errorCodeToError(In.error()));
   }
 
-  bool Changed = DevirtModule(M, ClSummaryAction, &Summary).run();
+  bool Changed = DevirtModule(M, AARGetter, ClSummaryAction, &Summary).run();
 
   if (!ClWriteSummary.empty()) {
     ExitOnError ExitOnErr(
@@ -754,8 +774,17 @@ bool DevirtModule::tryVirtualConstProp(
   // Make sure that each function is defined, does not access memory, takes at
   // least one argument, does not use its first argument (which we assume is
   // 'this'), and has the same return type.
+  //
+  // Note that we test whether this copy of the function is readnone, rather
+  // than testing function attributes, which must hold for any copy of the
+  // function, even a less optimized version substituted at link time. This is
+  // sound because the virtual constant propagation optimizations effectively
+  // inline all implementations of the virtual function into each call site,
+  // rather than using function attributes to perform local optimization.
   for (VirtualCallTarget &Target : TargetsForSlot) {
-    if (Target.Fn->isDeclaration() || !Target.Fn->doesNotAccessMemory() ||
+    if (Target.Fn->isDeclaration() ||
+        computeFunctionBodyMemoryAccess(*Target.Fn, AARGetter(*Target.Fn)) !=
+            MAK_ReadNone ||
         Target.Fn->arg_empty() || !Target.Fn->arg_begin()->use_empty() ||
         Target.Fn->getReturnType() != RetType)
       return false;
@@ -809,7 +838,7 @@ bool DevirtModule::tryVirtualConstProp(
         Target.WasDevirt = true;
 
     // Rewrite each call to a load from OffsetByte/OffsetBit.
-    Constant *ByteConst = ConstantInt::get(Int64Ty, OffsetByte);
+    Constant *ByteConst = ConstantInt::get(Int32Ty, OffsetByte);
     Constant *BitConst = ConstantInt::get(Int8Ty, 1ULL << OffsetBit);
     applyVirtualConstProp(CSByConstantArg.second,
                           TargetsForSlot[0].Fn->getName(), ByteConst, BitConst);
@@ -1048,8 +1077,7 @@ bool DevirtModule::run() {
     for (const auto &DT : DevirtTargets) {
       Function *F = DT.second;
       DISubprogram *SP = F->getSubprogram();
-      DebugLoc DL = SP ? DebugLoc::get(SP->getScopeLine(), 0, SP) : DebugLoc();
-      emitOptimizationRemark(F->getContext(), DEBUG_TYPE, *F, DL,
+      emitOptimizationRemark(F->getContext(), DEBUG_TYPE, *F, SP,
                              Twine("devirtualized ") + F->getName());
     }
   }

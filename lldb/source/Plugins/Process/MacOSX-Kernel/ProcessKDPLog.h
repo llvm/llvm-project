@@ -10,11 +10,6 @@
 #ifndef liblldb_ProcessKDPLog_h_
 #define liblldb_ProcessKDPLog_h_
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-
-// Project includes
 #include "lldb/Core/Log.h"
 
 #define KDP_LOG_PROCESS (1u << 1)
@@ -32,21 +27,17 @@
 #define KDP_LOG_ALL (UINT32_MAX)
 #define KDP_LOG_DEFAULT KDP_LOG_PACKETS
 
+namespace lldb_private {
 class ProcessKDPLog {
+  static Log::Channel g_channel;
+
 public:
-  static lldb_private::Log *GetLogIfAllCategoriesSet(uint32_t mask = 0);
+  static void Initialize();
 
-  static void DisableLog(const char **categories,
-                         lldb_private::Stream *feedback_strm);
-
-  static lldb_private::Log *
-  EnableLog(const std::shared_ptr<llvm::raw_ostream> &log_stream_sp,
-            uint32_t log_options, const char **categories,
-            lldb_private::Stream *feedback_strm);
-
-  static void ListLogCategories(lldb_private::Stream *strm);
-
-  static void LogIf(uint32_t mask, const char *format, ...);
+  static Log *GetLogIfAllCategoriesSet(uint32_t mask) {
+    return g_channel.GetLogIfAll(mask);
+  }
 };
+}
 
 #endif // liblldb_ProcessKDPLog_h_

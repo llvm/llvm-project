@@ -4554,7 +4554,6 @@ void updateLoopCountStatistic(ScopDetection::LoopStats Stats) {
   MaxNumLoopsInScop =
       std::max(MaxNumLoopsInScop.getValue(), (unsigned)Stats.NumLoops);
 
-  errs() << "MaxLoopDepth: " << Stats.MaxDepth << "\n";
   if (Stats.MaxDepth == 1)
     NumScopsDepthOne++;
   else if (Stats.MaxDepth == 2)

@@ -1907,6 +1907,7 @@ bool GDBRemoteCommunicationClient::GetCurrentProcessInfo(bool allow_lazy) {
         llvm::Triple triple(llvm::Twine("-") + vendor_name + "-" + os_name);
 
         assert(triple.getObjectFormat() != llvm::Triple::UnknownObjectFormat);
+        assert(triple.getObjectFormat() != llvm::Triple::Wasm);
         switch (triple.getObjectFormat()) {
         case llvm::Triple::MachO:
           m_process_arch.SetArchitecture(eArchTypeMachO, cpu, sub);
@@ -1917,6 +1918,10 @@ bool GDBRemoteCommunicationClient::GetCurrentProcessInfo(bool allow_lazy) {
         case llvm::Triple::COFF:
           m_process_arch.SetArchitecture(eArchTypeCOFF, cpu, sub);
           break;
+        case llvm::Triple::Wasm:
+          if (log)
+            log->Printf("error: not supported target architecture");
+          return false;
         case llvm::Triple::UnknownObjectFormat:
           if (log)
             log->Printf("error: failed to determine target architecture");

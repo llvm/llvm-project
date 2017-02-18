@@ -131,13 +131,14 @@ static const unsigned NoThreshold = UINT_MAX;
 /// Gather the various unrolling parameters based on the defaults, compiler
 /// flags, TTI overrides and user specified parameters.
 static TargetTransformInfo::UnrollingPreferences gatherUnrollingPreferences(
-    Loop *L, const TargetTransformInfo &TTI, Optional<unsigned> UserThreshold,
-    Optional<unsigned> UserCount, Optional<bool> UserAllowPartial,
-    Optional<bool> UserRuntime, Optional<bool> UserUpperBound) {
+    Loop *L, const TargetTransformInfo &TTI, int OptLevel,
+    Optional<unsigned> UserThreshold, Optional<unsigned> UserCount,
+    Optional<bool> UserAllowPartial, Optional<bool> UserRuntime,
+    Optional<bool> UserUpperBound) {
   TargetTransformInfo::UnrollingPreferences UP;
 
   // Set up the defaults
-  UP.Threshold = 150;
+  UP.Threshold = OptLevel > 2 ? 300 : 150;
   UP.MaxPercentThresholdBoost = 400;
   UP.OptSizeThreshold = 0;
   UP.PartialThreshold = 150;
@@ -927,7 +928,7 @@ static bool computeUnrollCount(
 static bool tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI,
                             ScalarEvolution *SE, const TargetTransformInfo &TTI,
                             AssumptionCache &AC, OptimizationRemarkEmitter &ORE,
-                            bool PreserveLCSSA,
+                            bool PreserveLCSSA, int OptLevel,
                             Optional<unsigned> ProvidedCount,
                             Optional<unsigned> ProvidedThreshold,
                             Optional<bool> ProvidedAllowPartial,
@@ -947,7 +948,7 @@ static bool tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI,
   bool NotDuplicatable;
   bool Convergent;
   TargetTransformInfo::UnrollingPreferences UP = gatherUnrollingPreferences(
-      L, TTI, ProvidedThreshold, ProvidedCount, ProvidedAllowPartial,
+      L, TTI, OptLevel, ProvidedThreshold, ProvidedCount, ProvidedAllowPartial,
       ProvidedRuntime, ProvidedUpperBound);
   // Exit early if unrolling is disabled.
   if (UP.Threshold == 0 && (!UP.Partial || UP.PartialThreshold == 0))
@@ -1047,16 +1048,17 @@ namespace {
 class LoopUnroll : public LoopPass {
 public:
   static char ID; // Pass ID, replacement for typeid
-  LoopUnroll(Optional<unsigned> Threshold = None,
+  LoopUnroll(int OptLevel = 2, Optional<unsigned> Threshold = None,
              Optional<unsigned> Count = None,
              Optional<bool> AllowPartial = None, Optional<bool> Runtime = None,
              Optional<bool> UpperBound = None)
-      : LoopPass(ID), ProvidedCount(std::move(Count)),
+      : LoopPass(ID), OptLevel(OptLevel), ProvidedCount(std::move(Count)),
         ProvidedThreshold(Threshold), ProvidedAllowPartial(AllowPartial),
         ProvidedRuntime(Runtime), ProvidedUpperBound(UpperBound) {
     initializeLoopUnrollPass(*PassRegistry::getPassRegistry());
   }
 
+  int OptLevel;
   Optional<unsigned> ProvidedCount;
   Optional<unsigned> ProvidedThreshold;
   Optional<bool> ProvidedAllowPartial;
@@ -1081,7 +1083,7 @@ public:
     OptimizationRemarkEmitter ORE(&F);
     bool PreserveLCSSA = mustPreserveAnalysisID(LCSSAID);
 
-    return tryToUnrollLoop(L, DT, LI, SE, TTI, AC, ORE, PreserveLCSSA,
+    return tryToUnrollLoop(L, DT, LI, SE, TTI, AC, ORE, PreserveLCSSA, OptLevel,
                            ProvidedCount, ProvidedThreshold,
                            ProvidedAllowPartial, ProvidedRuntime,
                            ProvidedUpperBound);
@@ -1107,21 +1109,22 @@ INITIALIZE_PASS_DEPENDENCY(LoopPass)
 INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
 INITIALIZE_PASS_END(LoopUnroll, "loop-unroll", "Unroll loops", false, false)
 
-Pass *llvm::createLoopUnrollPass(int Threshold, int Count, int AllowPartial,
-                                 int Runtime, int UpperBound) {
+Pass *llvm::createLoopUnrollPass(int OptLevel, int Threshold, int Count,
+                                 int AllowPartial, int Runtime,
+                                 int UpperBound) {
   // TODO: It would make more sense for this function to take the optionals
   // directly, but that's dangerous since it would silently break out of tree
   // callers.
-  return new LoopUnroll(Threshold == -1 ? None : Optional<unsigned>(Threshold),
-                        Count == -1 ? None : Optional<unsigned>(Count),
-                        AllowPartial == -1 ? None
-                                           : Optional<bool>(AllowPartial),
-                        Runtime == -1 ? None : Optional<bool>(Runtime),
-                        UpperBound == -1 ? None : Optional<bool>(UpperBound));
+  return new LoopUnroll(
+      OptLevel, Threshold == -1 ? None : Optional<unsigned>(Threshold),
+      Count == -1 ? None : Optional<unsigned>(Count),
+      AllowPartial == -1 ? None : Optional<bool>(AllowPartial),
+      Runtime == -1 ? None : Optional<bool>(Runtime),
+      UpperBound == -1 ? None : Optional<bool>(UpperBound));
 }
 
-Pass *llvm::createSimpleLoopUnrollPass() {
-  return llvm::createLoopUnrollPass(-1, -1, 0, 0, 0);
+Pass *llvm::createSimpleLoopUnrollPass(int OptLevel) {
+  return llvm::createLoopUnrollPass(OptLevel, -1, -1, 0, 0, 0);
 }
 
 PreservedAnalyses LoopUnrollPass::run(Loop &L, LoopAnalysisManager &AM,
@@ -1153,10 +1156,10 @@ PreservedAnalyses LoopUnrollPass::run(Loop &L, LoopAnalysisManager &AM,
   Optional<bool> AllowPartialParam, RuntimeParam, UpperBoundParam;
   if (!AllowPartialUnrolling)
     AllowPartialParam = RuntimeParam = UpperBoundParam = false;
-  bool Changed = tryToUnrollLoop(&L, AR.DT, &AR.LI, &AR.SE, AR.TTI, AR.AC, *ORE,
-                                 /*PreserveLCSSA*/ true, /*Count*/ None,
-                                 /*Threshold*/ None, AllowPartialParam,
-                                 RuntimeParam, UpperBoundParam);
+  bool Changed = tryToUnrollLoop(
+      &L, AR.DT, &AR.LI, &AR.SE, AR.TTI, AR.AC, *ORE,
+      /*PreserveLCSSA*/ true, OptLevel, /*Count*/ None,
+      /*Threshold*/ None, AllowPartialParam, RuntimeParam, UpperBoundParam);
   if (!Changed)
     return PreservedAnalyses::all();
 

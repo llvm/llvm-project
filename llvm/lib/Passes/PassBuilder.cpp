@@ -334,7 +334,7 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
   LPM2.addPass(IndVarSimplifyPass());
   LPM2.addPass(LoopIdiomRecognizePass());
   LPM2.addPass(LoopDeletionPass());
-  LPM2.addPass(LoopUnrollPass::createFull());
+  LPM2.addPass(LoopUnrollPass::createFull(Level));
 
   // We provide the opt remark emitter pass for LICM to use. We only need to do
   // this once as it is immutable.
@@ -605,7 +605,7 @@ PassBuilder::buildPerModuleDefaultPipeline(OptimizationLevel Level,
   // FIXME: It would be really good to use a loop-integrated instruction
   // combiner for cleanup here so that the unrolling and LICM can be pipelined
   // across the loop nests.
-  OptimizePM.addPass(createFunctionToLoopPassAdaptor(LoopUnrollPass::create()));
+  OptimizePM.addPass(createFunctionToLoopPassAdaptor(LoopUnrollPass::create(Level)));
   OptimizePM.addPass(InstCombinePass());
   OptimizePM.addPass(RequireAnalysisPass<OptimizationRemarkEmitterAnalysis, Function>());
   OptimizePM.addPass(createFunctionToLoopPassAdaptor(LICMPass()));

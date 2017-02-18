@@ -229,10 +229,8 @@ COMPILER_RT_VISIBILITY int lprofSuspendSigKill() {
 #if defined(__linux__)
   int PDeachSig = 0;
   /* Temporarily suspend getting SIGKILL upon exit of the parent process. */
-  if (prctl(PR_GET_PDEATHSIG, &PDeachSig) == 0 && PDeachSig == SIGKILL) {
-    fprintf(stderr, "set\n");
+  if (prctl(PR_GET_PDEATHSIG, &PDeachSig) == 0 && PDeachSig == SIGKILL)
     prctl(PR_SET_PDEATHSIG, 0);
-  }
   return (PDeachSig == SIGKILL);
 #else
   return 0;
@@ -241,7 +239,6 @@ COMPILER_RT_VISIBILITY int lprofSuspendSigKill() {
 
 COMPILER_RT_VISIBILITY void lprofRestoreSigKill() {
 #if defined(__linux__)
-  fprintf(stderr, "restore \n");
   prctl(PR_SET_PDEATHSIG, SIGKILL);
 #endif
 }

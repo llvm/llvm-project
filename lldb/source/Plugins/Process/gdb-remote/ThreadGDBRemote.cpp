@@ -41,18 +41,16 @@ ThreadGDBRemote::ThreadGDBRemote(Process &process, lldb::tid_t tid)
       m_dispatch_queue_t(LLDB_INVALID_ADDRESS), m_queue_kind(eQueueKindUnknown),
       m_queue_serial_number(LLDB_INVALID_QUEUE_ID),
       m_associated_with_libdispatch_queue(eLazyBoolCalculate) {
-  ProcessGDBRemoteLog::LogIf(
-      GDBR_LOG_THREAD,
-      "%p: ThreadGDBRemote::ThreadGDBRemote (pid = %i, tid = 0x%4.4x)", this,
-      process.GetID(), GetID());
+  Log *log(GetLogIfAnyCategoriesSet(GDBR_LOG_THREAD));
+  LLDB_LOG(log, "this = {0}, pid = {1}, tid = {2}", this, process.GetID(),
+           GetID());
 }
 
 ThreadGDBRemote::~ThreadGDBRemote() {
   ProcessSP process_sp(GetProcess());
-  ProcessGDBRemoteLog::LogIf(
-      GDBR_LOG_THREAD,
-      "%p: ThreadGDBRemote::~ThreadGDBRemote (pid = %i, tid = 0x%4.4x)", this,
-      process_sp ? process_sp->GetID() : LLDB_INVALID_PROCESS_ID, GetID());
+  Log *log(GetLogIfAnyCategoriesSet(GDBR_LOG_THREAD));
+  LLDB_LOG(log, "this = {0}, pid = {1}, tid = {2}", this,
+           process_sp ? process_sp->GetID() : LLDB_INVALID_PROCESS_ID, GetID());
   DestroyThread();
 }
 

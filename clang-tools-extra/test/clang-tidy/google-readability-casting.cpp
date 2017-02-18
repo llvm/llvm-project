@@ -222,3 +222,43 @@ void function_casts() {
   FnPtrVoid correct2 = static_cast<void (*)()>(&overloaded_function);
   FnRefInt correct3 = static_cast<void (&)(int)>(overloaded_function);
 }
+
+struct S {
+    S(const char *);
+};
+struct ConvertibleToS {
+  operator S() const;
+};
+struct ConvertibleToSRef {
+  operator const S&() const;
+};
+
+void conversions() {
+  //auto s1 = (const S&)"";
+  // C HECK-MESSAGES: :[[@LINE-1]]:10: warning: C-style casts are discouraged; use static_cast [
+  // C HECK-FIXES: S s1 = static_cast<const S&>("");
+  auto s2 = (S)"";
+  // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: C-style casts are discouraged; use constructor call syntax [
+  // CHECK-FIXES: auto s2 = S("");
+  auto s2a = (struct S)"";
+  // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: C-style casts are discouraged; use static_cast [
+  // CHECK-FIXES: auto s2a = static_cast<struct S>("");
+  ConvertibleToS c;
+  auto s3 = (const S&)c;
+  // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: C-style casts are discouraged; use static_cast/const_cast/reinterpret_cast [
+  // CHECK-FIXES: auto s3 = (const S&)c;
+  // FIXME: This should be a static_cast
+  // C HECK-FIXES: auto s3 = static_cast<const S&>(c);
+  auto s4 = (S)c;
+  // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: C-style casts are discouraged; use constructor call syntax [
+  // CHECK-FIXES: auto s4 = S(c);
+  ConvertibleToSRef cr;
+  auto s5 = (const S&)cr;
+  // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: C-style casts are discouraged; use static_cast/const_cast/reinterpret_cast [
+  // CHECK-FIXES: auto s5 = (const S&)cr;
+  // FIXME: This should be a static_cast
+  // C HECK-FIXES: auto s5 = static_cast<const S&>(cr);
+  auto s6 = (S)cr;
+  // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: C-style casts are discouraged; use constructor call syntax [
+  // CHECK-FIXES: auto s6 = S(cr);
+}

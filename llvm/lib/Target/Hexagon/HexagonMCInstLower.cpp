@@ -111,9 +111,12 @@ void llvm::HexagonLowerToMC(const MCInstrInfo &MCII, const MachineInstr *MI,
     default:
       MI->print(errs());
       llvm_unreachable("unknown operand type");
+    case MachineOperand::MO_RegisterMask:
+      continue;
     case MachineOperand::MO_Register:
       // Ignore all implicit register operands.
-      if (MO.isImplicit()) continue;
+      if (MO.isImplicit())
+        continue;
       MCO = MCOperand::createReg(MO.getReg());
       break;
     case MachineOperand::MO_FPImmediate: {

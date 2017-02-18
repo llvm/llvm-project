@@ -36,6 +36,9 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 
+#define GET_REGINFO_TARGET_DESC
+#include "HexagonGenRegisterInfo.inc"
+
 using namespace llvm;
 
 HexagonRegisterInfo::HexagonRegisterInfo()
@@ -131,6 +134,12 @@ HexagonRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
 
   llvm_unreachable("Callee saved registers requested for unknown architecture "
                    "version");
+}
+
+
+const uint32_t *HexagonRegisterInfo::getCallPreservedMask(
+      const MachineFunction &MF, CallingConv::ID) const {
+  return HexagonCSR_RegMask;
 }
 
 
@@ -284,6 +293,3 @@ unsigned HexagonRegisterInfo::getFirstCallerSavedNonParamReg() const {
   return Hexagon::R6;
 }
 
-
-#define GET_REGINFO_TARGET_DESC
-#include "HexagonGenRegisterInfo.inc"

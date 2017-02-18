@@ -74,7 +74,7 @@ Error StringTableBuilder::commit(msf::StreamWriter &Writer) const {
 
   // Write a hash table.
   uint32_t BucketCount = computeBucketCount(Strings.size());
-  if (auto EC = Writer.writeInteger(BucketCount))
+  if (auto EC = Writer.writeInteger(BucketCount, llvm::support::little))
     return EC;
   std::vector<ulittle32_t> Buckets(BucketCount);
 
@@ -96,7 +96,8 @@ Error StringTableBuilder::commit(msf::StreamWriter &Writer) const {
 
   if (auto EC = Writer.writeArray(ArrayRef<ulittle32_t>(Buckets)))
     return EC;
-  if (auto EC = Writer.writeInteger(static_cast<uint32_t>(Strings.size())))
+  if (auto EC = Writer.writeInteger(static_cast<uint32_t>(Strings.size()),
+                                    llvm::support::little))
     return EC;
   return Error::success();
 }

@@ -65,3 +65,8 @@ void intToStruct(int *P) {
   void *VP = P;
   Abc = (struct ABC *)VP;
 }
+
+// https://llvm.org/bugs/show_bug.cgi?id=31173
+void dontCrash(struct AB X) {
+  struct UndefS *S = (struct UndefS *)&X;
+}

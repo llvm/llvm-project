@@ -12,7 +12,6 @@
 
 // Project includes
 #include "lldb/Core/Logging.h"
-#include "lldb/Core/PluginInterface.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Flags.h"
 #include "lldb/lldb-private.h"
@@ -20,6 +19,7 @@
 // Other libraries and framework includes
 #include "llvm/Support/FormatVariadic.h"
 // C++ Includes
+#include <atomic>
 #include <cstdarg>
 #include <cstdint>
 // C Includes
@@ -44,6 +44,53 @@ namespace lldb_private {
 
 class Log final {
 public:
+  // Description of a log channel category.
+  struct Category {
+    llvm::StringLiteral name;
+    llvm::StringLiteral description;
+    uint32_t flag;
+  };
+
+  // This class describes a log channel. It also encapsulates the behavior
+  // necessary to enable a log channel in an atomic manner.
+  class Channel {
+    std::atomic<Log *> log_ptr;
+
+  public:
+    const llvm::ArrayRef<Category> categories;
+    const uint32_t default_flags;
+
+    constexpr Channel(llvm::ArrayRef<Log::Category> categories,
+                      uint32_t default_flags)
+        : log_ptr(nullptr), categories(categories),
+          default_flags(default_flags) {}
+
+    // This function is safe to call at any time
+    // FIXME: Not true yet, mask access is not atomic
+    Log *GetLogIfAll(uint32_t mask) {
+      Log *log = log_ptr.load(std::memory_order_acquire);
+      if (log && log->GetMask().AllSet(mask))
+        return log;
+      return nullptr;
+    }
+
+    // This function is safe to call at any time
+    // FIXME: Not true yet, mask access is not atomic
+    Log *GetLogIfAny(uint32_t mask) {
+      Log *log = log_ptr.load(std::memory_order_acquire);
+      if (log && log->GetMask().AnySet(mask))
+        return log;
+      return nullptr;
+    }
+
+    // Calls to Enable and disable need to be serialized externally.
+    void Enable(Log &log, const std::shared_ptr<llvm::raw_ostream> &stream_sp,
+                uint32_t flags);
+
+    // Calls to Enable and disable need to be serialized externally.
+    void Disable(uint32_t flags);
+  };
+
   //------------------------------------------------------------------
   // Callback definitions for abstracted plug-in log access.
   //------------------------------------------------------------------
@@ -63,6 +110,9 @@ public:
   //------------------------------------------------------------------
   // Static accessors for logging channels
   //------------------------------------------------------------------
+  static void Register(llvm::StringRef name, Channel &channel);
+  static void Unregister(llvm::StringRef name);
+
   static void RegisterLogChannel(const ConstString &channel,
                                  const Log::Callbacks &log_callbacks);
 
@@ -73,13 +123,13 @@ public:
 
   static bool
   EnableLogChannel(const std::shared_ptr<llvm::raw_ostream> &log_stream_sp,
-                   uint32_t log_options, const char *channel,
+                   uint32_t log_options, llvm::StringRef channel,
                    const char **categories, Stream &error_stream);
 
-  static void
-  EnableAllLogChannels(const std::shared_ptr<llvm::raw_ostream> &log_stream_sp,
-                       uint32_t log_options, const char **categories,
-                       Stream *feedback_strm);
+  static bool DisableLogChannel(llvm::StringRef channel,
+                                const char **categories, Stream &error_stream);
+
+  static bool ListChannelCategories(llvm::StringRef channel, Stream &stream);
 
   static void DisableAllLogChannels(Stream *feedback_strm);
 
@@ -88,12 +138,6 @@ public:
   static void Initialize();
 
   static void Terminate();
-
-  //------------------------------------------------------------------
-  // Auto completion
-  //------------------------------------------------------------------
-  static void AutoCompleteChannelName(const char *channel_name,
-                                      StringList &matches);
 
   //------------------------------------------------------------------
   // Member functions
@@ -160,34 +204,6 @@ private:
 
   void Format(llvm::StringRef file, llvm::StringRef function,
               const llvm::formatv_object_base &payload);
-};
-
-class LogChannel : public PluginInterface {
-public:
-  LogChannel();
-
-  ~LogChannel() override;
-
-  static lldb::LogChannelSP FindPlugin(const char *plugin_name);
-
-  // categories is an array of chars that ends with a NULL element.
-  virtual void Disable(const char **categories, Stream *feedback_strm) = 0;
-
-  virtual bool
-  Enable(const std::shared_ptr<llvm::raw_ostream> &log_stream_sp,
-         uint32_t log_options,
-         Stream *feedback_strm, // Feedback stream for argument errors etc
-         const char **categories) = 0; // The categories to enable within this
-                                       // logging stream, if empty, enable
-                                       // default set
-
-  virtual void ListCategories(Stream *strm) = 0;
-
-protected:
-  std::unique_ptr<Log> m_log_ap;
-
-private:
-  DISALLOW_COPY_AND_ASSIGN(LogChannel);
 };
 
 } // namespace lldb_private

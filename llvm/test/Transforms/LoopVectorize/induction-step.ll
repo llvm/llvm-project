@@ -12,11 +12,30 @@
 ;}
 
 ; CHECK-LABEL: @induction_with_global(
-; CHECK: %[[INT_INC:.*]] = load i32, i32* @int_inc, align 4
-; CHECK: vector.body:
-; CHECK:  %[[VAR1:.*]] = insertelement <8 x i32> undef, i32 %[[INT_INC]], i32 0
-; CHECK:  %[[VAR2:.*]] = shufflevector <8 x i32> %[[VAR1]], <8 x i32> undef, <8 x i32> zeroinitializer
-; CHECK:  mul <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>, %[[VAR2]]
+; CHECK:       for.body.lr.ph:
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* @int_inc, align 4
+; CHECK:       vector.ph:
+; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <8 x i32> undef, i32 %init, i32 0
+; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <8 x i32> [[DOTSPLATINSERT]], <8 x i32> undef, <8 x i32> zeroinitializer
+; CHECK-NEXT:    [[DOTSPLATINSERT2:%.*]] = insertelement <8 x i32> undef, i32 [[TMP0]], i32 0
+; CHECK-NEXT:    [[DOTSPLAT3:%.*]] = shufflevector <8 x i32> [[DOTSPLATINSERT2]], <8 x i32> undef, <8 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = mul <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>, [[DOTSPLAT3]]
+; CHECK-NEXT:    [[INDUCTION4:%.*]] = add <8 x i32> [[DOTSPLAT]], [[TMP6]]
+; CHECK-NEXT:    [[TMP7:%.*]] = mul i32 [[TMP0]], 8
+; CHECK-NEXT:    [[DOTSPLATINSERT5:%.*]] = insertelement <8 x i32> undef, i32 [[TMP7]], i32 0
+; CHECK-NEXT:    [[DOTSPLAT6:%.*]] = shufflevector <8 x i32> [[DOTSPLATINSERT5]], <8 x i32> undef, <8 x i32> zeroinitializer
+; CHECK-NEXT:    br label %vector.body
+; CHECK:       vector.body:
+; CHECK-NEXT:    %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
+; CHECK-NEXT:    %vec.ind = phi <8 x i32> [ [[INDUCTION4]], %vector.ph ], [ %vec.ind.next, %vector.body ]
+; CHECK:         [[TMP8:%.*]] = add i64 %index, 0
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i64 [[TMP8]]
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i32, i32* [[TMP9]], i32 0
+; CHECK-NEXT:    [[TMP11:%.*]] = bitcast i32* [[TMP10]] to <8 x i32>*
+; CHECK-NEXT:    store <8 x i32> %vec.ind, <8 x i32>* [[TMP11]], align 4
+; CHECK:         %index.next = add i64 %index, 8
+; CHECK-NEXT:    %vec.ind.next = add <8 x i32> %vec.ind, [[DOTSPLAT6]]
+; CHECK:         br i1 {{.*}}, label %middle.block, label %vector.body
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
@@ -66,13 +85,28 @@ for.end:                                          ; preds = %for.end.loopexit, %
 ;}
 
 ; CHECK-LABEL: @induction_with_loop_inv(
-; CHECK: for.cond1.preheader:                            
-; CHECK: %[[INDVAR0:.*]] = phi i32 [ 0,
-; CHECK: %[[INDVAR1:.*]] = phi i32 [ 0,
-; CHECK: vector.body:
-; CHECK:  %[[VAR1:.*]] = insertelement <8 x i32> undef, i32 %[[INDVAR1]], i32 0
-; CHECK:  %[[VAR2:.*]] = shufflevector <8 x i32> %[[VAR1]], <8 x i32> undef, <8 x i32> zeroinitializer
-; CHECK:  mul <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>, %[[VAR2]]
+; CHECK:       vector.ph:
+; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <8 x i32> undef, i32 %x.011, i32 0
+; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <8 x i32> [[DOTSPLATINSERT]], <8 x i32> undef, <8 x i32> zeroinitializer
+; CHECK-NEXT:    [[DOTSPLATINSERT2:%.*]] = insertelement <8 x i32> undef, i32 %j.012, i32 0
+; CHECK-NEXT:    [[DOTSPLAT3:%.*]] = shufflevector <8 x i32> [[DOTSPLATINSERT2]], <8 x i32> undef, <8 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP4:%.*]] = mul <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>, [[DOTSPLAT3]]
+; CHECK-NEXT:    [[INDUCTION4:%.*]] = add <8 x i32> [[DOTSPLAT]], [[TMP4]]
+; CHECK-NEXT:    [[TMP5:%.*]] = mul i32 %j.012, 8
+; CHECK-NEXT:    [[DOTSPLATINSERT5:%.*]] = insertelement <8 x i32> undef, i32 [[TMP5]], i32 0
+; CHECK-NEXT:    [[DOTSPLAT6:%.*]] = shufflevector <8 x i32> [[DOTSPLATINSERT5]], <8 x i32> undef, <8 x i32> zeroinitializer
+; CHECK-NEXT:    br label %vector.body
+; CHECK:       vector.body:
+; CHECK-NEXT:    %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
+; CHECK-NEXT:    %vec.ind = phi <8 x i32> [ [[INDUCTION4]], %vector.ph ], [ %vec.ind.next, %vector.body ]
+; CHECK:         [[TMP6:%.*]] = add i64 %index, 0
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i64 [[TMP6]]
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i32, i32* [[TMP7]], i32 0
+; CHECK-NEXT:    [[TMP9:%.*]] = bitcast i32* [[TMP8]] to <8 x i32>*
+; CHECK-NEXT:    store <8 x i32> %vec.ind, <8 x i32>* [[TMP9]], align 4
+; CHECK:         %index.next = add i64 %index, 8
+; CHECK-NEXT:    %vec.ind.next = add <8 x i32> %vec.ind, [[DOTSPLAT6]]
+; CHECK:         br i1 {{.*}}, label %middle.block, label %vector.body
 
 define i32 @induction_with_loop_inv(i32 %init, i32* noalias nocapture %A, i32 %N, i32 %M) {
 entry:
@@ -121,4 +155,47 @@ for.end6.loopexit:                                ; preds = %for.inc4
 for.end6:                                         ; preds = %for.end6.loopexit, %entry
   %x.0.lcssa = phi i32 [ %init, %entry ], [ %x.1.lcssa.lcssa, %for.end6.loopexit ]
   ret i32 %x.0.lcssa
+}
+
+
+; CHECK-LABEL: @non_primary_iv_loop_inv_trunc(
+; CHECK:       vector.ph:
+; CHECK:         [[TMP3:%.*]] = trunc i64 %step to i32
+; CHECK-NEXT:    [[DOTSPLATINSERT5:%.*]] = insertelement <8 x i32> undef, i32 [[TMP3]], i32 0
+; CHECK-NEXT:    [[DOTSPLAT6:%.*]] = shufflevector <8 x i32> [[DOTSPLATINSERT5]], <8 x i32> undef, <8 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP4:%.*]] = mul <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>, [[DOTSPLAT6]]
+; CHECK-NEXT:    [[INDUCTION7:%.*]] = add <8 x i32> zeroinitializer, [[TMP4]]
+; CHECK-NEXT:    [[TMP5:%.*]] = mul i32 [[TMP3]], 8
+; CHECK-NEXT:    [[DOTSPLATINSERT8:%.*]] = insertelement <8 x i32> undef, i32 [[TMP5]], i32 0
+; CHECK-NEXT:    [[DOTSPLAT9:%.*]] = shufflevector <8 x i32> [[DOTSPLATINSERT8]], <8 x i32> undef, <8 x i32> zeroinitializer
+; CHECK-NEXT:    br label %vector.body
+; CHECK:       vector.body:
+; CHECK-NEXT:    %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
+; CHECK:         [[VEC_IND10:%.*]] = phi <8 x i32> [ [[INDUCTION7]], %vector.ph ], [ [[VEC_IND_NEXT11:%.*]], %vector.body ]
+; CHECK:         [[TMP6:%.*]] = add i64 %index, 0
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i64 [[TMP6]]
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i32, i32* [[TMP7]], i32 0
+; CHECK-NEXT:    [[TMP9:%.*]] = bitcast i32* [[TMP8]] to <8 x i32>*
+; CHECK-NEXT:    store <8 x i32> [[VEC_IND10]], <8 x i32>* [[TMP9]], align 4
+; CHECK-NEXT:    %index.next = add i64 %index, 8
+; CHECK:         [[VEC_IND_NEXT11]] = add <8 x i32> [[VEC_IND10]], [[DOTSPLAT9]]
+; CHECK:         br i1 {{.*}}, label %middle.block, label %vector.body
+
+define void @non_primary_iv_loop_inv_trunc(i32* %a, i64 %n, i64 %step) {
+entry:
+  br label %for.body
+
+for.body:
+  %i = phi i64 [ %i.next, %for.body ], [ 0, %entry ]
+  %j = phi i64 [ %j.next, %for.body ], [ 0, %entry ]
+  %tmp0 = getelementptr inbounds i32, i32* %a, i64 %i
+  %tmp1 = trunc i64 %j to i32
+  store i32 %tmp1, i32* %tmp0, align 4
+  %i.next = add nuw nsw i64 %i, 1
+  %j.next = add nuw nsw i64 %j, %step
+  %cond = icmp slt i64 %i.next, %n
+  br i1 %cond, label %for.body, label %for.end
+
+for.end:
+  ret void
 }

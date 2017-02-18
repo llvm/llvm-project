@@ -644,11 +644,11 @@ bool HexagonTargetLowering::mayBeEmittedAsTailCall(CallInst *CI) const {
 
 /// LowerCallResult - Lower the result values of an ISD::CALL into the
 /// appropriate copies out of appropriate physical registers.  This assumes that
-/// Chain/InFlag are the input chain/flag to use, and that TheCall is the call
+/// Chain/Glue are the input chain/glue to use, and that TheCall is the call
 /// being lowered. Returns a SDNode with the same number of values as the
 /// ISD::CALL.
 SDValue HexagonTargetLowering::LowerCallResult(
-    SDValue Chain, SDValue InFlag, CallingConv::ID CallConv, bool isVarArg,
+    SDValue Chain, SDValue Glue, CallingConv::ID CallConv, bool isVarArg,
     const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &dl,
     SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals,
     const SmallVectorImpl<SDValue> &OutVals, SDValue Callee) const {
@@ -671,21 +671,24 @@ SDValue HexagonTargetLowering::LowerCallResult(
       // predicate register as the call result.
       auto &MRI = DAG.getMachineFunction().getRegInfo();
       SDValue FR0 = DAG.getCopyFromReg(Chain, dl, RVLocs[i].getLocReg(),
-                                       MVT::i32, InFlag);
+                                       MVT::i32, Glue);
       // FR0 = (Value, Chain, Glue)
       unsigned PredR = MRI.createVirtualRegister(&Hexagon::PredRegsRegClass);
       SDValue TPR = DAG.getCopyToReg(FR0.getValue(1), dl, PredR,
                                      FR0.getValue(0), FR0.getValue(2));
       // TPR = (Chain, Glue)
-      RetVal = DAG.getCopyFromReg(TPR.getValue(0), dl, PredR, MVT::i1,
-                                  TPR.getValue(1));
+      // Don't glue this CopyFromReg, because it copies from a virtual
+      // register. If it is glued to the call, InstrEmitter will add it
+      // as an implicit def to the call (EmitMachineNode).
+      RetVal = DAG.getCopyFromReg(TPR.getValue(0), dl, PredR, MVT::i1);
+      Glue = TPR.getValue(1);
     } else {
       RetVal = DAG.getCopyFromReg(Chain, dl, RVLocs[i].getLocReg(),
-                                  RVLocs[i].getValVT(), InFlag);
+                                  RVLocs[i].getValVT(), Glue);
+      Glue = RetVal.getValue(2);
     }
     InVals.push_back(RetVal.getValue(0));
     Chain = RetVal.getValue(1);
-    InFlag = RetVal.getValue(2);
   }
 
   return Chain;
@@ -840,16 +843,17 @@ HexagonTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   if (!MemOpChains.empty())
     Chain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, MemOpChains);
 
+  SDValue Glue;
   if (!IsTailCall) {
     SDValue C = DAG.getConstant(NumBytes, dl, PtrVT, true);
     Chain = DAG.getCALLSEQ_START(Chain, C, dl);
+    Glue = Chain.getValue(1);
   }
 
   // Build a sequence of copy-to-reg nodes chained together with token
   // chain and flag operands which copy the outgoing args into registers.
   // The Glue is necessary since all emitted instructions must be
   // stuck together.
-  SDValue Glue;
   if (!IsTailCall) {
     for (unsigned i = 0, e = RegsToPass.size(); i != e; ++i) {
       Chain = DAG.getCopyToReg(Chain, dl, RegsToPass[i].first,
@@ -901,6 +905,10 @@ HexagonTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     Ops.push_back(DAG.getRegister(RegsToPass[i].first,
                                   RegsToPass[i].second.getValueType()));
   }
+
+  const uint32_t *Mask = HRI.getCallPreservedMask(MF, CallConv);
+  assert(Mask && "Missing call preserved mask for calling convention");
+  Ops.push_back(DAG.getRegisterMask(Mask));
 
   if (Glue.getNode())
     Ops.push_back(Glue);
@@ -1571,9 +1579,10 @@ HexagonTargetLowering::LowerGLOBAL_OFFSET_TABLE(SDValue Op, SelectionDAG &DAG)
 
 SDValue
 HexagonTargetLowering::GetDynamicTLSAddr(SelectionDAG &DAG, SDValue Chain,
-      GlobalAddressSDNode *GA, SDValue *InFlag, EVT PtrVT, unsigned ReturnReg,
+      GlobalAddressSDNode *GA, SDValue Glue, EVT PtrVT, unsigned ReturnReg,
       unsigned char OperandFlags) const {
-  MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
+  MachineFunction &MF = DAG.getMachineFunction();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
   SDVTList NodeTys = DAG.getVTList(MVT::Other, MVT::Glue);
   SDLoc dl(GA);
   SDValue TGA = DAG.getTargetGlobalAddress(GA->getGlobal(), dl,
@@ -1585,23 +1594,21 @@ HexagonTargetLowering::GetDynamicTLSAddr(SelectionDAG &DAG, SDValue Chain,
   // 2. Callee which in this case is the Global address value.
   // 3. Registers live into the call.In this case its R0, as we
   //    have just one argument to be passed.
-  // 4. InFlag if there is any.
+  // 4. Glue.
   // Note: The order is important.
 
-  if (InFlag) {
-    SDValue Ops[] = { Chain, TGA,
-                      DAG.getRegister(Hexagon::R0, PtrVT), *InFlag };
-    Chain = DAG.getNode(HexagonISD::CALL, dl, NodeTys, Ops);
-  } else {
-    SDValue Ops[]  = { Chain, TGA, DAG.getRegister(Hexagon::R0, PtrVT)};
-    Chain = DAG.getNode(HexagonISD::CALL, dl, NodeTys, Ops);
-  }
+  const auto &HRI = *Subtarget.getRegisterInfo();
+  const uint32_t *Mask = HRI.getCallPreservedMask(MF, CallingConv::C);
+  assert(Mask && "Missing call preserved mask for calling convention");
+  SDValue Ops[] = { Chain, TGA, DAG.getRegister(Hexagon::R0, PtrVT),
+                    DAG.getRegisterMask(Mask), Glue };
+  Chain = DAG.getNode(HexagonISD::CALL, dl, NodeTys, Ops);
 
   // Inform MFI that function has calls.
   MFI.setAdjustsStack(true);
 
-  SDValue Flag = Chain.getValue(1);
-  return DAG.getCopyFromReg(Chain, dl, ReturnReg, PtrVT, Flag);
+  Glue = Chain.getValue(1);
+  return DAG.getCopyFromReg(Chain, dl, ReturnReg, PtrVT, Glue);
 }
 
 //
@@ -1694,7 +1701,7 @@ HexagonTargetLowering::LowerToTLSGeneralDynamicModel(GlobalAddressSDNode *GA,
   Chain = DAG.getCopyToReg(DAG.getEntryNode(), dl, Hexagon::R0, Chain, InFlag);
   InFlag = Chain.getValue(1);
 
-  return GetDynamicTLSAddr(DAG, Chain, GA, &InFlag, PtrVT,
+  return GetDynamicTLSAddr(DAG, Chain, GA, InFlag, PtrVT,
                            Hexagon::R0, HexagonII::MO_GDPLT);
 }
 

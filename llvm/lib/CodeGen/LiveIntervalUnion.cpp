@@ -1,4 +1,4 @@
-//===-- LiveIntervalUnion.cpp - Live interval union data structure --------===//
+//===- LiveIntervalUnion.cpp - Live interval union data structure ---------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -13,18 +13,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/CodeGen/LiveIntervalUnion.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SparseBitVector.h"
-#include "llvm/Support/Debug.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/CodeGen/LiveInterval.h"
+#include "llvm/CodeGen/LiveIntervalUnion.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetRegisterInfo.h"
-#include <algorithm>
+#include <cassert>
+#include <cstdlib>
 
 using namespace llvm;
 
 #define DEBUG_TYPE "regalloc"
-
 
 // Merge a LiveInterval's segments. Guarantee no overlaps.
 void LiveIntervalUnion::unify(LiveInterval &VirtReg, const LiveRange &Range) {
@@ -64,7 +64,7 @@ void LiveIntervalUnion::extract(LiveInterval &VirtReg, const LiveRange &Range) {
   LiveRange::const_iterator RegEnd = Range.end();
   SegmentIter SegPos = Segments.find(RegPos->start);
 
-  for (;;) {
+  while (true) {
     assert(SegPos.value() == &VirtReg && "Inconsistent LiveInterval");
     SegPos.erase();
     if (!SegPos.valid())

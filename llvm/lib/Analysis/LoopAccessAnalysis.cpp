@@ -172,11 +172,6 @@ const SCEV *llvm::replaceSymbolicStrideSCEV(PredicatedScalarEvolution &PSE,
     // Strip casts.
     StrideVal = stripIntegerCast(StrideVal);
 
-    // Replace symbolic stride by one.
-    Value *One = ConstantInt::get(StrideVal->getType(), 1);
-    ValueToValueMap RewriteMap;
-    RewriteMap[StrideVal] = One;
-
     ScalarEvolution *SE = PSE.getSE();
     const auto *U = cast<SCEVUnknown>(SE->getSCEV(StrideVal));
     const auto *CT =

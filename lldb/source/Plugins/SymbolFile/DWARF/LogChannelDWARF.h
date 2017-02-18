@@ -27,48 +27,17 @@
 #define DWARF_LOG_ALL (UINT32_MAX)
 #define DWARF_LOG_DEFAULT (DWARF_LOG_DEBUG_INFO)
 
-class LogChannelDWARF : public lldb_private::LogChannel {
+namespace lldb_private {
+class LogChannelDWARF {
+  static Log::Channel g_channel;
+
 public:
-  LogChannelDWARF();
-
-  ~LogChannelDWARF() override;
-
   static void Initialize();
-
   static void Terminate();
 
-  static lldb_private::ConstString GetPluginNameStatic();
-
-  static const char *GetPluginDescriptionStatic();
-
-  static lldb_private::LogChannel *CreateInstance();
-
-  lldb_private::ConstString GetPluginName() override;
-
-  uint32_t GetPluginVersion() override;
-
-  void Disable(const char **categories,
-               lldb_private::Stream *feedback_strm) override;
-
-  void Delete();
-
-  bool Enable(const std::shared_ptr<llvm::raw_ostream> &log_stream_sp,
-              uint32_t log_options,
-              lldb_private::Stream
-                  *feedback_strm, // Feedback stream for argument errors etc
-              const char **categories) override; // The categories to enable
-                                                 // within this logging stream,
-                                                 // if empty, enable default set
-
-  void ListCategories(lldb_private::Stream *strm) override;
-
-  static lldb_private::Log *GetLog();
-
-  static lldb_private::Log *GetLogIfAll(uint32_t mask);
-
-  static lldb_private::Log *GetLogIfAny(uint32_t mask);
-
-  static void LogIf(uint32_t mask, const char *format, ...);
+  static Log *GetLogIfAll(uint32_t mask) { return g_channel.GetLogIfAll(mask); }
+  static Log *GetLogIfAny(uint32_t mask) { return g_channel.GetLogIfAny(mask); }
 };
+}
 
 #endif // SymbolFileDWARF_LogChannelDWARF_h_

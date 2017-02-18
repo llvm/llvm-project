@@ -326,7 +326,7 @@ ARMBaseTargetMachine::getSubtargetImpl(const Function &F) const {
 #else
     ARMGISelActualAccessor *GISel = new ARMGISelActualAccessor();
     GISel->CallLoweringInfo.reset(new ARMCallLowering(*I->getTargetLowering()));
-    GISel->Legalizer.reset(new ARMLegalizerInfo());
+    GISel->Legalizer.reset(new ARMLegalizerInfo(*I));
 
     auto *RBI = new ARMRegisterBankInfo(*I->getRegisterInfo());
 

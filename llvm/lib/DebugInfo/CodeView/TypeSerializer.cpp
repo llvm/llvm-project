@@ -76,7 +76,7 @@ TypeSerializer::addPadding(MutableArrayRef<uint8_t> Record) {
   int N = PaddingBytes;
   while (PaddingBytes > 0) {
     uint8_t Pad = static_cast<uint8_t>(LF_PAD0 + PaddingBytes);
-    if (auto EC = Writer.writeInteger(Pad))
+    if (auto EC = Writer.writeInteger(Pad, llvm::support::little))
       return std::move(EC);
     --PaddingBytes;
   }
@@ -207,11 +207,11 @@ Error TypeSerializer::visitMemberEnd(CVMemberRecord &Record) {
     msf::StreamWriter CW(CS);
     if (auto EC = CW.writeBytes(CopyData))
       return EC;
-    if (auto EC = CW.writeEnum(TypeLeafKind::LF_INDEX))
+    if (auto EC = CW.writeEnum(TypeLeafKind::LF_INDEX, llvm::support::little))
       return EC;
-    if (auto EC = CW.writeInteger(uint16_t(0)))
+    if (auto EC = CW.writeInteger<uint16_t>(0, llvm::support::little))
       return EC;
-    if (auto EC = CW.writeInteger(uint32_t(0xB0C0B0C0)))
+    if (auto EC = CW.writeInteger<uint32_t>(0xB0C0B0C0, llvm::support::little))
       return EC;
     FieldListSegments.push_back(SavedSegment);
 

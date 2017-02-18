@@ -51,6 +51,10 @@ namespace rdf {
       return F - Map.begin() + 1;
     }
 
+    typedef typename std::vector<T>::const_iterator const_iterator;
+    const_iterator begin() const { return Map.begin(); }
+    const_iterator end() const { return Map.end(); }
+
   private:
     std::vector<T> Map;
   };

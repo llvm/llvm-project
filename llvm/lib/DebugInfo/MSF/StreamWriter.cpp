@@ -25,34 +25,6 @@ Error StreamWriter::writeBytes(ArrayRef<uint8_t> Buffer) {
   return Error::success();
 }
 
-Error StreamWriter::writeInteger(uint8_t Int) { return writeObject(Int); }
-
-Error StreamWriter::writeInteger(uint16_t Int) {
-  return writeObject(support::ulittle16_t(Int));
-}
-
-Error StreamWriter::writeInteger(uint32_t Int) {
-  return writeObject(support::ulittle32_t(Int));
-}
-
-Error StreamWriter::writeInteger(uint64_t Int) {
-  return writeObject(support::ulittle64_t(Int));
-}
-
-Error StreamWriter::writeInteger(int8_t Int) { return writeObject(Int); }
-
-Error StreamWriter::writeInteger(int16_t Int) {
-  return writeObject(support::little16_t(Int));
-}
-
-Error StreamWriter::writeInteger(int32_t Int) {
-  return writeObject(support::little32_t(Int));
-}
-
-Error StreamWriter::writeInteger(int64_t Int) {
-  return writeObject(support::little64_t(Int));
-}
-
 Error StreamWriter::writeZeroString(StringRef Str) {
   if (auto EC = writeFixedString(Str))
     return EC;
