@@ -682,35 +682,24 @@ declare void @g()
 ; CHECK-LABEL: test_pr30292
 ; CHECK: phi i32 [ 0, %entry ], [ %add1, %succ ], [ %add2, %two ]
 
-define zeroext i1 @test_pr30244(i1 zeroext %flag, i1 zeroext %flag2, i32 %blksA, i32 %blksB, i32 %nblks) {
-
+define void @test_pr30244(i1 %cond, i1 %cond2, i32 %a, i32 %b) {
 entry:
-  %p = alloca i8
-  br i1 %flag, label %if.then, label %if.else
+  %add1 = add i32 %a, 1
+  br label %succ
 
-if.then:
-  %cmp = icmp uge i32 %blksA, %nblks
-  %frombool1 = zext i1 %cmp to i8
-  store i8 %frombool1, i8* %p
-  br label %if.end
+one:
+  br i1 %cond, label %two, label %succ
 
-if.else:
-  br i1 %flag2, label %if.then2, label %if.end
+two:
+  call void @g()
+  %add2 = add i32 %a, 1
+  br label %succ
 
-if.then2:
-  %add = add i32 %nblks, %blksB
-  %cmp2 = icmp ule i32 %add, %blksA
-  %frombool3 = zext i1 %cmp2 to i8
-  store i8 %frombool3, i8* %p
-  br label %if.end
-
-if.end:
-  ret i1 true
+succ:
+  %p = phi i32 [ 0, %entry ], [ %add1, %one ], [ %add2, %two ]
+  br label %one
 }
 
-; CHECK-LABEL: @test_pr30244
-; CHECK: store
-; CHECK: store
 
 define i32 @test_pr30373a(i1 zeroext %flag, i32 %x, i32 %y) {
 entry:

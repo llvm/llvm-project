@@ -27,8 +27,12 @@ if.then:                                          ; preds = %while.body
   store i32 %add, i32* %count, align 4
   br label %if.end
 
-; CHECK: if.then:
-; CHECK:  br label %while.cond, !llvm.loop !0
+; rdar://30408338: 05bbcbdafe, which inhibited sinking the adds and merging the
+; blocks, was reverted. The result is a single while.body with the merged
+; if.then/if.else.
+
+; CHECK-DISABLED: if.then:
+; CHECK-DISABLED:  br label %while.cond, !llvm.loop !0
 
 if.else:                                          ; preds = %while.body
   %5 = load i32, i32* %count, align 4
@@ -36,7 +40,8 @@ if.else:                                          ; preds = %while.body
   store i32 %add2, i32* %count, align 4
   br label %if.end
 
-; CHECK: if.else:
+; CHECK-DISABLED: if.else:
+; CHECK: while.cond:
 ; CHECK:  br label %while.cond, !llvm.loop !0
 
 if.end:                                           ; preds = %if.else, %if.then
