@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -emit-pch -o %t %s
-// RUN: %clang_cc1 -fsyntax-only -include-pch %t %s -Wuninitialized -verify
-// RUN: %clang_cc1 -fsyntax-only -include-pch %t %s -Wuninitialized -fdiagnostics-parseable-fixits 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -std=c++98 -emit-pch -o %t %s
+// RUN: %clang_cc1 -std=c++98 -fsyntax-only -include-pch %t %s -Wuninitialized -verify
+// RUN: %clang_cc1 -std=c++98 -fsyntax-only -include-pch %t %s -Wuninitialized -fdiagnostics-parseable-fixits 2>&1 | FileCheck %s
 
 #ifndef HEADER
 #define HEADER

@@ -1946,6 +1946,13 @@ DEF_TRAVERSE_DECL(FunctionDecl, {
   ReturnValue = TraverseFunctionHelper(D);
 })
 
+DEF_TRAVERSE_DECL(CXXDeductionGuideDecl, {
+  // We skip decls_begin/decls_end, which are already covered by
+  // TraverseFunctionHelper().
+  ShouldVisitChildren = false;
+  ReturnValue = TraverseFunctionHelper(D);
+})
+
 DEF_TRAVERSE_DECL(CXXMethodDecl, {
   // We skip decls_begin/decls_end, which are already covered by
   // TraverseFunctionHelper().

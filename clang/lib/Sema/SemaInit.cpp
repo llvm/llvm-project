@@ -8296,10 +8296,10 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
       if (D->isInvalidDecl())
         continue;
 
-      FunctionTemplateDecl *TD = dyn_cast<FunctionTemplateDecl>(D);
-      FunctionDecl *FD =
-          TD ? TD->getTemplatedDecl() : dyn_cast<FunctionDecl>(D);
-      if (!FD)
+      auto *TD = dyn_cast<FunctionTemplateDecl>(D);
+      auto *GD = dyn_cast_or_null<CXXDeductionGuideDecl>(
+          TD ? TD->getTemplatedDecl() : dyn_cast<FunctionDecl>(D));
+      if (!GD)
         continue;
 
       // C++ [over.match.ctor]p1: (non-list copy-initialization from non-class)
@@ -8309,21 +8309,21 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
       //   The converting constructors of T are candidate functions.
       if (Kind.isCopyInit() && !ListInit) {
         // Only consider converting constructors.
-        if (FD->isExplicit())
+        if (GD->isExplicit())
           continue;
 
         // When looking for a converting constructor, deduction guides that
         // could never be called with one argument are not interesting to
         // check or note.
-        if (FD->getMinRequiredArguments() > 1 ||
-            (FD->getNumParams() == 0 && !FD->isVariadic()))
+        if (GD->getMinRequiredArguments() > 1 ||
+            (GD->getNumParams() == 0 && !GD->isVariadic()))
           continue;
       }
 
       // C++ [over.match.list]p1.1: (first phase list initialization)
       //   Initially, the candidate functions are the initializer-list
       //   constructors of the class T
-      if (OnlyListConstructors && !isInitListConstructor(FD))
+      if (OnlyListConstructors && !isInitListConstructor(GD))
         continue;
 
       // C++ [over.match.list]p1.2: (second phase list initialization)
@@ -8345,7 +8345,7 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
                                      Inits, Candidates,
                                      SuppressUserConversions);
       else
-        AddOverloadCandidate(FD, I.getPair(), Inits, Candidates,
+        AddOverloadCandidate(GD, I.getPair(), Inits, Candidates,
                              SuppressUserConversions);
     }
     return Candidates.BestViableFunction(*this, Kind.getLocation(), Best);
@@ -8416,7 +8416,8 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
     // C++ [over.match.list]p1:
     //   In copy-list-initialization, if an explicit constructor is chosen, the
     //   initialization is ill-formed.
-    if (Kind.isCopyInit() && ListInit && Best->Function->isExplicit()) {
+    if (Kind.isCopyInit() && ListInit &&
+        cast<CXXDeductionGuideDecl>(Best->Function)->isExplicit()) {
       bool IsDeductionGuide = !Best->Function->isImplicit();
       Diag(Kind.getLocation(), diag::err_deduced_class_template_explicit)
           << TemplateName << IsDeductionGuide;

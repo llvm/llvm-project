@@ -212,13 +212,11 @@ bool AssemblerInvocation::CreateFromArgs(AssemblerInvocation &Opts,
   // Frontend Options
   if (Args.hasArg(OPT_INPUT)) {
     bool First = true;
-    for (arg_iterator it = Args.filtered_begin(OPT_INPUT),
-                      ie = Args.filtered_end();
-         it != ie; ++it, First = false) {
-      const Arg *A = it;
-      if (First)
+    for (const Arg *A : Args.filtered(OPT_INPUT)) {
+      if (First) {
         Opts.InputFile = A->getValue();
-      else {
+        First = false;
+      } else {
         Diags.Report(diag::err_drv_unknown_argument) << A->getAsString(Args);
         Success = false;
       }

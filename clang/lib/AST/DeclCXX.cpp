@@ -71,8 +71,8 @@ CXXRecordDecl::DefinitionData::DefinitionData(CXXRecordDecl *D)
       ImplicitCopyAssignmentHasConstParam(true),
       HasDeclaredCopyConstructorWithConstParam(false),
       HasDeclaredCopyAssignmentWithConstParam(false), IsLambda(false),
-      IsParsingBaseSpecifiers(false), NumBases(0), NumVBases(0), Bases(),
-      VBases(), Definition(D), FirstFriend() {}
+      IsParsingBaseSpecifiers(false), ODRHash(0), NumBases(0), NumVBases(0),
+      Bases(), VBases(), Definition(D), FirstFriend() {}
 
 CXXBaseSpecifier *CXXRecordDecl::DefinitionData::getBasesSlowCase() const {
   return Bases.get(Definition->getASTContext().getExternalSource());
@@ -370,6 +370,8 @@ CXXRecordDecl::setBases(CXXBaseSpecifier const * const *Bases,
 
   data().IsParsingBaseSpecifiers = false;
 }
+
+void CXXRecordDecl::computeODRHash() {}
 
 void CXXRecordDecl::addedClassSubobject(CXXRecordDecl *Subobj) {
   // C++11 [class.copy]p11:
@@ -1470,6 +1472,23 @@ bool CXXRecordDecl::mayBeAbstract() const {
   }
   
   return false;
+}
+
+void CXXDeductionGuideDecl::anchor() { }
+
+CXXDeductionGuideDecl *CXXDeductionGuideDecl::Create(
+    ASTContext &C, DeclContext *DC, SourceLocation StartLoc, bool IsExplicit,
+    const DeclarationNameInfo &NameInfo, QualType T, TypeSourceInfo *TInfo,
+    SourceLocation EndLocation) {
+  return new (C, DC) CXXDeductionGuideDecl(C, DC, StartLoc, IsExplicit,
+                                           NameInfo, T, TInfo, EndLocation);
+}
+
+CXXDeductionGuideDecl *CXXDeductionGuideDecl::CreateDeserialized(ASTContext &C,
+                                                                 unsigned ID) {
+  return new (C, ID) CXXDeductionGuideDecl(C, nullptr, SourceLocation(), false,
+                                           DeclarationNameInfo(), QualType(),
+                                           nullptr, SourceLocation());
 }
 
 void CXXMethodDecl::anchor() { }
