@@ -598,30 +598,7 @@ if.end:
 ; CHECK: store
 ; CHECK: store
 
-; The phi is confusing - both add instructions are used by it, but
-; not on their respective unconditional arcs. It should not be
-; optimized.
-define void @test_pr30292(i1 %cond, i1 %cond2, i32 %a, i32 %b) {
-entry:
-  %add1 = add i32 %a, 1
-  br label %succ
-
-one:
-  br i1 %cond, label %two, label %succ
-
-two:
-  call void @g()
-  %add2 = add i32 %a, 1
-  br label %succ
-
-succ:
-  %p = phi i32 [ 0, %entry ], [ %add1, %one ], [ %add2, %two ]
-  br label %one
-}
 declare void @g()
-
-; CHECK-LABEL: test_pr30292
-; CHECK: phi i32 [ 0, %entry ], [ %add1, %succ ], [ %add2, %two ]
 
 define void @test_pr30244(i1 %cond, i1 %cond2, i32 %a, i32 %b) {
 entry:
