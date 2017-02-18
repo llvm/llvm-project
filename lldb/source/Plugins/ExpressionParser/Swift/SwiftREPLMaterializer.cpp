@@ -291,7 +291,7 @@ public:
       return;
     }
 
-    swift::Demangle::Context DCtx;
+    swift::Demangle::Context demangle_ctx;
 
     for (const IRExecutionUnit::JittedGlobalVariable &variable :
          execution_unit->GetJittedGlobalVariables()) {
@@ -302,7 +302,7 @@ public:
       //     kind=Identifier, text="a"
 
       swift::Demangle::NodePointer node_pointer =
-          DCtx.demangleSymbolAsNode(variable.m_name.GetStringRef());
+          demangle_ctx.demangleSymbolAsNode(variable.m_name.GetStringRef());
 
       if (!node_pointer ||
           node_pointer->getKind() != swift::Demangle::Node::Kind::Global)
@@ -368,7 +368,7 @@ public:
 
         return;
       }
-      DCtx.clear();
+      demangle_ctx.clear();
     }
 
     err.SetErrorToGenericError();
