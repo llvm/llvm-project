@@ -826,6 +826,7 @@ __kmp_dispatch_init(
 
             ntc = (tc % chunk ? 1 : 0) + tc / chunk;
             if ( nproc > 1 && ntc >= nproc ) {
+                KMP_COUNT_BLOCK(OMP_FOR_static_steal);
                 T id = __kmp_tid_from_gtid(gtid);
                 T small_chunk, extras;
 
@@ -1637,8 +1638,10 @@ __kmp_dispatch_next(
                                 }
                                 // stealing succeded, reduce victim's ub by 1/4 of undone chunks or by 1
                                 if( remaining > 3 ) {
+                                    KMP_COUNT_VALUE(FOR_static_steal_stolen, remaining>>2);
                                     init = ( victim->u.p.ub -= (remaining>>2) ); // steal 1/4 of remaining
                                 } else {
+                                    KMP_COUNT_VALUE(FOR_static_steal_stolen, 1);
                                     init = ( victim->u.p.ub -= 1 ); // steal 1 chunk of 2 or 3 remaining
                                 }
                                 __kmp_release_lock(lck, gtid);
@@ -1739,6 +1742,7 @@ __kmp_dispatch_next(
                                             *VOLATILE_CAST(kmp_int64 *)&vold.b,
                                             *VOLATILE_CAST(kmp_int64 *)&vnew.b ) ) {
                                         // stealing succedded
+                                        KMP_COUNT_VALUE(FOR_static_steal_stolen, vold.p.ub-vnew.p.ub);
                                         status = 1;
                                         while_index = 0;
                                         // now update own count and ub
@@ -1765,6 +1769,7 @@ __kmp_dispatch_next(
                         init *= chunk;
                         limit = chunk + init - 1;
                         incr  = pr->u.p.st;
+                        KMP_COUNT_VALUE(FOR_static_steal_chunks, 1);
 
                         KMP_DEBUG_ASSERT(init <= trip);
                         if ( (last = (limit >= trip)) != 0 )

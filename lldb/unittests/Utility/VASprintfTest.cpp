@@ -49,11 +49,11 @@ TEST(VASprintfTest, EncodingError) {
   setlocale(LC_ALL, ".932");
 
   wchar_t Invalid[2];
-  Invalid[0] = 129;
+  Invalid[0] = 0x100;
   Invalid[1] = 0;
   llvm::SmallString<32> Buffer;
   EXPECT_FALSE(Sprintf(Buffer, "%ls", Invalid));
   EXPECT_EQ("<Encoding error>", Buffer);
 
-  setlocale(LC_CTYPE, Current.c_str());
+  setlocale(LC_ALL, Current.c_str());
 }

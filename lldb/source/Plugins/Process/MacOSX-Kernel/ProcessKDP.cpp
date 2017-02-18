@@ -726,11 +726,7 @@ void ProcessKDP::Initialize() {
                                   GetPluginDescriptionStatic(), CreateInstance,
                                   DebuggerInitialize);
 
-    Log::Callbacks log_callbacks = {ProcessKDPLog::DisableLog,
-                                    ProcessKDPLog::EnableLog,
-                                    ProcessKDPLog::ListLogCategories};
-
-    Log::RegisterLogChannel(ProcessKDP::GetPluginNameStatic(), log_callbacks);
+    ProcessKDPLog::Initialize();
   });
 }
 

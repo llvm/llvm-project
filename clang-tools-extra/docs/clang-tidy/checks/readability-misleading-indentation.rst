@@ -32,7 +32,7 @@ Examples:
     foo2();  // Not guarded by if(cond1).
 
 Limitations
-===========
+-----------
 
 Note that this check only works as expected when the tabs or spaces are used
 consistently and not mixed.

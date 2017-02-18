@@ -89,6 +89,7 @@ enum stats_state_e {
     macro (OMP_PARALLEL, stats_flags_e::onlyInMaster | stats_flags_e::noTotal, arg) \
     macro (OMP_NESTED_PARALLEL, 0, arg)                         \
     macro (OMP_FOR_static, 0, arg)                              \
+    macro (OMP_FOR_static_steal, 0, arg)                        \
     macro (OMP_FOR_dynamic, 0, arg)                             \
     macro (OMP_DISTRIBUTE, 0, arg)                              \
     macro (OMP_BARRIER, 0, arg)                                 \
@@ -146,6 +147,8 @@ enum stats_state_e {
     macro (OMP_PARALLEL_args,     stats_flags_e::noUnits | stats_flags_e::noTotal, arg) \
     macro (FOR_static_iterations, stats_flags_e::noUnits | stats_flags_e::noTotal, arg) \
     macro (FOR_dynamic_iterations,stats_flags_e::noUnits | stats_flags_e::noTotal, arg) \
+    macro (FOR_static_steal_stolen,stats_flags_e::noUnits | stats_flags_e::noTotal, arg) \
+    macro (FOR_static_steal_chunks,stats_flags_e::noUnits | stats_flags_e::noTotal, arg) \
     KMP_FOREACH_DEVELOPER_TIMER(macro, arg)
 
 

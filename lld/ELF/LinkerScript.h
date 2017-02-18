@@ -275,7 +275,10 @@ public:
   int getSectionIndex(StringRef Name);
 
 private:
+  void assignSymbol(SymbolAssignment *Cmd, bool InSec = false);
+  void addSymbol(SymbolAssignment *Cmd);
   void computeInputSections(InputSectionDescription *);
+  void setDot(Expr E, bool InSec = false);
 
   void discard(ArrayRef<InputSectionBase<ELFT> *> V);
 
