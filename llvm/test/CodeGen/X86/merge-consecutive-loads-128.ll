@@ -1137,18 +1137,16 @@ define <4 x float> @merge_4f32_f32_X0YY(float* %ptr0, float* %ptr1) nounwind uwt
 ; Extension tests.
 ;
 
-; FIXME: PR31309
+; PR31309
 define <4 x i32> @load_i32_zext_i128_v4i32(i32* %ptr) {
 ; SSE-LABEL: load_i32_zext_i128_v4i32:
 ; SSE:       # BB#0:
-; SSE-NEXT:    movl (%rdi), %eax
-; SSE-NEXT:    movd %rax, %xmm0
+; SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: load_i32_zext_i128_v4i32:
 ; AVX:       # BB#0:
-; AVX-NEXT:    movl (%rdi), %eax
-; AVX-NEXT:    vmovq %rax, %xmm0
+; AVX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; AVX-NEXT:    retq
 ;
 ; X32-SSE1-LABEL: load_i32_zext_i128_v4i32:

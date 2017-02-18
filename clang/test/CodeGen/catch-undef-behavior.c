@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -fsanitize=alignment,null,object-size,shift-base,shift-exponent,return,signed-integer-overflow,vla-bound,float-cast-overflow,integer-divide-by-zero,bool,returns-nonnull-attribute,nonnull-attribute -fsanitize-recover=alignment,null,object-size,shift-base,shift-exponent,signed-integer-overflow,vla-bound,float-cast-overflow,integer-divide-by-zero,bool,returns-nonnull-attribute,nonnull-attribute -emit-llvm %s -o - -triple x86_64-linux-gnu | opt -instnamer -S | FileCheck %s --check-prefix=CHECK-COMMON --check-prefix=CHECK-UBSAN
 // RUN: %clang_cc1 -fsanitize-trap=alignment,null,object-size,shift-base,shift-exponent,return,signed-integer-overflow,vla-bound,float-cast-overflow,integer-divide-by-zero,bool,returns-nonnull-attribute,nonnull-attribute -fsanitize-recover=alignment,null,object-size,shift-base,shift-exponent,signed-integer-overflow,vla-bound,float-cast-overflow,integer-divide-by-zero,bool,returns-nonnull-attribute,nonnull-attribute -fsanitize=alignment,null,object-size,shift-base,shift-exponent,return,signed-integer-overflow,vla-bound,float-cast-overflow,integer-divide-by-zero,bool,returns-nonnull-attribute,nonnull-attribute -fsanitize-recover=alignment,null,object-size,shift-base,shift-exponent,signed-integer-overflow,vla-bound,float-cast-overflow,integer-divide-by-zero,bool,returns-nonnull-attribute,nonnull-attribute -emit-llvm %s -o - -triple x86_64-linux-gnu | opt -instnamer -S | FileCheck %s --check-prefix=CHECK-COMMON --check-prefix=CHECK-TRAP
+// RUN: %clang_cc1 -fsanitize=null -fsanitize-recover=null -emit-llvm %s -o - -triple x86_64-linux-gnu | FileCheck %s --check-prefix=CHECK-NULL
 // RUN: %clang_cc1 -fsanitize=signed-integer-overflow -emit-llvm %s -o - -triple x86_64-linux-gnu | FileCheck %s --check-prefix=CHECK-OVERFLOW
 
 // CHECK-UBSAN: @[[INT:.*]] = private unnamed_addr constant { i16, i16, [6 x i8] } { i16 0, i16 11, [6 x i8] c"'int'\00" }
@@ -29,20 +30,25 @@
 // CHECK-UBSAN: @[[LINE_1500:.*]] = {{.*}}, i32 1500, i32 10 {{.*}} @[[FP16]], {{.*}} }
 // CHECK-UBSAN: @[[LINE_1600:.*]] = {{.*}}, i32 1600, i32 10 {{.*}} @{{.*}} }
 
+// CHECK-NULL: @[[LINE_100:.*]] = private unnamed_addr global {{.*}}, i32 100, i32 5 {{.*}}
+
 // PR6805
 // CHECK-COMMON-LABEL: @foo
+// CHECK-NULL-LABEL: @foo
 void foo() {
   union { int i; } u;
+  // CHECK-COMMON:      %[[CHECK0:.*]] = icmp ne {{.*}}* %[[PTR:.*]], null
 
-  // CHECK-COMMON:      %[[I8PTR:.*]] = bitcast i32* %[[PTR:.*]] to i8*
+  // CHECK-COMMON:      %[[I8PTR:.*]] = bitcast i32* %[[PTR]] to i8*
   // CHECK-COMMON-NEXT: %[[SIZE:.*]] = call i64 @llvm.objectsize.i64.p0i8(i8* %[[I8PTR]], i1 false)
-  // CHECK-COMMON-NEXT: %[[CHECK0:.*]] = icmp uge i64 %[[SIZE]], 4
+  // CHECK-COMMON-NEXT: %[[CHECK1:.*]] = icmp uge i64 %[[SIZE]], 4
 
   // CHECK-COMMON:      %[[PTRTOINT:.*]] = ptrtoint {{.*}}* %[[PTR]] to i64
   // CHECK-COMMON-NEXT: %[[MISALIGN:.*]] = and i64 %[[PTRTOINT]], 3
-  // CHECK-COMMON-NEXT: %[[CHECK1:.*]] = icmp eq i64 %[[MISALIGN]], 0
+  // CHECK-COMMON-NEXT: %[[CHECK2:.*]] = icmp eq i64 %[[MISALIGN]], 0
 
-  // CHECK-COMMON:       %[[OK:.*]] = and i1 %[[CHECK0]], %[[CHECK1]]
+  // CHECK-COMMON:       %[[CHECK01:.*]] = and i1 %[[CHECK0]], %[[CHECK1]]
+  // CHECK-COMMON-NEXT:  %[[OK:.*]] = and i1 %[[CHECK01]], %[[CHECK2]]
 
   // CHECK-UBSAN: br i1 %[[OK]], {{.*}} !prof ![[WEIGHT_MD:.*]], !nosanitize
   // CHECK-TRAP:  br i1 %[[OK]], {{.*}}
@@ -52,6 +58,11 @@ void foo() {
 
   // CHECK-TRAP:      call void @llvm.trap() [[NR_NUW:#[0-9]+]]
   // CHECK-TRAP-NEXT: unreachable
+
+  // With -fsanitize=null, only perform the null check.
+  // CHECK-NULL: %[[NULL:.*]] = icmp ne {{.*}}, null
+  // CHECK-NULL: br i1 %[[NULL]]
+  // CHECK-NULL: call void @__ubsan_handle_type_mismatch_v1(i8* bitcast ({{.*}} @[[LINE_100]] to i8*), i64 %{{.*}})
 #line 100
   u.i=1;
 }

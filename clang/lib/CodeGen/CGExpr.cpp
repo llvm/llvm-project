@@ -947,45 +947,15 @@ LValue CodeGenFunction::EmitUnsupportedLValue(const Expr *E,
                         E->getType());
 }
 
-bool CodeGenFunction::CanElideObjectPointerNullCheck(const Expr *Obj) {
-  if (isa<DeclRefExpr>(Obj))
-    return true;
-
-  const Expr *Base = Obj;
-  while (!isa<CXXThisExpr>(Base)) {
-    // The result of a dynamic_cast can be null.
-    if (isa<CXXDynamicCastExpr>(Base))
-      return false;
-
-    if (const auto *CE = dyn_cast<CastExpr>(Base)) {
-      Base = CE->getSubExpr();
-    } else if (const auto *PE = dyn_cast<ParenExpr>(Base)) {
-      Base = PE->getSubExpr();
-    } else if (const auto *UO = dyn_cast<UnaryOperator>(Base)) {
-      if (UO->getOpcode() == UO_Extension)
-        Base = UO->getSubExpr();
-      else
-        return false;
-    } else {
-      return false;
-    }
-  }
-  return true;
-}
-
 LValue CodeGenFunction::EmitCheckedLValue(const Expr *E, TypeCheckKind TCK) {
   LValue LV;
   if (SanOpts.has(SanitizerKind::ArrayBounds) && isa<ArraySubscriptExpr>(E))
     LV = EmitArraySubscriptExpr(cast<ArraySubscriptExpr>(E), /*Accessed*/true);
   else
     LV = EmitLValue(E);
-  if (!isa<DeclRefExpr>(E) && !LV.isBitField() && LV.isSimple()) {
-    bool SkipNullCheck = false;
-    if (const auto *ME = dyn_cast<MemberExpr>(E))
-      SkipNullCheck = CanElideObjectPointerNullCheck(ME->getBase());
+  if (!isa<DeclRefExpr>(E) && !LV.isBitField() && LV.isSimple())
     EmitTypeCheck(TCK, E->getExprLoc(), LV.getPointer(),
-                  E->getType(), LV.getAlignment(), SkipNullCheck);
-  }
+                  E->getType(), LV.getAlignment());
   return LV;
 }
 
@@ -3365,9 +3335,7 @@ LValue CodeGenFunction::EmitMemberExpr(const MemberExpr *E) {
     AlignmentSource AlignSource;
     Address Addr = EmitPointerWithAlignment(BaseExpr, &AlignSource);
     QualType PtrTy = BaseExpr->getType()->getPointeeType();
-    bool SkipNullCheck = CanElideObjectPointerNullCheck(BaseExpr);
-    EmitTypeCheck(TCK_MemberAccess, E->getExprLoc(), Addr.getPointer(), PtrTy,
-                  /*Alignment=*/CharUnits::Zero(), SkipNullCheck);
+    EmitTypeCheck(TCK_MemberAccess, E->getExprLoc(), Addr.getPointer(), PtrTy);
     BaseLV = MakeAddrLValue(Addr, PtrTy, AlignSource);
   } else
     BaseLV = EmitCheckedLValue(BaseExpr, TCK_MemberAccess);

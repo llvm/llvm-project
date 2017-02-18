@@ -36,22 +36,13 @@ namespace lldb_private {
 namespace process_gdb_remote {
 
 class ProcessGDBRemoteLog {
+  static Log::Channel g_channel;
+
 public:
   static void Initialize();
 
-  static Log *GetLogIfAllCategoriesSet(uint32_t mask = 0);
-
-  static Log *GetLogIfAnyCategoryIsSet(uint32_t mask);
-
-  static void DisableLog(const char **categories, Stream *feedback_strm);
-
-  static Log *EnableLog(const std::shared_ptr<llvm::raw_ostream> &log_stream_sp,
-                        uint32_t log_options, const char **categories,
-                        Stream *feedback_strm);
-
-  static void ListLogCategories(Stream *strm);
-
-  static void LogIf(uint32_t mask, const char *format, ...);
+  static Log *GetLogIfAllCategoriesSet(uint32_t mask) { return g_channel.GetLogIfAll(mask); }
+  static Log *GetLogIfAnyCategoryIsSet(uint32_t mask) { return g_channel.GetLogIfAny(mask); }
 };
 
 } // namespace process_gdb_remote

@@ -1,11 +1,11 @@
 ; RUN: opt < %s -asan -asan-module -S \
 ; RUN:     -mtriple=i386-unknown-freebsd \
-; RUN:     -default-data-layout="e-m:e-p:32:32-f64:32:64-f80:32-n8:16:32-S128" | \
+; RUN:     -data-layout="e-m:e-p:32:32-f64:32:64-f80:32-n8:16:32-S128" | \
 ; RUN:     FileCheck --check-prefix=CHECK-32 %s
 
 ; RUN: opt < %s -asan -asan-module -S \
 ; RUN:     -mtriple=x86_64-unknown-freebsd \
-; RUN:     -default-data-layout="e-m:e-i64:64-f80:128-n8:16:32:64-S128" | \
+; RUN:     -data-layout="e-m:e-i64:64-f80:128-n8:16:32:64-S128" | \
 ; RUN:     FileCheck --check-prefix=CHECK-64 %s
 
 define i32 @read_4_bytes(i32* %a) sanitize_address {

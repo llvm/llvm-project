@@ -131,15 +131,6 @@ StringRef elf::getOutputSectionName(StringRef Name) {
   return Name;
 }
 
-template <class ELFT> void elf::reportDiscarded(InputSectionBase<ELFT> *IS) {
-  if (IS == In<ELFT>::ShStrTab)
-    error("discarding .shstrtab section is not allowed");
-  if (!Config->PrintGcSections)
-    return;
-  errs() << "removing unused section from '" << IS->Name << "' in file '"
-         << IS->getFile()->getName() << "'\n";
-}
-
 template <class ELFT> static bool needsInterpSection() {
   return !Symtab<ELFT>::X->getSharedFiles().empty() &&
          !Config->DynamicLinker.empty() &&
@@ -1867,8 +1858,3 @@ template bool elf::isRelroSection<ELF32LE>(const OutputSectionBase *);
 template bool elf::isRelroSection<ELF32BE>(const OutputSectionBase *);
 template bool elf::isRelroSection<ELF64LE>(const OutputSectionBase *);
 template bool elf::isRelroSection<ELF64BE>(const OutputSectionBase *);
-
-template void elf::reportDiscarded<ELF32LE>(InputSectionBase<ELF32LE> *);
-template void elf::reportDiscarded<ELF32BE>(InputSectionBase<ELF32BE> *);
-template void elf::reportDiscarded<ELF64LE>(InputSectionBase<ELF64LE> *);
-template void elf::reportDiscarded<ELF64BE>(InputSectionBase<ELF64BE> *);

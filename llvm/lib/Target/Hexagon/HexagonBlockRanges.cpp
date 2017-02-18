@@ -306,6 +306,8 @@ void HexagonBlockRanges::computeInitialLiveRanges(InstrIndexMap &IndexMap,
     LastUse[R] = LastDef[R] = IndexType::None;
   };
 
+  RegisterSet Defs, Clobbers;
+
   for (auto &In : B) {
     if (In.isDebugValue())
       continue;
@@ -324,18 +326,67 @@ void HexagonBlockRanges::computeInitialLiveRanges(InstrIndexMap &IndexMap,
           closeRange(S);
       }
     }
-    // Process defs.
+    // Process defs and clobbers.
+    Defs.clear();
+    Clobbers.clear();
     for (auto &Op : In.operands()) {
       if (!Op.isReg() || !Op.isDef() || Op.isUndef())
         continue;
       RegisterRef R = { Op.getReg(), Op.getSubReg() };
-      if (TargetRegisterInfo::isPhysicalRegister(R.Reg) && Reserved[R.Reg])
-        continue;
       for (auto S : expandToSubRegs(R, MRI, TRI)) {
-        if (LastDef[S] != IndexType::None || LastUse[S] != IndexType::None)
-          closeRange(S);
-        LastDef[S] = Index;
+        if (TargetRegisterInfo::isPhysicalRegister(S.Reg) && Reserved[S.Reg])
+          continue;
+        if (Op.isDead())
+          Clobbers.insert(S);
+        else
+          Defs.insert(S);
       }
+    }
+
+    for (auto &Op : In.operands()) {
+      if (!Op.isRegMask())
+        continue;
+      const uint32_t *BM = Op.getRegMask();
+      for (unsigned PR = 1, N = TRI.getNumRegs(); PR != N; ++PR) {
+        // Skip registers that have subregisters. A register is preserved
+        // iff its bit is set in the regmask, so if R1:0 was preserved, both
+        // R1 and R0 would also be present.
+        if (MCSubRegIterator(PR, &TRI, false).isValid())
+          continue;
+        if (Reserved[PR])
+          continue;
+        if (BM[PR/32] & (1u << (PR%32)))
+          continue;
+        RegisterRef R = { PR, 0 };
+        if (!Defs.count(R))
+          Clobbers.insert(R);
+      }
+    }
+#ifndef NDEBUG
+    for (RegisterRef R : Defs)
+      assert(!Clobbers.count(R));
+    for (RegisterRef R : Clobbers)
+      assert(!Defs.count(R));
+#endif
+    // Update maps for defs.
+    for (RegisterRef S : Defs) {
+      // Defs should already be expanded into subregs.
+      assert(!TargetRegisterInfo::isPhysicalRegister(S.Reg) ||
+             !MCSubRegIterator(S.Reg, &TRI, false).isValid());
+      if (LastDef[S] != IndexType::None || LastUse[S] != IndexType::None)
+        closeRange(S);
+      LastDef[S] = Index;
+    }
+    // Update maps for clobbers.
+    for (RegisterRef S : Clobbers) {
+      // Clobbers should already be expanded into subregs.
+      assert(!TargetRegisterInfo::isPhysicalRegister(S.Reg) ||
+             !MCSubRegIterator(S.Reg, &TRI, false).isValid());
+      if (LastDef[S] != IndexType::None || LastUse[S] != IndexType::None)
+        closeRange(S);
+      // Create a single-instruction range.
+      LastDef[S] = LastUse[S] = Index;
+      closeRange(S);
     }
   }
 

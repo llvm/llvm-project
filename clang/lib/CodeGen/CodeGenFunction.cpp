@@ -948,11 +948,6 @@ void CodeGenFunction::StartFunction(GlobalDecl GD,
       // fast register allocator would be happier...
       CXXThisValue = CXXABIThisValue;
     }
-
-    // Sanitize the 'this' pointer once per function, if it's available.
-    if (CXXThisValue)
-      EmitTypeCheck(TCK_MemberAccess, Loc, CXXThisValue,
-                    MD->getThisType(getContext()));
   }
 
   // If any of the arguments have a variably modified type, make sure to

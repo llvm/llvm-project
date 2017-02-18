@@ -177,7 +177,7 @@ public:
   void WriteFileHeader(const COFF::header &Header);
   void WriteSymbol(const COFFSymbol &S);
   void WriteAuxiliarySymbols(const COFFSymbol::AuxiliarySymbols &S);
-  void writeSectionHeader(const COFF::section &S);
+  void writeSectionHeaders();
   void WriteRelocation(const COFF::relocation &R);
   uint32_t writeSectionContents(MCAssembler &Asm, const MCAsmLayout &Layout,
                                 const MCSection &MCSec);
@@ -560,18 +560,37 @@ void WinCOFFObjectWriter::WriteAuxiliarySymbols(
   }
 }
 
-void WinCOFFObjectWriter::writeSectionHeader(const COFF::section &S) {
-  writeBytes(StringRef(S.Name, COFF::NameSize));
+// Write the section header.
+void WinCOFFObjectWriter::writeSectionHeaders() {
+  // Section numbers must be monotonically increasing in the section
+  // header, but our Sections array is not sorted by section number,
+  // so make a copy of Sections and sort it.
+  std::vector<COFFSection *> Arr;
+  for (auto &Section : Sections)
+    Arr.push_back(Section.get());
+  std::sort(Arr.begin(), Arr.end(),
+            [](const COFFSection *A, const COFFSection *B) {
+              return A->Number < B->Number;
+            });
 
-  writeLE32(S.VirtualSize);
-  writeLE32(S.VirtualAddress);
-  writeLE32(S.SizeOfRawData);
-  writeLE32(S.PointerToRawData);
-  writeLE32(S.PointerToRelocations);
-  writeLE32(S.PointerToLineNumbers);
-  writeLE16(S.NumberOfRelocations);
-  writeLE16(S.NumberOfLineNumbers);
-  writeLE32(S.Characteristics);
+  for (auto &Section : Arr) {
+    if (Section->Number == -1)
+      continue;
+
+    COFF::section &S = Section->Header;
+    if (Section->Relocations.size() >= 0xffff)
+      S.Characteristics |= COFF::IMAGE_SCN_LNK_NRELOC_OVFL;
+    writeBytes(StringRef(S.Name, COFF::NameSize));
+    writeLE32(S.VirtualSize);
+    writeLE32(S.VirtualAddress);
+    writeLE32(S.SizeOfRawData);
+    writeLE32(S.PointerToRawData);
+    writeLE32(S.PointerToRelocations);
+    writeLE32(S.PointerToLineNumbers);
+    writeLE16(S.NumberOfRelocations);
+    writeLE16(S.NumberOfLineNumbers);
+    writeLE32(S.Characteristics);
+  }
 }
 
 void WinCOFFObjectWriter::WriteRelocation(const COFF::relocation &R) {
@@ -895,14 +914,29 @@ void WinCOFFObjectWriter::createFileSymbols(MCAssembler &Asm) {
   }
 }
 
+static bool isAssociative(const COFFSection &Section) {
+  return Section.Symbol->Aux[0].Aux.SectionDefinition.Selection ==
+         COFF::IMAGE_COMDAT_SELECT_ASSOCIATIVE;
+}
+
 void WinCOFFObjectWriter::assignSectionNumbers() {
   size_t I = 1;
-  for (const auto &Section : Sections) {
-    Section->Number = I;
-    Section->Symbol->Data.SectionNumber = I;
-    Section->Symbol->Aux[0].Aux.SectionDefinition.Number = I;
+  auto Assign = [&](COFFSection &Section) {
+    Section.Number = I;
+    Section.Symbol->Data.SectionNumber = I;
+    Section.Symbol->Aux[0].Aux.SectionDefinition.Number = I;
     ++I;
-  }
+  };
+
+  // Although it is not explicitly requested by the Microsoft COFF spec,
+  // we should avoid emitting forward associative section references,
+  // because MSVC link.exe as of 2017 cannot handle that.
+  for (const std::unique_ptr<COFFSection> &Section : Sections)
+    if (!isAssociative(*Section))
+      Assign(*Section);
+  for (const std::unique_ptr<COFFSection> &Section : Sections)
+    if (isAssociative(*Section))
+      Assign(*Section);
 }
 
 // Assign file offsets to COFF object file structures.
@@ -1056,14 +1090,7 @@ void WinCOFFObjectWriter::writeObject(MCAssembler &Asm,
 
   // Write it all to disk...
   WriteFileHeader(Header);
-
-  for (auto &Section : Sections) {
-    if (Section->Number != -1) {
-      if (Section->Relocations.size() >= 0xffff)
-        Section->Header.Characteristics |= COFF::IMAGE_SCN_LNK_NRELOC_OVFL;
-      writeSectionHeader(Section->Header);
-    }
-  }
+  writeSectionHeaders();
 
   // Write section contents.
   sections::iterator I = Sections.begin();

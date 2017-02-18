@@ -2030,9 +2030,6 @@ public:
   llvm::BlockAddress *GetAddrOfLabel(const LabelDecl *L);
   llvm::BasicBlock *GetIndirectGotoBlock();
 
-  /// Check if the null check for \p ObjectPointer can be skipped.
-  static bool CanElideObjectPointerNullCheck(const Expr *ObjectPointer);
-
   /// EmitNullInitialization - Generate code to set a value of the given type to
   /// null, If the type contains data member pointers, they will be initialized
   /// to -1 in accordance with the Itanium C++ ABI.

@@ -1,4 +1,4 @@
-//===-- LiveIntervalUnion.h - Live interval union data struct --*- C++ -*--===//
+//===- LiveIntervalUnion.h - Live interval union data struct ---*- C++ -*--===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -18,7 +18,11 @@
 #define LLVM_CODEGEN_LIVEINTERVALUNION_H
 
 #include "llvm/ADT/IntervalMap.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/LiveInterval.h"
+#include "llvm/CodeGen/SlotIndexes.h"
+#include <cassert>
+#include <limits>
 
 namespace llvm {
 
@@ -56,14 +60,12 @@ public:
   // LiveIntervalUnions share an external allocator.
   typedef LiveSegments::Allocator Allocator;
 
-  class Query;
-
 private:
-  unsigned Tag;           // unique tag for current contents.
+  unsigned Tag = 0;       // unique tag for current contents.
   LiveSegments Segments;  // union of virtual reg segments
 
 public:
-  explicit LiveIntervalUnion(Allocator &a) : Tag(0), Segments(a) {}
+  explicit LiveIntervalUnion(Allocator &a) : Segments(a) {}
 
   // Iterate over all segments in the union of live virtual registers ordered
   // by their starting position.
@@ -109,23 +111,23 @@ public:
   /// Query interferences between a single live virtual register and a live
   /// interval union.
   class Query {
-    LiveIntervalUnion *LiveUnion;
-    LiveInterval *VirtReg;
+    LiveIntervalUnion *LiveUnion = nullptr;
+    LiveInterval *VirtReg = nullptr;
     LiveInterval::iterator VirtRegI; // current position in VirtReg
     SegmentIter LiveUnionI;          // current position in LiveUnion
     SmallVector<LiveInterval*,4> InterferingVRegs;
-    bool CheckedFirstInterference;
-    bool SeenAllInterferences;
-    bool SeenUnspillableVReg;
-    unsigned Tag, UserTag;
+    bool CheckedFirstInterference = false;
+    bool SeenAllInterferences = false;
+    bool SeenUnspillableVReg = false;
+    unsigned Tag = 0;
+    unsigned UserTag = 0;
 
   public:
-    Query(): LiveUnion(), VirtReg(), Tag(0), UserTag(0) {}
-
+    Query() = default;
     Query(LiveInterval *VReg, LiveIntervalUnion *LIU):
-      LiveUnion(LIU), VirtReg(VReg), CheckedFirstInterference(false),
-      SeenAllInterferences(false), SeenUnspillableVReg(false)
-    {}
+      LiveUnion(LIU), VirtReg(VReg) {}
+    Query(const Query &) = delete;
+    Query &operator=(const Query &) = delete;
 
     void clear() {
       LiveUnion = nullptr;
@@ -162,7 +164,8 @@ public:
 
     // Count the virtual registers in this union that interfere with this
     // query's live virtual register, up to maxInterferingRegs.
-    unsigned collectInterferingVRegs(unsigned MaxInterferingRegs = UINT_MAX);
+    unsigned collectInterferingVRegs(
+        unsigned MaxInterferingRegs = std::numeric_limits<unsigned>::max());
 
     // Was this virtual register visited during collectInterferingVRegs?
     bool isSeenInterference(LiveInterval *VReg) const;
@@ -177,18 +180,15 @@ public:
     const SmallVectorImpl<LiveInterval*> &interferingVRegs() const {
       return InterferingVRegs;
     }
-
-  private:
-    Query(const Query&) = delete;
-    void operator=(const Query&) = delete;
   };
 
   // Array of LiveIntervalUnions.
   class Array {
-    unsigned Size;
-    LiveIntervalUnion *LIUs;
+    unsigned Size = 0;
+    LiveIntervalUnion *LIUs = nullptr;
+
   public:
-    Array() : Size(0), LIUs(nullptr) {}
+    Array() = default;
     ~Array() { clear(); }
 
     // Initialize the array to have Size entries.
@@ -213,4 +213,4 @@ public:
 
 } // end namespace llvm
 
-#endif // !defined(LLVM_CODEGEN_LIVEINTERVALUNION_H)
+#endif // LLVM_CODEGEN_LIVEINTERVALUNION_H

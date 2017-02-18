@@ -1472,6 +1472,23 @@ bool CXXRecordDecl::mayBeAbstract() const {
   return false;
 }
 
+void CXXDeductionGuideDecl::anchor() { }
+
+CXXDeductionGuideDecl *CXXDeductionGuideDecl::Create(
+    ASTContext &C, DeclContext *DC, SourceLocation StartLoc, bool IsExplicit,
+    const DeclarationNameInfo &NameInfo, QualType T, TypeSourceInfo *TInfo,
+    SourceLocation EndLocation) {
+  return new (C, DC) CXXDeductionGuideDecl(C, DC, StartLoc, IsExplicit,
+                                           NameInfo, T, TInfo, EndLocation);
+}
+
+CXXDeductionGuideDecl *CXXDeductionGuideDecl::CreateDeserialized(ASTContext &C,
+                                                                 unsigned ID) {
+  return new (C, ID) CXXDeductionGuideDecl(C, nullptr, SourceLocation(), false,
+                                           DeclarationNameInfo(), QualType(),
+                                           nullptr, SourceLocation());
+}
+
 void CXXMethodDecl::anchor() { }
 
 bool CXXMethodDecl::isStatic() const {

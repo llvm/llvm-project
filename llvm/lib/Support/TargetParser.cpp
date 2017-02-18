@@ -448,6 +448,8 @@ bool llvm::AArch64::getExtensionFeatures(unsigned Extensions,
     Features.push_back("+spe");
   if (Extensions & AArch64::AEK_RAS)
     Features.push_back("+ras");
+  if (Extensions & AArch64::AEK_LSE)
+    Features.push_back("+lse");
 
   return true;
 }

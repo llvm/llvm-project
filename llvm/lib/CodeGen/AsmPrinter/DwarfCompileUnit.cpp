@@ -522,22 +522,19 @@ DIE *DwarfCompileUnit::constructVariableDIEImpl(const DbgVariable &DV,
   }
 
   // .. else use frame index.
-  if (DV.getFrameIndex().empty())
+  if (!DV.hasFrameIndexExprs())
     return VariableDie;
 
-  auto Expr = DV.getExpression().begin();
   DIELoc *Loc = new (DIEValueAllocator) DIELoc;
   DIEDwarfExpression DwarfExpr(*Asm, *this, *Loc);
-  for (auto FI : DV.getFrameIndex()) {
+  for (auto &Fragment : DV.getFrameIndexExprs()) {
     unsigned FrameReg = 0;
     const TargetFrameLowering *TFI = Asm->MF->getSubtarget().getFrameLowering();
-    int Offset = TFI->getFrameIndexReference(*Asm->MF, FI, FrameReg);
-    assert(Expr != DV.getExpression().end() && "Wrong number of expressions");
-    DwarfExpr.addFragmentOffset(*Expr);
+    int Offset = TFI->getFrameIndexReference(*Asm->MF, Fragment.FI, FrameReg);
+    DwarfExpr.addFragmentOffset(Fragment.Expr);
     DwarfExpr.AddMachineRegIndirect(*Asm->MF->getSubtarget().getRegisterInfo(),
                                     FrameReg, Offset);
-    DwarfExpr.AddExpression(*Expr);
-    ++Expr;
+    DwarfExpr.AddExpression(Fragment.Expr);
   }
   addBlock(*VariableDie, dwarf::DW_AT_location, DwarfExpr.finalize());
 

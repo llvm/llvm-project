@@ -1121,28 +1121,10 @@ multiclass T2I_st<bits<2> opcod, string opc,
 
 /// T2I_ext_rrot - A unary operation with two forms: one whose operand is a
 /// register and one whose operand is a register rotated by 8/16/24.
-class T2I_ext_rrot<bits<3> opcod, string opc, PatFrag opnode>
-  : T2TwoReg<(outs rGPR:$Rd), (ins rGPR:$Rm, rot_imm:$rot), IIC_iEXTr,
-             opc, ".w\t$Rd, $Rm$rot",
-             [(set rGPR:$Rd, (opnode (rotr rGPR:$Rm, rot_imm:$rot)))]>,
-             Requires<[IsThumb2]> {
-   let Inst{31-27} = 0b11111;
-   let Inst{26-23} = 0b0100;
-   let Inst{22-20} = opcod;
-   let Inst{19-16} = 0b1111; // Rn
-   let Inst{15-12} = 0b1111;
-   let Inst{7} = 1;
-
-   bits<2> rot;
-   let Inst{5-4} = rot{1-0}; // rotate
-}
-
-// UXTB16 - Requres T2ExtractPack, does not need the .w qualifier.
-class T2I_ext_rrot_uxtb16<bits<3> opcod, string opc, PatFrag opnode>
-  : T2TwoReg<(outs rGPR:$Rd), (ins rGPR:$Rm, rot_imm:$rot),
-             IIC_iEXTr, opc, "\t$Rd, $Rm$rot",
-            [(set rGPR:$Rd, (opnode (rotr rGPR:$Rm, rot_imm:$rot)))]>,
-          Requires<[HasT2ExtractPack, IsThumb2]> {
+class T2I_ext_rrot_base<bits<3> opcod, dag iops, dag oops,
+                        string opc, string oprs,
+                        list<dag> pattern>
+  : T2TwoReg<iops, oops, IIC_iEXTr, opc, oprs, pattern> {
   bits<2> rot;
   let Inst{31-27} = 0b11111;
   let Inst{26-23} = 0b0100;
@@ -1150,46 +1132,31 @@ class T2I_ext_rrot_uxtb16<bits<3> opcod, string opc, PatFrag opnode>
   let Inst{19-16} = 0b1111; // Rn
   let Inst{15-12} = 0b1111;
   let Inst{7} = 1;
-  let Inst{5-4} = rot;
+  let Inst{5-4} = rot; // rotate
 }
 
-// SXTB16 - Requres T2ExtractPack, does not need the .w qualifier, no pattern
-// supported yet.
-class T2I_ext_rrot_sxtb16<bits<3> opcod, string opc>
-  : T2TwoReg<(outs rGPR:$Rd), (ins rGPR:$Rm, rot_imm:$rot), IIC_iEXTr,
-             opc, "\t$Rd, $Rm$rot", []>,
-          Requires<[IsThumb2, HasT2ExtractPack]> {
-  bits<2> rot;
-  let Inst{31-27} = 0b11111;
-  let Inst{26-23} = 0b0100;
-  let Inst{22-20} = opcod;
-  let Inst{19-16} = 0b1111; // Rn
-  let Inst{15-12} = 0b1111;
-  let Inst{7} = 1;
-  let Inst{5-4} = rot;
-}
+class T2I_ext_rrot<bits<3> opcod, string opc>
+  : T2I_ext_rrot_base<opcod,
+                      (outs rGPR:$Rd),
+                      (ins rGPR:$Rm, rot_imm:$rot),
+                      opc, ".w\t$Rd, $Rm$rot", []>,
+                      Requires<[IsThumb2]>;
+
+// UXTB16, SXTB16 - Requires HasDSP, does not need the .w qualifier.
+class T2I_ext_rrot_xtb16<bits<3> opcod, string opc>
+  : T2I_ext_rrot_base<opcod,
+                      (outs rGPR:$Rd),
+                      (ins rGPR:$Rm, rot_imm:$rot),
+                      opc, "\t$Rd, $Rm$rot", []>,
+                      Requires<[HasDSP, IsThumb2]>;
 
 /// T2I_exta_rrot - A binary operation with two forms: one whose operand is a
 /// register and one whose operand is a register rotated by 8/16/24.
-class T2I_exta_rrot<bits<3> opcod, string opc, PatFrag opnode>
+class T2I_exta_rrot<bits<3> opcod, string opc>
   : T2ThreeReg<(outs rGPR:$Rd),
                (ins rGPR:$Rn, rGPR:$Rm, rot_imm:$rot),
-               IIC_iEXTAsr, opc, "\t$Rd, $Rn, $Rm$rot",
-             [(set rGPR:$Rd, (opnode rGPR:$Rn, (rotr rGPR:$Rm,rot_imm:$rot)))]>,
-           Requires<[HasT2ExtractPack, IsThumb2]> {
-  bits<2> rot;
-  let Inst{31-27} = 0b11111;
-  let Inst{26-23} = 0b0100;
-  let Inst{22-20} = opcod;
-  let Inst{15-12} = 0b1111;
-  let Inst{7} = 1;
-  let Inst{5-4} = rot;
-}
-
-class T2I_exta_rrot_np<bits<3> opcod, string opc>
-  : T2ThreeReg<(outs rGPR:$Rd), (ins rGPR:$Rn, rGPR:$Rm,rot_imm:$rot),
                IIC_iEXTAsr, opc, "\t$Rd, $Rn, $Rm$rot", []>,
-               Requires<[HasT2ExtractPack, IsThumb2]> {
+               Requires<[HasDSP, IsThumb2]> {
   bits<2> rot;
   let Inst{31-27} = 0b11111;
   let Inst{26-23} = 0b0100;
@@ -1969,31 +1936,39 @@ def : T2Pat<(or rGPR:$src, 0xffff0000), (t2MOVTi16 rGPR:$src, 0xffff)>;
 
 // Sign extenders
 
-def t2SXTB  : T2I_ext_rrot<0b100, "sxtb",
-                              UnOpFrag<(sext_inreg node:$Src, i8)>>;
-def t2SXTH  : T2I_ext_rrot<0b000, "sxth",
-                              UnOpFrag<(sext_inreg node:$Src, i16)>>;
-def t2SXTB16 : T2I_ext_rrot_sxtb16<0b010, "sxtb16">;
+def t2SXTB  : T2I_ext_rrot<0b100, "sxtb">;
+def t2SXTH  : T2I_ext_rrot<0b000, "sxth">;
+def t2SXTB16 : T2I_ext_rrot_xtb16<0b010, "sxtb16">;
 
-def t2SXTAB : T2I_exta_rrot<0b100, "sxtab",
-                        BinOpFrag<(add node:$LHS, (sext_inreg node:$RHS, i8))>>;
-def t2SXTAH : T2I_exta_rrot<0b000, "sxtah",
-                        BinOpFrag<(add node:$LHS, (sext_inreg node:$RHS,i16))>>;
-def t2SXTAB16 : T2I_exta_rrot_np<0b010, "sxtab16">;
+def t2SXTAB : T2I_exta_rrot<0b100, "sxtab">;
+def t2SXTAH : T2I_exta_rrot<0b000, "sxtah">;
+def t2SXTAB16 : T2I_exta_rrot<0b010, "sxtab16">;
+
+def : T2Pat<(sext_inreg (rotr rGPR:$Rn, rot_imm:$rot), i8),
+            (t2SXTB rGPR:$Rn, rot_imm:$rot)>;
+def : T2Pat<(sext_inreg (rotr rGPR:$Rn, rot_imm:$rot), i16),
+            (t2SXTH rGPR:$Rn, rot_imm:$rot)>;
+def : Thumb2DSPPat<(add rGPR:$Rn,
+                            (sext_inreg (rotr rGPR:$Rm, rot_imm:$rot), i8)),
+            (t2SXTAB rGPR:$Rn, rGPR:$Rm, rot_imm:$rot)>;
+def : Thumb2DSPPat<(add rGPR:$Rn,
+                            (sext_inreg (rotr rGPR:$Rm, rot_imm:$rot), i16)),
+            (t2SXTAH rGPR:$Rn, rGPR:$Rm, rot_imm:$rot)>;
+
 
 // A simple right-shift can also be used in most cases (the exception is the
 // SXTH operations with a rotate of 24: there the non-contiguous bits are
 // relevant).
-def : Thumb2ExtractPat<(add rGPR:$Rn, (sext_inreg
+def : Thumb2DSPPat<(add rGPR:$Rn, (sext_inreg
                                         (srl rGPR:$Rm, rot_imm:$rot), i8)),
                        (t2SXTAB rGPR:$Rn, rGPR:$Rm, rot_imm:$rot)>;
-def : Thumb2ExtractPat<(add rGPR:$Rn, (sext_inreg
+def : Thumb2DSPPat<(add rGPR:$Rn, (sext_inreg
                                         (srl rGPR:$Rm, imm8_or_16:$rot), i16)),
                        (t2SXTAH rGPR:$Rn, rGPR:$Rm, rot_imm:$rot)>;
-def : Thumb2ExtractPat<(add rGPR:$Rn, (sext_inreg
+def : Thumb2DSPPat<(add rGPR:$Rn, (sext_inreg
                                         (rotr rGPR:$Rm, (i32 24)), i16)),
                        (t2SXTAH rGPR:$Rn, rGPR:$Rm, (i32 3))>;
-def : Thumb2ExtractPat<(add rGPR:$Rn, (sext_inreg
+def : Thumb2DSPPat<(add rGPR:$Rn, (sext_inreg
                                         (or (srl rGPR:$Rm, (i32 24)),
                                               (shl rGPR:$Rm, (i32 8))), i16)),
                        (t2SXTAH rGPR:$Rn, rGPR:$Rm, (i32 3))>;
@@ -2001,12 +1976,16 @@ def : Thumb2ExtractPat<(add rGPR:$Rn, (sext_inreg
 // Zero extenders
 
 let AddedComplexity = 16 in {
-def t2UXTB   : T2I_ext_rrot<0b101, "uxtb",
-                               UnOpFrag<(and node:$Src, 0x000000FF)>>;
-def t2UXTH   : T2I_ext_rrot<0b001, "uxth",
-                               UnOpFrag<(and node:$Src, 0x0000FFFF)>>;
-def t2UXTB16 : T2I_ext_rrot_uxtb16<0b011, "uxtb16",
-                                   UnOpFrag<(and node:$Src, 0x00FF00FF)>>;
+def t2UXTB   : T2I_ext_rrot<0b101, "uxtb">;
+def t2UXTH   : T2I_ext_rrot<0b001, "uxth">;
+def t2UXTB16 : T2I_ext_rrot_xtb16<0b011, "uxtb16">;
+
+def : Thumb2DSPPat<(and (rotr rGPR:$Rm, rot_imm:$rot), 0x000000FF),
+                       (t2UXTB rGPR:$Rm, rot_imm:$rot)>;
+def : Thumb2DSPPat<(and (rotr rGPR:$Rm, rot_imm:$rot), 0x0000FFFF),
+                       (t2UXTH rGPR:$Rm, rot_imm:$rot)>;
+def : Thumb2DSPPat<(and (rotr rGPR:$Rm, rot_imm:$rot), 0x00FF00FF),
+                       (t2UXTB16 rGPR:$Rm, rot_imm:$rot)>;
 
 // FIXME: This pattern incorrectly assumes the shl operator is a rotate.
 //        The transformation should probably be done as a combiner action
@@ -2014,21 +1993,25 @@ def t2UXTB16 : T2I_ext_rrot_uxtb16<0b011, "uxtb16",
 //        eight bits of the source into the lower eight bits of the result.
 //def : T2Pat<(and (shl rGPR:$Src, (i32 8)), 0xFF00FF),
 //            (t2UXTB16 rGPR:$Src, 3)>,
-//          Requires<[HasT2ExtractPack, IsThumb2]>;
+//          Requires<[HasDSP, IsThumb2]>;
 def : T2Pat<(and (srl rGPR:$Src, (i32 8)), 0xFF00FF),
             (t2UXTB16 rGPR:$Src, 1)>,
-        Requires<[HasT2ExtractPack, IsThumb2]>;
+        Requires<[HasDSP, IsThumb2]>;
 
-def t2UXTAB : T2I_exta_rrot<0b101, "uxtab",
-                           BinOpFrag<(add node:$LHS, (and node:$RHS, 0x00FF))>>;
-def t2UXTAH : T2I_exta_rrot<0b001, "uxtah",
-                           BinOpFrag<(add node:$LHS, (and node:$RHS, 0xFFFF))>>;
-def t2UXTAB16 : T2I_exta_rrot_np<0b011, "uxtab16">;
+def t2UXTAB : T2I_exta_rrot<0b101, "uxtab">;
+def t2UXTAH : T2I_exta_rrot<0b001, "uxtah">;
+def t2UXTAB16 : T2I_exta_rrot<0b011, "uxtab16">;
 
-def : Thumb2ExtractPat<(add rGPR:$Rn, (and (srl rGPR:$Rm, rot_imm:$rot),
+def : Thumb2DSPPat<(add rGPR:$Rn, (and (rotr rGPR:$Rm, rot_imm:$rot),
+                                            0x00FF)),
+                       (t2UXTAB rGPR:$Rn, rGPR:$Rm, rot_imm:$rot)>;
+def : Thumb2DSPPat<(add rGPR:$Rn, (and (rotr rGPR:$Rm, rot_imm:$rot),
+                                            0xFFFF)),
+                       (t2UXTAH rGPR:$Rn, rGPR:$Rm, rot_imm:$rot)>;
+def : Thumb2DSPPat<(add rGPR:$Rn, (and (srl rGPR:$Rm, rot_imm:$rot),
                                            0xFF)),
                        (t2UXTAB rGPR:$Rn, rGPR:$Rm, rot_imm:$rot)>;
-def : Thumb2ExtractPat<(add rGPR:$Rn, (and (srl rGPR:$Rm, imm8_or_16:$rot),
+def : Thumb2DSPPat<(add rGPR:$Rn, (and (srl rGPR:$Rm, imm8_or_16:$rot),
                                             0xFFFF)),
                        (t2UXTAH rGPR:$Rn, rGPR:$Rm, rot_imm:$rot)>;
 }
@@ -2819,7 +2802,7 @@ def t2PKHBT : T2ThreeReg<
                   [(set rGPR:$Rd, (or (and rGPR:$Rn, 0xFFFF),
                                       (and (shl rGPR:$Rm, pkh_lsl_amt:$sh),
                                            0xFFFF0000)))]>,
-                  Requires<[HasT2ExtractPack, IsThumb2]>,
+                  Requires<[HasDSP, IsThumb2]>,
                   Sched<[WriteALUsi, ReadALU]> {
   let Inst{31-27} = 0b11101;
   let Inst{26-25} = 0b01;
@@ -2835,10 +2818,10 @@ def t2PKHBT : T2ThreeReg<
 // Alternate cases for PKHBT where identities eliminate some nodes.
 def : T2Pat<(or (and rGPR:$src1, 0xFFFF), (and rGPR:$src2, 0xFFFF0000)),
             (t2PKHBT rGPR:$src1, rGPR:$src2, 0)>,
-            Requires<[HasT2ExtractPack, IsThumb2]>;
+            Requires<[HasDSP, IsThumb2]>;
 def : T2Pat<(or (and rGPR:$src1, 0xFFFF), (shl rGPR:$src2, imm16_31:$sh)),
             (t2PKHBT rGPR:$src1, rGPR:$src2, imm16_31:$sh)>,
-            Requires<[HasT2ExtractPack, IsThumb2]>;
+            Requires<[HasDSP, IsThumb2]>;
 
 // Note: Shifts of 1-15 bits will be transformed to srl instead of sra and
 // will match the pattern below.
@@ -2848,7 +2831,7 @@ def t2PKHTB : T2ThreeReg<
                   [(set rGPR:$Rd, (or (and rGPR:$Rn, 0xFFFF0000),
                                        (and (sra rGPR:$Rm, pkh_asr_amt:$sh),
                                             0xFFFF)))]>,
-                  Requires<[HasT2ExtractPack, IsThumb2]>,
+                  Requires<[HasDSP, IsThumb2]>,
                   Sched<[WriteALUsi, ReadALU]> {
   let Inst{31-27} = 0b11101;
   let Inst{26-25} = 0b01;
@@ -2867,14 +2850,14 @@ def t2PKHTB : T2ThreeReg<
 // pkhtb src1, src2, asr (17..31).
 def : T2Pat<(or (and rGPR:$src1, 0xFFFF0000), (srl rGPR:$src2, imm16:$sh)),
             (t2PKHTB rGPR:$src1, rGPR:$src2, imm16:$sh)>,
-            Requires<[HasT2ExtractPack, IsThumb2]>;
+            Requires<[HasDSP, IsThumb2]>;
 def : T2Pat<(or (and rGPR:$src1, 0xFFFF0000), (sra rGPR:$src2, imm16_31:$sh)),
             (t2PKHTB rGPR:$src1, rGPR:$src2, imm16_31:$sh)>,
-            Requires<[HasT2ExtractPack, IsThumb2]>;
+            Requires<[HasDSP, IsThumb2]>;
 def : T2Pat<(or (and rGPR:$src1, 0xFFFF0000),
                 (and (srl rGPR:$src2, imm1_15:$sh), 0xFFFF)),
             (t2PKHTB rGPR:$src1, rGPR:$src2, imm1_15:$sh)>,
-            Requires<[HasT2ExtractPack, IsThumb2]>;
+            Requires<[HasDSP, IsThumb2]>;
 
 //===----------------------------------------------------------------------===//
 // CRC32 Instructions
@@ -4216,13 +4199,13 @@ def : T2Pat<(and rGPR:$Rm, 0x000000FF), (t2UXTB rGPR:$Rm, 0)>,
 def : T2Pat<(and rGPR:$Rm, 0x0000FFFF), (t2UXTH rGPR:$Rm, 0)>,
            Requires<[IsThumb2]>;
 def : T2Pat<(and rGPR:$Rm, 0x00FF00FF), (t2UXTB16 rGPR:$Rm, 0)>,
-           Requires<[HasT2ExtractPack, IsThumb2]>;
+           Requires<[HasDSP, IsThumb2]>;
 def : T2Pat<(add rGPR:$Rn, (and rGPR:$Rm, 0x00FF)),
             (t2UXTAB rGPR:$Rn, rGPR:$Rm, 0)>,
-           Requires<[HasT2ExtractPack, IsThumb2]>;
+           Requires<[HasDSP, IsThumb2]>;
 def : T2Pat<(add rGPR:$Rn, (and rGPR:$Rm, 0xFFFF)),
             (t2UXTAH rGPR:$Rn, rGPR:$Rm, 0)>,
-           Requires<[HasT2ExtractPack, IsThumb2]>;
+           Requires<[HasDSP, IsThumb2]>;
 }
 
 def : T2Pat<(sext_inreg rGPR:$Src, i8),  (t2SXTB rGPR:$Src, 0)>,
@@ -4231,10 +4214,10 @@ def : T2Pat<(sext_inreg rGPR:$Src, i16), (t2SXTH rGPR:$Src, 0)>,
            Requires<[IsThumb2]>;
 def : T2Pat<(add rGPR:$Rn, (sext_inreg rGPR:$Rm, i8)),
             (t2SXTAB rGPR:$Rn, rGPR:$Rm, 0)>,
-           Requires<[HasT2ExtractPack, IsThumb2]>;
+           Requires<[HasDSP, IsThumb2]>;
 def : T2Pat<(add rGPR:$Rn, (sext_inreg rGPR:$Rm, i16)),
             (t2SXTAH rGPR:$Rn, rGPR:$Rm, 0)>,
-           Requires<[HasT2ExtractPack, IsThumb2]>;
+           Requires<[HasDSP, IsThumb2]>;
 
 // Atomic load/store patterns
 def : T2Pat<(atomic_load_8   t2addrmode_imm12:$addr),
@@ -4431,10 +4414,10 @@ def : t2InstAlias<"mvn${s}${p} $Rd, $ShiftedRm",
 // input operands swapped when the shift amount is zero (i.e., unspecified).
 def : InstAlias<"pkhbt${p} $Rd, $Rn, $Rm",
                 (t2PKHBT rGPR:$Rd, rGPR:$Rn, rGPR:$Rm, 0, pred:$p), 0>,
-            Requires<[HasT2ExtractPack, IsThumb2]>;
+            Requires<[HasDSP, IsThumb2]>;
 def : InstAlias<"pkhtb${p} $Rd, $Rn, $Rm",
                 (t2PKHBT rGPR:$Rd, rGPR:$Rm, rGPR:$Rn, 0, pred:$p), 0>,
-            Requires<[HasT2ExtractPack, IsThumb2]>;
+            Requires<[HasDSP, IsThumb2]>;
 
 // PUSH/POP aliases for STM/LDM
 def : t2InstAlias<"push${p}.w $regs", (t2STMDB_UPD SP, pred:$p, reglist:$regs)>;
@@ -4513,16 +4496,16 @@ def : t2InstAlias<"strh${p} $Rt, $addr",
 // Extend instruction optional rotate operand.
 def : InstAlias<"sxtab${p} $Rd, $Rn, $Rm",
               (t2SXTAB rGPR:$Rd, rGPR:$Rn, rGPR:$Rm, 0, pred:$p), 0>,
-              Requires<[HasT2ExtractPack, IsThumb2]>;
+              Requires<[HasDSP, IsThumb2]>;
 def : InstAlias<"sxtah${p} $Rd, $Rn, $Rm",
               (t2SXTAH rGPR:$Rd, rGPR:$Rn, rGPR:$Rm, 0, pred:$p), 0>,
-              Requires<[HasT2ExtractPack, IsThumb2]>;
+              Requires<[HasDSP, IsThumb2]>;
 def : InstAlias<"sxtab16${p} $Rd, $Rn, $Rm",
               (t2SXTAB16 rGPR:$Rd, rGPR:$Rn, rGPR:$Rm, 0, pred:$p), 0>,
-              Requires<[HasT2ExtractPack, IsThumb2]>;
+              Requires<[HasDSP, IsThumb2]>;
 def : InstAlias<"sxtb16${p} $Rd, $Rm",
               (t2SXTB16 rGPR:$Rd, rGPR:$Rm, 0, pred:$p), 0>,
-              Requires<[HasT2ExtractPack, IsThumb2]>;
+              Requires<[HasDSP, IsThumb2]>;
 
 def : t2InstAlias<"sxtb${p} $Rd, $Rm",
                 (t2SXTB rGPR:$Rd, rGPR:$Rm, 0, pred:$p)>;
@@ -4535,16 +4518,16 @@ def : t2InstAlias<"sxth${p}.w $Rd, $Rm",
 
 def : InstAlias<"uxtab${p} $Rd, $Rn, $Rm",
               (t2UXTAB rGPR:$Rd, rGPR:$Rn, rGPR:$Rm, 0, pred:$p), 0>,
-              Requires<[HasT2ExtractPack, IsThumb2]>;
+              Requires<[HasDSP, IsThumb2]>;
 def : InstAlias<"uxtah${p} $Rd, $Rn, $Rm",
               (t2UXTAH rGPR:$Rd, rGPR:$Rn, rGPR:$Rm, 0, pred:$p), 0>,
-              Requires<[HasT2ExtractPack, IsThumb2]>;
+              Requires<[HasDSP, IsThumb2]>;
 def : InstAlias<"uxtab16${p} $Rd, $Rn, $Rm",
               (t2UXTAB16 rGPR:$Rd, rGPR:$Rn, rGPR:$Rm, 0, pred:$p), 0>,
-              Requires<[HasT2ExtractPack, IsThumb2]>;
+              Requires<[HasDSP, IsThumb2]>;
 def : InstAlias<"uxtb16${p} $Rd, $Rm",
               (t2UXTB16 rGPR:$Rd, rGPR:$Rm, 0, pred:$p), 0>,
-              Requires<[HasT2ExtractPack, IsThumb2]>;
+              Requires<[HasDSP, IsThumb2]>;
 
 def : t2InstAlias<"uxtb${p} $Rd, $Rm",
                 (t2UXTB rGPR:$Rd, rGPR:$Rm, 0, pred:$p)>;
@@ -4560,7 +4543,7 @@ def : t2InstAlias<"uxtb${p} $Rd, $Rm$rot",
                   (t2UXTB rGPR:$Rd, rGPR:$Rm, rot_imm:$rot, pred:$p)>;
 def : InstAlias<"uxtb16${p} $Rd, $Rm$rot",
                 (t2UXTB16 rGPR:$Rd, rGPR:$Rm, rot_imm:$rot, pred:$p), 0>,
-                Requires<[HasT2ExtractPack, IsThumb2]>;
+                Requires<[HasDSP, IsThumb2]>;
 def : t2InstAlias<"uxth${p} $Rd, $Rm$rot",
                   (t2UXTH rGPR:$Rd, rGPR:$Rm, rot_imm:$rot, pred:$p)>;
 
@@ -4568,7 +4551,7 @@ def : t2InstAlias<"sxtb${p} $Rd, $Rm$rot",
                   (t2SXTB rGPR:$Rd, rGPR:$Rm, rot_imm:$rot, pred:$p)>;
 def : InstAlias<"sxtb16${p} $Rd, $Rm$rot",
                 (t2SXTB16 rGPR:$Rd, rGPR:$Rm, rot_imm:$rot, pred:$p), 0>,
-                Requires<[HasT2ExtractPack, IsThumb2]>;
+                Requires<[HasDSP, IsThumb2]>;
 def : t2InstAlias<"sxth${p} $Rd, $Rm$rot",
                   (t2SXTH rGPR:$Rd, rGPR:$Rm, rot_imm:$rot, pred:$p)>;
 

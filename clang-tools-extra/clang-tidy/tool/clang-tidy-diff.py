@@ -55,6 +55,8 @@ def main():
                       help='checks filter, when not specified, use clang-tidy '
                       'default',
                       default='')
+  parser.add_argument('-path', dest='build_path',
+                      help='Path used to read a compile command database.')
   parser.add_argument('-extra-arg', dest='extra_arg',
                       action='append', default=[],
                       help='Additional argument to append to the compiler '
@@ -124,6 +126,8 @@ def main():
     command.append('-checks=' + quote + args.checks + quote)
   if args.quiet:
     command.append('-quiet')
+  if args.build_path is not None:
+    command.append('-p=%s' % args.build_path)
   command.extend(lines_by_file.keys())
   for arg in args.extra_arg:
       command.append('-extra-arg=%s' % arg)
