@@ -8,7 +8,7 @@
 
 ; "TO" - Optimizations and targetdata. This tests target-dependent
 ; folding in the optimizers.
-; RUN: opt -S -o - -instcombine -globalopt -default-data-layout="e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64" < %s | FileCheck --check-prefix=TO %s
+; RUN: opt -S -o - -instcombine -globalopt -data-layout="e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64" < %s | FileCheck --check-prefix=TO %s
 
 ; "SCEV" - ScalarEvolution with default target layout
 ; RUN: opt -analyze -scalar-evolution < %s | FileCheck --check-prefix=SCEV %s

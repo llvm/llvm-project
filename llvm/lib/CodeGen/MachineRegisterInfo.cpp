@@ -1,4 +1,4 @@
-//===-- lib/Codegen/MachineRegisterInfo.cpp -------------------------------===//
+//===- lib/Codegen/MachineRegisterInfo.cpp --------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -11,13 +11,27 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/ADT/iterator_range.h"
+#include "llvm/CodeGen/LowLevelType.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/IR/Attributes.h"
+#include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Function.h"
-#include "llvm/Support/raw_os_ostream.h"
+#include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetInstrInfo.h"
-#include "llvm/Target/TargetMachine.h"
+#include "llvm/Target/TargetRegisterInfo.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
+#include <cassert>
 
 using namespace llvm;
 
@@ -28,9 +42,8 @@ static cl::opt<bool> EnableSubRegLiveness("enable-subreg-liveness", cl::Hidden,
 void MachineRegisterInfo::Delegate::anchor() {}
 
 MachineRegisterInfo::MachineRegisterInfo(MachineFunction *MF)
-    : MF(MF), TheDelegate(nullptr),
-      TracksSubRegLiveness(MF->getSubtarget().enableSubRegLiveness() &&
-                           EnableSubRegLiveness) {
+    : MF(MF), TracksSubRegLiveness(MF->getSubtarget().enableSubRegLiveness() &&
+                                   EnableSubRegLiveness) {
   unsigned NumRegs = getTargetRegisterInfo()->getNumRegs();
   VRegInfo.reserve(256);
   RegAllocHints.reserve(256);

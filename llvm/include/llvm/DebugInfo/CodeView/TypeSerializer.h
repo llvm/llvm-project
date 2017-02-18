@@ -109,7 +109,7 @@ private:
   Error visitKnownMemberImpl(CVMemberRecord &CVR, RecordType &Record) {
     assert(CVR.Kind == static_cast<TypeLeafKind>(Record.getKind()));
 
-    if (auto EC = Writer.writeEnum(CVR.Kind))
+    if (auto EC = Writer.writeEnum(CVR.Kind, llvm::support::little))
       return EC;
 
     if (auto EC = Mapping.visitKnownMember(CVR, Record))

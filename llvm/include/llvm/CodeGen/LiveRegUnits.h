@@ -17,6 +17,9 @@
 
 #include "llvm/ADT/BitVector.h"
 #include "llvm/Target/TargetRegisterInfo.h"
+#include "llvm/MC/LaneBitmask.h"
+#include "llvm/MC/MCRegisterInfo.h"
+#include <cstdint>
 
 namespace llvm {
 
@@ -25,12 +28,12 @@ class MachineBasicBlock;
 
 /// A set of register units used to track register liveness.
 class LiveRegUnits {
-  const TargetRegisterInfo *TRI;
+  const TargetRegisterInfo *TRI = nullptr;
   BitVector Units;
 
 public:
   /// Constructs a new empty LiveRegUnits set.
-  LiveRegUnits() : TRI(nullptr) {}
+  LiveRegUnits() = default;
 
   /// Constructs and initialize an empty LiveRegUnits set.
   LiveRegUnits(const TargetRegisterInfo &TRI) {
@@ -120,6 +123,6 @@ public:
   }
 };
 
-} // namespace llvm
+} // end namespace llvm
 
-#endif
+#endif // LLVM_CODEGEN_LIVEREGUNITS_H

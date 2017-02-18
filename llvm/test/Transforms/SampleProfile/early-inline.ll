@@ -41,8 +41,8 @@ declare i32 @__gxx_personality_v0(...)
 !1 = !DIFile(filename: "a", directory: "b/")
 !3 = !{i32 2, !"Dwarf Version", i32 4}
 !4 = !{i32 2, !"Debug Info Version", i32 3}
-!6 = distinct !DISubprogram(linkageName: "_Z3foov", scope: !1, line: 5, scopeLine: 5, unit: !0)
+!6 = distinct !DISubprogram(linkageName: "_Z3foov", scope: !1, file: !1, line: 5, scopeLine: 5, unit: !0)
 !9 = !DILocation(line: 6, column: 3, scope: !6)
 !10 = !DILocation(line: 8, column: 5, scope: !11)
 !11 = distinct !DILexicalBlock(scope: !6, file: !1, line: 7, column: 7)
-!12 = distinct !DISubprogram(linkageName: "_ZL3barv", scope: !1, line: 20, scopeLine: 20, unit: !0)
+!12 = distinct !DISubprogram(linkageName: "_ZL3barv", scope: !1, file: !1, line: 20, scopeLine: 20, unit: !0)

@@ -2767,10 +2767,12 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   }
   case Intrinsic::amdgcn_icmp: {
     const auto *CD = dyn_cast<ConstantSDNode>(Op.getOperand(3));
-    int CondCode = CD->getSExtValue();
+    if (!CD)
+      return DAG.getUNDEF(VT);
 
+    int CondCode = CD->getSExtValue();
     if (CondCode < ICmpInst::Predicate::FIRST_ICMP_PREDICATE ||
-        CondCode >= ICmpInst::Predicate::BAD_ICMP_PREDICATE)
+        CondCode > ICmpInst::Predicate::LAST_ICMP_PREDICATE)
       return DAG.getUNDEF(VT);
 
     ICmpInst::Predicate IcInput = static_cast<ICmpInst::Predicate>(CondCode);
@@ -2780,10 +2782,12 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   }
   case Intrinsic::amdgcn_fcmp: {
     const auto *CD = dyn_cast<ConstantSDNode>(Op.getOperand(3));
-    int CondCode = CD->getSExtValue();
+    if (!CD)
+      return DAG.getUNDEF(VT);
 
-    if (CondCode <= FCmpInst::Predicate::FCMP_FALSE ||
-        CondCode >= FCmpInst::Predicate::FCMP_TRUE)
+    int CondCode = CD->getSExtValue();
+    if (CondCode < FCmpInst::Predicate::FIRST_FCMP_PREDICATE ||
+        CondCode > FCmpInst::Predicate::LAST_FCMP_PREDICATE)
       return DAG.getUNDEF(VT);
 
     FCmpInst::Predicate IcInput = static_cast<FCmpInst::Predicate>(CondCode);

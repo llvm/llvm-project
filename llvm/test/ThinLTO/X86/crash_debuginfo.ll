@@ -41,6 +41,5 @@ declare void @bar(i32)
 !14 = !DILocalVariable(name: "caster", scope: !9, file: !1, line: 728, type: !15)
 !15 = distinct !DICompositeType(tag: DW_TAG_union_type, scope: !9, file: !1, line: 728, size: 64, align: 64, elements: !6, identifier: "someclass")
 !16 = distinct !DILocation(line: 87, column: 9, scope: !17)
-!17 = distinct !DISubprogram(name: "foo", linkageName: "foo", scope: !10, line: 73, type: !11, isLocal: false, isDefinition: true, scopeLine: 74, flags: DIFlagPrototyped, isOptimized: true, unit: !0, declaration: !18, variables: !6)
+!17 = distinct !DISubprogram(name: "foo", linkageName: "foo", scope: !10, file: !1, line: 73, type: !11, isLocal: false, isDefinition: true, scopeLine: 74, flags: DIFlagPrototyped, isOptimized: true, unit: !0, declaration: !18, variables: !6)
 !18 = !DISubprogram(name: "foo", linkageName: "foo", scope: !10, file: !1, line: 83, type: !11, isLocal: false, isDefinition: false, scopeLine: 83, flags: DIFlagPrototyped, isOptimized: true)
-

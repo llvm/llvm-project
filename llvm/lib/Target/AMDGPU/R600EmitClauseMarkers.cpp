@@ -321,9 +321,11 @@ public:
       if (I != MBB.end() && I->getOpcode() == AMDGPU::CF_ALU)
         continue; // BB was already parsed
       for (MachineBasicBlock::iterator E = MBB.end(); I != E;) {
-        if (isALU(*I))
-          I = MakeALUClause(MBB, I);
-        else
+        if (isALU(*I)) {
+          auto next = MakeALUClause(MBB, I);
+          assert(next != I);
+          I = next;
+        } else
           ++I;
       }
     }

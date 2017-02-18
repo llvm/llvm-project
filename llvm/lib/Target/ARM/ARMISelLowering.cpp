@@ -10031,7 +10031,7 @@ static SDValue PerformORCombine(SDNode *N,
         (Mask == ~Mask2)) {
       // The pack halfword instruction works better for masks that fit it,
       // so use that when it's available.
-      if (Subtarget->hasT2ExtractPack() &&
+      if (Subtarget->hasDSP() &&
           (Mask == 0xffff || Mask == 0xffff0000))
         return SDValue();
       // 2a
@@ -10047,7 +10047,7 @@ static SDValue PerformORCombine(SDNode *N,
                (~Mask == Mask2)) {
       // The pack halfword instruction works better for masks that fit it,
       // so use that when it's available.
-      if (Subtarget->hasT2ExtractPack() &&
+      if (Subtarget->hasDSP() &&
           (Mask2 == 0xffff || Mask2 == 0xffff0000))
         return SDValue();
       // 2b

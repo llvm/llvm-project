@@ -1075,7 +1075,6 @@ define <2 x float> @sitofp_2i1_float(<2 x float> %a) {
 ; NOVL:       ## BB#0:
 ; NOVL-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; NOVL-NEXT:    vcmpltps %xmm0, %xmm1, %xmm0
-; NOVL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],zero,xmm0[1]
 ; NOVL-NEXT:    vcvtdq2ps %xmm0, %xmm0
 ; NOVL-NEXT:    retq
 ;

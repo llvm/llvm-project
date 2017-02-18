@@ -172,11 +172,13 @@ static bool selectExtract(MachineInstrBuilder &MIB, const ARMBaseInstrInfo &TII,
 
 /// Select the opcode for simple extensions (that translate to a single SXT/UXT
 /// instruction). Extension operations more complicated than that should not
-/// invoke this.
+/// invoke this. Returns the original opcode if it doesn't know how to select a
+/// better one.
 static unsigned selectSimpleExtOpc(unsigned Opc, unsigned Size) {
   using namespace TargetOpcode;
 
-  assert((Size == 8 || Size == 16) && "Unsupported size");
+  if (Size != 8 && Size != 16)
+    return Opc;
 
   if (Opc == G_SEXT)
     return Size == 8 ? ARM::SXTB : ARM::SXTH;
@@ -184,11 +186,12 @@ static unsigned selectSimpleExtOpc(unsigned Opc, unsigned Size) {
   if (Opc == G_ZEXT)
     return Size == 8 ? ARM::UXTB : ARM::UXTH;
 
-  llvm_unreachable("Unsupported opcode");
+  return Opc;
 }
 
 /// Select the opcode for simple loads. For types smaller than 32 bits, the
-/// value will be zero extended.
+/// value will be zero extended. Returns G_LOAD if it doesn't know how to select
+/// an opcode.
 static unsigned selectLoadOpCode(unsigned RegBank, unsigned Size) {
   if (RegBank == ARM::GPRRegBankID) {
     switch (Size) {
@@ -199,20 +202,23 @@ static unsigned selectLoadOpCode(unsigned RegBank, unsigned Size) {
       return ARM::LDRH;
     case 32:
       return ARM::LDRi12;
+    default:
+      return TargetOpcode::G_LOAD;
     }
-
-    llvm_unreachable("Unsupported size");
   }
 
-  assert(RegBank == ARM::FPRRegBankID && "Unsupported register bank");
-  switch (Size) {
-  case 32:
-    return ARM::VLDRS;
-  case 64:
-    return ARM::VLDRD;
+  if (RegBank == ARM::FPRRegBankID) {
+    switch (Size) {
+    case 32:
+      return ARM::VLDRS;
+    case 64:
+      return ARM::VLDRD;
+    default:
+      return TargetOpcode::G_LOAD;
+    }
   }
 
-  llvm_unreachable("Unsupported size");
+  return TargetOpcode::G_LOAD;
 }
 
 bool ARMInstructionSelector::select(MachineInstr &I) const {
@@ -277,6 +283,8 @@ bool ARMInstructionSelector::select(MachineInstr &I) const {
     case 8:
     case 16: {
       unsigned NewOpc = selectSimpleExtOpc(I.getOpcode(), SrcSize);
+      if (NewOpc == I.getOpcode())
+        return false;
       I.setDesc(TII.get(NewOpc));
       MIB.addImm(0).add(predOps(ARMCC::AL));
       break;
@@ -308,16 +316,13 @@ bool ARMInstructionSelector::select(MachineInstr &I) const {
     LLT ValTy = MRI.getType(Reg);
     const auto ValSize = ValTy.getSizeInBits();
 
-    if (ValSize != 64 && ValSize != 32 && ValSize != 16 && ValSize != 8 &&
-        ValSize != 1)
-      return false;
-
-    assert((ValSize != 64 || RegBank == ARM::FPRRegBankID) &&
-           "64-bit values should live in the FPR");
     assert((ValSize != 64 || TII.getSubtarget().hasVFP2()) &&
            "Don't know how to load 64-bit value without VFP");
 
     const auto NewOpc = selectLoadOpCode(RegBank, ValSize);
+    if (NewOpc == G_LOAD)
+      return false;
+
     I.setDesc(TII.get(NewOpc));
 
     if (NewOpc == ARM::LDRH)

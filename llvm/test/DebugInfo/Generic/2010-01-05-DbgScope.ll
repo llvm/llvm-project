@@ -13,7 +13,7 @@ entry:
 
 !0 = !DILocation(line: 571, column: 3, scope: !1)
 !1 = distinct !DILexicalBlock(line: 1, column: 1, file: !11, scope: !2)
-!2 = distinct !DISubprogram(name: "foo", linkageName: "foo", line: 561, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: false, unit: !3, scope: !3, type: !4)
+!2 = distinct !DISubprogram(name: "foo", linkageName: "foo", file: !11, line: 561, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: false, unit: !3, scope: !3, type: !4)
 !3 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang 1.1", isOptimized: true, emissionKind: FullDebug, file: !11, enums: !12, retainedTypes: !12)
 !4 = !DISubroutineType(types: !5)
 !5 = !{!6}

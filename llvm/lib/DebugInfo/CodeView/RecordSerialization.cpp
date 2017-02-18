@@ -37,7 +37,7 @@ Error llvm::codeview::consume(msf::StreamReader &Reader, APSInt &Num) {
   // Used to avoid overload ambiguity on APInt construtor.
   bool FalseVal = false;
   uint16_t Short;
-  if (auto EC = Reader.readInteger(Short))
+  if (auto EC = Reader.readInteger(Short, llvm::support::little))
     return EC;
 
   if (Short < LF_NUMERIC) {
@@ -49,49 +49,49 @@ Error llvm::codeview::consume(msf::StreamReader &Reader, APSInt &Num) {
   switch (Short) {
   case LF_CHAR: {
     int8_t N;
-    if (auto EC = Reader.readInteger(N))
+    if (auto EC = Reader.readInteger(N, llvm::support::little))
       return EC;
     Num = APSInt(APInt(8, N, true), false);
     return Error::success();
   }
   case LF_SHORT: {
     int16_t N;
-    if (auto EC = Reader.readInteger(N))
+    if (auto EC = Reader.readInteger(N, llvm::support::little))
       return EC;
     Num = APSInt(APInt(16, N, true), false);
     return Error::success();
   }
   case LF_USHORT: {
     uint16_t N;
-    if (auto EC = Reader.readInteger(N))
+    if (auto EC = Reader.readInteger(N, llvm::support::little))
       return EC;
     Num = APSInt(APInt(16, N, false), true);
     return Error::success();
   }
   case LF_LONG: {
     int32_t N;
-    if (auto EC = Reader.readInteger(N))
+    if (auto EC = Reader.readInteger(N, llvm::support::little))
       return EC;
     Num = APSInt(APInt(32, N, true), false);
     return Error::success();
   }
   case LF_ULONG: {
     uint32_t N;
-    if (auto EC = Reader.readInteger(N))
+    if (auto EC = Reader.readInteger(N, llvm::support::little))
       return EC;
     Num = APSInt(APInt(32, N, FalseVal), true);
     return Error::success();
   }
   case LF_QUADWORD: {
     int64_t N;
-    if (auto EC = Reader.readInteger(N))
+    if (auto EC = Reader.readInteger(N, llvm::support::little))
       return EC;
     Num = APSInt(APInt(64, N, true), false);
     return Error::success();
   }
   case LF_UQUADWORD: {
     uint64_t N;
-    if (auto EC = Reader.readInteger(N))
+    if (auto EC = Reader.readInteger(N, llvm::support::little))
       return EC;
     Num = APSInt(APInt(64, N, false), true);
     return Error::success();
@@ -124,7 +124,7 @@ Error llvm::codeview::consume_numeric(msf::StreamReader &Reader,
 }
 
 Error llvm::codeview::consume(msf::StreamReader &Reader, uint32_t &Item) {
-  return Reader.readInteger(Item);
+  return Reader.readInteger(Item, llvm::support::little);
 }
 
 Error llvm::codeview::consume(StringRef &Data, uint32_t &Item) {
@@ -137,7 +137,7 @@ Error llvm::codeview::consume(StringRef &Data, uint32_t &Item) {
 }
 
 Error llvm::codeview::consume(msf::StreamReader &Reader, int32_t &Item) {
-  return Reader.readInteger(Item);
+  return Reader.readInteger(Item, llvm::support::little);
 }
 
 Error llvm::codeview::consume(msf::StreamReader &Reader, StringRef &Item) {
