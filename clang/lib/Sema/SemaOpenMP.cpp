@@ -4181,6 +4181,36 @@ CheckOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
       return 0;
   }
 
+  // Create: increment expression for distribute loop when combined in a same
+  // directive with for as IV = IV + ST; ensure upper bound expression based
+  // on PrevUB instead of NumIterations - used to implement 'for' when found
+  // in combination with 'distribute', like in 'distribute parallel for'
+  SourceLocation DistIncLoc;
+  ExprResult DistCond, DistInc, PrevEUB;
+  if (isOpenMPLoopBoundSharingDirective(DKind)) {
+    DistCond = SemaRef.BuildBinOp(CurScope, CondLoc, BO_LE, IV.get(), UB.get());
+    assert(DistCond.isUsable() && "distribute cond expr was not built");
+
+    DistInc =
+        SemaRef.BuildBinOp(CurScope, DistIncLoc, BO_Add, IV.get(), ST.get());
+    assert(DistInc.isUsable() && "distribute inc expr was not built");
+    DistInc = SemaRef.BuildBinOp(CurScope, DistIncLoc, BO_Assign, IV.get(),
+                                 DistInc.get());
+    DistInc = SemaRef.ActOnFinishFullExpr(DistInc.get());
+    assert(DistInc.isUsable() && "distribute inc expr was not built");
+
+    // Build expression: UB = min(UB, prevUB) for #for in composite or combined
+    // construct
+    SourceLocation DistEUBLoc;
+    ExprResult IsUBGreater =
+        SemaRef.BuildBinOp(CurScope, DistEUBLoc, BO_GT, UB.get(), PrevUB.get());
+    ExprResult CondOp = SemaRef.ActOnConditionalOp(
+        DistEUBLoc, DistEUBLoc, IsUBGreater.get(), PrevUB.get(), UB.get());
+    PrevEUB = SemaRef.BuildBinOp(CurScope, DistIncLoc, BO_Assign, UB.get(),
+                                 CondOp.get());
+    PrevEUB = SemaRef.ActOnFinishFullExpr(PrevEUB.get());
+  }
+
   // Build updates and final values of the loop counters.
   bool HasErrors = false;
   Built.Counters.resize(NestedLoopCount);
@@ -4295,6 +4325,8 @@ CheckOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
   Built.NUB = NextUB.get();
   Built.PrevLB = PrevLB.get();
   Built.PrevUB = PrevUB.get();
+  Built.DistInc = DistInc.get();
+  Built.PrevEUB = PrevEUB.get();
 
   Expr *CounterVal = SemaRef.DefaultLvalueConversion(IV.get()).get();
   // Fill data for doacross depend clauses.

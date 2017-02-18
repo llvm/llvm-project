@@ -1,4 +1,4 @@
-//===--- LiveRegUnits.cpp - Register Unit Set -----------------------------===//
+//===- LiveRegUnits.cpp - Register Unit Set -------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -12,9 +12,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/LiveRegUnits.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBundle.h"
+#include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/Target/TargetRegisterInfo.h"
+
 using namespace llvm;
 
 void LiveRegUnits::removeRegsNotPreserved(const uint32_t *RegMask) {

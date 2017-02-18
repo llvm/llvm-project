@@ -320,13 +320,13 @@ body:             |
     %0(p0) = G_FRAME_INDEX %fixed-stack.2
     ; CHECK: [[FI32VREG:%[0-9]+]] = ADDri %fixed-stack.[[FI32]], 0, 14, _, _
 
-    %1(s32) = G_LOAD %0(p0)
+    %1(s32) = G_LOAD %0(p0) :: (load 4)
     ; CHECK: {{%[0-9]+}} = LDRi12 [[FI32VREG]], 0, 14, _
 
     %2(p0) = G_FRAME_INDEX %fixed-stack.0
     ; CHECK: [[FI1VREG:%[0-9]+]] = ADDri %fixed-stack.[[FI1]], 0, 14, _, _
 
-    %3(s1) = G_LOAD %2(p0)
+    %3(s1) = G_LOAD %2(p0) :: (load 1)
     ; CHECK: {{%[0-9]+}} = LDRBi12 [[FI1VREG]], 0, 14, _
 
     BX_RET 14, _
@@ -350,7 +350,7 @@ body:             |
 
     %0(p0) = COPY %r0
 
-    %1(s32) = G_LOAD %0(p0)
+    %1(s32) = G_LOAD %0(p0) :: (load 4)
     ; CHECK: %[[V]] = VLDRS %[[P]], 0, 14, _
 
     %s0 = COPY %1
@@ -377,7 +377,7 @@ body:             |
 
     %0(p0) = COPY %r0
 
-    %1(s64) = G_LOAD %0(p0)
+    %1(s64) = G_LOAD %0(p0) :: (load 8)
     ; CHECK: %[[V]] = VLDRD %[[P]], 0, 14, _
 
     %d0 = COPY %1

@@ -4,7 +4,7 @@
 #include "llvm/Analysis/RegionInfoImpl.h"
 #include "llvm/CodeGen/MachinePostDominators.h"
 
-#define DEBUG_TYPE "region"
+#define DEBUG_TYPE "machine-region-info"
 
 using namespace llvm;
 
@@ -86,6 +86,9 @@ bool MachineRegionInfoPass::runOnMachineFunction(MachineFunction &F) {
   auto DF = &getAnalysis<MachineDominanceFrontier>();
 
   RI.recalculate(F, DT, PDT, DF);
+
+  DEBUG(RI.dump());
+
   return false;
 }
 
@@ -103,9 +106,10 @@ void MachineRegionInfoPass::verifyAnalysis() const {
 
 void MachineRegionInfoPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
-  AU.addRequiredTransitive<DominatorTreeWrapperPass>();
-  AU.addRequired<PostDominatorTreeWrapperPass>();
-  AU.addRequired<DominanceFrontierWrapperPass>();
+  AU.addRequired<MachineDominatorTree>();
+  AU.addRequired<MachinePostDominatorTree>();
+  AU.addRequired<MachineDominanceFrontier>();
+  MachineFunctionPass::getAnalysisUsage(AU);
 }
 
 void MachineRegionInfoPass::print(raw_ostream &OS, const Module *) const {
@@ -120,13 +124,13 @@ LLVM_DUMP_METHOD void MachineRegionInfoPass::dump() const {
 
 char MachineRegionInfoPass::ID = 0;
 
-INITIALIZE_PASS_BEGIN(MachineRegionInfoPass, "regions",
-                "Detect single entry single exit regions", true, true)
+INITIALIZE_PASS_BEGIN(MachineRegionInfoPass, DEBUG_TYPE,
+                      "Detect single entry single exit regions", true, true)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
 INITIALIZE_PASS_DEPENDENCY(MachinePostDominatorTree)
 INITIALIZE_PASS_DEPENDENCY(MachineDominanceFrontier)
-INITIALIZE_PASS_END(MachineRegionInfoPass, "regions",
-                "Detect single entry single exit regions", true, true)
+INITIALIZE_PASS_END(MachineRegionInfoPass, DEBUG_TYPE,
+                    "Detect single entry single exit regions", true, true)
 
 // Create methods available outside of this file, to use them
 // "include/llvm/LinkAllPasses.h". Otherwise the pass would be deleted by

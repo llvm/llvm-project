@@ -182,7 +182,7 @@ Error CVTypeVisitor::visitFieldListMemberStream(msf::StreamReader Reader) {
 
   TypeLeafKind Leaf;
   while (!Reader.empty()) {
-    if (auto EC = Reader.readEnum(Leaf))
+    if (auto EC = Reader.readEnum(Leaf, llvm::support::little))
       return EC;
 
     CVMemberRecord Record;

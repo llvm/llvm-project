@@ -1,10 +1,4 @@
 # RUN: llc -mtriple=aarch64--linux-gnu -run-pass=aarch64-ldst-opt %s -verify-machineinstrs -o - 2>&1 | FileCheck %s
---- |
-  define void @promote-load-from-store() { ret void }
-  define void @store-pair() { ret void }
-  define void @store-pair-clearkill0() { ret void }
-  define void @store-pair-clearkill1() { ret void }
-...
 ---
 name: promote-load-from-store
 tracksRegLiveness: true
@@ -130,3 +124,23 @@ body: |
 # CHECK-NOT: %w2 = COPY killed %w1
 # CHECK: %w2 = COPY %w1
 # CHECK: STPWi %w1, killed %w2, killed %x0, 0
+---
+name: store-load-clearkill
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: %w1
+
+    STRWui %w1, %sp, 0 :: (store 4)
+    %wzr = COPY killed %w1 ; killing use of %w1
+    %w11 = LDRWui %sp, 0 :: (load 4)
+    HINT 0, implicit %w11 ; some use of %w11
+...
+# When replaceing the load of a store-load pair with a copy the kill flags
+# along the way need to be cleared.
+# CHECK-LABEL: name: store-load-clearkill
+# CHECK: STRWui %w1, %sp, 0 :: (store 4)
+# CHECK-NOT: COPY killed %w1
+# CHECK: %wzr = COPY %w1
+# CHECK: %w11 = ORRWrs %wzr, %w1, 0
+# CHECK: HINT 0, implicit %w11

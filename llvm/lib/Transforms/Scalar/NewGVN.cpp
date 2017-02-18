@@ -308,7 +308,6 @@ private:
   PHIExpression *createPHIExpression(Instruction *);
   const VariableExpression *createVariableExpression(Value *);
   const ConstantExpression *createConstantExpression(Constant *);
-  const Expression *createVariableOrConstant(Value *V);
   const UnknownExpression *createUnknownExpression(Instruction *);
   const StoreExpression *createStoreExpression(StoreInst *, MemoryAccess *);
   LoadExpression *createLoadExpression(Type *, Value *, LoadInst *,
@@ -363,7 +362,6 @@ private:
   // Reachability handling.
   void updateReachableEdge(BasicBlock *, BasicBlock *);
   void processOutgoingEdges(TerminatorInst *, BasicBlock *);
-  bool isOnlyReachableViaThisEdge(const BasicBlockEdge &) const;
   Value *findConditionEquivalence(Value *) const;
 
   // Elimination.
@@ -669,13 +667,6 @@ const VariableExpression *NewGVN::createVariableExpression(Value *V) {
   auto *E = new (ExpressionAllocator) VariableExpression(V);
   E->setOpcode(V->getValueID());
   return E;
-}
-
-const Expression *NewGVN::createVariableOrConstant(Value *V) {
-  auto Leader = lookupOperandLeader(V);
-  if (auto *C = dyn_cast<Constant>(Leader))
-    return createConstantExpression(C);
-  return createVariableExpression(Leader);
 }
 
 const ConstantExpression *NewGVN::createConstantExpression(Constant *C) {
@@ -1075,23 +1066,6 @@ const Expression *NewGVN::performSymbolicEvaluation(Value *V) {
     }
   }
   return E;
-}
-
-// There is an edge from 'Src' to 'Dst'.  Return true if every path from
-// the entry block to 'Dst' passes via this edge.  In particular 'Dst'
-// must not be reachable via another edge from 'Src'.
-bool NewGVN::isOnlyReachableViaThisEdge(const BasicBlockEdge &E) const {
-
-  // While in theory it is interesting to consider the case in which Dst has
-  // more than one predecessor, because Dst might be part of a loop which is
-  // only reachable from Src, in practice it is pointless since at the time
-  // GVN runs all such loops have preheaders, which means that Dst will have
-  // been changed to have only one predecessor, namely Src.
-  const BasicBlock *Pred = E.getEnd()->getSinglePredecessor();
-  const BasicBlock *Src = E.getStart();
-  assert((!Pred || Pred == Src) && "No edge between these basic blocks!");
-  (void)Src;
-  return Pred != nullptr;
 }
 
 void NewGVN::markUsersTouched(Value *V) {

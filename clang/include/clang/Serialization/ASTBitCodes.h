@@ -1123,6 +1123,8 @@ namespace clang {
       DECL_EXPORT,
       /// \brief A CXXRecordDecl record.
       DECL_CXX_RECORD,
+      /// \brief A CXXDeductionGuideDecl record.
+      DECL_CXX_DEDUCTION_GUIDE,
       /// \brief A CXXMethodDecl record.
       DECL_CXX_METHOD,
       /// \brief A CXXConstructorDecl record.

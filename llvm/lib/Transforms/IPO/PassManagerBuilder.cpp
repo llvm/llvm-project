@@ -320,7 +320,7 @@ void PassManagerBuilder::addFunctionSimplificationPasses(
     MPM.add(createCFGSimplificationPass());
   }
   if (!DisableUnrollLoops)
-    MPM.add(createSimpleLoopUnrollPass());    // Unroll small loops
+    MPM.add(createSimpleLoopUnrollPass(OptLevel));    // Unroll small loops
   addExtensionsToPM(EP_LoopOptimizerEnd, MPM);
 
   if (OptLevel > 1) {
@@ -366,7 +366,7 @@ void PassManagerBuilder::addFunctionSimplificationPasses(
 
       // BBVectorize may have significantly shortened a loop body; unroll again.
       if (!DisableUnrollLoops)
-        MPM.add(createLoopUnrollPass());
+        MPM.add(createLoopUnrollPass(OptLevel));
     }
   }
 
@@ -612,7 +612,7 @@ void PassManagerBuilder::populateModulePassManager(
 
       // BBVectorize may have significantly shortened a loop body; unroll again.
       if (!DisableUnrollLoops)
-        MPM.add(createLoopUnrollPass());
+        MPM.add(createLoopUnrollPass(OptLevel));
     }
   }
 
@@ -621,7 +621,7 @@ void PassManagerBuilder::populateModulePassManager(
   addInstructionCombiningPass(MPM);
 
   if (!DisableUnrollLoops) {
-    MPM.add(createLoopUnrollPass());    // Unroll small loops
+    MPM.add(createLoopUnrollPass(OptLevel));    // Unroll small loops
 
     // LoopUnroll may generate some redundency to cleanup.
     addInstructionCombiningPass(MPM);
@@ -772,11 +772,11 @@ void PassManagerBuilder::addLTOOptimizationPasses(legacy::PassManagerBase &PM) {
     PM.add(createLoopInterchangePass());
 
   if (!DisableUnrollLoops)
-    PM.add(createSimpleLoopUnrollPass());   // Unroll small loops
+    PM.add(createSimpleLoopUnrollPass(OptLevel));   // Unroll small loops
   PM.add(createLoopVectorizePass(true, LoopVectorize));
   // The vectorizer may have significantly shortened a loop body; unroll again.
   if (!DisableUnrollLoops)
-    PM.add(createLoopUnrollPass());
+    PM.add(createLoopUnrollPass(OptLevel));
 
   // Now that we've optimized loops (in particular loop induction variables),
   // we may have exposed more scalar opportunities. Run parts of the scalar

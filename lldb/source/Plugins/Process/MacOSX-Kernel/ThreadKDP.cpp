@@ -40,15 +40,13 @@ using namespace lldb_private;
 ThreadKDP::ThreadKDP(Process &process, lldb::tid_t tid)
     : Thread(process, tid), m_thread_name(), m_dispatch_queue_name(),
       m_thread_dispatch_qaddr(LLDB_INVALID_ADDRESS) {
-  ProcessKDPLog::LogIf(KDP_LOG_THREAD,
-                       "%p: ThreadKDP::ThreadKDP (tid = 0x%4.4x)", this,
-                       GetID());
+  Log *log = ProcessKDPLog::GetLogIfAllCategoriesSet(KDP_LOG_THREAD);
+  LLDB_LOG(log, "this = {0}, tid = {1:x}", this, GetID());
 }
 
 ThreadKDP::~ThreadKDP() {
-  ProcessKDPLog::LogIf(KDP_LOG_THREAD,
-                       "%p: ThreadKDP::~ThreadKDP (tid = 0x%4.4x)", this,
-                       GetID());
+  Log *log = ProcessKDPLog::GetLogIfAllCategoriesSet(KDP_LOG_THREAD);
+  LLDB_LOG(log, "this = {0}, tid = {1:x}", this, GetID());
   DestroyThread();
 }
 

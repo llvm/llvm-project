@@ -645,6 +645,26 @@ TEST(TargetParserTest, testAArch64CPU) {
   EXPECT_TRUE(testAArch64CPU(
       "vulcan", "armv8.1-a", "crypto-neon-fp-armv8",
       AArch64::AEK_CRC | AArch64::AEK_CRYPTO | AArch64::AEK_SIMD, "8.1-A"));
+  EXPECT_TRUE(testAArch64CPU(
+      "thunderx", "armv8-a", "crypto-neon-fp-armv8",
+      AArch64::AEK_CRC | AArch64::AEK_CRYPTO | AArch64::AEK_SIMD |
+      AArch64::AEK_FP | AArch64::AEK_PROFILE,
+      "8-A"));
+  EXPECT_TRUE(testAArch64CPU(
+      "thunderxt81", "armv8-a", "crypto-neon-fp-armv8",
+      AArch64::AEK_CRC | AArch64::AEK_CRYPTO | AArch64::AEK_SIMD |
+      AArch64::AEK_FP | AArch64::AEK_PROFILE,
+      "8-A"));
+  EXPECT_TRUE(testAArch64CPU(
+      "thunderxt83", "armv8-a", "crypto-neon-fp-armv8",
+      AArch64::AEK_CRC | AArch64::AEK_CRYPTO | AArch64::AEK_SIMD |
+      AArch64::AEK_FP | AArch64::AEK_PROFILE,
+      "8-A"));
+  EXPECT_TRUE(testAArch64CPU(
+      "thunderxt88", "armv8-a", "crypto-neon-fp-armv8",
+      AArch64::AEK_CRC | AArch64::AEK_CRYPTO | AArch64::AEK_SIMD |
+      AArch64::AEK_FP | AArch64::AEK_PROFILE,
+      "8-A"));
 }
 
 bool testAArch64Arch(StringRef Arch, StringRef DefaultCPU, StringRef SubArch,
@@ -681,6 +701,10 @@ TEST(TargetParserTest, testAArch64Extension) {
   EXPECT_FALSE(testAArch64Extension("exynos-m1", 0, "ras"));
   EXPECT_FALSE(testAArch64Extension("kryo", 0, "ras"));
   EXPECT_FALSE(testAArch64Extension("vulcan", 0, "ras"));
+  EXPECT_FALSE(testAArch64Extension("thunderx", 0, "lse"));
+  EXPECT_FALSE(testAArch64Extension("thunderxt81", 0, "lse"));
+  EXPECT_FALSE(testAArch64Extension("thunderxt83", 0, "lse"));
+  EXPECT_FALSE(testAArch64Extension("thunderxt88", 0, "lse"));
 
   EXPECT_FALSE(testAArch64Extension(
       "generic", static_cast<unsigned>(AArch64::ArchKind::AK_ARMV8A), "ras"));

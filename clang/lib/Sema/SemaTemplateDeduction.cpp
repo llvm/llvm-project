@@ -968,10 +968,10 @@ bool Sema::isSameOrCompatibleFunctionType(CanQualType Param,
 /// the template parameter lists of a class template and a constructor template
 /// when forming an implicit deduction guide.
 static unsigned getFirstInnerIndex(FunctionTemplateDecl *FTD) {
-  if (!FTD->isImplicit() || !FTD->getTemplatedDecl()->isDeductionGuide())
+  auto *Guide = dyn_cast<CXXDeductionGuideDecl>(FTD->getTemplatedDecl());
+  if (!Guide || !Guide->isImplicit())
     return 0;
-  return FTD->getDeclName().getCXXDeductionGuideTemplate()
-            ->getTemplateParameters()->size();
+  return Guide->getDeducedTemplate()->getTemplateParameters()->size();
 }
 
 /// Determine whether a type denotes a forwarding reference.

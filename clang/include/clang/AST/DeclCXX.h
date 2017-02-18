@@ -458,6 +458,9 @@ class CXXRecordDecl : public RecordDecl {
     /// \brief Whether we are currently parsing base specifiers.
     unsigned IsParsingBaseSpecifiers : 1;
 
+    /// \brief A hash of parts of the class to help in ODR checking.
+    unsigned ODRHash;
+
     /// \brief The number of base class specifiers in Bases.
     unsigned NumBases;
 
@@ -702,6 +705,9 @@ public:
   bool isParsingBaseSpecifiers() const {
     return data().IsParsingBaseSpecifiers;
   }
+
+  void computeODRHash();
+  unsigned getODRHash() const { return data().ODRHash; }
 
   /// \brief Sets the base classes of this struct or class.
   void setBases(CXXBaseSpecifier const * const *Bases, unsigned NumBases);
@@ -1738,6 +1744,58 @@ public:
   friend class ASTWriter;
 };
 
+/// \brief Represents a C++ deduction guide declaration.
+///
+/// \code
+/// template<typename T> struct A { A(); A(T); };
+/// A() -> A<int>;
+/// \endcode
+///
+/// In this example, there will be an explicit deduction guide from the
+/// second line, and implicit deduction guide templates synthesized from
+/// the constructors of \c A.
+class CXXDeductionGuideDecl : public FunctionDecl {
+  void anchor() override;
+private:
+  CXXDeductionGuideDecl(ASTContext &C, DeclContext *DC, SourceLocation StartLoc,
+                        bool IsExplicit, const DeclarationNameInfo &NameInfo,
+                        QualType T, TypeSourceInfo *TInfo,
+                        SourceLocation EndLocation)
+      : FunctionDecl(CXXDeductionGuide, C, DC, StartLoc, NameInfo, T, TInfo,
+                     SC_None, false, false) {
+    if (EndLocation.isValid())
+      setRangeEnd(EndLocation);
+    IsExplicitSpecified = IsExplicit;
+  }
+
+public:
+  static CXXDeductionGuideDecl *Create(ASTContext &C, DeclContext *DC,
+                                       SourceLocation StartLoc, bool IsExplicit,
+                                       const DeclarationNameInfo &NameInfo,
+                                       QualType T, TypeSourceInfo *TInfo,
+                                       SourceLocation EndLocation);
+
+  static CXXDeductionGuideDecl *CreateDeserialized(ASTContext &C, unsigned ID);
+
+  /// Whether this deduction guide is explicit.
+  bool isExplicit() const { return IsExplicitSpecified; }
+
+  /// Whether this deduction guide was declared with the 'explicit' specifier.
+  bool isExplicitSpecified() const { return IsExplicitSpecified; }
+
+  /// Get the template for which this guide performs deduction.
+  TemplateDecl *getDeducedTemplate() const {
+    return getDeclName().getCXXDeductionGuideTemplate();
+  }
+
+  // Implement isa/cast/dyncast/etc.
+  static bool classof(const Decl *D) { return classofKind(D->getKind()); }
+  static bool classofKind(Kind K) { return K == CXXDeductionGuide; }
+
+  friend class ASTDeclReader;
+  friend class ASTDeclWriter;
+};
+
 /// \brief Represents a static or instance method of a struct/union/class.
 ///
 /// In the terminology of the C++ Standard, these are the (static and
@@ -2181,8 +2239,7 @@ class CXXConstructorDecl final
     setImplicit(isImplicitlyDeclared);
     if (Inherited)
       *getTrailingObjects<InheritedConstructor>() = Inherited;
-    if (isExplicitSpecified)
-      setExplicitSpecified();
+    IsExplicitSpecified = isExplicitSpecified;
   }
 
 public:
@@ -2256,6 +2313,14 @@ public:
 
   void setCtorInitializers(CXXCtorInitializer **Initializers) {
     CtorInitializers = Initializers;
+  }
+
+  /// Whether this function is marked as explicit explicitly.
+  bool isExplicitSpecified() const { return IsExplicitSpecified; }
+
+  /// Whether this function is explicit.
+  bool isExplicit() const {
+    return getCanonicalDecl()->isExplicitSpecified();
   }
 
   /// \brief Determine whether this constructor is a delegating constructor.
@@ -2393,7 +2458,14 @@ public:
 
   void setOperatorDelete(FunctionDecl *OD);
   const FunctionDecl *getOperatorDelete() const {
-    return cast<CXXDestructorDecl>(getFirstDecl())->OperatorDelete;
+    return getCanonicalDecl()->OperatorDelete;
+  }
+
+  CXXDestructorDecl *getCanonicalDecl() override {
+    return cast<CXXDestructorDecl>(FunctionDecl::getCanonicalDecl());
+  }
+  const CXXDestructorDecl *getCanonicalDecl() const {
+    return const_cast<CXXDestructorDecl*>(this)->getCanonicalDecl();
   }
 
   // Implement isa/cast/dyncast/etc.
@@ -2424,8 +2496,7 @@ class CXXConversionDecl : public CXXMethodDecl {
                     SourceLocation EndLocation)
       : CXXMethodDecl(CXXConversion, C, RD, StartLoc, NameInfo, T, TInfo,
                       SC_None, isInline, isConstexpr, EndLocation) {
-    if (isExplicitSpecified)
-      setExplicitSpecified();
+    IsExplicitSpecified = isExplicitSpecified;
   }
 
 public:
@@ -2438,6 +2509,14 @@ public:
                                    SourceLocation EndLocation);
   static CXXConversionDecl *CreateDeserialized(ASTContext &C, unsigned ID);
 
+  /// Whether this function is marked as explicit explicitly.
+  bool isExplicitSpecified() const { return IsExplicitSpecified; }
+
+  /// Whether this function is explicit.
+  bool isExplicit() const {
+    return getCanonicalDecl()->isExplicitSpecified();
+  }
+
   /// \brief Returns the type that this conversion function is converting to.
   QualType getConversionType() const {
     return getType()->getAs<FunctionType>()->getReturnType();
@@ -2447,6 +2526,13 @@ public:
   /// a lambda closure type to a block pointer.
   bool isLambdaToBlockPointerConversion() const;
   
+  CXXConversionDecl *getCanonicalDecl() override {
+    return cast<CXXConversionDecl>(FunctionDecl::getCanonicalDecl());
+  }
+  const CXXConversionDecl *getCanonicalDecl() const {
+    return const_cast<CXXConversionDecl*>(this)->getCanonicalDecl();
+  }
+
   // Implement isa/cast/dyncast/etc.
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
   static bool classofKind(Kind K) { return K == CXXConversion; }

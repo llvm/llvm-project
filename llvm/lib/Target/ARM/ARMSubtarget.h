@@ -213,10 +213,6 @@ protected:
   /// HasHardwareDivideInARM - True if subtarget supports [su]div in ARM mode
   bool HasHardwareDivideInARM = false;
 
-  /// HasT2ExtractPack - True if subtarget supports thumb2 extract/pack
-  /// instructions.
-  bool HasT2ExtractPack = false;
-
   /// HasDataBarrier - True if the subtarget supports DMB / DSB data barrier
   /// instructions.
   bool HasDataBarrier = false;
@@ -508,7 +504,6 @@ public:
 
   bool hasDivide() const { return HasHardwareDivide; }
   bool hasDivideInARMMode() const { return HasHardwareDivideInARM; }
-  bool hasT2ExtractPack() const { return HasT2ExtractPack; }
   bool hasDataBarrier() const { return HasDataBarrier; }
   bool hasV7Clrex() const { return HasV7Clrex; }
   bool hasAcquireRelease() const { return HasAcquireRelease; }

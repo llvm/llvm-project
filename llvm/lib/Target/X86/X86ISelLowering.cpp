@@ -28503,14 +28503,14 @@ static SDValue combineBitcast(SDNode *N, SelectionDAG &DAG,
                               const X86Subtarget &Subtarget) {
   SDValue N0 = N->getOperand(0);
   EVT VT = N->getValueType(0);
+  EVT SrcVT = N0.getValueType();
 
   // Detect bitcasts between i32 to x86mmx low word. Since MMX types are
   // special and don't usually play with other vector types, it's better to
   // handle them early to be sure we emit efficient code by avoiding
   // store-load conversions.
   if (VT == MVT::x86mmx && N0.getOpcode() == ISD::BUILD_VECTOR &&
-      N0.getValueType() == MVT::v2i32 &&
-      isNullConstant(N0.getOperand(1))) {
+      SrcVT == MVT::v2i32 && isNullConstant(N0.getOperand(1))) {
     SDValue N00 = N0->getOperand(0);
     if (N00.getValueType() == MVT::i32)
       return DAG.getNode(X86ISD::MMX_MOVW2D, SDLoc(N00), VT, N00);

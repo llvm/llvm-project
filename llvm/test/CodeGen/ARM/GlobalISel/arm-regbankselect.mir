@@ -145,12 +145,12 @@ body:             |
   bb.0:
     liveins: %r0
     %0(p0) = COPY %r0
-    %6(s64) = G_LOAD %0
-    %1(s32) = G_LOAD %0
-    %2(s16) = G_LOAD %0
-    %3(s8)  = G_LOAD %0
-    %4(s1)  = G_LOAD %0
-    %5(p0)  = G_LOAD %0
+    %6(s64) = G_LOAD %0 :: (load 8)
+    %1(s32) = G_LOAD %0 :: (load 4)
+    %2(s16) = G_LOAD %0 :: (load 2)
+    %3(s8)  = G_LOAD %0 :: (load 1)
+    %4(s1)  = G_LOAD %0 :: (load 1)
+    %5(p0)  = G_LOAD %0 :: (load 8)
     BX_RET 14, _, implicit %r0
 
 ...

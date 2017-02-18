@@ -908,6 +908,14 @@ void MachineVerifier::visitMachineInstrBefore(const MachineInstr *MI) {
     }
   }
 
+  // Generic loads and stores must have a single MachineMemOperand
+  // describing that access.
+  if ((MI->getOpcode() == TargetOpcode::G_LOAD ||
+       MI->getOpcode() == TargetOpcode::G_STORE) &&
+      !MI->hasOneMemOperand())
+    report("Generic instruction accessing memory must have one mem operand",
+           MI);
+
   StringRef ErrorInfo;
   if (!TII->verifyInstruction(*MI, ErrorInfo))
     report(ErrorInfo.data(), MI);

@@ -1,4 +1,4 @@
-//===-- llvm/CodeGen/MachineRegisterInfo.h ----------------------*- C++ -*-===//
+//===- llvm/CodeGen/MachineRegisterInfo.h -----------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -15,19 +15,29 @@
 #define LLVM_CODEGEN_MACHINEREGISTERINFO_H
 
 #include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/IndexedMap.h"
-#include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/iterator_range.h"
-// PointerUnion needs to have access to the full RegisterBank type.
+#include "llvm/ADT/PointerUnion.h"
 #include "llvm/CodeGen/GlobalISel/RegisterBank.h"
 #include "llvm/CodeGen/LowLevelType.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBundle.h"
+#include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/MC/LaneBitmask.h"
 #include "llvm/Target/TargetRegisterInfo.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
 #include <vector>
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
+#include <iterator>
+#include <memory>
+#include <utility>
 
 namespace llvm {
+
 class PSetIterator;
 
 /// Convenient type to represent either a register class or a register bank.
@@ -41,15 +51,16 @@ class MachineRegisterInfo {
 public:
   class Delegate {
     virtual void anchor();
-  public:
-    virtual void MRI_NoteNewVirtualRegister(unsigned Reg) = 0;
 
-    virtual ~Delegate() {}
+  public:
+    virtual ~Delegate() = default;
+
+    virtual void MRI_NoteNewVirtualRegister(unsigned Reg) = 0;
   };
 
 private:
   MachineFunction *MF;
-  Delegate *TheDelegate;
+  Delegate *TheDelegate = nullptr;
 
   /// True if subregister liveness is tracked.
   const bool TracksSubRegLiveness;
@@ -113,12 +124,12 @@ private:
   /// Live in values are typically arguments in registers.  LiveIn values are
   /// allowed to have virtual registers associated with them, stored in the
   /// second element.
-  std::vector<std::pair<unsigned, unsigned> > LiveIns;
+  std::vector<std::pair<unsigned, unsigned>> LiveIns;
 
-  MachineRegisterInfo(const MachineRegisterInfo&) = delete;
-  void operator=(const MachineRegisterInfo&) = delete;
 public:
   explicit MachineRegisterInfo(MachineFunction *MF);
+  MachineRegisterInfo(const MachineRegisterInfo &) = delete;
+  MachineRegisterInfo &operator=(const MachineRegisterInfo &) = delete;
 
   const TargetRegisterInfo *getTargetRegisterInfo() const {
     return MF->getSubtarget().getRegisterInfo();
@@ -226,8 +237,6 @@ public:
     friend class defusechain_iterator;
   template<bool, bool, bool, bool, bool, bool>
     friend class defusechain_instr_iterator;
-
-
 
   /// reg_iterator/reg_begin/reg_end - Walk all defs and uses of the specified
   /// register.
@@ -800,7 +809,7 @@ public:
 
   // Iteration support for the live-ins set.  It's kept in sorted order
   // by register number.
-  typedef std::vector<std::pair<unsigned,unsigned> >::const_iterator
+  typedef std::vector<std::pair<unsigned,unsigned>>::const_iterator
   livein_iterator;
   livein_iterator livein_begin() const { return LiveIns.begin(); }
   livein_iterator livein_end()   const { return LiveIns.end(); }
@@ -836,7 +845,10 @@ public:
            bool ByOperand, bool ByInstr, bool ByBundle>
   class defusechain_iterator
     : public std::iterator<std::forward_iterator_tag, MachineInstr, ptrdiff_t> {
-    MachineOperand *Op;
+    friend class MachineRegisterInfo;
+
+    MachineOperand *Op = nullptr;
+
     explicit defusechain_iterator(MachineOperand *op) : Op(op) {
       // If the first node isn't one we're interested in, advance to one that
       // we are interested in.
@@ -847,7 +859,6 @@ public:
           advance();
       }
     }
-    friend class MachineRegisterInfo;
 
     void advance() {
       assert(Op && "Cannot increment end iterator!");
@@ -868,13 +879,14 @@ public:
           Op = getNextOperandForReg(Op);
       }
     }
+
   public:
     typedef std::iterator<std::forward_iterator_tag,
                           MachineInstr, ptrdiff_t>::reference reference;
     typedef std::iterator<std::forward_iterator_tag,
                           MachineInstr, ptrdiff_t>::pointer pointer;
 
-    defusechain_iterator() : Op(nullptr) {}
+    defusechain_iterator() = default;
 
     bool operator==(const defusechain_iterator &x) const {
       return Op == x.Op;
@@ -939,7 +951,10 @@ public:
            bool ByOperand, bool ByInstr, bool ByBundle>
   class defusechain_instr_iterator
     : public std::iterator<std::forward_iterator_tag, MachineInstr, ptrdiff_t> {
-    MachineOperand *Op;
+    friend class MachineRegisterInfo;
+
+    MachineOperand *Op = nullptr;
+
     explicit defusechain_instr_iterator(MachineOperand *op) : Op(op) {
       // If the first node isn't one we're interested in, advance to one that
       // we are interested in.
@@ -950,7 +965,6 @@ public:
           advance();
       }
     }
-    friend class MachineRegisterInfo;
 
     void advance() {
       assert(Op && "Cannot increment end iterator!");
@@ -971,13 +985,14 @@ public:
           Op = getNextOperandForReg(Op);
       }
     }
+
   public:
     typedef std::iterator<std::forward_iterator_tag,
                           MachineInstr, ptrdiff_t>::reference reference;
     typedef std::iterator<std::forward_iterator_tag,
                           MachineInstr, ptrdiff_t>::pointer pointer;
 
-    defusechain_instr_iterator() : Op(nullptr) {}
+    defusechain_instr_iterator() = default;
 
     bool operator==(const defusechain_instr_iterator &x) const {
       return Op == x.Op;
@@ -1029,10 +1044,12 @@ public:
 /// register. If Reg is physical, it must be a register unit (from
 /// MCRegUnitIterator).
 class PSetIterator {
-  const int *PSet;
-  unsigned Weight;
+  const int *PSet = nullptr;
+  unsigned Weight = 0;
+
 public:
-  PSetIterator(): PSet(nullptr), Weight(0) {}
+  PSetIterator() = default;
+
   PSetIterator(unsigned RegUnit, const MachineRegisterInfo *MRI) {
     const TargetRegisterInfo *TRI = MRI->getTargetRegisterInfo();
     if (TargetRegisterInfo::isVirtualRegister(RegUnit)) {
@@ -1047,6 +1064,7 @@ public:
     if (*PSet == -1)
       PSet = nullptr;
   }
+
   bool isValid() const { return PSet; }
 
   unsigned getWeight() const { return Weight; }
@@ -1066,6 +1084,6 @@ getPressureSets(unsigned RegUnit) const {
   return PSetIterator(RegUnit, this);
 }
 
-} // End llvm namespace
+} // end namespace llvm
 
-#endif
+#endif // LLVM_CODEGEN_MACHINEREGISTERINFO_H

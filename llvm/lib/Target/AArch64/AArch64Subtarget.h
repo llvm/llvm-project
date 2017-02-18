@@ -45,7 +45,11 @@ public:
     ExynosM1,
     Falkor,
     Kryo,
-    Vulcan
+    Vulcan,
+    ThunderX,
+    ThunderXT81,
+    ThunderXT83,
+    ThunderXT88
   };
 
 protected:

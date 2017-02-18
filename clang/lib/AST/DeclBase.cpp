@@ -619,6 +619,7 @@ bool Decl::isWeakImported() const {
 unsigned Decl::getIdentifierNamespaceForKind(Kind DeclKind) {
   switch (DeclKind) {
     case Function:
+    case CXXDeductionGuide:
     case CXXMethod:
     case CXXConstructor:
     case ConstructorUsingShadow:

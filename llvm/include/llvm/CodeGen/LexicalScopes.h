@@ -1,4 +1,4 @@
-//===- LexicalScopes.cpp - Collecting lexical scope info -*- C++ -*--------===//
+//===- LexicalScopes.cpp - Collecting lexical scope info --------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -19,19 +19,18 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/DebugInfoMetadata.h"
-#include "llvm/IR/ValueHandle.h"
+#include <cassert>
 #include <unordered_map>
 #include <utility>
+
 namespace llvm {
 
-class MachineInstr;
 class MachineBasicBlock;
 class MachineFunction;
+class MachineInstr;
 
 //===----------------------------------------------------------------------===//
 /// InsnRange - This is used to track range of instructions with identical
@@ -43,12 +42,10 @@ typedef std::pair<const MachineInstr *, const MachineInstr *> InsnRange;
 /// LexicalScope - This class is used to track scope information.
 ///
 class LexicalScope {
-
 public:
   LexicalScope(LexicalScope *P, const DILocalScope *D, const DILocation *I,
                bool A)
-      : Parent(P), Desc(D), InlinedAtLocation(I), AbstractScope(A),
-        LastInsn(nullptr), FirstInsn(nullptr), DFSIn(0), DFSOut(0) {
+      : Parent(P), Desc(D), InlinedAtLocation(I), AbstractScope(A) {
     assert(D);
     assert(D->getSubprogram()->getUnit()->getEmissionKind() !=
            DICompileUnit::NoDebug &&
@@ -131,10 +128,10 @@ private:
                                                // Contents not owned.
   SmallVector<InsnRange, 4> Ranges;
 
-  const MachineInstr *LastInsn;  // Last instruction of this scope.
-  const MachineInstr *FirstInsn; // First instruction of this scope.
-  unsigned DFSIn, DFSOut;        // In & Out Depth use to determine
-                                 // scope nesting.
+  const MachineInstr *LastInsn = nullptr;  // Last instruction of this scope.
+  const MachineInstr *FirstInsn = nullptr; // First instruction of this scope.
+  unsigned DFSIn = 0; // In & Out Depth use to determine scope nesting.
+  unsigned DFSOut = 0;
 };
 
 //===----------------------------------------------------------------------===//
@@ -143,7 +140,7 @@ private:
 ///
 class LexicalScopes {
 public:
-  LexicalScopes() : MF(nullptr), CurrentFnLexicalScope(nullptr) {}
+  LexicalScopes() = default;
 
   /// initialize - Scan machine function and constuct lexical scope nest, resets
   /// the instance if necessary.
@@ -229,8 +226,7 @@ private:
   assignInstructionRanges(SmallVectorImpl<InsnRange> &MIRanges,
                           DenseMap<const MachineInstr *, LexicalScope *> &M);
 
-private:
-  const MachineFunction *MF;
+  const MachineFunction *MF = nullptr;
 
   /// LexicalScopeMap - Tracks the scopes in the current function.
   // Use an unordered_map to ensure value pointer validity over insertion.
@@ -253,9 +249,9 @@ private:
 
   /// CurrentFnLexicalScope - Top level scope for the current function.
   ///
-  LexicalScope *CurrentFnLexicalScope;
+  LexicalScope *CurrentFnLexicalScope = nullptr;
 };
 
-} // end llvm namespace
+} // end namespace llvm
 
-#endif
+#endif // LLVM_CODEGEN_LEXICALSCOPES_H

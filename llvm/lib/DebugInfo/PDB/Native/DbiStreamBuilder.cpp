@@ -187,17 +187,21 @@ Error DbiStreamBuilder::generateFileInfoSubstream() {
 
   uint16_t ModiCount = std::min<uint32_t>(UINT16_MAX, ModuleInfos.size());
   uint16_t FileCount = std::min<uint32_t>(UINT16_MAX, SourceFileNames.size());
-  if (auto EC = MetadataWriter.writeInteger(ModiCount)) // NumModules
+  if (auto EC = MetadataWriter.writeInteger(
+          ModiCount, llvm::support::little)) // NumModules
     return EC;
-  if (auto EC = MetadataWriter.writeInteger(FileCount)) // NumSourceFiles
+  if (auto EC = MetadataWriter.writeInteger(
+          FileCount, llvm::support::little)) // NumSourceFiles
     return EC;
   for (uint16_t I = 0; I < ModiCount; ++I) {
-    if (auto EC = MetadataWriter.writeInteger(I)) // Mod Indices
+    if (auto EC = MetadataWriter.writeInteger(
+            I, llvm::support::little)) // Mod Indices
       return EC;
   }
   for (const auto MI : ModuleInfoList) {
     FileCount = static_cast<uint16_t>(MI->SourceFiles.size());
-    if (auto EC = MetadataWriter.writeInteger(FileCount)) // Mod File Counts
+    if (auto EC = MetadataWriter.writeInteger(
+            FileCount, llvm::support::little)) // Mod File Counts
       return EC;
   }
 
@@ -219,7 +223,8 @@ Error DbiStreamBuilder::generateFileInfoSubstream() {
       if (Result == SourceFileNames.end())
         return make_error<RawError>(raw_error_code::no_entry,
                                     "The source file was not found.");
-      if (auto EC = MetadataWriter.writeInteger(Result->second))
+      if (auto EC = MetadataWriter.writeInteger(Result->second,
+                                                llvm::support::little))
         return EC;
     }
   }
@@ -373,7 +378,7 @@ Error DbiStreamBuilder::commit(const msf::MSFLayout &Layout,
     return EC;
 
   if (!SectionContribs.empty()) {
-    if (auto EC = Writer.writeEnum(DbiSecContribVer60))
+    if (auto EC = Writer.writeEnum(DbiSecContribVer60, llvm::support::little))
       return EC;
     if (auto EC = Writer.writeArray(SectionContribs))
       return EC;
@@ -392,7 +397,8 @@ Error DbiStreamBuilder::commit(const msf::MSFLayout &Layout,
     return EC;
 
   for (auto &Stream : DbgStreams)
-    if (auto EC = Writer.writeInteger(Stream.StreamNumber))
+    if (auto EC =
+            Writer.writeInteger(Stream.StreamNumber, llvm::support::little))
       return EC;
 
   for (auto &Stream : DbgStreams) {

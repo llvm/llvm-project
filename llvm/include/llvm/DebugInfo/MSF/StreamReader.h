@@ -17,8 +17,10 @@
 #include "llvm/DebugInfo/MSF/StreamRef.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/type_traits.h"
 
 #include <string>
+#include <type_traits>
 
 namespace llvm {
 namespace msf {
@@ -29,22 +31,34 @@ public:
 
   Error readLongestContiguousChunk(ArrayRef<uint8_t> &Buffer);
   Error readBytes(ArrayRef<uint8_t> &Buffer, uint32_t Size);
-  Error readInteger(uint8_t &Dest);
-  Error readInteger(uint16_t &Dest);
-  Error readInteger(uint32_t &Dest);
-  Error readInteger(uint64_t &Dest);
-  Error readInteger(int8_t &Dest);
-  Error readInteger(int16_t &Dest);
-  Error readInteger(int32_t &Dest);
-  Error readInteger(int64_t &Dest);
+
+  template <typename T>
+  Error readInteger(T &Dest,
+                    llvm::support::endianness Endian = llvm::support::native) {
+    static_assert(std::is_integral<T>::value,
+                  "Cannot call readInteger with non-integral value!");
+
+    ArrayRef<uint8_t> Bytes;
+    if (auto EC = readBytes(Bytes, sizeof(T)))
+      return EC;
+
+    Dest = llvm::support::endian::read<T, llvm::support::unaligned>(
+        Bytes.data(), Endian);
+    return Error::success();
+  }
+
   Error readZeroString(StringRef &Dest);
   Error readFixedString(StringRef &Dest, uint32_t Length);
   Error readStreamRef(ReadableStreamRef &Ref);
   Error readStreamRef(ReadableStreamRef &Ref, uint32_t Length);
 
-  template <typename T> Error readEnum(T &Dest) {
+  template <typename T>
+  Error readEnum(T &Dest,
+                 llvm::support::endianness Endian = llvm::support::native) {
+    static_assert(std::is_enum<T>::value,
+                  "Cannot call readEnum with non-enum value!");
     typename std::underlying_type<T>::type N;
-    if (auto EC = readInteger(N))
+    if (auto EC = readInteger(N, Endian))
       return EC;
     Dest = static_cast<T>(N);
     return Error::success();

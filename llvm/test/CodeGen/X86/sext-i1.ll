@@ -112,3 +112,75 @@ define i64 @t5(i32 %x) nounwind readnone ssp {
   ret i64 %t1
 }
 
+; FIXME: sext (xor Bool, -1) --> sub (zext Bool), 1
+
+define i32 @select_0_or_1s(i1 %cond) {
+; X32-LABEL: select_0_or_1s:
+; X32:       # BB#0:
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X32-NEXT:    notb %al
+; X32-NEXT:    movzbl %al, %eax
+; X32-NEXT:    andl $1, %eax
+; X32-NEXT:    negl %eax
+; X32-NEXT:    retl
+;
+; X64-LABEL: select_0_or_1s:
+; X64:       # BB#0:
+; X64-NEXT:    notb %dil
+; X64-NEXT:    movzbl %dil, %eax
+; X64-NEXT:    andl $1, %eax
+; X64-NEXT:    negl %eax
+; X64-NEXT:    retq
+  %not = xor i1 %cond, 1
+  %sext = sext i1 %not to i32
+  ret i32 %sext
+}
+
+; FIXME: sext (xor Bool, -1) --> sub (zext Bool), 1
+
+define i32 @select_0_or_1s_zeroext(i1 zeroext %cond) {
+; X32-LABEL: select_0_or_1s_zeroext:
+; X32:       # BB#0:
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X32-NEXT:    notb %al
+; X32-NEXT:    movzbl %al, %eax
+; X32-NEXT:    andl $1, %eax
+; X32-NEXT:    negl %eax
+; X32-NEXT:    retl
+;
+; X64-LABEL: select_0_or_1s_zeroext:
+; X64:       # BB#0:
+; X64-NEXT:    notb %dil
+; X64-NEXT:    movzbl %dil, %eax
+; X64-NEXT:    andl $1, %eax
+; X64-NEXT:    negl %eax
+; X64-NEXT:    retq
+  %not = xor i1 %cond, 1
+  %sext = sext i1 %not to i32
+  ret i32 %sext
+}
+
+; FIXME: sext (xor Bool, -1) --> sub (zext Bool), 1
+
+define i32 @select_0_or_1s_signext(i1 signext %cond) {
+; X32-LABEL: select_0_or_1s_signext:
+; X32:       # BB#0:
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X32-NEXT:    notb %al
+; X32-NEXT:    movzbl %al, %eax
+; X32-NEXT:    andl $1, %eax
+; X32-NEXT:    negl %eax
+; X32-NEXT:    retl
+;
+; X64-LABEL: select_0_or_1s_signext:
+; X64:       # BB#0:
+; X64-NEXT:    notb %dil
+; X64-NEXT:    movzbl %dil, %eax
+; X64-NEXT:    andl $1, %eax
+; X64-NEXT:    negl %eax
+; X64-NEXT:    retq
+  %not = xor i1 %cond, 1
+  %sext = sext i1 %not to i32
+  ret i32 %sext
+}
+

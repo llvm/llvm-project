@@ -866,9 +866,11 @@ AArch64LoadStoreOpt::promoteLoadFromStore(MachineBasicBlock::iterator LoadI,
               .addImm(Imms);
     }
   }
-  StoreI->clearRegisterKills(StRt, TRI);
 
-  (void)BitExtMI;
+  // Clear kill flags between store and load.
+  for (MachineInstr &MI : make_range(StoreI->getIterator(),
+                                     BitExtMI->getIterator()))
+    MI.clearRegisterKills(StRt, TRI);
 
   DEBUG(dbgs() << "Promoting load by replacing :\n    ");
   DEBUG(StoreI->print(dbgs()));

@@ -126,19 +126,6 @@ class ResultsFormatter(object):
         self.terminate_called = False
         self.file_is_stream = file_is_stream
 
-        # Store counts of test_result events by status.
-        self.result_status_counts = {
-            EventBuilder.STATUS_SUCCESS: 0,
-            EventBuilder.STATUS_EXPECTED_FAILURE: 0,
-            EventBuilder.STATUS_EXPECTED_TIMEOUT: 0,
-            EventBuilder.STATUS_SKIP: 0,
-            EventBuilder.STATUS_UNEXPECTED_SUCCESS: 0,
-            EventBuilder.STATUS_FAILURE: 0,
-            EventBuilder.STATUS_ERROR: 0,
-            EventBuilder.STATUS_TIMEOUT: 0,
-            EventBuilder.STATUS_EXCEPTIONAL_EXIT: 0
-        }
-
         # Track the most recent test start event by worker index.
         # We'll use this to assign TIMEOUT and exceptional
         # exits to the most recent test started on a given
@@ -359,18 +346,12 @@ class ResultsFormatter(object):
                 if event_type == "terminate":
                     self.terminate_called = True
                 elif event_type in EventBuilder.RESULT_TYPES:
-                    # Keep track of event counts per test/job result status
-                    # type. The only job (i.e. inferior process) results that
-                    # make it here are ones that cannot be remapped to the most
-                    # recently started test for the given worker index.
-                    status = test_event["status"]
-                    self.result_status_counts[status] += 1
                     # Clear the most recently started test for the related
                     # worker.
                     worker_index = test_event.get("worker_index", None)
                     if worker_index is not None:
                         self.started_tests_by_worker.pop(worker_index, None)
-
+                    status = test_event["status"]
                     if status in EventBuilder.TESTRUN_ERROR_STATUS_VALUES:
                         # A test/job status value in any of those status values
                         # causes a testrun failure. If such a test fails, check
@@ -393,12 +374,6 @@ class ResultsFormatter(object):
                     # the need to run a low-load, single-worker test run can
                     # have the final run's results to always be used.
                     if test_key in self.result_events:
-                        # We are replacing the result of something that was
-                        # already counted by the base class.  Remove the double
-                        # counting by reducing by one the count for the test
-                        # result status.
-                        old_status = self.result_events[test_key]["status"]
-                        self.result_status_counts[old_status] -= 1
                         self.test_method_rerun_count += 1
                     self.result_events[test_key] = test_event
                 elif event_type == EventBuilder.TYPE_TEST_START:
@@ -494,7 +469,9 @@ class ResultsFormatter(object):
         @return an integer returning the number of test methods matching
         the given test result status.
         """
-        return self.result_status_counts[status]
+        return len([
+            [key, event] for (key, event) in self.result_events.items()
+            if event.get("status", "") == status])
 
     @classmethod
     def _event_sort_key(cls, event):

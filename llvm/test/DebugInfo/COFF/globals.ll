@@ -96,7 +96,7 @@
 ; OBJ:   ]
 ; OBJ: ]
 ; OBJ: CodeViewDebugInfo [
-; OBJ:   Section: .debug$S (7)
+; OBJ:   Section: .debug$S (8)
 ; OBJ:   Magic: 0x4
 ; OBJ:   Subsection [
 ; OBJ:     SubSectionType: Symbols (0xF1)

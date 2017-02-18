@@ -1599,20 +1599,21 @@ Decl *TemplateDeclInstantiator::VisitFunctionDecl(FunctionDecl *D,
                                          TemplateArgs);
   }
 
-  FunctionDecl *Function =
-      FunctionDecl::Create(SemaRef.Context, DC, D->getInnerLocStart(),
-                           D->getNameInfo(), T, TInfo,
-                           D->getCanonicalDecl()->getStorageClass(),
-                           D->isInlineSpecified(), D->hasWrittenPrototype(),
-                           D->isConstexpr());
-  Function->setRangeEnd(D->getSourceRange().getEnd());
+  FunctionDecl *Function;
+  if (auto *DGuide = dyn_cast<CXXDeductionGuideDecl>(D))
+    Function = CXXDeductionGuideDecl::Create(
+        SemaRef.Context, DC, D->getInnerLocStart(), DGuide->isExplicit(),
+        D->getNameInfo(), T, TInfo, D->getSourceRange().getEnd());
+  else {
+    Function = FunctionDecl::Create(
+        SemaRef.Context, DC, D->getInnerLocStart(), D->getNameInfo(), T, TInfo,
+        D->getCanonicalDecl()->getStorageClass(), D->isInlineSpecified(),
+        D->hasWrittenPrototype(), D->isConstexpr());
+    Function->setRangeEnd(D->getSourceRange().getEnd());
+  }
 
   if (D->isInlined())
     Function->setImplicitlyInline();
-
-  // A deduction-guide could be explicit.
-  if (D->isExplicitSpecified())
-    Function->setExplicitSpecified();
 
   if (QualifierLoc)
     Function->setQualifierInfo(QualifierLoc);
@@ -2778,6 +2779,11 @@ Decl *TemplateDeclInstantiator::VisitOMPCapturedExprDecl(
 }
 
 Decl *TemplateDeclInstantiator::VisitFunctionDecl(FunctionDecl *D) {
+  return VisitFunctionDecl(D, nullptr);
+}
+
+Decl *
+TemplateDeclInstantiator::VisitCXXDeductionGuideDecl(CXXDeductionGuideDecl *D) {
   return VisitFunctionDecl(D, nullptr);
 }
 
@@ -4958,8 +4964,9 @@ NamedDecl *Sema::FindInstantiatedDecl(SourceLocation Loc, NamedDecl *D,
         }
         // An implicit deduction guide acts as if it's within the class template
         // specialization described by its name and first N template params.
-        if (FD->isDeductionGuide() && FD->isImplicit()) {
-          TemplateDecl *TD = FD->getDeclName().getCXXDeductionGuideTemplate();
+        auto *Guide = dyn_cast<CXXDeductionGuideDecl>(FD);
+        if (Guide && Guide->isImplicit()) {
+          TemplateDecl *TD = Guide->getDeducedTemplate();
           TemplateArgumentListInfo Args(Loc, Loc);
           for (auto Arg : TemplateArgs.getInnermost().take_front(
                                       TD->getTemplateParameters()->size()))

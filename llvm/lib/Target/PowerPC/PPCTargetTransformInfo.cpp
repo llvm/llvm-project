@@ -401,6 +401,10 @@ int PPCTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src, unsigned Alignment,
   if (IsVSXType || (ST->hasVSX() && IsAltivecType))
     return Cost;
 
+  // Newer PPC supports unaligned memory access.
+  if (TLI->allowsMisalignedMemoryAccesses(LT.second, 0))
+    return Cost;
+
   // PPC in general does not support unaligned loads and stores. They'll need
   // to be decomposed based on the alignment factor.
 

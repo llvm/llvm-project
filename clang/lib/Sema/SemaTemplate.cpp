@@ -1438,7 +1438,8 @@ struct ConvertConstructorToDeductionGuideTransform {
   unsigned Depth1IndexAdjustment = Template->getTemplateParameters()->size();
 
   /// Transform a constructor declaration into a deduction guide.
-  NamedDecl *transformConstructor(FunctionTemplateDecl *FTD, FunctionDecl *FD) {
+  NamedDecl *transformConstructor(FunctionTemplateDecl *FTD,
+                                  CXXConstructorDecl *CD) {
     SmallVector<TemplateArgument, 16> SubstArgs;
 
     // C++ [over.match.class.deduct]p1:
@@ -1485,7 +1486,7 @@ struct ConvertConstructorToDeductionGuideTransform {
       Args.addOuterTemplateArguments(None);
     }
 
-    FunctionProtoTypeLoc FPTL = FD->getTypeSourceInfo()->getTypeLoc()
+    FunctionProtoTypeLoc FPTL = CD->getTypeSourceInfo()->getTypeLoc()
                                    .getAsAdjusted<FunctionProtoTypeLoc>();
     assert(FPTL && "no prototype for constructor declaration");
 
@@ -1499,9 +1500,9 @@ struct ConvertConstructorToDeductionGuideTransform {
       return nullptr;
     TypeSourceInfo *NewTInfo = TLB.getTypeSourceInfo(SemaRef.Context, NewType);
 
-    return buildDeductionGuide(TemplateParams, FD->isExplicit(), NewTInfo,
-                               FD->getLocStart(), FD->getLocation(),
-                               FD->getLocEnd());
+    return buildDeductionGuide(TemplateParams, CD->isExplicit(), NewTInfo,
+                               CD->getLocStart(), CD->getLocation(),
+                               CD->getLocEnd());
   }
 
   /// Build a deduction guide with the specified parameter types.
@@ -1677,17 +1678,15 @@ private:
                                  bool Explicit, TypeSourceInfo *TInfo,
                                  SourceLocation LocStart, SourceLocation Loc,
                                  SourceLocation LocEnd) {
+    DeclarationNameInfo Name(DeductionGuideName, Loc);
     ArrayRef<ParmVarDecl *> Params =
         TInfo->getTypeLoc().castAs<FunctionProtoTypeLoc>().getParams();
 
     // Build the implicit deduction guide template.
-    auto *Guide = FunctionDecl::Create(SemaRef.Context, DC, LocStart, Loc,
-                                       DeductionGuideName, TInfo->getType(),
-                                       TInfo, SC_None);
+    auto *Guide =
+        CXXDeductionGuideDecl::Create(SemaRef.Context, DC, LocStart, Explicit,
+                                      Name, TInfo->getType(), TInfo, LocEnd);
     Guide->setImplicit();
-    if (Explicit)
-      Guide->setExplicitSpecified();
-    Guide->setRangeEnd(LocEnd);
     Guide->setParams(Params);
 
     for (auto *Param : Params)
@@ -1749,16 +1748,16 @@ void Sema::DeclareImplicitDeductionGuides(TemplateDecl *Template,
     D = cast<NamedDecl>(D->getCanonicalDecl());
 
     auto *FTD = dyn_cast<FunctionTemplateDecl>(D);
-    auto *FD = FTD ? FTD->getTemplatedDecl() : dyn_cast<FunctionDecl>(D);
+    auto *CD =
+        dyn_cast_or_null<CXXConstructorDecl>(FTD ? FTD->getTemplatedDecl() : D);
     // Class-scope explicit specializations (MS extension) do not result in
     // deduction guides.
-    if (!FD || (!FTD && FD->isFunctionTemplateSpecialization()))
+    if (!CD || (!FTD && CD->isFunctionTemplateSpecialization()))
       continue;
 
-    Transform.transformConstructor(FTD, FD);
+    Transform.transformConstructor(FTD, CD);
     AddedAny = true;
 
-    CXXConstructorDecl *CD = cast<CXXConstructorDecl>(FD);
     AddedCopyOrMove |= CD->isCopyOrMoveConstructor();
   }
 

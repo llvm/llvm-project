@@ -1608,7 +1608,11 @@ private:
   unsigned SClass : 2;
   unsigned IsInline : 1;
   unsigned IsInlineSpecified : 1;
+protected:
+  // This is shared by CXXConstructorDecl, CXXConversionDecl, and
+  // CXXDeductionGuideDecl.
   unsigned IsExplicitSpecified : 1;
+private:
   unsigned IsVirtualAsWritten : 1;
   unsigned IsPure : 1;
   unsigned HasInheritedPrototype : 1;
@@ -1855,19 +1859,6 @@ public:
   bool isVirtualAsWritten() const { return IsVirtualAsWritten; }
   void setVirtualAsWritten(bool V) { IsVirtualAsWritten = V; }
 
-  /// Whether this function is marked as explicit explicitly.
-  bool isExplicitSpecified() const { return IsExplicitSpecified; }
-  void setExplicitSpecified() {
-    assert((getKind() == CXXConstructor || getKind() == CXXConversion ||
-            isDeductionGuide()) && "cannot be explicit");
-    IsExplicitSpecified = true;
-  }
-
-  /// Whether this function is explicit.
-  bool isExplicit() const {
-    return getFirstDecl()->isExplicitSpecified();
-  }
-
   /// Whether this virtual function is pure, i.e. makes the containing class
   /// abstract.
   bool isPure() const { return IsPure; }
@@ -1945,12 +1936,6 @@ public:
   bool isDeleted() const { return getCanonicalDecl()->IsDeleted; }
   bool isDeletedAsWritten() const { return IsDeleted && !IsDefaulted; }
   void setDeletedAsWritten(bool D = true) { IsDeleted = D; }
-
-  /// \brief Determines whether this function is a deduction guide.
-  bool isDeductionGuide() const {
-    return getDeclName().getNameKind() ==
-           DeclarationName::CXXDeductionGuideName;
-  }
 
   /// \brief Determines whether this function is "main", which is the
   /// entry point into an executable program.

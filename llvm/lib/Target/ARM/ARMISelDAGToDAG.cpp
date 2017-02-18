@@ -3277,26 +3277,23 @@ void ARMDAGToDAGISel::Select(SDNode *N) {
       int64_t Addend = -C->getSExtValue();
 
       SDNode *Add = nullptr;
-      // In T2 mode, ADDS can be better than CMN if the immediate fits in a
+      // ADDS can be better than CMN if the immediate fits in a
       // 16-bit ADDS, which means either [0,256) for tADDi8 or [0,8) for tADDi3.
       // Outside that range we can just use a CMN which is 32-bit but has a
       // 12-bit immediate range.
-      if (Subtarget->isThumb2() && Addend < 1<<8) {
-        SDValue Ops[] = { X, CurDAG->getTargetConstant(Addend, dl, MVT::i32),
-                          getAL(CurDAG, dl), CurDAG->getRegister(0, MVT::i32),
-                          CurDAG->getRegister(0, MVT::i32) };
-        Add = CurDAG->getMachineNode(ARM::t2ADDri, dl, MVT::i32, Ops);
-      } else if (!Subtarget->isThumb2() && Addend < 1<<8) {
-        // FIXME: Add T1 tADDi8 code.
-        SDValue Ops[] = {CurDAG->getRegister(ARM::CPSR, MVT::i32), X,
-                         CurDAG->getTargetConstant(Addend, dl, MVT::i32),
-                         getAL(CurDAG, dl), CurDAG->getRegister(0, MVT::i32)};
-        Add = CurDAG->getMachineNode(ARM::tADDi8, dl, MVT::i32, Ops);
-      } else if (!Subtarget->isThumb2() && Addend < 1<<3) {
-        SDValue Ops[] = {CurDAG->getRegister(ARM::CPSR, MVT::i32), X,
-                         CurDAG->getTargetConstant(Addend, dl, MVT::i32),
-                         getAL(CurDAG, dl), CurDAG->getRegister(0, MVT::i32)};
-        Add = CurDAG->getMachineNode(ARM::tADDi3, dl, MVT::i32, Ops);
+      if (Addend < 1<<8) {
+        if (Subtarget->isThumb2()) {
+          SDValue Ops[] = { X, CurDAG->getTargetConstant(Addend, dl, MVT::i32),
+                            getAL(CurDAG, dl), CurDAG->getRegister(0, MVT::i32),
+                            CurDAG->getRegister(0, MVT::i32) };
+          Add = CurDAG->getMachineNode(ARM::t2ADDri, dl, MVT::i32, Ops);
+        } else {
+          unsigned Opc = (Addend < 1<<3) ? ARM::tADDi3 : ARM::tADDi8;
+          SDValue Ops[] = {CurDAG->getRegister(ARM::CPSR, MVT::i32), X,
+                           CurDAG->getTargetConstant(Addend, dl, MVT::i32),
+                           getAL(CurDAG, dl), CurDAG->getRegister(0, MVT::i32)};
+          Add = CurDAG->getMachineNode(Opc, dl, MVT::i32, Ops);
+        }
       }
       if (Add) {
         SDValue Ops2[] = {SDValue(Add, 0), CurDAG->getConstant(0, dl, MVT::i32)};

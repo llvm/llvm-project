@@ -622,7 +622,7 @@ body: |
     ; CHECK:      %0(p0) = COPY %x0
     ; CHECK:      %1(s32) = G_LOAD %0
     %0(p0) = COPY %x0
-    %1(s32) = G_LOAD %0
+    %1(s32) = G_LOAD %0 :: (load 4)
 ...
 
 ---
@@ -643,7 +643,7 @@ body: |
     ; CHECK:      G_STORE %1(s32), %0(p0)
     %0(p0) = COPY %x0
     %1(s32) = COPY %w1
-    G_STORE %1, %0
+    G_STORE %1, %0 :: (store 4)
 ...
 
 ---

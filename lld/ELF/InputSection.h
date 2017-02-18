@@ -128,6 +128,9 @@ public:
   // this but instead this->Repl.
   InputSectionBase<ELFT> *Repl;
 
+  // InputSections that are dependent on us (reverse dependency for GC)
+  llvm::TinyPtrVector<InputSectionBase<ELFT> *> DependentSections;
+
   // Returns the size of this section (even if this is a common or BSS.)
   size_t getSize() const;
 
@@ -280,9 +283,6 @@ public:
   // The offset from beginning of the output sections this section was assigned
   // to. The writer sets a value.
   uint64_t OutSecOff = 0;
-
-  // InputSections that are dependent on us (reverse dependency for GC)
-  llvm::TinyPtrVector<InputSectionBase<ELFT> *> DependentSections;
 
   static bool classof(const InputSectionData *S);
 
