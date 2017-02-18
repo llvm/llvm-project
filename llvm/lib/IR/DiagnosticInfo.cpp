@@ -156,6 +156,14 @@ DiagnosticLocation::DiagnosticLocation(const DebugLoc &DL) {
   Column = DL->getColumn();
 }
 
+DiagnosticLocation::DiagnosticLocation(const DISubprogram *SP) {
+  if (!SP)
+    return;
+  Filename = SP->getFilename();
+  Line = SP->getScopeLine();
+  Column = 0;
+}
+
 void DiagnosticInfoWithLocationBase::getLocation(StringRef *Filename,
                                                  unsigned *Line,
                                                  unsigned *Column) const {
@@ -177,7 +185,7 @@ DiagnosticInfoOptimizationBase::Argument::Argument(StringRef Key, const Value *V
     : Key(Key) {
   if (auto *F = dyn_cast<Function>(V)) {
     if (DISubprogram *SP = F->getSubprogram())
-      Loc = DebugLoc::get(SP->getScopeLine(), 0, SP);
+      Loc = SP;
   }
   else if (auto *I = dyn_cast<Instruction>(V))
     Loc = I->getDebugLoc();

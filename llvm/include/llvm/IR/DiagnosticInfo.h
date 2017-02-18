@@ -354,6 +354,7 @@ class DiagnosticLocation {
 public:
   DiagnosticLocation() {}
   DiagnosticLocation(const DebugLoc &DL);
+  DiagnosticLocation(const DISubprogram *SP);
 
   bool isValid() const { return !Filename.empty(); }
   StringRef getFilename() const { return Filename; }
