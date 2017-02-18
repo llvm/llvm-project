@@ -404,65 +404,6 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata)
 !10 = !DIFile(filename: "a.c", directory: "a/b")
 !11 = !DILocation(line: 1, column: 14, scope: !8)
 
-; CHECK-LABEL: test14
-; CHECK: getelementptr
-; CHECK: load
-; CHECK-NOT: load
-
-; The load should be commoned.
-define i32 @test15(i1 zeroext %flag, i32 %w, i32 %x, i32 %y, %struct.anon* %s) {
-entry:
-  br i1 %flag, label %if.then, label %if.else
-
-if.then:
-  %dummy = add i32 %x, 1
-  %gepa = getelementptr inbounds %struct.anon, %struct.anon* %s, i32 0, i32 0
-  %sv1 = load i32, i32* %gepa
-  %ext1 = zext i32 %sv1 to i64
-  %cmp1 = icmp eq i64 %ext1, 56
-  br label %if.end
-
-if.else:
-  %dummy2 = add i32 %x, 4
-  %gepb = getelementptr inbounds %struct.anon, %struct.anon* %s, i32 0, i32 1
-  %sv2 = load i32, i32* %gepb
-  %ext2 = zext i32 %sv2 to i64
-  %cmp2 = icmp eq i64 %ext2, 57
-  br label %if.end
-
-if.end:
-  %p = phi i1 [ %cmp1, %if.then ], [ %cmp2, %if.else ]
-  ret i32 1
-}
-
-; CHECK-LABEL: test15
-; CHECK: getelementptr
-; CHECK: load
-; CHECK-NOT: load
-
-define zeroext i1 @test_crash(i1 zeroext %flag, i32* %i4, i32* %m, i32* %n) {
-entry:
-  br i1 %flag, label %if.then, label %if.else
-
-if.then:
-  %tmp1 = load i32, i32* %i4
-  %tmp2 = add i32 %tmp1, -1
-  store i32 %tmp2, i32* %i4
-  br label %if.end
-
-if.else:
-  %tmp3 = load i32, i32* %m
-  %tmp4 = load i32, i32* %n
-  %tmp5 = add i32 %tmp3, %tmp4
-  store i32 %tmp5, i32* %i4
-  br label %if.end
-
-if.end:
-  ret i1 true
-}
-
-; CHECK-LABEL: test_crash
-; No checks for test_crash - just ensure it doesn't crash!
 
 declare void @g()
 
