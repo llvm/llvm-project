@@ -36,8 +36,7 @@ public:
     RegScavenger *RS = nullptr) const override;
 
 private:
-  void emitFlatScratchInit(const SIInstrInfo *TII,
-                           const SIRegisterInfo* TRI,
+  void emitFlatScratchInit(const SISubtarget &ST,
                            MachineFunction &MF,
                            MachineBasicBlock &MBB) const;
 

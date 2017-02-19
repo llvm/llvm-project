@@ -285,34 +285,6 @@ void Dependences::addPrivatizationDependences() {
   isl_union_set_free(Universe);
 }
 
-static isl_stat getMaxScheduleDim(__isl_take isl_map *Map, void *User) {
-  unsigned int *MaxScheduleDim = (unsigned int *)User;
-  *MaxScheduleDim = std::max(*MaxScheduleDim, isl_map_dim(Map, isl_dim_out));
-  isl_map_free(Map);
-  return isl_stat_ok;
-}
-
-static __isl_give isl_union_map *
-addZeroPaddingToSchedule(__isl_take isl_union_map *Schedule) {
-  unsigned int MaxScheduleDim = 0;
-
-  isl_union_map_foreach_map(Schedule, getMaxScheduleDim, &MaxScheduleDim);
-
-  auto ExtensionMap = isl_union_map_empty(isl_union_map_get_space(Schedule));
-  for (unsigned int i = 0; i <= MaxScheduleDim; i++) {
-    auto *Map = isl_map_identity(
-        isl_space_alloc(isl_union_map_get_ctx(Schedule), 0, i, i));
-    Map = isl_map_add_dims(Map, isl_dim_out, MaxScheduleDim - i);
-    for (unsigned int j = 0; j < MaxScheduleDim - i; j++)
-      Map = isl_map_fix_si(Map, isl_dim_out, i + j, 0);
-
-    ExtensionMap = isl_union_map_add_map(ExtensionMap, Map);
-  }
-  Schedule = isl_union_map_apply_range(Schedule, ExtensionMap);
-
-  return Schedule;
-}
-
 static __isl_give isl_union_flow *buildFlow(__isl_keep isl_union_map *Snk,
                                             __isl_keep isl_union_map *Src,
                                             __isl_keep isl_union_map *MaySrc,
@@ -348,9 +320,10 @@ void Dependences::calculateDependences(Scop &S) {
         dbgs() << "AccessSchedule: " << AccessSchedule << '\n';
         dbgs() << "StmtSchedule: " << StmtSchedule << '\n';);
 
+  Schedule = S.getScheduleTree();
+
   if (!HasReductions) {
     isl_union_map_free(AccessSchedule);
-    Schedule = S.getScheduleTree();
     // Tag the schedule tree if we want fine-grain dependence info
     if (Level > AL_Statement) {
       auto TaggedDom = isl_union_map_domain((isl_union_map_copy(StmtSchedule)));
@@ -359,17 +332,31 @@ void Dependences::calculateDependences(Scop &S) {
       Schedule = isl_schedule_pullback_union_pw_multi_aff(Schedule, Tags);
     }
   } else {
-    auto *ScheduleMap =
-        isl_union_map_union(AccessSchedule, isl_union_map_copy(StmtSchedule));
-    Schedule = isl_schedule_from_domain(
-        isl_union_map_domain(isl_union_map_copy(ScheduleMap)));
-    if (!isl_union_map_is_empty(ScheduleMap)) {
-      ScheduleMap = addZeroPaddingToSchedule(ScheduleMap);
-      Schedule = isl_schedule_insert_partial_schedule(
-          Schedule, isl_multi_union_pw_aff_from_union_map(ScheduleMap));
-    } else {
-      isl_union_map_free(ScheduleMap);
-    }
+    isl_union_set *ReductionDom, *IdentityDom;
+    isl_union_map *ReductionMap, *IdentityMap;
+    isl_union_pw_multi_aff *ReductionTags, *IdentityTags, *Tags;
+
+    // Extract reduction tags from the access schedule. The result is a map that
+    // maps each tagged element in the domain to the memory location it
+    // accesses.
+    //
+    // ReductionTags = {[Stmt[i] -> Array[f(i)]] -> Stmt[i] }
+    ReductionDom = isl_union_map_domain((AccessSchedule));
+    ReductionMap = isl_union_set_unwrap(ReductionDom);
+    ReductionTags = isl_union_map_domain_map_union_pw_multi_aff(ReductionMap);
+
+    // Compute an identity map from each statement in domain to itself.
+    // IdentityTags = { [Stmt[i] -> Stmt[i] }
+    IdentityDom = isl_union_map_domain(isl_union_map_copy(StmtSchedule));
+    IdentityMap = isl_union_set_identity(IdentityDom);
+    IdentityTags = isl_union_pw_multi_aff_from_union_map(IdentityMap);
+
+    Tags = isl_union_pw_multi_aff_union_add(ReductionTags, IdentityTags);
+
+    // By pulling back Tags from Schedule, we have a schedule tree that can
+    // be used to compute normal dependences, as well as 'tagged' reduction
+    // dependences.
+    Schedule = isl_schedule_pullback_union_pw_multi_aff(Schedule, Tags);
   }
 
   DEBUG(dbgs() << "Read: " << Read << "\n";

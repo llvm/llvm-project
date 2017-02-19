@@ -72,11 +72,11 @@ unsigned unpackBits(unsigned Src, unsigned Shift, unsigned Width) {
   return (Src & getBitMask(Shift, Width)) >> Shift;
 }
 
-/// \returns Vmcnt bit shift.
-unsigned getVmcntBitShift() { return 0; }
+/// \returns Vmcnt bit shift (lower bits).
+unsigned getVmcntBitShiftLo() { return 0; }
 
-/// \returns Vmcnt bit width.
-unsigned getVmcntBitWidth() { return 4; }
+/// \returns Vmcnt bit width (lower bits).
+unsigned getVmcntBitWidthLo() { return 4; }
 
 /// \returns Expcnt bit shift.
 unsigned getExpcntBitShift() { return 4; }
@@ -89,6 +89,12 @@ unsigned getLgkmcntBitShift() { return 8; }
 
 /// \returns Lgkmcnt bit width.
 unsigned getLgkmcntBitWidth() { return 4; }
+
+/// \returns Vmcnt bit shift (higher bits).
+unsigned getVmcntBitShiftHi() { return 14; }
+
+/// \returns Vmcnt bit width (higher bits).
+unsigned getVmcntBitWidthHi() { return 2; }
 
 } // end namespace anonymous
 
@@ -119,6 +125,12 @@ IsaVersion getIsaVersion(const FeatureBitset &Features) {
     return {8, 0, 4};
   if (Features.test(FeatureISAVersion8_1_0))
     return {8, 1, 0};
+
+  // GFX9.
+  if (Features.test(FeatureISAVersion9_0_0))
+    return {9, 0, 0};
+  if (Features.test(FeatureISAVersion9_0_1))
+    return {9, 0, 1};
 
   if (!Features.test(FeatureGCN) || Features.test(FeatureSouthernIslands))
     return {0, 0, 0};
@@ -399,7 +411,12 @@ std::pair<int, int> getIntegerPairAttribute(const Function &F,
 }
 
 unsigned getVmcntBitMask(const IsaInfo::IsaVersion &Version) {
-  return (1 << getVmcntBitWidth()) - 1;
+  unsigned VmcntLo = (1 << getVmcntBitWidthLo()) - 1;
+  if (Version.Major < 9)
+    return VmcntLo;
+
+  unsigned VmcntHi = ((1 << getVmcntBitWidthHi()) - 1) << getVmcntBitWidthLo();
+  return VmcntLo | VmcntHi;
 }
 
 unsigned getExpcntBitMask(const IsaInfo::IsaVersion &Version) {
@@ -411,14 +428,27 @@ unsigned getLgkmcntBitMask(const IsaInfo::IsaVersion &Version) {
 }
 
 unsigned getWaitcntBitMask(const IsaInfo::IsaVersion &Version) {
-  unsigned Vmcnt = getBitMask(getVmcntBitShift(), getVmcntBitWidth());
+  unsigned VmcntLo = getBitMask(getVmcntBitShiftLo(), getVmcntBitWidthLo());
   unsigned Expcnt = getBitMask(getExpcntBitShift(), getExpcntBitWidth());
   unsigned Lgkmcnt = getBitMask(getLgkmcntBitShift(), getLgkmcntBitWidth());
-  return Vmcnt | Expcnt | Lgkmcnt;
+  unsigned Waitcnt = VmcntLo | Expcnt | Lgkmcnt;
+  if (Version.Major < 9)
+    return Waitcnt;
+
+  unsigned VmcntHi = getBitMask(getVmcntBitShiftHi(), getVmcntBitWidthHi());
+  return Waitcnt | VmcntHi;
 }
 
 unsigned decodeVmcnt(const IsaInfo::IsaVersion &Version, unsigned Waitcnt) {
-  return unpackBits(Waitcnt, getVmcntBitShift(), getVmcntBitWidth());
+  unsigned VmcntLo =
+      unpackBits(Waitcnt, getVmcntBitShiftLo(), getVmcntBitWidthLo());
+  if (Version.Major < 9)
+    return VmcntLo;
+
+  unsigned VmcntHi =
+      unpackBits(Waitcnt, getVmcntBitShiftHi(), getVmcntBitWidthHi());
+  VmcntHi <<= getVmcntBitWidthLo();
+  return VmcntLo | VmcntHi;
 }
 
 unsigned decodeExpcnt(const IsaInfo::IsaVersion &Version, unsigned Waitcnt) {
@@ -438,7 +468,13 @@ void decodeWaitcnt(const IsaInfo::IsaVersion &Version, unsigned Waitcnt,
 
 unsigned encodeVmcnt(const IsaInfo::IsaVersion &Version, unsigned Waitcnt,
                      unsigned Vmcnt) {
-  return packBits(Vmcnt, Waitcnt, getVmcntBitShift(), getVmcntBitWidth());
+  Waitcnt =
+      packBits(Vmcnt, Waitcnt, getVmcntBitShiftLo(), getVmcntBitWidthLo());
+  if (Version.Major < 9)
+    return Waitcnt;
+
+  Vmcnt >>= getVmcntBitWidthLo();
+  return packBits(Vmcnt, Waitcnt, getVmcntBitShiftHi(), getVmcntBitWidthHi());
 }
 
 unsigned encodeExpcnt(const IsaInfo::IsaVersion &Version, unsigned Waitcnt,

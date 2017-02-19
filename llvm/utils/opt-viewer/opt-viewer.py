@@ -184,17 +184,28 @@ class SourceFileRenderer:
             '''.format(filename), file=self.stream)
 
         self.html_formatter = HtmlFormatter(encoding='utf-8')
-        self.cpp_lexer = CppLexer()
+        self.cpp_lexer = CppLexer(stripnl=False)
 
-    def render_source_line(self, linenum, line):
-        html_line = highlight(line, self.cpp_lexer, self.html_formatter)
-        print('''
+    def render_source_lines(self, stream, line_remarks):
+        file_text = stream.read()
+        html_highlighted = highlight(file_text, self.cpp_lexer, self.html_formatter)
+
+        # Take off the header and footer, these must be
+        #   reapplied line-wise, within the page structure
+        html_highlighted = html_highlighted.replace('<div class="highlight"><pre>', '')
+        html_highlighted = html_highlighted.replace('</pre></div>', '')
+
+        for (linenum, html_line) in enumerate(html_highlighted.split('\n'), start=1):
+            print('''
 <tr>
 <td><a name=\"L{linenum}\">{linenum}</a></td>
 <td></td>
 <td></td>
-<td>{html_line}</td>
+<td><div class="highlight"><pre>{html_line}</pre></div></td>
 </tr>'''.format(**locals()), file=self.stream)
+
+            for remark in line_remarks.get(linenum, []):
+                self.render_inline_remarks(remark, html_line)
 
     def render_inline_remarks(self, r, line):
         inlining_context = r.DemangledFunctionName
@@ -237,10 +248,8 @@ class SourceFileRenderer:
 <td>Source</td>
 <td>Inline Context</td>
 </tr>''', file=self.stream)
-        for (linenum, line) in enumerate(self.source_stream.readlines(), start=1):
-            self.render_source_line(linenum, line)
-            for remark in line_remarks.get(linenum, []):
-                self.render_inline_remarks(remark, line)
+        self.render_source_lines(self.source_stream, line_remarks)
+
         print('''
 </table>
 </body>

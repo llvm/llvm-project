@@ -216,7 +216,8 @@ unsigned decodeLgkmcnt(const IsaInfo::IsaVersion &Version, unsigned Waitcnt);
 /// \p Lgkmcnt respectively.
 ///
 /// \details \p Vmcnt, \p Expcnt and \p Lgkmcnt are decoded as follows:
-///     \p Vmcnt = \p Waitcnt[3:0]
+///     \p Vmcnt = \p Waitcnt[3:0]                      (pre-gfx9 only)
+///     \p Vmcnt = \p Waitcnt[3:0] | \p Waitcnt[15:14]  (gfx9+ only)
 ///     \p Expcnt = \p Waitcnt[6:4]
 ///     \p Lgkmcnt = \p Waitcnt[11:8]
 void decodeWaitcnt(const IsaInfo::IsaVersion &Version, unsigned Waitcnt,
@@ -238,9 +239,11 @@ unsigned encodeLgkmcnt(const IsaInfo::IsaVersion &Version, unsigned Waitcnt,
 /// \p Version.
 ///
 /// \details \p Vmcnt, \p Expcnt and \p Lgkmcnt are encoded as follows:
-///     Waitcnt[3:0]  = \p Vmcnt
-///     Waitcnt[6:4]  = \p Expcnt
-///     Waitcnt[11:8] = \p Lgkmcnt
+///     Waitcnt[3:0]   = \p Vmcnt       (pre-gfx9 only)
+///     Waitcnt[3:0]   = \p Vmcnt[3:0]  (gfx9+ only)
+///     Waitcnt[6:4]   = \p Expcnt
+///     Waitcnt[11:8]  = \p Lgkmcnt
+///     Waitcnt[15:14] = \p Vmcnt[5:4]  (gfx9+ only)
 ///
 /// \returns Waitcnt with encoded \p Vmcnt, \p Expcnt and \p Lgkmcnt for given
 /// isa \p Version.

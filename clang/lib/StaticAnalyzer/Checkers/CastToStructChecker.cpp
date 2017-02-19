@@ -84,13 +84,6 @@ bool CastToStructVisitor::VisitCastExpr(const CastExpr *CE) {
     if (!VD || VD->getType()->isReferenceType())
       return true;
 
-    // Don't warn when target type has no definition.
-    if (const RecordType *RD = dyn_cast<RecordType>(ToPointeeTy.getTypePtr())) {
-      if (!RD->getDecl()->getDefinition()) {
-        return true;
-      }
-    }
-
     // Warn when there is widening cast.
     unsigned ToWidth = Ctx.getTypeInfo(ToPointeeTy).Width;
     unsigned OrigWidth = Ctx.getTypeInfo(OrigPointeeTy).Width;

@@ -133,6 +133,12 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   reserveRegisterTuples(Reserved, AMDGPU::EXEC);
   reserveRegisterTuples(Reserved, AMDGPU::FLAT_SCR);
 
+  // Reserve the memory aperture registers.
+  reserveRegisterTuples(Reserved, AMDGPU::SRC_SHARED_BASE);
+  reserveRegisterTuples(Reserved, AMDGPU::SRC_SHARED_LIMIT);
+  reserveRegisterTuples(Reserved, AMDGPU::SRC_PRIVATE_BASE);
+  reserveRegisterTuples(Reserved, AMDGPU::SRC_PRIVATE_LIMIT);
+
   // Reserve Trap Handler registers - support is not implemented in Codegen.
   reserveRegisterTuples(Reserved, AMDGPU::TBA);
   reserveRegisterTuples(Reserved, AMDGPU::TMA);

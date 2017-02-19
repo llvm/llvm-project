@@ -1322,7 +1322,10 @@ void MemorySSA::OptimizeUses::optimizeUsesInBlock(
 
   // Pop everything that doesn't dominate the current block off the stack,
   // increment the PopEpoch to account for this.
-  while (!VersionStack.empty()) {
+  while (true) {
+    assert(
+        !VersionStack.empty() &&
+        "Version stack should have liveOnEntry sentinel dominating everything");
     BasicBlock *BackBlock = VersionStack.back()->getBlock();
     if (DT->dominates(BackBlock, BB))
       break;
@@ -1330,6 +1333,7 @@ void MemorySSA::OptimizeUses::optimizeUsesInBlock(
       VersionStack.pop_back();
     ++PopEpoch;
   }
+
   for (MemoryAccess &MA : *Accesses) {
     auto *MU = dyn_cast<MemoryUse>(&MA);
     if (!MU) {
@@ -1450,20 +1454,13 @@ void MemorySSA::OptimizeUses::optimizeUsesInBlock(
 
 /// Optimize uses to point to their actual clobbering definitions.
 void MemorySSA::OptimizeUses::optimizeUses() {
-
-  // We perform a non-recursive top-down dominator tree walk
-  struct StackInfo {
-    const DomTreeNode *Node;
-    DomTreeNode::const_iterator Iter;
-  };
-
   SmallVector<MemoryAccess *, 16> VersionStack;
-  SmallVector<StackInfo, 16> DomTreeWorklist;
   DenseMap<MemoryLocOrCall, MemlocStackInfo> LocStackInfo;
   VersionStack.push_back(MSSA->getLiveOnEntryDef());
 
   unsigned long StackEpoch = 1;
   unsigned long PopEpoch = 1;
+  // We perform a non-recursive top-down dominator tree walk.
   for (const auto *DomNode : depth_first(DT->getRootNode()))
     optimizeUsesInBlock(DomNode->getBlock(), StackEpoch, PopEpoch, VersionStack,
                         LocStackInfo);
