@@ -102,6 +102,7 @@ define void @test3(i32 %x, i32 %y) {
 ; CHECK:         [[X_0:%.*]] = call i32 @llvm.ssa.copy.i32(i32 [[X]])
 ; CHECK:         [[YZ_0:%.*]] = call i1 @llvm.ssa.copy.i1(i1 [[YZ]])
 ; CHECK:         [[Y_0:%.*]] = call i32 @llvm.ssa.copy.i32(i32 [[Y]])
+; CHECK:         [[Z_0:%.*]] = call i1 @llvm.ssa.copy.i1(i1 [[Z]])
 ; CHECK-NEXT:    br i1 [[Z]], label [[BOTH_ZERO:%.*]], label [[NOPE:%.*]]
 ; CHECK:       both_zero:
 ; CHECK-NEXT:    call void @foo(i1 [[XZ_0]])
@@ -110,7 +111,7 @@ define void @test3(i32 %x, i32 %y) {
 ; CHECK-NEXT:    call void @bar(i32 [[Y_0]])
 ; CHECK-NEXT:    ret void
 ; CHECK:       nope:
-; CHECK-NEXT:    call void @foo(i1 [[Z]])
+; CHECK-NEXT:    call void @foo(i1 [[Z_0]])
 ; CHECK-NEXT:    ret void
 ;
   %xz = icmp eq i32 %x, 0

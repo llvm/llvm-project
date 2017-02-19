@@ -103,15 +103,15 @@ public:
   // This can be use by passes, when destroying predicateinfo, to know
   // whether they can just drop the intrinsic, or have to merge metadata.
   Value *OriginalOp;
-  CmpInst *Comparison;
+  Value *Condition;
   PredicateBase(const PredicateBase &) = delete;
   PredicateBase &operator=(const PredicateBase &) = delete;
   PredicateBase() = delete;
   virtual ~PredicateBase() = default;
 
 protected:
-  PredicateBase(PredicateType PT, Value *Op, CmpInst *Comparison)
-      : Type(PT), OriginalOp(Op), Comparison(Comparison) {}
+  PredicateBase(PredicateType PT, Value *Op, Value *Condition)
+      : Type(PT), OriginalOp(Op), Condition(Condition) {}
 };
 
 // Provides predicate information for assumes.  Since assumes are always true,
@@ -120,8 +120,8 @@ protected:
 class PredicateAssume : public PredicateBase {
 public:
   IntrinsicInst *AssumeInst;
-  PredicateAssume(Value *Op, IntrinsicInst *AssumeInst, CmpInst *Comparison)
-      : PredicateBase(PT_Assume, Op, Comparison), AssumeInst(AssumeInst) {}
+  PredicateAssume(Value *Op, IntrinsicInst *AssumeInst, Value *Condition)
+      : PredicateBase(PT_Assume, Op, Condition), AssumeInst(AssumeInst) {}
   PredicateAssume() = delete;
   static inline bool classof(const PredicateBase *PB) {
     return PB->Type == PT_Assume;
@@ -131,15 +131,15 @@ public:
 // Provides predicate information for branches.
 class PredicateBranch : public PredicateBase {
 public:
-  // This is the block that is conditional upon the comparison.
+  // This is the block that is conditional upon the condition.
   BasicBlock *BranchBB;
   // This is one of the true/false successors of BranchBB.
   BasicBlock *SplitBB;
   // If true, SplitBB is the true successor, otherwise it's the false successor.
   bool TrueEdge;
   PredicateBranch(Value *Op, BasicBlock *BranchBB, BasicBlock *SplitBB,
-                  CmpInst *Comparison, bool TakenEdge)
-      : PredicateBase(PT_Branch, Op, Comparison), BranchBB(BranchBB),
+                  Value *Condition, bool TakenEdge)
+      : PredicateBase(PT_Branch, Op, Condition), BranchBB(BranchBB),
         SplitBB(SplitBB), TrueEdge(TakenEdge) {}
   PredicateBranch() = delete;
   static inline bool classof(const PredicateBase *PB) {
@@ -197,6 +197,8 @@ private:
   bool stackIsInScope(const ValueDFSStack &, const ValueDFS &) const;
   void popStackUntilDFSScope(ValueDFSStack &, const ValueDFS &);
   ValueInfo &getOrCreateValueInfo(Value *);
+  void addInfoFor(SmallPtrSetImpl<Value *> &OpsToRename, Value *Op,
+                  PredicateBase *PB);
   const ValueInfo &getValueInfo(Value *) const;
   Function &F;
   DominatorTree &DT;
@@ -217,7 +219,7 @@ private:
   DenseMap<const BasicBlock *, std::unique_ptr<OrderedBasicBlock>> OBBMap;
   // The set of edges along which we can only handle phi uses, due to critical
   // edges.
-  DenseSet<BasicBlockEdge> PhiUsesOnly;
+  DenseSet<std::pair<BasicBlock *, BasicBlock *>> EdgeUsesOnly;
 };
 
 // This pass does eager building and then printing of PredicateInfo. It is used

@@ -292,7 +292,6 @@ let ExeDomain = SSEPackedInt in {
 // Instruction where either second or third source can be memory
 multiclass xop4op_int<bits<8> opc, string OpcodeStr, RegisterClass RC,
                        X86MemOperand x86memop, ValueType VT> {
-  // 128-bit Instruction
   def rrr : IXOPi8Reg<opc, MRMSrcReg, (outs RC:$dst),
             (ins RC:$src1, RC:$src2, RC:$src3),
             !strconcat(OpcodeStr,
@@ -327,79 +326,51 @@ let ExeDomain = SSEPackedInt in {
   defm VPCMOVY : xop4op_int<0xA2, "vpcmov", VR256, i256mem, v4i64>, VEX_L;
 }
 
-multiclass xop5op<bits<8> opc, string OpcodeStr, SDNode OpNode,
-                  ValueType vt128, ValueType vt256,
-                  ValueType id128, ValueType id256,
-                  PatFrag ld_128, PatFrag ld_256> {
-  def rr : IXOP5<opc, MRMSrcReg, (outs VR128:$dst),
-        (ins VR128:$src1, VR128:$src2, VR128:$src3, u8imm:$src4),
+multiclass xop_vpermil2<bits<8> Opc, string OpcodeStr, RegisterClass RC,
+                        X86MemOperand intmemop, X86MemOperand fpmemop,
+                        ValueType VT, PatFrag FPLdFrag,
+                        PatFrag IntLdFrag> {
+  def rr : IXOP5<Opc, MRMSrcReg, (outs RC:$dst),
+        (ins RC:$src1, RC:$src2, RC:$src3, u8imm:$src4),
         !strconcat(OpcodeStr,
         "\t{$src4, $src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3, $src4}"),
-        [(set VR128:$dst,
-           (vt128 (OpNode (vt128 VR128:$src1), (vt128 VR128:$src2),
-                          (id128 VR128:$src3), (i8 imm:$src4))))]>;
-  def rm : IXOP5<opc, MRMSrcMemOp4, (outs VR128:$dst),
-        (ins VR128:$src1, VR128:$src2, i128mem:$src3, u8imm:$src4),
+        [(set RC:$dst,
+           (VT (X86vpermil2 RC:$src1, RC:$src2, RC:$src3, (i8 imm:$src4))))]>;
+  def rm : IXOP5<Opc, MRMSrcMemOp4, (outs RC:$dst),
+        (ins RC:$src1, RC:$src2, intmemop:$src3, u8imm:$src4),
         !strconcat(OpcodeStr,
         "\t{$src4, $src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3, $src4}"),
-        [(set VR128:$dst,
-           (vt128 (OpNode (vt128 VR128:$src1), (vt128 VR128:$src2),
-                          (id128 (bitconvert (loadv2i64 addr:$src3))),
-                          (i8 imm:$src4))))]>,
-        VEX_W;
-  def mr : IXOP5<opc, MRMSrcMem, (outs VR128:$dst),
-        (ins VR128:$src1, f128mem:$src2, VR128:$src3, u8imm:$src4),
+        [(set RC:$dst,
+          (VT (X86vpermil2 RC:$src1, RC:$src2,
+                           (bitconvert (IntLdFrag addr:$src3)),
+                           (i8 imm:$src4))))]>, VEX_W;
+  def mr : IXOP5<Opc, MRMSrcMem, (outs RC:$dst),
+        (ins RC:$src1, fpmemop:$src2, RC:$src3, u8imm:$src4),
         !strconcat(OpcodeStr,
         "\t{$src4, $src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3, $src4}"),
-        [(set VR128:$dst,
-           (vt128 (OpNode (vt128 VR128:$src1),
-                          (vt128 (bitconvert (ld_128 addr:$src2))),
-                          (id128 VR128:$src3), (i8 imm:$src4))))]>;
+        [(set RC:$dst,
+          (VT (X86vpermil2 RC:$src1, (FPLdFrag addr:$src2),
+                           RC:$src3, (i8 imm:$src4))))]>;
   // For disassembler
   let isCodeGenOnly = 1, ForceDisassemble = 1, hasSideEffects = 0 in
-  def rr_REV : IXOP5<opc, MRMSrcRegOp4, (outs VR128:$dst),
-        (ins VR128:$src1, VR128:$src2, VR128:$src3, u8imm:$src4),
+  def rr_REV : IXOP5<Opc, MRMSrcRegOp4, (outs RC:$dst),
+        (ins RC:$src1, RC:$src2, RC:$src3, u8imm:$src4),
         !strconcat(OpcodeStr,
         "\t{$src4, $src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3, $src4}"),
         []>, VEX_W;
-
-  def rrY : IXOP5<opc, MRMSrcReg, (outs VR256:$dst),
-        (ins VR256:$src1, VR256:$src2, VR256:$src3, u8imm:$src4),
-        !strconcat(OpcodeStr,
-        "\t{$src4, $src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3, $src4}"),
-        [(set VR256:$dst,
-           (vt256 (OpNode (vt256 VR256:$src1), (vt256 VR256:$src2),
-                          (id256 VR256:$src3), (i8 imm:$src4))))]>, VEX_L;
-  def rmY : IXOP5<opc, MRMSrcMemOp4, (outs VR256:$dst),
-        (ins VR256:$src1, VR256:$src2, i256mem:$src3, u8imm:$src4),
-        !strconcat(OpcodeStr,
-        "\t{$src4, $src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3, $src4}"),
-        [(set VR256:$dst,
-           (vt256 (OpNode (vt256 VR256:$src1), (vt256 VR256:$src2),
-                          (id256 (bitconvert (loadv4i64 addr:$src3))),
-                          (i8 imm:$src4))))]>, VEX_W, VEX_L;
-  def mrY : IXOP5<opc, MRMSrcMem, (outs VR256:$dst),
-        (ins VR256:$src1, f256mem:$src2, VR256:$src3, u8imm:$src4),
-        !strconcat(OpcodeStr,
-        "\t{$src4, $src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3, $src4}"),
-        [(set VR256:$dst,
-           (vt256 (OpNode (vt256 VR256:$src1),
-                          (vt256 (bitconvert (ld_256 addr:$src2))),
-                          (id256 VR256:$src3), (i8 imm:$src4))))]>, VEX_L;
-  // For disassembler
-  let isCodeGenOnly = 1, ForceDisassemble = 1, hasSideEffects = 0 in
-  def rrY_REV : IXOP5<opc, MRMSrcRegOp4, (outs VR256:$dst),
-        (ins VR256:$src1, VR256:$src2, VR256:$src3, u8imm:$src4),
-        !strconcat(OpcodeStr,
-        "\t{$src4, $src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3, $src4}"),
-        []>, VEX_W, VEX_L;
 }
 
-let ExeDomain = SSEPackedDouble in
-  defm VPERMIL2PD : xop5op<0x49, "vpermil2pd", X86vpermil2, v2f64, v4f64,
-                           v2i64, v4i64, loadv2f64, loadv4f64>;
+let ExeDomain = SSEPackedDouble in {
+  defm VPERMIL2PD : xop_vpermil2<0x49, "vpermil2pd", VR128, i128mem, f128mem,
+                                 v2f64, loadv2f64, loadv2i64>;
+  defm VPERMIL2PDY : xop_vpermil2<0x49, "vpermil2pd", VR256, i256mem, f256mem,
+                                  v4f64, loadv4f64, loadv4i64>, VEX_L;
+}
 
-let ExeDomain = SSEPackedSingle in
-  defm VPERMIL2PS : xop5op<0x48, "vpermil2ps", X86vpermil2, v4f32, v8f32,
-                           v4i32, v8i32, loadv4f32, loadv8f32>;
+let ExeDomain = SSEPackedSingle in {
+  defm VPERMIL2PS : xop_vpermil2<0x48, "vpermil2ps", VR128, i128mem, f128mem,
+                                 v4f32, loadv4f32, loadv2i64>;
+  defm VPERMIL2PSY : xop_vpermil2<0x48, "vpermil2ps", VR256, i256mem, f256mem,
+                                  v8f32, loadv8f32, loadv4i64>, VEX_L;
+}
 
