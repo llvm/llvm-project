@@ -451,7 +451,9 @@ void CodeCoverageTool::demangleSymbols(const CoverageMapping &Coverage) {
   // Cache the demangled names.
   unsigned I = 0;
   for (const auto &Function : Coverage.getCoveredFunctions())
-    DC.DemangledNames[Function.Name] = Symbols[I++];
+    // On Windows, lines in the demangler's output file end with "\r\n".
+    // Splitting by '\n' keeps '\r's, so cut them now.
+    DC.DemangledNames[Function.Name] = Symbols[I++].rtrim();
 }
 
 void CodeCoverageTool::writeSourceFileView(StringRef SourceFile,
