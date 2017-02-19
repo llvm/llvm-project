@@ -31,6 +31,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/DebugCounter.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Transforms/Scalar.h"
 #include <algorithm>
@@ -48,6 +49,9 @@ INITIALIZE_PASS_END(PredicateInfoPrinterLegacyPass, "print-predicateinfo",
 static cl::opt<bool> VerifyPredicateInfo(
     "verify-predicateinfo", cl::init(false), cl::Hidden,
     cl::desc("Verify PredicateInfo in legacy printer pass."));
+DEBUG_COUNTER(RenameCounter, "predicateinfo-rename",
+              "Controls which variables are renamed with predicateinfo")
+
 namespace llvm {
 namespace PredicateInfoClasses {
 enum LocalNum {
@@ -578,6 +582,10 @@ void PredicateInfo::renameUses(SmallPtrSetImpl<Value *> &OpsToRename) {
       // Skip values, only want to rename the uses
       if (VD.Def || PossibleCopy)
         continue;
+      if (!DebugCounter::shouldExecute(RenameCounter)) {
+        DEBUG(dbgs() << "Skipping execution due to debug counter\n");
+        continue;
+      }
       ValueDFS &Result = RenameStack.back();
 
       // If the possible copy dominates something, materialize our stack up to

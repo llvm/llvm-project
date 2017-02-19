@@ -343,6 +343,9 @@ public:
 
   virtual void printOptionValue(size_t GlobalWidth, bool Force) const = 0;
 
+  static void printHelpStr(StringRef HelpStr, size_t Indent,
+                           size_t FirstLineIndentedBy);
+
   virtual void getExtraOptionNames(SmallVectorImpl<StringRef> &) {}
 
   // addOccurrence - Wrapper around handleOccurrence that enforces Flags.

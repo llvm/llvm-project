@@ -35,9 +35,11 @@ static bool shouldScheduleAdjacent(const AArch64InstrInfo &TII,
                                    const MachineInstr *First,
                                    const MachineInstr *Second) {
   unsigned FirstOpcode =
-      First ? First->getOpcode() : (unsigned)AArch64::INSTRUCTION_LIST_END;
+      First ? First->getOpcode()
+            : static_cast<unsigned>(AArch64::INSTRUCTION_LIST_END);
   unsigned SecondOpcode =
-      Second ? Second->getOpcode() : (unsigned)AArch64::INSTRUCTION_LIST_END;
+      Second ? Second->getOpcode()
+             : static_cast<unsigned>(AArch64::INSTRUCTION_LIST_END);
 
   if (ST.hasArithmeticBccFusion())
     // Fuse CMN, CMP, TST followed by Bcc.
