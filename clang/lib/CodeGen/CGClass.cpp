@@ -309,8 +309,10 @@ Address CodeGenFunction::GetAddressOfBaseClass(
   // just do a bitcast; null checks are unnecessary.
   if (NonVirtualOffset.isZero() && !VBase) {
     if (sanitizePerformTypeCheck()) {
+      SanitizerSet SkippedChecks;
+      SkippedChecks.set(SanitizerKind::Null, !NullCheckValue);
       EmitTypeCheck(TCK_Upcast, Loc, Value.getPointer(),
-                    DerivedTy, DerivedAlign, !NullCheckValue);
+                    DerivedTy, DerivedAlign, SkippedChecks);
     }
     return Builder.CreateBitCast(Value, BasePtrTy);
   }
@@ -331,8 +333,10 @@ Address CodeGenFunction::GetAddressOfBaseClass(
   }
 
   if (sanitizePerformTypeCheck()) {
+    SanitizerSet SkippedChecks;
+    SkippedChecks.set(SanitizerKind::Null, true);
     EmitTypeCheck(VBase ? TCK_UpcastToVirtualBase : TCK_Upcast, Loc,
-                  Value.getPointer(), DerivedTy, DerivedAlign, true);
+                  Value.getPointer(), DerivedTy, DerivedAlign, SkippedChecks);
   }
 
   // Compute the virtual offset.

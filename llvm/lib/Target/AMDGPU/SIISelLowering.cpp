@@ -532,7 +532,7 @@ bool SITargetLowering::isLegalAddressingMode(const DataLayout &DL,
       // in 8-bits, it can use a smaller encoding.
       if (!isUInt<32>(AM.BaseOffs / 4))
         return false;
-    } else if (Subtarget->getGeneration() == SISubtarget::VOLCANIC_ISLANDS) {
+    } else if (Subtarget->getGeneration() >= SISubtarget::VOLCANIC_ISLANDS) {
       // On VI, these use the SMEM format and the offset is 20-bit in bytes.
       if (!isUInt<20>(AM.BaseOffs))
         return false;
@@ -2233,6 +2233,13 @@ SDValue SITargetLowering::lowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {
 
 SDValue SITargetLowering::getSegmentAperture(unsigned AS,
                                              SelectionDAG &DAG) const {
+
+  if (Subtarget->hasApertureRegs()) { // Read from Aperture Registers directly.
+    unsigned RegNo = (AS == AMDGPUAS::LOCAL_ADDRESS) ? AMDGPU::SRC_SHARED_BASE :
+                                                       AMDGPU::SRC_PRIVATE_BASE;
+    return CreateLiveInRegister(DAG, &AMDGPU::SReg_32RegClass, RegNo, MVT::i32);
+  }
+
   SDLoc SL;
   MachineFunction &MF = DAG.getMachineFunction();
   SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();

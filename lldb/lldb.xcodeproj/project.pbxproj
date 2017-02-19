@@ -115,7 +115,6 @@
 		23DDF226196C3EE600BB8417 /* CommandOptionValidators.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23DDF224196C3EE600BB8417 /* CommandOptionValidators.cpp */; };
 		23E2E5251D90373D006F38BB /* ArchSpecTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23E2E5161D903689006F38BB /* ArchSpecTest.cpp */; };
 		23E2E5271D903782006F38BB /* MinidumpParserTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23E2E51A1D9036F2006F38BB /* MinidumpParserTest.cpp */; };
-		23E2E52B1D9037E6006F38BB /* ModuleCacheTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23CB15011D66CD8400EDDDE1 /* ModuleCacheTest.cpp */; };
 		23E2E5321D903832006F38BB /* BreakpointIDTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23E2E52D1D90382B006F38BB /* BreakpointIDTest.cpp */; };
 		23E2E5441D904913006F38BB /* MinidumpParser.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23E2E5371D9048FB006F38BB /* MinidumpParser.cpp */; };
 		23E2E5451D904913006F38BB /* MinidumpTypes.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23E2E5391D9048FB006F38BB /* MinidumpTypes.cpp */; };
@@ -949,6 +948,7 @@
 		AF9107EE168570D200DBCD3C /* RegisterContextDarwin_arm64.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF9107EC168570D200DBCD3C /* RegisterContextDarwin_arm64.cpp */; };
 		AF9107EF168570D200DBCD3C /* RegisterContextDarwin_arm64.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF9107EC168570D200DBCD3C /* RegisterContextDarwin_arm64.cpp */; };
 		AF9B8F33182DB52900DA866F /* SystemRuntimeMacOSX.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF9B8F31182DB52900DA866F /* SystemRuntimeMacOSX.cpp */; };
+		AFAFD80A1E57E1B90017A14F /* ModuleCacheTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AFAFD8091E57E1B90017A14F /* ModuleCacheTest.cpp */; };
 		AFB3D2801AC262AB003B4B30 /* MICmdCmdGdbShow.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AFB3D27E1AC262AB003B4B30 /* MICmdCmdGdbShow.cpp */; };
 		AFC234091AF85CE100CDE8B6 /* CommandObjectLanguage.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AFC234061AF85CE000CDE8B6 /* CommandObjectLanguage.cpp */; };
 		AFCB2BBD1BF577F40018B553 /* PythonExceptionState.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AFCB2BBB1BF577F40018B553 /* PythonExceptionState.cpp */; };
@@ -1290,7 +1290,6 @@
 		23CB14F91D66CCF100EDDDE1 /* CMakeLists.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = CMakeLists.txt; sourceTree = "<group>"; };
 		23CB14FA1D66CCF100EDDDE1 /* CPlusPlusLanguageTest.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = CPlusPlusLanguageTest.cpp; sourceTree = "<group>"; };
 		23CB14FD1D66CD2400EDDDE1 /* FileSpecTest.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = FileSpecTest.cpp; sourceTree = "<group>"; };
-		23CB15011D66CD8400EDDDE1 /* ModuleCacheTest.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ModuleCacheTest.cpp; sourceTree = "<group>"; };
 		23CB15051D66CDB400EDDDE1 /* TestModule.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = TestModule.c; sourceTree = "<group>"; };
 		23CB15061D66CDB400EDDDE1 /* TestModule.so */ = {isa = PBXFileReference; lastKnownFileType = file; path = TestModule.so; sourceTree = "<group>"; };
 		23CB150B1D66CF5600EDDDE1 /* CMakeLists.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = CMakeLists.txt; sourceTree = "<group>"; };
@@ -2988,6 +2987,7 @@
 		AF9472701B575E5F0063D65C /* ValueObjectConstResultCast.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = ValueObjectConstResultCast.h; path = include/lldb/Core/ValueObjectConstResultCast.h; sourceTree = "<group>"; };
 		AF9B8F31182DB52900DA866F /* SystemRuntimeMacOSX.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = SystemRuntimeMacOSX.cpp; sourceTree = "<group>"; };
 		AF9B8F32182DB52900DA866F /* SystemRuntimeMacOSX.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SystemRuntimeMacOSX.h; sourceTree = "<group>"; };
+		AFAFD8091E57E1B90017A14F /* ModuleCacheTest.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ModuleCacheTest.cpp; path = Target/ModuleCacheTest.cpp; sourceTree = "<group>"; };
 		AFB3D27E1AC262AB003B4B30 /* MICmdCmdGdbShow.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = MICmdCmdGdbShow.cpp; path = "tools/lldb-mi/MICmdCmdGdbShow.cpp"; sourceTree = SOURCE_ROOT; };
 		AFB3D27F1AC262AB003B4B30 /* MICmdCmdGdbShow.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MICmdCmdGdbShow.h; path = "tools/lldb-mi/MICmdCmdGdbShow.h"; sourceTree = SOURCE_ROOT; };
 		AFC234061AF85CE000CDE8B6 /* CommandObjectLanguage.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CommandObjectLanguage.cpp; path = source/Commands/CommandObjectLanguage.cpp; sourceTree = "<group>"; };
@@ -3229,6 +3229,7 @@
 				2321F93F1BDD33D800BA9A93 /* ScriptInterpreter */,
 				23CB15091D66CF2B00EDDDE1 /* Symbol */,
 				23CB150A1D66CF3200EDDDE1 /* SymbolFile */,
+				AFAFD8081E57E19E0017A14F /* Target */,
 				AFEC5FD31D94F9130076A480 /* UnwindAssembly */,
 				2321F9421BDD343A00BA9A93 /* Utility */,
 			);
@@ -3270,7 +3271,6 @@
 			children = (
 				2321F9431BDD346100BA9A93 /* CMakeLists.txt */,
 				23CB15041D66CD9200EDDDE1 /* Inputs */,
-				23CB15011D66CD8400EDDDE1 /* ModuleCacheTest.cpp */,
 				2321F9441BDD346100BA9A93 /* StringExtractorTest.cpp */,
 				2321F9451BDD346100BA9A93 /* TaskPoolTest.cpp */,
 				2321F9461BDD346100BA9A93 /* UriParserTest.cpp */,
@@ -6292,6 +6292,14 @@
 			name = "SysV-ppc64";
 			sourceTree = "<group>";
 		};
+		AFAFD8081E57E19E0017A14F /* Target */ = {
+			isa = PBXGroup;
+			children = (
+				AFAFD8091E57E1B90017A14F /* ModuleCacheTest.cpp */,
+			);
+			name = Target;
+			sourceTree = "<group>";
+		};
 		AFEC5FD31D94F9130076A480 /* UnwindAssembly */ = {
 			isa = PBXGroup;
 			children = (
@@ -6903,6 +6911,7 @@
 			files = (
 				23CB15331D66DA9300EDDDE1 /* GoParserTest.cpp in Sources */,
 				23CB15341D66DA9300EDDDE1 /* CPlusPlusLanguageTest.cpp in Sources */,
+				AFAFD80A1E57E1B90017A14F /* ModuleCacheTest.cpp in Sources */,
 				23CB15351D66DA9300EDDDE1 /* UriParserTest.cpp in Sources */,
 				23CB15361D66DA9300EDDDE1 /* FileSpecTest.cpp in Sources */,
 				23E2E5251D90373D006F38BB /* ArchSpecTest.cpp in Sources */,
@@ -6917,7 +6926,6 @@
 				23CB153D1D66DA9300EDDDE1 /* GDBRemoteCommunicationClientTest.cpp in Sources */,
 				23CB153E1D66DA9300EDDDE1 /* PythonDataObjectsTests.cpp in Sources */,
 				23CB153F1D66DA9300EDDDE1 /* SymbolsTest.cpp in Sources */,
-				23E2E52B1D9037E6006F38BB /* ModuleCacheTest.cpp in Sources */,
 				AFEC5FD81D94F9380076A480 /* Testx86AssemblyInspectionEngine.cpp in Sources */,
 				23CB15401D66DA9300EDDDE1 /* TestClangASTContext.cpp in Sources */,
 				23CB15411D66DA9300EDDDE1 /* StringExtractorTest.cpp in Sources */,

@@ -1107,7 +1107,7 @@ bool ASTReader::ReadVisibleDeclContextStorage(ModuleFile &M,
   return false;
 }
 
-void ASTReader::Error(StringRef Msg) {
+void ASTReader::Error(StringRef Msg) const {
   Error(diag::err_fe_pch_malformed, Msg);
   if (Context.getLangOpts().Modules && !Diags.isDiagnosticInFlight() &&
       !PP.getHeaderSearchInfo().getModuleCachePath().empty()) {
@@ -1117,7 +1117,7 @@ void ASTReader::Error(StringRef Msg) {
 }
 
 void ASTReader::Error(unsigned DiagID,
-                      StringRef Arg1, StringRef Arg2) {
+                      StringRef Arg1, StringRef Arg2) const {
   if (Diags.isDiagnosticInFlight())
     Diags.SetDelayedDiagnostic(DiagID, Arg1, Arg2);
   else
@@ -1584,7 +1584,11 @@ MacroInfo *ASTReader::ReadMacroRecord(ModuleFile &F, uint64_t Offset) {
 }
 
 PreprocessedEntityID
-ASTReader::getGlobalPreprocessedEntityID(ModuleFile &M, unsigned LocalID) const {
+ASTReader::getGlobalPreprocessedEntityID(ModuleFile &M,
+                                         unsigned LocalID) const {
+  if (!M.ModuleOffsetMap.empty())
+    ReadModuleOffsetMap(M);
+
   ContinuousRangeMap<uint32_t, int, 2>::const_iterator
     I = M.PreprocessedEntityRemap.find(LocalID - NUM_PREDEF_PP_ENTITY_IDS);
   assert(I != M.PreprocessedEntityRemap.end()
@@ -2935,83 +2939,9 @@ ASTReader::ReadASTBlock(ModuleFile &F, unsigned ClientLoadCapabilities) {
       break;
     }
 
-    case MODULE_OFFSET_MAP: {
-      // Additional remapping information.
-      const unsigned char *Data = (const unsigned char*)Blob.data();
-      const unsigned char *DataEnd = Data + Blob.size();
-
-      // If we see this entry before SOURCE_LOCATION_OFFSETS, add placeholders.
-      if (F.SLocRemap.find(0) == F.SLocRemap.end()) {
-        F.SLocRemap.insert(std::make_pair(0U, 0));
-        F.SLocRemap.insert(std::make_pair(2U, 1));
-      }
-
-      // Continuous range maps we may be updating in our module.
-      typedef ContinuousRangeMap<uint32_t, int, 2>::Builder
-          RemapBuilder;
-      RemapBuilder SLocRemap(F.SLocRemap);
-      RemapBuilder IdentifierRemap(F.IdentifierRemap);
-      RemapBuilder MacroRemap(F.MacroRemap);
-      RemapBuilder PreprocessedEntityRemap(F.PreprocessedEntityRemap);
-      RemapBuilder SubmoduleRemap(F.SubmoduleRemap);
-      RemapBuilder SelectorRemap(F.SelectorRemap);
-      RemapBuilder DeclRemap(F.DeclRemap);
-      RemapBuilder TypeRemap(F.TypeRemap);
-
-      while (Data < DataEnd) {
-        using namespace llvm::support;
-        uint16_t Len = endian::readNext<uint16_t, little, unaligned>(Data);
-        StringRef Name = StringRef((const char*)Data, Len);
-        Data += Len;
-        ModuleFile *OM = ModuleMgr.lookup(Name);
-        if (!OM) {
-          std::string Msg =
-              "SourceLocation remap refers to unknown module, cannot find ";
-          Msg.append(Name);
-          Error(Msg);
-          return Failure;
-        }
-
-        uint32_t SLocOffset =
-            endian::readNext<uint32_t, little, unaligned>(Data);
-        uint32_t IdentifierIDOffset =
-            endian::readNext<uint32_t, little, unaligned>(Data);
-        uint32_t MacroIDOffset =
-            endian::readNext<uint32_t, little, unaligned>(Data);
-        uint32_t PreprocessedEntityIDOffset =
-            endian::readNext<uint32_t, little, unaligned>(Data);
-        uint32_t SubmoduleIDOffset =
-            endian::readNext<uint32_t, little, unaligned>(Data);
-        uint32_t SelectorIDOffset =
-            endian::readNext<uint32_t, little, unaligned>(Data);
-        uint32_t DeclIDOffset =
-            endian::readNext<uint32_t, little, unaligned>(Data);
-        uint32_t TypeIndexOffset =
-            endian::readNext<uint32_t, little, unaligned>(Data);
-
-        uint32_t None = std::numeric_limits<uint32_t>::max();
-
-        auto mapOffset = [&](uint32_t Offset, uint32_t BaseOffset,
-                             RemapBuilder &Remap) {
-          if (Offset != None)
-            Remap.insert(std::make_pair(Offset,
-                                        static_cast<int>(BaseOffset - Offset)));
-        };
-        mapOffset(SLocOffset, OM->SLocEntryBaseOffset, SLocRemap);
-        mapOffset(IdentifierIDOffset, OM->BaseIdentifierID, IdentifierRemap);
-        mapOffset(MacroIDOffset, OM->BaseMacroID, MacroRemap);
-        mapOffset(PreprocessedEntityIDOffset, OM->BasePreprocessedEntityID,
-                  PreprocessedEntityRemap);
-        mapOffset(SubmoduleIDOffset, OM->BaseSubmoduleID, SubmoduleRemap);
-        mapOffset(SelectorIDOffset, OM->BaseSelectorID, SelectorRemap);
-        mapOffset(DeclIDOffset, OM->BaseDeclID, DeclRemap);
-        mapOffset(TypeIndexOffset, OM->BaseTypeIndex, TypeRemap);
-
-        // Global -> local mappings.
-        F.GlobalToLocalDeclIDs[OM] = DeclIDOffset;
-      }
+    case MODULE_OFFSET_MAP:
+      F.ModuleOffsetMap = Blob;
       break;
-    }
 
     case SOURCE_MANAGER_LINE_TABLE:
       if (ParseLineTable(F, Record))
@@ -3345,6 +3275,87 @@ ASTReader::ReadASTBlock(ModuleFile &F, unsigned ClientLoadCapabilities) {
       ForceCUDAHostDeviceDepth = Record[0];
       break;
     }
+  }
+}
+
+void ASTReader::ReadModuleOffsetMap(ModuleFile &F) const {
+  assert(!F.ModuleOffsetMap.empty() && "no module offset map to read");
+
+  // Additional remapping information.
+  const unsigned char *Data = (const unsigned char*)F.ModuleOffsetMap.data();
+  const unsigned char *DataEnd = Data + F.ModuleOffsetMap.size();
+  F.ModuleOffsetMap = StringRef();
+
+  // If we see this entry before SOURCE_LOCATION_OFFSETS, add placeholders.
+  if (F.SLocRemap.find(0) == F.SLocRemap.end()) {
+    F.SLocRemap.insert(std::make_pair(0U, 0));
+    F.SLocRemap.insert(std::make_pair(2U, 1));
+  }
+
+  // Continuous range maps we may be updating in our module.
+  typedef ContinuousRangeMap<uint32_t, int, 2>::Builder
+      RemapBuilder;
+  RemapBuilder SLocRemap(F.SLocRemap);
+  RemapBuilder IdentifierRemap(F.IdentifierRemap);
+  RemapBuilder MacroRemap(F.MacroRemap);
+  RemapBuilder PreprocessedEntityRemap(F.PreprocessedEntityRemap);
+  RemapBuilder SubmoduleRemap(F.SubmoduleRemap);
+  RemapBuilder SelectorRemap(F.SelectorRemap);
+  RemapBuilder DeclRemap(F.DeclRemap);
+  RemapBuilder TypeRemap(F.TypeRemap);
+
+  while (Data < DataEnd) {
+    // FIXME: Looking up dependency modules by filename is horrible.
+    using namespace llvm::support;
+    uint16_t Len = endian::readNext<uint16_t, little, unaligned>(Data);
+    StringRef Name = StringRef((const char*)Data, Len);
+    Data += Len;
+    ModuleFile *OM = ModuleMgr.lookup(Name);
+    if (!OM) {
+      std::string Msg =
+          "SourceLocation remap refers to unknown module, cannot find ";
+      Msg.append(Name);
+      Error(Msg);
+      return;
+    }
+
+    uint32_t SLocOffset =
+        endian::readNext<uint32_t, little, unaligned>(Data);
+    uint32_t IdentifierIDOffset =
+        endian::readNext<uint32_t, little, unaligned>(Data);
+    uint32_t MacroIDOffset =
+        endian::readNext<uint32_t, little, unaligned>(Data);
+    uint32_t PreprocessedEntityIDOffset =
+        endian::readNext<uint32_t, little, unaligned>(Data);
+    uint32_t SubmoduleIDOffset =
+        endian::readNext<uint32_t, little, unaligned>(Data);
+    uint32_t SelectorIDOffset =
+        endian::readNext<uint32_t, little, unaligned>(Data);
+    uint32_t DeclIDOffset =
+        endian::readNext<uint32_t, little, unaligned>(Data);
+    uint32_t TypeIndexOffset =
+        endian::readNext<uint32_t, little, unaligned>(Data);
+
+    uint32_t None = std::numeric_limits<uint32_t>::max();
+
+    auto mapOffset = [&](uint32_t Offset, uint32_t BaseOffset,
+                         RemapBuilder &Remap) {
+      if (Offset != None)
+        Remap.insert(std::make_pair(Offset,
+                                    static_cast<int>(BaseOffset - Offset)));
+    };
+    mapOffset(SLocOffset, OM->SLocEntryBaseOffset, SLocRemap);
+    mapOffset(IdentifierIDOffset, OM->BaseIdentifierID, IdentifierRemap);
+    mapOffset(MacroIDOffset, OM->BaseMacroID, MacroRemap);
+    mapOffset(PreprocessedEntityIDOffset, OM->BasePreprocessedEntityID,
+              PreprocessedEntityRemap);
+    mapOffset(SubmoduleIDOffset, OM->BaseSubmoduleID, SubmoduleRemap);
+    mapOffset(SelectorIDOffset, OM->BaseSelectorID, SelectorRemap);
+    mapOffset(DeclIDOffset, OM->BaseDeclID, DeclRemap);
+    mapOffset(TypeIndexOffset, OM->BaseTypeIndex, TypeRemap);
+
+    // Global -> local mappings.
+    F.GlobalToLocalDeclIDs[OM] = DeclIDOffset;
   }
 }
 
@@ -6434,6 +6445,9 @@ ASTReader::getGlobalTypeID(ModuleFile &F, unsigned LocalID) const {
   if (LocalIndex < NUM_PREDEF_TYPE_IDS)
     return LocalID;
 
+  if (!F.ModuleOffsetMap.empty())
+    ReadModuleOffsetMap(F);
+
   ContinuousRangeMap<uint32_t, int, 2>::iterator I
     = F.TypeRemap.find(LocalIndex - NUM_PREDEF_TYPE_IDS);
   assert(I != F.TypeRemap.end() && "Invalid index into type index remap");
@@ -6613,6 +6627,9 @@ serialization::DeclID
 ASTReader::getGlobalDeclID(ModuleFile &F, LocalDeclID LocalID) const {
   if (LocalID < NUM_PREDEF_DECL_IDS)
     return LocalID;
+
+  if (!F.ModuleOffsetMap.empty())
+    ReadModuleOffsetMap(F);
 
   ContinuousRangeMap<uint32_t, int, 2>::iterator I
     = F.DeclRemap.find(LocalID - NUM_PREDEF_DECL_IDS);
@@ -7788,6 +7805,9 @@ IdentifierID ASTReader::getGlobalIdentifierID(ModuleFile &M, unsigned LocalID) {
   if (LocalID < NUM_PREDEF_IDENT_IDS)
     return LocalID;
 
+  if (!M.ModuleOffsetMap.empty())
+    ReadModuleOffsetMap(M);
+
   ContinuousRangeMap<uint32_t, int, 2>::iterator I
     = M.IdentifierRemap.find(LocalID - NUM_PREDEF_IDENT_IDS);
   assert(I != M.IdentifierRemap.end()
@@ -7826,6 +7846,9 @@ MacroID ASTReader::getGlobalMacroID(ModuleFile &M, unsigned LocalID) {
   if (LocalID < NUM_PREDEF_MACRO_IDS)
     return LocalID;
 
+  if (!M.ModuleOffsetMap.empty())
+    ReadModuleOffsetMap(M);
+
   ContinuousRangeMap<uint32_t, int, 2>::iterator I
     = M.MacroRemap.find(LocalID - NUM_PREDEF_MACRO_IDS);
   assert(I != M.MacroRemap.end() && "Invalid index into macro index remap");
@@ -7837,6 +7860,9 @@ serialization::SubmoduleID
 ASTReader::getGlobalSubmoduleID(ModuleFile &M, unsigned LocalID) {
   if (LocalID < NUM_PREDEF_SUBMODULE_IDS)
     return LocalID;
+
+  if (!M.ModuleOffsetMap.empty())
+    ReadModuleOffsetMap(M);
 
   ContinuousRangeMap<uint32_t, int, 2>::iterator I
     = M.SubmoduleRemap.find(LocalID - NUM_PREDEF_SUBMODULE_IDS);
@@ -7965,6 +7991,9 @@ serialization::SelectorID
 ASTReader::getGlobalSelectorID(ModuleFile &M, unsigned LocalID) const {
   if (LocalID < NUM_PREDEF_SELECTOR_IDS)
     return LocalID;
+
+  if (!M.ModuleOffsetMap.empty())
+    ReadModuleOffsetMap(M);
 
   ContinuousRangeMap<uint32_t, int, 2>::iterator I
     = M.SelectorRemap.find(LocalID - NUM_PREDEF_SELECTOR_IDS);
@@ -8491,11 +8520,11 @@ CXXTemporary *ASTReader::ReadCXXTemporary(ModuleFile &F,
   return CXXTemporary::Create(Context, Decl);
 }
 
-DiagnosticBuilder ASTReader::Diag(unsigned DiagID) {
+DiagnosticBuilder ASTReader::Diag(unsigned DiagID) const {
   return Diag(CurrentImportLoc, DiagID);
 }
 
-DiagnosticBuilder ASTReader::Diag(SourceLocation Loc, unsigned DiagID) {
+DiagnosticBuilder ASTReader::Diag(SourceLocation Loc, unsigned DiagID) const {
   return Diags.Report(Loc, DiagID);
 }
 

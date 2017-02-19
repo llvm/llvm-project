@@ -37,6 +37,25 @@ static void registerXRayFlags(FlagParser *P, Flags *F) XRAY_NEVER_INSTRUMENT {
 #undef XRAY_FLAG
 }
 
+// This function, as defined with the help of a macro meant to be introduced at
+// build time of the XRay runtime, passes in a statically defined list of
+// options that control XRay. This means users/deployments can tweak the
+// defaults that override the hard-coded defaults in the xray_flags.inc at
+// compile-time using the XRAY_DEFAULT_OPTIONS macro.
+static const char *useCompilerDefinedFlags() XRAY_NEVER_INSTRUMENT {
+#ifdef XRAY_DEFAULT_OPTIONS
+// Do the double-layered string conversion to prevent badly crafted strings
+// provided through the XRAY_DEFAULT_OPTIONS from causing compilation issues (or
+// changing the semantics of the implementation through the macro). This ensures
+// that we convert whatever XRAY_DEFAULT_OPTIONS is defined as a string literal.
+#define XRAY_STRINGIZE(x) #x
+#define XRAY_STRINGIZE_OPTIONS(options) XRAY_STRINGIZE(options)
+  return XRAY_STRINGIZE_OPTIONS(XRAY_DEFAULT_OPTIONS);
+#else
+  return "";
+#endif
+}
+
 void initializeFlags() XRAY_NEVER_INSTRUMENT {
   SetCommonFlagsDefaults();
   auto *F = flags();
@@ -46,9 +65,14 @@ void initializeFlags() XRAY_NEVER_INSTRUMENT {
   registerXRayFlags(&XRayParser, F);
   RegisterCommonFlags(&XRayParser);
 
-  // Override from command line.
+  // Use options defaulted at compile-time for the runtime.
+  const char *XRayCompileFlags = useCompilerDefinedFlags();
+  XRayParser.ParseString(XRayCompileFlags);
+
+  // Override from environment variables.
   XRayParser.ParseString(GetEnv("XRAY_OPTIONS"));
 
+  // Override from command line.
   InitializeCommonFlags();
 
   if (Verbosity())

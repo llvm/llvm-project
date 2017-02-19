@@ -1077,8 +1077,7 @@ bool DevirtModule::run() {
     for (const auto &DT : DevirtTargets) {
       Function *F = DT.second;
       DISubprogram *SP = F->getSubprogram();
-      DebugLoc DL = SP ? DebugLoc::get(SP->getScopeLine(), 0, SP) : DebugLoc();
-      emitOptimizationRemark(F->getContext(), DEBUG_TYPE, *F, DL,
+      emitOptimizationRemark(F->getContext(), DEBUG_TYPE, *F, SP,
                              Twine("devirtualized ") + F->getName());
     }
   }

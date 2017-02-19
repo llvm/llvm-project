@@ -3025,6 +3025,7 @@ bool Scop::buildAliasGroup(Scop::AliasGroupTy &AliasGroup,
   AliasGroupTy ReadOnlyAccesses;
   AliasGroupTy ReadWriteAccesses;
   SmallPtrSet<const ScopArrayInfo *, 4> ReadWriteArrays;
+  SmallPtrSet<const ScopArrayInfo *, 4> ReadOnlyArrays;
 
   auto &F = getFunction();
 
@@ -3042,6 +3043,7 @@ bool Scop::buildAliasGroup(Scop::AliasGroupTy &AliasGroup,
       ReadWriteArrays.insert(Array);
       ReadWriteAccesses.push_back(Access);
     } else {
+      ReadOnlyArrays.insert(Array);
       ReadOnlyAccesses.push_back(Access);
     }
   }
@@ -3088,7 +3090,7 @@ bool Scop::buildAliasGroup(Scop::AliasGroupTy &AliasGroup,
   // Bail out if the number of values we need to compare is too large.
   // This is important as the number of comparisons grows quadratically with
   // the number of values we need to compare.
-  if (MinMaxAccessesReadWrite.size() + ReadOnlyAccesses.size() >
+  if (MinMaxAccessesReadWrite.size() + ReadOnlyArrays.size() >
       RunTimeChecksMaxArraysPerGroup)
     return false;
 

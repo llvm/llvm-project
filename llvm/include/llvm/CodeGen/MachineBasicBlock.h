@@ -128,7 +128,7 @@ public:
   /// to an LLVM basic block.
   const BasicBlock *getBasicBlock() const { return BB; }
 
-  /// Return the name of the corresponding LLVM basic block, or "(null)".
+  /// Return the name of the corresponding LLVM basic block, or an empty string.
   StringRef getName() const;
 
   /// Return a formatted string to identify this block and its parent function.

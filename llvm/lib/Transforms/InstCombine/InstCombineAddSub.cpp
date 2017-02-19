@@ -1044,9 +1044,16 @@ Instruction *InstCombiner::visitAdd(BinaryOperator &I) {
 
   const APInt *Val;
   if (match(RHS, m_APInt(Val))) {
-    // X + (signbit) --> X ^ signbit
-    if (Val->isSignBit())
+    if (Val->isSignBit()) {
+      // If wrapping is not allowed, then the addition must set the sign bit:
+      // X + (signbit) --> X | signbit
+      if (I.hasNoSignedWrap() || I.hasNoUnsignedWrap())
+        return BinaryOperator::CreateOr(LHS, RHS);
+
+      // If wrapping is allowed, then the addition flips the sign bit of LHS:
+      // X + (signbit) --> X ^ signbit
       return BinaryOperator::CreateXor(LHS, RHS);
+    }
 
     // Is this add the last step in a convoluted sext?
     Value *X;

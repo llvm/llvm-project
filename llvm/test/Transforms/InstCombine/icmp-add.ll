@@ -223,24 +223,22 @@ define i1 @nsw_slt5_ov(i8 %a) {
   ret i1 %c
 }
 
-; FIXME: InstCombine should not lose wrapping information by changing the add to xor.
+; InstCombine should not thwart this opportunity to simplify completely.
 
 define i1 @slt_zero_add_nsw_signbit(i8 %x) {
 ; CHECK-LABEL: @slt_zero_add_nsw_signbit(
-; CHECK-NEXT:    [[Z:%.*]] = icmp sgt i8 %x, -1
-; CHECK-NEXT:    ret i1 [[Z]]
+; CHECK-NEXT:    ret i1 true
 ;
   %y = add nsw i8 %x, -128
   %z = icmp slt i8 %y, 0
   ret i1 %z
 }
 
-; FIXME: InstCombine should not lose wrapping information by changing the add to xor.
+; InstCombine should not thwart this opportunity to simplify completely.
 
 define i1 @slt_zero_add_nuw_signbit(i8 %x) {
 ; CHECK-LABEL: @slt_zero_add_nuw_signbit(
-; CHECK-NEXT:    [[Z:%.*]] = icmp sgt i8 %x, -1
-; CHECK-NEXT:    ret i1 [[Z]]
+; CHECK-NEXT:    ret i1 true
 ;
   %y = add nuw i8 %x, 128
   %z = icmp slt i8 %y, 0

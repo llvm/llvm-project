@@ -948,6 +948,15 @@ void CodeGenFunction::StartFunction(GlobalDecl GD,
       // fast register allocator would be happier...
       CXXThisValue = CXXABIThisValue;
     }
+
+    // Null-check the 'this' pointer once per function, if it's available.
+    if (CXXThisValue) {
+      SanitizerSet SkippedChecks;
+      SkippedChecks.set(SanitizerKind::Alignment, true);
+      SkippedChecks.set(SanitizerKind::ObjectSize, true);
+      EmitTypeCheck(TCK_Load, Loc, CXXThisValue, MD->getThisType(getContext()),
+                    /*Alignment=*/CharUnits::Zero(), SkippedChecks);
+    }
   }
 
   // If any of the arguments have a variably modified type, make sure to

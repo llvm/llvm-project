@@ -170,13 +170,19 @@ __m128i test_mm_hsubq_epi32(__m128i a) {
 
 __m128i test_mm_cmov_si128(__m128i a, __m128i b, __m128i c) {
   // CHECK-LABEL: test_mm_cmov_si128
-  // CHECK: call <2 x i64> @llvm.x86.xop.vpcmov(<2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> %{{.*}})
+  // CHECK: [[AND:%.*]] = and <2 x i64> %{{.*}}, %{{.*}}
+  // CHECK: [[NEG:%.*]] = xor <2 x i64> %{{.*}}, <i64 -1, i64 -1>
+  // CHECK-NEXT: [[ANDN:%.*]] = and <2 x i64> %{{.*}}, [[NEG]]
+  // CHECK-NEXT: %{{.*}} = or <2 x i64> [[AND]], [[ANDN]]
   return _mm_cmov_si128(a, b, c);
 }
 
 __m256i test_mm256_cmov_si256(__m256i a, __m256i b, __m256i c) {
   // CHECK-LABEL: test_mm256_cmov_si256
-  // CHECK: call <4 x i64> @llvm.x86.xop.vpcmov.256(<4 x i64> %{{.*}}, <4 x i64> %{{.*}}, <4 x i64> %{{.*}})
+  // CHECK: [[AND:%.*]] = and <4 x i64> %{{.*}}, %{{.*}}
+  // CHECK: [[NEG:%.*]] = xor <4 x i64> %{{.*}}, <i64 -1, i64 -1, i64 -1, i64 -1>
+  // CHECK-NEXT: [[ANDN:%.*]] = and <4 x i64> %{{.*}}, [[NEG]]
+  // CHECK-NEXT: %{{.*}} = or <4 x i64> [[AND]], [[ANDN]]
   return _mm256_cmov_si256(a, b, c);
 }
 

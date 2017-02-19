@@ -1456,16 +1456,15 @@ void Driver::BuildInputs(const ToolChain &TC, DerivedArgList &Args,
                     ? types::TY_C
                     : types::TY_CXX;
 
-    arg_iterator it =
-        Args.filtered_begin(options::OPT__SLASH_TC, options::OPT__SLASH_TP);
-    const arg_iterator ie = Args.filtered_end();
-    Arg *Previous = *it++;
+    Arg *Previous = nullptr;
     bool ShowNote = false;
-    while (it != ie) {
-      Diag(clang::diag::warn_drv_overriding_flag_option)
-          << Previous->getSpelling() << (*it)->getSpelling();
-      Previous = *it++;
-      ShowNote = true;
+    for (Arg *A : Args.filtered(options::OPT__SLASH_TC, options::OPT__SLASH_TP)) {
+      if (Previous) {
+        Diag(clang::diag::warn_drv_overriding_flag_option)
+          << Previous->getSpelling() << A->getSpelling();
+        ShowNote = true;
+      }
+      Previous = A;
     }
     if (ShowNote)
       Diag(clang::diag::note_drv_t_option_is_global);

@@ -35,25 +35,28 @@ void AvoidCStyleCastsCheck::registerMatchers(
 }
 
 static bool needsConstCast(QualType SourceType, QualType DestType) {
-  SourceType = SourceType.getNonReferenceType();
-  DestType = DestType.getNonReferenceType();
-  while (SourceType->isPointerType() && DestType->isPointerType()) {
-    SourceType = SourceType->getPointeeType();
-    DestType = DestType->getPointeeType();
-    if (SourceType.isConstQualified() && !DestType.isConstQualified())
-      return true;
+  for (;;) {
+    if (SourceType.isConstQualified() && !DestType.isConstQualified()) {
+      return (SourceType->isPointerType() == DestType->isPointerType()) &&
+             (SourceType->isReferenceType() == DestType->isReferenceType());
+    }
+    if ((SourceType->isPointerType() && DestType->isPointerType()) ||
+        (SourceType->isReferenceType() && DestType->isReferenceType())) {
+      SourceType = SourceType->getPointeeType();
+      DestType = DestType->getPointeeType();
+   } else {
+     return false;
+   }
   }
-  return false;
 }
 
-static bool pointedTypesAreEqual(QualType SourceType, QualType DestType) {
-  SourceType = SourceType.getNonReferenceType();
-  DestType = DestType.getNonReferenceType();
-  while (SourceType->isPointerType() && DestType->isPointerType()) {
-    SourceType = SourceType->getPointeeType();
-    DestType = DestType->getPointeeType();
+static bool pointedUnqualifiedTypesAreEqual(QualType T1, QualType T2) {
+  while ((T1->isPointerType() && T2->isPointerType()) ||
+         (T1->isReferenceType() && T2->isReferenceType())) {
+    T1 = T1->getPointeeType();
+    T2 = T2->getPointeeType();
   }
-  return SourceType.getUnqualifiedType() == DestType.getUnqualifiedType();
+  return T1.getUnqualifiedType() == T2.getUnqualifiedType();
 }
 
 void AvoidCStyleCastsCheck::check(const MatchFinder::MatchResult &Result) {
@@ -67,11 +70,8 @@ void AvoidCStyleCastsCheck::check(const MatchFinder::MatchResult &Result) {
 
   // Casting to void is an idiomatic way to mute "unused variable" and similar
   // warnings.
-  if (CastExpr->getTypeAsWritten()->isVoidType())
+  if (CastExpr->getCastKind() == CK_ToVoid)
     return;
-
-  QualType SourceType = CastExpr->getSubExprAsWritten()->getType();
-  QualType DestType = CastExpr->getTypeAsWritten();
 
   auto isFunction = [](QualType T) {
     T = T.getCanonicalType().getNonReferenceType();
@@ -79,23 +79,29 @@ void AvoidCStyleCastsCheck::check(const MatchFinder::MatchResult &Result) {
            T->isMemberFunctionPointerType();
   };
 
-  bool FnToFnCast = isFunction(SourceType) && isFunction(DestType);
+  const QualType DestTypeAsWritten = CastExpr->getTypeAsWritten();
+  const QualType SourceTypeAsWritten = CastExpr->getSubExprAsWritten()->getType();
+  const QualType SourceType = SourceTypeAsWritten.getCanonicalType();
+  const QualType DestType = DestTypeAsWritten.getCanonicalType();
 
-  // Function pointer/reference casts may be needed to resolve ambiguities in
-  // case of overloaded functions, so detection of redundant casts is trickier
-  // in this case. Don't emit "redundant cast" warnings for function
-  // pointer/reference types.
-  if (SourceType == DestType && !FnToFnCast) {
-    diag(CastExpr->getLocStart(), "redundant cast to the same type")
-        << FixItHint::CreateRemoval(ParenRange);
-    return;
-  }
-  SourceType = SourceType.getCanonicalType();
-  DestType = DestType.getCanonicalType();
-  if (SourceType == DestType && !FnToFnCast) {
-    diag(CastExpr->getLocStart(),
-         "possibly redundant cast between typedefs of the same type");
-    return;
+  bool FnToFnCast =
+      isFunction(SourceTypeAsWritten) && isFunction(DestTypeAsWritten);
+
+  if (CastExpr->getCastKind() == CK_NoOp && !FnToFnCast) {
+    // Function pointer/reference casts may be needed to resolve ambiguities in
+    // case of overloaded functions, so detection of redundant casts is trickier
+    // in this case. Don't emit "redundant cast" warnings for function
+    // pointer/reference types.
+    if (SourceTypeAsWritten == DestTypeAsWritten) {
+      diag(CastExpr->getLocStart(), "redundant cast to the same type")
+          << FixItHint::CreateRemoval(ParenRange);
+      return;
+    }
+    if (SourceType == DestType) {
+      diag(CastExpr->getLocStart(),
+           "possibly redundant cast between typedefs of the same type");
+      return;
+    }
   }
 
   // The rest of this check is only relevant to C++.
@@ -126,11 +132,8 @@ void AvoidCStyleCastsCheck::check(const MatchFinder::MatchResult &Result) {
   auto Diag =
       diag(CastExpr->getLocStart(), "C-style casts are discouraged; use %0");
 
-  auto ReplaceWithCast = [&](StringRef CastType) {
-    Diag << CastType;
-
+  auto ReplaceWithCast = [&](std::string CastText) {
     const Expr *SubExpr = CastExpr->getSubExprAsWritten()->IgnoreImpCasts();
-    std::string CastText = (CastType + "<" + DestTypeString + ">").str();
     if (!isa<ParenExpr>(SubExpr)) {
       CastText.push_back('(');
       Diag << FixItHint::CreateInsertion(
@@ -140,28 +143,52 @@ void AvoidCStyleCastsCheck::check(const MatchFinder::MatchResult &Result) {
     }
     Diag << FixItHint::CreateReplacement(ParenRange, CastText);
   };
+  auto ReplaceWithNamedCast = [&](StringRef CastType) {
+    Diag << CastType;
+    std::string CastText = (CastType + "<" + DestTypeString + ">").str();
+    ReplaceWithCast(std::move(CastText));
+  };
+  auto ReplaceWithCtorCall = [&]() {
+    std::string CastText;
+    if (!DestTypeAsWritten.hasQualifiers() &&
+        DestTypeAsWritten->isRecordType() &&
+        !DestTypeAsWritten->isElaboratedTypeSpecifier()) {
+      Diag << "constructor call syntax";
+      CastText = DestTypeString.str(); // FIXME: Validate DestTypeString, maybe.
+    } else {
+      Diag << "static_cast";
+      CastText = ("static_cast<" + DestTypeString + ">").str();
+    }
+    ReplaceWithCast(std::move(CastText));
+  };
 
   // Suggest appropriate C++ cast. See [expr.cast] for cast notation semantics.
   switch (CastExpr->getCastKind()) {
   case CK_FunctionToPointerDecay:
-    ReplaceWithCast("static_cast");
+    ReplaceWithNamedCast("static_cast");
+    return;
+  case CK_ConstructorConversion:
+    ReplaceWithCtorCall();
     return;
   case CK_NoOp:
     if (FnToFnCast) {
-      ReplaceWithCast("static_cast");
+      ReplaceWithNamedCast("static_cast");
       return;
     }
     if (needsConstCast(SourceType, DestType) &&
-        pointedTypesAreEqual(SourceType, DestType)) {
-      ReplaceWithCast("const_cast");
+        pointedUnqualifiedTypesAreEqual(SourceType, DestType)) {
+      ReplaceWithNamedCast("const_cast");
       return;
     }
-    if (DestType->isReferenceType() &&
-        (SourceType.getNonReferenceType() ==
-             DestType.getNonReferenceType().withConst() ||
-         SourceType.getNonReferenceType() == DestType.getNonReferenceType())) {
-      ReplaceWithCast("const_cast");
-      return;
+    if (DestType->isReferenceType()) {
+      QualType Dest = DestType.getNonReferenceType();
+      QualType Source = SourceType.getNonReferenceType();
+      if (Source == Dest.withConst() ||
+          SourceType.getNonReferenceType() == DestType.getNonReferenceType()) {
+        ReplaceWithNamedCast("const_cast");
+        return;
+      }
+      break;
     }
   // FALLTHROUGH
   case clang::CK_IntegralCast:
@@ -170,14 +197,14 @@ void AvoidCStyleCastsCheck::check(const MatchFinder::MatchResult &Result) {
     // still retained.
     if ((SourceType->isBuiltinType() || SourceType->isEnumeralType()) &&
         (DestType->isBuiltinType() || DestType->isEnumeralType())) {
-      ReplaceWithCast("static_cast");
+      ReplaceWithNamedCast("static_cast");
       return;
     }
     break;
   case CK_BitCast:
     // FIXME: Suggest const_cast<...>(reinterpret_cast<...>(...)) replacement.
     if (!needsConstCast(SourceType, DestType)) {
-      ReplaceWithCast("reinterpret_cast");
+      ReplaceWithNamedCast("reinterpret_cast");
       return;
     }
     break;

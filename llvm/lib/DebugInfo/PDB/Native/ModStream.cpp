@@ -43,7 +43,7 @@ Error ModStream::reload() {
 
   ReadableStreamRef S;
 
-  if (auto EC = Reader.readInteger(Signature))
+  if (auto EC = Reader.readInteger(Signature, llvm::support::little))
     return EC;
   if (auto EC = Reader.readArray(SymbolsSubstream, SymbolSize - 4))
     return EC;
@@ -58,7 +58,7 @@ Error ModStream::reload() {
     return EC;
 
   uint32_t GlobalRefsSize;
-  if (auto EC = Reader.readInteger(GlobalRefsSize))
+  if (auto EC = Reader.readInteger(GlobalRefsSize, llvm::support::little))
     return EC;
   if (auto EC = Reader.readStreamRef(GlobalRefsSubstream, GlobalRefsSize))
     return EC;

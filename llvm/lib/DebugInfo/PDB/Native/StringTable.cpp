@@ -55,7 +55,7 @@ Error StringTable::load(StreamReader &Stream) {
     return make_error<RawError>(raw_error_code::corrupt_file,
                                 "Missing name count");
 
-  if (auto EC = Stream.readInteger(NameCount))
+  if (auto EC = Stream.readInteger(NameCount, llvm::support::little))
     return EC;
   return Error::success();
 }

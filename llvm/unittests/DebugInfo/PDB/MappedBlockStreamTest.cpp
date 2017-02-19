@@ -325,8 +325,8 @@ TEST(MappedBlockStreamTest, TestWriteThenRead) {
 
   StreamReader Reader(*S);
   StreamWriter Writer(*S);
-  EXPECT_NO_ERROR(Writer.writeInteger(u16[0]));
-  EXPECT_NO_ERROR(Reader.readInteger(u16[1]));
+  EXPECT_NO_ERROR(Writer.writeInteger(u16[0], llvm::support::little));
+  EXPECT_NO_ERROR(Reader.readInteger(u16[1], llvm::support::little));
   EXPECT_EQ(u16[0], u16[1]);
   EXPECT_EQ(std::vector<uint8_t>({0, 0x7A, 0xEC, 0, 0, 0, 0, 0, 0, 0}),
             DataBytes);
@@ -334,8 +334,8 @@ TEST(MappedBlockStreamTest, TestWriteThenRead) {
   Reader.setOffset(0);
   Writer.setOffset(0);
   ::memset(DataBytes.data(), 0, 10);
-  EXPECT_NO_ERROR(Writer.writeInteger(u32[0]));
-  EXPECT_NO_ERROR(Reader.readInteger(u32[1]));
+  EXPECT_NO_ERROR(Writer.writeInteger(u32[0], llvm::support::little));
+  EXPECT_NO_ERROR(Reader.readInteger(u32[1], llvm::support::little));
   EXPECT_EQ(u32[0], u32[1]);
   EXPECT_EQ(std::vector<uint8_t>({0x17, 0x5C, 0x50, 0, 0, 0, 0x35, 0, 0, 0}),
             DataBytes);
@@ -343,8 +343,8 @@ TEST(MappedBlockStreamTest, TestWriteThenRead) {
   Reader.setOffset(0);
   Writer.setOffset(0);
   ::memset(DataBytes.data(), 0, 10);
-  EXPECT_NO_ERROR(Writer.writeEnum(Enum[0]));
-  EXPECT_NO_ERROR(Reader.readEnum(Enum[1]));
+  EXPECT_NO_ERROR(Writer.writeEnum(Enum[0], llvm::support::little));
+  EXPECT_NO_ERROR(Reader.readEnum(Enum[1], llvm::support::little));
   EXPECT_EQ(Enum[0], Enum[1]);
   EXPECT_EQ(std::vector<uint8_t>({0x2C, 0x60, 0x4A, 0, 0, 0, 0, 0, 0, 0}),
             DataBytes);

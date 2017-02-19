@@ -190,7 +190,7 @@ set(LIBCXXABI_LIBCXX_INCLUDES "${LIBCXXABI_LIBCXX_INCLUDES}" CACHE PATH
 
 find_path(
   LIBCXXABI_LIBCXX_PATH
-  test/libcxx/__init__.py
+  utils/libcxx/test/__init__.py
   PATHS ${LIBCXXABI_LIBCXX_PATH}
         ${LIBCXXABI_LIBCXX_INCLUDES}/../
         ${LIBCXXABI_LIBCXX_SRC_DIRS}

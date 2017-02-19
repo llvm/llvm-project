@@ -201,6 +201,10 @@ public:
   /// file.
   std::vector<std::unique_ptr<ModuleFileExtensionReader>> ExtensionReaders;
 
+  /// The module offset map data for this file. If non-empty, the various
+  /// ContinuousRangeMaps described below have not yet been populated.
+  StringRef ModuleOffsetMap;
+
   // === Input Files ===
   /// \brief The cursor to the start of the input-files block.
   llvm::BitstreamCursor InputFilesCursor;

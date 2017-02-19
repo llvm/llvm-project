@@ -2030,6 +2030,9 @@ public:
   llvm::BlockAddress *GetAddrOfLabel(const LabelDecl *L);
   llvm::BasicBlock *GetIndirectGotoBlock();
 
+  /// Check if the null check for \p ObjectPointer can be skipped.
+  static bool CanElideObjectPointerNullCheck(const Expr *ObjectPointer);
+
   /// EmitNullInitialization - Generate code to set a value of the given type to
   /// null, If the type contains data member pointers, they will be initialized
   /// to -1 in accordance with the Itanium C++ ABI.
@@ -2252,7 +2255,7 @@ public:
   /// appropriate size and alignment for an object of type \p Type.
   void EmitTypeCheck(TypeCheckKind TCK, SourceLocation Loc, llvm::Value *V,
                      QualType Type, CharUnits Alignment = CharUnits::Zero(),
-                     bool SkipNullCheck = false);
+                     SanitizerSet SkippedChecks = SanitizerSet());
 
   /// \brief Emit a check that \p Base points into an array object, which
   /// we can access at index \p Index. \p Accessed should be \c false if we

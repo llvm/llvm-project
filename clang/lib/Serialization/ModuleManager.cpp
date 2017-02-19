@@ -27,7 +27,7 @@
 using namespace clang;
 using namespace serialization;
 
-ModuleFile *ModuleManager::lookup(StringRef Name) {
+ModuleFile *ModuleManager::lookup(StringRef Name) const {
   const FileEntry *Entry = FileMgr.getFile(Name, /*openFile=*/false,
                                            /*cacheFailure=*/false);
   if (Entry)
@@ -36,9 +36,8 @@ ModuleFile *ModuleManager::lookup(StringRef Name) {
   return nullptr;
 }
 
-ModuleFile *ModuleManager::lookup(const FileEntry *File) {
-  llvm::DenseMap<const FileEntry *, ModuleFile *>::iterator Known
-    = Modules.find(File);
+ModuleFile *ModuleManager::lookup(const FileEntry *File) const {
+  auto Known = Modules.find(File);
   if (Known == Modules.end())
     return nullptr;
 

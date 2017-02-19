@@ -132,8 +132,8 @@ Error PDBFileBuilder::commit(StringRef Filename) {
   auto DirStream =
       WritableMappedBlockStream::createDirectoryStream(Layout, Buffer);
   StreamWriter DW(*DirStream);
-  if (auto EC =
-          DW.writeInteger(static_cast<uint32_t>(Layout.StreamSizes.size())))
+  if (auto EC = DW.writeInteger<uint32_t>(Layout.StreamSizes.size(),
+                                          llvm::support::little))
     return EC;
 
   if (auto EC = DW.writeArray(Layout.StreamSizes))

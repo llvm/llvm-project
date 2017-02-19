@@ -71,8 +71,8 @@ CXXRecordDecl::DefinitionData::DefinitionData(CXXRecordDecl *D)
       ImplicitCopyAssignmentHasConstParam(true),
       HasDeclaredCopyConstructorWithConstParam(false),
       HasDeclaredCopyAssignmentWithConstParam(false), IsLambda(false),
-      IsParsingBaseSpecifiers(false), NumBases(0), NumVBases(0), Bases(),
-      VBases(), Definition(D), FirstFriend() {}
+      IsParsingBaseSpecifiers(false), ODRHash(0), NumBases(0), NumVBases(0),
+      Bases(), VBases(), Definition(D), FirstFriend() {}
 
 CXXBaseSpecifier *CXXRecordDecl::DefinitionData::getBasesSlowCase() const {
   return Bases.get(Definition->getASTContext().getExternalSource());
@@ -370,6 +370,8 @@ CXXRecordDecl::setBases(CXXBaseSpecifier const * const *Bases,
 
   data().IsParsingBaseSpecifiers = false;
 }
+
+void CXXRecordDecl::computeODRHash() {}
 
 void CXXRecordDecl::addedClassSubobject(CXXRecordDecl *Subobj) {
   // C++11 [class.copy]p11:
