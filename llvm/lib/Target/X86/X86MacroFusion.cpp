@@ -44,10 +44,10 @@ static bool shouldScheduleAdjacent(const X86Subtarget &ST,
     FuseInc
   } FuseKind;
 
-  unsigned FirstOpcode = First ?
-                         First->getOpcode() : X86::INSTRUCTION_LIST_END;
-  unsigned SecondOpcode = Second ?
-                          Second->getOpcode() : X86::INSTRUCTION_LIST_END;
+  unsigned FirstOpcode =
+      First ? First->getOpcode() : (unsigned)X86::INSTRUCTION_LIST_END;
+  unsigned SecondOpcode =
+      Second ? Second->getOpcode() : (unsigned)X86::INSTRUCTION_LIST_END;
 
   switch (SecondOpcode) {
   default:

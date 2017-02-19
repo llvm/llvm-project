@@ -5739,7 +5739,7 @@ static bool getFauxShuffleMask(SDValue N, SmallVectorImpl<int> &Mask,
     if (X86::isZeroNode(InScl)) {
       Ops.push_back(InVec);
       for (unsigned i = 0; i != NumElts; ++i)
-        Mask.push_back(i == InIdx ? SM_SentinelZero : i);
+        Mask.push_back(i == InIdx ? SM_SentinelZero : (int)i);
       return true;
     }
 
@@ -26315,12 +26315,15 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
   case X86ISD::VZEXT: {
     SDValue N0 = Op.getOperand(0);
     unsigned NumElts = Op.getValueType().getVectorNumElements();
-    unsigned InNumElts = N0.getValueType().getVectorNumElements();
-    unsigned InBitWidth = N0.getValueType().getScalarSizeInBits();
+
+    EVT SrcVT = N0.getValueType();
+    unsigned InNumElts = SrcVT.getVectorNumElements();
+    unsigned InBitWidth = SrcVT.getScalarSizeInBits();
+    assert(InNumElts >= NumElts && "Illegal VZEXT input");
 
     KnownZero = KnownOne = APInt(InBitWidth, 0);
-    APInt DemandedElts = APInt::getLowBitsSet(InNumElts, NumElts);
-    DAG.computeKnownBits(N0, KnownZero, KnownOne, DemandedElts, Depth + 1);
+    APInt DemandedSrcElts = APInt::getLowBitsSet(InNumElts, NumElts);
+    DAG.computeKnownBits(N0, KnownZero, KnownOne, DemandedSrcElts, Depth + 1);
     KnownOne = KnownOne.zext(BitWidth);
     KnownZero = KnownZero.zext(BitWidth);
     KnownZero |= APInt::getHighBitsSet(BitWidth, BitWidth - InBitWidth);

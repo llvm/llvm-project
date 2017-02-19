@@ -644,6 +644,12 @@ bool EEVT::TypeSet::EnforceSameSize(EEVT::TypeSet &VTOperand,
 
   bool MadeChange = false;
 
+  if (isCompletelyUnknown())
+    MadeChange = FillWithPossibleTypes(TP);
+
+  if (VTOperand.isCompletelyUnknown())
+    MadeChange = VTOperand.FillWithPossibleTypes(TP);
+
   // If we know one of the types, it forces the other type agree.
   if (isConcrete()) {
     MVT IVT = getConcrete();
