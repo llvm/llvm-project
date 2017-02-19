@@ -464,10 +464,11 @@ define <8 x i16> @trunc_shl_v8i16_v8i32_4(<8 x i32> %a) {
   ret <8 x i16> %conv
 }
 
-; FIXME: trunc (shuffle X, C, Mask) --> shuffle (trunc X), C', Mask
+; Although the mask is the same value, we don't create a shuffle for types that the backend may not be able to handle:
+; trunc (shuffle X, C, Mask) --> shuffle (trunc X), C', Mask
 
-define <4 x i8> @shuf1(<4 x i32> %x) {
-; CHECK-LABEL: @shuf1(
+define <4 x i8> @wide_shuf(<4 x i32> %x) {
+; CHECK-LABEL: @wide_shuf(
 ; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x i32> %x, <4 x i32> <i32 undef, i32 3634, i32 90, i32 undef>, <4 x i32> <i32 1, i32 5, i32 6, i32 2>
 ; CHECK-NEXT:    [[TRUNC:%.*]] = trunc <4 x i32> [[SHUF]] to <4 x i8>
 ; CHECK-NEXT:    ret <4 x i8> [[TRUNC]]
@@ -477,17 +478,47 @@ define <4 x i8> @shuf1(<4 x i32> %x) {
   ret <4 x i8> %trunc
 }
 
-; TODO: Shuffle with constant operand should be canonicalized to operand 1?
-; FIXME: trunc (shuffle C, X, Mask) --> shuffle C', (trunc X), Mask
+; FIXME:
+; trunc (shuffle X, undef, SplatMask) --> shuffle (trunc X), undef, SplatMask
 
-define <4 x i8> @shuf2(<4 x i32> %x) {
-; CHECK-LABEL: @shuf2(
-; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x i32> <i32 -3500, i32 undef, i32 undef, i32 -1>, <4 x i32> %x, <4 x i32> <i32 3, i32 6, i32 6, i32 0>
+define <4 x i8> @wide_splat1(<4 x i32> %x) {
+; CHECK-LABEL: @wide_splat1(
+; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x i32> %x, <4 x i32> undef, <4 x i32> <i32 2, i32 2, i32 2, i32 2>
 ; CHECK-NEXT:    [[TRUNC:%.*]] = trunc <4 x i32> [[SHUF]] to <4 x i8>
 ; CHECK-NEXT:    ret <4 x i8> [[TRUNC]]
 ;
-  %shuf = shufflevector <4 x i32> <i32 -3500, i32 3634, i32 90, i32 -1>, <4 x i32> %x, <4 x i32> <i32 3, i32 6, i32 6, i32 0>
+  %shuf = shufflevector <4 x i32> %x, <4 x i32> undef, <4 x i32> <i32 2, i32 2, i32 2, i32 2>
   %trunc = trunc <4 x i32> %shuf to <4 x i8>
   ret <4 x i8> %trunc
+}
+
+; FIXME:
+; Test weird types.
+; trunc (shuffle X, undef, SplatMask) --> shuffle (trunc X), undef, SplatMask
+
+define <3 x i31> @wide_splat2(<3 x i33> %x) {
+; CHECK-LABEL: @wide_splat2(
+; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <3 x i33> %x, <3 x i33> undef, <3 x i32> <i32 1, i32 1, i32 1>
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc <3 x i33> [[SHUF]] to <3 x i31>
+; CHECK-NEXT:    ret <3 x i31> [[TRUNC]]
+;
+  %shuf = shufflevector <3 x i33> %x, <3 x i33> undef, <3 x i32> <i32 1, i32 1, i32 1>
+  %trunc = trunc <3 x i33> %shuf to <3 x i31>
+  ret <3 x i31> %trunc
+}
+
+; FIXME:
+; trunc (shuffle X, undef, SplatMask) --> shuffle (trunc X), undef, SplatMask
+; A mask with undef elements should still be considered a splat mask.
+
+define <3 x i31> @wide_splat3(<3 x i33> %x) {
+; CHECK-LABEL: @wide_splat3(
+; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <3 x i33> %x, <3 x i33> undef, <3 x i32> <i32 undef, i32 1, i32 1>
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc <3 x i33> [[SHUF]] to <3 x i31>
+; CHECK-NEXT:    ret <3 x i31> [[TRUNC]]
+;
+  %shuf = shufflevector <3 x i33> %x, <3 x i33> undef, <3 x i32> <i32 undef, i32 1, i32 1>
+  %trunc = trunc <3 x i33> %shuf to <3 x i31>
+  ret <3 x i31> %trunc
 }
 

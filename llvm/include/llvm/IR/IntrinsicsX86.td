@@ -3033,17 +3033,6 @@ let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
   def int_x86_xop_vfrcz_ps_256 : GCCBuiltin<"__builtin_ia32_vfrczps256">,
               Intrinsic<[llvm_v8f32_ty], [llvm_v8f32_ty], [IntrNoMem]>;
 
-  def int_x86_xop_vpcmov :
-              GCCBuiltin<"__builtin_ia32_vpcmov">,
-              Intrinsic<[llvm_v2i64_ty],
-                        [llvm_v2i64_ty, llvm_v2i64_ty, llvm_v2i64_ty],
-                        [IntrNoMem]>;
-  def int_x86_xop_vpcmov_256 :
-              GCCBuiltin<"__builtin_ia32_vpcmov_256">,
-              Intrinsic<[llvm_v4i64_ty],
-                        [llvm_v4i64_ty, llvm_v4i64_ty, llvm_v4i64_ty],
-                        [IntrNoMem]>;
-
   def int_x86_xop_vpcomb : GCCBuiltin<"__builtin_ia32_vpcomb">,
               Intrinsic<[llvm_v16i8_ty], [llvm_v16i8_ty, llvm_v16i8_ty,
                          llvm_i8_ty], [IntrNoMem]>;

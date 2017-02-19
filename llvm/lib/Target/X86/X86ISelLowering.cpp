@@ -26315,12 +26315,15 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
   case X86ISD::VZEXT: {
     SDValue N0 = Op.getOperand(0);
     unsigned NumElts = Op.getValueType().getVectorNumElements();
-    unsigned InNumElts = N0.getValueType().getVectorNumElements();
-    unsigned InBitWidth = N0.getValueType().getScalarSizeInBits();
+
+    EVT SrcVT = N0.getValueType();
+    unsigned InNumElts = SrcVT.getVectorNumElements();
+    unsigned InBitWidth = SrcVT.getScalarSizeInBits();
+    assert(InNumElts >= NumElts && "Illegal VZEXT input");
 
     KnownZero = KnownOne = APInt(InBitWidth, 0);
-    APInt DemandedElts = APInt::getLowBitsSet(InNumElts, NumElts);
-    DAG.computeKnownBits(N0, KnownZero, KnownOne, DemandedElts, Depth + 1);
+    APInt DemandedSrcElts = APInt::getLowBitsSet(InNumElts, NumElts);
+    DAG.computeKnownBits(N0, KnownZero, KnownOne, DemandedSrcElts, Depth + 1);
     KnownOne = KnownOne.zext(BitWidth);
     KnownZero = KnownZero.zext(BitWidth);
     KnownZero |= APInt::getHighBitsSet(BitWidth, BitWidth - InBitWidth);
@@ -33434,6 +33437,16 @@ static SDValue combineSext(SDNode *N, SelectionDAG &DAG,
       return DAG.getNode(ISD::SELECT, DL, VT, N0, AllOnes, Zero);
     }
     return SDValue();
+  }
+
+  if (InVT == MVT::i1 && N0.getOpcode() == ISD::XOR &&
+      isAllOnesConstant(N0.getOperand(1)) && N0.hasOneUse()) {
+    // Invert and sign-extend a boolean is the same as zero-extend and subtract
+    // 1 because 0 becomes -1 and 1 becomes 0. The subtract is efficiently
+    // lowered with an LEA or a DEC. This is the same as: select Bool, 0, -1.
+    // sext (xor Bool, -1) --> sub (zext Bool), 1
+    SDValue Zext = DAG.getNode(ISD::ZERO_EXTEND, DL, VT, N0.getOperand(0));
+    return DAG.getNode(ISD::SUB, DL, VT, Zext, DAG.getConstant(1, DL, VT));
   }
 
   if (SDValue V = combineToExtendVectorInReg(N, DAG, DCI, Subtarget))

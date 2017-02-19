@@ -1777,7 +1777,7 @@ X86InstrInfo::X86InstrInfo(X86Subtarget &STI)
 
     // XOP foldable instructions
     { X86::VPCMOVrrr,         X86::VPCMOVrmr,           0 },
-    { X86::VPCMOVrrrY,        X86::VPCMOVrmrY,          0 },
+    { X86::VPCMOVYrrr,        X86::VPCMOVYrmr,          0 },
     { X86::VPCOMBri,          X86::VPCOMBmi,            0 },
     { X86::VPCOMDri,          X86::VPCOMDmi,            0 },
     { X86::VPCOMQri,          X86::VPCOMQmi,            0 },
@@ -2478,7 +2478,7 @@ X86InstrInfo::X86InstrInfo(X86Subtarget &STI)
 
     // XOP foldable instructions
     { X86::VPCMOVrrr,             X86::VPCMOVrrm,             0 },
-    { X86::VPCMOVrrrY,            X86::VPCMOVrrmY,            0 },
+    { X86::VPCMOVYrrr,            X86::VPCMOVYrrm,            0 },
     { X86::VPERMIL2PDrr,          X86::VPERMIL2PDrm,          0 },
     { X86::VPERMIL2PDrrY,         X86::VPERMIL2PDrmY,         0 },
     { X86::VPERMIL2PSrr,          X86::VPERMIL2PSrm,          0 },

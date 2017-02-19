@@ -216,3 +216,59 @@ define <8 x i32> @pr24458(<8 x float> %n) {
   ret <8 x i32> %wrong
 }
 
+; Insert a scalar int into a constant vector and truncate:
+; trunc (inselt C, X, Index) --> inselt C, (trunc X), Index
+
+define <3 x i16> @trunc_inselt1(i32 %x) {
+; CHECK-LABEL: @trunc_inselt1(
+; CHECK-NEXT:    [[VEC:%.*]] = insertelement <3 x i32> <i32 3, i32 undef, i32 65536>, i32 %x, i32 1
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc <3 x i32> [[VEC]] to <3 x i16>
+; CHECK-NEXT:    ret <3 x i16> [[TRUNC]]
+;
+  %vec = insertelement <3 x i32> <i32 3, i32 -2, i32 65536>, i32 %x, i32 1
+  %trunc = trunc <3 x i32> %vec to <3 x i16>
+  ret <3 x i16> %trunc
+}
+
+; Insert a scalar FP into a constant vector and FP truncate:
+; fptrunc (inselt C, X, Index) --> inselt C, (fptrunc X), Index
+
+define <2 x float> @fptrunc_inselt1(double %x, i32 %index) {
+; CHECK-LABEL: @fptrunc_inselt1(
+; CHECK-NEXT:    [[VEC:%.*]] = insertelement <2 x double> <double undef, double 3.000000e+00>, double %x, i32 %index
+; CHECK-NEXT:    [[TRUNC:%.*]] = fptrunc <2 x double> [[VEC]] to <2 x float>
+; CHECK-NEXT:    ret <2 x float> [[TRUNC]]
+;
+  %vec = insertelement <2 x double> <double undef, double 3.0>, double %x, i32 %index
+  %trunc = fptrunc <2 x double> %vec to <2 x float>
+  ret <2 x float> %trunc
+}
+
+; Insert a scalar int constant into a vector and truncate:
+; trunc (inselt X, C, Index) --> inselt (trunc X), C', Index
+
+define <8 x i16> @trunc_inselt2(<8 x i32> %x, i32 %index) {
+; CHECK-LABEL: @trunc_inselt2(
+; CHECK-NEXT:    [[VEC:%.*]] = insertelement <8 x i32> %x, i32 1048576, i32 %index
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc <8 x i32> [[VEC]] to <8 x i16>
+; CHECK-NEXT:    ret <8 x i16> [[TRUNC]]
+;
+  %vec = insertelement <8 x i32> %x, i32 1048576, i32 %index
+  %trunc = trunc <8 x i32> %vec to <8 x i16>
+  ret <8 x i16> %trunc
+}
+
+; Insert a scalar FP constant into a vector and FP truncate:
+; fptrunc (inselt X, C, Index) --> inselt (fptrunc X), C', Index
+
+define <3 x float> @fptrunc_inselt2(<3 x double> %x) {
+; CHECK-LABEL: @fptrunc_inselt2(
+; CHECK-NEXT:    [[VEC:%.*]] = insertelement <3 x double> %x, double 4.000000e+00, i32 2
+; CHECK-NEXT:    [[TRUNC:%.*]] = fptrunc <3 x double> [[VEC]] to <3 x float>
+; CHECK-NEXT:    ret <3 x float> [[TRUNC]]
+;
+  %vec = insertelement <3 x double> %x, double 4.0, i32 2
+  %trunc = fptrunc <3 x double> %vec to <3 x float>
+  ret <3 x float> %trunc
+}
+

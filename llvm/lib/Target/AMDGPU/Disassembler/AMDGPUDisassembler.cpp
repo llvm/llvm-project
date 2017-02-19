@@ -523,6 +523,11 @@ MCOperand AMDGPUDisassembler::decodeSpecialReg32(unsigned Val) const {
   case 124: return createRegOperand(M0);
   case 126: return createRegOperand(EXEC_LO);
   case 127: return createRegOperand(EXEC_HI);
+  case 235: return createRegOperand(SRC_SHARED_BASE);
+  case 236: return createRegOperand(SRC_SHARED_LIMIT);
+  case 237: return createRegOperand(SRC_PRIVATE_BASE);
+  case 238: return createRegOperand(SRC_PRIVATE_LIMIT);
+    // TODO: SRC_POPS_EXITING_WAVE_ID
     // ToDo: no support for vccz register
   case 251: break;
     // ToDo: no support for execz register

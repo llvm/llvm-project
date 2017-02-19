@@ -99,7 +99,7 @@
 
 #include <cstdarg>
 
-#if defined(__GNUC__)
+#if defined(__GNUC__) || defined(__clang__)
 #pragma GCC diagnostic ignored "-Wformat-zero-length"
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations" // for tmpnam
 #endif
