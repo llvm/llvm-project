@@ -836,8 +836,7 @@ EmitSchedule(MachineBasicBlock::iterator &InsertPos) {
       GluedNodes.push_back(N);
     while (!GluedNodes.empty()) {
       SDNode *N = GluedNodes.back();
-      Emitter.EmitNode(GluedNodes.back(), SU->OrigNode != SU, SU->isCloned,
-                       VRBaseMap);
+      Emitter.EmitNode(N, SU->OrigNode != SU, SU->isCloned, VRBaseMap);
       // Remember the source order of the inserted instruction.
       if (HasDbg)
         ProcessSourceNode(N, DAG, Emitter, VRBaseMap, Orders, Seen);

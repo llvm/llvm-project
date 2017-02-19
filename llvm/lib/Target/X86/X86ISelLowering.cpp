@@ -5154,7 +5154,8 @@ static const Constant *getTargetConstantFromNode(SDValue Op) {
 static bool getTargetConstantBitsFromNode(SDValue Op, unsigned EltSizeInBits,
                                           SmallBitVector &UndefElts,
                                           SmallVectorImpl<APInt> &EltBits,
-                                          bool AllowUndefs = true) {
+                                          bool AllowWholeUndefs = true,
+                                          bool AllowPartialUndefs = true) {
   assert(UndefElts.empty() && "Expected an empty UndefElts vector");
   assert(EltBits.empty() && "Expected an empty EltBits vector");
 
@@ -5175,6 +5176,7 @@ static bool getTargetConstantBitsFromNode(SDValue Op, unsigned EltSizeInBits,
   // Split the undef/constant single bitset data into the target elements.
   auto SplitBitData = [&]() {
     // Don't split if we don't allow undef bits.
+    bool AllowUndefs = AllowWholeUndefs || AllowPartialUndefs;
     if (UndefBits.getBoolValue() && !AllowUndefs)
       return false;
 
@@ -5185,12 +5187,18 @@ static bool getTargetConstantBitsFromNode(SDValue Op, unsigned EltSizeInBits,
       APInt UndefEltBits = UndefBits.lshr(i * EltSizeInBits);
       UndefEltBits = UndefEltBits.zextOrTrunc(EltSizeInBits);
 
-      // Only treat an element as UNDEF if all bits are UNDEF, otherwise
-      // treat it as zero.
+      // Only treat an element as UNDEF if all bits are UNDEF.
       if (UndefEltBits.isAllOnesValue()) {
+        if (!AllowWholeUndefs)
+          return false;
         UndefElts[i] = true;
         continue;
       }
+
+      // If only some bits are UNDEF then treat them as zero (or bail if not
+      // supported).
+      if (UndefEltBits.getBoolValue() && !AllowPartialUndefs)
+        return false;
 
       APInt Bits = MaskBits.lshr(i * EltSizeInBits);
       Bits = Bits.zextOrTrunc(EltSizeInBits);
@@ -5293,7 +5301,8 @@ static bool getTargetShuffleMaskIndices(SDValue MaskNode,
   // Extract the raw target constant bits.
   // FIXME: We currently don't support UNDEF bits or mask entries.
   if (!getTargetConstantBitsFromNode(MaskNode, MaskEltSizeInBits, UndefElts,
-                                     EltBits, /* AllowUndefs */ false))
+                                     EltBits, /* AllowWholeUndefs */ false,
+                                     /* AllowPartialUndefs */ false))
     return false;
 
   // Insert the extracted elements into the mask.
@@ -5600,6 +5609,19 @@ static bool setTargetShuffleZeroElements(SDValue N,
   V1 = peekThroughBitcasts(V1);
   V2 = peekThroughBitcasts(V2);
 
+  assert((VT.getSizeInBits() % Mask.size()) == 0 &&
+         "Illegal split of shuffle value type");
+  unsigned EltSizeInBits = VT.getSizeInBits() / Mask.size();
+
+  // Extract known constant input data.
+  SmallBitVector UndefSrcElts[2];
+  SmallVector<APInt, 32> SrcEltBits[2];
+  bool IsSrcConstant[2] = {
+      getTargetConstantBitsFromNode(V1, EltSizeInBits, UndefSrcElts[0],
+                                    SrcEltBits[0], true, false),
+      getTargetConstantBitsFromNode(V2, EltSizeInBits, UndefSrcElts[1],
+                                    SrcEltBits[1], true, false)};
+
   for (int i = 0, Size = Mask.size(); i < Size; ++i) {
     int M = Mask[i];
 
@@ -5608,6 +5630,7 @@ static bool setTargetShuffleZeroElements(SDValue N,
       continue;
 
     // Determine shuffle input and normalize the mask.
+    unsigned SrcIdx = M / Size;
     SDValue V = M < Size ? V1 : V2;
     M %= Size;
 
@@ -5632,39 +5655,12 @@ static bool setTargetShuffleZeroElements(SDValue N,
       continue;
     }
 
-    // Currently we can only search BUILD_VECTOR for UNDEF/ZERO elements.
-    if (V.getOpcode() != ISD::BUILD_VECTOR)
-      continue;
-
-    // If the BUILD_VECTOR has fewer elements then the (larger) source
-    // element must be UNDEF/ZERO.
-    // TODO: Is it worth testing the individual bits of a constant?
-    if ((Size % V.getNumOperands()) == 0) {
-      int Scale = Size / V->getNumOperands();
-      SDValue Op = V.getOperand(M / Scale);
-      if (Op.isUndef())
+    // Attempt to extract from the source's constant bits.
+    if (IsSrcConstant[SrcIdx]) {
+      if (UndefSrcElts[SrcIdx][M])
         Mask[i] = SM_SentinelUndef;
-      else if (X86::isZeroNode(Op))
+      else if (SrcEltBits[SrcIdx][M] == 0)
         Mask[i] = SM_SentinelZero;
-      continue;
-    }
-
-    // If the BUILD_VECTOR has more elements then all the (smaller) source
-    // elements must be all UNDEF or all ZERO.
-    if ((V.getNumOperands() % Size) == 0) {
-      int Scale = V->getNumOperands() / Size;
-      bool AllUndef = true;
-      bool AllZero = true;
-      for (int j = 0; j < Scale; ++j) {
-        SDValue Op = V.getOperand((M * Scale) + j);
-        AllUndef &= Op.isUndef();
-        AllZero &= X86::isZeroNode(Op);
-      }
-      if (AllUndef)
-        Mask[i] = SM_SentinelUndef;
-      else if (AllZero)
-        Mask[i] = SM_SentinelZero;
-      continue;
     }
   }
 
@@ -12235,7 +12231,7 @@ static bool matchVectorShuffleWithSHUFPD(MVT VT, SDValue &V1, SDValue &V2,
                                          unsigned &ShuffleImm,
                                          ArrayRef<int> Mask) {
   int NumElts = VT.getVectorNumElements();
-  assert(VT.getScalarType() == MVT::f64 &&
+  assert(VT.getScalarSizeInBits() == 64 &&
          (NumElts == 2 || NumElts == 4 || NumElts == 8) &&
          "Unexpected data type for VSHUFPD");
 
@@ -12271,6 +12267,9 @@ static bool matchVectorShuffleWithSHUFPD(MVT VT, SDValue &V1, SDValue &V2,
 static SDValue lowerVectorShuffleWithSHUFPD(const SDLoc &DL, MVT VT,
                                             ArrayRef<int> Mask, SDValue V1,
                                             SDValue V2, SelectionDAG &DAG) {
+  assert((VT == MVT::v2f64 || VT == MVT::v4f64 || VT == MVT::v8f64)&&
+         "Unexpected data type for VSHUFPD");
+
   unsigned Immediate = 0;
   if (!matchVectorShuffleWithSHUFPD(VT, V1, V2, Immediate, Mask))
     return SDValue();
@@ -26691,13 +26690,15 @@ static bool matchBinaryVectorShuffle(MVT MaskVT, ArrayRef<int> Mask,
 }
 
 static bool matchBinaryPermuteVectorShuffle(MVT MaskVT, ArrayRef<int> Mask,
-                                            bool AllowIntDomain, SDValue &V1,
-                                            SDValue &V2, SDLoc &DL,
+                                            bool AllowFloatDomain,
+                                            bool AllowIntDomain,
+                                            SDValue &V1, SDValue &V2, SDLoc &DL,
                                             SelectionDAG &DAG,
                                             const X86Subtarget &Subtarget,
                                             unsigned &Shuffle, MVT &ShuffleVT,
                                             unsigned &PermuteImm) {
   unsigned NumMaskElts = Mask.size();
+  unsigned EltSizeInBits = MaskVT.getScalarSizeInBits();
 
   // Attempt to match against PALIGNR byte rotate.
   if (AllowIntDomain && ((MaskVT.is128BitVector() && Subtarget.hasSSSE3()) ||
@@ -26777,7 +26778,8 @@ static bool matchBinaryPermuteVectorShuffle(MVT MaskVT, ArrayRef<int> Mask,
   }
 
   // Attempt to combine to INSERTPS.
-  if (Subtarget.hasSSE41() && MaskVT == MVT::v4f32) {
+  if (AllowFloatDomain && EltSizeInBits == 32 && Subtarget.hasSSE41() &&
+      MaskVT.is128BitVector()) {
     SmallBitVector Zeroable(4, false);
     for (unsigned i = 0; i != NumMaskElts; ++i)
       if (Mask[i] < 0)
@@ -26792,20 +26794,22 @@ static bool matchBinaryPermuteVectorShuffle(MVT MaskVT, ArrayRef<int> Mask,
   }
 
   // Attempt to combine to SHUFPD.
-  if ((MaskVT == MVT::v2f64 && Subtarget.hasSSE2()) ||
-      (MaskVT == MVT::v4f64 && Subtarget.hasAVX()) ||
-      (MaskVT == MVT::v8f64 && Subtarget.hasAVX512())) {
+  if (AllowFloatDomain && EltSizeInBits == 64 &&
+      ((MaskVT.is128BitVector() && Subtarget.hasSSE2()) ||
+       (MaskVT.is256BitVector() && Subtarget.hasAVX()) ||
+       (MaskVT.is512BitVector() && Subtarget.hasAVX512()))) {
     if (matchVectorShuffleWithSHUFPD(MaskVT, V1, V2, PermuteImm, Mask)) {
       Shuffle = X86ISD::SHUFP;
-      ShuffleVT = MaskVT;
+      ShuffleVT = MVT::getVectorVT(MVT::f64, MaskVT.getSizeInBits() / 64);
       return true;
     }
   }
 
   // Attempt to combine to SHUFPS.
-  if ((MaskVT == MVT::v4f32 && Subtarget.hasSSE1()) ||
-      (MaskVT == MVT::v8f32 && Subtarget.hasAVX()) ||
-      (MaskVT == MVT::v16f32 && Subtarget.hasAVX512())) {
+  if (AllowFloatDomain && EltSizeInBits == 32 &&
+      ((MaskVT.is128BitVector() && Subtarget.hasSSE1()) ||
+       (MaskVT.is256BitVector() && Subtarget.hasAVX()) ||
+       (MaskVT.is512BitVector() && Subtarget.hasAVX512()))) {
     SmallVector<int, 4> RepeatedMask;
     if (isRepeatedTargetShuffleMask(128, MaskVT, Mask, RepeatedMask)) {
       // Match each half of the repeated mask, to determine if its just
@@ -26841,7 +26845,7 @@ static bool matchBinaryPermuteVectorShuffle(MVT MaskVT, ArrayRef<int> Mask,
         V1 = Lo;
         V2 = Hi;
         Shuffle = X86ISD::SHUFP;
-        ShuffleVT = MaskVT;
+        ShuffleVT = MVT::getVectorVT(MVT::f32, MaskVT.getSizeInBits() / 32);
         PermuteImm = getV4X86ShuffleImm(ShufMask);
         return true;
       }
@@ -26963,9 +26967,9 @@ static bool combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
   unsigned Shuffle, PermuteImm;
 
   // Which shuffle domains are permitted?
-  // TODO - Allow either domain after a threshold depth.
-  bool AllowFloatDomain = FloatDomain;
-  bool AllowIntDomain = !FloatDomain;
+  // Permit domain crossing at higher combine depths.
+  bool AllowFloatDomain = FloatDomain || (Depth > 3);
+  bool AllowIntDomain = !FloatDomain || (Depth > 3);
 
   if (UnaryShuffle) {
     // If we are shuffling a X86ISD::VZEXT_LOAD then we can use the load
@@ -27035,8 +27039,9 @@ static bool combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
     return true;
   }
 
-  if (matchBinaryPermuteVectorShuffle(MaskVT, Mask, AllowIntDomain, V1, V2, DL,
-                                      DAG, Subtarget, Shuffle, ShuffleVT,
+  if (matchBinaryPermuteVectorShuffle(MaskVT, Mask, AllowFloatDomain,
+                                      AllowIntDomain, V1, V2, DL, DAG,
+                                      Subtarget, Shuffle, ShuffleVT,
                                       PermuteImm)) {
     if (Depth == 1 && Root.getOpcode() == Shuffle)
       return false; // Nothing to do!
@@ -28428,18 +28433,13 @@ static SDValue XFormVExtractWithShuffleIntoLoad(SDNode *N, SelectionDAG &DAG,
 
   EVT OriginalVT = InVec.getValueType();
 
-  if (InVec.getOpcode() == ISD::BITCAST) {
-    // Don't duplicate a load with other uses.
-    if (!InVec.hasOneUse())
-      return SDValue();
-    EVT BCVT = InVec.getOperand(0).getValueType();
-    if (!BCVT.isVector() ||
-        BCVT.getVectorNumElements() != OriginalVT.getVectorNumElements())
-      return SDValue();
-    InVec = InVec.getOperand(0);
-  }
+  // Peek through bitcasts, don't duplicate a load with other uses.
+  InVec = peekThroughOneUseBitcasts(InVec);
 
   EVT CurrentVT = InVec.getValueType();
+  if (!CurrentVT.isVector() ||
+      CurrentVT.getVectorNumElements() != OriginalVT.getVectorNumElements())
+    return SDValue();
 
   if (!isTargetShuffle(InVec.getOpcode()))
     return SDValue();

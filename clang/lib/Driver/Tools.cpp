@@ -5544,25 +5544,29 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   // -stack-protector=0 is default.
   unsigned StackProtectorLevel = 0;
-  if (Arg *A = Args.getLastArg(options::OPT_fno_stack_protector,
-                               options::OPT_fstack_protector_all,
-                               options::OPT_fstack_protector_strong,
-                               options::OPT_fstack_protector)) {
-    if (A->getOption().matches(options::OPT_fstack_protector)) {
-      StackProtectorLevel = std::max<unsigned>(
-          LangOptions::SSPOn,
-          getToolChain().GetDefaultStackProtectorLevel(KernelOrKext));
-    } else if (A->getOption().matches(options::OPT_fstack_protector_strong))
-      StackProtectorLevel = LangOptions::SSPStrong;
-    else if (A->getOption().matches(options::OPT_fstack_protector_all))
-      StackProtectorLevel = LangOptions::SSPReq;
-  } else {
-    StackProtectorLevel =
-        getToolChain().GetDefaultStackProtectorLevel(KernelOrKext);
-    // Only use a default stack protector on Darwin in case -ffreestanding
-    // is not specified.
-    if (Triple.isOSDarwin() && !IsHosted)
-      StackProtectorLevel = 0;
+  // NVPTX doesn't support stack protectors; from the compiler's perspective, it
+  // doesn't even have a stack!
+  if (!Triple.isNVPTX()) {
+    if (Arg *A = Args.getLastArg(options::OPT_fno_stack_protector,
+                                 options::OPT_fstack_protector_all,
+                                 options::OPT_fstack_protector_strong,
+                                 options::OPT_fstack_protector)) {
+      if (A->getOption().matches(options::OPT_fstack_protector)) {
+        StackProtectorLevel = std::max<unsigned>(
+            LangOptions::SSPOn,
+            getToolChain().GetDefaultStackProtectorLevel(KernelOrKext));
+      } else if (A->getOption().matches(options::OPT_fstack_protector_strong))
+        StackProtectorLevel = LangOptions::SSPStrong;
+      else if (A->getOption().matches(options::OPT_fstack_protector_all))
+        StackProtectorLevel = LangOptions::SSPReq;
+    } else {
+      StackProtectorLevel =
+          getToolChain().GetDefaultStackProtectorLevel(KernelOrKext);
+      // Only use a default stack protector on Darwin in case -ffreestanding
+      // is not specified.
+      if (Triple.isOSDarwin() && !IsHosted)
+        StackProtectorLevel = 0;
+    }
   }
   if (StackProtectorLevel) {
     CmdArgs.push_back("-stack-protector");
@@ -9001,12 +9005,12 @@ void openbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("__start");
   }
 
+  CmdArgs.push_back("--eh-frame-hdr");
   if (Args.hasArg(options::OPT_static)) {
     CmdArgs.push_back("-Bstatic");
   } else {
     if (Args.hasArg(options::OPT_rdynamic))
       CmdArgs.push_back("-export-dynamic");
-    CmdArgs.push_back("--eh-frame-hdr");
     CmdArgs.push_back("-Bdynamic");
     if (Args.hasArg(options::OPT_shared)) {
       CmdArgs.push_back("-shared");
@@ -9031,6 +9035,10 @@ void openbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       if (Args.hasArg(options::OPT_pg))
         CmdArgs.push_back(
             Args.MakeArgString(getToolChain().GetFilePath("gcrt0.o")));
+      else if (Args.hasArg(options::OPT_static) &&
+               !Args.hasArg(options::OPT_nopie))
+        CmdArgs.push_back(
+            Args.MakeArgString(getToolChain().GetFilePath("rcrt0.o")));
       else
         CmdArgs.push_back(
             Args.MakeArgString(getToolChain().GetFilePath("crt0.o")));
