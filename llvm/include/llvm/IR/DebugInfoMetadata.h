@@ -2048,7 +2048,7 @@ protected:
   DIVariable(LLVMContext &C, unsigned ID, StorageType Storage, unsigned Line,
              ArrayRef<Metadata *> Ops, uint32_t AlignInBits = 0)
       : DINode(C, ID, Storage, dwarf::DW_TAG_variable, Ops), Line(Line),
-	      AlignInBits(AlignInBits) {}
+        AlignInBits(AlignInBits) {}
   ~DIVariable() = default;
 
 public:
@@ -2238,7 +2238,7 @@ public:
 
   /// Retrieve the details of this fragment expression.
   static Optional<FragmentInfo> getFragmentInfo(expr_op_iterator Start,
-						expr_op_iterator End);
+                                                expr_op_iterator End);
 
   /// Retrieve the details of this fragment expression.
   Optional<FragmentInfo> getFragmentInfo() const {

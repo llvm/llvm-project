@@ -51,6 +51,7 @@ public:
     SOUTHERN_ISLANDS,
     SEA_ISLANDS,
     VOLCANIC_ISLANDS,
+    GFX9,
   };
 
   enum {
@@ -64,6 +65,8 @@ public:
     ISAVersion8_0_3,
     ISAVersion8_0_4,
     ISAVersion8_1_0,
+    ISAVersion9_0_0,
+    ISAVersion9_0_1
   };
 
   enum TrapHandlerAbi {
@@ -103,6 +106,7 @@ protected:
   bool FlatForGlobal;
   bool UnalignedScratchAccess;
   bool UnalignedBufferAccess;
+  bool HasApertureRegs;
   bool EnableXNACK;
   bool TrapHandler;
   bool DebuggerInsertNops;
@@ -123,6 +127,7 @@ protected:
   bool GCN1Encoding;
   bool GCN3Encoding;
   bool CIInsts;
+  bool GFX9Insts;
   bool SGPRInitBug;
   bool HasSMemRealTime;
   bool Has16BitInsts;
@@ -328,6 +333,10 @@ public:
 
   bool hasUnalignedScratchAccess() const {
     return UnalignedScratchAccess;
+  }
+
+  bool hasApertureRegs() const {
+   return HasApertureRegs;
   }
 
   bool isTrapHandlerEnabled() const {
@@ -645,6 +654,14 @@ public:
     return getGeneration() != AMDGPUSubtarget::SOUTHERN_ISLANDS;
   }
 
+  bool hasSMovFedHazard() const {
+    return getGeneration() >= AMDGPUSubtarget::GFX9;
+  }
+
+  bool hasReadM0Hazard() const {
+    return getGeneration() >= AMDGPUSubtarget::GFX9;
+  }
+
   unsigned getKernArgSegmentSize(const MachineFunction &MF, unsigned ExplictArgBytes) const;
 
   /// Return the maximum number of waves per SIMD for kernels using \p SGPRs SGPRs
@@ -656,7 +673,13 @@ public:
   /// \returns True if waitcnt instruction is needed before barrier instruction,
   /// false otherwise.
   bool needWaitcntBeforeBarrier() const {
-    return true;
+    return getGeneration() < GFX9;
+  }
+
+  /// \returns true if the flat_scratch register should be initialized with the
+  /// pointer to the wave's scratch memory rather than a size and offset.
+  bool flatScratchIsPointer() const {
+    return getGeneration() >= GFX9;
   }
 
   /// \returns SGPR allocation granularity supported by the subtarget.

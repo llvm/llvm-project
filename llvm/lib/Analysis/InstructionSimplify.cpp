@@ -557,9 +557,19 @@ static Value *SimplifyAddInst(Value *Op0, Value *Op1, bool isNSW, bool isNUW,
     return Y;
 
   // X + ~X -> -1   since   ~X = -X-1
+  Type *Ty = Op0->getType();
   if (match(Op0, m_Not(m_Specific(Op1))) ||
       match(Op1, m_Not(m_Specific(Op0))))
-    return Constant::getAllOnesValue(Op0->getType());
+    return Constant::getAllOnesValue(Ty);
+
+  // add nsw/nuw (xor Y, signbit), signbit --> Y
+  // The no-wrapping add guarantees that the top bit will be set by the add.
+  // Therefore, the xor must be clearing the already set sign bit of Y.
+  Constant *SignBit =
+      ConstantInt::get(Ty, APInt::getSignBit(Ty->getScalarSizeInBits()));
+  if ((isNSW || isNUW) && match(Op1, m_Specific(SignBit)) &&
+      match(Op0, m_Xor(m_Value(Y), m_Specific(SignBit))))
+    return Y;
 
   /// i1 add -> xor.
   if (MaxRecurse && Op0->getType()->isIntegerTy(1))

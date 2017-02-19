@@ -86,6 +86,7 @@ static SIEncodingFamily subtargetEncodingFamily(const AMDGPUSubtarget &ST) {
   case AMDGPUSubtarget::SEA_ISLANDS:
     return SIEncodingFamily::SI;
   case AMDGPUSubtarget::VOLCANIC_ISLANDS:
+  case AMDGPUSubtarget::GFX9:
     return SIEncodingFamily::VI;
 
   // FIXME: This should never be called for r600 GPUs.

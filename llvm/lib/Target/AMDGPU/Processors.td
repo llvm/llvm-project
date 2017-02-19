@@ -187,3 +187,10 @@ def : ProcessorModel<"gfx810", SIQuarterSpeedModel,
   [FeatureISAVersion8_1_0]
 >;
 
+def : ProcessorModel<"gfx900",   SIQuarterSpeedModel,
+  [FeatureGFX9, FeatureISAVersion9_0_0, FeatureLDSBankCount32]
+>;
+
+def : ProcessorModel<"gfx901",   SIQuarterSpeedModel,
+  [FeatureGFX9, FeatureXNACK, FeatureISAVersion9_0_1, FeatureLDSBankCount32]
+>;

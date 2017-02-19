@@ -52,6 +52,8 @@ class GCNHazardRecognizer final : public ScheduleHazardRecognizer {
   int checkVALUHazards(MachineInstr *VALU);
   int checkRWLaneHazards(MachineInstr *RWLane);
   int checkRFEHazards(MachineInstr *RFE);
+  int checkAnyInstHazards(MachineInstr *MI);
+  int checkReadM0Hazards(MachineInstr *SMovRel);
 public:
   GCNHazardRecognizer(const MachineFunction &MF);
   // We can only issue one instruction per cycle.

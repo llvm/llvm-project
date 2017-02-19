@@ -47,7 +47,7 @@ FunctionPass *createSIDebuggerInsertNopsPass();
 FunctionPass *createSIInsertWaitsPass();
 FunctionPass *createAMDGPUCodeGenPreparePass(const GCNTargetMachine *TM = nullptr);
 
-ModulePass *createAMDGPUAnnotateKernelFeaturesPass();
+ModulePass *createAMDGPUAnnotateKernelFeaturesPass(const TargetMachine *TM = nullptr);
 void initializeAMDGPUAnnotateKernelFeaturesPass(PassRegistry &);
 extern char &AMDGPUAnnotateKernelFeaturesID;
 

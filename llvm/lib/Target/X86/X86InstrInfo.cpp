@@ -1777,7 +1777,7 @@ X86InstrInfo::X86InstrInfo(X86Subtarget &STI)
 
     // XOP foldable instructions
     { X86::VPCMOVrrr,         X86::VPCMOVrmr,           0 },
-    { X86::VPCMOVrrrY,        X86::VPCMOVrmrY,          0 },
+    { X86::VPCMOVYrrr,        X86::VPCMOVYrmr,          0 },
     { X86::VPCOMBri,          X86::VPCOMBmi,            0 },
     { X86::VPCOMDri,          X86::VPCOMDmi,            0 },
     { X86::VPCOMQri,          X86::VPCOMQmi,            0 },
@@ -1787,9 +1787,9 @@ X86InstrInfo::X86InstrInfo(X86Subtarget &STI)
     { X86::VPCOMUQri,         X86::VPCOMUQmi,           0 },
     { X86::VPCOMUWri,         X86::VPCOMUWmi,           0 },
     { X86::VPERMIL2PDrr,      X86::VPERMIL2PDmr,        0 },
-    { X86::VPERMIL2PDrrY,     X86::VPERMIL2PDmrY,       0 },
+    { X86::VPERMIL2PDYrr,     X86::VPERMIL2PDYmr,       0 },
     { X86::VPERMIL2PSrr,      X86::VPERMIL2PSmr,        0 },
-    { X86::VPERMIL2PSrrY,     X86::VPERMIL2PSmrY,       0 },
+    { X86::VPERMIL2PSYrr,     X86::VPERMIL2PSYmr,       0 },
     { X86::VPMACSDDrr,        X86::VPMACSDDrm,          0 },
     { X86::VPMACSDQHrr,       X86::VPMACSDQHrm,         0 },
     { X86::VPMACSDQLrr,       X86::VPMACSDQLrm,         0 },
@@ -2478,11 +2478,11 @@ X86InstrInfo::X86InstrInfo(X86Subtarget &STI)
 
     // XOP foldable instructions
     { X86::VPCMOVrrr,             X86::VPCMOVrrm,             0 },
-    { X86::VPCMOVrrrY,            X86::VPCMOVrrmY,            0 },
+    { X86::VPCMOVYrrr,            X86::VPCMOVYrrm,            0 },
     { X86::VPERMIL2PDrr,          X86::VPERMIL2PDrm,          0 },
-    { X86::VPERMIL2PDrrY,         X86::VPERMIL2PDrmY,         0 },
+    { X86::VPERMIL2PDYrr,         X86::VPERMIL2PDYrm,         0 },
     { X86::VPERMIL2PSrr,          X86::VPERMIL2PSrm,          0 },
-    { X86::VPERMIL2PSrrY,         X86::VPERMIL2PSrmY,         0 },
+    { X86::VPERMIL2PSYrr,         X86::VPERMIL2PSYrm,         0 },
     { X86::VPPERMrrr,             X86::VPPERMrrm,             0 },
 
     // AVX-512 instructions with 3 source operands.
@@ -5292,18 +5292,30 @@ MachineInstr *X86InstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
   case X86::VPTERNLOGQZrri:      case X86::VPTERNLOGQZrmi:
   case X86::VPTERNLOGQZ128rri:   case X86::VPTERNLOGQZ128rmi:
   case X86::VPTERNLOGQZ256rri:   case X86::VPTERNLOGQZ256rmi:
-  case X86::VPTERNLOGDZrrik:     case X86::VPTERNLOGDZrmik:
-  case X86::VPTERNLOGDZ128rrik:  case X86::VPTERNLOGDZ128rmik:
-  case X86::VPTERNLOGDZ256rrik:  case X86::VPTERNLOGDZ256rmik:
-  case X86::VPTERNLOGQZrrik:     case X86::VPTERNLOGQZrmik:
-  case X86::VPTERNLOGQZ128rrik:  case X86::VPTERNLOGQZ128rmik:
-  case X86::VPTERNLOGQZ256rrik:  case X86::VPTERNLOGQZ256rmik:
+  case X86::VPTERNLOGDZrrik:
+  case X86::VPTERNLOGDZ128rrik:
+  case X86::VPTERNLOGDZ256rrik:
+  case X86::VPTERNLOGQZrrik:
+  case X86::VPTERNLOGQZ128rrik:
+  case X86::VPTERNLOGQZ256rrik:
   case X86::VPTERNLOGDZrrikz:    case X86::VPTERNLOGDZrmikz:
   case X86::VPTERNLOGDZ128rrikz: case X86::VPTERNLOGDZ128rmikz:
   case X86::VPTERNLOGDZ256rrikz: case X86::VPTERNLOGDZ256rmikz:
   case X86::VPTERNLOGQZrrikz:    case X86::VPTERNLOGQZrmikz:
   case X86::VPTERNLOGQZ128rrikz: case X86::VPTERNLOGQZ128rmikz:
-  case X86::VPTERNLOGQZ256rrikz: case X86::VPTERNLOGQZ256rmikz: {
+  case X86::VPTERNLOGQZ256rrikz: case X86::VPTERNLOGQZ256rmikz:
+  case X86::VPTERNLOGDZ128rmbi:
+  case X86::VPTERNLOGDZ256rmbi:
+  case X86::VPTERNLOGDZrmbi:
+  case X86::VPTERNLOGQZ128rmbi:
+  case X86::VPTERNLOGQZ256rmbi:
+  case X86::VPTERNLOGQZrmbi:
+  case X86::VPTERNLOGDZ128rmbikz:
+  case X86::VPTERNLOGDZ256rmbikz:
+  case X86::VPTERNLOGDZrmbikz:
+  case X86::VPTERNLOGQZ128rmbikz:
+  case X86::VPTERNLOGQZ256rmbikz:
+  case X86::VPTERNLOGQZrmbikz: {
     auto &WorkingMI = cloneIfNew(MI);
     if (!commuteVPTERNLOG(WorkingMI, OpIdx1, OpIdx2))
       return nullptr;
@@ -5484,18 +5496,30 @@ bool X86InstrInfo::findCommutedOpIndices(MachineInstr &MI, unsigned &SrcOpIdx1,
   case X86::VPTERNLOGQZrri:      case X86::VPTERNLOGQZrmi:
   case X86::VPTERNLOGQZ128rri:   case X86::VPTERNLOGQZ128rmi:
   case X86::VPTERNLOGQZ256rri:   case X86::VPTERNLOGQZ256rmi:
-  case X86::VPTERNLOGDZrrik:     case X86::VPTERNLOGDZrmik:
-  case X86::VPTERNLOGDZ128rrik:  case X86::VPTERNLOGDZ128rmik:
-  case X86::VPTERNLOGDZ256rrik:  case X86::VPTERNLOGDZ256rmik:
-  case X86::VPTERNLOGQZrrik:     case X86::VPTERNLOGQZrmik:
-  case X86::VPTERNLOGQZ128rrik:  case X86::VPTERNLOGQZ128rmik:
-  case X86::VPTERNLOGQZ256rrik:  case X86::VPTERNLOGQZ256rmik:
+  case X86::VPTERNLOGDZrrik:
+  case X86::VPTERNLOGDZ128rrik:
+  case X86::VPTERNLOGDZ256rrik:
+  case X86::VPTERNLOGQZrrik:
+  case X86::VPTERNLOGQZ128rrik:
+  case X86::VPTERNLOGQZ256rrik:
   case X86::VPTERNLOGDZrrikz:    case X86::VPTERNLOGDZrmikz:
   case X86::VPTERNLOGDZ128rrikz: case X86::VPTERNLOGDZ128rmikz:
   case X86::VPTERNLOGDZ256rrikz: case X86::VPTERNLOGDZ256rmikz:
   case X86::VPTERNLOGQZrrikz:    case X86::VPTERNLOGQZrmikz:
   case X86::VPTERNLOGQZ128rrikz: case X86::VPTERNLOGQZ128rmikz:
   case X86::VPTERNLOGQZ256rrikz: case X86::VPTERNLOGQZ256rmikz:
+  case X86::VPTERNLOGDZ128rmbi:
+  case X86::VPTERNLOGDZ256rmbi:
+  case X86::VPTERNLOGDZrmbi:
+  case X86::VPTERNLOGQZ128rmbi:
+  case X86::VPTERNLOGQZ256rmbi:
+  case X86::VPTERNLOGQZrmbi:
+  case X86::VPTERNLOGDZ128rmbikz:
+  case X86::VPTERNLOGDZ256rmbikz:
+  case X86::VPTERNLOGDZrmbikz:
+  case X86::VPTERNLOGQZ128rmbikz:
+  case X86::VPTERNLOGQZ256rmbikz:
+  case X86::VPTERNLOGQZrmbikz:
     return findThreeSrcCommutedOpIndices(MI, SrcOpIdx1, SrcOpIdx2);
   default:
     const X86InstrFMA3Group *FMA3Group =

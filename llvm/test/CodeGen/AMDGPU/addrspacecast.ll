@@ -1,14 +1,19 @@
-; RUN: llc -march=amdgcn -mtriple=amdgcn-amd-amdhsa -mattr=-promote-alloca -verify-machineinstrs < %s | FileCheck -check-prefix=HSA %s
+; RUN: llc -march=amdgcn -mtriple=amdgcn-amd-amdhsa -mattr=-promote-alloca -verify-machineinstrs < %s | FileCheck -check-prefix=HSA -check-prefix=CI %s
+; RUN: llc -march=amdgcn -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -mattr=-promote-alloca -verify-machineinstrs < %s | FileCheck -check-prefix=HSA -check-prefix=GFX9 %s
 
 ; HSA-LABEL: {{^}}use_group_to_flat_addrspacecast:
 ; HSA: enable_sgpr_private_segment_buffer = 1
 ; HSA: enable_sgpr_dispatch_ptr = 0
-; HSA: enable_sgpr_queue_ptr = 1
+; CI: enable_sgpr_queue_ptr = 1
+; GFX9: enable_sgpr_queue_ptr = 0
 
-; HSA-DAG: s_load_dword [[PTR:s[0-9]+]], s[6:7], 0x0{{$}}
-; HSA-DAG: s_load_dword [[APERTURE:s[0-9]+]], s[4:5], 0x10{{$}}
+; CI-DAG: s_load_dword [[PTR:s[0-9]+]], s[6:7], 0x0{{$}}
+; CI-DAG: s_load_dword [[APERTURE:s[0-9]+]], s[4:5], 0x10{{$}}
+; CI-DAG: v_mov_b32_e32 [[VAPERTURE:v[0-9]+]], [[APERTURE]]
 
-; HSA-DAG: v_mov_b32_e32 [[VAPERTURE:v[0-9]+]], [[APERTURE]]
+; GFX9-DAG: s_load_dword [[PTR:s[0-9]+]], s[4:5], 0x0{{$}}
+; GFX9-DAG: v_mov_b32_e32 [[VAPERTURE:v[0-9]+]], src_shared_base
+
 ; HSA-DAG: v_mov_b32_e32 [[VPTR:v[0-9]+]], [[PTR]]
 
 ; HSA-DAG: v_cmp_ne_u32_e64 vcc, [[PTR]], -1
@@ -17,6 +22,12 @@
 ; HSA-DAG: v_mov_b32_e32 [[K:v[0-9]+]], 7
 
 ; HSA: flat_store_dword v{{\[}}[[LO]]:[[HI]]{{\]}}, [[K]]
+
+; At most 2 digits. Make sure src_shared_base is not counted as a high
+; number SGPR.
+
+; CI: NumSgprs: {{[0-9][0-9]+}}
+; GFX9: NumSgprs: {{[0-9]+}}
 define void @use_group_to_flat_addrspacecast(i32 addrspace(3)* %ptr) #0 {
   %stof = addrspacecast i32 addrspace(3)* %ptr to i32 addrspace(4)*
   store volatile i32 7, i32 addrspace(4)* %stof
@@ -26,12 +37,16 @@ define void @use_group_to_flat_addrspacecast(i32 addrspace(3)* %ptr) #0 {
 ; HSA-LABEL: {{^}}use_private_to_flat_addrspacecast:
 ; HSA: enable_sgpr_private_segment_buffer = 1
 ; HSA: enable_sgpr_dispatch_ptr = 0
-; HSA: enable_sgpr_queue_ptr = 1
+; CI: enable_sgpr_queue_ptr = 1
+; GFX9: enable_sgpr_queue_ptr = 0
 
-; HSA-DAG: s_load_dword [[PTR:s[0-9]+]], s[6:7], 0x0{{$}}
-; HSA-DAG: s_load_dword [[APERTURE:s[0-9]+]], s[4:5], 0x11{{$}}
+; CI-DAG: s_load_dword [[PTR:s[0-9]+]], s[6:7], 0x0{{$}}
+; CI-DAG: s_load_dword [[APERTURE:s[0-9]+]], s[4:5], 0x11{{$}}
+; CI-DAG: v_mov_b32_e32 [[VAPERTURE:v[0-9]+]], [[APERTURE]]
 
-; HSA-DAG: v_mov_b32_e32 [[VAPERTURE:v[0-9]+]], [[APERTURE]]
+; GFX9-DAG: s_load_dword [[PTR:s[0-9]+]], s[4:5], 0x0{{$}}
+; GFX9-DAG: v_mov_b32_e32 [[VAPERTURE:v[0-9]+]], src_private_base
+
 ; HSA-DAG: v_mov_b32_e32 [[VPTR:v[0-9]+]], [[PTR]]
 
 ; HSA-DAG: v_cmp_ne_u32_e64 vcc, [[PTR]], -1
@@ -40,6 +55,9 @@ define void @use_group_to_flat_addrspacecast(i32 addrspace(3)* %ptr) #0 {
 ; HSA-DAG: v_mov_b32_e32 [[K:v[0-9]+]], 7
 
 ; HSA: flat_store_dword v{{\[}}[[LO]]:[[HI]]{{\]}}, [[K]]
+
+; CI: NumSgprs: {{[0-9][0-9]+}}
+; GFX9: NumSgprs: {{[0-9]+}}
 define void @use_private_to_flat_addrspacecast(i32* %ptr) #0 {
   %stof = addrspacecast i32* %ptr to i32 addrspace(4)*
   store volatile i32 7, i32 addrspace(4)* %stof
@@ -133,8 +151,10 @@ define void @use_flat_to_constant_addrspacecast(i32 addrspace(4)* %ptr) #0 {
 }
 
 ; HSA-LABEL: {{^}}cast_0_group_to_flat_addrspacecast:
-; HSA: s_load_dword [[APERTURE:s[0-9]+]], s[4:5], 0x10
-; HSA-DAG: v_mov_b32_e32 v[[HI:[0-9]+]], [[APERTURE]]
+; CI: s_load_dword [[APERTURE:s[0-9]+]], s[4:5], 0x10
+; CI-DAG: v_mov_b32_e32 v[[HI:[0-9]+]], [[APERTURE]]
+; GFX9-DAG: v_mov_b32_e32 v[[HI:[0-9]+]], src_shared_base
+
 ; HSA-DAG: v_mov_b32_e32 v[[LO:[0-9]+]], 0{{$}}
 ; HSA-DAG: v_mov_b32_e32 v[[K:[0-9]+]], 7{{$}}
 ; HSA: flat_store_dword v{{\[}}[[LO]]:[[HI]]{{\]}}, v[[K]]
@@ -176,8 +196,11 @@ define void @cast_neg1_flat_to_group_addrspacecast() #0 {
 }
 
 ; HSA-LABEL: {{^}}cast_0_private_to_flat_addrspacecast:
-; HSA: s_load_dword [[APERTURE:s[0-9]+]], s[4:5], 0x11
-; HSA-DAG: v_mov_b32_e32 v[[HI:[0-9]+]], [[APERTURE]]
+; CI: s_load_dword [[APERTURE:s[0-9]+]], s[4:5], 0x11
+; CI-DAG: v_mov_b32_e32 v[[HI:[0-9]+]], [[APERTURE]]
+
+; GFX9-DAG: v_mov_b32_e32 v[[HI:[0-9]+]], src_private_base
+
 ; HSA-DAG: v_mov_b32_e32 v[[LO:[0-9]+]], 0{{$}}
 ; HSA-DAG: v_mov_b32_e32 v[[K:[0-9]+]], 7{{$}}
 ; HSA: flat_store_dword v{{\[}}[[LO]]:[[HI]]{{\]}}, v[[K]]
@@ -226,9 +249,13 @@ end:
 
 ; Check for prologue initializing special SGPRs pointing to scratch.
 ; HSA-LABEL: {{^}}store_flat_scratch:
-; HSA-DAG: s_mov_b32 flat_scratch_lo, s9
-; HSA-DAG: s_add_u32 [[ADD:s[0-9]+]], s8, s11
-; HSA: s_lshr_b32 flat_scratch_hi, [[ADD]], 8
+; CI-DAG: s_mov_b32 flat_scratch_lo, s9
+; CI-DAG: s_add_u32 [[ADD:s[0-9]+]], s8, s11
+; CI: s_lshr_b32 flat_scratch_hi, [[ADD]], 8
+
+; GFX9: s_add_u32 flat_scratch_lo, s6, s9
+; GFX9: s_addc_u32 flat_scratch_hi, s7, 0
+
 ; HSA: flat_store_dword
 ; HSA: s_barrier
 ; HSA: flat_load_dword
