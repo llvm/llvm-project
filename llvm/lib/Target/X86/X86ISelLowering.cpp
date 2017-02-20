@@ -13776,24 +13776,36 @@ X86TargetLowering::LowerEXTRACT_VECTOR_ELT(SDValue Op,
     return ExtractBitFromMaskVector(Op, DAG);
 
   if (!isa<ConstantSDNode>(Idx)) {
-    if (VecVT.is512BitVector() ||
-        (VecVT.is256BitVector() && Subtarget.hasInt256() &&
-         VecVT.getScalarSizeInBits() == 32)) {
+    // Its more profitable to go through memory (1 cycles throughput)
+    // than using VMOVD + VPERMV/PSHUFB sequence ( 2/3 cycles throughput)
+    // IACA tool was used to get performace estimation
+    // (https://software.intel.com/en-us/articles/intel-architecture-code-analyzer)
+    //
+    // exmample : extractelement <16 x i8> %a, i32 %i
+    //
+    // Block Throughput: 3.00 Cycles
+    // Throughput Bottleneck: Port5
+    //
+    // | Num Of |   Ports pressure in cycles  |    |
+    // |  Uops  |  0  - DV  |  5  |  6  |  7  |    |
+    // ---------------------------------------------
+    // |   1    |           | 1.0 |     |     | CP | vmovd xmm1, edi
+    // |   1    |           | 1.0 |     |     | CP | vpshufb xmm0, xmm0, xmm1
+    // |   2    | 1.0       | 1.0 |     |     | CP | vpextrb eax, xmm0, 0x0
+    // Total Num Of Uops: 4
+    //
+    //
+    // Block Throughput: 1.00 Cycles
+    // Throughput Bottleneck: PORT2_AGU, PORT3_AGU, Port4
+    //
+    // |    |  Ports pressure in cycles   |  |
+    // |Uops| 1 | 2 - D  |3 -  D  | 4 | 5 |  |
+    // ---------------------------------------------------------
+    // |2^  |   | 0.5    | 0.5    |1.0|   |CP| vmovaps xmmword ptr [rsp-0x18], xmm0
+    // |1   |0.5|        |        |   |0.5|  | lea rax, ptr [rsp-0x18]
+    // |1   |   |0.5, 0.5|0.5, 0.5|   |   |CP| mov al, byte ptr [rdi+rax*1]
+    // Total Num Of Uops: 4
 
-      MVT MaskEltVT =
-        MVT::getIntegerVT(VecVT.getScalarSizeInBits());
-      MVT MaskVT = MVT::getVectorVT(MaskEltVT, VecVT.getSizeInBits() /
-                                    MaskEltVT.getSizeInBits());
-
-      Idx = DAG.getZExtOrTrunc(Idx, dl, MaskEltVT);
-      auto PtrVT = getPointerTy(DAG.getDataLayout());
-      SDValue Mask = DAG.getNode(X86ISD::VINSERT, dl, MaskVT,
-                                 getZeroVector(MaskVT, Subtarget, DAG, dl), Idx,
-                                 DAG.getConstant(0, dl, PtrVT));
-      SDValue Perm = DAG.getNode(X86ISD::VPERMV, dl, VecVT, Mask, Vec);
-      return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, Op.getValueType(), Perm,
-                         DAG.getConstant(0, dl, PtrVT));
-    }
     return SDValue();
   }
 
@@ -21387,7 +21399,7 @@ static bool SupportedVectorShiftWithImm(MVT VT, const X86Subtarget &Subtarget,
   bool LShift = VT.is128BitVector() ||
     (VT.is256BitVector() && Subtarget.hasInt256());
 
-  bool AShift = LShift && (Subtarget.hasVLX() ||
+  bool AShift = LShift && (Subtarget.hasAVX512() ||
     (VT != MVT::v2i64 && VT != MVT::v4i64));
   return (Opcode == ISD::SRA) ? AShift : LShift;
 }
@@ -23937,7 +23949,6 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case X86ISD::VTRUNCSTOREUS:      return "X86ISD::VTRUNCSTOREUS";
   case X86ISD::VMTRUNCSTORES:      return "X86ISD::VMTRUNCSTORES";
   case X86ISD::VMTRUNCSTOREUS:     return "X86ISD::VMTRUNCSTOREUS";
-  case X86ISD::VINSERT:            return "X86ISD::VINSERT";
   case X86ISD::VFPEXT:             return "X86ISD::VFPEXT";
   case X86ISD::VFPEXT_RND:         return "X86ISD::VFPEXT_RND";
   case X86ISD::VFPEXTS_RND:        return "X86ISD::VFPEXTS_RND";

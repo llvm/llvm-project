@@ -810,6 +810,8 @@ unsigned ContinuationIndenter::moveStateToNextToken(LineState &State,
   if (Current.isOneOf(TT_BinaryOperator, TT_ConditionalExpr) && Newline)
     State.Stack.back().NestedBlockIndent =
         State.Column + Current.ColumnWidth + 1;
+  if (Current.isOneOf(TT_LambdaLSquare, TT_LambdaArrow))
+    State.Stack.back().LastSpace = State.Column;
 
   // Insert scopes created by fake parenthesis.
   const FormatToken *Previous = Current.getPreviousNonComment();

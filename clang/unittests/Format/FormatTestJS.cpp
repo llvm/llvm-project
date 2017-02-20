@@ -1095,6 +1095,9 @@ TEST_F(FormatTestJS, TypeAnnotations) {
   verifyFormat("function someFunc(args: string[]):\n"
                "    {longReturnValue: string[]} {}",
                getGoogleJSStyleWithColumns(60));
+  verifyFormat(
+      "var someValue = (v as aaaaaaaaaaaaaaaaaaaa<T>[])\n"
+      "                    .someFunction(aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa);");
 }
 
 TEST_F(FormatTestJS, UnionIntersectionTypes) {

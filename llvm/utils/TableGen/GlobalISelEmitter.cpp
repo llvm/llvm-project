@@ -45,7 +45,8 @@ using namespace llvm;
 #define DEBUG_TYPE "gisel-emitter"
 
 STATISTIC(NumPatternTotal, "Total number of patterns");
-STATISTIC(NumPatternSkipped, "Number of patterns skipped");
+STATISTIC(NumPatternImported, "Number of patterns imported from SelectionDAG");
+STATISTIC(NumPatternImportsSkipped, "Number of SelectionDAG imports skipped");
 STATISTIC(NumPatternEmitted, "Number of patterns emitted");
 
 static cl::opt<bool> WarnOnSkippedPatterns(
@@ -55,7 +56,6 @@ static cl::opt<bool> WarnOnSkippedPatterns(
     cl::init(false));
 
 namespace {
-class RuleMatcher;
 
 //===- Helper functions ---------------------------------------------------===//
 
@@ -322,7 +322,7 @@ public:
     return *static_cast<Kind *>(Actions.back().get());
   }
 
-  void emit(raw_ostream &OS) {
+  void emit(raw_ostream &OS) const {
     if (Matchers.empty())
       llvm_unreachable("Unexpected empty matcher!");
 
@@ -516,6 +516,7 @@ Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
   }
 
   // We're done with this pattern!  It's eligible for GISel emission; return it.
+  ++NumPatternImported;
   return std::move(M);
 }
 
@@ -530,6 +531,7 @@ void GlobalISelEmitter::run(raw_ostream &OS) {
         "(MachineInstr &I) const {\n  const MachineRegisterInfo &MRI = "
         "I.getParent()->getParent()->getRegInfo();\n\n";
 
+  std::vector<RuleMatcher> Rules;
   // Look through the SelectionDAG patterns we found, possibly emitting some.
   for (const PatternToMatch &Pat : CGP.ptms()) {
     ++NumPatternTotal;
@@ -544,11 +546,15 @@ void GlobalISelEmitter::run(raw_ostream &OS) {
       } else {
         consumeError(std::move(Err));
       }
-      ++NumPatternSkipped;
+      ++NumPatternImportsSkipped;
       continue;
     }
 
-    MatcherOrErr->emit(OS);
+    Rules.push_back(std::move(MatcherOrErr.get()));
+  }
+
+  for (const auto &Rule : Rules) {
+    Rule.emit(OS);
     ++NumPatternEmitted;
   }
 

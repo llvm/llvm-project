@@ -81,14 +81,10 @@ RegularExpression::~RegularExpression() { Free(); }
 bool RegularExpression::Compile(llvm::StringRef str) {
   Free();
 
-  if (!str.empty()) {
-    m_re = str;
-    m_comp_err = ::regcomp(&m_preg, m_re.c_str(), DEFAULT_COMPILE_FLAGS);
-  } else {
-    // No valid regular expression
-    m_comp_err = 1;
-  }
-
+  // regcomp() on darwin does not recognize "" as a valid regular expression, so
+  // we substitute it with an equivalent non-empty one.
+  m_re = str.empty() ? "()" : str;
+  m_comp_err = ::regcomp(&m_preg, m_re.c_str(), DEFAULT_COMPILE_FLAGS);
   return m_comp_err == 0;
 }
 
