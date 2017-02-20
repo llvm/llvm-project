@@ -598,35 +598,6 @@ if.end:
 ; CHECK: store
 ; CHECK: store
 
-define i32 @test_pr30188a(i1 zeroext %flag, i32 %x) {
-entry:
-  %y = alloca i32
-  %z = alloca i32
-  br i1 %flag, label %if.then, label %if.else
-
-if.then:
-  call void @g()
-  %one = load i32, i32* %y
-  %two = add i32 %one, 2
-  store i32 %two, i32* %y
-  br label %if.end
-
-if.else:
-  %three = load i32, i32* %z
-  %four = add i32 %three, 2
-  store i32 %four, i32* %y
-  br label %if.end
-
-if.end:
-  ret i32 1
-}
-
-; CHECK-LABEL: test_pr30188a
-; CHECK-NOT: select
-; CHECK: load
-; CHECK: load
-; CHECK: store
-
 ; The phi is confusing - both add instructions are used by it, but
 ; not on their respective unconditional arcs. It should not be
 ; optimized.
