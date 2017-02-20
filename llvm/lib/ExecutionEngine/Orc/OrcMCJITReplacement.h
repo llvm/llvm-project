@@ -24,7 +24,7 @@
 #include "llvm/ExecutionEngine/Orc/CompileUtils.h"
 #include "llvm/ExecutionEngine/Orc/IRCompileLayer.h"
 #include "llvm/ExecutionEngine/Orc/LazyEmittingLayer.h"
-#include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
+#include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Mangler.h"
 #include "llvm/Object/Archive.h"
@@ -315,7 +315,7 @@ private:
     NotifyObjectLoadedT(OrcMCJITReplacement &M) : M(M) {}
 
     template <typename ObjListT>
-    void operator()(ObjectLinkingLayerBase::ObjSetHandleT H,
+    void operator()(RTDyldObjectLinkingLayerBase::ObjSetHandleT H,
                     const ObjListT &Objects,
                     const LoadedObjInfoListT &Infos) const {
       M.UnfinalizedSections[H] = std::move(M.SectionsAllocatedSinceLastLoad);
@@ -344,7 +344,7 @@ private:
   public:
     NotifyFinalizedT(OrcMCJITReplacement &M) : M(M) {}
 
-    void operator()(ObjectLinkingLayerBase::ObjSetHandleT H) {
+    void operator()(RTDyldObjectLinkingLayerBase::ObjSetHandleT H) {
       M.UnfinalizedSections.erase(H);
     }
 
@@ -361,7 +361,7 @@ private:
     return MangledName;
   }
 
-  typedef ObjectLinkingLayer<NotifyObjectLoadedT> ObjectLayerT;
+  typedef RTDyldObjectLinkingLayer<NotifyObjectLoadedT> ObjectLayerT;
   typedef IRCompileLayer<ObjectLayerT> CompileLayerT;
   typedef LazyEmittingLayer<CompileLayerT> LazyEmitLayerT;
 

@@ -16,7 +16,7 @@
 #include "llvm/ExecutionEngine/Orc/CompileUtils.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
 #include "llvm/ExecutionEngine/Orc/IRCompileLayer.h"
-#include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
+#include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/Support/Error.h"
 
@@ -30,7 +30,7 @@ DEFINE_SIMPLE_CONVERSION_FUNCTIONS(TargetMachine, LLVMTargetMachineRef)
 class OrcCBindingsStack {
 public:
   typedef orc::JITCompileCallbackManager CompileCallbackMgr;
-  typedef orc::ObjectLinkingLayer<> ObjLayerT;
+  typedef orc::RTDyldObjectLinkingLayer<> ObjLayerT;
   typedef orc::IRCompileLayer<ObjLayerT> CompileLayerT;
   typedef orc::CompileOnDemandLayer<CompileLayerT, CompileCallbackMgr>
       CODLayerT;

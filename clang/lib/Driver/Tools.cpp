@@ -3246,14 +3246,6 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
   }
 }
 
-// This adds the static libclang_rt.builtins-arch.a directly to the command line
-// FIXME: Make sure we can also emit shared objects if they're requested
-// and available, check for possible errors, etc.
-static void addClangRT(const ToolChain &TC, const ArgList &Args,
-                       ArgStringList &CmdArgs) {
-  CmdArgs.push_back(TC.getCompilerRTArgString(Args, "builtins"));
-}
-
 static void addOpenMPRuntime(ArgStringList &CmdArgs, const ToolChain &TC,
                               const ArgList &Args) {
   if (!Args.hasFlag(options::OPT_fopenmp, options::OPT_fopenmp_EQ,
@@ -10074,7 +10066,7 @@ static void AddRunTimeLibs(const ToolChain &TC, const Driver &D,
     case llvm::Triple::Win32:
     case llvm::Triple::Linux:
     case llvm::Triple::Fuchsia:
-      addClangRT(TC, Args, CmdArgs);
+      CmdArgs.push_back(TC.getCompilerRTArgString(Args, "builtins"));
       break;
     }
     break;

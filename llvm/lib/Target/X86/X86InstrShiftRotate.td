@@ -662,19 +662,19 @@ def ROR64mi  : RIi8<0xC1, MRM1m, (outs), (ins i64mem:$dst, u8imm:$src),
 // Rotate by 1
 def ROR8m1   : I<0xD0, MRM1m, (outs), (ins i8mem :$dst),
                  "ror{b}\t$dst",
-               [(store (rotr (loadi8 addr:$dst), (i8 1)), addr:$dst)],
+               [(store (rotl (loadi8 addr:$dst), (i8 7)), addr:$dst)],
                IIC_SR>;
 def ROR16m1  : I<0xD1, MRM1m, (outs), (ins i16mem:$dst),
                  "ror{w}\t$dst",
-              [(store (rotr (loadi16 addr:$dst), (i8 1)), addr:$dst)],
+              [(store (rotl (loadi16 addr:$dst), (i8 15)), addr:$dst)],
               IIC_SR>, OpSize16;
 def ROR32m1  : I<0xD1, MRM1m, (outs), (ins i32mem:$dst),
                  "ror{l}\t$dst",
-              [(store (rotr (loadi32 addr:$dst), (i8 1)), addr:$dst)],
+              [(store (rotl (loadi32 addr:$dst), (i8 31)), addr:$dst)],
               IIC_SR>, OpSize32;
 def ROR64m1  : RI<0xD1, MRM1m, (outs), (ins i64mem:$dst),
                  "ror{q}\t$dst",
-               [(store (rotr (loadi64 addr:$dst), (i8 1)), addr:$dst)],
+               [(store (rotl (loadi64 addr:$dst), (i8 63)), addr:$dst)],
                IIC_SR>;
 } // SchedRW
 

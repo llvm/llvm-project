@@ -545,6 +545,8 @@ protected:
     Builder.defineMacro("__ELF__");
     if (Opts.POSIXThreads)
       Builder.defineMacro("_REENTRANT");
+    if (this->HasFloat128)
+      Builder.defineMacro("__FLOAT128__");
   }
 public:
   OpenBSDTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
@@ -552,11 +554,11 @@ public:
     this->TLSSupported = false;
 
       switch (Triple.getArch()) {
-        default:
         case llvm::Triple::x86:
         case llvm::Triple::x86_64:
-        case llvm::Triple::arm:
-        case llvm::Triple::sparc:
+          this->HasFloat128 = true;
+          // FALLTHROUGH
+        default:
           this->MCountName = "__mcount";
           break;
         case llvm::Triple::mips64:

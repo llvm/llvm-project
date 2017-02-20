@@ -62,6 +62,7 @@ template <class ELFT>
 size_t elf::readEhRecordSize(InputSectionBase<ELFT> *S, size_t Off) {
   return EhReader<ELFT>(S, S->Data.slice(Off)).readEhRecordSize();
 }
+
 // .eh_frame section is a sequence of records. Each record starts with
 // a 4 byte length field. This function reads the length.
 template <class ELFT> size_t EhReader<ELFT>::readEhRecordSize() {

@@ -242,8 +242,6 @@ public:
   static bool classof(const SymbolBody *S) {
     return S->kind() == UndefinedKind;
   }
-
-  InputFile *file() { return this->File; }
 };
 
 template <class ELFT> class SharedSymbol : public Defined {
