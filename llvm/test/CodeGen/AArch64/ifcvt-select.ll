@@ -4,7 +4,7 @@
 define i32 @foo(i32 %a, i32 %b)  {
 entry:
 ;CHECK-LABEL: foo:
-;CHECK: csinc
+;CHECK: cneg
 ;CHECK-NOT: csel
   %sub = sub nsw i32 %b, %a
   %cmp10 = icmp sgt i32 %a, 0
