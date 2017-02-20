@@ -59,7 +59,7 @@ if( CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR )
 
   # Normalize LLVM_CMAKE_PATH. --cmakedir might contain backslashes.
   # CMake assumes slashes as PATH.
-  get_filename_component(LLVM_CMAKE_PATH ${LLVM_CONFIG_CMAKE_PATH} ABSOLUTE)
+  file(TO_CMAKE_PATH ${LLVM_CONFIG_CMAKE_PATH} LLVM_CMAKE_PATH)
 
   find_program(LLVM_TABLEGEN_EXE "llvm-tblgen" ${LLVM_TOOLS_BINARY_DIR}
     NO_DEFAULT_PATH)

@@ -47,6 +47,7 @@ add_llvm_library(LLVMSupport
   CrashRecoveryContext.cpp
   DataExtractor.cpp
   Debug.cpp
+  DebugCounter.cpp
   DeltaAlgorithm.cpp
   DAGDeltaAlgorithm.cpp
   Dwarf.cpp

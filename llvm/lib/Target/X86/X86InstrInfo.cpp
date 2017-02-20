@@ -5292,18 +5292,30 @@ MachineInstr *X86InstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
   case X86::VPTERNLOGQZrri:      case X86::VPTERNLOGQZrmi:
   case X86::VPTERNLOGQZ128rri:   case X86::VPTERNLOGQZ128rmi:
   case X86::VPTERNLOGQZ256rri:   case X86::VPTERNLOGQZ256rmi:
-  case X86::VPTERNLOGDZrrik:     case X86::VPTERNLOGDZrmik:
-  case X86::VPTERNLOGDZ128rrik:  case X86::VPTERNLOGDZ128rmik:
-  case X86::VPTERNLOGDZ256rrik:  case X86::VPTERNLOGDZ256rmik:
-  case X86::VPTERNLOGQZrrik:     case X86::VPTERNLOGQZrmik:
-  case X86::VPTERNLOGQZ128rrik:  case X86::VPTERNLOGQZ128rmik:
-  case X86::VPTERNLOGQZ256rrik:  case X86::VPTERNLOGQZ256rmik:
+  case X86::VPTERNLOGDZrrik:
+  case X86::VPTERNLOGDZ128rrik:
+  case X86::VPTERNLOGDZ256rrik:
+  case X86::VPTERNLOGQZrrik:
+  case X86::VPTERNLOGQZ128rrik:
+  case X86::VPTERNLOGQZ256rrik:
   case X86::VPTERNLOGDZrrikz:    case X86::VPTERNLOGDZrmikz:
   case X86::VPTERNLOGDZ128rrikz: case X86::VPTERNLOGDZ128rmikz:
   case X86::VPTERNLOGDZ256rrikz: case X86::VPTERNLOGDZ256rmikz:
   case X86::VPTERNLOGQZrrikz:    case X86::VPTERNLOGQZrmikz:
   case X86::VPTERNLOGQZ128rrikz: case X86::VPTERNLOGQZ128rmikz:
-  case X86::VPTERNLOGQZ256rrikz: case X86::VPTERNLOGQZ256rmikz: {
+  case X86::VPTERNLOGQZ256rrikz: case X86::VPTERNLOGQZ256rmikz:
+  case X86::VPTERNLOGDZ128rmbi:
+  case X86::VPTERNLOGDZ256rmbi:
+  case X86::VPTERNLOGDZrmbi:
+  case X86::VPTERNLOGQZ128rmbi:
+  case X86::VPTERNLOGQZ256rmbi:
+  case X86::VPTERNLOGQZrmbi:
+  case X86::VPTERNLOGDZ128rmbikz:
+  case X86::VPTERNLOGDZ256rmbikz:
+  case X86::VPTERNLOGDZrmbikz:
+  case X86::VPTERNLOGQZ128rmbikz:
+  case X86::VPTERNLOGQZ256rmbikz:
+  case X86::VPTERNLOGQZrmbikz: {
     auto &WorkingMI = cloneIfNew(MI);
     if (!commuteVPTERNLOG(WorkingMI, OpIdx1, OpIdx2))
       return nullptr;
@@ -5484,18 +5496,30 @@ bool X86InstrInfo::findCommutedOpIndices(MachineInstr &MI, unsigned &SrcOpIdx1,
   case X86::VPTERNLOGQZrri:      case X86::VPTERNLOGQZrmi:
   case X86::VPTERNLOGQZ128rri:   case X86::VPTERNLOGQZ128rmi:
   case X86::VPTERNLOGQZ256rri:   case X86::VPTERNLOGQZ256rmi:
-  case X86::VPTERNLOGDZrrik:     case X86::VPTERNLOGDZrmik:
-  case X86::VPTERNLOGDZ128rrik:  case X86::VPTERNLOGDZ128rmik:
-  case X86::VPTERNLOGDZ256rrik:  case X86::VPTERNLOGDZ256rmik:
-  case X86::VPTERNLOGQZrrik:     case X86::VPTERNLOGQZrmik:
-  case X86::VPTERNLOGQZ128rrik:  case X86::VPTERNLOGQZ128rmik:
-  case X86::VPTERNLOGQZ256rrik:  case X86::VPTERNLOGQZ256rmik:
+  case X86::VPTERNLOGDZrrik:
+  case X86::VPTERNLOGDZ128rrik:
+  case X86::VPTERNLOGDZ256rrik:
+  case X86::VPTERNLOGQZrrik:
+  case X86::VPTERNLOGQZ128rrik:
+  case X86::VPTERNLOGQZ256rrik:
   case X86::VPTERNLOGDZrrikz:    case X86::VPTERNLOGDZrmikz:
   case X86::VPTERNLOGDZ128rrikz: case X86::VPTERNLOGDZ128rmikz:
   case X86::VPTERNLOGDZ256rrikz: case X86::VPTERNLOGDZ256rmikz:
   case X86::VPTERNLOGQZrrikz:    case X86::VPTERNLOGQZrmikz:
   case X86::VPTERNLOGQZ128rrikz: case X86::VPTERNLOGQZ128rmikz:
   case X86::VPTERNLOGQZ256rrikz: case X86::VPTERNLOGQZ256rmikz:
+  case X86::VPTERNLOGDZ128rmbi:
+  case X86::VPTERNLOGDZ256rmbi:
+  case X86::VPTERNLOGDZrmbi:
+  case X86::VPTERNLOGQZ128rmbi:
+  case X86::VPTERNLOGQZ256rmbi:
+  case X86::VPTERNLOGQZrmbi:
+  case X86::VPTERNLOGDZ128rmbikz:
+  case X86::VPTERNLOGDZ256rmbikz:
+  case X86::VPTERNLOGDZrmbikz:
+  case X86::VPTERNLOGQZ128rmbikz:
+  case X86::VPTERNLOGQZ256rmbikz:
+  case X86::VPTERNLOGQZrmbikz:
     return findThreeSrcCommutedOpIndices(MI, SrcOpIdx1, SrcOpIdx2);
   default:
     const X86InstrFMA3Group *FMA3Group =

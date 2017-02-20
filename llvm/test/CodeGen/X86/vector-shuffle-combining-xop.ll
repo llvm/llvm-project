@@ -441,16 +441,14 @@ define <4 x float> @PR31296(i8* %in) {
 ; X32:       # BB#0: # %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X32-NEXT:    vmovaps {{.*#+}} xmm1 = <0,1,u,u>
-; X32-NEXT:    vpermil2ps {{.*#+}} xmm0 = xmm0[0],xmm1[0,0,1]
+; X32-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],zero,zero,mem[0]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: PR31296:
 ; X64:       # BB#0: # %entry
 ; X64-NEXT:    movl (%rdi), %eax
 ; X64-NEXT:    vmovq %rax, %xmm0
-; X64-NEXT:    vmovaps {{.*#+}} xmm1 = <0,1,u,u>
-; X64-NEXT:    vpermil2ps {{.*#+}} xmm0 = xmm0[0],xmm1[0,0,1]
+; X64-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],zero,zero,mem[0]
 ; X64-NEXT:    retq
 entry:
   %0 = getelementptr i8, i8* %in, i32 0

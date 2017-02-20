@@ -190,8 +190,9 @@ ASTManager::createASTUnitForFile(StringRef Uri, const DocumentStore &Docs) {
   for (const auto &S : Commands.front().CommandLine)
     ArgStrs.push_back(S.c_str());
 
+  auto ArgP = &*ArgStrs.begin();
   return std::unique_ptr<clang::ASTUnit>(ASTUnit::LoadFromCommandLine(
-      &*ArgStrs.begin(), &*ArgStrs.end(), PCHs, Diags, ResourceDir,
+      ArgP, ArgP + ArgStrs.size(), PCHs, Diags, ResourceDir,
       /*OnlyLocalDecls=*/false, /*CaptureDiagnostics=*/true,
       getRemappedFiles(Docs),
       /*RemappedFilesKeepOriginalName=*/true,
