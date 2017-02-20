@@ -1085,8 +1085,16 @@ static bool sortMipsSymbols(const SymbolBody *L, const SymbolBody *R) {
 
 template <class ELFT> void SymbolTableSection<ELFT>::finalize() {
   this->OutSec->Link = this->Link = StrTabSec.OutSec->SectionIndex;
-  this->OutSec->Info = this->Info = NumLocals + 1;
   this->OutSec->Entsize = this->Entsize;
+
+  if (!StrTabSec.isDynamic()) {
+    // All explictly added STB_LOCAL symbols without a Symbol are first
+    auto It = std::stable_partition(
+        Symbols.begin(), Symbols.end(),
+        [](const SymbolTableEntry &S) { return S.Symbol->isLocal(); });
+    NumLocals = It - Symbols.begin();
+  }
+  this->OutSec->Info = this->Info = 1 + NumLocals;
 
   if (Config->Relocatable)
     return;
@@ -1122,7 +1130,6 @@ template <class ELFT> void SymbolTableSection<ELFT>::addGlobal(SymbolBody *B) {
 
 template <class ELFT> void SymbolTableSection<ELFT>::addLocal(SymbolBody *B) {
   assert(!StrTabSec.isDynamic());
-  ++NumLocals;
   Symbols.push_back({B, StrTabSec.addString(B->getName())});
 }
 

@@ -579,6 +579,12 @@
 // CHECK-CORTEX-A73-SOFT: "-target-feature" "+soft-float"
 // CHECK-CORTEX-A73-SOFT: "-target-feature" "+soft-float-abi"
 
+// RUN: %clang -target arm -mcpu=cortex-m23 -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-CPUV8MBASE %s
+// CHECK-CPUV8MBASE:  "-cc1"{{.*}} "-triple" "thumbv8m.base-
+
+// RUN: %clang -target arm -mcpu=cortex-m33 -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-CPUV8MMAIN %s
+// CHECK-CPUV8MMAIN:  "-cc1"{{.*}} "-triple" "thumbv8m.main-
+
 // ================== Check whether -mcpu accepts mixed-case values.
 // RUN: %clang -target arm-linux-gnueabi -mcpu=Cortex-a5 -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-CASE-INSENSITIVE-CPUV7A %s
 // RUN: %clang -target arm-linux-gnueabi -mcpu=cortex-A7 -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-CASE-INSENSITIVE-CPUV7A %s

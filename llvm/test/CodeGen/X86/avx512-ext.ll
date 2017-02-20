@@ -491,8 +491,7 @@ define <2 x i64> @zext_2x8mem_to_2x64(<2 x i8> *%i , <2 x i1> %mask) nounwind re
 ; KNL-LABEL: zext_2x8mem_to_2x64:
 ; KNL:       ## BB#0:
 ; KNL-NEXT:    vpsllq $63, %xmm0, %xmm0
-; KNL-NEXT:    vpsrad $31, %xmm0, %xmm0
-; KNL-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
+; KNL-NEXT:    vpsraq $63, %zmm0, %zmm0
 ; KNL-NEXT:    vpmovzxbq {{.*#+}} xmm1 = mem[0],zero,zero,zero,zero,zero,zero,zero,mem[1],zero,zero,zero,zero,zero,zero,zero
 ; KNL-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; KNL-NEXT:    retq
@@ -512,8 +511,7 @@ define <2 x i64> @sext_2x8mem_to_2x64mask(<2 x i8> *%i , <2 x i1> %mask) nounwin
 ; KNL-LABEL: sext_2x8mem_to_2x64mask:
 ; KNL:       ## BB#0:
 ; KNL-NEXT:    vpsllq $63, %xmm0, %xmm0
-; KNL-NEXT:    vpsrad $31, %xmm0, %xmm0
-; KNL-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
+; KNL-NEXT:    vpsraq $63, %zmm0, %zmm0
 ; KNL-NEXT:    vpmovsxbq (%rdi), %xmm1
 ; KNL-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; KNL-NEXT:    retq
@@ -872,8 +870,7 @@ define <2 x i64> @zext_2x16mem_to_2x64(<2 x i16> *%i , <2 x i1> %mask) nounwind 
 ; KNL-LABEL: zext_2x16mem_to_2x64:
 ; KNL:       ## BB#0:
 ; KNL-NEXT:    vpsllq $63, %xmm0, %xmm0
-; KNL-NEXT:    vpsrad $31, %xmm0, %xmm0
-; KNL-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
+; KNL-NEXT:    vpsraq $63, %zmm0, %zmm0
 ; KNL-NEXT:    vpmovzxwq {{.*#+}} xmm1 = mem[0],zero,zero,zero,mem[1],zero,zero,zero
 ; KNL-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; KNL-NEXT:    retq
@@ -894,8 +891,7 @@ define <2 x i64> @sext_2x16mem_to_2x64mask(<2 x i16> *%i , <2 x i1> %mask) nounw
 ; KNL-LABEL: sext_2x16mem_to_2x64mask:
 ; KNL:       ## BB#0:
 ; KNL-NEXT:    vpsllq $63, %xmm0, %xmm0
-; KNL-NEXT:    vpsrad $31, %xmm0, %xmm0
-; KNL-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
+; KNL-NEXT:    vpsraq $63, %zmm0, %zmm0
 ; KNL-NEXT:    vpmovsxwq (%rdi), %xmm1
 ; KNL-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; KNL-NEXT:    retq
@@ -1061,8 +1057,7 @@ define <2 x i64> @zext_2x32mem_to_2x64(<2 x i32> *%i , <2 x i1> %mask) nounwind 
 ; KNL-LABEL: zext_2x32mem_to_2x64:
 ; KNL:       ## BB#0:
 ; KNL-NEXT:    vpsllq $63, %xmm0, %xmm0
-; KNL-NEXT:    vpsrad $31, %xmm0, %xmm0
-; KNL-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
+; KNL-NEXT:    vpsraq $63, %zmm0, %zmm0
 ; KNL-NEXT:    vpmovzxdq {{.*#+}} xmm1 = mem[0],zero,mem[1],zero
 ; KNL-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; KNL-NEXT:    retq
@@ -1083,8 +1078,7 @@ define <2 x i64> @sext_2x32mem_to_2x64mask(<2 x i32> *%i , <2 x i1> %mask) nounw
 ; KNL-LABEL: sext_2x32mem_to_2x64mask:
 ; KNL:       ## BB#0:
 ; KNL-NEXT:    vpsllq $63, %xmm0, %xmm0
-; KNL-NEXT:    vpsrad $31, %xmm0, %xmm0
-; KNL-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
+; KNL-NEXT:    vpsraq $63, %zmm0, %zmm0
 ; KNL-NEXT:    vpmovsxdq (%rdi), %xmm1
 ; KNL-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; KNL-NEXT:    retq

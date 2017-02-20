@@ -1962,29 +1962,29 @@ uint32_t GDBRemoteCommunicationClient::FindProcesses(
       bool has_name_match = false;
       if (name && name[0]) {
         has_name_match = true;
-        NameMatchType name_match_type = match_info.GetNameMatchType();
+        NameMatch name_match_type = match_info.GetNameMatchType();
         switch (name_match_type) {
-        case eNameMatchIgnore:
+        case NameMatch::Ignore:
           has_name_match = false;
           break;
 
-        case eNameMatchEquals:
+        case NameMatch::Equals:
           packet.PutCString("name_match:equals;");
           break;
 
-        case eNameMatchContains:
+        case NameMatch::Contains:
           packet.PutCString("name_match:contains;");
           break;
 
-        case eNameMatchStartsWith:
+        case NameMatch::StartsWith:
           packet.PutCString("name_match:starts_with;");
           break;
 
-        case eNameMatchEndsWith:
+        case NameMatch::EndsWith:
           packet.PutCString("name_match:ends_with;");
           break;
 
-        case eNameMatchRegularExpression:
+        case NameMatch::RegularExpression:
           packet.PutCString("name_match:regex;");
           break;
         }

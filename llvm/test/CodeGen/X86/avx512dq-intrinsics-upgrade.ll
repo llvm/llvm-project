@@ -18,8 +18,7 @@ define <2 x double>@test_int_x86_avx512_mask_vextractf64x2_512(<8 x double> %x0,
 ; CHECK-NEXT:    vmovq %rax, %xmm3
 ; CHECK-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm3[0],xmm2[0]
 ; CHECK-NEXT:    vpsllq $63, %xmm2, %xmm2
-; CHECK-NEXT:    vpsrad $31, %xmm2, %xmm2
-; CHECK-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[1,1,3,3]
+; CHECK-NEXT:    vpsraq $63, %zmm2, %zmm2
 ; CHECK-NEXT:    vblendvpd %xmm2, %xmm0, %xmm1, %xmm1
 ; CHECK-NEXT:    vandpd %xmm0, %xmm2, %xmm2
 ; CHECK-NEXT:    vaddpd %xmm0, %xmm1, %xmm0

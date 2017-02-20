@@ -665,7 +665,8 @@ public:
     return AArch64_AM::isAdvSIMDModImmType10(MCE->getValue());
   }
 
-  bool isBranchTarget26() const {
+  template<int N>
+  bool isBranchTarget() const {
     if (!isImm())
       return false;
     const MCConstantExpr *MCE = dyn_cast<MCConstantExpr>(getImm());
@@ -674,31 +675,8 @@ public:
     int64_t Val = MCE->getValue();
     if (Val & 0x3)
       return false;
-    return (Val >= -(0x2000000 << 2) && Val <= (0x1ffffff << 2));
-  }
-
-  bool isPCRelLabel19() const {
-    if (!isImm())
-      return false;
-    const MCConstantExpr *MCE = dyn_cast<MCConstantExpr>(getImm());
-    if (!MCE)
-      return true;
-    int64_t Val = MCE->getValue();
-    if (Val & 0x3)
-      return false;
-    return (Val >= -(0x40000 << 2) && Val <= (0x3ffff << 2));
-  }
-
-  bool isBranchTarget14() const {
-    if (!isImm())
-      return false;
-    const MCConstantExpr *MCE = dyn_cast<MCConstantExpr>(getImm());
-    if (!MCE)
-      return true;
-    int64_t Val = MCE->getValue();
-    if (Val & 0x3)
-      return false;
-    return (Val >= -(0x2000 << 2) && Val <= (0x1fff << 2));
+    assert(N > 0 && "Branch target immediate cannot be 0 bits!");
+    return (Val >= -((1<<(N-1)) << 2) && Val <= (((1<<(N-1))-1) << 2));
   }
 
   bool

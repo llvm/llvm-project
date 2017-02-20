@@ -4614,16 +4614,19 @@ static bool findBuildVector(InsertElementInst *FirstInsertElem,
 static bool findBuildAggregate(InsertValueInst *IV,
                                SmallVectorImpl<Value *> &BuildVector,
                                SmallVectorImpl<Value *> &BuildVectorOpds) {
-  if (!IV->hasOneUse())
-    return false;
-  Value *V = IV->getAggregateOperand();
-  if (!isa<UndefValue>(V)) {
-    InsertValueInst *I = dyn_cast<InsertValueInst>(V);
-    if (!I || !findBuildAggregate(I, BuildVector, BuildVectorOpds))
+  Value *V = nullptr;
+  do {
+    BuildVector.push_back(IV);
+    BuildVectorOpds.push_back(IV->getInsertedValueOperand());
+    V = IV->getAggregateOperand();
+    if (isa<UndefValue>(V))
+      break;
+    IV = dyn_cast<InsertValueInst>(V);
+    if (!IV || !IV->hasOneUse())
       return false;
-  }
-  BuildVector.push_back(IV);
-  BuildVectorOpds.push_back(IV->getInsertedValueOperand());
+  } while (true);
+  std::reverse(BuildVector.begin(), BuildVector.end());
+  std::reverse(BuildVectorOpds.begin(), BuildVectorOpds.end());
   return true;
 }
 
