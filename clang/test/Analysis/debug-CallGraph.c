@@ -43,8 +43,18 @@ void eee();
 void eee() {}
 void fff() { eee(); }
 
+// This test case tests that forward declaration for the top-level function
+// does not affect call graph construction.
+void do_nothing() {}
+void test_single_call();
+void test_single_call() {
+  do_nothing();
+}
+
 // CHECK:--- Call graph Dump ---
-// CHECK-NEXT: {{Function: < root > calls: get5 add test_add mmm foo aaa < > bbb ccc ddd eee fff $}}
+// CHECK-NEXT: {{Function: < root > calls: get5 add test_add mmm foo aaa < > bbb ddd ccc eee fff do_nothing test_single_call $}}
+// CHECK-NEXT: {{Function: test_single_call calls: do_nothing $}}
+// CHECK-NEXT: {{Function: do_nothing calls: $}}
 // CHECK-NEXT: {{Function: fff calls: eee $}}
 // CHECK-NEXT: {{Function: eee calls: $}}
 // CHECK-NEXT: {{Function: ddd calls: ccc $}}
