@@ -1069,7 +1069,7 @@ SwiftLanguageRuntime::GetMemoryReader() {
       Target &target(m_process->GetTarget());
       Address addr(address.getAddressData());
       Error error;
-      if (size > target.ReadMemory(addr, true, dest, size, error)) {
+      if (size > target.ReadMemory(addr, false, dest, size, error)) {
         if (log)
           log->Printf(
               "[MemoryReader] memory read returned fewer bytes than asked for");
