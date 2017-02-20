@@ -435,6 +435,47 @@ static std::vector<SharedSymbol<ELFT> *> getSymbolsAt(SharedSymbol<ELFT> *SS) {
 }
 
 // Reserve space in .bss or .bss.rel.ro for copy relocation.
+//
+// The copy relocation is pretty much a hack. If you use a copy relocation
+// in your program, not only the symbol name but the symbol's size, RW/RO
+// bit and alignment become part of the ABI. In addition to that, if the
+// symbol has aliases, the aliases become part of the ABI. That's subtle,
+// but if you violate that implicit ABI, that can cause very counter-
+// intuitive consequences.
+//
+// So, what is the copy relocation? It's for linking non-position
+// independent code to DSOs. In an ideal world, all references to data
+// exported by DSOs should go indirectly through GOT. But if object files
+// are compiled as non-PIC, all data references are direct. There is no
+// way for the linker to transform the code to use GOT, as machine
+// instructions are already set in stone in object files. This is where
+// the copy relocation takes a role.
+//
+// A copy relocation instructs the dynamic linker to copy data from a DSO
+// to a specified address (which is usually in .bss) at load-time. If the
+// static linker (that's us) finds a direct data reference to a DSO
+// symbol, it creates a copy relocation, so that the symbol can be
+// resolved as if it were in .bss rather than in a DSO.
+//
+// As you can see in this function, we create a copy relocation for the
+// dynamic linker, and the relocation contains not only symbol name but
+// various other informtion about the symbol. So, such attributes become a
+// part of the ABI.
+//
+// Note for application developers: I can give you a piece of advice if
+// you are writing a shared library. You probably should export only
+// functions from your library. You shouldn't export variables.
+//
+// As an example what can happen when you export variables without knowing
+// the semantics of copy relocations, assume that you have an exported
+// variable of type T. It is an ABI-breaking change to add new members at
+// end of T even though doing that doesn't change the layout of the
+// existing members. That's because the space for the new members are not
+// reserved in .bss unless you recompile the main program. That means they
+// are likely to overlap with other data that happens to be laid out next
+// to the variable in .bss. This kind of issue is sometimes very hard to
+// debug. What's a solution? Instead of exporting a varaible V from a DSO,
+// define an accessor getV().
 template <class ELFT> static void addCopyRelSymbol(SharedSymbol<ELFT> *SS) {
   typedef typename ELFT::uint uintX_t;
 
@@ -456,10 +497,10 @@ template <class ELFT> static void addCopyRelSymbol(SharedSymbol<ELFT> *SS) {
   // Look through the DSO's dynamic symbol table for aliases and create a
   // dynamic symbol for each one. This causes the copy relocation to correctly
   // interpose any aliases.
-  for (SharedSymbol<ELFT> *Alias : getSymbolsAt(SS)) {
-    Alias->NeedsCopy = true;
-    Alias->Section = ISec;
-    Alias->symbol()->IsUsedInRegularObj = true;
+  for (SharedSymbol<ELFT> *Sym : getSymbolsAt(SS)) {
+    Sym->NeedsCopy = true;
+    Sym->Section = ISec;
+    Sym->symbol()->IsUsedInRegularObj = true;
   }
 
   In<ELFT>::RelaDyn->addReloc({Target->CopyRel, ISec, 0, false, SS, 0});

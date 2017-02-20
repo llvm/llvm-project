@@ -1,4 +1,4 @@
-//===- ObjectLinkingLayer.h - Add object files to a JIT process -*- C++ -*-===//
+//===-- RTDyldObjectLinkingLayer.h - RTDyld-based jit linking  --*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,12 +7,12 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Contains the definition for the object layer of the JIT.
+// Contains the definition for an RTDyld-based, in-process object linking layer.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_EXECUTIONENGINE_ORC_OBJECTLINKINGLAYER_H
-#define LLVM_EXECUTIONENGINE_ORC_OBJECTLINKINGLAYER_H
+#ifndef LLVM_EXECUTIONENGINE_ORC_RTDYLDOBJECTLINKINGLAYER_H
+#define LLVM_EXECUTIONENGINE_ORC_RTDYLDOBJECTLINKINGLAYER_H
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringMap.h"
@@ -35,7 +35,7 @@
 namespace llvm {
 namespace orc {
 
-class ObjectLinkingLayerBase {
+class RTDyldObjectLinkingLayerBase {
 protected:
   /// @brief Holds a set of objects to be allocated/linked as a unit in the JIT.
   ///
@@ -87,7 +87,7 @@ public:
 class DoNothingOnNotifyLoaded {
 public:
   template <typename ObjSetT, typename LoadResult>
-  void operator()(ObjectLinkingLayerBase::ObjSetHandleT, const ObjSetT &,
+  void operator()(RTDyldObjectLinkingLayerBase::ObjSetHandleT, const ObjSetT &,
                   const LoadResult &) {}
 };
 
@@ -98,7 +98,7 @@ public:
 /// symbols queried. All objects added to this layer can see each other's
 /// symbols.
 template <typename NotifyLoadedFtor = DoNothingOnNotifyLoaded>
-class ObjectLinkingLayer : public ObjectLinkingLayerBase {
+class RTDyldObjectLinkingLayer : public RTDyldObjectLinkingLayerBase {
 public:
   /// @brief Functor for receiving finalization notifications.
   typedef std::function<void(ObjSetHandleT)> NotifyFinalizedFtor;
@@ -227,7 +227,7 @@ public:
 
   /// @brief Construct an ObjectLinkingLayer with the given NotifyLoaded,
   ///        and NotifyFinalized functors.
-  ObjectLinkingLayer(
+  RTDyldObjectLinkingLayer(
       NotifyLoadedFtor NotifyLoaded = NotifyLoadedFtor(),
       NotifyFinalizedFtor NotifyFinalized = NotifyFinalizedFtor())
       : NotifyLoaded(std::move(NotifyLoaded)),
@@ -359,4 +359,4 @@ private:
 } // end namespace orc
 } // end namespace llvm
 
-#endif // LLVM_EXECUTIONENGINE_ORC_OBJECTLINKINGLAYER_H
+#endif // LLVM_EXECUTIONENGINE_ORC_RTDYLDOBJECTLINKINGLAYER_H
