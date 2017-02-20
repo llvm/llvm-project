@@ -1660,62 +1660,20 @@ static bool SinkThenElseCodeToEnd(BranchInst *BI1) {
   assert(BI1->isUnconditional());
   BasicBlock *BBEnd = BI1->getSuccessor(0);
 
-  // We support two situations:
-  //   (1) all incoming arcs are unconditional
-  //   (2) one incoming arc is conditional
-  //
-  // (2) is very common in switch defaults and
-  // else-if patterns;
-  //
-  //   if (a) f(1);
-  //   else if (b) f(2);
-  //
-  // produces:
-  //
-  //       [if]
-  //      /    \
-  //    [f(1)] [if]
-  //      |     | \
-  //      |     |  \
-  //      |  [f(2)]|
-  //       \    | /
-  //        [ end ]
-  //
-  // [end] has two unconditional predecessor arcs and one conditional. The
-  // conditional refers to the implicit empty 'else' arc. This conditional
-  // arc can also be caused by an empty default block in a switch.
-  //
-  // In this case, we attempt to sink code from all *unconditional* arcs.
-  // If we can sink instructions from these arcs (determined during the scan
-  // phase below) we insert a common successor for all unconditional arcs and
-  // connect that to [end], to enable sinking:
-  //
-  //       [if]
-  //      /    \
-  //    [x(1)] [if]
-  //      |     | \
-  //      |     |  \
-  //      |  [x(2)] |
-  //       \   /    |
-  //   [sink.split] |
-  //         \     /
-  //         [ end ]
-  //
-  SmallVector<BasicBlock*,4> UnconditionalPreds;
-  Instruction *Cond = nullptr;
-  for (auto *B : predecessors(BBEnd)) {
-    auto *T = B->getTerminator();
-    if (isa<BranchInst>(T) && cast<BranchInst>(T)->isUnconditional())
-      UnconditionalPreds.push_back(B);
-    else if ((isa<BranchInst>(T) || isa<SwitchInst>(T)) && !Cond)
-      Cond = T;
-    else
-      return false;
-  }
-  if (UnconditionalPreds.size() < 2)
+  // We currently only support branch targets with two predecessors.
+  // FIXME: this is an arbitrary restriction and should be lifted.
+  SmallVector<BasicBlock*,4> Blocks;
+  for (auto *BB : predecessors(BBEnd))
+    Blocks.push_back(BB);
+  if (Blocks.size() != 2 ||
+      !all_of(Blocks, [](const BasicBlock *BB) {
+        auto *BI = dyn_cast<BranchInst>(BB->getTerminator());
+        return BI && BI->isUnconditional();
+      }))
     return false;
-  
+
   bool Changed = false;
+
   // We take a two-step approach to tail sinking. First we scan from the end of
   // each block upwards in lockstep. If the n'th instruction from the end of each
   // block can be sunk, those instructions are added to ValuesToSink and we
@@ -1725,7 +1683,7 @@ static bool SinkThenElseCodeToEnd(BranchInst *BI1) {
   unsigned ScanIdx = 0;
   SmallPtrSet<Value*,4> InstructionsToSink;
   DenseMap<Instruction*, SmallVector<Value*,4>> PHIOperands;
-  LockstepReverseIterator LRI(UnconditionalPreds);
+  LockstepReverseIterator LRI(Blocks);
   while (LRI.isValid() &&
          canSinkInstructions(*LRI, PHIOperands)) {
     DEBUG(dbgs() << "SINK: instruction can be sunk: " << *(*LRI)[0] << "\n");
@@ -1734,36 +1692,6 @@ static bool SinkThenElseCodeToEnd(BranchInst *BI1) {
     --LRI;
   }
 
-  auto ProfitableToSinkLastInstruction = [&]() {
-    LRI.reset();
-    unsigned NumPHIdValues = 0;
-    for (auto *I : *LRI)
-      for (auto *V : PHIOperands[I])
-        if (InstructionsToSink.count(V) == 0)
-          ++NumPHIdValues;
-    DEBUG(dbgs() << "SINK: #phid values: " << NumPHIdValues << "\n");
-    unsigned NumPHIInsts = NumPHIdValues / UnconditionalPreds.size();
-    if ((NumPHIdValues % UnconditionalPreds.size()) != 0)
-        NumPHIInsts++;
-    
-    return NumPHIInsts <= 1;
-  };
-
-  if (ScanIdx > 0 && Cond) {
-    // Check if we would actually sink anything first!
-    if (!ProfitableToSinkLastInstruction())
-      return false;
-    
-    DEBUG(dbgs() << "SINK: Splitting edge\n");
-    // We have a conditional edge and we're going to sink some instructions.
-    // Insert a new block postdominating all blocks we're going to sink from.
-    if (!SplitBlockPredecessors(BI1->getSuccessor(0), UnconditionalPreds,
-                                ".sink.split"))
-      // Edges couldn't be split.
-      return false;
-    Changed = true;
-  }
-  
   // Now that we've analyzed all potential sinking candidates, perform the
   // actual sink. We iteratively sink the last non-terminator of the source
   // blocks into their common successor unless doing so would require too
@@ -1778,22 +1706,32 @@ static bool SinkThenElseCodeToEnd(BranchInst *BI1) {
   // This is unlikely in practice though.
   for (unsigned SinkIdx = 0; SinkIdx != ScanIdx; ++SinkIdx) {
     DEBUG(dbgs() << "SINK: Sink: "
-                 << *UnconditionalPreds[0]->getTerminator()->getPrevNode()
+                 << *Blocks[0]->getTerminator()->getPrevNode()
                  << "\n");
 
     // Because we've sunk every instruction in turn, the current instruction to
     // sink is always at index 0.
-    if (!ProfitableToSinkLastInstruction()) {
-      // Too many PHIs would be created.
-      DEBUG(dbgs() << "SINK: stopping here, too many PHIs would be created!\n");
-      break;
-    }
+    LRI.reset();
+    unsigned NumPHIdValues = 0;
+    for (auto *I : *LRI)
+      for (auto *V : PHIOperands[I])
+        if (InstructionsToSink.count(V) == 0)
+          ++NumPHIdValues;
+    DEBUG(dbgs() << "SINK: #phid values: " << NumPHIdValues << "\n");
+    unsigned NumPHIInsts = NumPHIdValues / Blocks.size();
+    if (NumPHIdValues % Blocks.size() != 0)
+      NumPHIInsts++;
     
-    if (!sinkLastInstruction(UnconditionalPreds))
+    if (NumPHIInsts > 1)
+      // Too many PHIs would be created.
+      break;
+    
+    if (!sinkLastInstruction(Blocks))
       return Changed;
     NumSinkCommons++;
     Changed = true;
   }
+  
   return Changed;
 }
 
