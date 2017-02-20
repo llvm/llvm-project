@@ -1753,7 +1753,8 @@ static bool SinkThenElseCodeToEnd(BranchInst *BI1) {
     --LRI;
   }
 
-  auto ProfitableToSinkInstruction = [&](LockstepReverseIterator &LRI) {
+  auto ProfitableToSinkLastInstruction = [&]() {
+    LRI.reset();
     unsigned NumPHIdValues = 0;
     for (auto *I : *LRI)
       for (auto *V : PHIOperands[I])
@@ -1768,23 +1769,8 @@ static bool SinkThenElseCodeToEnd(BranchInst *BI1) {
   };
 
   if (ScanIdx > 0 && Cond) {
-    // Check if we would actually sink anything first! This mutates the CFG and
-    // adds an extra block. The goal in doing this is to allow instructions that
-    // couldn't be sunk before to be sunk - obviously, speculatable instructions
-    // (such as trunc, add) can be sunk and predicated already. So we check that
-    // we're going to sink at least one non-speculatable instruction.
-    LRI.reset();
-    unsigned Idx = 0;
-    bool Profitable = false;
-    while (ProfitableToSinkInstruction(LRI) && Idx < ScanIdx) {
-      if (!isSafeToSpeculativelyExecute((*LRI)[0])) {
-        Profitable = true;
-        break;
-      }
-      --LRI;
-      ++Idx;
-    }
-    if (!Profitable)
+    // Check if we would actually sink anything first!
+    if (!ProfitableToSinkLastInstruction())
       return false;
     
     DEBUG(dbgs() << "SINK: Splitting edge\n");
@@ -1816,8 +1802,7 @@ static bool SinkThenElseCodeToEnd(BranchInst *BI1) {
 
     // Because we've sunk every instruction in turn, the current instruction to
     // sink is always at index 0.
-    LRI.reset();
-    if (!ProfitableToSinkInstruction(LRI)) {
+    if (!ProfitableToSinkLastInstruction()) {
       // Too many PHIs would be created.
       DEBUG(dbgs() << "SINK: stopping here, too many PHIs would be created!\n");
       break;

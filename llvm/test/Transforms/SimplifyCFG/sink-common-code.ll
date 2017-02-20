@@ -491,35 +491,6 @@ if.end:
 
 ; CHECK-LABEL: test16
 ; CHECK: zext
-; CHECK: zext
-
-define zeroext i1 @test16a(i1 zeroext %flag, i1 zeroext %flag2, i32 %blksA, i32 %blksB, i32 %nblks, i8* %p) {
-
-entry:
-  br i1 %flag, label %if.then, label %if.else
-
-if.then:
-  %cmp = icmp uge i32 %blksA, %nblks
-  %frombool1 = zext i1 %cmp to i8
-  store i8 %frombool1, i8* %p
-  br label %if.end
-
-if.else:
-  br i1 %flag2, label %if.then2, label %if.end
-
-if.then2:
-  %add = add i32 %nblks, %blksB
-  %cmp2 = icmp ule i32 %add, %blksA
-  %frombool3 = zext i1 %cmp2 to i8
-  store i8 %frombool3, i8* %p
-  br label %if.end
-
-if.end:
-  ret i1 true
-}
-
-; CHECK-LABEL: test16a
-; CHECK: zext
 ; CHECK-NOT: zext
 
 define zeroext i1 @test17(i32 %flag, i32 %blksA, i32 %blksB, i32 %nblks) {
@@ -531,13 +502,13 @@ entry:
 
 if.then:
   %cmp = icmp uge i32 %blksA, %nblks
-  %frombool1 = call i8 @i1toi8(i1 %cmp)
+  %frombool1 = zext i1 %cmp to i8
   br label %if.end
 
 if.then2:
   %add = add i32 %nblks, %blksB
   %cmp2 = icmp ule i32 %add, %blksA
-  %frombool3 = call i8 @i1toi8(i1 %cmp2)
+  %frombool3 = zext i1 %cmp2 to i8
   br label %if.end
 
 if.end:
@@ -545,7 +516,6 @@ if.end:
   %tobool4 = icmp ne i8 %obeys.0, 0
   ret i1 %tobool4
 }
-declare i8 @i1toi8(i1)
 
 ; CHECK-LABEL: test17
 ; CHECK: if.then:
@@ -559,7 +529,7 @@ declare i8 @i1toi8(i1)
 
 ; CHECK: [[x]]:
 ; CHECK-NEXT: %[[y:.*]] = phi i1 [ %cmp
-; CHECK-NEXT: %[[z:.*]] = call i8 @i1toi8(i1 %[[y]])
+; CHECK-NEXT: %[[z:.*]] = zext i1 %[[y]]
 ; CHECK-NEXT: br label %if.end
 
 ; CHECK: if.end:
