@@ -320,8 +320,6 @@ bool AllocatedBlock::FreeBlock(addr_t addr) {
     m_reserved_blocks.RemoveEntryAtIndex(entry_idx);
     success = true;
   }
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
-  LLDB_LOGV(log, "({0}) (addr = {1:x}) => {2}", this, addr, success);
   return success;
 }
 
