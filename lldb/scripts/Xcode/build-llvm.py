@@ -21,17 +21,17 @@ def LLVM_HASH_INCLUDES_DIFFS():
 
 
 def LLVM_REF():
-    llvm_ref = "stable"
+    llvm_ref = "swift-4.0-branch"
     return llvm_ref
 
 
 def CLANG_REF():
-    clang_ref = "stable"
+    clang_ref = "swift-4.0-branch"
     return clang_ref
 
 
 def SWIFT_REF():
-    swift_ref = "master"
+    swift_ref = "swift-4.0-branch"
     return swift_ref
 
 # For use with Xcode-style builds
