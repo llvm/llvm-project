@@ -575,29 +575,6 @@ if.end:
 ; CHECK-DAG: [ %cmp3, %if.then3 ]
 ; CHECK-NEXT: zext i1 %[[x]] to i8
 
-define i32 @test_pr30188(i1 zeroext %flag, i32 %x) {
-entry:
-  %y = alloca i32
-  %z = alloca i32
-  br i1 %flag, label %if.then, label %if.else
-
-if.then:
-  store i32 %x, i32* %y
-  br label %if.end
-
-if.else:
-  store i32 %x, i32* %z
-  br label %if.end
-
-if.end:
-  ret i32 1
-}
-
-; CHECK-LABEL: test_pr30188
-; CHECK-NOT: select
-; CHECK: store
-; CHECK: store
-
 declare void @g()
 
 define void @test_pr30244(i1 %cond, i1 %cond2, i32 %a, i32 %b) {
