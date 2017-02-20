@@ -310,6 +310,12 @@ bool ARMInstructionSelector::select(MachineInstr &I) const {
     MIB.addImm(0).add(predOps(ARMCC::AL)).add(condCodeOp());
     break;
   case G_LOAD: {
+    const auto &MemOp = **I.memoperands_begin();
+    if (MemOp.getOrdering() != AtomicOrdering::NotAtomic) {
+      DEBUG(dbgs() << "Atomic load/store not supported yet\n");
+      return false;
+    }
+
     unsigned Reg = I.getOperand(0).getReg();
     unsigned RegBank = RBI.getRegBank(Reg, MRI, TRI)->getID();
 

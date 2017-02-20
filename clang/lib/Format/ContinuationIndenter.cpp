@@ -383,6 +383,8 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
       Current.FakeLParens.size() > 0 &&
       Current.FakeLParens.back() > prec::Unknown)
     State.Stack.back().NoLineBreak = true;
+  if (Previous.is(TT_TemplateString) && Previous.opensScope())
+    State.Stack.back().NoLineBreak = true;
 
   if (Style.AlignAfterOpenBracket != FormatStyle::BAS_DontAlign &&
       Previous.opensScope() && Previous.isNot(TT_ObjCMethodExpr) &&
@@ -398,7 +400,7 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
     State.Stack.back().NoLineBreak = true;
   if (Current.isMemberAccess() && Previous.is(tok::r_paren) &&
       (Previous.MatchingParen &&
-       (Previous.TotalLength - Previous.MatchingParen->TotalLength > 10))) {
+       (Previous.TotalLength - Previous.MatchingParen->TotalLength > 10)))
     // If there is a function call with long parameters, break before trailing
     // calls. This prevents things like:
     //   EXPECT_CALL(SomeLongParameter).Times(
@@ -406,7 +408,6 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
     // We don't want to do this for short parameters as they can just be
     // indexes.
     State.Stack.back().NoLineBreak = true;
-  }
 
   // Don't allow the RHS of an operator to be split over multiple lines unless
   // there is a line-break right after the operator.
@@ -618,7 +619,9 @@ unsigned ContinuationIndenter::addTokenOnNewLine(LineState &State,
   // If we break after { or the [ of an array initializer, we should also break
   // before the corresponding } or ].
   if (PreviousNonComment &&
-      (PreviousNonComment->isOneOf(tok::l_brace, TT_ArrayInitializerLSquare)))
+      (PreviousNonComment->isOneOf(tok::l_brace, TT_ArrayInitializerLSquare) ||
+       (PreviousNonComment->is(TT_TemplateString) &&
+        PreviousNonComment->opensScope())))
     State.Stack.back().BreakBeforeClosingBrace = true;
 
   if (State.Stack.back().AvoidBinPacking) {
@@ -666,6 +669,8 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
       return State.Stack[State.Stack.size() - 2].LastSpace;
     return State.FirstIndent;
   }
+  if (NextNonComment->is(TT_TemplateString) && NextNonComment->closesScope())
+    return State.Stack[State.Stack.size() - 2].LastSpace;
   if (Current.is(tok::identifier) && Current.Next &&
       Current.Next->is(TT_DictLiteral))
     return State.Stack.back().Indent;
@@ -840,6 +845,11 @@ unsigned ContinuationIndenter::moveStateToNextToken(LineState &State,
 
   moveStatePastFakeLParens(State, Newline);
   moveStatePastScopeCloser(State);
+  if (Current.is(TT_TemplateString) && Current.opensScope())
+    State.Stack.back().LastSpace =
+        (Current.IsMultiline ? Current.LastLineColumnWidth
+                             : State.Column + Current.ColumnWidth) -
+        strlen("${");
   moveStatePastScopeOpener(State, Newline);
   moveStatePastFakeRParens(State);
 

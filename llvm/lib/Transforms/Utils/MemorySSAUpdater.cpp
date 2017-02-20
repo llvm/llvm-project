@@ -234,7 +234,7 @@ void setMemoryPhiValueForBlock(MemoryPhi *MP, const BasicBlock *BB,
 // Then, we update the defs below us (and any new phi nodes) in the graph to
 // point to the correct new defs, to ensure we only have one variable, and no
 // disconnected stores.
-void MemorySSAUpdater::insertDef(MemoryDef *MD) {
+void MemorySSAUpdater::insertDef(MemoryDef *MD, bool RenameUses) {
   InsertedPHIs.clear();
 
   // See if we had a local def, and if not, go hunting.
@@ -286,6 +286,24 @@ void MemorySSAUpdater::insertDef(MemoryDef *MD) {
     FixupList.clear();
     // Put any new phis on the fixup list, and process them
     FixupList.append(InsertedPHIs.end() - StartingPHISize, InsertedPHIs.end());
+  }
+  // Now that all fixups are done, rename all uses if we are asked.
+  if (RenameUses) {
+    SmallPtrSet<BasicBlock *, 16> Visited;
+    BasicBlock *StartBlock = MD->getBlock();
+    // We are guaranteed there is a def in the block, because we just got it
+    // handed to us in this function.
+    MemoryAccess *FirstDef = &*MSSA->getWritableBlockDefs(StartBlock)->begin();
+    // Convert to incoming value if it's a memorydef. A phi *is* already an
+    // incoming value.
+    if (auto *MD = dyn_cast<MemoryDef>(FirstDef))
+      FirstDef = MD->getDefiningAccess();
+
+    MSSA->renamePass(MD->getBlock(), FirstDef, Visited);
+    // We just inserted a phi into this block, so the incoming value will become
+    // the phi anyway, so it does not matter what we pass.
+    for (auto *MP : InsertedPHIs)
+      MSSA->renamePass(MP->getBlock(), nullptr, Visited);
   }
 }
 

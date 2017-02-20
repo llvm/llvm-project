@@ -1,7 +1,7 @@
 # Check if this is a in tree build.
 if (NOT DEFINED LLVM_MAIN_SRC_DIR)
   project(Polly)
-  cmake_minimum_required(VERSION 2.8)
+  cmake_minimum_required(VERSION 3.4.3)
 
   # Where is LLVM installed?
   set(LLVM_INSTALL_ROOT "" CACHE PATH "Root of LLVM install.")

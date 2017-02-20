@@ -132,10 +132,6 @@ int __tsan_get_report_loc(void *report, uptr idx, const char **type,
                           int *fd, int *suppressable, void **trace,
                           uptr trace_size);
 
-SANITIZER_INTERFACE_ATTRIBUTE
-int __tsan_get_report_loc_object_type(void *report, uptr idx,
-                                      const char **object_type);
-
 // Returns information about mutexes included in the report.
 SANITIZER_INTERFACE_ATTRIBUTE
 int __tsan_get_report_mutex(void *report, uptr idx, uptr *mutex_id, void **addr,

@@ -28868,15 +28868,16 @@ static SDValue combineExtractVectorElt(SDNode *N, SelectionDAG &DAG,
   if (SDValue NewOp = XFormVExtractWithShuffleIntoLoad(N, DAG, DCI))
     return NewOp;
 
-  EVT VT = N->getValueType(0);
   SDValue InputVector = N->getOperand(0);
+  SDValue EltIdx = N->getOperand(1);
+
+  EVT SrcVT = InputVector.getValueType();
+  EVT VT = N->getValueType(0);
   SDLoc dl(InputVector);
 
   // Detect mmx to i32 conversion through a v2i32 elt extract.
   if (InputVector.getOpcode() == ISD::BITCAST && InputVector.hasOneUse() &&
-      VT == MVT::i32 && InputVector.getValueType() == MVT::v2i32 &&
-      isa<ConstantSDNode>(N->getOperand(1)) &&
-      N->getConstantOperandVal(1) == 0) {
+      VT == MVT::i32 && SrcVT == MVT::v2i32 && isNullConstant(EltIdx)) {
     SDValue MMXSrc = InputVector.getOperand(0);
 
     // The bitcast source is a direct mmx result.
@@ -28885,7 +28886,7 @@ static SDValue combineExtractVectorElt(SDNode *N, SelectionDAG &DAG,
   }
 
   if (VT == MVT::i1 && InputVector.getOpcode() == ISD::BITCAST &&
-      isa<ConstantSDNode>(N->getOperand(1)) &&
+      isa<ConstantSDNode>(EltIdx) &&
       isa<ConstantSDNode>(InputVector.getOperand(0))) {
     uint64_t ExtractedElt = N->getConstantOperandVal(1);
     uint64_t InputValue = InputVector.getConstantOperandVal(0);
@@ -28905,7 +28906,7 @@ static SDValue combineExtractVectorElt(SDNode *N, SelectionDAG &DAG,
 
   // Only operate on vectors of 4 elements, where the alternative shuffling
   // gets to be more expensive.
-  if (InputVector.getValueType() != MVT::v4i32)
+  if (SrcVT != MVT::v4i32)
     return SDValue();
 
   // Check whether every use of InputVector is an EXTRACT_VECTOR_ELT with a
@@ -28966,11 +28967,11 @@ static SDValue combineExtractVectorElt(SDNode *N, SelectionDAG &DAG,
       DAG.getNode(ISD::SRA, dl, MVT::i64, TopHalf, ShAmt));
   } else {
     // Store the value to a temporary stack slot.
-    SDValue StackPtr = DAG.CreateStackTemporary(InputVector.getValueType());
+    SDValue StackPtr = DAG.CreateStackTemporary(SrcVT);
     SDValue Ch = DAG.getStore(DAG.getEntryNode(), dl, InputVector, StackPtr,
                               MachinePointerInfo());
 
-    EVT ElementType = InputVector.getValueType().getVectorElementType();
+    EVT ElementType = SrcVT.getVectorElementType();
     unsigned EltSize = ElementType.getSizeInBits() / 8;
 
     // Replace each use (extract) with a load of the appropriate element.
