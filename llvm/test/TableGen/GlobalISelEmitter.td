@@ -27,11 +27,11 @@ class I<dag OOps, dag IOps, list<dag> Pat>
 //===- Test a simple pattern with regclass operands. ----------------------===//
 
 // CHECK: if ((I.getOpcode() == TargetOpcode::G_ADD) &&
-// CHECK-NEXT: (((MRI.getType(I.getOperand(0).getReg()) == (LLT::scalar(32))) &&
+// CHECK-NEXT: ((/* Operand 0 */ (MRI.getType(I.getOperand(0).getReg()) == (LLT::scalar(32))) &&
 // CHECK-NEXT:  ((&RBI.getRegBankFromRegClass(MyTarget::GPR32RegClass) == RBI.getRegBank(I.getOperand(0).getReg(), MRI, TRI))))) &&
-// CHECK-NEXT: (((MRI.getType(I.getOperand(1).getReg()) == (LLT::scalar(32))) &&
+// CHECK-NEXT: ((/* Operand 1 */ (MRI.getType(I.getOperand(1).getReg()) == (LLT::scalar(32))) &&
 // CHECK-NEXT:  ((&RBI.getRegBankFromRegClass(MyTarget::GPR32RegClass) == RBI.getRegBank(I.getOperand(1).getReg(), MRI, TRI))))) &&
-// CHECK-NEXT: (((MRI.getType(I.getOperand(2).getReg()) == (LLT::scalar(32))) &&
+// CHECK-NEXT: ((/* Operand 2 */ (MRI.getType(I.getOperand(2).getReg()) == (LLT::scalar(32))) &&
 // CHECK-NEXT:  ((&RBI.getRegBankFromRegClass(MyTarget::GPR32RegClass) == RBI.getRegBank(I.getOperand(2).getReg(), MRI, TRI)))))) {
 
 // CHECK-NEXT:   // (add:i32 GPR32:i32:$src1, GPR32:i32:$src2) => (ADD:i32 GPR32:i32:$src1, GPR32:i32:$src2)
@@ -46,7 +46,7 @@ def ADD : I<(outs GPR32:$dst), (ins GPR32:$src1, GPR32:$src2),
 //===- Test a pattern with an MBB operand. --------------------------------===//
 
 // CHECK: if ((I.getOpcode() == TargetOpcode::G_BR) &&
-// CHECK-NEXT: (((I.getOperand(0).isMBB())))) {
+// CHECK-NEXT: ((/* Operand 0 */ (I.getOperand(0).isMBB())))) {
 
 // CHECK-NEXT:   // (br (bb:Other):$target) => (BR (bb:Other):$target)
 // CHECK-NEXT:   I.setDesc(TII.get(MyTarget::BR));
