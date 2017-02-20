@@ -25,6 +25,7 @@ class TestSwiftReturns(TestBase):
 
     @decorators.swiftTest
     @decorators.skipIfLinux  # bugs.swift.org/SR-841
+    @decorators.expectedFailureAll(bugnumber="rdar://problem/25471028")
     def test_swift_returns(self):
         """Test getting return values"""
         self.build()
