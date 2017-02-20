@@ -8899,8 +8899,8 @@ def VPTERNLOG213_imm8 : SDNodeXForm<imm, [{
   uint8_t Imm = N->getZExtValue();
   // Swap bits 2/4 and 3/5.
   uint8_t NewImm = Imm & 0xc3;
-  if (Imm & 0x02) NewImm |= 0x10;
-  if (Imm & 0x10) NewImm |= 0x02;
+  if (Imm & 0x04) NewImm |= 0x10;
+  if (Imm & 0x10) NewImm |= 0x04;
   if (Imm & 0x08) NewImm |= 0x20;
   if (Imm & 0x20) NewImm |= 0x08;
   return getI8Imm(NewImm, SDLoc(N));
@@ -8914,6 +8914,32 @@ def VPTERNLOG132_imm8 : SDNodeXForm<imm, [{
   if (Imm & 0x04) NewImm |= 0x02;
   if (Imm & 0x20) NewImm |= 0x40;
   if (Imm & 0x40) NewImm |= 0x20;
+  return getI8Imm(NewImm, SDLoc(N));
+}]>;
+def VPTERNLOG231_imm8 : SDNodeXForm<imm, [{
+  // Convert a VPTERNLOG immediate by moving operand 1 to the end.
+  uint8_t Imm = N->getZExtValue();
+  // Move bits 1->2, 2->4, 3->6, 4->1, 5->3, 6->5
+  uint8_t NewImm = Imm & 0x81;
+  if (Imm & 0x02) NewImm |= 0x04;
+  if (Imm & 0x04) NewImm |= 0x10;
+  if (Imm & 0x08) NewImm |= 0x40;
+  if (Imm & 0x10) NewImm |= 0x02;
+  if (Imm & 0x20) NewImm |= 0x08;
+  if (Imm & 0x40) NewImm |= 0x20;
+  return getI8Imm(NewImm, SDLoc(N));
+}]>;
+def VPTERNLOG312_imm8 : SDNodeXForm<imm, [{
+  // Convert a VPTERNLOG immediate by moving operand 2 to the beginning.
+  uint8_t Imm = N->getZExtValue();
+  // Move bits 1->4, 2->1, 3->5, 4->2, 5->6, 6->3
+  uint8_t NewImm = Imm & 0x81;
+  if (Imm & 0x02) NewImm |= 0x10;
+  if (Imm & 0x04) NewImm |= 0x02;
+  if (Imm & 0x08) NewImm |= 0x20;
+  if (Imm & 0x10) NewImm |= 0x04;
+  if (Imm & 0x20) NewImm |= 0x40;
+  if (Imm & 0x40) NewImm |= 0x08;
   return getI8Imm(NewImm, SDLoc(N));
 }]>;
 
@@ -8991,6 +9017,69 @@ multiclass avx512_ternlog<bits<8> opc, string OpcodeStr, SDNode OpNode,
                     _.RC:$src2, (i8 imm:$src4)),
                    _.RC:$src1)),
             (!cast<Instruction>(NAME#_.ZSuffix#rmik) _.RC:$src1, _.KRCWM:$mask,
+             _.RC:$src2, addr:$src3, (VPTERNLOG132_imm8 imm:$src4))>;
+  def : Pat<(_.VT (vselect _.KRCWM:$mask,
+                   (OpNode (bitconvert (_.LdFrag addr:$src3)),
+                    _.RC:$src2, _.RC:$src1, (i8 imm:$src4)),
+                   _.RC:$src1)),
+            (!cast<Instruction>(NAME#_.ZSuffix#rmik) _.RC:$src1, _.KRCWM:$mask,
+             _.RC:$src2, addr:$src3, (VPTERNLOG321_imm8 imm:$src4))>;
+  def : Pat<(_.VT (vselect _.KRCWM:$mask,
+                   (OpNode _.RC:$src2, _.RC:$src1,
+                    (bitconvert (_.LdFrag addr:$src3)), (i8 imm:$src4)),
+                   _.RC:$src1)),
+            (!cast<Instruction>(NAME#_.ZSuffix#rmik) _.RC:$src1, _.KRCWM:$mask,
+             _.RC:$src2, addr:$src3, (VPTERNLOG213_imm8 imm:$src4))>;
+  def : Pat<(_.VT (vselect _.KRCWM:$mask,
+                   (OpNode _.RC:$src2, (bitconvert (_.LdFrag addr:$src3)),
+                    _.RC:$src1, (i8 imm:$src4)),
+                   _.RC:$src1)),
+            (!cast<Instruction>(NAME#_.ZSuffix#rmik) _.RC:$src1, _.KRCWM:$mask,
+             _.RC:$src2, addr:$src3, (VPTERNLOG231_imm8 imm:$src4))>;
+  def : Pat<(_.VT (vselect _.KRCWM:$mask,
+                   (OpNode (bitconvert (_.LdFrag addr:$src3)),
+                    _.RC:$src1, _.RC:$src2, (i8 imm:$src4)),
+                   _.RC:$src1)),
+            (!cast<Instruction>(NAME#_.ZSuffix#rmik) _.RC:$src1, _.KRCWM:$mask,
+             _.RC:$src2, addr:$src3, (VPTERNLOG312_imm8 imm:$src4))>;
+
+  // Additional patterns for matching broadcasts in other positions.
+  def : Pat<(_.VT (OpNode (X86VBroadcast (_.ScalarLdFrag addr:$src3)),
+                          _.RC:$src2, _.RC:$src1, (i8 imm:$src4))),
+            (!cast<Instruction>(NAME#_.ZSuffix#rmbi) _.RC:$src1, _.RC:$src2,
+                                   addr:$src3, (VPTERNLOG321_imm8 imm:$src4))>;
+  def : Pat<(_.VT (OpNode _.RC:$src1,
+                          (X86VBroadcast (_.ScalarLdFrag addr:$src3)),
+                          _.RC:$src2, (i8 imm:$src4))),
+            (!cast<Instruction>(NAME#_.ZSuffix#rmbi) _.RC:$src1, _.RC:$src2,
+                                   addr:$src3, (VPTERNLOG132_imm8 imm:$src4))>;
+
+  // Additional patterns for matching zero masking with broadcasts in other
+  // positions.
+  def : Pat<(_.VT (vselect _.KRCWM:$mask,
+                   (OpNode (X86VBroadcast (_.ScalarLdFrag addr:$src3)),
+                    _.RC:$src2, _.RC:$src1, (i8 imm:$src4)),
+                   _.ImmAllZerosV)),
+            (!cast<Instruction>(NAME#_.ZSuffix#rmbikz) _.RC:$src1,
+             _.KRCWM:$mask, _.RC:$src2, addr:$src3,
+             (VPTERNLOG321_imm8 imm:$src4))>;
+  def : Pat<(_.VT (vselect _.KRCWM:$mask,
+                   (OpNode _.RC:$src1,
+                    (X86VBroadcast (_.ScalarLdFrag addr:$src3)),
+                    _.RC:$src2, (i8 imm:$src4)),
+                   _.ImmAllZerosV)),
+            (!cast<Instruction>(NAME#_.ZSuffix#rmbikz) _.RC:$src1,
+             _.KRCWM:$mask, _.RC:$src2, addr:$src3,
+             (VPTERNLOG132_imm8 imm:$src4))>;
+
+  // Additional patterns for matching masked broadcasts with different
+  // operand orders.
+  def : Pat<(_.VT (vselect _.KRCWM:$mask,
+                   (OpNode _.RC:$src1,
+                    (X86VBroadcast (_.ScalarLdFrag addr:$src3)),
+                    _.RC:$src2, (i8 imm:$src4)),
+                   _.RC:$src1)),
+            (!cast<Instruction>(NAME#_.ZSuffix#rmbik) _.RC:$src1, _.KRCWM:$mask,
              _.RC:$src2, addr:$src3, (VPTERNLOG132_imm8 imm:$src4))>;
 }
 

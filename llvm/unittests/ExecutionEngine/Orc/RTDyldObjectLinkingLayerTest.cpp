@@ -1,4 +1,4 @@
-//===-- ObjectLinkingLayerTest.cpp - Unit tests for object linking layer --===//
+//===- RTDyldObjectLinkingLayerTest.cpp - RTDyld linking layer unit tests -===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -13,7 +13,7 @@
 #include "llvm/ExecutionEngine/Orc/CompileUtils.h"
 #include "llvm/ExecutionEngine/Orc/LambdaResolver.h"
 #include "llvm/ExecutionEngine/Orc/NullResolver.h"
-#include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
+#include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/LLVMContext.h"
 #include "gtest/gtest.h"
@@ -23,8 +23,8 @@ using namespace llvm::orc;
 
 namespace {
 
-class ObjectLinkingLayerExecutionTest : public testing::Test,
-                                        public OrcExecutionTest {
+class RTDyldObjectLinkingLayerExecutionTest : public testing::Test,
+                                              public OrcExecutionTest {
 
 };
 
@@ -44,7 +44,7 @@ public:
   }
 };
 
-TEST(ObjectLinkingLayerTest, TestSetProcessAllSections) {
+TEST(RTDyldObjectLinkingLayerTest, TestSetProcessAllSections) {
   class SectionMemoryManagerWrapper : public SectionMemoryManager {
   public:
     SectionMemoryManagerWrapper(bool &DebugSeen) : DebugSeen(DebugSeen) {}
@@ -63,7 +63,7 @@ TEST(ObjectLinkingLayerTest, TestSetProcessAllSections) {
     bool DebugSeen;
   };
 
-  ObjectLinkingLayer<> ObjLayer;
+  RTDyldObjectLinkingLayer<> ObjLayer;
 
   LLVMContext Context;
   auto M = llvm::make_unique<Module>("", Context);
@@ -114,11 +114,11 @@ TEST(ObjectLinkingLayerTest, TestSetProcessAllSections) {
   }
 }
 
-TEST_F(ObjectLinkingLayerExecutionTest, NoDuplicateFinalization) {
+TEST_F(RTDyldObjectLinkingLayerExecutionTest, NoDuplicateFinalization) {
   if (!TM)
     return;
 
-  ObjectLinkingLayer<> ObjLayer;
+  RTDyldObjectLinkingLayer<> ObjLayer;
   SimpleCompiler Compile(*TM);
 
   // Create a pair of modules that will trigger recursive finalization:
@@ -183,11 +183,11 @@ TEST_F(ObjectLinkingLayerExecutionTest, NoDuplicateFinalization) {
       << "Extra call to finalize";
 }
 
-TEST_F(ObjectLinkingLayerExecutionTest, NoPrematureAllocation) {
+TEST_F(RTDyldObjectLinkingLayerExecutionTest, NoPrematureAllocation) {
   if (!TM)
     return;
 
-  ObjectLinkingLayer<> ObjLayer;
+  RTDyldObjectLinkingLayer<> ObjLayer;
   SimpleCompiler Compile(*TM);
 
   // Create a pair of unrelated modules:

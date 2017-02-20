@@ -12,7 +12,7 @@
 #include "llvm/ExecutionEngine/Orc/CompileUtils.h"
 #include "llvm/ExecutionEngine/Orc/IRCompileLayer.h"
 #include "llvm/ExecutionEngine/Orc/NullResolver.h"
-#include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
+#include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/Orc/ObjectTransformLayer.h"
 #include "llvm/Object/ObjectFile.h"
 #include "gtest/gtest.h"
@@ -309,7 +309,7 @@ TEST(ObjectTransformLayerTest, Main) {
   };
 
   // Construct the jit layers.
-  ObjectLinkingLayer<> BaseLayer;
+  RTDyldObjectLinkingLayer<> BaseLayer;
   auto IdentityTransform = [](
       std::unique_ptr<llvm::object::OwningBinary<llvm::object::ObjectFile>>
           Obj) { return Obj; };

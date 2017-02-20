@@ -21,7 +21,7 @@
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
 #include "llvm/ExecutionEngine/Orc/IRCompileLayer.h"
 #include "llvm/ExecutionEngine/Orc/IRTransformLayer.h"
-#include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
+#include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/RTDyldMemoryManager.h"
 
 namespace llvm {
@@ -30,7 +30,7 @@ class OrcLazyJIT {
 public:
 
   typedef orc::JITCompileCallbackManager CompileCallbackMgr;
-  typedef orc::ObjectLinkingLayer<> ObjLayerT;
+  typedef orc::RTDyldObjectLinkingLayer<> ObjLayerT;
   typedef orc::IRCompileLayer<ObjLayerT> CompileLayerT;
   typedef std::function<std::unique_ptr<Module>(std::unique_ptr<Module>)>
     TransformFtor;
