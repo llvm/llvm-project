@@ -1476,25 +1476,6 @@ static bool canSinkInstructions(
     if (I0->getOperand(OI)->getType()->isTokenTy())
       // Don't touch any operand of token type.
       return false;
-
-    // Because SROA can't handle speculating stores of selects, try not
-    // to sink loads or stores of allocas when we'd have to create a PHI for
-    // the address operand. Also, because it is likely that loads or stores
-    // of allocas will disappear when Mem2Reg/SROA is run, don't sink them.
-    // This can cause code churn which can have unintended consequences down
-    // the line - see https://llvm.org/bugs/show_bug.cgi?id=30244.
-    // FIXME: This is a workaround for a deficiency in SROA - see
-    // https://llvm.org/bugs/show_bug.cgi?id=30188
-    if (OI == 1 && isa<StoreInst>(I0) &&
-        any_of(Insts, [](const Instruction *I) {
-          return isa<AllocaInst>(I->getOperand(1));
-        }))
-      return false;
-    if (OI == 0 && isa<LoadInst>(I0) && any_of(Insts, [](const Instruction *I) {
-          return isa<AllocaInst>(I->getOperand(0));
-        }))
-      return false;
-
     auto SameAsI0 = [&I0, OI](const Instruction *I) {
       assert(I->getNumOperands() == I0->getNumOperands());
       return I->getOperand(OI) == I0->getOperand(OI);
@@ -1508,6 +1489,21 @@ static bool canSinkInstructions(
         // FIXME: if the call was *already* indirect, we should do this.
         return false;
       }
+      // Because SROA can't handle speculating stores of selects, try not
+      // to sink loads or stores of allocas when we'd have to create a PHI for
+      // the address operand.
+      // FIXME: This is a workaround for a deficiency in SROA - see
+      // https://llvm.org/bugs/show_bug.cgi?id=30188
+      if (OI == 1 && isa<StoreInst>(I0) &&
+          any_of(Insts, [](const Instruction *I) {
+            return isa<AllocaInst>(I->getOperand(1));
+          }))
+        return false;
+      if (OI == 0 && isa<LoadInst>(I0) &&
+          any_of(Insts, [](const Instruction *I) {
+            return isa<AllocaInst>(I->getOperand(0));
+          }))
+        return false;
       for (auto *I : Insts)
         PHIOperands[I].push_back(I->getOperand(OI));
     }
