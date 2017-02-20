@@ -1461,11 +1461,9 @@ static bool canSinkInstructions(
   // we're contemplating sinking, it must already be determined to be sinkable.
   if (!isa<StoreInst>(I0)) {
     auto *PNUse = dyn_cast<PHINode>(*I0->user_begin());
-    auto *Succ = I0->getParent()->getTerminator()->getSuccessor(0);
-    if (!all_of(Insts, [&PNUse,&Succ](const Instruction *I) -> bool {
+    if (!all_of(Insts, [&PNUse](const Instruction *I) -> bool {
           auto *U = cast<Instruction>(*I->user_begin());
           return (PNUse &&
-                  PNUse->getParent() == Succ &&
                   PNUse->getIncomingValueForBlock(I->getParent()) == I) ||
                  U->getParent() == I->getParent();
         }))
