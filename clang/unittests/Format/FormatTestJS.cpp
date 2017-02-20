@@ -1421,62 +1421,46 @@ TEST_F(FormatTestJS, TemplateStrings) {
                "         aaaaaaaaaaaaa:${  aaaaaaa. aaaaa} aaaaaaaa`;");
   verifyFormat("var x = someFunction(`${})`)  //\n"
                "            .oooooooooooooooooon();");
-  verifyFormat("var x = someFunction(`${aaaa}${aaaaa(  //\n"
-               "                                   aaaaa)})`);");
+  verifyFormat("var x = someFunction(`${aaaa}${\n"
+               "                               aaaaa(  //\n"
+               "                                   aaaaa)\n"
+               "                             })`);");
 }
 
 TEST_F(FormatTestJS, TemplateStringMultiLineExpression) {
-  verifyFormat("var f = `aaaaaaaaaaaaaaaaaa: ${aaaaa +  //\n"
-               "                               bbbb}`;",
+  verifyFormat("var f = `aaaaaaaaaaaaaaaaaa: ${\n"
+               "                               aaaaa +  //\n"
+               "                               bbbb\n"
+               "                             }`;",
                "var f = `aaaaaaaaaaaaaaaaaa: ${aaaaa +  //\n"
                "                               bbbb}`;");
-  verifyFormat("var f = `aaaaaaaaaaaaaaaaaa: ${         //\n"
-               "                               aaaaa +  //\n"
-               "                               bbbb}`;",
-               "var f = `aaaaaaaaaaaaaaaaaa: ${         //\n"
-               "                               aaaaa +  //\n"
-               "                               bbbb}`;");
   verifyFormat("var f = `\n"
-               "  aaaaaaaaaaaaaaaaaa: ${aaaaa +  //\n"
-               "                        bbbb}`;",
+               "  aaaaaaaaaaaaaaaaaa: ${\n"
+               "                        aaaaa +  //\n"
+               "                        bbbb\n"
+               "                      }`;",
                "var f  =  `\n"
                "  aaaaaaaaaaaaaaaaaa: ${   aaaaa  +  //\n"
                "                        bbbb }`;");
   verifyFormat("var f = `\n"
-               "  aaaaaaaaaaaaaaaaaa: ${         //\n"
-               "                        aaaaa +  //\n"
-               "                        bbbb}`;",
-               "var f  =  `\n"
-               "  aaaaaaaaaaaaaaaaaa: ${     //\n"
-               "                        aaaaa  +  //\n"
-               "                        bbbb}`  ;");
-  verifyFormat("var f = `\n"
-               "  aaaaaaaaaaaaaaaaaa: ${someFunction(\n"
-               "                            aaaaa +  //\n"
-               "                            bbbb)}`;",
-               "var f  =  `\n"
-               "  aaaaaaaaaaaaaaaaaa: ${ someFunction  (\n"
-               "                            aaaaa  +   //\n"
-               "                            bbbb)}`;");
-  verifyFormat("var f = `\n"
-               "  aaaaaaaaaaaaaaaaaa: ${  //\n"
+               "  aaaaaaaaaaaaaaaaaa: ${\n"
                "                        someFunction(\n"
                "                            aaaaa +  //\n"
-               "                            bbbb)}`;",
+               "                            bbbb)\n"
+               "                      }`;",
                "var f  =  `\n"
-               "  aaaaaaaaaaaaaaaaaa: ${  //\n"
-               "                        someFunction (\n"
+               "  aaaaaaaaaaaaaaaaaa: ${someFunction (\n"
                "                            aaaaa  +   //\n"
                "                            bbbb)}`;");
+
+  // It might be preferable to wrap before "someFunction".
   verifyFormat("var f = `\n"
-               "  aaaaaaaaaaaaaaaaaa: ${  //\n"
-               "                        someFunction({\n"
+               "  aaaaaaaaaaaaaaaaaa: ${someFunction({\n"
                "                          aaaa: aaaaa,\n"
                "                          bbbb: bbbbb,\n"
                "                        })}`;",
                "var f  =  `\n"
-               "  aaaaaaaaaaaaaaaaaa: ${  //\n"
-               "                        someFunction ({\n"
+               "  aaaaaaaaaaaaaaaaaa: ${someFunction ({\n"
                "                          aaaa:  aaaaa,\n"
                "                          bbbb:  bbbbb,\n"
                "                        })}`;");

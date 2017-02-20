@@ -2920,7 +2920,8 @@ ExprResult Sema::BuildInstanceMessage(Expr *Receiver,
     
     case OMF_performSelector:
       if (Method && NumArgs >= 1) {
-        if (ObjCSelectorExpr *SelExp = dyn_cast<ObjCSelectorExpr>(Args[0])) {
+        if (const auto *SelExp =
+                dyn_cast<ObjCSelectorExpr>(Args[0]->IgnoreParens())) {
           Selector ArgSel = SelExp->getSelector();
           ObjCMethodDecl *SelMethod = 
             LookupInstanceMethodInGlobalPool(ArgSel,

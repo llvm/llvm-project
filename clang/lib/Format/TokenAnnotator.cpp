@@ -2536,9 +2536,12 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
       // https://github.com/Microsoft/TypeScript/blob/master/doc/spec.md#A.10
       return false;
     if (Left.isOneOf(Keywords.kw_module, tok::kw_namespace) &&
-        Right.isOneOf(tok::identifier, tok::string_literal)) {
+        Right.isOneOf(tok::identifier, tok::string_literal))
       return false; // must not break in "module foo { ...}"
-    }
+    if (Right.is(TT_TemplateString) && Right.closesScope())
+      return false;
+    if (Left.is(TT_TemplateString) && Left.opensScope())
+      return true;
   }
 
   if (Left.is(tok::at))
