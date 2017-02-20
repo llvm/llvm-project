@@ -322,6 +322,10 @@ OPTIONS
  universal binary or to use an architecture that does not match a
  non-universal binary.
 
+.. option:: -show-functions
+
+ Show coverage summaries for each function.
+
 .. program:: llvm-cov export
 
 .. _llvm-cov-export:
