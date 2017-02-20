@@ -416,7 +416,7 @@ public:
           if (partial_name) {
             match_info.GetProcessInfo().GetExecutableFile().SetFile(
                 partial_name, false);
-            match_info.SetNameMatchType(eNameMatchStartsWith);
+            match_info.SetNameMatchType(NameMatch::StartsWith);
           }
           platform_sp->FindProcesses(match_info, process_infos);
           const size_t num_matches = process_infos.GetSize();
