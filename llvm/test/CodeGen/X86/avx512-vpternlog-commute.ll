@@ -1003,3 +1003,66 @@ define <16 x i32> @vpternlog_v16i32_021_broadcast2_maskz(<16 x i32> %x0, <16 x i
   %res = call <16 x i32> @llvm.x86.avx512.maskz.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x2, <16 x i32> %x1, i32 114, i16 %mask)
   ret <16 x i32> %res
 }
+
+define <16 x i32> @vpternlog_v16i32_012_broadcast0_mask1(i32* %x0ptr, <16 x i32> %x1, <16 x i32> %x2, i16 %mask) {
+; CHECK-LABEL: vpternlog_v16i32_012_broadcast0_mask1:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovw %esi, %k1
+; CHECK-NEXT:    vpternlogd $92, (%rdi), %zmm1, %zmm0 {%k1}
+; CHECK-NEXT:    retq
+  %x0scalar = load i32, i32* %x0ptr
+  %vecinit.i = insertelement <16 x i32> undef, i32 %x0scalar, i32 0
+  %x0 = shufflevector <16 x i32> %vecinit.i, <16 x i32> undef, <16 x i32> zeroinitializer
+  %res = call <16 x i32> @llvm.x86.avx512.mask.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i32 114, i16 -1)
+  %mask.cast = bitcast i16 %mask to <16 x i1>
+  %res2 = select <16 x i1> %mask.cast, <16 x i32> %res, <16 x i32> %x1
+  ret <16 x i32> %res2
+}
+
+define <16 x i32> @vpternlog_v16i32_012_broadcast0_mask2(i32* %x0ptr, <16 x i32> %x1, <16 x i32> %x2, i16 %mask) {
+; CHECK-LABEL: vpternlog_v16i32_012_broadcast0_mask2:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovw %esi, %k1
+; CHECK-NEXT:    vpternlogd $58, (%rdi), %zmm0, %zmm1 {%k1}
+; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
+; CHECK-NEXT:    retq
+  %x0scalar = load i32, i32* %x0ptr
+  %vecinit.i = insertelement <16 x i32> undef, i32 %x0scalar, i32 0
+  %x0 = shufflevector <16 x i32> %vecinit.i, <16 x i32> undef, <16 x i32> zeroinitializer
+  %res = call <16 x i32> @llvm.x86.avx512.mask.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i32 114, i16 -1)
+  %mask.cast = bitcast i16 %mask to <16 x i1>
+  %res2 = select <16 x i1> %mask.cast, <16 x i32> %res, <16 x i32> %x2
+  ret <16 x i32> %res2
+}
+
+define <16 x i32> @vpternlog_v16i32_012_broadcast1_mask2(<16 x i32> %x0, i32* %x1ptr, <16 x i32> %x2, i16 %mask) {
+; CHECK-LABEL: vpternlog_v16i32_012_broadcast1_mask2:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovw %esi, %k1
+; CHECK-NEXT:    vpternlogd $46, (%rdi), %zmm0, %zmm1 {%k1}
+; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
+; CHECK-NEXT:    retq
+  %x1scalar = load i32, i32* %x1ptr
+  %vecinit.i = insertelement <16 x i32> undef, i32 %x1scalar, i32 0
+  %x1 = shufflevector <16 x i32> %vecinit.i, <16 x i32> undef, <16 x i32> zeroinitializer
+  %res = call <16 x i32> @llvm.x86.avx512.mask.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i32 114, i16 -1)
+  %mask.cast = bitcast i16 %mask to <16 x i1>
+  %res2 = select <16 x i1> %mask.cast, <16 x i32> %res, <16 x i32> %x2
+  ret <16 x i32> %res2
+}
+
+define <16 x i32> @vpternlog_v16i32_012_broadcast2_mask1(<16 x i32> %x0, <16 x i32> %x1, i32* %x2ptr, i16 %mask) {
+; CHECK-LABEL: vpternlog_v16i32_012_broadcast2_mask1:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovw %esi, %k1
+; CHECK-NEXT:    vpternlogd $78, (%rdi), %zmm0, %zmm1 {%k1}
+; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
+; CHECK-NEXT:    retq
+  %x2scalar = load i32, i32* %x2ptr
+  %vecinit.i = insertelement <16 x i32> undef, i32 %x2scalar, i32 0
+  %x2 = shufflevector <16 x i32> %vecinit.i, <16 x i32> undef, <16 x i32> zeroinitializer
+  %res = call <16 x i32> @llvm.x86.avx512.mask.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i32 114, i16 -1)
+  %mask.cast = bitcast i16 %mask to <16 x i1>
+  %res2 = select <16 x i1> %mask.cast, <16 x i32> %res, <16 x i32> %x1
+  ret <16 x i32> %res2
+}

@@ -682,3 +682,19 @@ define i32 @test_x86_sse_ucomineq_ss(<4 x float> %a0, <4 x float> %a1) {
   ret i32 %res
 }
 declare i32 @llvm.x86.sse.ucomineq.ss(<4 x float>, <4 x float>) nounwind readnone
+
+
+define void @sfence() nounwind {
+; SSE-LABEL: sfence:
+; SSE:       ## BB#0:
+; SSE-NEXT:    sfence ## encoding: [0x0f,0xae,0xf8]
+; SSE-NEXT:    retl ## encoding: [0xc3]
+;
+; VCHECK-LABEL: sfence:
+; VCHECK:       ## BB#0:
+; VCHECK-NEXT:    sfence ## encoding: [0x0f,0xae,0xf8]
+; VCHECK-NEXT:    retl ## encoding: [0xc3]
+  tail call void @llvm.x86.sse.sfence()
+  ret void
+}
+declare void @llvm.x86.sse.sfence() nounwind

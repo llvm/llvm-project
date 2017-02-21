@@ -538,27 +538,19 @@ define i32 @extractelement_v8i32_var(<8 x i32> %a, i256 %i) nounwind {
 ; SSE-NEXT:    popq %rbp
 ; SSE-NEXT:    retq
 ;
-; AVX1-LABEL: extractelement_v8i32_var:
-; AVX1:       # BB#0:
-; AVX1-NEXT:    pushq %rbp
-; AVX1-NEXT:    movq %rsp, %rbp
-; AVX1-NEXT:    andq $-32, %rsp
-; AVX1-NEXT:    subq $64, %rsp
-; AVX1-NEXT:    andl $7, %edi
-; AVX1-NEXT:    vmovaps %ymm0, (%rsp)
-; AVX1-NEXT:    movl (%rsp,%rdi,4), %eax
-; AVX1-NEXT:    movq %rbp, %rsp
-; AVX1-NEXT:    popq %rbp
-; AVX1-NEXT:    vzeroupper
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: extractelement_v8i32_var:
-; AVX2:       # BB#0:
-; AVX2-NEXT:    vmovd %edi, %xmm1
-; AVX2-NEXT:    vpermd %ymm0, %ymm1, %ymm0
-; AVX2-NEXT:    vmovd %xmm0, %eax
-; AVX2-NEXT:    vzeroupper
-; AVX2-NEXT:    retq
+; AVX-LABEL: extractelement_v8i32_var:
+; AVX:       # BB#0:
+; AVX-NEXT:    pushq %rbp
+; AVX-NEXT:    movq %rsp, %rbp
+; AVX-NEXT:    andq $-32, %rsp
+; AVX-NEXT:    subq $64, %rsp
+; AVX-NEXT:    andl $7, %edi
+; AVX-NEXT:    vmovaps %ymm0, (%rsp)
+; AVX-NEXT:    movl (%rsp,%rdi,4), %eax
+; AVX-NEXT:    movq %rbp, %rsp
+; AVX-NEXT:    popq %rbp
+; AVX-NEXT:    vzeroupper
+; AVX-NEXT:    retq
   %b = extractelement <8 x i32> %a, i256 %i
   ret i32 %b
 }

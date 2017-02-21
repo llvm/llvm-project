@@ -1116,27 +1116,8 @@ public:
   }
 };
 
-/// \brief Rename a single basic block into MemorySSA form.
-/// Uses the standard SSA renaming algorithm.
-/// \returns The new incoming value.
-MemoryAccess *MemorySSA::renameBlock(BasicBlock *BB,
-                                     MemoryAccess *IncomingVal) {
-  auto It = PerBlockAccesses.find(BB);
-  // Skip most processing if the list is empty.
-  if (It != PerBlockAccesses.end()) {
-    AccessList *Accesses = It->second.get();
-    for (MemoryAccess &L : *Accesses) {
-      if (MemoryUseOrDef *MUD = dyn_cast<MemoryUseOrDef>(&L)) {
-        if (MUD->getDefiningAccess() == nullptr)
-          MUD->setDefiningAccess(IncomingVal);
-        if (isa<MemoryDef>(&L))
-          IncomingVal = &L;
-      } else {
-        IncomingVal = &L;
-      }
-    }
-  }
-
+void MemorySSA::renameSuccessorPhis(BasicBlock *BB, MemoryAccess *IncomingVal,
+                                    bool RenameAllUses) {
   // Pass through values to our successors
   for (const BasicBlock *S : successors(BB)) {
     auto It = PerBlockAccesses.find(S);
@@ -1145,9 +1126,35 @@ MemoryAccess *MemorySSA::renameBlock(BasicBlock *BB,
       continue;
     AccessList *Accesses = It->second.get();
     auto *Phi = cast<MemoryPhi>(&Accesses->front());
-    Phi->addIncoming(IncomingVal, BB);
+    if (RenameAllUses) {
+      int PhiIndex = Phi->getBasicBlockIndex(BB);
+      assert(PhiIndex != -1 && "Incomplete phi during partial rename");
+      Phi->setIncomingValue(PhiIndex, IncomingVal);
+    } else
+      Phi->addIncoming(IncomingVal, BB);
   }
+}
 
+/// \brief Rename a single basic block into MemorySSA form.
+/// Uses the standard SSA renaming algorithm.
+/// \returns The new incoming value.
+MemoryAccess *MemorySSA::renameBlock(BasicBlock *BB, MemoryAccess *IncomingVal,
+                                     bool RenameAllUses) {
+  auto It = PerBlockAccesses.find(BB);
+  // Skip most processing if the list is empty.
+  if (It != PerBlockAccesses.end()) {
+    AccessList *Accesses = It->second.get();
+    for (MemoryAccess &L : *Accesses) {
+      if (MemoryUseOrDef *MUD = dyn_cast<MemoryUseOrDef>(&L)) {
+        if (MUD->getDefiningAccess() == nullptr || RenameAllUses)
+          MUD->setDefiningAccess(IncomingVal);
+        if (isa<MemoryDef>(&L))
+          IncomingVal = &L;
+      } else {
+        IncomingVal = &L;
+      }
+    }
+  }
   return IncomingVal;
 }
 
@@ -1156,11 +1163,19 @@ MemoryAccess *MemorySSA::renameBlock(BasicBlock *BB,
 /// We walk the dominator tree in preorder, renaming accesses, and then filling
 /// in phi nodes in our successors.
 void MemorySSA::renamePass(DomTreeNode *Root, MemoryAccess *IncomingVal,
-                           SmallPtrSet<BasicBlock *, 16> &Visited) {
+                           SmallPtrSetImpl<BasicBlock *> &Visited,
+                           bool SkipVisited, bool RenameAllUses) {
   SmallVector<RenamePassData, 32> WorkStack;
-  IncomingVal = renameBlock(Root->getBlock(), IncomingVal);
+  // Skip everything if we already renamed this block and we are skipping.
+  // Note: You can't sink this into the if, because we need it to occur
+  // regardless of whether we skip blocks or not.
+  bool AlreadyVisited = !Visited.insert(Root->getBlock()).second;
+  if (SkipVisited && AlreadyVisited)
+    return;
+
+  IncomingVal = renameBlock(Root->getBlock(), IncomingVal, RenameAllUses);
+  renameSuccessorPhis(Root->getBlock(), IncomingVal, RenameAllUses);
   WorkStack.push_back({Root, Root->begin(), IncomingVal});
-  Visited.insert(Root->getBlock());
 
   while (!WorkStack.empty()) {
     DomTreeNode *Node = WorkStack.back().DTN;
@@ -1173,8 +1188,20 @@ void MemorySSA::renamePass(DomTreeNode *Root, MemoryAccess *IncomingVal,
       DomTreeNode *Child = *ChildIt;
       ++WorkStack.back().ChildIt;
       BasicBlock *BB = Child->getBlock();
-      Visited.insert(BB);
-      IncomingVal = renameBlock(BB, IncomingVal);
+      // Note: You can't sink this into the if, because we need it to occur
+      // regardless of whether we skip blocks or not.
+      AlreadyVisited = !Visited.insert(BB).second;
+      if (SkipVisited && AlreadyVisited) {
+        // We already visited this during our renaming, which can happen when
+        // being asked to rename multiple blocks. Figure out the incoming val,
+        // which is the last def.
+        // Incoming value can only change if there is a block def, and in that
+        // case, it's the last block def in the list.
+        if (auto *BlockDefs = getWritableBlockDefs(BB))
+          IncomingVal = &*BlockDefs->rbegin();
+      } else
+        IncomingVal = renameBlock(BB, IncomingVal, RenameAllUses);
+      renameSuccessorPhis(BB, IncomingVal, RenameAllUses);
       WorkStack.push_back({Child, Child->begin(), IncomingVal});
     }
   }
@@ -1891,9 +1918,7 @@ void MemorySSA::print(raw_ostream &OS) const {
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-LLVM_DUMP_METHOD void MemorySSA::dump() const {
-  print(dbgs());
-}
+LLVM_DUMP_METHOD void MemorySSA::dump() const { print(dbgs()); }
 #endif
 
 void MemorySSA::verifyMemorySSA() const {
@@ -2163,7 +2188,7 @@ void MemoryUse::print(raw_ostream &OS) const {
 }
 
 void MemoryAccess::dump() const {
-  // Cannot completely remove virtual function even in release mode.
+// Cannot completely remove virtual function even in release mode.
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   print(dbgs());
   dbgs() << "\n";

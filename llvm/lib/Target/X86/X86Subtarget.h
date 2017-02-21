@@ -229,6 +229,9 @@ protected:
   /// True if LZCNT instruction is fast.
   bool HasFastLZCNT;
 
+  /// True if SHLD based rotate is fast.
+  bool HasFastSHLDRotate;
+
   /// True if the short functions should be padded to prevent
   /// a stall when returning too early.
   bool PadShortFunctions;
@@ -466,6 +469,7 @@ public:
   bool hasFastScalarFSQRT() const { return HasFastScalarFSQRT; }
   bool hasFastVectorFSQRT() const { return HasFastVectorFSQRT; }
   bool hasFastLZCNT() const { return HasFastLZCNT; }
+  bool hasFastSHLDRotate() const { return HasFastSHLDRotate; }
   bool hasSlowDivide32() const { return HasSlowDivide32; }
   bool hasSlowDivide64() const { return HasSlowDivide64; }
   bool padShortFunctions() const { return PadShortFunctions; }

@@ -108,6 +108,10 @@ int testDefaultArg(int a = 2*2) {
   return a;
 }
 
+int testDefaultArgExpr() {
+  return testDefaultArg();
+}
+
 template <typename T> // T has TemplateTypeParmType
 void testTemplateTypeParmType(int i);
 

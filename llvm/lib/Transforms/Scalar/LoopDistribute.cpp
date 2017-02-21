@@ -812,29 +812,29 @@ private:
       const RuntimePointerChecking *RtPtrChecking) {
     SmallVector<RuntimePointerChecking::PointerCheck, 4> Checks;
 
-    std::copy_if(AllChecks.begin(), AllChecks.end(), std::back_inserter(Checks),
-                 [&](const RuntimePointerChecking::PointerCheck &Check) {
-                   for (unsigned PtrIdx1 : Check.first->Members)
-                     for (unsigned PtrIdx2 : Check.second->Members)
-                       // Only include this check if there is a pair of pointers
-                       // that require checking and the pointers fall into
-                       // separate partitions.
-                       //
-                       // (Note that we already know at this point that the two
-                       // pointer groups need checking but it doesn't follow
-                       // that each pair of pointers within the two groups need
-                       // checking as well.
-                       //
-                       // In other words we don't want to include a check just
-                       // because there is a pair of pointers between the two
-                       // pointer groups that require checks and a different
-                       // pair whose pointers fall into different partitions.)
-                       if (RtPtrChecking->needsChecking(PtrIdx1, PtrIdx2) &&
-                           !RuntimePointerChecking::arePointersInSamePartition(
-                               PtrToPartition, PtrIdx1, PtrIdx2))
-                         return true;
-                   return false;
-                 });
+    copy_if(AllChecks, std::back_inserter(Checks),
+            [&](const RuntimePointerChecking::PointerCheck &Check) {
+              for (unsigned PtrIdx1 : Check.first->Members)
+                for (unsigned PtrIdx2 : Check.second->Members)
+                  // Only include this check if there is a pair of pointers
+                  // that require checking and the pointers fall into
+                  // separate partitions.
+                  //
+                  // (Note that we already know at this point that the two
+                  // pointer groups need checking but it doesn't follow
+                  // that each pair of pointers within the two groups need
+                  // checking as well.
+                  //
+                  // In other words we don't want to include a check just
+                  // because there is a pair of pointers between the two
+                  // pointer groups that require checks and a different
+                  // pair whose pointers fall into different partitions.)
+                  if (RtPtrChecking->needsChecking(PtrIdx1, PtrIdx2) &&
+                      !RuntimePointerChecking::arePointersInSamePartition(
+                          PtrToPartition, PtrIdx1, PtrIdx2))
+                    return true;
+              return false;
+            });
 
     return Checks;
   }

@@ -111,7 +111,7 @@ public:
   unsigned int getNumCounters() const { return RegisteredCounters.size(); }
 
   // Return the name and description of the counter with the given ID.
-  std::pair<StringRef, StringRef> getCounterInfo(unsigned ID) const {
+  std::pair<std::string, std::string> getCounterInfo(unsigned ID) const {
     return std::make_pair(RegisteredCounters[ID], CounterDesc.lookup(ID));
   }
 

@@ -176,3 +176,27 @@ namespace default_args_from_ctor {
   template <class A> struct T { template<typename B> T(A = 0, B = 0) {} };
   T t(0, 0);
 }
+
+namespace transform_params {
+  template<typename T, T N, template<T (*v)[N]> typename U, T (*X)[N]>
+  struct A { // expected-note 2{{candidate}}
+    template<typename V, V M, V (*Y)[M], template<V (*v)[M]> typename W>
+    A(U<X>, W<Y>); // expected-note {{[with V = int, M = 12, Y = &transform_params::n]}}
+
+    static constexpr T v = N;
+  };
+
+  int n[12];
+  template<int (*)[12]> struct Q {};
+  Q<&n> qn;
+  // FIXME: The class template argument deduction result here is correct, but
+  // we incorrectly fail to deduce arguments for the constructor!
+  A a(qn, qn); // expected-error {{no matching constructor for initialization of 'transform_params::A<int, 12, Q, &transform_params::n>'}}
+  static_assert(a.v == 12);
+
+  // FIXME: This should be accepted.
+  template<typename ...T> struct B { // expected-note {{candidate}}
+    template<T ...V> B(const T (&...p)[V]); // expected-note {{substitution failure}}
+  };
+  B b({1, 2, 3}, {"foo", "bar"}, {'x', 'y', 'z', 'w'}); // expected-error {{no viable constructor or deduction guide}}
+}

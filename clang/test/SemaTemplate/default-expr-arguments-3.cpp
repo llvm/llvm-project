@@ -37,7 +37,7 @@ template <class T> struct class2 {
 template struct class2<int>;
 
 // CHECK: FunctionTemplateDecl {{.*}} f1
-// CHECK-NEXT: TemplateTypeParmDecl {{.*}} typename T
+// CHECK-NEXT: TemplateTypeParmDecl {{.*}} typename depth 0 index 0 T
 // CHECK-NEXT: FunctionDecl {{.*}} f1 'void (void)'
 // CHECK: FunctionDecl {{.*}} f1 'void (void)'
 // CHECK-NEXT: TemplateArgument type 'int'

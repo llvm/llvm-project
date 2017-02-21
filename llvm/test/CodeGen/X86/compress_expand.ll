@@ -200,8 +200,7 @@ define void @test11(i64* %base, <2 x i64> %V, <2 x i1> %mask) {
 ; KNL:       # BB#0:
 ; KNL-NEXT:    # kill: %XMM0<def> %XMM0<kill> %ZMM0<def>
 ; KNL-NEXT:    vpsllq $63, %xmm1, %xmm1
-; KNL-NEXT:    vpsrad $31, %xmm1, %xmm1
-; KNL-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
+; KNL-NEXT:    vpsraq $63, %zmm1, %zmm1
 ; KNL-NEXT:    vpxord %zmm2, %zmm2, %zmm2
 ; KNL-NEXT:    vinserti32x4 $0, %xmm1, %zmm2, %zmm1
 ; KNL-NEXT:    vpsllq $63, %zmm1, %zmm1

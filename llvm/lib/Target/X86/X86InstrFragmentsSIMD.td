@@ -453,9 +453,6 @@ def X86SubVBroadcast : SDNode<"X86ISD::SUBV_BROADCAST",
 
 def X86VBroadcast : SDNode<"X86ISD::VBROADCAST", SDTVBroadcast>;
 def X86VBroadcastm : SDNode<"X86ISD::VBROADCASTM", SDTVBroadcastm>;
-def X86Vinsert   : SDNode<"X86ISD::VINSERT",  SDTypeProfile<1, 3,
-                              [SDTCisSameAs<0, 1>, SDTCisEltOfVec<2, 1>,
-                               SDTCisPtrTy<3>]>, []>;
 def X86Vextract   : SDNode<"X86ISD::VEXTRACT",  SDTypeProfile<1, 2,
                               [SDTCisEltOfVec<0, 1>, SDTCisVec<1>,
                                SDTCisPtrTy<2>]>, []>;

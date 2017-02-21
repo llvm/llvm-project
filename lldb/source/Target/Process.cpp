@@ -581,7 +581,7 @@ llvm::ArrayRef<OptionDefinition> ProcessLaunchCommandOptions::GetDefinitions() {
 }
 
 bool ProcessInstanceInfoMatch::NameMatches(const char *process_name) const {
-  if (m_name_match_type == eNameMatchIgnore || process_name == nullptr)
+  if (m_name_match_type == NameMatch::Ignore || process_name == nullptr)
     return true;
   const char *match_name = m_match_info.GetName();
   if (!match_name)
@@ -627,7 +627,7 @@ bool ProcessInstanceInfoMatch::Matches(
 }
 
 bool ProcessInstanceInfoMatch::MatchAllProcesses() const {
-  if (m_name_match_type != eNameMatchIgnore)
+  if (m_name_match_type != NameMatch::Ignore)
     return false;
 
   if (m_match_info.ProcessIDIsValid())
@@ -659,7 +659,7 @@ bool ProcessInstanceInfoMatch::MatchAllProcesses() const {
 
 void ProcessInstanceInfoMatch::Clear() {
   m_match_info.Clear();
-  m_name_match_type = eNameMatchIgnore;
+  m_name_match_type = NameMatch::Ignore;
   m_match_all_users = false;
 }
 
@@ -3024,7 +3024,7 @@ Error Process::Attach(ProcessAttachInfo &attach_info) {
         if (platform_sp) {
           ProcessInstanceInfoMatch match_info;
           match_info.GetProcessInfo() = attach_info;
-          match_info.SetNameMatchType(eNameMatchEquals);
+          match_info.SetNameMatchType(NameMatch::Equals);
           platform_sp->FindProcesses(match_info, process_infos);
           const uint32_t num_matches = process_infos.GetSize();
           if (num_matches == 1) {

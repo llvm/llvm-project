@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements the SubtargetFeature interface.
+/// \file Implements the SubtargetFeature interface.
 //
 //===----------------------------------------------------------------------===//
 
@@ -31,12 +31,7 @@
 
 using namespace llvm;
 
-//===----------------------------------------------------------------------===//
-//                          Static Helper Functions
-//===----------------------------------------------------------------------===//
-
-/// hasFlag - Determine if a feature has a flag; '+' or '-'
-///
+/// Determine if a feature has a flag; '+' or '-'
 static inline bool hasFlag(StringRef Feature) {
   assert(!Feature.empty() && "Empty string");
   // Get first character
@@ -45,14 +40,12 @@ static inline bool hasFlag(StringRef Feature) {
   return Ch == '+' || Ch =='-';
 }
 
-/// StripFlag - Return string stripped of flag.
-///
+/// Return string stripped of flag.
 static inline std::string StripFlag(StringRef Feature) {
   return hasFlag(Feature) ? Feature.substr(1) : Feature;
 }
 
-/// isEnabled - Return true if enable flag; '+'.
-///
+/// Return true if enable flag; '+'.
 static inline bool isEnabled(StringRef Feature) {
   assert(!Feature.empty() && "Empty string");
   // Get first character
@@ -61,15 +54,13 @@ static inline bool isEnabled(StringRef Feature) {
   return Ch == '+';
 }
 
-/// Split - Splits a string of comma separated items in to a vector of strings.
-///
+/// Splits a string of comma separated items in to a vector of strings.
 static void Split(std::vector<std::string> &V, StringRef S) {
   SmallVector<StringRef, 3> Tmp;
   S.split(Tmp, ',', -1, false /* KeepEmpty */);
   V.assign(Tmp.begin(), Tmp.end());
 }
 
-/// Adding features.
 void SubtargetFeatures::AddFeature(StringRef String, bool Enable) {
   // Don't add empty features.
   if (!String.empty())
@@ -89,8 +80,7 @@ static const SubtargetFeatureKV *Find(StringRef S,
   return F;
 }
 
-/// getLongestEntryLength - Return the length of the longest entry in the table.
-///
+/// Return the length of the longest entry in the table.
 static size_t getLongestEntryLength(ArrayRef<SubtargetFeatureKV> Table) {
   size_t MaxLen = 0;
   for (auto &I : Table)
@@ -99,7 +89,6 @@ static size_t getLongestEntryLength(ArrayRef<SubtargetFeatureKV> Table) {
 }
 
 /// Display help for feature choices.
-///
 static void Help(ArrayRef<SubtargetFeatureKV> CPUTable,
                  ArrayRef<SubtargetFeatureKV> FeatTable) {
   // Determine the length of the longest CPU and Feature entries.
@@ -122,10 +111,6 @@ static void Help(ArrayRef<SubtargetFeatureKV> CPUTable,
             "For example, llc -mcpu=mycpu -mattr=+feature1,-feature2\n";
 }
 
-//===----------------------------------------------------------------------===//
-//                    SubtargetFeatures Implementation
-//===----------------------------------------------------------------------===//
-
 SubtargetFeatures::SubtargetFeatures(StringRef Initial) {
   // Break up string into separate features
   Split(Features, Initial);
@@ -135,40 +120,35 @@ std::string SubtargetFeatures::getString() const {
   return join(Features.begin(), Features.end(), ",");
 }
 
-/// SetImpliedBits - For each feature that is (transitively) implied by this
-/// feature, set it.
-///
+/// For each feature that is (transitively) implied by this feature, set it.
 static
-void SetImpliedBits(FeatureBitset &Bits, const SubtargetFeatureKV *FeatureEntry,
+void SetImpliedBits(FeatureBitset &Bits, const SubtargetFeatureKV &FeatureEntry,
                     ArrayRef<SubtargetFeatureKV> FeatureTable) {
-  for (auto &FE : FeatureTable) {
-    if (FeatureEntry->Value == FE.Value) continue;
+  for (const SubtargetFeatureKV &FE : FeatureTable) {
+    if (FeatureEntry.Value == FE.Value) continue;
 
-    if ((FeatureEntry->Implies & FE.Value).any()) {
+    if ((FeatureEntry.Implies & FE.Value).any()) {
       Bits |= FE.Value;
-      SetImpliedBits(Bits, &FE, FeatureTable);
+      SetImpliedBits(Bits, FE, FeatureTable);
     }
   }
 }
 
-/// ClearImpliedBits - For each feature that (transitively) implies this
-/// feature, clear it.
-///
+/// For each feature that (transitively) implies this feature, clear it.
 static
-void ClearImpliedBits(FeatureBitset &Bits, 
-                      const SubtargetFeatureKV *FeatureEntry,
+void ClearImpliedBits(FeatureBitset &Bits,
+                      const SubtargetFeatureKV &FeatureEntry,
                       ArrayRef<SubtargetFeatureKV> FeatureTable) {
-  for (auto &FE : FeatureTable) {
-    if (FeatureEntry->Value == FE.Value) continue;
+  for (const SubtargetFeatureKV &FE : FeatureTable) {
+    if (FeatureEntry.Value == FE.Value) continue;
 
-    if ((FE.Implies & FeatureEntry->Value).any()) {
+    if ((FE.Implies & FeatureEntry.Value).any()) {
       Bits &= ~FE.Value;
-      ClearImpliedBits(Bits, &FE, FeatureTable);
+      ClearImpliedBits(Bits, FE, FeatureTable);
     }
   }
 }
 
-/// ToggleFeature - Toggle a feature and update the feature bits.
 void
 SubtargetFeatures::ToggleFeature(FeatureBitset &Bits, StringRef Feature,
                                  ArrayRef<SubtargetFeatureKV> FeatureTable) {
@@ -180,16 +160,15 @@ SubtargetFeatures::ToggleFeature(FeatureBitset &Bits, StringRef Feature,
     if ((Bits & FeatureEntry->Value) == FeatureEntry->Value) {
       Bits &= ~FeatureEntry->Value;
       // For each feature that implies this, clear it.
-      ClearImpliedBits(Bits, FeatureEntry, FeatureTable);
+      ClearImpliedBits(Bits, *FeatureEntry, FeatureTable);
     } else {
       Bits |=  FeatureEntry->Value;
 
       // For each feature that this implies, set it.
-      SetImpliedBits(Bits, FeatureEntry, FeatureTable);
+      SetImpliedBits(Bits, *FeatureEntry, FeatureTable);
     }
   } else {
-    errs() << "'" << Feature
-           << "' is not a recognized feature for this target"
+    errs() << "'" << Feature << "' is not a recognized feature for this target"
            << " (ignoring feature)\n";
   }
 }
@@ -208,22 +187,19 @@ void SubtargetFeatures::ApplyFeatureFlag(FeatureBitset &Bits, StringRef Feature,
       Bits |= FeatureEntry->Value;
 
       // For each feature that this implies, set it.
-      SetImpliedBits(Bits, FeatureEntry, FeatureTable);
+      SetImpliedBits(Bits, *FeatureEntry, FeatureTable);
     } else {
       Bits &= ~FeatureEntry->Value;
 
       // For each feature that implies this, clear it.
-      ClearImpliedBits(Bits, FeatureEntry, FeatureTable);
+      ClearImpliedBits(Bits, *FeatureEntry, FeatureTable);
     }
   } else {
-    errs() << "'" << Feature
-           << "' is not a recognized feature for this target"
+    errs() << "'" << Feature << "' is not a recognized feature for this target"
            << " (ignoring feature)\n";
   }
 }
 
-/// getFeatureBits - Get feature bits a CPU.
-///
 FeatureBitset
 SubtargetFeatures::getFeatureBits(StringRef CPU,
                                   ArrayRef<SubtargetFeatureKV> CPUTable,
@@ -231,12 +207,10 @@ SubtargetFeatures::getFeatureBits(StringRef CPU,
   if (CPUTable.empty() || FeatureTable.empty())
     return FeatureBitset();
 
-#ifndef NDEBUG
   assert(std::is_sorted(std::begin(CPUTable), std::end(CPUTable)) &&
          "CPU table is not sorted");
   assert(std::is_sorted(std::begin(FeatureTable), std::end(FeatureTable)) &&
          "CPU features table is not sorted");
-#endif
   // Resulting bits
   FeatureBitset Bits;
 
@@ -256,17 +230,16 @@ SubtargetFeatures::getFeatureBits(StringRef CPU,
       // Set the feature implied by this CPU feature, if any.
       for (auto &FE : FeatureTable) {
         if ((CPUEntry->Value & FE.Value).any())
-          SetImpliedBits(Bits, &FE, FeatureTable);
+          SetImpliedBits(Bits, FE, FeatureTable);
       }
     } else {
-      errs() << "'" << CPU
-             << "' is not a recognized processor for this target"
+      errs() << "'" << CPU << "' is not a recognized processor for this target"
              << " (ignoring processor)\n";
     }
   }
 
   // Iterate through each feature
-  for (auto &Feature : Features) {
+  for (const std::string &Feature : Features) {
     // Check for help
     if (Feature == "+help")
       Help(CPUTable, FeatureTable);
@@ -277,8 +250,6 @@ SubtargetFeatures::getFeatureBits(StringRef CPU,
   return Bits;
 }
 
-/// print - Print feature string.
-///
 void SubtargetFeatures::print(raw_ostream &OS) const {
   for (auto &F : Features)
     OS << F << " ";
@@ -286,20 +257,15 @@ void SubtargetFeatures::print(raw_ostream &OS) const {
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-/// dump - Dump feature info.
-///
 LLVM_DUMP_METHOD void SubtargetFeatures::dump() const {
   print(dbgs());
 }
 #endif
 
-/// Adds the default features for the specified target triple.
-///
-/// FIXME: This is an inelegant way of specifying the features of a
-/// subtarget. It would be better if we could encode this information
-/// into the IR. See <rdar://5972456>.
-///
 void SubtargetFeatures::getDefaultSubtargetFeatures(const Triple& Triple) {
+  // FIXME: This is an inelegant way of specifying the features of a
+  // subtarget. It would be better if we could encode this information
+  // into the IR. See <rdar://5972456>.
   if (Triple.getVendor() == Triple::Apple) {
     if (Triple.getArch() == Triple::ppc) {
       // powerpc-apple-*

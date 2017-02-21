@@ -2074,13 +2074,10 @@ Decl *TemplateDeclInstantiator::VisitTemplateTypeParmDecl(
   // TODO: don't always clone when decls are refcounted.
   assert(D->getTypeForDecl()->isTemplateTypeParmType());
 
-  TemplateTypeParmDecl *Inst =
-    TemplateTypeParmDecl::Create(SemaRef.Context, Owner,
-                                 D->getLocStart(), D->getLocation(),
-                                 D->getDepth() - TemplateArgs.getNumLevels(),
-                                 D->getIndex(), D->getIdentifier(),
-                                 D->wasDeclaredWithTypename(),
-                                 D->isParameterPack());
+  TemplateTypeParmDecl *Inst = TemplateTypeParmDecl::Create(
+      SemaRef.Context, Owner, D->getLocStart(), D->getLocation(),
+      D->getDepth() - TemplateArgs.getNumSubstitutedLevels(), D->getIndex(),
+      D->getIdentifier(), D->wasDeclaredWithTypename(), D->isParameterPack());
   Inst->setAccess(AS_public);
 
   if (D->hasDefaultArgument() && !D->defaultArgumentWasInherited()) {
@@ -2218,17 +2215,14 @@ Decl *TemplateDeclInstantiator::VisitNonTypeTemplateParmDecl(
   if (IsExpandedParameterPack)
     Param = NonTypeTemplateParmDecl::Create(
         SemaRef.Context, Owner, D->getInnerLocStart(), D->getLocation(),
-        D->getDepth() - TemplateArgs.getNumLevels(), D->getPosition(),
-        D->getIdentifier(), T, DI, ExpandedParameterPackTypes,
+        D->getDepth() - TemplateArgs.getNumSubstitutedLevels(),
+        D->getPosition(), D->getIdentifier(), T, DI, ExpandedParameterPackTypes,
         ExpandedParameterPackTypesAsWritten);
   else
-    Param = NonTypeTemplateParmDecl::Create(SemaRef.Context, Owner,
-                                            D->getInnerLocStart(),
-                                            D->getLocation(),
-                                    D->getDepth() - TemplateArgs.getNumLevels(),
-                                            D->getPosition(),
-                                            D->getIdentifier(), T,
-                                            D->isParameterPack(), DI);
+    Param = NonTypeTemplateParmDecl::Create(
+        SemaRef.Context, Owner, D->getInnerLocStart(), D->getLocation(),
+        D->getDepth() - TemplateArgs.getNumSubstitutedLevels(),
+        D->getPosition(), D->getIdentifier(), T, D->isParameterPack(), DI);
 
   Param->setAccess(AS_public);
   if (Invalid)
@@ -2349,19 +2343,15 @@ TemplateDeclInstantiator::VisitTemplateTemplateParmDecl(
   // Build the template template parameter.
   TemplateTemplateParmDecl *Param;
   if (IsExpandedParameterPack)
-    Param = TemplateTemplateParmDecl::Create(SemaRef.Context, Owner,
-                                             D->getLocation(),
-                                   D->getDepth() - TemplateArgs.getNumLevels(),
-                                             D->getPosition(),
-                                             D->getIdentifier(), InstParams,
-                                             ExpandedParams);
+    Param = TemplateTemplateParmDecl::Create(
+        SemaRef.Context, Owner, D->getLocation(),
+        D->getDepth() - TemplateArgs.getNumSubstitutedLevels(),
+        D->getPosition(), D->getIdentifier(), InstParams, ExpandedParams);
   else
-    Param = TemplateTemplateParmDecl::Create(SemaRef.Context, Owner,
-                                             D->getLocation(),
-                                   D->getDepth() - TemplateArgs.getNumLevels(),
-                                             D->getPosition(),
-                                             D->isParameterPack(),
-                                             D->getIdentifier(), InstParams);
+    Param = TemplateTemplateParmDecl::Create(
+        SemaRef.Context, Owner, D->getLocation(),
+        D->getDepth() - TemplateArgs.getNumSubstitutedLevels(),
+        D->getPosition(), D->isParameterPack(), D->getIdentifier(), InstParams);
   if (D->hasDefaultArgument() && !D->defaultArgumentWasInherited()) {
     NestedNameSpecifierLoc QualifierLoc =
         D->getDefaultArgument().getTemplateQualifierLoc();

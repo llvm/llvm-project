@@ -13,32 +13,23 @@
 
 using namespace lldb_private;
 
-bool lldb_private::NameMatches(llvm::StringRef name, NameMatchType match_type,
+bool lldb_private::NameMatches(llvm::StringRef name, NameMatch match_type,
                                llvm::StringRef match) {
-  if (match_type == eNameMatchIgnore)
-    return true;
-
-  if (name == match)
-    return true;
-
-  if (name.empty() || match.empty())
-    return false;
-
   switch (match_type) {
-  case eNameMatchIgnore: // This case cannot occur: tested before
+  case NameMatch::Ignore:
     return true;
-  case eNameMatchEquals:
+  case NameMatch::Equals:
     return name == match;
-  case eNameMatchContains:
+  case NameMatch::Contains:
     return name.contains(match);
-  case eNameMatchStartsWith:
+  case NameMatch::StartsWith:
     return name.startswith(match);
-  case eNameMatchEndsWith:
+  case NameMatch::EndsWith:
     return name.endswith(match);
-  case eNameMatchRegularExpression: {
+  case NameMatch::RegularExpression: {
     RegularExpression regex(match);
     return regex.Execute(name);
-  } break;
+  }
   }
   return false;
 }

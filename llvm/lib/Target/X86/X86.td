@@ -263,6 +263,15 @@ def FeatureFastLZCNT
           "fast-lzcnt", "HasFastLZCNT", "true",
           "LZCNT instructions are as fast as most simple integer ops">;
 
+
+// Sandy Bridge and newer processors can use SHLD with the same source on both
+// inputs to implement rotate to avoid the partial flag update of the normal
+// rotate instructions.
+def FeatureFastSHLDRotate
+    : SubtargetFeature<
+          "fast-shld-rotate", "HasFastSHLDRotate", "true",
+          "SHLD can be used as a faster rotate">;
+
 //===----------------------------------------------------------------------===//
 // X86 processors supported.
 //===----------------------------------------------------------------------===//
@@ -458,7 +467,8 @@ def SNBFeatures : ProcessorFeatures<[], [
   FeatureXSAVE,
   FeatureXSAVEOPT,
   FeatureLAHFSAHF,
-  FeatureFastScalarFSQRT
+  FeatureFastScalarFSQRT,
+  FeatureFastSHLDRotate
 ]>;
 
 class SandyBridgeProc<string Name> : ProcModel<Name, SandyBridgeModel,
