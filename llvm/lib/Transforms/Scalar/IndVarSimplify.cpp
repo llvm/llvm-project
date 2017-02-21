@@ -2152,6 +2152,8 @@ linearFunctionTestReplace(Loop *L,
   Value *CmpIndVar = IndVar;
   const SCEV *IVCount = BackedgeTakenCount;
 
+  assert(L->getLoopLatch() && "Loop no longer in simplified form?");
+
   // If the exiting block is the same as the backedge block, we prefer to
   // compare against the post-incremented value, otherwise we must compare
   // against the preincremented value.
@@ -2376,6 +2378,7 @@ bool IndVarSimplify::run(Loop *L) {
   //    Loop::getCanonicalInductionVariable only supports loops with preheaders,
   //    and we're in trouble if we can't find the induction variable even when
   //    we've manually inserted one.
+  //  - LFTR relies on having a single backedge.
   if (!L->isLoopSimplifyForm())
     return false;
 

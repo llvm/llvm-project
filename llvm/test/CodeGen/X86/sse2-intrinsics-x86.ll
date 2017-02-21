@@ -1712,3 +1712,34 @@ define void @test_x86_sse2_pause() {
   ret void
 }
 declare void @llvm.x86.sse2.pause() nounwind
+
+define void @lfence() nounwind {
+; CHECK-LABEL: lfence:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    lfence ## encoding: [0x0f,0xae,0xe8]
+; CHECK-NEXT:    retl ## encoding: [0xc3]
+  tail call void @llvm.x86.sse2.lfence()
+  ret void
+}
+declare void @llvm.x86.sse2.lfence() nounwind
+
+define void @mfence() nounwind {
+; CHECK-LABEL: mfence:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    mfence ## encoding: [0x0f,0xae,0xf0]
+; CHECK-NEXT:    retl ## encoding: [0xc3]
+  tail call void @llvm.x86.sse2.mfence()
+  ret void
+}
+declare void @llvm.x86.sse2.mfence() nounwind
+
+define void @clflush(i8* %p) nounwind {
+; CHECK-LABEL: clflush:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
+; CHECK-NEXT:    clflush (%eax) ## encoding: [0x0f,0xae,0x38]
+; CHECK-NEXT:    retl ## encoding: [0xc3]
+  tail call void @llvm.x86.sse2.clflush(i8* %p)
+  ret void
+}
+declare void @llvm.x86.sse2.clflush(i8*) nounwind

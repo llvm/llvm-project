@@ -10529,13 +10529,11 @@ static SDValue lowerV8I16GeneralSingleInputVectorShuffle(
   MutableArrayRef<int> HiMask = Mask.slice(4, 4);
 
   SmallVector<int, 4> LoInputs;
-  std::copy_if(LoMask.begin(), LoMask.end(), std::back_inserter(LoInputs),
-               [](int M) { return M >= 0; });
+  copy_if(LoMask, std::back_inserter(LoInputs), [](int M) { return M >= 0; });
   std::sort(LoInputs.begin(), LoInputs.end());
   LoInputs.erase(std::unique(LoInputs.begin(), LoInputs.end()), LoInputs.end());
   SmallVector<int, 4> HiInputs;
-  std::copy_if(HiMask.begin(), HiMask.end(), std::back_inserter(HiInputs),
-               [](int M) { return M >= 0; });
+  copy_if(HiMask, std::back_inserter(HiInputs), [](int M) { return M >= 0; });
   std::sort(HiInputs.begin(), HiInputs.end());
   HiInputs.erase(std::unique(HiInputs.begin(), HiInputs.end()), HiInputs.end());
   int NumLToL =
@@ -11272,14 +11270,13 @@ static SDValue lowerV16I8VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
       if (!canWidenViaDuplication(Mask))
         return SDValue();
       SmallVector<int, 4> LoInputs;
-      std::copy_if(Mask.begin(), Mask.end(), std::back_inserter(LoInputs),
-                   [](int M) { return M >= 0 && M < 8; });
+      copy_if(Mask, std::back_inserter(LoInputs),
+              [](int M) { return M >= 0 && M < 8; });
       std::sort(LoInputs.begin(), LoInputs.end());
       LoInputs.erase(std::unique(LoInputs.begin(), LoInputs.end()),
                      LoInputs.end());
       SmallVector<int, 4> HiInputs;
-      std::copy_if(Mask.begin(), Mask.end(), std::back_inserter(HiInputs),
-                   [](int M) { return M >= 8; });
+      copy_if(Mask, std::back_inserter(HiInputs), [](int M) { return M >= 8; });
       std::sort(HiInputs.begin(), HiInputs.end());
       HiInputs.erase(std::unique(HiInputs.begin(), HiInputs.end()),
                      HiInputs.end());
@@ -13776,24 +13773,36 @@ X86TargetLowering::LowerEXTRACT_VECTOR_ELT(SDValue Op,
     return ExtractBitFromMaskVector(Op, DAG);
 
   if (!isa<ConstantSDNode>(Idx)) {
-    if (VecVT.is512BitVector() ||
-        (VecVT.is256BitVector() && Subtarget.hasInt256() &&
-         VecVT.getScalarSizeInBits() == 32)) {
+    // Its more profitable to go through memory (1 cycles throughput)
+    // than using VMOVD + VPERMV/PSHUFB sequence ( 2/3 cycles throughput)
+    // IACA tool was used to get performace estimation
+    // (https://software.intel.com/en-us/articles/intel-architecture-code-analyzer)
+    //
+    // exmample : extractelement <16 x i8> %a, i32 %i
+    //
+    // Block Throughput: 3.00 Cycles
+    // Throughput Bottleneck: Port5
+    //
+    // | Num Of |   Ports pressure in cycles  |    |
+    // |  Uops  |  0  - DV  |  5  |  6  |  7  |    |
+    // ---------------------------------------------
+    // |   1    |           | 1.0 |     |     | CP | vmovd xmm1, edi
+    // |   1    |           | 1.0 |     |     | CP | vpshufb xmm0, xmm0, xmm1
+    // |   2    | 1.0       | 1.0 |     |     | CP | vpextrb eax, xmm0, 0x0
+    // Total Num Of Uops: 4
+    //
+    //
+    // Block Throughput: 1.00 Cycles
+    // Throughput Bottleneck: PORT2_AGU, PORT3_AGU, Port4
+    //
+    // |    |  Ports pressure in cycles   |  |
+    // |Uops| 1 | 2 - D  |3 -  D  | 4 | 5 |  |
+    // ---------------------------------------------------------
+    // |2^  |   | 0.5    | 0.5    |1.0|   |CP| vmovaps xmmword ptr [rsp-0x18], xmm0
+    // |1   |0.5|        |        |   |0.5|  | lea rax, ptr [rsp-0x18]
+    // |1   |   |0.5, 0.5|0.5, 0.5|   |   |CP| mov al, byte ptr [rdi+rax*1]
+    // Total Num Of Uops: 4
 
-      MVT MaskEltVT =
-        MVT::getIntegerVT(VecVT.getScalarSizeInBits());
-      MVT MaskVT = MVT::getVectorVT(MaskEltVT, VecVT.getSizeInBits() /
-                                    MaskEltVT.getSizeInBits());
-
-      Idx = DAG.getZExtOrTrunc(Idx, dl, MaskEltVT);
-      auto PtrVT = getPointerTy(DAG.getDataLayout());
-      SDValue Mask = DAG.getNode(X86ISD::VINSERT, dl, MaskVT,
-                                 getZeroVector(MaskVT, Subtarget, DAG, dl), Idx,
-                                 DAG.getConstant(0, dl, PtrVT));
-      SDValue Perm = DAG.getNode(X86ISD::VPERMV, dl, VecVT, Mask, Vec);
-      return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, Op.getValueType(), Perm,
-                         DAG.getConstant(0, dl, PtrVT));
-    }
     return SDValue();
   }
 
@@ -21387,7 +21396,7 @@ static bool SupportedVectorShiftWithImm(MVT VT, const X86Subtarget &Subtarget,
   bool LShift = VT.is128BitVector() ||
     (VT.is256BitVector() && Subtarget.hasInt256());
 
-  bool AShift = LShift && (Subtarget.hasVLX() ||
+  bool AShift = LShift && (Subtarget.hasAVX512() ||
     (VT != MVT::v2i64 && VT != MVT::v4i64));
   return (Opcode == ISD::SRA) ? AShift : LShift;
 }
@@ -23898,7 +23907,7 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case X86ISD::FMAXC:              return "X86ISD::FMAXC";
   case X86ISD::FMINC:              return "X86ISD::FMINC";
   case X86ISD::FRSQRT:             return "X86ISD::FRSQRT";
-  case X86ISD::FRSQRTS:             return "X86ISD::FRSQRTS";
+  case X86ISD::FRSQRTS:            return "X86ISD::FRSQRTS";
   case X86ISD::FRCP:               return "X86ISD::FRCP";
   case X86ISD::FRCPS:              return "X86ISD::FRCPS";
   case X86ISD::EXTRQI:             return "X86ISD::EXTRQI";
@@ -23937,7 +23946,6 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case X86ISD::VTRUNCSTOREUS:      return "X86ISD::VTRUNCSTOREUS";
   case X86ISD::VMTRUNCSTORES:      return "X86ISD::VMTRUNCSTORES";
   case X86ISD::VMTRUNCSTOREUS:     return "X86ISD::VMTRUNCSTOREUS";
-  case X86ISD::VINSERT:            return "X86ISD::VINSERT";
   case X86ISD::VFPEXT:             return "X86ISD::VFPEXT";
   case X86ISD::VFPEXT_RND:         return "X86ISD::VFPEXT_RND";
   case X86ISD::VFPEXTS_RND:        return "X86ISD::VFPEXTS_RND";
@@ -28857,15 +28865,16 @@ static SDValue combineExtractVectorElt(SDNode *N, SelectionDAG &DAG,
   if (SDValue NewOp = XFormVExtractWithShuffleIntoLoad(N, DAG, DCI))
     return NewOp;
 
-  EVT VT = N->getValueType(0);
   SDValue InputVector = N->getOperand(0);
+  SDValue EltIdx = N->getOperand(1);
+
+  EVT SrcVT = InputVector.getValueType();
+  EVT VT = N->getValueType(0);
   SDLoc dl(InputVector);
 
   // Detect mmx to i32 conversion through a v2i32 elt extract.
   if (InputVector.getOpcode() == ISD::BITCAST && InputVector.hasOneUse() &&
-      VT == MVT::i32 && InputVector.getValueType() == MVT::v2i32 &&
-      isa<ConstantSDNode>(N->getOperand(1)) &&
-      N->getConstantOperandVal(1) == 0) {
+      VT == MVT::i32 && SrcVT == MVT::v2i32 && isNullConstant(EltIdx)) {
     SDValue MMXSrc = InputVector.getOperand(0);
 
     // The bitcast source is a direct mmx result.
@@ -28874,7 +28883,7 @@ static SDValue combineExtractVectorElt(SDNode *N, SelectionDAG &DAG,
   }
 
   if (VT == MVT::i1 && InputVector.getOpcode() == ISD::BITCAST &&
-      isa<ConstantSDNode>(N->getOperand(1)) &&
+      isa<ConstantSDNode>(EltIdx) &&
       isa<ConstantSDNode>(InputVector.getOperand(0))) {
     uint64_t ExtractedElt = N->getConstantOperandVal(1);
     uint64_t InputValue = InputVector.getConstantOperandVal(0);
@@ -28894,7 +28903,7 @@ static SDValue combineExtractVectorElt(SDNode *N, SelectionDAG &DAG,
 
   // Only operate on vectors of 4 elements, where the alternative shuffling
   // gets to be more expensive.
-  if (InputVector.getValueType() != MVT::v4i32)
+  if (SrcVT != MVT::v4i32)
     return SDValue();
 
   // Check whether every use of InputVector is an EXTRACT_VECTOR_ELT with a
@@ -28955,11 +28964,11 @@ static SDValue combineExtractVectorElt(SDNode *N, SelectionDAG &DAG,
       DAG.getNode(ISD::SRA, dl, MVT::i64, TopHalf, ShAmt));
   } else {
     // Store the value to a temporary stack slot.
-    SDValue StackPtr = DAG.CreateStackTemporary(InputVector.getValueType());
+    SDValue StackPtr = DAG.CreateStackTemporary(SrcVT);
     SDValue Ch = DAG.getStore(DAG.getEntryNode(), dl, InputVector, StackPtr,
                               MachinePointerInfo());
 
-    EVT ElementType = InputVector.getValueType().getVectorElementType();
+    EVT ElementType = SrcVT.getVectorElementType();
     unsigned EltSize = ElementType.getSizeInBits() / 8;
 
     // Replace each use (extract) with a load of the appropriate element.

@@ -36,6 +36,7 @@
 #include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/ScopedPrinter.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
@@ -45,7 +46,8 @@ using namespace llvm;
 #define DEBUG_TYPE "gisel-emitter"
 
 STATISTIC(NumPatternTotal, "Total number of patterns");
-STATISTIC(NumPatternSkipped, "Number of patterns skipped");
+STATISTIC(NumPatternImported, "Number of patterns imported from SelectionDAG");
+STATISTIC(NumPatternImportsSkipped, "Number of SelectionDAG imports skipped");
 STATISTIC(NumPatternEmitted, "Number of patterns emitted");
 
 static cl::opt<bool> WarnOnSkippedPatterns(
@@ -55,7 +57,6 @@ static cl::opt<bool> WarnOnSkippedPatterns(
     cl::init(false));
 
 namespace {
-class RuleMatcher;
 
 //===- Helper functions ---------------------------------------------------===//
 
@@ -131,10 +132,9 @@ class OperandPredicateMatcher {
 public:
   virtual ~OperandPredicateMatcher() {}
 
-  /// Emit a C++ expression that checks the predicate for the OpIdx operand of
-  /// the instruction given in InsnVarName.
-  virtual void emitCxxPredicateExpr(raw_ostream &OS, StringRef InsnVarName,
-                                    unsigned OpIdx) const = 0;
+  /// Emit a C++ expression that checks the predicate for the given operand.
+  virtual void emitCxxPredicateExpr(raw_ostream &OS,
+                                    StringRef OperandExpr) const = 0;
 };
 
 /// Generates code to check that an operand is a particular LLT.
@@ -145,10 +145,9 @@ protected:
 public:
   LLTOperandMatcher(std::string Ty) : Ty(Ty) {}
 
-  void emitCxxPredicateExpr(raw_ostream &OS, StringRef InsnVarName,
-                            unsigned OpIdx) const override {
-    OS << "MRI.getType(" << InsnVarName << ".getOperand(" << OpIdx
-       << ").getReg()) == (" << Ty << ")";
+  void emitCxxPredicateExpr(raw_ostream &OS,
+                            StringRef OperandExpr) const override {
+    OS << "MRI.getType(" << OperandExpr << ".getReg()) == (" << Ty << ")";
   }
 };
 
@@ -160,20 +159,20 @@ protected:
 public:
   RegisterBankOperandMatcher(const CodeGenRegisterClass &RC) : RC(RC) {}
 
-  void emitCxxPredicateExpr(raw_ostream &OS, StringRef InsnVarName,
-                            unsigned OpIdx) const override {
+  void emitCxxPredicateExpr(raw_ostream &OS,
+                            StringRef OperandExpr) const override {
     OS << "(&RBI.getRegBankFromRegClass(" << RC.getQualifiedName()
-       << "RegClass) == RBI.getRegBank(" << InsnVarName << ".getOperand("
-       << OpIdx << ").getReg(), MRI, TRI))";
+       << "RegClass) == RBI.getRegBank(" << OperandExpr
+       << ".getReg(), MRI, TRI))";
   }
 };
 
 /// Generates code to check that an operand is a basic block.
 class MBBOperandMatcher : public OperandPredicateMatcher {
 public:
-  void emitCxxPredicateExpr(raw_ostream &OS, StringRef InsnVarName,
-                            unsigned OpIdx) const override {
-    OS << InsnVarName << ".getOperand(" << OpIdx << ").isMBB()";
+  void emitCxxPredicateExpr(raw_ostream &OS,
+                            StringRef OperandExpr) const override {
+    OS << OperandExpr << ".isMBB()";
   }
 };
 
@@ -185,12 +184,15 @@ protected:
 
 public:
   OperandMatcher(unsigned OpIdx) : OpIdx(OpIdx) {}
+  std::string getOperandExpr(StringRef InsnVarName) const {
+    return (InsnVarName + ".getOperand(" + llvm::to_string(OpIdx) + ")").str();
+  }
 
   /// Emit a C++ expression that tests whether the instruction named in
   /// InsnVarName matches all the predicate and all the operands.
   void emitCxxPredicateExpr(raw_ostream &OS, StringRef InsnVarName) const {
-    OS << "(";
-    emitCxxPredicateListExpr(OS, InsnVarName, OpIdx);
+    OS << "(/* Operand " << OpIdx << " */ ";
+    emitCxxPredicateListExpr(OS, getOperandExpr(InsnVarName));
     OS << ")";
   }
 };
@@ -322,7 +324,7 @@ public:
     return *static_cast<Kind *>(Actions.back().get());
   }
 
-  void emit(raw_ostream &OS) {
+  void emit(raw_ostream &OS) const {
     if (Matchers.empty())
       llvm_unreachable("Unexpected empty matcher!");
 
@@ -516,6 +518,7 @@ Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
   }
 
   // We're done with this pattern!  It's eligible for GISel emission; return it.
+  ++NumPatternImported;
   return std::move(M);
 }
 
@@ -530,6 +533,7 @@ void GlobalISelEmitter::run(raw_ostream &OS) {
         "(MachineInstr &I) const {\n  const MachineRegisterInfo &MRI = "
         "I.getParent()->getParent()->getRegInfo();\n\n";
 
+  std::vector<RuleMatcher> Rules;
   // Look through the SelectionDAG patterns we found, possibly emitting some.
   for (const PatternToMatch &Pat : CGP.ptms()) {
     ++NumPatternTotal;
@@ -544,11 +548,15 @@ void GlobalISelEmitter::run(raw_ostream &OS) {
       } else {
         consumeError(std::move(Err));
       }
-      ++NumPatternSkipped;
+      ++NumPatternImportsSkipped;
       continue;
     }
 
-    MatcherOrErr->emit(OS);
+    Rules.push_back(std::move(MatcherOrErr.get()));
+  }
+
+  for (const auto &Rule : Rules) {
+    Rule.emit(OS);
     ++NumPatternEmitted;
   }
 

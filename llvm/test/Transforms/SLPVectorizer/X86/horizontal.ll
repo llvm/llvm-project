@@ -812,3 +812,98 @@ entry:
   ret void
 }
 
+declare i32 @foobar(i32)
+
+define void @i32_red_call(i32 %val) {
+; CHECK-LABEL: @i32_red_call(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 0), align 16
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 1), align 4
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP1]], [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 2), align 8
+; CHECK-NEXT:    [[ADD_1:%.*]] = add nsw i32 [[TMP2]], [[ADD]]
+; CHECK-NEXT:    [[TMP3:%.*]] = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 3), align 4
+; CHECK-NEXT:    [[ADD_2:%.*]] = add nsw i32 [[TMP3]], [[ADD_1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 4), align 16
+; CHECK-NEXT:    [[ADD_3:%.*]] = add nsw i32 [[TMP4]], [[ADD_2]]
+; CHECK-NEXT:    [[TMP5:%.*]] = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 5), align 4
+; CHECK-NEXT:    [[ADD_4:%.*]] = add nsw i32 [[TMP5]], [[ADD_3]]
+; CHECK-NEXT:    [[TMP6:%.*]] = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 6), align 8
+; CHECK-NEXT:    [[ADD_5:%.*]] = add nsw i32 [[TMP6]], [[ADD_4]]
+; CHECK-NEXT:    [[TMP7:%.*]] = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 7), align 4
+; CHECK-NEXT:    [[ADD_6:%.*]] = add nsw i32 [[TMP7]], [[ADD_5]]
+; CHECK-NEXT:    [[RES:%.*]] = call i32 @foobar(i32 [[ADD_6]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  %0 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 0), align 16
+  %1 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 1), align 4
+  %add = add nsw i32 %1, %0
+  %2 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 2), align 8
+  %add.1 = add nsw i32 %2, %add
+  %3 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 3), align 4
+  %add.2 = add nsw i32 %3, %add.1
+  %4 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 4), align 16
+  %add.3 = add nsw i32 %4, %add.2
+  %5 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 5), align 4
+  %add.4 = add nsw i32 %5, %add.3
+  %6 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 6), align 8
+  %add.5 = add nsw i32 %6, %add.4
+  %7 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 7), align 4
+  %add.6 = add nsw i32 %7, %add.5
+  %res = call i32 @foobar(i32 %add.6)
+  ret void
+}
+
+define void @i32_red_invoke(i32 %val) personality i32 (...)* @__gxx_personality_v0 {
+; CHECK-LABEL: @i32_red_invoke(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 0), align 16
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 1), align 4
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP1]], [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 2), align 8
+; CHECK-NEXT:    [[ADD_1:%.*]] = add nsw i32 [[TMP2]], [[ADD]]
+; CHECK-NEXT:    [[TMP3:%.*]] = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 3), align 4
+; CHECK-NEXT:    [[ADD_2:%.*]] = add nsw i32 [[TMP3]], [[ADD_1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 4), align 16
+; CHECK-NEXT:    [[ADD_3:%.*]] = add nsw i32 [[TMP4]], [[ADD_2]]
+; CHECK-NEXT:    [[TMP5:%.*]] = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 5), align 4
+; CHECK-NEXT:    [[ADD_4:%.*]] = add nsw i32 [[TMP5]], [[ADD_3]]
+; CHECK-NEXT:    [[TMP6:%.*]] = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 6), align 8
+; CHECK-NEXT:    [[ADD_5:%.*]] = add nsw i32 [[TMP6]], [[ADD_4]]
+; CHECK-NEXT:    [[TMP7:%.*]] = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 7), align 4
+; CHECK-NEXT:    [[ADD_6:%.*]] = add nsw i32 [[TMP7]], [[ADD_5]]
+; CHECK-NEXT:    [[RES:%.*]] = invoke i32 @foobar(i32 [[ADD_6]])
+; CHECK-NEXT:    to label [[NORMAL:%.*]] unwind label [[EXCEPTION:%.*]]
+; CHECK:       exception:
+; CHECK-NEXT:    [[CLEANUP:%.*]] = landingpad i8
+; CHECK-NEXT:    cleanup
+; CHECK-NEXT:    br label [[NORMAL]]
+; CHECK:       normal:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %0 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 0), align 16
+  %1 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 1), align 4
+  %add = add nsw i32 %1, %0
+  %2 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 2), align 8
+  %add.1 = add nsw i32 %2, %add
+  %3 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 3), align 4
+  %add.2 = add nsw i32 %3, %add.1
+  %4 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 4), align 16
+  %add.3 = add nsw i32 %4, %add.2
+  %5 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 5), align 4
+  %add.4 = add nsw i32 %5, %add.3
+  %6 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 6), align 8
+  %add.5 = add nsw i32 %6, %add.4
+  %7 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr_i32, i64 0, i64 7), align 4
+  %add.6 = add nsw i32 %7, %add.5
+  %res = invoke i32 @foobar(i32 %add.6) to label %normal unwind label %exception
+exception:
+  %cleanup = landingpad i8 cleanup
+  br label %normal
+normal:
+  ret void
+}
+
+declare i32 @__gxx_personality_v0(...)

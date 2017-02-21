@@ -134,6 +134,12 @@ static cl::opt<bool> InsnsCost(
   "lsr-insns-cost", cl::Hidden, cl::init(false),
   cl::desc("Add instruction count to a LSR cost model"));
 
+// Flag to choose how to narrow complex lsr solution
+static cl::opt<bool> LSRExpNarrow(
+  "lsr-exp-narrow", cl::Hidden, cl::init(true),
+  cl::desc("Narrow LSR complex solution using"
+           " expectation of registers number"));
+
 #ifndef NDEBUG
 // Stress test IV chain generation.
 static cl::opt<bool> StressIVChain(
@@ -1095,6 +1101,7 @@ public:
   }
   
   bool HasFormulaWithSameRegs(const Formula &F) const;
+  float getNotSelectedProbability(const SCEV *Reg) const;
   bool InsertFormula(const Formula &F);
   void DeleteFormula(Formula &F);
   void RecomputeRegs(size_t LUIdx, RegUseTracker &Reguses);
@@ -1371,6 +1378,15 @@ bool LSRUse::HasFormulaWithSameRegs(const Formula &F) const {
   // Unstable sort by host order ok, because this is only used for uniquifying.
   std::sort(Key.begin(), Key.end());
   return Uniquifier.count(Key);
+}
+
+/// The function returns a probability of selecting formula without Reg.
+float LSRUse::getNotSelectedProbability(const SCEV *Reg) const {
+  unsigned FNum = 0;
+  for (const Formula &F : Formulae)
+    if (F.referencesReg(Reg))
+      FNum++;
+  return ((float)(Formulae.size() - FNum)) / Formulae.size();
 }
 
 /// If the given formula has not yet been inserted, add it to the list, and
@@ -1846,6 +1862,7 @@ class LSRInstance {
   void NarrowSearchSpaceByDetectingSupersets();
   void NarrowSearchSpaceByCollapsingUnrolledCode();
   void NarrowSearchSpaceByRefilteringUndesirableDedicatedRegisters();
+  void NarrowSearchSpaceByDeletingCostlyFormulas();
   void NarrowSearchSpaceByPickingWinnerRegs();
   void NarrowSearchSpaceUsingHeuristics();
 
@@ -4247,6 +4264,144 @@ void LSRInstance::NarrowSearchSpaceByRefilteringUndesirableDedicatedRegisters(){
   }
 }
 
+/// The function delete formulas with high registers number expectation.
+/// Assuming we don't know the value of each formula (already delete
+/// all inefficient), generate probability of not selecting for each
+/// register.
+/// For example,
+/// Use1:
+///  reg(a) + reg({0,+,1})
+///  reg(a) + reg({-1,+,1}) + 1
+///  reg({a,+,1})
+/// Use2:
+///  reg(b) + reg({0,+,1})
+///  reg(b) + reg({-1,+,1}) + 1
+///  reg({b,+,1})
+/// Use3:
+///  reg(c) + reg(b) + reg({0,+,1})
+///  reg(c) + reg({b,+,1})
+///
+/// Probability of not selecting
+///                 Use1   Use2    Use3
+/// reg(a)         (1/3) *   1   *   1
+/// reg(b)           1   * (1/3) * (1/2)
+/// reg({0,+,1})   (2/3) * (2/3) * (1/2)
+/// reg({-1,+,1})  (2/3) * (2/3) *   1
+/// reg({a,+,1})   (2/3) *   1   *   1
+/// reg({b,+,1})     1   * (2/3) * (2/3)
+/// reg(c)           1   *   1   *   0
+///
+/// Now count registers number mathematical expectation for each formula:
+/// Note that for each use we exclude probability if not selecting for the use.
+/// For example for Use1 probability for reg(a) would be just 1 * 1 (excluding
+/// probabilty 1/3 of not selecting for Use1).
+/// Use1:
+///  reg(a) + reg({0,+,1})          1 + 1/3       -- to be deleted
+///  reg(a) + reg({-1,+,1}) + 1     1 + 4/9       -- to be deleted
+///  reg({a,+,1})                   1
+/// Use2:
+///  reg(b) + reg({0,+,1})          1/2 + 1/3     -- to be deleted
+///  reg(b) + reg({-1,+,1}) + 1     1/2 + 2/3     -- to be deleted
+///  reg({b,+,1})                   2/3
+/// Use3:
+///  reg(c) + reg(b) + reg({0,+,1}) 1 + 1/3 + 4/9 -- to be deleted
+///  reg(c) + reg({b,+,1})          1 + 2/3
+
+void LSRInstance::NarrowSearchSpaceByDeletingCostlyFormulas() {
+  if (EstimateSearchSpaceComplexity() < ComplexityLimit)
+    return;
+  // Ok, we have too many of formulae on our hands to conveniently handle.
+  // Use a rough heuristic to thin out the list.
+
+  // Set of Regs wich will be 100% used in final solution.
+  // Used in each formula of a solution (in example above this is reg(c)).
+  // We can skip them in calculations.
+  SmallPtrSet<const SCEV *, 4> UniqRegs;
+  DEBUG(dbgs() << "The search space is too complex.\n");
+
+  // Map each register to probability of not selecting
+  DenseMap <const SCEV *, float> RegNumMap;
+  for (const SCEV *Reg : RegUses) {
+    if (UniqRegs.count(Reg))
+      continue;
+    float PNotSel = 1;
+    for (const LSRUse &LU : Uses) {
+      if (!LU.Regs.count(Reg))
+        continue;
+      float P = LU.getNotSelectedProbability(Reg);
+      if (P != 0.0)
+        PNotSel *= P;
+      else
+        UniqRegs.insert(Reg);
+    }
+    RegNumMap.insert(std::make_pair(Reg, PNotSel));
+  }
+
+  DEBUG(dbgs() << "Narrowing the search space by deleting costly formulas\n");
+
+  // Delete formulas where registers number expectation is high.
+  for (size_t LUIdx = 0, NumUses = Uses.size(); LUIdx != NumUses; ++LUIdx) {
+    LSRUse &LU = Uses[LUIdx];
+    // If nothing to delete - continue.
+    if (LU.Formulae.size() < 2)
+      continue;
+    // This is temporary solution to test performance. Float should be
+    // replaced with round independent type (based on integers) to avoid
+    // different results for different target builds.
+    float FMinRegNum = LU.Formulae[0].getNumRegs();
+    float FMinARegNum = LU.Formulae[0].getNumRegs();
+    size_t MinIdx = 0;
+    for (size_t i = 0, e = LU.Formulae.size(); i != e; ++i) {
+      Formula &F = LU.Formulae[i];
+      float FRegNum = 0;
+      float FARegNum = 0;
+      for (const SCEV *BaseReg : F.BaseRegs) {
+        if (UniqRegs.count(BaseReg))
+          continue;
+        FRegNum += RegNumMap[BaseReg] / LU.getNotSelectedProbability(BaseReg);
+        if (isa<SCEVAddRecExpr>(BaseReg))
+          FARegNum +=
+              RegNumMap[BaseReg] / LU.getNotSelectedProbability(BaseReg);
+      }
+      if (const SCEV *ScaledReg = F.ScaledReg) {
+        if (!UniqRegs.count(ScaledReg)) {
+          FRegNum +=
+              RegNumMap[ScaledReg] / LU.getNotSelectedProbability(ScaledReg);
+          if (isa<SCEVAddRecExpr>(ScaledReg))
+            FARegNum +=
+                RegNumMap[ScaledReg] / LU.getNotSelectedProbability(ScaledReg);
+        }
+      }
+      if (FMinRegNum > FRegNum ||
+          (FMinRegNum == FRegNum && FMinARegNum > FARegNum)) {
+        FMinRegNum = FRegNum;
+        FMinARegNum = FARegNum;
+        MinIdx = i;
+      }
+    }
+    DEBUG(dbgs() << "  The formula "; LU.Formulae[MinIdx].print(dbgs());
+          dbgs() << " with min reg num " << FMinRegNum << '\n');
+    if (MinIdx != 0)
+      std::swap(LU.Formulae[MinIdx], LU.Formulae[0]);
+    while (LU.Formulae.size() != 1) {
+      DEBUG(dbgs() << "  Deleting "; LU.Formulae.back().print(dbgs());
+            dbgs() << '\n');
+      LU.Formulae.pop_back();
+    }
+    LU.RecomputeRegs(LUIdx, RegUses);
+    assert(LU.Formulae.size() == 1 && "Should be exactly 1 min regs formula");
+    Formula &F = LU.Formulae[0];
+    DEBUG(dbgs() << "  Leaving only "; F.print(dbgs()); dbgs() << '\n');
+    // When we choose the formula, the regs become unique.
+    UniqRegs.insert(F.BaseRegs.begin(), F.BaseRegs.end());
+    if (F.ScaledReg)
+      UniqRegs.insert(F.ScaledReg);
+  }
+  DEBUG(dbgs() << "After pre-selection:\n";
+  print_uses(dbgs()));
+}
+
+
 /// Pick a register which seems likely to be profitable, and then in any use
 /// which has any reference to that register, delete all formulae which do not
 /// reference that register.
@@ -4319,7 +4474,10 @@ void LSRInstance::NarrowSearchSpaceUsingHeuristics() {
   NarrowSearchSpaceByDetectingSupersets();
   NarrowSearchSpaceByCollapsingUnrolledCode();
   NarrowSearchSpaceByRefilteringUndesirableDedicatedRegisters();
-  NarrowSearchSpaceByPickingWinnerRegs();
+  if (LSRExpNarrow)
+    NarrowSearchSpaceByDeletingCostlyFormulas();
+  else
+    NarrowSearchSpaceByPickingWinnerRegs();
 }
 
 /// This is the recursive solver.

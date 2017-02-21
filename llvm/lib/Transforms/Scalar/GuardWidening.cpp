@@ -568,8 +568,7 @@ bool GuardWideningImpl::combineRangeChecks(
       return RC.getBase() == CurrentBase && RC.getLength() == CurrentLength;
     };
 
-    std::copy_if(Checks.begin(), Checks.end(),
-                 std::back_inserter(CurrentChecks), IsCurrentCheck);
+    copy_if(Checks, std::back_inserter(CurrentChecks), IsCurrentCheck);
     Checks.erase(remove_if(Checks, IsCurrentCheck), Checks.end());
 
     assert(CurrentChecks.size() != 0 && "We know we have at least one!");

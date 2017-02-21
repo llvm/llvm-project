@@ -65,6 +65,11 @@ void DAGTypeLegalizer::ScalarizeVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::SETCC:             R = ScalarizeVecRes_SETCC(N); break;
   case ISD::UNDEF:             R = ScalarizeVecRes_UNDEF(N); break;
   case ISD::VECTOR_SHUFFLE:    R = ScalarizeVecRes_VECTOR_SHUFFLE(N); break;
+  case ISD::ANY_EXTEND_VECTOR_INREG:
+  case ISD::SIGN_EXTEND_VECTOR_INREG:
+  case ISD::ZERO_EXTEND_VECTOR_INREG:
+    R = ScalarizeVecRes_VecInregOp(N);
+    break;
   case ISD::ANY_EXTEND:
   case ISD::BITREVERSE:
   case ISD::BSWAP:
@@ -256,6 +261,34 @@ SDValue DAGTypeLegalizer::ScalarizeVecRes_InregOp(SDNode *N) {
   SDValue LHS = GetScalarizedVector(N->getOperand(0));
   return DAG.getNode(N->getOpcode(), SDLoc(N), EltVT,
                      LHS, DAG.getValueType(ExtVT));
+}
+
+SDValue DAGTypeLegalizer::ScalarizeVecRes_VecInregOp(SDNode *N) {
+  SDLoc DL(N);
+  SDValue Op = N->getOperand(0);
+
+  EVT OpVT = Op.getValueType();
+  EVT OpEltVT = OpVT.getVectorElementType();
+  EVT EltVT = N->getValueType(0).getVectorElementType();
+
+  if (getTypeAction(OpVT) == TargetLowering::TypeScalarizeVector) {
+    Op = GetScalarizedVector(Op);
+  } else {
+    Op = DAG.getNode(
+        ISD::EXTRACT_VECTOR_ELT, DL, OpEltVT, Op,
+        DAG.getConstant(0, DL, TLI.getVectorIdxTy(DAG.getDataLayout())));
+  }
+
+  switch (N->getOpcode()) {
+  case ISD::ANY_EXTEND_VECTOR_INREG:
+    return DAG.getNode(ISD::ANY_EXTEND, DL, EltVT, Op);
+  case ISD::SIGN_EXTEND_VECTOR_INREG:
+    return DAG.getNode(ISD::SIGN_EXTEND, DL, EltVT, Op);
+  case ISD::ZERO_EXTEND_VECTOR_INREG:
+    return DAG.getNode(ISD::ZERO_EXTEND, DL, EltVT, Op);
+  }
+
+  llvm_unreachable("Illegal extend_vector_inreg opcode");
 }
 
 SDValue DAGTypeLegalizer::ScalarizeVecRes_SCALAR_TO_VECTOR(SDNode *N) {
