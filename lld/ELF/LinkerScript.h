@@ -89,8 +89,9 @@ struct BaseCommand {
 
 // This represents ". = <expr>" or "<symbol> = <expr>".
 struct SymbolAssignment : BaseCommand {
-  SymbolAssignment(StringRef Name, Expr E)
-      : BaseCommand(AssignmentKind), Name(Name), Expression(E) {}
+  SymbolAssignment(StringRef Name, Expr E, std::string &&Loc)
+      : BaseCommand(AssignmentKind), Name(Name), Expression(E),
+        Location(std::move(Loc)) {}
 
   static bool classof(const BaseCommand *C);
 
@@ -104,6 +105,8 @@ struct SymbolAssignment : BaseCommand {
   // Command attributes for PROVIDE, HIDDEN and PROVIDE_HIDDEN.
   bool Provide = false;
   bool Hidden = false;
+
+  std::string Location;
 };
 
 // Linker scripts allow additional constraints to be put on ouput sections.
@@ -278,7 +281,7 @@ private:
   void assignSymbol(SymbolAssignment *Cmd, bool InSec = false);
   void addSymbol(SymbolAssignment *Cmd);
   void computeInputSections(InputSectionDescription *);
-  void setDot(Expr E, bool InSec = false);
+  void setDot(Expr E, const Twine &Loc, bool InSec = false);
 
   void discard(ArrayRef<InputSectionBase<ELFT> *> V);
 
@@ -295,7 +298,7 @@ private:
                                  OutputSectionBase *Sec);
 
   uintX_t Dot;
-  uintX_t LMAOffset = 0;
+  std::pair<Expr, uintX_t> CurLMA;
   OutputSectionBase *CurOutSec = nullptr;
   MemoryRegion *CurMemRegion = nullptr;
   uintX_t ThreadBssOffset = 0;

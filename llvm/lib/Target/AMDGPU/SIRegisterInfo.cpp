@@ -24,12 +24,6 @@
 
 using namespace llvm;
 
-static cl::opt<bool> EnableSpillSGPRToSMEM(
-  "amdgpu-spill-sgpr-to-smem",
-  cl::desc("Use scalar stores to spill SGPRs if supported by subtarget"),
-  cl::init(false));
-
-
 static bool hasPressureSet(const int *PSets, unsigned PSetID) {
   for (unsigned i = 0; PSets[i] != -1; ++i) {
     if (PSets[i] == (int)PSetID)
@@ -49,9 +43,28 @@ void SIRegisterInfo::classifyPressureSet(unsigned PSetID, unsigned Reg,
   }
 }
 
-SIRegisterInfo::SIRegisterInfo() : AMDGPURegisterInfo(),
-                                   SGPRPressureSets(getNumRegPressureSets()),
-                                   VGPRPressureSets(getNumRegPressureSets()) {
+static cl::opt<bool> EnableSpillSGPRToSMEM(
+  "amdgpu-spill-sgpr-to-smem",
+  cl::desc("Use scalar stores to spill SGPRs if supported by subtarget"),
+  cl::init(false));
+
+static cl::opt<bool> EnableSpillSGPRToVGPR(
+  "amdgpu-spill-sgpr-to-vgpr",
+  cl::desc("Enable spilling VGPRs to SGPRs"),
+  cl::ReallyHidden,
+  cl::init(true));
+
+SIRegisterInfo::SIRegisterInfo(const SISubtarget &ST) :
+  AMDGPURegisterInfo(),
+  SGPRPressureSets(getNumRegPressureSets()),
+  VGPRPressureSets(getNumRegPressureSets()),
+  SpillSGPRToVGPR(false),
+  SpillSGPRToSMEM(false) {
+  if (EnableSpillSGPRToSMEM && ST.hasScalarStores())
+    SpillSGPRToSMEM = true;
+  else if (EnableSpillSGPRToVGPR)
+    SpillSGPRToVGPR = true;
+
   unsigned NumRegPressureSets = getNumRegPressureSets();
 
   SGPRSetID = NumRegPressureSets;
@@ -557,11 +570,20 @@ static std::pair<unsigned, unsigned> getSpillEltSize(unsigned SuperRegSize,
                       AMDGPU::S_BUFFER_LOAD_DWORD_SGPR};
 }
 
-void SIRegisterInfo::spillSGPR(MachineBasicBlock::iterator MI,
+bool SIRegisterInfo::spillSGPR(MachineBasicBlock::iterator MI,
                                int Index,
-                               RegScavenger *RS) const {
+                               RegScavenger *RS,
+                               bool OnlyToVGPR) const {
   MachineBasicBlock *MBB = MI->getParent();
   MachineFunction *MF = MBB->getParent();
+  SIMachineFunctionInfo *MFI = MF->getInfo<SIMachineFunctionInfo>();
+
+  ArrayRef<SIMachineFunctionInfo::SpilledReg> VGPRSpills
+    = MFI->getSGPRToVGPRSpills(Index);
+  bool SpillToVGPR = !VGPRSpills.empty();
+  if (OnlyToVGPR && !SpillToVGPR)
+    return false;
+
   MachineRegisterInfo &MRI = MF->getRegInfo();
   const SISubtarget &ST =  MF->getSubtarget<SISubtarget>();
   const SIInstrInfo *TII = ST.getInstrInfo();
@@ -570,10 +592,11 @@ void SIRegisterInfo::spillSGPR(MachineBasicBlock::iterator MI,
   bool IsKill = MI->getOperand(0).isKill();
   const DebugLoc &DL = MI->getDebugLoc();
 
-  SIMachineFunctionInfo *MFI = MF->getInfo<SIMachineFunctionInfo>();
   MachineFrameInfo &FrameInfo = MF->getFrameInfo();
 
-  bool SpillToSMEM = ST.hasScalarStores() && EnableSpillSGPRToSMEM;
+  bool SpillToSMEM = spillSGPRToSMEM();
+  if (SpillToSMEM && OnlyToVGPR)
+    return false;
 
   assert(SuperReg != AMDGPU::M0 && "m0 should never spill");
 
@@ -646,9 +669,9 @@ void SIRegisterInfo::spillSGPR(MachineBasicBlock::iterator MI,
       continue;
     }
 
-    struct SIMachineFunctionInfo::SpilledReg Spill =
-      MFI->getSpilledReg(MF, Index, i);
-    if (Spill.hasReg()) {
+    if (SpillToVGPR) {
+      SIMachineFunctionInfo::SpilledReg Spill = VGPRSpills[i];
+
       BuildMI(*MBB, MI, DL,
               TII->getMCOpcodeFromPseudo(AMDGPU::V_WRITELANE_B32),
               Spill.VGPR)
@@ -659,6 +682,10 @@ void SIRegisterInfo::spillSGPR(MachineBasicBlock::iterator MI,
       // frame index, we should delete the frame index when all references to
       // it are fixed.
     } else {
+      // XXX - Can to VGPR spill fail for some subregisters but not others?
+      if (OnlyToVGPR)
+        return false;
+
       // Spill SGPR to a frame index.
       // TODO: Should VI try to spill to VGPR and then spill to SMEM?
       unsigned TmpReg = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
@@ -702,22 +729,33 @@ void SIRegisterInfo::spillSGPR(MachineBasicBlock::iterator MI,
 
   MI->eraseFromParent();
   MFI->addToSpilledSGPRs(NumSubRegs);
+  return true;
 }
 
-void SIRegisterInfo::restoreSGPR(MachineBasicBlock::iterator MI,
+bool SIRegisterInfo::restoreSGPR(MachineBasicBlock::iterator MI,
                                  int Index,
-                                 RegScavenger *RS) const {
+                                 RegScavenger *RS,
+                                 bool OnlyToVGPR) const {
   MachineFunction *MF = MI->getParent()->getParent();
   MachineRegisterInfo &MRI = MF->getRegInfo();
   MachineBasicBlock *MBB = MI->getParent();
   SIMachineFunctionInfo *MFI = MF->getInfo<SIMachineFunctionInfo>();
+
+  ArrayRef<SIMachineFunctionInfo::SpilledReg> VGPRSpills
+    = MFI->getSGPRToVGPRSpills(Index);
+  bool SpillToVGPR = !VGPRSpills.empty();
+  if (OnlyToVGPR && !SpillToVGPR)
+    return false;
+
   MachineFrameInfo &FrameInfo = MF->getFrameInfo();
   const SISubtarget &ST =  MF->getSubtarget<SISubtarget>();
   const SIInstrInfo *TII = ST.getInstrInfo();
   const DebugLoc &DL = MI->getDebugLoc();
 
   unsigned SuperReg = MI->getOperand(0).getReg();
-  bool SpillToSMEM = ST.hasScalarStores() && EnableSpillSGPRToSMEM;
+  bool SpillToSMEM = spillSGPRToSMEM();
+  if (SpillToSMEM && OnlyToVGPR)
+    return false;
 
   assert(SuperReg != AMDGPU::M0 && "m0 should never spill");
 
@@ -785,10 +823,8 @@ void SIRegisterInfo::restoreSGPR(MachineBasicBlock::iterator MI,
       continue;
     }
 
-    SIMachineFunctionInfo::SpilledReg Spill
-      = MFI->getSpilledReg(MF, Index, i);
-
-    if (Spill.hasReg()) {
+    if (SpillToVGPR) {
+      SIMachineFunctionInfo::SpilledReg Spill = VGPRSpills[i];
       auto MIB =
         BuildMI(*MBB, MI, DL, TII->getMCOpcodeFromPseudo(AMDGPU::V_READLANE_B32),
                 SubReg)
@@ -798,6 +834,9 @@ void SIRegisterInfo::restoreSGPR(MachineBasicBlock::iterator MI,
       if (NumSubRegs > 1)
         MIB.addReg(SuperReg, RegState::ImplicitDefine);
     } else {
+      if (OnlyToVGPR)
+        return false;
+
       // Restore SGPR from a stack slot.
       // FIXME: We should use S_LOAD_DWORD here for VI.
       unsigned TmpReg = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
@@ -832,6 +871,32 @@ void SIRegisterInfo::restoreSGPR(MachineBasicBlock::iterator MI,
   }
 
   MI->eraseFromParent();
+  return true;
+}
+
+/// Special case of eliminateFrameIndex. Returns true if the SGPR was spilled to
+/// a VGPR and the stack slot can be safely eliminated when all other users are
+/// handled.
+bool SIRegisterInfo::eliminateSGPRToVGPRSpillFrameIndex(
+  MachineBasicBlock::iterator MI,
+  int FI,
+  RegScavenger *RS) const {
+  switch (MI->getOpcode()) {
+  case AMDGPU::SI_SPILL_S512_SAVE:
+  case AMDGPU::SI_SPILL_S256_SAVE:
+  case AMDGPU::SI_SPILL_S128_SAVE:
+  case AMDGPU::SI_SPILL_S64_SAVE:
+  case AMDGPU::SI_SPILL_S32_SAVE:
+    return spillSGPR(MI, FI, RS, true);
+  case AMDGPU::SI_SPILL_S512_RESTORE:
+  case AMDGPU::SI_SPILL_S256_RESTORE:
+  case AMDGPU::SI_SPILL_S128_RESTORE:
+  case AMDGPU::SI_SPILL_S64_RESTORE:
+  case AMDGPU::SI_SPILL_S32_RESTORE:
+    return restoreSGPR(MI, FI, RS, true);
+  default:
+    llvm_unreachable("not an SGPR spill instruction");
+  }
 }
 
 void SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,

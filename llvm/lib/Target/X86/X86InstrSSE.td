@@ -8265,6 +8265,11 @@ defm VPBROADCASTQ  : avx2_broadcast<0x59, "vpbroadcastq", i64mem, loadi64,
                                     v2i64, v4i64, NoVLX>;
 
 let Predicates = [HasAVX2, NoVLX_Or_NoBWI] in {
+  // 32-bit targets will fail to load a i64 directly but can use ZEXT_LOAD.
+  def : Pat<(v2i64 (X86VBroadcast (v2i64 (X86vzload addr:$src)))),
+            (VPBROADCASTQrm addr:$src)>;
+  def : Pat<(v4i64 (X86VBroadcast (v4i64 (X86vzload addr:$src)))),
+            (VPBROADCASTQYrm addr:$src)>;
   // loadi16 is tricky to fold, because !isTypeDesirableForOp, justifiably.
   // This means we'll encounter truncated i32 loads; match that here.
   def : Pat<(v8i16 (X86VBroadcast (i16 (trunc (i32 (load addr:$src)))))),

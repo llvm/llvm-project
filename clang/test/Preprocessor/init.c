@@ -3040,6 +3040,7 @@
 // MIPS32BE:#define __llvm__ 1
 // MIPS32BE:#define __mips 32
 // MIPS32BE:#define __mips__ 1
+// MIPS32BE:#define __mips_abicalls 1
 // MIPS32BE:#define __mips_fpr 32
 // MIPS32BE:#define __mips_hard_float 1
 // MIPS32BE:#define __mips_o32 1
@@ -3246,6 +3247,7 @@
 // MIPS32EL:#define __llvm__ 1
 // MIPS32EL:#define __mips 32
 // MIPS32EL:#define __mips__ 1
+// MIPS32EL:#define __mips_abicalls 1
 // MIPS32EL:#define __mips_fpr 32
 // MIPS32EL:#define __mips_hard_float 1
 // MIPS32EL:#define __mips_o32 1
@@ -3555,6 +3557,7 @@
 // MIPSN32BE: #define __mips64 1
 // MIPSN32BE: #define __mips64__ 1
 // MIPSN32BE: #define __mips__ 1
+// MIPSN32BE: #define __mips_abicalls 1
 // MIPSN32BE: #define __mips_fpr 64
 // MIPSN32BE: #define __mips_hard_float 1
 // MIPSN32BE: #define __mips_isa_rev 2
@@ -3861,6 +3864,7 @@
 // MIPSN32EL: #define __mips64 1
 // MIPSN32EL: #define __mips64__ 1
 // MIPSN32EL: #define __mips__ 1
+// MIPSN32EL: #define __mips_abicalls 1
 // MIPSN32EL: #define __mips_fpr 64
 // MIPSN32EL: #define __mips_hard_float 1
 // MIPSN32EL: #define __mips_isa_rev 2
@@ -4073,6 +4077,7 @@
 // MIPS64BE:#define __mips64 1
 // MIPS64BE:#define __mips64__ 1
 // MIPS64BE:#define __mips__ 1
+// MIPS64BE:#define __mips_abicalls 1
 // MIPS64BE:#define __mips_fpr 64
 // MIPS64BE:#define __mips_hard_float 1
 // MIPS64BE:#define __mips_n64 1
@@ -4282,6 +4287,7 @@
 // MIPS64EL:#define __mips64 1
 // MIPS64EL:#define __mips64__ 1
 // MIPS64EL:#define __mips__ 1
+// MIPS64EL:#define __mips_abicalls 1
 // MIPS64EL:#define __mips_fpr 64
 // MIPS64EL:#define __mips_hard_float 1
 // MIPS64EL:#define __mips_n64 1
@@ -4512,6 +4518,45 @@
 // MIPS-XXR6:#define _MIPS_FPSET 32
 // MIPS-XXR6:#define __mips_fpr 64
 // MIPS-XXR6:#define __mips_nan2008 1
+//
+// RUN: %clang_cc1 -target-cpu mips32 \
+// RUN:   -E -dM -triple=mips-unknown-netbsd -mrelocation-model pic < /dev/null \
+// RUN:   | FileCheck -match-full-lines -check-prefix MIPS-ABICALLS-NETBSD %s
+// MIPS-ABICALLS-NETBSD-NOT: #define __ABICALLS__ 1
+// MIPS-ABICALLS-NETBSD: #define __mips_abicalls 1
+//
+// RUN: %clang_cc1 -target-cpu mips64 \
+// RUN:   -E -dM -triple=mips64-unknown-netbsd -mrelocation-model pic < \
+// RUN:   /dev/null | FileCheck -match-full-lines \
+// RUN:   -check-prefix MIPS-ABICALLS-NETBSD64 %s
+// MIPS-ABICALLS-NETBSD64-NOT: #define __ABICALLS__ 1
+// MIPS-ABICALLS-NETBSD64: #define __mips_abicalls 1
+//
+// RUN: %clang_cc1 -target-cpu mips32 \
+// RUN:   -E -dM -triple=mips-unknown-freebsd -mrelocation-model pic < /dev/null \
+// RUN:   | FileCheck -match-full-lines -check-prefix MIPS-ABICALLS-FREEBSD %s
+// MIPS-ABICALLS-FREEBSD: #define __ABICALLS__ 1
+// MIPS-ABICALLS-FREEBSD: #define __mips_abicalls 1
+//
+// RUN: %clang_cc1 -target-cpu mips64 \
+// RUN:   -E -dM -triple=mips64-unknown-freebsd -mrelocation-model pic < \
+// RUN:   /dev/null | FileCheck -match-full-lines \
+// RUN:   -check-prefix MIPS-ABICALLS-FREEBSD64 %s
+// MIPS-ABICALLS-FREEBSD64: #define __ABICALLS__ 1
+// MIPS-ABICALLS-FREEBSD64: #define __mips_abicalls 1
+//
+// RUN: %clang_cc1 -target-cpu mips32 \
+// RUN:   -E -dM -triple=mips-unknown-openbsd -mrelocation-model pic < /dev/null \
+// RUN:   | FileCheck -match-full-lines -check-prefix MIPS-ABICALLS-OPENBSD %s
+// MIPS-ABICALLS-OPENBSD: #define __ABICALLS__ 1
+// MIPS-ABICALLS-OPENBSD: #define __mips_abicalls 1
+//
+// RUN: %clang_cc1 -target-cpu mips64 \
+// RUN:   -E -dM -triple=mips64-unknown-openbsd -mrelocation-model pic < \
+// RUN:   /dev/null | FileCheck -match-full-lines \
+// RUN:   -check-prefix MIPS-ABICALLS-OPENBSD64 %s
+// MIPS-ABICALLS-OPENBSD64: #define __ABICALLS__ 1
+// MIPS-ABICALLS-OPENBSD64: #define __mips_abicalls 1
 //
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=msp430-none-none < /dev/null | FileCheck -match-full-lines -check-prefix MSP430 %s
 // RUN: %clang_cc1 -x c++ -E -dM -ffreestanding -triple=msp430-none-none < /dev/null | FileCheck -match-full-lines -check-prefix MSP430 -check-prefix MSP430-CXX %s

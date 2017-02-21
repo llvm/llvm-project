@@ -1,4 +1,4 @@
-//===-- RegisterClassInfo.h - Dynamic Register Class Info -*- C++ -*-------===//
+//===- RegisterClassInfo.h - Dynamic Register Class Info --------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -19,22 +19,25 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Target/TargetRegisterInfo.h"
+#include <cassert>
+#include <cstdint>
+#include <memory>
 
 namespace llvm {
 
 class RegisterClassInfo {
   struct RCInfo {
-    unsigned Tag;
-    unsigned NumRegs;
-    bool ProperSubClass;
-    uint8_t MinCost;
-    uint16_t LastCostChange;
+    unsigned Tag = 0;
+    unsigned NumRegs = 0;
+    bool ProperSubClass = false;
+    uint8_t MinCost = 0;
+    uint16_t LastCostChange = 0;
     std::unique_ptr<MCPhysReg[]> Order;
 
-    RCInfo()
-      : Tag(0), NumRegs(0), ProperSubClass(false), MinCost(0),
-        LastCostChange(0) {}
+    RCInfo() = default;
 
     operator ArrayRef<MCPhysReg>() const {
       return makeArrayRef(Order.get(), NumRegs);
@@ -46,14 +49,14 @@ class RegisterClassInfo {
 
   // Tag changes whenever cached information needs to be recomputed. An RCInfo
   // entry is valid when its tag matches.
-  unsigned Tag;
+  unsigned Tag = 0;
 
-  const MachineFunction *MF;
-  const TargetRegisterInfo *TRI;
+  const MachineFunction *MF = nullptr;
+  const TargetRegisterInfo *TRI = nullptr;
 
   // Callee saved registers of last MF. Assumed to be valid until the next
   // runOnFunction() call.
-  const MCPhysReg *CalleeSaved;
+  const MCPhysReg *CalleeSaved = nullptr;
 
   // Map register number to CalleeSaved index + 1;
   SmallVector<uint8_t, 4> CSRNum;
@@ -140,6 +143,7 @@ public:
 protected:
   unsigned computePSetLimit(unsigned Idx) const;
 };
+
 } // end namespace llvm
 
-#endif
+#endif // LLVM_CODEGEN_REGISTERCLASSINFO_H

@@ -122,12 +122,26 @@ static void printWithSpacePadding(raw_fd_ostream &OS, T Data, unsigned Size,
   }
 }
 
+static bool isBSDLike(object::Archive::Kind Kind) {
+  switch (Kind) {
+  case object::Archive::K_GNU:
+    return false;
+  case object::Archive::K_BSD:
+  case object::Archive::K_DARWIN:
+    return true;
+  case object::Archive::K_MIPS64:
+  case object::Archive::K_DARWIN64:
+  case object::Archive::K_COFF:
+    llvm_unreachable("not supported for writting");
+  }
+}
+
 static void print32(raw_ostream &Out, object::Archive::Kind Kind,
                     uint32_t Val) {
-  if (Kind == object::Archive::K_GNU)
-    support::endian::Writer<support::big>(Out).write(Val);
-  else
+  if (isBSDLike(Kind))
     support::endian::Writer<support::little>(Out).write(Val);
+  else
+    support::endian::Writer<support::big>(Out).write(Val);
 }
 
 static void printRestOfMemberHeader(
@@ -178,7 +192,7 @@ printMemberHeader(raw_fd_ostream &Out, object::Archive::Kind Kind, bool Thin,
                   std::vector<unsigned>::iterator &StringMapIndexIter,
                   const sys::TimePoint<std::chrono::seconds> &ModTime,
                   unsigned UID, unsigned GID, unsigned Perms, unsigned Size) {
-  if (Kind == object::Archive::K_BSD)
+  if (isBSDLike(Kind))
     return printBSDMemberHeader(Out, Name, ModTime, UID, GID, Perms, Size);
   if (!useStringTable(Thin, Name))
     return printGNUSmallMemberHeader(Out, Name, ModTime, UID, GID, Perms, Size);
@@ -285,10 +299,10 @@ writeSymbolTable(raw_fd_ostream &Out, object::Archive::Kind Kind,
 
     if (!HeaderStartOffset) {
       HeaderStartOffset = Out.tell();
-      if (Kind == object::Archive::K_GNU)
-        printGNUSmallMemberHeader(Out, "", now(Deterministic), 0, 0, 0, 0);
-      else
+      if (isBSDLike(Kind))
         printBSDMemberHeader(Out, "__.SYMDEF", now(Deterministic), 0, 0, 0, 0);
+      else
+        printGNUSmallMemberHeader(Out, "", now(Deterministic), 0, 0, 0, 0);
       BodyStartOffset = Out.tell();
       print32(Out, Kind, 0); // number of entries or bytes
     }
@@ -307,7 +321,7 @@ writeSymbolTable(raw_fd_ostream &Out, object::Archive::Kind Kind,
         return EC;
       NameOS << '\0';
       MemberOffsetRefs.push_back(MemberNum);
-      if (Kind == object::Archive::K_BSD)
+      if (isBSDLike(Kind))
         print32(Out, Kind, NameOffset);
       print32(Out, Kind, 0); // member offset
     }
@@ -318,12 +332,12 @@ writeSymbolTable(raw_fd_ostream &Out, object::Archive::Kind Kind,
 
   // ld64 prefers the cctools type archive which pads its string table to a
   // boundary of sizeof(int32_t).
-  if (Kind == object::Archive::K_BSD)
+  if (isBSDLike(Kind))
     for (unsigned P = OffsetToAlignment(NameOS.tell(), sizeof(int32_t)); P--;)
       NameOS << '\0';
 
   StringRef StringTable = NameOS.str();
-  if (Kind == object::Archive::K_BSD)
+  if (isBSDLike(Kind))
     print32(Out, Kind, StringTable.size()); // byte count of the string table
   Out << StringTable;
 
@@ -342,10 +356,10 @@ writeSymbolTable(raw_fd_ostream &Out, object::Archive::Kind Kind,
   // Patch up the number of symbols.
   Out.seek(BodyStartOffset);
   unsigned NumSyms = MemberOffsetRefs.size();
-  if (Kind == object::Archive::K_GNU)
-    print32(Out, Kind, NumSyms);
-  else
+  if (isBSDLike(Kind))
     print32(Out, Kind, NumSyms * 8);
+  else
+    print32(Out, Kind, NumSyms);
 
   Out.seek(Pos);
   return BodyStartOffset + 4;
@@ -357,8 +371,7 @@ llvm::writeArchive(StringRef ArcName,
                    bool WriteSymtab, object::Archive::Kind Kind,
                    bool Deterministic, bool Thin,
                    std::unique_ptr<MemoryBuffer> OldArchiveBuf) {
-  assert((!Thin || Kind == object::Archive::K_GNU) &&
-         "Only the gnu format has a thin mode");
+  assert((!Thin || !isBSDLike(Kind)) && "Only the gnu format has a thin mode");
   SmallString<128> TmpArchive;
   int TmpArchiveFD;
   if (auto EC = sys::fs::createUniqueFile(ArcName + ".temp-archive-%%%%%%%.a",
@@ -388,7 +401,7 @@ llvm::writeArchive(StringRef ArcName,
   }
 
   std::vector<unsigned> StringMapIndexes;
-  if (Kind != object::Archive::K_BSD)
+  if (!isBSDLike(Kind))
     writeStringTable(Out, ArcName, NewMembers, StringMapIndexes, Thin);
 
   std::vector<unsigned>::iterator StringMapIndexIter = StringMapIndexes.begin();
@@ -404,7 +417,7 @@ llvm::writeArchive(StringRef ArcName,
     // least 4-byte aligned for 32-bit content.  Opt for the larger encoding
     // uniformly.  This matches the behaviour with cctools and ensures that ld64
     // is happy with archives that we generate.
-    if (Kind == object::Archive::K_BSD)
+    if (Kind == object::Archive::K_DARWIN)
       Padding = OffsetToAlignment(M.Buf->getBufferSize(), 8);
 
     printMemberHeader(Out, Kind, Thin,
@@ -424,7 +437,7 @@ llvm::writeArchive(StringRef ArcName,
   if (MemberReferenceOffset) {
     Out.seek(MemberReferenceOffset);
     for (unsigned MemberNum : MemberOffsetRefs) {
-      if (Kind == object::Archive::K_BSD)
+      if (isBSDLike(Kind))
         Out.seek(Out.tell() + 4); // skip over the string offset
       print32(Out, Kind, MemberOffset[MemberNum]);
     }

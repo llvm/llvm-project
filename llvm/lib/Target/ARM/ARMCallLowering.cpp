@@ -304,3 +304,38 @@ bool ARMCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
                               AssignFn);
   return handleAssignments(MIRBuilder, ArgInfos, ArgHandler);
 }
+
+bool ARMCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
+                                const MachineOperand &Callee,
+                                const ArgInfo &OrigRet,
+                                ArrayRef<ArgInfo> OrigArgs) const {
+  const MachineFunction &MF = MIRBuilder.getMF();
+  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
+
+  if (MF.getSubtarget<ARMSubtarget>().genLongCalls())
+    return false;
+
+  // FIXME: Support calling functions with arguments.
+  if (OrigArgs.size() > 0)
+    return false;
+
+  // FIXME: Support calling functions with return types.
+  if (!OrigRet.Ty->isVoidTy())
+    return false;
+
+  MIRBuilder.buildInstr(ARM::ADJCALLSTACKDOWN)
+      .addImm(0)
+      .add(predOps(ARMCC::AL));
+
+  MIRBuilder.buildInstr(ARM::BLX)
+      .add(Callee)
+      // FIXME: Don't hardcode the calling conv here...
+      .addRegMask(TRI->getCallPreservedMask(MF, CallingConv::ARM_AAPCS));
+
+  MIRBuilder.buildInstr(ARM::ADJCALLSTACKUP)
+      .addImm(0)
+      .addImm(0)
+      .add(predOps(ARMCC::AL));
+
+  return true;
+}

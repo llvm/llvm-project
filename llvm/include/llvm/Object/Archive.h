@@ -212,6 +212,7 @@ public:
     K_GNU,
     K_MIPS64,
     K_BSD,
+    K_DARWIN,
     K_DARWIN64,
     K_COFF
   };

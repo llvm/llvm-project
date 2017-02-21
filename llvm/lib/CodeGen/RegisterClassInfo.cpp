@@ -1,4 +1,4 @@
-//===-- RegisterClassInfo.cpp - Dynamic Register Class Info ---------------===//
+//===- RegisterClassInfo.cpp - Dynamic Register Class Info ----------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -14,12 +14,21 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/CodeGen/RegisterClassInfo.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
+#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Target/TargetRegisterInfo.h"
+#include "llvm/Target/TargetSubtargetInfo.h"
+#include <algorithm>
+#include <cassert>
+#include <cstdint>
 
 using namespace llvm;
 
@@ -29,8 +38,7 @@ static cl::opt<unsigned>
 StressRA("stress-regalloc", cl::Hidden, cl::init(0), cl::value_desc("N"),
          cl::desc("Limit all regclasses to N registers"));
 
-RegisterClassInfo::RegisterClassInfo()
-  : Tag(0), MF(nullptr), TRI(nullptr), CalleeSaved(nullptr) {}
+RegisterClassInfo::RegisterClassInfo() = default;
 
 void RegisterClassInfo::runOnMachineFunction(const MachineFunction &mf) {
   bool Update = false;
@@ -114,7 +122,7 @@ void RegisterClassInfo::compute(const TargetRegisterClass *RC) const {
     }
   }
   RCI.NumRegs = N + CSRAlias.size();
-  assert (RCI.NumRegs <= NumRegs && "Allocation order larger than regclass");
+  assert(RCI.NumRegs <= NumRegs && "Allocation order larger than regclass");
 
   // CSR aliases go after the volatile registers, preserve the target's order.
   for (unsigned i = 0, e = CSRAlias.size(); i != e; ++i) {

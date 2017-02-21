@@ -90,6 +90,28 @@ define i32 @max_of_nots(i32 %x, i32 %y) {
   ret i32 %smax96
 }
 
+ ; negative test case (i.e. can not simplify) : ABS(MIN(NOT x,y))
+define i32 @abs_of_min_of_not(i32 %x, i32 %y) {
+; CHECK-LABEL: @abs_of_min_of_not(
+; CHECK-NEXT: xor
+; CHECK-NEXT: add
+; CHECK-NEXT: icmp sge
+; CHECK-NEXT: select
+; CHECK-NEXT: icmp sgt
+; CHECK-NEXT: sub
+; CHECK-NEXT: select
+; CHECK-NEXT: ret
+
+  %xord = xor i32 %x, -1
+  %yadd = add i32 %y, 2
+  %cond.i = icmp sge i32 %yadd, %xord
+  %min = select i1 %cond.i, i32 %xord, i32 %yadd
+  %cmp2 = icmp sgt i32 %min, -1
+  %sub = sub i32 0, %min
+  %abs = select i1 %cmp2, i32 %min, i32 %sub
+  ret i32  %abs
+}
+
 define <2 x i32> @max_of_nots_vec(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @max_of_nots_vec(
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt <2 x i32> %y, zeroinitializer

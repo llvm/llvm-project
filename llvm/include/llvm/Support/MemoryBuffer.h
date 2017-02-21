@@ -69,12 +69,12 @@ public:
   /// means that the client knows that the file exists and that it has the
   /// specified size.
   ///
-  /// \param IsVolatileSize Set to true to indicate that the file size may be
-  /// changing, e.g. when libclang tries to parse while the user is
-  /// editing/updating the file.
+  /// \param IsVolatile Set to true to indicate that the contents of the file
+  /// can change outside the user's control, e.g. when libclang tries to parse
+  /// while the user is editing/updating the file or if the file is on an NFS.
   static ErrorOr<std::unique_ptr<MemoryBuffer>>
   getFile(const Twine &Filename, int64_t FileSize = -1,
-          bool RequiresNullTerminator = true, bool IsVolatileSize = false);
+          bool RequiresNullTerminator = true, bool IsVolatile = false);
 
   /// Read all of the specified file into a MemoryBuffer as a stream
   /// (i.e. until EOF reached). This is useful for special files that
@@ -87,17 +87,17 @@ public:
   /// Since this is in the middle of a file, the buffer is not null terminated.
   static ErrorOr<std::unique_ptr<MemoryBuffer>>
   getOpenFileSlice(int FD, const Twine &Filename, uint64_t MapSize,
-                   int64_t Offset);
+                   int64_t Offset, bool IsVolatile = false);
 
   /// Given an already-open file descriptor, read the file and return a
   /// MemoryBuffer.
   ///
-  /// \param IsVolatileSize Set to true to indicate that the file size may be
-  /// changing, e.g. when libclang tries to parse while the user is
-  /// editing/updating the file.
+  /// \param IsVolatile Set to true to indicate that the contents of the file
+  /// can change outside the user's control, e.g. when libclang tries to parse
+  /// while the user is editing/updating the file or if the file is on an NFS.
   static ErrorOr<std::unique_ptr<MemoryBuffer>>
   getOpenFile(int FD, const Twine &Filename, uint64_t FileSize,
-              bool RequiresNullTerminator = true, bool IsVolatileSize = false);
+              bool RequiresNullTerminator = true, bool IsVolatile = false);
 
   /// Open the specified memory range as a MemoryBuffer. Note that InputData
   /// must be null terminated if RequiresNullTerminator is true.
@@ -136,7 +136,7 @@ public:
 
   /// Map a subrange of the specified file as a MemoryBuffer.
   static ErrorOr<std::unique_ptr<MemoryBuffer>>
-  getFileSlice(const Twine &Filename, uint64_t MapSize, uint64_t Offset);
+  getFileSlice(const Twine &Filename, uint64_t MapSize, uint64_t Offset, bool IsVolatile = false);
 
   //===--------------------------------------------------------------------===//
   // Provided for performance analysis.

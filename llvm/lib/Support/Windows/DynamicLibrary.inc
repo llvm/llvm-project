@@ -9,6 +9,8 @@
 //
 // This file provides the Win32 specific implementation of DynamicLibrary.
 //
+// FIXME: This file leaks OpenedHandles!
+//
 //===----------------------------------------------------------------------===//
 
 #include "WindowsSupport.h"

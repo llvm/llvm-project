@@ -23,10 +23,6 @@ define void @s_fsub_f32(float addrspace(1)* %out, float %a, float %b) {
   ret void
 }
 
-declare float @llvm.r600.load.input(i32) readnone
-
-declare void @llvm.AMDGPU.store.output(float, i32)
-
 ; FUNC-LABEL: {{^}}fsub_v2f32:
 ; R600-DAG: ADD {{\** *}}T{{[0-9]+\.[XYZW]}}, KC0[3].X, -KC0[3].Z
 ; R600-DAG: ADD {{\** *}}T{{[0-9]+\.[XYZW]}}, KC0[2].W, -KC0[3].Y

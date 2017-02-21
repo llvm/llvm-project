@@ -113,14 +113,14 @@ static __isl_give isl_map *tag(__isl_take isl_map *Relation, MemoryAccess *MA,
 /// Collect information about the SCoP @p S.
 static void collectInfo(Scop &S, isl_union_map **Read, isl_union_map **Write,
                         isl_union_map **MayWrite,
-                        isl_union_map **AccessSchedule,
+                        isl_union_map **ReductionTagMap,
                         isl_union_map **StmtSchedule,
                         Dependences::AnalysisLevel Level) {
   isl_space *Space = S.getParamSpace();
   *Read = isl_union_map_empty(isl_space_copy(Space));
   *Write = isl_union_map_empty(isl_space_copy(Space));
   *MayWrite = isl_union_map_empty(isl_space_copy(Space));
-  *AccessSchedule = isl_union_map_empty(isl_space_copy(Space));
+  *ReductionTagMap = isl_union_map_empty(isl_space_copy(Space));
   *StmtSchedule = isl_union_map_empty(Space);
 
   SmallPtrSet<const ScopArrayInfo *, 8> ReductionArrays;
@@ -145,21 +145,13 @@ static void collectInfo(Scop &S, isl_union_map **Read, isl_union_map **Write,
         // will be transformed into
         //   [Stmt[i0, i1] -> MemAcc_A[i0 + i1]] -> MemAcc_A[i0 + i1]
         //
-        // The original schedule looks like
-        //   Stmt[i0, i1] -> [0, i0, 2, i1, 0]
-        // but as we transformed the access domain we need the schedule
-        // to match the new access domains, thus we need
-        //   [Stmt[i0, i1] -> MemAcc_A[i0 + i1]] -> [0, i0, 2, i1, 0]
-        isl_map *Schedule = Stmt.getSchedule();
-        assert(Schedule &&
-               "Schedules that contain extension nodes require special "
-               "handling.");
-        Schedule = isl_map_apply_domain(
-            Schedule,
-            isl_map_reverse(isl_map_domain_map(isl_map_copy(accdom))));
-        accdom = isl_map_range_map(accdom);
+        // We collect all the access domains in the ReductionTagMap.
+        // This is used in Dependences::calculateDependences to create
+        // a tagged Schedule tree.
 
-        *AccessSchedule = isl_union_map_add_map(*AccessSchedule, Schedule);
+        *ReductionTagMap =
+            isl_union_map_add_map(*ReductionTagMap, isl_map_copy(accdom));
+        accdom = isl_map_range_map(accdom);
       } else {
         accdom = tag(accdom, MA, Level);
         if (Level > Dependences::AL_Statement) {
@@ -185,6 +177,7 @@ static void collectInfo(Scop &S, isl_union_map **Read, isl_union_map **Write,
   *StmtSchedule =
       isl_union_map_intersect_params(*StmtSchedule, S.getAssumedContext());
 
+  *ReductionTagMap = isl_union_map_coalesce(*ReductionTagMap);
   *Read = isl_union_map_coalesce(*Read);
   *Write = isl_union_map_coalesce(*Write);
   *MayWrite = isl_union_map_coalesce(*MayWrite);
@@ -304,26 +297,26 @@ static __isl_give isl_union_flow *buildFlow(__isl_keep isl_union_map *Snk,
 }
 
 void Dependences::calculateDependences(Scop &S) {
-  isl_union_map *Read, *Write, *MayWrite, *AccessSchedule, *StmtSchedule;
+  isl_union_map *Read, *Write, *MayWrite, *ReductionTagMap, *StmtSchedule;
   isl_schedule *Schedule;
 
   DEBUG(dbgs() << "Scop: \n" << S << "\n");
 
-  collectInfo(S, &Read, &Write, &MayWrite, &AccessSchedule, &StmtSchedule,
+  collectInfo(S, &Read, &Write, &MayWrite, &ReductionTagMap, &StmtSchedule,
               Level);
 
-  bool HasReductions = !isl_union_map_is_empty(AccessSchedule);
+  bool HasReductions = !isl_union_map_is_empty(ReductionTagMap);
 
   DEBUG(dbgs() << "Read: " << Read << '\n';
         dbgs() << "Write: " << Write << '\n';
         dbgs() << "MayWrite: " << MayWrite << '\n';
-        dbgs() << "AccessSchedule: " << AccessSchedule << '\n';
+        dbgs() << "ReductionTagMap: " << ReductionTagMap << '\n';
         dbgs() << "StmtSchedule: " << StmtSchedule << '\n';);
 
   Schedule = S.getScheduleTree();
 
   if (!HasReductions) {
-    isl_union_map_free(AccessSchedule);
+    isl_union_map_free(ReductionTagMap);
     // Tag the schedule tree if we want fine-grain dependence info
     if (Level > AL_Statement) {
       auto TaggedDom = isl_union_map_domain((isl_union_map_copy(StmtSchedule)));
@@ -332,18 +325,16 @@ void Dependences::calculateDependences(Scop &S) {
       Schedule = isl_schedule_pullback_union_pw_multi_aff(Schedule, Tags);
     }
   } else {
-    isl_union_set *ReductionDom, *IdentityDom;
-    isl_union_map *ReductionMap, *IdentityMap;
+    isl_union_set *IdentityDom;
+    isl_union_map *IdentityMap;
     isl_union_pw_multi_aff *ReductionTags, *IdentityTags, *Tags;
 
-    // Extract reduction tags from the access schedule. The result is a map that
-    // maps each tagged element in the domain to the memory location it
-    // accesses.
-    //
-    // ReductionTags = {[Stmt[i] -> Array[f(i)]] -> Stmt[i] }
-    ReductionDom = isl_union_map_domain((AccessSchedule));
-    ReductionMap = isl_union_set_unwrap(ReductionDom);
-    ReductionTags = isl_union_map_domain_map_union_pw_multi_aff(ReductionMap);
+    // Extract Reduction tags from the combined access domains in the given
+    // SCoP. The result is a map that maps each tagged element in the domain to
+    // the memory location it accesses. ReductionTags = {[Stmt[i] ->
+    // Array[f(i)]] -> Stmt[i] }
+    ReductionTags =
+        isl_union_map_domain_map_union_pw_multi_aff(ReductionTagMap);
 
     // Compute an identity map from each statement in domain to itself.
     // IdentityTags = { [Stmt[i] -> Stmt[i] }

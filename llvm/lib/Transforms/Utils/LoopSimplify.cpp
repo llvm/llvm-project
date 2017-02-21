@@ -645,14 +645,7 @@ ReprocessLoop:
   // loop-invariant instructions out of the way to open up more
   // opportunities, and the disadvantage of having the responsibility
   // to preserve dominator information.
-  bool UniqueExit = true;
-  if (!ExitBlocks.empty())
-    for (unsigned i = 1, e = ExitBlocks.size(); i != e; ++i)
-      if (ExitBlocks[i] != ExitBlocks[0]) {
-        UniqueExit = false;
-        break;
-      }
-  if (UniqueExit) {
+  if (ExitBlockSet.size() == 1) {
     for (unsigned i = 0, e = ExitingBlocks.size(); i != e; ++i) {
       BasicBlock *ExitingBlock = ExitingBlocks[i];
       if (!ExitingBlock->getSinglePredecessor()) continue;

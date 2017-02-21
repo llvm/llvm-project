@@ -77,8 +77,9 @@ STATISTIC(NumMovedLoads, "Number of load insts hoisted or sunk");
 STATISTIC(NumMovedCalls, "Number of call insts hoisted or sunk");
 STATISTIC(NumPromoted, "Number of memory locations promoted to registers");
 
+/// Memory promotion is enabled by default.
 static cl::opt<bool>
-    DisablePromotion("disable-licm-promotion", cl::Hidden,
+    DisablePromotion("disable-licm-promotion", cl::Hidden, cl::init(false),
                      cl::desc("Disable memory promotion in LICM pass"));
 
 static cl::opt<uint32_t> MaxNumUsesTraversed(

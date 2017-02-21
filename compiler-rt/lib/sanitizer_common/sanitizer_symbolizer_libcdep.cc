@@ -385,7 +385,23 @@ SymbolizerProcess::SymbolizerProcess(const char *path, bool use_forkpty)
   CHECK_NE(path_[0], '\0');
 }
 
+static bool IsSameModule(const char* path) {
+  if (const char* ProcessName = GetProcessName()) {
+    if (const char* SymbolizerName = StripModuleName(path)) {
+      return !internal_strcmp(ProcessName, SymbolizerName);
+    }
+  }
+  return false;
+}
+
 const char *SymbolizerProcess::SendCommand(const char *command) {
+  if (failed_to_start_)
+    return nullptr;
+  if (IsSameModule(path_)) {
+    Report("WARNING: Symbolizer was blocked from starting itself!\n");
+    failed_to_start_ = true;
+    return nullptr;
+  }
   for (; times_restarted_ < kMaxTimesRestarted; times_restarted_++) {
     // Start or restart symbolizer if we failed to send command to it.
     if (const char *res = SendCommandImpl(command))

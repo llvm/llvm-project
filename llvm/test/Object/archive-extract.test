@@ -43,10 +43,10 @@
 CHECK-GNU: 1465 2004-11-19 03:01:31.000000000 very_long_bytecode_file_name.bc
 
 ; RUN: rm -f %t.a
-; RUN: llvm-ar -format bsd rcU %t.a very_long_bytecode_file_name.bc
-; RUN: env TZ=GMT llvm-ar tv %t.a | FileCheck %s -check-prefix CHECK-BSD
+; RUN: llvm-ar -format darwin rcU %t.a very_long_bytecode_file_name.bc
+; RUN: env TZ=GMT llvm-ar tv %t.a | FileCheck %s -check-prefix CHECK-DARWIN
 
-CHECK-BSD: 1472 2004-11-19 03:01:31.000000000 very_long_bytecode_file_name.bc
+CHECK-DARWIN: 1472 2004-11-19 03:01:31.000000000 very_long_bytecode_file_name.bc
 
 RUN: not llvm-ar x %p/Inputs/GNU.a foo.o 2>&1 | FileCheck --check-prefix=NOTFOUND %s
 NOTFOUND: foo.o was not found

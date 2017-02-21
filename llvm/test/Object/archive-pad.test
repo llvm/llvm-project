@@ -1,0 +1,19 @@
+Test that only the darwin format needs to modify archive members to
+avoid a ld64 bug.
+
+RUN: echo foo > %t.o
+
+RUN: rm -f %t.a
+RUN: llvm-ar -format=bsd rc %t.a %t.o
+RUN: llvm-ar p %t.a > %bsd.o
+RUN: cmp %bsd.o %t.o
+
+RUN: rm -f %t.a
+RUN: llvm-ar -format=gnu rc %t.a %t.o
+RUN: llvm-ar p %t.a > %gnu.o
+RUN: cmp %gnu.o %t.o
+
+RUN: rm -f %t.a
+RUN: llvm-ar -format=darwin rc %t.a %t.o
+RUN: llvm-ar p %t.a > %darwin.o
+RUN: not cmp %darwin.o %t.o

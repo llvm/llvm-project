@@ -277,6 +277,10 @@ void InitializePlatformExceptionHandlers() {
 #endif
 }
 
+bool IsSystemHeapAddress(uptr addr) {
+  return ::HeapValidate(GetProcessHeap(), 0, (void*)addr) != FALSE;
+}
+
 // We want to install our own exception handler (EH) to print helpful reports
 // on access violations and whatnot.  Unfortunately, the CRT initializers assume
 // they are run before any user code and drop any previously-installed EHs on

@@ -22,22 +22,7 @@
     store float %1, float addrspace(1)* %out
     ret void
   }
-
-  declare { i1, i64 } @llvm.SI.if(i1)
-
-  declare { i1, i64 } @llvm.SI.else(i64)
-
-  declare i64 @llvm.SI.break(i64)
-
-  declare i64 @llvm.SI.if.break(i1, i64)
-
-  declare i64 @llvm.SI.else.break(i64, i64)
-
-  declare i1 @llvm.SI.loop(i64)
-
-  declare void @llvm.SI.end.cf(i64)
-
-  attributes #0 = { "target-cpu"="SI" }
+  attributes #0 = { nounwind }
 
 ...
 ---
