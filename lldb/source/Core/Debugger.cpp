@@ -193,7 +193,7 @@ OptionEnumValueElement g_language_enumerators[] = {
   "\\n"
 
 #define DEFAULT_FRAME_FORMAT                                                   \
-  "frame #${frame.index}:{ ${frame.no-debug}${frame.pc}}" MODULE_WITH_FUNC FILE_AND_LINE          \
+  "frame #${frame.index}: ${frame.pc}" MODULE_WITH_FUNC FILE_AND_LINE          \
       IS_OPTIMIZED "\\n"
 
 // Three parts to this disassembly format specification:

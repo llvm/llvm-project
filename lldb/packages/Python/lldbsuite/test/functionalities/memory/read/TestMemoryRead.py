@@ -118,3 +118,20 @@ class MemoryReadTestCase(TestBase):
                 '16',
                 '18',
                 '20'])
+
+        # the gdb format specifier and the size in characters for
+        # the returned values including the 0x prefix.
+        variations = [['b', 4], ['h', 6], ['w', 10], ['g', 18]]
+        for v in variations:
+          formatter = v[0]
+          expected_object_length = v[1]
+          self.runCmd(
+              "memory read --gdb-format 4%s &my_uint64s" % formatter)
+          lines = self.res.GetOutput().splitlines()
+          objects_read = []
+          for l in lines:
+              objects_read.extend(l.split(':')[1].split())
+          # Check that we got back 4 0x0000 etc bytes
+          for o in objects_read:
+              self.assertTrue (len(o) == expected_object_length)
+          self.assertTrue(len(objects_read) == 4)
