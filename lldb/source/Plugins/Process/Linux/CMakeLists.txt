@@ -2,7 +2,7 @@ include_directories(.)
 include_directories(../POSIX)
 include_directories(../Utility)
 
-add_lldb_library(lldbPluginProcessLinux
+add_lldb_library(lldbPluginProcessLinux PLUGIN
   NativeProcessLinux.cpp
   NativeRegisterContextLinux.cpp
   NativeRegisterContextLinux_arm.cpp
@@ -13,4 +13,15 @@ add_lldb_library(lldbPluginProcessLinux
   NativeThreadLinux.cpp
   ProcFileReader.cpp
   SingleStepCheck.cpp
+
+  LINK_LIBS
+    lldbCore
+    lldbHost
+    lldbSymbol
+    lldbTarget
+    lldbUtility
+    lldbPluginProcessPOSIX
+    lldbPluginProcessUtility
+  LINK_COMPONENTS
+    Support
   )

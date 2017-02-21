@@ -38,4 +38,35 @@ add_lldb_library(lldbSymbol
   Variable.cpp
   VariableList.cpp
   VerifyDecl.cpp
+
+  LINK_LIBS
+    swiftAST
+    swiftASTSectionImporter
+    swiftBasic
+    swiftClangImporter
+    swiftDriver
+    swiftFrontend
+    swiftIDE
+    swiftSIL
+    swiftSerialization
+    clangAST
+    clangBasic
+    clangFrontend
+    lldbCore
+    lldbDataFormatters
+    lldbExpression
+    lldbHost
+    lldbTarget
+    lldbUtility
+    lldbPluginExpressionParserClang
+    lldbPluginExpressionParserGo
+    lldbPluginExpressionParserSwift
+    lldbPluginSymbolFileDWARF
+    lldbPluginSymbolFilePDB
+    lldbPluginObjectContainerBSDArchive
+    lldbPluginCPlusPlusLanguage
+    lldbPluginObjCLanguage
+
+  LINK_COMPONENTS
+    Support
   )

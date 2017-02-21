@@ -59,4 +59,26 @@ add_lldb_library(lldbTarget
   ThreadSpec.cpp
   UnixSignals.cpp
   UnwindAssembly.cpp
+
+  LINK_LIBS
+    swiftAST
+    swiftBasic
+    swiftFrontend
+    swiftRemoteAST
+    lldbBreakpoint
+    lldbCore
+    lldbExpression
+    lldbHost
+    lldbInterpreter
+    lldbSymbol
+    lldbUtility
+    lldbPluginExpressionParserClang
+    lldbPluginExpressionParserSwift
+    lldbPluginCPlusPlusLanguage
+    lldbPluginObjCLanguage
+    lldbPluginSwiftLanguage
+    lldbPluginProcessUtility
+
+  LINK_COMPONENTS
+    Support
   )

@@ -1,6 +1,6 @@
 set(LLVM_NO_RTTI 1)
 
-add_lldb_library(lldbPluginSwiftLanguage
+add_lldb_library(lldbPluginSwiftLanguage PLUGIN
   FoundationValueTypes.cpp
   ObjCRuntimeSyntheticProvider.cpp
   SwiftArray.cpp
@@ -13,5 +13,19 @@ add_lldb_library(lldbPluginSwiftLanguage
   SwiftOptionSet.cpp
   SwiftOptional.cpp
   SwiftSet.cpp
+
+  LINK_LIBS
+    lldbCore
+    lldbDataFormatters
+    lldbSymbol
+    lldbTarget
+    lldbUtility
+    lldbPluginObjCLanguage
+    swiftAST
+    swiftClangImporter
+    clangAST
+
+  LINK_COMPONENTS
+    Support
 )
 
