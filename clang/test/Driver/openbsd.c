@@ -67,3 +67,26 @@
 // CHECK-MIPS64-PIC: as{{.*}}" "-mabi" "64" "-EB" "-KPIC"
 // CHECK-MIPS64EL: as{{.*}}" "-mabi" "64" "-EL"
 // CHECK-MIPS64EL-PIC: as{{.*}}" "-mabi" "64" "-EL" "-KPIC"
+
+// Check linking against correct startup code when (not) using PIE
+// RUN: %clang -no-canonical-prefixes -target i686-pc-openbsd %s -### 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-PIE %s
+// RUN: %clang -no-canonical-prefixes -target i686-pc-openbsd %s -fno-pie %s -### 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-PIE %s
+// RUN: %clang -no-canonical-prefixes -target i686-pc-openbsd -static %s -### 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-STATIC-PIE %s
+// RUN: %clang -no-canonical-prefixes -target i686-pc-openbsd -static -fno-pie %s -### 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-STATIC-PIE %s
+// RUN: %clang -no-canonical-prefixes -target i686-pc-openbsd -nopie %s -### 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-NOPIE %s
+// RUN: %clang -no-canonical-prefixes -target i686-pc-openbsd -fno-pie -nopie %s -### 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-NOPIE %s
+// RUN: %clang -no-canonical-prefixes -target i686-pc-openbsd -static -nopie %s -### 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-NOPIE %s
+// RUN: %clang -no-canonical-prefixes -target i686-pc-openbsd -fno-pie -static -nopie %s -### 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-NOPIE %s
+// CHECK-PIE: "{{.*}}crt0.o"
+// CHECK-PIE-NOT: "-nopie"
+// CHECK-STATIC-PIE: "{{.*}}rcrt0.o"
+// CHECK-STATIC-PIE-NOT: "-nopie"
+// CHECK-NOPIE: "-nopie" "{{.*}}crt0.o"
