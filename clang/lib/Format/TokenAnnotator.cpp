@@ -337,6 +337,9 @@ private:
                  Contexts.back().ContextKind == tok::l_brace &&
                  Parent->isOneOf(tok::l_brace, tok::comma)) {
         Left->Type = TT_JsComputedPropertyName;
+      } else if (CurrentToken->is(tok::r_square) && Parent &&
+                 Parent->is(TT_TemplateCloser)) {
+        Left->Type = TT_ArraySubscriptLSquare;
       } else if (Style.Language == FormatStyle::LK_Proto ||
                  (!CppArrayTemplates && Parent &&
                   Parent->isOneOf(TT_BinaryOperator, TT_TemplateCloser, tok::at,
@@ -2533,9 +2536,12 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
       // https://github.com/Microsoft/TypeScript/blob/master/doc/spec.md#A.10
       return false;
     if (Left.isOneOf(Keywords.kw_module, tok::kw_namespace) &&
-        Right.isOneOf(tok::identifier, tok::string_literal)) {
+        Right.isOneOf(tok::identifier, tok::string_literal))
       return false; // must not break in "module foo { ...}"
-    }
+    if (Right.is(TT_TemplateString) && Right.closesScope())
+      return false;
+    if (Left.is(TT_TemplateString) && Left.opensScope())
+      return true;
   }
 
   if (Left.is(tok::at))

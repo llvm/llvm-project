@@ -455,6 +455,8 @@ struct FormatToken {
   /// \brief Returns \c true if this tokens starts a block-type list, i.e. a
   /// list that should be indented with a block indent.
   bool opensBlockOrBlockTypeList(const FormatStyle &Style) const {
+    if (is(TT_TemplateString) && opensScope())
+      return true;
     return is(TT_ArrayInitializerLSquare) ||
            (is(tok::l_brace) &&
             (BlockKind == BK_Block || is(TT_DictLiteral) ||
@@ -463,6 +465,8 @@ struct FormatToken {
 
   /// \brief Same as opensBlockOrBlockTypeList, but for the closing token.
   bool closesBlockOrBlockTypeList(const FormatStyle &Style) const {
+    if (is(TT_TemplateString) && closesScope())
+      return true;
     return MatchingParen && MatchingParen->opensBlockOrBlockTypeList(Style);
   }
 

@@ -1441,7 +1441,7 @@ Sema::CreateGenericSelectionExpr(SourceLocation KeyLoc,
 
   // The controlling expression is an unevaluated operand, so side effects are
   // likely unintended.
-  if (ActiveTemplateInstantiations.empty() &&
+  if (!inTemplateInstantiation() &&
       ControllingExpr->HasSideEffects(Context, false))
     Diag(ControllingExpr->getExprLoc(),
          diag::warn_side_effects_unevaluated_context);
@@ -3695,7 +3695,7 @@ bool Sema::CheckUnaryExprOrTypeTraitOperand(Expr *E,
   // The operand for sizeof and alignof is in an unevaluated expression context,
   // so side effects could result in unintended consequences.
   if ((ExprKind == UETT_SizeOf || ExprKind == UETT_AlignOf) &&
-      ActiveTemplateInstantiations.empty() && E->HasSideEffects(Context, false))
+      !inTemplateInstantiation() && E->HasSideEffects(Context, false))
     Diag(E->getExprLoc(), diag::warn_side_effects_unevaluated_context);
 
   if (CheckObjCTraitOperandConstraints(*this, ExprTy, E->getExprLoc(),
@@ -9259,7 +9259,7 @@ QualType Sema::CheckCompareOperands(ExprResult &LHS, ExprResult &RHS,
       !(LHSType->isBlockPointerType() && IsRelational) &&
       !LHS.get()->getLocStart().isMacroID() &&
       !RHS.get()->getLocStart().isMacroID() &&
-      ActiveTemplateInstantiations.empty()) {
+      !inTemplateInstantiation()) {
     // For non-floating point types, check for self-comparisons of the form
     // x == x, x != x, x < x, etc.  These always evaluate to a constant, and
     // often indicate logic errors in the program.
@@ -9731,8 +9731,7 @@ QualType Sema::CheckVectorCompareOperands(ExprResult &LHS, ExprResult &RHS,
   // For non-floating point types, check for self-comparisons of the form
   // x == x, x != x, x < x, etc.  These always evaluate to a constant, and
   // often indicate logic errors in the program.
-  if (!LHSType->hasFloatingRepresentation() &&
-      ActiveTemplateInstantiations.empty()) {
+  if (!LHSType->hasFloatingRepresentation() && !inTemplateInstantiation()) {
     if (DeclRefExpr* DRL
           = dyn_cast<DeclRefExpr>(LHS.get()->IgnoreParenImpCasts()))
       if (DeclRefExpr* DRR
@@ -9820,7 +9819,7 @@ inline QualType Sema::CheckLogicalOperands(ExprResult &LHS, ExprResult &RHS,
       !LHS.get()->getType()->isBooleanType() &&
       RHS.get()->getType()->isIntegerType() && !RHS.get()->isValueDependent() &&
       // Don't warn in macros or template instantiations.
-      !Loc.isMacroID() && ActiveTemplateInstantiations.empty()) {
+      !Loc.isMacroID() && !inTemplateInstantiation()) {
     // If the RHS can be constant folded, and if it constant folds to something
     // that isn't 0 or 1 (which indicate a potential logical operation that
     // happened to fold to true/false) then warn.
@@ -10356,7 +10355,7 @@ void Sema::DiagnoseCommaOperator(const Expr *LHS, SourceLocation Loc) {
     return;
 
   // Don't warn in template instantiations.
-  if (!ActiveTemplateInstantiations.empty())
+  if (inTemplateInstantiation())
     return;
 
   // Scope isn't fine-grained enough to whitelist the specific cases, so
@@ -10951,7 +10950,7 @@ static inline UnaryOperatorKind ConvertTokenKindToUnaryOpcode(
 /// suppressed in the event of macro expansions.
 static void DiagnoseSelfAssignment(Sema &S, Expr *LHSExpr, Expr *RHSExpr,
                                    SourceLocation OpLoc) {
-  if (!S.ActiveTemplateInstantiations.empty())
+  if (S.inTemplateInstantiation())
     return;
   if (OpLoc.isInvalid() || OpLoc.isMacroID())
     return;

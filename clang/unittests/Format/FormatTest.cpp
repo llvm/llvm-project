@@ -9262,10 +9262,11 @@ TEST_F(FormatTest, FormatsLambdas) {
                "             << std::count_if(v.begin(), v.end(), [](int x) {\n"
                "                  return x == 2; // force break\n"
                "                });");
-  verifyFormat("return aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa([=](\n"
-               "    int iiiiiiiiiiii) {\n"
-               "  return aaaaaaaaaaaaaaaaaaaaaaa != aaaaaaaaaaaaaaaaaaaaaaa;\n"
-               "});",
+  verifyFormat("return aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa(\n"
+               "    [=](int iiiiiiiiiiii) {\n"
+               "      return aaaaaaaaaaaaaaaaaaaaaaa !=\n"
+               "             aaaaaaaaaaaaaaaaaaaaaaa;\n"
+               "    });",
                getLLVMStyleWithColumns(60));
   verifyFormat("SomeFunction({[&] {\n"
                "                // comment\n"
@@ -9351,6 +9352,15 @@ TEST_F(FormatTest, FormatsLambdas) {
                "#endif\n"
                "      ;\n"
                "};");
+
+  // Lambdas with complex multiline introducers.
+  verifyFormat(
+      "aaaaaaaaa.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa(\n"
+      "    [aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa]()\n"
+      "        -> ::std::unordered_set<\n"
+      "            aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa> {\n"
+      "      //\n"
+      "    });");
 }
 
 TEST_F(FormatTest, FormatsBlocks) {

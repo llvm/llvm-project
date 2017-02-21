@@ -12973,7 +12973,7 @@ checkLiteralOperatorTemplateParameterList(Sema &SemaRef,
           PmArgs->getType()->getAs<TemplateTypeParmType>();
       if (TArgs && TArgs->getDepth() == PmType->getDepth() &&
           TArgs->getIndex() == PmType->getIndex()) {
-        if (SemaRef.ActiveTemplateInstantiations.empty())
+        if (!SemaRef.inTemplateInstantiation())
           SemaRef.Diag(TpDecl->getLocation(),
                        diag::ext_string_literal_operator_template);
         return false;

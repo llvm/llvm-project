@@ -1443,6 +1443,8 @@ struct ConvertConstructorToDeductionGuideTransform {
                                   CXXConstructorDecl *CD) {
     SmallVector<TemplateArgument, 16> SubstArgs;
 
+    LocalInstantiationScope Scope(SemaRef);
+
     // C++ [over.match.class.deduct]p1:
     // -- For each constructor of the class template designated by the
     //    template-name, a function template with the following properties:
@@ -1464,7 +1466,7 @@ struct ConvertConstructorToDeductionGuideTransform {
       for (NamedDecl *Param : *InnerParams) {
         MultiLevelTemplateArgumentList Args;
         Args.addOuterTemplateArguments(SubstArgs);
-        Args.addOuterTemplateArguments(None);
+        Args.addOuterRetainedLevel();
         NamedDecl *NewParam = transformTemplateParameter(Param, Args);
         if (!NewParam)
           return nullptr;
@@ -1484,7 +1486,7 @@ struct ConvertConstructorToDeductionGuideTransform {
     MultiLevelTemplateArgumentList Args;
     if (FTD) {
       Args.addOuterTemplateArguments(SubstArgs);
-      Args.addOuterTemplateArguments(None);
+      Args.addOuterRetainedLevel();
     }
 
     FunctionProtoTypeLoc FPTL = CD->getTypeSourceInfo()->getTypeLoc()
@@ -1556,6 +1558,8 @@ private:
         if (InstantiatedDefaultArg)
           NewTTP->setDefaultArgument(InstantiatedDefaultArg);
       }
+      SemaRef.CurrentInstantiationScope->InstantiatedLocal(TemplateParam,
+                                                           NewTTP);
       return NewTTP;
     }
 
@@ -6776,7 +6780,7 @@ static bool CheckTemplateSpecializationScope(Sema &S,
       // Do not warn for class scope explicit specialization during
       // instantiation, warning was already emitted during pattern
       // semantic analysis.
-      if (!S.ActiveTemplateInstantiations.size())
+      if (!S.inTemplateInstantiation())
         S.Diag(Loc, diag::ext_function_specialization_in_class)
           << Specialized;
     } else {
