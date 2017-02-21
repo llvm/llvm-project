@@ -7,6 +7,8 @@
 
 #include "mathD.h"
 
+extern CONSTATTR double MATH_PRIVATE(atanred)(double);
+
 CONSTATTR double
 MATH_MANGLE(atan2)(double y, double x)
 {
@@ -20,38 +22,31 @@ MATH_MANGLE(atan2)(double y, double x)
     double u = BUILTIN_MAX_F64(ax, ay);
     double v = BUILTIN_MIN_F64(ax, ay);
     double vbyu = MATH_DIV(v, u);
-    double ret = MATH_MANGLE(atan)(vbyu);
 
-    double t = piby2 - ret;
-    ret = ax < ay ? t : ret;
+    double a = MATH_PRIVATE(atanred)(vbyu);
 
-    bool xneg = BUILTIN_CLASS_F64(x, CLASS_NINF|CLASS_NNOR|CLASS_NSUB|CLASS_NZER);
+    bool xneg = AS_INT2(x).y < 0;
 
-    t = pi - ret;
-    ret = xneg ? t : ret;
+    double t = piby2 - a;
+    a = ax < ay ? t : a;
+    t = pi - a;
+    a = xneg ? t : a;
 
-    ret = BUILTIN_COPYSIGN_F64(ret, y);
-
-    t = BUILTIN_COPYSIGN_F64(piby2, y);
-    ret = BUILTIN_CLASS_F64(x, CLASS_NZER|CLASS_PZER) ? t : ret;
-
-    t = BUILTIN_COPYSIGN_F64(pi, y);
-    t = xneg ? t : y;
-    ret = BUILTIN_CLASS_F64(y, CLASS_NZER|CLASS_PZER) ? t : ret;
+    t = xneg ? pi : 0.0;
+    a = y == 0.0 ? t : a;
 
     if (!FINITE_ONLY_OPT()) {
         t = xneg ? threepiby4 : piby4;
         t = BUILTIN_COPYSIGN_F64(t, y);
-        ret = BUILTIN_CLASS_F64(x, CLASS_NINF|CLASS_PINF) &
+        a = BUILTIN_CLASS_F64(x, CLASS_NINF|CLASS_PINF) &
               BUILTIN_CLASS_F64(y, CLASS_NINF|CLASS_PINF) ?
-              t : ret;
+              t : a;
 
-        ret = BUILTIN_CLASS_F64(x, CLASS_SNAN|CLASS_QNAN) |
+        a = BUILTIN_CLASS_F64(x, CLASS_SNAN|CLASS_QNAN) |
               BUILTIN_CLASS_F64(y, CLASS_SNAN|CLASS_QNAN) ?
-              AS_DOUBLE(QNANBITPATT_DP64) : ret;
+              AS_DOUBLE(QNANBITPATT_DP64) : a;
     }
 
-    return ret;
+    return BUILTIN_COPYSIGN_F64(a, y);
 }
-
 
