@@ -13732,10 +13732,14 @@ X86TargetLowering::ExtractBitFromMaskVector(SDValue Op, SelectionDAG &DAG) const
          "Unexpected vector type in ExtractBitFromMaskVector");
 
   // variable index can't be handled in mask registers,
-  // extend vector to VR512
+  // extend vector to VR512/128
   if (!isa<ConstantSDNode>(Idx)) {
-    MVT ExtVT = (VecVT == MVT::v8i1 ?  MVT::v8i64 : MVT::v16i32);
-    SDValue Ext = DAG.getNode(ISD::ZERO_EXTEND, dl, ExtVT, Vec);
+    unsigned NumElts = VecVT.getVectorNumElements();
+    // Extending v8i1/v16i1 to 512-bit get better performance on KNL
+    // than extending to 128/256bit.
+    unsigned VecSize = (NumElts <= 4 ? 128 : 512);
+    MVT ExtVT = MVT::getVectorVT(MVT::getIntegerVT(VecSize/NumElts), NumElts);
+    SDValue Ext = DAG.getNode(ISD::SIGN_EXTEND, dl, ExtVT, Vec);
     SDValue Elt = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl,
                               ExtVT.getVectorElementType(), Ext, Idx);
     return DAG.getNode(ISD::TRUNCATE, dl, EltVT, Elt);

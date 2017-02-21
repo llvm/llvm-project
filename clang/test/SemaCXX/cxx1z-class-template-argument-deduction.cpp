@@ -176,3 +176,40 @@ namespace default_args_from_ctor {
   template <class A> struct T { template<typename B> T(A = 0, B = 0) {} };
   T t(0, 0);
 }
+
+namespace transform_params {
+  template<typename T, T N, template<T (*v)[N]> typename U, T (*X)[N]>
+  struct A { // expected-note 2{{candidate}}
+    template<typename V, V M, V (*Y)[M], template<V (*v)[M]> typename W>
+    A(U<X>, W<Y>); // expected-note {{[with V = int, M = 12, Y = &transform_params::n]}}
+
+    static constexpr T v = N;
+  };
+
+  int n[12];
+  template<int (*)[12]> struct Q {};
+  Q<&n> qn;
+  // FIXME: The class template argument deduction result here is correct, but
+  // we incorrectly fail to deduce arguments for the constructor!
+  A a(qn, qn); // expected-error {{no matching constructor for initialization of 'transform_params::A<int, 12, Q, &transform_params::n>'}}
+  static_assert(a.v == 12);
+
+  template<typename ...T> struct B {
+    template<T ...V> B(const T (&...p)[V]) {
+      constexpr int Vs[] = {V...};
+      static_assert(Vs[0] == 3 && Vs[1] == 4 && Vs[2] == 4);
+    }
+    static constexpr int (*p)(T...) = (int(*)(int, char, char))nullptr;
+  };
+  B b({1, 2, 3}, "foo", {'x', 'y', 'z', 'w'}); // ok
+
+  template<typename ...T> struct C { // expected-note {{candidate}}
+    template<T ...V, template<T...> typename X>
+      C(X<V...>); // expected-note {{substitution failure [with T = <>, V = <0, 1, 2>]}}
+  };
+  template<int...> struct Y {};
+  // FIXME: This incorrectly deduces T = <>, rather than deducing
+  // T = <int, int, int> from the types of the elements of V.
+  // (This failure is not related to class template argument deduction.)
+  C c(Y<0, 1, 2>{}); // expected-error {{no viable constructor or deduction guide}}
+}

@@ -1,4 +1,5 @@
 ; RUN: llc < %s -march=x86 -mcpu=corei7 | FileCheck %s
+; RUN: llc < %s -march=x86 -mcpu=corei7-avx | FileCheck %s --check-prefix=SHLD
 ; RUN: llc < %s -march=x86 -mcpu=core-avx2 | FileCheck %s --check-prefix=BMI2
 
 define i32 @foo(i32 %x, i32 %y, i32 %z) nounwind readnone {
@@ -49,6 +50,8 @@ define i32 @xfoo(i32 %x, i32 %y, i32 %z) nounwind readnone {
 entry:
 ; CHECK-LABEL: xfoo:
 ; CHECK: roll $7
+; SHLD-LABEL: xfoo:
+; SHLD: shldl $7
 ; BMI2-LABEL: xfoo:
 ; BMI2: rorxl $25
 	%0 = lshr i32 %x, 25
@@ -61,6 +64,8 @@ define i32 @xfoop(i32* %p) nounwind readnone {
 entry:
 ; CHECK-LABEL: xfoop:
 ; CHECK: roll $7
+; SHLD-LABEL: xfoop:
+; SHLD: shldl $7
 ; BMI2-LABEL: xfoop:
 ; BMI2: rorxl $25
 	%x = load i32, i32* %p
@@ -84,6 +89,8 @@ define i32 @xun(i32 %x, i32 %y, i32 %z) nounwind readnone {
 entry:
 ; CHECK-LABEL: xun:
 ; CHECK: roll $25
+; SHLD-LABEL: xun:
+; SHLD: shldl $25
 ; BMI2-LABEL: xun:
 ; BMI2: rorxl $7
 	%0 = lshr i32 %x, 7
@@ -96,6 +103,8 @@ define i32 @xunp(i32* %p) nounwind readnone {
 entry:
 ; CHECK-LABEL: xunp:
 ; CHECK: roll $25
+; shld-label: xunp:
+; shld: shldl $25
 ; BMI2-LABEL: xunp:
 ; BMI2: rorxl $7
 	%x = load i32, i32* %p
