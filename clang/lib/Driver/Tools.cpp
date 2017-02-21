@@ -8937,6 +8937,10 @@ void openbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       if (Args.hasArg(options::OPT_pg))
         CmdArgs.push_back(
             Args.MakeArgString(getToolChain().GetFilePath("gcrt0.o")));
+      else if (Args.hasArg(options::OPT_static) &&
+               !Args.hasArg(options::OPT_nopie))
+        CmdArgs.push_back(
+            Args.MakeArgString(getToolChain().GetFilePath("rcrt0.o")));
       else
         CmdArgs.push_back(
             Args.MakeArgString(getToolChain().GetFilePath("crt0.o")));
