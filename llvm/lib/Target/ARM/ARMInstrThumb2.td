@@ -1828,7 +1828,7 @@ defm t2STM : thumb2_st_mult<"stm", IIC_iStore_m, IIC_iStore_mu, 0>;
 //
 
 let hasSideEffects = 0 in
-def t2MOVr : T2sTwoReg<(outs GPRnopc:$Rd), (ins GPR:$Rm), IIC_iMOVr,
+def t2MOVr : T2sTwoReg<(outs GPRnopc:$Rd), (ins GPRnopc:$Rm), IIC_iMOVr,
                    "mov", ".w\t$Rd, $Rm", []>, Sched<[WriteALU]> {
   let Inst{31-27} = 0b11101;
   let Inst{26-25} = 0b01;
@@ -1837,11 +1837,11 @@ def t2MOVr : T2sTwoReg<(outs GPRnopc:$Rd), (ins GPR:$Rm), IIC_iMOVr,
   let Inst{14-12} = 0b000;
   let Inst{7-4} = 0b0000;
 }
-def : t2InstAlias<"mov${p}.w $Rd, $Rm", (t2MOVr GPRnopc:$Rd, GPR:$Rm,
+def : t2InstAlias<"mov${p}.w $Rd, $Rm", (t2MOVr GPRnopc:$Rd, GPRnopc:$Rm,
                                                 pred:$p, zero_reg)>;
-def : t2InstAlias<"movs${p}.w $Rd, $Rm", (t2MOVr GPRnopc:$Rd, GPR:$Rm,
+def : t2InstAlias<"movs${p}.w $Rd, $Rm", (t2MOVr GPRnopc:$Rd, GPRnopc:$Rm,
                                                  pred:$p, CPSR)>;
-def : t2InstAlias<"movs${p} $Rd, $Rm", (t2MOVr GPRnopc:$Rd, GPR:$Rm,
+def : t2InstAlias<"movs${p} $Rd, $Rm", (t2MOVr GPRnopc:$Rd, GPRnopc:$Rm,
                                                pred:$p, CPSR)>;
 
 // AddedComplexity to ensure isel tries t2MOVi before t2MOVi16.

@@ -339,8 +339,10 @@ void EmitAssemblyHelper::CreatePasses(legacy::PassManager &MPM,
   if (TM)
     TM->adjustPassManager(PMBuilder);
 
-  PMBuilder.addExtension(PassManagerBuilder::EP_EarlyAsPossible,
-                         addAddDiscriminatorsPass);
+  if (CodeGenOpts.DebugInfoForProfiling ||
+      !CodeGenOpts.SampleProfileFile.empty())
+    PMBuilder.addExtension(PassManagerBuilder::EP_EarlyAsPossible,
+                           addAddDiscriminatorsPass);
 
   // In ObjC ARC mode, add the main ARC optimization passes.
   if (LangOpts.ObjCAutoRefCount) {

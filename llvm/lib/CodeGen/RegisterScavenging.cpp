@@ -1,4 +1,4 @@
-//===-- RegisterScavenging.cpp - Machine register scavenging --------------===//
+//===- RegisterScavenging.cpp - Machine register scavenging ---------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -15,18 +15,26 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetInstrInfo.h"
 #include "llvm/Target/TargetRegisterInfo.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
+#include <cassert>
+#include <iterator>
+#include <limits>
+#include <string>
+
 using namespace llvm;
 
 #define DEBUG_TYPE "reg-scavenging"
@@ -390,7 +398,7 @@ unsigned RegScavenger::scavengeRegister(const TargetRegisterClass *RC,
   unsigned NeedSize = RC->getSize();
   unsigned NeedAlign = RC->getAlignment();
 
-  unsigned SI = Scavenged.size(), Diff = UINT_MAX;
+  unsigned SI = Scavenged.size(), Diff = std::numeric_limits<unsigned>::max();
   int FIB = MFI.getObjectIndexBegin(), FIE = MFI.getObjectIndexEnd();
   for (unsigned I = 0; I < Scavenged.size(); ++I) {
     if (Scavenged[I].Reg != 0)

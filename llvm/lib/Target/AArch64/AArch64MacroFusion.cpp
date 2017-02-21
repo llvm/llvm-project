@@ -14,10 +14,13 @@
 
 #include "AArch64MacroFusion.h"
 #include "AArch64Subtarget.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Target/TargetInstrInfo.h"
 
 #define DEBUG_TYPE "misched"
+
+STATISTIC(NumFused, "Number of instr pairs fused");
 
 using namespace llvm;
 
@@ -34,12 +37,13 @@ static bool shouldScheduleAdjacent(const AArch64InstrInfo &TII,
                                    const AArch64Subtarget &ST,
                                    const MachineInstr *First,
                                    const MachineInstr *Second) {
+  assert((First || Second) && "At least one instr must be specified");
   unsigned FirstOpcode =
-      First ? First->getOpcode()
-            : static_cast<unsigned>(AArch64::INSTRUCTION_LIST_END);
+    First ? First->getOpcode()
+	  : static_cast<unsigned>(AArch64::INSTRUCTION_LIST_END);
   unsigned SecondOpcode =
-      Second ? Second->getOpcode()
-             : static_cast<unsigned>(AArch64::INSTRUCTION_LIST_END);
+    Second ? Second->getOpcode()
+           : static_cast<unsigned>(AArch64::INSTRUCTION_LIST_END);
 
   if (ST.hasArithmeticBccFusion())
     // Fuse CMN, CMP, TST followed by Bcc.
@@ -204,6 +208,7 @@ static bool scheduleAdjacentImpl(ScheduleDAGMI *DAG, SUnit *ASU,
       if (Dep.getSUnit() == ASU)
         Dep.setLatency(0);
 
+    ++NumFused;
     DEBUG(dbgs() << "Macro fuse ";
           Preds ? BSU->print(dbgs(), DAG) : ASU->print(dbgs(), DAG);
           dbgs() << " - ";

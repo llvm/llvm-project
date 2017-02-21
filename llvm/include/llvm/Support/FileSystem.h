@@ -464,6 +464,32 @@ inline bool equivalent(const Twine &A, const Twine &B) {
   return !equivalent(A, B, result) && result;
 }
 
+/// @brief Is the file mounted on a local filesystem?
+///
+/// @param path Input path.
+/// @param result Set to true if \a path is on fixed media such as a hard disk,
+///               false if it is not.
+/// @returns errc::success if result has been successfully set, otherwise a
+///          platform specific error_code.
+std::error_code is_local(const Twine &path, bool &result);
+
+/// @brief Version of is_local accepting an open file descriptor.
+std::error_code is_local(int FD, bool &result);
+
+/// @brief Simpler version of is_local for clients that don't need to
+///        differentiate between an error and false.
+inline bool is_local(const Twine &Path) {
+  bool Result;
+  return !is_local(Path, Result) && Result;
+}
+
+/// @brief Simpler version of is_local accepting an open file descriptor for
+///        clients that don't need to differentiate between an error and false.
+inline bool is_local(int FD) {
+  bool Result;
+  return !is_local(FD, Result) && Result;
+}
+
 /// @brief Does status represent a directory?
 ///
 /// @param status A file_status previously returned from status.

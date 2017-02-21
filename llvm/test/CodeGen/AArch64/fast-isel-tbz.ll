@@ -278,8 +278,24 @@ bb2:
 ; Test that we don't fold the 'and' instruction into the compare.
 define i32 @icmp_eq_and_i32(i32 %a, i1 %c) {
 ; CHECK-LABEL: icmp_eq_and_i32
-; CHECK:       and  [[REG:w[0-9]+]], w0, #0x4
+; CHECK:       and  [[REG:w[0-9]+]], w0, #0x3
 ; CHECK-NEXT:  cbz  [[REG]], {{LBB.+_3}}
+  %1 = and i32 %a, 3
+  br i1 %c, label %bb0, label %bb2
+bb0:
+  %2 = icmp eq i32 %1, 0
+  br i1 %2, label %bb1, label %bb2, !prof !0
+bb1:
+  ret i32 1
+bb2:
+  ret i32 0
+}
+
+; Test that we do fold the 'and' instruction into the compare and
+; generate a tbz instruction for the conditional branch.
+define i32 @icmp_eq_and1bit_i32(i32 %a, i1 %c) {
+; CHECK-LABEL: icmp_eq_and1bit_i32
+; CHECK:       tbz  {{w[0-9]+}}, #2, {{LBB.+_3}}
   %1 = and i32 %a, 4
   br i1 %c, label %bb0, label %bb2
 bb0:

@@ -53,7 +53,11 @@ extern "C" int __dll_thunk_init();
 // after __asan_init, thus an empty implementation is sufficient.
 #define INTERCEPT_SANITIZER_FUNCTION(name)                                     \
   extern "C" __declspec(noinline) void name() {                                \
-    volatile int prevent_icf = (__LINE__ << 8); (void)prevent_icf;             \
+    volatile int prevent_icf = (__LINE__ << 8) ^ __COUNTER__;                  \
+    static const char function_name[] = #name;                                 \
+    for (const char* ptr = &function_name[0]; *ptr; ++ptr)                     \
+      prevent_icf ^= *ptr;                                                     \
+    (void)prevent_icf;                                                         \
     __debugbreak();                                                            \
   }                                                                            \
   INTERCEPT_OR_DIE(#name, name)
@@ -64,7 +68,11 @@ extern "C" int __dll_thunk_init();
 // we consider the default impl provided by asan library.
 #define INTERCEPT_SANITIZER_WEAK_FUNCTION(name)                                \
   extern "C" __declspec(noinline) void name() {                                \
-    volatile int prevent_icf = (__LINE__ << 8); (void)prevent_icf;             \
+    volatile int prevent_icf = (__LINE__ << 8) ^ __COUNTER__;                  \
+    static const char function_name[] = #name;                                 \
+    for (const char* ptr = &function_name[0]; *ptr; ++ptr)                     \
+      prevent_icf ^= *ptr;                                                     \
+    (void)prevent_icf;                                                         \
     __debugbreak();                                                            \
   }                                                                            \
   INTERCEPT_WHEN_POSSIBLE(#name, STRINGIFY(WEAK_EXPORT_NAME(name)), name)

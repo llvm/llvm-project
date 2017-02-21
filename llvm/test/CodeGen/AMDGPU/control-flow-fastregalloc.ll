@@ -10,6 +10,8 @@
 
 
 ; GCN-LABEL: {{^}}divergent_if_endif:
+; VGPR: workitem_private_segment_byte_size = 12{{$}}
+
 
 ; GCN: {{^}}; BB#0:
 ; GCN: s_mov_b32 m0, -1
@@ -31,7 +33,9 @@
 ; VMEM: buffer_store_dword v[[V_SAVEEXEC_HI]], off, s[0:3], s7 offset:4 ; 4-byte Folded Spill
 
 ; Spill load
-; GCN: buffer_store_dword [[LOAD0]], off, s[0:3], s7 offset:[[LOAD0_OFFSET:[0-9]+]] ; 4-byte Folded Spill
+; VMEM: buffer_store_dword [[LOAD0]], off, s[0:3], s7 offset:[[LOAD0_OFFSET:[0-9]+]] ; 4-byte Folded Spill
+; VGPR: buffer_store_dword [[LOAD0]], off, s[0:3], s7 ; 4-byte Folded Spill
+
 ; GCN: s_mov_b64 exec, s{{\[}}[[ANDEXEC_LO]]:[[ANDEXEC_HI]]{{\]}}
 
 ; GCN: s_waitcnt vmcnt(0) expcnt(0)
@@ -40,7 +44,8 @@
 ; GCN: {{^}}BB{{[0-9]+}}_1: ; %if
 ; GCN: s_mov_b32 m0, -1
 ; GCN: ds_read_b32 [[LOAD1:v[0-9]+]]
-; GCN: buffer_load_dword [[RELOAD_LOAD0:v[0-9]+]], off, s[0:3], s7 offset:[[LOAD0_OFFSET]] ; 4-byte Folded Reload
+; VMEM: buffer_load_dword [[RELOAD_LOAD0:v[0-9]+]], off, s[0:3], s7 offset:[[LOAD0_OFFSET]] ; 4-byte Folded Reload
+; VGPR: buffer_load_dword [[RELOAD_LOAD0:v[0-9]+]], off, s[0:3], s7 ; 4-byte Folded Reload
 ; GCN: s_waitcnt vmcnt(0)
 
 ; Spill val register
@@ -88,6 +93,8 @@ endif:
 }
 
 ; GCN-LABEL: {{^}}divergent_loop:
+; VGPR: workitem_private_segment_byte_size = 16{{$}}
+
 ; GCN: {{^}}; BB#0:
 
 ; GCN: s_mov_b32 m0, -1

@@ -18,6 +18,7 @@
 
 // Other libraries and framework includes
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/RWMutex.h"
 // C++ Includes
 #include <atomic>
 #include <cstdarg>
@@ -184,14 +185,22 @@ public:
   bool GetVerbose() const;
 
   void SetStream(const std::shared_ptr<llvm::raw_ostream> &stream_sp) {
+    llvm::sys::ScopedWriter lock(m_stream_mutex);
     m_stream_sp = stream_sp;
+  }
+
+  std::shared_ptr<llvm::raw_ostream> GetStream() {
+    llvm::sys::ScopedReader lock(m_stream_mutex);
+    return m_stream_sp;
   }
 
 protected:
   //------------------------------------------------------------------
   // Member variables
   //------------------------------------------------------------------
+  llvm::sys::RWMutex m_stream_mutex; // Protects m_stream_sp
   std::shared_ptr<llvm::raw_ostream> m_stream_sp;
+
   Flags m_options;
   Flags m_mask_bits;
 

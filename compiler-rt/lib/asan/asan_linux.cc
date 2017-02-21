@@ -70,6 +70,7 @@ namespace __asan {
 
 void InitializePlatformInterceptors() {}
 void InitializePlatformExceptionHandlers() {}
+bool IsSystemHeapAddress (uptr addr) { return false; }
 
 void *AsanDoesNotSupportStaticLinkage() {
   // This will fail to link with -static.

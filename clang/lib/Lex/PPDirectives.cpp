@@ -1976,8 +1976,12 @@ void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
       SmallString<128> Path;
       Path.reserve(Name.size()+2);
       Path.push_back(isAngled ? '<' : '"');
+      bool isLeadingSeparator = llvm::sys::path::is_absolute(Name);
       for (auto Component : Components) {
-        Path.append(Component);
+        if (isLeadingSeparator)
+          isLeadingSeparator = false;
+        else
+          Path.append(Component);
         // Append the separator the user used, or the close quote
         Path.push_back(
           Path.size() <= Filename.size() ? Filename[Path.size()-1] :

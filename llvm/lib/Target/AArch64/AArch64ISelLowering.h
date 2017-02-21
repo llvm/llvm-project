@@ -412,6 +412,8 @@ public:
     return true;
   }
 
+  bool isMaskAndCmp0FoldingBeneficial(const Instruction &AndI) const override;
+
   bool hasAndNotCompare(SDValue) const override {
     // 'bics'
     return true;

@@ -210,12 +210,9 @@ class BreakableComment : public BreakableToken {
 protected:
   /// \brief Creates a breakable token for a comment.
   ///
-  /// \p StartColumn specifies the column in which the comment will start
-  /// after formatting, while \p OriginalStartColumn specifies in which
-  /// column the comment started before formatting.
-  /// If the comment starts a line after formatting, set \p FirstInLine to true.
+  /// \p StartColumn specifies the column in which the comment will start after
+  /// formatting.
   BreakableComment(const FormatToken &Token, unsigned StartColumn,
-                   unsigned OriginalStartColumn, bool FirstInLine,
                    bool InPPDirective, encoding::Encoding Encoding,
                    const FormatStyle &Style);
 
@@ -274,13 +271,6 @@ protected:
 
   // The intended start column of the first line of text from this section.
   unsigned StartColumn;
-
-  // The original start column of the first line of text from this section.
-  unsigned OriginalStartColumn;
-
-  // Whether the first token of this section is the first token in its unwrapped
-  // line.
-  bool FirstInLine;
 
   // The prefix to use in front a line that has been reflown up.
   // For example, when reflowing the second line after the first here:
