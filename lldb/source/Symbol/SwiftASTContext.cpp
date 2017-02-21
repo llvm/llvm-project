@@ -885,7 +885,8 @@ public:
                    .getPointer());
       case_type = GetFunctionArgumentTuple(case_type.GetFunctionReturnType());
 
-      const bool is_indirect = case_decl->isIndirect();
+      const bool is_indirect = case_decl->isIndirect() 
+          || case_decl->getParentEnum()->isIndirect();
 
       if (log)
         log->Printf("case_name = %s, type = %s, is_indirect = %s",
