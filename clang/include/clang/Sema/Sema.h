@@ -7182,6 +7182,20 @@ public:
     operator=(const InstantiatingTemplate&) = delete;
   };
 
+  /// Determine whether we are currently performing template instantiation.
+  bool inTemplateInstantiation() const {
+    return ActiveTemplateInstantiations.size() > NonInstantiationEntries;
+  }
+
+  void PrintContextStack() {
+    if (!ActiveTemplateInstantiations.empty() &&
+        ActiveTemplateInstantiations.back() !=
+            LastTemplateInstantiationErrorContext) {
+      PrintInstantiationStack();
+      LastTemplateInstantiationErrorContext =
+          ActiveTemplateInstantiations.back();
+    }
+  }
   void PrintInstantiationStack();
 
   /// \brief Determines whether we are currently in a context where

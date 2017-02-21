@@ -1479,6 +1479,7 @@ public:
                                                       unsigned NumExpansions);
   
   using TemplateParmPosition::getDepth;
+  using TemplateParmPosition::setDepth;
   using TemplateParmPosition::getPosition;
   using TemplateParmPosition::setPosition;
   using TemplateParmPosition::getIndex;

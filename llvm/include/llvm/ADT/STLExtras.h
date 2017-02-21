@@ -777,6 +777,13 @@ auto remove_if(R &&Range, UnaryPredicate P) -> decltype(std::begin(Range)) {
   return std::remove_if(std::begin(Range), std::end(Range), P);
 }
 
+/// Provide wrappers to std::copy_if which take ranges instead of having to
+/// pass begin/end explicitly.
+template <typename R, typename OutputIt, typename UnaryPredicate>
+OutputIt copy_if(R &&Range, OutputIt Out, UnaryPredicate P) {
+  return std::copy_if(std::begin(Range), std::end(Range), Out, P);
+}
+
 /// Wrapper function around std::find to detect if an element exists
 /// in a container.
 template <typename R, typename E>

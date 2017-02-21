@@ -244,7 +244,7 @@ static bool SemaBuiltinSEHScopeCheck(Sema &SemaRef, CallExpr *TheCall,
   // Scopes aren't available during instantiation. Fortunately, builtin
   // functions cannot be template args so they cannot be formed through template
   // instantiation. Therefore checking once during the parse is sufficient.
-  if (!SemaRef.ActiveTemplateInstantiations.empty())
+  if (SemaRef.inTemplateInstantiation())
     return false;
 
   Scope *S = SemaRef.getCurScope();
@@ -6782,7 +6782,7 @@ void Sema::CheckMaxUnsignedZero(const CallExpr *Call,
   if (!Call || !FDecl) return;
 
   // Ignore template specializations and macros.
-  if (!ActiveTemplateInstantiations.empty()) return;
+  if (inTemplateInstantiation()) return;
   if (Call->getExprLoc().isMacroID()) return;
 
   // Only care about the one template argument, two function parameter std::max
@@ -8235,7 +8235,7 @@ bool HasEnumType(Expr *E) {
 
 void CheckTrivialUnsignedComparison(Sema &S, BinaryOperator *E) {
   // Disable warning in template instantiations.
-  if (!S.ActiveTemplateInstantiations.empty())
+  if (S.inTemplateInstantiation())
     return;
 
   BinaryOperatorKind op = E->getOpcode();
@@ -8265,7 +8265,7 @@ void DiagnoseOutOfRangeComparison(Sema &S, BinaryOperator *E, Expr *Constant,
                                   Expr *Other, const llvm::APSInt &Value,
                                   bool RhsConstant) {
   // Disable warning in template instantiations.
-  if (!S.ActiveTemplateInstantiations.empty())
+  if (S.inTemplateInstantiation())
     return;
 
   // TODO: Investigate using GetExprRange() to get tighter bounds
@@ -8703,7 +8703,7 @@ void DiagnoseFloatingImpCast(Sema &S, Expr *E, QualType T,
 
                              SourceLocation CContext) {
   const bool IsBool = T->isSpecificBuiltinType(BuiltinType::Bool);
-  const bool PruneWarnings = !S.ActiveTemplateInstantiations.empty();
+  const bool PruneWarnings = S.inTemplateInstantiation();
 
   Expr *InnerE = E->IgnoreParenImpCasts();
   // We also want to warn on, e.g., "int i = -1.234"
@@ -11314,7 +11314,7 @@ void Sema::DiagnoseSelfMove(const Expr *LHSExpr, const Expr *RHSExpr,
   if (Diags.isIgnored(diag::warn_sizeof_pointer_expr_memaccess, OpLoc))
     return;
 
-  if (!ActiveTemplateInstantiations.empty())
+  if (inTemplateInstantiation())
     return;
 
   // Strip parens and casts away.

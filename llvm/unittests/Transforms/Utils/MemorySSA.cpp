@@ -158,7 +158,7 @@ TEST_F(MemorySSATest, CreateLoadsAndStoreUpdater) {
   StoreInst *LeftStore = B.CreateStore(B.getInt8(16), PointerArg);
   MemoryAccess *LeftStoreAccess = MSSA.createMemoryAccessInBB(
       LeftStore, nullptr, Left, MemorySSA::Beginning);
-  Updater.insertDef(cast<MemoryDef>(LeftStoreAccess));
+  Updater.insertDef(cast<MemoryDef>(LeftStoreAccess), false);
   // We don't touch existing loads, so we need to create a new one to get a phi
   // Add the second load
   B.SetInsertPoint(Merge, Merge->begin());
@@ -183,7 +183,11 @@ TEST_F(MemorySSATest, CreateLoadsAndStoreUpdater) {
   StoreInst *SecondEntryStore = B.CreateStore(B.getInt8(16), PointerArg);
   MemoryAccess *SecondEntryStoreAccess = MSSA.createMemoryAccessInBB(
       SecondEntryStore, nullptr, Entry, MemorySSA::End);
-  Updater.insertDef(cast<MemoryDef>(SecondEntryStoreAccess));
+  // Insert it twice just to test renaming
+  Updater.insertDef(cast<MemoryDef>(SecondEntryStoreAccess), false);
+  EXPECT_NE(FirstLoadAccess->getDefiningAccess(), MergePhi);
+  Updater.insertDef(cast<MemoryDef>(SecondEntryStoreAccess), true);
+  EXPECT_EQ(FirstLoadAccess->getDefiningAccess(), MergePhi);
   // and make sure the phi below it got updated, despite being blocks away
   MergePhi = dyn_cast<MemoryPhi>(SecondLoadAccess->getDefiningAccess());
   EXPECT_NE(MergePhi, nullptr);

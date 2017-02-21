@@ -481,3 +481,16 @@ namespace check_extended_pack {
   int n;
   void h() { g<0>(Y<0, &n>()); } // expected-error {{no matching function}}
 }
+
+namespace dependent_template_template_param_non_type_param_type {
+  template<int N> struct A { // expected-note 2{{candidate}}
+    template<typename V = int, V M = 12, V (*Y)[M], template<V (*v)[M]> class W>
+    A(W<Y>); // expected-note {{[with V = int, M = 12, Y = &dependent_template_template_param_non_type_param_type::n]}}
+  };
+
+  int n[12];
+  template<int (*)[12]> struct Q {};
+  Q<&n> qn;
+  // FIXME: This should be accepted, but we somehow fail to deduce W.
+  A<0> a(qn); // expected-error {{no matching constructor for initialization}}
+}

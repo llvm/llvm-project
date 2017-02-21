@@ -63,12 +63,30 @@ private:
 
 public:
   MemorySSAUpdater(MemorySSA *MSSA) : MSSA(MSSA) {}
-  void insertDef(MemoryDef *Def);
+  // Insert a definition into the MemorySSA IR.  RenameUses will rename any use
+  // below the new def block (and any inserted phis).  RenameUses should be set
+  // to true if the definition may cause new aliases for loads below it.  This
+  // is not the case for hoisting or sinking or other forms of code *movement*.
+  // It *is* the case for straight code insertion.
+  // For example:
+  // store a
+  // if (foo) { }
+  // load a
+  //
+  // Moving the store into the if block, and calling insertDef, does not
+  // require RenameUses.
+  // However, changing it to:
+  // store a
+  // if (foo) { store b }
+  // load a
+  // Where a mayalias b, *does* require RenameUses be set to true.
+  void insertDef(MemoryDef *Def, bool RenameUses = false);
   void insertUse(MemoryUse *Use);
   void moveBefore(MemoryUseOrDef *What, MemoryUseOrDef *Where);
   void moveAfter(MemoryUseOrDef *What, MemoryUseOrDef *Where);
   void moveToPlace(MemoryUseOrDef *What, BasicBlock *BB,
                    MemorySSA::InsertionPlace Where);
+
 private:
   // Move What before Where in the MemorySSA IR.
   template <class WhereType>

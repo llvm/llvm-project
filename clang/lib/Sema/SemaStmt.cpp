@@ -1810,7 +1810,7 @@ Sema::ActOnObjCForCollectionStmt(SourceLocation ForLoc,
 
         D->setType(FirstType);
 
-        if (ActiveTemplateInstantiations.empty()) {
+        if (!inTemplateInstantiation()) {
           SourceLocation Loc =
               D->getTypeSourceInfo()->getTypeLoc().getBeginLoc();
           Diag(Loc, diag::warn_auto_var_is_id)

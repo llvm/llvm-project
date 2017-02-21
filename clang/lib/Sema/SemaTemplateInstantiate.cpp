@@ -1121,6 +1121,23 @@ TemplateInstantiator::TransformTemplateParmRefExpr(DeclRefExpr *E,
     return E;
 
   TemplateArgument Arg = TemplateArgs(NTTP->getDepth(), NTTP->getPosition());
+
+  if (TemplateArgs.getNumLevels() != TemplateArgs.getNumSubstitutedLevels()) {
+    // We're performing a partial substitution, so the substituted argument
+    // could be dependent. As a result we can't create a SubstNonType*Expr
+    // node now, since that represents a fully-substituted argument.
+    // FIXME: We should have some AST representation for this.
+    if (Arg.getKind() == TemplateArgument::Pack) {
+      // FIXME: This won't work for alias templates.
+      assert(Arg.pack_size() == 1 && Arg.pack_begin()->isPackExpansion() &&
+             "unexpected pack arguments in partial substitution");
+      Arg = Arg.pack_begin()->getPackExpansionPattern();
+    }
+    assert(Arg.getKind() == TemplateArgument::Expression &&
+           "unexpected nontype template argument kind in partial substitution");
+    return Arg.getAsExpr();
+  }
+
   if (NTTP->isParameterPack()) {
     assert(Arg.getKind() == TemplateArgument::Pack && 
            "Missing argument pack");
@@ -1429,12 +1446,9 @@ TemplateInstantiator::TransformTemplateTypeParmType(TypeLocBuilder &TLB,
     NewTTPDecl = cast_or_null<TemplateTypeParmDecl>(
                                   TransformDecl(TL.getNameLoc(), OldTTPDecl));
 
-  QualType Result
-    = getSema().Context.getTemplateTypeParmType(T->getDepth()
-                                                 - TemplateArgs.getNumLevels(),
-                                                T->getIndex(),
-                                                T->isParameterPack(),
-                                                NewTTPDecl);
+  QualType Result = getSema().Context.getTemplateTypeParmType(
+      T->getDepth() - TemplateArgs.getNumSubstitutedLevels(), T->getIndex(),
+      T->isParameterPack(), NewTTPDecl);
   TemplateTypeParmTypeLoc NewTL = TLB.push<TemplateTypeParmTypeLoc>(Result);
   NewTL.setNameLoc(TL.getNameLoc());
   return Result;

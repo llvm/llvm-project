@@ -1463,6 +1463,7 @@ void ASTDumper::VisitTemplateTypeParmDecl(const TemplateTypeParmDecl *D) {
     OS << " typename";
   else
     OS << " class";
+  OS << " depth " << D->getDepth() << " index " << D->getIndex();
   if (D->isParameterPack())
     OS << " ...";
   dumpName(D);
@@ -1472,6 +1473,7 @@ void ASTDumper::VisitTemplateTypeParmDecl(const TemplateTypeParmDecl *D) {
 
 void ASTDumper::VisitNonTypeTemplateParmDecl(const NonTypeTemplateParmDecl *D) {
   dumpType(D->getType());
+  OS << " depth " << D->getDepth() << " index " << D->getIndex();
   if (D->isParameterPack())
     OS << " ...";
   dumpName(D);
@@ -1481,6 +1483,7 @@ void ASTDumper::VisitNonTypeTemplateParmDecl(const NonTypeTemplateParmDecl *D) {
 
 void ASTDumper::VisitTemplateTemplateParmDecl(
     const TemplateTemplateParmDecl *D) {
+  OS << " depth " << D->getDepth() << " index " << D->getIndex();
   if (D->isParameterPack())
     OS << " ...";
   dumpName(D);

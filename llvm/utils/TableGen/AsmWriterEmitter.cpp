@@ -813,10 +813,9 @@ void AsmWriterEmitter::EmitPrintAliasInstruction(raw_ostream &O) {
         // We only consider ReqFeatures predicates if PassSubtarget
         std::vector<Record *> RF =
             CGA.TheDef->getValueAsListOfDefs("Predicates");
-        std::copy_if(RF.begin(), RF.end(), std::back_inserter(ReqFeatures),
-                     [](Record *R) {
-                       return R->getValueAsBit("AssemblerMatcherPredicate");
-                     });
+        copy_if(RF, std::back_inserter(ReqFeatures), [](Record *R) {
+          return R->getValueAsBit("AssemblerMatcherPredicate");
+        });
       }
 
       unsigned NumMIOps = 0;

@@ -685,6 +685,11 @@ protected:
   // on the updater to fixup what it breaks, so it is not public.
   void moveTo(MemoryUseOrDef *What, BasicBlock *BB, AccessList::iterator Where);
   void moveTo(MemoryUseOrDef *What, BasicBlock *BB, InsertionPlace Point);
+  // Rename the dominator tree branch rooted at BB.
+  void renamePass(BasicBlock *BB, MemoryAccess *IncomingVal,
+                  SmallPtrSetImpl<BasicBlock *> &Visited) {
+    renamePass(DT->getNode(BB), IncomingVal, Visited, true, true);
+  }
 
 private:
   class CachingWalker;
@@ -708,12 +713,13 @@ private:
   MemoryAccess *findDominatingDef(BasicBlock *, enum InsertionPlace);
   void removeFromLookups(MemoryAccess *);
   void removeFromLists(MemoryAccess *, bool ShouldDelete = true);
-
   void placePHINodes(const SmallPtrSetImpl<BasicBlock *> &,
                      const DenseMap<const BasicBlock *, unsigned int> &);
-  MemoryAccess *renameBlock(BasicBlock *, MemoryAccess *);
+  MemoryAccess *renameBlock(BasicBlock *, MemoryAccess *, bool);
+  void renameSuccessorPhis(BasicBlock *, MemoryAccess *, bool);
   void renamePass(DomTreeNode *, MemoryAccess *IncomingVal,
-                  SmallPtrSet<BasicBlock *, 16> &Visited);
+                  SmallPtrSetImpl<BasicBlock *> &Visited,
+                  bool SkipVisited = false, bool RenameAllUses = false);
   AccessList *getOrCreateAccessList(const BasicBlock *);
   DefsList *getOrCreateDefsList(const BasicBlock *);
   void renumberBlock(const BasicBlock *) const;
