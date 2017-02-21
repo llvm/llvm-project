@@ -846,6 +846,15 @@ def SHRD64mri8 : RIi8<0xAC, MRMDestMem,
 
 } // Defs = [EFLAGS]
 
+// Sandy Bridge and newer Intel processors support faster rotates using
+// SHLD to avoid a partial flag update on the normal rotate instructions.
+let Predicates = [HasFastSHLDRotate], AddedComplexity = 5 in {
+  def : Pat<(rotl GR32:$src, (i8 imm:$shamt)),
+            (SHLD32rri8 GR32:$src, GR32:$src, imm:$shamt)>;
+  def : Pat<(rotl GR64:$src, (i8 imm:$shamt)),
+            (SHLD64rri8 GR64:$src, GR64:$src, imm:$shamt)>;
+}
+
 def ROT32L2R_imm8  : SDNodeXForm<imm, [{
   // Convert a ROTL shamt to a ROTR shamt on 32-bit integer.
   return getI8Imm(32 - N->getZExtValue(), SDLoc(N));

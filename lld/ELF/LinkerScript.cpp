@@ -1468,10 +1468,9 @@ Expr ScriptParser::readAssert() {
   StringRef Msg = unquote(next());
   expect(")");
   return [=](uint64_t Dot) {
-    uint64_t V = E(Dot);
-    if (!V)
+    if (!E(Dot))
       error(Msg);
-    return V;
+    return Dot;
   };
 }
 

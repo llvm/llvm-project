@@ -302,6 +302,7 @@ void X86Subtarget::initializeEnvironment() {
   HasFastScalarFSQRT = false;
   HasFastVectorFSQRT = false;
   HasFastLZCNT = false;
+  HasFastSHLDRotate = false;
   HasSlowDivide32 = false;
   HasSlowDivide64 = false;
   PadShortFunctions = false;

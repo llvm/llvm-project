@@ -1,4 +1,5 @@
 ; RUN: llc < %s -march=x86-64 -mcpu=corei7 | FileCheck %s
+; RUN: llc < %s -march=x86-64 -mcpu=corei7-avx | FileCheck %s --check-prefix=SHLD
 ; RUN: llc < %s -march=x86-64 -mcpu=core-avx2 | FileCheck %s --check-prefix=BMI2
 
 define i64 @foo(i64 %x, i64 %y, i64 %z) nounwind readnone {
@@ -49,6 +50,8 @@ define i64 @xfoo(i64 %x, i64 %y, i64 %z) nounwind readnone {
 entry:
 ; CHECK-LABEL: xfoo:
 ; CHECK: rolq $7
+; SHLD-LABEL: xfoo:
+; SHLD: shldq $7
 ; BMI2-LABEL: xfoo:
 ; BMI2: rorxq $57
 	%0 = lshr i64 %x, 57
@@ -61,6 +64,8 @@ define i64 @xfoop(i64* %p) nounwind readnone {
 entry:
 ; CHECK-LABEL: xfoop:
 ; CHECK: rolq $7
+; SHLD-LABEL: xfoop:
+; SHLD: shldq $7
 ; BMI2-LABEL: xfoop:
 ; BMI2: rorxq $57
 	%x = load i64, i64* %p
@@ -84,6 +89,8 @@ define i64 @xun(i64 %x, i64 %y, i64 %z) nounwind readnone {
 entry:
 ; CHECK-LABEL: xun:
 ; CHECK: rolq $57
+; SHLD-LABEL: xun:
+; SHLD: shldq $57
 ; BMI2-LABEL: xun:
 ; BMI2: rorxq $7
 	%0 = lshr i64 %x, 7
@@ -96,6 +103,8 @@ define i64 @xunp(i64* %p) nounwind readnone {
 entry:
 ; CHECK-LABEL: xunp:
 ; CHECK: rolq $57
+; SHLD-LABEL: xunp:
+; SHLD: shldq $57
 ; BMI2-LABEL: xunp:
 ; BMI2: rorxq $7
 	%x = load i64, i64* %p

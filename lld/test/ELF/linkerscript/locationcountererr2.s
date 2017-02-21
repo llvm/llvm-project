@@ -3,3 +3,6 @@
 # RUN: echo "SECTIONS { . = 0x20; . = 0x10; }" > %t.script
 # RUN: not ld.lld %t.o --script %t.script -o %t -shared 2>&1 | FileCheck %s
 # CHECK: unable to move location counter backward
+
+# RUN: echo "SECTIONS { . = 0x20; . = ASSERT(0x1, "foo"); }" > %t2.script
+# RUN: ld.lld %t.o --script %t2.script -o %t -shared

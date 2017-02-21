@@ -4957,11 +4957,17 @@ NamedDecl *Sema::FindInstantiatedDecl(SourceLocation Loc, NamedDecl *D,
         auto *Guide = dyn_cast<CXXDeductionGuideDecl>(FD);
         if (Guide && Guide->isImplicit()) {
           TemplateDecl *TD = Guide->getDeducedTemplate();
+          // Convert the arguments to an "as-written" list.
           TemplateArgumentListInfo Args(Loc, Loc);
-          for (auto Arg : TemplateArgs.getInnermost().take_front(
-                                      TD->getTemplateParameters()->size()))
-            Args.addArgument(
-                getTrivialTemplateArgumentLoc(Arg, QualType(), Loc));
+          for (TemplateArgument Arg : TemplateArgs.getInnermost().take_front(
+                                        TD->getTemplateParameters()->size())) {
+            ArrayRef<TemplateArgument> Unpacked(Arg);
+            if (Arg.getKind() == TemplateArgument::Pack)
+              Unpacked = Arg.pack_elements();
+            for (TemplateArgument UnpackedArg : Unpacked)
+              Args.addArgument(
+                  getTrivialTemplateArgumentLoc(UnpackedArg, QualType(), Loc));
+          }
           QualType T = CheckTemplateIdType(TemplateName(TD), Loc, Args);
           if (T.isNull())
             return nullptr;

@@ -730,6 +730,11 @@ public:
         std::copy(Pack.New.begin(), Pack.New.end(), ArgumentPack);
         NewPack = DeducedTemplateArgument(
             TemplateArgument(llvm::makeArrayRef(ArgumentPack, Pack.New.size())),
+            // FIXME: This is wrong, it's possible that some pack elements are
+            // deduced from an array bound and others are not:
+            //   template<typename ...T, T ...V> void g(const T (&...p)[V]);
+            //   g({1, 2, 3}, {{}, {}});
+            // ... should deduce T = {int, size_t (from array bound)}.
             Pack.New[0].wasDeducedFromArrayBound());
       }
 
@@ -3353,10 +3358,12 @@ static Sema::TemplateDeductionResult DeduceFromInitializerList(
             getDeducedParameterFromExpr(Info, DependentArrTy->getSizeExpr())) {
       // We can perform template argument deduction for the given non-type
       // template parameter.
-      llvm::APInt Size(S.Context.getIntWidth(NTTP->getType()),
-                       ILE->getNumInits());
+      // C++ [temp.deduct.type]p13:
+      //   The type of N in the type T[N] is std::size_t.
+      QualType T = S.Context.getSizeType();
+      llvm::APInt Size(S.Context.getIntWidth(T), ILE->getNumInits());
       if (auto Result = DeduceNonTypeTemplateArgument(
-              S, TemplateParams, NTTP, llvm::APSInt(Size), NTTP->getType(),
+              S, TemplateParams, NTTP, llvm::APSInt(Size), T,
               /*ArrayBound=*/true, Info, Deduced))
         return Result;
     }

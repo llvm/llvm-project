@@ -139,7 +139,7 @@ for.end:                                          ; preds = %for.body, %entry
 ; Consequently, we should *not* form any chains.
 ;
 ; A9: foldedidx:
-; A9: ldrb{{(.w)?}} {{r[0-9]|lr}}, [{{r[0-9]|lr}}, #3]
+; A9: ldrb{{(.w)?}} {{r[0-9]|lr}}, [{{r[0-9]|lr}}, #403]
 define void @foldedidx(i8* nocapture %a, i8* nocapture %b, i8* nocapture %c) nounwind ssp {
 entry:
   br label %for.body

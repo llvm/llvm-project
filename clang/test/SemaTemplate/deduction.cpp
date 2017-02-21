@@ -494,3 +494,45 @@ namespace dependent_template_template_param_non_type_param_type {
   // FIXME: This should be accepted, but we somehow fail to deduce W.
   A<0> a(qn); // expected-error {{no matching constructor for initialization}}
 }
+
+namespace dependent_list_deduction {
+  template<typename T, T V> void a(const int (&)[V]) {
+    static_assert(is_same<T, decltype(sizeof(0))>::value, "");
+    static_assert(V == 3, "");
+  }
+  template<typename T, T V> void b(const T (&)[V]) {
+    static_assert(is_same<T, int>::value, "");
+    static_assert(V == 3, "");
+  }
+  template<typename T, T V> void c(const T (&)[V]) {
+    static_assert(is_same<T, decltype(sizeof(0))>::value, "");
+    static_assert(V == 3, "");
+  }
+  void d() {
+    a({1, 2, 3});
+#if __cplusplus <= 201402L
+    // expected-error@-2 {{no match}} expected-note@-15 {{couldn't infer template argument 'T'}}
+#endif
+    b({1, 2, 3});
+    c({{}, {}, {}});
+#if __cplusplus <= 201402L
+    // expected-error@-2 {{no match}} expected-note@-12 {{couldn't infer template argument 'T'}}
+#endif
+  }
+
+  template<typename ...T> struct X;
+  template<int ...T> struct Y;
+  template<typename ...T, T ...V> void f(const T (&...p)[V]) {
+    static_assert(is_same<X<T...>, X<int, char, char>>::value, "");
+    static_assert(is_same<Y<V...>, Y<3, 2, 4>>::value, "");
+  }
+  template<typename ...T, T ...V> void g(const T (&...p)[V]) { // expected-note {{deduced incomplete pack}}
+    static_assert(is_same<X<T...>, X<int, decltype(sizeof(0))>>::value, "");
+    static_assert(is_same<Y<V...>, Y<2, 3>>::value, "");
+  }
+  void h() {
+    f({1, 2, 3}, {'a', 'b'}, "foo");
+    // FIXME: Deduction in this case should succeed.
+    g({1, 2}, {{}, {}, {}}); // expected-error {{no match}}
+  }
+}
