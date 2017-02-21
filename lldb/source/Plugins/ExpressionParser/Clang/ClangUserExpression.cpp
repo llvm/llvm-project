@@ -609,7 +609,7 @@ bool ClangUserExpression::AddArguments(ExecutionContext &exe_ctx,
 
     if (!object_ptr_error.Success()) {
       exe_ctx.GetTargetRef().GetDebugger().GetAsyncOutputStream()->Printf(
-          "warning: `%s' is not accessible (subsituting 0)\n",
+          "warning: `%s' is not accessible (substituting 0)\n",
           object_name.AsCString());
       object_ptr = 0;
     }

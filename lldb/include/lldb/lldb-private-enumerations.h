@@ -116,19 +116,6 @@ typedef enum LazyBool {
 } LazyBool;
 
 //------------------------------------------------------------------
-/// Name matching
-//------------------------------------------------------------------
-typedef enum NameMatchType {
-  eNameMatchIgnore,
-  eNameMatchEquals,
-  eNameMatchContains,
-  eNameMatchStartsWith,
-  eNameMatchEndsWith,
-  eNameMatchRegularExpression
-
-} NameMatchType;
-
-//------------------------------------------------------------------
 /// Instruction types
 //------------------------------------------------------------------
 typedef enum InstructionType {

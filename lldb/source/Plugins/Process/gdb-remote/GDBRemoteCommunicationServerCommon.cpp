@@ -360,16 +360,15 @@ GDBRemoteCommunicationServerCommon::Handle_qfProcessInfo(
         extractor.GetHexByteString(file);
         match_info.GetProcessInfo().GetExecutableFile().SetFile(file, false);
       } else if (key.equals("name_match")) {
-        NameMatchType name_match =
-            llvm::StringSwitch<NameMatchType>(value)
-                .Case("equals", eNameMatchEquals)
-                .Case("starts_with", eNameMatchStartsWith)
-                .Case("ends_with", eNameMatchEndsWith)
-                .Case("contains", eNameMatchContains)
-                .Case("regex", eNameMatchRegularExpression)
-                .Default(eNameMatchIgnore);
+        NameMatch name_match = llvm::StringSwitch<NameMatch>(value)
+                                   .Case("equals", NameMatch::Equals)
+                                   .Case("starts_with", NameMatch::StartsWith)
+                                   .Case("ends_with", NameMatch::EndsWith)
+                                   .Case("contains", NameMatch::Contains)
+                                   .Case("regex", NameMatch::RegularExpression)
+                                   .Default(NameMatch::Ignore);
         match_info.SetNameMatchType(name_match);
-        if (name_match == eNameMatchIgnore)
+        if (name_match == NameMatch::Ignore)
           return SendErrorResponse(2);
       } else if (key.equals("pid")) {
         lldb::pid_t pid = LLDB_INVALID_PROCESS_ID;

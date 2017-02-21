@@ -262,6 +262,20 @@ add_polly_library(PollyISL
   ${ISL_FILES}
 )
 
+
+# TODO: optionally use system isl instead
+if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
+  install(DIRECTORY
+    ${ISL_SOURCE_DIR}/include/
+    ${ISL_BINARY_DIR}/include/
+    DESTINATION include/polly
+    FILES_MATCHING
+    PATTERN "*.h"
+    PATTERN "CMakeFiles" EXCLUDE
+    PATTERN ".svn" EXCLUDE
+    )
+endif()
+
 add_executable(polly-isl-test
   isl/isl_test.c
 )
