@@ -312,7 +312,7 @@ Sema::getCurrentMangleNumberContext(const DeclContext *DC,
   //   In the following contexts [...] the one-definition rule requires closure
   //   types in different translation units to "correspond":
   bool IsInNonspecializedTemplate =
-    !ActiveTemplateInstantiations.empty() || CurContext->isDependentContext();
+      inTemplateInstantiation() || CurContext->isDependentContext();
   switch (Kind) {
   case Normal: {
     //  -- the bodies of non-exported nonspecialized template functions

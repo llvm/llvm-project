@@ -902,7 +902,7 @@ static void warnBracedScalarInit(Sema &S, const InitializedEntity &Entity,
   // Don't warn during template instantiation. If the initialization was
   // non-dependent, we warned during the initial parse; otherwise, the
   // type might not be scalar in some uses of the template.
-  if (!S.ActiveTemplateInstantiations.empty())
+  if (S.inTemplateInstantiation())
     return;
 
   unsigned DiagID = 0;
@@ -6249,7 +6249,7 @@ static void CheckMoveOnConstruction(Sema &S, const Expr *InitExpr,
   if (!InitExpr)
     return;
 
-  if (!S.ActiveTemplateInstantiations.empty())
+  if (S.inTemplateInstantiation())
     return;
 
   QualType DestType = InitExpr->getType();

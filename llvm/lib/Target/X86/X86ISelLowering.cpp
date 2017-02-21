@@ -10529,13 +10529,11 @@ static SDValue lowerV8I16GeneralSingleInputVectorShuffle(
   MutableArrayRef<int> HiMask = Mask.slice(4, 4);
 
   SmallVector<int, 4> LoInputs;
-  std::copy_if(LoMask.begin(), LoMask.end(), std::back_inserter(LoInputs),
-               [](int M) { return M >= 0; });
+  copy_if(LoMask, std::back_inserter(LoInputs), [](int M) { return M >= 0; });
   std::sort(LoInputs.begin(), LoInputs.end());
   LoInputs.erase(std::unique(LoInputs.begin(), LoInputs.end()), LoInputs.end());
   SmallVector<int, 4> HiInputs;
-  std::copy_if(HiMask.begin(), HiMask.end(), std::back_inserter(HiInputs),
-               [](int M) { return M >= 0; });
+  copy_if(HiMask, std::back_inserter(HiInputs), [](int M) { return M >= 0; });
   std::sort(HiInputs.begin(), HiInputs.end());
   HiInputs.erase(std::unique(HiInputs.begin(), HiInputs.end()), HiInputs.end());
   int NumLToL =
@@ -11272,14 +11270,13 @@ static SDValue lowerV16I8VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
       if (!canWidenViaDuplication(Mask))
         return SDValue();
       SmallVector<int, 4> LoInputs;
-      std::copy_if(Mask.begin(), Mask.end(), std::back_inserter(LoInputs),
-                   [](int M) { return M >= 0 && M < 8; });
+      copy_if(Mask, std::back_inserter(LoInputs),
+              [](int M) { return M >= 0 && M < 8; });
       std::sort(LoInputs.begin(), LoInputs.end());
       LoInputs.erase(std::unique(LoInputs.begin(), LoInputs.end()),
                      LoInputs.end());
       SmallVector<int, 4> HiInputs;
-      std::copy_if(Mask.begin(), Mask.end(), std::back_inserter(HiInputs),
-                   [](int M) { return M >= 8; });
+      copy_if(Mask, std::back_inserter(HiInputs), [](int M) { return M >= 8; });
       std::sort(HiInputs.begin(), HiInputs.end());
       HiInputs.erase(std::unique(HiInputs.begin(), HiInputs.end()),
                      HiInputs.end());
@@ -23910,7 +23907,7 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case X86ISD::FMAXC:              return "X86ISD::FMAXC";
   case X86ISD::FMINC:              return "X86ISD::FMINC";
   case X86ISD::FRSQRT:             return "X86ISD::FRSQRT";
-  case X86ISD::FRSQRTS:             return "X86ISD::FRSQRTS";
+  case X86ISD::FRSQRTS:            return "X86ISD::FRSQRTS";
   case X86ISD::FRCP:               return "X86ISD::FRCP";
   case X86ISD::FRCPS:              return "X86ISD::FRCPS";
   case X86ISD::EXTRQI:             return "X86ISD::EXTRQI";

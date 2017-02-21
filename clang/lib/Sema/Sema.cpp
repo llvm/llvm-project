@@ -327,7 +327,7 @@ bool Sema::makeUnavailableInSystemHeader(SourceLocation loc,
   if (!fn) return false;
 
   // If we're in template instantiation, it's an error.
-  if (!ActiveTemplateInstantiations.empty())
+  if (inTemplateInstantiation())
     return false;
 
   // If that function's not in a system header, it's an error.
@@ -1006,7 +1006,7 @@ void Sema::EmitCurrentDiagnostic(unsigned DiagID) {
   // and yet we also use the current diag ID on the DiagnosticsEngine. This has
   // been made more painfully obvious by the refactor that introduced this
   // function, but it is possible that the incoming argument can be
-  // eliminnated. If it truly cannot be (for example, there is some reentrancy
+  // eliminated. If it truly cannot be (for example, there is some reentrancy
   // issue I am not seeing yet), then there should at least be a clarifying
   // comment somewhere.
   if (Optional<TemplateDeductionInfo*> Info = isSFINAEContext()) {
@@ -1094,13 +1094,8 @@ void Sema::EmitCurrentDiagnostic(unsigned DiagID) {
   // that is different from the last template instantiation where
   // we emitted an error, print a template instantiation
   // backtrace.
-  if (!DiagnosticIDs::isBuiltinNote(DiagID) &&
-      !ActiveTemplateInstantiations.empty() &&
-      ActiveTemplateInstantiations.back()
-        != LastTemplateInstantiationErrorContext) {
-    PrintInstantiationStack();
-    LastTemplateInstantiationErrorContext = ActiveTemplateInstantiations.back();
-  }
+  if (!DiagnosticIDs::isBuiltinNote(DiagID))
+    PrintContextStack();
 }
 
 Sema::SemaDiagnosticBuilder

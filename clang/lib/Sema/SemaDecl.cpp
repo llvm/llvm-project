@@ -3088,7 +3088,7 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD,
         //   [...] A member shall not be declared twice in the
         //   member-specification, except that a nested class or member
         //   class template can be declared and then later defined.
-        if (ActiveTemplateInstantiations.empty()) {
+        if (!inTemplateInstantiation()) {
           unsigned NewDiag;
           if (isa<CXXConstructorDecl>(OldMethod))
             NewDiag = diag::err_constructor_redeclared;
@@ -9061,7 +9061,7 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
 
       // Warn that we did this, if we're not performing template instantiation.
       // In that case, we'll have warned already when the template was defined.
-      if (ActiveTemplateInstantiations.empty()) {
+      if (!inTemplateInstantiation()) {
         SourceLocation AddConstLoc;
         if (FunctionTypeLoc FTL = MD->getTypeSourceInfo()->getTypeLoc()
                 .IgnoreParens().getAs<FunctionTypeLoc>())
@@ -9918,8 +9918,8 @@ QualType Sema::deduceVarTypeFromInitializer(VarDecl *VDecl,
   // checks.
   // We only want to warn outside of template instantiations, though:
   // inside a template, the 'id' could have come from a parameter.
-  if (ActiveTemplateInstantiations.empty() && !DefaultedAnyToId &&
-      !IsInitCapture && !DeducedType.isNull() && DeducedType->isObjCIdType()) {
+  if (!inTemplateInstantiation() && !DefaultedAnyToId && !IsInitCapture &&
+      !DeducedType.isNull() && DeducedType->isObjCIdType()) {
     SourceLocation Loc = TSI->getTypeLoc().getBeginLoc();
     Diag(Loc, diag::warn_auto_var_is_id) << VN << Range;
   }
@@ -10821,7 +10821,7 @@ void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
   // Apply section attributes and pragmas to global variables.
   bool GlobalStorage = var->hasGlobalStorage();
   if (GlobalStorage && var->isThisDeclarationADefinition() &&
-      ActiveTemplateInstantiations.empty()) {
+      !inTemplateInstantiation()) {
     PragmaStack<StringLiteral *> *Stack = nullptr;
     int SectionFlags = ASTContext::PSF_Implicit | ASTContext::PSF_Read;
     if (var->getType().isConstQualified())
@@ -11472,7 +11472,7 @@ ParmVarDecl *Sema::BuildParmVarDeclForTypedef(DeclContext *DC,
 void Sema::DiagnoseUnusedParameters(ArrayRef<ParmVarDecl *> Parameters) {
   // Don't diagnose unused-parameter errors in template instantiations; we
   // will already have done so in the template itself.
-  if (!ActiveTemplateInstantiations.empty())
+  if (inTemplateInstantiation())
     return;
 
   for (const ParmVarDecl *Parameter : Parameters) {
@@ -11822,14 +11822,14 @@ Decl *Sema::ActOnStartOfFunctionDef(Scope *FnBodyScope, Decl *D,
   // captures during transformation of nested lambdas, it is necessary to
   // have the LSI properly restored.
   if (isGenericLambdaCallOperatorSpecialization(FD)) {
-    assert(ActiveTemplateInstantiations.size() &&
-      "There should be an active template instantiation on the stack "
-      "when instantiating a generic lambda!");
+    assert(inTemplateInstantiation() &&
+           "There should be an active template instantiation on the stack "
+           "when instantiating a generic lambda!");
     RebuildLambdaScopeInfo(cast<CXXMethodDecl>(D), *this);
-  }
-  else
+  } else {
     // Enter a new function scope
     PushFunctionScope();
+  }
 
   // Builtin functions cannot be defined.
   if (unsigned BuiltinID = FD->getBuiltinID()) {
@@ -12706,7 +12706,7 @@ bool Sema::isAcceptableTagRedeclaration(const TagDecl *Previous,
     if (const CXXRecordDecl *Record = dyn_cast<CXXRecordDecl>(Previous))
       isTemplate = Record->getDescribedClassTemplate();
 
-    if (!ActiveTemplateInstantiations.empty()) {
+    if (inTemplateInstantiation()) {
       // In a template instantiation, do not offer fix-its for tag mismatches
       // since they usually mess up the template instead of fixing the problem.
       Diag(NewTagLoc, diag::warn_struct_class_tag_mismatch)

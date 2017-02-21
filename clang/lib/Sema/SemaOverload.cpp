@@ -11491,7 +11491,7 @@ DiagnoseTwoPhaseLookup(Sema &SemaRef, SourceLocation FnLoc,
                        TemplateArgumentListInfo *ExplicitTemplateArgs,
                        ArrayRef<Expr *> Args,
                        bool *DoDiagnoseEmptyLookup = nullptr) {
-  if (SemaRef.ActiveTemplateInstantiations.empty() || !SS.isEmpty())
+  if (!SemaRef.inTemplateInstantiation() || !SS.isEmpty())
     return false;
 
   for (DeclContext *DC = SemaRef.CurContext; DC; DC = DC->getParent()) {
