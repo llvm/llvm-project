@@ -8932,6 +8932,22 @@ unsigned ARMAsmParser::checkTargetMatchPredicate(MCInst &Inst) {
       return Match_RequiresV6;
   }
 
+  // Before ARMv8 the rules for when SP is allowed in t2MOVr are more complex
+  // than the loop below can handle, so it uses the GPRnopc register class and
+  // we do SP handling here.
+  if (Opc == ARM::t2MOVr && !hasV8Ops())
+  {
+    // SP as both source and destination is not allowed
+    if (Inst.getOperand(0).getReg() == ARM::SP &&
+        Inst.getOperand(1).getReg() == ARM::SP)
+      return Match_RequiresV8;
+    // When flags-setting SP as either source or destination is not allowed
+    if (Inst.getOperand(4).getReg() == ARM::CPSR &&
+        (Inst.getOperand(0).getReg() == ARM::SP ||
+         Inst.getOperand(1).getReg() == ARM::SP))
+      return Match_RequiresV8;
+  }
+
   for (unsigned I = 0; I < MCID.NumOperands; ++I)
     if (MCID.OpInfo[I].RegClass == ARM::rGPRRegClassID) {
       // rGPRRegClass excludes PC, and also excluded SP before ARMv8

@@ -36,7 +36,7 @@ BranchOffsetBits("amdgpu-s-branch-bits", cl::ReallyHidden, cl::init(15),
                  cl::desc("Restrict range of branch instructions (DEBUG)"));
 
 SIInstrInfo::SIInstrInfo(const SISubtarget &ST)
-  : AMDGPUInstrInfo(ST), RI(), ST(ST) {}
+  : AMDGPUInstrInfo(ST), RI(ST), ST(ST) {}
 
 //===----------------------------------------------------------------------===//
 // TargetInstrInfo callbacks

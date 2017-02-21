@@ -128,13 +128,12 @@ unsigned SIFrameLowering::getReservedPrivateSegmentBufferReg(
   ArrayRef<MCPhysReg> AllSGPR128s = getAllSGPR128(ST, MF);
   AllSGPR128s = AllSGPR128s.slice(std::min(static_cast<unsigned>(AllSGPR128s.size()), NumPreloaded));
 
-  // Skip the last 2 elements because the last one is reserved for VCC, and
-  // this is the 2nd to last element already.
+  // Skip the last N reserved elements because they should have already been
+  // reserved for VCC etc.
   for (MCPhysReg Reg : AllSGPR128s) {
     // Pick the first unallocated one. Make sure we don't clobber the other
     // reserved input we needed.
     if (!MRI.isPhysRegUsed(Reg) && MRI.isAllocatable(Reg)) {
-      //assert(MRI.isAllocatable(Reg));
       MRI.replaceRegWith(ScratchRsrcReg, Reg);
       MFI->setScratchRSrcReg(Reg);
       return Reg;
@@ -157,7 +156,6 @@ unsigned SIFrameLowering::getReservedPrivateSegmentWaveByteOffsetReg(
 
   unsigned ScratchRsrcReg = MFI->getScratchRSrcReg();
   MachineRegisterInfo &MRI = MF.getRegInfo();
-
   unsigned NumPreloaded = MFI->getNumPreloadedSGPRs();
 
   ArrayRef<MCPhysReg> AllSGPRs = getAllSGPRs(ST, MF);
@@ -393,17 +391,45 @@ void SIFrameLowering::processFunctionBeforeFrameFinalized(
   if (!MFI.hasStackObjects())
     return;
 
-  bool MayNeedScavengingEmergencySlot = MFI.hasStackObjects();
+  assert(RS && "RegScavenger required if spilling");
+  int ScavengeFI = MFI.CreateStackObject(
+    AMDGPU::SGPR_32RegClass.getSize(),
+    AMDGPU::SGPR_32RegClass.getAlignment(), false);
+  RS->addScavengingFrameIndex(ScavengeFI);
 
-  assert((RS || !MayNeedScavengingEmergencySlot) &&
-         "RegScavenger required if spilling");
+  const SISubtarget &ST = MF.getSubtarget<SISubtarget>();
+  const SIInstrInfo *TII = ST.getInstrInfo();
+  const SIRegisterInfo &TRI = TII->getRegisterInfo();
+  if (!TRI.spillSGPRToVGPR())
+    return;
 
-  if (MayNeedScavengingEmergencySlot) {
-    int ScavengeFI = MFI.CreateStackObject(
-      AMDGPU::SGPR_32RegClass.getSize(),
-      AMDGPU::SGPR_32RegClass.getAlignment(), false);
-    RS->addScavengingFrameIndex(ScavengeFI);
+  SIMachineFunctionInfo *FuncInfo = MF.getInfo<SIMachineFunctionInfo>();
+  if (!FuncInfo->hasSpilledSGPRs())
+    return;
+
+  // Process all SGPR spills before frame offsets are finalized. Ideally SGPRs
+  // are spilled to VGPRs, in which case we can eliminate the stack usage.
+  //
+  // XXX - This operates under the assumption that only other SGPR spills are
+  // users of the frame index. I'm not 100% sure this is correct. The
+  // StackColoring pass has a comment saying a future improvement would be to
+  // merging of allocas with spill slots, but for now according to
+  // MachineFrameInfo isSpillSlot can't alias any other object.
+  for (MachineBasicBlock &MBB : MF) {
+    MachineBasicBlock::iterator Next;
+    for (auto I = MBB.begin(), E = MBB.end(); I != E; I = Next) {
+      MachineInstr &MI = *I;
+      Next = std::next(I);
+
+      if (TII->isSGPRSpill(MI)) {
+        int FI = TII->getNamedOperand(MI, AMDGPU::OpName::addr)->getIndex();
+        if (FuncInfo->allocateSGPRSpillToVGPR(MF, FI))
+          TRI.eliminateSGPRToVGPRSpillFrameIndex(MI, FI, RS);
+      }
+    }
   }
+
+  FuncInfo->removeSGPRToVGPRFrameIndices(MFI);
 }
 
 void SIFrameLowering::emitDebuggerPrologue(MachineFunction &MF,

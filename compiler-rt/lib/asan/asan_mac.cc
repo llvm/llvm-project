@@ -48,6 +48,7 @@ namespace __asan {
 
 void InitializePlatformInterceptors() {}
 void InitializePlatformExceptionHandlers() {}
+bool IsSystemHeapAddress (uptr addr) { return false; }
 
 // No-op. Mac does not support static linkage anyway.
 void *AsanDoesNotSupportStaticLinkage() {

@@ -1,4 +1,4 @@
-//===-- RegAllocPBQP.h ------------------------------------------*- C++ -*-===//
+//===- RegAllocPBQP.h -------------------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -16,15 +16,28 @@
 #ifndef LLVM_CODEGEN_REGALLOCPBQP_H
 #define LLVM_CODEGEN_REGALLOCPBQP_H
 
-#include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/Hashing.h"
 #include "llvm/CodeGen/PBQP/CostAllocator.h"
+#include "llvm/CodeGen/PBQP/Graph.h"
+#include "llvm/CodeGen/PBQP/Math.h"
 #include "llvm/CodeGen/PBQP/ReductionRules.h"
-#include "llvm/CodeGen/PBQPRAConstraint.h"
+#include "llvm/CodeGen/PBQP/Solution.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <algorithm>
+#include <cassert>
+#include <cstddef>
+#include <limits>
+#include <memory>
 #include <set>
+#include <vector>
 
 namespace llvm {
 
+class FunctionPass;
+class LiveIntervals;
+class MachineBlockFrequencyInfo;
+class MachineFunction;
 class raw_ostream;
 
 namespace PBQP {
@@ -37,15 +50,10 @@ inline unsigned getSpillOptionIdx() { return 0; }
 ///
 /// Keeps track of the number of infinities in each row and column.
 class MatrixMetadata {
-private:
-  MatrixMetadata(const MatrixMetadata&);
-  void operator=(const MatrixMetadata&);
 public:
   MatrixMetadata(const Matrix& M)
-    : WorstRow(0), WorstCol(0),
-      UnsafeRows(new bool[M.getRows() - 1]()),
+    : UnsafeRows(new bool[M.getRows() - 1]()),
       UnsafeCols(new bool[M.getCols() - 1]()) {
-
     unsigned* ColCounts = new unsigned[M.getCols() - 1]();
 
     for (unsigned i = 1; i < M.getRows(); ++i) {
@@ -66,13 +74,17 @@ public:
     delete[] ColCounts;
   }
 
+  MatrixMetadata(const MatrixMetadata &) = delete;
+  MatrixMetadata &operator=(const MatrixMetadata &) = delete;
+
   unsigned getWorstRow() const { return WorstRow; }
   unsigned getWorstCol() const { return WorstCol; }
   const bool* getUnsafeRows() const { return UnsafeRows.get(); }
   const bool* getUnsafeCols() const { return UnsafeCols.get(); }
 
 private:
-  unsigned WorstRow, WorstCol;
+  unsigned WorstRow = 0;
+  unsigned WorstCol = 0;
   std::unique_ptr<bool[]> UnsafeRows;
   std::unique_ptr<bool[]> UnsafeCols;
 };
@@ -80,16 +92,15 @@ private:
 /// \brief Holds a vector of the allowed physical regs for a vreg.
 class AllowedRegVector {
   friend hash_code hash_value(const AllowedRegVector &);
-public:
 
-  AllowedRegVector() : NumOpts(0), Opts(nullptr) {}
+public:
+  AllowedRegVector() = default;
+  AllowedRegVector(AllowedRegVector &&) = default;
 
   AllowedRegVector(const std::vector<unsigned> &OptVec)
     : NumOpts(OptVec.size()), Opts(new unsigned[NumOpts]) {
     std::copy(OptVec.begin(), OptVec.end(), Opts.get());
   }
-
-  AllowedRegVector(AllowedRegVector &&) = default;
 
   unsigned size() const { return NumOpts; }
   unsigned operator[](size_t I) const { return Opts[I]; }
@@ -105,7 +116,7 @@ public:
   }
 
 private:
-  unsigned NumOpts;
+  unsigned NumOpts = 0;
   std::unique_ptr<unsigned[]> Opts;
 };
 
@@ -120,8 +131,8 @@ inline hash_code hash_value(const AllowedRegVector &OptRegs) {
 class GraphMetadata {
 private:
   typedef ValuePool<AllowedRegVector> AllowedRegVecPool;
-public:
 
+public:
   typedef AllowedRegVecPool::PoolRef AllowedRegVecRef;
 
   GraphMetadata(MachineFunction &MF,
@@ -168,13 +179,7 @@ public:
     OptimallyReducible
   } ReductionState;
 
-  NodeMetadata()
-    : RS(Unprocessed), NumOpts(0), DeniedOpts(0), OptUnsafeEdges(nullptr),
-      VReg(0)
-#ifndef NDEBUG
-      , everConservativelyAllocatable(false)
-#endif
-      {}
+  NodeMetadata() = default;
 
   NodeMetadata(const NodeMetadata &Other)
     : RS(Other.RS), NumOpts(Other.NumOpts), DeniedOpts(Other.DeniedOpts),
@@ -190,9 +195,8 @@ public:
     }
   }
 
-  NodeMetadata(NodeMetadata &&Other) = default;
-
-  NodeMetadata& operator=(NodeMetadata &&Other) = default;
+  NodeMetadata(NodeMetadata &&) = default;
+  NodeMetadata& operator=(NodeMetadata &&) = default;
 
   void setVReg(unsigned VReg) { this->VReg = VReg; }
   unsigned getVReg() const { return VReg; }
@@ -249,21 +253,22 @@ public:
 #endif
 
 private:
-  ReductionState RS;
-  unsigned NumOpts;
-  unsigned DeniedOpts;
+  ReductionState RS = Unprocessed;
+  unsigned NumOpts = 0;
+  unsigned DeniedOpts = 0;
   std::unique_ptr<unsigned[]> OptUnsafeEdges;
-  unsigned VReg;
+  unsigned VReg = 0;
   GraphMetadata::AllowedRegVecRef AllowedRegs;
 
 #ifndef NDEBUG
-  bool everConservativelyAllocatable;
+  bool everConservativelyAllocatable = false;
 #endif
 };
 
 class RegAllocSolverImpl {
 private:
   typedef MDMatrix<MatrixMetadata> RAMatrix;
+
 public:
   typedef PBQP::Vector RawVector;
   typedef PBQP::Matrix RawMatrix;
@@ -296,6 +301,7 @@ public:
            "PBQP Graph should not contain single or zero-option nodes");
     G.getNodeMetadata(NId).setup(G.getNodeCosts(NId));
   }
+
   void handleRemoveNode(NodeId NId) {}
   void handleSetNodeCosts(NodeId NId, const Vector& newCosts) {}
 
@@ -342,7 +348,6 @@ public:
   }
 
 private:
-
   void promote(NodeId NId, NodeMetadata& NMd) {
     if (G.getNodeDegree(NId) == 3) {
       // This node is becoming optimally reducible.
@@ -474,6 +479,7 @@ private:
   class SpillCostComparator {
   public:
     SpillCostComparator(const Graph& G) : G(G) {}
+
     bool operator()(NodeId N1Id, NodeId N2Id) {
       PBQPNum N1SC = G.getNodeCosts(N1Id)[0];
       PBQPNum N2SC = G.getNodeCosts(N2Id)[0];
@@ -481,6 +487,7 @@ private:
         return G.getNodeDegree(N1Id) < G.getNodeDegree(N2Id);
       return N1SC < N2SC;
     }
+
   private:
     const Graph& G;
   };
@@ -495,6 +502,7 @@ private:
 class PBQPRAGraph : public PBQP::Graph<RegAllocSolverImpl> {
 private:
   typedef PBQP::Graph<RegAllocSolverImpl> BaseT;
+
 public:
   PBQPRAGraph(GraphMetadata Metadata) : BaseT(std::move(Metadata)) {}
 
@@ -517,13 +525,13 @@ inline Solution solve(PBQPRAGraph& G) {
   return RegAllocSolver.solve();
 }
 
-} // namespace RegAlloc
-} // namespace PBQP
+} // end namespace RegAlloc
+} // end namespace PBQP
 
 /// @brief Create a PBQP register allocator instance.
 FunctionPass *
 createPBQPRegisterAllocator(char *customPassID = nullptr);
 
-} // namespace llvm
+} // end namespace llvm
 
-#endif /* LLVM_CODEGEN_REGALLOCPBQP_H */
+#endif // LLVM_CODEGEN_REGALLOCPBQP_H

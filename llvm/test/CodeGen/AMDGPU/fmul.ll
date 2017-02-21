@@ -13,10 +13,6 @@ entry:
   ret void
 }
 
-declare float @llvm.r600.load.input(i32) readnone
-
-declare void @llvm.AMDGPU.store.output(float, i32)
-
 ; FUNC-LABEL: {{^}}fmul_v2f32:
 ; GCN: v_mul_f32
 ; GCN: v_mul_f32

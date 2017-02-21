@@ -1136,6 +1136,28 @@ TEST_F(FileSystemTest, OpenFileForRead) {
   ::close(FileDescriptor);
 }
 
+TEST_F(FileSystemTest, is_local) {
+  SmallString<128> CurrentPath;
+  ASSERT_NO_ERROR(fs::current_path(CurrentPath));
+
+  bool Result;
+  ASSERT_NO_ERROR(fs::is_local(CurrentPath, Result));
+  EXPECT_TRUE(Result);
+  EXPECT_TRUE(fs::is_local(CurrentPath));
+
+  int FD;
+  SmallString<64> TempPath;
+  ASSERT_NO_ERROR(fs::createTemporaryFile("prefix", "temp", FD, TempPath));
+  FileRemover Cleanup(TempPath);
+
+  // Make sure it exists.
+  ASSERT_TRUE(sys::fs::exists(Twine(TempPath)));
+
+  ASSERT_NO_ERROR(fs::is_local(FD, Result));
+  EXPECT_TRUE(Result);
+  EXPECT_TRUE(fs::is_local(FD));
+}
+
 TEST_F(FileSystemTest, set_current_path) {
   SmallString<128> path;
 

@@ -543,8 +543,14 @@ static RelExpr adjustExpr(const elf::ObjectFile<ELFT> &File, SymbolBody &Body,
   if (Body.isObject()) {
     // Produce a copy relocation.
     auto *B = cast<SharedSymbol<ELFT>>(&Body);
-    if (!B->NeedsCopy)
+    if (!B->NeedsCopy) {
+      if (Config->ZNocopyreloc)
+        error(S.getLocation(RelOff) + ": unresolvable relocation " + toString(Type)
+              + " against symbol '" + toString(*B) +
+              "'; recompile with -fPIC or remove '-z nocopyreloc'");
+
       addCopyRelSymbol(B);
+    }
     return Expr;
   }
   if (Body.isFunc()) {
