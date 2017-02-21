@@ -241,17 +241,27 @@ show the description of the defects.
 Static Analyzer
 ---------------
 
-...
+With the option --show-description, scan-build's list of defects will also
+show the description of the defects.
 
-Core Analysis Improvements
-==========================
+The analyzer now provides better support of code that uses gtest.
 
-- ...
+Several new checks were added:
 
-New Issues Found
-================
+- The analyzer warns when virtual calls are made from constructors or
+  destructors. This check is off by default but can be enabled by passing the
+  following command to scan-build: -enable-checker optin.cplusplus.VirtualCall.
+- The analyzer checks for synthesized copy properties of mutable types in
+  Objective C, such as NSMutableArray. Calling the setter for these properties
+  will store an immutable copy of the value.
+- The analyzer checks for calls to dispatch_once() that use an Objective-C
+  instance variable as the predicate. Using an instance variable as a predicate
+  may result in the passed-in block being executed multiple times or not at all.
+  These calls should be rewritten either to use a lock or to store the predicate
+  in a global or static variable.
+- The analyzer checks for unintended comparisons of NSNumber, CFNumberRef, and
+  other Cocoa number objects to scalar values.
 
-- ...
 
 Python Binding Changes
 ----------------------
