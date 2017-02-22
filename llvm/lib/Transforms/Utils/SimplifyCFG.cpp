@@ -94,7 +94,7 @@ static cl::opt<bool> DupRet(
     cl::desc("Duplicate return instructions into unconditional branches"));
 
 static cl::opt<bool>
-    SinkCommon("simplifycfg-sink-common", cl::Hidden, cl::init(true),
+    SinkCommon("simplifycfg-sink-common", cl::Hidden, cl::init(false),
                cl::desc("Sink common instructions down to the end block"));
 
 static cl::opt<bool> HoistCondStores(
