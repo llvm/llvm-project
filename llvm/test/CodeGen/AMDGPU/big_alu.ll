@@ -2,7 +2,7 @@
 
 ; This test ensures that R600 backend can handle ifcvt properly
 
-define amdgpu_ps void @main(<4 x float> inreg %reg0, <4 x float> inreg %reg1, <4 x float> inreg %reg2, <4 x float> inreg %reg3, <4 x float> inreg %reg4, <4 x float> inreg %reg5, <4 x float> inreg %reg6, <4 x float> inreg %reg7, <4 x float> inreg %reg8, <4 x float> inreg %reg9) {
+define amdgpu_ps void @main(<4 x float> inreg %reg0, <4 x float> inreg %reg1, <4 x float> inreg %reg2, <4 x float> inreg %reg3, <4 x float> inreg %reg4, <4 x float> inreg %reg5, <4 x float> inreg %reg6, <4 x float> inreg %reg7, <4 x float> inreg %reg8, <4 x float> inreg %reg9) #0 {
 main_body:
   %tmp = extractelement <4 x float> %reg0, i32 0
   %tmp1 = extractelement <4 x float> %reg0, i32 1
@@ -224,28 +224,31 @@ ENDIF136:                                         ; preds = %ENDIF154, %main_bod
   %result.i = fadd float %mul.i, %one.sub.ac.i
   %tmp204 = fadd float %result.i, 0x3FF4CCCCC0000000
   %tmp205 = fmul float %tmp204, 0x3FE1C71C80000000
-  %tmp206 = call float @llvm.AMDGPU.clamp.f32(float %tmp205, float 0.000000e+00, float 1.000000e+00)
+  %max.0.i = call float @llvm.maxnum.f32(float %tmp205, float 0.000000e+00)
+  %clamp.i = call float @llvm.minnum.f32(float %max.0.i, float 1.000000e+00)
   %tmp207 = fadd float %result.i, 0x3FF4CCCCC0000000
   %tmp208 = fmul float %tmp207, 0x3FE1C71C80000000
-  %tmp209 = call float @llvm.AMDGPU.clamp.f32(float %tmp208, float 0.000000e+00, float 1.000000e+00)
+  %max.0.i15 = call float @llvm.maxnum.f32(float %tmp208, float 0.000000e+00)
+  %clamp.i16 = call float @llvm.minnum.f32(float %max.0.i15, float 1.000000e+00)
   %tmp210 = fadd float %result.i, 2.000000e+00
   %tmp211 = fmul float %tmp210, 0x3FD611A7A0000000
-  %tmp212 = call float @llvm.AMDGPU.clamp.f32(float %tmp211, float 0.000000e+00, float 1.000000e+00)
-  %tmp213 = fmul float 2.000000e+00, %tmp206
+  %max.0.i13 = call float @llvm.maxnum.f32(float %tmp211, float 0.000000e+00)
+  %clamp.i14 = call float @llvm.minnum.f32(float %max.0.i13, float 1.000000e+00)
+  %tmp213 = fmul float 2.000000e+00, %clamp.i
   %tmp214 = fsub float -0.000000e+00, %tmp213
   %tmp215 = fadd float 3.000000e+00, %tmp214
-  %tmp216 = fmul float %tmp206, %tmp215
-  %tmp217 = fmul float %tmp206, %tmp216
-  %tmp218 = fmul float 2.000000e+00, %tmp209
+  %tmp216 = fmul float %clamp.i, %tmp215
+  %tmp217 = fmul float %clamp.i, %tmp216
+  %tmp218 = fmul float 2.000000e+00, %clamp.i16
   %tmp219 = fsub float -0.000000e+00, %tmp218
   %tmp220 = fadd float 3.000000e+00, %tmp219
-  %tmp221 = fmul float %tmp209, %tmp220
-  %tmp222 = fmul float %tmp209, %tmp221
-  %tmp223 = fmul float 2.000000e+00, %tmp212
+  %tmp221 = fmul float %clamp.i16, %tmp220
+  %tmp222 = fmul float %clamp.i16, %tmp221
+  %tmp223 = fmul float 2.000000e+00, %clamp.i14
   %tmp224 = fsub float -0.000000e+00, %tmp223
   %tmp225 = fadd float 3.000000e+00, %tmp224
-  %tmp226 = fmul float %tmp212, %tmp225
-  %tmp227 = fmul float %tmp212, %tmp226
+  %tmp226 = fmul float %clamp.i14, %tmp225
+  %tmp227 = fmul float %clamp.i14, %tmp226
   %tmp228 = fmul float %tmp26, 0x3F368B5CC0000000
   %tmp229 = fmul float %tmp27, 0x3F368B5CC0000000
   %tmp230 = insertelement <4 x float> undef, float %tmp228, i32 0
@@ -282,28 +285,31 @@ ENDIF136:                                         ; preds = %ENDIF154, %main_bod
   %tmp261 = fmul float %tmp257, 0.000000e+00
   %tmp262 = fadd float %result.i, 0x3FF4CCCCC0000000
   %tmp263 = fmul float %tmp262, 0x3FE1C71C80000000
-  %tmp264 = call float @llvm.AMDGPU.clamp.f32(float %tmp263, float 0.000000e+00, float 1.000000e+00)
+  %max.0.i11 = call float @llvm.maxnum.f32(float %tmp263, float 0.000000e+00)
+  %clamp.i12 = call float @llvm.minnum.f32(float %max.0.i11, float 1.000000e+00)
   %tmp265 = fadd float %result.i, 0x3FF4CCCCC0000000
   %tmp266 = fmul float %tmp265, 0x3FE1C71C80000000
-  %tmp267 = call float @llvm.AMDGPU.clamp.f32(float %tmp266, float 0.000000e+00, float 1.000000e+00)
+  %max.0.i9 = call float @llvm.maxnum.f32(float %tmp266, float 0.000000e+00)
+  %clamp.i10 = call float @llvm.minnum.f32(float %max.0.i9, float 1.000000e+00)
   %tmp268 = fadd float %result.i, 2.000000e+00
   %tmp269 = fmul float %tmp268, 0x3FD611A7A0000000
-  %tmp270 = call float @llvm.AMDGPU.clamp.f32(float %tmp269, float 0.000000e+00, float 1.000000e+00)
-  %tmp271 = fmul float 2.000000e+00, %tmp264
+  %max.0.i7 = call float @llvm.maxnum.f32(float %tmp269, float 0.000000e+00)
+  %clamp.i8 = call float @llvm.minnum.f32(float %max.0.i7, float 1.000000e+00)
+  %tmp271 = fmul float 2.000000e+00, %clamp.i12
   %tmp272 = fsub float -0.000000e+00, %tmp271
   %tmp273 = fadd float 3.000000e+00, %tmp272
-  %tmp274 = fmul float %tmp264, %tmp273
-  %tmp275 = fmul float %tmp264, %tmp274
-  %tmp276 = fmul float 2.000000e+00, %tmp267
+  %tmp274 = fmul float %clamp.i12, %tmp273
+  %tmp275 = fmul float %clamp.i12, %tmp274
+  %tmp276 = fmul float 2.000000e+00, %clamp.i10
   %tmp277 = fsub float -0.000000e+00, %tmp276
   %tmp278 = fadd float 3.000000e+00, %tmp277
-  %tmp279 = fmul float %tmp267, %tmp278
-  %tmp280 = fmul float %tmp267, %tmp279
-  %tmp281 = fmul float 2.000000e+00, %tmp270
+  %tmp279 = fmul float %clamp.i10, %tmp278
+  %tmp280 = fmul float %clamp.i10, %tmp279
+  %tmp281 = fmul float 2.000000e+00, %clamp.i8
   %tmp282 = fsub float -0.000000e+00, %tmp281
   %tmp283 = fadd float 3.000000e+00, %tmp282
-  %tmp284 = fmul float %tmp270, %tmp283
-  %tmp285 = fmul float %tmp270, %tmp284
+  %tmp284 = fmul float %clamp.i8, %tmp283
+  %tmp285 = fmul float %clamp.i8, %tmp284
   %tmp286 = fmul float %tmp26, 0x3F22DFD6A0000000
   %tmp287 = fmul float %tmp27, 0x3F22DFD6A0000000
   %tmp288 = insertelement <4 x float> undef, float %tmp286, i32 0
@@ -390,7 +396,8 @@ ENDIF136:                                         ; preds = %ENDIF154, %main_bod
   %tmp369 = fadd float %tmp368, %tmp367
   %tmp370 = fadd float %tmp369, 0xBFEFAE1480000000
   %tmp371 = fmul float %tmp370, 0xC023FFFFC0000000
-  %tmp372 = call float @llvm.AMDGPU.clamp.f32(float %tmp371, float 0.000000e+00, float 1.000000e+00)
+  %max.0.i5 = call float @llvm.maxnum.f32(float %tmp371, float 0.000000e+00)
+  %clamp.i6 = call float @llvm.minnum.f32(float %max.0.i5, float 1.000000e+00)
   %tmp373 = fsub float -0.000000e+00, %tmp339
   %tmp374 = fadd float %result.i, %tmp373
   %tmp375 = fadd float %tmp374, 0x3FBEB851E0000000
@@ -416,12 +423,13 @@ ENDIF136:                                         ; preds = %ENDIF154, %main_bod
   %tmp395 = fadd float %tmp394, %tmp393
   %tmp396 = fadd float %tmp395, 0xBFEFAE1480000000
   %tmp397 = fmul float %tmp396, 0xC0490001A0000000
-  %tmp398 = call float @llvm.AMDGPU.clamp.f32(float %tmp397, float 0.000000e+00, float 1.000000e+00)
-  %tmp399 = fmul float 2.000000e+00, %tmp372
+  %max.0.i3 = call float @llvm.maxnum.f32(float %tmp397, float 0.000000e+00)
+  %clamp.i4 = call float @llvm.minnum.f32(float %max.0.i3, float 1.000000e+00)
+  %tmp399 = fmul float 2.000000e+00, %clamp.i6
   %tmp400 = fsub float -0.000000e+00, %tmp399
   %tmp401 = fadd float 3.000000e+00, %tmp400
-  %tmp402 = fmul float %tmp372, %tmp401
-  %tmp403 = fmul float %tmp372, %tmp402
+  %tmp402 = fmul float %clamp.i6, %tmp401
+  %tmp403 = fmul float %clamp.i6, %tmp402
   %one.sub.a.i169 = fsub float 1.000000e+00, %tmp403
   %one.sub.ac.i170 = fmul float %one.sub.a.i169, %tmp349
   %mul.i171 = fmul float %tmp258, %tmp349
@@ -438,11 +446,11 @@ ENDIF136:                                         ; preds = %ENDIF154, %main_bod
   %one.sub.ac.i158 = fmul float %one.sub.a.i157, 0.000000e+00
   %mul.i159 = fmul float %tmp261, 0.000000e+00
   %result.i160 = fadd float %mul.i159, %one.sub.ac.i158
-  %tmp404 = fmul float 2.000000e+00, %tmp398
+  %tmp404 = fmul float 2.000000e+00, %clamp.i4
   %tmp405 = fsub float -0.000000e+00, %tmp404
   %tmp406 = fadd float 3.000000e+00, %tmp405
-  %tmp407 = fmul float %tmp398, %tmp406
-  %tmp408 = fmul float %tmp398, %tmp407
+  %tmp407 = fmul float %clamp.i4, %tmp406
+  %tmp408 = fmul float %clamp.i4, %tmp407
   %one.sub.a.i153 = fsub float 1.000000e+00, %tmp408
   %one.sub.ac.i154 = fmul float %one.sub.a.i153, %tmp375
   %mul.i155 = fmul float %tmp258, %tmp375
@@ -1157,12 +1165,13 @@ IF179:                                            ; preds = %ENDIF175
   %tmp882 = fadd float %tmp881, %tmp880
   %tmp883 = fadd float %tmp882, 0xBFEFAE1480000000
   %tmp884 = fmul float %tmp883, 0xC043FFFE20000000
-  %tmp885 = call float @llvm.AMDGPU.clamp.f32(float %tmp884, float 0.000000e+00, float 1.000000e+00)
-  %tmp886 = fmul float 2.000000e+00, %tmp885
+  %max.0.i1 = call float @llvm.maxnum.f32(float %tmp884, float 0.000000e+00)
+  %clamp.i2 = call float @llvm.minnum.f32(float %max.0.i1, float 1.000000e+00)
+  %tmp886 = fmul float 2.000000e+00, %clamp.i2
   %tmp887 = fsub float -0.000000e+00, %tmp886
   %tmp888 = fadd float 3.000000e+00, %tmp887
-  %tmp889 = fmul float %tmp885, %tmp888
-  %tmp890 = fmul float %tmp885, %tmp889
+  %tmp889 = fmul float %clamp.i2, %tmp888
+  %tmp890 = fmul float %clamp.i2, %tmp889
   %one.sub.a.i41 = fsub float 1.000000e+00, %tmp890
   %one.sub.ac.i42 = fmul float %one.sub.a.i41, %tmp866
   %mul.i43 = fmul float %temp84.5, %tmp866
@@ -1288,25 +1297,14 @@ ENDIF178:                                         ; preds = %IF179, %ENDIF175
   ret void
 }
 
-; Function Attrs: nounwind readnone
-declare float @llvm.r600.dot4(<4 x float>, <4 x float>) #0
-
-; Function Attrs: nounwind readnone
-declare float @llvm.r600.recipsqrt.clamped.f32(float) #0
-
-; Function Attrs: nounwind readonly
+declare float @llvm.r600.dot4(<4 x float>, <4 x float>) #1
+declare float @llvm.r600.recipsqrt.clamped.f32(float) #1
 declare float @llvm.fabs.f32(float) #1
-
-; Function Attrs: nounwind readnone
-declare float @llvm.exp2.f32(float) #0
-
-; Function Attrs: nounwind readnone
-declare float @llvm.AMDGPU.clamp.f32(float, float, float) #0
-
+declare float @llvm.exp2.f32(float) #1
 declare void @llvm.r600.store.swizzle(<4 x float>, i32, i32)
+declare <4 x float> @llvm.r600.tex(<4 x float>, i32, i32, i32, i32, i32, i32, i32, i32, i32) #1
+declare float @llvm.minnum.f32(float, float) #1
+declare float @llvm.maxnum.f32(float, float) #1
 
-; Function Attrs: nounwind readnone
-declare <4 x float> @llvm.r600.tex(<4 x float>, i32, i32, i32, i32, i32, i32, i32, i32, i32) #0
-
-attributes #0 = { nounwind readnone }
-attributes #1 = { nounwind readonly }
+attributes #0 = { nounwind }
+attributes #1 = { nounwind readnone }

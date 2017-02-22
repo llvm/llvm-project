@@ -568,8 +568,8 @@ static bool canMergeToProgbits(unsigned Type) {
 template <class ELFT> static void reportDiscarded(InputSectionBase<ELFT> *IS) {
   if (!Config->PrintGcSections)
     return;
-  errs() << "removing unused section from '" << IS->Name << "' in file '"
-         << IS->getFile()->getName() << "'\n";
+  message("removing unused section from '" + IS->Name + "' in file '" +
+          IS->getFile()->getName());
 }
 
 template <class ELFT>

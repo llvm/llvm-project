@@ -50,7 +50,7 @@
 #error "wrong value for __cpp_capture_star_this"
 #endif
 
-// FIXME: bump __cpp_constexpr to 201603 for constexpr lambda support
+// constexpr checked below
 
 #if check(if_constexpr, 0, 0, 0, 201606) // FIXME: provisional name
 #error "wrong value for __cpp_if_constexpr"
@@ -167,7 +167,7 @@
 #error "wrong value for __cpp_lambdas"
 #endif
 
-#if check(constexpr, 0, 200704, 201304, 201304)
+#if check(constexpr, 0, 200704, 201304, 201603)
 #error "wrong value for __cpp_constexpr"
 #endif
 

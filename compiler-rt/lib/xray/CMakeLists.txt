@@ -52,7 +52,7 @@ set(mips64el_SOURCES
 set(powerpc64le_SOURCES
         xray_powerpc64.cc
         xray_trampoline_powerpc64.cc
-        xray_trampoline_powerpc64.S
+        xray_trampoline_powerpc64_asm.S
         ${XRAY_SOURCES})
 
 include_directories(..)

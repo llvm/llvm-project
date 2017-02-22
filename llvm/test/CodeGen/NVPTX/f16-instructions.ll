@@ -229,7 +229,7 @@ define half @test_tailcall_flipped(half %a, half %b) #0 {
 ; CHECK-LABEL: test_select(
 ; CHECK-DAG:  ld.param.b16    [[A:%h[0-9]+]], [test_select_param_0];
 ; CHECK-DAG:  ld.param.b16    [[B:%h[0-9]+]], [test_select_param_1];
-; CHECK:      setp.eq.b16     [[PRED:%p[0-9]+]], %rs{{.*}}, 1;
+; CHECK-DAG:  setp.eq.b16     [[PRED:%p[0-9]+]], %rs{{.*}}, 1;
 ; CHECK-NEXT: selp.b16        [[R:%h[0-9]+]], [[A]], [[B]], [[PRED]];
 ; CHECK-NEXT: st.param.b16    [func_retval0+0], [[R]];
 ; CHECK-NEXT: ret;

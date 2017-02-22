@@ -110,7 +110,7 @@ static cl::opt<unsigned> FlatLoopTripCountThreshold(
              "aggressively unrolled."));
 
 static cl::opt<bool>
-    UnrollAllowPeeling("unroll-allow-peeling", cl::Hidden,
+    UnrollAllowPeeling("unroll-allow-peeling", cl::init(true), cl::Hidden,
                        cl::desc("Allows loops to be peeled when the dynamic "
                                 "trip count is known to be low."));
 
@@ -155,7 +155,7 @@ static TargetTransformInfo::UnrollingPreferences gatherUnrollingPreferences(
   UP.AllowExpensiveTripCount = false;
   UP.Force = false;
   UP.UpperBound = false;
-  UP.AllowPeeling = false;
+  UP.AllowPeeling = true;
 
   // Override with any target specific settings
   TTI.getUnrollingPreferences(L, UP);

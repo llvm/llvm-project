@@ -103,6 +103,7 @@ protected:
   bool FP32Denormals;
   bool FP64FP16Denormals;
   bool FPExceptions;
+  bool DX10Clamp;
   bool FlatForGlobal;
   bool UnalignedScratchAccess;
   bool UnalignedBufferAccess;
@@ -294,10 +295,6 @@ public:
     return DumpCode;
   }
 
-  bool enableIEEEBit(const MachineFunction &MF) const {
-    return AMDGPU::isCompute(MF.getFunction()->getCallingConv());
-  }
-
   /// Return the amount of LDS that can be used that will not restrict the
   /// occupancy lower than WaveCount.
   unsigned getMaxLocalMemSizeWithWaveCount(unsigned WaveCount,
@@ -321,6 +318,14 @@ public:
 
   bool hasFPExceptions() const {
     return FPExceptions;
+  }
+
+  bool enableDX10Clamp() const {
+    return DX10Clamp;
+  }
+
+  bool enableIEEEBit(const MachineFunction &MF) const {
+    return AMDGPU::isCompute(MF.getFunction()->getCallingConv());
   }
 
   bool useFlatForGlobal() const {

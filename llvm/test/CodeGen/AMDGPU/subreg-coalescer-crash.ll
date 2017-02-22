@@ -1,39 +1,37 @@
-; RUN: llc -march=amdgcn -mcpu=SI -verify-machineinstrs -o - %s
-; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs -o - %s
+; RUN: llc -march=amdgcn -verify-machineinstrs -o - %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs -o - %s | FileCheck -check-prefix=GCN %s
 
-; SI-LABEL:{{^}}row_filter_C1_D0:
-; SI: s_endpgm
-; Function Attrs: nounwind
+; GCN-LABEL:{{^}}row_filter_C1_D0:
 define void @row_filter_C1_D0() {
 entry:
   br i1 undef, label %for.inc.1, label %do.body.preheader
 
 do.body.preheader:                                ; preds = %entry
-  %0 = insertelement <4 x i32> zeroinitializer, i32 undef, i32 1
+  %tmp = insertelement <4 x i32> zeroinitializer, i32 undef, i32 1
   br i1 undef, label %do.body56.1, label %do.body90
 
 do.body90:                                        ; preds = %do.body56.2, %do.body56.1, %do.body.preheader
-  %1 = phi <4 x i32> [ %6, %do.body56.2 ], [ %5, %do.body56.1 ], [ %0, %do.body.preheader ]
-  %2 = insertelement <4 x i32> %1, i32 undef, i32 2
-  %3 = insertelement <4 x i32> %2, i32 undef, i32 3
+  %tmp1 = phi <4 x i32> [ %tmp6, %do.body56.2 ], [ %tmp5, %do.body56.1 ], [ %tmp, %do.body.preheader ]
+  %tmp2 = insertelement <4 x i32> %tmp1, i32 undef, i32 2
+  %tmp3 = insertelement <4 x i32> %tmp2, i32 undef, i32 3
   br i1 undef, label %do.body124.1, label %do.body.1562.preheader
 
 do.body.1562.preheader:                           ; preds = %do.body124.1, %do.body90
-  %storemerge = phi <4 x i32> [ %3, %do.body90 ], [ %7, %do.body124.1 ]
-  %4 = insertelement <4 x i32> undef, i32 undef, i32 1
+  %storemerge = phi <4 x i32> [ %tmp3, %do.body90 ], [ %tmp7, %do.body124.1 ]
+  %tmp4 = insertelement <4 x i32> undef, i32 undef, i32 1
   br label %for.inc.1
 
 do.body56.1:                                      ; preds = %do.body.preheader
-  %5 = insertelement <4 x i32> %0, i32 undef, i32 1
+  %tmp5 = insertelement <4 x i32> %tmp, i32 undef, i32 1
   %or.cond472.1 = or i1 undef, undef
   br i1 %or.cond472.1, label %do.body56.2, label %do.body90
 
 do.body56.2:                                      ; preds = %do.body56.1
-  %6 = insertelement <4 x i32> %5, i32 undef, i32 1
+  %tmp6 = insertelement <4 x i32> %tmp5, i32 undef, i32 1
   br label %do.body90
 
 do.body124.1:                                     ; preds = %do.body90
-  %7 = insertelement <4 x i32> %3, i32 undef, i32 3
+  %tmp7 = insertelement <4 x i32> %tmp3, i32 undef, i32 3
   br label %do.body.1562.preheader
 
 for.inc.1:                                        ; preds = %do.body.1562.preheader, %entry
@@ -42,8 +40,8 @@ for.inc.1:                                        ; preds = %do.body.1562.prehea
   unreachable
 }
 
-; SI-LABEL: {{^}}foo:
-; SI: s_endpgm
+; GCN-LABEL: {{^}}foo:
+; GCN: s_endpgm
 define amdgpu_ps void @foo() #0 {
 bb:
   br i1 undef, label %bb2, label %bb1
@@ -78,9 +76,9 @@ bb13:                                             ; preds = %bb2
 bb14:                                             ; preds = %bb27, %bb24, %bb9
   %tmp15 = phi float [ %tmp12, %bb9 ], [ undef, %bb27 ], [ 0.000000e+00, %bb24 ]
   %tmp16 = phi float [ %tmp11, %bb9 ], [ undef, %bb27 ], [ %tmp25, %bb24 ]
-  %tmp17 = fmul float 10.5, %tmp16
-  %tmp18 = fmul float 11.5, %tmp15
-  call void @llvm.SI.export(i32 15, i32 1, i32 1, i32 0, i32 1, float %tmp18, float %tmp17, float %tmp17, float %tmp17)
+  %tmp17 = fmul float 1.050000e+01, %tmp16
+  %tmp18 = fmul float 1.150000e+01, %tmp15
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %tmp18, float %tmp17, float %tmp17, float %tmp17, i1 true, i1 true) #0
   ret void
 
 bb23:                                             ; preds = %bb13
@@ -97,13 +95,8 @@ bb27:                                             ; preds = %bb24
   br label %bb14
 }
 
-; Function Attrs: nounwind readnone
+declare void @llvm.amdgcn.exp.f32(i32, i32, float, float, float, float, i1, i1) #0
 declare <4 x float> @llvm.SI.image.sample.v2i32(<2 x i32>, <8 x i32>, <4 x i32>, i32, i32, i32, i32, i32, i32, i32, i32) #1
-
-; Function Attrs: nounwind readnone
-declare i32 @llvm.SI.packf16(float, float) #1
-
-declare void @llvm.SI.export(i32, i32, i32, i32, i32, float, float, float, float)
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }
