@@ -5205,31 +5205,30 @@ static bool getTargetConstantBitsFromNode(SDValue Op, unsigned EltSizeInBits,
       if (UndefEltBits.getBoolValue() && !AllowPartialUndefs)
         return false;
 
-      APInt Bits = MaskBits.lshr(i * EltSizeInBits);
-      Bits = Bits.zextOrTrunc(EltSizeInBits);
+      APInt Bits = MaskBits.lshr(i * EltSizeInBits).zextOrTrunc(EltSizeInBits);
       EltBits[i] = Bits.getZExtValue();
     }
     return true;
   };
 
-  auto ExtractConstantBits = [SizeInBits](const Constant *Cst, APInt &Mask,
-                                          APInt &Undefs) {
+  // Collect constant bits and insert into mask/undef bit masks.
+  auto CollectConstantBits = [SizeInBits](const Constant *Cst, APInt &Mask,
+                                          APInt &Undefs, unsigned BitOffset) {
     if (!Cst)
       return false;
     unsigned CstSizeInBits = Cst->getType()->getPrimitiveSizeInBits();
     if (isa<UndefValue>(Cst)) {
-      Mask = APInt::getNullValue(SizeInBits);
-      Undefs = APInt::getLowBitsSet(SizeInBits, CstSizeInBits);
+      unsigned HiBits = BitOffset + CstSizeInBits;
+      Undefs |= APInt::getBitsSet(SizeInBits, BitOffset, HiBits);
       return true;
     }
     if (auto *CInt = dyn_cast<ConstantInt>(Cst)) {
-      Mask = CInt->getValue().zextOrTrunc(SizeInBits);
-      Undefs = APInt::getNullValue(SizeInBits);
+      Mask |= CInt->getValue().zextOrTrunc(SizeInBits).shl(BitOffset);
       return true;
     }
     if (auto *CFP = dyn_cast<ConstantFP>(Cst)) {
-      Mask = CFP->getValueAPF().bitcastToAPInt().zextOrTrunc(SizeInBits);
-      Undefs = APInt::getNullValue(SizeInBits);
+      APInt CstBits = CFP->getValueAPF().bitcastToAPInt();
+      Mask |= CstBits.zextOrTrunc(SizeInBits).shl(BitOffset);
       return true;
     }
     return false;
@@ -5239,14 +5238,15 @@ static bool getTargetConstantBitsFromNode(SDValue Op, unsigned EltSizeInBits,
   if (ISD::isBuildVectorOfConstantSDNodes(Op.getNode())) {
     for (unsigned i = 0, e = Op.getNumOperands(); i != e; ++i) {
       const SDValue &Src = Op.getOperand(i);
+      unsigned BitOffset = i * SrcEltSizeInBits;
       if (Src.isUndef()) {
-        APInt Undefs = APInt::getLowBitsSet(SizeInBits, SrcEltSizeInBits);
-        UndefBits |= Undefs.shl(i * SrcEltSizeInBits);
+        unsigned HiBits = BitOffset + SrcEltSizeInBits;
+        UndefBits |= APInt::getBitsSet(SizeInBits, BitOffset, HiBits);
         continue;
       }
       auto *Cst = cast<ConstantSDNode>(Src);
       APInt Bits = Cst->getAPIntValue().zextOrTrunc(SrcEltSizeInBits);
-      MaskBits |= Bits.zext(SizeInBits).shl(i * SrcEltSizeInBits);
+      MaskBits |= Bits.zext(SizeInBits).shl(BitOffset);
     }
     return SplitBitData();
   }
@@ -5258,13 +5258,10 @@ static bool getTargetConstantBitsFromNode(SDValue Op, unsigned EltSizeInBits,
       return false;
 
     unsigned CstEltSizeInBits = CstTy->getScalarSizeInBits();
-    for (unsigned i = 0, e = CstTy->getVectorNumElements(); i != e; ++i) {
-      APInt Bits, Undefs;
-      if (!ExtractConstantBits(Cst->getAggregateElement(i), Bits, Undefs))
+    for (unsigned i = 0, e = CstTy->getVectorNumElements(); i != e; ++i)
+      if (!CollectConstantBits(Cst->getAggregateElement(i), MaskBits, UndefBits,
+                               i * CstEltSizeInBits))
         return false;
-      MaskBits |= Bits.shl(i * CstEltSizeInBits);
-      UndefBits |= Undefs.shl(i * CstEltSizeInBits);
-    }
 
     return SplitBitData();
   }
@@ -5273,8 +5270,9 @@ static bool getTargetConstantBitsFromNode(SDValue Op, unsigned EltSizeInBits,
   if (Op.getOpcode() == X86ISD::VBROADCAST &&
       EltSizeInBits <= SrcEltSizeInBits) {
     if (auto *Broadcast = getTargetConstantFromNode(Op.getOperand(0))) {
-      APInt Bits, Undefs;
-      if (ExtractConstantBits(Broadcast, Bits, Undefs)) {
+      APInt Bits(SizeInBits, 0);
+      APInt Undefs(SizeInBits, 0);
+      if (CollectConstantBits(Broadcast, Bits, Undefs, 0)) {
         for (unsigned i = 0; i != NumSrcElts; ++i) {
           MaskBits |= Bits.shl(i * SrcEltSizeInBits);
           UndefBits |= Undefs.shl(i * SrcEltSizeInBits);

@@ -456,12 +456,17 @@ define i32 @load_i32_by_bswap_i16(i32* %arg) {
 ; (i32) p[1] | (sext(p[0] << 16) to i32)
 define i32 @load_i32_by_sext_i16(i32* %arg) {
 ; CHECK-LABEL: load_i32_by_sext_i16:
-; CHECK: ldr  r0, [r0]
+; CHECK: ldrh  r1, [r0]
+; CHECK-NEXT: ldrh  r0, [r0, #2]
+; CHECK-NEXT: orr r0, r0, r1, lsl #16
 ; CHECK-NEXT: mov pc, lr
-;
+
 ; CHECK-ARMv6-LABEL: load_i32_by_sext_i16:
-; CHECK-ARMv6: ldr r0, [r0]
+; CHECK-ARMv6: ldrh  r1, [r0]
+; CHECK-ARMv6-NEXT: ldrh  r0, [r0, #2]
+; CHECK-ARMv6-NEXT: orr r0, r0, r1, lsl #16
 ; CHECK-ARMv6-NEXT: bx  lr
+  
   %tmp = bitcast i32* %arg to i16*
   %tmp1 = load i16, i16* %tmp, align 4
   %tmp2 = sext i16 %tmp1 to i32

@@ -14,7 +14,7 @@
 # RUN: llvm-objdump -p %p/Inputs/test.wasm | FileCheck %s -check-prefix CHECK-HEADER
 
 # CHECK-HEADER: Program Header:
-# CHECK-HEADER: Version: 0xd
+# CHECK-HEADER: Version: 0x1
 
 # RUN: llvm-objdump -s --section=CODE %p/Inputs/test.wasm | FileCheck %s -check-prefix CHECK-SECTIONS
 

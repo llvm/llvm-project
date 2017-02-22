@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=aarch64-linux-gnu -run-pass peephole-opt -o - %s 2>&1 | FileCheck %s
+# RUN: llc -mtriple=aarch64-linux-gnu -run-pass peephole-opt -o - %s | FileCheck %s
 # CHECK: %1 = ANDWri {{.*}}
 # CHECK-NEXT: %wzr = SUBSWri {{.*}}
 --- |

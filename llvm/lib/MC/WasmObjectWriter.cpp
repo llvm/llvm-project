@@ -32,6 +32,7 @@
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/StringSaver.h"
+#include "llvm/Support/Wasm.h"
 #include <vector>
 
 using namespace llvm;
@@ -90,7 +91,8 @@ WasmObjectWriter::~WasmObjectWriter() {}
 
 // Emit the Wasm header.
 void WasmObjectWriter::writeHeader(const MCAssembler &Asm) {
-  // TODO: write the magic cookie and the version.
+  writeBytes(StringRef(wasm::WasmMagic, sizeof(wasm::WasmMagic)));
+  writeLE32(wasm::WasmVersion);
 }
 
 void WasmObjectWriter::executePostLayoutBinding(MCAssembler &Asm,

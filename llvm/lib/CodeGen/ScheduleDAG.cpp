@@ -1,4 +1,4 @@
-//===---- ScheduleDAG.cpp - Implement the ScheduleDAG class ---------------===//
+//===- ScheduleDAG.cpp - Implement the ScheduleDAG class ------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -12,17 +12,27 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/iterator_range.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/ScheduleDAG.h"
 #include "llvm/CodeGen/ScheduleHazardRecognizer.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetInstrInfo.h"
-#include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetRegisterInfo.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
-#include <climits>
+#include <algorithm>
+#include <cassert>
+#include <iterator>
+#include <limits>
+#include <utility>
+#include <vector>
+
 using namespace llvm;
 
 #define DEBUG_TYPE "pre-RA-sched"
@@ -33,18 +43,18 @@ static cl::opt<bool> StressSchedOpt(
   cl::desc("Stress test instruction scheduling"));
 #endif
 
-void SchedulingPriorityQueue::anchor() { }
+void SchedulingPriorityQueue::anchor() {}
 
 ScheduleDAG::ScheduleDAG(MachineFunction &mf)
     : TM(mf.getTarget()), TII(mf.getSubtarget().getInstrInfo()),
       TRI(mf.getSubtarget().getRegisterInfo()), MF(mf),
-      MRI(mf.getRegInfo()), EntrySU(), ExitSU() {
+      MRI(mf.getRegInfo()) {
 #ifndef NDEBUG
   StressSched = StressSchedOpt;
 #endif
 }
 
-ScheduleDAG::~ScheduleDAG() {}
+ScheduleDAG::~ScheduleDAG() = default;
 
 void ScheduleDAG::clearDAG() {
   SUnits.clear();
@@ -89,8 +99,10 @@ bool SUnit::addPred(const SDep &D, bool Required) {
   SUnit *N = D.getSUnit();
   // Update the bookkeeping.
   if (D.getKind() == SDep::Data) {
-    assert(NumPreds < UINT_MAX && "NumPreds will overflow!");
-    assert(N->NumSuccs < UINT_MAX && "NumSuccs will overflow!");
+    assert(NumPreds < std::numeric_limits<unsigned>::max() &&
+           "NumPreds will overflow!");
+    assert(N->NumSuccs < std::numeric_limits<unsigned>::max() &&
+           "NumSuccs will overflow!");
     ++NumPreds;
     ++N->NumSuccs;
   }
@@ -99,7 +111,8 @@ bool SUnit::addPred(const SDep &D, bool Required) {
       ++WeakPredsLeft;
     }
     else {
-      assert(NumPredsLeft < UINT_MAX && "NumPredsLeft will overflow!");
+      assert(NumPredsLeft < std::numeric_limits<unsigned>::max() &&
+             "NumPredsLeft will overflow!");
       ++NumPredsLeft;
     }
   }
@@ -108,7 +121,8 @@ bool SUnit::addPred(const SDep &D, bool Required) {
       ++N->WeakSuccsLeft;
     }
     else {
-      assert(N->NumSuccsLeft < UINT_MAX && "NumSuccsLeft will overflow!");
+      assert(N->NumSuccsLeft < std::numeric_limits<unsigned>::max() &&
+             "NumSuccsLeft will overflow!");
       ++N->NumSuccsLeft;
     }
   }
@@ -123,14 +137,14 @@ bool SUnit::addPred(const SDep &D, bool Required) {
 
 void SUnit::removePred(const SDep &D) {
   // Find the matching predecessor.
-  SmallVectorImpl<SDep>::iterator I = find(Preds, D);
+  SmallVectorImpl<SDep>::iterator I = llvm::find(Preds, D);
   if (I == Preds.end())
     return;
   // Find the corresponding successor in N.
   SDep P = D;
   P.setSUnit(this);
   SUnit *N = D.getSUnit();
-  SmallVectorImpl<SDep>::iterator Succ = find(N->Succs, P);
+  SmallVectorImpl<SDep>::iterator Succ = llvm::find(N->Succs, P);
   assert(Succ != N->Succs.end() && "Mismatching preds / succs lists!");
   N->Succs.erase(Succ);
   Preds.erase(I);
@@ -376,7 +390,7 @@ unsigned ScheduleDAG::VerifyScheduledDAG(bool isBottomUp) {
     }
     if (SUnit.isScheduled &&
         (isBottomUp ? SUnit.getHeight() : SUnit.getDepth()) >
-          unsigned(INT_MAX)) {
+          unsigned(std::numeric_limits<int>::max())) {
       if (!AnyNotSched)
         dbgs() << "*** Scheduling failed! ***\n";
       SUnit.dump(this);
@@ -559,7 +573,6 @@ void ScheduleDAGTopologicalSort::Shift(BitVector& Visited, int LowerBound,
   }
 }
 
-
 bool ScheduleDAGTopologicalSort::WillCreateCycle(SUnit *TargetSU, SUnit *SU) {
   // Is SU reachable from TargetSU via successor edges?
   if (IsReachable(SU, TargetSU))
@@ -597,4 +610,4 @@ ScheduleDAGTopologicalSort::
 ScheduleDAGTopologicalSort(std::vector<SUnit> &sunits, SUnit *exitsu)
   : SUnits(sunits), ExitSU(exitsu) {}
 
-ScheduleHazardRecognizer::~ScheduleHazardRecognizer() {}
+ScheduleHazardRecognizer::~ScheduleHazardRecognizer() = default;

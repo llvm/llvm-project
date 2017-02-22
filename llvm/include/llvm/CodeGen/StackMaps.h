@@ -1,4 +1,4 @@
-//===------------------- StackMaps.h - StackMaps ----------------*- C++ -*-===//
+//===- StackMaps.h - StackMaps ----------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -13,7 +13,11 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/MachineInstr.h"
-#include "llvm/MC/MCSymbol.h"
+#include "llvm/IR/CallingConv.h"
+#include "llvm/Support/Debug.h"
+#include <algorithm>
+#include <cassert>
+#include <cstdint>
 #include <vector>
 
 namespace llvm {
@@ -21,6 +25,9 @@ namespace llvm {
 class AsmPrinter;
 class MCExpr;
 class MCStreamer;
+class MCSymbol;
+class raw_ostream;
+class TargetRegisterInfo;
 
 /// \brief MI-level stackmap operands.
 ///
@@ -189,21 +196,22 @@ public:
       Constant,
       ConstantIndex
     };
-    LocationType Type;
-    unsigned Size;
-    unsigned Reg;
-    int64_t Offset;
-    Location() : Type(Unprocessed), Size(0), Reg(0), Offset(0) {}
+    LocationType Type = Unprocessed;
+    unsigned Size = 0;
+    unsigned Reg = 0;
+    int64_t Offset = 0;
+
+    Location() = default;
     Location(LocationType Type, unsigned Size, unsigned Reg, int64_t Offset)
         : Type(Type), Size(Size), Reg(Reg), Offset(Offset) {}
   };
 
   struct LiveOutReg {
-    unsigned short Reg;
-    unsigned short DwarfRegNum;
-    unsigned short Size;
+    unsigned short Reg = 0;
+    unsigned short DwarfRegNum = 0;
+    unsigned short Size = 0;
 
-    LiveOutReg() : Reg(0), DwarfRegNum(0), Size(0) {}
+    LiveOutReg() = default;
     LiveOutReg(unsigned short Reg, unsigned short DwarfRegNum,
                unsigned short Size)
         : Reg(Reg), DwarfRegNum(DwarfRegNum), Size(Size) {}
@@ -245,18 +253,20 @@ private:
   typedef MapVector<uint64_t, uint64_t> ConstantPool;
 
   struct FunctionInfo {
-    uint64_t StackSize;
-    uint64_t RecordCount;
-    FunctionInfo() : StackSize(0), RecordCount(1) {}
-    explicit FunctionInfo(uint64_t StackSize) : StackSize(StackSize), RecordCount(1) {}
+    uint64_t StackSize = 0;
+    uint64_t RecordCount = 1;
+
+    FunctionInfo() = default;
+    explicit FunctionInfo(uint64_t StackSize) : StackSize(StackSize) {}
   };
 
   struct CallsiteInfo {
-    const MCExpr *CSOffsetExpr;
-    uint64_t ID;
+    const MCExpr *CSOffsetExpr = nullptr;
+    uint64_t ID = 0;
     LocationVec Locations;
     LiveOutVec LiveOuts;
-    CallsiteInfo() : CSOffsetExpr(nullptr), ID(0) {}
+
+    CallsiteInfo() = default;
     CallsiteInfo(const MCExpr *CSOffsetExpr, uint64_t ID,
                  LocationVec &&Locations, LiveOutVec &&LiveOuts)
         : CSOffsetExpr(CSOffsetExpr), ID(ID), Locations(std::move(Locations)),
@@ -309,6 +319,7 @@ private:
   void print(raw_ostream &OS);
   void debug() { print(dbgs()); }
 };
-}
 
-#endif
+} // end namespace llvm
+
+#endif // LLVM_CODEGEN_STACKMAPS_H

@@ -4487,6 +4487,10 @@ void SITargetLowering::adjustWritemask(MachineSDNode *&Node,
   for (SDNode::use_iterator I = Node->use_begin(), E = Node->use_end();
        I != E; ++I) {
 
+    // Don't look at users of the chain.
+    if (I.getUse().getResNo() != 0)
+      continue;
+
     // Abort if we can't understand the usage
     if (!I->isMachineOpcode() ||
         I->getMachineOpcode() != TargetOpcode::EXTRACT_SUBREG)

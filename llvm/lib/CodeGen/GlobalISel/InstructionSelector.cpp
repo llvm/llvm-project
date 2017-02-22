@@ -55,6 +55,13 @@ bool InstructionSelector::constrainSelectedInstRegOperands(
     // constrainOperandRegClass does that for us.
     MO.setReg(constrainOperandRegClass(MF, TRI, MRI, TII, RBI, I, I.getDesc(),
                                        Reg, OpI));
+
+    // Tie uses to defs as indicated in MCInstrDesc.
+    if (MO.isUse()) {
+      int DefIdx = I.getDesc().getOperandConstraint(OpI, MCOI::TIED_TO);
+      if (DefIdx != -1)
+        I.tieOperands(DefIdx, OpI);
+    }
   }
   return true;
 }

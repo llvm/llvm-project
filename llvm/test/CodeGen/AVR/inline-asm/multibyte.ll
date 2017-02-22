@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=avr | FileCheck %s
+; RUN: llc < %s -march=avr -no-integrated-as | FileCheck %s
 ; XFAIL: *
 
 ; Multibyte references

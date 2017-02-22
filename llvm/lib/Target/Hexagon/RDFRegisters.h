@@ -103,6 +103,9 @@ namespace rdf {
       return !isRegMaskId(RB.Reg) ? aliasRM(RB, RA) : aliasMM(RA, RB);
     }
     std::set<RegisterId> getAliasSet(RegisterId Reg) const;
+    bool hasPartialOverlaps(RegisterId Reg) const {
+      return RegInfos[Reg].Partial;
+    }
 
     const TargetRegisterInfo &getTRI() const { return TRI; }
 
@@ -110,6 +113,7 @@ namespace rdf {
     struct RegInfo {
       unsigned MaxSuper = 0;
       const TargetRegisterClass *RegClass = nullptr;
+      bool Partial = false;
     };
 
     const TargetRegisterInfo &TRI;
@@ -124,7 +128,7 @@ namespace rdf {
 
   struct RegisterAggr {
     RegisterAggr(const PhysicalRegisterInfo &pri)
-        : ExpAliasUnits(pri.getTRI().getNumRegUnits()), PRI(pri) {}
+        : ExpUnits(pri.getTRI().getNumRegUnits()), PRI(pri) {}
     RegisterAggr(const RegisterAggr &RG) = default;
 
     bool empty() const { return Masks.empty(); }
@@ -154,7 +158,7 @@ namespace rdf {
 
   private:
     MapType Masks;
-    BitVector ExpAliasUnits; // Register units for explicit aliases.
+    BitVector ExpUnits; // Register units for explicit checks.
     bool CheckUnits = false;
     const PhysicalRegisterInfo &PRI;
   };

@@ -38,12 +38,13 @@ void X86LegalizerInfo::setLegalizerInfo32bit() {
   const LLT s16 = LLT::scalar(16);
   const LLT s32 = LLT::scalar(32);
 
-  for (auto Ty : {s8, s16, s32})
+  for (auto Ty : {s8, s16, s32}) {
     setAction({TargetOpcode::G_ADD, Ty}, Legal);
+    setAction({TargetOpcode::G_SUB, Ty}, Legal);
+  }
 }
-void
 
-X86LegalizerInfo::setLegalizerInfo64bit() {
+void X86LegalizerInfo::setLegalizerInfo64bit() {
 
   if (!Subtarget.is64Bit())
     return;
@@ -51,4 +52,5 @@ X86LegalizerInfo::setLegalizerInfo64bit() {
   const LLT s64 = LLT::scalar(64);
 
   setAction({TargetOpcode::G_ADD, s64}, Legal);
+  setAction({TargetOpcode::G_SUB, s64}, Legal);
 }
