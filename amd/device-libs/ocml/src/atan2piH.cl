@@ -1,3 +1,4 @@
+
 /*===--------------------------------------------------------------------------
  *                   ROCm Device Libraries
  *
@@ -7,47 +8,44 @@
 
 #include "mathH.h"
 
+extern CONSTATTR half MATH_PRIVATE(atanred)(half);
+
 CONSTATTR half
 MATH_MANGLE(atan2pi)(half y, half x)
 {
-    const half piinv = 0x1.45f306dc9c883p-2h;
+    const half pi = 0x1.921fb6p+1h;
 
-    half ay = BUILTIN_ABS_F16(y);
     half ax = BUILTIN_ABS_F16(x);
-    half u = BUILTIN_MAX_F16(ax, ay);
+    half ay = BUILTIN_ABS_F16(y);
     half v = BUILTIN_MIN_F16(ax, ay);
+    half u = BUILTIN_MAX_F16(ax, ay);
+
     half vbyu = MATH_DIV(v, u);
-    half ret = piinv * MATH_MANGLE(atan)(vbyu);
 
-    half t = 0.5h - ret;
-    ret = ax < ay ? t : ret;
+    half a = MATH_PRIVATE(atanred)(vbyu);
+    a = MATH_FAST_DIV(a, pi);
 
-    bool xneg = BUILTIN_CLASS_F16(x, CLASS_NINF|CLASS_NNOR|CLASS_NSUB|CLASS_NZER);
+    half at = 0.5h - a;
+    a = ay > ax ? at : a;
+    at = 1.0h - a;
+    a = x < 0.0h ? at : a;
 
-    t = 1.0h - ret;
-    ret = xneg ? t : ret;
-
-    ret = BUILTIN_COPYSIGN_F16(ret, y);
-
-    t = BUILTIN_COPYSIGN_F16(0.5h, y);
-    ret = BUILTIN_CLASS_F16(x, CLASS_NZER|CLASS_PZER) ? t : ret;
-
-    t = BUILTIN_COPYSIGN_F16(1.0h, y);
-    t = xneg ? t : y;
-    ret = BUILTIN_CLASS_F16(y, CLASS_NZER|CLASS_PZER) ? t : ret;
+    at = AS_SHORT(x) < 0 ? 1.0h : 0.0h;
+    a = y == 0.0h ? at : a;
 
     if (!FINITE_ONLY_OPT()) {
-        t = xneg ? 0.75h : 0.25h;
-        t = BUILTIN_COPYSIGN_F16(t, y);
-        ret = BUILTIN_CLASS_F16(x, CLASS_NINF|CLASS_PINF) &
-              BUILTIN_CLASS_F16(y, CLASS_NINF|CLASS_PINF) ?
-              t : ret;
+        // x and y are +- Inf
+        at = x < 0.0h ? 0.75h : 0.25h;
+        a = BUILTIN_CLASS_F16(x, CLASS_PINF|CLASS_NINF) &
+            BUILTIN_CLASS_F16(y, CLASS_PINF|CLASS_NINF) ?
+            at : a;
 
-        ret = BUILTIN_CLASS_F16(x, CLASS_SNAN|CLASS_QNAN) |
-              BUILTIN_CLASS_F16(y, CLASS_SNAN|CLASS_QNAN) ?
-              AS_HALF((short)QNANBITPATT_HP16) : ret;
+        // x or y is NaN
+        a = BUILTIN_CLASS_F16(x, CLASS_SNAN|CLASS_QNAN) |
+            BUILTIN_CLASS_F16(y, CLASS_SNAN|CLASS_QNAN) ?
+            AS_HALF((short)QNANBITPATT_HP16) : a;
     }
 
-    return ret;
+    return BUILTIN_COPYSIGN_F16(a, y);
 }
 

@@ -7,22 +7,13 @@
 
 #include "mathH.h"
 
-extern CONSTATTR half MATH_PRIVATE(atanred)(half);
-
 CONSTATTR INLINEATTR half
-MATH_MANGLE(atan)(half x)
+MATH_PRIVATE(atanred)(half v)
 {
-    half v = BUILTIN_ABS_F16(x);
-    bool g = v > 1.0h;
-
-    half vi = MATH_FAST_RCP(v);
-    v = g ? vi : v;
-
-    half a = MATH_PRIVATE(atanred)(v);
-
-    half y = MATH_MAD(0x1.ea8p-1h, 0x1.a3cp+0h, -a);
-    a = g ? y : a;
-
-    return BUILTIN_COPYSIGN_F16(a, x);
+    half t = v * v;
+    half z = MATH_MAD(t, MATH_MAD(t, MATH_MAD(t, 
+                 0x1.bc9bfep-6h, -0x1.926ee8p-4h), 0x1.8310dcp-3h), -0x1.546844p-2h);
+    z = MATH_MAD(v, t*z, v);
+    return z;
 }
 
