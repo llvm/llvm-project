@@ -53,6 +53,9 @@ void test_hidden_all_errors(Foo *foo) {
   p3p = foo.p3_prop; // expected-error{{property 'p3_prop' not found on object of type 'Foo *'}}
   id p4p = p4.p4_prop; // expected-error{{property 'p4_prop' not found on object of type 'id<P4>'}}
   p4p = foo.p4_prop; // expected-error{{property 'p4_prop' not found on object of type 'Foo *'}}
+
+  if (foo.hiddenPropertyFromExtension) { // expected-error {{property 'hiddenPropertyFromExtension' not found on object of type 'Foo *'}}
+  }
 }
 
 @import category_left.sub;
@@ -74,6 +77,7 @@ void test_hidden_right_errors(Foo *foo) {
   id p4p = p4.p4_prop; // expected-error{{property 'p4_prop' not found on object of type 'id<P4>'}}
   p4p = foo.p4_prop; // expected-error{{property 'p4_prop' not found on object of type 'Foo *'; did you mean 'p3_prop'?}}
   // expected-note@Inputs/category_left_sub.h:7{{'p3_prop' declared here}}
+  int hiddenFromExtension = foo.hiddenPropertyFromExtension; // expected-error {{property 'hiddenPropertyFromExtension' not found on object of type 'Foo *'}}
 }
 
 @import category_right.sub;
@@ -92,4 +96,6 @@ void test_hidden_okay(Foo *foo) {
   p3p = foo.p3_prop;
   id p4p = p4.p4_prop;
   p4p = foo.p4_prop;
+  if (foo.hiddenPropertyFromExtension) {
+  }
 }
