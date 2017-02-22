@@ -57,12 +57,12 @@ LinkerScriptBase *elf::ScriptBase;
 ScriptConfiguration *elf::ScriptConfig;
 
 template <class ELFT> static SymbolBody *addRegular(SymbolAssignment *Cmd) {
+  Symbol *Sym;
   uint8_t Visibility = Cmd->Hidden ? STV_HIDDEN : STV_DEFAULT;
-  Symbol *Sym = Symtab<ELFT>::X->addUndefined(
-      Cmd->Name, /*IsLocal=*/false, STB_GLOBAL, Visibility,
-      /*Type*/ 0,
-      /*CanOmitFromDynSym*/ false, /*File*/ nullptr);
-
+  std::tie(Sym, std::ignore) = Symtab<ELFT>::X->insert(
+      Cmd->Name, /*Type*/ 0, Visibility, /*CanOmitFromDynSym*/ false,
+      /*File*/ nullptr);
+  Sym->Binding = STB_GLOBAL;
   replaceBody<DefinedRegular<ELFT>>(Sym, Cmd->Name, /*IsLocal=*/false,
                                     Visibility, STT_NOTYPE, 0, 0, nullptr,
                                     nullptr);
@@ -70,14 +70,14 @@ template <class ELFT> static SymbolBody *addRegular(SymbolAssignment *Cmd) {
 }
 
 template <class ELFT> static SymbolBody *addSynthetic(SymbolAssignment *Cmd) {
+  Symbol *Sym;
   uint8_t Visibility = Cmd->Hidden ? STV_HIDDEN : STV_DEFAULT;
   const OutputSectionBase *Sec =
       ScriptConfig->HasSections ? nullptr : Cmd->Expression.Section();
-  Symbol *Sym = Symtab<ELFT>::X->addUndefined(
-      Cmd->Name, /*IsLocal=*/false, STB_GLOBAL, Visibility,
-      /*Type*/ 0,
-      /*CanOmitFromDynSym*/ false, /*File*/ nullptr);
-
+  std::tie(Sym, std::ignore) = Symtab<ELFT>::X->insert(
+      Cmd->Name, /*Type*/ 0, Visibility, /*CanOmitFromDynSym*/ false,
+      /*File*/ nullptr);
+  Sym->Binding = STB_GLOBAL;
   replaceBody<DefinedSynthetic>(Sym, Cmd->Name, 0, Sec);
   return Sym->body();
 }
@@ -91,13 +91,15 @@ static bool isUnderSysroot(StringRef Path) {
   return false;
 }
 
-template <class ELFT> void LinkerScript<ELFT>::setDot(Expr E, bool InSec) {
+template <class ELFT>
+void LinkerScript<ELFT>::setDot(Expr E, const Twine &Loc, bool InSec) {
   uintX_t Val = E(Dot);
   if (Val < Dot) {
     if (InSec)
-      error("unable to move location counter backward for: " + CurOutSec->Name);
+      error(Loc + ": unable to move location counter backward for: " +
+            CurOutSec->Name);
     else
-      error("unable to move location counter backward");
+      error(Loc + ": unable to move location counter backward");
   }
   Dot = Val;
   // Update to location counter means update to section size.
@@ -111,7 +113,7 @@ template <class ELFT> void LinkerScript<ELFT>::setDot(Expr E, bool InSec) {
 template <class ELFT>
 void LinkerScript<ELFT>::assignSymbol(SymbolAssignment *Cmd, bool InSec) {
   if (Cmd->Name == ".") {
-    setDot(Cmd->Expression, InSec);
+    setDot(Cmd->Expression, Cmd->Location, InSec);
     return;
   }
 
@@ -462,7 +464,9 @@ void LinkerScript<ELFT>::switchTo(OutputSectionBase *Sec) {
   // will set the LMA such that the difference between VMA and LMA for the
   // section is the same as the preceding output section in the same region
   // https://sourceware.org/binutils/docs-2.20/ld/Output-Section-LMA.html
-  CurOutSec->setLMAOffset(LMAOffset);
+  Expr LMAExpr = CurLMA.first;
+  if (LMAExpr)
+    CurOutSec->setLMAOffset(LMAExpr(CurLMA.second) - CurLMA.second);
 }
 
 template <class ELFT> void LinkerScript<ELFT>::process(BaseCommand &Base) {
@@ -499,6 +503,8 @@ template <class ELFT> void LinkerScript<ELFT>::process(BaseCommand &Base) {
         continue;
 
     auto *IB = static_cast<InputSectionBase<ELFT> *>(ID);
+    if (!IB->Live)
+      continue;
     switchTo(IB->OutSec);
     if (auto *I = dyn_cast<InputSection<ELFT>>(IB))
       output(I);
@@ -561,13 +567,13 @@ MemoryRegion *LinkerScript<ELFT>::findMemoryRegion(OutputSectionCommand *Cmd,
 template <class ELFT>
 void LinkerScript<ELFT>::assignOffsets(OutputSectionCommand *Cmd) {
   if (Cmd->LMAExpr)
-    LMAOffset = Cmd->LMAExpr(Dot) - Dot;
+    CurLMA = {Cmd->LMAExpr, Dot};
   OutputSectionBase *Sec = findSection<ELFT>(Cmd->Name, *OutputSections);
   if (!Sec)
     return;
 
   if (Cmd->AddrExpr && Sec->Flags & SHF_ALLOC)
-    setDot(Cmd->AddrExpr);
+    setDot(Cmd->AddrExpr, Cmd->Location);
 
   // Handle align (e.g. ".foo : ALIGN(16) { ... }").
   if (Cmd->AlignExpr)
@@ -1622,7 +1628,7 @@ SymbolAssignment *ScriptParser::readAssignment(StringRef Name) {
       return getSymbolValue(Loc, Name, Dot) + E(Dot);
     };
   }
-  return new SymbolAssignment(Name, E);
+  return new SymbolAssignment(Name, E, getCurrentLocation());
 }
 
 // This is an operator-precedence parser to parse a linker
