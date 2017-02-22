@@ -662,7 +662,7 @@ static bool ParseLocalDeclName(const swift::Demangle::NodePointer &node,
 
     default:
       if (child->hasText()) {
-        identifier.PutCString(child->getText().c_str());
+        identifier.PutCString(child->getText());
         return true;
       }
       break;
@@ -699,7 +699,7 @@ static bool ParseFunction(const swift::Demangle::NodePointer &node,
     case swift::Demangle::Node::Kind::PrefixOperator:
     case swift::Demangle::Node::Kind::Identifier:
       if ((*pos)->hasText())
-        identifier.PutCString((*pos)->getText().c_str());
+        identifier.PutCString((*pos)->getText());
       return true;
     }
   }
@@ -3728,8 +3728,10 @@ protected:
 
     stream.Printf("kind=%s",
                   SwiftDemangleNodeKindToCString(node_ptr->getKind()));
-    if (node_ptr->hasText())
-      stream.Printf(", text=\"%s\"", node_ptr->getText().c_str());
+    if (node_ptr->hasText()) {
+      std::string Text = node_ptr->getText();
+      stream.Printf(", text=\"%s\"", Text.c_str());
+    }
     if (node_ptr->hasIndex())
       stream.Printf(", index=%" PRIu64, node_ptr->getIndex());
 
