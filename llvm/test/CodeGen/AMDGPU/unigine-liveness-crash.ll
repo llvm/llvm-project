@@ -75,8 +75,9 @@ IF26:                                             ; preds = %main_body
 ENDIF25:                                          ; preds = %IF29, %main_body
   %.4 = phi float [ %tmp84, %IF29 ], [ %tmp68, %main_body ]
   %tmp73 = fadd float %.4, undef
-  %tmp74 = call float @llvm.AMDGPU.clamp.(float %tmp73, float 0.000000e+00, float 1.000000e+00)
-  %tmp75 = fmul float undef, %tmp74
+  %max.0.i = call float @llvm.maxnum.f32(float %tmp73, float 0.000000e+00)
+  %clamp.i = call float @llvm.minnum.f32(float %max.0.i, float 1.000000e+00)
+  %tmp75 = fmul float undef, %clamp.i
   %tmp76 = fmul float %tmp75, undef
   %tmp77 = fadd float %tmp76, undef
   %tmp78 = insertvalue <{ i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, float, float, float, float, float, float, float, float, float, float, float, float, float, float }> undef, float %tmp77, 11
@@ -105,9 +106,6 @@ ENDIF28:                                          ; preds = %LOOP
 }
 
 ; Function Attrs: nounwind readnone
-declare float @llvm.AMDGPU.clamp.(float, float, float) #1
-
-; Function Attrs: nounwind readnone
 declare <4 x float> @llvm.SI.image.sample.v2i32(<2 x i32>, <8 x i32>, <4 x i32>, i32, i32, i32, i32, i32, i32, i32, i32) #1
 
 ; Function Attrs: nounwind readnone
@@ -122,6 +120,12 @@ declare float @llvm.amdgcn.interp.p1(float, i32, i32, i32) #1
 ; Function Attrs: nounwind readnone
 declare float @llvm.amdgcn.interp.p2(float, float, i32, i32, i32) #1
 
-attributes #0 = { "InitialPSInputAddr"="36983" "target-cpu"="tonga" }
+; Function Attrs: nounwind readnone
+declare float @llvm.minnum.f32(float, float) #1
+
+; Function Attrs: nounwind readnone
+declare float @llvm.maxnum.f32(float, float) #1
+
+attributes #0 = { nounwind "InitialPSInputAddr"="36983" "target-cpu"="tonga" }
 attributes #1 = { nounwind readnone }
 attributes #2 = { nounwind }

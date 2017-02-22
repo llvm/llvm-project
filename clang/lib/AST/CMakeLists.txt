@@ -40,6 +40,7 @@ add_clang_library(clangAST
   MicrosoftMangle.cpp
   NestedNameSpecifier.cpp
   NSAPI.cpp
+  ODRHash.cpp
   OpenMPClause.cpp
   ParentMap.cpp
   RawCommentList.cpp

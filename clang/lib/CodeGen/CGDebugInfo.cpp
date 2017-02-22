@@ -2475,8 +2475,9 @@ static QualType UnwrapTypeForDebugInfo(QualType T, const ASTContext &C) {
     case Type::SubstTemplateTypeParm:
       T = cast<SubstTemplateTypeParmType>(T)->getReplacementType();
       break;
-    case Type::Auto: {
-      QualType DT = cast<AutoType>(T)->getDeducedType();
+    case Type::Auto:
+    case Type::DeducedTemplateSpecialization: {
+      QualType DT = cast<DeducedType>(T)->getDeducedType();
       assert(!DT.isNull() && "Undeduced types shouldn't reach here.");
       T = DT;
       break;

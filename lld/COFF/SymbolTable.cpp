@@ -57,8 +57,7 @@ static SymbolPreference compareDefined(Symbol *S, bool WasInserted,
 SymbolTable *Symtab;
 
 void SymbolTable::addFile(InputFile *File) {
-  if (Config->Verbose)
-    outs() << "Reading " << toString(File) << "\n";
+  log("Reading " + toString(File));
   File->parse();
 
   MachineTypes MT = File->getMachineType();
@@ -81,8 +80,7 @@ void SymbolTable::addFile(InputFile *File) {
   if (S.empty())
     return;
 
-  if (Config->Verbose)
-    outs() << "Directives: " << toString(File) << ": " << S << "\n";
+  log("Directives: " + toString(File) + ": " + S);
   Driver->parseDirectives(S);
 }
 
@@ -136,12 +134,11 @@ void SymbolTable::reportRemainingUndefines() {
     return;
   for (SymbolBody *B : Config->GCRoot)
     if (Undefs.count(B))
-      errs() << "<root>: undefined symbol: " << B->getName() << "\n";
+      warn("<root>: undefined symbol: " + B->getName());
   for (ObjectFile *File : ObjectFiles)
     for (SymbolBody *Sym : File->getSymbols())
       if (Undefs.count(Sym))
-        errs() << toString(File) << ": undefined symbol: " << Sym->getName()
-               << "\n";
+        warn(toString(File) + ": undefined symbol: " + Sym->getName());
   if (!Config->Force)
     fatal("link failed");
 }

@@ -55,6 +55,19 @@ static void print(StringRef S, raw_ostream::Colors C) {
   }
 }
 
+void log(const Twine &Msg) {
+  if (Config->Verbose) {
+    std::lock_guard<std::mutex> Lock(Mu);
+    outs() << Argv0 << ": " << Msg << "\n";
+  }
+}
+
+void message(const Twine &Msg) {
+  std::lock_guard<std::mutex> Lock(Mu);
+  outs() << Msg << "\n";
+  outs().flush();
+}
+
 void error(const Twine &Msg) {
   std::lock_guard<std::mutex> Lock(Mu);
 

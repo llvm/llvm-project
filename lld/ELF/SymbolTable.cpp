@@ -75,7 +75,7 @@ template <class ELFT> void SymbolTable<ELFT>::addFile(InputFile *File) {
   }
 
   if (Config->Trace)
-    outs() << toString(File) << "\n";
+    message(toString(File));
 
   // .so file
   if (auto *F = dyn_cast<SharedFile<ELFT>>(File)) {

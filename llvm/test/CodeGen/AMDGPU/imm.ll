@@ -667,3 +667,18 @@ define void @store_literal_imm_f64(double addrspace(1)* %out) {
   store double 4096.0, double addrspace(1)* %out
   ret void
 }
+
+; GCN-LABEL: {{^}}literal_folding:
+; GCN: v_mul_f32_e32 v{{[0-9]+}}, 0x3f4353f8, v{{[0-9]+}}
+; GCN: v_mul_f32_e32 v{{[0-9]+}}, 0xbf4353f8, v{{[0-9]+}}
+define amdgpu_vs void @literal_folding(float %arg) {
+main_body:
+  %tmp = fmul float %arg, 0x3FE86A7F00000000
+  %tmp1 = fmul float %arg, 0xBFE86A7F00000000
+  call void @llvm.amdgcn.exp.f32(i32 12, i32 15, float %tmp, float %tmp, float %tmp1, float %tmp1, i1 true, i1 false) #0
+  ret void
+}
+
+declare void @llvm.amdgcn.exp.f32(i32, i32, float, float, float, float, i1, i1) #0
+
+attributes #0 = { nounwind }

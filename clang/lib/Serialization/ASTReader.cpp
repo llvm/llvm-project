@@ -26,6 +26,7 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/NestedNameSpecifier.h"
+#include "clang/AST/ODRHash.h"
 #include "clang/AST/RawCommentList.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLocVisitor.h"
@@ -8918,24 +8919,143 @@ void ASTReader::diagnoseOdrViolations() {
       continue;
 
     bool Diagnosed = false;
-    for (auto *RD : Merge.second) {
+    CXXRecordDecl *FirstRecord = Merge.first;
+    std::string FirstModule = getOwningModuleNameForDiagnostic(FirstRecord);
+    for (CXXRecordDecl *SecondRecord : Merge.second) {
       // Multiple different declarations got merged together; tell the user
       // where they came from.
-      if (Merge.first != RD) {
-        // FIXME: Walk the definition, figure out what's different,
-        // and diagnose that.
-        if (!Diagnosed) {
-          std::string Module = getOwningModuleNameForDiagnostic(Merge.first);
-          Diag(Merge.first->getLocation(),
-               diag::err_module_odr_violation_different_definitions)
-            << Merge.first << Module.empty() << Module;
-          Diagnosed = true;
+      if (FirstRecord == SecondRecord)
+        continue;
+
+      std::string SecondModule = getOwningModuleNameForDiagnostic(SecondRecord);
+      using DeclHashes = llvm::SmallVector<std::pair<Decl *, unsigned>, 4>;
+      DeclHashes FirstHashes;
+      DeclHashes SecondHashes;
+      ODRHash Hash;
+
+      auto PopulateHashes = [&Hash, FirstRecord](DeclHashes &Hashes,
+                                                 CXXRecordDecl *Record) {
+        for (auto *D : Record->decls()) {
+          // Due to decl merging, the first CXXRecordDecl is the parent of
+          // Decls in both records.
+          if (!ODRHash::isWhitelistedDecl(D, FirstRecord))
+            continue;
+          Hash.clear();
+          Hash.AddSubDecl(D);
+          Hashes.emplace_back(D, Hash.CalculateHash());
+        }
+      };
+      PopulateHashes(FirstHashes, FirstRecord);
+      PopulateHashes(SecondHashes, SecondRecord);
+
+      // Used with err_module_odr_violation_mismatch_decl and
+      // note_module_odr_violation_mismatch_decl
+      enum {
+        EndOfClass,
+        PublicSpecifer,
+        PrivateSpecifer,
+        ProtectedSpecifer,
+        Other
+      } FirstDiffType = Other,
+        SecondDiffType = Other;
+
+      auto DifferenceSelector = [](Decl *D) {
+        assert(D && "valid Decl required");
+        switch (D->getKind()) {
+        default:
+          return Other;
+        case Decl::AccessSpec:
+          switch (D->getAccess()) {
+          case AS_public:
+            return PublicSpecifer;
+          case AS_private:
+            return PrivateSpecifer;
+          case AS_protected:
+            return ProtectedSpecifer;
+          case AS_none:
+            llvm_unreachable("Invalid access specifier");
+          }
+        }
+      };
+
+      Decl *FirstDecl = nullptr;
+      Decl *SecondDecl = nullptr;
+      auto FirstIt = FirstHashes.begin();
+      auto SecondIt = SecondHashes.begin();
+
+      // If there is a diagnoseable difference, FirstDiffType and
+      // SecondDiffType will not be Other and FirstDecl and SecondDecl will be
+      // filled in if not EndOfClass.
+      while (FirstIt != FirstHashes.end() || SecondIt != SecondHashes.end()) {
+        if (FirstIt->second == SecondIt->second) {
+          ++FirstIt;
+          ++SecondIt;
+          continue;
         }
 
-        Diag(RD->getLocation(),
-             diag::note_module_odr_violation_different_definitions)
-          << getOwningModuleNameForDiagnostic(RD);
+        FirstDecl = FirstIt == FirstHashes.end() ? nullptr : FirstIt->first;
+        SecondDecl = SecondIt == SecondHashes.end() ? nullptr : SecondIt->first;
+
+        FirstDiffType = FirstDecl ? DifferenceSelector(FirstDecl) : EndOfClass;
+        SecondDiffType =
+            SecondDecl ? DifferenceSelector(SecondDecl) : EndOfClass;
+
+        break;
       }
+
+      if (FirstDiffType == Other || SecondDiffType == Other) {
+        // Reaching this point means an unexpected Decl was encountered
+        // or no difference was detected.  This causes a generic error
+        // message to be emitted.
+        Diag(FirstRecord->getLocation(),
+             diag::err_module_odr_violation_different_definitions)
+            << FirstRecord << FirstModule.empty() << FirstModule;
+
+        Diag(SecondRecord->getLocation(),
+             diag::note_module_odr_violation_different_definitions)
+            << SecondModule;
+        Diagnosed = true;
+        break;
+      }
+
+      if (FirstDiffType != SecondDiffType) {
+        SourceLocation FirstLoc;
+        SourceRange FirstRange;
+        if (FirstDiffType == EndOfClass) {
+          FirstLoc = FirstRecord->getBraceRange().getEnd();
+        } else {
+          FirstLoc = FirstIt->first->getLocation();
+          FirstRange = FirstIt->first->getSourceRange();
+        }
+        Diag(FirstLoc, diag::err_module_odr_violation_mismatch_decl)
+            << FirstRecord << FirstModule.empty() << FirstModule << FirstRange
+            << FirstDiffType;
+
+        SourceLocation SecondLoc;
+        SourceRange SecondRange;
+        if (SecondDiffType == EndOfClass) {
+          SecondLoc = SecondRecord->getBraceRange().getEnd();
+        } else {
+          SecondLoc = SecondDecl->getLocation();
+          SecondRange = SecondDecl->getSourceRange();
+        }
+        Diag(SecondLoc, diag::note_module_odr_violation_mismatch_decl)
+            << SecondModule << SecondRange << SecondDiffType;
+        Diagnosed = true;
+        break;
+      }
+
+      if (Diagnosed == true)
+        continue;
+
+      Diag(FirstRecord->getLocation(),
+           diag::err_module_odr_violation_different_definitions)
+          << FirstRecord << FirstModule.empty() << FirstModule;
+
+      Diag(SecondRecord->getLocation(),
+           diag::note_module_odr_violation_different_definitions)
+          << SecondModule;
+      Diagnosed = true;
     }
 
     if (!Diagnosed) {

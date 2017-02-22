@@ -452,7 +452,7 @@ class CLAMP <RegisterClass rc> : AMDGPUShaderInst <
   (outs rc:$dst),
   (ins rc:$src0),
   "CLAMP $dst, $src0",
-  [(set f32:$dst, (AMDGPUclamp f32:$src0, (f32 FP_ZERO), (f32 FP_ONE)))]
+  [(set f32:$dst, (AMDGPUclamp f32:$src0))]
 >;
 
 class FABS <RegisterClass rc> : AMDGPUShaderInst <

@@ -1087,9 +1087,11 @@ LIBBUILTIN(ilogb, "id", "fne", "math.h", ALL_LANGUAGES)
 LIBBUILTIN(ilogbf, "if", "fne", "math.h", ALL_LANGUAGES)
 LIBBUILTIN(ilogbl, "iLd", "fne", "math.h", ALL_LANGUAGES)
 
-LIBBUILTIN(lgamma, "dd", "fne", "math.h", ALL_LANGUAGES)
-LIBBUILTIN(lgammaf, "ff", "fne", "math.h", ALL_LANGUAGES)
-LIBBUILTIN(lgammal, "LdLd", "fne", "math.h", ALL_LANGUAGES)
+// POSIX math.h declares a global, signgam, that lgamma writes to, so these
+// shouldn't have "e" or "c" attributes
+LIBBUILTIN(lgamma, "dd", "fn", "math.h", ALL_LANGUAGES)
+LIBBUILTIN(lgammaf, "ff", "fn", "math.h", ALL_LANGUAGES)
+LIBBUILTIN(lgammal, "LdLd", "fn", "math.h", ALL_LANGUAGES)
 
 LIBBUILTIN(llrint, "LLid", "fne", "math.h", ALL_LANGUAGES)
 LIBBUILTIN(llrintf, "LLif", "fne", "math.h", ALL_LANGUAGES)

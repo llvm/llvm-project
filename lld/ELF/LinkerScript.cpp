@@ -57,12 +57,12 @@ LinkerScriptBase *elf::ScriptBase;
 ScriptConfiguration *elf::ScriptConfig;
 
 template <class ELFT> static SymbolBody *addRegular(SymbolAssignment *Cmd) {
+  Symbol *Sym;
   uint8_t Visibility = Cmd->Hidden ? STV_HIDDEN : STV_DEFAULT;
-  Symbol *Sym = Symtab<ELFT>::X->addUndefined(
-      Cmd->Name, /*IsLocal=*/false, STB_GLOBAL, Visibility,
-      /*Type*/ 0,
-      /*CanOmitFromDynSym*/ false, /*File*/ nullptr);
-
+  std::tie(Sym, std::ignore) = Symtab<ELFT>::X->insert(
+      Cmd->Name, /*Type*/ 0, Visibility, /*CanOmitFromDynSym*/ false,
+      /*File*/ nullptr);
+  Sym->Binding = STB_GLOBAL;
   replaceBody<DefinedRegular<ELFT>>(Sym, Cmd->Name, /*IsLocal=*/false,
                                     Visibility, STT_NOTYPE, 0, 0, nullptr,
                                     nullptr);
@@ -70,14 +70,14 @@ template <class ELFT> static SymbolBody *addRegular(SymbolAssignment *Cmd) {
 }
 
 template <class ELFT> static SymbolBody *addSynthetic(SymbolAssignment *Cmd) {
+  Symbol *Sym;
   uint8_t Visibility = Cmd->Hidden ? STV_HIDDEN : STV_DEFAULT;
   const OutputSectionBase *Sec =
       ScriptConfig->HasSections ? nullptr : Cmd->Expression.Section();
-  Symbol *Sym = Symtab<ELFT>::X->addUndefined(
-      Cmd->Name, /*IsLocal=*/false, STB_GLOBAL, Visibility,
-      /*Type*/ 0,
-      /*CanOmitFromDynSym*/ false, /*File*/ nullptr);
-
+  std::tie(Sym, std::ignore) = Symtab<ELFT>::X->insert(
+      Cmd->Name, /*Type*/ 0, Visibility, /*CanOmitFromDynSym*/ false,
+      /*File*/ nullptr);
+  Sym->Binding = STB_GLOBAL;
   replaceBody<DefinedSynthetic>(Sym, Cmd->Name, 0, Sec);
   return Sym->body();
 }

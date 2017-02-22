@@ -299,7 +299,7 @@ void LinkerDriver::main(ArrayRef<const char *> ArgsArr, bool CanExitEarly) {
   // in help to print the version information, GNU ld just normally exits,
   // while gold can continue linking. We are compatible with ld.bfd here.
   if (Args.hasArg(OPT_version) || Args.hasArg(OPT_v))
-    outs() << getLLDVersion() << "\n";
+    message(getLLDVersion());
   if (Args.hasArg(OPT_version))
     return;
 

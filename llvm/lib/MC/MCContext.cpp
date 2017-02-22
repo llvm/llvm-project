@@ -23,11 +23,13 @@
 #include "llvm/MC/MCSectionCOFF.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCSectionMachO.h"
+#include "llvm/MC/MCSectionWasm.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCSymbolCOFF.h"
 #include "llvm/MC/MCSymbolELF.h"
 #include "llvm/MC/MCSymbolMachO.h"
+#include "llvm/MC/MCSymbolWasm.h"
 #include "llvm/MC/SectionKind.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/COFF.h"
@@ -154,6 +156,8 @@ MCSymbol *MCContext::createSymbolImpl(const StringMapEntry<bool> *Name,
       return new (Name, *this) MCSymbolELF(Name, IsTemporary);
     case MCObjectFileInfo::IsMachO:
       return new (Name, *this) MCSymbolMachO(Name, IsTemporary);
+    case MCObjectFileInfo::IsWasm:
+      return new (Name, *this) MCSymbolWasm(Name, IsTemporary);
     }
   }
   return new (Name, *this) MCSymbol(MCSymbol::SymbolKindUnset, Name,
@@ -345,7 +349,7 @@ MCSectionELF *MCContext::createELFRelSection(const Twine &Name, unsigned Type,
   StringMap<bool>::iterator I;
   bool Inserted;
   std::tie(I, Inserted) =
-      ELFRelSecNames.insert(std::make_pair(Name.str(), true));
+      RelSecNames.insert(std::make_pair(Name.str(), true));
 
   return createELFSectionImpl(I->getKey(), Type, Flags,
                               SectionKind::getReadOnly(), EntrySize, Group,
@@ -475,6 +479,80 @@ MCSectionCOFF *MCContext::getAssociativeCOFFSection(MCSectionCOFF *Sec,
 
   return getCOFFSection(Sec->getSectionName(), Characteristics, Sec->getKind(),
                         "", 0, UniqueID);
+}
+
+void MCContext::renameWasmSection(MCSectionWasm *Section, StringRef Name) {
+  StringRef GroupName;
+  assert(!Section->getGroup() && "not yet implemented");
+
+  unsigned UniqueID = Section->getUniqueID();
+  WasmUniquingMap.erase(
+      WasmSectionKey{Section->getSectionName(), GroupName, UniqueID});
+  auto I = WasmUniquingMap.insert(std::make_pair(
+                                     WasmSectionKey{Name, GroupName, UniqueID},
+                                     Section))
+               .first;
+  StringRef CachedName = I->first.SectionName;
+  const_cast<MCSectionWasm *>(Section)->setSectionName(CachedName);
+}
+
+MCSectionWasm *MCContext::createWasmRelSection(const Twine &Name, unsigned Type,
+                                               unsigned Flags,
+                                               const MCSymbolWasm *Group) {
+  StringMap<bool>::iterator I;
+  bool Inserted;
+  std::tie(I, Inserted) =
+      RelSecNames.insert(std::make_pair(Name.str(), true));
+
+  return new (WasmAllocator.Allocate())
+      MCSectionWasm(I->getKey(), Type, Flags, SectionKind::getReadOnly(),
+                    Group, ~0, nullptr);
+}
+
+MCSectionWasm *MCContext::getWasmNamedSection(const Twine &Prefix,
+                                              const Twine &Suffix, unsigned Type,
+                                              unsigned Flags) {
+  return getWasmSection(Prefix + "." + Suffix, Type, Flags, Suffix);
+}
+
+MCSectionWasm *MCContext::getWasmSection(const Twine &Section, unsigned Type,
+                                         unsigned Flags,
+                                         const Twine &Group, unsigned UniqueID,
+                                         const char *BeginSymName) {
+  MCSymbolWasm *GroupSym = nullptr;
+  if (!Group.isTriviallyEmpty() && !Group.str().empty())
+    GroupSym = cast<MCSymbolWasm>(getOrCreateSymbol(Group));
+
+  return getWasmSection(Section, Type, Flags, GroupSym, UniqueID, BeginSymName);
+}
+
+MCSectionWasm *MCContext::getWasmSection(const Twine &Section, unsigned Type,
+                                         unsigned Flags,
+                                         const MCSymbolWasm *GroupSym,
+                                         unsigned UniqueID,
+                                         const char *BeginSymName) {
+  StringRef Group = "";
+  if (GroupSym)
+    Group = GroupSym->getName();
+  // Do the lookup, if we have a hit, return it.
+  auto IterBool = WasmUniquingMap.insert(
+      std::make_pair(WasmSectionKey{Section.str(), Group, UniqueID}, nullptr));
+  auto &Entry = *IterBool.first;
+  if (!IterBool.second)
+    return Entry.second;
+
+  StringRef CachedName = Entry.first.SectionName;
+
+  SectionKind Kind = SectionKind::getText();
+
+  MCSymbol *Begin = nullptr;
+  if (BeginSymName)
+    Begin = createTempSymbol(BeginSymName, false);
+
+  MCSectionWasm *Result = new (WasmAllocator.Allocate())
+      MCSectionWasm(CachedName, Type, Flags, Kind, GroupSym, UniqueID, Begin);
+  Entry.second = Result;
+  return Result;
 }
 
 MCSubtargetInfo &MCContext::getSubtargetCopy(const MCSubtargetInfo &STI) {

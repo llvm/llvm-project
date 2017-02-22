@@ -231,19 +231,16 @@ void ICF::run(const std::vector<Chunk *> &Vec) {
     ++Cnt;
   } while (Repeat);
 
-  if (Config->Verbose)
-    outs() << "\nICF needed " << Cnt << " iterations\n";
+  log("ICF needed " + Twine(Cnt) + " iterations");
 
   // Merge sections in the same colors.
   forEachColor([&](size_t Begin, size_t End) {
     if (End - Begin == 1)
       return;
 
-    if (Config->Verbose)
-      outs() << "Selected " << Chunks[Begin]->getDebugName() << "\n";
+    log("Selected " + Chunks[Begin]->getDebugName());
     for (size_t I = Begin + 1; I < End; ++I) {
-      if (Config->Verbose)
-        outs() << "  Removed " << Chunks[I]->getDebugName() << "\n";
+      log("  Removed " + Chunks[I]->getDebugName());
       Chunks[Begin]->replace(Chunks[I]);
     }
   });

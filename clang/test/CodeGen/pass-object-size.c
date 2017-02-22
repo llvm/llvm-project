@@ -369,3 +369,29 @@ void test14(char *c) {
   // CHECK: call void (i8*, i64, ...) @my_sprintf
   my_sprintf(c, 1, 2, 3);
 }
+
+void pass_size_unsigned(unsigned *const PS(0));
+
+// Bug: we weren't lowering to the proper @llvm.objectsize for pointers that
+// don't turn into i8*s, which caused crashes.
+// CHECK-LABEL: define void @test15
+void test15(unsigned *I) {
+  // CHECK: @llvm.objectsize.i64.p0i32
+  // CHECK: call void @pass_size_unsigned
+  pass_size_unsigned(I);
+}
+
+void pass_size_as1(__attribute__((address_space(1))) void *const PS(0));
+
+void pass_size_unsigned_as1(
+    __attribute__((address_space(1))) unsigned *const PS(0));
+
+// CHECK-LABEL: define void @test16
+void test16(__attribute__((address_space(1))) unsigned *I) {
+  // CHECK: call i64 @llvm.objectsize.i64.p1i8
+  // CHECK: call void @pass_size_as1
+  pass_size_as1(I);
+  // CHECK: call i64 @llvm.objectsize.i64.p1i32
+  // CHECK: call void @pass_size_unsigned_as1
+  pass_size_unsigned_as1(I);
+}
