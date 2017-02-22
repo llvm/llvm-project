@@ -4045,7 +4045,7 @@ ASTReader::ASTReadResult ASTReader::findAndReadUnhashedControlBlock(
   }
 
   // FIXME: Should we check the signature even if DisableValidation?
-  if (DisableValidation ||
+  if (PP.getLangOpts().NeededByPCHOrCompilationUsesPCH || DisableValidation ||
       (AllowConfigurationMismatch && Result == ConfigurationMismatch))
     return Success;
 

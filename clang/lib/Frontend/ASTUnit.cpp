@@ -1751,7 +1751,7 @@ ASTUnit *ASTUnit::LoadFromCompilerInvocationAction(
     if (!AST)
       return nullptr;
   }
-  
+
   if (!ResourceFilesPath.empty()) {
     // Override the resources path.
     CI->getHeaderSearchOpts().ResourceDir = ResourceFilesPath;
@@ -1983,6 +1983,9 @@ ASTUnit *ASTUnit::LoadFromCommandLine(
 
   if (ModuleFormat)
     CI->getHeaderSearchOpts().ModuleFormat = ModuleFormat.getValue();
+
+  if (ForSerialization)
+    CI->getLangOpts()->NeededByPCHOrCompilationUsesPCH = true;
 
   // Create the AST unit.
   std::unique_ptr<ASTUnit> AST;
