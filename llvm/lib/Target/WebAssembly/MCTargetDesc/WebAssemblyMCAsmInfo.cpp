@@ -19,9 +19,9 @@ using namespace llvm;
 
 #define DEBUG_TYPE "wasm-mc-asm-info"
 
-WebAssemblyMCAsmInfo::~WebAssemblyMCAsmInfo() {}
+WebAssemblyMCAsmInfoELF::~WebAssemblyMCAsmInfoELF() {}
 
-WebAssemblyMCAsmInfo::WebAssemblyMCAsmInfo(const Triple &T) {
+WebAssemblyMCAsmInfoELF::WebAssemblyMCAsmInfoELF(const Triple &T) {
   PointerSize = CalleeSaveStackSlotSize = T.isArch64Bit() ? 8 : 4;
 
   // TODO: What should MaxInstLength be?
@@ -50,4 +50,34 @@ WebAssemblyMCAsmInfo::WebAssemblyMCAsmInfo(const Triple &T) {
 
   // WebAssembly's stack is never executable.
   UsesNonexecutableStackSection = false;
+}
+
+WebAssemblyMCAsmInfo::~WebAssemblyMCAsmInfo() {}
+
+WebAssemblyMCAsmInfo::WebAssemblyMCAsmInfo(const Triple &T) {
+  PointerSize = CalleeSaveStackSlotSize = T.isArch64Bit() ? 8 : 4;
+
+  // TODO: What should MaxInstLength be?
+
+  UseDataRegionDirectives = true;
+
+  // Use .skip instead of .zero because .zero is confusing when used with two
+  // arguments (it doesn't actually zero things out).
+  ZeroDirective = "\t.skip\t";
+
+  Data8bitsDirective = "\t.int8\t";
+  Data16bitsDirective = "\t.int16\t";
+  Data32bitsDirective = "\t.int32\t";
+  Data64bitsDirective = "\t.int64\t";
+
+  AlignmentIsInBytes = false;
+  COMMDirectiveAlignmentIsInBytes = false;
+  LCOMMDirectiveAlignmentType = LCOMM::Log2Alignment;
+
+  SupportsDebugInformation = true;
+
+  // For now, WebAssembly does not support exceptions.
+  ExceptionsType = ExceptionHandling::None;
+
+  // TODO: UseIntegratedAssembler?
 }

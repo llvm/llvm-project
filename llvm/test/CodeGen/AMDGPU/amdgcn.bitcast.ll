@@ -3,19 +3,15 @@
 
 ; This test just checks that the compiler doesn't crash.
 
-declare void @llvm.SI.export(i32, i32, i32, i32, i32, float, float, float, float)
-
 ; FUNC-LABEL: {{^}}v32i8_to_v8i32:
-; SI: s_endpgm
-define amdgpu_ps void @v32i8_to_v8i32(<32 x i8> addrspace(2)* inreg) #0 {
+define amdgpu_ps float @v32i8_to_v8i32(<32 x i8> addrspace(2)* inreg) #0 {
 entry:
   %1 = load <32 x i8>, <32 x i8> addrspace(2)* %0
   %2 = bitcast <32 x i8> %1 to <8 x i32>
   %3 = extractelement <8 x i32> %2, i32 1
   %4 = icmp ne i32 %3, 0
   %5 = select i1 %4, float 0.0, float 1.0
-  call void @llvm.SI.export(i32 15, i32 1, i32 1, i32 0, i32 1, float %5, float %5, float %5, float %5)
-  ret void
+  ret float %5
 }
 
 ; FUNC-LABEL: {{^}}i8ptr_v16i8ptr:

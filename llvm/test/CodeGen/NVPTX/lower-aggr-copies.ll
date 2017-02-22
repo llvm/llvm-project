@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=nvptx64 -mcpu=sm_35 | FileCheck %s --check-prefix PTX
+; RUN: llc < %s -march=nvptx64 -mcpu=sm_35 -O0 | FileCheck %s --check-prefix PTX
 ; RUN: opt < %s -S -nvptx-lower-aggr-copies | FileCheck %s --check-prefix IR
 
 ; Verify that the NVPTXLowerAggrCopies pass works as expected - calls to
@@ -27,9 +27,9 @@ entry:
 ; PTX:        LBB[[LABEL:[_0-9]+]]:
 ; PTX:        ld.u8 %rs[[REG:[0-9]+]]
 ; PTX:        st.u8 [%rd{{[0-9]+}}], %rs[[REG]]
-; PTX:        add.s64 %rd[[COUNTER:[0-9]+]], %rd[[COUNTER]], 1
-; PTX-NEXT:   setp.lt.u64 %p[[PRED:[0-9]+]], %rd[[COUNTER]], %rd
-; PTX-NEXT:   @%p[[PRED]] bra LBB[[LABEL]]
+; PTX:        add.s64 %rd[[COUNTER:[0-9]+]], %rd{{[0-9]+}}, 1
+; PTX:        setp.lt.u64 %p[[PRED:[0-9]+]], %rd[[COUNTER]], %rd
+; PTX:        @%p[[PRED]] bra LBB[[LABEL]]
 }
 
 define i8* @memcpy_volatile_caller(i8* %dst, i8* %src, i64 %n) #0 {
@@ -45,9 +45,9 @@ entry:
 ; PTX:        LBB[[LABEL:[_0-9]+]]:
 ; PTX:        ld.volatile.u8 %rs[[REG:[0-9]+]]
 ; PTX:        st.volatile.u8 [%rd{{[0-9]+}}], %rs[[REG]]
-; PTX:        add.s64 %rd[[COUNTER:[0-9]+]], %rd[[COUNTER]], 1
-; PTX-NEXT:   setp.lt.u64 %p[[PRED:[0-9]+]], %rd[[COUNTER]], %rd
-; PTX-NEXT:   @%p[[PRED]] bra LBB[[LABEL]]
+; PTX:        add.s64 %rd[[COUNTER:[0-9]+]], %rd{{[0-9]+}}, 1
+; PTX:        setp.lt.u64 %p[[PRED:[0-9]+]], %rd[[COUNTER]], %rd
+; PTX:        @%p[[PRED]] bra LBB[[LABEL]]
 }
 
 define i8* @memcpy_casting_caller(i32* %dst, i32* %src, i64 %n) #0 {
@@ -78,12 +78,13 @@ entry:
 ; IR-NEXT:    store i8 [[VAL]], i8* [[STOREPTR]]
 
 ; PTX-LABEL:  .visible .func (.param .b64 func_retval0) memset_caller(
-; PTX:        ld.param.u8 %rs[[REG:[0-9]+]]
+; PTX:        ld.param.u32 %r[[C:[0-9]+]]
+; PTX:        cvt.u16.u32  %rs[[REG:[0-9]+]], %r[[C]];
 ; PTX:        LBB[[LABEL:[_0-9]+]]:
 ; PTX:        st.u8 [%rd{{[0-9]+}}], %rs[[REG]]
-; PTX:        add.s64 %rd[[COUNTER:[0-9]+]], %rd[[COUNTER]], 1
-; PTX-NEXT:   setp.lt.u64 %p[[PRED:[0-9]+]], %rd[[COUNTER]], %rd
-; PTX-NEXT:   @%p[[PRED]] bra LBB[[LABEL]]
+; PTX:        add.s64 %rd[[COUNTER:[0-9]+]], %rd{{[0-9]+}}, 1
+; PTX:        setp.lt.u64 %p[[PRED:[0-9]+]], %rd[[COUNTER]], %rd
+; PTX:        @%p[[PRED]] bra LBB[[LABEL]]
 }
 
 define i8* @volatile_memset_caller(i8* %dst, i32 %c, i64 %n) #0 {
@@ -118,7 +119,7 @@ entry:
 ; PTX-NEXT:   @%p[[SRC_GT_THAN_DST]] bra LBB[[FORWARD_BB:[0-9_]+]]
 ; -- this is the backwards copying BB
 ; PTX:        @%p[[NEQ0]] bra LBB[[EXIT:[0-9_]+]]
-; PTX:        add.s64 %rd[[N]], %rd[[N]], -1
+; PTX:        add.s64 %rd{{[0-9]}}, %rd{{[0-9]}}, -1
 ; PTX:        ld.u8 %rs[[ELEMENT:[0-9]+]]
 ; PTX:        st.u8 [%rd{{[0-9]+}}], %rs[[ELEMENT]]
 ; -- this is the forwards copying BB
@@ -126,7 +127,7 @@ entry:
 ; PTX:        @%p[[NEQ0]] bra LBB[[EXIT]]
 ; PTX:        ld.u8 %rs[[ELEMENT2:[0-9]+]]
 ; PTX:        st.u8 [%rd{{[0-9]+}}], %rs[[ELEMENT2]]
-; PTX:        add.s64 %rd[[INDEX:[0-9]+]], %rd[[INDEX]], 1
+; PTX:        add.s64 %rd{{[0-9]+}}, %rd{{[0-9]+}}, 1
 ; -- exit block
 ; PTX:        LBB[[EXIT]]:
 ; PTX-NEXT:   st.param.b64 [func_retval0

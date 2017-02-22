@@ -44,6 +44,7 @@ class MCInstPrinter;
 class MCSection;
 class MCStreamer;
 class MCSymbolRefExpr;
+class MCSymbolWasm;
 class MCSubtargetInfo;
 class raw_ostream;
 class Twine;

@@ -36,6 +36,7 @@ extern llvm::raw_ostream *ErrorOS;
 extern llvm::StringRef Argv0;
 
 void log(const Twine &Msg);
+void message(const Twine &Msg);
 void warn(const Twine &Msg);
 void error(const Twine &Msg);
 LLVM_ATTRIBUTE_NORETURN void fatal(const Twine &Msg);

@@ -460,13 +460,14 @@ CodeGenFunction::emitBuiltinObjectSize(const Expr *E, unsigned Type,
   if (Type == 3 || E->HasSideEffects(getContext()))
     return getDefaultBuiltinObjectSizeResult(Type, ResType);
 
-  // LLVM only supports 0 and 2, make sure that we pass along that
-  // as a boolean.
+  Value *Ptr = EmitScalarExpr(E);
+  assert(Ptr->getType()->isPointerTy() &&
+         "Non-pointer passed to __builtin_object_size?");
+
+  // LLVM only supports 0 and 2, make sure that we pass along that as a boolean.
   auto *CI = ConstantInt::get(Builder.getInt1Ty(), (Type & 2) >> 1);
-  // FIXME: Get right address space.
-  llvm::Type *Tys[] = {ResType, Builder.getInt8PtrTy(0)};
-  Value *F = CGM.getIntrinsic(Intrinsic::objectsize, Tys);
-  return Builder.CreateCall(F, {EmitScalarExpr(E), CI});
+  Value *F = CGM.getIntrinsic(Intrinsic::objectsize, {ResType, Ptr->getType()});
+  return Builder.CreateCall(F, {Ptr, CI});
 }
 
 // Many of MSVC builtins are on both x64 and ARM; to avoid repeating code, we

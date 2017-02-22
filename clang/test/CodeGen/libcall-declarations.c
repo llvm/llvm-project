@@ -402,9 +402,9 @@ void *use[] = {
 // CHECK-NOERRNO: declare i32 @ilogb(double) [[NUW]]
 // CHECK-NOERRNO: declare i32 @ilogbf(float) [[NUW]]
 // CHECK-NOERRNO: declare i32 @ilogbl(x86_fp80) [[NUW]]
-// CHECK-NOERRNO: declare double @lgamma(double) [[NUW]]
-// CHECK-NOERRNO: declare float @lgammaf(float) [[NUW]]
-// CHECK-NOERRNO: declare x86_fp80 @lgammal(x86_fp80) [[NUW]]
+// CHECK-NOERRNO: declare double @lgamma(double) [[NONCONST:#[0-9]+]]
+// CHECK-NOERRNO: declare float @lgammaf(float) [[NONCONST]]
+// CHECK-NOERRNO: declare x86_fp80 @lgammal(x86_fp80) [[NONCONST]]
 // CHECK-NOERRNO: declare i64 @llrint(double) [[NUW]]
 // CHECK-NOERRNO: declare i64 @llrintf(float) [[NUW]]
 // CHECK-NOERRNO: declare i64 @llrintl(x86_fp80) [[NUW]]
@@ -554,6 +554,9 @@ void *use[] = {
 // CHECK-ERRNO: declare double @fmin(double, double) [[NUW]]
 // CHECK-ERRNO: declare float @fminf(float, float) [[NUW]]
 // CHECK-ERRNO: declare x86_fp80 @fminl(x86_fp80, x86_fp80) [[NUW]]
+// CHECK-ERRNO: declare double @lgamma(double) [[NONCONST:#[0-9]+]]
+// CHECK-ERRNO: declare float @lgammaf(float) [[NONCONST]]
+// CHECK-ERRNO: declare x86_fp80 @lgammal(x86_fp80) [[NONCONST]]
 // CHECK-ERRNO: declare double @nearbyint(double) [[NUW]]
 // CHECK-ERRNO: declare float @nearbyintf(float) [[NUW]]
 // CHECK-ERRNO: declare x86_fp80 @nearbyintl(x86_fp80) [[NUW]]
@@ -612,5 +615,11 @@ void *use[] = {
 // CHECK-ERRNO: declare <2 x float> @ctanhf(<2 x float>) [[NUW]]
 
 // CHECK-NOERRNO: attributes [[NUW]] = { nounwind readnone{{.*}} }
+// CHECK-NOERRNO: attributes [[NONCONST]] = {
+// CHECK-NOERRNO-NOT: readnone
+// CHECK-NOERRNO-SAME: nounwind{{.*}} }
 
+// CHECK-ERRNO: attributes [[NONCONST]] = {
+// CHECK-ERRNO-NOT: readnone
+// CHECK-ERRNO-SAME: nounwind{{.*}} }
 // CHECK-ERRNO: attributes [[NUW]] = { nounwind readnone{{.*}} }

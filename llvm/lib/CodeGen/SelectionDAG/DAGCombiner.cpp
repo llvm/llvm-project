@@ -7882,7 +7882,7 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
     EVT SrcVT = VecSrc.getValueType();
     if (SrcVT.isVector() && SrcVT.getScalarType() == VT &&
         (!LegalOperations ||
-         TLI.isOperationLegal(ISD::EXTRACT_VECTOR_ELT, SrcVT))) {
+         TLI.isOperationLegalOrCustom(ISD::EXTRACT_VECTOR_ELT, SrcVT))) {
       SDLoc SL(N);
 
       EVT IdxVT = TLI.getVectorIdxTy(DAG.getDataLayout());

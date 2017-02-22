@@ -30,8 +30,10 @@
 #include "llvm/MC/MCSectionCOFF.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCSectionMachO.h"
+#include "llvm/MC/MCSectionWasm.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbolELF.h"
+#include "llvm/MC/MCSymbolWasm.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/COFF.h"
@@ -1154,4 +1156,54 @@ MCSection *TargetLoweringObjectFileCOFF::getStaticDtorSection(
 void TargetLoweringObjectFileCOFF::emitLinkerFlagsForGlobal(
     raw_ostream &OS, const GlobalValue *GV) const {
   emitLinkerFlagsForGlobalCOFF(OS, GV, getTargetTriple(), getMangler());
+}
+
+//===----------------------------------------------------------------------===//
+//                                  Wasm
+//===----------------------------------------------------------------------===//
+
+MCSection *TargetLoweringObjectFileWasm::getExplicitSectionGlobal(
+    const GlobalObject *GO, SectionKind Kind, const TargetMachine &TM) const {
+  llvm_unreachable("getExplicitSectionGlobal not yet implemented");
+  return nullptr;
+}
+
+MCSection *TargetLoweringObjectFileWasm::SelectSectionForGlobal(
+    const GlobalObject *GO, SectionKind Kind, const TargetMachine &TM) const {
+  if (Kind.isText())
+    return TextSection;
+  assert(!Kind.isMetadata() && "metadata sections not yet implemented");
+  return DataSection;
+}
+
+bool TargetLoweringObjectFileWasm::shouldPutJumpTableInFunctionSection(
+    bool UsesLabelDifference, const Function &F) const {
+  // We can always create relative relocations, so use another section
+  // that can be marked non-executable.
+  return false;
+}
+
+const MCExpr *TargetLoweringObjectFileWasm::lowerRelativeReference(
+    const GlobalValue *LHS, const GlobalValue *RHS,
+    const TargetMachine &TM) const {
+  // We may only use a PLT-relative relocation to refer to unnamed_addr
+  // functions.
+  if (!LHS->hasGlobalUnnamedAddr() || !LHS->getValueType()->isFunctionTy())
+    return nullptr;
+
+  // Basic sanity checks.
+  if (LHS->getType()->getPointerAddressSpace() != 0 ||
+      RHS->getType()->getPointerAddressSpace() != 0 || LHS->isThreadLocal() ||
+      RHS->isThreadLocal())
+    return nullptr;
+
+  return MCBinaryExpr::createSub(
+      MCSymbolRefExpr::create(TM.getSymbol(LHS), MCSymbolRefExpr::VK_None,
+                              getContext()),
+      MCSymbolRefExpr::create(TM.getSymbol(RHS), getContext()), getContext());
+}
+
+void
+TargetLoweringObjectFileWasm::InitializeWasm() {
+  // TODO: Initialize StaticCtorSection and StaticDtorSection.
 }

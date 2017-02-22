@@ -128,6 +128,16 @@ int __tsan_get_report_loc(void *report, uptr idx, const char **type,
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
+int __tsan_get_report_loc_object_type(void *report, uptr idx,
+                                      const char **object_type) {
+  const ReportDesc *rep = (ReportDesc *)report;
+  CHECK_LT(idx, rep->locs.Size());
+  ReportLocation *loc = rep->locs[idx];
+  *object_type = GetObjectTypeFromTag(loc->external_tag);
+  return 1;
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE
 int __tsan_get_report_mutex(void *report, uptr idx, uptr *mutex_id, void **addr,
                             int *destroyed, void **trace, uptr trace_size) {
   const ReportDesc *rep = (ReportDesc *)report;
