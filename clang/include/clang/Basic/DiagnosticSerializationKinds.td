@@ -117,6 +117,15 @@ def note_module_odr_violation_different_definitions : Note<
 def err_module_odr_violation_different_instantiations : Error<
   "instantiation of %q0 is different in different modules">;
 
+def err_module_odr_violation_mismatch_decl : Error<
+  "%q0 has different definitions in different modules; first difference is "
+  "%select{definition in module '%2'|defined here}1 found "
+  "%select{end of class|public access specifier|private access specifier|"
+  "protected access specifier}3">;
+def note_module_odr_violation_mismatch_decl : Note<"but in '%0' found "
+  "%select{end of class|public access specifier|private access specifier|"
+  "protected access specifier}1">;
+
 def warn_module_uses_date_time : Warning<
   "%select{precompiled header|module}0 uses __DATE__ or __TIME__">,
   InGroup<DiagGroup<"pch-date-time">>;

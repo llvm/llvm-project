@@ -223,13 +223,11 @@ void BreakableStringLiteral::insertBreak(unsigned LineIndex,
 
 BreakableComment::BreakableComment(const FormatToken &Token,
                                    unsigned StartColumn,
-                                   unsigned OriginalStartColumn,
-                                   bool FirstInLine, bool InPPDirective,
+                                   bool InPPDirective,
                                    encoding::Encoding Encoding,
                                    const FormatStyle &Style)
     : BreakableToken(Token, InPPDirective, Encoding, Style),
-      StartColumn(StartColumn), OriginalStartColumn(OriginalStartColumn),
-      FirstInLine(FirstInLine) {}
+      StartColumn(StartColumn) {}
 
 unsigned BreakableComment::getLineCount() const { return Lines.size(); }
 
@@ -325,8 +323,7 @@ BreakableBlockComment::BreakableBlockComment(
     const FormatToken &Token, unsigned StartColumn,
     unsigned OriginalStartColumn, bool FirstInLine, bool InPPDirective,
     encoding::Encoding Encoding, const FormatStyle &Style)
-    : BreakableComment(Token, StartColumn, OriginalStartColumn, FirstInLine,
-                       InPPDirective, Encoding, Style) {
+    : BreakableComment(Token, StartColumn, InPPDirective, Encoding, Style) {
   assert(Tok.is(TT_BlockComment) &&
          "block comment section must start with a block comment");
 
@@ -664,8 +661,7 @@ BreakableLineCommentSection::BreakableLineCommentSection(
     const FormatToken &Token, unsigned StartColumn,
     unsigned OriginalStartColumn, bool FirstInLine, bool InPPDirective,
     encoding::Encoding Encoding, const FormatStyle &Style)
-    : BreakableComment(Token, StartColumn, OriginalStartColumn, FirstInLine,
-                       InPPDirective, Encoding, Style) {
+    : BreakableComment(Token, StartColumn, InPPDirective, Encoding, Style) {
   assert(Tok.is(TT_LineComment) &&
          "line comment section must start with a line comment");
   FormatToken *LineTok = nullptr;

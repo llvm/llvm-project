@@ -203,13 +203,19 @@ namespace transform_params {
   };
   B b({1, 2, 3}, "foo", {'x', 'y', 'z', 'w'}); // ok
 
+  // This should be accepted once -std=c++1z implies
+  // -frelaxed-template-template-args. Without that, a template template
+  // parameter 'template<int, int, int> typename' cannot bind to a template
+  // template argument 'template<int...> typename'.
   template<typename ...T> struct C { // expected-note {{candidate}}
     template<T ...V, template<T...> typename X>
-      C(X<V...>); // expected-note {{substitution failure [with T = <>, V = <0, 1, 2>]}}
+      C(X<V...>); // expected-note {{substitution failure [with T = <int, int, int>, V = <0, 1, 2>]}}
   };
   template<int...> struct Y {};
-  // FIXME: This incorrectly deduces T = <>, rather than deducing
-  // T = <int, int, int> from the types of the elements of V.
-  // (This failure is not related to class template argument deduction.)
   C c(Y<0, 1, 2>{}); // expected-error {{no viable constructor or deduction guide}}
+
+  template<typename ...T> struct D {
+    template<T ...V> D(Y<V...>);
+  };
+  D d(Y<0, 1, 2>{});
 }
