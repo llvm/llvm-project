@@ -1,5 +1,5 @@
-;RUN: llc < %s -march=amdgcn -mcpu=verde -verify-machineinstrs | FileCheck %s --check-prefix=CHECK --check-prefix=SI
-;RUN: llc < %s -march=amdgcn -mcpu=tonga -verify-machineinstrs | FileCheck %s --check-prefix=CHECK --check-prefix=VI
+; RUN: llc -march=amdgcn -mcpu=verde -verify-machineinstrs < %s | FileCheck -check-prefix=CHECK -check-prefix=SI %s
+; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=CHECK -check-prefix=VI %s
 
 ; Check that WQM isn't triggered by image load/store intrinsics.
 ;
@@ -25,9 +25,7 @@ main_body:
   %c.3 = extractelement <4 x i32> %c.2, i32 0
   %gep = getelementptr float, float addrspace(1)* %ptr, i32 %c.3
   %data = load float, float addrspace(1)* %gep
-
-  call void @llvm.SI.export(i32 15, i32 1, i32 1, i32 0, i32 1, float %data, float undef, float undef, float undef)
-
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %data, float undef, float undef, float undef, i1 true, i1 true) #1
   ret void
 }
 
@@ -500,7 +498,7 @@ end:
   ret <4 x float> %r
 }
 
-
+declare void @llvm.amdgcn.exp.f32(i32, i32, float, float, float, float, i1, i1) #1
 declare void @llvm.amdgcn.image.store.v4f32.v4i32.v8i32(<4 x float>, <4 x i32>, <8 x i32>, i32, i1, i1, i1, i1) #1
 declare void @llvm.amdgcn.buffer.store.f32(float, <4 x i32>, i32, i32, i1, i1) #1
 declare void @llvm.amdgcn.buffer.store.v4f32(<4 x float>, <4 x i32>, i32, i32, i1, i1) #1
@@ -512,8 +510,7 @@ declare <4 x float> @llvm.SI.image.sample.i32(i32, <8 x i32>, <4 x i32>, i32, i3
 declare <4 x float> @llvm.SI.image.sample.v2i32(<2 x i32>, <8 x i32>, <4 x i32>, i32, i32, i32, i32, i32, i32, i32, i32) #3
 declare <4 x float> @llvm.SI.image.sample.v4i32(<4 x i32>, <8 x i32>, <4 x i32>, i32, i32, i32, i32, i32, i32, i32, i32) #3
 
-declare void @llvm.AMDGPU.kill(float)
-declare void @llvm.SI.export(i32, i32, i32, i32, i32, float, float, float, float)
+declare void @llvm.AMDGPU.kill(float) #1
 
 attributes #1 = { nounwind }
 attributes #2 = { nounwind readonly }

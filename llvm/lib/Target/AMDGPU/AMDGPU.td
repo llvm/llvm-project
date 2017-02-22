@@ -257,6 +257,12 @@ def FeatureFP16Denormals : SubtargetFeature<"fp16-denormals",
   [FeatureFP64FP16Denormals]
 >;
 
+def FeatureDX10Clamp : SubtargetFeature<"dx10-clamp",
+  "DX10Clamp",
+  "true",
+  "clamp modifier clamps NaNs to 0.0"
+>;
+
 def FeatureFPExceptions : SubtargetFeature<"fp-exceptions",
   "FPExceptions",
   "true",

@@ -42,6 +42,9 @@ MCAsmBackend *createWebAssemblyAsmBackend(const Triple &TT);
 MCObjectWriter *createWebAssemblyELFObjectWriter(raw_pwrite_stream &OS,
                                                  bool Is64Bit, uint8_t OSABI);
 
+MCObjectWriter *createWebAssemblyWasmObjectWriter(raw_pwrite_stream &OS,
+                                                  bool Is64Bit);
+
 namespace WebAssembly {
 enum OperandType {
   /// Basic block label in a branch construct.

@@ -45,8 +45,10 @@ namespace llvm {
   class MCSectionCOFF;
   class MCSectionELF;
   class MCSectionMachO;
+  class MCSectionWasm;
   class MCSymbol;
   class MCSymbolELF;
+  class MCSymbolWasm;
   class SMLoc;
 
   /// Context object for machine code objects.  This class owns all of the
@@ -83,6 +85,7 @@ namespace llvm {
     SpecificBumpPtrAllocator<MCSectionCOFF> COFFAllocator;
     SpecificBumpPtrAllocator<MCSectionELF> ELFAllocator;
     SpecificBumpPtrAllocator<MCSectionMachO> MachOAllocator;
+    SpecificBumpPtrAllocator<MCSectionWasm> WasmAllocator;
 
     /// Bindings of names to symbols.
     SymbolTable Symbols;
@@ -216,10 +219,28 @@ namespace llvm {
       }
     };
 
+    struct WasmSectionKey {
+      std::string SectionName;
+      StringRef GroupName;
+      unsigned UniqueID;
+      WasmSectionKey(StringRef SectionName, StringRef GroupName,
+                     unsigned UniqueID)
+          : SectionName(SectionName), GroupName(GroupName), UniqueID(UniqueID) {
+      }
+      bool operator<(const WasmSectionKey &Other) const {
+        if (SectionName != Other.SectionName)
+          return SectionName < Other.SectionName;
+        if (GroupName != Other.GroupName)
+          return GroupName < Other.GroupName;
+        return UniqueID < Other.UniqueID;
+      }
+    };
+
     StringMap<MCSectionMachO *> MachOUniquingMap;
     std::map<ELFSectionKey, MCSectionELF *> ELFUniquingMap;
     std::map<COFFSectionKey, MCSectionCOFF *> COFFUniquingMap;
-    StringMap<bool> ELFRelSecNames;
+    std::map<WasmSectionKey, MCSectionWasm *> WasmUniquingMap;
+    StringMap<bool> RelSecNames;
 
     SpecificBumpPtrAllocator<MCSubtargetInfo> MCSubtargetAllocator;
 
@@ -415,6 +436,54 @@ namespace llvm {
     MCSectionCOFF *
     getAssociativeCOFFSection(MCSectionCOFF *Sec, const MCSymbol *KeySym,
                               unsigned UniqueID = GenericSectionID);
+
+    MCSectionWasm *getWasmSection(const Twine &Section, unsigned Type,
+                                  unsigned Flags) {
+      return getWasmSection(Section, Type, Flags, nullptr);
+    }
+
+    MCSectionWasm *getWasmSection(const Twine &Section, unsigned Type,
+                                  unsigned Flags, const char *BeginSymName) {
+      return getWasmSection(Section, Type, Flags, "", BeginSymName);
+    }
+
+    MCSectionWasm *getWasmSection(const Twine &Section, unsigned Type,
+                                  unsigned Flags, const Twine &Group) {
+      return getWasmSection(Section, Type, Flags, Group, nullptr);
+    }
+
+    MCSectionWasm *getWasmSection(const Twine &Section, unsigned Type,
+                                  unsigned Flags, const Twine &Group,
+                                  const char *BeginSymName) {
+      return getWasmSection(Section, Type, Flags, Group, ~0, BeginSymName);
+    }
+
+    MCSectionWasm *getWasmSection(const Twine &Section, unsigned Type,
+                                  unsigned Flags, const Twine &Group,
+                                  unsigned UniqueID) {
+      return getWasmSection(Section, Type, Flags, Group, UniqueID, nullptr);
+    }
+
+    MCSectionWasm *getWasmSection(const Twine &Section, unsigned Type,
+                                  unsigned Flags, const Twine &Group,
+                                  unsigned UniqueID, const char *BeginSymName);
+
+    MCSectionWasm *getWasmSection(const Twine &Section, unsigned Type,
+                                  unsigned Flags, const MCSymbolWasm *Group,
+                                  unsigned UniqueID, const char *BeginSymName);
+
+    /// Get a section with the provided group identifier. This section is
+    /// named by concatenating \p Prefix with '.' then \p Suffix. The \p Type
+    /// describes the type of the section and \p Flags are used to further
+    /// configure this named section.
+    MCSectionWasm *getWasmNamedSection(const Twine &Prefix, const Twine &Suffix,
+                                       unsigned Type, unsigned Flags);
+
+    MCSectionWasm *createWasmRelSection(const Twine &Name, unsigned Type,
+                                        unsigned Flags,
+                                        const MCSymbolWasm *Group);
+
+    void renameWasmSection(MCSectionWasm *Section, StringRef Name);
 
     // Create and save a copy of STI and return a reference to the copy.
     MCSubtargetInfo &getSubtargetCopy(const MCSubtargetInfo &STI);

@@ -364,7 +364,7 @@ Function *CodeExtractor::constructFunction(const ValueSet &inputs,
   //           attribute can not be inherited.
   AttributeSet OldFnAttrs = oldFunction->getAttributes().getFnAttributes();
   AttrBuilder AB(OldFnAttrs, AttributeSet::FunctionIndex);
-  for (auto Attr : AB.td_attrs())
+  for (const auto &Attr : AB.td_attrs())
     newFunction->addFnAttr(Attr.first, Attr.second);
 
   newFunction->getBasicBlockList().push_back(newRootNode);

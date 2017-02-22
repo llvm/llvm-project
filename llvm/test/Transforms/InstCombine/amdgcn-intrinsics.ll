@@ -633,3 +633,73 @@ define float @cos_fabs_fneg_f32(float %x) {
   %cos = call float @llvm.amdgcn.cos.f32(float %x.fabs.fneg)
   ret float %cos
 }
+
+; --------------------------------------------------------------------
+; llvm.amdgcn.cvt.pkrtz
+; --------------------------------------------------------------------
+
+declare <2 x half> @llvm.amdgcn.cvt.pkrtz(float, float) nounwind readnone
+
+; CHECK-LABEL: @vars_lhs_cvt_pkrtz(
+; CHECK: %cvt = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float %x, float %y)
+define <2 x half> @vars_lhs_cvt_pkrtz(float %x, float %y) {
+  %cvt = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float %x, float %y)
+  ret <2 x half> %cvt
+}
+
+; CHECK-LABEL: @constant_lhs_cvt_pkrtz(
+; CHECK: %cvt = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float 0.000000e+00, float %y)
+define <2 x half> @constant_lhs_cvt_pkrtz(float %y) {
+  %cvt = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float 0.0, float %y)
+  ret <2 x half> %cvt
+}
+
+; CHECK-LABEL: @constant_rhs_cvt_pkrtz(
+; CHECK: %cvt = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float %x, float 0.000000e+00)
+define <2 x half> @constant_rhs_cvt_pkrtz(float %x) {
+  %cvt = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float %x, float 0.0)
+  ret <2 x half> %cvt
+}
+
+; CHECK-LABEL: @undef_lhs_cvt_pkrtz(
+; CHECK: %cvt = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float undef, float %y)
+define <2 x half> @undef_lhs_cvt_pkrtz(float %y) {
+  %cvt = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float undef, float %y)
+  ret <2 x half> %cvt
+}
+
+; CHECK-LABEL: @undef_rhs_cvt_pkrtz(
+; CHECK: %cvt = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float %x, float undef)
+define <2 x half> @undef_rhs_cvt_pkrtz(float %x) {
+  %cvt = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float %x, float undef)
+  ret <2 x half> %cvt
+}
+
+; CHECK-LABEL: @undef_cvt_pkrtz(
+; CHECK: ret <2 x half> undef
+define <2 x half> @undef_cvt_pkrtz() {
+  %cvt = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float undef, float undef)
+  ret <2 x half> %cvt
+}
+
+; CHECK-LABEL: @constant_splat0_cvt_pkrtz(
+; CHECK: ret <2 x half> zeroinitializer
+define <2 x half> @constant_splat0_cvt_pkrtz() {
+  %cvt = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float 0.0, float 0.0)
+  ret <2 x half> %cvt
+}
+
+; CHECK-LABEL: @constant_cvt_pkrtz(
+; CHECK: ret <2 x half> <half 0xH4000, half 0xH4400>
+define <2 x half> @constant_cvt_pkrtz() {
+  %cvt = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float 2.0, float 4.0)
+  ret <2 x half> %cvt
+}
+
+; Test constant values where rtz changes result
+; CHECK-LABEL: @constant_rtz_pkrtz(
+; CHECK: ret <2 x half> <half 0xH7BFF, half 0xH7BFF>
+define <2 x half> @constant_rtz_pkrtz() {
+  %cvt = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float 65535.0, float 65535.0)
+  ret <2 x half> %cvt
+}

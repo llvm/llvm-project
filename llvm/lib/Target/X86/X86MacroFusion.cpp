@@ -14,10 +14,13 @@
 
 #include "X86MacroFusion.h"
 #include "X86Subtarget.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Target/TargetInstrInfo.h"
 
 #define DEBUG_TYPE "misched"
+
+STATISTIC(NumFused, "Number of instr pairs fused");
 
 using namespace llvm;
 
@@ -44,12 +47,13 @@ static bool shouldScheduleAdjacent(const X86Subtarget &ST,
     FuseInc
   } FuseKind;
 
+  assert((First || Second) && "At least one instr must be specified");
   unsigned FirstOpcode = First
-                             ? First->getOpcode()
-                             : static_cast<unsigned>(X86::INSTRUCTION_LIST_END);
-  unsigned SecondOpcode =
-      Second ? Second->getOpcode()
-             : static_cast<unsigned>(X86::INSTRUCTION_LIST_END);
+                         ? First->getOpcode()
+                         : static_cast<unsigned>(X86::INSTRUCTION_LIST_END);
+  unsigned SecondOpcode = Second
+                          ? Second->getOpcode()
+                          : static_cast<unsigned>(X86::INSTRUCTION_LIST_END);
 
   switch (SecondOpcode) {
   default:
@@ -215,7 +219,7 @@ void X86MacroFusion::apply(ScheduleDAGInstrs *DAGInstrs) {
   // For now, assume targets can only fuse with the branch.
   SUnit &ExitSU = DAG->ExitSU;
   MachineInstr *Branch = ExitSU.getInstr();
-  if (!shouldScheduleAdjacent(ST, nullptr, Branch))
+  if (!Branch || !shouldScheduleAdjacent(ST, nullptr, Branch))
     return;
 
   for (SDep &PredDep : ExitSU.Preds) {
@@ -244,6 +248,7 @@ void X86MacroFusion::apply(ScheduleDAGInstrs *DAGInstrs) {
       if (SuccDep.getSUnit() == &ExitSU)
         SuccDep.setLatency(0);
 
+    ++NumFused;
     DEBUG(dbgs() << "Macro fuse ";
           SU.print(dbgs(), DAG);
           dbgs() << " - ExitSU" << '\n');

@@ -647,11 +647,19 @@ def : BitConvert <v16f32, v16i32, VReg_512>;
 /********** Src & Dst modifiers **********/
 /********** =================== **********/
 
-def : Pat <
-  (AMDGPUclamp (VOP3Mods0Clamp f32:$src0, i32:$src0_modifiers, i32:$omod),
-               (f32 FP_ZERO), (f32 FP_ONE)),
-  (V_ADD_F32_e64 $src0_modifiers, $src0, 0, (i32 0), 1, $omod)
+
+// If denormals are not enabled, it only impacts the compare of the
+// inputs. The output result is not flushed.
+class ClampPat<Instruction inst, ValueType vt> : Pat <
+  (vt (AMDGPUclamp
+        (VOP3Mods0Clamp vt:$src0, i32:$src0_modifiers, i32:$omod))),
+  (inst i32:$src0_modifiers, vt:$src0,
+        i32:$src0_modifiers, vt:$src0, DSTCLAMP.ENABLE, $omod)
 >;
+
+// TODO: Does f64 support clamp?
+def : ClampPat<V_MAX_F32_e64, f32>;
+def : ClampPat<V_MAX_F16_e64, f16>;
 
 /********** ================================ **********/
 /********** Floating point absolute/negative **********/

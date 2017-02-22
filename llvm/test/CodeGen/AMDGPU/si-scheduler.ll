@@ -3,7 +3,7 @@
 ; The only way the subtarget knows that the si machine scheduler is being used
 ; is to specify -mattr=si-scheduler.  If we just pass --misched=si, the backend
 ; won't know what scheduler we are using.
-; RUN: llc -march=amdgcn -mcpu=SI --misched=si -mattr=si-scheduler < %s | FileCheck %s
+; RUN: llc -march=amdgcn --misched=si -mattr=si-scheduler < %s | FileCheck %s
 
 ; The test checks the "si" machine scheduler pass works correctly.
 
@@ -16,7 +16,7 @@
 ; CHECK: s_waitcnt vmcnt(0)
 ; CHECK: exp
 ; CHECK: s_endpgm
-define amdgpu_ps void @main([6 x <16 x i8>] addrspace(2)* byval %arg, [17 x <16 x i8>] addrspace(2)* byval %arg1, [17 x <4 x i32>] addrspace(2)* byval %arg2, [34 x <8 x i32>] addrspace(2)* byval %arg3, float inreg %arg4, i32 inreg %arg5, <2 x i32> %arg6, <2 x i32> %arg7, <2 x i32> %arg8, <3 x i32> %arg9, <2 x i32> %arg10, <2 x i32> %arg11, <2 x i32> %arg12, float %arg13, float %arg14, float %arg15, float %arg16, float %arg17, float %arg18, i32 %arg19, float %arg20, float %arg21) {
+define amdgpu_ps void @main([6 x <16 x i8>] addrspace(2)* byval %arg, [17 x <16 x i8>] addrspace(2)* byval %arg1, [17 x <4 x i32>] addrspace(2)* byval %arg2, [34 x <8 x i32>] addrspace(2)* byval %arg3, float inreg %arg4, i32 inreg %arg5, <2 x i32> %arg6, <2 x i32> %arg7, <2 x i32> %arg8, <3 x i32> %arg9, <2 x i32> %arg10, <2 x i32> %arg11, <2 x i32> %arg12, float %arg13, float %arg14, float %arg15, float %arg16, float %arg17, float %arg18, i32 %arg19, float %arg20, float %arg21) #0 {
 main_body:
   %tmp = bitcast [34 x <8 x i32>] addrspace(2)* %arg3 to <32 x i8> addrspace(2)*
   %tmp22 = load <32 x i8>, <32 x i8> addrspace(2)* %tmp, align 32, !tbaa !0
@@ -45,30 +45,21 @@ main_body:
   %tmp33 = extractelement <4 x float> %tmp31, i32 1
   %tmp34 = extractelement <4 x float> %tmp31, i32 2
   %tmp35 = extractelement <4 x float> %tmp31, i32 3
-  %tmp36 = call i32 @llvm.SI.packf16(float %tmp32, float %tmp33)
-  %tmp37 = bitcast i32 %tmp36 to float
-  %tmp38 = call i32 @llvm.SI.packf16(float %tmp34, float %tmp35)
-  %tmp39 = bitcast i32 %tmp38 to float
-  call void @llvm.SI.export(i32 15, i32 1, i32 1, i32 0, i32 1, float %tmp37, float %tmp39, float %tmp37, float %tmp39)
+  %tmp36 = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float %tmp32, float %tmp33)
+  %tmp38 = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float %tmp34, float %tmp35)
+  call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 15, <2 x half> %tmp36, <2 x half> %tmp38, i1 true, i1 false) #0
   ret void
 }
 
-; Function Attrs: nounwind readnone
-declare <4 x float> @llvm.SI.image.sample.v2i32(<2 x i32>, <8 x i32>, <4 x i32>, i32, i32, i32, i32, i32, i32, i32, i32) #0
+declare float @llvm.amdgcn.interp.p1(float, i32, i32, i32) #1
+declare float @llvm.amdgcn.interp.p2(float, float, i32, i32, i32) #1
+declare void @llvm.amdgcn.exp.compr.v2f16(i32, i32, <2 x half>, <2 x half>, i1, i1) #0
 
-; Function Attrs: nounwind readnone
-declare i32 @llvm.SI.packf16(float, float) #0
+declare <4 x float> @llvm.SI.image.sample.v2i32(<2 x i32>, <8 x i32>, <4 x i32>, i32, i32, i32, i32, i32, i32, i32, i32) #1
+declare <2 x half> @llvm.amdgcn.cvt.pkrtz(float, float) #1
 
-declare void @llvm.SI.export(i32, i32, i32, i32, i32, float, float, float, float)
-
-; Function Attrs: nounwind readnone
-declare float @llvm.amdgcn.interp.p1(float, i32, i32, i32) #0
-
-; Function Attrs: nounwind readnone
-declare float @llvm.amdgcn.interp.p2(float, float, i32, i32, i32) #0
-
-attributes #0 = { nounwind readnone }
-attributes #1 = { nounwind }
+attributes #0 = { nounwind }
+attributes #1 = { nounwind readnone }
 
 !0 = !{!1, !1, i64 0, i32 1}
 !1 = !{!"const", !2}

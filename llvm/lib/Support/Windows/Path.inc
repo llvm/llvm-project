@@ -277,6 +277,80 @@ std::error_code remove(const Twine &path, bool IgnoreNonExisting) {
   return std::error_code();
 }
 
+static std::error_code is_local_internal(SmallVectorImpl<wchar_t> &Path,
+                                         bool &Result) {
+  SmallVector<wchar_t, 128> VolumePath;
+  size_t Len = 128;
+  while (true) {
+    VolumePath.resize(Len);
+    BOOL Success =
+        ::GetVolumePathNameW(Path.data(), VolumePath.data(), VolumePath.size());
+
+    if (Success)
+      break;
+
+    DWORD Err = ::GetLastError();
+    if (Err != ERROR_INSUFFICIENT_BUFFER)
+      return mapWindowsError(Err);
+
+    Len *= 2;
+  }
+  // If the output buffer has exactly enough space for the path name, but not
+  // the null terminator, it will leave the output unterminated.  Push a null
+  // terminator onto the end to ensure that this never happens.
+  VolumePath.push_back(L'\0');
+  VolumePath.set_size(wcslen(VolumePath.data()));
+  const wchar_t *P = VolumePath.data();
+
+  UINT Type = ::GetDriveTypeW(P);
+  switch (Type) {
+  case DRIVE_FIXED:
+    Result = true;
+    return std::error_code();
+  case DRIVE_REMOTE:
+  case DRIVE_CDROM:
+  case DRIVE_RAMDISK:
+  case DRIVE_REMOVABLE:
+    Result = false;
+    return std::error_code();
+  default:
+    return make_error_code(errc::no_such_file_or_directory);
+  }
+  llvm_unreachable("Unreachable!");
+}
+
+std::error_code is_local(const Twine &path, bool &result) {
+  if (!llvm::sys::fs::exists(path) || !llvm::sys::path::has_root_path(path))
+    return make_error_code(errc::no_such_file_or_directory);
+
+  SmallString<128> Storage;
+  StringRef P = path.toStringRef(Storage);
+
+  // Convert to utf-16.
+  SmallVector<wchar_t, 128> WidePath;
+  if (std::error_code ec = widenPath(P, WidePath))
+    return ec;
+  return is_local_internal(WidePath, result);
+}
+
+std::error_code is_local(int FD, bool &Result) {
+  SmallVector<wchar_t, 128> FinalPath;
+  HANDLE Handle = reinterpret_cast<HANDLE>(_get_osfhandle(FD));
+
+  size_t Len = 128;
+  do {
+    FinalPath.reserve(Len);
+    Len = ::GetFinalPathNameByHandleW(Handle, FinalPath.data(),
+                                      FinalPath.capacity() - 1, VOLUME_NAME_NT);
+    if (Len == 0)
+      return mapWindowsError(::GetLastError());
+  } while (Len > FinalPath.capacity());
+
+  FinalPath.set_size(Len);
+
+  return is_local_internal(FinalPath, Result);
+}
+
 std::error_code rename(const Twine &from, const Twine &to) {
   // Convert to utf-16.
   SmallVector<wchar_t, 128> wide_from;

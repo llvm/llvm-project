@@ -105,9 +105,8 @@ else:                                             ; preds = %main_body
 
 endif:                                            ; preds = %else, %if
   %export = phi float [ %lds_data, %if ], [ %interp, %else ]
-  %tmp4 = call i32 @llvm.SI.packf16(float %export, float %export)
-  %tmp5 = bitcast i32 %tmp4 to float
-  call void @llvm.SI.export(i32 15, i32 1, i32 1, i32 0, i32 1, float %tmp5, float %tmp5, float %tmp5, float %tmp5)
+  %tmp4 = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float %export, float %export)
+  call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 15, <2 x half> %tmp4, <2 x half> %tmp4, i1 true, i1 true) #0
   ret void
 }
 
@@ -205,11 +204,10 @@ ret:
   ret void
 }
 
-declare float @llvm.amdgcn.interp.mov(i32, i32, i32, i32) #0
-
-declare i32 @llvm.SI.packf16(float, float) readnone
-
-declare void @llvm.SI.export(i32, i32, i32, i32, i32, float, float, float, float)
+declare float @llvm.amdgcn.interp.mov(i32, i32, i32, i32) #1
+declare void @llvm.amdgcn.exp.f32(i32, i32, float, float, float, float, i1, i1) #0
+declare void @llvm.amdgcn.exp.compr.v2f16(i32, i32, <2 x half>, <2 x half>, i1, i1) #0
+declare <2 x half> @llvm.amdgcn.cvt.pkrtz(float, float) #1
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }

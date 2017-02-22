@@ -251,6 +251,9 @@ namespace llvm {
       /// Commutative FMIN and FMAX.
       FMAXC, FMINC,
 
+      /// Scalar intrinsic floating point max and min.
+      FMAXS, FMINS,
+
       /// Floating point reciprocal-sqrt and reciprocal approximation.
       /// Note that these typically require refinement
       /// in order to obtain suitable precision.
@@ -807,6 +810,8 @@ namespace llvm {
       // such pair out until we get testcase to prove it is a win.
       return false;
     }
+
+    bool isMaskAndCmp0FoldingBeneficial(const Instruction &AndI) const override;
 
     bool hasAndNotCompare(SDValue Y) const override;
 

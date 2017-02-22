@@ -5484,7 +5484,8 @@ bool ARMAsmParser::parsePrefix(ARMMCExpr::VariantKind &RefKind) {
   enum {
     COFF = (1 << MCObjectFileInfo::IsCOFF),
     ELF = (1 << MCObjectFileInfo::IsELF),
-    MACHO = (1 << MCObjectFileInfo::IsMachO)
+    MACHO = (1 << MCObjectFileInfo::IsMachO),
+    WASM = (1 << MCObjectFileInfo::IsWasm),
   };
   static const struct PrefixEntry {
     const char *Spelling;
@@ -5517,6 +5518,9 @@ bool ARMAsmParser::parsePrefix(ARMMCExpr::VariantKind &RefKind) {
     break;
   case MCObjectFileInfo::IsCOFF:
     CurrentFormat = COFF;
+    break;
+  case MCObjectFileInfo::IsWasm:
+    CurrentFormat = WASM;
     break;
   }
 
@@ -8930,6 +8934,22 @@ unsigned ARMAsmParser::checkTargetMatchPredicate(MCInst &Inst) {
              isARMLowRegister(Inst.getOperand(0).getReg()) &&
              isARMLowRegister(Inst.getOperand(1).getReg()))
       return Match_RequiresV6;
+  }
+
+  // Before ARMv8 the rules for when SP is allowed in t2MOVr are more complex
+  // than the loop below can handle, so it uses the GPRnopc register class and
+  // we do SP handling here.
+  if (Opc == ARM::t2MOVr && !hasV8Ops())
+  {
+    // SP as both source and destination is not allowed
+    if (Inst.getOperand(0).getReg() == ARM::SP &&
+        Inst.getOperand(1).getReg() == ARM::SP)
+      return Match_RequiresV8;
+    // When flags-setting SP as either source or destination is not allowed
+    if (Inst.getOperand(4).getReg() == ARM::CPSR &&
+        (Inst.getOperand(0).getReg() == ARM::SP ||
+         Inst.getOperand(1).getReg() == ARM::SP))
+      return Match_RequiresV8;
   }
 
   for (unsigned I = 0; I < MCID.NumOperands; ++I)

@@ -1380,7 +1380,7 @@ bool AttrBuilder::overlaps(const AttrBuilder &B) const {
     return true;
 
   // Then check if any target dependent ones do.
-  for (auto I : td_attrs())
+  for (const auto &I : td_attrs())
     if (B.contains(I.first))
       return true;
 

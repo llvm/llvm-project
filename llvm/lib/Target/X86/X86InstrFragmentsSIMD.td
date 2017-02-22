@@ -42,6 +42,8 @@ def SDTX86CmpTestSae : SDTypeProfile<1, 3, [SDTCisVT<0, i32>,
 
 def X86fmin    : SDNode<"X86ISD::FMIN",      SDTFPBinOp>;
 def X86fmax    : SDNode<"X86ISD::FMAX",      SDTFPBinOp>;
+def X86fmins   : SDNode<"X86ISD::FMINS",     SDTFPBinOp>;
+def X86fmaxs   : SDNode<"X86ISD::FMAXS",     SDTFPBinOp>;
 
 // Commutative and Associative FMIN and FMAX.
 def X86fminc    : SDNode<"X86ISD::FMINC", SDTFPBinOp,

@@ -1,4 +1,4 @@
-; RUN: opt < %s -S -debug-only=loop-unroll -loop-unroll -unroll-allow-peeling 2>&1 | FileCheck %s
+; RUN: opt < %s -S -debug-only=loop-unroll -loop-unroll 2>&1 | FileCheck %s
 ; REQUIRES: asserts
 
 ; Make sure we use the profile information correctly to peel-off 3 iterations

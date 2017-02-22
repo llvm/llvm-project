@@ -325,7 +325,7 @@ def SReg_256 : RegisterClass<"AMDGPU", [v8i32, v8f32], 32, (add SGPR_256)> {
   let AllocationPriority = 11;
 }
 
-def SReg_512 : RegisterClass<"AMDGPU", [v64i8, v16i32], 32, (add SGPR_512)> {
+def SReg_512 : RegisterClass<"AMDGPU", [v16i32, v16f32], 32, (add SGPR_512)> {
   // Requires 8 s_mov_b64 to copy
   let CopyCost = 8;
   let AllocationPriority = 12;

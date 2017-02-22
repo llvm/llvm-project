@@ -1,55 +1,84 @@
-;RUN: llc < %s -march=r600 -mcpu=cayman -stress-sched -verify-misched -verify-machineinstrs
-;REQUIRES: asserts
+; RUN: llc -march=r600 -mcpu=cayman -stress-sched -verify-misched -verify-machineinstrs < %s
+; REQUIRES: asserts
 
-define void @main() {
+define amdgpu_vs void @main(<4 x float> inreg %reg0, <4 x float> inreg %reg1) #0 {
 main_body:
-  %0 = load <4 x float>, <4 x float> addrspace(9)* null
-  %1 = extractelement <4 x float> %0, i32 3
-  %2 = fptosi float %1 to i32
-  %3 = bitcast i32 %2 to float
-  %4 = load <4 x float>, <4 x float> addrspace(9)* null
-  %5 = extractelement <4 x float> %4, i32 0
-  %6 = load <4 x float>, <4 x float> addrspace(9)* null
-  %7 = extractelement <4 x float> %6, i32 1
-  %8 = load <4 x float>, <4 x float> addrspace(9)* null
-  %9 = extractelement <4 x float> %8, i32 2
-  br label %LOOP
+  %tmp = extractelement <4 x float> %reg1, i32 0
+  %tmp5 = extractelement <4 x float> %reg1, i32 1
+  %tmp6 = extractelement <4 x float> %reg1, i32 2
+  %tmp7 = extractelement <4 x float> %reg1, i32 3
+  %tmp8 = fcmp ult float %tmp5, 0.000000e+00
+  %tmp9 = select i1 %tmp8, float 1.000000e+00, float 0.000000e+00
+  %tmp10 = fsub float -0.000000e+00, %tmp9
+  %tmp11 = fptosi float %tmp10 to i32
+  %tmp12 = bitcast i32 %tmp11 to float
+  %tmp13 = fcmp ult float %tmp, 5.700000e+01
+  %tmp14 = select i1 %tmp13, float 1.000000e+00, float 0.000000e+00
+  %tmp15 = fsub float -0.000000e+00, %tmp14
+  %tmp16 = fptosi float %tmp15 to i32
+  %tmp17 = bitcast i32 %tmp16 to float
+  %tmp18 = bitcast float %tmp12 to i32
+  %tmp19 = bitcast float %tmp17 to i32
+  %tmp20 = and i32 %tmp18, %tmp19
+  %tmp21 = bitcast i32 %tmp20 to float
+  %tmp22 = bitcast float %tmp21 to i32
+  %tmp23 = icmp ne i32 %tmp22, 0
+  %tmp24 = fcmp ult float %tmp, 0.000000e+00
+  %tmp25 = select i1 %tmp24, float 1.000000e+00, float 0.000000e+00
+  %tmp26 = fsub float -0.000000e+00, %tmp25
+  %tmp27 = fptosi float %tmp26 to i32
+  %tmp28 = bitcast i32 %tmp27 to float
+  %tmp29 = bitcast float %tmp28 to i32
+  %tmp30 = icmp ne i32 %tmp29, 0
+  br i1 %tmp23, label %IF, label %ELSE
 
-LOOP:                                             ; preds = %ENDIF, %main_body
-  %temp4.0 = phi float [ %5, %main_body ], [ %temp5.0, %ENDIF ]
-  %temp5.0 = phi float [ %7, %main_body ], [ %temp6.0, %ENDIF ]
-  %temp6.0 = phi float [ %9, %main_body ], [ %temp4.0, %ENDIF ]
-  %temp8.0 = phi float [ 0.000000e+00, %main_body ], [ %27, %ENDIF ]
-  %10 = bitcast float %temp8.0 to i32
-  %11 = bitcast float %3 to i32
-  %12 = icmp sge i32 %10, %11
-  %13 = sext i1 %12 to i32
-  %14 = bitcast i32 %13 to float
-  %15 = bitcast float %14 to i32
-  %16 = icmp ne i32 %15, 0
-  br i1 %16, label %IF, label %ENDIF
+IF:                                               ; preds = %main_body
+  %. = select i1 %tmp30, float 0.000000e+00, float 1.000000e+00
+  %.18 = select i1 %tmp30, float 1.000000e+00, float 0.000000e+00
+  br label %ENDIF
 
-IF:                                               ; preds = %LOOP
-  %17 = call float @llvm.AMDGPU.clamp.f32(float %temp4.0, float 0.000000e+00, float 1.000000e+00)
-  %18 = call float @llvm.AMDGPU.clamp.f32(float %temp5.0, float 0.000000e+00, float 1.000000e+00)
-  %19 = call float @llvm.AMDGPU.clamp.f32(float %temp6.0, float 0.000000e+00, float 1.000000e+00)
-  %20 = call float @llvm.AMDGPU.clamp.f32(float 1.000000e+00, float 0.000000e+00, float 1.000000e+00)
-  %21 = insertelement <4 x float> undef, float %17, i32 0
-  %22 = insertelement <4 x float> %21, float %18, i32 1
-  %23 = insertelement <4 x float> %22, float %19, i32 2
-  %24 = insertelement <4 x float> %23, float %20, i32 3
-  call void @llvm.r600.store.swizzle(<4 x float> %24, i32 0, i32 0)
+ELSE:                                             ; preds = %main_body
+  br i1 %tmp30, label %ENDIF, label %ELSE17
+
+ENDIF:                                            ; preds = %ELSE17, %ELSE, %IF
+  %temp1.0 = phi float [ %., %IF ], [ %tmp48, %ELSE17 ], [ 0.000000e+00, %ELSE ]
+  %temp2.0 = phi float [ 0.000000e+00, %IF ], [ %tmp49, %ELSE17 ], [ 1.000000e+00, %ELSE ]
+  %temp.0 = phi float [ %.18, %IF ], [ %tmp47, %ELSE17 ], [ 0.000000e+00, %ELSE ]
+  %max.0.i = call float @llvm.maxnum.f32(float %temp.0, float 0.000000e+00)
+  %clamp.i = call float @llvm.minnum.f32(float %max.0.i, float 1.000000e+00)
+  %max.0.i3 = call float @llvm.maxnum.f32(float %temp1.0, float 0.000000e+00)
+  %clamp.i4 = call float @llvm.minnum.f32(float %max.0.i3, float 1.000000e+00)
+  %max.0.i1 = call float @llvm.maxnum.f32(float %temp2.0, float 0.000000e+00)
+  %clamp.i2 = call float @llvm.minnum.f32(float %max.0.i1, float 1.000000e+00)
+  %tmp31 = insertelement <4 x float> undef, float %clamp.i, i32 0
+  %tmp32 = insertelement <4 x float> %tmp31, float %clamp.i4, i32 1
+  %tmp33 = insertelement <4 x float> %tmp32, float %clamp.i2, i32 2
+  %tmp34 = insertelement <4 x float> %tmp33, float 1.000000e+00, i32 3
+  call void @llvm.r600.store.swizzle(<4 x float> %tmp34, i32 0, i32 0)
   ret void
 
-ENDIF:                                            ; preds = %LOOP
-  %25 = bitcast float %temp8.0 to i32
-  %26 = add i32 %25, 1
-  %27 = bitcast i32 %26 to float
-  br label %LOOP
+ELSE17:                                           ; preds = %ELSE
+  %tmp35 = fadd float 0.000000e+00, 0x3FC99999A0000000
+  %tmp36 = fadd float 0.000000e+00, 0x3FC99999A0000000
+  %tmp37 = fadd float 0.000000e+00, 0x3FC99999A0000000
+  %tmp38 = fadd float %tmp35, 0x3FC99999A0000000
+  %tmp39 = fadd float %tmp36, 0x3FC99999A0000000
+  %tmp40 = fadd float %tmp37, 0x3FC99999A0000000
+  %tmp41 = fadd float %tmp38, 0x3FC99999A0000000
+  %tmp42 = fadd float %tmp39, 0x3FC99999A0000000
+  %tmp43 = fadd float %tmp40, 0x3FC99999A0000000
+  %tmp44 = fadd float %tmp41, 0x3FC99999A0000000
+  %tmp45 = fadd float %tmp42, 0x3FC99999A0000000
+  %tmp46 = fadd float %tmp43, 0x3FC99999A0000000
+  %tmp47 = fadd float %tmp44, 0x3FC99999A0000000
+  %tmp48 = fadd float %tmp45, 0x3FC99999A0000000
+  %tmp49 = fadd float %tmp46, 0x3FC99999A0000000
+  br label %ENDIF
 }
 
-declare float @llvm.AMDGPU.clamp.f32(float, float, float) #0
+declare float @llvm.minnum.f32(float, float) #1
+declare float @llvm.maxnum.f32(float, float) #1
+declare void @llvm.r600.store.swizzle(<4 x float>, i32, i32) #0
 
-declare void @llvm.r600.store.swizzle(<4 x float>, i32, i32)
-
-attributes #0 = { readnone }
+attributes #0 = { nounwind }
+attributes #1 = { nounwind readnone }

@@ -9,8 +9,6 @@
 //
 //  This file implements the operating system DynamicLibrary concept.
 //
-// FIXME: This file leaks ExplicitSymbols and OpenedHandles!
-//
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/DynamicLibrary.h"
@@ -51,7 +49,7 @@ using namespace llvm::sys;
 //===          independent code.
 //===----------------------------------------------------------------------===//
 
-static DenseSet<void *> *OpenedHandles = nullptr;
+static llvm::ManagedStatic<DenseSet<void *> > OpenedHandles;
 
 DynamicLibrary DynamicLibrary::getPermanentLibrary(const char *filename,
                                                    std::string *errMsg) {
@@ -69,9 +67,6 @@ DynamicLibrary DynamicLibrary::getPermanentLibrary(const char *filename,
   if (!filename)
     handle = RTLD_DEFAULT;
 #endif
-
-  if (!OpenedHandles)
-    OpenedHandles = new DenseSet<void *>();
 
   // If we've already loaded this library, dlclose() the handle in order to
   // keep the internal refcount at +1.
@@ -121,7 +116,7 @@ void* DynamicLibrary::SearchForAddressOfSymbol(const char *symbolName) {
 
 #if defined(HAVE_DLFCN_H) && defined(HAVE_DLOPEN)
   // Now search the libraries.
-  if (OpenedHandles) {
+  if (OpenedHandles.isConstructed()) {
     for (DenseSet<void *>::iterator I = OpenedHandles->begin(),
          E = OpenedHandles->end(); I != E; ++I) {
       //lt_ptr ptr = lt_dlsym(*I, symbolName);

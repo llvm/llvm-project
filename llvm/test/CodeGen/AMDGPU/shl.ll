@@ -1,6 +1,6 @@
-; RUN: llc < %s -march=amdgcn -mcpu=verde -verify-machineinstrs | FileCheck -check-prefix=GCN -check-prefix=SI %s
-; XUN: llc < %s -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs | FileCheck -check-prefix=GCN -check-prefix=VI %s
-; RUN: llc < %s -march=r600 -mcpu=redwood | FileCheck --check-prefix=EG %s
+; RUN: llc -march=amdgcn -mcpu=verde -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=SI -check-prefix=FUNC %s
+; XUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VI -check-prefix=FUNC %s
+; RUN: llc -march=r600 -mcpu=redwood < %s | FileCheck -check-prefix=EG -check-prefix=FUNC %s
 
 declare i32 @llvm.r600.read.tidig.x() #0
 
@@ -464,6 +464,14 @@ define void @s_shl_inline_high_imm_f32_neg_4.0_i64(i64 addrspace(1)* %out, i64 a
   %shl = shl i64 13871086852301127680, %a
   store i64 %shl, i64 addrspace(1)* %out, align 8
   ret void
+}
+
+; FUNC-LABEL: {{^}}test_mul2:
+; GCN: s_lshl_b32 s{{[0-9]}}, s{{[0-9]}}, 1
+define void @test_mul2(i32 %p) {
+   %i = mul i32 %p, 2
+   store volatile i32 %i, i32 addrspace(1)* undef
+   ret void
 }
 
 attributes #0 = { nounwind readnone }

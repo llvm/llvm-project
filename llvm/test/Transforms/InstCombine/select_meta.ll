@@ -193,12 +193,11 @@ define i32 @test74(i32 %x) {
   ret i32 %retval
 }
 
-; FIXME:
 ; The compare should change, but the metadata remains the same because the select operands are not swapped.
 define i32 @smin1(i32 %x) {
 ; CHECK-LABEL: @smin1(
 ; CHECK-NEXT:    [[NOT_X:%.*]] = xor i32 %x, -1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 %x, 0
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[NOT_X]], -1
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 [[NOT_X]], i32 -1, !prof ![[MD1]]
 ; CHECK-NEXT:    ret i32 [[SEL]]
 ;
@@ -208,13 +207,12 @@ define i32 @smin1(i32 %x) {
   ret i32 %sel
 }
 
-; FIXME:
 ; The compare should change, and the metadata is swapped because the select operands are swapped.
 define i32 @smin2(i32 %x) {
 ; CHECK-LABEL: @smin2(
 ; CHECK-NEXT:    [[NOT_X:%.*]] = xor i32 %x, -1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 %x, 0
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 -1, i32 [[NOT_X]], !prof ![[MD1]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[NOT_X]], -1
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 [[NOT_X]], i32 -1, !prof ![[MD3]]
 ; CHECK-NEXT:    ret i32 [[SEL]]
 ;
   %not_x = xor i32 %x, -1
@@ -223,12 +221,11 @@ define i32 @smin2(i32 %x) {
   ret i32 %sel
 }
 
-; FIXME:
 ; The compare should change, but the metadata remains the same because the select operands are not swapped.
 define i32 @smax1(i32 %x) {
 ; CHECK-LABEL: @smax1(
 ; CHECK-NEXT:    [[NOT_X:%.*]] = xor i32 %x, -1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 %x, 0
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[NOT_X]], -1
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 [[NOT_X]], i32 -1, !prof ![[MD1]]
 ; CHECK-NEXT:    ret i32 [[SEL]]
 ;
@@ -238,13 +235,12 @@ define i32 @smax1(i32 %x) {
   ret i32 %sel
 }
 
-; FIXME:
 ; The compare should change, and the metadata is swapped because the select operands are swapped.
 define i32 @smax2(i32 %x) {
 ; CHECK-LABEL: @smax2(
 ; CHECK-NEXT:    [[NOT_X:%.*]] = xor i32 %x, -1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 %x, 0
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 -1, i32 [[NOT_X]], !prof ![[MD1]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[NOT_X]], -1
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 [[NOT_X]], i32 -1, !prof ![[MD3]]
 ; CHECK-NEXT:    ret i32 [[SEL]]
 ;
   %not_x = xor i32 %x, -1
@@ -253,11 +249,10 @@ define i32 @smax2(i32 %x) {
   ret i32 %sel
 }
 
-; FIXME:
 ; The compare should change, but the metadata remains the same because the select operands are not swapped.
 define i32 @umin1(i32 %x) {
 ; CHECK-LABEL: @umin1(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 %x, -1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 %x, -2147483648
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 %x, i32 -2147483648, !prof ![[MD1]]
 ; CHECK-NEXT:    ret i32 [[SEL]]
 ;
@@ -266,12 +261,11 @@ define i32 @umin1(i32 %x) {
   ret i32 %sel
 }
 
-; FIXME:
 ; The compare should change, and the metadata is swapped because the select operands are swapped.
 define i32 @umin2(i32 %x) {
 ; CHECK-LABEL: @umin2(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 %x, 0
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 2147483647, i32 %x, !prof ![[MD1]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 %x, 2147483647
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 %x, i32 2147483647, !prof ![[MD3]]
 ; CHECK-NEXT:    ret i32 [[SEL]]
 ;
   %cmp = icmp slt i32 %x, 0
@@ -279,11 +273,10 @@ define i32 @umin2(i32 %x) {
   ret i32 %sel
 }
 
-; FIXME:
 ; The compare should change, but the metadata remains the same because the select operands are not swapped.
 define i32 @umax1(i32 %x) {
 ; CHECK-LABEL: @umax1(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 %x, 0
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 %x, 2147483647
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 %x, i32 2147483647, !prof ![[MD1]]
 ; CHECK-NEXT:    ret i32 [[SEL]]
 ;
@@ -292,12 +285,11 @@ define i32 @umax1(i32 %x) {
   ret i32 %sel
 }
 
-; FIXME:
 ; The compare should change, and the metadata is swapped because the select operands are swapped.
 define i32 @umax2(i32 %x) {
 ; CHECK-LABEL: @umax2(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 %x, -1
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 -2147483648, i32 %x, !prof ![[MD1]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 %x, -2147483648
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 %x, i32 -2147483648, !prof ![[MD3]]
 ; CHECK-NEXT:    ret i32 [[SEL]]
 ;
   %cmp = icmp sgt i32 %x, -1

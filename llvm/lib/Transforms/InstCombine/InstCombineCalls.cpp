@@ -3206,6 +3206,31 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
 
     return replaceInstUsesWith(*II, ConstantInt::get(II->getType(), Result));
   }
+  case Intrinsic::amdgcn_cvt_pkrtz: {
+    Value *Src0 = II->getArgOperand(0);
+    Value *Src1 = II->getArgOperand(1);
+    if (const ConstantFP *C0 = dyn_cast<ConstantFP>(Src0)) {
+      if (const ConstantFP *C1 = dyn_cast<ConstantFP>(Src1)) {
+        const fltSemantics &HalfSem
+          = II->getType()->getScalarType()->getFltSemantics();
+        bool LosesInfo;
+        APFloat Val0 = C0->getValueAPF();
+        APFloat Val1 = C1->getValueAPF();
+        Val0.convert(HalfSem, APFloat::rmTowardZero, &LosesInfo);
+        Val1.convert(HalfSem, APFloat::rmTowardZero, &LosesInfo);
+
+        Constant *Folded = ConstantVector::get({
+            ConstantFP::get(II->getContext(), Val0),
+            ConstantFP::get(II->getContext(), Val1) });
+        return replaceInstUsesWith(*II, Folded);
+      }
+    }
+
+    if (isa<UndefValue>(Src0) && isa<UndefValue>(Src1))
+      return replaceInstUsesWith(*II, UndefValue::get(II->getType()));
+
+    break;
+  }
   case Intrinsic::stackrestore: {
     // If the save is right next to the restore, remove the restore.  This can
     // happen when variable allocas are DCE'd.

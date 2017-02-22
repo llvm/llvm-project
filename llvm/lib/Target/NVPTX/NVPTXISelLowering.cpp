@@ -184,6 +184,125 @@ static void ComputePTXValueVTs(const TargetLowering &TLI, const DataLayout &DL,
   }
 }
 
+// Check whether we can merge loads/stores of some of the pieces of a
+// flattened function parameter or return value into a single vector
+// load/store.
+//
+// The flattened parameter is represented as a list of EVTs and
+// offsets, and the whole structure is aligned to ParamAlignment. This
+// function determines whether we can load/store pieces of the
+// parameter starting at index Idx using a single vectorized op of
+// size AccessSize. If so, it returns the number of param pieces
+// covered by the vector op. Otherwise, it returns 1.
+static unsigned CanMergeParamLoadStoresStartingAt(
+    unsigned Idx, uint32_t AccessSize, const SmallVectorImpl<EVT> &ValueVTs,
+    const SmallVectorImpl<uint64_t> &Offsets, unsigned ParamAlignment) {
+  assert(isPowerOf2_32(AccessSize) && "must be a power of 2!");
+
+  // Can't vectorize if param alignment is not sufficient.
+  if (AccessSize > ParamAlignment)
+    return 1;
+  // Can't vectorize if offset is not aligned.
+  if (Offsets[Idx] & (AccessSize - 1))
+    return 1;
+
+  EVT EltVT = ValueVTs[Idx];
+  unsigned EltSize = EltVT.getStoreSize();
+
+  // Element is too large to vectorize.
+  if (EltSize >= AccessSize)
+    return 1;
+
+  unsigned NumElts = AccessSize / EltSize;
+  // Can't vectorize if AccessBytes if not a multiple of EltSize.
+  if (AccessSize != EltSize * NumElts)
+    return 1;
+
+  // We don't have enough elements to vectorize.
+  if (Idx + NumElts > ValueVTs.size())
+    return 1;
+
+  // PTX ISA can only deal with 2- and 4-element vector ops.
+  if (NumElts != 4 && NumElts != 2)
+    return 1;
+
+  for (unsigned j = Idx + 1; j < Idx + NumElts; ++j) {
+    // Types do not match.
+    if (ValueVTs[j] != EltVT)
+      return 1;
+
+    // Elements are not contiguous.
+    if (Offsets[j] - Offsets[j - 1] != EltSize)
+      return 1;
+  }
+  // OK. We can vectorize ValueVTs[i..i+NumElts)
+  return NumElts;
+}
+
+// Flags for tracking per-element vectorization state of loads/stores
+// of a flattened function parameter or return value.
+enum ParamVectorizationFlags {
+  PVF_INNER = 0x0, // Middle elements of a vector.
+  PVF_FIRST = 0x1, // First element of the vector.
+  PVF_LAST = 0x2,  // Last element of the vector.
+  // Scalar is effectively a 1-element vector.
+  PVF_SCALAR = PVF_FIRST | PVF_LAST
+};
+
+// Computes whether and how we can vectorize the loads/stores of a
+// flattened function parameter or return value.
+//
+// The flattened parameter is represented as the list of ValueVTs and
+// Offsets, and is aligned to ParamAlignment bytes. We return a vector
+// of the same size as ValueVTs indicating how each piece should be
+// loaded/stored (i.e. as a scalar, or as part of a vector
+// load/store).
+static SmallVector<ParamVectorizationFlags, 16>
+VectorizePTXValueVTs(const SmallVectorImpl<EVT> &ValueVTs,
+                     const SmallVectorImpl<uint64_t> &Offsets,
+                     unsigned ParamAlignment) {
+  // Set vector size to match ValueVTs and mark all elements as
+  // scalars by default.
+  SmallVector<ParamVectorizationFlags, 16> VectorInfo;
+  VectorInfo.assign(ValueVTs.size(), PVF_SCALAR);
+
+  // Check what we can vectorize using 128/64/32-bit accesses.
+  for (int I = 0, E = ValueVTs.size(); I != E; ++I) {
+    // Skip elements we've already processed.
+    assert(VectorInfo[I] == PVF_SCALAR && "Unexpected vector info state.");
+    for (unsigned AccessSize : {16, 8, 4, 2}) {
+      unsigned NumElts = CanMergeParamLoadStoresStartingAt(
+          I, AccessSize, ValueVTs, Offsets, ParamAlignment);
+      // Mark vectorized elements.
+      switch (NumElts) {
+      default:
+        llvm_unreachable("Unexpected return value");
+      case 1:
+        // Can't vectorize using this size, try next smaller size.
+        continue;
+      case 2:
+        assert(I + 1 < E && "Not enough elements.");
+        VectorInfo[I] = PVF_FIRST;
+        VectorInfo[I + 1] = PVF_LAST;
+        I += 1;
+        break;
+      case 4:
+        assert(I + 3 < E && "Not enough elements.");
+        VectorInfo[I] = PVF_FIRST;
+        VectorInfo[I + 1] = PVF_INNER;
+        VectorInfo[I + 2] = PVF_INNER;
+        VectorInfo[I + 3] = PVF_LAST;
+        I += 3;
+        break;
+      }
+      // Break out of the inner loop because we've already succeeded
+      // using largest possible AccessSize.
+      break;
+    }
+  }
+  return VectorInfo;
+}
+
 // NVPTXTargetLowering Constructor.
 NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
                                          const NVPTXSubtarget &STI)
@@ -1276,21 +1395,18 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   SDValue Callee = CLI.Callee;
   bool &isTailCall = CLI.IsTailCall;
   ArgListTy &Args = CLI.getArgs();
-  Type *retTy = CLI.RetTy;
+  Type *RetTy = CLI.RetTy;
   ImmutableCallSite *CS = CLI.CS;
+  const DataLayout &DL = DAG.getDataLayout();
 
   bool isABI = (STI.getSmVersion() >= 20);
   assert(isABI && "Non-ABI compilation is not supported");
   if (!isABI)
     return Chain;
-  MachineFunction &MF = DAG.getMachineFunction();
-  const Function *F = MF.getFunction();
-  auto &DL = MF.getDataLayout();
 
   SDValue tempChain = Chain;
-  Chain = DAG.getCALLSEQ_START(Chain,
-                               DAG.getIntPtrConstant(uniqueCallSite, dl, true),
-                               dl);
+  Chain = DAG.getCALLSEQ_START(
+      Chain, DAG.getIntPtrConstant(uniqueCallSite, dl, true), dl);
   SDValue InFlag = Chain.getValue(1);
 
   unsigned paramCount = 0;
@@ -1311,244 +1427,124 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     Type *Ty = Args[i].Ty;
 
     if (!Outs[OIdx].Flags.isByVal()) {
-      if (Ty->isAggregateType()) {
-        // aggregate
-        SmallVector<EVT, 16> vtparts;
-        SmallVector<uint64_t, 16> Offsets;
-        ComputePTXValueVTs(*this, DAG.getDataLayout(), Ty, vtparts, &Offsets,
-                           0);
-
-        unsigned align =
-            getArgumentAlignment(Callee, CS, Ty, paramCount + 1, DL);
-        // declare .param .align <align> .b8 .param<n>[<size>];
-        unsigned sz = DL.getTypeAllocSize(Ty);
-        SDVTList DeclareParamVTs = DAG.getVTList(MVT::Other, MVT::Glue);
-        SDValue DeclareParamOps[] = { Chain, DAG.getConstant(align, dl,
-                                                             MVT::i32),
-                                      DAG.getConstant(paramCount, dl, MVT::i32),
-                                      DAG.getConstant(sz, dl, MVT::i32),
-                                      InFlag };
-        Chain = DAG.getNode(NVPTXISD::DeclareParam, dl, DeclareParamVTs,
-                            DeclareParamOps);
-        InFlag = Chain.getValue(1);
-        for (unsigned j = 0, je = vtparts.size(); j != je; ++j) {
-          EVT elemtype = vtparts[j];
-          unsigned ArgAlign = GreatestCommonDivisor64(align, Offsets[j]);
-          if (elemtype.isInteger() && (sz < 8))
-            sz = 8;
-          SDValue StVal = OutVals[OIdx];
-          if (elemtype.getSizeInBits() < 16) {
-            StVal = DAG.getNode(ISD::ANY_EXTEND, dl, MVT::i16, StVal);
-          }
-          SDVTList CopyParamVTs = DAG.getVTList(MVT::Other, MVT::Glue);
-          SDValue CopyParamOps[] = { Chain,
-                                     DAG.getConstant(paramCount, dl, MVT::i32),
-                                     DAG.getConstant(Offsets[j], dl, MVT::i32),
-                                     StVal, InFlag };
-          Chain = DAG.getMemIntrinsicNode(NVPTXISD::StoreParam, dl,
-                                          CopyParamVTs, CopyParamOps,
-                                          elemtype, MachinePointerInfo(),
-                                          ArgAlign);
-          InFlag = Chain.getValue(1);
-          ++OIdx;
-        }
-        if (vtparts.size() > 0)
-          --OIdx;
-        ++paramCount;
-        continue;
-      }
-      if (Ty->isVectorTy()) {
-        EVT ObjectVT = getValueType(DL, Ty);
-        unsigned align =
-            getArgumentAlignment(Callee, CS, Ty, paramCount + 1, DL);
-        // declare .param .align <align> .b8 .param<n>[<size>];
-        unsigned sz = DL.getTypeAllocSize(Ty);
-        SDVTList DeclareParamVTs = DAG.getVTList(MVT::Other, MVT::Glue);
-        SDValue DeclareParamOps[] = { Chain,
-                                      DAG.getConstant(align, dl, MVT::i32),
-                                      DAG.getConstant(paramCount, dl, MVT::i32),
-                                      DAG.getConstant(sz, dl, MVT::i32),
-                                      InFlag };
-        Chain = DAG.getNode(NVPTXISD::DeclareParam, dl, DeclareParamVTs,
-                            DeclareParamOps);
-        InFlag = Chain.getValue(1);
-        unsigned NumElts = ObjectVT.getVectorNumElements();
-        EVT EltVT = ObjectVT.getVectorElementType();
-        EVT MemVT = EltVT;
-        bool NeedExtend = false;
-        if (EltVT.getSizeInBits() < 16) {
-          NeedExtend = true;
-          EltVT = MVT::i16;
-        }
-
-        // V1 store
-        if (NumElts == 1) {
-          SDValue Elt = OutVals[OIdx++];
-          if (NeedExtend)
-            Elt = DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::i16, Elt);
-
-          SDVTList CopyParamVTs = DAG.getVTList(MVT::Other, MVT::Glue);
-          SDValue CopyParamOps[] = { Chain,
-                                     DAG.getConstant(paramCount, dl, MVT::i32),
-                                     DAG.getConstant(0, dl, MVT::i32), Elt,
-                                     InFlag };
-          Chain = DAG.getMemIntrinsicNode(NVPTXISD::StoreParam, dl,
-                                          CopyParamVTs, CopyParamOps,
-                                          MemVT, MachinePointerInfo());
-          InFlag = Chain.getValue(1);
-        } else if (NumElts == 2) {
-          SDValue Elt0 = OutVals[OIdx++];
-          SDValue Elt1 = OutVals[OIdx++];
-          if (NeedExtend) {
-            Elt0 = DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::i16, Elt0);
-            Elt1 = DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::i16, Elt1);
-          }
-
-          SDVTList CopyParamVTs = DAG.getVTList(MVT::Other, MVT::Glue);
-          SDValue CopyParamOps[] = { Chain,
-                                     DAG.getConstant(paramCount, dl, MVT::i32),
-                                     DAG.getConstant(0, dl, MVT::i32), Elt0,
-                                     Elt1, InFlag };
-          Chain = DAG.getMemIntrinsicNode(NVPTXISD::StoreParamV2, dl,
-                                          CopyParamVTs, CopyParamOps,
-                                          MemVT, MachinePointerInfo());
-          InFlag = Chain.getValue(1);
-        } else {
-          unsigned curOffset = 0;
-          // V4 stores
-          // We have at least 4 elements (<3 x Ty> expands to 4 elements) and
-          // the
-          // vector will be expanded to a power of 2 elements, so we know we can
-          // always round up to the next multiple of 4 when creating the vector
-          // stores.
-          // e.g.  4 elem => 1 st.v4
-          //       6 elem => 2 st.v4
-          //       8 elem => 2 st.v4
-          //      11 elem => 3 st.v4
-          unsigned VecSize = 4;
-          if (EltVT.getSizeInBits() == 64)
-            VecSize = 2;
-
-          // This is potentially only part of a vector, so assume all elements
-          // are packed together.
-          unsigned PerStoreOffset = MemVT.getStoreSizeInBits() / 8 * VecSize;
-
-          for (unsigned i = 0; i < NumElts; i += VecSize) {
-            // Get values
-            SDValue StoreVal;
-            SmallVector<SDValue, 8> Ops;
-            Ops.push_back(Chain);
-            Ops.push_back(DAG.getConstant(paramCount, dl, MVT::i32));
-            Ops.push_back(DAG.getConstant(curOffset, dl, MVT::i32));
-
-            unsigned Opc = NVPTXISD::StoreParamV2;
-
-            StoreVal = OutVals[OIdx++];
-            if (NeedExtend)
-              StoreVal = DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::i16, StoreVal);
-            Ops.push_back(StoreVal);
-
-            if (i + 1 < NumElts) {
-              StoreVal = OutVals[OIdx++];
-              if (NeedExtend)
-                StoreVal =
-                    DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::i16, StoreVal);
-            } else {
-              StoreVal = DAG.getUNDEF(EltVT);
-            }
-            Ops.push_back(StoreVal);
-
-            if (VecSize == 4) {
-              Opc = NVPTXISD::StoreParamV4;
-              if (i + 2 < NumElts) {
-                StoreVal = OutVals[OIdx++];
-                if (NeedExtend)
-                  StoreVal =
-                      DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::i16, StoreVal);
-              } else {
-                StoreVal = DAG.getUNDEF(EltVT);
-              }
-              Ops.push_back(StoreVal);
-
-              if (i + 3 < NumElts) {
-                StoreVal = OutVals[OIdx++];
-                if (NeedExtend)
-                  StoreVal =
-                      DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::i16, StoreVal);
-              } else {
-                StoreVal = DAG.getUNDEF(EltVT);
-              }
-              Ops.push_back(StoreVal);
-            }
-
-            Ops.push_back(InFlag);
-
-            SDVTList CopyParamVTs = DAG.getVTList(MVT::Other, MVT::Glue);
-            Chain = DAG.getMemIntrinsicNode(Opc, dl, CopyParamVTs, Ops,
-                                            MemVT, MachinePointerInfo());
-            InFlag = Chain.getValue(1);
-            curOffset += PerStoreOffset;
-          }
-        }
-        ++paramCount;
-        --OIdx;
-        continue;
-      }
-      // Plain scalar
-      // for ABI,    declare .param .b<size> .param<n>;
-      unsigned sz = VT.getSizeInBits();
-      bool needExtend = false;
-      if (VT.isInteger()) {
-        if (sz < 16)
-          needExtend = true;
-        if (sz < 32)
-          sz = 32;
-      } else if (VT.isFloatingPoint() && sz < 32)
-        // PTX ABI requires all scalar parameters to be at least 32
-        // bits in size.  fp16 normally uses .b16 as its storage type
-        // in PTX, so its size must be adjusted here, too.
-        sz = 32;
+      SmallVector<EVT, 16> VTs;
+      SmallVector<uint64_t, 16> Offsets;
+      ComputePTXValueVTs(*this, DL, Ty, VTs, &Offsets);
+      unsigned ArgAlign =
+          getArgumentAlignment(Callee, CS, Ty, paramCount + 1, DL);
+      unsigned AllocSize = DL.getTypeAllocSize(Ty);
       SDVTList DeclareParamVTs = DAG.getVTList(MVT::Other, MVT::Glue);
-      SDValue DeclareParamOps[] = { Chain,
-                                    DAG.getConstant(paramCount, dl, MVT::i32),
-                                    DAG.getConstant(sz, dl, MVT::i32),
-                                    DAG.getConstant(0, dl, MVT::i32), InFlag };
-      Chain = DAG.getNode(NVPTXISD::DeclareScalarParam, dl, DeclareParamVTs,
-                          DeclareParamOps);
-      InFlag = Chain.getValue(1);
-      SDValue OutV = OutVals[OIdx];
-      if (needExtend) {
-        // zext/sext i1 to i16
-        unsigned opc = ISD::ZERO_EXTEND;
-        if (Outs[OIdx].Flags.isSExt())
-          opc = ISD::SIGN_EXTEND;
-        OutV = DAG.getNode(opc, dl, MVT::i16, OutV);
+      bool NeedAlign; // Does argument declaration specify alignment?
+      if (Ty->isAggregateType() || Ty->isVectorTy()) {
+        // declare .param .align <align> .b8 .param<n>[<size>];
+        SDValue DeclareParamOps[] = {
+            Chain, DAG.getConstant(ArgAlign, dl, MVT::i32),
+            DAG.getConstant(paramCount, dl, MVT::i32),
+            DAG.getConstant(AllocSize, dl, MVT::i32), InFlag};
+        Chain = DAG.getNode(NVPTXISD::DeclareParam, dl, DeclareParamVTs,
+                            DeclareParamOps);
+        NeedAlign = true;
+      } else {
+        // declare .param .b<size> .param<n>;
+        if ((VT.isInteger() || VT.isFloatingPoint()) && AllocSize < 4) {
+          // PTX ABI requires integral types to be at least 32 bits in
+          // size. FP16 is loaded/stored using i16, so it's handled
+          // here as well.
+          AllocSize = 4;
+        }
+        SDValue DeclareScalarParamOps[] = {
+            Chain, DAG.getConstant(paramCount, dl, MVT::i32),
+            DAG.getConstant(AllocSize * 8, dl, MVT::i32),
+            DAG.getConstant(0, dl, MVT::i32), InFlag};
+        Chain = DAG.getNode(NVPTXISD::DeclareScalarParam, dl, DeclareParamVTs,
+                            DeclareScalarParamOps);
+        NeedAlign = false;
       }
-      SDVTList CopyParamVTs = DAG.getVTList(MVT::Other, MVT::Glue);
-      SDValue CopyParamOps[] = { Chain,
-                                 DAG.getConstant(paramCount, dl, MVT::i32),
-                                 DAG.getConstant(0, dl, MVT::i32), OutV,
-                                 InFlag };
-
-      unsigned opcode = NVPTXISD::StoreParam;
-      if (Outs[OIdx].Flags.isZExt() && VT.getSizeInBits() < 32)
-        opcode = NVPTXISD::StoreParamU32;
-      else if (Outs[OIdx].Flags.isSExt() && VT.getSizeInBits() < 32)
-        opcode = NVPTXISD::StoreParamS32;
-      Chain = DAG.getMemIntrinsicNode(opcode, dl, CopyParamVTs, CopyParamOps,
-                                      VT, MachinePointerInfo());
-
       InFlag = Chain.getValue(1);
+
+      // PTX Interoperability Guide 3.3(A): [Integer] Values shorter
+      // than 32-bits are sign extended or zero extended, depending on
+      // whether they are signed or unsigned types. This case applies
+      // only to scalar parameters and not to aggregate values.
+      bool ExtendIntegerParam =
+          Ty->isIntegerTy() && DL.getTypeAllocSizeInBits(Ty) < 32;
+
+      auto VectorInfo = VectorizePTXValueVTs(VTs, Offsets, ArgAlign);
+      SmallVector<SDValue, 6> StoreOperands;
+      for (unsigned j = 0, je = VTs.size(); j != je; ++j) {
+        // New store.
+        if (VectorInfo[j] & PVF_FIRST) {
+          assert(StoreOperands.empty() && "Unfinished preceeding store.");
+          StoreOperands.push_back(Chain);
+          StoreOperands.push_back(DAG.getConstant(paramCount, dl, MVT::i32));
+          StoreOperands.push_back(DAG.getConstant(Offsets[j], dl, MVT::i32));
+        }
+
+        EVT EltVT = VTs[j];
+        SDValue StVal = OutVals[OIdx];
+        if (ExtendIntegerParam) {
+          assert(VTs.size() == 1 && "Scalar can't have multiple parts.");
+          // zext/sext to i32
+          StVal = DAG.getNode(Outs[OIdx].Flags.isSExt() ? ISD::SIGN_EXTEND
+                                                        : ISD::ZERO_EXTEND,
+                              dl, MVT::i32, StVal);
+        } else if (EltVT.getSizeInBits() < 16) {
+          // Use 16-bit registers for small stores as it's the
+          // smallest general purpose register size supported by NVPTX.
+          StVal = DAG.getNode(ISD::ANY_EXTEND, dl, MVT::i16, StVal);
+        }
+
+        // Record the value to store.
+        StoreOperands.push_back(StVal);
+
+        if (VectorInfo[j] & PVF_LAST) {
+          unsigned NumElts = StoreOperands.size() - 3;
+          NVPTXISD::NodeType Op;
+          switch (NumElts) {
+          case 1:
+            Op = NVPTXISD::StoreParam;
+            break;
+          case 2:
+            Op = NVPTXISD::StoreParamV2;
+            break;
+          case 4:
+            Op = NVPTXISD::StoreParamV4;
+            break;
+          default:
+            llvm_unreachable("Invalid vector info.");
+          }
+
+          StoreOperands.push_back(InFlag);
+
+          // Adjust type of the store op if we've extended the scalar
+          // return value.
+          EVT TheStoreType = ExtendIntegerParam ? MVT::i32 : VTs[j];
+          unsigned EltAlign =
+              NeedAlign ? GreatestCommonDivisor64(ArgAlign, Offsets[j]) : 0;
+
+          Chain = DAG.getMemIntrinsicNode(
+              Op, dl, DAG.getVTList(MVT::Other, MVT::Glue), StoreOperands,
+              TheStoreType, MachinePointerInfo(), EltAlign);
+          InFlag = Chain.getValue(1);
+
+          // Cleanup.
+          StoreOperands.clear();
+        }
+        ++OIdx;
+      }
+      assert(StoreOperands.empty() && "Unfinished paramter store.");
+      if (VTs.size() > 0)
+        --OIdx;
       ++paramCount;
       continue;
     }
-    // struct or vector
-    SmallVector<EVT, 16> vtparts;
+
+    // ByVal arguments
+    SmallVector<EVT, 16> VTs;
     SmallVector<uint64_t, 16> Offsets;
     auto *PTy = dyn_cast<PointerType>(Args[i].Ty);
     assert(PTy && "Type of a byval parameter should be pointer");
-    ComputePTXValueVTs(*this, DAG.getDataLayout(), PTy->getElementType(),
-                       vtparts, &Offsets, 0);
+    ComputePTXValueVTs(*this, DL, PTy->getElementType(), VTs, &Offsets, 0);
 
     // declare .param .align <align> .b8 .param<n>[<size>];
     unsigned sz = Outs[OIdx].Flags.getByValSize();
@@ -1569,11 +1565,11 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     Chain = DAG.getNode(NVPTXISD::DeclareParam, dl, DeclareParamVTs,
                         DeclareParamOps);
     InFlag = Chain.getValue(1);
-    for (unsigned j = 0, je = vtparts.size(); j != je; ++j) {
-      EVT elemtype = vtparts[j];
+    for (unsigned j = 0, je = VTs.size(); j != je; ++j) {
+      EVT elemtype = VTs[j];
       int curOffset = Offsets[j];
       unsigned PartAlign = GreatestCommonDivisor64(ArgAlign, curOffset);
-      auto PtrVT = getPointerTy(DAG.getDataLayout());
+      auto PtrVT = getPointerTy(DL);
       SDValue srcAddr = DAG.getNode(ISD::ADD, dl, PtrVT, OutVals[OIdx],
                                     DAG.getConstant(curOffset, dl, PtrVT));
       SDValue theVal = DAG.getLoad(elemtype, dl, tempChain, srcAddr,
@@ -1601,18 +1597,18 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   // Handle Result
   if (Ins.size() > 0) {
     SmallVector<EVT, 16> resvtparts;
-    ComputeValueVTs(*this, DL, retTy, resvtparts);
+    ComputeValueVTs(*this, DL, RetTy, resvtparts);
 
     // Declare
     //  .param .align 16 .b8 retval0[<size-in-bytes>], or
     //  .param .b<size-in-bits> retval0
-    unsigned resultsz = DL.getTypeAllocSizeInBits(retTy);
+    unsigned resultsz = DL.getTypeAllocSizeInBits(RetTy);
     // Emit ".param .b<size-in-bits> retval0" instead of byte arrays only for
     // these three types to match the logic in
     // NVPTXAsmPrinter::printReturnValStr and NVPTXTargetLowering::getPrototype.
     // Plus, this behavior is consistent with nvcc's.
-    if (retTy->isFloatingPointTy() || retTy->isIntegerTy() ||
-        retTy->isPointerTy()) {
+    if (RetTy->isFloatingPointTy() || RetTy->isIntegerTy() ||
+        RetTy->isPointerTy()) {
       // Scalar needs to be at least 32bit wide
       if (resultsz < 32)
         resultsz = 32;
@@ -1624,7 +1620,7 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
                           DeclareRetOps);
       InFlag = Chain.getValue(1);
     } else {
-      retAlignment = getArgumentAlignment(Callee, CS, retTy, 0, DL);
+      retAlignment = getArgumentAlignment(Callee, CS, RetTy, 0, DL);
       SDVTList DeclareRetVTs = DAG.getVTList(MVT::Other, MVT::Glue);
       SDValue DeclareRetOps[] = { Chain,
                                   DAG.getConstant(retAlignment, dl, MVT::i32),
@@ -1645,8 +1641,7 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     // The prototype is embedded in a string and put as the operand for a
     // CallPrototype SDNode which will print out to the value of the string.
     SDVTList ProtoVTs = DAG.getVTList(MVT::Other, MVT::Glue);
-    std::string Proto =
-        getPrototype(DAG.getDataLayout(), retTy, Args, Outs, retAlignment, CS);
+    std::string Proto = getPrototype(DL, RetTy, Args, Outs, retAlignment, CS);
     const char *ProtoStr =
       nvTM->getManagedStrPool()->getManagedString(Proto.c_str())->c_str();
     SDValue ProtoOps[] = {
@@ -1711,175 +1706,84 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   // Generate loads from param memory/moves from registers for result
   if (Ins.size() > 0) {
-    if (retTy && retTy->isVectorTy()) {
-      EVT ObjectVT = getValueType(DL, retTy);
-      unsigned NumElts = ObjectVT.getVectorNumElements();
-      EVT EltVT = ObjectVT.getVectorElementType();
-      assert(STI.getTargetLowering()->getNumRegisters(F->getContext(),
-                                                      ObjectVT) == NumElts &&
-             "Vector was not scalarized");
-      unsigned sz = EltVT.getSizeInBits();
-      bool needTruncate = sz < 8;
+    SmallVector<EVT, 16> VTs;
+    SmallVector<uint64_t, 16> Offsets;
+    ComputePTXValueVTs(*this, DL, RetTy, VTs, &Offsets, 0);
+    assert(VTs.size() == Ins.size() && "Bad value decomposition");
 
-      if (NumElts == 1) {
-        // Just a simple load
-        SmallVector<EVT, 4> LoadRetVTs;
-        if (EltVT == MVT::i1 || EltVT == MVT::i8) {
-          // If loading i1/i8 result, generate
-          //   load.b8 i16
-          //   if i1
-          //   trunc i16 to i1
-          LoadRetVTs.push_back(MVT::i16);
-        } else
-          LoadRetVTs.push_back(EltVT);
-        LoadRetVTs.push_back(MVT::Other);
-        LoadRetVTs.push_back(MVT::Glue);
-        SDValue LoadRetOps[] = {Chain, DAG.getConstant(1, dl, MVT::i32),
-                                DAG.getConstant(0, dl, MVT::i32), InFlag};
-        SDValue retval = DAG.getMemIntrinsicNode(
-            NVPTXISD::LoadParam, dl,
-            DAG.getVTList(LoadRetVTs), LoadRetOps, EltVT, MachinePointerInfo());
-        Chain = retval.getValue(1);
-        InFlag = retval.getValue(2);
-        SDValue Ret0 = retval;
-        if (needTruncate)
-          Ret0 = DAG.getNode(ISD::TRUNCATE, dl, EltVT, Ret0);
-        InVals.push_back(Ret0);
-      } else if (NumElts == 2) {
-        // LoadV2
-        SmallVector<EVT, 4> LoadRetVTs;
-        if (EltVT == MVT::i1 || EltVT == MVT::i8) {
-          // If loading i1/i8 result, generate
-          //   load.b8 i16
-          //   if i1
-          //   trunc i16 to i1
-          LoadRetVTs.push_back(MVT::i16);
-          LoadRetVTs.push_back(MVT::i16);
-        } else {
-          LoadRetVTs.push_back(EltVT);
-          LoadRetVTs.push_back(EltVT);
-        }
-        LoadRetVTs.push_back(MVT::Other);
-        LoadRetVTs.push_back(MVT::Glue);
-        SDValue LoadRetOps[] = {Chain, DAG.getConstant(1, dl, MVT::i32),
-                                DAG.getConstant(0, dl, MVT::i32), InFlag};
-        SDValue retval = DAG.getMemIntrinsicNode(
-            NVPTXISD::LoadParamV2, dl,
-            DAG.getVTList(LoadRetVTs), LoadRetOps, EltVT, MachinePointerInfo());
-        Chain = retval.getValue(2);
-        InFlag = retval.getValue(3);
-        SDValue Ret0 = retval.getValue(0);
-        SDValue Ret1 = retval.getValue(1);
-        if (needTruncate) {
-          Ret0 = DAG.getNode(ISD::TRUNCATE, dl, MVT::i1, Ret0);
-          InVals.push_back(Ret0);
-          Ret1 = DAG.getNode(ISD::TRUNCATE, dl, MVT::i1, Ret1);
-          InVals.push_back(Ret1);
-        } else {
-          InVals.push_back(Ret0);
-          InVals.push_back(Ret1);
-        }
-      } else {
-        // Split into N LoadV4
-        unsigned Ofst = 0;
-        unsigned VecSize = 4;
-        unsigned Opc = NVPTXISD::LoadParamV4;
-        if (EltVT.getSizeInBits() == 64) {
-          VecSize = 2;
-          Opc = NVPTXISD::LoadParamV2;
-        }
-        EVT VecVT = EVT::getVectorVT(F->getContext(), EltVT, VecSize);
-        for (unsigned i = 0; i < NumElts; i += VecSize) {
-          SmallVector<EVT, 8> LoadRetVTs;
-          if (EltVT == MVT::i1 || EltVT == MVT::i8) {
-            // If loading i1/i8 result, generate
-            //   load.b8 i16
-            //   if i1
-            //   trunc i16 to i1
-            for (unsigned j = 0; j < VecSize; ++j)
-              LoadRetVTs.push_back(MVT::i16);
-          } else {
-            for (unsigned j = 0; j < VecSize; ++j)
-              LoadRetVTs.push_back(EltVT);
-          }
-          LoadRetVTs.push_back(MVT::Other);
-          LoadRetVTs.push_back(MVT::Glue);
-          SDValue LoadRetOps[] = {Chain, DAG.getConstant(1, dl, MVT::i32),
-                                  DAG.getConstant(Ofst, dl, MVT::i32), InFlag};
-          SDValue retval = DAG.getMemIntrinsicNode(
-              Opc, dl, DAG.getVTList(LoadRetVTs),
-              LoadRetOps, EltVT, MachinePointerInfo());
-          if (VecSize == 2) {
-            Chain = retval.getValue(2);
-            InFlag = retval.getValue(3);
-          } else {
-            Chain = retval.getValue(4);
-            InFlag = retval.getValue(5);
-          }
+    unsigned RetAlign = getArgumentAlignment(Callee, CS, RetTy, 0, DL);
+    auto VectorInfo = VectorizePTXValueVTs(VTs, Offsets, RetAlign);
 
-          for (unsigned j = 0; j < VecSize; ++j) {
-            if (i + j >= NumElts)
-              break;
-            SDValue Elt = retval.getValue(j);
-            if (needTruncate)
-              Elt = DAG.getNode(ISD::TRUNCATE, dl, EltVT, Elt);
-            InVals.push_back(Elt);
-          }
-          Ofst += DL.getTypeAllocSize(VecVT.getTypeForEVT(F->getContext()));
-        }
+    SmallVector<EVT, 6> LoadVTs;
+    int VecIdx = -1; // Index of the first element of the vector.
+
+    // PTX Interoperability Guide 3.3(A): [Integer] Values shorter than
+    // 32-bits are sign extended or zero extended, depending on whether
+    // they are signed or unsigned types.
+    bool ExtendIntegerRetVal =
+        RetTy->isIntegerTy() && DL.getTypeAllocSizeInBits(RetTy) < 32;
+
+    for (unsigned i = 0, e = Ins.size(); i != e; ++i) {
+      bool needTruncate = false;
+      EVT TheLoadType = VTs[i];
+      EVT EltType = Ins[i].VT;
+      unsigned EltAlign = GreatestCommonDivisor64(RetAlign, Offsets[i]);
+      if (ExtendIntegerRetVal) {
+        TheLoadType = MVT::i32;
+        EltType = MVT::i32;
+        needTruncate = true;
+      } else if (TheLoadType.getSizeInBits() < 16) {
+        if (VTs[i].isInteger())
+          needTruncate = true;
+        EltType = MVT::i16;
       }
-    } else {
-      SmallVector<EVT, 16> VTs;
-      SmallVector<uint64_t, 16> Offsets;
-      auto &DL = DAG.getDataLayout();
-      ComputePTXValueVTs(*this, DL, retTy, VTs, &Offsets, 0);
-      assert(VTs.size() == Ins.size() && "Bad value decomposition");
-      unsigned RetAlign = getArgumentAlignment(Callee, CS, retTy, 0, DL);
-      for (unsigned i = 0, e = Ins.size(); i != e; ++i) {
-        unsigned sz = VTs[i].getSizeInBits();
-        unsigned AlignI = GreatestCommonDivisor64(RetAlign, Offsets[i]);
-        bool needTruncate = false;
-        if (VTs[i].isInteger() && sz < 8) {
-          sz = 8;
-          needTruncate = true;
+
+      // Record index of the very first element of the vector.
+      if (VectorInfo[i] & PVF_FIRST) {
+        assert(VecIdx == -1 && LoadVTs.empty() && "Orphaned operand list.");
+        VecIdx = i;
+      }
+
+      LoadVTs.push_back(EltType);
+
+      if (VectorInfo[i] & PVF_LAST) {
+        unsigned NumElts = LoadVTs.size();
+        LoadVTs.push_back(MVT::Other);
+        LoadVTs.push_back(MVT::Glue);
+        NVPTXISD::NodeType Op;
+        switch (NumElts) {
+        case 1:
+          Op = NVPTXISD::LoadParam;
+          break;
+        case 2:
+          Op = NVPTXISD::LoadParamV2;
+          break;
+        case 4:
+          Op = NVPTXISD::LoadParamV4;
+          break;
+        default:
+          llvm_unreachable("Invalid vector info.");
         }
 
-        SmallVector<EVT, 4> LoadRetVTs;
-        EVT TheLoadType = VTs[i];
-        if (retTy->isIntegerTy() && DL.getTypeAllocSizeInBits(retTy) < 32) {
-          // This is for integer types only, and specifically not for
-          // aggregates.
-          LoadRetVTs.push_back(MVT::i32);
-          TheLoadType = MVT::i32;
-          needTruncate = true;
-        } else if (sz < 16) {
-          // If loading i1/i8 result, generate
-          //   load i8 (-> i16)
-          //   trunc i16 to i1/i8
+        SDValue VectorOps[] = {Chain, DAG.getConstant(1, dl, MVT::i32),
+                               DAG.getConstant(Offsets[VecIdx], dl, MVT::i32),
+                               InFlag};
+        SDValue RetVal = DAG.getMemIntrinsicNode(
+            Op, dl, DAG.getVTList(LoadVTs), VectorOps, TheLoadType,
+            MachinePointerInfo(), EltAlign);
 
-          // FIXME: Do we need to set needTruncate to true here, too?  We could
-          // not figure out what this branch is for in D17872, so we left it
-          // alone.  The comment above about loading i1/i8 may be wrong, as the
-          // branch above seems to cover integers of size < 32.
-          LoadRetVTs.push_back(MVT::i16);
-        } else
-          LoadRetVTs.push_back(Ins[i].VT);
-        LoadRetVTs.push_back(MVT::Other);
-        LoadRetVTs.push_back(MVT::Glue);
+        for (unsigned j = 0; j < NumElts; ++j) {
+          SDValue Ret = RetVal.getValue(j);
+          if (needTruncate)
+            Ret = DAG.getNode(ISD::TRUNCATE, dl, Ins[VecIdx + j].VT, Ret);
+          InVals.push_back(Ret);
+        }
+        Chain = RetVal.getValue(NumElts);
+        InFlag = RetVal.getValue(NumElts + 1);
 
-        SDValue LoadRetOps[] = {Chain, DAG.getConstant(1, dl, MVT::i32),
-                                DAG.getConstant(Offsets[i], dl, MVT::i32),
-                                InFlag};
-        SDValue retval = DAG.getMemIntrinsicNode(
-            NVPTXISD::LoadParam, dl,
-            DAG.getVTList(LoadRetVTs), LoadRetOps,
-            TheLoadType, MachinePointerInfo(), AlignI);
-        Chain = retval.getValue(1);
-        InFlag = retval.getValue(2);
-        SDValue Ret0 = retval.getValue(0);
-        if (needTruncate)
-          Ret0 = DAG.getNode(ISD::TRUNCATE, dl, Ins[i].VT, Ret0);
-        InVals.push_back(Ret0);
+        // Cleanup
+        VecIdx = -1;
+        LoadVTs.clear();
       }
     }
   }
@@ -2371,176 +2275,66 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
     // appear in the same order as their order of appearance
     // in the original function. "idx+1" holds that order.
     if (!PAL.hasAttribute(i + 1, Attribute::ByVal)) {
-      if (Ty->isAggregateType()) {
-        SmallVector<EVT, 16> vtparts;
-        SmallVector<uint64_t, 16> offsets;
+      bool aggregateIsPacked = false;
+      if (StructType *STy = dyn_cast<StructType>(Ty))
+        aggregateIsPacked = STy->isPacked();
 
-        // NOTE: Here, we lose the ability to issue vector loads for vectors
-        // that are a part of a struct.  This should be investigated in the
-        // future.
-        ComputePTXValueVTs(*this, DAG.getDataLayout(), Ty, vtparts, &offsets,
-                           0);
-        assert(vtparts.size() > 0 && "empty aggregate type not expected");
-        bool aggregateIsPacked = false;
-        if (StructType *STy = dyn_cast<StructType>(Ty))
-          aggregateIsPacked = STy->isPacked();
+      SmallVector<EVT, 16> VTs;
+      SmallVector<uint64_t, 16> Offsets;
+      ComputePTXValueVTs(*this, DL, Ty, VTs, &Offsets, 0);
+      assert(VTs.size() > 0 && "empty aggregate type not expected");
+      auto VectorInfo =
+          VectorizePTXValueVTs(VTs, Offsets, DL.getABITypeAlignment(Ty));
 
-        SDValue Arg = getParamSymbol(DAG, idx, PtrVT);
-        for (unsigned parti = 0, parte = vtparts.size(); parti != parte;
-             ++parti) {
-          EVT partVT = vtparts[parti];
-          Value *srcValue = Constant::getNullValue(
-              PointerType::get(partVT.getTypeForEVT(F->getContext()),
-                               ADDRESS_SPACE_PARAM));
-          SDValue srcAddr =
-              DAG.getNode(ISD::ADD, dl, PtrVT, Arg,
-                          DAG.getConstant(offsets[parti], dl, PtrVT));
-          unsigned partAlign = aggregateIsPacked
-                                   ? 1
-                                   : DL.getABITypeAlignment(
-                                         partVT.getTypeForEVT(F->getContext()));
-          SDValue p;
-          if (Ins[InsIdx].VT.getSizeInBits() > partVT.getSizeInBits()) {
-            ISD::LoadExtType ExtOp = Ins[InsIdx].Flags.isSExt() ? 
-                                     ISD::SEXTLOAD : ISD::ZEXTLOAD;
-            p = DAG.getExtLoad(ExtOp, dl, Ins[InsIdx].VT, Root, srcAddr,
-                               MachinePointerInfo(srcValue), partVT, partAlign);
-          } else {
-            p = DAG.getLoad(partVT, dl, Root, srcAddr,
-                            MachinePointerInfo(srcValue), partAlign);
-          }
-          if (p.getNode())
-            p.getNode()->setIROrder(idx + 1);
-          InVals.push_back(p);
-          ++InsIdx;
-        }
-        if (vtparts.size() > 0)
-          --InsIdx;
-        continue;
-      }
-      if (Ty->isVectorTy()) {
-        EVT ObjectVT = getValueType(DL, Ty);
-        SDValue Arg = getParamSymbol(DAG, idx, PtrVT);
-        unsigned NumElts = ObjectVT.getVectorNumElements();
-        assert(TLI->getNumRegisters(F->getContext(), ObjectVT) == NumElts &&
-               "Vector was not scalarized");
-        EVT EltVT = ObjectVT.getVectorElementType();
-
-        // V1 load
-        // f32 = load ...
-        if (NumElts == 1) {
-          // We only have one element, so just directly load it
-          Value *SrcValue = Constant::getNullValue(PointerType::get(
-              EltVT.getTypeForEVT(F->getContext()), ADDRESS_SPACE_PARAM));
-          SDValue P = DAG.getLoad(
-              EltVT, dl, Root, Arg, MachinePointerInfo(SrcValue),
-              DL.getABITypeAlignment(EltVT.getTypeForEVT(F->getContext())),
-              MachineMemOperand::MODereferenceable |
-                  MachineMemOperand::MOInvariant);
-          if (P.getNode())
-            P.getNode()->setIROrder(idx + 1);
-
-          if (Ins[InsIdx].VT.getSizeInBits() > EltVT.getSizeInBits())
-            P = DAG.getNode(ISD::ANY_EXTEND, dl, Ins[InsIdx].VT, P);
-          InVals.push_back(P);
-          ++InsIdx;
-        } else if (NumElts == 2) {
-          // V2 load
-          // f32,f32 = load ...
-          EVT VecVT = EVT::getVectorVT(F->getContext(), EltVT, 2);
-          Value *SrcValue = Constant::getNullValue(PointerType::get(
-              VecVT.getTypeForEVT(F->getContext()), ADDRESS_SPACE_PARAM));
-          SDValue P = DAG.getLoad(
-              VecVT, dl, Root, Arg, MachinePointerInfo(SrcValue),
-              DL.getABITypeAlignment(VecVT.getTypeForEVT(F->getContext())),
-              MachineMemOperand::MODereferenceable |
-                  MachineMemOperand::MOInvariant);
-          if (P.getNode())
-            P.getNode()->setIROrder(idx + 1);
-
-          SDValue Elt0 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, EltVT, P,
-                                     DAG.getIntPtrConstant(0, dl));
-          SDValue Elt1 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, EltVT, P,
-                                     DAG.getIntPtrConstant(1, dl));
-
-          if (Ins[InsIdx].VT.getSizeInBits() > EltVT.getSizeInBits()) {
-            Elt0 = DAG.getNode(ISD::ANY_EXTEND, dl, Ins[InsIdx].VT, Elt0);
-            Elt1 = DAG.getNode(ISD::ANY_EXTEND, dl, Ins[InsIdx].VT, Elt1);
-          }
-
-          InVals.push_back(Elt0);
-          InVals.push_back(Elt1);
-          InsIdx += 2;
-        } else {
-          // V4 loads
-          // We have at least 4 elements (<3 x Ty> expands to 4 elements) and
-          // the vector will be expanded to a power of 2 elements, so we know we
-          // can always round up to the next multiple of 4 when creating the
-          // vector loads.
-          // e.g.  4 elem => 1 ld.v4
-          //       6 elem => 2 ld.v4
-          //       8 elem => 2 ld.v4
-          //      11 elem => 3 ld.v4
-          unsigned VecSize = 4;
-          if (EltVT.getSizeInBits() == 64) {
-            VecSize = 2;
-          }
-          EVT VecVT = EVT::getVectorVT(F->getContext(), EltVT, VecSize);
-          unsigned Ofst = 0;
-          for (unsigned i = 0; i < NumElts; i += VecSize) {
-            Value *SrcValue = Constant::getNullValue(
-                PointerType::get(VecVT.getTypeForEVT(F->getContext()),
-                                 ADDRESS_SPACE_PARAM));
-            SDValue SrcAddr = DAG.getNode(ISD::ADD, dl, PtrVT, Arg,
-                                          DAG.getConstant(Ofst, dl, PtrVT));
-            SDValue P = DAG.getLoad(
-                VecVT, dl, Root, SrcAddr, MachinePointerInfo(SrcValue),
-                DL.getABITypeAlignment(VecVT.getTypeForEVT(F->getContext())),
-                MachineMemOperand::MODereferenceable |
-                    MachineMemOperand::MOInvariant);
-            if (P.getNode())
-              P.getNode()->setIROrder(idx + 1);
-
-            for (unsigned j = 0; j < VecSize; ++j) {
-              if (i + j >= NumElts)
-                break;
-              SDValue Elt = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, EltVT, P,
-                                        DAG.getIntPtrConstant(j, dl));
-              if (Ins[InsIdx].VT.getSizeInBits() > EltVT.getSizeInBits())
-                Elt = DAG.getNode(ISD::ANY_EXTEND, dl, Ins[InsIdx].VT, Elt);
-              InVals.push_back(Elt);
-            }
-            Ofst += DL.getTypeAllocSize(VecVT.getTypeForEVT(F->getContext()));
-          }
-          InsIdx += NumElts;
-        }
-
-        if (NumElts > 0)
-          --InsIdx;
-        continue;
-      }
-      // A plain scalar.
-      EVT ObjectVT = getValueType(DL, Ty);
-      // If ABI, load from the param symbol
       SDValue Arg = getParamSymbol(DAG, idx, PtrVT);
-      Value *srcValue = Constant::getNullValue(PointerType::get(
-          ObjectVT.getTypeForEVT(F->getContext()), ADDRESS_SPACE_PARAM));
-      SDValue p;
-       if (ObjectVT.getSizeInBits() < Ins[InsIdx].VT.getSizeInBits()) {
-        ISD::LoadExtType ExtOp = Ins[InsIdx].Flags.isSExt() ? 
-                                       ISD::SEXTLOAD : ISD::ZEXTLOAD;
-        p = DAG.getExtLoad(
-            ExtOp, dl, Ins[InsIdx].VT, Root, Arg, MachinePointerInfo(srcValue),
-            ObjectVT,
-            DL.getABITypeAlignment(ObjectVT.getTypeForEVT(F->getContext())));
-      } else {
-        p = DAG.getLoad(
-            Ins[InsIdx].VT, dl, Root, Arg, MachinePointerInfo(srcValue),
-            DL.getABITypeAlignment(ObjectVT.getTypeForEVT(F->getContext())));
+      int VecIdx = -1; // Index of the first element of the current vector.
+      for (unsigned parti = 0, parte = VTs.size(); parti != parte; ++parti) {
+        if (VectorInfo[parti] & PVF_FIRST) {
+          assert(VecIdx == -1 && "Orphaned vector.");
+          VecIdx = parti;
+        }
+
+        // That's the last element of this store op.
+        if (VectorInfo[parti] & PVF_LAST) {
+          unsigned NumElts = parti - VecIdx + 1;
+          EVT EltVT = VTs[parti];
+          // i1 is loaded/stored as i8.
+          EVT LoadVT = EltVT == MVT::i1 ? MVT::i8 : EltVT;
+          EVT VecVT = EVT::getVectorVT(F->getContext(), LoadVT, NumElts);
+          SDValue VecAddr =
+              DAG.getNode(ISD::ADD, dl, PtrVT, Arg,
+                          DAG.getConstant(Offsets[VecIdx], dl, PtrVT));
+          Value *srcValue = Constant::getNullValue(PointerType::get(
+              EltVT.getTypeForEVT(F->getContext()), ADDRESS_SPACE_PARAM));
+          SDValue P =
+              DAG.getLoad(VecVT, dl, Root, VecAddr,
+                          MachinePointerInfo(srcValue), aggregateIsPacked,
+                          MachineMemOperand::MODereferenceable |
+                              MachineMemOperand::MOInvariant);
+          if (P.getNode())
+            P.getNode()->setIROrder(idx + 1);
+          for (unsigned j = 0; j < NumElts; ++j) {
+            SDValue Elt = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, LoadVT, P,
+                                      DAG.getIntPtrConstant(j, dl));
+            // We've loaded i1 as an i8 and now must truncate it back to i1
+            if (EltVT == MVT::i1)
+              Elt = DAG.getNode(ISD::TRUNCATE, dl, MVT::i1, Elt);
+            // Extend the element if necesary (e.g an i8 is loaded
+            // into an i16 register)
+            if (Ins[InsIdx].VT.getSizeInBits() > LoadVT.getSizeInBits()) {
+              unsigned Extend = Ins[InsIdx].Flags.isSExt() ? ISD::SIGN_EXTEND
+                                                           : ISD::ZERO_EXTEND;
+              Elt = DAG.getNode(Extend, dl, Ins[InsIdx].VT, Elt);
+            }
+            InVals.push_back(Elt);
+          }
+          // Reset vector tracking state.
+          VecIdx = -1;
+        }
+        ++InsIdx;
       }
-      if (p.getNode())
-        p.getNode()->setIROrder(idx + 1);
-      InVals.push_back(p);
+      if (VTs.size() > 0)
+        --InsIdx;
       continue;
     }
 
@@ -2582,165 +2376,81 @@ NVPTXTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
                                  const SmallVectorImpl<SDValue> &OutVals,
                                  const SDLoc &dl, SelectionDAG &DAG) const {
   MachineFunction &MF = DAG.getMachineFunction();
-  const Function *F = MF.getFunction();
-  Type *RetTy = F->getReturnType();
-  const DataLayout &TD = DAG.getDataLayout();
+  Type *RetTy = MF.getFunction()->getReturnType();
 
   bool isABI = (STI.getSmVersion() >= 20);
   assert(isABI && "Non-ABI compilation is not supported");
   if (!isABI)
     return Chain;
 
-  if (VectorType *VTy = dyn_cast<VectorType>(RetTy)) {
-    // If we have a vector type, the OutVals array will be the scalarized
-    // components and we have combine them into 1 or more vector stores.
-    unsigned NumElts = VTy->getNumElements();
-    assert(NumElts == Outs.size() && "Bad scalarization of return value");
+  const DataLayout DL = DAG.getDataLayout();
+  SmallVector<EVT, 16> VTs;
+  SmallVector<uint64_t, 16> Offsets;
+  ComputePTXValueVTs(*this, DL, RetTy, VTs, &Offsets);
+  assert(VTs.size() == OutVals.size() && "Bad return value decomposition");
 
-    // const_cast can be removed in later LLVM versions
-    EVT EltVT = getValueType(TD, RetTy).getVectorElementType();
-    bool NeedExtend = false;
-    if (EltVT.getSizeInBits() < 16)
-      NeedExtend = true;
+  auto VectorInfo = VectorizePTXValueVTs(
+      VTs, Offsets, RetTy->isSized() ? DL.getABITypeAlignment(RetTy) : 1);
 
-    // V1 store
-    if (NumElts == 1) {
-      SDValue StoreVal = OutVals[0];
-      // We only have one element, so just directly store it
-      if (NeedExtend)
-        StoreVal = DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::i16, StoreVal);
-      SDValue Ops[] = { Chain, DAG.getConstant(0, dl, MVT::i32), StoreVal };
-      Chain = DAG.getMemIntrinsicNode(NVPTXISD::StoreRetval, dl,
-                                      DAG.getVTList(MVT::Other), Ops,
-                                      EltVT, MachinePointerInfo());
-    } else if (NumElts == 2) {
-      // V2 store
-      SDValue StoreVal0 = OutVals[0];
-      SDValue StoreVal1 = OutVals[1];
+  // PTX Interoperability Guide 3.3(A): [Integer] Values shorter than
+  // 32-bits are sign extended or zero extended, depending on whether
+  // they are signed or unsigned types.
+  bool ExtendIntegerRetVal =
+      RetTy->isIntegerTy() && DL.getTypeAllocSizeInBits(RetTy) < 32;
+  bool aggregateIsPacked = false;
 
-      if (NeedExtend) {
-        StoreVal0 = DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::i16, StoreVal0);
-        StoreVal1 = DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::i16, StoreVal1);
-      }
+  if (StructType *STy = dyn_cast<StructType>(RetTy))
+    aggregateIsPacked = STy->isPacked();
 
-      SDValue Ops[] = { Chain, DAG.getConstant(0, dl, MVT::i32), StoreVal0,
-                        StoreVal1 };
-      Chain = DAG.getMemIntrinsicNode(NVPTXISD::StoreRetvalV2, dl,
-                                      DAG.getVTList(MVT::Other), Ops,
-                                      EltVT, MachinePointerInfo());
-    } else {
-      // V4 stores
-      // We have at least 4 elements (<3 x Ty> expands to 4 elements) and the
-      // vector will be expanded to a power of 2 elements, so we know we can
-      // always round up to the next multiple of 4 when creating the vector
-      // stores.
-      // e.g.  4 elem => 1 st.v4
-      //       6 elem => 2 st.v4
-      //       8 elem => 2 st.v4
-      //      11 elem => 3 st.v4
-
-      unsigned VecSize = 4;
-      if (OutVals[0].getValueSizeInBits() == 64)
-        VecSize = 2;
-
-      unsigned Offset = 0;
-
-      EVT VecVT =
-          EVT::getVectorVT(F->getContext(), EltVT, VecSize);
-      unsigned PerStoreOffset =
-          TD.getTypeAllocSize(VecVT.getTypeForEVT(F->getContext()));
-
-      for (unsigned i = 0; i < NumElts; i += VecSize) {
-        // Get values
-        SDValue StoreVal;
-        SmallVector<SDValue, 8> Ops;
-        Ops.push_back(Chain);
-        Ops.push_back(DAG.getConstant(Offset, dl, MVT::i32));
-        unsigned Opc = NVPTXISD::StoreRetvalV2;
-        EVT ExtendedVT = (NeedExtend) ? MVT::i16 : OutVals[0].getValueType();
-
-        StoreVal = OutVals[i];
-        if (NeedExtend)
-          StoreVal = DAG.getNode(ISD::ZERO_EXTEND, dl, ExtendedVT, StoreVal);
-        Ops.push_back(StoreVal);
-
-        if (i + 1 < NumElts) {
-          StoreVal = OutVals[i + 1];
-          if (NeedExtend)
-            StoreVal = DAG.getNode(ISD::ZERO_EXTEND, dl, ExtendedVT, StoreVal);
-        } else {
-          StoreVal = DAG.getUNDEF(ExtendedVT);
-        }
-        Ops.push_back(StoreVal);
-
-        if (VecSize == 4) {
-          Opc = NVPTXISD::StoreRetvalV4;
-          if (i + 2 < NumElts) {
-            StoreVal = OutVals[i + 2];
-            if (NeedExtend)
-              StoreVal =
-                  DAG.getNode(ISD::ZERO_EXTEND, dl, ExtendedVT, StoreVal);
-          } else {
-            StoreVal = DAG.getUNDEF(ExtendedVT);
-          }
-          Ops.push_back(StoreVal);
-
-          if (i + 3 < NumElts) {
-            StoreVal = OutVals[i + 3];
-            if (NeedExtend)
-              StoreVal =
-                  DAG.getNode(ISD::ZERO_EXTEND, dl, ExtendedVT, StoreVal);
-          } else {
-            StoreVal = DAG.getUNDEF(ExtendedVT);
-          }
-          Ops.push_back(StoreVal);
-        }
-
-        // Chain = DAG.getNode(Opc, dl, MVT::Other, &Ops[0], Ops.size());
-        Chain =
-            DAG.getMemIntrinsicNode(Opc, dl, DAG.getVTList(MVT::Other), Ops,
-                                    EltVT, MachinePointerInfo());
-        Offset += PerStoreOffset;
-      }
+  SmallVector<SDValue, 6> StoreOperands;
+  for (unsigned i = 0, e = Outs.size(); i != e; ++i) {
+    // New load/store. Record chain and offset operands.
+    if (VectorInfo[i] & PVF_FIRST) {
+      assert(StoreOperands.empty() && "Orphaned operand list.");
+      StoreOperands.push_back(Chain);
+      StoreOperands.push_back(DAG.getConstant(Offsets[i], dl, MVT::i32));
     }
-  } else {
-    SmallVector<EVT, 16> ValVTs;
-    SmallVector<uint64_t, 16> Offsets;
-    ComputePTXValueVTs(*this, DAG.getDataLayout(), RetTy, ValVTs, &Offsets, 0);
-    assert(ValVTs.size() == OutVals.size() && "Bad return value decomposition");
 
-    for (unsigned i = 0, e = Outs.size(); i != e; ++i) {
-      SDValue theVal = OutVals[i];
-      EVT TheValType = theVal.getValueType();
-      unsigned numElems = 1;
-      if (TheValType.isVector())
-        numElems = TheValType.getVectorNumElements();
-      for (unsigned j = 0, je = numElems; j != je; ++j) {
-        SDValue TmpVal = theVal;
-        if (TheValType.isVector())
-          TmpVal = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl,
-                               TheValType.getVectorElementType(), TmpVal,
-                               DAG.getIntPtrConstant(j, dl));
-        EVT TheStoreType = ValVTs[i];
-        if (RetTy->isIntegerTy() && TD.getTypeAllocSizeInBits(RetTy) < 32) {
-          // The following zero-extension is for integer types only, and
-          // specifically not for aggregates.
-          TmpVal = DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::i32, TmpVal);
-          TheStoreType = MVT::i32;
-        } else if (RetTy->isHalfTy()) {
-          TheStoreType = MVT::f16;
-        } else if (TmpVal.getValueSizeInBits() < 16)
-          TmpVal = DAG.getNode(ISD::ANY_EXTEND, dl, MVT::i16, TmpVal);
+    SDValue RetVal = OutVals[i];
+    if (ExtendIntegerRetVal) {
+      RetVal = DAG.getNode(Outs[i].Flags.isSExt() ? ISD::SIGN_EXTEND
+                                                  : ISD::ZERO_EXTEND,
+                           dl, MVT::i32, RetVal);
+    } else if (RetVal.getValueSizeInBits() < 16) {
+      // Use 16-bit registers for small load-stores as it's the
+      // smallest general purpose register size supported by NVPTX.
+      RetVal = DAG.getNode(ISD::ANY_EXTEND, dl, MVT::i16, RetVal);
+    }
 
-        SDValue Ops[] = {
-          Chain,
-          DAG.getConstant(Offsets[i], dl, MVT::i32),
-          TmpVal };
-        Chain = DAG.getMemIntrinsicNode(NVPTXISD::StoreRetval, dl,
-                                        DAG.getVTList(MVT::Other), Ops,
-                                        TheStoreType,
-                                        MachinePointerInfo());
+    // Record the value to return.
+    StoreOperands.push_back(RetVal);
+
+    // That's the last element of this store op.
+    if (VectorInfo[i] & PVF_LAST) {
+      NVPTXISD::NodeType Op;
+      unsigned NumElts = StoreOperands.size() - 2;
+      switch (NumElts) {
+      case 1:
+        Op = NVPTXISD::StoreRetval;
+        break;
+      case 2:
+        Op = NVPTXISD::StoreRetvalV2;
+        break;
+      case 4:
+        Op = NVPTXISD::StoreRetvalV4;
+        break;
+      default:
+        llvm_unreachable("Invalid vector info.");
       }
+
+      // Adjust type of load/store op if we've extended the scalar
+      // return value.
+      EVT TheStoreType = ExtendIntegerRetVal ? MVT::i32 : VTs[i];
+      Chain = DAG.getMemIntrinsicNode(Op, dl, DAG.getVTList(MVT::Other),
+                                      StoreOperands, TheStoreType,
+                                      MachinePointerInfo(), 1);
+      // Cleanup vector state.
+      StoreOperands.clear();
     }
   }
 
