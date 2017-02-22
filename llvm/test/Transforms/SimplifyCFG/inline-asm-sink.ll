@@ -1,4 +1,4 @@
-; RUN: opt < %s -simplifycfg -S | FileCheck %s
+; RUN: opt < %s -mem2reg -simplifycfg -S | FileCheck %s
 
 define i32 @test(i32 %x) {
 ; CHECK-LABEL: @test
@@ -23,7 +23,7 @@ if.else:
 
 if.end:
 ; CHECK-LABEL: if.end:
-; CHECK: {{%.*}} = phi i32 [ [[ASM2]], %if.else ], [ [[ASM1]], %if.then ]
+; CHECK: {{%.*}} = phi i32 [ [[ASM1]], %if.then ], [ [[ASM2]], %if.else ]
   %tmp3 = load i32, i32* %y, align 4
   ret i32 %tmp3
 }
