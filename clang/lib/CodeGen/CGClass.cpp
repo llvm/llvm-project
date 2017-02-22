@@ -2032,14 +2032,15 @@ void CodeGenFunction::EmitCXXConstructorCall(const CXXConstructorDecl *D,
   }
 
   // Insert any ABI-specific implicit constructor arguments.
-  unsigned ExtraArgs = CGM.getCXXABI().addImplicitConstructorArgs(
-      *this, D, Type, ForVirtualBase, Delegating, Args);
+  CGCXXABI::AddedStructorArgs ExtraArgs =
+      CGM.getCXXABI().addImplicitConstructorArgs(*this, D, Type, ForVirtualBase,
+                                                 Delegating, Args);
 
   // Emit the call.
   llvm::Constant *CalleePtr =
     CGM.getAddrOfCXXStructor(D, getFromCtorType(Type));
-  const CGFunctionInfo &Info =
-    CGM.getTypes().arrangeCXXConstructorCall(Args, D, Type, ExtraArgs);
+  const CGFunctionInfo &Info = CGM.getTypes().arrangeCXXConstructorCall(
+      Args, D, Type, ExtraArgs.Prefix + ExtraArgs.Suffix);
   CGCallee Callee = CGCallee::forDirect(CalleePtr, D);
   EmitCall(Info, Callee, ReturnValueSlot(), Args);
 

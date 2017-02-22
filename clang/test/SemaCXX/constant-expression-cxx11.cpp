@@ -1280,6 +1280,15 @@ namespace Atomic {
     constexpr TestVar testVar{-1};
     static_assert(testVar.value == -1, "");
   }
+
+  namespace PR32034 {
+    struct A {};
+    struct B { _Atomic(A) a; };
+    constexpr int n = (B(), B(), 0);
+
+    struct C { constexpr C() {} void *self = this; };
+    constexpr _Atomic(C) c = C();
+  }
 }
 
 namespace InstantiateCaseStmt {

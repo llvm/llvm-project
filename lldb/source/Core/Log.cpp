@@ -335,13 +335,6 @@ void Log::DisableAllLogChannels(Stream *feedback_strm) {
     entry.second.channel.Disable(UINT32_MAX);
 }
 
-void Log::Initialize() {
-  Log::Callbacks log_callbacks = {DisableLog, EnableLog, ListLogCategories};
-  Log::RegisterLogChannel(ConstString("lldb"), log_callbacks);
-}
-
-void Log::Terminate() { DisableAllLogChannels(nullptr); }
-
 void Log::ListAllLogChannels(Stream *strm) {
   CallbackMap &callback_map = GetCallbackMap();
 

@@ -15,6 +15,7 @@
 #define POLLY_SUPPORT_GIC_HELPER_H
 
 #include "llvm/ADT/APInt.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/Support/raw_ostream.h"
 #include "isl/aff.h"
 #include "isl/ctx.h"
@@ -315,6 +316,13 @@ template <typename T> static IslPtr<T> give(__isl_take T *Obj) {
 
 template <typename T>
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const IslPtr<T> &Obj) {
+  OS << IslObjTraits<T>::to_str(Obj.keep());
+  return OS;
+}
+
+template <typename T>
+llvm::DiagnosticInfoOptimizationBase &
+operator<<(llvm::DiagnosticInfoOptimizationBase &OS, const IslPtr<T> &Obj) {
   OS << IslObjTraits<T>::to_str(Obj.keep());
   return OS;
 }

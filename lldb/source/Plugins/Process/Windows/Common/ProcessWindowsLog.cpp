@@ -41,18 +41,8 @@ void ProcessWindowsLog::Initialize() {
 
 void ProcessWindowsLog::Terminate() {}
 
-Log *ProcessWindowsLog::GetLog() { return (g_log_enabled) ? g_log : nullptr; }
-
-bool ProcessWindowsLog::TestLogFlags(uint32_t mask, LogMaskReq req) {
-  Log *log = GetLog();
-  if (!log)
-    return false;
-
-  uint32_t log_mask = log->GetMask().Get();
-  if (req == LogMaskReq::All)
-    return ((log_mask & mask) == mask);
-  else
-    return (log_mask & mask);
+Log *ProcessWindowsLog::GetLogIfAny(uint32_t mask) {
+  return (g_log_enabled && g_log->GetMask().AnySet(mask)) ? g_log : nullptr;
 }
 
 static uint32_t GetFlagBits(const char *arg) {
@@ -80,7 +70,7 @@ static uint32_t GetFlagBits(const char *arg) {
 }
 
 void ProcessWindowsLog::DisableLog(const char **args, Stream *feedback_strm) {
-  Log *log(GetLog());
+  Log *log(g_log);
   if (log) {
     uint32_t flag_bits = 0;
 
