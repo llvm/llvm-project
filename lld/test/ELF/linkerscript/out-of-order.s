@@ -3,7 +3,7 @@
 # RUN: echo "SECTIONS { .data 0x4000 : { *(.data) } .text 0x2000 : { *(.text) } }" > %t.script
 # RUN: not ld.lld -o %t.so --script %t.script %t.o -shared 2>&1 | FileCheck %s
 
-# CHECK:  error: unable to move location counter backward
+# CHECK:  error: {{.*}}.script:1: unable to move location counter backward
 
 .quad 0
 .data

@@ -164,8 +164,7 @@ void LinkerDriver::addArchiveBuffer(MemoryBufferRef MB, StringRef SymName,
 
   Obj->ParentName = ParentName;
   Symtab.addFile(Obj);
-  if (Config->Verbose)
-    outs() << "Loaded " << toString(Obj) << " for " << SymName << "\n";
+  log("Loaded " + toString(Obj) + " for " + SymName);
 }
 
 void LinkerDriver::enqueueArchiveMember(const Archive::Child &C,
@@ -472,8 +471,8 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
     if (ErrOrWriter) {
       Tar = std::move(*ErrOrWriter);
     } else {
-      errs() << "/linkrepro: failed to open " << Path << ": "
-             << toString(ErrOrWriter.takeError()) << '\n';
+      error("/linkrepro: failed to open " + Path + ": " +
+            toString(ErrOrWriter.takeError()));
     }
   }
 
@@ -696,7 +695,7 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   // We should have inferred a machine type by now from the input files, but if
   // not we assume x64.
   if (Config->Machine == IMAGE_FILE_MACHINE_UNKNOWN) {
-    errs() << "warning: /machine is not specified. x64 is assumed.\n";
+    warn("/machine is not specified. x64 is assumed");
     Config->Machine = AMD64;
   }
 
@@ -733,8 +732,7 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
     if (S.empty())
       fatal("entry point must be defined");
     Config->Entry = addUndefined(S);
-    if (Config->Verbose)
-      outs() << "Entry name inferred: " << S << "\n";
+    log("Entry name inferred: " + S);
   }
 
   // Handle /export

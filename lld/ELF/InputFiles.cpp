@@ -56,14 +56,13 @@ public:
 }
 
 Optional<MemoryBufferRef> elf::readFile(StringRef Path) {
-  if (Config->Verbose)
-    outs() << Path << "\n";
-
+  log(Path);
   auto MBOrErr = MemoryBuffer::getFile(Path);
   if (auto EC = MBOrErr.getError()) {
     error("cannot open " + Path + ": " + EC.message());
     return None;
   }
+
   std::unique_ptr<MemoryBuffer> &MB = *MBOrErr;
   MemoryBufferRef MBRef = MB->getMemBufferRef();
   make<std::unique_ptr<MemoryBuffer>>(std::move(MB)); // take MB ownership

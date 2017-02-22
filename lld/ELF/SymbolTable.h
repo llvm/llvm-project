@@ -77,6 +77,11 @@ public:
                     uint8_t Binding, uint8_t StOther, uint8_t Type,
                     InputFile *File);
 
+  std::pair<Symbol *, bool> insert(StringRef Name);
+  std::pair<Symbol *, bool> insert(StringRef Name, uint8_t Type,
+                                   uint8_t Visibility, bool CanOmitFromDynSym,
+                                   InputFile *File);
+
   void scanUndefinedFlags();
   void scanShlibUndefined();
   void scanVersionScript();
@@ -90,11 +95,6 @@ public:
   std::vector<InputSectionBase<ELFT> *> Sections;
 
 private:
-  std::pair<Symbol *, bool> insert(StringRef Name);
-  std::pair<Symbol *, bool> insert(StringRef Name, uint8_t Type,
-                                   uint8_t Visibility, bool CanOmitFromDynSym,
-                                   InputFile *File);
-
   std::vector<SymbolBody *> findByVersion(SymbolVersion Ver);
   std::vector<SymbolBody *> findAllByVersion(SymbolVersion Ver);
 

@@ -299,7 +299,7 @@ void LinkerDriver::main(ArrayRef<const char *> ArgsArr, bool CanExitEarly) {
   // in help to print the version information, GNU ld just normally exits,
   // while gold can continue linking. We are compatible with ld.bfd here.
   if (Args.hasArg(OPT_version) || Args.hasArg(OPT_v))
-    outs() << getLLDVersion() << "\n";
+    message(getLLDVersion());
   if (Args.hasArg(OPT_version))
     return;
 
@@ -574,6 +574,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
 
   Config->ZCombreloc = !hasZOption(Args, "nocombreloc");
   Config->ZExecstack = hasZOption(Args, "execstack");
+  Config->ZNocopyreloc = hasZOption(Args, "nocopyreloc");
   Config->ZNodelete = hasZOption(Args, "nodelete");
   Config->ZNow = hasZOption(Args, "now");
   Config->ZOrigin = hasZOption(Args, "origin");

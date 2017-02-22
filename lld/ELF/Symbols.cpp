@@ -293,15 +293,15 @@ bool Symbol::includeInDynsym() const {
 // Print out a log message for --trace-symbol.
 void elf::printTraceSymbol(Symbol *Sym) {
   SymbolBody *B = Sym->body();
-  outs() << toString(B->File);
-
+  std::string S;
   if (B->isUndefined())
-    outs() << ": reference to ";
+    S = ": reference to ";
   else if (B->isCommon())
-    outs() << ": common definition of ";
+    S = ": common definition of ";
   else
-    outs() << ": definition of ";
-  outs() << B->getName() << "\n";
+    S = ": definition of ";
+
+  message(toString(B->File) + S + B->getName());
 }
 
 // Returns a symbol for an error message.

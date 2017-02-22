@@ -400,7 +400,7 @@ void Log::WriteHeader(llvm::raw_ostream &OS, llvm::StringRef file,
 void Log::WriteMessage(const std::string &message) {
   // Make a copy of our stream shared pointer in case someone disables our
   // log while we are logging and releases the stream
-  auto stream_sp = m_stream_sp;
+  auto stream_sp = GetStream();
   if (!stream_sp)
     return;
 
