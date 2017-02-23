@@ -912,7 +912,7 @@ struct X1 {
 template<class T> 
 template<class U>
 int X1::X2<T>::fooG3(T (*fp)(U)) { return 0; } 
-X1::X2<int> x2; //expected-note 3{{in instantiation of}}
+X1::X2<int> x2; //expected-note {{in instantiation of}}
 int run1 = x2.fooG2();
 int run2 = x2.fooG3();
 } // end ns

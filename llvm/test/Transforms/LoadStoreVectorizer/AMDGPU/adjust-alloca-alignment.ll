@@ -64,7 +64,10 @@ define void @load_unknown_offset_align1_i32(i32 addrspace(1)* noalias %out, i32 
 ; ALL: alloca [128 x i32], align 16
 
 ; UNALIGNED: load <2 x i32>, <2 x i32>* %{{[0-9]+}}, align 1{{$}}
-; ALIGNED: load <2 x i32>, <2 x i32>* %{{[0-9]+}}, align 4{{$}}
+
+; FIXME: Should change alignment
+; ALIGNED: load i32
+; ALIGNED: load i32
 define void @load_alloca16_unknown_offset_align1_i32(i32 addrspace(1)* noalias %out, i32 %offset) #0 {
   %alloca = alloca [128 x i32], align 16
   %ptr0 = getelementptr inbounds [128 x i32], [128 x i32]* %alloca, i32 0, i32 %offset

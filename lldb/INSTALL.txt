@@ -7,6 +7,11 @@ On Mac OS X, in addition to using Xcode you'll need to enable code signing
 on your system to either build lldb or debug using lldb.  Please see the code
 signing documentation in docs/code-signing.txt for more detailed directions.
 
+If you are building on Mac OS X and LLVM is not present in llvm/, then LLDB
+will check it out automatically.  The files in scripts/Xcode/repos determine
+which branches of LLVM/Clang are checked out, depending on the current
+LLDB branch, according to the algorithm in scripts/Xcode/repo.py.
+
 For instructions to build LLDB on Linux, or more details about supported
 compiler versions, other dependencies, and build flags, see:
 

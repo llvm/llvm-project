@@ -72,6 +72,40 @@ def u8imm : Operand<i8> {
 def brtarget   : Operand<OtherVT>;
 
 //===----------------------------------------------------------------------===//
+// Misc. PatFrags
+//===----------------------------------------------------------------------===//
+
+class HasOneUseBinOp<SDPatternOperator op> : PatFrag<
+  (ops node:$src0, node:$src1),
+  (op $src0, $src1),
+  [{ return N->hasOneUse(); }]
+>;
+
+class HasOneUseTernaryOp<SDPatternOperator op> : PatFrag<
+  (ops node:$src0, node:$src1, node:$src2),
+  (op $src0, $src1, $src2),
+  [{ return N->hasOneUse(); }]
+>;
+
+
+let Properties = [SDNPCommutative, SDNPAssociative] in {
+def smax_oneuse : HasOneUseBinOp<smax>;
+def smin_oneuse : HasOneUseBinOp<smin>;
+def umax_oneuse : HasOneUseBinOp<umax>;
+def umin_oneuse : HasOneUseBinOp<umin>;
+def fminnum_oneuse : HasOneUseBinOp<fminnum>;
+def fmaxnum_oneuse : HasOneUseBinOp<fmaxnum>;
+def and_oneuse : HasOneUseBinOp<and>;
+def or_oneuse : HasOneUseBinOp<or>;
+def xor_oneuse : HasOneUseBinOp<xor>;
+} // Properties = [SDNPCommutative, SDNPAssociative]
+
+def sub_oneuse : HasOneUseBinOp<sub>;
+def shl_oneuse : HasOneUseBinOp<shl>;
+
+def select_oneuse : HasOneUseTernaryOp<select>;
+
+//===----------------------------------------------------------------------===//
 // PatLeafs for floating-point comparisons
 //===----------------------------------------------------------------------===//
 
@@ -155,22 +189,6 @@ def COND_NULL : PatLeaf <
   [{(void)N; return false;}]
 >;
 
-
-//===----------------------------------------------------------------------===//
-// Misc. PatFrags
-//===----------------------------------------------------------------------===//
-
-class HasOneUseBinOp<SDPatternOperator op> : PatFrag<
-  (ops node:$src0, node:$src1),
-  (op $src0, $src1),
-  [{ return N->hasOneUse(); }]
->;
-
-class HasOneUseTernaryOp<SDPatternOperator op> : PatFrag<
-  (ops node:$src0, node:$src1, node:$src2),
-  (op $src0, $src1, $src2),
-  [{ return N->hasOneUse(); }]
->;
 
 //===----------------------------------------------------------------------===//
 // Load/Store Pattern Fragments
@@ -608,10 +626,22 @@ def IMMPopCount : SDNodeXForm<imm, [{
                                    MVT::i32);
 }]>;
 
-class BFEPattern <Instruction BFE, Instruction MOV> : Pat <
-  (i32 (and (i32 (srl i32:$src, i32:$rshift)), IMMZeroBasedBitfieldMask:$mask)),
-  (BFE $src, $rshift, (MOV (i32 (IMMPopCount $mask))))
->;
+multiclass BFEPattern <Instruction UBFE, Instruction SBFE, Instruction MOV> {
+  def : Pat <
+    (i32 (and (i32 (srl i32:$src, i32:$rshift)), IMMZeroBasedBitfieldMask:$mask)),
+    (UBFE $src, $rshift, (MOV (i32 (IMMPopCount $mask))))
+  >;
+
+  def : Pat <
+    (srl (shl_oneuse i32:$src, (sub 32, i32:$width)), (sub 32, i32:$width)),
+    (UBFE $src, (i32 0), $width)
+  >;
+
+  def : Pat <
+    (sra (shl_oneuse i32:$src, (sub 32, i32:$width)), (sub 32, i32:$width)),
+    (SBFE $src, (i32 0), $width)
+  >;
+}
 
 // rotr pattern
 class ROTRPattern <Instruction BIT_ALIGN> : Pat <
@@ -629,22 +659,6 @@ class IntMed3Pat<Instruction med3Inst,
        (min_oneuse (max_oneuse i32:$src0, i32:$src1), i32:$src2)),
   (med3Inst $src0, $src1, $src2)
 >;
-
-let Properties = [SDNPCommutative, SDNPAssociative] in {
-def smax_oneuse : HasOneUseBinOp<smax>;
-def smin_oneuse : HasOneUseBinOp<smin>;
-def umax_oneuse : HasOneUseBinOp<umax>;
-def umin_oneuse : HasOneUseBinOp<umin>;
-def fminnum_oneuse : HasOneUseBinOp<fminnum>;
-def fmaxnum_oneuse : HasOneUseBinOp<fmaxnum>;
-def and_oneuse : HasOneUseBinOp<and>;
-def or_oneuse : HasOneUseBinOp<or>;
-def xor_oneuse : HasOneUseBinOp<xor>;
-} // Properties = [SDNPCommutative, SDNPAssociative]
-
-def sub_oneuse : HasOneUseBinOp<sub>;
-
-def select_oneuse : HasOneUseTernaryOp<select>;
 
 // Special conversion patterns
 

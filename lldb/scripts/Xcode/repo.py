@@ -1,6 +1,7 @@
 import json
 import os
 import re
+import shutil
 import subprocess
 
 def identifier():
@@ -23,11 +24,19 @@ def find(identifier):
 	dir = os.path.dirname(os.path.realpath(__file__))
 	repos_dir = os.path.join(dir, "repos")
 	json_regex = re.compile(r"^.*.json$")
-	override_path = os.path.join(repos_dir, "OVERRIDE.json")
+	override_path = os.path.join(repos_dir, "OVERRIDE")
 	if os.path.isfile(override_path):
 		override_set = json.load(open(override_path))
 		return override_set["repos"]
-	for set in [json.load(open(os.path.join(repos_dir, f))) for f in filter(json_regex.match, os.listdir(repos_dir))]:
-		if re.match(set["regexp"], identifier):
+	fallback_path = os.path.join(repos_dir, "FALLBACK")
+	for path in [os.path.join(repos_dir, f) for f in filter(json_regex.match, os.listdir(repos_dir))]:
+		fd = open(path)
+		set = json.load(fd)
+		fd.close()
+		if any(re.match(set_regex, identifier) for set_regex in set["regexs"]):
+			shutil.copyfile(path, fallback_path)
 			return set["repos"]
-	return None
+	if os.path.isfile(fallback_path):
+		fallback_set = json.load(open(fallback_path))
+		return fallback_set["repos"]
+	sys.exit("Couldn't find a branch configuration for " + identifier + " and there was no " + fallback_path)

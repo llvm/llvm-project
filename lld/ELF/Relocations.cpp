@@ -91,11 +91,10 @@ static bool isPreemptible(const SymbolBody &Body, uint32_t Type) {
 // handling in to the separate function we can simplify the code and do not
 // pollute `handleTlsRelocation` by ARM and MIPS `ifs` statements.
 template <class ELFT, class GOT>
-static unsigned handleNoRelaxTlsRelocation(GOT *Got, uint32_t Type,
-                                           SymbolBody &Body,
-                                           InputSectionBase<ELFT> &C,
-                                           typename ELFT::uint Offset,
-                                           int64_t Addend, RelExpr Expr) {
+static unsigned
+handleNoRelaxTlsRelocation(GOT *Got, uint32_t Type, SymbolBody &Body,
+                           InputSectionBase &C, typename ELFT::uint Offset,
+                           int64_t Addend, RelExpr Expr) {
   typedef typename ELFT::uint uintX_t;
   auto addModuleReloc = [](SymbolBody &Body, GOT *Got, uintX_t Off, bool LD) {
     // The Dynamic TLS Module Index Relocation can be statically resolved to 1
@@ -136,7 +135,7 @@ static unsigned handleNoRelaxTlsRelocation(GOT *Got, uint32_t Type,
 // Returns the number of relocations processed.
 template <class ELFT>
 static unsigned
-handleTlsRelocation(uint32_t Type, SymbolBody &Body, InputSectionBase<ELFT> &C,
+handleTlsRelocation(uint32_t Type, SymbolBody &Body, InputSectionBase &C,
                     typename ELFT::uint Offset, int64_t Addend, RelExpr Expr) {
   if (!(C.Flags & SHF_ALLOC))
     return 0;
@@ -314,10 +313,9 @@ static bool isRelExpr(RelExpr Expr) {
 }
 
 template <class ELFT>
-static bool isStaticLinkTimeConstant(RelExpr E, uint32_t Type,
-                                     const SymbolBody &Body,
-                                     InputSectionBase<ELFT> &S,
-                                     typename ELFT::uint RelOff) {
+static bool
+isStaticLinkTimeConstant(RelExpr E, uint32_t Type, const SymbolBody &Body,
+                         InputSectionBase &S, typename ELFT::uint RelOff) {
   // These expressions always compute a constant
   if (isRelExprOneOf<R_SIZE, R_GOT_FROM_END, R_GOT_OFF, R_MIPS_GOT_LOCAL_PAGE,
                      R_MIPS_GOT_OFF, R_MIPS_GOT_OFF32, R_MIPS_TLSGD,
@@ -356,7 +354,7 @@ static bool isStaticLinkTimeConstant(RelExpr E, uint32_t Type,
       return true;
     if (&Body == ElfSym<ELFT>::MipsGpDisp)
       return true;
-    error(S.getLocation(RelOff) + ": relocation " + toString(Type) +
+    error(S.getLocation<ELFT>(RelOff) + ": relocation " + toString(Type) +
           " cannot refer to absolute symbol '" + toString(Body) +
           "' defined in " + toString(Body.File));
     return true;
@@ -509,7 +507,7 @@ template <class ELFT> static void addCopyRelSymbol(SharedSymbol<ELFT> *SS) {
 template <class ELFT>
 static RelExpr adjustExpr(const elf::ObjectFile<ELFT> &File, SymbolBody &Body,
                           bool IsWrite, RelExpr Expr, uint32_t Type,
-                          const uint8_t *Data, InputSectionBase<ELFT> &S,
+                          const uint8_t *Data, InputSectionBase &S,
                           typename ELFT::uint RelOff) {
   bool Preemptible = isPreemptible(Body, Type);
   if (Body.isGnuIFunc()) {
@@ -528,7 +526,7 @@ static RelExpr adjustExpr(const elf::ObjectFile<ELFT> &File, SymbolBody &Body,
   // only memory. We can hack around it if we are producing an executable and
   // the refered symbol can be preemepted to refer to the executable.
   if (Config->Shared || (Config->pic() && !isRelExpr(Expr))) {
-    error(S.getLocation(RelOff) + ": can't create dynamic relocation " +
+    error(S.getLocation<ELFT>(RelOff) + ": can't create dynamic relocation " +
           toString(Type) + " against " +
           (Body.getName().empty() ? "local symbol in readonly segment"
                                   : "symbol '" + toString(Body) + "'") +
@@ -536,8 +534,8 @@ static RelExpr adjustExpr(const elf::ObjectFile<ELFT> &File, SymbolBody &Body,
     return Expr;
   }
   if (Body.getVisibility() != STV_DEFAULT) {
-    error(S.getLocation(RelOff) + ": cannot preempt symbol '" + toString(Body) +
-          "' defined in " + toString(Body.File));
+    error(S.getLocation<ELFT>(RelOff) + ": cannot preempt symbol '" +
+          toString(Body) + "' defined in " + toString(Body.File));
     return Expr;
   }
   if (Body.isObject()) {
@@ -545,8 +543,8 @@ static RelExpr adjustExpr(const elf::ObjectFile<ELFT> &File, SymbolBody &Body,
     auto *B = cast<SharedSymbol<ELFT>>(&Body);
     if (!B->NeedsCopy) {
       if (Config->ZNocopyreloc)
-        error(S.getLocation(RelOff) + ": unresolvable relocation " + toString(Type)
-              + " against symbol '" + toString(*B) +
+        error(S.getLocation<ELFT>(RelOff) + ": unresolvable relocation " +
+              toString(Type) + " against symbol '" + toString(*B) +
               "'; recompile with -fPIC or remove '-z nocopyreloc'");
 
       addCopyRelSymbol(B);
@@ -610,7 +608,7 @@ static int64_t computeAddend(const elf::ObjectFile<ELFT> &File,
 }
 
 template <class ELFT>
-static void reportUndefined(SymbolBody &Sym, InputSectionBase<ELFT> &S,
+static void reportUndefined(SymbolBody &Sym, InputSectionBase &S,
                             typename ELFT::uint Offset) {
   bool CanBeExternal = Sym.symbol()->computeBinding() != STB_LOCAL &&
                        Sym.getVisibility() == STV_DEFAULT;
@@ -618,8 +616,8 @@ static void reportUndefined(SymbolBody &Sym, InputSectionBase<ELFT> &S,
       (Config->UnresolvedSymbols == UnresolvedPolicy::Ignore && CanBeExternal))
     return;
 
-  std::string Msg =
-      S.getLocation(Offset) + ": undefined symbol '" + toString(Sym) + "'";
+  std::string Msg = S.getLocation<ELFT>(Offset) + ": undefined symbol '" +
+                    toString(Sym) + "'";
 
   if (Config->UnresolvedSymbols == UnresolvedPolicy::WarnAll ||
       (Config->UnresolvedSymbols == UnresolvedPolicy::Warn && CanBeExternal))
@@ -658,7 +656,7 @@ mergeMipsN32RelTypes(uint32_t Type, uint32_t Offset, RelTy *I, RelTy *E) {
 // complicates things for the dynamic linker and means we would have to reserve
 // space for the extra PT_LOAD even if we end up not using it.
 template <class ELFT, class RelTy>
-static void scanRelocs(InputSectionBase<ELFT> &C, ArrayRef<RelTy> Rels) {
+static void scanRelocs(InputSectionBase &C, ArrayRef<RelTy> Rels) {
   typedef typename ELFT::uint uintX_t;
 
   bool IsWrite = C.Flags & SHF_WRITE;
@@ -667,7 +665,7 @@ static void scanRelocs(InputSectionBase<ELFT> &C, ArrayRef<RelTy> Rels) {
     In<ELFT>::RelaDyn->addReloc(Reloc);
   };
 
-  const elf::ObjectFile<ELFT> *File = C.getFile();
+  const elf::ObjectFile<ELFT> *File = C.getFile<ELFT>();
   ArrayRef<uint8_t> SectionData = C.Data;
   const uint8_t *Buf = SectionData.begin();
 
@@ -693,7 +691,7 @@ static void scanRelocs(InputSectionBase<ELFT> &C, ArrayRef<RelTy> Rels) {
     // We only report undefined symbols if they are referenced somewhere in the
     // code.
     if (!Body.isLocal() && Body.isUndefined() && !Body.symbol()->isWeak())
-      reportUndefined(Body, C, RI.r_offset);
+      reportUndefined<ELFT>(Body, C, RI.r_offset);
 
     RelExpr Expr = Target->getRelExpr(Type, Body);
     bool Preemptible = isPreemptible(Body, Type);
@@ -762,7 +760,7 @@ static void scanRelocs(InputSectionBase<ELFT> &C, ArrayRef<RelTy> Rels) {
       // We don't know anything about the finaly symbol. Just ask the dynamic
       // linker to handle the relocation for us.
       if (!Target->isPicRel(Type))
-        error(C.getLocation(Offset) + ": relocation " + toString(Type) +
+        error(C.getLocation<ELFT>(Offset) + ": relocation " + toString(Type) +
               " cannot be used against shared object; recompile with -fPIC.");
       AddDyn({Target->getDynRel(Type), &C, Offset, false, &Body, Addend});
 
@@ -853,11 +851,11 @@ static void scanRelocs(InputSectionBase<ELFT> &C, ArrayRef<RelTy> Rels) {
   }
 }
 
-template <class ELFT> void scanRelocations(InputSectionBase<ELFT> &S) {
+template <class ELFT> void scanRelocations(InputSectionBase &S) {
   if (S.AreRelocsRela)
-    scanRelocs(S, S.relas());
+    scanRelocs<ELFT>(S, S.relas<ELFT>());
   else
-    scanRelocs(S, S.rels());
+    scanRelocs<ELFT>(S, S.rels<ELFT>());
 }
 
 // Insert the Thunks for OutputSection OS into their designated place
@@ -940,7 +938,7 @@ void createThunks(ArrayRef<OutputSectionBase *> OutputSections) {
     if (TS == nullptr) {
       uint32_t Off = 0;
       for (auto *IS : OS->Sections) {
-        Off = IS->OutSecOff + IS->getSize();
+        Off = IS->OutSecOff + IS->template getSize<ELFT>();
         if ((IS->Flags & SHF_EXECINSTR) == 0)
           break;
       }
@@ -964,7 +962,8 @@ void createThunks(ArrayRef<OutputSectionBase *> OutputSections) {
     for (InputSection<ELFT> *IS : OS->Sections) {
       for (Relocation &Rel : IS->Relocations) {
         SymbolBody &Body = *Rel.Sym;
-        if (Target->needsThunk(Rel.Expr, Rel.Type, IS->getFile(), Body)) {
+        if (Target->needsThunk(Rel.Expr, Rel.Type, IS->template getFile<ELFT>(),
+                               Body)) {
           Thunk<ELFT> *T;
           bool IsNew;
           std::tie(T, IsNew) = GetThunk(Body, Rel.Type);
@@ -990,10 +989,10 @@ void createThunks(ArrayRef<OutputSectionBase *> OutputSections) {
     mergeThunks<ELFT>(KV.first, KV.second);
 }
 
-template void scanRelocations<ELF32LE>(InputSectionBase<ELF32LE> &);
-template void scanRelocations<ELF32BE>(InputSectionBase<ELF32BE> &);
-template void scanRelocations<ELF64LE>(InputSectionBase<ELF64LE> &);
-template void scanRelocations<ELF64BE>(InputSectionBase<ELF64BE> &);
+template void scanRelocations<ELF32LE>(InputSectionBase &);
+template void scanRelocations<ELF32BE>(InputSectionBase &);
+template void scanRelocations<ELF64LE>(InputSectionBase &);
+template void scanRelocations<ELF64BE>(InputSectionBase &);
 
 template void createThunks<ELF32LE>(ArrayRef<OutputSectionBase *>);
 template void createThunks<ELF32BE>(ArrayRef<OutputSectionBase *>);

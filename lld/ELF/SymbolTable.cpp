@@ -361,28 +361,26 @@ static void reportDuplicate(SymbolBody *Existing, InputFile *NewFile) {
 }
 
 template <class ELFT>
-static void reportDuplicate(SymbolBody *Existing,
-                            InputSectionBase<ELFT> *ErrSec,
+static void reportDuplicate(SymbolBody *Existing, InputSectionBase *ErrSec,
                             typename ELFT::uint ErrOffset) {
   DefinedRegular<ELFT> *D = dyn_cast<DefinedRegular<ELFT>>(Existing);
   if (!D || !D->Section || !ErrSec) {
-    reportDuplicate(Existing, ErrSec ? ErrSec->getFile() : nullptr);
+    reportDuplicate(Existing, ErrSec ? ErrSec->getFile<ELFT>() : nullptr);
     return;
   }
 
-  std::string OldLoc = D->Section->getLocation(D->Value);
-  std::string NewLoc = ErrSec->getLocation(ErrOffset);
+  std::string OldLoc = D->Section->template getLocation<ELFT>(D->Value);
+  std::string NewLoc = ErrSec->getLocation<ELFT>(ErrOffset);
 
   print(NewLoc + ": duplicate symbol '" + toString(*Existing) + "'");
   print(OldLoc + ": previous definition was here");
 }
 
 template <typename ELFT>
-Symbol *SymbolTable<ELFT>::addRegular(StringRef Name, uint8_t StOther,
-                                      uint8_t Type, uintX_t Value, uintX_t Size,
-                                      uint8_t Binding,
-                                      InputSectionBase<ELFT> *Section,
-                                      InputFile *File) {
+Symbol *
+SymbolTable<ELFT>::addRegular(StringRef Name, uint8_t StOther, uint8_t Type,
+                              uintX_t Value, uintX_t Size, uint8_t Binding,
+                              InputSectionBase *Section, InputFile *File) {
   Symbol *S;
   bool WasInserted;
   std::tie(S, WasInserted) = insert(Name, Type, getVisibility(StOther),
@@ -393,7 +391,7 @@ Symbol *SymbolTable<ELFT>::addRegular(StringRef Name, uint8_t StOther,
     replaceBody<DefinedRegular<ELFT>>(S, Name, /*IsLocal=*/false, StOther, Type,
                                       Value, Size, Section, File);
   else if (Cmp == 0)
-    reportDuplicate(S->body(), Section, Value);
+    reportDuplicate<ELFT>(S->body(), Section, Value);
   return S;
 }
 

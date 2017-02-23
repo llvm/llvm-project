@@ -93,7 +93,7 @@ template <class ELFT> void elf::ObjectFile<ELFT>::initializeDwarfLine() {
 // Returns source line information for a given offset
 // using DWARF debug info.
 template <class ELFT>
-std::string elf::ObjectFile<ELFT>::getLineInfo(InputSectionBase<ELFT> *S,
+std::string elf::ObjectFile<ELFT>::getLineInfo(InputSectionBase *S,
                                                uintX_t Offset) {
   if (!DwarfLine)
     initializeDwarfLine();
@@ -327,12 +327,11 @@ void elf::ObjectFile<ELFT>::initializeSections(
 }
 
 template <class ELFT>
-InputSectionBase<ELFT> *
-elf::ObjectFile<ELFT>::getRelocTarget(const Elf_Shdr &Sec) {
+InputSectionBase *elf::ObjectFile<ELFT>::getRelocTarget(const Elf_Shdr &Sec) {
   uint32_t Idx = Sec.sh_info;
   if (Idx >= Sections.size())
     fatal(toString(this) + ": invalid relocated section index: " + Twine(Idx));
-  InputSectionBase<ELFT> *Target = Sections[Idx];
+  InputSectionBase *Target = Sections[Idx];
 
   // Strictly speaking, a relocation section must be included in the
   // group of the section it relocates. However, LLVM 3.3 and earlier
@@ -346,7 +345,7 @@ elf::ObjectFile<ELFT>::getRelocTarget(const Elf_Shdr &Sec) {
 }
 
 template <class ELFT>
-InputSectionBase<ELFT> *
+InputSectionBase *
 elf::ObjectFile<ELFT>::createInputSection(const Elf_Shdr &Sec,
                                           StringRef SectionStringTable) {
   StringRef Name =
@@ -369,7 +368,7 @@ elf::ObjectFile<ELFT>::createInputSection(const Elf_Shdr &Sec,
     // section with it. Target can be discarded, for example
     // if it is a duplicated member of SHT_GROUP section, we
     // do not create or proccess relocatable sections then.
-    InputSectionBase<ELFT> *Target = getRelocTarget(Sec);
+    InputSectionBase *Target = getRelocTarget(Sec);
     if (!Target)
       return nullptr;
 
@@ -456,12 +455,11 @@ template <class ELFT> void elf::ObjectFile<ELFT>::initializeSymbols() {
 }
 
 template <class ELFT>
-InputSectionBase<ELFT> *
-elf::ObjectFile<ELFT>::getSection(const Elf_Sym &Sym) const {
+InputSectionBase *elf::ObjectFile<ELFT>::getSection(const Elf_Sym &Sym) const {
   uint32_t Index = this->getSectionIndex(Sym);
   if (Index >= Sections.size())
     fatal(toString(this) + ": invalid section index: " + Twine(Index));
-  InputSectionBase<ELFT> *S = Sections[Index];
+  InputSectionBase *S = Sections[Index];
 
   // We found that GNU assembler 2.17.50 [FreeBSD] 2007-07-03 could
   // generate broken objects. STT_SECTION/STT_NOTYPE symbols can be
@@ -483,7 +481,7 @@ elf::ObjectFile<ELFT>::getSection(const Elf_Sym &Sym) const {
 template <class ELFT>
 SymbolBody *elf::ObjectFile<ELFT>::createSymbolBody(const Elf_Sym *Sym) {
   int Binding = Sym->getBinding();
-  InputSectionBase<ELFT> *Sec = getSection(*Sym);
+  InputSectionBase *Sec = getSection(*Sym);
 
   uint8_t StOther = Sym->st_other;
   uint8_t Type = Sym->getType();

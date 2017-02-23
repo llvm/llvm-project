@@ -60,14 +60,14 @@ static void or32le(uint8_t *P, int32_t V) { write32le(P, read32le(P) | V); }
 static void or32be(uint8_t *P, int32_t V) { write32be(P, read32be(P) | V); }
 
 template <class ELFT> static std::string getErrorLoc(uint8_t *Loc) {
-  for (InputSectionData *D : Symtab<ELFT>::X->Sections) {
+  for (InputSectionBase *D : Symtab<ELFT>::X->Sections) {
     auto *IS = dyn_cast_or_null<InputSection<ELFT>>(D);
     if (!IS || !IS->OutSec)
       continue;
 
     uint8_t *ISLoc = cast<OutputSection<ELFT>>(IS->OutSec)->Loc + IS->OutSecOff;
-    if (ISLoc <= Loc && Loc < ISLoc + IS->getSize())
-      return IS->getLocation(Loc - ISLoc) + ": ";
+    if (ISLoc <= Loc && Loc < ISLoc + IS->template getSize<ELFT>())
+      return IS->template getLocation<ELFT>(Loc - ISLoc) + ": ";
   }
   return "";
 }
@@ -226,8 +226,8 @@ public:
   void writePltHeader(uint8_t *Buf) const override;
   void writePlt(uint8_t *Buf, uint64_t GotEntryAddr, uint64_t PltEntryAddr,
                 int32_t Index, unsigned RelOff) const override;
-  void addPltSymbols(InputSectionData *IS, uint64_t Off) const override;
-  void addPltHeaderSymbols(InputSectionData *ISD) const override;
+  void addPltSymbols(InputSectionBase *IS, uint64_t Off) const override;
+  void addPltHeaderSymbols(InputSectionBase *ISD) const override;
   bool needsThunk(RelExpr Expr, uint32_t RelocType, const InputFile *File,
                   const SymbolBody &S) const override;
   void relocateOne(uint8_t *Loc, uint32_t Type, uint64_t Val) const override;
@@ -1758,10 +1758,10 @@ void ARMTargetInfo::writePltHeader(uint8_t *Buf) const {
   write32le(Buf + 16, GotPlt - L1 - 8);
 }
 
-void ARMTargetInfo::addPltHeaderSymbols(InputSectionData *ISD) const {
+void ARMTargetInfo::addPltHeaderSymbols(InputSectionBase *ISD) const {
   auto *IS = cast<InputSection<ELF32LE>>(ISD);
-  addSyntheticLocal("$a", STT_NOTYPE, 0, 0, IS);
-  addSyntheticLocal("$d", STT_NOTYPE, 16, 0, IS);
+  addSyntheticLocal<ELF32LE>("$a", STT_NOTYPE, 0, 0, IS);
+  addSyntheticLocal<ELF32LE>("$d", STT_NOTYPE, 16, 0, IS);
 }
 
 void ARMTargetInfo::writePlt(uint8_t *Buf, uint64_t GotEntryAddr,
@@ -1781,10 +1781,10 @@ void ARMTargetInfo::writePlt(uint8_t *Buf, uint64_t GotEntryAddr,
   write32le(Buf + 12, GotEntryAddr - L1 - 8);
 }
 
-void ARMTargetInfo::addPltSymbols(InputSectionData *ISD, uint64_t Off) const {
+void ARMTargetInfo::addPltSymbols(InputSectionBase *ISD, uint64_t Off) const {
   auto *IS = cast<InputSection<ELF32LE>>(ISD);
-  addSyntheticLocal("$a", STT_NOTYPE, Off, 0, IS);
-  addSyntheticLocal("$d", STT_NOTYPE, Off + 12, 0, IS);
+  addSyntheticLocal<ELF32LE>("$a", STT_NOTYPE, Off, 0, IS);
+  addSyntheticLocal<ELF32LE>("$d", STT_NOTYPE, Off + 12, 0, IS);
 }
 
 bool ARMTargetInfo::needsThunk(RelExpr Expr, uint32_t RelocType,

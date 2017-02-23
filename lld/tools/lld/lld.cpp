@@ -108,6 +108,6 @@ int main(int Argc, const char **Argv) {
     return !mach_o::link(Args);
   default:
     die("lld is a generic driver.\n"
-        "Invoke ld.lld (Unix), ld (Mac) or lld-link (Windows) instead.");
+        "Invoke ld.lld (Unix), ld (macOS) or lld-link (Windows) instead.");
   }
 }

@@ -3959,7 +3959,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
 
   // If the type itself could have nullability but does not, infer pointer
   // nullability and perform consistency checking.
-  if (S.ActiveTemplateInstantiations.empty()) {
+  if (S.CodeSynthesisContexts.empty()) {
     if (T->canHaveNullability() && !T->getNullability(S.Context)) {
       if (isVaList(T)) {
         // Record that we've seen a pointer, but do nothing else.
@@ -7563,7 +7563,7 @@ QualType Sema::BuildDecltypeType(Expr *E, SourceLocation Loc,
   if (ER.isInvalid()) return QualType();
   E = ER.get();
 
-  if (AsUnevaluated && ActiveTemplateInstantiations.empty() &&
+  if (AsUnevaluated && CodeSynthesisContexts.empty() &&
       E->HasSideEffects(Context, false)) {
     // The expression operand for decltype is in an unevaluated expression
     // context, so side effects could result in unintended consequences.

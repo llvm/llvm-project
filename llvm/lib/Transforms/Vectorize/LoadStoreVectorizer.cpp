@@ -432,9 +432,12 @@ Vectorizer::splitOddVectorElts(ArrayRef<Instruction *> Chain,
   unsigned ElementSizeBytes = ElementSizeBits / 8;
   unsigned SizeBytes = ElementSizeBytes * Chain.size();
   unsigned NumLeft = (SizeBytes - (SizeBytes % 4)) / ElementSizeBytes;
-  if (NumLeft == Chain.size())
-    --NumLeft;
-  else if (NumLeft == 0)
+  if (NumLeft == Chain.size()) {
+    if ((NumLeft & 1) == 0)
+      NumLeft /= 2; // Split even in half
+    else
+      --NumLeft;    // Split off last element
+  } else if (NumLeft == 0)
     NumLeft = 1;
   return std::make_pair(Chain.slice(0, NumLeft), Chain.slice(NumLeft));
 }

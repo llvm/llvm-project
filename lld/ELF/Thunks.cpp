@@ -127,10 +127,10 @@ void ARMToThumbV7ABSLongThunk<ELFT>::writeTo(uint8_t *Buf,
 
 template <class ELFT>
 void ARMToThumbV7ABSLongThunk<ELFT>::addSymbols(ThunkSection<ELFT> &IS) {
-  this->ThunkSym = addSyntheticLocal(
+  this->ThunkSym = addSyntheticLocal<ELFT>(
       Saver.save("__ARMToThumbv7ABSLongThunk_" + this->Destination.getName()),
       STT_FUNC, this->Offset, size(), &IS);
-  addSyntheticLocal("$a", STT_NOTYPE, this->Offset, 0, &IS);
+  addSyntheticLocal<ELFT>("$a", STT_NOTYPE, this->Offset, 0, &IS);
 }
 
 template <class ELFT>
@@ -149,10 +149,10 @@ void ThumbToARMV7ABSLongThunk<ELFT>::writeTo(uint8_t *Buf,
 
 template <class ELFT>
 void ThumbToARMV7ABSLongThunk<ELFT>::addSymbols(ThunkSection<ELFT> &IS) {
-  this->ThunkSym = addSyntheticLocal(
+  this->ThunkSym = addSyntheticLocal<ELFT>(
       Saver.save("__ThumbToARMv7ABSLongThunk_" + this->Destination.getName()),
       STT_FUNC, this->Offset, size(), &IS);
-  addSyntheticLocal("$t", STT_NOTYPE, this->Offset, 0, &IS);
+  addSyntheticLocal<ELFT>("$t", STT_NOTYPE, this->Offset, 0, &IS);
 }
 
 template <class ELFT>
@@ -173,10 +173,10 @@ void ARMToThumbV7PILongThunk<ELFT>::writeTo(uint8_t *Buf,
 
 template <class ELFT>
 void ARMToThumbV7PILongThunk<ELFT>::addSymbols(ThunkSection<ELFT> &IS) {
-  this->ThunkSym = addSyntheticLocal(
+  this->ThunkSym = addSyntheticLocal<ELFT>(
       Saver.save("__ARMToThumbV7PILongThunk_" + this->Destination.getName()),
       STT_FUNC, this->Offset, size(), &IS);
-  addSyntheticLocal("$a", STT_NOTYPE, this->Offset, 0, &IS);
+  addSyntheticLocal<ELFT>("$a", STT_NOTYPE, this->Offset, 0, &IS);
 }
 
 template <class ELFT>
@@ -197,10 +197,10 @@ void ThumbToARMV7PILongThunk<ELFT>::writeTo(uint8_t *Buf,
 
 template <class ELFT>
 void ThumbToARMV7PILongThunk<ELFT>::addSymbols(ThunkSection<ELFT> &IS) {
-  this->ThunkSym = addSyntheticLocal(
+  this->ThunkSym = addSyntheticLocal<ELFT>(
       Saver.save("__ThumbToARMV7PILongThunk_" + this->Destination.getName()),
       STT_FUNC, this->Offset, size(), &IS);
-  addSyntheticLocal("$t", STT_NOTYPE, this->Offset, 0, &IS);
+  addSyntheticLocal<ELFT>("$t", STT_NOTYPE, this->Offset, 0, &IS);
 }
 
 // Write MIPS LA25 thunk code to call PIC function from the non-PIC one.
@@ -218,7 +218,7 @@ void MipsThunk<ELFT>::writeTo(uint8_t *Buf, ThunkSection<ELFT> &) const {
 }
 
 template <class ELFT> void MipsThunk<ELFT>::addSymbols(ThunkSection<ELFT> &IS) {
-  this->ThunkSym = addSyntheticLocal(
+  this->ThunkSym = addSyntheticLocal<ELFT>(
       Saver.save("__LA25Thunk_" + this->Destination.getName()), STT_FUNC,
       this->Offset, size(), &IS);
 }

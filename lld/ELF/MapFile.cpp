@@ -66,17 +66,17 @@ static void writeInputSection(raw_fd_ostream &OS, const InputSection<ELFT> *IS,
   int Width = ELFT::Is64Bits ? 16 : 8;
   StringRef Name = IS->Name;
   if (Name != PrevName) {
-    writeInSecLine(OS, Width, IS->OutSec->Addr + IS->OutSecOff, IS->getSize(),
-                   IS->Alignment, Name);
+    writeInSecLine(OS, Width, IS->OutSec->Addr + IS->OutSecOff,
+                   IS->template getSize<ELFT>(), IS->Alignment, Name);
     OS << '\n';
     PrevName = Name;
   }
 
-  elf::ObjectFile<ELFT> *File = IS->getFile();
+  elf::ObjectFile<ELFT> *File = IS->template getFile<ELFT>();
   if (!File)
     return;
-  writeFileLine(OS, Width, IS->OutSec->Addr + IS->OutSecOff, IS->getSize(),
-                IS->Alignment, toString(File));
+  writeFileLine(OS, Width, IS->OutSec->Addr + IS->OutSecOff,
+                IS->template getSize<ELFT>(), IS->Alignment, toString(File));
   OS << '\n';
 
   for (SymbolBody *Sym : File->getSymbols()) {
@@ -107,7 +107,7 @@ static void writeMapFile2(raw_fd_ostream &OS,
     OS << '\n';
 
     StringRef PrevName = "";
-    Sec->forEachInputSection([&](InputSectionData *S) {
+    Sec->forEachInputSection([&](InputSectionBase *S) {
       if (const auto *IS = dyn_cast<InputSection<ELFT>>(S))
         writeInputSection(OS, IS, PrevName);
     });

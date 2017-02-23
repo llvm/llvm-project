@@ -6837,10 +6837,12 @@ public:
                                bool RelativeToPrimary = false,
                                const FunctionDecl *Pattern = nullptr);
 
-  /// \brief A template instantiation that is currently in progress.
-  struct ActiveTemplateInstantiation {
+  /// A context in which code is being synthesized (where a source location
+  /// alone is not sufficient to identify the context). This covers template
+  /// instantiation and various forms of implicitly-generated functions.
+  struct CodeSynthesisContext {
     /// \brief The kind of template instantiation we are performing
-    enum InstantiationKind {
+    enum SynthesisKind {
       /// We are instantiating a template declaration. The entity is
       /// the declaration we're instantiating (e.g., a CXXRecordDecl).
       TemplateInstantiation,
@@ -6913,56 +6915,20 @@ public:
     /// template instantiation.
     SourceRange InstantiationRange;
 
-    ActiveTemplateInstantiation()
+    CodeSynthesisContext()
       : Kind(TemplateInstantiation), Template(nullptr), Entity(nullptr),
         TemplateArgs(nullptr), NumTemplateArgs(0), DeductionInfo(nullptr) {}
 
     /// \brief Determines whether this template is an actual instantiation
     /// that should be counted toward the maximum instantiation depth.
     bool isInstantiationRecord() const;
-
-    friend bool operator==(const ActiveTemplateInstantiation &X,
-                           const ActiveTemplateInstantiation &Y) {
-      if (X.Kind != Y.Kind)
-        return false;
-
-      if (X.Entity != Y.Entity)
-        return false;
-
-      switch (X.Kind) {
-      case TemplateInstantiation:
-      case ExceptionSpecInstantiation:
-        return true;
-
-      case PriorTemplateArgumentSubstitution:
-      case DefaultTemplateArgumentChecking:
-        return X.Template == Y.Template && X.TemplateArgs == Y.TemplateArgs;
-
-      case DefaultTemplateArgumentInstantiation:
-      case ExplicitTemplateArgumentSubstitution:
-      case DeducedTemplateArgumentSubstitution:
-      case DefaultFunctionArgumentInstantiation:
-        return X.TemplateArgs == Y.TemplateArgs;
-
-      }
-
-      llvm_unreachable("Invalid InstantiationKind!");
-    }
-
-    friend bool operator!=(const ActiveTemplateInstantiation &X,
-                           const ActiveTemplateInstantiation &Y) {
-      return !(X == Y);
-    }
   };
 
-  /// \brief List of active template instantiations.
+  /// \brief List of active code synthesis contexts.
   ///
-  /// This vector is treated as a stack. As one template instantiation
-  /// requires another template instantiation, additional
-  /// instantiations are pushed onto the stack up to a
-  /// user-configurable limit LangOptions::InstantiationDepth.
-  SmallVector<ActiveTemplateInstantiation, 16>
-    ActiveTemplateInstantiations;
+  /// This vector is treated as a stack. As synthesis of one entity requires
+  /// synthesis of another, additional contexts are pushed onto the stack.
+  SmallVector<CodeSynthesisContext, 16> CodeSynthesisContexts;
 
   /// Specializations whose definitions are currently being instantiated.
   llvm::DenseSet<std::pair<Decl *, unsigned>> InstantiatingSpecializations;
@@ -6973,7 +6939,7 @@ public:
 
   /// \brief Extra modules inspected when performing a lookup during a template
   /// instantiation. Computed lazily.
-  SmallVector<Module*, 16> ActiveTemplateInstantiationLookupModules;
+  SmallVector<Module*, 16> CodeSynthesisContextLookupModules;
 
   /// \brief Cache of additional modules that should be used for name lookup
   /// within the current template instantiation. Computed lazily; use
@@ -6996,19 +6962,22 @@ public:
   /// of a template instantiation or template argument deduction.
   bool InNonInstantiationSFINAEContext;
 
-  /// \brief The number of ActiveTemplateInstantiation entries in
-  /// \c ActiveTemplateInstantiations that are not actual instantiations and,
-  /// therefore, should not be counted as part of the instantiation depth.
+  /// \brief The number of \p CodeSynthesisContexts that are not template
+  /// instantiations and, therefore, should not be counted as part of the
+  /// instantiation depth.
+  ///
+  /// When the instantiation depth reaches the user-configurable limit
+  /// \p LangOptions::InstantiationDepth we will abort instantiation.
+  // FIXME: Should we have a similar limit for other forms of synthesis?
   unsigned NonInstantiationEntries;
 
-  /// \brief The last template from which a template instantiation
+  /// \brief The depth of the context stack at the point when the most recent
   /// error or warning was produced.
   ///
-  /// This value is used to suppress printing of redundant template
-  /// instantiation backtraces when there are multiple errors in the
-  /// same instantiation. FIXME: Does this belong in Sema? It's tough
-  /// to implement it anywhere else.
-  ActiveTemplateInstantiation LastTemplateInstantiationErrorContext;
+  /// This value is used to suppress printing of redundant context stacks
+  /// when there are multiple errors or warnings in the same instantiation.
+  // FIXME: Does this belong in Sema? It's tough to implement it anywhere else.
+  unsigned LastEmittedCodeSynthesisContextDepth = 0;
 
   /// \brief The current index into pack expansion arguments that will be
   /// used for substitution of parameter packs.
@@ -7086,7 +7055,7 @@ public:
     InstantiatingTemplate(Sema &SemaRef, SourceLocation PointOfInstantiation,
                           FunctionTemplateDecl *FunctionTemplate,
                           ArrayRef<TemplateArgument> TemplateArgs,
-                          ActiveTemplateInstantiation::InstantiationKind Kind,
+                          CodeSynthesisContext::SynthesisKind Kind,
                           sema::TemplateDeductionInfo &DeductionInfo,
                           SourceRange InstantiationRange = SourceRange());
 
@@ -7170,7 +7139,7 @@ public:
                                  SourceRange InstantiationRange);
 
     InstantiatingTemplate(
-        Sema &SemaRef, ActiveTemplateInstantiation::InstantiationKind Kind,
+        Sema &SemaRef, CodeSynthesisContext::SynthesisKind Kind,
         SourceLocation PointOfInstantiation, SourceRange InstantiationRange,
         Decl *Entity, NamedDecl *Template = nullptr,
         ArrayRef<TemplateArgument> TemplateArgs = None,
@@ -7184,16 +7153,14 @@ public:
 
   /// Determine whether we are currently performing template instantiation.
   bool inTemplateInstantiation() const {
-    return ActiveTemplateInstantiations.size() > NonInstantiationEntries;
+    return CodeSynthesisContexts.size() > NonInstantiationEntries;
   }
 
   void PrintContextStack() {
-    if (!ActiveTemplateInstantiations.empty() &&
-        ActiveTemplateInstantiations.back() !=
-            LastTemplateInstantiationErrorContext) {
+    if (!CodeSynthesisContexts.empty() &&
+        CodeSynthesisContexts.size() != LastEmittedCodeSynthesisContextDepth) {
       PrintInstantiationStack();
-      LastTemplateInstantiationErrorContext =
-          ActiveTemplateInstantiations.back();
+      LastEmittedCodeSynthesisContextDepth = CodeSynthesisContexts.size();
     }
   }
   void PrintInstantiationStack();
