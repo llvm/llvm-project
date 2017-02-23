@@ -240,14 +240,14 @@ bool OptimizationRemark::isEnabled(StringRef PassName) {
 
 OptimizationRemarkMissed::OptimizationRemarkMissed(
     const char *PassName, StringRef RemarkName, const DiagnosticLocation &Loc,
-    Value *CodeRegion)
+    const Value *CodeRegion)
     : DiagnosticInfoIROptimization(
           DK_OptimizationRemarkMissed, DS_Remark, PassName, RemarkName,
           *cast<BasicBlock>(CodeRegion)->getParent(), Loc, CodeRegion) {}
 
 OptimizationRemarkMissed::OptimizationRemarkMissed(const char *PassName,
                                                    StringRef RemarkName,
-                                                   Instruction *Inst)
+                                                   const Instruction *Inst)
     : DiagnosticInfoIROptimization(DK_OptimizationRemarkMissed, DS_Remark,
                                    PassName, RemarkName,
                                    *Inst->getParent()->getParent(),
@@ -260,14 +260,14 @@ bool OptimizationRemarkMissed::isEnabled(StringRef PassName) {
 
 OptimizationRemarkAnalysis::OptimizationRemarkAnalysis(
     const char *PassName, StringRef RemarkName, const DiagnosticLocation &Loc,
-    Value *CodeRegion)
+    const Value *CodeRegion)
     : DiagnosticInfoIROptimization(
           DK_OptimizationRemarkAnalysis, DS_Remark, PassName, RemarkName,
           *cast<BasicBlock>(CodeRegion)->getParent(), Loc, CodeRegion) {}
 
 OptimizationRemarkAnalysis::OptimizationRemarkAnalysis(const char *PassName,
                                                        StringRef RemarkName,
-                                                       Instruction *Inst)
+                                                       const Instruction *Inst)
     : DiagnosticInfoIROptimization(DK_OptimizationRemarkAnalysis, DS_Remark,
                                    PassName, RemarkName,
                                    *Inst->getParent()->getParent(),
@@ -275,7 +275,7 @@ OptimizationRemarkAnalysis::OptimizationRemarkAnalysis(const char *PassName,
 
 OptimizationRemarkAnalysis::OptimizationRemarkAnalysis(
     enum DiagnosticKind Kind, const char *PassName, StringRef RemarkName,
-    const DiagnosticLocation &Loc, Value *CodeRegion)
+    const DiagnosticLocation &Loc, const Value *CodeRegion)
     : DiagnosticInfoIROptimization(Kind, DS_Remark, PassName, RemarkName,
                                    *cast<BasicBlock>(CodeRegion)->getParent(),
                                    Loc, CodeRegion) {}
@@ -327,7 +327,7 @@ void llvm::emitOptimizationRemarkAnalysisAliasing(LLVMContext &Ctx,
 
 DiagnosticInfoOptimizationFailure::DiagnosticInfoOptimizationFailure(
     const char *PassName, StringRef RemarkName, const DiagnosticLocation &Loc,
-    Value *CodeRegion)
+    const Value *CodeRegion)
     : DiagnosticInfoIROptimization(
           DK_OptimizationFailure, DS_Warning, PassName, RemarkName,
           *cast<BasicBlock>(CodeRegion)->getParent(), Loc, CodeRegion) {}
