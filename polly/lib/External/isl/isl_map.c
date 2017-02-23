@@ -4140,11 +4140,14 @@ struct isl_basic_map *isl_basic_map_apply_domain(
 	if (!bmap1 || !bmap2)
 		goto error;
 
-	isl_assert(bmap1->ctx,
-	    isl_basic_map_n_in(bmap1) == isl_basic_map_n_in(bmap2), goto error);
-	isl_assert(bmap1->ctx,
-	    isl_basic_map_n_param(bmap1) == isl_basic_map_n_param(bmap2),
-	    goto error);
+	if (!isl_space_match(bmap1->dim, isl_dim_param,
+				bmap2->dim, isl_dim_param))
+		isl_die(isl_basic_map_get_ctx(bmap1), isl_error_invalid,
+			"parameters don't match", goto error);
+	if (!isl_space_tuple_is_equal(bmap1->dim, isl_dim_in,
+					bmap2->dim, isl_dim_in))
+		isl_die(isl_basic_map_get_ctx(bmap1), isl_error_invalid,
+			"spaces don't match", goto error);
 
 	bmap1 = isl_basic_map_reverse(bmap1);
 	bmap1 = isl_basic_map_apply_range(bmap1, bmap2);
@@ -12808,7 +12811,7 @@ static int set_ma_divs(__isl_keep isl_basic_map *bmap,
 		o_bmap += n_div;
 		o_ls += n_div;
 		isl_seq_clr(bmap->div[i] + o_bmap, bmap->n_div - n_div);
-		if (isl_basic_set_add_div_constraints(bmap, i) < 0)
+		if (isl_basic_map_add_div_constraints(bmap, i) < 0)
 			goto error;
 	}
 
@@ -13049,7 +13052,7 @@ __isl_give isl_basic_map *isl_basic_map_preimage_multi_aff(
 	isl_int_clear(g);
 	isl_basic_map_free(bmap);
 	isl_multi_aff_free(ma);
-	res = isl_basic_set_simplify(res);
+	res = isl_basic_map_simplify(res);
 	return isl_basic_map_finalize(res);
 error:
 	isl_int_clear(f);

@@ -1385,8 +1385,6 @@ X86InstrInfo::X86InstrInfo(X86Subtarget &STI)
     { X86::PMULHRWrr,         X86::PMULHRWrm,         0 },
 
     // AVX 128-bit versions of foldable instructions
-    { X86::VCVTSD2SSrr,       X86::VCVTSD2SSrm,        0 },
-    { X86::Int_VCVTSD2SSrr,   X86::Int_VCVTSD2SSrm,    TB_NO_REVERSE },
     { X86::VCVTSI2SD64rr,     X86::VCVTSI2SD64rm,      0 },
     { X86::Int_VCVTSI2SD64rr, X86::Int_VCVTSI2SD64rm,  0 },
     { X86::VCVTSI2SDrr,       X86::VCVTSI2SDrm,        0 },
@@ -1395,8 +1393,6 @@ X86InstrInfo::X86InstrInfo(X86Subtarget &STI)
     { X86::Int_VCVTSI2SS64rr, X86::Int_VCVTSI2SS64rm,  0 },
     { X86::VCVTSI2SSrr,       X86::VCVTSI2SSrm,        0 },
     { X86::Int_VCVTSI2SSrr,   X86::Int_VCVTSI2SSrm,    0 },
-    { X86::VCVTSS2SDrr,       X86::VCVTSS2SDrm,        0 },
-    { X86::Int_VCVTSS2SDrr,   X86::Int_VCVTSS2SDrm,    TB_NO_REVERSE },
     { X86::VADDPDrr,          X86::VADDPDrm,           0 },
     { X86::VADDPSrr,          X86::VADDPSrm,           0 },
     { X86::VADDSDrr,          X86::VADDSDrm,           0 },
@@ -1851,10 +1847,6 @@ X86InstrInfo::X86InstrInfo(X86Subtarget &STI)
     { X86::VCMPSDZrr_Int,     X86::VCMPSDZrm_Int,       TB_NO_REVERSE },
     { X86::VCMPSSZrr,         X86::VCMPSSZrm,           0 },
     { X86::VCMPSSZrr_Int,     X86::VCMPSSZrm_Int,       TB_NO_REVERSE },
-    { X86::VCVTSS2SDZrr,      X86::VCVTSS2SDZrm,        0 },
-    { X86::VCVTSS2SDZrr_Int,  X86::VCVTSS2SDZrm_Int,    TB_NO_REVERSE },
-    { X86::VCVTSD2SSZrr,      X86::VCVTSD2SSZrm,        0 },
-    { X86::VCVTSD2SSZrr_Int,  X86::VCVTSD2SSZrm_Int,    TB_NO_REVERSE },
     { X86::VDIVPDZrr,         X86::VDIVPDZrm,           0 },
     { X86::VDIVPSZrr,         X86::VDIVPSZrm,           0 },
     { X86::VDIVSDZrr,         X86::VDIVSDZrm,           0 },

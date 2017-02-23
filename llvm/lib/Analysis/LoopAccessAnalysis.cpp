@@ -135,21 +135,6 @@ bool VectorizerParams::isInterleaveForced() {
   return ::VectorizationInterleave.getNumOccurrences() > 0;
 }
 
-void LoopAccessReport::emitAnalysis(const LoopAccessReport &Message,
-                                    const Loop *TheLoop, const char *PassName,
-                                    OptimizationRemarkEmitter &ORE) {
-  DebugLoc DL = TheLoop->getStartLoc();
-  const Value *V = TheLoop->getHeader();
-  if (const Instruction *I = Message.getInstr()) {
-    // If there is no debug location attached to the instruction, revert back to
-    // using the loop's.
-    if (I->getDebugLoc())
-      DL = I->getDebugLoc();
-    V = I->getParent();
-  }
-  ORE.emitOptimizationRemarkAnalysis(PassName, DL, V, Message.str());
-}
-
 Value *llvm::stripIntegerCast(Value *V) {
   if (auto *CI = dyn_cast<CastInst>(V))
     if (CI->getOperand(0)->getType()->isIntegerTy())

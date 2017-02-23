@@ -208,6 +208,9 @@ isl_bool isl_pw_aff_involves_dims(__isl_keep isl_pw_aff *pwaff,
 
 isl_bool isl_pw_aff_is_cst(__isl_keep isl_pw_aff *pwaff);
 
+__isl_give isl_pw_aff *isl_pw_aff_project_domain_on_params(
+	__isl_take isl_pw_aff *pa);
+
 __isl_give isl_pw_aff *isl_pw_aff_align_params(__isl_take isl_pw_aff *pwaff,
 	__isl_take isl_space *model);
 
@@ -346,6 +349,7 @@ __isl_give isl_set *isl_pw_aff_list_gt_set(__isl_take isl_pw_aff_list *list1,
 	__isl_take isl_pw_aff_list *list2);
 
 ISL_DECLARE_MULTI(aff)
+ISL_DECLARE_MULTI_CMP(aff)
 ISL_DECLARE_MULTI_NEG(aff)
 ISL_DECLARE_MULTI_DIMS(aff)
 ISL_DECLARE_MULTI_WITH_DOMAIN(aff)
@@ -555,6 +559,7 @@ __isl_overload
 __isl_give isl_pw_multi_aff *isl_pw_multi_aff_pullback_pw_multi_aff(
 	__isl_take isl_pw_multi_aff *pma1, __isl_take isl_pw_multi_aff *pma2);
 
+int isl_pw_multi_aff_n_piece(__isl_keep isl_pw_multi_aff *pma);
 isl_stat isl_pw_multi_aff_foreach_piece(__isl_keep isl_pw_multi_aff *pma,
 	isl_stat (*fn)(__isl_take isl_set *set, __isl_take isl_multi_aff *maff,
 		    void *user), void *user);

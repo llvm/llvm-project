@@ -30,6 +30,7 @@ namespace llvm {
 
 class BitVector;
 class MachineFunction;
+class MachineRegisterInfo;
 class RegScavenger;
 template<class T> class SmallVectorImpl;
 class VirtRegMap;
@@ -718,6 +719,12 @@ public:
 
   /// Get the weight in units of pressure for this register unit.
   virtual unsigned getRegUnitWeight(unsigned RegUnit) const = 0;
+
+  /// Get the weight in units of pressure for a sub register of this register
+  /// unit given a lane mask.
+  virtual unsigned getRegUnitWeight(const MachineRegisterInfo &MRI,
+                                    unsigned RegUnit,
+                                    LaneBitmask LaneMask) const;
 
   /// Get the number of dimensions of register pressure.
   virtual unsigned getNumRegPressureSets() const = 0;

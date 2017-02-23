@@ -2379,10 +2379,10 @@ MipsAsmParser::tryExpandInstruction(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
     return expandUxw(Inst, IDLoc, Out, STI) ? MER_Fail : MER_Success;
   case Mips::NORImm:
     return expandAliasImmediate(Inst, IDLoc, Out, STI) ? MER_Fail : MER_Success;
-  case Mips::ADDi:
-  case Mips::ADDiu:
-  case Mips::SLTi:
-  case Mips::SLTiu:
+  case Mips::ADDi:   case Mips::ADDi_MM:
+  case Mips::ADDiu:  case Mips::ADDiu_MM:
+  case Mips::SLTi:   case Mips::SLTi_MM:
+  case Mips::SLTiu:  case Mips::SLTiu_MM:
     if ((Inst.getNumOperands() == 3) && Inst.getOperand(0).isReg() &&
         Inst.getOperand(1).isReg() && Inst.getOperand(2).isImm()) {
       int64_t ImmValue = Inst.getOperand(2).getImm();
@@ -2392,9 +2392,9 @@ MipsAsmParser::tryExpandInstruction(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
                                                          : MER_Success;
     }
     return MER_NotAMacro;
-  case Mips::ANDi:
-  case Mips::ORi:
-  case Mips::XORi:
+  case Mips::ANDi:  case Mips::ANDi_MM:
+  case Mips::ORi:   case Mips::ORi_MM:
+  case Mips::XORi:  case Mips::XORi_MM:
     if ((Inst.getNumOperands() == 3) && Inst.getOperand(0).isReg() &&
         Inst.getOperand(1).isReg() && Inst.getOperand(2).isImm()) {
       int64_t ImmValue = Inst.getOperand(2).getImm();
@@ -3821,29 +3821,50 @@ bool MipsAsmParser::expandAliasImmediate(MCInst &Inst, SMLoc IDLoc,
     switch (FinalOpcode) {
     default:
       llvm_unreachable("unimplemented expansion");
-    case (Mips::ADDi):
+    case Mips::ADDi:
       FinalOpcode = Mips::ADD;
       break;
-    case (Mips::ADDiu):
+    case Mips::ADDiu:
       FinalOpcode = Mips::ADDu;
       break;
-    case (Mips::ANDi):
+    case Mips::ANDi:
       FinalOpcode = Mips::AND;
       break;
-    case (Mips::NORImm):
+    case Mips::NORImm:
       FinalOpcode = Mips::NOR;
       break;
-    case (Mips::ORi):
+    case Mips::ORi:
       FinalOpcode = Mips::OR;
       break;
-    case (Mips::SLTi):
+    case Mips::SLTi:
       FinalOpcode = Mips::SLT;
       break;
-    case (Mips::SLTiu):
+    case Mips::SLTiu:
       FinalOpcode = Mips::SLTu;
       break;
-    case (Mips::XORi):
+    case Mips::XORi:
       FinalOpcode = Mips::XOR;
+      break;
+    case Mips::ADDi_MM:
+      FinalOpcode = Mips::ADD_MM;
+      break;
+    case Mips::ADDiu_MM:
+      FinalOpcode = Mips::ADDu_MM;
+      break;
+    case Mips::ANDi_MM:
+      FinalOpcode = Mips::AND_MM;
+      break;
+    case Mips::ORi_MM:
+      FinalOpcode = Mips::OR_MM;
+      break;
+    case Mips::SLTi_MM:
+      FinalOpcode = Mips::SLT_MM;
+      break;
+    case Mips::SLTiu_MM:
+      FinalOpcode = Mips::SLTu_MM;
+      break;
+    case Mips::XORi_MM:
+      FinalOpcode = Mips::XOR_MM;
       break;
     }
 

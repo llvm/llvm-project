@@ -2005,10 +2005,16 @@ unsigned X86TargetLowering::getAddressSpace() const {
   return 256;
 }
 
+static bool hasStackGuardSlotTLS(const Triple &TargetTriple) {
+  return TargetTriple.isOSGlibc() ||
+         (TargetTriple.isAndroid() && !TargetTriple.isAndroidVersionLT(17));
+}
+
 Value *X86TargetLowering::getIRStackGuard(IRBuilder<> &IRB) const {
-  // glibc has a special slot for the stack guard in tcbhead_t, use it instead
-  // of the usual global variable (see sysdeps/{i386,x86_64}/nptl/tls.h)
-  if (!Subtarget.isTargetGlibc())
+  // glibc and bionic have a special slot for the stack guard in tcbhead_t, use
+  // it instead of the usual global variable (see
+  // sysdeps/{i386,x86_64}/nptl/tls.h)
+  if (!hasStackGuardSlotTLS(Subtarget.getTargetTriple()))
     return TargetLowering::getIRStackGuard(IRB);
 
   // %fs:0x28, unless we're using a Kernel code model, in which case it's %gs:
@@ -2036,8 +2042,8 @@ void X86TargetLowering::insertSSPDeclarations(Module &M) const {
     SecurityCheckCookie->addAttribute(1, Attribute::AttrKind::InReg);
     return;
   }
-  // glibc has a special slot for the stack guard.
-  if (Subtarget.isTargetGlibc())
+  // glibc and bionic have a special slot for the stack guard.
+  if (hasStackGuardSlotTLS(Subtarget.getTargetTriple()))
     return;
   TargetLowering::insertSSPDeclarations(M);
 }

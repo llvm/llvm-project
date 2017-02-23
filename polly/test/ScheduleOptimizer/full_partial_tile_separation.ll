@@ -1,4 +1,6 @@
-; RUN: opt -S %loadPolly -polly-vectorizer=stripmine -polly-opt-isl -polly-ast -analyze < %s | FileCheck %s
+; RUN: opt -S %loadPolly -polly-pattern-matching-based-opts=false \
+; RUN: -polly-vectorizer=stripmine -polly-opt-isl -polly-ast -analyze \
+; RUN: < %s | FileCheck %s
 ; CHECK:          // 1st level tiling - Tiles
 ; CHECK-NEXT:    #pragma known-parallel
 ; CHECK-NEXT:    for (int c0 = 0; c0 <= floord(ni - 1, 32); c0 += 1)

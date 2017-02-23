@@ -35,17 +35,29 @@ namespace libunwind {
 #include "Registers.hpp"
 
 #if _LIBUNWIND_ARM_EHABI
+#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
+
+typedef void *_Unwind_Ptr;
+
+#elif defined(__linux__)
+
+typedef long unsigned int *_Unwind_Ptr;
+extern "C" _Unwind_Ptr __gnu_Unwind_Find_exidx(_Unwind_Ptr addr, int *len);
+
+// Emulate the BSD dl_unwind_find_exidx API when on a GNU libdl system.
+#define dl_unwind_find_exidx __gnu_Unwind_Find_exidx
+
+#elif !defined(_LIBUNWIND_IS_BAREMETAL)
+#include <link.h>
+#else // !defined(_LIBUNWIND_IS_BAREMETAL)
+// When statically linked on bare-metal, the symbols for the EH table are looked
+// up without going through the dynamic loader.
 struct EHTEntry {
   uint32_t functionOffset;
   uint32_t unwindOpcodes;
 };
-#if defined(_LIBUNWIND_IS_BAREMETAL)
-// When statically linked on bare-metal, the symbols for the EH table are looked
-// up without going through the dynamic loader.
 extern EHTEntry __exidx_start;
 extern EHTEntry __exidx_end;
-#else
-#include <link.h>
 #endif // !defined(_LIBUNWIND_IS_BAREMETAL)
 #endif // _LIBUNWIND_ARM_EHABI
 
@@ -356,15 +368,23 @@ inline bool LocalAddressSpace::findUnwindSections(pint_t targetAddr,
     info.compact_unwind_section_length = dyldInfo.compact_unwind_section_length;
     return true;
   }
-#elif _LIBUNWIND_ARM_EHABI && defined(_LIBUNWIND_IS_BAREMETAL)
+#elif _LIBUNWIND_ARM_EHABI
+ #ifdef _LIBUNWIND_IS_BAREMETAL
   // Bare metal is statically linked, so no need to ask the dynamic loader
   info.arm_section =        (uintptr_t)(&__exidx_start);
   info.arm_section_length = (uintptr_t)(&__exidx_end - &__exidx_start);
+ #else
+  int length = 0;
+  info.arm_section = (uintptr_t) dl_unwind_find_exidx(
+      (_Unwind_Ptr) targetAddr, &length);
+  info.arm_section_length = (uintptr_t)length;
+ #endif
   _LIBUNWIND_TRACE_UNWINDING("findUnwindSections: section %X length %x",
                              info.arm_section, info.arm_section_length);
   if (info.arm_section && info.arm_section_length)
     return true;
-#elif _LIBUNWIND_ARM_EHABI || _LIBUNWIND_SUPPORT_DWARF_UNWIND
+#elif _LIBUNWIND_SUPPORT_DWARF_UNWIND
+#if _LIBUNWIND_SUPPORT_DWARF_INDEX
   struct dl_iterate_cb_data {
     LocalAddressSpace *addressSpace;
     UnwindInfoSections *sects;
@@ -375,6 +395,9 @@ inline bool LocalAddressSpace::findUnwindSections(pint_t targetAddr,
   int found = dl_iterate_phdr(
       [](struct dl_phdr_info *pinfo, size_t, void *data) -> int {
         auto cbdata = static_cast<dl_iterate_cb_data *>(data);
+        size_t object_length;
+        bool found_obj = false;
+        bool found_hdr = false;
 
         assert(cbdata);
         assert(cbdata->sects);
@@ -389,14 +412,6 @@ inline bool LocalAddressSpace::findUnwindSections(pint_t targetAddr,
 #if !defined(Elf_Phdr)
         typedef ElfW(Phdr) Elf_Phdr;
 #endif
-
- #if _LIBUNWIND_SUPPORT_DWARF_UNWIND
-  #if !_LIBUNWIND_SUPPORT_DWARF_INDEX
-   #error "_LIBUNWIND_SUPPORT_DWARF_UNWIND requires _LIBUNWIND_SUPPORT_DWARF_INDEX on this platform."
-  #endif
-        size_t object_length;
-        bool found_obj = false;
-        bool found_hdr = false;
 
         for (Elf_Half i = 0; i < pinfo->dlpi_phnum; i++) {
           const Elf_Phdr *phdr = &pinfo->dlpi_phdr[i];
@@ -427,22 +442,12 @@ inline bool LocalAddressSpace::findUnwindSections(pint_t targetAddr,
         } else {
           return false;
         }
- #else // _LIBUNWIND_ARM_EHABI
-        for (Elf_Half i = 0; i < pinfo->dlpi_phnum; i++) {
-          const Elf_Phdr *phdr = &pinfo->dlpi_phdr[i];
-          if (phdr->p_type == PT_ARM_EXIDX) {
-            uintptr_t exidx_start = pinfo->dlpi_addr + phdr->p_vaddr;
-            cbdata->sects->arm_section = exidx_start;
-            cbdata->sects->arm_section_length = phdr->p_memsz /
-                                                sizeof(EHTEntry);
-            return true;
-          }
-        }
-        return false;
- #endif
       },
       &cb_data);
   return static_cast<bool>(found);
+#else
+#error "_LIBUNWIND_SUPPORT_DWARF_UNWIND requires _LIBUNWIND_SUPPORT_DWARF_INDEX on this platform."
+#endif
 #endif
 
   return false;

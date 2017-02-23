@@ -192,8 +192,8 @@ __isl_give LIST(EL) *FN(LIST(EL),insert)(__isl_take LIST(EL) *list,
 			"index out of bounds", goto error);
 
 	if (list->ref == 1 && list->size > list->n) {
-		for (i = list->n - 1; i >= pos; --i)
-			list->p[i + 1] = list->p[i];
+		for (i = list->n; i > pos; --i)
+			list->p[i] = list->p[i - 1];
 		list->n++;
 		list->p[pos] = el;
 		return list;

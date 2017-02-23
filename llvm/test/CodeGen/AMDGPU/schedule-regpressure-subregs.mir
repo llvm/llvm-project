@@ -1,0 +1,67 @@
+# RUN: llc -march=amdgcn -misched=converge -run-pass machine-scheduler -verify-misched %s -o - -debug-only=misched 2>&1 | FileCheck %s
+# REQUIRES: asserts
+
+# CHECK-LABEL: ScheduleDAGMILive::schedule starting
+
+# Check that def and use subregs count with the same weight
+# CHECK: %vreg9:sub1<def> = V_MUL_LO_I32 %vreg6:sub1, 3
+# CHECK: Pressure Diff : {{$}}
+
+# Check that a subreg does not count as a whole superreg
+# CHECK: %vreg9:sub0<def> = V_MUL_LO_I32 %vreg6:sub0, %vreg9:sub1
+# CHECK: Pressure Diff : VGPR_32 1{{$}}
+
+# Check that two subregs of the same register count as a whole register
+# CHECK: DS_WRITE2_B32 %vreg7, %vreg9:sub0, %vreg9:sub1
+# CHECK: Pressure Diff : VGPR_32 3{{$}}
+
+---
+name:            mo_pset
+alignment:       0
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: sreg_128 }
+  - { id: 1, class: sgpr_64 }
+  - { id: 2, class: sreg_32_xm0 }
+  - { id: 3, class: sgpr_32 }
+  - { id: 4, class: vgpr_32 }
+  - { id: 5, class: sreg_32_xm0_xexec }
+  - { id: 6, class: vreg_64 }
+  - { id: 7, class: vgpr_32 }
+  - { id: 8, class: vgpr_32 }
+  - { id: 9, class: vreg_64 }
+liveins:
+  - { reg: '%sgpr4_sgpr5', virtual-reg: '%1' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  maxCallFrameSize: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+body:             |
+  bb.0:
+    liveins: %sgpr4_sgpr5
+
+    %1 = COPY %sgpr4_sgpr5
+    %5 = S_LOAD_DWORD_IMM %1, 0, 0 :: (non-temporal dereferenceable invariant load 4 from `i32 addrspace(2)* undef`)
+    %m0 = S_MOV_B32 -1
+    %7 = COPY %5
+    %6 = DS_READ2_B32 %7, 0, 1, 0, implicit %m0, implicit %exec
+    undef %9.sub1 = V_MUL_LO_I32 %6.sub1, 3, implicit %exec
+    %9.sub0 = V_MUL_LO_I32 %6.sub0, %9.sub1, implicit %exec
+    DS_WRITE2_B32 %7, %9.sub0, %9.sub1, 4, 5, 0, implicit killed %m0, implicit %exec
+    S_ENDPGM
+
+...

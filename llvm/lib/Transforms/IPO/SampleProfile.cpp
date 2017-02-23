@@ -474,7 +474,7 @@ ErrorOr<uint64_t> SampleProfileLoader::getInstWeight(const Instruction &Inst) {
 
   const DILocation *DIL = DLoc;
   uint32_t LineOffset = getOffset(DIL);
-  uint32_t Discriminator = DIL->getDiscriminator();
+  uint32_t Discriminator = DIL->getBaseDiscriminator();
   ErrorOr<uint64_t> R = IsCall
                             ? FS->findCallSamplesAt(LineOffset, Discriminator)
                             : FS->findSamplesAt(LineOffset, Discriminator);
@@ -490,9 +490,10 @@ ErrorOr<uint64_t> SampleProfileLoader::getInstWeight(const Instruction &Inst) {
               " samples from profile (offset: " + Twine(LineOffset) +
               ((Discriminator) ? Twine(".") + Twine(Discriminator) : "") + ")");
     }
-    DEBUG(dbgs() << "    " << DLoc.getLine() << "." << DIL->getDiscriminator()
-                 << ":" << Inst << " (line offset: " << LineOffset << "."
-                 << DIL->getDiscriminator() << " - weight: " << R.get()
+    DEBUG(dbgs() << "    " << DLoc.getLine() << "."
+                 << DIL->getBaseDiscriminator() << ":" << Inst
+                 << " (line offset: " << LineOffset << "."
+                 << DIL->getBaseDiscriminator() << " - weight: " << R.get()
                  << ")\n");
   }
   return R;
@@ -564,7 +565,7 @@ SampleProfileLoader::findCalleeFunctionSamples(const Instruction &Inst) const {
     return nullptr;
 
   return FS->findFunctionSamplesAt(
-      LineLocation(getOffset(DIL), DIL->getDiscriminator()));
+      LineLocation(getOffset(DIL), DIL->getBaseDiscriminator()));
 }
 
 /// \brief Get the FunctionSamples for an instruction.
@@ -584,7 +585,7 @@ SampleProfileLoader::findFunctionSamples(const Instruction &Inst) const {
     return Samples;
   }
   for (DIL = DIL->getInlinedAt(); DIL; DIL = DIL->getInlinedAt())
-    S.push_back(LineLocation(getOffset(DIL), DIL->getDiscriminator()));
+    S.push_back(LineLocation(getOffset(DIL), DIL->getBaseDiscriminator()));
   if (S.size() == 0)
     return Samples;
   const FunctionSamples *FS = Samples;
@@ -1105,7 +1106,7 @@ void SampleProfileLoader::propagateWeights(Function &F) {
             continue;
           const DILocation *DIL = DLoc;
           uint32_t LineOffset = getOffset(DIL);
-          uint32_t Discriminator = DIL->getDiscriminator();
+          uint32_t Discriminator = DIL->getBaseDiscriminator();
 
           const FunctionSamples *FS = findFunctionSamples(I);
           if (!FS)

@@ -46,16 +46,29 @@
 
 using namespace llvm;
 
+/// Clamp lane masks to maximum posible value.
+static void clampMasks(const MachineRegisterInfo &MRI, unsigned Reg,
+                       LaneBitmask& LaneMask1, LaneBitmask& LaneMask2) {
+  if (TargetRegisterInfo::isVirtualRegister(Reg)) {
+    LaneBitmask Max = MRI.getMaxLaneMaskForVReg(Reg);
+    LaneMask1 &= Max;
+    LaneMask2 &= Max;
+  }
+}
+
 /// Increase pressure for each pressure set provided by TargetRegisterInfo.
 static void increaseSetPressure(std::vector<unsigned> &CurrSetPressure,
                                 const MachineRegisterInfo &MRI, unsigned Reg,
                                 LaneBitmask PrevMask, LaneBitmask NewMask) {
   assert((PrevMask & ~NewMask).none() && "Must not remove bits");
-  if (PrevMask.any() || NewMask.none())
+
+  clampMasks(MRI, Reg, PrevMask, NewMask);
+  if ((NewMask & ~PrevMask).none())
     return;
 
+  const TargetRegisterInfo *TRI = MRI.getTargetRegisterInfo();
+  unsigned Weight = TRI->getRegUnitWeight(MRI, Reg, NewMask & ~PrevMask);
   PSetIterator PSetI = MRI.getPressureSets(Reg);
-  unsigned Weight = PSetI.getWeight();
   for (; PSetI.isValid(); ++PSetI)
     CurrSetPressure[*PSetI] += Weight;
 }
@@ -65,11 +78,13 @@ static void decreaseSetPressure(std::vector<unsigned> &CurrSetPressure,
                                 const MachineRegisterInfo &MRI, unsigned Reg,
                                 LaneBitmask PrevMask, LaneBitmask NewMask) {
   //assert((NewMask & !PrevMask) == 0 && "Must not add bits");
-  if (NewMask.any() || PrevMask.none())
+  clampMasks(MRI, Reg, PrevMask, NewMask);
+  if ((~NewMask & PrevMask).none())
     return;
 
+  const TargetRegisterInfo *TRI = MRI.getTargetRegisterInfo();
+  unsigned Weight = TRI->getRegUnitWeight(MRI, Reg, ~NewMask & PrevMask);
   PSetIterator PSetI = MRI.getPressureSets(Reg);
-  unsigned Weight = PSetI.getWeight();
   for (; PSetI.isValid(); ++PSetI) {
     assert(CurrSetPressure[*PSetI] >= Weight && "register pressure underflow");
     CurrSetPressure[*PSetI] -= Weight;
@@ -139,11 +154,14 @@ void PressureDiff::dump(const TargetRegisterInfo &TRI) const {
 void RegPressureTracker::increaseRegPressure(unsigned RegUnit,
                                              LaneBitmask PreviousMask,
                                              LaneBitmask NewMask) {
-  if (PreviousMask.any() || NewMask.none())
+  clampMasks(*MRI, RegUnit, PreviousMask, NewMask);
+  if ((NewMask & ~PreviousMask).none())
     return;
 
+  const TargetRegisterInfo *TRI = MRI->getTargetRegisterInfo();
+  unsigned Weight = TRI->getRegUnitWeight(*MRI, RegUnit,
+                                          NewMask & ~PreviousMask);
   PSetIterator PSetI = MRI->getPressureSets(RegUnit);
-  unsigned Weight = PSetI.getWeight();
   for (; PSetI.isValid(); ++PSetI) {
     CurrSetPressure[*PSetI] += Weight;
     P.MaxSetPressure[*PSetI] =
@@ -644,17 +662,19 @@ void PressureDiffs::addInstruction(unsigned Idx,
   PressureDiff &PDiff = (*this)[Idx];
   assert(!PDiff.begin()->isValid() && "stale PDiff");
   for (const RegisterMaskPair &P : RegOpers.Defs)
-    PDiff.addPressureChange(P.RegUnit, true, &MRI);
+    PDiff.addPressureChange(P, true, &MRI);
 
   for (const RegisterMaskPair &P : RegOpers.Uses)
-    PDiff.addPressureChange(P.RegUnit, false, &MRI);
+    PDiff.addPressureChange(P, false, &MRI);
 }
 
 /// Add a change in pressure to the pressure diff of a given instruction.
-void PressureDiff::addPressureChange(unsigned RegUnit, bool IsDec,
+void PressureDiff::addPressureChange(RegisterMaskPair P, bool IsDec,
                                      const MachineRegisterInfo *MRI) {
-  PSetIterator PSetI = MRI->getPressureSets(RegUnit);
-  int Weight = IsDec ? -PSetI.getWeight() : PSetI.getWeight();
+  const TargetRegisterInfo *TRI = MRI->getTargetRegisterInfo();
+  int Weight = (int)TRI->getRegUnitWeight(*MRI, P.RegUnit, P.LaneMask);
+  PSetIterator PSetI = MRI->getPressureSets(P.RegUnit);
+  if (IsDec) Weight = -Weight;
   for (; PSetI.isValid(); ++PSetI) {
     // Find an existing entry in the pressure diff for this PSet.
     PressureDiff::iterator I = nonconst_begin(), E = nonconst_end();

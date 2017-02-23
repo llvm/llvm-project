@@ -962,6 +962,7 @@ private:
   /// transformations.
   Knowledge Zone;
 
+  /// For getting the MemoryAccesses that write or read a given scalar.
   ScalarDefUseChains DefUse;
 
   /// Determine whether two knowledges are conflicting with each other.
@@ -1568,8 +1569,12 @@ public:
       EltUnused = computeLifetime();
       EltWritten = computeWritten();
     }
+    DeLICMAnalyzed++;
 
-    if (isl_ctx_last_error(IslCtx.get()) == isl_error_quota) {
+    if (!EltUnused || !EltWritten) {
+      assert(isl_ctx_last_error(IslCtx.get()) == isl_error_quota &&
+             "The only reason that these things have not been computed should "
+             "be if the max-operations limit hit");
       DeLICMOutOfQuota++;
       DEBUG(dbgs() << "DeLICM analysis exceeded max_operations\n");
       DebugLoc Begin, End;
@@ -1578,15 +1583,14 @@ public:
                                    S->getEntry());
       R << "maximal number of operations exceeded during zone analysis";
       S->getFunction().getContext().diagnose(R);
+      return false;
     }
 
-    DeLICMAnalyzed++;
-    OriginalZone = Knowledge(nullptr, EltUnused, EltWritten);
+    Zone = OriginalZone = Knowledge(nullptr, EltUnused, EltWritten);
     DEBUG(dbgs() << "Computed Zone:\n"; OriginalZone.print(dbgs(), 4));
 
-    Zone = OriginalZone;
-
-    return DelicmMaxOps == 0 || Zone.isUsable();
+    assert(Zone.isUsable() && OriginalZone.isUsable());
+    return true;
   }
 
   /// Try to map as many scalars to unused array elements as possible.
@@ -1607,18 +1611,32 @@ public:
         if (MA->isMayWrite()) {
           DEBUG(dbgs() << "Access " << MA
                        << " pruned because it is a MAY_WRITE\n");
+          OptimizationRemarkMissed R(DEBUG_TYPE, "TargetMayWrite",
+                                     MA->getAccessInstruction());
+          R << "Skipped possible mapping target because it is not an "
+               "unconditional overwrite";
+          S->getFunction().getContext().diagnose(R);
           continue;
         }
 
         if (Stmt.getNumIterators() == 0) {
           DEBUG(dbgs() << "Access " << MA
                        << " pruned because it is not in a loop\n");
+          OptimizationRemarkMissed R(DEBUG_TYPE, "WriteNotInLoop",
+                                     MA->getAccessInstruction());
+          R << "skipped possible mapping target because it is not in a loop";
+          S->getFunction().getContext().diagnose(R);
           continue;
         }
 
         if (isScalarAccess(MA)) {
           DEBUG(dbgs() << "Access " << MA
                        << " pruned because it writes only a single element\n");
+          OptimizationRemarkMissed R(DEBUG_TYPE, "ScalarWrite",
+                                     MA->getAccessInstruction());
+          R << "skipped possible mapping target because the memory location "
+               "written to does not depend on its outer loop";
+          S->getFunction().getContext().diagnose(R);
           continue;
         }
 
@@ -1633,13 +1651,13 @@ public:
   }
 
   /// Dump the internal information about a performed DeLICM to @p OS.
-  void print(llvm::raw_ostream &OS, int indent = 0) {
+  void print(llvm::raw_ostream &OS, int Indent = 0) {
     if (!Zone.isUsable()) {
       OS << "Zone not computed\n";
       return;
     }
 
-    printAccesses(OS, indent);
+    printAccesses(OS, Indent);
   }
 };
 

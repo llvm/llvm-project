@@ -23,6 +23,18 @@
           (should (equal (buffer-string) "aa\nab\nac\nad\n")))))
     (should (equal (buffer-string) "aa\nab\nac\nad\n"))))
 
+(ert-deftest clang-include-fixer--insert-line-diff-on-empty-line ()
+  "Unit test for `clang-include-fixer--insert-line'."
+  (with-temp-buffer
+    (insert "aa\nab\n\nac\nad\n")
+    (let ((from (current-buffer)))
+      (with-temp-buffer
+        (insert "aa\n\nac\nad\n")
+        (let ((to (current-buffer)))
+          (should (clang-include-fixer--insert-line from to))
+          (should (equal (buffer-string) "aa\nab\n\nac\nad\n")))))
+    (should (equal (buffer-string) "aa\nab\n\nac\nad\n"))))
+
 (ert-deftest clang-include-fixer--symbol-at-point ()
   "Unit test for `clang-include-fixer--symbol-at-point'."
   (with-temp-buffer

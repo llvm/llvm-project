@@ -22,6 +22,7 @@
 namespace llvm {
 class MachineBasicBlock;
 class MachineBlockFrequencyInfo;
+class MachineInstr;
 
 /// \brief Common features for diagnostics dealing with optimization remarks
 /// that are used by machine passes.
@@ -29,10 +30,16 @@ class DiagnosticInfoMIROptimization : public DiagnosticInfoOptimizationBase {
 public:
   DiagnosticInfoMIROptimization(enum DiagnosticKind Kind, const char *PassName,
                                 StringRef RemarkName, const DebugLoc &DLoc,
-                                MachineBasicBlock *MBB)
+                                const MachineBasicBlock *MBB)
       : DiagnosticInfoOptimizationBase(Kind, DS_Remark, PassName, RemarkName,
                                        *MBB->getParent()->getFunction(), DLoc),
         MBB(MBB) {}
+
+  /// MI-specific kinds of diagnostic Arguments.
+  struct MachineArgument : public DiagnosticInfoOptimizationBase::Argument {
+    /// Print an entire MachineInstr.
+    MachineArgument(StringRef Key, const MachineInstr &MI);
+  };
 
   static bool classof(const DiagnosticInfo *DI) {
     return DI->getKind() >= DK_FirstMachineRemark &&
@@ -42,7 +49,7 @@ public:
   const MachineBasicBlock *getBlock() const { return MBB; }
 
 private:
-  MachineBasicBlock *MBB;
+  const MachineBasicBlock *MBB;
 };
 
 /// Diagnostic information for applied optimization remarks.
@@ -54,7 +61,7 @@ public:
   /// DLoc is the debug location and \p MBB is the block that the optimization
   /// operates in.
   MachineOptimizationRemark(const char *PassName, StringRef RemarkName,
-                            const DebugLoc &DLoc, MachineBasicBlock *MBB)
+                            const DebugLoc &DLoc, const MachineBasicBlock *MBB)
       : DiagnosticInfoMIROptimization(DK_MachineOptimizationRemark, PassName,
                                       RemarkName, DLoc, MBB) {}
 
@@ -77,7 +84,8 @@ public:
   /// remark.  \p DLoc is the debug location and \p MBB is the block that the
   /// optimization operates in.
   MachineOptimizationRemarkMissed(const char *PassName, StringRef RemarkName,
-                                  const DebugLoc &DLoc, MachineBasicBlock *MBB)
+                                  const DebugLoc &DLoc,
+                                  const MachineBasicBlock *MBB)
       : DiagnosticInfoMIROptimization(DK_MachineOptimizationRemarkMissed,
                                       PassName, RemarkName, DLoc, MBB) {}
 
@@ -101,7 +109,7 @@ public:
   /// optimization operates in.
   MachineOptimizationRemarkAnalysis(const char *PassName, StringRef RemarkName,
                                     const DebugLoc &DLoc,
-                                    MachineBasicBlock *MBB)
+                                    const MachineBasicBlock *MBB)
       : DiagnosticInfoMIROptimization(DK_MachineOptimizationRemarkAnalysis,
                                       PassName, RemarkName, DLoc, MBB) {}
 
@@ -114,6 +122,11 @@ public:
     return OptimizationRemarkAnalysis::isEnabled(getPassName());
   }
 };
+
+/// Extend llvm::ore:: with MI-specific helper names.
+namespace ore {
+using MNV = DiagnosticInfoMIROptimization::MachineArgument;
+}
 
 /// The optimization diagnostic interface.
 ///

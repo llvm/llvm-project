@@ -17,9 +17,9 @@
 #ifndef LLVM_ANALYSIS_LAZYMACHINEBLOCKFREQUENCYINFO_H
 #define LLVM_ANALYSIS_LAZYMACHINEBLOCKFREQUENCYINFO_H
 
-#include "llvm/Analysis/LazyBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
+#include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 
 namespace llvm {
@@ -28,30 +28,30 @@ namespace llvm {
 /// computed when the analysis pass is executed but rather when the BFI result
 /// is explicitly requested by the analysis client.
 ///
-/// There are some additional requirements for any client pass that wants to use
-/// the analysis:
-///
-/// 1. The pass needs to initialize dependent passes with:
-///
-///   INITIALIZE_PASS_DEPENDENCY(LazyMachineBFIPass)
-///
-/// 2. Similarly, getAnalysisUsage should call:
-///
-///   LazyMachineBlockFrequencyInfoPass::getLazyMachineBFIAnalysisUsage(AU)
-///
-/// 3. The computed MachineBFI should be requested with
-///    getAnalysis<LazyMachineBlockFrequencyInfoPass>().getBFI() before
-///    MachineLoopInfo could be invalidated for example by changing the CFG.
+/// This works by checking querying if MBFI is available and otherwise
+/// generating MBFI on the fly.  In this case the passes required for (LI, DT)
+/// are also queried before being computed on the fly.
 ///
 /// Note that it is expected that we wouldn't need this functionality for the
 /// new PM since with the new PM, analyses are executed on demand.
 
 class LazyMachineBlockFrequencyInfoPass : public MachineFunctionPass {
 private:
-  /// \brief Machine BPI is an immutable pass, no need to use it lazily.
-  LazyBlockFrequencyInfo<MachineFunction, MachineBranchProbabilityInfo,
-                         MachineLoopInfo, MachineBlockFrequencyInfo>
-      LMBFI;
+  /// If generated on the fly this own the instance.
+  mutable std::unique_ptr<MachineBlockFrequencyInfo> OwnedMBFI;
+
+  /// If generated on the fly this own the instance.
+  mutable std::unique_ptr<MachineLoopInfo> OwnedMLI;
+
+  /// If generated on the fly this own the instance.
+  mutable std::unique_ptr<MachineDominatorTree> OwnedMDT;
+
+  /// The function.
+  MachineFunction *MF = nullptr;
+
+  /// \brief Calculate MBFI and all other analyses that's not available and
+  /// required by BFI.
+  MachineBlockFrequencyInfo &calculateIfNotAvailable() const;
 
 public:
   static char ID;
@@ -59,25 +59,18 @@ public:
   LazyMachineBlockFrequencyInfoPass();
 
   /// \brief Compute and return the block frequencies.
-  MachineBlockFrequencyInfo &getBFI() { return LMBFI.getCalculated(); }
+  MachineBlockFrequencyInfo &getBFI() { return calculateIfNotAvailable(); }
 
   /// \brief Compute and return the block frequencies.
   const MachineBlockFrequencyInfo &getBFI() const {
-    return LMBFI.getCalculated();
+    return calculateIfNotAvailable();
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;
-
-  /// Helper for client passes to set up the analysis usage on behalf of this
-  /// pass.
-  static void getLazyMachineBFIAnalysisUsage(AnalysisUsage &AU);
 
   bool runOnMachineFunction(MachineFunction &F) override;
   void releaseMemory() override;
   void print(raw_ostream &OS, const Module *M) const override;
 };
-
-/// \brief Helper for client passes to initialize dependent passes for LMBFI.
-void initializeLazyMachineBFIPassPass(PassRegistry &Registry);
 }
 #endif

@@ -845,11 +845,11 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   // Aggregate all input sections into one place.
   for (elf::ObjectFile<ELFT> *F : Symtab.getObjectFiles())
     for (InputSectionBase *S : F->getSections())
-      if (S && S != &InputSection<ELFT>::Discarded)
+      if (S && S != &InputSection::Discarded)
         Symtab.Sections.push_back(S);
   for (BinaryFile *F : Symtab.getBinaryFiles())
     for (InputSectionBase *S : F->getSections())
-      Symtab.Sections.push_back(cast<InputSection<ELFT>>(S));
+      Symtab.Sections.push_back(cast<InputSection>(S));
 
   // Do size optimizations: garbage collection and identical code folding.
   if (Config->GcSections)

@@ -61,7 +61,7 @@ static void writeSymbolLine(raw_fd_ostream &OS, int Width, uint64_t Address,
 }
 
 template <class ELFT>
-static void writeInputSection(raw_fd_ostream &OS, const InputSection<ELFT> *IS,
+static void writeInputSection(raw_fd_ostream &OS, const InputSection *IS,
                               StringRef &PrevName) {
   int Width = ELFT::Is64Bits ? 16 : 8;
   StringRef Name = IS->Name;
@@ -108,8 +108,8 @@ static void writeMapFile2(raw_fd_ostream &OS,
 
     StringRef PrevName = "";
     Sec->forEachInputSection([&](InputSectionBase *S) {
-      if (const auto *IS = dyn_cast<InputSection<ELFT>>(S))
-        writeInputSection(OS, IS, PrevName);
+      if (const auto *IS = dyn_cast<InputSection>(S))
+        writeInputSection<ELFT>(OS, IS, PrevName);
     });
   }
 }

@@ -17,7 +17,7 @@
 namespace lld {
 namespace elf {
 
-template <class ELFT> class InputSection;
+class InputSection;
 
 // Struct represents single entry of address area of gdb index.
 template <class ELFT> struct AddressEntry {
@@ -32,12 +32,12 @@ template <class ELFT> struct AddressEntry {
 template <class ELFT> class GdbIndexBuilder : public llvm::LoadedObjectInfo {
   typedef typename ELFT::uint uintX_t;
 
-  InputSection<ELFT> *DebugInfoSec;
+  InputSection *DebugInfoSec;
 
   std::unique_ptr<llvm::DWARFContext> Dwarf;
 
 public:
-  GdbIndexBuilder(InputSection<ELFT> *DebugInfoSec);
+  GdbIndexBuilder(InputSection *DebugInfoSec);
 
   // Extracts the compilation units. Each first element of pair is a offset of a
   // CU in the .debug_info section and second is the length of that CU.

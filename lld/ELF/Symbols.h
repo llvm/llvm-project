@@ -272,7 +272,7 @@ public:
   const Elf_Verdef *Verdef;
 
   // Section is significant only when NeedsCopy is true.
-  InputSection<ELFT> *Section = nullptr;
+  InputSection *Section = nullptr;
 };
 
 // This class represents a symbol defined in an archive file. It is

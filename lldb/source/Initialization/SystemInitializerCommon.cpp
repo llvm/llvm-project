@@ -26,7 +26,7 @@
 #include "Plugins/ObjectFile/Mach-O/ObjectFileMachO.h"
 #endif
 
-#if defined(__linux__)
+#if defined(__linux__) || defined(__FreeBSD__)
 #include "Plugins/Process/POSIX/ProcessPOSIXLog.h"
 #endif
 
@@ -93,9 +93,8 @@ void SystemInitializerCommon::Initialize() {
 #if defined(__APPLE__)
   ObjectFileMachO::Initialize();
 #endif
-#if defined(__linux__)
-  static ConstString g_linux_log_name("linux");
-  ProcessPOSIXLog::Initialize(g_linux_log_name);
+#if defined(__linux__) || defined(__FreeBSD__)
+  ProcessPOSIXLog::Initialize();
 #endif
 #if defined(_MSC_VER)
   ProcessWindowsLog::Initialize();

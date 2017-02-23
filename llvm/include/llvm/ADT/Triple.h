@@ -560,7 +560,8 @@ public:
 
   /// Tests whether the OS uses glibc.
   bool isOSGlibc() const {
-    return getOS() == Triple::Linux || getOS() == Triple::KFreeBSD;
+    return (getOS() == Triple::Linux || getOS() == Triple::KFreeBSD) &&
+           !isAndroid();
   }
 
   /// Tests whether the OS uses the ELF binary format.
@@ -598,6 +599,19 @@ public:
 
   /// Tests whether the target is Android
   bool isAndroid() const { return getEnvironment() == Triple::Android; }
+
+  bool isAndroidVersionLT(unsigned Major) const {
+    assert(isAndroid() && "Not an Android triple!");
+
+    unsigned Env[3];
+    getEnvironmentVersion(Env[0], Env[1], Env[2]);
+
+    // 64-bit targets did not exist before API level 21 (Lollipop).
+    if (isArch64Bit() && Env[0] < 21)
+      Env[0] = 21;
+
+    return Env[0] < Major;
+  }
 
   /// Tests whether the environment is musl-libc
   bool isMusl() const {

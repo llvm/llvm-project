@@ -50,7 +50,7 @@ static typename ELFT::uint getSymVA(const SymbolBody &Body, int64_t &Addend) {
     // the group are not allowed. Unfortunately .eh_frame breaks that rule
     // and must be treated specially. For now we just replace the symbol with
     // 0.
-    if (IS == &InputSection<ELFT>::Discarded)
+    if (IS == &InputSection::Discarded)
       return 0;
 
     // This is an absolute symbol.

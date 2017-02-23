@@ -32,7 +32,7 @@ class DefinedCommon;
 class ScriptParser;
 class SymbolBody;
 class InputSectionBase;
-template <class ELFT> class InputSection;
+class InputSection;
 class OutputSectionBase;
 template <class ELFT> class OutputSectionFactory;
 class InputSectionBase;
@@ -304,7 +304,7 @@ private:
   uintX_t ThreadBssOffset = 0;
   void switchTo(OutputSectionBase *Sec);
   void flush();
-  void output(InputSection<ELFT> *Sec);
+  void output(InputSection *Sec);
   void process(BaseCommand &Base);
   llvm::DenseSet<OutputSectionBase *> AlreadyOutputOS;
   llvm::DenseSet<InputSectionBase *> AlreadyOutputIS;
