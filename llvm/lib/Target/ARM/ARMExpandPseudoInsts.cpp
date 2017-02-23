@@ -1225,16 +1225,36 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
     }
     case ARM::tTPsoft:
     case ARM::TPsoft: {
+      const bool Thumb = Opcode == ARM::tTPsoft;
+
       MachineInstrBuilder MIB;
-      if (Opcode == ARM::tTPsoft)
+      if (STI->genLongCalls()) {
+        MachineFunction *MF = MBB.getParent();
+        MachineConstantPool *MCP = MF->getConstantPool();
+        unsigned PCLabelID = AFI->createPICLabelUId();
+        MachineConstantPoolValue *CPV =
+            ARMConstantPoolSymbol::Create(MF->getFunction()->getContext(),
+                                          "__aeabi_read_tp", PCLabelID, 0);
+        unsigned Reg = MI.getOperand(0).getReg();
         MIB = BuildMI(MBB, MBBI, MI.getDebugLoc(),
-                      TII->get( ARM::tBL))
-              .addImm((unsigned)ARMCC::AL).addReg(0)
-              .addExternalSymbol("__aeabi_read_tp", 0);
-      else
+                      TII->get(Thumb ? ARM::tLDRpci : ARM::LDRi12), Reg)
+                  .addConstantPoolIndex(MCP->getConstantPoolIndex(CPV, 4));
+        if (!Thumb)
+          MIB.addImm(0);
+        MIB.addImm(static_cast<unsigned>(ARMCC::AL)).addReg(0);
+
         MIB = BuildMI(MBB, MBBI, MI.getDebugLoc(),
-                      TII->get( ARM::BL))
-              .addExternalSymbol("__aeabi_read_tp", 0);
+                      TII->get(Thumb ? ARM::tBLXr : ARM::BLX));
+        if (Thumb)
+          MIB.addImm(static_cast<unsigned>(ARMCC::AL)).addReg(0);
+        MIB.addReg(Reg, RegState::Kill);
+      } else {
+        MIB = BuildMI(MBB, MBBI, MI.getDebugLoc(),
+                      TII->get(Thumb ? ARM::tBL : ARM::BL));
+        if (Thumb)
+          MIB.addImm(static_cast<unsigned>(ARMCC::AL)).addReg(0);
+        MIB.addExternalSymbol("__aeabi_read_tp", 0);
+      }
 
       MIB->setMemRefs(MI.memoperands_begin(), MI.memoperands_end());
       TransferImpOps(MI, MIB, MIB);
