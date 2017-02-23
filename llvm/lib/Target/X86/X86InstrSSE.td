@@ -1716,20 +1716,21 @@ def : InstAlias<"cvtsd2si{q}\t{$src, $dst|$dst, $src}",
 // Convert scalar double to scalar single
 let hasSideEffects = 0, Predicates = [UseAVX] in {
 def VCVTSD2SSrr  : VSDI<0x5A, MRMSrcReg, (outs FR32:$dst),
-                       (ins FR64:$src1, FR64:$src2),
+                       (ins FR32:$src1, FR64:$src2),
                       "cvtsd2ss\t{$src2, $src1, $dst|$dst, $src1, $src2}", [],
                       IIC_SSE_CVT_Scalar_RR>, VEX_4V, VEX_LIG,
                       Sched<[WriteCvtF2F]>, VEX_WIG;
 let mayLoad = 1 in
 def VCVTSD2SSrm  : I<0x5A, MRMSrcMem, (outs FR32:$dst),
-                       (ins FR64:$src1, f64mem:$src2),
+                       (ins FR32:$src1, f64mem:$src2),
                       "vcvtsd2ss\t{$src2, $src1, $dst|$dst, $src1, $src2}",
                       [], IIC_SSE_CVT_Scalar_RM>,
                       XD, Requires<[HasAVX, OptForSize]>, VEX_4V, VEX_LIG,
                       Sched<[WriteCvtF2FLd, ReadAfterLd]>, VEX_WIG;
 }
 
-def : Pat<(f32 (fpround FR64:$src)), (VCVTSD2SSrr FR64:$src, FR64:$src)>,
+def : Pat<(f32 (fpround FR64:$src)), 
+            (VCVTSD2SSrr (COPY_TO_REGCLASS FR64:$src, FR32), FR64:$src)>,
           Requires<[UseAVX]>;
 
 def CVTSD2SSrr  : SDI<0x5A, MRMSrcReg, (outs FR32:$dst), (ins FR64:$src),
@@ -1781,14 +1782,14 @@ def Int_CVTSD2SSrm: I<0x5A, MRMSrcMem,
 // SSE2 instructions with XS prefix
 let hasSideEffects = 0, Predicates = [UseAVX] in {
 def VCVTSS2SDrr : I<0x5A, MRMSrcReg, (outs FR64:$dst),
-                    (ins FR32:$src1, FR32:$src2),
+                    (ins FR64:$src1, FR32:$src2),
                     "vcvtss2sd\t{$src2, $src1, $dst|$dst, $src1, $src2}",
                     [], IIC_SSE_CVT_Scalar_RR>,
                     XS, Requires<[HasAVX]>, VEX_4V, VEX_LIG,
                     Sched<[WriteCvtF2F]>, VEX_WIG;
 let mayLoad = 1 in
 def VCVTSS2SDrm : I<0x5A, MRMSrcMem, (outs FR64:$dst),
-                    (ins FR32:$src1, f32mem:$src2),
+                    (ins FR64:$src1, f32mem:$src2),
                     "vcvtss2sd\t{$src2, $src1, $dst|$dst, $src1, $src2}",
                     [], IIC_SSE_CVT_Scalar_RM>,
                     XS, VEX_4V, VEX_LIG, Requires<[HasAVX, OptForSize]>,
@@ -1796,15 +1797,15 @@ def VCVTSS2SDrm : I<0x5A, MRMSrcMem, (outs FR64:$dst),
 }
 
 def : Pat<(f64 (fpextend FR32:$src)),
-    (VCVTSS2SDrr FR32:$src, FR32:$src)>, Requires<[UseAVX]>;
+    (VCVTSS2SDrr (COPY_TO_REGCLASS FR32:$src, FR64), FR32:$src)>, Requires<[UseAVX]>;
 def : Pat<(fpextend (loadf32 addr:$src)),
-    (VCVTSS2SDrm (f32 (IMPLICIT_DEF)), addr:$src)>, Requires<[UseAVX]>;
+    (VCVTSS2SDrm (f64 (IMPLICIT_DEF)), addr:$src)>, Requires<[UseAVX]>;
 
 def : Pat<(extloadf32 addr:$src),
-    (VCVTSS2SDrm (f32 (IMPLICIT_DEF)), addr:$src)>,
+    (VCVTSS2SDrm (f64 (IMPLICIT_DEF)), addr:$src)>,
     Requires<[UseAVX, OptForSize]>;
 def : Pat<(extloadf32 addr:$src),
-    (VCVTSS2SDrr (f32 (IMPLICIT_DEF)), (VMOVSSrm addr:$src))>,
+    (VCVTSS2SDrr (f64 (IMPLICIT_DEF)), (VMOVSSrm addr:$src))>,
     Requires<[UseAVX, OptForSpeed]>;
 
 def CVTSS2SDrr : I<0x5A, MRMSrcReg, (outs FR64:$dst), (ins FR32:$src),

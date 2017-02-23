@@ -1851,6 +1851,10 @@ X86InstrInfo::X86InstrInfo(X86Subtarget &STI)
     { X86::VCMPSDZrr_Int,     X86::VCMPSDZrm_Int,       TB_NO_REVERSE },
     { X86::VCMPSSZrr,         X86::VCMPSSZrm,           0 },
     { X86::VCMPSSZrr_Int,     X86::VCMPSSZrm_Int,       TB_NO_REVERSE },
+    { X86::VCVTSS2SDZrr,      X86::VCVTSS2SDZrm,        0 },
+    { X86::VCVTSS2SDZrr_Int,  X86::VCVTSS2SDZrm_Int,    TB_NO_REVERSE },
+    { X86::VCVTSD2SSZrr,      X86::VCVTSD2SSZrm,        0 },
+    { X86::VCVTSD2SSZrr_Int,  X86::VCVTSD2SSZrm_Int,    TB_NO_REVERSE },
     { X86::VDIVPDZrr,         X86::VDIVPDZrm,           0 },
     { X86::VDIVPSZrr,         X86::VDIVPSZrm,           0 },
     { X86::VDIVSDZrr,         X86::VDIVSDZrm,           0 },
@@ -8165,11 +8169,15 @@ static bool hasUndefRegUpdate(unsigned Opcode) {
   case X86::VCVTUSI642SDZrrb_Int:
   case X86::VCVTUSI642SDZrm_Int:
   case X86::VCVTSD2SSZrr:
-  case X86::VCVTSD2SSZrrb:
+  case X86::VCVTSD2SSZrr_Int:
+  case X86::VCVTSD2SSZrrb_Int:
   case X86::VCVTSD2SSZrm:
+  case X86::VCVTSD2SSZrm_Int:
   case X86::VCVTSS2SDZrr:
-  case X86::VCVTSS2SDZrrb:
+  case X86::VCVTSS2SDZrr_Int:
+  case X86::VCVTSS2SDZrrb_Int:
   case X86::VCVTSS2SDZrm:
+  case X86::VCVTSS2SDZrm_Int:
   case X86::VRNDSCALESDr:
   case X86::VRNDSCALESDrb:
   case X86::VRNDSCALESDm:

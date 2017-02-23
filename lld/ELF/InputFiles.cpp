@@ -381,7 +381,7 @@ elf::ObjectFile<ELFT>::createInputSection(const Elf_Shdr &Sec,
     if (Target->FirstRelocation)
       fatal(toString(this) +
             ": multiple relocation sections to one section are not supported");
-    if (!isa<InputSection<ELFT>>(Target) && !isa<EhInputSection<ELFT>>(Target))
+    if (isa<MergeInputSection<ELFT>>(Target))
       fatal(toString(this) +
             ": relocations pointing to SHF_MERGE are not supported");
 
@@ -414,15 +414,29 @@ elf::ObjectFile<ELFT>::createInputSection(const Elf_Shdr &Sec,
   }
   }
 
-  // .note.GNU-stack is a marker section to control the presence of
-  // PT_GNU_STACK segment in outputs. Since the presence of the segment
-  // is controlled only by the command line option (-z execstack) in LLD,
-  // .note.GNU-stack is ignored.
+  // The GNU linker uses .note.GNU-stack section as a marker indicating
+  // that the code in the object file does not expect that the stack is
+  // executable (in terms of NX bit). If all input files have the marker,
+  // the GNU linker adds a PT_GNU_STACK segment to tells the loader to
+  // make the stack non-executable. Most object files have this section as
+  // of 2017.
+  //
+  // But making the stack non-executable is a norm today for security
+  // reasons. Failure to do so may result in a serious security issue.
+  // Therefore, we make LLD always add PT_GNU_STACK unless it is
+  // explicitly told to do otherwise (by -z execstack). Because the stack
+  // executable-ness is controlled solely by command line options,
+  // .note.GNU-stack sections are simply ignored.
   if (Name == ".note.GNU-stack")
     return &InputSection<ELFT>::Discarded;
 
+  // Split stacks is a feature to support a discontiguous stack. At least
+  // as of 2017, it seems that the feature is not being used widely.
+  // Only GNU gold supports that. We don't. For the details about that,
+  // see https://gcc.gnu.org/wiki/SplitStacks
   if (Name == ".note.GNU-split-stack") {
-    error("objects using splitstacks are not supported");
+    error(toString(this) +
+          ": object file compiled with -fsplit-stack is not supported");
     return &InputSection<ELFT>::Discarded;
   }
 
