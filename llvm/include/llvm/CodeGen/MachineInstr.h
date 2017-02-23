@@ -1149,9 +1149,10 @@ public:
   //
   // Debugging support
   //
-  void print(raw_ostream &OS, bool SkipOpers = false,
+  void print(raw_ostream &OS, bool SkipOpers = false, bool SkipDebugLoc = false,
              const TargetInstrInfo *TII = nullptr) const;
   void print(raw_ostream &OS, ModuleSlotTracker &MST, bool SkipOpers = false,
+             bool SkipDebugLoc = false,
              const TargetInstrInfo *TII = nullptr) const;
   void dump(const TargetInstrInfo *TII = nullptr) const;
 
