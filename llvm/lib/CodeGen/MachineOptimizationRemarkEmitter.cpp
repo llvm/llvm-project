@@ -74,7 +74,7 @@ bool MachineOptimizationRemarkEmitterPass::runOnMachineFunction(
 
 void MachineOptimizationRemarkEmitterPass::getAnalysisUsage(
     AnalysisUsage &AU) const {
-  LazyMachineBlockFrequencyInfoPass::getLazyMachineBFIAnalysisUsage(AU);
+  AU.addRequired<LazyMachineBlockFrequencyInfoPass>();
   AU.setPreservesAll();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
@@ -85,6 +85,6 @@ static const char ore_name[] = "Machine Optimization Remark Emitter";
 
 INITIALIZE_PASS_BEGIN(MachineOptimizationRemarkEmitterPass, ORE_NAME, ore_name,
                       false, true)
-INITIALIZE_PASS_DEPENDENCY(LazyMachineBFIPass)
+INITIALIZE_PASS_DEPENDENCY(LazyMachineBlockFrequencyInfoPass)
 INITIALIZE_PASS_END(MachineOptimizationRemarkEmitterPass, ORE_NAME, ore_name,
                     false, true)
