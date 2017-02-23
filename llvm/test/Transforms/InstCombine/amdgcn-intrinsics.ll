@@ -703,3 +703,325 @@ define <2 x half> @constant_rtz_pkrtz() {
   %cvt = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float 65535.0, float 65535.0)
   ret <2 x half> %cvt
 }
+
+; --------------------------------------------------------------------
+; llvm.amdgcn.ubfe
+; --------------------------------------------------------------------
+
+declare i32 @llvm.amdgcn.ubfe.i32(i32, i32, i32) nounwind readnone
+declare i64 @llvm.amdgcn.ubfe.i64(i64, i32, i32) nounwind readnone
+
+; CHECK-LABEL: @ubfe_var_i32(
+; CHECK-NEXT: %bfe = call i32 @llvm.amdgcn.ubfe.i32(i32 %src, i32 %offset, i32 %width)
+define i32 @ubfe_var_i32(i32 %src, i32 %offset, i32 %width) {
+  %bfe = call i32 @llvm.amdgcn.ubfe.i32(i32 %src, i32 %offset, i32 %width)
+  ret i32 %bfe
+}
+
+; CHECK-LABEL: @ubfe_clear_high_bits_constant_offset_i32(
+; CHECK-NEXT: %bfe = call i32 @llvm.amdgcn.ubfe.i32(i32 %src, i32 5, i32 %width)
+define i32 @ubfe_clear_high_bits_constant_offset_i32(i32 %src, i32 %width) {
+  %bfe = call i32 @llvm.amdgcn.ubfe.i32(i32 %src, i32 133, i32 %width)
+  ret i32 %bfe
+}
+
+; CHECK-LABEL: @ubfe_clear_high_bits_constant_width_i32(
+; CHECK-NEXT: %bfe = call i32 @llvm.amdgcn.ubfe.i32(i32 %src, i32 %offset, i32 5)
+define i32 @ubfe_clear_high_bits_constant_width_i32(i32 %src, i32 %offset) {
+  %bfe = call i32 @llvm.amdgcn.ubfe.i32(i32 %src, i32 %offset, i32 133)
+  ret i32 %bfe
+}
+
+; CHECK-LABEL: @ubfe_width_0(
+; CHECK-NEXT: ret i32 0
+define i32 @ubfe_width_0(i32 %src, i32 %offset) {
+  %bfe = call i32 @llvm.amdgcn.ubfe.i32(i32 %src, i32 %offset, i32 0)
+  ret i32 %bfe
+}
+
+; CHECK-LABEL: @ubfe_width_31(
+; CHECK: %bfe = call i32 @llvm.amdgcn.ubfe.i32(i32 %src, i32 %offset, i32 31)
+define i32 @ubfe_width_31(i32 %src, i32 %offset) {
+  %bfe = call i32 @llvm.amdgcn.ubfe.i32(i32 %src, i32 %offset, i32 31)
+  ret i32 %bfe
+}
+
+; CHECK-LABEL: @ubfe_width_32(
+; CHECK-NEXT: ret i32 0
+define i32 @ubfe_width_32(i32 %src, i32 %offset) {
+  %bfe = call i32 @llvm.amdgcn.ubfe.i32(i32 %src, i32 %offset, i32 32)
+  ret i32 %bfe
+}
+
+; CHECK-LABEL: @ubfe_width_33(
+; CHECK-NEXT: %bfe = call i32 @llvm.amdgcn.ubfe.i32(i32 %src, i32 %offset, i32 1)
+define i32 @ubfe_width_33(i32 %src, i32 %offset) {
+  %bfe = call i32 @llvm.amdgcn.ubfe.i32(i32 %src, i32 %offset, i32 33)
+  ret i32 %bfe
+}
+
+; CHECK-LABEL: @ubfe_offset_33(
+; CHECK-NEXT: %bfe = call i32 @llvm.amdgcn.ubfe.i32(i32 %src, i32 1, i32 %width)
+define i32 @ubfe_offset_33(i32 %src, i32 %width) {
+  %bfe = call i32 @llvm.amdgcn.ubfe.i32(i32 %src, i32 33, i32 %width)
+  ret i32 %bfe
+}
+
+; CHECK-LABEL: @ubfe_offset_0(
+; CHECK-NEXT: %1 = sub i32 32, %width
+; CHECK-NEXT: %2 = shl i32 %src, %1
+; CHECK-NEXT: %bfe = lshr i32 %2, %1
+; CHECK-NEXT: ret i32 %bfe
+define i32 @ubfe_offset_0(i32 %src, i32 %width) {
+  %bfe = call i32 @llvm.amdgcn.ubfe.i32(i32 %src, i32 0, i32 %width)
+  ret i32 %bfe
+}
+
+; CHECK-LABEL: @ubfe_offset_32(
+; CHECK-NEXT: %1 = sub i32 32, %width
+; CHECK-NEXT: %2 = shl i32 %src, %1
+; CHECK-NEXT: %bfe = lshr i32 %2, %1
+; CHECK-NEXT: ret i32 %bfe
+define i32 @ubfe_offset_32(i32 %src, i32 %width) {
+  %bfe = call i32 @llvm.amdgcn.ubfe.i32(i32 %src, i32 32, i32 %width)
+  ret i32 %bfe
+}
+
+; CHECK-LABEL: @ubfe_offset_31(
+; CHECK-NEXT: %1 = sub i32 32, %width
+; CHECK-NEXT: %2 = shl i32 %src, %1
+; CHECK-NEXT: %bfe = lshr i32 %2, %1
+; CHECK-NEXT: ret i32 %bfe
+define i32 @ubfe_offset_31(i32 %src, i32 %width) {
+  %bfe = call i32 @llvm.amdgcn.ubfe.i32(i32 %src, i32 32, i32 %width)
+  ret i32 %bfe
+}
+
+; CHECK-LABEL: @ubfe_offset_0_width_0(
+; CHECK-NEXT: ret i32 0
+define i32 @ubfe_offset_0_width_0(i32 %src) {
+  %bfe = call i32 @llvm.amdgcn.ubfe.i32(i32 %src, i32 0, i32 0)
+  ret i32 %bfe
+}
+
+; CHECK-LABEL: @ubfe_offset_0_width_3(
+; CHECK-NEXT: and i32 %src, 7
+; CHECK-NEXT: ret
+define i32 @ubfe_offset_0_width_3(i32 %src) {
+  %bfe = call i32 @llvm.amdgcn.ubfe.i32(i32 %src, i32 0, i32 3)
+  ret i32 %bfe
+}
+
+; CHECK-LABEL: @ubfe_offset_3_width_1(
+; CHECK-NEXT: %1 = lshr i32 %src, 3
+; CHECK-NEXT: and i32 %1, 1
+; CHECK-NEXT: ret i32
+define i32 @ubfe_offset_3_width_1(i32 %src) {
+  %bfe = call i32 @llvm.amdgcn.ubfe.i32(i32 %src, i32 3, i32 1)
+  ret i32 %bfe
+}
+
+; CHECK-LABEL: @ubfe_offset_3_width_4(
+; CHECK-NEXT: %1 = lshr i32 %src, 3
+; CHECK-NEXT: and i32 %1, 15
+; CHECK-NEXT: ret i32
+define i32 @ubfe_offset_3_width_4(i32 %src) {
+  %bfe = call i32 @llvm.amdgcn.ubfe.i32(i32 %src, i32 3, i32 4)
+  ret i32 %bfe
+}
+
+; CHECK-LABEL: @ubfe_0_0_0(
+; CHECK-NEXT: ret i32 0
+define i32 @ubfe_0_0_0() {
+  %bfe = call i32 @llvm.amdgcn.ubfe.i32(i32 0, i32 0, i32 0)
+  ret i32 %bfe
+}
+
+; CHECK-LABEL: @ubfe_neg1_5_7(
+; CHECK-NEXT: ret i32 127
+define i32 @ubfe_neg1_5_7() {
+  %bfe = call i32 @llvm.amdgcn.ubfe.i32(i32 -1, i32 5, i32 7)
+  ret i32 %bfe
+}
+
+; CHECK-LABEL: @ubfe_undef_src_i32(
+; CHECK-NEXT: ret i32 undef
+define i32 @ubfe_undef_src_i32(i32 %offset, i32 %width) {
+  %bfe = call i32 @llvm.amdgcn.ubfe.i32(i32 undef, i32 %offset, i32 %width)
+  ret i32 %bfe
+}
+
+; CHECK-LABEL: @ubfe_undef_offset_i32(
+; CHECK: %bfe = call i32 @llvm.amdgcn.ubfe.i32(i32 %src, i32 undef, i32 %width)
+define i32 @ubfe_undef_offset_i32(i32 %src, i32 %width) {
+  %bfe = call i32 @llvm.amdgcn.ubfe.i32(i32 %src, i32 undef, i32 %width)
+  ret i32 %bfe
+}
+
+; CHECK-LABEL: @ubfe_undef_width_i32(
+; CHECK: %bfe = call i32 @llvm.amdgcn.ubfe.i32(i32 %src, i32 %offset, i32 undef)
+define i32 @ubfe_undef_width_i32(i32 %src, i32 %offset) {
+  %bfe = call i32 @llvm.amdgcn.ubfe.i32(i32 %src, i32 %offset, i32 undef)
+  ret i32 %bfe
+}
+
+; CHECK-LABEL: @ubfe_offset_33_width_4_i64(
+; CHECK-NEXT: %1 = lshr i64 %src, 33
+; CHECK-NEXT: %bfe = and i64 %1, 15
+define i64 @ubfe_offset_33_width_4_i64(i64 %src) {
+  %bfe = call i64 @llvm.amdgcn.ubfe.i64(i64 %src, i32 33, i32 4)
+  ret i64 %bfe
+}
+
+; CHECK-LABEL: @ubfe_offset_0_i64(
+; CHECK-NEXT: %1 = sub i32 64, %width
+; CHECK-NEXT: %2 = zext i32 %1 to i64
+; CHECK-NEXT: %3 = shl i64 %src, %2
+; CHECK-NEXT: %bfe = lshr i64 %3, %2
+; CHECK-NEXT: ret i64 %bfe
+define i64 @ubfe_offset_0_i64(i64 %src, i32 %width) {
+  %bfe = call i64 @llvm.amdgcn.ubfe.i64(i64 %src, i32 0, i32 %width)
+  ret i64 %bfe
+}
+
+; CHECK-LABEL: @ubfe_offset_32_width_32_i64(
+; CHECK-NEXT: %bfe = lshr i64 %src, 32
+; CHECK-NEXT: ret i64 %bfe
+define i64 @ubfe_offset_32_width_32_i64(i64 %src) {
+  %bfe = call i64 @llvm.amdgcn.ubfe.i64(i64 %src, i32 32, i32 32)
+  ret i64 %bfe
+}
+
+; --------------------------------------------------------------------
+; llvm.amdgcn.sbfe
+; --------------------------------------------------------------------
+
+declare i32 @llvm.amdgcn.sbfe.i32(i32, i32, i32) nounwind readnone
+declare i64 @llvm.amdgcn.sbfe.i64(i64, i32, i32) nounwind readnone
+
+; CHECK-LABEL: @sbfe_offset_31(
+; CHECK-NEXT: %1 = sub i32 32, %width
+; CHECK-NEXT: %2 = shl i32 %src, %1
+; CHECK-NEXT: %bfe = ashr i32 %2, %1
+; CHECK-NEXT: ret i32 %bfe
+define i32 @sbfe_offset_31(i32 %src, i32 %width) {
+  %bfe = call i32 @llvm.amdgcn.sbfe.i32(i32 %src, i32 32, i32 %width)
+  ret i32 %bfe
+}
+
+; CHECK-LABEL: @sbfe_neg1_5_7(
+; CHECK-NEXT: ret i32 -1
+define i32 @sbfe_neg1_5_7() {
+  %bfe = call i32 @llvm.amdgcn.sbfe.i32(i32 -1, i32 5, i32 7)
+  ret i32 %bfe
+}
+
+; CHECK-LABEL: @sbfe_offset_32_width_32_i64(
+; CHECK-NEXT: %bfe = ashr i64 %src, 32
+; CHECK-NEXT: ret i64 %bfe
+define i64 @sbfe_offset_32_width_32_i64(i64 %src) {
+  %bfe = call i64 @llvm.amdgcn.sbfe.i64(i64 %src, i32 32, i32 32)
+  ret i64 %bfe
+}
+
+; --------------------------------------------------------------------
+; llvm.amdgcn.exp
+; --------------------------------------------------------------------
+
+declare void @llvm.amdgcn.exp.f32(i32, i32, float, float, float, float, i1, i1) nounwind inaccessiblememonly
+
+; Make sure no crashing on invalid variable params
+; CHECK-LABEL: @exp_invalid_inputs(
+; CHECK: call void @llvm.amdgcn.exp.f32(i32 0, i32 %en, float 1.000000e+00, float 2.000000e+00, float 5.000000e-01, float 4.000000e+00, i1 true, i1 false)
+; CHECK: call void @llvm.amdgcn.exp.f32(i32 %tgt, i32 15, float 1.000000e+00, float 2.000000e+00, float 5.000000e-01, float 4.000000e+00, i1 true, i1 false)
+define void @exp_invalid_inputs(i32 %tgt, i32 %en) {
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 %en, float 1.0, float 2.0, float 0.5, float 4.0, i1 true, i1 false)
+  call void @llvm.amdgcn.exp.f32(i32 %tgt, i32 15, float 1.0, float 2.0, float 0.5, float 4.0, i1 true, i1 false)
+  ret void
+}
+
+; CHECK-LABEL: @exp_disabled_inputs_to_undef(
+; CHECK: call void @llvm.amdgcn.exp.f32(i32 0, i32 1, float 1.000000e+00, float undef, float undef, float undef, i1 true, i1 false)
+; CHECK: call void @llvm.amdgcn.exp.f32(i32 0, i32 2, float undef, float 2.000000e+00, float undef, float undef, i1 true, i1 false)
+; CHECK: call void @llvm.amdgcn.exp.f32(i32 0, i32 4, float undef, float undef, float 5.000000e-01, float undef, i1 true, i1 false)
+; CHECK: call void @llvm.amdgcn.exp.f32(i32 0, i32 8, float undef, float undef, float undef, float 4.000000e+00, i1 true, i1 false)
+
+; CHECK: call void @llvm.amdgcn.exp.f32(i32 0, i32 1, float %x, float undef, float undef, float undef, i1 true, i1 false)
+; CHECK: call void @llvm.amdgcn.exp.f32(i32 0, i32 2, float undef, float %y, float undef, float undef, i1 true, i1 false)
+; CHECK: call void @llvm.amdgcn.exp.f32(i32 0, i32 4, float undef, float undef, float %z, float undef, i1 true, i1 false)
+; CHECK: call void @llvm.amdgcn.exp.f32(i32 0, i32 8, float undef, float undef, float undef, float %w, i1 true, i1 false)
+
+; CHECK: call void @llvm.amdgcn.exp.f32(i32 0, i32 0, float undef, float undef, float undef, float undef, i1 true, i1 false)
+
+; CHECK: call void @llvm.amdgcn.exp.f32(i32 0, i32 3, float 1.000000e+00, float 2.000000e+00, float undef, float undef, i1 true, i1 false)
+; CHECK: call void @llvm.amdgcn.exp.f32(i32 0, i32 5, float 1.000000e+00, float undef, float 5.000000e-01, float undef, i1 true, i1 false)
+; CHECK: call void @llvm.amdgcn.exp.f32(i32 0, i32 9, float 1.000000e+00, float undef, float undef, float 4.000000e+00, i1 false, i1 false)
+; CHECK: call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float 1.000000e+00, float 2.000000e+00, float 5.000000e-01, float 4.000000e+00, i1 false, i1 false)
+define void @exp_disabled_inputs_to_undef(float %x, float %y, float %z, float %w) {
+  ; enable src0..src3 constants
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 1, float 1.0, float 2.0, float 0.5, float 4.0, i1 true, i1 false)
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 2, float 1.0, float 2.0, float 0.5, float 4.0, i1 true, i1 false)
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 4, float 1.0, float 2.0, float 0.5, float 4.0, i1 true, i1 false)
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 8, float 1.0, float 2.0, float 0.5, float 4.0, i1 true, i1 false)
+
+  ; enable src0..src3 variables
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 1, float %x, float %y, float %z, float %w, i1 true, i1 false)
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 2, float %x, float %y, float %z, float %w, i1 true, i1 false)
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 4, float %x, float %y, float %z, float %w, i1 true, i1 false)
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 8, float %x, float %y, float %z, float %w, i1 true, i1 false)
+
+  ; enable none
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 0, float %x, float %y, float %z, float %w, i1 true, i1 false)
+
+  ; enable different source combinations
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 3, float 1.0, float 2.0, float 0.5, float 4.0, i1 true, i1 false)
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 5, float 1.0, float 2.0, float 0.5, float 4.0, i1 true, i1 false)
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 9, float 1.0, float 2.0, float 0.5, float 4.0, i1 false, i1 false)
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float 1.0, float 2.0, float 0.5, float 4.0, i1 false, i1 false)
+
+  ret void
+}
+
+; --------------------------------------------------------------------
+; llvm.amdgcn.exp.compr
+; --------------------------------------------------------------------
+
+declare void @llvm.amdgcn.exp.compr.v2f16(i32, i32, <2 x half>, <2 x half>, i1, i1) nounwind inaccessiblememonly
+
+; CHECK-LABEL: @exp_compr_invalid_inputs(
+; CHECK: call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 %en, <2 x half> <half 0xH3C00, half 0xH4000>, <2 x half> <half 0xH3800, half 0xH4400>, i1 true, i1 false)
+; CHECK: call void @llvm.amdgcn.exp.compr.v2f16(i32 %tgt, i32 5, <2 x half> <half 0xH3C00, half 0xH4000>, <2 x half> <half 0xH3800, half 0xH4400>, i1 true, i1 false)
+define void @exp_compr_invalid_inputs(i32 %tgt, i32 %en) {
+  call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 %en, <2 x half> <half 1.0, half 2.0>, <2 x half> <half 0.5, half 4.0>, i1 true, i1 false)
+  call void @llvm.amdgcn.exp.compr.v2f16(i32 %tgt, i32 5, <2 x half> <half 1.0, half 2.0>, <2 x half> <half 0.5, half 4.0>, i1 true, i1 false)
+  ret void
+}
+
+; CHECK-LABEL: @exp_compr_disabled_inputs_to_undef(
+; CHECK: call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 0, <2 x half> undef, <2 x half> undef, i1 true, i1 false)
+; CHECK: call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 1, <2 x half> <half 0xH3C00, half 0xH4000>, <2 x half> undef, i1 true, i1 false)
+; CHECK: call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 2, <2 x half> <half 0xH3C00, half 0xH4000>, <2 x half> undef, i1 true, i1 false)
+; CHECK: call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 3, <2 x half> <half 0xH3C00, half 0xH4000>, <2 x half> undef, i1 true, i1 false)
+
+; CHECK: call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 0, <2 x half> undef, <2 x half> undef, i1 true, i1 false)
+; CHECK: call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 1, <2 x half> %xy, <2 x half> undef, i1 true, i1 false)
+; CHECK: call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 2, <2 x half> %xy, <2 x half> undef, i1 true, i1 false)
+; CHECK: call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 3, <2 x half> %xy, <2 x half> undef, i1 true, i1 false)
+
+; CHECK: call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 12, <2 x half> undef, <2 x half> %zw, i1 true, i1 false)
+; CHECK: call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 15, <2 x half> %xy, <2 x half> %zw, i1 true, i1 false)
+define void @exp_compr_disabled_inputs_to_undef(<2 x half> %xy, <2 x half> %zw) {
+  call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 0, <2 x half> <half 1.0, half 2.0>, <2 x half> <half 0.5, half 4.0>, i1 true, i1 false)
+  call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 1, <2 x half> <half 1.0, half 2.0>, <2 x half> <half 0.5, half 4.0>, i1 true, i1 false)
+  call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 2, <2 x half> <half 1.0, half 2.0>, <2 x half> <half 0.5, half 4.0>, i1 true, i1 false)
+  call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 3, <2 x half> <half 1.0, half 2.0>, <2 x half> <half 0.5, half 4.0>, i1 true, i1 false)
+
+  call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 0, <2 x half> %xy, <2 x half> %zw, i1 true, i1 false)
+  call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 1, <2 x half> %xy, <2 x half> %zw, i1 true, i1 false)
+  call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 2, <2 x half> %xy, <2 x half> %zw, i1 true, i1 false)
+  call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 3, <2 x half> %xy, <2 x half> %zw, i1 true, i1 false)
+
+  call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 12, <2 x half> %xy, <2 x half> %zw, i1 true, i1 false)
+  call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 15, <2 x half> %xy, <2 x half> %zw, i1 true, i1 false)
+  ret void
+}

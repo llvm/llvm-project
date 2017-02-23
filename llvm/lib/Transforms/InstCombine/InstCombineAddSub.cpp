@@ -1078,11 +1078,6 @@ Instruction *InstCombiner::visitAdd(BinaryOperator &I) {
   // FIXME: Use the match above instead of dyn_cast to allow these transforms
   // for splat vectors.
   if (ConstantInt *CI = dyn_cast<ConstantInt>(RHS)) {
-    // See if SimplifyDemandedBits can simplify this.  This handles stuff like
-    // (X & 254)+1 -> (X&254)|1
-    if (SimplifyDemandedInstructionBits(I))
-      return &I;
-
     // zext(bool) + C -> bool ? C + 1 : C
     if (ZExtInst *ZI = dyn_cast<ZExtInst>(LHS))
       if (ZI->getSrcTy()->isIntegerTy(1))
@@ -1588,9 +1583,6 @@ Instruction *InstCombiner::visitSub(BinaryOperator &I) {
     Constant *C2;
     if (match(Op1, m_Add(m_Value(X), m_Constant(C2))))
       return BinaryOperator::CreateSub(ConstantExpr::getSub(C, C2), X);
-
-    if (SimplifyDemandedInstructionBits(I))
-      return &I;
 
     // Fold (sub 0, (zext bool to B)) --> (sext bool to B)
     if (C->isNullValue() && match(Op1, m_ZExt(m_Value(X))))

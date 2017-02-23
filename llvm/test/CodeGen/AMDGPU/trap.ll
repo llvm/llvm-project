@@ -28,7 +28,7 @@ declare void @llvm.debugtrap() #0
 ; GCN-LABEL: {{^}}hsa_trap:
 ; HSA-TRAP: enable_trap_handler = 1
 ; HSA-TRAP: s_mov_b64 s[0:1], s[4:5]
-; HSA-TRAP: s_trap 1
+; HSA-TRAP: s_trap 2
 
 ; for llvm.trap in hsa path without ABI, direct generate s_endpgm instruction without any warning information
 ; NO-HSA-TRAP: enable_trap_handler = 0
@@ -55,7 +55,7 @@ define void @hsa_trap() {
 ; GCN-LABEL: {{^}}hsa_debugtrap:
 ; HSA-TRAP: enable_trap_handler = 1
 ; HSA-TRAP: s_mov_b64 s[0:1], s[4:5]
-; HSA-TRAP: s_trap 2
+; HSA-TRAP: s_trap 3
 
 ; for llvm.debugtrap in non-hsa path without ABI, generate a warning and a s_endpgm instruction
 ; NO-HSA-TRAP: enable_trap_handler = 0

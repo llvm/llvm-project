@@ -78,6 +78,10 @@ class InstSI <dag outs, dag ins, string asm = "",
   // is unable to infer the encoding from the operands.
   field bit VOPAsmPrefer32Bit = 0;
 
+  // This bit indicates that this has a floating point result type, so
+  // the clamp modifier has floating point semantics.
+  field bit FPClamp = 0;
+
   // These need to be kept in sync with the enum in SIInstrFlags.
   let TSFlags{0} = SALU;
   let TSFlags{1} = VALU;
@@ -120,6 +124,7 @@ class InstSI <dag outs, dag ins, string asm = "",
   let TSFlags{39} = ScalarStore;
   let TSFlags{40} = FixedSize;
   let TSFlags{41} = VOPAsmPrefer32Bit;
+  let TSFlags{42} = FPClamp;
 
   let SchedRW = [Write32Bit];
 

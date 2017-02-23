@@ -42,6 +42,7 @@ enum RelExpr {
   R_MIPS_TLSGD,
   R_MIPS_TLSLD,
   R_NEG_TLS,
+  R_NONE,
   R_PAGE_PC,
   R_PC,
   R_PLT,
