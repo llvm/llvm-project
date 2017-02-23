@@ -230,7 +230,8 @@ static bool ShouldUpgradeX86Intrinsic(Function *F, StringRef Name) {
       Name.startswith("avx2.pblendd.") || // Added in 3.7
       Name.startswith("avx.vbroadcastf128") || // Added in 4.0
       Name == "avx2.vbroadcasti128" || // Added in 3.7
-      Name.startswith("xop.vpcmov") || // Added in 3.8
+      Name == "xop.vpcmov" || // Added in 3.8
+      Name == "xop.vpcmov.256" || // Added in 4.1
       Name.startswith("avx512.mask.move.s") || // Added in 4.0
       (Name.startswith("xop.vpcom") && // Added in 3.2
        F->arg_size() == 2))

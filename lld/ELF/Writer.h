@@ -19,7 +19,7 @@ namespace lld {
 namespace elf {
 class InputFile;
 class OutputSectionBase;
-template <class ELFT> class InputSectionBase;
+class InputSectionBase;
 template <class ELFT> class ObjectFile;
 template <class ELFT> class SymbolTable;
 template <class ELFT> void writeResult();

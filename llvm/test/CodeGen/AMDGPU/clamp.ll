@@ -87,9 +87,8 @@ define amdgpu_kernel void @v_clamp_multi_use_max_f32(float addrspace(1)* %out, f
 ; GCN: {{buffer|flat}}_load_ushort [[A:v[0-9]+]]
 ; VI: v_max_f16_e64 v{{[0-9]+}}, [[A]], [[A]] clamp{{$}}
 
-; SI: v_cvt_f32_f16_e32 [[CVT:v[0-9]+]], [[A]]
-; SI: v_max_f32_e64 v{{[0-9]+}}, [[CVT]], [[CVT]] clamp{{$}}
-; SI: v_cvt_f16_f32_e32
+; SI: v_cvt_f32_f16_e64 [[CVT:v[0-9]+]], [[A]] clamp{{$}}
+; SI: v_cvt_f16_f32_e32 v{{[0-9]+}}, [[CVT]]
 define amdgpu_kernel void @v_clamp_f16(half addrspace(1)* %out, half addrspace(1)* %aptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr half, half addrspace(1)* %aptr, i32 %tid
@@ -107,9 +106,8 @@ define amdgpu_kernel void @v_clamp_f16(half addrspace(1)* %out, half addrspace(1
 ; VI: v_max_f16_e64 v{{[0-9]+}}, -[[A]], -[[A]] clamp{{$}}
 
 ; FIXME: Better to fold neg into max
-; SI: v_cvt_f32_f16_e64 [[CVT:v[0-9]+]], -[[A]]
-; SI: v_max_f32_e64 v{{[0-9]+}}, [[CVT]], [[CVT]] clamp{{$}}
-; SI: v_cvt_f16_f32
+; SI: v_cvt_f32_f16_e64 [[CVT:v[0-9]+]], -[[A]] clamp{{$}}
+; SI: v_cvt_f16_f32_e32 v{{[0-9]+}}, [[CVT]]
 define amdgpu_kernel void @v_clamp_neg_f16(half addrspace(1)* %out, half addrspace(1)* %aptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr half, half addrspace(1)* %aptr, i32 %tid
@@ -129,9 +127,8 @@ define amdgpu_kernel void @v_clamp_neg_f16(half addrspace(1)* %out, half addrspa
 
 ; FIXME: Better to fold neg/abs into max
 
-; SI: v_cvt_f32_f16_e64 [[CVT:v[0-9]+]], -|[[A]]|
-; SI: v_max_f32_e64 v{{[0-9]+}}, [[CVT]], [[CVT]] clamp{{$}}
-; SI: v_cvt_f16_f32_e32
+; SI: v_cvt_f32_f16_e64 [[CVT:v[0-9]+]], -|[[A]]| clamp{{$}}
+; SI: v_cvt_f16_f32_e32 v{{[0-9]+}}, [[CVT]]
 define amdgpu_kernel void @v_clamp_negabs_f16(half addrspace(1)* %out, half addrspace(1)* %aptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr half, half addrspace(1)* %aptr, i32 %tid
@@ -150,8 +147,7 @@ define amdgpu_kernel void @v_clamp_negabs_f16(half addrspace(1)* %out, half addr
 ; FIXME: Do f64 instructions support clamp?
 ; GCN-LABEL: {{^}}v_clamp_f64:
 ; GCN: {{buffer|flat}}_load_dwordx2 [[A:v\[[0-9]+:[0-9]+\]]]
-; GCN: v_max_f64
-; GCN: v_min_f64
+; GCN: v_max_f64 v{{\[[0-9]+:[0-9]+\]}}, [[A]], [[A]] clamp{{$}}
 define amdgpu_kernel void @v_clamp_f64(double addrspace(1)* %out, double addrspace(1)* %aptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr double, double addrspace(1)* %aptr, i32 %tid
@@ -166,8 +162,7 @@ define amdgpu_kernel void @v_clamp_f64(double addrspace(1)* %out, double addrspa
 
 ; GCN-LABEL: {{^}}v_clamp_neg_f64:
 ; GCN: {{buffer|flat}}_load_dwordx2 [[A:v\[[0-9]+:[0-9]+\]]]
-; GCN: v_max_f64
-; GCN: v_min_f64
+; GCN: v_max_f64 v{{\[[0-9]+:[0-9]+\]}}, -[[A]], -[[A]] clamp{{$}}
 define amdgpu_kernel void @v_clamp_neg_f64(double addrspace(1)* %out, double addrspace(1)* %aptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr double, double addrspace(1)* %aptr, i32 %tid
@@ -183,8 +178,7 @@ define amdgpu_kernel void @v_clamp_neg_f64(double addrspace(1)* %out, double add
 
 ; GCN-LABEL: {{^}}v_clamp_negabs_f64:
 ; GCN: {{buffer|flat}}_load_dwordx2 [[A:v\[[0-9]+:[0-9]+\]]]
-; GCN: v_max_f64
-; GCN: v_min_f64
+; GCN: v_max_f64 v{{\[[0-9]+:[0-9]+\]}}, -|[[A]]|, -|[[A]]| clamp{{$}}
 define amdgpu_kernel void @v_clamp_negabs_f64(double addrspace(1)* %out, double addrspace(1)* %aptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr double, double addrspace(1)* %aptr, i32 %tid

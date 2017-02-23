@@ -26,7 +26,12 @@ void ODRHash::AddStmt(const Stmt *S) {
   assert(S && "Expecting non-null pointer.");
   S->ProcessODRHash(ID, *this);
 }
-void ODRHash::AddIdentifierInfo(const IdentifierInfo *II) {}
+
+void ODRHash::AddIdentifierInfo(const IdentifierInfo *II) {
+  assert(II && "Expecting non-null pointer.");
+  ID.AddString(II->getName());
+}
+
 void ODRHash::AddNestedNameSpecifier(const NestedNameSpecifier *NNS) {}
 void ODRHash::AddTemplateName(TemplateName Name) {}
 void ODRHash::AddDeclarationName(DeclarationName Name) {}
@@ -90,9 +95,30 @@ public:
     }
   }
 
+  void AddIdentifierInfo(const IdentifierInfo *II) {
+    Hash.AddBoolean(II);
+    if (II) {
+      Hash.AddIdentifierInfo(II);
+    }
+  }
+
+  void AddQualType(QualType T) {
+    Hash.AddQualType(T);
+  }
+
   void Visit(const Decl *D) {
     ID.AddInteger(D->getKind());
     Inherited::Visit(D);
+  }
+
+  void VisitNamedDecl(const NamedDecl *D) {
+    AddIdentifierInfo(D->getIdentifier());
+    Inherited::VisitNamedDecl(D);
+  }
+
+  void VisitValueDecl(const ValueDecl *D) {
+    AddQualType(D->getType());
+    Inherited::VisitValueDecl(D);
   }
 
   void VisitAccessSpecDecl(const AccessSpecDecl *D) {
@@ -106,6 +132,10 @@ public:
 
     Inherited::VisitStaticAssertDecl(D);
   }
+
+  void VisitFieldDecl(const FieldDecl *D) {
+    Inherited::VisitFieldDecl(D);
+  }
 };
 
 // Only allow a small portion of Decl's to be processed.  Remove this once
@@ -118,6 +148,7 @@ bool ODRHash::isWhitelistedDecl(const Decl *D, const CXXRecordDecl *Parent) {
     default:
       return false;
     case Decl::AccessSpec:
+    case Decl::Field:
     case Decl::StaticAssert:
       return true;
   }
@@ -163,8 +194,59 @@ void ODRHash::AddDecl(const Decl *D) {
   ID.AddInteger(D->getKind());
 }
 
-void ODRHash::AddType(const Type *T) {}
-void ODRHash::AddQualType(QualType T) {}
+// Process a Type pointer.  Add* methods call back into ODRHash while Visit*
+// methods process the relevant parts of the Type.
+class ODRTypeVisitor : public TypeVisitor<ODRTypeVisitor> {
+  typedef TypeVisitor<ODRTypeVisitor> Inherited;
+  llvm::FoldingSetNodeID &ID;
+  ODRHash &Hash;
+
+public:
+  ODRTypeVisitor(llvm::FoldingSetNodeID &ID, ODRHash &Hash)
+      : ID(ID), Hash(Hash) {}
+
+  void AddStmt(Stmt *S) {
+    Hash.AddBoolean(S);
+    if (S) {
+      Hash.AddStmt(S);
+    }
+  }
+
+  void Visit(const Type *T) {
+    ID.AddInteger(T->getTypeClass());
+    Inherited::Visit(T);
+  }
+
+  void VisitType(const Type *T) {}
+
+  void VisitBuiltinType(const BuiltinType *T) {
+    ID.AddInteger(T->getKind());
+    VisitType(T);
+  }
+};
+
+void ODRHash::AddType(const Type *T) {
+  assert(T && "Expecting non-null pointer.");
+  auto Result = TypeMap.insert(std::make_pair(T, TypeMap.size()));
+  ID.AddInteger(Result.first->second);
+  // On first encounter of a Type pointer, process it.  Every time afterwards,
+  // only the index value is needed.
+  if (!Result.second) {
+    return;
+  }
+
+  ODRTypeVisitor(ID, *this).Visit(T);
+}
+
+void ODRHash::AddQualType(QualType T) {
+  AddBoolean(T.isNull());
+  if (T.isNull())
+    return;
+  SplitQualType split = T.split();
+  ID.AddInteger(split.Quals.getAsOpaqueValue());
+  AddType(split.Ty);
+}
+
 void ODRHash::AddBoolean(bool Value) {
   Bools.push_back(Value);
 }

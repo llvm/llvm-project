@@ -13465,10 +13465,10 @@ FriendDecl *Sema::CheckFriendTypeDecl(SourceLocation LocStart,
   //   for a class.*
   //
   //   * The class-key of the elaborated-type-specifier is required.
-  if (!ActiveTemplateInstantiations.empty()) {
-    // Do not complain about the form of friend template types during
-    // template instantiation; we will already have complained when the
-    // template was declared.
+  if (!CodeSynthesisContexts.empty()) {
+    // Do not complain about the form of friend template types during any kind
+    // of code synthesis. For template instantiation, we will have complained
+    // when the template was defined.
   } else {
     if (!T->isElaboratedTypeSpecifier()) {
       // If we evaluated the type to a record type, suggest putting

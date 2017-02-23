@@ -11774,9 +11774,6 @@ static void RebuildLambdaScopeInfo(CXXMethodDecl *CallOperator,
 
 Decl *Sema::ActOnStartOfFunctionDef(Scope *FnBodyScope, Decl *D,
                                     SkipBodyInfo *SkipBody) {
-  // Clear the last template instantiation error context.
-  LastTemplateInstantiationErrorContext = ActiveTemplateInstantiation();
-
   if (!D)
     return D;
   FunctionDecl *FD = nullptr;

@@ -1888,9 +1888,10 @@ Sema::DiagnoseEmptyLookup(Scope *S, CXXScopeSpec &SS, LookupResult &R,
         // During a default argument instantiation the CurContext points
         // to a CXXMethodDecl; but we can't apply a this-> fixit inside a
         // function parameter list, hence add an explicit check.
-        bool isDefaultArgument = !ActiveTemplateInstantiations.empty() &&
-                              ActiveTemplateInstantiations.back().Kind ==
-            ActiveTemplateInstantiation::DefaultFunctionArgumentInstantiation;
+        bool isDefaultArgument =
+            !CodeSynthesisContexts.empty() &&
+            CodeSynthesisContexts.back().Kind ==
+                CodeSynthesisContext::DefaultFunctionArgumentInstantiation;
         CXXMethodDecl *CurMethod = dyn_cast<CXXMethodDecl>(CurContext);
         bool isInstance = CurMethod &&
                           CurMethod->isInstance() &&
@@ -13384,7 +13385,7 @@ void Sema::MarkFunctionReferenced(SourceLocation Loc, FunctionDecl *Func,
     if (!AlreadyInstantiated || Func->isConstexpr()) {
       if (isa<CXXRecordDecl>(Func->getDeclContext()) &&
           cast<CXXRecordDecl>(Func->getDeclContext())->isLocalClass() &&
-          ActiveTemplateInstantiations.size())
+          CodeSynthesisContexts.size())
         PendingLocalImplicitInstantiations.push_back(
             std::make_pair(Func, PointOfInstantiation));
       else if (Func->isConstexpr())

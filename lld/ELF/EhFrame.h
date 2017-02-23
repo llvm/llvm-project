@@ -14,11 +14,10 @@
 
 namespace lld {
 namespace elf {
-template <class ELFT> class InputSectionBase;
+class InputSectionBase;
 struct EhSectionPiece;
 
-template <class ELFT>
-size_t readEhRecordSize(InputSectionBase<ELFT> *S, size_t Off);
+template <class ELFT> size_t readEhRecordSize(InputSectionBase *S, size_t Off);
 template <class ELFT> uint8_t getFdeEncoding(EhSectionPiece *P);
 }
 }

@@ -121,10 +121,10 @@ def err_module_odr_violation_mismatch_decl : Error<
   "%q0 has different definitions in different modules; first difference is "
   "%select{definition in module '%2'|defined here}1 found "
   "%select{end of class|public access specifier|private access specifier|"
-  "protected access specifier|static assert}3">;
+  "protected access specifier|static assert|field}3">;
 def note_module_odr_violation_mismatch_decl : Note<"but in '%0' found "
   "%select{end of class|public access specifier|private access specifier|"
-  "protected access specifier|static assert}1">;
+  "protected access specifier|static assert|field}1">;
 
 def err_module_odr_violation_mismatch_decl_diff : Error<
   "%q0 has different definitions in different modules; first difference is "
@@ -132,13 +132,15 @@ def err_module_odr_violation_mismatch_decl_diff : Error<
   "%select{"
   "static assert with condition|"
   "static assert with message|"
-  "static assert with %select{|no }4message}3">;
+  "static assert with %select{|no }4message|"
+  "field %4}3">;
 
 def note_module_odr_violation_mismatch_decl_diff : Note<"but in '%0' found "
   "%select{"
   "static assert with different condition|"
   "static assert with different message|"
-  "static assert with %select{|no }2message}1">;
+  "static assert with %select{|no }2message|"
+  "field %2}1">;
 
 def warn_module_uses_date_time : Warning<
   "%select{precompiled header|module}0 uses __DATE__ or __TIME__">,

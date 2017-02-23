@@ -3304,6 +3304,34 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     RightShift->takeName(II);
     return replaceInstUsesWith(*II, RightShift);
   }
+  case Intrinsic::amdgcn_exp:
+  case Intrinsic::amdgcn_exp_compr: {
+    ConstantInt *En = dyn_cast<ConstantInt>(II->getArgOperand(1));
+    if (!En) // Illegal.
+      break;
+
+    unsigned EnBits = En->getZExtValue();
+    if (EnBits == 0xf)
+      break; // All inputs enabled.
+
+    bool IsCompr = II->getIntrinsicID() == Intrinsic::amdgcn_exp_compr;
+    bool Changed = false;
+    for (int I = 0; I < (IsCompr ? 2 : 4); ++I) {
+      if ((!IsCompr && (EnBits & (1 << I)) == 0) ||
+          (IsCompr && ((EnBits & (0x3 << (2 * I))) == 0))) {
+        Value *Src = II->getArgOperand(I + 2);
+        if (!isa<UndefValue>(Src)) {
+          II->setArgOperand(I + 2, UndefValue::get(Src->getType()));
+          Changed = true;
+        }
+      }
+    }
+
+    if (Changed)
+      return II;
+
+    break;
+  }
   case Intrinsic::stackrestore: {
     // If the save is right next to the restore, remove the restore.  This can
     // happen when variable allocas are DCE'd.
