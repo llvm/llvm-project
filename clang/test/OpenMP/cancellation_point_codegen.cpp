@@ -26,7 +26,6 @@ int main (int argc, char **argv) {
 // CHECK: [[CMP:%.+]] = icmp ne i32 [[RES]], 0
 // CHECK: br i1 [[CMP]], label %[[EXIT:[^,].+]], label %[[CONTINUE:.+]]
 // CHECK: [[EXIT]]
-// CHECK: call i32 @__kmpc_cancel_barrier(%ident_t*
 // CHECK: br label
 // CHECK: [[CONTINUE]]
 // CHECK: br label
@@ -46,7 +45,6 @@ int main (int argc, char **argv) {
 // CHECK: [[CMP:%.+]] = icmp ne i32 [[RES]], 0
 // CHECK: br i1 [[CMP]], label %[[EXIT:[^,].+]], label %[[CONTINUE:.+]]
 // CHECK: [[EXIT]]
-// CHECK: call i32 @__kmpc_cancel_barrier(%ident_t*
 // CHECK: br label
 // CHECK: [[CONTINUE]]
 // CHECK: br label
@@ -54,7 +52,6 @@ int main (int argc, char **argv) {
 // CHECK: [[CMP:%.+]] = icmp ne i32 [[RES]], 0
 // CHECK: br i1 [[CMP]], label %[[EXIT:[^,].+]], label %[[CONTINUE:.+]]
 // CHECK: [[EXIT]]
-// CHECK: call i32 @__kmpc_cancel_barrier(%ident_t*
 // CHECK: br label
 // CHECK: [[CONTINUE]]
 // CHECK: br label
@@ -69,7 +66,6 @@ for (int i = 0; i < argc; ++i) {
 // CHECK: [[CMP:%.+]] = icmp ne i32 [[RES]], 0
 // CHECK: br i1 [[CMP]], label %[[EXIT:[^,].+]], label %[[CONTINUE:.+]]
 // CHECK: [[EXIT]]
-// CHECK: call i32 @__kmpc_cancel_barrier(%ident_t*
 // CHECK: br label
 // CHECK: [[CONTINUE]]
 // CHECK: br label
@@ -116,7 +112,6 @@ for (int i = 0; i < argc; ++i) {
 // CHECK: [[CMP:%.+]] = icmp ne i32 [[RES]], 0
 // CHECK: br i1 [[CMP]], label %[[EXIT:[^,]+]],
 // CHECK: [[EXIT]]
-// CHECK: call i32 @__kmpc_cancel_barrier(%ident_t*
 // CHECK: br label %[[RETURN:.+]]
 // CHECK: [[RETURN]]
 // CHECK: ret void
@@ -126,7 +121,6 @@ for (int i = 0; i < argc; ++i) {
 // CHECK: [[CMP:%.+]] = icmp ne i32 [[RES]], 0
 // CHECK: br i1 [[CMP]], label %[[EXIT:[^,]+]],
 // CHECK: [[EXIT]]
-// CHECK: call i32 @__kmpc_cancel_barrier(%ident_t*
 // CHECK: br label %[[RETURN:.+]]
 // CHECK: [[RETURN]]
 // CHECK: ret i32 0
@@ -137,7 +131,6 @@ for (int i = 0; i < argc; ++i) {
 // CHECK: [[CMP:%.+]] = icmp ne i32 [[RES]], 0
 // CHECK: br i1 [[CMP]], label %[[EXIT:[^,].+]], label %[[CONTINUE:.+]]
 // CHECK: [[EXIT]]
-// CHECK: call i32 @__kmpc_cancel_barrier(%ident_t*
 // CHECK: br label
 // CHECK: [[CONTINUE]]
 // CHECK: br label
@@ -150,7 +143,6 @@ for (int i = 0; i < argc; ++i) {
 // CHECK: [[CMP:%.+]] = icmp ne i32 [[RES]], 0
 // CHECK: br i1 [[CMP]], label %[[EXIT:[^,].+]], label %[[CONTINUE:.+]]
 // CHECK: [[EXIT]]
-// CHECK: call i32 @__kmpc_cancel_barrier(%ident_t*
 // CHECK: br label
 // CHECK: [[CONTINUE]]
 // CHECK: br label
@@ -158,7 +150,6 @@ for (int i = 0; i < argc; ++i) {
 // CHECK: [[CMP:%.+]] = icmp ne i32 [[RES]], 0
 // CHECK: br i1 [[CMP]], label %[[EXIT:[^,].+]], label %[[CONTINUE:.+]]
 // CHECK: [[EXIT]]
-// CHECK: call i32 @__kmpc_cancel_barrier(%ident_t*
 // CHECK: br label
 // CHECK: [[CONTINUE]]
 // CHECK: br label
@@ -171,7 +162,6 @@ for (int i = 0; i < argc; ++i) {
 // CHECK: [[CMP:%.+]] = icmp ne i32 [[RES]], 0
 // CHECK: br i1 [[CMP]], label %[[EXIT:[^,].+]], label %[[CONTINUE:.+]]
 // CHECK: [[EXIT]]
-// CHECK: call i32 @__kmpc_cancel_barrier(%ident_t*
 // CHECK: br label
 // CHECK: [[CONTINUE]]
 // CHECK: br label
