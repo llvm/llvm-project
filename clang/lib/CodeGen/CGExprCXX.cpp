@@ -292,7 +292,7 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
 
   SanitizerSet SkippedChecks;
   if (const auto *CMCE = dyn_cast<CXXMemberCallExpr>(CE))
-    if (CanElideObjectPointerNullCheck(CMCE->getImplicitObjectArgument()))
+    if (IsDeclRefOrWrappedCXXThis(CMCE->getImplicitObjectArgument()))
       SkippedChecks.set(SanitizerKind::Null, true);
   EmitTypeCheck(
       isa<CXXConstructorDecl>(CalleeDecl) ? CodeGenFunction::TCK_ConstructorCall

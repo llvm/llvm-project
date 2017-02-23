@@ -31,11 +31,11 @@ namespace elf {
 class DefinedCommon;
 class ScriptParser;
 class SymbolBody;
-template <class ELFT> class InputSectionBase;
+class InputSectionBase;
 template <class ELFT> class InputSection;
 class OutputSectionBase;
 template <class ELFT> class OutputSectionFactory;
-class InputSectionData;
+class InputSectionBase;
 
 // This represents an expression in the linker script.
 // ScriptParser::readExpr reads an expression and returns an Expr.
@@ -159,7 +159,7 @@ struct InputSectionDescription : BaseCommand {
   // will be associated with this InputSectionDescription.
   std::vector<SectionPattern> SectionPatterns;
 
-  std::vector<InputSectionData *> Sections;
+  std::vector<InputSectionBase *> Sections;
 };
 
 // Represents an ASSERT().
@@ -259,7 +259,7 @@ public:
   uint32_t getFiller(StringRef Name);
   void writeDataBytes(StringRef Name, uint8_t *Buf);
   bool hasLMA(StringRef Name);
-  bool shouldKeep(InputSectionBase<ELFT> *S);
+  bool shouldKeep(InputSectionBase *S);
   void assignOffsets(OutputSectionCommand *Cmd);
   void placeOrphanSections();
   void assignAddresses(std::vector<PhdrEntry> &Phdrs);
@@ -283,9 +283,9 @@ private:
   void computeInputSections(InputSectionDescription *);
   void setDot(Expr E, const Twine &Loc, bool InSec = false);
 
-  void discard(ArrayRef<InputSectionBase<ELFT> *> V);
+  void discard(ArrayRef<InputSectionBase *> V);
 
-  std::vector<InputSectionBase<ELFT> *>
+  std::vector<InputSectionBase *>
   createInputSectionList(OutputSectionCommand &Cmd);
 
   // "ScriptConfig" is a bit too long, so define a short name for it.
@@ -307,7 +307,7 @@ private:
   void output(InputSection<ELFT> *Sec);
   void process(BaseCommand &Base);
   llvm::DenseSet<OutputSectionBase *> AlreadyOutputOS;
-  llvm::DenseSet<InputSectionData *> AlreadyOutputIS;
+  llvm::DenseSet<InputSectionBase *> AlreadyOutputIS;
 };
 
 // Variable template is a C++14 feature, so we can't template

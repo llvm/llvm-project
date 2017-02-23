@@ -17,7 +17,7 @@ namespace elf {
 class SymbolBody;
 class InputSectionData;
 template <class ELFT> class InputSection;
-template <class ELFT> class InputSectionBase;
+class InputSectionBase;
 class OutputSectionBase;
 
 // List of target-independent relocation types. Relocations read
@@ -42,6 +42,7 @@ enum RelExpr {
   R_MIPS_TLSGD,
   R_MIPS_TLSLD,
   R_NEG_TLS,
+  R_NONE,
   R_PAGE_PC,
   R_PC,
   R_PLT,
@@ -109,7 +110,7 @@ struct Relocation {
   SymbolBody *Sym;
 };
 
-template <class ELFT> void scanRelocations(InputSectionBase<ELFT> &);
+template <class ELFT> void scanRelocations(InputSectionBase &);
 
 template <class ELFT>
 void createThunks(ArrayRef<OutputSectionBase *> OutputSections);

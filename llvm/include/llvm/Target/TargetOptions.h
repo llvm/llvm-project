@@ -283,6 +283,7 @@ inline bool operator==(const TargetOptions &LHS,
     ARE_EQUAL(NoInfsFPMath) &&
     ARE_EQUAL(NoNaNsFPMath) &&
     ARE_EQUAL(NoTrappingFPMath) &&
+    ARE_EQUAL(NoSignedZerosFPMath) &&
     ARE_EQUAL(HonorSignDependentRoundingFPMathOption) &&
     ARE_EQUAL(NoZerosInBSS) &&
     ARE_EQUAL(GuaranteedTailCallOpt) &&

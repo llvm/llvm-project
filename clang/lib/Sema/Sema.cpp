@@ -1230,7 +1230,7 @@ BlockScopeInfo *Sema::getCurBlock() {
   if (CurBSI && CurBSI->TheDecl &&
       !CurBSI->TheDecl->Encloses(CurContext)) {
     // We have switched contexts due to template instantiation.
-    assert(!ActiveTemplateInstantiations.empty());
+    assert(!CodeSynthesisContexts.empty());
     return nullptr;
   }
 
@@ -1253,7 +1253,7 @@ LambdaScopeInfo *Sema::getCurLambda(bool IgnoreCapturedRegions) {
   if (CurLSI && CurLSI->Lambda &&
       !CurLSI->Lambda->Encloses(CurContext)) {
     // We have switched contexts due to template instantiation.
-    assert(!ActiveTemplateInstantiations.empty());
+    assert(!CodeSynthesisContexts.empty());
     return nullptr;
   }
 

@@ -4452,12 +4452,12 @@ int main(int argc, const char **argv) {
   LIBXML_TEST_VERSION
 #endif
 
+  if (argc > 1 && strcmp(argv[1], "core") == 0)
+    return indextest_core_main(argc, argv);
+
   client_data.main_func = cindextest_main;
   client_data.argc = argc;
   client_data.argv = argv;
-
-  if (argc > 1 && strcmp(argv[1], "core") == 0)
-    client_data.main_func = indextest_core_main;
 
   if (getenv("CINDEXTEST_NOTHREADS"))
     return client_data.main_func(client_data.argc, client_data.argv);

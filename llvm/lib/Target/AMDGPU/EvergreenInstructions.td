@@ -388,7 +388,7 @@ def BFE_INT_eg : R600_3OP <0x5, "BFE_INT",
   VecALU
 >;
 
-def : BFEPattern <BFE_UINT_eg, MOV_IMM_I32>;
+defm : BFEPattern <BFE_UINT_eg, BFE_INT_eg, MOV_IMM_I32>;
 
 def BFI_INT_eg : R600_3OP <0x06, "BFI_INT",
   [(set i32:$dst, (AMDGPUbfi i32:$src0, i32:$src1, i32:$src2))],

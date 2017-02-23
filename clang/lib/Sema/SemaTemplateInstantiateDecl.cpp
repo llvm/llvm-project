@@ -3563,8 +3563,8 @@ TemplateDeclInstantiator::InitFunctionInstantiation(FunctionDecl *New,
   // into a template instantiation for this specific function template
   // specialization, which is not a SFINAE context, so that we diagnose any
   // further errors in the declaration itself.
-  typedef Sema::ActiveTemplateInstantiation ActiveInstType;
-  ActiveInstType &ActiveInst = SemaRef.ActiveTemplateInstantiations.back();
+  typedef Sema::CodeSynthesisContext ActiveInstType;
+  ActiveInstType &ActiveInst = SemaRef.CodeSynthesisContexts.back();
   if (ActiveInst.Kind == ActiveInstType::ExplicitTemplateArgumentSubstitution ||
       ActiveInst.Kind == ActiveInstType::DeducedTemplateArgumentSubstitution) {
     if (FunctionTemplateDecl *FunTmpl

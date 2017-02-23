@@ -54,7 +54,7 @@ private:
   void addSectionSymbols();
   void addReservedSymbols();
   void createSections();
-  void forEachRelSec(std::function<void(InputSectionBase<ELFT> &)> Fn);
+  void forEachRelSec(std::function<void(InputSectionBase &)> Fn);
   void sortSections();
   void finalizeSections();
   void addPredefinedSections();
@@ -152,7 +152,7 @@ template <class ELFT> void Writer<ELFT>::removeEmptyPTLoad() {
 }
 
 template <class ELFT>
-static typename ELFT::uint getOutFlags(InputSectionBase<ELFT> *S) {
+static typename ELFT::uint getOutFlags(InputSectionBase *S) {
   return S->Flags & ~(typename ELFT::uint)(SHF_GROUP | SHF_COMPRESSED);
 }
 
@@ -164,7 +164,7 @@ template <class ELFT> static void combineMergableSections() {
   typedef typename ELFT::uint uintX_t;
 
   std::vector<MergeSyntheticSection<ELFT> *> MergeSections;
-  for (InputSectionBase<ELFT> *&S : Symtab<ELFT>::X->Sections) {
+  for (InputSectionBase *&S : Symtab<ELFT>::X->Sections) {
     MergeInputSection<ELFT> *MS = dyn_cast<MergeInputSection<ELFT>>(S);
     if (!MS)
       continue;
@@ -175,7 +175,7 @@ template <class ELFT> static void combineMergableSections() {
       continue;
 
     StringRef OutsecName = getOutputSectionName(MS->Name);
-    uintX_t Flags = getOutFlags(MS);
+    uintX_t Flags = getOutFlags<ELFT>(MS);
     uintX_t Alignment = std::max<uintX_t>(MS->Alignment, MS->Entsize);
 
     auto I =
@@ -195,7 +195,7 @@ template <class ELFT> static void combineMergableSections() {
     (*I)->addSection(MS);
   }
 
-  std::vector<InputSectionBase<ELFT> *> &V = Symtab<ELFT>::X->Sections;
+  std::vector<InputSectionBase *> &V = Symtab<ELFT>::X->Sections;
   V.erase(std::remove(V.begin(), V.end(), nullptr), V.end());
 }
 
@@ -307,7 +307,7 @@ template <class ELFT> void Writer<ELFT>::createSyntheticSections() {
   // you can call lld::elf::main more than once as a library.
   memset(&Out<ELFT>::First, 0, sizeof(Out<ELFT>));
 
-  auto Add = [](InputSectionBase<ELFT> *Sec) {
+  auto Add = [](InputSectionBase *Sec) {
     Symtab<ELFT>::X->Sections.push_back(Sec);
   };
 
@@ -452,7 +452,7 @@ template <class ELFT> void Writer<ELFT>::createSyntheticSections() {
 }
 
 template <class ELFT>
-static bool shouldKeepInSymtab(InputSectionBase<ELFT> *Sec, StringRef SymName,
+static bool shouldKeepInSymtab(InputSectionBase *Sec, StringRef SymName,
                                const SymbolBody &B) {
   if (B.isFile() || B.isSection())
     return false;
@@ -514,7 +514,7 @@ template <class ELFT> void Writer<ELFT>::copyLocalSymbols() {
       if (!includeInSymtab<ELFT>(*B))
         continue;
 
-      InputSectionBase<ELFT> *Sec = DR->Section;
+      InputSectionBase *Sec = DR->Section;
       if (!shouldKeepInSymtab<ELFT>(Sec, B->getName(), *B))
         continue;
       In<ELFT>::SymTab->addLocal(B);
@@ -526,8 +526,8 @@ template <class ELFT> void Writer<ELFT>::addSectionSymbols() {
   // Create one STT_SECTION symbol for each output section we might
   // have a relocation with.
   for (OutputSectionBase *Sec : OutputSections) {
-    InputSectionData *First = nullptr;
-    Sec->forEachInputSection([&](InputSectionData *D) {
+    InputSectionBase *First = nullptr;
+    Sec->forEachInputSection([&](InputSectionBase *D) {
       if (!First)
         First = D;
     });
@@ -747,7 +747,7 @@ addOptionalSynthetic(StringRef Name, OutputSectionBase *Sec,
 }
 
 template <class ELFT>
-static Symbol *addRegular(StringRef Name, InputSectionBase<ELFT> *Sec,
+static Symbol *addRegular(StringRef Name, InputSectionBase *Sec,
                           typename ELFT::uint Value) {
   // The linker generated symbols are added as STB_WEAK to allow user defined
   // ones to override them.
@@ -757,14 +757,14 @@ static Symbol *addRegular(StringRef Name, InputSectionBase<ELFT> *Sec,
 }
 
 template <class ELFT>
-static Symbol *addOptionalRegular(StringRef Name, InputSectionBase<ELFT> *IS,
+static Symbol *addOptionalRegular(StringRef Name, InputSectionBase *IS,
                                   typename ELFT::uint Value) {
   SymbolBody *S = Symtab<ELFT>::X->find(Name);
   if (!S)
     return nullptr;
   if (S->isInCurrentDSO())
     return S->symbol();
-  return addRegular(Name, IS, Value);
+  return addRegular<ELFT>(Name, IS, Value);
 }
 
 // The beginning and the ending of .rel[a].plt section are marked
@@ -885,7 +885,7 @@ static void sortBySymbolsOrder(ArrayRef<OutputSectionBase *> OutputSections) {
     SymbolOrder.insert({S, Priority++});
 
   // Build a map from sections to their priorities.
-  DenseMap<InputSectionData *, int> SectionOrder;
+  DenseMap<InputSectionBase *, int> SectionOrder;
   for (elf::ObjectFile<ELFT> *File : Symtab<ELFT>::X->getObjectFiles()) {
     for (SymbolBody *Body : File->getSymbols()) {
       auto *D = dyn_cast<DefinedRegular<ELFT>>(Body);
@@ -899,13 +899,12 @@ static void sortBySymbolsOrder(ArrayRef<OutputSectionBase *> OutputSections) {
   // Sort sections by priority.
   for (OutputSectionBase *Base : OutputSections)
     if (auto *Sec = dyn_cast<OutputSection<ELFT>>(Base))
-      Sec->sort([&](InputSectionData *S) { return SectionOrder.lookup(S); });
+      Sec->sort([&](InputSectionBase *S) { return SectionOrder.lookup(S); });
 }
 
 template <class ELFT>
-void Writer<ELFT>::forEachRelSec(
-    std::function<void(InputSectionBase<ELFT> &)> Fn) {
-  for (InputSectionBase<ELFT> *IS : Symtab<ELFT>::X->Sections) {
+void Writer<ELFT>::forEachRelSec(std::function<void(InputSectionBase &)> Fn) {
+  for (InputSectionBase *IS : Symtab<ELFT>::X->Sections) {
     if (!IS->Live)
       continue;
     // Scan all relocations. Each relocation goes through a series
@@ -921,7 +920,7 @@ void Writer<ELFT>::forEachRelSec(
 }
 
 template <class ELFT> void Writer<ELFT>::createSections() {
-  for (InputSectionBase<ELFT> *IS : Symtab<ELFT>::X->Sections)
+  for (InputSectionBase *IS : Symtab<ELFT>::X->Sections)
     if (IS)
       Factory.addInputSec(IS, getOutputSectionName(IS->Name));
 
@@ -1047,7 +1046,7 @@ static void removeUnusedSyntheticSections(std::vector<OutputSectionBase *> &V) {
   // All input synthetic sections that can be empty are placed after
   // all regular ones. We iterate over them all and exit at first
   // non-synthetic.
-  for (InputSectionBase<ELFT> *S : llvm::reverse(Symtab<ELFT>::X->Sections)) {
+  for (InputSectionBase *S : llvm::reverse(Symtab<ELFT>::X->Sections)) {
     SyntheticSection<ELFT> *SS = dyn_cast<SyntheticSection<ELFT>>(S);
     if (!SS)
       return;
@@ -1084,7 +1083,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   // Even the author of gold doesn't remember why gold behaves that way.
   // https://sourceware.org/ml/binutils/2002-03/msg00360.html
   if (In<ELFT>::DynSymTab)
-    addRegular("_DYNAMIC", In<ELFT>::Dynamic, 0);
+    addRegular<ELFT>("_DYNAMIC", In<ELFT>::Dynamic, 0);
 
   // Define __rel[a]_iplt_{start,end} symbols if needed.
   addRelIpltSymbols();

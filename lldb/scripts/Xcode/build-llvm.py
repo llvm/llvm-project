@@ -45,10 +45,8 @@ def process_repo(r):
 def XCODE_REPOSITORIES():
     identifier = repo.identifier()
     if identifier == None:
-        sys.exit("Couldn't identify the current branch")
+        identifier = "<invalid>" # repo.find will just use the fallback file
     set = repo.find(identifier)
-    if set == None:
-        sys.exit("Couldn't find a repository set for the current branch")
     return [process_repo(r) for r in set]
 
 

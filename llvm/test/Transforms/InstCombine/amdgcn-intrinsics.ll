@@ -923,3 +923,105 @@ define i64 @sbfe_offset_32_width_32_i64(i64 %src) {
   %bfe = call i64 @llvm.amdgcn.sbfe.i64(i64 %src, i32 32, i32 32)
   ret i64 %bfe
 }
+
+; --------------------------------------------------------------------
+; llvm.amdgcn.exp
+; --------------------------------------------------------------------
+
+declare void @llvm.amdgcn.exp.f32(i32, i32, float, float, float, float, i1, i1) nounwind inaccessiblememonly
+
+; Make sure no crashing on invalid variable params
+; CHECK-LABEL: @exp_invalid_inputs(
+; CHECK: call void @llvm.amdgcn.exp.f32(i32 0, i32 %en, float 1.000000e+00, float 2.000000e+00, float 5.000000e-01, float 4.000000e+00, i1 true, i1 false)
+; CHECK: call void @llvm.amdgcn.exp.f32(i32 %tgt, i32 15, float 1.000000e+00, float 2.000000e+00, float 5.000000e-01, float 4.000000e+00, i1 true, i1 false)
+define void @exp_invalid_inputs(i32 %tgt, i32 %en) {
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 %en, float 1.0, float 2.0, float 0.5, float 4.0, i1 true, i1 false)
+  call void @llvm.amdgcn.exp.f32(i32 %tgt, i32 15, float 1.0, float 2.0, float 0.5, float 4.0, i1 true, i1 false)
+  ret void
+}
+
+; CHECK-LABEL: @exp_disabled_inputs_to_undef(
+; CHECK: call void @llvm.amdgcn.exp.f32(i32 0, i32 1, float 1.000000e+00, float undef, float undef, float undef, i1 true, i1 false)
+; CHECK: call void @llvm.amdgcn.exp.f32(i32 0, i32 2, float undef, float 2.000000e+00, float undef, float undef, i1 true, i1 false)
+; CHECK: call void @llvm.amdgcn.exp.f32(i32 0, i32 4, float undef, float undef, float 5.000000e-01, float undef, i1 true, i1 false)
+; CHECK: call void @llvm.amdgcn.exp.f32(i32 0, i32 8, float undef, float undef, float undef, float 4.000000e+00, i1 true, i1 false)
+
+; CHECK: call void @llvm.amdgcn.exp.f32(i32 0, i32 1, float %x, float undef, float undef, float undef, i1 true, i1 false)
+; CHECK: call void @llvm.amdgcn.exp.f32(i32 0, i32 2, float undef, float %y, float undef, float undef, i1 true, i1 false)
+; CHECK: call void @llvm.amdgcn.exp.f32(i32 0, i32 4, float undef, float undef, float %z, float undef, i1 true, i1 false)
+; CHECK: call void @llvm.amdgcn.exp.f32(i32 0, i32 8, float undef, float undef, float undef, float %w, i1 true, i1 false)
+
+; CHECK: call void @llvm.amdgcn.exp.f32(i32 0, i32 0, float undef, float undef, float undef, float undef, i1 true, i1 false)
+
+; CHECK: call void @llvm.amdgcn.exp.f32(i32 0, i32 3, float 1.000000e+00, float 2.000000e+00, float undef, float undef, i1 true, i1 false)
+; CHECK: call void @llvm.amdgcn.exp.f32(i32 0, i32 5, float 1.000000e+00, float undef, float 5.000000e-01, float undef, i1 true, i1 false)
+; CHECK: call void @llvm.amdgcn.exp.f32(i32 0, i32 9, float 1.000000e+00, float undef, float undef, float 4.000000e+00, i1 false, i1 false)
+; CHECK: call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float 1.000000e+00, float 2.000000e+00, float 5.000000e-01, float 4.000000e+00, i1 false, i1 false)
+define void @exp_disabled_inputs_to_undef(float %x, float %y, float %z, float %w) {
+  ; enable src0..src3 constants
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 1, float 1.0, float 2.0, float 0.5, float 4.0, i1 true, i1 false)
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 2, float 1.0, float 2.0, float 0.5, float 4.0, i1 true, i1 false)
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 4, float 1.0, float 2.0, float 0.5, float 4.0, i1 true, i1 false)
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 8, float 1.0, float 2.0, float 0.5, float 4.0, i1 true, i1 false)
+
+  ; enable src0..src3 variables
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 1, float %x, float %y, float %z, float %w, i1 true, i1 false)
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 2, float %x, float %y, float %z, float %w, i1 true, i1 false)
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 4, float %x, float %y, float %z, float %w, i1 true, i1 false)
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 8, float %x, float %y, float %z, float %w, i1 true, i1 false)
+
+  ; enable none
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 0, float %x, float %y, float %z, float %w, i1 true, i1 false)
+
+  ; enable different source combinations
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 3, float 1.0, float 2.0, float 0.5, float 4.0, i1 true, i1 false)
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 5, float 1.0, float 2.0, float 0.5, float 4.0, i1 true, i1 false)
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 9, float 1.0, float 2.0, float 0.5, float 4.0, i1 false, i1 false)
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float 1.0, float 2.0, float 0.5, float 4.0, i1 false, i1 false)
+
+  ret void
+}
+
+; --------------------------------------------------------------------
+; llvm.amdgcn.exp.compr
+; --------------------------------------------------------------------
+
+declare void @llvm.amdgcn.exp.compr.v2f16(i32, i32, <2 x half>, <2 x half>, i1, i1) nounwind inaccessiblememonly
+
+; CHECK-LABEL: @exp_compr_invalid_inputs(
+; CHECK: call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 %en, <2 x half> <half 0xH3C00, half 0xH4000>, <2 x half> <half 0xH3800, half 0xH4400>, i1 true, i1 false)
+; CHECK: call void @llvm.amdgcn.exp.compr.v2f16(i32 %tgt, i32 5, <2 x half> <half 0xH3C00, half 0xH4000>, <2 x half> <half 0xH3800, half 0xH4400>, i1 true, i1 false)
+define void @exp_compr_invalid_inputs(i32 %tgt, i32 %en) {
+  call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 %en, <2 x half> <half 1.0, half 2.0>, <2 x half> <half 0.5, half 4.0>, i1 true, i1 false)
+  call void @llvm.amdgcn.exp.compr.v2f16(i32 %tgt, i32 5, <2 x half> <half 1.0, half 2.0>, <2 x half> <half 0.5, half 4.0>, i1 true, i1 false)
+  ret void
+}
+
+; CHECK-LABEL: @exp_compr_disabled_inputs_to_undef(
+; CHECK: call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 0, <2 x half> undef, <2 x half> undef, i1 true, i1 false)
+; CHECK: call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 1, <2 x half> <half 0xH3C00, half 0xH4000>, <2 x half> undef, i1 true, i1 false)
+; CHECK: call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 2, <2 x half> <half 0xH3C00, half 0xH4000>, <2 x half> undef, i1 true, i1 false)
+; CHECK: call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 3, <2 x half> <half 0xH3C00, half 0xH4000>, <2 x half> undef, i1 true, i1 false)
+
+; CHECK: call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 0, <2 x half> undef, <2 x half> undef, i1 true, i1 false)
+; CHECK: call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 1, <2 x half> %xy, <2 x half> undef, i1 true, i1 false)
+; CHECK: call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 2, <2 x half> %xy, <2 x half> undef, i1 true, i1 false)
+; CHECK: call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 3, <2 x half> %xy, <2 x half> undef, i1 true, i1 false)
+
+; CHECK: call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 12, <2 x half> undef, <2 x half> %zw, i1 true, i1 false)
+; CHECK: call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 15, <2 x half> %xy, <2 x half> %zw, i1 true, i1 false)
+define void @exp_compr_disabled_inputs_to_undef(<2 x half> %xy, <2 x half> %zw) {
+  call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 0, <2 x half> <half 1.0, half 2.0>, <2 x half> <half 0.5, half 4.0>, i1 true, i1 false)
+  call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 1, <2 x half> <half 1.0, half 2.0>, <2 x half> <half 0.5, half 4.0>, i1 true, i1 false)
+  call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 2, <2 x half> <half 1.0, half 2.0>, <2 x half> <half 0.5, half 4.0>, i1 true, i1 false)
+  call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 3, <2 x half> <half 1.0, half 2.0>, <2 x half> <half 0.5, half 4.0>, i1 true, i1 false)
+
+  call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 0, <2 x half> %xy, <2 x half> %zw, i1 true, i1 false)
+  call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 1, <2 x half> %xy, <2 x half> %zw, i1 true, i1 false)
+  call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 2, <2 x half> %xy, <2 x half> %zw, i1 true, i1 false)
+  call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 3, <2 x half> %xy, <2 x half> %zw, i1 true, i1 false)
+
+  call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 12, <2 x half> %xy, <2 x half> %zw, i1 true, i1 false)
+  call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 15, <2 x half> %xy, <2 x half> %zw, i1 true, i1 false)
+  ret void
+}

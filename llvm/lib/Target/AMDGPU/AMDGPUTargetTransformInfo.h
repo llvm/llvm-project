@@ -78,6 +78,17 @@ public:
   unsigned getNumberOfRegisters(bool Vector);
   unsigned getRegisterBitWidth(bool Vector);
   unsigned getLoadStoreVecRegBitWidth(unsigned AddrSpace) const;
+
+  bool isLegalToVectorizeMemChain(unsigned ChainSizeInBytes,
+                                  unsigned Alignment,
+                                  unsigned AddrSpace) const;
+  bool isLegalToVectorizeLoadChain(unsigned ChainSizeInBytes,
+                                   unsigned Alignment,
+                                   unsigned AddrSpace) const;
+  bool isLegalToVectorizeStoreChain(unsigned ChainSizeInBytes,
+                                    unsigned Alignment,
+                                    unsigned AddrSpace) const;
+
   unsigned getMaxInterleaveFactor(unsigned VF);
 
   int getArithmeticInstrCost(

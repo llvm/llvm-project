@@ -1,6 +1,7 @@
-; RUN: llvm-as -o %t1.obj %s
-; RUN: llvm-mc -triple=x86_64-pc-windows-msvc -filetype=obj -o %t2.obj %p/Inputs/msvclto.s
-; RUN: lld-link %t1.obj %t2.obj /msvclto /out:%t.exe /opt:lldlto=1 /opt:icf \
+; RUN: llvm-as -o %t.obj %s
+; RUN: mkdir -p %t.dir
+; RUN: llvm-mc -triple=x86_64-pc-windows-msvc -filetype=obj -o %t.dir/bitcode.obj %p/Inputs/msvclto.s
+; RUN: lld-link %t.obj %t.dir/bitcode.obj /msvclto /out:%t.exe /opt:lldlto=1 /opt:icf \
 ; RUN:   /entry:main /verbose > %t.log || true
 ; RUN: FileCheck %s < %t.log
 

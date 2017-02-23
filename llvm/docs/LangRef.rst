@@ -7734,8 +7734,10 @@ offsets implied by the indices to the base address with infinitely
 precise signed arithmetic are not an *in bounds* address of that
 allocated object. The *in bounds* addresses for an allocated object are
 all the addresses that point into the object, plus the address one byte
-past the end. In cases where the base is a vector of pointers the
-``inbounds`` keyword applies to each of the computations element-wise.
+past the end. The only *in bounds* address for a null pointer in the
+default address-space is the null pointer itself. In cases where the
+base is a vector of pointers the ``inbounds`` keyword applies to each
+of the computations element-wise.
 
 If the ``inbounds`` keyword is not present, the offsets are added to the
 base address with silently-wrapping two's complement arithmetic. If the

@@ -343,16 +343,26 @@ void test12(void *const p __attribute__((pass_object_size(3)))) {
 
 // CHECK-LABEL: define void @test13
 void test13() {
-  // Ensuring that we don't lower objectsize if the expression has side-effects
   char c[10];
+  unsigned i = 0;
   char *p = c;
 
   // CHECK: @llvm.objectsize
   ObjectSize0(p);
 
-  // CHECK-NOT: @llvm.objectsize
-  ObjectSize0(++p);
-  ObjectSize0(p++);
+  // Allow side-effects, since they always need to happen anyway. Just make sure
+  // we don't perform them twice.
+  // CHECK: = add
+  // CHECK-NOT: = add
+  // CHECK: @llvm.objectsize
+  // CHECK: call i32 @ObjectSize0
+  ObjectSize0(p + ++i);
+
+  // CHECK: = add
+  // CHECK: @llvm.objectsize
+  // CHECK-NOT: = add
+  // CHECK: call i32 @ObjectSize0
+  ObjectSize0(p + i++);
 }
 
 // There was a bug where variadic functions with pass_object_size would cause
@@ -394,4 +404,17 @@ void test16(__attribute__((address_space(1))) unsigned *I) {
   // CHECK: call i64 @llvm.objectsize.i64.p1i32
   // CHECK: call void @pass_size_unsigned_as1
   pass_size_unsigned_as1(I);
+}
+
+// This used to cause assertion failures, since we'd try to emit the statement
+// expression (and definitions for `a`) twice.
+// CHECK-LABEL: define void @test17
+void test17(char *C) {
+  // Check for 65535 to see if we're emitting this pointer twice.
+  // CHECK: 65535
+  // CHECK-NOT: 65535
+  // CHECK: @llvm.objectsize.i64.p0i8(i8* [[PTR:%[^,]+]],
+  // CHECK-NOT: 65535
+  // CHECK: call i32 @ObjectSize0(i8* [[PTR]]
+  ObjectSize0(C + ({ int a = 65535; a; }));
 }

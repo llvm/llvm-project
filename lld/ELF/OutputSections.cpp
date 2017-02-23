@@ -89,11 +89,11 @@ template <typename ELFT>
 static bool compareByFilePosition(InputSection<ELFT> *A,
                                   InputSection<ELFT> *B) {
   // Synthetic doesn't have link order dependecy, stable_sort will keep it last
-  if (A->kind() == InputSectionData::Synthetic ||
-      B->kind() == InputSectionData::Synthetic)
+  if (A->kind() == InputSectionBase::Synthetic ||
+      B->kind() == InputSectionBase::Synthetic)
     return false;
-  auto *LA = cast<InputSection<ELFT>>(A->getLinkOrderDep());
-  auto *LB = cast<InputSection<ELFT>>(B->getLinkOrderDep());
+  auto *LA = cast<InputSection<ELFT>>(A->template getLinkOrderDep<ELFT>());
+  auto *LB = cast<InputSection<ELFT>>(B->template getLinkOrderDep<ELFT>());
   OutputSectionBase *AOut = LA->OutSec;
   OutputSectionBase *BOut = LB->OutSec;
   if (AOut != BOut)
@@ -111,7 +111,7 @@ template <class ELFT> void OutputSection<ELFT>::finalize() {
     // SHF_LINK_ORDER flag. The dependency is indicated by the sh_link field. We
     // need to translate the InputSection sh_link to the OutputSection sh_link,
     // all InputSections in the OutputSection have the same dependency.
-    if (auto *D = this->Sections.front()->getLinkOrderDep())
+    if (auto *D = this->Sections.front()->template getLinkOrderDep<ELFT>())
       this->Link = D->OutSec->SectionIndex;
   }
 
@@ -126,12 +126,12 @@ template <class ELFT> void OutputSection<ELFT>::finalize() {
   this->Link = In<ELFT>::SymTab->OutSec->SectionIndex;
   // sh_info for SHT_REL[A] sections should contain the section header index of
   // the section to which the relocation applies.
-  InputSectionBase<ELFT> *S = First->getRelocatedSection();
+  InputSectionBase *S = First->getRelocatedSection();
   this->Info = S->OutSec->SectionIndex;
 }
 
 template <class ELFT>
-void OutputSection<ELFT>::addSection(InputSectionData *C) {
+void OutputSection<ELFT>::addSection(InputSectionBase *C) {
   assert(C->Live);
   auto *S = cast<InputSection<ELFT>>(C);
   Sections.push_back(S);
@@ -145,7 +145,7 @@ void OutputSection<ELFT>::addSection(InputSectionData *C) {
 
 template <class ELFT>
 void OutputSection<ELFT>::forEachInputSection(
-    std::function<void(InputSectionData *)> F) {
+    std::function<void(InputSectionBase *)> F) {
   for (InputSection<ELFT> *S : Sections)
     F(S);
 }
@@ -157,13 +157,13 @@ template <class ELFT> void OutputSection<ELFT>::assignOffsets() {
   for (InputSection<ELFT> *S : Sections) {
     Off = alignTo(Off, S->Alignment);
     S->OutSecOff = Off;
-    Off += S->getSize();
+    Off += S->template getSize<ELFT>();
   }
   this->Size = Off;
 }
 
 template <class ELFT>
-void OutputSection<ELFT>::sort(std::function<int(InputSectionData *S)> Order) {
+void OutputSection<ELFT>::sort(std::function<int(InputSectionBase *S)> Order) {
   typedef std::pair<unsigned, InputSection<ELFT> *> Pair;
   auto Comp = [](const Pair &A, const Pair &B) { return A.first < B.first; };
 
@@ -184,7 +184,7 @@ void OutputSection<ELFT>::sort(std::function<int(InputSectionData *S)> Order) {
 // For more detail, read the section of the GCC's manual about init_priority.
 template <class ELFT> void OutputSection<ELFT>::sortInitFini() {
   // Sort sections by priority.
-  sort([](InputSectionData *S) { return getPriority(S->Name); });
+  sort([](InputSectionBase *S) { return getPriority(S->Name); });
 }
 
 // Returns true if S matches /Filename.?\.o$/.
@@ -221,12 +221,12 @@ static bool isCrtend(StringRef S) { return isCrtBeginEnd(S, "crtend"); }
 template <class ELFT>
 static bool compCtors(const InputSection<ELFT> *A,
                       const InputSection<ELFT> *B) {
-  bool BeginA = isCrtbegin(A->getFile()->getName());
-  bool BeginB = isCrtbegin(B->getFile()->getName());
+  bool BeginA = isCrtbegin(A->template getFile<ELFT>()->getName());
+  bool BeginB = isCrtbegin(B->template getFile<ELFT>()->getName());
   if (BeginA != BeginB)
     return BeginA;
-  bool EndA = isCrtend(A->getFile()->getName());
-  bool EndB = isCrtend(B->getFile()->getName());
+  bool EndA = isCrtend(A->template getFile<ELFT>()->getName());
+  bool EndB = isCrtend(B->template getFile<ELFT>()->getName());
   if (EndA != EndB)
     return EndB;
   StringRef X = A->Name;
@@ -277,7 +277,7 @@ EhOutputSection<ELFT>::EhOutputSection()
 
 template <class ELFT>
 void EhOutputSection<ELFT>::forEachInputSection(
-    std::function<void(InputSectionData *)> F) {
+    std::function<void(InputSectionBase *)> F) {
   for (EhInputSection<ELFT> *S : Sections)
     F(S);
 }
@@ -297,7 +297,8 @@ CieRecord *EhOutputSection<ELFT>::addCie(EhSectionPiece &Piece,
   SymbolBody *Personality = nullptr;
   unsigned FirstRelI = Piece.FirstRelocation;
   if (FirstRelI != (unsigned)-1)
-    Personality = &Sec->getFile()->getRelocTargetSym(Rels[FirstRelI]);
+    Personality =
+        &Sec->template getFile<ELFT>()->getRelocTargetSym(Rels[FirstRelI]);
 
   // Search for an existing CIE by CIE contents/relocation target pair.
   CieRecord *Cie = &CieMap[{Piece.data(), Personality}];
@@ -321,11 +322,11 @@ bool EhOutputSection<ELFT>::isFdeLive(EhSectionPiece &Piece,
   if (FirstRelI == (unsigned)-1)
     return false;
   const RelTy &Rel = Rels[FirstRelI];
-  SymbolBody &B = Sec->getFile()->getRelocTargetSym(Rel);
+  SymbolBody &B = Sec->template getFile<ELFT>()->getRelocTargetSym(Rel);
   auto *D = dyn_cast<DefinedRegular<ELFT>>(&B);
   if (!D || !D->Section)
     return false;
-  InputSectionBase<ELFT> *Target = D->Section->Repl;
+  InputSectionBase *Target = D->Section->Repl;
   return Target && Target->Live;
 }
 
@@ -365,7 +366,7 @@ void EhOutputSection<ELFT>::addSectionAux(EhInputSection<ELFT> *Sec,
 }
 
 template <class ELFT>
-void EhOutputSection<ELFT>::addSection(InputSectionData *C) {
+void EhOutputSection<ELFT>::addSection(InputSectionBase *C) {
   auto *Sec = cast<EhInputSection<ELFT>>(C);
   Sec->OutSec = this;
   this->updateAlignment(Sec->Alignment);
@@ -380,9 +381,9 @@ void EhOutputSection<ELFT>::addSection(InputSectionData *C) {
 
   if (Sec->NumRelocations) {
     if (Sec->AreRelocsRela)
-      addSectionAux(Sec, Sec->relas());
+      addSectionAux(Sec, Sec->template relas<ELFT>());
     else
-      addSectionAux(Sec, Sec->rels());
+      addSectionAux(Sec, Sec->template rels<ELFT>());
     return;
   }
   addSectionAux(Sec, makeArrayRef<Elf_Rela>(nullptr, nullptr));
@@ -464,7 +465,7 @@ template <class ELFT> void EhOutputSection<ELFT>::writeTo(uint8_t *Buf) {
   }
 
   for (EhInputSection<ELFT> *S : Sections)
-    S->relocate(Buf, nullptr);
+    S->template relocate<ELFT>(Buf, nullptr);
 
   // Construct .eh_frame_hdr. .eh_frame_hdr is a binary search table
   // to get a FDE from an address to which FDE is applied. So here
@@ -482,12 +483,12 @@ template <class ELFT> void EhOutputSection<ELFT>::writeTo(uint8_t *Buf) {
 }
 
 template <class ELFT>
-static typename ELFT::uint getOutFlags(InputSectionBase<ELFT> *S) {
+static typename ELFT::uint getOutFlags(InputSectionBase *S) {
   return S->Flags & ~SHF_GROUP & ~SHF_COMPRESSED;
 }
 
 template <class ELFT>
-static SectionKey createKey(InputSectionBase<ELFT> *C, StringRef OutsecName) {
+static SectionKey createKey(InputSectionBase *C, StringRef OutsecName) {
   //  The ELF spec just says
   // ----------------------------------------------------------------
   // In the first phase, input sections that match in name, type and
@@ -564,23 +565,23 @@ static bool canMergeToProgbits(unsigned Type) {
          Type == SHT_NOTE;
 }
 
-template <class ELFT> static void reportDiscarded(InputSectionBase<ELFT> *IS) {
+template <class ELFT> static void reportDiscarded(InputSectionBase *IS) {
   if (!Config->PrintGcSections)
     return;
   message("removing unused section from '" + IS->Name + "' in file '" +
-          IS->getFile()->getName());
+          IS->getFile<ELFT>()->getName());
 }
 
 template <class ELFT>
-void OutputSectionFactory<ELFT>::addInputSec(InputSectionBase<ELFT> *IS,
+void OutputSectionFactory<ELFT>::addInputSec(InputSectionBase *IS,
                                              StringRef OutsecName) {
   if (!IS->Live) {
-    reportDiscarded(IS);
+    reportDiscarded<ELFT>(IS);
     return;
   }
 
-  SectionKey Key = createKey(IS, OutsecName);
-  uintX_t Flags = getOutFlags(IS);
+  SectionKey Key = createKey<ELFT>(IS, OutsecName);
+  uintX_t Flags = getOutFlags<ELFT>(IS);
   OutputSectionBase *&Sec = Map[Key];
   if (Sec) {
     if (getIncompatibleFlags(Sec->Flags) != getIncompatibleFlags(IS->Flags))
@@ -596,7 +597,7 @@ void OutputSectionFactory<ELFT>::addInputSec(InputSectionBase<ELFT> *IS,
     Sec->Flags |= Flags;
   } else {
     uint32_t Type = IS->Type;
-    if (IS->kind() == InputSectionBase<ELFT>::EHFrame) {
+    if (IS->kind() == InputSectionBase::EHFrame) {
       Out<ELFT>::EhFrame->addSection(IS);
       return;
     }
