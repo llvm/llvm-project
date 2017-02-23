@@ -16,6 +16,8 @@
 #include "llvm/CodeGen/GlobalISel/Legalizer.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
 #include "llvm/CodeGen/GlobalISel/Legalizer.h"
+#include "llvm/CodeGen/GlobalISel/Utils.h"
+#include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/Support/Debug.h"
@@ -123,6 +125,7 @@ bool Legalizer::runOnMachineFunction(MachineFunction &MF) {
   init(MF);
   const TargetPassConfig &TPC = getAnalysis<TargetPassConfig>();
   const LegalizerInfo &LegalizerInfo = *MF.getSubtarget().getLegalizerInfo();
+  MachineOptimizationRemarkEmitter MORE(MF, /*MBFI=*/nullptr);
   LegalizerHelper Helper(MF);
 
   // FIXME: an instruction may need more than one pass before it is legal. For
@@ -148,16 +151,9 @@ bool Legalizer::runOnMachineFunction(MachineFunction &MF) {
       // Error out if we couldn't legalize this instruction. We may want to fall
       // back to DAG ISel instead in the future.
       if (Res == LegalizerHelper::UnableToLegalize) {
-        if (!TPC.isGlobalISelAbortEnabled()) {
-          MF.getProperties().set(
-              MachineFunctionProperties::Property::FailedISel);
-          return false;
-        }
-        std::string Msg;
-        raw_string_ostream OS(Msg);
-        OS << "unable to legalize instruction: ";
-        MI->print(OS);
-        report_fatal_error(OS.str());
+        reportGISelFailure(MF, TPC, MORE, "gisel-legalize",
+                           "unable to legalize instruction", *MI);
+        return false;
       }
 
       Changed |= Res == LegalizerHelper::Legalized;
