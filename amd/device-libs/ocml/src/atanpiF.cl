@@ -7,15 +7,31 @@
 
 #include "mathF.h"
 
+extern CONSTATTR float MATH_PRIVATE(atanred)(float);
+
 CONSTATTR INLINEATTR float
 MATH_MANGLE(atanpi)(float x)
 {
     const float pi = 0x1.921fb6p+1f;
-    float ret = MATH_MANGLE(atan)(x);
+
+    float v = BUILTIN_ABS_F32(x);
+    bool g = v > 1.0f;
+
+    float vi = MATH_FAST_RCP(v);
+    v = g ? vi : v;
+
+    float a = MATH_PRIVATE(atanred)(v);
+
     if (DAZ_OPT()) {
-        ret = MATH_FAST_DIV(ret, pi);
+        a = MATH_FAST_DIV(a, pi);
     } else {
-        ret = MATH_DIV(ret, pi);
+        a = MATH_DIV(a, pi);
     }
-    return ret;
+
+    float y = 0.5f - a;
+    a = g ? y : a;
+
+    return BUILTIN_COPYSIGN_F32(a, x);
 }
+
+
