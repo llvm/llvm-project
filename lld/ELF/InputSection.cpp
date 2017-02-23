@@ -308,6 +308,7 @@ getRelocTargetVA(uint32_t Type, int64_t A, typename ELFT::uint P,
                  const SymbolBody &Body, RelExpr Expr) {
   switch (Expr) {
   case R_HINT:
+  case R_NONE:
   case R_TLSDESC_CALL:
     llvm_unreachable("cannot relocate hint relocs");
   case R_TLSLD:
@@ -459,7 +460,10 @@ void InputSection<ELFT>::relocateNonAlloc(uint8_t *Buf, ArrayRef<RelTy> Rels) {
       Addend += Target->getImplicitAddend(BufLoc, Type);
 
     SymbolBody &Sym = this->getFile<ELFT>()->getRelocTargetSym(Rel);
-    if (Target->getRelExpr(Type, Sym) != R_ABS) {
+    RelExpr Expr = Target->getRelExpr(Type, Sym);
+    if (Expr == R_NONE)
+      continue;
+    if (Expr != R_ABS) {
       error(this->getLocation<ELFT>(Offset) + ": has non-ABS reloc");
       return;
     }

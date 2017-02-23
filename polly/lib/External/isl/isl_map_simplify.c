@@ -67,7 +67,7 @@ struct isl_basic_set *isl_basic_set_drop_dims(
 
 	isl_assert(bset->ctx, first + n <= bset->dim->n_out, goto error);
 
-	if (n == 0 && !isl_space_get_tuple_name(bset->dim, isl_dim_set))
+	if (n == 0 && !isl_space_is_named_or_nested(bset->dim, isl_dim_set))
 		return bset;
 
 	bset = isl_basic_set_cow(bset);
@@ -238,7 +238,7 @@ struct isl_map *isl_map_drop(struct isl_map *map,
 
 	isl_assert(map->ctx, first + n <= isl_map_dim(map, type), goto error);
 
-	if (n == 0 && !isl_space_get_tuple_name(map->dim, type))
+	if (n == 0 && !isl_space_is_named_or_nested(map->dim, type))
 		return map;
 	map = isl_map_cow(map);
 	if (!map)

@@ -389,7 +389,7 @@ RelExpr X86TargetInfo::getRelExpr(uint32_t Type, const SymbolBody &S) const {
   case R_386_TLS_LE_32:
     return R_NEG_TLS;
   case R_386_NONE:
-    return R_HINT;
+    return R_NONE;
   default:
     error(toString(S.File) + ": unknown relocation type: " + toString(Type));
     return R_HINT;
@@ -684,7 +684,7 @@ RelExpr X86_64TargetInfo<ELFT>::getRelExpr(uint32_t Type,
   case R_X86_64_GOTTPOFF:
     return R_GOT_PC;
   case R_X86_64_NONE:
-    return R_HINT;
+    return R_NONE;
   default:
     error(toString(S.File) + ": unknown relocation type: " + toString(Type));
     return R_HINT;
@@ -1715,7 +1715,7 @@ RelExpr ARMTargetInfo::getRelExpr(uint32_t Type, const SymbolBody &S) const {
   case R_ARM_THM_MOVT_PREL:
     return R_PC;
   case R_ARM_NONE:
-    return R_HINT;
+    return R_NONE;
   case R_ARM_TLS_LE32:
     return R_TLS;
   }
