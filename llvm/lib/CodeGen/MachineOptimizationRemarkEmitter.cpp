@@ -15,11 +15,21 @@
 
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/LazyMachineBlockFrequencyInfo.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/LLVMContext.h"
 
 using namespace llvm;
+
+DiagnosticInfoMIROptimization::MachineArgument::MachineArgument(
+    StringRef MKey, const MachineInstr &MI)
+    : Argument() {
+  Key = MKey;
+
+  raw_string_ostream OS(Val);
+  MI.print(OS, /*SkipOpers=*/false, /*SkipDebugLoc=*/true);
+}
 
 Optional<uint64_t>
 MachineOptimizationRemarkEmitter::computeHotness(const MachineBasicBlock &MBB) {

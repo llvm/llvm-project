@@ -22,6 +22,7 @@
 namespace llvm {
 class MachineBasicBlock;
 class MachineBlockFrequencyInfo;
+class MachineInstr;
 
 /// \brief Common features for diagnostics dealing with optimization remarks
 /// that are used by machine passes.
@@ -33,6 +34,12 @@ public:
       : DiagnosticInfoOptimizationBase(Kind, DS_Remark, PassName, RemarkName,
                                        *MBB->getParent()->getFunction(), DLoc),
         MBB(MBB) {}
+
+  /// MI-specific kinds of diagnostic Arguments.
+  struct MachineArgument : public DiagnosticInfoOptimizationBase::Argument {
+    /// Print an entire MachineInstr.
+    MachineArgument(StringRef Key, const MachineInstr &MI);
+  };
 
   static bool classof(const DiagnosticInfo *DI) {
     return DI->getKind() >= DK_FirstMachineRemark &&
@@ -115,6 +122,11 @@ public:
     return OptimizationRemarkAnalysis::isEnabled(getPassName());
   }
 };
+
+/// Extend llvm::ore:: with MI-specific helper names.
+namespace ore {
+using MNV = DiagnosticInfoMIROptimization::MachineArgument;
+}
 
 /// The optimization diagnostic interface.
 ///
