@@ -68,6 +68,9 @@ MCStreamer *createMachOStreamer(MCContext &Ctx, MCAsmBackend &TAB,
                                 raw_pwrite_stream &OS, MCCodeEmitter *CE,
                                 bool RelaxAll, bool DWARFMustBeAtTheEnd,
                                 bool LabelSections = false);
+MCStreamer *createWasmStreamer(MCContext &Ctx, MCAsmBackend &TAB,
+                               raw_pwrite_stream &OS, MCCodeEmitter *CE,
+                               bool RelaxAll);
 
 MCRelocationInfo *createMCRelocationInfo(const Triple &TT, MCContext &Ctx);
 
@@ -143,6 +146,11 @@ public:
                                             MCCodeEmitter *Emitter,
                                             bool RelaxAll,
                                             bool IncrementalLinkerCompatible);
+  typedef MCStreamer *(*WasmStreamerCtorTy)(const Triple &T, MCContext &Ctx,
+                                            MCAsmBackend &TAB,
+                                            raw_pwrite_stream &OS,
+                                            MCCodeEmitter *Emitter,
+                                            bool RelaxAll);
   typedef MCTargetStreamer *(*NullTargetStreamerCtorTy)(MCStreamer &S);
   typedef MCTargetStreamer *(*AsmTargetStreamerCtorTy)(
       MCStreamer &S, formatted_raw_ostream &OS, MCInstPrinter *InstPrint,
@@ -227,6 +235,7 @@ private:
   COFFStreamerCtorTy COFFStreamerCtorFn;
   MachOStreamerCtorTy MachOStreamerCtorFn;
   ELFStreamerCtorTy ELFStreamerCtorFn;
+  WasmStreamerCtorTy WasmStreamerCtorFn;
 
   /// Construction function for this target's null TargetStreamer, if
   /// registered (default = nullptr).
@@ -251,7 +260,8 @@ private:
 public:
   Target()
       : COFFStreamerCtorFn(nullptr), MachOStreamerCtorFn(nullptr),
-        ELFStreamerCtorFn(nullptr), NullTargetStreamerCtorFn(nullptr),
+        ELFStreamerCtorFn(nullptr), WasmStreamerCtorFn(nullptr),
+        NullTargetStreamerCtorFn(nullptr),
         AsmTargetStreamerCtorFn(nullptr), ObjectTargetStreamerCtorFn(nullptr),
         MCRelocationInfoCtorFn(nullptr), MCSymbolizerCtorFn(nullptr) {}
 
@@ -460,6 +470,12 @@ public:
         S = ELFStreamerCtorFn(T, Ctx, TAB, OS, Emitter, RelaxAll);
       else
         S = createELFStreamer(Ctx, TAB, OS, Emitter, RelaxAll);
+      break;
+    case Triple::Wasm:
+      if (WasmStreamerCtorFn)
+        S = WasmStreamerCtorFn(T, Ctx, TAB, OS, Emitter, RelaxAll);
+      else
+        S = createWasmStreamer(Ctx, TAB, OS, Emitter, RelaxAll);
       break;
     }
     if (ObjectTargetStreamerCtorFn)
@@ -798,6 +814,10 @@ struct TargetRegistry {
 
   static void RegisterELFStreamer(Target &T, Target::ELFStreamerCtorTy Fn) {
     T.ELFStreamerCtorFn = Fn;
+  }
+
+  static void RegisterWasmStreamer(Target &T, Target::WasmStreamerCtorTy Fn) {
+    T.WasmStreamerCtorFn = Fn;
   }
 
   static void RegisterNullTargetStreamer(Target &T,

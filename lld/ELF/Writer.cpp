@@ -885,7 +885,7 @@ static void sortBySymbolsOrder(ArrayRef<OutputSectionBase *> OutputSections) {
     SymbolOrder.insert({S, Priority++});
 
   // Build a map from sections to their priorities.
-  DenseMap<InputSectionBase<ELFT> *, int> SectionOrder;
+  DenseMap<InputSectionData *, int> SectionOrder;
   for (elf::ObjectFile<ELFT> *File : Symtab<ELFT>::X->getObjectFiles()) {
     for (SymbolBody *Body : File->getSymbols()) {
       auto *D = dyn_cast<DefinedRegular<ELFT>>(Body);
@@ -899,7 +899,7 @@ static void sortBySymbolsOrder(ArrayRef<OutputSectionBase *> OutputSections) {
   // Sort sections by priority.
   for (OutputSectionBase *Base : OutputSections)
     if (auto *Sec = dyn_cast<OutputSection<ELFT>>(Base))
-      Sec->sort([&](InputSection<ELFT> *S) { return SectionOrder.lookup(S); });
+      Sec->sort([&](InputSectionData *S) { return SectionOrder.lookup(S); });
 }
 
 template <class ELFT>

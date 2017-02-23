@@ -1,4 +1,4 @@
-//===------- llvm/CodeGen/ScheduleDAG.h - Common Base Class------*- C++ -*-===//
+//===- llvm/CodeGen/ScheduleDAG.h - Common Base Class -----------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -18,27 +18,32 @@
 
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/GraphTraits.h"
+#include "llvm/ADT/iterator.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Target/TargetLowering.h"
+#include <cassert>
+#include <cstddef>
+#include <iterator>
+#include <string>
+#include <vector>
 
 namespace llvm {
-  class SUnit;
-  class MachineConstantPool;
-  class MachineFunction;
-  class MachineRegisterInfo;
-  class MachineInstr;
-  struct MCSchedClassDesc;
-  class TargetRegisterInfo;
-  class ScheduleDAG;
-  class SDNode;
-  class TargetInstrInfo;
-  class MCInstrDesc;
-  class TargetMachine;
-  class TargetRegisterClass;
-  template<class Graph> class GraphWriter;
+
+template<class Graph> class GraphWriter;
+class MachineFunction;
+class MachineRegisterInfo;
+class MCInstrDesc;
+struct MCSchedClassDesc;
+class ScheduleDAG;
+class SDNode;
+class SUnit;
+class TargetInstrInfo;
+class TargetMachine;
+class TargetRegisterClass;
+class TargetRegisterInfo;
 
   /// Scheduling dependency. This represents one direction of an edge in the
   /// scheduling DAG.
@@ -115,6 +120,7 @@ namespace llvm {
         break;
       }
     }
+
     SDep(SUnit *S, OrderKind kind)
       : Dep(S, Order), Contents(), Latency(0) {
       Contents.OrdKind = kind;
@@ -239,14 +245,15 @@ namespace llvm {
   private:
     enum : unsigned { BoundaryID = ~0u };
 
-    SDNode *Node;                       ///< Representative node.
-    MachineInstr *Instr;                ///< Alternatively, a MachineInstr.
-  public:
-    SUnit *OrigNode;                    ///< If not this, the node from which
-                                        /// this node was cloned.
-                                        /// (SD scheduling only)
+    SDNode *Node = nullptr;        ///< Representative node.
+    MachineInstr *Instr = nullptr; ///< Alternatively, a MachineInstr.
 
-    const MCSchedClassDesc *SchedClass; ///< nullptr or resolved SchedClass.
+  public:
+    SUnit *OrigNode = nullptr; ///< If not this, the node from which this node 
+                               /// was cloned. (SD scheduling only)
+
+    const MCSchedClassDesc *SchedClass =
+        nullptr; ///< nullptr or resolved SchedClass.
 
     SmallVector<SDep, 4> Preds;  ///< All sunit predecessors.
     SmallVector<SDep, 4> Succs;  ///< All sunit successors.
@@ -256,92 +263,78 @@ namespace llvm {
     typedef SmallVectorImpl<SDep>::const_iterator const_pred_iterator;
     typedef SmallVectorImpl<SDep>::const_iterator const_succ_iterator;
 
-    unsigned NodeNum;                 ///< Entry # of node in the node vector.
-    unsigned NodeQueueId;             ///< Queue id of node.
-    unsigned NumPreds;                ///< # of SDep::Data preds.
-    unsigned NumSuccs;                ///< # of SDep::Data sucss.
-    unsigned NumPredsLeft;            ///< # of preds not scheduled.
-    unsigned NumSuccsLeft;            ///< # of succs not scheduled.
-    unsigned WeakPredsLeft;           ///< # of weak preds not scheduled.
-    unsigned WeakSuccsLeft;           ///< # of weak succs not scheduled.
-    unsigned short NumRegDefsLeft;    ///< # of reg defs with no scheduled use.
-    unsigned short Latency;           ///< Node latency.
-    bool isVRegCycle      : 1;        ///< May use and def the same vreg.
-    bool isCall           : 1;        ///< Is a function call.
-    bool isCallOp         : 1;        ///< Is a function call operand.
-    bool isTwoAddress     : 1;        ///< Is a two-address instruction.
-    bool isCommutable     : 1;        ///< Is a commutable instruction.
-    bool hasPhysRegUses   : 1;        ///< Has physreg uses.
-    bool hasPhysRegDefs   : 1;        ///< Has physreg defs that are being used.
-    bool hasPhysRegClobbers : 1;      ///< Has any physreg defs, used or not.
-    bool isPending        : 1;        ///< True once pending.
-    bool isAvailable      : 1;        ///< True once available.
-    bool isScheduled      : 1;        ///< True once scheduled.
-    bool isScheduleHigh   : 1;        ///< True if preferable to schedule high.
-    bool isScheduleLow    : 1;        ///< True if preferable to schedule low.
-    bool isCloned         : 1;        ///< True if this node has been cloned.
-    bool isUnbuffered     : 1;        ///< Uses an unbuffered resource.
-    bool hasReservedResource : 1;     ///< Uses a reserved resource.
-    Sched::Preference SchedulingPref; ///< Scheduling preference.
+    unsigned NodeNum = BoundaryID;     ///< Entry # of node in the node vector.
+    unsigned NodeQueueId = 0;          ///< Queue id of node.
+    unsigned NumPreds = 0;             ///< # of SDep::Data preds.
+    unsigned NumSuccs = 0;             ///< # of SDep::Data sucss.
+    unsigned NumPredsLeft = 0;         ///< # of preds not scheduled.
+    unsigned NumSuccsLeft = 0;         ///< # of succs not scheduled.
+    unsigned WeakPredsLeft = 0;        ///< # of weak preds not scheduled.
+    unsigned WeakSuccsLeft = 0;        ///< # of weak succs not scheduled.
+    unsigned short NumRegDefsLeft = 0; ///< # of reg defs with no scheduled use.
+    unsigned short Latency = 0;        ///< Node latency.
+    bool isVRegCycle      : 1;         ///< May use and def the same vreg.
+    bool isCall           : 1;         ///< Is a function call.
+    bool isCallOp         : 1;         ///< Is a function call operand.
+    bool isTwoAddress     : 1;         ///< Is a two-address instruction.
+    bool isCommutable     : 1;         ///< Is a commutable instruction.
+    bool hasPhysRegUses   : 1;         ///< Has physreg uses.
+    bool hasPhysRegDefs   : 1;         ///< Has physreg defs that are being used.
+    bool hasPhysRegClobbers : 1;       ///< Has any physreg defs, used or not.
+    bool isPending        : 1;         ///< True once pending.
+    bool isAvailable      : 1;         ///< True once available.
+    bool isScheduled      : 1;         ///< True once scheduled.
+    bool isScheduleHigh   : 1;         ///< True if preferable to schedule high.
+    bool isScheduleLow    : 1;         ///< True if preferable to schedule low.
+    bool isCloned         : 1;         ///< True if this node has been cloned.
+    bool isUnbuffered     : 1;         ///< Uses an unbuffered resource.
+    bool hasReservedResource : 1;      ///< Uses a reserved resource.
+    Sched::Preference SchedulingPref = Sched::None; ///< Scheduling preference.
 
   private:
-    bool isDepthCurrent   : 1;        ///< True if Depth is current.
-    bool isHeightCurrent  : 1;        ///< True if Height is current.
-    unsigned Depth;                   ///< Node depth.
-    unsigned Height;                  ///< Node height.
-  public:
-    unsigned TopReadyCycle; ///< Cycle relative to start when node is ready.
-    unsigned BotReadyCycle; ///< Cycle relative to end when node is ready.
+    bool isDepthCurrent   : 1;         ///< True if Depth is current.
+    bool isHeightCurrent  : 1;         ///< True if Height is current.
+    unsigned Depth = 0;                ///< Node depth.
+    unsigned Height = 0;               ///< Node height.
 
-    const TargetRegisterClass *CopyDstRC; ///< Is a special copy node if !=null.
-    const TargetRegisterClass *CopySrcRC;
+  public:
+    unsigned TopReadyCycle = 0; ///< Cycle relative to start when node is ready.
+    unsigned BotReadyCycle = 0; ///< Cycle relative to end when node is ready.
+
+    const TargetRegisterClass *CopyDstRC =
+        nullptr; ///< Is a special copy node if != nullptr.
+    const TargetRegisterClass *CopySrcRC = nullptr;
 
     /// \brief Constructs an SUnit for pre-regalloc scheduling to represent an
     /// SDNode and any nodes flagged to it.
     SUnit(SDNode *node, unsigned nodenum)
-      : Node(node), Instr(nullptr), OrigNode(nullptr), SchedClass(nullptr),
-        NodeNum(nodenum), NodeQueueId(0), NumPreds(0), NumSuccs(0),
-        NumPredsLeft(0), NumSuccsLeft(0), WeakPredsLeft(0), WeakSuccsLeft(0),
-        NumRegDefsLeft(0), Latency(0), isVRegCycle(false), isCall(false),
+      : Node(node), NodeNum(nodenum), isVRegCycle(false), isCall(false),
         isCallOp(false), isTwoAddress(false), isCommutable(false),
         hasPhysRegUses(false), hasPhysRegDefs(false), hasPhysRegClobbers(false),
         isPending(false), isAvailable(false), isScheduled(false),
         isScheduleHigh(false), isScheduleLow(false), isCloned(false),
-        isUnbuffered(false), hasReservedResource(false),
-        SchedulingPref(Sched::None), isDepthCurrent(false),
-        isHeightCurrent(false), Depth(0), Height(0), TopReadyCycle(0),
-        BotReadyCycle(0), CopyDstRC(nullptr), CopySrcRC(nullptr) {}
+        isUnbuffered(false), hasReservedResource(false), isDepthCurrent(false),
+        isHeightCurrent(false) {}
 
     /// \brief Constructs an SUnit for post-regalloc scheduling to represent a
     /// MachineInstr.
     SUnit(MachineInstr *instr, unsigned nodenum)
-      : Node(nullptr), Instr(instr), OrigNode(nullptr), SchedClass(nullptr),
-        NodeNum(nodenum), NodeQueueId(0), NumPreds(0), NumSuccs(0),
-        NumPredsLeft(0), NumSuccsLeft(0), WeakPredsLeft(0), WeakSuccsLeft(0),
-        NumRegDefsLeft(0), Latency(0), isVRegCycle(false), isCall(false),
+      : Instr(instr), NodeNum(nodenum), isVRegCycle(false), isCall(false),
         isCallOp(false), isTwoAddress(false), isCommutable(false),
         hasPhysRegUses(false), hasPhysRegDefs(false), hasPhysRegClobbers(false),
         isPending(false), isAvailable(false), isScheduled(false),
         isScheduleHigh(false), isScheduleLow(false), isCloned(false),
-        isUnbuffered(false), hasReservedResource(false),
-        SchedulingPref(Sched::None), isDepthCurrent(false),
-        isHeightCurrent(false), Depth(0), Height(0), TopReadyCycle(0),
-        BotReadyCycle(0), CopyDstRC(nullptr), CopySrcRC(nullptr) {}
+        isUnbuffered(false), hasReservedResource(false), isDepthCurrent(false),
+        isHeightCurrent(false) {}
 
     /// \brief Constructs a placeholder SUnit.
     SUnit()
-      : Node(nullptr), Instr(nullptr), OrigNode(nullptr), SchedClass(nullptr),
-        NodeNum(BoundaryID), NodeQueueId(0), NumPreds(0), NumSuccs(0),
-        NumPredsLeft(0), NumSuccsLeft(0), WeakPredsLeft(0), WeakSuccsLeft(0),
-        NumRegDefsLeft(0), Latency(0), isVRegCycle(false), isCall(false),
-        isCallOp(false), isTwoAddress(false), isCommutable(false),
-        hasPhysRegUses(false), hasPhysRegDefs(false), hasPhysRegClobbers(false),
-        isPending(false), isAvailable(false), isScheduled(false),
-        isScheduleHigh(false), isScheduleLow(false), isCloned(false),
-        isUnbuffered(false), hasReservedResource(false),
-        SchedulingPref(Sched::None), isDepthCurrent(false),
-        isHeightCurrent(false), Depth(0), Height(0), TopReadyCycle(0),
-        BotReadyCycle(0), CopyDstRC(nullptr), CopySrcRC(nullptr) {}
+      : isVRegCycle(false), isCall(false), isCallOp(false), isTwoAddress(false),
+        isCommutable(false), hasPhysRegUses(false), hasPhysRegDefs(false),
+        hasPhysRegClobbers(false), isPending(false), isAvailable(false),
+        isScheduled(false), isScheduleHigh(false), isScheduleLow(false),
+        isCloned(false), isUnbuffered(false), hasReservedResource(false),
+        isDepthCurrent(false), isHeightCurrent(false) {}
 
     /// \brief Boundary nodes are placeholders for the boundary of the
     /// scheduling region.
@@ -506,12 +499,14 @@ namespace llvm {
   /// decide.
   class SchedulingPriorityQueue {
     virtual void anchor();
-    unsigned CurCycle;
+
+    unsigned CurCycle = 0;
     bool HasReadyFilter;
+
   public:
-    SchedulingPriorityQueue(bool rf = false):
-      CurCycle(0), HasReadyFilter(rf) {}
-    virtual ~SchedulingPriorityQueue() {}
+    SchedulingPriorityQueue(bool rf = false) :  HasReadyFilter(rf) {}
+
+    virtual ~SchedulingPriorityQueue() = default;
 
     virtual bool isBottomUp() const = 0;
 
@@ -530,6 +525,7 @@ namespace llvm {
       assert(!HasReadyFilter && "The ready filter must override isReady()");
       return true;
     }
+
     virtual void push(SUnit *U) = 0;
 
     void push_all(const std::vector<SUnit *> &Nodes) {
@@ -623,6 +619,7 @@ namespace llvm {
     unsigned Operand;
 
     SUnitIterator(SUnit *N, unsigned Op) : Node(N), Operand(Op) {}
+
   public:
     bool operator==(const SUnitIterator& x) const {
       return Operand == x.Operand;
@@ -649,6 +646,7 @@ namespace llvm {
 
     unsigned getOperand() const { return Operand; }
     const SUnit *getNode() const { return Node; }
+
     /// Tests if this is not an SDep::Data dependence.
     bool isCtrlDep() const {
       return getSDep().isCtrl();
@@ -746,6 +744,7 @@ namespace llvm {
     reverse_iterator rend() { return Index2Node.rend(); }
     const_reverse_iterator rend() const { return Index2Node.rend(); }
   };
-}
 
-#endif
+} // end namespace llvm
+
+#endif // LLVM_CODEGEN_SCHEDULEDAG_H

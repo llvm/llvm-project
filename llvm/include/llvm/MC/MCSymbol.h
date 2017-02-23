@@ -48,6 +48,7 @@ protected:
     SymbolKindCOFF,
     SymbolKindELF,
     SymbolKindMachO,
+    SymbolKindWasm,
   };
 
   /// A symbol can contain an Offset, or Value, or be Common, but never more
@@ -100,7 +101,7 @@ protected:
 
   /// LLVM RTTI discriminator. This is actually a SymbolKind enumerator, but is
   /// unsigned to avoid sign extension and achieve better bitpacking with MSVC.
-  unsigned Kind : 2;
+  unsigned Kind : 3;
 
   /// True if we have created a relocation that uses this symbol.
   mutable unsigned IsUsedInReloc : 1;
@@ -283,6 +284,8 @@ public:
   bool isCOFF() const { return Kind == SymbolKindCOFF; }
 
   bool isMachO() const { return Kind == SymbolKindMachO; }
+
+  bool isWasm() const { return Kind == SymbolKindWasm; }
 
   /// @}
   /// \name Variable Symbols

@@ -1,7 +1,6 @@
-// FIXME: Support sanitizer hooks for memcmp and strcmp need
-// to be implemented in the sanitizer runtime for platforms other
-// than linux
-REQUIRES: linux
+// FIXME: Support for sanitizer hooks for memcmp and strcmp needs to
+// be implemented in the sanitizer runtime for this test
+UNSUPPORTED: windows
 CHECK: BINGO
 
 RUN: not LLVMFuzzer-MemcmpTest               -seed=1 -runs=2000000   2>&1 | FileCheck %s
@@ -16,4 +15,3 @@ RECOMMENDED_DICT:###### Recommended dictionary. ######
 RECOMMENDED_DICT-DAG: "foo"
 RECOMMENDED_DICT-DAG: "bar"
 RECOMMENDED_DICT:###### End of recommended dictionary. ######
-

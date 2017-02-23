@@ -163,8 +163,7 @@ template <class ELFT> void OutputSection<ELFT>::assignOffsets() {
 }
 
 template <class ELFT>
-void OutputSection<ELFT>::sort(
-    std::function<int(InputSection<ELFT> *S)> Order) {
+void OutputSection<ELFT>::sort(std::function<int(InputSectionData *S)> Order) {
   typedef std::pair<unsigned, InputSection<ELFT> *> Pair;
   auto Comp = [](const Pair &A, const Pair &B) { return A.first < B.first; };
 
@@ -185,7 +184,7 @@ void OutputSection<ELFT>::sort(
 // For more detail, read the section of the GCC's manual about init_priority.
 template <class ELFT> void OutputSection<ELFT>::sortInitFini() {
   // Sort sections by priority.
-  sort([](InputSection<ELFT> *S) { return getPriority(S->Name); });
+  sort([](InputSectionData *S) { return getPriority(S->Name); });
 }
 
 // Returns true if S matches /Filename.?\.o$/.

@@ -587,10 +587,15 @@ define <2 x double> @test_x86_sse2_max_sd(<2 x double> %a0, <2 x double> %a1) {
 ; SSE-NEXT:    maxsd %xmm1, %xmm0 ## encoding: [0xf2,0x0f,0x5f,0xc1]
 ; SSE-NEXT:    retl ## encoding: [0xc3]
 ;
-; VCHECK-LABEL: test_x86_sse2_max_sd:
-; VCHECK:       ## BB#0:
-; VCHECK-NEXT:    vmaxsd %xmm1, %xmm0, %xmm0 ## encoding: [0xc5,0xfb,0x5f,0xc1]
-; VCHECK-NEXT:    retl ## encoding: [0xc3]
+; AVX2-LABEL: test_x86_sse2_max_sd:
+; AVX2:       ## BB#0:
+; AVX2-NEXT:    vmaxsd %xmm1, %xmm0, %xmm0 ## encoding: [0xc5,0xfb,0x5f,0xc1]
+; AVX2-NEXT:    retl ## encoding: [0xc3]
+;
+; SKX-LABEL: test_x86_sse2_max_sd:
+; SKX:       ## BB#0:
+; SKX-NEXT:    vmaxsd %xmm1, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfb,0x5f,0xc1]
+; SKX-NEXT:    retl ## encoding: [0xc3]
   %res = call <2 x double> @llvm.x86.sse2.max.sd(<2 x double> %a0, <2 x double> %a1) ; <<2 x double>> [#uses=1]
   ret <2 x double> %res
 }
@@ -624,10 +629,15 @@ define <2 x double> @test_x86_sse2_min_sd(<2 x double> %a0, <2 x double> %a1) {
 ; SSE-NEXT:    minsd %xmm1, %xmm0 ## encoding: [0xf2,0x0f,0x5d,0xc1]
 ; SSE-NEXT:    retl ## encoding: [0xc3]
 ;
-; VCHECK-LABEL: test_x86_sse2_min_sd:
-; VCHECK:       ## BB#0:
-; VCHECK-NEXT:    vminsd %xmm1, %xmm0, %xmm0 ## encoding: [0xc5,0xfb,0x5d,0xc1]
-; VCHECK-NEXT:    retl ## encoding: [0xc3]
+; AVX2-LABEL: test_x86_sse2_min_sd:
+; AVX2:       ## BB#0:
+; AVX2-NEXT:    vminsd %xmm1, %xmm0, %xmm0 ## encoding: [0xc5,0xfb,0x5d,0xc1]
+; AVX2-NEXT:    retl ## encoding: [0xc3]
+;
+; SKX-LABEL: test_x86_sse2_min_sd:
+; SKX:       ## BB#0:
+; SKX-NEXT:    vminsd %xmm1, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfb,0x5d,0xc1]
+; SKX-NEXT:    retl ## encoding: [0xc3]
   %res = call <2 x double> @llvm.x86.sse2.min.sd(<2 x double> %a0, <2 x double> %a1) ; <<2 x double>> [#uses=1]
   ret <2 x double> %res
 }

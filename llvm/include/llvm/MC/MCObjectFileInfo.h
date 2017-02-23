@@ -129,7 +129,7 @@ protected:
   /// it'll go here.
   MCSection *TLSExtraDataSection;
 
-  /// Section directive for Thread Local data. ELF, MachO and COFF.
+  /// Section directive for Thread Local data. ELF, MachO, COFF, and Wasm.
   MCSection *TLSDataSection; // Defaults to ".tdata".
 
   /// Section directive for Thread Local uninitialized data.
@@ -338,7 +338,7 @@ public:
     return EHFrameSection;
   }
 
-  enum Environment { IsMachO, IsELF, IsCOFF };
+  enum Environment { IsMachO, IsELF, IsCOFF, IsWasm };
   Environment getObjectFileType() const { return Env; }
 
   bool isPositionIndependent() const { return PositionIndependent; }
@@ -353,6 +353,7 @@ private:
   void initMachOMCObjectFileInfo(const Triple &T);
   void initELFMCObjectFileInfo(const Triple &T);
   void initCOFFMCObjectFileInfo(const Triple &T);
+  void initWasmMCObjectFileInfo(const Triple &T);
 
 public:
   const Triple &getTargetTriple() const { return TT; }

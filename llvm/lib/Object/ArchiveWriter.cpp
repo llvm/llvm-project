@@ -132,8 +132,9 @@ static bool isBSDLike(object::Archive::Kind Kind) {
   case object::Archive::K_MIPS64:
   case object::Archive::K_DARWIN64:
   case object::Archive::K_COFF:
-    llvm_unreachable("not supported for writting");
+    break;
   }
+  llvm_unreachable("not supported for writting");
 }
 
 static void print32(raw_ostream &Out, object::Archive::Kind Kind,

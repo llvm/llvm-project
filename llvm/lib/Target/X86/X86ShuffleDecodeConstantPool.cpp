@@ -57,15 +57,16 @@ static bool extractConstantMask(const Constant *C, unsigned MaskEltSizeInBits,
     if (!COp || (!isa<UndefValue>(COp) && !isa<ConstantInt>(COp)))
       return false;
 
+    unsigned BitOffset = i * CstEltSizeInBits;
+
     if (isa<UndefValue>(COp)) {
-      APInt EltUndef = APInt::getLowBitsSet(CstSizeInBits, CstEltSizeInBits);
-      UndefBits |= EltUndef.shl(i * CstEltSizeInBits);
+      unsigned HiBits = BitOffset + CstEltSizeInBits;
+      UndefBits |= APInt::getBitsSet(CstSizeInBits, BitOffset, HiBits);
       continue;
     }
 
-    APInt EltBits = cast<ConstantInt>(COp)->getValue();
-    EltBits = EltBits.zextOrTrunc(CstSizeInBits);
-    MaskBits |= EltBits.shl(i * CstEltSizeInBits);
+    auto *Elt = cast<ConstantInt>(COp);
+    MaskBits |= Elt->getValue().zextOrTrunc(CstSizeInBits).shl(BitOffset);
   }
 
   // Now extract the undef/constant bit data into the raw shuffle masks.

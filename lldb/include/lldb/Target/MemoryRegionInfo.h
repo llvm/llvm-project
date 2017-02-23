@@ -12,6 +12,7 @@
 #define lldb_MemoryRegionInfo_h
 
 #include "lldb/Core/RangeMap.h"
+#include "llvm/Support/FormatProviders.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Range.h"
 
@@ -97,6 +98,26 @@ protected:
   OptionalBool m_execute;
   OptionalBool m_mapped;
   ConstString m_name;
+};
+}
+
+namespace llvm {
+template <>
+struct format_provider<lldb_private::MemoryRegionInfo::OptionalBool> {
+  static void format(const lldb_private::MemoryRegionInfo::OptionalBool &B,
+                     raw_ostream &OS, StringRef Options) {
+    switch(B) {
+    case lldb_private::MemoryRegionInfo::eNo:
+      OS << "no";
+      return;
+    case lldb_private::MemoryRegionInfo::eYes:
+      OS << "yes";
+      return;
+    case lldb_private::MemoryRegionInfo::eDontKnow:
+      OS << "don't know";
+      return;
+    }
+  }
 };
 }
 

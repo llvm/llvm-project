@@ -18,6 +18,7 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/AST/ODRHash.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "llvm/ADT/STLExtras.h"
@@ -371,7 +372,15 @@ CXXRecordDecl::setBases(CXXBaseSpecifier const * const *Bases,
   data().IsParsingBaseSpecifiers = false;
 }
 
-void CXXRecordDecl::computeODRHash() {}
+void CXXRecordDecl::computeODRHash() {
+  if (!DefinitionData)
+    return;
+
+  ODRHash Hash;
+  Hash.AddCXXRecordDecl(this);
+
+  DefinitionData->ODRHash = Hash.CalculateHash();
+}
 
 void CXXRecordDecl::addedClassSubobject(CXXRecordDecl *Subobj) {
   // C++11 [class.copy]p11:

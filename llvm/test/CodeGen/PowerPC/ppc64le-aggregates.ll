@@ -284,7 +284,10 @@ entry:
 ; CHECK-DAG: lfs 12, 12({{[0-9]+}})
 ; CHECK-DAG: lfs 13, 16({{[0-9]+}})
 
-; CHECK-DAG: ld 10, 0({{[0-9]+}})
+; CHECK-DAG: lwz [[REG0:[0-9]+]], 0({{[0-9]+}})
+; CHECK-DAG: lwz [[REG1:[0-9]+]], 4({{[0-9]+}})
+; CHECK-DAG: sldi [[REG2:[0-9]+]], [[REG1]], 32
+; CHECK-DAG: or 10, [[REG0]], [[REG2]]
 ; CHECK: bl test2
 
 declare void @test2([8 x float], [5 x float], [2 x float])

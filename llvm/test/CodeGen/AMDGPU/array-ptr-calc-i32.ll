@@ -12,11 +12,7 @@ declare void @llvm.amdgcn.s.barrier() #2
 
 ; SI-LABEL: {{^}}test_private_array_ptr_calc:
 
-; FIXME: We end up with zero argument for ADD, because
-; SIRegisterInfo::eliminateFrameIndex() blindly replaces the frame index
-; with the appropriate offset.  We should fold this into the store.
-
-; SI-ALLOCA: v_add_i32_e32 [[PTRREG:v[0-9]+]], vcc, 0, v{{[0-9]+}}
+; SI-ALLOCA: v_add_i32_e32 [[PTRREG:v[0-9]+]], vcc, 16, v{{[0-9]+}}
 ; SI-ALLOCA: buffer_store_dword {{v[0-9]+}}, [[PTRREG]], s[{{[0-9]+:[0-9]+}}], s{{[0-9]+}} offen offset:64
 ; SI-ALLOCA: s_barrier
 ; SI-ALLOCA: buffer_load_dword {{v[0-9]+}}, [[PTRREG]], s[{{[0-9]+:[0-9]+}}], s{{[0-9]+}} offen offset:64

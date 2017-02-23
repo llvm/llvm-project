@@ -22,6 +22,7 @@
 namespace llvm {
 
 class MCELFStreamer;
+class MCWasmStreamer;
 
 /// WebAssembly-specific streamer interface, to implement support
 /// WebAssembly-specific assembly directives.
@@ -71,6 +72,22 @@ public:
 class WebAssemblyTargetELFStreamer final : public WebAssemblyTargetStreamer {
 public:
   explicit WebAssemblyTargetELFStreamer(MCStreamer &S);
+
+  void emitParam(ArrayRef<MVT> Types) override;
+  void emitResult(ArrayRef<MVT> Types) override;
+  void emitLocal(ArrayRef<MVT> Types) override;
+  void emitEndFunc() override;
+  void emitIndirectFunctionType(StringRef name,
+                                SmallVectorImpl<MVT> &Params,
+                                SmallVectorImpl<MVT> &Results) override;
+  void emitIndIdx(const MCExpr *Value) override;
+  void emitGlobalImport(StringRef name) override;
+};
+
+/// This part is for Wasm object output
+class WebAssemblyTargetWasmStreamer final : public WebAssemblyTargetStreamer {
+public:
+  explicit WebAssemblyTargetWasmStreamer(MCStreamer &S);
 
   void emitParam(ArrayRef<MVT> Types) override;
   void emitResult(ArrayRef<MVT> Types) override;

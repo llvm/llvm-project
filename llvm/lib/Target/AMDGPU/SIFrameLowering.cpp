@@ -383,6 +383,16 @@ void SIFrameLowering::emitEpilogue(MachineFunction &MF,
 
 }
 
+static bool allStackObjectsAreDead(const MachineFrameInfo &MFI) {
+  for (int I = MFI.getObjectIndexBegin(), E = MFI.getObjectIndexEnd();
+       I != E; ++I) {
+    if (!MFI.isDeadObjectIndex(I))
+      return false;
+  }
+
+  return true;
+}
+
 void SIFrameLowering::processFunctionBeforeFrameFinalized(
   MachineFunction &MF,
   RegScavenger *RS) const {
@@ -391,45 +401,68 @@ void SIFrameLowering::processFunctionBeforeFrameFinalized(
   if (!MFI.hasStackObjects())
     return;
 
-  assert(RS && "RegScavenger required if spilling");
-  int ScavengeFI = MFI.CreateStackObject(
-    AMDGPU::SGPR_32RegClass.getSize(),
-    AMDGPU::SGPR_32RegClass.getAlignment(), false);
-  RS->addScavengingFrameIndex(ScavengeFI);
-
   const SISubtarget &ST = MF.getSubtarget<SISubtarget>();
   const SIInstrInfo *TII = ST.getInstrInfo();
   const SIRegisterInfo &TRI = TII->getRegisterInfo();
-  if (!TRI.spillSGPRToVGPR())
-    return;
-
   SIMachineFunctionInfo *FuncInfo = MF.getInfo<SIMachineFunctionInfo>();
-  if (!FuncInfo->hasSpilledSGPRs())
-    return;
+  bool AllSGPRSpilledToVGPRs = false;
 
-  // Process all SGPR spills before frame offsets are finalized. Ideally SGPRs
-  // are spilled to VGPRs, in which case we can eliminate the stack usage.
-  //
-  // XXX - This operates under the assumption that only other SGPR spills are
-  // users of the frame index. I'm not 100% sure this is correct. The
-  // StackColoring pass has a comment saying a future improvement would be to
-  // merging of allocas with spill slots, but for now according to
-  // MachineFrameInfo isSpillSlot can't alias any other object.
-  for (MachineBasicBlock &MBB : MF) {
-    MachineBasicBlock::iterator Next;
-    for (auto I = MBB.begin(), E = MBB.end(); I != E; I = Next) {
-      MachineInstr &MI = *I;
-      Next = std::next(I);
+  if (TRI.spillSGPRToVGPR() && FuncInfo->hasSpilledSGPRs()) {
+    AllSGPRSpilledToVGPRs = true;
 
-      if (TII->isSGPRSpill(MI)) {
-        int FI = TII->getNamedOperand(MI, AMDGPU::OpName::addr)->getIndex();
-        if (FuncInfo->allocateSGPRSpillToVGPR(MF, FI))
-          TRI.eliminateSGPRToVGPRSpillFrameIndex(MI, FI, RS);
+    // Process all SGPR spills before frame offsets are finalized. Ideally SGPRs
+    // are spilled to VGPRs, in which case we can eliminate the stack usage.
+    //
+    // XXX - This operates under the assumption that only other SGPR spills are
+    // users of the frame index. I'm not 100% sure this is correct. The
+    // StackColoring pass has a comment saying a future improvement would be to
+    // merging of allocas with spill slots, but for now according to
+    // MachineFrameInfo isSpillSlot can't alias any other object.
+    for (MachineBasicBlock &MBB : MF) {
+      MachineBasicBlock::iterator Next;
+      for (auto I = MBB.begin(), E = MBB.end(); I != E; I = Next) {
+        MachineInstr &MI = *I;
+        Next = std::next(I);
+
+        if (TII->isSGPRSpill(MI)) {
+          int FI = TII->getNamedOperand(MI, AMDGPU::OpName::addr)->getIndex();
+          if (FuncInfo->allocateSGPRSpillToVGPR(MF, FI)) {
+            bool Spilled = TRI.eliminateSGPRToVGPRSpillFrameIndex(MI, FI, RS);
+            (void)Spilled;
+            assert(Spilled && "failed to spill SGPR to VGPR when allocated");
+          } else
+            AllSGPRSpilledToVGPRs = false;
+        }
       }
     }
+
+    FuncInfo->removeSGPRToVGPRFrameIndices(MFI);
   }
 
-  FuncInfo->removeSGPRToVGPRFrameIndices(MFI);
+  // FIXME: The other checks should be redundant with allStackObjectsAreDead,
+  // but currently hasNonSpillStackObjects is set only from source
+  // allocas. Stack temps produced from legalization are not counted currently.
+  if (FuncInfo->hasNonSpillStackObjects() || FuncInfo->hasSpilledVGPRs() ||
+      !AllSGPRSpilledToVGPRs || !allStackObjectsAreDead(MFI)) {
+    assert(RS && "RegScavenger required if spilling");
+
+    // We force this to be at offset 0 so no user object ever has 0 as an
+    // address, so we may use 0 as an invalid pointer value. This is because
+    // LLVM assumes 0 is an invalid pointer in address space 0. Because alloca
+    // is required to be address space 0, we are forced to accept this for
+    // now. Ideally we could have the stack in another address space with 0 as a
+    // valid pointer, and -1 as the null value.
+    //
+    // This will also waste additional space when user stack objects require > 4
+    // byte alignment.
+    //
+    // The main cost here is losing the offset for addressing modes. However
+    // this also ensures we shouldn't need a register for the offset when
+    // emergency scavenging.
+    int ScavengeFI = MFI.CreateFixedObject(
+      AMDGPU::SGPR_32RegClass.getSize(), 0, false);
+    RS->addScavengingFrameIndex(ScavengeFI);
+  }
 }
 
 void SIFrameLowering::emitDebuggerPrologue(MachineFunction &MF,

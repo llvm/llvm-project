@@ -16,6 +16,7 @@
 #include "llvm/MC/MCSectionCOFF.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCSectionMachO.h"
+#include "llvm/MC/MCSectionWasm.h"
 #include "llvm/Support/COFF.h"
 #include "llvm/Support/ELF.h"
 
@@ -798,6 +799,30 @@ void MCObjectFileInfo::initCOFFMCObjectFileInfo(const Triple &T) {
                                         SectionKind::getReadOnly());
 }
 
+void MCObjectFileInfo::initWasmMCObjectFileInfo(const Triple &T) {
+  // TODO: Set the section types and flags.
+  TextSection = Ctx->getWasmSection("", 0, 0);
+  DataSection = Ctx->getWasmSection("", 0, 0);
+
+  // TODO: Set the section types and flags.
+  DwarfLineSection = Ctx->getWasmSection(".debug_line", 0, 0);
+  DwarfStrSection = Ctx->getWasmSection(".debug_str", 0, 0);
+  DwarfLocSection = Ctx->getWasmSection(".debug_loc", 0, 0);
+  DwarfAbbrevSection = Ctx->getWasmSection(".debug_abbrev", 0, 0, "section_abbrev");
+  DwarfARangesSection = Ctx->getWasmSection(".debug_aranges", 0, 0);
+  DwarfRangesSection = Ctx->getWasmSection(".debug_ranges", 0, 0, "debug_range");
+  DwarfMacinfoSection = Ctx->getWasmSection(".debug_macinfo", 0, 0, "debug_macinfo");
+  DwarfAddrSection = Ctx->getWasmSection(".debug_addr", 0, 0);
+  DwarfCUIndexSection = Ctx->getWasmSection(".debug_cu_index", 0, 0);
+  DwarfTUIndexSection = Ctx->getWasmSection(".debug_tu_index", 0, 0);
+  DwarfInfoSection = Ctx->getWasmSection(".debug_info", 0, 0, "section_info");
+  DwarfFrameSection = Ctx->getWasmSection(".debug_frame", 0, 0);
+  DwarfPubNamesSection = Ctx->getWasmSection(".debug_pubnames", 0, 0);
+  DwarfPubTypesSection = Ctx->getWasmSection(".debug_pubtypes", 0, 0);
+
+  // TODO: Define more sections.
+}
+
 void MCObjectFileInfo::InitMCObjectFileInfo(const Triple &TheTriple, bool PIC,
                                             CodeModel::Model cm,
                                             MCContext &ctx) {
@@ -843,7 +868,8 @@ void MCObjectFileInfo::InitMCObjectFileInfo(const Triple &TheTriple, bool PIC,
     initELFMCObjectFileInfo(TT);
     break;
   case Triple::Wasm:
-    report_fatal_error("Cannot initialize MC for wasm object file format yet.");
+    Env = IsWasm;
+    initWasmMCObjectFileInfo(TT);
     break;
   case Triple::UnknownObjectFormat:
     report_fatal_error("Cannot initialize MC for unknown object file format.");

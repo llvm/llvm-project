@@ -89,9 +89,8 @@ struct BaseCommand {
 
 // This represents ". = <expr>" or "<symbol> = <expr>".
 struct SymbolAssignment : BaseCommand {
-  SymbolAssignment(StringRef Name, Expr E, std::string &&Loc)
-      : BaseCommand(AssignmentKind), Name(Name), Expression(E),
-        Location(std::move(Loc)) {}
+  SymbolAssignment(StringRef Name, Expr E, std::string Loc)
+      : BaseCommand(AssignmentKind), Name(Name), Expression(E), Location(Loc) {}
 
   static bool classof(const BaseCommand *C);
 
@@ -106,6 +105,7 @@ struct SymbolAssignment : BaseCommand {
   bool Provide = false;
   bool Hidden = false;
 
+  // Holds file name and line number for error reporting.
   std::string Location;
 };
 

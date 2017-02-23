@@ -6025,6 +6025,11 @@ void InterleavedAccessInfo::analyzeInterleaving(
       if (DesA.Stride != DesB.Stride || DesA.Size != DesB.Size)
         continue;
 
+      // Ignore A if the memory object of A and B don't belong to the same
+      // address space
+      if (getMemInstAddressSpace(A) != getMemInstAddressSpace(B))
+        continue;
+
       // Calculate the distance from A to B.
       const SCEVConstant *DistToB = dyn_cast<SCEVConstant>(
           PSE.getSE()->getMinusSCEV(DesA.Scev, DesB.Scev));
@@ -6068,35 +6073,35 @@ void InterleavedAccessInfo::analyzeInterleaving(
       releaseGroup(Group);
 
   // Remove interleaved groups with gaps (currently only loads) whose memory
-  // accesses may wrap around. We have to revisit the getPtrStride analysis, 
-  // this time with ShouldCheckWrap=true, since collectConstStrideAccesses does 
+  // accesses may wrap around. We have to revisit the getPtrStride analysis,
+  // this time with ShouldCheckWrap=true, since collectConstStrideAccesses does
   // not check wrapping (see documentation there).
-  // FORNOW we use Assume=false; 
-  // TODO: Change to Assume=true but making sure we don't exceed the threshold 
+  // FORNOW we use Assume=false;
+  // TODO: Change to Assume=true but making sure we don't exceed the threshold
   // of runtime SCEV assumptions checks (thereby potentially failing to
-  // vectorize altogether). 
+  // vectorize altogether).
   // Additional optional optimizations:
-  // TODO: If we are peeling the loop and we know that the first pointer doesn't 
+  // TODO: If we are peeling the loop and we know that the first pointer doesn't
   // wrap then we can deduce that all pointers in the group don't wrap.
-  // This means that we can forcefully peel the loop in order to only have to 
-  // check the first pointer for no-wrap. When we'll change to use Assume=true 
+  // This means that we can forcefully peel the loop in order to only have to
+  // check the first pointer for no-wrap. When we'll change to use Assume=true
   // we'll only need at most one runtime check per interleaved group.
   //
   for (InterleaveGroup *Group : LoadGroups) {
 
     // Case 1: A full group. Can Skip the checks; For full groups, if the wide
-    // load would wrap around the address space we would do a memory access at 
-    // nullptr even without the transformation. 
-    if (Group->getNumMembers() == Group->getFactor()) 
+    // load would wrap around the address space we would do a memory access at
+    // nullptr even without the transformation.
+    if (Group->getNumMembers() == Group->getFactor())
       continue;
 
-    // Case 2: If first and last members of the group don't wrap this implies 
+    // Case 2: If first and last members of the group don't wrap this implies
     // that all the pointers in the group don't wrap.
     // So we check only group member 0 (which is always guaranteed to exist),
-    // and group member Factor - 1; If the latter doesn't exist we rely on 
+    // and group member Factor - 1; If the latter doesn't exist we rely on
     // peeling (if it is a non-reveresed accsess -- see Case 3).
     Value *FirstMemberPtr = getPointerOperand(Group->getMember(0));
-    if (!getPtrStride(PSE, FirstMemberPtr, TheLoop, Strides, /*Assume=*/false, 
+    if (!getPtrStride(PSE, FirstMemberPtr, TheLoop, Strides, /*Assume=*/false,
                       /*ShouldCheckWrap=*/true)) {
       DEBUG(dbgs() << "LV: Invalidate candidate interleaved group due to "
                       "first group member potentially pointer-wrapping.\n");

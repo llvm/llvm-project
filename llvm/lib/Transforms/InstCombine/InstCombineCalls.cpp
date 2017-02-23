@@ -3231,6 +3231,79 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
 
     break;
   }
+  case Intrinsic::amdgcn_ubfe:
+  case Intrinsic::amdgcn_sbfe: {
+    // Decompose simple cases into standard shifts.
+    Value *Src = II->getArgOperand(0);
+    if (isa<UndefValue>(Src))
+      return replaceInstUsesWith(*II, Src);
+
+    unsigned Width;
+    Type *Ty = II->getType();
+    unsigned IntSize = Ty->getIntegerBitWidth();
+
+    ConstantInt *CWidth = dyn_cast<ConstantInt>(II->getArgOperand(2));
+    if (CWidth) {
+      Width = CWidth->getZExtValue();
+      if ((Width & (IntSize - 1)) == 0)
+        return replaceInstUsesWith(*II, ConstantInt::getNullValue(Ty));
+
+      if (Width >= IntSize) {
+        // Hardware ignores high bits, so remove those.
+        II->setArgOperand(2, ConstantInt::get(CWidth->getType(),
+                                              Width & (IntSize - 1)));
+        return II;
+      }
+    }
+
+    unsigned Offset;
+    ConstantInt *COffset = dyn_cast<ConstantInt>(II->getArgOperand(1));
+    if (COffset) {
+      Offset = COffset->getZExtValue();
+      if (Offset >= IntSize) {
+        II->setArgOperand(1, ConstantInt::get(COffset->getType(),
+                                              Offset & (IntSize - 1)));
+        return II;
+      }
+    }
+
+    bool Signed = II->getIntrinsicID() == Intrinsic::amdgcn_sbfe;
+
+    // TODO: Also emit sub if only width is constant.
+    if (!CWidth && COffset && Offset == 0) {
+      Constant *KSize = ConstantInt::get(COffset->getType(), IntSize);
+      Value *ShiftVal = Builder->CreateSub(KSize, II->getArgOperand(2));
+      ShiftVal = Builder->CreateZExt(ShiftVal, II->getType());
+
+      Value *Shl = Builder->CreateShl(Src, ShiftVal);
+      Value *RightShift = Signed ?
+        Builder->CreateAShr(Shl, ShiftVal) :
+        Builder->CreateLShr(Shl, ShiftVal);
+      RightShift->takeName(II);
+      return replaceInstUsesWith(*II, RightShift);
+    }
+
+    if (!CWidth || !COffset)
+      break;
+
+    // TODO: This allows folding to undef when the hardware has specific
+    // behavior?
+    if (Offset + Width < IntSize) {
+      Value *Shl = Builder->CreateShl(Src, IntSize  - Offset - Width);
+      Value *RightShift = Signed ?
+        Builder->CreateAShr(Shl, IntSize - Width) :
+        Builder->CreateLShr(Shl, IntSize - Width);
+      RightShift->takeName(II);
+      return replaceInstUsesWith(*II, RightShift);
+    }
+
+    Value *RightShift = Signed ?
+      Builder->CreateAShr(Src, Offset) :
+      Builder->CreateLShr(Src, Offset);
+
+    RightShift->takeName(II);
+    return replaceInstUsesWith(*II, RightShift);
+  }
   case Intrinsic::stackrestore: {
     // If the save is right next to the restore, remove the restore.  This can
     // happen when variable allocas are DCE'd.

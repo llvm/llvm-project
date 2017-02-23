@@ -322,10 +322,15 @@ define <4 x float> @test_x86_sse_max_ss(<4 x float> %a0, <4 x float> %a1) {
 ; SSE-NEXT:    maxss %xmm1, %xmm0 ## encoding: [0xf3,0x0f,0x5f,0xc1]
 ; SSE-NEXT:    retl ## encoding: [0xc3]
 ;
-; VCHECK-LABEL: test_x86_sse_max_ss:
-; VCHECK:       ## BB#0:
-; VCHECK-NEXT:    vmaxss %xmm1, %xmm0, %xmm0 ## encoding: [0xc5,0xfa,0x5f,0xc1]
-; VCHECK-NEXT:    retl ## encoding: [0xc3]
+; AVX2-LABEL: test_x86_sse_max_ss:
+; AVX2:       ## BB#0:
+; AVX2-NEXT:    vmaxss %xmm1, %xmm0, %xmm0 ## encoding: [0xc5,0xfa,0x5f,0xc1]
+; AVX2-NEXT:    retl ## encoding: [0xc3]
+;
+; SKX-LABEL: test_x86_sse_max_ss:
+; SKX:       ## BB#0:
+; SKX-NEXT:    vmaxss %xmm1, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfa,0x5f,0xc1]
+; SKX-NEXT:    retl ## encoding: [0xc3]
   %res = call <4 x float> @llvm.x86.sse.max.ss(<4 x float> %a0, <4 x float> %a1) ; <<4 x float>> [#uses=1]
   ret <4 x float> %res
 }
@@ -359,10 +364,15 @@ define <4 x float> @test_x86_sse_min_ss(<4 x float> %a0, <4 x float> %a1) {
 ; SSE-NEXT:    minss %xmm1, %xmm0 ## encoding: [0xf3,0x0f,0x5d,0xc1]
 ; SSE-NEXT:    retl ## encoding: [0xc3]
 ;
-; VCHECK-LABEL: test_x86_sse_min_ss:
-; VCHECK:       ## BB#0:
-; VCHECK-NEXT:    vminss %xmm1, %xmm0, %xmm0 ## encoding: [0xc5,0xfa,0x5d,0xc1]
-; VCHECK-NEXT:    retl ## encoding: [0xc3]
+; AVX2-LABEL: test_x86_sse_min_ss:
+; AVX2:       ## BB#0:
+; AVX2-NEXT:    vminss %xmm1, %xmm0, %xmm0 ## encoding: [0xc5,0xfa,0x5d,0xc1]
+; AVX2-NEXT:    retl ## encoding: [0xc3]
+;
+; SKX-LABEL: test_x86_sse_min_ss:
+; SKX:       ## BB#0:
+; SKX-NEXT:    vminss %xmm1, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfa,0x5d,0xc1]
+; SKX-NEXT:    retl ## encoding: [0xc3]
   %res = call <4 x float> @llvm.x86.sse.min.ss(<4 x float> %a0, <4 x float> %a1) ; <<4 x float>> [#uses=1]
   ret <4 x float> %res
 }

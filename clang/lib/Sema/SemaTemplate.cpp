@@ -5666,6 +5666,19 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
 
   // If the parameter type somehow involves auto, deduce the type now.
   if (getLangOpts().CPlusPlus1z && ParamType->isUndeducedType()) {
+    // During template argument deduction, we allow 'decltype(auto)' to
+    // match an arbitrary dependent argument.
+    // FIXME: The language rules don't say what happens in this case.
+    // FIXME: We get an opaque dependent type out of decltype(auto) if the
+    // expression is merely instantiation-dependent; is this enough?
+    if (CTAK == CTAK_Deduced && Arg->isTypeDependent()) {
+      auto *AT = dyn_cast<AutoType>(ParamType);
+      if (AT && AT->isDecltypeAuto()) {
+        Converted = TemplateArgument(Arg);
+        return Arg;
+      }
+    }
+
     // When checking a deduced template argument, deduce from its type even if
     // the type is dependent, in order to check the types of non-type template
     // arguments line up properly in partial ordering.

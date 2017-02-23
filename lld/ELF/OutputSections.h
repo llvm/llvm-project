@@ -112,7 +112,7 @@ public:
   typedef typename ELFT::uint uintX_t;
   OutputSection(StringRef Name, uint32_t Type, uintX_t Flags);
   void addSection(InputSectionData *C) override;
-  void sort(std::function<int(InputSection<ELFT> *S)> Order);
+  void sort(std::function<int(InputSectionData *S)> Order);
   void sortInitFini();
   void sortCtorsDtors();
   void writeTo(uint8_t *Buf) override;

@@ -5484,7 +5484,8 @@ bool ARMAsmParser::parsePrefix(ARMMCExpr::VariantKind &RefKind) {
   enum {
     COFF = (1 << MCObjectFileInfo::IsCOFF),
     ELF = (1 << MCObjectFileInfo::IsELF),
-    MACHO = (1 << MCObjectFileInfo::IsMachO)
+    MACHO = (1 << MCObjectFileInfo::IsMachO),
+    WASM = (1 << MCObjectFileInfo::IsWasm),
   };
   static const struct PrefixEntry {
     const char *Spelling;
@@ -5517,6 +5518,9 @@ bool ARMAsmParser::parsePrefix(ARMMCExpr::VariantKind &RefKind) {
     break;
   case MCObjectFileInfo::IsCOFF:
     CurrentFormat = COFF;
+    break;
+  case MCObjectFileInfo::IsWasm:
+    CurrentFormat = WASM;
     break;
   }
 

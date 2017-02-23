@@ -162,8 +162,8 @@ let Namespace = "Hexagon" in {
   def GP:         Rc<11, "gp",         ["c11"]>,   DwarfRegNum<[78]>;
   def CS0:        Rc<12, "cs0",        ["c12"]>,   DwarfRegNum<[79]>;
   def CS1:        Rc<13, "cs1",        ["c13"]>,   DwarfRegNum<[80]>;
-  def UPCL:       Rc<14, "upcyclelo",  ["c14"]>,   DwarfRegNum<[81]>;
-  def UPCH:       Rc<15, "upcyclehi",  ["c15"]>,   DwarfRegNum<[82]>;
+  def UPCYCLELO:  Rc<14, "upcyclelo",  ["c14"]>,   DwarfRegNum<[81]>;
+  def UPCYCLEHI:  Rc<15, "upcyclehi",  ["c15"]>,   DwarfRegNum<[82]>;
   def FRAMELIMIT: Rc<16, "framelimit", ["c16"]>,   DwarfRegNum<[83]>;
   def FRAMEKEY:   Rc<17, "framekey",   ["c17"]>,   DwarfRegNum<[84]>;
   def PKTCOUNTLO: Rc<18, "pktcountlo", ["c18"]>,   DwarfRegNum<[85]>;
@@ -182,7 +182,7 @@ let Namespace = "Hexagon" in {
     def C9_8:     Rcc<8,  "c9:8",   [C8, PC]>,                DwarfRegNum<[74]>;
     def C11_10:   Rcc<10, "c11:10", [UGP, GP]>,               DwarfRegNum<[76]>;
     def CS:       Rcc<12, "c13:12", [CS0, CS1], ["cs1:0"]>,   DwarfRegNum<[78]>;
-    def UPC:      Rcc<14, "c15:14", [UPCL, UPCH]>,            DwarfRegNum<[80]>;
+    def UPCYCLE:  Rcc<14, "c15:14", [UPCYCLELO, UPCYCLEHI]>,  DwarfRegNum<[80]>;
     def C17_16:   Rcc<16, "c17:16", [FRAMELIMIT, FRAMEKEY]>,  DwarfRegNum<[83]>;
     def PKTCOUNT: Rcc<18, "c19:18", [PKTCOUNTLO, PKTCOUNTHI], ["pktcount"]>,
                                                               DwarfRegNum<[85]>;
@@ -281,7 +281,7 @@ def ModRegs : RegisterClass<"Hexagon", [i32], 32, (add M0, M1)>;
 let Size = 32, isAllocatable = 0 in
 def CtrRegs : RegisterClass<"Hexagon", [i32], 32,
   (add LC0, SA0, LC1, SA1, P3_0, C5, C6, C7,
-       C8, PC, UGP, GP, CS0, CS1, UPCL, UPCH,
+       C8, PC, UGP, GP, CS0, CS1, UPCYCLELO, UPCYCLEHI,
        FRAMELIMIT, FRAMEKEY, PKTCOUNTLO, PKTCOUNTHI, UTIMERLO, UTIMERHI,
        M0, M1, USR)>;
 
@@ -290,7 +290,7 @@ def UsrBits : RegisterClass<"Hexagon", [i1], 0, (add USR_OVF)>;
 
 let Size = 64, isAllocatable = 0 in
 def CtrRegs64 : RegisterClass<"Hexagon", [i64], 64,
-  (add C1_0, C3_2, C5_4, C7_6, C9_8, C11_10, CS, UPC, C17_16,
+  (add C1_0, C3_2, C5_4, C7_6, C9_8, C11_10, CS, UPCYCLE, C17_16,
        PKTCOUNT, UTIMER)>;
 
 // These registers are new for v62 and onward.

@@ -103,12 +103,13 @@ namespace Auto {
   TDecltypeAuto<Int> dai; // expected-error {{different template parameters}}
   TDecltypeAuto<IntPtr> daip; // expected-error {{different template parameters}}
 
-  // FIXME: It's completely unclear what should happen here. A case can be made
-  // that 'auto' is more specialized, because it's always a prvalue, whereas
-  // 'decltype(auto)' could have any value category. Under that interpretation,
-  // we get the following results entirely backwards:
-  TAuto<DecltypeAuto> ada; // expected-error {{different template parameters}}
-  TAutoPtr<DecltypeAuto> apda; // expected-error {{different template parameters}}
+  // FIXME: It's completely unclear what should happen here, but these results
+  // seem at least plausible:
+  TAuto<DecltypeAuto> ada;
+  TAutoPtr<DecltypeAuto> apda;
+  // Perhaps this case should be invalid, as there are valid 'decltype(auto)'
+  // parameters (such as 'user-defined-type &') that are not valid 'auto'
+  // parameters.
   TDecltypeAuto<Auto> daa;
   TDecltypeAuto<AutoPtr> daa; // expected-error {{different template parameters}}
 

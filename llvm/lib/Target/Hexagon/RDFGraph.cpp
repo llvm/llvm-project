@@ -907,8 +907,10 @@ void DataFlowGraph::build(unsigned Options) {
   assert(EntryB.pred_empty() && "Function entry block has predecessors");
   for (auto I = MRI.livein_begin(), E = MRI.livein_end(); I != E; ++I)
     LiveIns.insert(RegisterRef(I->first));
-  for (auto I : EntryB.liveins())
-    LiveIns.insert(RegisterRef(I.PhysReg, I.LaneMask));
+  if (MRI.tracksLiveness()) {
+    for (auto I : EntryB.liveins())
+      LiveIns.insert(RegisterRef(I.PhysReg, I.LaneMask));
+  }
 
   // Add function-entry phi nodes for the live-in registers.
   for (std::pair<RegisterId,LaneBitmask> P : LiveIns) {

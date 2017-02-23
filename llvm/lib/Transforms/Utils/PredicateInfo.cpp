@@ -49,8 +49,36 @@ INITIALIZE_PASS_END(PredicateInfoPrinterLegacyPass, "print-predicateinfo",
 static cl::opt<bool> VerifyPredicateInfo(
     "verify-predicateinfo", cl::init(false), cl::Hidden,
     cl::desc("Verify PredicateInfo in legacy printer pass."));
+namespace {
 DEBUG_COUNTER(RenameCounter, "predicateinfo-rename",
               "Controls which variables are renamed with predicateinfo")
+// Given a predicate info that is a type of branching terminator, get the
+// branching block.
+const BasicBlock *getBranchBlock(const PredicateBase *PB) {
+  assert(isa<PredicateWithEdge>(PB) &&
+         "Only branches and switches should have PHIOnly defs that "
+         "require branch blocks.");
+  return cast<PredicateWithEdge>(PB)->From;
+}
+
+// Given a predicate info that is a type of branching terminator, get the
+// branching terminator.
+static Instruction *getBranchTerminator(const PredicateBase *PB) {
+  assert(isa<PredicateWithEdge>(PB) &&
+         "Not a predicate info type we know how to get a terminator from.");
+  return cast<PredicateWithEdge>(PB)->From->getTerminator();
+}
+
+// Given a predicate info that is a type of branching terminator, get the
+// edge this predicate info represents
+const std::pair<BasicBlock *, BasicBlock *>
+getBlockEdge(const PredicateBase *PB) {
+  assert(isa<PredicateWithEdge>(PB) &&
+         "Not a predicate info type we know how to get an edge from.");
+  const auto *PEdge = cast<PredicateWithEdge>(PB);
+  return std::make_pair(PEdge->From, PEdge->To);
+}
+}
 
 namespace llvm {
 namespace PredicateInfoClasses {
@@ -110,15 +138,14 @@ struct ValueDFS_Compare {
   }
 
   // For a phi use, or a non-materialized def, return the edge it represents.
-  const std::pair<const BasicBlock *, const BasicBlock *>
+  const std::pair<BasicBlock *, BasicBlock *>
   getBlockEdge(const ValueDFS &VD) const {
     if (!VD.Def && VD.U) {
       auto *PHI = cast<PHINode>(VD.U->getUser());
       return std::make_pair(PHI->getIncomingBlock(*VD.U), PHI->getParent());
     }
     // This is really a non-materialized def.
-    auto *PBranch = cast<PredicateBranch>(VD.PInfo);
-    return std::make_pair(PBranch->BranchBB, PBranch->SplitBB);
+    return ::getBlockEdge(VD.PInfo);
   }
 
   // For two phi related values, return the ordering.
@@ -208,17 +235,13 @@ bool PredicateInfo::stackIsInScope(const ValueDFSStack &Stack,
     auto *PHI = dyn_cast<PHINode>(VDUse.U->getUser());
     if (!PHI)
       return false;
-    // The only EdgeOnly defs should be branch info.
-    auto *PBranch = dyn_cast<PredicateBranch>(Stack.back().PInfo);
-    assert(PBranch && "Only branches should have EdgeOnly defs");
-    // Check edge matches us.
+    // Check edge
     BasicBlock *EdgePred = PHI->getIncomingBlock(*VDUse.U);
-    if (EdgePred != PBranch->BranchBB)
+    if (EdgePred != getBranchBlock(Stack.back().PInfo))
       return false;
 
     // Use dominates, which knows how to handle edge dominance.
-    return DT.dominates(BasicBlockEdge(PBranch->BranchBB, PBranch->SplitBB),
-                        *VDUse.U);
+    return DT.dominates(getBlockEdge(Stack.back().PInfo), *VDUse.U);
   }
 
   return (VDUse.DFSIn >= Stack.back().DFSIn &&
@@ -400,6 +423,33 @@ void PredicateInfo::processBranch(BranchInst *BI, BasicBlock *BranchBB,
     CmpOperands.clear();
   }
 }
+// Process a block terminating switch, and place relevant operations to be
+// renamed into OpsToRename.
+void PredicateInfo::processSwitch(SwitchInst *SI, BasicBlock *BranchBB,
+                                  SmallPtrSetImpl<Value *> &OpsToRename) {
+  Value *Op = SI->getCondition();
+  if ((!isa<Instruction>(Op) && !isa<Argument>(Op)) || Op->hasOneUse())
+    return;
+
+  // Remember how many outgoing edges there are to every successor.
+  SmallDenseMap<BasicBlock *, unsigned, 16> SwitchEdges;
+  for (unsigned i = 0, e = SI->getNumSuccessors(); i != e; ++i) {
+    BasicBlock *TargetBlock = SI->getSuccessor(i);
+    ++SwitchEdges[TargetBlock];
+  }
+
+  // Now propagate info for each case value
+  for (auto C : SI->cases()) {
+    BasicBlock *TargetBlock = C.getCaseSuccessor();
+    if (SwitchEdges.lookup(TargetBlock) == 1) {
+      PredicateSwitch *PS = new PredicateSwitch(
+          Op, SI->getParent(), TargetBlock, C.getCaseValue(), SI);
+      addInfoFor(OpsToRename, Op, PS);
+      if (!TargetBlock->getSinglePredecessor())
+        EdgeUsesOnly.insert({BranchBB, TargetBlock});
+    }
+  }
+}
 
 // Build predicate info for our function
 void PredicateInfo::buildPredicateInfo() {
@@ -413,6 +463,8 @@ void PredicateInfo::buildPredicateInfo() {
       if (!BI->isConditional())
         continue;
       processBranch(BI, BranchBB, OpsToRename);
+    } else if (auto *SI = dyn_cast<SwitchInst>(BranchBB->getTerminator())) {
+      processSwitch(SI, BranchBB, OpsToRename);
     }
   }
   for (auto &Assume : AC.assumptions()) {
@@ -422,6 +474,9 @@ void PredicateInfo::buildPredicateInfo() {
   // Now rename all our operations.
   renameUses(OpsToRename);
 }
+
+// Given the renaming stack, make all the operands currently on the stack real
+// by inserting them into the IR.  Return the last operation's value.
 Value *PredicateInfo::materializeStack(unsigned int &Counter,
                                        ValueDFSStack &RenameStack,
                                        Value *OrigOp) {
@@ -441,14 +496,13 @@ Value *PredicateInfo::materializeStack(unsigned int &Counter,
         RenameIter == RenameStack.begin() ? OrigOp : (RenameIter - 1)->Def;
     ValueDFS &Result = *RenameIter;
     auto *ValInfo = Result.PInfo;
-    // For branches, we can just place the operand in the branch block before
+    // For edge predicates, we can just place the operand in the block before
     // the terminator.  For assume, we have to place it right before the assume
     // to ensure we dominate all of our uses.  Always insert right before the
     // relevant instruction (terminator, assume), so that we insert in proper
     // order in the case of multiple predicateinfo in the same block.
-    if (isa<PredicateBranch>(ValInfo)) {
-      auto *PBranch = cast<PredicateBranch>(ValInfo);
-      IRBuilder<> B(PBranch->BranchBB->getTerminator());
+    if (isa<PredicateWithEdge>(ValInfo)) {
+      IRBuilder<> B(getBranchTerminator(ValInfo));
       Function *IF = Intrinsic::getDeclaration(
           F.getParent(), Intrinsic::ssa_copy, Op->getType());
       CallInst *PIC =
@@ -515,14 +569,14 @@ void PredicateInfo::renameUses(SmallPtrSetImpl<Value *> &OpsToRename) {
         VD.DFSOut = DomNode->getDFSNumOut();
         VD.PInfo = PossibleCopy;
         OrderedUses.push_back(VD);
-      } else if (const auto *PBranch =
-                     dyn_cast<PredicateBranch>(PossibleCopy)) {
+      } else if (isa<PredicateWithEdge>(PossibleCopy)) {
         // If we can only do phi uses, we treat it like it's in the branch
         // block, and handle it specially. We know that it goes last, and only
         // dominate phi uses.
-        if (EdgeUsesOnly.count({PBranch->BranchBB, PBranch->SplitBB})) {
+        auto BlockEdge = getBlockEdge(PossibleCopy);
+        if (EdgeUsesOnly.count(BlockEdge)) {
           VD.LocalNum = LN_Last;
-          auto *DomNode = DT.getNode(PBranch->BranchBB);
+          auto *DomNode = DT.getNode(BlockEdge.first);
           if (DomNode) {
             VD.DFSIn = DomNode->getDFSNumIn();
             VD.DFSOut = DomNode->getDFSNumOut();
@@ -535,7 +589,7 @@ void PredicateInfo::renameUses(SmallPtrSetImpl<Value *> &OpsToRename) {
           // insertion in the branch block).
           // Insert a possible copy at the split block and before the branch.
           VD.LocalNum = LN_First;
-          auto *DomNode = DT.getNode(PBranch->SplitBB);
+          auto *DomNode = DT.getNode(BlockEdge.second);
           if (DomNode) {
             VD.DFSIn = DomNode->getDFSNumIn();
             VD.DFSOut = DomNode->getDFSNumOut();
@@ -687,12 +741,24 @@ public:
                                     formatted_raw_ostream &OS) {
     if (const auto *PI = PredInfo->getPredicateInfoFor(I)) {
       OS << "; Has predicate info\n";
-      if (const auto *PB = dyn_cast<PredicateBranch>(PI))
+      if (const auto *PB = dyn_cast<PredicateBranch>(PI)) {
         OS << "; branch predicate info { TrueEdge: " << PB->TrueEdge
-           << " Comparison:" << *PB->Condition << " }\n";
-      else if (const auto *PA = dyn_cast<PredicateAssume>(PI))
+           << " Comparison:" << *PB->Condition << " Edge: [";
+        PB->From->printAsOperand(OS);
+        OS << ",";
+        PB->To->printAsOperand(OS);
+        OS << "] }\n";
+      } else if (const auto *PS = dyn_cast<PredicateSwitch>(PI)) {
+        OS << "; switch predicate info { CaseValue: " << *PS->CaseValue
+           << " Switch:" << *PS->Switch << " Edge: [";
+        PS->From->printAsOperand(OS);
+        OS << ",";
+        PS->To->printAsOperand(OS);
+        OS << "] }\n";
+      } else if (const auto *PA = dyn_cast<PredicateAssume>(PI)) {
         OS << "; assume predicate info {"
            << " Comparison:" << *PA->Condition << " }\n";
+      }
     }
   }
 };

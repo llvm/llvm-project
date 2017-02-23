@@ -76,7 +76,16 @@
 #include <sys/param.h>
 #include <sys/mount.h>
 #elif defined(__linux__)
+#if defined(HAVE_LINUX_MAGIC_H)
 #include <linux/magic.h>
+#else
+#if defined(HAVE_LINUX_NFS_FS_H)
+#include <linux/nfs_fs.h>
+#endif
+#if defined(HAVE_LINUX_SMB_H)
+#include <linux/smb.h>
+#endif
+#endif
 #include <sys/vfs.h>
 #else
 #include <sys/mount.h>
@@ -346,6 +355,12 @@ std::error_code remove(const Twine &path, bool IgnoreNonExisting) {
 
 static bool is_local_impl(struct STATVFS &Vfs) {
 #if defined(__linux__)
+#ifndef NFS_SUPER_MAGIC
+#define NFS_SUPER_MAGIC 0x6969
+#endif
+#ifndef SMB_SUPER_MAGIC
+#define SMB_SUPER_MAGIC 0x517B
+#endif
 #ifndef CIFS_MAGIC_NUMBER
 #define CIFS_MAGIC_NUMBER 0xFF534D42
 #endif
@@ -536,6 +551,25 @@ std::error_code mapped_file_region::init(int FD, uint64_t Offset,
 
   int flags = (Mode == readwrite) ? MAP_SHARED : MAP_PRIVATE;
   int prot = (Mode == readonly) ? PROT_READ : (PROT_READ | PROT_WRITE);
+#if defined(__APPLE__)
+  //----------------------------------------------------------------------
+  // Newer versions of MacOSX have a flag that will allow us to read from
+  // binaries whose code signature is invalid without crashing by using
+  // the MAP_RESILIENT_CODESIGN flag. Also if a file from removable media
+  // is mapped we can avoid crashing and return zeroes to any pages we try
+  // to read if the media becomes unavailable by using the
+  // MAP_RESILIENT_MEDIA flag.  These flags are only usable when mapping
+  // with PROT_READ, so take care not to specify them otherwise.
+  //----------------------------------------------------------------------
+  if (Mode == readonly) {
+#if defined(MAP_RESILIENT_CODESIGN)
+    flags |= MAP_RESILIENT_CODESIGN;
+#endif
+#if defined(MAP_RESILIENT_MEDIA)
+    flags |= MAP_RESILIENT_MEDIA;
+#endif
+  }
+#endif // #if defined (__APPLE__)
 
   Mapping = ::mmap(nullptr, Size, prot, flags, FD, Offset);
   if (Mapping == MAP_FAILED)

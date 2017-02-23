@@ -1,4 +1,4 @@
-# RUN: llc -run-pass none -o - %s 2>&1 | FileCheck %s
+# RUN: llc -run-pass none -o - %s | FileCheck %s
 # This test ensures that the MIR parser preserves unnamed LLVM IR block
 # references.
 

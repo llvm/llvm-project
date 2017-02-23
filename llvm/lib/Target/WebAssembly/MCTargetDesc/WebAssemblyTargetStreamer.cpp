@@ -18,9 +18,10 @@
 #include "WebAssemblyMCTargetDesc.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCSectionELF.h"
+#include "llvm/MC/MCSectionWasm.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbolELF.h"
-#include "llvm/Support/ELF.h"
+#include "llvm/MC/MCSymbolWasm.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormattedStream.h"
 using namespace llvm;
@@ -33,6 +34,9 @@ WebAssemblyTargetAsmStreamer::WebAssemblyTargetAsmStreamer(
     : WebAssemblyTargetStreamer(S), OS(OS) {}
 
 WebAssemblyTargetELFStreamer::WebAssemblyTargetELFStreamer(MCStreamer &S)
+    : WebAssemblyTargetStreamer(S) {}
+
+WebAssemblyTargetWasmStreamer::WebAssemblyTargetWasmStreamer(MCStreamer &S)
     : WebAssemblyTargetStreamer(S) {}
 
 static void PrintTypes(formatted_raw_ostream &OS, ArrayRef<MVT> Types) {
@@ -117,4 +121,35 @@ void WebAssemblyTargetELFStreamer::emitIndirectFunctionType(
 }
 
 void WebAssemblyTargetELFStreamer::emitGlobalImport(StringRef name) {
+}
+
+void WebAssemblyTargetWasmStreamer::emitParam(ArrayRef<MVT> Types) {
+  // Nothing to emit; params are declared as part of the function signature.
+}
+
+void WebAssemblyTargetWasmStreamer::emitResult(ArrayRef<MVT> Types) {
+  // Nothing to emit; results are declared as part of the function signature.
+}
+
+void WebAssemblyTargetWasmStreamer::emitLocal(ArrayRef<MVT> Types) {
+  Streamer.EmitULEB128IntValue(Types.size());
+  for (MVT Type : Types)
+    Streamer.EmitIntValue(int64_t(WebAssembly::toValType(Type)), 1);
+}
+
+void WebAssemblyTargetWasmStreamer::emitEndFunc() {
+  Streamer.EmitIntValue(WebAssembly::End, 1);
+}
+
+void WebAssemblyTargetWasmStreamer::emitIndIdx(const MCExpr *Value) {
+  llvm_unreachable(".indidx encoding not yet implemented");
+}
+
+void WebAssemblyTargetWasmStreamer::emitIndirectFunctionType(
+    StringRef name, SmallVectorImpl<MVT> &Params, SmallVectorImpl<MVT> &Results) {
+  // Nothing to emit here. TODO: Re-design how linking works and re-evaluate
+  // whether it's necessary for .o files to declare indirect function types.
+}
+
+void WebAssemblyTargetWasmStreamer::emitGlobalImport(StringRef name) {
 }

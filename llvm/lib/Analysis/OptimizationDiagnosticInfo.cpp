@@ -23,14 +23,14 @@
 
 using namespace llvm;
 
-OptimizationRemarkEmitter::OptimizationRemarkEmitter(Function *F)
+OptimizationRemarkEmitter::OptimizationRemarkEmitter(const Function *F)
     : F(F), BFI(nullptr) {
   if (!F->getContext().getDiagnosticHotnessRequested())
     return;
 
   // First create a dominator tree.
   DominatorTree DT;
-  DT.recalculate(*F);
+  DT.recalculate(*const_cast<Function *>(F));
 
   // Generate LoopInfo from it.
   LoopInfo LI;
@@ -146,7 +146,7 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(DiagnosticInfoOptimizationBase::Argument)
 
 void OptimizationRemarkEmitter::computeHotness(
     DiagnosticInfoIROptimization &OptDiag) {
-  Value *V = OptDiag.getCodeRegion();
+  const Value *V = OptDiag.getCodeRegion();
   if (V)
     OptDiag.setHotness(computeHotness(V));
 }

@@ -88,6 +88,15 @@ if(APPLE)
     HAVE_CRASHREPORTER_INFO)
 endif()
 
+if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
+  check_include_file(linux/magic.h HAVE_LINUX_MAGIC_H)
+  if(NOT HAVE_LINUX_MAGIC_H)
+    # older kernels use split files
+    check_include_file(linux/nfs_fs.h HAVE_LINUX_NFS_FS_H)
+    check_include_file(linux/smb.h HAVE_LINUX_SMB_H)
+  endif()
+endif()
+
 # library checks
 if( NOT PURE_WINDOWS )
   check_library_exists(pthread pthread_create "" HAVE_LIBPTHREAD)

@@ -474,6 +474,14 @@ public:
     return get(Opcode).TSFlags & SIInstrFlags::FIXED_SIZE;
   }
 
+  static bool hasFPClamp(const MachineInstr &MI) {
+    return MI.getDesc().TSFlags & SIInstrFlags::HasFPClamp;
+  }
+
+  bool hasFPClamp(uint16_t Opcode) const {
+    return get(Opcode).TSFlags & SIInstrFlags::HasFPClamp;
+  }
+
   bool isVGPRCopy(const MachineInstr &MI) const {
     assert(MI.isCopy());
     unsigned Dest = MI.getOperand(0).getReg();

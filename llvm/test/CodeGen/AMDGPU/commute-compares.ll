@@ -701,7 +701,7 @@ define void @commute_uno_2.0_f64(i32 addrspace(1)* %out, double addrspace(1)* %i
 ; GCN-LABEL: {{^}}commute_frameindex:
 ; XGCN: v_cmp_eq_u32_e32 vcc, 0, v{{[0-9]+}}
 
-; GCN: v_mov_b32_e32 [[FI:v[0-9]+]], 0{{$}}
+; GCN: v_mov_b32_e32 [[FI:v[0-9]+]], 4{{$}}
 ; GCN: v_cmp_eq_u32_e32 vcc, [[FI]], v{{[0-9]+}}
 define void @commute_frameindex(i32 addrspace(1)* nocapture %out) #0 {
 entry:

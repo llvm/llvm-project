@@ -5659,6 +5659,22 @@ class Hexagon_v2048v2048v1024v1024i_Intrinsic<string GCCIntSuffix>
                           [IntrNoMem]>;
 
 //
+// Hexagon_vv64ivmemv512_Intrinsic<string GCCIntSuffix>
+// tag: V6_vS32b_qpred_ai
+class Hexagon_vv64ivmemv512_Intrinsic<string GCCIntSuffix>
+ : Hexagon_Intrinsic<GCCIntSuffix,
+                          [], [llvm_v512i1_ty,llvm_ptr_ty,llvm_v16i32_ty],
+                          [IntrArgMemOnly]>;
+
+//
+// Hexagon_vv128ivmemv1024_Intrinsic<string GCCIntSuffix>
+// tag: V6_vS32b_qpred_ai_128B
+class Hexagon_vv128ivmemv1024_Intrinsic<string GCCIntSuffix>
+ : Hexagon_Intrinsic<GCCIntSuffix,
+                          [], [llvm_v1024i1_ty,llvm_ptr_ty,llvm_v32i32_ty],
+                          [IntrArgMemOnly]>;
+
+//
 // BUILTIN_INFO(HEXAGON.S6_rol_i_r,SI_ftype_SISI,2)
 // tag : S6_rol_i_r
 def int_hexagon_S6_rol_i_r :
@@ -9326,6 +9342,34 @@ Hexagon_v1024v1024v512v512i_Intrinsic<"HEXAGON_V6_vlutvwh_oracc">;
 def int_hexagon_V6_vlutvwh_oracc_128B :
 Hexagon_v2048v2048v1024v1024i_Intrinsic<"HEXAGON_V6_vlutvwh_oracc_128B">;
 
+//
+// Masked vector stores
+//
+def int_hexagon_V6_vmaskedstoreq :
+Hexagon_vv64ivmemv512_Intrinsic<"HEXAGON_V6_vmaskedstoreq">;
+
+def int_hexagon_V6_vmaskedstorenq :
+Hexagon_vv64ivmemv512_Intrinsic<"HEXAGON_V6_vmaskedstorenq">;
+
+def int_hexagon_V6_vmaskedstorentq :
+Hexagon_vv64ivmemv512_Intrinsic<"HEXAGON_V6_vmaskedstorentq">;
+
+def int_hexagon_V6_vmaskedstorentnq :
+Hexagon_vv64ivmemv512_Intrinsic<"HEXAGON_V6_vmaskedstorentnq">;
+
+def int_hexagon_V6_vmaskedstoreq_128B :
+Hexagon_vv128ivmemv1024_Intrinsic<"HEXAGON_V6_vmaskedstoreq_128B">;
+
+def int_hexagon_V6_vmaskedstorenq_128B :
+Hexagon_vv128ivmemv1024_Intrinsic<"HEXAGON_V6_vmaskedstorenq_128B">;
+
+def int_hexagon_V6_vmaskedstorentq_128B :
+Hexagon_vv128ivmemv1024_Intrinsic<"HEXAGON_V6_vmaskedstorentq_128B">;
+
+def int_hexagon_V6_vmaskedstorentnq_128B :
+Hexagon_vv128ivmemv1024_Intrinsic<"HEXAGON_V6_vmaskedstorentnq_128B">;
+
+
 ///
 /// HexagonV62 intrinsics
 ///
@@ -9593,6 +9637,7 @@ class Hexagon_V62_v2048v2048v1024v1024i_Intrinsic<string GCCIntSuffix>
  : Hexagon_Intrinsic<GCCIntSuffix,
                           [llvm_v64i32_ty], [llvm_v64i32_ty,llvm_v32i32_ty,llvm_v32i32_ty,llvm_i32_ty],
                           [IntrNoMem]>;
+
 
 //
 // BUILTIN_INFO(HEXAGON.M6_vabsdiffb,DI_ftype_DIDI,2)

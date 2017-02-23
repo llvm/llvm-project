@@ -74,7 +74,11 @@ WebAssemblyTargetMachine::WebAssemblyTargetMachine(
                                          : "e-m:e-p:32:32-i64:64-n32:64-S128",
                         TT, CPU, FS, Options, getEffectiveRelocModel(RM),
                         CM, OL),
-      TLOF(make_unique<WebAssemblyTargetObjectFile>()) {
+      TLOF(TT.isOSBinFormatELF() ?
+              static_cast<TargetLoweringObjectFile*>(
+                  new WebAssemblyTargetObjectFileELF()) :
+              static_cast<TargetLoweringObjectFile*>(
+                  new WebAssemblyTargetObjectFile())) {
   // WebAssembly type-checks instructions, but a noreturn function with a return
   // type that doesn't match the context will cause a check failure. So we lower
   // LLVM 'unreachable' to ISD::TRAP and then lower that to WebAssembly's

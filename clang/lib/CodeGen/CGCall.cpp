@@ -288,7 +288,17 @@ CodeGenTypes::arrangeCXXStructorDeclaration(const CXXMethodDecl *MD,
   if (PassParams)
     appendParameterTypes(*this, argTypes, paramInfos, FTP, MD);
 
-  TheCXXABI.buildStructorSignature(MD, Type, argTypes);
+  CGCXXABI::AddedStructorArgs AddedArgs =
+      TheCXXABI.buildStructorSignature(MD, Type, argTypes);
+  if (!paramInfos.empty()) {
+    // Note: prefix implies after the first param.
+    if (AddedArgs.Prefix)
+      paramInfos.insert(paramInfos.begin() + 1, AddedArgs.Prefix,
+                        FunctionProtoType::ExtParameterInfo{});
+    if (AddedArgs.Suffix)
+      paramInfos.append(AddedArgs.Suffix,
+                        FunctionProtoType::ExtParameterInfo{});
+  }
 
   RequiredArgs required =
       (PassParams && MD->isVariadic() ? RequiredArgs(argTypes.size())

@@ -95,6 +95,11 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
     // Support minnan and maxnan, which otherwise default to expand.
     setOperationAction(ISD::FMINNAN, T, Legal);
     setOperationAction(ISD::FMAXNAN, T, Legal);
+    // WebAssembly currently has no builtin f16 support.
+    setOperationAction(ISD::FP16_TO_FP, T, Expand);
+    setOperationAction(ISD::FP_TO_FP16, T, Expand);
+    setLoadExtAction(ISD::EXTLOAD, T, MVT::f16, Expand);
+    setTruncStoreAction(T, MVT::f16, Expand);
   }
 
   for (auto T : {MVT::i32, MVT::i64}) {

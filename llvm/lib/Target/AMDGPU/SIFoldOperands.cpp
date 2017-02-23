@@ -66,6 +66,7 @@ public:
   MachineRegisterInfo *MRI;
   const SIInstrInfo *TII;
   const SIRegisterInfo *TRI;
+  const SISubtarget *ST;
 
   void foldOperand(MachineOperand &OpToFold,
                    MachineInstr *UseMI,
@@ -74,6 +75,9 @@ public:
                    SmallVectorImpl<MachineInstr *> &CopiesToReplace) const;
 
   void foldInstOperand(MachineInstr &MI, MachineOperand &OpToFold) const;
+
+  const MachineOperand *isClamp(const MachineInstr &MI) const;
+  bool tryFoldClamp(MachineInstr &MI);
 
 public:
   SIFoldOperands() : MachineFunctionPass(ID) {
@@ -686,14 +690,76 @@ void SIFoldOperands::foldInstOperand(MachineInstr &MI,
   }
 }
 
+const MachineOperand *SIFoldOperands::isClamp(const MachineInstr &MI) const {
+  unsigned Op = MI.getOpcode();
+  switch (Op) {
+  case AMDGPU::V_MAX_F32_e64:
+  case AMDGPU::V_MAX_F16_e64:
+  case AMDGPU::V_MAX_F64: {
+    if (!TII->getNamedOperand(MI, AMDGPU::OpName::clamp)->getImm())
+      return nullptr;
+
+    // Make sure sources are identical.
+    const MachineOperand *Src0 = TII->getNamedOperand(MI, AMDGPU::OpName::src0);
+    const MachineOperand *Src1 = TII->getNamedOperand(MI, AMDGPU::OpName::src1);
+    if (!Src0->isReg() || Src0->getSubReg() != Src1->getSubReg() ||
+        Src0->getSubReg() != AMDGPU::NoSubRegister)
+      return nullptr;
+
+    // Can't fold up if we have modifiers.
+    if (TII->hasModifiersSet(MI, AMDGPU::OpName::src0_modifiers) ||
+        TII->hasModifiersSet(MI, AMDGPU::OpName::src1_modifiers) ||
+        TII->hasModifiersSet(MI, AMDGPU::OpName::omod))
+      return nullptr;
+    return Src0;
+  }
+  default:
+    return nullptr;
+  }
+}
+
+// We obviously have multiple uses in a clamp since the register is used twice
+// in the same instruction.
+static bool hasOneNonDBGUseInst(const MachineRegisterInfo &MRI, unsigned Reg) {
+  int Count = 0;
+  for (auto I = MRI.use_instr_nodbg_begin(Reg), E = MRI.use_instr_nodbg_end();
+       I != E; ++I) {
+    if (++Count > 1)
+      return false;
+  }
+
+  return true;
+}
+
+// FIXME: Does this need to check IEEE bit on function?
+bool SIFoldOperands::tryFoldClamp(MachineInstr &MI) {
+  const MachineOperand *ClampSrc = isClamp(MI);
+  if (!ClampSrc || !hasOneNonDBGUseInst(*MRI, ClampSrc->getReg()))
+    return false;
+
+  MachineInstr *Def = MRI->getVRegDef(ClampSrc->getReg());
+  if (!TII->hasFPClamp(*Def))
+    return false;
+  MachineOperand *DefClamp = TII->getNamedOperand(*Def, AMDGPU::OpName::clamp);
+  if (!DefClamp)
+    return false;
+
+  DEBUG(dbgs() << "Folding clamp " << *DefClamp << " into " << *Def << '\n');
+
+  // Clamp is applied after omod, so it is OK if omod is set.
+  DefClamp->setImm(1);
+  MRI->replaceRegWith(MI.getOperand(0).getReg(), Def->getOperand(0).getReg());
+  MI.eraseFromParent();
+  return true;
+}
+
 bool SIFoldOperands::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(*MF.getFunction()))
     return false;
 
-  const SISubtarget &ST = MF.getSubtarget<SISubtarget>();
-
   MRI = &MF.getRegInfo();
-  TII = ST.getInstrInfo();
+  ST = &MF.getSubtarget<SISubtarget>();
+  TII = ST->getInstrInfo();
   TRI = &TII->getRegisterInfo();
 
   for (MachineFunction::iterator BI = MF.begin(), BE = MF.end();
@@ -705,8 +771,11 @@ bool SIFoldOperands::runOnMachineFunction(MachineFunction &MF) {
       Next = std::next(I);
       MachineInstr &MI = *I;
 
-      if (!isSafeToFold(MI))
+      if (!isSafeToFold(MI)) {
+        // TODO: Try omod also.
+        tryFoldClamp(MI);
         continue;
+      }
 
       MachineOperand &OpToFold = MI.getOperand(1);
       bool FoldingImm = OpToFold.isImm() || OpToFold.isFI();
