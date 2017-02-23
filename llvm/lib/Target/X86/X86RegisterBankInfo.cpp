@@ -111,6 +111,7 @@ X86RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
 
   switch (Opc) {
   case TargetOpcode::G_ADD:
+  case TargetOpcode::G_SUB:
     return getOperandsMapping(MI, false);
     break;
   default:

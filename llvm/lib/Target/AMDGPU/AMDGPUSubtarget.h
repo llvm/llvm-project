@@ -74,15 +74,19 @@ public:
     TrapHandlerAbiHsa = 1
   };
 
-  enum TrapCode {
-    TrapCodeBreakPoint = 0,
-    TrapCodeLLVMTrap = 1,
-    TrapCodeLLVMDebugTrap = 2,
-    TrapCodeHSADebugTrap = 3
+  enum TrapID {
+    TrapIDHardwareReserved = 0,
+    TrapIDHSADebugTrap = 1,
+    TrapIDLLVMTrap = 2,
+    TrapIDLLVMDebugTrap = 3,
+    TrapIDDebugBreakpoint = 7,
+    TrapIDDebugReserved8 = 8,
+    TrapIDDebugReservedFE = 0xfe,
+    TrapIDDebugReservedFF = 0xff
   };
 
   enum TrapRegValues {
-    TrapCodeLLVMTrapRegValue = 1
+    LLVMTrapHandlerRegValue = 1
   };
 
 protected:

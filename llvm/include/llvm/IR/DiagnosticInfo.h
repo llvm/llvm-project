@@ -526,7 +526,7 @@ public:
                                const char *PassName, StringRef RemarkName,
                                const Function &Fn,
                                const DiagnosticLocation &Loc,
-                               Value *CodeRegion = nullptr)
+                               const Value *CodeRegion = nullptr)
       : DiagnosticInfoOptimizationBase(Kind, Severity, PassName, RemarkName, Fn,
                                        Loc),
         CodeRegion(CodeRegion) {}
@@ -566,7 +566,7 @@ public:
     *this << Msg.str();
   }
 
-  Value *getCodeRegion() const { return CodeRegion; }
+  const Value *getCodeRegion() const { return CodeRegion; }
 
   static bool classof(const DiagnosticInfo *DI) {
     return DI->getKind() >= DK_FirstRemark && DI->getKind() <= DK_LastRemark;
@@ -575,7 +575,7 @@ public:
 private:
   /// The IR value (currently basic block) that the optimization operates on.
   /// This is currently used to provide run-time hotness information with PGO.
-  Value *CodeRegion;
+  const Value *CodeRegion;
 };
 
 /// Diagnostic information for applied optimization remarks.
@@ -601,7 +601,7 @@ public:
   /// Loc is the debug location and \p CodeRegion is the region that the
   /// optimization operates on (currently on block is supported).
   OptimizationRemark(const char *PassName, StringRef RemarkName,
-                     const DiagnosticLocation &Loc, Value *CodeRegion);
+                     const DiagnosticLocation &Loc, const Value *CodeRegion);
 
   /// Same as above but the debug location and code region is derived from \p
   /// Instr.

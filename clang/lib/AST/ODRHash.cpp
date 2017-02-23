@@ -22,7 +22,10 @@
 
 using namespace clang;
 
-void ODRHash::AddStmt(const Stmt *S) {}
+void ODRHash::AddStmt(const Stmt *S) {
+  assert(S && "Expecting non-null pointer.");
+  S->ProcessODRHash(ID, *this);
+}
 void ODRHash::AddIdentifierInfo(const IdentifierInfo *II) {}
 void ODRHash::AddNestedNameSpecifier(const NestedNameSpecifier *NNS) {}
 void ODRHash::AddTemplateName(TemplateName Name) {}
@@ -80,6 +83,13 @@ public:
   ODRDeclVisitor(llvm::FoldingSetNodeID &ID, ODRHash &Hash)
       : ID(ID), Hash(Hash) {}
 
+  void AddStmt(const Stmt *S) {
+    Hash.AddBoolean(S);
+    if (S) {
+      Hash.AddStmt(S);
+    }
+  }
+
   void Visit(const Decl *D) {
     ID.AddInteger(D->getKind());
     Inherited::Visit(D);
@@ -88,6 +98,13 @@ public:
   void VisitAccessSpecDecl(const AccessSpecDecl *D) {
     ID.AddInteger(D->getAccess());
     Inherited::VisitAccessSpecDecl(D);
+  }
+
+  void VisitStaticAssertDecl(const StaticAssertDecl *D) {
+    AddStmt(D->getAssertExpr());
+    AddStmt(D->getMessage());
+
+    Inherited::VisitStaticAssertDecl(D);
   }
 };
 
@@ -101,6 +118,7 @@ bool ODRHash::isWhitelistedDecl(const Decl *D, const CXXRecordDecl *Parent) {
     default:
       return false;
     case Decl::AccessSpec:
+    case Decl::StaticAssert:
       return true;
   }
 }

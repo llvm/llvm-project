@@ -133,6 +133,8 @@ let SchedModel = SwiftModel in {
   def : SchedAlias<WriteALUSsr, SwiftWriteALUSsr>;
   def : ReadAdvance<ReadALU, 0>;
   def : SchedAlias<ReadALUsr, SwiftReadAdvanceALUsr>;
+  def : SchedAlias<WriteLd, SwiftWriteP2ThreeCycle>;
+  def : SchedAlias<WriteST, SwiftWriteP2>;
 
 
   def SwiftChooseShiftKindP01OneOrTwoCycle : SchedWriteVariant<[

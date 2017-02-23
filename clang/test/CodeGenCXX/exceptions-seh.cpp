@@ -118,7 +118,7 @@ void use_inline() {
   use_seh_in_inline_func();
 }
 
-// CHECK-LABEL: define linkonce_odr void @use_seh_in_inline_func() #{{[0-9]+}} comdat
+// CHECK-LABEL: define linkonce_odr void @use_seh_in_inline_func() #{{[0-9]+}}
 // CHECK-SAME:  personality i8* bitcast (i32 (...)* @__C_specific_handler to i8*)
 // CHECK: invoke void @might_throw()
 //
@@ -134,12 +134,12 @@ void use_inline() {
 // CHECK: %[[fp:[^ ]*]] = call i8* @llvm.localaddress()
 // CHECK: call void @"\01?fin$0@0@use_seh_in_inline_func@@"(i8 1, i8* %[[fp]])
 
-// CHECK-LABEL: define internal i32 @"\01?filt$0@0@use_seh_in_inline_func@@"(i8* %exception_pointers, i8* %frame_pointer) #{{[0-9]+}} comdat($use_seh_in_inline_func)
+// CHECK-LABEL: define internal i32 @"\01?filt$0@0@use_seh_in_inline_func@@"(i8* %exception_pointers, i8* %frame_pointer) #{{[0-9]+}}
 // CHECK: icmp eq i32 %{{.*}}, 424242
 // CHECK: zext i1 %{{.*}} to i32
 // CHECK: ret i32
 
-// CHECK-LABEL: define internal void @"\01?fin$0@0@use_seh_in_inline_func@@"(i8 %abnormal_termination, i8* %frame_pointer) #{{[0-9]+}} comdat($use_seh_in_inline_func)
+// CHECK-LABEL: define internal void @"\01?fin$0@0@use_seh_in_inline_func@@"(i8 %abnormal_termination, i8* %frame_pointer) #{{[0-9]+}}
 // CHECK: store i32 1234, i32* @my_unique_global
 
 // CHECK: attributes #[[NOINLINE]] = { {{.*noinline.*}} }

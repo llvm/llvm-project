@@ -199,6 +199,92 @@ main_body:
   ret void
 }
 
+; GCN-LABEL: {{^}}adjust_writemask_sample_0:
+; GCN: image_sample v{{[0-9]+}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}} dmask:0x1{{$}}
+define void @adjust_writemask_sample_0(float addrspace(1)* %out) {
+main_body:
+  %r = call <4 x float> @llvm.amdgcn.image.sample.v4f32.v4f32.v8i32(<4 x float> undef, <8 x i32> undef, <4 x i32> undef, i32 15, i1 0, i1 0, i1 0, i1 0, i1 0)
+  %elt0 = extractelement <4 x float> %r, i32 0
+  store float %elt0, float addrspace(1)* %out
+  ret void
+}
+
+; GCN-LABEL: {{^}}adjust_writemask_sample_01:
+; GCN: image_sample v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}} dmask:0x3{{$}}
+define void @adjust_writemask_sample_01(float addrspace(1)* %out) {
+main_body:
+  %r = call <4 x float> @llvm.amdgcn.image.sample.v4f32.v4f32.v8i32(<4 x float> undef, <8 x i32> undef, <4 x i32> undef, i32 15, i1 0, i1 0, i1 0, i1 0, i1 0)
+  %elt0 = extractelement <4 x float> %r, i32 0
+  %elt1 = extractelement <4 x float> %r, i32 1
+  store volatile float %elt0, float addrspace(1)* %out
+  store volatile float %elt1, float addrspace(1)* %out
+  ret void
+}
+
+; GCN-LABEL: {{^}}adjust_writemask_sample_012:
+; GCN: image_sample v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}} dmask:0x7{{$}}
+define void @adjust_writemask_sample_012(float addrspace(1)* %out) {
+main_body:
+  %r = call <4 x float> @llvm.amdgcn.image.sample.v4f32.v4f32.v8i32(<4 x float> undef, <8 x i32> undef, <4 x i32> undef, i32 15, i1 0, i1 0, i1 0, i1 0, i1 0)
+  %elt0 = extractelement <4 x float> %r, i32 0
+  %elt1 = extractelement <4 x float> %r, i32 1
+  %elt2 = extractelement <4 x float> %r, i32 2
+  store volatile float %elt0, float addrspace(1)* %out
+  store volatile float %elt1, float addrspace(1)* %out
+  store volatile float %elt2, float addrspace(1)* %out
+  ret void
+}
+
+; GCN-LABEL: {{^}}adjust_writemask_sample_12:
+; GCN: image_sample v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}} dmask:0x6{{$}}
+define void @adjust_writemask_sample_12(float addrspace(1)* %out) {
+main_body:
+  %r = call <4 x float> @llvm.amdgcn.image.sample.v4f32.v4f32.v8i32(<4 x float> undef, <8 x i32> undef, <4 x i32> undef, i32 15, i1 0, i1 0, i1 0, i1 0, i1 0)
+  %elt1 = extractelement <4 x float> %r, i32 1
+  %elt2 = extractelement <4 x float> %r, i32 2
+  store volatile float %elt1, float addrspace(1)* %out
+  store volatile float %elt2, float addrspace(1)* %out
+  ret void
+}
+
+; GCN-LABEL: {{^}}adjust_writemask_sample_03:
+; GCN: image_sample v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}} dmask:0x9{{$}}
+define void @adjust_writemask_sample_03(float addrspace(1)* %out) {
+main_body:
+  %r = call <4 x float> @llvm.amdgcn.image.sample.v4f32.v4f32.v8i32(<4 x float> undef, <8 x i32> undef, <4 x i32> undef, i32 15, i1 0, i1 0, i1 0, i1 0, i1 0)
+  %elt0 = extractelement <4 x float> %r, i32 0
+  %elt3 = extractelement <4 x float> %r, i32 3
+  store volatile float %elt0, float addrspace(1)* %out
+  store volatile float %elt3, float addrspace(1)* %out
+  ret void
+}
+
+; GCN-LABEL: {{^}}adjust_writemask_sample_13:
+; GCN: image_sample v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}} dmask:0xa{{$}}
+define void @adjust_writemask_sample_13(float addrspace(1)* %out) {
+main_body:
+  %r = call <4 x float> @llvm.amdgcn.image.sample.v4f32.v4f32.v8i32(<4 x float> undef, <8 x i32> undef, <4 x i32> undef, i32 15, i1 0, i1 0, i1 0, i1 0, i1 0)
+  %elt1 = extractelement <4 x float> %r, i32 1
+  %elt3 = extractelement <4 x float> %r, i32 3
+  store volatile float %elt1, float addrspace(1)* %out
+  store volatile float %elt3, float addrspace(1)* %out
+  ret void
+}
+
+; GCN-LABEL: {{^}}adjust_writemask_sample_123:
+; GCN: image_sample v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}} dmask:0xe{{$}}
+define void @adjust_writemask_sample_123(float addrspace(1)* %out) {
+main_body:
+  %r = call <4 x float> @llvm.amdgcn.image.sample.v4f32.v4f32.v8i32(<4 x float> undef, <8 x i32> undef, <4 x i32> undef, i32 15, i1 0, i1 0, i1 0, i1 0, i1 0)
+  %elt1 = extractelement <4 x float> %r, i32 1
+  %elt2 = extractelement <4 x float> %r, i32 2
+  %elt3 = extractelement <4 x float> %r, i32 3
+  store volatile float %elt1, float addrspace(1)* %out
+  store volatile float %elt2, float addrspace(1)* %out
+  store volatile float %elt3, float addrspace(1)* %out
+  ret void
+}
+
 declare <4 x float> @llvm.amdgcn.image.sample.v4f32.v4f32.v8i32(<4 x float>, <8 x i32>, <4 x i32>, i32, i1, i1, i1, i1, i1) #0
 declare <4 x float> @llvm.amdgcn.image.sample.cl.v4f32.v4f32.v8i32(<4 x float>, <8 x i32>, <4 x i32>, i32, i1, i1, i1, i1, i1) #0
 declare <4 x float> @llvm.amdgcn.image.sample.d.v4f32.v4f32.v8i32(<4 x float>, <8 x i32>, <4 x i32>, i32, i1, i1, i1, i1, i1) #0

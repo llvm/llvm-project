@@ -38,7 +38,7 @@ class Value;
 /// enabled in the LLVM context.
 class OptimizationRemarkEmitter {
 public:
-  OptimizationRemarkEmitter(Function *F, BlockFrequencyInfo *BFI)
+  OptimizationRemarkEmitter(const Function *F, BlockFrequencyInfo *BFI)
       : F(F), BFI(BFI) {}
 
   /// \brief This variant can be used to generate ORE on demand (without the
@@ -52,7 +52,7 @@ public:
   /// operation since BFI and all its required analyses are computed.  This is
   /// for example useful for CGSCC passes that can't use function analyses
   /// passes in the old PM.
-  OptimizationRemarkEmitter(Function *F);
+  OptimizationRemarkEmitter(const Function *F);
 
   OptimizationRemarkEmitter(OptimizationRemarkEmitter &&Arg)
       : F(Arg.F), BFI(Arg.BFI) {}
@@ -216,7 +216,7 @@ public:
   }
 
 private:
-  Function *F;
+  const Function *F;
 
   BlockFrequencyInfo *BFI;
 

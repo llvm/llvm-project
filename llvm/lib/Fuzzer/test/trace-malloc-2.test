@@ -1,0 +1,8 @@
+// FIXME: This test infinite loops on darwin because it crashes
+// printing a stack trace repeatedly
+UNSUPPORTED: darwin
+
+RUN: LLVMFuzzer-TraceMallocTest -seed=1 -trace_malloc=2 -runs=1000 2>&1 | FileCheck %s --check-prefix=TRACE2
+TRACE2-DAG: FREE[0]
+TRACE2-DAG: MALLOC[0]
+TRACE2-DAG: in LLVMFuzzerTestOneInput

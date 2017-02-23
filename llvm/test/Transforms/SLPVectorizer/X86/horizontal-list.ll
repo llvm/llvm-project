@@ -1439,6 +1439,114 @@ define float @extra_args(float* nocapture readonly %x, i32 %a, i32 %b) {
   ret float %add4.6
 }
 
+define float @extra_args_same_several_times(float* nocapture readonly %x, i32 %a, i32 %b) {
+; CHECK-LABEL: @extra_args_same_several_times(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[CONV:%.*]] = sitofp i32 [[MUL]] to float
+; CHECK-NEXT:    [[ADD:%.*]] = fadd fast float [[CONV]], 3.000000e+00
+; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds float, float* [[X:%.*]], i64 1
+; CHECK-NEXT:    [[ARRAYIDX3_1:%.*]] = getelementptr inbounds float, float* [[X]], i64 2
+; CHECK-NEXT:    [[ARRAYIDX3_2:%.*]] = getelementptr inbounds float, float* [[X]], i64 3
+; CHECK-NEXT:    [[ARRAYIDX3_3:%.*]] = getelementptr inbounds float, float* [[X]], i64 4
+; CHECK-NEXT:    [[ARRAYIDX3_4:%.*]] = getelementptr inbounds float, float* [[X]], i64 5
+; CHECK-NEXT:    [[ARRAYIDX3_5:%.*]] = getelementptr inbounds float, float* [[X]], i64 6
+; CHECK-NEXT:    [[ARRAYIDX3_6:%.*]] = getelementptr inbounds float, float* [[X]], i64 7
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast float* [[X]] to <8 x float>*
+; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x float>, <8 x float>* [[TMP0]], align 4
+; CHECK-NEXT:    [[ADD1:%.*]] = fadd fast float undef, [[ADD]]
+; CHECK-NEXT:    [[ADD4:%.*]] = fadd fast float undef, [[ADD1]]
+; CHECK-NEXT:    [[ADD41:%.*]] = fadd fast float [[ADD4]], 5.000000e+00
+; CHECK-NEXT:    [[ADD5:%.*]] = fadd fast float [[ADD41]], [[CONV]]
+; CHECK-NEXT:    [[ADD4_1:%.*]] = fadd fast float undef, [[ADD5]]
+; CHECK-NEXT:    [[ADD4_11:%.*]] = fadd fast float [[ADD4_1]], 5.000000e+00
+; CHECK-NEXT:    [[ADD4_2:%.*]] = fadd fast float undef, [[ADD4_11]]
+; CHECK-NEXT:    [[ADD4_3:%.*]] = fadd fast float undef, [[ADD4_2]]
+; CHECK-NEXT:    [[ADD4_4:%.*]] = fadd fast float undef, [[ADD4_3]]
+; CHECK-NEXT:    [[ADD4_5:%.*]] = fadd fast float undef, [[ADD4_4]]
+; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <8 x float> [[TMP1]], <8 x float> undef, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    [[BIN_RDX:%.*]] = fadd fast <8 x float> [[TMP1]], [[RDX_SHUF]]
+; CHECK-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <8 x float> [[BIN_RDX]], <8 x float> undef, <8 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    [[BIN_RDX2:%.*]] = fadd fast <8 x float> [[BIN_RDX]], [[RDX_SHUF1]]
+; CHECK-NEXT:    [[RDX_SHUF3:%.*]] = shufflevector <8 x float> [[BIN_RDX2]], <8 x float> undef, <8 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    [[BIN_RDX4:%.*]] = fadd fast <8 x float> [[BIN_RDX2]], [[RDX_SHUF3]]
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <8 x float> [[BIN_RDX4]], i32 0
+; CHECK-NEXT:    [[BIN_EXTRA:%.*]] = fadd fast float [[TMP2]], [[ADD]]
+; CHECK-NEXT:    [[BIN_EXTRA5:%.*]] = fadd fast float [[BIN_EXTRA]], 5.000000e+00
+; CHECK-NEXT:    [[BIN_EXTRA6:%.*]] = fadd fast float [[BIN_EXTRA5]], [[CONV]]
+; CHECK-NEXT:    [[ADD4_6:%.*]] = fadd fast float undef, [[ADD4_5]]
+; CHECK-NEXT:    ret float [[BIN_EXTRA6]]
+;
+; THRESHOLD-LABEL: @extra_args_same_several_times(
+; THRESHOLD-NEXT:  entry:
+; THRESHOLD-NEXT:    [[MUL:%.*]] = mul nsw i32 [[B:%.*]], [[A:%.*]]
+; THRESHOLD-NEXT:    [[CONV:%.*]] = sitofp i32 [[MUL]] to float
+; THRESHOLD-NEXT:    [[ADD:%.*]] = fadd fast float [[CONV]], 3.000000e+00
+; THRESHOLD-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds float, float* [[X:%.*]], i64 1
+; THRESHOLD-NEXT:    [[ARRAYIDX3_1:%.*]] = getelementptr inbounds float, float* [[X]], i64 2
+; THRESHOLD-NEXT:    [[ARRAYIDX3_2:%.*]] = getelementptr inbounds float, float* [[X]], i64 3
+; THRESHOLD-NEXT:    [[ARRAYIDX3_3:%.*]] = getelementptr inbounds float, float* [[X]], i64 4
+; THRESHOLD-NEXT:    [[ARRAYIDX3_4:%.*]] = getelementptr inbounds float, float* [[X]], i64 5
+; THRESHOLD-NEXT:    [[ARRAYIDX3_5:%.*]] = getelementptr inbounds float, float* [[X]], i64 6
+; THRESHOLD-NEXT:    [[ARRAYIDX3_6:%.*]] = getelementptr inbounds float, float* [[X]], i64 7
+; THRESHOLD-NEXT:    [[TMP0:%.*]] = bitcast float* [[X]] to <8 x float>*
+; THRESHOLD-NEXT:    [[TMP1:%.*]] = load <8 x float>, <8 x float>* [[TMP0]], align 4
+; THRESHOLD-NEXT:    [[ADD1:%.*]] = fadd fast float undef, [[ADD]]
+; THRESHOLD-NEXT:    [[ADD4:%.*]] = fadd fast float undef, [[ADD1]]
+; THRESHOLD-NEXT:    [[ADD41:%.*]] = fadd fast float [[ADD4]], 5.000000e+00
+; THRESHOLD-NEXT:    [[ADD5:%.*]] = fadd fast float [[ADD41]], [[CONV]]
+; THRESHOLD-NEXT:    [[ADD4_1:%.*]] = fadd fast float undef, [[ADD5]]
+; THRESHOLD-NEXT:    [[ADD4_11:%.*]] = fadd fast float [[ADD4_1]], 5.000000e+00
+; THRESHOLD-NEXT:    [[ADD4_2:%.*]] = fadd fast float undef, [[ADD4_11]]
+; THRESHOLD-NEXT:    [[ADD4_3:%.*]] = fadd fast float undef, [[ADD4_2]]
+; THRESHOLD-NEXT:    [[ADD4_4:%.*]] = fadd fast float undef, [[ADD4_3]]
+; THRESHOLD-NEXT:    [[ADD4_5:%.*]] = fadd fast float undef, [[ADD4_4]]
+; THRESHOLD-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <8 x float> [[TMP1]], <8 x float> undef, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef>
+; THRESHOLD-NEXT:    [[BIN_RDX:%.*]] = fadd fast <8 x float> [[TMP1]], [[RDX_SHUF]]
+; THRESHOLD-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <8 x float> [[BIN_RDX]], <8 x float> undef, <8 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; THRESHOLD-NEXT:    [[BIN_RDX2:%.*]] = fadd fast <8 x float> [[BIN_RDX]], [[RDX_SHUF1]]
+; THRESHOLD-NEXT:    [[RDX_SHUF3:%.*]] = shufflevector <8 x float> [[BIN_RDX2]], <8 x float> undef, <8 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; THRESHOLD-NEXT:    [[BIN_RDX4:%.*]] = fadd fast <8 x float> [[BIN_RDX2]], [[RDX_SHUF3]]
+; THRESHOLD-NEXT:    [[TMP2:%.*]] = extractelement <8 x float> [[BIN_RDX4]], i32 0
+; THRESHOLD-NEXT:    [[BIN_EXTRA:%.*]] = fadd fast float [[TMP2]], [[ADD]]
+; THRESHOLD-NEXT:    [[BIN_EXTRA5:%.*]] = fadd fast float [[BIN_EXTRA]], 5.000000e+00
+; THRESHOLD-NEXT:    [[BIN_EXTRA6:%.*]] = fadd fast float [[BIN_EXTRA5]], [[CONV]]
+; THRESHOLD-NEXT:    [[ADD4_6:%.*]] = fadd fast float undef, [[ADD4_5]]
+; THRESHOLD-NEXT:    ret float [[BIN_EXTRA6]]
+;
+  entry:
+  %mul = mul nsw i32 %b, %a
+  %conv = sitofp i32 %mul to float
+  %0 = load float, float* %x, align 4
+  %add = fadd fast float %conv, 3.000000e+00
+  %add1 = fadd fast float %0, %add
+  %arrayidx3 = getelementptr inbounds float, float* %x, i64 1
+  %1 = load float, float* %arrayidx3, align 4
+  %add4 = fadd fast float %1, %add1
+  %add41 = fadd fast float %add4, 5.000000e+00
+  %add5 = fadd fast float %add41, %conv
+  %arrayidx3.1 = getelementptr inbounds float, float* %x, i64 2
+  %2 = load float, float* %arrayidx3.1, align 4
+  %add4.1 = fadd fast float %2, %add5
+  %add4.11 = fadd fast float %add4.1, 5.000000e+00
+  %arrayidx3.2 = getelementptr inbounds float, float* %x, i64 3
+  %3 = load float, float* %arrayidx3.2, align 4
+  %add4.2 = fadd fast float %3, %add4.11
+  %arrayidx3.3 = getelementptr inbounds float, float* %x, i64 4
+  %4 = load float, float* %arrayidx3.3, align 4
+  %add4.3 = fadd fast float %4, %add4.2
+  %arrayidx3.4 = getelementptr inbounds float, float* %x, i64 5
+  %5 = load float, float* %arrayidx3.4, align 4
+  %add4.4 = fadd fast float %5, %add4.3
+  %arrayidx3.5 = getelementptr inbounds float, float* %x, i64 6
+  %6 = load float, float* %arrayidx3.5, align 4
+  %add4.5 = fadd fast float %6, %add4.4
+  %arrayidx3.6 = getelementptr inbounds float, float* %x, i64 7
+  %7 = load float, float* %arrayidx3.6, align 4
+  %add4.6 = fadd fast float %7, %add4.5
+  ret float %add4.6
+}
+
 define float @extra_args_no_replace(float* nocapture readonly %x, i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: @extra_args_no_replace(
 ; CHECK-NEXT:  entry:

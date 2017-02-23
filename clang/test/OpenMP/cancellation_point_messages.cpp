@@ -4,8 +4,16 @@ int main(int argc, char **argv) {
 #pragma omp cancellation       // expected-error {{expected an OpenMP directive}}
 #pragma omp cancellation point // expected-error {{one of 'for', 'parallel', 'sections' or 'taskgroup' is expected}}
   ;
+#pragma omp parallel
+  {
+#pragma omp cancellation point // expected-error {{one of 'for', 'parallel', 'sections' or 'taskgroup' is expected}}
+  }
 #pragma omp cancellation point parallel untied // expected-error {{unexpected OpenMP clause 'untied' in directive '#pragma omp cancellation point'}}
 #pragma omp cancellation point unknown         // expected-error {{one of 'for', 'parallel', 'sections' or 'taskgroup' is expected}}
+#pragma omp parallel
+  {
+#pragma omp cancellation point unknown         // expected-error {{one of 'for', 'parallel', 'sections' or 'taskgroup' is expected}}
+  }
 #pragma omp cancellation point sections(       // expected-warning {{extra tokens at the end of '#pragma omp cancellation point' are ignored}}
 #pragma omp cancellation point for, )          // expected-warning {{extra tokens at the end of '#pragma omp cancellation point' are ignored}}
 #pragma omp cancellation point taskgroup()     // expected-warning {{extra tokens at the end of '#pragma omp cancellation point' are ignored}}

@@ -1,0 +1,295 @@
+# RUN: llc -mtriple=aarch64--linux-gnu -run-pass=aarch64-copyelim %s -verify-machineinstrs -o - 2>&1 | FileCheck %s
+---
+# Check that bb.0 COPY is seen through to allow the bb.1 COPY of XZR to be removed.
+# CHECK-LABEL: name: test1
+# CHECK-NOT: COPY %xzr
+name:            test1
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: %x0, %x1
+
+    %x0 = COPY %x1
+    CBNZX %x1, %bb.2
+
+  bb.1:
+    successors: %bb.3
+
+    %x0 = COPY %xzr
+    B %bb.3
+
+  bb.2:
+    successors: %bb.3
+    liveins: %x1
+
+    %x0 = LDRXui %x1, 0
+
+  bb.3:
+    liveins: %x0
+
+    RET_ReallyLR implicit %x0
+
+...
+# Similar to test1, but with reversed COPY.
+# CHECK-LABEL: name: test2
+# CHECK-NOT: COPY %xzr
+name:            test2
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: %x0, %x1
+
+    %x1 = COPY %x0
+    CBNZX %x1, %bb.2
+
+  bb.1:
+    successors: %bb.3
+
+    %x0 = COPY %xzr
+    B %bb.3
+
+  bb.2:
+    successors: %bb.3
+    liveins: %x1
+
+    %x0 = LDRXui %x1, 0
+
+  bb.3:
+    liveins: %x0
+
+    RET_ReallyLR implicit %x0
+
+...
+# Similar to test1, but with a clobber that prevents removal of the XZR COPY.
+# CHECK-LABEL: name: test3
+# CHECK: COPY %xzr
+name:            test3
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: %x0, %x1, %x2
+
+    %x0 = COPY %x1
+    %x1 = LDRXui %x1, 0
+    CBNZX %x1, %bb.2
+
+  bb.1:
+    successors: %bb.3
+
+    %x0 = COPY %xzr
+    B %bb.3
+
+  bb.2:
+    successors: %bb.3
+    liveins: %x1
+
+    %x0 = LDRXui %x1, 0
+
+  bb.3:
+    liveins: %x0
+
+    RET_ReallyLR implicit %x0
+
+...
+# Similar to test2, but with a clobber that prevents removal of the XZR COPY.
+# CHECK-LABEL: name: test4
+# CHECK: COPY %xzr
+name:            test4
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: %x0, %x1, %x2
+
+    %x1 = COPY %x0
+    %x1 = LDRXui %x1, 0
+    CBNZX %x1, %bb.2
+
+  bb.1:
+    successors: %bb.3
+
+    %x0 = COPY %xzr
+    B %bb.3
+
+  bb.2:
+    successors: %bb.3
+    liveins: %x1
+
+    %x0 = LDRXui %x1, 0
+
+  bb.3:
+    liveins: %x0
+
+    RET_ReallyLR implicit %x0
+
+...
+# Similar to test2, but with a clobber that prevents removal of the XZR COPY.
+# CHECK-LABEL: name: test5
+# CHECK: COPY %xzr
+name:            test5
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: %x0, %x1, %x2
+
+    %x1 = COPY %x0
+    %x0 = LDRXui %x1, 0
+    CBNZX %x1, %bb.2
+
+  bb.1:
+    successors: %bb.3
+
+    %x0 = COPY %xzr
+    B %bb.3
+
+  bb.2:
+    successors: %bb.3
+    liveins: %x1
+
+    %x0 = LDRXui %x1, 0
+
+  bb.3:
+    liveins: %x0
+
+    RET_ReallyLR implicit %x0
+
+...
+# Similar to test1, but with two levels of COPYs.
+# CHECK-LABEL: name: test6
+# CHECK-NOT: COPY %xzr
+name:            test6
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: %x0, %x1, %x2
+
+    %x2 = COPY %x0
+    %x1 = COPY %x2
+    CBNZX %x1, %bb.2
+
+  bb.1:
+    successors: %bb.3
+
+    %x0 = COPY %xzr
+    B %bb.3
+
+  bb.2:
+    successors: %bb.3
+    liveins: %x1
+
+    %x0 = LDRXui %x1, 0
+
+  bb.3:
+    liveins: %x0
+
+    RET_ReallyLR implicit %x0
+
+...
+# Similar to test1, but with two levels of COPYs and a clobber preventing COPY of XZR removal.
+# CHECK-LABEL: name: test7
+# CHECK: COPY %xzr
+name:            test7
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: %x0, %x1, %x2
+
+    %x2 = COPY %x0
+    %x0 = LDRXui %x1, 0
+    %x1 = COPY %x2
+    CBNZX %x1, %bb.2
+
+  bb.1:
+    successors: %bb.3
+
+    %x0 = COPY %xzr
+    B %bb.3
+
+  bb.2:
+    successors: %bb.3
+    liveins: %x1
+
+    %x0 = LDRXui %x1, 0
+
+  bb.3:
+    liveins: %x0
+
+    RET_ReallyLR implicit %x0
+
+...
+# Check that the TargetRegs vector clobber update loop in
+#  AArch64RedundantCopyElimination::optimizeCopy works correctly.
+# CHECK-LABEL: name: test8
+# CHECK: x0 = COPY %xzr
+# CHECK: x1 = COPY %xzr
+name:            test8
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: %x0, %x1
+
+    %x1 = COPY %x0
+    CBNZX %x1, %bb.2
+
+  bb.1:
+    successors: %bb.3
+    liveins: %x0, %x2
+
+    %x0, %x1 = LDPXi %x2, 0
+    %x0 = COPY %xzr
+    %x1 = COPY %xzr
+    B %bb.3
+
+  bb.2:
+    successors: %bb.3
+    liveins: %x1
+
+    %x0 = LDRXui %x1, 0
+
+  bb.3:
+    liveins: %x0
+
+    RET_ReallyLR implicit %x0
+
+...
+# Check that copy isn't removed from a block with multiple predecessors.
+# CHECK-LABEL: name: test9
+# CHECK: x0 = COPY %xzr
+# CHECK-NEXT: B %bb.3
+name:            test9
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: %x0, %x1
+
+    CBNZX %x0, %bb.2
+
+  bb.1:
+    successors: %bb.3
+    liveins: %x0, %x2
+
+    %x0 = COPY %xzr
+    B %bb.3
+
+  bb.2:
+    successors: %bb.1, %bb.3
+    liveins: %x1
+
+    %x0 = LDRXui %x1, 0
+
+    CBNZX %x1, %bb.1
+
+  bb.3:
+    liveins: %x0
+
+    RET_ReallyLR implicit %x0
+
+...

@@ -1807,10 +1807,10 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
         .addReg(AMDGPU::SGPR0_SGPR1, RegState::Implicit);
     } else {
       switch (TrapType) {
-      case SISubtarget::TrapCodeLLVMTrap:
+      case SISubtarget::TrapIDLLVMTrap:
         BuildMI(*BB, MI, DL, TII->get(AMDGPU::S_ENDPGM));
         break;
-      case SISubtarget::TrapCodeLLVMDebugTrap: {
+      case SISubtarget::TrapIDLLVMDebugTrap: {
         DiagnosticInfoUnsupported NoTrap(*MF->getFunction(),
                                          "debugtrap handler not supported",
                                          DL,
@@ -2836,6 +2836,12 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                        Op.getOperand(1), Op.getOperand(2));
   case Intrinsic::amdgcn_sffbh:
     return DAG.getNode(AMDGPUISD::FFBH_I32, DL, VT, Op.getOperand(1));
+  case Intrinsic::amdgcn_sbfe:
+    return DAG.getNode(AMDGPUISD::BFE_I32, DL, VT,
+                       Op.getOperand(1), Op.getOperand(2), Op.getOperand(3));
+  case Intrinsic::amdgcn_ubfe:
+    return DAG.getNode(AMDGPUISD::BFE_U32, DL, VT,
+                       Op.getOperand(1), Op.getOperand(2), Op.getOperand(3));
   case Intrinsic::amdgcn_cvt_pkrtz: {
     // FIXME: Stop adding cast if v2f16 legal.
     EVT VT = Op.getValueType();
@@ -4060,7 +4066,8 @@ SDValue SITargetLowering::performFPMed3ImmCombine(SelectionDAG &DAG,
   }
 
   // No med3 for f16, but clamp is possible.
-  if (VT == MVT::f16)
+  // TODO: gfx9 has med3 f16
+  if (VT == MVT::f16 || VT == MVT::f64)
     return SDValue();
 
   // This isn't safe with signaling NaNs because in IEEE mode, min/max on a
@@ -4078,6 +4085,7 @@ SDValue SITargetLowering::performMinMaxCombine(SDNode *N,
                                                DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
 
+  EVT VT = N->getValueType(0);
   unsigned Opc = N->getOpcode();
   SDValue Op0 = N->getOperand(0);
   SDValue Op1 = N->getOperand(1);
@@ -4085,7 +4093,9 @@ SDValue SITargetLowering::performMinMaxCombine(SDNode *N,
   // Only do this if the inner op has one use since this will just increases
   // register pressure for no benefit.
 
-  if (Opc != AMDGPUISD::FMIN_LEGACY && Opc != AMDGPUISD::FMAX_LEGACY) {
+
+  if (Opc != AMDGPUISD::FMIN_LEGACY && Opc != AMDGPUISD::FMAX_LEGACY &&
+      VT != MVT::f64) {
     // max(max(a, b), c) -> max3(a, b, c)
     // min(min(a, b), c) -> min3(a, b, c)
     if (Op0.getOpcode() == Opc && Op0.hasOneUse()) {
@@ -4127,8 +4137,8 @@ SDValue SITargetLowering::performMinMaxCombine(SDNode *N,
   if (((Opc == ISD::FMINNUM && Op0.getOpcode() == ISD::FMAXNUM) ||
        (Opc == AMDGPUISD::FMIN_LEGACY &&
         Op0.getOpcode() == AMDGPUISD::FMAX_LEGACY)) &&
-      (N->getValueType(0) == MVT::f32 ||
-       (N->getValueType(0) == MVT::f16 && Subtarget->has16BitInsts())) &&
+      (VT == MVT::f32 || VT == MVT::f64 ||
+       (VT == MVT::f16 && Subtarget->has16BitInsts())) &&
       Op0.hasOneUse()) {
     if (SDValue Res = performFPMed3ImmCombine(DAG, SDLoc(N), Op0, Op1))
       return Res;
@@ -4409,7 +4419,6 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
   case AMDGPUISD::FMIN_LEGACY:
   case AMDGPUISD::FMAX_LEGACY: {
     if (DCI.getDAGCombineLevel() >= AfterLegalizeDAG &&
-        N->getValueType(0) != MVT::f64 &&
         getTargetMachine().getOptLevel() > CodeGenOpt::None)
       return performMinMaxCombine(N, DCI);
     break;
@@ -4497,6 +4506,10 @@ void SITargetLowering::adjustWritemask(MachineSDNode *&Node,
   // Try to figure out the used register components
   for (SDNode::use_iterator I = Node->use_begin(), E = Node->use_end();
        I != E; ++I) {
+
+    // Don't look at users of the chain.
+    if (I.getUse().getResNo() != 0)
+      continue;
 
     // Abort if we can't understand the usage
     if (!I->isMachineOpcode() ||

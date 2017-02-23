@@ -251,6 +251,9 @@ namespace llvm {
       /// Commutative FMIN and FMAX.
       FMAXC, FMINC,
 
+      /// Scalar intrinsic floating point max and min.
+      FMAXS, FMINS,
+
       /// Floating point reciprocal-sqrt and reciprocal approximation.
       /// Note that these typically require refinement
       /// in order to obtain suitable precision.

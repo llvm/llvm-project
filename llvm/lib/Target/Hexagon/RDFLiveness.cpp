@@ -801,7 +801,7 @@ void Liveness::resetKills(MachineBasicBlock *B) {
         Live.reset(*SR);
     }
     for (auto &Op : MI->operands()) {
-      if (!Op.isReg() || !Op.isUse())
+      if (!Op.isReg() || !Op.isUse() || Op.isUndef())
         continue;
       unsigned R = Op.getReg();
       if (!TargetRegisterInfo::isPhysicalRegister(R))

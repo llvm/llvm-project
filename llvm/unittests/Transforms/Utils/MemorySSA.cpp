@@ -90,6 +90,7 @@ TEST_F(MemorySSATest, CreateALoad) {
 
   setupAnalyses();
   MemorySSA &MSSA = *Analyses->MSSA;
+  MemorySSAUpdater Updater(&MSSA);
   // Add the load
   B.SetInsertPoint(Merge);
   LoadInst *LoadInst = B.CreateLoad(PointerArg);
@@ -99,8 +100,8 @@ TEST_F(MemorySSATest, CreateALoad) {
   EXPECT_NE(MP, nullptr);
 
   // Create the load memory acccess
-  MemoryUse *LoadAccess = cast<MemoryUse>(
-      MSSA.createMemoryAccessInBB(LoadInst, MP, Merge, MemorySSA::Beginning));
+  MemoryUse *LoadAccess = cast<MemoryUse>(Updater.createMemoryAccessInBB(
+      LoadInst, MP, Merge, MemorySSA::Beginning));
   MemoryAccess *DefiningAccess = LoadAccess->getDefiningAccess();
   EXPECT_TRUE(isa<MemoryPhi>(DefiningAccess));
   MSSA.verifyMemorySSA();
@@ -132,7 +133,7 @@ TEST_F(MemorySSATest, CreateLoadsAndStoreUpdater) {
   // Add the store
   B.SetInsertPoint(Entry, Entry->begin());
   StoreInst *EntryStore = B.CreateStore(B.getInt8(16), PointerArg);
-  MemoryAccess *EntryStoreAccess = MSSA.createMemoryAccessInBB(
+  MemoryAccess *EntryStoreAccess = Updater.createMemoryAccessInBB(
       EntryStore, nullptr, Entry, MemorySSA::Beginning);
   Updater.insertDef(cast<MemoryDef>(EntryStoreAccess));
 
@@ -145,7 +146,7 @@ TEST_F(MemorySSATest, CreateLoadsAndStoreUpdater) {
   EXPECT_EQ(MP, nullptr);
 
   // Create the load memory access
-  MemoryUse *FirstLoadAccess = cast<MemoryUse>(MSSA.createMemoryAccessInBB(
+  MemoryUse *FirstLoadAccess = cast<MemoryUse>(Updater.createMemoryAccessInBB(
       FirstLoad, nullptr, Merge, MemorySSA::Beginning));
   Updater.insertUse(FirstLoadAccess);
   // Should just have a load using the entry access, because it should discover
@@ -156,7 +157,7 @@ TEST_F(MemorySSATest, CreateLoadsAndStoreUpdater) {
   // Add the store
   B.SetInsertPoint(Left, Left->begin());
   StoreInst *LeftStore = B.CreateStore(B.getInt8(16), PointerArg);
-  MemoryAccess *LeftStoreAccess = MSSA.createMemoryAccessInBB(
+  MemoryAccess *LeftStoreAccess = Updater.createMemoryAccessInBB(
       LeftStore, nullptr, Left, MemorySSA::Beginning);
   Updater.insertDef(cast<MemoryDef>(LeftStoreAccess), false);
   // We don't touch existing loads, so we need to create a new one to get a phi
@@ -169,7 +170,7 @@ TEST_F(MemorySSATest, CreateLoadsAndStoreUpdater) {
   EXPECT_EQ(MP, nullptr);
 
   // Create the load memory access
-  MemoryUse *SecondLoadAccess = cast<MemoryUse>(MSSA.createMemoryAccessInBB(
+  MemoryUse *SecondLoadAccess = cast<MemoryUse>(Updater.createMemoryAccessInBB(
       SecondLoad, nullptr, Merge, MemorySSA::Beginning));
   Updater.insertUse(SecondLoadAccess);
   // Now the load should be a phi of the entry store and the left store
@@ -181,7 +182,7 @@ TEST_F(MemorySSATest, CreateLoadsAndStoreUpdater) {
   // Now create a store below the existing one in the entry
   B.SetInsertPoint(Entry, --Entry->end());
   StoreInst *SecondEntryStore = B.CreateStore(B.getInt8(16), PointerArg);
-  MemoryAccess *SecondEntryStoreAccess = MSSA.createMemoryAccessInBB(
+  MemoryAccess *SecondEntryStoreAccess = Updater.createMemoryAccessInBB(
       SecondEntryStore, nullptr, Entry, MemorySSA::End);
   // Insert it twice just to test renaming
   Updater.insertDef(cast<MemoryDef>(SecondEntryStoreAccess), false);
@@ -223,7 +224,7 @@ TEST_F(MemorySSATest, CreateALoadUpdater) {
   // Add the store
   StoreInst *SI = B.CreateStore(B.getInt8(16), PointerArg);
   MemoryAccess *StoreAccess =
-      MSSA.createMemoryAccessInBB(SI, nullptr, Left, MemorySSA::Beginning);
+      Updater.createMemoryAccessInBB(SI, nullptr, Left, MemorySSA::Beginning);
   Updater.insertDef(cast<MemoryDef>(StoreAccess));
 
   // Add the load
@@ -235,7 +236,7 @@ TEST_F(MemorySSATest, CreateALoadUpdater) {
   EXPECT_EQ(MP, nullptr);
 
   // Create the load memory acccess
-  MemoryUse *LoadAccess = cast<MemoryUse>(MSSA.createMemoryAccessInBB(
+  MemoryUse *LoadAccess = cast<MemoryUse>(Updater.createMemoryAccessInBB(
       LoadInst, nullptr, Merge, MemorySSA::Beginning));
   Updater.insertUse(LoadAccess);
   MemoryAccess *DefiningAccess = LoadAccess->getDefiningAccess();
@@ -267,15 +268,15 @@ TEST_F(MemorySSATest, MoveAStore) {
   B.CreateLoad(PointerArg);
   setupAnalyses();
   MemorySSA &MSSA = *Analyses->MSSA;
-
+  MemorySSAUpdater Updater(&MSSA);
   // Move the store
   SideStore->moveBefore(Entry->getTerminator());
   MemoryAccess *EntryStoreAccess = MSSA.getMemoryAccess(EntryStore);
   MemoryAccess *SideStoreAccess = MSSA.getMemoryAccess(SideStore);
-  MemoryAccess *NewStoreAccess = MSSA.createMemoryAccessAfter(
+  MemoryAccess *NewStoreAccess = Updater.createMemoryAccessAfter(
       SideStore, EntryStoreAccess, EntryStoreAccess);
   EntryStoreAccess->replaceAllUsesWith(NewStoreAccess);
-  MSSA.removeMemoryAccess(SideStoreAccess);
+  Updater.removeMemoryAccess(SideStoreAccess);
   MSSA.verifyMemorySSA();
 }
 
@@ -309,7 +310,7 @@ TEST_F(MemorySSATest, MoveAStoreUpdater) {
   SideStore->moveBefore(Entry->getTerminator());
   auto *EntryStoreAccess = MSSA.getMemoryAccess(EntryStore);
   auto *SideStoreAccess = MSSA.getMemoryAccess(SideStore);
-  auto *NewStoreAccess = MSSA.createMemoryAccessAfter(
+  auto *NewStoreAccess = Updater.createMemoryAccessAfter(
       SideStore, EntryStoreAccess, EntryStoreAccess);
   // Before, the load will point to a phi of the EntryStore and SideStore.
   auto *LoadAccess = cast<MemoryUse>(MSSA.getMemoryAccess(MergeLoad));
@@ -317,7 +318,7 @@ TEST_F(MemorySSATest, MoveAStoreUpdater) {
   MemoryPhi *MergePhi = cast<MemoryPhi>(LoadAccess->getDefiningAccess());
   EXPECT_EQ(MergePhi->getIncomingValue(1), EntryStoreAccess);
   EXPECT_EQ(MergePhi->getIncomingValue(0), SideStoreAccess);
-  MSSA.removeMemoryAccess(SideStoreAccess);
+  Updater.removeMemoryAccess(SideStoreAccess);
   Updater.insertDef(cast<MemoryDef>(NewStoreAccess));
   // After it's a phi of the new side store access.
   EXPECT_EQ(MergePhi->getIncomingValue(0), NewStoreAccess);
@@ -448,13 +449,15 @@ TEST_F(MemorySSATest, RemoveAPhi) {
 
   setupAnalyses();
   MemorySSA &MSSA = *Analyses->MSSA;
+  MemorySSAUpdater Updater(&MSSA);
+
   // Before, the load will be a use of a phi<store, liveonentry>.
   MemoryUse *LoadAccess = cast<MemoryUse>(MSSA.getMemoryAccess(LoadInst));
   MemoryDef *StoreAccess = cast<MemoryDef>(MSSA.getMemoryAccess(StoreInst));
   MemoryAccess *DefiningAccess = LoadAccess->getDefiningAccess();
   EXPECT_TRUE(isa<MemoryPhi>(DefiningAccess));
   // Kill the store
-  MSSA.removeMemoryAccess(StoreAccess);
+  Updater.removeMemoryAccess(StoreAccess);
   MemoryPhi *MP = cast<MemoryPhi>(DefiningAccess);
   // Verify the phi ended up as liveonentry, liveonentry
   for (auto &Op : MP->incoming_values())
@@ -464,7 +467,7 @@ TEST_F(MemorySSATest, RemoveAPhi) {
   // Verify the load is now defined by liveOnEntryDef
   EXPECT_TRUE(MSSA.isLiveOnEntryDef(LoadAccess->getDefiningAccess()));
   // Remove the PHI
-  MSSA.removeMemoryAccess(MP);
+  Updater.removeMemoryAccess(MP);
   MSSA.verifyMemorySSA();
 }
 
@@ -492,6 +495,7 @@ TEST_F(MemorySSATest, RemoveMemoryAccess) {
   setupAnalyses();
   MemorySSA &MSSA = *Analyses->MSSA;
   MemorySSAWalker *Walker = Analyses->Walker;
+  MemorySSAUpdater Updater(&MSSA);
 
   // Before, the load will be a use of a phi<store, liveonentry>. It should be
   // the same after.
@@ -502,7 +506,7 @@ TEST_F(MemorySSATest, RemoveMemoryAccess) {
   // The load is currently clobbered by one of the phi arguments, so the walker
   // should determine the clobbering access as the phi.
   EXPECT_EQ(DefiningAccess, Walker->getClobberingMemoryAccess(LoadInst));
-  MSSA.removeMemoryAccess(StoreAccess);
+  Updater.removeMemoryAccess(StoreAccess);
   MSSA.verifyMemorySSA();
   // After the removeaccess, let's see if we got the right accesses
   // The load should still point to the phi ...
@@ -526,7 +530,7 @@ TEST_F(MemorySSATest, RemoveMemoryAccess) {
   }
 
   // Now we try to remove the single valued phi
-  MSSA.removeMemoryAccess(DefiningAccess);
+  Updater.removeMemoryAccess(DefiningAccess);
   MSSA.verifyMemorySSA();
   // Now the load should be a load of live on entry.
   EXPECT_TRUE(MSSA.isLiveOnEntryDef(LoadAccess->getDefiningAccess()));
@@ -680,10 +684,11 @@ TEST_F(MemorySSATest, PartialWalkerCacheWithPhis) {
   setupAnalyses();
   MemorySSA &MSSA = *Analyses->MSSA;
   MemorySSAWalker *Walker = Analyses->Walker;
+  MemorySSAUpdater Updater(&MSSA);
 
   // Kill `KillStore`; it exists solely so that the load after it won't be
   // optimized to FirstStore.
-  MSSA.removeMemoryAccess(MSSA.getMemoryAccess(KillStore));
+  Updater.removeMemoryAccess(MSSA.getMemoryAccess(KillStore));
   KillStore->eraseFromParent();
   auto *ALoadMA = cast<MemoryUse>(MSSA.getMemoryAccess(ALoad));
   EXPECT_EQ(ALoadMA->getDefiningAccess(), MSSA.getMemoryAccess(BStore));
@@ -755,15 +760,16 @@ TEST_F(MemorySSATest, WalkerReopt) {
   setupAnalyses();
   MemorySSA &MSSA = *Analyses->MSSA;
   MemorySSAWalker *Walker = Analyses->Walker;
+  MemorySSAUpdater Updater(&MSSA);
 
   MemoryAccess *LoadClobber = Walker->getClobberingMemoryAccess(LIA);
   MemoryUse *LoadAccess = cast<MemoryUse>(MSSA.getMemoryAccess(LIA));
   EXPECT_EQ(LoadClobber, MSSA.getMemoryAccess(SIA));
   EXPECT_TRUE(MSSA.isLiveOnEntryDef(Walker->getClobberingMemoryAccess(SIA)));
-  MSSA.removeMemoryAccess(LoadAccess);
+  Updater.removeMemoryAccess(LoadAccess);
 
   // Create the load memory access pointing to an unoptimized place.
-  MemoryUse *NewLoadAccess = cast<MemoryUse>(MSSA.createMemoryAccessInBB(
+  MemoryUse *NewLoadAccess = cast<MemoryUse>(Updater.createMemoryAccessInBB(
       LIA, MSSA.getMemoryAccess(SIB), LIA->getParent(), MemorySSA::End));
   // This should it cause it to be optimized
   EXPECT_EQ(Walker->getClobberingMemoryAccess(NewLoadAccess), LoadClobber);
@@ -852,7 +858,7 @@ TEST_F(MemorySSATest, Irreducible) {
   MemorySSAUpdater Updater(&MSSA);
   // Create the load memory acccess
   LoadInst *LoadInst = B.CreateLoad(FirstArg);
-  MemoryUse *LoadAccess = cast<MemoryUse>(MSSA.createMemoryAccessInBB(
+  MemoryUse *LoadAccess = cast<MemoryUse>(Updater.createMemoryAccessInBB(
       LoadInst, nullptr, AfterLoopBB, MemorySSA::Beginning));
   Updater.insertUse(LoadAccess);
   MSSA.verifyMemorySSA();

@@ -4614,7 +4614,7 @@ static bool findBuildVector(InsertElementInst *FirstInsertElem,
 static bool findBuildAggregate(InsertValueInst *IV,
                                SmallVectorImpl<Value *> &BuildVector,
                                SmallVectorImpl<Value *> &BuildVectorOpds) {
-  Value *V = nullptr;
+  Value *V;
   do {
     BuildVector.push_back(IV);
     BuildVectorOpds.push_back(IV->getInsertedValueOperand());

@@ -27,6 +27,7 @@
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/MemorySSA.h"
+#include "llvm/Transforms/Utils/MemorySSAUpdater.h"
 
 using namespace llvm;
 
@@ -201,11 +202,13 @@ class GVNHoist {
 public:
   GVNHoist(DominatorTree *DT, AliasAnalysis *AA, MemoryDependenceResults *MD,
            MemorySSA *MSSA, bool OptForMinSize)
-      : DT(DT), AA(AA), MD(MD), MSSA(MSSA), OptForMinSize(OptForMinSize),
-        HoistingGeps(OptForMinSize), HoistedCtr(0) {
-      // Hoist as far as possible when optimizing for code-size.
-      if (OptForMinSize)
-        MaxNumberOfBBSInPath = -1;
+      : DT(DT), AA(AA), MD(MD), MSSA(MSSA),
+        MSSAUpdater(make_unique<MemorySSAUpdater>(MSSA)),
+        OptForMinSize(OptForMinSize), HoistingGeps(OptForMinSize),
+        HoistedCtr(0) {
+    // Hoist as far as possible when optimizing for code-size.
+    if (OptForMinSize)
+      MaxNumberOfBBSInPath = -1;
   }
 
   bool run(Function &F) {
@@ -251,6 +254,7 @@ private:
   AliasAnalysis *AA;
   MemoryDependenceResults *MD;
   MemorySSA *MSSA;
+  std::unique_ptr<MemorySSAUpdater> MSSAUpdater;
   const bool OptForMinSize;
   const bool HoistingGeps;
   DenseMap<const Value *, unsigned> DFSNumber;
@@ -817,9 +821,9 @@ private:
           // legal when the ld/st is not moved past its current definition.
           MemoryAccess *Def = OldMemAcc->getDefiningAccess();
           NewMemAcc =
-              MSSA->createMemoryAccessInBB(Repl, Def, HoistPt, MemorySSA::End);
+            MSSAUpdater->createMemoryAccessInBB(Repl, Def, HoistPt, MemorySSA::End);
           OldMemAcc->replaceAllUsesWith(NewMemAcc);
-          MSSA->removeMemoryAccess(OldMemAcc);
+          MSSAUpdater->removeMemoryAccess(OldMemAcc);
         }
       }
 
@@ -858,7 +862,7 @@ private:
             // Update the uses of the old MSSA access with NewMemAcc.
             MemoryAccess *OldMA = MSSA->getMemoryAccess(I);
             OldMA->replaceAllUsesWith(NewMemAcc);
-            MSSA->removeMemoryAccess(OldMA);
+            MSSAUpdater->removeMemoryAccess(OldMA);
           }
 
           Repl->andIRFlags(I);
@@ -880,7 +884,7 @@ private:
           auto In = Phi->incoming_values();
           if (all_of(In, [&](Use &U) { return U == NewMemAcc; })) {
             Phi->replaceAllUsesWith(NewMemAcc);
-            MSSA->removeMemoryAccess(Phi);
+            MSSAUpdater->removeMemoryAccess(Phi);
           }
         }
       }

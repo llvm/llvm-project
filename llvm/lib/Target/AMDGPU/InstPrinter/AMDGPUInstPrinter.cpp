@@ -672,11 +672,19 @@ template <unsigned N>
 void AMDGPUInstPrinter::printExpSrcN(const MCInst *MI, unsigned OpNo,
                                      const MCSubtargetInfo &STI,
                                      raw_ostream &O) {
-  int EnIdx = AMDGPU::getNamedOperandIdx(MI->getOpcode(), AMDGPU::OpName::en);
+  unsigned Opc = MI->getOpcode();
+  int EnIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::en);
   unsigned En = MI->getOperand(EnIdx).getImm();
 
-  // FIXME: What do we do with compr? The meaning of en changes depending on if
-  // compr is set.
+  int ComprIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::compr);
+
+  // If compr is set, print as src0, src0, src1, src1
+  if (MI->getOperand(ComprIdx).getImm()) {
+    if (N == 1 || N == 2)
+      --OpNo;
+    else if (N == 3)
+      OpNo -= 2;
+  }
 
   if (En & (1 << N))
     printRegOperand(MI->getOperand(OpNo).getReg(), O, MRI);

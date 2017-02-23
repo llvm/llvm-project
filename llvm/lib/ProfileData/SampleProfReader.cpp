@@ -681,11 +681,9 @@ std::error_code SampleProfileReaderGCC::readOneFunctionProfile(
       if (!GcovBuffer.readInt64(TargetCount))
         return sampleprof_error::truncated;
 
-      if (Update) {
-        FunctionSamples &TargetProfile = Profiles[TargetName];
-        TargetProfile.addCalledTargetSamples(LineOffset, Discriminator,
-                                             TargetName, TargetCount);
-      }
+      if (Update)
+        FProfile->addCalledTargetSamples(LineOffset, Discriminator,
+                                         TargetName, TargetCount);
     }
   }
 

@@ -1691,37 +1691,6 @@ MemoryUseOrDef *MemorySSA::createDefinedAccess(Instruction *I,
   return NewAccess;
 }
 
-MemoryAccess *MemorySSA::createMemoryAccessInBB(Instruction *I,
-                                                MemoryAccess *Definition,
-                                                const BasicBlock *BB,
-                                                InsertionPlace Point) {
-  MemoryUseOrDef *NewAccess = createDefinedAccess(I, Definition);
-  insertIntoListsForBlock(NewAccess, BB, Point);
-  return NewAccess;
-}
-
-MemoryUseOrDef *MemorySSA::createMemoryAccessBefore(Instruction *I,
-                                                    MemoryAccess *Definition,
-                                                    MemoryUseOrDef *InsertPt) {
-  assert(I->getParent() == InsertPt->getBlock() &&
-         "New and old access must be in the same block");
-  MemoryUseOrDef *NewAccess = createDefinedAccess(I, Definition);
-  insertIntoListsBefore(NewAccess, InsertPt->getBlock(),
-                        InsertPt->getIterator());
-  return NewAccess;
-}
-
-MemoryUseOrDef *MemorySSA::createMemoryAccessAfter(Instruction *I,
-                                                   MemoryAccess *Definition,
-                                                   MemoryAccess *InsertPt) {
-  assert(I->getParent() == InsertPt->getBlock() &&
-         "New and old access must be in the same block");
-  MemoryUseOrDef *NewAccess = createDefinedAccess(I, Definition);
-  insertIntoListsBefore(NewAccess, InsertPt->getBlock(),
-                        ++(InsertPt->getIterator()));
-  return NewAccess;
-}
-
 /// \brief Helper function to create new memory accesses
 MemoryUseOrDef *MemorySSA::createNewAccess(Instruction *I) {
   // The assume intrinsic has a control dependency which we model by claiming
@@ -1754,33 +1723,6 @@ MemoryUseOrDef *MemorySSA::createNewAccess(Instruction *I) {
   return MUD;
 }
 
-MemoryAccess *MemorySSA::findDominatingDef(BasicBlock *UseBlock,
-                                           enum InsertionPlace Where) {
-  // Handle the initial case
-  if (Where == Beginning)
-    // The only thing that could define us at the beginning is a phi node
-    if (MemoryPhi *Phi = getMemoryAccess(UseBlock))
-      return Phi;
-
-  DomTreeNode *CurrNode = DT->getNode(UseBlock);
-  // Need to be defined by our dominator
-  if (Where == Beginning)
-    CurrNode = CurrNode->getIDom();
-  Where = End;
-  while (CurrNode) {
-    auto It = PerBlockAccesses.find(CurrNode->getBlock());
-    if (It != PerBlockAccesses.end()) {
-      auto &Accesses = It->second;
-      for (MemoryAccess &RA : reverse(*Accesses)) {
-        if (isa<MemoryDef>(RA) || isa<MemoryPhi>(RA))
-          return &RA;
-      }
-    }
-    CurrNode = CurrNode->getIDom();
-  }
-  return LiveOnEntryDef.get();
-}
-
 /// \brief Returns true if \p Replacer dominates \p Replacee .
 bool MemorySSA::dominatesUse(const MemoryAccess *Replacer,
                              const MemoryAccess *Replacee) const {
@@ -1796,20 +1738,6 @@ bool MemorySSA::dominatesUse(const MemoryAccess *Replacer,
       return false;
   }
   return true;
-}
-
-/// \brief If all arguments of a MemoryPHI are defined by the same incoming
-/// argument, return that argument.
-static MemoryAccess *onlySingleValue(MemoryPhi *MP) {
-  MemoryAccess *MA = nullptr;
-
-  for (auto &Arg : MP->operands()) {
-    if (!MA)
-      MA = cast<MemoryAccess>(Arg);
-    else if (MA != Arg)
-      return nullptr;
-  }
-  return MA;
 }
 
 /// \brief Properly remove \p MA from all of MemorySSA's lookup tables.
@@ -1863,53 +1791,6 @@ void MemorySSA::removeFromLists(MemoryAccess *MA, bool ShouldDelete) {
 
   if (Accesses->empty())
     PerBlockAccesses.erase(AccessIt);
-}
-
-void MemorySSA::removeMemoryAccess(MemoryAccess *MA) {
-  assert(!isLiveOnEntryDef(MA) && "Trying to remove the live on entry def");
-  // We can only delete phi nodes if they have no uses, or we can replace all
-  // uses with a single definition.
-  MemoryAccess *NewDefTarget = nullptr;
-  if (MemoryPhi *MP = dyn_cast<MemoryPhi>(MA)) {
-    // Note that it is sufficient to know that all edges of the phi node have
-    // the same argument.  If they do, by the definition of dominance frontiers
-    // (which we used to place this phi), that argument must dominate this phi,
-    // and thus, must dominate the phi's uses, and so we will not hit the assert
-    // below.
-    NewDefTarget = onlySingleValue(MP);
-    assert((NewDefTarget || MP->use_empty()) &&
-           "We can't delete this memory phi");
-  } else {
-    NewDefTarget = cast<MemoryUseOrDef>(MA)->getDefiningAccess();
-  }
-
-  // Re-point the uses at our defining access
-  if (!isa<MemoryUse>(MA) && !MA->use_empty()) {
-    // Reset optimized on users of this store, and reset the uses.
-    // A few notes:
-    // 1. This is a slightly modified version of RAUW to avoid walking the
-    // uses twice here.
-    // 2. If we wanted to be complete, we would have to reset the optimized
-    // flags on users of phi nodes if doing the below makes a phi node have all
-    // the same arguments. Instead, we prefer users to removeMemoryAccess those
-    // phi nodes, because doing it here would be N^3.
-    if (MA->hasValueHandle())
-      ValueHandleBase::ValueIsRAUWd(MA, NewDefTarget);
-    // Note: We assume MemorySSA is not used in metadata since it's not really
-    // part of the IR.
-
-    while (!MA->use_empty()) {
-      Use &U = *MA->use_begin();
-      if (MemoryUse *MU = dyn_cast<MemoryUse>(U.getUser()))
-        MU->resetOptimized();
-      U.set(NewDefTarget);
-    }
-  }
-
-  // The call below to erase will destroy MA, so we can't change the order we
-  // are doing things here
-  removeFromLookups(MA);
-  removeFromLists(MA);
 }
 
 void MemorySSA::print(raw_ostream &OS) const {

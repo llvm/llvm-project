@@ -401,12 +401,12 @@ def SI_PC_ADD_REL_OFFSET : SPseudoInstSI <
 let Predicates = [isGCN] in {
 def : Pat<
   (trap),
-  (S_TRAP_PSEUDO TRAPTYPE.LLVM_TRAP)
+  (S_TRAP_PSEUDO TRAPID.LLVM_TRAP)
 >;
 
 def : Pat<
   (debugtrap),
-  (S_TRAP_PSEUDO TRAPTYPE.LLVM_DEBUG_TRAP)
+  (S_TRAP_PSEUDO TRAPID.LLVM_DEBUG_TRAP)
 >;
 
 def : Pat<
@@ -667,8 +667,8 @@ class ClampPat<Instruction inst, ValueType vt> : Pat <
         i32:$src0_modifiers, vt:$src0, DSTCLAMP.ENABLE, $omod)
 >;
 
-// TODO: Does f64 support clamp?
 def : ClampPat<V_MAX_F32_e64, f32>;
+def : ClampPat<V_MAX_F64, f64>;
 def : ClampPat<V_MAX_F16_e64, f16>;
 
 /********** ================================ **********/

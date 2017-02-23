@@ -377,4 +377,4 @@ ELF-LANAI-NEXT: }
 WASM: Format: WASM
 WASM-NEXT: Arch: wasm32
 WASM-NEXT: AddressSize: 32bit
-WASM-NEXT: Version: 0xD
+WASM-NEXT: Version: 0x1

@@ -100,6 +100,7 @@ class VOP3_Pseudo <string opName, VOPProfile P, list<dag> pattern=[], bit VOP3On
 
   let VOP3 = 1;
   let VALU = 1;
+  let FPClamp = P.HasFPClamp;
   let Uses = [EXEC];
 
   let AsmVariantName = AMDGPUAsmVariants.VOP3;

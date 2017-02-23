@@ -3338,3 +3338,11 @@ def: Pat<(v2i32 (zextloadv2i8 I32:$Rs)),
 def: Pat<(v2i32 (sextloadv2i8 I32:$Rs)),
          (S2_vsxthw (LoReg (v4i16 (S2_vsxtbh (L2_loadrh_io I32:$Rs, 0)))))>;
 
+
+// Read cycle counter.
+//
+def SDTInt64Leaf: SDTypeProfile<1, 0, [SDTCisVT<0, i64>]>;
+def HexagonREADCYCLE: SDNode<"HexagonISD::READCYCLE", SDTInt64Leaf,
+  [SDNPHasChain]>;
+
+def: Pat<(HexagonREADCYCLE), (A4_tfrcpp UPCYCLE)>;

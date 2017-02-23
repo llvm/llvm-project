@@ -1,4 +1,4 @@
-//===---------------------------- StackMaps.cpp ---------------------------===//
+//===- StackMaps.cpp ------------------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,23 +7,34 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/CodeGen/StackMaps.h"
+#include "llvm/ADT/DenseMapInfo.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/CodeGen/StackMaps.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCObjectFileInfo.h"
-#include "llvm/MC/MCSectionMachO.h"
+#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Target/TargetMachine.h"
+#include "llvm/Support/Debug.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MathExtras.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetOpcodes.h"
 #include "llvm/Target/TargetRegisterInfo.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
+#include <algorithm>
+#include <cassert>
+#include <cstdint>
 #include <iterator>
+#include <utility>
 
 using namespace llvm;
 
@@ -276,7 +287,8 @@ StackMaps::parseRegisterLiveOutMask(const uint32_t *Mask) const {
   }
 
   LiveOuts.erase(
-      remove_if(LiveOuts, [](const LiveOutReg &LO) { return LO.Reg == 0; }),
+      llvm::remove_if(LiveOuts,
+                      [](const LiveOutReg &LO) { return LO.Reg == 0; }),
       LiveOuts.end());
 
   return LiveOuts;
@@ -286,7 +298,6 @@ void StackMaps::recordStackMapOpers(const MachineInstr &MI, uint64_t ID,
                                     MachineInstr::const_mop_iterator MOI,
                                     MachineInstr::const_mop_iterator MOE,
                                     bool recordResult) {
-
   MCContext &OutContext = AP.OutStreamer->getContext();
   MCSymbol *MILabel = OutContext.createTempSymbol();
   AP.OutStreamer->EmitLabel(MILabel);
@@ -378,6 +389,7 @@ void StackMaps::recordPatchPoint(const MachineInstr &MI) {
   }
 #endif
 }
+
 void StackMaps::recordStatepoint(const MachineInstr &MI) {
   assert(MI.getOpcode() == TargetOpcode::STATEPOINT && "expected statepoint");
 

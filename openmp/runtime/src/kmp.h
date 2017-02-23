@@ -629,6 +629,8 @@ public:
     };
     void* operator new(size_t n);
     void operator delete(void* p);
+    // Need virtual destructor
+    virtual ~KMPAffinity() = default;
     // Determine if affinity is capable
     virtual void determine_capable(const char* env_var) {}
     // Bind the current thread to os proc

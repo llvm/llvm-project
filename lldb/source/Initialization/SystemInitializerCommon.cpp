@@ -70,7 +70,7 @@ void SystemInitializerCommon::Initialize() {
 #endif
 
   llvm::EnablePrettyStackTrace();
-  Log::Initialize();
+  InitializeLog();
   HostInfo::Initialize();
   Timer scoped_timer(LLVM_PRETTY_FUNCTION, LLVM_PRETTY_FUNCTION);
 
@@ -122,5 +122,5 @@ void SystemInitializerCommon::Terminate() {
 #endif
 
   HostInfo::Terminate();
-  Log::Terminate();
+  Log::DisableAllLogChannels(nullptr);
 }

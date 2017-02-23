@@ -39,6 +39,7 @@ namespace clang {
   class Expr;
   class IdentifierInfo;
   class LabelDecl;
+  class ODRHash;
   class ParmVarDecl;
   class PrinterHelper;
   struct PrintingPolicy;
@@ -436,6 +437,15 @@ public:
   /// written in the source.
   void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context,
                bool Canonical) const;
+
+  /// \brief Calculate a unique representation for a statement that is
+  /// stable across compiler invocations.
+  ///
+  /// \param ID profile information will be stored in ID.
+  ///
+  /// \param Hash an ODRHash object which will be called where pointers would
+  /// have been used in the Profile function.
+  void ProcessODRHash(llvm::FoldingSetNodeID &ID, ODRHash& Hash) const;
 };
 
 /// DeclStmt - Adaptor class for mixing declarations with statements and
