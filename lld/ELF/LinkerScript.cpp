@@ -401,7 +401,7 @@ template <class ELFT> static bool isTbss(OutputSectionBase *Sec) {
   return (Sec->Flags & SHF_TLS) && Sec->Type == SHT_NOBITS;
 }
 
-template <class ELFT> void LinkerScript<ELFT>::output(InputSection<ELFT> *S) {
+template <class ELFT> void LinkerScript<ELFT>::output(InputSection *S) {
   if (!AlreadyOutputIS.insert(S).second)
     return;
   bool IsTbss = isTbss<ELFT>(CurOutSec);
@@ -439,7 +439,7 @@ template <class ELFT> void LinkerScript<ELFT>::flush() {
   if (!CurOutSec || !AlreadyOutputOS.insert(CurOutSec).second)
     return;
   if (auto *OutSec = dyn_cast<OutputSection<ELFT>>(CurOutSec)) {
-    for (InputSection<ELFT> *I : OutSec->Sections)
+    for (InputSection *I : OutSec->Sections)
       output(I);
   } else {
     Dot += CurOutSec->Size;
@@ -504,7 +504,7 @@ template <class ELFT> void LinkerScript<ELFT>::process(BaseCommand &Base) {
     if (!IB->Live)
       continue;
     switchTo(IB->OutSec);
-    if (auto *I = dyn_cast<InputSection<ELFT>>(IB))
+    if (auto *I = dyn_cast<InputSection>(IB))
       output(I);
     else
       flush();

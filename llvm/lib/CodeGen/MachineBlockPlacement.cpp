@@ -309,8 +309,8 @@ class MachineBlockPlacement : public MachineFunctionPass {
   SmallVector<MachineBasicBlock *, 16> BlockWorkList;
   SmallVector<MachineBasicBlock *, 16> EHPadWorkList;
 
-  /// Edges that have already been computed as optimal by the trellis code.
-  DenseMap<const MachineBasicBlock *, MachineBasicBlock *> ComputedTrellisEdges;
+  /// Edges that have already been computed as optimal.
+  DenseMap<const MachineBasicBlock *, BlockAndTailDupResult> ComputedEdges;
 
   /// \brief Machine Function
   MachineFunction *F;
@@ -993,7 +993,7 @@ MachineBlockPlacement::getBestTrellisSuccessor(
   }
   // We have already computed the optimal edge for the other side of the
   // trellis.
-  ComputedTrellisEdges[BestB.Src] = BestB.Dest;
+  ComputedEdges[BestB.Src] = { BestB.Dest, false };
 
   auto TrellisSucc = BestA.Dest;
   DEBUG(BranchProbability SuccProb = getAdjustedProbability(
@@ -1329,18 +1329,16 @@ MachineBlockPlacement::selectBestSuccessor(
 
   DEBUG(dbgs() << "Selecting best successor for: " << getBlockName(BB) << "\n");
 
-  // if we already precomputed the best successor for BB as part of a trellis we
-  // saw earlier, return that if still applicable.
-  auto FoundEdge = ComputedTrellisEdges.find(BB);
-  if (FoundEdge != ComputedTrellisEdges.end()) {
-    MachineBasicBlock *Succ = FoundEdge->second;
-    ComputedTrellisEdges.erase(FoundEdge);
+  // if we already precomputed the best successor for BB, return that if still
+  // applicable.
+  auto FoundEdge = ComputedEdges.find(BB);
+  if (FoundEdge != ComputedEdges.end()) {
+    MachineBasicBlock *Succ = FoundEdge->second.BB;
+    ComputedEdges.erase(FoundEdge);
     BlockChain *SuccChain = BlockToChain[Succ];
     if (BB->isSuccessor(Succ) && (!BlockFilter || BlockFilter->count(Succ)) &&
-        SuccChain != &Chain && Succ == *SuccChain->begin()) {
-      BestSucc.BB = Succ;
-      return BestSucc;
-    }
+        SuccChain != &Chain && Succ == *SuccChain->begin())
+      return FoundEdge->second;
   }
 
   // if BB is part of a trellis, Use the trellis to determine the optimal

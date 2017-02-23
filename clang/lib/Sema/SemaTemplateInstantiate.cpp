@@ -196,6 +196,7 @@ bool Sema::CodeSynthesisContext::isInstantiationRecord() const {
     return true;
 
   case DefaultTemplateArgumentChecking:
+  case DeclaringSpecialMember:
     return false;
   }
 
@@ -207,8 +208,7 @@ Sema::InstantiatingTemplate::InstantiatingTemplate(
     SourceLocation PointOfInstantiation, SourceRange InstantiationRange,
     Decl *Entity, NamedDecl *Template, ArrayRef<TemplateArgument> TemplateArgs,
     sema::TemplateDeductionInfo *DeductionInfo)
-    : SemaRef(SemaRef), SavedInNonInstantiationSFINAEContext(
-                            SemaRef.InNonInstantiationSFINAEContext) {
+    : SemaRef(SemaRef) {
   // Don't allow further instantiation if a fatal error and an uncompilable
   // error have occurred. Any diagnostics we might have raised will not be
   // visible, and we do not need to construct a correct AST.
@@ -228,14 +228,12 @@ Sema::InstantiatingTemplate::InstantiatingTemplate(
     Inst.NumTemplateArgs = TemplateArgs.size();
     Inst.DeductionInfo = DeductionInfo;
     Inst.InstantiationRange = InstantiationRange;
+    SemaRef.pushCodeSynthesisContext(Inst);
+
     AlreadyInstantiating =
         !SemaRef.InstantiatingSpecializations
              .insert(std::make_pair(Inst.Entity->getCanonicalDecl(), Inst.Kind))
              .second;
-    SemaRef.InNonInstantiationSFINAEContext = false;
-    SemaRef.CodeSynthesisContexts.push_back(Inst);
-    if (!Inst.isInstantiationRecord())
-      ++SemaRef.NonInstantiationEntries;
   }
 }
 
@@ -348,38 +346,55 @@ Sema::InstantiatingTemplate::InstantiatingTemplate(
           PointOfInstantiation, InstantiationRange, Param, Template,
           TemplateArgs) {}
 
+void Sema::pushCodeSynthesisContext(CodeSynthesisContext Ctx) {
+  Ctx.SavedInNonInstantiationSFINAEContext = InNonInstantiationSFINAEContext;
+  InNonInstantiationSFINAEContext = false;
+
+  CodeSynthesisContexts.push_back(Ctx);
+
+  if (!Ctx.isInstantiationRecord())
+    ++NonInstantiationEntries;
+}
+
+void Sema::popCodeSynthesisContext() {
+  auto &Active = CodeSynthesisContexts.back();
+  if (!Active.isInstantiationRecord()) {
+    assert(NonInstantiationEntries > 0);
+    --NonInstantiationEntries;
+  }
+
+  InNonInstantiationSFINAEContext = Active.SavedInNonInstantiationSFINAEContext;
+
+  // Name lookup no longer looks in this template's defining module.
+  assert(CodeSynthesisContexts.size() >=
+             CodeSynthesisContextLookupModules.size() &&
+         "forgot to remove a lookup module for a template instantiation");
+  if (CodeSynthesisContexts.size() ==
+      CodeSynthesisContextLookupModules.size()) {
+    if (Module *M = CodeSynthesisContextLookupModules.back())
+      LookupModulesCache.erase(M);
+    CodeSynthesisContextLookupModules.pop_back();
+  }
+
+  // If we've left the code synthesis context for the current context stack,
+  // stop remembering that we've emitted that stack.
+  if (CodeSynthesisContexts.size() ==
+      LastEmittedCodeSynthesisContextDepth)
+    LastEmittedCodeSynthesisContextDepth = 0;
+
+  CodeSynthesisContexts.pop_back();
+}
+
 void Sema::InstantiatingTemplate::Clear() {
   if (!Invalid) {
-    auto &Active = SemaRef.CodeSynthesisContexts.back();
-    if (!Active.isInstantiationRecord()) {
-      assert(SemaRef.NonInstantiationEntries > 0);
-      --SemaRef.NonInstantiationEntries;
-    }
-    SemaRef.InNonInstantiationSFINAEContext
-      = SavedInNonInstantiationSFINAEContext;
-
-    // Name lookup no longer looks in this template's defining module.
-    assert(SemaRef.CodeSynthesisContexts.size() >=
-           SemaRef.CodeSynthesisContextLookupModules.size() &&
-           "forgot to remove a lookup module for a template instantiation");
-    if (SemaRef.CodeSynthesisContexts.size() ==
-        SemaRef.CodeSynthesisContextLookupModules.size()) {
-      if (Module *M = SemaRef.CodeSynthesisContextLookupModules.back())
-        SemaRef.LookupModulesCache.erase(M);
-      SemaRef.CodeSynthesisContextLookupModules.pop_back();
-    }
-
-    // If we've left the code synthesis context for the current context stack,
-    // stop remembering that we've emitted that stack.
-    if (SemaRef.CodeSynthesisContexts.size() ==
-        SemaRef.LastEmittedCodeSynthesisContextDepth)
-      SemaRef.LastEmittedCodeSynthesisContextDepth = 0;
-
-    if (!AlreadyInstantiating)
+    if (!AlreadyInstantiating) {
+      auto &Active = SemaRef.CodeSynthesisContexts.back();
       SemaRef.InstantiatingSpecializations.erase(
           std::make_pair(Active.Entity, Active.Kind));
+    }
 
-    SemaRef.CodeSynthesisContexts.pop_back();
+    SemaRef.popCodeSynthesisContext();
+
     Invalid = true;
   }
 }
@@ -603,6 +618,12 @@ void Sema::PrintInstantiationStack() {
         << cast<FunctionDecl>(Active->Entity)
         << Active->InstantiationRange;
       break;
+
+    case CodeSynthesisContext::DeclaringSpecialMember:
+      Diags.Report(Active->PointOfInstantiation,
+                   diag::note_in_declaration_of_implicit_special_member)
+        << cast<CXXRecordDecl>(Active->Entity) << Active->SpecialMember;
+      break;
     }
   }
 }
@@ -617,7 +638,7 @@ Optional<TemplateDeductionInfo *> Sema::isSFINAEContext() const {
        Active != ActiveEnd;
        ++Active) 
   {
-    switch(Active->Kind) {
+    switch (Active->Kind) {
     case CodeSynthesisContext::TemplateInstantiation:
       // An instantiation of an alias template may or may not be a SFINAE
       // context, depending on what else is on the stack.
@@ -643,7 +664,17 @@ Optional<TemplateDeductionInfo *> Sema::isSFINAEContext() const {
       // or deduced template arguments, so SFINAE applies.
       assert(Active->DeductionInfo && "Missing deduction info pointer");
       return Active->DeductionInfo;
+
+    case CodeSynthesisContext::DeclaringSpecialMember:
+      // This happens in a context unrelated to template instantiation, so
+      // there is no SFINAE.
+      return None;
     }
+
+    // The inner context was transparent for SFINAE. If it occurred within a
+    // non-instantiation SFINAE context, then SFINAE applies.
+    if (Active->SavedInNonInstantiationSFINAEContext)
+      return Optional<TemplateDeductionInfo *>(nullptr);
   }
 
   return None;

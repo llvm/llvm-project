@@ -486,13 +486,14 @@ PassBuilder::buildPerModuleDefaultPipeline(OptimizationLevel Level,
 
   // Add all the requested passes for PGO Instrumentation, if requested.
   if (PGOOpt) {
-    assert(PGOOpt->RunProfileGen || !PGOOpt->ProfileUseFile.empty());
+    assert(PGOOpt->RunProfileGen || PGOOpt->SamplePGO ||
+           !PGOOpt->ProfileUseFile.empty());
     addPGOInstrPasses(MPM, DebugLogging, Level, PGOOpt->RunProfileGen,
                       PGOOpt->ProfileGenFile, PGOOpt->ProfileUseFile);
   }
 
   // Indirect call promotion that promotes intra-module targes only.
-  MPM.addPass(PGOIndirectCallPromotion());
+  MPM.addPass(PGOIndirectCallPromotion(false, PGOOpt && PGOOpt->SamplePGO));
 
   // Require the GlobalsAA analysis for the module so we can query it within
   // the CGSCC pipeline.
@@ -665,7 +666,8 @@ ModulePassManager PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
     // left by the earlier promotion pass that promotes intra-module targets.
     // This two-step promotion is to save the compile time. For LTO, it should
     // produce the same result as if we only do promotion here.
-    MPM.addPass(PGOIndirectCallPromotion(true /* InLTO */));
+    MPM.addPass(PGOIndirectCallPromotion(true /* InLTO */,
+                                         PGOOpt && PGOOpt->SamplePGO));
 
     // Propagate constants at call sites into the functions they call.  This
     // opens opportunities for globalopt (and inlining) by substituting function

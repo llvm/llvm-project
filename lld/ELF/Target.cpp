@@ -61,7 +61,7 @@ static void or32be(uint8_t *P, int32_t V) { write32be(P, read32be(P) | V); }
 
 template <class ELFT> static std::string getErrorLoc(uint8_t *Loc) {
   for (InputSectionBase *D : Symtab<ELFT>::X->Sections) {
-    auto *IS = dyn_cast_or_null<InputSection<ELFT>>(D);
+    auto *IS = dyn_cast_or_null<InputSection>(D);
     if (!IS || !IS->OutSec)
       continue;
 
@@ -1759,7 +1759,7 @@ void ARMTargetInfo::writePltHeader(uint8_t *Buf) const {
 }
 
 void ARMTargetInfo::addPltHeaderSymbols(InputSectionBase *ISD) const {
-  auto *IS = cast<InputSection<ELF32LE>>(ISD);
+  auto *IS = cast<InputSection>(ISD);
   addSyntheticLocal<ELF32LE>("$a", STT_NOTYPE, 0, 0, IS);
   addSyntheticLocal<ELF32LE>("$d", STT_NOTYPE, 16, 0, IS);
 }
@@ -1782,7 +1782,7 @@ void ARMTargetInfo::writePlt(uint8_t *Buf, uint64_t GotEntryAddr,
 }
 
 void ARMTargetInfo::addPltSymbols(InputSectionBase *ISD, uint64_t Off) const {
-  auto *IS = cast<InputSection<ELF32LE>>(ISD);
+  auto *IS = cast<InputSection>(ISD);
   addSyntheticLocal<ELF32LE>("$a", STT_NOTYPE, Off, 0, IS);
   addSyntheticLocal<ELF32LE>("$d", STT_NOTYPE, Off + 12, 0, IS);
 }

@@ -50,7 +50,6 @@ namespace HexagonISD {
       JT,          // Jump table.
       CP,          // Constant pool.
 
-      POPCOUNT,
       COMBINE,
       PACKHL,
       VSPLATB,
@@ -181,7 +180,6 @@ namespace HexagonISD {
 
     SDValue LowerSETCC(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerVSELECT(SDValue Op, SelectionDAG &DAG) const;
-    SDValue LowerCTPOP(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerFRAMEADDR(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerATOMIC_FENCE(SDValue Op, SelectionDAG& DAG) const;
     SDValue LowerRETURNADDR(SDValue Op, SelectionDAG &DAG) const;

@@ -45,7 +45,7 @@ IslPtr<isl_union_map> beforeScatter(IslPtr<isl_union_map> UMap, bool Strict);
 IslPtr<isl_map> afterScatter(IslPtr<isl_map> Map, bool Strict);
 
 /// Piecewise afterScatter(IslPtr<isl_map>,bool).
-IslPtr<isl_union_map> afterScatter(NonowningIslPtr<isl_union_map> UMap,
+IslPtr<isl_union_map> afterScatter(const IslPtr<isl_union_map> &UMap,
                                    bool Strict);
 
 /// Construct a range of timepoints between two timepoints.
@@ -114,13 +114,13 @@ IslPtr<isl_set> singleton(IslPtr<isl_union_set> USet,
 /// The implementation currently returns the maximum number of dimensions it
 /// encounters, if different, and 0 if none is encountered. However, most other
 /// code will most likely fail if one of these happen.
-unsigned getNumScatterDims(NonowningIslPtr<isl_union_map> Schedule);
+unsigned getNumScatterDims(const IslPtr<isl_union_map> &Schedule);
 
 /// Return the scatter space of a @p Schedule.
 ///
 /// This is basically the range space of the schedule map, but harder to
 /// determine because it is an isl_union_map.
-IslPtr<isl_space> getScatterSpace(NonowningIslPtr<isl_union_map> Schedule);
+IslPtr<isl_space> getScatterSpace(const IslPtr<isl_union_map> &Schedule);
 
 /// Construct an identity map for the given domain values.
 ///
@@ -136,7 +136,7 @@ IslPtr<isl_space> getScatterSpace(NonowningIslPtr<isl_union_map> Schedule);
 ///
 /// @return { Space[] -> Space[] }
 ///         A map that maps each value of @p USet to itself.
-IslPtr<isl_union_map> makeIdentityMap(NonowningIslPtr<isl_union_set> USet,
+IslPtr<isl_union_map> makeIdentityMap(const IslPtr<isl_union_set> &USet,
                                       bool RestrictDomain);
 
 /// Reverse the nested map tuple in @p Map's domain.
@@ -147,7 +147,7 @@ IslPtr<isl_union_map> makeIdentityMap(NonowningIslPtr<isl_union_set> USet,
 IslPtr<isl_map> reverseDomain(IslPtr<isl_map> Map);
 
 /// Piecewise reverseDomain(IslPtr<isl_map>).
-IslPtr<isl_union_map> reverseDomain(NonowningIslPtr<isl_union_map> UMap);
+IslPtr<isl_union_map> reverseDomain(const IslPtr<isl_union_map> &UMap);
 
 /// Add a constant to one dimension of a set.
 ///

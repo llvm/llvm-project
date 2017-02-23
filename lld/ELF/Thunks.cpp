@@ -100,7 +100,7 @@ public:
   uint32_t size() const override { return 16; }
   void writeTo(uint8_t *Buf, ThunkSection<ELFT> &IS) const override;
   void addSymbols(ThunkSection<ELFT> &IS) override;
-  InputSection<ELFT> *getTargetInputSection() const override;
+  InputSection *getTargetInputSection() const override;
 };
 
 } // end anonymous namespace
@@ -224,9 +224,9 @@ template <class ELFT> void MipsThunk<ELFT>::addSymbols(ThunkSection<ELFT> &IS) {
 }
 
 template <class ELFT>
-InputSection<ELFT> *MipsThunk<ELFT>::getTargetInputSection() const {
+InputSection *MipsThunk<ELFT>::getTargetInputSection() const {
   auto *DR = dyn_cast<DefinedRegular<ELFT>>(&this->Destination);
-  return dyn_cast<InputSection<ELFT>>(DR->Section);
+  return dyn_cast<InputSection>(DR->Section);
 }
 
 template <class ELFT>

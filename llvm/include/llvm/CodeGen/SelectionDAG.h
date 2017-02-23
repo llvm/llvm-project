@@ -480,6 +480,13 @@ public:
                       bool isTarget = false, bool isOpaque = false);
   SDValue getConstant(const APInt &Val, const SDLoc &DL, EVT VT,
                       bool isTarget = false, bool isOpaque = false);
+
+  SDValue getAllOnesConstant(const SDLoc &DL, EVT VT, bool IsTarget = false,
+                             bool IsOpaque = false) {
+    return getConstant(APInt::getAllOnesValue(VT.getScalarSizeInBits()), DL,
+                       VT, IsTarget, IsOpaque);
+  }
+
   SDValue getConstant(const ConstantInt &Val, const SDLoc &DL, EVT VT,
                       bool isTarget = false, bool isOpaque = false);
   SDValue getIntPtrConstant(uint64_t Val, const SDLoc &DL,

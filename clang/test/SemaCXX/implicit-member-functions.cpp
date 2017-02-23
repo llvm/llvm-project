@@ -66,7 +66,8 @@ namespace Recursion {
     A(const T &);
     // expected-note@-1 {{in instantiation of default argument}}
   };
-  struct B { // expected-note {{candidate constructor (the implicit move }}
+  struct B { // expected-note {{while declaring the implicit copy constructor for 'B'}}
+    // expected-note@-1 {{candidate constructor (the implicit move }}
     B(); // expected-note {{candidate constructor not viable}}
     A a;
   };

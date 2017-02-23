@@ -45,14 +45,14 @@ bool isDimBoundedByParameter(IslPtr<isl_set> Set, unsigned dim) {
 }
 
 /// Whether BMap's first out-dimension is not a constant.
-bool isVariableDim(NonowningIslPtr<isl_basic_map> BMap) {
+bool isVariableDim(const IslPtr<isl_basic_map> &BMap) {
   auto FixedVal =
       give(isl_basic_map_plain_get_val_if_fixed(BMap.keep(), isl_dim_out, 0));
   return !FixedVal || isl_val_is_nan(FixedVal.keep());
 }
 
 /// Whether Map's first out dimension is no constant nor piecewise constant.
-bool isVariableDim(NonowningIslPtr<isl_map> Map) {
+bool isVariableDim(const IslPtr<isl_map> &Map) {
   return foreachEltWithBreak(Map, [](IslPtr<isl_basic_map> BMap) -> isl_stat {
     if (isVariableDim(BMap))
       return isl_stat_error;
@@ -61,7 +61,7 @@ bool isVariableDim(NonowningIslPtr<isl_map> Map) {
 }
 
 /// Whether UMap's first out dimension is no (piecewise) constant.
-bool isVariableDim(NonowningIslPtr<isl_union_map> UMap) {
+bool isVariableDim(const IslPtr<isl_union_map> &UMap) {
   return foreachEltWithBreak(UMap, [](IslPtr<isl_map> Map) -> isl_stat {
     if (isVariableDim(Map))
       return isl_stat_error;
@@ -155,7 +155,7 @@ IslPtr<isl_union_pw_aff> multiply(IslPtr<isl_union_pw_aff> UPwAff,
 ///
 /// It is assumed that all maps in the maps have at least the necessary number
 /// of out dimensions.
-IslPtr<isl_union_map> scheduleProjectOut(NonowningIslPtr<isl_union_map> UMap,
+IslPtr<isl_union_map> scheduleProjectOut(const IslPtr<isl_union_map> &UMap,
                                          unsigned first, unsigned n) {
   if (n == 0)
     return UMap; /* isl_map_project_out would also reset the tuple, which should
@@ -175,7 +175,7 @@ IslPtr<isl_union_map> scheduleProjectOut(NonowningIslPtr<isl_union_map> UMap,
 /// Because this function takes an isl_union_map, the out dimensions could be
 /// different. We return the maximum number in this case. However, a different
 /// number of dimensions is not supported by the other code in this file.
-size_t scheduleScatterDims(NonowningIslPtr<isl_union_map> Schedule) {
+size_t scheduleScatterDims(const IslPtr<isl_union_map> &Schedule) {
   unsigned Dims = 0;
   foreachElt(Schedule, [&Dims](IslPtr<isl_map> Map) {
     Dims = std::max(Dims, isl_map_dim(Map.keep(), isl_dim_out));

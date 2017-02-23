@@ -424,25 +424,25 @@ define void @global_zextload_v16i32_to_v16i64(<16 x i64> addrspace(1)* %out, <16
 ; GCN-NOHSA: buffer_store_dwordx4
 ; GCN-NOHSA: buffer_store_dwordx4
 
-; GCN-HSA: flat_store_dwordx4
-; GCN-HSA: flat_store_dwordx4
-; GCN-HSA: flat_store_dwordx4
-; GCN-HSA: flat_store_dwordx4
+; GCN-HSA-DAG: flat_store_dwordx4
+; GCN-HSA-DAG: flat_store_dwordx4
+; GCN-HSA-DAG: flat_store_dwordx4
+; GCN-HSA-DAG: flat_store_dwordx4
 
-; GCN-HSA: flat_store_dwordx4
-; GCN-HSA: flat_store_dwordx4
-; GCN-HSA: flat_store_dwordx4
-; GCN-HSA: flat_store_dwordx4
+; GCN-HSA-DAG: flat_store_dwordx4
+; GCN-HSA-DAG: flat_store_dwordx4
+; GCN-HSA-DAG: flat_store_dwordx4
+; GCN-HSA-DAG: flat_store_dwordx4
 
-; GCN-HSA: flat_store_dwordx4
-; GCN-HSA: flat_store_dwordx4
-; GCN-HSA: flat_store_dwordx4
-; GCN-HSA: flat_store_dwordx4
+; GCN-HSA-DAG: flat_store_dwordx4
+; GCN-HSA-DAG: flat_store_dwordx4
+; GCN-HSA-DAG: flat_store_dwordx4
+; GCN-HSA-DAG: flat_store_dwordx4
 
-; GCN-HSA: flat_store_dwordx4
-; GCN-HSA: flat_store_dwordx4
-; GCN-HSA: flat_store_dwordx4
-; GCN-HSA: flat_store_dwordx4
+; GCN-HSA-DAG: flat_store_dwordx4
+; GCN-HSA-DAG: flat_store_dwordx4
+; GCN-HSA-DAG: flat_store_dwordx4
+; GCN-HSA-DAG: flat_store_dwordx4
 
 define void @global_sextload_v32i32_to_v32i64(<32 x i64> addrspace(1)* %out, <32 x i32> addrspace(1)* %in) #0 {
   %ld = load <32 x i32>, <32 x i32> addrspace(1)* %in

@@ -54,9 +54,9 @@ template <class ELFT> static std::vector<DefinedCommon *> getCommonSymbols() {
 }
 
 // Find all common symbols and allocate space for them.
-template <class ELFT> InputSection<ELFT> *elf::createCommonSection() {
-  auto *Ret = make<InputSection<ELFT>>(SHF_ALLOC | SHF_WRITE, SHT_NOBITS, 1,
-                                       ArrayRef<uint8_t>(), "COMMON");
+template <class ELFT> InputSection *elf::createCommonSection() {
+  auto *Ret = make<InputSection>(SHF_ALLOC | SHF_WRITE, SHT_NOBITS, 1,
+                                 ArrayRef<uint8_t>(), "COMMON");
   Ret->Live = true;
 
   if (!Config->DefineCommon)
@@ -278,9 +278,9 @@ MipsReginfoSection<ELFT> *MipsReginfoSection<ELFT>::create() {
   return nullptr;
 }
 
-template <class ELFT> InputSection<ELFT> *elf::createInterpSection() {
-  auto *Ret = make<InputSection<ELFT>>(SHF_ALLOC, SHT_PROGBITS, 1,
-                                       ArrayRef<uint8_t>(), ".interp");
+template <class ELFT> InputSection *elf::createInterpSection() {
+  auto *Ret = make<InputSection>(SHF_ALLOC, SHT_PROGBITS, 1,
+                                 ArrayRef<uint8_t>(), ".interp");
   Ret->Live = true;
 
   // StringSaver guarantees that the returned string ends with '\0'.
@@ -397,6 +397,210 @@ void BuildIdSection<ELFT>::writeBuildId(ArrayRef<uint8_t> Buf) {
     break;
   default:
     llvm_unreachable("unknown BuildIdKind");
+  }
+}
+
+template <class ELFT>
+EhFrameSection<ELFT>::EhFrameSection()
+    : SyntheticSection<ELFT>(SHF_ALLOC, SHT_PROGBITS, 1, ".eh_frame") {}
+
+// Search for an existing CIE record or create a new one.
+// CIE records from input object files are uniquified by their contents
+// and where their relocations point to.
+template <class ELFT>
+template <class RelTy>
+CieRecord *EhFrameSection<ELFT>::addCie(EhSectionPiece &Piece,
+                                        ArrayRef<RelTy> Rels) {
+  auto *Sec = cast<EhInputSection<ELFT>>(Piece.ID);
+  const endianness E = ELFT::TargetEndianness;
+  if (read32<E>(Piece.data().data() + 4) != 0)
+    fatal(toString(Sec) + ": CIE expected at beginning of .eh_frame");
+
+  SymbolBody *Personality = nullptr;
+  unsigned FirstRelI = Piece.FirstRelocation;
+  if (FirstRelI != (unsigned)-1)
+    Personality =
+        &Sec->template getFile<ELFT>()->getRelocTargetSym(Rels[FirstRelI]);
+
+  // Search for an existing CIE by CIE contents/relocation target pair.
+  CieRecord *Cie = &CieMap[{Piece.data(), Personality}];
+
+  // If not found, create a new one.
+  if (Cie->Piece == nullptr) {
+    Cie->Piece = &Piece;
+    Cies.push_back(Cie);
+  }
+  return Cie;
+}
+
+// There is one FDE per function. Returns true if a given FDE
+// points to a live function.
+template <class ELFT>
+template <class RelTy>
+bool EhFrameSection<ELFT>::isFdeLive(EhSectionPiece &Piece,
+                                     ArrayRef<RelTy> Rels) {
+  auto *Sec = cast<EhInputSection<ELFT>>(Piece.ID);
+  unsigned FirstRelI = Piece.FirstRelocation;
+  if (FirstRelI == (unsigned)-1)
+    return false;
+  const RelTy &Rel = Rels[FirstRelI];
+  SymbolBody &B = Sec->template getFile<ELFT>()->getRelocTargetSym(Rel);
+  auto *D = dyn_cast<DefinedRegular<ELFT>>(&B);
+  if (!D || !D->Section)
+    return false;
+  InputSectionBase *Target = D->Section->Repl;
+  return Target && Target->Live;
+}
+
+// .eh_frame is a sequence of CIE or FDE records. In general, there
+// is one CIE record per input object file which is followed by
+// a list of FDEs. This function searches an existing CIE or create a new
+// one and associates FDEs to the CIE.
+template <class ELFT>
+template <class RelTy>
+void EhFrameSection<ELFT>::addSectionAux(EhInputSection<ELFT> *Sec,
+                                         ArrayRef<RelTy> Rels) {
+  const endianness E = ELFT::TargetEndianness;
+
+  DenseMap<size_t, CieRecord *> OffsetToCie;
+  for (EhSectionPiece &Piece : Sec->Pieces) {
+    // The empty record is the end marker.
+    if (Piece.size() == 4)
+      return;
+
+    size_t Offset = Piece.InputOff;
+    uint32_t ID = read32<E>(Piece.data().data() + 4);
+    if (ID == 0) {
+      OffsetToCie[Offset] = addCie(Piece, Rels);
+      continue;
+    }
+
+    uint32_t CieOffset = Offset + 4 - ID;
+    CieRecord *Cie = OffsetToCie[CieOffset];
+    if (!Cie)
+      fatal(toString(Sec) + ": invalid CIE reference");
+
+    if (!isFdeLive(Piece, Rels))
+      continue;
+    Cie->FdePieces.push_back(&Piece);
+    NumFdes++;
+  }
+}
+
+template <class ELFT>
+void EhFrameSection<ELFT>::addSection(InputSectionBase *C) {
+  auto *Sec = cast<EhInputSection<ELFT>>(C);
+  Sec->EHSec = this;
+  updateAlignment(Sec->Alignment);
+  Sections.push_back(Sec);
+
+  // .eh_frame is a sequence of CIE or FDE records. This function
+  // splits it into pieces so that we can call
+  // SplitInputSection::getSectionPiece on the section.
+  Sec->split();
+  if (Sec->Pieces.empty())
+    return;
+
+  if (Sec->NumRelocations) {
+    if (Sec->AreRelocsRela)
+      addSectionAux(Sec, Sec->template relas<ELFT>());
+    else
+      addSectionAux(Sec, Sec->template rels<ELFT>());
+    return;
+  }
+  addSectionAux(Sec, makeArrayRef<Elf_Rela>(nullptr, nullptr));
+}
+
+template <class ELFT>
+static void writeCieFde(uint8_t *Buf, ArrayRef<uint8_t> D) {
+  memcpy(Buf, D.data(), D.size());
+
+  // Fix the size field. -4 since size does not include the size field itself.
+  const endianness E = ELFT::TargetEndianness;
+  write32<E>(Buf, alignTo(D.size(), sizeof(typename ELFT::uint)) - 4);
+}
+
+template <class ELFT> void EhFrameSection<ELFT>::finalize() {
+  if (this->Size)
+    return; // Already finalized.
+
+  size_t Off = 0;
+  for (CieRecord *Cie : Cies) {
+    Cie->Piece->OutputOff = Off;
+    Off += alignTo(Cie->Piece->size(), sizeof(uintX_t));
+
+    for (EhSectionPiece *Fde : Cie->FdePieces) {
+      Fde->OutputOff = Off;
+      Off += alignTo(Fde->size(), sizeof(uintX_t));
+    }
+  }
+  this->Size = Off;
+}
+
+template <class ELFT> static uint64_t readFdeAddr(uint8_t *Buf, int Size) {
+  const endianness E = ELFT::TargetEndianness;
+  switch (Size) {
+  case DW_EH_PE_udata2:
+    return read16<E>(Buf);
+  case DW_EH_PE_udata4:
+    return read32<E>(Buf);
+  case DW_EH_PE_udata8:
+    return read64<E>(Buf);
+  case DW_EH_PE_absptr:
+    if (ELFT::Is64Bits)
+      return read64<E>(Buf);
+    return read32<E>(Buf);
+  }
+  fatal("unknown FDE size encoding");
+}
+
+// Returns the VA to which a given FDE (on a mmap'ed buffer) is applied to.
+// We need it to create .eh_frame_hdr section.
+template <class ELFT>
+typename ELFT::uint EhFrameSection<ELFT>::getFdePc(uint8_t *Buf, size_t FdeOff,
+                                                   uint8_t Enc) {
+  // The starting address to which this FDE applies is
+  // stored at FDE + 8 byte.
+  size_t Off = FdeOff + 8;
+  uint64_t Addr = readFdeAddr<ELFT>(Buf + Off, Enc & 0x7);
+  if ((Enc & 0x70) == DW_EH_PE_absptr)
+    return Addr;
+  if ((Enc & 0x70) == DW_EH_PE_pcrel)
+    return Addr + this->OutSec->Addr + Off;
+  fatal("unknown FDE size relative encoding");
+}
+
+template <class ELFT> void EhFrameSection<ELFT>::writeTo(uint8_t *Buf) {
+  const endianness E = ELFT::TargetEndianness;
+  for (CieRecord *Cie : Cies) {
+    size_t CieOffset = Cie->Piece->OutputOff;
+    writeCieFde<ELFT>(Buf + CieOffset, Cie->Piece->data());
+
+    for (EhSectionPiece *Fde : Cie->FdePieces) {
+      size_t Off = Fde->OutputOff;
+      writeCieFde<ELFT>(Buf + Off, Fde->data());
+
+      // FDE's second word should have the offset to an associated CIE.
+      // Write it.
+      write32<E>(Buf + Off + 4, Off + 4 - CieOffset);
+    }
+  }
+
+  for (EhInputSection<ELFT> *S : Sections)
+    S->template relocate<ELFT>(Buf, nullptr);
+
+  // Construct .eh_frame_hdr. .eh_frame_hdr is a binary search table
+  // to get a FDE from an address to which FDE is applied. So here
+  // we obtain two addresses and pass them to EhFrameHdr object.
+  if (In<ELFT>::EhFrameHdr) {
+    for (CieRecord *Cie : Cies) {
+      uint8_t Enc = getFdeEncoding<ELFT>(Cie->Piece);
+      for (SectionPiece *Fde : Cie->FdePieces) {
+        uintX_t Pc = getFdePc(Buf, Fde->OutputOff, Enc);
+        uintX_t FdeVA = this->OutSec->Addr + Fde->OutputOff;
+        In<ELFT>::EhFrameHdr->addFde(Pc, FdeVA);
+      }
+    }
   }
 }
 
@@ -1515,7 +1719,7 @@ GdbIndexSection<ELFT>::GdbIndexSection()
 
 template <class ELFT> void GdbIndexSection<ELFT>::parseDebugSections() {
   for (InputSectionBase *S : Symtab<ELFT>::X->Sections)
-    if (InputSection<ELFT> *IS = dyn_cast<InputSection<ELFT>>(S))
+    if (InputSection *IS = dyn_cast<InputSection>(S))
       if (IS->OutSec && IS->Name == ".debug_info")
         readDwarf(IS);
 }
@@ -1530,8 +1734,7 @@ static uint32_t hash(StringRef Str) {
   return R;
 }
 
-template <class ELFT>
-void GdbIndexSection<ELFT>::readDwarf(InputSection<ELFT> *I) {
+template <class ELFT> void GdbIndexSection<ELFT>::readDwarf(InputSection *I) {
   GdbIndexBuilder<ELFT> Builder(I);
   if (ErrorCount)
     return;
@@ -1676,7 +1879,7 @@ template <class ELFT> void EhFrameHeader<ELFT>::writeTo(uint8_t *Buf) {
   Buf[1] = DW_EH_PE_pcrel | DW_EH_PE_sdata4;
   Buf[2] = DW_EH_PE_udata4;
   Buf[3] = DW_EH_PE_datarel | DW_EH_PE_sdata4;
-  write32<E>(Buf + 4, Out<ELFT>::EhFrame->Addr - this->getVA() - 4);
+  write32<E>(Buf + 4, In<ELFT>::EhFrame->OutSec->Addr - this->getVA() - 4);
   write32<E>(Buf + 8, Fdes.size());
   Buf += 12;
 
@@ -1690,7 +1893,7 @@ template <class ELFT> void EhFrameHeader<ELFT>::writeTo(uint8_t *Buf) {
 
 template <class ELFT> size_t EhFrameHeader<ELFT>::getSize() const {
   // .eh_frame_hdr has a 12 bytes header followed by an array of FDEs.
-  return 12 + Out<ELFT>::EhFrame->NumFdes * 8;
+  return 12 + In<ELFT>::EhFrame->NumFdes * 8;
 }
 
 template <class ELFT>
@@ -1699,7 +1902,7 @@ void EhFrameHeader<ELFT>::addFde(uint32_t Pc, uint32_t FdeVA) {
 }
 
 template <class ELFT> bool EhFrameHeader<ELFT>::empty() const {
-  return Out<ELFT>::EhFrame->empty();
+  return In<ELFT>::EhFrame->empty();
 }
 
 template <class ELFT>
@@ -1971,9 +2174,8 @@ template <class ELFT>
 void ARMExidxSentinelSection<ELFT>::writeTo(uint8_t *Buf) {
   // Get the InputSection before us, we are by definition last
   auto RI = cast<OutputSection<ELFT>>(this->OutSec)->Sections.rbegin();
-  InputSection<ELFT> *LE = *(++RI);
-  InputSection<ELFT> *LC =
-      cast<InputSection<ELFT>>(LE->template getLinkOrderDep<ELFT>());
+  InputSection *LE = *(++RI);
+  InputSection *LC = cast<InputSection>(LE->template getLinkOrderDep<ELFT>());
   uint64_t S = LC->OutSec->Addr +
                LC->template getOffset<ELFT>(LC->template getSize<ELFT>());
   uint64_t P = this->getVA();
@@ -2003,20 +2205,20 @@ template <class ELFT> void ThunkSection<ELFT>::writeTo(uint8_t *Buf) {
 }
 
 template <class ELFT>
-InputSection<ELFT> *ThunkSection<ELFT>::getTargetInputSection() const {
+InputSection *ThunkSection<ELFT>::getTargetInputSection() const {
   const Thunk<ELFT> *T = Thunks.front();
   return T->getTargetInputSection();
 }
 
-template InputSection<ELF32LE> *elf::createCommonSection();
-template InputSection<ELF32BE> *elf::createCommonSection();
-template InputSection<ELF64LE> *elf::createCommonSection();
-template InputSection<ELF64BE> *elf::createCommonSection();
+template InputSection *elf::createCommonSection<ELF32LE>();
+template InputSection *elf::createCommonSection<ELF32BE>();
+template InputSection *elf::createCommonSection<ELF64LE>();
+template InputSection *elf::createCommonSection<ELF64BE>();
 
-template InputSection<ELF32LE> *elf::createInterpSection();
-template InputSection<ELF32BE> *elf::createInterpSection();
-template InputSection<ELF64LE> *elf::createInterpSection();
-template InputSection<ELF64BE> *elf::createInterpSection();
+template InputSection *elf::createInterpSection<ELF32LE>();
+template InputSection *elf::createInterpSection<ELF32BE>();
+template InputSection *elf::createInterpSection<ELF64LE>();
+template InputSection *elf::createInterpSection<ELF64BE>();
 
 template MergeInputSection<ELF32LE> *elf::createCommentSection();
 template MergeInputSection<ELF32BE> *elf::createCommentSection();
@@ -2160,3 +2362,8 @@ template class elf::ThunkSection<ELF32LE>;
 template class elf::ThunkSection<ELF32BE>;
 template class elf::ThunkSection<ELF64LE>;
 template class elf::ThunkSection<ELF64BE>;
+
+template class elf::EhFrameSection<ELF32LE>;
+template class elf::EhFrameSection<ELF32BE>;
+template class elf::EhFrameSection<ELF64LE>;
+template class elf::EhFrameSection<ELF64BE>;

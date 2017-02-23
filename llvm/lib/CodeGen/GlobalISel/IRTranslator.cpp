@@ -14,6 +14,7 @@
 
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Analysis/OptimizationDiagnosticInfo.h"
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -43,11 +44,21 @@ INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
 INITIALIZE_PASS_END(IRTranslator, DEBUG_TYPE, "IRTranslator LLVM IR -> MI",
                 false, false)
 
-static void reportTranslationError(const Value &V, const Twine &Message) {
-  std::string ErrStorage;
-  raw_string_ostream Err(ErrStorage);
-  Err << Message << ": " << V << '\n';
-  report_fatal_error(Err.str());
+static void reportTranslationError(MachineFunction &MF,
+                                   const TargetPassConfig &TPC,
+                                   OptimizationRemarkEmitter &ORE,
+                                   OptimizationRemarkMissed &R) {
+  MF.getProperties().set(MachineFunctionProperties::Property::FailedISel);
+
+  // Print the function name explicitly if we don't have a debug location (which
+  // makes the diagnostic less useful) or if we're going to emit a raw error.
+  if (!R.getLocation().isValid() || TPC.isGlobalISelAbortEnabled())
+    R << (" (in function: " + MF.getName() + ")").str();
+
+  if (TPC.isGlobalISelAbortEnabled())
+    report_fatal_error(R.getMsg());
+  else
+    ORE.emit(R);
 }
 
 IRTranslator::IRTranslator() : MachineFunctionPass(ID), MRI(nullptr) {
@@ -76,12 +87,12 @@ unsigned IRTranslator::getOrCreateVReg(const Value &Val) {
   if (auto CV = dyn_cast<Constant>(&Val)) {
     bool Success = translate(*CV, VReg);
     if (!Success) {
-      if (!TPC->isGlobalISelAbortEnabled()) {
-        MF->getProperties().set(
-            MachineFunctionProperties::Property::FailedISel);
-        return VReg;
-      }
-      reportTranslationError(Val, "unable to translate constant");
+      OptimizationRemarkMissed R("gisel-irtranslator", "GISelFailure",
+                                 DebugLoc(),
+                                 &MF->getFunction()->getEntryBlock());
+      R << "unable to translate constant: " << ore::NV("Type", Val.getType());
+      reportTranslationError(*MF, *TPC, *ORE, R);
+      return VReg;
     }
   }
 
@@ -117,12 +128,12 @@ unsigned IRTranslator::getMemOpAlignment(const Instruction &I) {
   } else if (const LoadInst *LI = dyn_cast<LoadInst>(&I)) {
     Alignment = LI->getAlignment();
     ValTy = LI->getType();
-  } else if (!TPC->isGlobalISelAbortEnabled()) {
-    MF->getProperties().set(
-        MachineFunctionProperties::Property::FailedISel);
+  } else {
+    OptimizationRemarkMissed R("gisel-irtranslator", "", &I);
+    R << "unable to translate memop: " << ore::NV("Opcode", &I);
+    reportTranslationError(*MF, *TPC, *ORE, R);
     return 1;
-  } else
-    llvm_unreachable("unhandled memory instruction");
+  }
 
   return Alignment ? Alignment : DL->getABITypeAlignment(ValTy);
 }
@@ -1018,6 +1029,7 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
   MRI = &MF->getRegInfo();
   DL = &F.getParent()->getDataLayout();
   TPC = &getAnalysis<TargetPassConfig>();
+  ORE = make_unique<OptimizationRemarkEmitter>(&F);
 
   assert(PendingPHIs.empty() && "stale PHIs");
 
@@ -1034,13 +1046,12 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
     VRegArgs.push_back(getOrCreateVReg(Arg));
   bool Succeeded = CLI->lowerFormalArguments(EntryBuilder, F, VRegArgs);
   if (!Succeeded) {
-    if (!TPC->isGlobalISelAbortEnabled()) {
-      MF->getProperties().set(
-          MachineFunctionProperties::Property::FailedISel);
-      finalizeFunction();
-      return false;
-    }
-    report_fatal_error("Unable to lower arguments");
+    OptimizationRemarkMissed R("gisel-irtranslator", "GISelFailure", DebugLoc(),
+                               &MF->getFunction()->getEntryBlock());
+    R << "unable to lower arguments: " << ore::NV("Prototype", F.getType());
+    reportTranslationError(*MF, *TPC, *ORE, R);
+    finalizeFunction();
+    return false;
   }
 
   // And translate the function!
@@ -1053,10 +1064,15 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
     for (const Instruction &Inst: BB) {
       Succeeded &= translate(Inst);
       if (!Succeeded) {
-        if (TPC->isGlobalISelAbortEnabled())
-          reportTranslationError(Inst, "unable to translate instruction");
-        MF->getProperties().set(
-            MachineFunctionProperties::Property::FailedISel);
+        std::string InstStrStorage;
+        raw_string_ostream InstStr(InstStrStorage);
+        InstStr << Inst;
+
+        OptimizationRemarkMissed R("gisel-irtranslator", "IRTranslatorFailure: ",
+                                   &Inst);
+        R << "unable to translate instruction: " << ore::NV("Opcode", &Inst)
+          << ": '" << InstStr.str() << "'";
+        reportTranslationError(*MF, *TPC, *ORE, R);
         break;
       }
     }

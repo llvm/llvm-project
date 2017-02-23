@@ -67,6 +67,7 @@
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/RegisterBankInfo.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 
 namespace llvm {
 // Forward declarations.
@@ -483,6 +484,9 @@ private:
   /// Get the frequency of the edges.
   /// This is required for non-fast mode.
   MachineBranchProbabilityInfo *MBPI;
+
+  /// Current optimization remark emitter. Used to report failures.
+  std::unique_ptr<MachineOptimizationRemarkEmitter> MORE;
 
   /// Helper class used for every code morphing.
   MachineIRBuilder MIRBuilder;
