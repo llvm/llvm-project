@@ -45,34 +45,33 @@ namespace {
 // A resolved relocation. The Sec and Offset fields are set if the relocation
 // was resolved to an offset within a section.
 template <class ELFT> struct ResolvedReloc {
-  InputSectionBase<ELFT> *Sec;
+  InputSectionBase *Sec;
   typename ELFT::uint Offset;
 };
 } // end anonymous namespace
 
 template <class ELFT>
-static typename ELFT::uint getAddend(InputSectionBase<ELFT> &Sec,
+static typename ELFT::uint getAddend(InputSectionBase &Sec,
                                      const typename ELFT::Rel &Rel) {
   return Target->getImplicitAddend(Sec.Data.begin() + Rel.r_offset,
                                    Rel.getType(Config->Mips64EL));
 }
 
 template <class ELFT>
-static typename ELFT::uint getAddend(InputSectionBase<ELFT> &Sec,
+static typename ELFT::uint getAddend(InputSectionBase &Sec,
                                      const typename ELFT::Rela &Rel) {
   return Rel.r_addend;
 }
 
 template <class ELFT, class RelT>
-static ResolvedReloc<ELFT> resolveReloc(InputSectionBase<ELFT> &Sec,
-                                        RelT &Rel) {
-  SymbolBody &B = Sec.getFile()->getRelocTargetSym(Rel);
+static ResolvedReloc<ELFT> resolveReloc(InputSectionBase &Sec, RelT &Rel) {
+  SymbolBody &B = Sec.getFile<ELFT>()->getRelocTargetSym(Rel);
   auto *D = dyn_cast<DefinedRegular<ELFT>>(&B);
   if (!D || !D->Section)
     return {nullptr, 0};
   typename ELFT::uint Offset = D->Value;
   if (D->isSection())
-    Offset += getAddend(Sec, Rel);
+    Offset += getAddend<ELFT>(Sec, Rel);
   return {D->Section->Repl, Offset};
 }
 
@@ -81,13 +80,13 @@ template <class ELFT>
 static void forEachSuccessor(InputSection<ELFT> &Sec,
                              std::function<void(ResolvedReloc<ELFT>)> Fn) {
   if (Sec.AreRelocsRela) {
-    for (const typename ELFT::Rela &Rel : Sec.relas())
-      Fn(resolveReloc(Sec, Rel));
+    for (const typename ELFT::Rela &Rel : Sec.template relas<ELFT>())
+      Fn(resolveReloc<ELFT>(Sec, Rel));
   } else {
-    for (const typename ELFT::Rel &Rel : Sec.rels())
-      Fn(resolveReloc(Sec, Rel));
+    for (const typename ELFT::Rel &Rel : Sec.template rels<ELFT>())
+      Fn(resolveReloc<ELFT>(Sec, Rel));
   }
-  for (InputSectionBase<ELFT> *IS : Sec.DependentSections)
+  for (InputSectionBase *IS : Sec.DependentSections)
     Fn({IS, 0});
 }
 
@@ -118,7 +117,7 @@ scanEhFrameSection(EhInputSection<ELFT> &EH, ArrayRef<RelTy> Rels,
     if (read32<E>(Piece.data().data() + 4) == 0) {
       // This is a CIE, we only need to worry about the first relocation. It is
       // known to point to the personality function.
-      Enqueue(resolveReloc(EH, Rels[FirstRelI]));
+      Enqueue(resolveReloc<ELFT>(EH, Rels[FirstRelI]));
       continue;
     }
     // This is a FDE. The relocations point to the described function or to
@@ -129,7 +128,7 @@ scanEhFrameSection(EhInputSection<ELFT> &EH, ArrayRef<RelTy> Rels,
       const RelTy &Rel = Rels[I2];
       if (Rel.r_offset >= PieceEnd)
         break;
-      ResolvedReloc<ELFT> R = resolveReloc(EH, Rels[I2]);
+      ResolvedReloc<ELFT> R = resolveReloc<ELFT>(EH, Rels[I2]);
       if (!R.Sec || R.Sec == &InputSection<ELFT>::Discarded)
         continue;
       if (R.Sec->Flags & SHF_EXECINSTR)
@@ -151,15 +150,15 @@ scanEhFrameSection(EhInputSection<ELFT> &EH,
   EH.split();
 
   if (EH.AreRelocsRela)
-    scanEhFrameSection(EH, EH.relas(), Enqueue);
+    scanEhFrameSection(EH, EH.template relas<ELFT>(), Enqueue);
   else
-    scanEhFrameSection(EH, EH.rels(), Enqueue);
+    scanEhFrameSection(EH, EH.template rels<ELFT>(), Enqueue);
 }
 
 // We do not garbage-collect two types of sections:
 // 1) Sections used by the loader (.init, .fini, .ctors, .dtors or .jcr)
 // 2) Non-allocatable sections which typically contain debugging information
-template <class ELFT> static bool isReserved(InputSectionBase<ELFT> *Sec) {
+template <class ELFT> static bool isReserved(InputSectionBase *Sec) {
   switch (Sec->Type) {
   case SHT_FINI_ARRAY:
   case SHT_INIT_ARRAY:
@@ -237,13 +236,13 @@ template <class ELFT> void elf::markLive() {
 
   // Preserve special sections and those which are specified in linker
   // script KEEP command.
-  for (InputSectionBase<ELFT> *Sec : Symtab<ELFT>::X->Sections) {
+  for (InputSectionBase *Sec : Symtab<ELFT>::X->Sections) {
     // .eh_frame is always marked as live now, but also it can reference to
     // sections that contain personality. We preserve all non-text sections
     // referred by .eh_frame here.
     if (auto *EH = dyn_cast_or_null<EhInputSection<ELFT>>(Sec))
       scanEhFrameSection<ELFT>(*EH, Enqueue);
-    if (isReserved(Sec) || Script<ELFT>::X->shouldKeep(Sec))
+    if (isReserved<ELFT>(Sec) || Script<ELFT>::X->shouldKeep(Sec))
       Enqueue({Sec, 0});
   }
 

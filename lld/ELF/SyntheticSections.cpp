@@ -130,13 +130,13 @@ MipsAbiFlagsSection<ELFT> *MipsAbiFlagsSection<ELFT>::create() {
   Elf_Mips_ABIFlags Flags = {};
   bool Create = false;
 
-  for (InputSectionBase<ELFT> *Sec : Symtab<ELFT>::X->Sections) {
+  for (InputSectionBase *Sec : Symtab<ELFT>::X->Sections) {
     if (!Sec->Live || Sec->Type != SHT_MIPS_ABIFLAGS)
       continue;
     Sec->Live = false;
     Create = true;
 
-    std::string Filename = toString(Sec->getFile());
+    std::string Filename = toString(Sec->getFile<ELFT>());
     const size_t Size = Sec->Data.size();
     // Older version of BFD (such as the default FreeBSD linker) concatenate
     // .MIPS.abiflags instead of merging. To allow for this case (or potential
@@ -197,13 +197,13 @@ MipsOptionsSection<ELFT> *MipsOptionsSection<ELFT>::create() {
   Elf_Mips_RegInfo Reginfo = {};
   bool Create = false;
 
-  for (InputSectionBase<ELFT> *Sec : Symtab<ELFT>::X->Sections) {
+  for (InputSectionBase *Sec : Symtab<ELFT>::X->Sections) {
     if (!Sec->Live || Sec->Type != SHT_MIPS_OPTIONS)
       continue;
     Sec->Live = false;
     Create = true;
 
-    std::string Filename = toString(Sec->getFile());
+    std::string Filename = toString(Sec->getFile<ELFT>());
     ArrayRef<uint8_t> D = Sec->Data;
 
     while (!D.empty()) {
@@ -217,7 +217,7 @@ MipsOptionsSection<ELFT> *MipsOptionsSection<ELFT>::create() {
         if (Config->Relocatable && Opt->getRegInfo().ri_gp_value)
           error(Filename + ": unsupported non-zero ri_gp_value");
         Reginfo.ri_gprmask |= Opt->getRegInfo().ri_gprmask;
-        Sec->getFile()->MipsGp0 = Opt->getRegInfo().ri_gp_value;
+        Sec->getFile<ELFT>()->MipsGp0 = Opt->getRegInfo().ri_gp_value;
         break;
       }
 
@@ -253,22 +253,24 @@ MipsReginfoSection<ELFT> *MipsReginfoSection<ELFT>::create() {
   Elf_Mips_RegInfo Reginfo = {};
   bool Create = false;
 
-  for (InputSectionBase<ELFT> *Sec : Symtab<ELFT>::X->Sections) {
+  for (InputSectionBase *Sec : Symtab<ELFT>::X->Sections) {
     if (!Sec->Live || Sec->Type != SHT_MIPS_REGINFO)
       continue;
     Sec->Live = false;
     Create = true;
 
     if (Sec->Data.size() != sizeof(Elf_Mips_RegInfo)) {
-      error(toString(Sec->getFile()) + ": invalid size of .reginfo section");
+      error(toString(Sec->getFile<ELFT>()) +
+            ": invalid size of .reginfo section");
       return nullptr;
     }
     auto *R = reinterpret_cast<const Elf_Mips_RegInfo *>(Sec->Data.data());
     if (Config->Relocatable && R->ri_gp_value)
-      error(toString(Sec->getFile()) + ": unsupported non-zero ri_gp_value");
+      error(toString(Sec->getFile<ELFT>()) +
+            ": unsupported non-zero ri_gp_value");
 
     Reginfo.ri_gprmask |= R->ri_gprmask;
-    Sec->getFile()->MipsGp0 = R->ri_gp_value;
+    Sec->getFile<ELFT>()->MipsGp0 = R->ri_gp_value;
   };
 
   if (Create)
@@ -288,10 +290,8 @@ template <class ELFT> InputSection<ELFT> *elf::createInterpSection() {
 }
 
 template <class ELFT>
-SymbolBody *elf::addSyntheticLocal(StringRef Name, uint8_t Type,
-                                   typename ELFT::uint Value,
-                                   typename ELFT::uint Size,
-                                   InputSectionBase<ELFT> *Section) {
+SymbolBody *elf::addSyntheticLocal(StringRef Name, uint8_t Type, uint64_t Value,
+                                   uint64_t Size, InputSectionBase *Section) {
   auto *S = make<DefinedRegular<ELFT>>(Name, /*IsLocal*/ true, STV_DEFAULT,
                                        Type, Value, Size, Section, nullptr);
   if (In<ELFT>::SymTab)
@@ -452,7 +452,7 @@ template <class ELFT> bool GotSection<ELFT>::empty() const {
 }
 
 template <class ELFT> void GotSection<ELFT>::writeTo(uint8_t *Buf) {
-  this->relocate(Buf, Buf + Size);
+  this->template relocate<ELFT>(Buf, Buf + Size);
 }
 
 template <class ELFT>
@@ -494,7 +494,8 @@ void MipsGotSection<ELFT>::addEntry(SymbolBody &Sym, int64_t Addend,
     // method calculate number of "pages" required to cover all saved output
     // section and allocate appropriate number of GOT entries.
     auto *DefSym = cast<DefinedRegular<ELFT>>(&Sym);
-    PageIndexMap.insert({DefSym->Section->getOutputSection(), 0});
+    PageIndexMap.insert(
+        {DefSym->Section->template getOutputSection<ELFT>(), 0});
     return;
   }
   if (Sym.isTls()) {
@@ -565,7 +566,8 @@ typename MipsGotSection<ELFT>::uintX_t
 MipsGotSection<ELFT>::getPageEntryOffset(const SymbolBody &B,
                                          int64_t Addend) const {
   const OutputSectionBase *OutSec =
-      cast<DefinedRegular<ELFT>>(&B)->Section->getOutputSection();
+      cast<DefinedRegular<ELFT>>(&B)
+          ->Section->template getOutputSection<ELFT>();
   uintX_t SecAddr = getMipsPageAddr(OutSec->Addr);
   uintX_t SymAddr = getMipsPageAddr(B.getVA<ELFT>(Addend));
   uintX_t Index = PageIndexMap.lookup(OutSec) + (SymAddr - SecAddr) / 0xffff;
@@ -976,7 +978,7 @@ template <class ELFT> void DynamicSection<ELFT>::writeTo(uint8_t *Buf) {
 
 template <class ELFT>
 typename ELFT::uint DynamicReloc<ELFT>::getOffset() const {
-  return InputSec->OutSec->Addr + InputSec->getOffset(OffsetInSec);
+  return InputSec->OutSec->Addr + InputSec->getOffset<ELFT>(OffsetInSec);
 }
 
 template <class ELFT> int64_t DynamicReloc<ELFT>::getAddend() const {
@@ -1168,14 +1170,14 @@ void SymbolTableSection<ELFT>::writeLocalSymbols(uint8_t *&Buf) {
 
   for (auto I = Symbols.begin(); I != Symbols.begin() + NumLocals; ++I) {
     const DefinedRegular<ELFT> &Body = *cast<DefinedRegular<ELFT>>(I->Symbol);
-    InputSectionBase<ELFT> *Section = Body.Section;
+    InputSectionBase *Section = Body.Section;
     auto *ESym = reinterpret_cast<Elf_Sym *>(Buf);
 
     if (!Section) {
       ESym->st_shndx = SHN_ABS;
       ESym->st_value = Body.Value;
     } else {
-      const OutputSectionBase *OutSec = Section->getOutputSection();
+      const OutputSectionBase *OutSec = Section->getOutputSection<ELFT>();
       ESym->st_shndx = OutSec->SectionIndex;
       ESym->st_value = OutSec->Addr + Section->getOffset(Body);
     }
@@ -1241,7 +1243,7 @@ SymbolTableSection<ELFT>::getOutputSection(SymbolBody *Sym) {
   case SymbolBody::DefinedRegularKind: {
     auto &D = cast<DefinedRegular<ELFT>>(*Sym);
     if (D.Section)
-      return D.Section->getOutputSection();
+      return D.Section->template getOutputSection<ELFT>();
     break;
   }
   case SymbolBody::DefinedCommonKind:
@@ -1512,7 +1514,7 @@ GdbIndexSection<ELFT>::GdbIndexSection()
       StringPool(llvm::StringTableBuilder::ELF) {}
 
 template <class ELFT> void GdbIndexSection<ELFT>::parseDebugSections() {
-  for (InputSectionBase<ELFT> *S : Symtab<ELFT>::X->Sections)
+  for (InputSectionBase *S : Symtab<ELFT>::X->Sections)
     if (InputSection<ELFT> *IS = dyn_cast<InputSection<ELFT>>(S))
       if (IS->OutSec && IS->Name == ".debug_info")
         readDwarf(IS);
@@ -1610,7 +1612,8 @@ template <class ELFT> void GdbIndexSection<ELFT>::writeTo(uint8_t *Buf) {
 
   // Write the address area.
   for (AddressEntry<ELFT> &E : AddressArea) {
-    uintX_t BaseAddr = E.Section->OutSec->Addr + E.Section->getOffset(0);
+    uintX_t BaseAddr =
+        E.Section->OutSec->Addr + E.Section->template getOffset<ELFT>(0);
     write64le(Buf, BaseAddr + E.LowAddress);
     write64le(Buf + 8, BaseAddr + E.HighAddress);
     write32le(Buf + 16, E.CuIndex);
@@ -1969,8 +1972,10 @@ void ARMExidxSentinelSection<ELFT>::writeTo(uint8_t *Buf) {
   // Get the InputSection before us, we are by definition last
   auto RI = cast<OutputSection<ELFT>>(this->OutSec)->Sections.rbegin();
   InputSection<ELFT> *LE = *(++RI);
-  InputSection<ELFT> *LC = cast<InputSection<ELFT>>(LE->getLinkOrderDep());
-  uint64_t S = LC->OutSec->Addr + LC->getOffset(LC->getSize());
+  InputSection<ELFT> *LC =
+      cast<InputSection<ELFT>>(LE->template getLinkOrderDep<ELFT>());
+  uint64_t S = LC->OutSec->Addr +
+               LC->template getOffset<ELFT>(LC->template getSize<ELFT>());
   uint64_t P = this->getVA();
   Target->relocateOne(Buf, R_ARM_PREL31, S - P);
   write32le(Buf + 4, 0x1);
@@ -2018,18 +2023,18 @@ template MergeInputSection<ELF32BE> *elf::createCommentSection();
 template MergeInputSection<ELF64LE> *elf::createCommentSection();
 template MergeInputSection<ELF64BE> *elf::createCommentSection();
 
-template SymbolBody *
-elf::addSyntheticLocal<ELF32LE>(StringRef, uint8_t, ELF32LE::uint,
-                                ELF32LE::uint, InputSectionBase<ELF32LE> *);
-template SymbolBody *
-elf::addSyntheticLocal<ELF32BE>(StringRef, uint8_t, ELF32BE::uint,
-                                ELF32BE::uint, InputSectionBase<ELF32BE> *);
-template SymbolBody *
-elf::addSyntheticLocal<ELF64LE>(StringRef, uint8_t, ELF64LE::uint,
-                                ELF64LE::uint, InputSectionBase<ELF64LE> *);
-template SymbolBody *
-elf::addSyntheticLocal<ELF64BE>(StringRef, uint8_t, ELF64BE::uint,
-                                ELF64BE::uint, InputSectionBase<ELF64BE> *);
+template SymbolBody *elf::addSyntheticLocal<ELF32LE>(StringRef, uint8_t,
+                                                     uint64_t, uint64_t,
+                                                     InputSectionBase *);
+template SymbolBody *elf::addSyntheticLocal<ELF32BE>(StringRef, uint8_t,
+                                                     uint64_t, uint64_t,
+                                                     InputSectionBase *);
+template SymbolBody *elf::addSyntheticLocal<ELF64LE>(StringRef, uint8_t,
+                                                     uint64_t, uint64_t,
+                                                     InputSectionBase *);
+template SymbolBody *elf::addSyntheticLocal<ELF64BE>(StringRef, uint8_t,
+                                                     uint64_t, uint64_t,
+                                                     InputSectionBase *);
 
 template class elf::MipsAbiFlagsSection<ELF32LE>;
 template class elf::MipsAbiFlagsSection<ELF32BE>;

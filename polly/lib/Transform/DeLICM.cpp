@@ -1607,18 +1607,32 @@ public:
         if (MA->isMayWrite()) {
           DEBUG(dbgs() << "Access " << MA
                        << " pruned because it is a MAY_WRITE\n");
+          OptimizationRemarkMissed R(DEBUG_TYPE, "TargetMayWrite",
+                                     MA->getAccessInstruction());
+          R << "Skipped possible mapping target because it is not an "
+               "unconditional overwrite";
+          S->getFunction().getContext().diagnose(R);
           continue;
         }
 
         if (Stmt.getNumIterators() == 0) {
           DEBUG(dbgs() << "Access " << MA
                        << " pruned because it is not in a loop\n");
+          OptimizationRemarkMissed R(DEBUG_TYPE, "WriteNotInLoop",
+                                     MA->getAccessInstruction());
+          R << "skipped possible mapping target because it is not in a loop";
+          S->getFunction().getContext().diagnose(R);
           continue;
         }
 
         if (isScalarAccess(MA)) {
           DEBUG(dbgs() << "Access " << MA
                        << " pruned because it writes only a single element\n");
+          OptimizationRemarkMissed R(DEBUG_TYPE, "ScalarWrite",
+                                     MA->getAccessInstruction());
+          R << "skipped possible mapping target because the memory location "
+               "written to does not depend on its outer loop";
+          S->getFunction().getContext().diagnose(R);
           continue;
         }
 

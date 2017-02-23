@@ -70,10 +70,12 @@ template <class ELFT>
 GdbIndexBuilder<ELFT>::GdbIndexBuilder(InputSection<ELFT> *DebugInfoSec)
     : DebugInfoSec(DebugInfoSec) {
   if (Expected<std::unique_ptr<object::ObjectFile>> Obj =
-          object::ObjectFile::createObjectFile(DebugInfoSec->getFile()->MB))
+          object::ObjectFile::createObjectFile(
+              DebugInfoSec->template getFile<ELFT>()->MB))
     Dwarf.reset(new DWARFContextInMemory(*Obj.get(), this));
   else
-    error(toString(DebugInfoSec->getFile()) + ": error creating DWARF context");
+    error(toString(DebugInfoSec->template getFile<ELFT>()) +
+          ": error creating DWARF context");
 }
 
 template <class ELFT>
@@ -150,11 +152,11 @@ GdbSymbol **GdbHashTab::findSlot(uint32_t Hash, size_t Offset) {
 }
 
 template <class ELFT>
-static InputSectionBase<ELFT> *
-findSection(ArrayRef<InputSectionBase<ELFT> *> Arr, uint64_t Offset) {
-  for (InputSectionBase<ELFT> *S : Arr)
+static InputSectionBase *findSection(ArrayRef<InputSectionBase *> Arr,
+                                     uint64_t Offset) {
+  for (InputSectionBase *S : Arr)
     if (S && S != &InputSection<ELFT>::Discarded)
-      if (Offset >= S->Offset && Offset < S->Offset + S->getSize())
+      if (Offset >= S->Offset && Offset < S->Offset + S->getSize<ELFT>())
         return S;
   return nullptr;
 }
@@ -167,11 +169,11 @@ GdbIndexBuilder<ELFT>::readAddressArea(size_t CurrentCU) {
     DWARFAddressRangesVector Ranges;
     CU->collectAddressRanges(Ranges);
 
-    ArrayRef<InputSectionBase<ELFT> *> Sections =
-        DebugInfoSec->getFile()->getSections();
+    ArrayRef<InputSectionBase *> Sections =
+        DebugInfoSec->template getFile<ELFT>()->getSections();
 
     for (std::pair<uint64_t, uint64_t> &R : Ranges)
-      if (InputSectionBase<ELFT> *S = findSection(Sections, R.first))
+      if (InputSectionBase *S = findSection<ELFT>(Sections, R.first))
         Ret.push_back(
             {S, R.first - S->Offset, R.second - S->Offset, CurrentCU});
     ++CurrentCU;

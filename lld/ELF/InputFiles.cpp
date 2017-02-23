@@ -93,7 +93,7 @@ template <class ELFT> void elf::ObjectFile<ELFT>::initializeDwarfLine() {
 // Returns source line information for a given offset
 // using DWARF debug info.
 template <class ELFT>
-std::string elf::ObjectFile<ELFT>::getLineInfo(InputSectionBase<ELFT> *S,
+std::string elf::ObjectFile<ELFT>::getLineInfo(InputSectionBase *S,
                                                uintX_t Offset) {
   if (!DwarfLine)
     initializeDwarfLine();
@@ -327,12 +327,11 @@ void elf::ObjectFile<ELFT>::initializeSections(
 }
 
 template <class ELFT>
-InputSectionBase<ELFT> *
-elf::ObjectFile<ELFT>::getRelocTarget(const Elf_Shdr &Sec) {
+InputSectionBase *elf::ObjectFile<ELFT>::getRelocTarget(const Elf_Shdr &Sec) {
   uint32_t Idx = Sec.sh_info;
   if (Idx >= Sections.size())
     fatal(toString(this) + ": invalid relocated section index: " + Twine(Idx));
-  InputSectionBase<ELFT> *Target = Sections[Idx];
+  InputSectionBase *Target = Sections[Idx];
 
   // Strictly speaking, a relocation section must be included in the
   // group of the section it relocates. However, LLVM 3.3 and earlier
@@ -346,7 +345,7 @@ elf::ObjectFile<ELFT>::getRelocTarget(const Elf_Shdr &Sec) {
 }
 
 template <class ELFT>
-InputSectionBase<ELFT> *
+InputSectionBase *
 elf::ObjectFile<ELFT>::createInputSection(const Elf_Shdr &Sec,
                                           StringRef SectionStringTable) {
   StringRef Name =
@@ -369,7 +368,7 @@ elf::ObjectFile<ELFT>::createInputSection(const Elf_Shdr &Sec,
     // section with it. Target can be discarded, for example
     // if it is a duplicated member of SHT_GROUP section, we
     // do not create or proccess relocatable sections then.
-    InputSectionBase<ELFT> *Target = getRelocTarget(Sec);
+    InputSectionBase *Target = getRelocTarget(Sec);
     if (!Target)
       return nullptr;
 
@@ -382,7 +381,7 @@ elf::ObjectFile<ELFT>::createInputSection(const Elf_Shdr &Sec,
     if (Target->FirstRelocation)
       fatal(toString(this) +
             ": multiple relocation sections to one section are not supported");
-    if (!isa<InputSection<ELFT>>(Target) && !isa<EhInputSection<ELFT>>(Target))
+    if (isa<MergeInputSection<ELFT>>(Target))
       fatal(toString(this) +
             ": relocations pointing to SHF_MERGE are not supported");
 
@@ -415,15 +414,29 @@ elf::ObjectFile<ELFT>::createInputSection(const Elf_Shdr &Sec,
   }
   }
 
-  // .note.GNU-stack is a marker section to control the presence of
-  // PT_GNU_STACK segment in outputs. Since the presence of the segment
-  // is controlled only by the command line option (-z execstack) in LLD,
-  // .note.GNU-stack is ignored.
+  // The GNU linker uses .note.GNU-stack section as a marker indicating
+  // that the code in the object file does not expect that the stack is
+  // executable (in terms of NX bit). If all input files have the marker,
+  // the GNU linker adds a PT_GNU_STACK segment to tells the loader to
+  // make the stack non-executable. Most object files have this section as
+  // of 2017.
+  //
+  // But making the stack non-executable is a norm today for security
+  // reasons. Failure to do so may result in a serious security issue.
+  // Therefore, we make LLD always add PT_GNU_STACK unless it is
+  // explicitly told to do otherwise (by -z execstack). Because the stack
+  // executable-ness is controlled solely by command line options,
+  // .note.GNU-stack sections are simply ignored.
   if (Name == ".note.GNU-stack")
     return &InputSection<ELFT>::Discarded;
 
+  // Split stacks is a feature to support a discontiguous stack. At least
+  // as of 2017, it seems that the feature is not being used widely.
+  // Only GNU gold supports that. We don't. For the details about that,
+  // see https://gcc.gnu.org/wiki/SplitStacks
   if (Name == ".note.GNU-split-stack") {
-    error("objects using splitstacks are not supported");
+    error(toString(this) +
+          ": object file compiled with -fsplit-stack is not supported");
     return &InputSection<ELFT>::Discarded;
   }
 
@@ -456,12 +469,11 @@ template <class ELFT> void elf::ObjectFile<ELFT>::initializeSymbols() {
 }
 
 template <class ELFT>
-InputSectionBase<ELFT> *
-elf::ObjectFile<ELFT>::getSection(const Elf_Sym &Sym) const {
+InputSectionBase *elf::ObjectFile<ELFT>::getSection(const Elf_Sym &Sym) const {
   uint32_t Index = this->getSectionIndex(Sym);
   if (Index >= Sections.size())
     fatal(toString(this) + ": invalid section index: " + Twine(Index));
-  InputSectionBase<ELFT> *S = Sections[Index];
+  InputSectionBase *S = Sections[Index];
 
   // We found that GNU assembler 2.17.50 [FreeBSD] 2007-07-03 could
   // generate broken objects. STT_SECTION/STT_NOTYPE symbols can be
@@ -483,7 +495,7 @@ elf::ObjectFile<ELFT>::getSection(const Elf_Sym &Sym) const {
 template <class ELFT>
 SymbolBody *elf::ObjectFile<ELFT>::createSymbolBody(const Elf_Sym *Sym) {
   int Binding = Sym->getBinding();
-  InputSectionBase<ELFT> *Sec = getSection(*Sym);
+  InputSectionBase *Sec = getSection(*Sym);
 
   uint8_t StOther = Sym->st_other;
   uint8_t Type = Sym->getType();

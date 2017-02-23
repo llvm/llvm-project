@@ -44,7 +44,7 @@ static typename ELFT::uint getSymVA(const SymbolBody &Body, int64_t &Addend) {
   }
   case SymbolBody::DefinedRegularKind: {
     auto &D = cast<DefinedRegular<ELFT>>(Body);
-    InputSectionBase<ELFT> *IS = D.Section;
+    InputSectionBase *IS = D.Section;
 
     // According to the ELF spec reference to a local symbol from outside
     // the group are not allowed. Unfortunately .eh_frame breaks that rule
@@ -62,8 +62,8 @@ static typename ELFT::uint getSymVA(const SymbolBody &Body, int64_t &Addend) {
       Offset += Addend;
       Addend = 0;
     }
-    const OutputSectionBase *OutSec = IS->getOutputSection();
-    uintX_t VA = (OutSec ? OutSec->Addr : 0) + IS->getOffset(Offset);
+    const OutputSectionBase *OutSec = IS->getOutputSection<ELFT>();
+    uintX_t VA = (OutSec ? OutSec->Addr : 0) + IS->getOffset<ELFT>(Offset);
     if (D.isTls() && !Config->Relocatable) {
       if (!Out<ELFT>::TlsPhdr)
         fatal(toString(D.File) +
@@ -219,7 +219,8 @@ template <class ELFT> bool DefinedRegular<ELFT>::isMipsPIC() const {
   if (!Section || !isFunc())
     return false;
   return (this->StOther & STO_MIPS_MIPS16) == STO_MIPS_PIC ||
-         (Section->getFile()->getObj().getHeader()->e_flags & EF_MIPS_PIC);
+         (Section->getFile<ELFT>()->getObj().getHeader()->e_flags &
+          EF_MIPS_PIC);
 }
 
 Undefined::Undefined(StringRefZ Name, bool IsLocal, uint8_t StOther,

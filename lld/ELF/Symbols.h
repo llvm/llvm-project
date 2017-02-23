@@ -180,7 +180,7 @@ template <class ELFT> class DefinedRegular : public Defined {
 
 public:
   DefinedRegular(StringRefZ Name, bool IsLocal, uint8_t StOther, uint8_t Type,
-                 uintX_t Value, uintX_t Size, InputSectionBase<ELFT> *Section,
+                 uintX_t Value, uintX_t Size, InputSectionBase *Section,
                  InputFile *File)
       : Defined(SymbolBody::DefinedRegularKind, Name, IsLocal, StOther, Type),
         Value(Value), Size(Size),
@@ -204,14 +204,13 @@ public:
   // manipulates this Section pointers so that they point to the same
   // section. This is a bit tricky, so be careful to not be confused.
   // If this is null, the symbol is an absolute symbol.
-  InputSectionBase<ELFT> *&Section;
+  InputSectionBase *&Section;
 
 private:
-  static InputSectionBase<ELFT> *NullInputSection;
+  static InputSectionBase *NullInputSection;
 };
 
-template <class ELFT>
-InputSectionBase<ELFT> *DefinedRegular<ELFT>::NullInputSection;
+template <class ELFT> InputSectionBase *DefinedRegular<ELFT>::NullInputSection;
 
 // DefinedSynthetic is a class to represent linker-generated ELF symbols.
 // The difference from the regular symbol is that DefinedSynthetic symbols
