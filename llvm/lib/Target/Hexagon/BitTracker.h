@@ -283,6 +283,9 @@ struct BitTracker::RegisterCell {
     return !operator==(RC);
   }
 
+  // Replace the ref-to-reg-0 bit values with the given register.
+  RegisterCell &regify(unsigned R);
+
   // Generate a "ref" cell for the corresponding register. In the resulting
   // cell each bit will be described as being the same as the corresponding
   // bit in register Reg (i.e. the cell is "defined" by register Reg).

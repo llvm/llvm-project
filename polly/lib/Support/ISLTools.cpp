@@ -106,7 +106,7 @@ IslPtr<isl_map> polly::afterScatter(IslPtr<isl_map> Map, bool Strict) {
   return give(isl_map_apply_range(Map.take(), ScatterRel.take()));
 }
 
-IslPtr<isl_union_map> polly::afterScatter(NonowningIslPtr<isl_union_map> UMap,
+IslPtr<isl_union_map> polly::afterScatter(const IslPtr<isl_union_map> &UMap,
                                           bool Strict) {
   auto Result = give(isl_union_map_empty(isl_union_map_get_space(UMap.keep())));
   foreachElt(UMap, [=, &Result](IslPtr<isl_map> Map) {
@@ -163,7 +163,7 @@ IslPtr<isl_set> polly::singleton(IslPtr<isl_union_set> USet,
   return Result;
 }
 
-unsigned polly::getNumScatterDims(NonowningIslPtr<isl_union_map> Schedule) {
+unsigned polly::getNumScatterDims(const IslPtr<isl_union_map> &Schedule) {
   unsigned Dims = 0;
   foreachElt(Schedule, [&Dims](IslPtr<isl_map> Map) {
     Dims = std::max(Dims, isl_map_dim(Map.keep(), isl_dim_out));
@@ -172,7 +172,7 @@ unsigned polly::getNumScatterDims(NonowningIslPtr<isl_union_map> Schedule) {
 }
 
 IslPtr<isl_space>
-polly::getScatterSpace(NonowningIslPtr<isl_union_map> Schedule) {
+polly::getScatterSpace(const IslPtr<isl_union_map> &Schedule) {
   if (!Schedule)
     return nullptr;
   auto Dims = getNumScatterDims(Schedule);
@@ -181,9 +181,8 @@ polly::getScatterSpace(NonowningIslPtr<isl_union_map> Schedule) {
   return give(isl_space_add_dims(ScatterSpace.take(), isl_dim_set, Dims));
 }
 
-IslPtr<isl_union_map>
-polly::makeIdentityMap(NonowningIslPtr<isl_union_set> USet,
-                       bool RestrictDomain) {
+IslPtr<isl_union_map> polly::makeIdentityMap(const IslPtr<isl_union_set> &USet,
+                                             bool RestrictDomain) {
   auto Result = give(isl_union_map_empty(isl_union_set_get_space(USet.keep())));
   foreachElt(USet, [=, &Result](IslPtr<isl_set> Set) {
     auto IdentityMap = give(isl_map_identity(
@@ -205,8 +204,7 @@ IslPtr<isl_map> polly::reverseDomain(IslPtr<isl_map> Map) {
   return give(isl_map_apply_domain(Map.take(), Swap.take()));
 }
 
-IslPtr<isl_union_map>
-polly::reverseDomain(NonowningIslPtr<isl_union_map> UMap) {
+IslPtr<isl_union_map> polly::reverseDomain(const IslPtr<isl_union_map> &UMap) {
   auto Result = give(isl_union_map_empty(isl_union_map_get_space(UMap.keep())));
   foreachElt(UMap, [=, &Result](IslPtr<isl_map> Map) {
     auto Reversed = reverseDomain(std::move(Map));

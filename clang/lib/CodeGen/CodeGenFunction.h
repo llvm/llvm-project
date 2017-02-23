@@ -3169,6 +3169,8 @@ private:
 public:
   llvm::Value *EmitMSVCBuiltinExpr(MSVCIntrin BuiltinID, const CallExpr *E);
 
+  llvm::Value *EmitBuiltinAvailable(ArrayRef<llvm::Value *> Args);
+
   llvm::Value *EmitObjCProtocolExpr(const ObjCProtocolExpr *E);
   llvm::Value *EmitObjCStringLiteral(const ObjCStringLiteral *E);
   llvm::Value *EmitObjCBoxedExpr(const ObjCBoxedExpr *E);

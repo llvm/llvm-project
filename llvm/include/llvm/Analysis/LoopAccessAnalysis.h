@@ -38,39 +38,6 @@ class SCEVUnionPredicate;
 class LoopAccessInfo;
 class OptimizationRemarkEmitter;
 
-/// Optimization analysis message produced during vectorization. Messages inform
-/// the user why vectorization did not occur.
-class LoopAccessReport {
-  std::string Message;
-  const Instruction *Instr;
-
-protected:
-  LoopAccessReport(const Twine &Message, const Instruction *I)
-      : Message(Message.str()), Instr(I) {}
-
-public:
-  LoopAccessReport(const Instruction *I = nullptr) : Instr(I) {}
-
-  template <typename A> LoopAccessReport &operator<<(const A &Value) {
-    raw_string_ostream Out(Message);
-    Out << Value;
-    return *this;
-  }
-
-  const Instruction *getInstr() const { return Instr; }
-
-  std::string &str() { return Message; }
-  const std::string &str() const { return Message; }
-  operator Twine() { return Message; }
-
-  /// \brief Emit an analysis note for \p PassName with the debug location from
-  /// the instruction in \p Message if available.  Otherwise use the location of
-  /// \p TheLoop.
-  static void emitAnalysis(const LoopAccessReport &Message, const Loop *TheLoop,
-                           const char *PassName,
-                           OptimizationRemarkEmitter &ORE);
-};
-
 /// \brief Collection of parameters shared beetween the Loop Vectorizer and the
 /// Loop Access Analysis.
 struct VectorizerParams {

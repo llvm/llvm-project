@@ -77,7 +77,7 @@ static ResolvedReloc<ELFT> resolveReloc(InputSectionBase &Sec, RelT &Rel) {
 
 // Calls Fn for each section that Sec refers to via relocations.
 template <class ELFT>
-static void forEachSuccessor(InputSection<ELFT> &Sec,
+static void forEachSuccessor(InputSection &Sec,
                              std::function<void(ResolvedReloc<ELFT>)> Fn) {
   if (Sec.AreRelocsRela) {
     for (const typename ELFT::Rela &Rel : Sec.template relas<ELFT>())
@@ -129,7 +129,7 @@ scanEhFrameSection(EhInputSection<ELFT> &EH, ArrayRef<RelTy> Rels,
       if (Rel.r_offset >= PieceEnd)
         break;
       ResolvedReloc<ELFT> R = resolveReloc<ELFT>(EH, Rels[I2]);
-      if (!R.Sec || R.Sec == &InputSection<ELFT>::Discarded)
+      if (!R.Sec || R.Sec == &InputSection::Discarded)
         continue;
       if (R.Sec->Flags & SHF_EXECINSTR)
         continue;
@@ -188,14 +188,14 @@ template <class ELFT> static bool isReserved(InputSectionBase *Sec) {
 // Starting from GC-root sections, this function visits all reachable
 // sections to set their "Live" bits.
 template <class ELFT> void elf::markLive() {
-  SmallVector<InputSection<ELFT> *, 256> Q;
+  SmallVector<InputSection *, 256> Q;
 
   auto Enqueue = [&](ResolvedReloc<ELFT> R) {
     // Skip over discarded sections. This in theory shouldn't happen, because
     // the ELF spec doesn't allow a relocation to point to a deduplicated
     // COMDAT section directly. Unfortunately this happens in practice (e.g.
     // .eh_frame) so we need to add a check.
-    if (!R.Sec || R.Sec == &InputSection<ELFT>::Discarded)
+    if (!R.Sec || R.Sec == &InputSection::Discarded)
       return;
 
     // We don't gc non alloc sections.
@@ -212,7 +212,7 @@ template <class ELFT> void elf::markLive() {
       return;
     R.Sec->Live = true;
     // Add input section to the queue.
-    if (InputSection<ELFT> *S = dyn_cast<InputSection<ELFT>>(R.Sec))
+    if (InputSection *S = dyn_cast<InputSection>(R.Sec))
       Q.push_back(S);
   };
 

@@ -11,10 +11,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/GlobalISel/Utils.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/CodeGen/GlobalISel/RegisterBankInfo.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/Target/TargetInstrInfo.h"
 #include "llvm/Target/TargetRegisterInfo.h"
 
@@ -42,4 +45,30 @@ unsigned llvm::constrainOperandRegClass(
   }
 
   return Reg;
+}
+
+void llvm::reportGISelFailure(MachineFunction &MF, const TargetPassConfig &TPC,
+                              MachineOptimizationRemarkEmitter &MORE,
+                              MachineOptimizationRemarkMissed &R) {
+  MF.getProperties().set(MachineFunctionProperties::Property::FailedISel);
+
+  // Print the function name explicitly if we don't have a debug location (which
+  // makes the diagnostic less useful) or if we're going to emit a raw error.
+  if (!R.getLocation().isValid() || TPC.isGlobalISelAbortEnabled())
+    R << (" (in function: " + MF.getName() + ")").str();
+
+  if (TPC.isGlobalISelAbortEnabled())
+    report_fatal_error(R.getMsg());
+  else
+    MORE.emit(R);
+}
+
+void llvm::reportGISelFailure(MachineFunction &MF, const TargetPassConfig &TPC,
+                              MachineOptimizationRemarkEmitter &MORE,
+                              const char *PassName, StringRef Msg,
+                              const MachineInstr &MI) {
+  MachineOptimizationRemarkMissed R(PassName, "GISelFailure: ",
+                                    MI.getDebugLoc(), MI.getParent());
+  R << Msg << ": " << ore::MNV("Inst", MI);
+  reportGISelFailure(MF, TPC, MORE, R);
 }

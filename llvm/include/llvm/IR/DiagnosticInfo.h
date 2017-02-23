@@ -641,12 +641,13 @@ public:
   /// remark.  \p Loc is the debug location and \p CodeRegion is the region
   /// that the optimization operates on (currently on block is supported).
   OptimizationRemarkMissed(const char *PassName, StringRef RemarkName,
-                           const DiagnosticLocation &Loc, Value *CodeRegion);
+                           const DiagnosticLocation &Loc,
+                           const Value *CodeRegion);
 
   /// \brief Same as above but \p Inst is used to derive code region and debug
   /// location.
   OptimizationRemarkMissed(const char *PassName, StringRef RemarkName,
-                           Instruction *Inst);
+                           const Instruction *Inst);
 
   static bool classof(const DiagnosticInfo *DI) {
     return DI->getKind() == DK_OptimizationRemarkMissed;
@@ -681,7 +682,8 @@ public:
   /// remark.  \p Loc is the debug location and \p CodeRegion is the region
   /// that the optimization operates on (currently on block is supported).
   OptimizationRemarkAnalysis(const char *PassName, StringRef RemarkName,
-                             const DiagnosticLocation &Loc, Value *CodeRegion);
+                             const DiagnosticLocation &Loc,
+                             const Value *CodeRegion);
 
   /// \brief This is ctor variant allows a pass to build an optimization remark
   /// from an existing remark.
@@ -697,7 +699,7 @@ public:
   /// \brief Same as above but \p Inst is used to derive code region and debug
   /// location.
   OptimizationRemarkAnalysis(const char *PassName, StringRef RemarkName,
-                             Instruction *Inst);
+                             const Instruction *Inst);
 
   static bool classof(const DiagnosticInfo *DI) {
     return DI->getKind() == DK_OptimizationRemarkAnalysis;
@@ -723,7 +725,8 @@ protected:
 
   OptimizationRemarkAnalysis(enum DiagnosticKind Kind, const char *PassName,
                              StringRef RemarkName,
-                             const DiagnosticLocation &Loc, Value *CodeRegion);
+                             const DiagnosticLocation &Loc,
+                             const Value *CodeRegion);
 };
 
 /// Diagnostic information for optimization analysis remarks related to
@@ -757,7 +760,7 @@ public:
   OptimizationRemarkAnalysisFPCommute(const char *PassName,
                                       StringRef RemarkName,
                                       const DiagnosticLocation &Loc,
-                                      Value *CodeRegion)
+                                      const Value *CodeRegion)
       : OptimizationRemarkAnalysis(DK_OptimizationRemarkAnalysisFPCommute,
                                    PassName, RemarkName, Loc, CodeRegion) {}
 
@@ -796,7 +799,7 @@ public:
   /// pointer aliasing legality.
   OptimizationRemarkAnalysisAliasing(const char *PassName, StringRef RemarkName,
                                      const DiagnosticLocation &Loc,
-                                     Value *CodeRegion)
+                                     const Value *CodeRegion)
       : OptimizationRemarkAnalysis(DK_OptimizationRemarkAnalysisAliasing,
                                    PassName, RemarkName, Loc, CodeRegion) {}
 
@@ -922,7 +925,7 @@ public:
   /// supported).
   DiagnosticInfoOptimizationFailure(const char *PassName, StringRef RemarkName,
                                     const DiagnosticLocation &Loc,
-                                    Value *CodeRegion);
+                                    const Value *CodeRegion);
 
   static bool classof(const DiagnosticInfo *DI) {
     return DI->getKind() == DK_OptimizationFailure;

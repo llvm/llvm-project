@@ -875,9 +875,9 @@ static void mergeThunks(OutputSection<ELFT> *OS,
   std::stable_sort(Thunks.begin(), Thunks.end(), ThunkCmp);
 
   // Merge sorted vectors of Thunks and InputSections by OutSecOff
-  std::vector<InputSection<ELFT> *> Tmp;
+  std::vector<InputSection *> Tmp;
   Tmp.reserve(OS->Sections.size() + Thunks.size());
-  auto MergeCmp = [](const InputSection<ELFT> *A, const InputSection<ELFT> *B) {
+  auto MergeCmp = [](const InputSection *A, const InputSection *B) {
     // std::merge requires a strict weak ordering.
     if (A->OutSecOff < B->OutSecOff)
       return true;
@@ -911,7 +911,7 @@ void createThunks(ArrayRef<OutputSectionBase *> OutputSections) {
   // Track Symbols that already have a Thunk
   DenseMap<SymbolBody *, Thunk<ELFT> *> ThunkedSymbols;
   // Track InputSections that have a ThunkSection placed in front
-  DenseMap<InputSection<ELFT> *, ThunkSection<ELFT> *> ThunkedSections;
+  DenseMap<InputSection *, ThunkSection<ELFT> *> ThunkedSections;
   // Track the ThunksSections that need to be inserted into an OutputSection
   std::map<OutputSection<ELFT> *, std::vector<ThunkSection<ELFT> *>>
       ThunkSections;
@@ -925,7 +925,7 @@ void createThunks(ArrayRef<OutputSectionBase *> OutputSections) {
   };
 
   // Find or create a ThunkSection to be placed immediately before IS
-  auto GetISThunkSec = [&](InputSection<ELFT> *IS, OutputSection<ELFT> *OS) {
+  auto GetISThunkSec = [&](InputSection *IS, OutputSection<ELFT> *OS) {
     ThunkSection<ELFT> *TS = ThunkedSections.lookup(IS);
     if (TS)
       return TS;
@@ -962,7 +962,7 @@ void createThunks(ArrayRef<OutputSectionBase *> OutputSections) {
       continue;
 
     ThunkSection<ELFT> *OSTS = nullptr;
-    for (InputSection<ELFT> *IS : OS->Sections) {
+    for (InputSection *IS : OS->Sections) {
       for (Relocation &Rel : IS->Relocations) {
         SymbolBody &Body = *Rel.Sym;
         if (Target->needsThunk(Rel.Expr, Rel.Type, IS->template getFile<ELFT>(),

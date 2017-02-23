@@ -130,6 +130,8 @@ static bool canBeFeederToNewValueJump(const HexagonInstrInfo *QII,
   if (II->getOpcode() == TargetOpcode::KILL)
     return false;
 
+  if (II->isImplicitDef())
+    return false;
 
   // Make sure there there is no 'def' or 'use' of any of the uses of
   // feeder insn between it's definition, this MI and jump, jmpInst

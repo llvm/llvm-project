@@ -227,8 +227,6 @@ DECLARE_TRAITS(union_pw_aff)
 DECLARE_TRAITS(multi_union_pw_aff)
 DECLARE_TRAITS(union_pw_multi_aff)
 
-template <typename T> class NonowningIslPtr;
-
 /// Smart pointer to an ISL object.
 ///
 /// An object of this class owns an reference of an ISL object, meaning if will
@@ -266,7 +264,6 @@ public:
   /* implicit */ IslPtr(ThisTy &&That) : IslPtr(That.Obj) {
     That.Obj = nullptr;
   }
-  /* implicit */ IslPtr(NonowningIslPtr<T> That) : IslPtr(That.copy()) {}
   ~IslPtr() {
     if (Obj)
       Traits::free(Obj);
@@ -327,88 +324,39 @@ operator<<(llvm::DiagnosticInfoOptimizationBase &OS, const IslPtr<T> &Obj) {
   return OS;
 }
 
-/// Smart pointer to an ISL object, but does not release it when destroyed.
-///
-/// This is meant to be used as function parameter type. The caller guarantees
-/// that the reference is alive during the function's execution and hence
-/// doesn't need to add a reference. Therefore, it is equivalent to the
-/// __isl_keep annotation (IslPtr being equivalent to __isl_take which can be
-/// either copied or moved).
-///
-/// Just as IslPtr, it has keep() and copy() methods. The take() method is
-/// missing as this would steal the reference from the owner (the caller).
-template <typename T> class NonowningIslPtr {
-  typedef NonowningIslPtr<T> ThisTy;
-  typedef IslObjTraits<T> Traits;
-
-private:
-  T *Obj;
-
-  /* implicit */ NonowningIslPtr(__isl_keep T *Obj) : Obj(Obj) {}
-
-public:
-  NonowningIslPtr() : Obj(nullptr) {}
-  /* implicit */ NonowningIslPtr(std::nullptr_t That) : NonowningIslPtr() {}
-
-  /* implicit */ NonowningIslPtr(const IslPtr<T> &That)
-      : NonowningIslPtr(That.keep()) {}
-
-  explicit operator bool() const { return Obj; }
-
-  static void swap(ThisTy &LHS, ThisTy &RHS) { std::swap(LHS.Obj, RHS.Obj); }
-
-  T *keep() const { return Obj; }
-  __isl_give T *copy() const { return Traits::copy(Obj); }
-
-  isl_ctx *getCtx() const { return Traits::get_ctx(Obj); }
-  std::string toStr() const { return Traits::to_str(Obj); }
-
-  /// Print a string representation of this ISL object to stderr.
-  ///
-  /// @see IslPtr<T>::dump()
-  void dump() const;
-};
-
-template <typename T>
-static llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
-                                     NonowningIslPtr<T> Obj) {
-  OS << IslObjTraits<T>::to_str(Obj.keep());
-  return OS;
-}
-
 /// Enumerate all isl_basic_maps of an isl_map.
 ///
 /// This basically wraps isl_map_foreach_basic_map() and allows to call back
 /// C++11 closures.
-void foreachElt(NonowningIslPtr<isl_map> Map,
+void foreachElt(const IslPtr<isl_map> &Map,
                 const std::function<void(IslPtr<isl_basic_map>)> &F);
 
 /// Enumerate all isl_basic_sets of an isl_set.
 ///
 /// This basically wraps isl_set_foreach_basic_set() and allows to call back
 /// C++11 closures.
-void foreachElt(NonowningIslPtr<isl_set> Set,
+void foreachElt(const IslPtr<isl_set> &Set,
                 const std::function<void(IslPtr<isl_basic_set>)> &F);
 
 /// Enumerate all isl_maps of an isl_union_map.
 ///
 /// This basically wraps isl_union_map_foreach_map() and allows to call back
 /// C++11 closures.
-void foreachElt(NonowningIslPtr<isl_union_map> UMap,
+void foreachElt(const IslPtr<isl_union_map> &UMap,
                 const std::function<void(IslPtr<isl_map> Map)> &F);
 
 /// Enumerate all isl_sets of an isl_union_set.
 ///
 /// This basically wraps isl_union_set_foreach_set() and allows to call back
 /// C++11 closures.
-void foreachElt(NonowningIslPtr<isl_union_set> USet,
+void foreachElt(const IslPtr<isl_union_set> &USet,
                 const std::function<void(IslPtr<isl_set> Set)> &F);
 
 /// Enumerate all isl_pw_aff of an isl_union_pw_aff.
 ///
 /// This basically wraps isl_union_pw_aff(), but also allows to call back C++11
 /// closures.
-void foreachElt(NonowningIslPtr<isl_union_pw_aff> UPwAff,
+void foreachElt(const IslPtr<isl_union_pw_aff> &UPwAff,
                 const std::function<void(IslPtr<isl_pw_aff>)> &F);
 
 /// Enumerate all polyhedra of an isl_map.
@@ -424,7 +372,7 @@ void foreachElt(NonowningIslPtr<isl_union_pw_aff> UPwAff,
 /// @return The isl_stat returned by the last callback invocation; isl_stat_ok
 ///         if the collection was empty.
 isl_stat
-foreachEltWithBreak(NonowningIslPtr<isl_map> Map,
+foreachEltWithBreak(const IslPtr<isl_map> &Map,
                     const std::function<isl_stat(IslPtr<isl_basic_map>)> &F);
 
 /// Enumerate all isl_maps of an isl_union_map.
@@ -441,7 +389,7 @@ foreachEltWithBreak(NonowningIslPtr<isl_map> Map,
 /// @return The isl_stat returned by the last callback invocation; isl_stat_ok
 ///         if the collection was initially empty.
 isl_stat
-foreachEltWithBreak(NonowningIslPtr<isl_union_map> UMap,
+foreachEltWithBreak(const IslPtr<isl_union_map> &UMap,
                     const std::function<isl_stat(IslPtr<isl_map> Map)> &F);
 
 /// Enumerate all pieces of an isl_pw_aff.
@@ -457,7 +405,7 @@ foreachEltWithBreak(NonowningIslPtr<isl_union_map> UMap,
 /// @return The isl_stat returned by the last callback invocation; isl_stat_ok
 ///         if the collection was initially empty.
 isl_stat foreachPieceWithBreak(
-    NonowningIslPtr<isl_pw_aff> PwAff,
+    const IslPtr<isl_pw_aff> &PwAff,
     const std::function<isl_stat(IslPtr<isl_set>, IslPtr<isl_aff>)> &F);
 
 /// Scoped limit of ISL operations.

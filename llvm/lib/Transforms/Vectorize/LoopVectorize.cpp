@@ -267,21 +267,6 @@ static bool hasCyclesInLoopBody(const Loop &L) {
   return false;
 }
 
-/// \brief This modifies LoopAccessReport to initialize message with
-/// loop-vectorizer-specific part.
-class VectorizationReport : public LoopAccessReport {
-public:
-  VectorizationReport(Instruction *I = nullptr)
-      : LoopAccessReport("loop not vectorized: ", I) {}
-
-  /// \brief This allows promotion of the loop-access analysis report into the
-  /// loop-vectorizer report.  It modifies the message to add the
-  /// loop-vectorizer-specific part of the message.
-  explicit VectorizationReport(const LoopAccessReport &R)
-      : LoopAccessReport(Twine("loop not vectorized: ") + R.str(),
-                         R.getInstr()) {}
-};
-
 /// A helper function for converting Scalar types to vector types.
 /// If the incoming type is void, we return void. If the VF is 1, we return
 /// the scalar type.
@@ -1535,14 +1520,6 @@ private:
   OptimizationRemarkEmitter &ORE;
 };
 
-static void emitAnalysisDiag(const Loop *TheLoop,
-                             const LoopVectorizeHints &Hints,
-                             OptimizationRemarkEmitter &ORE,
-                             const LoopAccessReport &Message) {
-  const char *Name = Hints.vectorizeAnalysisPassName();
-  LoopAccessReport::emitAnalysis(Message, TheLoop, Name, ORE);
-}
-
 static void emitMissedWarning(Function *F, Loop *L,
                               const LoopVectorizeHints &LH,
                               OptimizationRemarkEmitter *ORE) {
@@ -1755,14 +1732,6 @@ private:
   /// better choice for the main induction than the existing one.
   void addInductionPhi(PHINode *Phi, const InductionDescriptor &ID,
                        SmallPtrSetImpl<Value *> &AllowedExit);
-
-  /// Report an analysis message to assist the user in diagnosing loops that are
-  /// not vectorized.  These are handled as LoopAccessReport rather than
-  /// VectorizationReport because the << operator of VectorizationReport returns
-  /// LoopAccessReport.
-  void emitAnalysis(const LoopAccessReport &Message) const {
-    emitAnalysisDiag(TheLoop, *Hints, *ORE, Message);
-  }
 
   /// Create an analysis remark that explains why vectorization failed
   ///
