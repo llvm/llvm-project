@@ -95,7 +95,7 @@ VCS = enum('git',
 
 
 def run_in_directory(args, path):
-    return subprocess.check_output(args, cwd=path)
+    return subprocess.check_output([str(arg) for arg in args], cwd=path)
 
 
 class Git:
