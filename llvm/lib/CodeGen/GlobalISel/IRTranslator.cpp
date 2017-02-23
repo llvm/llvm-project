@@ -12,6 +12,7 @@
 
 #include "llvm/CodeGen/GlobalISel/IRTranslator.h"
 
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/OptimizationDiagnosticInfo.h"
@@ -1033,6 +1034,9 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
 
   assert(PendingPHIs.empty() && "stale PHIs");
 
+  // Release the per-function state when we return, whether we succeeded or not.
+  auto FinalizeOnReturn = make_scope_exit([this]() { finalizeFunction(); });
+
   // Setup a separate basic-block for the arguments and constants, falling
   // through to the IR-level Function's entry block.
   MachineBasicBlock *EntryBB = MF->CreateMachineBasicBlock();
@@ -1050,7 +1054,6 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
                                &MF->getFunction()->getEntryBlock());
     R << "unable to lower arguments: " << ore::NV("Prototype", F.getType());
     reportTranslationError(*MF, *TPC, *ORE, R);
-    finalizeFunction();
     return false;
   }
 
@@ -1112,8 +1115,6 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
     assert(&MF->front() == &NewEntryBB &&
            "New entry wasn't next in the list of basic block!");
   }
-
-  finalizeFunction();
 
   return false;
 }
