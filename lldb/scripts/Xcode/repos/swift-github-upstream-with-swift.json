@@ -1,0 +1,29 @@
+{
+    "regexs" : [".*github.*apple.*swift-lldb.*upstream-with-swift.*"],
+    "repos" : [
+        {"name": "llvm",
+         "vcs": "git",
+         "url": "https://github.com/apple/swift-llvm.git",
+         "ref": "upstream-with-swift"},
+
+        {"name": "clang",
+         "vcs": "git",
+         "url": "https://github.com/apple/swift-clang.git",
+         "ref": "upstream-with-swift"},
+
+        {"name": "swift",
+         "vcs": "git",
+         "url": "https://github.com/apple/swift.git",
+         "ref": "master-next"},
+
+        {"name": "cmark",
+         "vcs": "git",
+         "url": "https://github.com/apple/swift-cmark.git",
+         "ref": "master"},
+
+        {"name": "ninja",
+         "vcs": "git",
+         "url": "https://github.com/ninja-build/ninja.git",
+         "ref": "master"}
+    ]
+}
