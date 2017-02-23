@@ -136,7 +136,8 @@ define float @funcD(i64* nocapture %e) nounwind uwtable readonly ssp {
 define void @fpext() nounwind uwtable {
 ; CHECK-LABEL: fpext:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vcvtss2sd -{{[0-9]+}}(%rsp), %xmm0, %xmm0
+; CHECK-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vmovsd %xmm0, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    retq
   %f = alloca float, align 4

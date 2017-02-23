@@ -226,7 +226,7 @@ static cl::list<int>
 static cl::opt<bool>
     PMBasedOpts("polly-pattern-matching-based-opts",
                 cl::desc("Perform optimizations based on pattern matching"),
-                cl::init(false), cl::ZeroOrMore, cl::cat(PollyCategory));
+                cl::init(true), cl::ZeroOrMore, cl::cat(PollyCategory));
 
 static cl::opt<bool> OptimizedScops(
     "polly-optimized-scops",

@@ -3510,14 +3510,18 @@ private:
   /// \brief Attempts to statically evaluate the object size of E. If that
   /// fails, emits code to figure the size of E out for us. This is
   /// pass_object_size aware.
+  ///
+  /// If EmittedExpr is non-null, this will use that instead of re-emitting E.
   llvm::Value *evaluateOrEmitBuiltinObjectSize(const Expr *E, unsigned Type,
-                                               llvm::IntegerType *ResType);
+                                               llvm::IntegerType *ResType,
+                                               llvm::Value *EmittedE);
 
   /// \brief Emits the size of E, as required by __builtin_object_size. This
   /// function is aware of pass_object_size parameters, and will act accordingly
   /// if E is a parameter with the pass_object_size attribute.
   llvm::Value *emitBuiltinObjectSize(const Expr *E, unsigned Type,
-                                     llvm::IntegerType *ResType);
+                                     llvm::IntegerType *ResType,
+                                     llvm::Value *EmittedE);
 
 public:
 #ifndef NDEBUG

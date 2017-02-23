@@ -694,6 +694,11 @@ static void scanRelocs(InputSectionBase &C, ArrayRef<RelTy> Rels) {
       reportUndefined<ELFT>(Body, C, RI.r_offset);
 
     RelExpr Expr = Target->getRelExpr(Type, Body);
+
+    // Ignore "hint" relocations because they are only markers for relaxation.
+    if (isRelExprOneOf<R_HINT, R_NONE>(Expr))
+      continue;
+
     bool Preemptible = isPreemptible(Body, Type);
     Expr = adjustExpr(*File, Body, IsWrite, Expr, Type, Buf + RI.r_offset, C,
                       RI.r_offset);
@@ -732,9 +737,7 @@ static void scanRelocs(InputSectionBase &C, ArrayRef<RelTy> Rels) {
       continue;
     }
 
-    // Ignore "hint" and TLS Descriptor call relocation because they are
-    // only markers for relaxation.
-    if (isRelExprOneOf<R_HINT, R_TLSDESC_CALL>(Expr))
+    if (Expr == R_TLSDESC_CALL)
       continue;
 
     if (needsPlt(Expr) ||

@@ -298,7 +298,7 @@ private:
                                  OutputSectionBase *Sec);
 
   uintX_t Dot;
-  std::pair<Expr, uintX_t> CurLMA;
+  std::function<uint64_t()> LMAOffset;
   OutputSectionBase *CurOutSec = nullptr;
   MemoryRegion *CurMemRegion = nullptr;
   uintX_t ThreadBssOffset = 0;

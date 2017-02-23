@@ -2092,7 +2092,7 @@ STATIC int      s_ucmp(mp_int a, mp_int b)
 
 STATIC int      s_vcmp(mp_int a, mp_small v)
 {
-  mp_usmall uv = (mp_usmall) (v < 0) ? -v : v;
+  mp_usmall uv = (v < 0) ? -(mp_usmall) v : (mp_usmall) v;
   return s_uvcmp(a, uv);
 }
 

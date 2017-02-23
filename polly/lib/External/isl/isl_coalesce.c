@@ -1023,6 +1023,17 @@ static enum isl_change extend(int i, int j, int n, int *relax,
  * other basic map is included in the extension, because all other
  * inequality constraints are valid of "j") and we can replace the
  * two basic maps by this extension.
+ *
+ * If any of the relaxed constraints turn out to be redundant, then bail out.
+ * isl_tab_select_facet refuses to handle such constraints.  It may be
+ * possible to handle them anyway by making a distinction between
+ * redundant constraints with a corresponding facet that still intersects
+ * the set (allowing isl_tab_select_facet to handle them) and
+ * those where the facet does not intersect the set (which can be ignored
+ * because the empty facet is trivially included in the other disjunct).
+ * However, relaxed constraints that turn out to be redundant should
+ * be fairly rare and no such instance has been reported where
+ * coalescing would be successful.
  *        ____			  _____
  *       /    || 		 /     |
  *      /     ||  		/      |
@@ -1054,6 +1065,13 @@ static enum isl_change is_relaxed_extension(int i, int j, int n, int *relax,
 	for (l = 0; l < n; ++l)
 		if (isl_tab_relax(info[i].tab, n_eq + relax[l]) < 0)
 			return isl_change_error;
+	for (l = 0; l < n; ++l) {
+		if (!isl_tab_is_redundant(info[i].tab, n_eq + relax[l]))
+			continue;
+		if (isl_tab_rollback(info[i].tab, snap) < 0)
+			return isl_change_error;
+		return isl_change_none;
+	}
 	snap2 = isl_tab_snap(info[i].tab);
 	for (l = 0; l < n; ++l) {
 		if (isl_tab_rollback(info[i].tab, snap2) < 0)

@@ -3243,20 +3243,6 @@ void CodeGenFunction::EmitCallArgs(
     EvaluationOrder Order) {
   assert((int)ArgTypes.size() == (ArgRange.end() - ArgRange.begin()));
 
-  auto MaybeEmitImplicitObjectSize = [&](unsigned I, const Expr *Arg) {
-    if (CalleeDecl == nullptr || I >= CalleeDecl->getNumParams())
-      return;
-    auto *PS = CalleeDecl->getParamDecl(I)->getAttr<PassObjectSizeAttr>();
-    if (PS == nullptr)
-      return;
-
-    const auto &Context = getContext();
-    auto SizeTy = Context.getSizeType();
-    auto T = Builder.getIntNTy(Context.getTypeSize(SizeTy));
-    llvm::Value *V = evaluateOrEmitBuiltinObjectSize(Arg, PS->getType(), T);
-    Args.add(RValue::get(V), SizeTy);
-  };
-
   // We *have* to evaluate arguments from right to left in the MS C++ ABI,
   // because arguments are destroyed left to right in the callee. As a special
   // case, there are certain language constructs that require left-to-right
@@ -3266,6 +3252,27 @@ void CodeGenFunction::EmitCallArgs(
       CGM.getTarget().getCXXABI().areArgsDestroyedLeftToRightInCallee()
           ? Order == EvaluationOrder::ForceLeftToRight
           : Order != EvaluationOrder::ForceRightToLeft;
+
+  auto MaybeEmitImplicitObjectSize = [&](unsigned I, const Expr *Arg,
+                                         RValue EmittedArg) {
+    if (CalleeDecl == nullptr || I >= CalleeDecl->getNumParams())
+      return;
+    auto *PS = CalleeDecl->getParamDecl(I)->getAttr<PassObjectSizeAttr>();
+    if (PS == nullptr)
+      return;
+
+    const auto &Context = getContext();
+    auto SizeTy = Context.getSizeType();
+    auto T = Builder.getIntNTy(Context.getTypeSize(SizeTy));
+    assert(EmittedArg.getScalarVal() && "We emitted nothing for the arg?");
+    llvm::Value *V = evaluateOrEmitBuiltinObjectSize(Arg, PS->getType(), T,
+                                                     EmittedArg.getScalarVal());
+    Args.add(RValue::get(V), SizeTy);
+    // If we're emitting args in reverse, be sure to do so with
+    // pass_object_size, as well.
+    if (!LeftToRight)
+      std::swap(Args.back(), *(&Args.back() - 1));
+  };
 
   // Insert a stack save if we're going to need any inalloca args.
   bool HasInAllocaArgs = false;
@@ -3284,11 +3291,20 @@ void CodeGenFunction::EmitCallArgs(
   for (unsigned I = 0, E = ArgTypes.size(); I != E; ++I) {
     unsigned Idx = LeftToRight ? I : E - I - 1;
     CallExpr::const_arg_iterator Arg = ArgRange.begin() + Idx;
-    if (!LeftToRight) MaybeEmitImplicitObjectSize(Idx, *Arg);
+    unsigned InitialArgSize = Args.size();
     EmitCallArg(Args, *Arg, ArgTypes[Idx]);
-    EmitNonNullArgCheck(Args.back().RV, ArgTypes[Idx], (*Arg)->getExprLoc(),
-                        CalleeDecl, ParamsToSkip + Idx);
-    if (LeftToRight) MaybeEmitImplicitObjectSize(Idx, *Arg);
+    // In particular, we depend on it being the last arg in Args, and the
+    // objectsize bits depend on there only being one arg if !LeftToRight.
+    assert(InitialArgSize + 1 == Args.size() &&
+           "The code below depends on only adding one arg per EmitCallArg");
+    (void)InitialArgSize;
+    RValue RVArg = Args.back().RV;
+    EmitNonNullArgCheck(RVArg, ArgTypes[Idx], (*Arg)->getExprLoc(), CalleeDecl,
+                        ParamsToSkip + Idx);
+    // @llvm.objectsize should never have side-effects and shouldn't need
+    // destruction/cleanups, so we can safely "emit" it after its arg,
+    // regardless of right-to-leftness
+    MaybeEmitImplicitObjectSize(Idx, *Arg, RVArg);
   }
 
   if (!LeftToRight) {

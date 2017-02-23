@@ -1083,6 +1083,8 @@ inline int isl_sioimath_abs_cmp(isl_sioimath_src lhs, isl_sioimath_src rhs)
 }
 
 /* Return whether lhs is divisible by rhs.
+ * In particular, can rhs be multiplied by some integer to result in lhs?
+ * If rhs is zero, then this means lhs has to be zero too.
  */
 inline int isl_sioimath_is_divisible_by(isl_sioimath_src lhs,
 					isl_sioimath_src rhs)
@@ -1091,6 +1093,9 @@ inline int isl_sioimath_is_divisible_by(isl_sioimath_src lhs,
 	int32_t lhssmall, rhssmall;
 	mpz_t rem;
 	int cmp;
+
+	if (isl_sioimath_sgn(rhs) == 0)
+		return isl_sioimath_sgn(lhs) == 0;
 
 	if (isl_sioimath_decode_small(lhs, &lhssmall) &&
 	    isl_sioimath_decode_small(rhs, &rhssmall))

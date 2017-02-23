@@ -1,10 +1,15 @@
-; RUN: llc -relocation-model=static < %s | FileCheck %s
-; RUN: llc -relocation-model=pic < %s | FileCheck %s
-; RUN: llc -relocation-model=ropi < %s | FileCheck %s
-; RUN: llc -relocation-model=rwpi < %s | FileCheck %s
-
-target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-n32-S64"
-target triple = "armv7--linux-gnueabihf"
+; RUN: llc -mtriple armv7--linux-gnueabihf -relocation-model=static < %s | FileCheck %s --check-prefixes=CHECK,CHECK-V7,CHECK-V7ARM
+; RUN: llc -mtriple armv7--linux-gnueabihf -relocation-model=pic < %s | FileCheck %s --check-prefixes=CHECK,CHECK-V7,CHECK-V7ARM
+; RUN: llc -mtriple armv7--linux-gnueabihf -relocation-model=ropi < %s | FileCheck %s --check-prefixes=CHECK,CHECK-V7,CHECK-V7ARM
+; RUN: llc -mtriple armv7--linux-gnueabihf -relocation-model=rwpi < %s | FileCheck %s --check-prefixes=CHECK,CHECK-V7,CHECK-V7ARM
+; RUN: llc -mtriple thumbv7--linux-gnueabihf -relocation-model=static < %s | FileCheck %s --check-prefixes=CHECK,CHECK-V7,CHECK-V7THUMB
+; RUN: llc -mtriple thumbv7--linux-gnueabihf -relocation-model=pic < %s | FileCheck %s --check-prefixes=CHECK,CHECK-V7,CHECK-V7THUMB
+; RUN: llc -mtriple thumbv7--linux-gnueabihf -relocation-model=ropi < %s | FileCheck %s --check-prefixes=CHECK,CHECK-V7,CHECK-V7THUMB
+; RUN: llc -mtriple thumbv7--linux-gnueabihf -relocation-model=rwpi < %s | FileCheck %s --check-prefixes=CHECK,CHECK-V7,CHECK-V7THUMB
+; RUN: llc -mtriple thumbv6m--linux-gnueabihf -relocation-model=static < %s | FileCheck %s --check-prefixes=CHECK,CHECK-V6M
+; RUN: llc -mtriple thumbv6m--linux-gnueabihf -relocation-model=pic < %s | FileCheck %s --check-prefixes=CHECK,CHECK-V6M
+; RUN: llc -mtriple thumbv6m--linux-gnueabihf -relocation-model=ropi < %s | FileCheck %s --check-prefixes=CHECK,CHECK-V6M
+; RUN: llc -mtriple thumbv6m--linux-gnueabihf -relocation-model=rwpi < %s | FileCheck %s --check-prefixes=CHECK,CHECK-V6M
 
 @.str = private unnamed_addr constant [2 x i8] c"s\00", align 1
 @.str1 = private unnamed_addr constant [69 x i8] c"this string is far too long to fit in a literal pool by far and away\00", align 1
@@ -134,18 +139,48 @@ define void @test9() #0 {
   ret void
 }
 
+; CHECK-LABEL: @test10
+; CHECK-V6M: adr r{{[0-9]*}}, [[x:.*]]
+; CHECK-V6M: [[x]]:
+; CHECK-V6M: .asciz "s\000\000"
+; CHECK-V7: ldrb{{(.w)?}} r{{[0-9]*}}, [[x:.*]]
+; CHECK-V7: [[x]]:
+; CHECK-V7: .asciz "s\000\000"
+define void @test10(i8* %a) local_unnamed_addr #0 {
+  call void @llvm.memmove.p0i8.p0i8.i32(i8* %a, i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.str, i32 0, i32 0), i32 1, i32 1, i1 false)
+  ret void
+}
+
+; CHECK-LABEL: @test11
+; CHECK-V6M: adr r{{[0-9]*}}, [[x:.*]]
+; CHECK-V6M: [[x]]:
+; CHECK-V6M: .short 3
+; CHECK-V6M: .short 4
+; CHECK-V7THUMB: ldrh{{(.w)?}} r{{[0-9]*}}, [[x:.*]]
+; CHECK-V7THUMB: [[x]]:
+; CHECK-V7THUMB: .short 3
+; CHECK-V7THUMB: .short 4
+; CHECK-V7ARM: adr r{{[0-9]*}}, [[x:.*]]
+; CHECK-V7ARM: [[x]]:
+; CHECK-V7ARM: .short 3
+; CHECK-V7ARM: .short 4
+define void @test11(i16* %a) local_unnamed_addr #0 {
+  call void @llvm.memmove.p0i16.p0i16.i32(i16* %a, i16* getelementptr inbounds ([2 x i16], [2 x i16]* @.arr1, i32 0, i32 0), i32 2, i32 2, i1 false)
+  ret void
+}
+
 
 declare void @b(i8*) #1
 declare void @c(i16*) #1
 declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture writeonly, i8* nocapture readonly, i32, i32, i1)
+declare void @llvm.memmove.p0i8.p0i8.i32(i8*, i8*, i32, i32, i1) local_unnamed_addr
+declare void @llvm.memmove.p0i16.p0i16.i32(i16*, i16*, i32, i32, i1) local_unnamed_addr
 
 attributes #0 = { nounwind "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #2 = { nounwind }
 
 !llvm.module.flags = !{!0, !1}
-!llvm.ident = !{!2}
 
 !0 = !{i32 1, !"wchar_size", i32 4}
 !1 = !{i32 1, !"min_enum_size", i32 4}
-!2 = !{!"Apple LLVM version 6.1.0 (clang-602.0.53) (based on LLVM 3.6.0svn)"}

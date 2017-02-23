@@ -1,4 +1,5 @@
-; RUN: opt %loadPolly -polly-opt-isl -debug < %s 2>&1| FileCheck %s
+; RUN: opt %loadPolly -polly-opt-isl -polly-pattern-matching-based-opts=false \
+; RUN: -debug < %s 2>&1| FileCheck %s
 ; RUN: opt %loadPolly -polly-opt-isl -polly-pattern-matching-based-opts=true -debug < %s 2>&1| FileCheck %s --check-prefix=PATTERN-MATCHING-OPTS
 ; REQUIRES: asserts
 ;
