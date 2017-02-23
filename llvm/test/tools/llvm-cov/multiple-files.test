@@ -1,9 +1,15 @@
 // RUN: llvm-profdata merge %S/Inputs/multiple-files.proftext -o %t.profdata
-// RUN: llvm-cov report %S/Inputs/multiple-files.covmapping -instr-profile %t.profdata | FileCheck %s
+// RUN: llvm-cov report %S/Inputs/multiple-files.covmapping -instr-profile %t.profdata | FileCheck %s -check-prefix=MANY_COMPONENTS
+// RUN: llvm-cov report %S/Inputs/multiple-files2.covmapping -instr-profile %t.profdata | FileCheck %s -check-prefix=ONE_COMPONENT
 
-// CHECK: Filename
-// CHECK-NEXT: ---
-// CHECK-NEXT: {{^}}a{{[/\\]}}f2.c
-// CHECK-NEXT: {{^}}b{{[/\\]}}c{{[/\\]}}f4.c
-// CHECK-NEXT: {{^}}b{{[/\\]}}f3.c
-// CHECK-NEXT: {{^}}f1.c
+// MANY_COMPONENTS: Filename
+// MANY_COMPONENTS-NEXT: ---
+// MANY_COMPONENTS-NEXT: {{^}}a{{[/\\]}}f2.c
+// MANY_COMPONENTS-NEXT: {{^}}b{{[/\\]}}c{{[/\\]}}f4.c
+// MANY_COMPONENTS-NEXT: {{^}}b{{[/\\]}}f3.c
+// MANY_COMPONENTS-NEXT: {{^}}f1.c
+
+// ONE_COMPONENT: Filename
+// ONE_COMPONENT-NEXT: ---
+// ONE_COMPONENT-NEXT: {{^}}cov.c
+// ONE_COMPONENT-NEXT: {{^}}cov.h
