@@ -161,8 +161,8 @@ BitVector HexagonRegisterInfo::getReservedRegs(const MachineFunction &MF)
   Reserved.set(Hexagon::GP);          // C11
   Reserved.set(Hexagon::CS0);         // C12
   Reserved.set(Hexagon::CS1);         // C13
-  Reserved.set(Hexagon::UPCL);        // C14
-  Reserved.set(Hexagon::UPCH);        // C15
+  Reserved.set(Hexagon::UPCYCLELO);   // C14
+  Reserved.set(Hexagon::UPCYCLEHI);   // C15
   Reserved.set(Hexagon::FRAMELIMIT);  // C16
   Reserved.set(Hexagon::FRAMEKEY);    // C17
   Reserved.set(Hexagon::PKTCOUNTLO);  // C18

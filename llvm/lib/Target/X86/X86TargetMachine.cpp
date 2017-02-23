@@ -15,6 +15,7 @@
 #include "X86.h"
 #include "X86CallLowering.h"
 #include "X86LegalizerInfo.h"
+#include "X86InstructionSelector.h"
 #ifdef LLVM_BUILD_GLOBAL_ISEL
 #include "X86RegisterBankInfo.h"
 #endif
@@ -34,6 +35,7 @@
 #include "llvm/CodeGen/GlobalISel/IRTranslator.h"
 #include "llvm/CodeGen/GlobalISel/Legalizer.h"
 #include "llvm/CodeGen/GlobalISel/RegBankSelect.h"
+#include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
@@ -211,14 +213,14 @@ struct X86GISelActualAccessor : public GISelAccessor {
   std::unique_ptr<CallLowering> CallLoweringInfo;
   std::unique_ptr<LegalizerInfo> Legalizer;
   std::unique_ptr<RegisterBankInfo> RegBankInfo;
+  std::unique_ptr<InstructionSelector> InstSelector;
 
   const CallLowering *getCallLowering() const override {
     return CallLoweringInfo.get();
   }
 
   const InstructionSelector *getInstructionSelector() const override {
-    //TODO: Implement
-    return nullptr;
+    return InstSelector.get();
   }
 
   const LegalizerInfo *getLegalizerInfo() const override {
@@ -282,6 +284,7 @@ X86TargetMachine::getSubtargetImpl(const Function &F) const {
 
     auto *RBI = new X86RegisterBankInfo(*I->getRegisterInfo());
     GISel->RegBankInfo.reset(RBI);
+    GISel->InstSelector.reset(new X86InstructionSelector(*I, *RBI));
 
 #endif
     I->setGISelAccessor(*GISel);
@@ -391,7 +394,7 @@ bool X86PassConfig::addRegBankSelect() {
 }
 
 bool X86PassConfig::addGlobalInstructionSelect() {
-  //TODO: Implement
+  addPass(new InstructionSelect());
   return false;
 }
 #endif

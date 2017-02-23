@@ -593,55 +593,6 @@ public:
     return getWritableBlockDefs(BB);
   }
 
-  /// \brief Create an empty MemoryPhi in MemorySSA for a given basic block.
-  /// Only one MemoryPhi for a block exists at a time, so this function will
-  /// assert if you try to create one where it already exists.
-  MemoryPhi *createMemoryPhi(BasicBlock *BB);
-
-  enum InsertionPlace { Beginning, End };
-
-  /// \brief Create a MemoryAccess in MemorySSA at a specified point in a block,
-  /// with a specified clobbering definition.
-  ///
-  /// Returns the new MemoryAccess.
-  /// This should be called when a memory instruction is created that is being
-  /// used to replace an existing memory instruction. It will *not* create PHI
-  /// nodes, or verify the clobbering definition. The insertion place is used
-  /// solely to determine where in the memoryssa access lists the instruction
-  /// will be placed. The caller is expected to keep ordering the same as
-  /// instructions.
-  /// It will return the new MemoryAccess.
-  /// Note: If a MemoryAccess already exists for I, this function will make it
-  /// inaccessible and it *must* have removeMemoryAccess called on it.
-  MemoryAccess *createMemoryAccessInBB(Instruction *I, MemoryAccess *Definition,
-                                       const BasicBlock *BB,
-                                       InsertionPlace Point);
-
-  /// \brief Create a MemoryAccess in MemorySSA before or after an existing
-  /// MemoryAccess.
-  ///
-  /// Returns the new MemoryAccess.
-  /// This should be called when a memory instruction is created that is being
-  /// used to replace an existing memory instruction. It will *not* create PHI
-  /// nodes, or verify the clobbering definition.
-  ///
-  /// Note: If a MemoryAccess already exists for I, this function will make it
-  /// inaccessible and it *must* have removeMemoryAccess called on it.
-  MemoryUseOrDef *createMemoryAccessBefore(Instruction *I,
-                                           MemoryAccess *Definition,
-                                           MemoryUseOrDef *InsertPt);
-  MemoryUseOrDef *createMemoryAccessAfter(Instruction *I,
-                                          MemoryAccess *Definition,
-                                          MemoryAccess *InsertPt);
-
-  /// \brief Remove a MemoryAccess from MemorySSA, including updating all
-  /// definitions and uses.
-  /// This should be called when a memory instruction that has a MemoryAccess
-  /// associated with it is erased from the program.  For example, if a store or
-  /// load is simply erased (not replaced), removeMemoryAccess should be called
-  /// on the MemoryAccess for that store/load.
-  void removeMemoryAccess(MemoryAccess *);
-
   /// \brief Given two memory accesses in the same basic block, determine
   /// whether MemoryAccess \p A dominates MemoryAccess \p B.
   bool locallyDominates(const MemoryAccess *A, const MemoryAccess *B) const;
@@ -657,6 +608,10 @@ public:
   /// \brief Verify that MemorySSA is self consistent (IE definitions dominate
   /// all uses, uses appear in the right places).  This is used by unit tests.
   void verifyMemorySSA() const;
+
+  /// Used in various insertion functions to specify whether we are talking
+  /// about the beginning or end of a block.
+  enum InsertionPlace { Beginning, End };
 
 protected:
   // Used by Memory SSA annotater, dumpers, and wrapper pass
@@ -680,9 +635,10 @@ protected:
     return It == PerBlockDefs.end() ? nullptr : It->second.get();
   }
 
-  // This is used by the updater to perform the internal memoryssa machinations
-  // for moves.  It does not always leave the IR in a correct state, and relies
-  // on the updater to fixup what it breaks, so it is not public.
+  // These is used by the updater to perform various internal MemorySSA
+  // machinsations.  They do not always leave the IR in a correct state, and
+  // relies on the updater to fixup what it breaks, so it is not public.
+
   void moveTo(MemoryUseOrDef *What, BasicBlock *BB, AccessList::iterator Where);
   void moveTo(MemoryUseOrDef *What, BasicBlock *BB, InsertionPlace Point);
   // Rename the dominator tree branch rooted at BB.
@@ -690,6 +646,13 @@ protected:
                   SmallPtrSetImpl<BasicBlock *> &Visited) {
     renamePass(DT->getNode(BB), IncomingVal, Visited, true, true);
   }
+  void removeFromLookups(MemoryAccess *);
+  void removeFromLists(MemoryAccess *, bool ShouldDelete = true);
+  void insertIntoListsForBlock(MemoryAccess *, const BasicBlock *,
+                               InsertionPlace);
+  void insertIntoListsBefore(MemoryAccess *, const BasicBlock *,
+                             AccessList::iterator);
+  MemoryUseOrDef *createDefinedAccess(Instruction *, MemoryAccess *);
 
 private:
   class CachingWalker;
@@ -708,11 +671,9 @@ private:
   void computeDomLevels(DenseMap<DomTreeNode *, unsigned> &DomLevels);
   void markUnreachableAsLiveOnEntry(BasicBlock *BB);
   bool dominatesUse(const MemoryAccess *, const MemoryAccess *) const;
+  MemoryPhi *createMemoryPhi(BasicBlock *BB);
   MemoryUseOrDef *createNewAccess(Instruction *);
-  MemoryUseOrDef *createDefinedAccess(Instruction *, MemoryAccess *);
   MemoryAccess *findDominatingDef(BasicBlock *, enum InsertionPlace);
-  void removeFromLookups(MemoryAccess *);
-  void removeFromLists(MemoryAccess *, bool ShouldDelete = true);
   void placePHINodes(const SmallPtrSetImpl<BasicBlock *> &,
                      const DenseMap<const BasicBlock *, unsigned int> &);
   MemoryAccess *renameBlock(BasicBlock *, MemoryAccess *, bool);
@@ -723,10 +684,6 @@ private:
   AccessList *getOrCreateAccessList(const BasicBlock *);
   DefsList *getOrCreateDefsList(const BasicBlock *);
   void renumberBlock(const BasicBlock *) const;
-  void insertIntoListsForBlock(MemoryAccess *, const BasicBlock *,
-                               InsertionPlace);
-  void insertIntoListsBefore(MemoryAccess *, const BasicBlock *,
-                             AccessList::iterator);
   AliasAnalysis *AA;
   DominatorTree *DT;
   Function &F;

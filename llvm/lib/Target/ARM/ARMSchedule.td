@@ -89,9 +89,10 @@ def ReadMAC : SchedRead;
 // Divisions.
 def WriteDIV : SchedWrite;
 
-// Loads.
+// Loads/Stores.
 def WriteLd : SchedWrite;
 def WritePreLd : SchedWrite;
+def WriteST : SchedWrite;
 
 // Branches.
 def WriteBr : SchedWrite;

@@ -855,15 +855,19 @@ NewGVN::performSymbolicPredicateInfoEvaluation(Instruction *I) {
     return nullptr;
 
   DEBUG(dbgs() << "Found predicate info from instruction !\n");
-  auto *CopyOf = I->getOperand(0);
-  auto *Cond = dyn_cast<Instruction>(PI->Condition);
-  if (!Cond)
+
+  auto *PWC = dyn_cast<PredicateWithCondition>(PI);
+  if (!PWC)
     return nullptr;
+
+  auto *CopyOf = I->getOperand(0);
+  auto *Cond = PWC->Condition;
 
   // If this a copy of the condition, it must be either true or false depending
   // on the predicate info type and edge
   if (CopyOf == Cond) {
-    addPredicateUsers(PI, I);
+    // We should not need to add predicate users because the predicate info is
+    // already a use of this operand.
     if (isa<PredicateAssume>(PI))
       return createConstantExpression(ConstantInt::getTrue(Cond->getType()));
     if (auto *PBranch = dyn_cast<PredicateBranch>(PI)) {
@@ -871,32 +875,36 @@ NewGVN::performSymbolicPredicateInfoEvaluation(Instruction *I) {
         return createConstantExpression(ConstantInt::getTrue(Cond->getType()));
       return createConstantExpression(ConstantInt::getFalse(Cond->getType()));
     }
+    if (auto *PSwitch = dyn_cast<PredicateSwitch>(PI))
+      return createConstantExpression(cast<Constant>(PSwitch->CaseValue));
   }
-  // Not a copy of the condition, so see what the predicates tell us about this
-  // value.
+
   // Not a copy of the condition, so see what the predicates tell us about this
   // value.  First, though, we check to make sure the value is actually a copy
   // of one of the condition operands. It's possible, in certain cases, for it
   // to be a copy of a predicateinfo copy. In particular, if two branch
   // operations use the same condition, and one branch dominates the other, we
   // will end up with a copy of a copy.  This is currently a small deficiency in
-  // predicateinfo.   What will end up happening here is that we will value
+  // predicateinfo.  What will end up happening here is that we will value
   // number both copies the same anyway.
-  if (CopyOf != Cond->getOperand(0) && CopyOf != Cond->getOperand(1)) {
+
+  // Everything below relies on the condition being a comparison.
+  auto *Cmp = dyn_cast<CmpInst>(Cond);
+  if (!Cmp)
+    return nullptr;
+
+  if (CopyOf != Cmp->getOperand(0) && CopyOf != Cmp->getOperand(1)) {
     DEBUG(dbgs() << "Copy is not of any condition operands!");
     return nullptr;
   }
-  Value *FirstOp = lookupOperandLeader(Cond->getOperand(0));
-  Value *SecondOp = lookupOperandLeader(Cond->getOperand(1));
+  Value *FirstOp = lookupOperandLeader(Cmp->getOperand(0));
+  Value *SecondOp = lookupOperandLeader(Cmp->getOperand(1));
   bool SwappedOps = false;
   // Sort the ops
   if (shouldSwapOperands(FirstOp, SecondOp)) {
     std::swap(FirstOp, SecondOp);
     SwappedOps = true;
   }
-
-  // Everything below relies on the condition being a comparison.
-  auto *Cmp = dyn_cast<CmpInst>(Cond);
   CmpInst::Predicate Predicate =
       SwappedOps ? Cmp->getSwappedPredicate() : Cmp->getPredicate();
 
@@ -1095,7 +1103,6 @@ const Expression *NewGVN::performSymbolicCmpEvaluation(Instruction *I) {
 
   // Avoid processing the same info twice
   const PredicateBase *LastPredInfo = nullptr;
-
   // See if we know something about the comparison itself, like it is the target
   // of an assume.
   auto *CmpPI = PredInfo->getPredicateInfoFor(I);
@@ -1141,6 +1148,7 @@ const Expression *NewGVN::performSymbolicCmpEvaluation(Instruction *I) {
       if (PI == LastPredInfo)
         continue;
       LastPredInfo = PI;
+
       // TODO: Along the false edge, we may know more things too, like icmp of
       // same operands is false.
       // TODO: We only handle actual comparison conditions below, not and/or.

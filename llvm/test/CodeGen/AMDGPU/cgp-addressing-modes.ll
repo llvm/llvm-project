@@ -135,6 +135,47 @@ entry:
   %out.gep.0 = getelementptr i32, i32 addrspace(1)* %out, i64 999998
   %out.gep.1 = getelementptr i32, i32 addrspace(1)* %out, i64 999999
   %add.arg = add i32 %arg, 8
+  %alloca.gep = getelementptr [512 x i32], [512 x i32]* %alloca, i32 0, i32 1022
+  %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #0
+  %tmp0 = icmp eq i32 %tid, 0
+  br i1 %tmp0, label %endif, label %if
+
+if:
+  store volatile i32 123, i32* %alloca.gep
+  %tmp1 = load volatile i32, i32* %alloca.gep
+  br label %endif
+
+endif:
+  %x = phi i32 [ %tmp1, %if ], [ 0, %entry ]
+  store i32 %x, i32 addrspace(1)* %out.gep.0
+  %load = load volatile i32, i32* %alloca.gep
+  store i32 %load, i32 addrspace(1)* %out.gep.1
+  br label %done
+
+done:
+  ret void
+}
+
+; This ends up not fitting due to the reserved 4 bytes at offset 0
+; OPT-LABEL: @test_sink_scratch_small_offset_i32_reserved(
+; OPT-NOT:  getelementptr [512 x i32]
+; OPT: br i1
+; OPT: ptrtoint
+
+; GCN-LABEL: {{^}}test_sink_scratch_small_offset_i32_reserved:
+; GCN: s_and_saveexec_b64
+; GCN: v_mov_b32_e32 [[BASE_FI0:v[0-9]+]], 4
+; GCN: buffer_store_dword {{v[0-9]+}}, [[BASE_FI0]], {{s\[[0-9]+:[0-9]+\]}}, {{s[0-9]+}} offen offset:4092{{$}}
+; GCN: v_mov_b32_e32 [[BASE_FI1:v[0-9]+]], 4
+; GCN: buffer_load_dword {{v[0-9]+}}, [[BASE_FI1]], {{s\[[0-9]+:[0-9]+\]}}, {{s[0-9]+}} offen offset:4092{{$}}
+; GCN: {{^BB[0-9]+}}_2:
+
+define void @test_sink_scratch_small_offset_i32_reserved(i32 addrspace(1)* %out, i32 addrspace(1)* %in, i32 %arg) {
+entry:
+  %alloca = alloca [512 x i32], align 4
+  %out.gep.0 = getelementptr i32, i32 addrspace(1)* %out, i64 999998
+  %out.gep.1 = getelementptr i32, i32 addrspace(1)* %out, i64 999999
+  %add.arg = add i32 %arg, 8
   %alloca.gep = getelementptr [512 x i32], [512 x i32]* %alloca, i32 0, i32 1023
   %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #0
   %tmp0 = icmp eq i32 %tid, 0
@@ -165,7 +206,7 @@ done:
 ; GCN: s_and_saveexec_b64
 ; GCN: buffer_store_dword {{v[0-9]+}}, {{v[0-9]+}}, {{s\[[0-9]+:[0-9]+\]}}, {{s[0-9]+}} offen{{$}}
 ; GCN: buffer_load_dword {{v[0-9]+}}, {{v[0-9]+}}, {{s\[[0-9]+:[0-9]+\]}}, {{s[0-9]+}} offen{{$}}
-; GCN: {{^}}BB5_2:
+; GCN: {{^BB[0-9]+}}_2:
 define void @test_no_sink_scratch_large_offset_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in, i32 %arg) {
 entry:
   %alloca = alloca [512 x i32], align 4
@@ -197,7 +238,7 @@ done:
 ; GCN: s_and_saveexec_b64
 ; CI: buffer_load_dword {{v[0-9]+}}, {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
 ; VI: flat_load_dword v{{[0-9]+}}, v[{{[0-9]+:[0-9]+}}]
-; GCN: {{^}}BB6_2:
+; GCN: {{^BB[0-9]+}}_2:
 define void @test_sink_global_vreg_sreg_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in, i32 %offset) {
 entry:
   %offset.ext = zext i32 %offset to i64

@@ -1,4 +1,4 @@
-# RUN: llc -run-pass=greedy -mtriple=x86_64-apple-macosx -o - %s 2>&1 | FileCheck %s
+# RUN: llc -run-pass=greedy -mtriple=x86_64-apple-macosx -o - %s | FileCheck %s
 
 # Make sure we don't assert when we try to reload a value that is just implicitly used.
 ---

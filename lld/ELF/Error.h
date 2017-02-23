@@ -19,6 +19,10 @@
 //
 // Warn doesn't do anything but printing out a given message.
 //
+// It is not recommended to use llvm::outs() or llvm::errs() directly
+// in LLD because they are not thread-safe. The functions declared in
+// this file are thread-safe, so you want to use them instead.
+//
 //===----------------------------------------------------------------------===//
 
 #ifndef LLD_ELF_ERROR_H

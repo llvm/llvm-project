@@ -538,7 +538,8 @@ class T2FourReg<dag oops, dag iops, InstrItinClass itin,
 class T2MulLong<bits<3> opc22_20, bits<4> opc7_4,
                 string opc, list<dag> pattern>
   : T2I<(outs rGPR:$RdLo, rGPR:$RdHi), (ins rGPR:$Rn, rGPR:$Rm), IIC_iMUL64,
-         opc, "\t$RdLo, $RdHi, $Rn, $Rm", pattern> {
+         opc, "\t$RdLo, $RdHi, $Rn, $Rm", pattern>,
+    Sched<[WriteMUL64Lo, WriteMUL64Hi, ReadMUL, ReadMUL]> {
   bits<4> RdLo;
   bits<4> RdHi;
   bits<4> Rn;
@@ -556,7 +557,8 @@ class T2MlaLong<bits<3> opc22_20, bits<4> opc7_4, string opc>
   : T2I<(outs rGPR:$RdLo, rGPR:$RdHi),
         (ins rGPR:$Rn, rGPR:$Rm, rGPR:$RLo, rGPR:$RHi), IIC_iMAC64,
         opc, "\t$RdLo, $RdHi, $Rn, $Rm", []>,
-        RegConstraint<"$RLo = $RdLo, $RHi = $RdHi"> {
+        RegConstraint<"$RLo = $RdLo, $RHi = $RdHi">,
+    Sched<[WriteMAC64Lo, WriteMAC64Hi, ReadMUL, ReadMUL, ReadMAC, ReadMAC]> {
   bits<4> RdLo;
   bits<4> RdHi;
   bits<4> Rn;
@@ -977,7 +979,8 @@ multiclass T2I_ld<bit signed, bits<2> opcod, string opc,
                   PatFrag opnode> {
   def i12 : T2Ii12<(outs target:$Rt), (ins t2addrmode_imm12:$addr), iii,
                    opc, ".w\t$Rt, $addr",
-                   [(set target:$Rt, (opnode t2addrmode_imm12:$addr))]> {
+                   [(set target:$Rt, (opnode t2addrmode_imm12:$addr))]>,
+            Sched<[WriteLd]> {
     bits<4> Rt;
     bits<17> addr;
     let Inst{31-25} = 0b1111100;
@@ -993,7 +996,8 @@ multiclass T2I_ld<bit signed, bits<2> opcod, string opc,
   }
   def i8  : T2Ii8 <(outs target:$Rt), (ins t2addrmode_negimm8:$addr), iii,
                    opc, "\t$Rt, $addr",
-                   [(set target:$Rt, (opnode t2addrmode_negimm8:$addr))]> {
+                   [(set target:$Rt, (opnode t2addrmode_negimm8:$addr))]>,
+            Sched<[WriteLd]> {
     bits<4> Rt;
     bits<13> addr;
     let Inst{31-27} = 0b11111;
@@ -1015,7 +1019,8 @@ multiclass T2I_ld<bit signed, bits<2> opcod, string opc,
   }
   def s   : T2Iso <(outs target:$Rt), (ins t2addrmode_so_reg:$addr), iis,
                    opc, ".w\t$Rt, $addr",
-                   [(set target:$Rt, (opnode t2addrmode_so_reg:$addr))]> {
+                   [(set target:$Rt, (opnode t2addrmode_so_reg:$addr))]>,
+            Sched<[WriteLd]> {
     let Inst{31-27} = 0b11111;
     let Inst{26-25} = 0b00;
     let Inst{24} = signed;
@@ -1039,7 +1044,8 @@ multiclass T2I_ld<bit signed, bits<2> opcod, string opc,
   // from the PC.
   def pci : T2Ipc <(outs target:$Rt), (ins t2ldrlabel:$addr), iii,
                    opc, ".w\t$Rt, $addr",
-                   [(set target:$Rt, (opnode (ARMWrapper tconstpool:$addr)))]> {
+                   [(set target:$Rt, (opnode (ARMWrapper tconstpool:$addr)))]>,
+            Sched<[WriteLd]> {
     let isReMaterializable = 1;
     let Inst{31-27} = 0b11111;
     let Inst{26-25} = 0b00;
@@ -1065,7 +1071,8 @@ multiclass T2I_st<bits<2> opcod, string opc,
                   PatFrag opnode> {
   def i12 : T2Ii12<(outs), (ins target:$Rt, t2addrmode_imm12:$addr), iii,
                    opc, ".w\t$Rt, $addr",
-                   [(opnode target:$Rt, t2addrmode_imm12:$addr)]> {
+                   [(opnode target:$Rt, t2addrmode_imm12:$addr)]>,
+            Sched<[WriteST]> {
     let Inst{31-27} = 0b11111;
     let Inst{26-23} = 0b0001;
     let Inst{22-21} = opcod;
@@ -1082,7 +1089,8 @@ multiclass T2I_st<bits<2> opcod, string opc,
   }
   def i8  : T2Ii8 <(outs), (ins target:$Rt, t2addrmode_negimm8:$addr), iii,
                    opc, "\t$Rt, $addr",
-                   [(opnode target:$Rt, t2addrmode_negimm8:$addr)]> {
+                   [(opnode target:$Rt, t2addrmode_negimm8:$addr)]>,
+            Sched<[WriteST]> {
     let Inst{31-27} = 0b11111;
     let Inst{26-23} = 0b0000;
     let Inst{22-21} = opcod;
@@ -1102,7 +1110,8 @@ multiclass T2I_st<bits<2> opcod, string opc,
   }
   def s   : T2Iso <(outs), (ins target:$Rt, t2addrmode_so_reg:$addr), iis,
                    opc, ".w\t$Rt, $addr",
-                   [(opnode target:$Rt, t2addrmode_so_reg:$addr)]> {
+                   [(opnode target:$Rt, t2addrmode_so_reg:$addr)]>,
+            Sched<[WriteST]> {
     let Inst{31-27} = 0b11111;
     let Inst{26-23} = 0b0000;
     let Inst{22-21} = opcod;
@@ -1140,7 +1149,8 @@ class T2I_ext_rrot<bits<3> opcod, string opc>
                       (outs rGPR:$Rd),
                       (ins rGPR:$Rm, rot_imm:$rot),
                       opc, ".w\t$Rd, $Rm$rot", []>,
-                      Requires<[IsThumb2]>;
+                      Requires<[IsThumb2]>,
+                      Sched<[WriteALU, ReadALU]>;
 
 // UXTB16, SXTB16 - Requires HasDSP, does not need the .w qualifier.
 class T2I_ext_rrot_xtb16<bits<3> opcod, string opc>
@@ -1148,7 +1158,8 @@ class T2I_ext_rrot_xtb16<bits<3> opcod, string opc>
                       (outs rGPR:$Rd),
                       (ins rGPR:$Rm, rot_imm:$rot),
                       opc, "\t$Rd, $Rm$rot", []>,
-                      Requires<[HasDSP, IsThumb2]>;
+                      Requires<[HasDSP, IsThumb2]>,
+                      Sched<[WriteALU, ReadALU]>;
 
 /// T2I_exta_rrot - A binary operation with two forms: one whose operand is a
 /// register and one whose operand is a register rotated by 8/16/24.
@@ -1156,7 +1167,8 @@ class T2I_exta_rrot<bits<3> opcod, string opc>
   : T2ThreeReg<(outs rGPR:$Rd),
                (ins rGPR:$Rn, rGPR:$Rm, rot_imm:$rot),
                IIC_iEXTAsr, opc, "\t$Rd, $Rn, $Rm$rot", []>,
-               Requires<[HasDSP, IsThumb2]> {
+               Requires<[HasDSP, IsThumb2]>,
+               Sched<[WriteALU, ReadALU]> {
   bits<2> rot;
   let Inst{31-27} = 0b11111;
   let Inst{26-23} = 0b0100;
@@ -1246,7 +1258,8 @@ let mayLoad = 1, hasSideEffects = 0, hasExtraDefRegAllocReq = 1 in {
 // Load doubleword
 def t2LDRDi8  : T2Ii8s4<1, 0, 1, (outs rGPR:$Rt, rGPR:$Rt2),
                         (ins t2addrmode_imm8s4:$addr),
-                        IIC_iLoad_d_i, "ldrd", "\t$Rt, $Rt2, $addr", "", []>;
+                        IIC_iLoad_d_i, "ldrd", "\t$Rt, $Rt2, $addr", "", []>,
+                 Sched<[WriteLd]>;
 } // mayLoad = 1, hasSideEffects = 0, hasExtraDefRegAllocReq = 1
 
 // zextload i1 -> zextload i8
@@ -1300,17 +1313,20 @@ let mayLoad = 1, hasSideEffects = 0 in {
 def t2LDR_PRE  : T2Ipreldst<0, 0b10, 1, 1, (outs GPR:$Rt, GPR:$Rn_wb),
                             (ins t2addrmode_imm8_pre:$addr),
                             AddrModeT2_i8, IndexModePre, IIC_iLoad_iu,
-                            "ldr", "\t$Rt, $addr!", "$addr.base = $Rn_wb", []>;
+                            "ldr", "\t$Rt, $addr!", "$addr.base = $Rn_wb", []>,
+                 Sched<[WriteLd]>;
 
 def t2LDR_POST : T2Ipostldst<0, 0b10, 1, 0, (outs GPR:$Rt, GPR:$Rn_wb),
                           (ins addr_offset_none:$Rn, t2am_imm8_offset:$offset),
                           AddrModeT2_i8, IndexModePost, IIC_iLoad_iu,
-                          "ldr", "\t$Rt, $Rn$offset", "$Rn = $Rn_wb", []>;
+                          "ldr", "\t$Rt, $Rn$offset", "$Rn = $Rn_wb", []>,
+                  Sched<[WriteLd]>;
 
 def t2LDRB_PRE : T2Ipreldst<0, 0b00, 1, 1, (outs GPR:$Rt, GPR:$Rn_wb),
                             (ins t2addrmode_imm8_pre:$addr),
                             AddrModeT2_i8, IndexModePre, IIC_iLoad_bh_iu,
-                            "ldrb", "\t$Rt, $addr!", "$addr.base = $Rn_wb", []>;
+                            "ldrb", "\t$Rt, $addr!", "$addr.base = $Rn_wb", []>,
+                 Sched<[WriteLd]>;
 
 def t2LDRB_POST : T2Ipostldst<0, 0b00, 1, 0, (outs GPR:$Rt, GPR:$Rn_wb),
                           (ins addr_offset_none:$Rn, t2am_imm8_offset:$offset),
@@ -1320,41 +1336,45 @@ def t2LDRB_POST : T2Ipostldst<0, 0b00, 1, 0, (outs GPR:$Rt, GPR:$Rn_wb),
 def t2LDRH_PRE : T2Ipreldst<0, 0b01, 1, 1, (outs GPR:$Rt, GPR:$Rn_wb),
                             (ins t2addrmode_imm8_pre:$addr),
                             AddrModeT2_i8, IndexModePre, IIC_iLoad_bh_iu,
-                            "ldrh", "\t$Rt, $addr!", "$addr.base = $Rn_wb", []>;
+                            "ldrh", "\t$Rt, $addr!", "$addr.base = $Rn_wb", []>,
+                Sched<[WriteLd]>;
 
 def t2LDRH_POST : T2Ipostldst<0, 0b01, 1, 0, (outs GPR:$Rt, GPR:$Rn_wb),
                           (ins addr_offset_none:$Rn, t2am_imm8_offset:$offset),
                           AddrModeT2_i8, IndexModePost, IIC_iLoad_bh_iu,
-                          "ldrh", "\t$Rt, $Rn$offset", "$Rn = $Rn_wb", []>;
+                          "ldrh", "\t$Rt, $Rn$offset", "$Rn = $Rn_wb", []>,
+                  Sched<[WriteLd]>;
 
 def t2LDRSB_PRE : T2Ipreldst<1, 0b00, 1, 1, (outs GPR:$Rt, GPR:$Rn_wb),
                             (ins t2addrmode_imm8_pre:$addr),
                             AddrModeT2_i8, IndexModePre, IIC_iLoad_bh_iu,
                             "ldrsb", "\t$Rt, $addr!", "$addr.base = $Rn_wb",
-                            []>;
+                            []>, Sched<[WriteLd]>;
 
 def t2LDRSB_POST : T2Ipostldst<1, 0b00, 1, 0, (outs GPR:$Rt, GPR:$Rn_wb),
                           (ins addr_offset_none:$Rn, t2am_imm8_offset:$offset),
                           AddrModeT2_i8, IndexModePost, IIC_iLoad_bh_iu,
-                          "ldrsb", "\t$Rt, $Rn$offset", "$Rn = $Rn_wb", []>;
+                          "ldrsb", "\t$Rt, $Rn$offset", "$Rn = $Rn_wb", []>,
+                   Sched<[WriteLd]>;
 
 def t2LDRSH_PRE : T2Ipreldst<1, 0b01, 1, 1, (outs GPR:$Rt, GPR:$Rn_wb),
                             (ins t2addrmode_imm8_pre:$addr),
                             AddrModeT2_i8, IndexModePre, IIC_iLoad_bh_iu,
                             "ldrsh", "\t$Rt, $addr!", "$addr.base = $Rn_wb",
-                            []>;
+                            []>, Sched<[WriteLd]>;
 
 def t2LDRSH_POST : T2Ipostldst<1, 0b01, 1, 0, (outs GPR:$Rt, GPR:$Rn_wb),
                           (ins addr_offset_none:$Rn, t2am_imm8_offset:$offset),
                           AddrModeT2_i8, IndexModePost, IIC_iLoad_bh_iu,
-                          "ldrsh", "\t$Rt, $Rn$offset", "$Rn = $Rn_wb", []>;
+                          "ldrsh", "\t$Rt, $Rn$offset", "$Rn = $Rn_wb", []>,
+                  Sched<[WriteLd]>;
 } // mayLoad = 1, hasSideEffects = 0
 
 // LDRT, LDRBT, LDRHT, LDRSBT, LDRSHT all have offset mode (PUW=0b110).
 // Ref: A8.6.57 LDR (immediate, Thumb) Encoding T4
 class T2IldT<bit signed, bits<2> type, string opc, InstrItinClass ii>
   : T2Ii8<(outs rGPR:$Rt), (ins t2addrmode_posimm8:$addr), ii, opc,
-          "\t$Rt, $addr", []> {
+          "\t$Rt, $addr", []>, Sched<[WriteLd]> {
   bits<4> Rt;
   bits<13> addr;
   let Inst{31-27} = 0b11111;
@@ -1398,11 +1418,14 @@ class T2Ildacq<bits<4> bits23_20, bits<2> bit54, dag oops, dag iops,
 }
 
 def t2LDA : T2Ildacq<0b1101, 0b10, (outs rGPR:$Rt),
-                     (ins addr_offset_none:$addr), "lda", "\t$Rt, $addr", []>;
+                     (ins addr_offset_none:$addr), "lda", "\t$Rt, $addr", []>,
+            Sched<[WriteLd]>;
 def t2LDAB : T2Ildacq<0b1101, 0b00, (outs rGPR:$Rt),
-                      (ins addr_offset_none:$addr), "ldab", "\t$Rt, $addr", []>;
+                      (ins addr_offset_none:$addr), "ldab", "\t$Rt, $addr", []>,
+            Sched<[WriteLd]>;
 def t2LDAH : T2Ildacq<0b1101, 0b01, (outs rGPR:$Rt),
-                      (ins addr_offset_none:$addr), "ldah", "\t$Rt, $addr", []>;
+                      (ins addr_offset_none:$addr), "ldah", "\t$Rt, $addr", []>,
+            Sched<[WriteLd]>;
 
 // Store
 defm t2STR :T2I_st<0b10,"str", IIC_iStore_i, IIC_iStore_si, GPR, store>;
@@ -1415,7 +1438,8 @@ defm t2STRH:T2I_st<0b01,"strh", IIC_iStore_bh_i, IIC_iStore_bh_si,
 let mayStore = 1, hasSideEffects = 0, hasExtraSrcRegAllocReq = 1 in
 def t2STRDi8 : T2Ii8s4<1, 0, 0, (outs),
                        (ins rGPR:$Rt, rGPR:$Rt2, t2addrmode_imm8s4:$addr),
-               IIC_iStore_d_r, "strd", "\t$Rt, $Rt2, $addr", "", []>;
+               IIC_iStore_d_r, "strd", "\t$Rt, $Rt2, $addr", "", []>,
+               Sched<[WriteST]>;
 
 // Indexed stores
 
@@ -1424,19 +1448,22 @@ def t2STR_PRE  : T2Ipreldst<0, 0b10, 0, 1, (outs GPRnopc:$Rn_wb),
                             (ins GPRnopc:$Rt, t2addrmode_imm8_pre:$addr),
                             AddrModeT2_i8, IndexModePre, IIC_iStore_iu,
                             "str", "\t$Rt, $addr!",
-                            "$addr.base = $Rn_wb,@earlyclobber $Rn_wb", []>;
+                            "$addr.base = $Rn_wb,@earlyclobber $Rn_wb", []>,
+                 Sched<[WriteST]>;
 
 def t2STRH_PRE  : T2Ipreldst<0, 0b01, 0, 1, (outs GPRnopc:$Rn_wb),
                             (ins rGPR:$Rt, t2addrmode_imm8_pre:$addr),
                             AddrModeT2_i8, IndexModePre, IIC_iStore_iu,
                         "strh", "\t$Rt, $addr!",
-                        "$addr.base = $Rn_wb,@earlyclobber $Rn_wb", []>;
+                        "$addr.base = $Rn_wb,@earlyclobber $Rn_wb", []>,
+                  Sched<[WriteST]>;
 
 def t2STRB_PRE  : T2Ipreldst<0, 0b00, 0, 1, (outs GPRnopc:$Rn_wb),
                             (ins rGPR:$Rt, t2addrmode_imm8_pre:$addr),
                             AddrModeT2_i8, IndexModePre, IIC_iStore_bh_iu,
                         "strb", "\t$Rt, $addr!",
-                        "$addr.base = $Rn_wb,@earlyclobber $Rn_wb", []>;
+                        "$addr.base = $Rn_wb,@earlyclobber $Rn_wb", []>,
+            Sched<[WriteST]>;
 } // mayStore = 1, hasSideEffects = 0
 
 def t2STR_POST : T2Ipostldst<0, 0b10, 0, 0, (outs GPRnopc:$Rn_wb),
@@ -1447,7 +1474,8 @@ def t2STR_POST : T2Ipostldst<0, 0b10, 0, 0, (outs GPRnopc:$Rn_wb),
                           "$Rn = $Rn_wb,@earlyclobber $Rn_wb",
              [(set GPRnopc:$Rn_wb,
                   (post_store GPRnopc:$Rt, addr_offset_none:$Rn,
-                              t2am_imm8_offset:$offset))]>;
+                              t2am_imm8_offset:$offset))]>,
+            Sched<[WriteST]>;
 
 def t2STRH_POST : T2Ipostldst<0, 0b01, 0, 0, (outs GPRnopc:$Rn_wb),
                             (ins rGPR:$Rt, addr_offset_none:$Rn,
@@ -1457,7 +1485,8 @@ def t2STRH_POST : T2Ipostldst<0, 0b01, 0, 0, (outs GPRnopc:$Rn_wb),
                          "$Rn = $Rn_wb,@earlyclobber $Rn_wb",
        [(set GPRnopc:$Rn_wb,
              (post_truncsti16 rGPR:$Rt, addr_offset_none:$Rn,
-                              t2am_imm8_offset:$offset))]>;
+                              t2am_imm8_offset:$offset))]>,
+            Sched<[WriteST]>;
 
 def t2STRB_POST : T2Ipostldst<0, 0b00, 0, 0, (outs GPRnopc:$Rn_wb),
                             (ins rGPR:$Rt, addr_offset_none:$Rn,
@@ -1467,7 +1496,8 @@ def t2STRB_POST : T2Ipostldst<0, 0b00, 0, 0, (outs GPRnopc:$Rn_wb),
                          "$Rn = $Rn_wb,@earlyclobber $Rn_wb",
         [(set GPRnopc:$Rn_wb,
               (post_truncsti8 rGPR:$Rt, addr_offset_none:$Rn,
-                              t2am_imm8_offset:$offset))]>;
+                              t2am_imm8_offset:$offset))]>,
+            Sched<[WriteST]>;
 
 // Pseudo-instructions for pattern matching the pre-indexed stores. We can't
 // put the patterns on the instruction definitions directly as ISel wants
@@ -1480,17 +1510,20 @@ def t2STR_preidx: t2PseudoInst<(outs GPRnopc:$Rn_wb),
                (ins rGPR:$Rt, GPRnopc:$Rn, t2am_imm8_offset:$offset, pred:$p),
                4, IIC_iStore_ru,
       [(set GPRnopc:$Rn_wb,
-            (pre_store rGPR:$Rt, GPRnopc:$Rn, t2am_imm8_offset:$offset))]>;
+            (pre_store rGPR:$Rt, GPRnopc:$Rn, t2am_imm8_offset:$offset))]>,
+            Sched<[WriteST]>;
 def t2STRB_preidx: t2PseudoInst<(outs GPRnopc:$Rn_wb),
                (ins rGPR:$Rt, GPRnopc:$Rn, t2am_imm8_offset:$offset, pred:$p),
                4, IIC_iStore_ru,
       [(set GPRnopc:$Rn_wb,
-            (pre_truncsti8 rGPR:$Rt, GPRnopc:$Rn, t2am_imm8_offset:$offset))]>;
+            (pre_truncsti8 rGPR:$Rt, GPRnopc:$Rn, t2am_imm8_offset:$offset))]>,
+            Sched<[WriteST]>;
 def t2STRH_preidx: t2PseudoInst<(outs GPRnopc:$Rn_wb),
                (ins rGPR:$Rt, GPRnopc:$Rn, t2am_imm8_offset:$offset, pred:$p),
                4, IIC_iStore_ru,
       [(set GPRnopc:$Rn_wb,
-            (pre_truncsti16 rGPR:$Rt, GPRnopc:$Rn, t2am_imm8_offset:$offset))]>;
+            (pre_truncsti16 rGPR:$Rt, GPRnopc:$Rn, t2am_imm8_offset:$offset))]>,
+            Sched<[WriteST]>;
 }
 
 // STRT, STRBT, STRHT all have offset mode (PUW=0b110) and are for disassembly
@@ -1498,7 +1531,7 @@ def t2STRH_preidx: t2PseudoInst<(outs GPRnopc:$Rn_wb),
 // Ref: A8.6.193 STR (immediate, Thumb) Encoding T4
 class T2IstT<bits<2> type, string opc, InstrItinClass ii>
   : T2Ii8<(outs rGPR:$Rt), (ins t2addrmode_imm8:$addr), ii, opc,
-          "\t$Rt, $addr", []> {
+          "\t$Rt, $addr", []>, Sched<[WriteST]> {
   let Inst{31-27} = 0b11111;
   let Inst{26-25} = 0b00;
   let Inst{24} = 0; // not signed
@@ -1524,7 +1557,8 @@ def t2STRHT  : T2IstT<0b01, "strht", IIC_iStore_bh_i>;
 let mayLoad = 1 in
 def t2LDRD_PRE  : T2Ii8s4<1, 1, 1, (outs rGPR:$Rt, rGPR:$Rt2, GPR:$wb),
                  (ins t2addrmode_imm8s4_pre:$addr), IIC_iLoad_d_ru,
-                 "ldrd", "\t$Rt, $Rt2, $addr!", "$addr.base = $wb", []> {
+                 "ldrd", "\t$Rt, $Rt2, $addr!", "$addr.base = $wb", []>,
+                 Sched<[WriteLd]> {
   let DecoderMethod = "DecodeT2LDRDPreInstruction";
 }
 
@@ -1532,13 +1566,13 @@ let mayLoad = 1 in
 def t2LDRD_POST : T2Ii8s4post<0, 1, 1, (outs rGPR:$Rt, rGPR:$Rt2, GPR:$wb),
                  (ins addr_offset_none:$addr, t2am_imm8s4_offset:$imm),
                  IIC_iLoad_d_ru, "ldrd", "\t$Rt, $Rt2, $addr$imm",
-                 "$addr.base = $wb", []>;
+                 "$addr.base = $wb", []>, Sched<[WriteLd]>;
 
 let mayStore = 1 in
 def t2STRD_PRE  : T2Ii8s4<1, 1, 0, (outs GPR:$wb),
                  (ins rGPR:$Rt, rGPR:$Rt2, t2addrmode_imm8s4_pre:$addr),
                  IIC_iStore_d_ru, "strd", "\t$Rt, $Rt2, $addr!",
-                 "$addr.base = $wb", []> {
+                 "$addr.base = $wb", []>, Sched<[WriteST]> {
   let DecoderMethod = "DecodeT2STRDPreInstruction";
 }
 
@@ -1547,12 +1581,13 @@ def t2STRD_POST : T2Ii8s4post<0, 1, 0, (outs GPR:$wb),
                  (ins rGPR:$Rt, rGPR:$Rt2, addr_offset_none:$addr,
                       t2am_imm8s4_offset:$imm),
                  IIC_iStore_d_ru, "strd", "\t$Rt, $Rt2, $addr$imm",
-                 "$addr.base = $wb", []>;
+                 "$addr.base = $wb", []>, Sched<[WriteST]>;
 
 class T2Istrrel<bits<2> bit54, dag oops, dag iops,
                 string opc, string asm, list<dag> pattern>
   : Thumb2I<oops, iops, AddrModeNone, 4, NoItinerary, opc,
-            asm, "", pattern>, Requires<[IsThumb, HasAcquireRelease]> {
+            asm, "", pattern>, Requires<[IsThumb, HasAcquireRelease]>,
+    Sched<[WriteST]> {
   bits<4> Rt;
   bits<4> addr;
 
@@ -1893,10 +1928,11 @@ def t2MOVi16 : T2I<(outs rGPR:$Rd), (ins imm0_65535_expr:$imm), IIC_iMOVi,
 
 def : InstAlias<"mov${p} $Rd, $imm",
                 (t2MOVi16 rGPR:$Rd, imm256_65535_expr:$imm, pred:$p), 0>,
-                Requires<[IsThumb, HasV8MBaseline]>;
+                Requires<[IsThumb, HasV8MBaseline]>, Sched<[WriteALU]>;
 
 def t2MOVi16_ga_pcrel : PseudoInst<(outs rGPR:$Rd),
-                                (ins i32imm:$addr, pclabel:$id), IIC_iMOVi, []>;
+                                (ins i32imm:$addr, pclabel:$id), IIC_iMOVi, []>,
+                        Sched<[WriteALU]>;
 
 let Constraints = "$src = $Rd" in {
 def t2MOVTi16 : T2I<(outs rGPR:$Rd),
@@ -2530,7 +2566,8 @@ def : T2Pat<(t2_so_imm_not:$src),
 let isCommutable = 1 in
 def t2MUL: T2ThreeReg<(outs rGPR:$Rd), (ins rGPR:$Rn, rGPR:$Rm), IIC_iMUL32,
                 "mul", "\t$Rd, $Rn, $Rm",
-                [(set rGPR:$Rd, (mul rGPR:$Rn, rGPR:$Rm))]> {
+                [(set rGPR:$Rd, (mul rGPR:$Rn, rGPR:$Rm))]>,
+           Sched<[WriteMUL32, ReadMUL, ReadMUL]> {
   let Inst{31-27} = 0b11111;
   let Inst{26-23} = 0b0110;
   let Inst{22-20} = 0b000;
@@ -2541,7 +2578,8 @@ def t2MUL: T2ThreeReg<(outs rGPR:$Rd), (ins rGPR:$Rn, rGPR:$Rm), IIC_iMUL32,
 class T2FourRegMLA<bits<4> op7_4, string opc, list<dag> pattern>
   : T2FourReg<(outs rGPR:$Rd), (ins rGPR:$Rn, rGPR:$Rm, rGPR:$Ra), IIC_iMAC32,
                opc, "\t$Rd, $Rn, $Rm, $Ra", pattern>,
-               Requires<[IsThumb2, UseMulOps]> {
+               Requires<[IsThumb2, UseMulOps]>,
+    Sched<[WriteMAC32, ReadMUL, ReadMUL, ReadMAC]>  {
   let Inst{31-27} = 0b11111;
   let Inst{26-23} = 0b0110;
   let Inst{22-20} = 0b000;
@@ -2575,7 +2613,8 @@ class T2SMMUL<bits<4> op7_4, string opc, list<dag> pattern>
   : T2ThreeReg<(outs rGPR:$Rd),
                (ins rGPR:$Rn, rGPR:$Rm), IIC_iMUL32,
                opc, "\t$Rd, $Rn, $Rm", pattern>,
-               Requires<[IsThumb2, HasDSP]> {
+               Requires<[IsThumb2, HasDSP]>,
+    Sched<[WriteMUL32, ReadMUL, ReadMUL]> {
   let Inst{31-27} = 0b11111;
   let Inst{26-23} = 0b0110;
   let Inst{22-20} = 0b101;
@@ -2590,7 +2629,8 @@ class T2FourRegSMMLA<bits<3> op22_20, bits<4> op7_4, string opc,
                      list<dag> pattern>
   : T2FourReg<(outs rGPR:$Rd), (ins rGPR:$Rn, rGPR:$Rm, rGPR:$Ra), IIC_iMAC32,
               opc, "\t$Rd, $Rn, $Rm, $Ra", pattern>,
-              Requires<[IsThumb2, HasDSP, UseMulOps]> {
+              Requires<[IsThumb2, HasDSP, UseMulOps]>,
+    Sched<[WriteMAC32, ReadMUL, ReadMUL, ReadMAC]> {
   let Inst{31-27} = 0b11111;
   let Inst{26-23} = 0b0110;
   let Inst{22-20} = op22_20;
@@ -2607,7 +2647,8 @@ class T2ThreeRegSMUL<bits<3> op22_20, bits<2> op5_4, string opc,
                      list<dag> pattern>
   : T2ThreeReg<(outs rGPR:$Rd), (ins rGPR:$Rn, rGPR:$Rm), IIC_iMUL16, opc,
                "\t$Rd, $Rn, $Rm", pattern>,
-    Requires<[IsThumb2, HasDSP]> {
+    Requires<[IsThumb2, HasDSP]>,
+    Sched<[WriteMUL16, ReadMUL, ReadMUL]> {
     let Inst{31-27} = 0b11111;
     let Inst{26-23} = 0b0110;
     let Inst{22-20} = op22_20;
@@ -2642,7 +2683,8 @@ class T2FourRegSMLA<bits<3> op22_20, bits<2> op5_4, string opc,
                     list<dag> pattern>
   : T2FourReg<(outs rGPR:$Rd), (ins rGPR:$Rn, rGPR:$Rm, rGPR:$Ra), IIC_iMUL16,
                opc, "\t$Rd, $Rn, $Rm, $Ra", pattern>,
-    Requires<[IsThumb2, HasDSP, UseMulOps]> {
+    Requires<[IsThumb2, HasDSP, UseMulOps]>,
+    Sched<[WriteMAC16, ReadMUL, ReadMUL, ReadMAC]>  {
     let Inst{31-27} = 0b11111;
     let Inst{26-23} = 0b0110;
     let Inst{22-20} = op22_20;
@@ -2680,7 +2722,8 @@ class T2SMLAL<bits<3> op22_20, bits<4> op7_4, string opc, list<dag> pattern>
                   (outs rGPR:$Ra, rGPR:$Rd),
                   (ins rGPR:$Rn, rGPR:$Rm),
                   IIC_iMAC64, opc, "\t$Ra, $Rd, $Rn, $Rm", []>,
-                  Requires<[IsThumb2, HasDSP]>;
+                  Requires<[IsThumb2, HasDSP]>,
+    Sched<[WriteMAC64Lo, WriteMAC64Hi, ReadMUL, ReadMUL, ReadMAC, ReadMAC]>;
 
 // Halfword multiple accumulate long: SMLAL<x><y>
 def t2SMLALBB : T2SMLAL<0b100, 0b1000, "smlalbb", []>;
@@ -2693,7 +2736,8 @@ class T2DualHalfMul<bits<3> op22_20, bits<4> op7_4, string opc>
                    (outs rGPR:$Rd),
                    (ins rGPR:$Rn, rGPR:$Rm),
                    IIC_iMAC32, opc, "\t$Rd, $Rn, $Rm", []>,
-                   Requires<[IsThumb2, HasDSP]> {
+                   Requires<[IsThumb2, HasDSP]>,
+   Sched<[WriteMAC32, ReadMUL, ReadMUL, ReadMAC]> {
   let Inst{15-12} = 0b1111;
 }
 
@@ -2720,7 +2764,8 @@ class T2DualHalfMulAddLong<bits<3> op22_20, bits<4> op7_4, string opc>
                   (outs rGPR:$Ra, rGPR:$Rd),
                   (ins rGPR:$Rn, rGPR:$Rm),
                   IIC_iMAC64, opc, "\t$Ra, $Rd, $Rn, $Rm", []>,
-                  Requires<[IsThumb2, HasDSP]>;
+                  Requires<[IsThumb2, HasDSP]>,
+    Sched<[WriteMAC64Lo, WriteMAC64Hi, ReadMUL, ReadMUL, ReadMAC, ReadMAC]>;
 
 def t2SMLALD  : T2DualHalfMulAddLong<0b100, 0b1100, "smlald">;
 def t2SMLALDX : T2DualHalfMulAddLong<0b100, 0b1101, "smlaldx">;
@@ -2734,7 +2779,8 @@ def t2SMLSLDX : T2DualHalfMulAddLong<0b101, 0b1101, "smlsldx">;
 def t2SDIV : T2ThreeReg<(outs rGPR:$Rd), (ins rGPR:$Rn, rGPR:$Rm), IIC_iDIV,
                  "sdiv", "\t$Rd, $Rn, $Rm",
                  [(set rGPR:$Rd, (sdiv rGPR:$Rn, rGPR:$Rm))]>,
-                 Requires<[HasDivide, IsThumb, HasV8MBaseline]> {
+                 Requires<[HasDivide, IsThumb, HasV8MBaseline]>,
+             Sched<[WriteDIV]> {
   let Inst{31-27} = 0b11111;
   let Inst{26-21} = 0b011100;
   let Inst{20} = 0b1;
@@ -2745,7 +2791,8 @@ def t2SDIV : T2ThreeReg<(outs rGPR:$Rd), (ins rGPR:$Rn, rGPR:$Rm), IIC_iDIV,
 def t2UDIV : T2ThreeReg<(outs rGPR:$Rd), (ins rGPR:$Rn, rGPR:$Rm), IIC_iDIV,
                  "udiv", "\t$Rd, $Rn, $Rm",
                  [(set rGPR:$Rd, (udiv rGPR:$Rn, rGPR:$Rm))]>,
-                 Requires<[HasDivide, IsThumb, HasV8MBaseline]> {
+                 Requires<[HasDivide, IsThumb, HasV8MBaseline]>,
+             Sched<[WriteDIV]> {
   let Inst{31-27} = 0b11111;
   let Inst{26-21} = 0b011101;
   let Inst{20} = 0b1;

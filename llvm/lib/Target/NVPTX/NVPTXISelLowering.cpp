@@ -2397,10 +2397,6 @@ NVPTXTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
   // they are signed or unsigned types.
   bool ExtendIntegerRetVal =
       RetTy->isIntegerTy() && DL.getTypeAllocSizeInBits(RetTy) < 32;
-  bool aggregateIsPacked = false;
-
-  if (StructType *STy = dyn_cast<StructType>(RetTy))
-    aggregateIsPacked = STy->isPacked();
 
   SmallVector<SDValue, 6> StoreOperands;
   for (unsigned i = 0, e = Outs.size(); i != e; ++i) {

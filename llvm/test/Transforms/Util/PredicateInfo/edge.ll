@@ -52,13 +52,14 @@ bb2:
 define i32 @f3(i32 %x) {
 ; CHECK-LABEL: @f3(
 ; CHECK-NEXT:  bb0:
-; CHECK-NEXT:    switch i32 [[X:%.*]], label [[BB1:%.*]] [
+; CHECK:         [[X_0:%.*]] = call i32 @llvm.ssa.copy.i32(i32 [[X:%.*]])
+; CHECK-NEXT:    switch i32 [[X]], label [[BB1:%.*]] [
 ; CHECK-NEXT:    i32 0, label [[BB2:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    br label [[BB2]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[COND:%.*]] = phi i32 [ [[X]], [[BB0:%.*]] ], [ 0, [[BB1]] ]
+; CHECK-NEXT:    [[COND:%.*]] = phi i32 [ [[X_0]], [[BB0:%.*]] ], [ 0, [[BB1]] ]
 ; CHECK-NEXT:    [[FOO:%.*]] = add i32 [[COND]], [[X]]
 ; CHECK-NEXT:    ret i32 [[FOO]]
 ;

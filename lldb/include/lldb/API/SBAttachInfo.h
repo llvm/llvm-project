@@ -86,7 +86,7 @@ public:
   /// This function implies that a call to SBTarget::Attach(...) will
   /// be synchronous.
   ///
-  /// @param[in] wait_for
+  /// @param[in] b
   ///     If \b false, attach to an existing process whose name matches.
   ///     If \b true, then wait for the next process whose name matches.
   //------------------------------------------------------------------
@@ -99,7 +99,7 @@ public:
   /// Future calls to SBTarget::Attach(...) will be synchronous or
   /// asynchronous depending on the \a async argument.
   ///
-  /// @param[in] wait_for
+  /// @param[in] b
   ///     If \b false, attach to an existing process whose name matches.
   ///     If \b true, then wait for the next process whose name matches.
   ///

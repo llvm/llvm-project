@@ -455,7 +455,7 @@ class SI_Int<bits<8> o, Format F, dag outs, dag ins, string asm,
          Domain d = GenericDomain>
       : I<o, F, outs, ins, asm, pattern, itin, d> {
   let Predicates = !if(!eq(OpEnc.Value, EncEVEX.Value), [HasAVX512],
-                   !if(!eq(OpEnc.Value, EncVEX.Value), [HasAVX],
+                   !if(!eq(OpEnc.Value, EncVEX.Value), [UseAVX],
                    !if(!eq(OpPrefix.Value, XS.Value), [UseSSE1],
                    !if(!eq(OpPrefix.Value, XD.Value), [UseSSE2],
                    !if(!eq(OpPrefix.Value, PD.Value), [UseSSE2],

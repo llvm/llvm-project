@@ -1741,6 +1741,13 @@ bool ARMConstantIslands::undoLRSpillRestore() {
       MI->eraseFromParent();
       MadeChange = true;
     }
+    if (MI->getOpcode() == ARM::tPUSH &&
+        MI->getOperand(2).getReg() == ARM::LR &&
+        MI->getNumExplicitOperands() == 3) {
+      // Just remove the push.
+      MI->eraseFromParent();
+      MadeChange = true;
+    }
   }
   return MadeChange;
 }

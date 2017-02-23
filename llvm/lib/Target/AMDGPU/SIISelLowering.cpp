@@ -2825,6 +2825,12 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                        Op.getOperand(1), Op.getOperand(2));
   case Intrinsic::amdgcn_sffbh:
     return DAG.getNode(AMDGPUISD::FFBH_I32, DL, VT, Op.getOperand(1));
+  case Intrinsic::amdgcn_sbfe:
+    return DAG.getNode(AMDGPUISD::BFE_I32, DL, VT,
+                       Op.getOperand(1), Op.getOperand(2), Op.getOperand(3));
+  case Intrinsic::amdgcn_ubfe:
+    return DAG.getNode(AMDGPUISD::BFE_U32, DL, VT,
+                       Op.getOperand(1), Op.getOperand(2), Op.getOperand(3));
   case Intrinsic::amdgcn_cvt_pkrtz: {
     // FIXME: Stop adding cast if v2f16 legal.
     EVT VT = Op.getValueType();
@@ -4486,6 +4492,10 @@ void SITargetLowering::adjustWritemask(MachineSDNode *&Node,
   // Try to figure out the used register components
   for (SDNode::use_iterator I = Node->use_begin(), E = Node->use_end();
        I != E; ++I) {
+
+    // Don't look at users of the chain.
+    if (I.getUse().getResNo() != 0)
+      continue;
 
     // Abort if we can't understand the usage
     if (!I->isMachineOpcode() ||

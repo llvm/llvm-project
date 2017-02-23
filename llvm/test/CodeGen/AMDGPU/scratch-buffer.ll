@@ -9,8 +9,8 @@
 ; should be able to reuse the same regiser for each scratch buffer access.
 
 ; GCN-LABEL: {{^}}legal_offset_fi:
-; GCN: buffer_store_dword v{{[0-9]+}}, off, s[{{[0-9]+}}:{{[0-9]+}}], s{{[0-9]+$}}
-; GCN: v_mov_b32_e32 [[OFFSET:v[0-9]+]], 0x8000
+; GCN: buffer_store_dword v{{[0-9]+}}, off, s[{{[0-9]+}}:{{[0-9]+}}], s{{[0-9]+}} offset:4{{$}}
+; GCN: v_mov_b32_e32 [[OFFSET:v[0-9]+]], 0x8004
 ; GCN: buffer_store_dword v{{[0-9]+}}, [[OFFSET]], s[{{[0-9]+}}:{{[0-9]+}}], s{{[0-9]+}} offen{{$}}
 
 define void @legal_offset_fi(i32 addrspace(1)* %out, i32 %cond, i32 %if_offset, i32 %else_offset) {
@@ -49,7 +49,7 @@ done:
 ; GCN-LABEL: {{^}}legal_offset_fi_offset:
 ; GCN-DAG: buffer_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+}}:{{[0-9]+}}], s{{[0-9]+}} offen{{$}}
 ; This constant isn't folded, because it has multiple uses.
-; GCN-DAG: v_mov_b32_e32 [[K8000:v[0-9]+]], 0x8000
+; GCN-DAG: v_mov_b32_e32 [[K8000:v[0-9]+]], 0x8004
 ; GCN-DAG: v_add_i32_e32 [[OFFSET:v[0-9]+]], vcc, [[K8000]]
 ; GCN: buffer_store_dword v{{[0-9]+}}, [[OFFSET]], s[{{[0-9]+}}:{{[0-9]+}}], s{{[0-9]+}} offen{{$}}
 
@@ -98,7 +98,7 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}pos_vaddr_offset:
-; GCN: buffer_store_dword v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], s{{[0-9]+}} offset:16
+; GCN: buffer_store_dword v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], s{{[0-9]+}} offset:20
 define void @pos_vaddr_offset(i32 addrspace(1)* %out, i32 %offset) {
 entry:
   %array = alloca [8192 x i32]

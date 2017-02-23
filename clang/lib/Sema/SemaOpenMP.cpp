@@ -1956,7 +1956,23 @@ StmtResult Sema::ActOnOpenMPRegionEnd(StmtResult S,
   return SR;
 }
 
-static bool CheckNestingOfRegions(Sema &SemaRef, DSAStackTy *Stack,
+static bool checkCancelRegion(Sema &SemaRef, OpenMPDirectiveKind CurrentRegion,
+                              OpenMPDirectiveKind CancelRegion,
+                              SourceLocation StartLoc) {
+  // CancelRegion is only needed for cancel and cancellation_point.
+  if (CurrentRegion != OMPD_cancel && CurrentRegion != OMPD_cancellation_point)
+    return false;
+
+  if (CancelRegion == OMPD_parallel || CancelRegion == OMPD_for ||
+      CancelRegion == OMPD_sections || CancelRegion == OMPD_taskgroup)
+    return false;
+
+  SemaRef.Diag(StartLoc, diag::err_omp_wrong_cancel_region)
+      << getOpenMPDirectiveName(CancelRegion);
+  return true;
+}
+
+static bool checkNestingOfRegions(Sema &SemaRef, DSAStackTy *Stack,
                                   OpenMPDirectiveKind CurrentRegion,
                                   const DeclarationNameInfo &CurrentName,
                                   OpenMPDirectiveKind CancelRegion,
@@ -2256,7 +2272,9 @@ StmtResult Sema::ActOnOpenMPExecutableDirective(
     OpenMPDirectiveKind CancelRegion, ArrayRef<OMPClause *> Clauses,
     Stmt *AStmt, SourceLocation StartLoc, SourceLocation EndLoc) {
   StmtResult Res = StmtError();
-  if (CheckNestingOfRegions(*this, DSAStack, Kind, DirName, CancelRegion,
+  // First check CancelRegion which is then used in checkNestingOfRegions.
+  if (checkCancelRegion(*this, Kind, CancelRegion, StartLoc) ||
+      checkNestingOfRegions(*this, DSAStack, Kind, DirName, CancelRegion,
                             StartLoc))
     return StmtError();
 
@@ -5860,12 +5878,6 @@ StmtResult
 Sema::ActOnOpenMPCancellationPointDirective(SourceLocation StartLoc,
                                             SourceLocation EndLoc,
                                             OpenMPDirectiveKind CancelRegion) {
-  if (CancelRegion != OMPD_parallel && CancelRegion != OMPD_for &&
-      CancelRegion != OMPD_sections && CancelRegion != OMPD_taskgroup) {
-    Diag(StartLoc, diag::err_omp_wrong_cancel_region)
-        << getOpenMPDirectiveName(CancelRegion);
-    return StmtError();
-  }
   if (DSAStack->isParentNowaitRegion()) {
     Diag(StartLoc, diag::err_omp_parent_cancel_region_nowait) << 0;
     return StmtError();
@@ -5882,12 +5894,6 @@ StmtResult Sema::ActOnOpenMPCancelDirective(ArrayRef<OMPClause *> Clauses,
                                             SourceLocation StartLoc,
                                             SourceLocation EndLoc,
                                             OpenMPDirectiveKind CancelRegion) {
-  if (CancelRegion != OMPD_parallel && CancelRegion != OMPD_for &&
-      CancelRegion != OMPD_sections && CancelRegion != OMPD_taskgroup) {
-    Diag(StartLoc, diag::err_omp_wrong_cancel_region)
-        << getOpenMPDirectiveName(CancelRegion);
-    return StmtError();
-  }
   if (DSAStack->isParentNowaitRegion()) {
     Diag(StartLoc, diag::err_omp_parent_cancel_region_nowait) << 1;
     return StmtError();

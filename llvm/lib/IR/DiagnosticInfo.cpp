@@ -222,7 +222,7 @@ void DiagnosticInfoOptimizationBase::print(DiagnosticPrinter &DP) const {
 OptimizationRemark::OptimizationRemark(const char *PassName,
                                        StringRef RemarkName,
                                        const DiagnosticLocation &Loc,
-                                       Value *CodeRegion)
+                                       const Value *CodeRegion)
     : DiagnosticInfoIROptimization(
           DK_OptimizationRemark, DS_Remark, PassName, RemarkName,
           *cast<BasicBlock>(CodeRegion)->getParent(), Loc, CodeRegion) {}

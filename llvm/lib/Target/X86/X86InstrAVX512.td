@@ -4195,13 +4195,43 @@ multiclass avx512_fp_scalar_round<bits<8> opc, string OpcodeStr,X86VectorVTInfo 
                           EVEX_B, EVEX_RC;
 }
 multiclass avx512_fp_scalar_sae<bits<8> opc, string OpcodeStr,X86VectorVTInfo _,
-                         SDNode VecNode, OpndItins itins, bit IsCommutable> {
-  let ExeDomain = _.ExeDomain in
+                                SDNode OpNode, SDNode VecNode, SDNode SaeNode,
+                                OpndItins itins, bit IsCommutable> {
+  let ExeDomain = _.ExeDomain in {
+  defm rr_Int : AVX512_maskable_scalar<opc, MRMSrcReg, _, (outs _.RC:$dst),
+                           (ins _.RC:$src1, _.RC:$src2), OpcodeStr,
+                           "$src2, $src1", "$src1, $src2",
+                           (_.VT (VecNode _.RC:$src1, _.RC:$src2)),
+                           itins.rr>;
+
+  defm rm_Int : AVX512_maskable_scalar<opc, MRMSrcMem, _, (outs _.RC:$dst),
+                         (ins _.RC:$src1, _.IntScalarMemOp:$src2), OpcodeStr,
+                         "$src2, $src1", "$src1, $src2",
+                         (_.VT (VecNode _.RC:$src1,
+                                        _.ScalarIntMemCPat:$src2)),
+                         itins.rm>;
+
+  let isCodeGenOnly = 1, Predicates = [HasAVX512] in {
+  def rr : I< opc, MRMSrcReg, (outs _.FRC:$dst),
+                         (ins _.FRC:$src1, _.FRC:$src2),
+                          OpcodeStr#"\t{$src2, $src1, $dst|$dst, $src1, $src2}",
+                          [(set _.FRC:$dst, (OpNode _.FRC:$src1, _.FRC:$src2))],
+                          itins.rr> {
+    let isCommutable = IsCommutable;
+  }
+  def rm : I< opc, MRMSrcMem, (outs _.FRC:$dst),
+                         (ins _.FRC:$src1, _.ScalarMemOp:$src2),
+                         OpcodeStr#"\t{$src2, $src1, $dst|$dst, $src1, $src2}",
+                         [(set _.FRC:$dst, (OpNode _.FRC:$src1,
+                         (_.ScalarLdFrag addr:$src2)))], itins.rm>;
+  }
+
   defm rrb : AVX512_maskable_scalar<opc, MRMSrcReg, _, (outs _.RC:$dst),
                             (ins _.RC:$src1, _.RC:$src2), OpcodeStr,
                             "{sae}, $src2, $src1", "$src1, $src2, {sae}",
-                            (VecNode (_.VT _.RC:$src1), (_.VT _.RC:$src2),
+                            (SaeNode (_.VT _.RC:$src1), (_.VT _.RC:$src2),
                             (i32 FROUND_NO_EXC))>, EVEX_B;
+  }
 }
 
 multiclass avx512_binop_s_round<bits<8> opc, string OpcodeStr, SDNode OpNode,
@@ -4220,25 +4250,23 @@ multiclass avx512_binop_s_round<bits<8> opc, string OpcodeStr, SDNode OpNode,
 }
 
 multiclass avx512_binop_s_sae<bits<8> opc, string OpcodeStr, SDNode OpNode,
-                                  SDNode VecNode,
+                                  SDNode VecNode, SDNode SaeNode,
                                   SizeItins itins, bit IsCommutable> {
-  defm SSZ : avx512_fp_scalar<opc, OpcodeStr#"ss", f32x_info, OpNode, VecNode,
-                              itins.s, IsCommutable>,
-             avx512_fp_scalar_sae<opc, OpcodeStr#"ss", f32x_info, VecNode,
-                              itins.s, IsCommutable>,
+  defm SSZ : avx512_fp_scalar_sae<opc, OpcodeStr#"ss", f32x_info, OpNode,
+                              VecNode, SaeNode, itins.s, IsCommutable>,
                               XS, EVEX_4V, VEX_LIG,  EVEX_CD8<32, CD8VT1>;
-  defm SDZ : avx512_fp_scalar<opc, OpcodeStr#"sd", f64x_info, OpNode, VecNode,
-                              itins.d,                  IsCommutable>,
-             avx512_fp_scalar_sae<opc, OpcodeStr#"sd", f64x_info, VecNode,
-                              itins.d, IsCommutable>,
+  defm SDZ : avx512_fp_scalar_sae<opc, OpcodeStr#"sd", f64x_info, OpNode,
+                              VecNode, SaeNode, itins.d, IsCommutable>,
                               XD, VEX_W, EVEX_4V, VEX_LIG, EVEX_CD8<64, CD8VT1>;
 }
 defm VADD : avx512_binop_s_round<0x58, "vadd", fadd, X86faddRnd, SSE_ALU_ITINS_S, 1>;
 defm VMUL : avx512_binop_s_round<0x59, "vmul", fmul, X86fmulRnd, SSE_MUL_ITINS_S, 1>;
 defm VSUB : avx512_binop_s_round<0x5C, "vsub", fsub, X86fsubRnd, SSE_ALU_ITINS_S, 0>;
 defm VDIV : avx512_binop_s_round<0x5E, "vdiv", fdiv, X86fdivRnd, SSE_DIV_ITINS_S, 0>;
-defm VMIN : avx512_binop_s_sae  <0x5D, "vmin", X86fmin, X86fminRnd, SSE_ALU_ITINS_S, 0>;
-defm VMAX : avx512_binop_s_sae  <0x5F, "vmax", X86fmax, X86fmaxRnd, SSE_ALU_ITINS_S, 0>;
+defm VMIN : avx512_binop_s_sae  <0x5D, "vmin", X86fmin, X86fmins, X86fminRnd,
+                                 SSE_ALU_ITINS_S, 0>;
+defm VMAX : avx512_binop_s_sae  <0x5F, "vmax", X86fmax, X86fmaxs, X86fmaxRnd,
+                                 SSE_ALU_ITINS_S, 0>;
 
 // MIN/MAX nodes are commutable under "unsafe-fp-math". In this case we use
 // X86fminc and X86fmaxc instead of X86fmin and X86fmax

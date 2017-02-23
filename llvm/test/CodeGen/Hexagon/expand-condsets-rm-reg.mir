@@ -1,4 +1,4 @@
-# RUN: llc -march=hexagon -run-pass expand-condsets -o - 2>&1 %s -verify-machineinstrs -debug-only=expand-condsets | FileCheck %s
+# RUN: llc -march=hexagon -run-pass expand-condsets -o - %s -verify-machineinstrs -debug-only=expand-condsets 2>&1 | FileCheck %s
 # REQUIRES: asserts
 
 # Check that coalesced registers are removed from live intervals.
