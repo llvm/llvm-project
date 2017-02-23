@@ -2711,10 +2711,9 @@ Sema::SubstituteExplicitTemplateArguments(
   // explicitly-specified template arguments against this function template,
   // and then substitute them into the function parameter types.
   SmallVector<TemplateArgument, 4> DeducedArgs;
-  InstantiatingTemplate Inst(*this, Info.getLocation(), FunctionTemplate,
-                             DeducedArgs,
-           ActiveTemplateInstantiation::ExplicitTemplateArgumentSubstitution,
-                             Info);
+  InstantiatingTemplate Inst(
+      *this, Info.getLocation(), FunctionTemplate, DeducedArgs,
+      CodeSynthesisContext::ExplicitTemplateArgumentSubstitution, Info);
   if (Inst.isInvalid())
     return TDK_InstantiationDepth;
 
@@ -3002,10 +3001,9 @@ Sema::TemplateDeductionResult Sema::FinishTemplateArgumentDeduction(
   // Enter a new template instantiation context while we instantiate the
   // actual function declaration.
   SmallVector<TemplateArgument, 4> DeducedArgs(Deduced.begin(), Deduced.end());
-  InstantiatingTemplate Inst(*this, Info.getLocation(), FunctionTemplate,
-                             DeducedArgs,
-              ActiveTemplateInstantiation::DeducedTemplateArgumentSubstitution,
-                             Info);
+  InstantiatingTemplate Inst(
+      *this, Info.getLocation(), FunctionTemplate, DeducedArgs,
+      CodeSynthesisContext::DeducedTemplateArgumentSubstitution, Info);
   if (Inst.isInvalid())
     return TDK_InstantiationDepth;
 

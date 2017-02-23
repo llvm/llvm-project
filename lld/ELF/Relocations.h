@@ -17,7 +17,7 @@ namespace elf {
 class SymbolBody;
 class InputSectionData;
 template <class ELFT> class InputSection;
-template <class ELFT> class InputSectionBase;
+class InputSectionBase;
 class OutputSectionBase;
 
 // List of target-independent relocation types. Relocations read
@@ -109,7 +109,7 @@ struct Relocation {
   SymbolBody *Sym;
 };
 
-template <class ELFT> void scanRelocations(InputSectionBase<ELFT> &);
+template <class ELFT> void scanRelocations(InputSectionBase &);
 
 template <class ELFT>
 void createThunks(ArrayRef<OutputSectionBase *> OutputSections);

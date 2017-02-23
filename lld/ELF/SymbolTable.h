@@ -60,7 +60,7 @@ public:
 
   Symbol *addRegular(StringRef Name, uint8_t StOther, uint8_t Type,
                      uintX_t Value, uintX_t Size, uint8_t Binding,
-                     InputSectionBase<ELFT> *Section, InputFile *File);
+                     InputSectionBase *Section, InputFile *File);
 
   Symbol *addSynthetic(StringRef N, const OutputSectionBase *Section,
                        uintX_t Value, uint8_t StOther);
@@ -92,7 +92,7 @@ public:
   void trace(StringRef Name);
   void wrap(StringRef Name);
 
-  std::vector<InputSectionBase<ELFT> *> Sections;
+  std::vector<InputSectionBase *> Sections;
 
 private:
   std::vector<SymbolBody *> findByVersion(SymbolVersion Ver);

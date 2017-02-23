@@ -40,7 +40,7 @@ public:
   SyntheticSection(uintX_t Flags, uint32_t Type, uintX_t Addralign,
                    StringRef Name)
       : InputSection<ELFT>(Flags, Type, Addralign, {}, Name,
-                           InputSectionData::Synthetic) {
+                           InputSectionBase::Synthetic) {
     this->Live = true;
   }
 
@@ -54,8 +54,8 @@ public:
     return this->OutSec ? this->OutSec->Addr + this->OutSecOff : 0;
   }
 
-  static bool classof(const InputSectionData *D) {
-    return D->kind() == InputSectionData::Synthetic;
+  static bool classof(const InputSectionBase *D) {
+    return D->kind() == InputSectionBase::Synthetic;
   }
 };
 
@@ -277,7 +277,7 @@ template <class ELFT> class DynamicReloc {
   typedef typename ELFT::uint uintX_t;
 
 public:
-  DynamicReloc(uint32_t Type, const InputSectionBase<ELFT> *InputSec,
+  DynamicReloc(uint32_t Type, const InputSectionBase *InputSec,
                uintX_t OffsetInSec, bool UseSymVA, SymbolBody *Sym,
                int64_t Addend)
       : Type(Type), Sym(Sym), InputSec(InputSec), OffsetInSec(OffsetInSec),
@@ -286,13 +286,13 @@ public:
   uintX_t getOffset() const;
   int64_t getAddend() const;
   uint32_t getSymIndex() const;
-  const InputSectionBase<ELFT> *getInputSec() const { return InputSec; }
+  const InputSectionBase *getInputSec() const { return InputSec; }
 
   uint32_t Type;
 
 private:
   SymbolBody *Sym;
-  const InputSectionBase<ELFT> *InputSec = nullptr;
+  const InputSectionBase *InputSec = nullptr;
   uintX_t OffsetInSec;
   bool UseSymVA;
   int64_t Addend;
@@ -747,9 +747,8 @@ template <class ELFT> InputSection<ELFT> *createCommonSection();
 template <class ELFT> InputSection<ELFT> *createInterpSection();
 template <class ELFT> MergeInputSection<ELFT> *createCommentSection();
 template <class ELFT>
-SymbolBody *
-addSyntheticLocal(StringRef Name, uint8_t Type, typename ELFT::uint Value,
-                  typename ELFT::uint Size, InputSectionBase<ELFT> *Section);
+SymbolBody *addSyntheticLocal(StringRef Name, uint8_t Type, uint64_t Value,
+                              uint64_t Size, InputSectionBase *Section);
 
 // Linker generated sections which can be used as inputs.
 template <class ELFT> struct In {

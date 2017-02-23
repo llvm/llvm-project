@@ -156,8 +156,8 @@ public:
   explicit ObjectFile(MemoryBufferRef M);
   void parse(llvm::DenseSet<llvm::CachedHashStringRef> &ComdatGroups);
 
-  ArrayRef<InputSectionBase<ELFT> *> getSections() const { return Sections; }
-  InputSectionBase<ELFT> *getSection(const Elf_Sym &Sym) const;
+  ArrayRef<InputSectionBase *> getSections() const { return Sections; }
+  InputSectionBase *getSection(const Elf_Sym &Sym) const;
 
   SymbolBody &getSymbolBody(uint32_t SymbolIndex) const {
     if (SymbolIndex >= SymbolBodies.size())
@@ -173,7 +173,7 @@ public:
 
   // Returns source line information for a given offset.
   // If no information is available, returns "".
-  std::string getLineInfo(InputSectionBase<ELFT> *S, uintX_t Offset);
+  std::string getLineInfo(InputSectionBase *S, uintX_t Offset);
 
   // MIPS GP0 value defined by this file. This value represents the gp value
   // used to create the relocatable object and required to support
@@ -190,15 +190,15 @@ private:
   initializeSections(llvm::DenseSet<llvm::CachedHashStringRef> &ComdatGroups);
   void initializeSymbols();
   void initializeDwarfLine();
-  InputSectionBase<ELFT> *getRelocTarget(const Elf_Shdr &Sec);
-  InputSectionBase<ELFT> *createInputSection(const Elf_Shdr &Sec,
-                                             StringRef SectionStringTable);
+  InputSectionBase *getRelocTarget(const Elf_Shdr &Sec);
+  InputSectionBase *createInputSection(const Elf_Shdr &Sec,
+                                       StringRef SectionStringTable);
 
   bool shouldMerge(const Elf_Shdr &Sec);
   SymbolBody *createSymbolBody(const Elf_Sym *Sym);
 
   // List of all sections defined by this file.
-  std::vector<InputSectionBase<ELFT> *> Sections;
+  std::vector<InputSectionBase *> Sections;
 
   // List of all symbols referenced or defined by this file.
   std::vector<SymbolBody *> SymbolBodies;
@@ -322,10 +322,10 @@ public:
   explicit BinaryFile(MemoryBufferRef M) : InputFile(BinaryKind, M) {}
   static bool classof(const InputFile *F) { return F->kind() == BinaryKind; }
   template <class ELFT> void parse();
-  ArrayRef<InputSectionData *> getSections() const { return Sections; }
+  ArrayRef<InputSectionBase *> getSections() const { return Sections; }
 
 private:
-  std::vector<InputSectionData *> Sections;
+  std::vector<InputSectionBase *> Sections;
 };
 
 InputFile *createObjectFile(MemoryBufferRef MB, StringRef ArchiveName = "",

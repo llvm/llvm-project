@@ -1432,14 +1432,13 @@ static Module *getDefiningModule(Sema &S, Decl *Entity) {
 }
 
 llvm::DenseSet<Module*> &Sema::getLookupModules() {
-  unsigned N = ActiveTemplateInstantiations.size();
-  for (unsigned I = ActiveTemplateInstantiationLookupModules.size();
+  unsigned N = CodeSynthesisContexts.size();
+  for (unsigned I = CodeSynthesisContextLookupModules.size();
        I != N; ++I) {
-    Module *M =
-        getDefiningModule(*this, ActiveTemplateInstantiations[I].Entity);
+    Module *M = getDefiningModule(*this, CodeSynthesisContexts[I].Entity);
     if (M && !LookupModulesCache.insert(M).second)
       M = nullptr;
-    ActiveTemplateInstantiationLookupModules.push_back(M);
+    CodeSynthesisContextLookupModules.push_back(M);
   }
   return LookupModulesCache;
 }
@@ -1560,7 +1559,7 @@ bool LookupResult::isVisibleSlow(Sema &SemaRef, NamedDecl *D) {
          || (isa<FunctionDecl>(DC) && !SemaRef.getLangOpts().CPlusPlus))
             ? isVisible(SemaRef, cast<NamedDecl>(DC))
             : SemaRef.hasVisibleDefinition(cast<NamedDecl>(DC))) {
-      if (SemaRef.ActiveTemplateInstantiations.empty() &&
+      if (SemaRef.CodeSynthesisContexts.empty() &&
           // FIXME: Do something better in this case.
           !SemaRef.getLangOpts().ModulesLocalVisibility) {
         // Cache the fact that this declaration is implicitly visible because
@@ -4511,9 +4510,8 @@ std::unique_ptr<TypoCorrectionConsumer> Sema::makeTypoCorrectionConsumer(
   if (SS && SS->isInvalid())
     return nullptr;
 
-  // Never try to correct typos during template deduction or
-  // instantiation.
-  if (!ActiveTemplateInstantiations.empty())
+  // Never try to correct typos during any kind of code synthesis.
+  if (!CodeSynthesisContexts.empty())
     return nullptr;
 
   // Don't try to correct 'super'.

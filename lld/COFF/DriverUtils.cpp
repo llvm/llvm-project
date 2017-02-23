@@ -626,48 +626,15 @@ convertResToCOFF(const std::vector<MemoryBufferRef> &MBs) {
   return File.getMemoryBuffer();
 }
 
-static bool isBitcodeFile(StringRef Path) {
-  std::unique_ptr<MemoryBuffer> MB = check(
-      MemoryBuffer::getFile(Path, -1, false, true), "could not open " + Path);
-  StringRef Buf = MB->getBuffer();
-  return sys::fs::identify_magic(Buf) == sys::fs::file_magic::bitcode;
-}
-
 // Run MSVC link.exe for given in-memory object files.
 // Command line options are copied from those given to LLD.
 // This is for the /msvclto option.
-void runMSVCLinker(opt::InputArgList &Args, ArrayRef<StringRef> Objects) {
+void runMSVCLinker(std::string Rsp, ArrayRef<StringRef> Objects) {
   // Write the in-memory object files to disk.
   std::vector<TemporaryFile> Temps;
-  for (StringRef S : Objects)
+  for (StringRef S : Objects) {
     Temps.emplace_back("lto", "obj", S);
-
-  // Create a response file.
-  std::string Rsp = "/nologo ";
-  for (TemporaryFile &T : Temps)
-    Rsp += quote(T.Path) + " ";
-
-  for (auto *Arg : Args) {
-    switch (Arg->getOption().getID()) {
-    case OPT_linkrepro:
-    case OPT_lldmap:
-    case OPT_lldmap_file:
-    case OPT_msvclto:
-      // LLD-specific options are stripped.
-      break;
-    case OPT_opt:
-      if (!StringRef(Arg->getValue()).startswith("lld"))
-        Rsp += toString(Arg) + " ";
-      break;
-    case OPT_INPUT:
-      // Bitcode files are stripped as they've been compiled to
-      // native object files.
-      if (!isBitcodeFile(Arg->getValue()))
-        Rsp += quote(Arg->getValue()) + " ";
-      break;
-    default:
-      Rsp += toString(Arg) + " ";
-    }
+    Rsp += quote(Temps.back().Path) + " ";
   }
 
   log("link.exe " + Rsp);

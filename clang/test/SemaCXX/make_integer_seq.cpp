@@ -43,7 +43,7 @@ enum Color : int { Red,
                    Blue };
 using illformed1 = ErrorSeq<Color, Blue>; // expected-note{{in instantiation}}
 
-using illformed2 = ErrorSeq<int, -5>;
+using illformed2 = ErrorSeq<int, -5>; // expected-note{{in instantiation}}
 
 template <typename T, T N> void f() {}
 __make_integer_seq<f, int, 0> x; // expected-error{{template template parameter must be a class template or type alias template}}

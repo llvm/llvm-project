@@ -21,7 +21,7 @@ template <class ELFT> class InputSection;
 
 // Struct represents single entry of address area of gdb index.
 template <class ELFT> struct AddressEntry {
-  InputSectionBase<ELFT> *Section;
+  InputSectionBase *Section;
   uint64_t LowAddress;
   uint64_t HighAddress;
   size_t CuIndex;

@@ -155,7 +155,7 @@ private:
 // Returns a hash value for S. Note that the information about
 // relocation targets is not included in the hash value.
 template <class ELFT> static uint32_t getHash(InputSection<ELFT> *S) {
-  return hash_combine(S->Flags, S->getSize(), S->NumRelocations);
+  return hash_combine(S->Flags, S->template getSize<ELFT>(), S->NumRelocations);
 }
 
 // Returns true if section S is subject of ICF.
@@ -224,12 +224,13 @@ template <class ELFT>
 bool ICF<ELFT>::equalsConstant(const InputSection<ELFT> *A,
                                const InputSection<ELFT> *B) {
   if (A->NumRelocations != B->NumRelocations || A->Flags != B->Flags ||
-      A->getSize() != B->getSize() || A->Data != B->Data)
+      A->template getSize<ELFT>() != B->template getSize<ELFT>() ||
+      A->Data != B->Data)
     return false;
 
   if (A->AreRelocsRela)
-    return constantEq(A->relas(), B->relas());
-  return constantEq(A->rels(), B->rels());
+    return constantEq(A->template relas<ELFT>(), B->template relas<ELFT>());
+  return constantEq(A->template rels<ELFT>(), B->template rels<ELFT>());
 }
 
 // Compare two lists of relocations. Returns true if all pairs of
@@ -240,8 +241,8 @@ bool ICF<ELFT>::variableEq(const InputSection<ELFT> *A, ArrayRef<RelTy> RelsA,
                            const InputSection<ELFT> *B, ArrayRef<RelTy> RelsB) {
   auto Eq = [&](const RelTy &RA, const RelTy &RB) {
     // The two sections must be identical.
-    SymbolBody &SA = A->getFile()->getRelocTargetSym(RA);
-    SymbolBody &SB = B->getFile()->getRelocTargetSym(RB);
+    SymbolBody &SA = A->template getFile<ELFT>()->getRelocTargetSym(RA);
+    SymbolBody &SB = B->template getFile<ELFT>()->getRelocTargetSym(RB);
     if (&SA == &SB)
       return true;
 
@@ -278,8 +279,9 @@ template <class ELFT>
 bool ICF<ELFT>::equalsVariable(const InputSection<ELFT> *A,
                                const InputSection<ELFT> *B) {
   if (A->AreRelocsRela)
-    return variableEq(A, A->relas(), B, B->relas());
-  return variableEq(A, A->rels(), B, B->rels());
+    return variableEq(A, A->template relas<ELFT>(), B,
+                      B->template relas<ELFT>());
+  return variableEq(A, A->template rels<ELFT>(), B, B->template rels<ELFT>());
 }
 
 template <class ELFT> size_t ICF<ELFT>::findBoundary(size_t Begin, size_t End) {
@@ -336,7 +338,7 @@ void ICF<ELFT>::forEachClass(std::function<void(size_t, size_t)> Fn) {
 // The main function of ICF.
 template <class ELFT> void ICF<ELFT>::run() {
   // Collect sections to merge.
-  for (InputSectionBase<ELFT> *Sec : Symtab<ELFT>::X->Sections)
+  for (InputSectionBase *Sec : Symtab<ELFT>::X->Sections)
     if (auto *S = dyn_cast<InputSection<ELFT>>(Sec))
       if (isEligible(S))
         Sections.push_back(S);

@@ -6,6 +6,7 @@ import fnmatch
 import os
 import platform
 import re
+import repo
 import subprocess
 import sys
 
@@ -17,42 +18,36 @@ from lldbbuild import *
 def LLVM_HASH_INCLUDES_DIFFS():
     return False
 
-# The use of "x = "..."; return x" here is important because tooling looks for
-# it with regexps.  Only change how this works if you know what you are doing.
-
-
-def LLVM_REF():
-    llvm_ref = "master"
-    return llvm_ref
-
-
-def CLANG_REF():
-    clang_ref = "master"
-    return clang_ref
-
 # For use with Xcode-style builds
 
+def process_vcs(vcs):
+    return {
+        "svn": VCS.svn,
+        "git": VCS.git
+    }[vcs]
+
+def process_root(name):
+    return {
+        "llvm": llvm_source_path(),
+        "clang": clang_source_path(),
+        "ninja": ninja_source_path()
+    }[name]
+
+def process_repo(r):
+    return {
+        'name': r["name"],
+        'vcs': process_vcs(r["vcs"]),
+        'root': process_root(r["name"]),
+        'url': r["url"],
+        'ref': r["ref"]
+    }
 
 def XCODE_REPOSITORIES():
-    return [
-        {'name': "llvm",
-         'vcs': VCS.git,
-         'root': llvm_source_path(),
-         'url': "http://llvm.org/git/llvm.git",
-         'ref': LLVM_REF()},
-
-        {'name': "clang",
-         'vcs': VCS.git,
-         'root': clang_source_path(),
-         'url': "http://llvm.org/git/clang.git",
-         'ref': CLANG_REF()},
-
-        {'name': "ninja",
-         'vcs': VCS.git,
-         'root': ninja_source_path(),
-         'url': "https://github.com/ninja-build/ninja.git",
-         'ref': "master"}
-    ]
+    identifier = repo.identifier()
+    if identifier == None:
+        identifier = "<invalid>" # repo.find will just use the fallback file
+    set = repo.find(identifier)
+    return [process_repo(r) for r in set]
 
 
 def get_c_compiler():

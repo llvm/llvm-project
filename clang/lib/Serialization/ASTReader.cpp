@@ -8958,6 +8958,7 @@ void ASTReader::diagnoseOdrViolations() {
         PrivateSpecifer,
         ProtectedSpecifer,
         StaticAssert,
+        Field,
         Other
       } FirstDiffType = Other,
         SecondDiffType = Other;
@@ -8981,6 +8982,8 @@ void ASTReader::diagnoseOdrViolations() {
           llvm_unreachable("Invalid access specifier");
         case Decl::StaticAssert:
           return StaticAssert;
+        case Decl::Field:
+          return Field;
         }
       };
 
@@ -9060,6 +9063,7 @@ void ASTReader::diagnoseOdrViolations() {
         StaticAssertCondition,
         StaticAssertMessage,
         StaticAssertOnlyMessage,
+        FieldName,
       };
 
       // These lambdas have the common portions of the ODR diagnostics.  This
@@ -9143,6 +9147,24 @@ void ASTReader::diagnoseOdrViolations() {
                        StaticAssertMessage);
           ODRDiagNote(SecondStr->getLocStart(), SecondStr->getSourceRange(),
                       StaticAssertMessage);
+          Diagnosed = true;
+          break;
+        }
+        break;
+      }
+      case Field: {
+        FieldDecl *FirstField = cast<FieldDecl>(FirstDecl);
+        FieldDecl *SecondField = cast<FieldDecl>(SecondDecl);
+        IdentifierInfo *FirstII = FirstField->getIdentifier();
+        IdentifierInfo *SecondII = SecondField->getIdentifier();
+        if (FirstII->getName() != SecondII->getName()) {
+          ODRDiagError(FirstField->getLocation(), FirstField->getSourceRange(),
+                       FieldName)
+              << FirstII;
+          ODRDiagNote(SecondField->getLocation(), SecondField->getSourceRange(),
+                      FieldName)
+              << SecondII;
+
           Diagnosed = true;
           break;
         }
