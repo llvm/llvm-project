@@ -568,7 +568,7 @@ static int getPPC64SectionRank(StringRef SectionName) {
 static int getMipsSectionRank(const OutputSectionBase *S) {
   if ((S->Flags & SHF_MIPS_GPREL) == 0)
     return 0;
-  if (S->getName() == ".got")
+  if (S->Name == ".got")
     return 1;
   return 2;
 }
@@ -603,7 +603,7 @@ template <class ELFT> bool elf::isRelroSection(const OutputSectionBase *Sec) {
   if (Sec == Out<ELFT>::BssRelRo)
     return true;
 
-  StringRef S = Sec->getName();
+  StringRef S = Sec->Name;
   return S == ".data.rel.ro" || S == ".ctors" || S == ".dtors" || S == ".jcr" ||
          S == ".eh_frame" || S == ".openbsd.randomdata";
 }
@@ -613,8 +613,8 @@ static bool compareSectionsNonScript(const OutputSectionBase *A,
                                      const OutputSectionBase *B) {
   // Put .interp first because some loaders want to see that section
   // on the first page of the executable file when loaded into memory.
-  bool AIsInterp = A->getName() == ".interp";
-  bool BIsInterp = B->getName() == ".interp";
+  bool AIsInterp = A->Name == ".interp";
+  bool BIsInterp = B->Name == ".interp";
   if (AIsInterp != BIsInterp)
     return AIsInterp;
 
@@ -632,8 +632,8 @@ static bool compareSectionsNonScript(const OutputSectionBase *A,
 
   // We want to put section specified by -T option first, so we
   // can start assigning VA starting from them later.
-  auto AAddrSetI = Config->SectionStartMap.find(A->getName());
-  auto BAddrSetI = Config->SectionStartMap.find(B->getName());
+  auto AAddrSetI = Config->SectionStartMap.find(A->Name);
+  auto BAddrSetI = Config->SectionStartMap.find(B->Name);
   bool AHasAddrSet = AAddrSetI != Config->SectionStartMap.end();
   bool BHasAddrSet = BAddrSetI != Config->SectionStartMap.end();
   if (AHasAddrSet != BHasAddrSet)
@@ -698,8 +698,7 @@ static bool compareSectionsNonScript(const OutputSectionBase *A,
   // Some architectures have additional ordering restrictions for sections
   // within the same PT_LOAD.
   if (Config->EMachine == EM_PPC64)
-    return getPPC64SectionRank(A->getName()) <
-           getPPC64SectionRank(B->getName());
+    return getPPC64SectionRank(A->Name) < getPPC64SectionRank(B->Name);
   if (Config->EMachine == EM_MIPS)
     return getMipsSectionRank(A) < getMipsSectionRank(B);
 
@@ -711,8 +710,8 @@ template <class ELFT>
 static bool compareSections(const OutputSectionBase *A,
                             const OutputSectionBase *B) {
   // For now, put sections mentioned in a linker script first.
-  int AIndex = Script<ELFT>::X->getSectionIndex(A->getName());
-  int BIndex = Script<ELFT>::X->getSectionIndex(B->getName());
+  int AIndex = Script<ELFT>::X->getSectionIndex(A->Name);
+  int BIndex = Script<ELFT>::X->getSectionIndex(B->Name);
   bool AInScript = AIndex != INT_MAX;
   bool BInScript = BIndex != INT_MAX;
   if (AInScript != BInScript)
@@ -997,7 +996,7 @@ template <class ELFT> void Writer<ELFT>::sortSections() {
   auto E = OutputSections.end();
   auto NonScriptI =
       std::find_if(OutputSections.begin(), E, [](OutputSectionBase *S) {
-        return Script<ELFT>::X->getSectionIndex(S->getName()) == INT_MAX;
+        return Script<ELFT>::X->getSectionIndex(S->Name) == INT_MAX;
       });
   while (NonScriptI != E) {
     auto BestPos = std::max_element(
@@ -1143,7 +1142,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   unsigned I = 1;
   for (OutputSectionBase *Sec : OutputSections) {
     Sec->SectionIndex = I++;
-    Sec->ShName = In<ELFT>::ShStrTab->addString(Sec->getName());
+    Sec->ShName = In<ELFT>::ShStrTab->addString(Sec->Name);
   }
 
   // Binary and relocatable output does not have PHDRS.
@@ -1225,7 +1224,7 @@ template <class ELFT> void Writer<ELFT>::addStartEndSymbols() {
 // gold provide the feature, and used by many programs.
 template <class ELFT>
 void Writer<ELFT>::addStartStopSymbols(OutputSectionBase *Sec) {
-  StringRef S = Sec->getName();
+  StringRef S = Sec->Name;
   if (!isValidCIdentifier(S))
     return;
   addOptionalSynthetic<ELFT>(Saver.save("__start_" + S), Sec, 0, STV_DEFAULT);
@@ -1235,7 +1234,7 @@ void Writer<ELFT>::addStartStopSymbols(OutputSectionBase *Sec) {
 template <class ELFT>
 OutputSectionBase *Writer<ELFT>::findSection(StringRef Name) {
   for (OutputSectionBase *Sec : OutputSections)
-    if (Sec->getName() == Name)
+    if (Sec->Name == Name)
       return Sec;
   return nullptr;
 }
@@ -1296,7 +1295,7 @@ template <class ELFT> std::vector<PhdrEntry> Writer<ELFT>::createPhdrs() {
     // different flags or is loaded at a discontiguous address using AT linker
     // script command.
     uintX_t NewFlags = computeFlags<ELFT>(Sec->getPhdrFlags());
-    if (Script<ELFT>::X->hasLMA(Sec->getName()) || Flags != NewFlags) {
+    if (Script<ELFT>::X->hasLMA(Sec->Name) || Flags != NewFlags) {
       Load = AddHdr(PT_LOAD, NewFlags);
       Flags = NewFlags;
     }
@@ -1359,7 +1358,7 @@ template <class ELFT> std::vector<PhdrEntry> Writer<ELFT>::createPhdrs() {
   PhdrEntry *Note = nullptr;
   for (OutputSectionBase *Sec : OutputSections) {
     if (Sec->Type == SHT_NOTE) {
-      if (!Note || Script<ELFT>::X->hasLMA(Sec->getName()))
+      if (!Note || Script<ELFT>::X->hasLMA(Sec->Name))
         Note = AddHdr(PT_NOTE, PF_R);
       Note->add(Sec);
     } else {
@@ -1480,7 +1479,7 @@ template <class ELFT> void Writer<ELFT>::assignAddresses() {
     if (Sec->PageAlign)
       Alignment = std::max<uintX_t>(Alignment, Config->MaxPageSize);
 
-    auto I = Config->SectionStartMap.find(Sec->getName());
+    auto I = Config->SectionStartMap.find(Sec->Name);
     if (I != Config->SectionStartMap.end())
       VA = I->second;
 

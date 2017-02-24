@@ -138,10 +138,10 @@ static bool ShouldUpgradeX86Intrinsic(Function *F, StringRef Name) {
       Name.startswith("avx512.mask.cvtudq2pd.") || // Added in 4.0
       Name.startswith("avx512.mask.pmul.dq.") || // Added in 4.0
       Name.startswith("avx512.mask.pmulu.dq.") || // Added in 4.0
-      Name.startswith("avx512.mask.packsswb.") || // Added in 4.1
-      Name.startswith("avx512.mask.packssdw.") || // Added in 4.1
-      Name.startswith("avx512.mask.packuswb.") || // Added in 4.1
-      Name.startswith("avx512.mask.packusdw.") || // Added in 4.1
+      Name.startswith("avx512.mask.packsswb.") || // Added in 5.0
+      Name.startswith("avx512.mask.packssdw.") || // Added in 5.0
+      Name.startswith("avx512.mask.packuswb.") || // Added in 5.0
+      Name.startswith("avx512.mask.packusdw.") || // Added in 5.0
       Name == "avx512.mask.add.pd.128" || // Added in 4.0
       Name == "avx512.mask.add.pd.256" || // Added in 4.0
       Name == "avx512.mask.add.ps.128" || // Added in 4.0
@@ -158,14 +158,14 @@ static bool ShouldUpgradeX86Intrinsic(Function *F, StringRef Name) {
       Name == "avx512.mask.sub.pd.256" || // Added in 4.0
       Name == "avx512.mask.sub.ps.128" || // Added in 4.0
       Name == "avx512.mask.sub.ps.256" || // Added in 4.0
-      Name == "avx512.mask.max.pd.128" || // Added in 4.1
-      Name == "avx512.mask.max.pd.256" || // Added in 4.1
-      Name == "avx512.mask.max.ps.128" || // Added in 4.1
-      Name == "avx512.mask.max.ps.256" || // Added in 4.1
-      Name == "avx512.mask.min.pd.128" || // Added in 4.1
-      Name == "avx512.mask.min.pd.256" || // Added in 4.1
-      Name == "avx512.mask.min.ps.128" || // Added in 4.1
-      Name == "avx512.mask.min.ps.256" || // Added in 4.1
+      Name == "avx512.mask.max.pd.128" || // Added in 5.0
+      Name == "avx512.mask.max.pd.256" || // Added in 5.0
+      Name == "avx512.mask.max.ps.128" || // Added in 5.0
+      Name == "avx512.mask.max.ps.256" || // Added in 5.0
+      Name == "avx512.mask.min.pd.128" || // Added in 5.0
+      Name == "avx512.mask.min.pd.256" || // Added in 5.0
+      Name == "avx512.mask.min.ps.128" || // Added in 5.0
+      Name == "avx512.mask.min.ps.256" || // Added in 5.0
       Name.startswith("avx512.mask.vpermilvar.") || // Added in 4.0
       Name.startswith("avx512.mask.psll.d") || // Added in 4.0
       Name.startswith("avx512.mask.psll.q") || // Added in 4.0
@@ -188,6 +188,7 @@ static bool ShouldUpgradeX86Intrinsic(Function *F, StringRef Name) {
       Name.startswith("avx2.pmovzx") || // Added in 3.9
       Name.startswith("avx512.mask.pmovsx") || // Added in 4.0
       Name.startswith("avx512.mask.pmovzx") || // Added in 4.0
+      Name.startswith("avx512.mask.lzcnt.") || // Added in 5.0
       Name == "sse2.cvtdq2pd" || // Added in 3.9
       Name == "sse2.cvtps2pd" || // Added in 3.9
       Name == "avx.cvtdq2.pd.256" || // Added in 3.9
@@ -231,7 +232,7 @@ static bool ShouldUpgradeX86Intrinsic(Function *F, StringRef Name) {
       Name.startswith("avx.vbroadcastf128") || // Added in 4.0
       Name == "avx2.vbroadcasti128" || // Added in 3.7
       Name == "xop.vpcmov" || // Added in 3.8
-      Name == "xop.vpcmov.256" || // Added in 4.1
+      Name == "xop.vpcmov.256" || // Added in 5.0
       Name.startswith("avx512.mask.move.s") || // Added in 4.0
       (Name.startswith("xop.vpcom") && // Added in 3.2
        F->arg_size() == 2))
@@ -1517,6 +1518,13 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
       Rep = Builder.CreateFSub(CI->getArgOperand(0), CI->getArgOperand(1));
       Rep = EmitX86Select(Builder, CI->getArgOperand(3), Rep,
                           CI->getArgOperand(2));
+    } else if (IsX86 && Name.startswith("avx512.mask.lzcnt.")) {
+      Rep = Builder.CreateCall(Intrinsic::getDeclaration(F->getParent(),
+                                                         Intrinsic::ctlz,
+                                                         CI->getType()),
+                               { CI->getArgOperand(0), Builder.getInt1(false) });
+      Rep = EmitX86Select(Builder, CI->getArgOperand(2), Rep,
+                          CI->getArgOperand(1));
     } else if (IsX86 && (Name.startswith("avx512.mask.max.p") ||
                          Name.startswith("avx512.mask.min.p"))) {
       bool IsMin = Name[13] == 'i';

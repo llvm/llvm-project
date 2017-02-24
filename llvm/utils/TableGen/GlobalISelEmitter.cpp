@@ -103,6 +103,7 @@ public:
   iterator_range<typename PredicateVec::const_iterator> predicates() const {
     return make_range(predicates_begin(), predicates_end());
   }
+  typename PredicateVec::size_type predicates_size() const { return Predicates.size(); }
 
   /// Emit a C++ expression that tests whether all the predicates are met.
   template <class... Args>
@@ -130,11 +131,36 @@ public:
 /// * Operand is an MBB.
 class OperandPredicateMatcher {
 public:
+  /// This enum is used for RTTI and also defines the priority that is given to
+  /// the predicate when generating the matcher code. Kinds with higher priority
+  /// must be tested first.
+  ///
+  /// The relative priority of OPM_LLT, OPM_RegBank, and OPM_MBB do not matter.
+  enum PredicateKind {
+    OPM_LLT,
+    OPM_RegBank,
+    OPM_MBB,
+  };
+
+protected:
+  PredicateKind Kind;
+
+public:
+  OperandPredicateMatcher(PredicateKind Kind) : Kind(Kind) {}
   virtual ~OperandPredicateMatcher() {}
+
+  PredicateKind getKind() const { return Kind; }
 
   /// Emit a C++ expression that checks the predicate for the given operand.
   virtual void emitCxxPredicateExpr(raw_ostream &OS,
                                     StringRef OperandExpr) const = 0;
+
+  /// Compare the priority of this object and B.
+  ///
+  /// Returns true if this object is more important than B.
+  virtual bool isHigherPriorityThan(const OperandPredicateMatcher &B) {
+    return false;
+  };
 };
 
 /// Generates code to check that an operand is a particular LLT.
@@ -143,7 +169,12 @@ protected:
   std::string Ty;
 
 public:
-  LLTOperandMatcher(std::string Ty) : Ty(Ty) {}
+  LLTOperandMatcher(std::string Ty)
+      : OperandPredicateMatcher(OPM_LLT), Ty(Ty) {}
+
+  static bool classof(const OperandPredicateMatcher *P) {
+    return P->getKind() == OPM_LLT;
+  }
 
   void emitCxxPredicateExpr(raw_ostream &OS,
                             StringRef OperandExpr) const override {
@@ -157,7 +188,12 @@ protected:
   const CodeGenRegisterClass &RC;
 
 public:
-  RegisterBankOperandMatcher(const CodeGenRegisterClass &RC) : RC(RC) {}
+  RegisterBankOperandMatcher(const CodeGenRegisterClass &RC)
+      : OperandPredicateMatcher(OPM_RegBank), RC(RC) {}
+
+  static bool classof(const OperandPredicateMatcher *P) {
+    return P->getKind() == OPM_RegBank;
+  }
 
   void emitCxxPredicateExpr(raw_ostream &OS,
                             StringRef OperandExpr) const override {
@@ -170,6 +206,12 @@ public:
 /// Generates code to check that an operand is a basic block.
 class MBBOperandMatcher : public OperandPredicateMatcher {
 public:
+  MBBOperandMatcher() : OperandPredicateMatcher(OPM_MBB) {}
+
+  static bool classof(const OperandPredicateMatcher *P) {
+    return P->getKind() == OPM_MBB;
+  }
+
   void emitCxxPredicateExpr(raw_ostream &OS,
                             StringRef OperandExpr) const override {
     OS << OperandExpr << ".isMBB()";
@@ -195,6 +237,27 @@ public:
     emitCxxPredicateListExpr(OS, getOperandExpr(InsnVarName));
     OS << ")";
   }
+
+  /// Compare the priority of this object and B.
+  ///
+  /// Returns true if this object is more important than B.
+  bool isHigherPriorityThan(const OperandMatcher &B) const {
+    // Operand matchers involving more predicates have higher priority.
+    if (predicates_size() > B.predicates_size())
+      return true;
+    if (predicates_size() < B.predicates_size())
+      return false;
+
+    // This assumes that predicates are added in a consistent order.
+    for (const auto &Predicate : zip(predicates(), B.predicates())) {
+      if (std::get<0>(Predicate)->isHigherPriorityThan(*std::get<1>(Predicate)))
+        return true;
+      if (std::get<1>(Predicate)->isHigherPriorityThan(*std::get<0>(Predicate)))
+        return false;
+    }
+
+    return false;
+  };
 };
 
 /// Generates code to check a predicate on an instruction.
@@ -203,13 +266,32 @@ public:
 /// * The opcode of the instruction is a particular value.
 /// * The nsw/nuw flag is/isn't set.
 class InstructionPredicateMatcher {
+protected:
+  /// This enum is used for RTTI and also defines the priority that is given to
+  /// the predicate when generating the matcher code. Kinds with higher priority
+  /// must be tested first.
+  enum PredicateKind {
+    IPM_Opcode,
+  };
+
+  PredicateKind Kind;
+
 public:
   virtual ~InstructionPredicateMatcher() {}
+
+  PredicateKind getKind() const { return Kind; }
 
   /// Emit a C++ expression that tests whether the instruction named in
   /// InsnVarName matches the predicate.
   virtual void emitCxxPredicateExpr(raw_ostream &OS,
                                     StringRef InsnVarName) const = 0;
+
+  /// Compare the priority of this object and B.
+  ///
+  /// Returns true if this object is more important than B.
+  bool isHigherPriorityThan(const InstructionPredicateMatcher &B) const {
+    return Kind < B.Kind;
+  };
 };
 
 /// Generates code to check the opcode of an instruction.
@@ -220,11 +302,34 @@ protected:
 public:
   InstructionOpcodeMatcher(const CodeGenInstruction *I) : I(I) {}
 
+  static bool classof(const InstructionPredicateMatcher *P) {
+    return P->getKind() == IPM_Opcode;
+  }
+
   void emitCxxPredicateExpr(raw_ostream &OS,
                             StringRef InsnVarName) const override {
     OS << InsnVarName << ".getOpcode() == " << I->Namespace
        << "::" << I->TheDef->getName();
   }
+
+  /// Compare the priority of this object and B.
+  ///
+  /// Returns true if  is more important than B.
+  bool isHigherPriorityThan(const InstructionPredicateMatcher &B) const {
+    if (InstructionPredicateMatcher::isHigherPriorityThan(B))
+      return true;
+    if (B.InstructionPredicateMatcher::isHigherPriorityThan(*this))
+      return false;
+
+    // Prioritize opcodes for cosmetic reasons in the generated source. Although
+    // this is cosmetic at the moment, we may want to drive a similar ordering
+    // using instruction frequency information to improve compile time.
+    if (const InstructionOpcodeMatcher *BO =
+            dyn_cast<InstructionOpcodeMatcher>(&B))
+      return I->TheDef->getName() < BO->I->TheDef->getName();
+
+    return false;
+  };
 };
 
 /// Generates code to check that a set of predicates and operands match for a
@@ -255,6 +360,33 @@ public:
       OS << ")";
     }
   }
+
+  /// Compare the priority of this object and B.
+  ///
+  /// Returns true if this object is more important than B.
+  bool isHigherPriorityThan(const InstructionMatcher &B) const {
+    // Instruction matchers involving more operands have higher priority.
+    if (Operands.size() > B.Operands.size())
+      return true;
+    if (Operands.size() < B.Operands.size())
+      return false;
+
+    for (const auto &Predicate : zip(predicates(), B.predicates())) {
+      if (std::get<0>(Predicate)->isHigherPriorityThan(*std::get<1>(Predicate)))
+        return true;
+      if (std::get<1>(Predicate)->isHigherPriorityThan(*std::get<0>(Predicate)))
+        return false;
+    }
+
+    for (const auto &Operand : zip(Operands, B.Operands)) {
+      if (std::get<0>(Operand).isHigherPriorityThan(std::get<1>(Operand)))
+        return true;
+      if (std::get<1>(Operand).isHigherPriorityThan(std::get<0>(Operand)))
+        return false;
+    }
+
+    return false;
+  };
 };
 
 //===- Actions ------------------------------------------------------------===//
@@ -352,6 +484,26 @@ public:
     OS << "    return true;\n";
     OS << "  }\n\n";
   }
+
+  /// Compare the priority of this object and B.
+  ///
+  /// Returns true if this object is more important than B.
+  bool isHigherPriorityThan(const RuleMatcher &B) const {
+    // Rules involving more match roots have higher priority.
+    if (Matchers.size() > B.Matchers.size())
+      return true;
+    if (Matchers.size() < B.Matchers.size())
+      return false;
+
+    for (const auto &Matcher : zip(Matchers, B.Matchers)) {
+      if (std::get<0>(Matcher)->isHigherPriorityThan(*std::get<1>(Matcher)))
+        return true;
+      if (std::get<1>(Matcher)->isHigherPriorityThan(*std::get<0>(Matcher)))
+        return false;
+    }
+
+    return false;
+  };
 };
 
 //===- GlobalISelEmitter class --------------------------------------------===//
@@ -554,6 +706,17 @@ void GlobalISelEmitter::run(raw_ostream &OS) {
 
     Rules.push_back(std::move(MatcherOrErr.get()));
   }
+
+  std::sort(Rules.begin(), Rules.end(),
+            [](const RuleMatcher &A, const RuleMatcher &B) {
+              if (A.isHigherPriorityThan(B)) {
+                assert(!B.isHigherPriorityThan(A) && "Cannot be more important "
+                                                     "and less important at "
+                                                     "the same time");
+                return true;
+              }
+              return false;
+            });
 
   for (const auto &Rule : Rules) {
     Rule.emit(OS);

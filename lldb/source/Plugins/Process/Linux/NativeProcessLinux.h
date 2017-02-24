@@ -86,6 +86,8 @@ public:
 
   Error SetBreakpoint(lldb::addr_t addr, uint32_t size, bool hardware) override;
 
+  Error RemoveBreakpoint(lldb::addr_t addr, bool hardware = false) override;
+
   void DoStopIDBumped(uint32_t newBumpId) override;
 
   Error GetLoadedModuleFileSpec(const char *module_path,

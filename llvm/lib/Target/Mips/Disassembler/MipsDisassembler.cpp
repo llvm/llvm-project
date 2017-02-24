@@ -1117,6 +1117,7 @@ DecodeStatus MipsDisassembler::getInstruction(MCInst &Instr, uint64_t &Size,
                                               raw_ostream &CStream) const {
   uint32_t Insn;
   DecodeStatus Result;
+  Size = 0;
 
   if (IsMicroMips) {
     Result = readInstruction16(Bytes, Address, Size, Insn, IsBigEndian);
@@ -1179,98 +1180,88 @@ DecodeStatus MipsDisassembler::getInstruction(MCInst &Instr, uint64_t &Size,
       }
     }
 
-    // This is an invalid instruction. Let the disassembler move forward by the
-    // minimum instruction size.
+    // This is an invalid instruction. Claim that the Size is 2 bytes. Since
+    // microMIPS instructions have a minimum alignment of 2, the next 2 bytes
+    // could form a valid instruction. The two bytes we rejected as an
+    // instruction could have actually beeen an inline constant pool that is
+    // unconditionally branched over.
     Size = 2;
     return MCDisassembler::Fail;
   }
 
+  // Attempt to read the instruction so that we can attempt to decode it. If
+  // the buffer is not 4 bytes long, let the higher level logic figure out
+  // what to do with a size of zero and MCDisassembler::Fail.
   Result = readInstruction32(Bytes, Address, Size, Insn, IsBigEndian, false);
-  if (Result == MCDisassembler::Fail) {
-    Size = 4;
+  if (Result == MCDisassembler::Fail)
     return MCDisassembler::Fail;
-  }
+
+  // The only instruction size for standard encoded MIPS.
+  Size = 4;
 
   if (hasCOP3()) {
     DEBUG(dbgs() << "Trying COP3_ table (32-bit opcodes):\n");
     Result =
         decodeInstruction(DecoderTableCOP3_32, Instr, Insn, Address, this, STI);
-    if (Result != MCDisassembler::Fail) {
-      Size = 4;
+    if (Result != MCDisassembler::Fail)
       return Result;
-    }
   }
 
   if (hasMips32r6() && isGP64()) {
     DEBUG(dbgs() << "Trying Mips32r6_64r6 (GPR64) table (32-bit opcodes):\n");
     Result = decodeInstruction(DecoderTableMips32r6_64r6_GP6432, Instr, Insn,
                                Address, this, STI);
-    if (Result != MCDisassembler::Fail) {
-      Size = 4;
+    if (Result != MCDisassembler::Fail)
       return Result;
-    }
   }
 
   if (hasMips32r6() && isPTR64()) {
     DEBUG(dbgs() << "Trying Mips32r6_64r6 (PTR64) table (32-bit opcodes):\n");
     Result = decodeInstruction(DecoderTableMips32r6_64r6_PTR6432, Instr, Insn,
                                Address, this, STI);
-    if (Result != MCDisassembler::Fail) {
-      Size = 4;
+    if (Result != MCDisassembler::Fail)
       return Result;
-    }
   }
 
   if (hasMips32r6()) {
     DEBUG(dbgs() << "Trying Mips32r6_64r6 table (32-bit opcodes):\n");
     Result = decodeInstruction(DecoderTableMips32r6_64r632, Instr, Insn,
                                Address, this, STI);
-    if (Result != MCDisassembler::Fail) {
-      Size = 4;
+    if (Result != MCDisassembler::Fail)
       return Result;
-    }
   }
 
   if (hasMips2() && isPTR64()) {
     DEBUG(dbgs() << "Trying Mips32r6_64r6 (PTR64) table (32-bit opcodes):\n");
     Result = decodeInstruction(DecoderTableMips32_64_PTR6432, Instr, Insn,
                                Address, this, STI);
-    if (Result != MCDisassembler::Fail) {
-      Size = 4;
+    if (Result != MCDisassembler::Fail)
       return Result;
-    }
   }
 
   if (hasCnMips()) {
     DEBUG(dbgs() << "Trying CnMips table (32-bit opcodes):\n");
     Result = decodeInstruction(DecoderTableCnMips32, Instr, Insn,
                                Address, this, STI);
-    if (Result != MCDisassembler::Fail) {
-      Size = 4;
+    if (Result != MCDisassembler::Fail)
       return Result;
-    }
   }
 
   if (isGP64()) {
     DEBUG(dbgs() << "Trying Mips64 (GPR64) table (32-bit opcodes):\n");
     Result = decodeInstruction(DecoderTableMips6432, Instr, Insn,
                                Address, this, STI);
-    if (Result != MCDisassembler::Fail) {
-      Size = 4;
+    if (Result != MCDisassembler::Fail)
       return Result;
-    }
   }
 
   DEBUG(dbgs() << "Trying Mips table (32-bit opcodes):\n");
   // Calling the auto-generated decoder function.
   Result =
       decodeInstruction(DecoderTableMips32, Instr, Insn, Address, this, STI);
-  if (Result != MCDisassembler::Fail) {
-    Size = 4;
+  if (Result != MCDisassembler::Fail)
     return Result;
-  }
 
-  Size = 4;
   return MCDisassembler::Fail;
 }
 

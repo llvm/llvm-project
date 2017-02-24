@@ -565,6 +565,39 @@ void APInt::setBit(unsigned bitPosition) {
     pVal[whichWord(bitPosition)] |= maskBit(bitPosition);
 }
 
+void APInt::setBits(unsigned loBit, unsigned hiBit) {
+  assert(hiBit <= BitWidth && "hiBit out of range");
+  assert(loBit <= hiBit && loBit <= BitWidth && "loBit out of range");
+
+  if (loBit == hiBit)
+    return;
+
+  if (isSingleWord())
+    *this |= APInt::getBitsSet(BitWidth, loBit, hiBit);
+  else {
+    unsigned hiBit1 = hiBit - 1;
+    unsigned loWord = whichWord(loBit);
+    unsigned hiWord = whichWord(hiBit1);
+    if (loWord == hiWord) {
+      // Set bits are all within the same word, create a [loBit,hiBit) mask.
+      uint64_t mask = UINT64_MAX;
+      mask >>= (APINT_BITS_PER_WORD - (hiBit - loBit));
+      mask <<= whichBit(loBit);
+      pVal[loWord] |= mask;
+    } else {
+      // Set bits span multiple words, create a lo mask with set bits starting
+      // at loBit, a hi mask with set bits below hiBit and set all bits of the
+      // words in between.
+      uint64_t loMask = UINT64_MAX << whichBit(loBit);
+      uint64_t hiMask = UINT64_MAX >> (64 - whichBit(hiBit1) - 1);
+      pVal[loWord] |= loMask;
+      pVal[hiWord] |= hiMask;
+      for (unsigned word = loWord + 1; word < hiWord; ++word)
+        pVal[word] = UINT64_MAX;
+    }
+  }
+}
+
 /// Set the given bit to 0 whose position is given as "bitPosition".
 /// @brief Set a given bit to 0.
 void APInt::clearBit(unsigned bitPosition) {
