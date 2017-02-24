@@ -464,7 +464,7 @@ void LinkerScript<ELFT>::switchTo(OutputSectionBase *Sec) {
   // section is the same as the preceding output section in the same region
   // https://sourceware.org/binutils/docs-2.20/ld/Output-Section-LMA.html
   if (LMAOffset)
-    CurOutSec->setLMAOffset(LMAOffset());
+    CurOutSec->LMAOffset = LMAOffset();
 }
 
 template <class ELFT> void LinkerScript<ELFT>::process(BaseCommand &Base) {
@@ -515,7 +515,7 @@ template <class ELFT>
 static OutputSectionBase *
 findSection(StringRef Name, const std::vector<OutputSectionBase *> &Sections) {
   auto End = Sections.end();
-  auto HasName = [=](OutputSectionBase *Sec) { return Sec->getName() == Name; };
+  auto HasName = [=](OutputSectionBase *Sec) { return Sec->Name == Name; };
   auto I = std::find_if(Sections.begin(), End, HasName);
   std::vector<OutputSectionBase *> Ret;
   if (I == End)
@@ -752,7 +752,7 @@ template <class ELFT> void LinkerScript<ELFT>::placeOrphanSections() {
   }
 
   for (OutputSectionBase *Sec : *OutputSections) {
-    StringRef Name = Sec->getName();
+    StringRef Name = Sec->Name;
 
     // Find the last spot where we can insert a command and still get the
     // correct result.
@@ -851,7 +851,7 @@ template <class ELFT> std::vector<PhdrEntry> LinkerScript<ELFT>::createPhdrs() {
       break;
 
     // Assign headers specified by linker script
-    for (size_t Id : getPhdrIndices(Sec->getName())) {
+    for (size_t Id : getPhdrIndices(Sec->Name)) {
       Ret[Id].add(Sec);
       if (Opt.PhdrsCommands[Id].Flags == UINT_MAX)
         Ret[Id].p_flags |= Sec->getPhdrFlags();
@@ -941,7 +941,7 @@ const OutputSectionBase *LinkerScript<ELFT>::getOutputSection(const Twine &Loc,
   static OutputSectionBase FakeSec("", 0, 0);
 
   for (OutputSectionBase *Sec : *OutputSections)
-    if (Sec->getName() == Name)
+    if (Sec->Name == Name)
       return Sec;
 
   error(Loc + ": undefined section " + Name);
@@ -957,7 +957,7 @@ const OutputSectionBase *LinkerScript<ELFT>::getOutputSection(const Twine &Loc,
 template <class ELFT>
 uint64_t LinkerScript<ELFT>::getOutputSectionSize(StringRef Name) {
   for (OutputSectionBase *Sec : *OutputSections)
-    if (Sec->getName() == Name)
+    if (Sec->Name == Name)
       return Sec->Size;
   return 0;
 }

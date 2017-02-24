@@ -722,8 +722,7 @@ void ExeDepsFix::visitSoftInstr(MachineInstr *mi, unsigned mask) {
   // Kill off any remaining uses that don't match available, and build a list of
   // incoming DomainValues that we want to merge.
   SmallVector<LiveReg, 4> Regs;
-  for (SmallVectorImpl<int>::iterator i=used.begin(), e=used.end(); i!=e; ++i) {
-    int rx = *i;
+  for (int rx : used) {
     assert(LiveRegs && "no space allocated for live registers");
     const LiveReg &LR = LiveRegs[rx];
     // This useless DomainValue could have been missed above.

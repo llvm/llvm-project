@@ -85,3 +85,8 @@ List of projects and tools
     errors, fixit hints).  See also `<http://l.rw.rw/clang_plugin>`_ for
     step-by-step instructions."
 
+`<https://phabricator.kde.org/source/clazy>`_
+   "clazy is a compiler plugin which allows clang to understand Qt semantics.
+   You get more than 50 Qt related compiler warnings, ranging from unneeded
+   memory allocations to misusage of API, including fix-its for automatic
+   refactoring."

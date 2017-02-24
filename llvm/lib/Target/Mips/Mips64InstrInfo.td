@@ -707,6 +707,15 @@ let AdditionalPredicates = [NotInMicroMips] in {
   def : MipsInstAlias<"daddu $rs, $imm",
                       (DADDiu GPR64Opnd:$rs, GPR64Opnd:$rs, simm16_64:$imm),
                       0>, ISA_MIPS3;
+
+  defm : OneOrTwoOperandMacroImmediateAlias<"and", ANDi64, GPR64Opnd, imm64>,
+         GPR_64;
+
+  defm : OneOrTwoOperandMacroImmediateAlias<"or", ORi64, GPR64Opnd, imm64>,
+         GPR_64;
+
+  defm : OneOrTwoOperandMacroImmediateAlias<"xor", XORi64, GPR64Opnd, imm64>,
+         GPR_64;
 }
 def : MipsInstAlias<"dsll $rd, $rt, $rs",
                     (DSLLV GPR64Opnd:$rd, GPR64Opnd:$rt, GPR32Opnd:$rs), 0>,

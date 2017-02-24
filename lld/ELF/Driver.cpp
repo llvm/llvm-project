@@ -434,6 +434,13 @@ static DiscardPolicy getDiscardOption(opt::InputArgList &Args) {
   return DiscardPolicy::None;
 }
 
+static StringRef getDynamicLinkerOption(opt::InputArgList &Args) {
+  auto *Arg = Args.getLastArg(OPT_dynamic_linker, OPT_no_dynamic_linker);
+  if (!Arg || Arg->getOption().getID() == OPT_no_dynamic_linker)
+    return "";
+  return Arg->getValue();
+}
+
 static StripPolicy getStripOption(opt::InputArgList &Args) {
   if (auto *Arg = Args.getLastArg(OPT_strip_all, OPT_strip_debug)) {
     if (Arg->getOption().getID() == OPT_strip_all)
@@ -548,8 +555,6 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->Trace = Args.hasArg(OPT_trace);
   Config->Verbose = Args.hasArg(OPT_verbose);
   Config->WarnCommon = Args.hasArg(OPT_warn_common);
-
-  Config->DynamicLinker = getString(Args, OPT_dynamic_linker);
   Config->Entry = getString(Args, OPT_entry);
   Config->Fini = getString(Args, OPT_fini, "_fini");
   Config->Init = getString(Args, OPT_init, "_init");
@@ -582,6 +587,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->ZStackSize = getZOptionValue(Args, "stack-size", 0);
   Config->ZWxneeded = hasZOption(Args, "wxneeded");
 
+  Config->DynamicLinker = getDynamicLinkerOption(Args);
   Config->OFormatBinary = isOutputFormatBinary(Args);
   Config->SectionStartMap = getSectionStartMap(Args);
   Config->SortSection = getSortKind(Args);

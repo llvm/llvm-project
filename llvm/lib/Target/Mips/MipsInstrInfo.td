@@ -2322,15 +2322,17 @@ def MULOUMacro : MipsAsmPseudoInst<(outs), (ins GPR32Opnd:$rd, GPR32Opnd:$rs,
 //===----------------------------------------------------------------------===//
 
 multiclass OneOrTwoOperandMacroImmediateAlias<string Memnomic,
-                                         Instruction Opcode> {
+                                              Instruction Opcode,
+                                              RegisterOperand RO = GPR32Opnd,
+                                              Operand Imm = simm32_relaxed> {
   def : MipsInstAlias<!strconcat(Memnomic, " $rs, $rt, $imm"),
-                                (Opcode GPR32Opnd:$rs,
-                                        GPR32Opnd:$rt,
-                                        simm32_relaxed:$imm), 0>;
+                                (Opcode RO:$rs,
+                                        RO:$rt,
+                                        Imm:$imm), 0>;
   def : MipsInstAlias<!strconcat(Memnomic, " $rs, $imm"),
-                                (Opcode GPR32Opnd:$rs,
-                                        GPR32Opnd:$rs,
-                                        simm32_relaxed:$imm), 0>;
+                                (Opcode RO:$rs,
+                                        RO:$rs,
+                                        Imm:$imm), 0>;
 }
 
 def : MipsInstAlias<"move $dst, $src",
@@ -2384,11 +2386,11 @@ let AdditionalPredicates = [NotInMicroMips] in {
 
   defm : OneOrTwoOperandMacroImmediateAlias<"addu", ADDiu>;
 
-  defm : OneOrTwoOperandMacroImmediateAlias<"and", ANDi>;
+  defm : OneOrTwoOperandMacroImmediateAlias<"and", ANDi>, GPR_32;
 
-  defm : OneOrTwoOperandMacroImmediateAlias<"or", ORi>;
+  defm : OneOrTwoOperandMacroImmediateAlias<"or", ORi>, GPR_32;
 
-  defm : OneOrTwoOperandMacroImmediateAlias<"xor", XORi>;
+  defm : OneOrTwoOperandMacroImmediateAlias<"xor", XORi>, GPR_32;
 
   defm : OneOrTwoOperandMacroImmediateAlias<"slt", SLTi>;
 

@@ -2392,9 +2392,9 @@ MipsAsmParser::tryExpandInstruction(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
                                                          : MER_Success;
     }
     return MER_NotAMacro;
-  case Mips::ANDi:  case Mips::ANDi_MM:
-  case Mips::ORi:   case Mips::ORi_MM:
-  case Mips::XORi:  case Mips::XORi_MM:
+  case Mips::ANDi:  case Mips::ANDi_MM:  case Mips::ANDi64:
+  case Mips::ORi:   case Mips::ORi_MM:   case Mips::ORi64:
+  case Mips::XORi:  case Mips::XORi_MM:  case Mips::XORi64:
     if ((Inst.getNumOperands() == 3) && Inst.getOperand(0).isReg() &&
         Inst.getOperand(1).isReg() && Inst.getOperand(2).isImm()) {
       int64_t ImmValue = Inst.getOperand(2).getImm();
@@ -2581,7 +2581,6 @@ bool MipsAsmParser::loadImmediate(int64_t ImmValue, unsigned DstReg,
 
     uint16_t Bits31To16 = (ImmValue >> 16) & 0xffff;
     uint16_t Bits15To0 = ImmValue & 0xffff;
-
     if (!Is32BitImm && !isInt<32>(ImmValue)) {
       // Traditional behaviour seems to special case this particular value. It's
       // not clear why other masks are handled differently.
@@ -3805,7 +3804,7 @@ bool MipsAsmParser::expandAliasImmediate(MCInst &Inst, SMLoc IDLoc,
   unsigned SrcReg = Inst.getOperand(1).getReg();
   int64_t ImmValue = Inst.getOperand(2).getImm();
 
-  bool Is32Bit = isInt<32>(ImmValue) || isUInt<32>(ImmValue);
+  bool Is32Bit = isInt<32>(ImmValue) || (!isGP64bit() && isUInt<32>(ImmValue));
 
   unsigned FinalOpcode = Inst.getOpcode();
 
@@ -3865,6 +3864,15 @@ bool MipsAsmParser::expandAliasImmediate(MCInst &Inst, SMLoc IDLoc,
       break;
     case Mips::XORi_MM:
       FinalOpcode = Mips::XOR_MM;
+      break;
+    case Mips::ANDi64:
+      FinalOpcode = Mips::AND64;
+      break;
+    case Mips::ORi64:
+      FinalOpcode = Mips::OR64;
+      break;
+    case Mips::XORi64:
+      FinalOpcode = Mips::XOR64;
       break;
     }
 

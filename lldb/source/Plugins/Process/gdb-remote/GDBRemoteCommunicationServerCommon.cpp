@@ -838,6 +838,7 @@ GDBRemoteCommunicationServerCommon::Handle_qSupported(
   response.PutCString(";QListThreadsInStopReply+");
   response.PutCString(";qEcho+");
 #if defined(__linux__)
+  response.PutCString(";QPassSignals+");
   response.PutCString(";qXfer:auxv:read+");
 #endif
 

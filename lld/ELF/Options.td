@@ -148,6 +148,9 @@ def no_define_common: F<"no-define-common">,
 def no_demangle: F<"no-demangle">,
   HelpText<"Do not demangle symbol names">;
 
+def no_dynamic_linker: F<"no-dynamic-linker">,
+  HelpText<"Inhibit output of .interp section">;
+
 def no_export_dynamic: F<"no-export-dynamic">;
 def no_fatal_warnings: F<"no-fatal-warnings">;
 
@@ -357,7 +360,6 @@ def no_add_needed: F<"no-add-needed">;
 def no_allow_shlib_undefined: F<"no-allow-shlib-undefined">;
 def no_copy_dt_needed_entries: F<"no-copy-dt-needed-entries">,
   Alias<no_add_needed>;
-def no_dynamic_linker: F<"no-dynamic-linker">;
 def no_mmap_output_file: F<"no-mmap-output-file">;
 def no_warn_common: F<"no-warn-common">;
 def no_warn_mismatch: F<"no-warn-mismatch">;

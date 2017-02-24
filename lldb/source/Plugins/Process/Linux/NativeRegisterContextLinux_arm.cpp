@@ -130,6 +130,7 @@ NativeRegisterContextLinux_arm::NativeRegisterContextLinux_arm(
   ::memset(&m_fpr, 0, sizeof(m_fpr));
   ::memset(&m_gpr_arm, 0, sizeof(m_gpr_arm));
   ::memset(&m_hwp_regs, 0, sizeof(m_hwp_regs));
+  ::memset(&m_hbr_regs, 0, sizeof(m_hbr_regs));
 
   // 16 is just a maximum value, query hardware for actual watchpoint count
   m_max_hwp_supported = 16;
@@ -354,10 +355,28 @@ bool NativeRegisterContextLinux_arm::IsFPR(unsigned reg) const {
   return (m_reg_info.first_fpr <= reg && reg <= m_reg_info.last_fpr);
 }
 
+uint32_t NativeRegisterContextLinux_arm::NumSupportedHardwareBreakpoints() {
+  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_BREAKPOINTS));
+
+  if (log)
+    log->Printf("NativeRegisterContextLinux_arm::%s()", __FUNCTION__);
+
+  Error error;
+
+  // Read hardware breakpoint and watchpoint information.
+  error = ReadHardwareDebugInfo();
+
+  if (error.Fail())
+    return 0;
+
+  LLDB_LOG(log, "{0}", m_max_hbp_supported);
+  return m_max_hbp_supported;
+}
+
 uint32_t
 NativeRegisterContextLinux_arm::SetHardwareBreakpoint(lldb::addr_t addr,
                                                       size_t size) {
-  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_WATCHPOINTS));
+  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_BREAKPOINTS));
   LLDB_LOG(log, "addr: {0:x}, size: {1:x}", addr, size);
 
   // Read hardware breakpoint and watchpoint information.
@@ -368,71 +387,58 @@ NativeRegisterContextLinux_arm::SetHardwareBreakpoint(lldb::addr_t addr,
 
   uint32_t control_value = 0, bp_index = 0;
 
-  // Check if size has a valid hardware breakpoint length.
-  // Thumb instructions are 2-bytes but we have no way here to determine
-  // if target address is a thumb or arm instruction.
-  // TODO: Add support for setting thumb mode hardware breakpoints
-  if (size != 4 && size != 2)
+  // Setup address and control values.
+  // Use size to get a hint of arm vs thumb modes.
+  switch (size) {
+  case 2:
+    control_value = (0x3 << 5) | 7;
+    addr &= ~1;
+    break;
+  case 4:
+    control_value = (0xfu << 5) | 7;
+    addr &= ~3;
+    break;
+  default:
     return LLDB_INVALID_INDEX32;
+  }
 
-  // Setup control value
-  // Make the byte_mask into a valid Byte Address Select mask
-  control_value = 0xfu << 5;
-
-  // Enable this breakpoint and make it stop in privileged or user mode;
-  control_value |= 7;
-
-  // Make sure bits 1:0 are clear in our address
-  // This should be different once we support thumb here.
-  addr &= ~((lldb::addr_t)3);
-
-  // Iterate over stored hardware breakpoints
-  // Find a free bp_index or update reference count if duplicate.
+  // Iterate over stored breakpoints and find a free bp_index
   bp_index = LLDB_INVALID_INDEX32;
-
   for (uint32_t i = 0; i < m_max_hbp_supported; i++) {
     if ((m_hbr_regs[i].control & 1) == 0) {
       bp_index = i; // Mark last free slot
-    } else if (m_hbr_regs[i].address == addr &&
-               m_hbr_regs[i].control == control_value) {
-      bp_index = i; // Mark duplicate index
-      break;        // Stop searching here
+    } else if (m_hbr_regs[i].address == addr) {
+      return LLDB_INVALID_INDEX32; // We do not support duplicate breakpoints.
     }
   }
 
   if (bp_index == LLDB_INVALID_INDEX32)
     return LLDB_INVALID_INDEX32;
 
-  // Add new or update existing breakpoint
-  if ((m_hbr_regs[bp_index].control & 1) == 0) {
-    m_hbr_regs[bp_index].address = addr;
-    m_hbr_regs[bp_index].control = control_value;
-    m_hbr_regs[bp_index].refcount = 1;
+  // Update breakpoint in local cache
+  m_hbr_regs[bp_index].real_addr = addr;
+  m_hbr_regs[bp_index].address = addr;
+  m_hbr_regs[bp_index].control = control_value;
 
-    // PTRACE call to set corresponding hardware breakpoint register.
-    error = WriteHardwareDebugRegs(eDREGTypeBREAK, bp_index);
+  // PTRACE call to set corresponding hardware breakpoint register.
+  error = WriteHardwareDebugRegs(eDREGTypeBREAK, bp_index);
 
-    if (error.Fail()) {
-      m_hbr_regs[bp_index].address = 0;
-      m_hbr_regs[bp_index].control &= ~1;
-      m_hbr_regs[bp_index].refcount = 0;
+  if (error.Fail()) {
+    m_hbr_regs[bp_index].address = 0;
+    m_hbr_regs[bp_index].control &= ~1;
 
-      return LLDB_INVALID_INDEX32;
-    }
-  } else
-    m_hbr_regs[bp_index].refcount++;
+    return LLDB_INVALID_INDEX32;
+  }
 
   return bp_index;
 }
 
 bool NativeRegisterContextLinux_arm::ClearHardwareBreakpoint(uint32_t hw_idx) {
-  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_WATCHPOINTS));
+  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_BREAKPOINTS));
   LLDB_LOG(log, "hw_idx: {0}", hw_idx);
 
-  Error error;
-
   // Read hardware breakpoint and watchpoint information.
-  error = ReadHardwareDebugInfo();
+  Error error = ReadHardwareDebugInfo();
 
   if (error.Fail())
     return false;
@@ -440,35 +446,88 @@ bool NativeRegisterContextLinux_arm::ClearHardwareBreakpoint(uint32_t hw_idx) {
   if (hw_idx >= m_max_hbp_supported)
     return false;
 
-  // Update reference count if multiple references.
-  if (m_hbr_regs[hw_idx].refcount > 1) {
-    m_hbr_regs[hw_idx].refcount--;
-    return true;
-  } else if (m_hbr_regs[hw_idx].refcount == 1) {
-    // Create a backup we can revert to in case of failure.
-    lldb::addr_t tempAddr = m_hbr_regs[hw_idx].address;
-    uint32_t tempControl = m_hbr_regs[hw_idx].control;
-    uint32_t tempRefCount = m_hbr_regs[hw_idx].refcount;
+  // Create a backup we can revert to in case of failure.
+  lldb::addr_t tempAddr = m_hbr_regs[hw_idx].address;
+  uint32_t tempControl = m_hbr_regs[hw_idx].control;
 
-    m_hbr_regs[hw_idx].control &= ~1;
-    m_hbr_regs[hw_idx].address = 0;
-    m_hbr_regs[hw_idx].refcount = 0;
+  m_hbr_regs[hw_idx].control &= ~1;
+  m_hbr_regs[hw_idx].address = 0;
 
-    // PTRACE call to clear corresponding hardware breakpoint register.
-    WriteHardwareDebugRegs(eDREGTypeBREAK, hw_idx);
+  // PTRACE call to clear corresponding hardware breakpoint register.
+  error = WriteHardwareDebugRegs(eDREGTypeBREAK, hw_idx);
 
-    if (error.Fail()) {
-      m_hbr_regs[hw_idx].control = tempControl;
-      m_hbr_regs[hw_idx].address = tempAddr;
-      m_hbr_regs[hw_idx].refcount = tempRefCount;
+  if (error.Fail()) {
+    m_hbr_regs[hw_idx].control = tempControl;
+    m_hbr_regs[hw_idx].address = tempAddr;
 
-      return false;
-    }
-
-    return true;
+    return false;
   }
 
-  return false;
+  return true;
+}
+
+Error NativeRegisterContextLinux_arm::GetHardwareBreakHitIndex(
+    uint32_t &bp_index, lldb::addr_t trap_addr) {
+  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_BREAKPOINTS));
+
+  if (log)
+    log->Printf("NativeRegisterContextLinux_arm64::%s()", __FUNCTION__);
+
+  lldb::addr_t break_addr;
+
+  for (bp_index = 0; bp_index < m_max_hbp_supported; ++bp_index) {
+    break_addr = m_hbr_regs[bp_index].address;
+
+    if ((m_hbr_regs[bp_index].control & 0x1) && (trap_addr == break_addr)) {
+      m_hbr_regs[bp_index].hit_addr = trap_addr;
+      return Error();
+    }
+  }
+
+  bp_index = LLDB_INVALID_INDEX32;
+  return Error();
+}
+
+Error NativeRegisterContextLinux_arm::ClearAllHardwareBreakpoints() {
+  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_BREAKPOINTS));
+
+  if (log)
+    log->Printf("NativeRegisterContextLinux_arm::%s()", __FUNCTION__);
+
+  Error error;
+
+  // Read hardware breakpoint and watchpoint information.
+  error = ReadHardwareDebugInfo();
+
+  if (error.Fail())
+    return error;
+
+  lldb::addr_t tempAddr = 0;
+  uint32_t tempControl = 0;
+
+  for (uint32_t i = 0; i < m_max_hbp_supported; i++) {
+    if (m_hbr_regs[i].control & 0x01) {
+      // Create a backup we can revert to in case of failure.
+      tempAddr = m_hbr_regs[i].address;
+      tempControl = m_hbr_regs[i].control;
+
+      // Clear breakpoints in local cache
+      m_hbr_regs[i].control &= ~1;
+      m_hbr_regs[i].address = 0;
+
+      // Ptrace call to update hardware debug registers
+      error = WriteHardwareDebugRegs(eDREGTypeBREAK, i);
+
+      if (error.Fail()) {
+        m_hbr_regs[i].control = tempControl;
+        m_hbr_regs[i].address = tempAddr;
+
+        return error;
+      }
+    }
+  }
+
+  return Error();
 }
 
 uint32_t NativeRegisterContextLinux_arm::NumSupportedHardwareWatchpoints() {
@@ -784,8 +843,8 @@ Error NativeRegisterContextLinux_arm::WriteHardwareDebugRegs(int hwbType,
         (PTRACE_TYPE_ARG3)(intptr_t) - ((hwb_index << 1) + 2), ctrl_buf,
         sizeof(unsigned int));
   } else {
-    addr_buf = &m_hwp_regs[hwb_index].address;
-    ctrl_buf = &m_hwp_regs[hwb_index].control;
+    addr_buf = &m_hbr_regs[hwb_index].address;
+    ctrl_buf = &m_hbr_regs[hwb_index].control;
 
     error = NativeProcessLinux::PtraceWrapper(
         PTRACE_SETHBPREGS, m_thread.GetID(),

@@ -216,14 +216,13 @@ static bool isCrtend(StringRef S) { return isCrtBeginEnd(S, "crtend"); }
 // .ctors are duplicate features (and .init_array is newer.) However, there
 // are too many real-world use cases of .ctors, so we had no choice to
 // support that with this rather ad-hoc semantics.
-template <class ELFT>
 static bool compCtors(const InputSection *A, const InputSection *B) {
-  bool BeginA = isCrtbegin(A->template getFile<ELFT>()->getName());
-  bool BeginB = isCrtbegin(B->template getFile<ELFT>()->getName());
+  bool BeginA = isCrtbegin(A->File->getName());
+  bool BeginB = isCrtbegin(B->File->getName());
   if (BeginA != BeginB)
     return BeginA;
-  bool EndA = isCrtend(A->template getFile<ELFT>()->getName());
-  bool EndB = isCrtend(B->template getFile<ELFT>()->getName());
+  bool EndA = isCrtend(A->File->getName());
+  bool EndB = isCrtend(B->File->getName());
   if (EndA != EndB)
     return EndB;
   StringRef X = A->Name;
@@ -241,7 +240,7 @@ static bool compCtors(const InputSection *A, const InputSection *B) {
 // Unfortunately, the rules are different from the one for .{init,fini}_array.
 // Read the comment above.
 template <class ELFT> void OutputSection<ELFT>::sortCtorsDtors() {
-  std::stable_sort(Sections.begin(), Sections.end(), compCtors<ELFT>);
+  std::stable_sort(Sections.begin(), Sections.end(), compCtors);
 }
 
 // Fill [Buf, Buf + Size) with Filler. Filler is written in big

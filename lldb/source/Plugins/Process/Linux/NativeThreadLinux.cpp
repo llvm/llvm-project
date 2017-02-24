@@ -190,6 +190,38 @@ Error NativeThreadLinux::RemoveWatchpoint(lldb::addr_t addr) {
   return Error("Clearing hardware watchpoint failed.");
 }
 
+Error NativeThreadLinux::SetHardwareBreakpoint(lldb::addr_t addr, size_t size) {
+  if (m_state == eStateLaunching)
+    return Error();
+
+  Error error = RemoveHardwareBreakpoint(addr);
+  if (error.Fail())
+    return error;
+
+  NativeRegisterContextSP reg_ctx = GetRegisterContext();
+  uint32_t bp_index = reg_ctx->SetHardwareBreakpoint(addr, size);
+
+  if (bp_index == LLDB_INVALID_INDEX32)
+    return Error("Setting hardware breakpoint failed.");
+
+  m_hw_break_index_map.insert({addr, bp_index});
+  return Error();
+}
+
+Error NativeThreadLinux::RemoveHardwareBreakpoint(lldb::addr_t addr) {
+  auto bp = m_hw_break_index_map.find(addr);
+  if (bp == m_hw_break_index_map.end())
+    return Error();
+
+  uint32_t bp_index = bp->second;
+  if (GetRegisterContext()->ClearHardwareBreakpoint(bp_index)) {
+    m_hw_break_index_map.erase(bp);
+    return Error();
+  }
+
+  return Error("Clearing hardware breakpoint failed.");
+}
+
 Error NativeThreadLinux::Resume(uint32_t signo) {
   const StateType new_state = StateType::eStateRunning;
   MaybeLogStateChange(new_state);
@@ -208,6 +240,18 @@ Error NativeThreadLinux::Resume(uint32_t signo) {
     for (const auto &pair : watchpoint_map) {
       const auto &wp = pair.second;
       SetWatchpoint(wp.m_addr, wp.m_size, wp.m_watch_flags, wp.m_hardware);
+    }
+  }
+
+  // Set all active hardware breakpoint on all threads.
+  if (m_hw_break_index_map.empty()) {
+    NativeProcessLinux &process = GetProcess();
+
+    const auto &hw_breakpoint_map = process.GetHardwareBreakpointMap();
+    GetRegisterContext()->ClearAllHardwareBreakpoints();
+    for (const auto &pair : hw_breakpoint_map) {
+      const auto &bp = pair.second;
+      SetHardwareBreakpoint(bp.m_addr, bp.m_size);
     }
   }
 
