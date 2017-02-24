@@ -94,7 +94,7 @@ public:
 
   EncodingToTypeSP GetEncodingToType() override;
 
-  bool IsTaggedPointer(lldb::addr_t ptr);
+  bool IsTaggedPointer(lldb::addr_t ptr) override;
 
   TaggedPointerVendor *GetTaggedPointerVendor() override {
     return m_tagged_pointer_vendor_ap.get();
