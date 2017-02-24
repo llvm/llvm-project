@@ -27,33 +27,22 @@ template <class ELFT> class EhInputSection;
 class InputSection;
 class InputSectionBase;
 template <class ELFT> class MergeInputSection;
-template <class ELFT> class OutputSection;
+class OutputSection;
 template <class ELFT> class ObjectFile;
 template <class ELFT> class SharedFile;
 template <class ELFT> class SharedSymbol;
 template <class ELFT> class DefinedRegular;
 
 // This represents a section in an output file.
-// Different sub classes represent different types of sections. Some contain
-// input sections, others are created by the linker.
+// It is composed of multiple InputSections.
 // The writer creates multiple OutputSections and assign them unique,
 // non-overlapping file offsets and VAs.
-class OutputSectionBase {
+class OutputSection final {
 public:
-  enum Kind {
-    Base,
-    Regular,
-  };
+  OutputSection(StringRef Name, uint32_t Type, uint64_t Flags);
 
-  OutputSectionBase(StringRef Name, uint32_t Type, uint64_t Flags);
   uint64_t getLMA() const { return Addr + LMAOffset; }
   template <typename ELFT> void writeHeaderTo(typename ELFT::Shdr *SHdr);
-
-  virtual void addSection(InputSectionBase *C) {}
-  virtual Kind getKind() const { return Base; }
-  static bool classof(const OutputSectionBase *B) {
-    return B->getKind() == Base;
-  }
 
   unsigned SectionIndex;
 
@@ -74,13 +63,7 @@ public:
   // between their file offsets should be equal to difference between their
   // virtual addresses. To compute some section offset we use the following
   // formula: Off = Off_first + VA - VA_first.
-  OutputSectionBase *FirstInPtLoad = nullptr;
-
-  virtual void finalize() {}
-  virtual void forEachInputSection(std::function<void(InputSectionBase *)> F) {}
-  virtual void assignOffsets() {}
-  virtual void writeTo(uint8_t *Buf) {}
-  virtual ~OutputSectionBase() = default;
+  OutputSection *FirstInPtLoad = nullptr;
 
   StringRef Name;
 
@@ -96,29 +79,14 @@ public:
   uint32_t Type = 0;
   uint32_t Info = 0;
   uint32_t Link = 0;
-};
 
-template <class ELFT> class OutputSection final : public OutputSectionBase {
-
-public:
-  typedef typename ELFT::Shdr Elf_Shdr;
-  typedef typename ELFT::Sym Elf_Sym;
-  typedef typename ELFT::Rel Elf_Rel;
-  typedef typename ELFT::Rela Elf_Rela;
-  typedef typename ELFT::uint uintX_t;
-  OutputSection(StringRef Name, uint32_t Type, uintX_t Flags);
-  void addSection(InputSectionBase *C) override;
+  void addSection(InputSectionBase *C);
   void sort(std::function<int(InputSectionBase *S)> Order);
   void sortInitFini();
   void sortCtorsDtors();
-  void writeTo(uint8_t *Buf) override;
-  void finalize() override;
-  void forEachInputSection(std::function<void(InputSectionBase *)> F) override;
-  void assignOffsets() override;
-  Kind getKind() const override { return Regular; }
-  static bool classof(const OutputSectionBase *B) {
-    return B->getKind() == Regular;
-  }
+  template <class ELFT> void writeTo(uint8_t *Buf);
+  template <class ELFT> void finalize();
+  template <class ELFT> void assignOffsets();
   std::vector<InputSection *> Sections;
 
   // Location in the output buffer.
@@ -133,17 +101,17 @@ template <class ELFT> struct Out {
   typedef typename ELFT::Phdr Elf_Phdr;
 
   static uint8_t First;
-  static OutputSection<ELFT> *Bss;
-  static OutputSection<ELFT> *BssRelRo;
-  static OutputSectionBase *Opd;
+  static OutputSection *Bss;
+  static OutputSection *BssRelRo;
+  static OutputSection *Opd;
   static uint8_t *OpdBuf;
   static PhdrEntry *TlsPhdr;
-  static OutputSectionBase *DebugInfo;
-  static OutputSectionBase *ElfHeader;
-  static OutputSectionBase *ProgramHeaders;
-  static OutputSectionBase *PreinitArray;
-  static OutputSectionBase *InitArray;
-  static OutputSectionBase *FiniArray;
+  static OutputSection *DebugInfo;
+  static OutputSection *ElfHeader;
+  static OutputSection *ProgramHeaders;
+  static OutputSection *PreinitArray;
+  static OutputSection *InitArray;
+  static OutputSection *FiniArray;
 };
 
 struct SectionKey {
@@ -174,13 +142,13 @@ template <class ELFT> class OutputSectionFactory {
   typedef typename ELFT::uint uintX_t;
 
 public:
-  OutputSectionFactory(std::vector<OutputSectionBase *> &OutputSections);
+  OutputSectionFactory(std::vector<OutputSection *> &OutputSections);
   ~OutputSectionFactory();
   void addInputSec(InputSectionBase *IS, StringRef OutsecName);
 
 private:
-  llvm::SmallDenseMap<SectionKey, OutputSectionBase *> Map;
-  std::vector<OutputSectionBase *> &OutputSections;
+  llvm::SmallDenseMap<SectionKey, OutputSection *> Map;
+  std::vector<OutputSection *> &OutputSections;
 };
 
 template <class ELFT> uint64_t getHeaderSize() {
@@ -190,17 +158,17 @@ template <class ELFT> uint64_t getHeaderSize() {
 }
 
 template <class ELFT> uint8_t Out<ELFT>::First;
-template <class ELFT> OutputSection<ELFT> *Out<ELFT>::Bss;
-template <class ELFT> OutputSection<ELFT> *Out<ELFT>::BssRelRo;
-template <class ELFT> OutputSectionBase *Out<ELFT>::Opd;
+template <class ELFT> OutputSection *Out<ELFT>::Bss;
+template <class ELFT> OutputSection *Out<ELFT>::BssRelRo;
+template <class ELFT> OutputSection *Out<ELFT>::Opd;
 template <class ELFT> uint8_t *Out<ELFT>::OpdBuf;
 template <class ELFT> PhdrEntry *Out<ELFT>::TlsPhdr;
-template <class ELFT> OutputSectionBase *Out<ELFT>::DebugInfo;
-template <class ELFT> OutputSectionBase *Out<ELFT>::ElfHeader;
-template <class ELFT> OutputSectionBase *Out<ELFT>::ProgramHeaders;
-template <class ELFT> OutputSectionBase *Out<ELFT>::PreinitArray;
-template <class ELFT> OutputSectionBase *Out<ELFT>::InitArray;
-template <class ELFT> OutputSectionBase *Out<ELFT>::FiniArray;
+template <class ELFT> OutputSection *Out<ELFT>::DebugInfo;
+template <class ELFT> OutputSection *Out<ELFT>::ElfHeader;
+template <class ELFT> OutputSection *Out<ELFT>::ProgramHeaders;
+template <class ELFT> OutputSection *Out<ELFT>::PreinitArray;
+template <class ELFT> OutputSection *Out<ELFT>::InitArray;
+template <class ELFT> OutputSection *Out<ELFT>::FiniArray;
 } // namespace elf
 } // namespace lld
 

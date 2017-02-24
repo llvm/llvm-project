@@ -838,11 +838,6 @@ Instruction *InstCombiner::visitZExt(ZExtInst &CI) {
   if (Instruction *Result = commonCastTransforms(CI))
     return Result;
 
-  // See if we can simplify any instructions used by the input whose sole
-  // purpose is to compute bits we don't care about.
-  if (SimplifyDemandedInstructionBits(CI))
-    return &CI;
-
   Value *Src = CI.getOperand(0);
   Type *SrcTy = Src->getType(), *DestTy = CI.getType();
 
@@ -1123,11 +1118,6 @@ Instruction *InstCombiner::visitSExt(SExtInst &CI) {
 
   if (Instruction *I = commonCastTransforms(CI))
     return I;
-
-  // See if we can simplify any instructions used by the input whose sole
-  // purpose is to compute bits we don't care about.
-  if (SimplifyDemandedInstructionBits(CI))
-    return &CI;
 
   Value *Src = CI.getOperand(0);
   Type *SrcTy = Src->getType(), *DestTy = CI.getType();

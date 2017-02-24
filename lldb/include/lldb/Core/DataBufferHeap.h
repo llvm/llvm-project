@@ -25,7 +25,8 @@ namespace lldb_private {
 /// the object. This class is best used to store chunks of data that
 /// are created or read from sources that can't intelligently and lazily
 /// fault new data pages in. Large amounts of data that comes from files
-/// should probably use the DataBufferMemoryMap class.
+/// should probably use DataBufferLLVM, which can intelligently determine
+/// when memory mapping is optimal.
 //----------------------------------------------------------------------
 class DataBufferHeap : public DataBuffer {
 public:

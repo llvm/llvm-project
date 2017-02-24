@@ -369,6 +369,23 @@ static bool hasIrregularType(Type *Ty, const DataLayout &DL, unsigned VF) {
 ///       we always assume predicated blocks have a 50% chance of executing.
 static unsigned getReciprocalPredBlockProb() { return 2; }
 
+/// A helper function that adds a 'fast' flag to floating-point operations.
+static Value *addFastMathFlag(Value *V) {
+  if (isa<FPMathOperator>(V)) {
+    FastMathFlags Flags;
+    Flags.setUnsafeAlgebra();
+    cast<Instruction>(V)->setFastMathFlags(Flags);
+  }
+  return V;
+}
+
+/// A helper function that returns an integer or floating-point constant with
+/// value C.
+static Constant *getSignedIntOrFpConstant(Type *Ty, int64_t C) {
+  return Ty->isIntegerTy() ? ConstantInt::getSigned(Ty, C)
+                           : ConstantFP::get(Ty, C);
+}
+
 /// InnerLoopVectorizer vectorizes loops which contain only one basic
 /// block to a specified vectorization factor (VF).
 /// This class performs the widening of scalars into vectors, or multiple
@@ -522,19 +539,21 @@ protected:
   /// \p EntryVal is the value from the original loop that maps to the steps.
   /// Note that \p EntryVal doesn't have to be an induction variable (e.g., it
   /// can be a truncate instruction).
-  void buildScalarSteps(Value *ScalarIV, Value *Step, Value *EntryVal);
+  void buildScalarSteps(Value *ScalarIV, Value *Step, Value *EntryVal,
+                        const InductionDescriptor &ID);
 
   /// Create a vector induction phi node based on an existing scalar one. \p
   /// EntryVal is the value from the original loop that maps to the vector phi
   /// node, and \p Step is the loop-invariant step. If \p EntryVal is a
   /// truncate instruction, instead of widening the original IV, we widen a
   /// version of the IV truncated to \p EntryVal's type.
-  void createVectorIntInductionPHI(const InductionDescriptor &II, Value *Step,
-                                   Instruction *EntryVal);
+  void createVectorIntOrFpInductionPHI(const InductionDescriptor &II,
+                                       Value *Step, Instruction *EntryVal);
 
-  /// Widen an integer induction variable \p IV. If \p Trunc is provided, the
-  /// induction variable will first be truncated to the corresponding type.
-  void widenIntInduction(PHINode *IV, TruncInst *Trunc = nullptr);
+  /// Widen an integer or floating-point induction variable \p IV. If \p Trunc
+  /// is provided, the integer induction variable will first be truncated to
+  /// the corresponding type.
+  void widenIntOrFpInduction(PHINode *IV, TruncInst *Trunc = nullptr);
 
   /// Returns true if an instruction \p I should be scalarized instead of
   /// vectorized for the chosen vectorization factor.
@@ -2324,30 +2343,46 @@ Value *InnerLoopVectorizer::getBroadcastInstrs(Value *V) {
   return Shuf;
 }
 
-void InnerLoopVectorizer::createVectorIntInductionPHI(
+void InnerLoopVectorizer::createVectorIntOrFpInductionPHI(
     const InductionDescriptor &II, Value *Step, Instruction *EntryVal) {
   Value *Start = II.getStartValue();
-  assert(Step->getType()->isIntegerTy() &&
-         "Cannot widen an IV having a step with a non-integer type");
 
   // Construct the initial value of the vector IV in the vector loop preheader
   auto CurrIP = Builder.saveIP();
   Builder.SetInsertPoint(LoopVectorPreHeader->getTerminator());
   if (isa<TruncInst>(EntryVal)) {
+    assert(Start->getType()->isIntegerTy() &&
+           "Truncation requires an integer type");
     auto *TruncType = cast<IntegerType>(EntryVal->getType());
     Step = Builder.CreateTrunc(Step, TruncType);
     Start = Builder.CreateCast(Instruction::Trunc, Start, TruncType);
   }
   Value *SplatStart = Builder.CreateVectorSplat(VF, Start);
-  Value *SteppedStart = getStepVector(SplatStart, 0, Step);
+  Value *SteppedStart =
+      getStepVector(SplatStart, 0, Step, II.getInductionOpcode());
+
+  // We create vector phi nodes for both integer and floating-point induction
+  // variables. Here, we determine the kind of arithmetic we will perform.
+  Instruction::BinaryOps AddOp;
+  Instruction::BinaryOps MulOp;
+  if (Step->getType()->isIntegerTy()) {
+    AddOp = Instruction::Add;
+    MulOp = Instruction::Mul;
+  } else {
+    AddOp = II.getInductionOpcode();
+    MulOp = Instruction::FMul;
+  }
+
+  // Multiply the vectorization factor by the step using integer or
+  // floating-point arithmetic as appropriate.
+  Value *ConstVF = getSignedIntOrFpConstant(Step->getType(), VF);
+  Value *Mul = addFastMathFlag(Builder.CreateBinOp(MulOp, Step, ConstVF));
 
   // Create a vector splat to use in the induction update.
   //
   // FIXME: If the step is non-constant, we create the vector splat with
   //        IRBuilder. IRBuilder can constant-fold the multiply, but it doesn't
   //        handle a constant vector splat.
-  auto *ConstVF = ConstantInt::getSigned(Step->getType(), VF);
-  auto *Mul = Builder.CreateMul(Step, ConstVF);
   Value *SplatVF = isa<Constant>(Mul)
                        ? ConstantVector::getSplat(VF, cast<Constant>(Mul))
                        : Builder.CreateVectorSplat(VF, Mul);
@@ -2361,8 +2396,8 @@ void InnerLoopVectorizer::createVectorIntInductionPHI(
   VectorParts Entry(UF);
   for (unsigned Part = 0; Part < UF; ++Part) {
     Entry[Part] = LastInduction;
-    LastInduction = cast<Instruction>(
-        Builder.CreateAdd(LastInduction, SplatVF, "step.add"));
+    LastInduction = cast<Instruction>(addFastMathFlag(
+        Builder.CreateBinOp(AddOp, LastInduction, SplatVF, "step.add")));
   }
   VectorLoopValueMap.initVector(EntryVal, Entry);
   if (isa<TruncInst>(EntryVal))
@@ -2395,7 +2430,10 @@ bool InnerLoopVectorizer::needsScalarInduction(Instruction *IV) const {
   return any_of(IV->users(), isScalarInst);
 }
 
-void InnerLoopVectorizer::widenIntInduction(PHINode *IV, TruncInst *Trunc) {
+void InnerLoopVectorizer::widenIntOrFpInduction(PHINode *IV, TruncInst *Trunc) {
+
+  assert((IV->getType()->isIntegerTy() || IV != OldInduction) &&
+         "Primary induction variable must have an integer type");
 
   auto II = Legal->getInductionVars()->find(IV);
   assert(II != Legal->getInductionVars()->end() && "IV is not an induction");
@@ -2424,15 +2462,20 @@ void InnerLoopVectorizer::widenIntInduction(PHINode *IV, TruncInst *Trunc) {
   assert(PSE.getSE()->isLoopInvariant(ID.getStep(), OrigLoop) &&
          "Induction step should be loop invariant");
   auto &DL = OrigLoop->getHeader()->getModule()->getDataLayout();
-  SCEVExpander Exp(*PSE.getSE(), DL, "induction");
-  Value *Step = Exp.expandCodeFor(ID.getStep(), ID.getStep()->getType(),
-                                  LoopVectorPreHeader->getTerminator());
+  Value *Step = nullptr;
+  if (PSE.getSE()->isSCEVable(IV->getType())) {
+    SCEVExpander Exp(*PSE.getSE(), DL, "induction");
+    Step = Exp.expandCodeFor(ID.getStep(), ID.getStep()->getType(),
+                             LoopVectorPreHeader->getTerminator());
+  } else {
+    Step = cast<SCEVUnknown>(ID.getStep())->getValue();
+  }
 
   // Try to create a new independent vector induction variable. If we can't
   // create the phi node, we will splat the scalar induction variable in each
   // loop iteration.
   if (VF > 1 && !shouldScalarizeInstruction(EntryVal)) {
-    createVectorIntInductionPHI(ID, Step, EntryVal);
+    createVectorIntOrFpInductionPHI(ID, Step, EntryVal);
     VectorizedIV = true;
   }
 
@@ -2451,7 +2494,10 @@ void InnerLoopVectorizer::widenIntInduction(PHINode *IV, TruncInst *Trunc) {
     } else {
       ScalarIV = Induction;
       if (IV != OldInduction) {
-        ScalarIV = Builder.CreateSExtOrTrunc(ScalarIV, IV->getType());
+        ScalarIV = IV->getType()->isIntegerTy()
+                       ? Builder.CreateSExtOrTrunc(ScalarIV, IV->getType())
+                       : Builder.CreateCast(Instruction::SIToFP, Induction,
+                                            IV->getType());
         ScalarIV = ID.transform(Builder, ScalarIV, PSE.getSE(), DL);
         ScalarIV->setName("offset.idx");
       }
@@ -2464,7 +2510,8 @@ void InnerLoopVectorizer::widenIntInduction(PHINode *IV, TruncInst *Trunc) {
     Value *Broadcasted = getBroadcastInstrs(ScalarIV);
     VectorParts Entry(UF);
     for (unsigned Part = 0; Part < UF; ++Part)
-      Entry[Part] = getStepVector(Broadcasted, VF * Part, Step);
+      Entry[Part] =
+          getStepVector(Broadcasted, VF * Part, Step, ID.getInductionOpcode());
     VectorLoopValueMap.initVector(EntryVal, Entry);
     if (Trunc)
       addMetadata(Entry, Trunc);
@@ -2477,7 +2524,7 @@ void InnerLoopVectorizer::widenIntInduction(PHINode *IV, TruncInst *Trunc) {
   // in the loop in the common case prior to InstCombine. We will be trading
   // one vector extract for each scalar step.
   if (NeedsScalarIV)
-    buildScalarSteps(ScalarIV, Step, EntryVal);
+    buildScalarSteps(ScalarIV, Step, EntryVal, ID);
 }
 
 Value *InnerLoopVectorizer::getStepVector(Value *Val, int StartIdx, Value *Step,
@@ -2537,15 +2584,28 @@ Value *InnerLoopVectorizer::getStepVector(Value *Val, int StartIdx, Value *Step,
 }
 
 void InnerLoopVectorizer::buildScalarSteps(Value *ScalarIV, Value *Step,
-                                           Value *EntryVal) {
+                                           Value *EntryVal,
+                                           const InductionDescriptor &ID) {
 
   // We shouldn't have to build scalar steps if we aren't vectorizing.
   assert(VF > 1 && "VF should be greater than one");
 
   // Get the value type and ensure it and the step have the same integer type.
   Type *ScalarIVTy = ScalarIV->getType()->getScalarType();
-  assert(ScalarIVTy->isIntegerTy() && ScalarIVTy == Step->getType() &&
-         "Val and Step should have the same integer type");
+  assert(ScalarIVTy == Step->getType() &&
+         "Val and Step should have the same type");
+
+  // We build scalar steps for both integer and floating-point induction
+  // variables. Here, we determine the kind of arithmetic we will perform.
+  Instruction::BinaryOps AddOp;
+  Instruction::BinaryOps MulOp;
+  if (ScalarIVTy->isIntegerTy()) {
+    AddOp = Instruction::Add;
+    MulOp = Instruction::Mul;
+  } else {
+    AddOp = ID.getInductionOpcode();
+    MulOp = Instruction::FMul;
+  }
 
   // Determine the number of scalars we need to generate for each unroll
   // iteration. If EntryVal is uniform, we only need to generate the first
@@ -2558,9 +2618,9 @@ void InnerLoopVectorizer::buildScalarSteps(Value *ScalarIV, Value *Step,
   for (unsigned Part = 0; Part < UF; ++Part) {
     Entry[Part].resize(VF);
     for (unsigned Lane = 0; Lane < Lanes; ++Lane) {
-      auto *StartIdx = ConstantInt::get(ScalarIVTy, VF * Part + Lane);
-      auto *Mul = Builder.CreateMul(StartIdx, Step);
-      auto *Add = Builder.CreateAdd(ScalarIV, Mul);
+      auto *StartIdx = getSignedIntOrFpConstant(ScalarIVTy, VF * Part + Lane);
+      auto *Mul = addFastMathFlag(Builder.CreateBinOp(MulOp, StartIdx, Step));
+      auto *Add = addFastMathFlag(Builder.CreateBinOp(AddOp, ScalarIV, Mul));
       Entry[Part][Lane] = Add;
     }
   }
@@ -3643,16 +3703,6 @@ static void cse(BasicBlock *BB) {
   }
 }
 
-/// \brief Adds a 'fast' flag to floating point operations.
-static Value *addFastMathFlag(Value *V) {
-  if (isa<FPMathOperator>(V)) {
-    FastMathFlags Flags;
-    Flags.setUnsafeAlgebra();
-    cast<Instruction>(V)->setFastMathFlags(Flags);
-  }
-  return V;
-}
-
 /// \brief Estimate the overhead of scalarizing an instruction. This is a
 /// convenience wrapper for the type-based getScalarizationOverhead API.
 static unsigned getScalarizationOverhead(Instruction *I, unsigned VF,
@@ -4653,7 +4703,8 @@ void InnerLoopVectorizer::widenPHIInstruction(Instruction *PN, unsigned UF,
   case InductionDescriptor::IK_NoInduction:
     llvm_unreachable("Unknown induction");
   case InductionDescriptor::IK_IntInduction:
-    return widenIntInduction(P);
+  case InductionDescriptor::IK_FpInduction:
+    return widenIntOrFpInduction(P);
   case InductionDescriptor::IK_PtrInduction: {
     // Handle the pointer induction variable case.
     assert(P->getType()->isPointerTy() && "Unexpected type.");
@@ -4678,30 +4729,6 @@ void InnerLoopVectorizer::widenPHIInstruction(Instruction *PN, unsigned UF,
       }
     }
     VectorLoopValueMap.initScalar(P, Entry);
-    return;
-  }
-  case InductionDescriptor::IK_FpInduction: {
-    assert(P->getType() == II.getStartValue()->getType() &&
-           "Types must match");
-    // Handle other induction variables that are now based on the
-    // canonical one.
-    assert(P != OldInduction && "Primary induction can be integer only");
-
-    Value *V = Builder.CreateCast(Instruction::SIToFP, Induction, P->getType());
-    V = II.transform(Builder, V, PSE.getSE(), DL);
-    V->setName("fp.offset.idx");
-
-    // Now we have scalar op: %fp.offset.idx = StartVal +/- Induction*StepVal
-
-    Value *Broadcasted = getBroadcastInstrs(V);
-    // After broadcasting the induction variable we need to make the vector
-    // consecutive by adding StepVal*0, StepVal*1, StepVal*2, etc.
-    Value *StepVal = cast<SCEVUnknown>(II.getStep())->getValue();
-    VectorParts Entry(UF);
-    for (unsigned part = 0; part < UF; ++part)
-      Entry[part] = getStepVector(Broadcasted, VF * part, StepVal,
-                                  II.getInductionOpcode());
-    VectorLoopValueMap.initVector(P, Entry);
     return;
   }
   }
@@ -4878,8 +4905,8 @@ void InnerLoopVectorizer::vectorizeBlockInLoop(BasicBlock *BB, PhiVector *PV) {
       // because (a) FP conversions lose precision, (b) sext/zext may wrap, and
       // (c) other casts depend on pointer size.
       if (Cost->isOptimizableIVTruncate(CI, VF)) {
-        widenIntInduction(cast<PHINode>(CI->getOperand(0)),
-                          cast<TruncInst>(CI));
+        widenIntOrFpInduction(cast<PHINode>(CI->getOperand(0)),
+                              cast<TruncInst>(CI));
         break;
       }
 

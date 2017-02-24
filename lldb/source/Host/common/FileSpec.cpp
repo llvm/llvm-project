@@ -27,7 +27,6 @@
 
 #include "lldb/Core/ArchSpec.h"
 #include "lldb/Core/DataBufferHeap.h"
-#include "lldb/Core/DataBufferMemoryMap.h"
 #include "lldb/Host/File.h"
 #include "lldb/Host/FileSpec.h"
 #include "lldb/Host/FileSystem.h"
@@ -823,39 +822,6 @@ ConstString FileSpec::GetFileNameStrippingExtension() const {
     return m_filename;
 
   return ConstString(filename, dot_pos - filename);
-}
-
-//------------------------------------------------------------------
-// Returns a shared pointer to a data buffer that contains all or
-// part of the contents of a file. The data is memory mapped and
-// will lazily page in data from the file as memory is accessed.
-// The data that is mapped will start "file_offset" bytes into the
-// file, and "file_size" bytes will be mapped. If "file_size" is
-// greater than the number of bytes available in the file starting
-// at "file_offset", the number of bytes will be appropriately
-// truncated. The final number of bytes that get mapped can be
-// verified using the DataBuffer::GetByteSize() function.
-//------------------------------------------------------------------
-DataBufferSP FileSpec::MemoryMapFileContents(off_t file_offset,
-                                             size_t file_size) const {
-  DataBufferSP data_sp;
-  std::unique_ptr<DataBufferMemoryMap> mmap_data(new DataBufferMemoryMap());
-  if (mmap_data.get()) {
-    const size_t mapped_length =
-        mmap_data->MemoryMapFromFileSpec(this, file_offset, file_size);
-    if (((file_size == SIZE_MAX) && (mapped_length > 0)) ||
-        (mapped_length >= file_size))
-      data_sp.reset(mmap_data.release());
-  }
-  return data_sp;
-}
-
-DataBufferSP FileSpec::MemoryMapFileContentsIfLocal(off_t file_offset,
-                                                    size_t file_size) const {
-  if (FileSystem::IsLocal(*this))
-    return MemoryMapFileContents(file_offset, file_size);
-  else
-    return ReadFileContents(file_offset, file_size, NULL);
 }
 
 //------------------------------------------------------------------

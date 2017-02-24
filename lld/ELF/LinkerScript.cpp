@@ -72,7 +72,7 @@ template <class ELFT> static SymbolBody *addRegular(SymbolAssignment *Cmd) {
 template <class ELFT> static SymbolBody *addSynthetic(SymbolAssignment *Cmd) {
   Symbol *Sym;
   uint8_t Visibility = Cmd->Hidden ? STV_HIDDEN : STV_DEFAULT;
-  const OutputSectionBase *Sec =
+  const OutputSection *Sec =
       ScriptConfig->HasSections ? nullptr : Cmd->Expression.Section();
   std::tie(Sym, std::ignore) = Symtab<ELFT>::X->insert(
       Cmd->Name, /*Type*/ 0, Visibility, /*CanOmitFromDynSym*/ false,
@@ -397,7 +397,7 @@ void LinkerScript<ELFT>::addOrphanSections(
       Factory.addInputSec(S, getOutputSectionName(S->Name));
 }
 
-template <class ELFT> static bool isTbss(OutputSectionBase *Sec) {
+template <class ELFT> static bool isTbss(OutputSection *Sec) {
   return (Sec->Flags & SHF_TLS) && Sec->Type == SHT_NOBITS;
 }
 
@@ -438,16 +438,11 @@ template <class ELFT> void LinkerScript<ELFT>::output(InputSection *S) {
 template <class ELFT> void LinkerScript<ELFT>::flush() {
   if (!CurOutSec || !AlreadyOutputOS.insert(CurOutSec).second)
     return;
-  if (auto *OutSec = dyn_cast<OutputSection<ELFT>>(CurOutSec)) {
-    for (InputSection *I : OutSec->Sections)
-      output(I);
-  } else {
-    Dot += CurOutSec->Size;
-  }
+  for (InputSection *I : CurOutSec->Sections)
+    output(I);
 }
 
-template <class ELFT>
-void LinkerScript<ELFT>::switchTo(OutputSectionBase *Sec) {
+template <class ELFT> void LinkerScript<ELFT>::switchTo(OutputSection *Sec) {
   if (CurOutSec == Sec)
     return;
   if (AlreadyOutputOS.count(Sec))
@@ -512,12 +507,12 @@ template <class ELFT> void LinkerScript<ELFT>::process(BaseCommand &Base) {
 }
 
 template <class ELFT>
-static OutputSectionBase *
-findSection(StringRef Name, const std::vector<OutputSectionBase *> &Sections) {
+static OutputSection *
+findSection(StringRef Name, const std::vector<OutputSection *> &Sections) {
   auto End = Sections.end();
-  auto HasName = [=](OutputSectionBase *Sec) { return Sec->Name == Name; };
+  auto HasName = [=](OutputSection *Sec) { return Sec->Name == Name; };
   auto I = std::find_if(Sections.begin(), End, HasName);
-  std::vector<OutputSectionBase *> Ret;
+  std::vector<OutputSection *> Ret;
   if (I == End)
     return nullptr;
   assert(std::find_if(I + 1, End, HasName) == End);
@@ -529,7 +524,7 @@ findSection(StringRef Name, const std::vector<OutputSectionBase *> &Sections) {
 // returned. Otherwise, a nullptr is returned.
 template <class ELFT>
 MemoryRegion *LinkerScript<ELFT>::findMemoryRegion(OutputSectionCommand *Cmd,
-                                                   OutputSectionBase *Sec) {
+                                                   OutputSection *Sec) {
   // If a memory region name was specified in the output section command,
   // then try to find that region first.
   if (!Cmd->MemoryRegionName.empty()) {
@@ -568,7 +563,7 @@ void LinkerScript<ELFT>::assignOffsets(OutputSectionCommand *Cmd) {
     uintX_t D = Dot;
     LMAOffset = [=] { return Cmd->LMAExpr(D) - D; };
   }
-  OutputSectionBase *Sec = findSection<ELFT>(Cmd->Name, *OutputSections);
+  OutputSection *Sec = findSection<ELFT>(Cmd->Name, *OutputSections);
   if (!Sec)
     return;
 
@@ -634,8 +629,7 @@ template <class ELFT> void LinkerScript<ELFT>::adjustSectionsBeforeSorting() {
     auto *Cmd = dyn_cast<OutputSectionCommand>(Base.get());
     if (!Cmd)
       continue;
-    if (OutputSectionBase *Sec =
-            findSection<ELFT>(Cmd->Name, *OutputSections)) {
+    if (OutputSection *Sec = findSection<ELFT>(Cmd->Name, *OutputSections)) {
       Flags = Sec->Flags;
       Type = Sec->Type;
       continue;
@@ -644,7 +638,7 @@ template <class ELFT> void LinkerScript<ELFT>::adjustSectionsBeforeSorting() {
     if (isAllSectionDescription(*Cmd))
       continue;
 
-    auto *OutSec = make<OutputSection<ELFT>>(Cmd->Name, Type, Flags);
+    auto *OutSec = make<OutputSection>(Cmd->Name, Type, Flags);
     OutputSections->push_back(OutSec);
   }
 }
@@ -751,7 +745,7 @@ template <class ELFT> void LinkerScript<ELFT>::placeOrphanSections() {
       ++CmdIndex;
   }
 
-  for (OutputSectionBase *Sec : *OutputSections) {
+  for (OutputSection *Sec : *OutputSections) {
     StringRef Name = Sec->Name;
 
     // Find the last spot where we can insert a command and still get the
@@ -794,7 +788,7 @@ void LinkerScript<ELFT>::assignAddresses(std::vector<PhdrEntry> &Phdrs) {
   // To handle that, create a dummy aether section that fills the void before
   // the linker scripts switches to another section. It has an index of one
   // which will map to whatever the first actual section is.
-  auto *Aether = make<OutputSectionBase>("", 0, SHF_ALLOC);
+  auto *Aether = make<OutputSection>("", 0, SHF_ALLOC);
   Aether->SectionIndex = 1;
   switchTo(Aether);
 
@@ -814,7 +808,7 @@ void LinkerScript<ELFT>::assignAddresses(std::vector<PhdrEntry> &Phdrs) {
   }
 
   uintX_t MinVA = std::numeric_limits<uintX_t>::max();
-  for (OutputSectionBase *Sec : *OutputSections) {
+  for (OutputSection *Sec : *OutputSections) {
     if (Sec->Flags & SHF_ALLOC)
       MinVA = std::min<uint64_t>(MinVA, Sec->Addr);
     else
@@ -846,7 +840,7 @@ template <class ELFT> std::vector<PhdrEntry> LinkerScript<ELFT>::createPhdrs() {
   }
 
   // Add output sections to program headers.
-  for (OutputSectionBase *Sec : *OutputSections) {
+  for (OutputSection *Sec : *OutputSections) {
     if (!(Sec->Flags & SHF_ALLOC))
       break;
 
@@ -936,11 +930,11 @@ template <class ELFT> bool LinkerScript<ELFT>::hasPhdrsCommands() {
 }
 
 template <class ELFT>
-const OutputSectionBase *LinkerScript<ELFT>::getOutputSection(const Twine &Loc,
-                                                              StringRef Name) {
-  static OutputSectionBase FakeSec("", 0, 0);
+const OutputSection *LinkerScript<ELFT>::getOutputSection(const Twine &Loc,
+                                                          StringRef Name) {
+  static OutputSection FakeSec("", 0, 0);
 
-  for (OutputSectionBase *Sec : *OutputSections)
+  for (OutputSection *Sec : *OutputSections)
     if (Sec->Name == Name)
       return Sec;
 
@@ -956,7 +950,7 @@ const OutputSectionBase *LinkerScript<ELFT>::getOutputSection(const Twine &Loc,
 // be empty. That is why this function is different from getOutputSection().
 template <class ELFT>
 uint64_t LinkerScript<ELFT>::getOutputSectionSize(StringRef Name) {
-  for (OutputSectionBase *Sec : *OutputSections)
+  for (OutputSection *Sec : *OutputSections)
     if (Sec->Name == Name)
       return Sec->Size;
   return 0;
@@ -988,7 +982,7 @@ template <class ELFT> bool LinkerScript<ELFT>::isAbsolute(StringRef S) {
 // specific section but isn't absolute at the same time, so we try
 // to find suitable section for it as well.
 template <class ELFT>
-const OutputSectionBase *LinkerScript<ELFT>::getSymbolSection(StringRef S) {
+const OutputSection *LinkerScript<ELFT>::getSymbolSection(StringRef S) {
   if (SymbolBody *Sym = Symtab<ELFT>::X->find(S))
     return SymbolTableSection<ELFT>::getOutputSection(Sym);
   return CurOutSec;
@@ -1646,7 +1640,7 @@ Expr ScriptParser::readExpr() {
 static Expr combine(StringRef Op, Expr L, Expr R) {
   auto IsAbs = [=] { return L.IsAbsolute() && R.IsAbsolute(); };
   auto GetOutSec = [=] {
-    const OutputSectionBase *S = L.Section();
+    const OutputSection *S = L.Section();
     return S ? S : R.Section();
   };
 

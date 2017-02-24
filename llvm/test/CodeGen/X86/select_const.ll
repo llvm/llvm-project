@@ -108,10 +108,9 @@ define i32 @select_0_or_neg1_signext(i1 signext %cond) {
 define i32 @select_neg1_or_0(i1 %cond) {
 ; CHECK-LABEL: select_neg1_or_0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    testb $1, %dil
-; CHECK-NEXT:    movl $-1, %eax
-; CHECK-NEXT:    cmovel %ecx, %eax
+; CHECK-NEXT:    andl $1, %edi
+; CHECK-NEXT:    negl %edi
+; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    retq
   %sel = select i1 %cond, i32 -1, i32 0
   ret i32 %sel
@@ -120,10 +119,8 @@ define i32 @select_neg1_or_0(i1 %cond) {
 define i32 @select_neg1_or_0_zeroext(i1 zeroext %cond) {
 ; CHECK-LABEL: select_neg1_or_0_zeroext:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    testb %dil, %dil
-; CHECK-NEXT:    movl $-1, %eax
-; CHECK-NEXT:    cmovel %ecx, %eax
+; CHECK-NEXT:    movzbl %dil, %eax
+; CHECK-NEXT:    negl %eax
 ; CHECK-NEXT:    retq
   %sel = select i1 %cond, i32 -1, i32 0
   ret i32 %sel
@@ -132,10 +129,7 @@ define i32 @select_neg1_or_0_zeroext(i1 zeroext %cond) {
 define i32 @select_neg1_or_0_signext(i1 signext %cond) {
 ; CHECK-LABEL: select_neg1_or_0_signext:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    testb $1, %dil
-; CHECK-NEXT:    movl $-1, %eax
-; CHECK-NEXT:    cmovel %ecx, %eax
+; CHECK-NEXT:    movsbl %dil, %eax
 ; CHECK-NEXT:    retq
   %sel = select i1 %cond, i32 -1, i32 0
   ret i32 %sel

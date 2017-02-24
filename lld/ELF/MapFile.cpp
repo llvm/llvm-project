@@ -95,26 +95,25 @@ static void writeInputSection(raw_fd_ostream &OS, const InputSection *IS,
 
 template <class ELFT>
 static void writeMapFile2(raw_fd_ostream &OS,
-                          ArrayRef<OutputSectionBase *> OutputSections) {
+                          ArrayRef<OutputSection *> OutputSections) {
   int Width = ELFT::Is64Bits ? 16 : 8;
 
   OS << left_justify("Address", Width) << ' ' << left_justify("Size", Width)
      << " Align Out     In      File    Symbol\n";
 
-  for (OutputSectionBase *Sec : OutputSections) {
+  for (OutputSection *Sec : OutputSections) {
     writeOutSecLine(OS, Width, Sec->Addr, Sec->Size, Sec->Addralign, Sec->Name);
     OS << '\n';
 
     StringRef PrevName = "";
-    Sec->forEachInputSection([&](InputSectionBase *S) {
-      if (const auto *IS = dyn_cast<InputSection>(S))
-        writeInputSection<ELFT>(OS, IS, PrevName);
-    });
+    for (InputSection *IS : Sec->Sections) {
+      writeInputSection<ELFT>(OS, IS, PrevName);
+    }
   }
 }
 
 template <class ELFT>
-void elf::writeMapFile(ArrayRef<OutputSectionBase *> OutputSections) {
+void elf::writeMapFile(ArrayRef<OutputSection *> OutputSections) {
   if (Config->MapFile.empty())
     return;
 
@@ -126,7 +125,7 @@ void elf::writeMapFile(ArrayRef<OutputSectionBase *> OutputSections) {
     writeMapFile2<ELFT>(OS, OutputSections);
 }
 
-template void elf::writeMapFile<ELF32LE>(ArrayRef<OutputSectionBase *>);
-template void elf::writeMapFile<ELF32BE>(ArrayRef<OutputSectionBase *>);
-template void elf::writeMapFile<ELF64LE>(ArrayRef<OutputSectionBase *>);
-template void elf::writeMapFile<ELF64BE>(ArrayRef<OutputSectionBase *>);
+template void elf::writeMapFile<ELF32LE>(ArrayRef<OutputSection *>);
+template void elf::writeMapFile<ELF32BE>(ArrayRef<OutputSection *>);
+template void elf::writeMapFile<ELF64LE>(ArrayRef<OutputSection *>);
+template void elf::writeMapFile<ELF64BE>(ArrayRef<OutputSection *>);

@@ -5599,14 +5599,38 @@ SDValue DAGCombiner::foldSelectOfConstants(SDNode *N) {
   if (!isa<ConstantSDNode>(N1) || !isa<ConstantSDNode>(N2))
     return SDValue();
 
-  // TODO: We should handle other cases of selecting between {-1,0,1} here.
-  if (CondVT == MVT::i1) {
+  // Only do this before legalization to avoid conflicting with target-specific
+  // transforms in the other direction (create a select from a zext/sext). There
+  // is also a target-independent combine here in DAGCombiner in the other
+  // direction for (select Cond, -1, 0) when the condition is not i1.
+  // TODO: This could be generalized for any 2 constants that differ by 1:
+  // add ({s/z}ext Cond), C
+  if (CondVT == MVT::i1 && !LegalOperations) {
     if (isNullConstant(N1) && isOneConstant(N2)) {
       // select Cond, 0, 1 --> zext (!Cond)
       SDValue NotCond = DAG.getNOT(DL, Cond, MVT::i1);
       if (VT != MVT::i1)
         NotCond = DAG.getNode(ISD::ZERO_EXTEND, DL, VT, NotCond);
       return NotCond;
+    }
+    if (isNullConstant(N1) && isAllOnesConstant(N2)) {
+      // select Cond, 0, -1 --> sext (!Cond)
+      SDValue NotCond = DAG.getNOT(DL, Cond, MVT::i1);
+      if (VT != MVT::i1)
+        NotCond = DAG.getNode(ISD::SIGN_EXTEND, DL, VT, NotCond);
+      return NotCond;
+    }
+    if (isOneConstant(N1) && isNullConstant(N2)) {
+      // select Cond, 1, 0 --> zext (Cond)
+      if (VT != MVT::i1)
+        Cond = DAG.getNode(ISD::ZERO_EXTEND, DL, VT, Cond);
+      return Cond;
+    }
+    if (isAllOnesConstant(N1) && isNullConstant(N2)) {
+      // select Cond, -1, 0 --> sext (Cond)
+      if (VT != MVT::i1)
+        Cond = DAG.getNode(ISD::SIGN_EXTEND, DL, VT, Cond);
+      return Cond;
     }
     return SDValue();
   }
@@ -6766,7 +6790,12 @@ SDValue DAGCombiner::visitSIGN_EXTEND(SDNode *N) {
 
     if (!VT.isVector()) {
       EVT SetCCVT = getSetCCResultType(N00VT);
-      if (!LegalOperations || TLI.isOperationLegal(ISD::SETCC, N00VT)) {
+      // Don't do this transform for i1 because there's a select transform
+      // that would reverse it.
+      // TODO: We should not do this transform at all without a target hook
+      // because a sext is likely cheaper than a select?
+      if (SetCCVT.getScalarSizeInBits() != 1 &&
+          (!LegalOperations || TLI.isOperationLegal(ISD::SETCC, N00VT))) {
         SDValue SetCC = DAG.getSetCC(DL, SetCCVT, N00, N01, CC);
         return DAG.getSelect(DL, VT, SetCC, ExtTrueVal, Zero);
       }

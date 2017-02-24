@@ -31,8 +31,7 @@ template <class ELFT> class DefinedRegular;
 template <class ELFT> class EhFrameSection;
 template <class ELFT> class MergeSyntheticSection;
 template <class ELFT> class ObjectFile;
-template <class ELFT> class OutputSection;
-class OutputSectionBase;
+class OutputSection;
 
 // This corresponds to a section of an input file.
 class InputSectionBase {
@@ -78,7 +77,7 @@ public:
                    uint64_t Entsize, uint32_t Link, uint32_t Info,
                    uint64_t Addralign, ArrayRef<uint8_t> Data, StringRef Name,
                    Kind SectionKind);
-  OutputSectionBase *OutSec = nullptr;
+  OutputSection *OutSec = nullptr;
 
   // Relocations that refer to this section.
   const void *FirstRelocation = nullptr;
@@ -110,7 +109,7 @@ public:
   // Returns the size of this section (even if this is a common or BSS.)
   template <class ELFT> size_t getSize() const;
 
-  template <class ELFT> OutputSectionBase *getOutputSection() const;
+  template <class ELFT> OutputSection *getOutputSection() const;
 
   template <class ELFT> ObjectFile<ELFT> *getFile() const;
 
