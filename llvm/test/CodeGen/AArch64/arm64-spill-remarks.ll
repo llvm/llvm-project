@@ -1,6 +1,8 @@
 ; RUN: llc < %s -mtriple=arm64-apple-ios7.0 -aarch64-neon-syntax=apple -pass-remarks-missed=regalloc 2>&1 | FileCheck -check-prefix=REMARK %s
 ; RUN: llc < %s -mtriple=arm64-apple-ios7.0 -aarch64-neon-syntax=apple -pass-remarks-missed=regalloc -pass-remarks-with-hotness 2>&1 | FileCheck -check-prefix=HOTNESS %s
 ; RUN: llc < %s -mtriple=arm64-apple-ios7.0 -aarch64-neon-syntax=apple 2>&1 | FileCheck -check-prefix=NO_REMARK %s
+; RUN: llc < %s -mtriple=arm64-apple-ios7.0 -aarch64-neon-syntax=apple -pass-remarks-output=%t.yaml -pass-remarks-with-hotness 2>&1 | FileCheck -check-prefix=NO_REMARK %s
+; RUN: cat %t.yaml | FileCheck -check-prefix=YAML %s
 
 ; This has two nested loops, each with one value that has to be spilled and
 ; then reloaded.
@@ -20,6 +22,46 @@
 ; HOTNESS: remark: /tmp/kk.c:1:20: 2 spills 2 reloads generated in loop (hotness: 300)
 
 ; NO_REMARK-NOT: remark
+
+; YAML: --- !Missed
+; YAML: Pass:            regalloc
+; YAML: Name:            LoopSpillReload
+; YAML: DebugLoc:        { File: /tmp/kk.c, Line: 3, Column: 20 }
+; YAML: Function:        fpr128
+; YAML: Hotness:         300
+; YAML: Args:
+; YAML:   - NumSpills:       '1'
+; YAML:   - String:          ' spills '
+; YAML:   - NumReloads:      '1'
+; YAML:   - String:          ' reloads '
+; YAML:   - String:          generated in loop
+; YAML: ...
+; YAML: --- !Missed
+; YAML: Pass:            regalloc
+; YAML: Name:            LoopSpillReload
+; YAML: DebugLoc:        { File: /tmp/kk.c, Line: 2, Column: 20 }
+; YAML: Function:        fpr128
+; YAML: Hotness:         30000
+; YAML: Args:
+; YAML:   - NumSpills:       '1'
+; YAML:   - String:          ' spills '
+; YAML:   - NumReloads:      '1'
+; YAML:   - String:          ' reloads '
+; YAML:   - String:          generated in loop
+; YAML: ...
+; YAML: --- !Missed
+; YAML: Pass:            regalloc
+; YAML: Name:            LoopSpillReload
+; YAML: DebugLoc:        { File: /tmp/kk.c, Line: 1, Column: 20 }
+; YAML: Function:        fpr128
+; YAML: Hotness:         300
+; YAML: Args:
+; YAML:   - NumSpills:       '2'
+; YAML:   - String:          ' spills '
+; YAML:   - NumReloads:      '2'
+; YAML:   - String:          ' reloads '
+; YAML:   - String:          generated in loop
+; YAML: ...
 
 define void @fpr128(<4 x float>* %p) nounwind ssp !prof !11 {
 entry:
