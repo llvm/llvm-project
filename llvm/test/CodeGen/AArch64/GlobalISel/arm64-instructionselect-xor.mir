@@ -100,7 +100,7 @@ body:             |
     liveins: %w0
 
     %0(s32) = COPY %w0
-    %1(s32) = G_CONSTANT -1
+    %1(s32) = G_CONSTANT i64 -1
     %2(s32) = G_XOR %0, %1
 ...
 
@@ -128,7 +128,7 @@ body:             |
     liveins: %x0
 
     %0(s64) = COPY %x0
-    %1(s64) = G_CONSTANT -1
+    %1(s64) = G_CONSTANT i64 -1
     %2(s64) = G_XOR %0, %1
 ...
 
@@ -157,10 +157,9 @@ body:             |
   bb.0:
     liveins: %w0, %w1
     successors: %bb.1
-    %1(s32) = G_CONSTANT -1
+    %1(s32) = G_CONSTANT i64 -1
     G_BR %bb.1
   bb.1:
     %0(s32) = COPY %w0
     %2(s32) = G_XOR %0, %1
 ...
-
