@@ -1988,7 +1988,9 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
     }
     if (isIndirectDebugValue())
       OS << " indirect";
-  } else if (debugLoc && MF && !SkipDebugLoc) {
+  } else if (SkipDebugLoc) {
+    return;
+  } else if (debugLoc && MF) {
     if (!HaveSemi)
       OS << ";";
     OS << " dbg:";
