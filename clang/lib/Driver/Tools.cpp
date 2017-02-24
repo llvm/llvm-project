@@ -53,7 +53,7 @@ using namespace clang::driver::tools;
 using namespace clang;
 using namespace llvm::opt;
 
-static void handleTargetFeaturesGroup(const ArgList &Args,
+void tools::handleTargetFeaturesGroup(const ArgList &Args,
                                       std::vector<StringRef> &Features,
                                       OptSpecifier Group) {
   for (const Arg *A : Args.filtered(Group)) {
@@ -68,44 +68,6 @@ static void handleTargetFeaturesGroup(const ArgList &Args,
     if (IsNegative)
       Name = Name.substr(3);
     Features.push_back(Args.MakeArgString((IsNegative ? "-" : "+") + Name));
-  }
-}
-
-static const char *getSparcAsmModeForCPU(StringRef Name,
-                                         const llvm::Triple &Triple) {
-  if (Triple.getArch() == llvm::Triple::sparcv9) {
-    return llvm::StringSwitch<const char *>(Name)
-          .Case("niagara", "-Av9b")
-          .Case("niagara2", "-Av9b")
-          .Case("niagara3", "-Av9d")
-          .Case("niagara4", "-Av9d")
-          .Default("-Av9");
-  } else {
-    return llvm::StringSwitch<const char *>(Name)
-          .Case("v8", "-Av8")
-          .Case("supersparc", "-Av8")
-          .Case("sparclite", "-Asparclite")
-          .Case("f934", "-Asparclite")
-          .Case("hypersparc", "-Av8")
-          .Case("sparclite86x", "-Asparclite")
-          .Case("sparclet", "-Asparclet")
-          .Case("tsc701", "-Asparclet")
-          .Case("v9", "-Av8plus")
-          .Case("ultrasparc", "-Av8plus")
-          .Case("ultrasparc3", "-Av8plus")
-          .Case("niagara", "-Av8plusb")
-          .Case("niagara2", "-Av8plusb")
-          .Case("niagara3", "-Av8plusd")
-          .Case("niagara4", "-Av8plusd")
-          .Case("leon2", "-Av8")
-          .Case("at697e", "-Av8")
-          .Case("at697f", "-Av8")
-          .Case("leon3", "-Av8")
-          .Case("ut699", "-Av8")
-          .Case("gr712rc", "-Av8")
-          .Case("leon4", "-Av8")
-          .Case("gr740", "-Av8")
-          .Default("-Av8");
   }
 }
 
@@ -789,432 +751,6 @@ static bool isNoCommonDefault(const llvm::Triple &Triple) {
   }
 }
 
-// ARM tools start.
-
-// Get SubArch (vN).
-static int getARMSubArchVersionNumber(const llvm::Triple &Triple) {
-  llvm::StringRef Arch = Triple.getArchName();
-  return llvm::ARM::parseArchVersion(Arch);
-}
-
-// True if M-profile.
-static bool isARMMProfile(const llvm::Triple &Triple) {
-  llvm::StringRef Arch = Triple.getArchName();
-  unsigned Profile = llvm::ARM::parseArchProfile(Arch);
-  return Profile == llvm::ARM::PK_M;
-}
-
-// Get Arch/CPU from args.
-static void getARMArchCPUFromArgs(const ArgList &Args, llvm::StringRef &Arch,
-                                  llvm::StringRef &CPU, bool FromAs = false) {
-  if (const Arg *A = Args.getLastArg(options::OPT_mcpu_EQ))
-    CPU = A->getValue();
-  if (const Arg *A = Args.getLastArg(options::OPT_march_EQ))
-    Arch = A->getValue();
-  if (!FromAs)
-    return;
-
-  for (const Arg *A :
-       Args.filtered(options::OPT_Wa_COMMA, options::OPT_Xassembler)) {
-    StringRef Value = A->getValue();
-    if (Value.startswith("-mcpu="))
-      CPU = Value.substr(6);
-    if (Value.startswith("-march="))
-      Arch = Value.substr(7);
-  }
-}
-
-// Handle -mhwdiv=.
-// FIXME: Use ARMTargetParser.
-static void getARMHWDivFeatures(const Driver &D, const Arg *A,
-                                const ArgList &Args, StringRef HWDiv,
-                                std::vector<StringRef> &Features) {
-  unsigned HWDivID = llvm::ARM::parseHWDiv(HWDiv);
-  if (!llvm::ARM::getHWDivFeatures(HWDivID, Features))
-    D.Diag(diag::err_drv_clang_unsupported) << A->getAsString(Args);
-}
-
-// Handle -mfpu=.
-static void getARMFPUFeatures(const Driver &D, const Arg *A,
-                              const ArgList &Args, StringRef FPU,
-                              std::vector<StringRef> &Features) {
-  unsigned FPUID = llvm::ARM::parseFPU(FPU);
-  if (!llvm::ARM::getFPUFeatures(FPUID, Features))
-    D.Diag(diag::err_drv_clang_unsupported) << A->getAsString(Args);
-}
-
-// Decode ARM features from string like +[no]featureA+[no]featureB+...
-static bool DecodeARMFeatures(const Driver &D, StringRef text,
-                              std::vector<StringRef> &Features) {
-  SmallVector<StringRef, 8> Split;
-  text.split(Split, StringRef("+"), -1, false);
-
-  for (StringRef Feature : Split) {
-    StringRef FeatureName = llvm::ARM::getArchExtFeature(Feature);
-    if (!FeatureName.empty())
-      Features.push_back(FeatureName);
-    else
-      return false;
-  }
-  return true;
-}
-
-// Check if -march is valid by checking if it can be canonicalised and parsed.
-// getARMArch is used here instead of just checking the -march value in order
-// to handle -march=native correctly.
-static void checkARMArchName(const Driver &D, const Arg *A, const ArgList &Args,
-                             llvm::StringRef ArchName,
-                             std::vector<StringRef> &Features,
-                             const llvm::Triple &Triple) {
-  std::pair<StringRef, StringRef> Split = ArchName.split("+");
-
-  std::string MArch = arm::getARMArch(ArchName, Triple);
-  if (llvm::ARM::parseArch(MArch) == llvm::ARM::AK_INVALID ||
-      (Split.second.size() && !DecodeARMFeatures(D, Split.second, Features)))
-    D.Diag(diag::err_drv_clang_unsupported) << A->getAsString(Args);
-}
-
-// Check -mcpu=. Needs ArchName to handle -mcpu=generic.
-static void checkARMCPUName(const Driver &D, const Arg *A, const ArgList &Args,
-                            llvm::StringRef CPUName, llvm::StringRef ArchName,
-                            std::vector<StringRef> &Features,
-                            const llvm::Triple &Triple) {
-  std::pair<StringRef, StringRef> Split = CPUName.split("+");
-
-  std::string CPU = arm::getARMTargetCPU(CPUName, ArchName, Triple);
-  if (arm::getLLVMArchSuffixForARM(CPU, ArchName, Triple).empty() ||
-      (Split.second.size() && !DecodeARMFeatures(D, Split.second, Features)))
-    D.Diag(diag::err_drv_clang_unsupported) << A->getAsString(Args);
-}
-
-static bool useAAPCSForMachO(const llvm::Triple &T) {
-  // The backend is hardwired to assume AAPCS for M-class processors, ensure
-  // the frontend matches that.
-  return T.getEnvironment() == llvm::Triple::EABI ||
-         T.getOS() == llvm::Triple::UnknownOS || isARMMProfile(T);
-}
-
-// Select the float ABI as determined by -msoft-float, -mhard-float, and
-// -mfloat-abi=.
-arm::FloatABI arm::getARMFloatABI(const ToolChain &TC, const ArgList &Args) {
-  const Driver &D = TC.getDriver();
-  const llvm::Triple &Triple = TC.getEffectiveTriple();
-  auto SubArch = getARMSubArchVersionNumber(Triple);
-  arm::FloatABI ABI = FloatABI::Invalid;
-  if (Arg *A =
-          Args.getLastArg(options::OPT_msoft_float, options::OPT_mhard_float,
-                          options::OPT_mfloat_abi_EQ)) {
-    if (A->getOption().matches(options::OPT_msoft_float)) {
-      ABI = FloatABI::Soft;
-    } else if (A->getOption().matches(options::OPT_mhard_float)) {
-      ABI = FloatABI::Hard;
-    } else {
-      ABI = llvm::StringSwitch<arm::FloatABI>(A->getValue())
-                .Case("soft", FloatABI::Soft)
-                .Case("softfp", FloatABI::SoftFP)
-                .Case("hard", FloatABI::Hard)
-                .Default(FloatABI::Invalid);
-      if (ABI == FloatABI::Invalid && !StringRef(A->getValue()).empty()) {
-        D.Diag(diag::err_drv_invalid_mfloat_abi) << A->getAsString(Args);
-        ABI = FloatABI::Soft;
-      }
-    }
-
-    // It is incorrect to select hard float ABI on MachO platforms if the ABI is
-    // "apcs-gnu".
-    if (Triple.isOSBinFormatMachO() && !useAAPCSForMachO(Triple) &&
-        ABI == FloatABI::Hard) {
-      D.Diag(diag::err_drv_unsupported_opt_for_target) << A->getAsString(Args)
-                                                       << Triple.getArchName();
-    }
-  }
-
-  // If unspecified, choose the default based on the platform.
-  if (ABI == FloatABI::Invalid) {
-    switch (Triple.getOS()) {
-    case llvm::Triple::Darwin:
-    case llvm::Triple::MacOSX:
-    case llvm::Triple::IOS:
-    case llvm::Triple::TvOS: {
-      // Darwin defaults to "softfp" for v6 and v7.
-      ABI = (SubArch == 6 || SubArch == 7) ? FloatABI::SoftFP : FloatABI::Soft;
-      ABI = Triple.isWatchABI() ? FloatABI::Hard : ABI;
-      break;
-    }
-    case llvm::Triple::WatchOS:
-      ABI = FloatABI::Hard;
-      break;
-
-    // FIXME: this is invalid for WindowsCE
-    case llvm::Triple::Win32:
-      ABI = FloatABI::Hard;
-      break;
-
-    case llvm::Triple::FreeBSD:
-      switch (Triple.getEnvironment()) {
-      case llvm::Triple::GNUEABIHF:
-        ABI = FloatABI::Hard;
-        break;
-      default:
-        // FreeBSD defaults to soft float
-        ABI = FloatABI::Soft;
-        break;
-      }
-      break;
-
-    default:
-      switch (Triple.getEnvironment()) {
-      case llvm::Triple::GNUEABIHF:
-      case llvm::Triple::MuslEABIHF:
-      case llvm::Triple::EABIHF:
-        ABI = FloatABI::Hard;
-        break;
-      case llvm::Triple::GNUEABI:
-      case llvm::Triple::MuslEABI:
-      case llvm::Triple::EABI:
-        // EABI is always AAPCS, and if it was not marked 'hard', it's softfp
-        ABI = FloatABI::SoftFP;
-        break;
-      case llvm::Triple::Android:
-        ABI = (SubArch == 7) ? FloatABI::SoftFP : FloatABI::Soft;
-        break;
-      default:
-        // Assume "soft", but warn the user we are guessing.
-        if (Triple.isOSBinFormatMachO() &&
-            Triple.getSubArch() == llvm::Triple::ARMSubArch_v7em)
-          ABI = FloatABI::Hard;
-        else
-          ABI = FloatABI::Soft;
-
-        if (Triple.getOS() != llvm::Triple::UnknownOS ||
-            !Triple.isOSBinFormatMachO())
-          D.Diag(diag::warn_drv_assuming_mfloat_abi_is) << "soft";
-        break;
-      }
-    }
-  }
-
-  assert(ABI != FloatABI::Invalid && "must select an ABI");
-  return ABI;
-}
-
-static void getARMTargetFeatures(const ToolChain &TC,
-                                 const llvm::Triple &Triple,
-                                 const ArgList &Args,
-                                 ArgStringList &CmdArgs,
-                                 std::vector<StringRef> &Features,
-                                 bool ForAS) {
-  const Driver &D = TC.getDriver();
-
-  bool KernelOrKext =
-      Args.hasArg(options::OPT_mkernel, options::OPT_fapple_kext);
-  arm::FloatABI ABI = arm::getARMFloatABI(TC, Args);
-  const Arg *WaCPU = nullptr, *WaFPU = nullptr;
-  const Arg *WaHDiv = nullptr, *WaArch = nullptr;
-
-  if (!ForAS) {
-    // FIXME: Note, this is a hack, the LLVM backend doesn't actually use these
-    // yet (it uses the -mfloat-abi and -msoft-float options), and it is
-    // stripped out by the ARM target. We should probably pass this a new
-    // -target-option, which is handled by the -cc1/-cc1as invocation.
-    //
-    // FIXME2:  For consistency, it would be ideal if we set up the target
-    // machine state the same when using the frontend or the assembler. We don't
-    // currently do that for the assembler, we pass the options directly to the
-    // backend and never even instantiate the frontend TargetInfo. If we did,
-    // and used its handleTargetFeatures hook, then we could ensure the
-    // assembler and the frontend behave the same.
-
-    // Use software floating point operations?
-    if (ABI == arm::FloatABI::Soft)
-      Features.push_back("+soft-float");
-
-    // Use software floating point argument passing?
-    if (ABI != arm::FloatABI::Hard)
-      Features.push_back("+soft-float-abi");
-  } else {
-    // Here, we make sure that -Wa,-mfpu/cpu/arch/hwdiv will be passed down
-    // to the assembler correctly.
-    for (const Arg *A :
-         Args.filtered(options::OPT_Wa_COMMA, options::OPT_Xassembler)) {
-      StringRef Value = A->getValue();
-      if (Value.startswith("-mfpu=")) {
-        WaFPU = A;
-      } else if (Value.startswith("-mcpu=")) {
-        WaCPU = A;
-      } else if (Value.startswith("-mhwdiv=")) {
-        WaHDiv = A;
-      } else if (Value.startswith("-march=")) {
-        WaArch = A;
-      }
-    }
-  }
-
-  // Check -march. ClangAs gives preference to -Wa,-march=.
-  const Arg *ArchArg = Args.getLastArg(options::OPT_march_EQ);
-  StringRef ArchName;
-  if (WaArch) {
-    if (ArchArg)
-      D.Diag(clang::diag::warn_drv_unused_argument)
-          << ArchArg->getAsString(Args);
-    ArchName = StringRef(WaArch->getValue()).substr(7);
-    checkARMArchName(D, WaArch, Args, ArchName, Features, Triple);
-    // FIXME: Set Arch.
-    D.Diag(clang::diag::warn_drv_unused_argument) << WaArch->getAsString(Args);
-  } else if (ArchArg) {
-    ArchName = ArchArg->getValue();
-    checkARMArchName(D, ArchArg, Args, ArchName, Features, Triple);
-  }
-
-  // Check -mcpu. ClangAs gives preference to -Wa,-mcpu=.
-  const Arg *CPUArg = Args.getLastArg(options::OPT_mcpu_EQ);
-  StringRef CPUName;
-  if (WaCPU) {
-    if (CPUArg)
-      D.Diag(clang::diag::warn_drv_unused_argument)
-          << CPUArg->getAsString(Args);
-    CPUName = StringRef(WaCPU->getValue()).substr(6);
-    checkARMCPUName(D, WaCPU, Args, CPUName, ArchName, Features, Triple);
-  } else if (CPUArg) {
-    CPUName = CPUArg->getValue();
-    checkARMCPUName(D, CPUArg, Args, CPUName, ArchName, Features, Triple);
-  }
-
-  // Add CPU features for generic CPUs
-  if (CPUName == "native") {
-    llvm::StringMap<bool> HostFeatures;
-    if (llvm::sys::getHostCPUFeatures(HostFeatures))
-      for (auto &F : HostFeatures)
-        Features.push_back(
-            Args.MakeArgString((F.second ? "+" : "-") + F.first()));
-  }
-
-  // Honor -mfpu=. ClangAs gives preference to -Wa,-mfpu=.
-  const Arg *FPUArg = Args.getLastArg(options::OPT_mfpu_EQ);
-  if (WaFPU) {
-    if (FPUArg)
-      D.Diag(clang::diag::warn_drv_unused_argument)
-          << FPUArg->getAsString(Args);
-    getARMFPUFeatures(D, WaFPU, Args, StringRef(WaFPU->getValue()).substr(6),
-                      Features);
-  } else if (FPUArg) {
-    getARMFPUFeatures(D, FPUArg, Args, FPUArg->getValue(), Features);
-  }
-
-  // Honor -mhwdiv=. ClangAs gives preference to -Wa,-mhwdiv=.
-  const Arg *HDivArg = Args.getLastArg(options::OPT_mhwdiv_EQ);
-  if (WaHDiv) {
-    if (HDivArg)
-      D.Diag(clang::diag::warn_drv_unused_argument)
-          << HDivArg->getAsString(Args);
-    getARMHWDivFeatures(D, WaHDiv, Args,
-                        StringRef(WaHDiv->getValue()).substr(8), Features);
-  } else if (HDivArg)
-    getARMHWDivFeatures(D, HDivArg, Args, HDivArg->getValue(), Features);
-
-  // Setting -msoft-float effectively disables NEON because of the GCC
-  // implementation, although the same isn't true of VFP or VFP3.
-  if (ABI == arm::FloatABI::Soft) {
-    Features.push_back("-neon");
-    // Also need to explicitly disable features which imply NEON.
-    Features.push_back("-crypto");
-  }
-
-  // En/disable crc code generation.
-  if (Arg *A = Args.getLastArg(options::OPT_mcrc, options::OPT_mnocrc)) {
-    if (A->getOption().matches(options::OPT_mcrc))
-      Features.push_back("+crc");
-    else
-      Features.push_back("-crc");
-  }
-
-  // Look for the last occurrence of -mlong-calls or -mno-long-calls. If
-  // neither options are specified, see if we are compiling for kernel/kext and
-  // decide whether to pass "+long-calls" based on the OS and its version.
-  if (Arg *A = Args.getLastArg(options::OPT_mlong_calls,
-                               options::OPT_mno_long_calls)) {
-    if (A->getOption().matches(options::OPT_mlong_calls))
-      Features.push_back("+long-calls");
-  } else if (KernelOrKext && (!Triple.isiOS() || Triple.isOSVersionLT(6)) &&
-             !Triple.isWatchOS()) {
-      Features.push_back("+long-calls");
-  }
-
-  // Generate execute-only output (no data access to code sections).
-  // Supported only on ARMv6T2 and ARMv7 and above.
-  // Cannot be combined with -mno-movt or -mlong-calls
-  if (Arg *A = Args.getLastArg(options::OPT_mexecute_only, options::OPT_mno_execute_only)) {
-    if (A->getOption().matches(options::OPT_mexecute_only)) {
-      if (getARMSubArchVersionNumber(Triple) < 7 &&
-          llvm::ARM::parseArch(Triple.getArchName()) != llvm::ARM::AK_ARMV6T2)
-            D.Diag(diag::err_target_unsupported_execute_only) << Triple.getArchName();
-      else if (Arg *B = Args.getLastArg(options::OPT_mno_movt))
-        D.Diag(diag::err_opt_not_valid_with_opt) << A->getAsString(Args) << B->getAsString(Args);
-      // Long calls create constant pool entries and have not yet been fixed up
-      // to play nicely with execute-only. Hence, they cannot be used in
-      // execute-only code for now
-      else if (Arg *B = Args.getLastArg(options::OPT_mlong_calls, options::OPT_mno_long_calls)) {
-        if (B->getOption().matches(options::OPT_mlong_calls))
-          D.Diag(diag::err_opt_not_valid_with_opt) << A->getAsString(Args) << B->getAsString(Args);
-      }
-
-      CmdArgs.push_back("-backend-option");
-      CmdArgs.push_back("-arm-execute-only");
-    }
-  }
-
-  // Kernel code has more strict alignment requirements.
-  if (KernelOrKext)
-    Features.push_back("+strict-align");
-  else if (Arg *A = Args.getLastArg(options::OPT_mno_unaligned_access,
-                                    options::OPT_munaligned_access)) {
-    if (A->getOption().matches(options::OPT_munaligned_access)) {
-      // No v6M core supports unaligned memory access (v6M ARM ARM A3.2).
-      if (Triple.getSubArch() == llvm::Triple::SubArchType::ARMSubArch_v6m)
-        D.Diag(diag::err_target_unsupported_unaligned) << "v6m";
-      // v8M Baseline follows on from v6M, so doesn't support unaligned memory
-      // access either.
-      else if (Triple.getSubArch() == llvm::Triple::SubArchType::ARMSubArch_v8m_baseline)
-        D.Diag(diag::err_target_unsupported_unaligned) << "v8m.base";
-    } else
-      Features.push_back("+strict-align");
-  } else {
-    // Assume pre-ARMv6 doesn't support unaligned accesses.
-    //
-    // ARMv6 may or may not support unaligned accesses depending on the
-    // SCTLR.U bit, which is architecture-specific. We assume ARMv6
-    // Darwin and NetBSD targets support unaligned accesses, and others don't.
-    //
-    // ARMv7 always has SCTLR.U set to 1, but it has a new SCTLR.A bit
-    // which raises an alignment fault on unaligned accesses. Linux
-    // defaults this bit to 0 and handles it as a system-wide (not
-    // per-process) setting. It is therefore safe to assume that ARMv7+
-    // Linux targets support unaligned accesses. The same goes for NaCl.
-    //
-    // The above behavior is consistent with GCC.
-    int VersionNum = getARMSubArchVersionNumber(Triple);
-    if (Triple.isOSDarwin() || Triple.isOSNetBSD()) {
-      if (VersionNum < 6 ||
-          Triple.getSubArch() == llvm::Triple::SubArchType::ARMSubArch_v6m)
-        Features.push_back("+strict-align");
-    } else if (Triple.isOSLinux() || Triple.isOSNaCl()) {
-      if (VersionNum < 7)
-        Features.push_back("+strict-align");
-    } else
-      Features.push_back("+strict-align");
-  }
-
-  // llvm does not support reserving registers in general. There is support
-  // for reserving r9 on ARM though (defined as a platform-specific register
-  // in ARM EABI).
-  if (Args.hasArg(options::OPT_ffixed_r9))
-    Features.push_back("+reserve-r9");
-
-  // The kext linker doesn't know how to deal with movw/movt.
-  if (KernelOrKext || Args.hasArg(options::OPT_mno_movt))
-    Features.push_back("+no-movt");
-}
-
 void Clang::AddARMTargetArgs(const llvm::Triple &Triple, const ArgList &Args,
                              ArgStringList &CmdArgs, bool KernelOrKext) const {
   // Select the ABI to use.
@@ -1224,7 +760,7 @@ void Clang::AddARMTargetArgs(const llvm::Triple &Triple, const ArgList &Args,
   if (Arg *A = Args.getLastArg(options::OPT_mabi_EQ)) {
     ABIName = A->getValue();
   } else if (Triple.isOSBinFormatMachO()) {
-    if (useAAPCSForMachO(Triple)) {
+    if (arm::useAAPCSForMachO(Triple)) {
       ABIName = "aapcs";
     } else if (Triple.isWatchABI()) {
       ABIName = "aapcs16";
@@ -1292,34 +828,6 @@ void Clang::AddARMTargetArgs(const llvm::Triple &Triple, const ArgList &Args,
                     options::OPT_mno_implicit_float, true))
     CmdArgs.push_back("-no-implicit-float");
 }
-// ARM tools end.
-
-/// getAArch64TargetCPU - Get the (LLVM) name of the AArch64 cpu we are
-/// targeting. Set \p A to the Arg corresponding to the -mcpu or -mtune
-/// arguments if they are provided, or to nullptr otherwise.
-static std::string getAArch64TargetCPU(const ArgList &Args, Arg *&A) {
-  std::string CPU;
-  // If we have -mtune or -mcpu, use that.
-  if ((A = Args.getLastArg(options::OPT_mtune_EQ))) {
-    CPU = StringRef(A->getValue()).lower();
-  } else if ((A = Args.getLastArg(options::OPT_mcpu_EQ))) {
-    StringRef Mcpu = A->getValue();
-    CPU = Mcpu.split("+").first.lower();
-  }
-
-  // Handle CPU name is 'native'.
-  if (CPU == "native")
-    return llvm::sys::getHostCPUName();
-  else if (CPU.size())
-    return CPU;
-
-  // Make sure we pick "cyclone" if -arch is used.
-  // FIXME: Should this be picked by checking the target triple instead?
-  if (Args.getLastArg(options::OPT_arch))
-    return "cyclone";
-
-  return "generic";
-}
 
 void Clang::AddAArch64TargetArgs(const ArgList &Args,
                                  ArgStringList &CmdArgs) const {
@@ -1369,158 +877,7 @@ void Clang::AddAArch64TargetArgs(const ArgList &Args,
   }
 }
 
-// Get CPU and ABI names. They are not independent
-// so we have to calculate them together.
-void mips::getMipsCPUAndABI(const ArgList &Args, const llvm::Triple &Triple,
-                            StringRef &CPUName, StringRef &ABIName) {
-  const char *DefMips32CPU = "mips32r2";
-  const char *DefMips64CPU = "mips64r2";
-
-  // MIPS32r6 is the default for mips(el)?-img-linux-gnu and MIPS64r6 is the
-  // default for mips64(el)?-img-linux-gnu.
-  if (Triple.getVendor() == llvm::Triple::ImaginationTechnologies &&
-      Triple.getEnvironment() == llvm::Triple::GNU) {
-    DefMips32CPU = "mips32r6";
-    DefMips64CPU = "mips64r6";
-  }
-
-  // MIPS64r6 is the default for Android MIPS64 (mips64el-linux-android).
-  if (Triple.isAndroid()) {
-    DefMips32CPU = "mips32";
-    DefMips64CPU = "mips64r6";
-  }
-
-  // MIPS3 is the default for mips64*-unknown-openbsd.
-  if (Triple.getOS() == llvm::Triple::OpenBSD)
-    DefMips64CPU = "mips3";
-
-  if (Arg *A = Args.getLastArg(options::OPT_march_EQ, options::OPT_mcpu_EQ))
-    CPUName = A->getValue();
-
-  if (Arg *A = Args.getLastArg(options::OPT_mabi_EQ)) {
-    ABIName = A->getValue();
-    // Convert a GNU style Mips ABI name to the name
-    // accepted by LLVM Mips backend.
-    ABIName = llvm::StringSwitch<llvm::StringRef>(ABIName)
-                  .Case("32", "o32")
-                  .Case("64", "n64")
-                  .Default(ABIName);
-  }
-
-  // Setup default CPU and ABI names.
-  if (CPUName.empty() && ABIName.empty()) {
-    switch (Triple.getArch()) {
-    default:
-      llvm_unreachable("Unexpected triple arch name");
-    case llvm::Triple::mips:
-    case llvm::Triple::mipsel:
-      CPUName = DefMips32CPU;
-      break;
-    case llvm::Triple::mips64:
-    case llvm::Triple::mips64el:
-      CPUName = DefMips64CPU;
-      break;
-    }
-  }
-
-  if (ABIName.empty() &&
-      (Triple.getVendor() == llvm::Triple::MipsTechnologies ||
-       Triple.getVendor() == llvm::Triple::ImaginationTechnologies)) {
-    ABIName = llvm::StringSwitch<const char *>(CPUName)
-                  .Case("mips1", "o32")
-                  .Case("mips2", "o32")
-                  .Case("mips3", "n64")
-                  .Case("mips4", "n64")
-                  .Case("mips5", "n64")
-                  .Case("mips32", "o32")
-                  .Case("mips32r2", "o32")
-                  .Case("mips32r3", "o32")
-                  .Case("mips32r5", "o32")
-                  .Case("mips32r6", "o32")
-                  .Case("mips64", "n64")
-                  .Case("mips64r2", "n64")
-                  .Case("mips64r3", "n64")
-                  .Case("mips64r5", "n64")
-                  .Case("mips64r6", "n64")
-                  .Case("octeon", "n64")
-                  .Case("p5600", "o32")
-                  .Default("");
-  }
-
-  if (ABIName.empty()) {
-    // Deduce ABI name from the target triple.
-    if (Triple.getArch() == llvm::Triple::mips ||
-        Triple.getArch() == llvm::Triple::mipsel)
-      ABIName = "o32";
-    else
-      ABIName = "n64";
-  }
-
-  if (CPUName.empty()) {
-    // Deduce CPU name from ABI name.
-    CPUName = llvm::StringSwitch<const char *>(ABIName)
-                  .Case("o32", DefMips32CPU)
-                  .Cases("n32", "n64", DefMips64CPU)
-                  .Default("");
-  }
-
-  // FIXME: Warn on inconsistent use of -march and -mabi.
-}
-
-std::string mips::getMipsABILibSuffix(const ArgList &Args,
-                                      const llvm::Triple &Triple) {
-  StringRef CPUName, ABIName;
-  tools::mips::getMipsCPUAndABI(Args, Triple, CPUName, ABIName);
-  return llvm::StringSwitch<std::string>(ABIName)
-      .Case("o32", "")
-      .Case("n32", "32")
-      .Case("n64", "64");
-}
-
-// Convert ABI name to the GNU tools acceptable variant.
-static StringRef getGnuCompatibleMipsABIName(StringRef ABI) {
-  return llvm::StringSwitch<llvm::StringRef>(ABI)
-      .Case("o32", "32")
-      .Case("n64", "64")
-      .Default(ABI);
-}
-
-// Select the MIPS float ABI as determined by -msoft-float, -mhard-float,
-// and -mfloat-abi=.
-static mips::FloatABI getMipsFloatABI(const Driver &D, const ArgList &Args) {
-  mips::FloatABI ABI = mips::FloatABI::Invalid;
-  if (Arg *A =
-          Args.getLastArg(options::OPT_msoft_float, options::OPT_mhard_float,
-                          options::OPT_mfloat_abi_EQ)) {
-    if (A->getOption().matches(options::OPT_msoft_float))
-      ABI = mips::FloatABI::Soft;
-    else if (A->getOption().matches(options::OPT_mhard_float))
-      ABI = mips::FloatABI::Hard;
-    else {
-      ABI = llvm::StringSwitch<mips::FloatABI>(A->getValue())
-                .Case("soft", mips::FloatABI::Soft)
-                .Case("hard", mips::FloatABI::Hard)
-                .Default(mips::FloatABI::Invalid);
-      if (ABI == mips::FloatABI::Invalid && !StringRef(A->getValue()).empty()) {
-        D.Diag(diag::err_drv_invalid_mfloat_abi) << A->getAsString(Args);
-        ABI = mips::FloatABI::Hard;
-      }
-    }
-  }
-
-  // If unspecified, choose the default based on the platform.
-  if (ABI == mips::FloatABI::Invalid) {
-    // Assume "hard", because it's a default value used by gcc.
-    // When we start to recognize specific target MIPS processors,
-    // we will be able to select the default more correctly.
-    ABI = mips::FloatABI::Hard;
-  }
-
-  assert(ABI != mips::FloatABI::Invalid && "must select an ABI");
-  return ABI;
-}
-
-static void AddTargetFeature(const ArgList &Args,
+void tools::AddTargetFeature(const ArgList &Args,
                              std::vector<StringRef> &Features,
                              OptSpecifier OnOpt, OptSpecifier OffOpt,
                              StringRef FeatureName) {
@@ -1530,129 +887,6 @@ static void AddTargetFeature(const ArgList &Args,
     else
       Features.push_back(Args.MakeArgString("-" + FeatureName));
   }
-}
-
-static void getMIPSTargetFeatures(const Driver &D, const llvm::Triple &Triple,
-                                  const ArgList &Args,
-                                  std::vector<StringRef> &Features) {
-  StringRef CPUName;
-  StringRef ABIName;
-  mips::getMipsCPUAndABI(Args, Triple, CPUName, ABIName);
-  ABIName = getGnuCompatibleMipsABIName(ABIName);
-
-  // Historically, PIC code for MIPS was associated with -mabicalls, a.k.a
-  // SVR4 abicalls. Static code does not use SVR4 calling sequences. An ABI
-  // extension was developed by Richard Sandiford & Code Sourcery to support
-  // static code calling PIC code (CPIC). For O32 and N32 this means we have
-  // several combinations of PIC/static and abicalls. Pure static, static
-  // with the CPIC extension, and pure PIC code.
-
-  // At final link time, O32 and N32 with CPIC will have another section
-  // added to the binary which contains the stub functions to perform
-  // any fixups required for PIC code.
-
-  // For N64, the situation is more regular: code can either be static
-  // (non-abicalls) or PIC (abicalls). GCC has traditionally picked PIC code
-  // code for N64. Since Clang has already built the relocation model portion
-  // of the commandline, we pick add +noabicalls feature in the N64 static
-  // case.
-
-  // The is another case to be accounted for: -msym32, which enforces that all
-  // symbols have 32 bits in size. In this case, N64 can in theory use CPIC
-  // but it is unsupported.
-
-  // The combinations for N64 are:
-  // a) Static without abicalls and 64bit symbols.
-  // b) Static with abicalls and 32bit symbols.
-  // c) PIC with abicalls and 64bit symbols.
-
-  // For case (a) we need to add +noabicalls for N64.
-
-  bool IsN64 = ABIName == "64";
-  bool NonPIC = false;
-
-  Arg *LastPICArg = Args.getLastArg(options::OPT_fPIC, options::OPT_fno_PIC,
-                                    options::OPT_fpic, options::OPT_fno_pic,
-                                    options::OPT_fPIE, options::OPT_fno_PIE,
-                                    options::OPT_fpie, options::OPT_fno_pie);
-  if (LastPICArg) {
-    Option O = LastPICArg->getOption();
-    NonPIC =
-        (O.matches(options::OPT_fno_PIC) || O.matches(options::OPT_fno_pic) ||
-         O.matches(options::OPT_fno_PIE) || O.matches(options::OPT_fno_pie));
-  }
-
-  if (IsN64 && NonPIC) {
-    Features.push_back("+noabicalls");
-  } else {
-    AddTargetFeature(Args, Features, options::OPT_mno_abicalls,
-                     options::OPT_mabicalls, "noabicalls");
-  }
-
-  mips::FloatABI FloatABI = getMipsFloatABI(D, Args);
-  if (FloatABI == mips::FloatABI::Soft) {
-    // FIXME: Note, this is a hack. We need to pass the selected float
-    // mode to the MipsTargetInfoBase to define appropriate macros there.
-    // Now it is the only method.
-    Features.push_back("+soft-float");
-  }
-
-  if (Arg *A = Args.getLastArg(options::OPT_mnan_EQ)) {
-    StringRef Val = StringRef(A->getValue());
-    if (Val == "2008") {
-      if (mips::getSupportedNanEncoding(CPUName) & mips::Nan2008)
-        Features.push_back("+nan2008");
-      else {
-        Features.push_back("-nan2008");
-        D.Diag(diag::warn_target_unsupported_nan2008) << CPUName;
-      }
-    } else if (Val == "legacy") {
-      if (mips::getSupportedNanEncoding(CPUName) & mips::NanLegacy)
-        Features.push_back("-nan2008");
-      else {
-        Features.push_back("+nan2008");
-        D.Diag(diag::warn_target_unsupported_nanlegacy) << CPUName;
-      }
-    } else
-      D.Diag(diag::err_drv_unsupported_option_argument)
-          << A->getOption().getName() << Val;
-  }
-
-  AddTargetFeature(Args, Features, options::OPT_msingle_float,
-                   options::OPT_mdouble_float, "single-float");
-  AddTargetFeature(Args, Features, options::OPT_mips16, options::OPT_mno_mips16,
-                   "mips16");
-  AddTargetFeature(Args, Features, options::OPT_mmicromips,
-                   options::OPT_mno_micromips, "micromips");
-  AddTargetFeature(Args, Features, options::OPT_mdsp, options::OPT_mno_dsp,
-                   "dsp");
-  AddTargetFeature(Args, Features, options::OPT_mdspr2, options::OPT_mno_dspr2,
-                   "dspr2");
-  AddTargetFeature(Args, Features, options::OPT_mmsa, options::OPT_mno_msa,
-                   "msa");
-
-  // Add the last -mfp32/-mfpxx/-mfp64, if none are given and the ABI is O32
-  // pass -mfpxx, or if none are given and fp64a is default, pass fp64 and
-  // nooddspreg.
-  if (Arg *A = Args.getLastArg(options::OPT_mfp32, options::OPT_mfpxx,
-                               options::OPT_mfp64)) {
-    if (A->getOption().matches(options::OPT_mfp32))
-      Features.push_back(Args.MakeArgString("-fp64"));
-    else if (A->getOption().matches(options::OPT_mfpxx)) {
-      Features.push_back(Args.MakeArgString("+fpxx"));
-      Features.push_back(Args.MakeArgString("+nooddspreg"));
-    } else
-      Features.push_back(Args.MakeArgString("+fp64"));
-  } else if (mips::shouldUseFPXX(Args, Triple, CPUName, ABIName, FloatABI)) {
-    Features.push_back(Args.MakeArgString("+fpxx"));
-    Features.push_back(Args.MakeArgString("+nooddspreg"));
-  } else if (mips::isFP64ADefault(Triple, CPUName)) {
-    Features.push_back(Args.MakeArgString("+fp64"));
-    Features.push_back(Args.MakeArgString("+nooddspreg"));
-  }
-
-  AddTargetFeature(Args, Features, options::OPT_mno_odd_spreg,
-                   options::OPT_modd_spreg, "nooddspreg");
 }
 
 void Clang::AddMIPSTargetArgs(const ArgList &Args,
@@ -1666,7 +900,7 @@ void Clang::AddMIPSTargetArgs(const ArgList &Args,
   CmdArgs.push_back("-target-abi");
   CmdArgs.push_back(ABIName.data());
 
-  mips::FloatABI ABI = getMipsFloatABI(D, Args);
+  mips::FloatABI ABI = mips::getMipsFloatABI(D, Args);
   if (ABI == mips::FloatABI::Soft) {
     // Floating point operations and argument passing are soft.
     CmdArgs.push_back("-msoft-float");
@@ -1721,115 +955,6 @@ void Clang::AddMIPSTargetArgs(const ArgList &Args,
     } else
       D.Diag(diag::warn_target_unsupported_compact_branches) << CPUName;
   }
-}
-
-/// getPPCTargetCPU - Get the (LLVM) name of the PowerPC cpu we are targeting.
-static std::string getPPCTargetCPU(const ArgList &Args) {
-  if (Arg *A = Args.getLastArg(options::OPT_mcpu_EQ)) {
-    StringRef CPUName = A->getValue();
-
-    if (CPUName == "native") {
-      std::string CPU = llvm::sys::getHostCPUName();
-      if (!CPU.empty() && CPU != "generic")
-        return CPU;
-      else
-        return "";
-    }
-
-    return llvm::StringSwitch<const char *>(CPUName)
-        .Case("common", "generic")
-        .Case("440", "440")
-        .Case("440fp", "440")
-        .Case("450", "450")
-        .Case("601", "601")
-        .Case("602", "602")
-        .Case("603", "603")
-        .Case("603e", "603e")
-        .Case("603ev", "603ev")
-        .Case("604", "604")
-        .Case("604e", "604e")
-        .Case("620", "620")
-        .Case("630", "pwr3")
-        .Case("G3", "g3")
-        .Case("7400", "7400")
-        .Case("G4", "g4")
-        .Case("7450", "7450")
-        .Case("G4+", "g4+")
-        .Case("750", "750")
-        .Case("970", "970")
-        .Case("G5", "g5")
-        .Case("a2", "a2")
-        .Case("a2q", "a2q")
-        .Case("e500mc", "e500mc")
-        .Case("e5500", "e5500")
-        .Case("power3", "pwr3")
-        .Case("power4", "pwr4")
-        .Case("power5", "pwr5")
-        .Case("power5x", "pwr5x")
-        .Case("power6", "pwr6")
-        .Case("power6x", "pwr6x")
-        .Case("power7", "pwr7")
-        .Case("power8", "pwr8")
-        .Case("power9", "pwr9")
-        .Case("pwr3", "pwr3")
-        .Case("pwr4", "pwr4")
-        .Case("pwr5", "pwr5")
-        .Case("pwr5x", "pwr5x")
-        .Case("pwr6", "pwr6")
-        .Case("pwr6x", "pwr6x")
-        .Case("pwr7", "pwr7")
-        .Case("pwr8", "pwr8")
-        .Case("pwr9", "pwr9")
-        .Case("powerpc", "ppc")
-        .Case("powerpc64", "ppc64")
-        .Case("powerpc64le", "ppc64le")
-        .Default("");
-  }
-
-  return "";
-}
-
-static void getPPCTargetFeatures(const Driver &D, const llvm::Triple &Triple,
-                                 const ArgList &Args,
-                                 std::vector<StringRef> &Features) {
-  handleTargetFeaturesGroup(Args, Features, options::OPT_m_ppc_Features_Group);
-
-  ppc::FloatABI FloatABI = ppc::getPPCFloatABI(D, Args);
-  if (FloatABI == ppc::FloatABI::Soft)
-    Features.push_back("-hard-float");
-
-  // Altivec is a bit weird, allow overriding of the Altivec feature here.
-  AddTargetFeature(Args, Features, options::OPT_faltivec,
-                   options::OPT_fno_altivec, "altivec");
-}
-
-ppc::FloatABI ppc::getPPCFloatABI(const Driver &D, const ArgList &Args) {
-  ppc::FloatABI ABI = ppc::FloatABI::Invalid;
-  if (Arg *A =
-          Args.getLastArg(options::OPT_msoft_float, options::OPT_mhard_float,
-                          options::OPT_mfloat_abi_EQ)) {
-    if (A->getOption().matches(options::OPT_msoft_float))
-      ABI = ppc::FloatABI::Soft;
-    else if (A->getOption().matches(options::OPT_mhard_float))
-      ABI = ppc::FloatABI::Hard;
-    else {
-      ABI = llvm::StringSwitch<ppc::FloatABI>(A->getValue())
-                .Case("soft", ppc::FloatABI::Soft)
-                .Case("hard", ppc::FloatABI::Hard)
-                .Default(ppc::FloatABI::Invalid);
-      if (ABI == ppc::FloatABI::Invalid && !StringRef(A->getValue()).empty()) {
-        D.Diag(diag::err_drv_invalid_mfloat_abi) << A->getAsString(Args);
-        ABI = ppc::FloatABI::Hard;
-      }
-    }
-  }
-
-  // If unspecified, choose the default based on the platform.
-  if (ABI == ppc::FloatABI::Invalid) {
-    ABI = ppc::FloatABI::Hard;
-  }
-
-  return ABI;
 }
 
 void Clang::AddPPCTargetArgs(const ArgList &Args,
@@ -1889,11 +1014,6 @@ void Clang::AddPPCTargetArgs(const ArgList &Args,
   }
 }
 
-bool ppc::hasPPCAbiArg(const ArgList &Args, const char *Value) {
-  Arg *A = Args.getLastArg(options::OPT_mabi_EQ);
-  return A && (A->getValue() == StringRef(Value));
-}
-
 /// Get the (LLVM) name of the R600 gpu we are targeting.
 static std::string getR600TargetGPU(const ArgList &Args) {
   if (Arg *A = Args.getLastArg(options::OPT_mcpu_EQ)) {
@@ -1916,48 +1036,6 @@ static std::string getLanaiTargetCPU(const ArgList &Args) {
     return A->getValue();
   }
   return "";
-}
-
-sparc::FloatABI sparc::getSparcFloatABI(const Driver &D,
-                                        const ArgList &Args) {
-  sparc::FloatABI ABI = sparc::FloatABI::Invalid;
-  if (Arg *A =
-          Args.getLastArg(options::OPT_msoft_float, options::OPT_mhard_float,
-                          options::OPT_mfloat_abi_EQ)) {
-    if (A->getOption().matches(options::OPT_msoft_float))
-      ABI = sparc::FloatABI::Soft;
-    else if (A->getOption().matches(options::OPT_mhard_float))
-      ABI = sparc::FloatABI::Hard;
-    else {
-      ABI = llvm::StringSwitch<sparc::FloatABI>(A->getValue())
-                .Case("soft", sparc::FloatABI::Soft)
-                .Case("hard", sparc::FloatABI::Hard)
-                .Default(sparc::FloatABI::Invalid);
-      if (ABI == sparc::FloatABI::Invalid &&
-          !StringRef(A->getValue()).empty()) {
-        D.Diag(diag::err_drv_invalid_mfloat_abi) << A->getAsString(Args);
-        ABI = sparc::FloatABI::Hard;
-      }
-    }
-  }
-
-  // If unspecified, choose the default based on the platform.
-  // Only the hard-float ABI on Sparc is standardized, and it is the
-  // default. GCC also supports a nonstandard soft-float ABI mode, also
-  // implemented in LLVM. However as this is not standard we set the default
-  // to be hard-float.
-  if (ABI == sparc::FloatABI::Invalid) {
-    ABI = sparc::FloatABI::Hard;
-  }
-
-  return ABI;
-}
-
-static void getSparcTargetFeatures(const Driver &D, const ArgList &Args,
-                                 std::vector<StringRef> &Features) {
-  sparc::FloatABI FloatABI = sparc::getSparcFloatABI(D, Args);
-  if (FloatABI == sparc::FloatABI::Soft)
-    Features.push_back("+soft-float");
 }
 
 void Clang::AddSparcTargetArgs(const ArgList &Args,
@@ -1984,119 +1062,6 @@ void Clang::AddSystemZTargetArgs(const ArgList &Args,
     CmdArgs.push_back("-mbackchain");
 }
 
-static const char *getSystemZTargetCPU(const ArgList &Args) {
-  if (const Arg *A = Args.getLastArg(options::OPT_march_EQ))
-    return A->getValue();
-  return "z10";
-}
-
-static void getSystemZTargetFeatures(const ArgList &Args,
-                                     std::vector<StringRef> &Features) {
-  // -m(no-)htm overrides use of the transactional-execution facility.
-  if (Arg *A = Args.getLastArg(options::OPT_mhtm, options::OPT_mno_htm)) {
-    if (A->getOption().matches(options::OPT_mhtm))
-      Features.push_back("+transactional-execution");
-    else
-      Features.push_back("-transactional-execution");
-  }
-  // -m(no-)vx overrides use of the vector facility.
-  if (Arg *A = Args.getLastArg(options::OPT_mvx, options::OPT_mno_vx)) {
-    if (A->getOption().matches(options::OPT_mvx))
-      Features.push_back("+vector");
-    else
-      Features.push_back("-vector");
-  }
-}
-
-static const char *getX86TargetCPU(const ArgList &Args,
-                                   const llvm::Triple &Triple) {
-  if (const Arg *A = Args.getLastArg(options::OPT_march_EQ)) {
-    if (StringRef(A->getValue()) != "native") {
-      if (Triple.isOSDarwin() && Triple.getArchName() == "x86_64h")
-        return "core-avx2";
-
-      return A->getValue();
-    }
-
-    // FIXME: Reject attempts to use -march=native unless the target matches
-    // the host.
-    //
-    // FIXME: We should also incorporate the detected target features for use
-    // with -native.
-    std::string CPU = llvm::sys::getHostCPUName();
-    if (!CPU.empty() && CPU != "generic")
-      return Args.MakeArgString(CPU);
-  }
-
-  if (const Arg *A = Args.getLastArg(options::OPT__SLASH_arch)) {
-    // Mapping built by referring to X86TargetInfo::getDefaultFeatures().
-    StringRef Arch = A->getValue();
-    const char *CPU;
-    if (Triple.getArch() == llvm::Triple::x86) {
-      CPU = llvm::StringSwitch<const char *>(Arch)
-                .Case("IA32", "i386")
-                .Case("SSE", "pentium3")
-                .Case("SSE2", "pentium4")
-                .Case("AVX", "sandybridge")
-                .Case("AVX2", "haswell")
-                .Default(nullptr);
-    } else {
-      CPU = llvm::StringSwitch<const char *>(Arch)
-                .Case("AVX", "sandybridge")
-                .Case("AVX2", "haswell")
-                .Default(nullptr);
-    }
-    if (CPU)
-      return CPU;
-  }
-
-  // Select the default CPU if none was given (or detection failed).
-
-  if (Triple.getArch() != llvm::Triple::x86_64 &&
-      Triple.getArch() != llvm::Triple::x86)
-    return nullptr; // This routine is only handling x86 targets.
-
-  bool Is64Bit = Triple.getArch() == llvm::Triple::x86_64;
-
-  // FIXME: Need target hooks.
-  if (Triple.isOSDarwin()) {
-    if (Triple.getArchName() == "x86_64h")
-      return "core-avx2";
-    // macosx10.12 drops support for all pre-Penryn Macs.
-    // Simulators can still run on 10.11 though, like Xcode.
-    if (Triple.isMacOSX() && !Triple.isOSVersionLT(10, 12))
-      return "penryn";
-    // The oldest x86_64 Macs have core2/Merom; the oldest x86 Macs have Yonah.
-    return Is64Bit ? "core2" : "yonah";
-  }
-
-  // Set up default CPU name for PS4 compilers.
-  if (Triple.isPS4CPU())
-    return "btver2";
-
-  // On Android use targets compatible with gcc
-  if (Triple.isAndroid())
-    return Is64Bit ? "x86-64" : "i686";
-
-  // Everything else goes to x86-64 in 64-bit mode.
-  if (Is64Bit)
-    return "x86-64";
-
-  switch (Triple.getOS()) {
-  case llvm::Triple::FreeBSD:
-  case llvm::Triple::NetBSD:
-  case llvm::Triple::OpenBSD:
-    return "i486";
-  case llvm::Triple::Haiku:
-    return "i586";
-  case llvm::Triple::Bitrig:
-    return "i686";
-  default:
-    // Fallback to p4.
-    return "pentium4";
-  }
-}
-
 /// Get the (LLVM) name of the WebAssembly cpu we are targeting.
 static StringRef getWebAssemblyTargetCPU(const ArgList &Args) {
   // If we have -mcpu=, use that.
@@ -2116,8 +1081,8 @@ static StringRef getWebAssemblyTargetCPU(const ArgList &Args) {
   return "generic";
 }
 
-static std::string getCPUName(const ArgList &Args, const llvm::Triple &T,
-                              bool FromAs = false) {
+std::string tools::getCPUName(const ArgList &Args, const llvm::Triple &T,
+                              bool FromAs) {
   Arg *A;
 
   switch (T.getArch()) {
@@ -2126,14 +1091,14 @@ static std::string getCPUName(const ArgList &Args, const llvm::Triple &T,
 
   case llvm::Triple::aarch64:
   case llvm::Triple::aarch64_be:
-    return getAArch64TargetCPU(Args, A);
+    return aarch64::getAArch64TargetCPU(Args, A);
 
   case llvm::Triple::arm:
   case llvm::Triple::armeb:
   case llvm::Triple::thumb:
   case llvm::Triple::thumbeb: {
     StringRef MArch, MCPU;
-    getARMArchCPUFromArgs(Args, MArch, MCPU, FromAs);
+    arm::getARMArchCPUFromArgs(Args, MArch, MCPU, FromAs);
     return arm::getARMTargetCPU(MCPU, MArch, T);
   }
   case llvm::Triple::mips:
@@ -2155,7 +1120,7 @@ static std::string getCPUName(const ArgList &Args, const llvm::Triple &T,
   case llvm::Triple::ppc:
   case llvm::Triple::ppc64:
   case llvm::Triple::ppc64le: {
-    std::string TargetCPUName = getPPCTargetCPU(Args);
+    std::string TargetCPUName = ppc::getPPCTargetCPU(Args);
     // LLVM may default to generating code for the native CPU,
     // but, like gcc, we default to a more generic option for
     // each architecture. (except on Darwin)
@@ -2179,7 +1144,7 @@ static std::string getCPUName(const ArgList &Args, const llvm::Triple &T,
 
   case llvm::Triple::x86:
   case llvm::Triple::x86_64:
-    return getX86TargetCPU(Args, T);
+    return x86::getX86TargetCPU(Args, T);
 
   case llvm::Triple::hexagon:
     return "hexagon" +
@@ -2189,7 +1154,7 @@ static std::string getCPUName(const ArgList &Args, const llvm::Triple &T,
     return getLanaiTargetCPU(Args);
 
   case llvm::Triple::systemz:
-    return getSystemZTargetCPU(Args);
+    return systemz::getSystemZTargetCPU(Args);
 
   case llvm::Triple::r600:
   case llvm::Triple::amdgcn:
@@ -2423,70 +1388,6 @@ static void ParseMRecip(const Driver &D, const ArgList &Args,
   OutStrings.push_back(Args.MakeArgString(Out));
 }
 
-static void getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
-                                 const ArgList &Args,
-                                 std::vector<StringRef> &Features) {
-  // If -march=native, autodetect the feature list.
-  if (const Arg *A = Args.getLastArg(options::OPT_march_EQ)) {
-    if (StringRef(A->getValue()) == "native") {
-      llvm::StringMap<bool> HostFeatures;
-      if (llvm::sys::getHostCPUFeatures(HostFeatures))
-        for (auto &F : HostFeatures)
-          Features.push_back(
-              Args.MakeArgString((F.second ? "+" : "-") + F.first()));
-    }
-  }
-
-  if (Triple.getArchName() == "x86_64h") {
-    // x86_64h implies quite a few of the more modern subtarget features
-    // for Haswell class CPUs, but not all of them. Opt-out of a few.
-    Features.push_back("-rdrnd");
-    Features.push_back("-aes");
-    Features.push_back("-pclmul");
-    Features.push_back("-rtm");
-    Features.push_back("-hle");
-    Features.push_back("-fsgsbase");
-  }
-
-  const llvm::Triple::ArchType ArchType = Triple.getArch();
-  // Add features to be compatible with gcc for Android.
-  if (Triple.isAndroid()) {
-    if (ArchType == llvm::Triple::x86_64) {
-      Features.push_back("+sse4.2");
-      Features.push_back("+popcnt");
-    } else
-      Features.push_back("+ssse3");
-  }
-
-  // Set features according to the -arch flag on MSVC.
-  if (Arg *A = Args.getLastArg(options::OPT__SLASH_arch)) {
-    StringRef Arch = A->getValue();
-    bool ArchUsed = false;
-    // First, look for flags that are shared in x86 and x86-64.
-    if (ArchType == llvm::Triple::x86_64 || ArchType == llvm::Triple::x86) {
-      if (Arch == "AVX" || Arch == "AVX2") {
-        ArchUsed = true;
-        Features.push_back(Args.MakeArgString("+" + Arch.lower()));
-      }
-    }
-    // Then, look for x86-specific flags.
-    if (ArchType == llvm::Triple::x86) {
-      if (Arch == "IA32") {
-        ArchUsed = true;
-      } else if (Arch == "SSE" || Arch == "SSE2") {
-        ArchUsed = true;
-        Features.push_back(Args.MakeArgString("+" + Arch.lower()));
-      }
-    }
-    if (!ArchUsed)
-      D.Diag(clang::diag::warn_drv_unused_argument) << A->getAsString(Args);
-  }
-
-  // Now add any that the user explicitly requested on the command line,
-  // which may override the defaults.
-  handleTargetFeaturesGroup(Args, Features, options::OPT_m_x86_Features_Group);
-}
-
 void Clang::AddX86TargetArgs(const ArgList &Args,
                              ArgStringList &CmdArgs) const {
   if (!Args.hasFlag(options::OPT_mred_zone, options::OPT_mno_red_zone, true) ||
@@ -2582,155 +1483,6 @@ void Clang::AddWebAssemblyTargetArgs(const ArgList &Args,
   }
 }
 
-// Decode AArch64 features from string like +[no]featureA+[no]featureB+...
-static bool DecodeAArch64Features(const Driver &D, StringRef text,
-                                  std::vector<StringRef> &Features) {
-  SmallVector<StringRef, 8> Split;
-  text.split(Split, StringRef("+"), -1, false);
-
-  for (StringRef Feature : Split) {
-    StringRef FeatureName = llvm::AArch64::getArchExtFeature(Feature);
-    if (!FeatureName.empty())
-      Features.push_back(FeatureName);
-    else if (Feature == "neon" || Feature == "noneon")
-      D.Diag(diag::err_drv_no_neon_modifier);
-    else
-      return false;
-  }
-  return true;
-}
-
-// Check if the CPU name and feature modifiers in -mcpu are legal. If yes,
-// decode CPU and feature.
-static bool DecodeAArch64Mcpu(const Driver &D, StringRef Mcpu, StringRef &CPU,
-                              std::vector<StringRef> &Features) {
-  std::pair<StringRef, StringRef> Split = Mcpu.split("+");
-  CPU = Split.first;
-
-  if (CPU == "generic") {
-    Features.push_back("+neon");
-  } else {
-    unsigned ArchKind = llvm::AArch64::parseCPUArch(CPU);
-    if (!llvm::AArch64::getArchFeatures(ArchKind, Features))
-      return false;
-
-    unsigned Extension = llvm::AArch64::getDefaultExtensions(CPU, ArchKind);
-    if (!llvm::AArch64::getExtensionFeatures(Extension, Features))
-      return false;
-   }
-
-  if (Split.second.size() && !DecodeAArch64Features(D, Split.second, Features))
-    return false;
-
-  return true;
-}
-
-static bool
-getAArch64ArchFeaturesFromMarch(const Driver &D, StringRef March,
-                                const ArgList &Args,
-                                std::vector<StringRef> &Features) {
-  std::string MarchLowerCase = March.lower();
-  std::pair<StringRef, StringRef> Split = StringRef(MarchLowerCase).split("+");
-
-  unsigned ArchKind = llvm::AArch64::parseArch(Split.first);
-  if (ArchKind == static_cast<unsigned>(llvm::AArch64::ArchKind::AK_INVALID) ||
-      !llvm::AArch64::getArchFeatures(ArchKind, Features) ||
-      (Split.second.size() && !DecodeAArch64Features(D, Split.second, Features)))
-    return false;
-
-  return true;
-}
-
-static bool
-getAArch64ArchFeaturesFromMcpu(const Driver &D, StringRef Mcpu,
-                               const ArgList &Args,
-                               std::vector<StringRef> &Features) {
-  StringRef CPU;
-  std::string McpuLowerCase = Mcpu.lower();
-  if (!DecodeAArch64Mcpu(D, McpuLowerCase, CPU, Features))
-    return false;
-
-  return true;
-}
-
-static bool
-getAArch64MicroArchFeaturesFromMtune(const Driver &D, StringRef Mtune,
-                                     const ArgList &Args,
-                                     std::vector<StringRef> &Features) {
-  std::string MtuneLowerCase = Mtune.lower();
-  // Handle CPU name is 'native'.
-  if (MtuneLowerCase == "native")
-    MtuneLowerCase = llvm::sys::getHostCPUName();
-  if (MtuneLowerCase == "cyclone") {
-    Features.push_back("+zcm");
-    Features.push_back("+zcz");
-  }
-  return true;
-}
-
-static bool
-getAArch64MicroArchFeaturesFromMcpu(const Driver &D, StringRef Mcpu,
-                                    const ArgList &Args,
-                                    std::vector<StringRef> &Features) {
-  StringRef CPU;
-  std::vector<StringRef> DecodedFeature;
-  std::string McpuLowerCase = Mcpu.lower();
-  if (!DecodeAArch64Mcpu(D, McpuLowerCase, CPU, DecodedFeature))
-    return false;
-
-  return getAArch64MicroArchFeaturesFromMtune(D, CPU, Args, Features);
-}
-
-static void getAArch64TargetFeatures(const Driver &D, const ArgList &Args,
-                                     std::vector<StringRef> &Features) {
-  Arg *A;
-  bool success = true;
-  // Enable NEON by default.
-  Features.push_back("+neon");
-  if ((A = Args.getLastArg(options::OPT_march_EQ)))
-    success = getAArch64ArchFeaturesFromMarch(D, A->getValue(), Args, Features);
-  else if ((A = Args.getLastArg(options::OPT_mcpu_EQ)))
-    success = getAArch64ArchFeaturesFromMcpu(D, A->getValue(), Args, Features);
-  else if (Args.hasArg(options::OPT_arch))
-    success = getAArch64ArchFeaturesFromMcpu(D, getAArch64TargetCPU(Args, A),
-                                             Args, Features);
-
-  if (success && (A = Args.getLastArg(options::OPT_mtune_EQ)))
-    success =
-        getAArch64MicroArchFeaturesFromMtune(D, A->getValue(), Args, Features);
-  else if (success && (A = Args.getLastArg(options::OPT_mcpu_EQ)))
-    success =
-        getAArch64MicroArchFeaturesFromMcpu(D, A->getValue(), Args, Features);
-  else if (success && Args.hasArg(options::OPT_arch))
-    success = getAArch64MicroArchFeaturesFromMcpu(
-        D, getAArch64TargetCPU(Args, A), Args, Features);
-
-  if (!success)
-    D.Diag(diag::err_drv_clang_unsupported) << A->getAsString(Args);
-
-  if (Args.getLastArg(options::OPT_mgeneral_regs_only)) {
-    Features.push_back("-fp-armv8");
-    Features.push_back("-crypto");
-    Features.push_back("-neon");
-  }
-
-  // En/disable crc
-  if (Arg *A = Args.getLastArg(options::OPT_mcrc, options::OPT_mnocrc)) {
-    if (A->getOption().matches(options::OPT_mcrc))
-      Features.push_back("+crc");
-    else
-      Features.push_back("-crc");
-  }
-
-  if (Arg *A = Args.getLastArg(options::OPT_mno_unaligned_access,
-                               options::OPT_munaligned_access))
-    if (A->getOption().matches(options::OPT_mno_unaligned_access))
-      Features.push_back("+strict-align");
-
-  if (Args.hasArg(options::OPT_ffixed_x18))
-    Features.push_back("+reserve-x18");
-}
-
 static void getHexagonTargetFeatures(const ArgList &Args,
                                      std::vector<StringRef> &Features) {
   handleTargetFeaturesGroup(Args, Features,
@@ -2780,31 +1532,31 @@ static void getTargetFeatures(const ToolChain &TC, const llvm::Triple &Triple,
   case llvm::Triple::mipsel:
   case llvm::Triple::mips64:
   case llvm::Triple::mips64el:
-    getMIPSTargetFeatures(D, Triple, Args, Features);
+    mips::getMIPSTargetFeatures(D, Triple, Args, Features);
     break;
 
   case llvm::Triple::arm:
   case llvm::Triple::armeb:
   case llvm::Triple::thumb:
   case llvm::Triple::thumbeb:
-    getARMTargetFeatures(TC, Triple, Args, CmdArgs, Features, ForAS);
+    arm::getARMTargetFeatures(TC, Triple, Args, CmdArgs, Features, ForAS);
     break;
 
   case llvm::Triple::ppc:
   case llvm::Triple::ppc64:
   case llvm::Triple::ppc64le:
-    getPPCTargetFeatures(D, Triple, Args, Features);
+    ppc::getPPCTargetFeatures(D, Triple, Args, Features);
     break;
   case llvm::Triple::systemz:
-    getSystemZTargetFeatures(Args, Features);
+    systemz::getSystemZTargetFeatures(Args, Features);
     break;
   case llvm::Triple::aarch64:
   case llvm::Triple::aarch64_be:
-    getAArch64TargetFeatures(D, Args, Features);
+    aarch64::getAArch64TargetFeatures(D, Args, Features);
     break;
   case llvm::Triple::x86:
   case llvm::Triple::x86_64:
-    getX86TargetFeatures(D, Triple, Args, Features);
+    x86::getX86TargetFeatures(D, Triple, Args, Features);
     break;
   case llvm::Triple::hexagon:
     getHexagonTargetFeatures(Args, Features);
@@ -2816,7 +1568,7 @@ static void getTargetFeatures(const ToolChain &TC, const llvm::Triple &Triple,
   case llvm::Triple::sparc:
   case llvm::Triple::sparcel:
   case llvm::Triple::sparcv9:
-    getSparcTargetFeatures(D, Args, Features);
+    sparc::getSparcTargetFeatures(D, Args, Features);
     break;
   case llvm::Triple::r600:
   case llvm::Triple::amdgcn:
@@ -7982,110 +6734,8 @@ void arm::appendEBLinkFlags(const ArgList &Args, ArgStringList &CmdArgs,
 
   // ARMv7 (and later) and ARMv6-M do not support BE-32, so instruct the linker
   // to generate BE-8 executables.
-  if (getARMSubArchVersionNumber(Triple) >= 7 || isARMMProfile(Triple))
+  if (arm::getARMSubArchVersionNumber(Triple) >= 7 || arm::isARMMProfile(Triple))
     CmdArgs.push_back("--be8");
-}
-
-mips::NanEncoding mips::getSupportedNanEncoding(StringRef &CPU) {
-  // Strictly speaking, mips32r2 and mips64r2 are NanLegacy-only since Nan2008
-  // was first introduced in Release 3. However, other compilers have
-  // traditionally allowed it for Release 2 so we should do the same.
-  return (NanEncoding)llvm::StringSwitch<int>(CPU)
-      .Case("mips1", NanLegacy)
-      .Case("mips2", NanLegacy)
-      .Case("mips3", NanLegacy)
-      .Case("mips4", NanLegacy)
-      .Case("mips5", NanLegacy)
-      .Case("mips32", NanLegacy)
-      .Case("mips32r2", NanLegacy | Nan2008)
-      .Case("mips32r3", NanLegacy | Nan2008)
-      .Case("mips32r5", NanLegacy | Nan2008)
-      .Case("mips32r6", Nan2008)
-      .Case("mips64", NanLegacy)
-      .Case("mips64r2", NanLegacy | Nan2008)
-      .Case("mips64r3", NanLegacy | Nan2008)
-      .Case("mips64r5", NanLegacy | Nan2008)
-      .Case("mips64r6", Nan2008)
-      .Default(NanLegacy);
-}
-
-bool mips::hasCompactBranches(StringRef &CPU) {
-  // mips32r6 and mips64r6 have compact branches.
-  return llvm::StringSwitch<bool>(CPU)
-      .Case("mips32r6", true)
-      .Case("mips64r6", true)
-      .Default(false);
-}
-
-bool mips::hasMipsAbiArg(const ArgList &Args, const char *Value) {
-  Arg *A = Args.getLastArg(options::OPT_mabi_EQ);
-  return A && (A->getValue() == StringRef(Value));
-}
-
-bool mips::isUCLibc(const ArgList &Args) {
-  Arg *A = Args.getLastArg(options::OPT_m_libc_Group);
-  return A && A->getOption().matches(options::OPT_muclibc);
-}
-
-bool mips::isNaN2008(const ArgList &Args, const llvm::Triple &Triple) {
-  if (Arg *NaNArg = Args.getLastArg(options::OPT_mnan_EQ))
-    return llvm::StringSwitch<bool>(NaNArg->getValue())
-        .Case("2008", true)
-        .Case("legacy", false)
-        .Default(false);
-
-  // NaN2008 is the default for MIPS32r6/MIPS64r6.
-  return llvm::StringSwitch<bool>(getCPUName(Args, Triple))
-      .Cases("mips32r6", "mips64r6", true)
-      .Default(false);
-
-  return false;
-}
-
-bool mips::isFP64ADefault(const llvm::Triple &Triple, StringRef CPUName) {
-  if (!Triple.isAndroid())
-    return false;
-
-  // Android MIPS32R6 defaults to FP64A.
-  return llvm::StringSwitch<bool>(CPUName)
-      .Case("mips32r6", true)
-      .Default(false);
-}
-
-bool mips::isFPXXDefault(const llvm::Triple &Triple, StringRef CPUName,
-                         StringRef ABIName, mips::FloatABI FloatABI) {
-  if (Triple.getVendor() != llvm::Triple::ImaginationTechnologies &&
-      Triple.getVendor() != llvm::Triple::MipsTechnologies &&
-      !Triple.isAndroid())
-    return false;
-
-  if (ABIName != "32")
-    return false;
-
-  // FPXX shouldn't be used if either -msoft-float or -mfloat-abi=soft is
-  // present.
-  if (FloatABI == mips::FloatABI::Soft)
-    return false;
-
-  return llvm::StringSwitch<bool>(CPUName)
-      .Cases("mips2", "mips3", "mips4", "mips5", true)
-      .Cases("mips32", "mips32r2", "mips32r3", "mips32r5", true)
-      .Cases("mips64", "mips64r2", "mips64r3", "mips64r5", true)
-      .Default(false);
-}
-
-bool mips::shouldUseFPXX(const ArgList &Args, const llvm::Triple &Triple,
-                         StringRef CPUName, StringRef ABIName,
-                         mips::FloatABI FloatABI) {
-  bool UseFPXX = isFPXXDefault(Triple, CPUName, ABIName, FloatABI);
-
-  // FPXX shouldn't be used if -msingle-float is present.
-  if (Arg *A = Args.getLastArg(options::OPT_msingle_float,
-                               options::OPT_mdouble_float))
-    if (A->getOption().matches(options::OPT_msingle_float))
-      UseFPXX = false;
-
-  return UseFPXX;
 }
 
 llvm::Triple::ArchType darwin::getArchTypeForMachOArchName(StringRef Str) {
@@ -8924,7 +7574,7 @@ void openbsd::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
   case llvm::Triple::sparcel: {
     CmdArgs.push_back("-32");
     std::string CPU = getCPUName(Args, getToolChain().getTriple());
-    CmdArgs.push_back(getSparcAsmModeForCPU(CPU, getToolChain().getTriple()));
+    CmdArgs.push_back(sparc::getSparcAsmModeForCPU(CPU, getToolChain().getTriple()));
     AddAssemblerKPIC(getToolChain(), Args, CmdArgs);
     break;
   }
@@ -8932,7 +7582,7 @@ void openbsd::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
   case llvm::Triple::sparcv9: {
     CmdArgs.push_back("-64");
     std::string CPU = getCPUName(Args, getToolChain().getTriple());
-    CmdArgs.push_back(getSparcAsmModeForCPU(CPU, getToolChain().getTriple()));
+    CmdArgs.push_back(sparc::getSparcAsmModeForCPU(CPU, getToolChain().getTriple()));
     AddAssemblerKPIC(getToolChain(), Args, CmdArgs);
     break;
   }
@@ -8944,7 +7594,7 @@ void openbsd::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
     mips::getMipsCPUAndABI(Args, getToolChain().getTriple(), CPUName, ABIName);
 
     CmdArgs.push_back("-mabi");
-    CmdArgs.push_back(getGnuCompatibleMipsABIName(ABIName).data());
+    CmdArgs.push_back(mips::getGnuCompatibleMipsABIName(ABIName).data());
 
     if (getToolChain().getArch() == llvm::Triple::mips64)
       CmdArgs.push_back("-EB");
@@ -9257,7 +7907,7 @@ void freebsd::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(CPUName.data());
 
     CmdArgs.push_back("-mabi");
-    CmdArgs.push_back(getGnuCompatibleMipsABIName(ABIName).data());
+    CmdArgs.push_back(mips::getGnuCompatibleMipsABIName(ABIName).data());
 
     if (getToolChain().getArch() == llvm::Triple::mips ||
         getToolChain().getArch() == llvm::Triple::mips64)
@@ -9301,7 +7951,7 @@ void freebsd::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
   case llvm::Triple::sparcel:
   case llvm::Triple::sparcv9: {
     std::string CPU = getCPUName(Args, getToolChain().getTriple());
-    CmdArgs.push_back(getSparcAsmModeForCPU(CPU, getToolChain().getTriple()));
+    CmdArgs.push_back(sparc::getSparcAsmModeForCPU(CPU, getToolChain().getTriple()));
     AddAssemblerKPIC(getToolChain(), Args, CmdArgs);
     break;
   }
@@ -9528,7 +8178,7 @@ void netbsd::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
   case llvm::Triple::thumb:
   case llvm::Triple::thumbeb: {
     StringRef MArch, MCPU;
-    getARMArchCPUFromArgs(Args, MArch, MCPU, /*FromAs*/ true);
+    arm::getARMArchCPUFromArgs(Args, MArch, MCPU, /*FromAs*/ true);
     std::string Arch =
         arm::getARMTargetCPU(MCPU, MArch, getToolChain().getTriple());
     CmdArgs.push_back(Args.MakeArgString("-mcpu=" + Arch));
@@ -9547,7 +8197,7 @@ void netbsd::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(CPUName.data());
 
     CmdArgs.push_back("-mabi");
-    CmdArgs.push_back(getGnuCompatibleMipsABIName(ABIName).data());
+    CmdArgs.push_back(mips::getGnuCompatibleMipsABIName(ABIName).data());
 
     if (getToolChain().getArch() == llvm::Triple::mips ||
         getToolChain().getArch() == llvm::Triple::mips64)
@@ -9563,7 +8213,7 @@ void netbsd::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
   case llvm::Triple::sparcel: {
     CmdArgs.push_back("-32");
     std::string CPU = getCPUName(Args, getToolChain().getTriple());
-    CmdArgs.push_back(getSparcAsmModeForCPU(CPU, getToolChain().getTriple()));
+    CmdArgs.push_back(sparc::getSparcAsmModeForCPU(CPU, getToolChain().getTriple()));
     AddAssemblerKPIC(getToolChain(), Args, CmdArgs);
     break;
   }
@@ -9571,7 +8221,7 @@ void netbsd::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
   case llvm::Triple::sparcv9: {
     CmdArgs.push_back("-64");
     std::string CPU = getCPUName(Args, getToolChain().getTriple());
-    CmdArgs.push_back(getSparcAsmModeForCPU(CPU, getToolChain().getTriple()));
+    CmdArgs.push_back(sparc::getSparcAsmModeForCPU(CPU, getToolChain().getTriple()));
     AddAssemblerKPIC(getToolChain(), Args, CmdArgs);
     break;
   }
@@ -9851,14 +8501,14 @@ void gnutools::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
   case llvm::Triple::sparcel: {
     CmdArgs.push_back("-32");
     std::string CPU = getCPUName(Args, getToolChain().getTriple());
-    CmdArgs.push_back(getSparcAsmModeForCPU(CPU, getToolChain().getTriple()));
+    CmdArgs.push_back(sparc::getSparcAsmModeForCPU(CPU, getToolChain().getTriple()));
     AddAssemblerKPIC(getToolChain(), Args, CmdArgs);
     break;
   }
   case llvm::Triple::sparcv9: {
     CmdArgs.push_back("-64");
     std::string CPU = getCPUName(Args, getToolChain().getTriple());
-    CmdArgs.push_back(getSparcAsmModeForCPU(CPU, getToolChain().getTriple()));
+    CmdArgs.push_back(sparc::getSparcAsmModeForCPU(CPU, getToolChain().getTriple()));
     AddAssemblerKPIC(getToolChain(), Args, CmdArgs);
     break;
   }
@@ -9912,7 +8562,7 @@ void gnutools::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
     StringRef CPUName;
     StringRef ABIName;
     mips::getMipsCPUAndABI(Args, getToolChain().getTriple(), CPUName, ABIName);
-    ABIName = getGnuCompatibleMipsABIName(ABIName);
+    ABIName = mips::getGnuCompatibleMipsABIName(ABIName);
 
     CmdArgs.push_back("-march");
     CmdArgs.push_back(CPUName.data());
@@ -9948,7 +8598,7 @@ void gnutools::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
       A->render(Args, CmdArgs);
     } else if (mips::shouldUseFPXX(
                    Args, getToolChain().getTriple(), CPUName, ABIName,
-                   getMipsFloatABI(getToolChain().getDriver(), Args)))
+                   mips::getMipsFloatABI(getToolChain().getDriver(), Args)))
       CmdArgs.push_back("-mfpxx");
 
     // Pass on -mmips16 or -mno-mips16. However, the assembler equivalent of
@@ -9991,7 +8641,7 @@ void gnutools::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
   case llvm::Triple::systemz: {
     // Always pass an -march option, since our default of z10 is later
     // than the GNU assembler's default.
-    StringRef CPUName = getSystemZTargetCPU(Args);
+    StringRef CPUName = systemz::getSystemZTargetCPU(Args);
     CmdArgs.push_back(Args.MakeArgString("-march=" + CPUName));
     break;
   }

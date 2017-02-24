@@ -37,6 +37,7 @@ foreach i = 0-4 in {
   def R#i  : NVPTXReg<"%r"#i>;  // 32-bit
   def RL#i : NVPTXReg<"%rd"#i>; // 64-bit
   def H#i  : NVPTXReg<"%h"#i>;  // 16-bit float
+  def HH#i : NVPTXReg<"%hh"#i>; // 2x16-bit float
   def F#i  : NVPTXReg<"%f"#i>;  // 32-bit float
   def FL#i : NVPTXReg<"%fd"#i>; // 64-bit float
 
@@ -59,6 +60,7 @@ def Int16Regs : NVPTXRegClass<[i16], 16, (add (sequence "RS%u", 0, 4))>;
 def Int32Regs : NVPTXRegClass<[i32], 32, (add (sequence "R%u", 0, 4))>;
 def Int64Regs : NVPTXRegClass<[i64], 64, (add (sequence "RL%u", 0, 4))>;
 def Float16Regs : NVPTXRegClass<[f16], 16, (add (sequence "H%u", 0, 4))>;
+def Float16x2Regs : NVPTXRegClass<[v2f16], 32, (add (sequence "HH%u", 0, 4))>;
 def Float32Regs : NVPTXRegClass<[f32], 32, (add (sequence "F%u", 0, 4))>;
 def Float64Regs : NVPTXRegClass<[f64], 64, (add (sequence "FL%u", 0, 4))>;
 def Int32ArgRegs : NVPTXRegClass<[i32], 32, (add (sequence "ia%u", 0, 4))>;

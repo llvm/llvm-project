@@ -140,7 +140,7 @@ void DIASession::setLoadAddress(uint64_t Address) {
   Session->put_loadAddress(Address);
 }
 
-std::unique_ptr<PDBSymbolExe> DIASession::getGlobalScope() const {
+std::unique_ptr<PDBSymbolExe> DIASession::getGlobalScope() {
   CComPtr<IDiaSymbol> GlobalScope;
   if (S_OK != Session->get_globalScope(&GlobalScope))
     return nullptr;

@@ -1373,24 +1373,6 @@ CodeGenFunction::GenerateBlockFunction(GlobalDecl GD,
   return fn;
 }
 
-/*
-    notes.push_back(HelperInfo());
-    HelperInfo &note = notes.back();
-    note.index = capture.getIndex();
-    note.RequiresCopying = (ci->hasCopyExpr() || BlockRequiresCopying(type));
-    note.cxxbar_import = ci->getCopyExpr();
-
-    if (ci->isByRef()) {
-      note.flag = BLOCK_FIELD_IS_BYREF;
-      if (type.isObjCGCWeak())
-        note.flag |= BLOCK_FIELD_IS_WEAK;
-    } else if (type->isBlockPointerType()) {
-      note.flag = BLOCK_FIELD_IS_BLOCK;
-    } else {
-      note.flag = BLOCK_FIELD_IS_OBJECT;
-    }
- */
-
 /// Generate the copy-helper function for a block closure object:
 ///   static void block_copy_helper(block_t *dst, block_t *src);
 /// The runtime will have previously initialized 'dst' by doing a

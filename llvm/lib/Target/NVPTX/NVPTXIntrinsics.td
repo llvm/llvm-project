@@ -1606,6 +1606,10 @@ defm INT_PTX_LDG_GLOBAL_i32
   : LDG_G<"u32 \t$result, [$src];", Int32Regs>;
 defm INT_PTX_LDG_GLOBAL_i64
   : LDG_G<"u64 \t$result, [$src];", Int64Regs>;
+defm INT_PTX_LDG_GLOBAL_f16
+  : LDG_G<"b16 \t$result, [$src];", Float16Regs>;
+defm INT_PTX_LDG_GLOBAL_f16x2
+  : LDG_G<"b32 \t$result, [$src];", Float16x2Regs>;
 defm INT_PTX_LDG_GLOBAL_f32
   : LDG_G<"f32 \t$result, [$src];", Float32Regs>;
 defm INT_PTX_LDG_GLOBAL_f64
@@ -1661,6 +1665,8 @@ defm INT_PTX_LDG_G_v2i16_ELE
   : VLDG_G_ELE_V2<"v2.u16 \t{{$dst1, $dst2}}, [$src];", Int16Regs>;
 defm INT_PTX_LDG_G_v2i32_ELE
   : VLDG_G_ELE_V2<"v2.u32 \t{{$dst1, $dst2}}, [$src];", Int32Regs>;
+defm INT_PTX_LDG_G_v4f16_ELE
+  : VLDG_G_ELE_V2<"v2.b32 \t{{$dst1, $dst2}}, [$src];", Float16x2Regs>;
 defm INT_PTX_LDG_G_v2f32_ELE
   : VLDG_G_ELE_V2<"v2.f32 \t{{$dst1, $dst2}}, [$src];", Float32Regs>;
 defm INT_PTX_LDG_G_v2i64_ELE
@@ -1673,6 +1679,8 @@ defm INT_PTX_LDG_G_v4i16_ELE
   : VLDG_G_ELE_V4<"v4.u16 \t{{$dst1, $dst2, $dst3, $dst4}}, [$src];", Int16Regs>;
 defm INT_PTX_LDG_G_v4i32_ELE
   : VLDG_G_ELE_V4<"v4.u32 \t{{$dst1, $dst2, $dst3, $dst4}}, [$src];", Int32Regs>;
+defm INT_PTX_LDG_G_v8f16_ELE
+  : VLDG_G_ELE_V4<"v4.b32 \t{{$dst1, $dst2, $dst3, $dst4}}, [$src];", Float16x2Regs>;
 defm INT_PTX_LDG_G_v4f32_ELE
   : VLDG_G_ELE_V4<"v4.f32 \t{{$dst1, $dst2, $dst3, $dst4}}, [$src];", Float32Regs>;
 

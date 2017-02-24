@@ -431,7 +431,8 @@ void PassManagerBuilder::populateModulePassManager(
   // earlier in the pass pipeline, here before globalopt. Otherwise imported
   // available_externally functions look unreferenced and are removed.
   if (PerformThinLTO)
-    MPM.add(createPGOIndirectCallPromotionLegacyPass(/*InLTO = */ true));
+    MPM.add(createPGOIndirectCallPromotionLegacyPass(/*InLTO = */ true,
+                                                     !PGOSampleUse.empty()));
 
   if (!DisableUnitAtATime) {
     // Infer attributes about declarations if possible.
@@ -458,7 +459,8 @@ void PassManagerBuilder::populateModulePassManager(
     // Indirect call promotion that promotes intra-module targets only.
     // For ThinLTO this is done earlier due to interactions with globalopt
     // for imported functions.
-    MPM.add(createPGOIndirectCallPromotionLegacyPass());
+    MPM.add(
+        createPGOIndirectCallPromotionLegacyPass(false, !PGOSampleUse.empty()));
   }
 
   if (EnableNonLTOGlobalsModRef)
@@ -681,7 +683,8 @@ void PassManagerBuilder::addLTOOptimizationPasses(legacy::PassManagerBase &PM) {
     // left by the earlier promotion pass that promotes intra-module targets.
     // This two-step promotion is to save the compile time. For LTO, it should
     // produce the same result as if we only do promotion here.
-    PM.add(createPGOIndirectCallPromotionLegacyPass(true));
+    PM.add(
+        createPGOIndirectCallPromotionLegacyPass(true, !PGOSampleUse.empty()));
 
     // Propagate constants at call sites into the functions they call.  This
     // opens opportunities for globalopt (and inlining) by substituting function

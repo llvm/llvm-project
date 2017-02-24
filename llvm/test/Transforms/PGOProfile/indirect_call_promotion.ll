@@ -1,4 +1,6 @@
 ; RUN: opt < %s -pgo-icall-prom -S | FileCheck %s --check-prefix=ICALL-PROM
+; RUN: opt < %s -pgo-icall-prom -S -icp-samplepgo | FileCheck %s --check-prefix=ICALL-PROM
+; RUN: opt < %s -pgo-icall-prom -S -icp-samplepgo | FileCheck %s --check-prefix=ICALL-PROM-SAMPLEPGO
 ; RUN: opt < %s -passes=pgo-icall-prom -S | FileCheck %s --check-prefix=ICALL-PROM
 ; RUN: opt < %s -pgo-icall-prom -S -pass-remarks=pgo-icall-prom -icp-count-threshold=0 -icp-percent-threshold=0 -icp-max-prom=4 2>&1 | FileCheck %s --check-prefix=PASS-REMARK
 ; RUN: opt < %s -passes=pgo-icall-prom -S -pass-remarks=pgo-icall-prom -icp-count-threshold=0 -icp-percent-threshold=0 -icp-max-prom=4 2>&1 | FileCheck %s --check-prefix=PASS-REMARK
@@ -40,6 +42,7 @@ entry:
 ; ICALL-PROM:   br i1 [[CMP]], label %if.true.direct_targ, label %if.false.orig_indirect, !prof [[BRANCH_WEIGHT:![0-9]+]]
 ; ICALL-PROM: if.true.direct_targ:
 ; ICALL-PROM:   [[DIRCALL_RET:%[0-9]+]] = call i32 @func4()
+; ICALL-PROM-SAMPLEPGO: call i32 @func4(), !prof [[CALL_METADATA:![0-9]+]]
 ; ICALL-PROM:   br label %if.end.icp
   %call = call i32 %tmp(), !prof !1
 ; ICALL-PROM: if.false.orig_indirect:
@@ -54,3 +57,4 @@ entry:
 
 ; ICALL-PROM: [[BRANCH_WEIGHT]] = !{!"branch_weights", i32 1030, i32 570}
 ; ICALL-PROM: [[NEW_VP_METADATA]] = !{!"VP", i32 0, i64 570, i64 -4377547752858689819, i64 410}
+; ICALL-PROM-SAMPLEPGO: [[CALL_METADATA]] = !{!"branch_weights", i32 1030}

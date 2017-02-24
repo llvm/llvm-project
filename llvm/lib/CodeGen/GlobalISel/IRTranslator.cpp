@@ -12,6 +12,7 @@
 
 #include "llvm/CodeGen/GlobalISel/IRTranslator.h"
 
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/OptimizationDiagnosticInfo.h"
@@ -88,7 +89,7 @@ unsigned IRTranslator::getOrCreateVReg(const Value &Val) {
     bool Success = translate(*CV, VReg);
     if (!Success) {
       OptimizationRemarkMissed R("gisel-irtranslator", "GISelFailure",
-                                 DebugLoc(),
+                                 MF->getFunction()->getSubprogram(),
                                  &MF->getFunction()->getEntryBlock());
       R << "unable to translate constant: " << ore::NV("Type", Val.getType());
       reportTranslationError(*MF, *TPC, *ORE, R);
@@ -1033,6 +1034,9 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
 
   assert(PendingPHIs.empty() && "stale PHIs");
 
+  // Release the per-function state when we return, whether we succeeded or not.
+  auto FinalizeOnReturn = make_scope_exit([this]() { finalizeFunction(); });
+
   // Setup a separate basic-block for the arguments and constants, falling
   // through to the IR-level Function's entry block.
   MachineBasicBlock *EntryBB = MF->CreateMachineBasicBlock();
@@ -1044,13 +1048,12 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
   SmallVector<unsigned, 8> VRegArgs;
   for (const Argument &Arg: F.args())
     VRegArgs.push_back(getOrCreateVReg(Arg));
-  bool Succeeded = CLI->lowerFormalArguments(EntryBuilder, F, VRegArgs);
-  if (!Succeeded) {
-    OptimizationRemarkMissed R("gisel-irtranslator", "GISelFailure", DebugLoc(),
+  if (!CLI->lowerFormalArguments(EntryBuilder, F, VRegArgs)) {
+    OptimizationRemarkMissed R("gisel-irtranslator", "GISelFailure",
+                               MF->getFunction()->getSubprogram(),
                                &MF->getFunction()->getEntryBlock());
     R << "unable to lower arguments: " << ore::NV("Prototype", F.getType());
     reportTranslationError(*MF, *TPC, *ORE, R);
-    finalizeFunction();
     return false;
   }
 
@@ -1062,58 +1065,54 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
     CurBuilder.setMBB(MBB);
 
     for (const Instruction &Inst: BB) {
-      Succeeded &= translate(Inst);
-      if (!Succeeded) {
-        std::string InstStrStorage;
-        raw_string_ostream InstStr(InstStrStorage);
-        InstStr << Inst;
+      if (translate(Inst))
+        continue;
 
-        OptimizationRemarkMissed R("gisel-irtranslator", "IRTranslatorFailure: ",
-                                   &Inst);
-        R << "unable to translate instruction: " << ore::NV("Opcode", &Inst)
-          << ": '" << InstStr.str() << "'";
-        reportTranslationError(*MF, *TPC, *ORE, R);
-        break;
-      }
+      std::string InstStrStorage;
+      raw_string_ostream InstStr(InstStrStorage);
+      InstStr << Inst;
+
+      OptimizationRemarkMissed R("gisel-irtranslator", "GISelFailure",
+                                 Inst.getDebugLoc(), &BB);
+      R << "unable to translate instruction: " << ore::NV("Opcode", &Inst)
+        << ": '" << InstStr.str() << "'";
+      reportTranslationError(*MF, *TPC, *ORE, R);
+      return false;
     }
   }
 
-  if (Succeeded) {
-    finishPendingPhis();
+  finishPendingPhis();
 
-    // Now that the MachineFrameInfo has been configured, no further changes to
-    // the reserved registers are possible.
-    MRI->freezeReservedRegs(*MF);
+  // Now that the MachineFrameInfo has been configured, no further changes to
+  // the reserved registers are possible.
+  MRI->freezeReservedRegs(*MF);
 
-    // Merge the argument lowering and constants block with its single
-    // successor, the LLVM-IR entry block.  We want the basic block to
-    // be maximal.
-    assert(EntryBB->succ_size() == 1 &&
-           "Custom BB used for lowering should have only one successor");
-    // Get the successor of the current entry block.
-    MachineBasicBlock &NewEntryBB = **EntryBB->succ_begin();
-    assert(NewEntryBB.pred_size() == 1 &&
-           "LLVM-IR entry block has a predecessor!?");
-    // Move all the instruction from the current entry block to the
-    // new entry block.
-    NewEntryBB.splice(NewEntryBB.begin(), EntryBB, EntryBB->begin(),
-                      EntryBB->end());
+  // Merge the argument lowering and constants block with its single
+  // successor, the LLVM-IR entry block.  We want the basic block to
+  // be maximal.
+  assert(EntryBB->succ_size() == 1 &&
+         "Custom BB used for lowering should have only one successor");
+  // Get the successor of the current entry block.
+  MachineBasicBlock &NewEntryBB = **EntryBB->succ_begin();
+  assert(NewEntryBB.pred_size() == 1 &&
+         "LLVM-IR entry block has a predecessor!?");
+  // Move all the instruction from the current entry block to the
+  // new entry block.
+  NewEntryBB.splice(NewEntryBB.begin(), EntryBB, EntryBB->begin(),
+                    EntryBB->end());
 
-    // Update the live-in information for the new entry block.
-    for (const MachineBasicBlock::RegisterMaskPair &LiveIn : EntryBB->liveins())
-      NewEntryBB.addLiveIn(LiveIn);
-    NewEntryBB.sortUniqueLiveIns();
+  // Update the live-in information for the new entry block.
+  for (const MachineBasicBlock::RegisterMaskPair &LiveIn : EntryBB->liveins())
+    NewEntryBB.addLiveIn(LiveIn);
+  NewEntryBB.sortUniqueLiveIns();
 
-    // Get rid of the now empty basic block.
-    EntryBB->removeSuccessor(&NewEntryBB);
-    MF->remove(EntryBB);
-    MF->DeleteMachineBasicBlock(EntryBB);
+  // Get rid of the now empty basic block.
+  EntryBB->removeSuccessor(&NewEntryBB);
+  MF->remove(EntryBB);
+  MF->DeleteMachineBasicBlock(EntryBB);
 
-    assert(&MF->front() == &NewEntryBB &&
-           "New entry wasn't next in the list of basic block!");
-  }
-
-  finalizeFunction();
+  assert(&MF->front() == &NewEntryBB &&
+         "New entry wasn't next in the list of basic block!");
 
   return false;
 }

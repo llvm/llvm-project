@@ -19,6 +19,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/NoFolder.h"
 #include "llvm/IR/Operator.h"
 #include "gtest/gtest.h"
 #include <memory>
@@ -577,6 +578,66 @@ TEST(InstructionsTest, AlterInvokeBundles) {
   EXPECT_EQ(Invoke->getDebugLoc(), Clone->getDebugLoc());
   EXPECT_EQ(Clone->getNumOperandBundles(), 1U);
   EXPECT_TRUE(Clone->getOperandBundle("after").hasValue());
+}
+
+TEST_F(ModuleWithFunctionTest, DropPoisonGeneratingFlags) {
+  auto *OnlyBB = BasicBlock::Create(Ctx, "bb", F);
+  auto *Arg0 = &*F->arg_begin();
+
+  IRBuilder<NoFolder> B(Ctx);
+  B.SetInsertPoint(OnlyBB);
+
+  {
+    auto *UI =
+        cast<Instruction>(B.CreateUDiv(Arg0, Arg0, "", /*isExact*/ true));
+    ASSERT_TRUE(UI->isExact());
+    UI->dropPoisonGeneratingFlags();
+    ASSERT_FALSE(UI->isExact());
+  }
+
+  {
+    auto *ShrI =
+        cast<Instruction>(B.CreateLShr(Arg0, Arg0, "", /*isExact*/ true));
+    ASSERT_TRUE(ShrI->isExact());
+    ShrI->dropPoisonGeneratingFlags();
+    ASSERT_FALSE(ShrI->isExact());
+  }
+
+  {
+    auto *AI = cast<Instruction>(
+        B.CreateAdd(Arg0, Arg0, "", /*HasNUW*/ true, /*HasNSW*/ false));
+    ASSERT_TRUE(AI->hasNoUnsignedWrap());
+    AI->dropPoisonGeneratingFlags();
+    ASSERT_FALSE(AI->hasNoUnsignedWrap());
+    ASSERT_FALSE(AI->hasNoSignedWrap());
+  }
+
+  {
+    auto *SI = cast<Instruction>(
+        B.CreateAdd(Arg0, Arg0, "", /*HasNUW*/ false, /*HasNSW*/ true));
+    ASSERT_TRUE(SI->hasNoSignedWrap());
+    SI->dropPoisonGeneratingFlags();
+    ASSERT_FALSE(SI->hasNoUnsignedWrap());
+    ASSERT_FALSE(SI->hasNoSignedWrap());
+  }
+
+  {
+    auto *ShlI = cast<Instruction>(
+        B.CreateShl(Arg0, Arg0, "", /*HasNUW*/ true, /*HasNSW*/ true));
+    ASSERT_TRUE(ShlI->hasNoSignedWrap());
+    ASSERT_TRUE(ShlI->hasNoUnsignedWrap());
+    ShlI->dropPoisonGeneratingFlags();
+    ASSERT_FALSE(ShlI->hasNoUnsignedWrap());
+    ASSERT_FALSE(ShlI->hasNoSignedWrap());
+  }
+
+  {
+    Value *GEPBase = Constant::getNullValue(B.getInt8PtrTy());
+    auto *GI = cast<GetElementPtrInst>(B.CreateInBoundsGEP(GEPBase, {Arg0}));
+    ASSERT_TRUE(GI->isInBounds());
+    GI->dropPoisonGeneratingFlags();
+    ASSERT_FALSE(GI->isInBounds());
+  }
 }
 
 } // end anonymous namespace

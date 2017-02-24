@@ -29,10 +29,11 @@ class MachineInstr;
 class DiagnosticInfoMIROptimization : public DiagnosticInfoOptimizationBase {
 public:
   DiagnosticInfoMIROptimization(enum DiagnosticKind Kind, const char *PassName,
-                                StringRef RemarkName, const DebugLoc &DLoc,
+                                StringRef RemarkName,
+                                const DiagnosticLocation &Loc,
                                 const MachineBasicBlock *MBB)
       : DiagnosticInfoOptimizationBase(Kind, DS_Remark, PassName, RemarkName,
-                                       *MBB->getParent()->getFunction(), DLoc),
+                                       *MBB->getParent()->getFunction(), Loc),
         MBB(MBB) {}
 
   /// MI-specific kinds of diagnostic Arguments.
@@ -58,12 +59,13 @@ public:
   /// \p PassName is the name of the pass emitting this diagnostic. If this name
   /// matches the regular expression given in -Rpass=, then the diagnostic will
   /// be emitted.  \p RemarkName is a textual identifier for the remark.  \p
-  /// DLoc is the debug location and \p MBB is the block that the optimization
+  /// Loc is the debug location and \p MBB is the block that the optimization
   /// operates in.
   MachineOptimizationRemark(const char *PassName, StringRef RemarkName,
-                            const DebugLoc &DLoc, const MachineBasicBlock *MBB)
+                            const DiagnosticLocation &Loc,
+                            const MachineBasicBlock *MBB)
       : DiagnosticInfoMIROptimization(DK_MachineOptimizationRemark, PassName,
-                                      RemarkName, DLoc, MBB) {}
+                                      RemarkName, Loc, MBB) {}
 
   static bool classof(const DiagnosticInfo *DI) {
     return DI->getKind() == DK_MachineOptimizationRemark;
@@ -81,13 +83,13 @@ public:
   /// \p PassName is the name of the pass emitting this diagnostic. If this name
   /// matches the regular expression given in -Rpass-missed=, then the
   /// diagnostic will be emitted.  \p RemarkName is a textual identifier for the
-  /// remark.  \p DLoc is the debug location and \p MBB is the block that the
+  /// remark.  \p Loc is the debug location and \p MBB is the block that the
   /// optimization operates in.
   MachineOptimizationRemarkMissed(const char *PassName, StringRef RemarkName,
-                                  const DebugLoc &DLoc,
+                                  const DiagnosticLocation &Loc,
                                   const MachineBasicBlock *MBB)
       : DiagnosticInfoMIROptimization(DK_MachineOptimizationRemarkMissed,
-                                      PassName, RemarkName, DLoc, MBB) {}
+                                      PassName, RemarkName, Loc, MBB) {}
 
   static bool classof(const DiagnosticInfo *DI) {
     return DI->getKind() == DK_MachineOptimizationRemarkMissed;
@@ -105,13 +107,13 @@ public:
   /// \p PassName is the name of the pass emitting this diagnostic. If this name
   /// matches the regular expression given in -Rpass-analysis=, then the
   /// diagnostic will be emitted.  \p RemarkName is a textual identifier for the
-  /// remark.  \p DLoc is the debug location and \p MBB is the block that the
+  /// remark.  \p Loc is the debug location and \p MBB is the block that the
   /// optimization operates in.
   MachineOptimizationRemarkAnalysis(const char *PassName, StringRef RemarkName,
-                                    const DebugLoc &DLoc,
+                                    const DiagnosticLocation &Loc,
                                     const MachineBasicBlock *MBB)
       : DiagnosticInfoMIROptimization(DK_MachineOptimizationRemarkAnalysis,
-                                      PassName, RemarkName, DLoc, MBB) {}
+                                      PassName, RemarkName, Loc, MBB) {}
 
   static bool classof(const DiagnosticInfo *DI) {
     return DI->getKind() == DK_MachineOptimizationRemarkAnalysis;

@@ -844,9 +844,9 @@ template <class ELFT> void Writer<ELFT>::addReservedSymbols() {
   if (ScriptConfig->HasSections)
     return;
 
-  // __ehdr_start is the location of program headers.
+  // __ehdr_start is the location of ELF file headers.
   ElfSym<ELFT>::EhdrStart =
-      addOptionalSynthetic<ELFT>("__ehdr_start", Out<ELFT>::ProgramHeaders, 0);
+      addOptionalSynthetic<ELFT>("__ehdr_start", Out<ELFT>::ElfHeader, 0);
 
   auto Define = [](StringRef S, DefinedSynthetic *&Sym1,
                    DefinedSynthetic *&Sym2) {

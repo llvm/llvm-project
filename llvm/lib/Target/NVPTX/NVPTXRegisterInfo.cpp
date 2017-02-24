@@ -35,6 +35,8 @@ std::string getNVPTXRegClassName(TargetRegisterClass const *RC) {
     // accepted for all supported fp16 instructions on all GPU
     // variants, so we can use them instead.
     return ".b16";
+  if (RC == &NVPTX::Float16x2RegsRegClass)
+    return ".b32";
   if (RC == &NVPTX::Float64RegsRegClass)
     return ".f64";
   if (RC == &NVPTX::Int64RegsRegClass)
@@ -73,6 +75,8 @@ std::string getNVPTXRegClassStr(TargetRegisterClass const *RC) {
     return "%f";
   if (RC == &NVPTX::Float16RegsRegClass)
     return "%h";
+  if (RC == &NVPTX::Float16x2RegsRegClass)
+    return "%hh";
   if (RC == &NVPTX::Float64RegsRegClass)
     return "%fd";
   if (RC == &NVPTX::Int64RegsRegClass)

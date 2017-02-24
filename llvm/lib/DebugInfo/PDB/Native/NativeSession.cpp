@@ -14,6 +14,7 @@
 #include "llvm/DebugInfo/PDB/GenericError.h"
 #include "llvm/DebugInfo/PDB/IPDBEnumChildren.h"
 #include "llvm/DebugInfo/PDB/IPDBSourceFile.h"
+#include "llvm/DebugInfo/PDB/Native/NativeRawSymbol.h"
 #include "llvm/DebugInfo/PDB/Native/PDBFile.h"
 #include "llvm/DebugInfo/PDB/Native/RawError.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolCompiland.h"
@@ -68,8 +69,12 @@ uint64_t NativeSession::getLoadAddress() const { return 0; }
 
 void NativeSession::setLoadAddress(uint64_t Address) {}
 
-std::unique_ptr<PDBSymbolExe> NativeSession::getGlobalScope() const {
-  return nullptr;
+std::unique_ptr<PDBSymbolExe> NativeSession::getGlobalScope() {
+  auto RawSymbol = llvm::make_unique<NativeRawSymbol>(*this);
+  auto PdbSymbol(PDBSymbol::create(*this, std::move(RawSymbol)));
+  std::unique_ptr<PDBSymbolExe> ExeSymbol(
+    static_cast<PDBSymbolExe *>(PdbSymbol.release()));
+  return ExeSymbol;
 }
 
 std::unique_ptr<PDBSymbol>
