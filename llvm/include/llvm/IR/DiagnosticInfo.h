@@ -451,6 +451,21 @@ public:
             DI->getKind() <= DK_LastMachineRemark);
   }
 
+  bool isPassed() const {
+    return (getKind() == DK_OptimizationRemark ||
+            getKind() == DK_MachineOptimizationRemark);
+  }
+
+  bool isMissed() const {
+    return (getKind() == DK_OptimizationRemarkMissed ||
+            getKind() == DK_MachineOptimizationRemarkMissed);
+  }
+
+  bool isAnalysis() const {
+    return (getKind() == DK_OptimizationRemarkAnalysis ||
+            getKind() == DK_MachineOptimizationRemarkAnalysis);
+  }
+
 protected:
   /// Name of the pass that triggers this report. If this matches the
   /// regular expression given in -Rpass=regexp, then the remark will
