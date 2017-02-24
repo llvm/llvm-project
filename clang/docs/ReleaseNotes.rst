@@ -36,7 +36,8 @@ sections with improvements to Clang's support for those languages.
 Major New Features
 ------------------
 
-- The ``diagnose_if`` attribute has been added to clang. This attribute allows
+- The `diagnose_if <AttributeReference.html#diagnose-if>`_ attribute has been
+  added to clang. This attribute allows
   clang to emit a warning or error if a function call meets one or more
   user-specified conditions.
 
@@ -67,7 +68,7 @@ Improvements to ThinLTO (-flto=thin)
   more accurate function importing decisions, as well as cross-module indirect
   call promotion.
 - Significant build-time and binary-size improvements when compiling with debug
-  info (-g).
+  info (``-g``).
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
