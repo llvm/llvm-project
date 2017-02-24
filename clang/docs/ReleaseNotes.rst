@@ -70,11 +70,6 @@ Improvements to ThinLTO (-flto=thin)
 - Significant build-time and binary-size improvements when compiling with debug
   info (``-g``).
 
-Improvements to Clang's diagnostics
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
--  ...
-
 New Compiler Flags
 ------------------
 
@@ -85,51 +80,6 @@ some other optimizations might be enabled or disabled.
 The option -MJ has been added to simplify adding JSON compilation
 database output into existing build systems.
 
-The option ....
-
-New Pragmas in Clang
------------------------
-
-Clang now supports the ...
-
-
-Attribute Changes in Clang
---------------------------
-
--  ...
-
-Windows Support
----------------
-
-Clang's support for building native Windows programs ...
-
-
-C Language Changes in Clang
----------------------------
-
-- ...
-
-...
-
-C11 Feature Support
-^^^^^^^^^^^^^^^^^^^
-
-...
-
-C++ Language Changes in Clang
------------------------------
-
-...
-
-C++1z Feature Support
-^^^^^^^^^^^^^^^^^^^^^
-
-...
-
-Objective-C Language Changes in Clang
--------------------------------------
-
-...
 
 OpenCL C Language Changes in Clang
 ----------------------------------
@@ -205,29 +155,8 @@ OpenCL C Language Changes in Clang
   <https://clang.llvm.org/docs/UsersManual.html#opencl-features>`_ to Clang
   documentation.
 
-OpenMP Support in Clang
-----------------------------------
-
-...
-
-Internal API Changes
---------------------
-
-These are major API changes that have happened since the 3.9 release of
-Clang. If upgrading an external codebase that uses Clang as a library,
-this section should help get you past the largest hurdles of upgrading.
-
--  ...
-
-AST Matchers
-------------
-
-...
-
 libclang
 --------
-
-...
 
 With the option --show-description, scan-build's list of defects will also
 show the description of the defects.
@@ -257,16 +186,6 @@ Several new checks were added:
 - The analyzer checks for unintended comparisons of NSNumber, CFNumberRef, and
   other Cocoa number objects to scalar values.
 
-
-Python Binding Changes
-----------------------
-
-The following methods have been added:
-
--  ...
-
-Significant Known Problems
-==========================
 
 Additional Information
 ======================
