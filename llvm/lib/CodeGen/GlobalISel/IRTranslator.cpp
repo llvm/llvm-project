@@ -89,7 +89,7 @@ unsigned IRTranslator::getOrCreateVReg(const Value &Val) {
     bool Success = translate(*CV, VReg);
     if (!Success) {
       OptimizationRemarkMissed R("gisel-irtranslator", "GISelFailure",
-                                 DebugLoc(),
+                                 MF->getFunction()->getSubprogram(),
                                  &MF->getFunction()->getEntryBlock());
       R << "unable to translate constant: " << ore::NV("Type", Val.getType());
       reportTranslationError(*MF, *TPC, *ORE, R);
@@ -1049,7 +1049,8 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
   for (const Argument &Arg: F.args())
     VRegArgs.push_back(getOrCreateVReg(Arg));
   if (!CLI->lowerFormalArguments(EntryBuilder, F, VRegArgs)) {
-    OptimizationRemarkMissed R("gisel-irtranslator", "GISelFailure", DebugLoc(),
+    OptimizationRemarkMissed R("gisel-irtranslator", "GISelFailure",
+                               MF->getFunction()->getSubprogram(),
                                &MF->getFunction()->getEntryBlock());
     R << "unable to lower arguments: " << ore::NV("Prototype", F.getType());
     reportTranslationError(*MF, *TPC, *ORE, R);
