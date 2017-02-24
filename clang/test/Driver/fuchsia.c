@@ -38,3 +38,8 @@
 // CHECK-RELOCATABLE-NOT: "-pie"
 // CHECK-RELOCATABLE-NOT: "--build-id"
 // CHECK-RELOCATABLE: "-r"
+
+// RUN: %clang %s -### --target=x86_64-unknown-fuchsia \
+// RUN:     -fsanitize=safe-stack 2>&1 \
+// RUN:     | FileCheck %s -check-prefix=CHECK-SAFESTACK
+// CHECK-SAFESTACK: "-fsanitize=safe-stack"

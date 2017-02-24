@@ -2,7 +2,16 @@
 
 struct A { int a, b; int f(); };
 
-// CHECK: define {{.*}}@_Z3fn1i(
+namespace NonAggregateCopyInAggregateInit { // PR32044
+  struct A { constexpr A(int n) : x(n), y() {} int x, y; } extern a;
+  // CHECK-DAG: @_ZN31NonAggregateCopyInAggregateInit1bE = global %{{.*}} { %[[A:.*]]* @_ZN31NonAggregateCopyInAggregateInit1aE }
+  struct B { A &p; } b{{a}};
+  // CHECK-DAG: @_ZGRN31NonAggregateCopyInAggregateInit1cE_ = internal global %[[A]] { i32 1, i32 0 }
+  // CHECK-DAG: @_ZN31NonAggregateCopyInAggregateInit1cE = global %{{.*}} { %{{.*}}* @_ZGRN31NonAggregateCopyInAggregateInit1cE_ }
+  struct C { A &&p; } c{{1}};
+}
+
+// CHECK-LABEL: define {{.*}}@_Z3fn1i(
 int fn1(int x) {
   // CHECK: %[[INITLIST:.*]] = alloca %struct.A
   // CHECK: %[[A:.*]] = getelementptr inbounds %struct.A, %struct.A* %[[INITLIST]], i32 0, i32 0
@@ -15,7 +24,7 @@ int fn1(int x) {
 
 struct B { int &r; int &f() { return r; } };
 
-// CHECK: define {{.*}}@_Z3fn2Ri(
+// CHECK-LABEL: define {{.*}}@_Z3fn2Ri(
 int &fn2(int &v) {
   // CHECK: %[[INITLIST2:.*]] = alloca %struct.B, align 8
   // CHECK: %[[R:.*]] = getelementptr inbounds %struct.B, %struct.B* %[[INITLIST2:.*]], i32 0, i32 0
@@ -24,7 +33,7 @@ int &fn2(int &v) {
   return B{v}.f();
 }
 
-// CHECK: define {{.*}}@__cxx_global_var_init(
+// CHECK-LABEL: define {{.*}}@__cxx_global_var_init(
 //
 // CHECK: call {{.*}}@_ZN14NonTrivialInit1AC1Ev(
 // CHECK: getelementptr inbounds {{.*}}, i64 1

@@ -24,7 +24,15 @@
 using namespace clang;
 using namespace CodeGen;
 
-static RequiredArgs
+namespace {
+struct MemberCallInfo {
+  RequiredArgs ReqArgs;
+  // Number of prefix arguments for the call. Ignores the `this` pointer.
+  unsigned PrefixSize;
+};
+}
+
+static MemberCallInfo
 commonEmitCXXMemberOrOperatorCall(CodeGenFunction &CGF, const CXXMethodDecl *MD,
                                   llvm::Value *This, llvm::Value *ImplicitParam,
                                   QualType ImplicitParamTy, const CallExpr *CE,
@@ -48,6 +56,7 @@ commonEmitCXXMemberOrOperatorCall(CodeGenFunction &CGF, const CXXMethodDecl *MD,
 
   const FunctionProtoType *FPT = MD->getType()->castAs<FunctionProtoType>();
   RequiredArgs required = RequiredArgs::forPrototypePlus(FPT, Args.size(), MD);
+  unsigned PrefixSize = Args.size() - 1;
 
   // And the rest of the call args.
   if (RtlArgs) {
@@ -65,7 +74,7 @@ commonEmitCXXMemberOrOperatorCall(CodeGenFunction &CGF, const CXXMethodDecl *MD,
         FPT->getNumParams() == 0 &&
         "No CallExpr specified for function with non-zero number of arguments");
   }
-  return required;
+  return {required, PrefixSize};
 }
 
 RValue CodeGenFunction::EmitCXXMemberOrOperatorCall(
@@ -75,9 +84,10 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorCall(
     const CallExpr *CE, CallArgList *RtlArgs) {
   const FunctionProtoType *FPT = MD->getType()->castAs<FunctionProtoType>();
   CallArgList Args;
-  RequiredArgs required = commonEmitCXXMemberOrOperatorCall(
+  MemberCallInfo CallInfo = commonEmitCXXMemberOrOperatorCall(
       *this, MD, This, ImplicitParam, ImplicitParamTy, CE, Args, RtlArgs);
-  auto &FnInfo = CGM.getTypes().arrangeCXXMethodCall(Args, FPT, required);
+  auto &FnInfo = CGM.getTypes().arrangeCXXMethodCall(
+      Args, FPT, CallInfo.ReqArgs, CallInfo.PrefixSize);
   return EmitCall(FnInfo, Callee, ReturnValue, Args);
 }
 
@@ -425,7 +435,8 @@ CodeGenFunction::EmitCXXMemberPointerCallExpr(const CXXMemberCallExpr *E,
 
   // And the rest of the call args
   EmitCallArgs(Args, FPT, E->arguments());
-  return EmitCall(CGM.getTypes().arrangeCXXMethodCall(Args, FPT, required),
+  return EmitCall(CGM.getTypes().arrangeCXXMethodCall(Args, FPT, required,
+                                                      /*PrefixSize=*/0),
                   Callee, ReturnValue, Args);
 }
 

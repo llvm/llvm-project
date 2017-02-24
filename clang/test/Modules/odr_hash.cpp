@@ -162,6 +162,36 @@ S3 s3;
 // expected-error@first.h:* {{'Field::S3::x' from module 'FirstModule' is not present in definition of 'Field::S3' in module 'SecondModule'}}
 // expected-note@second.h:* {{declaration of 'x' does not match}}
 #endif
+
+#if defined(FIRST)
+typedef int A;
+struct S4 {
+  A x;
+};
+
+struct S5 {
+  A x;
+};
+#elif defined(SECOND)
+typedef int B;
+struct S4 {
+  B x;
+};
+
+struct S5 {
+  int x;
+};
+#else
+S4 s4;
+// expected-error@second.h:* {{'Field::S4' has different definitions in different modules; first difference is definition in module 'SecondModule' found field 'x' with type 'B' (aka 'int')}}
+// expected-note@first.h:* {{but in 'FirstModule' found field 'x' with type 'A' (aka 'int')}}
+
+S5 s5;
+// expected-error@second.h:* {{'Field::S5' has different definitions in different modules; first difference is definition in module 'SecondModule' found field 'x' with type 'int'}}
+// expected-note@first.h:* {{but in 'FirstModule' found field 'x' with type 'A' (aka 'int')}}
+#endif
+
+
 }  // namespace Field
 
 // Naive parsing of AST can lead to cycles in processing.  Ensure
@@ -193,6 +223,7 @@ struct NestedNamespaceSpecifier {};
 // while struct T should error at the access specifier mismatch at the end.
 namespace AllDecls {
 #if defined(FIRST)
+typedef int INT;
 struct S {
   public:
   private:
@@ -203,8 +234,11 @@ struct S {
 
   int x;
   double y;
+
+  INT z;
 };
 #elif defined(SECOND)
+typedef int INT;
 struct S {
   public:
   private:
@@ -215,12 +249,15 @@ struct S {
 
   int x;
   double y;
+
+  INT z;
 };
 #else
 S s;
 #endif
 
 #if defined(FIRST)
+typedef int INT;
 struct T {
   public:
   private:
@@ -231,10 +268,13 @@ struct T {
 
   int x;
   double y;
+
+  INT z;
 
   private:
 };
 #elif defined(SECOND)
+typedef int INT;
 struct T {
   public:
   private:
@@ -245,6 +285,8 @@ struct T {
 
   int x;
   double y;
+
+  INT z;
 
   public:
 };

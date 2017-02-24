@@ -38,10 +38,22 @@ class Compiler;
 }
 
 using llvm::opt::ArgStringList;
+using llvm::opt::ArgList;
 
 SmallString<128> getCompilerRT(const ToolChain &TC,
                                const llvm::opt::ArgList &Args,
                                StringRef Component, bool Shared = false);
+
+std::string getCPUName(const ArgList &Args, const llvm::Triple &T,
+                       bool FromAs = false);
+
+void AddTargetFeature(const ArgList &Args, std::vector<StringRef> &Features,
+                      llvm::opt::OptSpecifier OnOpt,
+                      llvm::opt::OptSpecifier OffOpt, StringRef FeatureName);
+
+void handleTargetFeaturesGroup(const ArgList &Args,
+                               std::vector<StringRef> &Features,
+                               llvm::opt::OptSpecifier Group);
 
 /// \brief Clang compiler tool.
 class LLVM_LIBRARY_VISIBILITY Clang : public Tool {
@@ -321,6 +333,11 @@ bool hasCompactBranches(StringRef &CPU);
 void getMipsCPUAndABI(const llvm::opt::ArgList &Args,
                       const llvm::Triple &Triple, StringRef &CPUName,
                       StringRef &ABIName);
+void getMIPSTargetFeatures(const Driver &D, const llvm::Triple &Triple,
+                           const ArgList &Args,
+                           std::vector<StringRef> &Features);
+StringRef getGnuCompatibleMipsABIName(StringRef ABI);
+mips::FloatABI getMipsFloatABI(const Driver &D, const ArgList &Args);
 std::string getMipsABILibSuffix(const llvm::opt::ArgList &Args,
                                 const llvm::Triple &Triple);
 bool hasMipsAbiArg(const llvm::opt::ArgList &Args, const char *Value);
@@ -332,6 +349,7 @@ bool isFPXXDefault(const llvm::Triple &Triple, StringRef CPUName,
 bool shouldUseFPXX(const llvm::opt::ArgList &Args, const llvm::Triple &Triple,
                    StringRef CPUName, StringRef ABIName,
                    mips::FloatABI FloatABI);
+
 } // end namespace mips
 
 namespace ppc {
@@ -803,7 +821,22 @@ enum class FloatABI {
 };
 
 FloatABI getARMFloatABI(const ToolChain &TC, const llvm::opt::ArgList &Args);
+
+bool useAAPCSForMachO(const llvm::Triple &T);
+void getARMArchCPUFromArgs(const ArgList &Args, llvm::StringRef &Arch,
+                           llvm::StringRef &CPU, bool FromAs = false);
+void getARMTargetFeatures(const ToolChain &TC, const llvm::Triple &Triple,
+                          const ArgList &Args, ArgStringList &CmdArgs,
+                          std::vector<StringRef> &Features, bool ForAS);
+int getARMSubArchVersionNumber(const llvm::Triple &Triple);
+bool isARMMProfile(const llvm::Triple &Triple);
 } // end namespace arm
+
+namespace aarch64 {
+void getAArch64TargetFeatures(const Driver &D, const ArgList &Args,
+                              std::vector<StringRef> &Features);
+std::string getAArch64TargetCPU(const ArgList &Args, llvm::opt::Arg *&A);
+} // end namespace aarch64
 
 namespace ppc {
 enum class FloatABI {
@@ -813,6 +846,11 @@ enum class FloatABI {
 };
 
 FloatABI getPPCFloatABI(const Driver &D, const llvm::opt::ArgList &Args);
+
+std::string getPPCTargetCPU(const ArgList &Args);
+void getPPCTargetFeatures(const Driver &D, const llvm::Triple &Triple,
+                          const ArgList &Args,
+                          std::vector<StringRef> &Features);
 } // end namespace ppc
 
 namespace sparc {
@@ -823,6 +861,11 @@ enum class FloatABI {
 };
 
 FloatABI getSparcFloatABI(const Driver &D, const llvm::opt::ArgList &Args);
+
+void getSparcTargetFeatures(const Driver &D, const ArgList &Args,
+                            std::vector<StringRef> &Features);
+const char *getSparcAsmModeForCPU(StringRef Name,
+                                  const llvm::Triple &Triple);
 } // end namespace sparc
 
 namespace XCore {
@@ -1002,6 +1045,20 @@ public:
                     const char *LinkingOutput) const override;
 };
 } // end namespace AVR
+
+namespace systemz {
+const char *getSystemZTargetCPU(const ArgList &Args);
+void getSystemZTargetFeatures(const ArgList &Args,
+                              std::vector<StringRef> &Features);
+} // end namespace systemz
+
+namespace x86 {
+const char *getX86TargetCPU(const ArgList &Args,
+                            const llvm::Triple &Triple);
+void getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
+                          const ArgList &Args,
+                          std::vector<StringRef> &Features);
+} // end namespace x86
 
 } // end namespace tools
 } // end namespace driver
