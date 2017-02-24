@@ -81,7 +81,7 @@ TEST(FDRLoggingTest, Simple) {
   // record.
   MetadataRecord MDR;
   memcpy(&MDR, Contents + sizeof(XRayFileHeader), sizeof(MetadataRecord));
-  ASSERT_EQ(MDR.RecordKind, MetadataRecord::RecordKinds::NewBuffer);
+  ASSERT_EQ(MDR.RecordKind, uint8_t(MetadataRecord::RecordKinds::NewBuffer));
 }
 
 TEST(FDRLoggingTest, Multiple) {
@@ -120,7 +120,7 @@ TEST(FDRLoggingTest, Multiple) {
 
   MetadataRecord MDR0;
   memcpy(&MDR0, Contents + sizeof(XRayFileHeader), sizeof(MetadataRecord));
-  ASSERT_EQ(MDR0.RecordKind, MetadataRecord::RecordKinds::NewBuffer);
+  ASSERT_EQ(MDR0.RecordKind, uint8_t(MetadataRecord::RecordKinds::NewBuffer));
 }
 
 } // namespace

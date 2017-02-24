@@ -1484,7 +1484,7 @@ static int vertex_on_facet(__isl_keep isl_basic_set *vertex,
  */
 static isl_stat triangulate(__isl_keep isl_cell *cell, __isl_keep isl_vec *v,
 	int *simplex_ids, int n_simplex, int *other_ids, int n_other,
-	int (*fn)(__isl_take isl_cell *simplex, void *user), void *user)
+	isl_stat (*fn)(__isl_take isl_cell *simplex, void *user), void *user)
 {
 	int i, j, k;
 	int d, nparam;

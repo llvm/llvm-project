@@ -1202,7 +1202,7 @@ static __isl_give isl_space *read_tuple_space(__isl_keep isl_stream *s,
 			goto error;
 		out = read_tuple_space(s, v, isl_space_copy(space),
 					rational, comma, read_el, user);
-		res = isl_space_range_product(res, out);
+		res = isl_space_product(res, out);
 	} else
 		res = read_tuple_list(s, v, isl_space_copy(space),
 					rational, comma, read_el, user);

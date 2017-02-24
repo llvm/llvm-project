@@ -24,7 +24,7 @@ struct PhdrEntry;
 class SymbolBody;
 struct EhSectionPiece;
 template <class ELFT> class EhInputSection;
-template <class ELFT> class InputSection;
+class InputSection;
 class InputSectionBase;
 template <class ELFT> class MergeInputSection;
 template <class ELFT> class OutputSection;
@@ -123,56 +123,10 @@ public:
   static bool classof(const OutputSectionBase *B) {
     return B->getKind() == Regular;
   }
-  std::vector<InputSection<ELFT> *> Sections;
+  std::vector<InputSection *> Sections;
 
   // Location in the output buffer.
   uint8_t *Loc = nullptr;
-};
-
-struct CieRecord {
-  EhSectionPiece *Piece = nullptr;
-  std::vector<EhSectionPiece *> FdePieces;
-};
-
-// Output section for .eh_frame.
-template <class ELFT> class EhOutputSection final : public OutputSectionBase {
-  typedef typename ELFT::uint uintX_t;
-  typedef typename ELFT::Shdr Elf_Shdr;
-  typedef typename ELFT::Rel Elf_Rel;
-  typedef typename ELFT::Rela Elf_Rela;
-
-public:
-  EhOutputSection();
-  void writeTo(uint8_t *Buf) override;
-  void finalize() override;
-  bool empty() const { return Sections.empty(); }
-  void forEachInputSection(std::function<void(InputSectionBase *)> F) override;
-
-  void addSection(InputSectionBase *S) override;
-  Kind getKind() const override { return EHFrame; }
-  static bool classof(const OutputSectionBase *B) {
-    return B->getKind() == EHFrame;
-  }
-
-  size_t NumFdes = 0;
-
-private:
-  template <class RelTy>
-  void addSectionAux(EhInputSection<ELFT> *S, llvm::ArrayRef<RelTy> Rels);
-
-  template <class RelTy>
-  CieRecord *addCie(EhSectionPiece &Piece, ArrayRef<RelTy> Rels);
-
-  template <class RelTy>
-  bool isFdeLive(EhSectionPiece &Piece, ArrayRef<RelTy> Rels);
-
-  uintX_t getFdePc(uint8_t *Buf, size_t Off, uint8_t Enc);
-
-  std::vector<EhInputSection<ELFT> *> Sections;
-  std::vector<CieRecord *> Cies;
-
-  // CIE records are uniquified by their contents and personality functions.
-  llvm::DenseMap<std::pair<ArrayRef<uint8_t>, SymbolBody *>, CieRecord> CieMap;
 };
 
 // All output sections that are hadnled by the linker specially are
@@ -183,7 +137,6 @@ template <class ELFT> struct Out {
   typedef typename ELFT::Phdr Elf_Phdr;
 
   static uint8_t First;
-  static EhOutputSection<ELFT> *EhFrame;
   static OutputSection<ELFT> *Bss;
   static OutputSection<ELFT> *BssRelRo;
   static OutputSectionBase *Opd;
@@ -241,7 +194,6 @@ template <class ELFT> uint64_t getHeaderSize() {
 }
 
 template <class ELFT> uint8_t Out<ELFT>::First;
-template <class ELFT> EhOutputSection<ELFT> *Out<ELFT>::EhFrame;
 template <class ELFT> OutputSection<ELFT> *Out<ELFT>::Bss;
 template <class ELFT> OutputSection<ELFT> *Out<ELFT>::BssRelRo;
 template <class ELFT> OutputSectionBase *Out<ELFT>::Opd;

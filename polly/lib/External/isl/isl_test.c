@@ -4464,6 +4464,67 @@ static int test_bin_aff(isl_ctx *ctx)
 }
 
 struct {
+	__isl_give isl_pw_aff *(*fn)(__isl_take isl_pw_aff *pa1,
+				     __isl_take isl_pw_aff *pa2);
+} pw_aff_bin_op[] = {
+	['m'] = { &isl_pw_aff_min },
+	['M'] = { &isl_pw_aff_max },
+};
+
+/* Inputs for binary isl_pw_aff operation tests.
+ * "arg1" and "arg2" are the two arguments, "op" identifies the operation
+ * defined by pw_aff_bin_op, and "res" is the expected result.
+ */
+struct {
+	const char *arg1;
+	unsigned char op;
+	const char *arg2;
+	const char *res;
+} pw_aff_bin_tests[] = {
+	{ "{ [i] -> [i] }", 'm', "{ [i] -> [i] }",
+	  "{ [i] -> [i] }" },
+	{ "{ [i] -> [i] }", 'M', "{ [i] -> [i] }",
+	  "{ [i] -> [i] }" },
+	{ "{ [i] -> [i] }", 'm', "{ [i] -> [0] }",
+	  "{ [i] -> [i] : i <= 0; [i] -> [0] : i > 0 }" },
+	{ "{ [i] -> [i] }", 'M', "{ [i] -> [0] }",
+	  "{ [i] -> [i] : i >= 0; [i] -> [0] : i < 0 }" },
+	{ "{ [i] -> [i] }", 'm', "{ [i] -> [NaN] }",
+	  "{ [i] -> [NaN] }" },
+	{ "{ [i] -> [NaN] }", 'm', "{ [i] -> [i] }",
+	  "{ [i] -> [NaN] }" },
+};
+
+/* Perform some basic tests of binary operations on isl_pw_aff objects.
+ */
+static int test_bin_pw_aff(isl_ctx *ctx)
+{
+	int i;
+	isl_bool ok;
+	isl_pw_aff *pa1, *pa2, *res;
+
+	for (i = 0; i < ARRAY_SIZE(pw_aff_bin_tests); ++i) {
+		pa1 = isl_pw_aff_read_from_str(ctx, pw_aff_bin_tests[i].arg1);
+		pa2 = isl_pw_aff_read_from_str(ctx, pw_aff_bin_tests[i].arg2);
+		res = isl_pw_aff_read_from_str(ctx, pw_aff_bin_tests[i].res);
+		pa1 = pw_aff_bin_op[pw_aff_bin_tests[i].op].fn(pa1, pa2);
+		if (isl_pw_aff_involves_nan(res))
+			ok = isl_pw_aff_involves_nan(pa1);
+		else
+			ok = isl_pw_aff_plain_is_equal(pa1, res);
+		isl_pw_aff_free(pa1);
+		isl_pw_aff_free(res);
+		if (ok < 0)
+			return -1;
+		if (!ok)
+			isl_die(ctx, isl_error_unknown,
+				"unexpected result", return -1);
+	}
+
+	return 0;
+}
+
+struct {
 	__isl_give isl_union_pw_multi_aff *(*fn)(
 		__isl_take isl_union_pw_multi_aff *upma1,
 		__isl_take isl_union_pw_multi_aff *upma2);
@@ -4570,6 +4631,8 @@ int test_aff(isl_ctx *ctx)
 	int zero, equal;
 
 	if (test_bin_aff(ctx) < 0)
+		return -1;
+	if (test_bin_pw_aff(ctx) < 0)
 		return -1;
 	if (test_bin_upma(ctx) < 0)
 		return -1;
@@ -5445,8 +5508,8 @@ static int test_list(isl_ctx *ctx)
 	d = isl_id_alloc(ctx, "d", NULL);
 
 	list = isl_id_list_alloc(ctx, 4);
-	list = isl_id_list_add(list, a);
 	list = isl_id_list_add(list, b);
+	list = isl_id_list_insert(list, 0, a);
 	list = isl_id_list_add(list, c);
 	list = isl_id_list_add(list, d);
 	list = isl_id_list_drop(list, 1, 1);

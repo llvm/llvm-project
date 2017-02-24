@@ -190,8 +190,8 @@ void setupNewBuffer(const BufferQueue::Buffer &Buffer) XRAY_NEVER_INSTRUMENT {
     // point we only write down the following bytes:
     //   - Thread ID (pid_t, 4 bytes)
     auto &NewBuffer = *reinterpret_cast<MetadataRecord *>(&Records[0]);
-    NewBuffer.Type = RecordType::Metadata;
-    NewBuffer.RecordKind = MetadataRecord::RecordKinds::NewBuffer;
+    NewBuffer.Type = uint8_t(RecordType::Metadata);
+    NewBuffer.RecordKind = uint8_t(MetadataRecord::RecordKinds::NewBuffer);
     pid_t Tid = syscall(SYS_gettid);
     std::memcpy(&NewBuffer.Data, &Tid, sizeof(pid_t));
   }
@@ -200,8 +200,9 @@ void setupNewBuffer(const BufferQueue::Buffer &Buffer) XRAY_NEVER_INSTRUMENT {
   {
     static_assert(sizeof(time_t) <= 8, "time_t needs to be at most 8 bytes");
     auto &WalltimeMarker = *reinterpret_cast<MetadataRecord *>(&Records[1]);
-    WalltimeMarker.Type = RecordType::Metadata;
-    WalltimeMarker.RecordKind = MetadataRecord::RecordKinds::WalltimeMarker;
+    WalltimeMarker.Type = uint8_t(RecordType::Metadata);
+    WalltimeMarker.RecordKind =
+        uint8_t(MetadataRecord::RecordKinds::WalltimeMarker);
     timespec TS{0, 0};
     clock_gettime(CLOCK_MONOTONIC, &TS);
 
@@ -219,8 +220,8 @@ void setupNewBuffer(const BufferQueue::Buffer &Buffer) XRAY_NEVER_INSTRUMENT {
 
 void writeNewCPUIdMetadata(uint16_t CPU, uint64_t TSC) XRAY_NEVER_INSTRUMENT {
   MetadataRecord NewCPUId;
-  NewCPUId.Type = RecordType::Metadata;
-  NewCPUId.RecordKind = MetadataRecord::RecordKinds::NewCPUId;
+  NewCPUId.Type = uint8_t(RecordType::Metadata);
+  NewCPUId.RecordKind = uint8_t(MetadataRecord::RecordKinds::NewCPUId);
 
   // The data for the New CPU will contain the following bytes:
   //   - CPU ID (uint16_t, 2 bytes)
@@ -234,8 +235,8 @@ void writeNewCPUIdMetadata(uint16_t CPU, uint64_t TSC) XRAY_NEVER_INSTRUMENT {
 
 void writeEOBMetadata() XRAY_NEVER_INSTRUMENT {
   MetadataRecord EOBMeta;
-  EOBMeta.Type = RecordType::Metadata;
-  EOBMeta.RecordKind = MetadataRecord::RecordKinds::EndOfBuffer;
+  EOBMeta.Type = uint8_t(RecordType::Metadata);
+  EOBMeta.RecordKind = uint8_t(MetadataRecord::RecordKinds::EndOfBuffer);
   // For now we don't write any bytes into the Data field.
   std::memcpy(RecordPtr, &EOBMeta, sizeof(MetadataRecord));
   RecordPtr += sizeof(MetadataRecord);
@@ -243,8 +244,8 @@ void writeEOBMetadata() XRAY_NEVER_INSTRUMENT {
 
 void writeTSCWrapMetadata(uint64_t TSC) XRAY_NEVER_INSTRUMENT {
   MetadataRecord TSCWrap;
-  TSCWrap.Type = RecordType::Metadata;
-  TSCWrap.RecordKind = MetadataRecord::RecordKinds::TSCWrap;
+  TSCWrap.Type = uint8_t(RecordType::Metadata);
+  TSCWrap.RecordKind = uint8_t(MetadataRecord::RecordKinds::TSCWrap);
 
   // The data for the TSCWrap record contains the following bytes:
   //   - Full TSC (uint64_t, 8 bytes)
@@ -447,7 +448,7 @@ void fdrLoggingHandleArg0(int32_t FuncId,
       AlignedFuncRecordBuffer;
   auto &FuncRecord =
       *reinterpret_cast<FunctionRecord *>(&AlignedFuncRecordBuffer);
-  FuncRecord.Type = RecordType::Function;
+  FuncRecord.Type = uint8_t(RecordType::Function);
 
   // Only get the lower 28 bits of the function id.
   FuncRecord.FuncId = FuncId & ~(0x0F << 28);
@@ -493,13 +494,14 @@ void fdrLoggingHandleArg0(int32_t FuncId,
 
   switch (Entry) {
   case XRayEntryType::ENTRY:
-    FuncRecord.RecordKind = FunctionRecord::RecordKinds::FunctionEnter;
+    FuncRecord.RecordKind = uint8_t(FunctionRecord::RecordKinds::FunctionEnter);
     break;
   case XRayEntryType::EXIT:
-    FuncRecord.RecordKind = FunctionRecord::RecordKinds::FunctionExit;
+    FuncRecord.RecordKind = uint8_t(FunctionRecord::RecordKinds::FunctionExit);
     break;
   case XRayEntryType::TAIL:
-    FuncRecord.RecordKind = FunctionRecord::RecordKinds::FunctionTailExit;
+    FuncRecord.RecordKind =
+        uint8_t(FunctionRecord::RecordKinds::FunctionTailExit);
     break;
   }
 

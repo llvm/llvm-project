@@ -34,7 +34,7 @@ enum class RecordType : uint8_t {
 // additional bytes in the end to hold free-form data.
 struct alignas(16) MetadataRecord {
   // A MetadataRecord must always have a type of 1.
-  RecordType Type : 1;
+  /* RecordType */ uint8_t Type : 1;
 
   // Each kind of record is represented as a 7-bit value (even though we use an
   // unsigned 8-bit enum class to do so).
@@ -45,7 +45,8 @@ struct alignas(16) MetadataRecord {
     TSCWrap,
     WalltimeMarker,
   };
-  RecordKinds RecordKind : 7; // Use 7 bits to identify this record type.
+  // Use 7 bits to identify this record type.
+  /* RecordKinds */ uint8_t RecordKind : 7;
   char Data[15];
 } __attribute__((packed));
 
@@ -53,13 +54,13 @@ static_assert(sizeof(MetadataRecord) == 16, "Wrong size for MetadataRecord.");
 
 struct alignas(8) FunctionRecord {
   // A FunctionRecord must always have a type of 0.
-  RecordType Type : 1;
+  /* RecordType */ uint8_t Type : 1;
   enum class RecordKinds {
     FunctionEnter = 0x00,
     FunctionExit = 0x01,
     FunctionTailExit = 0x02,
   };
-  RecordKinds RecordKind : 3;
+  /* RecordKinds */ uint8_t RecordKind : 3;
 
   // We only use 28 bits of the function ID, so that we can use as few bytes as
   // possible. This means we only support 2^28 (268,435,456) unique function ids
