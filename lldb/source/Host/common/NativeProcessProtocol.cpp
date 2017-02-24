@@ -145,11 +145,8 @@ NativeProcessProtocol::GetWatchpointMap() const {
   return m_watchpoint_list.GetWatchpointMap();
 }
 
-uint32_t NativeProcessProtocol::GetMaxWatchpoints() const {
-  // This default implementation will return the number of
-  // *hardware* breakpoints available.  MacOSX and other OS
-  // implementations that support software breakpoints will want to
-  // override this correctly for their implementation.
+llvm::Optional<std::pair<uint32_t, uint32_t>>
+NativeProcessProtocol::GetHardwareDebugSupportInfo() const {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
 
   // get any thread
@@ -160,7 +157,7 @@ uint32_t NativeProcessProtocol::GetMaxWatchpoints() const {
       log->Warning("NativeProcessProtocol::%s (): failed to find a thread to "
                    "grab a NativeRegisterContext!",
                    __FUNCTION__);
-    return 0;
+    return llvm::None;
   }
 
   NativeRegisterContextSP reg_ctx_sp(thread_sp->GetRegisterContext());
@@ -169,10 +166,11 @@ uint32_t NativeProcessProtocol::GetMaxWatchpoints() const {
       log->Warning("NativeProcessProtocol::%s (): failed to get a "
                    "RegisterContextNativeProcess from the first thread!",
                    __FUNCTION__);
-    return 0;
+    return llvm::None;
   }
 
-  return reg_ctx_sp->NumSupportedHardwareWatchpoints();
+  return std::make_pair(reg_ctx_sp->NumSupportedHardwareBreakpoints(),
+                        reg_ctx_sp->NumSupportedHardwareWatchpoints());
 }
 
 Error NativeProcessProtocol::SetWatchpoint(lldb::addr_t addr, size_t size,
@@ -269,6 +267,92 @@ Error NativeProcessProtocol::RemoveWatchpoint(lldb::addr_t addr) {
   return overall_error.Fail() ? overall_error : error;
 }
 
+const HardwareBreakpointMap &
+NativeProcessProtocol::GetHardwareBreakpointMap() const {
+  return m_hw_breakpoints_map;
+}
+
+Error NativeProcessProtocol::SetHardwareBreakpoint(lldb::addr_t addr,
+                                                   size_t size) {
+  // This default implementation assumes setting a hardware breakpoint for
+  // this process will require setting same hardware breakpoint for each
+  // of its existing threads. New thread will do the same once created.
+  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
+
+  // Update the thread list
+  UpdateThreads();
+
+  // Exit here if target does not have required hardware breakpoint capability.
+  auto hw_debug_cap = GetHardwareDebugSupportInfo();
+
+  if (hw_debug_cap == llvm::None || hw_debug_cap->first == 0 ||
+      hw_debug_cap->first <= m_hw_breakpoints_map.size())
+    return Error("Target does not have required no of hardware breakpoints");
+
+  // Vector below stores all thread pointer for which we have we successfully
+  // set this hardware breakpoint. If any of the current process threads fails
+  // to set this hardware breakpoint then roll back and remove this breakpoint
+  // for all the threads that had already set it successfully.
+  std::vector<NativeThreadProtocolSP> breakpoint_established_threads;
+
+  // Request to set a hardware breakpoint for each of current process threads.
+  std::lock_guard<std::recursive_mutex> guard(m_threads_mutex);
+  for (auto thread_sp : m_threads) {
+    assert(thread_sp && "thread list should not have a NULL thread!");
+    if (!thread_sp)
+      continue;
+
+    Error thread_error = thread_sp->SetHardwareBreakpoint(addr, size);
+    if (thread_error.Success()) {
+      // Remember that we set this breakpoint successfully in
+      // case we need to clear it later.
+      breakpoint_established_threads.push_back(thread_sp);
+    } else {
+      // Unset the breakpoint for each thread we successfully
+      // set so that we get back to a consistent state of "not
+      // set" for this hardware breakpoint.
+      for (auto rollback_thread_sp : breakpoint_established_threads) {
+        Error remove_error = rollback_thread_sp->RemoveHardwareBreakpoint(addr);
+        if (remove_error.Fail() && log) {
+          log->Warning("NativeProcessProtocol::%s (): RemoveHardwareBreakpoint"
+                       " failed for pid=%" PRIu64 ", tid=%" PRIu64 ": %s",
+                       __FUNCTION__, GetID(), rollback_thread_sp->GetID(),
+                       remove_error.AsCString());
+        }
+      }
+
+      return thread_error;
+    }
+  }
+
+  // Register new hardware breakpoint into hardware breakpoints map of current
+  // process.
+  m_hw_breakpoints_map[addr] = {addr, size};
+
+  return Error();
+}
+
+Error NativeProcessProtocol::RemoveHardwareBreakpoint(lldb::addr_t addr) {
+  // Update the thread list
+  UpdateThreads();
+
+  Error error;
+
+  std::lock_guard<std::recursive_mutex> guard(m_threads_mutex);
+  for (auto thread_sp : m_threads) {
+    assert(thread_sp && "thread list should not have a NULL thread!");
+    if (!thread_sp)
+      continue;
+
+    error = thread_sp->RemoveHardwareBreakpoint(addr);
+  }
+
+  // Also remove from hardware breakpoint map of current process.
+  m_hw_breakpoints_map.erase(addr);
+
+  return error;
+}
+
 bool NativeProcessProtocol::RegisterNativeDelegate(
     NativeDelegate &native_delegate) {
   std::lock_guard<std::recursive_mutex> guard(m_delegates_mutex);
@@ -345,8 +429,12 @@ Error NativeProcessProtocol::SetSoftwareBreakpoint(lldb::addr_t addr,
       });
 }
 
-Error NativeProcessProtocol::RemoveBreakpoint(lldb::addr_t addr) {
-  return m_breakpoint_list.DecRef(addr);
+Error NativeProcessProtocol::RemoveBreakpoint(lldb::addr_t addr,
+                                              bool hardware) {
+  if (hardware)
+    return RemoveHardwareBreakpoint(addr);
+  else
+    return m_breakpoint_list.DecRef(addr);
 }
 
 Error NativeProcessProtocol::EnableBreakpoint(lldb::addr_t addr) {

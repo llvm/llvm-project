@@ -94,7 +94,7 @@ template <class ELFT> void elf::ObjectFile<ELFT>::initializeDwarfLine() {
 // using DWARF debug info.
 template <class ELFT>
 std::string elf::ObjectFile<ELFT>::getLineInfo(InputSectionBase *S,
-                                               uintX_t Offset) {
+                                               uint64_t Offset) {
   if (!DwarfLine)
     initializeDwarfLine();
 
@@ -241,14 +241,14 @@ bool elf::ObjectFile<ELFT>::shouldMerge(const Elf_Shdr &Sec) {
   // the section does not hold a table of fixed-size entries". We know
   // that Rust 1.13 produces a string mergeable section with a zero
   // sh_entsize. Here we just accept it rather than being picky about it.
-  uintX_t EntSize = Sec.sh_entsize;
+  uint64_t EntSize = Sec.sh_entsize;
   if (EntSize == 0)
     return false;
   if (Sec.sh_size % EntSize)
     fatal(toString(this) +
           ": SHF_MERGE section size must be a multiple of sh_entsize");
 
-  uintX_t Flags = Sec.sh_flags;
+  uint64_t Flags = Sec.sh_flags;
   if (!(Flags & SHF_MERGE))
     return false;
   if (Flags & SHF_WRITE)
@@ -499,8 +499,8 @@ SymbolBody *elf::ObjectFile<ELFT>::createSymbolBody(const Elf_Sym *Sym) {
 
   uint8_t StOther = Sym->st_other;
   uint8_t Type = Sym->getType();
-  uintX_t Value = Sym->st_value;
-  uintX_t Size = Sym->st_size;
+  uint64_t Value = Sym->st_value;
+  uint64_t Size = Sym->st_size;
 
   if (Binding == STB_LOCAL) {
     if (Sym->getType() == STT_FILE)
@@ -639,7 +639,7 @@ template <class ELFT> void SharedFile<ELFT>::parseSoName() {
             toString(this) + ": getSectionContentsAsArray failed");
   for (const Elf_Dyn &Dyn : Arr) {
     if (Dyn.d_tag == DT_SONAME) {
-      uintX_t Val = Dyn.getVal();
+      uint64_t Val = Dyn.getVal();
       if (Val >= this->StringTable.size())
         fatal(toString(this) + ": invalid DT_SONAME entry");
       SoName = StringRef(this->StringTable.data() + Val);

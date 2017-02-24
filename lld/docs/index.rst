@@ -17,13 +17,16 @@ Features
 --------
 
 - LLD is a drop-in replacement for the GNU linkers. That accepts the
-  same command line arguments and linker scripts as GNU. Although our
-  linker is relatively new and still in active development, that is
-  already able to link the entire FreeBSD/amd64 base system including
-  the kernel. We are currently working closely with the FreeBSD
-  project to make LLD default system linker in future versions of the
-  operating system, so we are serious about addressing compatibility
-  issues.
+  same command line arguments and linker scripts as GNU.
+
+  We are currently working closely with the FreeBSD project to make
+  LLD default system linker in future versions of the operating
+  system, so we are serious about addressing compatibility issues. As
+  of February 2017, LLD is able to link the entire FreeBSD/amd64 base
+  system including the kernel. With a few work-in-progress patches it
+  can link approximately 95% of the ports collection on AMD64. For the
+  details, see `FreeBSD quarterly status report
+  <https://www.freebsd.org/news/status/report-2016-10-2016-12.html#Using-LLVM%27s-LLD-Linker-as-FreeBSD%27s-System-Linker>`.
 
 - LLD is very fast. When you link a large program on a multicore
   machine, you can expect that LLD runs more than twice as fast as GNU
@@ -80,10 +83,10 @@ disk latency/throughput, your results may vary.
 
 ============  ===========  ======  ========  ======
 Program       Output size  GNU ld  GNU gold  LLD
-ffmpeg dbg    92 MiB	   1.59s   1.15s     0.78s
-mysqld dbg    158 MiB      7.09s   2.49s     1.31s
-clang dbg     1.55 GiB     86.76s  21.93s    8.38s
-chromium dbg  1.57 GiB     N/A     40.86s    12.69s
+ffmpeg dbg    91 MiB       1.59s   1.15s     0.78s
+mysqld dbg    157 MiB      7.09s   2.49s     1.31s
+clang dbg     1.45 GiB     86.76s  21.93s    8.38s
+chromium dbg  1.52 GiB     N/A     40.86s    12.69s
 ============  ===========  ======  ========  ======
 
 Build
@@ -127,7 +130,8 @@ Here is a brief project history of the ELF and COFF ports.
 - July 2016: Started working on improving the linker script support.
 
 - December 2016: Succeeded to build the entire FreeBSD base system
-  including the kernel. We had widen the gap against the GNU linkers.
+  including the kernel. We had widen the performance gap against the
+  GNU linkers.
 
 Internals
 ---------

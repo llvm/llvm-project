@@ -15,7 +15,7 @@
 namespace lld {
 namespace elf {
 template <class ELFT>
-void writeMapFile(llvm::ArrayRef<OutputSectionBase *> OutputSections);
+void writeMapFile(llvm::ArrayRef<OutputSection *> OutputSections);
 }
 }
 

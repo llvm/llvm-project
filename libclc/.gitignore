@@ -1,6 +1,7 @@
 Makefile
 amdgcn--
 amdgcn--amdhsa
+amdgcn-mesa-mesa3d
 build/*.pyc
 built_libs/
 generic--

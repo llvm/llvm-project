@@ -946,7 +946,7 @@ void UnwrappedLineParser::parseStructuralElement() {
       if (!parseEnum())
         break;
       // This only applies for C++.
-      if (Style.Language != FormatStyle::LK_Cpp) {
+      if (!Style.IsCpp()) {
         addUnwrappedLine();
         return;
       }
@@ -1127,7 +1127,7 @@ void UnwrappedLineParser::parseStructuralElement() {
 }
 
 bool UnwrappedLineParser::tryToParseLambda() {
-  if (Style.Language != FormatStyle::LK_Cpp) {
+  if (!Style.IsCpp()) {
     nextToken();
     return false;
   }
@@ -1737,8 +1737,7 @@ bool UnwrappedLineParser::parseEnum() {
       nextToken();
       // If there are two identifiers in a row, this is likely an elaborate
       // return type. In Java, this can be "implements", etc.
-      if (Style.Language == FormatStyle::LK_Cpp &&
-          FormatTok->is(tok::identifier))
+      if (Style.IsCpp() && FormatTok->is(tok::identifier))
         return false;
     }
   }

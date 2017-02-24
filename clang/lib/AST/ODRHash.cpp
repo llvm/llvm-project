@@ -183,6 +183,13 @@ public:
 
   void VisitFieldDecl(const FieldDecl *D) {
     Inherited::VisitFieldDecl(D);
+
+    const bool IsBitfield = D->isBitField();
+    Hash.AddBoolean(IsBitfield);
+
+    if (IsBitfield) {
+      AddStmt(D->getBitWidth());
+    }
   }
 };
 

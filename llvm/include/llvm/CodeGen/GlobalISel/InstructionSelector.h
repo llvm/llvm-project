@@ -16,8 +16,12 @@
 #ifndef LLVM_CODEGEN_GLOBALISEL_INSTRUCTIONSELECTOR_H
 #define LLVM_CODEGEN_GLOBALISEL_INSTRUCTIONSELECTOR_H
 
+#include <cstdint>
+
 namespace llvm {
 class MachineInstr;
+class MachineOperand;
+class MachineRegisterInfo;
 class RegisterBankInfo;
 class TargetInstrInfo;
 class TargetRegisterInfo;
@@ -56,6 +60,9 @@ protected:
                                         const TargetInstrInfo &TII,
                                         const TargetRegisterInfo &TRI,
                                         const RegisterBankInfo &RBI) const;
+
+  bool isOperandImmEqual(const MachineOperand &MO, int64_t Value,
+                         const MachineRegisterInfo &MRI) const;
 };
 
 } // End namespace llvm.

@@ -485,7 +485,7 @@ template <class ELFT> static void addCopyRelSymbol(SharedSymbol<ELFT> *SS) {
   // See if this symbol is in a read-only segment. If so, preserve the symbol's
   // memory protection by reserving space in the .bss.rel.ro section.
   bool IsReadOnly = isReadOnly(SS);
-  OutputSection<ELFT> *OSec = IsReadOnly ? Out<ELFT>::BssRelRo : Out<ELFT>::Bss;
+  OutputSection *OSec = IsReadOnly ? Out<ELFT>::BssRelRo : Out<ELFT>::Bss;
 
   // Create a SyntheticSection in Out to hold the .bss and the Copy Reloc.
   auto *ISec =
@@ -866,7 +866,7 @@ template <class ELFT> void scanRelocations(InputSectionBase &S) {
 // offsets.
 // This may invalidate any output section offsets stored outside of InputSection
 template <class ELFT>
-static void mergeThunks(OutputSection<ELFT> *OS,
+static void mergeThunks(OutputSection *OS,
                         std::vector<ThunkSection<ELFT> *> &Thunks) {
   // Order Thunks in ascending OutSecOff
   auto ThunkCmp = [](const ThunkSection<ELFT> *A, const ThunkSection<ELFT> *B) {
@@ -893,7 +893,7 @@ static void mergeThunks(OutputSection<ELFT> *OS,
              Thunks.end(), std::back_inserter(Tmp), MergeCmp);
   OS->Sections = std::move(Tmp);
   OS->Size = 0;
-  OS->assignOffsets();
+  OS->assignOffsets<ELFT>();
 }
 
 // Process all relocations from the InputSections that have been assigned
@@ -907,14 +907,13 @@ static void mergeThunks(OutputSection<ELFT> *OS,
 // FIXME: All Thunks are assumed to be in range of the relocation. Range
 // extension Thunks are not yet supported.
 template <class ELFT>
-void createThunks(ArrayRef<OutputSectionBase *> OutputSections) {
+void createThunks(ArrayRef<OutputSection *> OutputSections) {
   // Track Symbols that already have a Thunk
   DenseMap<SymbolBody *, Thunk<ELFT> *> ThunkedSymbols;
   // Track InputSections that have a ThunkSection placed in front
   DenseMap<InputSection *, ThunkSection<ELFT> *> ThunkedSections;
   // Track the ThunksSections that need to be inserted into an OutputSection
-  std::map<OutputSection<ELFT> *, std::vector<ThunkSection<ELFT> *>>
-      ThunkSections;
+  std::map<OutputSection *, std::vector<ThunkSection<ELFT> *>> ThunkSections;
 
   // Find or create a Thunk for Body for relocation Type
   auto GetThunk = [&](SymbolBody &Body, uint32_t Type) {
@@ -925,11 +924,11 @@ void createThunks(ArrayRef<OutputSectionBase *> OutputSections) {
   };
 
   // Find or create a ThunkSection to be placed immediately before IS
-  auto GetISThunkSec = [&](InputSection *IS, OutputSection<ELFT> *OS) {
+  auto GetISThunkSec = [&](InputSection *IS, OutputSection *OS) {
     ThunkSection<ELFT> *TS = ThunkedSections.lookup(IS);
     if (TS)
       return TS;
-    auto *TOS = cast<OutputSection<ELFT>>(IS->OutSec);
+    auto *TOS = cast<OutputSection>(IS->OutSec);
     TS = make<ThunkSection<ELFT>>(TOS, IS->OutSecOff);
     ThunkSections[OS].push_back(TS);
     ThunkedSections[IS] = TS;
@@ -937,7 +936,7 @@ void createThunks(ArrayRef<OutputSectionBase *> OutputSections) {
   };
   // Find or create a ThunkSection to be placed as last executable section in
   // OS.
-  auto GetOSThunkSec = [&](ThunkSection<ELFT> *&TS, OutputSection<ELFT> *OS) {
+  auto GetOSThunkSec = [&](ThunkSection<ELFT> *&TS, OutputSection *OS) {
     if (TS == nullptr) {
       uint32_t Off = 0;
       for (auto *IS : OS->Sections) {
@@ -956,8 +955,8 @@ void createThunks(ArrayRef<OutputSectionBase *> OutputSections) {
   // We separate the creation of ThunkSections from the insertion of the
   // ThunkSections back into the OutputSection as ThunkSections are not always
   // inserted into the same OutputSection as the caller.
-  for (OutputSectionBase *Base : OutputSections) {
-    auto *OS = dyn_cast<OutputSection<ELFT>>(Base);
+  for (OutputSection *Base : OutputSections) {
+    auto *OS = dyn_cast<OutputSection>(Base);
     if (OS == nullptr)
       continue;
 
@@ -997,9 +996,9 @@ template void scanRelocations<ELF32BE>(InputSectionBase &);
 template void scanRelocations<ELF64LE>(InputSectionBase &);
 template void scanRelocations<ELF64BE>(InputSectionBase &);
 
-template void createThunks<ELF32LE>(ArrayRef<OutputSectionBase *>);
-template void createThunks<ELF32BE>(ArrayRef<OutputSectionBase *>);
-template void createThunks<ELF64LE>(ArrayRef<OutputSectionBase *>);
-template void createThunks<ELF64BE>(ArrayRef<OutputSectionBase *>);
+template void createThunks<ELF32LE>(ArrayRef<OutputSection *>);
+template void createThunks<ELF32BE>(ArrayRef<OutputSection *>);
+template void createThunks<ELF64LE>(ArrayRef<OutputSection *>);
+template void createThunks<ELF64BE>(ArrayRef<OutputSection *>);
 }
 }

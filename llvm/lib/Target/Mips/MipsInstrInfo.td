@@ -1666,6 +1666,10 @@ class AtomicCmpSwap<PatFrag Op, RegisterClass DRC> :
   PseudoSE<(outs DRC:$dst), (ins PtrRC:$ptr, DRC:$cmp, DRC:$swap),
            [(set DRC:$dst, (Op iPTR:$ptr, DRC:$cmp, DRC:$swap))]>;
 
+class AtomicCmpSwapSubword<RegisterClass RC> :
+  PseudoSE<(outs RC:$dst), (ins PtrRC:$ptr, RC:$mask, RC:$ShiftCmpVal,
+                                RC:$mask2, RC:$ShiftNewVal, RC:$ShiftAmt), []>;
+
 class LLBase<string opstr, RegisterOperand RO, DAGOperand MO = mem> :
   InstSE<(outs RO:$rt), (ins MO:$addr), !strconcat(opstr, "\t$rt, $addr"),
          [], II_LL, FrmI, opstr> {
@@ -1744,11 +1748,21 @@ let usesCustomInserter = 1 in {
   def ATOMIC_SWAP_I16      : Atomic2Ops<atomic_swap_16, GPR32>;
   def ATOMIC_SWAP_I32      : Atomic2Ops<atomic_swap_32, GPR32>;
 
-  def ATOMIC_CMP_SWAP_I8   : AtomicCmpSwap<atomic_cmp_swap_8, GPR32>;
-  def ATOMIC_CMP_SWAP_I16  : AtomicCmpSwap<atomic_cmp_swap_16, GPR32>;
-  def ATOMIC_CMP_SWAP_I32  : AtomicCmpSwap<atomic_cmp_swap_32, GPR32>;
+  def ATOMIC_CMP_SWAP_I8_PSEUDO : AtomicCmpSwap<atomic_cmp_swap_8, GPR32>;
+  def ATOMIC_CMP_SWAP_I16_PSEUDO : AtomicCmpSwap<atomic_cmp_swap_16, GPR32>;
 }
 
+let isPseudo = 1 in {
+  // The expansion of ATOMIC_CMP_SWAP_I(8|16) occurs in two parts. First,
+  // the *_PSEUDO is partially lowering during ISelLowering to compute the
+  // aligned addresses and necessary masks, along with another pseudo which
+  // represents the ll/sc loop. That pseudo is lowered after the basic
+  // postRA pseudos have been lowered.
+  def ATOMIC_CMP_SWAP_I8_FRAG : AtomicCmpSwapSubword<GPR32>;
+  def ATOMIC_CMP_SWAP_I16_FRAG : AtomicCmpSwapSubword<GPR32>;
+
+  def ATOMIC_CMP_SWAP_I32  : AtomicCmpSwap<atomic_cmp_swap_32, GPR32>;
+}
 /// Pseudo instructions for loading and storing accumulator registers.
 let isPseudo = 1, isCodeGenOnly = 1, hasNoSchedulingInfo = 1 in {
   def LOAD_ACC64  : Load<"", ACC64>;
@@ -2322,15 +2336,17 @@ def MULOUMacro : MipsAsmPseudoInst<(outs), (ins GPR32Opnd:$rd, GPR32Opnd:$rs,
 //===----------------------------------------------------------------------===//
 
 multiclass OneOrTwoOperandMacroImmediateAlias<string Memnomic,
-                                         Instruction Opcode> {
+                                              Instruction Opcode,
+                                              RegisterOperand RO = GPR32Opnd,
+                                              Operand Imm = simm32_relaxed> {
   def : MipsInstAlias<!strconcat(Memnomic, " $rs, $rt, $imm"),
-                                (Opcode GPR32Opnd:$rs,
-                                        GPR32Opnd:$rt,
-                                        simm32_relaxed:$imm), 0>;
+                                (Opcode RO:$rs,
+                                        RO:$rt,
+                                        Imm:$imm), 0>;
   def : MipsInstAlias<!strconcat(Memnomic, " $rs, $imm"),
-                                (Opcode GPR32Opnd:$rs,
-                                        GPR32Opnd:$rs,
-                                        simm32_relaxed:$imm), 0>;
+                                (Opcode RO:$rs,
+                                        RO:$rs,
+                                        Imm:$imm), 0>;
 }
 
 def : MipsInstAlias<"move $dst, $src",
@@ -2384,11 +2400,11 @@ let AdditionalPredicates = [NotInMicroMips] in {
 
   defm : OneOrTwoOperandMacroImmediateAlias<"addu", ADDiu>;
 
-  defm : OneOrTwoOperandMacroImmediateAlias<"and", ANDi>;
+  defm : OneOrTwoOperandMacroImmediateAlias<"and", ANDi>, GPR_32;
 
-  defm : OneOrTwoOperandMacroImmediateAlias<"or", ORi>;
+  defm : OneOrTwoOperandMacroImmediateAlias<"or", ORi>, GPR_32;
 
-  defm : OneOrTwoOperandMacroImmediateAlias<"xor", XORi>;
+  defm : OneOrTwoOperandMacroImmediateAlias<"xor", XORi>, GPR_32;
 
   defm : OneOrTwoOperandMacroImmediateAlias<"slt", SLTi>;
 

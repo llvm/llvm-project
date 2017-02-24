@@ -81,6 +81,12 @@ enum : unsigned {
   WASM_OPCODE_F64_CONST  = 0x44,
 };
 
+#define WASM_RELOC(name, value) name = value,
+
+enum : unsigned {
+#include "WasmRelocs/WebAssembly.def"
+};
+
 } // end namespace wasm
 } // end namespace llvm
 

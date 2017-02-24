@@ -1085,7 +1085,7 @@ void ScheduleDAGMILive::updatePressureDiffs(
           continue;
 
         PressureDiff &PDiff = getPressureDiff(&SU);
-        PDiff.addPressureChange(P, Decrement, &MRI);
+        PDiff.addPressureChange(Reg, Decrement, &MRI);
         DEBUG(
           dbgs() << "  UpdateRegP: SU(" << SU.NodeNum << ") "
                  << PrintReg(Reg, TRI) << ':' << PrintLaneMask(P.LaneMask)
@@ -1123,7 +1123,7 @@ void ScheduleDAGMILive::updatePressureDiffs(
               LI.Query(LIS->getInstructionIndex(*SU->getInstr()));
           if (LRQ.valueIn() == VNI) {
             PressureDiff &PDiff = getPressureDiff(SU);
-            PDiff.addPressureChange(P, true, &MRI);
+            PDiff.addPressureChange(Reg, true, &MRI);
             DEBUG(
               dbgs() << "  UpdateRegP: SU(" << SU->NodeNum << ") "
                      << *SU->getInstr();

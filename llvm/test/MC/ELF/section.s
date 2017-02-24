@@ -143,12 +143,13 @@ bar:
 
 // Test that we handle the strings like gas
 .section bar-"foo"
-.section "foo"
+.section "fooo"
+
 
 // CHECK:        Section {
 // CHECK:          Name: bar-"foo"
 // CHECK:        Section {
-// CHECK:          Name: foo
+// CHECK:          Name: fooo
 
 // Test SHF_LINK_ORDER
 

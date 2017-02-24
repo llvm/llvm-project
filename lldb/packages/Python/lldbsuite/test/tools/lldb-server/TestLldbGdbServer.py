@@ -1082,7 +1082,7 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         self.set_inferior_startup_launch()
         self.qMemoryRegionInfo_reports_heap_address_as_readable_writeable()
 
-    def software_breakpoint_set_and_remove_work(self):
+    def breakpoint_set_and_remove_work(self, want_hardware=False):
         # Start up the inferior.
         procs = self.prep_debug_monitor_and_inferior(
             inferior_args=[
@@ -1126,15 +1126,27 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         self.assertIsNotNone(context.get("function_address"))
         function_address = int(context.get("function_address"), 16)
 
+        # Get current target architecture
+        target_arch = self.getArchitecture()
+
         # Set the breakpoint.
-        if self.getArchitecture() == "arm":
+        if (target_arch == "arm") or (target_arch == "aarch64"):
             # TODO: Handle case when setting breakpoint in thumb code
             BREAKPOINT_KIND = 4
         else:
             BREAKPOINT_KIND = 1
+
+        # Set default packet type to Z0 (software breakpoint)
+        z_packet_type = 0       
+
+        # If hardware breakpoint is requested set packet type to Z1
+        if want_hardware == True:
+            z_packet_type = 1
+
         self.reset_test_sequence()
         self.add_set_breakpoint_packets(
             function_address,
+            z_packet_type,
             do_continue=True,
             breakpoint_kind=BREAKPOINT_KIND)
 
@@ -1182,13 +1194,15 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         # Verify that a breakpoint remove and continue gets us the expected
         # output.
         self.reset_test_sequence()
+
+        # Add breakpoint remove packets
+        self.add_remove_breakpoint_packets(
+            function_address,
+            z_packet_type,
+            breakpoint_kind=BREAKPOINT_KIND)
+
         self.test_sequence.add_log_lines(
             [
-                # Remove the breakpoint.
-                "read packet: $z0,{0:x},{1}#00".format(
-                    function_address, BREAKPOINT_KIND),
-                # Verify the stub could unset it.
-                "send packet: $OK#00",
                 # Continue running.
                 "read packet: $c#63",
                 # We should now receive the output from the call.
@@ -1209,7 +1223,7 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         else:
             self.build()
         self.set_inferior_startup_launch()
-        self.software_breakpoint_set_and_remove_work()
+        self.breakpoint_set_and_remove_work(want_hardware=False)
 
     @llgs_test
     @expectedFlakeyLinux("llvm.org/pr25652")
@@ -1221,7 +1235,35 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         else:
             self.build()
         self.set_inferior_startup_launch()
-        self.software_breakpoint_set_and_remove_work()
+        self.breakpoint_set_and_remove_work(want_hardware=False)
+
+    @debugserver_test
+    @skipUnlessPlatform(oslist=['linux'])
+    @expectedFailureAndroid
+    @skipIf(archs=no_match(['arm', 'aarch64']))
+    def test_hardware_breakpoint_set_and_remove_work_debugserver(self):
+        self.init_debugserver_test()
+        if self.getArchitecture() == "arm":
+            # TODO: Handle case when setting breakpoint in thumb code
+            self.build(dictionary={'CFLAGS_EXTRAS': '-marm'})
+        else:
+            self.build()
+        self.set_inferior_startup_launch()
+        self.breakpoint_set_and_remove_work(want_hardware=True)
+
+    @llgs_test
+    @skipUnlessPlatform(oslist=['linux'])
+    @expectedFailureAndroid
+    @skipIf(archs=no_match(['arm', 'aarch64']))
+    def test_hardware_breakpoint_set_and_remove_work_llgs(self):
+        self.init_llgs_test()
+        if self.getArchitecture() == "arm":
+            # TODO: Handle case when setting breakpoint in thumb code
+            self.build(dictionary={'CFLAGS_EXTRAS': '-marm'})
+        else:
+            self.build()
+        self.set_inferior_startup_launch()
+        self.breakpoint_set_and_remove_work(want_hardware=True)
 
     def qSupported_returns_known_stub_features(self):
         # Start up the stub and start/prep the inferior.

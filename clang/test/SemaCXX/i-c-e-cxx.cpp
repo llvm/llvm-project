@@ -1,4 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -pedantic %s
+// RUN: %clang_cc1 -fsyntax-only -verify -pedantic -std=gnu++98 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -pedantic -std=gnu++11 %s
 
 // C++-specific tests for integral constant expressions.
 
@@ -16,9 +18,21 @@ void f() {
 }
 
 int a() {
-  const int t=t; // expected-note {{declared here}} expected-note {{read of object outside its lifetime}}
-  switch(1) { // expected-warning {{no case matching constant switch condition '1'}}
-    case t:; // expected-error {{not an integral constant expression}} expected-note {{initializer of 't' is not a constant expression}}
+  const int t=t; // expected-note {{declared here}}
+#if __cplusplus <= 199711L
+  // expected-note@-2 {{read of object outside its lifetime}}
+#endif
+
+  switch(1) {
+#if __cplusplus <= 199711L
+  // expected-warning@-2 {{no case matching constant switch condition '1'}}
+#endif
+    case t:; // expected-note {{initializer of 't' is not a constant expression}}
+#if __cplusplus <= 199711L
+    // expected-error@-2 {{not an integral constant expression}}
+#else
+    // expected-error@-4 {{case value is not a constant expression}}
+#endif
   }
 }
 
@@ -48,7 +62,10 @@ void pr6373(const unsigned x = 0) {
 namespace rdar9204520 {
   
 struct A {
-  static const int B = int(0.75 * 1000 * 1000); // expected-warning {{not a constant expression; folding it to a constant is a GNU extension}}
+  static const int B = int(0.75 * 1000 * 1000);
+#if __cplusplus <= 199711L
+  // expected-warning@-2 {{not a constant expression; folding it to a constant is a GNU extension}}
+#endif
 };
 
 int foo() { return A::B; }
@@ -59,10 +76,24 @@ const int x = 10;
 int* y = reinterpret_cast<const char&>(x); // expected-error {{cannot initialize}}
 
 // This isn't an integral constant expression, but make sure it folds anyway.
-struct PR8836 { char _; long long a; }; // expected-warning {{long long}}
-int PR8836test[(__typeof(sizeof(int)))&reinterpret_cast<const volatile char&>((((PR8836*)0)->a))]; // expected-warning {{folded to constant array as an extension}} expected-note {{cast that performs the conversions of a reinterpret_cast is not allowed in a constant expression}}
+struct PR8836 { char _; long long a; };
+#if __cplusplus <= 199711L
+// expected-warning@-2 {{'long long' is a C++11 extension}}
+#endif
 
-const int nonconst = 1.0; // expected-note {{declared here}}
-int arr[nonconst]; // expected-warning {{folded to constant array as an extension}} expected-note {{initializer of 'nonconst' is not a constant expression}}
+int PR8836test[(__typeof(sizeof(int)))&reinterpret_cast<const volatile char&>((((PR8836*)0)->a))];
+// expected-warning@-1 {{folded to constant array as an extension}}
+// expected-note@-2 {{cast that performs the conversions of a reinterpret_cast is not allowed in a constant expression}}
+
+const int nonconst = 1.0;
+#if __cplusplus <= 199711L
+// expected-note@-2 {{declared here}}
+#endif
+int arr[nonconst];
+#if __cplusplus <= 199711L
+// expected-warning@-2 {{folded to constant array as an extension}}
+// expected-note@-3 {{initializer of 'nonconst' is not a constant expression}}
+#endif
+
 const int castfloat = static_cast<int>(1.0);
 int arr2[castfloat]; // ok

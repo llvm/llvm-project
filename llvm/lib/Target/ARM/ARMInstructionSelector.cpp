@@ -189,36 +189,39 @@ static unsigned selectSimpleExtOpc(unsigned Opc, unsigned Size) {
   return Opc;
 }
 
-/// Select the opcode for simple loads. For types smaller than 32 bits, the
-/// value will be zero extended. Returns G_LOAD if it doesn't know how to select
-/// an opcode.
-static unsigned selectLoadOpCode(unsigned RegBank, unsigned Size) {
+/// Select the opcode for simple loads and stores. For types smaller than 32
+/// bits, the value will be zero extended. Returns the original opcode if it
+/// doesn't know how to select a better one.
+static unsigned selectLoadStoreOpCode(unsigned Opc, unsigned RegBank,
+                                      unsigned Size) {
+  bool isStore = Opc == TargetOpcode::G_STORE;
+
   if (RegBank == ARM::GPRRegBankID) {
     switch (Size) {
     case 1:
     case 8:
-      return ARM::LDRBi12;
+      return isStore ? ARM::STRBi12 : ARM::LDRBi12;
     case 16:
-      return ARM::LDRH;
+      return isStore ? ARM::STRH : ARM::LDRH;
     case 32:
-      return ARM::LDRi12;
+      return isStore ? ARM::STRi12 : ARM::LDRi12;
     default:
-      return TargetOpcode::G_LOAD;
+      return Opc;
     }
   }
 
   if (RegBank == ARM::FPRRegBankID) {
     switch (Size) {
     case 32:
-      return ARM::VLDRS;
+      return isStore ? ARM::VSTRS : ARM::VLDRS;
     case 64:
-      return ARM::VLDRD;
+      return isStore ? ARM::VSTRD : ARM::VLDRD;
     default:
-      return TargetOpcode::G_LOAD;
+      return Opc;
     }
   }
 
-  return TargetOpcode::G_LOAD;
+  return Opc;
 }
 
 bool ARMInstructionSelector::select(MachineInstr &I) const {
@@ -309,6 +312,7 @@ bool ARMInstructionSelector::select(MachineInstr &I) const {
     I.setDesc(TII.get(ARM::ADDri));
     MIB.addImm(0).add(predOps(ARMCC::AL)).add(condCodeOp());
     break;
+  case G_STORE:
   case G_LOAD: {
     const auto &MemOp = **I.memoperands_begin();
     if (MemOp.getOrdering() != AtomicOrdering::NotAtomic) {
@@ -323,15 +327,15 @@ bool ARMInstructionSelector::select(MachineInstr &I) const {
     const auto ValSize = ValTy.getSizeInBits();
 
     assert((ValSize != 64 || TII.getSubtarget().hasVFP2()) &&
-           "Don't know how to load 64-bit value without VFP");
+           "Don't know how to load/store 64-bit value without VFP");
 
-    const auto NewOpc = selectLoadOpCode(RegBank, ValSize);
-    if (NewOpc == G_LOAD)
+    const auto NewOpc = selectLoadStoreOpCode(I.getOpcode(), RegBank, ValSize);
+    if (NewOpc == G_LOAD || NewOpc == G_STORE)
       return false;
 
     I.setDesc(TII.get(NewOpc));
 
-    if (NewOpc == ARM::LDRH)
+    if (NewOpc == ARM::LDRH || NewOpc == ARM::STRH)
       // LDRH has a funny addressing mode (there's already a FIXME for it).
       MIB.addReg(0);
     MIB.addImm(0).add(predOps(ARMCC::AL));

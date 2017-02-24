@@ -151,7 +151,7 @@ body:             |
     %2(s16) = G_LOAD %0 :: (load 2)
     %3(s8)  = G_LOAD %0 :: (load 1)
     %4(s1)  = G_LOAD %0 :: (load 1)
-    %5(p0)  = G_LOAD %0 :: (load 8)
+    %5(p0)  = G_LOAD %0 :: (load 4)
     BX_RET 14, _, implicit %r0
 
 ...
@@ -191,7 +191,7 @@ body:             |
     %4(s1) = COPY %r4
     G_STORE %4(s1), %0 :: (store 1)
     %5(p0) = COPY %r5
-    G_STORE %5(p0), %0 :: (store 8)
+    G_STORE %5(p0), %0 :: (store 4)
     %6(s64) = COPY %d6
     G_STORE %6(s64), %0 :: (store 8)
     BX_RET 14, _, implicit %r0

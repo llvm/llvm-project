@@ -769,7 +769,7 @@ template <class ELFT>
 typename MipsGotSection<ELFT>::uintX_t
 MipsGotSection<ELFT>::getPageEntryOffset(const SymbolBody &B,
                                          int64_t Addend) const {
-  const OutputSectionBase *OutSec =
+  const OutputSection *OutSec =
       cast<DefinedRegular<ELFT>>(&B)
           ->Section->template getOutputSection<ELFT>();
   uintX_t SecAddr = getMipsPageAddr(OutSec->Addr);
@@ -827,7 +827,7 @@ unsigned MipsGotSection<ELFT>::getLocalEntriesNum() const {
 
 template <class ELFT> void MipsGotSection<ELFT>::finalize() {
   PageEntriesNum = 0;
-  for (std::pair<const OutputSectionBase *, size_t> &P : PageIndexMap) {
+  for (std::pair<const OutputSection *, size_t> &P : PageIndexMap) {
     // For each output section referenced by GOT page relocations calculate
     // and save into PageIndexMap an upper bound of MIPS GOT entries required
     // to store page addresses of local symbols. We assume the worst case -
@@ -877,7 +877,7 @@ template <class ELFT> void MipsGotSection<ELFT>::writeTo(uint8_t *Buf) {
   P[1] = uintX_t(1) << (ELFT::Is64Bits ? 63 : 31);
   Buf += HeaderEntriesNum * sizeof(uintX_t);
   // Write 'page address' entries to the local part of the GOT.
-  for (std::pair<const OutputSectionBase *, size_t> &L : PageIndexMap) {
+  for (std::pair<const OutputSection *, size_t> &L : PageIndexMap) {
     size_t PageCount = getMipsPageCount(L.first->Size);
     uintX_t FirstPageAddr = getMipsPageAddr(L.first->Addr);
     for (size_t PI = 0; PI < PageCount; ++PI) {
@@ -1381,7 +1381,7 @@ void SymbolTableSection<ELFT>::writeLocalSymbols(uint8_t *&Buf) {
       ESym->st_shndx = SHN_ABS;
       ESym->st_value = Body.Value;
     } else {
-      const OutputSectionBase *OutSec = Section->getOutputSection<ELFT>();
+      const OutputSection *OutSec = Section->getOutputSection<ELFT>();
       ESym->st_shndx = OutSec->SectionIndex;
       ESym->st_value = OutSec->Addr + Section->getOffset(Body);
     }
@@ -1412,7 +1412,7 @@ void SymbolTableSection<ELFT>::writeGlobalSymbols(uint8_t *Buf) {
     ESym->setVisibility(Body->symbol()->Visibility);
     ESym->st_value = Body->getVA<ELFT>();
 
-    if (const OutputSectionBase *OutSec = getOutputSection(Body)) {
+    if (const OutputSection *OutSec = getOutputSection(Body)) {
       ESym->st_shndx = OutSec->SectionIndex;
     } else if (isa<DefinedRegular<ELFT>>(Body)) {
       ESym->st_shndx = SHN_ABS;
@@ -1439,7 +1439,7 @@ void SymbolTableSection<ELFT>::writeGlobalSymbols(uint8_t *Buf) {
 }
 
 template <class ELFT>
-const OutputSectionBase *
+const OutputSection *
 SymbolTableSection<ELFT>::getOutputSection(SymbolBody *Sym) {
   switch (Sym->kind()) {
   case SymbolBody::DefinedSyntheticKind:
@@ -2173,7 +2173,7 @@ ARMExidxSentinelSection<ELFT>::ARMExidxSentinelSection()
 template <class ELFT>
 void ARMExidxSentinelSection<ELFT>::writeTo(uint8_t *Buf) {
   // Get the InputSection before us, we are by definition last
-  auto RI = cast<OutputSection<ELFT>>(this->OutSec)->Sections.rbegin();
+  auto RI = cast<OutputSection>(this->OutSec)->Sections.rbegin();
   InputSection *LE = *(++RI);
   InputSection *LC = cast<InputSection>(LE->template getLinkOrderDep<ELFT>());
   uint64_t S = LC->OutSec->Addr +
@@ -2184,7 +2184,7 @@ void ARMExidxSentinelSection<ELFT>::writeTo(uint8_t *Buf) {
 }
 
 template <class ELFT>
-ThunkSection<ELFT>::ThunkSection(OutputSectionBase *OS, uint64_t Off)
+ThunkSection<ELFT>::ThunkSection(OutputSection *OS, uint64_t Off)
     : SyntheticSection<ELFT>(SHF_ALLOC | SHF_EXECINSTR, SHT_PROGBITS,
                              sizeof(typename ELFT::uint), ".text.thunk") {
   this->OutSec = OS;
