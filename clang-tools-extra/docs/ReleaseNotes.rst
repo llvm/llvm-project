@@ -1,18 +1,12 @@
-===================================================
-Extra Clang Tools 4.0.0 (In-Progress) Release Notes
-===================================================
+=====================================
+Extra Clang Tools 4.0.0 Release Notes
+=====================================
 
 .. contents::
    :local:
    :depth: 3
 
 Written by the `LLVM Team <http://llvm.org/>`_
-
-.. warning::
-
-   These are in-progress notes for the upcoming Extra Clang Tools 4.0 release.
-   You may prefer the `Extra Clang Tools 3.9 Release Notes
-   <http://llvm.org/releases/3.9.0/tools/clang/tools/extra/docs/ReleaseNotes.html>`_.
 
 Introduction
 ============
