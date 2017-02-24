@@ -60,8 +60,6 @@ Major New Features
        }
 
 
--  ...
-
 Improvements to ThinLTO (-flto=thin)
 ------------------------------------
 - Integration with profile data (PGO). When available, profile data enables
@@ -73,12 +71,12 @@ Improvements to ThinLTO (-flto=thin)
 New Compiler Flags
 ------------------
 
-The option -Og has been added to optimize the debugging experience.
-For now, this option is exactly the same as -O1. However, in the future,
-some other optimizations might be enabled or disabled.
+- The option ``-Og`` has been added to optimize the debugging experience.
+  For now, this option is exactly the same as ``-O1``. However, in the future,
+  some other optimizations might be enabled or disabled.
 
-The option -MJ has been added to simplify adding JSON compilation
-database output into existing build systems.
+- The option ``-MJ`` has been added to simplify adding JSON compilation
+  database output into existing build systems.
 
 
 OpenCL C Language Changes in Clang
@@ -151,21 +149,14 @@ OpenCL C Language Changes in Clang
   which is now handled as a compiler builtin function with an integer value
   passed into it.
 * Change fake address space map to use the SPIR convention.
-* Added `the OpenCL manual
-  <https://clang.llvm.org/docs/UsersManual.html#opencl-features>`_ to Clang
+* Added `the OpenCL manual <UsersManual.html#opencl-features>`_ to Clang
   documentation.
-
-libclang
---------
-
-With the option --show-description, scan-build's list of defects will also
-show the description of the defects.
 
 
 Static Analyzer
 ---------------
 
-With the option --show-description, scan-build's list of defects will also
+With the option ``--show-description``, scan-build's list of defects will also
 show the description of the defects.
 
 The analyzer now provides better support of code that uses gtest.
@@ -174,16 +165,16 @@ Several new checks were added:
 
 - The analyzer warns when virtual calls are made from constructors or
   destructors. This check is off by default but can be enabled by passing the
-  following command to scan-build: -enable-checker optin.cplusplus.VirtualCall.
+  following command to scan-build: ``-enable-checker optin.cplusplus.VirtualCall``.
 - The analyzer checks for synthesized copy properties of mutable types in
-  Objective C, such as NSMutableArray. Calling the setter for these properties
+  Objective C, such as ``NSMutableArray``. Calling the setter for these properties
   will store an immutable copy of the value.
-- The analyzer checks for calls to dispatch_once() that use an Objective-C
+- The analyzer checks for calls to ``dispatch_once()`` that use an Objective-C
   instance variable as the predicate. Using an instance variable as a predicate
   may result in the passed-in block being executed multiple times or not at all.
   These calls should be rewritten either to use a lock or to store the predicate
   in a global or static variable.
-- The analyzer checks for unintended comparisons of NSNumber, CFNumberRef, and
+- The analyzer checks for unintended comparisons of ``NSNumber``, ``CFNumberRef``, and
   other Cocoa number objects to scalar values.
 
 
