@@ -1,4 +1,4 @@
-# RUN: llc -O0 -run-pass=avr-expand-pseudo %s -o - 2>&1 | FileCheck %s
+# RUN: llc -O0 -run-pass=avr-expand-pseudo %s -o - | FileCheck %s
 
 # TODO: Write this test.
 # This instruction isn't expanded by the pseudo expansion passs, but

@@ -1,4 +1,6 @@
 ; RUN: opt < %s -loop-vectorize -S -pass-remarks-missed='loop-vectorize' -pass-remarks-analysis='loop-vectorize' 2>&1 | FileCheck %s
+; RUN: opt < %s -loop-vectorize -o /dev/null -pass-remarks-output=%t.yaml
+; RUN: cat %t.yaml | FileCheck -check-prefix=YAML %s
 
 ; C/C++ code for tests
 ; void test(int *A, int Length) {
@@ -41,6 +43,61 @@
 ; CHECK: _Z17test_array_boundsPiS_i
 ; CHECK-NOT: x i32>
 ; CHECK: ret
+
+; YAML:       --- !Analysis
+; YAML-NEXT: Pass:            loop-vectorize
+; YAML-NEXT: Name:            CantComputeNumberOfIterations
+; YAML-NEXT: DebugLoc:        { File: source.cpp, Line: 4, Column: 5 }
+; YAML-NEXT: Function:        _Z4testPii
+; YAML-NEXT: Args:
+; YAML-NEXT:   - String:          'loop not vectorized: '
+; YAML-NEXT:   - String:          could not determine number of loop iterations
+; YAML-NEXT: ...
+; YAML-NEXT: --- !Missed
+; YAML-NEXT: Pass:            loop-vectorize
+; YAML-NEXT: Name:            MissedDetails
+; YAML-NEXT: DebugLoc:        { File: source.cpp, Line: 4, Column: 5 }
+; YAML-NEXT: Function:        _Z4testPii
+; YAML-NEXT: Args:
+; YAML-NEXT:   - String:          loop not vectorized
+; YAML-NEXT: ...
+; YAML-NEXT: --- !Analysis
+; YAML-NEXT: Pass:            loop-vectorize
+; YAML-NEXT: Name:            AllDisabled
+; YAML-NEXT: DebugLoc:        { File: source.cpp, Line: 13, Column: 5 }
+; YAML-NEXT: Function:        _Z13test_disabledPii
+; YAML-NEXT: Args:
+; YAML-NEXT:   - String:          'loop not vectorized: vectorization and interleaving are explicitly disabled, or vectorize width and interleave count are both set to 1'
+; YAML-NEXT: ...
+; YAML-NEXT: --- !Analysis
+; YAML-NEXT: Pass:            ''
+; YAML-NEXT: Name:            CantIdentifyArrayBounds
+; YAML-NEXT: DebugLoc:        { File: source.cpp, Line: 19, Column: 5 }
+; YAML-NEXT: Function:        _Z17test_array_boundsPiS_i
+; YAML-NEXT: Args:
+; YAML-NEXT:   - String:          'loop not vectorized: '
+; YAML-NEXT:   - String:          cannot identify array bounds
+; YAML-NEXT: ...
+; YAML-NEXT: --- !Missed
+; YAML-NEXT: Pass:            loop-vectorize
+; YAML-NEXT: Name:            MissedDetails
+; YAML-NEXT: DebugLoc:        { File: source.cpp, Line: 19, Column: 5 }
+; YAML-NEXT: Function:        _Z17test_array_boundsPiS_i
+; YAML-NEXT: Args:
+; YAML-NEXT:   - String:          loop not vectorized
+; YAML-NEXT:   - String:          ' (Force='
+; YAML-NEXT:   - Force:           'true'
+; YAML-NEXT:   - String:          ')'
+; YAML-NEXT: ...
+; YAML-NEXT: --- !Failure
+; YAML-NEXT: Pass:            loop-vectorize
+; YAML-NEXT: Name:            FailedRequestedVectorization
+; YAML-NEXT: DebugLoc:        { File: source.cpp, Line: 19, Column: 5 }
+; YAML-NEXT: Function:        _Z17test_array_boundsPiS_i
+; YAML-NEXT: Args:
+; YAML-NEXT:   - String:          'loop not vectorized: '
+; YAML-NEXT:   - String:          failed explicitly specified loop vectorization
+; YAML-NEXT: ...
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 

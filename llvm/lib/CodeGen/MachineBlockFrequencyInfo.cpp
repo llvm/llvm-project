@@ -127,10 +127,9 @@ void MachineBlockFrequencyInfo::getAnalysisUsage(AnalysisUsage &AU) const {
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
-bool MachineBlockFrequencyInfo::runOnMachineFunction(MachineFunction &F) {
-  MachineBranchProbabilityInfo &MBPI =
-      getAnalysis<MachineBranchProbabilityInfo>();
-  MachineLoopInfo &MLI = getAnalysis<MachineLoopInfo>();
+void MachineBlockFrequencyInfo::calculate(
+    const MachineFunction &F, const MachineBranchProbabilityInfo &MBPI,
+    const MachineLoopInfo &MLI) {
   if (!MBFI)
     MBFI.reset(new ImplType);
   MBFI->calculate(F, MBPI, MLI);
@@ -141,6 +140,13 @@ bool MachineBlockFrequencyInfo::runOnMachineFunction(MachineFunction &F) {
     view();
   }
 #endif
+}
+
+bool MachineBlockFrequencyInfo::runOnMachineFunction(MachineFunction &F) {
+  MachineBranchProbabilityInfo &MBPI =
+      getAnalysis<MachineBranchProbabilityInfo>();
+  MachineLoopInfo &MLI = getAnalysis<MachineLoopInfo>();
+  calculate(F, MBPI, MLI);
   return false;
 }
 

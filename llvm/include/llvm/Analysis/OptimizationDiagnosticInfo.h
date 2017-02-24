@@ -38,7 +38,7 @@ class Value;
 /// enabled in the LLVM context.
 class OptimizationRemarkEmitter {
 public:
-  OptimizationRemarkEmitter(Function *F, BlockFrequencyInfo *BFI)
+  OptimizationRemarkEmitter(const Function *F, BlockFrequencyInfo *BFI)
       : F(F), BFI(BFI) {}
 
   /// \brief This variant can be used to generate ORE on demand (without the
@@ -52,7 +52,7 @@ public:
   /// operation since BFI and all its required analyses are computed.  This is
   /// for example useful for CGSCC passes that can't use function analyses
   /// passes in the old PM.
-  OptimizationRemarkEmitter(Function *F);
+  OptimizationRemarkEmitter(const Function *F);
 
   OptimizationRemarkEmitter(OptimizationRemarkEmitter &&Arg)
       : F(Arg.F), BFI(Arg.BFI) {}
@@ -63,7 +63,11 @@ public:
     return *this;
   }
 
-  /// The new interface to emit remarks.
+  /// \brief Output the remark via the diagnostic handler and to the
+  /// optimization record file.
+  ///
+  /// This is the new interface that should be now used rather than the legacy
+  /// emit* APIs.
   void emit(DiagnosticInfoOptimizationBase &OptDiag);
 
   /// Emit an optimization-applied message.
@@ -208,7 +212,7 @@ public:
   }
 
 private:
-  Function *F;
+  const Function *F;
 
   BlockFrequencyInfo *BFI;
 
@@ -220,7 +224,7 @@ private:
   Optional<uint64_t> computeHotness(const Value *V);
 
   /// Similar but use value from \p OptDiag and update hotness there.
-  void computeHotness(DiagnosticInfoOptimizationBase &OptDiag);
+  void computeHotness(DiagnosticInfoIROptimization &OptDiag);
 
   /// \brief Only allow verbose messages if we know we're filtering by hotness
   /// (BFI is only set in this case).
@@ -274,5 +278,11 @@ public:
   /// \brief Run the analysis pass over a function and produce BFI.
   Result run(Function &F, FunctionAnalysisManager &AM);
 };
+
+namespace yaml {
+template <> struct MappingTraits<DiagnosticInfoOptimizationBase *> {
+  static void mapping(IO &io, DiagnosticInfoOptimizationBase *&OptDiag);
+};
+}
 }
 #endif // LLVM_IR_OPTIMIZATIONDIAGNOSTICINFO_H

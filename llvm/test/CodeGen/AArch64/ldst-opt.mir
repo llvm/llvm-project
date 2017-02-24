@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=aarch64--linux-gnu -run-pass=aarch64-ldst-opt %s -verify-machineinstrs -o - 2>&1 | FileCheck %s
+# RUN: llc -mtriple=aarch64--linux-gnu -run-pass=aarch64-ldst-opt %s -verify-machineinstrs -o - | FileCheck %s
 ---
 name: promote-load-from-store
 tracksRegLiveness: true

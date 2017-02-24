@@ -1,4 +1,4 @@
-# RUN: llc -O0 %s -o - 2>&1 -march=avr | FileCheck %s
+# RUN: llc -O0 %s -o - -march=avr | FileCheck %s
 
 # This test ensures that the pseudo expander can correctly handle the case
 # where we are expanding a 16-bit LDD instruction where the source and
