@@ -1048,8 +1048,7 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
   SmallVector<unsigned, 8> VRegArgs;
   for (const Argument &Arg: F.args())
     VRegArgs.push_back(getOrCreateVReg(Arg));
-  bool Succeeded = CLI->lowerFormalArguments(EntryBuilder, F, VRegArgs);
-  if (!Succeeded) {
+  if (!CLI->lowerFormalArguments(EntryBuilder, F, VRegArgs)) {
     OptimizationRemarkMissed R("gisel-irtranslator", "GISelFailure", DebugLoc(),
                                &MF->getFunction()->getEntryBlock());
     R << "unable to lower arguments: " << ore::NV("Prototype", F.getType());
@@ -1065,19 +1064,19 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
     CurBuilder.setMBB(MBB);
 
     for (const Instruction &Inst: BB) {
-      Succeeded &= translate(Inst);
-      if (!Succeeded) {
-        std::string InstStrStorage;
-        raw_string_ostream InstStr(InstStrStorage);
-        InstStr << Inst;
+      if (translate(Inst))
+        continue;
 
-        OptimizationRemarkMissed R("gisel-irtranslator", "IRTranslatorFailure: ",
-                                   &Inst);
-        R << "unable to translate instruction: " << ore::NV("Opcode", &Inst)
-          << ": '" << InstStr.str() << "'";
-        reportTranslationError(*MF, *TPC, *ORE, R);
-        return false;
-      }
+      std::string InstStrStorage;
+      raw_string_ostream InstStr(InstStrStorage);
+      InstStr << Inst;
+
+      OptimizationRemarkMissed R("gisel-irtranslator", "IRTranslatorFailure: ",
+                                 &Inst);
+      R << "unable to translate instruction: " << ore::NV("Opcode", &Inst)
+        << ": '" << InstStr.str() << "'";
+      reportTranslationError(*MF, *TPC, *ORE, R);
+      return false;
     }
   }
 
