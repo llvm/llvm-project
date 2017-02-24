@@ -60,8 +60,7 @@ static bool extractConstantMask(const Constant *C, unsigned MaskEltSizeInBits,
     unsigned BitOffset = i * CstEltSizeInBits;
 
     if (isa<UndefValue>(COp)) {
-      unsigned HiBits = BitOffset + CstEltSizeInBits;
-      UndefBits |= APInt::getBitsSet(CstSizeInBits, BitOffset, HiBits);
+      UndefBits.setBits(BitOffset, BitOffset + CstEltSizeInBits);
       continue;
     }
 

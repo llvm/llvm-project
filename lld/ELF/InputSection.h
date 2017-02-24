@@ -248,7 +248,10 @@ public:
   EhFrameSection<ELFT> *EHSec = nullptr;
 };
 
-// This corresponds to a non SHF_MERGE section of an input file.
+// This is a section that is added directly to an output section
+// instead of needing special combination via a synthetic section. This
+// includes all input sections with the exceptions of SHF_MERGE and
+// .eh_frame. It also includes the synthetic sections themselves.
 class InputSection : public InputSectionBase {
 public:
   InputSection();

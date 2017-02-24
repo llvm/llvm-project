@@ -145,3 +145,8 @@ WebAssemblyRegStackify could be extended, or possibly rewritten, to take
 advantage of the new opportunities.
 
 //===---------------------------------------------------------------------===//
+
+Add support for mergeable sections in the Wasm writer, such as for strings and
+floating-point constants.
+
+//===---------------------------------------------------------------------===//

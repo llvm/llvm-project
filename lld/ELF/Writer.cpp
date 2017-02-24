@@ -1138,7 +1138,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   // This is a bit of a hack. A value of 0 means undef, so we set it
   // to 1 t make __ehdr_start defined. The section number is not
   // particularly relevant.
-  Out<ELFT>::ProgramHeaders->SectionIndex = 1;
+  Out<ELFT>::ElfHeader->SectionIndex = 1;
 
   unsigned I = 1;
   for (OutputSectionBase *Sec : OutputSections) {

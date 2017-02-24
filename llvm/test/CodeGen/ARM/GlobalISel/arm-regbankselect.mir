@@ -6,6 +6,7 @@
   define void @test_add_s1() { ret void }
 
   define void @test_loads() #0 { ret void }
+  define void @test_stores() #0 { ret void }
 
   define void @test_fadd_s32() #0 { ret void }
   define void @test_fadd_s64() #0 { ret void }
@@ -151,6 +152,48 @@ body:             |
     %3(s8)  = G_LOAD %0 :: (load 1)
     %4(s1)  = G_LOAD %0 :: (load 1)
     %5(p0)  = G_LOAD %0 :: (load 8)
+    BX_RET 14, _, implicit %r0
+
+...
+---
+name:            test_stores
+# CHECK-LABEL: name: test_stores
+legalized:       true
+regBankSelected: false
+selected:        false
+# CHECK: registers:
+# CHECK: - { id: 0, class: gprb }
+# CHECK: - { id: 1, class: gprb }
+# CHECK: - { id: 2, class: gprb }
+# CHECK: - { id: 3, class: gprb }
+# CHECK: - { id: 4, class: gprb }
+# CHECK: - { id: 5, class: gprb }
+# CHECK: - { id: 6, class: fprb }
+
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+  - { id: 3, class: _ }
+  - { id: 4, class: _ }
+  - { id: 5, class: _ }
+  - { id: 6, class: _ }
+body:             |
+  bb.0:
+    liveins: %r0, %r1, %r2, %r3, %r4, %r5, %d6
+    %0(p0) = COPY %r0
+    %1(s32) = COPY %r1
+    G_STORE %1(s32), %0 :: (store 4)
+    %2(s16) = COPY %r2
+    G_STORE %2(s16), %0 :: (store 2)
+    %3(s8) = COPY %r3
+    G_STORE %3(s8), %0 :: (store 1)
+    %4(s1) = COPY %r4
+    G_STORE %4(s1), %0 :: (store 1)
+    %5(p0) = COPY %r5
+    G_STORE %5(p0), %0 :: (store 8)
+    %6(s64) = COPY %d6
+    G_STORE %6(s64), %0 :: (store 8)
     BX_RET 14, _, implicit %r0
 
 ...

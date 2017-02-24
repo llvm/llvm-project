@@ -1239,6 +1239,9 @@ public:
   /// Set the given bit to 1 whose position is given as "bitPosition".
   void setBit(unsigned bitPosition);
 
+  /// Set the bits from loBit (inclusive) to hiBit (exclusive) to 1.
+  void setBits(unsigned loBit, unsigned hiBit);
+
   /// \brief Set every bit to 0.
   void clearAllBits() {
     if (isSingleWord())

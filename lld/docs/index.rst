@@ -141,3 +141,5 @@ document soon.
 
    NewLLD
    AtomLLD
+   windows_support
+   ReleaseNotes

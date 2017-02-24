@@ -11,7 +11,7 @@
 # CHECK-NEXT:    Other [ (0x2)
 # CHECK-NEXT:      STV_HIDDEN (0x2)
 # CHECK-NEXT:    ]
-# CHECK-NEXT:    Section: Undefined (0x0)
+# CHECK-NEXT:    Section: .text (0x1)
 
 .text
 .global _start, __ehdr_start
