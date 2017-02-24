@@ -412,15 +412,6 @@ bool TargetRegisterInfo::regmaskSubsetEqual(const uint32_t *mask0,
   return true;
 }
 
-/// Get the weight in units of pressure for a sub register of this register
-/// unit given a lane mask.
-unsigned TargetRegisterInfo::getRegUnitWeight(const MachineRegisterInfo &MRI,
-                                              unsigned RegUnit,
-                                              LaneBitmask LaneMask) const {
-  PSetIterator PSetI = MRI.getPressureSets(RegUnit);
-  return PSetI.getWeight();
-}
-
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD
 void TargetRegisterInfo::dumpReg(unsigned Reg, unsigned SubRegIndex,

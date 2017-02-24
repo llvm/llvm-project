@@ -213,6 +213,7 @@ public:
   bool addInstSelector() override;
   void addPreEmitPass() override;
   void addPreRegAlloc() override;
+  void addPreSched2() override;
 };
 
 } // end anonymous namespace
@@ -269,4 +270,8 @@ void MipsPassConfig::addPreEmitPass() {
   addPass(createMipsHazardSchedule());
   addPass(createMipsLongBranchPass(TM));
   addPass(createMipsConstantIslandPass());
+}
+
+void MipsPassConfig::addPreSched2() {
+  addPass(createMipsExpandPseudoPass());
 }

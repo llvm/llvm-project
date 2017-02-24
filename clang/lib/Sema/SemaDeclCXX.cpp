@@ -6371,16 +6371,40 @@ struct SpecialMemberVisitor {
   Sema::CXXSpecialMember CSM;
   Sema::InheritedConstructorInfo *ICI;
 
-  bool ConstArg = false;
+  // Properties of the special member, computed for convenience.
+  bool IsConstructor = false, IsAssignment = false, ConstArg = false;
 
   SpecialMemberVisitor(Sema &S, CXXMethodDecl *MD, Sema::CXXSpecialMember CSM,
                        Sema::InheritedConstructorInfo *ICI)
       : S(S), MD(MD), CSM(CSM), ICI(ICI) {
+    switch (CSM) {
+    case Sema::CXXDefaultConstructor:
+    case Sema::CXXCopyConstructor:
+    case Sema::CXXMoveConstructor:
+      IsConstructor = true;
+      break;
+    case Sema::CXXCopyAssignment:
+    case Sema::CXXMoveAssignment:
+      IsAssignment = true;
+      break;
+    case Sema::CXXDestructor:
+      break;
+    case Sema::CXXInvalid:
+      llvm_unreachable("invalid special member kind");
+    }
+
     if (MD->getNumParams()) {
       if (const ReferenceType *RT =
               MD->getParamDecl(0)->getType()->getAs<ReferenceType>())
         ConstArg = RT->getPointeeType().isConstQualified();
     }
+  }
+
+  Derived &getDerived() { return static_cast<Derived&>(*this); }
+
+  /// Is this a "move" special member?
+  bool isMove() const {
+    return CSM == Sema::CXXMoveConstructor || CSM == Sema::CXXMoveAssignment;
   }
 
   /// Look up the corresponding special member in the given class.
@@ -6390,16 +6414,68 @@ struct SpecialMemberVisitor {
                                        ConstArg && !IsMutable);
   }
 
+  /// Look up the constructor for the specified base class to see if it's
+  /// overridden due to this being an inherited constructor.
+  Sema::SpecialMemberOverloadResult lookupInheritedCtor(CXXRecordDecl *Class) {
+    if (!ICI)
+      return {};
+    assert(CSM == Sema::CXXDefaultConstructor);
+    auto *BaseCtor =
+      cast<CXXConstructorDecl>(MD)->getInheritedConstructor().getConstructor();
+    if (auto *MD = ICI->findConstructorForBase(Class, BaseCtor).first)
+      return MD;
+    return {};
+  }
+
   /// A base or member subobject.
   typedef llvm::PointerUnion<CXXBaseSpecifier*, FieldDecl*> Subobject;
 
+  /// Get the location to use for a subobject in diagnostics.
   static SourceLocation getSubobjectLoc(Subobject Subobj) {
+    // FIXME: For an indirect virtual base, the direct base leading to
+    // the indirect virtual base would be a more useful choice.
     if (auto *B = Subobj.dyn_cast<CXXBaseSpecifier*>())
       return B->getBaseTypeLoc();
     else
       return Subobj.get<FieldDecl*>()->getLocation();
   }
 
+  enum BasesToVisit {
+    /// Visit all non-virtual (direct) bases.
+    VisitNonVirtualBases,
+    /// Visit all direct bases, virtual or not.
+    VisitDirectBases,
+    /// Visit all non-virtual bases, and all virtual bases if the class
+    /// is not abstract.
+    VisitPotentiallyConstructedBases,
+    /// Visit all direct or virtual bases.
+    VisitAllBases
+  };
+
+  // Visit the bases and members of the class.
+  bool visit(BasesToVisit Bases) {
+    CXXRecordDecl *RD = MD->getParent();
+
+    if (Bases == VisitPotentiallyConstructedBases)
+      Bases = RD->isAbstract() ? VisitNonVirtualBases : VisitAllBases;
+
+    for (auto &B : RD->bases())
+      if ((Bases == VisitDirectBases || !B.isVirtual()) &&
+          getDerived().visitBase(&B))
+        return true;
+
+    if (Bases == VisitAllBases)
+      for (auto &B : RD->vbases())
+        if (getDerived().visitBase(&B))
+          return true;
+
+    for (auto *F : RD->fields())
+      if (!F->isInvalidDecl() && !F->isUnnamedBitfield() &&
+          getDerived().visitField(F))
+        return true;
+
+    return false;
+  }
 };
 }
 
@@ -6408,8 +6484,6 @@ struct SpecialMemberDeletionInfo
     : SpecialMemberVisitor<SpecialMemberDeletionInfo> {
   bool Diagnose;
 
-  // Properties of the special member, computed for convenience.
-  bool IsConstructor, IsAssignment, IsMove;
   SourceLocation Loc;
 
   bool AllFieldsAreConst;
@@ -6418,36 +6492,16 @@ struct SpecialMemberDeletionInfo
                             Sema::CXXSpecialMember CSM,
                             Sema::InheritedConstructorInfo *ICI, bool Diagnose)
       : SpecialMemberVisitor(S, MD, CSM, ICI), Diagnose(Diagnose),
-        IsConstructor(false), IsAssignment(false), IsMove(false),
-        Loc(MD->getLocation()), AllFieldsAreConst(true) {
-    switch (CSM) {
-      case Sema::CXXDefaultConstructor:
-      case Sema::CXXCopyConstructor:
-        IsConstructor = true;
-        break;
-      case Sema::CXXMoveConstructor:
-        IsConstructor = true;
-        IsMove = true;
-        break;
-      case Sema::CXXCopyAssignment:
-        IsAssignment = true;
-        break;
-      case Sema::CXXMoveAssignment:
-        IsAssignment = true;
-        IsMove = true;
-        break;
-      case Sema::CXXDestructor:
-        break;
-      case Sema::CXXInvalid:
-        llvm_unreachable("invalid special member kind");
-    }
-  }
+        Loc(MD->getLocation()), AllFieldsAreConst(true) {}
 
   bool inUnion() const { return MD->getParent()->isUnion(); }
 
   Sema::CXXSpecialMember getEffectiveCSM() {
     return ICI ? Sema::CXXInvalid : CSM;
   }
+
+  bool visitBase(CXXBaseSpecifier *Base) { return shouldDeleteForBase(Base); }
+  bool visitField(FieldDecl *Field) { return shouldDeleteForField(Field); }
 
   bool shouldDeleteForBase(CXXBaseSpecifier *Base);
   bool shouldDeleteForField(FieldDecl *FD);
@@ -6585,23 +6639,20 @@ bool SpecialMemberDeletionInfo::shouldDeleteForBase(CXXBaseSpecifier *Base) {
     return false;
   // If we have an inheriting constructor, check whether we're calling an
   // inherited constructor instead of a default constructor.
-  if (ICI) {
-    assert(CSM == Sema::CXXDefaultConstructor);
-    auto *BaseCtor =
-        ICI->findConstructorForBase(BaseClass, cast<CXXConstructorDecl>(MD)
-                                                   ->getInheritedConstructor()
-                                                   .getConstructor())
-            .first;
-    if (BaseCtor) {
-      if (BaseCtor->isDeleted() && Diagnose) {
-        S.Diag(Base->getLocStart(),
-               diag::note_deleted_special_member_class_subobject)
-          << getEffectiveCSM() << MD->getParent() << /*IsField*/false
-          << Base->getType() << /*Deleted*/1 << /*IsDtorCallInCtor*/false;
-        S.NoteDeletedFunction(BaseCtor);
-      }
-      return BaseCtor->isDeleted();
+  Sema::SpecialMemberOverloadResult SMOR = lookupInheritedCtor(BaseClass);
+  if (auto *BaseCtor = SMOR.getMethod()) {
+    // Note that we do not check access along this path; other than that,
+    // this is the same as shouldDeleteForSubobjectCall(Base, BaseCtor, false);
+    // FIXME: Check that the base has a usable destructor! Sink this into
+    // shouldDeleteForClassSubobject.
+    if (BaseCtor->isDeleted() && Diagnose) {
+      S.Diag(Base->getLocStart(),
+             diag::note_deleted_special_member_class_subobject)
+        << getEffectiveCSM() << MD->getParent() << /*IsField*/false
+        << Base->getType() << /*Deleted*/1 << /*IsDtorCallInCtor*/false;
+      S.NoteDeletedFunction(BaseCtor);
     }
+    return BaseCtor->isDeleted();
   }
   return shouldDeleteForClassSubobject(BaseClass, Base, 0);
 }
@@ -6650,7 +6701,7 @@ bool SpecialMemberDeletionInfo::shouldDeleteForField(FieldDecl *FD) {
     if (FieldType->isReferenceType()) {
       if (Diagnose)
         S.Diag(FD->getLocation(), diag::note_deleted_assign_field)
-          << IsMove << MD->getParent() << FD << FieldType << /*Reference*/0;
+          << isMove() << MD->getParent() << FD << FieldType << /*Reference*/0;
       return true;
     }
     if (!FieldRecord && FieldType.isConstQualified()) {
@@ -6658,7 +6709,7 @@ bool SpecialMemberDeletionInfo::shouldDeleteForField(FieldDecl *FD) {
       // -- a non-static data member of const non-class type (or array thereof)
       if (Diagnose)
         S.Diag(FD->getLocation(), diag::note_deleted_assign_field)
-          << IsMove << MD->getParent() << FD << FD->getType() << /*Const*/1;
+          << isMove() << MD->getParent() << FD << FD->getType() << /*Const*/1;
       return true;
     }
   }
@@ -6829,24 +6880,13 @@ bool Sema::ShouldDeleteSpecialMember(CXXMethodDecl *MD, CXXSpecialMember CSM,
 
   SpecialMemberDeletionInfo SMI(*this, MD, CSM, ICI, Diagnose);
 
-  for (auto &BI : RD->bases())
-    if ((SMI.IsAssignment || !BI.isVirtual()) &&
-        SMI.shouldDeleteForBase(&BI))
-      return true;
-
   // Per DR1611, do not consider virtual bases of constructors of abstract
   // classes, since we are not going to construct them. For assignment
   // operators, we only assign (and thus only consider) direct bases.
-  if ((!RD->isAbstract() || !SMI.IsConstructor) && !SMI.IsAssignment) {
-    for (auto &BI : RD->vbases())
-      if (SMI.shouldDeleteForBase(&BI))
-        return true;
-  }
-
-  for (auto *FI : RD->fields())
-    if (!FI->isInvalidDecl() && !FI->isUnnamedBitfield() &&
-        SMI.shouldDeleteForField(FI))
-      return true;
+  if (SMI.visit(SMI.IsConstructor ? SMI.VisitPotentiallyConstructedBases :
+                SMI.IsAssignment  ? SMI.VisitDirectBases :
+                                    SMI.VisitAllBases))
+    return true;
 
   if (SMI.shouldDeleteForAllConstMembers())
     return true;
@@ -10068,8 +10108,8 @@ struct SpecialMemberExceptionSpecInfo
                                  SourceLocation Loc)
       : SpecialMemberVisitor(S, MD, CSM, ICI), Loc(Loc), ExceptSpec(S) {}
 
-  void visitBase(CXXBaseSpecifier *Base);
-  void visitField(FieldDecl *FD);
+  bool visitBase(CXXBaseSpecifier *Base);
+  bool visitField(FieldDecl *FD);
 
   void visitClassSubobject(CXXRecordDecl *Class, Subobject Subobj,
                            unsigned Quals);
@@ -10079,26 +10119,23 @@ struct SpecialMemberExceptionSpecInfo
 };
 }
 
-void SpecialMemberExceptionSpecInfo::visitBase(CXXBaseSpecifier *Base) {
+bool SpecialMemberExceptionSpecInfo::visitBase(CXXBaseSpecifier *Base) {
   auto *RT = Base->getType()->getAs<RecordType>();
   if (!RT)
-    return;
+    return false;
 
   auto *BaseClass = cast<CXXRecordDecl>(RT->getDecl());
-  if (ICI) {
-    assert(CSM == Sema::CXXDefaultConstructor);
-    if (auto *BaseCtor = ICI->findConstructorForBase(
-                                BaseClass, cast<CXXConstructorDecl>(MD)
-                                               ->getInheritedConstructor()
-                                               .getConstructor())
-                             .first)
-      return visitSubobjectCall(Base, BaseCtor);
+  Sema::SpecialMemberOverloadResult SMOR = lookupInheritedCtor(BaseClass);
+  if (auto *BaseCtor = SMOR.getMethod()) {
+    visitSubobjectCall(Base, BaseCtor);
+    return false;
   }
 
   visitClassSubobject(BaseClass, Base, 0);
+  return false;
 }
 
-void SpecialMemberExceptionSpecInfo::visitField(FieldDecl *FD) {
+bool SpecialMemberExceptionSpecInfo::visitField(FieldDecl *FD) {
   if (CSM == Sema::CXXDefaultConstructor && FD->hasInClassInitializer()) {
     Expr *E = FD->getInClassInitializer();
     if (!E)
@@ -10115,6 +10152,7 @@ void SpecialMemberExceptionSpecInfo::visitField(FieldDecl *FD) {
     visitClassSubobject(cast<CXXRecordDecl>(RT->getDecl()), FD,
                         FD->getType().getCVRQualifiers());
   }
+  return false;
 }
 
 void SpecialMemberExceptionSpecInfo::visitClassSubobject(CXXRecordDecl *Class,
@@ -10146,19 +10184,23 @@ ComputeDefaultedSpecialMemberExceptionSpec(
   if (ClassDecl->isInvalidDecl())
     return Info.ExceptSpec;
 
-  // Direct base-class constructors.
-  for (auto &B : ClassDecl->bases())
-    if (!B.isVirtual()) // Handled below.
-      Info.visitBase(&B);
-
-  // Virtual base-class constructors.
-  // FIXME: Implement potentially-constructed subobjects rule.
-  for (auto &B : ClassDecl->vbases())
-    Info.visitBase(&B);
-
-  // Field constructors.
-  for (auto *F : ClassDecl->fields())
-    Info.visitField(F);
+  // C++1z [except.spec]p7:
+  //   [Look for exceptions thrown by] a constructor selected [...] to
+  //   initialize a potentially constructed subobject,
+  // C++1z [except.spec]p8:
+  //   The exception specification for an implicitly-declared destructor, or a
+  //   destructor without a noexcept-specifier, is potentially-throwing if and
+  //   only if any of the destructors for any of its potentially constructed
+  //   subojects is potentially throwing.
+  // FIXME: We should respect the first rule but ignore the "potentially
+  // constructed" in the second rule to resolve a core issue (no number yet)
+  // that would have us reject:
+  //   struct A { virtual void f() = 0; virtual ~A() noexcept(false) = 0; };
+  //   struct B : A {};
+  //   struct C : B { void f(); };
+  // ... due to giving B::~B() a non-throwing exception specification.
+  // For now we don't implement either.
+  Info.visit(Info.VisitAllBases);
 
   return Info.ExceptSpec;
 }

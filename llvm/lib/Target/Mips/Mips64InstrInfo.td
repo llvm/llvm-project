@@ -73,6 +73,9 @@ let usesCustomInserter = 1 in {
   def ATOMIC_LOAD_XOR_I64  : Atomic2Ops<atomic_load_xor_64, GPR64>;
   def ATOMIC_LOAD_NAND_I64 : Atomic2Ops<atomic_load_nand_64, GPR64>;
   def ATOMIC_SWAP_I64      : Atomic2Ops<atomic_swap_64, GPR64>;
+}
+
+let isPseudo = 1 in {
   def ATOMIC_CMP_SWAP_I64  : AtomicCmpSwap<atomic_cmp_swap_64, GPR64>;
 }
 

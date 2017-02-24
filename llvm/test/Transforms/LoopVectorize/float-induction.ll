@@ -15,47 +15,50 @@
 
 ; VEC4_INTERL1-LABEL: @fp_iv_loop1(
 ; VEC4_INTERL1:       vector.ph:
+; VEC4_INTERL1-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x float> undef, float %init, i32 0
+; VEC4_INTERL1-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <4 x float> [[DOTSPLATINSERT]], <4 x float> undef, <4 x i32> zeroinitializer
+; VEC4_INTERL1-NEXT:    [[DOTSPLATINSERT2:%.*]] = insertelement <4 x float> undef, float %fpinc, i32 0
+; VEC4_INTERL1-NEXT:    [[DOTSPLAT3:%.*]] = shufflevector <4 x float> [[DOTSPLATINSERT2]], <4 x float> undef, <4 x i32> zeroinitializer
+; VEC4_INTERL1-NEXT:    [[TMP5:%.*]] = fmul fast <4 x float> [[DOTSPLAT3]], <float 0.000000e+00, float 1.000000e+00, float 2.000000e+00, float 3.000000e+00>
+; VEC4_INTERL1-NEXT:    [[INDUCTION4:%.*]] = fsub fast <4 x float> [[DOTSPLAT]], [[TMP5]]
+; VEC4_INTERL1-NEXT:    [[TMP6:%.*]] = fmul fast float %fpinc, 4.000000e+00
+; VEC4_INTERL1-NEXT:    [[DOTSPLATINSERT5:%.*]] = insertelement <4 x float> undef, float [[TMP6]], i32 0
+; VEC4_INTERL1-NEXT:    [[DOTSPLAT6:%.*]] = shufflevector <4 x float> [[DOTSPLATINSERT5]], <4 x float> undef, <4 x i32> zeroinitializer
 ; VEC4_INTERL1-NEXT:    br label %vector.body
 ; VEC4_INTERL1:       vector.body:
 ; VEC4_INTERL1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %vector.ph ], [ [[INDEX_NEXT:%.*]], %vector.body ]
-; VEC4_INTERL1-NEXT:    [[TMP5:%.*]] = sitofp i64 [[INDEX]] to float
-; VEC4_INTERL1-NEXT:    [[TMP6:%.*]] = fmul fast float %fpinc, [[TMP5]]
-; VEC4_INTERL1-NEXT:    [[FP_OFFSET_IDX:%.*]] = fsub fast float %init, [[TMP6]]
-; VEC4_INTERL1-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <4 x float> undef, float [[FP_OFFSET_IDX]], i32 0
-; VEC4_INTERL1-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT3]], <4 x float> undef, <4 x i32> zeroinitializer
-; VEC4_INTERL1-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x float> undef, float %fpinc, i32 0
-; VEC4_INTERL1-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <4 x float> [[DOTSPLATINSERT]], <4 x float> undef, <4 x i32> zeroinitializer
-; VEC4_INTERL1-NEXT:    [[TMP7:%.*]] = fmul fast <4 x float> [[DOTSPLAT]], <float 0.000000e+00, float 1.000000e+00, float 2.000000e+00, float 3.000000e+00>
-; VEC4_INTERL1-NEXT:    [[INDUCTION5:%.*]] = fsub fast <4 x float> [[BROADCAST_SPLAT4]], [[TMP7]]
+; VEC4_INTERL1-NEXT:    [[VEC_IND:%.*]] = phi <4 x float> [ [[INDUCTION4]], %vector.ph ], [ [[VEC_IND_NEXT:%.*]], %vector.body ]
 ; VEC4_INTERL1-NEXT:    [[TMP8:%.*]] = getelementptr inbounds float, float* %A, i64 [[INDEX]]
 ; VEC4_INTERL1-NEXT:    [[TMP9:%.*]] = bitcast float* [[TMP8]] to <4 x float>*
-; VEC4_INTERL1-NEXT:    store <4 x float> [[INDUCTION5]], <4 x float>* [[TMP9]], align 4
+; VEC4_INTERL1-NEXT:    store <4 x float> [[VEC_IND]], <4 x float>* [[TMP9]], align 4
 ; VEC4_INTERL1-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 4
+; VEC4_INTERL1-NEXT:    [[VEC_IND_NEXT]] = fsub fast <4 x float> [[VEC_IND]], [[DOTSPLAT6]]
 ; VEC4_INTERL1:         br i1 {{.*}}, label %middle.block, label %vector.body
 
 ; VEC4_INTERL2-LABEL: @fp_iv_loop1(
 ; VEC4_INTERL2:       vector.ph:
+; VEC4_INTERL2-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x float> undef, float %init, i32 0
+; VEC4_INTERL2-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <4 x float> [[DOTSPLATINSERT]], <4 x float> undef, <4 x i32> zeroinitializer
+; VEC4_INTERL2-NEXT:    [[DOTSPLATINSERT3:%.*]] = insertelement <4 x float> undef, float %fpinc, i32 0
+; VEC4_INTERL2-NEXT:    [[DOTSPLAT4:%.*]] = shufflevector <4 x float> [[DOTSPLATINSERT3]], <4 x float> undef, <4 x i32> zeroinitializer
+; VEC4_INTERL2-NEXT:    [[TMP5:%.*]] = fmul fast <4 x float> [[DOTSPLAT4]], <float 0.000000e+00, float 1.000000e+00, float 2.000000e+00, float 3.000000e+00>
+; VEC4_INTERL2-NEXT:    [[INDUCTION5:%.*]] = fsub fast <4 x float> [[DOTSPLAT]], [[TMP5]]
+; VEC4_INTERL2-NEXT:    [[TMP6:%.*]] = fmul fast float %fpinc, 4.000000e+00
+; VEC4_INTERL2-NEXT:    [[DOTSPLATINSERT6:%.*]] = insertelement <4 x float> undef, float [[TMP6]], i32 0
+; VEC4_INTERL2-NEXT:    [[DOTSPLAT7:%.*]] = shufflevector <4 x float> [[DOTSPLATINSERT6]], <4 x float> undef, <4 x i32> zeroinitializer
 ; VEC4_INTERL2-NEXT:    br label %vector.body
 ; VEC4_INTERL2:       vector.body:
 ; VEC4_INTERL2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %vector.ph ], [ [[INDEX_NEXT:%.*]], %vector.body ]
-; VEC4_INTERL2-NEXT:    [[TMP5:%.*]] = sitofp i64 [[INDEX]] to float
-; VEC4_INTERL2-NEXT:    [[TMP6:%.*]] = fmul fast float %fpinc, [[TMP5]]
-; VEC4_INTERL2-NEXT:    [[FP_OFFSET_IDX:%.*]] = fsub fast float %init, [[TMP6]]
-; VEC4_INTERL2-NEXT:    [[BROADCAST_SPLATINSERT4:%.*]] = insertelement <4 x float> undef, float [[FP_OFFSET_IDX]], i32 0
-; VEC4_INTERL2-NEXT:    [[BROADCAST_SPLAT5:%.*]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT4]], <4 x float> undef, <4 x i32> zeroinitializer
-; VEC4_INTERL2-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x float> undef, float %fpinc, i32 0
-; VEC4_INTERL2-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <4 x float> [[DOTSPLATINSERT]], <4 x float> undef, <4 x i32> zeroinitializer
-; VEC4_INTERL2-NEXT:    [[TMP7:%.*]] = fmul fast <4 x float> [[DOTSPLAT]], <float 0.000000e+00, float 1.000000e+00, float 2.000000e+00, float 3.000000e+00>
-; VEC4_INTERL2-NEXT:    [[INDUCTION6:%.*]] = fsub fast <4 x float> [[BROADCAST_SPLAT5]], [[TMP7]]
-; VEC4_INTERL2-NEXT:    [[TMP8:%.*]] = fmul fast <4 x float> [[DOTSPLAT]], <float 4.000000e+00, float 5.000000e+00, float 6.000000e+00, float 7.000000e+00>
-; VEC4_INTERL2-NEXT:    [[INDUCTION9:%.*]] = fsub fast <4 x float> [[BROADCAST_SPLAT5]], [[TMP8]]
+; VEC4_INTERL2-NEXT:    [[VEC_IND:%.*]] = phi <4 x float> [ [[INDUCTION5]], %vector.ph ], [ [[VEC_IND_NEXT:%.*]], %vector.body ]
+; VEC4_INTERL2-NEXT:    [[STEP_ADD:%.*]] = fsub fast <4 x float> [[VEC_IND]], [[DOTSPLAT7]]
 ; VEC4_INTERL2-NEXT:    [[TMP9:%.*]] = getelementptr inbounds float, float* %A, i64 [[INDEX]]
 ; VEC4_INTERL2-NEXT:    [[TMP10:%.*]] = bitcast float* [[TMP9]] to <4 x float>*
-; VEC4_INTERL2-NEXT:    store <4 x float> [[INDUCTION6]], <4 x float>* [[TMP10]], align 4
+; VEC4_INTERL2-NEXT:    store <4 x float> [[VEC_IND]], <4 x float>* [[TMP10]], align 4
 ; VEC4_INTERL2-NEXT:    [[TMP11:%.*]] = getelementptr float, float* [[TMP9]], i64 4
 ; VEC4_INTERL2-NEXT:    [[TMP12:%.*]] = bitcast float* [[TMP11]] to <4 x float>*
-; VEC4_INTERL2-NEXT:    store <4 x float> [[INDUCTION9]], <4 x float>* [[TMP12]], align 4
+; VEC4_INTERL2-NEXT:    store <4 x float> [[STEP_ADD]], <4 x float>* [[TMP12]], align 4
 ; VEC4_INTERL2-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 8
+; VEC4_INTERL2-NEXT:    [[VEC_IND_NEXT]] = fsub fast <4 x float> [[STEP_ADD]], [[DOTSPLAT7]]
 ; VEC4_INTERL2:         br i1 {{.*}}, label %middle.block, label %vector.body
 
 ; VEC1_INTERL2-LABEL: @fp_iv_loop1(
@@ -112,19 +115,18 @@ for.end:                                          ; preds = %for.end.loopexit, %
 
 ; VEC4_INTERL1-LABEL: @fp_iv_loop2(
 ; VEC4_INTERL1:       vector.ph:
+; VEC4_INTERL1-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x float> undef, float %init, i32 0
+; VEC4_INTERL1-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <4 x float> [[DOTSPLATINSERT]], <4 x float> undef, <4 x i32> zeroinitializer
+; VEC4_INTERL1-NEXT:    [[INDUCTION2:%.*]] = fadd fast <4 x float> [[DOTSPLAT]], <float 0.000000e+00, float 5.000000e-01, float 1.000000e+00, float 1.500000e+00>
 ; VEC4_INTERL1-NEXT:    br label %vector.body
 ; VEC4_INTERL1:       vector.body:
 ; VEC4_INTERL1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %vector.ph ], [ [[INDEX_NEXT:%.*]], %vector.body ]
-; VEC4_INTERL1-NEXT:    [[TMP5:%.*]] = sitofp i64 [[INDEX]] to float
-; VEC4_INTERL1-NEXT:    [[TMP6:%.*]] = fmul fast float [[TMP5]], 5.000000e-01
-; VEC4_INTERL1-NEXT:    [[FP_OFFSET_IDX:%.*]] = fadd fast float [[TMP6]], %init
-; VEC4_INTERL1-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <4 x float> undef, float [[FP_OFFSET_IDX]], i32 0
-; VEC4_INTERL1-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT3]], <4 x float> undef, <4 x i32> zeroinitializer
-; VEC4_INTERL1-NEXT:    [[INDUCTION5:%.*]] = fadd fast <4 x float> [[BROADCAST_SPLAT4]], <float 0.000000e+00, float 5.000000e-01, float 1.000000e+00, float 1.500000e+00>
+; VEC4_INTERL1-NEXT:    [[VEC_IND:%.*]] = phi <4 x float> [ [[INDUCTION2]], %vector.ph ], [ [[VEC_IND_NEXT:%.*]], %vector.body ]
 ; VEC4_INTERL1-NEXT:    [[TMP7:%.*]] = getelementptr inbounds float, float* %A, i64 [[INDEX]]
 ; VEC4_INTERL1-NEXT:    [[TMP8:%.*]] = bitcast float* [[TMP7]] to <4 x float>*
-; VEC4_INTERL1-NEXT:    store <4 x float> [[INDUCTION5]], <4 x float>* [[TMP8]], align 4
+; VEC4_INTERL1-NEXT:    store <4 x float> [[VEC_IND]], <4 x float>* [[TMP8]], align 4
 ; VEC4_INTERL1-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 4
+; VEC4_INTERL1-NEXT:    [[VEC_IND_NEXT]] = fadd fast <4 x float> [[VEC_IND]], <float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00>
 ; VEC4_INTERL1:         br i1 {{.*}}, label %middle.block, label %vector.body
 
 define void @fp_iv_loop2(float %init, float* noalias nocapture %A, i32 %N) #0 {
@@ -170,30 +172,27 @@ for.end:                                          ; preds = %for.end.loopexit, %
 ; VEC4_INTERL1:       for.body.lr.ph:
 ; VEC4_INTERL1:         [[TMP0:%.*]] = load float, float* @fp_inc, align 4
 ; VEC4_INTERL1:       vector.ph:
-; VEC4_INTERL1-NEXT:    [[BROADCAST_SPLATINSERT14:%.*]] = insertelement <4 x float> undef, float [[TMP0]], i32 0
-; VEC4_INTERL1-NEXT:    [[BROADCAST_SPLAT15:%.*]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT14]], <4 x float> undef, <4 x i32> zeroinitializer
-; VEC4_INTERL1-NEXT:    br label %vector.body
+; VEC4_INTERL1-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x float> undef, float %init, i32 0
+; VEC4_INTERL1-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <4 x float> [[DOTSPLATINSERT]], <4 x float> undef, <4 x i32> zeroinitializer
+; VEC4_INTERL1-NEXT:    [[DOTSPLATINSERT5:%.*]] = insertelement <4 x float> undef, float [[TMP0]], i32 0
+; VEC4_INTERL1-NEXT:    [[DOTSPLAT6:%.*]] = shufflevector <4 x float> [[DOTSPLATINSERT5]], <4 x float> undef, <4 x i32> zeroinitializer
+; VEC4_INTERL1-NEXT:    [[TMP7:%.*]] = fmul fast <4 x float> [[DOTSPLAT6]], <float 0.000000e+00, float 1.000000e+00, float 2.000000e+00, float 3.000000e+00>
+; VEC4_INTERL1-NEXT:    [[INDUCTION7:%.*]] = fadd fast <4 x float> [[DOTSPLAT]], [[TMP7]]
+; VEC4_INTERL1-NEXT:    [[TMP8:%.*]] = fmul fast float [[TMP0]], 4.000000e+00
+; VEC4_INTERL1-NEXT:    [[DOTSPLATINSERT8:%.*]] = insertelement <4 x float> undef, float [[TMP8]], i32 0
+; VEC4_INTERL1-NEXT:    [[DOTSPLAT9:%.*]] = shufflevector <4 x float> [[DOTSPLATINSERT8]], <4 x float> undef, <4 x i32> zeroinitializer
+; VEC4_INTERL1-NEXT:    [[BROADCAST_SPLATINSERT12:%.*]] = insertelement <4 x float> undef, float [[TMP0]], i32 0
+; VEC4_INTERL1-NEXT:    [[BROADCAST_SPLAT13:%.*]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT12]], <4 x float> undef, <4 x i32> zeroinitializer
+; VEC4_INTERL1-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VEC4_INTERL1:       vector.body:
 ; VEC4_INTERL1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %vector.ph ], [ [[INDEX_NEXT:%.*]], %vector.body ]
-; VEC4_INTERL1-NEXT:    [[TMP7:%.*]] = sitofp i64 [[INDEX]] to float
-; VEC4_INTERL1-NEXT:    [[TMP8:%.*]] = fmul fast float [[TMP7]], -5.000000e-01
-; VEC4_INTERL1-NEXT:    [[FP_OFFSET_IDX:%.*]] = fadd fast float [[TMP8]], 0x3FB99999A0000000
-; VEC4_INTERL1-NEXT:    [[BROADCAST_SPLATINSERT6:%.*]] = insertelement <4 x float> undef, float [[FP_OFFSET_IDX]], i32 0
-; VEC4_INTERL1-NEXT:    [[BROADCAST_SPLAT7:%.*]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT6]], <4 x float> undef, <4 x i32> zeroinitializer
-; VEC4_INTERL1-NEXT:    [[TMP9:%.*]] = sitofp i64 [[INDEX]] to float
-; VEC4_INTERL1-NEXT:    [[TMP10:%.*]] = fmul fast float [[TMP0]], [[TMP9]]
-; VEC4_INTERL1-NEXT:    [[FP_OFFSET_IDX10:%.*]] = fadd fast float [[TMP10]], %init
-; VEC4_INTERL1-NEXT:    [[BROADCAST_SPLATINSERT11:%.*]] = insertelement <4 x float> undef, float [[FP_OFFSET_IDX10]], i32 0
-; VEC4_INTERL1-NEXT:    [[BROADCAST_SPLAT12:%.*]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT11]], <4 x float> undef, <4 x i32> zeroinitializer
-; VEC4_INTERL1-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x float> undef, float [[TMP0]], i32 0
-; VEC4_INTERL1-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <4 x float> [[DOTSPLATINSERT]], <4 x float> undef, <4 x i32> zeroinitializer
-; VEC4_INTERL1-NEXT:    [[TMP11:%.*]] = fmul fast <4 x float> [[DOTSPLAT]], <float 0.000000e+00, float 1.000000e+00, float 2.000000e+00, float 3.000000e+00>
-; VEC4_INTERL1-NEXT:    [[INDUCTION13:%.*]] = fadd fast <4 x float> [[BROADCAST_SPLAT12]], [[TMP11]]
+; VEC4_INTERL1-NEXT:    [[VEC_IND:%.*]] = phi <4 x float> [ <float 0x3FB99999A0000000, float 0xBFD99999A0000000, float 0xBFECCCCCC0000000, float 0xBFF6666660000000>, %vector.ph ], [ [[VEC_IND_NEXT:%.*]], %vector.body ]
+; VEC4_INTERL1-NEXT:    [[VEC_IND10:%.*]] = phi <4 x float> [ [[INDUCTION7]], %vector.ph ], [ [[VEC_IND_NEXT11:%.*]], %vector.body ]
 ; VEC4_INTERL1-NEXT:    [[TMP12:%.*]] = getelementptr inbounds float, float* %A, i64 [[INDEX]]
 ; VEC4_INTERL1-NEXT:    [[TMP13:%.*]] = bitcast float* [[TMP12]] to <4 x float>*
-; VEC4_INTERL1-NEXT:    store <4 x float> [[INDUCTION13]], <4 x float>* [[TMP13]], align 4
-; VEC4_INTERL1-NEXT:    [[TMP14:%.*]] = fadd fast <4 x float> [[INDUCTION13]], [[BROADCAST_SPLAT15]]
-; VEC4_INTERL1-NEXT:    [[TMP15:%.*]] = fadd fast <4 x float> [[BROADCAST_SPLAT7]], <float -5.000000e-01, float -1.000000e+00, float -1.500000e+00, float -2.000000e+00>
+; VEC4_INTERL1-NEXT:    store <4 x float> [[VEC_IND10]], <4 x float>* [[TMP13]], align 4
+; VEC4_INTERL1-NEXT:    [[TMP14:%.*]] = fadd fast <4 x float> [[VEC_IND10]], [[BROADCAST_SPLAT13]]
+; VEC4_INTERL1-NEXT:    [[TMP15:%.*]] = fadd fast <4 x float> [[VEC_IND]], <float -5.000000e-01, float -5.000000e-01, float -5.000000e-01, float -5.000000e-01>
 ; VEC4_INTERL1-NEXT:    [[TMP16:%.*]] = fadd fast <4 x float> [[TMP15]], [[TMP14]]
 ; VEC4_INTERL1-NEXT:    [[TMP17:%.*]] = getelementptr inbounds float, float* %B, i64 [[INDEX]]
 ; VEC4_INTERL1-NEXT:    [[TMP18:%.*]] = bitcast float* [[TMP17]] to <4 x float>*
@@ -202,6 +201,8 @@ for.end:                                          ; preds = %for.end.loopexit, %
 ; VEC4_INTERL1-NEXT:    [[TMP20:%.*]] = bitcast float* [[TMP19]] to <4 x float>*
 ; VEC4_INTERL1-NEXT:    store <4 x float> [[TMP15]], <4 x float>* [[TMP20]], align 4
 ; VEC4_INTERL1-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 4
+; VEC4_INTERL1-NEXT:    [[VEC_IND_NEXT]] = fadd fast <4 x float> [[VEC_IND]], <float -2.000000e+00, float -2.000000e+00, float -2.000000e+00, float -2.000000e+00>
+; VEC4_INTERL1-NEXT:    [[VEC_IND_NEXT11]] = fadd fast <4 x float> [[VEC_IND10]], [[DOTSPLAT9]]
 ; VEC4_INTERL1:         br i1 {{.*}}, label %middle.block, label %vector.body
 
 define void @fp_iv_loop3(float %init, float* noalias nocapture %A, float* noalias nocapture %B, float* noalias nocapture %C, i32 %N) #1 {
@@ -252,16 +253,12 @@ for.end:
 ; VEC4_INTERL1-NEXT:    br label %vector.body
 ; VEC4_INTERL1:       vector.body:
 ; VEC4_INTERL1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %vector.ph ], [ [[INDEX_NEXT:%.*]], %vector.body ]
-; VEC4_INTERL1-NEXT:    [[TMP5:%.*]] = sitofp i64 [[INDEX]] to float
-; VEC4_INTERL1-NEXT:    [[TMP6:%.*]] = fmul fast float [[TMP5]], 5.000000e-01
-; VEC4_INTERL1-NEXT:    [[FP_OFFSET_IDX:%.*]] = fadd fast float [[TMP6]], 1.000000e+00
-; VEC4_INTERL1-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <4 x float> undef, float [[FP_OFFSET_IDX]], i32 0
-; VEC4_INTERL1-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT3]], <4 x float> undef, <4 x i32> zeroinitializer
-; VEC4_INTERL1-NEXT:    [[INDUCTION5:%.*]] = fadd fast <4 x float> [[BROADCAST_SPLAT4]], <float 0.000000e+00, float 5.000000e-01, float 1.000000e+00, float 1.500000e+00>
+; VEC4_INTERL1-NEXT:    [[VEC_IND:%.*]] = phi <4 x float> [ <float 1.000000e+00, float 1.500000e+00, float 2.000000e+00, float 2.500000e+00>, %vector.ph ], [ [[VEC_IND_NEXT:%.*]], %vector.body ]
 ; VEC4_INTERL1-NEXT:    [[TMP7:%.*]] = getelementptr inbounds float, float* %A, i64 [[INDEX]]
 ; VEC4_INTERL1-NEXT:    [[TMP8:%.*]] = bitcast float* [[TMP7]] to <4 x float>*
-; VEC4_INTERL1-NEXT:    store <4 x float> [[INDUCTION5]], <4 x float>* [[TMP8]], align 4
+; VEC4_INTERL1-NEXT:    store <4 x float> [[VEC_IND]], <4 x float>* [[TMP8]], align 4
 ; VEC4_INTERL1-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 4
+; VEC4_INTERL1-NEXT:    [[VEC_IND_NEXT]] = fadd fast <4 x float> [[VEC_IND]], <float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00>
 ; VEC4_INTERL1:         br i1 {{.*}}, label %middle.block, label %vector.body
 
 define void @fp_iv_loop4(float* noalias nocapture %A, i32 %N) {
@@ -294,9 +291,6 @@ for.end:                                          ; preds = %for.end.loopexit, %
 ; VEC2_INTERL1_PRED_STORE:       vector.body:
 ; VEC2_INTERL1_PRED_STORE-NEXT:    [[INDEX:%.*]] = phi i64 [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE7:.*]] ], [ 0, %min.iters.checked ]
 ; VEC2_INTERL1_PRED_STORE-NEXT:    [[TMP1:%.*]] = sitofp i64 [[INDEX]] to float
-; VEC2_INTERL1_PRED_STORE-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <2 x float> undef, float [[TMP1]], i32 0
-; VEC2_INTERL1_PRED_STORE-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <2 x float> [[BROADCAST_SPLATINSERT3]], <2 x float> undef, <2 x i32> zeroinitializer
-; VEC2_INTERL1_PRED_STORE-NEXT:    [[INDUCTION5:%.*]] = fadd fast <2 x float> [[BROADCAST_SPLAT4]], <float 0.000000e+00, float 1.000000e+00>
 ; VEC2_INTERL1_PRED_STORE-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, float* %A, i64 [[INDEX]]
 ; VEC2_INTERL1_PRED_STORE-NEXT:    [[TMP3:%.*]] = bitcast float* [[TMP2]] to <2 x float>*
 ; VEC2_INTERL1_PRED_STORE-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x float>, <2 x float>* [[TMP3]], align 4
@@ -304,15 +298,14 @@ for.end:                                          ; preds = %for.end.loopexit, %
 ; VEC2_INTERL1_PRED_STORE-NEXT:    [[TMP5:%.*]] = extractelement <2 x i1> [[TMP4]], i32 0
 ; VEC2_INTERL1_PRED_STORE-NEXT:    br i1 [[TMP5]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; VEC2_INTERL1_PRED_STORE:       [[PRED_STORE_IF]]:
-; VEC2_INTERL1_PRED_STORE-NEXT:    [[TMP6:%.*]] = extractelement <2 x float> [[INDUCTION5]], i32 0
 ; VEC2_INTERL1_PRED_STORE-NEXT:    [[TMP7:%.*]] = getelementptr inbounds float, float* %A, i64 [[INDEX]]
-; VEC2_INTERL1_PRED_STORE-NEXT:    store float [[TMP6]], float* [[TMP7]], align 4
+; VEC2_INTERL1_PRED_STORE-NEXT:    store float [[TMP1]], float* [[TMP7]], align 4
 ; VEC2_INTERL1_PRED_STORE-NEXT:    br label %[[PRED_STORE_CONTINUE]]
 ; VEC2_INTERL1_PRED_STORE:       [[PRED_STORE_CONTINUE]]:
 ; VEC2_INTERL1_PRED_STORE-NEXT:    [[TMP8:%.*]] = extractelement <2 x i1> [[TMP4]], i32 1
 ; VEC2_INTERL1_PRED_STORE-NEXT:    br i1 [[TMP8]], label %[[PRED_STORE_IF6:.*]], label %[[PRED_STORE_CONTINUE7]]
 ; VEC2_INTERL1_PRED_STORE:       [[PRED_STORE_IF6]]:
-; VEC2_INTERL1_PRED_STORE-NEXT:    [[TMP9:%.*]] = extractelement <2 x float> [[INDUCTION5]], i32 1
+; VEC2_INTERL1_PRED_STORE-NEXT:    [[TMP9:%.*]] = fadd fast float [[TMP1]], 1.000000e+00
 ; VEC2_INTERL1_PRED_STORE-NEXT:    [[TMP10:%.*]] = or i64 [[INDEX]], 1
 ; VEC2_INTERL1_PRED_STORE-NEXT:    [[TMP11:%.*]] = getelementptr inbounds float, float* %A, i64 [[TMP10]]
 ; VEC2_INTERL1_PRED_STORE-NEXT:    store float [[TMP9]], float* [[TMP11]], align 4

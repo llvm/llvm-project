@@ -1384,8 +1384,8 @@ static bool getEdgeValueLocal(Value *Val, BasicBlock *BBFrom,
 /// \brief Compute the value of Val on the edge BBFrom -> BBTo or the value at
 /// the basic block if the edge does not constrain Val.
 bool LazyValueInfoImpl::getEdgeValue(Value *Val, BasicBlock *BBFrom,
-                                      BasicBlock *BBTo, LVILatticeVal &Result,
-                                      Instruction *CxtI) {
+                                     BasicBlock *BBTo, LVILatticeVal &Result,
+                                     Instruction *CxtI) {
   // If already a constant, there is nothing to compute.
   if (Constant *VC = dyn_cast<Constant>(Val)) {
     Result = LVILatticeVal::get(VC);

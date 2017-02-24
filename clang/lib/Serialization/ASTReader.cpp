@@ -9063,6 +9063,8 @@ void ASTReader::diagnoseOdrViolations() {
         StaticAssertOnlyMessage,
         FieldName,
         FieldTypeName,
+        FieldSingleBitField,
+        FieldDifferentWidthBitField
       };
 
       // These lambdas have the common portions of the ODR diagnostics.  This
@@ -9211,6 +9213,30 @@ void ASTReader::diagnoseOdrViolations() {
             Diagnosed = true;
             break;
           }
+        }
+
+        const bool IsFirstBitField = FirstField->isBitField();
+        const bool IsSecondBitField = SecondField->isBitField();
+        if (IsFirstBitField != IsSecondBitField) {
+          ODRDiagError(FirstField->getLocation(), FirstField->getSourceRange(),
+                       FieldSingleBitField)
+              << FirstII << IsFirstBitField;
+          ODRDiagNote(SecondField->getLocation(), SecondField->getSourceRange(),
+                      FieldSingleBitField)
+              << SecondII << IsSecondBitField;
+          Diagnosed = true;
+          break;
+        }
+
+        if (IsFirstBitField && IsSecondBitField) {
+          ODRDiagError(FirstField->getLocation(), FirstField->getSourceRange(),
+                       FieldDifferentWidthBitField)
+              << FirstII << FirstField->getBitWidth()->getSourceRange();
+          ODRDiagNote(SecondField->getLocation(), SecondField->getSourceRange(),
+                      FieldDifferentWidthBitField)
+              << SecondII << SecondField->getBitWidth()->getSourceRange();
+          Diagnosed = true;
+          break;
         }
 
         break;

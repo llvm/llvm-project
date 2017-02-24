@@ -33,7 +33,7 @@ class ScriptParser;
 class SymbolBody;
 class InputSectionBase;
 class InputSection;
-class OutputSectionBase;
+class OutputSection;
 template <class ELFT> class OutputSectionFactory;
 class InputSectionBase;
 
@@ -47,13 +47,13 @@ struct Expr {
 
   // If expression is section-relative the function below is used
   // to get the output section pointer.
-  std::function<const OutputSectionBase *()> Section;
+  std::function<const OutputSection *()> Section;
 
   uint64_t operator()(uint64_t Dot) const { return Val(Dot); }
   operator bool() const { return (bool)Val; }
 
   Expr(std::function<uint64_t(uint64_t)> Val, std::function<bool()> IsAbsolute,
-       std::function<const OutputSectionBase *()> Section)
+       std::function<const OutputSection *()> Section)
       : Val(Val), IsAbsolute(IsAbsolute), Section(Section) {}
   template <typename T>
   Expr(T V) : Expr(V, [] { return true; }, [] { return nullptr; }) {}
@@ -213,9 +213,9 @@ public:
   virtual uint64_t getSymbolValue(const Twine &Loc, StringRef S) = 0;
   virtual bool isDefined(StringRef S) = 0;
   virtual bool isAbsolute(StringRef S) = 0;
-  virtual const OutputSectionBase *getSymbolSection(StringRef S) = 0;
-  virtual const OutputSectionBase *getOutputSection(const Twine &Loc,
-                                                    StringRef S) = 0;
+  virtual const OutputSection *getSymbolSection(StringRef S) = 0;
+  virtual const OutputSection *getOutputSection(const Twine &Loc,
+                                                StringRef S) = 0;
   virtual uint64_t getOutputSectionSize(StringRef S) = 0;
 };
 
@@ -268,12 +268,11 @@ public:
   uint64_t getSymbolValue(const Twine &Loc, StringRef S) override;
   bool isDefined(StringRef S) override;
   bool isAbsolute(StringRef S) override;
-  const OutputSectionBase *getSymbolSection(StringRef S) override;
-  const OutputSectionBase *getOutputSection(const Twine &Loc,
-                                            StringRef S) override;
+  const OutputSection *getSymbolSection(StringRef S) override;
+  const OutputSection *getOutputSection(const Twine &Loc, StringRef S) override;
   uint64_t getOutputSectionSize(StringRef S) override;
 
-  std::vector<OutputSectionBase *> *OutputSections;
+  std::vector<OutputSection *> *OutputSections;
 
   int getSectionIndex(StringRef Name);
 
@@ -294,19 +293,18 @@ private:
   std::vector<size_t> getPhdrIndices(StringRef SectionName);
   size_t getPhdrIndex(const Twine &Loc, StringRef PhdrName);
 
-  MemoryRegion *findMemoryRegion(OutputSectionCommand *Cmd,
-                                 OutputSectionBase *Sec);
+  MemoryRegion *findMemoryRegion(OutputSectionCommand *Cmd, OutputSection *Sec);
 
   uintX_t Dot;
   std::function<uint64_t()> LMAOffset;
-  OutputSectionBase *CurOutSec = nullptr;
+  OutputSection *CurOutSec = nullptr;
   MemoryRegion *CurMemRegion = nullptr;
   uintX_t ThreadBssOffset = 0;
-  void switchTo(OutputSectionBase *Sec);
+  void switchTo(OutputSection *Sec);
   void flush();
   void output(InputSection *Sec);
   void process(BaseCommand &Base);
-  llvm::DenseSet<OutputSectionBase *> AlreadyOutputOS;
+  llvm::DenseSet<OutputSection *> AlreadyOutputOS;
   llvm::DenseSet<InputSectionBase *> AlreadyOutputIS;
 };
 

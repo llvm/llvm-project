@@ -656,7 +656,6 @@ FormatStyle getChromiumStyle(FormatStyle::LanguageKind Language) {
     if (Language == FormatStyle::LK_ObjC)
       ChromiumStyle.ColumnLimit = 80;
   }
-  ChromiumStyle.SortIncludes = false;
   return ChromiumStyle;
 }
 
@@ -1662,7 +1661,7 @@ bool isDeletedHeader(llvm::StringRef HeaderName,
 tooling::Replacements
 fixCppIncludeInsertions(StringRef Code, const tooling::Replacements &Replaces,
                         const FormatStyle &Style) {
-  if (Style.Language != FormatStyle::LanguageKind::LK_Cpp)
+  if (!Style.IsCpp())
     return Replaces;
 
   tooling::Replacements HeaderInsertions;
@@ -1864,7 +1863,7 @@ LangOptions getFormattingLangOpts(const FormatStyle &Style) {
   LangOpts.CPlusPlus11 = Style.Standard == FormatStyle::LS_Cpp03 ? 0 : 1;
   LangOpts.CPlusPlus14 = Style.Standard == FormatStyle::LS_Cpp03 ? 0 : 1;
   LangOpts.LineComment = 1;
-  bool AlternativeOperators = Style.Language == FormatStyle::LK_Cpp;
+  bool AlternativeOperators = Style.IsCpp();
   LangOpts.CXXOperatorNames = AlternativeOperators ? 1 : 0;
   LangOpts.Bool = 1;
   LangOpts.ObjC1 = 1;
