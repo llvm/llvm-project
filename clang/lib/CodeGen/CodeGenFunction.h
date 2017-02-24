@@ -1564,6 +1564,8 @@ public:
                      SourceLocation Loc = SourceLocation(),
                      SourceLocation StartLoc = SourceLocation());
 
+  static bool IsConstructorDelegationValid(const CXXConstructorDecl *Ctor);
+
   void EmitConstructorBody(FunctionArgList &Args);
   void EmitDestructorBody(FunctionArgList &Args);
   void emitImplicitAssignmentOperatorBody(FunctionArgList &Args);
