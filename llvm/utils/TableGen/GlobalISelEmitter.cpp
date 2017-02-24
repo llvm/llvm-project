@@ -374,7 +374,7 @@ public:
   }
 
   void emitCxxPredicateExpr(raw_ostream &OS,
-                            const StringRef OperandExpr) const override {
+                            StringRef OperandExpr) const override {
     OS << "isOperandImmEqual(" << OperandExpr << ", " << Value << ", MRI)";
   }
 };
