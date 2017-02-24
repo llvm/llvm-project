@@ -7,6 +7,7 @@
 
 #include "irif.h"
 #include "ockl.h"
+#include "oclc.h"
 
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 
@@ -641,9 +642,16 @@ OCKL_MANGLE_T(image_sampleh_lod,3D)(TSHARP i, SSHARP s, float4 c, float l)
 
 // We rely on the fact that the runtime allocates 12 words for the T# or V#
 // and fills words 8, 9, and 10 with the data we need to answer all of the queries
-GATTR int OCKL_MANGLE_T(image_array_size,1Da)(TSHARP i)  { return FIELD(i, 173, 13) + 1U; }
-GATTR int OCKL_MANGLE_T(image_array_size,2Da)(TSHARP i)  { return FIELD(i, 173, 13) + 1U; }
-GATTR int OCKL_MANGLE_T(image_array_size,2Dad)(TSHARP i) { return FIELD(i, 173, 13) + 1U; }
+
+#define ARRAY_SIZE(I) \
+    if (__oclc_ISA_version() < 900) { \
+        return FIELD(I, 173, 13) + 1U; \
+    } else { \
+        return FIELD(I, 128, 13) + 1U; \
+    }
+GATTR int OCKL_MANGLE_T(image_array_size,1Da)(TSHARP i)  { ARRAY_SIZE(i) }
+GATTR int OCKL_MANGLE_T(image_array_size,2Da)(TSHARP i)  { ARRAY_SIZE(i) }
+GATTR int OCKL_MANGLE_T(image_array_size,2Dad)(TSHARP i) { ARRAY_SIZE(i) }
 
 GATTR int OCKL_MANGLE_T(image_channel_data_type,1D)(TSHARP i)   { return WORD(i, 8); }
 GATTR int OCKL_MANGLE_T(image_channel_data_type,1Da)(TSHARP i)  { return WORD(i, 8); }
