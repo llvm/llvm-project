@@ -5,9 +5,6 @@ LLD 4.0.0 Release Notes
 .. contents::
     :local:
 
-.. warning::
-   These are in-progress notes for the upcoming LLVM 4.0.0 release.
-
 Introduction
 ============
 
