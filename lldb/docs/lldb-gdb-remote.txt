@@ -1029,7 +1029,7 @@ for this region.
 //  region what contains data mapped from the specified file.
 //
 // RESPONSE
-//  <unsinged-hex64> - Load address of the file in big endian encoding
+//  <unsigned-hex64> - Load address of the file in big endian encoding
 //  "E01" - the requested file isn't loaded
 //  "EXX" - for any other errors
 //

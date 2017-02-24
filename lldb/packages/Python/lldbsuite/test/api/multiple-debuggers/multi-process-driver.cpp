@@ -217,6 +217,10 @@ void *do_one_debugger (void *in)
 
 int main (int argc, char **argv)
 {
+#if !defined(_MSC_VER)
+  signal(SIGPIPE, SIG_IGN);
+#endif
+  
     SBDebugger::Initialize();
 
     completed_threads_array = (bool *) malloc (sizeof (bool) * NUMBER_OF_SIMULTANEOUS_DEBUG_SESSIONS);
