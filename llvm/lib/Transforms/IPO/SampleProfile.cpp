@@ -646,7 +646,7 @@ bool SampleProfileLoader::inlineHotFunctions(Function &F) {
           // We set the probability to 80% taken to indicate that the static
           // call is likely taken.
           DI = dyn_cast<Instruction>(
-              promoteIndirectCall(I, CalledFunction, 80, 100)
+              promoteIndirectCall(I, CalledFunction, 80, 100, false)
                   ->stripPointerCasts());
           PromotedInsns.insert(I);
         } else {

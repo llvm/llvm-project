@@ -47,6 +47,7 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/Support/CommandLine.h"
@@ -235,6 +236,11 @@ namespace {
                                         TerminatorInst *TI);
 
     void SimplifyCode(std::vector<Instruction*> &Worklist, Loop *L);
+
+    /// Given that the Invariant is not equal to Val. Simplify instructions
+    /// in the loop.
+    Value *SimplifyInstructionWithNotEqual(Instruction *Inst, Value *Invariant,
+                                           Constant *Val);
   };
 }
 
@@ -1218,10 +1224,27 @@ void LoopUnswitch::RewriteLoopBodyWithConditionConstant(Loop *L, Value *LIC,
     if (!UI || !L->contains(UI))
       continue;
 
-    Worklist.push_back(UI);
+    // At this point, we know LIC is definitely not Val. Try to use some simple
+    // logic to simplify the user w.r.t. to the context.
+    if (Value *Replacement = SimplifyInstructionWithNotEqual(UI, LIC, Val)) {
+      if (LI->replacementPreservesLCSSAForm(UI, Replacement)) {
+        // This in-loop instruction has been simplified w.r.t. its context,
+        // i.e. LIC != Val, make sure we propagate its replacement value to
+        // all its users.
+        //  
+        // We can not yet delete UI, the LIC user, yet, because that would invalidate
+        // the LIC->users() iterator !. However, we can make this instruction
+        // dead by replacing all its users and push it onto the worklist so that
+        // it can be properly deleted and its operands simplified. 
+        UI->replaceAllUsesWith(Replacement);
+        Worklist.push_back(UI);
+        continue;
+      }
+    }
 
-    // TODO: We could do other simplifications, for example, turning
-    // 'icmp eq LIC, Val' -> false.
+    // Unable to simplify with non-valueness, push it into the worklist so that
+    // SimplifyCode can attempt to simplify it.
+    Worklist.push_back(UI);
 
     // If we know that LIC is not Val, use this info to simplify code.
     SwitchInst *SI = dyn_cast<SwitchInst>(UI);
@@ -1361,4 +1384,28 @@ void LoopUnswitch::SimplifyCode(std::vector<Instruction*> &Worklist, Loop *L) {
       continue;
     }
   }
+}
+
+/// Simple simplifications we can do given the information that Cond is
+/// definitely not equal to Val.
+Value *LoopUnswitch::SimplifyInstructionWithNotEqual(Instruction *Inst,
+                                                     Value *Invariant,
+                                                     Constant *Val) {
+  // icmp eq cond, val -> false
+  ICmpInst *CI = dyn_cast<ICmpInst>(Inst);
+  if (CI && CI->isEquality()) {
+    Value *Op0 = CI->getOperand(0);
+    Value *Op1 = CI->getOperand(1);
+    if ((Op0 == Invariant && Op1 == Val) || (Op0 == Val && Op1 == Invariant)) {
+      LLVMContext &Ctx = Inst->getContext();
+      if (CI->getPredicate() == CmpInst::ICMP_EQ)
+        return ConstantInt::getFalse(Ctx);
+      else 
+        return ConstantInt::getTrue(Ctx);
+     }
+  }
+
+  // FIXME: there may be other opportunities, e.g. comparison with floating
+  // point, or Invariant - Val != 0, etc.
+  return nullptr;
 }

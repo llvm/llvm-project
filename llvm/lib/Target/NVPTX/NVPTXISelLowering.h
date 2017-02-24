@@ -56,6 +56,7 @@ enum NodeType : unsigned {
   MUL_WIDE_SIGNED,
   MUL_WIDE_UNSIGNED,
   IMAD,
+  SETP_F16X2,
   Dummy,
 
   LoadV2 = ISD::FIRST_TARGET_MEMORY_OPCODE,
@@ -73,7 +74,7 @@ enum NodeType : unsigned {
   StoreParamV2,
   StoreParamV4,
   StoreParamS32, // to sext and store a <32bit value, not used currently
-  StoreParamU32, // to zext and store a <32bit value, not used currently 
+  StoreParamU32, // to zext and store a <32bit value, not used currently
   StoreRetval,
   StoreRetvalV2,
   StoreRetvalV4,
@@ -549,14 +550,15 @@ private:
   const NVPTXSubtarget &STI; // cache the subtarget here
   SDValue getParamSymbol(SelectionDAG &DAG, int idx, EVT) const;
 
+  SDValue LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerCONCAT_VECTORS(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerEXTRACT_VECTOR_ELT(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue LowerLOAD(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerLOADi1(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue LowerSTORE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSTOREi1(SDValue Op, SelectionDAG &DAG) const;
-  SDValue LowerSTOREf16(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSTOREVector(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue LowerShiftRightParts(SDValue Op, SelectionDAG &DAG) const;

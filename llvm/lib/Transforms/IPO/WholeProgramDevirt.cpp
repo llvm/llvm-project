@@ -896,7 +896,11 @@ bool DevirtModule::areRemarksEnabled() {
   if (FL.empty())
     return false;
   const Function &Fn = FL.front();
-  auto DI = OptimizationRemark(DEBUG_TYPE, Fn, DebugLoc(), "");
+
+  const auto &BBL = Fn.getBasicBlockList();
+  if (BBL.empty())
+    return false;
+  auto DI = OptimizationRemark(DEBUG_TYPE, "", DebugLoc(), &BBL.front());
   return DI.isEnabled();
 }
 

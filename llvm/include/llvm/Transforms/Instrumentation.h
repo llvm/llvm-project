@@ -86,7 +86,8 @@ ModulePass *createGCOVProfilerPass(const GCOVOptions &Options =
 ModulePass *createPGOInstrumentationGenLegacyPass();
 ModulePass *
 createPGOInstrumentationUseLegacyPass(StringRef Filename = StringRef(""));
-ModulePass *createPGOIndirectCallPromotionLegacyPass(bool InLTO = false);
+ModulePass *createPGOIndirectCallPromotionLegacyPass(bool InLTO = false,
+                                                     bool SamplePGO = false);
 
 // Helper function to check if it is legal to promote indirect call \p Inst
 // to a direct call of function \p F. Stores the reason in \p Reason.
@@ -102,9 +103,12 @@ bool isLegalToPromote(Instruction *Inst, Function *F, const char **Reason);
 // TotalCount is the profile count value that the instruction executes.
 // Count is the profile count value that F is the target function.
 // These two values are used to update the branch weight.
+// If \p AttachProfToDirectCall is true, a prof metadata is attached to the
+// new direct call to contain \p Count.
 // Returns the promoted direct call instruction.
 Instruction *promoteIndirectCall(Instruction *Inst, Function *F, uint64_t Count,
-                                 uint64_t TotalCount);
+                                 uint64_t TotalCount,
+                                 bool AttachProfToDirectCall);
 
 /// Options for the frontend instrumentation based profiling pass.
 struct InstrProfOptions {

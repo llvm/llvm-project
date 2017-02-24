@@ -77,8 +77,7 @@ static bool isLoopDead(Loop *L, ScalarEvolution &SE,
 
   // Make sure that no instructions in the block have potential side-effects.
   // This includes instructions that could write to memory, and loads that are
-  // marked volatile.  This could be made more aggressive by using aliasing
-  // information to identify readonly and readnone calls.
+  // marked volatile.
   for (Loop::block_iterator LI = L->block_begin(), LE = L->block_end();
        LI != LE; ++LI) {
     for (Instruction &I : **LI) {

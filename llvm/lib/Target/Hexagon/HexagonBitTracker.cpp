@@ -272,6 +272,9 @@ bool HexagonEvaluator::evaluate(const MachineInstr &MI,
   // cases below.
   uint16_t W0 = (Reg[0].Reg != 0) ? getRegBitWidth(Reg[0]) : 0;
 
+  // Register id of the 0th operand. It can be 0.
+  unsigned Reg0 = Reg[0].Reg;
+
   switch (Opc) {
     // Transfer immediate:
 
@@ -791,6 +794,17 @@ bool HexagonEvaluator::evaluate(const MachineInstr &MI,
       return rr0(eZXT(rc(1), 8), Outputs);
     case A2_zxth:
       return rr0(eZXT(rc(1), 16), Outputs);
+
+    // Saturations
+
+    case A2_satb:
+      return rr0(eSXT(RegisterCell::self(0, W0).regify(Reg0), 8), Outputs);
+    case A2_sath:
+      return rr0(eSXT(RegisterCell::self(0, W0).regify(Reg0), 16), Outputs);
+    case A2_satub:
+      return rr0(eZXT(RegisterCell::self(0, W0).regify(Reg0), 8), Outputs);
+    case A2_satuh:
+      return rr0(eZXT(RegisterCell::self(0, W0).regify(Reg0), 16), Outputs);
 
     // Bit count:
 

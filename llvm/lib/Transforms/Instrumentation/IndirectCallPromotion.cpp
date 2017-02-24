@@ -80,6 +80,12 @@ static cl::opt<bool> ICPLTOMode("icp-lto", cl::init(false), cl::Hidden,
                                 cl::desc("Run indirect-call promotion in LTO "
                                          "mode"));
 
+// Set if the pass is called in SamplePGO mode. The difference for SamplePGO
+// mode is it will add prof metadatato the created direct call.
+static cl::opt<bool>
+    ICPSamplePGOMode("icp-samplepgo", cl::init(false), cl::Hidden,
+                     cl::desc("Run indirect-call promotion in SamplePGO mode"));
+
 // If the option is set to true, only call instructions will be considered for
 // transformation -- invoke instructions will be ignored.
 static cl::opt<bool>
@@ -105,8 +111,8 @@ class PGOIndirectCallPromotionLegacyPass : public ModulePass {
 public:
   static char ID;
 
-  PGOIndirectCallPromotionLegacyPass(bool InLTO = false)
-      : ModulePass(ID), InLTO(InLTO) {
+  PGOIndirectCallPromotionLegacyPass(bool InLTO = false, bool SamplePGO = false)
+      : ModulePass(ID), InLTO(InLTO), SamplePGO(SamplePGO) {
     initializePGOIndirectCallPromotionLegacyPassPass(
         *PassRegistry::getPassRegistry());
   }
@@ -119,6 +125,10 @@ private:
   // If this pass is called in LTO. We need to special handling the PGOFuncName
   // for the static variables due to LTO's internalization.
   bool InLTO;
+
+  // If this pass is called in SamplePGO. We need to add the prof metadata to
+  // the promoted direct call.
+  bool SamplePGO;
 };
 } // end anonymous namespace
 
@@ -128,8 +138,9 @@ INITIALIZE_PASS(PGOIndirectCallPromotionLegacyPass, "pgo-icall-prom",
                 "direct calls.",
                 false, false)
 
-ModulePass *llvm::createPGOIndirectCallPromotionLegacyPass(bool InLTO) {
-  return new PGOIndirectCallPromotionLegacyPass(InLTO);
+ModulePass *llvm::createPGOIndirectCallPromotionLegacyPass(bool InLTO,
+                                                           bool SamplePGO) {
+  return new PGOIndirectCallPromotionLegacyPass(InLTO, SamplePGO);
 }
 
 namespace {
@@ -143,6 +154,8 @@ private:
   // Symtab that maps indirect call profile values to function names and
   // defines.
   InstrProfSymtab *Symtab;
+
+  bool SamplePGO;
 
   // Test if we can legally promote this direct-call of Target.
   bool isPromotionLegal(Instruction *Inst, uint64_t Target, Function *&F,
@@ -175,9 +188,9 @@ private:
   ICallPromotionFunc &operator=(const ICallPromotionFunc &other) = delete;
 
 public:
-  ICallPromotionFunc(Function &Func, Module *Modu, InstrProfSymtab *Symtab)
-      : F(Func), M(Modu), Symtab(Symtab) {
-  }
+  ICallPromotionFunc(Function &Func, Module *Modu, InstrProfSymtab *Symtab,
+                     bool SamplePGO)
+      : F(Func), M(Modu), Symtab(Symtab), SamplePGO(SamplePGO) {}
 
   bool processFunction();
 };
@@ -509,10 +522,14 @@ static void insertCallRetPHI(Instruction *Inst, Instruction *CallResult,
 //     Ret = phi(Ret1, Ret2);
 // It adds type casts for the args do not match the parameters and the return
 // value. Branch weights metadata also updated.
+// If \p AttachProfToDirectCall is true, a prof metadata is attached to the
+// new direct call to contain \p Count. This is used by SamplePGO inliner to
+// check callsite hotness.
 // Returns the promoted direct call instruction.
 Instruction *llvm::promoteIndirectCall(Instruction *Inst,
                                        Function *DirectCallee, uint64_t Count,
-                                       uint64_t TotalCount) {
+                                       uint64_t TotalCount,
+                                       bool AttachProfToDirectCall) {
   assert(DirectCallee != nullptr);
   BasicBlock *BB = Inst->getParent();
   // Just to suppress the non-debug build warning.
@@ -526,6 +543,14 @@ Instruction *llvm::promoteIndirectCall(Instruction *Inst,
 
   Instruction *NewInst =
       createDirectCallInst(Inst, DirectCallee, DirectCallBB, MergeBB);
+
+  if (AttachProfToDirectCall) {
+    SmallVector<uint32_t, 1> Weights;
+    Weights.push_back(Count);
+    MDBuilder MDB(NewInst->getContext());
+    dyn_cast<Instruction>(NewInst->stripPointerCasts())
+        ->setMetadata(LLVMContext::MD_prof, MDB.createBranchWeights(Weights));
+  }
 
   // Move Inst from MergeBB to IndirectCallBB.
   Inst->removeFromParent();
@@ -569,7 +594,7 @@ uint32_t ICallPromotionFunc::tryToPromote(
 
   for (auto &C : Candidates) {
     uint64_t Count = C.Count;
-    promoteIndirectCall(Inst, C.TargetFunction, Count, TotalCount);
+    promoteIndirectCall(Inst, C.TargetFunction, Count, TotalCount, SamplePGO);
     assert(TotalCount >= Count);
     TotalCount -= Count;
     NumOfPGOICallPromotion++;
@@ -610,7 +635,7 @@ bool ICallPromotionFunc::processFunction() {
 }
 
 // A wrapper function that does the actual work.
-static bool promoteIndirectCalls(Module &M, bool InLTO) {
+static bool promoteIndirectCalls(Module &M, bool InLTO, bool SamplePGO) {
   if (DisableICP)
     return false;
   InstrProfSymtab Symtab;
@@ -621,7 +646,7 @@ static bool promoteIndirectCalls(Module &M, bool InLTO) {
       continue;
     if (F.hasFnAttribute(Attribute::OptimizeNone))
       continue;
-    ICallPromotionFunc ICallPromotion(F, &M, &Symtab);
+    ICallPromotionFunc ICallPromotion(F, &M, &Symtab, SamplePGO);
     bool FuncChanged = ICallPromotion.processFunction();
     if (ICPDUMPAFTER && FuncChanged) {
       DEBUG(dbgs() << "\n== IR Dump After =="; F.print(dbgs()));
@@ -638,11 +663,14 @@ static bool promoteIndirectCalls(Module &M, bool InLTO) {
 
 bool PGOIndirectCallPromotionLegacyPass::runOnModule(Module &M) {
   // Command-line option has the priority for InLTO.
-  return promoteIndirectCalls(M, InLTO | ICPLTOMode);
+  return promoteIndirectCalls(M, InLTO | ICPLTOMode,
+                              SamplePGO | ICPSamplePGOMode);
 }
 
-PreservedAnalyses PGOIndirectCallPromotion::run(Module &M, ModuleAnalysisManager &AM) {
-  if (!promoteIndirectCalls(M, InLTO | ICPLTOMode))
+PreservedAnalyses PGOIndirectCallPromotion::run(Module &M,
+                                                ModuleAnalysisManager &AM) {
+  if (!promoteIndirectCalls(M, InLTO | ICPLTOMode,
+                            SamplePGO | ICPSamplePGOMode))
     return PreservedAnalyses::all();
 
   return PreservedAnalyses::none();

@@ -2,6 +2,7 @@
 ; RUN: llc -mtriple=x86_64-linux < %s -o - | FileCheck --check-prefix=LINUX-X64 %s
 ; RUN: llc -mtriple=i386-linux-android < %s -o - | FileCheck --check-prefix=ANDROID-I386 %s
 ; RUN: llc -mtriple=x86_64-linux-android < %s -o - | FileCheck --check-prefix=ANDROID-X64 %s
+; RUN: llc -mtriple=x86_64-fuchsia < %s -o - | FileCheck --check-prefix=FUCHSIA-X64 %s
 
 define void @_Z1fv() safestack {
 entry:
@@ -30,3 +31,7 @@ declare void @_Z7CapturePi(i32*)
 ; ANDROID-X64: movq %fs:72, %[[A:.*]]
 ; ANDROID-X64: leaq -16(%[[A]]), %[[B:.*]]
 ; ANDROID-X64: movq %[[B]], %fs:72
+
+; FUCHSIA-X64: movq %fs:24, %[[A:.*]]
+; FUCHSIA-X64: leaq -16(%[[A]]), %[[B:.*]]
+; FUCHSIA-X64: movq %[[B]], %fs:24

@@ -2717,15 +2717,17 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOrigin(&I, getCleanOrigin());
     IRBuilder<> IRB(I.getNextNode());
     const DataLayout &DL = F.getParent()->getDataLayout();
-    uint64_t Size = DL.getTypeAllocSize(I.getAllocatedType());
+    uint64_t TypeSize = DL.getTypeAllocSize(I.getAllocatedType());
+    Value *Len = ConstantInt::get(MS.IntptrTy, TypeSize);
+    if (I.isArrayAllocation())
+      Len = IRB.CreateMul(Len, I.getArraySize());
     if (PoisonStack && ClPoisonStackWithCall) {
       IRB.CreateCall(MS.MsanPoisonStackFn,
-                     {IRB.CreatePointerCast(&I, IRB.getInt8PtrTy()),
-                      ConstantInt::get(MS.IntptrTy, Size)});
+                     {IRB.CreatePointerCast(&I, IRB.getInt8PtrTy()), Len});
     } else {
       Value *ShadowBase = getShadowPtr(&I, Type::getInt8PtrTy(*MS.C), IRB);
       Value *PoisonValue = IRB.getInt8(PoisonStack ? ClPoisonStackPattern : 0);
-      IRB.CreateMemSet(ShadowBase, PoisonValue, Size, I.getAlignment());
+      IRB.CreateMemSet(ShadowBase, PoisonValue, Len, I.getAlignment());
     }
 
     if (PoisonStack && MS.TrackOrigins) {
@@ -2742,8 +2744,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
                                                StackDescription.str());
 
       IRB.CreateCall(MS.MsanSetAllocaOrigin4Fn,
-                     {IRB.CreatePointerCast(&I, IRB.getInt8PtrTy()),
-                      ConstantInt::get(MS.IntptrTy, Size),
+                     {IRB.CreatePointerCast(&I, IRB.getInt8PtrTy()), Len,
                       IRB.CreatePointerCast(Descr, IRB.getInt8PtrTy()),
                       IRB.CreatePointerCast(&F, MS.IntptrTy)});
     }

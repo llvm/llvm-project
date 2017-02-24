@@ -1,4 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++03 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s
 // PR5336
 template<typename FromCl>
 struct isa_impl_cl {
@@ -104,5 +106,8 @@ class E {
   template<> class D<C>;  // expected-error {{cannot specialize a template template parameter}}
   friend class D<C>; // expected-error {{type alias template 'D' cannot be referenced with a class specifier}}
 };
-template<typename T> using D = int; // expected-note {{declared here}} expected-warning {{extension}}
+#if __cplusplus <= 199711L
+// expected-warning@+2 {{extension}}
+#endif
+template<typename T> using D = int; // expected-note {{declared here}} 
 E<D> ed; // expected-note {{instantiation of}}

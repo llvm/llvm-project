@@ -623,6 +623,11 @@ InitListChecker::FillInEmptyInitializations(const InitializedEntity &Entity,
   assert((ILE->getType() != SemaRef.Context.VoidTy) &&
          "Should not have void type");
 
+  // A transparent ILE is not performing aggregate initialization and should
+  // not be filled in.
+  if (ILE->isTransparent())
+    return;
+
   if (const RecordType *RType = ILE->getType()->getAs<RecordType>()) {
     const RecordDecl *RDecl = RType->getDecl();
     if (RDecl->isUnion() && ILE->getInitializedFieldInUnion())

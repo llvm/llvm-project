@@ -2664,9 +2664,12 @@ static bool isSameTemplateParameterList(const TemplateParameterList *X,
 }
 
 /// Determine whether the attributes we can overload on are identical for A and
-/// B. Expects A and B to (otherwise) have the same type.
+/// B. Will ignore any overloadable attrs represented in the type of A and B.
 static bool hasSameOverloadableAttrs(const FunctionDecl *A,
                                      const FunctionDecl *B) {
+  // Note that pass_object_size attributes are represented in the function's
+  // ExtParameterInfo, so we don't need to check them here.
+
   SmallVector<const EnableIfAttr *, 4> AEnableIfs;
   // Since this is an equality check, we can ignore that enable_if attrs show up
   // in reverse order.
@@ -2696,8 +2699,6 @@ static bool hasSameOverloadableAttrs(const FunctionDecl *A,
       return false;
   }
 
-  // FIXME: This doesn't currently consider pass_object_size attributes, since
-  // we aren't guaranteed that A and B have valid parameter lists yet.
   return true;
 }
 

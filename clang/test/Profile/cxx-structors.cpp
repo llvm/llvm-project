@@ -16,12 +16,28 @@ struct Bar : public Foo {
   ~Bar();
 };
 
+struct Baz : virtual public Foo {
+  Baz() {}
+  Baz(int x) : Foo(x) {}
+  ~Baz();
+};
+
+struct Quux : public Foo {
+  Quux(const char *y, ...) : Foo(0) {}
+};
+
 Foo foo;
 Foo foo2(1);
 Bar bar;
+Baz baz;
+Baz baz2(1);
+Quux qux("fi", "fo", "fum");
 
 // Profile data for complete constructors and destructors must absent.
 
+// INSTR: @__profc__ZN3BazC1Ev =
+// INSTR: @__profc__ZN3BazC1Ei =
+// INSTR: @__profc__ZN4QuuxC1EPKcz =
 // INSTR: @__profc_main =
 // INSTR: @__profc__ZN3FooC2Ev =
 // INSTR: @__profc__ZN3FooD2Ev =

@@ -844,9 +844,9 @@ template <class ELFT> void Writer<ELFT>::addReservedSymbols() {
   if (ScriptConfig->HasSections)
     return;
 
-  // __ehdr_start is the location of program headers.
+  // __ehdr_start is the location of ELF file headers.
   ElfSym<ELFT>::EhdrStart =
-      addOptionalSynthetic<ELFT>("__ehdr_start", Out<ELFT>::ProgramHeaders, 0);
+      addOptionalSynthetic<ELFT>("__ehdr_start", Out<ELFT>::ElfHeader, 0);
 
   auto Define = [](StringRef S, DefinedSynthetic *&Sym1,
                    DefinedSynthetic *&Sym2) {
@@ -1138,7 +1138,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   // This is a bit of a hack. A value of 0 means undef, so we set it
   // to 1 t make __ehdr_start defined. The section number is not
   // particularly relevant.
-  Out<ELFT>::ProgramHeaders->SectionIndex = 1;
+  Out<ELFT>::ElfHeader->SectionIndex = 1;
 
   unsigned I = 1;
   for (OutputSectionBase *Sec : OutputSections) {

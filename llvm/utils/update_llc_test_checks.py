@@ -121,6 +121,7 @@ def build_function_body_dictionary(raw_tool_output, triple, prefixes, func_dict,
       'x86': (scrub_asm_x86, ASM_FUNCTION_X86_RE),
       'i386': (scrub_asm_x86, ASM_FUNCTION_X86_RE),
       'arm-eabi': (scrub_asm_arm_eabi, ASM_FUNCTION_ARM_RE),
+      'armeb-eabi': (scrub_asm_arm_eabi, ASM_FUNCTION_ARM_RE),
       'powerpc64le': (scrub_asm_powerpc64le, ASM_FUNCTION_PPC_RE),
   }
   handlers = None
