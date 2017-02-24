@@ -12,7 +12,7 @@ LLD is a linker which supports ELF (Unix), COFF (Windows) and Mach-O
 (macOS). It is generally faster than the GNU BFD/gold linkers or the
 MSVC linker.
 
-LLD is designed to be a drop-in replacmenet for the system linkers, so
+LLD is designed to be a drop-in replacement for the system linkers, so
 that users don't need to change their build systems other than swapping
 the linker command.
 
@@ -46,17 +46,17 @@ Other notable changes are listed below:
   but the source location of unresolved symbols.
 
 * Error messages are printed in red just like Clang by default. You
-  can disable it by passing -no-color-diagnostics.
+  can disable it by passing ``-no-color-diagnostics``.
 
 * LLD's version string is now embedded in a .comment section in the
   result output file. You can dump it with this command: ``objdump -j -s
   .comment <file>``.
 
-* The -Map option is supported. With that, you can print out section
+* The ``-Map`` option is supported. With that, you can print out section
   and symbol information to a specified file. This feature is useful
   for analyzing link results.
 
-* The file format for the -reproduce option has changed from cpio to
+* The file format for the ``-reproduce`` option has changed from cpio to
   tar.
 
 * When creating a copy relocation for a symbol, LLD now scans the
@@ -64,8 +64,8 @@ Other notable changes are listed below:
   space for the copy relocation is reserved in .bss.rel.ro instead of
   .bss. This fixes a security issue that read-only data in a DSO
   becomes writable if it is copied by a copy relocation. This issue
-  was disclosed originally on the binutils mailing list at
-  `<https://sourceware.org/ml/libc-alpha/2016-12/msg00914.html>`.
+  was disclosed originally on the
+  `binutils mailing list <https://sourceware.org/ml/libc-alpha/2016-12/msg00914.html>`_.
 
 * Compressed input sections are supported.
 
@@ -73,7 +73,7 @@ Other notable changes are listed below:
   ``-Ttext``, ``-b binary``, ``-build-id=uuid``, ``-no-rosegment``,
   ``-nopie``, ``-nostdlib``, ``-omagic``, ``-retain-symbols-file``,
   ``-sort-section``, ``-z max-page-size`` and ``-z wxneeded`` are
-  suppoorted.
+  supported.
 
 * A lot of linker script directives have been added.
 
@@ -81,15 +81,15 @@ Other notable changes are listed below:
   0x200000 to make it huge-page friendly.
 
 * ARM port now supports GNU ifunc, the ARM C++ exceptions ABI, TLS
-  relocations and static linking. Problems with dlopen() on systems
+  relocations and static linking. Problems with ``dlopen()`` on systems
   using eglibc fixed.
 
 * MIPS port now supports input files in new R6 revision of MIPS ABIs
   or N32 ABI. Generated file now contains .MIPS.abiflags section and
   complete set of ELF headers flags.
 
-* Relocations produced by the ``-mxgot`` compiler's flag is supported
-  for MIPS. Now it is possible to generate "large" GOT exceeds 64K
+* Relocations produced by the ``-mxgot`` compiler flag is supported
+  for MIPS. Now it is possible to generate "large" GOT that exceeds the 64K
   limit.
 
 COFF Improvements
