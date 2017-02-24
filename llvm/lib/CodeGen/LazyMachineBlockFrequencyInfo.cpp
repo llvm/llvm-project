@@ -37,38 +37,61 @@ LazyMachineBlockFrequencyInfoPass::LazyMachineBlockFrequencyInfoPass()
 
 void LazyMachineBlockFrequencyInfoPass::print(raw_ostream &OS,
                                               const Module *M) const {
-  LMBFI.getCalculated().print(OS, M);
+  getBFI().print(OS, M);
 }
 
 void LazyMachineBlockFrequencyInfoPass::getAnalysisUsage(
     AnalysisUsage &AU) const {
   AU.addRequired<MachineBranchProbabilityInfo>();
-  AU.addRequired<MachineLoopInfo>();
   AU.setPreservesAll();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
 void LazyMachineBlockFrequencyInfoPass::releaseMemory() {
-  LMBFI.releaseMemory();
+  OwnedMBFI.reset();
+  OwnedMLI.reset();
+  OwnedMDT.reset();
+}
+
+MachineBlockFrequencyInfo &
+LazyMachineBlockFrequencyInfoPass::calculateIfNotAvailable() const {
+  auto *MBFI = getAnalysisIfAvailable<MachineBlockFrequencyInfo>();
+  if (MBFI) {
+    DEBUG(dbgs() << "MachineBlockFrequencyInfo is available\n");
+    return *MBFI;
+  }
+
+  auto &MBPI = getAnalysis<MachineBranchProbabilityInfo>();
+  auto *MLI = getAnalysisIfAvailable<MachineLoopInfo>();
+  auto *MDT = getAnalysisIfAvailable<MachineDominatorTree>();
+  DEBUG(dbgs() << "Building MachineBlockFrequencyInfo on the fly\n");
+  DEBUG(if (MLI) dbgs() << "LoopInfo is available\n");
+
+  if (!MLI) {
+    DEBUG(dbgs() << "Building LoopInfo on the fly\n");
+    // First create a dominator tree.
+    DEBUG(if (MDT) dbgs() << "DominatorTree is available\n");
+
+    if (!MDT) {
+      DEBUG(dbgs() << "Building DominatorTree on the fly\n");
+      OwnedMDT = make_unique<MachineDominatorTree>();
+      OwnedMDT->getBase().recalculate(*MF);
+      MDT = OwnedMDT.get();
+    }
+
+    // Generate LoopInfo from it.
+    OwnedMLI = make_unique<MachineLoopInfo>();
+    OwnedMLI->getBase().analyze(MDT->getBase());
+    MLI = OwnedMLI.get();
+  }
+
+  OwnedMBFI = make_unique<MachineBlockFrequencyInfo>();
+  OwnedMBFI->calculate(*MF, MBPI, *MLI);
+  return *OwnedMBFI.get();
 }
 
 bool LazyMachineBlockFrequencyInfoPass::runOnMachineFunction(
-    MachineFunction &MF) {
-  auto &BPIPass = getAnalysis<MachineBranchProbabilityInfo>();
-  auto &LI = getAnalysis<MachineLoopInfo>();
-  LMBFI.setAnalysis(&MF, &BPIPass, &LI);
+    MachineFunction &F) {
+  MF = &F;
   return false;
-}
-
-void LazyMachineBlockFrequencyInfoPass::getLazyMachineBFIAnalysisUsage(
-    AnalysisUsage &AU) {
-  AU.addRequired<LazyMachineBlockFrequencyInfoPass>();
-  AU.addRequired<MachineBranchProbabilityInfo>();
-  AU.addRequired<MachineLoopInfo>();
-}
-
-void llvm::initializeLazyMachineBFIPassPass(PassRegistry &Registry) {
-  INITIALIZE_PASS_DEPENDENCY(LazyMachineBlockFrequencyInfoPass);
-  INITIALIZE_PASS_DEPENDENCY(MachineBranchProbabilityInfo);
-  INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo);
 }
