@@ -1072,8 +1072,8 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
       raw_string_ostream InstStr(InstStrStorage);
       InstStr << Inst;
 
-      OptimizationRemarkMissed R("gisel-irtranslator", "IRTranslatorFailure: ",
-                                 &Inst);
+      OptimizationRemarkMissed R("gisel-irtranslator", "GISelFailure",
+                                 Inst.getDebugLoc(), &BB);
       R << "unable to translate instruction: " << ore::NV("Opcode", &Inst)
         << ": '" << InstStr.str() << "'";
       reportTranslationError(*MF, *TPC, *ORE, R);
