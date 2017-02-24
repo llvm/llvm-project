@@ -127,13 +127,13 @@ define half @test_fdiv(half %a, half %b) #0 {
 ; CHECK-LABEL: test_frem(
 ; CHECK-DAG:  ld.param.b16    [[A:%h[0-9]+]], [test_frem_param_0];
 ; CHECK-DAG:  ld.param.b16    [[B:%h[0-9]+]], [test_frem_param_1];
-; CHECK-DAG:  cvt.f32.f16     [[F0:%f[0-9]+]], [[A]];
-; CHECK-DAG:  cvt.f32.f16     [[F1:%f[0-9]+]], [[B]];
-; CHECK-NEXT: div.rn.f32      [[F2:%f[0-9]+]], [[F0]], [[F1]];
-; CHECK-NEXT: cvt.rmi.f32.f32 [[F3:%f[0-9]+]], [[F2]];
-; CHECK-NEXT: mul.f32         [[F4:%f[0-9]+]], [[F3]], [[F1]];
-; CHECK-NEXT: sub.f32         [[F5:%f[0-9]+]], [[F0]], [[F4]];
-; CHECK-NEXT: cvt.rn.f16.f32  [[R:%h[0-9]+]], [[F5]];
+; CHECK-DAG:  cvt.f32.f16     [[FA:%f[0-9]+]], [[A]];
+; CHECK-DAG:  cvt.f32.f16     [[FB:%f[0-9]+]], [[B]];
+; CHECK-NEXT: div.rn.f32      [[D:%f[0-9]+]], [[FA]], [[FB]];
+; CHECK-NEXT: cvt.rmi.f32.f32 [[DI:%f[0-9]+]], [[D]];
+; CHECK-NEXT: mul.f32         [[RI:%f[0-9]+]], [[DI]], [[FB]];
+; CHECK-NEXT: sub.f32         [[RF:%f[0-9]+]], [[FA]], [[RI]];
+; CHECK-NEXT: cvt.rn.f16.f32  [[R:%h[0-9]+]], [[RF]];
 ; CHECK-NEXT: st.param.b16    [func_retval0+0], [[R]];
 ; CHECK-NEXT: ret;
 define half @test_frem(half %a, half %b) #0 {
@@ -509,7 +509,7 @@ define i1 @test_fcmp_ord(half %a, half %b) #0 {
 ; CHECK-NOF16-DAG: cvt.f32.f16 [[AF:%f[0-9]+]], [[A]];
 ; CHECK-NOF16-DAG: cvt.f32.f16 [[BF:%f[0-9]+]], [[B]];
 ; CHECK-NOF16: setp.lt.f32    [[PRED:%p[0-9]+]], [[AF]], [[BF]]
-; CHECK-NEXT: @%p1 bra        [[LABEL:LBB.*]];
+; CHECK-NEXT: @[[PRED]] bra   [[LABEL:LBB.*]];
 ; CHECK:      st.u32  [%[[C]]],
 ; CHECK:      [[LABEL]]:
 ; CHECK:      st.u32  [%[[D]]],

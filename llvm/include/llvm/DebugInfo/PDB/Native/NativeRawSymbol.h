@@ -19,7 +19,7 @@ class NativeSession;
 
 class NativeRawSymbol : public IPDBRawSymbol {
 public:
-  explicit NativeRawSymbol(const NativeSession &PDBSession);
+  explicit NativeRawSymbol(NativeSession &PDBSession);
 
   void dump(raw_ostream &OS, int Indent) const override;
 
@@ -196,6 +196,9 @@ public:
   bool isVolatileType() const override;
   bool wasInlined() const override;
   std::string getUnused() const override;
+
+private:
+  NativeSession &Session;
 };
 
 }

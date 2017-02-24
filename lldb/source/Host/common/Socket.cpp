@@ -443,11 +443,7 @@ NativeSocket Socket::AcceptSocket(NativeSocket sockfd, struct sockaddr *addr,
   if (!child_processes_inherit) {
     flags |= SOCK_CLOEXEC;
   }
-#if defined(__NetBSD__)
-  NativeSocket fd = ::paccept(sockfd, addr, addrlen, nullptr, flags);
-#else
   NativeSocket fd = ::accept4(sockfd, addr, addrlen, flags);
-#endif
 #else
   NativeSocket fd = ::accept(sockfd, addr, addrlen);
 #endif

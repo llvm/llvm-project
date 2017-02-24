@@ -32,9 +32,57 @@ void ODRHash::AddIdentifierInfo(const IdentifierInfo *II) {
   ID.AddString(II->getName());
 }
 
+void ODRHash::AddDeclarationName(DeclarationName Name) {
+  AddBoolean(Name.isEmpty());
+  if (Name.isEmpty())
+    return;
+
+  auto Kind = Name.getNameKind();
+  ID.AddInteger(Kind);
+  switch (Kind) {
+  case DeclarationName::Identifier:
+    AddIdentifierInfo(Name.getAsIdentifierInfo());
+    break;
+  case DeclarationName::ObjCZeroArgSelector:
+  case DeclarationName::ObjCOneArgSelector:
+  case DeclarationName::ObjCMultiArgSelector: {
+    Selector S = Name.getObjCSelector();
+    AddBoolean(S.isNull());
+    AddBoolean(S.isKeywordSelector());
+    AddBoolean(S.isUnarySelector());
+    unsigned NumArgs = S.getNumArgs();
+    for (unsigned i = 0; i < NumArgs; ++i) {
+      AddIdentifierInfo(S.getIdentifierInfoForSlot(i));
+    }
+    break;
+  }
+  case DeclarationName::CXXConstructorName:
+  case DeclarationName::CXXDestructorName:
+    AddQualType(Name.getCXXNameType());
+    break;
+  case DeclarationName::CXXOperatorName:
+    ID.AddInteger(Name.getCXXOverloadedOperator());
+    break;
+  case DeclarationName::CXXLiteralOperatorName:
+    AddIdentifierInfo(Name.getCXXLiteralIdentifier());
+    break;
+  case DeclarationName::CXXConversionFunctionName:
+    AddQualType(Name.getCXXNameType());
+    break;
+  case DeclarationName::CXXUsingDirective:
+    break;
+  case DeclarationName::CXXDeductionGuideName: {
+    auto *Template = Name.getCXXDeductionGuideTemplate();
+    AddBoolean(Template);
+    if (Template) {
+      AddDecl(Template);
+    }
+  }
+  }
+}
+
 void ODRHash::AddNestedNameSpecifier(const NestedNameSpecifier *NNS) {}
 void ODRHash::AddTemplateName(TemplateName Name) {}
-void ODRHash::AddDeclarationName(DeclarationName Name) {}
 void ODRHash::AddTemplateArgument(TemplateArgument TA) {}
 void ODRHash::AddTemplateParameterList(const TemplateParameterList *TPL) {}
 
@@ -192,6 +240,10 @@ void ODRHash::AddDecl(const Decl *D) {
   }
 
   ID.AddInteger(D->getKind());
+
+  if (const NamedDecl *ND = dyn_cast<NamedDecl>(D)) {
+    AddDeclarationName(ND->getDeclName());
+  }
 }
 
 // Process a Type pointer.  Add* methods call back into ODRHash while Visit*
@@ -212,6 +264,13 @@ public:
     }
   }
 
+  void AddDecl(Decl *D) {
+    Hash.AddBoolean(D);
+    if (D) {
+      Hash.AddDecl(D);
+    }
+  }
+
   void Visit(const Type *T) {
     ID.AddInteger(T->getTypeClass());
     Inherited::Visit(T);
@@ -221,6 +280,11 @@ public:
 
   void VisitBuiltinType(const BuiltinType *T) {
     ID.AddInteger(T->getKind());
+    VisitType(T);
+  }
+
+  void VisitTypedefType(const TypedefType *T) {
+    AddDecl(T->getDecl());
     VisitType(T);
   }
 };

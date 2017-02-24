@@ -4860,6 +4860,12 @@ void Fuchsia::AddCXXStdlibLibArgs(const ArgList &Args,
   CmdArgs.push_back("-lunwind");
 }
 
+SanitizerMask Fuchsia::getSupportedSanitizers() const {
+  SanitizerMask Res = ToolChain::getSupportedSanitizers();
+  Res |= SanitizerKind::SafeStack;
+  return Res;
+}
+
 /// DragonFly - DragonFly tool chain which can call as(1) and ld(1) directly.
 
 DragonFly::DragonFly(const Driver &D, const llvm::Triple &Triple,

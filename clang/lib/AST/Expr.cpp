@@ -1882,6 +1882,11 @@ bool InitListExpr::isTransparent() const {
   if (getNumInits() != 1 || !getInit(0))
     return false;
 
+  // Don't confuse aggregate initialization of a struct X { X &x; }; with a
+  // transparent struct copy.
+  if (!getInit(0)->isRValue() && getType()->isRecordType())
+    return false;
+
   return getType().getCanonicalType() ==
          getInit(0)->getType().getCanonicalType();
 }

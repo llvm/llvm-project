@@ -276,6 +276,10 @@ public:
   /// Determine whether the no signed wrap flag is set.
   bool hasNoSignedWrap() const;
 
+  /// Drops flags that may cause this instruction to evaluate to poison despite
+  /// having non-poison inputs.
+  void dropPoisonGeneratingFlags();
+
   /// Determine whether the exact flag is set.
   bool isExact() const;
 

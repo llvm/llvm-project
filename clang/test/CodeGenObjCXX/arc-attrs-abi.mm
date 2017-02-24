@@ -5,14 +5,15 @@
 // caused assertions to fire. Hence, minimal CHECKs.
 
 struct VirtualBase {
-  VirtualBase(__attribute__((ns_consumed)) id x);
+  VirtualBase(__attribute__((ns_consumed)) id x,
+              void * __attribute__((pass_object_size(0))));
 };
 struct WithVirtualBase : virtual VirtualBase {
   WithVirtualBase(__attribute__((ns_consumed)) id x);
 };
 
 WithVirtualBase::WithVirtualBase(__attribute__((ns_consumed)) id x)
-    : VirtualBase(x) {}
+    : VirtualBase(x, (void *)0) {}
 
 
 struct VirtualBase2 {

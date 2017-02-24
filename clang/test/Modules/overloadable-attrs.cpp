@@ -17,3 +17,6 @@ static_assert(enable_if_attrs::fn4(0) == 0, "");
 static_assert(enable_if_attrs::fn4(1) == 1, "");
 static_assert(enable_if_attrs::fn5(0) == 0, "");
 static_assert(enable_if_attrs::fn5(1) == 1, "");
+
+static_assert(pass_object_size_attrs::fn1(nullptr) == 1, "");
+static_assert(pass_object_size_attrs::fn2(nullptr) == 1, "");
