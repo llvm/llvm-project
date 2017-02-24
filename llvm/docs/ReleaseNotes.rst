@@ -22,55 +22,56 @@ them.
 
 Non-comprehensive list of changes in this release
 =================================================
-* The C API functions LLVMAddFunctionAttr, LLVMGetFunctionAttr,
-  LLVMRemoveFunctionAttr, LLVMAddAttribute, LLVMRemoveAttribute,
-  LLVMGetAttribute, LLVMAddInstrAttribute and
-  LLVMRemoveInstrAttribute have been removed.
-
-* The C API enum LLVMAttribute has been deleted.
-
-* The definition and uses of LLVM_ATRIBUTE_UNUSED_RESULT in the LLVM source
-  were replaced with LLVM_NODISCARD, which matches the C++17 [[nodiscard]]
-  semantics rather than gcc's __attribute__((warn_unused_result)).
-
 * Minimum compiler version to build has been raised to GCC 4.8 and VS 2015.
+
+* The C API functions ``LLVMAddFunctionAttr``, ``LLVMGetFunctionAttr``,
+  ``LLVMRemoveFunctionAttr``, ``LLVMAddAttribute``, ``LLVMRemoveAttribute``,
+  ``LLVMGetAttribute``, ``LLVMAddInstrAttribute`` and
+  ``LLVMRemoveInstrAttribute`` have been removed.
+
+* The C API enum ``LLVMAttribute`` has been deleted.
+
+* The definition and uses of ``LLVM_ATRIBUTE_UNUSED_RESULT`` in the LLVM source
+  were replaced with ``LLVM_NODISCARD``, which matches the C++17 ``[[nodiscard]]``
+  semantics rather than gcc's ``__attribute__((warn_unused_result))``.
 
 * The Timer related APIs now expect a Name and Description. When upgrading code
   the previously used names should become descriptions and a short name in the
   style of a programming language identifier should be added.
 
-* LLVM now handles invariant.group across different basic blocks, which makes
+* LLVM now handles ``invariant.group`` across different basic blocks, which makes
   it possible to devirtualize virtual calls inside loops.
 
-* The aggressive dead code elimination phase ("adce") now remove
+* The aggressive dead code elimination phase ("adce") now removes
   branches which do not effect program behavior. Loops are retained by
   default since they may be infinite but these can also be removed
-  with LLVM option -adce-remove-loops when the loop body otherwise has
+  with LLVM option ``-adce-remove-loops`` when the loop body otherwise has
   no live operations.
 
 * The GVNHoist pass is now enabled by default. The new pass based on Global
   Value Numbering detects similar computations in branch code and replaces
   multiple instances of the same computation with a unique expression.  The
   transform benefits code size and generates better schedules.  GVNHoist is
-  more aggressive at -Os and -Oz, hoisting more expressions at the expense of
-  execution time degradations.
+  more aggressive at ``-Os`` and ``-Oz``, hoisting more expressions at the
+  expense of execution time degradations.
 
  * The llvm-cov tool can now export coverage data as json. Its html output mode
    has also improved.
 
 Improvements to ThinLTO (-flto=thin)
 ------------------------------------
-* Integration with profile data (PGO). When available, profile data
-  enables more accurate function importing decisions, as well as
-  cross-module indirect call promotion.
-* Significant build-time and binary-size improvements when compiling with
-  debug info (-g).
+Integration with profile data (PGO). When available, profile data
+enables more accurate function importing decisions, as well as
+cross-module indirect call promotion.
+
+Significant build-time and binary-size improvements when compiling with
+debug info (-g).
 
 LLVM Coroutines
 ---------------
 
 Experimental support for :doc:`Coroutines` was added, which can be enabled
-with ``-enable-coroutines`` in ``opt`` command tool or using
+with ``-enable-coroutines`` in ``opt`` the command tool or using the
 ``addCoroutinePassesToExtensionPoints`` API when building the optimization
 pipeline.
 
@@ -81,16 +82,16 @@ For more information on LLVM Coroutines and the LLVM implementation, see
 Regcall and Vectorcall Calling Conventions
 --------------------------------------------------
 
-Support was added for _regcall calling convention.
-Existing __vectorcall calling convention support was extended to include
+Support was added for ``_regcall`` calling convention.
+Existing ``__vectorcall`` calling convention support was extended to include
 correct handling of HVAs.
 
-The __vectorcall calling convention was introduced by Microsoft to
+The ``__vectorcall`` calling convention was introduced by Microsoft to
 enhance register usage when passing parameters.
 For more information please read `__vectorcall documentation
 <https://msdn.microsoft.com/en-us/library/dn375768.aspx>`_.
 
-The __regcall calling convention was introduced by Intel to
+The ``__regcall`` calling convention was introduced by Intel to
 optimize parameter transfer on function call.
 This calling convention ensures that as many values as possible are
 passed or returned in registers.
@@ -102,7 +103,7 @@ Code Generation Testing
 
 Passes that work on the machine instruction representation can be tested with
 the .mir serialization format. ``llc`` supports the ``-run-pass``,
-``-stop-after``, ``-stop-before``, ``-start-after``, ``-start-before`` to to
+``-stop-after``, ``-stop-before``, ``-start-after``, ``-start-before`` to
 run a single pass of the code generation pipeline, or to stop or start the code
 generation pipeline at a given point.
 
@@ -185,9 +186,6 @@ changes landed in this release.
   removed.  Clients may use ``N->getIterator()`` (if not ``nullptr``) or
   ``&*I`` (if not ``end()``); alternatively, clients may refactor to use
   references for known-good nodes.
-
-Changes to the LLVM IR
-----------------------
 
 Changes to the ARM Targets
 --------------------------
