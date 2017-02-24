@@ -160,8 +160,7 @@ public:
 
   /// Emit a C++ expression that checks the predicate for the OpIdx operand of
   /// the instruction given in InsnVarName.
-  virtual void emitCxxPredicateExpr(raw_ostream &OS,
-                                    const StringRef InsnVarName,
+  virtual void emitCxxPredicateExpr(raw_ostream &OS, StringRef InsnVarName,
                                     unsigned OpIdx) const = 0;
 };
 
@@ -173,7 +172,7 @@ protected:
 public:
   LLTOperandMatcher(std::string Ty) : Ty(Ty) {}
 
-  void emitCxxPredicateExpr(raw_ostream &OS, const StringRef InsnVarName,
+  void emitCxxPredicateExpr(raw_ostream &OS, StringRef InsnVarName,
                             unsigned OpIdx) const override {
     OS << "MRI.getType(" << InsnVarName << ".getOperand(" << OpIdx
        << ").getReg()) == (" << Ty << ")";
@@ -188,7 +187,7 @@ protected:
 public:
   RegisterBankOperandMatcher(const CodeGenRegisterClass &RC) : RC(RC) {}
 
-  void emitCxxPredicateExpr(raw_ostream &OS, const StringRef InsnVarName,
+  void emitCxxPredicateExpr(raw_ostream &OS, StringRef InsnVarName,
                             unsigned OpIdx) const override {
     OS << "(&RBI.getRegBankFromRegClass(" << RC.getQualifiedName()
        << "RegClass) == RBI.getRegBank(" << InsnVarName << ".getOperand("
@@ -199,7 +198,7 @@ public:
 /// Generates code to check that an operand is a basic block.
 class MBBOperandMatcher : public OperandPredicateMatcher {
 public:
-  void emitCxxPredicateExpr(raw_ostream &OS, const StringRef InsnVarName,
+  void emitCxxPredicateExpr(raw_ostream &OS, StringRef InsnVarName,
                             unsigned OpIdx) const override {
     OS << InsnVarName << ".getOperand(" << OpIdx << ").isMBB()";
   }
@@ -216,7 +215,7 @@ public:
 
   /// Emit a C++ expression that tests whether the instruction named in
   /// InsnVarName matches all the predicate and all the operands.
-  void emitCxxPredicateExpr(raw_ostream &OS, const StringRef InsnVarName) const {
+  void emitCxxPredicateExpr(raw_ostream &OS, StringRef InsnVarName) const {
     OS << "(";
     emitCxxPredicateListExpr(OS, InsnVarName, OpIdx);
     OS << ")";
@@ -235,7 +234,7 @@ public:
   /// Emit a C++ expression that tests whether the instruction named in
   /// InsnVarName matches the predicate.
   virtual void emitCxxPredicateExpr(raw_ostream &OS,
-                                    const StringRef InsnVarName) const = 0;
+                                    StringRef InsnVarName) const = 0;
 };
 
 /// Generates code to check the opcode of an instruction.
@@ -247,7 +246,7 @@ public:
   InstructionOpcodeMatcher(const CodeGenInstruction *I) : I(I) {}
 
   void emitCxxPredicateExpr(raw_ostream &OS,
-                            const StringRef InsnVarName) const override {
+                            StringRef InsnVarName) const override {
     OS << InsnVarName << ".getOpcode() == " << I->Namespace
        << "::" << I->TheDef->getName();
   }
@@ -273,7 +272,7 @@ public:
 
   /// Emit a C++ expression that tests whether the instruction named in
   /// InsnVarName matches all the predicates and all the operands.
-  void emitCxxPredicateExpr(raw_ostream &OS, const StringRef InsnVarName) const {
+  void emitCxxPredicateExpr(raw_ostream &OS, StringRef InsnVarName) const {
     emitCxxPredicateListExpr(OS, InsnVarName);
     for (const auto &Operand : Operands) {
       OS << " &&\n(";
