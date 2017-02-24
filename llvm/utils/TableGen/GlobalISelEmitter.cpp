@@ -36,6 +36,7 @@
 #include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/ScopedPrinter.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
@@ -184,7 +185,7 @@ protected:
 public:
   OperandMatcher(unsigned OpIdx) : OpIdx(OpIdx) {}
   std::string getOperandExpr(StringRef InsnVarName) const {
-    return (InsnVarName + ".getOperand(" + std::to_string(OpIdx) + ")").str();
+    return (InsnVarName + ".getOperand(" + llvm::to_string(OpIdx) + ")").str();
   }
 
   /// Emit a C++ expression that tests whether the instruction named in
