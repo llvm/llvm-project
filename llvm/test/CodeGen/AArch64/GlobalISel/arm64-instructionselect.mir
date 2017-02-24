@@ -18,9 +18,6 @@
   define void @or_s64_gpr() { ret void }
   define void @or_v2s32_fpr() { ret void }
 
-  define void @xor_s32_gpr() { ret void }
-  define void @xor_s64_gpr() { ret void }
-
   define void @and_s32_gpr() { ret void }
   define void @and_s64_gpr() { ret void }
 
@@ -351,64 +348,6 @@ body:             |
       %0(<2 x s32>) = COPY %d0
       %1(<2 x s32>) = COPY %d1
       %2(<2 x s32>) = G_OR %0, %1
-...
-
----
-# Same as add_s32_gpr, for G_XOR operations.
-# CHECK-LABEL: name: xor_s32_gpr
-name:            xor_s32_gpr
-legalized:       true
-regBankSelected: true
-
-# CHECK:      registers:
-# CHECK-NEXT:  - { id: 0, class: gpr32 }
-# CHECK-NEXT:  - { id: 1, class: gpr32 }
-# CHECK-NEXT:  - { id: 2, class: gpr32 }
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: gpr }
-  - { id: 2, class: gpr }
-
-# CHECK:  body:
-# CHECK:    %0 = COPY %w0
-# CHECK:    %1 = COPY %w1
-# CHECK:    %2 = EORWrr %0, %1
-body:             |
-  bb.0:
-    liveins: %w0, %w1
-
-    %0(s32) = COPY %w0
-    %1(s32) = COPY %w1
-    %2(s32) = G_XOR %0, %1
-...
-
----
-# Same as add_s64_gpr, for G_XOR operations.
-# CHECK-LABEL: name: xor_s64_gpr
-name:            xor_s64_gpr
-legalized:       true
-regBankSelected: true
-
-# CHECK:      registers:
-# CHECK-NEXT:  - { id: 0, class: gpr64 }
-# CHECK-NEXT:  - { id: 1, class: gpr64 }
-# CHECK-NEXT:  - { id: 2, class: gpr64 }
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: gpr }
-  - { id: 2, class: gpr }
-
-# CHECK:  body:
-# CHECK:    %0 = COPY %x0
-# CHECK:    %1 = COPY %x1
-# CHECK:    %2 = EORXrr %0, %1
-body:             |
-  bb.0:
-    liveins: %x0, %x1
-
-    %0(s64) = COPY %x0
-    %1(s64) = COPY %x1
-    %2(s64) = G_XOR %0, %1
 ...
 
 ---
