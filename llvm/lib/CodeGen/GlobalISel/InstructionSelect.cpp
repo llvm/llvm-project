@@ -12,6 +12,7 @@
 
 #include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
 #include "llvm/ADT/PostOrderIterator.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
@@ -55,6 +56,13 @@ static void reportSelectionError(const MachineFunction &MF,
 }
 
 bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
+
+  // No matter what happens, whether we successfully select the function or not,
+  // nothing is going to use the vreg types after us.  Make sure they disappear.
+  auto ClearVRegTypesOnReturn =
+      make_scope_exit([&]() { MRI.getVRegToType().clear(); });
+
   // If the ISel pipeline failed, do not bother running that pass.
   if (MF.getProperties().hasProperty(
           MachineFunctionProperties::Property::FailedISel))
@@ -68,8 +76,6 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
 
   // FIXME: freezeReservedRegs is now done in IRTranslator, but there are many
   // other MF/MFI fields we need to initialize.
-
-  const MachineRegisterInfo &MRI = MF.getRegInfo();
 
 #ifndef NDEBUG
   // Check that our input is fully legal: we require the function to have the
@@ -90,7 +96,6 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
   // Until then, keep track of the number of blocks to assert that we don't.
   const size_t NumBlocks = MF.size();
 
-  bool Failed = false;
   for (MachineBasicBlock *MBB : post_order(&MF)) {
     if (MBB->empty())
       continue;
@@ -120,8 +125,8 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
           // FIXME: It would be nice to dump all inserted instructions.  It's
           // not obvious how, esp. considering select() can insert after MI.
           reportSelectionError(MF, &MI, "Cannot select");
-        Failed = true;
-        break;
+        MF.getProperties().set(MachineFunctionProperties::Property::FailedISel);
+        return false;
       }
 
       // Dump the range of instructions that MI expanded into.
@@ -150,8 +155,8 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
     if (MI && !RC) {
       if (TPC.isGlobalISelAbortEnabled())
         reportSelectionError(MF, MI, "VReg has no regclass after selection");
-      Failed = true;
-      break;
+      MF.getProperties().set(MachineFunctionProperties::Property::FailedISel);
+      return false;
     } else if (!RC)
       continue;
 
@@ -160,18 +165,18 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
       if (TPC.isGlobalISelAbortEnabled())
         reportSelectionError(
             MF, MI, "VReg has explicit size different from class size");
-      Failed = true;
-      break;
+      MF.getProperties().set(MachineFunctionProperties::Property::FailedISel);
+      return false;
     }
   }
 
-  MRI.getVRegToType().clear();
-
-  if (!TPC.isGlobalISelAbortEnabled() && (Failed || MF.size() != NumBlocks)) {
+  if (MF.size() != NumBlocks) {
+    if (TPC.isGlobalISelAbortEnabled())
+      reportSelectionError(MF, /*MI=*/nullptr,
+                           "Inserting blocks is not supported yet");
     MF.getProperties().set(MachineFunctionProperties::Property::FailedISel);
     return false;
   }
-  assert(MF.size() == NumBlocks && "Inserting blocks is not supported yet");
 
   // FIXME: Should we accurately track changes?
   return true;
