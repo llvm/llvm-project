@@ -277,6 +277,7 @@ protected:
   PredicateKind Kind;
 
 public:
+  InstructionPredicateMatcher(PredicateKind Kind) : Kind(Kind) {}
   virtual ~InstructionPredicateMatcher() {}
 
   PredicateKind getKind() const { return Kind; }
@@ -300,7 +301,8 @@ protected:
   const CodeGenInstruction *I;
 
 public:
-  InstructionOpcodeMatcher(const CodeGenInstruction *I) : I(I) {}
+  InstructionOpcodeMatcher(const CodeGenInstruction *I)
+      : InstructionPredicateMatcher(IPM_Opcode), I(I) {}
 
   static bool classof(const InstructionPredicateMatcher *P) {
     return P->getKind() == IPM_Opcode;
