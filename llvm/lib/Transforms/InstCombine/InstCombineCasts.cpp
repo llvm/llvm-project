@@ -1167,18 +1167,16 @@ Instruction *InstCombiner::visitSExt(SExtInst &CI) {
                                       ShAmt);
   }
 
-  // If this input is a trunc from our destination, then turn sext(trunc(x))
+  // If the input is a trunc from the destination type, then turn sext(trunc(x))
   // into shifts.
-  if (TruncInst *TI = dyn_cast<TruncInst>(Src))
-    if (TI->hasOneUse() && TI->getOperand(0)->getType() == DestTy) {
-      uint32_t SrcBitSize = SrcTy->getScalarSizeInBits();
-      uint32_t DestBitSize = DestTy->getScalarSizeInBits();
-
-      // We need to emit a shl + ashr to do the sign extend.
-      Value *ShAmt = ConstantInt::get(DestTy, DestBitSize-SrcBitSize);
-      Value *Res = Builder->CreateShl(TI->getOperand(0), ShAmt, "sext");
-      return BinaryOperator::CreateAShr(Res, ShAmt);
-    }
+  Value *X;
+  if (match(Src, m_OneUse(m_Trunc(m_Value(X)))) && X->getType() == DestTy) {
+    // sext(trunc(X)) --> ashr(shl(X, C), C)
+    unsigned SrcBitSize = SrcTy->getScalarSizeInBits();
+    unsigned DestBitSize = DestTy->getScalarSizeInBits();
+    Constant *ShAmt = ConstantInt::get(DestTy, DestBitSize - SrcBitSize);
+    return BinaryOperator::CreateAShr(Builder->CreateShl(X, ShAmt), ShAmt);
+  }
 
   if (ICmpInst *ICI = dyn_cast<ICmpInst>(Src))
     return transformSExtICmp(ICI, CI);
@@ -1225,17 +1223,15 @@ static Constant *fitsInFPType(ConstantFP *CFP, const fltSemantics &Sem) {
   return nullptr;
 }
 
-/// If this is a floating-point extension instruction, look
-/// through it until we get the source value.
+/// Look through floating-point extensions until we get the source value.
 static Value *lookThroughFPExtensions(Value *V) {
-  if (Instruction *I = dyn_cast<Instruction>(V))
-    if (I->getOpcode() == Instruction::FPExt)
-      return lookThroughFPExtensions(I->getOperand(0));
+  while (auto *FPExt = dyn_cast<FPExtInst>(V))
+    V = FPExt->getOperand(0);
 
   // If this value is a constant, return the constant in the smallest FP type
   // that can accurately represent it.  This allows us to turn
   // (float)((double)X+2.0) into x+2.0f.
-  if (ConstantFP *CFP = dyn_cast<ConstantFP>(V)) {
+  if (auto *CFP = dyn_cast<ConstantFP>(V)) {
     if (CFP->getType() == Type::getPPC_FP128Ty(V->getContext()))
       return V;  // No constant folding of this.
     // See if the value can be truncated to half and then reextended.

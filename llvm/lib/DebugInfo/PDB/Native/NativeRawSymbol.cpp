@@ -10,7 +10,9 @@
 #include "llvm/DebugInfo/PDB/Native/NativeRawSymbol.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/DebugInfo/PDB/Native/InfoStream.h"
 #include "llvm/DebugInfo/PDB/IPDBEnumChildren.h"
+#include "llvm/DebugInfo/PDB/Native/PDBFile.h"
 #include "llvm/DebugInfo/PDB/PDBExtras.h"
 #include "llvm/DebugInfo/PDB/Native/NativeSession.h"
 #include "llvm/Support/ConvertUTF.h"
@@ -19,7 +21,8 @@
 using namespace llvm;
 using namespace llvm::pdb;
 
-NativeRawSymbol::NativeRawSymbol(const NativeSession &PDBSession) {}
+NativeRawSymbol::NativeRawSymbol(NativeSession &PDBSession)
+  : Session(PDBSession) {}
 
 void NativeRawSymbol::dump(raw_ostream &OS, int Indent) const {}
 
@@ -62,6 +65,11 @@ uint32_t NativeRawSymbol::getAddressSection() const {
 }
 
 uint32_t NativeRawSymbol::getAge() const {
+  auto &File = Session.getPDBFile();
+  auto IS = File.getPDBInfoStream();
+  if (IS)
+    return IS->getAge();
+  consumeError(IS.takeError());
   return 0;
 }
 
@@ -248,7 +256,7 @@ uint32_t NativeRawSymbol::getSubTypeId() const {
 }
 
 std::string NativeRawSymbol::getSymbolsFileName() const {
-  return 0;
+  return Session.getPDBFile().getFilePath();
 }
 
 uint32_t NativeRawSymbol::getSymIndexId() const {
@@ -328,7 +336,12 @@ PDB_SymType NativeRawSymbol::getSymTag() const {
 }
 
 PDB_UniqueId NativeRawSymbol::getGuid() const {
-  return {{0}};
+  auto &File = Session.getPDBFile();
+  auto IS = File.getPDBInfoStream();
+  if (IS)
+    return IS->getGuid();
+  consumeError(IS.takeError());
+  return PDB_UniqueId{{0}};
 }
 
 int32_t NativeRawSymbol::getOffset() const {

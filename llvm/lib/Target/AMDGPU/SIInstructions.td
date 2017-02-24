@@ -1043,6 +1043,11 @@ def : Pat <
 >;
 
 def : Pat <
+  (i1 (trunc i16:$a)),
+  (V_CMP_EQ_U32_e64 (S_AND_B32 (i32 1), $a), (i32 1))
+>;
+
+def : Pat <
   (i1 (trunc i64:$a)),
   (V_CMP_EQ_U32_e64 (S_AND_B32 (i32 1),
                     (i32 (EXTRACT_SUBREG $a, sub0))), (i32 1))

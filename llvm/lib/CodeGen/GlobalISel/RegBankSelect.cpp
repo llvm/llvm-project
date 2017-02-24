@@ -14,6 +14,7 @@
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
 #include "llvm/CodeGen/GlobalISel/RegisterBank.h"
+#include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -71,6 +72,7 @@ void RegBankSelect::init(MachineFunction &MF) {
     MBPI = nullptr;
   }
   MIRBuilder.setMF(MF);
+  MORE = make_unique<MachineOptimizationRemarkEmitter>(MF, MBFI);
 }
 
 void RegBankSelect::getAnalysisUsage(AnalysisUsage &AU) const {
@@ -585,18 +587,12 @@ bool RegBankSelect::runOnMachineFunction(MachineFunction &MF) {
   // LegalizerInfo as it's currently in the separate GlobalISel library.
   const MachineRegisterInfo &MRI = MF.getRegInfo();
   if (const LegalizerInfo *MLI = MF.getSubtarget().getLegalizerInfo()) {
-    for (const MachineBasicBlock &MBB : MF) {
-      for (const MachineInstr &MI : MBB) {
+    for (MachineBasicBlock &MBB : MF) {
+      for (MachineInstr &MI : MBB) {
         if (isPreISelGenericOpcode(MI.getOpcode()) && !MLI->isLegal(MI, MRI)) {
-          if (!TPC->isGlobalISelAbortEnabled()) {
-            MF.getProperties().set(
-                MachineFunctionProperties::Property::FailedISel);
-            return false;
-          }
-          std::string ErrStorage;
-          raw_string_ostream Err(ErrStorage);
-          Err << "Instruction is not legal: " << MI << '\n';
-          report_fatal_error(Err.str());
+          reportGISelFailure(MF, *TPC, *MORE, "gisel-regbankselect",
+                             "instruction is not legal", MI);
+          return false;
         }
       }
     }
@@ -622,9 +618,8 @@ bool RegBankSelect::runOnMachineFunction(MachineFunction &MF) {
         continue;
 
       if (!assignInstr(MI)) {
-        if (TPC->isGlobalISelAbortEnabled())
-          report_fatal_error("Unable to map instruction");
-        MF.getProperties().set(MachineFunctionProperties::Property::FailedISel);
+        reportGISelFailure(MF, *TPC, *MORE, "gisel-regbankselect",
+                           "unable to map instruction", MI);
         return false;
       }
     }

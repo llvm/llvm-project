@@ -34,6 +34,7 @@ class Instruction;
 class MachineBasicBlock;
 class MachineFunction;
 class MachineInstr;
+class OptimizationRemarkEmitter;
 class MachineRegisterInfo;
 class TargetPassConfig;
 
@@ -372,6 +373,9 @@ private:
 
   /// Current target configuration. Controls how the pass handles errors.
   const TargetPassConfig *TPC;
+
+  /// Current optimization remark emitter. Used to report failures.
+  std::unique_ptr<OptimizationRemarkEmitter> ORE;
 
   // * Insert all the code needed to materialize the constants
   // at the proper place. E.g., Entry block or dominator block

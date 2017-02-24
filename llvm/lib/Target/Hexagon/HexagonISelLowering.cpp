@@ -1292,17 +1292,6 @@ static bool isSExtFree(SDValue N) {
   return false;
 }
 
-SDValue HexagonTargetLowering::LowerCTPOP(SDValue Op, SelectionDAG &DAG) const {
-  SDLoc dl(Op);
-  SDValue InpVal = Op.getOperand(0);
-  if (isa<ConstantSDNode>(InpVal)) {
-    uint64_t V = cast<ConstantSDNode>(InpVal)->getZExtValue();
-    return DAG.getTargetConstant(countPopulation(V), dl, MVT::i64);
-  }
-  SDValue PopOut = DAG.getNode(HexagonISD::POPCOUNT, dl, MVT::i32, InpVal);
-  return DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::i64, PopOut);
-}
-
 SDValue HexagonTargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
   SDLoc dl(Op);
 
@@ -1911,7 +1900,12 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::CTPOP, MVT::i8,  Promote);
   setOperationAction(ISD::CTPOP, MVT::i16, Promote);
   setOperationAction(ISD::CTPOP, MVT::i32, Promote);
-  setOperationAction(ISD::CTPOP, MVT::i64, Custom);
+  setOperationAction(ISD::CTPOP, MVT::i64, Legal);
+
+  setOperationAction(ISD::BITREVERSE, MVT::i32, Legal);
+  setOperationAction(ISD::BITREVERSE, MVT::i64, Legal);
+  setOperationAction(ISD::BSWAP, MVT::i32, Legal);
+  setOperationAction(ISD::BSWAP, MVT::i64, Legal);
 
   // We custom lower i64 to i64 mul, so that it is not considered as a legal
   // operation. There is a pattern that will match i64 mul and transform it
@@ -1921,7 +1915,7 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
   for (unsigned IntExpOp :
        { ISD::SDIV,      ISD::UDIV,      ISD::SREM,      ISD::UREM,
          ISD::SDIVREM,   ISD::UDIVREM,   ISD::ROTL,      ISD::ROTR,
-         ISD::BSWAP,     ISD::SHL_PARTS, ISD::SRA_PARTS, ISD::SRL_PARTS,
+         ISD::SHL_PARTS, ISD::SRA_PARTS, ISD::SRL_PARTS,
          ISD::SMUL_LOHI, ISD::UMUL_LOHI }) {
     setOperationAction(IntExpOp, MVT::i32, Expand);
     setOperationAction(IntExpOp, MVT::i64, Expand);
@@ -2288,7 +2282,6 @@ const char* HexagonTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case HexagonISD::INSERTRP:      return "HexagonISD::INSERTRP";
   case HexagonISD::JT:            return "HexagonISD::JT";
   case HexagonISD::PACKHL:        return "HexagonISD::PACKHL";
-  case HexagonISD::POPCOUNT:      return "HexagonISD::POPCOUNT";
   case HexagonISD::RET_FLAG:      return "HexagonISD::RET_FLAG";
   case HexagonISD::SHUFFEB:       return "HexagonISD::SHUFFEB";
   case HexagonISD::SHUFFEH:       return "HexagonISD::SHUFFEH";
@@ -2989,7 +2982,6 @@ HexagonTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     case ISD::DYNAMIC_STACKALLOC:   return LowerDYNAMIC_STACKALLOC(Op, DAG);
     case ISD::SETCC:                return LowerSETCC(Op, DAG);
     case ISD::VSELECT:              return LowerVSELECT(Op, DAG);
-    case ISD::CTPOP:                return LowerCTPOP(Op, DAG);
     case ISD::INTRINSIC_WO_CHAIN:   return LowerINTRINSIC_WO_CHAIN(Op, DAG);
     case ISD::INTRINSIC_VOID:       return LowerINTRINSIC_VOID(Op, DAG);
     case ISD::INLINEASM:            return LowerINLINEASM(Op, DAG);

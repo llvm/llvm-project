@@ -203,6 +203,8 @@ protected:
 
   PacketResult Handle_qFileLoadAddress(StringExtractorGDBRemote &packet);
 
+  PacketResult Handle_QPassSignals(StringExtractorGDBRemote &packet);
+
   void SetCurrentThreadID(lldb::tid_t tid);
 
   lldb::tid_t GetCurrentThreadID() const;

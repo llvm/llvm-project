@@ -1048,7 +1048,7 @@ updateScheduledPressure(const SUnit *SU,
       ++CritIdx;
     if (CritIdx != CritEnd && RegionCriticalPSets[CritIdx].getPSet() == ID) {
       if ((int)NewMaxPressure[ID] > RegionCriticalPSets[CritIdx].getUnitInc()
-          && NewMaxPressure[ID] <= std::numeric_limits<int16_t>::max())
+          && NewMaxPressure[ID] <= (unsigned)std::numeric_limits<int16_t>::max())
         RegionCriticalPSets[CritIdx].setUnitInc(NewMaxPressure[ID]);
     }
     unsigned Limit = RegClassInfo->getRegPressureSetLimit(ID);
@@ -1085,7 +1085,7 @@ void ScheduleDAGMILive::updatePressureDiffs(
           continue;
 
         PressureDiff &PDiff = getPressureDiff(&SU);
-        PDiff.addPressureChange(Reg, Decrement, &MRI);
+        PDiff.addPressureChange(P, Decrement, &MRI);
         DEBUG(
           dbgs() << "  UpdateRegP: SU(" << SU.NodeNum << ") "
                  << PrintReg(Reg, TRI) << ':' << PrintLaneMask(P.LaneMask)
@@ -1123,7 +1123,7 @@ void ScheduleDAGMILive::updatePressureDiffs(
               LI.Query(LIS->getInstructionIndex(*SU->getInstr()));
           if (LRQ.valueIn() == VNI) {
             PressureDiff &PDiff = getPressureDiff(SU);
-            PDiff.addPressureChange(Reg, true, &MRI);
+            PDiff.addPressureChange(P, true, &MRI);
             DEBUG(
               dbgs() << "  UpdateRegP: SU(" << SU->NodeNum << ") "
                      << *SU->getInstr();

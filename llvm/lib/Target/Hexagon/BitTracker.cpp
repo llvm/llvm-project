@@ -317,6 +317,15 @@ bool BT::RegisterCell::operator== (const RegisterCell &RC) const {
   return true;
 }
 
+BT::RegisterCell &BT::RegisterCell::regify(unsigned R) {
+  for (unsigned i = 0, n = width(); i < n; ++i) {
+    const BitValue &V = Bits[i];
+    if (V.Type == BitValue::Ref && V.RefI.Reg == 0)
+      Bits[i].RefI = BitRef(R, i);
+  }
+  return *this;
+}
+
 uint16_t BT::MachineEvaluator::getRegBitWidth(const RegisterRef &RR) const {
   // The general problem is with finding a register class that corresponds
   // to a given reference reg:sub. There can be several such classes, and
@@ -378,12 +387,7 @@ void BT::MachineEvaluator::putCell(const RegisterRef &RR, RegisterCell RC,
     return;
   assert(RR.Sub == 0 && "Unexpected sub-register in definition");
   // Eliminate all ref-to-reg-0 bit values: replace them with "self".
-  for (unsigned i = 0, n = RC.width(); i < n; ++i) {
-    const BitValue &V = RC[i];
-    if (V.Type == BitValue::Ref && V.RefI.Reg == 0)
-      RC[i].RefI = BitRef(RR.Reg, i);
-  }
-  M[RR.Reg] = RC;
+  M[RR.Reg] = RC.regify(RR.Reg);
 }
 
 // Check if the cell represents a compile-time integer value.

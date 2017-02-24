@@ -4,9 +4,9 @@
 %s_i1 = type { i1 }
 %s_i8 = type { i8 }
 %s_i16 = type { i16 }
-%s_half = type { half }
+%s_f16 = type { half }
 %s_i32 = type { i32 }
-%s_float = type { float }
+%s_f32 = type { float }
 %s_i64 = type { i64 }
 %s_f64 = type { double }
 
@@ -322,20 +322,146 @@ define <5 x i16> @test_v5i16(<5 x i16> %a) {
 }
 
 ; CHECK: .func  (.param .b32 func_retval0)
-; CHECK-LABEL: test_half(
-; CHECK-NEXT: .param .b32 test_half_param_0
-; CHECK:      ld.param.b16    [[E:%h[0-9]+]], [test_half_param_0];
+; CHECK-LABEL: test_f16(
+; CHECK-NEXT: .param .b32 test_f16_param_0
+; CHECK:      ld.param.b16    [[E:%h[0-9]+]], [test_f16_param_0];
 ; CHECK:      .param .b32 param0;
 ; CHECK:      st.param.b16    [param0+0], [[E]];
 ; CHECK:      .param .b32 retval0;
 ; CHECK:      call.uni (retval0),
-; CHECK-NEXT: test_half,
+; CHECK-NEXT: test_f16,
 ; CHECK:      ld.param.b16    [[R:%h[0-9]+]], [retval0+0];
 ; CHECK:      st.param.b16    [func_retval0+0], [[R]]
 ; CHECK-NEXT: ret;
-define half @test_half(half %a) {
-       %r = tail call half @test_half(half %a);
+define half @test_f16(half %a) {
+       %r = tail call half @test_f16(half %a);
        ret half %r;
+}
+
+; CHECK: .func  (.param .align 4 .b8 func_retval0[4])
+; CHECK-LABEL: test_v2f16(
+; CHECK-NEXT: .param .align 4 .b8 test_v2f16_param_0[4]
+; CHECK:      ld.param.b32    [[E:%hh[0-9]+]], [test_v2f16_param_0];
+; CHECK:      .param .align 4 .b8 param0[4];
+; CHECK:      st.param.b32    [param0+0], [[E]];
+; CHECK:      .param .align 4 .b8 retval0[4];
+; CHECK:      call.uni (retval0),
+; CHECK-NEXT: test_v2f16,
+; CHECK:      ld.param.b32    [[R:%hh[0-9]+]], [retval0+0];
+; CHECK:      st.param.b32    [func_retval0+0], [[R]]
+; CHECK-NEXT: ret;
+define <2 x half> @test_v2f16(<2 x half> %a) {
+       %r = tail call <2 x half> @test_v2f16(<2 x half> %a);
+       ret <2 x half> %r;
+}
+
+; CHECK:.func  (.param .align 8 .b8 func_retval0[8])
+; CHECK-LABEL: test_v3f16(
+; CHECK:      .param .align 8 .b8 test_v3f16_param_0[8]
+; CHECK-DAG:  ld.param.b32    [[HH01:%hh[0-9]+]], [test_v3f16_param_0];
+; CHECK-DAG:  mov.b32         {[[E0:%h[0-9]+]], [[E1:%h[0-9]+]]}, [[HH01]];
+; CHECK-DAG:  ld.param.b16    [[E2:%h[0-9]+]], [test_v3f16_param_0+4];
+; CHECK:      .param .align 8 .b8 param0[8];
+; CHECK-DAG:  st.param.v2.b16 [param0+0], {[[E0]], [[E1]]};
+; CHECK-DAG:  st.param.b16    [param0+4], [[E2]];
+; CHECK:      .param .align 8 .b8 retval0[8];
+; CHECK:      call.uni (retval0),
+; CHECK:      test_v3f16,
+; CHECK-DAG:  ld.param.v2.b16 {[[R0:%h[0-9]+]], [[R1:%h[0-9]+]]}, [retval0+0];
+; CHECK-DAG:  ld.param.b16    [[R2:%h[0-9]+]], [retval0+4];
+; CHECK-DAG:  st.param.v2.b16 [func_retval0+0], {[[R0]], [[R1]]};
+; CHECK-DAG:  st.param.b16    [func_retval0+4], [[R2]];
+; CHECK:      ret;
+define <3 x half> @test_v3f16(<3 x half> %a) {
+       %r = tail call <3 x half> @test_v3f16(<3 x half> %a);
+       ret <3 x half> %r;
+}
+
+; CHECK:.func  (.param .align 8 .b8 func_retval0[8])
+; CHECK-LABEL: test_v4f16(
+; CHECK:      .param .align 8 .b8 test_v4f16_param_0[8]
+; CHECK:      ld.param.v2.u32 {[[R01:%r[0-9]+]], [[R23:%r[0-9]+]]}, [test_v4f16_param_0];
+; CHECK-DAG:  mov.b32         [[HH01:%hh[0-9]+]], [[R01]];
+; CHECK-DAG:  mov.b32         [[HH23:%hh[0-9]+]], [[R23]];
+; CHECK:      .param .align 8 .b8 param0[8];
+; CHECK:      st.param.v2.b32 [param0+0], {[[HH01]], [[HH23]]};
+; CHECK:      .param .align 8 .b8 retval0[8];
+; CHECK:      call.uni (retval0),
+; CHECK:      test_v4f16,
+; CHECK:      ld.param.v2.b32 {[[RH01:%hh[0-9]+]], [[RH23:%hh[0-9]+]]}, [retval0+0];
+; CHECK:      st.param.v2.b32 [func_retval0+0], {[[RH01]], [[RH23]]};
+; CHECK:      ret;
+define <4 x half> @test_v4f16(<4 x half> %a) {
+       %r = tail call <4 x half> @test_v4f16(<4 x half> %a);
+       ret <4 x half> %r;
+}
+
+; CHECK:.func  (.param .align 16 .b8 func_retval0[16])
+; CHECK-LABEL: test_v5f16(
+; CHECK:      .param .align 16 .b8 test_v5f16_param_0[16]
+; CHECK-DAG:  ld.param.v4.b16  {[[E0:%h[0-9]+]], [[E1:%h[0-9]+]], [[E2:%h[0-9]+]], [[E3:%h[0-9]+]]}, [test_v5f16_param_0];
+; CHECK-DAG:  mov.b32         {[[E0:%h[0-9]+]], [[E1:%h[0-9]+]]}, [[HH01]];
+; CHECK-DAG:  ld.param.b16    [[E4:%h[0-9]+]], [test_v5f16_param_0+8];
+; CHECK:      .param .align 16 .b8 param0[16];
+; CHECK-DAG:  st.param.v4.b16 [param0+0],
+; CHECK-DAG:  st.param.b16    [param0+8], [[E4]];
+; CHECK:      .param .align 16 .b8 retval0[16];
+; CHECK:      call.uni (retval0),
+; CHECK:      test_v5f16,
+; CHECK-DAG:  ld.param.v4.b16 {[[R0:%h[0-9]+]], [[R1:%h[0-9]+]], [[R2:%h[0-9]+]], [[R3:%h[0-9]+]]}, [retval0+0];
+; CHECK-DAG:  ld.param.b16    [[R4:%h[0-9]+]], [retval0+8];
+; CHECK-DAG:  st.param.v4.b16 [func_retval0+0], {[[R0]], [[R1]], [[R2]], [[R3]]};
+; CHECK-DAG:  st.param.b16    [func_retval0+8], [[R4]];
+; CHECK:      ret;
+define <5 x half> @test_v5f16(<5 x half> %a) {
+       %r = tail call <5 x half> @test_v5f16(<5 x half> %a);
+       ret <5 x half> %r;
+}
+
+; CHECK:.func  (.param .align 16 .b8 func_retval0[16])
+; CHECK-LABEL: test_v8f16(
+; CHECK:      .param .align 16 .b8 test_v8f16_param_0[16]
+; CHECK:      ld.param.v4.u32 {[[R01:%r[0-9]+]], [[R23:%r[0-9]+]], [[R45:%r[0-9]+]], [[R67:%r[0-9]+]]}, [test_v8f16_param_0];
+; CHECK-DAG:  mov.b32         [[HH01:%hh[0-9]+]], [[R01]];
+; CHECK-DAG:  mov.b32         [[HH23:%hh[0-9]+]], [[R23]];
+; CHECK-DAG:  mov.b32         [[HH45:%hh[0-9]+]], [[R45]];
+; CHECK-DAG:  mov.b32         [[HH67:%hh[0-9]+]], [[R67]];
+; CHECK:      .param .align 16 .b8 param0[16];
+; CHECK:      st.param.v4.b32 [param0+0], {[[HH01]], [[HH23]], [[HH45]], [[HH67]]};
+; CHECK:      .param .align 16 .b8 retval0[16];
+; CHECK:      call.uni (retval0),
+; CHECK:      test_v8f16,
+; CHECK:      ld.param.v4.b32 {[[RH01:%hh[0-9]+]], [[RH23:%hh[0-9]+]], [[RH45:%hh[0-9]+]], [[RH67:%hh[0-9]+]]}, [retval0+0];
+; CHECK:      st.param.v4.b32 [func_retval0+0], {[[RH01]], [[RH23]], [[RH45]], [[RH67]]};
+; CHECK:      ret;
+define <8 x half> @test_v8f16(<8 x half> %a) {
+       %r = tail call <8 x half> @test_v8f16(<8 x half> %a);
+       ret <8 x half> %r;
+}
+
+; CHECK:.func  (.param .align 32 .b8 func_retval0[32])
+; CHECK-LABEL: test_v9f16(
+; CHECK:      .param .align 32 .b8 test_v9f16_param_0[32]
+; CHECK-DAG:  ld.param.v4.b16  {[[E0:%h[0-9]+]], [[E1:%h[0-9]+]], [[E2:%h[0-9]+]], [[E3:%h[0-9]+]]}, [test_v9f16_param_0];
+; CHECK-DAG:  ld.param.v4.b16  {[[E4:%h[0-9]+]], [[E5:%h[0-9]+]], [[E6:%h[0-9]+]], [[E7:%h[0-9]+]]}, [test_v9f16_param_0+8];
+; CHECK-DAG:  ld.param.b16     [[E8:%h[0-9]+]], [test_v9f16_param_0+16];
+; CHECK:      .param .align 32 .b8 param0[32];
+; CHECK-DAG:  st.param.v4.b16 [param0+0],
+; CHECK-DAG:  st.param.v4.b16 [param0+8],
+; CHECK-DAG:  st.param.b16    [param0+16], [[E8]];
+; CHECK:      .param .align 32 .b8 retval0[32];
+; CHECK:      call.uni (retval0),
+; CHECK:      test_v9f16,
+; CHECK-DAG:  ld.param.v4.b16 {[[R0:%h[0-9]+]], [[R1:%h[0-9]+]], [[R2:%h[0-9]+]], [[R3:%h[0-9]+]]}, [retval0+0];
+; CHECK-DAG:  ld.param.v4.b16 {[[R4:%h[0-9]+]], [[R5:%h[0-9]+]], [[R6:%h[0-9]+]], [[R7:%h[0-9]+]]}, [retval0+8];
+; CHECK-DAG:  ld.param.b16    [[R8:%h[0-9]+]], [retval0+16];
+; CHECK-DAG:  st.param.v4.b16 [func_retval0+0], {[[R0]], [[R1]], [[R2]], [[R3]]};
+; CHECK-DAG:  st.param.v4.b16 [func_retval0+8], {[[R4]], [[R5]], [[R6]], [[R7]]};
+; CHECK-DAG:  st.param.b16    [func_retval0+16], [[R8]];
+; CHECK:      ret;
+define <9 x half> @test_v9f16(<9 x half> %a) {
+       %r = tail call <9 x half> @test_v9f16(<9 x half> %a);
+       ret <9 x half> %r;
 }
 
 ; CHECK: .func  (.param .b32 func_retval0)
@@ -415,19 +541,19 @@ define <5 x i32> @test_v5i32(<5 x i32> %a) {
 }
 
 ; CHECK: .func  (.param .b32 func_retval0)
-; CHECK-LABEL: test_float(
-; CHECK-NEXT: .param .b32 test_float_param_0
-; CHECK:      ld.param.f32    [[E:%f[0-9]+]], [test_float_param_0];
+; CHECK-LABEL: test_f32(
+; CHECK-NEXT: .param .b32 test_f32_param_0
+; CHECK:      ld.param.f32    [[E:%f[0-9]+]], [test_f32_param_0];
 ; CHECK:      .param .b32 param0;
 ; CHECK:      st.param.f32    [param0+0], [[E]];
 ; CHECK:      .param .b32 retval0;
 ; CHECK:      call.uni (retval0),
-; CHECK-NEXT: test_float,
+; CHECK-NEXT: test_f32,
 ; CHECK:      ld.param.f32    [[R:%f[0-9]+]], [retval0+0];
 ; CHECK:      st.param.f32    [func_retval0+0], [[R]];
 ; CHECK-NEXT: ret;
-define float @test_float(float %a) {
-       %r = tail call float @test_float(float %a);
+define float @test_f32(float %a) {
+       %r = tail call float @test_f32(float %a);
        ret float %r;
 }
 
@@ -547,20 +673,20 @@ define %s_i16 @test_s_i16(%s_i16 %a) {
 }
 
 ; CHECK: .func  (.param .align 2 .b8 func_retval0[2])
-; CHECK-LABEL: test_s_half(
-; CHECK-NEXT: .param .align 2 .b8 test_s_half_param_0[2]
-; CHECK:      ld.param.b16 [[A:%h[0-9]+]], [test_s_half_param_0];
+; CHECK-LABEL: test_s_f16(
+; CHECK-NEXT: .param .align 2 .b8 test_s_f16_param_0[2]
+; CHECK:      ld.param.b16 [[A:%h[0-9]+]], [test_s_f16_param_0];
 ; CHECK:      .param .align 2 .b8 param0[2];
 ; CHECK:      st.param.b16    [param0+0], [[A]]
 ; CHECK:      .param .align 2 .b8 retval0[2];
 ; CHECK:      call.uni
-; CHECK-NEXT: test_s_half,
+; CHECK-NEXT: test_s_f16,
 ; CHECK:      ld.param.b16    [[R:%h[0-9]+]], [retval0+0];
 ; CHECK:      st.param.b16    [func_retval0+0], [[R]];
 ; CHECK-NEXT: ret;
-define %s_half @test_s_half(%s_half %a) {
-       %r = tail call %s_half @test_s_half(%s_half %a);
-       ret %s_half %r;
+define %s_f16 @test_s_f16(%s_f16 %a) {
+       %r = tail call %s_f16 @test_s_f16(%s_f16 %a);
+       ret %s_f16 %r;
 }
 
 ; CHECK: .func  (.param .align 4 .b8 func_retval0[4])
@@ -581,20 +707,20 @@ define %s_i32 @test_s_i32(%s_i32 %a) {
 }
 
 ; CHECK: .func  (.param .align 4 .b8 func_retval0[4])
-; CHECK-LABEL: test_s_float(
-; CHECK-NEXT: .param .align 4 .b8 test_s_float_param_0[4]
-; CHECK:      ld.param.f32    [[E:%f[0-9]+]], [test_s_float_param_0];
+; CHECK-LABEL: test_s_f32(
+; CHECK-NEXT: .param .align 4 .b8 test_s_f32_param_0[4]
+; CHECK:      ld.param.f32    [[E:%f[0-9]+]], [test_s_f32_param_0];
 ; CHECK:      .param .align 4 .b8 param0[4]
 ; CHECK:      st.param.f32    [param0+0], [[E]];
 ; CHECK:      .param .align 4 .b8 retval0[4];
 ; CHECK:      call.uni (retval0),
-; CHECK-NEXT: test_s_float,
+; CHECK-NEXT: test_s_f32,
 ; CHECK:      ld.param.f32    [[R:%f[0-9]+]], [retval0+0];
 ; CHECK:      st.param.f32    [func_retval0+0], [[R]];
 ; CHECK-NEXT: ret;
-define %s_float @test_s_float(%s_float %a) {
-       %r = tail call %s_float @test_s_float(%s_float %a);
-       ret %s_float %r;
+define %s_f32 @test_s_f32(%s_f32 %a) {
+       %r = tail call %s_f32 @test_s_f32(%s_f32 %a);
+       ret %s_f32 %r;
 }
 
 ; CHECK: .func  (.param .align 8 .b8 func_retval0[8])

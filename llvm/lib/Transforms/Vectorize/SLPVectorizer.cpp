@@ -304,6 +304,7 @@ public:
   typedef SmallVector<Instruction *, 16> InstrList;
   typedef SmallPtrSet<Value *, 16> ValueSet;
   typedef SmallVector<StoreInst *, 8> StoreList;
+  typedef MapVector<Value *, SmallVector<DebugLoc, 2>> ExtraValueToDebugLocsMap;
 
   BoUpSLP(Function *Func, ScalarEvolution *Se, TargetTransformInfo *Tti,
           TargetLibraryInfo *TLi, AliasAnalysis *Aa, LoopInfo *Li,
@@ -333,7 +334,7 @@ public:
   /// Vectorize the tree but with the list of externally used values \p
   /// ExternallyUsedValues. Values in this MapVector can be replaced but the
   /// generated extractvalue instructions.
-  Value *vectorizeTree(MapVector<Value *, DebugLoc> &ExternallyUsedValues);
+  Value *vectorizeTree(ExtraValueToDebugLocsMap &ExternallyUsedValues);
 
   /// \returns the cost incurred by unwanted spills and fills, caused by
   /// holding live values over call sites.
@@ -352,7 +353,7 @@ public:
   /// into account (anf updating it, if required) list of externally used
   /// values stored in \p ExternallyUsedValues.
   void buildTree(ArrayRef<Value *> Roots,
-                 MapVector<Value *, DebugLoc> &ExternallyUsedValues,
+                 ExtraValueToDebugLocsMap &ExternallyUsedValues,
                  ArrayRef<Value *> UserIgnoreLst = None);
 
   /// Clear the internal data structures that are created by 'buildTree'.
@@ -953,11 +954,11 @@ private:
 
 void BoUpSLP::buildTree(ArrayRef<Value *> Roots,
                         ArrayRef<Value *> UserIgnoreLst) {
-  MapVector<Value *, DebugLoc> ExternallyUsedValues;
+  ExtraValueToDebugLocsMap ExternallyUsedValues;
   buildTree(Roots, ExternallyUsedValues, UserIgnoreLst);
 }
 void BoUpSLP::buildTree(ArrayRef<Value *> Roots,
-                        MapVector<Value *, DebugLoc> &ExternallyUsedValues,
+                        ExtraValueToDebugLocsMap &ExternallyUsedValues,
                         ArrayRef<Value *> UserIgnoreLst) {
   deleteTree();
   UserIgnoreList = UserIgnoreLst;
@@ -2801,12 +2802,12 @@ Value *BoUpSLP::vectorizeTree(ArrayRef<Value *> VL, TreeEntry *E) {
 }
 
 Value *BoUpSLP::vectorizeTree() {
-  MapVector<Value *, DebugLoc> ExternallyUsedValues;
+  ExtraValueToDebugLocsMap ExternallyUsedValues;
   return vectorizeTree(ExternallyUsedValues);
 }
 
 Value *
-BoUpSLP::vectorizeTree(MapVector<Value *, DebugLoc> &ExternallyUsedValues) {
+BoUpSLP::vectorizeTree(ExtraValueToDebugLocsMap &ExternallyUsedValues) {
 
   // All blocks must be scheduled before any instructions are inserted.
   for (auto &BSIter : BlocksSchedules) {
@@ -2868,7 +2869,6 @@ BoUpSLP::vectorizeTree(MapVector<Value *, DebugLoc> &ExternallyUsedValues) {
       assert(ExternallyUsedValues.count(Scalar) &&
              "Scalar with nullptr as an external user must be registered in "
              "ExternallyUsedValues map");
-      DebugLoc DL = ExternallyUsedValues[Scalar];
       if (auto *VecI = dyn_cast<Instruction>(Vec)) {
         Builder.SetInsertPoint(VecI->getParent(),
                                std::next(VecI->getIterator()));
@@ -2878,8 +2878,9 @@ BoUpSLP::vectorizeTree(MapVector<Value *, DebugLoc> &ExternallyUsedValues) {
       Value *Ex = Builder.CreateExtractElement(Vec, Lane);
       Ex = extend(ScalarRoot, Ex, Scalar->getType());
       CSEBlocks.insert(cast<Instruction>(Scalar)->getParent());
+      auto &Locs = ExternallyUsedValues[Scalar];
+      ExternallyUsedValues.insert({Ex, Locs});
       ExternallyUsedValues.erase(Scalar);
-      ExternallyUsedValues[Ex] = DL;
       continue;
     }
 
@@ -4439,9 +4440,11 @@ public:
     Builder.setFastMathFlags(Unsafe);
     unsigned i = 0;
 
-    MapVector<Value *, DebugLoc> ExternallyUsedValues;
+    BoUpSLP::ExtraValueToDebugLocsMap ExternallyUsedValues;
+    // The same extra argument may be used several time, so log each attempt
+    // to use it.
     for (auto &Pair : ExtraArgs)
-      ExternallyUsedValues[Pair.second] = Pair.first->getDebugLoc();
+      ExternallyUsedValues[Pair.second].push_back(Pair.first->getDebugLoc());
     while (i < NumReducedVals - ReduxWidth + 1 && ReduxWidth > 2) {
       auto VL = makeArrayRef(&ReducedVals[i], ReduxWidth);
       V.buildTree(VL, ExternallyUsedValues, ReductionOps);
@@ -4489,9 +4492,14 @@ public:
             Builder.CreateBinOp(ReductionOpcode, VectorizedTree, I);
       }
       for (auto &Pair : ExternallyUsedValues) {
-        Builder.SetCurrentDebugLocation(Pair.second);
-        VectorizedTree = Builder.CreateBinOp(ReductionOpcode, VectorizedTree,
-                                             Pair.first, "bin.extra");
+        assert(!Pair.second.empty() &&
+               "At least one DebugLoc must be inserted");
+        // Add each externally used value to the final reduction.
+        for (auto &DL : Pair.second) {
+          Builder.SetCurrentDebugLocation(DL);
+          VectorizedTree = Builder.CreateBinOp(ReductionOpcode, VectorizedTree,
+                                               Pair.first, "bin.extra");
+        }
       }
       // Update users.
       if (ReductionPHI && !isa<UndefValue>(ReductionPHI)) {

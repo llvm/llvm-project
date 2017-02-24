@@ -45,6 +45,7 @@
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineModuleInfoImpls.h"
 #include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
@@ -213,6 +214,7 @@ void AsmPrinter::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
   MachineFunctionPass::getAnalysisUsage(AU);
   AU.addRequired<MachineModuleInfo>();
+  AU.addRequired<MachineOptimizationRemarkEmitterPass>();
   AU.addRequired<GCModuleInfo>();
   if (isVerbose())
     AU.addRequired<MachineLoopInfo>();
@@ -925,6 +927,7 @@ void AsmPrinter::EmitFunctionBody() {
 
   // Print out code for the function.
   bool HasAnyRealCode = false;
+  int NumInstsInFunction = 0;
   for (auto &MBB : *MF) {
     // Print a label for the basic block.
     EmitBasicBlockStart(MBB);
@@ -934,7 +937,7 @@ void AsmPrinter::EmitFunctionBody() {
       if (!MI.isPosition() && !MI.isImplicitDef() && !MI.isKill() &&
           !MI.isDebugValue()) {
         HasAnyRealCode = true;
-        ++EmittedInsts;
+        ++NumInstsInFunction;
       }
 
       if (ShouldPrintDebugScopes) {
@@ -994,6 +997,14 @@ void AsmPrinter::EmitFunctionBody() {
 
     EmitBasicBlockEnd(MBB);
   }
+
+  EmittedInsts += NumInstsInFunction;
+  MachineOptimizationRemarkAnalysis R(DEBUG_TYPE, "InstructionCount",
+                                      MF->getFunction()->getSubprogram(),
+                                      &MF->front());
+  R << ore::NV("NumInstructions", NumInstsInFunction)
+    << " instructions in function";
+  ORE->emit(R);
 
   // If the function is empty and the object file uses .subsections_via_symbols,
   // then we need to emit *something* to the function body to prevent the
@@ -1353,6 +1364,7 @@ void AsmPrinter::SetupMachineFunction(MachineFunction &MF) {
       CurrentFnSymForSize = CurrentFnBegin;
   }
 
+  ORE = &getAnalysis<MachineOptimizationRemarkEmitterPass>().getORE();
   if (isVerbose())
     LI = &getAnalysis<MachineLoopInfo>();
 }

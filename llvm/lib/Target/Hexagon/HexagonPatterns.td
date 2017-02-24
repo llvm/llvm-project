@@ -1591,6 +1591,15 @@ def: Pat<(i64 (cttz I64:$Rss)), (ToZext64 (S2_ct0p I64:$Rss))>;
 def: Pat<(i64 (ctlz (not I64:$Rss))), (ToZext64 (S2_cl1p I64:$Rss))>;
 def: Pat<(i64 (cttz (not I64:$Rss))), (ToZext64 (S2_ct1p I64:$Rss))>;
 
+def: Pat<(i64 (ctpop I64:$Rss)), (ToZext64 (S5_popcountp I64:$Rss))>;
+def: Pat<(i32 (ctpop I32:$Rs)), (S5_popcountp (A4_combineir 0, I32:$Rs))>;
+
+def: Pat<(bitreverse I32:$Rs), (S2_brev I32:$Rs)>;
+def: Pat<(bitreverse I64:$Rss), (S2_brevp I64:$Rss)>;
+
+def: Pat<(bswap I32:$Rs), (A2_swiz I32:$Rs)>;
+def: Pat<(bswap I64:$Rss), (A2_combinew (A2_swiz (LoReg $Rss)),
+                                        (A2_swiz (HiReg $Rss)))>;
 
 let AddedComplexity = 20 in {   // Complexity greater than cmp reg-imm.
   def: Pat<(i1 (seteq (and (shl 1, u5_0ImmPred:$u5), I32:$Rs), 0)),
@@ -2238,12 +2247,6 @@ def ftoi : SDNodeXForm<fpimm, [{
 
 def: Pat<(sra (i64 (add (sra I64:$src1, u6_0ImmPred:$src2), 1)), (i32 1)),
          (S2_asr_i_p_rnd I64:$src1, imm:$src2)>;
-
-def SDTHexagonI32I64: SDTypeProfile<1, 1, [SDTCisVT<0, i32>,
-                                           SDTCisVT<1, i64>]>;
-def HexagonPOPCOUNT: SDNode<"HexagonISD::POPCOUNT", SDTHexagonI32I64>;
-
-def: Pat<(HexagonPOPCOUNT I64:$Rss), (S5_popcountp I64:$Rss)>;
 
 let AddedComplexity = 20 in {
   defm: Loadx_pat<load, f32, s30_2ImmPred, L2_loadri_io>;

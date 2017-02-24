@@ -64,6 +64,9 @@ void NVPTXInstPrinter::printRegName(raw_ostream &OS, unsigned RegNo) const {
   case 7:
     OS << "%h";
     break;
+  case 8:
+    OS << "%hh";
+    break;
   }
 
   unsigned VReg = RegNo & 0x0FFFFFFF;

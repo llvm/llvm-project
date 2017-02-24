@@ -63,6 +63,26 @@ TEST(APIntTest, i33_Count) {
   EXPECT_EQ(((uint64_t)-2)&((1ull<<33) -1), i33minus2.getZExtValue());
 }
 
+TEST(APIntTest, i61_Count) {
+  APInt i61(61, 1 << 15);
+  EXPECT_EQ(45u, i61.countLeadingZeros());
+  EXPECT_EQ(0u, i61.countLeadingOnes());
+  EXPECT_EQ(16u, i61.getActiveBits());
+  EXPECT_EQ(15u, i61.countTrailingZeros());
+  EXPECT_EQ(1u, i61.countPopulation());
+  EXPECT_EQ((1 << 15), i61.getSExtValue());
+  EXPECT_EQ((1 << 15), i61.getZExtValue());
+
+  i61.setBits(8, 19);
+  EXPECT_EQ(42u, i61.countLeadingZeros());
+  EXPECT_EQ(0u, i61.countLeadingOnes());
+  EXPECT_EQ(19u, i61.getActiveBits());
+  EXPECT_EQ(8u, i61.countTrailingZeros());
+  EXPECT_EQ(11u, i61.countPopulation());
+  EXPECT_EQ((1 << 19) - (1 << 8), i61.getSExtValue());
+  EXPECT_EQ((1 << 19) - (1 << 8), i61.getZExtValue());
+}
+
 TEST(APIntTest, i65_Count) {
   APInt i65(65, 0, true);
   EXPECT_EQ(65u, i65.countLeadingZeros());
@@ -118,6 +138,80 @@ TEST(APIntTest, i128_PositiveCount) {
   EXPECT_EQ(1u, one.countPopulation());
   EXPECT_EQ(1, one.getSExtValue());
   EXPECT_EQ(1u, one.getZExtValue());
+
+  APInt s128(128, 2, true);
+  EXPECT_EQ(126u, s128.countLeadingZeros());
+  EXPECT_EQ(0u, s128.countLeadingOnes());
+  EXPECT_EQ(2u, s128.getActiveBits());
+  EXPECT_EQ(1u, s128.countTrailingZeros());
+  EXPECT_EQ(0u, s128.countTrailingOnes());
+  EXPECT_EQ(1u, s128.countPopulation());
+  EXPECT_EQ(2, s128.getSExtValue());
+  EXPECT_EQ(2u, s128.getZExtValue());
+
+  // NOP Test
+  s128.setBits(42, 42);
+  EXPECT_EQ(126u, s128.countLeadingZeros());
+  EXPECT_EQ(0u, s128.countLeadingOnes());
+  EXPECT_EQ(2u, s128.getActiveBits());
+  EXPECT_EQ(1u, s128.countTrailingZeros());
+  EXPECT_EQ(0u, s128.countTrailingOnes());
+  EXPECT_EQ(1u, s128.countPopulation());
+  EXPECT_EQ(2, s128.getSExtValue());
+  EXPECT_EQ(2u, s128.getZExtValue());
+
+  s128.setBits(3, 32);
+  EXPECT_EQ(96u, s128.countLeadingZeros());
+  EXPECT_EQ(0u, s128.countLeadingOnes());
+  EXPECT_EQ(32u, s128.getActiveBits());
+  EXPECT_EQ(33u, s128.getMinSignedBits());
+  EXPECT_EQ(1u, s128.countTrailingZeros());
+  EXPECT_EQ(0u, s128.countTrailingOnes());
+  EXPECT_EQ(30u, s128.countPopulation());
+  EXPECT_EQ(static_cast<uint32_t>((~0u << 3) | 2), s128.getZExtValue());
+
+  s128.setBits(62, 128);
+  EXPECT_EQ(0u, s128.countLeadingZeros());
+  EXPECT_EQ(66u, s128.countLeadingOnes());
+  EXPECT_EQ(128u, s128.getActiveBits());
+  EXPECT_EQ(63u, s128.getMinSignedBits());
+  EXPECT_EQ(1u, s128.countTrailingZeros());
+  EXPECT_EQ(0u, s128.countTrailingOnes());
+  EXPECT_EQ(96u, s128.countPopulation());
+  EXPECT_EQ(static_cast<int64_t>((3ull << 62) |
+                                 static_cast<uint32_t>((~0u << 3) | 2)),
+            s128.getSExtValue());
+}
+
+TEST(APIntTest, i256) {
+  APInt s256(256, 15, true);
+  EXPECT_EQ(252u, s256.countLeadingZeros());
+  EXPECT_EQ(0u, s256.countLeadingOnes());
+  EXPECT_EQ(4u, s256.getActiveBits());
+  EXPECT_EQ(0u, s256.countTrailingZeros());
+  EXPECT_EQ(4u, s256.countTrailingOnes());
+  EXPECT_EQ(4u, s256.countPopulation());
+  EXPECT_EQ(15, s256.getSExtValue());
+  EXPECT_EQ(15u, s256.getZExtValue());
+
+  s256.setBits(62, 66);
+  EXPECT_EQ(190u, s256.countLeadingZeros());
+  EXPECT_EQ(0u, s256.countLeadingOnes());
+  EXPECT_EQ(66u, s256.getActiveBits());
+  EXPECT_EQ(67u, s256.getMinSignedBits());
+  EXPECT_EQ(0u, s256.countTrailingZeros());
+  EXPECT_EQ(4u, s256.countTrailingOnes());
+  EXPECT_EQ(8u, s256.countPopulation());
+
+  s256.setBits(60, 256);
+  EXPECT_EQ(0u, s256.countLeadingZeros());
+  EXPECT_EQ(196u, s256.countLeadingOnes());
+  EXPECT_EQ(256u, s256.getActiveBits());
+  EXPECT_EQ(61u, s256.getMinSignedBits());
+  EXPECT_EQ(0u, s256.countTrailingZeros());
+  EXPECT_EQ(4u, s256.countTrailingOnes());
+  EXPECT_EQ(200u, s256.countPopulation());
+  EXPECT_EQ(static_cast<int64_t>((~0ull << 60) | 15), s256.getSExtValue());
 }
 
 TEST(APIntTest, i1) {

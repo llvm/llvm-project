@@ -63,7 +63,7 @@ inline static unsigned getDigit(char cdigit, uint8_t radix) {
     r = cdigit - 'a';
     if (r <= radix - 11U)
       return r + 10;
-    
+
     radix = 10;
   }
 
@@ -565,6 +565,39 @@ void APInt::setBit(unsigned bitPosition) {
     pVal[whichWord(bitPosition)] |= maskBit(bitPosition);
 }
 
+void APInt::setBits(unsigned loBit, unsigned hiBit) {
+  assert(hiBit <= BitWidth && "hiBit out of range");
+  assert(loBit <= hiBit && loBit <= BitWidth && "loBit out of range");
+
+  if (loBit == hiBit)
+    return;
+
+  if (isSingleWord())
+    *this |= APInt::getBitsSet(BitWidth, loBit, hiBit);
+  else {
+    unsigned hiBit1 = hiBit - 1;
+    unsigned loWord = whichWord(loBit);
+    unsigned hiWord = whichWord(hiBit1);
+    if (loWord == hiWord) {
+      // Set bits are all within the same word, create a [loBit,hiBit) mask.
+      uint64_t mask = UINT64_MAX;
+      mask >>= (APINT_BITS_PER_WORD - (hiBit - loBit));
+      mask <<= whichBit(loBit);
+      pVal[loWord] |= mask;
+    } else {
+      // Set bits span multiple words, create a lo mask with set bits starting
+      // at loBit, a hi mask with set bits below hiBit and set all bits of the
+      // words in between.
+      uint64_t loMask = UINT64_MAX << whichBit(loBit);
+      uint64_t hiMask = UINT64_MAX >> (64 - whichBit(hiBit1) - 1);
+      pVal[loWord] |= loMask;
+      pVal[hiWord] |= hiMask;
+      for (unsigned word = loWord + 1; word < hiWord; ++word)
+        pVal[word] = UINT64_MAX;
+    }
+  }
+}
+
 /// Set the given bit to 0 whose position is given as "bitPosition".
 /// @brief Set a given bit to 0.
 void APInt::clearBit(unsigned bitPosition) {
@@ -587,7 +620,7 @@ void APInt::flipBit(unsigned bitPosition) {
 
 unsigned APInt::getBitsNeeded(StringRef str, uint8_t radix) {
   assert(!str.empty() && "Invalid string length");
-  assert((radix == 10 || radix == 8 || radix == 16 || radix == 2 || 
+  assert((radix == 10 || radix == 8 || radix == 16 || radix == 2 ||
           radix == 36) &&
          "Radix should be 2, 8, 10, 16, or 36!");
 
@@ -612,7 +645,7 @@ unsigned APInt::getBitsNeeded(StringRef str, uint8_t radix) {
     return slen * 4 + isNegative;
 
   // FIXME: base 36
-  
+
   // This is grossly inefficient but accurate. We could probably do something
   // with a computation of roughly slen*64/20 and then adjust by the value of
   // the first few digits. But, I'm not sure how accurate that could be.
@@ -621,7 +654,7 @@ unsigned APInt::getBitsNeeded(StringRef str, uint8_t radix) {
   // be too large. This avoids the assertion in the constructor. This
   // calculation doesn't work appropriately for the numbers 0-9, so just use 4
   // bits in that case.
-  unsigned sufficient 
+  unsigned sufficient
     = radix == 10? (slen == 1 ? 4 : slen * 64/18)
                  : (slen == 1 ? 7 : slen * 16/3);
 
@@ -2035,7 +2068,7 @@ APInt APInt::sdiv_ov(const APInt &RHS, bool &Overflow) const {
 
 APInt APInt::smul_ov(const APInt &RHS, bool &Overflow) const {
   APInt Res = *this * RHS;
-  
+
   if (*this != 0 && RHS != 0)
     Overflow = Res.sdiv(RHS) != *this || Res.sdiv(*this) != RHS;
   else
@@ -2062,7 +2095,7 @@ APInt APInt::sshl_ov(const APInt &ShAmt, bool &Overflow) const {
     Overflow = ShAmt.uge(countLeadingZeros());
   else
     Overflow = ShAmt.uge(countLeadingOnes());
-  
+
   return *this << ShAmt;
 }
 
@@ -2082,7 +2115,7 @@ APInt APInt::ushl_ov(const APInt &ShAmt, bool &Overflow) const {
 void APInt::fromString(unsigned numbits, StringRef str, uint8_t radix) {
   // Check our assumptions here
   assert(!str.empty() && "Invalid string length");
-  assert((radix == 10 || radix == 8 || radix == 16 || radix == 2 || 
+  assert((radix == 10 || radix == 8 || radix == 16 || radix == 2 ||
           radix == 36) &&
          "Radix should be 2, 8, 10, 16, or 36!");
 
@@ -2141,7 +2174,7 @@ void APInt::fromString(unsigned numbits, StringRef str, uint8_t radix) {
 
 void APInt::toString(SmallVectorImpl<char> &Str, unsigned Radix,
                      bool Signed, bool formatAsCLiteral) const {
-  assert((Radix == 10 || Radix == 8 || Radix == 16 || Radix == 2 || 
+  assert((Radix == 10 || Radix == 8 || Radix == 16 || Radix == 2 ||
           Radix == 36) &&
          "Radix should be 2, 8, 10, 16, or 36!");
 

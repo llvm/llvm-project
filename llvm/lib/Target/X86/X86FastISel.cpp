@@ -2427,8 +2427,13 @@ bool X86FastISel::X86SelectFPExtOrFPTrunc(const Instruction *I,
   MachineInstrBuilder MIB;
   MIB = BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(TargetOpc),
                 ResultReg);
-  if (Subtarget->hasAVX())
-    MIB.addReg(OpReg);
+  if (Subtarget->hasAVX()) {
+    unsigned ImplicitDefReg = createResultReg(RC);
+    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
+            TII.get(TargetOpcode::IMPLICIT_DEF), ImplicitDefReg);
+
+    MIB.addReg(ImplicitDefReg);
+  }
   MIB.addReg(OpReg);
   updateValueMap(I, ResultReg);
   return true;

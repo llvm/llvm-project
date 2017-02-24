@@ -1473,9 +1473,10 @@ define float @extra_args_same_several_times(float* nocapture readonly %x, i32 %a
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <8 x float> [[BIN_RDX4]], i32 0
 ; CHECK-NEXT:    [[BIN_EXTRA:%.*]] = fadd fast float [[TMP2]], [[ADD]]
 ; CHECK-NEXT:    [[BIN_EXTRA5:%.*]] = fadd fast float [[BIN_EXTRA]], 5.000000e+00
-; CHECK-NEXT:    [[BIN_EXTRA6:%.*]] = fadd fast float [[BIN_EXTRA5]], [[CONV]]
+; CHECK-NEXT:    [[BIN_EXTRA6:%.*]] = fadd fast float [[BIN_EXTRA5]], 5.000000e+00
+; CHECK-NEXT:    [[BIN_EXTRA7:%.*]] = fadd fast float [[BIN_EXTRA6]], [[CONV]]
 ; CHECK-NEXT:    [[ADD4_6:%.*]] = fadd fast float undef, [[ADD4_5]]
-; CHECK-NEXT:    ret float [[BIN_EXTRA6]]
+; CHECK-NEXT:    ret float [[BIN_EXTRA7]]
 ;
 ; THRESHOLD-LABEL: @extra_args_same_several_times(
 ; THRESHOLD-NEXT:  entry:
@@ -1510,9 +1511,10 @@ define float @extra_args_same_several_times(float* nocapture readonly %x, i32 %a
 ; THRESHOLD-NEXT:    [[TMP2:%.*]] = extractelement <8 x float> [[BIN_RDX4]], i32 0
 ; THRESHOLD-NEXT:    [[BIN_EXTRA:%.*]] = fadd fast float [[TMP2]], [[ADD]]
 ; THRESHOLD-NEXT:    [[BIN_EXTRA5:%.*]] = fadd fast float [[BIN_EXTRA]], 5.000000e+00
-; THRESHOLD-NEXT:    [[BIN_EXTRA6:%.*]] = fadd fast float [[BIN_EXTRA5]], [[CONV]]
+; THRESHOLD-NEXT:    [[BIN_EXTRA6:%.*]] = fadd fast float [[BIN_EXTRA5]], 5.000000e+00
+; THRESHOLD-NEXT:    [[BIN_EXTRA7:%.*]] = fadd fast float [[BIN_EXTRA6]], [[CONV]]
 ; THRESHOLD-NEXT:    [[ADD4_6:%.*]] = fadd fast float undef, [[ADD4_5]]
-; THRESHOLD-NEXT:    ret float [[BIN_EXTRA6]]
+; THRESHOLD-NEXT:    ret float [[BIN_EXTRA7]]
 ;
   entry:
   %mul = mul nsw i32 %b, %a

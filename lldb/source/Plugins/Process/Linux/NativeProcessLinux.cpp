@@ -1037,6 +1037,13 @@ void NativeProcessLinux::MonitorSignal(const siginfo_t &info,
     return;
   }
 
+  // Check if debugger should stop at this signal or just ignore it
+  // and resume the inferior.
+  if (m_signals_to_ignore.find(signo) != m_signals_to_ignore.end()) {
+     ResumeThread(thread, thread.GetState(), signo);
+     return;
+  }
+
   // This thread is stopped.
   LLDB_LOG(log, "received signal {0}", Host::GetSignalAsCString(signo));
   thread.SetStoppedBySignal(signo, &info);

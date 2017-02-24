@@ -1520,8 +1520,8 @@ Value *ReassociatePass::OptimizeAdd(Instruction *I,
       if (ConstantInt *CI = dyn_cast<ConstantInt>(Factor)) {
         if (CI->isNegative() && !CI->isMinValue(true)) {
           Factor = ConstantInt::get(CI->getContext(), -CI->getValue());
-          assert(!Duplicates.count(Factor) &&
-                 "Shouldn't have two constant factors, missed a canonicalize");
+          if (!Duplicates.insert(Factor).second)
+            continue;
           unsigned Occ = ++FactorOccurrences[Factor];
           if (Occ > MaxOcc) {
             MaxOcc = Occ;
@@ -1533,8 +1533,8 @@ Value *ReassociatePass::OptimizeAdd(Instruction *I,
           APFloat F(CF->getValueAPF());
           F.changeSign();
           Factor = ConstantFP::get(CF->getContext(), F);
-          assert(!Duplicates.count(Factor) &&
-                 "Shouldn't have two constant factors, missed a canonicalize");
+          if (!Duplicates.insert(Factor).second)
+            continue;
           unsigned Occ = ++FactorOccurrences[Factor];
           if (Occ > MaxOcc) {
             MaxOcc = Occ;
