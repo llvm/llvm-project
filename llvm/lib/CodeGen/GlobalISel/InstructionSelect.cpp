@@ -20,6 +20,7 @@
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -187,8 +188,10 @@ bool InstructionSelector::isOperandImmEqual(
     MachineInstr *Def = MRI.getVRegDef(MO.getReg());
     if (Def->getOpcode() != TargetOpcode::G_CONSTANT)
       return false;
-    assert(Def->getOperand(1).isImm() && "G_CONSTANT values must be constants");
-    return Def->getOperand(1).getImm() == Value;
+    assert(Def->getOperand(1).isCImm() &&
+           "G_CONSTANT values must be constants");
+    const ConstantInt &Imm = *Def->getOperand(1).getCImm();
+    return Imm.getBitWidth() <= 64 && Imm.getSExtValue() == Value;
   }
 
   return false;
