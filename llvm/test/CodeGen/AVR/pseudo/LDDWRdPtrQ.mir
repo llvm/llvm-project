@@ -1,4 +1,4 @@
-# RUN: llc -O0  %s -o - 2>&1 -march=avr | FileCheck %s
+# RUN: llc -O0  %s -o - -march=avr | FileCheck %s
 
 # This test checks the expansion of the 16-bit 'LDDWRdPtrQ' pseudo instruction.
 

@@ -1,4 +1,4 @@
-# RUN: llc -run-pass=greedy -debug-pass=Arguments -o - %s 2>&1 | FileCheck %s
+# RUN: llc -run-pass=greedy -debug-pass=Arguments -o - %s | FileCheck %s
 
 # Check that passes are initialized correctly, so that it's possible to
 # use -run-pass.
