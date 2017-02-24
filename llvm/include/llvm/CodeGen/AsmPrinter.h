@@ -46,6 +46,7 @@ class MachineLoop;
 class MachineConstantPoolValue;
 class MachineJumpTableInfo;
 class MachineModuleInfo;
+class MachineOptimizationRemarkEmitter;
 class MCAsmInfo;
 class MCCFIInstruction;
 class MCContext;
@@ -88,6 +89,9 @@ public:
 
   /// This is a pointer to the current MachineModuleInfo.
   MachineModuleInfo *MMI;
+
+  /// Optimization remark emitter.
+  MachineOptimizationRemarkEmitter *ORE;
 
   /// The symbol for the current function. This is recalculated at the beginning
   /// of each call to runOnMachineFunction().
