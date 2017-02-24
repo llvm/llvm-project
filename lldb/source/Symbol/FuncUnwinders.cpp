@@ -73,13 +73,13 @@ UnwindPlanSP FuncUnwinders::GetUnwindPlanAtCallSite(Target &target,
 
 UnwindPlanSP FuncUnwinders::GetCompactUnwindUnwindPlan(Target &target,
                                                        int current_offset) {
+  std::lock_guard<std::recursive_mutex> guard(m_mutex);
   if (m_unwind_plan_compact_unwind.size() > 0)
     return m_unwind_plan_compact_unwind[0]; // FIXME support multiple compact
                                             // unwind plans for one func
   if (m_tried_unwind_plan_compact_unwind)
     return UnwindPlanSP();
 
-  std::lock_guard<std::recursive_mutex> guard(m_mutex);
   m_tried_unwind_plan_compact_unwind = true;
   if (m_range.GetBaseAddress().IsValid()) {
     Address current_pc(m_range.GetBaseAddress());
@@ -101,10 +101,10 @@ UnwindPlanSP FuncUnwinders::GetCompactUnwindUnwindPlan(Target &target,
 
 UnwindPlanSP FuncUnwinders::GetEHFrameUnwindPlan(Target &target,
                                                  int current_offset) {
+  std::lock_guard<std::recursive_mutex> guard(m_mutex);
   if (m_unwind_plan_eh_frame_sp.get() || m_tried_unwind_plan_eh_frame)
     return m_unwind_plan_eh_frame_sp;
 
-  std::lock_guard<std::recursive_mutex> guard(m_mutex);
   m_tried_unwind_plan_eh_frame = true;
   if (m_range.GetBaseAddress().IsValid()) {
     Address current_pc(m_range.GetBaseAddress());
@@ -123,10 +123,10 @@ UnwindPlanSP FuncUnwinders::GetEHFrameUnwindPlan(Target &target,
 
 UnwindPlanSP FuncUnwinders::GetArmUnwindUnwindPlan(Target &target,
                                                    int current_offset) {
+  std::lock_guard<std::recursive_mutex> guard(m_mutex);
   if (m_unwind_plan_arm_unwind_sp.get() || m_tried_unwind_plan_arm_unwind)
     return m_unwind_plan_arm_unwind_sp;
 
-  std::lock_guard<std::recursive_mutex> guard(m_mutex);
   m_tried_unwind_plan_arm_unwind = true;
   if (m_range.GetBaseAddress().IsValid()) {
     Address current_pc(m_range.GetBaseAddress());
@@ -147,6 +147,7 @@ UnwindPlanSP FuncUnwinders::GetArmUnwindUnwindPlan(Target &target,
 UnwindPlanSP FuncUnwinders::GetEHFrameAugmentedUnwindPlan(Target &target,
                                                           Thread &thread,
                                                           int current_offset) {
+  std::lock_guard<std::recursive_mutex> guard(m_mutex);
   if (m_unwind_plan_eh_frame_augmented_sp.get() ||
       m_tried_unwind_plan_eh_frame_augmented)
     return m_unwind_plan_eh_frame_augmented_sp;
@@ -162,7 +163,6 @@ UnwindPlanSP FuncUnwinders::GetEHFrameAugmentedUnwindPlan(Target &target,
     return m_unwind_plan_eh_frame_augmented_sp;
   }
 
-  std::lock_guard<std::recursive_mutex> guard(m_mutex);
   m_tried_unwind_plan_eh_frame_augmented = true;
 
   UnwindPlanSP eh_frame_plan = GetEHFrameUnwindPlan(target, current_offset);
@@ -190,12 +190,12 @@ UnwindPlanSP FuncUnwinders::GetEHFrameAugmentedUnwindPlan(Target &target,
 UnwindPlanSP FuncUnwinders::GetAssemblyUnwindPlan(Target &target,
                                                   Thread &thread,
                                                   int current_offset) {
+  std::lock_guard<std::recursive_mutex> guard(m_mutex);
   if (m_unwind_plan_assembly_sp.get() || m_tried_unwind_plan_assembly ||
       m_unwind_table.GetAllowAssemblyEmulationUnwindPlans() == false) {
     return m_unwind_plan_assembly_sp;
   }
 
-  std::lock_guard<std::recursive_mutex> guard(m_mutex);
   m_tried_unwind_plan_assembly = true;
 
   UnwindAssemblySP assembly_profiler_sp(GetUnwindAssemblyProfiler(target));
@@ -298,10 +298,10 @@ UnwindPlanSP FuncUnwinders::GetUnwindPlanAtNonCallSite(Target &target,
 
 UnwindPlanSP FuncUnwinders::GetUnwindPlanFastUnwind(Target &target,
                                                     Thread &thread) {
+  std::lock_guard<std::recursive_mutex> guard(m_mutex);
   if (m_unwind_plan_fast_sp.get() || m_tried_unwind_fast)
     return m_unwind_plan_fast_sp;
 
-  std::lock_guard<std::recursive_mutex> guard(m_mutex);
   m_tried_unwind_fast = true;
 
   UnwindAssemblySP assembly_profiler_sp(GetUnwindAssemblyProfiler(target));
@@ -316,10 +316,10 @@ UnwindPlanSP FuncUnwinders::GetUnwindPlanFastUnwind(Target &target,
 }
 
 UnwindPlanSP FuncUnwinders::GetUnwindPlanArchitectureDefault(Thread &thread) {
+  std::lock_guard<std::recursive_mutex> guard(m_mutex);
   if (m_unwind_plan_arch_default_sp.get() || m_tried_unwind_arch_default)
     return m_unwind_plan_arch_default_sp;
 
-  std::lock_guard<std::recursive_mutex> guard(m_mutex);
   m_tried_unwind_arch_default = true;
 
   Address current_pc;
@@ -340,11 +340,11 @@ UnwindPlanSP FuncUnwinders::GetUnwindPlanArchitectureDefault(Thread &thread) {
 
 UnwindPlanSP
 FuncUnwinders::GetUnwindPlanArchitectureDefaultAtFunctionEntry(Thread &thread) {
+  std::lock_guard<std::recursive_mutex> guard(m_mutex);
   if (m_unwind_plan_arch_default_at_func_entry_sp.get() ||
       m_tried_unwind_arch_default_at_func_entry)
     return m_unwind_plan_arch_default_at_func_entry_sp;
 
-  std::lock_guard<std::recursive_mutex> guard(m_mutex);
   m_tried_unwind_arch_default_at_func_entry = true;
 
   Address current_pc;
@@ -365,10 +365,10 @@ FuncUnwinders::GetUnwindPlanArchitectureDefaultAtFunctionEntry(Thread &thread) {
 }
 
 Address &FuncUnwinders::GetFirstNonPrologueInsn(Target &target) {
+  std::lock_guard<std::recursive_mutex> guard(m_mutex);
   if (m_first_non_prologue_insn.IsValid())
     return m_first_non_prologue_insn;
 
-  std::lock_guard<std::recursive_mutex> guard(m_mutex);
   ExecutionContext exe_ctx(target.shared_from_this(), false);
   UnwindAssemblySP assembly_profiler_sp(GetUnwindAssemblyProfiler(target));
   if (assembly_profiler_sp)

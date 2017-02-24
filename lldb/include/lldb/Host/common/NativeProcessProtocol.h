@@ -17,6 +17,8 @@
 #include "lldb/Utility/Error.h"
 #include "lldb/lldb-private-forward.h"
 #include "lldb/lldb-types.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/StringRef.h"
 
 #include "NativeBreakpointList.h"
@@ -63,6 +65,12 @@ public:
   virtual Error Interrupt();
 
   virtual Error Kill() = 0;
+
+  //------------------------------------------------------------------
+  // Tells a process not to stop the inferior on given signals
+  // and just reinject them back.
+  //------------------------------------------------------------------
+  virtual Error IgnoreSignals(llvm::ArrayRef<int> signals);
 
   //----------------------------------------------------------------------
   // Memory and memory region functions
@@ -307,6 +315,10 @@ protected:
   NativeWatchpointList m_watchpoint_list;
   int m_terminal_fd;
   uint32_t m_stop_id;
+
+  // Set of signal numbers that LLDB directly injects back to inferior
+  // without stopping it.
+  llvm::DenseSet<int> m_signals_to_ignore;
 
   // lldb_private::Host calls should be used to launch a process for debugging,
   // and

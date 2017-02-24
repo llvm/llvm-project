@@ -213,16 +213,14 @@ return nil.  Buffer restrictions are ignored."
                 (if (zerop chars)
                     ;; Buffer contents are equal, nothing to do.
                     t
-                  (goto-char (point-min))
-                  (forward-char chars)
+                  (goto-char chars)
                   ;; We might have ended up in the middle of a line if the
                   ;; current line partially matches.  In this case we would
                   ;; have to insert more than a line.  Move to the beginning of
                   ;; the line to avoid this situation.
                   (beginning-of-line)
                   (with-current-buffer from
-                    (goto-char (point-min))
-                    (forward-char chars)
+                    (goto-char chars)
                     (beginning-of-line)
                     (let ((from-begin (point))
                           (from-end (progn (forward-line) (point)))
@@ -268,9 +266,10 @@ clang-include-fixer to insert the selected header."
                (clang-include-fixer--replace-buffer stdout)
                (let-alist context
                  (let-alist (car .HeaderInfos)
-                   (run-hook-with-args 'clang-include-fixer-add-include-hook
-                                       (substring .Header 1 -1)
-                                       (string= (substring .Header 0 1) "<"))))))
+                   (with-local-quit
+                     (run-hook-with-args 'clang-include-fixer-add-include-hook
+                                         (substring .Header 1 -1)
+                                         (string= (substring .Header 0 1) "<")))))))
            (format "-insert-header=%s"
                    (clang-include-fixer--encode-json context))))))))
   nil)

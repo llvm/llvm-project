@@ -28,6 +28,7 @@ class SymbolBody;
 struct SectionPiece;
 
 template <class ELFT> class DefinedRegular;
+template <class ELFT> class EhFrameSection;
 template <class ELFT> class MergeSyntheticSection;
 template <class ELFT> class ObjectFile;
 template <class ELFT> class OutputSection;
@@ -244,27 +245,24 @@ public:
   // Splittable sections are handled as a sequence of data
   // rather than a single large blob of data.
   std::vector<EhSectionPiece> Pieces;
+  EhFrameSection<ELFT> *EHSec = nullptr;
 };
 
 // This corresponds to a non SHF_MERGE section of an input file.
-template <class ELFT> class InputSection : public InputSectionBase {
-  typedef typename ELFT::Shdr Elf_Shdr;
-  typedef typename ELFT::Rela Elf_Rela;
-  typedef typename ELFT::Rel Elf_Rel;
-  typedef typename ELFT::Sym Elf_Sym;
-  typedef typename ELFT::uint uintX_t;
-
+class InputSection : public InputSectionBase {
 public:
   InputSection();
-  InputSection(uintX_t Flags, uint32_t Type, uintX_t Addralign,
+  InputSection(uint64_t Flags, uint32_t Type, uint64_t Addralign,
                ArrayRef<uint8_t> Data, StringRef Name, Kind K = Regular);
-  InputSection(ObjectFile<ELFT> *F, const Elf_Shdr *Header, StringRef Name);
+  template <class ELFT>
+  InputSection(ObjectFile<ELFT> *F, const typename ELFT::Shdr *Header,
+               StringRef Name);
 
-  static InputSection<ELFT> Discarded;
+  static InputSection Discarded;
 
   // Write this section to a mmap'ed file, assuming Buf is pointing to
   // beginning of the output section.
-  void writeTo(uint8_t *Buf);
+  template <class ELFT> void writeTo(uint8_t *Buf);
 
   // The offset from beginning of the output sections this section was assigned
   // to. The writer sets a value.
@@ -272,23 +270,22 @@ public:
 
   static bool classof(const InputSectionBase *S);
 
-  InputSectionBase *getRelocatedSection();
+  template <class ELFT> InputSectionBase *getRelocatedSection();
 
-  template <class RelTy>
+  template <class ELFT, class RelTy>
   void relocateNonAlloc(uint8_t *Buf, llvm::ArrayRef<RelTy> Rels);
 
   // Used by ICF.
   uint32_t Class[2] = {0, 0};
 
   // Called by ICF to merge two input sections.
-  void replace(InputSection<ELFT> *Other);
+  void replace(InputSection *Other);
 
 private:
-  template <class RelTy>
+  template <class ELFT, class RelTy>
   void copyRelocations(uint8_t *Buf, llvm::ArrayRef<RelTy> Rels);
 };
 
-template <class ELFT> InputSection<ELFT> InputSection<ELFT>::Discarded;
 } // namespace elf
 
 std::string toString(const elf::InputSectionBase *);

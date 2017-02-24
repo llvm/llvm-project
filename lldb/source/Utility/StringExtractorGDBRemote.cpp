@@ -91,6 +91,10 @@ StringExtractorGDBRemote::GetServerPacketType() const {
         return eServerPacketType_QEnvironmentHexEncoded;
       break;
 
+    case 'P':
+      if (PACKET_STARTS_WITH("QPassSignals:"))
+        return eServerPacketType_QPassSignals;
+
     case 'S':
       if (PACKET_MATCHES("QStartNoAckMode"))
         return eServerPacketType_QStartNoAckMode;

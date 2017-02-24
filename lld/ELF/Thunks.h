@@ -40,7 +40,7 @@ public:
 
   // Some Thunks must be placed immediately before their Target as they elide
   // a branch and fall through to the first Symbol in the Target.
-  virtual InputSection<ELFT> *getTargetInputSection() const { return nullptr; }
+  virtual InputSection *getTargetInputSection() const { return nullptr; }
 
   // The alignment requirement for this Thunk, defaults to the size of the
   // typical code section alignment.

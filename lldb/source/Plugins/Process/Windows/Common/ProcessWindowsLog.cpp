@@ -9,152 +9,34 @@
 
 #include "ProcessWindowsLog.h"
 
-#include <mutex>
-
-#include "lldb/Core/StreamFile.h"
-#include "lldb/Interpreter/Args.h"
-#include "llvm/Support/ManagedStatic.h"
-#include "llvm/Support/Threading.h"
-
 using namespace lldb;
 using namespace lldb_private;
 
-// We want to avoid global constructors where code needs to be run so here we
-// control access to our static g_log_sp by hiding it in a singleton function
-// that will construct the static g_log_sp the first time this function is
-// called.
-static bool g_log_enabled = false;
-static Log *g_log = nullptr;
+static constexpr Log::Category g_categories[] = {
+    {{"break"}, {"log breakpoints"}, WINDOWS_LOG_BREAKPOINTS},
+    {{"event"}, {"log low level debugger events"}, WINDOWS_LOG_EVENT},
+    {{"exception"}, {"log exception information"}, WINDOWS_LOG_EXCEPTION},
+    {{"memory"}, {"log memory reads and writes"}, WINDOWS_LOG_MEMORY},
+    {{"process"}, {"log process events and activities"}, WINDOWS_LOG_PROCESS},
+    {{"registers"}, {"log register read/writes"}, WINDOWS_LOG_REGISTERS},
+    {{"step"}, {"log step related activities"}, WINDOWS_LOG_STEP},
+    {{"thread"}, {"log thread events and activities"}, WINDOWS_LOG_THREAD},
+};
 
-static llvm::ManagedStatic<llvm::once_flag> g_once_flag;
+Log::Channel ProcessWindowsLog::g_channel(g_categories, WINDOWS_LOG_PROCESS);
 
 void ProcessWindowsLog::Initialize() {
-  static ConstString g_name("windows");
-
-  llvm::call_once(*g_once_flag, []() {
-    Log::Callbacks log_callbacks = {DisableLog, EnableLog, ListLogCategories};
-
-    Log::RegisterLogChannel(g_name, log_callbacks);
-    RegisterPluginName(g_name);
-  });
+  static llvm::once_flag g_once_flag;
+  llvm::call_once(g_once_flag, []() { Log::Register("windows", g_channel); });
 }
 
 void ProcessWindowsLog::Terminate() {}
 
-Log *ProcessWindowsLog::GetLogIfAny(uint32_t mask) {
-  return (g_log_enabled && g_log->GetMask().AnySet(mask)) ? g_log : nullptr;
-}
 
-static uint32_t GetFlagBits(const char *arg) {
-  if (::strcasecmp(arg, "all") == 0)
-    return WINDOWS_LOG_ALL;
-  else if (::strcasecmp(arg, "break") == 0)
-    return WINDOWS_LOG_BREAKPOINTS;
-  else if (::strcasecmp(arg, "event") == 0)
-    return WINDOWS_LOG_EVENT;
-  else if (::strcasecmp(arg, "exception") == 0)
-    return WINDOWS_LOG_EXCEPTION;
-  else if (::strcasecmp(arg, "memory") == 0)
-    return WINDOWS_LOG_MEMORY;
-  else if (::strcasecmp(arg, "process") == 0)
-    return WINDOWS_LOG_PROCESS;
-  else if (::strcasecmp(arg, "registers") == 0)
-    return WINDOWS_LOG_REGISTERS;
-  else if (::strcasecmp(arg, "step") == 0)
-    return WINDOWS_LOG_STEP;
-  else if (::strcasecmp(arg, "thread") == 0)
-    return WINDOWS_LOG_THREAD;
-  else if (::strcasecmp(arg, "verbose") == 0)
-    return WINDOWS_LOG_VERBOSE;
-  return 0;
-}
 
-void ProcessWindowsLog::DisableLog(const char **args, Stream *feedback_strm) {
-  Log *log(g_log);
-  if (log) {
-    uint32_t flag_bits = 0;
 
-    if (args[0] != nullptr) {
-      flag_bits = log->GetMask().Get();
-      for (; args[0]; args++) {
-        const char *arg = args[0];
-        uint32_t bits = GetFlagBits(arg);
 
-        if (bits) {
-          flag_bits &= ~bits;
-        } else {
-          feedback_strm->Printf("error: unrecognized log category '%s'\n", arg);
-          ListLogCategories(feedback_strm);
-        }
-      }
-    }
 
-    log->GetMask().Reset(flag_bits);
-    if (flag_bits == 0) {
-      g_log_enabled = false;
-      log->SetStream(nullptr);
-    }
-  }
 
-  return;
-}
 
-Log *ProcessWindowsLog::EnableLog(
-    const std::shared_ptr<llvm::raw_ostream> &log_stream_sp, uint32_t log_options,
-    const char **args, Stream *feedback_strm) {
-  // Try see if there already is a log - that way we can reuse its settings.
-  // We could reuse the log in toto, but we don't know that the stream is the
-  // same.
-  uint32_t flag_bits = 0;
-  if (g_log)
-    flag_bits = g_log->GetMask().Get();
 
-  // Now make a new log with this stream if one was provided
-  if (log_stream_sp) {
-    if (g_log)
-      g_log->SetStream(log_stream_sp);
-    else
-      g_log = new Log(log_stream_sp);
-  }
-
-  if (g_log) {
-    bool got_unknown_category = false;
-    for (; args[0]; args++) {
-      const char *arg = args[0];
-      uint32_t bits = GetFlagBits(arg);
-
-      if (bits) {
-        flag_bits |= bits;
-      } else {
-        feedback_strm->Printf("error: unrecognized log category '%s'\n", arg);
-        if (got_unknown_category == false) {
-          got_unknown_category = true;
-          ListLogCategories(feedback_strm);
-        }
-      }
-    }
-    if (flag_bits == 0)
-      flag_bits = WINDOWS_LOG_ALL;
-    g_log->GetMask().Reset(flag_bits);
-    g_log->GetOptions().Reset(log_options);
-    g_log_enabled = true;
-  }
-  return g_log;
-}
-
-void ProcessWindowsLog::ListLogCategories(Stream *strm) {
-  strm->Printf("Logging categories for '%s':\n"
-               "  all - turn on all available logging categories\n"
-               "  break - log breakpoints\n"
-               "  event - log low level debugger events\n"
-               "  exception - log exception information\n"
-               "  memory - log memory reads and writes\n"
-               "  process - log process events and activities\n"
-               "  registers - log register read/writes\n"
-               "  thread - log thread events and activities\n"
-               "  step - log step related activities\n"
-               "  verbose - enable verbose logging\n",
-               ProcessWindowsLog::m_pluginname);
-}
-
-const char *ProcessWindowsLog::m_pluginname = "";

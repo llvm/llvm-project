@@ -4593,7 +4593,7 @@ static __isl_give isl_pw_qpolynomial *compressed_multiplicative_call(
 	__isl_give isl_pw_qpolynomial *(*fn)(__isl_take isl_basic_set *bset))
 {
 	int i, n;
-	isl_space *dim;
+	isl_space *space;
 	isl_set *set;
 	isl_factorizer *f;
 	isl_qpolynomial *qp;
@@ -4612,10 +4612,10 @@ static __isl_give isl_pw_qpolynomial *compressed_multiplicative_call(
 	nparam = isl_basic_set_dim(bset, isl_dim_param);
 	nvar = isl_basic_set_dim(bset, isl_dim_set);
 
-	dim = isl_basic_set_get_space(bset);
-	dim = isl_space_domain(dim);
-	set = isl_set_universe(isl_space_copy(dim));
-	qp = isl_qpolynomial_one_on_domain(dim);
+	space = isl_basic_set_get_space(bset);
+	space = isl_space_params(space);
+	set = isl_set_universe(isl_space_copy(space));
+	qp = isl_qpolynomial_one_on_domain(space);
 	pwqp = isl_pw_qpolynomial_alloc(set, qp);
 
 	bset = isl_morph_basic_set(isl_morph_copy(f->morph), bset);

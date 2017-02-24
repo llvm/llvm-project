@@ -67,7 +67,7 @@ using namespace llvm::object;
 using namespace lld::elf;
 
 template <class ELFT>
-GdbIndexBuilder<ELFT>::GdbIndexBuilder(InputSection<ELFT> *DebugInfoSec)
+GdbIndexBuilder<ELFT>::GdbIndexBuilder(InputSection *DebugInfoSec)
     : DebugInfoSec(DebugInfoSec) {
   if (Expected<std::unique_ptr<object::ObjectFile>> Obj =
           object::ObjectFile::createObjectFile(
@@ -155,7 +155,7 @@ template <class ELFT>
 static InputSectionBase *findSection(ArrayRef<InputSectionBase *> Arr,
                                      uint64_t Offset) {
   for (InputSectionBase *S : Arr)
-    if (S && S != &InputSection<ELFT>::Discarded)
+    if (S && S != &InputSection::Discarded)
       if (Offset >= S->Offset && Offset < S->Offset + S->getSize<ELFT>())
         return S;
   return nullptr;

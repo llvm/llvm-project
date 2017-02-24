@@ -46,6 +46,12 @@ lldb_private::Error NativeProcessProtocol::Interrupt() {
 #endif
 }
 
+Error NativeProcessProtocol::IgnoreSignals(llvm::ArrayRef<int> signals) {
+  m_signals_to_ignore.clear();
+  m_signals_to_ignore.insert(signals.begin(), signals.end());
+  return Error();
+}
+
 lldb_private::Error
 NativeProcessProtocol::GetMemoryRegionInfo(lldb::addr_t load_addr,
                                            MemoryRegionInfo &range_info) {
