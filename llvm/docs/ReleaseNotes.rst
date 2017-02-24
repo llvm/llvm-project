@@ -29,13 +29,6 @@ Non-comprehensive list of changes in this release
 
 * The C API enum LLVMAttribute has been deleted.
 
-.. NOTE
-   For small 1-3 sentence descriptions, just add an entry at the end of
-   this list. If your description won't fit comfortably in one bullet
-   point (e.g. maybe you would like to give an example of the
-   functionality, or simply have a lot to talk about), see the `NOTE` below
-   for adding a new subsection.
-
 * The definition and uses of LLVM_ATRIBUTE_UNUSED_RESULT in the LLVM source
   were replaced with LLVM_NODISCARD, which matches the C++17 [[nodiscard]]
   semantics rather than gcc's __attribute__((warn_unused_result)).
@@ -65,25 +58,13 @@ Non-comprehensive list of changes in this release
  * The llvm-cov tool can now export coverage data as json. Its html output mode
    has also improved.
 
-* ... next change ...
-
-.. NOTE
-   If you would like to document a larger change, then you can add a
-   subsection about it right here. You can copy the following boilerplate
-   and un-indent it (the indentation causes it to be inside this comment).
-
-   Special New Feature
-   -------------------
-
-   Makes programs 10x faster by doing Special New Thing.
-
-   Improvements to ThinLTO (-flto=thin)
-   ------------------------------------
-   * Integration with profile data (PGO). When available, profile data
-     enables more accurate function importing decisions, as well as
-     cross-module indirect call promotion.
-   * Significant build-time and binary-size improvements when compiling with
-     debug info (-g).
+Improvements to ThinLTO (-flto=thin)
+------------------------------------
+* Integration with profile data (PGO). When available, profile data
+  enables more accurate function importing decisions, as well as
+  cross-module indirect call promotion.
+* Significant build-time and binary-size improvements when compiling with
+  debug info (-g).
 
 LLVM Coroutines
 ---------------
@@ -109,9 +90,9 @@ enhance register usage when passing parameters.
 For more information please read `__vectorcall documentation
 <https://msdn.microsoft.com/en-us/library/dn375768.aspx>`_.
 
-The __regcall calling convention was introduced by Intel to 
+The __regcall calling convention was introduced by Intel to
 optimize parameter transfer on function call.
-This calling convention ensures that as many values as possible are 
+This calling convention ensures that as many values as possible are
 passed or returned in registers.
 For more information please read `__regcall documentation
 <https://software.intel.com/en-us/node/693069>`_.
@@ -238,28 +219,6 @@ Changes to the ARM Targets
 A lot of work has also been done in LLD for ARM, which now supports more
 relocations and TLS.
 
-
-Changes to the MIPS Target
---------------------------
-
- During this release ...
-
-
-Changes to the PowerPC Target
------------------------------
-
- During this release ...
-
-Changes to the X86 Target
--------------------------
-
- During this release ...
-
-Changes to the AMDGPU Target
------------------------------
-
- During this release ...
-
 Changes to the AVR Target
 -----------------------------
 
@@ -290,8 +249,6 @@ Changes to the OCaml bindings
 
 External Open Source Projects Using LLVM 4.0.0
 ==============================================
-
-* A project...
 
 LDC - the LLVM-based D compiler
 -------------------------------
