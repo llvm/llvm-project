@@ -29,7 +29,7 @@ class DiagnosticInfoMIROptimization : public DiagnosticInfoOptimizationBase {
 public:
   DiagnosticInfoMIROptimization(enum DiagnosticKind Kind, const char *PassName,
                                 StringRef RemarkName, const DebugLoc &DLoc,
-                                MachineBasicBlock *MBB)
+                                const MachineBasicBlock *MBB)
       : DiagnosticInfoOptimizationBase(Kind, DS_Remark, PassName, RemarkName,
                                        *MBB->getParent()->getFunction(), DLoc),
         MBB(MBB) {}
@@ -42,7 +42,7 @@ public:
   const MachineBasicBlock *getBlock() const { return MBB; }
 
 private:
-  MachineBasicBlock *MBB;
+  const MachineBasicBlock *MBB;
 };
 
 /// Diagnostic information for applied optimization remarks.
@@ -54,7 +54,7 @@ public:
   /// DLoc is the debug location and \p MBB is the block that the optimization
   /// operates in.
   MachineOptimizationRemark(const char *PassName, StringRef RemarkName,
-                            const DebugLoc &DLoc, MachineBasicBlock *MBB)
+                            const DebugLoc &DLoc, const MachineBasicBlock *MBB)
       : DiagnosticInfoMIROptimization(DK_MachineOptimizationRemark, PassName,
                                       RemarkName, DLoc, MBB) {}
 
@@ -77,7 +77,8 @@ public:
   /// remark.  \p DLoc is the debug location and \p MBB is the block that the
   /// optimization operates in.
   MachineOptimizationRemarkMissed(const char *PassName, StringRef RemarkName,
-                                  const DebugLoc &DLoc, MachineBasicBlock *MBB)
+                                  const DebugLoc &DLoc,
+                                  const MachineBasicBlock *MBB)
       : DiagnosticInfoMIROptimization(DK_MachineOptimizationRemarkMissed,
                                       PassName, RemarkName, DLoc, MBB) {}
 
@@ -101,7 +102,7 @@ public:
   /// optimization operates in.
   MachineOptimizationRemarkAnalysis(const char *PassName, StringRef RemarkName,
                                     const DebugLoc &DLoc,
-                                    MachineBasicBlock *MBB)
+                                    const MachineBasicBlock *MBB)
       : DiagnosticInfoMIROptimization(DK_MachineOptimizationRemarkAnalysis,
                                       PassName, RemarkName, DLoc, MBB) {}
 
