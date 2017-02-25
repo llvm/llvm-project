@@ -14,8 +14,8 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Error.h"
 
-#include "llvm/DebugInfo/MSF/ByteStream.h"
-#include "llvm/DebugInfo/MSF/StreamReader.h"
+#include "llvm/DebugInfo/MSF/BinaryByteStream.h"
+#include "llvm/DebugInfo/MSF/BinaryStreamReader.h"
 #include "llvm/DebugInfo/PDB/Native/PDBFile.h"
 #include "llvm/DebugInfo/PDB/Native/RawConstants.h"
 #include "llvm/DebugInfo/PDB/PDBTypes.h"
@@ -60,7 +60,7 @@ public:
 
   Error finalizeMsfLayout();
 
-  Error commit(const msf::MSFLayout &Layout, const msf::WritableStream &Buffer);
+  Error commit(const msf::MSFLayout &Layout, WritableBinaryStreamRef Buffer);
 
   // A helper function to create Section Contributions from COFF input
   // section headers.
@@ -112,9 +112,9 @@ private:
 
   StringMap<uint32_t> SourceFileNames;
 
-  msf::WritableStreamRef NamesBuffer;
-  msf::MutableByteStream ModInfoBuffer;
-  msf::MutableByteStream FileInfoBuffer;
+  WritableBinaryStreamRef NamesBuffer;
+  MutableBinaryByteStream ModInfoBuffer;
+  MutableBinaryByteStream FileInfoBuffer;
   ArrayRef<SectionContrib> SectionContribs;
   ArrayRef<SecMapEntry> SectionMap;
   llvm::SmallVector<DebugStream, (int)DbgHeaderType::Max> DbgStreams;

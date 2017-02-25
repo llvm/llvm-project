@@ -86,6 +86,7 @@
 #include <clc/math/round.h>
 #include <clc/math/sin.h>
 #include <clc/math/sincos.h>
+#include <clc/math/sinh.h>
 #include <clc/math/sinpi.h>
 #include <clc/math/sqrt.h>
 #include <clc/math/tan.h>

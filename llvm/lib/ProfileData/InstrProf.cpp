@@ -29,9 +29,22 @@
 using namespace llvm;
 
 static cl::opt<bool> StaticFuncFullModulePrefix(
-    "static-func-full-module-prefix", cl::init(false),
+    "static-func-full-module-prefix", cl::init(true),
     cl::desc("Use full module build paths in the profile counter names for "
              "static functions."));
+
+// This option is tailored to users that have different top-level directory in
+// profile-gen and profile-use compilation. Users need to specific the number
+// of levels to strip. A value larger than the number of directories in the
+// source file will strip all the directory names and only leave the basename.
+//
+// Note current Thin-LTO module importing for the indirect-calls assumes
+// the source directory name not being stripped. A non-zero option value here
+// can potentially prevent some inter-module indirect-call-promotions.
+static cl::opt<unsigned> StaticFuncStripDirNamePrefix(
+    "static-func-strip-dirname-prefix", cl::init(0),
+    cl::desc("Strip specified level of directory name from source path in "
+             "the profile counter name for static functions."));
 
 namespace {
 std::string getInstrProfErrString(instrprof_error Err) {
@@ -133,6 +146,24 @@ std::string getPGOFuncName(StringRef RawFuncName,
   return GlobalValue::getGlobalIdentifier(RawFuncName, Linkage, FileName);
 }
 
+// Strip NumPrefix level of directory name from PathNameStr. If the number of
+// directory separators is less than NumPrefix, strip all the directories and
+// leave base file name only.
+static StringRef stripDirPrefix(StringRef PathNameStr, uint32_t NumPrefix) {
+  uint32_t Count = NumPrefix;
+  uint32_t Pos = 0, LastPos = 0;
+  for (auto & CI : PathNameStr) {
+    ++Pos;
+    if (llvm::sys::path::is_separator(CI)) {
+      LastPos = Pos;
+      --Count;
+    }
+    if (Count == 0)
+      break;
+  }
+  return PathNameStr.substr(LastPos);
+}
+
 // Return the PGOFuncName. This function has some special handling when called
 // in LTO optimization. The following only applies when calling in LTO passes
 // (when \c InLTO is true): LTO's internalization privatizes many global linkage
@@ -151,6 +182,8 @@ std::string getPGOFuncName(const Function &F, bool InLTO, uint64_t Version) {
     StringRef FileName = (StaticFuncFullModulePrefix
                               ? F.getParent()->getName()
                               : sys::path::filename(F.getParent()->getName()));
+    if (StaticFuncFullModulePrefix && StaticFuncStripDirNamePrefix != 0)
+      FileName = stripDirPrefix(FileName, StaticFuncStripDirNamePrefix);
     return getPGOFuncName(F.getName(), F.getLinkage(), FileName, Version);
   }
 

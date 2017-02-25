@@ -142,7 +142,6 @@ class CallAnalyzer : public InstVisitor<CallAnalyzer, bool> {
   void disableSROA(Value *V);
   void accumulateSROACost(DenseMap<Value *, int>::iterator CostIt,
                           int InstructionCost);
-  bool isGEPOffsetConstant(GetElementPtrInst &GEP);
   bool isGEPFree(GetElementPtrInst &GEP);
   bool accumulateGEPOffset(GEPOperator &GEP, APInt &Offset);
   bool simplifyCallSite(Function *F, CallSite CS);
@@ -300,17 +299,6 @@ void CallAnalyzer::accumulateSROACost(DenseMap<Value *, int>::iterator CostIt,
   SROACostSavings += InstructionCost;
 }
 
-/// \brief Check whether a GEP's indices are all constant.
-///
-/// Respects any simplified values known during the analysis of this callsite.
-bool CallAnalyzer::isGEPOffsetConstant(GetElementPtrInst &GEP) {
-  for (User::op_iterator I = GEP.idx_begin(), E = GEP.idx_end(); I != E; ++I)
-    if (!isa<Constant>(*I) && !SimplifiedValues.lookup(*I))
-      return false;
-
-  return true;
-}
-
 /// \brief Accumulate a constant GEP offset into an APInt if possible.
 ///
 /// Returns false if unable to compute the offset for any reason. Respects any
@@ -440,7 +428,15 @@ bool CallAnalyzer::visitGetElementPtr(GetElementPtrInst &I) {
     }
   }
 
-  if (isGEPOffsetConstant(I)) {
+  // Lambda to check whether a GEP's indices are all constant.
+  auto IsGEPOffsetConstant = [&](GetElementPtrInst &GEP) {
+    for (User::op_iterator I = GEP.idx_begin(), E = GEP.idx_end(); I != E; ++I)
+      if (!isa<Constant>(*I) && !SimplifiedValues.lookup(*I))
+        return false;
+    return true;
+  };
+
+  if (IsGEPOffsetConstant(I)) {
     if (SROACandidate)
       SROAArgValues[&I] = SROAArg;
 

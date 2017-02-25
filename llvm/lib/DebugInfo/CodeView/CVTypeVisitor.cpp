@@ -16,8 +16,8 @@
 #include "llvm/DebugInfo/CodeView/TypeRecordMapping.h"
 #include "llvm/DebugInfo/CodeView/TypeServerHandler.h"
 #include "llvm/DebugInfo/CodeView/TypeVisitorCallbackPipeline.h"
-#include "llvm/DebugInfo/MSF/ByteStream.h"
-#include "llvm/DebugInfo/MSF/StreamReader.h"
+#include "llvm/DebugInfo/MSF/BinaryByteStream.h"
+#include "llvm/DebugInfo/MSF/BinaryStreamReader.h"
 
 using namespace llvm;
 using namespace llvm::codeview;
@@ -174,7 +174,7 @@ Error CVTypeVisitor::visitTypeStream(CVTypeRange Types) {
   return Error::success();
 }
 
-Error CVTypeVisitor::visitFieldListMemberStream(msf::StreamReader Reader) {
+Error CVTypeVisitor::visitFieldListMemberStream(BinaryStreamReader Reader) {
   FieldListDeserializer Deserializer(Reader);
   TypeVisitorCallbackPipeline Pipeline;
   Pipeline.addCallbackToPipeline(Deserializer);
@@ -182,7 +182,7 @@ Error CVTypeVisitor::visitFieldListMemberStream(msf::StreamReader Reader) {
 
   TypeLeafKind Leaf;
   while (!Reader.empty()) {
-    if (auto EC = Reader.readEnum(Leaf, llvm::support::little))
+    if (auto EC = Reader.readEnum(Leaf))
       return EC;
 
     CVMemberRecord Record;
@@ -195,7 +195,7 @@ Error CVTypeVisitor::visitFieldListMemberStream(msf::StreamReader Reader) {
 }
 
 Error CVTypeVisitor::visitFieldListMemberStream(ArrayRef<uint8_t> Data) {
-  msf::ByteStream S(Data);
-  msf::StreamReader SR(S);
+  BinaryByteStream S(Data, llvm::support::little);
+  BinaryStreamReader SR(S);
   return visitFieldListMemberStream(SR);
 }

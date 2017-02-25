@@ -508,6 +508,16 @@ multiclass FMADPat <ValueType vt, Instruction inst> {
 defm : FMADPat <f16, V_MAC_F16_e64>;
 defm : FMADPat <f32, V_MAC_F32_e64>;
 
+class FMADModsPat<Instruction inst, SDPatternOperator mad_opr> : Pat<
+  (f32 (mad_opr (VOP3Mods f32:$src0, i32:$src0_mod),
+  (VOP3Mods f32:$src1, i32:$src1_mod),
+  (VOP3Mods f32:$src2, i32:$src2_mod))),
+  (inst $src0_mod, $src0, $src1_mod, $src1,
+  $src2_mod, $src2, DSTCLAMP.NONE, DSTOMOD.NONE)
+>;
+
+def : FMADModsPat<V_MAD_F32, AMDGPUfmad_ftz>;
+
 multiclass SelectPat <ValueType vt, Instruction inst> {
   def : Pat <
     (vt (select i1:$src0, vt:$src1, vt:$src2)),

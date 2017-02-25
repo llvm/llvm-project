@@ -6,7 +6,7 @@
 ; CHECK: DW_TAG_variable
 source_filename = "test/CodeGen/WebAssembly/dbgvalue.ll"
 target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
-target triple = "wasm32-unknown-unknown"
+target triple = "wasm32-unknown-unknown-wasm"
 
 @key = external local_unnamed_addr global [15 x i8], align 1
 @.str = external unnamed_addr constant [33 x i8], align 1

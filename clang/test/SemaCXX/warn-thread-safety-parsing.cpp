@@ -1,4 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -Wthread-safety %s
+// RUN: %clang_cc1 -fsyntax-only -verify -Wthread-safety -std=c++98 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -Wthread-safety -std=c++11 %s
 
 #define LOCKABLE            __attribute__ ((lockable))
 #define SCOPED_LOCKABLE     __attribute__ ((scoped_lockable))
@@ -1266,8 +1268,11 @@ public:
   void foo3(FooLate *f) EXCLUSIVE_LOCKS_REQUIRED(f->mu) { }
   void foo4(FooLate *f) EXCLUSIVE_LOCKS_REQUIRED(f->mu);
 
-  static void foo5()    EXCLUSIVE_LOCKS_REQUIRED(mu); // \
-    // expected-error {{invalid use of member 'mu' in static member function}}
+  static void foo5()    EXCLUSIVE_LOCKS_REQUIRED(mu);
+//FIXME: Bug 32066 - Error should be emitted irrespective of C++ dialect
+#if __cplusplus <= 199711L
+  // expected-error@-3 {{invalid use of member 'mu' in static member function}}
+#endif
 
   template <class T>
   void foo6() EXCLUSIVE_LOCKS_REQUIRED(T::statmu) { }
@@ -1461,15 +1466,24 @@ class Foo {
   mutable Mutex mu;
   int a GUARDED_BY(mu);
 
-  static int si GUARDED_BY(mu); // \
-    // expected-error {{invalid use of non-static data member 'mu'}}
+  static int si GUARDED_BY(mu);
+//FIXME: Bug 32066 - Error should be emitted irrespective of C++ dialect
+#if __cplusplus <= 199711L
+  // expected-error@-3 {{invalid use of non-static data member 'mu'}}
+#endif
 
-  static void foo() EXCLUSIVE_LOCKS_REQUIRED(mu); // \
-    // expected-error {{invalid use of member 'mu' in static member function}}
+  static void foo() EXCLUSIVE_LOCKS_REQUIRED(mu);
+//FIXME: Bug 32066 - Error should be emitted irrespective of C++ dialect
+#if __cplusplus <= 199711L
+  // expected-error@-3 {{invalid use of member 'mu' in static member function}}
+#endif
 
   friend FooStream& operator<<(FooStream& s, const Foo& f)
-    EXCLUSIVE_LOCKS_REQUIRED(mu); // \
-    // expected-error {{invalid use of non-static data member 'mu'}}
+    EXCLUSIVE_LOCKS_REQUIRED(mu);
+//FIXME: Bug 32066 - Error should be emitted irrespective of C++ dialect
+#if __cplusplus <= 199711L
+    // expected-error@-3 {{invalid use of non-static data member 'mu'}}
+#endif
 };
 
 

@@ -26,7 +26,7 @@ Features
   system including the kernel. With a few work-in-progress patches it
   can link approximately 95% of the ports collection on AMD64. For the
   details, see `FreeBSD quarterly status report
-  <https://www.freebsd.org/news/status/report-2016-10-2016-12.html#Using-LLVM%27s-LLD-Linker-as-FreeBSD%27s-System-Linker>`.
+  <https://www.freebsd.org/news/status/report-2016-10-2016-12.html#Using-LLVM%27s-LLD-Linker-as-FreeBSD%27s-System-Linker>`_.
 
 - LLD is very fast. When you link a large program on a multicore
   machine, you can expect that LLD runs more than twice as fast as GNU
@@ -81,13 +81,13 @@ Note that this is just a benchmark result of our environment.
 Depending on number of available cores, available amount of memory or
 disk latency/throughput, your results may vary.
 
-============  ===========  ======  ========  ======
-Program       Output size  GNU ld  GNU gold  LLD
-ffmpeg dbg    91 MiB       1.59s   1.15s     0.78s
-mysqld dbg    157 MiB      7.09s   2.49s     1.31s
-clang dbg     1.45 GiB     86.76s  21.93s    8.38s
-chromium dbg  1.52 GiB     N/A     40.86s    12.69s
-============  ===========  ======  ========  ======
+============  ===========  =======  ========  ======
+Program       Output size  GNU ld   GNU gold  LLD
+ffmpeg dbg    91 MiB       1.59s    1.15s     0.78s
+mysqld dbg    157 MiB      7.09s    2.49s     1.31s
+clang dbg     1.45 GiB     86.76s   21.93s    8.38s
+chromium dbg  1.52 GiB     142.30s  40.86s    12.69s
+============  ===========  =======  ========  ======
 
 Build
 -----

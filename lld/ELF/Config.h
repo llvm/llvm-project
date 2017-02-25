@@ -109,7 +109,7 @@ struct Configuration {
   bool FatalWarnings;
   bool GcSections;
   bool GdbIndex;
-  bool GnuHash = false;
+  bool GnuHash;
   bool ICF;
   bool Mips64EL = false;
   bool MipsN32Abi = false;
@@ -117,7 +117,7 @@ struct Configuration {
   bool NoUndefinedVersion;
   bool Nostdlib;
   bool OFormatBinary;
-  bool OMagic;
+  bool Omagic;
   bool OptRemarksWithHotness;
   bool Pie;
   bool PrintGcSections;
@@ -127,7 +127,7 @@ struct Configuration {
   bool SingleRoRx;
   bool Shared;
   bool Static = false;
-  bool SysvHash = true;
+  bool SysvHash;
   bool Target1Rel;
   bool Threads;
   bool Trace;
@@ -145,9 +145,9 @@ struct Configuration {
   bool ZWxneeded;
   DiscardPolicy Discard;
   SortSectionPolicy SortSection;
-  StripPolicy Strip = StripPolicy::None;
+  StripPolicy Strip;
   UnresolvedPolicy UnresolvedSymbols;
-  Target2Policy Target2 = Target2Policy::GotRel;
+  Target2Policy Target2;
   BuildIdKind BuildId = BuildIdKind::None;
   ELFKind EKind = ELFNoneKind;
   uint16_t DefaultSymbolVersion = llvm::ELF::VER_NDX_GLOBAL;

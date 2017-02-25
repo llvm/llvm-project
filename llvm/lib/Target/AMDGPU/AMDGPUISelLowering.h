@@ -271,6 +271,9 @@ enum NodeType : unsigned {
   DIV_SCALE,
   DIV_FMAS,
   DIV_FIXUP,
+  // For emitting ISD::FMAD when f32 denormals are enabled because mac/mad is
+  // treated as an illegal operation.
+  FMAD_FTZ,
   TRIG_PREOP, // 1 ULP max error for f64
 
   // RCP, RSQ - For f32, 1 ULP max error, no denormal handling.

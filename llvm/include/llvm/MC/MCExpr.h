@@ -270,6 +270,7 @@ public:
     VK_Hexagon_IE_GOT,
 
     VK_WebAssembly_FUNCTION, // Function table index, rather than virtual addr
+    VK_WebAssembly_TYPEINDEX,// Type table index
 
     VK_AMDGPU_GOTPCREL32_LO, // symbol@gotpcrel32@lo
     VK_AMDGPU_GOTPCREL32_HI, // symbol@gotpcrel32@hi

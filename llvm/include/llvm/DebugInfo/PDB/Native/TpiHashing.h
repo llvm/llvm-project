@@ -15,7 +15,7 @@
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
 #include "llvm/DebugInfo/CodeView/TypeVisitorCallbacks.h"
-#include "llvm/DebugInfo/MSF/StreamArray.h"
+#include "llvm/DebugInfo/MSF/BinaryStreamArray.h"
 #include "llvm/DebugInfo/PDB/Native/RawError.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
@@ -57,7 +57,7 @@ private:
 
 class TpiHashVerifier : public codeview::TypeVisitorCallbacks {
 public:
-  TpiHashVerifier(msf::FixedStreamArray<support::ulittle32_t> &HashValues,
+  TpiHashVerifier(FixedStreamArray<support::ulittle32_t> &HashValues,
                   uint32_t NumHashBuckets)
       : HashValues(HashValues), NumHashBuckets(NumHashBuckets) {}
 
@@ -83,7 +83,7 @@ private:
             utohexstr(codeview::TypeIndex::FirstNonSimpleIndex + Index));
   }
 
-  msf::FixedStreamArray<support::ulittle32_t> HashValues;
+  FixedStreamArray<support::ulittle32_t> HashValues;
   codeview::CVType RawRecord;
   uint32_t NumHashBuckets;
   uint32_t Index = -1;

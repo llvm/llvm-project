@@ -69,3 +69,20 @@ bool WebAssembly::isChild(const MachineInstr &MI,
   return TargetRegisterInfo::isVirtualRegister(Reg) &&
          MFI.isVRegStackified(Reg);
 }
+
+bool WebAssembly::isCallIndirect(const MachineInstr &MI) {
+  switch (MI.getOpcode()) {
+  case WebAssembly::CALL_INDIRECT_VOID:
+  case WebAssembly::CALL_INDIRECT_I32:
+  case WebAssembly::CALL_INDIRECT_I64:
+  case WebAssembly::CALL_INDIRECT_F32:
+  case WebAssembly::CALL_INDIRECT_F64:
+  case WebAssembly::CALL_INDIRECT_v16i8:
+  case WebAssembly::CALL_INDIRECT_v8i16:
+  case WebAssembly::CALL_INDIRECT_v4i32:
+  case WebAssembly::CALL_INDIRECT_v4f32:
+    return true;
+  default:
+    return false;
+  }
+}

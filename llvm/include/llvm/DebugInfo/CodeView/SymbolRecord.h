@@ -13,13 +13,13 @@
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
-#include "llvm/ADT/iterator_range.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/DebugInfo/CodeView/CVRecord.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/RecordSerialization.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
-#include "llvm/DebugInfo/MSF/StreamArray.h"
+#include "llvm/DebugInfo/MSF/BinaryStreamArray.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include <cstddef>
@@ -938,7 +938,7 @@ public:
 };
 
 typedef CVRecord<SymbolKind> CVSymbol;
-typedef msf::VarStreamArray<CVSymbol> CVSymbolArray;
+typedef VarStreamArray<CVSymbol> CVSymbolArray;
 
 } // end namespace codeview
 } // end namespace llvm

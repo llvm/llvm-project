@@ -19,6 +19,7 @@
 #include <vector>
 
 #include "func-id-helper.h"
+#include "xray-color-helper.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Errc.h"
@@ -97,7 +98,7 @@ public:
   PerThreadFunctionStackMap PerThreadFunctionStack;
 
   /// Usefull object for getting human readable Symbol Names.
-  FuncIdConversionHelper &FuncIdHelper;
+  const FuncIdConversionHelper &FuncIdHelper;
   bool DeduceSiblingCalls = false;
   TimestampT CurrentMaxTSC = 0;
 
@@ -117,11 +118,15 @@ public:
   /// Normalises latency statistics for each edge and vertex by CycleFrequency;
   void normalizeStatistics(double CycleFrequency);
 
+  /// An object to color gradients
+  ColorHelper CHelper;
+
 public:
   /// Takes in a reference to a FuncIdHelper in order to have ready access to
   /// Symbol names.
-  explicit GraphRenderer(FuncIdConversionHelper &FuncIdHelper, bool DSC)
-      : FuncIdHelper(FuncIdHelper), DeduceSiblingCalls(DSC) {
+  explicit GraphRenderer(const FuncIdConversionHelper &FuncIdHelper, bool DSC)
+      : FuncIdHelper(FuncIdHelper), DeduceSiblingCalls(DSC),
+        CHelper(ColorHelper::SequentialScheme::OrRd) {
     G[0] = {};
   }
 
