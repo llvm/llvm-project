@@ -81,8 +81,8 @@ static bool IsWidenedIntegerOp(const ASTContext &Ctx, const Expr *E) {
 
 /// Check if we can skip the overflow check for \p Op.
 static bool CanElideOverflowCheck(const ASTContext &Ctx, const BinOpInfo &Op) {
-  assert(isa<UnaryOperator>(Op.E) ||
-         isa<BinaryOperator>(Op.E) && "Expected a unary or binary operator");
+  assert((isa<UnaryOperator>(Op.E) || isa<BinaryOperator>(Op.E)) &&
+         "Expected a unary or binary operator");
 
   if (const auto *UO = dyn_cast<UnaryOperator>(Op.E))
     return IsWidenedIntegerOp(Ctx, UO->getSubExpr());
