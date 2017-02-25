@@ -689,7 +689,8 @@ void CodeGenFunction::EmitInitializerForField(FieldDecl *Field, LValue LHS,
 /// complete-to-base constructor delegation optimization, i.e.
 /// emitting the complete constructor as a simple call to the base
 /// constructor.
-static bool IsConstructorDelegationValid(const CXXConstructorDecl *Ctor) {
+bool CodeGenFunction::IsConstructorDelegationValid(
+    const CXXConstructorDecl *Ctor) {
 
   // Currently we disable the optimization for classes with virtual
   // bases because (1) the addresses of parameter variables need to be
