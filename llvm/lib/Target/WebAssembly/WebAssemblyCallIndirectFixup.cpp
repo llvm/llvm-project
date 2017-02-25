@@ -97,15 +97,28 @@ bool WebAssemblyCallIndirectFixup::runOnMachineFunction(MachineFunction &MF) {
         MI.setDesc(Desc);
 
         // Rewrite argument order
-        auto Uses = MI.explicit_uses();
-        MachineInstr::mop_iterator it = Uses.begin();
-        const MachineOperand MO = *it;
+        SmallVector<MachineOperand, 8> Ops;
+
+        // Set up a placeholder for the type signature immediate.
+        Ops.push_back(MachineOperand::CreateImm(0));
 
         // Set up the flags immediate, which currently has no defined flags
         // so it's always zero.
-        it->ChangeToImmediate(0);
+        Ops.push_back(MachineOperand::CreateImm(0));
 
-        MI.addOperand(MF, MO);
+        for (const MachineOperand &MO :
+                 make_range(MI.operands_begin() +
+                                MI.getDesc().getNumDefs() + 1,
+                            MI.operands_begin() +
+                                MI.getNumExplicitOperands()))
+          Ops.push_back(MO);
+        Ops.push_back(MI.getOperand(MI.getDesc().getNumDefs()));
+
+        // Replace the instructions operands.
+        while (MI.getNumOperands() > MI.getDesc().getNumDefs())
+          MI.RemoveOperand(MI.getNumOperands() - 1);
+        for (const MachineOperand &MO : Ops)
+          MI.addOperand(MO);
 
         DEBUG(dbgs() << "  After transform: " << MI);
         Changed = true;

@@ -263,6 +263,55 @@ void test_class_f64(global double* out, double a, int b)
   *out = __builtin_amdgcn_class(a, b);
 }
 
+// CHECK-LABEL: @test_buffer_wbinvl1
+// CHECK: call void @llvm.amdgcn.buffer.wbinvl1(
+void test_buffer_wbinvl1()
+{
+  __builtin_amdgcn_buffer_wbinvl1();
+}
+
+// CHECK-LABEL: @test_s_dcache_inv
+// CHECK: call void @llvm.amdgcn.s.dcache.inv(
+void test_s_dcache_inv()
+{
+  __builtin_amdgcn_s_dcache_inv();
+}
+
+// CHECK-LABEL: @test_s_waitcnt
+// CHECK: call void @llvm.amdgcn.s.waitcnt(
+void test_s_waitcnt()
+{
+  __builtin_amdgcn_s_waitcnt(0);
+}
+
+// CHECK-LABEL: @test_s_sendmsg
+// CHECK: call void @llvm.amdgcn.s.sendmsg(
+void test_s_sendmsg()
+{
+  __builtin_amdgcn_s_sendmsg(1, 0);
+}
+
+// CHECK-LABEL: @test_s_sendmsg_var
+// CHECK: call void @llvm.amdgcn.s.sendmsg(
+void test_s_sendmsg_var(int in)
+{
+  __builtin_amdgcn_s_sendmsg(1, in);
+}
+
+// CHECK-LABEL: @test_s_sendmsghalt
+// CHECK: call void @llvm.amdgcn.s.sendmsghalt(
+void test_s_sendmsghalt()
+{
+  __builtin_amdgcn_s_sendmsghalt(1, 0);
+}
+
+// CHECK-LABEL: @test_s_sendmsghalt
+// CHECK: call void @llvm.amdgcn.s.sendmsghalt(
+void test_s_sendmsghalt_var(int in)
+{
+  __builtin_amdgcn_s_sendmsghalt(1, in);
+}
+
 // CHECK-LABEL: @test_s_barrier
 // CHECK: call void @llvm.amdgcn.s.barrier(
 void test_s_barrier()

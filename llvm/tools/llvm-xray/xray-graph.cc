@@ -373,61 +373,6 @@ GraphRenderer::TimeStat::getAsString(GraphRenderer::StatType T) const {
   return S.str();
 }
 
-// Evaluates a polynomial given the coefficints provided in an ArrayRef
-// evaluating:
-//
-//    p(x) = a[n-0]*x^0 + a[n-1]*x^1 + ... a[n-n]*x^n
-//
-// at x_0 using Horner's Method for both performance and stability reasons.
-static double polyEval(ArrayRef<double> a, double x_0) {
-  double B = 0;
-  for (const auto &c : a) {
-    B = c + B * x_0;
-  }
-  return B;
-}
-
-// Takes a double precision number, clips it between 0 and 1 and then converts
-// that to an integer between 0x00 and 0xFF with proxpper rounding.
-static uint8_t uintIntervalTo8bitChar(double B) {
-  double n = std::max(std::min(B, 1.0), 0.0);
-  return static_cast<uint8_t>(255 * n + 0.5);
-}
-
-// Gets a color in a gradient given a number in the interval [0,1], it does this
-// by evaluating a polynomial which maps [0, 1] -> [0, 1] for each of the R G
-// and B values in the color. It then converts this [0,1] colors to a 24 bit
-// color.
-//
-// In order to calculate these polynomials,
-//   1. Convert the OrRed9 color scheme from http://colorbrewer2.org/ from sRGB
-//      to LAB color space.
-//   2. Interpolate between the descrete colors in LAB space using a cubic
-//      spline interpolation.
-//   3. Sample this interpolation at 100 points and convert to sRGB.
-//   4. Calculate a polynomial fit for these 100 points for each of R G and B.
-//      We used a polynomial of degree 9 arbitrarily based on a fuzzy goodness
-//      of fit metric (using human judgement);
-//   5. Extract these polynomial coefficients from matlab as a set of constants.
-static std::string getColor(double point) {
-  assert(point >= 0.0 && point <= 1);
-  const static double RedPoly[] = {-38.4295,  239.239, -600.108, 790.544,
-                                   -591.26,   251.304, -58.0983, 6.62999,
-                                   -0.325899, 1.00173};
-  const static double GreenPoly[] = {-603.634,   2338.15, -3606.74, 2786.16,
-                                     -1085.19,   165.15,  11.2584,  -6.11338,
-                                     -0.0091078, 0.965469};
-  const static double BluePoly[] = {-325.686, 947.415,  -699.079, -513.75,
-                                    1127.78,  -732.617, 228.092,  -33.8202,
-                                    0.732108, 0.913916};
-
-  uint8_t r = uintIntervalTo8bitChar(polyEval(RedPoly, point));
-  uint8_t g = uintIntervalTo8bitChar(polyEval(GreenPoly, point));
-  uint8_t b = uintIntervalTo8bitChar(polyEval(BluePoly, point));
-
-  return llvm::formatv("#{0:X-2}{1:X-2}{2:x-2}", r, g, b);
-}
-
 // Returns the quotient between the property T of this and another TimeStat as
 // a double
 double GraphRenderer::TimeStat::compare(StatType T, const TimeStat &O) const {
@@ -491,7 +436,8 @@ void GraphRenderer::exportGraphAsDOT(raw_ostream &OS, const XRayFileHeader &H,
     OS << "F" << E.first.first << " -> "
        << "F" << E.first.second << " [label=\"" << S.getAsString(ET) << "\"";
     if (EC != StatType::NONE)
-      OS << " color=\"" << getColor(S.compare(EC, G.GraphEdgeMax)) << "\"";
+      OS << " color=\"" << CHelper.getColorString(S.compare(EC, G.GraphEdgeMax))
+         << "\"";
     OS << "];\n";
   }
 
@@ -507,7 +453,8 @@ void GraphRenderer::exportGraphAsDOT(raw_ostream &OS, const XRayFileHeader &H,
     else
       OS << "\"";
     if (VC != StatType::NONE)
-      OS << " color=\"" << getColor(VA.S.compare(VC, G.GraphVertexMax)) << "\"";
+      OS << " color=\"" << CHelper.getColorString(VA.S.compare(VC, G.GraphVertexMax))
+         << "\"";
     OS << "];\n";
   }
   OS << "}\n";

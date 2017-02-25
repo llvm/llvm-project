@@ -5031,7 +5031,7 @@ class SExtLoadi16CVTf64Pat<dag addrmode, dag INST>
                                0),
                              dsub)))>,
     Requires<[NotForCodeSize, UseAlternateSExtLoadCVTF32]>;
- 
+
 def : SExtLoadi16CVTf64Pat<(ro16.Wpat GPR64sp:$Rn, GPR32:$Rm, ro16.Wext:$ext),
                            (LDRHroW GPR64sp:$Rn, GPR32:$Rm, ro16.Wext:$ext)>;
 def : SExtLoadi16CVTf64Pat<(ro16.Xpat GPR64sp:$Rn, GPR64:$Rm, ro16.Xext:$ext),

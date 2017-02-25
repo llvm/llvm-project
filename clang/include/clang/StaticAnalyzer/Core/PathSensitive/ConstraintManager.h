@@ -139,6 +139,8 @@ public:
     return nullptr;
   }
 
+  /// Scan all symbols referenced by the constraints. If the symbol is not
+  /// alive, remove it.
   virtual ProgramStateRef removeDeadBindings(ProgramStateRef state,
                                                  SymbolReaper& SymReaper) = 0;
 

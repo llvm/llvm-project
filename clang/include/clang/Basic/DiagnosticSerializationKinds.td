@@ -136,7 +136,10 @@ def err_module_odr_violation_mismatch_decl_diff : Error<
   "field %4|"
   "field %4 with type %5|"
   "%select{non-|}5bitfield %4|"
-  "bitfield %4 with one width expression}3">;
+  "bitfield %4 with one width expression|"
+  "%select{non-|}5mutable field %4|"
+  "field %4 with %select{no|an}5 initalizer|"
+  "field %4 with an initializer}3">;
 
 def note_module_odr_violation_mismatch_decl_diff : Note<"but in '%0' found "
   "%select{"
@@ -146,7 +149,10 @@ def note_module_odr_violation_mismatch_decl_diff : Note<"but in '%0' found "
   "field %2|"
   "field %2 with type %3|"
   "%select{non-|}3bitfield %2|"
-  "bitfield %2 with different width expression}1">;
+  "bitfield %2 with different width expression|"
+  "%select{non-|}3mutable field %2|"
+  "field %2 with %select{no|an}3 initializer|"
+  "field %2 with a different initializer}1">;
 
 def warn_module_uses_date_time : Warning<
   "%select{precompiled header|module}0 uses __DATE__ or __TIME__">,

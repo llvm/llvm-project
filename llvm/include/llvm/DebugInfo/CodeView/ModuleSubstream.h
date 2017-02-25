@@ -11,8 +11,8 @@
 #define LLVM_DEBUGINFO_CODEVIEW_MODULESUBSTREAM_H
 
 #include "llvm/DebugInfo/CodeView/CodeView.h"
-#include "llvm/DebugInfo/MSF/StreamArray.h"
-#include "llvm/DebugInfo/MSF/StreamRef.h"
+#include "llvm/DebugInfo/MSF/BinaryStreamArray.h"
+#include "llvm/DebugInfo/MSF/BinaryStreamRef.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 
@@ -59,23 +59,22 @@ struct ColumnNumberEntry {
 class ModuleSubstream {
 public:
   ModuleSubstream();
-  ModuleSubstream(ModuleSubstreamKind Kind, msf::ReadableStreamRef Data);
-  static Error initialize(msf::ReadableStreamRef Stream, ModuleSubstream &Info);
+  ModuleSubstream(ModuleSubstreamKind Kind, BinaryStreamRef Data);
+  static Error initialize(BinaryStreamRef Stream, ModuleSubstream &Info);
   uint32_t getRecordLength() const;
   ModuleSubstreamKind getSubstreamKind() const;
-  msf::ReadableStreamRef getRecordData() const;
+  BinaryStreamRef getRecordData() const;
 
 private:
   ModuleSubstreamKind Kind;
-  msf::ReadableStreamRef Data;
+  BinaryStreamRef Data;
 };
 
-typedef msf::VarStreamArray<ModuleSubstream> ModuleSubstreamArray;
+typedef VarStreamArray<ModuleSubstream> ModuleSubstreamArray;
 } // namespace codeview
 
-namespace msf {
 template <> struct VarStreamArrayExtractor<codeview::ModuleSubstream> {
-  Error operator()(ReadableStreamRef Stream, uint32_t &Length,
+  Error operator()(BinaryStreamRef Stream, uint32_t &Length,
                    codeview::ModuleSubstream &Info) const {
     if (auto EC = codeview::ModuleSubstream::initialize(Stream, Info))
       return EC;
@@ -83,7 +82,6 @@ template <> struct VarStreamArrayExtractor<codeview::ModuleSubstream> {
     return Error::success();
   }
 };
-} // namespace msf
 } // namespace llvm
 
 #endif // LLVM_DEBUGINFO_CODEVIEW_MODULESUBSTREAM_H

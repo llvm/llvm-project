@@ -1,6 +1,7 @@
 # CMakeLists.txt file for unit testing OpenMP Library
 include(FindPythonInterp)
 include(CheckTypeSize)
+include(CheckFunctionExists)
 include(CheckLibraryExists)
 
 if(NOT PYTHONINTERP_FOUND)
@@ -11,6 +12,17 @@ endif()
 
 # Some tests use math functions
 check_library_exists(m sqrt "" LIBOMP_HAVE_LIBM)
+# When using libgcc, -latomic may be needed for atomics
+# (but when using compiler-rt, the atomics will be built-in)
+# Note: we can not check for __atomic_load because clang treats it
+# as special built-in and that breaks CMake checks
+check_function_exists(__atomic_load_1 LIBOMP_HAVE_BUILTIN_ATOMIC)
+if(NOT LIBOMP_HAVE_BUILTIN_ATOMIC)
+  check_library_exists(atomic __atomic_load_1 "" LIBOMP_HAVE_LIBATOMIC)
+else()
+  # not needed
+  set(LIBOMP_HAVE_LIBATOMIC 0)
+endif()
 
 macro(pythonize_bool var)
   if (${var})
@@ -25,6 +37,7 @@ pythonize_bool(LIBOMP_OMPT_SUPPORT)
 pythonize_bool(LIBOMP_OMPT_BLAME)
 pythonize_bool(LIBOMP_OMPT_TRACE)
 pythonize_bool(LIBOMP_HAVE_LIBM)
+pythonize_bool(LIBOMP_HAVE_LIBATOMIC)
 
 set(LIBOMP_TEST_CFLAGS "" CACHE STRING
   "Extra compiler flags to send to the test compiler")

@@ -4,13 +4,17 @@
 ; expected.
 
 target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
-target triple = "wasm32-unknown-unknown"
+target triple = "wasm32-unknown-unknown-wasm"
 
 ; CHECK-LABEL: ord_f64:
 ; CHECK-NEXT: .param f64, f64{{$}}
 ; CHECK-NEXT: .result i32{{$}}
-; CHECK-NEXT: f64.eq $push[[NUM0:[0-9]+]]=, $0, $0{{$}}
-; CHECK-NEXT: f64.eq $push[[NUM1:[0-9]+]]=, $1, $1{{$}}
+; CHECK-NEXT: get_local $push[[L0:[0-9]+]]=, 0{{$}}
+; CHECK-NEXT: get_local $push[[L1:[0-9]+]]=, 0{{$}}
+; CHECK-NEXT: f64.eq $push[[NUM0:[0-9]+]]=, $pop[[L0]], $pop[[L1]]{{$}}
+; CHECK-NEXT: get_local $push[[L2:[0-9]+]]=, 1{{$}}
+; CHECK-NEXT: get_local $push[[L3:[0-9]+]]=, 1{{$}}
+; CHECK-NEXT: f64.eq $push[[NUM1:[0-9]+]]=, $pop[[L2]], $pop[[L3]]{{$}}
 ; CHECK-NEXT: i32.and $push[[NUM2:[0-9]+]]=, $pop[[NUM0]], $pop[[NUM1]]{{$}}
 ; CHECK-NEXT: return $pop[[NUM2]]{{$}}
 define i32 @ord_f64(double %x, double %y) {
@@ -22,8 +26,12 @@ define i32 @ord_f64(double %x, double %y) {
 ; CHECK-LABEL: uno_f64:
 ; CHECK-NEXT: .param f64, f64{{$}}
 ; CHECK-NEXT: .result i32{{$}}
-; CHECK-NEXT: f64.ne $push[[NUM0:[0-9]+]]=, $0, $0{{$}}
-; CHECK-NEXT: f64.ne $push[[NUM1:[0-9]+]]=, $1, $1{{$}}
+; CHECK-NEXT: get_local $push[[L0:[0-9]+]]=, 0{{$}}
+; CHECK-NEXT: get_local $push[[L1:[0-9]+]]=, 0{{$}}
+; CHECK-NEXT: f64.ne $push[[NUM0:[0-9]+]]=, $pop[[L0]], $pop[[L1]]{{$}}
+; CHECK-NEXT: get_local $push[[L2:[0-9]+]]=, 1{{$}}
+; CHECK-NEXT: get_local $push[[L3:[0-9]+]]=, 1{{$}}
+; CHECK-NEXT: f64.ne $push[[NUM1:[0-9]+]]=, $pop[[L2]], $pop[[L3]]{{$}}
 ; CHECK-NEXT: i32.or $push[[NUM2:[0-9]+]]=, $pop[[NUM0]], $pop[[NUM1]]{{$}}
 ; CHECK-NEXT: return $pop[[NUM2]]{{$}}
 define i32 @uno_f64(double %x, double %y) {
@@ -35,7 +43,9 @@ define i32 @uno_f64(double %x, double %y) {
 ; CHECK-LABEL: oeq_f64:
 ; CHECK-NEXT: .param f64, f64{{$}}
 ; CHECK-NEXT: .result i32{{$}}
-; CHECK-NEXT: f64.eq $push[[NUM:[0-9]+]]=, $0, $1{{$}}
+; CHECK-NEXT: get_local $push[[L0:[0-9]+]]=, 0{{$}}
+; CHECK-NEXT: get_local $push[[L1:[0-9]+]]=, 1{{$}}
+; CHECK-NEXT: f64.eq $push[[NUM:[0-9]+]]=, $pop[[L0]], $pop[[L1]]{{$}}
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
 define i32 @oeq_f64(double %x, double %y) {
   %a = fcmp oeq double %x, %y
@@ -44,7 +54,7 @@ define i32 @oeq_f64(double %x, double %y) {
 }
 
 ; CHECK-LABEL: une_f64:
-; CHECK: f64.ne $push[[NUM:[0-9]+]]=, $0, $1{{$}}
+; CHECK: f64.ne $push[[NUM:[0-9]+]]=, $pop[[L0]], $pop[[L1]]{{$}}
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
 define i32 @une_f64(double %x, double %y) {
   %a = fcmp une double %x, %y
@@ -53,7 +63,7 @@ define i32 @une_f64(double %x, double %y) {
 }
 
 ; CHECK-LABEL: olt_f64:
-; CHECK: f64.lt $push[[NUM:[0-9]+]]=, $0, $1{{$}}
+; CHECK: f64.lt $push[[NUM:[0-9]+]]=, $pop[[L0]], $pop[[L1]]{{$}}
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
 define i32 @olt_f64(double %x, double %y) {
   %a = fcmp olt double %x, %y
@@ -62,7 +72,7 @@ define i32 @olt_f64(double %x, double %y) {
 }
 
 ; CHECK-LABEL: ole_f64:
-; CHECK: f64.le $push[[NUM:[0-9]+]]=, $0, $1{{$}}
+; CHECK: f64.le $push[[NUM:[0-9]+]]=, $pop[[L0]], $pop[[L1]]{{$}}
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
 define i32 @ole_f64(double %x, double %y) {
   %a = fcmp ole double %x, %y
@@ -71,7 +81,7 @@ define i32 @ole_f64(double %x, double %y) {
 }
 
 ; CHECK-LABEL: ogt_f64:
-; CHECK: f64.gt $push[[NUM:[0-9]+]]=, $0, $1{{$}}
+; CHECK: f64.gt $push[[NUM:[0-9]+]]=, $pop[[L0]], $pop[[L1]]{{$}}
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
 define i32 @ogt_f64(double %x, double %y) {
   %a = fcmp ogt double %x, %y
@@ -80,7 +90,7 @@ define i32 @ogt_f64(double %x, double %y) {
 }
 
 ; CHECK-LABEL: oge_f64:
-; CHECK: f64.ge $push[[NUM:[0-9]+]]=, $0, $1{{$}}
+; CHECK: f64.ge $push[[NUM:[0-9]+]]=, $pop[[L0]], $pop[[L1]]{{$}}
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
 define i32 @oge_f64(double %x, double %y) {
   %a = fcmp oge double %x, %y
@@ -93,9 +103,15 @@ define i32 @oge_f64(double %x, double %y) {
 ; CHECK-LABEL: ueq_f64:
 ; CHECK-NEXT: .param f64, f64{{$}}
 ; CHECK-NEXT: .result i32{{$}}
-; CHECK-NEXT: f64.eq $push[[NUM0:[0-9]+]]=, $0, $1{{$}}
-; CHECK-NEXT: f64.ne $push[[NUM1:[0-9]+]]=, $0, $0{{$}}
-; CHECK-NEXT: f64.ne $push[[NUM2:[0-9]+]]=, $1, $1{{$}}
+; CHECK-NEXT: get_local $push[[L0:[0-9]+]]=, 0{{$}}
+; CHECK-NEXT: get_local $push[[L1:[0-9]+]]=, 1{{$}}
+; CHECK-NEXT: f64.eq $push[[NUM0:[0-9]+]]=, $pop[[L0]], $pop[[L1]]{{$}}
+; CHECK-NEXT: get_local $push[[L2:[0-9]+]]=, 0{{$}}
+; CHECK-NEXT: get_local $push[[L3:[0-9]+]]=, 0{{$}}
+; CHECK-NEXT: f64.ne $push[[NUM1:[0-9]+]]=, $pop[[L2]], $pop[[L3]]{{$}}
+; CHECK-NEXT: get_local $push[[L4:[0-9]+]]=, 1{{$}}
+; CHECK-NEXT: get_local $push[[L5:[0-9]+]]=, 1{{$}}
+; CHECK-NEXT: f64.ne $push[[NUM2:[0-9]+]]=, $pop[[L4]], $pop[[L5]]{{$}}
 ; CHECK-NEXT: i32.or $push[[NUM3:[0-9]+]]=, $pop[[NUM1]], $pop[[NUM2]]{{$}}
 ; CHECK-NEXT: i32.or $push[[NUM4:[0-9]+]]=, $pop[[NUM0]], $pop[[NUM3]]{{$}}
 ; CHECK-NEXT: return $pop[[NUM4]]{{$}}
@@ -108,9 +124,15 @@ define i32 @ueq_f64(double %x, double %y) {
 ; CHECK-LABEL: one_f64:
 ; CHECK-NEXT: .param f64, f64{{$}}
 ; CHECK-NEXT: .result i32{{$}}
-; CHECK-NEXT: f64.ne $push[[NUM0:[0-9]+]]=, $0, $1{{$}}
-; CHECK-NEXT: f64.eq $push[[NUM1:[0-9]+]]=, $0, $0{{$}}
-; CHECK-NEXT: f64.eq $push[[NUM2:[0-9]+]]=, $1, $1{{$}}
+; CHECK-NEXT: get_local $push[[L0:[0-9]+]]=, 0{{$}}
+; CHECK-NEXT: get_local $push[[L1:[0-9]+]]=, 1{{$}}
+; CHECK-NEXT: f64.ne $push[[NUM0:[0-9]+]]=, $pop[[L0]], $pop[[L1]]{{$}}
+; CHECK-NEXT: get_local $push[[L2:[0-9]+]]=, 0{{$}}
+; CHECK-NEXT: get_local $push[[L3:[0-9]+]]=, 0{{$}}
+; CHECK-NEXT: f64.eq $push[[NUM1:[0-9]+]]=, $pop[[L2]], $pop[[L3]]{{$}}
+; CHECK-NEXT: get_local $push[[L4:[0-9]+]]=, 1{{$}}
+; CHECK-NEXT: get_local $push[[L5:[0-9]+]]=, 1{{$}}
+; CHECK-NEXT: f64.eq $push[[NUM2:[0-9]+]]=, $pop[[L4]], $pop[[L5]]{{$}}
 ; CHECK-NEXT: i32.and $push[[NUM3:[0-9]+]]=, $pop[[NUM1]], $pop[[NUM2]]{{$}}
 ; CHECK-NEXT: i32.and $push[[NUM4:[0-9]+]]=, $pop[[NUM0]], $pop[[NUM3]]{{$}}
 ; CHECK-NEXT: return $pop[[NUM4]]
@@ -123,9 +145,15 @@ define i32 @one_f64(double %x, double %y) {
 ; CHECK-LABEL: ult_f64:
 ; CHECK-NEXT: .param f64, f64{{$}}
 ; CHECK-NEXT: .result i32{{$}}
-; CHECK-NEXT: f64.lt $push[[NUM0:[0-9]+]]=, $0, $1{{$}}
-; CHECK-NEXT: f64.ne $push[[NUM1:[0-9]+]]=, $0, $0{{$}}
-; CHECK-NEXT: f64.ne $push[[NUM2:[0-9]+]]=, $1, $1{{$}}
+; CHECK-NEXT: get_local $push[[L0:[0-9]+]]=, 0{{$}}
+; CHECK-NEXT: get_local $push[[L1:[0-9]+]]=, 1{{$}}
+; CHECK-NEXT: f64.lt $push[[NUM0:[0-9]+]]=, $pop[[L0]], $pop[[L1]]{{$}}
+; CHECK-NEXT: get_local $push[[L2:[0-9]+]]=, 0{{$}}
+; CHECK-NEXT: get_local $push[[L3:[0-9]+]]=, 0{{$}}
+; CHECK-NEXT: f64.ne $push[[NUM1:[0-9]+]]=, $pop[[L2]], $pop[[L3]]{{$}}
+; CHECK-NEXT: get_local $push[[L4:[0-9]+]]=, 1{{$}}
+; CHECK-NEXT: get_local $push[[L5:[0-9]+]]=, 1{{$}}
+; CHECK-NEXT: f64.ne $push[[NUM2:[0-9]+]]=, $pop[[L4]], $pop[[L5]]{{$}}
 ; CHECK-NEXT: i32.or $push[[NUM3:[0-9]+]]=, $pop[[NUM1]], $pop[[NUM2]]{{$}}
 ; CHECK-NEXT: i32.or $push[[NUM4:[0-9]+]]=, $pop[[NUM0]], $pop[[NUM3]]{{$}}
 ; CHECK-NEXT: return $pop[[NUM4]]{{$}}
@@ -138,9 +166,15 @@ define i32 @ult_f64(double %x, double %y) {
 ; CHECK-LABEL: ule_f64:
 ; CHECK-NEXT: .param f64, f64{{$}}
 ; CHECK-NEXT: .result i32{{$}}
-; CHECK-NEXT: f64.le $push[[NUM0:[0-9]+]]=, $0, $1{{$}}
-; CHECK-NEXT: f64.ne $push[[NUM1:[0-9]+]]=, $0, $0{{$}}
-; CHECK-NEXT: f64.ne $push[[NUM2:[0-9]+]]=, $1, $1{{$}}
+; CHECK-NEXT: get_local $push[[L0:[0-9]+]]=, 0{{$}}
+; CHECK-NEXT: get_local $push[[L1:[0-9]+]]=, 1{{$}}
+; CHECK-NEXT: f64.le $push[[NUM0:[0-9]+]]=, $pop[[L0]], $pop[[L1]]{{$}}
+; CHECK-NEXT: get_local $push[[L2:[0-9]+]]=, 0{{$}}
+; CHECK-NEXT: get_local $push[[L3:[0-9]+]]=, 0{{$}}
+; CHECK-NEXT: f64.ne $push[[NUM1:[0-9]+]]=, $pop[[L2]], $pop[[L3]]{{$}}
+; CHECK-NEXT: get_local $push[[L4:[0-9]+]]=, 1{{$}}
+; CHECK-NEXT: get_local $push[[L5:[0-9]+]]=, 1{{$}}
+; CHECK-NEXT: f64.ne $push[[NUM2:[0-9]+]]=, $pop[[L4]], $pop[[L5]]{{$}}
 ; CHECK-NEXT: i32.or $push[[NUM3:[0-9]+]]=, $pop[[NUM1]], $pop[[NUM2]]{{$}}
 ; CHECK-NEXT: i32.or $push[[NUM4:[0-9]+]]=, $pop[[NUM0]], $pop[[NUM3]]{{$}}
 ; CHECK-NEXT: return $pop[[NUM4]]{{$}}
@@ -153,9 +187,15 @@ define i32 @ule_f64(double %x, double %y) {
 ; CHECK-LABEL: ugt_f64:
 ; CHECK-NEXT: .param f64, f64{{$}}
 ; CHECK-NEXT: .result i32{{$}}
-; CHECK-NEXT: f64.gt $push[[NUM0:[0-9]+]]=, $0, $1{{$}}
-; CHECK-NEXT: f64.ne $push[[NUM1:[0-9]+]]=, $0, $0{{$}}
-; CHECK-NEXT: f64.ne $push[[NUM2:[0-9]+]]=, $1, $1{{$}}
+; CHECK-NEXT: get_local $push[[L0:[0-9]+]]=, 0{{$}}
+; CHECK-NEXT: get_local $push[[L1:[0-9]+]]=, 1{{$}}
+; CHECK-NEXT: f64.gt $push[[NUM0:[0-9]+]]=, $pop[[L0]], $pop[[L1]]{{$}}
+; CHECK-NEXT: get_local $push[[L2:[0-9]+]]=, 0{{$}}
+; CHECK-NEXT: get_local $push[[L3:[0-9]+]]=, 0{{$}}
+; CHECK-NEXT: f64.ne $push[[NUM1:[0-9]+]]=, $pop[[L2]], $pop[[L3]]{{$}}
+; CHECK-NEXT: get_local $push[[L4:[0-9]+]]=, 1{{$}}
+; CHECK-NEXT: get_local $push[[L5:[0-9]+]]=, 1{{$}}
+; CHECK-NEXT: f64.ne $push[[NUM2:[0-9]+]]=, $pop[[L4]], $pop[[L5]]{{$}}
 ; CHECK-NEXT: i32.or $push[[NUM3:[0-9]+]]=, $pop[[NUM1]], $pop[[NUM2]]{{$}}
 ; CHECK-NEXT: i32.or $push[[NUM4:[0-9]+]]=, $pop[[NUM0]], $pop[[NUM3]]{{$}}
 ; CHECK-NEXT: return $pop[[NUM4]]{{$}}
@@ -168,9 +208,15 @@ define i32 @ugt_f64(double %x, double %y) {
 ; CHECK-LABEL: uge_f64:
 ; CHECK-NEXT: .param f64, f64{{$}}
 ; CHECK-NEXT: .result i32{{$}}
-; CHECK-NEXT: f64.ge $push[[NUM0:[0-9]+]]=, $0, $1{{$}}
-; CHECK-NEXT: f64.ne $push[[NUM1:[0-9]+]]=, $0, $0{{$}}
-; CHECK-NEXT: f64.ne $push[[NUM2:[0-9]+]]=, $1, $1{{$}}
+; CHECK-NEXT: get_local $push[[L0:[0-9]+]]=, 0{{$}}
+; CHECK-NEXT: get_local $push[[L1:[0-9]+]]=, 1{{$}}
+; CHECK-NEXT: f64.ge $push[[NUM0:[0-9]+]]=, $pop[[L0]], $pop[[L1]]{{$}}
+; CHECK-NEXT: get_local $push[[L2:[0-9]+]]=, 0{{$}}
+; CHECK-NEXT: get_local $push[[L3:[0-9]+]]=, 0{{$}}
+; CHECK-NEXT: f64.ne $push[[NUM1:[0-9]+]]=, $pop[[L2]], $pop[[L3]]{{$}}
+; CHECK-NEXT: get_local $push[[L4:[0-9]+]]=, 1{{$}}
+; CHECK-NEXT: get_local $push[[L5:[0-9]+]]=, 1{{$}}
+; CHECK-NEXT: f64.ne $push[[NUM2:[0-9]+]]=, $pop[[L4]], $pop[[L5]]{{$}}
 ; CHECK-NEXT: i32.or $push[[NUM3:[0-9]+]]=, $pop[[NUM1]], $pop[[NUM2]]{{$}}
 ; CHECK-NEXT: i32.or $push[[NUM4:[0-9]+]]=, $pop[[NUM0]], $pop[[NUM3]]{{$}}
 ; CHECK-NEXT: return $pop[[NUM4]]{{$}}

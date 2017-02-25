@@ -12,8 +12,8 @@
 
 #include "llvm/DebugInfo/CodeView/TypeRecordMapping.h"
 #include "llvm/DebugInfo/CodeView/TypeVisitorCallbacks.h"
-#include "llvm/DebugInfo/MSF/ByteStream.h"
-#include "llvm/DebugInfo/MSF/StreamWriter.h"
+#include "llvm/DebugInfo/MSF/BinaryByteStream.h"
+#include "llvm/DebugInfo/MSF/BinaryStreamWriter.h"
 
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
@@ -56,8 +56,8 @@ class TypeSerializer : public TypeVisitorCallbacks {
   Optional<TypeLeafKind> TypeKind;
   Optional<TypeLeafKind> MemberKind;
   std::vector<uint8_t> RecordBuffer;
-  msf::MutableByteStream Stream;
-  msf::StreamWriter Writer;
+  MutableBinaryByteStream Stream;
+  BinaryStreamWriter Writer;
   TypeRecordMapping Mapping;
 
   RecordList SeenRecords;
@@ -109,7 +109,7 @@ private:
   Error visitKnownMemberImpl(CVMemberRecord &CVR, RecordType &Record) {
     assert(CVR.Kind == static_cast<TypeLeafKind>(Record.getKind()));
 
-    if (auto EC = Writer.writeEnum(CVR.Kind, llvm::support::little))
+    if (auto EC = Writer.writeEnum(CVR.Kind))
       return EC;
 
     if (auto EC = Mapping.visitKnownMember(CVR, Record))

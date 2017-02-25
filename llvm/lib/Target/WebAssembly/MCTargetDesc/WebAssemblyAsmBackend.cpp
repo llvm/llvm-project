@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
+#include "MCTargetDesc/WebAssemblyFixupKinds.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCDirectives.h"
@@ -70,6 +71,12 @@ public:
       : MCAsmBackend(), Is64Bit(Is64Bit) {}
   ~WebAssemblyAsmBackend() override {}
 
+  unsigned getNumFixupKinds() const override {
+    return WebAssembly::NumTargetFixupKinds;
+  }
+
+  const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override;
+
   void applyFixup(const MCFixup &Fixup, char *Data, unsigned DataSize,
                   uint64_t Value, bool IsPCRel) const override;
 
@@ -80,12 +87,6 @@ public:
                             const MCRelaxableFragment *DF,
                             const MCAsmLayout &Layout) const override {
     return false;
-  }
-
-  unsigned getNumFixupKinds() const override {
-    // We currently just use the generic fixups in MCFixup.h and don't have any
-    // target-specific fixups.
-    return 0;
   }
 
   bool mayNeedRelaxation(const MCInst &Inst) const override { return false; }
@@ -129,6 +130,26 @@ void WebAssemblyAsmBackendELF::applyFixup(const MCFixup &Fixup, char *Data,
 MCObjectWriter *
 WebAssemblyAsmBackendELF::createObjectWriter(raw_pwrite_stream &OS) const {
   return createWebAssemblyELFObjectWriter(OS, Is64Bit, 0);
+}
+
+const MCFixupKindInfo &
+WebAssemblyAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
+  const static MCFixupKindInfo Infos[WebAssembly::NumTargetFixupKinds] = {
+    // This table *must* be in the order that the fixup_* kinds are defined in
+    // WebAssemblyFixupKinds.h.
+    //
+    // Name                     Offset (bits) Size (bits)     Flags
+    { "fixup_code_sleb128_i32", 0,            5*8,            0 },
+    { "fixup_code_sleb128_i64", 0,            10*8,           0 },
+    { "fixup_code_uleb128_i32", 0,            5*8,            0 },
+  };
+
+  if (Kind < FirstTargetFixupKind)
+    return MCAsmBackend::getFixupKindInfo(Kind);
+
+  assert(unsigned(Kind - FirstTargetFixupKind) < getNumFixupKinds() &&
+         "Invalid kind!");
+  return Infos[Kind - FirstTargetFixupKind];
 }
 
 bool WebAssemblyAsmBackend::writeNopData(uint64_t Count,

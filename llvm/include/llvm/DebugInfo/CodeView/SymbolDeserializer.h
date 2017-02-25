@@ -15,8 +15,8 @@
 #include "llvm/DebugInfo/CodeView/SymbolRecordMapping.h"
 #include "llvm/DebugInfo/CodeView/SymbolVisitorCallbacks.h"
 #include "llvm/DebugInfo/CodeView/SymbolVisitorDelegate.h"
-#include "llvm/DebugInfo/MSF/ByteStream.h"
-#include "llvm/DebugInfo/MSF/StreamReader.h"
+#include "llvm/DebugInfo/MSF/BinaryByteStream.h"
+#include "llvm/DebugInfo/MSF/BinaryStreamReader.h"
 #include "llvm/Support/Error.h"
 
 namespace llvm {
@@ -25,10 +25,11 @@ class SymbolVisitorDelegate;
 class SymbolDeserializer : public SymbolVisitorCallbacks {
   struct MappingInfo {
     explicit MappingInfo(ArrayRef<uint8_t> RecordData)
-        : Stream(RecordData), Reader(Stream), Mapping(Reader) {}
+        : Stream(RecordData, llvm::support::little), Reader(Stream),
+          Mapping(Reader) {}
 
-    msf::ByteStream Stream;
-    msf::StreamReader Reader;
+    BinaryByteStream Stream;
+    BinaryStreamReader Reader;
     SymbolRecordMapping Mapping;
   };
 

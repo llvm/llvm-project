@@ -22,22 +22,29 @@ class MCContext;
 class MCFixup;
 class MCFragment;
 class MCObjectWriter;
+class MCSectionWasm;
 class MCSymbol;
 class MCSymbolWasm;
 class MCValue;
 class raw_pwrite_stream;
 
+// Information about a single relocation.
 struct WasmRelocationEntry {
   uint64_t Offset;            // Where is the relocation.
   const MCSymbolWasm *Symbol; // The symbol to relocate with.
+  uint64_t Addend;            // A value to add to the symbol.
   unsigned Type;              // The type of the relocation.
+  MCSectionWasm *FixupSection;// The section the relocation is targeting.
 
   WasmRelocationEntry(uint64_t Offset, const MCSymbolWasm *Symbol,
-                      unsigned Type)
-      : Offset(Offset), Symbol(Symbol), Type(Type) {}
+                      uint64_t Addend, unsigned Type,
+                      MCSectionWasm *FixupSection)
+      : Offset(Offset), Symbol(Symbol), Addend(Addend), Type(Type),
+        FixupSection(FixupSection) {}
 
   void print(raw_ostream &Out) const {
-    Out << "Off=" << Offset << ", Sym=" << Symbol << ", Type=" << Type;
+    Out << "Off=" << Offset << ", Sym=" << Symbol << ", Addend=" << Addend
+        << ", Type=" << Type << ", FixupSection=" << FixupSection;
   }
   void dump() const { print(errs()); }
 };

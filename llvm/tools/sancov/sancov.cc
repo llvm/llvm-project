@@ -96,7 +96,8 @@ cl::opt<ActionType> Action(
 
 static cl::list<std::string>
     ClInputFiles(cl::Positional, cl::OneOrMore,
-                 cl::desc("(<binary file>|<.sancov file>)..."));
+                 cl::desc("<action> <binary files...> <.sancov files...> "
+                          "<.symcov files...>"));
 
 static cl::opt<bool> ClDemangle("demangle", cl::init(true),
                                 cl::desc("Print demangled function name."));
@@ -1200,7 +1201,17 @@ int main(int Argc, char **Argv) {
   llvm::InitializeAllTargetMCs();
   llvm::InitializeAllDisassemblers();
 
-  cl::ParseCommandLineOptions(Argc, Argv, "Sanitizer Coverage Processing Tool");
+  cl::ParseCommandLineOptions(Argc, Argv, 
+      "Sanitizer Coverage Processing Tool (sancov)\n\n"
+      "  This tool can extract various coverage-related information from: \n"
+      "  coverage-instrumented binary files, raw .sancov files and their "
+      "symbolized .symcov version.\n"
+      "  Depending on chosen action the tool expects different input files:\n"
+      "    -print-coverage-pcs     - coverage-instrumented binary files\n"
+      "    -print-coverage         - .sancov files\n"
+      "    <other actions>         - .sancov files & corresponding binary "
+      "files, .symcov files\n"
+      );
 
   // -print doesn't need object files.
   if (Action == PrintAction) {

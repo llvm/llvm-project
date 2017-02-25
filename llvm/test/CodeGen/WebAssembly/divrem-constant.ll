@@ -3,7 +3,7 @@
 ; Test that integer div and rem by constant are optimized appropriately.
 
 target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
-target triple = "wasm32-unknown-unknown"
+target triple = "wasm32-unknown-unknown-wasm"
 
 ; CHECK-LABEL: test_udiv_2:
 ; CHECK: i32.shr_u

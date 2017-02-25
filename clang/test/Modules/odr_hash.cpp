@@ -233,6 +233,48 @@ S8 s8;
 // expected-note@first.h:* {{but in 'FirstModule' found bitfield 'x' with different width expression}}
 #endif
 
+#if defined(FIRST)
+struct S9 {
+  mutable int x;
+};
+#elif defined(SECOND)
+struct S9 {
+  int x;
+};
+#else
+S9 s9;
+// expected-error@second.h:* {{'Field::S9' has different definitions in different modules; first difference is definition in module 'SecondModule' found non-mutable field 'x'}}
+// expected-note@first.h:* {{but in 'FirstModule' found mutable field 'x'}}
+#endif
+
+#if defined(FIRST)
+struct S10 {
+  unsigned x = 5;
+};
+#elif defined(SECOND)
+struct S10 {
+  unsigned x;
+};
+#else
+S10 s10;
+// expected-error@second.h:* {{'Field::S10' has different definitions in different modules; first difference is definition in module 'SecondModule' found field 'x' with no initalizer}}
+// expected-note@first.h:* {{but in 'FirstModule' found field 'x' with an initializer}}
+#endif
+
+#if defined(FIRST)
+struct S11 {
+  unsigned x = 5;
+};
+#elif defined(SECOND)
+struct S11 {
+  unsigned x = 7;
+};
+#else
+S11 s11;
+// expected-error@second.h:* {{'Field::S11' has different definitions in different modules; first difference is definition in module 'SecondModule' found field 'x' with an initializer}}
+// expected-note@first.h:* {{but in 'FirstModule' found field 'x' with a different initializer}}
+#endif
+
 }  // namespace Field
 
 // Naive parsing of AST can lead to cycles in processing.  Ensure
@@ -280,6 +322,8 @@ struct S {
 
   unsigned a : 1;
   unsigned b : 2*2 + 5/2;
+
+  mutable int c = sizeof(x + y);
 };
 #elif defined(SECOND)
 typedef int INT;
@@ -298,6 +342,8 @@ struct S {
 
   unsigned a : 1;
   unsigned b : 2 * 2 + 5 / 2;
+
+  mutable int c = sizeof(x + y);
 };
 #else
 S s;
@@ -321,6 +367,8 @@ struct T {
   unsigned a : 1;
   unsigned b : 2 * 2 + 5 / 2;
 
+  mutable int c = sizeof(x + y);
+
   private:
 };
 #elif defined(SECOND)
@@ -340,6 +388,8 @@ struct T {
 
   unsigned a : 1;
   unsigned b : 2 * 2 + 5 / 2;
+
+  mutable int c = sizeof(x + y);
 
   public:
 };

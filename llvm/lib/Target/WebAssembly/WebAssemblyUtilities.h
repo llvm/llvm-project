@@ -27,6 +27,7 @@ bool isArgument(const MachineInstr &MI);
 bool isCopy(const MachineInstr &MI);
 bool isTee(const MachineInstr &MI);
 bool isChild(const MachineInstr &MI, const WebAssemblyFunctionInfo &MFI);
+bool isCallIndirect(const MachineInstr &MI);
 
 } // end namespace WebAssembly
 } // end namespace llvm

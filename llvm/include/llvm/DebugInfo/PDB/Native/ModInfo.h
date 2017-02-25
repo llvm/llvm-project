@@ -11,8 +11,8 @@
 #define LLVM_DEBUGINFO_PDB_RAW_MODINFO_H
 
 #include "llvm/ADT/StringRef.h"
-#include "llvm/DebugInfo/MSF/StreamArray.h"
-#include "llvm/DebugInfo/MSF/StreamRef.h"
+#include "llvm/DebugInfo/MSF/BinaryStreamArray.h"
+#include "llvm/DebugInfo/MSF/BinaryStreamRef.h"
 #include "llvm/DebugInfo/PDB/Native/RawTypes.h"
 #include "llvm/Support/Error.h"
 #include <cstdint>
@@ -30,7 +30,7 @@ public:
   ModInfo(const ModInfo &Info);
   ~ModInfo();
 
-  static Error initialize(msf::ReadableStreamRef Stream, ModInfo &Info);
+  static Error initialize(BinaryStreamRef Stream, ModInfo &Info);
 
   bool hasECInfo() const;
   uint16_t getTypeServerIndex() const;
@@ -63,10 +63,8 @@ struct ModuleInfoEx {
 
 } // end namespace pdb
 
-namespace msf {
-
 template <> struct VarStreamArrayExtractor<pdb::ModInfo> {
-  Error operator()(ReadableStreamRef Stream, uint32_t &Length,
+  Error operator()(BinaryStreamRef Stream, uint32_t &Length,
                    pdb::ModInfo &Info) const {
     if (auto EC = pdb::ModInfo::initialize(Stream, Info))
       return EC;
@@ -74,8 +72,6 @@ template <> struct VarStreamArrayExtractor<pdb::ModInfo> {
     return Error::success();
   }
 };
-
-} // end namespace msf
 
 } // end namespace llvm
 

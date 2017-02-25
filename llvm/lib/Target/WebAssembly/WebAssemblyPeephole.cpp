@@ -80,8 +80,18 @@ static bool MaybeRewriteToFallthrough(MachineInstr &MI, MachineBasicBlock &MBB,
     return false;
   if (&MBB != &MF.back())
     return false;
-  if (&MI != &MBB.back())
-    return false;
+  if (MF.getSubtarget<WebAssemblySubtarget>()
+        .getTargetTriple().isOSBinFormatELF()) {
+    if (&MI != &MBB.back())
+      return false;
+  } else {
+    MachineBasicBlock::iterator End = MBB.end();
+    --End;
+    assert(End->getOpcode() == WebAssembly::END_FUNCTION);
+    --End;
+    if (&MI != &*End)
+      return false;
+  }
 
   if (FallthroughOpc != WebAssembly::FALLTHROUGH_RETURN_VOID) {
     // If the operand isn't stackified, insert a COPY to read the operand and

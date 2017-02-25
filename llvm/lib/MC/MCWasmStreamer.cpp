@@ -89,7 +89,29 @@ bool MCWasmStreamer::EmitSymbolAttribute(MCSymbol *S, MCSymbolAttr Attribute) {
   // the symbol with the assembler.
   getAssembler().registerSymbol(*Symbol);
 
-  // TODO: Set the symbol binding, type, etc.
+  switch (Attribute) {
+  case MCSA_LazyReference:
+  case MCSA_Reference:
+  case MCSA_SymbolResolver:
+  case MCSA_PrivateExtern:
+  case MCSA_WeakDefinition:
+  case MCSA_WeakDefAutoPrivate:
+  case MCSA_Invalid:
+  case MCSA_IndirectSymbol:
+    return false;
+  case MCSA_Global:
+    Symbol->setExternal(true);
+    break;
+  case MCSA_ELF_TypeFunction:
+    Symbol->setIsFunction(true);
+    break;
+  case MCSA_ELF_TypeObject:
+    Symbol->setIsFunction(false);
+    break;
+  default:
+    // unrecognized directive
+    return false;
+  }
 
   return true;
 }
@@ -97,6 +119,10 @@ bool MCWasmStreamer::EmitSymbolAttribute(MCSymbol *S, MCSymbolAttr Attribute) {
 void MCWasmStreamer::EmitCommonSymbol(MCSymbol *S, uint64_t Size,
                                       unsigned ByteAlignment) {
   llvm_unreachable("Common symbols are not yet implemented for Wasm");
+}
+
+void MCWasmStreamer::emitELFSize(MCSymbol *Symbol, const MCExpr *Value) {
+  cast<MCSymbolWasm>(Symbol)->setSize(Value);
 }
 
 void MCWasmStreamer::EmitLocalCommonSymbol(MCSymbol *S, uint64_t Size,
@@ -124,7 +150,17 @@ void MCWasmStreamer::EmitFileDirective(StringRef Filename) {
 }
 
 void MCWasmStreamer::EmitIdent(StringRef IdentString) {
-  llvm_unreachable("Ident sections not yet implemented for wasm");
+  MCSection *Comment = getAssembler().getContext().getWasmSection(
+      ".comment", 0, 0);
+  PushSection();
+  SwitchSection(Comment);
+  if (!SeenIdent) {
+    EmitIntValue(0, 1);
+    SeenIdent = true;
+  }
+  EmitBytes(IdentString);
+  EmitIntValue(0, 1);
+  PopSection();
 }
 
 void MCWasmStreamer::EmitInstToFragment(const MCInst &Inst,
