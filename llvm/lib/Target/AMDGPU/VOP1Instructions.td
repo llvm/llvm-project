@@ -607,12 +607,6 @@ def : Pat<
   (COPY $src)
 >;
 
-def : Pat<
-  (i1 (trunc i16:$src)),
-  (COPY $src)
->;
-
-
 def : Pat <
   (i16 (trunc i64:$src)),
   (EXTRACT_SUBREG $src, sub0)

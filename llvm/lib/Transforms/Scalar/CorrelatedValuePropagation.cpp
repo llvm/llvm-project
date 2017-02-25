@@ -41,6 +41,8 @@ STATISTIC(NumSDivs,     "Number of sdiv converted to udiv");
 STATISTIC(NumAShrs,     "Number of ashr converted to lshr");
 STATISTIC(NumSRems,     "Number of srem converted to urem");
 
+static cl::opt<bool> DontProcessAdds("cvp-dont-process-adds", cl::init(true));
+
 namespace {
   class CorrelatedValuePropagation : public FunctionPass {
   public:
@@ -404,6 +406,9 @@ static bool processAShr(BinaryOperator *SDI, LazyValueInfo *LVI) {
 
 static bool processAdd(BinaryOperator *AddOp, LazyValueInfo *LVI) {
   typedef OverflowingBinaryOperator OBO;
+
+  if (DontProcessAdds)
+    return false;
 
   if (AddOp->getType()->isVectorTy() || hasLocalDefs(AddOp))
     return false;
