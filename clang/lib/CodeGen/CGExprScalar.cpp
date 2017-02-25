@@ -81,8 +81,8 @@ static bool IsWidenedIntegerOp(const ASTContext &Ctx, const Expr *E) {
 
 /// Check if we can skip the overflow check for \p Op.
 static bool CanElideOverflowCheck(const ASTContext &Ctx, const BinOpInfo &Op) {
-  assert(isa<UnaryOperator>(Op.E) ||
-         isa<BinaryOperator>(Op.E) && "Expected a unary or binary operator");
+  assert((isa<UnaryOperator>(Op.E) || isa<BinaryOperator>(Op.E)) &&
+         "Expected a unary or binary operator");
 
   if (const auto *UO = dyn_cast<UnaryOperator>(Op.E))
     return IsWidenedIntegerOp(Ctx, UO->getSubExpr());
@@ -3414,9 +3414,11 @@ VisitAbstractConditionalOperator(const AbstractConditionalOperator *E) {
   // safe to evaluate the LHS and RHS unconditionally.
   if (isCheapEnoughToEvaluateUnconditionally(lhsExpr, CGF) &&
       isCheapEnoughToEvaluateUnconditionally(rhsExpr, CGF)) {
-    CGF.incrementProfileCounter(E);
-
     llvm::Value *CondV = CGF.EvaluateExprAsBool(condExpr);
+    llvm::Value *StepV = Builder.CreateZExtOrBitCast(CondV, CGF.Int64Ty);
+
+    CGF.incrementProfileCounter(E, StepV);
+
     llvm::Value *LHS = Visit(lhsExpr);
     llvm::Value *RHS = Visit(rhsExpr);
     if (!LHS) {

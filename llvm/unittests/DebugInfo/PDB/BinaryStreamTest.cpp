@@ -330,7 +330,7 @@ TEST_F(BinaryStreamTest, StreamReaderBounds) {
   }
 }
 
-TEST_F(BinaryStreamTest, StreamReaderIntegers) {
+TEST_F(BinaryStreamTest, DISABLED_StreamReaderIntegers) {
   support::ulittle64_t Little{908234};
   support::ubig32_t Big{28907823};
   short NS = 2897;
@@ -406,7 +406,7 @@ TEST_F(BinaryStreamTest, StreamReaderIntegerArray) {
   }
 }
 
-TEST_F(BinaryStreamTest, StreamReaderEnum) {
+TEST_F(BinaryStreamTest, DISABLED_StreamReaderEnum) {
   enum class MyEnum : int64_t { Foo = -10, Bar = 0, Baz = 10 };
 
   std::vector<MyEnum> Enums = {MyEnum::Bar, MyEnum::Baz, MyEnum::Foo};
@@ -603,7 +603,7 @@ TEST_F(BinaryStreamTest, StreamWriterIntegerArrays) {
   }
 }
 
-TEST_F(BinaryStreamTest, StreamWriterEnum) {
+TEST_F(BinaryStreamTest, DISABLED_StreamWriterEnum) {
   enum class MyEnum : int64_t { Foo = -10, Bar = 0, Baz = 10 };
 
   std::vector<MyEnum> Expected = {MyEnum::Bar, MyEnum::Foo, MyEnum::Baz};
