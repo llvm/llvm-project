@@ -2385,12 +2385,12 @@ Value *ScalarExprEmitter::EmitDiv(const BinOpInfo &Ops) {
 
 Value *ScalarExprEmitter::EmitRem(const BinOpInfo &Ops) {
   // Rem in C can't be a floating point type: C99 6.5.5p2.
-  if (CGF.SanOpts.has(SanitizerKind::IntegerDivideByZero)) {
+  if ((CGF.SanOpts.has(SanitizerKind::IntegerDivideByZero) ||
+       CGF.SanOpts.has(SanitizerKind::SignedIntegerOverflow)) &&
+      Ops.Ty->isIntegerType()) {
     CodeGenFunction::SanitizerScope SanScope(&CGF);
     llvm::Value *Zero = llvm::Constant::getNullValue(ConvertType(Ops.Ty));
-
-    if (Ops.Ty->isIntegerType())
-      EmitUndefinedBehaviorIntegerDivAndRemCheck(Ops, Zero, false);
+    EmitUndefinedBehaviorIntegerDivAndRemCheck(Ops, Zero, false);
   }
 
   if (Ops.Ty->hasUnsignedIntegerRepresentation())
