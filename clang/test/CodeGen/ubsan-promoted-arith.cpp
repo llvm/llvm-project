@@ -2,6 +2,7 @@
 
 typedef unsigned char uchar;
 typedef unsigned short ushort;
+typedef int int4 __attribute__((ext_vector_type(4)));
 
 enum E1 : int {
   a
@@ -101,11 +102,13 @@ char rem1(char c) { return c % c; }
 // CHECK-NOT: ubsan_handle_divrem_overflow
 uchar rem2(uchar uc) { return uc % uc; }
 
-// FIXME: This is a long-standing false negative.
-//
 // CHECK-LABEL: define signext i8 @_Z4rem3
-// rdar30301609: ubsan_handle_divrem_overflow
+// CHECK: ubsan_handle_divrem_overflow
 char rem3(int i, char c) { return i % c; }
+
+// CHECK-LABEL: define signext i8 @_Z4rem4
+// CHECK-NOT: ubsan_handle_divrem_overflow
+char rem4(char c, int i) { return c % i; }
 
 // CHECK-LABEL: define signext i8 @_Z4inc1
 // CHECK-NOT: sadd.with.overflow
@@ -122,3 +125,7 @@ void inc3(char c) { c++; }
 // CHECK-LABEL: define void @_Z4inc4
 // CHECK-NOT: uadd.with.overflow
 void inc4(uchar uc) { uc++; }
+
+// CHECK-LABEL: define <4 x i32> @_Z4vremDv4_iS_
+// CHECK-NOT: ubsan_handle_divrem_overflow
+int4 vrem(int4 a, int4 b) { return a % b; }
