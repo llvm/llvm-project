@@ -20,8 +20,9 @@
 #include <vector>
 
 namespace llvm {
-class BinaryStreamWriter;
-
+namespace msf {
+class StreamWriter;
+}
 namespace pdb {
 
 class StringTableBuilder {
@@ -31,7 +32,7 @@ public:
   uint32_t insert(StringRef S);
 
   uint32_t finalize();
-  Error commit(BinaryStreamWriter &Writer) const;
+  Error commit(msf::StreamWriter &Writer) const;
 
 private:
   DenseMap<StringRef, uint32_t> Strings;

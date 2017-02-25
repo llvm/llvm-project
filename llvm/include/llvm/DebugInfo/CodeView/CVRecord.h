@@ -48,13 +48,15 @@ public:
 
 } // end namespace codeview
 
+namespace msf {
+
 template <typename Kind>
 struct VarStreamArrayExtractor<codeview::CVRecord<Kind>> {
-  Error operator()(BinaryStreamRef Stream, uint32_t &Len,
+  Error operator()(ReadableStreamRef Stream, uint32_t &Len,
                    codeview::CVRecord<Kind> &Item) const {
     using namespace codeview;
     const RecordPrefix *Prefix = nullptr;
-    BinaryStreamReader Reader(Stream);
+    StreamReader Reader(Stream);
     uint32_t Offset = Reader.getOffset();
 
     if (auto EC = Reader.readObject(Prefix))
@@ -73,6 +75,8 @@ struct VarStreamArrayExtractor<codeview::CVRecord<Kind>> {
     return Error::success();
   }
 };
+
+} // end namespace msf
 
 } // end namespace llvm
 

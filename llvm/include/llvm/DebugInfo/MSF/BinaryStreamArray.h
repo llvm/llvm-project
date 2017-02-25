@@ -1,4 +1,4 @@
-//===- BinaryStreamArray.h - Array backed by an arbitrary stream *- C++ -*-===//
+//===- StreamArray.h - Array backed by an arbitrary stream ------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_SUPPORT_BINARYSTREAMARRAY_H
-#define LLVM_SUPPORT_BINARYSTREAMARRAY_H
+#ifndef LLVM_DEBUGINFO_MSF_STREAMARRAY_H
+#define LLVM_DEBUGINFO_MSF_STREAMARRAY_H
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/iterator.h"
@@ -17,20 +17,11 @@
 #include <cassert>
 #include <cstdint>
 
-/// Lightweight arrays that are backed by an arbitrary BinaryStream.  This file
-/// provides two different array implementations.
-///
-///     VarStreamArray - Arrays of variable length records.  The user specifies
-///       an Extractor type that can extract a record from a given offset and
-///       return the number of bytes consumed by the record.
-///
-///     FixedStreamArray - Arrays of fixed length records.  This is similar in
-///       spirit to ArrayRef<T>, but since it is backed by a BinaryStream, the
-///       elements of the array need not be laid out in contiguous memory.
 namespace llvm {
+namespace msf {
 
 /// VarStreamArrayExtractor is intended to be specialized to provide customized
-/// extraction logic.  On input it receives a BinaryStreamRef pointing to the
+/// extraction logic.  On input it receives a StreamRef pointing to the
 /// beginning of the next record, but where the length of the record is not yet
 /// known.  Upon completion, it should return an appropriate Error instance if
 /// a record could not be extracted, or if one could be extracted it should
@@ -44,7 +35,7 @@ namespace llvm {
 template <typename T> struct VarStreamArrayExtractor {
   // Method intentionally deleted.  You must provide an explicit specialization
   // with the following method implemented.
-  Error operator()(BinaryStreamRef Stream, uint32_t &Len,
+  Error operator()(ReadableStreamRef Stream, uint32_t &Len,
                    T &Item) const = delete;
 };
 
@@ -58,10 +49,10 @@ template <typename T> struct VarStreamArrayExtractor {
 /// abstracting this out, we need not duplicate this memory, and we can
 /// iterate over arrays in arbitrarily formatted streams.  Elements are parsed
 /// lazily on iteration, so there is no upfront cost associated with building
-/// or copying a VarStreamArray, no matter how large it may be.
+/// a VarStreamArray, no matter how large it may be.
 ///
 /// You create a VarStreamArray by specifying a ValueType and an Extractor type.
-/// If you do not specify an Extractor type, you are expected to specialize
+/// If you do not specify an Extractor type, it expects you to specialize
 /// VarStreamArrayExtractor<T> for your ValueType.
 ///
 /// By default an Extractor is default constructed in the class, but in some
@@ -95,8 +86,8 @@ public:
   VarStreamArray() = default;
   explicit VarStreamArray(const Extractor &E) : E(E) {}
 
-  explicit VarStreamArray(BinaryStreamRef Stream) : Stream(Stream) {}
-  VarStreamArray(BinaryStreamRef Stream, const Extractor &E)
+  explicit VarStreamArray(ReadableStreamRef Stream) : Stream(Stream) {}
+  VarStreamArray(ReadableStreamRef Stream, const Extractor &E)
       : Stream(Stream), E(E) {}
 
   VarStreamArray(const VarStreamArray<ValueType, Extractor> &Other)
@@ -110,10 +101,10 @@ public:
 
   const Extractor &getExtractor() const { return E; }
 
-  BinaryStreamRef getUnderlyingStream() const { return Stream; }
+  ReadableStreamRef getUnderlyingStream() const { return Stream; }
 
 private:
-  BinaryStreamRef Stream;
+  ReadableStreamRef Stream;
   Extractor E;
 };
 
@@ -162,25 +153,23 @@ public:
     return ThisValue;
   }
 
-  IterType &operator+=(unsigned N) {
-    for (unsigned I = 0; I < N; ++I) {
-      // We are done with the current record, discard it so that we are
-      // positioned at the next record.
-      IterRef = IterRef.drop_front(ThisLen);
-      if (IterRef.getLength() == 0) {
-        // There is nothing after the current record, we must make this an end
-        // iterator.
+  IterType &operator++() {
+    // We are done with the current record, discard it so that we are
+    // positioned at the next record.
+    IterRef = IterRef.drop_front(ThisLen);
+    if (IterRef.getLength() == 0) {
+      // There is nothing after the current record, we must make this an end
+      // iterator.
+      moveToEnd();
+    } else {
+      // There is some data after the current record.
+      auto EC = Extract(IterRef, ThisLen, ThisValue);
+      if (EC) {
+        consumeError(std::move(EC));
+        markError();
+      } else if (ThisLen == 0) {
+        // An empty record? Make this an end iterator.
         moveToEnd();
-      } else {
-        // There is some data after the current record.
-        auto EC = Extract(IterRef, ThisLen, ThisValue);
-        if (EC) {
-          consumeError(std::move(EC));
-          markError();
-        } else if (ThisLen == 0) {
-          // An empty record? Make this an end iterator.
-          moveToEnd();
-        }
       }
     }
     return *this;
@@ -199,7 +188,7 @@ private:
   }
 
   ValueType ThisValue;
-  BinaryStreamRef IterRef;
+  ReadableStreamRef IterRef;
   const ArrayType *Array{nullptr};
   uint32_t ThisLen{0};
   bool HasError{false};
@@ -209,17 +198,12 @@ private:
 
 template <typename T> class FixedStreamArrayIterator;
 
-/// FixedStreamArray is similar to VarStreamArray, except with each record
-/// having a fixed-length.  As with VarStreamArray, there is no upfront
-/// cost associated with building or copying a FixedStreamArray, as the
-/// memory for each element is not read from the backing stream until that
-/// element is iterated.
 template <typename T> class FixedStreamArray {
   friend class FixedStreamArrayIterator<T>;
 
 public:
   FixedStreamArray() = default;
-  explicit FixedStreamArray(BinaryStreamRef Stream) : Stream(Stream) {
+  FixedStreamArray(ReadableStreamRef Stream) : Stream(Stream) {
     assert(Stream.getLength() % sizeof(T) == 0);
   }
 
@@ -258,10 +242,10 @@ public:
     return FixedStreamArrayIterator<T>(*this, size());
   }
 
-  BinaryStreamRef getUnderlyingStream() const { return Stream; }
+  ReadableStreamRef getUnderlyingStream() const { return Stream; }
 
 private:
-  BinaryStreamRef Stream;
+  ReadableStreamRef Stream;
 };
 
 template <typename T>
@@ -314,6 +298,7 @@ private:
   uint32_t Index;
 };
 
+} // namespace msf
 } // namespace llvm
 
-#endif // LLVM_SUPPORT_BINARYSTREAMARRAY_H
+#endif // LLVM_DEBUGINFO_MSF_STREAMARRAY_H

@@ -938,7 +938,7 @@ public:
 };
 
 typedef CVRecord<SymbolKind> CVSymbol;
-typedef VarStreamArray<CVSymbol> CVSymbolArray;
+typedef msf::VarStreamArray<CVSymbol> CVSymbolArray;
 
 } // end namespace codeview
 } // end namespace llvm

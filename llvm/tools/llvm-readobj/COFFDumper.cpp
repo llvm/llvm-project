@@ -56,6 +56,7 @@
 using namespace llvm;
 using namespace llvm::object;
 using namespace llvm::codeview;
+using namespace llvm::msf;
 using namespace llvm::support;
 using namespace llvm::Win64EH;
 
@@ -154,7 +155,7 @@ public:
     Sec = Obj->getCOFFSection(SR);
   }
 
-  uint32_t getRecordOffset(BinaryStreamReader Reader) override {
+  uint32_t getRecordOffset(msf::StreamReader Reader) override {
     ArrayRef<uint8_t> Data;
     if (auto EC = Reader.readLongestContiguousChunk(Data)) {
       llvm::consumeError(std::move(EC));
@@ -840,13 +841,13 @@ void COFFDumper::printCodeViewSymbolSection(StringRef SectionName,
     }
     case ModuleSubstreamKind::FrameData: {
       // First four bytes is a relocation against the function.
-      BinaryByteStream S(Contents, llvm::support::little);
-      BinaryStreamReader SR(S);
-      StringRef CodePtr;
-      error(SR.readFixedString(CodePtr, 4));
+      msf::ByteStream S(Contents);
+      msf::StreamReader SR(S);
+      const uint32_t *CodePtr;
+      error(SR.readObject(CodePtr));
       StringRef LinkageName;
       error(resolveSymbolName(Obj->getCOFFSection(Section), SectionContents,
-                              CodePtr.data(), LinkageName));
+                              CodePtr, LinkageName));
       W.printString("LinkageName", LinkageName);
 
       // To find the active frame description, search this array for the
@@ -965,9 +966,9 @@ void COFFDumper::printCodeViewSymbolsSubsection(StringRef Subsection,
 
   CVSymbolDumper CVSD(W, TypeDB, std::move(CODD),
                       opts::CodeViewSubsectionBytes);
-  BinaryByteStream Stream(BinaryData, llvm::support::little);
+  ByteStream Stream(BinaryData);
   CVSymbolArray Symbols;
-  BinaryStreamReader Reader(Stream);
+  StreamReader Reader(Stream);
   if (auto EC = Reader.readArray(Symbols, Reader.getLength())) {
     consumeError(std::move(EC));
     W.flush();
@@ -982,8 +983,8 @@ void COFFDumper::printCodeViewSymbolsSubsection(StringRef Subsection,
 }
 
 void COFFDumper::printCodeViewFileChecksums(StringRef Subsection) {
-  BinaryByteStream S(Subsection, llvm::support::little);
-  BinaryStreamReader SR(S);
+  msf::ByteStream S(Subsection);
+  msf::StreamReader SR(S);
   while (!SR.empty()) {
     DictScope S(W, "FileChecksum");
     const FileChecksum *FC;
@@ -1011,10 +1012,10 @@ void COFFDumper::printCodeViewFileChecksums(StringRef Subsection) {
 }
 
 void COFFDumper::printCodeViewInlineeLines(StringRef Subsection) {
-  BinaryByteStream S(Subsection, llvm::support::little);
-  BinaryStreamReader SR(S);
+  msf::ByteStream S(Subsection);
+  msf::StreamReader SR(S);
   uint32_t Signature;
-  error(SR.readInteger(Signature));
+  error(SR.readInteger(Signature, llvm::support::little));
   bool HasExtraFiles = Signature == unsigned(InlineeLinesSignature::ExtraFiles);
 
   while (!SR.empty()) {
@@ -1027,12 +1028,12 @@ void COFFDumper::printCodeViewInlineeLines(StringRef Subsection) {
 
     if (HasExtraFiles) {
       uint32_t ExtraFileCount;
-      error(SR.readInteger(ExtraFileCount));
+      error(SR.readInteger(ExtraFileCount, llvm::support::little));
       W.printNumber("ExtraFileCount", ExtraFileCount);
       ListScope ExtraFiles(W, "ExtraFiles");
       for (unsigned I = 0; I < ExtraFileCount; ++I) {
         uint32_t FileID;
-        error(SR.readInteger(FileID));
+        error(SR.readInteger(FileID, llvm::support::little));
         printFileNameForOffset("FileID", FileID);
       }
     }
@@ -1077,9 +1078,9 @@ void COFFDumper::mergeCodeViewTypes(TypeTableBuilder &CVTypes) {
         error(object_error::parse_failed);
       ArrayRef<uint8_t> Bytes(reinterpret_cast<const uint8_t *>(Data.data()),
                               Data.size());
-      BinaryByteStream Stream(Bytes, llvm::support::little);
+      ByteStream Stream(Bytes);
       CVTypeArray Types;
-      BinaryStreamReader Reader(Stream);
+      StreamReader Reader(Stream);
       if (auto EC = Reader.readArray(Types, Reader.getLength())) {
         consumeError(std::move(EC));
         W.flush();
