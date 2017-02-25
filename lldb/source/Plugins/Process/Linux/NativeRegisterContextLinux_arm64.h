@@ -46,9 +46,16 @@ public:
   // Hardware breakpoints/watchpoint mangement functions
   //------------------------------------------------------------------
 
+  uint32_t NumSupportedHardwareBreakpoints() override;
+
   uint32_t SetHardwareBreakpoint(lldb::addr_t addr, size_t size) override;
 
   bool ClearHardwareBreakpoint(uint32_t hw_idx) override;
+
+  Error ClearAllHardwareBreakpoints() override;
+
+  Error GetHardwareBreakHitIndex(uint32_t &bp_index,
+                                 lldb::addr_t trap_addr) override;
 
   uint32_t NumSupportedHardwareWatchpoints() override;
 

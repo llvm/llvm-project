@@ -78,6 +78,12 @@
 #define _LIBUNWIND_BUILD_ZERO_COST_APIS 0
 #endif
 
+#if defined(NDEBUG) && defined(_LIBUNWIND_IS_BAREMETAL)
+#define _LIBUNWIND_ABORT(msg)                                                  \
+  do {                                                                         \
+    abort();                                                                   \
+  } while (0)
+#else
 #define _LIBUNWIND_ABORT(msg)                                                  \
   do {                                                                         \
     fprintf(stderr, "libunwind: %s %s:%d - %s\n", __func__, __FILE__,          \
@@ -85,9 +91,14 @@
     fflush(stderr);                                                            \
     abort();                                                                   \
   } while (0)
+#endif
 
+#if defined(NDEBUG) && defined(_LIBUNWIND_IS_BAREMETAL)
+#define _LIBUNWIND_LOG(msg, ...)
+#else
 #define _LIBUNWIND_LOG(msg, ...)                                               \
   fprintf(stderr, "libunwind: " msg "\n", __VA_ARGS__)
+#endif
 
 #if defined(_LIBUNWIND_HAS_NO_THREADS)
   // only used with pthread calls, not needed for the single-threaded builds

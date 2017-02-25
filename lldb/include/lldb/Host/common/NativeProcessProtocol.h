@@ -107,18 +107,28 @@ public:
   virtual Error SetBreakpoint(lldb::addr_t addr, uint32_t size,
                               bool hardware) = 0;
 
-  virtual Error RemoveBreakpoint(lldb::addr_t addr);
+  virtual Error RemoveBreakpoint(lldb::addr_t addr, bool hardware = false);
 
   virtual Error EnableBreakpoint(lldb::addr_t addr);
 
   virtual Error DisableBreakpoint(lldb::addr_t addr);
 
   //----------------------------------------------------------------------
+  // Hardware Breakpoint functions
+  //----------------------------------------------------------------------
+  virtual const HardwareBreakpointMap &GetHardwareBreakpointMap() const;
+
+  virtual Error SetHardwareBreakpoint(lldb::addr_t addr, size_t size);
+
+  virtual Error RemoveHardwareBreakpoint(lldb::addr_t addr);
+
+  //----------------------------------------------------------------------
   // Watchpoint functions
   //----------------------------------------------------------------------
   virtual const NativeWatchpointList::WatchpointMap &GetWatchpointMap() const;
 
-  virtual uint32_t GetMaxWatchpoints() const;
+  virtual llvm::Optional<std::pair<uint32_t, uint32_t>>
+  GetHardwareDebugSupportInfo() const;
 
   virtual Error SetWatchpoint(lldb::addr_t addr, size_t size,
                               uint32_t watch_flags, bool hardware);
@@ -313,6 +323,7 @@ protected:
   std::vector<NativeDelegate *> m_delegates;
   NativeBreakpointList m_breakpoint_list;
   NativeWatchpointList m_watchpoint_list;
+  HardwareBreakpointMap m_hw_breakpoints_map;
   int m_terminal_fd;
   uint32_t m_stop_id;
 

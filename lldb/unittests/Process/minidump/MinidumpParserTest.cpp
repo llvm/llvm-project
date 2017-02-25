@@ -19,6 +19,7 @@
 #include "gtest/gtest.h"
 
 #include "lldb/Core/ArchSpec.h"
+#include "lldb/Core/DataBufferLLVM.h"
 #include "lldb/Core/DataExtractor.h"
 #include "lldb/Host/FileSpec.h"
 #include "lldb/Target/MemoryRegionInfo.h"
@@ -26,6 +27,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 
 // C includes
@@ -49,11 +51,11 @@ public:
   void SetUpData(const char *minidump_filename, size_t load_size = SIZE_MAX) {
     llvm::SmallString<128> filename = inputs_folder;
     llvm::sys::path::append(filename, minidump_filename);
-    FileSpec minidump_file(filename.c_str(), false);
-    lldb::DataBufferSP data_sp(
-        minidump_file.MemoryMapFileContents(0, load_size));
+
+    auto BufferPtr = DataBufferLLVM::CreateFromPath(filename, load_size, 0);
+
     llvm::Optional<MinidumpParser> optional_parser =
-        MinidumpParser::Create(data_sp);
+        MinidumpParser::Create(BufferPtr);
     ASSERT_TRUE(optional_parser.hasValue());
     parser.reset(new MinidumpParser(optional_parser.getValue()));
     ASSERT_GT(parser->GetData().size(), 0UL);

@@ -16,7 +16,6 @@ namespace lld {
 namespace elf {
 class SymbolBody;
 template <class ELFT> class ThunkSection;
-class OutputSectionBase;
 // Class to describe an instance of a Thunk.
 // A Thunk is a code-sequence inserted by the linker in between a caller and
 // the callee. The relocation to the callee is redirected to the Thunk, which

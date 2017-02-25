@@ -35,7 +35,7 @@ static typename ELFT::uint getSymVA(const SymbolBody &Body, int64_t &Addend) {
   switch (Body.kind()) {
   case SymbolBody::DefinedSyntheticKind: {
     auto &D = cast<DefinedSynthetic>(Body);
-    const OutputSectionBase *Sec = D.Section;
+    const OutputSection *Sec = D.Section;
     if (!Sec)
       return D.Value;
     if (D.Value == uintX_t(-1))
@@ -62,7 +62,7 @@ static typename ELFT::uint getSymVA(const SymbolBody &Body, int64_t &Addend) {
       Offset += Addend;
       Addend = 0;
     }
-    const OutputSectionBase *OutSec = IS->getOutputSection<ELFT>();
+    const OutputSection *OutSec = IS->getOutputSection<ELFT>();
     uintX_t VA = (OutSec ? OutSec->Addr : 0) + IS->getOffset<ELFT>(Offset);
     if (D.isTls() && !Config->Relocatable) {
       if (!Out<ELFT>::TlsPhdr)

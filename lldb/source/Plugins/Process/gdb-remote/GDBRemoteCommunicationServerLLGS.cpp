@@ -2534,12 +2534,14 @@ GDBRemoteCommunicationServerLLGS::Handle_z(StringExtractorGDBRemote &packet) {
         packet, "Too short z packet, missing software/hardware specifier");
 
   bool want_breakpoint = true;
+  bool want_hardware = false;
 
   const GDBStoppointType stoppoint_type =
       GDBStoppointType(packet.GetS32(eStoppointInvalid));
   switch (stoppoint_type) {
   case eBreakpointHardware:
     want_breakpoint = true;
+    want_hardware = true;
     break;
   case eBreakpointSoftware:
     want_breakpoint = true;
@@ -2582,7 +2584,8 @@ GDBRemoteCommunicationServerLLGS::Handle_z(StringExtractorGDBRemote &packet) {
 
   if (want_breakpoint) {
     // Try to clear the breakpoint.
-    const Error error = m_debugged_process_sp->RemoveBreakpoint(addr);
+    const Error error =
+        m_debugged_process_sp->RemoveBreakpoint(addr, want_hardware);
     if (error.Success())
       return SendOKResponse();
     Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_BREAKPOINTS));
@@ -3040,9 +3043,14 @@ GDBRemoteCommunicationServerLLGS::Handle_qWatchpointSupportInfo(
   if (packet.GetChar() != ':')
     return SendErrorResponse(67);
 
-  uint32_t num = m_debugged_process_sp->GetMaxWatchpoints();
+  auto hw_debug_cap = m_debugged_process_sp->GetHardwareDebugSupportInfo();
+
   StreamGDBRemote response;
-  response.Printf("num:%d;", num);
+  if (hw_debug_cap == llvm::None)
+    response.Printf("num:0;");
+  else
+    response.Printf("num:%d;", hw_debug_cap->second);
+
   return SendPacketNoLock(response.GetString());
 }
 

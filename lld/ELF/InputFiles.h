@@ -138,7 +138,6 @@ template <class ELFT> class ObjectFile : public ELFFileBase<ELFT> {
   typedef typename ELFT::Shdr Elf_Shdr;
   typedef typename ELFT::SymRange Elf_Sym_Range;
   typedef typename ELFT::Word Elf_Word;
-  typedef typename ELFT::uint uintX_t;
 
   StringRef getShtGroupSignature(ArrayRef<Elf_Shdr> Sections,
                                  const Elf_Shdr &Sec);
@@ -173,7 +172,7 @@ public:
 
   // Returns source line information for a given offset.
   // If no information is available, returns "".
-  std::string getLineInfo(InputSectionBase *S, uintX_t Offset);
+  std::string getLineInfo(InputSectionBase *S, uint64_t Offset);
 
   // MIPS GP0 value defined by this file. This value represents the gp value
   // used to create the relocatable object and required to support
@@ -277,7 +276,6 @@ template <class ELFT> class SharedFile : public ELFFileBase<ELFT> {
   typedef typename ELFT::Verdef Elf_Verdef;
   typedef typename ELFT::Versym Elf_Versym;
   typedef typename ELFT::Word Elf_Word;
-  typedef typename ELFT::uint uintX_t;
 
   std::vector<StringRef> Undefs;
   StringRef SoName;

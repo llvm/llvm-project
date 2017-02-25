@@ -870,6 +870,19 @@ void NativeProcessLinux::MonitorSIGTRAP(const siginfo_t &info,
       break;
     }
 
+    // If a breakpoint was hit, report it
+    uint32_t bp_index;
+    error = thread.GetRegisterContext()->GetHardwareBreakHitIndex(
+        bp_index, (uintptr_t)info.si_addr);
+    if (error.Fail())
+      LLDB_LOG(log, "received error while checking for hardware "
+                    "breakpoint hits, pid = {0}, error = {1}",
+               thread.GetID(), error);
+    if (bp_index != LLDB_INVALID_INDEX32) {
+      MonitorBreakpoint(thread);
+      break;
+    }
+
     // Otherwise, report step over
     MonitorTrace(thread);
     break;
@@ -1726,9 +1739,16 @@ Error NativeProcessLinux::GetSoftwareBreakpointPCOffset(
 Error NativeProcessLinux::SetBreakpoint(lldb::addr_t addr, uint32_t size,
                                         bool hardware) {
   if (hardware)
-    return Error("NativeProcessLinux does not support hardware breakpoints");
+    return SetHardwareBreakpoint(addr, size);
   else
     return SetSoftwareBreakpoint(addr, size);
+}
+
+Error NativeProcessLinux::RemoveBreakpoint(lldb::addr_t addr, bool hardware) {
+  if (hardware)
+    return RemoveHardwareBreakpoint(addr);
+  else
+    return NativeProcessProtocol::RemoveBreakpoint(addr);
 }
 
 Error NativeProcessLinux::GetSoftwareBreakpointTrapOpcode(

@@ -30,8 +30,7 @@ class BitcodeFile;
 class InputFile;
 class LazyObjectFile;
 template <class ELFT> class ObjectFile;
-template <class ELFT> class OutputSection;
-class OutputSectionBase;
+class OutputSection;
 template <class ELFT> class SharedFile;
 
 struct Symbol;
@@ -219,8 +218,7 @@ template <class ELFT> InputSectionBase *DefinedRegular<ELFT>::NullInputSection;
 // If Section is null, this symbol is relative to the image base.
 class DefinedSynthetic : public Defined {
 public:
-  DefinedSynthetic(StringRef Name, uint64_t Value,
-                   const OutputSectionBase *Section)
+  DefinedSynthetic(StringRef Name, uint64_t Value, const OutputSection *Section)
       : Defined(SymbolBody::DefinedSyntheticKind, Name, /*IsLocal=*/false,
                 llvm::ELF::STV_HIDDEN, 0 /* Type */),
         Value(Value), Section(Section) {}
@@ -230,7 +228,7 @@ public:
   }
 
   uint64_t Value;
-  const OutputSectionBase *Section;
+  const OutputSection *Section;
 };
 
 class Undefined : public SymbolBody {
