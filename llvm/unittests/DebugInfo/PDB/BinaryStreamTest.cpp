@@ -452,7 +452,7 @@ TEST_F(BinaryStreamTest, StreamReaderObject) {
 
   std::vector<Foo> Foos;
   Foos.push_back({-42, 42.42, 42});
-  Foos.push_back({100, 3.1415, -89});
+  Foos.push_back({100, 3.1415, static_cast<char>(-89)});
 
   const uint8_t *Bytes = reinterpret_cast<const uint8_t *>(&Foos[0]);
 

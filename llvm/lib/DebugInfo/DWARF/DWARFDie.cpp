@@ -329,6 +329,12 @@ void DWARFDie::dump(raw_ostream &OS, unsigned RecurseDepth,
         
         // Dump all data in the DIE for the attributes.
         for (const auto &AttrSpec : AbbrevDecl->attributes()) {
+          if (AttrSpec.Form == DW_FORM_implicit_const) {
+            // We are dumping .debug_info section ,
+            // implicit_const attribute values are not really stored here,
+            // but in .debug_abbrev section. So we just skip such attrs.
+            continue;
+          }
           dumpAttribute(OS, *this, &offset, AttrSpec.Attr, AttrSpec.Form,
                         Indent);
         }

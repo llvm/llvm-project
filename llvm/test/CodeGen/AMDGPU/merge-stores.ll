@@ -1,8 +1,5 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs -amdgpu-load-store-vectorizer=0 < %s | FileCheck -check-prefix=SI -check-prefix=GCN -check-prefix=GCN-NOAA %s
-; RUN: llc -march=amdgcn -mcpu=bonaire -verify-machineinstrs -amdgpu-load-store-vectorizer=0 < %s | FileCheck -check-prefix=SI -check-prefix=GCN -check-prefix=GCN-NOAA %s
-
-; RUN: llc -march=amdgcn -verify-machineinstrs -combiner-alias-analysis -amdgpu-load-store-vectorizer=0 < %s | FileCheck -check-prefix=SI -check-prefix=GCN -check-prefix=GCN-AA %s
-; RUN: llc -march=amdgcn -mcpu=bonaire -verify-machineinstrs -combiner-alias-analysis -amdgpu-load-store-vectorizer=0 < %s | FileCheck -check-prefix=SI -check-prefix=GCN -check-prefix=GCN-AA %s
+; RUN: llc -march=amdgcn -verify-machineinstrs -amdgpu-load-store-vectorizer=0 < %s | FileCheck -check-prefix=SI -check-prefix=GCN -check-prefix=GCN-AA %s
+; RUN: llc -march=amdgcn -mcpu=bonaire -verify-machineinstrs -amdgpu-load-store-vectorizer=0 < %s | FileCheck -check-prefix=SI -check-prefix=GCN -check-prefix=GCN-AA %s
 
 ; This test is mostly to test DAG store merging, so disable the vectorizer.
 ; Run with devices with different unaligned load restrictions.
@@ -150,12 +147,7 @@ define void @merge_global_store_4_constants_f32(float addrspace(1)* %out) #0 {
 }
 
 ; GCN-LABEL: {{^}}merge_global_store_4_constants_mixed_i32_f32:
-; GCN-NOAA: buffer_store_dwordx4 v
-
-; GCN-AA: buffer_store_dwordx2
-; GCN-AA: buffer_store_dword v
-; GCN-AA: buffer_store_dword v
-
+; GCN-AA: buffer_store_dwordx4 v
 ; GCN: s_endpgm
 define void @merge_global_store_4_constants_mixed_i32_f32(float addrspace(1)* %out) #0 {
   %out.gep.1 = getelementptr float, float addrspace(1)* %out, i32 1
@@ -474,17 +466,9 @@ define void @merge_global_store_4_adjacent_loads_i8_natural_align(i8 addrspace(1
   ret void
 }
 
-; This works once AA is enabled on the subtarget
 ; GCN-LABEL: {{^}}merge_global_store_4_vector_elts_loads_v4i32:
 ; GCN: buffer_load_dwordx4 [[LOAD:v\[[0-9]+:[0-9]+\]]]
-
-; GCN-NOAA: buffer_store_dword v
-; GCN-NOAA: buffer_store_dword v
-; GCN-NOAA: buffer_store_dword v
-; GCN-NOAA: buffer_store_dword v
-
-; GCN-AA: buffer_store_dwordx4 [[LOAD]]
-
+; GCN: buffer_store_dwordx4 [[LOAD]]
 ; GCN: s_endpgm
 define void @merge_global_store_4_vector_elts_loads_v4i32(i32 addrspace(1)* %out, <4 x i32> addrspace(1)* %in) #0 {
   %out.gep.1 = getelementptr i32, i32 addrspace(1)* %out, i32 1
