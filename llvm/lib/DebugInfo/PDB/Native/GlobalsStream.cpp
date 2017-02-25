@@ -23,7 +23,7 @@ GlobalsStream::GlobalsStream(std::unique_ptr<MappedBlockStream> Stream)
 GlobalsStream::~GlobalsStream() = default;
 
 Error GlobalsStream::reload() {
-  BinaryStreamReader Reader(*Stream);
+  StreamReader Reader(*Stream);
 
   const GSIHashHeader *HashHdr;
   if (auto EC = readGSIHashHeader(HashHdr, Reader))

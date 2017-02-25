@@ -18,6 +18,31 @@ void test_s_sleep(int x)
   __builtin_amdgcn_s_sleep(x); // expected-error {{argument to '__builtin_amdgcn_s_sleep' must be a constant integer}}
 }
 
+void test_s_waitcnt(int x)
+{
+  __builtin_amdgcn_s_waitcnt(x); // expected-error {{argument to '__builtin_amdgcn_s_waitcnt' must be a constant integer}}
+}
+
+void test_s_sendmsg(int in)
+{
+  __builtin_amdgcn_s_sendmsg(in, 1); // expected-error {{argument to '__builtin_amdgcn_s_sendmsg' must be a constant integer}}
+}
+
+void test_s_sendmsg_var(int in1, int in2)
+{
+  __builtin_amdgcn_s_sendmsg(in1, in2); // expected-error {{argument to '__builtin_amdgcn_s_sendmsg' must be a constant integer}}
+}
+
+void test_s_sendmsghalt(int in)
+{
+  __builtin_amdgcn_s_sendmsghalt(in, 1); // expected-error {{argument to '__builtin_amdgcn_s_sendmsghalt' must be a constant integer}}
+}
+
+void test_s_sendmsghalt_var(int in1, int in2)
+{
+  __builtin_amdgcn_s_sendmsghalt(in1, in2); // expected-error {{argument to '__builtin_amdgcn_s_sendmsghalt' must be a constant integer}}
+}
+
 void test_s_incperflevel(int x)
 {
   __builtin_amdgcn_s_incperflevel(x); // expected-error {{argument to '__builtin_amdgcn_s_incperflevel' must be a constant integer}}

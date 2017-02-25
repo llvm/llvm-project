@@ -1,4 +1,4 @@
-//== SimpleConstraintManager.h ----------------------------------*- C++ -*--==//
+//== RangedConstraintManager.h ----------------------------------*- C++ -*--==//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,59 +7,55 @@
 //
 //===----------------------------------------------------------------------===//
 //
-//  Code shared between BasicConstraintManager and RangeConstraintManager.
+//  Ranged constraint manager, built on SimpleConstraintManager.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_LIB_STATICANALYZER_CORE_SIMPLECONSTRAINTMANAGER_H
-#define LLVM_CLANG_LIB_STATICANALYZER_CORE_SIMPLECONSTRAINTMANAGER_H
+#ifndef LLVM_CLANG_LIB_STATICANALYZER_CORE_RANGEDCONSTRAINTMANAGER_H
+#define LLVM_CLANG_LIB_STATICANALYZER_CORE_RANGEDCONSTRAINTMANAGER_H
 
-#include "clang/StaticAnalyzer/Core/PathSensitive/ConstraintManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/SimpleConstraintManager.h"
 
 namespace clang {
 
 namespace ento {
 
-class SimpleConstraintManager : public ConstraintManager {
-  SubEngine *SU;
-  SValBuilder &SVB;
-
+class RangedConstraintManager : public SimpleConstraintManager {
 public:
-  SimpleConstraintManager(SubEngine *SE, SValBuilder &SB) : SU(SE), SVB(SB) {}
-  ~SimpleConstraintManager() override;
+  RangedConstraintManager(SubEngine *SE, SValBuilder &SB)
+      : SimpleConstraintManager(SE, SB) {}
+
+  ~RangedConstraintManager() override;
 
   //===------------------------------------------------------------------===//
-  // Common implementation for the interface provided by ConstraintManager.
+  // Implementation for interface from SimpleConstraintManager.
   //===------------------------------------------------------------------===//
 
-  ProgramStateRef assume(ProgramStateRef State, DefinedSVal Cond,
-                         bool Assumption) override;
+  ProgramStateRef assumeSym(ProgramStateRef State, SymbolRef Sym,
+                            bool Assumption) override;
 
-  ProgramStateRef assume(ProgramStateRef State, NonLoc Cond, bool Assumption);
+  ProgramStateRef assumeSymInclusiveRange(ProgramStateRef State, SymbolRef Sym,
+                                          const llvm::APSInt &From,
+                                          const llvm::APSInt &To,
+                                          bool InRange) override;
 
-  ProgramStateRef assumeInclusiveRange(ProgramStateRef State, NonLoc Value,
-                                       const llvm::APSInt &From,
-                                       const llvm::APSInt &To,
-                                       bool InRange) override;
-
-  ProgramStateRef assumeSymRel(ProgramStateRef State, const SymExpr *LHS,
-                               BinaryOperator::Opcode Op,
-                               const llvm::APSInt &Int);
-
-  ProgramStateRef assumeSymWithinInclusiveRange(ProgramStateRef State,
-                                                SymbolRef Sym,
-                                                const llvm::APSInt &From,
-                                                const llvm::APSInt &To,
-                                                bool InRange);
+  ProgramStateRef assumeSymUnsupported(ProgramStateRef State, SymbolRef Sym,
+                                       bool Assumption) override;
 
 protected:
+  /// Assume a constraint between a symbolic expression and a concrete integer.
+  virtual ProgramStateRef assumeSymRel(ProgramStateRef State, SymbolRef Sym,
+                               BinaryOperator::Opcode op,
+                               const llvm::APSInt &Int);
+
   //===------------------------------------------------------------------===//
   // Interface that subclasses must implement.
   //===------------------------------------------------------------------===//
 
   // Each of these is of the form "$Sym+Adj <> V", where "<>" is the comparison
   // operation for the method being invoked.
+
   virtual ProgramStateRef assumeSymNE(ProgramStateRef State, SymbolRef Sym,
                                       const llvm::APSInt &V,
                                       const llvm::APSInt &Adjustment) = 0;
@@ -84,28 +80,19 @@ protected:
                                       const llvm::APSInt &V,
                                       const llvm::APSInt &Adjustment) = 0;
 
-  virtual ProgramStateRef assumeSymbolWithinInclusiveRange(
+  virtual ProgramStateRef assumeSymWithinInclusiveRange(
       ProgramStateRef State, SymbolRef Sym, const llvm::APSInt &From,
       const llvm::APSInt &To, const llvm::APSInt &Adjustment) = 0;
 
-  virtual ProgramStateRef assumeSymbolOutOfInclusiveRange(
+  virtual ProgramStateRef assumeSymOutsideInclusiveRange(
       ProgramStateRef State, SymbolRef Sym, const llvm::APSInt &From,
       const llvm::APSInt &To, const llvm::APSInt &Adjustment) = 0;
 
   //===------------------------------------------------------------------===//
   // Internal implementation.
   //===------------------------------------------------------------------===//
-
-  BasicValueFactory &getBasicVals() const { return SVB.getBasicValueFactory(); }
-  SymbolManager &getSymbolManager() const { return SVB.getSymbolManager(); }
-
-  bool canReasonAbout(SVal X) const override;
-
-  ProgramStateRef assumeAux(ProgramStateRef State, NonLoc Cond,
-                            bool Assumption);
-
-  ProgramStateRef assumeAuxForSymbol(ProgramStateRef State, SymbolRef Sym,
-                                     bool Assumption);
+private:
+  static void computeAdjustment(SymbolRef &Sym, llvm::APSInt &Adjustment);
 };
 
 } // end GR namespace

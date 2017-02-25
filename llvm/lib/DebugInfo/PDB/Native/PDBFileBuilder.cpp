@@ -12,8 +12,6 @@
 #include "llvm/ADT/BitVector.h"
 
 #include "llvm/DebugInfo/MSF/BinaryStream.h"
-#include "llvm/DebugInfo/MSF/BinaryStream.h"
-#include "llvm/DebugInfo/MSF/BinaryStreamWriter.h"
 #include "llvm/DebugInfo/MSF/BinaryStreamWriter.h"
 #include "llvm/DebugInfo/MSF/MSFBuilder.h"
 #include "llvm/DebugInfo/PDB/GenericError.h"
@@ -120,9 +118,8 @@ Error PDBFileBuilder::commit(StringRef Filename) {
   if (OutFileOrError.getError())
     return llvm::make_error<pdb::GenericError>(generic_error_code::invalid_path,
                                                Filename);
-  FileBufferByteStream Buffer(std::move(*OutFileOrError),
-                              llvm::support::little);
-  BinaryStreamWriter Writer(Buffer);
+  FileBufferByteStream Buffer(std::move(*OutFileOrError));
+  StreamWriter Writer(Buffer);
 
   if (auto EC = Writer.writeObject(*Layout.SB))
     return EC;
@@ -134,8 +131,9 @@ Error PDBFileBuilder::commit(StringRef Filename) {
 
   auto DirStream =
       WritableMappedBlockStream::createDirectoryStream(Layout, Buffer);
-  BinaryStreamWriter DW(*DirStream);
-  if (auto EC = DW.writeInteger<uint32_t>(Layout.StreamSizes.size()))
+  StreamWriter DW(*DirStream);
+  if (auto EC = DW.writeInteger<uint32_t>(Layout.StreamSizes.size(),
+                                          llvm::support::little))
     return EC;
 
   if (auto EC = DW.writeArray(Layout.StreamSizes))
@@ -152,7 +150,7 @@ Error PDBFileBuilder::commit(StringRef Filename) {
 
   auto NS = WritableMappedBlockStream::createIndexedStream(Layout, Buffer,
                                                            StringTableStreamNo);
-  BinaryStreamWriter NSWriter(*NS);
+  StreamWriter NSWriter(*NS);
   if (auto EC = Strings.commit(NSWriter))
     return EC;
 

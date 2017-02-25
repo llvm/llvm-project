@@ -2257,18 +2257,12 @@ of a ``BasicBlock`` and the number of ``Instruction``\ s it contains:
 
 .. code-block:: c++
 
-  // func is a pointer to a Function instance
-  for (Function::iterator i = func->begin(), e = func->end(); i != e; ++i)
+  Function &Func = ...
+  for (BasicBlock &BB : Func)
     // Print out the name of the basic block if it has one, and then the
     // number of instructions that it contains
-    errs() << "Basic block (name=" << i->getName() << ") has "
-               << i->size() << " instructions.\n";
-
-Note that i can be used as if it were a pointer for the purposes of invoking
-member functions of the ``Instruction`` class.  This is because the indirection
-operator is overloaded for the iterator classes.  In the above code, the
-expression ``i->size()`` is exactly equivalent to ``(*i).size()`` just like
-you'd expect.
+    errs() << "Basic block (name=" << BB.getName() << ") has "
+               << BB.size() << " instructions.\n";
 
 .. _iterate_basicblock:
 
@@ -2281,17 +2275,17 @@ a code snippet that prints out each instruction in a ``BasicBlock``:
 
 .. code-block:: c++
 
-  // blk is a pointer to a BasicBlock instance
-  for (BasicBlock::iterator i = blk->begin(), e = blk->end(); i != e; ++i)
+  BasicBlock& BB = ...
+  for (Instruction &I : BB)
      // The next statement works since operator<<(ostream&,...)
      // is overloaded for Instruction&
-     errs() << *i << "\n";
+     errs() << I << "\n";
 
 
 However, this isn't really the best way to print out the contents of a
 ``BasicBlock``!  Since the ostream operators are overloaded for virtually
 anything you'll care about, you could have just invoked the print routine on the
-basic block itself: ``errs() << *blk << "\n";``.
+basic block itself: ``errs() << BB << "\n";``.
 
 .. _iterate_insiter:
 
@@ -2425,13 +2419,13 @@ method):
       OurFunctionPass(): callCounter(0) { }
 
       virtual runOnFunction(Function& F) {
-        for (Function::iterator b = F.begin(), be = F.end(); b != be; ++b) {
-          for (BasicBlock::iterator i = b->begin(), ie = b->end(); i != ie; ++i) {
-            if (CallInst* callInst = dyn_cast<CallInst>(&*i)) {
+        for (BasicBlock &B : F) {
+          for (Instruction &I: B) {
+            if (auto *CallInst = dyn_cast<CallInst>(&I)) {
               // We know we've encountered a call instruction, so we
               // need to determine if it's a call to the
               // function pointed to by m_func or not.
-              if (callInst->getCalledFunction() == targetFunc)
+              if (CallInst->getCalledFunction() == targetFunc)
                 ++callCounter;
             }
           }
@@ -2524,12 +2518,11 @@ iterate over all predecessors of BB:
   #include "llvm/IR/CFG.h"
   BasicBlock *BB = ...;
 
-  for (pred_iterator PI = pred_begin(BB), E = pred_end(BB); PI != E; ++PI) {
-    BasicBlock *Pred = *PI;
+  for (BasicBlock *Pred : predecessors(BB)) {
     // ...
   }
 
-Similarly, to iterate over successors use ``succ_iterator/succ_begin/succ_end``.
+Similarly, to iterate over successors use ``successors``.
 
 .. _simplechanges:
 
@@ -2554,7 +2547,7 @@ For example, an ``AllocaInst`` only *requires* a (const-ptr-to) ``Type``.  Thus:
 
 .. code-block:: c++
 
-  AllocaInst* ai = new AllocaInst(Type::Int32Ty);
+  auto *ai = new AllocaInst(Type::Int32Ty);
 
 will create an ``AllocaInst`` instance that represents the allocation of one
 integer in the current stack frame, at run time.  Each ``Instruction`` subclass
@@ -2579,7 +2572,7 @@ intending to use it within the same ``Function``.  I might do:
 
 .. code-block:: c++
 
-  AllocaInst* pa = new AllocaInst(Type::Int32Ty, 0, "indexLoc");
+  auto *pa = new AllocaInst(Type::Int32Ty, 0, "indexLoc");
 
 where ``indexLoc`` is now the logical name of the instruction's execution value,
 which is a pointer to an integer on the run time stack.
@@ -2599,7 +2592,7 @@ sequence of instructions that form a ``BasicBlock``:
 
       BasicBlock *pb = ...;
       Instruction *pi = ...;
-      Instruction *newInst = new Instruction(...);
+      auto *newInst = new Instruction(...);
 
       pb->getInstList().insert(pi, newInst); // Inserts newInst before pi in pb
 
@@ -2611,7 +2604,7 @@ sequence of instructions that form a ``BasicBlock``:
   .. code-block:: c++
 
     BasicBlock *pb = ...;
-    Instruction *newInst = new Instruction(...);
+    auto *newInst = new Instruction(...);
 
     pb->getInstList().push_back(newInst); // Appends newInst to pb
 
@@ -2620,7 +2613,7 @@ sequence of instructions that form a ``BasicBlock``:
   .. code-block:: c++
 
     BasicBlock *pb = ...;
-    Instruction *newInst = new Instruction(..., pb);
+    auto *newInst = new Instruction(..., pb);
 
   which is much cleaner, especially if you are creating long instruction
   streams.
@@ -2635,7 +2628,7 @@ sequence of instructions that form a ``BasicBlock``:
   .. code-block:: c++
 
     Instruction *pi = ...;
-    Instruction *newInst = new Instruction(...);
+    auto *newInst = new Instruction(...);
 
     pi->getParent()->getInstList().insert(pi, newInst);
 
@@ -2651,7 +2644,7 @@ sequence of instructions that form a ``BasicBlock``:
   .. code-block:: c++
 
     Instruction* pi = ...;
-    Instruction* newInst = new Instruction(..., pi);
+    auto *newInst = new Instruction(..., pi);
 
   which is much cleaner, especially if you're creating a lot of instructions and
   adding them to ``BasicBlock``\ s.

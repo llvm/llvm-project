@@ -76,7 +76,7 @@ TypeSerializer::addPadding(MutableArrayRef<uint8_t> Record) {
   int N = PaddingBytes;
   while (PaddingBytes > 0) {
     uint8_t Pad = static_cast<uint8_t>(LF_PAD0 + PaddingBytes);
-    if (auto EC = Writer.writeInteger(Pad))
+    if (auto EC = Writer.writeInteger(Pad, llvm::support::little))
       return std::move(EC);
     --PaddingBytes;
   }
@@ -85,8 +85,7 @@ TypeSerializer::addPadding(MutableArrayRef<uint8_t> Record) {
 
 TypeSerializer::TypeSerializer(BumpPtrAllocator &Storage)
     : RecordStorage(Storage), LastTypeIndex(),
-      RecordBuffer(MaxRecordLength * 2),
-      Stream(RecordBuffer, llvm::support::little), Writer(Stream),
+      RecordBuffer(MaxRecordLength * 2), Stream(RecordBuffer), Writer(Stream),
       Mapping(Writer) {
   // RecordBuffer needs to be able to hold enough data so that if we are 1
   // byte short of MaxRecordLen, and then we try to write MaxRecordLen bytes,
@@ -204,15 +203,15 @@ Error TypeSerializer::visitMemberEnd(CVMemberRecord &Record) {
 
     uint8_t *SegmentBytes = RecordStorage.Allocate<uint8_t>(LengthWithSize);
     auto SavedSegment = MutableArrayRef<uint8_t>(SegmentBytes, LengthWithSize);
-    MutableBinaryByteStream CS(SavedSegment, llvm::support::little);
-    BinaryStreamWriter CW(CS);
+    msf::MutableByteStream CS(SavedSegment);
+    msf::StreamWriter CW(CS);
     if (auto EC = CW.writeBytes(CopyData))
       return EC;
-    if (auto EC = CW.writeEnum(TypeLeafKind::LF_INDEX))
+    if (auto EC = CW.writeEnum(TypeLeafKind::LF_INDEX, llvm::support::little))
       return EC;
-    if (auto EC = CW.writeInteger<uint16_t>(0))
+    if (auto EC = CW.writeInteger<uint16_t>(0, llvm::support::little))
       return EC;
-    if (auto EC = CW.writeInteger<uint32_t>(0xB0C0B0C0))
+    if (auto EC = CW.writeInteger<uint32_t>(0xB0C0B0C0, llvm::support::little))
       return EC;
     FieldListSegments.push_back(SavedSegment);
 

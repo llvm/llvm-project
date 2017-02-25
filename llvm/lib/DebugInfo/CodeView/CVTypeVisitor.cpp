@@ -174,7 +174,7 @@ Error CVTypeVisitor::visitTypeStream(CVTypeRange Types) {
   return Error::success();
 }
 
-Error CVTypeVisitor::visitFieldListMemberStream(BinaryStreamReader Reader) {
+Error CVTypeVisitor::visitFieldListMemberStream(msf::StreamReader Reader) {
   FieldListDeserializer Deserializer(Reader);
   TypeVisitorCallbackPipeline Pipeline;
   Pipeline.addCallbackToPipeline(Deserializer);
@@ -182,7 +182,7 @@ Error CVTypeVisitor::visitFieldListMemberStream(BinaryStreamReader Reader) {
 
   TypeLeafKind Leaf;
   while (!Reader.empty()) {
-    if (auto EC = Reader.readEnum(Leaf))
+    if (auto EC = Reader.readEnum(Leaf, llvm::support::little))
       return EC;
 
     CVMemberRecord Record;
@@ -195,7 +195,7 @@ Error CVTypeVisitor::visitFieldListMemberStream(BinaryStreamReader Reader) {
 }
 
 Error CVTypeVisitor::visitFieldListMemberStream(ArrayRef<uint8_t> Data) {
-  BinaryByteStream S(Data, llvm::support::little);
-  BinaryStreamReader SR(S);
+  msf::ByteStream S(Data);
+  msf::StreamReader SR(S);
   return visitFieldListMemberStream(SR);
 }
