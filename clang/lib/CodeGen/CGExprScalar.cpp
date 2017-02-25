@@ -3396,11 +3396,9 @@ VisitAbstractConditionalOperator(const AbstractConditionalOperator *E) {
   // safe to evaluate the LHS and RHS unconditionally.
   if (isCheapEnoughToEvaluateUnconditionally(lhsExpr, CGF) &&
       isCheapEnoughToEvaluateUnconditionally(rhsExpr, CGF)) {
+    CGF.incrementProfileCounter(E);
+
     llvm::Value *CondV = CGF.EvaluateExprAsBool(condExpr);
-    llvm::Value *StepV = Builder.CreateZExtOrBitCast(CondV, CGF.Int64Ty);
-
-    CGF.incrementProfileCounter(E, StepV);
-
     llvm::Value *LHS = Visit(lhsExpr);
     llvm::Value *RHS = Visit(rhsExpr);
     if (!LHS) {
