@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++11 -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only -main-file-name macro-expressions.cpp %s | FileCheck %s
+// RUN: %clang_cc1 -std=c++11 -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only -main-file-name macro-expressions.cpp -w %s | FileCheck %s
 
 #define EXPR(x) (x)
 #define NEXPR(x) (!x)
