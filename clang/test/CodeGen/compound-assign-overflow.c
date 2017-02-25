@@ -25,11 +25,9 @@ void compaddunsigned() {
   // CHECK: @__ubsan_handle_add_overflow(i8* bitcast ({{.*}} @[[LINE_200]] to i8*), {{.*}})
 }
 
-int8_t a, b;
-
 // CHECK: @compdiv
 void compdiv() {
 #line 300
-  a /= b;
+  x /= x;
   // CHECK: @__ubsan_handle_divrem_overflow(i8* bitcast ({{.*}} @[[LINE_300]] to i8*), {{.*}})
 }
