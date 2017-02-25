@@ -191,6 +191,89 @@ S5 s5;
 // expected-note@first.h:* {{but in 'FirstModule' found field 'x' with type 'A' (aka 'int')}}
 #endif
 
+#if defined(FIRST)
+struct S6 {
+  unsigned x;
+};
+#elif defined(SECOND)
+struct S6 {
+  unsigned x : 1;
+};
+#else
+S6 s6;
+// expected-error@second.h:* {{'Field::S6' has different definitions in different modules; first difference is definition in module 'SecondModule' found bitfield 'x'}}
+// expected-note@first.h:* {{but in 'FirstModule' found non-bitfield 'x'}}
+#endif
+
+#if defined(FIRST)
+struct S7 {
+  unsigned x : 2;
+};
+#elif defined(SECOND)
+struct S7 {
+  unsigned x : 1;
+};
+#else
+S7 s7;
+// expected-error@second.h:* {{'Field::S7' has different definitions in different modules; first difference is definition in module 'SecondModule' found bitfield 'x' with one width expression}}
+// expected-note@first.h:* {{but in 'FirstModule' found bitfield 'x' with different width expression}}
+#endif
+
+#if defined(FIRST)
+struct S8 {
+  unsigned x : 2;
+};
+#elif defined(SECOND)
+struct S8 {
+  unsigned x : 1 + 1;
+};
+#else
+S8 s8;
+// expected-error@second.h:* {{'Field::S8' has different definitions in different modules; first difference is definition in module 'SecondModule' found bitfield 'x' with one width expression}}
+// expected-note@first.h:* {{but in 'FirstModule' found bitfield 'x' with different width expression}}
+#endif
+
+#if defined(FIRST)
+struct S9 {
+  mutable int x;
+};
+#elif defined(SECOND)
+struct S9 {
+  int x;
+};
+#else
+S9 s9;
+// expected-error@second.h:* {{'Field::S9' has different definitions in different modules; first difference is definition in module 'SecondModule' found non-mutable field 'x'}}
+// expected-note@first.h:* {{but in 'FirstModule' found mutable field 'x'}}
+#endif
+
+#if defined(FIRST)
+struct S10 {
+  unsigned x = 5;
+};
+#elif defined(SECOND)
+struct S10 {
+  unsigned x;
+};
+#else
+S10 s10;
+// expected-error@second.h:* {{'Field::S10' has different definitions in different modules; first difference is definition in module 'SecondModule' found field 'x' with no initalizer}}
+// expected-note@first.h:* {{but in 'FirstModule' found field 'x' with an initializer}}
+#endif
+
+#if defined(FIRST)
+struct S11 {
+  unsigned x = 5;
+};
+#elif defined(SECOND)
+struct S11 {
+  unsigned x = 7;
+};
+#else
+S11 s11;
+// expected-error@second.h:* {{'Field::S11' has different definitions in different modules; first difference is definition in module 'SecondModule' found field 'x' with an initializer}}
+// expected-note@first.h:* {{but in 'FirstModule' found field 'x' with a different initializer}}
+#endif
 
 }  // namespace Field
 
@@ -236,6 +319,11 @@ struct S {
   double y;
 
   INT z;
+
+  unsigned a : 1;
+  unsigned b : 2*2 + 5/2;
+
+  mutable int c = sizeof(x + y);
 };
 #elif defined(SECOND)
 typedef int INT;
@@ -251,6 +339,11 @@ struct S {
   double y;
 
   INT z;
+
+  unsigned a : 1;
+  unsigned b : 2 * 2 + 5 / 2;
+
+  mutable int c = sizeof(x + y);
 };
 #else
 S s;
@@ -271,6 +364,11 @@ struct T {
 
   INT z;
 
+  unsigned a : 1;
+  unsigned b : 2 * 2 + 5 / 2;
+
+  mutable int c = sizeof(x + y);
+
   private:
 };
 #elif defined(SECOND)
@@ -287,6 +385,11 @@ struct T {
   double y;
 
   INT z;
+
+  unsigned a : 1;
+  unsigned b : 2 * 2 + 5 / 2;
+
+  mutable int c = sizeof(x + y);
 
   public:
 };

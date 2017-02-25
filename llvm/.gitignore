@@ -21,6 +21,9 @@
 #OS X specific files.
 .DS_store
 
+# Nested build directory
+/build
+
 #==============================================================================#
 # Explicit files to ignore (only matches one).
 #==============================================================================#

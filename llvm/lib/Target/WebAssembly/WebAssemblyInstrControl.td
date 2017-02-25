@@ -64,9 +64,12 @@ let Uses = [VALUE_STACK], Defs = [VALUE_STACK] in {
 def BLOCK     : I<(outs), (ins Signature:$sig), [], "block   \t$sig", 0x02>;
 def LOOP      : I<(outs), (ins Signature:$sig), [], "loop    \t$sig", 0x03>;
 
-// END_BLOCK and END_LOOP are represented with the same opcode in wasm.
+// END_BLOCK, END_LOOP, and END_FUNCTION are represented with the same opcode
+// in wasm.
 def END_BLOCK : I<(outs), (ins), [], "end_block", 0x0b>;
 def END_LOOP  : I<(outs), (ins), [], "end_loop", 0x0b>;
+let isTerminator = 1, isBarrier = 1 in
+def END_FUNCTION : I<(outs), (ins), [], "end_function", 0x0b>;
 } // Uses = [VALUE_STACK], Defs = [VALUE_STACK]
 
 multiclass RETURN<WebAssemblyRegClass vt> {

@@ -120,6 +120,11 @@ namespace DummyRPCAPI {
     static const char* getName() { return "IntInt"; }
   };
 
+  class VoidString : public Function<VoidString, void(std::string)> {
+  public:
+    static const char* getName() { return "VoidString"; }
+  };
+
   class AllTheTypes
     : public Function<AllTheTypes,
                       void(int8_t, uint8_t, int16_t, uint16_t, int32_t,
@@ -335,6 +340,46 @@ TEST(DummyRPC, TestAsyncIntIntHandlerMethod) {
     // Poke the client to process the result.
     auto Err = Client.handleOne();
     EXPECT_FALSE(!!Err) << "Client failed to handle response from void(bool)";
+  }
+
+  ServerThread.join();
+}
+
+TEST(DummyRPC, TestCallAsyncVoidString) {
+  Queue Q1, Q2;
+  DummyRPCEndpoint Client(Q1, Q2);
+  DummyRPCEndpoint Server(Q2, Q1);
+
+  std::thread ServerThread([&]() {
+      Server.addHandler<DummyRPCAPI::VoidString>(
+          [](const std::string &S) {
+            EXPECT_EQ(S, "hello")
+              << "Server void(std::string) received unexpected result";
+          });
+
+      // Poke the server to handle the negotiate call.
+      for (int I = 0; I < 4; ++I) {
+        auto Err = Server.handleOne();
+        EXPECT_FALSE(!!Err) << "Server failed to handle call";
+      }
+  });
+
+  {
+    // Make an call using a std::string.
+    auto Err = Client.callB<DummyRPCAPI::VoidString>(std::string("hello"));
+    EXPECT_FALSE(!!Err) << "Client.callAsync failed for void(std::string)";
+  }
+
+  {
+    // Make an call using a std::string.
+    auto Err = Client.callB<DummyRPCAPI::VoidString>(StringRef("hello"));
+    EXPECT_FALSE(!!Err) << "Client.callAsync failed for void(std::string)";
+  }
+
+  {
+    // Make an call using a std::string.
+    auto Err = Client.callB<DummyRPCAPI::VoidString>("hello");
+    EXPECT_FALSE(!!Err) << "Client.callAsync failed for void(string)";
   }
 
   ServerThread.join();

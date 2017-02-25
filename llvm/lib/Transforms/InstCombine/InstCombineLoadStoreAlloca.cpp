@@ -309,7 +309,7 @@ void PointerReplacer::replace(Instruction *I) {
     auto *NewI = new BitCastInst(V, NewT);
     IC.InsertNewInstWith(NewI, *BC);
     NewI->takeName(BC);
-    WorkMap[GEP] = NewI;
+    WorkMap[BC] = NewI;
   } else {
     llvm_unreachable("should never reach here");
   }

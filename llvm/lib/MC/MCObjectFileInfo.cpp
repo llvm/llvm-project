@@ -801,8 +801,8 @@ void MCObjectFileInfo::initCOFFMCObjectFileInfo(const Triple &T) {
 
 void MCObjectFileInfo::initWasmMCObjectFileInfo(const Triple &T) {
   // TODO: Set the section types and flags.
-  TextSection = Ctx->getWasmSection("", 0, 0);
-  DataSection = Ctx->getWasmSection("", 0, 0);
+  TextSection = Ctx->getWasmSection(".text", 0, 0);
+  DataSection = Ctx->getWasmSection(".data", 0, 0);
 
   // TODO: Set the section types and flags.
   DwarfLineSection = Ctx->getWasmSection(".debug_line", 0, 0);

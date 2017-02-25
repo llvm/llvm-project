@@ -172,6 +172,8 @@ public:
 };
 
 class TargetLoweringObjectFileWasm : public TargetLoweringObjectFile {
+  mutable unsigned NextUniqueID = 0;
+
 public:
   TargetLoweringObjectFileWasm() {}
 

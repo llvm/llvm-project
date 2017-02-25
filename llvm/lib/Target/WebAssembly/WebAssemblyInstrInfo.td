@@ -107,6 +107,9 @@ def Signature : Operand<i32> {
 }
 } // OperandType = "OPERAND_SIGNATURE"
 
+let OperandType = "OPERAND_TYPEINDEX" in
+def TypeIndex : Operand<i32>;
+
 } // OperandNamespace = "WebAssembly"
 
 //===----------------------------------------------------------------------===//

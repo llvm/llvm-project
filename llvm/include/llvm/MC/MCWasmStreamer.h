@@ -54,6 +54,8 @@ public:
   void EmitCOFFSymbolType(int Type) override;
   void EndCOFFSymbolDef() override;
 
+  void emitELFSize(MCSymbol *Symbol, const MCExpr *Value) override;
+
   void EmitLocalCommonSymbol(MCSymbol *Symbol, uint64_t Size,
                              unsigned ByteAlignment) override;
 

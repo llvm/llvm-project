@@ -1,17 +1,30 @@
-// RUN: %clang_cc1 -fsyntax-only %s
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++98 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s
 
 template<typename T, int N>
 struct X0 {
   const char *f0(bool Cond) {
     return Cond? "honk" : N;
+#if __cplusplus >= 201103L
+// expected-error@-2 {{incompatible operand types ('const char *' and 'int')}}
+#else
+// expected-no-diagnostics
+#endif
   }
 
   const char *f1(bool Cond) {
     return Cond? N : "honk";
+#if __cplusplus >= 201103L
+// expected-error@-2 {{incompatible operand types ('int' and 'const char *')}}
+#endif
   }
   
   bool f2(const char *str) {
     return str == N;
+#if __cplusplus >= 201103L
+// expected-error@-2 {{comparison between pointer and integer ('const char *' and 'int')}}
+#endif
   }
 };
 

@@ -1,5 +1,8 @@
 ; RUN: llc -march=amdgcn -mcpu=verde -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
-; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs -mattr=-fp32-denormals < %s | FileCheck -check-prefix=SI -check-prefix=FUNC -check-prefix=VI %s
+
+; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=fiji -mattr=+fp32-denormals < %s | FileCheck -check-prefix=GCN -check-prefix=VI %s
+
 ; RUN: llc -march=r600 -mcpu=redwood < %s | FileCheck -check-prefix=EG -check-prefix=FUNC %s
 
 ; FUNC-LABEL: {{^}}udiv_i32:
@@ -179,4 +182,19 @@ define void @test_udiv_3_mulhu(i32 %p) {
    %i = udiv i32 %p, 3
    store volatile i32 %i, i32 addrspace(1)* undef
    ret void
+}
+
+; GCN-LABEL: {{^}}fdiv_test_denormals
+; VI: v_mad_f32 v{{[0-9]+}}, -v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
+define amdgpu_kernel void @fdiv_test_denormals(i8 addrspace(1)* nocapture readonly %arg) {
+bb:
+  %tmp = load i8, i8 addrspace(1)* null, align 1
+  %tmp1 = sext i8 %tmp to i32
+  %tmp2 = getelementptr inbounds i8, i8 addrspace(1)* %arg, i64 undef
+  %tmp3 = load i8, i8 addrspace(1)* %tmp2, align 1
+  %tmp4 = sext i8 %tmp3 to i32
+  %tmp5 = sdiv i32 %tmp1, %tmp4
+  %tmp6 = trunc i32 %tmp5 to i8
+  store i8 %tmp6, i8 addrspace(1)* null, align 1
+  ret void
 }

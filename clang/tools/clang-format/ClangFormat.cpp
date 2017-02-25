@@ -296,6 +296,7 @@ static bool format(StringRef FileName) {
                                    InMemoryFileSystem.get());
     Rewriter Rewrite(Sources, LangOptions());
     tooling::applyAllReplacements(Replaces, Rewrite);
+    Code.reset();
     if (Inplace) {
       if (FileName == "-")
         errs() << "error: cannot use -i when reading from stdin.\n";

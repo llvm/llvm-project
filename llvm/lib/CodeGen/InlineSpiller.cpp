@@ -558,7 +558,7 @@ bool InlineSpiller::reMaterializeFor(LiveInterval &VirtReg, MachineInstr &MI) {
       Edit->rematerializeAt(*MI.getParent(), MI, NewVReg, RM, TRI);
 
   // We take the DebugLoc from MI, since OrigMI may be attributed to a
-  // different source location. 
+  // different source location.
   auto *NewMI = LIS.getInstructionFromIndex(DefIdx);
   NewMI->setDebugLoc(MI.getDebugLoc());
 

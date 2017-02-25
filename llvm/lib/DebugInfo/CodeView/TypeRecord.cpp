@@ -10,8 +10,8 @@
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
 #include "llvm/DebugInfo/CodeView/RecordSerialization.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
-#include "llvm/DebugInfo/MSF/ByteStream.h"
-#include "llvm/DebugInfo/MSF/StreamReader.h"
+#include "llvm/DebugInfo/MSF/BinaryByteStream.h"
+#include "llvm/DebugInfo/MSF/BinaryStreamReader.h"
 
 using namespace llvm;
 using namespace llvm::codeview;
