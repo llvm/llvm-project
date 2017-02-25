@@ -488,6 +488,15 @@ static void FixEndsAtEndOfFunction(
   }
 }
 
+// WebAssembly functions end with an end instruction, as if the function body
+// were a block.
+static void AppendEndToFunction(
+    MachineFunction &MF,
+    const WebAssemblyInstrInfo &TII) {
+  BuildMI(MF.back(), MF.back().end(), DebugLoc(),
+          TII.get(WebAssembly::END_FUNCTION));
+}
+
 /// Insert LOOP and BLOCK markers at appropriate places.
 static void PlaceMarkers(MachineFunction &MF, const MachineLoopInfo &MLI,
                          const WebAssemblyInstrInfo &TII,
@@ -555,6 +564,11 @@ static void PlaceMarkers(MachineFunction &MF, const MachineLoopInfo &MLI,
   // Fix up block/loop signatures at the end of the function to conform to
   // WebAssembly's rules.
   FixEndsAtEndOfFunction(MF, MFI, BlockTops, LoopTops);
+
+  // Add an end instruction at the end of the function body.
+  if (!MF.getSubtarget<WebAssemblySubtarget>()
+        .getTargetTriple().isOSBinFormatELF())
+    AppendEndToFunction(MF, TII);
 }
 
 bool WebAssemblyCFGStackify::runOnMachineFunction(MachineFunction &MF) {

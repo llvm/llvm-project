@@ -156,7 +156,7 @@ public:
   const_iterator begin() const { return &PressureChanges[0]; }
   const_iterator end() const { return &PressureChanges[MaxPSets]; }
 
-  void addPressureChange(RegisterMaskPair P, bool IsDec,
+  void addPressureChange(unsigned RegUnit, bool IsDec,
                          const MachineRegisterInfo *MRI);
 
   void dump(const TargetRegisterInfo &TRI) const;

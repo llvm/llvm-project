@@ -640,6 +640,16 @@ detail::concat_range<ValueT, RangeTs...> concat(RangeTs &&... Ranges) {
 //     Extra additions to <utility>
 //===----------------------------------------------------------------------===//
 
+/// \brief Template class to compute the sum of sizes of all items in a
+/// parameter pack.
+template <typename T, typename... Ts> struct sizeof_sum {
+  static const size_t value = sizeof(T) + sizeof_sum<Ts...>::value;
+};
+
+template <typename T> struct sizeof_sum<T> {
+  static const size_t value = sizeof(T);
+};
+
 /// \brief Function object to check whether the first component of a std::pair
 /// compares less than the first component of another std::pair.
 struct less_first {

@@ -11,12 +11,13 @@
 #define LLVM_DEBUGINFO_PDB_RAW_PUBLICSSTREAM_H
 
 #include "llvm/DebugInfo/CodeView/SymbolRecord.h"
+#include "llvm/DebugInfo/MSF/BinaryStreamArray.h"
 #include "llvm/DebugInfo/MSF/MappedBlockStream.h"
-#include "llvm/DebugInfo/MSF/StreamArray.h"
 #include "llvm/DebugInfo/PDB/Native/RawConstants.h"
 #include "llvm/DebugInfo/PDB/Native/RawTypes.h"
 #include "llvm/DebugInfo/PDB/PDBTypes.h"
 
+#include "llvm/DebugInfo/MSF/BinaryStreamArray.h"
 #include "llvm/Support/Error.h"
 
 namespace llvm {
@@ -38,16 +39,16 @@ public:
   uint32_t getNumBuckets() const { return NumBuckets; }
   iterator_range<codeview::CVSymbolArray::Iterator>
   getSymbols(bool *HadError) const;
-  msf::FixedStreamArray<support::ulittle32_t> getHashBuckets() const {
+  FixedStreamArray<support::ulittle32_t> getHashBuckets() const {
     return HashBuckets;
   }
-  msf::FixedStreamArray<support::ulittle32_t> getAddressMap() const {
+  FixedStreamArray<support::ulittle32_t> getAddressMap() const {
     return AddressMap;
   }
-  msf::FixedStreamArray<support::ulittle32_t> getThunkMap() const {
+  FixedStreamArray<support::ulittle32_t> getThunkMap() const {
     return ThunkMap;
   }
-  msf::FixedStreamArray<SectionOffset> getSectionOffsets() const {
+  FixedStreamArray<SectionOffset> getSectionOffsets() const {
     return SectionOffsets;
   }
 
@@ -59,11 +60,11 @@ private:
   std::unique_ptr<msf::MappedBlockStream> Stream;
   uint32_t NumBuckets = 0;
   ArrayRef<uint8_t> Bitmap;
-  msf::FixedStreamArray<PSHashRecord> HashRecords;
-  msf::FixedStreamArray<support::ulittle32_t> HashBuckets;
-  msf::FixedStreamArray<support::ulittle32_t> AddressMap;
-  msf::FixedStreamArray<support::ulittle32_t> ThunkMap;
-  msf::FixedStreamArray<SectionOffset> SectionOffsets;
+  FixedStreamArray<PSHashRecord> HashRecords;
+  FixedStreamArray<support::ulittle32_t> HashBuckets;
+  FixedStreamArray<support::ulittle32_t> AddressMap;
+  FixedStreamArray<support::ulittle32_t> ThunkMap;
+  FixedStreamArray<SectionOffset> SectionOffsets;
 
   const HeaderInfo *Header;
   const GSIHashHeader *HashHdr;

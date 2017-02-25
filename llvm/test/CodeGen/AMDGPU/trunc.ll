@@ -56,8 +56,7 @@ define void @trunc_shl_i64(i64 addrspace(1)* %out2, i32 addrspace(1)* %out, i64 
 }
 
 ; GCN-LABEL: {{^}}trunc_i32_to_i1:
-; GCN: v_and_b32_e32 v{{[0-9]+}}, 1, v{{[0-9]+}}
-; GCN: v_cmp_eq_u32
+; GCN: v_and_b32_e32 [[VREG:v[0-9]+]], 1, v{{[0-9]+}}
 define void @trunc_i32_to_i1(i32 addrspace(1)* %out, i32 addrspace(1)* %ptr) {
   %a = load i32, i32 addrspace(1)* %ptr, align 4
   %trunc = trunc i32 %a to i1
@@ -67,8 +66,7 @@ define void @trunc_i32_to_i1(i32 addrspace(1)* %out, i32 addrspace(1)* %ptr) {
 }
 
 ; GCN-LABEL: {{^}}trunc_i8_to_i1:
-; GCN: v_and_b32_e32 v{{[0-9]+}}, 1, v{{[0-9]+}}
-; GCN: v_cmp_eq_u32
+; GCN: v_and_b32_e32 [[VREG:v[0-9]+]], 1, v{{[0-9]+}}
 define void @trunc_i8_to_i1(i8 addrspace(1)* %out, i8 addrspace(1)* %ptr) {
   %a = load i8, i8 addrspace(1)* %ptr, align 4
   %trunc = trunc i8 %a to i1
@@ -78,8 +76,7 @@ define void @trunc_i8_to_i1(i8 addrspace(1)* %out, i8 addrspace(1)* %ptr) {
 }
 
 ; GCN-LABEL: {{^}}sgpr_trunc_i16_to_i1:
-; GCN: s_and_b32 s{{[0-9]+}}, 1, s{{[0-9]+}}
-; GCN: v_cmp_eq_u32
+; GCN: s_and_b32 s{{[0-9]+}}, s{{[0-9]+}}, 1
 define void @sgpr_trunc_i16_to_i1(i16 addrspace(1)* %out, i16 %a) {
   %trunc = trunc i16 %a to i1
   %result = select i1 %trunc, i16 1, i16 0
@@ -88,8 +85,7 @@ define void @sgpr_trunc_i16_to_i1(i16 addrspace(1)* %out, i16 %a) {
 }
 
 ; GCN-LABEL: {{^}}sgpr_trunc_i32_to_i1:
-; GCN: s_and_b32 s{{[0-9]+}}, 1, s{{[0-9]+}}
-; GCN: v_cmp_eq_u32
+; GCN: s_and_b32 s{{[0-9]+}}, s{{[0-9]+}}, 1
 define void @sgpr_trunc_i32_to_i1(i32 addrspace(1)* %out, i32 %a) {
   %trunc = trunc i32 %a to i1
   %result = select i1 %trunc, i32 1, i32 0

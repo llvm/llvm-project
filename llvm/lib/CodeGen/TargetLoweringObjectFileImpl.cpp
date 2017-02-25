@@ -1162,18 +1162,73 @@ void TargetLoweringObjectFileCOFF::emitLinkerFlagsForGlobal(
 //                                  Wasm
 //===----------------------------------------------------------------------===//
 
+static const Comdat *getWasmComdat(const GlobalValue *GV) {
+  const Comdat *C = GV->getComdat();
+  if (!C)
+    return nullptr;
+
+  if (C->getSelectionKind() != Comdat::Any)
+    report_fatal_error("Wasm COMDATs only support SelectionKind::Any, '" +
+                       C->getName() + "' cannot be lowered.");
+
+  return C;
+}
+
 MCSection *TargetLoweringObjectFileWasm::getExplicitSectionGlobal(
     const GlobalObject *GO, SectionKind Kind, const TargetMachine &TM) const {
   llvm_unreachable("getExplicitSectionGlobal not yet implemented");
   return nullptr;
 }
 
+static MCSectionWasm *
+selectWasmSectionForGlobal(MCContext &Ctx, const GlobalObject *GO,
+                           SectionKind Kind, Mangler &Mang,
+                           const TargetMachine &TM, bool EmitUniqueSection,
+                           unsigned Flags, unsigned *NextUniqueID) {
+  StringRef Group = "";
+  if (getWasmComdat(GO))
+    llvm_unreachable("comdat not yet supported for wasm");
+
+  bool UniqueSectionNames = TM.getUniqueSectionNames();
+  SmallString<128> Name = getSectionPrefixForGlobal(Kind);
+
+  if (const auto *F = dyn_cast<Function>(GO)) {
+    const auto &OptionalPrefix = F->getSectionPrefix();
+    if (OptionalPrefix)
+      Name += *OptionalPrefix;
+  }
+
+  if (EmitUniqueSection && UniqueSectionNames) {
+    Name.push_back('.');
+    TM.getNameWithPrefix(Name, GO, Mang, true);
+  }
+  unsigned UniqueID = MCContext::GenericSectionID;
+  if (EmitUniqueSection && !UniqueSectionNames) {
+    UniqueID = *NextUniqueID;
+    (*NextUniqueID)++;
+  }
+  return Ctx.getWasmSection(Name, /*Type=*/0, Flags,
+                            Group, UniqueID);
+}
+
 MCSection *TargetLoweringObjectFileWasm::SelectSectionForGlobal(
     const GlobalObject *GO, SectionKind Kind, const TargetMachine &TM) const {
+
+  if (Kind.isCommon())
+    report_fatal_error("mergable sections not supported yet on wasm");
+
+  // If we have -ffunction-section or -fdata-section then we should emit the
+  // global value to a uniqued section specifically for it.
+  bool EmitUniqueSection = false;
   if (Kind.isText())
-    return TextSection;
-  assert(!Kind.isMetadata() && "metadata sections not yet implemented");
-  return DataSection;
+    EmitUniqueSection = TM.getFunctionSections();
+  else
+    EmitUniqueSection = TM.getDataSections();
+  EmitUniqueSection |= GO->hasComdat();
+
+  return selectWasmSectionForGlobal(getContext(), GO, Kind, getMangler(), TM,
+                                    EmitUniqueSection, /*Flags=*/0,
+                                    &NextUniqueID);
 }
 
 bool TargetLoweringObjectFileWasm::shouldPutJumpTableInFunctionSection(

@@ -9,7 +9,7 @@
 
 #include "llvm/DebugInfo/PDB/Native/GlobalsStream.h"
 #include "GSI.h"
-#include "llvm/DebugInfo/MSF/StreamReader.h"
+#include "llvm/DebugInfo/MSF/BinaryStreamReader.h"
 #include "llvm/Support/Error.h"
 #include <algorithm>
 
@@ -23,7 +23,7 @@ GlobalsStream::GlobalsStream(std::unique_ptr<MappedBlockStream> Stream)
 GlobalsStream::~GlobalsStream() = default;
 
 Error GlobalsStream::reload() {
-  StreamReader Reader(*Stream);
+  BinaryStreamReader Reader(*Stream);
 
   const GSIHashHeader *HashHdr;
   if (auto EC = readGSIHashHeader(HashHdr, Reader))

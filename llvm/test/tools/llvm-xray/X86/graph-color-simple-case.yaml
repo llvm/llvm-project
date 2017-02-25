@@ -32,15 +32,15 @@ records:
 
 
 #EDGE:     digraph xray {
-#EDGE-DAG: F0 -> F7 [label="7.{{[0-9]*}}e+01" color="#B00100"];
-#EDGE-DAG: F0 -> F2 [label="2.{{[0-9]*}}e+01" color="#FD9965"];
+#EDGE-DAG: F0 -> F7 [label="7.{{[0-9]*}}e+01" color="#B00000"];
+#EDGE-DAG: F0 -> F2 [label="2.{{[0-9]*}}e+01" color="#FC9963"];
 #EDGE-DAG: F0 -> F9 [label="9.{{[0-9]*}}e+01" color="#7F0000"];
-#EDGE-DAG: F0 -> F4 [label="4.{{[0-9]*}}e+01" color="#E8543b"];
-#EDGE-DAG: F0 -> F6 [label="6.{{[0-9]*}}e+01" color="#C5140a"];
-#EDGE-DAG: F0 -> F1 [label="1.{{[0-9]*}}e+01" color="#FDC58c"];
-#EDGE-DAG: F0 -> F8 [label="8.{{[0-9]*}}e+01" color="#990101"];
-#EDGE-DAG: F0 -> F3 [label="3.{{[0-9]*}}e+01" color="#F5744d"];
-#EDGE-DAG: F0 -> F5 [label="5.{{[0-9]*}}e+01" color="#D83323"];
+#EDGE-DAG: F0 -> F4 [label="4.{{[0-9]*}}e+01" color="#E75339"];
+#EDGE-DAG: F0 -> F6 [label="6.{{[0-9]*}}e+01" color="#C4150D"];
+#EDGE-DAG: F0 -> F1 [label="1.{{[0-9]*}}e+01" color="#FDC48D"];
+#EDGE-DAG: F0 -> F8 [label="8.{{[0-9]*}}e+01" color="#970000"];
+#EDGE-DAG: F0 -> F3 [label="3.{{[0-9]*}}e+01" color="#F4744E"];
+#EDGE-DAG: F0 -> F5 [label="5.{{[0-9]*}}e+01" color="#D83220"];
 #EDGE-DAG: F7 [label="@(7)"];
 #EDGE-DAG: F2 [label="@(2)"];
 #EDGE-DAG: F9 [label="@(9)"];
@@ -63,13 +63,13 @@ records:
 #VERTEX-DAG: F0 -> F8 [label=""];
 #VERTEX-DAG: F0 -> F3 [label=""];
 #VERTEX-DAG: F0 -> F5 [label=""];
-#VERTEX-DAG: F7 [label="{@(7)|7.{{[0-9]*}}e+01}" color="#B00100"];
-#VERTEX-DAG: F2 [label="{@(2)|2.{{[0-9]*}}e+01}" color="#FD9965"];
+#VERTEX-DAG: F7 [label="{@(7)|7.{{[0-9]*}}e+01}" color="#B00000"];
+#VERTEX-DAG: F2 [label="{@(2)|2.{{[0-9]*}}e+01}" color="#FC9963"];
 #VERTEX-DAG: F9 [label="{@(9)|9.{{[0-9]*}}e+01}" color="#7F0000"];
-#VERTEX-DAG: F4 [label="{@(4)|4.{{[0-9]*}}e+01}" color="#E8543b"];
-#VERTEX-DAG: F6 [label="{@(6)|6.{{[0-9]*}}e+01}" color="#C5140a"];
-#VERTEX-DAG: F1 [label="{@(1)|1.{{[0-9]*}}e+01}" color="#FDC58c"];
-#VERTEX-DAG: F8 [label="{@(8)|8.{{[0-9]*}}e+01}" color="#990101"];
-#VERTEX-DAG: F3 [label="{@(3)|3.{{[0-9]*}}e+01}" color="#F5744d"];
-#VERTEX-DAG: F5 [label="{@(5)|5.{{[0-9]*}}e+01}" color="#D83323"];
+#VERTEX-DAG: F4 [label="{@(4)|4.{{[0-9]*}}e+01}" color="#E75339"];
+#VERTEX-DAG: F6 [label="{@(6)|6.{{[0-9]*}}e+01}" color="#C4150D"];
+#VERTEX-DAG: F1 [label="{@(1)|1.{{[0-9]*}}e+01}" color="#FDC48D"];
+#VERTEX-DAG: F8 [label="{@(8)|8.{{[0-9]*}}e+01}" color="#970000"];
+#VERTEX-DAG: F3 [label="{@(3)|3.{{[0-9]*}}e+01}" color="#F4744E"];
+#VERTEX-DAG: F5 [label="{@(5)|5.{{[0-9]*}}e+01}" color="#D83220"];
 #VERTEX-NEXT: }

@@ -21,7 +21,6 @@
 #include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/LLVMContext.h"
-#include "llvm/Support/MathExtras.h"
 
 using namespace llvm;
 
@@ -1408,19 +1407,4 @@ const int *SIRegisterInfo::getRegUnitPressureSets(unsigned RegUnit) const {
   if (hasRegUnit(AMDGPU::M0, RegUnit))
     return Empty;
   return AMDGPURegisterInfo::getRegUnitPressureSets(RegUnit);
-}
-
-unsigned SIRegisterInfo::getRegUnitWeight(const MachineRegisterInfo &MRI,
-                                          unsigned RegUnit,
-                                          LaneBitmask LaneMask) const {
-  unsigned Weight = TargetRegisterInfo::getRegUnitWeight(MRI, RegUnit,
-                                                         LaneMask);
-  if (Weight > 1 && LaneMask.any() && !LaneMask.all() &&
-      isVirtualRegister(RegUnit)) {
-    LaneBitmask Max = MRI.getMaxLaneMaskForVReg(RegUnit);
-    if (Max != LaneMask && !Max.all() && !Max.none())
-      Weight = (Weight * countPopulation(LaneMask.getAsInteger())) /
-                         countPopulation(Max.getAsInteger());
-  }
-  return Weight;
 }

@@ -4,7 +4,7 @@
 ; Test that basic call operations assemble as expected.
 
 target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
-target triple = "wasm32-unknown-unknown"
+target triple = "wasm32-unknown-unknown-wasm"
 
 declare i32 @i32_nullary()
 declare i32 @i32_unary(i32)
@@ -61,7 +61,8 @@ define void @call_void_nullary() {
 ; CHECK-LABEL: call_i32_unary:
 ; CHECK-NEXT: .param i32{{$}}
 ; CHECK-NEXT: .result i32{{$}}
-; CHECK-NEXT: {{^}} i32.call $push[[NUM:[0-9]+]]=, i32_unary@FUNCTION, $0{{$}}
+; CHECK-NEXT: get_local $push[[L0:[0-9]+]]=, 0{{$}}
+; CHECK-NEXT: {{^}} i32.call $push[[NUM:[0-9]+]]=, i32_unary@FUNCTION, $pop[[L0]]{{$}}
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
 define i32 @call_i32_unary(i32 %a) {
   %r = call i32 @i32_unary(i32 %a)
@@ -71,7 +72,9 @@ define i32 @call_i32_unary(i32 %a) {
 ; CHECK-LABEL: call_i32_binary:
 ; CHECK-NEXT: .param i32, i32{{$}}
 ; CHECK-NEXT: .result i32{{$}}
-; CHECK-NEXT: {{^}} i32.call $push[[NUM:[0-9]+]]=, i32_binary@FUNCTION, $0, $1{{$}}
+; CHECK-NEXT: get_local $push[[L0:[0-9]+]]=, 0{{$}}
+; CHECK-NEXT: get_local $push[[L1:[0-9]+]]=, 1{{$}}
+; CHECK-NEXT: {{^}} i32.call $push[[NUM:[0-9]+]]=, i32_binary@FUNCTION, $pop[[L0]], $pop[[L1]]{{$}}
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
 define i32 @call_i32_binary(i32 %a, i32 %b) {
   %r = call i32 @i32_binary(i32 %a, i32 %b)
@@ -80,7 +83,8 @@ define i32 @call_i32_binary(i32 %a, i32 %b) {
 
 ; CHECK-LABEL: call_indirect_void:
 ; CHECK-NEXT: .param i32{{$}}
-; CHECK-NEXT: {{^}} call_indirect $0{{$}}
+; CHECK-NEXT: get_local $push[[L0:[0-9]+]]=, 0{{$}}
+; CHECK-NEXT: {{^}} call_indirect $pop[[L0]]{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @call_indirect_void(void ()* %callee) {
   call void %callee()
@@ -90,7 +94,8 @@ define void @call_indirect_void(void ()* %callee) {
 ; CHECK-LABEL: call_indirect_i32:
 ; CHECK-NEXT: .param i32{{$}}
 ; CHECK-NEXT: .result i32{{$}}
-; CHECK-NEXT: {{^}} i32.call_indirect $push[[NUM:[0-9]+]]=, $0{{$}}
+; CHECK-NEXT: get_local $push[[L0:[0-9]+]]=, 0{{$}}
+; CHECK-NEXT: {{^}} i32.call_indirect $push[[NUM:[0-9]+]]=, $pop[[L0]]{{$}}
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
 define i32 @call_indirect_i32(i32 ()* %callee) {
   %t = call i32 %callee()
@@ -99,7 +104,9 @@ define i32 @call_indirect_i32(i32 ()* %callee) {
 
 ; CHECK-LABEL: call_indirect_arg:
 ; CHECK-NEXT: .param i32, i32{{$}}
-; CHECK-NEXT: {{^}} call_indirect $1, $0{{$}}
+; CHECK-NEXT: get_local $push[[L0:[0-9]+]]=, 1{{$}}
+; CHECK-NEXT: get_local $push[[L1:[0-9]+]]=, 0{{$}}
+; CHECK-NEXT: {{^}} call_indirect $pop[[L0]], $pop[[L1]]{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @call_indirect_arg(void (i32)* %callee, i32 %arg) {
   call void %callee(i32 %arg)
@@ -108,7 +115,11 @@ define void @call_indirect_arg(void (i32)* %callee, i32 %arg) {
 
 ; CHECK-LABEL: call_indirect_arg_2:
 ; CHECK-NEXT: .param i32, i32, i32{{$}}
-; CHECK-NEXT: {{^}} i32.call_indirect $drop=, $1, $2, $0{{$}}
+; CHECK-NEXT: get_local $push[[L0:[0-9]+]]=, 1{{$}}
+; CHECK-NEXT: get_local $push[[L1:[0-9]+]]=, 2{{$}}
+; CHECK-NEXT: get_local $push[[L2:[0-9]+]]=, 0{{$}}
+; CHECK-NEXT: {{^}} i32.call_indirect $push[[NUM:[0-9]+]]=, $pop[[L0]], $pop[[L1]], $pop[[L2]]{{$}}
+; CHECK-NEXT: drop $pop[[NUM]]{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @call_indirect_arg_2(i32 (i32, i32)* %callee, i32 %arg, i32 %arg2) {
   call i32 %callee(i32 %arg, i32 %arg2)

@@ -142,10 +142,12 @@ public:
   }
 };
 
-template <typename ChannelT>
-class SerializationTraits<ChannelT, std::string, const char *,
-                          typename std::enable_if<std::is_base_of<
-                              RawByteChannel, ChannelT>::value>::type> {
+template <typename ChannelT, typename T>
+class SerializationTraits<ChannelT, std::string, T,
+                          typename std::enable_if<
+                            std::is_base_of<RawByteChannel, ChannelT>::value &&
+                            (std::is_same<T, const char*>::value ||
+                             std::is_same<T, char*>::value)>::type> {
 public:
   static Error serialize(RawByteChannel &C, const char *S) {
     return SerializationTraits<ChannelT, std::string, StringRef>::serialize(C,

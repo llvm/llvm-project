@@ -30,6 +30,7 @@
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineModuleInfoImpls.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/Support/Debug.h"
@@ -152,7 +153,7 @@ static void QueryCallee(const MachineInstr &MI, unsigned CalleeOpNo, bool &Read,
 }
 
 // Determine whether MI reads memory, writes memory, has side effects,
-// and/or uses the __stack_pointer value.
+// and/or uses the stack pointer value.
 static void Query(const MachineInstr &MI, AliasAnalysis &AA, bool &Read,
                   bool &Write, bool &Effects, bool &StackPointer) {
   assert(!MI.isPosition());
@@ -169,15 +170,28 @@ static void Query(const MachineInstr &MI, AliasAnalysis &AA, bool &Read,
   if (MI.mayStore()) {
     Write = true;
 
-    // Check for stores to __stack_pointer.
-    for (auto MMO : MI.memoperands()) {
-      const MachinePointerInfo &MPI = MMO->getPointerInfo();
-      if (MPI.V.is<const PseudoSourceValue *>()) {
-        auto PSV = MPI.V.get<const PseudoSourceValue *>();
-        if (const ExternalSymbolPseudoSourceValue *EPSV =
-                dyn_cast<ExternalSymbolPseudoSourceValue>(PSV))
-          if (StringRef(EPSV->getSymbol()) == "__stack_pointer")
-            StackPointer = true;
+    const MachineFunction &MF = *MI.getParent()->getParent();
+    if (MF.getSubtarget<WebAssemblySubtarget>()
+          .getTargetTriple().isOSBinFormatELF()) {
+      // Check for stores to __stack_pointer.
+      for (auto MMO : MI.memoperands()) {
+        const MachinePointerInfo &MPI = MMO->getPointerInfo();
+        if (MPI.V.is<const PseudoSourceValue *>()) {
+          auto PSV = MPI.V.get<const PseudoSourceValue *>();
+          if (const ExternalSymbolPseudoSourceValue *EPSV =
+                  dyn_cast<ExternalSymbolPseudoSourceValue>(PSV))
+            if (StringRef(EPSV->getSymbol()) == "__stack_pointer")
+              StackPointer = true;
+        }
+      }
+    } else {
+      // Check for sets of the stack pointer.
+      const MachineModuleInfoWasm &MMIW =
+          MF.getMMI().getObjFileInfo<MachineModuleInfoWasm>();
+      if ((MI.getOpcode() == WebAssembly::SET_LOCAL_I32 ||
+           MI.getOpcode() == WebAssembly::SET_LOCAL_I64) &&
+          MI.getOperand(0).getImm() == MMIW.getStackPointerGlobal()) {
+        StackPointer = true;
       }
     }
   } else if (MI.hasOrderedMemoryRef()) {

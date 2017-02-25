@@ -1232,6 +1232,10 @@ def : Pat<(srl i64:$rS, i32:$rB),
 def : Pat<(shl i64:$rS, i32:$rB),
           (SLD $rS, $rB)>;
 
+// SUBFIC
+def : Pat<(sub imm64SExt16:$imm, i64:$in),
+          (SUBFIC8 $in, imm:$imm)>;
+
 // SHL/SRL
 def : Pat<(shl i64:$in, (i32 imm:$imm)),
           (RLDICR $in, imm:$imm, (SHL64 imm:$imm))>;

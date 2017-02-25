@@ -17,10 +17,9 @@
 #include <cstdint>
 
 namespace llvm {
-namespace msf {
-class StreamReader;
-class StreamWriter;
-}
+class BinaryStreamReader;
+class BinaryStreamWriter;
+
 namespace pdb {
 class NamedStreamMapBuilder;
 class NamedStreamMap {
@@ -33,8 +32,8 @@ class NamedStreamMap {
 public:
   NamedStreamMap();
 
-  Error load(msf::StreamReader &Stream);
-  Error commit(msf::StreamWriter &Writer) const;
+  Error load(BinaryStreamReader &Stream);
+  Error commit(BinaryStreamWriter &Writer) const;
   uint32_t finalize();
 
   bool get(StringRef Stream, uint32_t &StreamNo) const;

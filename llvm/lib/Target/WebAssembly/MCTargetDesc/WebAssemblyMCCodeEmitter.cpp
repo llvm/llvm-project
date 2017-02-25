@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
+#include "MCTargetDesc/WebAssemblyFixupKinds.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/MC/MCCodeEmitter.h"
@@ -48,9 +49,7 @@ class WebAssemblyMCCodeEmitter final : public MCCodeEmitter {
 
 public:
   WebAssemblyMCCodeEmitter(const MCInstrInfo &mcii, MCContext &ctx)
-      : MCII(mcii), Ctx(ctx) {
-    (void)Ctx;
-  }
+      : MCII(mcii), Ctx(ctx) {}
 };
 } // end anonymous namespace
 
@@ -68,6 +67,13 @@ void WebAssemblyMCCodeEmitter::encodeInstruction(
   assert(Binary < UINT8_MAX && "Multi-byte opcodes not supported yet");
   OS << uint8_t(Binary);
 
+  // For br_table instructions, encode the size of the table. In the MCInst,
+  // there's an index operand, one operand for each table entry, and the
+  // default operand.
+  if (MI.getOpcode() == WebAssembly::BR_TABLE_I32 ||
+      MI.getOpcode() == WebAssembly::BR_TABLE_I64)
+    encodeULEB128(MI.getNumOperands() - 2, OS);
+
   const MCInstrDesc &Desc = MCII.get(MI.getOpcode());
   for (unsigned i = 0, e = MI.getNumOperands(); i < e; ++i) {
     const MCOperand &MO = MI.getOperand(i);
@@ -82,6 +88,12 @@ void WebAssemblyMCCodeEmitter::encodeInstruction(
           encodeSLEB128(int32_t(MO.getImm()), OS);
         } else if (Info.OperandType == WebAssembly::OPERAND_I64IMM) {
           encodeSLEB128(int64_t(MO.getImm()), OS);
+        } else if (Info.OperandType == WebAssembly::OPERAND_GLOBAL) {
+          Fixups.push_back(MCFixup::create(
+              OS.tell() - Start, MCConstantExpr::create(MO.getImm(), Ctx),
+              MCFixupKind(WebAssembly::fixup_code_global_index), MI.getLoc()));
+          ++MCNumFixups;
+          encodeULEB128(uint64_t(MO.getImm()), OS);
         } else {
           encodeULEB128(uint64_t(MO.getImm()), OS);
         }
@@ -107,14 +119,28 @@ void WebAssemblyMCCodeEmitter::encodeInstruction(
         support::endian::Writer<support::little>(OS).write<double>(d);
       }
     } else if (MO.isExpr()) {
+      const MCOperandInfo &Info = Desc.OpInfo[i];
+      llvm::MCFixupKind FixupKind;
+      size_t PaddedSize;
+      if (Info.OperandType == WebAssembly::OPERAND_I32IMM) {
+        FixupKind = MCFixupKind(WebAssembly::fixup_code_sleb128_i32);
+        PaddedSize = 5;
+      } else if (Info.OperandType == WebAssembly::OPERAND_I64IMM) {
+        FixupKind = MCFixupKind(WebAssembly::fixup_code_sleb128_i64);
+        PaddedSize = 10;
+      } else if (Info.OperandType == WebAssembly::OPERAND_FUNCTION32 ||
+                 Info.OperandType == WebAssembly::OPERAND_OFFSET32 ||
+                 Info.OperandType == WebAssembly::OPERAND_TYPEINDEX) {
+        FixupKind = MCFixupKind(WebAssembly::fixup_code_uleb128_i32);
+        PaddedSize = 5;
+      } else {
+        llvm_unreachable("unexpected symbolic operand kind");
+      }
       Fixups.push_back(MCFixup::create(
           OS.tell() - Start, MO.getExpr(),
-          STI.getTargetTriple().isArch64Bit() ? FK_Data_8 : FK_Data_4,
-          MI.getLoc()));
+          FixupKind, MI.getLoc()));
       ++MCNumFixups;
-      encodeULEB128(STI.getTargetTriple().isArch64Bit() ? UINT64_MAX
-                                                        : uint64_t(UINT32_MAX),
-                    OS);
+      encodeULEB128(0, OS, PaddedSize - 1);
     } else {
       llvm_unreachable("unexpected operand kind");
     }

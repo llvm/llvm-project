@@ -854,7 +854,6 @@ bool JumpThreadingPass::ProcessBlock(BasicBlock *BB) {
     if (SimplifyPartiallyRedundantLoad(LI))
       return true;
 
-
   // Handle a variety of cases where we are branching on something derived from
   // a PHI node in the current block.  If we can prove that any predecessors
   // compute a predictable value based on a PHI node, thread those predecessors.

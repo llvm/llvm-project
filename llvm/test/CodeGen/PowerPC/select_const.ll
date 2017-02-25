@@ -39,70 +39,27 @@ define i32 @select_0_or_1_signext(i1 signext %cond) {
 ; select Cond, 1, 0 --> zext (Cond)
 
 define i32 @select_1_or_0(i1 %cond) {
-; ISEL-LABEL: select_1_or_0:
-; ISEL:       # BB#0:
-; ISEL-NEXT:    andi. 3, 3, 1
-; ISEL-NEXT:    li 4, 1
-; ISEL-NEXT:    li 3, 0
-; ISEL-NEXT:    isel 3, 4, 3, 1
-; ISEL-NEXT:    blr
-;
-; NO_ISEL-LABEL: select_1_or_0:
-; NO_ISEL:       # BB#0:
-; NO_ISEL-NEXT:    andi. 3, 3, 1
-; NO_ISEL-NEXT:    li 4, 1
-; NO_ISEL-NEXT:    li 3, 0
-; NO_ISEL-NEXT:    bc 12, 1, .LBB3_1
-; NO_ISEL-NEXT:    blr
-; NO_ISEL-NEXT:  .LBB3_1:
-; NO_ISEL-NEXT:    addi 3, 4, 0
-; NO_ISEL-NEXT:    blr
+; ALL-LABEL: select_1_or_0:
+; ALL:       # BB#0:
+; ALL-NEXT:    clrldi 3, 3, 63
+; ALL-NEXT:    blr
   %sel = select i1 %cond, i32 1, i32 0
   ret i32 %sel
 }
 
 define i32 @select_1_or_0_zeroext(i1 zeroext %cond) {
-; ISEL-LABEL: select_1_or_0_zeroext:
-; ISEL:       # BB#0:
-; ISEL-NEXT:    andi. 3, 3, 1
-; ISEL-NEXT:    li 4, 1
-; ISEL-NEXT:    li 3, 0
-; ISEL-NEXT:    isel 3, 4, 3, 1
-; ISEL-NEXT:    blr
-;
-; NO_ISEL-LABEL: select_1_or_0_zeroext:
-; NO_ISEL:       # BB#0:
-; NO_ISEL-NEXT:    andi. 3, 3, 1
-; NO_ISEL-NEXT:    li 4, 1
-; NO_ISEL-NEXT:    li 3, 0
-; NO_ISEL-NEXT:    bc 12, 1, .LBB4_1
-; NO_ISEL-NEXT:    blr
-; NO_ISEL-NEXT:  .LBB4_1:
-; NO_ISEL-NEXT:    addi 3, 4, 0
-; NO_ISEL-NEXT:    blr
+; ALL-LABEL: select_1_or_0_zeroext:
+; ALL:       # BB#0:
+; ALL-NEXT:    blr
   %sel = select i1 %cond, i32 1, i32 0
   ret i32 %sel
 }
 
 define i32 @select_1_or_0_signext(i1 signext %cond) {
-; ISEL-LABEL: select_1_or_0_signext:
-; ISEL:       # BB#0:
-; ISEL-NEXT:    andi. 3, 3, 1
-; ISEL-NEXT:    li 4, 1
-; ISEL-NEXT:    li 3, 0
-; ISEL-NEXT:    isel 3, 4, 3, 1
-; ISEL-NEXT:    blr
-;
-; NO_ISEL-LABEL: select_1_or_0_signext:
-; NO_ISEL:       # BB#0:
-; NO_ISEL-NEXT:    andi. 3, 3, 1
-; NO_ISEL-NEXT:    li 4, 1
-; NO_ISEL-NEXT:    li 3, 0
-; NO_ISEL-NEXT:    bc 12, 1, .LBB5_1
-; NO_ISEL-NEXT:    blr
-; NO_ISEL-NEXT:  .LBB5_1:
-; NO_ISEL-NEXT:    addi 3, 4, 0
-; NO_ISEL-NEXT:    blr
+; ALL-LABEL: select_1_or_0_signext:
+; ALL:       # BB#0:
+; ALL-NEXT:    clrldi 3, 3, 63
+; ALL-NEXT:    blr
   %sel = select i1 %cond, i32 1, i32 0
   ret i32 %sel
 }

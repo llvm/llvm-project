@@ -70,8 +70,8 @@ TEST(APIntTest, i61_Count) {
   EXPECT_EQ(16u, i61.getActiveBits());
   EXPECT_EQ(15u, i61.countTrailingZeros());
   EXPECT_EQ(1u, i61.countPopulation());
-  EXPECT_EQ((1 << 15), i61.getSExtValue());
-  EXPECT_EQ((1 << 15), i61.getZExtValue());
+  EXPECT_EQ(static_cast<int64_t>(1 << 15), i61.getSExtValue());
+  EXPECT_EQ(static_cast<uint64_t>(1 << 15), i61.getZExtValue());
 
   i61.setBits(8, 19);
   EXPECT_EQ(42u, i61.countLeadingZeros());
@@ -79,8 +79,8 @@ TEST(APIntTest, i61_Count) {
   EXPECT_EQ(19u, i61.getActiveBits());
   EXPECT_EQ(8u, i61.countTrailingZeros());
   EXPECT_EQ(11u, i61.countPopulation());
-  EXPECT_EQ((1 << 19) - (1 << 8), i61.getSExtValue());
-  EXPECT_EQ((1 << 19) - (1 << 8), i61.getZExtValue());
+  EXPECT_EQ(static_cast<int64_t>((1 << 19) - (1 << 8)), i61.getSExtValue());
+  EXPECT_EQ(static_cast<uint64_t>((1 << 19) - (1 << 8)), i61.getZExtValue());
 }
 
 TEST(APIntTest, i65_Count) {

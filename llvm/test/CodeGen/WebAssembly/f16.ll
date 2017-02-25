@@ -1,4 +1,5 @@
 ; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt | FileCheck %s
+; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -fast-isel | FileCheck %s
 
 ; Test that f16 is expanded.
 

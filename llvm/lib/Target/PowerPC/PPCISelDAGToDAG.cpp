@@ -2714,6 +2714,19 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
       CurDAG->SelectNodeTo(N, PPC::RLDICL, MVT::i64, Ops);
       return;
     }
+    // If this is a negated 64-bit zero-extension mask,
+    // i.e. the immediate is a sequence of ones from most significant side
+    // and all zero for reminder, we should use rldicr.
+    if (isInt64Immediate(N->getOperand(1).getNode(), Imm64) &&
+        isMask_64(~Imm64)) {
+      SDValue Val = N->getOperand(0);
+      MB = 63 - countTrailingOnes(~Imm64);
+      SH = 0;
+      SDValue Ops[] = { Val, getI32Imm(SH, dl), getI32Imm(MB, dl) };
+      CurDAG->SelectNodeTo(N, PPC::RLDICR, MVT::i64, Ops);
+      return;
+    }
+
     // AND X, 0 -> 0, not "rlwinm 32".
     if (isInt32Immediate(N->getOperand(1), Imm) && (Imm == 0)) {
       ReplaceUses(SDValue(N, 0), N->getOperand(1));
