@@ -739,7 +739,8 @@ CodeGenPGO::applyFunctionAttributes(llvm::IndexedInstrProfReader *PGOReader,
   Fn->setEntryCount(FunctionCount);
 }
 
-void CodeGenPGO::emitCounterIncrement(CGBuilderTy &Builder, const Stmt *S) {
+void CodeGenPGO::emitCounterIncrement(CGBuilderTy &Builder, const Stmt *S,
+                                      llvm::Value *StepV) {
   if (!CGM.getCodeGenOpts().hasProfileClangInstr() || !RegionCounterMap)
     return;
   if (!Builder.GetInsertBlock())
@@ -747,11 +748,17 @@ void CodeGenPGO::emitCounterIncrement(CGBuilderTy &Builder, const Stmt *S) {
 
   unsigned Counter = (*RegionCounterMap)[S];
   auto *I8PtrTy = llvm::Type::getInt8PtrTy(CGM.getLLVMContext());
-  Builder.CreateCall(CGM.getIntrinsic(llvm::Intrinsic::instrprof_increment),
-                     {llvm::ConstantExpr::getBitCast(FuncNameVar, I8PtrTy),
-                      Builder.getInt64(FunctionHash),
-                      Builder.getInt32(NumRegionCounters),
-                      Builder.getInt32(Counter)});
+
+  ArrayRef<llvm::Value *> Args = {
+      llvm::ConstantExpr::getBitCast(FuncNameVar, I8PtrTy),
+      Builder.getInt64(FunctionHash), Builder.getInt32(NumRegionCounters),
+      Builder.getInt32(Counter), StepV};
+  if (!StepV)
+    Builder.CreateCall(CGM.getIntrinsic(llvm::Intrinsic::instrprof_increment),
+                       Args.drop_back(1));
+  else
+    Builder.CreateCall(
+        CGM.getIntrinsic(llvm::Intrinsic::instrprof_increment_step), Args);
 }
 
 // This method either inserts a call to the profile run-time during
