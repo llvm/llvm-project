@@ -5,12 +5,6 @@ LLVM 4.0.0 Release Notes
 .. contents::
     :local:
 
-.. warning::
-   These are in-progress notes for the upcoming LLVM 4.0.0 release.  You may
-   prefer the `LLVM 3.9 Release Notes <http://llvm.org/releases/3.9.0/docs
-   /ReleaseNotes.html>`_.
-
-
 Introduction
 ============
 
@@ -28,74 +22,56 @@ them.
 
 Non-comprehensive list of changes in this release
 =================================================
-* The C API functions LLVMAddFunctionAttr, LLVMGetFunctionAttr,
-  LLVMRemoveFunctionAttr, LLVMAddAttribute, LLVMRemoveAttribute,
-  LLVMGetAttribute, LLVMAddInstrAttribute and
-  LLVMRemoveInstrAttribute have been removed.
-
-* The C API enum LLVMAttribute has been deleted.
-
-.. NOTE
-   For small 1-3 sentence descriptions, just add an entry at the end of
-   this list. If your description won't fit comfortably in one bullet
-   point (e.g. maybe you would like to give an example of the
-   functionality, or simply have a lot to talk about), see the `NOTE` below
-   for adding a new subsection.
-
-* The definition and uses of LLVM_ATRIBUTE_UNUSED_RESULT in the LLVM source
-  were replaced with LLVM_NODISCARD, which matches the C++17 [[nodiscard]]
-  semantics rather than gcc's __attribute__((warn_unused_result)).
-
 * Minimum compiler version to build has been raised to GCC 4.8 and VS 2015.
+
+* The C API functions ``LLVMAddFunctionAttr``, ``LLVMGetFunctionAttr``,
+  ``LLVMRemoveFunctionAttr``, ``LLVMAddAttribute``, ``LLVMRemoveAttribute``,
+  ``LLVMGetAttribute``, ``LLVMAddInstrAttribute`` and
+  ``LLVMRemoveInstrAttribute`` have been removed.
+
+* The C API enum ``LLVMAttribute`` has been deleted.
+
+* The definition and uses of ``LLVM_ATRIBUTE_UNUSED_RESULT`` in the LLVM source
+  were replaced with ``LLVM_NODISCARD``, which matches the C++17 ``[[nodiscard]]``
+  semantics rather than gcc's ``__attribute__((warn_unused_result))``.
 
 * The Timer related APIs now expect a Name and Description. When upgrading code
   the previously used names should become descriptions and a short name in the
   style of a programming language identifier should be added.
 
-* LLVM now handles invariant.group across different basic blocks, which makes
+* LLVM now handles ``invariant.group`` across different basic blocks, which makes
   it possible to devirtualize virtual calls inside loops.
 
-* The aggressive dead code elimination phase ("adce") now remove
+* The aggressive dead code elimination phase ("adce") now removes
   branches which do not effect program behavior. Loops are retained by
   default since they may be infinite but these can also be removed
-  with LLVM option -adce-remove-loops when the loop body otherwise has
+  with LLVM option ``-adce-remove-loops`` when the loop body otherwise has
   no live operations.
 
 * The GVNHoist pass is now enabled by default. The new pass based on Global
   Value Numbering detects similar computations in branch code and replaces
   multiple instances of the same computation with a unique expression.  The
   transform benefits code size and generates better schedules.  GVNHoist is
-  more aggressive at -Os and -Oz, hoisting more expressions at the expense of
-  execution time degradations.
+  more aggressive at ``-Os`` and ``-Oz``, hoisting more expressions at the
+  expense of execution time degradations.
 
  * The llvm-cov tool can now export coverage data as json. Its html output mode
    has also improved.
 
-* ... next change ...
+Improvements to ThinLTO (-flto=thin)
+------------------------------------
+Integration with profile data (PGO). When available, profile data
+enables more accurate function importing decisions, as well as
+cross-module indirect call promotion.
 
-.. NOTE
-   If you would like to document a larger change, then you can add a
-   subsection about it right here. You can copy the following boilerplate
-   and un-indent it (the indentation causes it to be inside this comment).
-
-   Special New Feature
-   -------------------
-
-   Makes programs 10x faster by doing Special New Thing.
-
-   Improvements to ThinLTO (-flto=thin)
-   ------------------------------------
-   * Integration with profile data (PGO). When available, profile data
-     enables more accurate function importing decisions, as well as
-     cross-module indirect call promotion.
-   * Significant build-time and binary-size improvements when compiling with
-     debug info (-g).
+Significant build-time and binary-size improvements when compiling with
+debug info (-g).
 
 LLVM Coroutines
 ---------------
 
 Experimental support for :doc:`Coroutines` was added, which can be enabled
-with ``-enable-coroutines`` in ``opt`` command tool or using
+with ``-enable-coroutines`` in ``opt`` the command tool or using the
 ``addCoroutinePassesToExtensionPoints`` API when building the optimization
 pipeline.
 
@@ -106,18 +82,18 @@ For more information on LLVM Coroutines and the LLVM implementation, see
 Regcall and Vectorcall Calling Conventions
 --------------------------------------------------
 
-Support was added for _regcall calling convention.
-Existing __vectorcall calling convention support was extended to include
+Support was added for ``_regcall`` calling convention.
+Existing ``__vectorcall`` calling convention support was extended to include
 correct handling of HVAs.
 
-The __vectorcall calling convention was introduced by Microsoft to
+The ``__vectorcall`` calling convention was introduced by Microsoft to
 enhance register usage when passing parameters.
 For more information please read `__vectorcall documentation
 <https://msdn.microsoft.com/en-us/library/dn375768.aspx>`_.
 
-The __regcall calling convention was introduced by Intel to 
+The ``__regcall`` calling convention was introduced by Intel to
 optimize parameter transfer on function call.
-This calling convention ensures that as many values as possible are 
+This calling convention ensures that as many values as possible are
 passed or returned in registers.
 For more information please read `__regcall documentation
 <https://software.intel.com/en-us/node/693069>`_.
@@ -127,7 +103,7 @@ Code Generation Testing
 
 Passes that work on the machine instruction representation can be tested with
 the .mir serialization format. ``llc`` supports the ``-run-pass``,
-``-stop-after``, ``-stop-before``, ``-start-after``, ``-start-before`` to to
+``-stop-after``, ``-stop-before``, ``-start-after``, ``-start-before`` to
 run a single pass of the code generation pipeline, or to stop or start the code
 generation pipeline at a given point.
 
@@ -211,9 +187,6 @@ changes landed in this release.
   ``&*I`` (if not ``end()``); alternatively, clients may refactor to use
   references for known-good nodes.
 
-Changes to the LLVM IR
-----------------------
-
 Changes to the ARM Targets
 --------------------------
 
@@ -243,28 +216,6 @@ Changes to the ARM Targets
 
 A lot of work has also been done in LLD for ARM, which now supports more
 relocations and TLS.
-
-
-Changes to the MIPS Target
---------------------------
-
- During this release ...
-
-
-Changes to the PowerPC Target
------------------------------
-
- During this release ...
-
-Changes to the X86 Target
--------------------------
-
- During this release ...
-
-Changes to the AMDGPU Target
------------------------------
-
- During this release ...
 
 Changes to the AVR Target
 -----------------------------
@@ -296,8 +247,6 @@ Changes to the OCaml bindings
 
 External Open Source Projects Using LLVM 4.0.0
 ==============================================
-
-* A project...
 
 LDC - the LLVM-based D compiler
 -------------------------------
