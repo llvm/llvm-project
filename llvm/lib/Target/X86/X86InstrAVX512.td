@@ -308,18 +308,6 @@ multiclass AVX512_maskable_scalar<bits<8> O, Format F, X86VectorVTInfo _,
                           (X86selects _.KRCWM:$mask, RHS, _.RC:$src0),
                           X86selects, "$src0 = $dst", itin, IsCommutable>;
 
-// Similar to AVX512_maskable_scalar, but with scalar types.
-multiclass AVX512_maskable_fp_scalar<bits<8> O, Format F, X86VectorVTInfo _,
-                           dag Outs, dag Ins, string OpcodeStr,
-                           string AttSrcAsm, string IntelSrcAsm,
-                           InstrItinClass itin = NoItinerary,
-                           bit IsCommutable = 0> :
-   AVX512_maskable_fp_common<O, F, _, Outs, Ins,
-                          !con((ins _.FRC:$src0, _.KRCWM:$mask), Ins),
-                          !con((ins _.KRCWM:$mask), Ins),
-                          OpcodeStr, AttSrcAsm, IntelSrcAsm,
-                          X86selects, "$src0 = $dst", itin, IsCommutable>;
-
 // Similar to AVX512_maskable but in this case one of the source operands
 // ($src1) is already tied to $dst so we just use that for the preserved
 // vector elements.  NOTE that the NonTiedIns (the ins dag) should exclude
@@ -6059,7 +6047,6 @@ let Predicates = [HasAVX512] in {
 //===----------------------------------------------------------------------===//
 multiclass avx512_cvt_fp_scalar<bits<8> opc, string OpcodeStr, X86VectorVTInfo _,
                          X86VectorVTInfo _Src, SDNode OpNode> {
-  let isCodeGenOnly = 1 in {
   defm rr_Int : AVX512_maskable_scalar<opc, MRMSrcReg, _, (outs _.RC:$dst),
                          (ins _.RC:$src1, _Src.RC:$src2), OpcodeStr,
                          "$src2, $src1", "$src1, $src2",
@@ -6075,18 +6062,18 @@ multiclass avx512_cvt_fp_scalar<bits<8> opc, string OpcodeStr, X86VectorVTInfo _
                                             (_Src.ScalarLdFrag addr:$src2))),
                                   (i32 FROUND_CURRENT)))>,
                          EVEX_4V, VEX_LIG, Sched<[WriteCvtF2FLd, ReadAfterLd]>;
-  }
 
-  defm rr : AVX512_maskable_fp_scalar<opc, MRMSrcReg, _, (outs _.FRC:$dst),
-                         (ins _.FRC:$src1, _Src.FRC:$src2), OpcodeStr,
-                         "$src2, $src1", "$src1, $src2">,
-                         EVEX_4V, VEX_LIG, Sched<[WriteCvtF2F]>;
-  let mayLoad = 1 in
-  defm rm : AVX512_maskable_fp_scalar<opc, MRMSrcMem, _, (outs _.FRC:$dst),
-                         (ins _.FRC:$src1, _Src.ScalarMemOp:$src2), OpcodeStr,
-                         "$src2, $src1", "$src1, $src2">,
-                         EVEX_4V, VEX_LIG, Sched<[WriteCvtF2FLd, ReadAfterLd]>;
-  
+  let isCodeGenOnly = 1, hasSideEffects = 0 in {
+    def rr : I<opc, MRMSrcReg, (outs _.FRC:$dst),
+               (ins _.FRC:$src1, _Src.FRC:$src2),
+               OpcodeStr#"\t{$src2, $src1, $dst|$dst, $src1, $src2}", []>,
+               EVEX_4V, VEX_LIG, Sched<[WriteCvtF2F]>;
+    let mayLoad = 1 in
+    def rm : I<opc, MRMSrcMem, (outs _.FRC:$dst),
+               (ins _.FRC:$src1, _Src.ScalarMemOp:$src2),
+               OpcodeStr#"\t{$src2, $src1, $dst|$dst, $src1, $src2}", []>,
+               EVEX_4V, VEX_LIG, Sched<[WriteCvtF2FLd, ReadAfterLd]>;
+  }
 }
 
 // Scalar Coversion with SAE - suppress all exceptions

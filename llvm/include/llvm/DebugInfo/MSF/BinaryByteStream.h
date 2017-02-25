@@ -1,19 +1,19 @@
-//===- BinaryByteStream.h ---------------------------------------*- C++ -*-===//
+//===- ByteStream.h - Reads stream data from a byte sequence ----*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
 // This file is distributed under the University of Illinois Open Source
 // License. See LICENSE.TXT for details.
-//===----------------------------------------------------------------------===//
-// A BinaryStream which stores data in a single continguous memory buffer.
+//
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_SUPPORT_BINARYBYTESTREAM_H
-#define LLVM_SUPPORT_BINARYBYTESTREAM_H
+#ifndef LLVM_DEBUGINFO_MSF_BYTESTREAM_H
+#define LLVM_DEBUGINFO_MSF_BYTESTREAM_H
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/MSF/BinaryStream.h"
+#include "llvm/DebugInfo/MSF/MSFError.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -23,40 +23,34 @@
 #include <memory>
 
 namespace llvm {
+namespace msf {
 
-/// \brief An implementation of BinaryStream which holds its entire data set
-/// in a single contiguous buffer.  BinaryByteStream guarantees that no read
-/// operation will ever incur a copy.  Note that BinaryByteStream does not
-/// own the underlying buffer.
-class BinaryByteStream : public BinaryStream {
+class ByteStream : public ReadableStream {
 public:
-  BinaryByteStream() = default;
-  BinaryByteStream(ArrayRef<uint8_t> Data, llvm::support::endianness Endian)
-      : Endian(Endian), Data(Data) {}
-  BinaryByteStream(StringRef Data, llvm::support::endianness Endian)
-      : Endian(Endian), Data(Data.bytes_begin(), Data.bytes_end()) {}
-
-  llvm::support::endianness getEndian() const override { return Endian; }
+  ByteStream() = default;
+  explicit ByteStream(ArrayRef<uint8_t> Data) : Data(Data) {}
+  explicit ByteStream(StringRef Data)
+      : Data(Data.bytes_begin(), Data.bytes_end()) {}
 
   Error readBytes(uint32_t Offset, uint32_t Size,
-                  ArrayRef<uint8_t> &Buffer) override {
+                  ArrayRef<uint8_t> &Buffer) const override {
     if (Offset > Data.size())
-      return errorCodeToError(make_error_code(std::errc::no_buffer_space));
+      return make_error<MSFError>(msf_error_code::insufficient_buffer);
     if (Data.size() < Size + Offset)
-      return errorCodeToError(make_error_code(std::errc::no_buffer_space));
+      return make_error<MSFError>(msf_error_code::insufficient_buffer);
     Buffer = Data.slice(Offset, Size);
     return Error::success();
   }
 
   Error readLongestContiguousChunk(uint32_t Offset,
-                                   ArrayRef<uint8_t> &Buffer) override {
+                                   ArrayRef<uint8_t> &Buffer) const override {
     if (Offset >= Data.size())
-      return errorCodeToError(make_error_code(std::errc::no_buffer_space));
+      return make_error<MSFError>(msf_error_code::insufficient_buffer);
     Buffer = Data.slice(Offset);
     return Error::success();
   }
 
-  uint32_t getLength() override { return Data.size(); }
+  uint32_t getLength() const override { return Data.size(); }
 
   ArrayRef<uint8_t> data() const { return Data; }
 
@@ -66,91 +60,76 @@ public:
   }
 
 protected:
-  llvm::support::endianness Endian;
   ArrayRef<uint8_t> Data;
 };
 
-/// \brief An implementation of BinaryStream whose data is backed by an llvm
-/// MemoryBuffer object.  MemoryBufferByteStream owns the MemoryBuffer in
-/// question.  As with BinaryByteStream, reading from a MemoryBufferByteStream
-/// will never cause a copy.
-class MemoryBufferByteStream : public BinaryByteStream {
+// MemoryBufferByteStream behaves like a read-only ByteStream, but has its data
+// backed by an llvm::MemoryBuffer.  It also owns the underlying MemoryBuffer.
+class MemoryBufferByteStream : public ByteStream {
 public:
-  explicit MemoryBufferByteStream(std::unique_ptr<MemoryBuffer> Buffer,
-                                  llvm::support::endianness Endian)
-      : BinaryByteStream(Buffer->getBuffer(), Endian),
+  explicit MemoryBufferByteStream(std::unique_ptr<MemoryBuffer> Buffer)
+      : ByteStream(ArrayRef<uint8_t>(Buffer->getBuffer().bytes_begin(),
+                                     Buffer->getBuffer().bytes_end())),
         MemBuffer(std::move(Buffer)) {}
 
   std::unique_ptr<MemoryBuffer> MemBuffer;
 };
 
-/// \brief An implementation of BinaryStream which holds its entire data set
-/// in a single contiguous buffer.  As with BinaryByteStream, the mutable
-/// version also guarantees that no read operation will ever incur a copy,
-/// and similarly it does not own the underlying buffer.
-class MutableBinaryByteStream : public WritableBinaryStream {
+class MutableByteStream : public WritableStream {
 public:
-  MutableBinaryByteStream() = default;
-  MutableBinaryByteStream(MutableArrayRef<uint8_t> Data,
-                          llvm::support::endianness Endian)
-      : Data(Data), ImmutableStream(Data, Endian) {}
-
-  llvm::support::endianness getEndian() const override {
-    return ImmutableStream.getEndian();
-  }
+  MutableByteStream() = default;
+  explicit MutableByteStream(MutableArrayRef<uint8_t> Data)
+      : Data(Data), ImmutableStream(Data) {}
 
   Error readBytes(uint32_t Offset, uint32_t Size,
-                  ArrayRef<uint8_t> &Buffer) override {
+                  ArrayRef<uint8_t> &Buffer) const override {
     return ImmutableStream.readBytes(Offset, Size, Buffer);
   }
 
   Error readLongestContiguousChunk(uint32_t Offset,
-                                   ArrayRef<uint8_t> &Buffer) override {
+                                   ArrayRef<uint8_t> &Buffer) const override {
     return ImmutableStream.readLongestContiguousChunk(Offset, Buffer);
   }
 
-  uint32_t getLength() override { return ImmutableStream.getLength(); }
+  uint32_t getLength() const override { return ImmutableStream.getLength(); }
 
-  Error writeBytes(uint32_t Offset, ArrayRef<uint8_t> Buffer) override {
+  Error writeBytes(uint32_t Offset, ArrayRef<uint8_t> Buffer) const override {
     if (Buffer.empty())
       return Error::success();
 
     if (Data.size() < Buffer.size())
-      return errorCodeToError(make_error_code(std::errc::no_buffer_space));
+      return make_error<MSFError>(msf_error_code::insufficient_buffer);
     if (Offset > Buffer.size() - Data.size())
-      return errorCodeToError(make_error_code(std::errc::no_buffer_space));
+      return make_error<MSFError>(msf_error_code::insufficient_buffer);
 
     uint8_t *DataPtr = const_cast<uint8_t *>(Data.data());
     ::memcpy(DataPtr + Offset, Buffer.data(), Buffer.size());
     return Error::success();
   }
 
-  Error commit() override { return Error::success(); }
+  Error commit() const override { return Error::success(); }
 
   MutableArrayRef<uint8_t> data() const { return Data; }
 
 private:
   MutableArrayRef<uint8_t> Data;
-  BinaryByteStream ImmutableStream;
+  ByteStream ImmutableStream;
 };
 
-/// \brief An implementation of WritableBinaryStream backed by an llvm
-/// FileOutputBuffer.
-class FileBufferByteStream : public WritableBinaryStream {
+// A simple adapter that acts like a ByteStream but holds ownership over
+// and underlying FileOutputBuffer.
+class FileBufferByteStream : public WritableStream {
 private:
-  class StreamImpl : public MutableBinaryByteStream {
+  class StreamImpl : public MutableByteStream {
   public:
-    StreamImpl(std::unique_ptr<FileOutputBuffer> Buffer,
-               llvm::support::endianness Endian)
-        : MutableBinaryByteStream(
-              MutableArrayRef<uint8_t>(Buffer->getBufferStart(),
-                                       Buffer->getBufferEnd()),
-              Endian),
+    StreamImpl(std::unique_ptr<FileOutputBuffer> Buffer)
+        : MutableByteStream(MutableArrayRef<uint8_t>(Buffer->getBufferStart(),
+                                                     Buffer->getBufferEnd())),
           FileBuffer(std::move(Buffer)) {}
 
-    Error commit() override {
+    Error commit() const override {
       if (FileBuffer->commit())
-        return errorCodeToError(make_error_code(std::errc::no_buffer_space));
+        return llvm::make_error<MSFError>(msf_error_code::not_writable);
       return Error::success();
     }
 
@@ -159,36 +138,32 @@ private:
   };
 
 public:
-  explicit FileBufferByteStream(std::unique_ptr<FileOutputBuffer> Buffer,
-                                llvm::support::endianness Endian)
-      : Impl(std::move(Buffer), Endian) {}
-
-  llvm::support::endianness getEndian() const override {
-    return Impl.getEndian();
-  }
+  explicit FileBufferByteStream(std::unique_ptr<FileOutputBuffer> Buffer)
+      : Impl(std::move(Buffer)) {}
 
   Error readBytes(uint32_t Offset, uint32_t Size,
-                  ArrayRef<uint8_t> &Buffer) override {
+                  ArrayRef<uint8_t> &Buffer) const override {
     return Impl.readBytes(Offset, Size, Buffer);
   }
 
   Error readLongestContiguousChunk(uint32_t Offset,
-                                   ArrayRef<uint8_t> &Buffer) override {
+                                   ArrayRef<uint8_t> &Buffer) const override {
     return Impl.readLongestContiguousChunk(Offset, Buffer);
   }
 
-  uint32_t getLength() override { return Impl.getLength(); }
+  uint32_t getLength() const override { return Impl.getLength(); }
 
-  Error writeBytes(uint32_t Offset, ArrayRef<uint8_t> Data) override {
+  Error writeBytes(uint32_t Offset, ArrayRef<uint8_t> Data) const override {
     return Impl.writeBytes(Offset, Data);
   }
 
-  Error commit() override { return Impl.commit(); }
+  Error commit() const override { return Impl.commit(); }
 
 private:
   StreamImpl Impl;
 };
 
+} // end namespace msf
 } // end namespace llvm
 
-#endif // LLVM_SUPPORT_BINARYBYTESTREAM_H
+#endif // LLVM_DEBUGINFO_MSF_BYTESTREAM_H

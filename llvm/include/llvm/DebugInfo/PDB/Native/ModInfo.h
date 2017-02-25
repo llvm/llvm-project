@@ -30,7 +30,7 @@ public:
   ModInfo(const ModInfo &Info);
   ~ModInfo();
 
-  static Error initialize(BinaryStreamRef Stream, ModInfo &Info);
+  static Error initialize(msf::ReadableStreamRef Stream, ModInfo &Info);
 
   bool hasECInfo() const;
   uint16_t getTypeServerIndex() const;
@@ -63,8 +63,10 @@ struct ModuleInfoEx {
 
 } // end namespace pdb
 
+namespace msf {
+
 template <> struct VarStreamArrayExtractor<pdb::ModInfo> {
-  Error operator()(BinaryStreamRef Stream, uint32_t &Length,
+  Error operator()(ReadableStreamRef Stream, uint32_t &Length,
                    pdb::ModInfo &Info) const {
     if (auto EC = pdb::ModInfo::initialize(Stream, Info))
       return EC;
@@ -72,6 +74,8 @@ template <> struct VarStreamArrayExtractor<pdb::ModInfo> {
     return Error::success();
   }
 };
+
+} // end namespace msf
 
 } // end namespace llvm
 

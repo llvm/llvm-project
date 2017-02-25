@@ -7,10 +7,8 @@ define void @test(i64* %P) nounwind  {
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl (%eax), %ecx
-; CHECK-NEXT:    movl 4(%eax), %edx
 ; CHECK-NEXT:    xorl $1, %ecx
 ; CHECK-NEXT:    orl $2, %ecx
-; CHECK-NEXT:    movl %edx, 4(%eax)
 ; CHECK-NEXT:    movl %ecx, (%eax)
 ; CHECK-NEXT:    retl
         %tmp1 = load i64, i64* %P, align 8

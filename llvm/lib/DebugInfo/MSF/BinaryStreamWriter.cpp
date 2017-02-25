@@ -1,4 +1,4 @@
-//===- BinaryStreamWriter.cpp - Writes objects to a BinaryStream ----------===//
+//===- StreamWrite.cpp - Writes bytes and objects to a stream -------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -11,42 +11,21 @@
 
 #include "llvm/DebugInfo/MSF/BinaryStreamReader.h"
 #include "llvm/DebugInfo/MSF/BinaryStreamRef.h"
+#include "llvm/DebugInfo/MSF/MSFError.h"
 
 using namespace llvm;
+using namespace llvm::msf;
 
-BinaryStreamWriter::BinaryStreamWriter(WritableBinaryStreamRef S)
-    : Stream(S), Offset(0) {}
+StreamWriter::StreamWriter(WritableStreamRef S) : Stream(S), Offset(0) {}
 
-Error BinaryStreamWriter::writeBytes(ArrayRef<uint8_t> Buffer) {
+Error StreamWriter::writeBytes(ArrayRef<uint8_t> Buffer) {
   if (auto EC = Stream.writeBytes(Offset, Buffer))
     return EC;
   Offset += Buffer.size();
   return Error::success();
 }
 
-Error BinaryStreamWriter::writeInteger(uint64_t Value, uint32_t ByteSize) {
-  assert(ByteSize == 1 || ByteSize == 2 || ByteSize == 4 || ByteSize == 8);
-  uint8_t Bytes[8];
-  MutableArrayRef<uint8_t> Buffer(Bytes);
-  Buffer = Buffer.take_front(ByteSize);
-  switch (ByteSize) {
-  case 1:
-    Buffer[0] = static_cast<uint8_t>(Value);
-    break;
-  case 2:
-    llvm::support::endian::write16(Buffer.data(), Value, Stream.getEndian());
-    break;
-  case 4:
-    llvm::support::endian::write32(Buffer.data(), Value, Stream.getEndian());
-    break;
-  case 8:
-    llvm::support::endian::write64(Buffer.data(), Value, Stream.getEndian());
-    break;
-  }
-  return writeBytes(Buffer);
-}
-
-Error BinaryStreamWriter::writeCString(StringRef Str) {
+Error StreamWriter::writeZeroString(StringRef Str) {
   if (auto EC = writeFixedString(Str))
     return EC;
   if (auto EC = writeObject('\0'))
@@ -55,21 +34,31 @@ Error BinaryStreamWriter::writeCString(StringRef Str) {
   return Error::success();
 }
 
-Error BinaryStreamWriter::writeFixedString(StringRef Str) {
-  return writeBytes(ArrayRef<uint8_t>(Str.bytes_begin(), Str.bytes_end()));
+Error StreamWriter::writeFixedString(StringRef Str) {
+  ArrayRef<uint8_t> Bytes(Str.bytes_begin(), Str.bytes_end());
+  if (auto EC = Stream.writeBytes(Offset, Bytes))
+    return EC;
+
+  Offset += Str.size();
+  return Error::success();
 }
 
-Error BinaryStreamWriter::writeStreamRef(BinaryStreamRef Ref) {
-  return writeStreamRef(Ref, Ref.getLength());
+Error StreamWriter::writeStreamRef(ReadableStreamRef Ref) {
+  if (auto EC = writeStreamRef(Ref, Ref.getLength()))
+    return EC;
+  // Don't increment Offset here, it is done by the overloaded call to
+  // writeStreamRef.
+  return Error::success();
 }
 
-Error BinaryStreamWriter::writeStreamRef(BinaryStreamRef Ref, uint32_t Length) {
-  BinaryStreamReader SrcReader(Ref.slice(0, Length));
+Error StreamWriter::writeStreamRef(ReadableStreamRef Ref, uint32_t Length) {
+  Ref = Ref.slice(0, Length);
+
+  StreamReader SrcReader(Ref);
   // This is a bit tricky.  If we just call readBytes, we are requiring that it
-  // return us the entire stream as a contiguous buffer.  There is no guarantee
-  // this can be satisfied by returning a reference straight from the buffer, as
-  // an implementation may not store all data in a single contiguous buffer.  So
-  // we iterate over each contiguous chunk, writing each one in succession.
+  // return us the entire stream as a contiguous buffer.  For large streams this
+  // will allocate a huge amount of space from the pool.  Instead, iterate over
+  // each contiguous chunk until we've consumed the entire stream.
   while (SrcReader.bytesRemaining() > 0) {
     ArrayRef<uint8_t> Chunk;
     if (auto EC = SrcReader.readLongestContiguousChunk(Chunk))

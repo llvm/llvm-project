@@ -21,22 +21,22 @@
 #include <vector>
 
 namespace llvm {
-class BinaryStreamRef;
-class WritableBinaryStream;
+namespace codeview {
+class TypeRecord;
+}
+namespace msf {
+class ByteStream;
+class MSFBuilder;
+struct MSFLayout;
+class ReadableStreamRef;
+class WritableStream;
 
-template <> struct BinaryItemTraits<llvm::codeview::CVType> {
+template <> struct SequencedItemTraits<llvm::codeview::CVType> {
   static size_t length(const codeview::CVType &Item) { return Item.length(); }
   static ArrayRef<uint8_t> bytes(const codeview::CVType &Item) {
     return Item.data();
   }
 };
-
-namespace codeview {
-class TypeRecord;
-}
-namespace msf {
-class MSFBuilder;
-struct MSFLayout;
 }
 namespace pdb {
 class PDBFile;
@@ -56,9 +56,9 @@ public:
 
   Error finalizeMsfLayout();
 
-  Error commit(const msf::MSFLayout &Layout, WritableBinaryStreamRef Buffer);
+  Error commit(const msf::MSFLayout &Layout, const msf::WritableStream &Buffer);
 
-  uint32_t calculateSerializedLength();
+  uint32_t calculateSerializedLength() const;
 
 private:
   uint32_t calculateHashBufferSize() const;
@@ -69,9 +69,9 @@ private:
 
   Optional<PdbRaw_TpiVer> VerHeader;
   std::vector<codeview::CVType> TypeRecords;
-  BinaryItemStream<codeview::CVType> TypeRecordStream;
+  msf::SequencedItemStream<codeview::CVType> TypeRecordStream;
   uint32_t HashStreamIndex = kInvalidStreamIndex;
-  std::unique_ptr<BinaryByteStream> HashValueStream;
+  std::unique_ptr<msf::ByteStream> HashValueStream;
 
   const TpiStreamHeader *Header;
   uint32_t Idx;

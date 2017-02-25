@@ -36,6 +36,7 @@
 
 // CHECK: Header search options:
 // CHECK:   System root [-isysroot=]: '/'
+// CHECK:   Resource dir [ -resource-dir=]: '{{.*}}clang{{.*}}'
 // CHECK:   Use builtin include directories [-nobuiltininc]: Yes
 // CHECK:   Use standard system include directories [-nostdinc]: No
 // CHECK:   Use standard C++ include directories [-nostdinc++]: Yes

@@ -14,7 +14,6 @@
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
 #include "llvm/DebugInfo/CodeView/TypeVisitorCallbackPipeline.h"
 #include "llvm/DebugInfo/MSF/BinaryStreamReader.h"
-#include "llvm/DebugInfo/MSF/BinaryStreamReader.h"
 #include "llvm/DebugInfo/MSF/MappedBlockStream.h"
 #include "llvm/DebugInfo/PDB/Native/PDBFile.h"
 #include "llvm/DebugInfo/PDB/Native/PDBTypeServerHandler.h"
@@ -55,7 +54,7 @@ Error TpiStream::verifyHashValues() {
 }
 
 Error TpiStream::reload() {
-  BinaryStreamReader Reader(*Stream);
+  StreamReader Reader(*Stream);
 
   if (Reader.bytesRemaining() < sizeof(TpiStreamHeader))
     return make_error<RawError>(raw_error_code::corrupt_file,
@@ -94,7 +93,7 @@ Error TpiStream::reload() {
 
     auto HS = MappedBlockStream::createIndexedStream(
         Pdb.getMsfLayout(), Pdb.getMsfBuffer(), Header->HashStreamIndex);
-    BinaryStreamReader HSR(*HS);
+    StreamReader HSR(*HS);
 
     uint32_t NumHashValues =
         Header->HashValueBuffer.Length / sizeof(ulittle32_t);

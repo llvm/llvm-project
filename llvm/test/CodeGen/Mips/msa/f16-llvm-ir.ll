@@ -234,15 +234,15 @@ entry:
 ; MIPS32:     insert.w $w[[W0]][1], $[[R1]]
 ; MIPS32:     insert.w $w[[W0]][3], $[[R1]]
 
-; MIPS64-N64: ld $[[R3:[0-9]+]], %got_disp(h)
-; MIPS64-N32: lw $[[R3:[0-9]+]], %got_disp(h)
-; MIPS64:     dmfc1 $[[R1:[0-9]+]], $f[[F2]]
-; MIPS64:     fill.d $w[[W0:[0-9]+]], $[[R1]]
+; MIPS64-N64-DAG: ld $[[R3:[0-9]+]], %got_disp(h)
+; MIPS64-N32-DAG: lw $[[R3:[0-9]+]], %got_disp(h)
+; MIPS64-DAG:     dmfc1 $[[R1:[0-9]+]], $f[[F2]]
+; MIPS64-DAG:     fill.d $w[[W0:[0-9]+]], $[[R1]]
 
-; ALL:        fexdo.w $w[[W1:[0-9]+]], $w[[W0]], $w[[W0]]
-; ALL:        fexdo.h $w[[W2:[0-9]+]], $w[[W1]], $w[[W1]]
+; ALL-DAG:        fexdo.w $w[[W1:[0-9]+]], $w[[W0]], $w[[W0]]
+; ALL-DAG:        fexdo.h $w[[W2:[0-9]+]], $w[[W1]], $w[[W1]]
 
-; MIPS32:     lw $[[R3:[0-9]+]], %got(h)
+; MIPS32-DAG:     lw $[[R3:[0-9]+]], %got(h)
 
 ; ALL:        copy_u.h $[[R2:[0-9]+]], $w[[W2]]
 ; ALL:        sh $[[R2]], 0($[[R3]])

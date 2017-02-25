@@ -50,9 +50,9 @@ private:
   std::unique_ptr<msf::MappedBlockStream> Stream;
 
   codeview::CVSymbolArray SymbolsSubstream;
-  BinaryStreamRef LinesSubstream;
-  BinaryStreamRef C13LinesSubstream;
-  BinaryStreamRef GlobalRefsSubstream;
+  msf::ReadableStreamRef LinesSubstream;
+  msf::ReadableStreamRef C13LinesSubstream;
+  msf::ReadableStreamRef GlobalRefsSubstream;
 
   codeview::ModuleSubstreamArray LineInfo;
 };

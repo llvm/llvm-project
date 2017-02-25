@@ -28,9 +28,9 @@ static Error checkHashHdrVersion(const GSIHashHeader *HashHdr) {
   return Error::success();
 }
 
-Error readGSIHashBuckets(FixedStreamArray<support::ulittle32_t> &HashBuckets,
-                         const GSIHashHeader *HashHdr,
-                         BinaryStreamReader &Reader) {
+Error readGSIHashBuckets(
+    msf::FixedStreamArray<support::ulittle32_t> &HashBuckets,
+    const GSIHashHeader *HashHdr, msf::StreamReader &Reader) {
   if (auto EC = checkHashHdrVersion(HashHdr))
     return EC;
 
@@ -57,7 +57,7 @@ Error readGSIHashBuckets(FixedStreamArray<support::ulittle32_t> &HashBuckets,
 }
 
 Error readGSIHashHeader(const GSIHashHeader *&HashHdr,
-                        BinaryStreamReader &Reader) {
+                        msf::StreamReader &Reader) {
   if (Reader.readObject(HashHdr))
     return make_error<RawError>(raw_error_code::corrupt_file,
                                 "Stream does not contain a GSIHashHeader.");
@@ -70,9 +70,9 @@ Error readGSIHashHeader(const GSIHashHeader *&HashHdr,
   return Error::success();
 }
 
-Error readGSIHashRecords(FixedStreamArray<PSHashRecord> &HashRecords,
+Error readGSIHashRecords(msf::FixedStreamArray<PSHashRecord> &HashRecords,
                          const GSIHashHeader *HashHdr,
-                         BinaryStreamReader &Reader) {
+                         msf::StreamReader &Reader) {
   if (auto EC = checkHashHdrVersion(HashHdr))
     return EC;
 

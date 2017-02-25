@@ -31,7 +31,7 @@ ModStream::ModStream(const ModInfo &Module,
 ModStream::~ModStream() = default;
 
 Error ModStream::reload() {
-  BinaryStreamReader Reader(*Stream);
+  StreamReader Reader(*Stream);
 
   uint32_t SymbolSize = Mod.getSymbolDebugInfoByteSize();
   uint32_t C11Size = Mod.getLineInfoByteSize();
@@ -41,9 +41,9 @@ Error ModStream::reload() {
     return make_error<RawError>(raw_error_code::corrupt_file,
                                 "Module has both C11 and C13 line info");
 
-  BinaryStreamRef S;
+  ReadableStreamRef S;
 
-  if (auto EC = Reader.readInteger(Signature))
+  if (auto EC = Reader.readInteger(Signature, llvm::support::little))
     return EC;
   if (auto EC = Reader.readArray(SymbolsSubstream, SymbolSize - 4))
     return EC;
@@ -53,12 +53,12 @@ Error ModStream::reload() {
   if (auto EC = Reader.readStreamRef(C13LinesSubstream, C13Size))
     return EC;
 
-  BinaryStreamReader LineReader(C13LinesSubstream);
+  StreamReader LineReader(C13LinesSubstream);
   if (auto EC = LineReader.readArray(LineInfo, LineReader.bytesRemaining()))
     return EC;
 
   uint32_t GlobalRefsSize;
-  if (auto EC = Reader.readInteger(GlobalRefsSize))
+  if (auto EC = Reader.readInteger(GlobalRefsSize, llvm::support::little))
     return EC;
   if (auto EC = Reader.readStreamRef(GlobalRefsSubstream, GlobalRefsSize))
     return EC;

@@ -100,10 +100,10 @@ define void @i56_and_or(i56* %a) {
 ; CHECK-NEXT:    andq %rax, %rcx
 ; CHECK-NEXT:    movl %ecx, (%rdi)
 ; CHECK-NEXT:    movq %rcx, %rax
-; CHECK-NEXT:    shrq $48, %rax
-; CHECK-NEXT:    movb %al, 6(%rdi)
-; CHECK-NEXT:    shrq $32, %rcx
-; CHECK-NEXT:    movw %cx, 4(%rdi)
+; CHECK-NEXT:    shrq $32, %rax
+; CHECK-NEXT:    movw %ax, 4(%rdi)
+; CHECK-NEXT:    shrq $48, %rcx
+; CHECK-NEXT:    movb %cl, 6(%rdi)
 ; CHECK-NEXT:    retq
   %b = load i56, i56* %a, align 1
   %c = and i56 %b, -128
@@ -127,9 +127,9 @@ define void @i56_insert_bit(i56* %a, i1 zeroext %bit) {
 ; CHECK-NEXT:    movabsq $72057594037919743, %rdx # imm = 0xFFFFFFFFFFDFFF
 ; CHECK-NEXT:    andq %rcx, %rdx
 ; CHECK-NEXT:    orq %rdx, %rax
+; CHECK-NEXT:    movl %eax, (%rdi)
 ; CHECK-NEXT:    shrq $48, %rdx
 ; CHECK-NEXT:    movb %dl, 6(%rdi)
-; CHECK-NEXT:    movl %eax, (%rdi)
 ; CHECK-NEXT:    shrq $32, %rax
 ; CHECK-NEXT:    movw %ax, 4(%rdi)
 ; CHECK-NEXT:    retq

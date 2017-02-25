@@ -1,7 +1,7 @@
 ; RUN: llc -mtriple=arm-eabi -mattr=+v6 %s -o - | FileCheck %s
 
 define i32 @test1(i32 %X) nounwind {
-; CHECK: test1
+; CHECK-LABEL: test1
 ; CHECK: rev16 r0, r0
         %tmp1 = lshr i32 %X, 8
         %X15 = bitcast i32 %X to i32
@@ -17,7 +17,7 @@ define i32 @test1(i32 %X) nounwind {
 }
 
 define i32 @test2(i32 %X) nounwind {
-; CHECK: test2
+; CHECK-LABEL: test2
 ; CHECK: revsh r0, r0
         %tmp1 = lshr i32 %X, 8
         %tmp1.upgrd.1 = trunc i32 %tmp1 to i16
@@ -58,7 +58,7 @@ entry:
 ; rdar://9609059
 define i32 @test5(i32 %i) nounwind readnone {
 entry:
-; CHECK: test5
+; CHECK-LABEL: test5
 ; CHECK: revsh r0, r0
   %shl = shl i32 %i, 24
   %shr = ashr exact i32 %shl, 16
@@ -71,7 +71,7 @@ entry:
 ; rdar://9609108
 define i32 @test6(i32 %x) nounwind readnone {
 entry:
-; CHECK: test6
+; CHECK-LABEL: test6
 ; CHECK: rev16 r0, r0
   %and = shl i32 %x, 8
   %shl = and i32 %and, 65280
@@ -88,7 +88,7 @@ entry:
 ; rdar://9164521
 define i32 @test7(i32 %a) nounwind readnone {
 entry:
-; CHECK: test7
+; CHECK-LABEL: test7
 ; CHECK: rev r0, r0
 ; CHECK: lsr r0, r0, #16
   %and = lshr i32 %a, 8
@@ -101,7 +101,7 @@ entry:
 
 define i32 @test8(i32 %a) nounwind readnone {
 entry:
-; CHECK: test8
+; CHECK-LABEL: test8
 ; CHECK: revsh r0, r0
   %and = lshr i32 %a, 8
   %shr4 = and i32 %and, 255
@@ -115,7 +115,7 @@ entry:
 ; rdar://10750814
 define zeroext i16 @test9(i16 zeroext %v) nounwind readnone {
 entry:
-; CHECK: test9
+; CHECK-LABEL: test9
 ; CHECK: rev16 r0, r0
   %conv = zext i16 %v to i32
   %shr4 = lshr i32 %conv, 8

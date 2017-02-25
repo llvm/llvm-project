@@ -13,47 +13,49 @@
 
 using namespace llvm;
 using namespace llvm::codeview;
+using namespace llvm::msf;
 
-Error IModuleSubstreamVisitor::visitSymbols(BinaryStreamRef Data) {
+Error IModuleSubstreamVisitor::visitSymbols(ReadableStreamRef Data) {
   return visitUnknown(ModuleSubstreamKind::Symbols, Data);
 }
-Error IModuleSubstreamVisitor::visitLines(BinaryStreamRef Data,
+Error IModuleSubstreamVisitor::visitLines(ReadableStreamRef Data,
                                           const LineSubstreamHeader *Header,
                                           const LineInfoArray &Lines) {
   return visitUnknown(ModuleSubstreamKind::Lines, Data);
 }
-Error IModuleSubstreamVisitor::visitStringTable(BinaryStreamRef Data) {
+Error IModuleSubstreamVisitor::visitStringTable(ReadableStreamRef Data) {
   return visitUnknown(ModuleSubstreamKind::StringTable, Data);
 }
 Error IModuleSubstreamVisitor::visitFileChecksums(
-    BinaryStreamRef Data, const FileChecksumArray &Checksums) {
+    ReadableStreamRef Data, const FileChecksumArray &Checksums) {
   return visitUnknown(ModuleSubstreamKind::FileChecksums, Data);
 }
-Error IModuleSubstreamVisitor::visitFrameData(BinaryStreamRef Data) {
+Error IModuleSubstreamVisitor::visitFrameData(ReadableStreamRef Data) {
   return visitUnknown(ModuleSubstreamKind::FrameData, Data);
 }
-Error IModuleSubstreamVisitor::visitInlineeLines(BinaryStreamRef Data) {
+Error IModuleSubstreamVisitor::visitInlineeLines(ReadableStreamRef Data) {
   return visitUnknown(ModuleSubstreamKind::InlineeLines, Data);
 }
-Error IModuleSubstreamVisitor::visitCrossScopeImports(BinaryStreamRef Data) {
+Error IModuleSubstreamVisitor::visitCrossScopeImports(ReadableStreamRef Data) {
   return visitUnknown(ModuleSubstreamKind::CrossScopeExports, Data);
 }
-Error IModuleSubstreamVisitor::visitCrossScopeExports(BinaryStreamRef Data) {
+Error IModuleSubstreamVisitor::visitCrossScopeExports(ReadableStreamRef Data) {
   return visitUnknown(ModuleSubstreamKind::CrossScopeImports, Data);
 }
-Error IModuleSubstreamVisitor::visitILLines(BinaryStreamRef Data) {
+Error IModuleSubstreamVisitor::visitILLines(ReadableStreamRef Data) {
   return visitUnknown(ModuleSubstreamKind::ILLines, Data);
 }
-Error IModuleSubstreamVisitor::visitFuncMDTokenMap(BinaryStreamRef Data) {
+Error IModuleSubstreamVisitor::visitFuncMDTokenMap(ReadableStreamRef Data) {
   return visitUnknown(ModuleSubstreamKind::FuncMDTokenMap, Data);
 }
-Error IModuleSubstreamVisitor::visitTypeMDTokenMap(BinaryStreamRef Data) {
+Error IModuleSubstreamVisitor::visitTypeMDTokenMap(ReadableStreamRef Data) {
   return visitUnknown(ModuleSubstreamKind::TypeMDTokenMap, Data);
 }
-Error IModuleSubstreamVisitor::visitMergedAssemblyInput(BinaryStreamRef Data) {
+Error IModuleSubstreamVisitor::visitMergedAssemblyInput(
+    ReadableStreamRef Data) {
   return visitUnknown(ModuleSubstreamKind::MergedAssemblyInput, Data);
 }
-Error IModuleSubstreamVisitor::visitCoffSymbolRVA(BinaryStreamRef Data) {
+Error IModuleSubstreamVisitor::visitCoffSymbolRVA(ReadableStreamRef Data) {
   return visitUnknown(ModuleSubstreamKind::CoffSymbolRVA, Data);
 }
 
@@ -63,7 +65,7 @@ Error llvm::codeview::visitModuleSubstream(const ModuleSubstream &R,
   case ModuleSubstreamKind::Symbols:
     return V.visitSymbols(R.getRecordData());
   case ModuleSubstreamKind::Lines: {
-    BinaryStreamReader Reader(R.getRecordData());
+    StreamReader Reader(R.getRecordData());
     const LineSubstreamHeader *Header;
     if (auto EC = Reader.readObject(Header))
       return EC;
@@ -76,7 +78,7 @@ Error llvm::codeview::visitModuleSubstream(const ModuleSubstream &R,
   case ModuleSubstreamKind::StringTable:
     return V.visitStringTable(R.getRecordData());
   case ModuleSubstreamKind::FileChecksums: {
-    BinaryStreamReader Reader(R.getRecordData());
+    StreamReader Reader(R.getRecordData());
     FileChecksumArray Checksums;
     if (auto EC = Reader.readArray(Checksums, Reader.bytesRemaining()))
       return EC;

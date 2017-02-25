@@ -19,7 +19,6 @@
 
 using namespace llvm;
 using namespace llvm::pdb;
-using namespace llvm::support;
 
 namespace {
 class StringTableBuilderTest : public ::testing::Test {};
@@ -34,13 +33,13 @@ TEST_F(StringTableBuilderTest, Simple) {
   EXPECT_EQ(9U, Builder.insert("baz"));
 
   std::vector<uint8_t> Buffer(Builder.finalize());
-  MutableBinaryByteStream OutStream(Buffer, little);
-  BinaryStreamWriter Writer(OutStream);
+  msf::MutableByteStream OutStream(Buffer);
+  msf::StreamWriter Writer(OutStream);
   EXPECT_NO_ERROR(Builder.commit(Writer));
 
   // Reads the contents back.
-  BinaryByteStream InStream(Buffer, little);
-  BinaryStreamReader Reader(InStream);
+  msf::ByteStream InStream(Buffer);
+  msf::StreamReader Reader(InStream);
   StringTable Table;
   EXPECT_NO_ERROR(Table.load(Reader));
 
