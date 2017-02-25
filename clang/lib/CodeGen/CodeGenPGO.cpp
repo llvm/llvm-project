@@ -626,12 +626,14 @@ void CodeGenPGO::assignRegionCounters(GlobalDecl GD, llvm::Function *Fn) {
   // Constructors and destructors may be represented by several functions in IR.
   // If so, instrument only base variant, others are implemented by delegation
   // to the base one, it would be counted twice otherwise.
-  if (CGM.getTarget().getCXXABI().hasConstructorVariants() &&
-      ((isa<CXXConstructorDecl>(GD.getDecl()) &&
-        GD.getCtorType() != Ctor_Base) ||
-       (isa<CXXDestructorDecl>(GD.getDecl()) &&
-        GD.getDtorType() != Dtor_Base))) {
+  if (CGM.getTarget().getCXXABI().hasConstructorVariants()) {
+    if (isa<CXXDestructorDecl>(D) && GD.getDtorType() != Dtor_Base)
       return;
+
+    if (const auto *CCD = dyn_cast<CXXConstructorDecl>(D))
+      if (GD.getCtorType() != Ctor_Base &&
+          CodeGenFunction::IsConstructorDelegationValid(CCD))
+        return;
   }
   CGM.ClearUnusedCoverageMapping(D);
   setFuncName(Fn);
@@ -737,7 +739,8 @@ CodeGenPGO::applyFunctionAttributes(llvm::IndexedInstrProfReader *PGOReader,
   Fn->setEntryCount(FunctionCount);
 }
 
-void CodeGenPGO::emitCounterIncrement(CGBuilderTy &Builder, const Stmt *S) {
+void CodeGenPGO::emitCounterIncrement(CGBuilderTy &Builder, const Stmt *S,
+                                      llvm::Value *StepV) {
   if (!CGM.getCodeGenOpts().hasProfileClangInstr() || !RegionCounterMap)
     return;
   if (!Builder.GetInsertBlock())
@@ -745,11 +748,17 @@ void CodeGenPGO::emitCounterIncrement(CGBuilderTy &Builder, const Stmt *S) {
 
   unsigned Counter = (*RegionCounterMap)[S];
   auto *I8PtrTy = llvm::Type::getInt8PtrTy(CGM.getLLVMContext());
-  Builder.CreateCall(CGM.getIntrinsic(llvm::Intrinsic::instrprof_increment),
-                     {llvm::ConstantExpr::getBitCast(FuncNameVar, I8PtrTy),
-                      Builder.getInt64(FunctionHash),
-                      Builder.getInt32(NumRegionCounters),
-                      Builder.getInt32(Counter)});
+
+  ArrayRef<llvm::Value *> Args = {
+      llvm::ConstantExpr::getBitCast(FuncNameVar, I8PtrTy),
+      Builder.getInt64(FunctionHash), Builder.getInt32(NumRegionCounters),
+      Builder.getInt32(Counter), StepV};
+  if (!StepV)
+    Builder.CreateCall(CGM.getIntrinsic(llvm::Intrinsic::instrprof_increment),
+                       Args.drop_back(1));
+  else
+    Builder.CreateCall(
+        CGM.getIntrinsic(llvm::Intrinsic::instrprof_increment_step), Args);
 }
 
 // This method either inserts a call to the profile run-time during

@@ -105,7 +105,8 @@ private:
   void emitCounterRegionMapping(const Decl *D);
 
 public:
-  void emitCounterIncrement(CGBuilderTy &Builder, const Stmt *S);
+  void emitCounterIncrement(CGBuilderTy &Builder, const Stmt *S,
+                            llvm::Value *StepV);
 
   /// Return the region count for the counter at the given index.
   uint64_t getRegionCount(const Stmt *S) {

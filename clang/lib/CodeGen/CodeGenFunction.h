@@ -1127,10 +1127,11 @@ private:
                                             uint64_t LoopCount);
 
 public:
-  /// Increment the profiler's counter for the given statement.
-  void incrementProfileCounter(const Stmt *S) {
+  /// Increment the profiler's counter for the given statement by \p StepV.
+  /// If \p StepV is null, the default increment is 1.
+  void incrementProfileCounter(const Stmt *S, llvm::Value *StepV = nullptr) {
     if (CGM.getCodeGenOpts().hasProfileClangInstr())
-      PGO.emitCounterIncrement(Builder, S);
+      PGO.emitCounterIncrement(Builder, S, StepV);
     PGO.setCurrentStmt(S);
   }
 
@@ -1563,6 +1564,8 @@ public:
                      const FunctionArgList &Args,
                      SourceLocation Loc = SourceLocation(),
                      SourceLocation StartLoc = SourceLocation());
+
+  static bool IsConstructorDelegationValid(const CXXConstructorDecl *Ctor);
 
   void EmitConstructorBody(FunctionArgList &Args);
   void EmitDestructorBody(FunctionArgList &Args);
@@ -2030,6 +2033,10 @@ public:
   llvm::BlockAddress *GetAddrOfLabel(const LabelDecl *L);
   llvm::BasicBlock *GetIndirectGotoBlock();
 
+  /// Check if \p E is a reference, or a C++ "this" pointer wrapped in value-
+  /// preserving casts.
+  static bool IsDeclRefOrWrappedCXXThis(const Expr *E);
+
   /// EmitNullInitialization - Generate code to set a value of the given type to
   /// null, If the type contains data member pointers, they will be initialized
   /// to -1 in accordance with the Itanium C++ ABI.
@@ -2252,7 +2259,7 @@ public:
   /// appropriate size and alignment for an object of type \p Type.
   void EmitTypeCheck(TypeCheckKind TCK, SourceLocation Loc, llvm::Value *V,
                      QualType Type, CharUnits Alignment = CharUnits::Zero(),
-                     bool SkipNullCheck = false);
+                     SanitizerSet SkippedChecks = SanitizerSet());
 
   /// \brief Emit a check that \p Base points into an array object, which
   /// we can access at index \p Index. \p Accessed should be \c false if we
