@@ -12,7 +12,7 @@
 #include "ThreadMinidump.h"
 
 // Other libraries and framework includes
-#include "lldb/Core/DataBufferHeap.h"
+#include "lldb/Core/DataBufferLLVM.h"
 #include "lldb/Core/Log.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
@@ -25,6 +25,7 @@
 #include "lldb/Target/UnixSignals.h"
 #include "lldb/Utility/LLDBAssert.h"
 
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Threading.h"
 
 // C includes
@@ -50,20 +51,25 @@ lldb::ProcessSP ProcessMinidump::CreateInstance(lldb::TargetSP target_sp,
 
   lldb::ProcessSP process_sp;
   // Read enough data for the Minidump header
-  const size_t header_size = sizeof(MinidumpHeader);
-  lldb::DataBufferSP data_sp(crash_file->MemoryMapFileContents(0, header_size));
-  if (!data_sp)
+  constexpr size_t header_size = sizeof(MinidumpHeader);
+  auto DataPtr =
+      DataBufferLLVM::CreateFromFileSpec(*crash_file, header_size, 0);
+  if (!DataPtr)
     return nullptr;
+
+  assert(DataPtr->GetByteSize() == header_size);
 
   // first, only try to parse the header, beacuse we need to be fast
-  llvm::ArrayRef<uint8_t> header_data(data_sp->GetBytes(), header_size);
-  const MinidumpHeader *header = MinidumpHeader::Parse(header_data);
-
-  if (data_sp->GetByteSize() != header_size || header == nullptr)
+  llvm::ArrayRef<uint8_t> HeaderBytes = DataPtr->GetData();
+  const MinidumpHeader *header = MinidumpHeader::Parse(HeaderBytes);
+  if (header == nullptr)
     return nullptr;
 
-  lldb::DataBufferSP all_data_sp(crash_file->MemoryMapFileContents());
-  auto minidump_parser = MinidumpParser::Create(all_data_sp);
+  auto AllData = DataBufferLLVM::CreateFromFileSpec(*crash_file, -1, 0);
+  if (!AllData)
+    return nullptr;
+
+  auto minidump_parser = MinidumpParser::Create(AllData);
   // check if the parser object is valid
   if (!minidump_parser)
     return nullptr;

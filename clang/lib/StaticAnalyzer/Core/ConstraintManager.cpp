@@ -20,8 +20,8 @@ ConstraintManager::~ConstraintManager() {}
 
 static DefinedSVal getLocFromSymbol(const ProgramStateRef &State,
                                     SymbolRef Sym) {
-  const MemRegion *R = State->getStateManager().getRegionManager()
-                                               .getSymbolicRegion(Sym);
+  const MemRegion *R =
+      State->getStateManager().getRegionManager().getSymbolicRegion(Sym);
   return loc::MemRegionVal(R);
 }
 

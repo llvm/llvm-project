@@ -118,7 +118,7 @@ uint64_t InputSectionBase::getOffset(uint64_t Offset) const {
 }
 
 template <class ELFT>
-OutputSectionBase *InputSectionBase::getOutputSection() const {
+OutputSection *InputSectionBase::getOutputSection() const {
   if (auto *MS = dyn_cast<MergeInputSection<ELFT>>(this))
     return MS->MergeSec ? MS->MergeSec->OutSec : nullptr;
   if (auto *EH = dyn_cast<EhInputSection<ELFT>>(this))
@@ -827,10 +827,10 @@ template InputSectionBase *InputSectionBase::getLinkOrderDep<ELF32BE>() const;
 template InputSectionBase *InputSectionBase::getLinkOrderDep<ELF64LE>() const;
 template InputSectionBase *InputSectionBase::getLinkOrderDep<ELF64BE>() const;
 
-template OutputSectionBase *InputSectionBase::getOutputSection<ELF32LE>() const;
-template OutputSectionBase *InputSectionBase::getOutputSection<ELF32BE>() const;
-template OutputSectionBase *InputSectionBase::getOutputSection<ELF64LE>() const;
-template OutputSectionBase *InputSectionBase::getOutputSection<ELF64BE>() const;
+template OutputSection *InputSectionBase::getOutputSection<ELF32LE>() const;
+template OutputSection *InputSectionBase::getOutputSection<ELF32BE>() const;
+template OutputSection *InputSectionBase::getOutputSection<ELF64LE>() const;
+template OutputSection *InputSectionBase::getOutputSection<ELF64BE>() const;
 
 template InputSectionBase *InputSection::getRelocatedSection<ELF32LE>();
 template InputSectionBase *InputSection::getRelocatedSection<ELF32BE>();

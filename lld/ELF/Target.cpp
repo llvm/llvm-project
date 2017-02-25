@@ -65,7 +65,7 @@ template <class ELFT> static std::string getErrorLoc(uint8_t *Loc) {
     if (!IS || !IS->OutSec)
       continue;
 
-    uint8_t *ISLoc = cast<OutputSection<ELFT>>(IS->OutSec)->Loc + IS->OutSecOff;
+    uint8_t *ISLoc = cast<OutputSection>(IS->OutSec)->Loc + IS->OutSecOff;
     if (ISLoc <= Loc && Loc < ISLoc + IS->template getSize<ELFT>())
       return IS->template getLocation<ELFT>(Loc - ISLoc) + ": ";
   }

@@ -17,7 +17,7 @@ namespace elf {
 class SymbolBody;
 class InputSection;
 class InputSectionBase;
-class OutputSectionBase;
+class OutputSection;
 
 // List of target-independent relocation types. Relocations read
 // from files are converted to these types so that the main code
@@ -112,7 +112,7 @@ struct Relocation {
 template <class ELFT> void scanRelocations(InputSectionBase &);
 
 template <class ELFT>
-void createThunks(ArrayRef<OutputSectionBase *> OutputSections);
+void createThunks(ArrayRef<OutputSection *> OutputSections);
 
 // Return a int64_t to make sure we get the sign extension out of the way as
 // early as possible.

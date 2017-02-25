@@ -71,6 +71,13 @@ protected:
   void verifyFormat(llvm::StringRef Code,
                     const FormatStyle &Style = getLLVMStyle()) {
     EXPECT_EQ(Code.str(), format(test::messUp(Code), Style));
+    if (Style.Language == FormatStyle::LK_Cpp) {
+      // Objective-C++ is a superset of C++, so everything checked for C++
+      // needs to be checked for Objective-C++ as well.
+      FormatStyle ObjCStyle = Style;
+      ObjCStyle.Language = FormatStyle::LK_ObjC;
+      EXPECT_EQ(Code.str(), format(test::messUp(Code), ObjCStyle));
+    }
   }
 
   void verifyIncompleteFormat(llvm::StringRef Code,

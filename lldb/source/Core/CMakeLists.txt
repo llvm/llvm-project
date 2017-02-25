@@ -10,7 +10,7 @@ add_lldb_library(lldbCore
   Communication.cpp
   Connection.cpp
   DataBufferHeap.cpp
-  DataBufferMemoryMap.cpp
+  DataBufferLLVM.cpp
   DataEncoder.cpp
   DataExtractor.cpp
   Debugger.cpp

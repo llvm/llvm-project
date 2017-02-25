@@ -31,8 +31,7 @@ template <class ELFT> class DefinedRegular;
 template <class ELFT> class EhFrameSection;
 template <class ELFT> class MergeSyntheticSection;
 template <class ELFT> class ObjectFile;
-template <class ELFT> class OutputSection;
-class OutputSectionBase;
+class OutputSection;
 
 // This corresponds to a section of an input file.
 class InputSectionBase {
@@ -78,7 +77,7 @@ public:
                    uint64_t Entsize, uint32_t Link, uint32_t Info,
                    uint64_t Addralign, ArrayRef<uint8_t> Data, StringRef Name,
                    Kind SectionKind);
-  OutputSectionBase *OutSec = nullptr;
+  OutputSection *OutSec = nullptr;
 
   // Relocations that refer to this section.
   const void *FirstRelocation = nullptr;
@@ -110,7 +109,7 @@ public:
   // Returns the size of this section (even if this is a common or BSS.)
   template <class ELFT> size_t getSize() const;
 
-  template <class ELFT> OutputSectionBase *getOutputSection() const;
+  template <class ELFT> OutputSection *getOutputSection() const;
 
   template <class ELFT> ObjectFile<ELFT> *getFile() const;
 
@@ -248,7 +247,10 @@ public:
   EhFrameSection<ELFT> *EHSec = nullptr;
 };
 
-// This corresponds to a non SHF_MERGE section of an input file.
+// This is a section that is added directly to an output section
+// instead of needing special combination via a synthetic section. This
+// includes all input sections with the exceptions of SHF_MERGE and
+// .eh_frame. It also includes the synthetic sections themselves.
 class InputSection : public InputSectionBase {
 public:
   InputSection();

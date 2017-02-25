@@ -354,13 +354,25 @@ static bool getArg(opt::InputArgList &Args, unsigned K1, unsigned K2,
   return Default;
 }
 
+static std::vector<StringRef> getArgs(opt::InputArgList &Args, int Id) {
+  std::vector<StringRef> V;
+  for (auto *Arg : Args.filtered(Id))
+    V.push_back(Arg->getValue());
+  return V;
+}
+
+static std::string getRPath(opt::InputArgList &Args) {
+  std::vector<StringRef> V = getArgs(Args, OPT_rpath);
+  return llvm::join(V.begin(), V.end(), ":");
+}
+
 // Determines what we should do if there are remaining unresolved
 // symbols after the name resolution.
 static UnresolvedPolicy getUnresolvedSymbolPolicy(opt::InputArgList &Args) {
   // -noinhibit-exec or -r imply some default values.
   if (Args.hasArg(OPT_noinhibit_exec))
     return UnresolvedPolicy::WarnAll;
-  if (Config->Relocatable)
+  if (Args.hasArg(OPT_relocatable))
     return UnresolvedPolicy::IgnoreAll;
 
   UnresolvedPolicy ErrorOrWarn =
@@ -396,7 +408,7 @@ static UnresolvedPolicy getUnresolvedSymbolPolicy(opt::InputArgList &Args) {
   return ErrorOrWarn;
 }
 
-static Target2Policy getTarget2Option(opt::InputArgList &Args) {
+static Target2Policy getTarget2(opt::InputArgList &Args) {
   if (auto *Arg = Args.getLastArg(OPT_target2)) {
     StringRef S = Arg->getValue();
     if (S == "rel")
@@ -420,9 +432,10 @@ static bool isOutputFormatBinary(opt::InputArgList &Args) {
   return false;
 }
 
-static DiscardPolicy getDiscardOption(opt::InputArgList &Args) {
-  if (Config->Relocatable)
+static DiscardPolicy getDiscard(opt::InputArgList &Args) {
+  if (Args.hasArg(OPT_relocatable))
     return DiscardPolicy::None;
+
   auto *Arg =
       Args.getLastArg(OPT_discard_all, OPT_discard_locals, OPT_discard_none);
   if (!Arg)
@@ -434,20 +447,23 @@ static DiscardPolicy getDiscardOption(opt::InputArgList &Args) {
   return DiscardPolicy::None;
 }
 
-static StringRef getDynamicLinkerOption(opt::InputArgList &Args) {
+static StringRef getDynamicLinker(opt::InputArgList &Args) {
   auto *Arg = Args.getLastArg(OPT_dynamic_linker, OPT_no_dynamic_linker);
   if (!Arg || Arg->getOption().getID() == OPT_no_dynamic_linker)
     return "";
   return Arg->getValue();
 }
 
-static StripPolicy getStripOption(opt::InputArgList &Args) {
-  if (auto *Arg = Args.getLastArg(OPT_strip_all, OPT_strip_debug)) {
-    if (Arg->getOption().getID() == OPT_strip_all)
-      return StripPolicy::All;
-    return StripPolicy::Debug;
-  }
-  return StripPolicy::None;
+static StripPolicy getStrip(opt::InputArgList &Args) {
+  if (Args.hasArg(OPT_relocatable))
+    return StripPolicy::None;
+
+  auto *Arg = Args.getLastArg(OPT_strip_all, OPT_strip_debug);
+  if (!Arg)
+    return StripPolicy::None;
+  if (Arg->getOption().getID() == OPT_strip_all)
+    return StripPolicy::All;
+  return StripPolicy::Debug;
 }
 
 static uint64_t parseSectionAddress(StringRef S, opt::Arg *Arg) {
@@ -477,7 +493,7 @@ static StringMap<uint64_t> getSectionStartMap(opt::InputArgList &Args) {
   return Ret;
 }
 
-static SortSectionPolicy getSortKind(opt::InputArgList &Args) {
+static SortSectionPolicy getSortSection(opt::InputArgList &Args) {
   StringRef S = getString(Args, OPT_sort_section);
   if (S == "alignment")
     return SortSectionPolicy::Alignment;
@@ -486,6 +502,17 @@ static SortSectionPolicy getSortKind(opt::InputArgList &Args) {
   if (!S.empty())
     error("unknown --sort-section rule: " + S);
   return SortSectionPolicy::Default;
+}
+
+static std::pair<bool, bool> getHashStyle(opt::InputArgList &Args) {
+  StringRef S = getString(Args, OPT_hash_style, "sysv");
+  if (S == "sysv")
+    return {true, false};
+  if (S == "gnu")
+    return {false, true};
+  if (S != "both")
+    error("unknown -hash-style: " + S);
+  return {true, true};
 }
 
 static std::vector<StringRef> getLines(MemoryBufferRef MB) {
@@ -503,80 +530,65 @@ static std::vector<StringRef> getLines(MemoryBufferRef MB) {
 
 // Initializes Config members by the command line options.
 void LinkerDriver::readConfigs(opt::InputArgList &Args) {
-  for (auto *Arg : Args.filtered(OPT_L))
-    Config->SearchPaths.push_back(Arg->getValue());
-
-  std::vector<StringRef> RPaths;
-  for (auto *Arg : Args.filtered(OPT_rpath))
-    RPaths.push_back(Arg->getValue());
-  if (!RPaths.empty())
-    Config->RPath = llvm::join(RPaths.begin(), RPaths.end(), ":");
-
-  if (auto *Arg = Args.getLastArg(OPT_m)) {
-    // Parse ELF{32,64}{LE,BE} and CPU type.
-    StringRef S = Arg->getValue();
-    std::tie(Config->EKind, Config->EMachine, Config->OSABI) =
-        parseEmulation(S);
-    Config->MipsN32Abi = (S == "elf32btsmipn32" || S == "elf32ltsmipn32");
-    Config->Emulation = S;
-  }
-
   Config->AllowMultipleDefinition = Args.hasArg(OPT_allow_multiple_definition);
+  Config->AuxiliaryList = getArgs(Args, OPT_auxiliary);
   Config->Bsymbolic = Args.hasArg(OPT_Bsymbolic);
   Config->BsymbolicFunctions = Args.hasArg(OPT_Bsymbolic_functions);
+  Config->DefineCommon = getArg(Args, OPT_define_common, OPT_no_define_common,
+                                !Args.hasArg(OPT_relocatable));
   Config->Demangle = getArg(Args, OPT_demangle, OPT_no_demangle, true);
   Config->DisableVerify = Args.hasArg(OPT_disable_verify);
-  Config->EmitRelocs = Args.hasArg(OPT_emit_relocs);
+  Config->Discard = getDiscard(Args);
+  Config->DynamicLinker = getDynamicLinker(Args);
   Config->EhFrameHdr = Args.hasArg(OPT_eh_frame_hdr);
+  Config->EmitRelocs = Args.hasArg(OPT_emit_relocs);
   Config->EnableNewDtags = !Args.hasArg(OPT_disable_new_dtags);
+  Config->Entry = getString(Args, OPT_entry);
   Config->ExportDynamic =
       getArg(Args, OPT_export_dynamic, OPT_no_export_dynamic, false);
   Config->FatalWarnings =
       getArg(Args, OPT_fatal_warnings, OPT_no_fatal_warnings, false);
+  Config->Fini = getString(Args, OPT_fini, "_fini");
   Config->GcSections = getArg(Args, OPT_gc_sections, OPT_no_gc_sections, false);
   Config->GdbIndex = Args.hasArg(OPT_gdb_index);
   Config->ICF = Args.hasArg(OPT_icf);
-  Config->NoGnuUnique = Args.hasArg(OPT_no_gnu_unique);
-  Config->NoUndefinedVersion = Args.hasArg(OPT_no_undefined_version);
-  Config->Nostdlib = Args.hasArg(OPT_nostdlib);
-  Config->OMagic = Args.hasArg(OPT_omagic);
-  Config->OptRemarksWithHotness = Args.hasArg(OPT_opt_remarks_with_hotness);
-  Config->Pie = getArg(Args, OPT_pie, OPT_nopie, false);
-  Config->PrintGcSections = Args.hasArg(OPT_print_gc_sections);
-  Config->Relocatable = Args.hasArg(OPT_relocatable);
-  Config->DefineCommon = getArg(Args, OPT_define_common, OPT_no_define_common,
-                                !Config->Relocatable);
-  Config->Discard = getDiscardOption(Args);
-  Config->SaveTemps = Args.hasArg(OPT_save_temps);
-  Config->SingleRoRx = Args.hasArg(OPT_no_rosegment);
-  Config->Shared = Args.hasArg(OPT_shared);
-  Config->Target1Rel = getArg(Args, OPT_target1_rel, OPT_target1_abs, false);
-  Config->Threads = getArg(Args, OPT_threads, OPT_no_threads, true);
-  Config->Trace = Args.hasArg(OPT_trace);
-  Config->Verbose = Args.hasArg(OPT_verbose);
-  Config->WarnCommon = Args.hasArg(OPT_warn_common);
-  Config->Entry = getString(Args, OPT_entry);
-  Config->Fini = getString(Args, OPT_fini, "_fini");
   Config->Init = getString(Args, OPT_init, "_init");
   Config->LTOAAPipeline = getString(Args, OPT_lto_aa_pipeline);
   Config->LTONewPmPasses = getString(Args, OPT_lto_newpm_passes);
-  Config->MapFile = getString(Args, OPT_Map);
-  Config->OptRemarksFilename = getString(Args, OPT_opt_remarks_filename);
-  Config->OutputFile = getString(Args, OPT_o);
-  Config->SoName = getString(Args, OPT_soname);
-  Config->Sysroot = getString(Args, OPT_sysroot);
-
-  Config->Optimize = getInteger(Args, OPT_O, 1);
   Config->LTOO = getInteger(Args, OPT_lto_O, 2);
-  if (Config->LTOO > 3)
-    error("invalid optimization level for LTO: " + getString(Args, OPT_lto_O));
   Config->LTOPartitions = getInteger(Args, OPT_lto_partitions, 1);
-  if (Config->LTOPartitions == 0)
-    error("--lto-partitions: number of threads must be > 0");
+  Config->MapFile = getString(Args, OPT_Map);
+  Config->NoGnuUnique = Args.hasArg(OPT_no_gnu_unique);
+  Config->NoUndefinedVersion = Args.hasArg(OPT_no_undefined_version);
+  Config->Nostdlib = Args.hasArg(OPT_nostdlib);
+  Config->OFormatBinary = isOutputFormatBinary(Args);
+  Config->Omagic = Args.hasArg(OPT_omagic);
+  Config->OptRemarksFilename = getString(Args, OPT_opt_remarks_filename);
+  Config->OptRemarksWithHotness = Args.hasArg(OPT_opt_remarks_with_hotness);
+  Config->Optimize = getInteger(Args, OPT_O, 1);
+  Config->OutputFile = getString(Args, OPT_o);
+  Config->Pie = getArg(Args, OPT_pie, OPT_nopie, false);
+  Config->PrintGcSections = Args.hasArg(OPT_print_gc_sections);
+  Config->RPath = getRPath(Args);
+  Config->Relocatable = Args.hasArg(OPT_relocatable);
+  Config->SaveTemps = Args.hasArg(OPT_save_temps);
+  Config->SearchPaths = getArgs(Args, OPT_L);
+  Config->SectionStartMap = getSectionStartMap(Args);
+  Config->Shared = Args.hasArg(OPT_shared);
+  Config->SingleRoRx = Args.hasArg(OPT_no_rosegment);
+  Config->SoName = getString(Args, OPT_soname);
+  Config->SortSection = getSortSection(Args);
+  Config->Strip = getStrip(Args);
+  Config->Sysroot = getString(Args, OPT_sysroot);
+  Config->Target1Rel = getArg(Args, OPT_target1_rel, OPT_target1_abs, false);
+  Config->Target2 = getTarget2(Args);
   Config->ThinLTOJobs = getInteger(Args, OPT_thinlto_jobs, -1u);
-  if (Config->ThinLTOJobs == 0)
-    error("--thinlto-jobs: number of threads must be > 0");
-
+  Config->Threads = getArg(Args, OPT_threads, OPT_no_threads, true);
+  Config->Trace = Args.hasArg(OPT_trace);
+  Config->Undefined = getArgs(Args, OPT_undefined);
+  Config->UnresolvedSymbols = getUnresolvedSymbolPolicy(Args);
+  Config->Verbose = Args.hasArg(OPT_verbose);
+  Config->WarnCommon = Args.hasArg(OPT_warn_common);
   Config->ZCombreloc = !hasZOption(Args, "nocombreloc");
   Config->ZExecstack = hasZOption(Args, "execstack");
   Config->ZNocopyreloc = hasZOption(Args, "nocopyreloc");
@@ -587,12 +599,21 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->ZStackSize = getZOptionValue(Args, "stack-size", 0);
   Config->ZWxneeded = hasZOption(Args, "wxneeded");
 
-  Config->DynamicLinker = getDynamicLinkerOption(Args);
-  Config->OFormatBinary = isOutputFormatBinary(Args);
-  Config->SectionStartMap = getSectionStartMap(Args);
-  Config->SortSection = getSortKind(Args);
-  Config->Target2 = getTarget2Option(Args);
-  Config->UnresolvedSymbols = getUnresolvedSymbolPolicy(Args);
+  if (Config->LTOO > 3)
+    error("invalid optimization level for LTO: " + getString(Args, OPT_lto_O));
+  if (Config->LTOPartitions == 0)
+    error("--lto-partitions: number of threads must be > 0");
+  if (Config->ThinLTOJobs == 0)
+    error("--thinlto-jobs: number of threads must be > 0");
+
+  if (auto *Arg = Args.getLastArg(OPT_m)) {
+    // Parse ELF{32,64}{LE,BE} and CPU type.
+    StringRef S = Arg->getValue();
+    std::tie(Config->EKind, Config->EMachine, Config->OSABI) =
+        parseEmulation(S);
+    Config->MipsN32Abi = (S == "elf32btsmipn32" || S == "elf32ltsmipn32");
+    Config->Emulation = S;
+  }
 
   if (Args.hasArg(OPT_print_map))
     Config->MapFile = "-";
@@ -601,22 +622,10 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   // .text segments are writable. Today, the option is still in use to
   // create special-purpose programs such as boot loaders. It doesn't
   // make sense to create PT_GNU_RELRO for such executables.
-  if (Config->OMagic)
+  if (Config->Omagic)
     Config->ZRelro = false;
 
-  if (!Config->Relocatable)
-    Config->Strip = getStripOption(Args);
-
-  if (auto *Arg = Args.getLastArg(OPT_hash_style)) {
-    StringRef S = Arg->getValue();
-    if (S == "gnu") {
-      Config->GnuHash = true;
-      Config->SysvHash = false;
-    } else if (S == "both") {
-      Config->GnuHash = true;
-    } else if (S != "sysv")
-      error("unknown hash style: " + S);
-  }
+  std::tie(Config->SysvHash, Config->GnuHash) = getHashStyle(Args);
 
   // Parse --build-id or --build-id=<style>.
   if (Args.hasArg(OPT_build_id))
@@ -639,13 +648,8 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
     }
   }
 
-  for (auto *Arg : Args.filtered(OPT_auxiliary))
-    Config->AuxiliaryList.push_back(Arg->getValue());
   if (!Config->Shared && !Config->AuxiliaryList.empty())
     error("-f may not be used without -shared");
-
-  for (auto *Arg : Args.filtered(OPT_undefined))
-    Config->Undefined.push_back(Arg->getValue());
 
   for (auto *Arg : Args.filtered(OPT_dynamic_list))
     if (Optional<MemoryBufferRef> Buffer = readFile(Arg->getValue()))

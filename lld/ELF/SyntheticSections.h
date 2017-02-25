@@ -249,7 +249,7 @@ private:
   uint32_t PageEntriesNum = 0;
   // Map output sections referenced by MIPS GOT relocations
   // to the first index of "Page" entries allocated for this section.
-  llvm::SmallMapVector<const OutputSectionBase *, size_t, 16> PageIndexMap;
+  llvm::SmallMapVector<const OutputSection *, size_t, 16> PageIndexMap;
 
   typedef std::pair<const SymbolBody *, uintX_t> GotEntry;
   typedef std::vector<GotEntry> GotEntries;
@@ -364,13 +364,13 @@ class DynamicSection final : public SyntheticSection<ELFT> {
   struct Entry {
     int32_t Tag;
     union {
-      OutputSectionBase *OutSec;
+      OutputSection *OutSec;
       InputSection *InSec;
       uint64_t Val;
       const SymbolBody *Sym;
     };
     enum KindT { SecAddr, SecSize, SymAddr, PlainInt, InSecAddr } Kind;
-    Entry(int32_t Tag, OutputSectionBase *OutSec, KindT Kind = SecAddr)
+    Entry(int32_t Tag, OutputSection *OutSec, KindT Kind = SecAddr)
         : Tag(Tag), OutSec(OutSec), Kind(Kind) {}
     Entry(int32_t Tag, InputSection *Sec)
         : Tag(Tag), InSec(Sec), Kind(InSecAddr) {}
@@ -443,7 +443,7 @@ public:
 
   ArrayRef<SymbolTableEntry> getSymbols() const { return Symbols; }
 
-  static const OutputSectionBase *getOutputSection(SymbolBody *Sym);
+  static const OutputSection *getOutputSection(SymbolBody *Sym);
 
 private:
   void writeLocalSymbols(uint8_t *&Buf);
@@ -777,7 +777,7 @@ public:
 template <class ELFT> class ThunkSection : public SyntheticSection<ELFT> {
 public:
   // ThunkSection in OS, with desired OutSecOff of Off
-  ThunkSection(OutputSectionBase *OS, uint64_t Off);
+  ThunkSection(OutputSection *OS, uint64_t Off);
 
   // Add a newly created Thunk to this container:
   // Thunk is given offset from start of this InputSection
