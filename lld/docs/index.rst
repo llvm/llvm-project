@@ -109,6 +109,29 @@ build that tree. You need `cmake` and of course a C++ compiler.
   $ cmake -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_PROJECTS=lld -DCMAKE_INSTALL_PREFIX=/usr/local ../llvm-project/llvm
   $ make install
 
+Using LLD
+---------
+
+LLD is installed as ``ld.lld``. On Unix, linkers are invoked by
+compiler drivers, so you are not expected to use that command
+directly. There are a few ways to tell compiler drivers to use ld.lld
+instead of the default linker.
+
+The easiest way to do that is to overwrite the default linker. After
+installing LLD to somewhere on your disk, you can create a symbolic
+link by doing ``ld -s /path/to/ld.lld /usr/bin/ld`` so that
+``/usr/bin/ld`` is resolved to LLD.
+
+If you don't want to change the system setting, you can use clang's
+``-fuse-ld`` option. In this way, you want to set ``-fuse-ld=lld`` to
+LDFLAGS when building your programs.
+
+LLD leaves its name and version number to a ``.comment`` section in an
+output. If you are in doubt whether you are successfully using LLD or
+not, run ``objdump -s -j .comment <output-file>`` and examine the
+output. If the string "Linker: LLD" is included in the output, you are
+using LLD.
+
 History
 -------
 

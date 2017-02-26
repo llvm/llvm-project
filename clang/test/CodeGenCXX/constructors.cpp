@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 %s -emit-llvm -o - | FileCheck %s --implicit-check-not=should_not_appear_in_output
 
 struct Member { int x; Member(); Member(int); Member(const Member &); };
 struct VBase { int x; VBase(); VBase(int); VBase(const VBase &); };
@@ -108,4 +108,58 @@ namespace test1 {
   // CHECK-LABEL:    define void @_ZN5test11BC2Ev(
   // CHECK:      [[THIS:%.*]] = load [[B:%.*]]*, [[B:%.*]]**
   // CHECK-NEXT: ret void
+}
+
+// Ensure that we
+// a) emit the ABI-required but useless complete object and deleting destructor
+//    symbols for an abstract class, and 
+// b) do *not* emit references to virtual base destructors for an abstract class
+//
+// Our approach to this is to give these functions a body that simply traps.
+//
+// FIXME: We should ideally not create these symbols at all, but Clang can
+// actually generate references to them in other TUs in some cases, so we can't
+// stop emitting them without breaking ABI. See:
+//
+//   https://github.com/itanium-cxx-abi/cxx-abi/issues/10
+namespace abstract {
+  // Note, the destructor of this class is not instantiated here.
+  template<typename T> struct should_not_appear_in_output {
+    ~should_not_appear_in_output() { int arr[-(int)sizeof(T)]; }
+  };
+
+  struct X { ~X(); };
+
+  struct A : virtual should_not_appear_in_output<int>, X {
+    virtual ~A() = 0;
+  };
+
+  // CHECK-LABEL: define void @_ZN8abstract1AD2Ev(
+  // CHECK: call {{.*}}@_ZN8abstract1XD2Ev(
+  // CHECK: ret
+
+  // CHECK-LABEL: define void @_ZN8abstract1AD1Ev(
+  // CHECK: call {{.*}}@llvm.trap(
+  // CHECK: unreachable
+
+  // CHECK-LABEL: define void @_ZN8abstract1AD0Ev(
+  // CHECK: call {{.*}}@llvm.trap(
+  // CHECK: unreachable
+  A::~A() {}
+
+  struct B : virtual should_not_appear_in_output<int>, X {
+    virtual void f() = 0;
+    ~B();
+  };
+
+  // CHECK-LABEL: define void @_ZN8abstract1BD2Ev(
+  // CHECK: call {{.*}}@_ZN8abstract1XD2Ev(
+  // CHECK: ret
+
+  // CHECK-LABEL: define void @_ZN8abstract1BD1Ev(
+  // CHECK: call {{.*}}@llvm.trap(
+  // CHECK: unreachable
+
+  // CHECK-NOT: @_ZN8abstract1BD0Ev(
+  B::~B() {}
 }

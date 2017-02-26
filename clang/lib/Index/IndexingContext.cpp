@@ -50,7 +50,7 @@ bool IndexingContext::handleReference(const NamedDecl *D, SourceLocation Loc,
                                       ArrayRef<SymbolRelation> Relations,
                                       const Expr *RefE,
                                       const Decl *RefD) {
-  if (!shouldIndexFunctionLocalSymbols() && isFunctionLocalDecl(D))
+  if (!shouldIndexFunctionLocalSymbols() && isFunctionLocalSymbol(D))
     return true;
 
   if (isa<NonTypeTemplateParmDecl>(D) || isa<TemplateTypeParmDecl>(D))
@@ -98,34 +98,6 @@ bool IndexingContext::importedModule(const ImportDecl *ImportD) {
     Roles |= (unsigned)SymbolRole::Implicit;
 
   return DataConsumer.handleModuleOccurence(ImportD, Roles, FID, Offset);
-}
-
-bool IndexingContext::isFunctionLocalDecl(const Decl *D) {
-  assert(D);
-
-  if (isa<TemplateTemplateParmDecl>(D))
-    return true;
-
-  if (isa<ObjCTypeParamDecl>(D))
-    return true;
-
-  if (!D->getParentFunctionOrMethod())
-    return false;
-
-  if (const NamedDecl *ND = dyn_cast<NamedDecl>(D)) {
-    switch (ND->getFormalLinkage()) {
-    case NoLinkage:
-    case VisibleNoLinkage:
-    case InternalLinkage:
-      return true;
-    case UniqueExternalLinkage:
-      llvm_unreachable("Not a sema linkage");
-    case ExternalLinkage:
-      return false;
-    }
-  }
-
-  return true;
 }
 
 bool IndexingContext::isTemplateImplicitInstantiation(const Decl *D) {
@@ -316,12 +288,12 @@ bool IndexingContext::handleDeclOccurrence(const Decl *D, SourceLocation Loc,
   };
 
   if (Parent) {
-    if (IsRef) {
+    if (IsRef || (!isa<ParmVarDecl>(D) && isFunctionLocalSymbol(D))) {
       addRelation(SymbolRelation{
         (unsigned)SymbolRole::RelationContainedBy,
         Parent
       });
-    } else if (!cast<DeclContext>(Parent)->isFunctionOrMethod()) {
+    } else {
       addRelation(SymbolRelation{
         (unsigned)SymbolRole::RelationChildOf,
         Parent

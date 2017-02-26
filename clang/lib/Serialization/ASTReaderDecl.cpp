@@ -1524,7 +1524,8 @@ void ASTDeclReader::ReadCXXDefinitionData(
   Data.ComputedVisibleConversions = Record.readInt();
   Data.UserProvidedDefaultConstructor = Record.readInt();
   Data.DeclaredSpecialMembers = Record.readInt();
-  Data.ImplicitCopyConstructorHasConstParam = Record.readInt();
+  Data.ImplicitCopyConstructorCanHaveConstParamForVBase = Record.readInt();
+  Data.ImplicitCopyConstructorCanHaveConstParamForNonVBase = Record.readInt();
   Data.ImplicitCopyAssignmentHasConstParam = Record.readInt();
   Data.HasDeclaredCopyConstructorWithConstParam = Record.readInt();
   Data.HasDeclaredCopyAssignmentWithConstParam = Record.readInt();
@@ -1654,7 +1655,8 @@ void ASTDeclReader::MergeDefinitionData(
   // ComputedVisibleConversions is handled below.
   MATCH_FIELD(UserProvidedDefaultConstructor)
   OR_FIELD(DeclaredSpecialMembers)
-  MATCH_FIELD(ImplicitCopyConstructorHasConstParam)
+  MATCH_FIELD(ImplicitCopyConstructorCanHaveConstParamForVBase)
+  MATCH_FIELD(ImplicitCopyConstructorCanHaveConstParamForNonVBase)
   MATCH_FIELD(ImplicitCopyAssignmentHasConstParam)
   OR_FIELD(HasDeclaredCopyConstructorWithConstParam)
   OR_FIELD(HasDeclaredCopyAssignmentWithConstParam)
