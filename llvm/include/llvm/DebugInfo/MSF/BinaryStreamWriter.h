@@ -1,4 +1,4 @@
-//===- BinaryStreamWriter.h - Writes objects to a BinaryStream ---*- C++-*-===//
+//===- StreamWriter.h - Writes bytes and objects to a stream ----*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,121 +7,55 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_SUPPORT_BINARYSTREAMWRITER_H
-#define LLVM_SUPPORT_BINARYSTREAMWRITER_H
+#ifndef LLVM_DEBUGINFO_MSF_STREAMWRITER_H
+#define LLVM_DEBUGINFO_MSF_STREAMWRITER_H
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/MSF/BinaryStreamArray.h"
 #include "llvm/DebugInfo/MSF/BinaryStreamRef.h"
+#include "llvm/DebugInfo/MSF/MSFError.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include <cstdint>
 #include <type_traits>
 
 namespace llvm {
+namespace msf {
 
-/// \brief Provides write only access to a subclass of `WritableBinaryStream`.
-/// Provides bounds checking and helpers for writing certain common data types
-/// such as null-terminated strings, integers in various flavors of endianness,
-/// etc.  Can be subclassed to provide reading and writing of custom datatypes,
-/// although no methods are overridable.
-class BinaryStreamWriter {
+class StreamWriter {
 public:
-  BinaryStreamWriter() = default;
-  explicit BinaryStreamWriter(WritableBinaryStreamRef Stream);
-  virtual ~BinaryStreamWriter() {}
+  StreamWriter() = default;
+  explicit StreamWriter(WritableStreamRef Stream);
 
-  /// Write the bytes specified in \p Buffer to the underlying stream.
-  /// On success, updates the offset so that subsequent writes will occur
-  /// at the next unwritten position.
-  ///
-  /// \returns a success error code if the data was successfully written,
-  /// otherwise returns an appropriate error code.
   Error writeBytes(ArrayRef<uint8_t> Buffer);
 
-  /// Write the the integer \p Value to the underlying stream in the
-  /// specified endianness.  On success, updates the offset so that
-  /// subsequent writes occur at the next unwritten position.
-  ///
-  /// \returns a success error code if the data was successfully written,
-  /// otherwise returns an appropriate error code.
-  template <typename T> Error writeInteger(T Value) {
-    return writeIntegers(Value);
-  }
-
-  /// Write a \p ByteSize byte integer to the stream, updating the writer's
-  /// position if successful.
-  ///
-  /// \returns a success error code if the data was successfully written,
-  /// otherwise returns an appropriate error code.
-  Error writeInteger(uint64_t Value, uint32_t ByteSize);
-
-  /// Write a list of integers into the underlying stream and update the
-  /// stream's offset. On success, updates the offset so that subsequent writes
-  /// occur at the next unwritten position.  Use of this method is more
-  /// efficient than calling `writeInteger` multiple times because this performs
-  /// bounds checking only once, and requires only a single error check by the
-  /// user.
-  ///
-  /// \returns a success error code if the data was successfully written,
-  /// otherwise returns an appropriate error code.
-  template <typename... Ts> Error writeIntegers(Ts... Ints) {
-    uint8_t Buffer[sizeof_sum<Ts...>::value];
-
-    writeIntegersImpl(Buffer, Ints...);
+  template <typename T>
+  Error writeInteger(T Value,
+                     llvm::support::endianness Endian = llvm::support::native) {
+    static_assert(std::is_integral<T>::value,
+                  "Cannot call writeInteger with non-integral value!");
+    uint8_t Buffer[sizeof(T)];
+    llvm::support::endian::write<T, llvm::support::unaligned>(Buffer, Value,
+                                                              Endian);
     return writeBytes(Buffer);
   }
 
-  /// Similar to writeInteger
-  template <typename T> Error writeEnum(T Num) {
+  Error writeZeroString(StringRef Str);
+  Error writeFixedString(StringRef Str);
+  Error writeStreamRef(ReadableStreamRef Ref);
+  Error writeStreamRef(ReadableStreamRef Ref, uint32_t Size);
+
+  template <typename T>
+  Error writeEnum(T Num,
+                  llvm::support::endianness Endian = llvm::support::native) {
     static_assert(std::is_enum<T>::value,
                   "Cannot call writeEnum with non-Enum type");
 
     using U = typename std::underlying_type<T>::type;
-    return writeInteger<U>(static_cast<U>(Num));
+    return writeInteger<U>(static_cast<U>(Num), Endian);
   }
 
-  /// Write the the string \p Str to the underlying stream followed by a null
-  /// terminator.  On success, updates the offset so that subsequent writes
-  /// occur at the next unwritten position.  \p Str need not be null terminated
-  /// on input.
-  ///
-  /// \returns a success error code if the data was successfully written,
-  /// otherwise returns an appropriate error code.
-  Error writeCString(StringRef Str);
-
-  /// Write the the string \p Str to the underlying stream without a null
-  /// terminator.  On success, updates the offset so that subsequent writes
-  /// occur at the next unwritten position.
-  ///
-  /// \returns a success error code if the data was successfully written,
-  /// otherwise returns an appropriate error code.
-  Error writeFixedString(StringRef Str);
-
-  /// Efficiently reads all data from \p Ref, and writes it to this stream.
-  /// This operation will not invoke any copies of the source data, regardless
-  /// of the source stream's implementation.
-  ///
-  /// \returns a success error code if the data was successfully written,
-  /// otherwise returns an appropriate error code.
-  Error writeStreamRef(BinaryStreamRef Ref);
-
-  /// Efficiently reads \p Size bytes from \p Ref, and writes it to this stream.
-  /// This operation will not invoke any copies of the source data, regardless
-  /// of the source stream's implementation.
-  ///
-  /// \returns a success error code if the data was successfully written,
-  /// otherwise returns an appropriate error code.
-  Error writeStreamRef(BinaryStreamRef Ref, uint32_t Size);
-
-  /// Writes the object \p Obj to the underlying stream, as if by using memcpy.
-  /// It is up to the caller to ensure that type of \p Obj can be safely copied
-  /// in this fashion, as no checks are made to ensure that this is safe.
-  ///
-  /// \returns a success error code if the data was successfully written,
-  /// otherwise returns an appropriate error code.
   template <typename T> Error writeObject(const T &Obj) {
     static_assert(!std::is_pointer<T>::value,
                   "writeObject should not be used with pointers, to write "
@@ -131,38 +65,23 @@ public:
         ArrayRef<uint8_t>(reinterpret_cast<const uint8_t *>(&Obj), sizeof(T)));
   }
 
-  /// Writes an array of objects of type T to the underlying stream, as if by
-  /// using memcpy.  It is up to the caller to ensure that type of \p Obj can
-  /// be safely copied in this fashion, as no checks are made to ensure that
-  /// this is safe.
-  ///
-  /// \returns a success error code if the data was successfully written,
-  /// otherwise returns an appropriate error code.
   template <typename T> Error writeArray(ArrayRef<T> Array) {
     if (Array.empty())
       return Error::success();
 
     if (Array.size() > UINT32_MAX / sizeof(T))
-      return errorCodeToError(make_error_code(std::errc::no_buffer_space));
+      return make_error<MSFError>(msf_error_code::insufficient_buffer);
 
     return writeBytes(
         ArrayRef<uint8_t>(reinterpret_cast<const uint8_t *>(Array.data()),
                           Array.size() * sizeof(T)));
   }
 
-  /// Writes all data from the array \p Array to the underlying stream.
-  ///
-  /// \returns a success error code if the data was successfully written,
-  /// otherwise returns an appropriate error code.
   template <typename T, typename U>
   Error writeArray(VarStreamArray<T, U> Array) {
     return writeStreamRef(Array.getUnderlyingStream());
   }
 
-  /// Writes all elements from the array \p Array to the underlying stream.
-  ///
-  /// \returns a success error code if the data was successfully written,
-  /// otherwise returns an appropriate error code.
   template <typename T> Error writeArray(FixedStreamArray<T> Array) {
     return writeStreamRef(Array.getUnderlyingStream());
   }
@@ -172,28 +91,12 @@ public:
   uint32_t getLength() const { return Stream.getLength(); }
   uint32_t bytesRemaining() const { return getLength() - getOffset(); }
 
-protected:
-  template <typename T>
-  void writeIntegersImpl(MutableArrayRef<uint8_t> Buffer, T Value) {
-    static_assert(std::is_integral<T>::value,
-                  "Cannot call writeInteger with non-integral value!");
-    assert(Buffer.size() == sizeof(T));
-    llvm::support::endian::write<T, llvm::support::unaligned>(
-        Buffer.data(), Value, Stream.getEndian());
-  }
-
-  template <typename T, typename... Ts>
-  void writeIntegersImpl(MutableArrayRef<uint8_t> Buffer, T Car, Ts... Cdr) {
-    auto First = Buffer.take_front(sizeof(T));
-    auto Rest = Buffer.drop_front(sizeof(T));
-    writeIntegersImpl(First, Car);
-    writeIntegersImpl(Rest, Cdr...);
-  }
-
-  WritableBinaryStreamRef Stream;
+private:
+  WritableStreamRef Stream;
   uint32_t Offset = 0;
 };
 
+} // end namespace msf
 } // end namespace llvm
 
-#endif // LLVM_SUPPORT_BINARYSTREAMWRITER_H
+#endif // LLVM_DEBUGINFO_MSF_STREAMWRITER_H

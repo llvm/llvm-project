@@ -721,7 +721,7 @@ void ExeDepsFix::visitSoftInstr(MachineInstr *mi, unsigned mask) {
 
   // Kill off any remaining uses that don't match available, and build a list of
   // incoming DomainValues that we want to merge.
-  SmallVector<LiveReg, 4> Regs;
+  SmallVector<const LiveReg *, 4> Regs;
   for (int rx : used) {
     assert(LiveRegs && "no space allocated for live registers");
     const LiveReg &LR = LiveRegs[rx];
@@ -731,16 +731,11 @@ void ExeDepsFix::visitSoftInstr(MachineInstr *mi, unsigned mask) {
       continue;
     }
     // Sorted insertion.
-    bool Inserted = false;
-    for (SmallVectorImpl<LiveReg>::iterator i = Regs.begin(), e = Regs.end();
-           i != e && !Inserted; ++i) {
-      if (LR.Def < i->Def) {
-        Inserted = true;
-        Regs.insert(i, LR);
-      }
-    }
-    if (!Inserted)
-      Regs.push_back(LR);
+    auto I = std::upper_bound(Regs.begin(), Regs.end(), &LR,
+                              [](const LiveReg *LHS, const LiveReg *RHS) {
+                                return LHS->Def < RHS->Def;
+                              });
+    Regs.insert(I, &LR);
   }
 
   // doms are now sorted in order of appearance. Try to merge them all, giving
@@ -748,14 +743,14 @@ void ExeDepsFix::visitSoftInstr(MachineInstr *mi, unsigned mask) {
   DomainValue *dv = nullptr;
   while (!Regs.empty()) {
     if (!dv) {
-      dv = Regs.pop_back_val().Value;
+      dv = Regs.pop_back_val()->Value;
       // Force the first dv to match the current instruction.
       dv->AvailableDomains = dv->getCommonDomains(available);
       assert(dv->AvailableDomains && "Domain should have been filtered");
       continue;
     }
 
-    DomainValue *Latest = Regs.pop_back_val().Value;
+    DomainValue *Latest = Regs.pop_back_val()->Value;
     // Skip already merged values.
     if (Latest == dv || Latest->Next)
       continue;

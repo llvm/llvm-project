@@ -33,8 +33,8 @@ class CodeViewRecordIO {
   }
 
 public:
-  explicit CodeViewRecordIO(BinaryStreamReader &Reader) : Reader(&Reader) {}
-  explicit CodeViewRecordIO(BinaryStreamWriter &Writer) : Writer(&Writer) {}
+  explicit CodeViewRecordIO(msf::StreamReader &Reader) : Reader(&Reader) {}
+  explicit CodeViewRecordIO(msf::StreamWriter &Writer) : Writer(&Writer) {}
 
   Error beginRecord(Optional<uint32_t> MaxLength);
   Error endRecord();
@@ -59,9 +59,9 @@ public:
 
   template <typename T> Error mapInteger(T &Value) {
     if (isWriting())
-      return Writer->writeInteger(Value);
+      return Writer->writeInteger(Value, llvm::support::little);
 
-    return Reader->readInteger(Value);
+    return Reader->readInteger(Value, llvm::support::little);
   }
 
   template <typename T> Error mapEnum(T &Value) {
@@ -93,7 +93,7 @@ public:
     SizeType Size;
     if (isWriting()) {
       Size = static_cast<SizeType>(Items.size());
-      if (auto EC = Writer->writeInteger(Size))
+      if (auto EC = Writer->writeInteger(Size, llvm::support::little))
         return EC;
 
       for (auto &X : Items) {
@@ -101,7 +101,7 @@ public:
           return EC;
       }
     } else {
-      if (auto EC = Reader->readInteger(Size))
+      if (auto EC = Reader->readInteger(Size, llvm::support::little))
         return EC;
       for (SizeType I = 0; I < Size; ++I) {
         typename T::value_type Item;
@@ -160,8 +160,8 @@ private:
 
   SmallVector<RecordLimit, 2> Limits;
 
-  BinaryStreamReader *Reader = nullptr;
-  BinaryStreamWriter *Writer = nullptr;
+  msf::StreamReader *Reader = nullptr;
+  msf::StreamWriter *Writer = nullptr;
 };
 
 } // end namespace codeview

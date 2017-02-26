@@ -1483,7 +1483,7 @@ define double @test_f64_fneg_fmul(double %x, double %y) #0 {
 ;
 ; AVX512-LABEL: test_f64_fneg_fmul:
 ; AVX512:       # BB#0:
-; AVX512-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; AVX512-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
 ; AVX512-NEXT:    vfnmsub213sd %xmm2, %xmm1, %xmm0
 ; AVX512-NEXT:    retq
   %m = fmul nsz double %x, %y

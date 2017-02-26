@@ -1272,6 +1272,9 @@ public:
   /// as "bitPosition".
   void flipBit(unsigned bitPosition);
 
+  /// Return an APInt with the extracted bits [bitPosition,bitPosition+numBits).
+  APInt extractBits(unsigned numBits, unsigned bitPosition) const;
+
   /// @}
   /// \name Value Characterization Functions
   /// @{

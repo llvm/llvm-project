@@ -33,7 +33,9 @@
 
 namespace llvm {
 
-class BinaryStreamReader;
+namespace msf {
+class StreamReader;
+}
 
 namespace pdb {
 
@@ -54,14 +56,14 @@ struct GSIHashHeader {
   support::ulittle32_t NumBuckets;
 };
 
-Error readGSIHashBuckets(FixedStreamArray<support::ulittle32_t> &HashBuckets,
-                         const GSIHashHeader *HashHdr,
-                         BinaryStreamReader &Reader);
+Error readGSIHashBuckets(
+    msf::FixedStreamArray<support::ulittle32_t> &HashBuckets,
+    const GSIHashHeader *HashHdr, msf::StreamReader &Reader);
 Error readGSIHashHeader(const GSIHashHeader *&HashHdr,
-                        BinaryStreamReader &Reader);
-Error readGSIHashRecords(FixedStreamArray<PSHashRecord> &HashRecords,
+                        msf::StreamReader &Reader);
+Error readGSIHashRecords(msf::FixedStreamArray<PSHashRecord> &HashRecords,
                          const GSIHashHeader *HashHdr,
-                         BinaryStreamReader &Reader);
+                         msf::StreamReader &Reader);
 }
 }
 

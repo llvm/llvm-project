@@ -19,10 +19,9 @@
 #include "llvm/DebugInfo/PDB/PDBTypes.h"
 
 namespace llvm {
-class WritableBinaryStream;
-
 namespace msf {
 class MSFBuilder;
+class StreamWriter;
 }
 namespace pdb {
 class PDBFile;
@@ -44,7 +43,7 @@ public:
   Error finalizeMsfLayout();
 
   Error commit(const msf::MSFLayout &Layout,
-               WritableBinaryStreamRef Buffer) const;
+               const msf::WritableStream &Buffer) const;
 
 private:
   msf::MSFBuilder &Msf;

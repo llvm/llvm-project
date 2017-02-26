@@ -1,4 +1,4 @@
-//===- BinaryStreamReader.h - Reads objects from a binary stream *- C++ -*-===//
+//===- StreamReader.h - Reads bytes and objects from a stream ---*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,166 +7,71 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_SUPPORT_BINARYSTREAMREADER_H
-#define LLVM_SUPPORT_BINARYSTREAMREADER_H
+#ifndef LLVM_DEBUGINFO_MSF_STREAMREADER_H
+#define LLVM_DEBUGINFO_MSF_STREAMREADER_H
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/DebugInfo/MSF/BinaryStream.h"
 #include "llvm/DebugInfo/MSF/BinaryStreamArray.h"
 #include "llvm/DebugInfo/MSF/BinaryStreamRef.h"
+#include "llvm/DebugInfo/MSF/MSFError.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/type_traits.h"
 
 #include <string>
 #include <type_traits>
 
 namespace llvm {
+namespace msf {
 
-/// \brief Provides read only access to a subclass of `BinaryStream`.  Provides
-/// bounds checking and helpers for writing certain common data types such as
-/// null-terminated strings, integers in various flavors of endianness, etc.
-/// Can be subclassed to provide reading of custom datatypes, although no
-/// are overridable.
-class BinaryStreamReader {
+class StreamReader {
 public:
-  explicit BinaryStreamReader(BinaryStreamRef Stream);
-  virtual ~BinaryStreamReader() {}
+  StreamReader(ReadableStreamRef Stream);
 
-  /// Read as much as possible from the underlying string at the current offset
-  /// without invoking a copy, and set \p Buffer to the resulting data slice.
-  /// Updates the stream's offset to point after the newly read data.
-  ///
-  /// \returns a success error code if the data was successfully read, otherwise
-  /// returns an appropriate error code.
   Error readLongestContiguousChunk(ArrayRef<uint8_t> &Buffer);
-
-  /// Read \p Size bytes from the underlying stream at the current offset and
-  /// and set \p Buffer to the resulting data slice.  Whether a copy occurs
-  /// depends on the implementation of the underlying stream.  Updates the
-  /// stream's offset to point after the newly read data.
-  ///
-  /// \returns a success error code if the data was successfully read, otherwise
-  /// returns an appropriate error code.
   Error readBytes(ArrayRef<uint8_t> &Buffer, uint32_t Size);
 
-  /// Read an integer of the specified endianness into \p Dest and update the
-  /// stream's offset.  The data is always copied from the stream's underlying
-  /// buffer into \p Dest. Updates the stream's offset to point after the newly
-  /// read data.
-  ///
-  /// \returns a success error code if the data was successfully read, otherwise
-  /// returns an appropriate error code.
-  template <typename T> Error readInteger(T &Dest) {
+  template <typename T>
+  Error readInteger(T &Dest,
+                    llvm::support::endianness Endian = llvm::support::native) {
     static_assert(std::is_integral<T>::value,
                   "Cannot call readInteger with non-integral value!");
 
     ArrayRef<uint8_t> Bytes;
     if (auto EC = readBytes(Bytes, sizeof(T)))
       return EC;
-    readIntegersImpl(Bytes, Dest);
+
+    Dest = llvm::support::endian::read<T, llvm::support::unaligned>(
+        Bytes.data(), Endian);
     return Error::success();
   }
 
-  /// Read a list of integers into \p Dest and update the stream's offset.
-  /// The data is always copied from the stream's underlying into \p Dest.
-  /// Updates the stream's offset to point after the newly read data.  Use of
-  /// this method is more efficient than calling `readInteger` multiple times
-  /// because this performs bounds checking only once, and requires only a
-  /// single error check by the user.
-  ///
-  /// \returns a success error code if the data was successfully read, otherwise
-  /// returns an appropriate error code.
-  template <typename... Ts> Error readIntegers(Ts &... Dest) {
-    const size_t Size = sizeof_sum<Ts...>::value;
-    ArrayRef<uint8_t> Bytes;
-    if (auto EC = readBytes(Bytes, Size))
-      return EC;
-    readIntegersImpl(Bytes, Dest...);
-    return Error::success();
-  }
+  Error readZeroString(StringRef &Dest);
+  Error readFixedString(StringRef &Dest, uint32_t Length);
+  Error readStreamRef(ReadableStreamRef &Ref);
+  Error readStreamRef(ReadableStreamRef &Ref, uint32_t Length);
 
-  /// Read a \p ByteSize byte integer and store the result in \p Dest, updating
-  /// the reader's position if successful.
-  ///
-  /// \returns a success error code if the data was successfully read, otherwise
-  /// returns an appropriate error code.
-  Error readInteger(uint64_t &Dest, uint32_t ByteSize);
-
-  /// Similar to readInteger.
-  template <typename T> Error readEnum(T &Dest) {
+  template <typename T>
+  Error readEnum(T &Dest,
+                 llvm::support::endianness Endian = llvm::support::native) {
     static_assert(std::is_enum<T>::value,
                   "Cannot call readEnum with non-enum value!");
     typename std::underlying_type<T>::type N;
-    if (auto EC = readInteger(N))
+    if (auto EC = readInteger(N, Endian))
       return EC;
     Dest = static_cast<T>(N);
     return Error::success();
   }
 
-  /// Read a null terminated string from \p Dest.  Whether a copy occurs depends
-  /// on the implementation of the underlying stream.  Updates the stream's
-  /// offset to point after the newly read data.
-  ///
-  /// \returns a success error code if the data was successfully read, otherwise
-  /// returns an appropriate error code.
-  Error readCString(StringRef &Dest);
-
-  /// Read a \p Length byte string into \p Dest.  Whether a copy occurs depends
-  /// on the implementation of the underlying stream.  Updates the stream's
-  /// offset to point after the newly read data.
-  ///
-  /// \returns a success error code if the data was successfully read, otherwise
-  /// returns an appropriate error code.
-  Error readFixedString(StringRef &Dest, uint32_t Length);
-
-  /// Read the entire remainder of the underlying stream into \p Ref.  This is
-  /// equivalent to calling getUnderlyingStream().slice(Offset).  Updates the
-  /// stream's offset to point to the end of the stream.  Never causes a copy.
-  ///
-  /// \returns a success error code if the data was successfully read, otherwise
-  /// returns an appropriate error code.
-  Error readStreamRef(BinaryStreamRef &Ref);
-
-  /// Read \p Length bytes from the underlying stream into \p Ref.  This is
-  /// equivalent to calling getUnderlyingStream().slice(Offset, Length).
-  /// Updates the stream's offset to point after the newly read object.  Never
-  /// causes a copy.
-  ///
-  /// \returns a success error code if the data was successfully read, otherwise
-  /// returns an appropriate error code.
-  Error readStreamRef(BinaryStreamRef &Ref, uint32_t Length);
-
-  /// Get a pointer to an object of type T from the underlying stream, as if by
-  /// memcpy, and store the result into \p Dest.  It is up to the caller to
-  /// ensure that objects of type T can be safely treated in this manner.
-  /// Updates the stream's offset to point after the newly read object.  Whether
-  /// a copy occurs depends upon the implementation of the underlying
-  /// stream.
-  ///
-  /// \returns a success error code if the data was successfully read, otherwise
-  /// returns an appropriate error code.
   template <typename T> Error readObject(const T *&Dest) {
     ArrayRef<uint8_t> Buffer;
     if (auto EC = readBytes(Buffer, sizeof(T)))
       return EC;
-    assert(alignmentAdjustment(Buffer.data(), alignof(T)) == 0 &&
-           "Reading at invalid alignment!");
     Dest = reinterpret_cast<const T *>(Buffer.data());
     return Error::success();
   }
 
-  /// Get a reference to a \p NumElements element array of objects of type T
-  /// from the underlying stream as if by memcpy, and store the resulting array
-  /// slice into \p array.  It is up to the caller to ensure that objects of
-  /// type T can be safely treated in this manner.  Updates the stream's offset
-  /// to point after the newly read object.  Whether a copy occurs depends upon
-  /// the implementation of the underlying stream.
-  ///
-  /// \returns a success error code if the data was successfully read, otherwise
-  /// returns an appropriate error code.
   template <typename T>
   Error readArray(ArrayRef<T> &Array, uint32_t NumElements) {
     ArrayRef<uint8_t> Bytes;
@@ -176,43 +81,23 @@ public:
     }
 
     if (NumElements > UINT32_MAX / sizeof(T))
-      return errorCodeToError(make_error_code(std::errc::no_buffer_space));
+      return make_error<MSFError>(msf_error_code::insufficient_buffer);
 
     if (auto EC = readBytes(Bytes, NumElements * sizeof(T)))
       return EC;
-
-    assert(alignmentAdjustment(Bytes.data(), alignof(T)) == 0 &&
-           "Reading at invalid alignment!");
-
     Array = ArrayRef<T>(reinterpret_cast<const T *>(Bytes.data()), NumElements);
     return Error::success();
   }
 
-  /// Read a VarStreamArray of size \p Size bytes and store the result into
-  /// \p Array.  Updates the stream's offset to point after the newly read
-  /// array.  Never causes a copy (although iterating the elements of the
-  /// VarStreamArray may, depending upon the implementation of the underlying
-  /// stream).
-  ///
-  /// \returns a success error code if the data was successfully read, otherwise
-  /// returns an appropriate error code.
   template <typename T, typename U>
   Error readArray(VarStreamArray<T, U> &Array, uint32_t Size) {
-    BinaryStreamRef S;
+    ReadableStreamRef S;
     if (auto EC = readStreamRef(S, Size))
       return EC;
     Array = VarStreamArray<T, U>(S, Array.getExtractor());
     return Error::success();
   }
 
-  /// Read a FixedStreamArray of \p NumItems elements and store the result into
-  /// \p Array.  Updates the stream's offset to point after the newly read
-  /// array.  Never causes a copy (although iterating the elements of the
-  /// FixedStreamArray may, depending upon the implementation of the underlying
-  /// stream).
-  ///
-  /// \returns a success error code if the data was successfully read, otherwise
-  /// returns an appropriate error code.
   template <typename T>
   Error readArray(FixedStreamArray<T> &Array, uint32_t NumItems) {
     if (NumItems == 0) {
@@ -221,11 +106,10 @@ public:
     }
     uint32_t Length = NumItems * sizeof(T);
     if (Length / sizeof(T) != NumItems)
-      return errorCodeToError(
-          make_error_code(std::errc::illegal_byte_sequence));
+      return make_error<MSFError>(msf_error_code::invalid_format);
     if (Offset + Length > Stream.getLength())
-      return errorCodeToError(make_error_code(std::errc::no_buffer_space));
-    BinaryStreamRef View = Stream.slice(Offset, Length);
+      return make_error<MSFError>(msf_error_code::insufficient_buffer);
+    ReadableStreamRef View = Stream.slice(Offset, Length);
     Array = FixedStreamArray<T>(View);
     Offset += Length;
     return Error::success();
@@ -237,36 +121,15 @@ public:
   uint32_t getLength() const { return Stream.getLength(); }
   uint32_t bytesRemaining() const { return getLength() - getOffset(); }
 
-  /// Advance the stream's offset by \p Amount bytes.
-  ///
-  /// \returns a success error code if at least \p Amount bytes remain in the
-  /// stream, otherwise returns an appropriate error code.
   Error skip(uint32_t Amount);
 
-  /// Examine the next byte of the underlying stream without advancing the
-  /// stream's offset.  If the stream is empty the behavior is undefined.
-  ///
-  /// \returns the next byte in the stream.
   uint8_t peek() const;
 
 private:
-  template <typename T>
-  void readIntegersImpl(ArrayRef<uint8_t> Bytes, T &Dest) {
-    Dest = llvm::support::endian::read<T, llvm::support::unaligned>(
-        Bytes.data(), Stream.getEndian());
-  }
-
-  template <typename T, typename... Ts>
-  void readIntegersImpl(ArrayRef<uint8_t> Bytes, T &Dest, Ts &... Rest) {
-    auto Car = Bytes.take_front(sizeof(T));
-    auto Cdr = Bytes.drop_front(sizeof(T));
-    readIntegersImpl(Car, Dest);
-    readIntegersImpl(Cdr, Rest...);
-  }
-
-  BinaryStreamRef Stream;
+  ReadableStreamRef Stream;
   uint32_t Offset;
 };
+} // namespace msf
 } // namespace llvm
 
-#endif // LLVM_SUPPORT_BINARYSTREAMREADER_H
+#endif // LLVM_DEBUGINFO_MSF_STREAMREADER_H

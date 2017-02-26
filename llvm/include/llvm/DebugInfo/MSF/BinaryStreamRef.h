@@ -1,4 +1,4 @@
-//===- BinaryStreamRef.h - A copyable reference to a stream -----*- C++ -*-===//
+//===- StreamRef.h - A copyable reference to a stream -----------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,30 +7,28 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_SUPPORT_BINARYSTREAMREF_H
-#define LLVM_SUPPORT_BINARYSTREAMREF_H
+#ifndef LLVM_DEBUGINFO_MSF_STREAMREF_H
+#define LLVM_DEBUGINFO_MSF_STREAMREF_H
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/DebugInfo/MSF/BinaryStream.h"
+#include "llvm/DebugInfo/MSF/MSFError.h"
 #include "llvm/Support/Error.h"
 #include <algorithm>
 #include <cstdint>
 
 namespace llvm {
+namespace msf {
 
-/// Common stuff for mutable and immutable StreamRefs.
-template <class StreamType, class RefType> class BinaryStreamRefBase {
+template <class StreamType, class RefType> class StreamRefBase {
 public:
-  BinaryStreamRefBase() : Stream(nullptr), ViewOffset(0), Length(0) {}
-  BinaryStreamRefBase(StreamType &Stream, uint32_t Offset, uint32_t Length)
+  StreamRefBase() : Stream(nullptr), ViewOffset(0), Length(0) {}
+  StreamRefBase(const StreamType &Stream, uint32_t Offset, uint32_t Length)
       : Stream(&Stream), ViewOffset(Offset), Length(Length) {}
-
-  llvm::support::endianness getEndian() const { return Stream->getEndian(); }
 
   uint32_t getLength() const { return Length; }
   const StreamType *getStream() const { return Stream; }
 
-  /// Return a new BinaryStreamRef with the first \p N elements removed.
   RefType drop_front(uint32_t N) const {
     if (!Stream)
       return RefType();
@@ -39,7 +37,6 @@ public:
     return RefType(*Stream, ViewOffset + N, Length - N);
   }
 
-  /// Return a new BinaryStreamRef with only the first \p N elements remaining.
   RefType keep_front(uint32_t N) const {
     if (!Stream)
       return RefType();
@@ -47,8 +44,6 @@ public:
     return RefType(*Stream, ViewOffset, N);
   }
 
-  /// Return a new BinaryStreamRef with the first \p Offset elements removed,
-  /// and retaining exactly \p Len elements.
   RefType slice(uint32_t Offset, uint32_t Len) const {
     return drop_front(Offset).keep_front(Len);
   }
@@ -64,55 +59,40 @@ public:
   }
 
 protected:
-  StreamType *Stream;
+  const StreamType *Stream;
   uint32_t ViewOffset;
   uint32_t Length;
 };
 
-/// \brief BinaryStreamRef is to BinaryStream what ArrayRef is to an Array.  It
-/// provides copy-semantics and read only access to a "window" of the underlying
-/// BinaryStream. Note that BinaryStreamRef is *not* a BinaryStream.  That is to
-/// say, it does not inherit and override the methods of BinaryStream.  In
-/// general, you should not pass around pointers or references to BinaryStreams
-/// and use inheritance to achieve polymorphism.  Instead, you should pass
-/// around BinaryStreamRefs by value and achieve polymorphism that way.
-class BinaryStreamRef
-    : public BinaryStreamRefBase<BinaryStream, BinaryStreamRef> {
+class ReadableStreamRef
+    : public StreamRefBase<ReadableStream, ReadableStreamRef> {
 public:
-  BinaryStreamRef() = default;
-  BinaryStreamRef(BinaryStream &Stream)
-      : BinaryStreamRefBase(Stream, 0, Stream.getLength()) {}
-  BinaryStreamRef(BinaryStream &Stream, uint32_t Offset, uint32_t Length)
-      : BinaryStreamRefBase(Stream, Offset, Length) {}
+  ReadableStreamRef() = default;
+  ReadableStreamRef(const ReadableStream &Stream)
+      : StreamRefBase(Stream, 0, Stream.getLength()) {}
+  ReadableStreamRef(const ReadableStream &Stream, uint32_t Offset,
+                    uint32_t Length)
+      : StreamRefBase(Stream, Offset, Length) {}
 
-  // Use BinaryStreamRef.slice() instead.
-  BinaryStreamRef(BinaryStreamRef &S, uint32_t Offset,
-                  uint32_t Length) = delete;
+  // Use StreamRef.slice() instead.
+  ReadableStreamRef(const ReadableStreamRef &S, uint32_t Offset,
+                    uint32_t Length) = delete;
 
-  /// Given an Offset into this StreamRef and a Size, return a reference to a
-  /// buffer owned by the stream.
-  ///
-  /// \returns a success error code if the entire range of data is within the
-  /// bounds of this BinaryStreamRef's view and the implementation could read
-  /// the data, and an appropriate error code otherwise.
   Error readBytes(uint32_t Offset, uint32_t Size,
                   ArrayRef<uint8_t> &Buffer) const {
     if (ViewOffset + Offset < Offset)
-      return errorCodeToError(make_error_code(std::errc::no_buffer_space));
+      return make_error<MSFError>(msf_error_code::insufficient_buffer);
     if (Size + Offset > Length)
-      return errorCodeToError(make_error_code(std::errc::no_buffer_space));
+      return make_error<MSFError>(msf_error_code::insufficient_buffer);
     return Stream->readBytes(ViewOffset + Offset, Size, Buffer);
   }
 
-  /// Given an Offset into this BinaryStreamRef, return a reference to the
-  /// largest buffer the stream could support without necessitating a copy.
-  ///
-  /// \returns a success error code if implementation could read the data,
-  /// and an appropriate error code otherwise.
+  // Given an offset into the stream, read as much as possible without copying
+  // any data.
   Error readLongestContiguousChunk(uint32_t Offset,
                                    ArrayRef<uint8_t> &Buffer) const {
     if (Offset >= Length)
-      return errorCodeToError(make_error_code(std::errc::no_buffer_space));
+      return make_error<MSFError>(msf_error_code::insufficient_buffer);
 
     if (auto EC = Stream->readLongestContiguousChunk(Offset, Buffer))
       return EC;
@@ -126,39 +106,30 @@ public:
   }
 };
 
-class WritableBinaryStreamRef
-    : public BinaryStreamRefBase<WritableBinaryStream,
-                                 WritableBinaryStreamRef> {
+class WritableStreamRef
+    : public StreamRefBase<WritableStream, WritableStreamRef> {
 public:
-  WritableBinaryStreamRef() = default;
-  WritableBinaryStreamRef(WritableBinaryStream &Stream)
-      : BinaryStreamRefBase(Stream, 0, Stream.getLength()) {}
-  WritableBinaryStreamRef(WritableBinaryStream &Stream, uint32_t Offset,
-                          uint32_t Length)
-      : BinaryStreamRefBase(Stream, Offset, Length) {}
+  WritableStreamRef() = default;
+  WritableStreamRef(const WritableStream &Stream)
+      : StreamRefBase(Stream, 0, Stream.getLength()) {}
+  WritableStreamRef(const WritableStream &Stream, uint32_t Offset,
+                    uint32_t Length)
+      : StreamRefBase(Stream, Offset, Length) {}
 
-  // Use WritableBinaryStreamRef.slice() instead.
-  WritableBinaryStreamRef(WritableBinaryStreamRef &S, uint32_t Offset,
-                          uint32_t Length) = delete;
+  // Use StreamRef.slice() instead.
+  WritableStreamRef(const WritableStreamRef &S, uint32_t Offset,
+                    uint32_t Length) = delete;
 
-  /// Given an Offset into this WritableBinaryStreamRef and some input data,
-  /// writes the data to the underlying stream.
-  ///
-  /// \returns a success error code if the data could fit within the underlying
-  /// stream at the specified location and the implementation could write the
-  /// data, and an appropriate error code otherwise.
   Error writeBytes(uint32_t Offset, ArrayRef<uint8_t> Data) const {
     if (Data.size() + Offset > Length)
-      return errorCodeToError(make_error_code(std::errc::no_buffer_space));
+      return make_error<MSFError>(msf_error_code::insufficient_buffer);
     return Stream->writeBytes(ViewOffset + Offset, Data);
   }
 
-  operator BinaryStreamRef() { return BinaryStreamRef(*Stream); }
-
-  /// \brief For buffered streams, commits changes to the backing store.
-  Error commit() { return Stream->commit(); }
+  Error commit() const { return Stream->commit(); }
 };
 
+} // end namespace msf
 } // end namespace llvm
 
-#endif // LLVM_SUPPORT_BINARYSTREAMREF_H
+#endif // LLVM_DEBUGINFO_MSF_STREAMREF_H

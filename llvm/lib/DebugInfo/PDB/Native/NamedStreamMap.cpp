@@ -21,22 +21,23 @@
 #include <cstdint>
 
 using namespace llvm;
+using namespace llvm::msf;
 using namespace llvm::pdb;
 
 NamedStreamMap::NamedStreamMap() = default;
 
-Error NamedStreamMap::load(BinaryStreamReader &Stream) {
+Error NamedStreamMap::load(StreamReader &Stream) {
   Mapping.clear();
   FinalizedHashTable.clear();
   FinalizedInfo.reset();
 
   uint32_t StringBufferSize;
-  if (auto EC = Stream.readInteger(StringBufferSize))
+  if (auto EC = Stream.readInteger(StringBufferSize, llvm::support::little))
     return joinErrors(std::move(EC),
                       make_error<RawError>(raw_error_code::corrupt_file,
                                            "Expected string buffer size"));
 
-  BinaryStreamRef StringsBuffer;
+  msf::ReadableStreamRef StringsBuffer;
   if (auto EC = Stream.readStreamRef(StringsBuffer, StringBufferSize))
     return EC;
 
@@ -50,11 +51,11 @@ Error NamedStreamMap::load(BinaryStreamReader &Stream) {
     std::tie(NameOffset, NameIndex) = Entry;
 
     // Compute the offset of the start of the string relative to the stream.
-    BinaryStreamReader NameReader(StringsBuffer);
+    msf::StreamReader NameReader(StringsBuffer);
     NameReader.setOffset(NameOffset);
     // Pump out our c-string from the stream.
     StringRef Str;
-    if (auto EC = NameReader.readCString(Str))
+    if (auto EC = NameReader.readZeroString(Str))
       return joinErrors(std::move(EC),
                         make_error<RawError>(raw_error_code::corrupt_file,
                                              "Expected name map name"));
@@ -66,16 +67,17 @@ Error NamedStreamMap::load(BinaryStreamReader &Stream) {
   return Error::success();
 }
 
-Error NamedStreamMap::commit(BinaryStreamWriter &Writer) const {
+Error NamedStreamMap::commit(msf::StreamWriter &Writer) const {
   assert(FinalizedInfo.hasValue());
 
   // The first field is the number of bytes of string data.
-  if (auto EC = Writer.writeInteger(FinalizedInfo->StringDataBytes))
+  if (auto EC = Writer.writeInteger(FinalizedInfo->StringDataBytes,
+                                    llvm::support::little))
     return EC;
 
   // Now all of the string data itself.
   for (const auto &Item : Mapping) {
-    if (auto EC = Writer.writeCString(Item.getKey()))
+    if (auto EC = Writer.writeZeroString(Item.getKey()))
       return EC;
   }
 

@@ -2113,13 +2113,29 @@ static unsigned computeNumSignBitsVectorConstant(const Value *V,
   return MinSignBits;
 }
 
+static unsigned ComputeNumSignBitsImpl(const Value *V, unsigned Depth,
+                                       const Query &Q);
+
+static unsigned ComputeNumSignBits(const Value *V, unsigned Depth,
+                                   const Query &Q) {
+  unsigned Result = ComputeNumSignBitsImpl(V, Depth, Q);
+  assert(Result > 0 && "At least one sign bit needs to be present!");
+  return Result;
+}
+
 /// Return the number of times the sign bit of the register is replicated into
 /// the other bits. We know that at least 1 bit is always equal to the sign bit
 /// (itself), but other cases can give us information. For example, immediately
 /// after an "ashr X, 2", we know that the top 3 bits are all equal to each
 /// other, so we return 3. For vectors, return the number of sign bits for the
 /// vector element with the mininum number of known sign bits.
-unsigned ComputeNumSignBits(const Value *V, unsigned Depth, const Query &Q) {
+static unsigned ComputeNumSignBitsImpl(const Value *V, unsigned Depth,
+                                       const Query &Q) {
+
+  // We return the minimum number of sign bits that are guaranteed to be present
+  // in V, so for undef we have to conservatively return 1.  We don't have the
+  // same behavior for poison though -- that's a FIXME today.
+
   unsigned TyBits = Q.DL.getTypeSizeInBits(V->getType()->getScalarType());
   unsigned Tmp, Tmp2;
   unsigned FirstAnswer = 1;
@@ -2195,7 +2211,10 @@ unsigned ComputeNumSignBits(const Value *V, unsigned Depth, const Query &Q) {
     // ashr X, C   -> adds C sign bits.  Vectors too.
     const APInt *ShAmt;
     if (match(U->getOperand(1), m_APInt(ShAmt))) {
-      Tmp += ShAmt->getZExtValue();
+      unsigned ShAmtLimited = ShAmt->getZExtValue();
+      if (ShAmtLimited >= TyBits)
+        break;  // Bad shift.
+      Tmp += ShAmtLimited;
       if (Tmp > TyBits) Tmp = TyBits;
     }
     return Tmp;

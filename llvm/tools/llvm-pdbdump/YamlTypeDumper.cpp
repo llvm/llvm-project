@@ -573,8 +573,8 @@ struct MappingContextTraits<pdb::yaml::PdbTpiFieldListRecord,
     assert(IO.outputting());
     codeview::TypeVisitorCallbackPipeline Pipeline;
 
-    BinaryByteStream Data(Obj.Record.Data, llvm::support::little);
-    BinaryStreamReader FieldReader(Data);
+    msf::ByteStream Data(Obj.Record.Data);
+    msf::StreamReader FieldReader(Data);
     codeview::FieldListDeserializer Deserializer(FieldReader);
 
     // For PDB to Yaml, deserialize into a high level record type, then dump

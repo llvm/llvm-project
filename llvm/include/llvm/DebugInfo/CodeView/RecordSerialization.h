@@ -41,37 +41,37 @@ struct RecordPrefix {
 StringRef getBytesAsCharacters(ArrayRef<uint8_t> LeafData);
 StringRef getBytesAsCString(ArrayRef<uint8_t> LeafData);
 
-inline Error consume(BinaryStreamReader &Reader) { return Error::success(); }
+inline Error consume(msf::StreamReader &Reader) { return Error::success(); }
 
 /// Decodes a numeric "leaf" value. These are integer literals encountered in
 /// the type stream. If the value is positive and less than LF_NUMERIC (1 <<
 /// 15), it is emitted directly in Data. Otherwise, it has a tag like LF_CHAR
 /// that indicates the bitwidth and sign of the numeric data.
-Error consume(BinaryStreamReader &Reader, APSInt &Num);
+Error consume(msf::StreamReader &Reader, APSInt &Num);
 
 /// Decodes a numeric leaf value that is known to be a particular type.
-Error consume_numeric(BinaryStreamReader &Reader, uint64_t &Value);
+Error consume_numeric(msf::StreamReader &Reader, uint64_t &Value);
 
 /// Decodes signed and unsigned fixed-length integers.
-Error consume(BinaryStreamReader &Reader, uint32_t &Item);
-Error consume(BinaryStreamReader &Reader, int32_t &Item);
+Error consume(msf::StreamReader &Reader, uint32_t &Item);
+Error consume(msf::StreamReader &Reader, int32_t &Item);
 
 /// Decodes a null terminated string.
-Error consume(BinaryStreamReader &Reader, StringRef &Item);
+Error consume(msf::StreamReader &Reader, StringRef &Item);
 
 Error consume(StringRef &Data, APSInt &Num);
 Error consume(StringRef &Data, uint32_t &Item);
 
 /// Decodes an arbitrary object whose layout matches that of the underlying
 /// byte sequence, and returns a pointer to the object.
-template <typename T> Error consume(BinaryStreamReader &Reader, T *&Item) {
+template <typename T> Error consume(msf::StreamReader &Reader, T *&Item) {
   return Reader.readObject(Item);
 }
 
 template <typename T, typename U> struct serialize_conditional_impl {
   serialize_conditional_impl(T &Item, U Func) : Item(Item), Func(Func) {}
 
-  Error deserialize(BinaryStreamReader &Reader) const {
+  Error deserialize(msf::StreamReader &Reader) const {
     if (!Func())
       return Error::success();
     return consume(Reader, Item);
@@ -89,7 +89,7 @@ serialize_conditional_impl<T, U> serialize_conditional(T &Item, U Func) {
 template <typename T, typename U> struct serialize_array_impl {
   serialize_array_impl(ArrayRef<T> &Item, U Func) : Item(Item), Func(Func) {}
 
-  Error deserialize(BinaryStreamReader &Reader) const {
+  Error deserialize(msf::StreamReader &Reader) const {
     return Reader.readArray(Item, Func());
   }
 
@@ -100,7 +100,7 @@ template <typename T, typename U> struct serialize_array_impl {
 template <typename T> struct serialize_vector_tail_impl {
   serialize_vector_tail_impl(std::vector<T> &Item) : Item(Item) {}
 
-  Error deserialize(BinaryStreamReader &Reader) const {
+  Error deserialize(msf::StreamReader &Reader) const {
     T Field;
     // Stop when we run out of bytes or we hit record padding bytes.
     while (!Reader.empty() && Reader.peek() < LF_PAD0) {
@@ -118,14 +118,14 @@ struct serialize_null_term_string_array_impl {
   serialize_null_term_string_array_impl(std::vector<StringRef> &Item)
       : Item(Item) {}
 
-  Error deserialize(BinaryStreamReader &Reader) const {
+  Error deserialize(msf::StreamReader &Reader) const {
     if (Reader.empty())
       return make_error<CodeViewError>(cv_error_code::insufficient_buffer,
                                        "Null terminated string is empty!");
 
     while (Reader.peek() != 0) {
       StringRef Field;
-      if (auto EC = Reader.readCString(Field))
+      if (auto EC = Reader.readZeroString(Field))
         return EC;
       Item.push_back(Field);
     }
@@ -138,7 +138,7 @@ struct serialize_null_term_string_array_impl {
 template <typename T> struct serialize_arrayref_tail_impl {
   serialize_arrayref_tail_impl(ArrayRef<T> &Item) : Item(Item) {}
 
-  Error deserialize(BinaryStreamReader &Reader) const {
+  Error deserialize(msf::StreamReader &Reader) const {
     uint32_t Count = Reader.bytesRemaining() / sizeof(T);
     return Reader.readArray(Item, Count);
   }
@@ -149,7 +149,7 @@ template <typename T> struct serialize_arrayref_tail_impl {
 template <typename T> struct serialize_numeric_impl {
   serialize_numeric_impl(T &Item) : Item(Item) {}
 
-  Error deserialize(BinaryStreamReader &Reader) const {
+  Error deserialize(msf::StreamReader &Reader) const {
     return consume_numeric(Reader, Item);
   }
 
@@ -201,42 +201,42 @@ template <typename T> serialize_numeric_impl<T> serialize_numeric(T &Item) {
 #define CV_NUMERIC_FIELD(I) serialize_numeric(I)
 
 template <typename T, typename U>
-Error consume(BinaryStreamReader &Reader,
+Error consume(msf::StreamReader &Reader,
               const serialize_conditional_impl<T, U> &Item) {
   return Item.deserialize(Reader);
 }
 
 template <typename T, typename U>
-Error consume(BinaryStreamReader &Reader,
+Error consume(msf::StreamReader &Reader,
               const serialize_array_impl<T, U> &Item) {
   return Item.deserialize(Reader);
 }
 
-inline Error consume(BinaryStreamReader &Reader,
+inline Error consume(msf::StreamReader &Reader,
                      const serialize_null_term_string_array_impl &Item) {
   return Item.deserialize(Reader);
 }
 
 template <typename T>
-Error consume(BinaryStreamReader &Reader,
+Error consume(msf::StreamReader &Reader,
               const serialize_vector_tail_impl<T> &Item) {
   return Item.deserialize(Reader);
 }
 
 template <typename T>
-Error consume(BinaryStreamReader &Reader,
+Error consume(msf::StreamReader &Reader,
               const serialize_arrayref_tail_impl<T> &Item) {
   return Item.deserialize(Reader);
 }
 
 template <typename T>
-Error consume(BinaryStreamReader &Reader,
+Error consume(msf::StreamReader &Reader,
               const serialize_numeric_impl<T> &Item) {
   return Item.deserialize(Reader);
 }
 
 template <typename T, typename U, typename... Args>
-Error consume(BinaryStreamReader &Reader, T &&X, U &&Y, Args &&... Rest) {
+Error consume(msf::StreamReader &Reader, T &&X, U &&Y, Args &&... Rest) {
   if (auto EC = consume(Reader, X))
     return EC;
   return consume(Reader, Y, std::forward<Args>(Rest)...);
