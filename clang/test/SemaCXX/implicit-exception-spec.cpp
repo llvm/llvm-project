@@ -92,3 +92,61 @@ namespace ImplicitDtorExceptionSpec {
     } e;
   };
 }
+
+struct nothrow_t {} nothrow;
+void *operator new(decltype(sizeof(0)), nothrow_t) noexcept;
+
+namespace PotentiallyConstructed {
+  template<bool NE> struct A {
+    A() noexcept(NE);
+    A(const A&) noexcept(NE);
+    A(A&&) noexcept(NE);
+    A &operator=(const A&) noexcept(NE);
+    A &operator=(A&&) noexcept(NE);
+    ~A() noexcept(NE);
+  };
+
+  template<bool NE> struct B : virtual A<NE> {};
+
+  template<bool NE> struct C : virtual A<NE> {
+    virtual void f() = 0; // expected-note 2{{unimplemented}}
+  };
+
+  template<bool NE> struct D final : C<NE> {
+    void f();
+  };
+
+  template<typename T, bool A, bool B, bool C, bool D, bool E, bool F> void check() {
+    T *p = nullptr;
+    T &a = *p;
+    static_assert(noexcept(a = a) == D, "");
+    static_assert(noexcept(a = static_cast<T&&>(a)) == E, "");
+    static_assert(noexcept(delete &a) == F, ""); // expected-warning 2{{abstract}}
+
+    // These are last because the first failure here causes instantiation to bail out.
+    static_assert(noexcept(new (nothrow) T()) == A, ""); // expected-error 2{{abstract}}
+    static_assert(noexcept(new (nothrow) T(a)) == B, "");
+    static_assert(noexcept(new (nothrow) T(static_cast<T&&>(a))) == C, "");
+  }
+
+  template void check<A<false>, 0, 0, 0, 0, 0, 0>();
+  template void check<A<true >, 1, 1, 1, 1, 1, 1>();
+  template void check<B<false>, 0, 0, 0, 0, 0, 0>();
+  template void check<B<true >, 1, 1, 1, 1, 1, 1>();
+  template void check<C<false>, 1, 1, 1, 0, 0, 0>(); // expected-note {{instantiation}}
+  template void check<C<true >, 1, 1, 1, 1, 1, 1>(); // expected-note {{instantiation}}
+  template void check<D<false>, 0, 0, 0, 0, 0, 0>();
+  template void check<D<true >, 1, 1, 1, 1, 1, 1>();
+
+  // ... the above trick doesn't work for this case...
+  struct Cfalse : virtual A<false> {
+    virtual void f() = 0;
+
+    Cfalse() noexcept;
+    Cfalse(const Cfalse&) noexcept;
+    Cfalse(Cfalse&&) noexcept;
+  };
+  Cfalse::Cfalse() noexcept = default;
+  Cfalse::Cfalse(const Cfalse&) noexcept = default;
+  Cfalse::Cfalse(Cfalse&&) noexcept = default;
+}

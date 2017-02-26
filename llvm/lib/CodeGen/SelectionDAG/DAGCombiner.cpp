@@ -1353,8 +1353,7 @@ void DAGCombiner::Run(CombineLevel AtLevel) {
     else {
       assert(N->getValueType(0) == RV.getValueType() &&
              N->getNumValues() == 1 && "Type mismatch");
-      SDValue OpV = RV;
-      DAG.ReplaceAllUsesWith(N, &OpV);
+      DAG.ReplaceAllUsesWith(N, &RV);
     }
 
     // Push the new node and any users onto the worklist
