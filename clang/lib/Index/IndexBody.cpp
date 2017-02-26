@@ -269,7 +269,7 @@ public:
       const Decl *D = *I;
       if (!D)
         continue;
-      if (!IndexCtx.isFunctionLocalDecl(D))
+      if (!isFunctionLocalSymbol(D))
         IndexCtx.indexTopLevelDecl(D);
     }
 

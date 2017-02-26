@@ -5703,7 +5703,8 @@ void ASTRecordWriter::AddCXXDefinitionData(const CXXRecordDecl *D) {
   Record->push_back(Data.ComputedVisibleConversions);
   Record->push_back(Data.UserProvidedDefaultConstructor);
   Record->push_back(Data.DeclaredSpecialMembers);
-  Record->push_back(Data.ImplicitCopyConstructorHasConstParam);
+  Record->push_back(Data.ImplicitCopyConstructorCanHaveConstParamForVBase);
+  Record->push_back(Data.ImplicitCopyConstructorCanHaveConstParamForNonVBase);
   Record->push_back(Data.ImplicitCopyAssignmentHasConstParam);
   Record->push_back(Data.HasDeclaredCopyConstructorWithConstParam);
   Record->push_back(Data.HasDeclaredCopyAssignmentWithConstParam);

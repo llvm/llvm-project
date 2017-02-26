@@ -1159,6 +1159,10 @@ define void @ktest_2(<32 x float> %in, float * %base) {
 ; KNL-NEXT:    kmovw %k0, %eax
 ; KNL-NEXT:    vpinsrb $15, %eax, %xmm2, %xmm2
 ; KNL-NEXT:    vinserti128 $1, %xmm3, %ymm2, %ymm2
+; KNL-NEXT:    vpsllw $7, %ymm2, %ymm2
+; KNL-NEXT:    vpand {{.*}}(%rip), %ymm2, %ymm2
+; KNL-NEXT:    vpxor %ymm3, %ymm3, %ymm3
+; KNL-NEXT:    vpcmpgtb %ymm2, %ymm3, %ymm2
 ; KNL-NEXT:    vmovups 4(%rdi), %zmm3 {%k2} {z}
 ; KNL-NEXT:    vmovups 68(%rdi), %zmm4 {%k1} {z}
 ; KNL-NEXT:    vcmpltps %zmm4, %zmm1, %k0

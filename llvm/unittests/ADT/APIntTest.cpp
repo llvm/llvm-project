@@ -1505,3 +1505,19 @@ TEST(APIntTest, reverseBits) {
     }
   }
 }
+
+TEST(APIntTest, extractBits) {
+  APInt i32(32, 0x1234567);
+  EXPECT_EQ(0x3456, i32.extractBits(16, 4));
+
+  APInt i257(257, 0xFFFFFFFFFF0000FFull, true);
+  EXPECT_EQ(0xFFu, i257.extractBits(16, 0));
+  EXPECT_EQ((0xFFu >> 1), i257.extractBits(16, 1));
+  EXPECT_EQ(-1, i257.extractBits(32, 64).getSExtValue());
+  EXPECT_EQ(-1, i257.extractBits(128, 128).getSExtValue());
+  EXPECT_EQ(-1, i257.extractBits(66, 191).getSExtValue());
+  EXPECT_EQ(static_cast<int64_t>(0xFFFFFFFFFF80007Full),
+            i257.extractBits(128, 1).getSExtValue());
+  EXPECT_EQ(static_cast<int64_t>(0xFFFFFFFFFF80007Full),
+            i257.extractBits(129, 1).getSExtValue());
+}

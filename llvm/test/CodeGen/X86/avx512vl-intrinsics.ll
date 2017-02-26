@@ -4100,7 +4100,7 @@ define <4 x double> @test_rsqrt_pd_256_rrk(<4 x double> %a0, <4 x double> %a1, i
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
 ; CHECK-NEXT:    vrsqrt14pd %ymm0, %ymm1 {%k1} ## encoding: [0x62,0xf2,0xfd,0x29,0x4e,0xc8]
-; CHECK-NEXT:    vmovaps %ymm1, %ymm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfc,0x28,0xc1]
+; CHECK-NEXT:    vmovapd %ymm1, %ymm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfd,0x28,0xc1]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %res = call <4 x double> @llvm.x86.avx512.rsqrt14.pd.256(<4 x double> %a0, <4 x double> %a1, i8 %mask)
   ret <4 x double> %res
@@ -4130,7 +4130,7 @@ define <2 x double> @test_rsqrt_pd_128_rrk(<2 x double> %a0, <2 x double> %a1, i
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
 ; CHECK-NEXT:    vrsqrt14pd %xmm0, %xmm1 {%k1} ## encoding: [0x62,0xf2,0xfd,0x09,0x4e,0xc8]
-; CHECK-NEXT:    vmovaps %xmm1, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf8,0x28,0xc1]
+; CHECK-NEXT:    vmovapd %xmm1, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0x28,0xc1]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %res = call <2 x double> @llvm.x86.avx512.rsqrt14.pd.128(<2 x double> %a0, <2 x double> %a1, i8 %mask)
   ret <2 x double> %res
@@ -4163,7 +4163,7 @@ define <4 x double> @test_rcp_pd_256_rrk(<4 x double> %a0, <4 x double> %a1, i8 
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
 ; CHECK-NEXT:    vrcp14pd %ymm0, %ymm1 {%k1} ## encoding: [0x62,0xf2,0xfd,0x29,0x4c,0xc8]
-; CHECK-NEXT:    vmovaps %ymm1, %ymm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfc,0x28,0xc1]
+; CHECK-NEXT:    vmovapd %ymm1, %ymm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfd,0x28,0xc1]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %res = call <4 x double> @llvm.x86.avx512.rcp14.pd.256(<4 x double> %a0, <4 x double> %a1, i8 %mask)
   ret <4 x double> %res
@@ -4193,7 +4193,7 @@ define <2 x double> @test_rcp_pd_128_rrk(<2 x double> %a0, <2 x double> %a1, i8 
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
 ; CHECK-NEXT:    vrcp14pd %xmm0, %xmm1 {%k1} ## encoding: [0x62,0xf2,0xfd,0x09,0x4c,0xc8]
-; CHECK-NEXT:    vmovaps %xmm1, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf8,0x28,0xc1]
+; CHECK-NEXT:    vmovapd %xmm1, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0x28,0xc1]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %res = call <2 x double> @llvm.x86.avx512.rcp14.pd.128(<2 x double> %a0, <2 x double> %a1, i8 %mask)
   ret <2 x double> %res

@@ -113,13 +113,13 @@ entry:
   %add13 = add nsw i32 %add11, %6
   ret i32 %add13
 
-; CHECK-DAG: lha {{[0-9]+}}, 126(1)
-; CHECK-DAG: lha {{[0-9]+}}, 132(1)
-; CHECK-DAG: lbz {{[0-9]+}}, 119(1)
-; CHECK-DAG: lwz {{[0-9]+}}, 140(1)
-; CHECK-DAG: lwz {{[0-9]+}}, 144(1)
-; CHECK-DAG: lwz {{[0-9]+}}, 152(1)
-; CHECK-DAG: lwz {{[0-9]+}}, 160(1)
+; CHECK: lha {{[0-9]+}}, 126(1)
+; CHECK: lha {{[0-9]+}}, 132(1)
+; CHECK: lbz {{[0-9]+}}, 119(1)
+; CHECK: lwz {{[0-9]+}}, 140(1)
+; CHECK: lwz {{[0-9]+}}, 144(1)
+; CHECK: lwz {{[0-9]+}}, 152(1)
+; CHECK: lwz {{[0-9]+}}, 160(1)
 }
 
 define i32 @caller2() nounwind {
@@ -205,11 +205,11 @@ entry:
   %add13 = add nsw i32 %add11, %6
   ret i32 %add13
 
-; CHECK-DAG: lha {{[0-9]+}}, 126(1)
-; CHECK-DAG: lha {{[0-9]+}}, 133(1)
-; CHECK-DAG: lbz {{[0-9]+}}, 119(1)
-; CHECK-DAG: lwz {{[0-9]+}}, 140(1)
-; CHECK-DAG: lwz {{[0-9]+}}, 147(1)
-; CHECK-DAG: lwz {{[0-9]+}}, 154(1)
-; CHECK-DAG: lwz {{[0-9]+}}, 161(1)
+; CHECK: lha {{[0-9]+}}, 126(1)
+; CHECK: lha {{[0-9]+}}, 133(1)
+; CHECK: lbz {{[0-9]+}}, 119(1)
+; CHECK: lwz {{[0-9]+}}, 140(1)
+; CHECK: lwz {{[0-9]+}}, 147(1)
+; CHECK: lwz {{[0-9]+}}, 154(1)
+; CHECK: lwz {{[0-9]+}}, 161(1)
 }

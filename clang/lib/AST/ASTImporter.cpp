@@ -2363,8 +2363,10 @@ bool ASTNodeImporter::ImportDefinition(RecordDecl *From, RecordDecl *To,
     ToData.UserProvidedDefaultConstructor
       = FromData.UserProvidedDefaultConstructor;
     ToData.DeclaredSpecialMembers = FromData.DeclaredSpecialMembers;
-    ToData.ImplicitCopyConstructorHasConstParam
-      = FromData.ImplicitCopyConstructorHasConstParam;
+    ToData.ImplicitCopyConstructorCanHaveConstParamForVBase
+      = FromData.ImplicitCopyConstructorCanHaveConstParamForVBase;
+    ToData.ImplicitCopyConstructorCanHaveConstParamForNonVBase
+      = FromData.ImplicitCopyConstructorCanHaveConstParamForNonVBase;
     ToData.ImplicitCopyAssignmentHasConstParam
       = FromData.ImplicitCopyAssignmentHasConstParam;
     ToData.HasDeclaredCopyConstructorWithConstParam
