@@ -79,7 +79,8 @@ Driver::Driver(StringRef ClangExecutable, StringRef DefaultTargetTriple,
     llvm::sys::path::append(P, ClangResourceDir);
   } else {
     StringRef ClangLibdirSuffix(CLANG_LIBDIR_SUFFIX);
-    llvm::sys::path::append(P, "..", Twine("lib") + ClangLibdirSuffix, "clang",
+    P = llvm::sys::path::parent_path(Dir);
+    llvm::sys::path::append(P, Twine("lib") + ClangLibdirSuffix, "clang",
                             CLANG_VERSION_STRING);
   }
   ResourceDir = P.str();
