@@ -106,14 +106,15 @@ extern int setjmp(jmp_buf);
 @property (nonatomic, strong) IBOutletCollection(I1) NSArray *buttons;
 @end
 
-// CHECK: [[@LINE+2]]:17 | field/ObjC | _prop | c:objc(cs)I2@_prop | <no-cgname> | Def,Impl,RelChild | rel: 1
-// CHECK-NEXT: RelChild | I2 | c:objc(cs)I2
 @implementation I2
-// CHECK: [[@LINE+6]]:13 | instance-property/ObjC | prop | c:objc(cs)I2(py)prop | <no-cgname> | Ref,RelCont | rel: 1
-// CHECK-NEXT: RelCont | I2 | c:objc(cs)I2
-// CHECK: [[@LINE+4]]:13 | instance-method/acc-get/ObjC | prop | c:objc(cs)I2(im)prop | -[I2 prop] | Def,RelChild | rel: 1
+// CHECK: [[@LINE+9]]:13 | instance-property/ObjC | prop | c:objc(cs)I2(py)prop | <no-cgname> | Def,RelChild,RelAcc | rel: 2
 // CHECK-NEXT: RelChild | I2 | c:objc(cs)I2
-// CHECK: [[@LINE+2]]:13 | instance-method/acc-set/ObjC | setProp: | c:objc(cs)I2(im)setProp: | -[I2 setProp:] | Def,RelChild | rel: 1
+// CHECK-NEXT: RelAcc | _prop | c:objc(cs)I2@_prop
+// CHECK: [[@LINE+6]]:13 | instance-method/acc-get/ObjC | prop | c:objc(cs)I2(im)prop | -[I2 prop] | Def,Impl,RelChild | rel: 1
+// CHECK-NEXT: RelChild | I2 | c:objc(cs)I2
+// CHECK: [[@LINE+4]]:13 | instance-method/acc-set/ObjC | setProp: | c:objc(cs)I2(im)setProp: | -[I2 setProp:] | Def,Impl,RelChild | rel: 1
+// CHECK-NEXT: RelChild | I2 | c:objc(cs)I2
+// CHECK: [[@LINE+2]]:20 | field/ObjC | _prop | c:objc(cs)I2@_prop | <no-cgname> | Def,RelChild | rel: 1
 // CHECK-NEXT: RelChild | I2 | c:objc(cs)I2
 @synthesize prop = _prop;
 
@@ -139,10 +140,11 @@ extern int setjmp(jmp_buf);
 
 // CHECK: [[@LINE+1]]:17 | class/ObjC | I3 | c:objc(cs)I3 | <no-cgname> | Def | rel: 0
 @implementation I3
-// CHECK: [[@LINE+4]]:13 | instance-property/ObjC | prop | c:objc(cs)I3(py)prop | <no-cgname> | Ref,RelCont | rel: 1
-// CHECK-NEXT: RelCont | I3 | c:objc(cs)I3
-// CHECK: [[@LINE+2]]:13 | instance-method/acc-get/ObjC | prop | c:objc(cs)I3(im)prop | -[I3 prop] | Def,RelChild | rel: 1
-// CHECK: [[@LINE+1]]:13 | instance-method/acc-set/ObjC | setProp: | c:objc(cs)I3(im)setProp: | -[I3 setProp:] | Def,RelChild | rel: 1
+// CHECK: [[@LINE+5]]:13 | instance-property/ObjC | prop | c:objc(cs)I3(py)prop | <no-cgname> | Def,RelChild,RelAcc | rel: 2
+// CHECK-NEXT: RelChild | I3 | c:objc(cs)I3
+// CHECK-NEXT: RelAcc | _prop | c:objc(cs)I3@_prop
+// CHECK: [[@LINE+2]]:13 | instance-method/acc-get/ObjC | prop | c:objc(cs)I3(im)prop | -[I3 prop] | Def,Impl,RelChild | rel: 1
+// CHECK: [[@LINE+1]]:13 | instance-method/acc-set/ObjC | setProp: | c:objc(cs)I3(im)setProp: | -[I3 setProp:] | Def,Impl,RelChild | rel: 1
 @synthesize prop = _prop;
 @end
 
@@ -181,4 +183,90 @@ typedef MyGenCls<Base *><MyEnumerating> MyEnumerator;
 // CHECK: [[@LINE+2]]:34 | protocol/ObjC | MyEnumerating | c:objc(pl)MyEnumerating | <no-cgname> | Ref,RelBase,RelCont | rel: 1
 // CHECK-NEXT: RelBase,RelCont | PermanentEnumerator | c:objc(cs)PermanentEnumerator
 @interface PermanentEnumerator : MyEnumerator
+@end
+
+@interface I4
+@property id foo;
+@end
+
+@implementation I4 {
+  id _blahfoo; // explicit def
+  // CHECK: [[@LINE-1]]:6 | field/ObjC | _blahfoo | c:objc(cs)I4@_blahfoo | <no-cgname> | Def,RelChild | rel: 1
+}
+@synthesize foo = _blahfoo; // ref of field _blahfoo
+// CHECK: [[@LINE-1]]:13 | instance-property/ObjC | foo | c:objc(cs)I4(py)foo | <no-cgname> | Def,RelChild,RelAcc | rel: 2
+// CHECK-NEXT: RelChild | I4 | c:objc(cs)I4
+// CHECK-NEXT: RelAcc | _blahfoo | c:objc(cs)I4@_blahfoo
+// CHECK: [[@LINE-4]]:13 | instance-method/acc-get/ObjC | foo | c:objc(cs)I4(im)foo | -[I4 foo] | Def,Impl,RelChild | rel: 1
+// CHECK-NEXT: RelChild | I4 | c:objc(cs)I4
+// CHECK: [[@LINE-6]]:13 | instance-method/acc-set/ObjC | setFoo: | c:objc(cs)I4(im)setFoo: | -[I4 setFoo:] | Def,Impl,RelChild | rel: 1
+// CHECK-NEXT: RelChild | I4 | c:objc(cs)I4
+// CHECK: [[@LINE-8]]:19 | field/ObjC | _blahfoo | c:objc(cs)I4@_blahfoo | <no-cgname> | Ref | rel: 0
+
+-(void)method {
+  _blahfoo = 0;
+  // CHECK: [[@LINE-1]]:3 | field/ObjC | _blahfoo | c:objc(cs)I4@_blahfoo | <no-cgname> | Ref,Writ,RelCont | rel: 1
+}
+@end
+
+@interface I5
+@property id foo;
+@end
+
+@implementation I5
+@synthesize foo = _blahfoo; // explicit def of field _blahfoo
+// CHECK: [[@LINE-1]]:13 | instance-property/ObjC | foo | c:objc(cs)I5(py)foo | <no-cgname> | Def,RelChild,RelAcc | rel: 2
+// CHECK-NEXT: RelChild | I5 | c:objc(cs)I5
+// CHECK-NEXT: RelAcc | _blahfoo | c:objc(cs)I5@_blahfoo
+// CHECK: [[@LINE-4]]:13 | instance-method/acc-get/ObjC | foo | c:objc(cs)I5(im)foo | -[I5 foo] | Def,Impl,RelChild | rel: 1
+// CHECK-NEXT: RelChild | I5 | c:objc(cs)I5
+// CHECK: [[@LINE-6]]:13 | instance-method/acc-set/ObjC | setFoo: | c:objc(cs)I5(im)setFoo: | -[I5 setFoo:] | Def,Impl,RelChild | rel: 1
+// CHECK-NEXT: RelChild | I5 | c:objc(cs)I5
+// CHECK: [[@LINE-8]]:19 | field/ObjC | _blahfoo | c:objc(cs)I5@_blahfoo | <no-cgname> | Def,RelChild | rel: 1
+
+-(void)method {
+  _blahfoo = 0;
+  // CHECK: [[@LINE-1]]:3 | field/ObjC | _blahfoo | c:objc(cs)I5@_blahfoo | <no-cgname> | Ref,Writ,RelCont | rel: 1
+}
+@end
+
+@interface I6
+@property id foo;
+@end
+
+@implementation I6
+@synthesize foo; // implicit def of field foo
+// CHECK: [[@LINE-1]]:13 | instance-property/ObjC | foo | c:objc(cs)I6(py)foo | <no-cgname> | Def,RelChild,RelAcc | rel: 2
+// CHECK-NEXT: RelChild | I6 | c:objc(cs)I6
+// CHECK-NEXT: RelAcc | foo | c:objc(cs)I6@foo
+// CHECK: [[@LINE-4]]:13 | instance-method/acc-get/ObjC | foo | c:objc(cs)I6(im)foo | -[I6 foo] | Def,Impl,RelChild | rel: 1
+// CHECK-NEXT: RelChild | I6 | c:objc(cs)I6
+// CHECK: [[@LINE-6]]:13 | instance-method/acc-set/ObjC | setFoo: | c:objc(cs)I6(im)setFoo: | -[I6 setFoo:] | Def,Impl,RelChild | rel: 1
+// CHECK-NEXT: RelChild | I6 | c:objc(cs)I6
+// CHECK: [[@LINE-8]]:13 | field/ObjC | foo | c:objc(cs)I6@foo | <no-cgname> | Def,Impl,RelChild | rel: 1
+
+-(void)method {
+  foo = 0;
+  // CHECK: [[@LINE-1]]:3 | field/ObjC | foo | c:objc(cs)I6@foo | <no-cgname> | Ref,Writ,RelCont | rel: 1
+}
+@end
+
+@interface I7
+@property id foo;
+@end
+
+@implementation I7 // implicit def of field _foo
+// CHECK: [[@LINE-1]]:17 | instance-property/ObjC | foo | c:objc(cs)I7(py)foo | <no-cgname> | Def,Impl,RelChild,RelAcc | rel: 2
+// CHECK-NEXT: RelChild | I7 | c:objc(cs)I7
+// CHECK-NEXT: RelAcc | _foo | c:objc(cs)I7@_foo
+// CHECK: [[@LINE-4]]:17 | instance-method/acc-get/ObjC | foo | c:objc(cs)I7(im)foo | -[I7 foo] | Def,Impl,RelChild | rel: 1
+// CHECK-NEXT: RelChild | I7 | c:objc(cs)I7
+// CHECK: [[@LINE-6]]:17 | instance-method/acc-set/ObjC | setFoo: | c:objc(cs)I7(im)setFoo: | -[I7 setFoo:] | Def,Impl,RelChild | rel: 1
+// CHECK-NEXT: RelChild | I7 | c:objc(cs)I7
+// CHECK: [[@LINE-8]]:17 | field/ObjC | _foo | c:objc(cs)I7@_foo | <no-cgname> | Def,Impl,RelChild | rel: 1
+
+-(void)method {
+  _foo = 0;
+// CHECK: [[@LINE-1]]:3 | field/ObjC | _foo | c:objc(cs)I7@_foo | <no-cgname> | Ref,Writ,RelCont | rel: 1
+}
 @end

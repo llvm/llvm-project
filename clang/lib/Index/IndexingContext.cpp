@@ -24,9 +24,7 @@ bool IndexingContext::shouldIndexFunctionLocalSymbols() const {
 bool IndexingContext::handleDecl(const Decl *D,
                                  SymbolRoleSet Roles,
                                  ArrayRef<SymbolRelation> Relations) {
-  return handleDeclOccurrence(D, D->getLocation(), /*IsRef=*/false,
-                              cast<Decl>(D->getDeclContext()), Roles, Relations,
-                              nullptr, nullptr, D->getDeclContext());
+  return handleDecl(D, D->getLocation(), Roles, Relations);
 }
 
 bool IndexingContext::handleDecl(const Decl *D, SourceLocation Loc,
@@ -35,9 +33,14 @@ bool IndexingContext::handleDecl(const Decl *D, SourceLocation Loc,
                                  const DeclContext *DC) {
   if (!DC)
     DC = D->getDeclContext();
+
+  const Decl *OrigD = D;
+  if (isa<ObjCPropertyImplDecl>(D)) {
+    D = cast<ObjCPropertyImplDecl>(D)->getPropertyDecl();
+  }
   return handleDeclOccurrence(D, Loc, /*IsRef=*/false, cast<Decl>(DC),
                               Roles, Relations,
-                              nullptr, nullptr, DC);
+                              nullptr, OrigD, DC);
 }
 
 bool IndexingContext::handleReference(const NamedDecl *D, SourceLocation Loc,
@@ -286,7 +289,7 @@ bool IndexingContext::handleDeclOccurrence(const Decl *D, SourceLocation Loc,
 
   if (IsRef)
     Roles |= (unsigned)SymbolRole::Reference;
-  else if (isDeclADefinition(D, ContainerDC, *Ctx))
+  else if (isDeclADefinition(OrigD, ContainerDC, *Ctx))
     Roles |= (unsigned)SymbolRole::Definition;
   else
     Roles |= (unsigned)SymbolRole::Declaration;
