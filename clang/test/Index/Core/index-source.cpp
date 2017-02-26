@@ -23,6 +23,16 @@ public:
 TemplCls<int> gtv(0);
 // CHECK: [[@LINE-1]]:1 | class(Gen)/C++ | TemplCls | c:@ST>1#T@TemplCls | <no-cgname> | Ref,RelCont | rel: 1
 
+template<class T>
+class Wrapper {};
+template<class T, class P>
+class Wrapper<T(P)> {};
+
+// CHECK: [[@LINE+1]]:6 | function/C | test1 | [[TEST1_USR:.*]] | [[TEST1_CG:.*]] | Decl | rel: 0
+void test1(Wrapper<void(int)> f);
+// CHECK: [[@LINE+1]]:6 | function/C | test1 | [[TEST1_USR]] | [[TEST1_CG]] | Def | rel: 0
+void test1(Wrapper<void(int)> f) {}
+
 template <typename T>
 class BT {
   struct KLR {

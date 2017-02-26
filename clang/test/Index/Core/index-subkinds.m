@@ -42,7 +42,7 @@
 @class NSButton;
 @interface IBCls
 
-// CHECK: [[@LINE+2]]:34 | instance-method/acc-get/ObjC | prop | c:objc(cs)IBCls(im)prop | -[IBCls prop] | Decl,Dyn,RelChild,RelAcc | rel: 2
+// CHECK: [[@LINE+2]]:34 | instance-method/acc-get/ObjC | prop | c:objc(cs)IBCls(im)prop | -[IBCls prop] | Decl,Dyn,Impl,RelChild,RelAcc | rel: 2
 // CHECK: [[@LINE+1]]:34 | instance-property(IB)/ObjC | prop | c:objc(cs)IBCls(py)prop | <no-cgname> | Decl,RelChild | rel: 1
 @property (readonly) IBOutlet id prop;
 // CHECK: [[@LINE+1]]:54 | instance-property(IB,IBColl)/ObjC | propColl | c:objc(cs)IBCls(py)propColl | <no-cgname> | Decl,RelChild | rel: 1
