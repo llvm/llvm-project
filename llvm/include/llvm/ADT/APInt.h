@@ -147,7 +147,7 @@ class LLVM_NODISCARD APInt {
       return *this;
 
     // Mask out the high bits.
-    uint64_t mask = ~uint64_t(0ULL) >> (APINT_BITS_PER_WORD - wordBits);
+    uint64_t mask = UINT64_MAX >> (APINT_BITS_PER_WORD - wordBits);
     if (isSingleWord())
       VAL &= mask;
     else
@@ -406,7 +406,7 @@ public:
 
   /// If this value is smaller than the specified limit, return it, otherwise
   /// return the limit value.  This causes the value to saturate to the limit.
-  uint64_t getLimitedValue(uint64_t Limit = ~0ULL) const {
+  uint64_t getLimitedValue(uint64_t Limit = UINT64_MAX) const {
     return (getActiveBits() > 64 || getZExtValue() > Limit) ? Limit
                                                             : getZExtValue();
   }
@@ -523,7 +523,7 @@ public:
     unsigned shiftAmt = numBits - hiBitsSet;
     // For small values, return quickly
     if (numBits <= APINT_BITS_PER_WORD)
-      return APInt(numBits, ~0ULL << shiftAmt);
+      return APInt(numBits, UINT64_MAX << shiftAmt);
     return getAllOnesValue(numBits).shl(shiftAmt);
   }
 
@@ -538,8 +538,6 @@ public:
     // Handle a degenerate case, to avoid shifting by word size
     if (loBitsSet == 0)
       return APInt(numBits, 0);
-    if (loBitsSet == APINT_BITS_PER_WORD)
-      return APInt(numBits, UINT64_MAX);
     // For small values, return quickly.
     if (loBitsSet <= APINT_BITS_PER_WORD)
       return APInt(numBits, UINT64_MAX >> (APINT_BITS_PER_WORD - loBitsSet));

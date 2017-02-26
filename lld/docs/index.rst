@@ -119,7 +119,7 @@ instead of the default linker.
 
 The easiest way to do that is to overwrite the default linker. After
 installing LLD to somewhere on your disk, you can create a symbolic
-link by doing ``ld -s /path/to/ld.lld /usr/bin/ld`` so that
+link by doing ``ln -s /path/to/ld.lld /usr/bin/ld`` so that
 ``/usr/bin/ld`` is resolved to LLD.
 
 If you don't want to change the system setting, you can use clang's
