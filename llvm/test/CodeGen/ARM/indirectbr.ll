@@ -47,7 +47,6 @@ L3:                                               ; preds = %L4, %bb2
   br label %L2
 
 L2:                                               ; preds = %L3, %bb2
-; THUMB-LABEL: %L1.clone
 ; THUMB: muls
   %res.2 = phi i32 [ %res.1, %L3 ], [ 1, %bb2 ]   ; <i32> [#uses=1]
   %phitmp = mul i32 %res.2, 6                     ; <i32> [#uses=1]

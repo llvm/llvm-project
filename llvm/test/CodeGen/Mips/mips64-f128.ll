@@ -577,10 +577,10 @@ entry:
 
 ; ALL-LABEL: store_LD_LD:
 ; ALL: ld $[[R0:[0-9]+]], %got_disp(gld1)
+; ALL: ld $[[R1:[0-9]+]], 0($[[R0]])
 ; ALL: ld $[[R2:[0-9]+]], 8($[[R0]])
 ; ALL: ld $[[R3:[0-9]+]], %got_disp(gld0)
 ; ALL: sd $[[R2]], 8($[[R3]])
-; ALL: ld $[[R1:[0-9]+]], 0($[[R0]])
 ; ALL: sd $[[R1]], 0($[[R3]])
 
 define void @store_LD_LD() {

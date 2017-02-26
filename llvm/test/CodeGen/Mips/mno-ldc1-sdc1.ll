@@ -130,12 +130,12 @@
 ; MM-MNO-PIC:         addiu   $[[R1:[0-9]+]], $[[R0]], %lo(_gp_disp)
 ; MM-MNO-PIC:         addu    $[[R2:[0-9]+]], $[[R1]], $25
 ; MM-MNO-PIC:         lw      $[[R3:[0-9]+]], %got(g0)($[[R2]])
-; MM-MNO-PIC-DAG:     lw16    $[[R4:[0-9]+]], 0($[[R3]])
-; MM-MNO-PIC-DAG:     lw16    $[[R5:[0-9]+]], 4($[[R3]])
-; MM-MNO-LE-PIC-DAG:  mtc1    $[[R4]], $f0
-; MM-MNO-LE-PIC-DAG:  mthc1   $[[R5]], $f0
-; MM-MNO-BE-PIC-DAG:  mtc1    $[[R5]], $f0
-; MM-MNO-BE-PIC-DAG:  mthc1   $[[R4]], $f0
+; MM-MNO-PIC:         lw16    $[[R4:[0-9]+]], 0($[[R3]])
+; MM-MNO-PIC:         lw16    $[[R5:[0-9]+]], 4($[[R3]])
+; MM-MNO-LE-PIC:      mtc1    $[[R4]], $f0
+; MM-MNO-LE-PIC:      mthc1   $[[R5]], $f0
+; MM-MNO-BE-PIC:      mtc1    $[[R5]], $f0
+; MM-MNO-BE-PIC:      mthc1   $[[R4]], $f0
 
 ; MM-STATIC-PIC:      lui     $[[R0:[0-9]+]], %hi(g0)
 ; MM-STATIC-PIC:      ldc1    $f0, %lo(g0)($[[R0]])
@@ -214,13 +214,13 @@ entry:
 ; MM-MNO-PIC:         lui     $[[R0:[0-9]+]], %hi(_gp_disp)
 ; MM-MNO-PIC:         addiu   $[[R1:[0-9]+]], $[[R0]], %lo(_gp_disp)
 ; MM-MNO-PIC:         addu    $[[R2:[0-9]+]], $[[R1]], $25
-; MM-MNO-LE-PIC-DAG:  mfc1    $[[R3:[0-9]+]], $f12
-; MM-MNO-BE-PIC-DAG:  mfhc1   $[[R3:[0-9]+]], $f12
-; MM-MNO-PIC-DAG:     lw      $[[R4:[0-9]+]], %got(g0)($[[R2]])
-; MM-MNO-PIC-DAG:     sw16    $[[R3]], 0($[[R4]])
-; MM-MNO-LE-PIC-DAG:  mfhc1   $[[R5:[0-9]+]], $f12
-; MM-MNO-BE-PIC-DAG:  mfc1    $[[R5:[0-9]+]], $f12
-; MM-MNO-PIC-DAG:     sw16    $[[R5]], 4($[[R4]])
+; MM-MNO-LE-PIC:      mfc1    $[[R3:[0-9]+]], $f12
+; MM-MNO-BE-PIC:      mfhc1   $[[R3:[0-9]+]], $f12
+; MM-MNO-PIC:         lw      $[[R4:[0-9]+]], %got(g0)($[[R2]])
+; MM-MNO-PIC:         sw16    $[[R3]], 0($[[R4]])
+; MM-MNO-LE-PIC:      mfhc1   $[[R5:[0-9]+]], $f12
+; MM-MNO-BE-PIC:      mfc1    $[[R5:[0-9]+]], $f12
+; MM-MNO-PIC:         sw16    $[[R5]], 4($[[R4]])
 
 ; MM-STATIC-PIC:      lui     $[[R0:[0-9]+]], %hi(g0)
 ; MM-STATIC-PIC:      sdc1    $f12, %lo(g0)($[[R0]])
@@ -267,8 +267,8 @@ entry:
 
 ; MM-MNO-PIC:    sll16   $[[R0:[0-9]+]], $5, 3
 ; MM-MNO-PIC:    addu16  $[[R1:[0-9]+]], $4, $[[R0]]
-; MM-MNO-PIC-DAG: lw16    $[[R2:[0-9]+]], 0($[[R1]])
-; MM-MNO-PIC-DAG: lw16    $[[R3:[0-9]+]], 4($[[R1]])
+; MM-MNO-PIC:    lw16    $[[R2:[0-9]+]], 0($[[R1]])
+; MM-MNO-PIC:    lw16    $[[R3:[0-9]+]], 4($[[R1]])
 ; MM-MNO-LE-PIC: mtc1    $[[R2]], $f0
 ; MM-MNO-LE-PIC: mthc1   $[[R3]], $f0
 ; MM-MNO-BE-PIC: mtc1    $[[R3]], $f0
@@ -313,14 +313,14 @@ entry:
 ; MM:            addu16  $[[R1:[0-9]+]], $6, $[[R0]]
 ; MM:            sdc1    $f12, 0($[[R1]])
 
-; MM-MNO-PIC:        sll16   $[[R0:[0-9]+]], $7, 3
-; MM-MNO-PIC:        addu16  $[[R1:[0-9]+]], $6, $[[R0]]
-; MM-MNO-LE-PIC-DAG: mfc1    $[[R2:[0-9]+]], $f12
-; MM-MNO-BE-PIC-DAG: mfhc1   $[[R2:[0-9]+]], $f12
-; MM-MNO-PIC-DAG:    sw16    $[[R2]], 0($[[R1]])
-; MM-MNO-LE-PIC-DAG: mfhc1   $[[R3:[0-9]+]], $f12
-; MM-MNO-BE-PIC-DAG: mfc1    $[[R3:[0-9]+]], $f12
-; MM-MNO-PIC-DAG:    sw16    $[[R3]], 4($[[R1]])
+; MM-MNO-PIC:    sll16   $[[R0:[0-9]+]], $7, 3
+; MM-MNO-PIC:    addu16  $[[R1:[0-9]+]], $6, $[[R0]]
+; MM-MNO-LE-PIC: mfc1    $[[R2:[0-9]+]], $f12
+; MM-MNO-BE-PIC: mfhc1   $[[R2:[0-9]+]], $f12
+; MM-MNO-PIC:    sw16    $[[R2]], 0($[[R1]])
+; MM-MNO-LE-PIC: mfhc1   $[[R3:[0-9]+]], $f12
+; MM-MNO-BE-PIC: mfc1    $[[R3:[0-9]+]], $f12
+; MM-MNO-PIC:    sw16    $[[R3]], 4($[[R1]])
 
 ; MM-STATIC-PIC: sll16   $[[R0:[0-9]+]], $7, 3
 ; MM-STATIC-PIC: addu16  $[[R1:[0-9]+]], $6, $[[R0]]
