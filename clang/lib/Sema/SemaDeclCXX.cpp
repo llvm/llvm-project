@@ -5081,6 +5081,10 @@ Sema::MarkBaseAndMemberDestructorsReferenced(SourceLocation Location,
     DiagnoseUseOfDecl(Dtor, Location);
   }
 
+  // We only potentially invoke the destructors of potentially constructed
+  // subobjects.
+  bool VisitVirtualBases = !ClassDecl->isAbstract();
+
   llvm::SmallPtrSet<const RecordType *, 8> DirectVirtualBases;
 
   // Bases.
@@ -5089,8 +5093,11 @@ Sema::MarkBaseAndMemberDestructorsReferenced(SourceLocation Location,
     const RecordType *RT = Base.getType()->getAs<RecordType>();
 
     // Remember direct virtual bases.
-    if (Base.isVirtual())
+    if (Base.isVirtual()) {
+      if (!VisitVirtualBases)
+        continue;
       DirectVirtualBases.insert(RT);
+    }
 
     CXXRecordDecl *BaseClassDecl = cast<CXXRecordDecl>(RT->getDecl());
     // If our base class is invalid, we probably can't get its dtor anyway.
@@ -5112,6 +5119,9 @@ Sema::MarkBaseAndMemberDestructorsReferenced(SourceLocation Location,
     MarkFunctionReferenced(Location, Dtor);
     DiagnoseUseOfDecl(Dtor, Location);
   }
+
+  if (!VisitVirtualBases)
+    return;
   
   // Virtual bases.
   for (const auto &VBase : ClassDecl->vbases()) {
@@ -6881,11 +6891,13 @@ bool Sema::ShouldDeleteSpecialMember(CXXMethodDecl *MD, CXXSpecialMember CSM,
   SpecialMemberDeletionInfo SMI(*this, MD, CSM, ICI, Diagnose);
 
   // Per DR1611, do not consider virtual bases of constructors of abstract
-  // classes, since we are not going to construct them. For assignment
-  // operators, we only assign (and thus only consider) direct bases.
-  if (SMI.visit(SMI.IsConstructor ? SMI.VisitPotentiallyConstructedBases :
-                SMI.IsAssignment  ? SMI.VisitDirectBases :
-                                    SMI.VisitAllBases))
+  // classes, since we are not going to construct them.
+  // Per DR1658, do not consider virtual bases of destructors of abstract
+  // classes either.
+  // Per DR2180, for assignment operators we only assign (and thus only
+  // consider) direct bases.
+  if (SMI.visit(SMI.IsAssignment ? SMI.VisitDirectBases
+                                 : SMI.VisitPotentiallyConstructedBases))
     return true;
 
   if (SMI.shouldDeleteForAllConstMembers())
@@ -10192,15 +10204,15 @@ ComputeDefaultedSpecialMemberExceptionSpec(
   //   destructor without a noexcept-specifier, is potentially-throwing if and
   //   only if any of the destructors for any of its potentially constructed
   //   subojects is potentially throwing.
-  // FIXME: We should respect the first rule but ignore the "potentially
-  // constructed" in the second rule to resolve a core issue (no number yet)
-  // that would have us reject:
+  // FIXME: We respect the first rule but ignore the "potentially constructed"
+  // in the second rule to resolve a core issue (no number yet) that would have
+  // us reject:
   //   struct A { virtual void f() = 0; virtual ~A() noexcept(false) = 0; };
   //   struct B : A {};
   //   struct C : B { void f(); };
   // ... due to giving B::~B() a non-throwing exception specification.
-  // For now we don't implement either.
-  Info.visit(Info.VisitAllBases);
+  Info.visit(Info.IsConstructor ? Info.VisitPotentiallyConstructedBases
+                                : Info.VisitAllBases);
 
   return Info.ExceptSpec;
 }

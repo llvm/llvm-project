@@ -65,20 +65,20 @@ define void @i24_insert_bit(i24* %a, i1 zeroext %bit) {
 define void @i56_or(i56* %a) {
 ; CHECK-LABEL: i56_or:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movzwl 4(%rdi), %eax
-; CHECK-NEXT:    movzbl 6(%rdi), %ecx
-; CHECK-NEXT:    movl (%rdi), %edx
-; CHECK-NEXT:    movb %cl, 6(%rdi)
-; CHECK-NEXT:    # kill: %ECX<def> %ECX<kill> %RCX<kill> %RCX<def>
-; CHECK-NEXT:    shll $16, %ecx
-; CHECK-NEXT:    orl %eax, %ecx
-; CHECK-NEXT:    shlq $32, %rcx
-; CHECK-NEXT:    orq %rcx, %rdx
-; CHECK-NEXT:    orq $384, %rdx # imm = 0x180
-; CHECK-NEXT:    movl %edx, (%rdi)
-; CHECK-NEXT:    shrq $32, %rdx
-; CHECK-NEXT:    movw %dx, 4(%rdi)
-; CHECK-NEXT:    retq
+; ACHECK-NEXT:    movzwl 4(%rdi), %eax
+; ACHECK-NEXT:    movzbl 6(%rdi), %ecx
+; ACHECK-NEXT:    movl (%rdi), %edx
+; ACHECK-NEXT:    movb %cl, 6(%rdi)
+; ACHECK-NEXT:    # kill: %ECX<def> %ECX<kill> %RCX<kill> %RCX<def>
+; ACHECK-NEXT:    shll $16, %ecx
+; ACHECK-NEXT:    orl %eax, %ecx
+; ACHECK-NEXT:    shlq $32, %rcx
+; ACHECK-NEXT:    orq %rcx, %rdx
+; ACHECK-NEXT:    orq $384, %rdx # imm = 0x180
+; ACHECK-NEXT:    movl %edx, (%rdi)
+; ACHECK-NEXT:    shrq $32, %rdx
+; ACHECK-NEXT:    movw %dx, 4(%rdi)
+; ACHECK-NEXT:    retq
   %aa = load i56, i56* %a, align 1
   %b = or i56 %aa, 384
   store i56 %b, i56* %a, align 1
@@ -100,10 +100,10 @@ define void @i56_and_or(i56* %a) {
 ; CHECK-NEXT:    andq %rax, %rcx
 ; CHECK-NEXT:    movl %ecx, (%rdi)
 ; CHECK-NEXT:    movq %rcx, %rax
-; CHECK-NEXT:    shrq $32, %rax
-; CHECK-NEXT:    movw %ax, 4(%rdi)
-; CHECK-NEXT:    shrq $48, %rcx
-; CHECK-NEXT:    movb %cl, 6(%rdi)
+; CHECK-NEXT:    shrq $48, %rax
+; CHECK-NEXT:    movb %al, 6(%rdi)
+; CHECK-NEXT:    shrq $32, %rcx
+; CHECK-NEXT:    movw %cx, 4(%rdi)
 ; CHECK-NEXT:    retq
   %b = load i56, i56* %a, align 1
   %c = and i56 %b, -128
@@ -127,9 +127,9 @@ define void @i56_insert_bit(i56* %a, i1 zeroext %bit) {
 ; CHECK-NEXT:    movabsq $72057594037919743, %rdx # imm = 0xFFFFFFFFFFDFFF
 ; CHECK-NEXT:    andq %rcx, %rdx
 ; CHECK-NEXT:    orq %rdx, %rax
-; CHECK-NEXT:    movl %eax, (%rdi)
 ; CHECK-NEXT:    shrq $48, %rdx
 ; CHECK-NEXT:    movb %dl, 6(%rdi)
+; CHECK-NEXT:    movl %eax, (%rdi)
 ; CHECK-NEXT:    shrq $32, %rax
 ; CHECK-NEXT:    movw %ax, 4(%rdi)
 ; CHECK-NEXT:    retq

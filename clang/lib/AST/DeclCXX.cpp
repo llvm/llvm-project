@@ -68,7 +68,8 @@ CXXRecordDecl::DefinitionData::DefinitionData(CXXRecordDecl *D)
       HasConstexprDefaultConstructor(false),
       HasNonLiteralTypeFieldsOrBases(false), ComputedVisibleConversions(false),
       UserProvidedDefaultConstructor(false), DeclaredSpecialMembers(0),
-      ImplicitCopyConstructorHasConstParam(true),
+      ImplicitCopyConstructorCanHaveConstParamForVBase(true),
+      ImplicitCopyConstructorCanHaveConstParamForNonVBase(true),
       ImplicitCopyAssignmentHasConstParam(true),
       HasDeclaredCopyConstructorWithConstParam(false),
       HasDeclaredCopyAssignmentWithConstParam(false), IsLambda(false),
@@ -227,7 +228,7 @@ CXXRecordDecl::setBases(CXXBaseSpecifier const * const *Bases,
         //   'const B&' or 'const volatile B&' [...]
         if (CXXRecordDecl *VBaseDecl = VBase.getType()->getAsCXXRecordDecl())
           if (!VBaseDecl->hasCopyConstructorWithConstParam())
-            data().ImplicitCopyConstructorHasConstParam = false;
+            data().ImplicitCopyConstructorCanHaveConstParamForVBase = false;
 
         // C++1z [dcl.init.agg]p1:
         //   An aggregate is a class with [...] no virtual base classes
@@ -264,6 +265,14 @@ CXXRecordDecl::setBases(CXXBaseSpecifier const * const *Bases,
       //   In the definition of a constexpr constructor [...]
       //    -- the class shall not have any virtual base classes
       data().DefaultedDefaultConstructorIsConstexpr = false;
+
+      // C++1z [class.copy]p8:
+      //   The implicitly-declared copy constructor for a class X will have
+      //   the form 'X::X(const X&)' if each potentially constructed subobject
+      //   has a copy constructor whose first parameter is of type
+      //   'const B&' or 'const volatile B&' [...]
+      if (!BaseClassDecl->hasCopyConstructorWithConstParam())
+        data().ImplicitCopyConstructorCanHaveConstParamForVBase = false;
     } else {
       // C++ [class.ctor]p5:
       //   A default constructor is trivial [...] if:
@@ -306,6 +315,14 @@ CXXRecordDecl::setBases(CXXBaseSpecifier const * const *Bases,
       //   default constructor is constexpr.
       if (!BaseClassDecl->hasConstexprDefaultConstructor())
         data().DefaultedDefaultConstructorIsConstexpr = false;
+
+      // C++1z [class.copy]p8:
+      //   The implicitly-declared copy constructor for a class X will have
+      //   the form 'X::X(const X&)' if each potentially constructed subobject
+      //   has a copy constructor whose first parameter is of type
+      //   'const B&' or 'const volatile B&' [...]
+      if (!BaseClassDecl->hasCopyConstructorWithConstParam())
+        data().ImplicitCopyConstructorCanHaveConstParamForNonVBase = false;
     }
 
     // C++ [class.ctor]p3:
@@ -324,14 +341,6 @@ CXXRecordDecl::setBases(CXXBaseSpecifier const * const *Bases,
     //   B&', 'const volatile B&', or 'B' [...]
     if (!BaseClassDecl->hasCopyAssignmentWithConstParam())
       data().ImplicitCopyAssignmentHasConstParam = false;
-
-    // C++11 [class.copy]p8:
-    //   The implicitly-declared copy constructor for a class X will have
-    //   the form 'X::X(const X&)' if each direct [...] base class B of X
-    //   has a copy constructor whose first parameter is of type
-    //   'const B&' or 'const volatile B&' [...]
-    if (!BaseClassDecl->hasCopyConstructorWithConstParam())
-      data().ImplicitCopyConstructorHasConstParam = false;
 
     // A class has an Objective-C object member if... or any of its bases
     // has an Objective-C object member.
@@ -916,12 +925,11 @@ void CXXRecordDecl::addedMember(Decl *D) {
 
         // C++11 [class.copy]p8:
         //   The implicitly-declared copy constructor for a class X will have
-        //   the form 'X::X(const X&)' if [...] for all the non-static data
-        //   members of X that are of a class type M (or array thereof), each
-        //   such class type has a copy constructor whose first parameter is
-        //   of type 'const M&' or 'const volatile M&'.
+        //   the form 'X::X(const X&)' if each potentially constructed subobject
+        //   of a class type M (or array thereof) has a copy constructor whose
+        //   first parameter is of type 'const M&' or 'const volatile M&'.
         if (!FieldRec->hasCopyConstructorWithConstParam())
-          data().ImplicitCopyConstructorHasConstParam = false;
+          data().ImplicitCopyConstructorCanHaveConstParamForNonVBase = false;
 
         // C++11 [class.copy]p18:
         //   The implicitly-declared copy assignment oeprator for a class X will
