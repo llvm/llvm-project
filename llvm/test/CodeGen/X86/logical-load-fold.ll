@@ -15,14 +15,14 @@ define double @load_double_no_fold(double %x, double %y) {
 ; SSE2:       # BB#0:
 ; SSE2-NEXT:    cmplesd %xmm0, %xmm1
 ; SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; SSE2-NEXT:    andps %xmm1, %xmm0
+; SSE2-NEXT:    andpd %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; AVX-LABEL: load_double_no_fold:
 ; AVX:       # BB#0:
 ; AVX-NEXT:    vcmplesd %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
-; AVX-NEXT:    vandps %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vandpd %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 
   %cmp = fcmp oge double %x, %y

@@ -641,7 +641,7 @@ define <4 x double> @merge_4f64_f64_34uz_volatile(double* %ptr) nounwind uwtable
 ; AVX512F:       # BB#0:
 ; AVX512F-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; AVX512F-NEXT:    vmovhpd {{.*#+}} xmm0 = xmm0[0],mem[0]
-; AVX512F-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX512F-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; AVX512F-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX512F-NEXT:    retq
 ;

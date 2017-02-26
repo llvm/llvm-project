@@ -5,7 +5,7 @@ define internal i16 @foo(i16 %i) nounwind {
 entry:
   %tmp1 = getelementptr inbounds [5 x i8*], [5 x i8*]* @C.0.2070, i16 0, i16 %i ; <i8**> [#uses=1]
   %gotovar.4.0 = load i8*, i8** %tmp1, align 4        ; <i8*> [#uses=1]
-; CHECK: br .LC.0.2070(r15)
+; CHECK: br .LC.0.2070(r12)
   indirectbr i8* %gotovar.4.0, [label %L5, label %L4, label %L3, label %L2, label %L1]
 
 L5:                                               ; preds = %bb2
