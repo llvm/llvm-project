@@ -5,7 +5,7 @@ define double @test1(double %a, double %b, double %eps) {
 ; CHECK-LABEL: test1:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    cmpltsd %xmm2, %xmm0
-; CHECK-NEXT:    andps %xmm1, %xmm0
+; CHECK-NEXT:    andpd %xmm1, %xmm0
 ; CHECK-NEXT:    retq
 ;
   %cmp = fcmp olt double %a, %eps
@@ -17,7 +17,7 @@ define double @test2(double %a, double %b, double %eps) {
 ; CHECK-LABEL: test2:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    cmplesd %xmm2, %xmm0
-; CHECK-NEXT:    andps %xmm1, %xmm0
+; CHECK-NEXT:    andpd %xmm1, %xmm0
 ; CHECK-NEXT:    retq
 ;
   %cmp = fcmp ole double %a, %eps
@@ -29,8 +29,8 @@ define double @test3(double %a, double %b, double %eps) {
 ; CHECK-LABEL: test3:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    cmpltsd %xmm0, %xmm2
-; CHECK-NEXT:    andps %xmm1, %xmm2
-; CHECK-NEXT:    movaps %xmm2, %xmm0
+; CHECK-NEXT:    andpd %xmm1, %xmm2
+; CHECK-NEXT:    movapd %xmm2, %xmm0
 ; CHECK-NEXT:    retq
 ;
   %cmp = fcmp ogt double %a, %eps
@@ -42,8 +42,8 @@ define double @test4(double %a, double %b, double %eps) {
 ; CHECK-LABEL: test4:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    cmplesd %xmm0, %xmm2
-; CHECK-NEXT:    andps %xmm1, %xmm2
-; CHECK-NEXT:    movaps %xmm2, %xmm0
+; CHECK-NEXT:    andpd %xmm1, %xmm2
+; CHECK-NEXT:    movapd %xmm2, %xmm0
 ; CHECK-NEXT:    retq
 ;
   %cmp = fcmp oge double %a, %eps
@@ -55,7 +55,7 @@ define double @test5(double %a, double %b, double %eps) {
 ; CHECK-LABEL: test5:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    cmpltsd %xmm2, %xmm0
-; CHECK-NEXT:    andnps %xmm1, %xmm0
+; CHECK-NEXT:    andnpd %xmm1, %xmm0
 ; CHECK-NEXT:    retq
 ;
   %cmp = fcmp olt double %a, %eps
@@ -67,7 +67,7 @@ define double @test6(double %a, double %b, double %eps) {
 ; CHECK-LABEL: test6:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    cmplesd %xmm2, %xmm0
-; CHECK-NEXT:    andnps %xmm1, %xmm0
+; CHECK-NEXT:    andnpd %xmm1, %xmm0
 ; CHECK-NEXT:    retq
 ;
   %cmp = fcmp ole double %a, %eps
@@ -79,8 +79,8 @@ define double @test7(double %a, double %b, double %eps) {
 ; CHECK-LABEL: test7:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    cmpltsd %xmm0, %xmm2
-; CHECK-NEXT:    andnps %xmm1, %xmm2
-; CHECK-NEXT:    movaps %xmm2, %xmm0
+; CHECK-NEXT:    andnpd %xmm1, %xmm2
+; CHECK-NEXT:    movapd %xmm2, %xmm0
 ; CHECK-NEXT:    retq
 ;
   %cmp = fcmp ogt double %a, %eps
@@ -92,8 +92,8 @@ define double @test8(double %a, double %b, double %eps) {
 ; CHECK-LABEL: test8:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    cmplesd %xmm0, %xmm2
-; CHECK-NEXT:    andnps %xmm1, %xmm2
-; CHECK-NEXT:    movaps %xmm2, %xmm0
+; CHECK-NEXT:    andnpd %xmm1, %xmm2
+; CHECK-NEXT:    movapd %xmm2, %xmm0
 ; CHECK-NEXT:    retq
 ;
   %cmp = fcmp oge double %a, %eps
@@ -220,10 +220,10 @@ define double @test18(double %a, double %b, double %c, double %eps) {
 ; CHECK-LABEL: test18:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    cmplesd %xmm0, %xmm3
-; CHECK-NEXT:    andps %xmm3, %xmm2
-; CHECK-NEXT:    andnps %xmm1, %xmm3
-; CHECK-NEXT:    orps %xmm2, %xmm3
-; CHECK-NEXT:    movaps %xmm3, %xmm0
+; CHECK-NEXT:    andpd %xmm3, %xmm2
+; CHECK-NEXT:    andnpd %xmm1, %xmm3
+; CHECK-NEXT:    orpd %xmm2, %xmm3
+; CHECK-NEXT:    movapd %xmm3, %xmm0
 ; CHECK-NEXT:    retq
 ;
   %cmp = fcmp oge double %a, %eps

@@ -51,6 +51,8 @@ enum class SymbolKind : uint8_t {
   Constructor,
   Destructor,
   ConversionFunction,
+
+  Parameter,
 };
 
 enum class SymbolLanguage {
@@ -77,8 +79,9 @@ enum class SymbolProperty : uint8_t {
   IBAnnotated                   = 1 << 4,
   IBOutletCollection            = 1 << 5,
   GKInspectable                 = 1 << 6,
+  Local                         = 1 << 7,
 };
-static const unsigned SymbolPropertyBitNum = 7;
+static const unsigned SymbolPropertyBitNum = 8;
 typedef unsigned SymbolPropertySet;
 
 /// Set of roles that are attributed to symbol occurrences.
@@ -124,6 +127,8 @@ struct SymbolInfo {
 };
 
 SymbolInfo getSymbolInfo(const Decl *D);
+
+bool isFunctionLocalSymbol(const Decl *D);
 
 void applyForEachSymbolRole(SymbolRoleSet Roles,
                             llvm::function_ref<void(SymbolRole)> Fn);

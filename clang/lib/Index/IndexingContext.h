@@ -58,7 +58,6 @@ public:
     return false;
   }
 
-  static bool isFunctionLocalDecl(const Decl *D);
   static bool isTemplateImplicitInstantiation(const Decl *D);
 
   bool handleDecl(const Decl *D, SymbolRoleSet Roles = SymbolRoleSet(),

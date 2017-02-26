@@ -2934,13 +2934,13 @@ define <2 x double> @test_mm_sqrt_sd(<2 x double> %a0, <2 x double> %a1) nounwin
 ; X32-LABEL: test_mm_sqrt_sd:
 ; X32:       # BB#0:
 ; X32-NEXT:    sqrtsd %xmm0, %xmm1
-; X32-NEXT:    movaps %xmm1, %xmm0
+; X32-NEXT:    movapd %xmm1, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_sqrt_sd:
 ; X64:       # BB#0:
 ; X64-NEXT:    sqrtsd %xmm0, %xmm1
-; X64-NEXT:    movaps %xmm1, %xmm0
+; X64-NEXT:    movapd %xmm1, %xmm0
 ; X64-NEXT:    retq
   %call = call <2 x double> @llvm.x86.sse2.sqrt.sd(<2 x double> %a0)
   %ext0 = extractelement <2 x double> %call, i32 0

@@ -191,7 +191,7 @@ void IndexingContext::indexNestedNameSpecifierLoc(NestedNameSpecifierLoc NNS,
 }
 
 void IndexingContext::indexTagDecl(const TagDecl *D) {
-  if (!shouldIndexFunctionLocalSymbols() && isFunctionLocalDecl(D))
+  if (!shouldIndexFunctionLocalSymbols() && isFunctionLocalSymbol(D))
     return;
 
   if (handleDecl(D)) {

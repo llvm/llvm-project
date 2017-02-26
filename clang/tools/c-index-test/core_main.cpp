@@ -55,6 +55,9 @@ static cl::opt<bool>
 DumpModuleImports("dump-imported-module-files",
                cl::desc("Print symbols and input files from imported modules"));
 
+static cl::opt<bool>
+IncludeLocals("include-locals", cl::desc("Print local symbols"));
+
 static cl::opt<std::string>
 ModuleFilePath("module-file",
                cl::desc("Path to module file to print symbols from"));
@@ -159,7 +162,8 @@ static void dumpModuleFileInputs(serialization::ModuleFile &Mod,
 }
 
 static bool printSourceSymbols(ArrayRef<const char *> Args,
-                               bool dumpModuleImports) {
+                               bool dumpModuleImports,
+                               bool indexLocals) {
   SmallVector<const char *, 4> ArgsWithProgName;
   ArgsWithProgName.push_back("clang");
   ArgsWithProgName.append(Args.begin(), Args.end());
@@ -172,6 +176,7 @@ static bool printSourceSymbols(ArrayRef<const char *> Args,
   raw_ostream &OS = outs();
   auto DataConsumer = std::make_shared<PrintIndexDataConsumer>(OS);
   IndexingOptions IndexOpts;
+  IndexOpts.IndexFunctionLocals = indexLocals;
   std::unique_ptr<FrontendAction> IndexAction;
   IndexAction = createIndexingAction(DataConsumer, IndexOpts,
                                      /*WrappedAction=*/nullptr);
@@ -297,7 +302,7 @@ int indextest_core_main(int argc, const char **argv) {
       errs() << "error: missing compiler args; pass '-- <compiler arguments>'\n";
       return 1;
     }
-    return printSourceSymbols(CompArgs, options::DumpModuleImports);
+    return printSourceSymbols(CompArgs, options::DumpModuleImports, options::IncludeLocals);
   }
 
   return 0;
