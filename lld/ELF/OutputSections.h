@@ -30,7 +30,7 @@ template <class ELFT> class MergeInputSection;
 class OutputSection;
 template <class ELFT> class ObjectFile;
 template <class ELFT> class SharedFile;
-template <class ELFT> class SharedSymbol;
+class SharedSymbol;
 template <class ELFT> class DefinedRegular;
 
 // This represents a section in an output file.
@@ -93,13 +93,10 @@ public:
   uint8_t *Loc = nullptr;
 };
 
-// All output sections that are hadnled by the linker specially are
+// All output sections that are handled by the linker specially are
 // globally accessible. Writer initializes them, so don't use them
 // until Writer is initialized.
-template <class ELFT> struct Out {
-  typedef typename ELFT::uint uintX_t;
-  typedef typename ELFT::Phdr Elf_Phdr;
-
+struct Out {
   static uint8_t First;
   static OutputSection *Bss;
   static OutputSection *BssRelRo;
@@ -137,13 +134,12 @@ namespace elf {
 // input section. Output section type is determined by various
 // factors, including input section's sh_flags, sh_type and
 // linker scripts.
-template <class ELFT> class OutputSectionFactory {
-  typedef typename ELFT::Shdr Elf_Shdr;
-  typedef typename ELFT::uint uintX_t;
-
+class OutputSectionFactory {
 public:
   OutputSectionFactory(std::vector<OutputSection *> &OutputSections);
   ~OutputSectionFactory();
+
+  template <class ELFT>
   void addInputSec(InputSectionBase *IS, StringRef OutsecName);
 
 private:
@@ -154,21 +150,9 @@ private:
 template <class ELFT> uint64_t getHeaderSize() {
   if (Config->OFormatBinary)
     return 0;
-  return Out<ELFT>::ElfHeader->Size + Out<ELFT>::ProgramHeaders->Size;
+  return Out::ElfHeader->Size + Out::ProgramHeaders->Size;
 }
 
-template <class ELFT> uint8_t Out<ELFT>::First;
-template <class ELFT> OutputSection *Out<ELFT>::Bss;
-template <class ELFT> OutputSection *Out<ELFT>::BssRelRo;
-template <class ELFT> OutputSection *Out<ELFT>::Opd;
-template <class ELFT> uint8_t *Out<ELFT>::OpdBuf;
-template <class ELFT> PhdrEntry *Out<ELFT>::TlsPhdr;
-template <class ELFT> OutputSection *Out<ELFT>::DebugInfo;
-template <class ELFT> OutputSection *Out<ELFT>::ElfHeader;
-template <class ELFT> OutputSection *Out<ELFT>::ProgramHeaders;
-template <class ELFT> OutputSection *Out<ELFT>::PreinitArray;
-template <class ELFT> OutputSection *Out<ELFT>::InitArray;
-template <class ELFT> OutputSection *Out<ELFT>::FiniArray;
 } // namespace elf
 } // namespace lld
 

@@ -288,6 +288,9 @@ private:
   void copyRelocations(uint8_t *Buf, llvm::ArrayRef<RelTy> Rels);
 };
 
+// The list of all input sections.
+extern std::vector<InputSectionBase *> InputSections;
+
 } // namespace elf
 
 std::string toString(const elf::InputSectionBase *);

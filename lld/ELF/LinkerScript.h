@@ -34,7 +34,7 @@ class SymbolBody;
 class InputSectionBase;
 class InputSection;
 class OutputSection;
-template <class ELFT> class OutputSectionFactory;
+class OutputSectionFactory;
 class InputSectionBase;
 
 // This represents an expression in the linker script.
@@ -247,8 +247,8 @@ public:
   LinkerScript();
   ~LinkerScript();
 
-  void processCommands(OutputSectionFactory<ELFT> &Factory);
-  void addOrphanSections(OutputSectionFactory<ELFT> &Factory);
+  void processCommands(OutputSectionFactory &Factory);
+  void addOrphanSections(OutputSectionFactory &Factory);
   void removeEmptyCommands();
   void adjustSectionsBeforeSorting();
   void adjustSectionsAfterSorting();
