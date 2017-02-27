@@ -36,6 +36,7 @@ enum : uint64_t {
 
  // TODO: Should this be spilt into VOP3 a and b?
   VOP3 = 1 << 10,
+  VOP3P = 1 << 12,
 
   VINTRP = 1 << 13,
   SDWA = 1 << 14,
@@ -102,12 +103,14 @@ namespace AMDGPU {
     OPERAND_REG_INLINE_C_FP16,
     OPERAND_REG_INLINE_C_FP32,
     OPERAND_REG_INLINE_C_FP64,
+    OPERAND_REG_INLINE_C_V2FP16,
+    OPERAND_REG_INLINE_C_V2INT16,
 
     OPERAND_REG_IMM_FIRST = OPERAND_REG_IMM_INT32,
     OPERAND_REG_IMM_LAST = OPERAND_REG_IMM_FP16,
 
     OPERAND_REG_INLINE_C_FIRST = OPERAND_REG_INLINE_C_INT16,
-    OPERAND_REG_INLINE_C_LAST = OPERAND_REG_INLINE_C_FP64,
+    OPERAND_REG_INLINE_C_LAST = OPERAND_REG_INLINE_C_V2INT16,
 
     OPERAND_SRC_FIRST = OPERAND_REG_IMM_INT32,
     OPERAND_SRC_LAST = OPERAND_REG_INLINE_C_LAST,
@@ -125,9 +128,12 @@ namespace AMDGPU {
 // NEG and SEXT share same bit-mask because they can't be set simultaneously.
 namespace SISrcMods {
   enum {
-   NEG = 1 << 0,  // Floating-point negate modifier
-   ABS = 1 << 1,  // Floating-point absolute modifier
-   SEXT = 1 << 0  // Integer sign-extend modifier
+   NEG = 1 << 0,   // Floating-point negate modifier
+   ABS = 1 << 1,   // Floating-point absolute modifier
+   SEXT = 1 << 0,  // Integer sign-extend modifier
+   NEG_HI = ABS,   // Floating-point negate high packed component modifier.
+   OP_SEL_0 = 1 << 2,
+   OP_SEL_1 = 1 << 3
   };
 }
 

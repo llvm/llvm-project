@@ -101,6 +101,217 @@ loop_exit:
 ; CHECK: }
 }
 
+; Make sure we unswitch %a == 0 out of the loop.
+;
+; CHECK: define void @and_i2_as_switch_input(i2
+; CHECK: entry:
+; This is an indication that the loop has been unswitched.
+; CHECK: icmp eq i2 %a, 0
+; CHECK: br
+; There should be no more unswitching after the 1st unswitch.
+; CHECK-NOT: icmp eq
+; CHECK: ret
+define void @and_i2_as_switch_input(i2 %a) {
+entry:
+  br label %for.body
+
+for.body:
+  %i = phi i2 [ 0, %entry ], [ %inc, %for.inc ]
+  %and = and i2 %a, %i
+  %and1 = and i2 %and, %i
+  switch i2 %and1, label %sw.default [
+    i2 0, label %sw.bb
+    i2 1, label %sw.bb1
+  ]
+
+sw.bb:
+  br label %sw.epilog
+
+sw.bb1:
+  br label %sw.epilog
+
+sw.default:
+  br label %sw.epilog
+
+sw.epilog:
+  br label %for.inc
+
+for.inc:
+  %inc = add nsw i2 %i, 1
+  %cmp = icmp slt i2 %inc, 3 
+  br i1 %cmp, label %for.body, label %for.end
+
+for.end:
+  ret void
+}
+
+; Make sure we unswitch %a == !0 out of the loop.
+;
+; CHECK: define void @or_i2_as_switch_input(i2
+; CHECK: entry:
+; This is an indication that the loop has been unswitched.
+; CHECK: icmp eq i2 %a, -1
+; CHECK: br
+; There should be no more unswitching after the 1st unswitch.
+; CHECK-NOT: icmp eq
+; CHECK: ret
+define void @or_i2_as_switch_input(i2 %a) {
+entry:
+  br label %for.body
+
+for.body:
+  %i = phi i2 [ 0, %entry ], [ %inc, %for.inc ]
+  %or = or i2 %a, %i
+  %or1 = or i2 %or, %i
+  switch i2 %or1, label %sw.default [
+    i2 2, label %sw.bb
+    i2 3, label %sw.bb1
+  ]
+
+sw.bb:
+  br label %sw.epilog
+
+sw.bb1:
+  br label %sw.epilog
+
+sw.default:
+  br label %sw.epilog
+
+sw.epilog:
+  br label %for.inc
+
+for.inc:
+  %inc = add nsw i2 %i, 1
+  %cmp = icmp slt i2 %inc, 3 
+  br i1 %cmp, label %for.body, label %for.end
+
+for.end:
+  ret void
+}
+
+; Make sure we unswitch %a == !0 out of the loop. Even we do not
+; have it as a case value. Unswitching it out allows us to simplify
+; the or operator chain.
+;
+; CHECK: define void @or_i2_as_switch_input_unswitch_default(i2
+; CHECK: entry:
+; This is an indication that the loop has been unswitched.
+; CHECK: icmp eq i2 %a, -1
+; CHECK: br
+; There should be no more unswitching after the 1st unswitch.
+; CHECK-NOT: icmp eq
+; CHECK: ret
+define void @or_i2_as_switch_input_unswitch_default(i2 %a) {
+entry:
+  br label %for.body
+
+for.body:
+  %i = phi i2 [ 0, %entry ], [ %inc, %for.inc ]
+  %or = or i2 %a, %i
+  %or1 = or i2 %or, %i
+  switch i2 %or1, label %sw.default [
+    i2 1, label %sw.bb
+    i2 2, label %sw.bb1
+  ]
+
+sw.bb:
+  br label %sw.epilog
+
+sw.bb1:
+  br label %sw.epilog
+
+sw.default:
+  br label %sw.epilog
+
+sw.epilog:
+  br label %for.inc
+
+for.inc:
+  %inc = add nsw i2 %i, 1
+  %cmp = icmp slt i2 %inc, 3 
+  br i1 %cmp, label %for.body, label %for.end
+
+for.end:
+  ret void
+}
+
+; Make sure we don't unswitch, as we can not find an input value %a
+; that will effectively unswitch 0 or 3 out of the loop.
+;
+; CHECK: define void @and_or_i2_as_switch_input(i2
+; CHECK: entry:
+; This is an indication that the loop has NOT been unswitched.
+; CHECK-NOT: icmp
+; CHECK: br
+define void @and_or_i2_as_switch_input(i2 %a) {
+entry:
+  br label %for.body
+
+for.body:
+  %i = phi i2 [ 0, %entry ], [ %inc, %for.inc ]
+  %and = and i2 %a, %i 
+  %or = or i2 %and, %i
+  switch i2 %or, label %sw.default [
+    i2 0, label %sw.bb
+    i2 3, label %sw.bb1
+  ]
+
+sw.bb:
+  br label %sw.epilog
+
+sw.bb1:
+  br label %sw.epilog
+
+sw.default:
+  br label %sw.epilog
+
+sw.epilog:
+  br label %for.inc
+
+for.inc:
+  %inc = add nsw i2 %i, 1
+  %cmp = icmp slt i2 %inc, 3 
+  br i1 %cmp, label %for.body, label %for.end
+
+for.end:
+  ret void
+}
+
+; Make sure we don't unswitch, as we can not find an input value %a
+; that will effectively unswitch true/false out of the loop.
+;
+; CHECK: define void @and_or_i1_as_branch_input(i1
+; CHECK: entry:
+; This is an indication that the loop has NOT been unswitched.
+; CHECK-NOT: icmp
+; CHECK: br
+define void @and_or_i1_as_branch_input(i1 %a) {
+entry:
+  br label %for.body
+
+for.body:
+  %i = phi i1 [ 0, %entry ], [ %inc, %for.inc ]
+  %and = and i1 %a, %i 
+  %or = or i1 %and, %i
+  br i1 %or, label %sw.bb, label %sw.bb1
+
+sw.bb:
+  br label %sw.epilog
+
+sw.bb1:
+  br label %sw.epilog
+
+sw.epilog:
+  br label %for.inc
+
+for.inc:
+  %inc = add nsw i1 %i, 1
+  %cmp = icmp slt i1 %inc, 1 
+  br i1 %cmp, label %for.body, label %for.end
+
+for.end:
+  ret void
+}
 
 declare void @incf() noreturn
 declare void @decf() noreturn

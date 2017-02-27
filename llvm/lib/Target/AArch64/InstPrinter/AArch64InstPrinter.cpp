@@ -739,7 +739,6 @@ bool AArch64InstPrinter::printSysAlias(const MCInst *MI,
   assert(Opcode == AArch64::SYSxt && "Invalid opcode for SYS alias!");
 #endif
 
-  const char *Asm = nullptr;
   const MCOperand &Op1 = MI->getOperand(0);
   const MCOperand &Cn = MI->getOperand(1);
   const MCOperand &Cm = MI->getOperand(2);
@@ -750,230 +749,74 @@ bool AArch64InstPrinter::printSysAlias(const MCInst *MI,
   unsigned CmVal = Cm.getImm();
   unsigned Op2Val = Op2.getImm();
 
+  uint16_t Encoding = Op2Val;
+  Encoding |= CmVal << 3;
+  Encoding |= CnVal << 7;
+  Encoding |= Op1Val << 11;
+
+  bool NeedsReg;
+  std::string Ins;
+  std::string Name;
+
   if (CnVal == 7) {
     switch (CmVal) {
-    default:
-      break;
-
+    default: return false;
     // IC aliases
-    case 1:
-      if (Op1Val == 0 && Op2Val == 0)
-        Asm = "ic\tialluis";
-      break;
-    case 5:
-      if (Op1Val == 0 && Op2Val == 0)
-        Asm = "ic\tiallu";
-      else if (Op1Val == 3 && Op2Val == 1)
-        Asm = "ic\tivau";
-      break;
+    case 1: case 5: {
+      const AArch64IC::IC *IC = AArch64IC::lookupICByEncoding(Encoding);
+      if (!IC || !IC->haveFeatures(STI.getFeatureBits()))
+        return false;
 
+      NeedsReg = IC->NeedsReg;
+      Ins = "ic\t";
+      Name = std::string(IC->Name);
+    }
+    break;
     // DC aliases
-    case 4:
-      if (Op1Val == 3 && Op2Val == 1)
-        Asm = "dc\tzva";
-      break;
-    case 6:
-      if (Op1Val == 0 && Op2Val == 1)
-        Asm = "dc\tivac";
-      if (Op1Val == 0 && Op2Val == 2)
-        Asm = "dc\tisw";
-      break;
-    case 10:
-      if (Op1Val == 3 && Op2Val == 1)
-        Asm = "dc\tcvac";
-      else if (Op1Val == 0 && Op2Val == 2)
-        Asm = "dc\tcsw";
-      break;
-    case 11:
-      if (Op1Val == 3 && Op2Val == 1)
-        Asm = "dc\tcvau";
-      break;
-    case 12:
-      if (Op1Val == 3 && Op2Val == 1 &&
-          (STI.getFeatureBits()[AArch64::HasV8_2aOps]))
-        Asm = "dc\tcvap";
-      break;
-    case 14:
-      if (Op1Val == 3 && Op2Val == 1)
-        Asm = "dc\tcivac";
-      else if (Op1Val == 0 && Op2Val == 2)
-        Asm = "dc\tcisw";
-      break;
+    case 4: case 6: case 10: case 11: case 12: case 14:
+    {
+      const AArch64DC::DC *DC = AArch64DC::lookupDCByEncoding(Encoding);
+      if (!DC || !DC->haveFeatures(STI.getFeatureBits()))
+        return false;
 
+      NeedsReg = true;
+      Ins = "dc\t";
+      Name = std::string(DC->Name);
+    }
+    break;
     // AT aliases
-    case 8:
-      switch (Op1Val) {
-      default:
-        break;
-      case 0:
-        switch (Op2Val) {
-        default:
-          break;
-        case 0: Asm = "at\ts1e1r"; break;
-        case 1: Asm = "at\ts1e1w"; break;
-        case 2: Asm = "at\ts1e0r"; break;
-        case 3: Asm = "at\ts1e0w"; break;
-        }
-        break;
-      case 4:
-        switch (Op2Val) {
-        default:
-          break;
-        case 0: Asm = "at\ts1e2r"; break;
-        case 1: Asm = "at\ts1e2w"; break;
-        case 4: Asm = "at\ts12e1r"; break;
-        case 5: Asm = "at\ts12e1w"; break;
-        case 6: Asm = "at\ts12e0r"; break;
-        case 7: Asm = "at\ts12e0w"; break;
-        }
-        break;
-      case 6:
-        switch (Op2Val) {
-        default:
-          break;
-        case 0: Asm = "at\ts1e3r"; break;
-        case 1: Asm = "at\ts1e3w"; break;
-        }
-        break;
-      }
-      break;
-    case 9:
-      switch (Op1Val) {
-      default:
-        break;
-      case 0:
-        if (STI.getFeatureBits()[AArch64::HasV8_2aOps]) {
-          switch (Op2Val) {
-          default:
-            break;
-          case 0: Asm = "at\ts1e1rp"; break;
-          case 1: Asm = "at\ts1e1wp"; break;
-          }
-        }
-        break;
-      }
+    case 8: case 9: {
+      const AArch64AT::AT *AT = AArch64AT::lookupATByEncoding(Encoding);
+      if (!AT || !AT->haveFeatures(STI.getFeatureBits()))
+        return false;
+
+      NeedsReg = true;
+      Ins = "at\t";
+      Name = std::string(AT->Name);
+    }
+    break;
     }
   } else if (CnVal == 8) {
     // TLBI aliases
-    switch (CmVal) {
-    default:
-      break;
-    case 3:
-      switch (Op1Val) {
-      default:
-        break;
-      case 0:
-        switch (Op2Val) {
-        default:
-          break;
-        case 0: Asm = "tlbi\tvmalle1is"; break;
-        case 1: Asm = "tlbi\tvae1is"; break;
-        case 2: Asm = "tlbi\taside1is"; break;
-        case 3: Asm = "tlbi\tvaae1is"; break;
-        case 5: Asm = "tlbi\tvale1is"; break;
-        case 7: Asm = "tlbi\tvaale1is"; break;
-        }
-        break;
-      case 4:
-        switch (Op2Val) {
-        default:
-          break;
-        case 0: Asm = "tlbi\talle2is"; break;
-        case 1: Asm = "tlbi\tvae2is"; break;
-        case 4: Asm = "tlbi\talle1is"; break;
-        case 5: Asm = "tlbi\tvale2is"; break;
-        case 6: Asm = "tlbi\tvmalls12e1is"; break;
-        }
-        break;
-      case 6:
-        switch (Op2Val) {
-        default:
-          break;
-        case 0: Asm = "tlbi\talle3is"; break;
-        case 1: Asm = "tlbi\tvae3is"; break;
-        case 5: Asm = "tlbi\tvale3is"; break;
-        }
-        break;
-      }
-      break;
-    case 0:
-      switch (Op1Val) {
-      default:
-        break;
-      case 4:
-        switch (Op2Val) {
-        default:
-          break;
-        case 1: Asm = "tlbi\tipas2e1is"; break;
-        case 5: Asm = "tlbi\tipas2le1is"; break;
-        }
-        break;
-      }
-      break;
-    case 4:
-      switch (Op1Val) {
-      default:
-        break;
-      case 4:
-        switch (Op2Val) {
-        default:
-          break;
-        case 1: Asm = "tlbi\tipas2e1"; break;
-        case 5: Asm = "tlbi\tipas2le1"; break;
-        }
-        break;
-      }
-      break;
-    case 7:
-      switch (Op1Val) {
-      default:
-        break;
-      case 0:
-        switch (Op2Val) {
-        default:
-          break;
-        case 0: Asm = "tlbi\tvmalle1"; break;
-        case 1: Asm = "tlbi\tvae1"; break;
-        case 2: Asm = "tlbi\taside1"; break;
-        case 3: Asm = "tlbi\tvaae1"; break;
-        case 5: Asm = "tlbi\tvale1"; break;
-        case 7: Asm = "tlbi\tvaale1"; break;
-        }
-        break;
-      case 4:
-        switch (Op2Val) {
-        default:
-          break;
-        case 0: Asm = "tlbi\talle2"; break;
-        case 1: Asm = "tlbi\tvae2"; break;
-        case 4: Asm = "tlbi\talle1"; break;
-        case 5: Asm = "tlbi\tvale2"; break;
-        case 6: Asm = "tlbi\tvmalls12e1"; break;
-        }
-        break;
-      case 6:
-        switch (Op2Val) {
-        default:
-          break;
-        case 0: Asm = "tlbi\talle3"; break;
-        case 1: Asm = "tlbi\tvae3";  break;
-        case 5: Asm = "tlbi\tvale3"; break;
-        }
-        break;
-      }
-      break;
-    }
+    const AArch64TLBI::TLBI *TLBI = AArch64TLBI::lookupTLBIByEncoding(Encoding);
+    if (!TLBI || !TLBI->haveFeatures(STI.getFeatureBits()))
+      return false;
+
+    NeedsReg = TLBI->NeedsReg;
+    Ins = "tlbi\t";
+    Name = std::string(TLBI->Name);
   }
+  else
+    return false;
 
-  if (Asm) {
-    unsigned Reg = MI->getOperand(4).getReg();
+  std::string Str = Ins + Name;
+  std::transform(Str.begin(), Str.end(), Str.begin(), ::tolower);
 
-    O << '\t' << Asm;
-    if (StringRef(Asm).lower().find("all") == StringRef::npos)
-      O << ", " << getRegisterName(Reg);
-  }
+  O << '\t' << Str;
+  if (NeedsReg)
+    O << ", " << getRegisterName(MI->getOperand(4).getReg());
 
-  return Asm != nullptr;
+  return true;
 }
 
 void AArch64InstPrinter::printOperand(const MCInst *MI, unsigned OpNo,

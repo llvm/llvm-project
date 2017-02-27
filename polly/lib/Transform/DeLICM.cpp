@@ -965,6 +965,19 @@ private:
   /// For getting the MemoryAccesses that write or read a given scalar.
   ScalarDefUseChains DefUse;
 
+  /// Number of StoreInsts something can be mapped to.
+  int NumberOfCompatibleTargets = 0;
+
+  /// The number of StoreInsts to which at least one value or PHI has been
+  /// mapped to.
+  int NumberOfTargetsMapped = 0;
+
+  /// The number of llvm::Value mapped to some array element.
+  int NumberOfMappedValueScalars = 0;
+
+  /// The number of PHIs mapped to some array element.
+  int NumberOfMappedPHIScalars = 0;
+
   /// Determine whether two knowledges are conflicting with each other.
   ///
   /// @see Knowledge::isConflicting
@@ -1240,6 +1253,7 @@ private:
     applyLifetime(Proposed);
 
     MappedValueScalars++;
+    NumberOfMappedValueScalars += 1;
   }
 
   /// Try to map a MemoryKind::PHI scalar to a given array element.
@@ -1379,6 +1393,7 @@ private:
     applyLifetime(Proposed);
 
     MappedPHIScalars++;
+    NumberOfMappedPHIScalars++;
   }
 
   /// Search and map scalars to memory overwritten by @p TargetStoreMA.
@@ -1492,8 +1507,10 @@ private:
       }
     }
 
-    if (AnyMapped)
+    if (AnyMapped) {
       TargetsMapped++;
+      NumberOfTargetsMapped++;
+    }
     return AnyMapped;
   }
 
@@ -1544,6 +1561,23 @@ private:
     auto Set = give(isl_map_range(Map.take()));
     return isl_set_is_singleton(Set.keep()) == isl_bool_true;
   }
+
+  /// Print mapping statistics to @p OS.
+  void printStatistics(llvm::raw_ostream &OS, int Indent = 0) const {
+    OS.indent(Indent) << "Statistics {\n";
+    OS.indent(Indent + 4) << "Compatible overwrites: "
+                          << NumberOfCompatibleTargets << "\n";
+    OS.indent(Indent + 4) << "Overwrites mapped to:  " << NumberOfTargetsMapped
+                          << '\n';
+    OS.indent(Indent + 4) << "Value scalars mapped:  "
+                          << NumberOfMappedValueScalars << '\n';
+    OS.indent(Indent + 4) << "PHI scalars mapped:    "
+                          << NumberOfMappedPHIScalars << '\n';
+    OS.indent(Indent) << "}\n";
+  }
+
+  /// Return whether at least one transformation been applied.
+  bool isModified() const { return NumberOfTargetsMapped > 0; }
 
 public:
   DeLICMImpl(Scop *S) : ZoneAlgorithm(S) {}
@@ -1640,6 +1674,7 @@ public:
           continue;
         }
 
+        NumberOfCompatibleTargets++;
         DEBUG(dbgs() << "Analyzing target access " << MA << "\n");
         if (collapseScalarsToStore(MA))
           Modified = true;
@@ -1653,10 +1688,15 @@ public:
   /// Dump the internal information about a performed DeLICM to @p OS.
   void print(llvm::raw_ostream &OS, int Indent = 0) {
     if (!Zone.isUsable()) {
-      OS << "Zone not computed\n";
+      OS.indent(Indent) << "Zone not computed\n";
       return;
     }
 
+    printStatistics(OS, Indent);
+    if (!isModified()) {
+      OS.indent(Indent) << "No modification has been made\n";
+      return;
+    }
     printAccesses(OS, Indent);
   }
 };

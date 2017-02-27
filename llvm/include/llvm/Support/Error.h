@@ -985,6 +985,45 @@ private:
 LLVM_ATTRIBUTE_NORETURN void report_fatal_error(Error Err,
                                                 bool gen_crash_diag = true);
 
+/// Report a fatal error if Err is a failure value.
+///
+/// This function can be used to wrap calls to fallible functions ONLY when it
+/// is known that the Error will always be a success value. E.g.
+///
+///   @code{.cpp}
+///   // foo only attempts the fallible operation if DoFallibleOperation is
+///   // true. If DoFallibleOperation is false then foo always returns
+///   // Error::success().
+///   Error foo(bool DoFallibleOperation);
+///
+///   cantFail(foo(false));
+///   @endcode
+inline void cantFail(Error Err) {
+  if (Err)
+    llvm_unreachable("Failure value returned from cantFail wrapped call");
+}
+
+/// Report a fatal error if ValOrErr is a failure value, otherwise unwraps and
+/// returns the contained value.
+///
+/// This function can be used to wrap calls to fallible functions ONLY when it
+/// is known that the Error will always be a success value. E.g.
+///
+///   @code{.cpp}
+///   // foo only attempts the fallible operation if DoFallibleOperation is
+///   // true. If DoFallibleOperation is false then foo always returns an int.
+///   Expected<int> foo(bool DoFallibleOperation);
+///
+///   int X = cantFail(foo(false));
+///   @endcode
+template <typename T>
+T cantFail(Expected<T> ValOrErr) {
+  if (ValOrErr)
+    return std::move(*ValOrErr);
+  else
+    llvm_unreachable("Failure value returned from cantFail wrapped call");
+}
+
 } // end namespace llvm
 
 #endif // LLVM_SUPPORT_ERROR_H

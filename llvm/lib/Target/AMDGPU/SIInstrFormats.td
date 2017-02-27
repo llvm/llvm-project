@@ -31,6 +31,7 @@ class InstSI <dag outs, dag ins, string asm = "",
   field bit VOP2 = 0;
   field bit VOPC = 0;
   field bit VOP3 = 0;
+  field bit VOP3P = 0;
   field bit VINTRP = 0;
   field bit SDWA = 0;
   field bit DPP = 0;
@@ -96,6 +97,7 @@ class InstSI <dag outs, dag ins, string asm = "",
   let TSFlags{8} = VOP2;
   let TSFlags{9} = VOPC;
   let TSFlags{10} = VOP3;
+  let TSFlags{12} = VOP3P;
 
   let TSFlags{13} = VINTRP;
   let TSFlags{14} = SDWA;

@@ -133,6 +133,7 @@ def err_drv_invalid_gcc_output_type : Error<
     "invalid output type '%0' for use with gcc tool">;
 def err_drv_cc_print_options_failure : Error<
     "unable to open CC_PRINT_OPTIONS file: %0">;
+def err_drv_lto_without_lld : Error<"LTO requires -fuse-ld=lld">;
 def err_drv_preamble_format : Error<
     "incorrect format for -preamble-bytes=N,END">;
 def err_drv_conflicting_deployment_targets : Error<

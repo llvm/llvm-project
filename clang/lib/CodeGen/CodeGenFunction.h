@@ -2866,6 +2866,13 @@ public:
   /// representation to its value representation.
   llvm::Value *EmitFromMemory(llvm::Value *Value, QualType Ty);
 
+  /// Check if the scalar \p Value is within the valid range for the given
+  /// type \p Ty.
+  ///
+  /// Returns true if a check is needed (even if the range is unknown).
+  bool EmitScalarRangeCheck(llvm::Value *Value, QualType Ty,
+                            SourceLocation Loc);
+
   /// EmitLoadOfScalar - Load a scalar value from an address, taking
   /// care to appropriately convert from the memory representation to
   /// the LLVM value representation.

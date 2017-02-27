@@ -158,12 +158,24 @@ if (CUDALIB_FOUND)
   INCLUDE_DIRECTORIES( ${CUDALIB_INCLUDE_DIR} )
 endif(CUDALIB_FOUND)
 
+option(POLLY_BUNDLED_ISL "Use the bundled version of libisl included in Polly" ON)
+if (NOT POLLY_BUNDLED_ISL)
+  find_package(ISL MODULE REQUIRED)
+  message(STATUS "Using external libisl ${ISL_VERSION} in: ${ISL_PREFIX}")
+  set(ISL_TARGET ISL)
+else()
+  set(ISL_INCLUDE_DIRS
+    ${CMAKE_CURRENT_BINARY_DIR}/lib/External/isl/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/lib/External/isl/include
+  )
+  set(ISL_TARGET PollyISL)
+endif()
+
 include_directories(
   BEFORE
   ${CMAKE_CURRENT_SOURCE_DIR}/include
+  ${ISL_INCLUDE_DIRS}
   ${CMAKE_CURRENT_SOURCE_DIR}/lib/External/JSON/include
-  ${CMAKE_CURRENT_BINARY_DIR}/lib/External/isl/include
-  ${CMAKE_CURRENT_SOURCE_DIR}/lib/External/isl/include
   ${CMAKE_CURRENT_SOURCE_DIR}/lib/External/pet/include
   ${CMAKE_CURRENT_SOURCE_DIR}/lib/External
   ${CMAKE_CURRENT_BINARY_DIR}/include

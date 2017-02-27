@@ -126,6 +126,11 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     addRegisterClass(MVT::f16, &AMDGPU::SReg_32_XM0RegClass);
   }
 
+  if (Subtarget->hasVOP3PInsts()) {
+    addRegisterClass(MVT::v2i16, &AMDGPU::SReg_32_XM0RegClass);
+    addRegisterClass(MVT::v2f16, &AMDGPU::SReg_32_XM0RegClass);
+  }
+
   computeRegisterProperties(STI.getRegisterInfo());
 
   // We need to custom lower vector stores from local memory
@@ -202,7 +207,8 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
 
   // We only support LOAD/STORE and vector manipulation ops for vectors
   // with > 4 elements.
-  for (MVT VT : {MVT::v8i32, MVT::v8f32, MVT::v16i32, MVT::v16f32, MVT::v2i64, MVT::v2f64}) {
+  for (MVT VT : {MVT::v8i32, MVT::v8f32, MVT::v16i32, MVT::v16f32,
+        MVT::v2i64, MVT::v2f64}) {
     for (unsigned Op = 0; Op < ISD::BUILTIN_OP_END; ++Op) {
       switch (Op) {
       case ISD::LOAD:
@@ -370,6 +376,41 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FMA, MVT::f16, Legal);
     if (!Subtarget->hasFP16Denormals())
       setOperationAction(ISD::FMAD, MVT::f16, Legal);
+  }
+
+  if (Subtarget->hasVOP3PInsts()) {
+    for (MVT VT : {MVT::v2i16, MVT::v2f16}) {
+      for (unsigned Op = 0; Op < ISD::BUILTIN_OP_END; ++Op) {
+        switch (Op) {
+        case ISD::LOAD:
+        case ISD::STORE:
+        case ISD::BUILD_VECTOR:
+        case ISD::BITCAST:
+        case ISD::EXTRACT_VECTOR_ELT:
+        case ISD::INSERT_VECTOR_ELT:
+        case ISD::INSERT_SUBVECTOR:
+        case ISD::EXTRACT_SUBVECTOR:
+        case ISD::SCALAR_TO_VECTOR:
+          break;
+        case ISD::CONCAT_VECTORS:
+          setOperationAction(Op, VT, Custom);
+          break;
+        default:
+          setOperationAction(Op, VT, Expand);
+          break;
+        }
+      }
+    }
+
+    setOperationAction(ISD::STORE, MVT::v2i16, Promote);
+    AddPromotedToType(ISD::STORE, MVT::v2i16, MVT::i32);
+    setOperationAction(ISD::STORE, MVT::v2f16, Promote);
+    AddPromotedToType(ISD::STORE, MVT::v2f16, MVT::i32);
+
+    setOperationAction(ISD::LOAD, MVT::v2i16, Promote);
+    AddPromotedToType(ISD::LOAD, MVT::v2i16, MVT::i32);
+    setOperationAction(ISD::LOAD, MVT::v2f16, Promote);
+    AddPromotedToType(ISD::LOAD, MVT::v2f16, MVT::i32);
   }
 
   setTargetDAGCombine(ISD::FADD);

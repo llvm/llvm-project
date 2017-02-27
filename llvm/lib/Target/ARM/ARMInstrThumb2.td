@@ -2324,10 +2324,17 @@ def : T2Pat<(ARMssatnoshift GPRnopc:$Rn, imm0_31:$imm),
 //  Shift and rotate Instructions.
 //
 
-defm t2LSL  : T2I_sh_ir<0b00, "lsl", imm0_31, shl>;
+defm t2LSL  : T2I_sh_ir<0b00, "lsl", imm1_31, shl>;
 defm t2LSR  : T2I_sh_ir<0b01, "lsr", imm_sr,  srl>;
 defm t2ASR  : T2I_sh_ir<0b10, "asr", imm_sr,  sra>;
 defm t2ROR  : T2I_sh_ir<0b11, "ror", imm0_31, rotr>;
+
+// LSL #0 is actually MOV, and has slightly different permitted registers to
+// LSL with non-zero shift
+def : t2InstAlias<"lsl${s}${p} $Rd, $Rm, #0",
+                  (t2MOVr GPRnopc:$Rd, GPRnopc:$Rm, pred:$p, cc_out:$s)>;
+def : t2InstAlias<"lsl${s}${p}.w $Rd, $Rm, #0",
+                  (t2MOVr GPRnopc:$Rd, GPRnopc:$Rm, pred:$p, cc_out:$s)>;
 
 // (rotr x, (and y, 0x...1f)) ==> (ROR x, y)
 def : T2Pat<(rotr rGPR:$lhs, (and rGPR:$rhs, lo5AllOne)),
@@ -4646,6 +4653,8 @@ def : t2InstAlias<"neg${s}${p} $Rd, $Rm",
 
 // MOV so_reg assembler pseudos. InstAlias isn't expressive enough for
 // these, unfortunately.
+// FIXME: LSL #0 in the shift should allow SP to be used as either the
+// source or destination (but not both).
 def t2MOVsi: t2AsmPseudo<"mov${p} $Rd, $shift",
                          (ins rGPR:$Rd, t2_so_reg:$shift, pred:$p)>;
 def t2MOVSsi: t2AsmPseudo<"movs${p} $Rd, $shift",
