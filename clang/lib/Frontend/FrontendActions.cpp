@@ -93,7 +93,7 @@ GeneratePCHAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
   Consumers.push_back(llvm::make_unique<PCHGenerator>(
                         CI.getPreprocessor(), OutputFile, Sysroot,
                         Buffer, CI.getFrontendOpts().ModuleFileExtensions,
-                        /*AllowASTWithErrors*/false,
+      /*AllowASTWithErrors*/CI.getPreprocessorOpts().AllowPCHWithCompilerErrors,
                         /*IncludeTimestamps*/
                           +CI.getFrontendOpts().IncludeTimestamps));
   Consumers.push_back(CI.getPCHContainerWriter().CreatePCHContainerGenerator(
@@ -125,6 +125,12 @@ GeneratePCHAction::ComputeASTConsumerArguments(CompilerInstance &CI,
 
   OutputFile = CI.getFrontendOpts().OutputFile;
   return OS;
+}
+
+bool GeneratePCHAction::shouldEraseOutputFiles() {
+  if (getCompilerInstance().getPreprocessorOpts().AllowPCHWithCompilerErrors)
+    return false;
+  return ASTFrontendAction::shouldEraseOutputFiles();
 }
 
 bool GeneratePCHAction::BeginSourceFileAction(CompilerInstance &CI,

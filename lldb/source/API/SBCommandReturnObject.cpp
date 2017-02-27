@@ -17,6 +17,7 @@
 
 #include "lldb/Core/Log.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
+#include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Error.h"
 
 using namespace lldb;

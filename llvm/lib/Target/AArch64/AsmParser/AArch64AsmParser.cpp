@@ -2723,7 +2723,6 @@ bool AArch64AsmParser::tryParseVectorRegister(OperandVector &Operands) {
 
 /// parseRegister - Parse a non-vector register operand.
 bool AArch64AsmParser::parseRegister(OperandVector &Operands) {
-  MCAsmParser &Parser = getParser();
   SMLoc S = getLoc();
   // Try for a vector register.
   if (!tryParseVectorRegister(Operands))
@@ -2735,30 +2734,6 @@ bool AArch64AsmParser::parseRegister(OperandVector &Operands) {
     return true;
   Operands.push_back(
       AArch64Operand::CreateReg(Reg, false, S, getLoc(), getContext()));
-
-  // A small number of instructions (FMOVXDhighr, for example) have "[1]"
-  // as a string token in the instruction itself.
-  SMLoc LBracS = getLoc();
-  const AsmToken &Tok = Parser.getTok();
-  if (parseOptionalToken(AsmToken::LBrac)) {
-    if (Tok.is(AsmToken::Integer)) {
-      SMLoc IntS = getLoc();
-      int64_t Val = Tok.getIntVal();
-      if (Val == 1) {
-        Parser.Lex();
-        SMLoc RBracS = getLoc();
-        if (parseOptionalToken(AsmToken::RBrac)) {
-          Operands.push_back(
-              AArch64Operand::CreateToken("[", false, LBracS, getContext()));
-          Operands.push_back(
-              AArch64Operand::CreateToken("1", false, IntS, getContext()));
-          Operands.push_back(
-              AArch64Operand::CreateToken("]", false, RBracS, getContext()));
-          return false;
-        }
-      }
-    }
-  }
 
   return false;
 }

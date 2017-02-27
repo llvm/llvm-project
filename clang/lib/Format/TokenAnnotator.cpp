@@ -2220,6 +2220,14 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
   } else if (Style.Language == FormatStyle::LK_JavaScript) {
     if (Left.is(TT_JsFatArrow))
       return true;
+    if (Left.is(Keywords.kw_async) && Right.is(tok::l_paren) &&
+        Right.MatchingParen) {
+      const FormatToken *Next = Right.MatchingParen->getNextNonComment();
+      // An async arrow function, for example: `x = async () => foo();`,
+      // as opposed to calling a function called async: `x = async();`
+      if (Next && Next->is(TT_JsFatArrow))
+        return true;
+    }
     if ((Left.is(TT_TemplateString) && Left.TokenText.endswith("${")) ||
         (Right.is(TT_TemplateString) && Right.TokenText.startswith("}")))
       return false;
