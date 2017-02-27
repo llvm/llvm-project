@@ -60,7 +60,7 @@
 # SIMPLE:      0000000000000128         .foo    00000000 .hidden _end_sec
 # SIMPLE-NEXT: 0000000000000120         .foo    00000000 _begin_sec
 # SIMPLE-NEXT: 0000000000000128         *ABS*   00000000 _end_sec_abs
-# SIMPLE-NEXT: 0000000000001048         .text   00000000 _start
+# SIMPLE-NEXT: 000000000000104c         .text   00000000 _start
 # SIMPLE-NEXT: 0000000000000120         .foo    00000000 begin_foo
 # SIMPLE-NEXT: 0000000000000128         .foo    00000000 end_foo
 # SIMPLE-NEXT: 0000000000000008         *ABS*   00000000 size_foo_1

@@ -56,9 +56,9 @@ Error CVTypeDumper::dump(const CVTypeArray &Types,
 }
 
 Error CVTypeDumper::dump(ArrayRef<uint8_t> Data, TypeVisitorCallbacks &Dumper) {
-  msf::ByteStream Stream(Data);
+  BinaryByteStream Stream(Data);
   CVTypeArray Types;
-  msf::StreamReader Reader(Stream);
+  BinaryStreamReader Reader(Stream);
   if (auto EC = Reader.readArray(Types, Reader.getLength()))
     return EC;
 

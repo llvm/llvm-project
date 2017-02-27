@@ -90,6 +90,8 @@ private:
                    raw_ostream &O);
   void printImmediate16(uint32_t Imm, const MCSubtargetInfo &STI,
                         raw_ostream &O);
+  void printImmediateV216(uint32_t Imm, const MCSubtargetInfo &STI,
+                          raw_ostream &O);
   void printImmediate32(uint32_t Imm, const MCSubtargetInfo &STI,
                         raw_ostream &O);
   void printImmediate64(uint64_t Imm, const MCSubtargetInfo &STI,
@@ -117,6 +119,14 @@ private:
                         const MCSubtargetInfo &STI, raw_ostream &O);
   void printSDWADstUnused(const MCInst *MI, unsigned OpNo,
                           const MCSubtargetInfo &STI, raw_ostream &O);
+  void printOpSel(const MCInst *MI, unsigned OpNo,
+                  const MCSubtargetInfo &STI, raw_ostream &O);
+  void printOpSelHi(const MCInst *MI, unsigned OpNo,
+                  const MCSubtargetInfo &STI, raw_ostream &O);
+  void printNegLo(const MCInst *MI, unsigned OpNo,
+                  const MCSubtargetInfo &STI, raw_ostream &O);
+  void printNegHi(const MCInst *MI, unsigned OpNo,
+                  const MCSubtargetInfo &STI, raw_ostream &O);
   void printInterpSlot(const MCInst *MI, unsigned OpNo,
                        const MCSubtargetInfo &STI, raw_ostream &O);
   void printInterpAttr(const MCInst *MI, unsigned OpNo,

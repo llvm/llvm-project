@@ -13,7 +13,7 @@
 ///
 //===----------------------------------------------------------------------===//
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/DebugInfo/CodeView/ByteStream.h"
+#include "llvm/DebugInfo/CodeView/BinaryByteStream.h"
 #include "llvm/DebugInfo/CodeView/SymbolDumper.h"
 #include "llvm/DebugInfo/CodeView/TypeDumper.h"
 #include "llvm/DebugInfo/PDB/Raw/DbiStream.h"
@@ -28,14 +28,15 @@
 using namespace llvm;
 
 namespace {
-// We need a class which behaves like an immutable ByteStream, but whose data
+// We need a class which behaves like an immutable BinaryByteStream, but whose
+// data
 // is backed by an llvm::MemoryBuffer.  It also needs to own the underlying
 // MemoryBuffer, so this simple adapter is a good way to achieve that.
-class InputByteStream : public codeview::ByteStream<false> {
+class InputByteStream : public codeview::BinaryByteStream<false> {
 public:
   explicit InputByteStream(std::unique_ptr<MemoryBuffer> Buffer)
-      : ByteStream(ArrayRef<uint8_t>(Buffer->getBuffer().bytes_begin(),
-                                     Buffer->getBuffer().bytes_end())),
+      : BinaryByteStream(ArrayRef<uint8_t>(Buffer->getBuffer().bytes_begin(),
+                                           Buffer->getBuffer().bytes_end())),
         MemBuffer(std::move(Buffer)) {}
 
   std::unique_ptr<MemoryBuffer> MemBuffer;

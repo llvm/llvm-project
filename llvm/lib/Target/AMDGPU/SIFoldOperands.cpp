@@ -12,6 +12,7 @@
 #include "AMDGPU.h"
 #include "AMDGPUSubtarget.h"
 #include "SIInstrInfo.h"
+#include "SIMachineFunctionInfo.h"
 #include "llvm/CodeGen/LiveIntervalAnalysis.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -79,6 +80,9 @@ public:
   const MachineOperand *isClamp(const MachineInstr &MI) const;
   bool tryFoldClamp(MachineInstr &MI);
 
+  std::pair<const MachineOperand *, int> isOMod(const MachineInstr &MI) const;
+  bool tryFoldOMod(MachineInstr &MI);
+
 public:
   SIFoldOperands() : MachineFunctionPass(ID) {
     initializeSIFoldOperandsPass(*PassRegistry::getPassRegistry());
@@ -135,7 +139,7 @@ FunctionPass *llvm::createSIFoldOperandsPass() {
   return new SIFoldOperands();
 }
 
-static bool isSafeToFold(const MachineInstr &MI) {
+static bool isFoldableCopy(const MachineInstr &MI) {
   switch (MI.getOpcode()) {
   case AMDGPU::V_MOV_B32_e32:
   case AMDGPU::V_MOV_B32_e64:
@@ -731,7 +735,6 @@ static bool hasOneNonDBGUseInst(const MachineRegisterInfo &MRI, unsigned Reg) {
   return true;
 }
 
-// FIXME: Does this need to check IEEE bit on function?
 bool SIFoldOperands::tryFoldClamp(MachineInstr &MI) {
   const MachineOperand *ClampSrc = isClamp(MI);
   if (!ClampSrc || !hasOneNonDBGUseInst(*MRI, ClampSrc->getReg()))
@@ -753,6 +756,128 @@ bool SIFoldOperands::tryFoldClamp(MachineInstr &MI) {
   return true;
 }
 
+static int getOModValue(unsigned Opc, int64_t Val) {
+  switch (Opc) {
+  case AMDGPU::V_MUL_F32_e64: {
+    switch (static_cast<uint32_t>(Val)) {
+    case 0x3f000000: // 0.5
+      return SIOutMods::DIV2;
+    case 0x40000000: // 2.0
+      return SIOutMods::MUL2;
+    case 0x40800000: // 4.0
+      return SIOutMods::MUL4;
+    default:
+      return SIOutMods::NONE;
+    }
+  }
+  case AMDGPU::V_MUL_F16_e64: {
+    switch (static_cast<uint16_t>(Val)) {
+    case 0x3800: // 0.5
+      return SIOutMods::DIV2;
+    case 0x4000: // 2.0
+      return SIOutMods::MUL2;
+    case 0x4400: // 4.0
+      return SIOutMods::MUL4;
+    default:
+      return SIOutMods::NONE;
+    }
+  }
+  default:
+    llvm_unreachable("invalid mul opcode");
+  }
+}
+
+// FIXME: Does this really not support denormals with f16?
+// FIXME: Does this need to check IEEE mode bit? SNaNs are generally not
+// handled, so will anything other than that break?
+std::pair<const MachineOperand *, int>
+SIFoldOperands::isOMod(const MachineInstr &MI) const {
+  unsigned Op = MI.getOpcode();
+  switch (Op) {
+  case AMDGPU::V_MUL_F32_e64:
+  case AMDGPU::V_MUL_F16_e64: {
+    // If output denormals are enabled, omod is ignored.
+    if ((Op == AMDGPU::V_MUL_F32_e64 && ST->hasFP32Denormals()) ||
+        (Op == AMDGPU::V_MUL_F16_e64 && ST->hasFP16Denormals()))
+      return std::make_pair(nullptr, SIOutMods::NONE);
+
+    const MachineOperand *RegOp = nullptr;
+    const MachineOperand *ImmOp = nullptr;
+    const MachineOperand *Src0 = TII->getNamedOperand(MI, AMDGPU::OpName::src0);
+    const MachineOperand *Src1 = TII->getNamedOperand(MI, AMDGPU::OpName::src1);
+    if (Src0->isImm()) {
+      ImmOp = Src0;
+      RegOp = Src1;
+    } else if (Src1->isImm()) {
+      ImmOp = Src1;
+      RegOp = Src0;
+    } else
+      return std::make_pair(nullptr, SIOutMods::NONE);
+
+    int OMod = getOModValue(Op, ImmOp->getImm());
+    if (OMod == SIOutMods::NONE ||
+        TII->hasModifiersSet(MI, AMDGPU::OpName::src0_modifiers) ||
+        TII->hasModifiersSet(MI, AMDGPU::OpName::src1_modifiers) ||
+        TII->hasModifiersSet(MI, AMDGPU::OpName::omod) ||
+        TII->hasModifiersSet(MI, AMDGPU::OpName::clamp))
+      return std::make_pair(nullptr, SIOutMods::NONE);
+
+    return std::make_pair(RegOp, OMod);
+  }
+  case AMDGPU::V_ADD_F32_e64:
+  case AMDGPU::V_ADD_F16_e64: {
+    // If output denormals are enabled, omod is ignored.
+    if ((Op == AMDGPU::V_ADD_F32_e64 && ST->hasFP32Denormals()) ||
+        (Op == AMDGPU::V_ADD_F16_e64 && ST->hasFP16Denormals()))
+      return std::make_pair(nullptr, SIOutMods::NONE);
+
+    // Look through the DAGCombiner canonicalization fmul x, 2 -> fadd x, x
+    const MachineOperand *Src0 = TII->getNamedOperand(MI, AMDGPU::OpName::src0);
+    const MachineOperand *Src1 = TII->getNamedOperand(MI, AMDGPU::OpName::src1);
+
+    if (Src0->isReg() && Src1->isReg() && Src0->getReg() == Src1->getReg() &&
+        Src0->getSubReg() == Src1->getSubReg() &&
+        !TII->hasModifiersSet(MI, AMDGPU::OpName::src0_modifiers) &&
+        !TII->hasModifiersSet(MI, AMDGPU::OpName::src1_modifiers) &&
+        !TII->hasModifiersSet(MI, AMDGPU::OpName::clamp) &&
+        !TII->hasModifiersSet(MI, AMDGPU::OpName::omod))
+      return std::make_pair(Src0, SIOutMods::MUL2);
+
+    return std::make_pair(nullptr, SIOutMods::NONE);
+  }
+  default:
+    return std::make_pair(nullptr, SIOutMods::NONE);
+  }
+}
+
+// FIXME: Does this need to check IEEE bit on function?
+bool SIFoldOperands::tryFoldOMod(MachineInstr &MI) {
+  const MachineOperand *RegOp;
+  int OMod;
+  std::tie(RegOp, OMod) = isOMod(MI);
+  if (OMod == SIOutMods::NONE || !RegOp->isReg() ||
+      RegOp->getSubReg() != AMDGPU::NoSubRegister ||
+      !hasOneNonDBGUseInst(*MRI, RegOp->getReg()))
+    return false;
+
+  MachineInstr *Def = MRI->getVRegDef(RegOp->getReg());
+  MachineOperand *DefOMod = TII->getNamedOperand(*Def, AMDGPU::OpName::omod);
+  if (!DefOMod || DefOMod->getImm() != SIOutMods::NONE)
+    return false;
+
+  // Clamp is applied after omod. If the source already has clamp set, don't
+  // fold it.
+  if (TII->hasModifiersSet(*Def, AMDGPU::OpName::clamp))
+    return false;
+
+  DEBUG(dbgs() << "Folding omod " << MI << " into " << *Def << '\n');
+
+  DefOMod->setImm(OMod);
+  MRI->replaceRegWith(MI.getOperand(0).getReg(), Def->getOperand(0).getReg());
+  MI.eraseFromParent();
+  return true;
+}
+
 bool SIFoldOperands::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(*MF.getFunction()))
     return false;
@@ -761,6 +886,15 @@ bool SIFoldOperands::runOnMachineFunction(MachineFunction &MF) {
   ST = &MF.getSubtarget<SISubtarget>();
   TII = ST->getInstrInfo();
   TRI = &TII->getRegisterInfo();
+
+  const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
+
+  // omod is ignored by hardware if IEEE bit is enabled. omod also does not
+  // correctly handle signed zeros.
+  //
+  // TODO: Check nsz on instructions when fast math flags are preserved to MI
+  // level.
+  bool IsIEEEMode = ST->enableIEEEBit(MF) || !MFI->hasNoSignedZerosFPMath();
 
   for (MachineFunction::iterator BI = MF.begin(), BE = MF.end();
        BI != BE; ++BI) {
@@ -771,9 +905,9 @@ bool SIFoldOperands::runOnMachineFunction(MachineFunction &MF) {
       Next = std::next(I);
       MachineInstr &MI = *I;
 
-      if (!isSafeToFold(MI)) {
-        // TODO: Try omod also.
-        tryFoldClamp(MI);
+      if (!isFoldableCopy(MI)) {
+        if (IsIEEEMode || !tryFoldOMod(MI))
+          tryFoldClamp(MI);
         continue;
       }
 

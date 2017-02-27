@@ -1670,10 +1670,10 @@ define i32 @wobble(i32 %arg, i32 %bar) {
 ; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x i32> [[TMP8]], i32 3
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq <4 x i32> [[TMP8]], zeroinitializer
 ; CHECK-NEXT:    [[TMP11:%.*]] = sext <4 x i1> [[TMP10]] to <4 x i32>
-; CHECK-NEXT:    [[R1:%.*]] = add i32 [[ARG]], undef
-; CHECK-NEXT:    [[R2:%.*]] = add i32 [[R1]], undef
-; CHECK-NEXT:    [[R3:%.*]] = add i32 [[R2]], undef
-; CHECK-NEXT:    [[R4:%.*]] = add i32 [[R3]], undef
+; CHECK-NEXT:    [[R1:%.*]] = add nuw i32 [[ARG]], undef
+; CHECK-NEXT:    [[R2:%.*]] = add nsw i32 [[R1]], undef
+; CHECK-NEXT:    [[R3:%.*]] = add nsw i32 [[R2]], undef
+; CHECK-NEXT:    [[R4:%.*]] = add nsw i32 [[R3]], undef
 ; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x i32> [[TMP11]], <4 x i32> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = add <4 x i32> [[TMP11]], [[RDX_SHUF]]
 ; CHECK-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <4 x i32> [[BIN_RDX]], <4 x i32> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
@@ -1681,7 +1681,7 @@ define i32 @wobble(i32 %arg, i32 %bar) {
 ; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x i32> [[BIN_RDX2]], i32 0
 ; CHECK-NEXT:    [[BIN_EXTRA:%.*]] = add i32 [[TMP12]], [[ARG]]
 ; CHECK-NEXT:    [[BIN_EXTRA3:%.*]] = add i32 [[BIN_EXTRA]], [[TMP9]]
-; CHECK-NEXT:    [[R5:%.*]] = add i32 [[R4]], undef
+; CHECK-NEXT:    [[R5:%.*]] = add nsw i32 [[R4]], undef
 ; CHECK-NEXT:    ret i32 [[BIN_EXTRA3]]
 ;
 ; THRESHOLD-LABEL: @wobble(
@@ -1698,10 +1698,10 @@ define i32 @wobble(i32 %arg, i32 %bar) {
 ; THRESHOLD-NEXT:    [[TMP9:%.*]] = extractelement <4 x i32> [[TMP8]], i32 3
 ; THRESHOLD-NEXT:    [[TMP10:%.*]] = icmp eq <4 x i32> [[TMP8]], zeroinitializer
 ; THRESHOLD-NEXT:    [[TMP11:%.*]] = sext <4 x i1> [[TMP10]] to <4 x i32>
-; THRESHOLD-NEXT:    [[R1:%.*]] = add i32 [[ARG]], undef
-; THRESHOLD-NEXT:    [[R2:%.*]] = add i32 [[R1]], undef
-; THRESHOLD-NEXT:    [[R3:%.*]] = add i32 [[R2]], undef
-; THRESHOLD-NEXT:    [[R4:%.*]] = add i32 [[R3]], undef
+; THRESHOLD-NEXT:    [[R1:%.*]] = add nuw i32 [[ARG]], undef
+; THRESHOLD-NEXT:    [[R2:%.*]] = add nsw i32 [[R1]], undef
+; THRESHOLD-NEXT:    [[R3:%.*]] = add nsw i32 [[R2]], undef
+; THRESHOLD-NEXT:    [[R4:%.*]] = add nsw i32 [[R3]], undef
 ; THRESHOLD-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x i32> [[TMP11]], <4 x i32> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
 ; THRESHOLD-NEXT:    [[BIN_RDX:%.*]] = add <4 x i32> [[TMP11]], [[RDX_SHUF]]
 ; THRESHOLD-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <4 x i32> [[BIN_RDX]], <4 x i32> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
@@ -1709,7 +1709,7 @@ define i32 @wobble(i32 %arg, i32 %bar) {
 ; THRESHOLD-NEXT:    [[TMP12:%.*]] = extractelement <4 x i32> [[BIN_RDX2]], i32 0
 ; THRESHOLD-NEXT:    [[BIN_EXTRA:%.*]] = add i32 [[TMP12]], [[ARG]]
 ; THRESHOLD-NEXT:    [[BIN_EXTRA3:%.*]] = add i32 [[BIN_EXTRA]], [[TMP9]]
-; THRESHOLD-NEXT:    [[R5:%.*]] = add i32 [[R4]], undef
+; THRESHOLD-NEXT:    [[R5:%.*]] = add nsw i32 [[R4]], undef
 ; THRESHOLD-NEXT:    ret i32 [[BIN_EXTRA3]]
 ;
   bb:
@@ -1725,11 +1725,11 @@ define i32 @wobble(i32 %arg, i32 %bar) {
   %x4 = xor i32 %arg, %bar
   %i4 = icmp eq i32 %x4, 0
   %s4 = sext i1 %i4 to i32
-  %r1 = add i32 %arg, %s1
-  %r2 = add i32 %r1, %s2
-  %r3 = add i32 %r2, %s3
-  %r4 = add i32 %r3, %s4
-  %r5 = add i32 %r4, %x4
+  %r1 = add nuw i32 %arg, %s1
+  %r2 = add nsw i32 %r1, %s2
+  %r3 = add nsw i32 %r2, %s3
+  %r4 = add nsw i32 %r3, %s4
+  %r5 = add nsw i32 %r4, %x4
   ret i32 %r5
 }
 

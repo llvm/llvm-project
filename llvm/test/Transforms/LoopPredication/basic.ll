@@ -494,3 +494,78 @@ exit:
   %result = phi i32 [ 0, %entry ], [ %loop.acc.next, %loop ]
   ret i32 %result
 }
+
+define i32 @unsigned_loop_0_to_n_hoist_length(i32* %array, i16 %length.i16, i32 %n) {
+; CHECK-LABEL: @unsigned_loop_0_to_n_hoist_length
+entry:
+  %tmp5 = icmp eq i32 %n, 0
+  br i1 %tmp5, label %exit, label %loop.preheader
+
+loop.preheader:
+; CHECK: loop.preheader:
+; CHECK: [[max_index:[^ ]+]] = add i32 %n, -1
+; CHECK-NEXT: [[length:[^ ]+]] = zext i16 %length.i16 to i32
+; CHECK-NEXT: [[wide_cond:[^ ]+]] = icmp ult i32 [[max_index]], [[length]]
+; CHECK-NEXT: br label %loop
+  br label %loop
+
+loop:
+; CHECK: loop:
+; CHECK: call void (i1, ...) @llvm.experimental.guard(i1 [[wide_cond]], i32 9) [ "deopt"() ]
+  %loop.acc = phi i32 [ %loop.acc.next, %loop ], [ 0, %loop.preheader ]
+  %i = phi i32 [ %i.next, %loop ], [ 0, %loop.preheader ]
+  %length = zext i16 %length.i16 to i32
+  %within.bounds = icmp ult i32 %i, %length
+  call void (i1, ...) @llvm.experimental.guard(i1 %within.bounds, i32 9) [ "deopt"() ]
+
+  %i.i64 = zext i32 %i to i64
+  %array.i.ptr = getelementptr inbounds i32, i32* %array, i64 %i.i64
+  %array.i = load i32, i32* %array.i.ptr, align 4
+  %loop.acc.next = add i32 %loop.acc, %array.i
+
+  %i.next = add nuw i32 %i, 1
+  %continue = icmp ult i32 %i.next, %n
+  br i1 %continue, label %loop, label %exit
+
+exit:
+  %result = phi i32 [ 0, %entry ], [ %loop.acc.next, %loop ]
+  ret i32 %result
+}
+
+define i32 @unsigned_loop_0_to_n_cant_hoist_length(i32* %array, i32 %length, i32 %divider, i32 %n) {
+; CHECK-LABEL: @unsigned_loop_0_to_n_cant_hoist_length
+entry:
+  %tmp5 = icmp eq i32 %n, 0
+  br i1 %tmp5, label %exit, label %loop.preheader
+
+loop.preheader:
+; CHECK: loop.preheader:
+; CHECK-NEXT: br label %loop
+  br label %loop
+
+loop:
+; CHECK: loop:
+; CHECK-NEXT: %loop.acc = phi i32 [ %loop.acc.next, %loop ], [ 0, %loop.preheader ]
+; CHECK-NEXT: %i = phi i32 [ %i.next, %loop ], [ 0, %loop.preheader ]
+; CHECK-NEXT: %length.udiv = udiv i32 %length, %divider
+; CHECK-NEXT: %within.bounds = icmp ult i32 %i, %length.udiv
+; CHECK-NEXT: call void (i1, ...) @llvm.experimental.guard(i1 %within.bounds, i32 9) [ "deopt"() ]
+  %loop.acc = phi i32 [ %loop.acc.next, %loop ], [ 0, %loop.preheader ]
+  %i = phi i32 [ %i.next, %loop ], [ 0, %loop.preheader ]
+  %length.udiv = udiv i32 %length, %divider
+  %within.bounds = icmp ult i32 %i, %length.udiv
+  call void (i1, ...) @llvm.experimental.guard(i1 %within.bounds, i32 9) [ "deopt"() ]
+
+  %i.i64 = zext i32 %i to i64
+  %array.i.ptr = getelementptr inbounds i32, i32* %array, i64 %i.i64
+  %array.i = load i32, i32* %array.i.ptr, align 4
+  %loop.acc.next = add i32 %loop.acc, %array.i
+
+  %i.next = add nuw i32 %i, 1
+  %continue = icmp ult i32 %i.next, %n
+  br i1 %continue, label %loop, label %exit
+
+exit:
+  %result = phi i32 [ 0, %entry ], [ %loop.acc.next, %loop ]
+  ret i32 %result
+}

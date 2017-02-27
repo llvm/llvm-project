@@ -8236,7 +8236,7 @@ bool ARMAsmParser::processInstruction(MCInst &Inst,
   case ARM::t2LSRri:
   case ARM::t2ASRri: {
     if (isARMLowRegister(Inst.getOperand(0).getReg()) &&
-        Inst.getOperand(0).getReg() == Inst.getOperand(1).getReg() &&
+        isARMLowRegister(Inst.getOperand(1).getReg()) &&
         Inst.getOperand(5).getReg() == (inITBlock() ? 0 : ARM::CPSR) &&
         !(static_cast<ARMOperand &>(*Operands[3]).isToken() &&
           static_cast<ARMOperand &>(*Operands[3]).getToken() == ".w")) {
@@ -8311,23 +8311,38 @@ bool ARMAsmParser::processInstruction(MCInst &Inst,
       isNarrow = true;
     MCInst TmpInst;
     unsigned newOpc;
-    switch(ARM_AM::getSORegShOp(Inst.getOperand(2).getImm())) {
-    default: llvm_unreachable("unexpected opcode!");
-    case ARM_AM::asr: newOpc = isNarrow ? ARM::tASRri : ARM::t2ASRri; break;
-    case ARM_AM::lsr: newOpc = isNarrow ? ARM::tLSRri : ARM::t2LSRri; break;
-    case ARM_AM::lsl: newOpc = isNarrow ? ARM::tLSLri : ARM::t2LSLri; break;
-    case ARM_AM::ror: newOpc = ARM::t2RORri; isNarrow = false; break;
-    case ARM_AM::rrx: isNarrow = false; newOpc = ARM::t2RRX; break;
-    }
+    unsigned Shift = ARM_AM::getSORegShOp(Inst.getOperand(2).getImm());
     unsigned Amount = ARM_AM::getSORegOffset(Inst.getOperand(2).getImm());
+    bool isMov = false;
+    // MOV rd, rm, LSL #0 is actually a MOV instruction
+    if (Shift == ARM_AM::lsl && Amount == 0) {
+      isMov = true;
+      // The 16-bit encoding of MOV rd, rm, LSL #N is explicitly encoding T2 of
+      // MOV (register) in the ARMv8-A and ARMv8-M manuals, and immediate 0 is
+      // unpredictable in an IT block so the 32-bit encoding T3 has to be used
+      // instead.
+      if (inITBlock()) {
+        isNarrow = false;
+      }
+      newOpc = isNarrow ? ARM::tMOVSr : ARM::t2MOVr;
+    } else {
+      switch(Shift) {
+      default: llvm_unreachable("unexpected opcode!");
+      case ARM_AM::asr: newOpc = isNarrow ? ARM::tASRri : ARM::t2ASRri; break;
+      case ARM_AM::lsr: newOpc = isNarrow ? ARM::tLSRri : ARM::t2LSRri; break;
+      case ARM_AM::lsl: newOpc = isNarrow ? ARM::tLSLri : ARM::t2LSLri; break;
+      case ARM_AM::ror: newOpc = ARM::t2RORri; isNarrow = false; break;
+      case ARM_AM::rrx: isNarrow = false; newOpc = ARM::t2RRX; break;
+      }
+    }
     if (Amount == 32) Amount = 0;
     TmpInst.setOpcode(newOpc);
     TmpInst.addOperand(Inst.getOperand(0)); // Rd
-    if (isNarrow)
+    if (isNarrow && !isMov)
       TmpInst.addOperand(MCOperand::createReg(
           Inst.getOpcode() == ARM::t2MOVSsi ? ARM::CPSR : 0));
     TmpInst.addOperand(Inst.getOperand(1)); // Rn
-    if (newOpc != ARM::t2RRX)
+    if (newOpc != ARM::t2RRX && !isMov)
       TmpInst.addOperand(MCOperand::createImm(Amount));
     TmpInst.addOperand(Inst.getOperand(3)); // CondCode
     TmpInst.addOperand(Inst.getOperand(4));
@@ -8921,6 +8936,9 @@ unsigned ARMAsmParser::checkTargetMatchPredicate(MCInst &Inst) {
       return Match_RequiresITBlock;
     if (isThumbTwo() && Inst.getOperand(OpNo).getReg() == ARM::CPSR &&
         inITBlock())
+      return Match_RequiresNotITBlock;
+    // LSL with zero immediate is not allowed in an IT block
+    if (Opc == ARM::tLSLri && Inst.getOperand(4).getImm() == 0 && inITBlock())
       return Match_RequiresNotITBlock;
   } else if (isThumbOne()) {
     // Some high-register supporting Thumb1 encodings only allow both registers

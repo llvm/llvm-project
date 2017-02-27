@@ -52,7 +52,7 @@ uint32_t StringTableBuilder::finalize() {
   return Size;
 }
 
-Error StringTableBuilder::commit(msf::StreamWriter &Writer) const {
+Error StringTableBuilder::commit(BinaryStreamWriter &Writer) const {
   // Write a header
   StringTableHeader H;
   H.Signature = StringTableSignature;
@@ -67,7 +67,7 @@ Error StringTableBuilder::commit(msf::StreamWriter &Writer) const {
     StringRef S = Pair.first;
     uint32_t Offset = Pair.second;
     Writer.setOffset(StringStart + Offset);
-    if (auto EC = Writer.writeZeroString(S))
+    if (auto EC = Writer.writeCString(S))
       return EC;
   }
   Writer.setOffset(StringStart + StringSize);

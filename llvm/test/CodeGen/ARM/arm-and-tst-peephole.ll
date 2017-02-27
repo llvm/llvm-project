@@ -140,7 +140,7 @@ return:                                           ; preds = %bb2, %bb, %entry
 ; folding of unrelated tests (in this case, a TST against r1 was eliminated in
 ; favour of an AND of r0).
 
-define i32 @test_tst_assessment(i1 %lhs, i1 %rhs) {
+define i32 @test_tst_assessment(i32 %a, i32 %b) {
 ; ARM-LABEL: test_tst_assessment:
 ; ARM:       @ BB#0:
 ; ARM-NEXT:    and r0, r0, #1
@@ -150,11 +150,13 @@ define i32 @test_tst_assessment(i1 %lhs, i1 %rhs) {
 ;
 ; THUMB-LABEL: test_tst_assessment:
 ; THUMB:       @ BB#0:
-; THUMB-NEXT:    movs r2, #1
-; THUMB-NEXT:    ands r2, r0
-; THUMB-NEXT:    subs r0, r2, #1
+; THUMB-NEXT:    push {r0}
+; THUMB-NEXT:    pop {r2}
+; THUMB-NEXT:    movs r0, #1
+; THUMB-NEXT:    ands r0, r2
+; THUMB-NEXT:    subs r2, r0, #1
 ; THUMB-NEXT:    lsls r1, r1, #31
-; THUMB-NEXT:    bne .LBB2_2
+; THUMB-NEXT:    beq .LBB2_2
 ; THUMB-NEXT:  @ BB#1:
 ; THUMB-NEXT:    push {r2}
 ; THUMB-NEXT:    pop {r0}
@@ -176,10 +178,12 @@ define i32 @test_tst_assessment(i1 %lhs, i1 %rhs) {
 ; V8-NEXT:    it ne
 ; V8-NEXT:    subne r0, #1
 ; V8-NEXT:    bx lr
-  %lhs32 = zext i1 %lhs to i32
-  %rhs32 = zext i1 %rhs to i32
-  %diff = sub nsw i32 %lhs32, %rhs32
-  ret i32 %diff
+  %and1 = and i32 %a, 1
+  %sub = sub i32 %and1, 1
+  %and2 = and i32 %b, 1
+  %cmp = icmp eq i32 %and2, 0
+  %sel = select i1 %cmp, i32 %and1, i32 %sub
+  ret i32 %sel
 }
 
 !1 = !{!"branch_weights", i32 1, i32 1, i32 3, i32 2 }

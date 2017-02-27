@@ -30,7 +30,7 @@ SymbolStream::SymbolStream(std::unique_ptr<MappedBlockStream> Stream)
 SymbolStream::~SymbolStream() {}
 
 Error SymbolStream::reload() {
-  StreamReader Reader(*Stream);
+  BinaryStreamReader Reader(*Stream);
 
   if (auto EC = Reader.readArray(SymbolRecords, Stream->getLength()))
     return EC;

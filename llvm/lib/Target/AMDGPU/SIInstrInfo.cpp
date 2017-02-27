@@ -1537,15 +1537,10 @@ bool SIInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
 
   if (Opc == AMDGPU::V_MAD_F32 || Opc == AMDGPU::V_MAC_F32_e64 ||
       Opc == AMDGPU::V_MAD_F16 || Opc == AMDGPU::V_MAC_F16_e64) {
-    bool IsF32 = Opc == AMDGPU::V_MAD_F32 || Opc == AMDGPU::V_MAC_F32_e64;
-
-    // Don't fold if we are using source modifiers. The new VOP2 instructions
-    // don't have them.
-    if (hasModifiersSet(UseMI, AMDGPU::OpName::src0_modifiers) ||
-        hasModifiersSet(UseMI, AMDGPU::OpName::src1_modifiers) ||
-        hasModifiersSet(UseMI, AMDGPU::OpName::src2_modifiers)) {
+    // Don't fold if we are using source or output modifiers. The new VOP2
+    // instructions don't have them.
+    if (hasAnyModifiersSet(UseMI))
       return false;
-    }
 
     const MachineOperand &ImmOp = DefMI.getOperand(1);
 
@@ -1558,6 +1553,7 @@ bool SIInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
     if (isInlineConstant(UseMI, *Src0, ImmOp))
       return false;
 
+    bool IsF32 = Opc == AMDGPU::V_MAD_F32 || Opc == AMDGPU::V_MAC_F32_e64;
     MachineOperand *Src1 = getNamedOperand(UseMI, AMDGPU::OpName::src1);
     MachineOperand *Src2 = getNamedOperand(UseMI, AMDGPU::OpName::src2);
 
@@ -1942,6 +1938,14 @@ bool SIInstrInfo::hasModifiersSet(const MachineInstr &MI,
                                   unsigned OpName) const {
   const MachineOperand *Mods = getNamedOperand(MI, OpName);
   return Mods && Mods->getImm();
+}
+
+bool SIInstrInfo::hasAnyModifiersSet(const MachineInstr &MI) const {
+  return hasModifiersSet(MI, AMDGPU::OpName::src0_modifiers) ||
+         hasModifiersSet(MI, AMDGPU::OpName::src1_modifiers) ||
+         hasModifiersSet(MI, AMDGPU::OpName::src2_modifiers) ||
+         hasModifiersSet(MI, AMDGPU::OpName::clamp) ||
+         hasModifiersSet(MI, AMDGPU::OpName::omod);
 }
 
 bool SIInstrInfo::usesConstantBus(const MachineRegisterInfo &MRI,

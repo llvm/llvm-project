@@ -56,8 +56,8 @@ class TypeSerializer : public TypeVisitorCallbacks {
   Optional<TypeLeafKind> TypeKind;
   Optional<TypeLeafKind> MemberKind;
   std::vector<uint8_t> RecordBuffer;
-  msf::MutableByteStream Stream;
-  msf::StreamWriter Writer;
+  MutableBinaryByteStream Stream;
+  BinaryStreamWriter Writer;
   TypeRecordMapping Mapping;
 
   RecordList SeenRecords;

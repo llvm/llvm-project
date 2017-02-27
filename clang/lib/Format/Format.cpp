@@ -17,6 +17,7 @@
 #include "AffectedRangeManager.h"
 #include "ContinuationIndenter.h"
 #include "FormatTokenLexer.h"
+#include "NamespaceEndCommentsFixer.h"
 #include "SortJavaScriptImports.h"
 #include "TokenAnalyzer.h"
 #include "TokenAnnotator.h"
@@ -1855,6 +1856,16 @@ tooling::Replacements cleanup(const FormatStyle &Style, StringRef Code,
       Environment::CreateVirtualEnvironment(Code, FileName, Ranges);
   Cleaner Clean(*Env, Style);
   return Clean.process();
+}
+
+tooling::Replacements fixNamespaceEndComments(const FormatStyle &Style,
+                                              StringRef Code,
+                                              ArrayRef<tooling::Range> Ranges,
+                                              StringRef FileName) {
+  std::unique_ptr<Environment> Env =
+      Environment::CreateVirtualEnvironment(Code, FileName, Ranges);
+  NamespaceEndCommentsFixer Fix(*Env, Style);
+  return Fix.process();
 }
 
 LangOptions getFormattingLangOpts(const FormatStyle &Style) {

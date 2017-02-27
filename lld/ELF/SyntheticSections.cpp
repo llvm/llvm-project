@@ -540,7 +540,14 @@ template <class ELFT> void EhFrameSection<ELFT>::finalizeContents() {
       Off += alignTo(Fde->size(), sizeof(uintX_t));
     }
   }
-  this->Size = Off;
+
+  // Add a CIE record of length 0 as a terminator. While the relevant
+  // standards don't explicitly require such a terminator, ld.bfd and
+  // ld.gold always seem to add one and some unwiders rely on its
+  // presence. It also prevents us from generating a .eh_frame section
+  // with zero Call Frame Information records, which isn't allowed by
+  // the LSB standard.
+  this->Size = Off + 4;
 }
 
 template <class ELFT> static uint64_t readFdeAddr(uint8_t *Buf, int Size) {

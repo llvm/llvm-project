@@ -141,10 +141,9 @@ Optional<Value *> LoopPredication::widenICmpRangeCheck(ICmpInst *ICI,
     std::swap(LHSS, RHSS);
     Pred = ICmpInst::getSwappedPredicate(Pred);
   }
-  if (!SE->isLoopInvariant(RHSS, L))
+  if (!SE->isLoopInvariant(RHSS, L) || !isSafeToExpand(RHSS, *SE))
     return None;
 
-  Value *Bound = RHS;
   const SCEVAddRecExpr *IndexAR = dyn_cast<SCEVAddRecExpr>(LHSS);
   if (!IndexAR || IndexAR->getLoop() != L)
     return None;
@@ -176,9 +175,12 @@ Optional<Value *> LoopPredication::widenICmpRangeCheck(ICmpInst *ICI,
 
   DEBUG(dbgs() << "NewLHSS is loop invariant and safe to expand. Expand!\n");
 
-  Value *NewLHS = Expander.expandCodeFor(NewLHSS, Bound->getType(),
-                                         Preheader->getTerminator());
-  return Builder.CreateICmp(Pred, NewLHS, Bound);
+  Type *Ty = LHS->getType();
+  Instruction *InsertAt = Preheader->getTerminator();
+  assert(Ty == RHS->getType() && "icmp operands have different types?");
+  Value *NewLHS = Expander.expandCodeFor(NewLHSS, Ty, InsertAt);
+  Value *NewRHS = Expander.expandCodeFor(RHSS, Ty, InsertAt);
+  return Builder.CreateICmp(Pred, NewLHS, NewRHS);
 }
 
 bool LoopPredication::widenGuardConditions(IntrinsicInst *Guard,

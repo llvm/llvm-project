@@ -28,8 +28,8 @@ namespace codeview {
 
 struct LineColumnEntry {
   support::ulittle32_t NameIndex;
-  msf::FixedStreamArray<LineNumberEntry> LineNumbers;
-  msf::FixedStreamArray<ColumnNumberEntry> Columns;
+  FixedStreamArray<LineNumberEntry> LineNumbers;
+  FixedStreamArray<ColumnNumberEntry> Columns;
 };
 
 struct FileChecksumEntry {
@@ -38,49 +38,47 @@ struct FileChecksumEntry {
   ArrayRef<uint8_t> Checksum; // The bytes of the checksum.
 };
 
-typedef msf::VarStreamArray<LineColumnEntry> LineInfoArray;
-typedef msf::VarStreamArray<FileChecksumEntry> FileChecksumArray;
+typedef VarStreamArray<LineColumnEntry> LineInfoArray;
+typedef VarStreamArray<FileChecksumEntry> FileChecksumArray;
 
 class IModuleSubstreamVisitor {
 public:
   virtual ~IModuleSubstreamVisitor() = default;
 
   virtual Error visitUnknown(ModuleSubstreamKind Kind,
-                             msf::ReadableStreamRef Data) = 0;
-  virtual Error visitSymbols(msf::ReadableStreamRef Data);
-  virtual Error visitLines(msf::ReadableStreamRef Data,
+                             BinaryStreamRef Data) = 0;
+  virtual Error visitSymbols(BinaryStreamRef Data);
+  virtual Error visitLines(BinaryStreamRef Data,
                            const LineSubstreamHeader *Header,
                            const LineInfoArray &Lines);
-  virtual Error visitStringTable(msf::ReadableStreamRef Data);
-  virtual Error visitFileChecksums(msf::ReadableStreamRef Data,
+  virtual Error visitStringTable(BinaryStreamRef Data);
+  virtual Error visitFileChecksums(BinaryStreamRef Data,
                                    const FileChecksumArray &Checksums);
-  virtual Error visitFrameData(msf::ReadableStreamRef Data);
-  virtual Error visitInlineeLines(msf::ReadableStreamRef Data);
-  virtual Error visitCrossScopeImports(msf::ReadableStreamRef Data);
-  virtual Error visitCrossScopeExports(msf::ReadableStreamRef Data);
-  virtual Error visitILLines(msf::ReadableStreamRef Data);
-  virtual Error visitFuncMDTokenMap(msf::ReadableStreamRef Data);
-  virtual Error visitTypeMDTokenMap(msf::ReadableStreamRef Data);
-  virtual Error visitMergedAssemblyInput(msf::ReadableStreamRef Data);
-  virtual Error visitCoffSymbolRVA(msf::ReadableStreamRef Data);
+  virtual Error visitFrameData(BinaryStreamRef Data);
+  virtual Error visitInlineeLines(BinaryStreamRef Data);
+  virtual Error visitCrossScopeImports(BinaryStreamRef Data);
+  virtual Error visitCrossScopeExports(BinaryStreamRef Data);
+  virtual Error visitILLines(BinaryStreamRef Data);
+  virtual Error visitFuncMDTokenMap(BinaryStreamRef Data);
+  virtual Error visitTypeMDTokenMap(BinaryStreamRef Data);
+  virtual Error visitMergedAssemblyInput(BinaryStreamRef Data);
+  virtual Error visitCoffSymbolRVA(BinaryStreamRef Data);
 };
 
 Error visitModuleSubstream(const ModuleSubstream &R,
                            IModuleSubstreamVisitor &V);
 } // end namespace codeview
 
-namespace msf {
-
 template <> class VarStreamArrayExtractor<codeview::LineColumnEntry> {
 public:
   VarStreamArrayExtractor(const codeview::LineSubstreamHeader *Header)
       : Header(Header) {}
 
-  Error operator()(ReadableStreamRef Stream, uint32_t &Len,
+  Error operator()(BinaryStreamRef Stream, uint32_t &Len,
                    codeview::LineColumnEntry &Item) const {
     using namespace codeview;
     const LineFileBlockHeader *BlockHeader;
-    StreamReader Reader(Stream);
+    BinaryStreamReader Reader(Stream);
     if (auto EC = Reader.readObject(BlockHeader))
       return EC;
     bool HasColumn = Header->Flags & LineFlags::HaveColumns;
@@ -113,11 +111,11 @@ private:
 
 template <> class VarStreamArrayExtractor<codeview::FileChecksumEntry> {
 public:
-  Error operator()(ReadableStreamRef Stream, uint32_t &Len,
+  Error operator()(BinaryStreamRef Stream, uint32_t &Len,
                    codeview::FileChecksumEntry &Item) const {
     using namespace codeview;
     const FileChecksum *Header;
-    StreamReader Reader(Stream);
+    BinaryStreamReader Reader(Stream);
     if (auto EC = Reader.readObject(Header))
       return EC;
     Item.FileNameOffset = Header->FileNameOffset;
@@ -128,8 +126,6 @@ public:
     return Error::success();
   }
 };
-
-} // end namespace msf
 
 } // end namespace llvm
 

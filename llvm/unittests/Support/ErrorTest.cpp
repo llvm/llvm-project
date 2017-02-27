@@ -469,6 +469,34 @@ TEST(Error, ExitOnError) {
       << "exitOnError returned an unexpected error result";
 }
 
+// Test that the ExitOnError utility works as expected.
+TEST(Error, CantFailSuccess) {
+  cantFail(Error::success());
+
+  int X = cantFail(Expected<int>(42));
+  EXPECT_EQ(X, 42) << "Expected value modified by cantFail";
+}
+
+// Test that cantFail results in a crash if you pass it a failure value.
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
+TEST(Error, CantFailDeath) {
+  EXPECT_DEATH(
+      cantFail(make_error<StringError>("foo", inconvertibleErrorCode())),
+      "Failure value returned from cantFail wrapped call")
+    << "cantFail(Error) did not cause an abort for failure value";
+
+  EXPECT_DEATH(
+      {
+        auto IEC = inconvertibleErrorCode();
+        int X = cantFail(Expected<int>(make_error<StringError>("foo", IEC)));
+        (void)X;
+      },
+      "Failure value returned from cantFail wrapped call")
+    << "cantFail(Expected<int>) did not cause an abort for failure value";
+}
+#endif
+
+
 // Test Checked Expected<T> in success mode.
 TEST(Error, CheckedExpectedInSuccessMode) {
   Expected<int> A = 7;

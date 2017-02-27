@@ -136,6 +136,7 @@ protected:
   bool SGPRInitBug;
   bool HasSMemRealTime;
   bool Has16BitInsts;
+  bool HasVOP3PInsts;
   bool HasMovrel;
   bool HasVGPRIndexMode;
   bool HasScalarStores;
@@ -214,6 +215,10 @@ public:
 
   bool has16BitInsts() const {
     return Has16BitInsts;
+  }
+
+  bool hasVOP3PInsts() const {
+    return HasVOP3PInsts;
   }
 
   bool hasHWFP64() const {

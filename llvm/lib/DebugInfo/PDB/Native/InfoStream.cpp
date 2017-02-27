@@ -26,7 +26,7 @@ InfoStream::InfoStream(std::unique_ptr<MappedBlockStream> Stream)
     : Stream(std::move(Stream)) {}
 
 Error InfoStream::reload() {
-  StreamReader Reader(*Stream);
+  BinaryStreamReader Reader(*Stream);
 
   const InfoStreamHeader *H;
   if (auto EC = Reader.readObject(H))

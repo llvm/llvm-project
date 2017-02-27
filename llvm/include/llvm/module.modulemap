@@ -276,6 +276,7 @@ module LLVM_Utils {
     textual header "Support/ELFRelocs/SystemZ.def"
     textual header "Support/ELFRelocs/x86_64.def"
     textual header "Support/ELFRelocs/WebAssembly.def"
+    textual header "Support/WasmRelocs/WebAssembly.def"
   }
 
   // This part of the module is usable from both C and C++ code.
