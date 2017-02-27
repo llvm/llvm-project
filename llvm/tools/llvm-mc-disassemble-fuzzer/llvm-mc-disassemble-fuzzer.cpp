@@ -20,19 +20,6 @@ using namespace llvm;
 
 const unsigned AssemblyTextBufSize = 80;
 
-enum ActionType {
-  AC_Assemble,
-  AC_Disassemble
-};
-
-static cl::opt<ActionType>
-Action(cl::desc("Action to perform:"),
-       cl::init(AC_Assemble),
-       cl::values(clEnumValN(AC_Assemble, "assemble",
-                             "Assemble a .s file (default)"),
-                  clEnumValN(AC_Disassemble, "disassemble",
-                             "Disassemble strings of hex bytes")));
-
 static cl::opt<std::string>
     TripleName("triple", cl::desc("Target triple to assemble for, "
                                   "see -version for available targets"));
@@ -88,13 +75,7 @@ int DisassembleOneInput(const uint8_t *Data, size_t Size) {
 }
 
 int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
-  if (Action == AC_Assemble)
-    errs() << "error: -assemble is not implemented\n";
-  else if (Action == AC_Disassemble)
-    return DisassembleOneInput(Data, Size);
-
-  llvm_unreachable("Unknown action");
-  return 0;
+  return DisassembleOneInput(Data, Size);
 }
 
 int LLVMFuzzerInitialize(int *argc, char ***argv) {
@@ -154,6 +135,9 @@ int LLVMFuzzerInitialize(int *argc, char ***argv) {
       Features.AddFeature(MAttrs[i]);
     FeaturesStr = Features.getString();
   }
+
+  if (TripleName.empty())
+    TripleName = sys::getDefaultTargetTriple();
 
   return 0;
 }

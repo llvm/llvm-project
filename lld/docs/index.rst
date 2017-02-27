@@ -48,7 +48,7 @@ Features
   external linkers. All you have to do is to construct object files
   and command line arguments just like you would do to invoke an
   external linker and then call the linker's main function,
-  `lld::elf::link`, from your code.
+  ``lld::elf::link``, from your code.
 
 - It is small. We are using LLVM libObject library to read from object
   files, so it is not completely a fair comparison, but as of February
@@ -56,7 +56,7 @@ Features
   consists of 198k lines of C++ code.
 
 - Link-time optimization (LTO) is supported by default. Essentially,
-  all you have to do to do LTO is to pass the `-flto` option to clang.
+  all you have to do to do LTO is to pass the ``-flto`` option to clang.
   Then clang creates object files not in the native object file format
   but in LLVM bitcode format. LLD reads bitcode object files, compile
   them using LLVM and emit an output file. Because in this way LLD can
@@ -93,7 +93,7 @@ Build
 -----
 
 If you have already checked out LLVM using SVN, you can check out LLD
-under `tools` directory just like you probably did for clang. For the
+under ``tools`` directory just like you probably did for clang. For the
 details, see `Getting Started with the LLVM System
 <http://llvm.org/docs/GettingStarted.html>`_.
 

@@ -252,7 +252,7 @@ void LinkerScript<ELFT>::computeInputSections(InputSectionDescription *I) {
   for (SectionPattern &Pat : I->SectionPatterns) {
     size_t SizeBefore = I->Sections.size();
 
-    for (InputSectionBase *S : Symtab<ELFT>::X->Sections) {
+    for (InputSectionBase *S : InputSections) {
       if (S->Assigned)
         continue;
       // For -emit-relocs we have to ignore entries like
@@ -321,7 +321,7 @@ LinkerScript<ELFT>::createInputSectionList(OutputSectionCommand &OutCmd) {
 }
 
 template <class ELFT>
-void LinkerScript<ELFT>::processCommands(OutputSectionFactory<ELFT> &Factory) {
+void LinkerScript<ELFT>::processCommands(OutputSectionFactory &Factory) {
   for (unsigned I = 0; I < Opt.Commands.size(); ++I) {
     auto Iter = Opt.Commands.begin() + I;
     const std::unique_ptr<BaseCommand> &Base1 = *Iter;
@@ -383,18 +383,17 @@ void LinkerScript<ELFT>::processCommands(OutputSectionFactory<ELFT> &Factory) {
 
       // Add input sections to an output section.
       for (InputSectionBase *S : V)
-        Factory.addInputSec(S, Cmd->Name);
+        Factory.addInputSec<ELFT>(S, Cmd->Name);
     }
   }
 }
 
 // Add sections that didn't match any sections command.
 template <class ELFT>
-void LinkerScript<ELFT>::addOrphanSections(
-    OutputSectionFactory<ELFT> &Factory) {
-  for (InputSectionBase *S : Symtab<ELFT>::X->Sections)
+void LinkerScript<ELFT>::addOrphanSections(OutputSectionFactory &Factory) {
+  for (InputSectionBase *S : InputSections)
     if (S->Live && !S->OutSec)
-      Factory.addInputSec(S, getOutputSectionName(S->Name));
+      Factory.addInputSec<ELFT>(S, getOutputSectionName(S->Name));
 }
 
 template <class ELFT> static bool isTbss(OutputSection *Sec) {
@@ -491,7 +490,7 @@ template <class ELFT> void LinkerScript<ELFT>::process(BaseCommand &Base) {
     // empty ones afterwards (because there is no way to know whether they were
     // going be empty or not other than actually running linker scripts.)
     // We need to ignore remains of empty sections.
-    if (auto *Sec = dyn_cast<SyntheticSection<ELFT>>(ID))
+    if (auto *Sec = dyn_cast<SyntheticSection>(ID))
       if (Sec->empty())
         continue;
 
@@ -829,9 +828,9 @@ template <class ELFT> std::vector<PhdrEntry> LinkerScript<ELFT>::createPhdrs() {
     PhdrEntry &Phdr = Ret.back();
 
     if (Cmd.HasFilehdr)
-      Phdr.add(Out<ELFT>::ElfHeader);
+      Phdr.add(Out::ElfHeader);
     if (Cmd.HasPhdrs)
-      Phdr.add(Out<ELFT>::ProgramHeaders);
+      Phdr.add(Out::ProgramHeaders);
 
     if (Cmd.LMAExpr) {
       Phdr.p_paddr = Cmd.LMAExpr(0);

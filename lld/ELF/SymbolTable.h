@@ -91,8 +91,6 @@ public:
   void trace(StringRef Name);
   void wrap(StringRef Name);
 
-  std::vector<InputSectionBase *> Sections;
-
 private:
   std::vector<SymbolBody *> findByVersion(SymbolVersion Ver);
   std::vector<SymbolBody *> findAllByVersion(SymbolVersion Ver);
