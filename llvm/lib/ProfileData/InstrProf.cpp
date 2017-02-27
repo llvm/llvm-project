@@ -38,7 +38,7 @@ static cl::opt<bool> StaticFuncFullModulePrefix(
 // of levels to strip. A value larger than the number of directories in the
 // source file will strip all the directory names and only leave the basename.
 //
-// Note current Thin-LTO module importing for the indirect-calls assumes
+// Note current ThinLTO module importing for the indirect-calls assumes
 // the source directory name not being stripped. A non-zero option value here
 // can potentially prevent some inter-module indirect-call-promotions.
 static cl::opt<unsigned> StaticFuncStripDirNamePrefix(

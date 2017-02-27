@@ -66,7 +66,7 @@ if (GPU_CODEGEN)
   target_link_libraries(Polly PollyPPCG)
 endif (GPU_CODEGEN)
 
-target_link_libraries(Polly PollyISL)
+target_link_libraries(Polly ${ISL_TARGET})
 
 if (BUILD_SHARED_LIBS)
   target_link_libraries(Polly

@@ -28,7 +28,7 @@ namespace codeview {
 
 class SymbolSerializer : public SymbolVisitorCallbacks {
   uint32_t RecordStart = 0;
-  msf::StreamWriter &Writer;
+  BinaryStreamWriter &Writer;
   SymbolRecordMapping Mapping;
   Optional<SymbolKind> CurrentSymbol;
 
@@ -42,7 +42,7 @@ class SymbolSerializer : public SymbolVisitorCallbacks {
   }
 
 public:
-  explicit SymbolSerializer(msf::StreamWriter &Writer)
+  explicit SymbolSerializer(BinaryStreamWriter &Writer)
       : Writer(Writer), Mapping(Writer) {}
 
   virtual Error visitSymbolBegin(CVSymbol &Record) override {

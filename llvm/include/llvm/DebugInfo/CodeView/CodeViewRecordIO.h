@@ -33,8 +33,8 @@ class CodeViewRecordIO {
   }
 
 public:
-  explicit CodeViewRecordIO(msf::StreamReader &Reader) : Reader(&Reader) {}
-  explicit CodeViewRecordIO(msf::StreamWriter &Writer) : Writer(&Writer) {}
+  explicit CodeViewRecordIO(BinaryStreamReader &Reader) : Reader(&Reader) {}
+  explicit CodeViewRecordIO(BinaryStreamWriter &Writer) : Writer(&Writer) {}
 
   Error beginRecord(Optional<uint32_t> MaxLength);
   Error endRecord();
@@ -160,8 +160,8 @@ private:
 
   SmallVector<RecordLimit, 2> Limits;
 
-  msf::StreamReader *Reader = nullptr;
-  msf::StreamWriter *Writer = nullptr;
+  BinaryStreamReader *Reader = nullptr;
+  BinaryStreamWriter *Writer = nullptr;
 };
 
 } // end namespace codeview

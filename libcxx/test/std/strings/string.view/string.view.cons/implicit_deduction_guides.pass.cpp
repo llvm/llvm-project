@@ -10,10 +10,6 @@
 // UNSUPPORTED: c++98, c++03, c++11, c++14
 // UNSUPPORTED: libcpp-no-deduction-guides
 
-// FIXME(EricWF): As of 16/Feb/2017 Clang hits an assertion when compiling this
-// test with '-g' (as the sanitizers do).
-// XFAIL: ubsan, asan, msan, tsan
-
 // <string_view>
 
 // Test that the constructors offered by std::basic_string_view are formulated

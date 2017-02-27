@@ -237,7 +237,7 @@ def VOP_MOVRELD : VOPProfile<[untyped, i32, untyped, untyped]> {
                      src0_sel:$src0_sel);
 
   let Asm32 = getAsm32<1, 1>.ret;
-  let Asm64 = getAsm64<1, 1, 0>.ret;
+  let Asm64 = getAsm64<1, 1, 0, 1>.ret;
   let AsmDPP = getAsmDPP<1, 1, 0>.ret;
   let AsmSDWA = getAsmSDWA<1, 1, 0>.ret;
 

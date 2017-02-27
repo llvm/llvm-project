@@ -1,4 +1,4 @@
-//===- StreamInterface.h - Base interface for a stream of data --*- C++ -*-===//
+//===- BinaryStream.h - Base interface for a stream of data -----*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,47 +7,60 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DEBUGINFO_MSF_STREAMINTERFACE_H
-#define LLVM_DEBUGINFO_MSF_STREAMINTERFACE_H
+#ifndef LLVM_DEBUGINFO_MSF_BINARYSTREAM_H
+#define LLVM_DEBUGINFO_MSF_BINARYSTREAM_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include <cstdint>
 
 namespace llvm {
-namespace msf {
 
-class ReadableStream {
+/// \brief An interface for accessing data in a stream-like format, but which
+/// discourages copying.  Instead of specifying a buffer in which to copy
+/// data on a read, the API returns an ArrayRef to data owned by the stream's
+/// implementation.  Since implementations may not necessarily store data in a
+/// single contiguous buffer (or even in memory at all), in such cases a it may
+/// be necessary for an implementation to cache such a buffer so that it can
+/// return it.
+class BinaryStream {
 public:
-  virtual ~ReadableStream() = default;
+  virtual ~BinaryStream() = default;
 
-  // Given an offset into the stream and a number of bytes, attempt to read
-  // the bytes and set the output ArrayRef to point to a reference into the
-  // stream, without copying any data.
+  /// \brief Given an offset into the stream and a number of bytes, attempt to
+  /// read the bytes and set the output ArrayRef to point to data owned by the
+  /// stream.
   virtual Error readBytes(uint32_t Offset, uint32_t Size,
-                          ArrayRef<uint8_t> &Buffer) const = 0;
+                          ArrayRef<uint8_t> &Buffer) = 0;
 
-  // Given an offset into the stream, read as much as possible without copying
-  // any data.
+  /// \brief Given an offset into the stream, read as much as possible without
+  /// copying any data.
   virtual Error readLongestContiguousChunk(uint32_t Offset,
-                                           ArrayRef<uint8_t> &Buffer) const = 0;
+                                           ArrayRef<uint8_t> &Buffer) = 0;
 
-  virtual uint32_t getLength() const = 0;
+  /// \brief Return the number of bytes of data in this stream.
+  virtual uint32_t getLength() = 0;
 };
 
-class WritableStream : public ReadableStream {
+/// \brief A BinaryStream which can be read from as well as written to.  Note
+/// that writing to a BinaryStream always necessitates copying from the input
+/// buffer to the stream's backing store.  Streams are assumed to be buffered
+/// so that to be portable it is necessary to call commit() on the stream when
+/// all data has been written.
+class WritableBinaryStream : public BinaryStream {
 public:
-  ~WritableStream() override = default;
+  ~WritableBinaryStream() override = default;
 
-  // Attempt to write the given bytes into the stream at the desired offset.
-  // This will always necessitate a copy.  Cannot shrink or grow the stream,
-  // only writes into existing allocated space.
-  virtual Error writeBytes(uint32_t Offset, ArrayRef<uint8_t> Data) const = 0;
+  /// \brief Attempt to write the given bytes into the stream at the desired
+  /// offset. This will always necessitate a copy.  Cannot shrink or grow the
+  /// stream, only writes into existing allocated space.
+  virtual Error writeBytes(uint32_t Offset, ArrayRef<uint8_t> Data) = 0;
 
-  virtual Error commit() const = 0;
+  /// \brief For buffered streams, commits changes to the backing store.
+  virtual Error commit() = 0;
 };
 
-} // end namespace msf
 } // end namespace llvm
 
-#endif // LLVM_DEBUGINFO_MSF_STREAMINTERFACE_H
+#endif // LLVM_DEBUGINFO_MSF_BINARYSTREAM_H

@@ -190,6 +190,12 @@ def Feature16BitInsts : SubtargetFeature<"16-bit-insts",
   "Has i16/f16 instructions"
 >;
 
+def FeatureVOP3P : SubtargetFeature<"vop3p",
+  "HasVOP3PInsts",
+  "true",
+  "Has VOP3P packed instructions"
+>;
+
 def FeatureMovrel : SubtargetFeature<"movrel",
   "HasMovrel",
   "true",
@@ -400,7 +406,7 @@ def FeatureGFX9 : SubtargetFeatureGeneration<"GFX9",
    FeatureWavefrontSize64, FeatureFlatAddressSpace, FeatureGCN,
    FeatureGCN3Encoding, FeatureCIInsts, Feature16BitInsts,
    FeatureSMemRealTime, FeatureScalarStores, FeatureInv2PiInlineImm,
-   FeatureApertureRegs, FeatureGFX9Insts
+   FeatureApertureRegs, FeatureGFX9Insts, FeatureVOP3P
   ]
 >;
 
@@ -575,7 +581,10 @@ def isCIVI : Predicate <
 
 def HasFlatAddressSpace : Predicate<"Subtarget->hasFlatAddressSpace()">;
 
-def Has16BitInsts : Predicate<"Subtarget->has16BitInsts()">;
+def Has16BitInsts : Predicate<"Subtarget->has16BitInsts()">,
+  AssemblerPredicate<"Feature16BitInsts">;
+def HasVOP3PInsts : Predicate<"Subtarget->hasVOP3PInsts()">,
+  AssemblerPredicate<"FeatureVOP3P">;
 
 def HasSDWA : Predicate<"Subtarget->hasSDWA()">,
   AssemblerPredicate<"FeatureSDWA">;

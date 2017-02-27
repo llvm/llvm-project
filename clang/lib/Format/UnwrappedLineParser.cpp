@@ -428,6 +428,8 @@ void UnwrappedLineParser::parseBlock(bool MustBeDeclaration, bool AddLevel,
     parseParens();
 
   addUnwrappedLine();
+  size_t OpeningLineIndex =
+      Lines.empty() ? (UnwrappedLine::kInvalidIndex) : (Lines.size() - 1);
 
   ScopedDeclarationState DeclarationState(*Line, DeclarationScopeStack,
                                           MustBeDeclaration);
@@ -453,6 +455,7 @@ void UnwrappedLineParser::parseBlock(bool MustBeDeclaration, bool AddLevel,
   if (MunchSemi && FormatTok->Tok.is(tok::semi))
     nextToken();
   Line->Level = InitialLevel;
+  Line->MatchingOpeningBlockLineIndex = OpeningLineIndex;
 }
 
 static bool isGoogScope(const UnwrappedLine &Line) {

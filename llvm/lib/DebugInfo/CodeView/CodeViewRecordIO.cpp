@@ -146,10 +146,10 @@ Error CodeViewRecordIO::mapStringZ(StringRef &Value) {
   if (isWriting()) {
     // Truncate if we attempt to write too much.
     StringRef S = Value.take_front(maxFieldLength() - 1);
-    if (auto EC = Writer->writeZeroString(S))
+    if (auto EC = Writer->writeCString(S))
       return EC;
   } else {
-    if (auto EC = Reader->readZeroString(Value))
+    if (auto EC = Reader->readCString(Value))
       return EC;
   }
   return Error::success();

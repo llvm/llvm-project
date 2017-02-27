@@ -31,6 +31,7 @@ class AMDGPUMachineFunction : public MachineFunctionInfo {
   unsigned ABIArgOffset;
 
   bool IsKernel;
+  bool NoSignedZerosFPMath;
 
 public:
   AMDGPUMachineFunction(const MachineFunction &MF);
@@ -68,6 +69,10 @@ public:
 
   bool isKernel() const {
     return IsKernel;
+  }
+
+  bool hasNoSignedZerosFPMath() const {
+    return NoSignedZerosFPMath;
   }
 
   unsigned allocateLDSGlobal(const DataLayout &DL, const GlobalValue &GV);

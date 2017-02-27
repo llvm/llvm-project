@@ -38,7 +38,6 @@
 
 using namespace llvm;
 using namespace llvm::codeview;
-using namespace llvm::msf;
 
 CodeViewDebug::CodeViewDebug(AsmPrinter *AP)
     : DebugHandlerBase(AP), OS(*Asm->OutStreamer), Allocator(),
@@ -495,9 +494,9 @@ void CodeViewDebug::emitTypeInformation() {
       // comments. The MSVC linker doesn't do much type record validation,
       // so the first link of an invalid type record can succeed while
       // subsequent links will fail with LNK1285.
-      ByteStream Stream(Record);
+      BinaryByteStream Stream(Record);
       CVTypeArray Types;
-      StreamReader Reader(Stream);
+      BinaryStreamReader Reader(Stream);
       Error E = Reader.readArray(Types, Reader.getLength());
       if (!E) {
         TypeVisitorCallbacks C;

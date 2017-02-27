@@ -244,40 +244,34 @@ define void @v7i8(<4 x i8> %a, <4 x i8> %b, <7 x i8>* %p) nounwind {
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm0 = [255,255,255,255,255,255,255,255]
 ; SSE2-NEXT:    pand %xmm2, %xmm0
 ; SSE2-NEXT:    packuswb %xmm0, %xmm0
-; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[0,1,1,3]
-; SSE2-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3]
 ; SSE2-NEXT:    movdqa %xmm2, -{{[0-9]+}}(%rsp)
 ; SSE2-NEXT:    movb -{{[0-9]+}}(%rsp), %al
 ; SSE2-NEXT:    movb %al, 6(%rdi)
-; SSE2-NEXT:    movd %xmm1, (%rdi)
-; SSE2-NEXT:    pextrw $4, %xmm0, %eax
+; SSE2-NEXT:    movd %xmm0, (%rdi)
+; SSE2-NEXT:    pextrw $2, %xmm0, %eax
 ; SSE2-NEXT:    movw %ax, 4(%rdi)
 ; SSE2-NEXT:    retq
 ;
 ; SSE42-LABEL: v7i8:
 ; SSE42:       # BB#0:
 ; SSE42-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,3,1,3]
+; SSE42-NEXT:    pextrb $0, %xmm1, 6(%rdi)
 ; SSE42-NEXT:    pshufb {{.*#+}} xmm1 = xmm1[8,9,8,9,4,5,8,9,0,1,12,13,0,1,14,15]
 ; SSE42-NEXT:    pblendw {{.*#+}} xmm1 = xmm0[0],xmm1[1],xmm0[2],xmm1[3],xmm0[4],xmm1[5,6,7]
-; SSE42-NEXT:    pextrb $12, %xmm1, 6(%rdi)
 ; SSE42-NEXT:    pshufb {{.*#+}} xmm1 = xmm1[0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u]
-; SSE42-NEXT:    pmovzxdq {{.*#+}} xmm0 = xmm1[0],zero,xmm1[1],zero
-; SSE42-NEXT:    pmovzxwd {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero
-; SSE42-NEXT:    pextrw $4, %xmm1, 4(%rdi)
-; SSE42-NEXT:    movd %xmm0, (%rdi)
+; SSE42-NEXT:    pextrw $2, %xmm1, 4(%rdi)
+; SSE42-NEXT:    movd %xmm1, (%rdi)
 ; SSE42-NEXT:    retq
 ;
 ; AVX-LABEL: v7i8:
 ; AVX:       # BB#0:
 ; AVX-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,3,1,3]
-; AVX-NEXT:    vpshufb {{.*#+}} xmm1 = xmm1[8,9,8,9,4,5,8,9,0,1,12,13,0,1,14,15]
-; AVX-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2],xmm1[3],xmm0[4],xmm1[5,6,7]
-; AVX-NEXT:    vpshufb {{.*#+}} xmm1 = xmm0[0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u]
-; AVX-NEXT:    vpmovzxdq {{.*#+}} xmm2 = xmm1[0],zero,xmm1[1],zero
-; AVX-NEXT:    vpmovzxwd {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero
-; AVX-NEXT:    vpextrb $12, %xmm0, 6(%rdi)
-; AVX-NEXT:    vpextrw $4, %xmm1, 4(%rdi)
-; AVX-NEXT:    vmovd %xmm2, (%rdi)
+; AVX-NEXT:    vpshufb {{.*#+}} xmm2 = xmm1[8,9,8,9,4,5,8,9,0,1,12,13,0,1,14,15]
+; AVX-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm2[1],xmm0[2],xmm2[3],xmm0[4],xmm2[5,6,7]
+; AVX-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u]
+; AVX-NEXT:    vpextrb $0, %xmm1, 6(%rdi)
+; AVX-NEXT:    vpextrw $2, %xmm0, 4(%rdi)
+; AVX-NEXT:    vmovd %xmm0, (%rdi)
 ; AVX-NEXT:    retq
   %r = shufflevector <4 x i8> %a, <4 x i8> %b, <7 x i32> <i32 0, i32 6, i32 3, i32 6, i32 1, i32 7, i32 4>
   store <7 x i8> %r, <7 x i8>* %p

@@ -22,7 +22,7 @@ HashTable::HashTable() : HashTable(8) {}
 
 HashTable::HashTable(uint32_t Capacity) { Buckets.resize(Capacity); }
 
-Error HashTable::load(msf::StreamReader &Stream) {
+Error HashTable::load(BinaryStreamReader &Stream) {
   const Header *H;
   if (auto EC = Stream.readObject(H))
     return EC;
@@ -77,7 +77,7 @@ uint32_t HashTable::calculateSerializedLength() const {
   return Size;
 }
 
-Error HashTable::commit(msf::StreamWriter &Writer) const {
+Error HashTable::commit(BinaryStreamWriter &Writer) const {
   Header H;
   H.Size = size();
   H.Capacity = capacity();
@@ -209,7 +209,7 @@ void HashTable::grow() {
   assert(size() == S);
 }
 
-Error HashTable::readSparseBitVector(msf::StreamReader &Stream,
+Error HashTable::readSparseBitVector(BinaryStreamReader &Stream,
                                      SparseBitVector<> &V) {
   uint32_t NumWords;
   if (auto EC = Stream.readInteger(NumWords, llvm::support::little))
@@ -231,7 +231,7 @@ Error HashTable::readSparseBitVector(msf::StreamReader &Stream,
   return Error::success();
 }
 
-Error HashTable::writeSparseBitVector(msf::StreamWriter &Writer,
+Error HashTable::writeSparseBitVector(BinaryStreamWriter &Writer,
                                       SparseBitVector<> &Vec) {
   int ReqBits = Vec.find_last() + 1;
   uint32_t NumWords = alignTo(ReqBits, sizeof(uint32_t)) / sizeof(uint32_t);

@@ -715,8 +715,6 @@ private:
   /// the consumer eagerly.
   SmallVector<uint64_t, 16> EagerlyDeserializedDecls;
 
-  SmallVector<uint64_t, 16> ModularCodegenDecls;
-
   /// \brief The IDs of all tentative definitions stored in the chain.
   ///
   /// Sema keeps track of all tentative definitions in a TU because it has to

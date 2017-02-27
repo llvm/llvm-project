@@ -153,18 +153,18 @@ Error DbiStreamBuilder::generateModiSubstream() {
   uint32_t Size = calculateModiSubstreamSize();
   auto Data = Allocator.Allocate<uint8_t>(Size);
 
-  ModInfoBuffer = MutableByteStream(MutableArrayRef<uint8_t>(Data, Size));
+  ModInfoBuffer = MutableBinaryByteStream(MutableArrayRef<uint8_t>(Data, Size));
 
-  StreamWriter ModiWriter(ModInfoBuffer);
+  BinaryStreamWriter ModiWriter(ModInfoBuffer);
   for (const auto &M : ModuleInfoList) {
     ModuleInfoHeader Layout = {};
     Layout.ModDiStream = kInvalidStreamIndex;
     Layout.NumFiles = M->SourceFiles.size();
     if (auto EC = ModiWriter.writeObject(Layout))
       return EC;
-    if (auto EC = ModiWriter.writeZeroString(M->Mod))
+    if (auto EC = ModiWriter.writeCString(M->Mod))
       return EC;
-    if (auto EC = ModiWriter.writeZeroString(M->Obj))
+    if (auto EC = ModiWriter.writeCString(M->Obj))
       return EC;
   }
   if (ModiWriter.bytesRemaining() > sizeof(uint32_t))
@@ -179,11 +179,12 @@ Error DbiStreamBuilder::generateFileInfoSubstream() {
   auto Data = Allocator.Allocate<uint8_t>(Size);
   uint32_t NamesOffset = Size - NameSize;
 
-  FileInfoBuffer = MutableByteStream(MutableArrayRef<uint8_t>(Data, Size));
+  FileInfoBuffer =
+      MutableBinaryByteStream(MutableArrayRef<uint8_t>(Data, Size));
 
-  WritableStreamRef MetadataBuffer =
-      WritableStreamRef(FileInfoBuffer).keep_front(NamesOffset);
-  StreamWriter MetadataWriter(MetadataBuffer);
+  WritableBinaryStreamRef MetadataBuffer =
+      WritableBinaryStreamRef(FileInfoBuffer).keep_front(NamesOffset);
+  BinaryStreamWriter MetadataWriter(MetadataBuffer);
 
   uint16_t ModiCount = std::min<uint32_t>(UINT16_MAX, ModuleInfos.size());
   uint16_t FileCount = std::min<uint32_t>(UINT16_MAX, SourceFileNames.size());
@@ -209,11 +210,11 @@ Error DbiStreamBuilder::generateFileInfoSubstream() {
   // A side effect of this is that this will actually compute the various
   // file name offsets, so we can then go back and write the FileNameOffsets
   // array to the other substream.
-  NamesBuffer = WritableStreamRef(FileInfoBuffer).drop_front(NamesOffset);
-  StreamWriter NameBufferWriter(NamesBuffer);
+  NamesBuffer = WritableBinaryStreamRef(FileInfoBuffer).drop_front(NamesOffset);
+  BinaryStreamWriter NameBufferWriter(NamesBuffer);
   for (auto &Name : SourceFileNames) {
     Name.second = NameBufferWriter.getOffset();
-    if (auto EC = NameBufferWriter.writeZeroString(Name.getKey()))
+    if (auto EC = NameBufferWriter.writeCString(Name.getKey()))
       return EC;
   }
 
@@ -363,14 +364,14 @@ std::vector<SecMapEntry> DbiStreamBuilder::createSectionMap(
 }
 
 Error DbiStreamBuilder::commit(const msf::MSFLayout &Layout,
-                               const msf::WritableStream &Buffer) {
+                               WritableBinaryStreamRef Buffer) {
   if (auto EC = finalize())
     return EC;
 
   auto InfoS =
       WritableMappedBlockStream::createIndexedStream(Layout, Buffer, StreamDBI);
 
-  StreamWriter Writer(*InfoS);
+  BinaryStreamWriter Writer(*InfoS);
   if (auto EC = Writer.writeObject(*Header))
     return EC;
 
@@ -404,9 +405,9 @@ Error DbiStreamBuilder::commit(const msf::MSFLayout &Layout,
   for (auto &Stream : DbgStreams) {
     if (Stream.StreamNumber == kInvalidStreamIndex)
       continue;
-    auto WritableStream = WritableMappedBlockStream::createIndexedStream(
+    auto WritableBinaryStream = WritableMappedBlockStream::createIndexedStream(
         Layout, Buffer, Stream.StreamNumber);
-    StreamWriter DbgStreamWriter(*WritableStream);
+    BinaryStreamWriter DbgStreamWriter(*WritableBinaryStream);
     if (auto EC = DbgStreamWriter.writeArray(Stream.Data))
       return EC;
   }

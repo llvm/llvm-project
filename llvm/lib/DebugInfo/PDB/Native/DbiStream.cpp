@@ -34,7 +34,7 @@ using namespace llvm::support;
 
 template <typename ContribType>
 static Error loadSectionContribs(FixedStreamArray<ContribType> &Output,
-                                 StreamReader &Reader) {
+                                 BinaryStreamReader &Reader) {
   if (Reader.bytesRemaining() % sizeof(ContribType) != 0)
     return make_error<RawError>(
         raw_error_code::corrupt_file,
@@ -52,7 +52,7 @@ DbiStream::DbiStream(PDBFile &File, std::unique_ptr<MappedBlockStream> Stream)
 DbiStream::~DbiStream() = default;
 
 Error DbiStream::reload() {
-  StreamReader Reader(*Stream);
+  BinaryStreamReader Reader(*Stream);
 
   if (Stream->getLength() < sizeof(DbiStreamHeader))
     return make_error<RawError>(raw_error_code::corrupt_file,
@@ -145,7 +145,7 @@ Error DbiStream::reload() {
                                 "Found unexpected bytes in DBI Stream.");
 
   if (ECSubstream.getLength() > 0) {
-    StreamReader ECReader(ECSubstream);
+    BinaryStreamReader ECReader(ECSubstream);
     if (auto EC = ECNames.load(ECReader))
       return EC;
   }
@@ -207,16 +207,16 @@ PDB_Machine DbiStream::getMachineType() const {
   return static_cast<PDB_Machine>(Machine);
 }
 
-msf::FixedStreamArray<object::coff_section> DbiStream::getSectionHeaders() {
+FixedStreamArray<object::coff_section> DbiStream::getSectionHeaders() {
   return SectionHeaders;
 }
 
-msf::FixedStreamArray<object::FpoData> DbiStream::getFpoRecords() {
+FixedStreamArray<object::FpoData> DbiStream::getFpoRecords() {
   return FpoRecords;
 }
 
 ArrayRef<ModuleInfoEx> DbiStream::modules() const { return ModuleInfos; }
-msf::FixedStreamArray<SecMapEntry> DbiStream::getSectionMap() const {
+FixedStreamArray<SecMapEntry> DbiStream::getSectionMap() const {
   return SectionMap;
 }
 
@@ -235,7 +235,7 @@ Error DbiStream::initializeSectionContributionData() {
   if (SecContrSubstream.getLength() == 0)
     return Error::success();
 
-  StreamReader SCReader(SecContrSubstream);
+  BinaryStreamReader SCReader(SecContrSubstream);
   if (auto EC = SCReader.readEnum(SectionContribVersion, llvm::support::little))
     return EC;
 
@@ -254,7 +254,7 @@ Error DbiStream::initializeModInfoArray() {
 
   // Since each ModInfo in the stream is a variable length, we have to iterate
   // them to know how many there actually are.
-  StreamReader Reader(ModInfoSubstream);
+  BinaryStreamReader Reader(ModInfoSubstream);
 
   VarStreamArray<ModInfo> ModInfoArray;
   if (auto EC = Reader.readArray(ModInfoArray, ModInfoSubstream.getLength()))
@@ -284,7 +284,7 @@ Error DbiStream::initializeSectionHeadersData() {
                                 "Corrupted section header stream.");
 
   size_t NumSections = StreamLen / sizeof(object::coff_section);
-  msf::StreamReader Reader(*SHS);
+  BinaryStreamReader Reader(*SHS);
   if (auto EC = Reader.readArray(SectionHeaders, NumSections))
     return make_error<RawError>(raw_error_code::corrupt_file,
                                 "Could not read a bitmap.");
@@ -316,7 +316,7 @@ Error DbiStream::initializeFpoRecords() {
                                 "Corrupted New FPO stream.");
 
   size_t NumRecords = StreamLen / sizeof(object::FpoData);
-  msf::StreamReader Reader(*FS);
+  BinaryStreamReader Reader(*FS);
   if (auto EC = Reader.readArray(FpoRecords, NumRecords))
     return make_error<RawError>(raw_error_code::corrupt_file,
                                 "Corrupted New FPO stream.");
@@ -328,7 +328,7 @@ Error DbiStream::initializeSectionMapData() {
   if (SecMapSubstream.getLength() == 0)
     return Error::success();
 
-  StreamReader SMReader(SecMapSubstream);
+  BinaryStreamReader SMReader(SecMapSubstream);
   const SecMapHeader *Header;
   if (auto EC = SMReader.readObject(Header))
     return EC;
@@ -342,7 +342,7 @@ Error DbiStream::initializeFileInfo() {
     return Error::success();
 
   const FileInfoSubstreamHeader *FH;
-  StreamReader FISR(FileInfoSubstream);
+  BinaryStreamReader FISR(FileInfoSubstream);
   if (auto EC = FISR.readObject(FH))
     return EC;
 
@@ -411,14 +411,14 @@ uint32_t DbiStream::getDebugStreamIndex(DbgHeaderType Type) const {
 }
 
 Expected<StringRef> DbiStream::getFileNameForIndex(uint32_t Index) const {
-  StreamReader Names(NamesBuffer);
+  BinaryStreamReader Names(NamesBuffer);
   if (Index >= FileNameOffsets.size())
     return make_error<RawError>(raw_error_code::index_out_of_bounds);
 
   uint32_t FileOffset = FileNameOffsets[Index];
   Names.setOffset(FileOffset);
   StringRef Name;
-  if (auto EC = Names.readZeroString(Name))
+  if (auto EC = Names.readCString(Name))
     return std::move(EC);
   return Name;
 }

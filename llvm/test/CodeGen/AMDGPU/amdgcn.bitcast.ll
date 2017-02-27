@@ -26,15 +26,37 @@ entry:
 
 define void @f32_to_v2i16(<2 x i16> addrspace(1)* %out, float addrspace(1)* %in) nounwind {
   %load = load float, float addrspace(1)* %in, align 4
-  %bc = bitcast float %load to <2 x i16>
-  store <2 x i16> %bc, <2 x i16> addrspace(1)* %out, align 4
+  %fadd32 = fadd float %load, 1.0
+  %bc = bitcast float %fadd32 to <2 x i16>
+  %add.bitcast = add <2 x i16> %bc, <i16 2, i16 2>
+  store <2 x i16> %add.bitcast, <2 x i16> addrspace(1)* %out
   ret void
 }
 
 define void @v2i16_to_f32(float addrspace(1)* %out, <2 x i16> addrspace(1)* %in) nounwind {
   %load = load <2 x i16>, <2 x i16> addrspace(1)* %in, align 4
-  %bc = bitcast <2 x i16> %load to float
-  store float %bc, float addrspace(1)* %out, align 4
+  %add.v2i16 = add <2 x i16> %load, <i16 2, i16 2>
+  %bc = bitcast <2 x i16> %add.v2i16 to float
+  %fadd.bitcast = fadd float %bc, 1.0
+  store float %fadd.bitcast, float addrspace(1)* %out
+  ret void
+}
+
+define void @f32_to_v2f16(<2 x half> addrspace(1)* %out, float addrspace(1)* %in) nounwind {
+  %load = load float, float addrspace(1)* %in, align 4
+  %fadd32 = fadd float %load, 1.0
+  %bc = bitcast float %fadd32 to <2 x half>
+  %add.bitcast = fadd <2 x half> %bc, <half 2.0, half 2.0>
+  store <2 x half> %add.bitcast, <2 x half> addrspace(1)* %out
+  ret void
+}
+
+define void @v2f16_to_f32(float addrspace(1)* %out, <2 x half> addrspace(1)* %in) nounwind {
+  %load = load <2 x half>, <2 x half> addrspace(1)* %in, align 4
+  %add.v2f16 = fadd <2 x half> %load, <half 2.0, half 2.0>
+  %bc = bitcast <2 x half> %add.v2f16 to float
+  %fadd.bitcast = fadd float %bc, 1.0
+  store float %fadd.bitcast, float addrspace(1)* %out
   ret void
 }
 
@@ -58,7 +80,8 @@ define void @bitcast_v2i32_to_f64(double addrspace(1)* %out, <2 x i32> addrspace
   %val = load <2 x i32>, <2 x i32> addrspace(1)* %in, align 8
   %add = add <2 x i32> %val, <i32 4, i32 9>
   %bc = bitcast <2 x i32> %add to double
-  store double %bc, double addrspace(1)* %out, align 8
+  %fadd.bc = fadd double %bc, 1.0
+  store double %fadd.bc, double addrspace(1)* %out, align 8
   ret void
 }
 

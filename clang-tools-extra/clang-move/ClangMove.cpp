@@ -168,6 +168,21 @@ private:
   ClangMoveTool *MoveTool;
 };
 
+class VarDeclarationMatch : public MatchFinder::MatchCallback {
+public:
+  explicit VarDeclarationMatch(ClangMoveTool *MoveTool)
+      : MoveTool(MoveTool) {}
+
+  void run(const MatchFinder::MatchResult &Result) override {
+    const auto *VD = Result.Nodes.getNodeAs<clang::VarDecl>("var");
+    assert(VD);
+    MoveDeclFromOldFileToNewFile(MoveTool, VD);
+  }
+
+private:
+  ClangMoveTool *MoveTool;
+};
+
 class TypeAliasMatch : public MatchFinder::MatchCallback {
 public:
   explicit TypeAliasMatch(ClangMoveTool *MoveTool)
@@ -618,6 +633,11 @@ void ClangMoveTool::registerMatchers(ast_matchers::MatchFinder *Finder) {
                          .bind("function"),
                      MatchCallbacks.back().get());
 
+  MatchCallbacks.push_back(llvm::make_unique<VarDeclarationMatch>(this));
+  Finder->addMatcher(
+      varDecl(InOldFiles, *HasAnySymbolNames, TopLevelDecl).bind("var"),
+      MatchCallbacks.back().get());
+
   // Match enum definition in old.h. Enum helpers (which are defined in old.cc)
   // will not be moved for now no matter whether they are used or not.
   MatchCallbacks.push_back(llvm::make_unique<EnumDeclarationMatch>(this));
@@ -852,7 +872,10 @@ void ClangMoveTool::onEndOfTranslationUnit() {
     for (const auto *Decl : UnremovedDeclsInOldHeader) {
       auto Kind = Decl->getKind();
       const std::string QualifiedName = Decl->getQualifiedNameAsString();
-      if (Kind == Decl::Kind::Function || Kind == Decl::Kind::FunctionTemplate)
+      if (Kind == Decl::Kind::Var)
+        Reporter->reportDeclaration(QualifiedName, "Variable");
+      else if (Kind == Decl::Kind::Function ||
+               Kind == Decl::Kind::FunctionTemplate)
         Reporter->reportDeclaration(QualifiedName, "Function");
       else if (Kind == Decl::Kind::ClassTemplate ||
                Kind == Decl::Kind::CXXRecord)
@@ -883,6 +906,7 @@ void ClangMoveTool::onEndOfTranslationUnit() {
     case Decl::Kind::Typedef:
     case Decl::Kind::TypeAlias:
     case Decl::Kind::TypeAliasTemplate:
+    case Decl::Kind::Var:
       return true;
     default:
       return false;

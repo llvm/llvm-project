@@ -564,18 +564,18 @@ the boolean conversion operator):
 
 .. code-block:: c++
 
-  if (auto Err = canFail(...))
+  if (auto Err = mayFail(...))
     return Err; // Failure value - move error to caller.
 
   // Safe to continue: Err was checked.
 
-In contrast, the following code will always cause an abort, even if ``canFail``
+In contrast, the following code will always cause an abort, even if ``mayFail``
 returns a success value:
 
 .. code-block:: c++
 
-    canFail();
-    // Program will always abort here, even if canFail() returns Success, since
+    mayFail();
+    // Program will always abort here, even if mayFail() returns Success, since
     // the value is not checked.
 
 Failure values are considered checked once a handler for the error type has
@@ -632,6 +632,12 @@ For tool code, where errors can be handled by printing an error message then
 exiting with an error code, the :ref:`ExitOnError <err_exitonerr>` utility
 may be a better choice than handleErrors, as it simplifies control flow when
 calling fallible functions.
+
+In situations where it is known that a particular call to a fallible function
+will always succeed (for example, a call to a function that can only fail on a
+subset of inputs with an input that is known to be safe) the
+:ref:`cantFail <err_cantfail>` functions can be used to remove the error type,
+simplifying control flow.
 
 StringError
 """""""""""
@@ -764,6 +770,43 @@ mapping can also be supplied from ``Error`` values to exit codes using the
 
 Use ``ExitOnError`` in your tool code where possible as it can greatly improve
 readability.
+
+.. _err_cantfail:
+
+Using cantFail to simplify safe callsites
+"""""""""""""""""""""""""""""""""""""""""
+
+Some functions may only fail for a subset of their inputs. For such functions
+call-sites using known-safe inputs can assume that the result will be a success
+value.
+
+The cantFail functions encapsulate this by wrapping an assertion that their
+argument is a success value and, in the case of Expected<T>, unwrapping the
+T value from the Expected<T> argument:
+
+.. code-block:: c++
+
+  Error mayFail(int X);
+  Expected<int> mayFail2(int X);
+
+  void foo() {
+    cantFail(mayFail(KnownSafeValue));
+    int Y = cantFail(mayFail2(KnownSafeValue));
+    ...
+  }
+
+Like the ExitOnError utility, cantFail simplifies control flow. Their treatment
+of error cases is very different however: Where ExitOnError is guaranteed to
+terminate the program on an error input, cantFile simply asserts that the result
+is success. In debug builds this will result in an assertion failure if an error
+is encountered. In release builds the behavior of cantFail for failure values is
+undefined. As such, care must be taken in the use of cantFail: clients must be
+certain that a cantFail wrapped call really can not fail under any
+circumstances.
+
+Use of the cantFail functions should be rare in library code, but they are
+likely to be of more use in tool and unit-test code where inputs and/or
+mocked-up classes or functions may be known to be safe.
 
 Fallible constructors
 """""""""""""""""""""

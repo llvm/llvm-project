@@ -44,10 +44,10 @@ Error InfoStreamBuilder::finalizeMsfLayout() {
 }
 
 Error InfoStreamBuilder::commit(const msf::MSFLayout &Layout,
-                                const msf::WritableStream &Buffer) const {
+                                WritableBinaryStreamRef Buffer) const {
   auto InfoS =
       WritableMappedBlockStream::createIndexedStream(Layout, Buffer, StreamPDB);
-  StreamWriter Writer(*InfoS);
+  BinaryStreamWriter Writer(*InfoS);
 
   InfoStreamHeader H;
   H.Age = Age;

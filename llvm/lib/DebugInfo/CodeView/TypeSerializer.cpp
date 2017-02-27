@@ -203,8 +203,8 @@ Error TypeSerializer::visitMemberEnd(CVMemberRecord &Record) {
 
     uint8_t *SegmentBytes = RecordStorage.Allocate<uint8_t>(LengthWithSize);
     auto SavedSegment = MutableArrayRef<uint8_t>(SegmentBytes, LengthWithSize);
-    msf::MutableByteStream CS(SavedSegment);
-    msf::StreamWriter CW(CS);
+    MutableBinaryByteStream CS(SavedSegment);
+    BinaryStreamWriter CW(CS);
     if (auto EC = CW.writeBytes(CopyData))
       return EC;
     if (auto EC = CW.writeEnum(TypeLeafKind::LF_INDEX, llvm::support::little))
