@@ -35,6 +35,30 @@ public:
 };
 } // end anonymous namespace
 
+static bool isArrayIndexOutOfBounds(CheckerContext &C, const Expr *Ex) {
+  ProgramStateRef state = C.getState();
+  const LocationContext *LCtx = C.getLocationContext();
+
+  if (!isa<ArraySubscriptExpr>(Ex))
+    return false;
+
+  SVal Loc = state->getSVal(Ex, LCtx);
+  if (!Loc.isValid())
+    return false;
+
+  const MemRegion *MR = Loc.castAs<loc::MemRegionVal>().getRegion();
+  const ElementRegion *ER = dyn_cast<ElementRegion>(MR);
+  if (!ER)
+    return false;
+
+  DefinedOrUnknownSVal Idx = ER->getIndex().castAs<DefinedOrUnknownSVal>();
+  DefinedOrUnknownSVal NumElements = C.getStoreManager().getSizeInElements(
+      state, ER->getSuperRegion(), ER->getValueType());
+  ProgramStateRef StInBound = state->assumeInBound(Idx, NumElements, true);
+  ProgramStateRef StOutBound = state->assumeInBound(Idx, NumElements, false);
+  return StOutBound && !StInBound;
+}
+
 void UndefResultChecker::checkPostStmt(const BinaryOperator *B,
                                        CheckerContext &C) const {
   ProgramStateRef state = C.getState();
@@ -77,6 +101,8 @@ void UndefResultChecker::checkPostStmt(const BinaryOperator *B,
          << " operand of '"
          << BinaryOperator::getOpcodeStr(B->getOpcode())
          << "' is a garbage value";
+      if (isArrayIndexOutOfBounds(C, Ex))
+        OS << " due to array index out of bounds";
     }
     else {
       // Neither operand was undefined, but the result is undefined.
