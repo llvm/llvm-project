@@ -6,11 +6,12 @@ add_clang_unittest(FormatTests
   CleanupTest.cpp
   FormatTest.cpp
   FormatTestComments.cpp
-  FormatTestJava.cpp
   FormatTestJS.cpp
+  FormatTestJava.cpp
   FormatTestObjC.cpp
   FormatTestProto.cpp
   FormatTestSelective.cpp
+  NamespaceEndCommentsFixerTest.cpp
   SortImportsTestJS.cpp
   SortIncludesTest.cpp
   )

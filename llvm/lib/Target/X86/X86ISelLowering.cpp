@@ -8141,12 +8141,13 @@ static bool isNonZeroElementsInOrder(const SmallBitVector &Zeroable,
   // Check if the Mask's nonzero elements are in increasing order.
   for (int i = 0, e = Zeroable.size(); i < e; i++) {
     // Checks if the mask's zeros elements are built from only zeros.
-    if (Mask[i] == -1)
+    assert(Mask[i] >= -1 && "Out of bound mask element!");
+    if (Mask[i] < 0)
       return false;
     if (Zeroable[i])
       continue;
     // Find the lowest non zero element
-    if (NextElement == -1) {
+    if (NextElement < 0) {
       NextElement = Mask[i] != 0 ? VectorType.getVectorNumElements() : 0;
       IsZeroSideLeft = NextElement != 0;
     }

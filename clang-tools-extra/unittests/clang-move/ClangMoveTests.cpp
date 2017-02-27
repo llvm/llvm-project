@@ -539,6 +539,8 @@ TEST(ClangMove, DumpDecls) {
                             "enum class E2 { Red };\n"
                             "typedef int Int2;\n"
                             "using Int = int;\n"
+                            "extern int kGlobalInt;\n"
+                            "extern const char* const kGlobalStr;\n"
                             "} // namespace b\n"
                             "} // namespace a\n";
   const char TestCode[] = "#include \"foo.h\"\n";
@@ -553,7 +555,8 @@ TEST(ClangMove, DumpDecls) {
       {"A", "Class"},         {"B", "Class"},        {"a::Move1", "Class"},
       {"a::f1", "Function"},  {"a::f2", "Function"}, {"a::b::Move1", "Class"},
       {"a::b::f", "Function"}, {"a::b::E1", "Enum"}, {"a::b::E2", "Enum"},
-      {"a::b::Int2", "TypeAlias"}, {"a::b::Int", "TypeAlias"} };
+      {"a::b::Int2", "TypeAlias"}, {"a::b::Int", "TypeAlias"},
+      {"a::b::kGlobalInt", "Variable"}, {"a::b::kGlobalStr", "Variable"}};
   runClangMoveOnCode(Spec, TestHeader, TestCode, &Reporter);
   std::set<DeclarationReporter::DeclarationPair> Results;
   for (const auto& DelPair : Reporter.getDeclarationList())

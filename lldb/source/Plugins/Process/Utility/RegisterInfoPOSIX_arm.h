@@ -1,4 +1,4 @@
-//===-- RegisterContextFreeBSD_arm.h ----------------------------*- C++ -*-===//
+//===-- RegisterInfoPOSIX_arm.h ---------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,14 +7,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_RegisterContextFreeBSD_arm_h_
-#define liblldb_RegisterContextFreeBSD_arm_h_
+#ifndef liblldb_RegisterInfoPOSIX_arm_h_
+#define liblldb_RegisterInfoPOSIX_arm_h_
 
 #include "RegisterInfoInterface.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/lldb-private.h"
 
-class RegisterContextFreeBSD_arm : public lldb_private::RegisterInfoInterface {
+class RegisterInfoPOSIX_arm : public lldb_private::RegisterInfoInterface {
 public:
   struct GPR {
     uint32_t r[16]; // R0-R15
@@ -46,7 +46,7 @@ public:
     uint32_t wcr[16];
   };
 
-  RegisterContextFreeBSD_arm(const lldb_private::ArchSpec &target_arch);
+  RegisterInfoPOSIX_arm(const lldb_private::ArchSpec &target_arch);
 
   size_t GetGPRSize() const override;
 
@@ -59,4 +59,4 @@ private:
   uint32_t m_register_info_count;
 };
 
-#endif // liblldb_RegisterContextFreeBSD_arm_h_
+#endif // liblldb_RegisterInfoPOSIX_arm_h_

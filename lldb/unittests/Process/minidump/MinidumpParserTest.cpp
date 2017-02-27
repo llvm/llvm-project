@@ -48,7 +48,8 @@ public:
     llvm::sys::path::append(inputs_folder, "Inputs");
   }
 
-  void SetUpData(const char *minidump_filename, size_t load_size = SIZE_MAX) {
+  void SetUpData(const char *minidump_filename,
+                 uint64_t load_size = UINT64_MAX) {
     llvm::SmallString<128> filename = inputs_folder;
     llvm::sys::path::append(filename, minidump_filename);
 
