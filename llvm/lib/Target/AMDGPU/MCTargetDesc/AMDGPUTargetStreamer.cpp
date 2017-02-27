@@ -100,10 +100,17 @@ void AMDGPUTargetAsmStreamer::EmitRuntimeMetadata(const FeatureBitset &Features,
   OS << "\n\t.end_amdgpu_runtime_metadata\n";
 }
 
-void AMDGPUTargetAsmStreamer::EmitRuntimeMetadata(StringRef Metadata) {
+bool AMDGPUTargetAsmStreamer::EmitRuntimeMetadata(const FeatureBitset &Features,
+                                                  StringRef Metadata) {
+  auto VerifiedMetadata = getRuntimeMDYAMLString(Features, Metadata);
+  if (!VerifiedMetadata)
+    return true;
+
   OS << "\t.amdgpu_runtime_metadata";
-  OS << Metadata;
+  OS << VerifiedMetadata.get();
   OS << "\t.end_amdgpu_runtime_metadata\n";
+
+  return false;
 }
 
 //===----------------------------------------------------------------------===//
@@ -216,7 +223,12 @@ void AMDGPUTargetELFStreamer::EmitAMDGPUHsaProgramScopeGlobal(
   Symbol->setBinding(ELF::STB_GLOBAL);
 }
 
-void AMDGPUTargetELFStreamer::EmitRuntimeMetadata(StringRef Metadata) {
+bool AMDGPUTargetELFStreamer::EmitRuntimeMetadata(const FeatureBitset &Features,
+                                                  StringRef Metadata) {
+  auto VerifiedMetadata = getRuntimeMDYAMLString(Features, Metadata);
+  if (!VerifiedMetadata)
+    return true;
+
   // Create two labels to mark the beginning and end of the desc field
   // and a MCExpr to calculate the size of the desc field.
   auto &Context = getContext();
@@ -231,13 +243,15 @@ void AMDGPUTargetELFStreamer::EmitRuntimeMetadata(StringRef Metadata) {
     PT_NOTE::NT_AMDGPU_HSA_RUNTIME_METADATA,
     [&](MCELFStreamer &OS) {
       OS.EmitLabel(DescBegin);
-      OS.EmitBytes(Metadata);
+      OS.EmitBytes(VerifiedMetadata.get());
       OS.EmitLabel(DescEnd);
     }
   );
+
+  return false;
 }
 
 void AMDGPUTargetELFStreamer::EmitRuntimeMetadata(const FeatureBitset &Features,
                                                   const Module &M) {
-  EmitRuntimeMetadata(getRuntimeMDYAMLString(Features, M));
+  EmitRuntimeMetadata(Features, getRuntimeMDYAMLString(Features, M));
 }

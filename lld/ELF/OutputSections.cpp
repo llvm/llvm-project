@@ -30,6 +30,19 @@ using namespace llvm::ELF;
 using namespace lld;
 using namespace lld::elf;
 
+uint8_t Out::First;
+OutputSection *Out::Bss;
+OutputSection *Out::BssRelRo;
+OutputSection *Out::Opd;
+uint8_t *Out::OpdBuf;
+PhdrEntry *Out::TlsPhdr;
+OutputSection *Out::DebugInfo;
+OutputSection *Out::ElfHeader;
+OutputSection *Out::ProgramHeaders;
+OutputSection *Out::PreinitArray;
+OutputSection *Out::InitArray;
+OutputSection *Out::FiniArray;
+
 uint32_t OutputSection::getPhdrFlags() const {
   uint32_t Ret = PF_R;
   if (Flags & SHF_WRITE)
@@ -124,7 +137,7 @@ template <class ELFT> void OutputSection::finalize() {
     return;
 
   InputSection *First = Sections[0];
-  if (isa<SyntheticSection<ELFT>>(First))
+  if (isa<SyntheticSection>(First))
     return;
 
   this->Link = In<ELFT>::SymTab->OutSec->SectionIndex;
@@ -326,8 +339,7 @@ static SectionKey createKey(InputSectionBase *C, StringRef OutsecName) {
   return SectionKey{OutsecName, Flags, Alignment};
 }
 
-template <class ELFT>
-OutputSectionFactory<ELFT>::OutputSectionFactory(
+OutputSectionFactory::OutputSectionFactory(
     std::vector<OutputSection *> &OutputSections)
     : OutputSections(OutputSections) {}
 
@@ -355,15 +367,15 @@ template <class ELFT> static void reportDiscarded(InputSectionBase *IS) {
 }
 
 template <class ELFT>
-void OutputSectionFactory<ELFT>::addInputSec(InputSectionBase *IS,
-                                             StringRef OutsecName) {
+void OutputSectionFactory::addInputSec(InputSectionBase *IS,
+                                       StringRef OutsecName) {
   if (!IS->Live) {
     reportDiscarded<ELFT>(IS);
     return;
   }
 
   SectionKey Key = createKey<ELFT>(IS, OutsecName);
-  uintX_t Flags = getOutFlags<ELFT>(IS);
+  uint64_t Flags = getOutFlags<ELFT>(IS);
   OutputSection *&Sec = Map[Key];
   if (Sec) {
     if (getIncompatibleFlags(Sec->Flags) != getIncompatibleFlags(IS->Flags))
@@ -390,7 +402,7 @@ void OutputSectionFactory<ELFT>::addInputSec(InputSectionBase *IS,
   Sec->addSection(IS);
 }
 
-template <class ELFT> OutputSectionFactory<ELFT>::~OutputSectionFactory() {}
+OutputSectionFactory::~OutputSectionFactory() {}
 
 SectionKey DenseMapInfo<SectionKey>::getEmptyKey() {
   return SectionKey{DenseMapInfo<StringRef>::getEmptyKey(), 0, 0};
@@ -433,9 +445,13 @@ template void OutputSection::writeTo<ELF32BE>(uint8_t *Buf);
 template void OutputSection::writeTo<ELF64LE>(uint8_t *Buf);
 template void OutputSection::writeTo<ELF64BE>(uint8_t *Buf);
 
-template class OutputSectionFactory<ELF32LE>;
-template class OutputSectionFactory<ELF32BE>;
-template class OutputSectionFactory<ELF64LE>;
-template class OutputSectionFactory<ELF64BE>;
+template void OutputSectionFactory::addInputSec<ELF32LE>(InputSectionBase *,
+                                                         StringRef);
+template void OutputSectionFactory::addInputSec<ELF32BE>(InputSectionBase *,
+                                                         StringRef);
+template void OutputSectionFactory::addInputSec<ELF64LE>(InputSectionBase *,
+                                                         StringRef);
+template void OutputSectionFactory::addInputSec<ELF64BE>(InputSectionBase *,
+                                                         StringRef);
 }
 }

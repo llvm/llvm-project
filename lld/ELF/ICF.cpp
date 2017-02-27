@@ -77,7 +77,6 @@
 #include "Config.h"
 #include "SymbolTable.h"
 #include "Threads.h"
-
 #include "llvm/ADT/Hashing.h"
 #include "llvm/Object/ELF.h"
 #include "llvm/Support/ELF.h"
@@ -159,7 +158,7 @@ template <class ELFT> static uint32_t getHash(InputSection *S) {
 }
 
 // Returns true if section S is subject of ICF.
-template <class ELFT> static bool isEligible(InputSection *S) {
+static bool isEligible(InputSection *S) {
   // .init and .fini contains instructions that must be executed to
   // initialize and finalize the process. They cannot and should not
   // be merged.
@@ -336,9 +335,9 @@ void ICF<ELFT>::forEachClass(std::function<void(size_t, size_t)> Fn) {
 // The main function of ICF.
 template <class ELFT> void ICF<ELFT>::run() {
   // Collect sections to merge.
-  for (InputSectionBase *Sec : Symtab<ELFT>::X->Sections)
+  for (InputSectionBase *Sec : InputSections)
     if (auto *S = dyn_cast<InputSection>(Sec))
-      if (isEligible<ELFT>(S))
+      if (isEligible(S))
         Sections.push_back(S);
 
   // Initially, we use hash values to partition sections.

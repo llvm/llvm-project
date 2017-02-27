@@ -65,10 +65,10 @@ static typename ELFT::uint getSymVA(const SymbolBody &Body, int64_t &Addend) {
     const OutputSection *OutSec = IS->getOutputSection<ELFT>();
     uintX_t VA = (OutSec ? OutSec->Addr : 0) + IS->getOffset<ELFT>(Offset);
     if (D.isTls() && !Config->Relocatable) {
-      if (!Out<ELFT>::TlsPhdr)
+      if (!Out::TlsPhdr)
         fatal(toString(D.File) +
               " has a STT_TLS symbol but doesn't have a PT_TLS section");
-      return VA - Out<ELFT>::TlsPhdr->p_vaddr;
+      return VA - Out::TlsPhdr->p_vaddr;
     }
     return VA;
   }
@@ -78,7 +78,7 @@ static typename ELFT::uint getSymVA(const SymbolBody &Body, int64_t &Addend) {
     return In<ELFT>::Common->OutSec->Addr + In<ELFT>::Common->OutSecOff +
            cast<DefinedCommon>(Body).Offset;
   case SymbolBody::SharedKind: {
-    auto &SS = cast<SharedSymbol<ELFT>>(Body);
+    auto &SS = cast<SharedSymbol>(Body);
     if (SS.NeedsCopy)
       return SS.Section->OutSec->Addr + SS.Section->OutSecOff;
     if (SS.NeedsPltAddr)
@@ -167,8 +167,8 @@ template <class ELFT> typename ELFT::uint SymbolBody::getSize() const {
     return C->Size;
   if (const auto *DR = dyn_cast<DefinedRegular<ELFT>>(this))
     return DR->Size;
-  if (const auto *S = dyn_cast<SharedSymbol<ELFT>>(this))
-    return S->Sym.st_size;
+  if (const auto *S = dyn_cast<SharedSymbol>(this))
+    return S->getSize<ELFT>();
   return 0;
 }
 
@@ -235,6 +235,17 @@ DefinedCommon::DefinedCommon(StringRef Name, uint64_t Size, uint64_t Alignment,
               Type),
       Alignment(Alignment), Size(Size) {
   this->File = File;
+}
+
+// If a shared symbol is referred via a copy relocation, its alignment
+// becomes part of the ABI. This function returns a symbol alignment.
+// Because symbols don't have alignment attributes, we need to infer that.
+template <class ELFT> uint64_t SharedSymbol::getAlignment() const {
+  auto *File = cast<SharedFile<ELFT>>(this->File);
+  uint64_t SecAlign = File->getSection(getSym<ELFT>())->sh_addralign;
+  uint64_t SymValue = getSym<ELFT>().st_value;
+  uint64_t SymAlign = uint64_t(1) << countTrailingZeros(SymValue);
+  return std::min(SecAlign, SymAlign);
 }
 
 InputFile *Lazy::fetch() {
@@ -348,12 +359,12 @@ template uint32_t SymbolBody::template getSize<ELF32BE>() const;
 template uint64_t SymbolBody::template getSize<ELF64LE>() const;
 template uint64_t SymbolBody::template getSize<ELF64BE>() const;
 
-template class elf::SharedSymbol<ELF32LE>;
-template class elf::SharedSymbol<ELF32BE>;
-template class elf::SharedSymbol<ELF64LE>;
-template class elf::SharedSymbol<ELF64BE>;
-
 template class elf::DefinedRegular<ELF32LE>;
 template class elf::DefinedRegular<ELF32BE>;
 template class elf::DefinedRegular<ELF64LE>;
 template class elf::DefinedRegular<ELF64BE>;
+
+template uint64_t SharedSymbol::template getAlignment<ELF32LE>() const;
+template uint64_t SharedSymbol::template getAlignment<ELF32BE>() const;
+template uint64_t SharedSymbol::template getAlignment<ELF64LE>() const;
+template uint64_t SharedSymbol::template getAlignment<ELF64BE>() const;

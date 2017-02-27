@@ -789,12 +789,12 @@ public:
       : MCTargetAsmParser(Options, STI), MII(MII), Parser(_Parser) {
     MCAsmParserExtension::Initialize(Parser);
 
-    if (getSTI().getFeatureBits().none()) {
+    if (getFeatureBits().none()) {
       // Set default features.
       copySTI().ToggleFeature("SOUTHERN_ISLANDS");
     }
 
-    setAvailableFeatures(ComputeAvailableFeatures(getSTI().getFeatureBits()));
+    setAvailableFeatures(ComputeAvailableFeatures(getFeatureBits()));
 
     {
       // TODO: make those pre-defined variables read-only.
@@ -802,7 +802,7 @@ public:
       // MCSymbol::isRedefinable is intended for another purpose, and
       // AsmParser::parseDirectiveSet() cannot be specialized for specific target.
       AMDGPU::IsaInfo::IsaVersion ISA =
-          AMDGPU::IsaInfo::getIsaVersion(getSTI().getFeatureBits());
+          AMDGPU::IsaInfo::getIsaVersion(getFeatureBits());
       MCContext &Ctx = getContext();
       MCSymbol *Sym =
           Ctx.getOrCreateSymbol(Twine(".option.machine_version_major"));
@@ -828,7 +828,7 @@ public:
   }
 
   bool hasInv2PiInlineImm() const {
-    return getSTI().getFeatureBits()[AMDGPU::FeatureInv2PiInlineImm];
+    return getFeatureBits()[AMDGPU::FeatureInv2PiInlineImm];
   }
 
   bool hasSGPR102_SGPR103() const {
@@ -848,6 +848,10 @@ public:
 
   const MCInstrInfo *getMII() const {
     return &MII;
+  }
+
+  const FeatureBitset &getFeatureBits() const {
+    return getSTI().getFeatureBits();
   }
 
   void setForcedEncodingSize(unsigned Size) { ForcedEncodingSize = Size; }
@@ -1870,7 +1874,7 @@ bool AMDGPUAsmParser::ParseDirectiveHSACodeObjectISA() {
   // targeted GPU.
   if (getLexer().is(AsmToken::EndOfStatement)) {
     AMDGPU::IsaInfo::IsaVersion ISA =
-        AMDGPU::IsaInfo::getIsaVersion(getSTI().getFeatureBits());
+        AMDGPU::IsaInfo::getIsaVersion(getFeatureBits());
     getTargetStreamer().EmitDirectiveHSACodeObjectISA(ISA.Major, ISA.Minor,
                                                       ISA.Stepping,
                                                       "AMD", "AMDGPU");
@@ -1947,7 +1951,8 @@ bool AMDGPUAsmParser::ParseDirectiveRuntimeMetadata() {
 
   MS.flush();
 
-  getTargetStreamer().EmitRuntimeMetadata(Metadata);
+  if (getTargetStreamer().EmitRuntimeMetadata(getFeatureBits(), Metadata))
+    return Error(getParser().getTok().getLoc(), "invalid runtime metadata");
 
   return false;
 }
@@ -1965,7 +1970,7 @@ bool AMDGPUAsmParser::ParseAMDKernelCodeTValue(StringRef ID,
 
 bool AMDGPUAsmParser::ParseDirectiveAMDKernelCodeT() {
   amd_kernel_code_t Header;
-  AMDGPU::initDefaultAMDKernelCodeT(Header, getSTI().getFeatureBits());
+  AMDGPU::initDefaultAMDKernelCodeT(Header, getFeatureBits());
 
   while (true) {
     // Lex EndOfStatement.  This is in a while loop, because lexing a comment
@@ -2459,7 +2464,7 @@ bool AMDGPUAsmParser::parseCnt(int64_t &IntVal) {
     Parser.Lex();
 
   AMDGPU::IsaInfo::IsaVersion ISA =
-      AMDGPU::IsaInfo::getIsaVersion(getSTI().getFeatureBits());
+      AMDGPU::IsaInfo::getIsaVersion(getFeatureBits());
   if (CntName == "vmcnt")
     IntVal = encodeVmcnt(ISA, IntVal, CntVal);
   else if (CntName == "expcnt")
@@ -2475,7 +2480,7 @@ bool AMDGPUAsmParser::parseCnt(int64_t &IntVal) {
 OperandMatchResultTy
 AMDGPUAsmParser::parseSWaitCntOps(OperandVector &Operands) {
   AMDGPU::IsaInfo::IsaVersion ISA =
-      AMDGPU::IsaInfo::getIsaVersion(getSTI().getFeatureBits());
+      AMDGPU::IsaInfo::getIsaVersion(getFeatureBits());
   int64_t Waitcnt = getWaitcntBitMask(ISA);
   SMLoc S = Parser.getTok().getLoc();
 
