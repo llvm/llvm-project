@@ -60,7 +60,7 @@ static void or32le(uint8_t *P, int32_t V) { write32le(P, read32le(P) | V); }
 static void or32be(uint8_t *P, int32_t V) { write32be(P, read32be(P) | V); }
 
 template <class ELFT> static std::string getErrorLoc(uint8_t *Loc) {
-  for (InputSectionBase *D : Symtab<ELFT>::X->Sections) {
+  for (InputSectionBase *D : InputSections) {
     auto *IS = dyn_cast_or_null<InputSection>(D);
     if (!IS || !IS->OutSec)
       continue;

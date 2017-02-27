@@ -33,6 +33,8 @@ using namespace llvm::support::endian;
 using namespace lld;
 using namespace lld::elf;
 
+std::vector<InputSectionBase *> elf::InputSections;
+
 // Returns a string to construct an error message.
 std::string lld::toString(const InputSectionBase *Sec) {
   // File can be absent if section is synthetic.
@@ -86,7 +88,7 @@ InputSectionBase::InputSectionBase(elf::ObjectFile<ELFT> *File,
 }
 
 template <class ELFT> size_t InputSectionBase::getSize() const {
-  if (auto *S = dyn_cast<SyntheticSection<ELFT>>(this))
+  if (auto *S = dyn_cast<SyntheticSection>(this))
     return S->getSize();
 
   return Data.size();
@@ -368,11 +370,11 @@ getRelocTargetVA(uint32_t Type, int64_t A, typename ELFT::uint P,
       return 0;
     if (Target->TcbSize)
       return Body.getVA<ELFT>(A) +
-             alignTo(Target->TcbSize, Out<ELFT>::TlsPhdr->p_align);
-    return Body.getVA<ELFT>(A) - Out<ELFT>::TlsPhdr->p_memsz;
+             alignTo(Target->TcbSize, Out::TlsPhdr->p_align);
+    return Body.getVA<ELFT>(A) - Out::TlsPhdr->p_memsz;
   case R_RELAX_TLS_GD_TO_LE_NEG:
   case R_NEG_TLS:
-    return Out<ELF32LE>::TlsPhdr->p_memsz - Body.getVA<ELFT>(A);
+    return Out::TlsPhdr->p_memsz - Body.getVA<ELFT>(A);
   case R_ABS:
   case R_RELAX_GOT_PC_NOPIC:
     return Body.getVA<ELFT>(A);
@@ -409,14 +411,14 @@ getRelocTargetVA(uint32_t Type, int64_t A, typename ELFT::uint P,
     // so don't bother doing anything at all.
     if (!SymVA)
       return 0;
-    if (Out<ELF64BE>::Opd) {
+    if (Out::Opd) {
       // If this is a local call, and we currently have the address of a
       // function-descriptor, get the underlying code address instead.
-      uint64_t OpdStart = Out<ELF64BE>::Opd->Addr;
-      uint64_t OpdEnd = OpdStart + Out<ELF64BE>::Opd->Size;
+      uint64_t OpdStart = Out::Opd->Addr;
+      uint64_t OpdEnd = OpdStart + Out::Opd->Size;
       bool InOpd = OpdStart <= SymVA && SymVA < OpdEnd;
       if (InOpd)
-        SymVA = read64be(&Out<ELF64BE>::OpdBuf[SymVA - OpdStart]);
+        SymVA = read64be(&Out::OpdBuf[SymVA - OpdStart]);
     }
     return SymVA - P;
   }
@@ -469,7 +471,7 @@ void InputSection::relocateNonAlloc(uint8_t *Buf, ArrayRef<RelTy> Rels) {
 
     uintX_t AddrLoc = this->OutSec->Addr + Offset;
     uint64_t SymVA = 0;
-    if (!Sym.isTls() || Out<ELFT>::TlsPhdr)
+    if (!Sym.isTls() || Out::TlsPhdr)
       SymVA = SignExtend64<sizeof(uintX_t) * 8>(
           getRelocTargetVA<ELFT>(Type, Addend, AddrLoc, Sym, R_ABS));
     Target->relocateOne(BufLoc, Type, SymVA);
@@ -543,7 +545,7 @@ template <class ELFT> void InputSection::writeTo(uint8_t *Buf) {
   if (this->Type == SHT_NOBITS)
     return;
 
-  if (auto *S = dyn_cast<SyntheticSection<ELFT>>(this)) {
+  if (auto *S = dyn_cast<SyntheticSection>(this)) {
     S->writeTo(Buf + OutSecOff);
     return;
   }

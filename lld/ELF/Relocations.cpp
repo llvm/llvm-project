@@ -387,23 +387,13 @@ static RelExpr fromPlt(RelExpr Expr) {
   return Expr;
 }
 
-template <class ELFT> static uint32_t getAlignment(SharedSymbol<ELFT> *SS) {
-  typedef typename ELFT::uint uintX_t;
-
-  uintX_t SecAlign = SS->file()->getSection(SS->Sym)->sh_addralign;
-  uintX_t SymValue = SS->Sym.st_value;
-  int TrailingZeros =
-      std::min(countTrailingZeros(SecAlign), countTrailingZeros(SymValue));
-  return 1 << TrailingZeros;
-}
-
-template <class ELFT> static bool isReadOnly(SharedSymbol<ELFT> *SS) {
-  typedef typename ELFT::uint uintX_t;
+template <class ELFT> static bool isReadOnly(SharedSymbol *SS) {
   typedef typename ELFT::Phdr Elf_Phdr;
+  uint64_t Value = SS->getValue<ELFT>();
 
   // Determine if the symbol is read-only by scanning the DSO's program headers.
-  uintX_t Value = SS->Sym.st_value;
-  for (const Elf_Phdr &Phdr : check(SS->file()->getObj().program_headers()))
+  auto *File = cast<SharedFile<ELFT>>(SS->File);
+  for (const Elf_Phdr &Phdr : check(File->getObj().program_headers()))
     if ((Phdr.p_type == ELF::PT_LOAD || Phdr.p_type == ELF::PT_GNU_RELRO) &&
         !(Phdr.p_flags & ELF::PF_W) && Value >= Phdr.p_vaddr &&
         Value < Phdr.p_vaddr + Phdr.p_memsz)
@@ -417,16 +407,20 @@ template <class ELFT> static bool isReadOnly(SharedSymbol<ELFT> *SS) {
 // them are copied by a copy relocation, all of them need to be copied.
 // Otherwise, they would refer different places at runtime.
 template <class ELFT>
-static std::vector<SharedSymbol<ELFT> *> getSymbolsAt(SharedSymbol<ELFT> *SS) {
+static std::vector<SharedSymbol *> getSymbolsAt(SharedSymbol *SS) {
   typedef typename ELFT::Sym Elf_Sym;
 
-  std::vector<SharedSymbol<ELFT> *> Ret;
-  for (const Elf_Sym &S : SS->file()->getGlobalSymbols()) {
-    if (S.st_shndx != SS->Sym.st_shndx || S.st_value != SS->Sym.st_value)
+  auto *File = cast<SharedFile<ELFT>>(SS->File);
+  uint64_t Shndx = SS->getShndx<ELFT>();
+  uint64_t Value = SS->getValue<ELFT>();
+
+  std::vector<SharedSymbol *> Ret;
+  for (const Elf_Sym &S : File->getGlobalSymbols()) {
+    if (S.st_shndx != Shndx || S.st_value != Value)
       continue;
-    StringRef Name = check(S.getName(SS->file()->getStringTable()));
+    StringRef Name = check(S.getName(File->getStringTable()));
     SymbolBody *Sym = Symtab<ELFT>::X->find(Name);
-    if (auto *Alias = dyn_cast_or_null<SharedSymbol<ELFT>>(Sym))
+    if (auto *Alias = dyn_cast_or_null<SharedSymbol>(Sym))
       Ret.push_back(Alias);
   }
   return Ret;
@@ -474,7 +468,7 @@ static std::vector<SharedSymbol<ELFT> *> getSymbolsAt(SharedSymbol<ELFT> *SS) {
 // to the variable in .bss. This kind of issue is sometimes very hard to
 // debug. What's a solution? Instead of exporting a varaible V from a DSO,
 // define an accessor getV().
-template <class ELFT> static void addCopyRelSymbol(SharedSymbol<ELFT> *SS) {
+template <class ELFT> static void addCopyRelSymbol(SharedSymbol *SS) {
   typedef typename ELFT::uint uintX_t;
 
   // Copy relocation against zero-sized symbol doesn't make sense.
@@ -484,18 +478,18 @@ template <class ELFT> static void addCopyRelSymbol(SharedSymbol<ELFT> *SS) {
 
   // See if this symbol is in a read-only segment. If so, preserve the symbol's
   // memory protection by reserving space in the .bss.rel.ro section.
-  bool IsReadOnly = isReadOnly(SS);
-  OutputSection *OSec = IsReadOnly ? Out<ELFT>::BssRelRo : Out<ELFT>::Bss;
+  bool IsReadOnly = isReadOnly<ELFT>(SS);
+  OutputSection *OSec = IsReadOnly ? Out::BssRelRo : Out::Bss;
 
   // Create a SyntheticSection in Out to hold the .bss and the Copy Reloc.
   auto *ISec =
-      make<CopyRelSection<ELFT>>(IsReadOnly, getAlignment(SS), SymSize);
+      make<CopyRelSection<ELFT>>(IsReadOnly, SS->getAlignment<ELFT>(), SymSize);
   OSec->addSection(ISec);
 
   // Look through the DSO's dynamic symbol table for aliases and create a
   // dynamic symbol for each one. This causes the copy relocation to correctly
   // interpose any aliases.
-  for (SharedSymbol<ELFT> *Sym : getSymbolsAt(SS)) {
+  for (SharedSymbol *Sym : getSymbolsAt<ELFT>(SS)) {
     Sym->NeedsCopy = true;
     Sym->Section = ISec;
     Sym->symbol()->IsUsedInRegularObj = true;
@@ -540,14 +534,14 @@ static RelExpr adjustExpr(const elf::ObjectFile<ELFT> &File, SymbolBody &Body,
   }
   if (Body.isObject()) {
     // Produce a copy relocation.
-    auto *B = cast<SharedSymbol<ELFT>>(&Body);
+    auto *B = cast<SharedSymbol>(&Body);
     if (!B->NeedsCopy) {
       if (Config->ZNocopyreloc)
         error(S.getLocation<ELFT>(RelOff) + ": unresolvable relocation " +
               toString(Type) + " against symbol '" + toString(*B) +
               "'; recompile with -fPIC or remove '-z nocopyreloc'");
 
-      addCopyRelSymbol(B);
+      addCopyRelSymbol<ELFT>(B);
     }
     return Expr;
   }

@@ -241,36 +241,48 @@ public:
   }
 };
 
-template <class ELFT> class SharedSymbol : public Defined {
-  typedef typename ELFT::Sym Elf_Sym;
-  typedef typename ELFT::Verdef Elf_Verdef;
-  typedef typename ELFT::uint uintX_t;
-
+class SharedSymbol : public Defined {
 public:
   static bool classof(const SymbolBody *S) {
     return S->kind() == SymbolBody::SharedKind;
   }
 
-  SharedSymbol(SharedFile<ELFT> *F, StringRef Name, const Elf_Sym &Sym,
-               const Elf_Verdef *Verdef)
-      : Defined(SymbolBody::SharedKind, Name, /*IsLocal=*/false, Sym.st_other,
-                Sym.getType()),
-        Sym(Sym), Verdef(Verdef) {
+  SharedSymbol(InputFile *File, StringRef Name, uint8_t StOther, uint8_t Type,
+               const void *ElfSym, const void *Verdef)
+      : Defined(SymbolBody::SharedKind, Name, /*IsLocal=*/false, StOther, Type),
+        Verdef(Verdef), ElfSym(ElfSym) {
     // IFuncs defined in DSOs are treated as functions by the static linker.
     if (isGnuIFunc())
       Type = llvm::ELF::STT_FUNC;
-    this->File = F;
+    this->File = File;
   }
 
-  SharedFile<ELFT> *file() { return (SharedFile<ELFT> *)this->File; }
+  template <class ELFT> uint64_t getShndx() const {
+    return getSym<ELFT>().st_shndx;
+  }
 
-  const Elf_Sym &Sym;
+  template <class ELFT> uint64_t getValue() const {
+    return getSym<ELFT>().st_value;
+  }
+
+  template <class ELFT> uint64_t getSize() const {
+    return getSym<ELFT>().st_size;
+  }
+
+  template <class ELFT> uint64_t getAlignment() const;
 
   // This field is a pointer to the symbol's version definition.
-  const Elf_Verdef *Verdef;
+  const void *Verdef;
 
   // Section is significant only when NeedsCopy is true.
   InputSection *Section = nullptr;
+
+private:
+  template <class ELFT> const typename ELFT::Sym &getSym() const {
+    return *(const typename ELFT::Sym *)ElfSym;
+  }
+
+  const void *ElfSym;
 };
 
 // This class represents a symbol defined in an archive file. It is
@@ -405,7 +417,7 @@ struct Symbol {
   // ELFT, and we verify this with the static_asserts in replaceBody.
   llvm::AlignedCharArrayUnion<
       DefinedCommon, DefinedRegular<llvm::object::ELF64LE>, DefinedSynthetic,
-      Undefined, SharedSymbol<llvm::object::ELF64LE>, LazyArchive, LazyObject>
+      Undefined, SharedSymbol, LazyArchive, LazyObject>
       Body;
 
   SymbolBody *body() { return reinterpret_cast<SymbolBody *>(Body.buffer); }

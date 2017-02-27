@@ -80,6 +80,8 @@ protected:
 
   bool hasASTFileSupport() const override { return false; }
 
+  bool shouldEraseOutputFiles() override;
+
 public:
   /// \brief Compute the AST consumer arguments that will be used to
   /// create the PCHGenerator instance returned by CreateASTConsumer.

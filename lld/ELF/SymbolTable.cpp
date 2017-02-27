@@ -262,8 +262,8 @@ Symbol *SymbolTable<ELFT>::addUndefined(StringRef Name, bool IsLocal,
   if (Binding != STB_WEAK) {
     if (S->body()->isShared() || S->body()->isLazy())
       S->Binding = Binding;
-    if (auto *SS = dyn_cast<SharedSymbol<ELFT>>(S->body()))
-      SS->file()->IsUsed = true;
+    if (auto *SS = dyn_cast<SharedSymbol>(S->body()))
+      cast<SharedFile<ELFT>>(SS->File)->IsUsed = true;
   }
   if (auto *L = dyn_cast<Lazy>(S->body())) {
     // An undefined weak will not fetch archive members, but we have to remember
@@ -413,7 +413,7 @@ Symbol *SymbolTable<ELFT>::addSynthetic(StringRef N,
 }
 
 template <typename ELFT>
-void SymbolTable<ELFT>::addShared(SharedFile<ELFT> *F, StringRef Name,
+void SymbolTable<ELFT>::addShared(SharedFile<ELFT> *File, StringRef Name,
                                   const Elf_Sym &Sym,
                                   const typename ELFT::Verdef *Verdef) {
   // DSO symbols do not affect visibility in the output, so we pass STV_DEFAULT
@@ -421,15 +421,17 @@ void SymbolTable<ELFT>::addShared(SharedFile<ELFT> *F, StringRef Name,
   // unchanged.
   Symbol *S;
   bool WasInserted;
-  std::tie(S, WasInserted) =
-      insert(Name, Sym.getType(), STV_DEFAULT, /*CanOmitFromDynSym*/ true, F);
+  std::tie(S, WasInserted) = insert(Name, Sym.getType(), STV_DEFAULT,
+                                    /*CanOmitFromDynSym*/ true, File);
   // Make sure we preempt DSO symbols with default visibility.
   if (Sym.getVisibility() == STV_DEFAULT)
     S->ExportDynamic = true;
+
   if (WasInserted || isa<Undefined>(S->body())) {
-    replaceBody<SharedSymbol<ELFT>>(S, F, Name, Sym, Verdef);
+    replaceBody<SharedSymbol>(S, File, Name, Sym.st_other, Sym.getType(), &Sym,
+                              Verdef);
     if (!S->isWeak())
-      F->IsUsed = true;
+      File->IsUsed = true;
   }
 }
 

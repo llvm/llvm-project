@@ -1901,10 +1901,10 @@ bool JumpThreadingPass::DuplicateCondBranchOnPHIIntoPred(
 /// TryToUnfoldSelect - Look for blocks of the form
 /// bb1:
 ///   %a = select
-///   br bb
+///   br bb2
 ///
 /// bb2:
-///   %p = phi [%a, %bb] ...
+///   %p = phi [%a, %bb1] ...
 ///   %c = icmp %p
 ///   br i1 %c
 ///

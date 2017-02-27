@@ -236,7 +236,7 @@ template <class ELFT> void elf::markLive() {
 
   // Preserve special sections and those which are specified in linker
   // script KEEP command.
-  for (InputSectionBase *Sec : Symtab<ELFT>::X->Sections) {
+  for (InputSectionBase *Sec : InputSections) {
     // .eh_frame is always marked as live now, but also it can reference to
     // sections that contain personality. We preserve all non-text sections
     // referred by .eh_frame here.
