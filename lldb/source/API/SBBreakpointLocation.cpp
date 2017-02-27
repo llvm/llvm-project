@@ -301,7 +301,7 @@ SBBreakpoint SBBreakpointLocation::GetBreakpoint() {
   if (m_opaque_sp) {
     std::lock_guard<std::recursive_mutex> guard(
         m_opaque_sp->GetTarget().GetAPIMutex());
-    *sb_bp = m_opaque_sp->GetBreakpoint().shared_from_this();
+    sb_bp = m_opaque_sp->GetBreakpoint().shared_from_this();
   }
 
   if (log) {
@@ -310,7 +310,7 @@ SBBreakpoint SBBreakpointLocation::GetBreakpoint() {
     log->Printf(
         "SBBreakpointLocation(%p)::GetBreakpoint () => SBBreakpoint(%p) %s",
         static_cast<void *>(m_opaque_sp.get()),
-        static_cast<void *>(sb_bp.get()), sstr.GetData());
+        static_cast<void *>(sb_bp.GetSP().get()), sstr.GetData());
   }
   return sb_bp;
 }

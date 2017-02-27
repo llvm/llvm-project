@@ -753,3 +753,32 @@ define i32 @zext_load_i32_by_i8_bswap_shl_16(i32* %arg) {
   %tmp8 = or i32 %tmp7, %tmp30
   ret i32 %tmp8
 }
+
+; i8* p;
+; i16* p1.i16 = (i16*) p;
+; (p1.i16[0] << 8) | ((i16) p[2])
+;
+; This is essentialy a i16 load from p[1], but we don't fold the pattern now
+; because in the original DAG we don't have p[1] address available
+define i16 @load_i16_from_nonzero_offset(i8* %p) {
+; CHECK-LABEL: load_i16_from_nonzero_offset:
+; CHECK: ldrh  r1, [r0]
+; CHECK-NEXT: ldrb  r0, [r0, #2]
+; CHECK-NEXT: orr r0, r0, r1, lsl #8
+; CHECK-NEXT: mov pc, lr
+;
+; CHECK-ARMv6-LABEL: load_i16_from_nonzero_offset:
+; CHECK-ARMv6: ldrh  r1, [r0]
+; CHECK-ARMv6-NEXT: ldrb  r0, [r0, #2]
+; CHECK-ARMv6-NEXT: orr r0, r0, r1, lsl #8
+; CHECK-ARMv6-NEXT: bx  lr
+
+  %p1.i16 = bitcast i8* %p to i16*
+  %p2.i8 = getelementptr i8, i8* %p, i64 2
+  %v1 = load i16, i16* %p1.i16
+  %v2.i8 = load i8, i8* %p2.i8
+  %v2 = zext i8 %v2.i8 to i16
+  %v1.shl = shl i16 %v1, 8
+  %res = or i16 %v1.shl, %v2
+  ret i16 %res
+}

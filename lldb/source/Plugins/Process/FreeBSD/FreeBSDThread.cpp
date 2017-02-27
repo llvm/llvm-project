@@ -18,11 +18,11 @@
 // Project includes
 #include "FreeBSDThread.h"
 #include "POSIXStopInfo.h"
-#include "Plugins/Process/Utility/RegisterContextFreeBSD_arm.h"
 #include "Plugins/Process/Utility/RegisterContextFreeBSD_i386.h"
 #include "Plugins/Process/Utility/RegisterContextFreeBSD_mips64.h"
 #include "Plugins/Process/Utility/RegisterContextFreeBSD_powerpc.h"
 #include "Plugins/Process/Utility/RegisterContextFreeBSD_x86_64.h"
+#include "Plugins/Process/Utility/RegisterInfoPOSIX_arm.h"
 #include "Plugins/Process/Utility/RegisterInfoPOSIX_arm64.h"
 #include "Plugins/Process/Utility/UnwindLLDB.h"
 #include "ProcessFreeBSD.h"
@@ -137,7 +137,7 @@ lldb::RegisterContextSP FreeBSDThread::GetRegisterContext() {
       reg_interface = new RegisterInfoPOSIX_arm64(target_arch);
       break;
     case llvm::Triple::arm:
-      reg_interface = new RegisterContextFreeBSD_arm(target_arch);
+      reg_interface = new RegisterInfoPOSIX_arm(target_arch);
       break;
     case llvm::Triple::ppc:
 #ifndef __powerpc64__

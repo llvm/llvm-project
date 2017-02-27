@@ -463,6 +463,8 @@ TEST_F(FormatTestJS, AsyncFunctions) {
   verifyFormat("export async function f() {\n"
                "  return fetch(x);\n"
                "}");
+  verifyFormat("let x = async () => f();");
+  verifyFormat("let x = async();");
   verifyFormat("class X {\n"
                "  async asyncMethod() {\n"
                "    return fetch(1);\n"
