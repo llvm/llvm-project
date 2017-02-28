@@ -511,11 +511,10 @@ SymbolBody *elf::ObjectFile<ELFT>::createSymbolBody(const Elf_Sym *Sym) {
 
     StringRefZ Name = this->StringTable.data() + Sym->st_name;
     if (Sym->st_shndx == SHN_UNDEF)
-      return new (BAlloc)
-          Undefined(Name, /*IsLocal=*/true, StOther, Type, this);
+      return make<Undefined>(Name, /*IsLocal=*/true, StOther, Type, this);
 
-    return new (BAlloc) DefinedRegular<ELFT>(Name, /*IsLocal=*/true, StOther,
-                                             Type, Value, Size, Sec, this);
+    return make<DefinedRegular>(Name, /*IsLocal=*/true, StOther, Type, Value,
+                                Size, Sec, this);
   }
 
   StringRef Name = check(Sym->getName(this->StringTable));
@@ -744,6 +743,7 @@ static uint8_t getBitcodeMachineKind(MemoryBufferRef MB) {
   case Triple::aarch64:
     return EM_AARCH64;
   case Triple::arm:
+  case Triple::thumb:
     return EM_ARM;
   case Triple::mips:
   case Triple::mipsel:

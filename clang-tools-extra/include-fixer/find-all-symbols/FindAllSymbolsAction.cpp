@@ -24,8 +24,8 @@ FindAllSymbolsAction::FindAllSymbolsAction(
   Matcher.registerMatchers(&MatchFinder);
 }
 
-std::unique_ptr<clang::ASTConsumer>
-FindAllSymbolsAction::CreateASTConsumer(clang::CompilerInstance &Compiler,
+std::unique_ptr<ASTConsumer>
+FindAllSymbolsAction::CreateASTConsumer(CompilerInstance &Compiler,
                                         StringRef InFile) {
   Compiler.getPreprocessor().addCommentHandler(&Handler);
   Compiler.getPreprocessor().addPPCallbacks(llvm::make_unique<FindAllMacros>(

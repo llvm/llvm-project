@@ -28,6 +28,18 @@ using namespace llvm::ELF;
 using namespace lld;
 using namespace lld::elf;
 
+InputSectionBase *DefinedRegular::NullInputSection;
+
+DefinedSynthetic *ElfSym::Etext;
+DefinedSynthetic *ElfSym::Etext2;
+DefinedSynthetic *ElfSym::Edata;
+DefinedSynthetic *ElfSym::Edata2;
+DefinedSynthetic *ElfSym::End;
+DefinedSynthetic *ElfSym::End2;
+DefinedRegular *ElfSym::MipsGpDisp;
+DefinedRegular *ElfSym::MipsLocalGp;
+DefinedRegular *ElfSym::MipsGp;
+
 template <class ELFT>
 static typename ELFT::uint getSymVA(const SymbolBody &Body, int64_t &Addend) {
   typedef typename ELFT::uint uintX_t;
@@ -43,7 +55,7 @@ static typename ELFT::uint getSymVA(const SymbolBody &Body, int64_t &Addend) {
     return Sec->Addr + D.Value;
   }
   case SymbolBody::DefinedRegularKind: {
-    auto &D = cast<DefinedRegular<ELFT>>(Body);
+    auto &D = cast<DefinedRegular>(Body);
     InputSectionBase *IS = D.Section;
 
     // According to the ELF spec reference to a local symbol from outside
@@ -58,12 +70,35 @@ static typename ELFT::uint getSymVA(const SymbolBody &Body, int64_t &Addend) {
       return D.Value;
 
     uintX_t Offset = D.Value;
+
+    // An object in an SHF_MERGE section might be referenced via a
+    // section symbol (as a hack for reducing the number of local
+    // symbols).
+    // We must incorporate the addend into the section offset (and
+    // zero out the addend for later processing) so that we find the
+    // right object in the section.
+    // Note that for an ordinary symbol we do not perform this
+    // adjustment and thus effectively assume that the addend cannot
+    // cross the boundaries of mergeable objects.
     if (D.isSection()) {
       Offset += Addend;
       Addend = 0;
     }
+
     const OutputSection *OutSec = IS->getOutputSection<ELFT>();
+
+    // In the typical case, this is actually very simple and boils
+    // down to adding together 3 numbers:
+    // 1. The address of the output section.
+    // 2. The offset of the input section within the output section.
+    // 3. The offset within the input section (this addition happens
+    //    inside InputSection::getOffset).
+    //
+    // If you understand the data structures involved with this next
+    // line (and how they get built), then you have a pretty good
+    // understanding of the linker.
     uintX_t VA = (OutSec ? OutSec->Addr : 0) + IS->getOffset<ELFT>(Offset);
+
     if (D.isTls() && !Config->Relocatable) {
       if (!Out::TlsPhdr)
         fatal(toString(D.File) +
@@ -165,11 +200,36 @@ template <class ELFT> typename ELFT::uint SymbolBody::getPltVA() const {
 template <class ELFT> typename ELFT::uint SymbolBody::getSize() const {
   if (const auto *C = dyn_cast<DefinedCommon>(this))
     return C->Size;
-  if (const auto *DR = dyn_cast<DefinedRegular<ELFT>>(this))
+  if (const auto *DR = dyn_cast<DefinedRegular>(this))
     return DR->Size;
   if (const auto *S = dyn_cast<SharedSymbol>(this))
     return S->getSize<ELFT>();
   return 0;
+}
+
+template <class ELFT>
+const OutputSection *SymbolBody::getOutputSection() const {
+  if (auto *S = dyn_cast<DefinedRegular>(this)) {
+    if (S->Section)
+      return S->Section->template getOutputSection<ELFT>();
+    return nullptr;
+  }
+
+  if (auto *S = dyn_cast<SharedSymbol>(this)) {
+    if (S->NeedsCopy)
+      return S->Section->OutSec;
+    return nullptr;
+  }
+
+  if (isa<DefinedCommon>(this)) {
+    if (Config->DefineCommon)
+      return In<ELFT>::Common->OutSec;
+    return nullptr;
+  }
+
+  if (auto *S = dyn_cast<DefinedSynthetic>(this))
+    return S->Section;
+  return nullptr;
 }
 
 // If a symbol name contains '@', the characters after that is
@@ -215,7 +275,7 @@ Defined::Defined(Kind K, StringRefZ Name, bool IsLocal, uint8_t StOther,
                  uint8_t Type)
     : SymbolBody(K, Name, IsLocal, StOther, Type) {}
 
-template <class ELFT> bool DefinedRegular<ELFT>::isMipsPIC() const {
+template <class ELFT> bool DefinedRegular::isMipsPIC() const {
   if (!Section || !isFunc())
     return false;
   return (this->StOther & STO_MIPS_MIPS16) == STO_MIPS_PIC ||
@@ -359,10 +419,19 @@ template uint32_t SymbolBody::template getSize<ELF32BE>() const;
 template uint64_t SymbolBody::template getSize<ELF64LE>() const;
 template uint64_t SymbolBody::template getSize<ELF64BE>() const;
 
-template class elf::DefinedRegular<ELF32LE>;
-template class elf::DefinedRegular<ELF32BE>;
-template class elf::DefinedRegular<ELF64LE>;
-template class elf::DefinedRegular<ELF64BE>;
+template const OutputSection *
+    SymbolBody::template getOutputSection<ELF32LE>() const;
+template const OutputSection *
+    SymbolBody::template getOutputSection<ELF32BE>() const;
+template const OutputSection *
+    SymbolBody::template getOutputSection<ELF64LE>() const;
+template const OutputSection *
+    SymbolBody::template getOutputSection<ELF64BE>() const;
+
+template bool DefinedRegular::template isMipsPIC<ELF32LE>() const;
+template bool DefinedRegular::template isMipsPIC<ELF32BE>() const;
+template bool DefinedRegular::template isMipsPIC<ELF64LE>() const;
+template bool DefinedRegular::template isMipsPIC<ELF64BE>() const;
 
 template uint64_t SharedSymbol::template getAlignment<ELF32LE>() const;
 template uint64_t SharedSymbol::template getAlignment<ELF32BE>() const;

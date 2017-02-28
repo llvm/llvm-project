@@ -408,23 +408,18 @@ struct SymbolTableEntry {
 
 template <class ELFT> class SymbolTableSection final : public SyntheticSection {
 public:
-  typedef typename ELFT::Shdr Elf_Shdr;
   typedef typename ELFT::Sym Elf_Sym;
-  typedef typename ELFT::SymRange Elf_Sym_Range;
   typedef typename ELFT::uint uintX_t;
+
   SymbolTableSection(StringTableSection<ELFT> &StrTabSec);
 
   void finalizeContents() override;
   void writeTo(uint8_t *Buf) override;
   size_t getSize() const override { return getNumSymbols() * sizeof(Elf_Sym); }
-  void addGlobal(SymbolBody *Body);
-  void addLocal(SymbolBody *Body);
+  void addSymbol(SymbolBody *Body);
   unsigned getNumSymbols() const { return Symbols.size() + 1; }
   size_t getSymbolIndex(SymbolBody *Body);
-
   ArrayRef<SymbolTableEntry> getSymbols() const { return Symbols; }
-
-  static const OutputSection *getOutputSection(SymbolBody *Sym);
 
 private:
   // A vector of symbols and their string table offsets.
@@ -437,8 +432,6 @@ private:
 // https://blogs.oracle.com/ali/entry/gnu_hash_elf_sections
 template <class ELFT>
 class GnuHashTableSection final : public SyntheticSection {
-  typedef typename ELFT::Off Elf_Off;
-  typedef typename ELFT::Word Elf_Word;
   typedef typename ELFT::uint uintX_t;
 
 public:
@@ -455,8 +448,8 @@ private:
   static unsigned calcNBuckets(unsigned NumHashed);
   static unsigned calcMaskWords(unsigned NumHashed);
 
-  void writeHeader(uint8_t *&Buf);
-  void writeBloomFilter(uint8_t *&Buf);
+  uint8_t *writeHeader(uint8_t *Buf);
+  uint8_t *writeBloomFilter(uint8_t *Buf);
   void writeHashTable(uint8_t *Buf);
 
   struct SymbolData {
@@ -474,8 +467,6 @@ private:
 };
 
 template <class ELFT> class HashTableSection final : public SyntheticSection {
-  typedef typename ELFT::Word Elf_Word;
-
 public:
   HashTableSection();
   void finalizeContents() override;

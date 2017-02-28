@@ -27,7 +27,7 @@
 # DIS-NEXT:  30020 00000000 00000001 00000000 00000001
 # DIS-NEXT:  30030 ffff8004 ffff9004
 
-# DIS: 00040000 l       .tdata          00000000 loc
+# DIS: 00000000 l       .tdata          00000000 loc
 # DIS: 00000004 g       .tdata          00000000 bar
 # DIS: 00000000 g       *UND*           00000000 foo
 

@@ -292,7 +292,7 @@ static int32_t findMipsPairedAddend(const uint8_t *Buf, const uint8_t *BufLoc,
 template <class ELFT> static bool isAbsolute(const SymbolBody &Body) {
   if (Body.isUndefined())
     return !Body.isLocal() && Body.symbol()->isWeak();
-  if (const auto *DR = dyn_cast<DefinedRegular<ELFT>>(&Body))
+  if (const auto *DR = dyn_cast<DefinedRegular>(&Body))
     return DR->Section == nullptr; // Absolute symbol.
   return false;
 }
@@ -352,7 +352,7 @@ isStaticLinkTimeConstant(RelExpr E, uint32_t Type, const SymbolBody &Body,
   if (AbsVal && RelE) {
     if (Body.isUndefined() && !Body.isLocal() && Body.symbol()->isWeak())
       return true;
-    if (&Body == ElfSym<ELFT>::MipsGpDisp)
+    if (&Body == ElfSym::MipsGpDisp)
       return true;
     error(S.getLocation<ELFT>(RelOff) + ": relocation " + toString(Type) +
           " cannot refer to absolute symbol '" + toString(Body) +

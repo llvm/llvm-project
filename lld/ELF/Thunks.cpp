@@ -225,7 +225,7 @@ template <class ELFT> void MipsThunk<ELFT>::addSymbols(ThunkSection<ELFT> &IS) {
 
 template <class ELFT>
 InputSection *MipsThunk<ELFT>::getTargetInputSection() const {
-  auto *DR = dyn_cast<DefinedRegular<ELFT>>(&this->Destination);
+  auto *DR = dyn_cast<DefinedRegular>(&this->Destination);
   return dyn_cast<InputSection>(DR->Section);
 }
 

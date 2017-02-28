@@ -31,7 +31,7 @@ class OutputSection;
 template <class ELFT> class ObjectFile;
 template <class ELFT> class SharedFile;
 class SharedSymbol;
-template <class ELFT> class DefinedRegular;
+class DefinedRegular;
 
 // This represents a section in an output file.
 // It is composed of multiple InputSections.
