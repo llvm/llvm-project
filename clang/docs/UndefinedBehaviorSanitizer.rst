@@ -117,7 +117,9 @@ Available checks are:
   -  ``-fsanitize=unreachable``: If control flow reaches
      ``__builtin_unreachable``.
   -  ``-fsanitize=unsigned-integer-overflow``: Unsigned integer
-     overflows.
+     overflows. Note that unlike signed integer overflow, unsigned integer
+     is not undefined behavior. However, while it has well-defined semantics,
+     it is often unintentional, so UBSan offers to catch it.
   -  ``-fsanitize=vla-bound``: A variable-length array whose bound
      does not evaluate to a positive value.
   -  ``-fsanitize=vptr``: Use of an object whose vptr indicates that

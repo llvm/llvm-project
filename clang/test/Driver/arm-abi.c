@@ -28,6 +28,10 @@
 // RUN: %clang -target arm--netbsd-eabihf %s -### -o %t.o 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-AAPCS %s
 
+// OpenBSD defaults to aapcs-linux
+// RUN: %clang -target arm--openbsd- %s -### -o %t.o 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-AAPCS-LINUX %s
+
 // Otherwise, ABI is selected based on environment
 // RUN: %clang -target arm---android %s -### -o %t.o 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-AAPCS-LINUX %s

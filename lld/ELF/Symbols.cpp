@@ -74,7 +74,19 @@ static typename ELFT::uint getSymVA(const SymbolBody &Body, int64_t &Addend) {
     }
 
     const OutputSection *OutSec = IS->getOutputSection<ELFT>();
+
+    // In the typical case, this is actually very simple and boils
+    // down to adding together 3 numbers:
+    // 1. The address of the output section.
+    // 2. The offset of the input section within the output section.
+    // 3. The offset within the input section (this addition happens
+    //    inside InputSection::getOffset).
+    //
+    // If you understand the data structures involved with this next
+    // line (and how they get built), then you have a pretty good
+    // understanding of the linker.
     uintX_t VA = (OutSec ? OutSec->Addr : 0) + IS->getOffset<ELFT>(Offset);
+
     if (D.isTls() && !Config->Relocatable) {
       if (!Out::TlsPhdr)
         fatal(toString(D.File) +

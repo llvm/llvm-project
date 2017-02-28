@@ -522,6 +522,15 @@
 
 // RUN: env CL="%s" _CL_="%s" not %clang --rsp-quoting=windows -c
 
+// RUN: %clang_cl -### /c -flto -- %s 2>&1 | FileCheck -check-prefix=LTO %s
+// LTO: -flto
+
+// RUN: %clang_cl -### /c -flto=thin -- %s 2>&1 | FileCheck -check-prefix=LTO-THIN %s
+// LTO-THIN: -flto=thin
+
+// RUN: %clang_cl -### -Fe%t.exe -entry:main -flto -- %s 2>&1 | FileCheck -check-prefix=LTO-WITHOUT-LLD %s
+// LTO-WITHOUT-LLD: LTO requires -fuse-ld=lld
+
 // Accept "core" clang options.
 // (/Zs is for syntax-only, -Werror makes it fail hard on unknown options)
 // RUN: %clang_cl \
