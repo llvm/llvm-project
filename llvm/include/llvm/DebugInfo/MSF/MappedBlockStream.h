@@ -15,6 +15,8 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/DebugInfo/MSF/BinaryStream.h"
+#include "llvm/DebugInfo/MSF/BinaryStream.h"
+#include "llvm/DebugInfo/MSF/BinaryStreamRef.h"
 #include "llvm/DebugInfo/MSF/MSFStreamLayout.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Endian.h"
@@ -37,29 +39,33 @@ struct MSFLayout;
 /// the MSF.  MappedBlockStream provides methods for reading from and writing
 /// to one of these streams transparently, as if it were a contiguous sequence
 /// of bytes.
-class MappedBlockStream : public ReadableStream {
+class MappedBlockStream : public BinaryStream {
   friend class WritableMappedBlockStream;
 public:
   static std::unique_ptr<MappedBlockStream>
   createStream(uint32_t BlockSize, uint32_t NumBlocks,
-               const MSFStreamLayout &Layout, const ReadableStream &MsfData);
+               const MSFStreamLayout &Layout, BinaryStreamRef MsfData);
 
   static std::unique_ptr<MappedBlockStream>
-  createIndexedStream(const MSFLayout &Layout, const ReadableStream &MsfData,
+  createIndexedStream(const MSFLayout &Layout, BinaryStreamRef MsfData,
                       uint32_t StreamIndex);
 
   static std::unique_ptr<MappedBlockStream>
-  createFpmStream(const MSFLayout &Layout, const ReadableStream &MsfData);
+  createFpmStream(const MSFLayout &Layout, BinaryStreamRef MsfData);
 
   static std::unique_ptr<MappedBlockStream>
-  createDirectoryStream(const MSFLayout &Layout, const ReadableStream &MsfData);
+  createDirectoryStream(const MSFLayout &Layout, BinaryStreamRef MsfData);
+
+  llvm::support::endianness getEndian() const override {
+    return llvm::support::little;
+  }
 
   Error readBytes(uint32_t Offset, uint32_t Size,
-                  ArrayRef<uint8_t> &Buffer) const override;
+                  ArrayRef<uint8_t> &Buffer) override;
   Error readLongestContiguousChunk(uint32_t Offset,
-                                   ArrayRef<uint8_t> &Buffer) const override;
+                                   ArrayRef<uint8_t> &Buffer) override;
 
-  uint32_t getLength() const override;
+  uint32_t getLength() override;
 
   uint32_t getNumBytesCopied() const;
 
@@ -74,51 +80,56 @@ public:
 protected:
   MappedBlockStream(uint32_t BlockSize, uint32_t NumBlocks,
                     const MSFStreamLayout &StreamLayout,
-                    const ReadableStream &MsfData);
+                    BinaryStreamRef MsfData);
 
 private:
   const MSFStreamLayout &getStreamLayout() const { return StreamLayout; }
   void fixCacheAfterWrite(uint32_t Offset, ArrayRef<uint8_t> Data) const;
 
-  Error readBytes(uint32_t Offset, MutableArrayRef<uint8_t> Buffer) const;
+  Error readBytes(uint32_t Offset, MutableArrayRef<uint8_t> Buffer);
   bool tryReadContiguously(uint32_t Offset, uint32_t Size,
-                           ArrayRef<uint8_t> &Buffer) const;
+                           ArrayRef<uint8_t> &Buffer);
 
   const uint32_t BlockSize;
   const uint32_t NumBlocks;
   const MSFStreamLayout StreamLayout;
-  const ReadableStream &MsfData;
+  BinaryStreamRef MsfData;
 
   typedef MutableArrayRef<uint8_t> CacheEntry;
-  mutable llvm::BumpPtrAllocator Pool;
-  mutable DenseMap<uint32_t, std::vector<CacheEntry>> CacheMap;
+  llvm::BumpPtrAllocator Pool;
+  DenseMap<uint32_t, std::vector<CacheEntry>> CacheMap;
 };
 
-class WritableMappedBlockStream : public WritableStream {
+class WritableMappedBlockStream : public WritableBinaryStream {
 public:
   static std::unique_ptr<WritableMappedBlockStream>
   createStream(uint32_t BlockSize, uint32_t NumBlocks,
-               const MSFStreamLayout &Layout, const WritableStream &MsfData);
+               const MSFStreamLayout &Layout, WritableBinaryStreamRef MsfData);
 
   static std::unique_ptr<WritableMappedBlockStream>
-  createIndexedStream(const MSFLayout &Layout, const WritableStream &MsfData,
+  createIndexedStream(const MSFLayout &Layout, WritableBinaryStreamRef MsfData,
                       uint32_t StreamIndex);
 
   static std::unique_ptr<WritableMappedBlockStream>
-  createDirectoryStream(const MSFLayout &Layout, const WritableStream &MsfData);
+  createDirectoryStream(const MSFLayout &Layout,
+                        WritableBinaryStreamRef MsfData);
 
   static std::unique_ptr<WritableMappedBlockStream>
-  createFpmStream(const MSFLayout &Layout, const WritableStream &MsfData);
+  createFpmStream(const MSFLayout &Layout, WritableBinaryStreamRef MsfData);
+
+  llvm::support::endianness getEndian() const override {
+    return llvm::support::little;
+  }
 
   Error readBytes(uint32_t Offset, uint32_t Size,
-                  ArrayRef<uint8_t> &Buffer) const override;
+                  ArrayRef<uint8_t> &Buffer) override;
   Error readLongestContiguousChunk(uint32_t Offset,
-                                   ArrayRef<uint8_t> &Buffer) const override;
-  uint32_t getLength() const override;
+                                   ArrayRef<uint8_t> &Buffer) override;
+  uint32_t getLength() override;
 
-  Error writeBytes(uint32_t Offset, ArrayRef<uint8_t> Buffer) const override;
+  Error writeBytes(uint32_t Offset, ArrayRef<uint8_t> Buffer) override;
 
-  Error commit() const override;
+  Error commit() override;
 
   const MSFStreamLayout &getStreamLayout() const {
     return ReadInterface.getStreamLayout();
@@ -130,12 +141,12 @@ public:
 protected:
   WritableMappedBlockStream(uint32_t BlockSize, uint32_t NumBlocks,
                             const MSFStreamLayout &StreamLayout,
-                            const WritableStream &MsfData);
+                            WritableBinaryStreamRef MsfData);
 
 private:
   MappedBlockStream ReadInterface;
 
-  const WritableStream &WriteInterface;
+  WritableBinaryStreamRef WriteInterface;
 };
 
 } // end namespace pdb

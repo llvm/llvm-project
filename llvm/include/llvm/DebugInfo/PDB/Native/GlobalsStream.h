@@ -27,15 +27,15 @@ public:
   explicit GlobalsStream(std::unique_ptr<msf::MappedBlockStream> Stream);
   ~GlobalsStream();
   Error commit();
-  msf::FixedStreamArray<support::ulittle32_t> getHashBuckets() const {
+  FixedStreamArray<support::ulittle32_t> getHashBuckets() const {
     return HashBuckets;
   }
   uint32_t getNumBuckets() const { return NumBuckets; }
   Error reload();
 
 private:
-  msf::FixedStreamArray<support::ulittle32_t> HashBuckets;
-  msf::FixedStreamArray<PSHashRecord> HashRecords;
+  FixedStreamArray<support::ulittle32_t> HashBuckets;
+  FixedStreamArray<PSHashRecord> HashRecords;
   uint32_t NumBuckets;
   std::unique_ptr<msf::MappedBlockStream> Stream;
 };

@@ -8,6 +8,8 @@
   define void @test_loads() #0 { ret void }
   define void @test_stores() #0 { ret void }
 
+  define void @test_gep() { ret void }
+
   define void @test_fadd_s32() #0 { ret void }
   define void @test_fadd_s64() #0 { ret void }
 
@@ -196,6 +198,31 @@ body:             |
     G_STORE %6(s64), %0 :: (store 8)
     BX_RET 14, _, implicit %r0
 
+...
+---
+name:            test_gep
+# CHECK-LABEL: name: test_gep
+legalized:       true
+regBankSelected: false
+selected:        false
+# CHECK: registers:
+# CHECK: - { id: 0, class: gprb }
+# CHECK: - { id: 1, class: gprb }
+# CHECK: - { id: 2, class: gprb }
+
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+body:             |
+  bb.0:
+    liveins: %r0, %r1
+
+    %0(p0) = COPY %r0
+    %1(s32) = COPY %r1
+    %2(p0) = G_GEP %0, %1(s32)
+    %r0 = COPY %2(p0)
+    BX_RET 14, _, implicit %r0
 ...
 ---
 name:            test_fadd_s32

@@ -118,8 +118,9 @@ Error PDBFileBuilder::commit(StringRef Filename) {
   if (OutFileOrError.getError())
     return llvm::make_error<pdb::GenericError>(generic_error_code::invalid_path,
                                                Filename);
-  FileBufferByteStream Buffer(std::move(*OutFileOrError));
-  StreamWriter Writer(Buffer);
+  FileBufferByteStream Buffer(std::move(*OutFileOrError),
+                              llvm::support::little);
+  BinaryStreamWriter Writer(Buffer);
 
   if (auto EC = Writer.writeObject(*Layout.SB))
     return EC;
@@ -131,9 +132,8 @@ Error PDBFileBuilder::commit(StringRef Filename) {
 
   auto DirStream =
       WritableMappedBlockStream::createDirectoryStream(Layout, Buffer);
-  StreamWriter DW(*DirStream);
-  if (auto EC = DW.writeInteger<uint32_t>(Layout.StreamSizes.size(),
-                                          llvm::support::little))
+  BinaryStreamWriter DW(*DirStream);
+  if (auto EC = DW.writeInteger<uint32_t>(Layout.StreamSizes.size()))
     return EC;
 
   if (auto EC = DW.writeArray(Layout.StreamSizes))
@@ -150,7 +150,7 @@ Error PDBFileBuilder::commit(StringRef Filename) {
 
   auto NS = WritableMappedBlockStream::createIndexedStream(Layout, Buffer,
                                                            StringTableStreamNo);
-  StreamWriter NSWriter(*NS);
+  BinaryStreamWriter NSWriter(*NS);
   if (auto EC = Strings.commit(NSWriter))
     return EC;
 

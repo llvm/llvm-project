@@ -13,18 +13,16 @@
 
 using namespace llvm;
 using namespace llvm::codeview;
-using namespace llvm::msf;
 
 ModuleSubstream::ModuleSubstream() : Kind(ModuleSubstreamKind::None) {}
 
-ModuleSubstream::ModuleSubstream(ModuleSubstreamKind Kind,
-                                 ReadableStreamRef Data)
+ModuleSubstream::ModuleSubstream(ModuleSubstreamKind Kind, BinaryStreamRef Data)
     : Kind(Kind), Data(Data) {}
 
-Error ModuleSubstream::initialize(ReadableStreamRef Stream,
+Error ModuleSubstream::initialize(BinaryStreamRef Stream,
                                   ModuleSubstream &Info) {
   const ModuleSubsectionHeader *Header;
-  StreamReader Reader(Stream);
+  BinaryStreamReader Reader(Stream);
   if (auto EC = Reader.readObject(Header))
     return EC;
 
@@ -42,4 +40,4 @@ uint32_t ModuleSubstream::getRecordLength() const {
 
 ModuleSubstreamKind ModuleSubstream::getSubstreamKind() const { return Kind; }
 
-ReadableStreamRef ModuleSubstream::getRecordData() const { return Data; }
+BinaryStreamRef ModuleSubstream::getRecordData() const { return Data; }

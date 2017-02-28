@@ -136,6 +136,7 @@ protected:
   bool SGPRInitBug;
   bool HasSMemRealTime;
   bool Has16BitInsts;
+  bool HasVOP3PInsts;
   bool HasMovrel;
   bool HasVGPRIndexMode;
   bool HasScalarStores;
@@ -216,6 +217,10 @@ public:
     return Has16BitInsts;
   }
 
+  bool hasVOP3PInsts() const {
+    return HasVOP3PInsts;
+  }
+
   bool hasHWFP64() const {
     return FP64;
   }
@@ -269,6 +274,10 @@ public:
 
   bool hasFFBH() const {
     return (getGeneration() >= EVERGREEN);
+  }
+
+  bool hasMed3_16() const {
+    return getGeneration() >= GFX9;
   }
 
   bool hasCARRY() const {

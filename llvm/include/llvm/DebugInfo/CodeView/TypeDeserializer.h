@@ -29,10 +29,11 @@ namespace codeview {
 class TypeDeserializer : public TypeVisitorCallbacks {
   struct MappingInfo {
     explicit MappingInfo(ArrayRef<uint8_t> RecordData)
-        : Stream(RecordData), Reader(Stream), Mapping(Reader) {}
+        : Stream(RecordData, llvm::support::little), Reader(Stream),
+          Mapping(Reader) {}
 
-    msf::ByteStream Stream;
-    msf::StreamReader Reader;
+    BinaryByteStream Stream;
+    BinaryStreamReader Reader;
     TypeRecordMapping Mapping;
   };
 
@@ -72,16 +73,16 @@ private:
 
 class FieldListDeserializer : public TypeVisitorCallbacks {
   struct MappingInfo {
-    explicit MappingInfo(msf::StreamReader &R)
+    explicit MappingInfo(BinaryStreamReader &R)
         : Reader(R), Mapping(Reader), StartOffset(0) {}
 
-    msf::StreamReader &Reader;
+    BinaryStreamReader &Reader;
     TypeRecordMapping Mapping;
     uint32_t StartOffset;
   };
 
 public:
-  explicit FieldListDeserializer(msf::StreamReader &Reader) : Mapping(Reader) {
+  explicit FieldListDeserializer(BinaryStreamReader &Reader) : Mapping(Reader) {
     CVType FieldList;
     FieldList.Type = TypeLeafKind::LF_FIELDLIST;
     consumeError(Mapping.Mapping.visitTypeBegin(FieldList));

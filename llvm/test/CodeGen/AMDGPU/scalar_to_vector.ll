@@ -67,10 +67,9 @@ define void @scalar_to_vector_v2f32(<4 x i16> addrspace(1)* %out, float addrspac
 ;   ret void
 ; }
 
-; define void @scalar_to_vector_test6(<4 x i16> addrspace(1)* %out) nounwind {
-;   %newvec0 = insertelement <2 x i32> undef, i32 12345, i32 0
-;   %bc = bitcast <2 x i32> %newvec0 to <4 x i16>
-;   %add = add <4 x i16> %bc, <i16 1, i16 2, i16 3, i16 4>
-;   store <4 x i16> %add, <4 x i16> addrspace(1)* %out, align 16
-;   ret void
-; }
+define void @scalar_to_vector_test6(<2 x half> addrspace(1)* %out, i8 zeroext %val) nounwind {
+  %newvec0 = insertelement <4 x i8> undef, i8 %val, i32 0
+  %bc = bitcast <4 x i8> %newvec0 to <2 x half>
+  store <2 x half> %bc, <2 x half> addrspace(1)* %out
+  ret void
+}

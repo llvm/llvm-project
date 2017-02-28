@@ -182,7 +182,7 @@ TextInstrProfReader::readValueProfileData(InstrProfRecord &Record) {
         CHECK_LINE_END(Line);
         std::pair<StringRef, StringRef> VD = Line->rsplit(':');
         uint64_t TakenCount, Value;
-        if (VK == IPVK_IndirectCallTarget) {
+        if (ValueKind == IPVK_IndirectCallTarget) {
           Symtab->addFuncName(VD.first);
           Value = IndexedInstrProf::ComputeHash(VD.first);
         } else {
@@ -192,7 +192,8 @@ TextInstrProfReader::readValueProfileData(InstrProfRecord &Record) {
         CurrentValues.push_back({Value, TakenCount});
         Line++;
       }
-      Record.addValueData(VK, S, CurrentValues.data(), NumValueData, nullptr);
+      Record.addValueData(ValueKind, S, CurrentValues.data(), NumValueData,
+                          nullptr);
     }
   }
   return success();

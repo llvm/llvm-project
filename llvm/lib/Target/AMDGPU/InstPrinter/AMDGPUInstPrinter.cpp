@@ -375,6 +375,14 @@ void AMDGPUInstPrinter::printImmediate16(uint32_t Imm,
     O << formatHex(static_cast<uint64_t>(Imm));
 }
 
+void AMDGPUInstPrinter::printImmediateV216(uint32_t Imm,
+                                           const MCSubtargetInfo &STI,
+                                           raw_ostream &O) {
+  uint16_t Lo16 = static_cast<uint16_t>(Imm);
+  assert(Lo16 == static_cast<uint16_t>(Imm >> 16));
+  printImmediate16(Lo16, STI, O);
+}
+
 void AMDGPUInstPrinter::printImmediate32(uint32_t Imm,
                                          const MCSubtargetInfo &STI,
                                          raw_ostream &O) {
@@ -488,6 +496,10 @@ void AMDGPUInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
     case AMDGPU::OPERAND_REG_IMM_INT16:
     case AMDGPU::OPERAND_REG_IMM_FP16:
       printImmediate16(Op.getImm(), STI, O);
+      break;
+    case AMDGPU::OPERAND_REG_INLINE_C_V2FP16:
+    case AMDGPU::OPERAND_REG_INLINE_C_V2INT16:
+      printImmediateV216(Op.getImm(), STI, O);
       break;
     case MCOI::OPERAND_UNKNOWN:
     case MCOI::OPERAND_PCREL:
@@ -736,6 +748,71 @@ void AMDGPUInstPrinter::printExpTgt(const MCInst *MI, unsigned OpNo,
     // Reserved values 10, 11
     O << " invalid_target_" << Tgt;
   }
+}
+
+static bool allOpsDefaultValue(const int* Ops, int NumOps, int Mod) {
+  int DefaultValue = (Mod == SISrcMods::OP_SEL_1);
+
+  for (int I = 0; I < NumOps; ++I) {
+    if (!!(Ops[I] & Mod) != DefaultValue)
+      return false;
+  }
+
+  return true;
+}
+
+static void printPackedModifier(const MCInst *MI, StringRef Name, unsigned Mod,
+                                raw_ostream &O) {
+  unsigned Opc = MI->getOpcode();
+  int NumOps = 0;
+  int Ops[3];
+
+  for (int OpName : { AMDGPU::OpName::src0_modifiers,
+                      AMDGPU::OpName::src1_modifiers,
+                      AMDGPU::OpName::src2_modifiers }) {
+    int Idx = AMDGPU::getNamedOperandIdx(Opc, OpName);
+    if (Idx == -1)
+      break;
+
+    Ops[NumOps++] = MI->getOperand(Idx).getImm();
+  }
+
+  if (allOpsDefaultValue(Ops, NumOps, Mod))
+    return;
+
+  O << Name;
+  for (int I = 0; I < NumOps; ++I) {
+    if (I != 0)
+      O << ',';
+
+    O << !!(Ops[I] & Mod);
+  }
+
+  O << ']';
+}
+
+void AMDGPUInstPrinter::printOpSel(const MCInst *MI, unsigned,
+                                   const MCSubtargetInfo &STI,
+                                   raw_ostream &O) {
+  printPackedModifier(MI, " op_sel:[", SISrcMods::OP_SEL_0, O);
+}
+
+void AMDGPUInstPrinter::printOpSelHi(const MCInst *MI, unsigned OpNo,
+                                     const MCSubtargetInfo &STI,
+                                     raw_ostream &O) {
+  printPackedModifier(MI, " op_sel_hi:[", SISrcMods::OP_SEL_1, O);
+}
+
+void AMDGPUInstPrinter::printNegLo(const MCInst *MI, unsigned OpNo,
+                                   const MCSubtargetInfo &STI,
+                                   raw_ostream &O) {
+  printPackedModifier(MI, " neg_lo:[", SISrcMods::NEG, O);
+}
+
+void AMDGPUInstPrinter::printNegHi(const MCInst *MI, unsigned OpNo,
+                                   const MCSubtargetInfo &STI,
+                                   raw_ostream &O) {
+  printPackedModifier(MI, " neg_hi:[", SISrcMods::NEG_HI, O);
 }
 
 void AMDGPUInstPrinter::printInterpSlot(const MCInst *MI, unsigned OpNum,

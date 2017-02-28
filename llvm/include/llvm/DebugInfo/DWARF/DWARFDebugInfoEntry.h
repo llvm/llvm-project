@@ -1,4 +1,4 @@
-//===-- DWARFDebugInfoEntry.h -----------------------------------*- C++ -*-===//
+//===- DWARFDebugInfoEntry.h ------------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,43 +7,37 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_DEBUGINFO_DWARFDEBUGINFOENTRY_H
-#define LLVM_LIB_DEBUGINFO_DWARFDEBUGINFOENTRY_H
+#ifndef LLVM_DEBUGINFO_DWARFDEBUGINFOENTRY_H
+#define LLVM_DEBUGINFO_DWARFDEBUGINFOENTRY_H
 
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFAbbreviationDeclaration.h"
-#include "llvm/DebugInfo/DWARF/DWARFDebugRangeList.h"
-#include "llvm/Support/DataTypes.h"
 #include "llvm/Support/Dwarf.h"
+#include <cstdint>
 
 namespace llvm {
 
-class DWARFDebugAranges;
-class DWARFCompileUnit;
+class DataExtractor;
 class DWARFUnit;
-class DWARFContext;
-class DWARFFormValue;
-struct DWARFDebugInfoEntryInlinedChain;
 
 /// DWARFDebugInfoEntry - A DIE with only the minimum required data.
 class DWARFDebugInfoEntry {
   /// Offset within the .debug_info of the start of this entry.
-  uint32_t Offset;
+  uint32_t Offset = 0;
 
   /// The integer depth of this DIE within the compile unit DIEs where the
   /// compile/type unit DIE has a depth of zero.
-  uint32_t Depth;
+  uint32_t Depth = 0;
 
-  const DWARFAbbreviationDeclaration *AbbrevDecl;
+  const DWARFAbbreviationDeclaration *AbbrevDecl = nullptr;
+
 public:
-  DWARFDebugInfoEntry()
-    : Offset(0), Depth(0), AbbrevDecl(nullptr) {}
+  DWARFDebugInfoEntry() = default;
 
   /// Extracts a debug info entry, which is a child of a given unit,
   /// starting at a given offset. If DIE can't be extracted, returns false and
   /// doesn't change OffsetPtr.
   bool extractFast(const DWARFUnit &U, uint32_t *OffsetPtr);
+
   /// High performance extraction should use this call.
   bool extractFast(const DWARFUnit &U, uint32_t *OffsetPtr,
                    const DataExtractor &DebugInfoData,
@@ -52,15 +46,18 @@ public:
 
   uint32_t getOffset() const { return Offset; }
   uint32_t getDepth() const { return Depth; }
+
   dwarf::Tag getTag() const {
     return AbbrevDecl ? AbbrevDecl->getTag() : dwarf::DW_TAG_null;
   }
+
   bool hasChildren() const { return AbbrevDecl && AbbrevDecl->hasChildren(); }
+
   const DWARFAbbreviationDeclaration *getAbbreviationDeclarationPtr() const {
     return AbbrevDecl;
   }
 };
 
-}
+} // end namespace llvm
 
-#endif
+#endif // LLVM_DEBUGINFO_DWARFDEBUGINFOENTRY_H

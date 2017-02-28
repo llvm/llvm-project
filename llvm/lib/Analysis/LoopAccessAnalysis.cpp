@@ -1052,7 +1052,12 @@ bool llvm::sortMemAccesses(ArrayRef<Value *> VL, const DataLayout &DL,
   Value *Obj0 = GetUnderlyingObject(Ptr0, DL);
 
   for (auto *Val : VL) {
+    // The only kind of access we care about here is load.
+    if (!isa<LoadInst>(Val))
+      return false;
+
     Value *Ptr = getPointerOperand(Val);
+    assert(Ptr && "Expected value to have a pointer operand.");
 
     // If a pointer refers to a different underlying object, bail - the
     // pointers are by definition incomparable.

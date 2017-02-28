@@ -20,7 +20,8 @@ AMDGPUMachineFunction::AMDGPUMachineFunction(const MachineFunction &MF) :
   LDSSize(0),
   ABIArgOffset(0),
   IsKernel(MF.getFunction()->getCallingConv() == CallingConv::AMDGPU_KERNEL ||
-           MF.getFunction()->getCallingConv() == CallingConv::SPIR_KERNEL) {
+           MF.getFunction()->getCallingConv() == CallingConv::SPIR_KERNEL),
+  NoSignedZerosFPMath(MF.getTarget().Options.NoSignedZerosFPMath) {
   // FIXME: Should initialize KernArgSize based on ExplicitKernelArgOffset,
   // except reserved size is not correctly aligned.
 }

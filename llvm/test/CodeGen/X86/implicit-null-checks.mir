@@ -341,6 +341,30 @@
     ret void
   }
 
+  define i32 @inc_store_and_load_no_alias(i32* noalias %ptr, i32* noalias %ptr2) {
+  entry:
+    %ptr_is_null = icmp eq i32* %ptr, null
+    br i1 %ptr_is_null, label %is_null, label %not_null, !make.implicit !0
+
+  not_null:
+    ret i32 undef
+
+  is_null:
+    ret i32 undef
+  }
+
+  define i32 @inc_store_and_load_alias(i32* %ptr, i32* %ptr2) {
+  entry:
+    %ptr_is_null = icmp eq i32* %ptr, null
+    br i1 %ptr_is_null, label %is_null, label %not_null, !make.implicit !0
+
+  not_null:
+    ret i32 undef
+
+  is_null:
+    ret i32 undef
+  }
+
   attributes #0 = { "target-features"="+bmi,+bmi2" }
 
   !0 = !{}
@@ -645,7 +669,7 @@ body:             |
 name:            use_alternate_load_op
 # CHECK-LABEL: name:            use_alternate_load_op
 # CHECK: bb.0.entry:
-# CHECK: %r10 = FAULTING_OP 1, %bb.2.is_null, {{[0-9]+}}, killed %rdi, 1, _, 0, _
+# CHECK: %rax = FAULTING_OP 1, %bb.2.is_null, {{[0-9]+}}, killed %rdi, 1, _, 0, _
 # CHECK-NEXT: JMP_1 %bb.1.not_null
 # CHECK: bb.1.not_null
 
@@ -666,9 +690,9 @@ body:             |
     liveins: %rdi, %rsi
 
     %rcx = MOV64rm killed %rsi, 1, _, 0, _
-    %rdx = AND64rm killed %rcx, %rdi, 1, _, 0, _, implicit-def dead %eflags
-    %r10 = MOV64rm killed %rdi, 1, _, 0, _
-    RETQ %r10d
+    %rcx = AND64rm killed %rcx, %rdi, 1, _, 0, _, implicit-def dead %eflags
+    %rax = MOV64rm killed %rdi, 1, _, 0, _
+    RETQ %eax
 
   bb.2.is_null:
     %eax = XOR32rr undef %eax, undef %eax, implicit-def dead %eflags
@@ -1205,5 +1229,71 @@ body:             |
 
   bb.2.is_null:
     RETQ
+
+...
+---
+name:            inc_store_and_load_no_alias
+# CHECK-LABEL: inc_store_and_load_no_alias
+# CHECK: bb.0.entry:
+# CHECK:  %eax = FAULTING_OP 1, %bb.2.is_null, {{[0-9]+}}, killed %rdi, 1, _, 0, _ :: (load 4 from %ir.ptr)
+# CHECK-NEXT: JMP_1 %bb.1.not_null
+# CHECK: bb.1.not_null
+
+alignment:       4
+tracksRegLiveness: true
+liveins:
+  - { reg: '%rdi' }
+  - { reg: '%rsi' }
+body:             |
+  bb.0.entry:
+    successors: %bb.2.is_null, %bb.1.not_null
+    liveins: %rdi, %rsi
+
+    TEST64rr %rdi, %rdi, implicit-def %eflags
+    JE_1 %bb.2.is_null, implicit killed %eflags
+
+  bb.1.not_null:
+    liveins: %rdi, %rsi
+
+    MOV32mi killed %rsi, 1, _, 0, _, 3 :: (store 4 into %ir.ptr2)
+    %eax = MOV32rm killed %rdi, 1, _, 0, _ :: (load 4 from %ir.ptr)
+    RETQ %eax
+
+  bb.2.is_null:
+    %eax = XOR32rr undef %eax, undef %eax, implicit-def dead %eflags
+    RETQ %eax
+
+...
+---
+name:            inc_store_and_load_alias
+# CHECK-LABEL: inc_store_and_load_alias
+# CHECK: bb.0.entry:
+# CHECK:    TEST64rr %rdi, %rdi, implicit-def %eflags
+# CHECK-NEXT:    JE_1 %bb.2.is_null, implicit killed %eflags
+# CHECK: bb.1.not_null
+
+alignment:       4
+tracksRegLiveness: true
+liveins:
+  - { reg: '%rdi' }
+  - { reg: '%rsi' }
+body:             |
+  bb.0.entry:
+    successors: %bb.2.is_null, %bb.1.not_null
+    liveins: %rdi, %rsi
+
+    TEST64rr %rdi, %rdi, implicit-def %eflags
+    JE_1 %bb.2.is_null, implicit killed %eflags
+
+  bb.1.not_null:
+    liveins: %rdi, %rsi
+
+    MOV32mi killed %rsi, 1, _, 0, _, 3 :: (store 4 into %ir.ptr2)
+    %eax = MOV32rm killed %rdi, 1, _, 0, _ :: (load 4 from %ir.ptr)
+    RETQ %eax
+
+  bb.2.is_null:
+    %eax = XOR32rr undef %eax, undef %eax, implicit-def dead %eflags
+    RETQ %eax
 
 ...

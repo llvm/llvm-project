@@ -212,22 +212,6 @@ void MCWasmStreamer::EmitSymbolDesc(MCSymbol *Symbol, unsigned DescValue) {
   llvm_unreachable("Wasm doesn't support this directive");
 }
 
-void MCWasmStreamer::BeginCOFFSymbolDef(const MCSymbol *Symbol) {
-  llvm_unreachable("Wasm doesn't support this directive");
-}
-
-void MCWasmStreamer::EmitCOFFSymbolStorageClass(int StorageClass) {
-  llvm_unreachable("Wasm doesn't support this directive");
-}
-
-void MCWasmStreamer::EmitCOFFSymbolType(int Type) {
-  llvm_unreachable("Wasm doesn't support this directive");
-}
-
-void MCWasmStreamer::EndCOFFSymbolDef() {
-  llvm_unreachable("Wasm doesn't support this directive");
-}
-
 void MCWasmStreamer::EmitZerofill(MCSection *Section, MCSymbol *Symbol,
                                   uint64_t Size, unsigned ByteAlignment) {
   llvm_unreachable("Wasm doesn't support this directive");

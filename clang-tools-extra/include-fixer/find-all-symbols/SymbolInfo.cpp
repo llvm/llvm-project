@@ -113,6 +113,14 @@ SymbolInfo::Signals SymbolInfo::Signals::operator+(const Signals &RHS) const {
   return Result;
 }
 
+bool SymbolInfo::Signals::operator==(const Signals &RHS) const {
+  return std::tie(Seen, Used) == std::tie(RHS.Seen, RHS.Used);
+}
+
+bool SymbolAndSignals::operator==(const SymbolAndSignals& RHS) const {
+  return std::tie(Symbol, Signals) == std::tie(RHS.Symbol, RHS.Signals);
+}
+
 bool WriteSymbolInfosToStream(llvm::raw_ostream &OS,
                               const SymbolInfo::SignalMap &Symbols) {
   llvm::yaml::Output yout(OS);

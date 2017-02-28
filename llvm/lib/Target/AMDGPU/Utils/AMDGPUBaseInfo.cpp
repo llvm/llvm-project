@@ -564,6 +564,7 @@ bool isSISrcFPOperand(const MCInstrDesc &Desc, unsigned OpNo) {
   case AMDGPU::OPERAND_REG_INLINE_C_FP32:
   case AMDGPU::OPERAND_REG_INLINE_C_FP64:
   case AMDGPU::OPERAND_REG_INLINE_C_FP16:
+  case AMDGPU::OPERAND_REG_INLINE_C_V2FP16:
     return true;
   default:
     return false;
@@ -680,6 +681,14 @@ bool isInlinableLiteral16(int16_t Literal, bool HasInv2Pi) {
          Val == 0x4400 || // 4.0
          Val == 0xC400 || // -4.0
          Val == 0x3118;   // 1/2pi
+}
+
+bool isInlinableLiteralV216(int32_t Literal, bool HasInv2Pi) {
+  assert(HasInv2Pi);
+
+  int16_t Lo16 = static_cast<int16_t>(Literal);
+  int16_t Hi16 = static_cast<int16_t>(Literal >> 16);
+  return Lo16 == Hi16 && isInlinableLiteral16(Lo16, HasInv2Pi);
 }
 
 bool isUniformMMO(const MachineMemOperand *MMO) {

@@ -59,6 +59,7 @@ public:
 
     Signals &operator+=(const Signals &RHS);
     Signals operator+(const Signals &RHS) const;
+    bool operator==(const Signals &RHS) const;
   };
 
   using SignalMap = std::map<SymbolInfo, Signals>;
@@ -128,6 +129,7 @@ private:
 struct SymbolAndSignals {
   SymbolInfo Symbol;
   SymbolInfo::Signals Signals;
+  bool operator==(const SymbolAndSignals& RHS) const;
 };
 
 /// \brief Write SymbolInfos to a stream (YAML format).

@@ -1,4 +1,4 @@
-//===-- BuiltinGCs.cpp - Boilerplate for our built in GC types --*- C++ -*-===//
+//===- BuiltinGCs.cpp - Boilerplate for our built in GC types -------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -14,6 +14,8 @@
 
 #include "llvm/CodeGen/GCs.h"
 #include "llvm/CodeGen/GCStrategy.h"
+#include "llvm/IR/DerivedTypes.h"
+#include "llvm/Support/Casting.h"
 
 using namespace llvm;
 
@@ -77,6 +79,7 @@ public:
     UsesMetadata = false;
     CustomRoots = false;
   }
+
   Optional<bool> isGCManagedPointer(const Type *Ty) const override {
     // Method is only valid on pointer typed values.
     const PointerType *PT = cast<PointerType>(Ty);
@@ -110,6 +113,7 @@ public:
     UsesMetadata = false;
     CustomRoots = false;
   }
+
   Optional<bool> isGCManagedPointer(const Type *Ty) const override {
     // Method is only valid on pointer typed values.
     const PointerType *PT = cast<PointerType>(Ty);
@@ -117,7 +121,8 @@ public:
     return (1 == PT->getAddressSpace());
   }
 };
-}
+
+} // end anonymous namespace
 
 // Register all the above so that they can be found at runtime.  Note that
 // these static initializers are important since the registration list is

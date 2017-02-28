@@ -10,17 +10,14 @@ define i64 @test1(<2 x i64> %a) {
 ; X32-NEXT:    movdqa %xmm0, %xmm1
 ; X32-NEXT:    psllq $2, %xmm1
 ; X32-NEXT:    movsd {{.*#+}} xmm1 = xmm0[0],xmm1[1]
-; X32-NEXT:    movd %xmm1, %eax
-; X32-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,2,3]
-; X32-NEXT:    movd %xmm0, %edx
+; X32-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,2,3]
+; X32-NEXT:    movd %xmm1, %edx
+; X32-NEXT:    movd %xmm0, %eax
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test1:
 ; X64:       # BB#0: # %entry
-; X64-NEXT:    movdqa %xmm0, %xmm1
-; X64-NEXT:    psllq $2, %xmm1
-; X64-NEXT:    movsd {{.*#+}} xmm1 = xmm0[0],xmm1[1]
-; X64-NEXT:    movd %xmm1, %rax
+; X64-NEXT:    movd %xmm0, %rax
 ; X64-NEXT:    retq
 entry:
  %c = shl <2 x i64> %a, <i64 0, i64 2>

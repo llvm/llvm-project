@@ -18,6 +18,8 @@
 
   define void @test_stores() #0 { ret void }
 
+  define void @test_gep() { ret void }
+
   define void @test_soft_fp_double() #0 { ret void }
 
   attributes #0 = { "target-features"="+vfp2,-neonfp" }
@@ -435,6 +437,33 @@ body:             |
     ; CHECK: VSTRD %[[F64]], %[[P]], 0, 14, _
 
     BX_RET 14, _
+...
+---
+name:            test_gep
+# CHECK-LABEL: name: test_gep
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+  - { id: 2, class: gprb }
+# CHECK: id: [[PTR:[0-9]+]], class: gpr
+# CHECK: id: [[OFF:[0-9]+]], class: gpr
+# CHECK: id: [[GEP:[0-9]+]], class: gpr
+body:             |
+  bb.0:
+    liveins: %r0, %r1
+
+    %0(p0) = COPY %r0
+    %1(s32) = COPY %r1
+
+    %2(p0) = G_GEP %0, %1(s32)
+    ; CHECK: %[[GEP]] = ADDrr %[[PTR]], %[[OFF]], 14, _, _
+
+    %r0 = COPY %2(p0)
+    BX_RET 14, _, implicit %r0
 ...
 ---
 name:            test_soft_fp_double

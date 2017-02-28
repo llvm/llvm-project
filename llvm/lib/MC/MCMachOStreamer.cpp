@@ -92,22 +92,6 @@ public:
   void EmitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
                         unsigned ByteAlignment) override;
 
-  void BeginCOFFSymbolDef(const MCSymbol *Symbol) override {
-    llvm_unreachable("macho doesn't support this directive");
-  }
-
-  void EmitCOFFSymbolStorageClass(int StorageClass) override {
-    llvm_unreachable("macho doesn't support this directive");
-  }
-
-  void EmitCOFFSymbolType(int Type) override {
-    llvm_unreachable("macho doesn't support this directive");
-  }
-
-  void EndCOFFSymbolDef() override {
-    llvm_unreachable("macho doesn't support this directive");
-  }
-
   void EmitLocalCommonSymbol(MCSymbol *Symbol, uint64_t Size,
                              unsigned ByteAlignment) override;
   void EmitZerofill(MCSection *Section, MCSymbol *Symbol = nullptr,

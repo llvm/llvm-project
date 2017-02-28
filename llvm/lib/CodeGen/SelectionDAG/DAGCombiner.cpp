@@ -275,6 +275,7 @@ namespace {
     SDValue visitSIGN_EXTEND(SDNode *N);
     SDValue visitZERO_EXTEND(SDNode *N);
     SDValue visitANY_EXTEND(SDNode *N);
+    SDValue visitAssertZext(SDNode *N);
     SDValue visitSIGN_EXTEND_INREG(SDNode *N);
     SDValue visitSIGN_EXTEND_VECTOR_INREG(SDNode *N);
     SDValue visitZERO_EXTEND_VECTOR_INREG(SDNode *N);
@@ -1438,6 +1439,7 @@ SDValue DAGCombiner::visit(SDNode *N) {
   case ISD::SIGN_EXTEND:        return visitSIGN_EXTEND(N);
   case ISD::ZERO_EXTEND:        return visitZERO_EXTEND(N);
   case ISD::ANY_EXTEND:         return visitANY_EXTEND(N);
+  case ISD::AssertZext:         return visitAssertZext(N);
   case ISD::SIGN_EXTEND_INREG:  return visitSIGN_EXTEND_INREG(N);
   case ISD::SIGN_EXTEND_VECTOR_INREG: return visitSIGN_EXTEND_VECTOR_INREG(N);
   case ISD::ZERO_EXTEND_VECTOR_INREG: return visitZERO_EXTEND_VECTOR_INREG(N);
@@ -4516,15 +4518,24 @@ SDValue DAGCombiner::MatchLoadCombine(SDNode *N) {
   std::function<unsigned(unsigned, unsigned)> BigEndianByteAt = [](
     unsigned BW, unsigned i) { return BW - i - 1; };
 
+  bool IsBigEndianTarget = DAG.getDataLayout().isBigEndian();
+  auto MemoryByteOffset = [&] (ByteProvider P) {
+    assert(P.isMemory() && "Must be a memory byte provider");
+    unsigned LoadBitWidth = P.Load->getMemoryVT().getSizeInBits();
+    assert(LoadBitWidth % 8 == 0 &&
+           "can only analyze providers for individual bytes not bit");
+    unsigned LoadByteWidth = LoadBitWidth / 8;
+    return IsBigEndianTarget
+            ? BigEndianByteAt(LoadByteWidth, P.ByteOffset)
+            : LittleEndianByteAt(LoadByteWidth, P.ByteOffset);
+  };
+
   Optional<BaseIndexOffset> Base;
   SDValue Chain;
 
   SmallSet<LoadSDNode *, 8> Loads;
-  LoadSDNode *FirstLoad = nullptr;
+  Optional<ByteProvider> FirstByteProvider;
   int64_t FirstOffset = INT64_MAX;
-
-  bool IsBigEndianTarget = DAG.getDataLayout().isBigEndian();
-  auto ByteAt = IsBigEndianTarget ? BigEndianByteAt : LittleEndianByteAt;
 
   // Check if all the bytes of the OR we are looking at are loaded from the same
   // base address. Collect bytes offsets from Base address in ByteOffsets.
@@ -4555,17 +4566,12 @@ SDValue DAGCombiner::MatchLoadCombine(SDNode *N) {
       return SDValue();
 
     // Calculate the offset of the current byte from the base address
-    unsigned LoadBitWidth = L->getMemoryVT().getSizeInBits();
-    assert(LoadBitWidth % 8 == 0 &&
-           "can only analyze providers for individual bytes not bit");
-    unsigned LoadByteWidth = LoadBitWidth / 8;
-    int64_t MemoryByteOffset = ByteAt(LoadByteWidth, P->ByteOffset);
-    int64_t ByteOffsetFromBase = Ptr.Offset + MemoryByteOffset;
+    int64_t ByteOffsetFromBase = Ptr.Offset + MemoryByteOffset(*P);
     ByteOffsets[i] = ByteOffsetFromBase;
 
     // Remember the first byte load
     if (ByteOffsetFromBase < FirstOffset) {
-      FirstLoad = L;
+      FirstByteProvider = P;
       FirstOffset = ByteOffsetFromBase;
     }
 
@@ -4587,7 +4593,13 @@ SDValue DAGCombiner::MatchLoadCombine(SDNode *N) {
       return SDValue();
   }
   assert((BigEndian != LittleEndian) && "should be either or");
-  assert(FirstLoad && "must be set");
+  assert(FirstByteProvider && "must be set");
+
+  // Ensure that the first byte is loaded from zero offset of the first load.
+  // So the combined value can be loaded from the first load address.
+  if (MemoryByteOffset(*FirstByteProvider) != 0)
+    return SDValue();
+  LoadSDNode *FirstLoad = FirstByteProvider->Load;
 
   // The node we are looking at matches with the pattern, check if we can
   // replace it with a single load and bswap if needed.
@@ -7293,6 +7305,19 @@ SDValue DAGCombiner::visitANY_EXTEND(SDNode *N) {
   return SDValue();
 }
 
+SDValue DAGCombiner::visitAssertZext(SDNode *N) {
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+  EVT EVT = cast<VTSDNode>(N1)->getVT();
+
+  // fold (assertzext (assertzext x, vt), vt) -> (assertzext x, vt)
+  if (N0.getOpcode() == ISD::AssertZext &&
+      EVT == cast<VTSDNode>(N0.getOperand(1))->getVT())
+    return N0;
+
+  return SDValue();
+}
+
 /// See if the specified operand can be simplified with the knowledge that only
 /// the bits specified by Mask are used.  If so, return the simpler operand,
 /// otherwise return a null SDValue.
@@ -7882,7 +7907,7 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
     EVT SrcVT = VecSrc.getValueType();
     if (SrcVT.isVector() && SrcVT.getScalarType() == VT &&
         (!LegalOperations ||
-         TLI.isOperationLegalOrCustom(ISD::EXTRACT_VECTOR_ELT, SrcVT))) {
+         TLI.isOperationLegal(ISD::EXTRACT_VECTOR_ELT, SrcVT))) {
       SDLoc SL(N);
 
       EVT IdxVT = TLI.getVectorIdxTy(DAG.getDataLayout());

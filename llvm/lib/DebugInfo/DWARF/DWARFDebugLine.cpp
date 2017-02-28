@@ -1,4 +1,4 @@
-//===-- DWARFDebugLine.cpp ------------------------------------------------===//
+//===- DWARFDebugLine.cpp -------------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,14 +7,23 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/SmallString.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugLine.h"
+#include "llvm/DebugInfo/DWARF/DWARFRelocMap.h"
 #include "llvm/Support/Dwarf.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
+#include <cassert>
+#include <cinttypes>
+#include <cstdint>
+#include <cstdio>
+#include <utility>
+
 using namespace llvm;
 using namespace dwarf;
+
 typedef DILineInfoSpecifier::FileLineInfoKind FileLineInfoKind;
 
 DWARFDebugLine::Prologue::Prologue() { clear(); }

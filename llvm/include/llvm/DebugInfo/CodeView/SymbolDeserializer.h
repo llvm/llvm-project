@@ -25,10 +25,11 @@ class SymbolVisitorDelegate;
 class SymbolDeserializer : public SymbolVisitorCallbacks {
   struct MappingInfo {
     explicit MappingInfo(ArrayRef<uint8_t> RecordData)
-        : Stream(RecordData), Reader(Stream), Mapping(Reader) {}
+        : Stream(RecordData, llvm::support::little), Reader(Stream),
+          Mapping(Reader) {}
 
-    msf::ByteStream Stream;
-    msf::StreamReader Reader;
+    BinaryByteStream Stream;
+    BinaryStreamReader Reader;
     SymbolRecordMapping Mapping;
   };
 

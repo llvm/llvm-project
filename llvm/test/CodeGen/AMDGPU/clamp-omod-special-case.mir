@@ -1,12 +1,30 @@
 # RUN: llc -march=amdgcn -verify-machineinstrs -run-pass si-fold-operands  %s -o - | FileCheck -check-prefix=GCN %s
 --- |
-  define amdgpu_kernel void @v_max_self_clamp_not_set_f32(float addrspace(1)* %out, float addrspace(1)* %aptr) {
+  define amdgpu_ps void @v_max_self_clamp_not_set_f32() #0 {
     ret void
   }
 
-  define amdgpu_kernel void @v_clamp_omod_already_set_f32(float addrspace(1)* %out, float addrspace(1)* %aptr) {
+  define amdgpu_ps void @v_clamp_omod_already_set_f32() #0 {
     ret void
   }
+
+  define amdgpu_ps void @v_omod_mul_omod_already_set_f32() #0 {
+    ret void
+  }
+
+  define amdgpu_ps void @v_omod_mul_clamp_already_set_f32() #0 {
+    ret void
+  }
+
+  define amdgpu_ps void @v_omod_add_omod_already_set_f32() #0 {
+    ret void
+  }
+
+  define amdgpu_ps void @v_omod_add_clamp_already_set_f32() #0 {
+    ret void
+  }
+
+  attributes #0 = { nounwind "no-signed-zeros-fp-math"="false" }
 
 ...
 ---
@@ -132,4 +150,275 @@ body:             |
     %21 = V_MAX_F32_e64 0, killed %20, 0, killed %20, 1, 3, implicit %exec
     BUFFER_STORE_DWORD_ADDR64 killed %21, %26, killed %16, 0, 0, 0, 0, 0, implicit %exec
     S_ENDPGM
+...
+---
+# Don't fold a mul that looks like an omod if itself has omod set
+
+# GCN-LABEL: name: v_omod_mul_omod_already_set_f32
+# GCN: %20 = V_ADD_F32_e64 0, killed %17, 0, 1065353216, 0, 0, implicit %exec
+# GCN-NEXT: %21 = V_MUL_F32_e64 0, killed %20, 0, 1056964608, 0, 3, implicit %exec
+name:            v_omod_mul_omod_already_set_f32
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: sgpr_64 }
+  - { id: 1, class: sreg_32_xm0 }
+  - { id: 2, class: sgpr_32 }
+  - { id: 3, class: vgpr_32 }
+  - { id: 4, class: sreg_64_xexec }
+  - { id: 5, class: sreg_64_xexec }
+  - { id: 6, class: sreg_32 }
+  - { id: 7, class: sreg_32 }
+  - { id: 8, class: sreg_32_xm0 }
+  - { id: 9, class: sreg_64 }
+  - { id: 10, class: sreg_32_xm0 }
+  - { id: 11, class: sreg_32_xm0 }
+  - { id: 12, class: sgpr_64 }
+  - { id: 13, class: sgpr_128 }
+  - { id: 14, class: sreg_32_xm0 }
+  - { id: 15, class: sreg_64 }
+  - { id: 16, class: sgpr_128 }
+  - { id: 17, class: vgpr_32 }
+  - { id: 18, class: vreg_64 }
+  - { id: 19, class: vgpr_32 }
+  - { id: 20, class: vgpr_32 }
+  - { id: 21, class: vgpr_32 }
+  - { id: 22, class: vgpr_32 }
+  - { id: 23, class: vreg_64 }
+  - { id: 24, class: vgpr_32 }
+  - { id: 25, class: vreg_64 }
+  - { id: 26, class: vreg_64 }
+liveins:
+  - { reg: '%sgpr0_sgpr1', virtual-reg: '%0' }
+  - { reg: '%vgpr0', virtual-reg: '%3' }
+body:             |
+  bb.0 (%ir-block.0):
+    liveins: %sgpr0_sgpr1, %vgpr0
+
+    %3 = COPY %vgpr0
+    %0 = COPY %sgpr0_sgpr1
+    %4 = S_LOAD_DWORDX2_IMM %0, 9, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(2)* undef`)
+    %5 = S_LOAD_DWORDX2_IMM %0, 11, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(2)* undef`)
+    %24 = V_ASHRREV_I32_e32 31, %3, implicit %exec
+    %25 = REG_SEQUENCE %3, 1, %24, 2
+    %10 = S_MOV_B32 61440
+    %11 = S_MOV_B32 0
+    %12 = REG_SEQUENCE killed %11, 1, killed %10, 2
+    %13 = REG_SEQUENCE killed %5, 17, %12, 18
+    %14 = S_MOV_B32 2
+    %26 = V_LSHL_B64 killed %25, 2, implicit %exec
+    %16 = REG_SEQUENCE killed %4, 17, %12, 18
+    %18 = COPY %26
+    %17 = BUFFER_LOAD_DWORD_ADDR64 %26, killed %13, 0, 0, 0, 0, 0, implicit %exec
+    %20 = V_ADD_F32_e64 0, killed %17, 0, 1065353216, 0, 0, implicit %exec
+    %21 = V_MUL_F32_e64 0, killed %20, 0, 1056964608, 0, 3, implicit %exec
+    BUFFER_STORE_DWORD_ADDR64 killed %21, %26, killed %16, 0, 0, 0, 0, 0, implicit %exec
+    S_ENDPGM
+
+...
+---
+# Don't fold a mul that looks like an omod if itself has clamp set
+# This might be OK, but would require folding the clamp at the same time.
+# GCN-LABEL: name: v_omod_mul_clamp_already_set_f32
+# GCN: %20 = V_ADD_F32_e64 0, killed %17, 0, 1065353216, 0, 0, implicit %exec
+# GCN-NEXT: %21 = V_MUL_F32_e64 0, killed %20, 0, 1056964608, 1, 0, implicit %exec
+
+name:            v_omod_mul_clamp_already_set_f32
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: sgpr_64 }
+  - { id: 1, class: sreg_32_xm0 }
+  - { id: 2, class: sgpr_32 }
+  - { id: 3, class: vgpr_32 }
+  - { id: 4, class: sreg_64_xexec }
+  - { id: 5, class: sreg_64_xexec }
+  - { id: 6, class: sreg_32 }
+  - { id: 7, class: sreg_32 }
+  - { id: 8, class: sreg_32_xm0 }
+  - { id: 9, class: sreg_64 }
+  - { id: 10, class: sreg_32_xm0 }
+  - { id: 11, class: sreg_32_xm0 }
+  - { id: 12, class: sgpr_64 }
+  - { id: 13, class: sgpr_128 }
+  - { id: 14, class: sreg_32_xm0 }
+  - { id: 15, class: sreg_64 }
+  - { id: 16, class: sgpr_128 }
+  - { id: 17, class: vgpr_32 }
+  - { id: 18, class: vreg_64 }
+  - { id: 19, class: vgpr_32 }
+  - { id: 20, class: vgpr_32 }
+  - { id: 21, class: vgpr_32 }
+  - { id: 22, class: vgpr_32 }
+  - { id: 23, class: vreg_64 }
+  - { id: 24, class: vgpr_32 }
+  - { id: 25, class: vreg_64 }
+  - { id: 26, class: vreg_64 }
+liveins:
+  - { reg: '%sgpr0_sgpr1', virtual-reg: '%0' }
+  - { reg: '%vgpr0', virtual-reg: '%3' }
+body:             |
+  bb.0 (%ir-block.0):
+    liveins: %sgpr0_sgpr1, %vgpr0
+
+    %3 = COPY %vgpr0
+    %0 = COPY %sgpr0_sgpr1
+    %4 = S_LOAD_DWORDX2_IMM %0, 9, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(2)* undef`)
+    %5 = S_LOAD_DWORDX2_IMM %0, 11, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(2)* undef`)
+    %24 = V_ASHRREV_I32_e32 31, %3, implicit %exec
+    %25 = REG_SEQUENCE %3, 1, %24, 2
+    %10 = S_MOV_B32 61440
+    %11 = S_MOV_B32 0
+    %12 = REG_SEQUENCE killed %11, 1, killed %10, 2
+    %13 = REG_SEQUENCE killed %5, 17, %12, 18
+    %14 = S_MOV_B32 2
+    %26 = V_LSHL_B64 killed %25, 2, implicit %exec
+    %16 = REG_SEQUENCE killed %4, 17, %12, 18
+    %18 = COPY %26
+    %17 = BUFFER_LOAD_DWORD_ADDR64 %26, killed %13, 0, 0, 0, 0, 0, implicit %exec
+    %20 = V_ADD_F32_e64 0, killed %17, 0, 1065353216, 0, 0, implicit %exec
+    %21 = V_MUL_F32_e64 0, killed %20, 0, 1056964608, 1, 0, implicit %exec
+    BUFFER_STORE_DWORD_ADDR64 killed %21, %26, killed %16, 0, 0, 0, 0, 0, implicit %exec
+    S_ENDPGM
+
+...
+
+
+
+
+
+
+
+
+
+
+
+
+
+---
+# Don't fold a mul that looks like an omod if itself has omod set
+
+# GCN-LABEL: name: v_omod_add_omod_already_set_f32
+# GCN: %20 = V_ADD_F32_e64 0, killed %17, 0, 1065353216, 0, 0, implicit %exec
+# GCN-NEXT: %21 = V_ADD_F32_e64 0, killed %20, 0, killed %20, 0, 3, implicit %exec
+name:            v_omod_add_omod_already_set_f32
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: sgpr_64 }
+  - { id: 1, class: sreg_32_xm0 }
+  - { id: 2, class: sgpr_32 }
+  - { id: 3, class: vgpr_32 }
+  - { id: 4, class: sreg_64_xexec }
+  - { id: 5, class: sreg_64_xexec }
+  - { id: 6, class: sreg_32 }
+  - { id: 7, class: sreg_32 }
+  - { id: 8, class: sreg_32_xm0 }
+  - { id: 9, class: sreg_64 }
+  - { id: 10, class: sreg_32_xm0 }
+  - { id: 11, class: sreg_32_xm0 }
+  - { id: 12, class: sgpr_64 }
+  - { id: 13, class: sgpr_128 }
+  - { id: 14, class: sreg_32_xm0 }
+  - { id: 15, class: sreg_64 }
+  - { id: 16, class: sgpr_128 }
+  - { id: 17, class: vgpr_32 }
+  - { id: 18, class: vreg_64 }
+  - { id: 19, class: vgpr_32 }
+  - { id: 20, class: vgpr_32 }
+  - { id: 21, class: vgpr_32 }
+  - { id: 22, class: vgpr_32 }
+  - { id: 23, class: vreg_64 }
+  - { id: 24, class: vgpr_32 }
+  - { id: 25, class: vreg_64 }
+  - { id: 26, class: vreg_64 }
+liveins:
+  - { reg: '%sgpr0_sgpr1', virtual-reg: '%0' }
+  - { reg: '%vgpr0', virtual-reg: '%3' }
+body:             |
+  bb.0 (%ir-block.0):
+    liveins: %sgpr0_sgpr1, %vgpr0
+
+    %3 = COPY %vgpr0
+    %0 = COPY %sgpr0_sgpr1
+    %4 = S_LOAD_DWORDX2_IMM %0, 9, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(2)* undef`)
+    %5 = S_LOAD_DWORDX2_IMM %0, 11, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(2)* undef`)
+    %24 = V_ASHRREV_I32_e32 31, %3, implicit %exec
+    %25 = REG_SEQUENCE %3, 1, %24, 2
+    %10 = S_MOV_B32 61440
+    %11 = S_MOV_B32 0
+    %12 = REG_SEQUENCE killed %11, 1, killed %10, 2
+    %13 = REG_SEQUENCE killed %5, 17, %12, 18
+    %14 = S_MOV_B32 2
+    %26 = V_LSHL_B64 killed %25, 2, implicit %exec
+    %16 = REG_SEQUENCE killed %4, 17, %12, 18
+    %18 = COPY %26
+    %17 = BUFFER_LOAD_DWORD_ADDR64 %26, killed %13, 0, 0, 0, 0, 0, implicit %exec
+    %20 = V_ADD_F32_e64 0, killed %17, 0, 1065353216, 0, 0, implicit %exec
+    %21 = V_ADD_F32_e64 0, killed %20, 0, killed %20, 0, 3, implicit %exec
+    BUFFER_STORE_DWORD_ADDR64 killed %21, %26, killed %16, 0, 0, 0, 0, 0, implicit %exec
+    S_ENDPGM
+
+...
+---
+# Don't fold a mul that looks like an omod if itself has clamp set
+# This might be OK, but would require folding the clamp at the same time.
+# GCN-LABEL: name: v_omod_add_clamp_already_set_f32
+# GCN: %20 = V_ADD_F32_e64 0, killed %17, 0, 1065353216, 0, 0, implicit %exec
+# GCN-NEXT: %21 = V_ADD_F32_e64 0, killed %20, 0, killed %20, 1, 0, implicit %exec
+
+name:            v_omod_add_clamp_already_set_f32
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: sgpr_64 }
+  - { id: 1, class: sreg_32_xm0 }
+  - { id: 2, class: sgpr_32 }
+  - { id: 3, class: vgpr_32 }
+  - { id: 4, class: sreg_64_xexec }
+  - { id: 5, class: sreg_64_xexec }
+  - { id: 6, class: sreg_32 }
+  - { id: 7, class: sreg_32 }
+  - { id: 8, class: sreg_32_xm0 }
+  - { id: 9, class: sreg_64 }
+  - { id: 10, class: sreg_32_xm0 }
+  - { id: 11, class: sreg_32_xm0 }
+  - { id: 12, class: sgpr_64 }
+  - { id: 13, class: sgpr_128 }
+  - { id: 14, class: sreg_32_xm0 }
+  - { id: 15, class: sreg_64 }
+  - { id: 16, class: sgpr_128 }
+  - { id: 17, class: vgpr_32 }
+  - { id: 18, class: vreg_64 }
+  - { id: 19, class: vgpr_32 }
+  - { id: 20, class: vgpr_32 }
+  - { id: 21, class: vgpr_32 }
+  - { id: 22, class: vgpr_32 }
+  - { id: 23, class: vreg_64 }
+  - { id: 24, class: vgpr_32 }
+  - { id: 25, class: vreg_64 }
+  - { id: 26, class: vreg_64 }
+liveins:
+  - { reg: '%sgpr0_sgpr1', virtual-reg: '%0' }
+  - { reg: '%vgpr0', virtual-reg: '%3' }
+body:             |
+  bb.0 (%ir-block.0):
+    liveins: %sgpr0_sgpr1, %vgpr0
+
+    %3 = COPY %vgpr0
+    %0 = COPY %sgpr0_sgpr1
+    %4 = S_LOAD_DWORDX2_IMM %0, 9, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(2)* undef`)
+    %5 = S_LOAD_DWORDX2_IMM %0, 11, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(2)* undef`)
+    %24 = V_ASHRREV_I32_e32 31, %3, implicit %exec
+    %25 = REG_SEQUENCE %3, 1, %24, 2
+    %10 = S_MOV_B32 61440
+    %11 = S_MOV_B32 0
+    %12 = REG_SEQUENCE killed %11, 1, killed %10, 2
+    %13 = REG_SEQUENCE killed %5, 17, %12, 18
+    %14 = S_MOV_B32 2
+    %26 = V_LSHL_B64 killed %25, 2, implicit %exec
+    %16 = REG_SEQUENCE killed %4, 17, %12, 18
+    %18 = COPY %26
+    %17 = BUFFER_LOAD_DWORD_ADDR64 %26, killed %13, 0, 0, 0, 0, 0, implicit %exec
+    %20 = V_ADD_F32_e64 0, killed %17, 0, 1065353216, 0, 0, implicit %exec
+    %21 = V_ADD_F32_e64 0, killed %20, 0, killed %20, 1, 0, implicit %exec
+    BUFFER_STORE_DWORD_ADDR64 killed %21, %26, killed %16, 0, 0, 0, 0, 0, implicit %exec
+    S_ENDPGM
+
 ...

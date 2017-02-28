@@ -19,6 +19,7 @@
 
 using namespace llvm;
 using namespace llvm::pdb;
+using namespace llvm::support;
 
 namespace {
 class HashTableInternals : public HashTable {
@@ -147,14 +148,14 @@ TEST(HashTableTest, Serialization) {
   }
 
   std::vector<uint8_t> Buffer(Table.calculateSerializedLength());
-  msf::MutableByteStream Stream(Buffer);
-  msf::StreamWriter Writer(Stream);
+  MutableBinaryByteStream Stream(Buffer, little);
+  BinaryStreamWriter Writer(Stream);
   EXPECT_NO_ERROR(Table.commit(Writer));
   // We should have written precisely the number of bytes we calculated earlier.
   EXPECT_EQ(Buffer.size(), Writer.getOffset());
 
   HashTableInternals Table2;
-  msf::StreamReader Reader(Stream);
+  BinaryStreamReader Reader(Stream);
   EXPECT_NO_ERROR(Table2.load(Reader));
   // We should have read precisely the number of bytes we calculated earlier.
   EXPECT_EQ(Buffer.size(), Reader.getOffset());
