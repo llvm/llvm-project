@@ -640,5 +640,40 @@ TEST_F(ModuleWithFunctionTest, DropPoisonGeneratingFlags) {
   }
 }
 
+TEST(InstructionsTest, GEPIndices) {
+  LLVMContext Context;
+  IRBuilder<NoFolder> Builder(Context);
+  Type *ElementTy = Builder.getInt8Ty();
+  Type *ArrTy = ArrayType::get(ArrayType::get(ElementTy, 64), 64);
+  Value *Indices[] = {
+    Builder.getInt32(0),
+    Builder.getInt32(13),
+    Builder.getInt32(42) };
+
+  Value *V = Builder.CreateGEP(ArrTy, UndefValue::get(PointerType::getUnqual(ArrTy)),
+                               Indices);
+  ASSERT_TRUE(isa<GetElementPtrInst>(V));
+
+  auto *GEPI = cast<GetElementPtrInst>(V);
+  ASSERT_NE(GEPI->idx_begin(), GEPI->idx_end());
+  ASSERT_EQ(GEPI->idx_end(), std::next(GEPI->idx_begin(), 3));
+  EXPECT_EQ(Indices[0], GEPI->idx_begin()[0]);
+  EXPECT_EQ(Indices[1], GEPI->idx_begin()[1]);
+  EXPECT_EQ(Indices[2], GEPI->idx_begin()[2]);
+  EXPECT_EQ(GEPI->idx_begin(), GEPI->indices().begin());
+  EXPECT_EQ(GEPI->idx_end(), GEPI->indices().end());
+
+  const auto *CGEPI = GEPI;
+  ASSERT_NE(CGEPI->idx_begin(), CGEPI->idx_end());
+  ASSERT_EQ(CGEPI->idx_end(), std::next(CGEPI->idx_begin(), 3));
+  EXPECT_EQ(Indices[0], CGEPI->idx_begin()[0]);
+  EXPECT_EQ(Indices[1], CGEPI->idx_begin()[1]);
+  EXPECT_EQ(Indices[2], CGEPI->idx_begin()[2]);
+  EXPECT_EQ(CGEPI->idx_begin(), CGEPI->indices().begin());
+  EXPECT_EQ(CGEPI->idx_end(), CGEPI->indices().end());
+
+  delete GEPI;
+}
+
 } // end anonymous namespace
 } // end namespace llvm

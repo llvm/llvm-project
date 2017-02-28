@@ -620,8 +620,8 @@ FormatStyle getGoogleStyle(FormatStyle::LanguageKind Language) {
     GoogleStyle.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_Empty;
     GoogleStyle.AlwaysBreakBeforeMultilineStrings = false;
     GoogleStyle.BreakBeforeTernaryOperators = false;
-    GoogleStyle.CommentPragmas =
-        "(taze:|@(export|requirecss|return|returns|see|visibility)) ";
+    // taze:, and @tag followed by { for a lot of JSDoc tags.
+    GoogleStyle.CommentPragmas = "(taze:|(@[A-Za-z_0-9-]+[ \\t]*{))";
     GoogleStyle.MaxEmptyLinesToKeep = 3;
     GoogleStyle.NamespaceIndentation = FormatStyle::NI_All;
     GoogleStyle.SpacesInContainerLiterals = false;

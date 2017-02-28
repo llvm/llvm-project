@@ -2,7 +2,7 @@
 // name.
 
 // RUN: %clangxx_xray -std=c++11 %s -o %t
-// RUN: %run %t > xray.log.file.name 2>&1
+// RUN: XRAY_OPTIONS="patch_premain=true xray_naive_log=true" %run %t > xray.log.file.name 2>&1
 // RUN: ls | FileCheck xray.log.file.name
 // RUN: rm xray-log.* xray.log.file.name
 

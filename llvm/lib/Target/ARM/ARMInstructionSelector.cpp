@@ -299,6 +299,7 @@ bool ARMInstructionSelector::select(MachineInstr &I) const {
     break;
   }
   case G_ADD:
+  case G_GEP:
     I.setDesc(TII.get(ARM::ADDrr));
     MIB.add(predOps(ARMCC::AL)).add(condCodeOp());
     break;

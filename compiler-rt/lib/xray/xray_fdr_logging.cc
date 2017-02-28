@@ -523,7 +523,7 @@ void fdrLoggingHandleArg0(int32_t FuncId,
 
 } // namespace __xray
 
-static auto Unused = [] {
+static auto UNUSED Unused = [] {
   using namespace __xray;
   if (flags()->xray_fdr_log) {
     XRayLogImpl Impl{

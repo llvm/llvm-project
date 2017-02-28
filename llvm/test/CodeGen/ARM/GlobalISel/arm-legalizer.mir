@@ -11,6 +11,8 @@
   define void @test_legal_loads() #0 { ret void }
   define void @test_legal_stores() #0 { ret void }
 
+  define void @test_gep() { ret void }
+
   define void @test_fadd_s32() #0 { ret void }
   define void @test_fadd_s64() #0 { ret void }
 
@@ -240,6 +242,31 @@ body:             |
     %6(p0) = COPY %r6
     G_STORE %6(p0), %0(p0) :: (store 4)
     BX_RET 14, _
+...
+---
+name:            test_gep
+# CHECK-LABEL: name: test_gep
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+body:             |
+  bb.0:
+    liveins: %r0, %r1
+
+    %0(p0) = COPY %r0
+    %1(s32) = COPY %r1
+
+    ; CHECK: {{%[0-9]+}}(p0) = G_GEP {{%[0-9]+}}, {{%[0-9]+}}(s32)
+    %2(p0) = G_GEP %0, %1(s32)
+
+    %r0 = COPY %2(p0)
+    BX_RET 14, _, implicit %r0
 ...
 ---
 name:            test_fadd_s32

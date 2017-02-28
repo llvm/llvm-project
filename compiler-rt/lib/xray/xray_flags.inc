@@ -14,7 +14,7 @@
 #error "Define XRAY_FLAG prior to including this file!"
 #endif
 
-XRAY_FLAG(bool, patch_premain, true,
+XRAY_FLAG(bool, patch_premain, false,
           "Whether to patch instrumentation points before main.")
 XRAY_FLAG(bool, xray_naive_log, true,
           "Whether to install the naive log implementation.")

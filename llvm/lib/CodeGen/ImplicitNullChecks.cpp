@@ -153,6 +153,7 @@ class ImplicitNullChecks : public MachineFunctionPass {
   const TargetRegisterInfo *TRI = nullptr;
   AliasAnalysis *AA = nullptr;
   MachineModuleInfo *MMI = nullptr;
+  MachineFrameInfo *MFI = nullptr;
 
   bool analyzeBlockForNullChecks(MachineBasicBlock &MBB,
                                  SmallVectorImpl<NullCheck> &NullCheckList);
@@ -160,18 +161,29 @@ class ImplicitNullChecks : public MachineFunctionPass {
                                     MachineBasicBlock *HandlerMBB);
   void rewriteNullChecks(ArrayRef<NullCheck> NullCheckList);
 
-  enum SuitabilityResult { SR_Suitable, SR_Unsuitable, SR_Impossible };
+  enum AliasResult {
+    AR_NoAlias,
+    AR_MayAlias,
+    AR_WillAliasEverything
+  };
+  /// Returns AR_NoAlias if \p MI memory operation does not alias with
+  /// \p PrevMI, AR_MayAlias if they may alias and AR_WillAliasEverything if
+  /// they may alias and any further memory operation may alias with \p PrevMI.
+  AliasResult areMemoryOpsAliased(MachineInstr &MI, MachineInstr *PrevMI);
 
+  enum SuitabilityResult {
+    SR_Suitable,
+    SR_Unsuitable,
+    SR_Impossible
+  };
   /// Return SR_Suitable if \p MI a memory operation that can be used to
   /// implicitly null check the value in \p PointerReg, SR_Unsuitable if
   /// \p MI cannot be used to null check and SR_Impossible if there is
   /// no sense to continue lookup due to any other instruction will not be able
   /// to be used. \p PrevInsts is the set of instruction seen since
-  /// the explicit null check on \p PointerReg. \p SeenLoad means that load
-  /// instruction has been observed in \PrevInsts set.
+  /// the explicit null check on \p PointerReg.
   SuitabilityResult isSuitableMemoryOp(MachineInstr &MI, unsigned PointerReg,
-                                       ArrayRef<MachineInstr *> PrevInsts,
-                                       bool &SeenLoad);
+                                       ArrayRef<MachineInstr *> PrevInsts);
 
   /// Return true if \p FaultingMI can be hoisted from after the the
   /// instructions in \p InstsSeenSoFar to before them.  Set \p Dependence to a
@@ -269,6 +281,7 @@ bool ImplicitNullChecks::runOnMachineFunction(MachineFunction &MF) {
   TII = MF.getSubtarget().getInstrInfo();
   TRI = MF.getRegInfo().getTargetRegisterInfo();
   MMI = &MF.getMMI();
+  MFI = &MF.getFrameInfo();
   AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
 
   SmallVector<NullCheck, 16> NullCheckList;
@@ -292,47 +305,84 @@ static bool AnyAliasLiveIn(const TargetRegisterInfo *TRI,
   return false;
 }
 
+ImplicitNullChecks::AliasResult
+ImplicitNullChecks::areMemoryOpsAliased(MachineInstr &MI,
+                                        MachineInstr *PrevMI) {
+  // If it is not memory access, skip the check.
+  if (!(PrevMI->mayStore() || PrevMI->mayLoad()))
+    return AR_NoAlias;
+  // Load-Load may alias
+  if (!(MI.mayStore() || PrevMI->mayStore()))
+    return AR_NoAlias;
+  // We lost info, conservatively alias. If it was store then no sense to
+  // continue because we won't be able to check against it further.
+  if (MI.memoperands_empty())
+    return MI.mayStore() ? AR_WillAliasEverything : AR_MayAlias;
+  if (PrevMI->memoperands_empty())
+    return PrevMI->mayStore() ? AR_WillAliasEverything : AR_MayAlias;
+
+  for (MachineMemOperand *MMO1 : MI.memoperands()) {
+    // MMO1 should have a value due it comes from operation we'd like to use
+    // as implicit null check.
+    assert(MMO1->getValue() && "MMO1 should have a Value!");
+    for (MachineMemOperand *MMO2 : PrevMI->memoperands()) {
+      if (const PseudoSourceValue *PSV = MMO2->getPseudoValue()) {
+        if (PSV->mayAlias(MFI))
+          return AR_MayAlias;
+        continue;
+      }
+      llvm::AliasResult AAResult = AA->alias(
+          MemoryLocation(MMO1->getValue(), MemoryLocation::UnknownSize,
+                         MMO1->getAAInfo()),
+          MemoryLocation(MMO2->getValue(), MemoryLocation::UnknownSize,
+                         MMO2->getAAInfo()));
+      if (AAResult != NoAlias)
+        return AR_MayAlias;
+    }
+  }
+  return AR_NoAlias;
+}
+
 ImplicitNullChecks::SuitabilityResult
 ImplicitNullChecks::isSuitableMemoryOp(MachineInstr &MI, unsigned PointerReg,
-                                       ArrayRef<MachineInstr *> PrevInsts,
-                                       bool &SeenLoad) {
+                                       ArrayRef<MachineInstr *> PrevInsts) {
   int64_t Offset;
   unsigned BaseReg;
 
-  // First, if it is a store and we saw load before we bail out
-  // because we will not be able to re-order load-store without
-  // using alias analysis.
-  if (SeenLoad && MI.mayStore())
-    return SR_Impossible;
-
-  SeenLoad = SeenLoad || MI.mayLoad();
-
-  // Without alias analysis we cannot re-order store with anything.
-  // so if this instruction is not a candidate we should stop.
-  SuitabilityResult Unsuitable = MI.mayStore() ? SR_Impossible : SR_Unsuitable;
-
   if (!TII->getMemOpBaseRegImmOfs(MI, BaseReg, Offset, TRI) ||
       BaseReg != PointerReg)
-    return Unsuitable;
+    return SR_Unsuitable;
 
   // We want the mem access to be issued at a sane offset from PointerReg,
   // so that if PointerReg is null then the access reliably page faults.
   if (!((MI.mayLoad() || MI.mayStore()) && !MI.isPredicable() &&
         Offset < PageSize))
-    return Unsuitable;
+    return SR_Unsuitable;
 
   // Finally, we need to make sure that the access instruction actually is
   // accessing from PointerReg, and there isn't some re-definition of PointerReg
   // between the compare and the memory access.
   // If PointerReg has been redefined before then there is no sense to continue
   // lookup due to this condition will fail for any further instruction.
+  SuitabilityResult Suitable = SR_Suitable;
   for (auto *PrevMI : PrevInsts)
-    for (auto &PrevMO : PrevMI->operands())
+    for (auto &PrevMO : PrevMI->operands()) {
       if (PrevMO.isReg() && PrevMO.getReg() && PrevMO.isDef() &&
           TRI->regsOverlap(PrevMO.getReg(), PointerReg))
         return SR_Impossible;
 
-  return SR_Suitable;
+      // Check whether the current memory access aliases with previous one.
+      // If we already found that it aliases then no need to continue.
+      // But we continue base pointer check as it can result in SR_Impossible.
+      if (Suitable == SR_Suitable) {
+        AliasResult AR = areMemoryOpsAliased(MI, PrevMI);
+        if (AR == AR_WillAliasEverything)
+          return SR_Impossible;
+        if (AR == AR_MayAlias)
+          Suitable = SR_Unsuitable;
+      }
+    }
+  return Suitable;
 }
 
 bool ImplicitNullChecks::canHoistInst(MachineInstr *FaultingMI,
@@ -503,15 +553,13 @@ bool ImplicitNullChecks::analyzeBlockForNullChecks(
   const unsigned PointerReg = MBP.LHS.getReg();
 
   SmallVector<MachineInstr *, 8> InstsSeenSoFar;
-  bool SeenLoad = false;
 
   for (auto &MI : *NotNullSucc) {
     if (!canHandle(&MI) || InstsSeenSoFar.size() >= MaxInstsToConsider)
       return false;
 
     MachineInstr *Dependence;
-    SuitabilityResult SR =
-        isSuitableMemoryOp(MI, PointerReg, InstsSeenSoFar, SeenLoad);
+    SuitabilityResult SR = isSuitableMemoryOp(MI, PointerReg, InstsSeenSoFar);
     if (SR == SR_Impossible)
       return false;
     if (SR == SR_Suitable &&

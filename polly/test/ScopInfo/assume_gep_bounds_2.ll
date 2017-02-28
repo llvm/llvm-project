@@ -1,4 +1,5 @@
-; RUN: opt %loadPolly -basicaa -polly-scops -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -basicaa -polly-scops -analyze < %s \
+; RUN:  -polly-precise-inbounds | FileCheck %s
 ;
 ;    void foo(float A[restrict][20], float B[restrict][20], long n, long m,
 ;             long p) {

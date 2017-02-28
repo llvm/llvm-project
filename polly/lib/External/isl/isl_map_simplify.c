@@ -98,38 +98,6 @@ error:
 	return NULL;
 }
 
-struct isl_set *isl_set_drop_dims(
-		struct isl_set *set, unsigned first, unsigned n)
-{
-	int i;
-
-	if (!set)
-		goto error;
-
-	isl_assert(set->ctx, first + n <= set->dim->n_out, goto error);
-
-	if (n == 0 && !isl_space_get_tuple_name(set->dim, isl_dim_set))
-		return set;
-	set = isl_set_cow(set);
-	if (!set)
-		goto error;
-	set->dim = isl_space_drop_outputs(set->dim, first, n);
-	if (!set->dim)
-		goto error;
-
-	for (i = 0; i < set->n; ++i) {
-		set->p[i] = isl_basic_set_drop_dims(set->p[i], first, n);
-		if (!set->p[i])
-			goto error;
-	}
-
-	ISL_F_CLR(set, ISL_SET_NORMALIZED);
-	return set;
-error:
-	isl_set_free(set);
-	return NULL;
-}
-
 /* Move "n" divs starting at "first" to the end of the list of divs.
  */
 static struct isl_basic_map *move_divs_last(struct isl_basic_map *bmap,
@@ -222,12 +190,6 @@ __isl_give isl_basic_set *isl_basic_set_drop(__isl_take isl_basic_set *bset,
 							type, first, n));
 }
 
-struct isl_basic_map *isl_basic_map_drop_inputs(
-		struct isl_basic_map *bmap, unsigned first, unsigned n)
-{
-	return isl_basic_map_drop(bmap, isl_dim_in, first, n);
-}
-
 struct isl_map *isl_map_drop(struct isl_map *map,
 	enum isl_dim_type type, unsigned first, unsigned n)
 {
@@ -264,12 +226,6 @@ struct isl_set *isl_set_drop(struct isl_set *set,
 	enum isl_dim_type type, unsigned first, unsigned n)
 {
 	return set_from_map(isl_map_drop(set_to_map(set), type, first, n));
-}
-
-struct isl_map *isl_map_drop_inputs(
-		struct isl_map *map, unsigned first, unsigned n)
-{
-	return isl_map_drop(map, isl_dim_in, first, n);
 }
 
 /*
@@ -4852,11 +4808,10 @@ static int lower_bound_is_cst(__isl_keep isl_basic_map *bmap, int div, int ineq)
 {
 	int i;
 	int lower = -1, upper = -1;
-	unsigned o_div, n_div;
+	unsigned o_div;
 	isl_int l, u;
 	int equal;
 
-	n_div = isl_basic_map_dim(bmap, isl_dim_div);
 	o_div = isl_basic_map_offset(bmap, isl_dim_div);
 	for (i = 0; i < bmap->n_ineq && (lower < 0 || upper < 0); ++i) {
 		if (i == ineq)

@@ -518,7 +518,7 @@ template <class ELFT> void Writer<ELFT>::copyLocalSymbols() {
       InputSectionBase *Sec = DR->Section;
       if (!shouldKeepInSymtab<ELFT>(Sec, B->getName(), *B))
         continue;
-      In<ELFT>::SymTab->addLocal(B);
+      In<ELFT>::SymTab->addSymbol(B);
     }
   }
 }
@@ -537,7 +537,7 @@ template <class ELFT> void Writer<ELFT>::addSectionSymbols() {
         DefinedRegular<ELFT>("", /*IsLocal=*/true, /*StOther*/ 0, STT_SECTION,
                              /*Value*/ 0, /*Size*/ 0, IS, nullptr);
 
-    In<ELFT>::SymTab->addLocal(B);
+    In<ELFT>::SymTab->addSymbol(B);
   }
 }
 
@@ -837,8 +837,7 @@ template <class ELFT> void Writer<ELFT>::addReservedSymbols() {
     return;
 
   // __ehdr_start is the location of ELF file headers.
-  ElfSym<ELFT>::EhdrStart =
-      addOptionalSynthetic<ELFT>("__ehdr_start", Out::ElfHeader, 0);
+  addOptionalSynthetic<ELFT>("__ehdr_start", Out::ElfHeader, 0);
 
   auto Define = [](StringRef S, DefinedSynthetic *&Sym1,
                    DefinedSynthetic *&Sym2) {
@@ -1104,10 +1103,10 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     if (!includeInSymtab<ELFT>(*Body))
       continue;
     if (In<ELFT>::SymTab)
-      In<ELFT>::SymTab->addGlobal(Body);
+      In<ELFT>::SymTab->addSymbol(Body);
 
     if (In<ELFT>::DynSymTab && S->includeInDynsym()) {
-      In<ELFT>::DynSymTab->addGlobal(Body);
+      In<ELFT>::DynSymTab->addSymbol(Body);
       if (auto *SS = dyn_cast<SharedSymbol>(Body))
         if (cast<SharedFile<ELFT>>(SS->File)->isNeeded())
           In<ELFT>::VerNeed->addSymbol(SS);
