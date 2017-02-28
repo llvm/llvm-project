@@ -69,6 +69,7 @@ bool elf::link(ArrayRef<const char *> Args, bool CanExitEarly,
   ErrorCount = 0;
   ErrorOS = &Error;
   Argv0 = Args[0];
+  InputSections.clear();
   Tar = nullptr;
 
   Config = make<Configuration>();
@@ -856,10 +857,10 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   for (elf::ObjectFile<ELFT> *F : Symtab.getObjectFiles())
     for (InputSectionBase *S : F->getSections())
       if (S && S != &InputSection::Discarded)
-        Symtab.Sections.push_back(S);
+        InputSections.push_back(S);
   for (BinaryFile *F : Symtab.getBinaryFiles())
     for (InputSectionBase *S : F->getSections())
-      Symtab.Sections.push_back(cast<InputSection>(S));
+      InputSections.push_back(cast<InputSection>(S));
 
   // Do size optimizations: garbage collection and identical code folding.
   if (Config->GcSections)
@@ -869,15 +870,14 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
 
   // MergeInputSection::splitIntoPieces needs to be called before
   // any call of MergeInputSection::getOffset. Do that.
-  forEach(Symtab.Sections.begin(), Symtab.Sections.end(),
-          [](InputSectionBase *S) {
-            if (!S->Live)
-              return;
-            if (Decompressor::isCompressedELFSection(S->Flags, S->Name))
-              S->uncompress<ELFT>();
-            if (auto *MS = dyn_cast<MergeInputSection<ELFT>>(S))
-              MS->splitIntoPieces();
-          });
+  forEach(InputSections.begin(), InputSections.end(), [](InputSectionBase *S) {
+    if (!S->Live)
+      return;
+    if (Decompressor::isCompressedELFSection(S->Flags, S->Name))
+      S->uncompress<ELFT>();
+    if (auto *MS = dyn_cast<MergeInputSection<ELFT>>(S))
+      MS->splitIntoPieces();
+  });
 
   // Write the result to the file.
   writeResult<ELFT>();

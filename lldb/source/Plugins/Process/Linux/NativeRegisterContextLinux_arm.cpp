@@ -18,7 +18,7 @@
 
 #include "Plugins/Process/Linux/Procfs.h"
 #include "Plugins/Process/POSIX/ProcessPOSIXLog.h"
-#include "Plugins/Process/Utility/RegisterContextLinux_arm.h"
+#include "Plugins/Process/Utility/RegisterInfoPOSIX_arm.h"
 
 #include <elf.h>
 #include <sys/socket.h>
@@ -109,7 +109,7 @@ NativeRegisterContextLinux_arm::NativeRegisterContextLinux_arm(
     const ArchSpec &target_arch, NativeThreadProtocol &native_thread,
     uint32_t concrete_frame_idx)
     : NativeRegisterContextLinux(native_thread, concrete_frame_idx,
-                                 new RegisterContextLinux_arm(target_arch)) {
+                                 new RegisterInfoPOSIX_arm(target_arch)) {
   switch (target_arch.GetMachine()) {
   case llvm::Triple::arm:
     m_reg_info.num_registers = k_num_registers_arm;

@@ -48,7 +48,7 @@ Features
   external linkers. All you have to do is to construct object files
   and command line arguments just like you would do to invoke an
   external linker and then call the linker's main function,
-  `lld::elf::link`, from your code.
+  ``lld::elf::link``, from your code.
 
 - It is small. We are using LLVM libObject library to read from object
   files, so it is not completely a fair comparison, but as of February
@@ -56,7 +56,7 @@ Features
   consists of 198k lines of C++ code.
 
 - Link-time optimization (LTO) is supported by default. Essentially,
-  all you have to do to do LTO is to pass the `-flto` option to clang.
+  all you have to do to do LTO is to pass the ``-flto`` option to clang.
   Then clang creates object files not in the native object file format
   but in LLVM bitcode format. LLD reads bitcode object files, compile
   them using LLVM and emit an output file. Because in this way LLD can
@@ -81,19 +81,26 @@ Note that this is just a benchmark result of our environment.
 Depending on number of available cores, available amount of memory or
 disk latency/throughput, your results may vary.
 
-============  ===========  =======  ========  ======
-Program       Output size  GNU ld   GNU gold  LLD
-ffmpeg dbg    91 MiB       1.59s    1.15s     0.78s
-mysqld dbg    157 MiB      7.09s    2.49s     1.31s
-clang dbg     1.45 GiB     86.76s   21.93s    8.38s
-chromium dbg  1.52 GiB     142.30s  40.86s    12.69s
-============  ===========  =======  ========  ======
+============  ===========  ============  =============  ======
+Program       Output size  GNU ld        GNU gold [1]_  LLD
+ffmpeg dbg    91 MiB       1.59s         1.15s          0.78s
+mysqld dbg    157 MiB      7.09s         2.49s          1.31s
+clang dbg     1.45 GiB     86.76s        21.93s         8.38s
+chromium dbg  1.52 GiB     142.30s [2]_  40.86s         12.69s
+============  ===========  ============  =============  ======
+
+.. [1] With the ``--threads`` option to enable multi-threading support.
+
+.. [2] Since GNU ld doesn't support the ``-icf=all`` option, we
+       removed that from the command line for GNU ld. GNU ld would be
+       slower than this if it had that option support. For gold and
+       LLD, we use ``-icf=all``.
 
 Build
 -----
 
 If you have already checked out LLVM using SVN, you can check out LLD
-under `tools` directory just like you probably did for clang. For the
+under ``tools`` directory just like you probably did for clang. For the
 details, see `Getting Started with the LLVM System
 <http://llvm.org/docs/GettingStarted.html>`_.
 
@@ -108,6 +115,29 @@ build that tree. You need `cmake` and of course a C++ compiler.
   $ cd build
   $ cmake -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_PROJECTS=lld -DCMAKE_INSTALL_PREFIX=/usr/local ../llvm-project/llvm
   $ make install
+
+Using LLD
+---------
+
+LLD is installed as ``ld.lld``. On Unix, linkers are invoked by
+compiler drivers, so you are not expected to use that command
+directly. There are a few ways to tell compiler drivers to use ld.lld
+instead of the default linker.
+
+The easiest way to do that is to overwrite the default linker. After
+installing LLD to somewhere on your disk, you can create a symbolic
+link by doing ``ln -s /path/to/ld.lld /usr/bin/ld`` so that
+``/usr/bin/ld`` is resolved to LLD.
+
+If you don't want to change the system setting, you can use clang's
+``-fuse-ld`` option. In this way, you want to set ``-fuse-ld=lld`` to
+LDFLAGS when building your programs.
+
+LLD leaves its name and version number to a ``.comment`` section in an
+output. If you are in doubt whether you are successfully using LLD or
+not, run ``objdump -s -j .comment <output-file>`` and examine the
+output. If the string "Linker: LLD" is included in the output, you are
+using LLD.
 
 History
 -------

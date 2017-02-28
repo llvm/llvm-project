@@ -6,6 +6,8 @@ add_clang_executable(clangd
   ProtocolHandlers.cpp
   )
 
+install(TARGETS clangd RUNTIME DESTINATION bin)
+
 target_link_libraries(clangd
   clangBasic
   clangFormat

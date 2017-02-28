@@ -130,6 +130,20 @@ TEST_F(LogChannelTest, Enable) {
   EXPECT_NE(nullptr, test_channel.GetLogIfAll(FOO | BAR));
 }
 
+TEST_F(LogChannelTest, EnableOptions) {
+  EXPECT_EQ(nullptr, test_channel.GetLogIfAll(FOO));
+  std::string message;
+  std::shared_ptr<llvm::raw_string_ostream> stream_sp(
+      new llvm::raw_string_ostream(message));
+  StreamString err;
+  EXPECT_TRUE(Log::EnableLogChannel(stream_sp, LLDB_LOG_OPTION_VERBOSE, "chan",
+                                    nullptr, err));
+
+  Log *log = test_channel.GetLogIfAll(FOO);
+  ASSERT_NE(nullptr, log);
+  EXPECT_TRUE(log->GetVerbose());
+}
+
 TEST_F(LogChannelTest, Disable) {
   EXPECT_EQ(nullptr, test_channel.GetLogIfAll(FOO));
   const char *cat12[] = {"foo", "bar", nullptr};

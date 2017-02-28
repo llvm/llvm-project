@@ -45,6 +45,12 @@ using namespace llvm::support::endian;
 using namespace lld;
 using namespace lld::elf;
 
+uint64_t SyntheticSection::getVA() const {
+  if (this->OutSec)
+    return this->OutSec->Addr + this->OutSecOff;
+  return 0;
+}
+
 template <class ELFT> static std::vector<DefinedCommon *> getCommonSymbols() {
   std::vector<DefinedCommon *> V;
   for (Symbol *S : Symtab<ELFT>::X->getSymbols())
@@ -118,7 +124,7 @@ template <class ELFT> MergeInputSection<ELFT> *elf::createCommentSection() {
 // .MIPS.abiflags section.
 template <class ELFT>
 MipsAbiFlagsSection<ELFT>::MipsAbiFlagsSection(Elf_Mips_ABIFlags Flags)
-    : SyntheticSection<ELFT>(SHF_ALLOC, SHT_MIPS_ABIFLAGS, 8, ".MIPS.abiflags"),
+    : SyntheticSection(SHF_ALLOC, SHT_MIPS_ABIFLAGS, 8, ".MIPS.abiflags"),
       Flags(Flags) {}
 
 template <class ELFT> void MipsAbiFlagsSection<ELFT>::writeTo(uint8_t *Buf) {
@@ -130,7 +136,7 @@ MipsAbiFlagsSection<ELFT> *MipsAbiFlagsSection<ELFT>::create() {
   Elf_Mips_ABIFlags Flags = {};
   bool Create = false;
 
-  for (InputSectionBase *Sec : Symtab<ELFT>::X->Sections) {
+  for (InputSectionBase *Sec : InputSections) {
     if (!Sec->Live || Sec->Type != SHT_MIPS_ABIFLAGS)
       continue;
     Sec->Live = false;
@@ -175,7 +181,7 @@ MipsAbiFlagsSection<ELFT> *MipsAbiFlagsSection<ELFT>::create() {
 // .MIPS.options section.
 template <class ELFT>
 MipsOptionsSection<ELFT>::MipsOptionsSection(Elf_Mips_RegInfo Reginfo)
-    : SyntheticSection<ELFT>(SHF_ALLOC, SHT_MIPS_OPTIONS, 8, ".MIPS.options"),
+    : SyntheticSection(SHF_ALLOC, SHT_MIPS_OPTIONS, 8, ".MIPS.options"),
       Reginfo(Reginfo) {}
 
 template <class ELFT> void MipsOptionsSection<ELFT>::writeTo(uint8_t *Buf) {
@@ -197,7 +203,7 @@ MipsOptionsSection<ELFT> *MipsOptionsSection<ELFT>::create() {
   Elf_Mips_RegInfo Reginfo = {};
   bool Create = false;
 
-  for (InputSectionBase *Sec : Symtab<ELFT>::X->Sections) {
+  for (InputSectionBase *Sec : InputSections) {
     if (!Sec->Live || Sec->Type != SHT_MIPS_OPTIONS)
       continue;
     Sec->Live = false;
@@ -235,7 +241,7 @@ MipsOptionsSection<ELFT> *MipsOptionsSection<ELFT>::create() {
 // MIPS .reginfo section.
 template <class ELFT>
 MipsReginfoSection<ELFT>::MipsReginfoSection(Elf_Mips_RegInfo Reginfo)
-    : SyntheticSection<ELFT>(SHF_ALLOC, SHT_MIPS_REGINFO, 4, ".reginfo"),
+    : SyntheticSection(SHF_ALLOC, SHT_MIPS_REGINFO, 4, ".reginfo"),
       Reginfo(Reginfo) {}
 
 template <class ELFT> void MipsReginfoSection<ELFT>::writeTo(uint8_t *Buf) {
@@ -253,7 +259,7 @@ MipsReginfoSection<ELFT> *MipsReginfoSection<ELFT>::create() {
   Elf_Mips_RegInfo Reginfo = {};
   bool Create = false;
 
-  for (InputSectionBase *Sec : Symtab<ELFT>::X->Sections) {
+  for (InputSectionBase *Sec : InputSections) {
     if (!Sec->Live || Sec->Type != SHT_MIPS_REGINFO)
       continue;
     Sec->Live = false;
@@ -278,7 +284,7 @@ MipsReginfoSection<ELFT> *MipsReginfoSection<ELFT>::create() {
   return nullptr;
 }
 
-template <class ELFT> InputSection *elf::createInterpSection() {
+InputSection *elf::createInterpSection() {
   auto *Ret = make<InputSection>(SHF_ALLOC, SHT_PROGBITS, 1,
                                  ArrayRef<uint8_t>(), ".interp");
   Ret->Live = true;
@@ -317,7 +323,7 @@ static size_t getHashSize() {
 
 template <class ELFT>
 BuildIdSection<ELFT>::BuildIdSection()
-    : SyntheticSection<ELFT>(SHF_ALLOC, SHT_NOTE, 1, ".note.gnu.build-id"),
+    : SyntheticSection(SHF_ALLOC, SHT_NOTE, 1, ".note.gnu.build-id"),
       HashSize(getHashSize()) {}
 
 template <class ELFT> void BuildIdSection<ELFT>::writeTo(uint8_t *Buf) {
@@ -363,8 +369,8 @@ void BuildIdSection<ELFT>::computeHash(
 
 template <class ELFT>
 CopyRelSection<ELFT>::CopyRelSection(bool ReadOnly, uintX_t AddrAlign, size_t S)
-    : SyntheticSection<ELFT>(SHF_ALLOC, SHT_NOBITS, AddrAlign,
-                             ReadOnly ? ".bss.rel.ro" : ".bss"),
+    : SyntheticSection(SHF_ALLOC, SHT_NOBITS, AddrAlign,
+                       ReadOnly ? ".bss.rel.ro" : ".bss"),
       Size(S) {
   if (!ReadOnly)
     this->Flags |= SHF_WRITE;
@@ -402,7 +408,7 @@ void BuildIdSection<ELFT>::writeBuildId(ArrayRef<uint8_t> Buf) {
 
 template <class ELFT>
 EhFrameSection<ELFT>::EhFrameSection()
-    : SyntheticSection<ELFT>(SHF_ALLOC, SHT_PROGBITS, 1, ".eh_frame") {}
+    : SyntheticSection(SHF_ALLOC, SHT_PROGBITS, 1, ".eh_frame") {}
 
 // Search for an existing CIE record or create a new one.
 // CIE records from input object files are uniquified by their contents
@@ -520,7 +526,7 @@ static void writeCieFde(uint8_t *Buf, ArrayRef<uint8_t> D) {
   write32<E>(Buf, alignTo(D.size(), sizeof(typename ELFT::uint)) - 4);
 }
 
-template <class ELFT> void EhFrameSection<ELFT>::finalize() {
+template <class ELFT> void EhFrameSection<ELFT>::finalizeContents() {
   if (this->Size)
     return; // Already finalized.
 
@@ -534,7 +540,14 @@ template <class ELFT> void EhFrameSection<ELFT>::finalize() {
       Off += alignTo(Fde->size(), sizeof(uintX_t));
     }
   }
-  this->Size = Off;
+
+  // Add a CIE record of length 0 as a terminator. While the relevant
+  // standards don't explicitly require such a terminator, ld.bfd and
+  // ld.gold always seem to add one and some unwiders rely on its
+  // presence. It also prevents us from generating a .eh_frame section
+  // with zero Call Frame Information records, which isn't allowed by
+  // the LSB standard.
+  this->Size = Off + 4;
 }
 
 template <class ELFT> static uint64_t readFdeAddr(uint8_t *Buf, int Size) {
@@ -606,8 +619,8 @@ template <class ELFT> void EhFrameSection<ELFT>::writeTo(uint8_t *Buf) {
 
 template <class ELFT>
 GotSection<ELFT>::GotSection()
-    : SyntheticSection<ELFT>(SHF_ALLOC | SHF_WRITE, SHT_PROGBITS,
-                             Target->GotEntrySize, ".got") {}
+    : SyntheticSection(SHF_ALLOC | SHF_WRITE, SHT_PROGBITS,
+                       Target->GotEntrySize, ".got") {}
 
 template <class ELFT> void GotSection<ELFT>::addEntry(SymbolBody &Sym) {
   Sym.GotIndex = NumEntries;
@@ -645,7 +658,7 @@ GotSection<ELFT>::getGlobalDynOffset(const SymbolBody &B) const {
   return B.GlobalDynIndex * sizeof(uintX_t);
 }
 
-template <class ELFT> void GotSection<ELFT>::finalize() {
+template <class ELFT> void GotSection<ELFT>::finalizeContents() {
   Size = NumEntries * sizeof(uintX_t);
 }
 
@@ -661,8 +674,8 @@ template <class ELFT> void GotSection<ELFT>::writeTo(uint8_t *Buf) {
 
 template <class ELFT>
 MipsGotSection<ELFT>::MipsGotSection()
-    : SyntheticSection<ELFT>(SHF_ALLOC | SHF_WRITE | SHF_MIPS_GPREL,
-                             SHT_PROGBITS, 16, ".got") {}
+    : SyntheticSection(SHF_ALLOC | SHF_WRITE | SHF_MIPS_GPREL, SHT_PROGBITS, 16,
+                       ".got") {}
 
 template <class ELFT>
 void MipsGotSection<ELFT>::addEntry(SymbolBody &Sym, int64_t Addend,
@@ -825,7 +838,7 @@ unsigned MipsGotSection<ELFT>::getLocalEntriesNum() const {
          LocalEntries32.size();
 }
 
-template <class ELFT> void MipsGotSection<ELFT>::finalize() {
+template <class ELFT> void MipsGotSection<ELFT>::finalizeContents() {
   PageEntriesNum = 0;
   for (std::pair<const OutputSection *, size_t> &P : PageIndexMap) {
     // For each output section referenced by GOT page relocations calculate
@@ -922,8 +935,8 @@ template <class ELFT> void MipsGotSection<ELFT>::writeTo(uint8_t *Buf) {
 
 template <class ELFT>
 GotPltSection<ELFT>::GotPltSection()
-    : SyntheticSection<ELFT>(SHF_ALLOC | SHF_WRITE, SHT_PROGBITS,
-                             Target->GotPltEntrySize, ".got.plt") {}
+    : SyntheticSection(SHF_ALLOC | SHF_WRITE, SHT_PROGBITS,
+                       Target->GotPltEntrySize, ".got.plt") {}
 
 template <class ELFT> void GotPltSection<ELFT>::addEntry(SymbolBody &Sym) {
   Sym.GotPltIndex = Target->GotPltHeaderEntriesNum + Entries.size();
@@ -948,10 +961,9 @@ template <class ELFT> void GotPltSection<ELFT>::writeTo(uint8_t *Buf) {
 // part of the .got.plt
 template <class ELFT>
 IgotPltSection<ELFT>::IgotPltSection()
-    : SyntheticSection<ELFT>(SHF_ALLOC | SHF_WRITE, SHT_PROGBITS,
-                             Target->GotPltEntrySize,
-                             Config->EMachine == EM_ARM ? ".got" : ".got.plt") {
-}
+    : SyntheticSection(SHF_ALLOC | SHF_WRITE, SHT_PROGBITS,
+                       Target->GotPltEntrySize,
+                       Config->EMachine == EM_ARM ? ".got" : ".got.plt") {}
 
 template <class ELFT> void IgotPltSection<ELFT>::addEntry(SymbolBody &Sym) {
   Sym.IsInIgot = true;
@@ -972,8 +984,7 @@ template <class ELFT> void IgotPltSection<ELFT>::writeTo(uint8_t *Buf) {
 
 template <class ELFT>
 StringTableSection<ELFT>::StringTableSection(StringRef Name, bool Dynamic)
-    : SyntheticSection<ELFT>(Dynamic ? (uintX_t)SHF_ALLOC : 0, SHT_STRTAB, 1,
-                             Name),
+    : SyntheticSection(Dynamic ? (uintX_t)SHF_ALLOC : 0, SHT_STRTAB, 1, Name),
       Dynamic(Dynamic) {
   // ELF string tables start with a NUL byte.
   addString("");
@@ -1010,8 +1021,8 @@ static unsigned getVerDefNum() { return Config->VersionDefinitions.size() + 1; }
 
 template <class ELFT>
 DynamicSection<ELFT>::DynamicSection()
-    : SyntheticSection<ELFT>(SHF_ALLOC | SHF_WRITE, SHT_DYNAMIC,
-                             sizeof(uintX_t), ".dynamic") {
+    : SyntheticSection(SHF_ALLOC | SHF_WRITE, SHT_DYNAMIC, sizeof(uintX_t),
+                       ".dynamic") {
   this->Entsize = ELFT::Is64Bits ? 16 : 8;
   // .dynamic section is not writable on MIPS.
   // See "Special Section" in Chapter 4 in the following document:
@@ -1064,7 +1075,7 @@ template <class ELFT> void DynamicSection<ELFT>::addEntries() {
 }
 
 // Add remaining entries to complete .dynamic contents.
-template <class ELFT> void DynamicSection<ELFT>::finalize() {
+template <class ELFT> void DynamicSection<ELFT>::finalizeContents() {
   if (this->Size)
     return; // Already finalized.
 
@@ -1102,17 +1113,17 @@ template <class ELFT> void DynamicSection<ELFT>::finalize() {
   if (In<ELFT>::HashTab)
     add({DT_HASH, In<ELFT>::HashTab});
 
-  if (Out<ELFT>::PreinitArray) {
-    add({DT_PREINIT_ARRAY, Out<ELFT>::PreinitArray});
-    add({DT_PREINIT_ARRAYSZ, Out<ELFT>::PreinitArray, Entry::SecSize});
+  if (Out::PreinitArray) {
+    add({DT_PREINIT_ARRAY, Out::PreinitArray});
+    add({DT_PREINIT_ARRAYSZ, Out::PreinitArray, Entry::SecSize});
   }
-  if (Out<ELFT>::InitArray) {
-    add({DT_INIT_ARRAY, Out<ELFT>::InitArray});
-    add({DT_INIT_ARRAYSZ, Out<ELFT>::InitArray, Entry::SecSize});
+  if (Out::InitArray) {
+    add({DT_INIT_ARRAY, Out::InitArray});
+    add({DT_INIT_ARRAYSZ, Out::InitArray, Entry::SecSize});
   }
-  if (Out<ELFT>::FiniArray) {
-    add({DT_FINI_ARRAY, Out<ELFT>::FiniArray});
-    add({DT_FINI_ARRAYSZ, Out<ELFT>::FiniArray, Entry::SecSize});
+  if (Out::FiniArray) {
+    add({DT_FINI_ARRAY, Out::FiniArray});
+    add({DT_FINI_ARRAYSZ, Out::FiniArray, Entry::SecSize});
   }
 
   if (SymbolBody *B = Symtab<ELFT>::X->findInCurrentDSO(Config->Init))
@@ -1199,8 +1210,8 @@ template <class ELFT> uint32_t DynamicReloc<ELFT>::getSymIndex() const {
 
 template <class ELFT>
 RelocationSection<ELFT>::RelocationSection(StringRef Name, bool Sort)
-    : SyntheticSection<ELFT>(SHF_ALLOC, Config->Rela ? SHT_RELA : SHT_REL,
-                             sizeof(uintX_t), Name),
+    : SyntheticSection(SHF_ALLOC, Config->Rela ? SHT_RELA : SHT_REL,
+                       sizeof(uintX_t), Name),
       Sort(Sort) {
   this->Entsize = Config->Rela ? sizeof(Elf_Rela) : sizeof(Elf_Rel);
 }
@@ -1254,7 +1265,7 @@ template <class ELFT> unsigned RelocationSection<ELFT>::getRelocOffset() {
   return this->Entsize * Relocs.size();
 }
 
-template <class ELFT> void RelocationSection<ELFT>::finalize() {
+template <class ELFT> void RelocationSection<ELFT>::finalizeContents() {
   this->Link = In<ELFT>::DynSymTab ? In<ELFT>::DynSymTab->OutSec->SectionIndex
                                    : In<ELFT>::SymTab->OutSec->SectionIndex;
 
@@ -1266,10 +1277,10 @@ template <class ELFT> void RelocationSection<ELFT>::finalize() {
 template <class ELFT>
 SymbolTableSection<ELFT>::SymbolTableSection(
     StringTableSection<ELFT> &StrTabSec)
-    : SyntheticSection<ELFT>(StrTabSec.isDynamic() ? (uintX_t)SHF_ALLOC : 0,
-                             StrTabSec.isDynamic() ? SHT_DYNSYM : SHT_SYMTAB,
-                             sizeof(uintX_t),
-                             StrTabSec.isDynamic() ? ".dynsym" : ".symtab"),
+    : SyntheticSection(StrTabSec.isDynamic() ? (uintX_t)SHF_ALLOC : 0,
+                       StrTabSec.isDynamic() ? SHT_DYNSYM : SHT_SYMTAB,
+                       sizeof(uintX_t),
+                       StrTabSec.isDynamic() ? ".dynsym" : ".symtab"),
       StrTabSec(StrTabSec) {
   this->Entsize = sizeof(Elf_Sym);
 }
@@ -1279,52 +1290,50 @@ SymbolTableSection<ELFT>::SymbolTableSection(
 // See "Global Offset Table" in Chapter 5 in the following document
 // for detailed description:
 // ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
-static bool sortMipsSymbols(const SymbolBody *L, const SymbolBody *R) {
+static bool sortMipsSymbols(const SymbolTableEntry &L, const SymbolTableEntry &R) {
   // Sort entries related to non-local preemptible symbols by GOT indexes.
   // All other entries go to the first part of GOT in arbitrary order.
-  bool LIsInLocalGot = !L->IsInGlobalMipsGot;
-  bool RIsInLocalGot = !R->IsInGlobalMipsGot;
+  bool LIsInLocalGot = !L.Symbol->IsInGlobalMipsGot;
+  bool RIsInLocalGot = !R.Symbol->IsInGlobalMipsGot;
   if (LIsInLocalGot || RIsInLocalGot)
     return !RIsInLocalGot;
-  return L->GotIndex < R->GotIndex;
+  return L.Symbol->GotIndex < R.Symbol->GotIndex;
 }
 
-template <class ELFT> void SymbolTableSection<ELFT>::finalize() {
+// Finalize a symbol table. The ELF spec requires that all local
+// symbols precede global symbols, so we sort symbol entries in this
+// function. (For .dynsym, we don't do that because symbols for
+// dynamic linking are inherently all globals.)
+template <class ELFT> void SymbolTableSection<ELFT>::finalizeContents() {
   this->OutSec->Link = this->Link = StrTabSec.OutSec->SectionIndex;
   this->OutSec->Entsize = this->Entsize;
 
+  // Move all local symbols before global symbols.
+  size_t NumLocals = 0;
   if (!StrTabSec.isDynamic()) {
-    // All explictly added STB_LOCAL symbols without a Symbol are first
     auto It = std::stable_partition(
-        Symbols.begin(), Symbols.end(),
-        [](const SymbolTableEntry &S) { return S.Symbol->isLocal(); });
+        Symbols.begin(), Symbols.end(), [](const SymbolTableEntry &S) {
+          return S.Symbol->isLocal() ||
+                 S.Symbol->symbol()->computeBinding() == STB_LOCAL;
+        });
     NumLocals = It - Symbols.begin();
   }
-  this->OutSec->Info = this->Info = 1 + NumLocals;
 
-  if (Config->Relocatable)
+  // Section's Info field has the index of the first non-local symbol.
+  // Because the first symbol entry is a null entry, +1 is needed.
+  this->Info = NumLocals + 1;
+  this->OutSec->Info = NumLocals + 1;
+
+  if (Config->Relocatable || !StrTabSec.isDynamic())
     return;
 
-  if (!StrTabSec.isDynamic()) {
-    auto GlobBegin = Symbols.begin() + NumLocals;
-    auto It = std::stable_partition(
-        GlobBegin, Symbols.end(), [](const SymbolTableEntry &S) {
-          return S.Symbol->symbol()->computeBinding() == STB_LOCAL;
-        });
-    // update sh_info with number of Global symbols output with computed
-    // binding of STB_LOCAL
-    this->OutSec->Info = this->Info = 1 + (It - Symbols.begin());
-    return;
-  }
-
-  if (In<ELFT>::GnuHashTab)
+  if (In<ELFT>::GnuHashTab) {
     // NB: It also sorts Symbols to meet the GNU hash table requirements.
     In<ELFT>::GnuHashTab->addSymbols(Symbols);
-  else if (Config->EMachine == EM_MIPS)
-    std::stable_sort(Symbols.begin(), Symbols.end(),
-                     [](const SymbolTableEntry &L, const SymbolTableEntry &R) {
-                       return sortMipsSymbols(L.Symbol, R.Symbol);
-                     });
+  } else if (Config->EMachine == EM_MIPS) {
+    std::stable_sort(Symbols.begin(), Symbols.end(), sortMipsSymbols);
+  }
+
   size_t I = 0;
   for (const SymbolTableEntry &S : Symbols)
     S.Symbol->DynsymIndex = ++I;
@@ -1356,85 +1365,64 @@ size_t SymbolTableSection<ELFT>::getSymbolIndex(SymbolBody *Body) {
   return I - Symbols.begin() + 1;
 }
 
+// Write the internal symbol table contents to the output symbol table.
 template <class ELFT> void SymbolTableSection<ELFT>::writeTo(uint8_t *Buf) {
+  // The first entry is a null entry as per the ELF spec.
   Buf += sizeof(Elf_Sym);
 
-  // All symbols with STB_LOCAL binding precede the weak and global symbols.
-  // .dynsym only contains global symbols.
-  if (Config->Discard != DiscardPolicy::All && !StrTabSec.isDynamic())
-    writeLocalSymbols(Buf);
-
-  writeGlobalSymbols(Buf);
-}
-
-template <class ELFT>
-void SymbolTableSection<ELFT>::writeLocalSymbols(uint8_t *&Buf) {
-  // Iterate over all input object files to copy their local symbols
-  // to the output symbol table pointed by Buf.
-
-  for (auto I = Symbols.begin(); I != Symbols.begin() + NumLocals; ++I) {
-    const DefinedRegular<ELFT> &Body = *cast<DefinedRegular<ELFT>>(I->Symbol);
-    InputSectionBase *Section = Body.Section;
-    auto *ESym = reinterpret_cast<Elf_Sym *>(Buf);
-
-    if (!Section) {
-      ESym->st_shndx = SHN_ABS;
-      ESym->st_value = Body.Value;
-    } else {
-      const OutputSection *OutSec = Section->getOutputSection<ELFT>();
-      ESym->st_shndx = OutSec->SectionIndex;
-      ESym->st_value = OutSec->Addr + Section->getOffset(Body);
-    }
-    ESym->st_name = I->StrTabOffset;
-    ESym->st_size = Body.template getSize<ELFT>();
-    ESym->setBindingAndType(STB_LOCAL, Body.Type);
-    Buf += sizeof(*ESym);
-  }
-}
-
-template <class ELFT>
-void SymbolTableSection<ELFT>::writeGlobalSymbols(uint8_t *Buf) {
-  // Write the internal symbol table contents to the output symbol table
-  // pointed by Buf.
   auto *ESym = reinterpret_cast<Elf_Sym *>(Buf);
 
-  for (auto I = Symbols.begin() + NumLocals; I != Symbols.end(); ++I) {
-    const SymbolTableEntry &S = *I;
-    SymbolBody *Body = S.Symbol;
-    size_t StrOff = S.StrTabOffset;
+  for (SymbolTableEntry &Ent : Symbols) {
+    SymbolBody *Body = Ent.Symbol;
 
-    uint8_t Type = Body->Type;
-    uintX_t Size = Body->getSize<ELFT>();
+    if (Body->isLocal()) {
+      ESym->setBindingAndType(STB_LOCAL, Body->Type);
+    } else {
+      ESym->setBindingAndType(Body->symbol()->computeBinding(), Body->Type);
+      ESym->setVisibility(Body->symbol()->Visibility);
+    }
 
-    ESym->setBindingAndType(Body->symbol()->computeBinding(), Type);
-    ESym->st_size = Size;
-    ESym->st_name = StrOff;
-    ESym->setVisibility(Body->symbol()->Visibility);
+    ESym->st_name = Ent.StrTabOffset;
+    ESym->st_size = Body->getSize<ELFT>();
     ESym->st_value = Body->getVA<ELFT>();
 
     if (const OutputSection *OutSec = getOutputSection(Body)) {
       ESym->st_shndx = OutSec->SectionIndex;
+
+      // This piece of code should go away as it doesn't make sense,
+      // but we want to keep it tentatively because some tests for TLS
+      // variable depends on this. We should fix the test and remove
+      // this code.
+      if (Body->isLocal())
+        if (auto *DS = dyn_cast<DefinedRegular<ELFT>>(Body))
+          ESym->st_value = OutSec->Addr + DS->Section->getOffset(*DS);
     } else if (isa<DefinedRegular<ELFT>>(Body)) {
       ESym->st_shndx = SHN_ABS;
     } else if (isa<DefinedCommon>(Body)) {
       ESym->st_shndx = SHN_COMMON;
       ESym->st_value = cast<DefinedCommon>(Body)->Alignment;
     }
+    ++ESym;
+  }
 
-    if (Config->EMachine == EM_MIPS) {
-      // On MIPS we need to mark symbol which has a PLT entry and requires
-      // pointer equality by STO_MIPS_PLT flag. That is necessary to help
-      // dynamic linker distinguish such symbols and MIPS lazy-binding stubs.
-      // https://sourceware.org/ml/binutils/2008-07/txt00000.txt
+  // On MIPS we need to mark symbol which has a PLT entry and requires
+  // pointer equality by STO_MIPS_PLT flag. That is necessary to help
+  // dynamic linker distinguish such symbols and MIPS lazy-binding stubs.
+  // https://sourceware.org/ml/binutils/2008-07/txt00000.txt
+  if (Config->EMachine == EM_MIPS) {
+    auto *ESym = reinterpret_cast<Elf_Sym *>(Buf);
+
+    for (SymbolTableEntry &Ent : Symbols) {
+      SymbolBody *Body = Ent.Symbol;
       if (Body->isInPlt() && Body->NeedsPltAddr)
         ESym->st_other |= STO_MIPS_PLT;
-      if (Config->Relocatable) {
-        auto *D = dyn_cast<DefinedRegular<ELFT>>(Body);
-        if (D && D->isMipsPIC())
-          ESym->st_other |= STO_MIPS_PIC;
-      }
+
+      if (Config->Relocatable)
+        if (auto *D = dyn_cast<DefinedRegular<ELFT>>(Body))
+          if (D->isMipsPIC())
+            ESym->st_other |= STO_MIPS_PIC;
+      ++ESym;
     }
-    ++ESym;
   }
 }
 
@@ -1455,7 +1443,7 @@ SymbolTableSection<ELFT>::getOutputSection(SymbolBody *Sym) {
       return nullptr;
     return In<ELFT>::Common->OutSec;
   case SymbolBody::SharedKind: {
-    auto &SS = cast<SharedSymbol<ELFT>>(*Sym);
+    auto &SS = cast<SharedSymbol>(*Sym);
     if (SS.NeedsCopy)
       return SS.Section->OutSec;
     break;
@@ -1470,8 +1458,7 @@ SymbolTableSection<ELFT>::getOutputSection(SymbolBody *Sym) {
 
 template <class ELFT>
 GnuHashTableSection<ELFT>::GnuHashTableSection()
-    : SyntheticSection<ELFT>(SHF_ALLOC, SHT_GNU_HASH, sizeof(uintX_t),
-                             ".gnu.hash") {
+    : SyntheticSection(SHF_ALLOC, SHT_GNU_HASH, sizeof(uintX_t), ".gnu.hash") {
   this->Entsize = ELFT::Is64Bits ? 0 : 4;
 }
 
@@ -1509,7 +1496,7 @@ unsigned GnuHashTableSection<ELFT>::calcMaskWords(unsigned NumHashed) {
   return NextPowerOf2((NumHashed - 1) / sizeof(Elf_Off));
 }
 
-template <class ELFT> void GnuHashTableSection<ELFT>::finalize() {
+template <class ELFT> void GnuHashTableSection<ELFT>::finalizeContents() {
   unsigned NumHashed = Symbols.size();
   NBuckets = calcNBuckets(NumHashed);
   MaskWords = calcMaskWords(NumHashed);
@@ -1618,11 +1605,11 @@ void GnuHashTableSection<ELFT>::addSymbols(std::vector<SymbolTableEntry> &V) {
 
 template <class ELFT>
 HashTableSection<ELFT>::HashTableSection()
-    : SyntheticSection<ELFT>(SHF_ALLOC, SHT_HASH, sizeof(Elf_Word), ".hash") {
+    : SyntheticSection(SHF_ALLOC, SHT_HASH, sizeof(Elf_Word), ".hash") {
   this->Entsize = sizeof(Elf_Word);
 }
 
-template <class ELFT> void HashTableSection<ELFT>::finalize() {
+template <class ELFT> void HashTableSection<ELFT>::finalizeContents() {
   this->OutSec->Link = this->Link = In<ELFT>::DynSymTab->OutSec->SectionIndex;
   this->OutSec->Entsize = this->Entsize;
 
@@ -1657,8 +1644,7 @@ template <class ELFT> void HashTableSection<ELFT>::writeTo(uint8_t *Buf) {
 
 template <class ELFT>
 PltSection<ELFT>::PltSection(size_t S)
-    : SyntheticSection<ELFT>(SHF_ALLOC | SHF_EXECINSTR, SHT_PROGBITS, 16,
-                             ".plt"),
+    : SyntheticSection(SHF_ALLOC | SHF_EXECINSTR, SHT_PROGBITS, 16, ".plt"),
       HeaderSize(S) {}
 
 template <class ELFT> void PltSection<ELFT>::writeTo(uint8_t *Buf) {
@@ -1714,11 +1700,11 @@ template <class ELFT> unsigned PltSection<ELFT>::getPltRelocOff() const {
 
 template <class ELFT>
 GdbIndexSection<ELFT>::GdbIndexSection()
-    : SyntheticSection<ELFT>(0, SHT_PROGBITS, 1, ".gdb_index"),
+    : SyntheticSection(0, SHT_PROGBITS, 1, ".gdb_index"),
       StringPool(llvm::StringTableBuilder::ELF) {}
 
 template <class ELFT> void GdbIndexSection<ELFT>::parseDebugSections() {
-  for (InputSectionBase *S : Symtab<ELFT>::X->Sections)
+  for (InputSectionBase *S : InputSections)
     if (InputSection *IS = dyn_cast<InputSection>(S))
       if (IS->OutSec && IS->Name == ".debug_info")
         readDwarf(IS);
@@ -1768,7 +1754,7 @@ template <class ELFT> void GdbIndexSection<ELFT>::readDwarf(InputSection *I) {
   }
 }
 
-template <class ELFT> void GdbIndexSection<ELFT>::finalize() {
+template <class ELFT> void GdbIndexSection<ELFT>::finalizeContents() {
   if (Finalized)
     return;
   Finalized = true;
@@ -1793,7 +1779,7 @@ template <class ELFT> void GdbIndexSection<ELFT>::finalize() {
 }
 
 template <class ELFT> size_t GdbIndexSection<ELFT>::getSize() const {
-  const_cast<GdbIndexSection<ELFT> *>(this)->finalize();
+  const_cast<GdbIndexSection<ELFT> *>(this)->finalizeContents();
   return StringPoolOffset + StringPool.getSize();
 }
 
@@ -1853,12 +1839,12 @@ template <class ELFT> void GdbIndexSection<ELFT>::writeTo(uint8_t *Buf) {
 }
 
 template <class ELFT> bool GdbIndexSection<ELFT>::empty() const {
-  return !Out<ELFT>::DebugInfo;
+  return !Out::DebugInfo;
 }
 
 template <class ELFT>
 EhFrameHeader<ELFT>::EhFrameHeader()
-    : SyntheticSection<ELFT>(SHF_ALLOC, SHT_PROGBITS, 1, ".eh_frame_hdr") {}
+    : SyntheticSection(SHF_ALLOC, SHT_PROGBITS, 1, ".eh_frame_hdr") {}
 
 // .eh_frame_hdr contains a binary search table of pointers to FDEs.
 // Each entry of the search table consists of two values,
@@ -1907,8 +1893,8 @@ template <class ELFT> bool EhFrameHeader<ELFT>::empty() const {
 
 template <class ELFT>
 VersionDefinitionSection<ELFT>::VersionDefinitionSection()
-    : SyntheticSection<ELFT>(SHF_ALLOC, SHT_GNU_verdef, sizeof(uint32_t),
-                             ".gnu.version_d") {}
+    : SyntheticSection(SHF_ALLOC, SHT_GNU_verdef, sizeof(uint32_t),
+                       ".gnu.version_d") {}
 
 static StringRef getFileDefName() {
   if (!Config->SoName.empty())
@@ -1916,7 +1902,7 @@ static StringRef getFileDefName() {
   return Config->OutputFile;
 }
 
-template <class ELFT> void VersionDefinitionSection<ELFT>::finalize() {
+template <class ELFT> void VersionDefinitionSection<ELFT>::finalizeContents() {
   FileDefNameOff = In<ELFT>::DynStrTab->addString(getFileDefName());
   for (VersionDefinition &V : Config->VersionDefinitions)
     V.NameOff = In<ELFT>::DynStrTab->addString(V.Name);
@@ -1966,10 +1952,10 @@ template <class ELFT> size_t VersionDefinitionSection<ELFT>::getSize() const {
 
 template <class ELFT>
 VersionTableSection<ELFT>::VersionTableSection()
-    : SyntheticSection<ELFT>(SHF_ALLOC, SHT_GNU_versym, sizeof(uint16_t),
-                             ".gnu.version") {}
+    : SyntheticSection(SHF_ALLOC, SHT_GNU_versym, sizeof(uint16_t),
+                       ".gnu.version") {}
 
-template <class ELFT> void VersionTableSection<ELFT>::finalize() {
+template <class ELFT> void VersionTableSection<ELFT>::finalizeContents() {
   this->OutSec->Entsize = this->Entsize = sizeof(Elf_Versym);
   // At the moment of june 2016 GNU docs does not mention that sh_link field
   // should be set, but Sun docs do. Also readelf relies on this field.
@@ -1994,8 +1980,8 @@ template <class ELFT> bool VersionTableSection<ELFT>::empty() const {
 
 template <class ELFT>
 VersionNeedSection<ELFT>::VersionNeedSection()
-    : SyntheticSection<ELFT>(SHF_ALLOC, SHT_GNU_verneed, sizeof(uint32_t),
-                             ".gnu.version_r") {
+    : SyntheticSection(SHF_ALLOC, SHT_GNU_verneed, sizeof(uint32_t),
+                       ".gnu.version_r") {
   // Identifiers in verneed section start at 2 because 0 and 1 are reserved
   // for VER_NDX_LOCAL and VER_NDX_GLOBAL.
   // First identifiers are reserved by verdef section if it exist.
@@ -2003,24 +1989,27 @@ VersionNeedSection<ELFT>::VersionNeedSection()
 }
 
 template <class ELFT>
-void VersionNeedSection<ELFT>::addSymbol(SharedSymbol<ELFT> *SS) {
-  if (!SS->Verdef) {
+void VersionNeedSection<ELFT>::addSymbol(SharedSymbol *SS) {
+  auto *Ver = reinterpret_cast<const typename ELFT::Verdef *>(SS->Verdef);
+  if (!Ver) {
     SS->symbol()->VersionId = VER_NDX_GLOBAL;
     return;
   }
-  SharedFile<ELFT> *F = SS->file();
+
+  auto *File = cast<SharedFile<ELFT>>(SS->File);
+
   // If we don't already know that we need an Elf_Verneed for this DSO, prepare
   // to create one by adding it to our needed list and creating a dynstr entry
   // for the soname.
-  if (F->VerdefMap.empty())
-    Needed.push_back({F, In<ELFT>::DynStrTab->addString(F->getSoName())});
-  typename SharedFile<ELFT>::NeededVer &NV = F->VerdefMap[SS->Verdef];
+  if (File->VerdefMap.empty())
+    Needed.push_back({File, In<ELFT>::DynStrTab->addString(File->getSoName())});
+  typename SharedFile<ELFT>::NeededVer &NV = File->VerdefMap[Ver];
   // If we don't already know that we need an Elf_Vernaux for this Elf_Verdef,
   // prepare to create one by allocating a version identifier and creating a
   // dynstr entry for the version name.
   if (NV.Index == 0) {
-    NV.StrTab = In<ELFT>::DynStrTab->addString(
-        SS->file()->getStringTable().data() + SS->Verdef->getAux()->vda_name);
+    NV.StrTab = In<ELFT>::DynStrTab->addString(File->getStringTable().data() +
+                                               Ver->getAux()->vda_name);
     NV.Index = NextIndex++;
   }
   SS->symbol()->VersionId = NV.Index;
@@ -2061,7 +2050,7 @@ template <class ELFT> void VersionNeedSection<ELFT>::writeTo(uint8_t *Buf) {
   Verneed[-1].vn_next = 0;
 }
 
-template <class ELFT> void VersionNeedSection<ELFT>::finalize() {
+template <class ELFT> void VersionNeedSection<ELFT>::finalizeContents() {
   this->OutSec->Link = this->Link = In<ELFT>::DynStrTab->OutSec->SectionIndex;
   this->OutSec->Info = this->Info = Needed.size();
 }
@@ -2081,7 +2070,7 @@ template <class ELFT>
 MergeSyntheticSection<ELFT>::MergeSyntheticSection(StringRef Name,
                                                    uint32_t Type, uintX_t Flags,
                                                    uintX_t Alignment)
-    : SyntheticSection<ELFT>(Flags, Type, Alignment, Name),
+    : SyntheticSection(Flags, Type, Alignment, Name),
       Builder(StringTableBuilder::RAW, Alignment) {}
 
 template <class ELFT>
@@ -2133,7 +2122,7 @@ template <class ELFT> void MergeSyntheticSection<ELFT>::finalizeNoTailMerge() {
   Builder.finalizeInOrder();
 }
 
-template <class ELFT> void MergeSyntheticSection<ELFT>::finalize() {
+template <class ELFT> void MergeSyntheticSection<ELFT>::finalizeContents() {
   if (Finalized)
     return;
   Finalized = true;
@@ -2145,14 +2134,14 @@ template <class ELFT> void MergeSyntheticSection<ELFT>::finalize() {
 
 template <class ELFT> size_t MergeSyntheticSection<ELFT>::getSize() const {
   // We should finalize string builder to know the size.
-  const_cast<MergeSyntheticSection<ELFT> *>(this)->finalize();
+  const_cast<MergeSyntheticSection<ELFT> *>(this)->finalizeContents();
   return Builder.getSize();
 }
 
 template <class ELFT>
 MipsRldMapSection<ELFT>::MipsRldMapSection()
-    : SyntheticSection<ELFT>(SHF_ALLOC | SHF_WRITE, SHT_PROGBITS,
-                             sizeof(typename ELFT::uint), ".rld_map") {}
+    : SyntheticSection(SHF_ALLOC | SHF_WRITE, SHT_PROGBITS,
+                       sizeof(typename ELFT::uint), ".rld_map") {}
 
 template <class ELFT> void MipsRldMapSection<ELFT>::writeTo(uint8_t *Buf) {
   // Apply filler from linker script.
@@ -2163,8 +2152,8 @@ template <class ELFT> void MipsRldMapSection<ELFT>::writeTo(uint8_t *Buf) {
 
 template <class ELFT>
 ARMExidxSentinelSection<ELFT>::ARMExidxSentinelSection()
-    : SyntheticSection<ELFT>(SHF_ALLOC | SHF_LINK_ORDER, SHT_ARM_EXIDX,
-                             sizeof(typename ELFT::uint), ".ARM.exidx") {}
+    : SyntheticSection(SHF_ALLOC | SHF_LINK_ORDER, SHT_ARM_EXIDX,
+                       sizeof(typename ELFT::uint), ".ARM.exidx") {}
 
 // Write a terminating sentinel entry to the end of the .ARM.exidx table.
 // This section will have been sorted last in the .ARM.exidx table.
@@ -2185,8 +2174,8 @@ void ARMExidxSentinelSection<ELFT>::writeTo(uint8_t *Buf) {
 
 template <class ELFT>
 ThunkSection<ELFT>::ThunkSection(OutputSection *OS, uint64_t Off)
-    : SyntheticSection<ELFT>(SHF_ALLOC | SHF_EXECINSTR, SHT_PROGBITS,
-                             sizeof(typename ELFT::uint), ".text.thunk") {
+    : SyntheticSection(SHF_ALLOC | SHF_EXECINSTR, SHT_PROGBITS,
+                       sizeof(typename ELFT::uint), ".text.thunk") {
   this->OutSec = OS;
   this->OutSecOff = Off;
 }
@@ -2214,11 +2203,6 @@ template InputSection *elf::createCommonSection<ELF32LE>();
 template InputSection *elf::createCommonSection<ELF32BE>();
 template InputSection *elf::createCommonSection<ELF64LE>();
 template InputSection *elf::createCommonSection<ELF64BE>();
-
-template InputSection *elf::createInterpSection<ELF32LE>();
-template InputSection *elf::createInterpSection<ELF32BE>();
-template InputSection *elf::createInterpSection<ELF64LE>();
-template InputSection *elf::createInterpSection<ELF64BE>();
 
 template MergeInputSection<ELF32LE> *elf::createCommentSection();
 template MergeInputSection<ELF32BE> *elf::createCommentSection();
