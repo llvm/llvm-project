@@ -233,3 +233,10 @@ addr_t DynamicLoader::ReadPointer(addr_t addr) {
   else
     return value;
 }
+
+void DynamicLoader::LoadOperatingSystemPlugin(bool flush)
+{
+    if (m_process)
+        m_process->LoadOperatingSystemPlugin(flush);
+}
+
