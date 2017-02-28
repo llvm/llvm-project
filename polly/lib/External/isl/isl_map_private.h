@@ -162,9 +162,6 @@ __isl_give isl_map *isl_map_finalize(__isl_take isl_map *map);
 
 __isl_give isl_basic_set *isl_basic_set_from_underlying_set(
 	__isl_take isl_basic_set *bset, __isl_take isl_basic_set *like);
-__isl_give isl_set *isl_set_from_underlying_set(
-	__isl_take isl_set *set, __isl_take isl_basic_set *like);
-__isl_give isl_set *isl_set_to_underlying_set(__isl_take isl_set *set);
 
 __isl_give isl_map *isl_map_realign(__isl_take isl_map *map,
 	__isl_take isl_reordering *r);
@@ -220,8 +217,6 @@ __isl_give isl_basic_map *isl_basic_map_alloc_space(__isl_take isl_space *dim,
 		unsigned extra, unsigned n_eq, unsigned n_ineq);
 __isl_give isl_map *isl_map_alloc_space(__isl_take isl_space *dim, int n,
 	unsigned flags);
-
-unsigned isl_basic_map_total_dim(const struct isl_basic_map *bmap);
 
 int isl_basic_map_alloc_equality(struct isl_basic_map *bmap);
 int isl_basic_set_alloc_equality(struct isl_basic_set *bset);
@@ -299,8 +294,8 @@ __isl_give isl_basic_map *isl_basic_map_sort_constraints(
 	__isl_take isl_basic_map *bmap);
 __isl_give isl_basic_set *isl_basic_set_sort_constraints(
 	__isl_take isl_basic_set *bset);
-int isl_basic_map_plain_cmp(const __isl_keep isl_basic_map *bmap1,
-	const __isl_keep isl_basic_map *bmap2);
+int isl_basic_map_plain_cmp(__isl_keep isl_basic_map *bmap1,
+	__isl_keep isl_basic_map *bmap2);
 isl_bool isl_basic_map_plain_is_equal(__isl_keep isl_basic_map *bmap1,
 	__isl_keep isl_basic_map *bmap2);
 struct isl_basic_map *isl_basic_map_normalize_constraints(
@@ -331,10 +326,6 @@ struct isl_set *isl_set_drop(struct isl_set *set,
 	enum isl_dim_type type, unsigned first, unsigned n);
 struct isl_basic_set *isl_basic_set_drop_dims(
 		struct isl_basic_set *bset, unsigned first, unsigned n);
-struct isl_set *isl_set_drop_dims(
-		struct isl_set *set, unsigned first, unsigned n);
-struct isl_map *isl_map_drop_inputs(
-		struct isl_map *map, unsigned first, unsigned n);
 struct isl_map *isl_map_drop(struct isl_map *map,
 	enum isl_dim_type type, unsigned first, unsigned n);
 __isl_give isl_basic_map *isl_basic_map_drop_unrelated_constraints(
@@ -363,9 +354,6 @@ __isl_give isl_map *isl_map_eliminate(__isl_take isl_map *map,
 	enum isl_dim_type type, unsigned first, unsigned n);
 __isl_give isl_set *isl_set_eliminate(__isl_take isl_set *set,
 	enum isl_dim_type type, unsigned first, unsigned n);
-
-int isl_basic_set_constraint_is_redundant(struct isl_basic_set **bset,
-	isl_int *c, isl_int *opt_n, isl_int *opt_d);
 
 int isl_basic_map_add_div_constraint(__isl_keep isl_basic_map *bmap,
 	unsigned div, int sign);

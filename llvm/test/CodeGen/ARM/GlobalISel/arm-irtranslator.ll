@@ -359,22 +359,51 @@ entry:
   ret void
 }
 
-declare arm_aapcscc i32* @simple_params_target(i32, i32*)
+declare arm_aapcscc i32* @simple_reg_params_target(i32, i32*)
 
-define arm_aapcscc i32* @test_call_simple_params(i32 *%a, i32 %b) {
-; CHECK-LABEL: name: test_call_simple_params
+define arm_aapcscc i32* @test_call_simple_reg_params(i32 *%a, i32 %b) {
+; CHECK-LABEL: name: test_call_simple_reg_params
 ; CHECK-DAG: [[AVREG:%[0-9]+]](p0) = COPY %r0
 ; CHECK-DAG: [[BVREG:%[0-9]+]](s32) = COPY %r1
 ; CHECK: ADJCALLSTACKDOWN 0, 14, _, implicit-def %sp, implicit %sp
 ; CHECK-DAG: %r0 = COPY [[BVREG]]
 ; CHECK-DAG: %r1 = COPY [[AVREG]]
-; CHECK: BLX @simple_params_target, csr_aapcs, implicit-def %lr, implicit %sp, implicit %r0, implicit %r1, implicit-def %r0
+; CHECK: BLX @simple_reg_params_target, csr_aapcs, implicit-def %lr, implicit %sp, implicit %r0, implicit %r1, implicit-def %r0
 ; CHECK: [[RVREG:%[0-9]+]](p0) = COPY %r0
 ; CHECK: ADJCALLSTACKUP 0, 0, 14, _, implicit-def %sp, implicit %sp
 ; CHECK: %r0 = COPY [[RVREG]]
 ; CHECK: BX_RET 14, _, implicit %r0
 entry:
-  %r = notail call arm_aapcscc i32 *@simple_params_target(i32 %b, i32 *%a)
+  %r = notail call arm_aapcscc i32 *@simple_reg_params_target(i32 %b, i32 *%a)
+  ret i32 *%r
+}
+
+declare arm_aapcscc i32* @simple_stack_params_target(i32, i32*, i32, i32*, i32, i32*)
+
+define arm_aapcscc i32* @test_call_simple_stack_params(i32 *%a, i32 %b) {
+; CHECK-LABEL: name: test_call_simple_stack_params
+; CHECK-DAG: [[AVREG:%[0-9]+]](p0) = COPY %r0
+; CHECK-DAG: [[BVREG:%[0-9]+]](s32) = COPY %r1
+; CHECK: ADJCALLSTACKDOWN 8, 14, _, implicit-def %sp, implicit %sp
+; CHECK-DAG: %r0 = COPY [[BVREG]]
+; CHECK-DAG: %r1 = COPY [[AVREG]]
+; CHECK-DAG: %r2 = COPY [[BVREG]]
+; CHECK-DAG: %r3 = COPY [[AVREG]]
+; CHECK: [[SP1:%[0-9]+]](p0) = COPY %sp
+; CHECK: [[OFF1:%[0-9]+]](s32) = G_CONSTANT i32 0
+; CHECK: [[FI1:%[0-9]+]](p0) = G_GEP [[SP1]], [[OFF1]](s32)
+; CHECK: G_STORE [[BVREG]](s32), [[FI1]](p0)
+; CHECK: [[SP2:%[0-9]+]](p0) = COPY %sp
+; CHECK: [[OFF2:%[0-9]+]](s32) = G_CONSTANT i32 4
+; CHECK: [[FI2:%[0-9]+]](p0) = G_GEP [[SP2]], [[OFF2]](s32)
+; CHECK: G_STORE [[AVREG]](p0), [[FI2]](p0)
+; CHECK: BLX @simple_stack_params_target, csr_aapcs, implicit-def %lr, implicit %sp, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
+; CHECK: [[RVREG:%[0-9]+]](p0) = COPY %r0
+; CHECK: ADJCALLSTACKUP 8, 0, 14, _, implicit-def %sp, implicit %sp
+; CHECK: %r0 = COPY [[RVREG]]
+; CHECK: BX_RET 14, _, implicit %r0
+entry:
+  %r = notail call arm_aapcscc i32 *@simple_stack_params_target(i32 %b, i32 *%a, i32 %b, i32 *%a, i32 %b, i32 *%a)
   ret i32 *%r
 }
 
@@ -423,7 +452,7 @@ entry:
   ret double %r
 }
 
-declare arm_aapcscc double @aapcscc_fp_target(float, double)
+declare arm_aapcscc double @aapcscc_fp_target(float, double, float, double)
 
 define arm_aapcscc double @test_call_aapcs_fp_params(double %a, float %b) {
 ; CHECK-LABEL: name: test_call_aapcs_fp_params
@@ -432,19 +461,27 @@ define arm_aapcscc double @test_call_aapcs_fp_params(double %a, float %b) {
 ; LITTLE-DAG: [[AVREG:%[0-9]+]](s64) = G_SEQUENCE [[A1]](s32), 0, [[A2]](s32), 32
 ; BIG-DAG: [[AVREG:%[0-9]+]](s64) = G_SEQUENCE [[A2]](s32), 0, [[A1]](s32), 32
 ; CHECK-DAG: [[BVREG:%[0-9]+]](s32) = COPY %r2
-; CHECK: ADJCALLSTACKDOWN 0, 14, _, implicit-def %sp, implicit %sp
+; CHECK: ADJCALLSTACKDOWN 16, 14, _, implicit-def %sp, implicit %sp
 ; CHECK-DAG: %r0 = COPY [[BVREG]]
 ; CHECK-DAG: [[A1:%[0-9]+]](s32), [[A2:%[0-9]+]](s32) = G_EXTRACT [[AVREG]](s64), 0, 32
 ; LITTLE-DAG: %r2 = COPY [[A1]]
 ; LITTLE-DAG: %r3 = COPY [[A2]]
 ; BIG-DAG: %r2 = COPY [[A2]]
 ; BIG-DAG: %r3 = COPY [[A1]]
+; CHECK: [[SP1:%[0-9]+]](p0) = COPY %sp
+; CHECK: [[OFF1:%[0-9]+]](s32) = G_CONSTANT i32 0
+; CHECK: [[FI1:%[0-9]+]](p0) = G_GEP [[SP1]], [[OFF1]](s32)
+; CHECK: G_STORE [[BVREG]](s32), [[FI1]](p0)
+; CHECK: [[SP2:%[0-9]+]](p0) = COPY %sp
+; CHECK: [[OFF2:%[0-9]+]](s32) = G_CONSTANT i32 8
+; CHECK: [[FI2:%[0-9]+]](p0) = G_GEP [[SP2]], [[OFF2]](s32)
+; CHECK: G_STORE [[AVREG]](s64), [[FI2]](p0)
 ; CHECK: BLX @aapcscc_fp_target, csr_aapcs, implicit-def %lr, implicit %sp, implicit %r0, implicit %r2, implicit %r3, implicit-def %r0, implicit-def %r1
 ; CHECK-DAG: [[R1:%[0-9]+]](s32) = COPY %r0
 ; CHECK-DAG: [[R2:%[0-9]+]](s32) = COPY %r1
 ; LITTLE: [[RVREG:%[0-9]+]](s64) = G_SEQUENCE [[R1]](s32), 0, [[R2]](s32), 32
 ; BIG: [[RVREG:%[0-9]+]](s64) = G_SEQUENCE [[R2]](s32), 0, [[R1]](s32), 32
-; CHECK: ADJCALLSTACKUP 0, 0, 14, _, implicit-def %sp, implicit %sp
+; CHECK: ADJCALLSTACKUP 16, 0, 14, _, implicit-def %sp, implicit %sp
 ; CHECK: [[R1:%[0-9]+]](s32), [[R2:%[0-9]+]](s32) = G_EXTRACT [[RVREG]](s64), 0, 32
 ; LITTLE-DAG: %r0 = COPY [[R1]]
 ; LITTLE-DAG: %r1 = COPY [[R2]]
@@ -452,6 +489,6 @@ define arm_aapcscc double @test_call_aapcs_fp_params(double %a, float %b) {
 ; BIG-DAG: %r1 = COPY [[R1]]
 ; CHECK: BX_RET 14, _, implicit %r0, implicit %r1
 entry:
-  %r = notail call arm_aapcscc double @aapcscc_fp_target(float %b, double %a)
+  %r = notail call arm_aapcscc double @aapcscc_fp_target(float %b, double %a, float %b, double %a)
   ret double %r
 }

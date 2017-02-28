@@ -192,8 +192,8 @@ void AArch64CallLowering::splitToValueTypes(
     // FIXME: set split flags if they're actually used (e.g. i128 on AAPCS).
     Type *SplitTy = SplitVT.getTypeForEVT(Ctx);
     SplitArgs.push_back(
-        ArgInfo{MRI.createGenericVirtualRegister(LLT{*SplitTy, DL}), SplitTy,
-                OrigArg.Flags, OrigArg.IsFixed});
+        ArgInfo{MRI.createGenericVirtualRegister(getLLTForType(*SplitTy, DL)),
+                SplitTy, OrigArg.Flags, OrigArg.IsFixed});
   }
 
   SmallVector<uint64_t, 4> BitOffsets;

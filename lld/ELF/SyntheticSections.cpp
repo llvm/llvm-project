@@ -371,10 +371,7 @@ template <class ELFT>
 CopyRelSection<ELFT>::CopyRelSection(bool ReadOnly, uintX_t AddrAlign, size_t S)
     : SyntheticSection(SHF_ALLOC, SHT_NOBITS, AddrAlign,
                        ReadOnly ? ".bss.rel.ro" : ".bss"),
-      Size(S) {
-  if (!ReadOnly)
-    this->Flags |= SHF_WRITE;
-}
+      Size(S) {}
 
 template <class ELFT>
 void BuildIdSection<ELFT>::writeBuildId(ArrayRef<uint8_t> Buf) {
@@ -1461,7 +1458,7 @@ template <class ELFT>
 unsigned GnuHashTableSection<ELFT>::calcMaskWords(unsigned NumHashed) {
   if (!NumHashed)
     return 1;
-  return NextPowerOf2((NumHashed - 1) / sizeof(Elf_Off));
+  return NextPowerOf2((NumHashed - 1) / sizeof(uintX_t));
 }
 
 template <class ELFT> void GnuHashTableSection<ELFT>::finalizeContents() {
@@ -1473,33 +1470,35 @@ template <class ELFT> void GnuHashTableSection<ELFT>::finalizeContents() {
 
   this->OutSec->Entsize = this->Entsize;
   this->OutSec->Link = In<ELFT>::DynSymTab->OutSec->SectionIndex;
-  this->Size = sizeof(Elf_Word) * 4            // Header
-               + sizeof(Elf_Off) * MaskWords   // Bloom Filter
-               + sizeof(Elf_Word) * NBuckets   // Hash Buckets
-               + sizeof(Elf_Word) * NumHashed; // Hash Values
+  this->Size = sizeof(uint32_t) * 4            // Header
+               + sizeof(uintX_t) * MaskWords   // Bloom Filter
+               + sizeof(uint32_t) * NBuckets   // Hash Buckets
+               + sizeof(uint32_t) * NumHashed; // Hash Values
 }
 
 template <class ELFT> void GnuHashTableSection<ELFT>::writeTo(uint8_t *Buf) {
-  writeHeader(Buf);
+  Buf = writeHeader(Buf);
   if (Symbols.empty())
     return;
-  writeBloomFilter(Buf);
+  Buf = writeBloomFilter(Buf);
   writeHashTable(Buf);
 }
 
 template <class ELFT>
-void GnuHashTableSection<ELFT>::writeHeader(uint8_t *&Buf) {
-  auto *P = reinterpret_cast<Elf_Word *>(Buf);
-  *P++ = NBuckets;
-  *P++ = In<ELFT>::DynSymTab->getNumSymbols() - Symbols.size();
-  *P++ = MaskWords;
-  *P++ = Shift2;
-  Buf = reinterpret_cast<uint8_t *>(P);
+uint8_t *GnuHashTableSection<ELFT>::writeHeader(uint8_t *Buf) {
+  const endianness E = ELFT::TargetEndianness;
+  write32<E>(Buf, NBuckets);
+  write32<E>(Buf + 4, In<ELFT>::DynSymTab->getNumSymbols() - Symbols.size());
+  write32<E>(Buf + 8, MaskWords);
+  write32<E>(Buf + 12, Shift2);
+  return Buf + 16;
 }
 
 template <class ELFT>
-void GnuHashTableSection<ELFT>::writeBloomFilter(uint8_t *&Buf) {
-  unsigned C = sizeof(Elf_Off) * 8;
+uint8_t *GnuHashTableSection<ELFT>::writeBloomFilter(uint8_t *Buf) {
+  typedef typename ELFT::Off Elf_Off;
+
+  const unsigned C = sizeof(uintX_t) * 8;
 
   auto *Masks = reinterpret_cast<Elf_Off *>(Buf);
   for (const SymbolData &Sym : Symbols) {
@@ -1508,11 +1507,14 @@ void GnuHashTableSection<ELFT>::writeBloomFilter(uint8_t *&Buf) {
                 (uintX_t(1) << ((Sym.Hash >> Shift2) % C));
     Masks[Pos] |= V;
   }
-  Buf += sizeof(Elf_Off) * MaskWords;
+  return Buf + sizeof(uintX_t) * MaskWords;
 }
 
 template <class ELFT>
 void GnuHashTableSection<ELFT>::writeHashTable(uint8_t *Buf) {
+  // A 32-bit integer type in the target endianness.
+  typedef typename ELFT::Word Elf_Word;
+
   Elf_Word *Buckets = reinterpret_cast<Elf_Word *>(Buf);
   Elf_Word *Values = Buckets + NBuckets;
 
@@ -1573,8 +1575,8 @@ void GnuHashTableSection<ELFT>::addSymbols(std::vector<SymbolTableEntry> &V) {
 
 template <class ELFT>
 HashTableSection<ELFT>::HashTableSection()
-    : SyntheticSection(SHF_ALLOC, SHT_HASH, sizeof(Elf_Word), ".hash") {
-  this->Entsize = sizeof(Elf_Word);
+    : SyntheticSection(SHF_ALLOC, SHT_HASH, 4, ".hash") {
+  this->Entsize = 4;
 }
 
 template <class ELFT> void HashTableSection<ELFT>::finalizeContents() {
@@ -1588,11 +1590,15 @@ template <class ELFT> void HashTableSection<ELFT>::finalizeContents() {
   // FIXME: This is simplistic. We can try to optimize it, but implementing
   // support for SHT_GNU_HASH is probably even more profitable.
   NumEntries += In<ELFT>::DynSymTab->getNumSymbols();
-  this->Size = NumEntries * sizeof(Elf_Word);
+  this->Size = NumEntries * 4;
 }
 
 template <class ELFT> void HashTableSection<ELFT>::writeTo(uint8_t *Buf) {
+  // A 32-bit integer type in the target endianness.
+  typedef typename ELFT::Word Elf_Word;
+
   unsigned NumSymbols = In<ELFT>::DynSymTab->getNumSymbols();
+
   auto *P = reinterpret_cast<Elf_Word *>(Buf);
   *P++ = NumSymbols; // nbucket
   *P++ = NumSymbols; // nchain

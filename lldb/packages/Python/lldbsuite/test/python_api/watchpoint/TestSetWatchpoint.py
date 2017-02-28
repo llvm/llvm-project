@@ -108,3 +108,6 @@ class SetWatchpointAPITestCase(TestBase):
         self.assertTrue(
             process.GetState() == lldb.eStateExited,
             PROCESS_EXITED)
+
+        self.dbg.DeleteTarget(target)
+        self.assertFalse(watchpoint.IsValid())

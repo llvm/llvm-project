@@ -334,8 +334,7 @@ IncludeFixerContext IncludeFixerSemaSource::getIncludeFixerContext(
         SourceManager, HeaderSearch);
     SymbolCandidates.emplace_back(Symbol.getName(), Symbol.getSymbolKind(),
                                   MinimizedFilePath, Symbol.getLineNumber(),
-                                  Symbol.getContexts(),
-                                  Symbol.getNumOccurrences());
+                                  Symbol.getContexts());
   }
   return IncludeFixerContext(FilePath, QuerySymbolInfos, SymbolCandidates);
 }

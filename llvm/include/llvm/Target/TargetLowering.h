@@ -363,6 +363,9 @@ public:
     return false;
   }
 
+  /// Returns if it's reasonable to merge stores to MemVT size.
+  virtual bool canMergeStoresTo(EVT MemVT) const { return true; }
+
   /// \brief Return true if it is cheap to speculate a call to intrinsic cttz.
   virtual bool isCheapToSpeculateCttz() const {
     return false;

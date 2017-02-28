@@ -129,7 +129,7 @@ void __xray_InMemoryRawLog(int32_t FuncId,
   }
 }
 
-static auto Unused = [] {
+static auto UNUSED Unused = [] {
   if (!probeRequiredCPUFeatures()) {
     Report("Required CPU features missing for XRay instrumentation, not "
            "installing instrumentation hooks.\n");

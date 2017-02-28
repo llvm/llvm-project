@@ -81,7 +81,7 @@ DynamicLibrary DynamicLibrary::getPermanentLibrary(const char *filename,
     MakeErrMsg(errMsg, std::string(filename) + ": Can't convert to UTF-16");
     return DynamicLibrary();
   }
-  
+
   HMODULE a_handle = LoadLibraryW(filenameUnicode.data());
 
   if (a_handle == 0) {

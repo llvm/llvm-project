@@ -4455,7 +4455,6 @@ static int all_single_occurrence(__isl_keep isl_basic_map *bmap, int ineq,
  * val: the coefficients of the output variables
  */
 struct isl_constraint_equal_info {
-	isl_basic_map *bmap;
 	unsigned n_in;
 	unsigned n_out;
 	isl_int *val;
@@ -4504,7 +4503,6 @@ static isl_bool parallel_constraints(__isl_keep isl_basic_map *bmap,
 	occurrences = count_occurrences(bmap, info.n_in);
 	if (info.n_in && !occurrences)
 		goto error;
-	info.bmap = bmap;
 	n_out = isl_basic_map_dim(bmap, isl_dim_out);
 	n_div = isl_basic_map_dim(bmap, isl_dim_div);
 	info.n_out = n_out + n_div;
@@ -5430,22 +5428,6 @@ __isl_give isl_vec *isl_tab_lexmin_get_solution(__isl_keep isl_tab_lexmin *tl)
 		return isl_vec_alloc(tl->ctx, 0);
 	else
 		return isl_tab_get_sample_value(tl->tab);
-}
-
-/* Return the lexicographically smallest rational point in "bset",
- * assuming that all variables are non-negative.
- * If "bset" is empty, then return a zero-length vector.
- */
-__isl_give isl_vec *isl_tab_basic_set_non_neg_lexmin(
-	__isl_take isl_basic_set *bset)
-{
-	isl_tab_lexmin *tl;
-	isl_vec *sol;
-
-	tl = isl_tab_lexmin_from_basic_set(bset);
-	sol = isl_tab_lexmin_get_solution(tl);
-	isl_tab_lexmin_free(tl);
-	return sol;
 }
 
 struct isl_sol_pma {

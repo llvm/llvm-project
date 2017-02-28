@@ -432,8 +432,6 @@ private:
 // https://blogs.oracle.com/ali/entry/gnu_hash_elf_sections
 template <class ELFT>
 class GnuHashTableSection final : public SyntheticSection {
-  typedef typename ELFT::Off Elf_Off;
-  typedef typename ELFT::Word Elf_Word;
   typedef typename ELFT::uint uintX_t;
 
 public:
@@ -450,8 +448,8 @@ private:
   static unsigned calcNBuckets(unsigned NumHashed);
   static unsigned calcMaskWords(unsigned NumHashed);
 
-  void writeHeader(uint8_t *&Buf);
-  void writeBloomFilter(uint8_t *&Buf);
+  uint8_t *writeHeader(uint8_t *Buf);
+  uint8_t *writeBloomFilter(uint8_t *Buf);
   void writeHashTable(uint8_t *Buf);
 
   struct SymbolData {
@@ -469,8 +467,6 @@ private:
 };
 
 template <class ELFT> class HashTableSection final : public SyntheticSection {
-  typedef typename ELFT::Word Elf_Word;
-
 public:
   HashTableSection();
   void finalizeContents() override;
