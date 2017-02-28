@@ -20,6 +20,14 @@ have questions or comments, the `LLVM Developer's Mailing List
 <http://lists.llvm.org/mailman/listinfo/llvm-dev>`_ is a good place to send
 them.
 
+New Versioning Scheme
+=====================
+Starting with this release, LLVM is using a
+`new versioning scheme <http://blog.llvm.org/2016/12/llvms-new-versioning-scheme.html>`_,
+increasing the major version number with each major release. Stable updates to
+this release will be versioned 4.0.x, and the next major release, six months
+from now, will be version 5.0.0.
+
 Non-comprehensive list of changes in this release
 =================================================
 * Minimum compiler version to build has been raised to GCC 4.8 and VS 2015.
