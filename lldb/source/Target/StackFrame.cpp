@@ -221,18 +221,20 @@ bool StackFrame::ChangePC(addr_t pc) {
 
 const char *StackFrame::Disassemble() {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
-  if (m_disassembly.Empty())
-    return nullptr;
-
-  ExecutionContext exe_ctx(shared_from_this());
-  Target *target = exe_ctx.GetTargetPtr();
-  if (target) {
-    const char *plugin_name = nullptr;
-    const char *flavor = nullptr;
-    Disassembler::Disassemble(target->GetDebugger(), target->GetArchitecture(),
-                              plugin_name, flavor, exe_ctx, 0, false, 0, 0,
-                              m_disassembly);
+  if (m_disassembly.Empty()) {
+    ExecutionContext exe_ctx(shared_from_this());
+    Target *target = exe_ctx.GetTargetPtr();
+    if (target) {
+      const char *plugin_name = nullptr;
+      const char *flavor = nullptr;
+      Disassembler::Disassemble(target->GetDebugger(),
+                                target->GetArchitecture(), plugin_name, flavor,
+                                exe_ctx, 0, false, 0, 0, m_disassembly);
+    }
+    if (m_disassembly.Empty())
+      return nullptr;
   }
+
   return m_disassembly.GetData();
 }
 
