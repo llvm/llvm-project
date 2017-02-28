@@ -19,7 +19,8 @@
 namespace clang {
 namespace include_fixer {
 
-using clang::find_all_symbols::SymbolInfo;
+using find_all_symbols::SymbolInfo;
+using find_all_symbols::SymbolAndSignals;
 
 // Calculate a score based on whether we think the given header is closely
 // related to the given source file.
@@ -45,26 +46,26 @@ static double similarityScore(llvm::StringRef FileName,
   return MaxSegments;
 }
 
-static void rank(std::vector<SymbolInfo> &Symbols,
+static void rank(std::vector<SymbolAndSignals> &Symbols,
                  llvm::StringRef FileName) {
   llvm::DenseMap<llvm::StringRef, double> Score;
-  for (const SymbolInfo &Symbol : Symbols) {
+  for (const auto &Symbol : Symbols) {
     // Calculate a score from the similarity of the header the symbol is in
     // with the current file and the popularity of the symbol.
-    double NewScore = similarityScore(FileName, Symbol.getFilePath()) *
-                      (1.0 + std::log2(1 + Symbol.getNumOccurrences()));
-    double &S = Score[Symbol.getFilePath()];
+    double NewScore = similarityScore(FileName, Symbol.Symbol.getFilePath()) *
+                      (1.0 + std::log2(1 + Symbol.Signals.Seen));
+    double &S = Score[Symbol.Symbol.getFilePath()];
     S = std::max(S, NewScore);
   }
   // Sort by the gathered scores. Use file name as a tie breaker so we can
   // deduplicate.
   std::sort(Symbols.begin(), Symbols.end(),
-            [&](const SymbolInfo &A, const SymbolInfo &B) {
-              auto AS = Score[A.getFilePath()];
-              auto BS = Score[B.getFilePath()];
+            [&](const SymbolAndSignals &A, const SymbolAndSignals &B) {
+              auto AS = Score[A.Symbol.getFilePath()];
+              auto BS = Score[B.Symbol.getFilePath()];
               if (AS != BS)
                 return AS > BS;
-              return A.getFilePath() < B.getFilePath();
+              return A.Symbol.getFilePath() < B.Symbol.getFilePath();
             });
 }
 
@@ -88,9 +89,9 @@ SymbolIndexManager::search(llvm::StringRef Identifier,
   // Eventually we will either hit a class (namespaces aren't in the database
   // either) and can report that result.
   bool TookPrefix = false;
-  std::vector<clang::find_all_symbols::SymbolInfo> MatchedSymbols;
+  std::vector<SymbolAndSignals> MatchedSymbols;
   do {
-    std::vector<clang::find_all_symbols::SymbolInfo> Symbols;
+    std::vector<SymbolAndSignals> Symbols;
     for (const auto &DB : SymbolIndices) {
       auto Res = DB.get()->search(Names.back());
       Symbols.insert(Symbols.end(), Res.begin(), Res.end());
@@ -99,7 +100,8 @@ SymbolIndexManager::search(llvm::StringRef Identifier,
     DEBUG(llvm::dbgs() << "Searching " << Names.back() << "... got "
                        << Symbols.size() << " results...\n");
 
-    for (const auto &Symbol : Symbols) {
+    for (auto &SymAndSig : Symbols) {
+      const SymbolInfo &Symbol = SymAndSig.Symbol;
       // Match the identifier name without qualifier.
       if (Symbol.getName() == Names.back()) {
         bool IsMatched = true;
@@ -139,7 +141,7 @@ SymbolIndexManager::search(llvm::StringRef Identifier,
                Symbol.getSymbolKind() == SymbolInfo::SymbolKind::Macro))
             continue;
 
-          MatchedSymbols.push_back(Symbol);
+          MatchedSymbols.push_back(std::move(SymAndSig));
         }
       }
     }
@@ -148,7 +150,11 @@ SymbolIndexManager::search(llvm::StringRef Identifier,
   } while (MatchedSymbols.empty() && !Names.empty() && IsNestedSearch);
 
   rank(MatchedSymbols, FileName);
-  return MatchedSymbols;
+  // Strip signals, they are no longer needed.
+  std::vector<SymbolInfo> Res;
+  for (const auto &SymAndSig : MatchedSymbols)
+    Res.push_back(std::move(SymAndSig.Symbol));
+  return Res;
 }
 
 } // namespace include_fixer

@@ -158,6 +158,8 @@ cl::opt<std::string>
 
 std::unique_ptr<include_fixer::SymbolIndexManager>
 createSymbolIndexManager(StringRef FilePath) {
+  using find_all_symbols::SymbolInfo;
+
   auto SymbolIndexMgr = llvm::make_unique<include_fixer::SymbolIndexManager>();
   switch (DatabaseFormat) {
   case fixed: {
@@ -167,17 +169,19 @@ createSymbolIndexManager(StringRef FilePath) {
     std::map<std::string, std::vector<std::string>> SymbolsMap;
     SmallVector<StringRef, 4> SemicolonSplits;
     StringRef(Input).split(SemicolonSplits, ";");
-    std::vector<find_all_symbols::SymbolInfo> Symbols;
+    std::vector<find_all_symbols::SymbolAndSignals> Symbols;
     for (StringRef Pair : SemicolonSplits) {
       auto Split = Pair.split('=');
       std::vector<std::string> Headers;
       SmallVector<StringRef, 4> CommaSplits;
       Split.second.split(CommaSplits, ",");
       for (size_t I = 0, E = CommaSplits.size(); I != E; ++I)
-        Symbols.push_back(find_all_symbols::SymbolInfo(
-            Split.first.trim(),
-            find_all_symbols::SymbolInfo::SymbolKind::Unknown,
-            CommaSplits[I].trim(), 1, {}, /*NumOccurrences=*/E - I));
+        Symbols.push_back(
+            {SymbolInfo(Split.first.trim(), SymbolInfo::SymbolKind::Unknown,
+                        CommaSplits[I].trim(), 1, {}),
+             // Use fake "seen" signal for tests, so first header wins.
+             SymbolInfo::Signals(/*Seen=*/static_cast<unsigned>(E - I),
+                                 /*Used=*/0)});
     }
     SymbolIndexMgr->addSymbolIndex([=]() {
       return llvm::make_unique<include_fixer::InMemorySymbolIndex>(Symbols);

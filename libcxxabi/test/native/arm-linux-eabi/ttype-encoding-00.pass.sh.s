@@ -1,5 +1,6 @@
 @ RUN: %cxx %flags %link_flags %s -o %t.exe
 @ RUN: %exec %t.exe
+@ UNSUPPORTED: libcxxabi-no-exceptions
 
 @ PURPOSE: Check that 0x00 is a valid value for ttype encoding.  LLVM and
 @ GCC 4.6 are generating 0x00 as ttype encoding.  libc++abi should provide

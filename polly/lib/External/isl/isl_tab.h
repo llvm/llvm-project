@@ -272,8 +272,6 @@ __isl_give isl_vec *isl_tab_basic_set_non_trivial_lexmin(
 	__isl_take isl_basic_set *bset, int n_op, int n_region,
 	struct isl_region *region,
 	int (*conflict)(int con, void *user), void *user);
-__isl_give isl_vec *isl_tab_basic_set_non_neg_lexmin(
-	__isl_take isl_basic_set *bset);
 
 struct isl_tab_lexmin;
 typedef struct isl_tab_lexmin isl_tab_lexmin;

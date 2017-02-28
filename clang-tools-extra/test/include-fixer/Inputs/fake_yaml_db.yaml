@@ -8,7 +8,8 @@ Contexts:
 FilePath:        foo.h
 LineNumber:      1
 Type:            Class
-NumOccurrences:  1
+Seen:            1
+Used:            0
 ---
 Name:           bar
 Contexts:
@@ -19,7 +20,8 @@ Contexts:
 FilePath:        ../include/bar.h
 LineNumber:      1
 Type:            Class
-NumOccurrences:  1
+Seen:            1
+Used:            0
 ---
 Name:           bar
 Contexts:
@@ -30,7 +32,8 @@ Contexts:
 FilePath:        ../include/bar.h
 LineNumber:      2
 Type:            Class
-NumOccurrences:  3
+Seen:            3
+Used:            0
 ---
 Name:           bar
 Contexts:
@@ -41,14 +44,16 @@ Contexts:
 FilePath:        ../include/zbar.h
 LineNumber:      1
 Type:            Class
-NumOccurrences:  3
+Seen:            3
+Used:            0
 ---
 Name:           b
 Contexts:
 FilePath:        var.h
 LineNumber:      1
 Type:            Variable
-NumOccurrences:  1
+Seen:            1
+Used:            0
 ---
 Name:            bar
 Contexts:
@@ -57,4 +62,5 @@ Contexts:
 FilePath:        test/include-fixer/baz.h
 LineNumber:      1
 Type:            Class
-NumOccurrences:  1
+Seen:            1
+Used:            0

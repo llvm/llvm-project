@@ -89,9 +89,10 @@ static uint32_t GetFlags(Stream &stream, const ChannelMap::value_type &entry,
 
 void Log::Channel::Enable(Log &log,
                           const std::shared_ptr<llvm::raw_ostream> &stream_sp,
-                          uint32_t flags) {
+                          uint32_t options, uint32_t flags) {
   log.GetMask().Set(flags);
   if (log.GetMask().Get()) {
+    log.GetOptions().Set(options);
     log.SetStream(stream_sp);
     log_ptr.store(&log, std::memory_order_release);
   }
@@ -221,16 +222,6 @@ void Log::Warning(const char *format, ...) {
   free(arg_msg);
 }
 
-typedef std::map<ConstString, Log::Callbacks> CallbackMap;
-typedef CallbackMap::iterator CallbackMapIter;
-
-// Surround our callback map with a singleton function so we don't have any
-// global initializers.
-static CallbackMap &GetCallbackMap() {
-  static CallbackMap g_callback_map;
-  return g_callback_map;
-}
-
 void Log::Register(llvm::StringRef name, Channel &channel) {
   auto iter = g_channel_map->try_emplace(name, channel);
   assert(iter.second == true);
@@ -244,37 +235,10 @@ void Log::Unregister(llvm::StringRef name) {
   g_channel_map->erase(iter);
 }
 
-void Log::RegisterLogChannel(const ConstString &channel,
-                             const Log::Callbacks &log_callbacks) {
-  GetCallbackMap().insert(std::make_pair(channel, log_callbacks));
-}
-
-bool Log::UnregisterLogChannel(const ConstString &channel) {
-  return GetCallbackMap().erase(channel) != 0;
-}
-
-bool Log::GetLogChannelCallbacks(const ConstString &channel,
-                                 Log::Callbacks &log_callbacks) {
-  CallbackMap &callback_map = GetCallbackMap();
-  CallbackMapIter pos = callback_map.find(channel);
-  if (pos != callback_map.end()) {
-    log_callbacks = pos->second;
-    return true;
-  }
-  ::memset(&log_callbacks, 0, sizeof(log_callbacks));
-  return false;
-}
-
 bool Log::EnableLogChannel(
     const std::shared_ptr<llvm::raw_ostream> &log_stream_sp,
     uint32_t log_options, llvm::StringRef channel, const char **categories,
     Stream &error_stream) {
-  Log::Callbacks log_callbacks;
-  if (Log::GetLogChannelCallbacks(ConstString(channel), log_callbacks)) {
-    log_callbacks.enable(log_stream_sp, log_options, categories, &error_stream);
-    return true;
-  }
-
   auto iter = g_channel_map->find(channel);
   if (iter == g_channel_map->end()) {
     error_stream.Format("Invalid log channel '{0}'.\n", channel);
@@ -283,18 +247,13 @@ bool Log::EnableLogChannel(
   uint32_t flags = categories && categories[0]
                        ? GetFlags(error_stream, *iter, categories)
                        : iter->second.channel.default_flags;
-  iter->second.channel.Enable(iter->second.log, log_stream_sp, flags);
+  iter->second.channel.Enable(iter->second.log, log_stream_sp, log_options,
+                              flags);
   return true;
 }
 
 bool Log::DisableLogChannel(llvm::StringRef channel, const char **categories,
                             Stream &error_stream) {
-  Log::Callbacks log_callbacks;
-  if (Log::GetLogChannelCallbacks(ConstString(channel), log_callbacks)) {
-    log_callbacks.disable(categories, &error_stream);
-    return true;
-  }
-
   auto iter = g_channel_map->find(channel);
   if (iter == g_channel_map->end()) {
     error_stream.Format("Invalid log channel '{0}'.\n", channel);
@@ -308,12 +267,6 @@ bool Log::DisableLogChannel(llvm::StringRef channel, const char **categories,
 }
 
 bool Log::ListChannelCategories(llvm::StringRef channel, Stream &stream) {
-  Log::Callbacks log_callbacks;
-  if (Log::GetLogChannelCallbacks(ConstString(channel), log_callbacks)) {
-    log_callbacks.list_categories(&stream);
-    return true;
-  }
-
   auto ch = g_channel_map->find(channel);
   if (ch == g_channel_map->end()) {
     stream.Format("Invalid log channel '{0}'.\n", channel);
@@ -324,28 +277,15 @@ bool Log::ListChannelCategories(llvm::StringRef channel, Stream &stream) {
 }
 
 void Log::DisableAllLogChannels(Stream *feedback_strm) {
-  CallbackMap &callback_map = GetCallbackMap();
-  CallbackMapIter pos, end = callback_map.end();
-  const char *categories[] = {"all", nullptr};
-
-  for (pos = callback_map.begin(); pos != end; ++pos)
-    pos->second.disable(categories, feedback_strm);
-
   for (auto &entry : *g_channel_map)
     entry.second.channel.Disable(UINT32_MAX);
 }
 
 void Log::ListAllLogChannels(Stream *strm) {
-  CallbackMap &callback_map = GetCallbackMap();
-
-  if (callback_map.empty() && g_channel_map->empty()) {
+  if (g_channel_map->empty()) {
     strm->PutCString("No logging channels are currently registered.\n");
     return;
   }
-
-  CallbackMapIter pos, end = callback_map.end();
-  for (pos = callback_map.begin(); pos != end; ++pos)
-    pos->second.list_categories(strm);
 
   for (const auto &channel : *g_channel_map)
     ListCategories(*strm, channel);

@@ -301,7 +301,7 @@ SymbolBody *elf::addSyntheticLocal(StringRef Name, uint8_t Type, uint64_t Value,
   auto *S = make<DefinedRegular<ELFT>>(Name, /*IsLocal*/ true, STV_DEFAULT,
                                        Type, Value, Size, Section, nullptr);
   if (In<ELFT>::SymTab)
-    In<ELFT>::SymTab->addLocal(S);
+    In<ELFT>::SymTab->addSymbol(S);
   return S;
 }
 
@@ -540,7 +540,14 @@ template <class ELFT> void EhFrameSection<ELFT>::finalizeContents() {
       Off += alignTo(Fde->size(), sizeof(uintX_t));
     }
   }
-  this->Size = Off;
+
+  // Add a CIE record of length 0 as a terminator. While the relevant
+  // standards don't explicitly require such a terminator, ld.bfd and
+  // ld.gold always seem to add one and some unwiders rely on its
+  // presence. It also prevents us from generating a .eh_frame section
+  // with zero Call Frame Information records, which isn't allowed by
+  // the LSB standard.
+  this->Size = Off + 4;
 }
 
 template <class ELFT> static uint64_t readFdeAddr(uint8_t *Buf, int Size) {
@@ -1298,52 +1305,45 @@ static bool sortMipsSymbols(const SymbolTableEntry &L, const SymbolTableEntry &R
 // function. (For .dynsym, we don't do that because symbols for
 // dynamic linking are inherently all globals.)
 template <class ELFT> void SymbolTableSection<ELFT>::finalizeContents() {
-  this->OutSec->Link = this->Link = StrTabSec.OutSec->SectionIndex;
+  this->OutSec->Link = StrTabSec.OutSec->SectionIndex;
   this->OutSec->Entsize = this->Entsize;
 
-  if (!StrTabSec.isDynamic()) {
-    // All explictly added STB_LOCAL symbols without a Symbol are first
-    auto It = std::stable_partition(
-        Symbols.begin(), Symbols.end(),
-        [](const SymbolTableEntry &S) { return S.Symbol->isLocal(); });
-    NumLocals = It - Symbols.begin();
-  }
-  this->OutSec->Info = this->Info = 1 + NumLocals;
+  // If it is a .dynsym, there should be no local symbols, but we need
+  // to do a few things for the dynamic linker.
+  if (this->Type == SHT_DYNSYM) {
+    // Section's Info field has the index of the first non-local symbol.
+    // Because the first symbol entry is a null entry, 1 is the first.
+    this->OutSec->Info = 1;
 
-  if (Config->Relocatable)
-    return;
+    if (In<ELFT>::GnuHashTab) {
+      // NB: It also sorts Symbols to meet the GNU hash table requirements.
+      In<ELFT>::GnuHashTab->addSymbols(Symbols);
+    } else if (Config->EMachine == EM_MIPS) {
+      std::stable_sort(Symbols.begin(), Symbols.end(), sortMipsSymbols);
+    }
 
-  if (!StrTabSec.isDynamic()) {
-    auto GlobalBegin = Symbols.begin() + NumLocals;
-    auto It = std::stable_partition(
-        GlobalBegin, Symbols.end(), [](const SymbolTableEntry &S) {
-          return S.Symbol->symbol()->computeBinding() == STB_LOCAL;
-        });
-    // update sh_info with number of Global symbols output with computed
-    // binding of STB_LOCAL
-    this->OutSec->Info = this->Info = 1 + (It - Symbols.begin());
+    size_t I = 0;
+    for (const SymbolTableEntry &S : Symbols)
+      S.Symbol->DynsymIndex = ++I;
     return;
   }
 
-  if (In<ELFT>::GnuHashTab) {
-    // NB: It also sorts Symbols to meet the GNU hash table requirements.
-    In<ELFT>::GnuHashTab->addSymbols(Symbols);
-  } else if (Config->EMachine == EM_MIPS) {
-    std::stable_sort(Symbols.begin(), Symbols.end(), sortMipsSymbols);
-  }
-
-  size_t I = 0;
-  for (const SymbolTableEntry &S : Symbols)
-    S.Symbol->DynsymIndex = ++I;
+  // If it is a .symtab, move all local symbols before global symbols.
+  auto It = std::stable_partition(
+      Symbols.begin(), Symbols.end(), [](const SymbolTableEntry &S) {
+        return S.Symbol->isLocal() ||
+               S.Symbol->symbol()->computeBinding() == STB_LOCAL;
+      });
+  size_t NumLocals = It - Symbols.begin();
+  this->OutSec->Info = NumLocals + 1;
 }
 
-template <class ELFT> void SymbolTableSection<ELFT>::addGlobal(SymbolBody *B) {
-  Symbols.push_back({B, StrTabSec.addString(B->getName(), false)});
-}
+template <class ELFT> void SymbolTableSection<ELFT>::addSymbol(SymbolBody *B) {
+  // Adding a local symbol to a .dynsym is a bug.
+  assert(this->Type != SHT_DYNSYM || !B->isLocal());
 
-template <class ELFT> void SymbolTableSection<ELFT>::addLocal(SymbolBody *B) {
-  assert(!StrTabSec.isDynamic());
-  Symbols.push_back({B, StrTabSec.addString(B->getName())});
+  bool HashIt = B->isLocal();
+  Symbols.push_back({B, StrTabSec.addString(B->getName(), HashIt)});
 }
 
 template <class ELFT>
@@ -1363,116 +1363,65 @@ size_t SymbolTableSection<ELFT>::getSymbolIndex(SymbolBody *Body) {
   return I - Symbols.begin() + 1;
 }
 
+// Write the internal symbol table contents to the output symbol table.
 template <class ELFT> void SymbolTableSection<ELFT>::writeTo(uint8_t *Buf) {
+  // The first entry is a null entry as per the ELF spec.
   Buf += sizeof(Elf_Sym);
 
-  // All symbols with STB_LOCAL binding precede the weak and global symbols.
-  // .dynsym only contains global symbols.
-  if (Config->Discard != DiscardPolicy::All && !StrTabSec.isDynamic())
-    writeLocalSymbols(Buf);
-
-  writeGlobalSymbols(Buf);
-}
-
-template <class ELFT>
-void SymbolTableSection<ELFT>::writeLocalSymbols(uint8_t *&Buf) {
-  // Iterate over all input object files to copy their local symbols
-  // to the output symbol table pointed by Buf.
-
-  for (auto I = Symbols.begin(); I != Symbols.begin() + NumLocals; ++I) {
-    const DefinedRegular<ELFT> &Body = *cast<DefinedRegular<ELFT>>(I->Symbol);
-    InputSectionBase *Section = Body.Section;
-    auto *ESym = reinterpret_cast<Elf_Sym *>(Buf);
-
-    if (!Section) {
-      ESym->st_shndx = SHN_ABS;
-      ESym->st_value = Body.Value;
-    } else {
-      const OutputSection *OutSec = Section->getOutputSection<ELFT>();
-      ESym->st_shndx = OutSec->SectionIndex;
-      ESym->st_value = OutSec->Addr + Section->getOffset(Body);
-    }
-    ESym->st_name = I->StrTabOffset;
-    ESym->st_size = Body.template getSize<ELFT>();
-    ESym->setBindingAndType(STB_LOCAL, Body.Type);
-    Buf += sizeof(*ESym);
-  }
-}
-
-template <class ELFT>
-void SymbolTableSection<ELFT>::writeGlobalSymbols(uint8_t *Buf) {
-  // Write the internal symbol table contents to the output symbol table
-  // pointed by Buf.
   auto *ESym = reinterpret_cast<Elf_Sym *>(Buf);
 
-  for (auto I = Symbols.begin() + NumLocals; I != Symbols.end(); ++I) {
-    const SymbolTableEntry &S = *I;
-    SymbolBody *Body = S.Symbol;
-    size_t StrOff = S.StrTabOffset;
+  for (SymbolTableEntry &Ent : Symbols) {
+    SymbolBody *Body = Ent.Symbol;
 
-    uint8_t Type = Body->Type;
-    uintX_t Size = Body->getSize<ELFT>();
+    if (Body->isLocal()) {
+      ESym->setBindingAndType(STB_LOCAL, Body->Type);
+    } else {
+      ESym->setBindingAndType(Body->symbol()->computeBinding(), Body->Type);
+      ESym->setVisibility(Body->symbol()->Visibility);
+    }
 
-    ESym->setBindingAndType(Body->symbol()->computeBinding(), Type);
-    ESym->st_size = Size;
-    ESym->st_name = StrOff;
-    ESym->setVisibility(Body->symbol()->Visibility);
+    ESym->st_name = Ent.StrTabOffset;
+    ESym->st_size = Body->getSize<ELFT>();
     ESym->st_value = Body->getVA<ELFT>();
 
-    if (const OutputSection *OutSec = getOutputSection(Body)) {
+    if (const OutputSection *OutSec = Body->getOutputSection<ELFT>()) {
       ESym->st_shndx = OutSec->SectionIndex;
+
+      // This piece of code should go away as it doesn't make sense,
+      // but we want to keep it tentatively because some tests for TLS
+      // variable depends on this. We should fix the test and remove
+      // this code.
+      if (Body->isLocal())
+        if (auto *DS = dyn_cast<DefinedRegular<ELFT>>(Body))
+          ESym->st_value = OutSec->Addr + DS->Section->getOffset(*DS);
     } else if (isa<DefinedRegular<ELFT>>(Body)) {
       ESym->st_shndx = SHN_ABS;
     } else if (isa<DefinedCommon>(Body)) {
       ESym->st_shndx = SHN_COMMON;
       ESym->st_value = cast<DefinedCommon>(Body)->Alignment;
     }
-
-    if (Config->EMachine == EM_MIPS) {
-      // On MIPS we need to mark symbol which has a PLT entry and requires
-      // pointer equality by STO_MIPS_PLT flag. That is necessary to help
-      // dynamic linker distinguish such symbols and MIPS lazy-binding stubs.
-      // https://sourceware.org/ml/binutils/2008-07/txt00000.txt
-      if (Body->isInPlt() && Body->NeedsPltAddr)
-        ESym->st_other |= STO_MIPS_PLT;
-      if (Config->Relocatable) {
-        auto *D = dyn_cast<DefinedRegular<ELFT>>(Body);
-        if (D && D->isMipsPIC())
-          ESym->st_other |= STO_MIPS_PIC;
-      }
-    }
     ++ESym;
   }
-}
 
-template <class ELFT>
-const OutputSection *
-SymbolTableSection<ELFT>::getOutputSection(SymbolBody *Sym) {
-  switch (Sym->kind()) {
-  case SymbolBody::DefinedSyntheticKind:
-    return cast<DefinedSynthetic>(Sym)->Section;
-  case SymbolBody::DefinedRegularKind: {
-    auto &D = cast<DefinedRegular<ELFT>>(*Sym);
-    if (D.Section)
-      return D.Section->template getOutputSection<ELFT>();
-    break;
+  // On MIPS we need to mark symbol which has a PLT entry and requires
+  // pointer equality by STO_MIPS_PLT flag. That is necessary to help
+  // dynamic linker distinguish such symbols and MIPS lazy-binding stubs.
+  // https://sourceware.org/ml/binutils/2008-07/txt00000.txt
+  if (Config->EMachine == EM_MIPS) {
+    auto *ESym = reinterpret_cast<Elf_Sym *>(Buf);
+
+    for (SymbolTableEntry &Ent : Symbols) {
+      SymbolBody *Body = Ent.Symbol;
+      if (Body->isInPlt() && Body->NeedsPltAddr)
+        ESym->st_other |= STO_MIPS_PLT;
+
+      if (Config->Relocatable)
+        if (auto *D = dyn_cast<DefinedRegular<ELFT>>(Body))
+          if (D->isMipsPIC())
+            ESym->st_other |= STO_MIPS_PIC;
+      ++ESym;
+    }
   }
-  case SymbolBody::DefinedCommonKind:
-    if (!Config->DefineCommon)
-      return nullptr;
-    return In<ELFT>::Common->OutSec;
-  case SymbolBody::SharedKind: {
-    auto &SS = cast<SharedSymbol>(*Sym);
-    if (SS.NeedsCopy)
-      return SS.Section->OutSec;
-    break;
-  }
-  case SymbolBody::UndefinedKind:
-  case SymbolBody::LazyArchiveKind:
-  case SymbolBody::LazyObjectKind:
-    break;
-  }
-  return nullptr;
 }
 
 template <class ELFT>
@@ -1512,7 +1461,7 @@ template <class ELFT>
 unsigned GnuHashTableSection<ELFT>::calcMaskWords(unsigned NumHashed) {
   if (!NumHashed)
     return 1;
-  return NextPowerOf2((NumHashed - 1) / sizeof(Elf_Off));
+  return NextPowerOf2((NumHashed - 1) / sizeof(uintX_t));
 }
 
 template <class ELFT> void GnuHashTableSection<ELFT>::finalizeContents() {
@@ -1523,34 +1472,36 @@ template <class ELFT> void GnuHashTableSection<ELFT>::finalizeContents() {
   Shift2 = ELFT::Is64Bits ? 6 : 5;
 
   this->OutSec->Entsize = this->Entsize;
-  this->OutSec->Link = this->Link = In<ELFT>::DynSymTab->OutSec->SectionIndex;
-  this->Size = sizeof(Elf_Word) * 4            // Header
-               + sizeof(Elf_Off) * MaskWords   // Bloom Filter
-               + sizeof(Elf_Word) * NBuckets   // Hash Buckets
-               + sizeof(Elf_Word) * NumHashed; // Hash Values
+  this->OutSec->Link = In<ELFT>::DynSymTab->OutSec->SectionIndex;
+  this->Size = sizeof(uint32_t) * 4            // Header
+               + sizeof(uintX_t) * MaskWords   // Bloom Filter
+               + sizeof(uint32_t) * NBuckets   // Hash Buckets
+               + sizeof(uint32_t) * NumHashed; // Hash Values
 }
 
 template <class ELFT> void GnuHashTableSection<ELFT>::writeTo(uint8_t *Buf) {
-  writeHeader(Buf);
+  Buf = writeHeader(Buf);
   if (Symbols.empty())
     return;
-  writeBloomFilter(Buf);
+  Buf = writeBloomFilter(Buf);
   writeHashTable(Buf);
 }
 
 template <class ELFT>
-void GnuHashTableSection<ELFT>::writeHeader(uint8_t *&Buf) {
-  auto *P = reinterpret_cast<Elf_Word *>(Buf);
-  *P++ = NBuckets;
-  *P++ = In<ELFT>::DynSymTab->getNumSymbols() - Symbols.size();
-  *P++ = MaskWords;
-  *P++ = Shift2;
-  Buf = reinterpret_cast<uint8_t *>(P);
+uint8_t *GnuHashTableSection<ELFT>::writeHeader(uint8_t *Buf) {
+  const endianness E = ELFT::TargetEndianness;
+  write32<E>(Buf, NBuckets);
+  write32<E>(Buf + 4, In<ELFT>::DynSymTab->getNumSymbols() - Symbols.size());
+  write32<E>(Buf + 8, MaskWords);
+  write32<E>(Buf + 12, Shift2);
+  return Buf + 16;
 }
 
 template <class ELFT>
-void GnuHashTableSection<ELFT>::writeBloomFilter(uint8_t *&Buf) {
-  unsigned C = sizeof(Elf_Off) * 8;
+uint8_t *GnuHashTableSection<ELFT>::writeBloomFilter(uint8_t *Buf) {
+  typedef typename ELFT::Off Elf_Off;
+
+  const unsigned C = sizeof(uintX_t) * 8;
 
   auto *Masks = reinterpret_cast<Elf_Off *>(Buf);
   for (const SymbolData &Sym : Symbols) {
@@ -1559,11 +1510,14 @@ void GnuHashTableSection<ELFT>::writeBloomFilter(uint8_t *&Buf) {
                 (uintX_t(1) << ((Sym.Hash >> Shift2) % C));
     Masks[Pos] |= V;
   }
-  Buf += sizeof(Elf_Off) * MaskWords;
+  return Buf + sizeof(uintX_t) * MaskWords;
 }
 
 template <class ELFT>
 void GnuHashTableSection<ELFT>::writeHashTable(uint8_t *Buf) {
+  // A 32-bit integer type in the target endianness.
+  typedef typename ELFT::Word Elf_Word;
+
   Elf_Word *Buckets = reinterpret_cast<Elf_Word *>(Buf);
   Elf_Word *Values = Buckets + NBuckets;
 
@@ -1624,12 +1578,12 @@ void GnuHashTableSection<ELFT>::addSymbols(std::vector<SymbolTableEntry> &V) {
 
 template <class ELFT>
 HashTableSection<ELFT>::HashTableSection()
-    : SyntheticSection(SHF_ALLOC, SHT_HASH, sizeof(Elf_Word), ".hash") {
-  this->Entsize = sizeof(Elf_Word);
+    : SyntheticSection(SHF_ALLOC, SHT_HASH, 4, ".hash") {
+  this->Entsize = 4;
 }
 
 template <class ELFT> void HashTableSection<ELFT>::finalizeContents() {
-  this->OutSec->Link = this->Link = In<ELFT>::DynSymTab->OutSec->SectionIndex;
+  this->OutSec->Link = In<ELFT>::DynSymTab->OutSec->SectionIndex;
   this->OutSec->Entsize = this->Entsize;
 
   unsigned NumEntries = 2;                            // nbucket and nchain.
@@ -1639,11 +1593,15 @@ template <class ELFT> void HashTableSection<ELFT>::finalizeContents() {
   // FIXME: This is simplistic. We can try to optimize it, but implementing
   // support for SHT_GNU_HASH is probably even more profitable.
   NumEntries += In<ELFT>::DynSymTab->getNumSymbols();
-  this->Size = NumEntries * sizeof(Elf_Word);
+  this->Size = NumEntries * 4;
 }
 
 template <class ELFT> void HashTableSection<ELFT>::writeTo(uint8_t *Buf) {
+  // A 32-bit integer type in the target endianness.
+  typedef typename ELFT::Word Elf_Word;
+
   unsigned NumSymbols = In<ELFT>::DynSymTab->getNumSymbols();
+
   auto *P = reinterpret_cast<Elf_Word *>(Buf);
   *P++ = NumSymbols; // nbucket
   *P++ = NumSymbols; // nchain
@@ -1926,12 +1884,12 @@ template <class ELFT> void VersionDefinitionSection<ELFT>::finalizeContents() {
   for (VersionDefinition &V : Config->VersionDefinitions)
     V.NameOff = In<ELFT>::DynStrTab->addString(V.Name);
 
-  this->OutSec->Link = this->Link = In<ELFT>::DynStrTab->OutSec->SectionIndex;
+  this->OutSec->Link = In<ELFT>::DynStrTab->OutSec->SectionIndex;
 
   // sh_info should be set to the number of definitions. This fact is missed in
   // documentation, but confirmed by binutils community:
   // https://sourceware.org/ml/binutils/2014-11/msg00355.html
-  this->OutSec->Info = this->Info = getVerDefNum();
+  this->OutSec->Info = getVerDefNum();
 }
 
 template <class ELFT>
@@ -1978,7 +1936,7 @@ template <class ELFT> void VersionTableSection<ELFT>::finalizeContents() {
   this->OutSec->Entsize = this->Entsize = sizeof(Elf_Versym);
   // At the moment of june 2016 GNU docs does not mention that sh_link field
   // should be set, but Sun docs do. Also readelf relies on this field.
-  this->OutSec->Link = this->Link = In<ELFT>::DynSymTab->OutSec->SectionIndex;
+  this->OutSec->Link = In<ELFT>::DynSymTab->OutSec->SectionIndex;
 }
 
 template <class ELFT> size_t VersionTableSection<ELFT>::getSize() const {
@@ -2070,8 +2028,8 @@ template <class ELFT> void VersionNeedSection<ELFT>::writeTo(uint8_t *Buf) {
 }
 
 template <class ELFT> void VersionNeedSection<ELFT>::finalizeContents() {
-  this->OutSec->Link = this->Link = In<ELFT>::DynStrTab->OutSec->SectionIndex;
-  this->OutSec->Info = this->Info = Needed.size();
+  this->OutSec->Link = In<ELFT>::DynStrTab->OutSec->SectionIndex;
+  this->OutSec->Info = Needed.size();
 }
 
 template <class ELFT> size_t VersionNeedSection<ELFT>::getSize() const {

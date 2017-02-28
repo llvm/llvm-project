@@ -44,9 +44,9 @@ using namespace lld::elf;
 namespace {
 // A resolved relocation. The Sec and Offset fields are set if the relocation
 // was resolved to an offset within a section.
-template <class ELFT> struct ResolvedReloc {
+struct ResolvedReloc {
   InputSectionBase *Sec;
-  typename ELFT::uint Offset;
+  uint64_t Offset;
 };
 } // end anonymous namespace
 
@@ -64,7 +64,7 @@ static typename ELFT::uint getAddend(InputSectionBase &Sec,
 }
 
 template <class ELFT, class RelT>
-static ResolvedReloc<ELFT> resolveReloc(InputSectionBase &Sec, RelT &Rel) {
+static ResolvedReloc resolveReloc(InputSectionBase &Sec, RelT &Rel) {
   SymbolBody &B = Sec.getFile<ELFT>()->getRelocTargetSym(Rel);
   auto *D = dyn_cast<DefinedRegular<ELFT>>(&B);
   if (!D || !D->Section)
@@ -78,7 +78,7 @@ static ResolvedReloc<ELFT> resolveReloc(InputSectionBase &Sec, RelT &Rel) {
 // Calls Fn for each section that Sec refers to via relocations.
 template <class ELFT>
 static void forEachSuccessor(InputSection &Sec,
-                             std::function<void(ResolvedReloc<ELFT>)> Fn) {
+                             std::function<void(ResolvedReloc)> Fn) {
   if (Sec.AreRelocsRela) {
     for (const typename ELFT::Rela &Rel : Sec.template relas<ELFT>())
       Fn(resolveReloc<ELFT>(Sec, Rel));
@@ -105,9 +105,8 @@ static void forEachSuccessor(InputSection &Sec,
 // the gc pass. With that we would be able to also gc some sections holding
 // LSDAs and personality functions if we found that they were unused.
 template <class ELFT, class RelTy>
-static void
-scanEhFrameSection(EhInputSection<ELFT> &EH, ArrayRef<RelTy> Rels,
-                   std::function<void(ResolvedReloc<ELFT>)> Enqueue) {
+static void scanEhFrameSection(EhInputSection<ELFT> &EH, ArrayRef<RelTy> Rels,
+                               std::function<void(ResolvedReloc)> Enqueue) {
   const endianness E = ELFT::TargetEndianness;
   for (unsigned I = 0, N = EH.Pieces.size(); I < N; ++I) {
     EhSectionPiece &Piece = EH.Pieces[I];
@@ -128,7 +127,7 @@ scanEhFrameSection(EhInputSection<ELFT> &EH, ArrayRef<RelTy> Rels,
       const RelTy &Rel = Rels[I2];
       if (Rel.r_offset >= PieceEnd)
         break;
-      ResolvedReloc<ELFT> R = resolveReloc<ELFT>(EH, Rels[I2]);
+      ResolvedReloc R = resolveReloc<ELFT>(EH, Rels[I2]);
       if (!R.Sec || R.Sec == &InputSection::Discarded)
         continue;
       if (R.Sec->Flags & SHF_EXECINSTR)
@@ -139,9 +138,8 @@ scanEhFrameSection(EhInputSection<ELFT> &EH, ArrayRef<RelTy> Rels,
 }
 
 template <class ELFT>
-static void
-scanEhFrameSection(EhInputSection<ELFT> &EH,
-                   std::function<void(ResolvedReloc<ELFT>)> Enqueue) {
+static void scanEhFrameSection(EhInputSection<ELFT> &EH,
+                               std::function<void(ResolvedReloc)> Enqueue) {
   if (!EH.NumRelocations)
     return;
 
@@ -190,7 +188,7 @@ template <class ELFT> static bool isReserved(InputSectionBase *Sec) {
 template <class ELFT> void elf::markLive() {
   SmallVector<InputSection *, 256> Q;
 
-  auto Enqueue = [&](ResolvedReloc<ELFT> R) {
+  auto Enqueue = [&](ResolvedReloc R) {
     // Skip over discarded sections. This in theory shouldn't happen, because
     // the ELF spec doesn't allow a relocation to point to a deduplicated
     // COMDAT section directly. Unfortunately this happens in practice (e.g.
