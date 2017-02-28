@@ -1575,6 +1575,30 @@ TEST_F(FormatTestJS, JSDocAnnotations) {
                " * @export {this.is.a.long.path.to.a.Type}\n"
                " */",
                getGoogleJSStyleWithColumns(20));
+  verifyFormat("/**\n"
+               " * @mods {this.is.a.long.path.to.a.Type}\n"
+               " */",
+               "/**\n"
+               " * @mods {this.is.a.long.path.to.a.Type}\n"
+               " */",
+               getGoogleJSStyleWithColumns(20));
+  verifyFormat("/**\n"
+               " * @param {this.is.a.long.path.to.a.Type}\n"
+               " */",
+               "/**\n"
+               " * @param {this.is.a.long.path.to.a.Type}\n"
+               " */",
+               getGoogleJSStyleWithColumns(20));
+  verifyFormat(
+      "/**\n"
+      " * @param This is a\n"
+      " * long comment but\n"
+      " * no type\n"
+      " */",
+      "/**\n"
+      " * @param This is a long comment but no type\n"
+      " */",
+      getGoogleJSStyleWithColumns(20));
 }
 
 TEST_F(FormatTestJS, RequoteStringsSingle) {
