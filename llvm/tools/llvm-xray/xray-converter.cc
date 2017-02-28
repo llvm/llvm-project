@@ -98,7 +98,7 @@ void TraceConverter::exportAsYAML(const Trace &Records, raw_ostream &OS) {
                                        : std::to_string(R.FuncId),
                              R.TSC, R.TId});
   }
-  Output Out(OS);
+  Output Out(OS, nullptr, 0);
   Out << Trace;
 }
 

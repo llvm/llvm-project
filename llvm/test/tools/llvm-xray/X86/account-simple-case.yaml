@@ -7,10 +7,8 @@ header:
   nonstop-tsc: true
   cycle-frequency: 2601000000
 records:
-  - { type: 0, func-id: 1, cpu: 1, thread: 111, kind: function-enter,
-    tsc: 10001 }
-  - { type: 0, func-id: 1, cpu: 1, thread: 111, kind: function-exit,
-    tsc: 10100 }
+  - { type: 0, func-id: 1, cpu: 1, thread: 111, kind: function-enter, tsc: 10001 }
+  - { type: 0, func-id: 1, cpu: 1, thread: 111, kind: function-exit, tsc: 10100 }
 ...
 
 #CHECK:       Functions with latencies: 1
