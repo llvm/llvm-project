@@ -338,9 +338,6 @@ public:
 // Some linker-generated symbols need to be created as
 // DefinedRegular symbols.
 template <class ELFT> struct ElfSym {
-  // The content for __ehdr_start symbol.
-  static DefinedSynthetic *EhdrStart;
-
   // The content for _etext and etext symbols.
   static DefinedSynthetic *Etext;
   static DefinedSynthetic *Etext2;
@@ -359,7 +356,6 @@ template <class ELFT> struct ElfSym {
   static DefinedRegular<ELFT> *MipsGp;
 };
 
-template <class ELFT> DefinedSynthetic *ElfSym<ELFT>::EhdrStart;
 template <class ELFT> DefinedSynthetic *ElfSym<ELFT>::Etext;
 template <class ELFT> DefinedSynthetic *ElfSym<ELFT>::Etext2;
 template <class ELFT> DefinedSynthetic *ElfSym<ELFT>::Edata;

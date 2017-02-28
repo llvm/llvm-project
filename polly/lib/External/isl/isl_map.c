@@ -3296,9 +3296,6 @@ static __isl_give isl_map *map_intersect_add_constraint(
 	if (map2->p[0]->n_eq + map2->p[0]->n_ineq != 1)
 		return isl_map_intersect(map2, map1);
 
-	isl_assert(map2->ctx,
-		    map2->p[0]->n_eq + map2->p[0]->n_ineq == 1, goto error);
-
 	map1 = isl_map_cow(map1);
 	if (!map1)
 		goto error;
@@ -4954,11 +4951,6 @@ int isl_basic_map_add_div_constraint(__isl_keep isl_basic_map *bmap,
 		return add_lower_div_constraint(bmap, div_pos, bmap->div[div]);
 }
 
-int isl_basic_set_add_div_constraints(struct isl_basic_set *bset, unsigned div)
-{
-	return isl_basic_map_add_div_constraints(bset, div);
-}
-
 struct isl_basic_set *isl_basic_map_underlying_set(
 		struct isl_basic_map *bmap)
 {
@@ -5084,40 +5076,6 @@ struct isl_basic_set *isl_basic_set_from_underlying_set(
 							bset_to_bmap(like)));
 }
 
-struct isl_set *isl_set_from_underlying_set(
-	struct isl_set *set, struct isl_basic_set *like)
-{
-	int i;
-
-	if (!set || !like)
-		goto error;
-	isl_assert(set->ctx, set->dim->n_out == isl_basic_set_total_dim(like),
-		    goto error);
-	if (isl_space_is_equal(set->dim, like->dim) && like->n_div == 0) {
-		isl_basic_set_free(like);
-		return set;
-	}
-	set = isl_set_cow(set);
-	if (!set)
-		goto error;
-	for (i = 0; i < set->n; ++i) {
-		set->p[i] = isl_basic_set_from_underlying_set(set->p[i],
-						      isl_basic_set_copy(like));
-		if (!set->p[i])
-			goto error;
-	}
-	isl_space_free(set->dim);
-	set->dim = isl_space_copy(like->dim);
-	if (!set->dim)
-		goto error;
-	isl_basic_set_free(like);
-	return set;
-error:
-	isl_basic_set_free(like);
-	isl_set_free(set);
-	return NULL;
-}
-
 struct isl_set *isl_map_underlying_set(struct isl_map *map)
 {
 	int i;
@@ -5150,11 +5108,6 @@ struct isl_set *isl_map_underlying_set(struct isl_map *map)
 error:
 	isl_map_free(map);
 	return NULL;
-}
-
-struct isl_set *isl_set_to_underlying_set(struct isl_set *set)
-{
-	return set_from_map(isl_map_underlying_set(set_to_map(set)));
 }
 
 /* Replace the space of "bmap" by "space".
@@ -6143,26 +6096,6 @@ __isl_give isl_basic_map *isl_basic_map_upper_bound_si(
 	return basic_map_bound_si(bmap, type, pos, value, 1);
 }
 
-struct isl_basic_set *isl_basic_set_lower_bound_dim(struct isl_basic_set *bset,
-	unsigned dim, isl_int value)
-{
-	int j;
-
-	bset = isl_basic_set_cow(bset);
-	bset = isl_basic_set_extend_constraints(bset, 0, 1);
-	j = isl_basic_set_alloc_inequality(bset);
-	if (j < 0)
-		goto error;
-	isl_seq_clr(bset->ineq[j], 1 + isl_basic_set_total_dim(bset));
-	isl_int_set_si(bset->ineq[j][1 + isl_basic_set_n_param(bset) + dim], 1);
-	isl_int_neg(bset->ineq[j][0], value);
-	bset = isl_basic_set_simplify(bset);
-	return isl_basic_set_finalize(bset);
-error:
-	isl_basic_set_free(bset);
-	return NULL;
-}
-
 static __isl_give isl_map *map_bound_si(__isl_take isl_map *map,
 	enum isl_dim_type type, unsigned pos, int value, int upper)
 {
@@ -6330,27 +6263,6 @@ __isl_give isl_set *isl_set_upper_bound_val(__isl_take isl_set *set,
 	return set;
 error:
 	isl_val_free(value);
-	isl_set_free(set);
-	return NULL;
-}
-
-struct isl_set *isl_set_lower_bound_dim(struct isl_set *set, unsigned dim,
-					isl_int value)
-{
-	int i;
-
-	set = isl_set_cow(set);
-	if (!set)
-		return NULL;
-
-	isl_assert(set->ctx, dim < isl_set_n_dim(set), goto error);
-	for (i = 0; i < set->n; ++i) {
-		set->p[i] = isl_basic_set_lower_bound_dim(set->p[i], dim, value);
-		if (!set->p[i])
-			goto error;
-	}
-	return set;
-error:
 	isl_set_free(set);
 	return NULL;
 }
@@ -9058,12 +8970,6 @@ static isl_bool isl_basic_set_plain_has_fixed_var(
 						pos, val);
 }
 
-static int isl_set_plain_has_fixed_var(__isl_keep isl_set *set, unsigned pos,
-	isl_int *val)
-{
-	return isl_map_plain_has_fixed_var(set_to_map(set), pos, val);
-}
-
 isl_bool isl_basic_map_plain_is_fixed(__isl_keep isl_basic_map *bmap,
 	enum isl_dim_type type, unsigned pos, isl_int *val)
 {
@@ -9166,101 +9072,6 @@ isl_bool isl_basic_set_plain_dim_is_fixed(__isl_keep isl_basic_set *bset,
 					isl_basic_set_n_param(bset) + dim, val);
 }
 
-/* Check if dimension dim has fixed value and if so and if val is not NULL,
- * then return this fixed value in *val.
- */
-int isl_set_plain_dim_is_fixed(__isl_keep isl_set *set,
-	unsigned dim, isl_int *val)
-{
-	return isl_set_plain_has_fixed_var(set, isl_set_n_param(set) + dim, val);
-}
-
-/* Check if input variable in has fixed value and if so and if val is not NULL,
- * then return this fixed value in *val.
- */
-int isl_map_plain_input_is_fixed(__isl_keep isl_map *map,
-	unsigned in, isl_int *val)
-{
-	return isl_map_plain_has_fixed_var(map, isl_map_n_param(map) + in, val);
-}
-
-/* Check if dimension dim has an (obvious) fixed lower bound and if so
- * and if val is not NULL, then return this lower bound in *val.
- */
-int isl_basic_set_plain_dim_has_fixed_lower_bound(
-	__isl_keep isl_basic_set *bset, unsigned dim, isl_int *val)
-{
-	int i, i_eq = -1, i_ineq = -1;
-	isl_int *c;
-	unsigned total;
-	unsigned nparam;
-
-	if (!bset)
-		return -1;
-	total = isl_basic_set_total_dim(bset);
-	nparam = isl_basic_set_n_param(bset);
-	for (i = 0; i < bset->n_eq; ++i) {
-		if (isl_int_is_zero(bset->eq[i][1+nparam+dim]))
-			continue;
-		if (i_eq != -1)
-			return 0;
-		i_eq = i;
-	}
-	for (i = 0; i < bset->n_ineq; ++i) {
-		if (!isl_int_is_pos(bset->ineq[i][1+nparam+dim]))
-			continue;
-		if (i_eq != -1 || i_ineq != -1)
-			return 0;
-		i_ineq = i;
-	}
-	if (i_eq == -1 && i_ineq == -1)
-		return 0;
-	c = i_eq != -1 ? bset->eq[i_eq] : bset->ineq[i_ineq];
-	/* The coefficient should always be one due to normalization. */
-	if (!isl_int_is_one(c[1+nparam+dim]))
-		return 0;
-	if (isl_seq_first_non_zero(c+1, nparam+dim) != -1)
-		return 0;
-	if (isl_seq_first_non_zero(c+1+nparam+dim+1,
-					total - nparam - dim - 1) != -1)
-		return 0;
-	if (val)
-		isl_int_neg(*val, c[0]);
-	return 1;
-}
-
-int isl_set_plain_dim_has_fixed_lower_bound(__isl_keep isl_set *set,
-	unsigned dim, isl_int *val)
-{
-	int i;
-	isl_int v;
-	isl_int tmp;
-	int fixed;
-
-	if (!set)
-		return -1;
-	if (set->n == 0)
-		return 0;
-	if (set->n == 1)
-		return isl_basic_set_plain_dim_has_fixed_lower_bound(set->p[0],
-								dim, val);
-	isl_int_init(v);
-	isl_int_init(tmp);
-	fixed = isl_basic_set_plain_dim_has_fixed_lower_bound(set->p[0],
-								dim, &v);
-	for (i = 1; fixed == 1 && i < set->n; ++i) {
-		fixed = isl_basic_set_plain_dim_has_fixed_lower_bound(set->p[i],
-								dim, &tmp);
-		if (fixed == 1 && isl_int_ne(tmp, v))
-			fixed = 0;
-	}
-	if (val)
-		isl_int_set(*val, v);
-	isl_int_clear(tmp);
-	isl_int_clear(v);
-	return fixed;
-}
-
 /* Return -1 if the constraint "c1" should be sorted before "c2"
  * and 1 if it should be sorted after "c2".
  * Return 0 if the two constraints are the same (up to the constant term).
@@ -9361,8 +9172,8 @@ struct isl_basic_set *isl_basic_set_normalize(struct isl_basic_set *bset)
 	return bset_from_bmap(isl_basic_map_normalize(bset_to_bmap(bset)));
 }
 
-int isl_basic_map_plain_cmp(const __isl_keep isl_basic_map *bmap1,
-	const __isl_keep isl_basic_map *bmap2)
+int isl_basic_map_plain_cmp(__isl_keep isl_basic_map *bmap1,
+	__isl_keep isl_basic_map *bmap2)
 {
 	int i, cmp;
 	unsigned total;
@@ -9413,8 +9224,8 @@ int isl_basic_map_plain_cmp(const __isl_keep isl_basic_map *bmap1,
 	return 0;
 }
 
-int isl_basic_set_plain_cmp(const __isl_keep isl_basic_set *bset1,
-	const __isl_keep isl_basic_set *bset2)
+int isl_basic_set_plain_cmp(__isl_keep isl_basic_set *bset1,
+	__isl_keep isl_basic_set *bset2)
 {
 	return isl_basic_map_plain_cmp(bset1, bset2);
 }
@@ -9454,8 +9265,8 @@ isl_bool isl_basic_set_plain_is_equal(__isl_keep isl_basic_set *bset1,
 
 static int qsort_bmap_cmp(const void *p1, const void *p2)
 {
-	const struct isl_basic_map *bmap1 = *(const struct isl_basic_map **)p1;
-	const struct isl_basic_map *bmap2 = *(const struct isl_basic_map **)p2;
+	isl_basic_map *bmap1 = *(isl_basic_map **) p1;
+	isl_basic_map *bmap2 = *(isl_basic_map **) p2;
 
 	return isl_basic_map_plain_cmp(bmap1, bmap2);
 }
@@ -9594,36 +9405,6 @@ isl_bool isl_set_plain_is_equal(__isl_keep isl_set *set1,
 	__isl_keep isl_set *set2)
 {
 	return isl_map_plain_is_equal(set_to_map(set1), set_to_map(set2));
-}
-
-/* Return an interval that ranges from min to max (inclusive)
- */
-struct isl_basic_set *isl_basic_set_interval(struct isl_ctx *ctx,
-	isl_int min, isl_int max)
-{
-	int k;
-	struct isl_basic_set *bset = NULL;
-
-	bset = isl_basic_set_alloc(ctx, 0, 1, 0, 0, 2);
-	if (!bset)
-		goto error;
-
-	k = isl_basic_set_alloc_inequality(bset);
-	if (k < 0)
-		goto error;
-	isl_int_set_si(bset->ineq[k][1], 1);
-	isl_int_neg(bset->ineq[k][0], min);
-
-	k = isl_basic_set_alloc_inequality(bset);
-	if (k < 0)
-		goto error;
-	isl_int_set_si(bset->ineq[k][1], -1);
-	isl_int_set(bset->ineq[k][0], max);
-
-	return bset;
-error:
-	isl_basic_set_free(bset);
-	return NULL;
 }
 
 /* Return the basic maps in "map" as a list.

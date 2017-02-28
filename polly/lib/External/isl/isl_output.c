@@ -1576,11 +1576,10 @@ static __isl_give isl_printer *print_pow(__isl_take isl_printer *p,
 
 /* Print the polynomial "up" defined over the domain space "space" and
  * local variables defined by "div" to "p".
- * If "outer" is set, then "up" is not nested inside another polynomial.
  */
 static __isl_give isl_printer *upoly_print(__isl_keep struct isl_upoly *up,
 	__isl_keep isl_space *space, __isl_keep isl_mat *div,
-	__isl_take isl_printer *p, int outer)
+	__isl_take isl_printer *p)
 {
 	int i, n, first, print_parens;
 	struct isl_upoly_rec *rec;
@@ -1595,8 +1594,7 @@ static __isl_give isl_printer *upoly_print(__isl_keep struct isl_upoly *up,
 	if (!rec)
 		goto error;
 	n = upoly_rec_n_non_zero(rec);
-	print_parens = n > 1 ||
-		    (outer && rec->up.var >= isl_space_dim(space, isl_dim_all));
+	print_parens = n > 1;
 	if (print_parens)
 		p = isl_printer_print_str(p, "(");
 	for (i = 0, first = 1; i < rec->n; ++i) {
@@ -1616,7 +1614,7 @@ static __isl_give isl_printer *upoly_print(__isl_keep struct isl_upoly *up,
 			if (!first)
 				p = isl_printer_print_str(p, " + ");
 			if (i == 0 || !isl_upoly_is_one(rec->p[i]))
-				p = upoly_print(rec->p[i], space, div, p, 0);
+				p = upoly_print(rec->p[i], space, div, p);
 		}
 		first = 0;
 		if (i == 0)
@@ -1639,7 +1637,7 @@ static __isl_give isl_printer *print_qpolynomial(__isl_take isl_printer *p,
 {
 	if (!p || !qp)
 		goto error;
-	p = upoly_print(qp->upoly, qp->dim, qp->div, p, 1);
+	p = upoly_print(qp->upoly, qp->dim, qp->div, p);
 	return p;
 error:
 	isl_printer_free(p);
@@ -1687,7 +1685,7 @@ static __isl_give isl_printer *print_qpolynomial_c(__isl_take isl_printer *p,
 		qp = isl_qpolynomial_mul(qp, f);
 	}
 	if (qp)
-		p = upoly_print(qp->upoly, space, qp->div, p, 0);
+		p = upoly_print(qp->upoly, space, qp->div, p);
 	else
 		p = isl_printer_free(p);
 	if (!isl_int_is_one(den)) {

@@ -6305,10 +6305,6 @@ bool ARMAsmParser::validatetLDMRegList(const MCInst &Inst,
   else if (ListContainsPC && ListContainsLR)
     return Error(Operands[ListNo + HasWritebackToken]->getStartLoc(),
                  "PC and LR may not be in the register list simultaneously");
-  else if (inITBlock() && !lastInITBlock() && ListContainsPC)
-    return Error(Operands[ListNo + HasWritebackToken]->getStartLoc(),
-                 "instruction must be outside of IT block or the last "
-                 "instruction in an IT block");
   return false;
 }
 
@@ -6368,6 +6364,12 @@ bool ARMAsmParser::validateInstruction(MCInst &Inst,
              Inst.getOperand(MCID.findFirstPredOperandIdx()).getImm() !=
                  ARMCC::AL) {
     return Warning(Loc, "predicated instructions should be in IT block");
+  }
+
+  // PC-setting instructions in an IT block, but not the last instruction of
+  // the block, are UNPREDICTABLE.
+  if (inExplicitITBlock() && !lastInITBlock() && isITBlockTerminator(Inst)) {
+    return Error(Loc, "instruction must be outside of IT block or the last instruction in an IT block");
   }
 
   const unsigned Opcode = Inst.getOpcode();
@@ -9013,6 +9015,7 @@ bool ARMAsmParser::isITBlockTerminator(MCInst &Inst) const {
   // operands. We only care about Thumb instructions here, as ARM instructions
   // obviously can't be in an IT block.
   switch (Inst.getOpcode()) {
+  case ARM::tLDMIA:
   case ARM::t2LDMIA:
   case ARM::t2LDMIA_UPD:
   case ARM::t2LDMDB:

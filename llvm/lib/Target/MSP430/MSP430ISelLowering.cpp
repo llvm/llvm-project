@@ -1219,7 +1219,7 @@ MSP430TargetLowering::EmitShiftInstr(MachineInstr &MI,
                 BB->end());
   RemBB->transferSuccessorsAndUpdatePHIs(BB);
 
-  // Add adges BB => LoopBB => RemBB, BB => RemBB, LoopBB => LoopBB
+  // Add edges BB => LoopBB => RemBB, BB => RemBB, LoopBB => LoopBB
   BB->addSuccessor(LoopBB);
   BB->addSuccessor(RemBB);
   LoopBB->addSuccessor(RemBB);

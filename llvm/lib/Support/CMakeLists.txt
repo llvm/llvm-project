@@ -68,6 +68,7 @@ add_llvm_library(LLVMSupport
   LineIterator.cpp
   Locale.cpp
   LockFileManager.cpp
+  LowLevelType.cpp
   ManagedStatic.cpp
   MathExtras.cpp
   MemoryBuffer.cpp

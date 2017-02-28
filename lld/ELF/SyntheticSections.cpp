@@ -371,10 +371,7 @@ template <class ELFT>
 CopyRelSection<ELFT>::CopyRelSection(bool ReadOnly, uintX_t AddrAlign, size_t S)
     : SyntheticSection(SHF_ALLOC, SHT_NOBITS, AddrAlign,
                        ReadOnly ? ".bss.rel.ro" : ".bss"),
-      Size(S) {
-  if (!ReadOnly)
-    this->Flags |= SHF_WRITE;
-}
+      Size(S) {}
 
 template <class ELFT>
 void BuildIdSection<ELFT>::writeBuildId(ArrayRef<uint8_t> Buf) {
