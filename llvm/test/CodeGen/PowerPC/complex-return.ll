@@ -24,10 +24,10 @@ entry:
 }
 
 ; CHECK-LABEL: foo:
-; CHECK: lfd 1
-; CHECK: lfd 2
-; CHECK: lfd 3
-; CHECK: lfd 4
+; CHECK-DAG: lfd 1
+; CHECK-DAG: lfd 2
+; CHECK-DAG: lfd 3
+; CHECK_DAG: lfd 4
 
 define { float, float } @oof() nounwind {
 entry:
@@ -50,6 +50,6 @@ entry:
 }
 
 ; CHECK-LABEL: oof:
-; CHECK: lfs 2
-; CHECK: lfs 1
+; CHECK-DAG: lfs 2
+; CHECK-DAG: lfs 1
 

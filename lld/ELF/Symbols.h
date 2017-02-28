@@ -174,13 +174,10 @@ public:
 };
 
 // Regular defined symbols read from object file symbol tables.
-template <class ELFT> class DefinedRegular : public Defined {
-  typedef typename ELFT::Sym Elf_Sym;
-  typedef typename ELFT::uint uintX_t;
-
+class DefinedRegular : public Defined {
 public:
   DefinedRegular(StringRefZ Name, bool IsLocal, uint8_t StOther, uint8_t Type,
-                 uintX_t Value, uintX_t Size, InputSectionBase *Section,
+                 uint64_t Value, uint64_t Size, InputSectionBase *Section,
                  InputFile *File)
       : Defined(SymbolBody::DefinedRegularKind, Name, IsLocal, StOther, Type),
         Value(Value), Size(Size),
@@ -189,14 +186,14 @@ public:
   }
 
   // Return true if the symbol is a PIC function.
-  bool isMipsPIC() const;
+  template <class ELFT> bool isMipsPIC() const;
 
   static bool classof(const SymbolBody *S) {
     return S->kind() == SymbolBody::DefinedRegularKind;
   }
 
-  uintX_t Value;
-  uintX_t Size;
+  uint64_t Value;
+  uint64_t Size;
 
   // The input section this symbol belongs to. Notice that this is
   // a reference to a pointer. We are using two levels of indirections
@@ -209,8 +206,6 @@ public:
 private:
   static InputSectionBase *NullInputSection;
 };
-
-template <class ELFT> InputSectionBase *DefinedRegular<ELFT>::NullInputSection;
 
 // DefinedSynthetic is a class to represent linker-generated ELF symbols.
 // The difference from the regular symbol is that DefinedSynthetic symbols
@@ -337,7 +332,7 @@ public:
 
 // Some linker-generated symbols need to be created as
 // DefinedRegular symbols.
-template <class ELFT> struct ElfSym {
+struct ElfSym {
   // The content for _etext and etext symbols.
   static DefinedSynthetic *Etext;
   static DefinedSynthetic *Etext2;
@@ -351,20 +346,10 @@ template <class ELFT> struct ElfSym {
   static DefinedSynthetic *End2;
 
   // The content for _gp_disp/__gnu_local_gp symbols for MIPS target.
-  static DefinedRegular<ELFT> *MipsGpDisp;
-  static DefinedRegular<ELFT> *MipsLocalGp;
-  static DefinedRegular<ELFT> *MipsGp;
+  static DefinedRegular *MipsGpDisp;
+  static DefinedRegular *MipsLocalGp;
+  static DefinedRegular *MipsGp;
 };
-
-template <class ELFT> DefinedSynthetic *ElfSym<ELFT>::Etext;
-template <class ELFT> DefinedSynthetic *ElfSym<ELFT>::Etext2;
-template <class ELFT> DefinedSynthetic *ElfSym<ELFT>::Edata;
-template <class ELFT> DefinedSynthetic *ElfSym<ELFT>::Edata2;
-template <class ELFT> DefinedSynthetic *ElfSym<ELFT>::End;
-template <class ELFT> DefinedSynthetic *ElfSym<ELFT>::End2;
-template <class ELFT> DefinedRegular<ELFT> *ElfSym<ELFT>::MipsGpDisp;
-template <class ELFT> DefinedRegular<ELFT> *ElfSym<ELFT>::MipsLocalGp;
-template <class ELFT> DefinedRegular<ELFT> *ElfSym<ELFT>::MipsGp;
 
 // A real symbol object, SymbolBody, is usually stored within a Symbol. There's
 // always one Symbol for each symbol name. The resolver updates the SymbolBody
@@ -409,12 +394,9 @@ struct Symbol {
 
   // This field is used to store the Symbol's SymbolBody. This instantiation of
   // AlignedCharArrayUnion gives us a struct with a char array field that is
-  // large and aligned enough to store any derived class of SymbolBody. We
-  // assume that the size and alignment of ELF64LE symbols is sufficient for any
-  // ELFT, and we verify this with the static_asserts in replaceBody.
-  llvm::AlignedCharArrayUnion<
-      DefinedCommon, DefinedRegular<llvm::object::ELF64LE>, DefinedSynthetic,
-      Undefined, SharedSymbol, LazyArchive, LazyObject>
+  // large and aligned enough to store any derived class of SymbolBody.
+  llvm::AlignedCharArrayUnion<DefinedCommon, DefinedRegular, DefinedSynthetic,
+                              Undefined, SharedSymbol, LazyArchive, LazyObject>
       Body;
 
   SymbolBody *body() { return reinterpret_cast<SymbolBody *>(Body.buffer); }

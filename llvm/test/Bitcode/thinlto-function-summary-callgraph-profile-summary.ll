@@ -10,7 +10,7 @@
 ; CHECK-NEXT:    <VERSION
 ; See if the call to func is registered, using the expected callsite count
 ; and profile count, with value id matching the subsequent value symbol table.
-; CHECK-NEXT:    <PERMODULE_PROFILE {{.*}} op4=[[HOT1:.*]] op5=3 op6=[[COLD:.*]] op7=1 op8=[[HOT2:.*]] op9=3 op10=[[NONE1:.*]] op11=2 op12=[[HOT3:.*]] op13=3 op14=[[NONE2:.*]] op15=2 op16=[[NONE3:.*]] op17=2/>
+; CHECK-NEXT:    <PERMODULE_PROFILE {{.*}} op4=[[HOT1:.*]] op5=3 op6=[[COLD:.*]] op7=1 op8=[[HOT2:.*]] op9=3 op10=[[NONE1:.*]] op11=2 op12=[[HOT3:.*]] op13=3 op14=[[NONE2:.*]] op15=2 op16=[[NONE3:.*]] op17=2 op18=[[LEGACY:.*]] op19=3/>
 ; CHECK-NEXT:  </GLOBALVAL_SUMMARY_BLOCK>
 ; CHECK-LABEL:  <VALUE_SYMTAB
 ; CHECK-NEXT:       <FNENTRY {{.*}} record string = 'hot_function
@@ -21,6 +21,7 @@
 ; CHECK-DAG:        <ENTRY abbrevid=6 op0=[[HOT1]] {{.*}} record string = 'hot1'
 ; CHECK-DAG:        <ENTRY abbrevid=6 op0=[[HOT2]] {{.*}} record string = 'hot2'
 ; CHECK-DAG:        <ENTRY abbrevid=6 op0=[[HOT3]] {{.*}} record string = 'hot3'
+; CHECK-DAG:        <COMBINED_ENTRY abbrevid=11 op0=[[LEGACY]] op1=123/>
 ; CHECK-LABEL:  </VALUE_SYMTAB>
 
 ; COMBINED:       <GLOBALVAL_SUMMARY_BLOCK
@@ -80,7 +81,7 @@ declare void @none3() #1
 
 
 !llvm.module.flags = !{!1}
-!20 = !{!"function_entry_count", i64 110}
+!20 = !{!"function_entry_count", i64 110, i64 123}
 
 !1 = !{i32 1, !"ProfileSummary", !2}
 !2 = !{!3, !4, !5, !6, !7, !8, !9, !10}

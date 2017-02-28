@@ -25,6 +25,7 @@
 #include "lldb/Host/Symbols.h"
 #include "lldb/Interpreter/OptionValueProperties.h"
 #include "lldb/Symbol/ObjectFile.h"
+#include "lldb/Target/OperatingSystem.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
@@ -1026,6 +1027,12 @@ void DynamicLoaderDarwinKernel::LoadKernelModuleIfNeeded() {
         m_kernel.LoadImageAtFileAddress(m_process);
       }
     }
+    
+    // The operating system plugin gets loaded and initialized in 
+    // LoadImageUsingMemoryModule when we discover the kernel dSYM.  For a
+    // core file in particular, that's the wrong place to do this, since 
+    // we haven't fixed up the section addresses yet.  So let's redo it here.
+    LoadOperatingSystemPlugin(false);
 
     if (m_kernel.IsLoaded() && m_kernel.GetModule()) {
       static ConstString kext_summary_symbol("gLoadedKextSummaries");

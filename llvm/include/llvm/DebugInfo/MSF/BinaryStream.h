@@ -11,6 +11,7 @@
 #define LLVM_DEBUGINFO_MSF_BINARYSTREAM_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/DebugInfo/MSF/BinaryStreamError.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include <cstdint>
@@ -43,6 +44,15 @@ public:
 
   /// \brief Return the number of bytes of data in this stream.
   virtual uint32_t getLength() = 0;
+
+protected:
+  Error checkOffset(uint32_t Offset, uint32_t DataSize) {
+    if (Offset > getLength())
+      return make_error<BinaryStreamError>(stream_error_code::invalid_offset);
+    if (getLength() < DataSize + Offset)
+      return make_error<BinaryStreamError>(stream_error_code::stream_too_short);
+    return Error::success();
+  }
 };
 
 /// \brief A BinaryStream which can be read from as well as written to.  Note

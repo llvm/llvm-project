@@ -12,4 +12,4 @@ define void @f3() !prof !0 !prof !0 {
   unreachable
 }
 
-!0 = !{}
+!0 = !{!"function_entry_count", i64 100}

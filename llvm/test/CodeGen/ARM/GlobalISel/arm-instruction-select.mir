@@ -19,6 +19,7 @@
   define void @test_stores() #0 { ret void }
 
   define void @test_gep() { ret void }
+  define void @test_constants() { ret void }
 
   define void @test_soft_fp_double() #0 { ret void }
 
@@ -463,6 +464,24 @@ body:             |
     ; CHECK: %[[GEP]] = ADDrr %[[PTR]], %[[OFF]], 14, _, _
 
     %r0 = COPY %2(p0)
+    BX_RET 14, _, implicit %r0
+...
+---
+name:            test_constants
+# CHECK-LABEL: name: test_constants
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+# CHECK: id: [[C:[0-9]+]], class: gpr
+body:             |
+  bb.0:
+    %0(s32) = G_CONSTANT 42
+    ; CHECK: %[[C]] = MOVi 42, 14, _, _
+
+    %r0 = COPY %0(s32)
     BX_RET 14, _, implicit %r0
 ...
 ---

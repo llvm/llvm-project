@@ -9,11 +9,10 @@
 
 #include "llvm/DebugInfo/MSF/BinaryStreamReader.h"
 
+#include "llvm/DebugInfo/MSF/BinaryStreamError.h"
 #include "llvm/DebugInfo/MSF/BinaryStreamRef.h"
-#include "llvm/DebugInfo/MSF/MSFError.h"
 
 using namespace llvm;
-using namespace llvm::msf;
 
 BinaryStreamReader::BinaryStreamReader(BinaryStreamRef S)
     : Stream(S), Offset(0) {}
@@ -74,7 +73,7 @@ Error BinaryStreamReader::readStreamRef(BinaryStreamRef &Ref) {
 
 Error BinaryStreamReader::readStreamRef(BinaryStreamRef &Ref, uint32_t Length) {
   if (bytesRemaining() < Length)
-    return make_error<MSFError>(msf_error_code::insufficient_buffer);
+    return make_error<BinaryStreamError>(stream_error_code::stream_too_short);
   Ref = Stream.slice(Offset, Length);
   Offset += Length;
   return Error::success();
@@ -82,7 +81,7 @@ Error BinaryStreamReader::readStreamRef(BinaryStreamRef &Ref, uint32_t Length) {
 
 Error BinaryStreamReader::skip(uint32_t Amount) {
   if (Amount > bytesRemaining())
-    return make_error<MSFError>(msf_error_code::insufficient_buffer);
+    return make_error<BinaryStreamError>(stream_error_code::stream_too_short);
   Offset += Amount;
   return Error::success();
 }

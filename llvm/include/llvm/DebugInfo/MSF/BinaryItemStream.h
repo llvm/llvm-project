@@ -12,7 +12,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/DebugInfo/MSF/BinaryStream.h"
-#include "llvm/DebugInfo/MSF/MSFError.h"
+#include "llvm/DebugInfo/MSF/BinaryStreamError.h"
 #include "llvm/Support/Error.h"
 #include <cstddef>
 #include <cstdint>
@@ -45,9 +45,10 @@ public:
     if (!ExpectedIndex)
       return ExpectedIndex.takeError();
     const auto &Item = Items[*ExpectedIndex];
+    if (auto EC = checkOffset(Offset, Size))
+      return EC;
     if (Size > Traits::length(Item))
-      return make_error<msf::MSFError>(
-          msf::msf_error_code::insufficient_buffer);
+      return make_error<BinaryStreamError>(stream_error_code::stream_too_short);
     Buffer = Traits::bytes(Item).take_front(Size);
     return Error::success();
   }
@@ -81,8 +82,7 @@ private:
       ++CurrentIndex;
     }
     if (CurrentOffset != Offset)
-      return make_error<msf::MSFError>(
-          msf::msf_error_code::insufficient_buffer);
+      return make_error<BinaryStreamError>(stream_error_code::stream_too_short);
     return CurrentIndex;
   }
 

@@ -27,7 +27,7 @@ class DefinedCommon;
 class SymbolBody;
 struct SectionPiece;
 
-template <class ELFT> class DefinedRegular;
+class DefinedRegular;
 template <class ELFT> class EhFrameSection;
 template <class ELFT> class MergeSyntheticSection;
 template <class ELFT> class ObjectFile;
@@ -117,8 +117,7 @@ public:
     return getFile<ELFT>()->getObj();
   }
 
-  template <class ELFT>
-  uint64_t getOffset(const DefinedRegular<ELFT> &Sym) const;
+  template <class ELFT> uint64_t getOffset(const DefinedRegular &Sym) const;
 
   template <class ELFT> InputSectionBase *getLinkOrderDep() const;
   // Translate an offset in the input section to an offset in the output
