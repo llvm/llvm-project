@@ -17,13 +17,12 @@
 #include "llvm/Support/Endian.h"
 
 using namespace llvm;
-using namespace llvm::msf;
 using namespace llvm::support;
 using namespace llvm::pdb;
 
 StringTable::StringTable() : Signature(0), HashVersion(0), NameCount(0) {}
 
-Error StringTable::load(StreamReader &Stream) {
+Error StringTable::load(BinaryStreamReader &Stream) {
   const StringTableHeader *H;
   if (auto EC = Stream.readObject(H))
     return EC;
@@ -55,7 +54,7 @@ Error StringTable::load(StreamReader &Stream) {
     return make_error<RawError>(raw_error_code::corrupt_file,
                                 "Missing name count");
 
-  if (auto EC = Stream.readInteger(NameCount, llvm::support::little))
+  if (auto EC = Stream.readInteger(NameCount))
     return EC;
   return Error::success();
 }
@@ -68,9 +67,9 @@ StringRef StringTable::getStringForID(uint32_t ID) const {
   // the starting offset of the string we're looking for.  So just seek into
   // the desired offset and a read a null terminated stream from that offset.
   StringRef Result;
-  StreamReader NameReader(NamesBuffer);
+  BinaryStreamReader NameReader(NamesBuffer);
   NameReader.setOffset(ID);
-  if (auto EC = NameReader.readZeroString(Result))
+  if (auto EC = NameReader.readCString(Result))
     consumeError(std::move(EC));
   return Result;
 }

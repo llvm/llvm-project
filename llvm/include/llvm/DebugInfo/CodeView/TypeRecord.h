@@ -26,9 +26,7 @@
 
 namespace llvm {
 
-namespace msf {
-class StreamReader;
-} // end namespace msf
+class BinaryStreamReader;
 
 namespace codeview {
 
@@ -42,7 +40,7 @@ struct CVMemberRecord {
   TypeLeafKind Kind;
   ArrayRef<uint8_t> Data;
 };
-typedef msf::VarStreamArray<CVType> CVTypeArray;
+typedef VarStreamArray<CVType> CVTypeArray;
 typedef iterator_range<CVTypeArray::Iterator> CVTypeRange;
 
 /// Equvalent to CV_fldattr_t in cvinfo.h.

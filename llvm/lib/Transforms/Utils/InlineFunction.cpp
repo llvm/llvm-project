@@ -1093,52 +1093,38 @@ static void AddAliasScopeMetadata(CallSite CS, ValueToValueMapTy &VMap,
   }
 }
 
-/// Add @llvm.assume-based assumptions to preserve information supplied by
-/// argument attributes because the attributes will disappear after inlining.
-static void addAssumptions(CallSite CS, InlineFunctionInfo &IFI) {
-  if (!IFI.GetAssumptionCache)
+/// If the inlined function has non-byval align arguments, then
+/// add @llvm.assume-based alignment assumptions to preserve this information.
+static void AddAlignmentAssumptions(CallSite CS, InlineFunctionInfo &IFI) {
+  if (!PreserveAlignmentAssumptions || !IFI.GetAssumptionCache)
     return;
 
   AssumptionCache *AC = &(*IFI.GetAssumptionCache)(*CS.getCaller());
   auto &DL = CS.getCaller()->getParent()->getDataLayout();
 
-  // To avoid inserting redundant assumptions, check that an assumption provides
-  // new information in the caller. This might require a dominator tree.
+  // To avoid inserting redundant assumptions, we should check for assumptions
+  // already in the caller. To do this, we might need a DT of the caller.
   DominatorTree DT;
   bool DTCalculated = false;
-  auto calcDomTreeIfNeeded = [&]() {
-    if (!DTCalculated) {
-      DT.recalculate(*CS.getCaller());
-      DTCalculated = true;
-    }
-  };
 
   Function *CalledFunc = CS.getCalledFunction();
-  IRBuilder<> Builder(CS.getInstruction());
   for (Argument &Arg : CalledFunc->args()) {
-    Value *ArgVal = CS.getArgument(Arg.getArgNo());
-
     unsigned Align = Arg.getType()->isPointerTy() ? Arg.getParamAlignment() : 0;
-    if (PreserveAlignmentAssumptions && Align &&
-        !Arg.hasByValOrInAllocaAttr() && !Arg.hasNUses(0)) {
+    if (Align && !Arg.hasByValOrInAllocaAttr() && !Arg.hasNUses(0)) {
+      if (!DTCalculated) {
+        DT.recalculate(*CS.getCaller());
+        DTCalculated = true;
+      }
+
       // If we can already prove the asserted alignment in the context of the
       // caller, then don't bother inserting the assumption.
-      calcDomTreeIfNeeded();
-      if (getKnownAlignment(ArgVal, DL, CS.getInstruction(), AC, &DT) < Align) {
-        CallInst *Asmp = Builder.CreateAlignmentAssumption(DL, ArgVal, Align);
-        AC->registerAssumption(Asmp);
-      }
-    }
+      Value *ArgVal = CS.getArgument(Arg.getArgNo());
+      if (getKnownAlignment(ArgVal, DL, CS.getInstruction(), AC, &DT) >= Align)
+        continue;
 
-    if (Arg.hasNonNullAttr()) {
-      // If we can already prove nonnull in the context of the caller, then
-      // don't bother inserting the assumption.
-      calcDomTreeIfNeeded();
-      if (!isKnownNonNullAt(ArgVal, CS.getInstruction(), &DT)) {
-        Value *NotNull = Builder.CreateIsNotNull(ArgVal);
-        CallInst *Asmp = Builder.CreateAssumption(NotNull);
-        AC->registerAssumption(Asmp);
-      }
+      CallInst *NewAsmp = IRBuilder<>(CS.getInstruction())
+                              .CreateAlignmentAssumption(DL, ArgVal, Align);
+      AC->registerAssumption(NewAsmp);
     }
   }
 }
@@ -1635,10 +1621,10 @@ bool llvm::InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
       VMap[&*I] = ActualArg;
     }
 
-    // Add assumptions if necessary. We do this before the inlined instructions
-    // are actually cloned into the caller so that we can easily check what will
-    // be known at the start of the inlined code.
-    addAssumptions(CS, IFI);
+    // Add alignment assumptions if necessary. We do this before the inlined
+    // instructions are actually cloned into the caller so that we can easily
+    // check what will be known at the start of the inlined code.
+    AddAlignmentAssumptions(CS, IFI);
 
     // We want the inliner to prune the code as it copies.  We would LOVE to
     // have no dead or constant instructions leftover after inlining occurs

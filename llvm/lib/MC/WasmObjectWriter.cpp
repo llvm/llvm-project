@@ -283,7 +283,8 @@ void WasmObjectWriter::recordRelocation(MCAssembler &Asm,
 
 namespace {
 
-// 
+// The signature of a wasm function, in a struct capable of being used as a
+// DenseMap key.
 struct WasmFunctionType {
   // Support empty and tombstone instances, needed by DenseMap.
   enum { Plain, Empty, Tombstone } State;
@@ -356,7 +357,7 @@ struct WasmGlobal {
   uint32_t InitialValue;
 };
 
-}  // end anonymous namespace
+} // end anonymous namespace
 
 // Write X as an (unsigned) LEB value at offset Offset in Stream, padded
 // to allow patching.

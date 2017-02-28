@@ -1,4 +1,4 @@
-//===-- llvm/CodeGen/TargetSchedule.h - Sched Machine Model -----*- C++ -*-===//
+//===- llvm/CodeGen/TargetSchedule.h - Sched Machine Model ------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -23,10 +23,8 @@
 
 namespace llvm {
 
-class TargetRegisterInfo;
-class TargetSubtargetInfo;
-class TargetInstrInfo;
 class MachineInstr;
+class TargetInstrInfo;
 
 /// Provide an instruction scheduling machine model to CodeGen passes.
 class TargetSchedModel {
@@ -34,8 +32,8 @@ class TargetSchedModel {
   // processor.
   MCSchedModel SchedModel;
   InstrItineraryData InstrItins;
-  const TargetSubtargetInfo *STI;
-  const TargetInstrInfo *TII;
+  const TargetSubtargetInfo *STI = nullptr;
+  const TargetInstrInfo *TII = nullptr;
 
   SmallVector<unsigned, 16> ResourceFactors;
   unsigned MicroOpFactor; // Multiply to normalize microops to resource units.
@@ -44,7 +42,7 @@ class TargetSchedModel {
   unsigned computeInstrLatency(const MCSchedClassDesc &SCDesc) const;
 
 public:
-  TargetSchedModel(): SchedModel(MCSchedModel::GetDefaultSchedModel()), STI(nullptr), TII(nullptr) {}
+  TargetSchedModel() : SchedModel(MCSchedModel::GetDefaultSchedModel()) {}
 
   /// \brief Initialize the machine model for instruction scheduling.
   ///
@@ -185,6 +183,6 @@ public:
                                 const MachineInstr *DepMI) const;
 };
 
-} // namespace llvm
+} // end namespace llvm
 
-#endif
+#endif // LLVM_CODEGEN_TARGETSCHEDULE_H

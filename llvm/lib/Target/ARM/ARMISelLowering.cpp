@@ -9163,7 +9163,7 @@ static bool isConditionalZeroOrAllOnes(SDNode *N, bool AllOnes,
     SDLoc dl(N);
     EVT VT = N->getValueType(0);
     CC = N->getOperand(0);
-    if (CC.getValueType() != MVT::i1)
+    if (CC.getValueType() != MVT::i1 || CC.getOpcode() != ISD::SETCC)
       return false;
     Invert = !AllOnes;
     if (AllOnes)

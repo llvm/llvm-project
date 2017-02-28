@@ -427,15 +427,10 @@ public:
   static const OutputSection *getOutputSection(SymbolBody *Sym);
 
 private:
-  void writeLocalSymbols(uint8_t *&Buf);
-  void writeGlobalSymbols(uint8_t *Buf);
-
   // A vector of symbols and their string table offsets.
   std::vector<SymbolTableEntry> Symbols;
 
   StringTableSection<ELFT> &StrTabSec;
-
-  unsigned NumLocals = 0;
 };
 
 // Outputs GNU Hash section. For detailed explanation see:

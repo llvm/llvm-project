@@ -1,4 +1,4 @@
-//===-- DWARFDebugAranges.cpp -----------------------------------*- C++ -*-===//
+//===- DWARFDebugAranges.cpp ----------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -11,11 +11,13 @@
 #include "llvm/DebugInfo/DWARF/DWARFCompileUnit.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugArangeSet.h"
-#include "llvm/Support/Format.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/DataExtractor.h"
 #include <algorithm>
 #include <cassert>
+#include <cstdint>
 #include <set>
+#include <vector>
+
 using namespace llvm;
 
 void DWARFDebugAranges::extract(DataExtractor DebugArangesData) {
@@ -81,7 +83,7 @@ void DWARFDebugAranges::construct() {
   std::sort(Endpoints.begin(), Endpoints.end());
   uint64_t PrevAddress = -1ULL;
   for (const auto &E : Endpoints) {
-    if (PrevAddress < E.Address && ValidCUs.size() > 0) {
+    if (PrevAddress < E.Address && !ValidCUs.empty()) {
       // If the address range between two endpoints is described by some
       // CU, first try to extend the last range in Aranges. If we can't
       // do it, start a new range.

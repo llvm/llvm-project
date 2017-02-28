@@ -39,7 +39,6 @@ class TestMultipleSimultaneousDebuggers(TestBase):
         self.inferior_exe = os.path.join(os.getcwd(), "testprog")
         self.buildDriver('testprog.cpp', self.inferior_exe)
         self.addTearDownHook(lambda: os.remove(self.inferior_exe))
-        sys.exit()
 
 # check_call will raise a CalledProcessError if multi-process-driver doesn't return
 # exit code 0 to indicate success.  We can let this exception go - the test harness

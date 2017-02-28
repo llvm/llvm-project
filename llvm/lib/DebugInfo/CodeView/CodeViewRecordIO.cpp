@@ -87,14 +87,13 @@ Error CodeViewRecordIO::mapByteVectorTail(std::vector<uint8_t> &Bytes) {
 
 Error CodeViewRecordIO::mapInteger(TypeIndex &TypeInd) {
   if (isWriting()) {
-    if (auto EC =
-            Writer->writeInteger(TypeInd.getIndex(), llvm::support::little))
+    if (auto EC = Writer->writeInteger(TypeInd.getIndex()))
       return EC;
     return Error::success();
   }
 
   uint32_t I;
-  if (auto EC = Reader->readInteger(I, llvm::support::little))
+  if (auto EC = Reader->readInteger(I))
     return EC;
   TypeInd.setIndex(I);
   return Error::success();
@@ -146,10 +145,10 @@ Error CodeViewRecordIO::mapStringZ(StringRef &Value) {
   if (isWriting()) {
     // Truncate if we attempt to write too much.
     StringRef S = Value.take_front(maxFieldLength() - 1);
-    if (auto EC = Writer->writeZeroString(S))
+    if (auto EC = Writer->writeCString(S))
       return EC;
   } else {
-    if (auto EC = Reader->readZeroString(Value))
+    if (auto EC = Reader->readCString(Value))
       return EC;
   }
   return Error::success();
@@ -177,7 +176,7 @@ Error CodeViewRecordIO::mapStringZVectorZ(std::vector<StringRef> &Value) {
       if (auto EC = mapStringZ(V))
         return EC;
     }
-    if (auto EC = Writer->writeInteger<uint8_t>(0, llvm::support::little))
+    if (auto EC = Writer->writeInteger<uint8_t>(0))
       return EC;
   } else {
     StringRef S;
@@ -195,28 +194,24 @@ Error CodeViewRecordIO::mapStringZVectorZ(std::vector<StringRef> &Value) {
 Error CodeViewRecordIO::writeEncodedSignedInteger(const int64_t &Value) {
   assert(Value < 0 && "Encoded integer is not signed!");
   if (Value >= std::numeric_limits<int8_t>::min()) {
-    if (auto EC =
-            Writer->writeInteger<uint16_t>(LF_CHAR, llvm::support::little))
+    if (auto EC = Writer->writeInteger<uint16_t>(LF_CHAR))
       return EC;
-    if (auto EC = Writer->writeInteger<int8_t>(Value, llvm::support::little))
+    if (auto EC = Writer->writeInteger<int8_t>(Value))
       return EC;
   } else if (Value >= std::numeric_limits<int16_t>::min()) {
-    if (auto EC =
-            Writer->writeInteger<uint16_t>(LF_SHORT, llvm::support::little))
+    if (auto EC = Writer->writeInteger<uint16_t>(LF_SHORT))
       return EC;
-    if (auto EC = Writer->writeInteger<int16_t>(Value, llvm::support::little))
+    if (auto EC = Writer->writeInteger<int16_t>(Value))
       return EC;
   } else if (Value >= std::numeric_limits<int32_t>::min()) {
-    if (auto EC =
-            Writer->writeInteger<uint16_t>(LF_LONG, llvm::support::little))
+    if (auto EC = Writer->writeInteger<uint16_t>(LF_LONG))
       return EC;
-    if (auto EC = Writer->writeInteger<int32_t>(Value, llvm::support::little))
+    if (auto EC = Writer->writeInteger<int32_t>(Value))
       return EC;
   } else {
-    if (auto EC =
-            Writer->writeInteger<uint16_t>(LF_QUADWORD, llvm::support::little))
+    if (auto EC = Writer->writeInteger<uint16_t>(LF_QUADWORD))
       return EC;
-    if (auto EC = Writer->writeInteger(Value, llvm::support::little))
+    if (auto EC = Writer->writeInteger(Value))
       return EC;
   }
   return Error::success();
@@ -224,25 +219,22 @@ Error CodeViewRecordIO::writeEncodedSignedInteger(const int64_t &Value) {
 
 Error CodeViewRecordIO::writeEncodedUnsignedInteger(const uint64_t &Value) {
   if (Value < LF_NUMERIC) {
-    if (auto EC = Writer->writeInteger<uint16_t>(Value, llvm::support::little))
+    if (auto EC = Writer->writeInteger<uint16_t>(Value))
       return EC;
   } else if (Value <= std::numeric_limits<uint16_t>::max()) {
-    if (auto EC =
-            Writer->writeInteger<uint16_t>(LF_USHORT, llvm::support::little))
+    if (auto EC = Writer->writeInteger<uint16_t>(LF_USHORT))
       return EC;
-    if (auto EC = Writer->writeInteger<uint16_t>(Value, llvm::support::little))
+    if (auto EC = Writer->writeInteger<uint16_t>(Value))
       return EC;
   } else if (Value <= std::numeric_limits<uint32_t>::max()) {
-    if (auto EC =
-            Writer->writeInteger<uint16_t>(LF_ULONG, llvm::support::little))
+    if (auto EC = Writer->writeInteger<uint16_t>(LF_ULONG))
       return EC;
-    if (auto EC = Writer->writeInteger<uint32_t>(Value, llvm::support::little))
+    if (auto EC = Writer->writeInteger<uint32_t>(Value))
       return EC;
   } else {
-    if (auto EC =
-            Writer->writeInteger<uint16_t>(LF_UQUADWORD, llvm::support::little))
+    if (auto EC = Writer->writeInteger<uint16_t>(LF_UQUADWORD))
       return EC;
-    if (auto EC = Writer->writeInteger(Value, llvm::support::little))
+    if (auto EC = Writer->writeInteger(Value))
       return EC;
   }
 

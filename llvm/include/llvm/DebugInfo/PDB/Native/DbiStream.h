@@ -12,6 +12,8 @@
 
 #include "llvm/DebugInfo/CodeView/ModuleSubstream.h"
 #include "llvm/DebugInfo/MSF/BinaryStreamArray.h"
+#include "llvm/DebugInfo/MSF/BinaryStreamArray.h"
+#include "llvm/DebugInfo/MSF/BinaryStreamRef.h"
 #include "llvm/DebugInfo/MSF/BinaryStreamRef.h"
 #include "llvm/DebugInfo/MSF/MappedBlockStream.h"
 #include "llvm/DebugInfo/PDB/Native/ModInfo.h"
@@ -70,11 +72,11 @@ public:
 
   Expected<StringRef> getFileNameForIndex(uint32_t Index) const;
 
-  msf::FixedStreamArray<object::coff_section> getSectionHeaders();
+  FixedStreamArray<object::coff_section> getSectionHeaders();
 
-  msf::FixedStreamArray<object::FpoData> getFpoRecords();
+  FixedStreamArray<object::FpoData> getFpoRecords();
 
-  msf::FixedStreamArray<SecMapEntry> getSectionMap() const;
+  FixedStreamArray<SecMapEntry> getSectionMap() const;
   void visitSectionContributions(ISectionContribVisitor &Visitor) const;
 
 private:
@@ -91,28 +93,28 @@ private:
   std::vector<ModuleInfoEx> ModuleInfos;
   StringTable ECNames;
 
-  msf::ReadableStreamRef ModInfoSubstream;
-  msf::ReadableStreamRef SecContrSubstream;
-  msf::ReadableStreamRef SecMapSubstream;
-  msf::ReadableStreamRef FileInfoSubstream;
-  msf::ReadableStreamRef TypeServerMapSubstream;
-  msf::ReadableStreamRef ECSubstream;
+  BinaryStreamRef ModInfoSubstream;
+  BinaryStreamRef SecContrSubstream;
+  BinaryStreamRef SecMapSubstream;
+  BinaryStreamRef FileInfoSubstream;
+  BinaryStreamRef TypeServerMapSubstream;
+  BinaryStreamRef ECSubstream;
 
-  msf::ReadableStreamRef NamesBuffer;
+  BinaryStreamRef NamesBuffer;
 
-  msf::FixedStreamArray<support::ulittle16_t> DbgStreams;
+  FixedStreamArray<support::ulittle16_t> DbgStreams;
 
   PdbRaw_DbiSecContribVer SectionContribVersion;
-  msf::FixedStreamArray<SectionContrib> SectionContribs;
-  msf::FixedStreamArray<SectionContrib2> SectionContribs2;
-  msf::FixedStreamArray<SecMapEntry> SectionMap;
-  msf::FixedStreamArray<support::little32_t> FileNameOffsets;
+  FixedStreamArray<SectionContrib> SectionContribs;
+  FixedStreamArray<SectionContrib2> SectionContribs2;
+  FixedStreamArray<SecMapEntry> SectionMap;
+  FixedStreamArray<support::little32_t> FileNameOffsets;
 
   std::unique_ptr<msf::MappedBlockStream> SectionHeaderStream;
-  msf::FixedStreamArray<object::coff_section> SectionHeaders;
+  FixedStreamArray<object::coff_section> SectionHeaders;
 
   std::unique_ptr<msf::MappedBlockStream> FpoStream;
-  msf::FixedStreamArray<object::FpoData> FpoRecords;
+  FixedStreamArray<object::FpoData> FpoRecords;
 
   const DbiStreamHeader *Header;
 };

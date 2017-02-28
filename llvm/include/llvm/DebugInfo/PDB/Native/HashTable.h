@@ -42,10 +42,10 @@ public:
   HashTable();
   explicit HashTable(uint32_t Capacity);
 
-  Error load(msf::StreamReader &Stream);
+  Error load(BinaryStreamReader &Stream);
 
   uint32_t calculateSerializedLength() const;
-  Error commit(msf::StreamWriter &Writer) const;
+  Error commit(BinaryStreamWriter &Writer) const;
 
   void clear();
 
@@ -71,9 +71,9 @@ private:
   static uint32_t maxLoad(uint32_t capacity);
   void grow();
 
-  static Error readSparseBitVector(msf::StreamReader &Stream,
+  static Error readSparseBitVector(BinaryStreamReader &Stream,
                                    SparseBitVector<> &V);
-  static Error writeSparseBitVector(msf::StreamWriter &Writer,
+  static Error writeSparseBitVector(BinaryStreamWriter &Writer,
                                     SparseBitVector<> &Vec);
 };
 

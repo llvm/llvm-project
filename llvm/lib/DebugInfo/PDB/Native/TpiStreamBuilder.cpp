@@ -34,7 +34,8 @@ using namespace llvm::pdb;
 using namespace llvm::support;
 
 TpiStreamBuilder::TpiStreamBuilder(MSFBuilder &Msf, uint32_t StreamIdx)
-    : Msf(Msf), Allocator(Msf.getAllocator()), Header(nullptr), Idx(StreamIdx) {
+    : Msf(Msf), Allocator(Msf.getAllocator()),
+      TypeRecordStream(llvm::support::little), Header(nullptr), Idx(StreamIdx) {
 }
 
 TpiStreamBuilder::~TpiStreamBuilder() = default;
@@ -82,7 +83,7 @@ Error TpiStreamBuilder::finalize() {
   return Error::success();
 }
 
-uint32_t TpiStreamBuilder::calculateSerializedLength() const {
+uint32_t TpiStreamBuilder::calculateSerializedLength() {
   return sizeof(TpiStreamHeader) + TypeRecordStream.getLength();
 }
 
@@ -113,19 +114,20 @@ Error TpiStreamBuilder::finalizeMsfLayout() {
   }
   ArrayRef<uint8_t> Bytes(reinterpret_cast<const uint8_t *>(HashBuffer.data()),
                           HashBufferSize);
-  HashValueStream = llvm::make_unique<ByteStream>(Bytes);
+  HashValueStream =
+      llvm::make_unique<BinaryByteStream>(Bytes, llvm::support::little);
   return Error::success();
 }
 
 Error TpiStreamBuilder::commit(const msf::MSFLayout &Layout,
-                               const msf::WritableStream &Buffer) {
+                               WritableBinaryStreamRef Buffer) {
   if (auto EC = finalize())
     return EC;
 
   auto InfoS =
       WritableMappedBlockStream::createIndexedStream(Layout, Buffer, Idx);
 
-  StreamWriter Writer(*InfoS);
+  BinaryStreamWriter Writer(*InfoS);
   if (auto EC = Writer.writeObject(*Header))
     return EC;
 
@@ -136,7 +138,7 @@ Error TpiStreamBuilder::commit(const msf::MSFLayout &Layout,
   if (HashStreamIndex != kInvalidStreamIndex) {
     auto HVS = WritableMappedBlockStream::createIndexedStream(Layout, Buffer,
                                                               HashStreamIndex);
-    StreamWriter HW(*HVS);
+    BinaryStreamWriter HW(*HVS);
     if (auto EC = HW.writeStreamRef(*HashValueStream))
       return EC;
   }

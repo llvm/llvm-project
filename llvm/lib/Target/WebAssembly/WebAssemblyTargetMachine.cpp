@@ -280,7 +280,11 @@ void WebAssemblyPassConfig::addPreEmitPass() {
   // Insert explicit get_local and set_local operators.
   addPass(createWebAssemblyExplicitLocals());
 
-  // Put the CFG in structured form; insert BLOCK and LOOP markers.
+  // Sort the blocks of the CFG into topological order, a prerequisite for
+  // BLOCK and LOOP markers.
+  addPass(createWebAssemblyCFGSort());
+
+  // Insert BLOCK and LOOP markers.
   addPass(createWebAssemblyCFGStackify());
 
   // Lower br_unless into br_if.

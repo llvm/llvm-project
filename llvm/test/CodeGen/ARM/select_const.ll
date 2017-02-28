@@ -98,9 +98,8 @@ define i32 @select_0_or_neg1_signext(i1 signext %cond) {
 define i32 @select_0_or_neg1_alt(i1 %cond) {
 ; CHECK-LABEL: select_0_or_neg1_alt:
 ; CHECK:       @ BB#0:
-; CHECK-NEXT:    mov r1, #1
-; CHECK-NEXT:    bic r0, r1, r0
-; CHECK-NEXT:    rsb r0, r0, #0
+; CHECK-NEXT:    and r0, r0, #1
+; CHECK-NEXT:    sub r0, r0, #1
 ; CHECK-NEXT:    mov pc, lr
   %z = zext i1 %cond to i32
   %add = add i32 %z, -1
@@ -110,8 +109,7 @@ define i32 @select_0_or_neg1_alt(i1 %cond) {
 define i32 @select_0_or_neg1_alt_zeroext(i1 zeroext %cond) {
 ; CHECK-LABEL: select_0_or_neg1_alt_zeroext:
 ; CHECK:       @ BB#0:
-; CHECK-NEXT:    eor r0, r0, #1
-; CHECK-NEXT:    rsb r0, r0, #0
+; CHECK-NEXT:    sub r0, r0, #1
 ; CHECK-NEXT:    mov pc, lr
   %z = zext i1 %cond to i32
   %add = add i32 %z, -1

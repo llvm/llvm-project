@@ -157,6 +157,19 @@ inline match_combine_or<match_zero, match_neg_zero> m_AnyZero() {
   return m_CombineOr(m_Zero(), m_NegZero());
 }
 
+struct match_nan {
+  template <typename ITy> bool match(ITy *V) {
+    if (const auto *C = dyn_cast<ConstantFP>(V)) {
+      const APFloat &APF = C->getValueAPF();
+      return APF.isNaN();
+    }
+    return false;
+  }
+};
+
+/// Match an arbitrary NaN constant. This includes quiet and signalling nans.
+inline match_nan m_NaN() { return match_nan(); }
+
 struct apint_match {
   const APInt *&Res;
   apint_match(const APInt *&R) : Res(R) {}

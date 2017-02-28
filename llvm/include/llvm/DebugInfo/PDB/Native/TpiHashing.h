@@ -57,7 +57,7 @@ private:
 
 class TpiHashVerifier : public codeview::TypeVisitorCallbacks {
 public:
-  TpiHashVerifier(msf::FixedStreamArray<support::ulittle32_t> &HashValues,
+  TpiHashVerifier(FixedStreamArray<support::ulittle32_t> &HashValues,
                   uint32_t NumHashBuckets)
       : HashValues(HashValues), NumHashBuckets(NumHashBuckets) {}
 
@@ -83,7 +83,7 @@ private:
             utohexstr(codeview::TypeIndex::FirstNonSimpleIndex + Index));
   }
 
-  msf::FixedStreamArray<support::ulittle32_t> HashValues;
+  FixedStreamArray<support::ulittle32_t> HashValues;
   codeview::CVType RawRecord;
   uint32_t NumHashBuckets;
   uint32_t Index = -1;

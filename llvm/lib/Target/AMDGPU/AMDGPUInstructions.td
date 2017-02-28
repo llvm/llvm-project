@@ -75,6 +75,12 @@ def brtarget   : Operand<OtherVT>;
 // Misc. PatFrags
 //===----------------------------------------------------------------------===//
 
+class HasOneUseUnaryOp<SDPatternOperator op> : PatFrag<
+  (ops node:$src0),
+  (op $src0),
+  [{ return N->hasOneUse(); }]
+>;
+
 class HasOneUseBinOp<SDPatternOperator op> : PatFrag<
   (ops node:$src0, node:$src1),
   (op $src0, $src1),
@@ -87,6 +93,7 @@ class HasOneUseTernaryOp<SDPatternOperator op> : PatFrag<
   [{ return N->hasOneUse(); }]
 >;
 
+def trunc_oneuse : HasOneUseUnaryOp<trunc>;
 
 let Properties = [SDNPCommutative, SDNPAssociative] in {
 def smax_oneuse : HasOneUseBinOp<smax>;
@@ -101,6 +108,8 @@ def xor_oneuse : HasOneUseBinOp<xor>;
 } // Properties = [SDNPCommutative, SDNPAssociative]
 
 def sub_oneuse : HasOneUseBinOp<sub>;
+
+def srl_oneuse : HasOneUseBinOp<srl>;
 def shl_oneuse : HasOneUseBinOp<shl>;
 
 def select_oneuse : HasOneUseTernaryOp<select>;
@@ -440,6 +449,7 @@ int PI = 0x40490fdb;
 int TWO_PI_INV = 0x3e22f983;
 int FP_UINT_MAX_PLUS_1 = 0x4f800000;    // 1 << 32 in floating point encoding
 int FP16_ONE = 0x3C00;
+int V2FP16_ONE = 0x3C003C00;
 int FP32_ONE = 0x3f800000;
 int FP32_NEG_ONE = 0xbf800000;
 int FP64_ONE = 0x3ff0000000000000;
@@ -654,9 +664,10 @@ class ROTRPattern <Instruction BIT_ALIGN> : Pat <
 class IntMed3Pat<Instruction med3Inst,
                  SDPatternOperator max,
                  SDPatternOperator max_oneuse,
-                 SDPatternOperator min_oneuse> : Pat<
-  (max (min_oneuse i32:$src0, i32:$src1),
-       (min_oneuse (max_oneuse i32:$src0, i32:$src1), i32:$src2)),
+                 SDPatternOperator min_oneuse,
+                 ValueType vt = i32> : Pat<
+  (max (min_oneuse vt:$src0, vt:$src1),
+       (min_oneuse (max_oneuse vt:$src0, vt:$src1), vt:$src2)),
   (med3Inst $src0, $src1, $src2)
 >;
 

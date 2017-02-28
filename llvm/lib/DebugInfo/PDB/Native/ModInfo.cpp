@@ -16,7 +16,6 @@
 #include <cstdint>
 
 using namespace llvm;
-using namespace llvm::msf;
 using namespace llvm::pdb;
 using namespace llvm::support;
 
@@ -26,15 +25,15 @@ ModInfo::ModInfo(const ModInfo &Info) = default;
 
 ModInfo::~ModInfo() = default;
 
-Error ModInfo::initialize(ReadableStreamRef Stream, ModInfo &Info) {
-  StreamReader Reader(Stream);
+Error ModInfo::initialize(BinaryStreamRef Stream, ModInfo &Info) {
+  BinaryStreamReader Reader(Stream);
   if (auto EC = Reader.readObject(Info.Layout))
     return EC;
 
-  if (auto EC = Reader.readZeroString(Info.ModuleName))
+  if (auto EC = Reader.readCString(Info.ModuleName))
     return EC;
 
-  if (auto EC = Reader.readZeroString(Info.ObjFileName))
+  if (auto EC = Reader.readCString(Info.ObjFileName))
     return EC;
   return Error::success();
 }

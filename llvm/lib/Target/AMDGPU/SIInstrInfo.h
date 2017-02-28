@@ -69,6 +69,9 @@ private:
                             MachineInstr &Inst) const;
   void splitScalar64BitBFE(SmallVectorImpl<MachineInstr *> &Worklist,
                            MachineInstr &Inst) const;
+  void movePackToVALU(SmallVectorImpl<MachineInstr *> &Worklist,
+                      MachineRegisterInfo &MRI,
+                      MachineInstr &Inst) const;
 
   void addUsersToMoveToVALUWorklist(
     unsigned Reg, MachineRegisterInfo &MRI,
@@ -496,28 +499,6 @@ public:
     const MachineFunction &MF = *MI.getParent()->getParent();
     const MachineRegisterInfo &MRI = MF.getRegInfo();
     return !RI.isSGPRReg(MRI, Dest);
-  }
-
-  static int operandBitWidth(uint8_t OperandType) {
-    switch (OperandType) {
-    case AMDGPU::OPERAND_REG_IMM_INT32:
-    case AMDGPU::OPERAND_REG_IMM_FP32:
-    case AMDGPU::OPERAND_REG_INLINE_C_INT32:
-    case AMDGPU::OPERAND_REG_INLINE_C_FP32:
-      return 32;
-    case AMDGPU::OPERAND_REG_IMM_INT64:
-    case AMDGPU::OPERAND_REG_IMM_FP64:
-    case AMDGPU::OPERAND_REG_INLINE_C_INT64:
-    case AMDGPU::OPERAND_REG_INLINE_C_FP64:
-      return 64;
-    case AMDGPU::OPERAND_REG_INLINE_C_INT16:
-    case AMDGPU::OPERAND_REG_INLINE_C_FP16:
-    case AMDGPU::OPERAND_REG_IMM_INT16:
-    case AMDGPU::OPERAND_REG_IMM_FP16:
-      return 16;
-    default:
-      llvm_unreachable("unexpected operand type");
-    }
   }
 
   bool isInlineConstant(const APInt &Imm) const;

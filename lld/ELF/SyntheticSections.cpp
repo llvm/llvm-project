@@ -1308,29 +1308,24 @@ template <class ELFT> void SymbolTableSection<ELFT>::finalizeContents() {
   this->OutSec->Link = this->Link = StrTabSec.OutSec->SectionIndex;
   this->OutSec->Entsize = this->Entsize;
 
+  // Move all local symbols before global symbols.
+  size_t NumLocals = 0;
   if (!StrTabSec.isDynamic()) {
-    // All explictly added STB_LOCAL symbols without a Symbol are first
     auto It = std::stable_partition(
-        Symbols.begin(), Symbols.end(),
-        [](const SymbolTableEntry &S) { return S.Symbol->isLocal(); });
+        Symbols.begin(), Symbols.end(), [](const SymbolTableEntry &S) {
+          return S.Symbol->isLocal() ||
+                 S.Symbol->symbol()->computeBinding() == STB_LOCAL;
+        });
     NumLocals = It - Symbols.begin();
   }
-  this->OutSec->Info = this->Info = 1 + NumLocals;
 
-  if (Config->Relocatable)
-    return;
+  // Section's Info field has the index of the first non-local symbol.
+  // Because the first symbol entry is a null entry, +1 is needed.
+  this->Info = NumLocals + 1;
+  this->OutSec->Info = NumLocals + 1;
 
-  if (!StrTabSec.isDynamic()) {
-    auto GlobalBegin = Symbols.begin() + NumLocals;
-    auto It = std::stable_partition(
-        GlobalBegin, Symbols.end(), [](const SymbolTableEntry &S) {
-          return S.Symbol->symbol()->computeBinding() == STB_LOCAL;
-        });
-    // update sh_info with number of Global symbols output with computed
-    // binding of STB_LOCAL
-    this->OutSec->Info = this->Info = 1 + (It - Symbols.begin());
+  if (Config->Relocatable || !StrTabSec.isDynamic())
     return;
-  }
 
   if (In<ELFT>::GnuHashTab) {
     // NB: It also sorts Symbols to meet the GNU hash table requirements.
@@ -1370,85 +1365,64 @@ size_t SymbolTableSection<ELFT>::getSymbolIndex(SymbolBody *Body) {
   return I - Symbols.begin() + 1;
 }
 
+// Write the internal symbol table contents to the output symbol table.
 template <class ELFT> void SymbolTableSection<ELFT>::writeTo(uint8_t *Buf) {
+  // The first entry is a null entry as per the ELF spec.
   Buf += sizeof(Elf_Sym);
 
-  // All symbols with STB_LOCAL binding precede the weak and global symbols.
-  // .dynsym only contains global symbols.
-  if (Config->Discard != DiscardPolicy::All && !StrTabSec.isDynamic())
-    writeLocalSymbols(Buf);
-
-  writeGlobalSymbols(Buf);
-}
-
-template <class ELFT>
-void SymbolTableSection<ELFT>::writeLocalSymbols(uint8_t *&Buf) {
-  // Iterate over all input object files to copy their local symbols
-  // to the output symbol table pointed by Buf.
-
-  for (auto I = Symbols.begin(); I != Symbols.begin() + NumLocals; ++I) {
-    const DefinedRegular<ELFT> &Body = *cast<DefinedRegular<ELFT>>(I->Symbol);
-    InputSectionBase *Section = Body.Section;
-    auto *ESym = reinterpret_cast<Elf_Sym *>(Buf);
-
-    if (!Section) {
-      ESym->st_shndx = SHN_ABS;
-      ESym->st_value = Body.Value;
-    } else {
-      const OutputSection *OutSec = Section->getOutputSection<ELFT>();
-      ESym->st_shndx = OutSec->SectionIndex;
-      ESym->st_value = OutSec->Addr + Section->getOffset(Body);
-    }
-    ESym->st_name = I->StrTabOffset;
-    ESym->st_size = Body.template getSize<ELFT>();
-    ESym->setBindingAndType(STB_LOCAL, Body.Type);
-    Buf += sizeof(*ESym);
-  }
-}
-
-template <class ELFT>
-void SymbolTableSection<ELFT>::writeGlobalSymbols(uint8_t *Buf) {
-  // Write the internal symbol table contents to the output symbol table
-  // pointed by Buf.
   auto *ESym = reinterpret_cast<Elf_Sym *>(Buf);
 
-  for (auto I = Symbols.begin() + NumLocals; I != Symbols.end(); ++I) {
-    const SymbolTableEntry &S = *I;
-    SymbolBody *Body = S.Symbol;
-    size_t StrOff = S.StrTabOffset;
+  for (SymbolTableEntry &Ent : Symbols) {
+    SymbolBody *Body = Ent.Symbol;
 
-    uint8_t Type = Body->Type;
-    uintX_t Size = Body->getSize<ELFT>();
+    if (Body->isLocal()) {
+      ESym->setBindingAndType(STB_LOCAL, Body->Type);
+    } else {
+      ESym->setBindingAndType(Body->symbol()->computeBinding(), Body->Type);
+      ESym->setVisibility(Body->symbol()->Visibility);
+    }
 
-    ESym->setBindingAndType(Body->symbol()->computeBinding(), Type);
-    ESym->st_size = Size;
-    ESym->st_name = StrOff;
-    ESym->setVisibility(Body->symbol()->Visibility);
+    ESym->st_name = Ent.StrTabOffset;
+    ESym->st_size = Body->getSize<ELFT>();
     ESym->st_value = Body->getVA<ELFT>();
 
     if (const OutputSection *OutSec = getOutputSection(Body)) {
       ESym->st_shndx = OutSec->SectionIndex;
+
+      // This piece of code should go away as it doesn't make sense,
+      // but we want to keep it tentatively because some tests for TLS
+      // variable depends on this. We should fix the test and remove
+      // this code.
+      if (Body->isLocal())
+        if (auto *DS = dyn_cast<DefinedRegular<ELFT>>(Body))
+          ESym->st_value = OutSec->Addr + DS->Section->getOffset(*DS);
     } else if (isa<DefinedRegular<ELFT>>(Body)) {
       ESym->st_shndx = SHN_ABS;
     } else if (isa<DefinedCommon>(Body)) {
       ESym->st_shndx = SHN_COMMON;
       ESym->st_value = cast<DefinedCommon>(Body)->Alignment;
     }
+    ++ESym;
+  }
 
-    if (Config->EMachine == EM_MIPS) {
-      // On MIPS we need to mark symbol which has a PLT entry and requires
-      // pointer equality by STO_MIPS_PLT flag. That is necessary to help
-      // dynamic linker distinguish such symbols and MIPS lazy-binding stubs.
-      // https://sourceware.org/ml/binutils/2008-07/txt00000.txt
+  // On MIPS we need to mark symbol which has a PLT entry and requires
+  // pointer equality by STO_MIPS_PLT flag. That is necessary to help
+  // dynamic linker distinguish such symbols and MIPS lazy-binding stubs.
+  // https://sourceware.org/ml/binutils/2008-07/txt00000.txt
+  if (Config->EMachine == EM_MIPS) {
+    auto *ESym = reinterpret_cast<Elf_Sym *>(Buf);
+
+    for (SymbolTableEntry &Ent : Symbols) {
+      SymbolBody *Body = Ent.Symbol;
       if (Body->isInPlt() && Body->NeedsPltAddr)
         ESym->st_other |= STO_MIPS_PLT;
-      if (Config->Relocatable) {
-        auto *D = dyn_cast<DefinedRegular<ELFT>>(Body);
-        if (D && D->isMipsPIC())
-          ESym->st_other |= STO_MIPS_PIC;
-      }
+
+      if (Config->Relocatable)
+        if (auto *D = dyn_cast<DefinedRegular<ELFT>>(Body))
+          if (D->isMipsPIC())
+            ESym->st_other |= STO_MIPS_PIC;
+      ++ESym;
     }
-    ++ESym;
   }
 }
 

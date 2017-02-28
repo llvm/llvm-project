@@ -1,4 +1,4 @@
-//===-- DWARFFormValue.cpp ------------------------------------------------===//
+//===- DWARFFormValue.cpp -------------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -9,16 +9,21 @@
 
 #include "SyntaxHighlighting.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/None.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/DebugInfo/DWARF/DWARFCompileUnit.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
-#include "llvm/Support/Debug.h"
+#include "llvm/DebugInfo/DWARF/DWARFRelocMap.h"
+#include "llvm/DebugInfo/DWARF/DWARFUnit.h"
 #include "llvm/Support/Dwarf.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
-#include <cassert>
+#include <cinttypes>
+#include <cstdint>
 #include <limits>
+
 using namespace llvm;
 using namespace dwarf;
 using namespace syntax;
@@ -66,13 +71,16 @@ class FormSizeHelper {
 
 public:
   FormSizeHelper(uint16_t V, uint8_t A, llvm::dwarf::DwarfFormat F)
-  : Version(V), AddrSize(A), Format(F) {}
+      : Version(V), AddrSize(A), Format(F) {}
+
   uint8_t getAddressByteSize() const { return AddrSize; }
+
   uint8_t getRefAddrByteSize() const {
     if (Version == 2)
       return AddrSize;
     return getDwarfOffsetByteSize();
   }
+
   uint8_t getDwarfOffsetByteSize() const {
     switch (Format) {
       case dwarf::DwarfFormat::DWARF32:
@@ -497,21 +505,18 @@ DWARFFormValue::dump(raw_ostream &OS) const {
 
   case DW_FORM_sdata:     OS << Value.sval; break;
   case DW_FORM_udata:     OS << Value.uval; break;
-  case DW_FORM_strp: {
+  case DW_FORM_strp:
     OS << format(" .debug_str[0x%8.8x] = ", (uint32_t)uvalue);
     dumpString(OS);
     break;
-  }
-  case DW_FORM_GNU_str_index: {
+  case DW_FORM_GNU_str_index:
     OS << format(" indexed (%8.8x) string = ", (uint32_t)uvalue);
     dumpString(OS);
     break;
-  }
-  case DW_FORM_GNU_strp_alt: {
+  case DW_FORM_GNU_strp_alt:
     OS << format("alt indirect string, offset: 0x%" PRIx64 "", uvalue);
     dumpString(OS);
     break;
-  }
   case DW_FORM_ref_addr:
     OS << format("0x%016" PRIx64, uvalue);
     break;
@@ -676,4 +681,3 @@ Optional<uint64_t> DWARFFormValue::getAsReferenceUVal() const {
     return None;
   return Value.uval;
 }
-

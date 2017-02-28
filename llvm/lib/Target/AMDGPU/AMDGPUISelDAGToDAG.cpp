@@ -159,6 +159,10 @@ private:
                                  SDValue &Clamp,
                                  SDValue &Omod) const;
 
+  bool SelectVOP3PMods(SDValue In, SDValue &Src, SDValue &SrcMods) const;
+  bool SelectVOP3PMods0(SDValue In, SDValue &Src, SDValue &SrcMods,
+                        SDValue &Clamp) const;
+
   void SelectADD_SUB_I64(SDNode *N);
   void SelectUADDO_USUBO(SDNode *N);
   void SelectDIV_SCALE(SDNode *N);
@@ -305,6 +309,20 @@ static unsigned selectSGPRVectorRegClassID(unsigned NumVectorElts) {
   llvm_unreachable("invalid vector size");
 }
 
+static bool getConstantValue(SDValue N, uint32_t &Out) {
+  if (const ConstantSDNode *C = dyn_cast<ConstantSDNode>(N)) {
+    Out = C->getAPIntValue().getZExtValue();
+    return true;
+  }
+
+  if (const ConstantFPSDNode *C = dyn_cast<ConstantFPSDNode>(N)) {
+    Out = C->getValueAPF().bitcastToAPInt().getZExtValue();
+    return true;
+  }
+
+  return false;
+}
+
 void AMDGPUDAGToDAGISel::Select(SDNode *N) {
   unsigned int Opc = N->getOpcode();
   if (N->isMachineOpcode()) {
@@ -356,7 +374,24 @@ void AMDGPUDAGToDAGISel::Select(SDNode *N) {
     EVT VT = N->getValueType(0);
     unsigned NumVectorElts = VT.getVectorNumElements();
     EVT EltVT = VT.getVectorElementType();
+
+    if (VT == MVT::v2i16 || VT == MVT::v2f16) {
+      if (Opc == ISD::BUILD_VECTOR) {
+        uint32_t LHSVal, RHSVal;
+        if (getConstantValue(N->getOperand(0), LHSVal) &&
+            getConstantValue(N->getOperand(1), RHSVal)) {
+          uint32_t K = LHSVal | (RHSVal << 16);
+          CurDAG->SelectNodeTo(N, AMDGPU::S_MOV_B32, VT,
+                               CurDAG->getTargetConstant(K, SDLoc(N), MVT::i32));
+          return;
+        }
+      }
+
+      break;
+    }
+
     assert(EltVT.bitsEq(MVT::i32));
+
     if (Subtarget->getGeneration() >= AMDGPUSubtarget::SOUTHERN_ISLANDS) {
       RegClassID = selectSGPRVectorRegClassID(NumVectorElts);
     } else {
@@ -1565,7 +1600,6 @@ void AMDGPUDAGToDAGISel::SelectATOMIC_CMP_SWAP(SDNode *N) {
 bool AMDGPUDAGToDAGISel::SelectVOP3Mods(SDValue In, SDValue &Src,
                                         SDValue &SrcMods) const {
   unsigned Mods = 0;
-
   Src = In;
 
   if (Src.getOpcode() == ISD::FNEG) {
@@ -1579,7 +1613,6 @@ bool AMDGPUDAGToDAGISel::SelectVOP3Mods(SDValue In, SDValue &Src,
   }
 
   SrcMods = CurDAG->getTargetConstant(Mods, SDLoc(In), MVT::i32);
-
   return true;
 }
 
@@ -1631,6 +1664,38 @@ bool AMDGPUDAGToDAGISel::SelectVOP3Mods0Clamp0OMod(SDValue In, SDValue &Src,
                                                    SDValue &Omod) const {
   Clamp = Omod = CurDAG->getTargetConstant(0, SDLoc(In), MVT::i32);
   return SelectVOP3Mods(In, Src, SrcMods);
+}
+
+bool AMDGPUDAGToDAGISel::SelectVOP3PMods(SDValue In, SDValue &Src,
+                                         SDValue &SrcMods) const {
+  unsigned Mods = 0;
+  Src = In;
+
+  // FIXME: Look for on separate components
+  if (Src.getOpcode() == ISD::FNEG) {
+    Mods |= (SISrcMods::NEG | SISrcMods::NEG_HI);
+    Src = Src.getOperand(0);
+  }
+
+  // Packed instructions do not have abs modifiers.
+
+  // FIXME: Handle abs/neg of individual components.
+  // FIXME: Handle swizzling with op_sel
+  Mods |= SISrcMods::OP_SEL_1;
+
+  SrcMods = CurDAG->getTargetConstant(Mods, SDLoc(In), MVT::i32);
+  return true;
+}
+
+bool AMDGPUDAGToDAGISel::SelectVOP3PMods0(SDValue In, SDValue &Src,
+                                          SDValue &SrcMods,
+                                          SDValue &Clamp) const {
+  SDLoc SL(In);
+
+  // FIXME: Handle clamp and op_sel
+  Clamp = CurDAG->getTargetConstant(0, SL, MVT::i32);
+
+  return SelectVOP3PMods(In, Src, SrcMods);
 }
 
 void AMDGPUDAGToDAGISel::PostprocessISelDAG() {

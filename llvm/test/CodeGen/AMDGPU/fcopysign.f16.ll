@@ -1,5 +1,6 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=FUNC -check-prefix=GCN -check-prefix=SI %s
-; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=FUNC -check-prefix=GCN -check-prefix=VI %s
+; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=SI %s
+; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VI %s
+; RUN: llc -march=amdgcn -mcpu=gfx901 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VI %s
 
 declare half @llvm.copysign.f16(half, half)
 declare float @llvm.copysign.f32(float, float)
@@ -8,7 +9,7 @@ declare <2 x half> @llvm.copysign.v2f16(<2 x half>, <2 x half>)
 declare <3 x half> @llvm.copysign.v3f16(<3 x half>, <3 x half>)
 declare <4 x half> @llvm.copysign.v4f16(<4 x half>, <4 x half>)
 
-; FUNC-LABEL: {{^}}test_copysign_f16:
+; GCN-LABEL: {{^}}test_copysign_f16:
 ; SI: buffer_load_ushort v[[MAG:[0-9]+]]
 ; SI: buffer_load_ushort v[[SIGN:[0-9]+]]
 ; SI: s_brev_b32 s[[CONST:[0-9]+]], -2
@@ -34,7 +35,7 @@ entry:
   ret void
 }
 
-; FUNC-LABEL: {{^}}test_copysign_out_f32_mag_f16_sign_f32:
+; GCN-LABEL: {{^}}test_copysign_out_f32_mag_f16_sign_f32:
 ; GCN-DAG: buffer_load_ushort v[[MAG:[0-9]+]]
 ; GCN-DAG: buffer_load_dword v[[SIGN:[0-9]+]]
 ; GCN-DAG: s_brev_b32 s[[CONST:[0-9]+]], -2
@@ -55,7 +56,7 @@ entry:
   ret void
 }
 
-; FUNC-LABEL: {{^}}test_copysign_out_f64_mag_f16_sign_f64:
+; GCN-LABEL: {{^}}test_copysign_out_f64_mag_f16_sign_f64:
 ; GCN-DAG: buffer_load_ushort v[[MAG:[0-9]+]]
 ; GCN-DAG: buffer_load_dwordx2 v{{\[}}[[SIGN_LO:[0-9]+]]:[[SIGN_HI:[0-9]+]]{{\]}}
 ; GCN-DAG: s_brev_b32 s[[CONST:[0-9]+]], -2
@@ -77,7 +78,7 @@ entry:
   ret void
 }
 
-; FUNC-LABEL: {{^}}test_copysign_out_f32_mag_f32_sign_f16:
+; GCN-LABEL: {{^}}test_copysign_out_f32_mag_f32_sign_f16:
 ; GCN-DAG: buffer_load_dword v[[MAG:[0-9]+]]
 ; GCN-DAG: buffer_load_ushort v[[SIGN:[0-9]+]]
 ; GCN-DAG: s_brev_b32 s[[CONST:[0-9]+]], -2
@@ -100,7 +101,7 @@ entry:
   ret void
 }
 
-; FUNC-LABEL: {{^}}test_copysign_out_f64_mag_f64_sign_f16:
+; GCN-LABEL: {{^}}test_copysign_out_f64_mag_f64_sign_f16:
 ; GCN-DAG: buffer_load_dwordx2 v{{\[}}[[MAG_LO:[0-9]+]]:[[MAG_HI:[0-9]+]]{{\]}}
 ; GCN-DAG: buffer_load_ushort v[[SIGN:[0-9]+]]
 ; GCN-DAG: s_brev_b32 s[[CONST:[0-9]+]], -2
@@ -123,7 +124,7 @@ entry:
   ret void
 }
 
-; FUNC-LABEL: {{^}}test_copysign_out_f16_mag_f16_sign_f32:
+; GCN-LABEL: {{^}}test_copysign_out_f16_mag_f16_sign_f32:
 ; GCN-DAG: buffer_load_ushort v[[MAG:[0-9]+]]
 ; GCN-DAG: buffer_load_dword v[[SIGN:[0-9]+]]
 ; SI-DAG: s_brev_b32 s[[CONST:[0-9]+]], -2
@@ -148,7 +149,7 @@ entry:
   ret void
 }
 
-; FUNC-LABEL: {{^}}test_copysign_out_f16_mag_f16_sign_f64:
+; GCN-LABEL: {{^}}test_copysign_out_f16_mag_f16_sign_f64:
 ; GCN-DAG: buffer_load_ushort v[[MAG:[0-9]+]]
 ; GCN-DAG: buffer_load_dwordx2 v{{\[}}[[SIGN_LO:[0-9]+]]:[[SIGN_HI:[0-9]+]]{{\]}}
 ; SI-DAG: s_brev_b32 s[[CONST:[0-9]+]], -2
@@ -173,7 +174,7 @@ entry:
   ret void
 }
 
-; FUNC-LABEL: {{^}}test_copysign_out_f16_mag_f32_sign_f16:
+; GCN-LABEL: {{^}}test_copysign_out_f16_mag_f32_sign_f16:
 ; GCN-DAG: buffer_load_dword v[[MAG:[0-9]+]]
 ; GCN-DAG: buffer_load_ushort v[[SIGN:[0-9]+]]
 ; SI-DAG: s_brev_b32 s[[CONST:[0-9]+]], -2
@@ -200,7 +201,7 @@ entry:
   ret void
 }
 
-; FUNC-LABEL: {{^}}test_copysign_out_f16_mag_f64_sign_f16:
+; GCN-LABEL: {{^}}test_copysign_out_f16_mag_f64_sign_f16:
 ; GCN: v_bfi_b32
 ; GCN: s_endpgm
 define void @test_copysign_out_f16_mag_f64_sign_f16(
@@ -216,7 +217,7 @@ entry:
   ret void
 }
 
-; FUNC-LABEL: {{^}}test_copysign_v2f16:
+; GCN-LABEL: {{^}}test_copysign_v2f16:
 ; GCN: v_bfi_b32
 ; GCN: v_bfi_b32
 ; GCN: s_endpgm
@@ -230,7 +231,7 @@ entry:
   ret void
 }
 
-; FUNC-LABEL: {{^}}test_copysign_v3f16:
+; GCN-LABEL: {{^}}test_copysign_v3f16:
 ; GCN: v_bfi_b32
 ; GCN: v_bfi_b32
 ; GCN: v_bfi_b32
@@ -245,7 +246,7 @@ entry:
   ret void
 }
 
-; FUNC-LABEL: {{^}}test_copysign_v4f16:
+; GCN-LABEL: {{^}}test_copysign_v4f16:
 ; GCN: v_bfi_b32
 ; GCN: v_bfi_b32
 ; GCN: v_bfi_b32
