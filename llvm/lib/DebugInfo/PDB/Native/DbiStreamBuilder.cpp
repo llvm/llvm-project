@@ -153,7 +153,8 @@ Error DbiStreamBuilder::generateModiSubstream() {
   uint32_t Size = calculateModiSubstreamSize();
   auto Data = Allocator.Allocate<uint8_t>(Size);
 
-  ModInfoBuffer = MutableBinaryByteStream(MutableArrayRef<uint8_t>(Data, Size));
+  ModInfoBuffer = MutableBinaryByteStream(MutableArrayRef<uint8_t>(Data, Size),
+                                          llvm::support::little);
 
   BinaryStreamWriter ModiWriter(ModInfoBuffer);
   for (const auto &M : ModuleInfoList) {
@@ -179,8 +180,8 @@ Error DbiStreamBuilder::generateFileInfoSubstream() {
   auto Data = Allocator.Allocate<uint8_t>(Size);
   uint32_t NamesOffset = Size - NameSize;
 
-  FileInfoBuffer =
-      MutableBinaryByteStream(MutableArrayRef<uint8_t>(Data, Size));
+  FileInfoBuffer = MutableBinaryByteStream(MutableArrayRef<uint8_t>(Data, Size),
+                                           llvm::support::little);
 
   WritableBinaryStreamRef MetadataBuffer =
       WritableBinaryStreamRef(FileInfoBuffer).keep_front(NamesOffset);
@@ -188,21 +189,17 @@ Error DbiStreamBuilder::generateFileInfoSubstream() {
 
   uint16_t ModiCount = std::min<uint32_t>(UINT16_MAX, ModuleInfos.size());
   uint16_t FileCount = std::min<uint32_t>(UINT16_MAX, SourceFileNames.size());
-  if (auto EC = MetadataWriter.writeInteger(
-          ModiCount, llvm::support::little)) // NumModules
+  if (auto EC = MetadataWriter.writeInteger(ModiCount)) // NumModules
     return EC;
-  if (auto EC = MetadataWriter.writeInteger(
-          FileCount, llvm::support::little)) // NumSourceFiles
+  if (auto EC = MetadataWriter.writeInteger(FileCount)) // NumSourceFiles
     return EC;
   for (uint16_t I = 0; I < ModiCount; ++I) {
-    if (auto EC = MetadataWriter.writeInteger(
-            I, llvm::support::little)) // Mod Indices
+    if (auto EC = MetadataWriter.writeInteger(I)) // Mod Indices
       return EC;
   }
   for (const auto MI : ModuleInfoList) {
     FileCount = static_cast<uint16_t>(MI->SourceFiles.size());
-    if (auto EC = MetadataWriter.writeInteger(
-            FileCount, llvm::support::little)) // Mod File Counts
+    if (auto EC = MetadataWriter.writeInteger(FileCount)) // Mod File Counts
       return EC;
   }
 
@@ -224,8 +221,7 @@ Error DbiStreamBuilder::generateFileInfoSubstream() {
       if (Result == SourceFileNames.end())
         return make_error<RawError>(raw_error_code::no_entry,
                                     "The source file was not found.");
-      if (auto EC = MetadataWriter.writeInteger(Result->second,
-                                                llvm::support::little))
+      if (auto EC = MetadataWriter.writeInteger(Result->second))
         return EC;
     }
   }
@@ -379,7 +375,7 @@ Error DbiStreamBuilder::commit(const msf::MSFLayout &Layout,
     return EC;
 
   if (!SectionContribs.empty()) {
-    if (auto EC = Writer.writeEnum(DbiSecContribVer60, llvm::support::little))
+    if (auto EC = Writer.writeEnum(DbiSecContribVer60))
       return EC;
     if (auto EC = Writer.writeArray(SectionContribs))
       return EC;
@@ -398,16 +394,15 @@ Error DbiStreamBuilder::commit(const msf::MSFLayout &Layout,
     return EC;
 
   for (auto &Stream : DbgStreams)
-    if (auto EC =
-            Writer.writeInteger(Stream.StreamNumber, llvm::support::little))
+    if (auto EC = Writer.writeInteger(Stream.StreamNumber))
       return EC;
 
   for (auto &Stream : DbgStreams) {
     if (Stream.StreamNumber == kInvalidStreamIndex)
       continue;
-    auto WritableBinaryStream = WritableMappedBlockStream::createIndexedStream(
+    auto WritableStream = WritableMappedBlockStream::createIndexedStream(
         Layout, Buffer, Stream.StreamNumber);
-    BinaryStreamWriter DbgStreamWriter(*WritableBinaryStream);
+    BinaryStreamWriter DbgStreamWriter(*WritableStream);
     if (auto EC = DbgStreamWriter.writeArray(Stream.Data))
       return EC;
   }

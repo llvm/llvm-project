@@ -23,6 +23,7 @@
 
 using namespace llvm;
 using namespace llvm::msf;
+using namespace llvm::support;
 
 namespace {
 
@@ -36,6 +37,8 @@ public:
 
   uint32_t block_size() const { return 1; }
   uint32_t block_count() const { return Blocks.size(); }
+
+  endianness getEndian() const override { return little; }
 
   Error readBytes(uint32_t Offset, uint32_t Size,
                   ArrayRef<uint8_t> &Buffer) override {
@@ -326,8 +329,8 @@ TEST(MappedBlockStreamTest, TestWriteThenRead) {
 
   BinaryStreamReader Reader(*S);
   BinaryStreamWriter Writer(*S);
-  EXPECT_NO_ERROR(Writer.writeInteger(u16[0], llvm::support::little));
-  EXPECT_NO_ERROR(Reader.readInteger(u16[1], llvm::support::little));
+  EXPECT_NO_ERROR(Writer.writeInteger(u16[0]));
+  EXPECT_NO_ERROR(Reader.readInteger(u16[1]));
   EXPECT_EQ(u16[0], u16[1]);
   EXPECT_EQ(std::vector<uint8_t>({0, 0x7A, 0xEC, 0, 0, 0, 0, 0, 0, 0}),
             DataBytes);
@@ -335,8 +338,8 @@ TEST(MappedBlockStreamTest, TestWriteThenRead) {
   Reader.setOffset(0);
   Writer.setOffset(0);
   ::memset(DataBytes.data(), 0, 10);
-  EXPECT_NO_ERROR(Writer.writeInteger(u32[0], llvm::support::little));
-  EXPECT_NO_ERROR(Reader.readInteger(u32[1], llvm::support::little));
+  EXPECT_NO_ERROR(Writer.writeInteger(u32[0]));
+  EXPECT_NO_ERROR(Reader.readInteger(u32[1]));
   EXPECT_EQ(u32[0], u32[1]);
   EXPECT_EQ(std::vector<uint8_t>({0x17, 0x5C, 0x50, 0, 0, 0, 0x35, 0, 0, 0}),
             DataBytes);
@@ -344,8 +347,8 @@ TEST(MappedBlockStreamTest, TestWriteThenRead) {
   Reader.setOffset(0);
   Writer.setOffset(0);
   ::memset(DataBytes.data(), 0, 10);
-  EXPECT_NO_ERROR(Writer.writeEnum(Enum[0], llvm::support::little));
-  EXPECT_NO_ERROR(Reader.readEnum(Enum[1], llvm::support::little));
+  EXPECT_NO_ERROR(Writer.writeEnum(Enum[0]));
+  EXPECT_NO_ERROR(Reader.readEnum(Enum[1]));
   EXPECT_EQ(Enum[0], Enum[1]);
   EXPECT_EQ(std::vector<uint8_t>({0x2C, 0x60, 0x4A, 0, 0, 0, 0, 0, 0, 0}),
             DataBytes);
@@ -400,7 +403,7 @@ TEST(MappedBlockStreamTest, TestWriteContiguousStreamRef) {
       F.block_size(), F.block_count(), F.layout(), F);
 
   // First write "Test Str" into the source stream.
-  MutableBinaryByteStream SourceStream(SrcData);
+  MutableBinaryByteStream SourceStream(SrcData, little);
   BinaryStreamWriter SourceWriter(SourceStream);
   EXPECT_NO_ERROR(SourceWriter.writeCString("Test Str"));
   EXPECT_EQ(SrcDataBytes, std::vector<uint8_t>(

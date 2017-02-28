@@ -93,7 +93,7 @@ static std::vector<uint8_t> mergeDebugT(SymbolTable *Symtab) {
     if (Data.empty())
       continue;
 
-    BinaryByteStream Stream(Data);
+    BinaryByteStream Stream(Data, llvm::support::little);
     codeview::CVTypeArray Types;
     BinaryStreamReader Reader(Stream);
     // Follow type servers.  If the same type server is encountered more than
@@ -137,7 +137,7 @@ static void dumpDebugS(ScopedPrinter &W, ObjectFile *File) {
   if (Data.empty())
     return;
 
-  BinaryByteStream Stream(Data);
+  BinaryByteStream Stream(Data, llvm::support::little);
   CVSymbolArray Symbols;
   BinaryStreamReader Reader(Stream);
   if (auto EC = Reader.readArray(Symbols, Reader.getLength()))
@@ -161,7 +161,7 @@ static void dumpCodeView(SymbolTable *Symtab) {
 
 static void addTypeInfo(pdb::TpiStreamBuilder &TpiBuilder,
                         ArrayRef<uint8_t> Data) {
-  BinaryByteStream Stream(Data);
+  BinaryByteStream Stream(Data, llvm::support::little);
   codeview::CVTypeArray Records;
   BinaryStreamReader Reader(Stream);
   if (auto EC = Reader.readArray(Records, Reader.getLength()))

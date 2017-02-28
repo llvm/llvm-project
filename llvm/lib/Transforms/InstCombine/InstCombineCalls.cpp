@@ -1533,6 +1533,27 @@ static bool simplifyX86MaskedStore(IntrinsicInst &II, InstCombiner &IC) {
   return true;
 }
 
+// Constant fold llvm.amdgcn.fmed3 intrinsics for standard inputs.
+//
+// A single NaN input is folded to minnum, so we rely on that folding for
+// handling NaNs.
+static APFloat fmed3AMDGCN(const APFloat &Src0, const APFloat &Src1,
+                           const APFloat &Src2) {
+  APFloat Max3 = maxnum(maxnum(Src0, Src1), Src2);
+
+  APFloat::cmpResult Cmp0 = Max3.compare(Src0);
+  assert(Cmp0 != APFloat::cmpUnordered && "nans handled separately");
+  if (Cmp0 == APFloat::cmpEqual)
+    return maxnum(Src1, Src2);
+
+  APFloat::cmpResult Cmp1 = Max3.compare(Src1);
+  assert(Cmp1 != APFloat::cmpUnordered && "nans handled separately");
+  if (Cmp1 == APFloat::cmpEqual)
+    return maxnum(Src0, Src2);
+
+  return maxnum(Src0, Src1);
+}
+
 // Returns true iff the 2 intrinsics have the same operands, limiting the
 // comparison to the first NumOperands.
 static bool haveSameOperands(const IntrinsicInst &I, const IntrinsicInst &E,
@@ -3329,6 +3350,61 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
 
     if (Changed)
       return II;
+
+    break;
+
+  }
+  case Intrinsic::amdgcn_fmed3: {
+    // Note this does not preserve proper sNaN behavior if IEEE-mode is enabled
+    // for the shader.
+
+    Value *Src0 = II->getArgOperand(0);
+    Value *Src1 = II->getArgOperand(1);
+    Value *Src2 = II->getArgOperand(2);
+
+    bool Swap = false;
+    // Canonicalize constants to RHS operands.
+    //
+    // fmed3(c0, x, c1) -> fmed3(x, c0, c1)
+    if (isa<Constant>(Src0) && !isa<Constant>(Src1)) {
+      std::swap(Src0, Src1);
+      Swap = true;
+    }
+
+    if (isa<Constant>(Src1) && !isa<Constant>(Src2)) {
+      std::swap(Src1, Src2);
+      Swap = true;
+    }
+
+    if (isa<Constant>(Src0) && !isa<Constant>(Src1)) {
+      std::swap(Src0, Src1);
+      Swap = true;
+    }
+
+    if (Swap) {
+      II->setArgOperand(0, Src0);
+      II->setArgOperand(1, Src1);
+      II->setArgOperand(2, Src2);
+      return II;
+    }
+
+    if (match(Src2, m_NaN()) || isa<UndefValue>(Src2)) {
+      CallInst *NewCall = Builder->CreateMinNum(Src0, Src1);
+      NewCall->copyFastMathFlags(II);
+      NewCall->takeName(II);
+      return replaceInstUsesWith(*II, NewCall);
+    }
+
+    if (const ConstantFP *C0 = dyn_cast<ConstantFP>(Src0)) {
+      if (const ConstantFP *C1 = dyn_cast<ConstantFP>(Src1)) {
+        if (const ConstantFP *C2 = dyn_cast<ConstantFP>(Src2)) {
+          APFloat Result = fmed3AMDGCN(C0->getValueAPF(), C1->getValueAPF(),
+                                       C2->getValueAPF());
+          return replaceInstUsesWith(*II,
+            ConstantFP::get(Builder->getContext(), Result));
+        }
+      }
+    }
 
     break;
   }

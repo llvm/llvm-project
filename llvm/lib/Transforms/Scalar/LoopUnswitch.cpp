@@ -1332,13 +1332,11 @@ void LoopUnswitch::RewriteLoopBodyWithConditionConstant(Loop *L, Value *LIC,
         // dead by replacing all its users and push it onto the worklist so that
         // it can be properly deleted and its operands simplified. 
         UI->replaceAllUsesWith(Replacement);
-        Worklist.push_back(UI);
-        continue;
       }
     }
 
-    // Unable to simplify with non-valueness, push it into the worklist so that
-    // SimplifyCode can attempt to simplify it.
+    // This is a LIC user, push it into the worklist so that SimplifyCode can
+    // attempt to simplify it.
     Worklist.push_back(UI);
 
     // If we know that LIC is not Val, use this info to simplify code.

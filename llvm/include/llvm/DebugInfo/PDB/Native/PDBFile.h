@@ -11,8 +11,7 @@
 #define LLVM_DEBUGINFO_PDB_RAW_PDBFILE_H
 
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/DebugInfo/MSF/BinaryStream.h"
-#include "llvm/DebugInfo/MSF/BinaryStreamArray.h"
+#include "llvm/DebugInfo/MSF/BinaryStreamRef.h"
 #include "llvm/DebugInfo/MSF/IMSFFile.h"
 #include "llvm/DebugInfo/MSF/MSFCommon.h"
 #include "llvm/Support/Allocator.h"
@@ -23,6 +22,8 @@
 #include <memory>
 
 namespace llvm {
+
+class BinaryStream;
 
 namespace msf {
 class MappedBlockStream;

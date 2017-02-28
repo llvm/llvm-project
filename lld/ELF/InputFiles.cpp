@@ -744,6 +744,7 @@ static uint8_t getBitcodeMachineKind(MemoryBufferRef MB) {
   case Triple::aarch64:
     return EM_AARCH64;
   case Triple::arm:
+  case Triple::thumb:
     return EM_ARM;
   case Triple::mips:
   case Triple::mipsel:

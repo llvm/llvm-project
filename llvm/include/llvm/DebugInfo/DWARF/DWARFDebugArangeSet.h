@@ -1,4 +1,4 @@
-//===-- DWARFDebugArangeSet.h -----------------------------------*- C++ -*-===//
+//===- DWARFDebugArangeSet.h ------------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,11 +7,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_DEBUGINFO_DWARFDEBUGARANGESET_H
-#define LLVM_LIB_DEBUGINFO_DWARFDEBUGARANGESET_H
+#ifndef LLVM_DEBUGINFO_DWARFDEBUGARANGESET_H
+#define LLVM_DEBUGINFO_DWARFDEBUGARANGESET_H
 
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/DataExtractor.h"
+#include <cstdint>
 #include <vector>
 
 namespace llvm {
@@ -40,6 +41,7 @@ public:
   struct Descriptor {
     uint64_t Address;
     uint64_t Length;
+
     uint64_t getEndAddress() const { return Address + Length; }
   };
 
@@ -53,6 +55,7 @@ private:
 
 public:
   DWARFDebugArangeSet() { clear(); }
+
   void clear();
   bool extract(DataExtractor data, uint32_t *offset_ptr);
   void dump(raw_ostream &OS) const;
@@ -67,6 +70,6 @@ public:
   }
 };
 
-}
+} // end namespace llvm
 
-#endif
+#endif // LLVM_DEBUGINFO_DWARFDEBUGARANGESET_H

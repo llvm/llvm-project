@@ -182,7 +182,7 @@ Error CVTypeVisitor::visitFieldListMemberStream(BinaryStreamReader Reader) {
 
   TypeLeafKind Leaf;
   while (!Reader.empty()) {
-    if (auto EC = Reader.readEnum(Leaf, llvm::support::little))
+    if (auto EC = Reader.readEnum(Leaf))
       return EC;
 
     CVMemberRecord Record;
@@ -195,7 +195,7 @@ Error CVTypeVisitor::visitFieldListMemberStream(BinaryStreamReader Reader) {
 }
 
 Error CVTypeVisitor::visitFieldListMemberStream(ArrayRef<uint8_t> Data) {
-  BinaryByteStream S(Data);
+  BinaryByteStream S(Data, llvm::support::little);
   BinaryStreamReader SR(S);
   return visitFieldListMemberStream(SR);
 }

@@ -408,34 +408,24 @@ struct SymbolTableEntry {
 
 template <class ELFT> class SymbolTableSection final : public SyntheticSection {
 public:
-  typedef typename ELFT::Shdr Elf_Shdr;
   typedef typename ELFT::Sym Elf_Sym;
-  typedef typename ELFT::SymRange Elf_Sym_Range;
   typedef typename ELFT::uint uintX_t;
+
   SymbolTableSection(StringTableSection<ELFT> &StrTabSec);
 
   void finalizeContents() override;
   void writeTo(uint8_t *Buf) override;
   size_t getSize() const override { return getNumSymbols() * sizeof(Elf_Sym); }
-  void addGlobal(SymbolBody *Body);
-  void addLocal(SymbolBody *Body);
+  void addSymbol(SymbolBody *Body);
   unsigned getNumSymbols() const { return Symbols.size() + 1; }
   size_t getSymbolIndex(SymbolBody *Body);
-
   ArrayRef<SymbolTableEntry> getSymbols() const { return Symbols; }
 
-  static const OutputSection *getOutputSection(SymbolBody *Sym);
-
 private:
-  void writeLocalSymbols(uint8_t *&Buf);
-  void writeGlobalSymbols(uint8_t *Buf);
-
   // A vector of symbols and their string table offsets.
   std::vector<SymbolTableEntry> Symbols;
 
   StringTableSection<ELFT> &StrTabSec;
-
-  unsigned NumLocals = 0;
 };
 
 // Outputs GNU Hash section. For detailed explanation see:

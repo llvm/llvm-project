@@ -1,4 +1,4 @@
-//===---------------------------- FaultMaps.cpp ---------------------------===//
+//===- FaultMaps.cpp ------------------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,14 +7,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/CodeGen/FaultMaps.h"
-
+#include "llvm/ADT/Twine.h"
 #include "llvm/CodeGen/AsmPrinter.h"
+#include "llvm/CodeGen/FaultMaps.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/Format.h"
+#include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 
@@ -102,12 +105,10 @@ void FaultMaps::emitFunctionInfo(const MCSymbol *FnLabel,
   }
 }
 
-
 const char *FaultMaps::faultTypeToString(FaultMaps::FaultKind FT) {
   switch (FT) {
   default:
     llvm_unreachable("unhandled fault type!");
-
   case FaultMaps::FaultingLoad:
     return "FaultingLoad";
   case FaultMaps::FaultingLoadStore:

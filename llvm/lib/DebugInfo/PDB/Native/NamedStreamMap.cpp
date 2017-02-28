@@ -31,7 +31,7 @@ Error NamedStreamMap::load(BinaryStreamReader &Stream) {
   FinalizedInfo.reset();
 
   uint32_t StringBufferSize;
-  if (auto EC = Stream.readInteger(StringBufferSize, llvm::support::little))
+  if (auto EC = Stream.readInteger(StringBufferSize))
     return joinErrors(std::move(EC),
                       make_error<RawError>(raw_error_code::corrupt_file,
                                            "Expected string buffer size"));
@@ -70,8 +70,7 @@ Error NamedStreamMap::commit(BinaryStreamWriter &Writer) const {
   assert(FinalizedInfo.hasValue());
 
   // The first field is the number of bytes of string data.
-  if (auto EC = Writer.writeInteger(FinalizedInfo->StringDataBytes,
-                                    llvm::support::little))
+  if (auto EC = Writer.writeInteger(FinalizedInfo->StringDataBytes))
     return EC;
 
   // Now all of the string data itself.

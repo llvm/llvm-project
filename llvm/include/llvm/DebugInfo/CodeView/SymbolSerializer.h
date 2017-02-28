@@ -12,18 +12,19 @@
 
 #include "llvm/DebugInfo/CodeView/SymbolRecordMapping.h"
 #include "llvm/DebugInfo/CodeView/SymbolVisitorCallbacks.h"
-#include "llvm/DebugInfo/MSF/BinaryByteStream.h"
-#include "llvm/DebugInfo/MSF/BinaryStreamWriter.h"
 
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
+#include "llvm/DebugInfo/MSF/BinaryByteStream.h"
+#include "llvm/DebugInfo/MSF/BinaryStreamWriter.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Error.h"
 
 namespace llvm {
+class BinaryStreamWriter;
 namespace codeview {
 
 class SymbolSerializer : public SymbolVisitorCallbacks {

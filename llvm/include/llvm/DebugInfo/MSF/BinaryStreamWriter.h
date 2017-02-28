@@ -47,24 +47,22 @@ public:
   ///
   /// \returns a success error code if the data was successfully written,
   /// otherwise returns an appropriate error code.
-  template <typename T>
-  Error writeInteger(T Value, llvm::support::endianness Endian) {
+  template <typename T> Error writeInteger(T Value) {
     static_assert(std::is_integral<T>::value,
                   "Cannot call writeInteger with non-integral value!");
     uint8_t Buffer[sizeof(T)];
-    llvm::support::endian::write<T, llvm::support::unaligned>(Buffer, Value,
-                                                              Endian);
+    llvm::support::endian::write<T, llvm::support::unaligned>(
+        Buffer, Value, Stream.getEndian());
     return writeBytes(Buffer);
   }
 
   /// Similar to writeInteger
-  template <typename T>
-  Error writeEnum(T Num, llvm::support::endianness Endian) {
+  template <typename T> Error writeEnum(T Num) {
     static_assert(std::is_enum<T>::value,
                   "Cannot call writeEnum with non-Enum type");
 
     using U = typename std::underlying_type<T>::type;
-    return writeInteger<U>(static_cast<U>(Num), Endian);
+    return writeInteger<U>(static_cast<U>(Num));
   }
 
   /// Write the the string \p Str to the underlying stream followed by a null

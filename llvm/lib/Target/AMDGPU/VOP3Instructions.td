@@ -258,8 +258,8 @@ def V_MAD_I16 : VOP3Inst <"v_mad_i16", VOP3_Profile<VOP_I16_I16_I16_I16>>;
 
 let Predicates = [isVI] in {
 
-multiclass Tenary_i16_Pats <SDPatternOperator op1, SDPatternOperator op2,
-                            Instruction inst, SDPatternOperator op3> {
+multiclass Ternary_i16_Pats <SDPatternOperator op1, SDPatternOperator op2,
+                             Instruction inst, SDPatternOperator op3> {
 def : Pat<
   (op2 (op1 i16:$src0, i16:$src1), i16:$src2),
   (inst i16:$src0, i16:$src1, i16:$src2)
@@ -278,8 +278,8 @@ def : Pat<
 >;
 }
 
-defm: Tenary_i16_Pats<mul, add, V_MAD_U16, zext>;
-defm: Tenary_i16_Pats<mul, add, V_MAD_I16, sext>;
+defm: Ternary_i16_Pats<mul, add, V_MAD_U16, zext>;
+defm: Ternary_i16_Pats<mul, add, V_MAD_I16, sext>;
 
 } // End Predicates = [isVI]
 
@@ -291,6 +291,10 @@ def V_ADD3_U32 : VOP3Inst <"v_add3_u32", VOP3_Profile<VOP_I32_I32_I32_I32>>;
 def V_LSHL_OR_B32 : VOP3Inst <"v_lshl_or_b32", VOP3_Profile<VOP_I32_I32_I32_I32>>;
 def V_AND_OR_B32 : VOP3Inst <"v_and_or_b32", VOP3_Profile<VOP_I32_I32_I32_I32>>;
 def V_OR3_B32 : VOP3Inst <"v_or3_b32", VOP3_Profile<VOP_I32_I32_I32_I32>>;
+
+def V_MED3_F16 : VOP3Inst <"v_med3_f16", VOP3_Profile<VOP_F16_F16_F16_F16>, AMDGPUfmed3>;
+def V_MED3_I16 : VOP3Inst <"v_med3_i16", VOP3_Profile<VOP_I16_I16_I16_I16>, AMDGPUsmed3>;
+def V_MED3_U16 : VOP3Inst <"v_med3_u16", VOP3_Profile<VOP_I16_I16_I16_I16>, AMDGPUumed3>;
 }
 
 
@@ -487,3 +491,7 @@ defm V_LSHL_OR_B32 : VOP3_Real_vi <0x200>;
 defm V_AND_OR_B32 : VOP3_Real_vi <0x201>;
 defm V_OR3_B32 : VOP3_Real_vi <0x202>;
 defm V_PACK_B32_F16 : VOP3_Real_vi <0x2a0>;
+
+defm V_MED3_F16 : VOP3_Real_vi <0x1fa>;
+defm V_MED3_I16 : VOP3_Real_vi <0x1fb>;
+defm V_MED3_U16 : VOP3_Real_vi <0x1fc>;

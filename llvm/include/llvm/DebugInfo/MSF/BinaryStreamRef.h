@@ -26,6 +26,8 @@ public:
   BinaryStreamRefBase(StreamType &Stream, uint32_t Offset, uint32_t Length)
       : Stream(&Stream), ViewOffset(Offset), Length(Length) {}
 
+  llvm::support::endianness getEndian() const { return Stream->getEndian(); }
+
   uint32_t getLength() const { return Length; }
   const StreamType *getStream() const { return Stream; }
 

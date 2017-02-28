@@ -191,6 +191,10 @@ arm::FloatABI arm::getARMFloatABI(const ToolChain &TC, const ArgList &Args) {
       }
       break;
 
+    case llvm::Triple::OpenBSD:
+      ABI = FloatABI::Soft;
+      break;
+
     default:
       switch (Triple.getEnvironment()) {
       case llvm::Triple::GNUEABIHF:

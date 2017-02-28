@@ -1226,6 +1226,14 @@ def : Pat <
 // Miscellaneous Optimization Patterns
 //============================================================================//
 
+// Undo sub x, c -> add x, -c canonicalization since c is more likely
+// an inline immediate than -c.
+// TODO: Also do for 64-bit.
+def : Pat<
+  (add i32:$src0, (i32 NegSubInlineConst32:$src1)),
+  (S_SUB_I32 $src0, NegSubInlineConst32:$src1)
+>;
+
 def : SHA256MaPattern <V_BFI_B32, V_XOR_B32_e64>;
 
 def : IntMed3Pat<V_MED3_I32, smax, smax_oneuse, smin_oneuse>;
@@ -1245,14 +1253,11 @@ class FPMed3Pat<ValueType vt,
 
 def : FPMed3Pat<f32, V_MED3_F32>;
 
-
-// Undo sub x, c -> add x, -c canonicalization since c is more likely
-// an inline immediate than -c.
-// TODO: Also do for 64-bit.
-def : Pat<
-  (add i32:$src0, (i32 NegSubInlineConst32:$src1)),
-  (S_SUB_I32 $src0, NegSubInlineConst32:$src1)
->;
+let Predicates = [isGFX9] in {
+def : FPMed3Pat<f16, V_MED3_F16>;
+def : IntMed3Pat<V_MED3_I16, smax, smax_oneuse, smin_oneuse, i16>;
+def : IntMed3Pat<V_MED3_U16, umax, umax_oneuse, umin_oneuse, i16>;
+} // End Predicates = [isGFX9]
 
 //============================================================================//
 // Assembler aliases

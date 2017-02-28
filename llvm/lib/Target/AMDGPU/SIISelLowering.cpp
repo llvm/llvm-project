@@ -4080,8 +4080,9 @@ static unsigned minMaxOpcToMin3Max3Opc(unsigned Opc) {
   }
 }
 
-static SDValue performIntMed3ImmCombine(SelectionDAG &DAG, const SDLoc &SL,
-                                        SDValue Op0, SDValue Op1, bool Signed) {
+SDValue SITargetLowering::performIntMed3ImmCombine(
+  SelectionDAG &DAG, const SDLoc &SL,
+  SDValue Op0, SDValue Op1, bool Signed) const {
   ConstantSDNode *K1 = dyn_cast<ConstantSDNode>(Op1);
   if (!K1)
     return SDValue();
@@ -4099,23 +4100,22 @@ static SDValue performIntMed3ImmCombine(SelectionDAG &DAG, const SDLoc &SL,
   }
 
   EVT VT = K0->getValueType(0);
+  unsigned Med3Opc = Signed ? AMDGPUISD::SMED3 : AMDGPUISD::UMED3;
+  if (VT == MVT::i32 || (VT == MVT::i16 && Subtarget->hasMed3_16())) {
+    return DAG.getNode(Med3Opc, SL, VT,
+                       Op0.getOperand(0), SDValue(K0, 0), SDValue(K1, 0));
+  }
 
+  // If there isn't a 16-bit med3 operation, convert to 32-bit.
   MVT NVT = MVT::i32;
   unsigned ExtOp = Signed ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND;
 
-  SDValue Tmp1, Tmp2, Tmp3;
-  Tmp1 = DAG.getNode(ExtOp, SL, NVT, Op0->getOperand(0));
-  Tmp2 = DAG.getNode(ExtOp, SL, NVT, Op0->getOperand(1));
-  Tmp3 = DAG.getNode(ExtOp, SL, NVT, Op1);
+  SDValue Tmp1 = DAG.getNode(ExtOp, SL, NVT, Op0->getOperand(0));
+  SDValue Tmp2 = DAG.getNode(ExtOp, SL, NVT, Op0->getOperand(1));
+  SDValue Tmp3 = DAG.getNode(ExtOp, SL, NVT, Op1);
 
-  if (VT == MVT::i16) {
-    Tmp1 = DAG.getNode(Signed ? AMDGPUISD::SMED3 : AMDGPUISD::UMED3, SL, NVT,
-                       Tmp1, Tmp2, Tmp3);
-
-    return DAG.getNode(ISD::TRUNCATE, SL, VT, Tmp1);
-  } else
-    return DAG.getNode(Signed ? AMDGPUISD::SMED3 : AMDGPUISD::UMED3, SL, VT,
-                       Op0.getOperand(0), SDValue(K0, 0), SDValue(K1, 0));
+  SDValue Med3 = DAG.getNode(Med3Opc, SL, NVT, Tmp1, Tmp2, Tmp3);
+  return DAG.getNode(ISD::TRUNCATE, SL, VT, Med3);
 }
 
 static bool isKnownNeverSNan(SelectionDAG &DAG, SDValue Op) {
@@ -4152,9 +4152,8 @@ SDValue SITargetLowering::performFPMed3ImmCombine(SelectionDAG &DAG,
       return DAG.getNode(AMDGPUISD::CLAMP, SL, VT, Op0.getOperand(0));
   }
 
-  // No med3 for f16, but clamp is possible.
-  // TODO: gfx9 has med3 f16
-  if (VT == MVT::f16 || VT == MVT::f64)
+  // med3 for f16 is only available on gfx9+.
+  if (VT == MVT::f64 || (VT == MVT::f16 && !Subtarget->hasMed3_16()))
     return SDValue();
 
   // This isn't safe with signaling NaNs because in IEEE mode, min/max on a

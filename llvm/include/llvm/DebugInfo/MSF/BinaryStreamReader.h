@@ -12,8 +12,8 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/DebugInfo/MSF/BinaryStream.h"
 #include "llvm/DebugInfo/MSF/BinaryStreamArray.h"
+#include "llvm/DebugInfo/MSF/BinaryStreamRef.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MathExtras.h"
@@ -58,8 +58,7 @@ public:
   ///
   /// \returns a success error code if the data was successfully read, otherwise
   /// returns an appropriate error code.
-  template <typename T>
-  Error readInteger(T &Dest, llvm::support::endianness Endian) {
+  template <typename T> Error readInteger(T &Dest) {
     static_assert(std::is_integral<T>::value,
                   "Cannot call readInteger with non-integral value!");
 
@@ -68,17 +67,16 @@ public:
       return EC;
 
     Dest = llvm::support::endian::read<T, llvm::support::unaligned>(
-        Bytes.data(), Endian);
+        Bytes.data(), Stream.getEndian());
     return Error::success();
   }
 
   /// Similar to readInteger.
-  template <typename T>
-  Error readEnum(T &Dest, llvm::support::endianness Endian) {
+  template <typename T> Error readEnum(T &Dest) {
     static_assert(std::is_enum<T>::value,
                   "Cannot call readEnum with non-enum value!");
     typename std::underlying_type<T>::type N;
-    if (auto EC = readInteger(N, Endian))
+    if (auto EC = readInteger(N))
       return EC;
     Dest = static_cast<T>(N);
     return Error::success();

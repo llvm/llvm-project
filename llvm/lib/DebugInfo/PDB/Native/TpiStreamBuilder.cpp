@@ -34,7 +34,8 @@ using namespace llvm::pdb;
 using namespace llvm::support;
 
 TpiStreamBuilder::TpiStreamBuilder(MSFBuilder &Msf, uint32_t StreamIdx)
-    : Msf(Msf), Allocator(Msf.getAllocator()), Header(nullptr), Idx(StreamIdx) {
+    : Msf(Msf), Allocator(Msf.getAllocator()),
+      TypeRecordStream(llvm::support::little), Header(nullptr), Idx(StreamIdx) {
 }
 
 TpiStreamBuilder::~TpiStreamBuilder() = default;
@@ -113,7 +114,8 @@ Error TpiStreamBuilder::finalizeMsfLayout() {
   }
   ArrayRef<uint8_t> Bytes(reinterpret_cast<const uint8_t *>(HashBuffer.data()),
                           HashBufferSize);
-  HashValueStream = llvm::make_unique<BinaryByteStream>(Bytes);
+  HashValueStream =
+      llvm::make_unique<BinaryByteStream>(Bytes, llvm::support::little);
   return Error::success();
 }
 

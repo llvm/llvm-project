@@ -84,6 +84,7 @@ public:
   template <class ELFT> typename ELFT::uint getGotPltVA() const;
   template <class ELFT> typename ELFT::uint getPltVA() const;
   template <class ELFT> typename ELFT::uint getSize() const;
+  template <class ELFT> const OutputSection *getOutputSection() const;
 
   // The file from which this symbol was created.
   InputFile *File = nullptr;

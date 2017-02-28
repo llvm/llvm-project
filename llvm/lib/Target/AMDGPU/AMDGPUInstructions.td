@@ -664,9 +664,10 @@ class ROTRPattern <Instruction BIT_ALIGN> : Pat <
 class IntMed3Pat<Instruction med3Inst,
                  SDPatternOperator max,
                  SDPatternOperator max_oneuse,
-                 SDPatternOperator min_oneuse> : Pat<
-  (max (min_oneuse i32:$src0, i32:$src1),
-       (min_oneuse (max_oneuse i32:$src0, i32:$src1), i32:$src2)),
+                 SDPatternOperator min_oneuse,
+                 ValueType vt = i32> : Pat<
+  (max (min_oneuse vt:$src0, vt:$src1),
+       (min_oneuse (max_oneuse vt:$src0, vt:$src1), vt:$src2)),
   (med3Inst $src0, $src1, $src2)
 >;
 

@@ -45,7 +45,8 @@ Error NativeSession::createFromPdb(StringRef Path,
     return make_error<GenericError>(generic_error_code::invalid_path);
 
   std::unique_ptr<MemoryBuffer> Buffer = std::move(*ErrorOrBuffer);
-  auto Stream = llvm::make_unique<MemoryBufferByteStream>(std::move(Buffer));
+  auto Stream = llvm::make_unique<MemoryBufferByteStream>(
+      std::move(Buffer), llvm::support::little);
 
   auto Allocator = llvm::make_unique<BumpPtrAllocator>();
   auto File = llvm::make_unique<PDBFile>(Path, std::move(Stream), *Allocator);

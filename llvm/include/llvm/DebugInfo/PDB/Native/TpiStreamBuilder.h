@@ -14,6 +14,7 @@
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
 #include "llvm/DebugInfo/MSF/BinaryByteStream.h"
 #include "llvm/DebugInfo/MSF/BinaryItemStream.h"
+#include "llvm/DebugInfo/MSF/BinaryStreamRef.h"
 #include "llvm/DebugInfo/PDB/Native/RawConstants.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Error.h"
@@ -22,12 +23,7 @@
 
 namespace llvm {
 class BinaryByteStream;
-class BinaryStreamRef;
-class WritableBinaryStream;
-
-namespace codeview {
-class TypeRecord;
-}
+class WritableBinaryStreamRef;
 
 template <> struct BinaryItemTraits<llvm::codeview::CVType> {
   static size_t length(const codeview::CVType &Item) { return Item.length(); }
@@ -36,6 +32,9 @@ template <> struct BinaryItemTraits<llvm::codeview::CVType> {
   }
 };
 
+namespace codeview {
+class TypeRecord;
+}
 namespace msf {
 class MSFBuilder;
 struct MSFLayout;
