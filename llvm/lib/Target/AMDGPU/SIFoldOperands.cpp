@@ -367,8 +367,6 @@ void SIFoldOperands::foldOperand(
   const TargetRegisterClass *FoldRC =
     TRI->getRegClass(FoldDesc.OpInfo[0].RegClass);
 
-  APInt Imm(TII->operandBitWidth(FoldDesc.OpInfo[1].OperandType),
-            OpToFold.getImm());
 
   // Split 64-bit constants into 32-bits for folding.
   if (UseOp.getSubReg() && AMDGPU::getRegBitWidth(FoldRC->getID()) == 64) {
@@ -378,21 +376,25 @@ void SIFoldOperands::foldOperand(
       MRI->getRegClass(UseReg) :
       TRI->getPhysRegClass(UseReg);
 
-    assert(Imm.getBitWidth() == 64);
-
     if (AMDGPU::getRegBitWidth(UseRC->getID()) != 64)
       return;
 
+    APInt Imm(64, OpToFold.getImm());
     if (UseOp.getSubReg() == AMDGPU::sub0) {
       Imm = Imm.getLoBits(32);
     } else {
       assert(UseOp.getSubReg() == AMDGPU::sub1);
       Imm = Imm.getHiBits(32);
     }
+
+    MachineOperand ImmOp = MachineOperand::CreateImm(Imm.getSExtValue());
+    tryAddToFoldList(FoldList, UseMI, UseOpIdx, &ImmOp, TII);
+    return;
   }
 
-  MachineOperand ImmOp = MachineOperand::CreateImm(Imm.getSExtValue());
-  tryAddToFoldList(FoldList, UseMI, UseOpIdx, &ImmOp, TII);
+
+
+  tryAddToFoldList(FoldList, UseMI, UseOpIdx, &OpToFold, TII);
 }
 
 static bool evalBinaryInstruction(unsigned Opcode, int32_t &Result,

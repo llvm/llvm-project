@@ -1,4 +1,4 @@
-//===-- DWARFDebugAranges.h -------------------------------------*- C++ -*-===//
+//===- DWARFDebugAranges.h --------------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,11 +7,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_DEBUGINFO_DWARFDEBUGARANGES_H
-#define LLVM_LIB_DEBUGINFO_DWARFDEBUGARANGES_H
+#ifndef LLVM_DEBUGINFO_DWARFDEBUGARANGES_H
+#define LLVM_DEBUGINFO_DWARFDEBUGARANGES_H
 
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/Support/DataExtractor.h"
+#include <cstdint>
 #include <vector>
 
 namespace llvm {
@@ -42,6 +43,7 @@ private:
       else
         Length = HighPC - LowPC;
     }
+
     uint64_t HighPC() const {
       if (Length)
         return LowPC + Length;
@@ -51,6 +53,7 @@ private:
     bool containsAddress(uint64_t Address) const {
       return LowPC <= Address && Address < HighPC();
     }
+
     bool operator<(const Range &other) const {
       return LowPC < other.LowPC;
     }
@@ -73,7 +76,6 @@ private:
     }
   };
 
-
   typedef std::vector<Range>              RangeColl;
   typedef RangeColl::const_iterator       RangeCollIterator;
 
@@ -82,6 +84,6 @@ private:
   DenseSet<uint32_t> ParsedCUOffsets;
 };
 
-}
+} // end namespace llvm
 
-#endif
+#endif // LLVM_DEBUGINFO_DWARFDEBUGARANGES_H

@@ -1839,17 +1839,26 @@ bool SIInstrInfo::isInlineConstant(const MachineOperand &MO,
   // would be for any 32-bit integer operand, but would not be for a 64-bit one.
 
   int64_t Imm = MO.getImm();
-  switch (operandBitWidth(OperandType)) {
-  case 32: {
+  switch (OperandType) {
+  case AMDGPU::OPERAND_REG_IMM_INT32:
+  case AMDGPU::OPERAND_REG_IMM_FP32:
+  case AMDGPU::OPERAND_REG_INLINE_C_INT32:
+  case AMDGPU::OPERAND_REG_INLINE_C_FP32: {
     int32_t Trunc = static_cast<int32_t>(Imm);
     return Trunc == Imm &&
            AMDGPU::isInlinableLiteral32(Trunc, ST.hasInv2PiInlineImm());
   }
-  case 64: {
+  case AMDGPU::OPERAND_REG_IMM_INT64:
+  case AMDGPU::OPERAND_REG_IMM_FP64:
+  case AMDGPU::OPERAND_REG_INLINE_C_INT64:
+  case AMDGPU::OPERAND_REG_INLINE_C_FP64: {
     return AMDGPU::isInlinableLiteral64(MO.getImm(),
                                         ST.hasInv2PiInlineImm());
   }
-  case 16: {
+  case AMDGPU::OPERAND_REG_IMM_INT16:
+  case AMDGPU::OPERAND_REG_IMM_FP16:
+  case AMDGPU::OPERAND_REG_INLINE_C_INT16:
+  case AMDGPU::OPERAND_REG_INLINE_C_FP16: {
     if (isInt<16>(Imm) || isUInt<16>(Imm)) {
       // A few special case instructions have 16-bit operands on subtargets
       // where 16-bit instructions are not legal.
@@ -1861,6 +1870,11 @@ bool SIInstrInfo::isInlineConstant(const MachineOperand &MO,
     }
 
     return false;
+  }
+  case AMDGPU::OPERAND_REG_INLINE_C_V2INT16:
+  case AMDGPU::OPERAND_REG_INLINE_C_V2FP16: {
+    uint32_t Trunc = static_cast<uint32_t>(Imm);
+    return  AMDGPU::isInlinableLiteralV216(Trunc, ST.hasInv2PiInlineImm());
   }
   default:
     llvm_unreachable("invalid bitwidth");
@@ -3117,6 +3131,14 @@ void SIInstrInfo::moveToVALU(MachineInstr &TopInst) const {
     case AMDGPU::S_BFE_U64:
     case AMDGPU::S_BFM_B64:
       llvm_unreachable("Moving this op to VALU not implemented");
+
+    case AMDGPU::S_PACK_LL_B32_B16:
+    case AMDGPU::S_PACK_LH_B32_B16:
+    case AMDGPU::S_PACK_HH_B32_B16: {
+      movePackToVALU(Worklist, MRI, Inst);
+      Inst.eraseFromParent();
+      continue;
+    }
     }
 
     if (NewOpcode == AMDGPU::INSTRUCTION_LIST_END) {
@@ -3465,6 +3487,82 @@ void SIInstrInfo::addUsersToMoveToVALUWorklist(
       ++I;
     }
   }
+}
+
+void SIInstrInfo::movePackToVALU(SmallVectorImpl<MachineInstr *> &Worklist,
+                                 MachineRegisterInfo &MRI,
+                                 MachineInstr &Inst) const {
+  unsigned ResultReg = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+  MachineBasicBlock *MBB = Inst.getParent();
+  MachineOperand &Src0 = Inst.getOperand(1);
+  MachineOperand &Src1 = Inst.getOperand(2);
+  const DebugLoc &DL = Inst.getDebugLoc();
+
+  switch (Inst.getOpcode()) {
+  case AMDGPU::S_PACK_LL_B32_B16: {
+    // v_pack_b32_f16 flushes denormals if not enabled. Use it if the default
+    // is to leave them untouched.
+    // XXX: Does this do anything to NaNs?
+    if (ST.hasFP16Denormals()) {
+      BuildMI(*MBB, Inst, DL, get(AMDGPU::V_PACK_B32_F16), ResultReg)
+        .addImm(0)  // src0_modifiers
+        .add(Src0)  // src0
+        .addImm(0)  // src1_modifiers
+        .add(Src1)  // src2
+        .addImm(0)  // clamp
+        .addImm(0); // omod
+    } else {
+      unsigned ImmReg = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+      unsigned TmpReg = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+
+      // FIXME: Can do a lot better if we know the high bits of src0 or src1 are
+      // 0.
+      BuildMI(*MBB, Inst, DL, get(AMDGPU::V_MOV_B32_e32), ImmReg)
+        .addImm(0xffff);
+
+      BuildMI(*MBB, Inst, DL, get(AMDGPU::V_AND_B32_e64), TmpReg)
+        .addReg(ImmReg, RegState::Kill)
+        .add(Src0);
+
+      BuildMI(*MBB, Inst, DL, get(AMDGPU::V_LSHL_OR_B32), ResultReg)
+        .add(Src1)
+        .addImm(16)
+        .addReg(TmpReg, RegState::Kill);
+    }
+
+    break;
+  }
+  case AMDGPU::S_PACK_LH_B32_B16: {
+    unsigned ImmReg = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+    BuildMI(*MBB, Inst, DL, get(AMDGPU::V_MOV_B32_e32), ImmReg)
+      .addImm(0xffff);
+    BuildMI(*MBB, Inst, DL, get(AMDGPU::V_BFI_B32), ResultReg)
+      .addReg(ImmReg, RegState::Kill)
+      .add(Src0)
+      .add(Src1);
+    break;
+  }
+  case AMDGPU::S_PACK_HH_B32_B16: {
+    unsigned ImmReg = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+    unsigned TmpReg = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+    BuildMI(*MBB, Inst, DL, get(AMDGPU::V_LSHRREV_B32_e64), TmpReg)
+      .addImm(16)
+      .add(Src0);
+    BuildMI(*MBB, Inst, DL, get(AMDGPU::V_MOV_B32_e32), ImmReg)
+      .addImm(0xffff);
+    BuildMI(*MBB, Inst, DL, get(AMDGPU::V_AND_OR_B32), ResultReg)
+      .add(Src1)
+      .addReg(ImmReg, RegState::Kill)
+      .addReg(TmpReg, RegState::Kill);
+    break;
+  }
+  default:
+    llvm_unreachable("unhandled s_pack_* instruction");
+  }
+
+  MachineOperand &Dest = Inst.getOperand(0);
+  MRI.replaceRegWith(Dest.getReg(), ResultReg);
+  addUsersToMoveToVALUWorklist(ResultReg, MRI, Worklist);
 }
 
 void SIInstrInfo::addSCCDefUsersToVALUWorklist(

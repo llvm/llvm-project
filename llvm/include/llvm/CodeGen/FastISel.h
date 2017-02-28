@@ -1,4 +1,4 @@
-//===-- FastISel.h - Definition of the FastISel class ---*- C++ -*---------===//
+//===- FastISel.h - Definition of the FastISel class ------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -16,10 +16,21 @@
 #define LLVM_CODEGEN_FASTISEL_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineValueType.h"
+#include "llvm/IR/Attributes.h"
 #include "llvm/IR/CallingConv.h"
+#include "llvm/IR/CallSite.h"
+#include "llvm/IR/DebugLoc.h"
+#include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/Target/TargetLowering.h"
+#include <algorithm>
+#include <cstdint>
+#include <utility>
+#include <vector>
 
 namespace llvm {
 
@@ -31,8 +42,8 @@ class MachineConstantPool;
 class FastISel {
 public:
   struct ArgListEntry {
-    Value *Val;
-    Type *Ty;
+    Value *Val = nullptr;
+    Type *Ty = nullptr;
     bool IsSExt : 1;
     bool IsZExt : 1;
     bool IsInReg : 1;
@@ -43,13 +54,12 @@ public:
     bool IsReturned : 1;
     bool IsSwiftSelf : 1;
     bool IsSwiftError : 1;
-    uint16_t Alignment;
+    uint16_t Alignment = 0;
 
     ArgListEntry()
-        : Val(nullptr), Ty(nullptr), IsSExt(false), IsZExt(false),
-          IsInReg(false), IsSRet(false), IsNest(false), IsByVal(false),
-          IsInAlloca(false), IsReturned(false), IsSwiftSelf(false),
-          IsSwiftError(false), Alignment(0) {}
+        : IsSExt(false), IsZExt(false), IsInReg(false), IsSRet(false),
+          IsNest(false), IsByVal(false), IsInAlloca(false), IsReturned(false),
+          IsSwiftSelf(false), IsSwiftError(false) {}
 
     /// \brief Set CallLoweringInfo attribute flags based on a call instruction
     /// and called function attributes.
@@ -58,29 +68,28 @@ public:
   typedef std::vector<ArgListEntry> ArgListTy;
 
   struct CallLoweringInfo {
-    Type *RetTy;
+    Type *RetTy = nullptr;
     bool RetSExt : 1;
     bool RetZExt : 1;
     bool IsVarArg : 1;
     bool IsInReg : 1;
     bool DoesNotReturn : 1;
     bool IsReturnValueUsed : 1;
+    bool IsPatchPoint : 1;
 
     // \brief IsTailCall Should be modified by implementations of FastLowerCall
     // that perform tail call conversions.
-    bool IsTailCall;
+    bool IsTailCall = false;
 
-    unsigned NumFixedArgs;
-    CallingConv::ID CallConv;
-    const Value *Callee;
-    MCSymbol *Symbol;
+    unsigned NumFixedArgs = -1;
+    CallingConv::ID CallConv = CallingConv::C;
+    const Value *Callee = nullptr;
+    MCSymbol *Symbol = nullptr;
     ArgListTy Args;
-    ImmutableCallSite *CS;
-    MachineInstr *Call;
-    unsigned ResultReg;
-    unsigned NumResultRegs;
-
-    bool IsPatchPoint;
+    ImmutableCallSite *CS = nullptr;
+    MachineInstr *Call = nullptr;
+    unsigned ResultReg = 0;
+    unsigned NumResultRegs = 0;
 
     SmallVector<Value *, 16> OutVals;
     SmallVector<ISD::ArgFlagsTy, 16> OutFlags;
@@ -89,11 +98,8 @@ public:
     SmallVector<unsigned, 4> InRegs;
 
     CallLoweringInfo()
-        : RetTy(nullptr), RetSExt(false), RetZExt(false), IsVarArg(false),
-          IsInReg(false), DoesNotReturn(false), IsReturnValueUsed(true),
-          IsTailCall(false), NumFixedArgs(-1), CallConv(CallingConv::C),
-          Callee(nullptr), Symbol(nullptr), CS(nullptr), Call(nullptr),
-          ResultReg(0), NumResultRegs(0), IsPatchPoint(false) {}
+        : RetSExt(false), RetZExt(false), IsVarArg(false), IsInReg(false),
+          DoesNotReturn(false), IsReturnValueUsed(true), IsPatchPoint(false) {}
 
     CallLoweringInfo &setCallee(Type *ResultTy, FunctionType *FuncTy,
                                 const Value *Target, ArgListTy &&ArgsList,
@@ -510,7 +516,6 @@ protected:
     }
   }
 
-
   bool lowerCall(const CallInst *I);
   /// \brief Select and emit code for a binary operator instruction, which has
   /// an opcode which directly corresponds to the given ISD opcode.
@@ -567,4 +572,4 @@ private:
 
 } // end namespace llvm
 
-#endif
+#endif // LLVM_CODEGEN_FASTISEL_H

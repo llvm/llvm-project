@@ -573,7 +573,7 @@ struct MappingContextTraits<pdb::yaml::PdbTpiFieldListRecord,
     assert(IO.outputting());
     codeview::TypeVisitorCallbackPipeline Pipeline;
 
-    BinaryByteStream Data(Obj.Record.Data);
+    BinaryByteStream Data(Obj.Record.Data, llvm::support::little);
     BinaryStreamReader FieldReader(Data);
     codeview::FieldListDeserializer Deserializer(FieldReader);
 

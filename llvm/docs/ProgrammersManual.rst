@@ -482,7 +482,7 @@ that inherits from the ErrorInfo utility, E.g.:
     }
   };
 
-  char FileExists::ID; // This should be declared in the C++ file.
+  char BadFileFormat::ID; // This should be declared in the C++ file.
 
   Error printFormattedFile(StringRef Path) {
     if (<check for valid format>)

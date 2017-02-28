@@ -1,4 +1,4 @@
-//===-- DWARFDebugInfoEntry.cpp -------------------------------------------===//
+//===- DWARFDebugInfoEntry.cpp --------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,20 +7,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "SyntaxHighlighting.h"
-#include "llvm/DebugInfo/DWARF/DWARFCompileUnit.h"
-#include "llvm/DebugInfo/DWARF/DWARFContext.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugAbbrev.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugInfoEntry.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
-#include "llvm/Support/DataTypes.h"
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/Dwarf.h"
-#include "llvm/Support/Format.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvm/DebugInfo/DWARF/DWARFUnit.h"
+#include "llvm/Support/DataExtractor.h"
+#include <cstddef>
+#include <cstdint>
+
 using namespace llvm;
 using namespace dwarf;
-using namespace syntax;
 
 bool DWARFDebugInfoEntry::extractFast(const DWARFUnit &U,
                                              uint32_t *OffsetPtr) {
@@ -28,6 +25,7 @@ bool DWARFDebugInfoEntry::extractFast(const DWARFUnit &U,
   const uint32_t UEndOffset = U.getNextUnitOffset();
   return extractFast(U, OffsetPtr, DebugInfoData, UEndOffset, 0);
 }
+
 bool DWARFDebugInfoEntry::extractFast(const DWARFUnit &U, uint32_t *OffsetPtr,
                                       const DataExtractor &DebugInfoData,
                                       uint32_t UEndOffset, uint32_t D) {

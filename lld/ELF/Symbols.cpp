@@ -172,6 +172,31 @@ template <class ELFT> typename ELFT::uint SymbolBody::getSize() const {
   return 0;
 }
 
+template <class ELFT>
+const OutputSection *SymbolBody::getOutputSection() const {
+  if (auto *S = dyn_cast<DefinedRegular<ELFT>>(this)) {
+    if (S->Section)
+      return S->Section->template getOutputSection<ELFT>();
+    return nullptr;
+  }
+
+  if (auto *S = dyn_cast<SharedSymbol>(this)) {
+    if (S->NeedsCopy)
+      return S->Section->OutSec;
+    return nullptr;
+  }
+
+  if (isa<DefinedCommon>(this)) {
+    if (Config->DefineCommon)
+      return In<ELFT>::Common->OutSec;
+    return nullptr;
+  }
+
+  if (auto *S = dyn_cast<DefinedSynthetic>(this))
+    return S->Section;
+  return nullptr;
+}
+
 // If a symbol name contains '@', the characters after that is
 // a symbol version name. This function parses that.
 void SymbolBody::parseSymbolVersion() {
@@ -358,6 +383,15 @@ template uint32_t SymbolBody::template getSize<ELF32LE>() const;
 template uint32_t SymbolBody::template getSize<ELF32BE>() const;
 template uint64_t SymbolBody::template getSize<ELF64LE>() const;
 template uint64_t SymbolBody::template getSize<ELF64BE>() const;
+
+template const OutputSection *
+    SymbolBody::template getOutputSection<ELF32LE>() const;
+template const OutputSection *
+    SymbolBody::template getOutputSection<ELF32BE>() const;
+template const OutputSection *
+    SymbolBody::template getOutputSection<ELF64LE>() const;
+template const OutputSection *
+    SymbolBody::template getOutputSection<ELF64BE>() const;
 
 template class elf::DefinedRegular<ELF32LE>;
 template class elf::DefinedRegular<ELF32BE>;

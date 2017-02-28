@@ -1306,6 +1306,7 @@ static void setupSwiftErrorVals(const Function &Fn, const TargetLowering *TLI,
 }
 
 static void createSwiftErrorEntriesInEntryBlock(FunctionLoweringInfo *FuncInfo,
+                                                FastISel *FastIS,
                                                 const TargetLowering *TLI,
                                                 const TargetInstrInfo *TII,
                                                 SelectionDAGBuilder *SDB) {
@@ -1332,6 +1333,11 @@ static void createSwiftErrorEntriesInEntryBlock(FunctionLoweringInfo *FuncInfo,
     BuildMI(*FuncInfo->MBB, FuncInfo->MBB->getFirstNonPHI(),
             SDB->getCurDebugLoc(), TII->get(TargetOpcode::IMPLICIT_DEF),
             VReg);
+
+    // Keep FastIS informed about the value we just inserted.
+    if (FastIS)
+      FastIS->setLastLocalValue(&*std::prev(FuncInfo->InsertPt));
+
     FuncInfo->setCurrentSwiftErrorVReg(FuncInfo->MBB, SwiftErrorVal, VReg);
   }
 }
@@ -1501,7 +1507,7 @@ void SelectionDAGISel::SelectAllBasicBlocks(const Function &Fn) {
     else
       FastIS->setLastLocalValue(nullptr);
   }
-  createSwiftErrorEntriesInEntryBlock(FuncInfo, TLI, TII, SDB);
+  createSwiftErrorEntriesInEntryBlock(FuncInfo, FastIS, TLI, TII, SDB);
 
   // Iterate over all basic blocks in the function.
   for (const BasicBlock *LLVMBB : RPOT) {

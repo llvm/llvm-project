@@ -1,4 +1,4 @@
-//===------------------- FaultMaps.h - The "FaultMaps" section --*- C++ -*-===//
+//===- FaultMaps.h - The "FaultMaps" section --------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -12,17 +12,17 @@
 
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/Endian.h"
-#include "llvm/Support/Format.h"
-
-#include <vector>
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
 #include <map>
+#include <vector>
 
 namespace llvm {
 
 class AsmPrinter;
 class MCExpr;
-class MCSymbol;
-class MCStreamer;
+class raw_ostream;
 
 class FaultMaps {
 public:
@@ -33,9 +33,9 @@ public:
     FaultKindMax
   };
 
-  static const char *faultTypeToString(FaultKind);
-
   explicit FaultMaps(AsmPrinter &AP);
+
+  static const char *faultTypeToString(FaultKind);
 
   void recordFaultingOp(FaultKind FaultTy, const MCSymbol *HandlerLabel);
   void serializeToFaultMapSection();
@@ -44,13 +44,11 @@ private:
   static const char *WFMP;
 
   struct FaultInfo {
-    FaultKind Kind;
-    const MCExpr *FaultingOffsetExpr;
-    const MCExpr *HandlerOffsetExpr;
+    FaultKind Kind = FaultKindMax;
+    const MCExpr *FaultingOffsetExpr = nullptr;
+    const MCExpr *HandlerOffsetExpr = nullptr;
 
-    FaultInfo()
-        : Kind(FaultKindMax), FaultingOffsetExpr(nullptr),
-          HandlerOffsetExpr(nullptr) {}
+    FaultInfo() = default;
 
     explicit FaultInfo(FaultMaps::FaultKind Kind, const MCExpr *FaultingOffset,
                        const MCExpr *HandlerOffset)
@@ -158,11 +156,11 @@ public:
 
     static const size_t FunctionInfoHeaderSize = FunctionFaultInfosOffset;
 
-    const uint8_t *P;
-    const uint8_t *E;
+    const uint8_t *P = nullptr;
+    const uint8_t *E = nullptr;
 
   public:
-    FunctionInfoAccessor() : P(nullptr), E(nullptr) {}
+    FunctionInfoAccessor() = default;
 
     explicit FunctionInfoAccessor(const uint8_t *P, const uint8_t *E)
         : P(P), E(E) {}
@@ -219,6 +217,6 @@ raw_ostream &operator<<(raw_ostream &OS,
 
 raw_ostream &operator<<(raw_ostream &OS, const FaultMapParser &);
 
-} // namespace llvm
+} // end namespace llvm
 
-#endif
+#endif // LLVM_CODEGEN_FAULTMAPS_H

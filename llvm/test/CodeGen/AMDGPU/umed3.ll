@@ -1,12 +1,13 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
-; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=SICIVI -check-prefix=SI %s
+; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=SICIVI -check-prefix=VI %s
+; RUN: llc -march=amdgcn -mcpu=gfx901 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GFX9 %s
 
-declare i32 @llvm.r600.read.tidig.x() #0
+declare i32 @llvm.amdgcn.workitem.id.x() #0
 
 ; GCN-LABEL: {{^}}v_test_umed3_r_i_i_i32:
 ; GCN: v_med3_u32 v{{[0-9]+}}, v{{[0-9]+}}, 12, 17
 define void @v_test_umed3_r_i_i_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %aptr) #1 {
-  %tid = call i32 @llvm.r600.read.tidig.x()
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr i32, i32 addrspace(1)* %aptr, i32 %tid
   %outgep = getelementptr i32, i32 addrspace(1)* %out, i32 %tid
   %a = load i32, i32 addrspace(1)* %gep0
@@ -25,7 +26,7 @@ define void @v_test_umed3_r_i_i_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %a
 ; GCN: v_max_u32
 ; GCN: v_min_u32
 define void @v_test_umed3_multi_use_r_i_i_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %aptr) #1 {
-  %tid = call i32 @llvm.r600.read.tidig.x()
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr i32, i32 addrspace(1)* %aptr, i32 %tid
   %outgep = getelementptr i32, i32 addrspace(1)* %out, i32 %tid
   %a = load i32, i32 addrspace(1)* %gep0
@@ -45,7 +46,7 @@ define void @v_test_umed3_multi_use_r_i_i_i32(i32 addrspace(1)* %out, i32 addrsp
 ; GCN: v_max_u32_e32 v{{[0-9]+}}, 17, v{{[0-9]+}}
 ; GCN: v_min_u32_e32 v{{[0-9]+}}, 12, v{{[0-9]+}}
 define void @v_test_umed3_r_i_i_constant_order_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %aptr) #1 {
-  %tid = call i32 @llvm.r600.read.tidig.x()
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr i32, i32 addrspace(1)* %aptr, i32 %tid
   %outgep = getelementptr i32, i32 addrspace(1)* %out, i32 %tid
   %a = load i32, i32 addrspace(1)* %gep0
@@ -64,7 +65,7 @@ define void @v_test_umed3_r_i_i_constant_order_i32(i32 addrspace(1)* %out, i32 a
 ; GCN: v_max_i32_e32 v{{[0-9]+}}, 12, v{{[0-9]+}}
 ; GCN: v_min_u32_e32 v{{[0-9]+}}, 17, v{{[0-9]+}}
 define void @v_test_umed3_r_i_i_sign_mismatch_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %aptr) #1 {
-  %tid = call i32 @llvm.r600.read.tidig.x()
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr i32, i32 addrspace(1)* %aptr, i32 %tid
   %outgep = getelementptr i32, i32 addrspace(1)* %out, i32 %tid
   %a = load i32, i32 addrspace(1)* %gep0
@@ -83,7 +84,7 @@ define void @v_test_umed3_r_i_i_sign_mismatch_i32(i32 addrspace(1)* %out, i32 ad
 ; GCN: v_cmp_lt_u64
 ; GCN: v_cmp_gt_u64
 define void @v_test_umed3_r_i_i_i64(i64 addrspace(1)* %out, i64 addrspace(1)* %aptr) #1 {
-  %tid = call i32 @llvm.r600.read.tidig.x()
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr i64, i64 addrspace(1)* %aptr, i32 %tid
   %outgep = getelementptr i64, i64 addrspace(1)* %out, i32 %tid
   %a = load i64, i64 addrspace(1)* %gep0
@@ -99,9 +100,10 @@ define void @v_test_umed3_r_i_i_i64(i64 addrspace(1)* %out, i64 addrspace(1)* %a
 }
 
 ; GCN-LABEL: {{^}}v_test_umed3_r_i_i_i16:
-; GCN: v_med3_u32 v{{[0-9]+}}, v{{[0-9]+}}, 12, 17
+; SICIVI: v_med3_u32 v{{[0-9]+}}, v{{[0-9]+}}, 12, 17
+; GFX9: v_med3_u16 v{{[0-9]+}}, v{{[0-9]+}}, 12, 17
 define void @v_test_umed3_r_i_i_i16(i16 addrspace(1)* %out, i16 addrspace(1)* %aptr) #1 {
-  %tid = call i32 @llvm.r600.read.tidig.x()
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr i16, i16 addrspace(1)* %aptr, i32 %tid
   %outgep = getelementptr i16, i16 addrspace(1)* %out, i32 %tid
   %a = load i16, i16 addrspace(1)* %gep0
@@ -476,6 +478,35 @@ bb:
   %tmp2 = call i32 @umin(i32 %tmp1, i32 9)
   %tmp3 = call i32 @umax(i32 %tmp0, i32 %tmp2)
   store i32 %tmp3, i32 addrspace(1)* %arg
+  ret void
+}
+
+; GCN-LABEL: {{^}}v_test_umed3_i16_pat_0:
+; SI: v_med3_u32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
+
+; FIXME: VI not matching med3
+; VI: v_min_u16
+; VI: v_max_u16
+; VI: v_min_u16
+; VI: v_max_u16
+
+; GFX9: v_med3_u16 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
+define void @v_test_umed3_i16_pat_0(i16 addrspace(1)* %arg, i16 addrspace(1)* %out, i16 addrspace(1)* %a.ptr) #1 {
+bb:
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %gep0 = getelementptr inbounds i16, i16 addrspace(1)* %a.ptr, i32 %tid
+  %gep1 = getelementptr inbounds i16, i16 addrspace(1)* %gep0, i32 3
+  %gep2 = getelementptr inbounds i16, i16 addrspace(1)* %gep0, i32 8
+  %out.gep = getelementptr inbounds i16, i16 addrspace(1)* %out, i32 %tid
+  %x = load i16, i16 addrspace(1)* %gep0
+  %y = load i16, i16 addrspace(1)* %gep1
+  %z = load i16, i16 addrspace(1)* %gep2
+
+  %tmp0 = call i16 @umin16(i16 %x, i16 %y)
+  %tmp1 = call i16 @umax16(i16 %x, i16 %y)
+  %tmp2 = call i16 @umin16(i16 %tmp1, i16 %z)
+  %tmp3 = call i16 @umax16(i16 %tmp0, i16 %tmp2)
+  store i16 %tmp3, i16 addrspace(1)* %out.gep
   ret void
 }
 

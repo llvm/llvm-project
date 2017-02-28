@@ -12,6 +12,8 @@
 
 #include "llvm/DebugInfo/CodeView/ModuleSubstream.h"
 #include "llvm/DebugInfo/MSF/BinaryStreamArray.h"
+#include "llvm/DebugInfo/MSF/BinaryStreamArray.h"
+#include "llvm/DebugInfo/MSF/BinaryStreamRef.h"
 #include "llvm/DebugInfo/MSF/BinaryStreamRef.h"
 #include "llvm/DebugInfo/MSF/MappedBlockStream.h"
 #include "llvm/DebugInfo/PDB/Native/ModInfo.h"

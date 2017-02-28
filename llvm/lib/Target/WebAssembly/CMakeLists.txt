@@ -14,6 +14,7 @@ add_llvm_target(WebAssemblyCodeGen
   WebAssemblyAsmPrinter.cpp
   WebAssemblyCallIndirectFixup.cpp
   WebAssemblyCFGStackify.cpp
+  WebAssemblyCFGSort.cpp
   WebAssemblyExplicitLocals.cpp
   WebAssemblyFastISel.cpp
   WebAssemblyFixIrreducibleControlFlow.cpp

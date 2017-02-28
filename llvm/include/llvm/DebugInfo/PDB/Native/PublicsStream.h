@@ -16,7 +16,6 @@
 #include "llvm/DebugInfo/PDB/Native/RawConstants.h"
 #include "llvm/DebugInfo/PDB/Native/RawTypes.h"
 #include "llvm/DebugInfo/PDB/PDBTypes.h"
-
 #include "llvm/Support/Error.h"
 
 namespace llvm {

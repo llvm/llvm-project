@@ -196,6 +196,21 @@ def si_uniform_br_scc : PatFrag <
   return isCBranchSCC(N);
 }]>;
 
+def lshr_rev : PatFrag <
+  (ops node:$src1, node:$src0),
+  (srl $src0, $src1)
+>;
+
+def ashr_rev : PatFrag <
+  (ops node:$src1, node:$src0),
+  (sra $src0, $src1)
+>;
+
+def lshl_rev : PatFrag <
+  (ops node:$src1, node:$src0),
+  (shl $src0, $src1)
+>;
+
 multiclass SIAtomicM0Glue2 <string op_name, bit is_amdgpu = 0> {
 
   def _glue : SDNode <
@@ -658,11 +673,16 @@ def SIOperand {
   int FLAT_SCR = 0x68;
 }
 
+// This should be kept in sync with SISrcMods enum
 def SRCMODS {
   int NONE = 0;
   int NEG = 1;
   int ABS = 2;
   int NEG_ABS = 3;
+
+  int NEG_HI = ABS;
+  int OP_SEL_0 = 4;
+  int OP_SEL_1 = 8;
 }
 
 def DSTCLAMP {
@@ -1301,7 +1321,7 @@ def VOP_F16_F16_I16 : VOPProfile <[f16, f16, i16, untyped]>;
 def VOP_F16_F16_I32 : VOPProfile <[f16, f16, i32, untyped]>;
 def VOP_I16_I16_I16 : VOPProfile <[i32, i32, i32, untyped]>;
 
-def VOP_I16_I16_I16_I16 : VOPProfile <[i32, i32, i32, i32, untyped]>;
+def VOP_I16_I16_I16_I16 : VOPProfile <[i16, i16, i16, i16, untyped]>;
 def VOP_F16_F16_F16_F16 : VOPProfile <[f16, f16, f16, f16, untyped]>;
 
 def VOP_V2F16_V2F16_V2F16 : VOPProfile <[v2f16, v2f16, v2f16, untyped]>;

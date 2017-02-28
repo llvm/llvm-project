@@ -622,6 +622,10 @@ def : BitConvert <v2f16, i32, SReg_32>;
 def : BitConvert <i32, v2f16, SReg_32>;
 def : BitConvert <v2i16, v2f16, SReg_32>;
 def : BitConvert <v2f16, v2i16, SReg_32>;
+def : BitConvert <v2f16, f32, SReg_32>;
+def : BitConvert <f32, v2f16, SReg_32>;
+def : BitConvert <v2i16, f32, SReg_32>;
+def : BitConvert <f32, v2i16, SReg_32>;
 
 // 64-bit bitcast
 def : BitConvert <i64, f64, VReg_64>;
@@ -773,6 +777,25 @@ def : Pat <
 def : Pat <
   (fneg (fabs f16:$src)),
   (S_OR_B32 $src, (S_MOV_B32 (i32 0x00008000))) // Set sign bit
+>;
+
+def : Pat <
+  (fneg v2f16:$src),
+  (V_XOR_B32_e64 (S_MOV_B32 (i32 0x80008000)), $src)
+>;
+
+def : Pat <
+  (fabs v2f16:$src),
+  (V_AND_B32_e64 (S_MOV_B32 (i32 0x7fff7fff)), $src)
+>;
+
+// This is really (fneg (fabs v2f16:$src))
+//
+// fabs is not reported as free because there is modifier for it in
+// VOP3P instructions, so it is turned into the bit op.
+def : Pat <
+  (fneg (v2f16 (bitconvert (and_oneuse i32:$src, 0x7fff7fff)))),
+  (S_OR_B32 (S_MOV_B32 (i32 0x80008000)), $src) // Set sign bit
 >;
 
 /********** ================== **********/
@@ -1107,6 +1130,12 @@ def : Pat<
   (V_MUL_F64 0, CONST.FP64_ONE, $src_mods, $src, 0, 0)
 >;
 
+def : Pat<
+  (fcanonicalize (v2f16 (VOP3PMods v2f16:$src, i32:$src_mods))),
+  (V_PK_MUL_F16 SRCMODS.OP_SEL_1, (i32 CONST.V2FP16_ONE), $src_mods, $src, DSTCLAMP.NONE)
+>;
+
+
 // Allow integer inputs
 class ExpPattern<SDPatternOperator node, ValueType vt, Instruction Inst> : Pat<
   (node (i8 timm:$tgt), (i8 timm:$en), vt:$src0, vt:$src1, vt:$src2, vt:$src3, (i1 timm:$compr), (i1 timm:$vm)),
@@ -1115,6 +1144,40 @@ class ExpPattern<SDPatternOperator node, ValueType vt, Instruction Inst> : Pat<
 
 def : ExpPattern<AMDGPUexport, i32, EXP>;
 def : ExpPattern<AMDGPUexport_done, i32, EXP_DONE>;
+
+def : Pat <
+  (v2i16 (build_vector i16:$src0, i16:$src1)),
+  (v2i16 (S_PACK_LL_B32_B16 $src0, $src1))
+>;
+
+// With multiple uses of the shift, this will duplicate the shift and
+// increase register pressure.
+def : Pat <
+  (v2i16 (build_vector i16:$src0, (i16 (trunc (srl_oneuse i32:$src1, (i32 16)))))),
+  (v2i16 (S_PACK_LH_B32_B16 i16:$src0, i32:$src1))
+>;
+
+def : Pat <
+  (v2i16 (build_vector (i16 (trunc (srl_oneuse i32:$src0, (i32 16)))),
+                       (i16 (trunc (srl_oneuse i32:$src1, (i32 16)))))),
+  (v2i16 (S_PACK_HH_B32_B16 $src0, $src1))
+>;
+
+// TODO: Should source modifiers be matched to v_pack_b32_f16?
+def : Pat <
+  (v2f16 (build_vector f16:$src0, f16:$src1)),
+  (v2f16 (S_PACK_LL_B32_B16 $src0, $src1))
+>;
+
+// def : Pat <
+//   (v2f16 (scalar_to_vector f16:$src0)),
+//   (COPY $src0)
+// >;
+
+// def : Pat <
+//   (v2i16 (scalar_to_vector i16:$src0)),
+//   (COPY $src0)
+// >;
 
 //===----------------------------------------------------------------------===//
 // Fract Patterns
@@ -1153,6 +1216,14 @@ def : Pat <
 // Miscellaneous Optimization Patterns
 //============================================================================//
 
+// Undo sub x, c -> add x, -c canonicalization since c is more likely
+// an inline immediate than -c.
+// TODO: Also do for 64-bit.
+def : Pat<
+  (add i32:$src0, (i32 NegSubInlineConst32:$src1)),
+  (S_SUB_I32 $src0, NegSubInlineConst32:$src1)
+>;
+
 def : SHA256MaPattern <V_BFI_B32, V_XOR_B32_e64>;
 
 def : IntMed3Pat<V_MED3_I32, smax, smax_oneuse, smin_oneuse>;
@@ -1172,14 +1243,11 @@ class FPMed3Pat<ValueType vt,
 
 def : FPMed3Pat<f32, V_MED3_F32>;
 
-
-// Undo sub x, c -> add x, -c canonicalization since c is more likely
-// an inline immediate than -c.
-// TODO: Also do for 64-bit.
-def : Pat<
-  (add i32:$src0, (i32 NegSubInlineConst32:$src1)),
-  (S_SUB_I32 $src0, NegSubInlineConst32:$src1)
->;
+let Predicates = [isGFX9] in {
+def : FPMed3Pat<f16, V_MED3_F16>;
+def : IntMed3Pat<V_MED3_I16, smax, smax_oneuse, smin_oneuse, i16>;
+def : IntMed3Pat<V_MED3_U16, umax, umax_oneuse, umin_oneuse, i16>;
+} // End Predicates = [isGFX9]
 
 //============================================================================//
 // Assembler aliases

@@ -494,7 +494,7 @@ void CodeViewDebug::emitTypeInformation() {
       // comments. The MSVC linker doesn't do much type record validation,
       // so the first link of an invalid type record can succeed while
       // subsequent links will fail with LNK1285.
-      BinaryByteStream Stream(Record);
+      BinaryByteStream Stream(Record, llvm::support::little);
       CVTypeArray Types;
       BinaryStreamReader Reader(Stream);
       Error E = Reader.readArray(Types, Reader.getLength());

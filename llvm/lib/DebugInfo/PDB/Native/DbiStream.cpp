@@ -236,7 +236,7 @@ Error DbiStream::initializeSectionContributionData() {
     return Error::success();
 
   BinaryStreamReader SCReader(SecContrSubstream);
-  if (auto EC = SCReader.readEnum(SectionContribVersion, llvm::support::little))
+  if (auto EC = SCReader.readEnum(SectionContribVersion))
     return EC;
 
   if (SectionContribVersion == DbiSecContribVer60)

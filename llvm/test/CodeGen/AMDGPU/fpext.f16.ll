@@ -1,5 +1,6 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs -enable-unsafe-fp-math < %s | FileCheck -check-prefix=GCN -check-prefix=SI %s
-; RUN: llc -march=amdgcn -mcpu=fiji -mattr=-flat-for-global -verify-machineinstrs -enable-unsafe-fp-math < %s | FileCheck -check-prefix=GCN -check-prefix=VI %s
+; RUN: llc -march=amdgcn -verify-machineinstrs -enable-unsafe-fp-math < %s | FileCheck -check-prefix=GCN -check-prefix=SI -check-prefix=SIVI %s
+; RUN: llc -march=amdgcn -mcpu=fiji -mattr=-flat-for-global -verify-machineinstrs -enable-unsafe-fp-math < %s | FileCheck -check-prefix=GCN -check-prefix=VI -check-prefix=GFX89 %s
+; RUN: llc -march=amdgcn -mcpu=gfx901 -mattr=-flat-for-global -verify-machineinstrs -enable-unsafe-fp-math < %s | FileCheck -check-prefix=GCN -check-prefix=GFX9 -check-prefix=GFX89 %s
 
 ; GCN-LABEL: {{^}}fpext_f16_to_f32
 ; GCN: buffer_load_ushort v[[A_F16:[0-9]+]]
@@ -8,7 +9,7 @@
 ; GCN: s_endpgm
 define void @fpext_f16_to_f32(
     float addrspace(1)* %r,
-    half addrspace(1)* %a) {
+    half addrspace(1)* %a) #0 {
 entry:
   %a.val = load half, half addrspace(1)* %a
   %r.val = fpext half %a.val to float
@@ -24,7 +25,7 @@ entry:
 ; GCN: s_endpgm
 define void @fpext_f16_to_f64(
     double addrspace(1)* %r,
-    half addrspace(1)* %a) {
+    half addrspace(1)* %a) #0 {
 entry:
   %a.val = load half, half addrspace(1)* %a
   %r.val = fpext half %a.val to double
@@ -34,15 +35,15 @@ entry:
 
 ; GCN-LABEL: {{^}}fpext_v2f16_to_v2f32
 ; GCN: buffer_load_dword v[[A_V2_F16:[0-9]+]]
-; VI:  v_lshrrev_b32_e32 v[[A_F16_1:[0-9]+]], 16, v[[A_V2_F16]]
-; GCN: v_cvt_f32_f16_e32 v[[R_F32_0:[0-9]+]], v[[A_V2_F16]]
+; GFX89-DAG:  v_lshrrev_b32_e32 v[[A_F16_1:[0-9]+]], 16, v[[A_V2_F16]]
+; GCN-DAG: v_cvt_f32_f16_e32 v[[R_F32_0:[0-9]+]], v[[A_V2_F16]]
 ; SI:  v_lshrrev_b32_e32 v[[A_F16_1:[0-9]+]], 16, v[[A_V2_F16]]
 ; GCN: v_cvt_f32_f16_e32 v[[R_F32_1:[0-9]+]], v[[A_F16_1]]
 ; GCN: buffer_store_dwordx2 v{{\[}}[[R_F32_0]]:[[R_F32_1]]{{\]}}
 ; GCN: s_endpgm
 define void @fpext_v2f16_to_v2f32(
     <2 x float> addrspace(1)* %r,
-    <2 x half> addrspace(1)* %a) {
+    <2 x half> addrspace(1)* %a) #0 {
 entry:
   %a.val = load <2 x half>, <2 x half> addrspace(1)* %a
   %r.val = fpext <2 x half> %a.val to <2 x float>
@@ -51,13 +52,14 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}fpext_v2f16_to_v2f64
-; GCN: buffer_load_dword v[[A_V2_F16:[0-9]+]]
-; GCN: v_lshrrev_b32_e32 v[[A_F16_1:[0-9]+]], 16, v[[A_V2_F16]]
-; GCN: v_cvt_f32_f16_e32 v[[A_F32_1:[0-9]+]], v[[A_F16_1]]
-; GCN: v_cvt_f32_f16_e32 v[[A_F32_0:[0-9]+]], v[[A_V2_F16]]
-; GCN: v_cvt_f64_f32_e32 v{{\[}}{{[0-9]+}}:[[R_F64_3:[0-9]+]]{{\]}}, v[[A_F32_1]]
-; GCN: v_cvt_f64_f32_e32 v{{\[}}[[R_F64_0:[0-9]+]]:{{[0-9]+}}{{\]}}, v[[A_F32_0]]
-; GCN: buffer_store_dwordx4 v{{\[}}[[R_F64_0]]:[[R_F64_3]]{{\]}}
+; GCN: buffer_load_dword
+; GCN-DAG: v_lshrrev_b32_e32
+; GCN-DAG: v_cvt_f32_f16_e32
+; GCN: v_cvt_f32_f16_e32
+
+; GCN: v_cvt_f64_f32_e32
+; GCN: v_cvt_f64_f32_e32
+; GCN: buffer_store_dwordx4
 ; GCN: s_endpgm
 define void @fpext_v2f16_to_v2f64(
     <2 x double> addrspace(1)* %r,
@@ -129,7 +131,7 @@ entry:
 
 ; FIXME: Using the source modifier here only wastes code size
 ; SI-DAG: v_cvt_f32_f16_e32 [[CVT:v[0-9]+]], [[A]]
-; VI-DAG: v_cvt_f32_f16_e64 [[CVT:v[0-9]+]], -[[A]]
+; GFX89-DAG: v_cvt_f32_f16_e64 [[CVT:v[0-9]+]], -[[A]]
 
 ; GCN: store_dword [[CVT]]
 ; GCN: store_short [[XOR]]
@@ -152,8 +154,8 @@ entry:
 ; SI: v_mul_f32_e32 [[MUL_F32:v[0-9]+]], [[CVTA]], [[CVTA_NEG]]
 ; SI: v_cvt_f16_f32_e32 [[MUL:v[0-9]+]], [[MUL_F32]]
 
-; VI-DAG: v_cvt_f32_f16_e64 [[CVT_NEGA:v[0-9]+]], -[[A]]
-; VI: v_mul_f16_e64 [[MUL:v[0-9]+]], -[[A]], [[A]]
+; GFX89-DAG: v_cvt_f32_f16_e64 [[CVT_NEGA:v[0-9]+]], -[[A]]
+; GFX89: v_mul_f16_e64 [[MUL:v[0-9]+]], -[[A]], [[A]]
 
 ; GCN: buffer_store_dword [[CVTA_NEG]]
 ; GCN: buffer_store_short [[MUL]]
@@ -198,8 +200,8 @@ entry:
 ; SI: v_cvt_f16_f32_e32 [[MUL:v[0-9]+]], [[MUL_F32]]
 ; SI: v_and_b32_e32 [[ABS_A:v[0-9]+]], 0x7fffffff, [[CVTA]]
 
-; VI-DAG: v_cvt_f32_f16_e64 [[ABS_A:v[0-9]+]], |[[A]]|
-; VI: v_mul_f16_e64 [[MUL:v[0-9]+]], |[[A]]|, [[A]]
+; GFX89-DAG: v_cvt_f32_f16_e64 [[ABS_A:v[0-9]+]], |[[A]]|
+; GFX89: v_mul_f16_e64 [[MUL:v[0-9]+]], |[[A]]|, [[A]]
 
 ; GCN: buffer_store_dword [[ABS_A]]
 ; GCN: buffer_store_short [[MUL]]
@@ -245,8 +247,8 @@ entry:
 ; SI: v_cvt_f16_f32_e32 [[MUL:v[0-9]+]], [[MUL_F32]]
 ; SI: v_or_b32_e32 [[FABS_FNEG:v[0-9]+]], 0x80000000, [[CVTA]]
 
-; VI-DAG: v_cvt_f32_f16_e64 [[FABS_FNEG:v[0-9]+]], -|[[A]]|
-; VI-DAG: v_mul_f16_e64 [[MUL:v[0-9]+]], -|[[A]]|, [[A]]
+; GFX89-DAG: v_cvt_f32_f16_e64 [[FABS_FNEG:v[0-9]+]], -|[[A]]|
+; GFX89-DAG: v_mul_f16_e64 [[MUL:v[0-9]+]], -|[[A]]|, [[A]]
 
 ; GCN: buffer_store_dword [[FABS_FNEG]]
 ; GCN: buffer_store_short [[MUL]]

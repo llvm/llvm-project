@@ -1369,6 +1369,63 @@ define {i64, i1} @uaddoovf(i64 %a, i64 %b) {
   ret {i64, i1} %t
 }
 
+define {i64, i1} @usuboovf(i64 %a, i64 %b) {
+; SDAG-LABEL: usuboovf:
+; SDAG:       ## BB#0:
+; SDAG-NEXT:    subq %rdi, %rdi
+; SDAG-NEXT:    sbbb %r8b, %r8b
+; SDAG-NEXT:    movq $-1, %rax
+; SDAG-NEXT:    subq %rsi, %rax
+; SDAG-NEXT:    sbbb %cl, %cl
+; SDAG-NEXT:    subq %rdi, %rax
+; SDAG-NEXT:    sbbb %dl, %dl
+; SDAG-NEXT:    orb %cl, %dl
+; SDAG-NEXT:    orb %r8b, %dl
+; SDAG-NEXT:    andb $1, %dl
+; SDAG-NEXT:    retq
+;
+; FAST-LABEL: usuboovf:
+; FAST:       ## BB#0:
+; FAST-NEXT:    subq %rdi, %rdi
+; FAST-NEXT:    sbbb %r8b, %r8b
+; FAST-NEXT:    movq $-1, %rax
+; FAST-NEXT:    subq %rsi, %rax
+; FAST-NEXT:    sbbb %cl, %cl
+; FAST-NEXT:    subq %rdi, %rax
+; FAST-NEXT:    sbbb %dl, %dl
+; FAST-NEXT:    orb %cl, %dl
+; FAST-NEXT:    orb %r8b, %dl
+; FAST-NEXT:    andb $1, %dl
+; FAST-NEXT:    retq
+;
+; KNL-LABEL: usuboovf:
+; KNL:       ## BB#0:
+; KNL-NEXT:    subq %rdi, %rdi
+; KNL-NEXT:    sbbb %dl, %dl
+; KNL-NEXT:    movq $-1, %rax
+; KNL-NEXT:    subq %rsi, %rax
+; KNL-NEXT:    sbbb %cl, %cl
+; KNL-NEXT:    orb %dl, %cl
+; KNL-NEXT:    subq %rdi, %rax
+; KNL-NEXT:    sbbb %dl, %dl
+; KNL-NEXT:    orb %cl, %dl
+; KNL-NEXT:    andb $1, %dl
+; KNL-NEXT:    retq
+  %t0 = call {i64, i1} @llvm.usub.with.overflow.i64(i64 %a, i64 %a)
+  %v0 = extractvalue {i64, i1} %t0, 0
+  %o0 = extractvalue {i64, i1} %t0, 1
+  %t1 = call {i64, i1} @llvm.usub.with.overflow.i64(i64 -1, i64 %b)
+  %v1 = extractvalue {i64, i1} %t1, 0
+  %o1 = extractvalue {i64, i1} %t1, 1
+  %oo = or i1 %o0, %o1
+  %t2 = call {i64, i1} @llvm.usub.with.overflow.i64(i64 %v1, i64 %v0)
+  %v2 = extractvalue {i64, i1} %t2, 0
+  %o2 = extractvalue {i64, i1} %t2, 1
+  %ooo = or i1 %oo, %o2
+  %t = insertvalue {i64, i1} %t2, i1 %ooo, 1
+  ret {i64, i1} %t
+}
+
 declare {i8,  i1} @llvm.sadd.with.overflow.i8 (i8,  i8 ) nounwind readnone
 declare {i16, i1} @llvm.sadd.with.overflow.i16(i16, i16) nounwind readnone
 declare {i32, i1} @llvm.sadd.with.overflow.i32(i32, i32) nounwind readnone

@@ -96,3 +96,8 @@
 // CHECK-STATIC-PIE: "{{.*}}rcrt0.o"
 // CHECK-STATIC-PIE-NOT: "-nopie"
 // CHECK-NOPIE: "-nopie" "{{.*}}crt0.o"
+
+// Check ARM float ABI
+// RUN: %clang -target arm-unknown-openbsd -### -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-ARM-FLOAT-ABI %s
+// CHECK-ARM-FLOAT-ABI: "-mfloat-abi" "soft"

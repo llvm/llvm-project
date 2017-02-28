@@ -186,7 +186,7 @@ Error PDBFile::parseStreamData() {
   // been parsed, we can avoid this and reuse MappedBlockStream.
   auto DS = MappedBlockStream::createDirectoryStream(ContainerLayout, *Buffer);
   BinaryStreamReader Reader(*DS);
-  if (auto EC = Reader.readInteger(NumStreams, llvm::support::little))
+  if (auto EC = Reader.readInteger(NumStreams))
     return EC;
 
   if (auto EC = Reader.readArray(ContainerLayout.StreamSizes, NumStreams))

@@ -218,5 +218,58 @@ define {i32, i1} @knownbits_uaddo_saddo(i64 %a0, i64 %a1) nounwind {
   ret {i32, i1} %ret1
 }
 
+define {i32, i1} @knownbits_usubo_ssubo(i64 %a0, i64 %a1) nounwind {
+; X32-LABEL: knownbits_usubo_ssubo:
+; X32:       # BB#0:
+; X32-NEXT:    pushl %ebx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    movl %ecx, %edx
+; X32-NEXT:    subl %eax, %edx
+; X32-NEXT:    setns %bl
+; X32-NEXT:    cmpl %edx, %ecx
+; X32-NEXT:    setb %dh
+; X32-NEXT:    testl %ecx, %ecx
+; X32-NEXT:    setns %cl
+; X32-NEXT:    cmpb %bl, %cl
+; X32-NEXT:    setne %ch
+; X32-NEXT:    testl %eax, %eax
+; X32-NEXT:    setns %al
+; X32-NEXT:    cmpb %al, %cl
+; X32-NEXT:    setne %dl
+; X32-NEXT:    andb %ch, %dl
+; X32-NEXT:    orb %dh, %dl
+; X32-NEXT:    xorl %eax, %eax
+; X32-NEXT:    popl %ebx
+; X32-NEXT:    retl
+;
+; X64-LABEL: knownbits_usubo_ssubo:
+; X64:       # BB#0:
+; X64-NEXT:    shlq $32, %rdi
+; X64-NEXT:    shlq $32, %rsi
+; X64-NEXT:    subq %rsi, %rdi
+; X64-NEXT:    setb %cl
+; X64-NEXT:    seto %dl
+; X64-NEXT:    leal (%rdi,%rdi), %eax
+; X64-NEXT:    orb %cl, %dl
+; X64-NEXT:    retq
+  %1 = shl i64 %a0, 32
+  %2 = shl i64 %a1, 32
+  %u = call {i64, i1} @llvm.usub.with.overflow.i64(i64 %1, i64 %2)
+  %uval = extractvalue {i64, i1} %u, 0
+  %uovf = extractvalue {i64, i1} %u, 1
+  %s = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 %1, i64 %2)
+  %sval = extractvalue {i64, i1} %s, 0
+  %sovf = extractvalue {i64, i1} %s, 1
+  %sum = add i64 %uval, %sval
+  %3 = trunc i64 %sum to i32
+  %4 = or i1 %uovf, %sovf
+  %ret0 = insertvalue {i32, i1} undef, i32 %3, 0
+  %ret1 = insertvalue {i32, i1} %ret0, i1 %4, 1
+  ret {i32, i1} %ret1
+}
+
 declare {i64, i1} @llvm.uadd.with.overflow.i64(i64, i64) nounwind readnone
 declare {i64, i1} @llvm.sadd.with.overflow.i64(i64, i64) nounwind readnone
+declare {i64, i1} @llvm.usub.with.overflow.i64(i64, i64) nounwind readnone
+declare {i64, i1} @llvm.ssub.with.overflow.i64(i64, i64) nounwind readnone

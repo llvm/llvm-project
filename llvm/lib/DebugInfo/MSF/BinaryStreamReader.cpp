@@ -23,8 +23,6 @@ Error BinaryStreamReader::readLongestContiguousChunk(
   if (auto EC = Stream.readLongestContiguousChunk(Offset, Buffer))
     return EC;
   Offset += Buffer.size();
-  std::vector<char *> m_argv;
-  ArrayRef<const char *> S = makeArrayRef(m_argv);
   return Error::success();
 }
 

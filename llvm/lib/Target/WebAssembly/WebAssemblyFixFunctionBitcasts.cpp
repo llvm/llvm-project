@@ -84,7 +84,7 @@ static void FindUses(Value *V, Function &F,
 //  - Call with fewer arguments than needed: arguments are filled in with undef
 //  - Return value is not needed: drop it
 //  - Return value needed but not present: supply an undef
-//  
+//
 // For now, return nullptr without creating a wrapper if the wrapper cannot
 // be generated due to incompatible types.
 static Function *CreateWrapper(Function *F, FunctionType *Ty) {

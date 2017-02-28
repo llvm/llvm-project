@@ -56,6 +56,10 @@ public:
   static std::unique_ptr<MappedBlockStream>
   createDirectoryStream(const MSFLayout &Layout, BinaryStreamRef MsfData);
 
+  llvm::support::endianness getEndian() const override {
+    return llvm::support::little;
+  }
+
   Error readBytes(uint32_t Offset, uint32_t Size,
                   ArrayRef<uint8_t> &Buffer) override;
   Error readLongestContiguousChunk(uint32_t Offset,
@@ -112,6 +116,10 @@ public:
 
   static std::unique_ptr<WritableMappedBlockStream>
   createFpmStream(const MSFLayout &Layout, WritableBinaryStreamRef MsfData);
+
+  llvm::support::endianness getEndian() const override {
+    return llvm::support::little;
+  }
 
   Error readBytes(uint32_t Offset, uint32_t Size,
                   ArrayRef<uint8_t> &Buffer) override;

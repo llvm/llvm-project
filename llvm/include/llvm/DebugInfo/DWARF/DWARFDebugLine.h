@@ -1,4 +1,4 @@
-//===-- DWARFDebugLine.h ----------------------------------------*- C++ -*-===//
+//===- DWARFDebugLine.h -----------------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,12 +7,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_DEBUGINFO_DWARFDEBUGLINE_H
-#define LLVM_LIB_DEBUGINFO_DWARFDEBUGLINE_H
+#ifndef LLVM_DEBUGINFO_DWARFDEBUGLINE_H
+#define LLVM_DEBUGINFO_DWARFDEBUGLINE_H
 
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFRelocMap.h"
 #include "llvm/Support/DataExtractor.h"
+#include <cstdint>
 #include <map>
 #include <string>
 #include <vector>
@@ -24,13 +25,14 @@ class raw_ostream;
 class DWARFDebugLine {
 public:
   DWARFDebugLine(const RelocAddrMap* LineInfoRelocMap) : RelocMap(LineInfoRelocMap) {}
-  struct FileNameEntry {
-    FileNameEntry() : Name(nullptr), DirIdx(0), ModTime(0), Length(0) {}
 
-    const char *Name;
-    uint64_t DirIdx;
-    uint64_t ModTime;
-    uint64_t Length;
+  struct FileNameEntry {
+    FileNameEntry() = default;
+
+    const char *Name = nullptr;
+    uint64_t DirIdx = 0;
+    uint64_t ModTime = 0;
+    uint64_t Length = 0;
   };
 
   struct Prologue {
@@ -64,9 +66,11 @@ public:
     std::vector<FileNameEntry> FileNames;
 
     bool IsDWARF64;
+
     uint32_t sizeofTotalLength() const {
       return IsDWARF64 ? 12 : 4;
     }
+
     uint32_t sizeofPrologueLength() const {
       return IsDWARF64 ? 8 : 4;
     }
@@ -76,10 +80,12 @@ public:
       return PrologueLength + sizeofTotalLength() + sizeof(Version) +
              sizeofPrologueLength();
     }
+
     // Length of the line table data in bytes (not including the prologue).
     uint32_t getStatementTableLength() const {
       return TotalLength + sizeofTotalLength() - getLength();
     }
+
     int32_t getMaxLineIncrementForSpecialOpcode() const {
       return LineBase + (int8_t)LineRange - 1;
     }
@@ -146,6 +152,8 @@ public:
   // compilation unit may consist of multiple sequences, which are not
   // guaranteed to be in the order of ascending instruction address.
   struct Sequence {
+    Sequence();
+
     // Sequence describes instructions at address range [LowPC, HighPC)
     // and is described by line table rows [FirstRowIndex, LastRowIndex).
     uint64_t LowPC;
@@ -154,15 +162,16 @@ public:
     unsigned LastRowIndex;
     bool Empty;
 
-    Sequence();
     void reset();
 
     static bool orderByLowPC(const Sequence& LHS, const Sequence& RHS) {
       return LHS.LowPC < RHS.LowPC;
     }
+
     bool isValid() const {
       return !Empty && (LowPC < HighPC) && (FirstRowIndex < LastRowIndex);
     }
+
     bool containsPC(uint64_t pc) const {
       return (LowPC <= pc && pc < HighPC);
     }
@@ -177,6 +186,7 @@ public:
     void appendRow(const DWARFDebugLine::Row &R) {
       Rows.push_back(R);
     }
+
     void appendSequence(const DWARFDebugLine::Sequence &S) {
       Sequences.push_back(S);
     }
@@ -249,6 +259,7 @@ private:
   const RelocAddrMap *RelocMap;
   LineTableMapTy LineTableMap;
 };
-}
 
-#endif
+} // end namespace llvm
+
+#endif // LLVM_DEBUGINFO_DWARFDEBUGLINE_H

@@ -1,5 +1,6 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=SI %s
-; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VI %s
+; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=SI -check-prefix=SICIVI %s
+; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VI -check-prefix=SICIVI %s
+; RUN: llc -march=amdgcn -mcpu=gfx901 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GFX9 %s
 
 ; GCN-LABEL: {{^}}extract_vector_elt_v2i16:
 ; GCN: s_load_dword [[VEC:s[0-9]+]]
@@ -70,16 +71,23 @@ define void @extract_vector_elt_v3i16(i16 addrspace(1)* %out, <3 x i16> %foo) #0
 }
 
 ; GCN-LABEL: {{^}}extract_vector_elt_v4i16:
-; GCN: buffer_load_ushort
-; GCN: buffer_load_ushort
-; GCN: buffer_store_short
-; GCN: buffer_store_short
+; SICIVI: buffer_load_ushort
+; SICIVI: buffer_load_ushort
+; SICIVI: buffer_store_short
+; SICIVI: buffer_store_short
+
+; GFX9-DAG: s_load_dword [[LOAD0:s[0-9]+]], s[0:1], 0x2c
+; GFX9-DAG: s_load_dword [[LOAD1:s[0-9]+]], s[0:1], 0x30
+; GFX9-DAG: v_mov_b32_e32 [[VLOAD0:v[0-9]+]], [[LOAD0]]
+; GFX9-DAG: buffer_store_short [[VLOAD0]], off
+; GFX9-DAG: v_mov_b32_e32 [[VLOAD1:v[0-9]+]], [[LOAD1]]
+; GFX9-DAG: buffer_store_short [[VLOAD1]], off
 define void @extract_vector_elt_v4i16(i16 addrspace(1)* %out, <4 x i16> %foo) #0 {
   %p0 = extractelement <4 x i16> %foo, i32 0
   %p1 = extractelement <4 x i16> %foo, i32 2
   %out1 = getelementptr i16, i16 addrspace(1)* %out, i32 10
-  store i16 %p1, i16 addrspace(1)* %out, align 2
-  store i16 %p0, i16 addrspace(1)* %out1, align 2
+  store volatile i16 %p1, i16 addrspace(1)* %out, align 2
+  store volatile i16 %p0, i16 addrspace(1)* %out1, align 2
   ret void
 }
 
@@ -88,9 +96,12 @@ define void @extract_vector_elt_v4i16(i16 addrspace(1)* %out, <4 x i16> %foo) #0
 ; GCN: buffer_load_ushort
 ; GCN: buffer_load_ushort
 
-; GCN: buffer_store_short
-; GCN: buffer_store_short
-; GCN: buffer_store_short
+; SICIVI: buffer_store_short
+; SICIVI: buffer_store_short
+; SICIVI: buffer_store_short
+
+; GFX9: buffer_store_dword
+; GFX9: buffer_store_dword
 
 ; GCN: buffer_load_ushort
 ; GCN: buffer_store_short
@@ -102,18 +113,24 @@ define void @dynamic_extract_vector_elt_v3i16(i16 addrspace(1)* %out, <3 x i16> 
 }
 
 ; GCN-LABEL: {{^}}dynamic_extract_vector_elt_v4i16:
-; GCN: buffer_load_ushort
-; GCN: buffer_load_ushort
-; GCN: buffer_load_ushort
-; GCN: buffer_load_ushort
+; SICIVI: buffer_load_ushort
+; SICIVI: buffer_load_ushort
+; SICIVI: buffer_load_ushort
+; SICIVI: buffer_load_ushort
 
-; GCN: buffer_store_short
-; GCN: buffer_store_short
-; GCN: buffer_store_short
-; GCN: buffer_store_short
+; SICIVI: buffer_store_short
+; SICIVI: buffer_store_short
+; SICIVI: buffer_store_short
+; SICIVI: buffer_store_short
 
-; GCN: buffer_load_ushort
-; GCN: buffer_store_short
+; SICIVI: buffer_load_ushort
+; SICIVI: buffer_store_short
+
+; GFX9: s_load_dword
+; GFX9: buffer_store_dword
+; GFX9: buffer_store_dword
+; GFX9: buffer_load_ushort
+; GFX9: buffer_store_short
 define void @dynamic_extract_vector_elt_v4i16(i16 addrspace(1)* %out, <4 x i16> %foo, i32 %idx) #0 {
   %p0 = extractelement <4 x i16> %foo, i32 %idx
   %out1 = getelementptr i16, i16 addrspace(1)* %out, i32 1

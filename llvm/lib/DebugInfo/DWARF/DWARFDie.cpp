@@ -1,4 +1,4 @@
-//===-- DWARFDie.cpp ------------------------------------------------------===//
+//===- DWARFDie.cpp -------------------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,25 +7,33 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/DebugInfo/DWARF/DWARFDie.h"
 #include "SyntaxHighlighting.h"
-#include "llvm/DebugInfo/DWARF/DWARFCompileUnit.h"
+#include "llvm/ADT/None.h"
+#include "llvm/ADT/Optional.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/DebugInfo/DWARF/DWARFAbbreviationDeclaration.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
-#include "llvm/DebugInfo/DWARF/DWARFDebugAbbrev.h"
-#include "llvm/DebugInfo/DWARF/DWARFDebugInfoEntry.h"
+#include "llvm/DebugInfo/DWARF/DWARFDebugRangeList.h"
+#include "llvm/DebugInfo/DWARF/DWARFDie.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
-#include "llvm/Support/DataTypes.h"
-#include "llvm/Support/Debug.h"
+#include "llvm/DebugInfo/DWARF/DWARFUnit.h"
+#include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Dwarf.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
+#include <algorithm>
+#include <cassert>
+#include <cinttypes>
+#include <cstdint>
+#include <string>
+#include <utility>
 
 using namespace llvm;
 using namespace dwarf;
 using namespace syntax;
 
-namespace {
- static void dumpApplePropertyAttribute(raw_ostream &OS, uint64_t Val) {
+static void dumpApplePropertyAttribute(raw_ostream &OS, uint64_t Val) {
   OS << " (";
   do {
     uint64_t Shift = countTrailingZeros(Val);
@@ -121,8 +129,6 @@ static void dumpAttribute(raw_ostream &OS, const DWARFDie &Die,
   
   OS << ")\n";
 }
-
-} // end anonymous namespace
 
 bool DWARFDie::isSubprogramDIE() const {
   return getTag() == DW_TAG_subprogram;
@@ -355,7 +361,6 @@ void DWARFDie::dump(raw_ostream &OS, unsigned RecurseDepth,
     }
   }
 }
-
 
 void DWARFDie::getInlinedChainForAddress(
     const uint64_t Address, SmallVectorImpl<DWARFDie> &InlinedChain) const {

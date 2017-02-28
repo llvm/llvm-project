@@ -394,6 +394,7 @@ static ShadowMapping getShadowMapping(Triple &TargetTriple, int LongSize,
                   TargetTriple.getArch() == llvm::Triple::mips64el;
   bool IsAArch64 = TargetTriple.getArch() == llvm::Triple::aarch64;
   bool IsWindows = TargetTriple.isOSWindows();
+  bool IsFuchsia = TargetTriple.isOSFuchsia();
 
   ShadowMapping Mapping;
 
@@ -414,7 +415,11 @@ static ShadowMapping getShadowMapping(Triple &TargetTriple, int LongSize,
     else
       Mapping.Offset = kDefaultShadowOffset32;
   } else {  // LongSize == 64
-    if (IsPPC64)
+    // Fuchsia is always PIE, which means that the beginning of the address
+    // space is always available.
+    if (IsFuchsia)
+      Mapping.Offset = 0;
+    else if (IsPPC64)
       Mapping.Offset = kPPC64_ShadowOffset64;
     else if (IsSystemZ)
       Mapping.Offset = kSystemZ_ShadowOffset64;
