@@ -54,6 +54,10 @@ o subdirectories of 'test'
   C/C++/ObjC source files; they were created to house the Python test case which
   does not involve lldb reading in an executable file at all.
 
+  The sample_test directory contains examples of both a full and an "inline" 
+  testcase that run a process to a breakpoint and check a local variable.  These
+  are convenient starting points for adding new tests.
+
 o make directory
 
   Contains Makefile.rules, which can be utilized by test cases to write Makefile
@@ -157,6 +161,9 @@ o Writing test cases:
  then use SBInterpreter::HandleCommand to run the command.  You get the full result text 
  from the command in the command return object, and all the part where you are driving the 
  debugger to the point you want to test will be more robust.
+
+ The sample_test directory contains a standard and an "inline" test that are good starting
+ points for writing a new test.
 
 o Attaching in test cases:
 
