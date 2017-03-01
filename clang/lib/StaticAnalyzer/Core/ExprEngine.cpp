@@ -615,7 +615,15 @@ void ExprEngine::ProcessAutomaticObjDtor(const CFGAutomaticObjDtor Dtor,
   const MemRegion *Region = dest.castAs<loc::MemRegionVal>().getRegion();
 
   if (varType->isReferenceType()) {
-    Region = state->getSVal(Region).getAsRegion()->getBaseRegion();
+    const MemRegion *ValueRegion = state->getSVal(Region).getAsRegion();
+    if (!ValueRegion) {
+      // FIXME: This should not happen. The language guarantees a presence
+      // of a valid initializer here, so the reference shall not be undefined.
+      // It seems that we're calling destructors over variables that
+      // were not initialized yet.
+      return;
+    }
+    Region = ValueRegion->getBaseRegion();
     varType = cast<TypedValueRegion>(Region)->getValueType();
   }
 
