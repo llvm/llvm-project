@@ -100,10 +100,12 @@ public:
   static bool
   EnableLogChannel(const std::shared_ptr<llvm::raw_ostream> &log_stream_sp,
                    uint32_t log_options, llvm::StringRef channel,
-                   const char **categories, Stream &error_stream);
+                   llvm::ArrayRef<const char *> categories,
+                   Stream &error_stream);
 
   static bool DisableLogChannel(llvm::StringRef channel,
-                                const char **categories, Stream &error_stream);
+                                llvm::ArrayRef<const char *> categories,
+                                Stream &error_stream);
 
   static bool ListChannelCategories(llvm::StringRef channel, Stream &stream);
 

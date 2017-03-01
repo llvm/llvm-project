@@ -193,6 +193,15 @@ public:
   const char **GetConstArgumentVector() const;
 
   //------------------------------------------------------------------
+  /// Gets the argument as an ArrayRef. Note that the return value does *not*
+  /// have a nullptr const char * at the end, as the size of the list is
+  /// embedded in the ArrayRef object.
+  //------------------------------------------------------------------
+  llvm::ArrayRef<const char *> GetArgumentArrayRef() const {
+    return llvm::makeArrayRef(m_argv).drop_back();
+  }
+
+  //------------------------------------------------------------------
   /// Appends a new argument to the end of the list argument list.
   ///
   /// @param[in] arg_cstr

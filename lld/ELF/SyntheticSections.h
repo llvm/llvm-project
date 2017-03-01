@@ -445,25 +445,21 @@ public:
   void addSymbols(std::vector<SymbolTableEntry> &Symbols);
 
 private:
-  static unsigned calcNBuckets(unsigned NumHashed);
-  static unsigned calcMaskWords(unsigned NumHashed);
+  size_t getShift2() const { return ELFT::Is64Bits ? 6 : 5; }
 
-  uint8_t *writeHeader(uint8_t *Buf);
-  uint8_t *writeBloomFilter(uint8_t *Buf);
+  void writeBloomFilter(uint8_t *Buf);
   void writeHashTable(uint8_t *Buf);
 
-  struct SymbolData {
+  struct Entry {
     SymbolBody *Body;
-    size_t STName;
+    size_t StrTabOffset;
     uint32_t Hash;
   };
 
-  std::vector<SymbolData> Symbols;
-
-  unsigned MaskWords;
-  unsigned NBuckets;
-  unsigned Shift2;
-  uintX_t Size = 0;
+  std::vector<Entry> Symbols;
+  size_t MaskWords;
+  size_t NBuckets;
+  size_t Size = 0;
 };
 
 template <class ELFT> class HashTableSection final : public SyntheticSection {

@@ -35,6 +35,7 @@ struct some_hash
     some_hash();
     some_hash(const some_hash&);
     ~some_hash() noexcept(false);
+    std::size_t operator()(T const&) const;
 };
 
 int main()

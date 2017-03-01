@@ -24,9 +24,9 @@
 # endif // defined(BSD)
 #endif // defined(__unix__) || (defined(__APPLE__) && defined(__MACH__))
 
-#if defined(__unix__) || (defined(__APPLE__) && defined(__MACH__)) || defined(__CloudABI__)
+#if defined(__unix__) || (defined(__APPLE__) && defined(__MACH__)) || defined(__CloudABI__) || defined(__Fuchsia__)
 # include <unistd.h>
-#endif // defined(__unix__) || (defined(__APPLE__) && defined(__MACH__)) || defined(__CloudABI__)
+#endif // defined(__unix__) || (defined(__APPLE__) && defined(__MACH__)) || defined(__CloudABI__) || defined(__Fuchsia__)
 
 #if defined(__NetBSD__)
 #pragma weak pthread_create // Do not create libpthread dependency
