@@ -2,8 +2,15 @@
 
 namespace {
 // POD types are trivially move constructible.
+struct POD {
+  int a, b, c;
+};
+
 struct Movable {
   int a, b, c;
+  Movable() = default;
+  Movable(const Movable &) {}
+  Movable(Movable &&) {}
 };
 
 struct NotMovable {
@@ -147,7 +154,8 @@ template <typename T> struct N {
 // Test with value parameter.
 struct O {
   O(Movable M) : M(M) {}
-  // CHECK-FIXES: O(Movable M) : M(M) {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: pass by value and use std::move
+  // CHECK-FIXES: O(Movable M) : M(std::move(M)) {}
   Movable M;
 };
 
@@ -179,7 +187,8 @@ typedef ::Movable RMovable;
 }
 struct R {
   R(ns_R::RMovable M) : M(M) {}
-  // CHECK-FIXES: R(ns_R::RMovable M) : M(M) {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: pass by value and use std::move
+  // CHECK-FIXES: R(ns_R::RMovable M) : M(std::move(M)) {}
   ns_R::RMovable M;
 };
 
@@ -198,4 +207,9 @@ struct T {
   T(array<int, 10> a) : a_(a) {}
   // CHECK-FIXES: T(array<int, 10> a) : a_(a) {}
   array<int, 10> a_;
+};
+
+struct U {
+  U(const POD &M) : M(M) {}
+  POD M;
 };

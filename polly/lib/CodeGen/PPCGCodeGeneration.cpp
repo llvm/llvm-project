@@ -603,8 +603,9 @@ void GPUNodeBuilder::createCallLaunchKernel(Value *GPUKernel, Value *GridDimX,
     F = Function::Create(Ty, Linkage, Name, M);
   }
 
-  Builder.CreateCall(F, {GPUKernel, GridDimX, GridDimY, BlockDimX, BlockDimY,
-                         BlockDimZ, Parameters});
+  Builder.CreateCall(F,
+                     {GPUKernel, GridDimX, GridDimY, BlockDimX, BlockDimY,
+                      BlockDimZ, Parameters});
 }
 
 void GPUNodeBuilder::createCallFreeKernel(Value *GPUKernel) {

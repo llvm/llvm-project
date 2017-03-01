@@ -636,7 +636,12 @@ OutputSectionFactory<ELFT>::create(const SectionKey &Key,
     if (getIncompatibleFlags(Sec->Flags) != getIncompatibleFlags(C->Flags))
       error("Section has flags incompatible with others with the same name " +
             toString(C));
-    if (Sec->Type != C->Type)
+    // Convert notbits to progbits if they are mixed. This happens is some
+    // linker scripts.
+    if (Sec->Type == SHT_NOBITS && C->Type == SHT_PROGBITS)
+      Sec->Type = SHT_PROGBITS;
+    if (Sec->Type != C->Type &&
+        !(Sec->Type == SHT_PROGBITS && C->Type == SHT_NOBITS))
       error("Section has different type from others with the same name " +
             toString(C));
     Sec->Flags |= Flags;

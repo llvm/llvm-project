@@ -56,11 +56,7 @@ template <class T> T check(ErrorOr<T> E) {
 
 template <class T> T check(Expected<T> E) {
   if (!E)
-    handleAllErrors(std::move(E.takeError()),
-                    [](llvm::ErrorInfoBase &EIB) -> Error {
-                      fatal(EIB.message());
-                      return Error::success();
-                    });
+    fatal(llvm::toString(E.takeError()));
   return std::move(*E);
 }
 

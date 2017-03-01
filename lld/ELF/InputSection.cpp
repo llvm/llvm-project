@@ -36,7 +36,7 @@ using namespace lld::elf;
 // Returns a string to construct an error message.
 template <class ELFT>
 std::string lld::toString(const InputSectionBase<ELFT> *Sec) {
-  // File can absent if section is synthetic.
+  // File can be absent if section is synthetic.
   std::string FileName =
       Sec->getFile() ? Sec->getFile()->getName() : "<internal>";
   return (FileName + ":(" + Sec->Name + ")").str();
@@ -104,11 +104,6 @@ template <class ELFT> size_t InputSectionBase<ELFT>::getSize() const {
       return D->getThunkOff() + D->getThunksSize();
 
   return Data.size();
-}
-
-// Returns a string for an error message.
-template <class SectionT> static std::string getName(SectionT *Sec) {
-  return (Sec->getFile()->getName() + ":(" + Sec->Name + ")").str();
 }
 
 template <class ELFT>
