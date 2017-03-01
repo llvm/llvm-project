@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify -fblocks -Wno-objc-root-class -std=c++11 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -fblocks -Wno-objc-root-class -std=c++14 %s
 @protocol NSObject;
 
 void bar(id(^)(void));
@@ -143,6 +143,17 @@ namespace DependentReturn {
   bool operator!=(X, X);
 
   template void f<X>(X);
+}
+
+namespace GenericLambdaCapture {
+int test(int outerp) {
+  auto lambda =[&](auto p) {
+    return ^{
+      return p + outerp;
+    }();
+  };
+  return lambda(1);
+}
 }
 
 namespace MoveBlockVariable {
