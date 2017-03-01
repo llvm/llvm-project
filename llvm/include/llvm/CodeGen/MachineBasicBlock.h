@@ -664,6 +664,10 @@ public:
     return findDebugLoc(MBBI.getInstrIterator());
   }
 
+  /// Find and return the merged DebugLoc of the branch instructions of the
+  /// block. Return UnknownLoc if there is none.
+  DebugLoc findBranchDebugLoc();
+
   /// Possible outcome of a register liveness query to computeRegisterLiveness()
   enum LivenessQueryResult {
     LQR_Live,   ///< Register is known to be (at least partially) live.
