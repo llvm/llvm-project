@@ -88,7 +88,15 @@ bool DWARFUnit::getStringOffsetSectionItem(uint32_t Index,
 bool DWARFUnit::extractImpl(DataExtractor debug_info, uint32_t *offset_ptr) {
   Length = debug_info.getU32(offset_ptr);
   Version = debug_info.getU16(offset_ptr);
-  uint64_t AbbrOffset = debug_info.getU32(offset_ptr);
+  uint64_t AbbrOffset;
+  if (Version >= 5) {
+    UnitType = debug_info.getU8(offset_ptr);
+    AddrSize = debug_info.getU8(offset_ptr);
+    AbbrOffset = debug_info.getU32(offset_ptr);
+  } else {
+    AbbrOffset = debug_info.getU32(offset_ptr);
+    AddrSize = debug_info.getU8(offset_ptr);
+  }
   if (IndexEntry) {
     if (AbbrOffset)
       return false;
@@ -100,7 +108,6 @@ bool DWARFUnit::extractImpl(DataExtractor debug_info, uint32_t *offset_ptr) {
       return false;
     AbbrOffset = AbbrEntry->Offset;
   }
-  AddrSize = debug_info.getU8(offset_ptr);
 
   bool LengthOK = debug_info.isValidOffset(getNextUnitOffset() - 1);
   bool VersionOK = DWARFContext::isSupportedVersion(Version);

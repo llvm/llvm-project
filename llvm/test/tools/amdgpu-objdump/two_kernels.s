@@ -98,7 +98,7 @@ amd_kernel_code_t_minimal:
 // DIS: amd_kernel_code_t_minimal:
 // DIS: .amd_kernel_code_t
 // DIS:     amd_code_version_major = 1
-// DIS:     amd_code_version_minor = 0
+// DIS:     amd_code_version_minor = 1
 // DIS:     amd_machine_kind = 1
 // DIS:     amd_machine_version_major = 0
 // DIS:     amd_machine_version_minor = 0

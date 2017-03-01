@@ -3193,8 +3193,9 @@ static void handleTransparentUnionAttr(Sema &S, Decl *D,
   }
 
   if (!RD->isCompleteDefinition()) {
-    S.Diag(Attr.getLoc(),
-        diag::warn_transparent_union_attribute_not_definition);
+    if (!RD->isBeingDefined())
+      S.Diag(Attr.getLoc(),
+             diag::warn_transparent_union_attribute_not_definition);
     return;
   }
 
@@ -6312,6 +6313,15 @@ void Sema::ProcessDeclAttributeList(Scope *S, Decl *D,
       D->setInvalidDecl();
     }
   }
+}
+
+// Helper for delayed proccessing TransparentUnion attribute.
+void Sema::ProcessDeclAttributeDelayed(Decl *D, const AttributeList *AttrList) {
+  for (const AttributeList *Attr = AttrList; Attr; Attr = Attr->getNext())
+    if (Attr->getKind() == AttributeList::AT_TransparentUnion) {
+      handleTransparentUnionAttr(*this, D, *Attr);
+      break;
+    }
 }
 
 // Annotation attributes are the only attributes allowed after an access

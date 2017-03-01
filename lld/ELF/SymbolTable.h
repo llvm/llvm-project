@@ -46,11 +46,11 @@ public:
   ArrayRef<BinaryFile *> getBinaryFiles() const { return BinaryFiles; }
   ArrayRef<SharedFile<ELFT> *> getSharedFiles() const { return SharedFiles; }
 
-  DefinedRegular<ELFT> *addAbsolute(StringRef Name,
-                                    uint8_t Visibility = llvm::ELF::STV_HIDDEN,
-                                    uint8_t Binding = llvm::ELF::STB_GLOBAL);
-  DefinedRegular<ELFT> *addIgnored(StringRef Name,
-                                   uint8_t Visibility = llvm::ELF::STV_HIDDEN);
+  DefinedRegular *addAbsolute(StringRef Name,
+                              uint8_t Visibility = llvm::ELF::STV_HIDDEN,
+                              uint8_t Binding = llvm::ELF::STB_GLOBAL);
+  DefinedRegular *addIgnored(StringRef Name,
+                             uint8_t Visibility = llvm::ELF::STV_HIDDEN);
 
   Symbol *addUndefined(StringRef Name);
   Symbol *addUndefined(StringRef Name, bool IsLocal, uint8_t Binding,

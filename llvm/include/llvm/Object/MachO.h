@@ -139,13 +139,16 @@ typedef content_iterator<MachORebaseEntry> rebase_iterator;
 /// MachOBindEntry encapsulates the current state in the decompression of
 /// binding opcodes. This allows you to iterate through the compressed table of
 /// bindings using:
-///    for (const llvm::object::MachOBindEntry &Entry : Obj->bindTable()) {
+///    Error Err;
+///    for (const llvm::object::MachOBindEntry &Entry : Obj->bindTable(&Err)) {
 ///    }
+///    if (Err) { report error ...
 class MachOBindEntry {
 public:
   enum class Kind { Regular, Lazy, Weak };
 
-  MachOBindEntry(ArrayRef<uint8_t> Opcodes, bool is64Bit, MachOBindEntry::Kind);
+  MachOBindEntry(Error *Err, const MachOObjectFile *O,
+                 ArrayRef<uint8_t> Opcodes, bool is64Bit, MachOBindEntry::Kind);
 
   uint32_t segmentIndex() const;
   uint64_t segmentOffset() const;
@@ -166,6 +169,8 @@ private:
   uint64_t readULEB128();
   int64_t readSLEB128();
 
+  Error *E;
+  const MachOObjectFile *O;
   ArrayRef<uint8_t> Opcodes;
   const uint8_t *Ptr;
   uint64_t SegmentOffset;
@@ -245,6 +250,7 @@ public:
 
   // MachO specific.
   std::error_code getLibraryShortNameByIndex(unsigned Index, StringRef &) const;
+  uint32_t getLibraryCount() const;
 
   section_iterator getRelocationRelocatedSection(relocation_iterator Rel) const;
 
@@ -292,16 +298,18 @@ public:
                                                      bool is64);
 
   /// For use iterating over all bind table entries.
-  iterator_range<bind_iterator> bindTable() const;
+  iterator_range<bind_iterator> bindTable(Error &Err) const;
 
   /// For use iterating over all lazy bind table entries.
-  iterator_range<bind_iterator> lazyBindTable() const;
+  iterator_range<bind_iterator> lazyBindTable(Error &Err) const;
 
-  /// For use iterating over all lazy bind table entries.
-  iterator_range<bind_iterator> weakBindTable() const;
+  /// For use iterating over all weak bind table entries.
+  iterator_range<bind_iterator> weakBindTable(Error &Err) const;
 
   /// For use examining bind opcodes not in a MachOObjectFile.
-  static iterator_range<bind_iterator> bindTable(ArrayRef<uint8_t> Opcodes,
+  static iterator_range<bind_iterator> bindTable(Error &Err,
+                                                 const MachOObjectFile *O,
+                                                 ArrayRef<uint8_t> Opcodes,
                                                  bool is64,
                                                  MachOBindEntry::Kind);
 

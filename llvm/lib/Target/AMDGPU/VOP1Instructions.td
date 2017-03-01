@@ -30,11 +30,11 @@ class VOP1_SDWAe <bits<8> op, VOPProfile P> : VOP_SDWAe <P> {
   let Inst{31-25} = 0x3f; // encoding
 }
 
-class VOP1_Pseudo <string opName, VOPProfile P, list<dag> pattern=[]> :
+class VOP1_Pseudo <string opName, VOPProfile P, list<dag> pattern=[], bit VOP1Only = 0> :
   InstSI <P.Outs32, P.Ins32, "", pattern>,
   VOP <opName>,
-  SIMCInstr <opName#"_e32", SIEncodingFamily.NONE>,
-  MnemonicAlias<opName#"_e32", opName> {
+  SIMCInstr <!if(VOP1Only, opName, opName#"_e32"), SIEncodingFamily.NONE>,
+  MnemonicAlias<!if(VOP1Only, opName, opName#"_e32"), opName> {
 
   let isPseudo = 1;
   let isCodeGenOnly = 1;
@@ -332,6 +332,25 @@ def : Pat<
 
 }
 
+def VOP_SWAP_I32 : VOPProfile<[i32, i32, i32, untyped]> {
+  let Outs32 = (outs VGPR_32:$vdst, VGPR_32:$vdst1);
+  let Ins32 = (ins VGPR_32:$src0, VGPR_32:$src1);
+  let Outs64 = Outs32;
+  let Asm32 = " $vdst, $src0";
+  let Asm64 = "";
+  let Ins64 = (ins);
+}
+
+let SubtargetPredicate = isGFX9 in {
+  let Constraints = "$vdst = $src1, $vdst1 = $src0",
+      DisableEncoding="$vdst1,$src1",
+      SchedRW = [Write64Bit, Write64Bit] in {
+// Never VOP3. Takes as long as 2 v_mov_b32s
+def V_SWAP_B32 : VOP1_Pseudo <"v_swap_b32", VOP_SWAP_I32, [], 1>;
+}
+
+} // End SubtargetPredicate = isGFX9
+
 //===----------------------------------------------------------------------===//
 // Target
 //===----------------------------------------------------------------------===//
@@ -453,6 +472,14 @@ class VOP1_DPP <bits<8> op, VOP1_Pseudo ps, VOPProfile P = ps.Pfl> :
   let Inst{31-25} = 0x3f; //encoding
 }
 
+multiclass VOP1Only_Real_vi <bits<10> op> {
+  let AssemblerPredicates = [isVI], DecoderNamespace = "VI" in {
+    def _vi :
+      VOP1_Real<!cast<VOP1_Pseudo>(NAME), SIEncodingFamily.VI>,
+      VOP1e<op{7-0}, !cast<VOP1_Pseudo>(NAME).Pfl>;
+  }
+}
+
 multiclass VOP1_Real_vi <bits<10> op> {
   let AssemblerPredicates = [isVI], DecoderNamespace = "VI" in {
     def _e32_vi :
@@ -547,7 +574,7 @@ defm V_RNDNE_F16         : VOP1_Real_vi <0x47>;
 defm V_FRACT_F16         : VOP1_Real_vi <0x48>;
 defm V_SIN_F16           : VOP1_Real_vi <0x49>;
 defm V_COS_F16           : VOP1_Real_vi <0x4a>;
-
+defm V_SWAP_B32          : VOP1Only_Real_vi <0x51>;
 
 // Copy of v_mov_b32 with $vdst as a use operand for use with VGPR
 // indexing mode. vdst can't be treated as a def for codegen purposes,

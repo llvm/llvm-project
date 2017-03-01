@@ -1653,8 +1653,8 @@ void Verifier::verifyFunctionMetadata(
   for (const auto &Pair : MDs) {
     if (Pair.first == LLVMContext::MD_prof) {
       MDNode *MD = Pair.second;
-      Assert(MD->getNumOperands() == 2,
-             "!prof annotations should have exactly 2 operands", MD);
+      Assert(MD->getNumOperands() >= 2,
+             "!prof annotations should have no less than 2 operands", MD);
 
       // Check first operand.
       Assert(MD->getOperand(0) != nullptr, "first operand should not be null",

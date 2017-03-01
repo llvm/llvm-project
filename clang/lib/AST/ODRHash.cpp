@@ -194,6 +194,14 @@ public:
 
     Inherited::VisitFieldDecl(D);
   }
+
+  void VisitFunctionDecl(const FunctionDecl *D) {
+    Inherited::VisitFunctionDecl(D);
+  }
+
+  void VisitCXXMethodDecl(const CXXMethodDecl *D) {
+    Inherited::VisitCXXMethodDecl(D);
+  }
 };
 
 // Only allow a small portion of Decl's to be processed.  Remove this once
@@ -206,6 +214,7 @@ bool ODRHash::isWhitelistedDecl(const Decl *D, const CXXRecordDecl *Parent) {
     default:
       return false;
     case Decl::AccessSpec:
+    case Decl::CXXMethod:
     case Decl::Field:
     case Decl::StaticAssert:
       return true;

@@ -2406,9 +2406,9 @@ let AdditionalPredicates = [NotInMicroMips] in {
 
   defm : OneOrTwoOperandMacroImmediateAlias<"xor", XORi>, GPR_32;
 
-  defm : OneOrTwoOperandMacroImmediateAlias<"slt", SLTi>;
+  defm : OneOrTwoOperandMacroImmediateAlias<"slt", SLTi>, GPR_32;
 
-  defm : OneOrTwoOperandMacroImmediateAlias<"sltu", SLTiu>;
+  defm : OneOrTwoOperandMacroImmediateAlias<"sltu", SLTiu>, GPR_32;
 }
 def : MipsInstAlias<"mfc0 $rt, $rd", (MFC0 GPR32Opnd:$rt, COP0Opnd:$rd, 0), 0>;
 def : MipsInstAlias<"mtc0 $rt, $rd", (MTC0 COP0Opnd:$rd, GPR32Opnd:$rt, 0), 0>;
@@ -2516,11 +2516,12 @@ def JalTwoReg : MipsAsmPseudoInst<(outs GPR32Opnd:$rd), (ins GPR32Opnd:$rs),
 def JalOneReg : MipsAsmPseudoInst<(outs), (ins GPR32Opnd:$rs),
                       "jal\t$rs"> ;
 
-def NORImm : MipsAsmPseudoInst<
-                 (outs), (ins GPR32Opnd:$rs, GPR32Opnd:$rt, simm32_relaxed:$imm),
-                 "nor\t$rs, $rt, $imm">;
+class NORIMM_DESC_BASE<RegisterOperand RO, DAGOperand Imm> :
+   MipsAsmPseudoInst<(outs RO:$rs), (ins RO:$rt, Imm:$imm),
+                      "nor\t$rs, $rt, $imm">;
+def NORImm : NORIMM_DESC_BASE<GPR32Opnd, simm32_relaxed>, GPR_32;
 def : MipsInstAlias<"nor\t$rs, $imm", (NORImm GPR32Opnd:$rs, GPR32Opnd:$rs,
-                                              simm32_relaxed:$imm)>;
+                                              simm32_relaxed:$imm)>, GPR_32;
 
 let hasDelaySlot = 1, isCTI = 1 in {
 def BneImm : MipsAsmPseudoInst<(outs GPR32Opnd:$rt),

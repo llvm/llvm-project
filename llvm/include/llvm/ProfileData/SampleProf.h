@@ -15,8 +15,11 @@
 #ifndef LLVM_PROFILEDATA_SAMPLEPROF_H_
 #define LLVM_PROFILEDATA_SAMPLEPROF_H_
 
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/IR/GlobalValue.h"
+#include "llvm/IR/Module.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/raw_ostream.h"
@@ -298,6 +301,20 @@ public:
       MergeResult(Result, functionSamplesAt(Loc).merge(Rec, Weight));
     }
     return Result;
+  }
+
+  /// Recursively traverses all children, if the corresponding function is
+  /// not defined in module \p M, and its total sample is no less than
+  /// \p Threshold, add its corresponding GUID to \p S.
+  void findImportedFunctions(DenseSet<GlobalValue::GUID> &S, const Module *M,
+                             uint64_t Threshold) const {
+    if (TotalSamples <= Threshold)
+      return;
+    Function *F = M->getFunction(Name);
+    if (!F || !F->getSubprogram())
+      S.insert(Function::getGUID(Name));
+    for (auto CS : CallsiteSamples)
+      CS.second.findImportedFunctions(S, M, Threshold);
   }
 
   /// Set the name of the function.

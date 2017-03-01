@@ -505,6 +505,7 @@ class Process : public std::enable_shared_from_this<Process>,
                 public PluginInterface {
   friend class FunctionCaller; // For WaitForStateChangeEventsPrivate
   friend class Debugger; // For PopProcessIOHandler and ProcessIOHandlerIsActive
+  friend class DynamicLoader; // For LoadOperatingSystemPlugin
   friend class ProcessEventData;
   friend class StopInfo;
   friend class Target;

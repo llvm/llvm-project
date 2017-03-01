@@ -150,7 +150,7 @@ template <class ELFT> void InputSectionBase::uncompress() {
 }
 
 template <class ELFT>
-uint64_t InputSectionBase::getOffset(const DefinedRegular<ELFT> &Sym) const {
+uint64_t InputSectionBase::getOffset(const DefinedRegular &Sym) const {
   return getOffset<ELFT>(Sym.Value);
 }
 
@@ -177,7 +177,7 @@ std::string InputSectionBase::getLocation(uint64_t Offset) {
 
   // Find a function symbol that encloses a given location.
   for (SymbolBody *B : getFile<ELFT>()->getSymbols())
-    if (auto *D = dyn_cast<DefinedRegular<ELFT>>(B))
+    if (auto *D = dyn_cast<DefinedRegular>(B))
       if (D->Section == this && D->Type == STT_FUNC)
         if (D->Value <= Offset && Offset < D->Value + D->Size)
           return SrcFile + ":(function " + toString(*D) + ")";
@@ -250,7 +250,7 @@ void InputSection::copyRelocations(uint8_t *Buf, ArrayRef<RelTy> Rels) {
       // avoid having to parse and recreate .eh_frame, we just replace any
       // relocation in it pointing to discarded sections with R_*_NONE, which
       // hopefully creates a frame that is ignored at runtime.
-      InputSectionBase *Section = cast<DefinedRegular<ELFT>>(Body).Section;
+      InputSectionBase *Section = cast<DefinedRegular>(Body).Section;
       if (Section == &InputSection::Discarded) {
         P->setSymbolAndType(0, 0, false);
         continue;
@@ -840,13 +840,13 @@ template InputSectionBase *InputSection::getRelocatedSection<ELF64LE>();
 template InputSectionBase *InputSection::getRelocatedSection<ELF64BE>();
 
 template uint64_t
-InputSectionBase::getOffset(const DefinedRegular<ELF32LE> &Sym) const;
+InputSectionBase::getOffset<ELF32LE>(const DefinedRegular &Sym) const;
 template uint64_t
-InputSectionBase::getOffset(const DefinedRegular<ELF32BE> &Sym) const;
+InputSectionBase::getOffset<ELF32BE>(const DefinedRegular &Sym) const;
 template uint64_t
-InputSectionBase::getOffset(const DefinedRegular<ELF64LE> &Sym) const;
+InputSectionBase::getOffset<ELF64LE>(const DefinedRegular &Sym) const;
 template uint64_t
-InputSectionBase::getOffset(const DefinedRegular<ELF64BE> &Sym) const;
+InputSectionBase::getOffset<ELF64BE>(const DefinedRegular &Sym) const;
 
 template uint64_t InputSectionBase::getOffset<ELF32LE>(uint64_t Offset) const;
 template uint64_t InputSectionBase::getOffset<ELF32BE>(uint64_t Offset) const;

@@ -163,7 +163,8 @@ protected:
   ErrorOr<uint64_t> getBlockWeight(const BasicBlock *BB);
   const FunctionSamples *findCalleeFunctionSamples(const Instruction &I) const;
   const FunctionSamples *findFunctionSamples(const Instruction &I) const;
-  bool inlineHotFunctions(Function &F);
+  bool inlineHotFunctions(Function &F,
+                          DenseSet<GlobalValue::GUID> &ImportGUIDs);
   void printEdgeWeight(raw_ostream &OS, Edge E);
   void printBlockWeight(raw_ostream &OS, const BasicBlock *BB) const;
   void printBlockEquivalence(raw_ostream &OS, const BasicBlock *BB);
@@ -604,9 +605,12 @@ SampleProfileLoader::findFunctionSamples(const Instruction &Inst) const {
 /// it to direct call. Each indirect call is limited with a single target.
 ///
 /// \param F function to perform iterative inlining.
+/// \param ImportGUIDs a set to be updated to include all GUIDs that come
+///     from a different module but inlined in the profiled binary.
 ///
 /// \returns True if there is any inline happened.
-bool SampleProfileLoader::inlineHotFunctions(Function &F) {
+bool SampleProfileLoader::inlineHotFunctions(
+    Function &F, DenseSet<GlobalValue::GUID> &ImportGUIDs) {
   DenseSet<Instruction *> PromotedInsns;
   bool Changed = false;
   LLVMContext &Ctx = F.getContext();
@@ -655,8 +659,12 @@ bool SampleProfileLoader::inlineHotFunctions(Function &F) {
           continue;
         }
       }
-      if (!CalledFunction || !CalledFunction->getSubprogram())
+      if (!CalledFunction || !CalledFunction->getSubprogram()) {
+        findCalleeFunctionSamples(*I)->findImportedFunctions(
+            ImportGUIDs, F.getParent(),
+            Samples->getTotalSamples() * SampleProfileHotThreshold / 100);
         continue;
+      }
       DebugLoc DLoc = I->getDebugLoc();
       uint64_t NumSamples = findCalleeFunctionSamples(*I)->getTotalSamples();
       if (InlineFunction(CallSite(DI), IFI)) {
@@ -1041,10 +1049,6 @@ void SampleProfileLoader::propagateWeights(Function &F) {
   bool Changed = true;
   unsigned I = 0;
 
-  // Add an entry count to the function using the samples gathered
-  // at the function entry.
-  F.setEntryCount(Samples->getHeadSamples() + 1);
-
   // If BB weight is larger than its corresponding loop's header BB weight,
   // use the BB weight to replace the loop header BB weight.
   for (auto &BI : F) {
@@ -1273,12 +1277,19 @@ bool SampleProfileLoader::emitAnnotations(Function &F) {
   DEBUG(dbgs() << "Line number for the first instruction in " << F.getName()
                << ": " << getFunctionLoc(F) << "\n");
 
-  Changed |= inlineHotFunctions(F);
+  DenseSet<GlobalValue::GUID> ImportGUIDs;
+  Changed |= inlineHotFunctions(F, ImportGUIDs);
 
   // Compute basic block weights.
   Changed |= computeBlockWeights(F);
 
   if (Changed) {
+    // Add an entry count to the function using the samples gathered at the
+    // function entry. Also sets the GUIDs that comes from a different
+    // module but inlined in the profiled binary. This is aiming at making
+    // the IR match the profiled binary before annotation.
+    F.setEntryCount(Samples->getHeadSamples() + 1, &ImportGUIDs);
+
     // Compute dominance and loop info needed for propagation.
     computeDominanceAndLoopInfo(F);
 

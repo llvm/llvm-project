@@ -396,11 +396,10 @@ bool PDBFile::hasStringTable() {
   return IS->getNamedStreamIndex("/names") < getNumStreams();
 }
 
-/// Wrapper around MappedBlockStream::createIndexedStream()
-/// that checks if a stream with that index actually exists.
-/// If it does not, the return value will have an MSFError with
-/// code msf_error_code::no_stream. Else, the return value will
-/// contain the stream returned by createIndexedStream().
+/// Wrapper around MappedBlockStream::createIndexedStream() that checks if a
+/// stream with that index actually exists.  If it does not, the return value
+/// will have an MSFError with code msf_error_code::no_stream.  Else, the return
+/// value will contain the stream returned by createIndexedStream().
 Expected<std::unique_ptr<MappedBlockStream>>
 PDBFile::safelyCreateIndexedStream(const MSFLayout &Layout,
                                    BinaryStreamRef MsfData,

@@ -1083,7 +1083,8 @@ private:
       if (Current.MatchingParen && Current.Next &&
           !Current.Next->isBinaryOperator() &&
           !Current.Next->isOneOf(tok::semi, tok::colon, tok::l_brace,
-                                 tok::period, tok::arrow, tok::coloncolon))
+                                 tok::comma, tok::period, tok::arrow,
+                                 tok::coloncolon))
         if (FormatToken *AfterParen = Current.MatchingParen->Next) {
           // Make sure this isn't the return type of an Obj-C block declaration
           if (AfterParen->Tok.isNot(tok::caret)) {

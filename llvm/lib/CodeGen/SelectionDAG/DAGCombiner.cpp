@@ -5677,7 +5677,9 @@ SDValue DAGCombiner::foldSelectOfConstants(SDNode *N) {
   if (!VT.isInteger())
     return SDValue();
 
-  if (!isa<ConstantSDNode>(N1) || !isa<ConstantSDNode>(N2))
+  auto *C1 = dyn_cast<ConstantSDNode>(N1);
+  auto *C2 = dyn_cast<ConstantSDNode>(N2);
+  if (!C1 || !C2)
     return SDValue();
 
   // Only do this before legalization to avoid conflicting with target-specific
@@ -5687,27 +5689,27 @@ SDValue DAGCombiner::foldSelectOfConstants(SDNode *N) {
   // TODO: This could be generalized for any 2 constants that differ by 1:
   // add ({s/z}ext Cond), C
   if (CondVT == MVT::i1 && !LegalOperations) {
-    if (isNullConstant(N1) && isOneConstant(N2)) {
+    if (C1->isNullValue() && C2->isOne()) {
       // select Cond, 0, 1 --> zext (!Cond)
       SDValue NotCond = DAG.getNOT(DL, Cond, MVT::i1);
       if (VT != MVT::i1)
         NotCond = DAG.getNode(ISD::ZERO_EXTEND, DL, VT, NotCond);
       return NotCond;
     }
-    if (isNullConstant(N1) && isAllOnesConstant(N2)) {
+    if (C1->isNullValue() && C2->isAllOnesValue()) {
       // select Cond, 0, -1 --> sext (!Cond)
       SDValue NotCond = DAG.getNOT(DL, Cond, MVT::i1);
       if (VT != MVT::i1)
         NotCond = DAG.getNode(ISD::SIGN_EXTEND, DL, VT, NotCond);
       return NotCond;
     }
-    if (isOneConstant(N1) && isNullConstant(N2)) {
+    if (C1->isOne() && C2->isNullValue()) {
       // select Cond, 1, 0 --> zext (Cond)
       if (VT != MVT::i1)
         Cond = DAG.getNode(ISD::ZERO_EXTEND, DL, VT, Cond);
       return Cond;
     }
-    if (isAllOnesConstant(N1) && isNullConstant(N2)) {
+    if (C1->isAllOnesValue() && C2->isNullValue()) {
       // select Cond, -1, 0 --> sext (Cond)
       if (VT != MVT::i1)
         Cond = DAG.getNode(ISD::SIGN_EXTEND, DL, VT, Cond);
@@ -5730,7 +5732,7 @@ SDValue DAGCombiner::foldSelectOfConstants(SDNode *N) {
           TargetLowering::ZeroOrOneBooleanContent &&
       TLI.getBooleanContents(false, false) ==
           TargetLowering::ZeroOrOneBooleanContent &&
-      isNullConstant(N1) && isOneConstant(N2)) {
+      C1->isNullValue() && C2->isOne()) {
     SDValue NotCond =
         DAG.getNode(ISD::XOR, DL, CondVT, Cond, DAG.getConstant(1, DL, CondVT));
     if (VT.bitsEq(CondVT))

@@ -244,8 +244,8 @@ bool ICF<ELFT>::variableEq(const InputSection *A, ArrayRef<RelTy> RelsA,
     if (&SA == &SB)
       return true;
 
-    auto *DA = dyn_cast<DefinedRegular<ELFT>>(&SA);
-    auto *DB = dyn_cast<DefinedRegular<ELFT>>(&SB);
+    auto *DA = dyn_cast<DefinedRegular>(&SA);
+    auto *DB = dyn_cast<DefinedRegular>(&SB);
     if (!DA || !DB)
       return false;
     if (DA->Value != DB->Value)

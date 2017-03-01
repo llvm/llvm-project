@@ -37,8 +37,10 @@ void DWARFTypeUnit::dump(raw_ostream &OS, bool SummarizeTypes) {
 
   OS << format("0x%08x", getOffset()) << ": Type Unit:"
      << " length = " << format("0x%08x", getLength())
-     << " version = " << format("0x%04x", getVersion())
-     << " abbr_offset = " << format("0x%04x", getAbbreviations()->getOffset())
+     << " version = " << format("0x%04x", getVersion());
+  if (getVersion() >= 5)
+    OS << " unit_type = " << dwarf::UnitTypeString(getUnitType());
+  OS << " abbr_offset = " << format("0x%04x", getAbbreviations()->getOffset())
      << " addr_size = " << format("0x%02x", getAddressByteSize())
      << " name = '" << Name << "'"
      << " type_signature = " << format("0x%16" PRIx64, TypeHash)

@@ -10609,6 +10609,12 @@ void Sema::CheckArrayAccess(const Expr *expr) {
           CheckArrayAccess(rhs);
         return;
       }
+      case Stmt::CXXOperatorCallExprClass: {
+        const auto *OCE = cast<CXXOperatorCallExpr>(expr);
+        for (const auto *Arg : OCE->arguments())
+          CheckArrayAccess(Arg);
+        return;
+      }
       default:
         return;
     }
