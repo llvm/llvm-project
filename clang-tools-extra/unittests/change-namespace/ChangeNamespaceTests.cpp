@@ -38,7 +38,8 @@ public:
 
     std::map<std::string, tooling::Replacements> FileToReplacements;
     change_namespace::ChangeNamespaceTool NamespaceTool(
-        OldNamespace, NewNamespace, FilePattern, &FileToReplacements);
+        OldNamespace, NewNamespace, FilePattern,
+        /*WhiteListedSymbolPatterns*/ {}, &FileToReplacements);
     ast_matchers::MatchFinder Finder;
     NamespaceTool.registerMatchers(&Finder);
     std::unique_ptr<tooling::FrontendActionFactory> Factory =
@@ -369,6 +370,36 @@ TEST_F(ChangeNamespaceTest, LeaveForwardDeclarationBehind) {
                          "class A {\n"
                          "  ::na::nb::FWD *fwd;\n"
                          "};\n"
+                         "} // namespace y\n"
+                         "} // namespace x\n";
+  EXPECT_EQ(format(Expected), runChangeNamespaceOnCode(Code));
+}
+
+TEST_F(ChangeNamespaceTest, InsertForwardDeclsProperly) {
+  std::string Code = "namespace na {\n"
+                     "namespace nb {\n"
+                     "\n"
+                     "class FWD;\n"
+                     "class FWD2;\n"
+                     "class A {\n"
+                     "  FWD *fwd;\n"
+                     "};\n"
+                     "\n"
+                     "} // namespace nb\n"
+                     "} // namespace na\n";
+  std::string Expected = "namespace na {\n"
+                         "namespace nb {\n"
+                         "class FWD;\n"
+                         "class FWD2;\n"
+                         "} // namespace nb\n"
+                         "} // namespace na\n"
+                         "namespace x {\n"
+                         "namespace y {\n"
+                         "\n"
+                         "class A {\n"
+                         "  ::na::nb::FWD *fwd;\n"
+                         "};\n"
+                         "\n"
                          "} // namespace y\n"
                          "} // namespace x\n";
   EXPECT_EQ(format(Expected), runChangeNamespaceOnCode(Code));

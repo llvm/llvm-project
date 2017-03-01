@@ -12,7 +12,7 @@ config.hwloc_library_dir = "@LIBOMP_HWLOC_LIBRARY_DIR@"
 config.using_hwloc = @LIBOMP_USE_HWLOC@
 config.has_ompt = @LIBOMP_OMPT_SUPPORT@ and @LIBOMP_OMPT_BLAME@ and @LIBOMP_OMPT_TRACE@
 config.has_libm = @LIBOMP_HAVE_LIBM@
+config.has_libatomic = @LIBOMP_HAVE_LIBATOMIC@
 
 # Let the main config do the real work.
 lit_config.load_config(config, "@LIBOMP_BASE_DIR@/test/lit.cfg")
-

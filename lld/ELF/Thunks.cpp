@@ -100,7 +100,7 @@ public:
   uint32_t size() const override { return 16; }
   void writeTo(uint8_t *Buf, ThunkSection<ELFT> &IS) const override;
   void addSymbols(ThunkSection<ELFT> &IS) override;
-  InputSection<ELFT> *getTargetInputSection() const override;
+  InputSection *getTargetInputSection() const override;
 };
 
 } // end anonymous namespace
@@ -127,10 +127,10 @@ void ARMToThumbV7ABSLongThunk<ELFT>::writeTo(uint8_t *Buf,
 
 template <class ELFT>
 void ARMToThumbV7ABSLongThunk<ELFT>::addSymbols(ThunkSection<ELFT> &IS) {
-  this->ThunkSym = addSyntheticLocal(
+  this->ThunkSym = addSyntheticLocal<ELFT>(
       Saver.save("__ARMToThumbv7ABSLongThunk_" + this->Destination.getName()),
       STT_FUNC, this->Offset, size(), &IS);
-  addSyntheticLocal("$a", STT_NOTYPE, this->Offset, 0, &IS);
+  addSyntheticLocal<ELFT>("$a", STT_NOTYPE, this->Offset, 0, &IS);
 }
 
 template <class ELFT>
@@ -149,10 +149,10 @@ void ThumbToARMV7ABSLongThunk<ELFT>::writeTo(uint8_t *Buf,
 
 template <class ELFT>
 void ThumbToARMV7ABSLongThunk<ELFT>::addSymbols(ThunkSection<ELFT> &IS) {
-  this->ThunkSym = addSyntheticLocal(
+  this->ThunkSym = addSyntheticLocal<ELFT>(
       Saver.save("__ThumbToARMv7ABSLongThunk_" + this->Destination.getName()),
       STT_FUNC, this->Offset, size(), &IS);
-  addSyntheticLocal("$t", STT_NOTYPE, this->Offset, 0, &IS);
+  addSyntheticLocal<ELFT>("$t", STT_NOTYPE, this->Offset, 0, &IS);
 }
 
 template <class ELFT>
@@ -173,10 +173,10 @@ void ARMToThumbV7PILongThunk<ELFT>::writeTo(uint8_t *Buf,
 
 template <class ELFT>
 void ARMToThumbV7PILongThunk<ELFT>::addSymbols(ThunkSection<ELFT> &IS) {
-  this->ThunkSym = addSyntheticLocal(
+  this->ThunkSym = addSyntheticLocal<ELFT>(
       Saver.save("__ARMToThumbV7PILongThunk_" + this->Destination.getName()),
       STT_FUNC, this->Offset, size(), &IS);
-  addSyntheticLocal("$a", STT_NOTYPE, this->Offset, 0, &IS);
+  addSyntheticLocal<ELFT>("$a", STT_NOTYPE, this->Offset, 0, &IS);
 }
 
 template <class ELFT>
@@ -197,10 +197,10 @@ void ThumbToARMV7PILongThunk<ELFT>::writeTo(uint8_t *Buf,
 
 template <class ELFT>
 void ThumbToARMV7PILongThunk<ELFT>::addSymbols(ThunkSection<ELFT> &IS) {
-  this->ThunkSym = addSyntheticLocal(
+  this->ThunkSym = addSyntheticLocal<ELFT>(
       Saver.save("__ThumbToARMV7PILongThunk_" + this->Destination.getName()),
       STT_FUNC, this->Offset, size(), &IS);
-  addSyntheticLocal("$t", STT_NOTYPE, this->Offset, 0, &IS);
+  addSyntheticLocal<ELFT>("$t", STT_NOTYPE, this->Offset, 0, &IS);
 }
 
 // Write MIPS LA25 thunk code to call PIC function from the non-PIC one.
@@ -218,15 +218,15 @@ void MipsThunk<ELFT>::writeTo(uint8_t *Buf, ThunkSection<ELFT> &) const {
 }
 
 template <class ELFT> void MipsThunk<ELFT>::addSymbols(ThunkSection<ELFT> &IS) {
-  this->ThunkSym = addSyntheticLocal(
+  this->ThunkSym = addSyntheticLocal<ELFT>(
       Saver.save("__LA25Thunk_" + this->Destination.getName()), STT_FUNC,
       this->Offset, size(), &IS);
 }
 
 template <class ELFT>
-InputSection<ELFT> *MipsThunk<ELFT>::getTargetInputSection() const {
-  auto *DR = dyn_cast<DefinedRegular<ELFT>>(&this->Destination);
-  return dyn_cast<InputSection<ELFT>>(DR->Section);
+InputSection *MipsThunk<ELFT>::getTargetInputSection() const {
+  auto *DR = dyn_cast<DefinedRegular>(&this->Destination);
+  return dyn_cast<InputSection>(DR->Section);
 }
 
 template <class ELFT>
@@ -244,12 +244,12 @@ static Thunk<ELFT> *addThunkArm(uint32_t Reloc, SymbolBody &S) {
   case R_ARM_PC24:
   case R_ARM_PLT32:
   case R_ARM_JUMP24:
-    if (Config->Pic)
+    if (Config->pic())
       return make<ARMToThumbV7PILongThunk<ELFT>>(S);
     return make<ARMToThumbV7ABSLongThunk<ELFT>>(S);
   case R_ARM_THM_JUMP19:
   case R_ARM_THM_JUMP24:
-    if (Config->Pic)
+    if (Config->pic())
       return make<ThumbToARMV7PILongThunk<ELFT>>(S);
     return make<ThumbToARMV7ABSLongThunk<ELFT>>(S);
   }

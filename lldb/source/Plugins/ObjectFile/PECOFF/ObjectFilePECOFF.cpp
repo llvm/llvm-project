@@ -13,8 +13,8 @@
 #include "llvm/Support/COFF.h"
 
 #include "lldb/Core/ArchSpec.h"
-#include "lldb/Core/DataBuffer.h"
 #include "lldb/Core/DataBufferHeap.h"
+#include "lldb/Core/DataBufferLLVM.h"
 #include "lldb/Core/FileSpecList.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
@@ -29,6 +29,8 @@
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/StreamString.h"
+
+#include "llvm/Support/MemoryBuffer.h"
 
 #define IMAGE_DOS_SIGNATURE 0x5A4D    // MZ
 #define IMAGE_NT_SIGNATURE 0x00004550 // PE00
@@ -65,20 +67,28 @@ ObjectFile *ObjectFilePECOFF::CreateInstance(const lldb::ModuleSP &module_sp,
                                              lldb::offset_t file_offset,
                                              lldb::offset_t length) {
   if (!data_sp) {
-    data_sp = file->MemoryMapFileContentsIfLocal(file_offset, length);
+    data_sp = DataBufferLLVM::CreateFromFileSpec(*file, length, file_offset);
+    if (!data_sp)
+      return nullptr;
     data_offset = 0;
   }
 
-  if (ObjectFilePECOFF::MagicBytesMatch(data_sp)) {
-    // Update the data to contain the entire file if it doesn't already
-    if (data_sp->GetByteSize() < length)
-      data_sp = file->MemoryMapFileContentsIfLocal(file_offset, length);
-    std::unique_ptr<ObjectFile> objfile_ap(new ObjectFilePECOFF(
-        module_sp, data_sp, data_offset, file, file_offset, length));
-    if (objfile_ap.get() && objfile_ap->ParseHeader())
-      return objfile_ap.release();
+  if (!ObjectFilePECOFF::MagicBytesMatch(data_sp))
+    return nullptr;
+
+  // Update the data to contain the entire file if it doesn't already
+  if (data_sp->GetByteSize() < length) {
+    data_sp = DataBufferLLVM::CreateFromFileSpec(*file, length, file_offset);
+    if (!data_sp)
+      return nullptr;
   }
-  return NULL;
+
+  auto objfile_ap = llvm::make_unique<ObjectFilePECOFF>(
+      module_sp, data_sp, data_offset, file, file_offset, length);
+  if (!objfile_ap || !objfile_ap->ParseHeader())
+    return nullptr;
+
+  return objfile_ap.release();
 }
 
 ObjectFile *ObjectFilePECOFF::CreateMemoryInstance(

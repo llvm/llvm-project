@@ -96,6 +96,7 @@ public:
     // debug server packages
     eServerPacketType_QEnvironmentHexEncoded,
     eServerPacketType_QListThreadsInStopReply,
+    eServerPacketType_QPassSignals,
     eServerPacketType_QRestoreRegisterState,
     eServerPacketType_QSaveRegisterState,
     eServerPacketType_QSetLogging,

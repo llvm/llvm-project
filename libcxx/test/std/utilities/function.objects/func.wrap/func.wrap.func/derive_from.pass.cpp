@@ -12,7 +12,7 @@
 
 // <functional>
 
-// See https://llvm.org/bugs/show_bug.cgi?id=20002
+// See https://bugs.llvm.org/show_bug.cgi?id=20002
 
 #include <functional>
 #include <type_traits>

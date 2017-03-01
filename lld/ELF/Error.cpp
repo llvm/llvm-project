@@ -45,9 +45,16 @@ static void print(StringRef S, raw_ostream::Colors C) {
 }
 
 void elf::log(const Twine &Msg) {
-  std::lock_guard<std::mutex> Lock(Mu);
-  if (Config->Verbose)
+  if (Config->Verbose) {
+    std::lock_guard<std::mutex> Lock(Mu);
     outs() << Argv0 << ": " << Msg << "\n";
+  }
+}
+
+void elf::message(const Twine &Msg) {
+  std::lock_guard<std::mutex> Lock(Mu);
+  outs() << Msg << "\n";
+  outs().flush();
 }
 
 void elf::warn(const Twine &Msg) {

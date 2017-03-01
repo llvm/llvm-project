@@ -151,6 +151,9 @@
 /* Define to the version of this package. */
 #undef PACKAGE_VERSION
 
+/* Defined if CompilerInstance::setInvocation takes a shared_ptr */
+#undef SETINVOCATION_TAKES_SHARED_PTR
+
 /* Define if CompilerInvocation::setLangDefaults takes 5 arguments */
 #undef SETLANGDEFAULTS_TAKES_5_ARGUMENTS
 

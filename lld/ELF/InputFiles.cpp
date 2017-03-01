@@ -56,14 +56,13 @@ public:
 }
 
 Optional<MemoryBufferRef> elf::readFile(StringRef Path) {
-  if (Config->Verbose)
-    outs() << Path << "\n";
-
+  log(Path);
   auto MBOrErr = MemoryBuffer::getFile(Path);
   if (auto EC = MBOrErr.getError()) {
     error("cannot open " + Path + ": " + EC.message());
     return None;
   }
+
   std::unique_ptr<MemoryBuffer> &MB = *MBOrErr;
   MemoryBufferRef MBRef = MB->getMemBufferRef();
   make<std::unique_ptr<MemoryBuffer>>(std::move(MB)); // take MB ownership
@@ -94,8 +93,8 @@ template <class ELFT> void elf::ObjectFile<ELFT>::initializeDwarfLine() {
 // Returns source line information for a given offset
 // using DWARF debug info.
 template <class ELFT>
-std::string elf::ObjectFile<ELFT>::getLineInfo(InputSectionBase<ELFT> *S,
-                                               uintX_t Offset) {
+std::string elf::ObjectFile<ELFT>::getLineInfo(InputSectionBase *S,
+                                               uint64_t Offset) {
   if (!DwarfLine)
     initializeDwarfLine();
 
@@ -242,14 +241,14 @@ bool elf::ObjectFile<ELFT>::shouldMerge(const Elf_Shdr &Sec) {
   // the section does not hold a table of fixed-size entries". We know
   // that Rust 1.13 produces a string mergeable section with a zero
   // sh_entsize. Here we just accept it rather than being picky about it.
-  uintX_t EntSize = Sec.sh_entsize;
+  uint64_t EntSize = Sec.sh_entsize;
   if (EntSize == 0)
     return false;
   if (Sec.sh_size % EntSize)
     fatal(toString(this) +
           ": SHF_MERGE section size must be a multiple of sh_entsize");
 
-  uintX_t Flags = Sec.sh_flags;
+  uint64_t Flags = Sec.sh_flags;
   if (!(Flags & SHF_MERGE))
     return false;
   if (Flags & SHF_WRITE)
@@ -278,20 +277,20 @@ void elf::ObjectFile<ELFT>::initializeSections(
   StringRef SectionStringTable = check(Obj.getSectionStringTable(ObjSections));
   for (const Elf_Shdr &Sec : ObjSections) {
     ++I;
-    if (Sections[I] == &InputSection<ELFT>::Discarded)
+    if (Sections[I] == &InputSection::Discarded)
       continue;
 
     // SHF_EXCLUDE'ed sections are discarded by the linker. However,
     // if -r is given, we'll let the final link discard such sections.
     // This is compatible with GNU.
     if ((Sec.sh_flags & SHF_EXCLUDE) && !Config->Relocatable) {
-      Sections[I] = &InputSection<ELFT>::Discarded;
+      Sections[I] = &InputSection::Discarded;
       continue;
     }
 
     switch (Sec.sh_type) {
     case SHT_GROUP:
-      Sections[I] = &InputSection<ELFT>::Discarded;
+      Sections[I] = &InputSection::Discarded;
       if (ComdatGroups.insert(CachedHashStringRef(
                                   getShtGroupSignature(ObjSections, Sec)))
               .second)
@@ -300,7 +299,7 @@ void elf::ObjectFile<ELFT>::initializeSections(
         if (SecIndex >= Size)
           fatal(toString(this) + ": invalid section index in group: " +
                 Twine(SecIndex));
-        Sections[SecIndex] = &InputSection<ELFT>::Discarded;
+        Sections[SecIndex] = &InputSection::Discarded;
       }
       break;
     case SHT_SYMTAB:
@@ -322,24 +321,22 @@ void elf::ObjectFile<ELFT>::initializeSections(
       if (Sec.sh_link >= Sections.size())
         fatal(toString(this) + ": invalid sh_link index: " +
               Twine(Sec.sh_link));
-      auto *IS = cast<InputSection<ELFT>>(Sections[Sec.sh_link]);
-      IS->DependentSection = Sections[I];
+      Sections[Sec.sh_link]->DependentSections.push_back(Sections[I]);
     }
   }
 }
 
 template <class ELFT>
-InputSectionBase<ELFT> *
-elf::ObjectFile<ELFT>::getRelocTarget(const Elf_Shdr &Sec) {
+InputSectionBase *elf::ObjectFile<ELFT>::getRelocTarget(const Elf_Shdr &Sec) {
   uint32_t Idx = Sec.sh_info;
   if (Idx >= Sections.size())
     fatal(toString(this) + ": invalid relocated section index: " + Twine(Idx));
-  InputSectionBase<ELFT> *Target = Sections[Idx];
+  InputSectionBase *Target = Sections[Idx];
 
   // Strictly speaking, a relocation section must be included in the
   // group of the section it relocates. However, LLVM 3.3 and earlier
   // would fail to do so, so we gracefully handle that case.
-  if (Target == &InputSection<ELFT>::Discarded)
+  if (Target == &InputSection::Discarded)
     return nullptr;
 
   if (!Target)
@@ -348,7 +345,7 @@ elf::ObjectFile<ELFT>::getRelocTarget(const Elf_Shdr &Sec) {
 }
 
 template <class ELFT>
-InputSectionBase<ELFT> *
+InputSectionBase *
 elf::ObjectFile<ELFT>::createInputSection(const Elf_Shdr &Sec,
                                           StringRef SectionStringTable) {
   StringRef Name =
@@ -361,27 +358,30 @@ elf::ObjectFile<ELFT>::createInputSection(const Elf_Shdr &Sec,
     // attribute section for dlopen to work.
     // In a full implementation we would merge all attribute sections.
     if (In<ELFT>::ARMAttributes == nullptr) {
-      In<ELFT>::ARMAttributes = make<InputSection<ELFT>>(this, &Sec, Name);
+      In<ELFT>::ARMAttributes = make<InputSection>(this, &Sec, Name);
       return In<ELFT>::ARMAttributes;
     }
-    return &InputSection<ELFT>::Discarded;
+    return &InputSection::Discarded;
   case SHT_RELA:
   case SHT_REL: {
+    // Find the relocation target section and associate this
+    // section with it. Target can be discarded, for example
+    // if it is a duplicated member of SHT_GROUP section, we
+    // do not create or proccess relocatable sections then.
+    InputSectionBase *Target = getRelocTarget(Sec);
+    if (!Target)
+      return nullptr;
+
     // This section contains relocation information.
     // If -r is given, we do not interpret or apply relocation
     // but just copy relocation sections to output.
     if (Config->Relocatable)
-      return make<InputSection<ELFT>>(this, &Sec, Name);
+      return make<InputSection>(this, &Sec, Name);
 
-    // Find the relocation target section and associate this
-    // section with it.
-    InputSectionBase<ELFT> *Target = getRelocTarget(Sec);
-    if (!Target)
-      return nullptr;
     if (Target->FirstRelocation)
       fatal(toString(this) +
             ": multiple relocation sections to one section are not supported");
-    if (!isa<InputSection<ELFT>>(Target) && !isa<EhInputSection<ELFT>>(Target))
+    if (isa<MergeInputSection<ELFT>>(Target))
       fatal(toString(this) +
             ": relocations pointing to SHF_MERGE are not supported");
 
@@ -404,26 +404,44 @@ elf::ObjectFile<ELFT>::createInputSection(const Elf_Shdr &Sec,
     // from the output, so returning `nullptr` for the normal case.
     // However, if -emit-relocs is given, we need to leave them in the output.
     // (Some post link analysis tools need this information.)
-    if (Config->EmitRelocs)
-      return make<InputSection<ELFT>>(this, &Sec, Name);
+    if (Config->EmitRelocs) {
+      InputSection *RelocSec = make<InputSection>(this, &Sec, Name);
+      // We will not emit relocation section if target was discarded.
+      Target->DependentSections.push_back(RelocSec);
+      return RelocSec;
+    }
     return nullptr;
   }
   }
 
-  // .note.GNU-stack is a marker section to control the presence of
-  // PT_GNU_STACK segment in outputs. Since the presence of the segment
-  // is controlled only by the command line option (-z execstack) in LLD,
-  // .note.GNU-stack is ignored.
+  // The GNU linker uses .note.GNU-stack section as a marker indicating
+  // that the code in the object file does not expect that the stack is
+  // executable (in terms of NX bit). If all input files have the marker,
+  // the GNU linker adds a PT_GNU_STACK segment to tells the loader to
+  // make the stack non-executable. Most object files have this section as
+  // of 2017.
+  //
+  // But making the stack non-executable is a norm today for security
+  // reasons. Failure to do so may result in a serious security issue.
+  // Therefore, we make LLD always add PT_GNU_STACK unless it is
+  // explicitly told to do otherwise (by -z execstack). Because the stack
+  // executable-ness is controlled solely by command line options,
+  // .note.GNU-stack sections are simply ignored.
   if (Name == ".note.GNU-stack")
-    return &InputSection<ELFT>::Discarded;
+    return &InputSection::Discarded;
 
+  // Split stacks is a feature to support a discontiguous stack. At least
+  // as of 2017, it seems that the feature is not being used widely.
+  // Only GNU gold supports that. We don't. For the details about that,
+  // see https://gcc.gnu.org/wiki/SplitStacks
   if (Name == ".note.GNU-split-stack") {
-    error("objects using splitstacks are not supported");
-    return &InputSection<ELFT>::Discarded;
+    error(toString(this) +
+          ": object file compiled with -fsplit-stack is not supported");
+    return &InputSection::Discarded;
   }
 
   if (Config->Strip != StripPolicy::None && Name.startswith(".debug"))
-    return &InputSection<ELFT>::Discarded;
+    return &InputSection::Discarded;
 
   // The linkonce feature is a sort of proto-comdat. Some glibc i386 object
   // files contain definitions of symbol "__x86.get_pc_thunk.bx" in linkonce
@@ -431,7 +449,7 @@ elf::ObjectFile<ELFT>::createInputSection(const Elf_Shdr &Sec,
   // FIXME: This is glibc PR20543, we should remove this hack once that has been
   // fixed for a while.
   if (Name.startswith(".gnu.linkonce."))
-    return &InputSection<ELFT>::Discarded;
+    return &InputSection::Discarded;
 
   // The linker merges EH (exception handling) frames and creates a
   // .eh_frame_hdr section for runtime. So we handle them with a special
@@ -441,7 +459,7 @@ elf::ObjectFile<ELFT>::createInputSection(const Elf_Shdr &Sec,
 
   if (shouldMerge(Sec))
     return make<MergeInputSection<ELFT>>(this, &Sec, Name);
-  return make<InputSection<ELFT>>(this, &Sec, Name);
+  return make<InputSection>(this, &Sec, Name);
 }
 
 template <class ELFT> void elf::ObjectFile<ELFT>::initializeSymbols() {
@@ -451,12 +469,11 @@ template <class ELFT> void elf::ObjectFile<ELFT>::initializeSymbols() {
 }
 
 template <class ELFT>
-InputSectionBase<ELFT> *
-elf::ObjectFile<ELFT>::getSection(const Elf_Sym &Sym) const {
+InputSectionBase *elf::ObjectFile<ELFT>::getSection(const Elf_Sym &Sym) const {
   uint32_t Index = this->getSectionIndex(Sym);
   if (Index >= Sections.size())
     fatal(toString(this) + ": invalid section index: " + Twine(Index));
-  InputSectionBase<ELFT> *S = Sections[Index];
+  InputSectionBase *S = Sections[Index];
 
   // We found that GNU assembler 2.17.50 [FreeBSD] 2007-07-03 could
   // generate broken objects. STT_SECTION/STT_NOTYPE symbols can be
@@ -470,7 +487,7 @@ elf::ObjectFile<ELFT>::getSection(const Elf_Sym &Sym) const {
     fatal(toString(this) + ": invalid section index: " + Twine(Index));
   }
 
-  if (S == &InputSection<ELFT>::Discarded)
+  if (S == &InputSection::Discarded)
     return S;
   return S->Repl;
 }
@@ -478,12 +495,12 @@ elf::ObjectFile<ELFT>::getSection(const Elf_Sym &Sym) const {
 template <class ELFT>
 SymbolBody *elf::ObjectFile<ELFT>::createSymbolBody(const Elf_Sym *Sym) {
   int Binding = Sym->getBinding();
-  InputSectionBase<ELFT> *Sec = getSection(*Sym);
+  InputSectionBase *Sec = getSection(*Sym);
 
   uint8_t StOther = Sym->st_other;
   uint8_t Type = Sym->getType();
-  uintX_t Value = Sym->st_value;
-  uintX_t Size = Sym->st_size;
+  uint64_t Value = Sym->st_value;
+  uint64_t Size = Sym->st_size;
 
   if (Binding == STB_LOCAL) {
     if (Sym->getType() == STT_FILE)
@@ -494,11 +511,10 @@ SymbolBody *elf::ObjectFile<ELFT>::createSymbolBody(const Elf_Sym *Sym) {
 
     StringRefZ Name = this->StringTable.data() + Sym->st_name;
     if (Sym->st_shndx == SHN_UNDEF)
-      return new (BAlloc)
-          Undefined(Name, /*IsLocal=*/true, StOther, Type, this);
+      return make<Undefined>(Name, /*IsLocal=*/true, StOther, Type, this);
 
-    return new (BAlloc) DefinedRegular<ELFT>(Name, /*IsLocal=*/true, StOther,
-                                             Type, Value, Size, Sec, this);
+    return make<DefinedRegular>(Name, /*IsLocal=*/true, StOther, Type, Value,
+                                Size, Sec, this);
   }
 
   StringRef Name = check(Sym->getName(this->StringTable));
@@ -524,7 +540,7 @@ SymbolBody *elf::ObjectFile<ELFT>::createSymbolBody(const Elf_Sym *Sym) {
   case STB_GLOBAL:
   case STB_WEAK:
   case STB_GNU_UNIQUE:
-    if (Sec == &InputSection<ELFT>::Discarded)
+    if (Sec == &InputSection::Discarded)
       return elf::Symtab<ELFT>::X
           ->addUndefined(Name, /*IsLocal=*/false, Binding, StOther, Type,
                          /*CanOmitFromDynSym=*/false, this)
@@ -622,7 +638,7 @@ template <class ELFT> void SharedFile<ELFT>::parseSoName() {
             toString(this) + ": getSectionContentsAsArray failed");
   for (const Elf_Dyn &Dyn : Arr) {
     if (Dyn.d_tag == DT_SONAME) {
-      uintX_t Val = Dyn.getVal();
+      uint64_t Val = Dyn.getVal();
       if (Val >= this->StringTable.size())
         fatal(toString(this) + ": invalid DT_SONAME entry");
       SoName = StringRef(this->StringTable.data() + Val);
@@ -727,6 +743,7 @@ static uint8_t getBitcodeMachineKind(MemoryBufferRef MB) {
   case Triple::aarch64:
     return EM_AARCH64;
   case Triple::arm:
+  case Triple::thumb:
     return EM_ARM;
   case Triple::mips:
   case Triple::mipsel:
@@ -864,8 +881,8 @@ template <class ELFT> void BinaryFile::parse() {
   StringRef EndName = Saver.save(Twine(Filename) + "_end");
   StringRef SizeName = Saver.save(Twine(Filename) + "_size");
 
-  auto *Section = make<InputSection<ELFT>>(SHF_ALLOC | SHF_WRITE, SHT_PROGBITS,
-                                           8, Data, ".data");
+  auto *Section =
+      make<InputSection>(SHF_ALLOC | SHF_WRITE, SHT_PROGBITS, 8, Data, ".data");
   Sections.push_back(Section);
 
   elf::Symtab<ELFT>::X->addRegular(StartName, STV_DEFAULT, STT_OBJECT, 0, 0,

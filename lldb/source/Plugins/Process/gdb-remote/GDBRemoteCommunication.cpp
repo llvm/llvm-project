@@ -1083,8 +1083,7 @@ Error GDBRemoteCommunication::StartDebugserverProcess(
     // port is null when debug server should listen on domain socket -
     // we're not interested in port value but rather waiting for debug server
     // to become available.
-    if (pass_comm_fd == -1 &&
-        ((port != nullptr && *port == 0) || port == nullptr)) {
+    if (pass_comm_fd == -1) {
       if (url) {
 // Create a temporary file to get the stdout/stderr and redirect the
 // output of the command into this file. We will later read this file
@@ -1256,11 +1255,21 @@ Error GDBRemoteCommunication::StartDebugserverProcess(
             port_cstr, num_bytes, std::chrono::seconds{10}, num_bytes);
         if (error.Success() && (port != nullptr)) {
           assert(num_bytes > 0 && port_cstr[num_bytes - 1] == '\0');
-          *port = StringConvert::ToUInt32(port_cstr, 0);
-          if (log)
-            log->Printf("GDBRemoteCommunication::%s() "
-                        "debugserver listens %u port",
-                        __FUNCTION__, *port);
+          uint16_t child_port = StringConvert::ToUInt32(port_cstr, 0);
+          if (*port == 0 || *port == child_port) {
+            *port = child_port;
+            if (log)
+              log->Printf("GDBRemoteCommunication::%s() "
+                          "debugserver listens %u port",
+                          __FUNCTION__, *port);
+          } else {
+            if (log)
+              log->Printf("GDBRemoteCommunication::%s() "
+                          "debugserver listening on port "
+                          "%d but requested port was %d",
+                          __FUNCTION__, (uint32_t)child_port,
+                          (uint32_t)(*port));
+          }
         } else {
           if (log)
             log->Printf("GDBRemoteCommunication::%s() "

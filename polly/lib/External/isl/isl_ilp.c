@@ -315,7 +315,8 @@ enum isl_lp_result isl_basic_set_solve_ilp(struct isl_basic_set *bset, int max,
 	if (sol_p)
 		*sol_p = NULL;
 
-	isl_assert(bset->ctx, isl_basic_set_n_param(bset) == 0, goto error);
+	isl_assert(bset->ctx, isl_basic_set_n_param(bset) == 0,
+		return isl_lp_error);
 
 	if (isl_basic_set_plain_is_empty(bset))
 		return isl_lp_empty;
@@ -336,9 +337,6 @@ enum isl_lp_result isl_basic_set_solve_ilp(struct isl_basic_set *bset, int max,
 	}
 
 	return res;
-error:
-	isl_basic_set_free(bset);
-	return isl_lp_error;
 }
 
 static enum isl_lp_result basic_set_opt(__isl_keep isl_basic_set *bset, int max,

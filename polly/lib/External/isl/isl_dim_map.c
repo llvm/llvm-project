@@ -189,6 +189,9 @@ __isl_give isl_dim_map *isl_dim_map_extend(__isl_keep isl_dim_map *dim_map,
 	struct isl_dim_map *res;
 	int offset;
 
+	if (!dim_map)
+		return NULL;
+
 	offset = isl_basic_map_offset(bmap, isl_dim_div);
 
 	res = isl_dim_map_alloc(bmap->ctx, dim_map->len - 1 + bmap->n_div);

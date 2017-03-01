@@ -22,8 +22,6 @@
 
 namespace __cxxabiv1 {
 
-#pragma GCC visibility push(default)
-
 extern "C" {
 
 void
@@ -54,7 +52,5 @@ unsigned int
 __cxa_uncaught_exceptions() throw() { return 0; }
 
 }  // extern "C"
-
-#pragma GCC visibility pop
 
 }  // abi

@@ -1433,19 +1433,22 @@ static void translate_map(int32_t arg_num, void **args_base, void **args,
   bool *is_ptr_old = (bool *) alloca(arg_num * sizeof(bool));
   // old entry is member of member_of[old] cmb_entry
   int *member_of = (int *) alloca(arg_num * sizeof(int));
+  // temporary storage for modifications of the original arg_types
+  int32_t *mod_arg_types = (int32_t *) alloca(arg_num  *sizeof(int32_t));
 
   DP("Translating %d map entries\n", arg_num);
   for (int i = 0; i < arg_num; ++i) {
     member_of[i] = -1;
     is_ptr_old[i] = false;
+    mod_arg_types[i] = arg_types[i];
     // Scan previous entries to see whether this entry shares the same base
     for (int j = 0; j < i; ++j) {
       void *new_begin_addr = NULL;
       void *new_end_addr = NULL;
 
-      if (arg_types[i] & OMP_TGT_OLDMAPTYPE_MAP_PTR) {
+      if (mod_arg_types[i] & OMP_TGT_OLDMAPTYPE_MAP_PTR) {
         if (args_base[i] == args[j]) {
-          if (!(arg_types[j] & OMP_TGT_OLDMAPTYPE_MAP_PTR)) {
+          if (!(mod_arg_types[j] & OMP_TGT_OLDMAPTYPE_MAP_PTR)) {
             DP("Entry %d has the same base as entry %d's begin address\n", i,
                 j);
             new_begin_addr = args_base[i];
@@ -1455,10 +1458,18 @@ static void translate_map(int32_t arg_num, void **args_base, void **args,
           } else {
             DP("Entry %d has the same base as entry %d's begin address, but "
                 "%d's base was a MAP_PTR too\n", i, j, j);
+            int32_t to_from_always_delete =
+                OMP_TGT_OLDMAPTYPE_TO | OMP_TGT_OLDMAPTYPE_FROM |
+                OMP_TGT_OLDMAPTYPE_ALWAYS | OMP_TGT_OLDMAPTYPE_DELETE;
+            if (mod_arg_types[j] & to_from_always_delete) {
+              DP("Resetting to/from/always/delete flags for entry %d because "
+                  "it is only a pointer to pointer\n", j);
+              mod_arg_types[j] &= ~to_from_always_delete;
+            }
           }
         }
       } else {
-        if (!(arg_types[i] & OMP_TGT_OLDMAPTYPE_FIRST_MAP) &&
+        if (!(mod_arg_types[i] & OMP_TGT_OLDMAPTYPE_FIRST_MAP) &&
             args_base[i] == args_base[j]) {
           DP("Entry %d has the same base address as entry %d\n", i, j);
           new_begin_addr = args[i];
@@ -1476,7 +1487,7 @@ static void translate_map(int32_t arg_num, void **args_base, void **args,
           // Initialize new entry
           cmb_entries[id].num_members = 1;
           cmb_entries[id].base_addr = args_base[j];
-          if (arg_types[j] & OMP_TGT_OLDMAPTYPE_MAP_PTR) {
+          if (mod_arg_types[j] & OMP_TGT_OLDMAPTYPE_MAP_PTR) {
             cmb_entries[id].begin_addr = args_base[j];
             cmb_entries[id].end_addr = (char *)args_base[j] + arg_sizes[j];
           } else {
@@ -1554,7 +1565,7 @@ static void translate_map(int32_t arg_num, void **args_base, void **args,
     new_args_base[nid] = args_base[i];
     new_args[nid] = args[i];
     new_arg_sizes[nid] = arg_sizes[i];
-    int64_t old_type = arg_types[i];
+    int64_t old_type = mod_arg_types[i];
 
     if (is_ptr_old[i]) {
       // Reset TO and FROM flags
@@ -1787,12 +1798,12 @@ static int target_data_end(DeviceTy &Device, int32_t arg_num, void **args_base,
         " - is%s last\n", arg_sizes[i], DPxPTR(TgtPtrBegin),
         (IsLast ? "" : " not"));
 
+    bool DelEntry = IsLast || ForceDelete;
+
     if ((arg_types[i] & OMP_TGT_MAPTYPE_MEMBER_OF) &&
         !(arg_types[i] & OMP_TGT_MAPTYPE_PTR_AND_OBJ)) {
-      IsLast = false; // protect parent struct from being deallocated
+      DelEntry = false; // protect parent struct from being deallocated
     }
-
-    bool DelEntry = IsLast || ForceDelete;
 
     if ((arg_types[i] & OMP_TGT_MAPTYPE_FROM) || DelEntry) {
       // Move data back to the host

@@ -281,8 +281,8 @@ static __isl_give isl_basic_set *farkas(__isl_take isl_space *space,
 	}
 
 	dual = isl_basic_set_remove_divs(dual);
-	isl_basic_set_simplify(dual);
-	isl_basic_set_finalize(dual);
+	dual = isl_basic_set_simplify(dual);
+	dual = isl_basic_set_finalize(dual);
 
 	isl_basic_set_free(bset);
 	return dual;

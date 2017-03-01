@@ -1,4 +1,6 @@
-; RUN: opt -S %loadPolly -basicaa -polly-opt-isl -polly-tiling=false -polly-vectorizer=polly -polly-ast -analyze < %s | FileCheck %s
+; RUN: opt -S %loadPolly -basicaa -polly-opt-isl -polly-tiling=false \
+; RUN: -polly-pattern-matching-based-opts=false -polly-vectorizer=polly \
+; RUN: -polly-ast -analyze < %s | FileCheck %s
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 @C = common global [1536 x [1536 x float]] zeroinitializer, align 16

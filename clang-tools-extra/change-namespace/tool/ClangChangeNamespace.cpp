@@ -73,6 +73,29 @@ cl::opt<std::string> Style("style",
                            cl::desc("The style name used for reformatting."),
                            cl::init("LLVM"), cl::cat(ChangeNamespaceCategory));
 
+cl::opt<std::string> WhiteListFile(
+    "whitelist_file",
+    cl::desc("A file containing regexes of symbol names that are not expected "
+             "to be updated when changing namespaces around them."),
+    cl::init(""), cl::cat(ChangeNamespaceCategory));
+
+llvm::ErrorOr<std::vector<std::string>> GetWhiteListedSymbolPatterns() {
+  std::vector<std::string> Patterns;
+  if (WhiteListFile.empty())
+    return Patterns;
+
+  llvm::SmallVector<StringRef, 8> Lines;
+  llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> File =
+      llvm::MemoryBuffer::getFile(WhiteListFile);
+  if (!File)
+    return File.getError();
+  llvm::StringRef Content = File.get()->getBuffer();
+  Content.split(Lines, '\n', /*MaxSplit=*/-1, /*KeepEmpty=*/false);
+  for (auto Line : Lines)
+    Patterns.push_back(Line.trim());
+  return Patterns;
+}
+
 } // anonymous namespace
 
 int main(int argc, const char **argv) {
@@ -81,8 +104,16 @@ int main(int argc, const char **argv) {
                                              ChangeNamespaceCategory);
   const auto &Files = OptionsParser.getSourcePathList();
   tooling::RefactoringTool Tool(OptionsParser.getCompilations(), Files);
+  llvm::ErrorOr<std::vector<std::string>> WhiteListPatterns =
+      GetWhiteListedSymbolPatterns();
+  if (!WhiteListPatterns) {
+    llvm::errs() << "Failed to open whitelist file " << WhiteListFile << ". "
+                 << WhiteListPatterns.getError().message() << "\n";
+    return 1;
+  }
   change_namespace::ChangeNamespaceTool NamespaceTool(
-      OldNamespace, NewNamespace, FilePattern, &Tool.getReplacements(), Style);
+      OldNamespace, NewNamespace, FilePattern, *WhiteListPatterns,
+      &Tool.getReplacements(), Style);
   ast_matchers::MatchFinder Finder;
   NamespaceTool.registerMatchers(&Finder);
   std::unique_ptr<tooling::FrontendActionFactory> Factory =

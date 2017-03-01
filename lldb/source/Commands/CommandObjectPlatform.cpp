@@ -1182,21 +1182,21 @@ protected:
                 m_options.match_info.GetProcessInfo().GetName();
             if (match_name && match_name[0]) {
               switch (m_options.match_info.GetNameMatchType()) {
-              case eNameMatchIgnore:
+              case NameMatch::Ignore:
                 break;
-              case eNameMatchEquals:
+              case NameMatch::Equals:
                 match_desc = "matched";
                 break;
-              case eNameMatchContains:
+              case NameMatch::Contains:
                 match_desc = "contained";
                 break;
-              case eNameMatchStartsWith:
+              case NameMatch::StartsWith:
                 match_desc = "started with";
                 break;
-              case eNameMatchEndsWith:
+              case NameMatch::EndsWith:
                 match_desc = "ended with";
                 break;
-              case eNameMatchRegularExpression:
+              case NameMatch::RegularExpression:
                 match_desc = "matched the regular expression";
                 break;
               }
@@ -1342,31 +1342,31 @@ protected:
       case 'n':
         match_info.GetProcessInfo().GetExecutableFile().SetFile(option_arg,
                                                                 false);
-        match_info.SetNameMatchType(eNameMatchEquals);
+        match_info.SetNameMatchType(NameMatch::Equals);
         break;
 
       case 'e':
         match_info.GetProcessInfo().GetExecutableFile().SetFile(option_arg,
                                                                 false);
-        match_info.SetNameMatchType(eNameMatchEndsWith);
+        match_info.SetNameMatchType(NameMatch::EndsWith);
         break;
 
       case 's':
         match_info.GetProcessInfo().GetExecutableFile().SetFile(option_arg,
                                                                 false);
-        match_info.SetNameMatchType(eNameMatchStartsWith);
+        match_info.SetNameMatchType(NameMatch::StartsWith);
         break;
 
       case 'c':
         match_info.GetProcessInfo().GetExecutableFile().SetFile(option_arg,
                                                                 false);
-        match_info.SetNameMatchType(eNameMatchContains);
+        match_info.SetNameMatchType(NameMatch::Contains);
         break;
 
       case 'r':
         match_info.GetProcessInfo().GetExecutableFile().SetFile(option_arg,
                                                                 false);
-        match_info.SetNameMatchType(eNameMatchRegularExpression);
+        match_info.SetNameMatchType(NameMatch::RegularExpression);
         break;
 
       case 'A':
@@ -1585,7 +1585,7 @@ public:
           if (partial_name) {
             match_info.GetProcessInfo().GetExecutableFile().SetFile(
                 partial_name, false);
-            match_info.SetNameMatchType(eNameMatchStartsWith);
+            match_info.SetNameMatchType(NameMatch::StartsWith);
           }
           platform_sp->FindProcesses(match_info, process_infos);
           const uint32_t num_matches = process_infos.GetSize();

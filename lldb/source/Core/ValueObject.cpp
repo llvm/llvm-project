@@ -37,7 +37,7 @@
 #include "Plugins/ExpressionParser/Clang/ClangExpressionVariable.h"
 #include "Plugins/ExpressionParser/Clang/ClangPersistentVariables.h"
 
-#include "lldb/Host/Endian.h"
+#include "lldb/Utility/Endian.h"
 
 #include "lldb/Interpreter/CommandInterpreter.h"
 

@@ -107,6 +107,8 @@ private:
   StringRef findDefaultEntry();
   WindowsSubsystem inferSubsystem();
 
+  void invokeMSVC(llvm::opt::InputArgList &Args);
+
   MemoryBufferRef takeBuffer(std::unique_ptr<MemoryBuffer> MB);
   void addBuffer(std::unique_ptr<MemoryBuffer> MB);
   void addArchiveBuffer(MemoryBufferRef MBRef, StringRef SymName,
@@ -178,7 +180,7 @@ void checkFailIfMismatch(StringRef Arg);
 std::unique_ptr<MemoryBuffer>
 convertResToCOFF(const std::vector<MemoryBufferRef> &MBs);
 
-void runMSVCLinker(llvm::opt::InputArgList &Args, ArrayRef<StringRef> Objects);
+void runMSVCLinker(std::string Rsp, ArrayRef<StringRef> Objects);
 
 // Create enum with OPT_xxx values for each option in Options.td
 enum {

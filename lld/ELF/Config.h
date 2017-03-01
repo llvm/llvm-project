@@ -13,6 +13,7 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
+#include "llvm/Support/CodeGen.h"
 #include "llvm/Support/ELF.h"
 
 #include <vector>
@@ -109,7 +110,7 @@ struct Configuration {
   bool FatalWarnings;
   bool GcSections;
   bool GdbIndex;
-  bool GnuHash = false;
+  bool GnuHash;
   bool ICF;
   bool Mips64EL = false;
   bool MipsN32Abi = false;
@@ -117,9 +118,8 @@ struct Configuration {
   bool NoUndefinedVersion;
   bool Nostdlib;
   bool OFormatBinary;
-  bool OMagic;
+  bool Omagic;
   bool OptRemarksWithHotness;
-  bool Pic;
   bool Pie;
   bool PrintGcSections;
   bool Rela;
@@ -128,7 +128,7 @@ struct Configuration {
   bool SingleRoRx;
   bool Shared;
   bool Static = false;
-  bool SysvHash = true;
+  bool SysvHash;
   bool Target1Rel;
   bool Threads;
   bool Trace;
@@ -137,6 +137,7 @@ struct Configuration {
   bool WarnMissingEntry;
   bool ZCombreloc;
   bool ZExecstack;
+  bool ZNocopyreloc;
   bool ZNodelete;
   bool ZNow;
   bool ZOrigin;
@@ -145,9 +146,9 @@ struct Configuration {
   bool ZWxneeded;
   DiscardPolicy Discard;
   SortSectionPolicy SortSection;
-  StripPolicy Strip = StripPolicy::None;
+  StripPolicy Strip;
   UnresolvedPolicy UnresolvedSymbols;
-  Target2Policy Target2 = Target2Policy::GotRel;
+  Target2Policy Target2;
   BuildIdKind BuildId = BuildIdKind::None;
   ELFKind EKind = ELFNoneKind;
   uint16_t DefaultSymbolVersion = llvm::ELF::VER_NDX_GLOBAL;
@@ -160,7 +161,14 @@ struct Configuration {
   unsigned LTOO;
   unsigned Optimize;
   unsigned ThinLTOJobs;
-  bool copyRelocs() { return Relocatable || EmitRelocs; };
+
+  // Returns true if we need to pass through relocations in input
+  // files to the output file. Usually false because we consume
+  // relocations.
+  bool copyRelocs() const { return Relocatable || EmitRelocs; }
+
+  // Returns true if we are creating position-independent code.
+  bool pic() const { return Pie || Shared; }
 };
 
 // The only instance of Configuration struct.

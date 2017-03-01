@@ -74,10 +74,25 @@ STATISTIC(AssumptionsInvariantLoad,
 STATISTIC(AssumptionsDelinearization,
           "Number of delinearization assumptions taken.");
 
+STATISTIC(NumLoopsInScop, "Number of loops in scops");
+STATISTIC(NumScopsDepthOne, "Number of scops with maximal loop depth 1");
+STATISTIC(NumScopsDepthTwo, "Number of scops with maximal loop depth 2");
+STATISTIC(NumScopsDepthThree, "Number of scops with maximal loop depth 3");
+STATISTIC(NumScopsDepthFour, "Number of scops with maximal loop depth 4");
+STATISTIC(NumScopsDepthFive, "Number of scops with maximal loop depth 5");
+STATISTIC(NumScopsDepthLarger,
+          "Number of scops with maximal loop depth 6 and larger");
+STATISTIC(MaxNumLoopsInScop, "Maximal number of loops in scops");
+
 // The maximal number of basic sets we allow during domain construction to
 // be created. More complex scops will result in very high compile time and
 // are also unlikely to result in good code
-static int const MaxDisjunctionsInDomain = 20;
+static int const MaxDisjunctsInDomain = 20;
+
+// The number of disjunct in the context after which we stop to add more
+// disjuncts. This parameter is there to avoid exponential growth in the
+// number of disjunct when adding non-convex sets to the context.
+static int const MaxDisjunctsInContext = 4;
 
 static cl::opt<bool> PollyRemarksMinimal(
     "polly-remarks-minimal",
@@ -122,6 +137,11 @@ static cl::opt<bool> UnprofitableScalarAccs(
     cl::desc("Count statements with scalar accesses as not optimizable"),
     cl::Hidden, cl::init(true), cl::cat(PollyCategory));
 
+static cl::opt<bool> PollyPreciseInbounds(
+    "polly-precise-inbounds",
+    cl::desc("Take more precise inbounds assumptions (do not scale well)"),
+    cl::Hidden, cl::init(false), cl::cat(PollyCategory));
+
 //===----------------------------------------------------------------------===//
 
 // Create a sequence of two schedules. Either argument may be null and is
@@ -143,23 +163,35 @@ static __isl_give isl_set *addRangeBoundsToSet(__isl_take isl_set *S,
                                                int dim,
                                                enum isl_dim_type type) {
   isl_val *V;
-  isl_ctx *ctx = isl_set_get_ctx(S);
+  isl_ctx *Ctx = isl_set_get_ctx(S);
 
-  bool useLowerUpperBound = Range.isSignWrappedSet() && !Range.isFullSet();
-  const auto LB = useLowerUpperBound ? Range.getLower() : Range.getSignedMin();
-  V = isl_valFromAPInt(ctx, LB, true);
-  isl_set *SLB = isl_set_lower_bound_val(isl_set_copy(S), type, dim, V);
+  // The upper and lower bound for a parameter value is derived either from
+  // the data type of the parameter or from the - possibly more restrictive -
+  // range metadata.
+  V = isl_valFromAPInt(Ctx, Range.getSignedMin(), true);
+  S = isl_set_lower_bound_val(S, type, dim, V);
+  V = isl_valFromAPInt(Ctx, Range.getSignedMax(), true);
+  S = isl_set_upper_bound_val(S, type, dim, V);
 
-  const auto UB = useLowerUpperBound ? Range.getUpper() : Range.getSignedMax();
-  V = isl_valFromAPInt(ctx, UB, true);
-  if (useLowerUpperBound)
+  if (Range.isFullSet())
+    return S;
+
+  if (isl_set_n_basic_set(S) > MaxDisjunctsInContext)
+    return S;
+
+  // In case of signed wrapping, we can refine the set of valid values by
+  // excluding the part not covered by the wrapping range.
+  if (Range.isSignWrappedSet()) {
+    V = isl_valFromAPInt(Ctx, Range.getLower(), true);
+    isl_set *SLB = isl_set_lower_bound_val(isl_set_copy(S), type, dim, V);
+
+    V = isl_valFromAPInt(Ctx, Range.getUpper(), true);
     V = isl_val_sub_ui(V, 1);
-  isl_set *SUB = isl_set_upper_bound_val(S, type, dim, V);
+    isl_set *SUB = isl_set_upper_bound_val(S, type, dim, V);
+    S = isl_set_union(SLB, SUB);
+  }
 
-  if (useLowerUpperBound)
-    return isl_set_union(SLB, SUB);
-  else
-    return isl_set_intersect(SLB, SUB);
+  return S;
 }
 
 static const ScopArrayInfo *identifyBasePtrOriginSAI(Scop *S, Value *BasePtr) {
@@ -358,6 +390,10 @@ void MemoryAccess::wrapConstantDimensions() {
 
     // This transformation is not applicable to dimensions with dynamic size.
     if (!DimSizeCst)
+      continue;
+
+    // This transformation is not applicable to dimensions of size zero.
+    if (DimSize->isZero())
       continue;
 
     auto *DimSizeVal = isl_valFromAPInt(Ctx, DimSizeCst->getAPInt(), false);
@@ -672,6 +708,8 @@ void MemoryAccess::assumeNoOutOfBound() {
   const auto &Loc = getAccessInstruction()
                         ? getAccessInstruction()->getDebugLoc()
                         : DebugLoc();
+  if (!PollyPreciseInbounds)
+    Outside = isl_set_gist(Outside, isl_set_params(Statement->getDomain()));
   Statement->getParent()->recordAssumption(INBOUNDS, Outside, Loc,
                                            AS_ASSUMPTION);
   isl_space_free(Space);
@@ -1440,13 +1478,13 @@ buildConditionSets(ScopStmt &Stmt, Value *Condition, TerminatorInst *TI,
 
   isl_set *AlternativeCondSet = nullptr;
   bool TooComplex =
-      isl_set_n_basic_set(ConsequenceCondSet) >= MaxDisjunctionsInDomain;
+      isl_set_n_basic_set(ConsequenceCondSet) >= MaxDisjunctsInDomain;
 
   if (!TooComplex) {
     AlternativeCondSet = isl_set_subtract(isl_set_copy(Domain),
                                           isl_set_copy(ConsequenceCondSet));
     TooComplex =
-        isl_set_n_basic_set(AlternativeCondSet) >= MaxDisjunctionsInDomain;
+        isl_set_n_basic_set(AlternativeCondSet) >= MaxDisjunctsInDomain;
   }
 
   if (TooComplex) {
@@ -2110,7 +2148,7 @@ static isl_stat buildMinMaxAccess(__isl_take isl_set *Set, void *User) {
 
   Set = isl_set_remove_divs(Set);
 
-  if (isl_set_n_basic_set(Set) >= MaxDisjunctionsInDomain) {
+  if (isl_set_n_basic_set(Set) >= MaxDisjunctsInDomain) {
     isl_set_free(Set);
     return isl_stat_error;
   }
@@ -2437,7 +2475,7 @@ bool Scop::propagateInvalidStmtDomains(Region *R, DominatorTree &DT,
 
       // Check if the maximal number of domain disjunctions was reached.
       // In case this happens we will bail.
-      if (NumConjucts < MaxDisjunctionsInDomain)
+      if (NumConjucts < MaxDisjunctsInDomain)
         continue;
 
       isl_set_free(InvalidDomain);
@@ -2616,7 +2654,7 @@ bool Scop::buildDomainsWithBranchConstraints(Region *R, DominatorTree &DT,
 
       // Check if the maximal number of domain disjunctions was reached.
       // In case this happens we will clean up and bail.
-      if (isl_set_n_basic_set(SuccDomain) < MaxDisjunctionsInDomain)
+      if (isl_set_n_basic_set(SuccDomain) < MaxDisjunctsInDomain)
         continue;
 
       invalidate(COMPLEXITY, DebugLoc());
@@ -2994,6 +3032,7 @@ bool Scop::buildAliasGroup(Scop::AliasGroupTy &AliasGroup,
   AliasGroupTy ReadOnlyAccesses;
   AliasGroupTy ReadWriteAccesses;
   SmallPtrSet<const ScopArrayInfo *, 4> ReadWriteArrays;
+  SmallPtrSet<const ScopArrayInfo *, 4> ReadOnlyArrays;
 
   auto &F = getFunction();
 
@@ -3011,6 +3050,7 @@ bool Scop::buildAliasGroup(Scop::AliasGroupTy &AliasGroup,
       ReadWriteArrays.insert(Array);
       ReadWriteAccesses.push_back(Access);
     } else {
+      ReadOnlyArrays.insert(Array);
       ReadOnlyAccesses.push_back(Access);
     }
   }
@@ -3057,7 +3097,7 @@ bool Scop::buildAliasGroup(Scop::AliasGroupTy &AliasGroup,
   // Bail out if the number of values we need to compare is too large.
   // This is important as the number of comparisons grows quadratically with
   // the number of values we need to compare.
-  if (MinMaxAccessesReadWrite.size() + ReadOnlyAccesses.size() >
+  if (MinMaxAccessesReadWrite.size() + ReadOnlyArrays.size() >
       RunTimeChecksMaxArraysPerGroup)
     return false;
 
@@ -3473,7 +3513,7 @@ void Scop::addInvariantLoads(ScopStmt &Stmt, InvariantAccessesTy &InvMAs) {
   isl_set *DomainCtx = isl_set_params(Stmt.getDomain());
   DomainCtx = isl_set_subtract(DomainCtx, StmtInvalidCtx);
 
-  if (isl_set_n_basic_set(DomainCtx) >= MaxDisjunctionsInDomain) {
+  if (isl_set_n_basic_set(DomainCtx) >= MaxDisjunctsInDomain) {
     auto *AccInst = InvMAs.front().MA->getAccessInstruction();
     invalidate(COMPLEXITY, AccInst->getDebugLoc());
     isl_set_free(DomainCtx);
@@ -3640,7 +3680,7 @@ __isl_give isl_set *Scop::getNonHoistableCtx(MemoryAccess *Access,
     return WrittenCtx;
 
   WrittenCtx = isl_set_remove_divs(WrittenCtx);
-  bool TooComplex = isl_set_n_basic_set(WrittenCtx) >= MaxDisjunctionsInDomain;
+  bool TooComplex = isl_set_n_basic_set(WrittenCtx) >= MaxDisjunctsInDomain;
   if (TooComplex || !isRequiredInvariantLoad(LI)) {
     isl_set_free(WrittenCtx);
     return nullptr;
@@ -4518,6 +4558,25 @@ void ScopInfoRegionPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
 }
 
+void updateLoopCountStatistic(ScopDetection::LoopStats Stats) {
+  NumLoopsInScop += Stats.NumLoops;
+  MaxNumLoopsInScop =
+      std::max(MaxNumLoopsInScop.getValue(), (unsigned)Stats.NumLoops);
+
+  if (Stats.MaxDepth == 1)
+    NumScopsDepthOne++;
+  else if (Stats.MaxDepth == 2)
+    NumScopsDepthTwo++;
+  else if (Stats.MaxDepth == 3)
+    NumScopsDepthThree++;
+  else if (Stats.MaxDepth == 4)
+    NumScopsDepthFour++;
+  else if (Stats.MaxDepth == 5)
+    NumScopsDepthFive++;
+  else
+    NumScopsDepthLarger++;
+}
+
 bool ScopInfoRegionPass::runOnRegion(Region *R, RGPassManager &RGM) {
   auto &SD = getAnalysis<ScopDetection>();
 
@@ -4533,6 +4592,13 @@ bool ScopInfoRegionPass::runOnRegion(Region *R, RGPassManager &RGM) {
 
   ScopBuilder SB(R, AA, DL, DT, LI, SD, SE);
   S = SB.getScop(); // take ownership of scop object
+
+  if (S) {
+    ScopDetection::LoopStats Stats =
+        ScopDetection::countBeneficialLoops(&S->getRegion(), SE, LI, 0);
+    updateLoopCountStatistic(Stats);
+  }
+
   return false;
 }
 

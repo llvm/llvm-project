@@ -593,6 +593,7 @@ void __libcpp_thread_sleep_for(const chrono::nanoseconds& __ns)
   // round-up to the nearest milisecond
   milliseconds __ms =
       duration_cast<milliseconds>(__ns + chrono::nanoseconds(999999));
+  // FIXME(compnerd) this should be an alertable sleep (WFSO or SleepEx)
   Sleep(__ms.count());
 }
 

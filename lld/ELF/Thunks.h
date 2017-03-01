@@ -16,7 +16,6 @@ namespace lld {
 namespace elf {
 class SymbolBody;
 template <class ELFT> class ThunkSection;
-class OutputSectionBase;
 // Class to describe an instance of a Thunk.
 // A Thunk is a code-sequence inserted by the linker in between a caller and
 // the callee. The relocation to the callee is redirected to the Thunk, which
@@ -40,7 +39,7 @@ public:
 
   // Some Thunks must be placed immediately before their Target as they elide
   // a branch and fall through to the first Symbol in the Target.
-  virtual InputSection<ELFT> *getTargetInputSection() const { return nullptr; }
+  virtual InputSection *getTargetInputSection() const { return nullptr; }
 
   // The alignment requirement for this Thunk, defaults to the size of the
   // typical code section alignment.

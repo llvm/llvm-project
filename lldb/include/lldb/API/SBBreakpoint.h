@@ -133,19 +133,13 @@ private:
 
   SBBreakpoint(const lldb::BreakpointSP &bp_sp);
 
-  lldb_private::Breakpoint *operator->() const;
-
-  lldb_private::Breakpoint *get() const;
-
-  lldb::BreakpointSP &operator*();
-
-  const lldb::BreakpointSP &operator*() const;
-
   static bool PrivateBreakpointHitCallback(
       void *baton, lldb_private::StoppointCallbackContext *context,
       lldb::user_id_t break_id, lldb::user_id_t break_loc_id);
 
-  lldb::BreakpointSP m_opaque_sp;
+  lldb::BreakpointSP GetSP() const;
+
+  lldb::BreakpointWP m_opaque_wp;
 };
 
 class LLDB_API SBBreakpointList {

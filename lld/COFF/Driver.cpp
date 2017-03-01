@@ -164,8 +164,7 @@ void LinkerDriver::addArchiveBuffer(MemoryBufferRef MB, StringRef SymName,
 
   Obj->ParentName = ParentName;
   Symtab.addFile(Obj);
-  if (Config->Verbose)
-    outs() << "Loaded " << toString(Obj) << " for " << SymName << "\n";
+  log("Loaded " + toString(Obj) + " for " + SymName);
 }
 
 void LinkerDriver::enqueueArchiveMember(const Archive::Child &C,
@@ -423,6 +422,46 @@ static std::string getMapFile(const opt::InputArgList &Args) {
   return (OutFile.substr(0, OutFile.rfind('.')) + ".map").str();
 }
 
+static bool isBitcodeFile(StringRef Path) {
+  std::unique_ptr<MemoryBuffer> MB = check(
+      MemoryBuffer::getFile(Path, -1, false, true), "could not open " + Path);
+  StringRef Buf = MB->getBuffer();
+  return sys::fs::identify_magic(Buf) == sys::fs::file_magic::bitcode;
+}
+
+// Create response file contents and invoke the MSVC linker.
+void LinkerDriver::invokeMSVC(opt::InputArgList &Args) {
+  std::string Rsp = "/nologo ";
+
+  for (auto *Arg : Args) {
+    switch (Arg->getOption().getID()) {
+    case OPT_linkrepro:
+    case OPT_lldmap:
+    case OPT_lldmap_file:
+    case OPT_msvclto:
+      // LLD-specific options are stripped.
+      break;
+    case OPT_opt:
+      if (!StringRef(Arg->getValue()).startswith("lld"))
+        Rsp += toString(Arg) + " ";
+      break;
+    case OPT_INPUT:
+      // Bitcode files are stripped as they've been compiled to
+      // native object files.
+      if (Optional<StringRef> Path = doFindFile(Arg->getValue()))
+        if (isBitcodeFile(*Path))
+          break;
+      Rsp += quote(Arg->getValue()) + " ";
+      break;
+    default:
+      Rsp += toString(Arg) + " ";
+    }
+  }
+
+  std::vector<StringRef> ObjectFiles = Symtab.compileBitcodeFiles();
+  runMSVCLinker(Rsp, ObjectFiles);
+}
+
 void LinkerDriver::enqueueTask(std::function<void()> Task) {
   TaskQueue.push_back(std::move(Task));
 }
@@ -472,8 +511,8 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
     if (ErrOrWriter) {
       Tar = std::move(*ErrOrWriter);
     } else {
-      errs() << "/linkrepro: failed to open " << Path << ": "
-             << toString(ErrOrWriter.takeError()) << '\n';
+      error("/linkrepro: failed to open " + Path + ": " +
+            toString(ErrOrWriter.takeError()));
     }
   }
 
@@ -696,7 +735,7 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   // We should have inferred a machine type by now from the input files, but if
   // not we assume x64.
   if (Config->Machine == IMAGE_FILE_MACHINE_UNKNOWN) {
-    errs() << "warning: /machine is not specified. x64 is assumed.\n";
+    warn("/machine is not specified. x64 is assumed");
     Config->Machine = AMD64;
   }
 
@@ -733,8 +772,7 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
     if (S.empty())
       fatal("entry point must be defined");
     Config->Entry = addUndefined(S);
-    if (Config->Verbose)
-      outs() << "Entry name inferred: " << S << "\n";
+    log("Entry name inferred: " + S);
   }
 
   // Handle /export
@@ -822,8 +860,7 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   // If /msvclto is given, we use the MSVC linker to link LTO output files.
   // This is useful because MSVC link.exe can generate complete PDBs.
   if (Args.hasArg(OPT_msvclto)) {
-    std::vector<StringRef> ObjectFiles = Symtab.compileBitcodeFiles();
-    runMSVCLinker(Args, ObjectFiles);
+    invokeMSVC(Args);
     exit(0);
   }
 

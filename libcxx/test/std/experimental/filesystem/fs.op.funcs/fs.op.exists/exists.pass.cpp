@@ -85,4 +85,13 @@ TEST_CASE(test_exists_fails)
     TEST_CHECK_THROW(filesystem_error, exists(file));
 }
 
+TEST_CASE(test_name_too_long) {
+    std::string long_name(2500, 'a');
+    const path file(long_name);
+
+    std::error_code ec;
+    TEST_CHECK(exists(file, ec) == false);
+    TEST_CHECK(ec);
+}
+
 TEST_SUITE_END()

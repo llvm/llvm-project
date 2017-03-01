@@ -18,22 +18,24 @@ using llvm::yaml::IO;
 using llvm::yaml::Input;
 using ContextType = clang::find_all_symbols::SymbolInfo::ContextType;
 using clang::find_all_symbols::SymbolInfo;
+using clang::find_all_symbols::SymbolAndSignals;
 using SymbolKind = clang::find_all_symbols::SymbolInfo::SymbolKind;
 
-LLVM_YAML_IS_DOCUMENT_LIST_VECTOR(SymbolInfo)
+LLVM_YAML_IS_DOCUMENT_LIST_VECTOR(SymbolAndSignals)
 LLVM_YAML_IS_FLOW_SEQUENCE_VECTOR(std::string)
 LLVM_YAML_IS_SEQUENCE_VECTOR(SymbolInfo::Context)
 
 namespace llvm {
 namespace yaml {
-template <> struct MappingTraits<SymbolInfo> {
-  static void mapping(IO &io, SymbolInfo &Symbol) {
-    io.mapRequired("Name", Symbol.Name);
-    io.mapRequired("Contexts", Symbol.Contexts);
-    io.mapRequired("FilePath", Symbol.FilePath);
-    io.mapRequired("LineNumber", Symbol.LineNumber);
-    io.mapRequired("Type", Symbol.Type);
-    io.mapRequired("NumOccurrences", Symbol.NumOccurrences);
+template <> struct MappingTraits<SymbolAndSignals> {
+  static void mapping(IO &io, SymbolAndSignals &Symbol) {
+    io.mapRequired("Name", Symbol.Symbol.Name);
+    io.mapRequired("Contexts", Symbol.Symbol.Contexts);
+    io.mapRequired("FilePath", Symbol.Symbol.FilePath);
+    io.mapRequired("LineNumber", Symbol.Symbol.LineNumber);
+    io.mapRequired("Type", Symbol.Symbol.Type);
+    io.mapRequired("Seen", Symbol.Signals.Seen);
+    io.mapRequired("Used", Symbol.Signals.Used);
   }
 };
 
@@ -73,10 +75,9 @@ namespace find_all_symbols {
 
 SymbolInfo::SymbolInfo(llvm::StringRef Name, SymbolKind Type,
                        llvm::StringRef FilePath, int LineNumber,
-                       const std::vector<Context> &Contexts,
-                       unsigned NumOccurrences)
+                       const std::vector<Context> &Contexts)
     : Name(Name), Type(Type), FilePath(FilePath), Contexts(Contexts),
-      LineNumber(LineNumber), NumOccurrences(NumOccurrences) {}
+      LineNumber(LineNumber) {}
 
 bool SymbolInfo::operator==(const SymbolInfo &Symbol) const {
   return std::tie(Name, Type, FilePath, LineNumber, Contexts) ==
@@ -100,16 +101,38 @@ std::string SymbolInfo::getQualifiedName() const {
   return QualifiedName;
 }
 
+SymbolInfo::Signals &SymbolInfo::Signals::operator+=(const Signals &RHS) {
+  Seen += RHS.Seen;
+  Used += RHS.Used;
+  return *this;
+}
+
+SymbolInfo::Signals SymbolInfo::Signals::operator+(const Signals &RHS) const {
+  Signals Result = *this;
+  Result += RHS;
+  return Result;
+}
+
+bool SymbolInfo::Signals::operator==(const Signals &RHS) const {
+  return std::tie(Seen, Used) == std::tie(RHS.Seen, RHS.Used);
+}
+
+bool SymbolAndSignals::operator==(const SymbolAndSignals& RHS) const {
+  return std::tie(Symbol, Signals) == std::tie(RHS.Symbol, RHS.Signals);
+}
+
 bool WriteSymbolInfosToStream(llvm::raw_ostream &OS,
-                              const std::set<SymbolInfo> &Symbols) {
+                              const SymbolInfo::SignalMap &Symbols) {
   llvm::yaml::Output yout(OS);
-  for (auto Symbol : Symbols)
-    yout << Symbol;
+  for (const auto &Symbol : Symbols) {
+    SymbolAndSignals S{Symbol.first, Symbol.second};
+    yout << S;
+  }
   return true;
 }
 
-std::vector<SymbolInfo> ReadSymbolInfosFromYAML(llvm::StringRef Yaml) {
-  std::vector<SymbolInfo> Symbols;
+std::vector<SymbolAndSignals> ReadSymbolInfosFromYAML(llvm::StringRef Yaml) {
+  std::vector<SymbolAndSignals> Symbols;
   llvm::yaml::Input yin(Yaml);
   yin >> Symbols;
   return Symbols;

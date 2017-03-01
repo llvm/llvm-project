@@ -9,8 +9,6 @@
 
 #include <exception>
 
-#pragma GCC visibility push(default)
-
 namespace std
 {
 
@@ -37,5 +35,3 @@ const char* bad_exception::what() const _NOEXCEPT
 }
 
 }  // std
-
-#pragma GCC visibility pop

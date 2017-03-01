@@ -19,10 +19,10 @@
 #include "lldb/Target/ABI.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Process.h"
+#include "lldb/Target/RegisterNumber.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/UnwindAssembly.h"
-#include "lldb/Utility/RegisterNumber.h"
 
 using namespace lldb;
 using namespace lldb_private;

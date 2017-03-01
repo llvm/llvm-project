@@ -20,7 +20,6 @@
 
 namespace clang {
 namespace find_all_symbols {
-
 /// \brief Contains all information for a Symbol.
 class SymbolInfo {
 public:
@@ -46,13 +45,31 @@ public:
   /// \brief A pair of <ContextType, ContextName>.
   typedef std::pair<ContextType, std::string> Context;
 
+  // \brief Signals are signals gathered by observing how a symbol is used.
+  // These are used to rank results.
+  struct Signals {
+    Signals() {}
+    Signals(unsigned Seen, unsigned Used) : Seen(Seen), Used(Used) {}
+
+    // Number of times this symbol was visible to a TU.
+    unsigned Seen = 0;
+
+    // Number of times this symbol was referenced a TU's main file.
+    unsigned Used = 0;
+
+    Signals &operator+=(const Signals &RHS);
+    Signals operator+(const Signals &RHS) const;
+    bool operator==(const Signals &RHS) const;
+  };
+
+  using SignalMap = std::map<SymbolInfo, Signals>;
+
   // The default constructor is required by YAML traits in
   // LLVM_YAML_IS_DOCUMENT_LIST_VECTOR.
   SymbolInfo() : Type(SymbolKind::Unknown), LineNumber(-1) {}
 
   SymbolInfo(llvm::StringRef Name, SymbolKind Type, llvm::StringRef FilePath,
-             int LineNumber, const std::vector<Context> &Contexts,
-             unsigned NumOccurrences = 0);
+             int LineNumber, const std::vector<Context> &Contexts);
 
   void SetFilePath(llvm::StringRef Path) { FilePath = Path; }
 
@@ -76,15 +93,12 @@ public:
   /// \brief Get a 1-based line number of the symbol's declaration.
   int getLineNumber() const { return LineNumber; }
 
-  /// \brief The number of times this symbol was found during an indexing run.
-  unsigned getNumOccurrences() const { return NumOccurrences; }
-
   bool operator<(const SymbolInfo &Symbol) const;
 
   bool operator==(const SymbolInfo &Symbol) const;
 
 private:
-  friend struct llvm::yaml::MappingTraits<SymbolInfo>;
+  friend struct llvm::yaml::MappingTraits<struct SymbolAndSignals>;
 
   /// \brief Identifier name.
   std::string Name;
@@ -110,18 +124,20 @@ private:
 
   /// \brief The 1-based line number of of the symbol's declaration.
   int LineNumber;
+};
 
-  /// \brief The number of times this symbol was found during an indexing
-  /// run. Populated by the reducer and used to rank results.
-  unsigned NumOccurrences;
+struct SymbolAndSignals {
+  SymbolInfo Symbol;
+  SymbolInfo::Signals Signals;
+  bool operator==(const SymbolAndSignals& RHS) const;
 };
 
 /// \brief Write SymbolInfos to a stream (YAML format).
 bool WriteSymbolInfosToStream(llvm::raw_ostream &OS,
-                              const std::set<SymbolInfo> &Symbols);
+                              const SymbolInfo::SignalMap &Symbols);
 
 /// \brief Read SymbolInfos from a YAML document.
-std::vector<SymbolInfo> ReadSymbolInfosFromYAML(llvm::StringRef Yaml);
+std::vector<SymbolAndSignals> ReadSymbolInfosFromYAML(llvm::StringRef Yaml);
 
 } // namespace find_all_symbols
 } // namespace clang

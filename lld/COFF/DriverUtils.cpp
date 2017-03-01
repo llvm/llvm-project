@@ -44,39 +44,33 @@ namespace {
 class Executor {
 public:
   explicit Executor(StringRef S) : Saver(Alloc), Prog(Saver.save(S)) {}
-  void add(StringRef S) { Args.push_back(Saver.save(S).data()); }
-  void add(std::string &S) { Args.push_back(Saver.save(S).data()); }
-  void add(Twine S) { Args.push_back(Saver.save(S).data()); }
-  void add(const char *S) { Args.push_back(Saver.save(S).data()); }
+  void add(StringRef S) { Args.push_back(Saver.save(S)); }
+  void add(std::string &S) { Args.push_back(Saver.save(S)); }
+  void add(Twine S) { Args.push_back(Saver.save(S)); }
+  void add(const char *S) { Args.push_back(Saver.save(S)); }
 
   void run() {
-    if (Config->Verbose) {
-      outs() << Prog;
-      for (const char *Arg : Args)
-        outs() << " " << Arg;
-      outs() << '\n';
-    }
-
     ErrorOr<std::string> ExeOrErr = sys::findProgramByName(Prog);
     if (auto EC = ExeOrErr.getError())
       fatal(EC, "unable to find " + Prog + " in PATH: ");
-    const char *Exe = Saver.save(*ExeOrErr).data();
-
+    StringRef Exe = Saver.save(*ExeOrErr);
     Args.insert(Args.begin(), Exe);
-    Args.push_back(nullptr);
-    if (sys::ExecuteAndWait(Args[0], Args.data()) != 0) {
-      for (const char *S : Args)
-        if (S)
-          errs() << S << " ";
-      fatal("ExecuteAndWait failed");
-    }
+
+    std::vector<const char *> Vec;
+    for (StringRef S : Args)
+      Vec.push_back(S.data());
+    Vec.push_back(nullptr);
+
+    if (sys::ExecuteAndWait(Args[0], Vec.data()) != 0)
+      fatal("ExecuteAndWait failed: " +
+            llvm::join(Args.begin(), Args.end(), " "));
   }
 
 private:
   BumpPtrAllocator Alloc;
   StringSaver Saver;
   StringRef Prog;
-  std::vector<const char *> Args;
+  std::vector<StringRef> Args;
 };
 
 } // anonymous namespace
@@ -175,8 +169,7 @@ void parseMerge(StringRef S) {
   if (!Inserted) {
     StringRef Existing = Pair.first->second;
     if (Existing != To)
-      errs() << "warning: " << S << ": already merged into " << Existing
-             << "\n";
+      warn(S + ": already merged into " + Existing);
   }
 }
 
@@ -558,7 +551,7 @@ void fixupExports() {
     Export *Existing = Pair.first->second;
     if (E == *Existing || E.Name != Existing->Name)
       continue;
-    errs() << "warning: duplicate /export option: " << E.Name << "\n";
+    warn("duplicate /export option: " + E.Name);
   }
   Config->Exports = std::move(V);
 
@@ -633,52 +626,18 @@ convertResToCOFF(const std::vector<MemoryBufferRef> &MBs) {
   return File.getMemoryBuffer();
 }
 
-static bool isBitcodeFile(StringRef Path) {
-  std::unique_ptr<MemoryBuffer> MB = check(
-      MemoryBuffer::getFile(Path, -1, false, true), "could not open " + Path);
-  StringRef Buf = MB->getBuffer();
-  return sys::fs::identify_magic(Buf) == sys::fs::file_magic::bitcode;
-}
-
 // Run MSVC link.exe for given in-memory object files.
 // Command line options are copied from those given to LLD.
 // This is for the /msvclto option.
-void runMSVCLinker(opt::InputArgList &Args, ArrayRef<StringRef> Objects) {
+void runMSVCLinker(std::string Rsp, ArrayRef<StringRef> Objects) {
   // Write the in-memory object files to disk.
   std::vector<TemporaryFile> Temps;
-  for (StringRef S : Objects)
+  for (StringRef S : Objects) {
     Temps.emplace_back("lto", "obj", S);
-
-  // Create a response file.
-  std::string Rsp = "/nologo ";
-  for (TemporaryFile &T : Temps)
-    Rsp += quote(T.Path) + " ";
-
-  for (auto *Arg : Args) {
-    switch (Arg->getOption().getID()) {
-    case OPT_linkrepro:
-    case OPT_lldmap:
-    case OPT_lldmap_file:
-    case OPT_msvclto:
-      // LLD-specific options are stripped.
-      break;
-    case OPT_opt:
-      if (!StringRef(Arg->getValue()).startswith("lld"))
-        Rsp += toString(Arg) + " ";
-      break;
-    case OPT_INPUT:
-      // Bitcode files are stripped as they've been compiled to
-      // native object files.
-      if (!isBitcodeFile(Arg->getValue()))
-        Rsp += quote(Arg->getValue()) + " ";
-      break;
-    default:
-      Rsp += toString(Arg) + " ";
-    }
+    Rsp += quote(Temps.back().Path) + " ";
   }
 
-  if (Config->Verbose)
-    outs() << "link.exe " << Rsp << "\n";
+  log("link.exe " + Rsp);
 
   // Run MSVC link.exe.
   Temps.emplace_back("lto", "rsp", Rsp);
@@ -723,16 +682,16 @@ opt::InputArgList ArgParser::parse(ArrayRef<const char *> ArgsArr) {
 
   // Print the real command line if response files are expanded.
   if (Args.hasArg(OPT_verbose) && ArgsArr.size() != Argv.size()) {
-    outs() << "Command line:";
+    std::string Msg = "Command line:";
     for (const char *S : Argv)
-      outs() << " " << S;
-    outs() << "\n";
+      Msg += " " + std::string(S);
+    message(Msg);
   }
 
   if (MissingCount)
     fatal(Twine(Args.getArgString(MissingIndex)) + ": missing argument");
   for (auto *Arg : Args.filtered(OPT_UNKNOWN))
-    errs() << "ignoring unknown argument: " << Arg->getSpelling() << "\n";
+    warn("ignoring unknown argument: " + Arg->getSpelling());
   return Args;
 }
 

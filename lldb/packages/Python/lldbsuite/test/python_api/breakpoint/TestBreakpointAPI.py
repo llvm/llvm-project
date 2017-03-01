@@ -17,6 +17,7 @@ from lldbsuite.test import lldbutil
 class BreakpointAPITestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
+    NO_DEBUG_INFO_TESTCASE = True
 
     @add_test_categories(['pyapi'])
     def test_breakpoint_is_valid(self):
@@ -49,3 +50,28 @@ class BreakpointAPITestCase(TestBase):
         self.assertTrue(
             not breakpoint,
             "Breakpoint we deleted is no longer valid.")
+
+    @add_test_categories(['pyapi'])
+    def test_target_delete(self):
+        """Make sure that if an SBTarget gets deleted the associated
+        Breakpoint's IsValid returns false."""
+
+        self.build()
+        exe = os.path.join(os.getcwd(), "a.out")
+
+        # Create a target by the debugger.
+        target = self.dbg.CreateTarget(exe)
+        self.assertTrue(target, VALID_TARGET)
+
+        # Now create a breakpoint on main.c by name 'AFunction'.
+        breakpoint = target.BreakpointCreateByName('AFunction', 'a.out')
+        #print("breakpoint:", breakpoint)
+        self.assertTrue(breakpoint and
+                        breakpoint.GetNumLocations() == 1,
+                        VALID_BREAKPOINT)
+        location = breakpoint.GetLocationAtIndex(0)
+        self.assertTrue(location.IsValid())
+
+        self.assertTrue(self.dbg.DeleteTarget(target))
+        self.assertFalse(breakpoint.IsValid())
+        self.assertFalse(location.IsValid())

@@ -59,7 +59,7 @@ int main()
     assert(p->get_char() == 'e');
     }
 
-    { // https://llvm.org/bugs/show_bug.cgi?id=24137
+    { // https://bugs.llvm.org/show_bug.cgi?id=24137
     std::shared_ptr<Foo> p1       = std::make_shared<Foo>();
     assert(p1.get());
     std::shared_ptr<const Foo> p2 = std::make_shared<const Foo>();

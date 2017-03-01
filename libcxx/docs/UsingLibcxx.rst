@@ -180,3 +180,15 @@ thread safety annotations.
     * Giving `set`, `map`, `multiset`, `multimap` a comparator which is not
       const callable.
 
+C++17 Specific Configuration Macros
+-----------------------------------
+**_LIBCPP_ENABLE_CXX17_REMOVED_FEATURES**:
+  This macro is used to re-enable all the features removed in C++17. The effect
+  is equivalent to manually defining each macro listed below.
+
+**_LIBCPP_ENABLE_CXX17_REMOVED_UNEXPECTED_FUNCTIONS**:
+  This macro is used to re-enable the `set_unexpected`, `get_unexpected`, and
+  `unexpected` functions, which were removed in C++17.
+
+**_LIBCPP_ENABLE_CXX17_REMOVED_AUTO_PTR**:
+  This macro is used to re-enable `std::auto_ptr` in C++17.

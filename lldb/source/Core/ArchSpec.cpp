@@ -25,12 +25,12 @@
 #include "Plugins/Process/Utility/ARMDefines.h"
 #include "Plugins/Process/Utility/InstructionUtils.h"
 #include "lldb/Core/StringList.h"
-#include "lldb/Host/Endian.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Target/Platform.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/Thread.h"
+#include "lldb/Utility/Endian.h"
 #include "lldb/Utility/NameMatches.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/SafeMachO.h"
@@ -259,7 +259,7 @@ struct ArchDefinition {
 size_t ArchSpec::AutoComplete(llvm::StringRef name, StringList &matches) {
   if (!name.empty()) {
     for (uint32_t i = 0; i < llvm::array_lengthof(g_core_definitions); ++i) {
-      if (NameMatches(g_core_definitions[i].name, eNameMatchStartsWith, name))
+      if (NameMatches(g_core_definitions[i].name, NameMatch::StartsWith, name))
         matches.AppendString(g_core_definitions[i].name);
     }
   } else {

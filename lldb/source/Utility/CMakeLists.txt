@@ -3,11 +3,8 @@ add_lldb_library(lldbUtility
   Error.cpp
   JSON.cpp
   LLDBAssert.cpp
-  ModuleCache.cpp
   NameMatches.cpp
-  PseudoTerminal.cpp
   Range.cpp
-  RegisterNumber.cpp
   RegularExpression.cpp
   SelectHelper.cpp
   SharingPtr.cpp
@@ -18,11 +15,10 @@ add_lldb_library(lldbUtility
   StringLexer.cpp
   TaskPool.cpp
   UriParser.cpp
+  VASprintf.cpp
 
   LINK_LIBS
-    lldbCore
-    lldbHost
-    lldbTarget
+  # lldbUtility cannot have any dependencies
 
   LINK_COMPONENTS
     Support

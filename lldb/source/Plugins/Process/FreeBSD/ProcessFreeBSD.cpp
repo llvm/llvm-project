@@ -78,7 +78,6 @@ void ProcessFreeBSD::Initialize() {
   llvm::call_once(g_once_flag, []() {
     PluginManager::RegisterPlugin(GetPluginNameStatic(),
                                   GetPluginDescriptionStatic(), CreateInstance);
-    ProcessPOSIXLog::Initialize(GetPluginNameStatic());
   });
 }
 

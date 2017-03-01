@@ -4,15 +4,15 @@
 # RUN: llvm-readobj -symbols %t1 | FileCheck %s --check-prefix=GC
 # RUN: llvm-readobj -symbols %t2 | FileCheck %s --check-prefix=NOGC
 
-# NOGC: Symbol {
-# NOGC:   Name: (0)
-# NOGC:   Value: 0x1000
-# NOGC:   Size: 0
-# NOGC:   Binding: Local
-# NOGC:   Type: TLS
-# NOGC:   Other: 0
-# NOGC:   Section: .tbss
-# NOGC: }
+# NOGC:      Symbol {
+# NOGC:        Name: patatino
+# NOGC-NEXT:   Value: 0x0
+# NOGC-NEXT:   Size: 0
+# NOGC-NEXT:   Binding: Local
+# NOGC-NEXT:   Type: TLS
+# NOGC-NEXT:   Other: 0
+# NOGC-NEXT:   Section: .tbss
+# NOGC-NEXT: }
 
 # GC-NOT: tbss
 

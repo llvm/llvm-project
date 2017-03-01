@@ -17,7 +17,7 @@ void TextDocumentDidOpenHandler::handleNotification(
     llvm::yaml::MappingNode *Params) {
   auto DOTDP = DidOpenTextDocumentParams::parse(Params);
   if (!DOTDP) {
-    Output.logs() << "Failed to decode DidOpenTextDocumentParams!\n";
+    Output.log("Failed to decode DidOpenTextDocumentParams!\n");
     return;
   }
   Store.addDocument(DOTDP->textDocument.uri, DOTDP->textDocument.text);
@@ -27,7 +27,7 @@ void TextDocumentDidChangeHandler::handleNotification(
     llvm::yaml::MappingNode *Params) {
   auto DCTDP = DidChangeTextDocumentParams::parse(Params);
   if (!DCTDP || DCTDP->contentChanges.size() != 1) {
-    Output.logs() << "Failed to decode DidChangeTextDocumentParams!\n";
+    Output.log("Failed to decode DidChangeTextDocumentParams!\n");
     return;
   }
   // We only support full syncing right now.
@@ -91,11 +91,11 @@ void TextDocumentRangeFormattingHandler::handleMethod(
     llvm::yaml::MappingNode *Params, StringRef ID) {
   auto DRFP = DocumentRangeFormattingParams::parse(Params);
   if (!DRFP) {
-    Output.logs() << "Failed to decode DocumentRangeFormattingParams!\n";
+    Output.log("Failed to decode DocumentRangeFormattingParams!\n");
     return;
   }
 
-  StringRef Code = Store.getDocument(DRFP->textDocument.uri);
+  std::string Code = Store.getDocument(DRFP->textDocument.uri);
 
   size_t Begin = positionToOffset(Code, DRFP->range.start);
   size_t Len = positionToOffset(Code, DRFP->range.end) - Begin;
@@ -104,16 +104,37 @@ void TextDocumentRangeFormattingHandler::handleMethod(
                           {clang::tooling::Range(Begin, Len)}, ID));
 }
 
+void TextDocumentOnTypeFormattingHandler::handleMethod(
+    llvm::yaml::MappingNode *Params, StringRef ID) {
+  auto DOTFP = DocumentOnTypeFormattingParams::parse(Params);
+  if (!DOTFP) {
+    Output.log("Failed to decode DocumentOnTypeFormattingParams!\n");
+    return;
+  }
+
+  // Look for the previous opening brace from the character position and format
+  // starting from there.
+  std::string Code = Store.getDocument(DOTFP->textDocument.uri);
+  size_t CursorPos = positionToOffset(Code, DOTFP->position);
+  size_t PreviousLBracePos = StringRef(Code).find_last_of('{', CursorPos);
+  if (PreviousLBracePos == StringRef::npos)
+    PreviousLBracePos = CursorPos;
+  size_t Len = 1 + CursorPos - PreviousLBracePos;
+
+  writeMessage(formatCode(Code, DOTFP->textDocument.uri,
+                          {clang::tooling::Range(PreviousLBracePos, Len)}, ID));
+}
+
 void TextDocumentFormattingHandler::handleMethod(
     llvm::yaml::MappingNode *Params, StringRef ID) {
   auto DFP = DocumentFormattingParams::parse(Params);
   if (!DFP) {
-    Output.logs() << "Failed to decode DocumentFormattingParams!\n";
+    Output.log("Failed to decode DocumentFormattingParams!\n");
     return;
   }
 
   // Format everything.
-  StringRef Code = Store.getDocument(DFP->textDocument.uri);
+  std::string Code = Store.getDocument(DFP->textDocument.uri);
   writeMessage(formatCode(Code, DFP->textDocument.uri,
                           {clang::tooling::Range(0, Code.size())}, ID));
 }

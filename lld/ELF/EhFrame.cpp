@@ -38,13 +38,14 @@ using namespace lld::elf;
 namespace {
 template <class ELFT> class EhReader {
 public:
-  EhReader(InputSectionBase<ELFT> *S, ArrayRef<uint8_t> D) : IS(S), D(D) {}
+  EhReader(InputSectionBase *S, ArrayRef<uint8_t> D) : IS(S), D(D) {}
   size_t readEhRecordSize();
   uint8_t getFdeEncoding();
 
 private:
   template <class P> void failOn(const P *Loc, const Twine &Msg) {
-    fatal(IS->getLocation((const uint8_t *)Loc - IS->Data.data()) + ": " + Msg);
+    fatal(IS->getLocation<ELFT>((const uint8_t *)Loc - IS->Data.data()) + ": " +
+          Msg);
   }
 
   uint8_t readByte();
@@ -53,15 +54,16 @@ private:
   void skipLeb128();
   void skipAugP();
 
-  InputSectionBase<ELFT> *IS;
+  InputSectionBase *IS;
   ArrayRef<uint8_t> D;
 };
 }
 
 template <class ELFT>
-size_t elf::readEhRecordSize(InputSectionBase<ELFT> *S, size_t Off) {
+size_t elf::readEhRecordSize(InputSectionBase *S, size_t Off) {
   return EhReader<ELFT>(S, S->Data.slice(Off)).readEhRecordSize();
 }
+
 // .eh_frame section is a sequence of records. Each record starts with
 // a 4 byte length field. This function reads the length.
 template <class ELFT> size_t EhReader<ELFT>::readEhRecordSize() {
@@ -152,7 +154,7 @@ template <class ELFT> void EhReader<ELFT>::skipAugP() {
 }
 
 template <class ELFT> uint8_t elf::getFdeEncoding(EhSectionPiece *P) {
-  auto *IS = static_cast<InputSectionBase<ELFT> *>(P->ID);
+  auto *IS = static_cast<InputSectionBase *>(P->ID);
   return EhReader<ELFT>(IS, P->data()).getFdeEncoding();
 }
 
@@ -199,14 +201,10 @@ template <class ELFT> uint8_t EhReader<ELFT>::getFdeEncoding() {
   return DW_EH_PE_absptr;
 }
 
-template size_t elf::readEhRecordSize<ELF32LE>(InputSectionBase<ELF32LE> *S,
-                                               size_t Off);
-template size_t elf::readEhRecordSize<ELF32BE>(InputSectionBase<ELF32BE> *S,
-                                               size_t Off);
-template size_t elf::readEhRecordSize<ELF64LE>(InputSectionBase<ELF64LE> *S,
-                                               size_t Off);
-template size_t elf::readEhRecordSize<ELF64BE>(InputSectionBase<ELF64BE> *S,
-                                               size_t Off);
+template size_t elf::readEhRecordSize<ELF32LE>(InputSectionBase *S, size_t Off);
+template size_t elf::readEhRecordSize<ELF32BE>(InputSectionBase *S, size_t Off);
+template size_t elf::readEhRecordSize<ELF64LE>(InputSectionBase *S, size_t Off);
+template size_t elf::readEhRecordSize<ELF64BE>(InputSectionBase *S, size_t Off);
 
 template uint8_t elf::getFdeEncoding<ELF32LE>(EhSectionPiece *P);
 template uint8_t elf::getFdeEncoding<ELF32BE>(EhSectionPiece *P);

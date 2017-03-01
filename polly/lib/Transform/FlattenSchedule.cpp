@@ -27,7 +27,7 @@ namespace {
 /// Print a schedule to @p OS.
 ///
 /// Prints the schedule for each statements on a new line.
-void printSchedule(raw_ostream &OS, NonowningIslPtr<isl_union_map> Schedule,
+void printSchedule(raw_ostream &OS, const IslPtr<isl_union_map> &Schedule,
                    int indent) {
   foreachElt(Schedule, [&OS, indent](IslPtr<isl_map> Map) {
     OS.indent(indent) << Map << "\n";

@@ -20,7 +20,7 @@
 #include "llvm/DebugInfo/CodeView/TypeDumpVisitor.h"
 #include "llvm/DebugInfo/CodeView/TypeStreamMerger.h"
 #include "llvm/DebugInfo/CodeView/TypeTableBuilder.h"
-#include "llvm/DebugInfo/MSF/ByteStream.h"
+#include "llvm/DebugInfo/MSF/BinaryByteStream.h"
 #include "llvm/DebugInfo/MSF/MSFBuilder.h"
 #include "llvm/DebugInfo/MSF/MSFCommon.h"
 #include "llvm/DebugInfo/PDB/Native/DbiStream.h"
@@ -29,12 +29,14 @@
 #include "llvm/DebugInfo/PDB/Native/InfoStreamBuilder.h"
 #include "llvm/DebugInfo/PDB/Native/PDBFile.h"
 #include "llvm/DebugInfo/PDB/Native/PDBFileBuilder.h"
+#include "llvm/DebugInfo/PDB/Native/PDBTypeServerHandler.h"
 #include "llvm/DebugInfo/PDB/Native/StringTableBuilder.h"
 #include "llvm/DebugInfo/PDB/Native/TpiStream.h"
 #include "llvm/DebugInfo/PDB/Native/TpiStreamBuilder.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/FileOutputBuffer.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include <memory>
 
@@ -91,12 +93,18 @@ static std::vector<uint8_t> mergeDebugT(SymbolTable *Symtab) {
     if (Data.empty())
       continue;
 
-    msf::ByteStream Stream(Data);
+    BinaryByteStream Stream(Data, llvm::support::little);
     codeview::CVTypeArray Types;
-    msf::StreamReader Reader(Stream);
+    BinaryStreamReader Reader(Stream);
+    // Follow type servers.  If the same type server is encountered more than
+    // once for this instance of `PDBTypeServerHandler` (for example if many
+    // object files reference the same TypeServer), the types from the
+    // TypeServer will only be visited once.
+    pdb::PDBTypeServerHandler Handler;
+    Handler.addSearchPath(llvm::sys::path::parent_path(File->getName()));
     if (auto EC = Reader.readArray(Types, Reader.getLength()))
       fatal(EC, "Reader::readArray failed");
-    if (auto Err = codeview::mergeTypeStreams(Builder, Types))
+    if (auto Err = codeview::mergeTypeStreams(Builder, &Handler, Types))
       fatal(Err, "codeview::mergeTypeStreams failed");
   }
 
@@ -116,6 +124,8 @@ static void dumpDebugT(ScopedPrinter &W, ObjectFile *File) {
 
   TypeDatabase TDB;
   TypeDumpVisitor TDV(TDB, &W, false);
+  // Use a default implementation that does not follow type servers and instead
+  // just dumps the contents of the TypeServer2 record.
   CVTypeDumper TypeDumper(TDB);
   if (auto EC = TypeDumper.dump(Data, TDV))
     fatal(EC, "CVTypeDumper::dump failed");
@@ -127,9 +137,9 @@ static void dumpDebugS(ScopedPrinter &W, ObjectFile *File) {
   if (Data.empty())
     return;
 
-  msf::ByteStream Stream(Data);
+  BinaryByteStream Stream(Data, llvm::support::little);
   CVSymbolArray Symbols;
-  msf::StreamReader Reader(Stream);
+  BinaryStreamReader Reader(Stream);
   if (auto EC = Reader.readArray(Symbols, Reader.getLength()))
     fatal(EC, "StreamReader.readArray<CVSymbolArray> failed");
 
@@ -151,9 +161,9 @@ static void dumpCodeView(SymbolTable *Symtab) {
 
 static void addTypeInfo(pdb::TpiStreamBuilder &TpiBuilder,
                         ArrayRef<uint8_t> Data) {
-  msf::ByteStream Stream(Data);
+  BinaryByteStream Stream(Data, llvm::support::little);
   codeview::CVTypeArray Records;
-  msf::StreamReader Reader(Stream);
+  BinaryStreamReader Reader(Stream);
   if (auto EC = Reader.readArray(Records, Reader.getLength()))
     fatal(EC, "Reader.readArray failed");
   for (const codeview::CVType &Rec : Records)

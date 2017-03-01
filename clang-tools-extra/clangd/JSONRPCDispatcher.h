@@ -28,8 +28,8 @@ public:
   /// Emit a JSONRPC message.
   void writeMessage(const Twine &Message);
 
-  /// Get the logging stream.
-  llvm::raw_ostream &logs() { return Logs; }
+  /// Write to the logging stream.
+  void log(const Twine &Message);
 
 private:
   llvm::raw_ostream &Outs;

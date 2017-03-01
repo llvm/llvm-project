@@ -3082,6 +3082,8 @@ use the following functions.
 		isl_stat (*fn)(__isl_take isl_set *set,
 			  __isl_take isl_aff *aff,
 			  void *user), void *user);
+	int isl_pw_multi_aff_n_piece(
+		__isl_keep isl_pw_multi_aff *pma);
 	isl_stat isl_pw_multi_aff_foreach_piece(
 		__isl_keep isl_pw_multi_aff *pma,
 		isl_stat (*fn)(__isl_take isl_set *set,
@@ -3089,6 +3091,8 @@ use the following functions.
 			    void *user), void *user);
 
 	#include <isl/polynomial.h>
+	int isl_pw_qpolynomial_n_piece(
+		__isl_keep isl_pw_qpolynomial *pwqp);
 	isl_stat isl_pw_qpolynomial_foreach_piece(
 		__isl_keep isl_pw_qpolynomial *pwqp,
 		isl_stat (*fn)(__isl_take isl_set *set,
@@ -3099,6 +3103,8 @@ use the following functions.
 		isl_stat (*fn)(__isl_take isl_set *set,
 			  __isl_take isl_qpolynomial *qp,
 			  void *user), void *user);
+	int isl_pw_qpolynomial_fold_n_piece(
+		__isl_keep isl_pw_qpolynomial_fold *pwf);
 	isl_stat isl_pw_qpolynomial_fold_foreach_piece(
 		__isl_keep isl_pw_qpolynomial_fold *pwf,
 		isl_stat (*fn)(__isl_take isl_set *set,
@@ -4046,14 +4052,40 @@ the input is itself a wrapped relation.
 
 Check whether the given expression is a constant.
 
+	#include <isl/val.h>
+	isl_bool isl_multi_val_involves_nan(
+		__isl_keep isl_multi_val *mv);
+
 	#include <isl/aff.h>
 	isl_bool isl_aff_is_nan(__isl_keep isl_aff *aff);
+	isl_bool isl_multi_aff_involves_nan(
+		__isl_keep isl_multi_aff *ma);
 	isl_bool isl_pw_aff_involves_nan(
 		__isl_keep isl_pw_aff *pa);
+	isl_bool isl_pw_multi_aff_involves_nan(
+		__isl_keep isl_pw_multi_aff *pma);
+	isl_bool isl_multi_pw_aff_involves_nan(
+		__isl_keep isl_multi_pw_aff *mpa);
+	isl_bool isl_union_pw_aff_involves_nan(
+		__isl_keep isl_union_pw_aff *upa);
+	isl_bool isl_union_pw_multi_aff_involves_nan(
+		__isl_keep isl_union_pw_multi_aff *upma);
+	isl_bool isl_multi_union_pw_aff_involves_nan(
+		__isl_keep isl_multi_union_pw_aff *mupa);
 
 	#include <isl/polynomial.h>
+	isl_bool isl_qpolynomial_is_nan(
+		__isl_keep isl_qpolynomial *qp);
 	isl_bool isl_qpolynomial_fold_is_nan(
 		__isl_keep isl_qpolynomial_fold *fold);
+	isl_bool isl_pw_qpolynomial_involves_nan(
+		__isl_keep isl_pw_qpolynomial *pwqp);
+	isl_bool isl_pw_qpolynomial_fold_involves_nan(
+		__isl_keep isl_pw_qpolynomial_fold *pwf);
+	isl_bool isl_union_pw_qpolynomial_involves_nan(
+		__isl_keep isl_union_pw_qpolynomial *upwqp);
+	isl_bool isl_union_pw_qpolynomial_fold_involves_nan(
+		__isl_keep isl_union_pw_qpolynomial_fold *upwf);
 
 Check whether the given expression is equal to or involves NaN.
 
@@ -4121,7 +4153,13 @@ return true if the objects are not the same.
 	isl_bool isl_pw_aff_plain_is_equal(
 		__isl_keep isl_pw_aff *pwaff1,
 		__isl_keep isl_pw_aff *pwaff2);
+	isl_bool isl_pw_aff_is_equal(
+		__isl_keep isl_pw_aff *pa1,
+		__isl_keep isl_pw_aff *pa2);
 	isl_bool isl_pw_multi_aff_plain_is_equal(
+		__isl_keep isl_pw_multi_aff *pma1,
+		__isl_keep isl_pw_multi_aff *pma2);
+	isl_bool isl_pw_multi_aff_is_equal(
 		__isl_keep isl_pw_multi_aff *pma1,
 		__isl_keep isl_pw_multi_aff *pma2);
 	isl_bool isl_multi_pw_aff_plain_is_equal(
@@ -4255,10 +4293,14 @@ the internal representation of the inputs has not changed), but may
 change over different versions of C<isl>.
 
 	#include <isl/aff.h>
+	int isl_multi_aff_plain_cmp(
+		__isl_keep isl_multi_aff *ma1,
+		__isl_keep isl_multi_aff *ma2);
 	int isl_pw_aff_plain_cmp(__isl_keep isl_pw_aff *pa1,
 		__isl_keep isl_pw_aff *pa2);
 
-The function C<isl_pw_aff_plain_cmp> can be used to sort
+The functions C<isl_multi_aff_plain_cmp> and
+C<isl_pw_aff_plain_cmp> can be used to sort C<isl_multi_aff>s and
 C<isl_pw_aff>s.  The order is not strictly defined.
 The current order sorts expressions that only involve
 earlier dimensions before those that involve later dimensions.
@@ -4369,6 +4411,9 @@ parameters.
 	#include <isl/aff.h>
 	__isl_give isl_aff *isl_aff_project_domain_on_params(
 		__isl_take isl_aff *aff);
+	__isl_give isl_pw_aff *
+	isl_pw_aff_project_domain_on_params(
+		__isl_take isl_pw_aff *pa);
 	__isl_give isl_pw_multi_aff *
 	isl_pw_multi_aff_project_domain_on_params(
 		__isl_take isl_pw_multi_aff *pma);
@@ -4529,6 +4574,14 @@ flat anonymous space.
 	__isl_give isl_union_pw_multi_aff *
 	isl_union_pw_multi_aff_from_domain(
 		__isl_take isl_union_set *uset);
+
+	#include <isl/polynomial.h>
+	__isl_give isl_pw_qpolynomial *
+	isl_pw_qpolynomial_from_range(
+		__isl_take isl_pw_qpolynomial *pwqp);
+	__isl_give isl_pw_qpolynomial_fold *
+	isl_pw_qpolynomial_fold_from_range(
+		__isl_take isl_pw_qpolynomial_fold *pwf);
 
 =item * Slicing
 

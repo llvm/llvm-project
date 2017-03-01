@@ -333,6 +333,16 @@ signbit(_A1 __lcpp_x) _NOEXCEPT
     return __libcpp_signbit((typename std::__promote<_A1>::type)__lcpp_x);
 }
 
+#elif defined(_LIBCPP_MSVCRT) && ((_VC_CRT_MAJOR_VERSION-0) >= 14)
+
+template <typename _A1>
+inline _LIBCPP_INLINE_VISIBILITY
+typename std::enable_if<std::is_arithmetic<_A1>::value, bool>::type
+signbit(_A1 __lcpp_x) _NOEXCEPT
+{
+  return ::signbit(static_cast<typename std::__promote<_A1>::type>(__lcpp_x));
+}
+
 #endif  // signbit
 
 // fpclassify
@@ -355,6 +365,16 @@ typename std::enable_if<std::is_arithmetic<_A1>::value, int>::type
 fpclassify(_A1 __lcpp_x) _NOEXCEPT
 {
     return __libcpp_fpclassify((typename std::__promote<_A1>::type)__lcpp_x);
+}
+
+#elif defined(_LIBCPP_MSVCRT) && ((_VC_CRT_MAJOR_VERSION-0) >= 14)
+
+template <typename _A1>
+inline _LIBCPP_INLINE_VISIBILITY
+typename std::enable_if<std::is_arithmetic<_A1>::value, int>::type
+fpclassify(_A1 __lcpp_x) _NOEXCEPT
+{
+  return ::fpclassify(static_cast<typename std::__promote<_A1>::type>(__lcpp_x));
 }
 
 #endif  // fpclassify
@@ -1020,7 +1040,7 @@ copysign(_A1 __lcpp_x, _A2 __lcpp_y) _NOEXCEPT
     return ::copysign((__result_type)__lcpp_x, (__result_type)__lcpp_y);
 }
 
-#if !defined(_LIBCPP_MSVCRT) || ((_VC_CRT_MAJOR_VERSION-0) >= 14)
+#if !(defined(_LIBCPP_MSVCRT) && ((_VC_CRT_MAJOR_VERSION-0) < 14))
 
 // erf
 
@@ -1404,7 +1424,7 @@ inline _LIBCPP_INLINE_VISIBILITY
 typename std::enable_if<std::is_integral<_A1>::value, double>::type
 trunc(_A1 __lcpp_x) _NOEXCEPT {return ::trunc((double)__lcpp_x);}
 
-#endif // !defined(_LIBCPP_MSVCRT) || ((_VC_CRT_MAJOR_VERSION-0) >= 14)
+#endif // !(defined(_LIBCPP_MSVCRT) && ((_VC_CRT_MAJOR_VERSION-0) < 14))
 
 } // extern "C++"
 

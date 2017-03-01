@@ -75,6 +75,11 @@ public:
 
   virtual bool ClearHardwareBreakpoint(uint32_t hw_idx);
 
+  virtual Error ClearAllHardwareBreakpoints();
+
+  virtual Error GetHardwareBreakHitIndex(uint32_t &bp_index,
+                                         lldb::addr_t trap_addr);
+
   virtual uint32_t NumSupportedHardwareWatchpoints();
 
   virtual uint32_t SetHardwareWatchpoint(lldb::addr_t addr, size_t size,

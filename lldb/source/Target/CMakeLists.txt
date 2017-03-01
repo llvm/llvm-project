@@ -13,6 +13,7 @@ add_lldb_library(lldbTarget
   LanguageRuntime.cpp
   Memory.cpp
   MemoryHistory.cpp
+  ModuleCache.cpp
   ObjCLanguageRuntime.cpp
   OperatingSystem.cpp
   PathMappingList.cpp
@@ -24,6 +25,7 @@ add_lldb_library(lldbTarget
   QueueItem.cpp
   QueueList.cpp
   RegisterContext.cpp
+  RegisterNumber.cpp
   SectionLoadHistory.cpp
   SectionLoadList.cpp
   StackFrame.cpp

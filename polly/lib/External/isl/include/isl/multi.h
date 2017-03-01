@@ -32,6 +32,8 @@ __isl_null isl_multi_##BASE *isl_multi_##BASE##_free(			\
 isl_bool isl_multi_##BASE##_plain_is_equal(				\
 	__isl_keep isl_multi_##BASE *multi1,				\
 	__isl_keep isl_multi_##BASE *multi2);				\
+isl_bool isl_multi_##BASE##_involves_nan(				\
+	__isl_keep isl_multi_##BASE *multi);				\
 int isl_multi_##BASE##_find_dim_by_id(					\
 	__isl_keep isl_multi_##BASE *multi, enum isl_dim_type type,	\
 	__isl_keep isl_id *id);						\
@@ -114,6 +116,10 @@ __isl_give isl_multi_##BASE *isl_multi_##BASE##_align_params(		\
 	__isl_take isl_space *model);					\
 __isl_give isl_multi_##BASE *isl_multi_##BASE##_from_range(		\
 	__isl_take isl_multi_##BASE *multi);
+
+#define ISL_DECLARE_MULTI_CMP(BASE)					\
+int isl_multi_##BASE##_plain_cmp(__isl_keep isl_multi_##BASE *multi1,	\
+	__isl_keep isl_multi_##BASE *multi2);
 
 #define ISL_DECLARE_MULTI_NEG(BASE)					\
 __isl_give isl_multi_##BASE *isl_multi_##BASE##_neg(		 	\

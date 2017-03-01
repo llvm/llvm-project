@@ -1,4 +1,6 @@
-// RUN: %check_clang_tidy %s readability-function-size %t -- -config='{CheckOptions: [{key: readability-function-size.LineThreshold, value: 0}, {key: readability-function-size.StatementThreshold, value: 0}, {key: readability-function-size.BranchThreshold, value: 0}]}' -- -std=c++11
+// RUN: %check_clang_tidy %s readability-function-size %t -- -config='{CheckOptions: [{key: readability-function-size.LineThreshold, value: 0}, {key: readability-function-size.StatementThreshold, value: 0}, {key: readability-function-size.BranchThreshold, value: 0}, {key: readability-function-size.ParameterThreshold, value: 5}]}' -- -std=c++11
+
+// Bad formatting is intentional, don't run clang-format over the whole file!
 
 void foo1() {
 }
@@ -36,6 +38,11 @@ int x = foo6(0);
 // CHECK-MESSAGES: :[[@LINE-3]]:25: warning: function 'foo6' exceeds recommended size/complexity
 // CHECK-MESSAGES: :[[@LINE-4]]:25: note: 1 lines including whitespace and comments (threshold 0)
 // CHECK-MESSAGES: :[[@LINE-5]]:25: note: 1 statements (threshold 0)
+
+void foo7(int p1, int p2, int p3, int p4, int p5, int p6) {;}
+// CHECK-MESSAGES: :[[@LINE-1]]:6: warning: function 'foo7' exceeds recommended size/complexity
+// CHECK-MESSAGES: :[[@LINE-2]]:6: note: 1 statements (threshold 0)
+// CHECK-MESSAGES: :[[@LINE-3]]:6: note: 6 parameters (threshold 5)
 
 void bar1() { [](){;;;;;;;;;;;if(1){}}();
 

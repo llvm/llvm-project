@@ -46,6 +46,10 @@ public:
 
   Error RemoveWatchpoint(lldb::addr_t addr) override;
 
+  Error SetHardwareBreakpoint(lldb::addr_t addr, size_t size) override;
+
+  Error RemoveHardwareBreakpoint(lldb::addr_t addr) override;
+
 private:
   // ---------------------------------------------------------------------
   // Interface for friend classes
@@ -102,7 +106,8 @@ private:
   std::string m_stop_description;
   using WatchpointIndexMap = std::map<lldb::addr_t, uint32_t>;
   WatchpointIndexMap m_watchpoint_index_map;
-  llvm::Optional<SingleStepWorkaround> m_step_workaround;
+  WatchpointIndexMap m_hw_break_index_map;
+  std::unique_ptr<SingleStepWorkaround> m_step_workaround;
 };
 
 typedef std::shared_ptr<NativeThreadLinux> NativeThreadLinuxSP;

@@ -86,6 +86,7 @@
 #include <clc/math/round.h>
 #include <clc/math/sin.h>
 #include <clc/math/sincos.h>
+#include <clc/math/sinh.h>
 #include <clc/math/sinpi.h>
 #include <clc/math/sqrt.h>
 #include <clc/math/tan.h>
@@ -103,6 +104,7 @@
 #include <clc/math/native_sin.h>
 #include <clc/math/native_sqrt.h>
 #include <clc/math/native_rsqrt.h>
+#include <clc/math/native_tan.h>
 #include <clc/math/rsqrt.h>
 
 /* 6.11.2.1 Floating-point macros */

@@ -52,6 +52,25 @@
 
 using namespace lldb_private;
 
+#if defined(_MSC_VER)
+static DWORD safeUndecorateName(const char *Mangled, char *Demangled,
+                                DWORD DemangledLength) {
+  static std::mutex M;
+  std::lock_guard<std::mutex> Lock(M);
+  return ::UnDecorateSymbolName(
+      Mangled, Demangled, DemangledLength,
+      UNDNAME_NO_ACCESS_SPECIFIERS |       // Strip public, private, protected
+                                           // keywords
+          UNDNAME_NO_ALLOCATION_LANGUAGE | // Strip __thiscall, __stdcall,
+                                           // etc keywords
+          UNDNAME_NO_THROW_SIGNATURES |    // Strip throw() specifications
+          UNDNAME_NO_MEMBER_TYPE |         // Strip virtual, static, etc
+                                           // specifiers
+          UNDNAME_NO_MS_KEYWORDS           // Strip all MS extension keywords
+      );
+}
+#endif
+
 static inline Mangled::ManglingScheme cstring_mangling_scheme(const char *s) {
   if (s) {
     if (s[0] == '?')
@@ -298,17 +317,8 @@ Mangled::GetDemangledName(lldb::LanguageType language) const {
         const size_t demangled_length = 2048;
         demangled_name = static_cast<char *>(::malloc(demangled_length));
         ::ZeroMemory(demangled_name, demangled_length);
-        DWORD result = ::UnDecorateSymbolName(
-            mangled_name, demangled_name, demangled_length,
-            UNDNAME_NO_ACCESS_SPECIFIERS | // Strip public, private, protected
-                                           // keywords
-                UNDNAME_NO_ALLOCATION_LANGUAGE | // Strip __thiscall, __stdcall,
-                                                 // etc keywords
-                UNDNAME_NO_THROW_SIGNATURES |    // Strip throw() specifications
-                UNDNAME_NO_MEMBER_TYPE |         // Strip virtual, static, etc
-                                                 // specifiers
-                UNDNAME_NO_MS_KEYWORDS // Strip all MS extension keywords
-            );
+        DWORD result =
+            safeUndecorateName(mangled_name, demangled_name, demangled_length);
         if (log) {
           if (demangled_name && demangled_name[0])
             log->Printf("demangled msvc: %s -> \"%s\"", mangled_name,

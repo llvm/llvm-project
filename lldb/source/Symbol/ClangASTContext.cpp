@@ -72,7 +72,8 @@
 #include "Plugins/ExpressionParser/Clang/ClangUserExpression.h"
 #include "Plugins/ExpressionParser/Clang/ClangUtilityFunction.h"
 #include "lldb/Core/ArchSpec.h"
-#include "lldb/Core/Flags.h"
+#include "lldb/Utility/Flags.h"
+
 #include "lldb/Core/Log.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
@@ -4351,6 +4352,8 @@ ClangASTContext::GetTypeClass(lldb::opaque_compiler_type_t type) {
     break;
   case clang::Type::TemplateSpecialization:
     break;
+  case clang::Type::DeducedTemplateSpecialization:
+    break;
   case clang::Type::Atomic:
     break;
   case clang::Type::Pipe:
@@ -5122,7 +5125,6 @@ lldb::Encoding ClangASTContext::GetEncoding(lldb::opaque_compiler_type_t type,
     case clang::BuiltinType::Kind::OCLImage3dWO:
     case clang::BuiltinType::Kind::OCLImage3dRW:
     case clang::BuiltinType::Kind::OCLQueue:
-    case clang::BuiltinType::Kind::OCLNDRange:
     case clang::BuiltinType::Kind::OCLReserveID:
     case clang::BuiltinType::Kind::OCLSampler:
     case clang::BuiltinType::Kind::OMPArraySection:
@@ -5206,6 +5208,7 @@ lldb::Encoding ClangASTContext::GetEncoding(lldb::opaque_compiler_type_t type,
   case clang::Type::TypeOf:
   case clang::Type::Decltype:
   case clang::Type::TemplateSpecialization:
+  case clang::Type::DeducedTemplateSpecialization:
   case clang::Type::Atomic:
   case clang::Type::Adjusted:
   case clang::Type::Pipe:
@@ -5355,6 +5358,7 @@ lldb::Format ClangASTContext::GetFormat(lldb::opaque_compiler_type_t type) {
   case clang::Type::TypeOf:
   case clang::Type::Decltype:
   case clang::Type::TemplateSpecialization:
+  case clang::Type::DeducedTemplateSpecialization:
   case clang::Type::Atomic:
   case clang::Type::Adjusted:
   case clang::Type::Pipe:

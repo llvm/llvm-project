@@ -18,8 +18,10 @@
 #include "lldb/Utility/StreamString.h"
 
 // Other libraries and framework includes
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/Chrono.h"
+#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/raw_ostream.h"
@@ -35,6 +37,76 @@
 
 using namespace lldb;
 using namespace lldb_private;
+
+namespace {
+  struct ChannelAndLog {
+    Log log;
+    Log::Channel &channel;
+
+    ChannelAndLog(Log::Channel &channel) : channel(channel) {}
+  };
+  typedef llvm::StringMap<ChannelAndLog> ChannelMap;
+}
+
+static llvm::ManagedStatic<ChannelMap> g_channel_map;
+
+static void ListCategories(Stream &stream, const ChannelMap::value_type &entry) {
+  stream.Format("Logging categories for '{0}':\n", entry.first());
+  stream.Format("  all - all available logging categories\n");
+  stream.Format("  default - default set of logging categories\n");
+  for (const auto &category : entry.second.channel.categories)
+    stream.Format("  {0} - {1}\n", category.name, category.description);
+}
+
+static uint32_t GetFlags(Stream &stream, const ChannelMap::value_type &entry,
+                         llvm::ArrayRef<const char *> categories) {
+  bool list_categories = false;
+  uint32_t flags = 0;
+  for (const char *category : categories) {
+    if (llvm::StringRef("all").equals_lower(category)) {
+      flags |= UINT32_MAX;
+      continue;
+    }
+    if (llvm::StringRef("default").equals_lower(category)) {
+      flags |= entry.second.channel.default_flags;
+      continue;
+    }
+    auto cat = llvm::find_if(
+        entry.second.channel.categories,
+        [&](const Log::Category &c) { return c.name.equals_lower(category); });
+    if (cat != entry.second.channel.categories.end()) {
+      flags |= cat->flag;
+      continue;
+    }
+    stream.Format("error: unrecognized log category '{0}'\n", category);
+    list_categories = true;
+  }
+  if (list_categories)
+    ListCategories(stream, entry);
+  return flags;
+}
+
+void Log::Channel::Enable(Log &log,
+                          const std::shared_ptr<llvm::raw_ostream> &stream_sp,
+                          uint32_t options, uint32_t flags) {
+  log.GetMask().Set(flags);
+  if (log.GetMask().Get()) {
+    log.GetOptions().Set(options);
+    log.SetStream(stream_sp);
+    log_ptr.store(&log, std::memory_order_release);
+  }
+}
+
+void Log::Channel::Disable(uint32_t flags) {
+  Log *log = log_ptr.load(std::memory_order_acquire);
+  if (!log)
+    return;
+  log->GetMask().Clear(flags);
+  if (!log->GetMask().Get()) {
+    log->SetStream(nullptr);
+    log_ptr.store(nullptr, std::memory_order_release);
+  }
+}
 
 Log::Log() : m_stream_sp(), m_options(0), m_mask_bits(0) {}
 
@@ -149,149 +221,75 @@ void Log::Warning(const char *format, ...) {
   free(arg_msg);
 }
 
-typedef std::map<ConstString, Log::Callbacks> CallbackMap;
-typedef CallbackMap::iterator CallbackMapIter;
-
-typedef std::map<ConstString, LogChannelSP> LogChannelMap;
-typedef LogChannelMap::iterator LogChannelMapIter;
-
-// Surround our callback map with a singleton function so we don't have any
-// global initializers.
-static CallbackMap &GetCallbackMap() {
-  static CallbackMap g_callback_map;
-  return g_callback_map;
+void Log::Register(llvm::StringRef name, Channel &channel) {
+  auto iter = g_channel_map->try_emplace(name, channel);
+  assert(iter.second == true);
+  (void)iter;
 }
 
-static LogChannelMap &GetChannelMap() {
-  static LogChannelMap g_channel_map;
-  return g_channel_map;
-}
-
-void Log::RegisterLogChannel(const ConstString &channel,
-                             const Log::Callbacks &log_callbacks) {
-  GetCallbackMap().insert(std::make_pair(channel, log_callbacks));
-}
-
-bool Log::UnregisterLogChannel(const ConstString &channel) {
-  return GetCallbackMap().erase(channel) != 0;
-}
-
-bool Log::GetLogChannelCallbacks(const ConstString &channel,
-                                 Log::Callbacks &log_callbacks) {
-  CallbackMap &callback_map = GetCallbackMap();
-  CallbackMapIter pos = callback_map.find(channel);
-  if (pos != callback_map.end()) {
-    log_callbacks = pos->second;
-    return true;
-  }
-  ::memset(&log_callbacks, 0, sizeof(log_callbacks));
-  return false;
+void Log::Unregister(llvm::StringRef name) {
+  auto iter = g_channel_map->find(name);
+  assert(iter != g_channel_map->end());
+  iter->second.channel.Disable(UINT32_MAX);
+  g_channel_map->erase(iter);
 }
 
 bool Log::EnableLogChannel(
     const std::shared_ptr<llvm::raw_ostream> &log_stream_sp,
-    uint32_t log_options, const char *channel, const char **categories,
-    Stream &error_stream) {
-  Log::Callbacks log_callbacks;
-  if (Log::GetLogChannelCallbacks(ConstString(channel), log_callbacks)) {
-    log_callbacks.enable(log_stream_sp, log_options, categories, &error_stream);
-    return true;
-  }
-
-  LogChannelSP log_channel_sp(LogChannel::FindPlugin(channel));
-  if (log_channel_sp) {
-    if (log_channel_sp->Enable(log_stream_sp, log_options, &error_stream,
-                               categories)) {
-      return true;
-    } else {
-      error_stream.Printf("Invalid log channel '%s'.\n", channel);
-      return false;
-    }
-  } else {
-    error_stream.Printf("Invalid log channel '%s'.\n", channel);
+    uint32_t log_options, llvm::StringRef channel,
+    llvm::ArrayRef<const char *> categories, Stream &error_stream) {
+  auto iter = g_channel_map->find(channel);
+  if (iter == g_channel_map->end()) {
+    error_stream.Format("Invalid log channel '{0}'.\n", channel);
     return false;
   }
+  uint32_t flags = categories.empty()
+                       ? iter->second.channel.default_flags
+                       : GetFlags(error_stream, *iter, categories);
+  iter->second.channel.Enable(iter->second.log, log_stream_sp, log_options,
+                              flags);
+  return true;
 }
 
-void Log::EnableAllLogChannels(
-    const std::shared_ptr<llvm::raw_ostream> &log_stream_sp,
-    uint32_t log_options, const char **categories, Stream *feedback_strm) {
-  CallbackMap &callback_map = GetCallbackMap();
-  CallbackMapIter pos, end = callback_map.end();
-
-  for (pos = callback_map.begin(); pos != end; ++pos)
-    pos->second.enable(log_stream_sp, log_options, categories, feedback_strm);
-
-  LogChannelMap &channel_map = GetChannelMap();
-  LogChannelMapIter channel_pos, channel_end = channel_map.end();
-  for (channel_pos = channel_map.begin(); channel_pos != channel_end;
-       ++channel_pos) {
-    channel_pos->second->Enable(log_stream_sp, log_options, feedback_strm,
-                                categories);
+bool Log::DisableLogChannel(llvm::StringRef channel,
+                            llvm::ArrayRef<const char *> categories,
+                            Stream &error_stream) {
+  auto iter = g_channel_map->find(channel);
+  if (iter == g_channel_map->end()) {
+    error_stream.Format("Invalid log channel '{0}'.\n", channel);
+    return false;
   }
+  uint32_t flags = categories.empty()
+                       ? UINT32_MAX
+                       : GetFlags(error_stream, *iter, categories);
+  iter->second.channel.Disable(flags);
+  return true;
 }
 
-void Log::AutoCompleteChannelName(const char *channel_name,
-                                  StringList &matches) {
-  LogChannelMap &map = GetChannelMap();
-  LogChannelMapIter pos, end = map.end();
-  for (pos = map.begin(); pos != end; ++pos) {
-    const char *pos_channel_name = pos->first.GetCString();
-    if (channel_name && channel_name[0]) {
-      if (NameMatches(channel_name, eNameMatchStartsWith, pos_channel_name)) {
-        matches.AppendString(pos_channel_name);
-      }
-    } else
-      matches.AppendString(pos_channel_name);
+bool Log::ListChannelCategories(llvm::StringRef channel, Stream &stream) {
+  auto ch = g_channel_map->find(channel);
+  if (ch == g_channel_map->end()) {
+    stream.Format("Invalid log channel '{0}'.\n", channel);
+    return false;
   }
+  ListCategories(stream, *ch);
+  return true;
 }
 
 void Log::DisableAllLogChannels(Stream *feedback_strm) {
-  CallbackMap &callback_map = GetCallbackMap();
-  CallbackMapIter pos, end = callback_map.end();
-  const char *categories[] = {"all", nullptr};
-
-  for (pos = callback_map.begin(); pos != end; ++pos)
-    pos->second.disable(categories, feedback_strm);
-
-  LogChannelMap &channel_map = GetChannelMap();
-  LogChannelMapIter channel_pos, channel_end = channel_map.end();
-  for (channel_pos = channel_map.begin(); channel_pos != channel_end;
-       ++channel_pos)
-    channel_pos->second->Disable(categories, feedback_strm);
+  for (auto &entry : *g_channel_map)
+    entry.second.channel.Disable(UINT32_MAX);
 }
-
-void Log::Initialize() {
-  Log::Callbacks log_callbacks = {DisableLog, EnableLog, ListLogCategories};
-  Log::RegisterLogChannel(ConstString("lldb"), log_callbacks);
-}
-
-void Log::Terminate() { DisableAllLogChannels(nullptr); }
 
 void Log::ListAllLogChannels(Stream *strm) {
-  CallbackMap &callback_map = GetCallbackMap();
-  LogChannelMap &channel_map = GetChannelMap();
-
-  if (callback_map.empty() && channel_map.empty()) {
+  if (g_channel_map->empty()) {
     strm->PutCString("No logging channels are currently registered.\n");
     return;
   }
 
-  CallbackMapIter pos, end = callback_map.end();
-  for (pos = callback_map.begin(); pos != end; ++pos)
-    pos->second.list_categories(strm);
-
-  uint32_t idx = 0;
-  const char *name;
-  for (idx = 0;
-       (name = PluginManager::GetLogChannelCreateNameAtIndex(idx)) != nullptr;
-       ++idx) {
-    LogChannelSP log_channel_sp(LogChannel::FindPlugin(name));
-    if (log_channel_sp)
-      log_channel_sp->ListCategories(strm);
-  }
+  for (const auto &channel : *g_channel_map)
+    ListCategories(*strm, channel);
 }
-
 bool Log::GetVerbose() const { return m_options.Test(LLDB_LOG_OPTION_VERBOSE); }
 
 void Log::WriteHeader(llvm::raw_ostream &OS, llvm::StringRef file,
@@ -335,7 +333,7 @@ void Log::WriteHeader(llvm::raw_ostream &OS, llvm::StringRef file,
 void Log::WriteMessage(const std::string &message) {
   // Make a copy of our stream shared pointer in case someone disables our
   // log while we are logging and releases the stream
-  auto stream_sp = m_stream_sp;
+  auto stream_sp = GetStream();
   if (!stream_sp)
     return;
 
@@ -358,33 +356,3 @@ void Log::Format(llvm::StringRef file, llvm::StringRef function,
   message << payload << "\n";
   WriteMessage(message.str());
 }
-
-LogChannelSP LogChannel::FindPlugin(const char *plugin_name) {
-  LogChannelSP log_channel_sp;
-  LogChannelMap &channel_map = GetChannelMap();
-  ConstString log_channel_name(plugin_name);
-  LogChannelMapIter pos = channel_map.find(log_channel_name);
-  if (pos == channel_map.end()) {
-    ConstString const_plugin_name(plugin_name);
-    LogChannelCreateInstance create_callback =
-        PluginManager::GetLogChannelCreateCallbackForPluginName(
-            const_plugin_name);
-    if (create_callback) {
-      log_channel_sp.reset(create_callback());
-      if (log_channel_sp) {
-        // Cache the one and only loaded instance of each log channel
-        // plug-in after it has been loaded once.
-        channel_map[log_channel_name] = log_channel_sp;
-      }
-    }
-  } else {
-    // We have already loaded an instance of this log channel class,
-    // so just return the cached instance.
-    log_channel_sp = pos->second;
-  }
-  return log_channel_sp;
-}
-
-LogChannel::LogChannel() : m_log_ap() {}
-
-LogChannel::~LogChannel() = default;

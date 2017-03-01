@@ -139,6 +139,7 @@ bool ClangASTSource::FindExternalVisibleDeclsByName(
   case DeclarationName::CXXConstructorName:
   case DeclarationName::CXXDestructorName:
   case DeclarationName::CXXConversionFunctionName:
+  case DeclarationName::CXXDeductionGuideName:
     SetNoExternalVisibleDeclsForName(decl_ctx, clang_decl_name);
     return false;
   }

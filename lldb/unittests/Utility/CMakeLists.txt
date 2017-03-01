@@ -1,19 +1,15 @@
 add_lldb_unittest(UtilityTests
   ConstStringTest.cpp
-  ModuleCacheTest.cpp
+  ErrorTest.cpp
+  NameMatchesTest.cpp
   StringExtractorTest.cpp
   TaskPoolTest.cpp
   TimeoutTest.cpp
   UriParserTest.cpp
+  VASprintfTest.cpp
 
   LINK_LIBS
-      lldbCore
-      lldbHost
-      lldbSymbol
       lldbUtility
-      lldbPluginObjectFileELF
-    LINK_COMPONENTS
-      Support
+  LINK_COMPONENTS
+    Support
   )
-
-add_unittest_inputs(UtilityTests TestModule.so)

@@ -113,6 +113,7 @@ bool RegisterContextWindows::ClearHardwareWatchpoint(uint32_t hw_index) {
 bool RegisterContextWindows::HardwareSingleStep(bool enable) { return false; }
 
 bool RegisterContextWindows::CacheAllRegisterValues() {
+  Log *log = ProcessWindowsLog::GetLogIfAny(WINDOWS_LOG_REGISTERS);
   if (!m_context_stale)
     return true;
 
@@ -122,14 +123,13 @@ bool RegisterContextWindows::CacheAllRegisterValues() {
   if (!::GetThreadContext(
           wthread.GetHostThread().GetNativeThread().GetSystemHandle(),
           &m_context)) {
-    WINERR_IFALL(
-        WINDOWS_LOG_REGISTERS,
-        "GetThreadContext failed with error %lu while caching register values.",
+    LLDB_LOG(
+        log,
+        "GetThreadContext failed with error {0} while caching register values.",
         ::GetLastError());
     return false;
   }
-  WINLOG_IFALL(WINDOWS_LOG_REGISTERS,
-               "GetThreadContext successfully updated the register values.");
+  LLDB_LOG(log, "successfully updated the register values.");
   m_context_stale = false;
   return true;
 }

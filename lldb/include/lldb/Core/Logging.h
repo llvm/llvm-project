@@ -26,7 +26,6 @@
 #define LIBLLDB_LOG_WATCHPOINTS (1u << 6)
 #define LIBLLDB_LOG_STEP (1u << 7)
 #define LIBLLDB_LOG_EXPRESSIONS (1u << 8)
-#define LIBLLDB_LOG_TEMPORARY (1u << 9)
 #define LIBLLDB_LOG_STATE (1u << 10)
 #define LIBLLDB_LOG_OBJECT (1u << 11)
 #define LIBLLDB_LOG_COMMUNICATION (1u << 12)
@@ -57,23 +56,13 @@
 
 namespace lldb_private {
 
-void LogIfAllCategoriesSet(uint32_t mask, const char *format, ...);
-
 void LogIfAnyCategoriesSet(uint32_t mask, const char *format, ...);
 
 Log *GetLogIfAllCategoriesSet(uint32_t mask);
 
 Log *GetLogIfAnyCategoriesSet(uint32_t mask);
 
-uint32_t GetLogMask();
-
-void DisableLog(const char **categories, Stream *feedback_strm);
-
-Log *EnableLog(const std::shared_ptr<llvm::raw_ostream> &log_stream_sp,
-               uint32_t log_options, const char **categories,
-               Stream *feedback_strm);
-
-void ListLogCategories(Stream *strm);
+void InitializeLog();
 
 } // namespace lldb_private
 

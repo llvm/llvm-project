@@ -27,7 +27,6 @@
 #include "lldb/Core/State.h"
 #include "lldb/Host/ConnectionFileDescriptor.h"
 #include "lldb/Host/Debug.h"
-#include "lldb/Host/Endian.h"
 #include "lldb/Host/File.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
@@ -39,6 +38,7 @@
 #include "lldb/Interpreter/Args.h"
 #include "lldb/Target/FileAction.h"
 #include "lldb/Target/MemoryRegionInfo.h"
+#include "lldb/Utility/Endian.h"
 #include "lldb/Utility/JSON.h"
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/StreamString.h"
@@ -181,6 +181,9 @@ void GDBRemoteCommunicationServerLLGS::RegisterPacketHandlers() {
                                 &GDBRemoteCommunicationServerLLGS::Handle_Z);
   RegisterMemberFunctionHandler(StringExtractorGDBRemote::eServerPacketType_z,
                                 &GDBRemoteCommunicationServerLLGS::Handle_z);
+  RegisterMemberFunctionHandler(
+      StringExtractorGDBRemote::eServerPacketType_QPassSignals,
+      &GDBRemoteCommunicationServerLLGS::Handle_QPassSignals);
 
   RegisterPacketHandler(StringExtractorGDBRemote::eServerPacketType_k,
                         [this](StringExtractorGDBRemote packet, Error &error,
@@ -2531,12 +2534,14 @@ GDBRemoteCommunicationServerLLGS::Handle_z(StringExtractorGDBRemote &packet) {
         packet, "Too short z packet, missing software/hardware specifier");
 
   bool want_breakpoint = true;
+  bool want_hardware = false;
 
   const GDBStoppointType stoppoint_type =
       GDBStoppointType(packet.GetS32(eStoppointInvalid));
   switch (stoppoint_type) {
   case eBreakpointHardware:
     want_breakpoint = true;
+    want_hardware = true;
     break;
   case eBreakpointSoftware:
     want_breakpoint = true;
@@ -2579,7 +2584,8 @@ GDBRemoteCommunicationServerLLGS::Handle_z(StringExtractorGDBRemote &packet) {
 
   if (want_breakpoint) {
     // Try to clear the breakpoint.
-    const Error error = m_debugged_process_sp->RemoveBreakpoint(addr);
+    const Error error =
+        m_debugged_process_sp->RemoveBreakpoint(addr, want_hardware);
     if (error.Success())
       return SendOKResponse();
     Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_BREAKPOINTS));
@@ -3037,9 +3043,14 @@ GDBRemoteCommunicationServerLLGS::Handle_qWatchpointSupportInfo(
   if (packet.GetChar() != ':')
     return SendErrorResponse(67);
 
-  uint32_t num = m_debugged_process_sp->GetMaxWatchpoints();
+  auto hw_debug_cap = m_debugged_process_sp->GetHardwareDebugSupportInfo();
+
   StreamGDBRemote response;
-  response.Printf("num:%d;", num);
+  if (hw_debug_cap == llvm::None)
+    response.Printf("num:0;");
+  else
+    response.Printf("num:%d;", hw_debug_cap->second);
+
   return SendPacketNoLock(response.GetString());
 }
 
@@ -3070,6 +3081,40 @@ GDBRemoteCommunicationServerLLGS::Handle_qFileLoadAddress(
   StreamGDBRemote response;
   response.PutHex64(file_load_address);
   return SendPacketNoLock(response.GetString());
+}
+
+GDBRemoteCommunication::PacketResult
+GDBRemoteCommunicationServerLLGS::Handle_QPassSignals(
+    StringExtractorGDBRemote &packet) {
+  std::vector<int> signals;
+  packet.SetFilePos(strlen("QPassSignals:"));
+
+  // Read sequence of hex signal numbers divided by a semicolon and
+  // optionally spaces.
+  while (packet.GetBytesLeft() > 0) {
+    int signal = packet.GetS32(-1, 16);
+    if (signal < 0)
+      return SendIllFormedResponse(packet, "Failed to parse signal number.");
+    signals.push_back(signal);
+
+    packet.SkipSpaces();
+    char separator = packet.GetChar();
+    if (separator == '\0')
+      break; // End of string
+    if (separator != ';')
+      return SendIllFormedResponse(packet, "Invalid separator,"
+                                            " expected semicolon.");
+  }
+
+  // Fail if we don't have a current process.
+  if (!m_debugged_process_sp)
+    return SendErrorResponse(68);
+
+  Error error = m_debugged_process_sp->IgnoreSignals(signals);
+  if (error.Fail())
+    return SendErrorResponse(69);
+
+  return SendOKResponse();
 }
 
 void GDBRemoteCommunicationServerLLGS::MaybeCloseInferiorTerminalConnection() {

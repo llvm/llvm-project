@@ -21,7 +21,8 @@
 
 // Other libraries and framework includes
 // Project includes
-#include "lldb/Core/Flags.h"
+#include "lldb/Utility/Flags.h"
+
 #include "lldb/Core/StringList.h"
 #include "lldb/Core/ValueObjectList.h"
 #include "lldb/Host/Predicate.h"

@@ -62,8 +62,9 @@ __isl_give isl_val *isl_val_mod_val(__isl_take isl_val *v1,
 
 int isl_val_plain_is_equal(__isl_keep isl_val *val1, __isl_keep isl_val *val2);
 
-int isl_val_matching_params(__isl_keep isl_val *v, __isl_keep isl_space *space);
-int isl_val_check_match_domain_space(__isl_keep isl_val *v,
+isl_bool isl_val_matching_params(__isl_keep isl_val *v,
+	__isl_keep isl_space *space);
+isl_stat isl_val_check_match_domain_space(__isl_keep isl_val *v,
 	__isl_keep isl_space *space);
 
 #undef BASE

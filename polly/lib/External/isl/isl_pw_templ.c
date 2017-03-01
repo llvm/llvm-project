@@ -1593,10 +1593,10 @@ __isl_give PW *FN(PW,reset_user)(__isl_take PW *pw)
 	return FN(PW,reset_space)(pw, space);
 }
 
-int FN(PW,has_equal_space)(__isl_keep PW *pw1, __isl_keep PW *pw2)
+isl_bool FN(PW,has_equal_space)(__isl_keep PW *pw1, __isl_keep PW *pw2)
 {
 	if (!pw1 || !pw2)
-		return -1;
+		return isl_bool_error;
 
 	return isl_space_is_equal(pw1->dim, pw2->dim);
 }
@@ -1666,18 +1666,18 @@ isl_stat FN(PW,foreach_piece)(__isl_keep PW *pw,
 }
 
 #ifndef NO_LIFT
-static int any_divs(__isl_keep isl_set *set)
+static isl_bool any_divs(__isl_keep isl_set *set)
 {
 	int i;
 
 	if (!set)
-		return -1;
+		return isl_bool_error;
 
 	for (i = 0; i < set->n; ++i)
 		if (set->p[i]->n_div > 0)
-			return 1;
+			return isl_bool_true;
 
-	return 0;
+	return isl_bool_false;
 }
 
 static isl_stat foreach_lifted_subset(__isl_take isl_set *set,
@@ -1724,12 +1724,16 @@ isl_stat FN(PW,foreach_lifted_piece)(__isl_keep PW *pw,
 		return isl_stat_error;
 
 	for (i = 0; i < pw->n; ++i) {
+		isl_bool any;
 		isl_set *set;
 		EL *el;
 
+		any = any_divs(pw->p[i].set);
+		if (any < 0)
+			return isl_stat_error;
 		set = isl_set_copy(pw->p[i].set);
 		el = FN(EL,copy)(pw->p[i].FIELD);
-		if (!any_divs(set)) {
+		if (!any) {
 			if (fn(set, el, user) < 0)
 				return isl_stat_error;
 			continue;
@@ -1959,14 +1963,24 @@ __isl_give PW *FN(PW,normalize)(__isl_take PW *pw)
 /* Is pw1 obviously equal to pw2?
  * That is, do they have obviously identical cells and obviously identical
  * elements on each cell?
+ *
+ * If "pw1" or "pw2" contain any NaNs, then they are considered
+ * not to be the same.  A NaN is not equal to anything, not even
+ * to another NaN.
  */
 isl_bool FN(PW,plain_is_equal)(__isl_keep PW *pw1, __isl_keep PW *pw2)
 {
 	int i;
-	isl_bool equal;
+	isl_bool equal, has_nan;
 
 	if (!pw1 || !pw2)
 		return isl_bool_error;
+
+	has_nan = FN(PW,involves_nan)(pw1);
+	if (has_nan >= 0 && !has_nan)
+		has_nan = FN(PW,involves_nan)(pw2);
+	if (has_nan < 0 || has_nan)
+		return isl_bool_not(has_nan);
 
 	if (pw1 == pw2)
 		return isl_bool_true;
@@ -1999,6 +2013,26 @@ error:
 	FN(PW,free)(pw1);
 	FN(PW,free)(pw2);
 	return isl_bool_error;
+}
+
+/* Does "pw" involve any NaNs?
+ */
+isl_bool FN(PW,involves_nan)(__isl_keep PW *pw)
+{
+	int i;
+
+	if (!pw)
+		return isl_bool_error;
+	if (pw->n == 0)
+		return isl_bool_false;
+
+	for (i = 0; i < pw->n; ++i) {
+		isl_bool has_nan = FN(EL,involves_nan)(pw->p[i].FIELD);
+		if (has_nan < 0 || has_nan)
+			return has_nan;
+	}
+
+	return isl_bool_false;
 }
 
 #ifndef NO_PULLBACK

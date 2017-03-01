@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "ASTManager.h"
 #include "DocumentStore.h"
 #include "JSONRPCDispatcher.h"
 #include "ProtocolHandlers.h"
@@ -27,6 +28,8 @@ int main(int argc, char *argv[]) {
   // Set up a document store and intialize all the method handlers for JSONRPC
   // dispatching.
   DocumentStore Store;
+  ASTManager AST(Out, Store);
+  Store.addListener(&AST);
   JSONRPCDispatcher Dispatcher(llvm::make_unique<Handler>(Out));
   Dispatcher.registerHandler("initialize",
                              llvm::make_unique<InitializeHandler>(Out));
@@ -43,6 +46,9 @@ int main(int argc, char *argv[]) {
   Dispatcher.registerHandler(
       "textDocument/rangeFormatting",
       llvm::make_unique<TextDocumentRangeFormattingHandler>(Out, Store));
+  Dispatcher.registerHandler(
+      "textDocument/onTypeFormatting",
+      llvm::make_unique<TextDocumentOnTypeFormattingHandler>(Out, Store));
   Dispatcher.registerHandler(
       "textDocument/formatting",
       llvm::make_unique<TextDocumentFormattingHandler>(Out, Store));
@@ -85,12 +91,11 @@ int main(int argc, char *argv[]) {
     if (Len > 0) {
       llvm::StringRef JSONRef(JSON.data(), Len);
       // Log the message.
-      Logs << "<-- " << JSONRef << '\n';
-      Logs.flush();
+      Out.log("<-- " + JSONRef + "\n");
 
       // Finally, execute the action for this JSON message.
       if (!Dispatcher.call(JSONRef))
-        Logs << "JSON dispatch failed!\n";
+        Out.log("JSON dispatch failed!\n");
 
       // If we're done, exit the loop.
       if (ShutdownHandler->isDone())

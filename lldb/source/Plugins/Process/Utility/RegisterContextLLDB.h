@@ -21,7 +21,7 @@
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Symbol/UnwindPlan.h"
 #include "lldb/Target/RegisterContext.h"
-#include "lldb/Utility/RegisterNumber.h"
+#include "lldb/Target/RegisterNumber.h"
 #include "lldb/lldb-private.h"
 
 namespace lldb_private {

@@ -20,6 +20,7 @@
 #include "IdentifierNamingCheck.h"
 #include "ImplicitBoolCastCheck.h"
 #include "InconsistentDeclarationParameterNameCheck.h"
+#include "MisleadingIndentationCheck.h"
 #include "MisplacedArrayIndexCheck.h"
 #include "NamedParameterCheck.h"
 #include "NonConstParameterCheck.h"
@@ -61,6 +62,8 @@ public:
         "readability-implicit-bool-cast");
     CheckFactories.registerCheck<InconsistentDeclarationParameterNameCheck>(
         "readability-inconsistent-declaration-parameter-name");
+    CheckFactories.registerCheck<MisleadingIndentationCheck>(
+        "readability-misleading-indentation");
     CheckFactories.registerCheck<MisplacedArrayIndexCheck>(
         "readability-misplaced-array-index");
     CheckFactories.registerCheck<RedundantFunctionPtrDereferenceCheck>(

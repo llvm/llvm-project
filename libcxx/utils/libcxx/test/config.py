@@ -229,21 +229,19 @@ class Configuration(object):
         self.cxx.compile_env['CCACHE_CPP2'] = '1'
 
     def _configure_clang_cl(self, clang_path):
+        def _split_env_var(var):
+            return [p.strip() for p in os.environ.get(var, '').split(';') if p.strip()]
+
+        def _prefixed_env_list(var, prefix):
+            from itertools import chain
+            return list(chain.from_iterable((prefix, path) for path in _split_env_var(var)))
+
         assert self.cxx_is_clang_cl
         flags = []
-        compile_flags = []
-        link_flags = []
-        if 'INCLUDE' in os.environ:
-            compile_flags += ['-isystem %s' % p.strip()
-                              for p in os.environ['INCLUDE'].split(';')
-                              if p.strip()]
-        if 'LIB' in os.environ:
-            for p in os.environ['LIB'].split(';'):
-                p = p.strip()
-                if not p:
-                    continue
-                link_flags += ['-L%s' % p]
-                self.add_path(self.exec_env, p)
+        compile_flags = _prefixed_env_list('INCLUDE', '-isystem')
+        link_flags = _prefixed_env_list('LIB', '-L')
+        for path in _list_env_var('LIB'):
+            self.add_path(self.exec_env, path)
         return CXXCompiler(clang_path, flags=flags,
                            compile_flags=compile_flags,
                            link_flags=link_flags)
@@ -396,6 +394,9 @@ class Configuration(object):
 
         if '__cpp_structured_bindings' not in macros:
             self.config.available_features.add('libcpp-no-structured-bindings')
+
+        if '__cpp_deduction_guides' not in macros:
+            self.config.available_features.add('libcpp-no-deduction-guides')
 
         if self.is_windows:
             self.config.available_features.add('windows')
@@ -825,7 +826,7 @@ class Configuration(object):
                 if llvm_symbolizer is not None:
                     self.exec_env['ASAN_SYMBOLIZER_PATH'] = llvm_symbolizer
                 # FIXME: Turn ODR violation back on after PR28391 is resolved
-                # https://llvm.org/bugs/show_bug.cgi?id=28391
+                # https://bugs.llvm.org/show_bug.cgi?id=28391
                 self.exec_env['ASAN_OPTIONS'] = 'detect_odr_violation=0'
                 self.config.available_features.add('asan')
                 self.config.available_features.add('sanitizer-new-delete')

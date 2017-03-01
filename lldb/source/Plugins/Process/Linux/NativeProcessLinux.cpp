@@ -29,6 +29,7 @@
 #include "lldb/Core/State.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostProcess.h"
+#include "lldb/Host/PseudoTerminal.h"
 #include "lldb/Host/ThreadLauncher.h"
 #include "lldb/Host/common/NativeBreakpoint.h"
 #include "lldb/Host/common/NativeRegisterContext.h"
@@ -41,7 +42,6 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/Error.h"
 #include "lldb/Utility/LLDBAssert.h"
-#include "lldb/Utility/PseudoTerminal.h"
 #include "lldb/Utility/StringExtractor.h"
 
 #include "NativeThreadLinux.h"
@@ -870,6 +870,19 @@ void NativeProcessLinux::MonitorSIGTRAP(const siginfo_t &info,
       break;
     }
 
+    // If a breakpoint was hit, report it
+    uint32_t bp_index;
+    error = thread.GetRegisterContext()->GetHardwareBreakHitIndex(
+        bp_index, (uintptr_t)info.si_addr);
+    if (error.Fail())
+      LLDB_LOG(log, "received error while checking for hardware "
+                    "breakpoint hits, pid = {0}, error = {1}",
+               thread.GetID(), error);
+    if (bp_index != LLDB_INVALID_INDEX32) {
+      MonitorBreakpoint(thread);
+      break;
+    }
+
     // Otherwise, report step over
     MonitorTrace(thread);
     break;
@@ -1035,6 +1048,13 @@ void NativeProcessLinux::MonitorSignal(const siginfo_t &info,
 
     // Done handling.
     return;
+  }
+
+  // Check if debugger should stop at this signal or just ignore it
+  // and resume the inferior.
+  if (m_signals_to_ignore.find(signo) != m_signals_to_ignore.end()) {
+     ResumeThread(thread, thread.GetState(), signo);
+     return;
   }
 
   // This thread is stopped.
@@ -1719,9 +1739,16 @@ Error NativeProcessLinux::GetSoftwareBreakpointPCOffset(
 Error NativeProcessLinux::SetBreakpoint(lldb::addr_t addr, uint32_t size,
                                         bool hardware) {
   if (hardware)
-    return Error("NativeProcessLinux does not support hardware breakpoints");
+    return SetHardwareBreakpoint(addr, size);
   else
     return SetSoftwareBreakpoint(addr, size);
+}
+
+Error NativeProcessLinux::RemoveBreakpoint(lldb::addr_t addr, bool hardware) {
+  if (hardware)
+    return RemoveHardwareBreakpoint(addr);
+  else
+    return NativeProcessProtocol::RemoveBreakpoint(addr);
 }
 
 Error NativeProcessLinux::GetSoftwareBreakpointTrapOpcode(
@@ -2412,8 +2439,8 @@ Error NativeProcessLinux::PtraceWrapper(int req, lldb::pid_t pid, void *addr,
   if (result)
     *result = ret;
 
-  LLDB_LOG(log, "ptrace({0}, {1}, {2}, {3}, {4}, {5})={6:x}", req, pid, addr,
-           data, data_size, ret);
+  LLDB_LOG(log, "ptrace({0}, {1}, {2}, {3}, {4})={5:x}", req, pid, addr, data,
+           data_size, ret);
 
   PtraceDisplayBytes(req, data, data_size);
 

@@ -70,7 +70,7 @@ zed:
 // NOMERGE-NEXT: Link: 0
 // NOMERGE-NEXT: Info: 0
 // NOMERGE-NEXT: AddressAlignment: 1
-// NOMERGE-NEXT: EntrySize: 0
+// NOMERGE-NEXT: EntrySize: 1
 // NOMERGE-NEXT: SectionData (
 // NOMERGE-NEXT:   0000: 61626300 61626300 626300 |abc.abc.bc.|
 // NOMERGE-NEXT: )

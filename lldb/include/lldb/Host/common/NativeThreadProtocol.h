@@ -56,6 +56,13 @@ public:
 
   virtual Error RemoveWatchpoint(lldb::addr_t addr) = 0;
 
+  // ---------------------------------------------------------------------
+  // Thread-specific Hardware Breakpoint routines
+  // ---------------------------------------------------------------------
+  virtual Error SetHardwareBreakpoint(lldb::addr_t addr, size_t size) = 0;
+
+  virtual Error RemoveHardwareBreakpoint(lldb::addr_t addr) = 0;
+
 protected:
   NativeProcessProtocolWP m_process_wp;
   lldb::tid_t m_tid;

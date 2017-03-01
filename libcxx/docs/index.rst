@@ -120,7 +120,7 @@ This list contains known issues with libc++
 
 A full list of currently open libc++ bugs can be `found here`__.
 
-.. __:  https://llvm.org/bugs/buglist.cgi?component=All%20Bugs&product=libc%2B%2B&query_format=advanced&resolution=---&order=changeddate%20DESC%2Cassigned_to%20DESC%2Cbug_status%2Cpriority%2Cbug_id&list_id=74184
+.. __:  https://bugs.llvm.org/buglist.cgi?component=All%20Bugs&product=libc%2B%2B&query_format=advanced&resolution=---&order=changeddate%20DESC%2Cassigned_to%20DESC%2Cbug_status%2Cpriority%2Cbug_id&list_id=74184
 
 Design Documents
 ----------------
@@ -180,7 +180,7 @@ Quick Links
 ===========
 * `LLVM Homepage <http://llvm.org/>`_
 * `libc++abi Homepage <http://libcxxabi.llvm.org/>`_
-* `LLVM Bugzilla <http://llvm.org/bugs/>`_
+* `LLVM Bugzilla <https://bugs.llvm.org/>`_
 * `cfe-commits Mailing List`_
 * `cfe-dev Mailing List`_
 * `Browse libc++ -- SVN <http://llvm.org/svn/llvm-project/libcxx/trunk/>`_

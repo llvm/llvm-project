@@ -263,7 +263,9 @@ AllocatedBlock::AllocatedBlock(lldb::addr_t addr, uint32_t byte_size,
 AllocatedBlock::~AllocatedBlock() {}
 
 lldb::addr_t AllocatedBlock::ReserveBlock(uint32_t size) {
-  addr_t addr = LLDB_INVALID_ADDRESS;
+  // We must return something valid for zero bytes.
+  if (size == 0)
+    size = 1;
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
   
   const size_t free_count = m_free_blocks.GetSize();
@@ -276,7 +278,7 @@ lldb::addr_t AllocatedBlock::ReserveBlock(uint32_t size) {
       // We found a free block that is big enough for our data. Figure out how
       // many chunks we will need and calculate the resulting block size we will
       // reserve.
-      addr = free_block.GetRangeBase();
+      addr_t addr = free_block.GetRangeBase();
       size_t num_chunks = CalculateChunksNeededForSize(size);
       lldb::addr_t block_size = num_chunks * m_chunk_size;
       lldb::addr_t bytes_left = range_size - block_size;
@@ -301,11 +303,14 @@ lldb::addr_t AllocatedBlock::ReserveBlock(uint32_t size) {
         free_block.SetRangeBase(reserved_block.GetRangeEnd());
         free_block.SetByteSize(bytes_left);
       }
+      LLDB_LOGV(log, "({0}) (size = {1} ({1:x})) => {2:x}", this, size, addr);
+      return addr;
     }
   }
 
-  LLDB_LOGV(log, "({0}) (size = {1} ({1:x})) => {2:x}", this, size, addr);
-  return addr;
+  LLDB_LOGV(log, "({0}) (size = {1} ({1:x})) => {2:x}", this, size,
+            LLDB_INVALID_ADDRESS);
+  return LLDB_INVALID_ADDRESS;
 }
 
 bool AllocatedBlock::FreeBlock(addr_t addr) {

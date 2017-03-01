@@ -51,6 +51,72 @@ def XCODE_REPOSITORIES():
     return [process_repo(r) for r in set]
 
 
+def get_c_compiler():
+    return subprocess.check_output([
+        'xcrun',
+        '--sdk', 'macosx',
+        '-find', 'clang'
+    ]).rstrip()
+
+
+def get_cxx_compiler():
+    return subprocess.check_output([
+        'xcrun',
+        '--sdk', 'macosx',
+        '-find', 'clang++'
+    ]).rstrip()
+
+#                 CFLAGS="-isysroot $(xcrun --sdk macosx --show-sdk-path) -mmacosx-version-min=${DARWIN_DEPLOYMENT_VERSION_OSX}" \
+#                        LDFLAGS="-mmacosx-version-min=${DARWIN_DEPLOYMENT_VERSION_OSX}" \
+
+
+def get_deployment_target():
+    return os.environ.get('MACOSX_DEPLOYMENT_TARGET', None)
+
+
+def get_c_flags():
+    cflags = ''
+    # sdk_path = subprocess.check_output([
+    #     'xcrun',
+    #     '--sdk', 'macosx',
+    #     '--show-sdk-path']).rstrip()
+    # cflags += '-isysroot {}'.format(sdk_path)
+
+    deployment_target = get_deployment_target()
+    if deployment_target:
+        # cflags += ' -mmacosx-version-min={}'.format(deployment_target)
+        pass
+
+    return cflags
+
+
+def get_cxx_flags():
+    return get_c_flags()
+
+
+def get_common_linker_flags():
+    linker_flags = ""
+    deployment_target = get_deployment_target()
+    if deployment_target:
+        # if len(linker_flags) > 0:
+        #     linker_flags += ' '
+        # linker_flags += '-mmacosx-version-min={}'.format(deployment_target)
+        pass
+
+    return linker_flags
+
+
+def get_exe_linker_flags():
+    return get_common_linker_flags()
+
+def XCODE_REPOSITORIES():
+    identifier = repo.identifier()
+    if identifier == None:
+        identifier = "<invalid>" # repo.find will just use the fallback file
+    set = repo.find(identifier)
+    return [process_repo(r) for r in set]
+
+
 def BUILD_SCRIPT_FLAGS():
     return {
         "Debug": ["--preset=LLDB_Swift_ReleaseAssert"],

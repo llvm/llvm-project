@@ -11,6 +11,7 @@
 
 #define _LIBCPP_BUILDING_NEW
 
+#include "__cxxabi_config.h"
 #include <new>
 #include <cstdlib>
 
@@ -36,7 +37,7 @@
 * The loop terminates when an attempt to allocate the requested storage is
   successful or when a called new_handler function does not return.
 */
-__attribute__((__weak__, __visibility__("default")))
+_LIBCXXABI_WEAK
 void *
 operator new(std::size_t size) _THROW_BAD_ALLOC
 {
@@ -70,7 +71,7 @@ http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2007/n2158.html
 Calls operator new(size). If the call returns normally, returns the result of
 that call. Otherwise, returns a null pointer.
 */
-__attribute__((__weak__, __visibility__("default")))
+_LIBCXXABI_WEAK
 void*
 operator new(size_t size, const std::nothrow_t&) _NOEXCEPT
 {
@@ -94,7 +95,7 @@ operator new(size_t size, const std::nothrow_t&) _NOEXCEPT
 
 Returns operator new(size).
 */
-__attribute__((__weak__, __visibility__("default")))
+_LIBCXXABI_WEAK
 void*
 operator new[](size_t size) _THROW_BAD_ALLOC
 {
@@ -107,7 +108,7 @@ operator new[](size_t size) _THROW_BAD_ALLOC
 Calls operator new[](size). If the call returns normally, returns the result
 of that call. Otherwise, returns a null pointer.
 */
-__attribute__((__weak__, __visibility__("default")))
+_LIBCXXABI_WEAK
 void*
 operator new[](size_t size, const std::nothrow_t&) _NOEXCEPT
 {
@@ -132,7 +133,7 @@ operator new[](size_t size, const std::nothrow_t&) _NOEXCEPT
 If ptr is null, does nothing. Otherwise, reclaims the storage allocated by the
 earlier call to operator new.
 */
-__attribute__((__weak__, __visibility__("default")))
+_LIBCXXABI_WEAK
 void
 operator delete(void* ptr) _NOEXCEPT
 {
@@ -145,7 +146,7 @@ operator delete(void* ptr) _NOEXCEPT
 
 calls operator delete(ptr)
 */
-__attribute__((__weak__, __visibility__("default")))
+_LIBCXXABI_WEAK
 void
 operator delete(void* ptr, const std::nothrow_t&) _NOEXCEPT
 {
@@ -157,7 +158,7 @@ operator delete(void* ptr, const std::nothrow_t&) _NOEXCEPT
 
 Calls operator delete(ptr)
 */
-__attribute__((__weak__, __visibility__("default")))
+_LIBCXXABI_WEAK
 void
 operator delete[] (void* ptr) _NOEXCEPT
 {
@@ -169,7 +170,7 @@ operator delete[] (void* ptr) _NOEXCEPT
 
 calls operator delete[](ptr)
 */
-__attribute__((__weak__, __visibility__("default")))
+_LIBCXXABI_WEAK
 void
 operator delete[] (void* ptr, const std::nothrow_t&) _NOEXCEPT
 {

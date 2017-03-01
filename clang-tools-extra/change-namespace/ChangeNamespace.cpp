@@ -290,6 +290,7 @@ AST_MATCHER(EnumDecl, isScoped) {
 
 ChangeNamespaceTool::ChangeNamespaceTool(
     llvm::StringRef OldNs, llvm::StringRef NewNs, llvm::StringRef FilePattern,
+    llvm::ArrayRef<std::string> WhiteListedSymbolPatterns,
     std::map<std::string, tooling::Replacements> *FileToReplacements,
     llvm::StringRef FallbackStyle)
     : FallbackStyle(FallbackStyle), FileToReplacements(*FileToReplacements),
@@ -308,6 +309,9 @@ ChangeNamespaceTool::ChangeNamespaceTool(
   }
   DiffOldNamespace = joinNamespaces(OldNsSplitted);
   DiffNewNamespace = joinNamespaces(NewNsSplitted);
+
+  for (const auto &Pattern : WhiteListedSymbolPatterns)
+    WhiteListedSymbolRegexes.emplace_back(Pattern);
 }
 
 void ChangeNamespaceTool::registerMatchers(ast_matchers::MatchFinder *Finder) {
@@ -672,19 +676,18 @@ void ChangeNamespaceTool::moveClassForwardDeclaration(
     const NamedDecl *FwdDecl) {
   SourceLocation Start = FwdDecl->getLocStart();
   SourceLocation End = FwdDecl->getLocEnd();
+  const SourceManager &SM = *Result.SourceManager;
   SourceLocation AfterSemi = Lexer::findLocationAfterToken(
-      End, tok::semi, *Result.SourceManager, Result.Context->getLangOpts(),
+      End, tok::semi, SM, Result.Context->getLangOpts(),
       /*SkipTrailingWhitespaceAndNewLine=*/true);
   if (AfterSemi.isValid())
     End = AfterSemi.getLocWithOffset(-1);
   // Delete the forward declaration from the code to be moved.
-  addReplacementOrDie(Start, End, "", *Result.SourceManager,
-                      &FileToReplacements);
+  addReplacementOrDie(Start, End, "", SM, &FileToReplacements);
   llvm::StringRef Code = Lexer::getSourceText(
-      CharSourceRange::getTokenRange(
-          Result.SourceManager->getSpellingLoc(Start),
-          Result.SourceManager->getSpellingLoc(End)),
-      *Result.SourceManager, Result.Context->getLangOpts());
+      CharSourceRange::getTokenRange(SM.getSpellingLoc(Start),
+                                     SM.getSpellingLoc(End)),
+      SM, Result.Context->getLangOpts());
   // Insert the forward declaration back into the old namespace after moving the
   // code from old namespace to new namespace.
   // Insertion information is stored in `InsertFwdDecls` and actual
@@ -693,8 +696,9 @@ void ChangeNamespaceTool::moveClassForwardDeclaration(
   const auto *NsDecl = Result.Nodes.getNodeAs<NamespaceDecl>("ns_decl");
   // The namespace contains the forward declaration, so it must not be empty.
   assert(!NsDecl->decls_empty());
-  const auto Insertion = createInsertion(NsDecl->decls_begin()->getLocStart(),
-                                         Code, *Result.SourceManager);
+  const auto Insertion = createInsertion(
+      getLocAfterNamespaceLBrace(NsDecl, SM, Result.Context->getLangOpts()),
+      Code, SM);
   InsertForwardDeclaration InsertFwd;
   InsertFwd.InsertionOffset = Insertion.getOffset();
   InsertFwd.ForwardDeclText = Insertion.getReplacementText().str();
@@ -736,6 +740,9 @@ void ChangeNamespaceTool::replaceQualifiedSymbolInDeclContext(
           Result.SourceManager->getSpellingLoc(End)),
       *Result.SourceManager, Result.Context->getLangOpts());
   std::string FromDeclName = FromDecl->getQualifiedNameAsString();
+  for (llvm::Regex &RE : WhiteListedSymbolRegexes)
+    if (RE.match(FromDeclName))
+      return;
   std::string ReplaceName =
       getShortestQualifiedNameInNamespace(FromDeclName, NewNs);
   // Checks if there is any using namespace declarations that can shorten the

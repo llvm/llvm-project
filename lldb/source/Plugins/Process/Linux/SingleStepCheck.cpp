@@ -139,13 +139,13 @@ bool WorkaroundNeeded() {
 
 } // end anonymous namespace
 
-llvm::Optional<SingleStepWorkaround> SingleStepWorkaround::Get(::pid_t tid) {
+std::unique_ptr<SingleStepWorkaround> SingleStepWorkaround::Get(::pid_t tid) {
   Log *log = ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_THREAD);
 
   static bool workaround_needed = WorkaroundNeeded();
   if (!workaround_needed) {
     LLDB_LOG(log, "workaround for thread {0} not needed", tid);
-    return llvm::None;
+    return nullptr;
   }
 
   cpu_set_t original_set;
@@ -153,7 +153,7 @@ llvm::Optional<SingleStepWorkaround> SingleStepWorkaround::Get(::pid_t tid) {
     // This should really not fail. But, just in case...
     LLDB_LOG(log, "Unable to get cpu affinity for thread {0}: {1}", tid,
              Error(errno, eErrorTypePOSIX));
-    return llvm::None;
+    return nullptr;
   }
 
   cpu_set_t set;
@@ -168,12 +168,13 @@ llvm::Optional<SingleStepWorkaround> SingleStepWorkaround::Get(::pid_t tid) {
   }
 
   LLDB_LOG(log, "workaround for thread {0} prepared", tid);
-  return SingleStepWorkaround(tid, original_set);
+  return llvm::make_unique<SingleStepWorkaround>(tid, original_set);
 }
 
 SingleStepWorkaround::~SingleStepWorkaround() {
+  Log *log = ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_THREAD);
+  LLDB_LOG(log, "Removing workaround");
   if (sched_setaffinity(m_tid, sizeof m_original_set, &m_original_set) != 0) {
-    Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_THREAD));
     LLDB_LOG(log, "Unable to reset cpu affinity for thread {0}: {1}", m_tid,
              Error(errno, eErrorTypePOSIX));
   }

@@ -210,22 +210,6 @@ public:
   GetObjectContainerGetModuleSpecificationsCallbackAtIndex(uint32_t idx);
 
   //------------------------------------------------------------------
-  // LogChannel
-  //------------------------------------------------------------------
-  static bool RegisterPlugin(const ConstString &name, const char *description,
-                             LogChannelCreateInstance create_callback);
-
-  static bool UnregisterPlugin(LogChannelCreateInstance create_callback);
-
-  static LogChannelCreateInstance
-  GetLogChannelCreateCallbackAtIndex(uint32_t idx);
-
-  static LogChannelCreateInstance
-  GetLogChannelCreateCallbackForPluginName(const ConstString &name);
-
-  static const char *GetLogChannelCreateNameAtIndex(uint32_t idx);
-
-  //------------------------------------------------------------------
   // Platform
   //------------------------------------------------------------------
   static bool

@@ -28,7 +28,7 @@ void CA::f2() { }
 
 template <>
 int CA::f3() {
-// CHECK-MESSAGES: :[[@LINE-1]]:9: warning: function 'f3<int>' defined in a header file;
+// CHECK-MESSAGES: :[[@LINE-1]]:9: warning: full function template specialization 'f3<int>' defined in a header file;
 // CHECK-FIXES: inline int CA::f3() {
   int a = 1;
   return a;
@@ -71,6 +71,12 @@ void CB<T>::CCB::f3() {
 template <typename T>
 int CB<T>::a = 2; // OK: static data member definition of a class template.
 
+template class CB<int>; // OK: explicitly instantiated static data member of a class template.
+inline int callCB() {
+  CB<double> cb; // OK: implicitly instantiated static data member of a class template.
+  return cb.a;
+}
+
 template <typename T>
 T tf() { // OK: template function definition.
   T a;
@@ -92,7 +98,7 @@ T f3() {
 
 template <>
 int f3() {
-// CHECK-MESSAGES: :[[@LINE-1]]:5: warning: function 'f3<int>' defined in a header file;
+// CHECK-MESSAGES: :[[@LINE-1]]:5: warning: full function template specialization 'f3<int>' defined in a header file;
 // CHECK-FIXES: inline int f3() {
   int a = 1;
   return a;
@@ -106,6 +112,12 @@ namespace {
 }
 
 int f8() = delete; // OK: the function being marked delete is not callable.
+
+template <typename T>
+int f9(T t) { return 1; }
+
+inline void callF9() { f9(1); } // OK: implicitly instantiated function.
+template int f9(double); // OK: explicitly instantiated function.
 
 int a = 1;
 // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: variable 'a' defined in a header file; variable definitions in header files can lead to ODR violations [misc-definitions-in-headers]

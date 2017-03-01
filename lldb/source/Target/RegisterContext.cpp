@@ -18,12 +18,12 @@
 #include "lldb/Core/Scalar.h"
 #include "lldb/Core/Value.h"
 #include "lldb/Expression/DWARFExpression.h"
-#include "lldb/Host/Endian.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
+#include "lldb/Utility/Endian.h"
 
 using namespace lldb;
 using namespace lldb_private;

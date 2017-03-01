@@ -31,10 +31,10 @@
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/Timer.h"
 #include "lldb/Core/UUID.h"
-#include "lldb/Host/Endian.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Utility/CleanUp.h"
+#include "lldb/Utility/Endian.h"
 #include "lldb/Utility/StreamString.h"
 #include "mach/machine.h"
 

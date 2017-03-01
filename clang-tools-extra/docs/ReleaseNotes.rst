@@ -57,10 +57,30 @@ The improvements are...
 Improvements to clang-tidy
 --------------------------
 
+- New `cert-dcl58-cpp
+  <http://clang.llvm.org/extra/clang-tidy/checks/cert-dcl58-cpp.html>`_ check
+
+  Finds modification of the ``std`` or ``posix`` namespace.
+
+- New `readability-misleading-indentation
+  <http://clang.llvm.org/extra/clang-tidy/checks/readability-misleading-indentation.html>`_ check
+
+  Finds misleading indentation where braces should be introduced or the code should be reformatted.
+
+- Added `ParameterThreshold` to `readability-function-size`.
+
+  Finds functions that have more then `ParameterThreshold` parameters and emits a warning.
+
 - New `safety-no-assembler
   <http://clang.llvm.org/extra/clang-tidy/checks/safety-no-assembler.html>`_ check
 
   Finds uses of inline assembler.
+
+- New `modernize-return-braced-init-list
+  <http://clang.llvm.org/extra/clang-tidy/checks/modernize-return-braced-init-list.html>`_ check
+
+  Finds and replaces explicit calls to the constructor in a return statement by
+  a braced initializer list so that the return type is not needlessly repeated.
 
 Improvements to include-fixer
 -----------------------------

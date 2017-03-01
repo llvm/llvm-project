@@ -482,14 +482,13 @@ namespace std {
 
 #endif  // __GXX_EXPERIMENTAL_CXX0X__
 
-#define _LIBCPP_BEGIN_NAMESPACE_STD namespace std { namespace _LIBCPP_NAMESPACE {
+#define _LIBCPP_BEGIN_NAMESPACE_STD namespace std { inline namespace _LIBCPP_NAMESPACE {
 #define _LIBCPP_END_NAMESPACE_STD  } }
 #define _VSTD std::_LIBCPP_NAMESPACE
 
 namespace std {
-namespace _LIBCPP_NAMESPACE {
-}
-using namespace _LIBCPP_NAMESPACE __attribute__((__strong__));
+  inline namespace _LIBCPP_NAMESPACE {
+  }
 }
 
 #if !defined(_LIBCPP_HAS_NO_ASAN) && !defined(__SANITIZE_ADDRESS__)
@@ -940,7 +939,8 @@ _LIBCPP_FUNC_VIS extern "C" void __sanitizer_annotate_contiguous_container(
 
 // Thread API
 #if !defined(_LIBCPP_HAS_NO_THREADS) && \
-    !defined(_LIBCPP_HAS_THREAD_API_PTHREAD)
+    !defined(_LIBCPP_HAS_THREAD_API_PTHREAD) && \
+    !defined(_LIBCPP_HAS_THREAD_API_EXTERNAL)
 # if defined(__FreeBSD__) || \
     defined(__Fuchsia__) || \
     defined(__NetBSD__) || \
@@ -962,7 +962,7 @@ _LIBCPP_FUNC_VIS extern "C" void __sanitizer_annotate_contiguous_container(
 #endif
 
 #if defined(_LIBCPP_HAS_NO_THREADS) && defined(_LIBCPP_HAS_THREAD_API_EXTERNAL)
-#  error _LIBCPP_HAS_EXTERNAL_THREAD_API may not be defined when \
+#  error _LIBCPP_HAS_THREAD_API_EXTERNAL may not be defined when \
          _LIBCPP_HAS_NO_THREADS is defined.
 #endif
 
@@ -1055,6 +1055,11 @@ _LIBCPP_FUNC_VIS extern "C" void __sanitizer_annotate_contiguous_container(
 #else
 # define _LIBCPP_DECLSPEC_EMPTY_BASES
 #endif
+
+#if defined(_LIBCPP_ENABLE_CXX17_REMOVED_FEATURES)
+# define _LIBCPP_ENABLE_CXX17_REMOVED_AUTO_PTR
+# define _LIBCPP_ENABLE_CXX17_REMOVED_UNEXPECTED_FUNCTIONS
+#endif // _LIBCPP_ENABLE_CXX17_REMOVED_FEATURES
 
 #endif // __cplusplus
 

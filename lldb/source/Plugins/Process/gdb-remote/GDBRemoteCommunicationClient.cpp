@@ -1907,6 +1907,7 @@ bool GDBRemoteCommunicationClient::GetCurrentProcessInfo(bool allow_lazy) {
         llvm::Triple triple(llvm::Twine("-") + vendor_name + "-" + os_name);
 
         assert(triple.getObjectFormat() != llvm::Triple::UnknownObjectFormat);
+        assert(triple.getObjectFormat() != llvm::Triple::Wasm);
         switch (triple.getObjectFormat()) {
         case llvm::Triple::MachO:
           m_process_arch.SetArchitecture(eArchTypeMachO, cpu, sub);
@@ -1917,6 +1918,10 @@ bool GDBRemoteCommunicationClient::GetCurrentProcessInfo(bool allow_lazy) {
         case llvm::Triple::COFF:
           m_process_arch.SetArchitecture(eArchTypeCOFF, cpu, sub);
           break;
+        case llvm::Triple::Wasm:
+          if (log)
+            log->Printf("error: not supported target architecture");
+          return false;
         case llvm::Triple::UnknownObjectFormat:
           if (log)
             log->Printf("error: failed to determine target architecture");
@@ -1957,29 +1962,29 @@ uint32_t GDBRemoteCommunicationClient::FindProcesses(
       bool has_name_match = false;
       if (name && name[0]) {
         has_name_match = true;
-        NameMatchType name_match_type = match_info.GetNameMatchType();
+        NameMatch name_match_type = match_info.GetNameMatchType();
         switch (name_match_type) {
-        case eNameMatchIgnore:
+        case NameMatch::Ignore:
           has_name_match = false;
           break;
 
-        case eNameMatchEquals:
+        case NameMatch::Equals:
           packet.PutCString("name_match:equals;");
           break;
 
-        case eNameMatchContains:
+        case NameMatch::Contains:
           packet.PutCString("name_match:contains;");
           break;
 
-        case eNameMatchStartsWith:
+        case NameMatch::StartsWith:
           packet.PutCString("name_match:starts_with;");
           break;
 
-        case eNameMatchEndsWith:
+        case NameMatch::EndsWith:
           packet.PutCString("name_match:ends_with;");
           break;
 
-        case eNameMatchRegularExpression:
+        case NameMatch::RegularExpression:
           packet.PutCString("name_match:regex;");
           break;
         }

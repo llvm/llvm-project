@@ -33,12 +33,12 @@ using namespace llvm::support::endian;
 using namespace lld;
 using namespace lld::elf;
 
+std::vector<InputSectionBase *> elf::InputSections;
+
 // Returns a string to construct an error message.
-template <class ELFT>
-std::string lld::toString(const InputSectionBase<ELFT> *Sec) {
+std::string lld::toString(const InputSectionBase *Sec) {
   // File can be absent if section is synthetic.
-  std::string FileName =
-      Sec->getFile() ? Sec->getFile()->getName() : "<internal>";
+  std::string FileName = Sec->File ? Sec->File->getName() : "<internal>";
   return (FileName + ":(" + Sec->Name + ")").str();
 }
 
@@ -50,17 +50,15 @@ static ArrayRef<uint8_t> getSectionContents(elf::ObjectFile<ELFT> *File,
   return check(File->getObj().getSectionContents(Hdr));
 }
 
-template <class ELFT>
-InputSectionBase<ELFT>::InputSectionBase(elf::ObjectFile<ELFT> *File,
-                                         uintX_t Flags, uint32_t Type,
-                                         uintX_t Entsize, uint32_t Link,
-                                         uint32_t Info, uintX_t Addralign,
-                                         ArrayRef<uint8_t> Data, StringRef Name,
-                                         Kind SectionKind)
-    : InputSectionData(SectionKind, Name, Data,
-                       !Config->GcSections || !(Flags & SHF_ALLOC)),
-      File(File), Flags(Flags), Entsize(Entsize), Type(Type), Link(Link),
-      Info(Info), Repl(this) {
+InputSectionBase::InputSectionBase(InputFile *File, uint64_t Flags,
+                                   uint32_t Type, uint64_t Entsize,
+                                   uint32_t Link, uint32_t Info,
+                                   uint64_t Addralign, ArrayRef<uint8_t> Data,
+                                   StringRef Name, Kind SectionKind)
+    : File(File), Data(Data), Name(Name), SectionKind(SectionKind),
+      Live(!Config->GcSections || !(Flags & SHF_ALLOC)), Assigned(false),
+      Flags(Flags), Entsize(Entsize), Type(Type), Link(Link), Info(Info),
+      Repl(this) {
   NumRelocations = 0;
   AreRelocsRela = false;
 
@@ -79,9 +77,9 @@ InputSectionBase<ELFT>::InputSectionBase(elf::ObjectFile<ELFT> *File,
 }
 
 template <class ELFT>
-InputSectionBase<ELFT>::InputSectionBase(elf::ObjectFile<ELFT> *File,
-                                         const Elf_Shdr *Hdr, StringRef Name,
-                                         Kind SectionKind)
+InputSectionBase::InputSectionBase(elf::ObjectFile<ELFT> *File,
+                                   const typename ELFT::Shdr *Hdr,
+                                   StringRef Name, Kind SectionKind)
     : InputSectionBase(File, Hdr->sh_flags & ~SHF_INFO_LINK, Hdr->sh_type,
                        Hdr->sh_entsize, Hdr->sh_link, Hdr->sh_info,
                        Hdr->sh_addralign, getSectionContents(File, Hdr), Name,
@@ -89,23 +87,24 @@ InputSectionBase<ELFT>::InputSectionBase(elf::ObjectFile<ELFT> *File,
   this->Offset = Hdr->sh_offset;
 }
 
-template <class ELFT> size_t InputSectionBase<ELFT>::getSize() const {
-  if (auto *S = dyn_cast<SyntheticSection<ELFT>>(this))
+template <class ELFT> size_t InputSectionBase::getSize() const {
+  if (auto *S = dyn_cast<SyntheticSection>(this))
     return S->getSize();
 
   return Data.size();
 }
 
 template <class ELFT>
-typename ELFT::uint InputSectionBase<ELFT>::getOffset(uintX_t Offset) const {
+uint64_t InputSectionBase::getOffset(uint64_t Offset) const {
+  typedef typename ELFT::uint uintX_t;
   switch (kind()) {
   case Regular:
-    return cast<InputSection<ELFT>>(this)->OutSecOff + Offset;
+    return cast<InputSection>(this)->OutSecOff + Offset;
   case Synthetic:
     // For synthetic sections we treat offset -1 as the end of the section.
     // The same approach is used for synthetic symbols (DefinedSynthetic).
-    return cast<InputSection<ELFT>>(this)->OutSecOff +
-           (Offset == uintX_t(-1) ? getSize() : Offset);
+    return cast<InputSection>(this)->OutSecOff +
+           (Offset == uintX_t(-1) ? getSize<ELFT>() : Offset);
   case EHFrame:
     // The file crtbeginT.o has relocations pointing to the start of an empty
     // .eh_frame that is known to be the first in the link. It does that to
@@ -121,15 +120,17 @@ typename ELFT::uint InputSectionBase<ELFT>::getOffset(uintX_t Offset) const {
 }
 
 template <class ELFT>
-OutputSectionBase *InputSectionBase<ELFT>::getOutputSection() const {
+OutputSection *InputSectionBase::getOutputSection() const {
   if (auto *MS = dyn_cast<MergeInputSection<ELFT>>(this))
     return MS->MergeSec ? MS->MergeSec->OutSec : nullptr;
+  if (auto *EH = dyn_cast<EhInputSection<ELFT>>(this))
+    return EH->EHSec->OutSec;
   return OutSec;
 }
 
 // Uncompress section contents. Note that this function is called
 // from parallel_for_each, so it must be thread-safe.
-template <class ELFT> void InputSectionBase<ELFT>::uncompress() {
+template <class ELFT> void InputSectionBase::uncompress() {
   Decompressor Dec = check(Decompressor::create(
       Name, toStringRef(Data), ELFT::TargetEndianness == llvm::support::little,
       ELFT::Is64Bits));
@@ -149,35 +150,34 @@ template <class ELFT> void InputSectionBase<ELFT>::uncompress() {
 }
 
 template <class ELFT>
-typename ELFT::uint
-InputSectionBase<ELFT>::getOffset(const DefinedRegular<ELFT> &Sym) const {
-  return getOffset(Sym.Value);
+uint64_t InputSectionBase::getOffset(const DefinedRegular &Sym) const {
+  return getOffset<ELFT>(Sym.Value);
 }
 
 template <class ELFT>
-InputSectionBase<ELFT> *InputSectionBase<ELFT>::getLinkOrderDep() const {
+InputSectionBase *InputSectionBase::getLinkOrderDep() const {
   if ((Flags & SHF_LINK_ORDER) && Link != 0)
-    return getFile()->getSections()[Link];
+    return getFile<ELFT>()->getSections()[Link];
   return nullptr;
 }
 
 // Returns a source location string. Used to construct an error message.
 template <class ELFT>
-std::string InputSectionBase<ELFT>::getLocation(typename ELFT::uint Offset) {
+std::string InputSectionBase::getLocation(uint64_t Offset) {
   // First check if we can get desired values from debugging information.
-  std::string LineInfo = File->getLineInfo(this, Offset);
+  std::string LineInfo = getFile<ELFT>()->getLineInfo(this, Offset);
   if (!LineInfo.empty())
     return LineInfo;
 
   // File->SourceFile contains STT_FILE symbol that contains a
   // source file name. If it's missing, we use an object file name.
-  std::string SrcFile = File->SourceFile;
+  std::string SrcFile = getFile<ELFT>()->SourceFile;
   if (SrcFile.empty())
     SrcFile = toString(File);
 
   // Find a function symbol that encloses a given location.
-  for (SymbolBody *B : File->getSymbols())
-    if (auto *D = dyn_cast<DefinedRegular<ELFT>>(B))
+  for (SymbolBody *B : getFile<ELFT>()->getSymbols())
+    if (auto *D = dyn_cast<DefinedRegular>(B))
       if (D->Section == this && D->Type == STT_FUNC)
         if (D->Value <= Offset && Offset < D->Value + D->Size)
           return SrcFile + ":(function " + toString(*D) + ")";
@@ -186,41 +186,38 @@ std::string InputSectionBase<ELFT>::getLocation(typename ELFT::uint Offset) {
   return (SrcFile + ":(" + Name + "+0x" + utohexstr(Offset) + ")").str();
 }
 
-template <class ELFT>
-InputSection<ELFT>::InputSection() : InputSectionBase<ELFT>() {}
+InputSection InputSection::Discarded;
+
+InputSection::InputSection() : InputSectionBase() {}
+
+InputSection::InputSection(uint64_t Flags, uint32_t Type, uint64_t Addralign,
+                           ArrayRef<uint8_t> Data, StringRef Name, Kind K)
+    : InputSectionBase(nullptr, Flags, Type,
+                       /*Entsize*/ 0, /*Link*/ 0, /*Info*/ 0, Addralign, Data,
+                       Name, K) {}
 
 template <class ELFT>
-InputSection<ELFT>::InputSection(uintX_t Flags, uint32_t Type,
-                                 uintX_t Addralign, ArrayRef<uint8_t> Data,
-                                 StringRef Name, Kind K)
-    : InputSectionBase<ELFT>(nullptr, Flags, Type,
-                             /*Entsize*/ 0, /*Link*/ 0, /*Info*/ 0, Addralign,
-                             Data, Name, K) {}
+InputSection::InputSection(elf::ObjectFile<ELFT> *F,
+                           const typename ELFT::Shdr *Header, StringRef Name)
+    : InputSectionBase(F, Header, Name, InputSectionBase::Regular) {}
 
-template <class ELFT>
-InputSection<ELFT>::InputSection(elf::ObjectFile<ELFT> *F,
-                                 const Elf_Shdr *Header, StringRef Name)
-    : InputSectionBase<ELFT>(F, Header, Name, Base::Regular) {}
-
-template <class ELFT>
-bool InputSection<ELFT>::classof(const InputSectionData *S) {
-  return S->kind() == Base::Regular || S->kind() == Base::Synthetic;
+bool InputSection::classof(const InputSectionBase *S) {
+  return S->kind() == InputSectionBase::Regular ||
+         S->kind() == InputSectionBase::Synthetic;
 }
 
-template <class ELFT>
-InputSectionBase<ELFT> *InputSection<ELFT>::getRelocatedSection() {
+template <class ELFT> InputSectionBase *InputSection::getRelocatedSection() {
   assert(this->Type == SHT_RELA || this->Type == SHT_REL);
-  ArrayRef<InputSectionBase<ELFT> *> Sections = this->File->getSections();
+  ArrayRef<InputSectionBase *> Sections = this->getFile<ELFT>()->getSections();
   return Sections[this->Info];
 }
 
 // This is used for -r and --emit-relocs. We can't use memcpy to copy
 // relocations because we need to update symbol table offset and section index
 // for each relocation. So we copy relocations one by one.
-template <class ELFT>
-template <class RelTy>
-void InputSection<ELFT>::copyRelocations(uint8_t *Buf, ArrayRef<RelTy> Rels) {
-  InputSectionBase<ELFT> *RelocatedSection = getRelocatedSection();
+template <class ELFT, class RelTy>
+void InputSection::copyRelocations(uint8_t *Buf, ArrayRef<RelTy> Rels) {
+  InputSectionBase *RelocatedSection = getRelocatedSection<ELFT>();
 
   // Loop is slow and have complexity O(N*M), where N - amount of
   // relocations and M - amount of symbols in symbol table.
@@ -228,36 +225,47 @@ void InputSection<ELFT>::copyRelocations(uint8_t *Buf, ArrayRef<RelTy> Rels) {
   // simple linear search.
   for (const RelTy &Rel : Rels) {
     uint32_t Type = Rel.getType(Config->Mips64EL);
-    SymbolBody &Body = this->File->getRelocTargetSym(Rel);
+    SymbolBody &Body = this->getFile<ELFT>()->getRelocTargetSym(Rel);
 
-    Elf_Rela *P = reinterpret_cast<Elf_Rela *>(Buf);
+    auto *P = reinterpret_cast<typename ELFT::Rela *>(Buf);
     Buf += sizeof(RelTy);
 
     if (Config->Rela)
       P->r_addend = getAddend<ELFT>(Rel);
+
+    // Output section VA is zero for -r, so r_offset is an offset within the
+    // section, but for --emit-relocs it is an virtual address.
+    P->r_offset = RelocatedSection->OutSec->Addr +
+                  RelocatedSection->getOffset<ELFT>(Rel.r_offset);
+    P->setSymbolAndType(In<ELFT>::SymTab->getSymbolIndex(&Body), Type,
+                        Config->Mips64EL);
 
     if (Body.Type == STT_SECTION) {
       // We combine multiple section symbols into only one per
       // section. This means we have to update the addend. That is
       // trivial for Elf_Rela, but for Elf_Rel we have to write to the
       // section data. We do that by adding to the Relocation vector.
+
+      // .eh_frame is horribly special and can reference discarded sections. To
+      // avoid having to parse and recreate .eh_frame, we just replace any
+      // relocation in it pointing to discarded sections with R_*_NONE, which
+      // hopefully creates a frame that is ignored at runtime.
+      InputSectionBase *Section = cast<DefinedRegular>(Body).Section;
+      if (Section == &InputSection::Discarded) {
+        P->setSymbolAndType(0, 0, false);
+        continue;
+      }
+
       if (Config->Rela) {
-        P->r_addend += Body.getVA<ELFT>() -
-                       cast<DefinedRegular<ELFT>>(Body).Section->OutSec->Addr;
+        P->r_addend += Body.getVA<ELFT>() - Section->OutSec->Addr;
       } else if (Config->Relocatable) {
         const uint8_t *BufLoc = RelocatedSection->Data.begin() + Rel.r_offset;
-        uint64_t Implicit = Target->getImplicitAddend(BufLoc, Type);
         RelocatedSection->Relocations.push_back(
-            {R_ABS, Type, Rel.r_offset, Implicit, &Body});
+            {R_ABS, Type, Rel.r_offset, Target->getImplicitAddend(BufLoc, Type),
+             &Body});
       }
     }
 
-    // Output section VA is zero for -r, so r_offset is an offset within the
-    // section, but for --emit-relocs it is an virtual address.
-    P->r_offset = RelocatedSection->OutSec->Addr +
-                  RelocatedSection->getOffset(Rel.r_offset);
-    P->setSymbolAndType(In<ELFT>::SymTab->getSymbolIndex(&Body), Type,
-                        Config->Mips64EL);
   }
 }
 
@@ -297,10 +305,11 @@ static uint64_t getAArch64UndefinedRelativeWeakVA(uint64_t Type, uint64_t A,
 
 template <class ELFT>
 static typename ELFT::uint
-getRelocTargetVA(uint32_t Type, typename ELFT::uint A, typename ELFT::uint P,
+getRelocTargetVA(uint32_t Type, int64_t A, typename ELFT::uint P,
                  const SymbolBody &Body, RelExpr Expr) {
   switch (Expr) {
   case R_HINT:
+  case R_NONE:
   case R_TLSDESC_CALL:
     llvm_unreachable("cannot relocate hint relocs");
   case R_TLSLD:
@@ -361,11 +370,11 @@ getRelocTargetVA(uint32_t Type, typename ELFT::uint A, typename ELFT::uint P,
       return 0;
     if (Target->TcbSize)
       return Body.getVA<ELFT>(A) +
-             alignTo(Target->TcbSize, Out<ELFT>::TlsPhdr->p_align);
-    return Body.getVA<ELFT>(A) - Out<ELFT>::TlsPhdr->p_memsz;
+             alignTo(Target->TcbSize, Out::TlsPhdr->p_align);
+    return Body.getVA<ELFT>(A) - Out::TlsPhdr->p_memsz;
   case R_RELAX_TLS_GD_TO_LE_NEG:
   case R_NEG_TLS:
-    return Out<ELF32LE>::TlsPhdr->p_memsz - Body.getVA<ELFT>(A);
+    return Out::TlsPhdr->p_memsz - Body.getVA<ELFT>(A);
   case R_ABS:
   case R_RELAX_GOT_PC_NOPIC:
     return Body.getVA<ELFT>(A);
@@ -402,14 +411,14 @@ getRelocTargetVA(uint32_t Type, typename ELFT::uint A, typename ELFT::uint P,
     // so don't bother doing anything at all.
     if (!SymVA)
       return 0;
-    if (Out<ELF64BE>::Opd) {
+    if (Out::Opd) {
       // If this is a local call, and we currently have the address of a
       // function-descriptor, get the underlying code address instead.
-      uint64_t OpdStart = Out<ELF64BE>::Opd->Addr;
-      uint64_t OpdEnd = OpdStart + Out<ELF64BE>::Opd->Size;
+      uint64_t OpdStart = Out::Opd->Addr;
+      uint64_t OpdEnd = OpdStart + Out::Opd->Size;
       bool InOpd = OpdStart <= SymVA && SymVA < OpdEnd;
       if (InOpd)
-        SymVA = read64be(&Out<ELF64BE>::OpdBuf[SymVA - OpdStart]);
+        SymVA = read64be(&Out::OpdBuf[SymVA - OpdStart]);
     }
     return SymVA - P;
   }
@@ -440,57 +449,64 @@ getRelocTargetVA(uint32_t Type, typename ELFT::uint A, typename ELFT::uint P,
 // treatement such as GOT or PLT (because at runtime no one refers them).
 // So, we handle relocations for non-alloc sections directly in this
 // function as a performance optimization.
-template <class ELFT>
-template <class RelTy>
-void InputSection<ELFT>::relocateNonAlloc(uint8_t *Buf, ArrayRef<RelTy> Rels) {
+template <class ELFT, class RelTy>
+void InputSection::relocateNonAlloc(uint8_t *Buf, ArrayRef<RelTy> Rels) {
+  typedef typename ELFT::uint uintX_t;
   for (const RelTy &Rel : Rels) {
     uint32_t Type = Rel.getType(Config->Mips64EL);
-    uintX_t Offset = this->getOffset(Rel.r_offset);
+    uintX_t Offset = this->getOffset<ELFT>(Rel.r_offset);
     uint8_t *BufLoc = Buf + Offset;
-    uintX_t Addend = getAddend<ELFT>(Rel);
+    int64_t Addend = getAddend<ELFT>(Rel);
     if (!RelTy::IsRela)
       Addend += Target->getImplicitAddend(BufLoc, Type);
 
-    SymbolBody &Sym = this->File->getRelocTargetSym(Rel);
-    if (Target->getRelExpr(Type, Sym) != R_ABS) {
-      error(this->getLocation(Offset) + ": has non-ABS reloc");
+    SymbolBody &Sym = this->getFile<ELFT>()->getRelocTargetSym(Rel);
+    RelExpr Expr = Target->getRelExpr(Type, Sym);
+    if (Expr == R_NONE)
+      continue;
+    if (Expr != R_ABS) {
+      error(this->getLocation<ELFT>(Offset) + ": has non-ABS reloc");
       return;
     }
 
     uintX_t AddrLoc = this->OutSec->Addr + Offset;
     uint64_t SymVA = 0;
-    if (!Sym.isTls() || Out<ELFT>::TlsPhdr)
+    if (!Sym.isTls() || Out::TlsPhdr)
       SymVA = SignExtend64<sizeof(uintX_t) * 8>(
           getRelocTargetVA<ELFT>(Type, Addend, AddrLoc, Sym, R_ABS));
     Target->relocateOne(BufLoc, Type, SymVA);
   }
 }
 
+template <class ELFT> elf::ObjectFile<ELFT> *InputSectionBase::getFile() const {
+  return cast_or_null<elf::ObjectFile<ELFT>>(File);
+}
+
 template <class ELFT>
-void InputSectionBase<ELFT>::relocate(uint8_t *Buf, uint8_t *BufEnd) {
+void InputSectionBase::relocate(uint8_t *Buf, uint8_t *BufEnd) {
   // scanReloc function in Writer.cpp constructs Relocations
   // vector only for SHF_ALLOC'ed sections. For other sections,
   // we handle relocations directly here.
-  auto *IS = dyn_cast<InputSection<ELFT>>(this);
+  auto *IS = dyn_cast<InputSection>(this);
   if (IS && !(IS->Flags & SHF_ALLOC)) {
     if (IS->AreRelocsRela)
-      IS->relocateNonAlloc(Buf, IS->relas());
+      IS->relocateNonAlloc<ELFT>(Buf, IS->template relas<ELFT>());
     else
-      IS->relocateNonAlloc(Buf, IS->rels());
+      IS->relocateNonAlloc<ELFT>(Buf, IS->template rels<ELFT>());
     return;
   }
 
+  typedef typename ELFT::uint uintX_t;
   const unsigned Bits = sizeof(uintX_t) * 8;
   for (const Relocation &Rel : Relocations) {
-    uintX_t Offset = getOffset(Rel.Offset);
+    uintX_t Offset = getOffset<ELFT>(Rel.Offset);
     uint8_t *BufLoc = Buf + Offset;
     uint32_t Type = Rel.Type;
-    uintX_t A = Rel.Addend;
 
-    uintX_t AddrLoc = OutSec->Addr + Offset;
+    uintX_t AddrLoc = getOutputSection<ELFT>()->Addr + Offset;
     RelExpr Expr = Rel.Expr;
     uint64_t TargetVA = SignExtend64<Bits>(
-        getRelocTargetVA<ELFT>(Type, A, AddrLoc, *Rel.Sym, Expr));
+        getRelocTargetVA<ELFT>(Type, Rel.Addend, AddrLoc, *Rel.Sym, Expr));
 
     switch (Expr) {
     case R_RELAX_GOT_PC:
@@ -525,11 +541,11 @@ void InputSectionBase<ELFT>::relocate(uint8_t *Buf, uint8_t *BufEnd) {
   }
 }
 
-template <class ELFT> void InputSection<ELFT>::writeTo(uint8_t *Buf) {
+template <class ELFT> void InputSection::writeTo(uint8_t *Buf) {
   if (this->Type == SHT_NOBITS)
     return;
 
-  if (auto *S = dyn_cast<SyntheticSection<ELFT>>(this)) {
+  if (auto *S = dyn_cast<SyntheticSection>(this)) {
     S->writeTo(Buf + OutSecOff);
     return;
   }
@@ -537,11 +553,13 @@ template <class ELFT> void InputSection<ELFT>::writeTo(uint8_t *Buf) {
   // If -r or --emit-relocs is given, then an InputSection
   // may be a relocation section.
   if (this->Type == SHT_RELA) {
-    copyRelocations(Buf + OutSecOff, this->template getDataAs<Elf_Rela>());
+    copyRelocations<ELFT>(Buf + OutSecOff,
+                          this->template getDataAs<typename ELFT::Rela>());
     return;
   }
   if (this->Type == SHT_REL) {
-    copyRelocations(Buf + OutSecOff, this->template getDataAs<Elf_Rel>());
+    copyRelocations<ELFT>(Buf + OutSecOff,
+                          this->template getDataAs<typename ELFT::Rel>());
     return;
   }
 
@@ -551,11 +569,10 @@ template <class ELFT> void InputSection<ELFT>::writeTo(uint8_t *Buf) {
 
   // Iterate over all relocation sections that apply to this section.
   uint8_t *BufEnd = Buf + OutSecOff + Data.size();
-  this->relocate(Buf, BufEnd);
+  this->relocate<ELFT>(Buf, BufEnd);
 }
 
-template <class ELFT>
-void InputSection<ELFT>::replace(InputSection<ELFT> *Other) {
+void InputSection::replace(InputSection *Other) {
   this->Alignment = std::max(this->Alignment, Other->Alignment);
   Other->Repl = this->Repl;
   Other->Live = false;
@@ -564,7 +581,7 @@ void InputSection<ELFT>::replace(InputSection<ELFT> *Other) {
 template <class ELFT>
 EhInputSection<ELFT>::EhInputSection(elf::ObjectFile<ELFT> *F,
                                      const Elf_Shdr *Header, StringRef Name)
-    : InputSectionBase<ELFT>(F, Header, Name, InputSectionBase<ELFT>::EHFrame) {
+    : InputSectionBase(F, Header, Name, InputSectionBase::EHFrame) {
   // Mark .eh_frame sections as live by default because there are
   // usually no relocations that point to .eh_frames. Otherwise,
   // the garbage collector would drop all .eh_frame sections.
@@ -572,8 +589,8 @@ EhInputSection<ELFT>::EhInputSection(elf::ObjectFile<ELFT> *F,
 }
 
 template <class ELFT>
-bool EhInputSection<ELFT>::classof(const InputSectionData *S) {
-  return S->kind() == InputSectionBase<ELFT>::EHFrame;
+bool EhInputSection<ELFT>::classof(const InputSectionBase *S) {
+  return S->kind() == InputSectionBase::EHFrame;
 }
 
 // Returns the index of the first relocation that points to a region between
@@ -604,9 +621,9 @@ template <class ELFT> void EhInputSection<ELFT>::split() {
 
   if (this->NumRelocations) {
     if (this->AreRelocsRela)
-      split(this->relas());
+      split(this->relas<ELFT>());
     else
-      split(this->rels());
+      split(this->rels<ELFT>());
     return;
   }
   split(makeArrayRef<typename ELFT::Rela>(nullptr, nullptr));
@@ -678,7 +695,7 @@ template <class ELFT>
 MergeInputSection<ELFT>::MergeInputSection(elf::ObjectFile<ELFT> *F,
                                            const Elf_Shdr *Header,
                                            StringRef Name)
-    : InputSectionBase<ELFT>(F, Header, Name, InputSectionBase<ELFT>::Merge) {}
+    : InputSectionBase(F, Header, Name, InputSectionBase::Merge) {}
 
 // This function is called after we obtain a complete list of input sections
 // that need to be linked. This is responsible to split section contents
@@ -700,8 +717,8 @@ template <class ELFT> void MergeInputSection<ELFT>::splitIntoPieces() {
 }
 
 template <class ELFT>
-bool MergeInputSection<ELFT>::classof(const InputSectionData *S) {
-  return S->kind() == InputSectionBase<ELFT>::Merge;
+bool MergeInputSection<ELFT>::classof(const InputSectionBase *S) {
+  return S->kind() == InputSectionBase::Merge;
 }
 
 // Do binary search to get a section piece at a given input offset.
@@ -769,15 +786,28 @@ typename ELFT::uint MergeInputSection<ELFT>::getOffset(uintX_t Offset) const {
   return Piece.OutputOff + Addend;
 }
 
-template class elf::InputSectionBase<ELF32LE>;
-template class elf::InputSectionBase<ELF32BE>;
-template class elf::InputSectionBase<ELF64LE>;
-template class elf::InputSectionBase<ELF64BE>;
+template InputSection::InputSection(elf::ObjectFile<ELF32LE> *F,
+                                    const ELF32LE::Shdr *Header,
+                                    StringRef Name);
+template InputSection::InputSection(elf::ObjectFile<ELF32BE> *F,
+                                    const ELF32BE::Shdr *Header,
+                                    StringRef Name);
+template InputSection::InputSection(elf::ObjectFile<ELF64LE> *F,
+                                    const ELF64LE::Shdr *Header,
+                                    StringRef Name);
+template InputSection::InputSection(elf::ObjectFile<ELF64BE> *F,
+                                    const ELF64BE::Shdr *Header,
+                                    StringRef Name);
 
-template class elf::InputSection<ELF32LE>;
-template class elf::InputSection<ELF32BE>;
-template class elf::InputSection<ELF64LE>;
-template class elf::InputSection<ELF64BE>;
+template std::string InputSectionBase::getLocation<ELF32LE>(uint64_t Offset);
+template std::string InputSectionBase::getLocation<ELF32BE>(uint64_t Offset);
+template std::string InputSectionBase::getLocation<ELF64LE>(uint64_t Offset);
+template std::string InputSectionBase::getLocation<ELF64BE>(uint64_t Offset);
+
+template void InputSection::writeTo<ELF32LE>(uint8_t *Buf);
+template void InputSection::writeTo<ELF32BE>(uint8_t *Buf);
+template void InputSection::writeTo<ELF64LE>(uint8_t *Buf);
+template void InputSection::writeTo<ELF64BE>(uint8_t *Buf);
 
 template class elf::EhInputSection<ELF32LE>;
 template class elf::EhInputSection<ELF32BE>;
@@ -789,7 +819,46 @@ template class elf::MergeInputSection<ELF32BE>;
 template class elf::MergeInputSection<ELF64LE>;
 template class elf::MergeInputSection<ELF64BE>;
 
-template std::string lld::toString(const InputSectionBase<ELF32LE> *);
-template std::string lld::toString(const InputSectionBase<ELF32BE> *);
-template std::string lld::toString(const InputSectionBase<ELF64LE> *);
-template std::string lld::toString(const InputSectionBase<ELF64BE> *);
+template void InputSectionBase::uncompress<ELF32LE>();
+template void InputSectionBase::uncompress<ELF32BE>();
+template void InputSectionBase::uncompress<ELF64LE>();
+template void InputSectionBase::uncompress<ELF64BE>();
+
+template InputSectionBase *InputSectionBase::getLinkOrderDep<ELF32LE>() const;
+template InputSectionBase *InputSectionBase::getLinkOrderDep<ELF32BE>() const;
+template InputSectionBase *InputSectionBase::getLinkOrderDep<ELF64LE>() const;
+template InputSectionBase *InputSectionBase::getLinkOrderDep<ELF64BE>() const;
+
+template OutputSection *InputSectionBase::getOutputSection<ELF32LE>() const;
+template OutputSection *InputSectionBase::getOutputSection<ELF32BE>() const;
+template OutputSection *InputSectionBase::getOutputSection<ELF64LE>() const;
+template OutputSection *InputSectionBase::getOutputSection<ELF64BE>() const;
+
+template InputSectionBase *InputSection::getRelocatedSection<ELF32LE>();
+template InputSectionBase *InputSection::getRelocatedSection<ELF32BE>();
+template InputSectionBase *InputSection::getRelocatedSection<ELF64LE>();
+template InputSectionBase *InputSection::getRelocatedSection<ELF64BE>();
+
+template uint64_t
+InputSectionBase::getOffset<ELF32LE>(const DefinedRegular &Sym) const;
+template uint64_t
+InputSectionBase::getOffset<ELF32BE>(const DefinedRegular &Sym) const;
+template uint64_t
+InputSectionBase::getOffset<ELF64LE>(const DefinedRegular &Sym) const;
+template uint64_t
+InputSectionBase::getOffset<ELF64BE>(const DefinedRegular &Sym) const;
+
+template uint64_t InputSectionBase::getOffset<ELF32LE>(uint64_t Offset) const;
+template uint64_t InputSectionBase::getOffset<ELF32BE>(uint64_t Offset) const;
+template uint64_t InputSectionBase::getOffset<ELF64LE>(uint64_t Offset) const;
+template uint64_t InputSectionBase::getOffset<ELF64BE>(uint64_t Offset) const;
+
+template size_t InputSectionBase::getSize<ELF32LE>() const;
+template size_t InputSectionBase::getSize<ELF32BE>() const;
+template size_t InputSectionBase::getSize<ELF64LE>() const;
+template size_t InputSectionBase::getSize<ELF64BE>() const;
+
+template elf::ObjectFile<ELF32LE> *InputSectionBase::getFile<ELF32LE>() const;
+template elf::ObjectFile<ELF32BE> *InputSectionBase::getFile<ELF32BE>() const;
+template elf::ObjectFile<ELF64LE> *InputSectionBase::getFile<ELF64LE>() const;
+template elf::ObjectFile<ELF64BE> *InputSectionBase::getFile<ELF64BE>() const;
