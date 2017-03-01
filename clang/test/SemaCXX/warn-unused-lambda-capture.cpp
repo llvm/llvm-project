@@ -1,8 +1,14 @@
-// RUN: %clang_cc1 -fsyntax-only -Wunused-lambda-capture -Wused-but-marked-unused -Wno-uninitialized -verify -std=c++14 %s
+// RUN: %clang_cc1 -fsyntax-only -Wunused-lambda-capture -Wused-but-marked-unused -Wno-uninitialized -verify -std=c++1z %s
 
 class NonTrivialConstructor {
 public:
   NonTrivialConstructor() {}
+};
+
+class NonTrivialCopyConstructor {
+public:
+  NonTrivialCopyConstructor() = default;
+  NonTrivialCopyConstructor(const NonTrivialCopyConstructor &) {}
 };
 
 class NonTrivialDestructor {
@@ -57,14 +63,67 @@ void test() {
     auto explicit_by_value_used = [i] { return i + 1; };
     auto explicit_by_value_unused = [i] {}; // expected-warning{{lambda capture 'i' is not used}}
   };
+
+  Trivial trivial;
+  auto explicit_by_value_trivial = [trivial] {}; // expected-warning{{lambda capture 'trivial' is not used}}
+
+  NonTrivialConstructor cons;
+  auto explicit_by_value_non_trivial_constructor = [cons] {}; // expected-warning{{lambda capture 'cons' is not used}}
+
+  NonTrivialCopyConstructor copy_cons;
+  auto explicit_by_value_non_trivial_copy_constructor = [copy_cons] {};
+
+  NonTrivialDestructor dest;
+  auto explicit_by_value_non_trivial_destructor = [dest] {};
+
+  volatile int v;
+  auto explicit_by_value_volatile = [v] {};
 }
 
-class Foo
-{
+class TrivialThis : Trivial {
   void test() {
     auto explicit_this_used = [this] { return i; };
     auto explicit_this_used_void = [this] { (void)this; };
     auto explicit_this_unused = [this] {}; // expected-warning{{lambda capture 'this' is not used}}
+    auto explicit_star_this_used = [*this] { return i; };
+    auto explicit_star_this_used_void = [*this] { (void)this; };
+    auto explicit_star_this_unused = [*this] {}; // expected-warning{{lambda capture 'this' is not used}}
+  }
+  int i;
+};
+
+class NonTrivialConstructorThis : NonTrivialConstructor {
+  void test() {
+    auto explicit_this_used = [this] { return i; };
+    auto explicit_this_used_void = [this] { (void)this; };
+    auto explicit_this_unused = [this] {}; // expected-warning{{lambda capture 'this' is not used}}
+    auto explicit_star_this_used = [*this] { return i; };
+    auto explicit_star_this_used_void = [*this] { (void)this; };
+    auto explicit_star_this_unused = [*this] {}; // expected-warning{{lambda capture 'this' is not used}}
+  }
+  int i;
+};
+
+class NonTrivialCopyConstructorThis : NonTrivialCopyConstructor {
+  void test() {
+    auto explicit_this_used = [this] { return i; };
+    auto explicit_this_used_void = [this] { (void)this; };
+    auto explicit_this_unused = [this] {}; // expected-warning{{lambda capture 'this' is not used}}
+    auto explicit_star_this_used = [*this] { return i; };
+    auto explicit_star_this_used_void = [*this] { (void)this; };
+    auto explicit_star_this_unused = [*this] {};
+  }
+  int i;
+};
+
+class NonTrivialDestructorThis : NonTrivialDestructor {
+  void test() {
+    auto explicit_this_used = [this] { return i; };
+    auto explicit_this_used_void = [this] { (void)this; };
+    auto explicit_this_unused = [this] {}; // expected-warning{{lambda capture 'this' is not used}}
+    auto explicit_star_this_used = [*this] { return i; };
+    auto explicit_star_this_used_void = [*this] { (void)this; };
+    auto explicit_star_this_unused = [*this] {};
   }
   int i;
 };
@@ -107,6 +166,21 @@ void test_templated() {
     auto explicit_by_value_used = [i] { return i + 1; };
     auto explicit_by_value_unused = [i] {}; // expected-warning{{lambda capture 'i' is not used}}
   };
+
+  Trivial trivial;
+  auto explicit_by_value_trivial = [trivial] {}; // expected-warning{{lambda capture 'trivial' is not used}}
+
+  NonTrivialConstructor cons;
+  auto explicit_by_value_non_trivial_constructor = [cons] {}; // expected-warning{{lambda capture 'cons' is not used}}
+
+  NonTrivialCopyConstructor copy_cons;
+  auto explicit_by_value_non_trivial_copy_constructor = [copy_cons] {};
+
+  NonTrivialDestructor dest;
+  auto explicit_by_value_non_trivial_destructor = [dest] {};
+
+  volatile int v;
+  auto explicit_by_value_volatile = [v] {};
 }
 
 void test_use_template() {

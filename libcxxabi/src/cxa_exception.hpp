@@ -25,7 +25,7 @@ static const uint64_t kOurDependentExceptionClass = 0x434C4E47432B2B01; // CLNGC
 static const uint64_t get_vendor_and_language     = 0xFFFFFFFFFFFFFF00; // mask for CLNGC++
 
 struct _LIBCXXABI_HIDDEN __cxa_exception {
-#if defined(__LP64__) || _LIBCXXABI_ARM_EHABI
+#if defined(__LP64__) || defined(_LIBCXXABI_ARM_EHABI)
     // This is a new field to support C++ 0x exception_ptr.
     // For binary compatibility it is at the start of this
     // struct which is prepended to the object thrown in
@@ -43,7 +43,7 @@ struct _LIBCXXABI_HIDDEN __cxa_exception {
 
     int handlerCount;
 
-#if _LIBCXXABI_ARM_EHABI
+#if defined(_LIBCXXABI_ARM_EHABI)
     __cxa_exception* nextPropagatingException;
     int propagationCount;
 #else
@@ -54,7 +54,7 @@ struct _LIBCXXABI_HIDDEN __cxa_exception {
     void *adjustedPtr;
 #endif
 
-#if !defined(__LP64__) && !_LIBCXXABI_ARM_EHABI
+#if !defined(__LP64__) && !defined(_LIBCXXABI_ARM_EHABI)
     // This is a new field to support C++ 0x exception_ptr.
     // For binary compatibility it is placed where the compiler
     // previously adding padded to 64-bit align unwindHeader.
@@ -68,7 +68,7 @@ struct _LIBCXXABI_HIDDEN __cxa_exception {
 // The layout of this structure MUST match the layout of __cxa_exception, with
 // primaryException instead of referenceCount.
 struct _LIBCXXABI_HIDDEN __cxa_dependent_exception {
-#if defined(__LP64__) || _LIBCXXABI_ARM_EHABI
+#if defined(__LP64__) || defined(_LIBCXXABI_ARM_EHABI)
     void* primaryException;
 #endif
 
@@ -81,7 +81,7 @@ struct _LIBCXXABI_HIDDEN __cxa_dependent_exception {
 
     int handlerCount;
 
-#if _LIBCXXABI_ARM_EHABI
+#if defined(_LIBCXXABI_ARM_EHABI)
     __cxa_exception* nextPropagatingException;
     int propagationCount;
 #else
@@ -92,7 +92,7 @@ struct _LIBCXXABI_HIDDEN __cxa_dependent_exception {
     void *adjustedPtr;
 #endif
 
-#if !defined(__LP64__) && !_LIBCXXABI_ARM_EHABI
+#if !defined(__LP64__) && !defined(_LIBCXXABI_ARM_EHABI)
     void* primaryException;
 #endif
 
@@ -102,7 +102,7 @@ struct _LIBCXXABI_HIDDEN __cxa_dependent_exception {
 struct _LIBCXXABI_HIDDEN __cxa_eh_globals {
     __cxa_exception *   caughtExceptions;
     unsigned int        uncaughtExceptions;
-#if _LIBCXXABI_ARM_EHABI
+#if defined(_LIBCXXABI_ARM_EHABI)
     __cxa_exception* propagatingExceptions;
 #endif
 };

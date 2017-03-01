@@ -169,6 +169,14 @@ TEST(ArgsTest, AppendArguments) {
   EXPECT_STREQ("4", args.GetArgumentAtIndex(3));
 }
 
+TEST(ArgsTest, GetArgumentArrayRef) {
+  Args args("foo bar");
+  auto ref = args.GetArgumentArrayRef();
+  ASSERT_EQ(2u, ref.size());
+  EXPECT_STREQ("foo", ref[0]);
+  EXPECT_STREQ("bar", ref[1]);
+}
+
 TEST(ArgsTest, StringToBoolean) {
   bool success = false;
   EXPECT_TRUE(Args::StringToBoolean(llvm::StringRef("true"), false, nullptr));

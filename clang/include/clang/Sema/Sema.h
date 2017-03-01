@@ -5340,6 +5340,9 @@ public:
   ExprResult ActOnLambdaExpr(SourceLocation StartLoc, Stmt *Body,
                              Scope *CurScope);
 
+  /// \brief Does copying/destroying the captured variable have side effects?
+  bool CaptureHasSideEffects(const sema::LambdaScopeInfo::Capture &From);
+
   /// \brief Diagnose if an explicit lambda capture is unused.
   void DiagnoseUnusedLambdaCapture(const sema::LambdaScopeInfo::Capture &From);
 

@@ -32,7 +32,7 @@ extern "C" void android_set_abort_message(const char* msg);
 void abort_message(const char* format, ...)
 {
     // write message to stderr
-#if !defined(NDEBUG) || !LIBCXXABI_BAREMETAL
+#if !defined(NDEBUG) || !defined(LIBCXXABI_BAREMETAL)
 #ifdef __APPLE__
     fprintf(stderr, "libc++abi.dylib: ");
 #endif
