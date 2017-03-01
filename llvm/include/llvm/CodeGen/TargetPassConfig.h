@@ -286,6 +286,10 @@ public:
   /// verification is enabled.
   void addVerifyPass(const std::string &Banner);
 
+  /// Check whether or not GlobalISel should be enabled by default.
+  /// Fallback/abort behavior is controlled via other methods.
+  virtual bool isGlobalISelEnabled() const;
+
   /// Check whether or not GlobalISel should abort on error.
   /// When this is disable, GlobalISel will fall back on SDISel instead of
   /// erroring out.
