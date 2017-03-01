@@ -1692,13 +1692,6 @@ GdbIndexSection<ELFT>::GdbIndexSection()
     : SyntheticSection(0, SHT_PROGBITS, 1, ".gdb_index"),
       StringPool(llvm::StringTableBuilder::ELF) {}
 
-template <class ELFT> void GdbIndexSection<ELFT>::parseDebugSections() {
-  for (InputSectionBase *S : InputSections)
-    if (InputSection *IS = dyn_cast<InputSection>(S))
-      if (IS->OutSec && IS->Name == ".debug_info")
-        readDwarf(IS);
-}
-
 // Iterative hash function for symbol's name is described in .gdb_index format
 // specification. Note that we use one for version 5 to 7 here, it is different
 // for version 4.
@@ -1709,8 +1702,8 @@ static uint32_t hash(StringRef Str) {
   return R;
 }
 
-template <class ELFT> void GdbIndexSection<ELFT>::readDwarf(InputSection *I) {
-  GdbIndexBuilder<ELFT> Builder(I);
+template <class ELFT> void GdbIndexSection<ELFT>::readDwarf(InputSection *Sec) {
+  GdbIndexBuilder<ELFT> Builder(Sec);
   if (ErrorCount)
     return;
 
@@ -1748,7 +1741,12 @@ template <class ELFT> void GdbIndexSection<ELFT>::finalizeContents() {
     return;
   Finalized = true;
 
-  parseDebugSections();
+  for (InputSectionBase *S : InputSections)
+    if (InputSection *IS = dyn_cast<InputSection>(S))
+      if (IS->OutSec && IS->Name == ".debug_info")
+        readDwarf(IS);
+
+  SymbolTable.finalizeContents();
 
   // GdbIndex header consist from version fields
   // and 5 more fields with different kinds of offsets.

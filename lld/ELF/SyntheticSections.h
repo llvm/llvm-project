@@ -524,8 +524,7 @@ public:
   std::vector<AddressEntry<ELFT>> AddressArea;
 
 private:
-  void parseDebugSections();
-  void readDwarf(InputSection *I);
+  void readDwarf(InputSection *Sec);
 
   uint32_t CuTypesOffset;
   uint32_t SymTabOffset;

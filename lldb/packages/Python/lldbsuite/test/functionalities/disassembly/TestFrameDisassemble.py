@@ -1,5 +1,5 @@
 """
-Describe the purpose of the test class here.
+Test to ensure SBFrame::Disassemble produces SOME output
 """
 
 from __future__ import print_function
@@ -13,26 +13,23 @@ import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.lldbtest import *
 
 
-class RenameThisSampleTestTestCase(TestBase):
+class FrameDisassembleTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    # If your test case doesn't stress debug info, the 
-    # set this to true.  That way it won't be run once for
-    # each debug info format.
     NO_DEBUG_INFO_TESTCASE = True
 
-    def test_sample_rename_this(self):
-        """There can be many tests in a test case - describe this test here."""
+    def test_frame_disassemble(self):
+        """Sample test to ensure SBFrame::Disassemble produces SOME output."""
         self.build()
-        self.sample_test()
+        self.frame_disassemble_test()
 
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
 
-    def sample_test(self):
-        """You might use the test implementation in several ways, say so here."""
+    def frame_disassemble_test(self):
+        """Sample test to ensure SBFrame::Disassemble produces SOME output"""
         exe = os.path.join(os.getcwd(), "a.out")
 
         # Create a target by the debugger.
@@ -42,7 +39,7 @@ class RenameThisSampleTestTestCase(TestBase):
         # Now create a breakpoint in main.c at the source matching
         # "Set a breakpoint here"
         breakpoint = target.BreakpointCreateBySourceRegex(
-            "Set a breakpoint here", lldb.SBFileSpec("main.c"))
+            "Set a breakpoint here", lldb.SBFileSpec("main.cpp"))
         self.assertTrue(breakpoint and
                         breakpoint.GetNumLocations() >= 1,
                         VALID_BREAKPOINT)
@@ -67,8 +64,5 @@ class RenameThisSampleTestTestCase(TestBase):
         self.assertTrue(breakpoint.GetHitCount() == 1)
 
         frame = threads[0].GetFrameAtIndex(0)
-        test_var = frame.FindVariable("test_var")
-        self.assertTrue(test_var.GetError().Success(), "Failed to fetch test_var")
-        test_value = test_var.GetValueAsUnsigned()
-        self.assertEqual(test_value, 10, "Got the right value for test_var")
-
+        disassembly = frame.Disassemble()
+        self.assertTrue(len(disassembly) != 0, "Disassembly was empty.")

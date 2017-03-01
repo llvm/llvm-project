@@ -18,6 +18,7 @@ namespace lld {
 namespace elf {
 
 class InputSection;
+class ObjInfoTy;
 
 // Struct represents single entry of address area of gdb index.
 template <class ELFT> struct AddressEntry {
@@ -29,15 +30,16 @@ template <class ELFT> struct AddressEntry {
 
 // GdbIndexBuilder is a helper class used for extracting data required
 // for building .gdb_index section from objects.
-template <class ELFT> class GdbIndexBuilder : public llvm::LoadedObjectInfo {
+template <class ELFT> class GdbIndexBuilder {
   typedef typename ELFT::uint uintX_t;
 
   InputSection *DebugInfoSec;
-
   std::unique_ptr<llvm::DWARFContext> Dwarf;
+  std::unique_ptr<ObjInfoTy> ObjInfo;
 
 public:
   GdbIndexBuilder(InputSection *DebugInfoSec);
+  ~GdbIndexBuilder();
 
   // Extracts the compilation units. Each first element of pair is a offset of a
   // CU in the .debug_info section and second is the length of that CU.
@@ -50,13 +52,6 @@ public:
   // Method extracts public names and types. It returns list of name and
   // gnu_pub* kind pairs.
   std::vector<std::pair<StringRef, uint8_t>> readPubNamesAndTypes();
-
-private:
-  // Method returns section file offset as a load addres for DWARF parser. That
-  // allows to find the target section index for address ranges.
-  uint64_t
-  getSectionLoadAddress(const llvm::object::SectionRef &Sec) const override;
-  std::unique_ptr<llvm::LoadedObjectInfo> clone() const override;
 };
 
 // Element of GdbHashTab hash table.
@@ -75,22 +70,18 @@ class GdbHashTab final {
 public:
   std::pair<bool, GdbSymbol *> add(uint32_t Hash, size_t Offset);
 
+  void finalizeContents();
   size_t getCapacity() { return Table.size(); }
   GdbSymbol *getSymbol(size_t I) { return Table[I]; }
 
 private:
-  void expand();
-
   GdbSymbol **findSlot(uint32_t Hash, size_t Offset);
 
-  llvm::BumpPtrAllocator Alloc;
+  llvm::DenseMap<std::pair<uint32_t, size_t>, GdbSymbol *> Map;
   std::vector<GdbSymbol *> Table;
 
   // Size keeps the amount of filled entries in Table.
   size_t Size = 0;
-
-  // Initial size must be a power of 2.
-  static const int32_t InitialSize = 1024;
 };
 
 } // namespace elf
