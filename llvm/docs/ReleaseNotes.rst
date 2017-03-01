@@ -20,6 +20,14 @@ have questions or comments, the `LLVM Developer's Mailing List
 <http://lists.llvm.org/mailman/listinfo/llvm-dev>`_ is a good place to send
 them.
 
+New Versioning Scheme
+=====================
+Starting with this release, LLVM is using a
+`new versioning scheme <http://blog.llvm.org/2016/12/llvms-new-versioning-scheme.html>`_,
+increasing the major version number with each major release. Stable updates to
+this release will be versioned 4.0.x, and the next major release, six months
+from now, will be version 5.0.0.
+
 Non-comprehensive list of changes in this release
 =================================================
 * Minimum compiler version to build has been raised to GCC 4.8 and VS 2015.
@@ -265,6 +273,15 @@ Changes to the MIPS Target
 * Fixed a crash when half-precision floating point conversion MSA intrinsics are used.
 * Fixed several crashes involving FastISel.
 * Corrected the corrected definitions for aui/daui/dahi/dati for MIPSR6.
+
+Changes to the X86 Target
+-------------------------
+
+**During this release the X86 target has:**
+
+* Added support AMD Ryzen (znver1) CPUs.
+* Gained support for using VEX encoding on AVX-512 CPUs to reduce code size when possible.
+* Improved AVX-512 codegen.
 
 Changes to the OCaml bindings
 -----------------------------
