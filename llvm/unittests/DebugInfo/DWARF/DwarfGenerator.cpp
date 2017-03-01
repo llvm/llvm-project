@@ -240,8 +240,14 @@ StringRef dwarfgen::Generator::generate() {
     assert(Length != -1U);
     Asm->EmitInt32(Length);
     Asm->EmitInt16(Version);
-    Asm->EmitInt32(0);
-    Asm->EmitInt8(CU->getAddressSize());
+    if (Version <= 4) {
+      Asm->EmitInt32(0);
+      Asm->EmitInt8(CU->getAddressSize());
+    } else {
+      Asm->EmitInt8(dwarf::DW_UT_compile);
+      Asm->EmitInt8(CU->getAddressSize());
+      Asm->EmitInt32(0);
+    }
     Asm->emitDwarfDIE(*CU->getUnitDIE().Die);
   }
 
