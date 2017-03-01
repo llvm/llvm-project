@@ -2086,7 +2086,7 @@ RelExpr MipsTargetInfo<ELFT>::getRelExpr(uint32_t Type,
     // offset between start of function and 'gp' value which by default
     // equal to the start of .got section. In that case we consider these
     // relocations as relative.
-    if (&S == ElfSym<ELFT>::MipsGpDisp)
+    if (&S == ElfSym::MipsGpDisp)
       return R_PC;
     return R_ABS;
   case R_MIPS_PC32:
@@ -2245,10 +2245,10 @@ bool MipsTargetInfo<ELFT>::needsThunk(RelExpr Expr, uint32_t Type,
   // If current file has PIC code, LA25 stub is not required.
   if (F->getObj().getHeader()->e_flags & EF_MIPS_PIC)
     return false;
-  auto *D = dyn_cast<DefinedRegular<ELFT>>(&S);
+  auto *D = dyn_cast<DefinedRegular>(&S);
   // LA25 is required if target file has PIC code
   // or target symbol is a PIC symbol.
-  return D && D->isMipsPIC();
+  return D && D->isMipsPIC<ELFT>();
 }
 
 template <class ELFT>

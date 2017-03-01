@@ -294,7 +294,14 @@ class TrailingObjects : private trailing_objects_internal::TrailingObjectsImpl<
 
 public:
   // Make this (privately inherited) member public.
+#ifndef _MSC_VER
   using ParentType::OverloadToken;
+#else
+  // MSVC bug prevents the above from working, at least up through CL
+  // 19.10.24629.
+  template <typename T>
+  using OverloadToken = typename ParentType::template OverloadToken<T>;
+#endif
 
   /// Returns a pointer to the trailing object array of the given type
   /// (which must be one of those specified in the class template). The

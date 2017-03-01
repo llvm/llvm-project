@@ -14,7 +14,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/MSF/BinaryStream.h"
-#include "llvm/DebugInfo/MSF/MSFError.h"
+#include "llvm/DebugInfo/MSF/BinaryStreamError.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -41,21 +41,16 @@ public:
 
   Error readBytes(uint32_t Offset, uint32_t Size,
                   ArrayRef<uint8_t> &Buffer) override {
-    if (Offset > Data.size())
-      return make_error<msf::MSFError>(
-          msf::msf_error_code::insufficient_buffer);
-    if (Data.size() < Size + Offset)
-      return make_error<msf::MSFError>(
-          msf::msf_error_code::insufficient_buffer);
+    if (auto EC = checkOffset(Offset, Size))
+      return EC;
     Buffer = Data.slice(Offset, Size);
     return Error::success();
   }
 
   Error readLongestContiguousChunk(uint32_t Offset,
                                    ArrayRef<uint8_t> &Buffer) override {
-    if (Offset >= Data.size())
-      return make_error<msf::MSFError>(
-          msf::msf_error_code::insufficient_buffer);
+    if (auto EC = checkOffset(Offset, 1))
+      return EC;
     Buffer = Data.slice(Offset);
     return Error::success();
   }
@@ -119,12 +114,8 @@ public:
     if (Buffer.empty())
       return Error::success();
 
-    if (Data.size() < Buffer.size())
-      return make_error<msf::MSFError>(
-          msf::msf_error_code::insufficient_buffer);
-    if (Offset > Buffer.size() - Data.size())
-      return make_error<msf::MSFError>(
-          msf::msf_error_code::insufficient_buffer);
+    if (auto EC = checkOffset(Offset, Buffer.size()))
+      return EC;
 
     uint8_t *DataPtr = const_cast<uint8_t *>(Data.data());
     ::memcpy(DataPtr + Offset, Buffer.data(), Buffer.size());
@@ -156,8 +147,8 @@ private:
 
     Error commit() override {
       if (FileBuffer->commit())
-        return make_error<msf::MSFError>(
-            msf::msf_error_code::insufficient_buffer);
+        return make_error<BinaryStreamError>(
+            stream_error_code::filesystem_error);
       return Error::success();
     }
 

@@ -259,6 +259,11 @@ computeFunctionSummary(ModuleSummaryIndex &Index, const Module &M,
       }
     }
 
+  // Explicit add hot edges to enforce importing for designated GUIDs for
+  // sample PGO, to enable the same inlines as the profiled optimized binary.
+  for (auto &I : F.getImportGUIDs())
+    CallGraphEdges[I].updateHotness(CalleeInfo::HotnessType::Hot);
+
   bool NonRenamableLocal = isNonRenamableLocal(F);
   bool NotEligibleForImport =
       NonRenamableLocal || HasInlineAsmMaybeReferencingInternal ||

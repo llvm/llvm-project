@@ -292,6 +292,7 @@ def V_LSHL_OR_B32 : VOP3Inst <"v_lshl_or_b32", VOP3_Profile<VOP_I32_I32_I32_I32>
 def V_AND_OR_B32 : VOP3Inst <"v_and_or_b32", VOP3_Profile<VOP_I32_I32_I32_I32>>;
 def V_OR3_B32 : VOP3Inst <"v_or3_b32", VOP3_Profile<VOP_I32_I32_I32_I32>>;
 
+def V_XAD_U32 : VOP3Inst <"v_xad_u32", VOP3_Profile<VOP_I32_I32_I32_I32>>;
 def V_MED3_F16 : VOP3Inst <"v_med3_f16", VOP3_Profile<VOP_F16_F16_F16_F16>, AMDGPUfmed3>;
 def V_MED3_I16 : VOP3Inst <"v_med3_i16", VOP3_Profile<VOP_I16_I16_I16_I16>, AMDGPUsmed3>;
 def V_MED3_U16 : VOP3Inst <"v_med3_u16", VOP3_Profile<VOP_I16_I16_I16_I16>, AMDGPUumed3>;
@@ -492,6 +493,7 @@ defm V_AND_OR_B32 : VOP3_Real_vi <0x201>;
 defm V_OR3_B32 : VOP3_Real_vi <0x202>;
 defm V_PACK_B32_F16 : VOP3_Real_vi <0x2a0>;
 
+defm V_XAD_U32 : VOP3_Real_vi <0x1f3>;
 defm V_MED3_F16 : VOP3_Real_vi <0x1fa>;
 defm V_MED3_I16 : VOP3_Real_vi <0x1fb>;
 defm V_MED3_U16 : VOP3_Real_vi <0x1fc>;

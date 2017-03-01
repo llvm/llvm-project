@@ -428,7 +428,7 @@ __kmp_test_then_and32( volatile kmp_int32 *p, kmp_int32 d )
     return old_value;
 }
 
-# if KMP_ARCH_X86 || KMP_ARCH_PPC64 || (KMP_OS_LINUX && KMP_ARCH_AARCH64)
+# if KMP_ARCH_X86
 kmp_int8
 __kmp_test_then_add8( volatile kmp_int8 *p, kmp_int8 d )
 {
@@ -462,7 +462,7 @@ __kmp_test_then_add64( volatile kmp_int64 *p, kmp_int64 d )
     }
     return old_value;
 }
-# endif /* KMP_ARCH_X86 || KMP_ARCH_PPC64 || (KMP_OS_LINUX && KMP_ARCH_AARCH64) */
+# endif /* KMP_ARCH_X86 */
 
 kmp_int64
 __kmp_test_then_or64( volatile kmp_int64 *p, kmp_int64 d )

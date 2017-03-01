@@ -298,8 +298,8 @@ InputSection *elf::createInterpSection() {
 template <class ELFT>
 SymbolBody *elf::addSyntheticLocal(StringRef Name, uint8_t Type, uint64_t Value,
                                    uint64_t Size, InputSectionBase *Section) {
-  auto *S = make<DefinedRegular<ELFT>>(Name, /*IsLocal*/ true, STV_DEFAULT,
-                                       Type, Value, Size, Section, nullptr);
+  auto *S = make<DefinedRegular>(Name, /*IsLocal*/ true, STV_DEFAULT, Type,
+                                 Value, Size, Section, nullptr);
   if (In<ELFT>::SymTab)
     In<ELFT>::SymTab->addSymbol(S);
   return S;
@@ -448,7 +448,7 @@ bool EhFrameSection<ELFT>::isFdeLive(EhSectionPiece &Piece,
     return false;
   const RelTy &Rel = Rels[FirstRelI];
   SymbolBody &B = Sec->template getFile<ELFT>()->getRelocTargetSym(Rel);
-  auto *D = dyn_cast<DefinedRegular<ELFT>>(&B);
+  auto *D = dyn_cast<DefinedRegular>(&B);
   if (!D || !D->Section)
     return false;
   InputSectionBase *Target = D->Section->Repl;
@@ -537,14 +537,7 @@ template <class ELFT> void EhFrameSection<ELFT>::finalizeContents() {
       Off += alignTo(Fde->size(), sizeof(uintX_t));
     }
   }
-
-  // Add a CIE record of length 0 as a terminator. While the relevant
-  // standards don't explicitly require such a terminator, ld.bfd and
-  // ld.gold always seem to add one and some unwiders rely on its
-  // presence. It also prevents us from generating a .eh_frame section
-  // with zero Call Frame Information records, which isn't allowed by
-  // the LSB standard.
-  this->Size = Off + 4;
+  this->Size = Off;
 }
 
 template <class ELFT> static uint64_t readFdeAddr(uint8_t *Buf, int Size) {
@@ -707,7 +700,7 @@ void MipsGotSection<ELFT>::addEntry(SymbolBody &Sym, int64_t Addend,
     // sections referenced by GOT relocations. Then later in the `finalize`
     // method calculate number of "pages" required to cover all saved output
     // section and allocate appropriate number of GOT entries.
-    auto *DefSym = cast<DefinedRegular<ELFT>>(&Sym);
+    auto *DefSym = cast<DefinedRegular>(&Sym);
     PageIndexMap.insert(
         {DefSym->Section->template getOutputSection<ELFT>(), 0});
     return;
@@ -780,8 +773,7 @@ typename MipsGotSection<ELFT>::uintX_t
 MipsGotSection<ELFT>::getPageEntryOffset(const SymbolBody &B,
                                          int64_t Addend) const {
   const OutputSection *OutSec =
-      cast<DefinedRegular<ELFT>>(&B)
-          ->Section->template getOutputSection<ELFT>();
+      cast<DefinedRegular>(&B)->Section->template getOutputSection<ELFT>();
   uintX_t SecAddr = getMipsPageAddr(OutSec->Addr);
   uintX_t SymAddr = getMipsPageAddr(B.getVA<ELFT>(Addend));
   uintX_t Index = PageIndexMap.lookup(OutSec) + (SymAddr - SecAddr) / 0xffff;
@@ -859,7 +851,7 @@ template <class ELFT> bool MipsGotSection<ELFT>::empty() const {
 
 template <class ELFT>
 typename MipsGotSection<ELFT>::uintX_t MipsGotSection<ELFT>::getGp() const {
-  return ElfSym<ELFT>::MipsGp->template getVA<ELFT>(0);
+  return ElfSym::MipsGp->template getVA<ELFT>(0);
 }
 
 template <class ELFT>
@@ -1351,8 +1343,8 @@ size_t SymbolTableSection<ELFT>::getSymbolIndex(SymbolBody *Body) {
     // This is used for -r, so we have to handle multiple section
     // symbols being combined.
     if (Body->Type == STT_SECTION && E.Symbol->Type == STT_SECTION)
-      return cast<DefinedRegular<ELFT>>(Body)->Section->OutSec ==
-             cast<DefinedRegular<ELFT>>(E.Symbol)->Section->OutSec;
+      return cast<DefinedRegular>(Body)->Section->OutSec ==
+             cast<DefinedRegular>(E.Symbol)->Section->OutSec;
     return false;
   });
   if (I == Symbols.end())
@@ -1370,6 +1362,7 @@ template <class ELFT> void SymbolTableSection<ELFT>::writeTo(uint8_t *Buf) {
   for (SymbolTableEntry &Ent : Symbols) {
     SymbolBody *Body = Ent.Symbol;
 
+    // Set st_info and st_other.
     if (Body->isLocal()) {
       ESym->setBindingAndType(STB_LOCAL, Body->Type);
     } else {
@@ -1379,24 +1372,23 @@ template <class ELFT> void SymbolTableSection<ELFT>::writeTo(uint8_t *Buf) {
 
     ESym->st_name = Ent.StrTabOffset;
     ESym->st_size = Body->getSize<ELFT>();
-    ESym->st_value = Body->getVA<ELFT>();
 
-    if (const OutputSection *OutSec = Body->getOutputSection<ELFT>()) {
+    // Set a section index.
+    if (const OutputSection *OutSec = Body->getOutputSection<ELFT>())
       ESym->st_shndx = OutSec->SectionIndex;
-
-      // This piece of code should go away as it doesn't make sense,
-      // but we want to keep it tentatively because some tests for TLS
-      // variable depends on this. We should fix the test and remove
-      // this code.
-      if (Body->isLocal())
-        if (auto *DS = dyn_cast<DefinedRegular<ELFT>>(Body))
-          ESym->st_value = OutSec->Addr + DS->Section->getOffset(*DS);
-    } else if (isa<DefinedRegular<ELFT>>(Body)) {
+    else if (isa<DefinedRegular>(Body))
       ESym->st_shndx = SHN_ABS;
-    } else if (isa<DefinedCommon>(Body)) {
+    else if (isa<DefinedCommon>(Body))
       ESym->st_shndx = SHN_COMMON;
+
+    // st_value is usually an address of a symbol, but that has a
+    // special meaining for uninstantiated common symbols (this can
+    // occur if -r is given).
+    if (!Config->DefineCommon && isa<DefinedCommon>(Body))
       ESym->st_value = cast<DefinedCommon>(Body)->Alignment;
-    }
+    else
+      ESym->st_value = Body->getVA<ELFT>();
+
     ++ESym;
   }
 
@@ -1413,14 +1405,45 @@ template <class ELFT> void SymbolTableSection<ELFT>::writeTo(uint8_t *Buf) {
         ESym->st_other |= STO_MIPS_PLT;
 
       if (Config->Relocatable)
-        if (auto *D = dyn_cast<DefinedRegular<ELFT>>(Body))
-          if (D->isMipsPIC())
+        if (auto *D = dyn_cast<DefinedRegular>(Body))
+          if (D->isMipsPIC<ELFT>())
             ESym->st_other |= STO_MIPS_PIC;
       ++ESym;
     }
   }
 }
 
+// .hash and .gnu.hash sections contain on-disk hash tables that map
+// symbol names to their dynamic symbol table indices. Their purpose
+// is to help the dynamic linker resolve symbols quickly. If ELF files
+// don't have them, the dynamic linker has to do linear search on all
+// dynamic symbols, which makes programs slower. Therefore, a .hash
+// section is added to a DSO by default. A .gnu.hash is added if you
+// give the -hash-style=gnu or -hash-style=both option.
+//
+// The Unix semantics of resolving dynamic symbols is somewhat expensive.
+// Each ELF file has a list of DSOs that the ELF file depends on and a
+// list of dynamic symbols that need to be resolved from any of the
+// DSOs. That means resolving all dynamic symbols takes O(m)*O(n)
+// where m is the number of DSOs and n is the number of dynamic
+// symbols. For modern large programs, both m and n are large.  So
+// making each step faster by using hash tables substiantially
+// improves time to load programs.
+//
+// (Note that this is not the only way to design the shared library.
+// For instance, the Windows DLL takes a different approach. On
+// Windows, each dynamic symbol has a name of DLL from which the symbol
+// has to be resolved. That makes the cost of symbol resolution O(n).
+// This disables some hacky techniques you can use on Unix such as
+// LD_PRELOAD, but this is arguably better semantics than the Unix ones.)
+//
+// Due to historical reasons, we have two different hash tables, .hash
+// and .gnu.hash. They are for the same purpose, and .gnu.hash is a new
+// and better version of .hash. .hash is just an on-disk hash table, but
+// .gnu.hash has a bloom filter in addition to a hash table to skip
+// DSOs very quickly. If you are sure that your dynamic linker knows
+// about .gnu.hash, you want to specify -hash-style=gnu. Otherwise, a
+// safe bet is to specify -hash-style=both for backward compatibilty.
 template <class ELFT>
 GnuHashTableSection<ELFT>::GnuHashTableSection()
     : SyntheticSection(SHF_ALLOC, SHT_GNU_HASH, sizeof(uintX_t), ".gnu.hash") {

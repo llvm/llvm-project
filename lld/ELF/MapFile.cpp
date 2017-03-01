@@ -80,7 +80,7 @@ static void writeInputSection(raw_fd_ostream &OS, const InputSection *IS,
   OS << '\n';
 
   for (SymbolBody *Sym : File->getSymbols()) {
-    auto *DR = dyn_cast<DefinedRegular<ELFT>>(Sym);
+    auto *DR = dyn_cast<DefinedRegular>(Sym);
     if (!DR)
       continue;
     if (DR->Section != IS)

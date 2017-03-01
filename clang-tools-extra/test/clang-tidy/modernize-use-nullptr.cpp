@@ -228,3 +228,19 @@ struct D {
 void test_default_argument() {
   D(nullptr);
 }
+
+// Test on two neighbour CXXDefaultArgExprs nodes.
+typedef unsigned long long uint64;
+struct ZZ {
+  explicit ZZ(uint64, const uint64* = NULL) {}
+// CHECK-MESSAGES: :[[@LINE-1]]:39: warning: use nullptr
+// CHECK-FIXES: explicit ZZ(uint64, const uint64* = nullptr) {}
+  operator bool()  { return true; }
+};
+
+uint64 Hash(uint64 seed = 0) { return 0; }
+
+void f() {
+  bool a;
+  a = ZZ(Hash());
+}

@@ -150,7 +150,8 @@ public:
     }
 
     if (NumElements > UINT32_MAX / sizeof(T))
-      return make_error<msf::MSFError>(msf::msf_error_code::insufficient_buffer);
+      return make_error<BinaryStreamError>(
+          stream_error_code::invalid_array_size);
 
     if (auto EC = readBytes(Bytes, NumElements * sizeof(T)))
       return EC;
@@ -193,16 +194,16 @@ public:
       Array = FixedStreamArray<T>();
       return Error::success();
     }
-    uint32_t Length = NumItems * sizeof(T);
-    if (Length / sizeof(T) != NumItems)
-      return errorCodeToError(
-          make_error_code(std::errc::illegal_byte_sequence));
-    if (Offset + Length > Stream.getLength())
-      return make_error<msf::MSFError>(
-          msf::msf_error_code::insufficient_buffer);
-    BinaryStreamRef View = Stream.slice(Offset, Length);
+
+    if (NumItems > UINT32_MAX / sizeof(T))
+      return make_error<BinaryStreamError>(
+          stream_error_code::invalid_array_size);
+
+    BinaryStreamRef View;
+    if (auto EC = readStreamRef(View, NumItems * sizeof(T)))
+      return EC;
+
     Array = FixedStreamArray<T>(View);
-    Offset += Length;
     return Error::success();
   }
 

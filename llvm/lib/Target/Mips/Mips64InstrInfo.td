@@ -892,3 +892,17 @@ let AdditionalPredicates = [NotInMicroMips] in {
                                                       imm64:$imm), 0>,
         ISA_MIPS3_NOT_32R6_64R6;
 }
+
+def NORImm64 : NORIMM_DESC_BASE<GPR64Opnd, imm64>, GPR_64;
+def : MipsInstAlias<"nor\t$rs, $imm", (NORImm64 GPR64Opnd:$rs, GPR64Opnd:$rs,
+                                                imm64:$imm)>, GPR_64;
+def SLTImm64 : MipsAsmPseudoInst<(outs GPR64Opnd:$rs),
+                                 (ins GPR64Opnd:$rt, imm64:$imm),
+                                 "slt\t$rs, $rt, $imm">, GPR_64;
+def : MipsInstAlias<"slt\t$rs, $imm", (SLTImm64 GPR64Opnd:$rs, GPR64Opnd:$rs,
+                                                imm64:$imm)>, GPR_64;
+def SLTUImm64 : MipsAsmPseudoInst<(outs GPR64Opnd:$rs),
+                                  (ins GPR64Opnd:$rt, imm64:$imm),
+                                  "sltu\t$rs, $rt, $imm">, GPR_64;
+def : MipsInstAlias<"sltu\t$rs, $imm", (SLTUImm64 GPR64Opnd:$rs, GPR64Opnd:$rs,
+                                                  imm64:$imm)>, GPR_64;

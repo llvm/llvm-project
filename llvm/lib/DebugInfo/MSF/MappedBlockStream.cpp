@@ -9,9 +9,9 @@
 
 #include "llvm/DebugInfo/MSF/MappedBlockStream.h"
 
+#include "llvm/DebugInfo/MSF/BinaryStreamError.h"
 #include "llvm/DebugInfo/MSF/IMSFFile.h"
 #include "llvm/DebugInfo/MSF/MSFCommon.h"
-#include "llvm/DebugInfo/MSF/MSFError.h"
 #include "llvm/DebugInfo/MSF/MSFStreamLayout.h"
 
 using namespace llvm;
@@ -89,10 +89,8 @@ MappedBlockStream::createFpmStream(const MSFLayout &Layout,
 Error MappedBlockStream::readBytes(uint32_t Offset, uint32_t Size,
                                    ArrayRef<uint8_t> &Buffer) {
   // Make sure we aren't trying to read beyond the end of the stream.
-  if (Size > StreamLayout.Length)
-    return make_error<MSFError>(msf_error_code::insufficient_buffer);
-  if (Offset > StreamLayout.Length - Size)
-    return make_error<MSFError>(msf_error_code::insufficient_buffer);
+  if (auto EC = checkOffset(Offset, Size))
+    return EC;
 
   if (tryReadContiguously(Offset, Size, Buffer))
     return Error::success();
@@ -169,8 +167,9 @@ Error MappedBlockStream::readBytes(uint32_t Offset, uint32_t Size,
 Error MappedBlockStream::readLongestContiguousChunk(uint32_t Offset,
                                                     ArrayRef<uint8_t> &Buffer) {
   // Make sure we aren't trying to read beyond the end of the stream.
-  if (Offset >= StreamLayout.Length)
-    return make_error<MSFError>(msf_error_code::insufficient_buffer);
+  if (auto EC = checkOffset(Offset, 1))
+    return EC;
+
   uint32_t First = Offset / BlockSize;
   uint32_t Last = First;
 
@@ -244,10 +243,8 @@ Error MappedBlockStream::readBytes(uint32_t Offset,
   uint32_t OffsetInBlock = Offset % BlockSize;
 
   // Make sure we aren't trying to read beyond the end of the stream.
-  if (Buffer.size() > StreamLayout.Length)
-    return make_error<MSFError>(msf_error_code::insufficient_buffer);
-  if (Offset > StreamLayout.Length - Buffer.size())
-    return make_error<MSFError>(msf_error_code::insufficient_buffer);
+  if (auto EC = checkOffset(Offset, Buffer.size()))
+    return EC;
 
   uint32_t BytesLeft = Buffer.size();
   uint32_t BytesWritten = 0;
@@ -374,11 +371,8 @@ uint32_t WritableMappedBlockStream::getLength() {
 Error WritableMappedBlockStream::writeBytes(uint32_t Offset,
                                             ArrayRef<uint8_t> Buffer) {
   // Make sure we aren't trying to write beyond the end of the stream.
-  if (Buffer.size() > getStreamLength())
-    return make_error<MSFError>(msf_error_code::insufficient_buffer);
-
-  if (Offset > getStreamLayout().Length - Buffer.size())
-    return make_error<MSFError>(msf_error_code::insufficient_buffer);
+  if (auto EC = checkOffset(Offset, Buffer.size()))
+    return EC;
 
   uint32_t BlockNum = Offset / getBlockSize();
   uint32_t OffsetInBlock = Offset % getBlockSize();

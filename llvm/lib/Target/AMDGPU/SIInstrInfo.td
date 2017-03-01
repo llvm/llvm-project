@@ -1319,7 +1319,7 @@ def VOP_I16_F16 : VOPProfile <[i16, f16, untyped, untyped]>;
 def VOP_F16_F16_F16 : VOPProfile <[f16, f16, f16, untyped]>;
 def VOP_F16_F16_I16 : VOPProfile <[f16, f16, i16, untyped]>;
 def VOP_F16_F16_I32 : VOPProfile <[f16, f16, i32, untyped]>;
-def VOP_I16_I16_I16 : VOPProfile <[i32, i32, i32, untyped]>;
+def VOP_I16_I16_I16 : VOPProfile <[i16, i16, i16, untyped]>;
 
 def VOP_I16_I16_I16_I16 : VOPProfile <[i16, i16, i16, i16, untyped]>;
 def VOP_F16_F16_F16_F16 : VOPProfile <[f16, f16, f16, f16, untyped]>;

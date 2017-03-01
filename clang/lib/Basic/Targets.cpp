@@ -5985,8 +5985,9 @@ public:
     // AArch64 targets default to using the ARM C++ ABI.
     TheCXXABI.set(TargetCXXABI::GenericAArch64);
 
-    if (Triple.getOS() == llvm::Triple::Linux ||
-        Triple.getOS() == llvm::Triple::UnknownOS)
+    if (Triple.getOS() == llvm::Triple::Linux)
+      this->MCountName = "\01_mcount";
+    else if (Triple.getOS() == llvm::Triple::UnknownOS)
       this->MCountName = Opts.EABIVersion == "gnu" ? "\01_mcount" : "mcount";
   }
 
