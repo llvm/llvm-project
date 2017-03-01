@@ -1239,8 +1239,9 @@ void Debugger::SetLoggingCallback(lldb::LogOutputCallback log_callback,
   m_log_callback_stream_sp.reset(new StreamCallback(log_callback, baton));
 }
 
-bool Debugger::EnableLog(const char *channel, const char **categories,
-                         const char *log_file, uint32_t log_options,
+bool Debugger::EnableLog(llvm::StringRef channel,
+                         llvm::ArrayRef<const char *> categories,
+                         llvm::StringRef log_file, uint32_t log_options,
                          Stream &error_stream) {
   const bool should_close = true;
   const bool unbuffered = true;
@@ -1251,7 +1252,7 @@ bool Debugger::EnableLog(const char *channel, const char **categories,
     // For now when using the callback mode you always get thread & timestamp.
     log_options |=
         LLDB_LOG_OPTION_PREPEND_TIMESTAMP | LLDB_LOG_OPTION_PREPEND_THREAD_NAME;
-  } else if (log_file == nullptr || *log_file == '\0') {
+  } else if (log_file.empty()) {
     log_stream_sp = std::make_shared<llvm::raw_fd_ostream>(
         GetOutputFile()->GetFile().GetDescriptor(), !should_close, unbuffered);
   } else {

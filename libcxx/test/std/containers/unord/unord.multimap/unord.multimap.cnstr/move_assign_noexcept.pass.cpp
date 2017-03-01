@@ -41,6 +41,7 @@ struct some_hash
     some_hash();
     some_hash(const some_hash&);
     some_hash& operator=(const some_hash&);
+    std::size_t operator()(T const&) const;
 };
 
 int main()

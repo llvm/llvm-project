@@ -125,7 +125,9 @@ template <class ELFT> MergeInputSection<ELFT> *elf::createCommentSection() {
 template <class ELFT>
 MipsAbiFlagsSection<ELFT>::MipsAbiFlagsSection(Elf_Mips_ABIFlags Flags)
     : SyntheticSection(SHF_ALLOC, SHT_MIPS_ABIFLAGS, 8, ".MIPS.abiflags"),
-      Flags(Flags) {}
+      Flags(Flags) {
+  this->Entsize = sizeof(Elf_Mips_ABIFlags);
+}
 
 template <class ELFT> void MipsAbiFlagsSection<ELFT>::writeTo(uint8_t *Buf) {
   memcpy(Buf, &Flags, sizeof(Flags));
@@ -182,7 +184,9 @@ MipsAbiFlagsSection<ELFT> *MipsAbiFlagsSection<ELFT>::create() {
 template <class ELFT>
 MipsOptionsSection<ELFT>::MipsOptionsSection(Elf_Mips_RegInfo Reginfo)
     : SyntheticSection(SHF_ALLOC, SHT_MIPS_OPTIONS, 8, ".MIPS.options"),
-      Reginfo(Reginfo) {}
+      Reginfo(Reginfo) {
+  this->Entsize = sizeof(Elf_Mips_Options) + sizeof(Elf_Mips_RegInfo);
+}
 
 template <class ELFT> void MipsOptionsSection<ELFT>::writeTo(uint8_t *Buf) {
   auto *Options = reinterpret_cast<Elf_Mips_Options *>(Buf);
@@ -242,7 +246,9 @@ MipsOptionsSection<ELFT> *MipsOptionsSection<ELFT>::create() {
 template <class ELFT>
 MipsReginfoSection<ELFT>::MipsReginfoSection(Elf_Mips_RegInfo Reginfo)
     : SyntheticSection(SHF_ALLOC, SHT_MIPS_REGINFO, 4, ".reginfo"),
-      Reginfo(Reginfo) {}
+      Reginfo(Reginfo) {
+  this->Entsize = sizeof(Elf_Mips_RegInfo);
+}
 
 template <class ELFT> void MipsReginfoSection<ELFT>::writeTo(uint8_t *Buf) {
   if (!Config->Relocatable)
@@ -285,14 +291,14 @@ MipsReginfoSection<ELFT> *MipsReginfoSection<ELFT>::create() {
 }
 
 InputSection *elf::createInterpSection() {
-  auto *Ret = make<InputSection>(SHF_ALLOC, SHT_PROGBITS, 1,
-                                 ArrayRef<uint8_t>(), ".interp");
-  Ret->Live = true;
-
   // StringSaver guarantees that the returned string ends with '\0'.
   StringRef S = Saver.save(Config->DynamicLinker);
-  Ret->Data = {(const uint8_t *)S.data(), S.size() + 1};
-  return Ret;
+  ArrayRef<uint8_t> Contents = {(const uint8_t *)S.data(), S.size() + 1};
+
+  auto *Sec =
+      make<InputSection>(SHF_ALLOC, SHT_PROGBITS, 1, Contents, ".interp");
+  Sec->Live = true;
+  return Sec;
 }
 
 template <class ELFT>
@@ -1013,6 +1019,7 @@ DynamicSection<ELFT>::DynamicSection()
     : SyntheticSection(SHF_ALLOC | SHF_WRITE, SHT_DYNAMIC, sizeof(uintX_t),
                        ".dynamic") {
   this->Entsize = ELFT::Is64Bits ? 16 : 8;
+
   // .dynamic section is not writable on MIPS.
   // See "Special Section" in Chapter 4 in the following document:
   // ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
@@ -1147,7 +1154,6 @@ template <class ELFT> void DynamicSection<ELFT>::finalizeContents() {
       add({DT_MIPS_RLD_MAP, In<ELFT>::MipsRldMap});
   }
 
-  this->OutSec->Entsize = this->Entsize;
   this->OutSec->Link = this->Link;
 
   // +1 for DT_NULL
@@ -1260,7 +1266,6 @@ template <class ELFT> void RelocationSection<ELFT>::finalizeContents() {
 
   // Set required output section properties.
   this->OutSec->Link = this->Link;
-  this->OutSec->Entsize = this->Entsize;
 }
 
 template <class ELFT>
@@ -1295,7 +1300,6 @@ static bool sortMipsSymbols(const SymbolTableEntry &L, const SymbolTableEntry &R
 // dynamic linking are inherently all globals.)
 template <class ELFT> void SymbolTableSection<ELFT>::finalizeContents() {
   this->OutSec->Link = StrTabSec.OutSec->SectionIndex;
-  this->OutSec->Entsize = this->Entsize;
 
   // If it is a .dynsym, there should be no local symbols, but we need
   // to do a few things for the dynamic linker.
@@ -1413,93 +1417,85 @@ template <class ELFT> void SymbolTableSection<ELFT>::writeTo(uint8_t *Buf) {
   }
 }
 
+// .hash and .gnu.hash sections contain on-disk hash tables that map
+// symbol names to their dynamic symbol table indices. Their purpose
+// is to help the dynamic linker resolve symbols quickly. If ELF files
+// don't have them, the dynamic linker has to do linear search on all
+// dynamic symbols, which makes programs slower. Therefore, a .hash
+// section is added to a DSO by default. A .gnu.hash is added if you
+// give the -hash-style=gnu or -hash-style=both option.
+//
+// The Unix semantics of resolving dynamic symbols is somewhat expensive.
+// Each ELF file has a list of DSOs that the ELF file depends on and a
+// list of dynamic symbols that need to be resolved from any of the
+// DSOs. That means resolving all dynamic symbols takes O(m)*O(n)
+// where m is the number of DSOs and n is the number of dynamic
+// symbols. For modern large programs, both m and n are large.  So
+// making each step faster by using hash tables substiantially
+// improves time to load programs.
+//
+// (Note that this is not the only way to design the shared library.
+// For instance, the Windows DLL takes a different approach. On
+// Windows, each dynamic symbol has a name of DLL from which the symbol
+// has to be resolved. That makes the cost of symbol resolution O(n).
+// This disables some hacky techniques you can use on Unix such as
+// LD_PRELOAD, but this is arguably better semantics than the Unix ones.)
+//
+// Due to historical reasons, we have two different hash tables, .hash
+// and .gnu.hash. They are for the same purpose, and .gnu.hash is a new
+// and better version of .hash. .hash is just an on-disk hash table, but
+// .gnu.hash has a bloom filter in addition to a hash table to skip
+// DSOs very quickly. If you are sure that your dynamic linker knows
+// about .gnu.hash, you want to specify -hash-style=gnu. Otherwise, a
+// safe bet is to specify -hash-style=both for backward compatibilty.
 template <class ELFT>
 GnuHashTableSection<ELFT>::GnuHashTableSection()
     : SyntheticSection(SHF_ALLOC, SHT_GNU_HASH, sizeof(uintX_t), ".gnu.hash") {
   this->Entsize = ELFT::Is64Bits ? 0 : 4;
 }
 
-template <class ELFT>
-unsigned GnuHashTableSection<ELFT>::calcNBuckets(unsigned NumHashed) {
-  if (!NumHashed)
-    return 0;
-
-  // These values are prime numbers which are not greater than 2^(N-1) + 1.
-  // In result, for any particular NumHashed we return a prime number
-  // which is not greater than NumHashed.
-  static const unsigned Primes[] = {
-      1,   1,    3,    3,    7,    13,    31,    61,    127,   251,
-      509, 1021, 2039, 4093, 8191, 16381, 32749, 65521, 131071};
-
-  return Primes[std::min<unsigned>(Log2_32_Ceil(NumHashed),
-                                   array_lengthof(Primes) - 1)];
-}
-
-// Bloom filter estimation: at least 8 bits for each hashed symbol.
-// GNU Hash table requirement: it should be a power of 2,
-//   the minimum value is 1, even for an empty table.
-// Expected results for a 32-bit target:
-//   calcMaskWords(0..4)   = 1
-//   calcMaskWords(5..8)   = 2
-//   calcMaskWords(9..16)  = 4
-// For a 64-bit target:
-//   calcMaskWords(0..8)   = 1
-//   calcMaskWords(9..16)  = 2
-//   calcMaskWords(17..32) = 4
-template <class ELFT>
-unsigned GnuHashTableSection<ELFT>::calcMaskWords(unsigned NumHashed) {
-  if (!NumHashed)
-    return 1;
-  return NextPowerOf2((NumHashed - 1) / sizeof(uintX_t));
-}
-
 template <class ELFT> void GnuHashTableSection<ELFT>::finalizeContents() {
-  unsigned NumHashed = Symbols.size();
-  NBuckets = calcNBuckets(NumHashed);
-  MaskWords = calcMaskWords(NumHashed);
-  // Second hash shift estimation: just predefined values.
-  Shift2 = ELFT::Is64Bits ? 6 : 5;
-
-  this->OutSec->Entsize = this->Entsize;
   this->OutSec->Link = In<ELFT>::DynSymTab->OutSec->SectionIndex;
-  this->Size = sizeof(uint32_t) * 4            // Header
-               + sizeof(uintX_t) * MaskWords   // Bloom Filter
-               + sizeof(uint32_t) * NBuckets   // Hash Buckets
-               + sizeof(uint32_t) * NumHashed; // Hash Values
+
+  // Computes bloom filter size in word size. We want to allocate 8
+  // bits for each symbol. It must be a power of two.
+  if (Symbols.empty())
+    MaskWords = 1;
+  else
+    MaskWords = NextPowerOf2((Symbols.size() - 1) / sizeof(uintX_t));
+
+  Size = 16;                           // Header
+  Size += sizeof(uintX_t) * MaskWords; // Bloom filter
+  Size += NBuckets * 4;                // Hash buckets
+  Size += Symbols.size() * 4;          // Hash values
 }
 
 template <class ELFT> void GnuHashTableSection<ELFT>::writeTo(uint8_t *Buf) {
-  Buf = writeHeader(Buf);
-  if (Symbols.empty())
-    return;
-  Buf = writeBloomFilter(Buf);
-  writeHashTable(Buf);
-}
-
-template <class ELFT>
-uint8_t *GnuHashTableSection<ELFT>::writeHeader(uint8_t *Buf) {
+  // Write a header.
   const endianness E = ELFT::TargetEndianness;
   write32<E>(Buf, NBuckets);
   write32<E>(Buf + 4, In<ELFT>::DynSymTab->getNumSymbols() - Symbols.size());
   write32<E>(Buf + 8, MaskWords);
-  write32<E>(Buf + 12, Shift2);
-  return Buf + 16;
+  write32<E>(Buf + 12, getShift2());
+  Buf += 16;
+
+  writeBloomFilter(Buf);
+  Buf += sizeof(uintX_t) * MaskWords;
+
+  writeHashTable(Buf);
 }
 
 template <class ELFT>
-uint8_t *GnuHashTableSection<ELFT>::writeBloomFilter(uint8_t *Buf) {
+void GnuHashTableSection<ELFT>::writeBloomFilter(uint8_t *Buf) {
   typedef typename ELFT::Off Elf_Off;
-
   const unsigned C = sizeof(uintX_t) * 8;
 
-  auto *Masks = reinterpret_cast<Elf_Off *>(Buf);
-  for (const SymbolData &Sym : Symbols) {
-    size_t Pos = (Sym.Hash / C) & (MaskWords - 1);
-    uintX_t V = (uintX_t(1) << (Sym.Hash % C)) |
-                (uintX_t(1) << ((Sym.Hash >> Shift2) % C));
-    Masks[Pos] |= V;
+  auto *Filter = reinterpret_cast<Elf_Off *>(Buf);
+  for (const Entry &Sym : Symbols) {
+    size_t I = (Sym.Hash / C) & (MaskWords - 1);
+    Filter[I] |= uintX_t(1) << (Sym.Hash % C);
+    Filter[I] |= uintX_t(1) << ((Sym.Hash >> getShift2()) % C);
   }
-  return Buf + sizeof(uintX_t) * MaskWords;
 }
 
 template <class ELFT>
@@ -1507,25 +1503,30 @@ void GnuHashTableSection<ELFT>::writeHashTable(uint8_t *Buf) {
   // A 32-bit integer type in the target endianness.
   typedef typename ELFT::Word Elf_Word;
 
-  Elf_Word *Buckets = reinterpret_cast<Elf_Word *>(Buf);
-  Elf_Word *Values = Buckets + NBuckets;
+  // Group symbols by hash value.
+  std::vector<std::vector<Entry>> Syms(NBuckets);
+  for (const Entry &Ent : Symbols)
+    Syms[Ent.Hash % NBuckets].push_back(Ent);
 
-  int PrevBucket = -1;
-  int I = 0;
-  for (const SymbolData &Sym : Symbols) {
-    int Bucket = Sym.Hash % NBuckets;
-    assert(PrevBucket <= Bucket);
-    if (Bucket != PrevBucket) {
-      Buckets[Bucket] = Sym.Body->DynsymIndex;
-      PrevBucket = Bucket;
-      if (I > 0)
-        Values[I - 1] |= 1;
-    }
-    Values[I] = Sym.Hash & ~1;
-    ++I;
+  // Write hash buckets. Hash buckets contain indices in the following
+  // hash value table.
+  Elf_Word *Buckets = reinterpret_cast<Elf_Word *>(Buf);
+  for (size_t I = 0; I < NBuckets; ++I)
+    if (!Syms[I].empty())
+      Buckets[I] = Syms[I][0].Body->DynsymIndex;
+
+  // Write a hash value table. It represents a sequence of chains that
+  // share the same hash modulo value. The last element of each chain
+  // is terminated by LSB 1.
+  Elf_Word *Values = Buckets + NBuckets;
+  size_t I = 0;
+  for (std::vector<Entry> &Vec : Syms) {
+    if (Vec.empty())
+      continue;
+    for (const Entry &Ent : makeArrayRef(Vec).drop_back())
+      Values[I++] = Ent.Hash & ~1;
+    Values[I++] = Vec.back().Hash | 1;
   }
-  if (I > 0)
-    Values[I - 1] |= 1;
 }
 
 static uint32_t hashGnu(StringRef Name) {
@@ -1535,34 +1536,50 @@ static uint32_t hashGnu(StringRef Name) {
   return H;
 }
 
+// Returns a number of hash buckets to accomodate given number of elements.
+// We want to choose a moderate number that is not too small (which
+// causes too many hash collisions) and not too large (which wastes
+// disk space.)
+//
+// We return a prime number because it (is believed to) achieve good
+// hash distribution.
+static size_t getBucketSize(size_t NumSymbols) {
+  // List of largest prime numbers that are not greater than 2^n + 1.
+  for (size_t N : {131071, 65521, 32749, 16381, 8191, 4093, 2039, 1021, 509,
+                   251, 127, 61, 31, 13, 7, 3, 1})
+    if (N <= NumSymbols)
+      return N;
+  return 0;
+}
+
 // Add symbols to this symbol hash table. Note that this function
 // destructively sort a given vector -- which is needed because
 // GNU-style hash table places some sorting requirements.
 template <class ELFT>
 void GnuHashTableSection<ELFT>::addSymbols(std::vector<SymbolTableEntry> &V) {
-  // Ideally this will just be 'auto' but GCC 6.1 is not able
-  // to deduce it correctly.
+  // We cannot use 'auto' for Mid because GCC 6.1 cannot deduce
+  // its type correctly.
   std::vector<SymbolTableEntry>::iterator Mid =
       std::stable_partition(V.begin(), V.end(), [](const SymbolTableEntry &S) {
         return S.Symbol->isUndefined();
       });
   if (Mid == V.end())
     return;
-  for (auto I = Mid, E = V.end(); I != E; ++I) {
-    SymbolBody *B = I->Symbol;
-    size_t StrOff = I->StrTabOffset;
-    Symbols.push_back({B, StrOff, hashGnu(B->getName())});
+
+  for (SymbolTableEntry &Ent : llvm::make_range(Mid, V.end())) {
+    SymbolBody *B = Ent.Symbol;
+    Symbols.push_back({B, Ent.StrTabOffset, hashGnu(B->getName())});
   }
 
-  unsigned NBuckets = calcNBuckets(Symbols.size());
+  NBuckets = getBucketSize(Symbols.size());
   std::stable_sort(Symbols.begin(), Symbols.end(),
-                   [&](const SymbolData &L, const SymbolData &R) {
+                   [&](const Entry &L, const Entry &R) {
                      return L.Hash % NBuckets < R.Hash % NBuckets;
                    });
 
   V.erase(Mid, V.end());
-  for (const SymbolData &Sym : Symbols)
-    V.push_back({Sym.Body, Sym.STName});
+  for (const Entry &Ent : Symbols)
+    V.push_back({Ent.Body, Ent.StrTabOffset});
 }
 
 template <class ELFT>
@@ -1573,7 +1590,6 @@ HashTableSection<ELFT>::HashTableSection()
 
 template <class ELFT> void HashTableSection<ELFT>::finalizeContents() {
   this->OutSec->Link = In<ELFT>::DynSymTab->OutSec->SectionIndex;
-  this->OutSec->Entsize = this->Entsize;
 
   unsigned NumEntries = 2;                            // nbucket and nchain.
   NumEntries += In<ELFT>::DynSymTab->getNumSymbols(); // The chain entries.
@@ -1919,10 +1935,11 @@ template <class ELFT> size_t VersionDefinitionSection<ELFT>::getSize() const {
 template <class ELFT>
 VersionTableSection<ELFT>::VersionTableSection()
     : SyntheticSection(SHF_ALLOC, SHT_GNU_versym, sizeof(uint16_t),
-                       ".gnu.version") {}
+                       ".gnu.version") {
+  this->Entsize = sizeof(Elf_Versym);
+}
 
 template <class ELFT> void VersionTableSection<ELFT>::finalizeContents() {
-  this->OutSec->Entsize = this->Entsize = sizeof(Elf_Versym);
   // At the moment of june 2016 GNU docs does not mention that sh_link field
   // should be set, but Sun docs do. Also readelf relies on this field.
   this->OutSec->Link = In<ELFT>::DynSymTab->OutSec->SectionIndex;

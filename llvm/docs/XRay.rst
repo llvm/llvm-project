@@ -28,8 +28,9 @@ XRay consists of three main parts:
 - A runtime library for enabling/disabling tracing at runtime.
 - A suite of tools for analysing the traces.
 
-  **NOTE:** As of the time of this writing, XRay is only available for x86_64
-  and arm7 32-bit (no-thumb) Linux.
+  **NOTE:** As of February 27, 2017 , XRay is only available for the following
+  architectures running Linux: x86_64, arm7 (no thumb), aarch64, powerpc64le,
+  mips, mipsel, mips64, mips64el.
 
 The compiler-inserted instrumentation points come in the form of nop-sleds in
 the final generated binary, and an ELF section named ``xray_instr_map`` which
@@ -84,7 +85,10 @@ GCC-style attributes or C++11-style attributes.
 
 When linking a binary, you can either manually link in the `XRay Runtime
 Library`_ or use ``clang`` to link it in automatically with the
-``-fxray-instrument`` flag.
+``-fxray-instrument`` flag. Alternatively, you can statically link-in the XRay
+runtime library from compiler-rt -- those archive files will take the name of
+`libclang_rt.xray-{arch}` where `{arch}` is the mnemonic supported by clang
+(x86_64, arm7, etc.).
 
 LLVM Function Attribute
 -----------------------
@@ -135,7 +139,7 @@ variable, where we list down the options and their defaults below.
 +-------------------+-----------------+---------------+------------------------+
 | Option            | Type            | Default       | Description            |
 +===================+=================+===============+========================+
-| patch_premain     | ``bool``        | ``true``      | Whether to patch       |
+| patch_premain     | ``bool``        | ``false``     | Whether to patch       |
 |                   |                 |               | instrumentation points |
 |                   |                 |               | before main.           |
 +-------------------+-----------------+---------------+------------------------+
@@ -146,6 +150,11 @@ variable, where we list down the options and their defaults below.
 | xray_logfile_base | ``const char*`` | ``xray-log.`` | Filename base for the  |
 |                   |                 |               | XRay logfile.          |
 +-------------------+-----------------+---------------+------------------------+
+| xray_fdr_log      | ``bool``        | ``false``     | Wheter to install the  |
+|                   |                 |               | Flight Data Recorder   |
+|                   |                 |               | (FDR) mode.            |
++-------------------+-----------------+---------------+------------------------+
+
 
 If you choose to not use the default logging implementation that comes with the
 XRay runtime and/or control when/how the XRay instrumentation runs, you may use
@@ -175,6 +184,64 @@ thread-safety of operations to be performed by the XRay runtime library:
   XRay cannot guarantee that all threads that have ever gotten a copy of the
   pointer will not invoke the function.
 
+Flight Data Recorder Mode
+-------------------------
+
+XRay supports a logging mode which allows the application to only capture a
+fixed amount of memory's worth of events. Flight Data Recorder (FDR) mode works
+very much like a plane's "black box" which keeps recording data to memory in a
+fixed-size circular queue of buffers, and have the data available
+programmatically until the buffers are finalized and flushed. To use FDR mode
+on your application, you may set the ``xray_fdr_log`` option to ``true`` in the
+``XRAY_OPTIONS`` environment variable (while also optionally setting the
+``xray_naive_log`` to ``false``).
+
+When FDR mode is on, it will keep writing and recycling memory buffers until
+the logging implementation is finalized -- at which point it can be flushed and
+re-initialised later. To do this programmatically, we follow the workflow
+provided below:
+
+.. code-block:: c++
+
+  // Patch the sleds, if we haven't yet.
+  auto patch_status = __xray_patch();
+
+  // Maybe handle the patch_status errors.
+
+  // When we want to flush the log, we need to finalize it first, to give
+  // threads a chance to return buffers to the queue.
+  auto finalize_status = __xray_log_finalize();
+  if (finalize_status != XRAY_LOG_FINALIZED) {
+    // maybe retry, or bail out.
+  }
+
+  // At this point, we are sure that the log is finalized, so we may try
+  // flushing the log.
+  auto flush_status = __xray_log_flushLog();
+  if (flush_status != XRAY_LOG_FLUSHED) {
+    // maybe retry, or bail out.
+  }
+
+The default settings for the FDR mode implementation will create logs named
+similarly to the naive log implementation, but will have a different log
+format. All the trace analysis tools (and the trace reading library) will
+support all versions of the FDR mode format as we add more functionality and
+record types in the future.
+
+  **NOTE:** We do not however promise perpetual support for when we update the
+  log versions we support going forward. Deprecation of the formats will be
+  announced and discussed on the developers mailing list.
+
+XRay allows for replacing the default FDR mode logging implementation using the
+following API:
+
+- ``__xray_set_log_impl(...)``: This function takes a struct of type
+  ``XRayLogImpl``, which is defined in ``xray/xray_log_interface.h``, part of
+  the XRay compiler-rt installation.
+- ``__xray_log_init(...)``: This function allows for initializing and
+  re-initializing an installed logging implementation. See
+  ``xray/xray_log_interface.h`` for details, part of the XRay compiler-rt
+  installation.
 
 Trace Analysis Tools
 --------------------
@@ -185,7 +252,26 @@ supports the following subcommands:
 
 - ``extract``: Extract the instrumentation map from a binary, and return it as
   YAML.
+- ``account``: Performs basic function call accounting statistics with various
+  options for sorting, and output formats (supports CSV, YAML, and
+  console-friendly TEXT).
+- ``convert``: Converts an XRay log file from one format to another. Currently
+  only converts to YAML.
+- ``graph``: Generates a DOT graph of the function call relationships between
+  functions found in an XRay trace.
 
+These subcommands use various library components found as part of the XRay
+libraries, distributed with the LLVM distribution. These are:
+
+- ``llvm/XRay/Trace.h`` : A trace reading library for conveniently loading
+  an XRay trace of supported forms, into a convenient in-memory representation.
+  All the analysis tools that deal with traces use this implementation.
+- ``llvm/XRay/Graph.h`` : A semi-generic graph type used by the graph
+  subcommand to conveniently represent a function call graph with statistics
+  associated with edges and vertices.
+- ``llvm/XRay/InstrumentationMap.h``: A convenient tool for analyzing the
+  instrumentation map in XRay-instrumented object files and binaries. The
+  ``extract`` subcommand uses this particular library.
 
 Future Work
 ===========
@@ -193,38 +279,19 @@ Future Work
 There are a number of ongoing efforts for expanding the toolset building around
 the XRay instrumentation system.
 
-Flight Data Recorder Mode
--------------------------
-
-The `XRay whitepaper`_ mentions a mode for when events are kept in memory, and
-have the traces be dumped on demand through a triggering API. This work is
-currently ongoing.
-
 Trace Analysis
 --------------
-
-There are a few more subcommands making its way to the ``llvm-xray`` tool, that
-are currently under review:
-
-- ``convert``: Turns an XRay trace from one format to another. Currently
-  supporting conversion from the binary XRay log to YAML.
-- ``account``: Do function call accounting based on data in the XRay log.
 
 We have more subcommands and modes that we're thinking of developing, in the
 following forms:
 
 - ``stack``: Reconstruct the function call stacks in a timeline.
-- ``convert``: Converting from one version of the XRay log to another (higher)
-  version, and converting to other trace formats (i.e. Chrome Trace Viewer,
-  pprof, etc.).
-- ``graph``: Generate a function call graph with relative timings and distributions.
 
 More Platforms
 --------------
 
-Since XRay is only currently available in x86_64 and arm7 32-bit (no-thumb)
-running Linux, we're looking to supporting more platforms (architectures and
-operating systems).
+We're looking forward to contributions to port XRay to more architectures and
+operating systems.
 
 .. References...
 

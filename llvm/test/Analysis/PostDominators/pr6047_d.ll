@@ -21,4 +21,12 @@ bb35.loopexit3:
 bb35:
   ret void
 }
-; CHECK: [4] %entry
+; CHECK: Inorder PostDominator Tree: 
+; CHECK-NEXT:   [1]  <<exit node>> {0,15}
+; CHECK-NEXT:     [2] %bb35 {1,4}
+; CHECK-NEXT:       [3] %bb35.loopexit3 {2,3}
+; CHECK-NEXT:     [2] %c {5,12}
+; CHECK-NEXT:       [3] %b {6,7}
+; CHECK-NEXT:       [3] %entry {8,9}
+; CHECK-NEXT:       [3] %a {10,11}
+; CHECK-NEXT:     [2] %bb3.i {13,14}

@@ -8,6 +8,7 @@
   define void @test_combines_3() { ret void }
   define void @test_combines_4() { ret void }
   define void @test_combines_5() { ret void }
+  define void @test_combines_6() { ret void }
 ...
 
 ---
@@ -106,4 +107,25 @@ body: |
     %3:_(s32) = G_EXTRACT %2, 0
     %4:_(s32) = G_EXTRACT %2, 32
     %5:_(s32) = G_ADD %3, %4
+...
+
+---
+name:            test_combines_6
+body: |
+  bb.0:
+    liveins: %w0
+
+    ; CHECK-LABEL: name: test_combines_6
+    ; CHECK: %0(s32) = COPY %w0
+    %0:_(s32) = COPY %w0
+
+    ; Check that we replace all the uses of a G_EXTRACT.
+    ; CHECK-NOT: G_SEQUENCE
+    ; CHECK-NOT: G_EXTRACT
+    ; CHECK: %3(s32) = G_MUL %0, %0
+    ; CHECK: %4(s32) = G_ADD %0, %3
+    %1:_(s32) = G_SEQUENCE %0, 0
+    %2:_(s32) = G_EXTRACT %1, 0
+    %3:_(s32) = G_MUL %2, %2
+    %4:_(s32) = G_ADD %2, %3
 ...

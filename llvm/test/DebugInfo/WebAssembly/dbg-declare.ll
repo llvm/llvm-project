@@ -1,5 +1,5 @@
-; RUN: llc < %s -verify-machineinstrs -mtriple=wasm32-unknown-unknown | FileCheck %s
-; RUN: llc < %s -verify-machineinstrs -mtriple=wasm32-unknown-unknown -fast-isel | FileCheck --check-prefix=CHECK-FAST %s
+; RUN: llc < %s -verify-machineinstrs -mtriple=wasm32-unknown-unknown-wasm | FileCheck %s
+; RUN: llc < %s -verify-machineinstrs -mtriple=wasm32-unknown-unknown-wasm -fast-isel | FileCheck --check-prefix=CHECK-FAST %s
 ; CHECK: #DEBUG_VALUE: decode:i <- [%vreg
 ; CHECK: #DEBUG_VALUE: decode:v <- [%vreg
 ; CHECK: DW_TAG_variable
@@ -9,7 +9,7 @@
 
 source_filename = "test/DebugInfo/WebAssembly/dbg-declare.ll"
 target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
-target triple = "wasm32-unknown-unknown"
+target triple = "wasm32-unknown-unknown-wasm"
 
 @key = external global [15 x i8], align 1
 

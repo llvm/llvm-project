@@ -1,6 +1,7 @@
 // FIXME: Support for sanitizer hooks for memcmp and strcmp needs to
 // be implemented in the sanitizer runtime for this test
 UNSUPPORTED: windows
+XFAIL: darwin
 CHECK: BINGO
 
 RUN: not LLVMFuzzer-MemcmpTest               -seed=1 -runs=2000000   2>&1 | FileCheck %s

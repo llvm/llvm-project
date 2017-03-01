@@ -13,6 +13,8 @@
 #include "llvm/DebugInfo/DWARF/DWARFAbbreviationDeclaration.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugAbbrev.h"
+#include "llvm/DebugInfo/DWARF/DWARFDebugInfoEntry.h"
+#include "llvm/DebugInfo/DWARF/DWARFDie.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
 #include "llvm/Object/ObjectFile.h"
@@ -21,12 +23,12 @@
 #include "llvm/Support/Path.h"
 #include <algorithm>
 #include <cassert>
+#include <cstddef>
 #include <cstdint>
 #include <cstdio>
 #include <vector>
 
-namespace llvm {
-
+using namespace llvm;
 using namespace dwarf;
 
 void DWARFUnitSectionBase::parse(DWARFContext &C, const DWARFSection &Section) {
@@ -159,7 +161,7 @@ void DWARFUnit::clear() {
 }
 
 const char *DWARFUnit::getCompilationDir() {
-  return toString(getUnitDIE().find(DW_AT_comp_dir), nullptr);
+  return dwarf::toString(getUnitDIE().find(DW_AT_comp_dir), nullptr);
 }
 
 Optional<uint64_t> DWARFUnit::getDWOId() {
@@ -245,8 +247,7 @@ size_t DWARFUnit::extractDIEsIfNeeded(bool CUDieOnly) {
   return DieArray.size();
 }
 
-DWARFUnit::DWOHolder::DWOHolder(StringRef DWOPath)
-    : DWOU(nullptr) {
+DWARFUnit::DWOHolder::DWOHolder(StringRef DWOPath) {
   auto Obj = object::ObjectFile::createObjectFile(DWOPath);
   if (!Obj) {
     // TODO: Actually report errors helpfully.
@@ -268,10 +269,10 @@ bool DWARFUnit::parseDWO() {
   DWARFDie UnitDie = getUnitDIE();
   if (!UnitDie)
     return false;
-  auto DWOFileName = toString(UnitDie.find(DW_AT_GNU_dwo_name));
+  auto DWOFileName = dwarf::toString(UnitDie.find(DW_AT_GNU_dwo_name));
   if (!DWOFileName)
     return false;
-  auto CompilationDir = toString(UnitDie.find(DW_AT_comp_dir));
+  auto CompilationDir = dwarf::toString(UnitDie.find(DW_AT_comp_dir));
   SmallString<16> AbsolutePath;
   if (sys::path::is_relative(*DWOFileName) && CompilationDir &&
       *CompilationDir) {
@@ -375,8 +376,8 @@ DWARFUnit::getInlinedChainForAddress(uint64_t Address,
     InlinedChain.clear();
 }
 
-const DWARFUnitIndex &getDWARFUnitIndex(DWARFContext &Context,
-                                        DWARFSectionKind Kind) {
+const DWARFUnitIndex &llvm::getDWARFUnitIndex(DWARFContext &Context,
+                                              DWARFSectionKind Kind) {
   if (Kind == DW_SECT_INFO)
     return Context.getCUIndex();
   assert(Kind == DW_SECT_TYPES);
@@ -414,11 +415,10 @@ DWARFDie DWARFUnit::getSibling(const DWARFDebugInfoEntry *Die) {
     return DWARFDie();
   
   // Find the next DIE whose depth is the same as the Die's depth.
-  for (size_t I=getDIEIndex(Die)+1, EndIdx = DieArray.size(); I<EndIdx; ++I) {
+  for (size_t I = getDIEIndex(Die) + 1, EndIdx = DieArray.size(); I < EndIdx;
+       ++I) {
     if (DieArray[I].getDepth() == Depth)
       return DWARFDie(this, &DieArray[I]);
   }
   return DWARFDie();
 }
-
-} // end namespace llvm

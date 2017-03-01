@@ -7647,10 +7647,10 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   const char *VAPassName = Hints.vectorizeAnalysisPassName();
   if (!VectorizeLoop && !InterleaveLoop) {
     // Do not vectorize or interleaving the loop.
-    ORE->emit(OptimizationRemarkAnalysis(VAPassName, VecDiagMsg.first,
+    ORE->emit(OptimizationRemarkMissed(VAPassName, VecDiagMsg.first,
                                          L->getStartLoc(), L->getHeader())
               << VecDiagMsg.second);
-    ORE->emit(OptimizationRemarkAnalysis(LV_NAME, IntDiagMsg.first,
+    ORE->emit(OptimizationRemarkMissed(LV_NAME, IntDiagMsg.first,
                                          L->getStartLoc(), L->getHeader())
               << IntDiagMsg.second);
     return false;

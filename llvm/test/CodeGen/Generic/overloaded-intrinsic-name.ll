@@ -1,4 +1,4 @@
-; RUN: opt -verify -S < %s
+; RUN: opt -verify -S < %s | FileCheck %s
 
 ; Tests the name mangling performed by the codepath following
 ; getMangledTypeStr(). Only tests that code with the various manglings
@@ -67,7 +67,9 @@ entry:
 
 define %i32* @test_broken_names(%i32* %v) gc "statepoint-example" {
 entry:
-      %tok = call token (i64, i32, i1 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.deadbeef(i64 0, i32 0, i1 ()* @return_i1, i32 0, i32 0, i32 0, i32 0, %i32* %v)
+      %tok = call fastcc token (i64, i32, i1 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.deadbeef(i64 0, i32 0, i1 ()* @return_i1, i32 0, i32 0, i32 0, i32 0, %i32* %v)
+; Make sure we do not destroy the calling convention when remangling
+; CHECK: fastcc
       %v-new = call %i32* @llvm.experimental.gc.relocate.beefdead(token %tok,  i32 7, i32 7)
       ret %i32* %v-new
 }

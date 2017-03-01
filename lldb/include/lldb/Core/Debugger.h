@@ -192,8 +192,9 @@ public:
 
   void SetCloseInputOnEOF(bool b);
 
-  bool EnableLog(const char *channel, const char **categories,
-                 const char *log_file, uint32_t log_options,
+  bool EnableLog(llvm::StringRef channel,
+                 llvm::ArrayRef<const char *> categories,
+                 llvm::StringRef log_file, uint32_t log_options,
                  Stream &error_stream);
 
   void SetLoggingCallback(lldb::LogOutputCallback log_callback, void *baton);

@@ -74,12 +74,14 @@ static typename ELFT::uint getSymVA(const SymbolBody &Body, int64_t &Addend) {
     // An object in an SHF_MERGE section might be referenced via a
     // section symbol (as a hack for reducing the number of local
     // symbols).
-    // We must incorporate the addend into the section offset (and
-    // zero out the addend for later processing) so that we find the
-    // right object in the section.
-    // Note that for an ordinary symbol we do not perform this
-    // adjustment and thus effectively assume that the addend cannot
-    // cross the boundaries of mergeable objects.
+    // Depending on the addend, the reference via a section symbol
+    // refers to a different object in the merge section.
+    // Since the objects in the merge section are not necessarily
+    // contiguous in the output, the addend can thus affect the final
+    // VA in a non-linear way.
+    // To make this work, we incorporate the addend into the section
+    // offset (and zero out the addend for later processing) so that
+    // we find the right object in the section.
     if (D.isSection()) {
       Offset += Addend;
       Addend = 0;

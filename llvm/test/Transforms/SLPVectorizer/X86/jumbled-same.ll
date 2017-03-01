@@ -13,7 +13,7 @@ define i32 @fn1() {
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, <4 x i32>* bitcast ([4 x i32]* @b to <4 x i32>*), align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> undef, <4 x i32> <i32 1, i32 2, i32 3, i32 0>
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt <4 x i32> [[TMP1]], zeroinitializer
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i32> [[TMP0]], i32 1
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i32> [[TMP1]], i32 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> undef, i32 [[TMP3]], i32 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> [[TMP4]], i32 ptrtoint (i32 ()* @fn1 to i32), i32 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x i32> [[TMP5]], i32 ptrtoint (i32 ()* @fn1 to i32), i32 2

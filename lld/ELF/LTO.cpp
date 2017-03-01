@@ -73,6 +73,7 @@ static std::unique_ptr<lto::LTO> createLTO() {
   Conf.Options.RelaxELFRelocations = true;
 
   Conf.RelocModel = Config->pic() ? Reloc::PIC_ : Reloc::Static;
+  Conf.CodeModel = GetCodeModelFromCMModel();
   Conf.DisableVerify = Config->DisableVerify;
   Conf.DiagHandler = diagnosticHandler;
   Conf.OptLevel = Config->LTOO;

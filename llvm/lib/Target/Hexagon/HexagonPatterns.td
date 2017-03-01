@@ -89,6 +89,11 @@ def LogN2_64 : SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant(Log2_64(NV), SDLoc(N), MVT::i32);
 }]>;
 
+def ToZext64: OutPatFrag<(ops node:$Rs),
+  (i64 (A4_combineir 0, (i32 $Rs)))>;
+def ToSext64: OutPatFrag<(ops node:$Rs),
+  (i64 (A2_sxtw (i32 $Rs)))>;
+
 
 class T_CMP_pat <InstHexagon MI, PatFrag OpNode, PatLeaf ImmPred>
   : Pat<(i1 (OpNode I32:$src1, ImmPred:$src2)),
@@ -902,26 +907,35 @@ def: Pat<(i1 (setule I64:$src1, I64:$src2)),
          (C2_not (C2_cmpgtup DoubleRegs:$src1, DoubleRegs:$src2))>;
 
 // Sign extends.
-// i1 -> i32
-def: Pat<(i32 (sext I1:$src1)),
-         (C2_muxii PredRegs:$src1, -1, 0)>;
+// sext i1->i32
+def: Pat<(i32 (sext I1:$Pu)),
+         (C2_muxii I1:$Pu, -1, 0)>;
 
-// i1 -> i64
-def: Pat<(i64 (sext I1:$src1)),
-         (A2_combinew (A2_tfrsi -1), (C2_muxii PredRegs:$src1, -1, 0))>;
+// sext i1->i64
+def: Pat<(i64 (sext I1:$Pu)),
+         (A2_combinew (C2_muxii PredRegs:$Pu, -1, 0),
+                      (C2_muxii PredRegs:$Pu, -1, 0))>;
 
 // Zero extends.
-// i1 -> i32
-def: Pat<(i32 (zext I1:$src1)),
-         (C2_muxii PredRegs:$src1, 1, 0)>;
+// zext i1->i32
+def: Pat<(i32 (zext I1:$Pu)),
+         (C2_muxii PredRegs:$Pu, 1, 0)>;
+
+// zext i1->i64
+def: Pat<(i64 (zext I1:$Pu)),
+         (ToZext64 (C2_muxii PredRegs:$Pu, 1, 0))>;
+
+// zext i32->i64
+def: Pat<(Zext64 I32:$Rs),
+         (ToZext64 IntRegs:$Rs)>;
 
 // Map from Rs = Pd to Pd = mux(Pd, #1, #0)
-def: Pat<(i32 (anyext I1:$src1)),
-         (C2_muxii PredRegs:$src1, 1, 0)>;
+def: Pat<(i32 (anyext I1:$Pu)),
+         (C2_muxii PredRegs:$Pu, 1, 0)>;
 
-// Map from Rss = Pd to Rdd = sxtw (mux(Pd, #1, #0))
-def: Pat<(i64 (anyext I1:$src1)),
-         (A2_sxtw (C2_muxii PredRegs:$src1, 1, 0))>;
+// Map from Rss = Pd to Rdd = combine(#0, (mux(Pd, #1, #0)))
+def: Pat<(i64 (anyext I1:$Pu)),
+         (ToZext64 (C2_muxii PredRegs:$Pu, 1, 0))>;
 
 // Clear the sign bit in a 64-bit register.
 def ClearSign : OutPatFrag<(ops node:$Rss),
@@ -1248,11 +1262,6 @@ def: Pat<(HexagonCOMBINE s32_0ImmPred:$s8, s8_0ImmPred:$S8),
 }
 
 
-def ToZext64: OutPatFrag<(ops node:$Rs),
-  (i64 (A4_combineir 0, (i32 $Rs)))>;
-def ToSext64: OutPatFrag<(ops node:$Rs),
-  (i64 (A2_sxtw (i32 $Rs)))>;
-
 // Patterns to generate indexed loads with different forms of the address:
 // - frameindex,
 // - base + offset,
@@ -1352,14 +1361,6 @@ let AddedComplexity = 20 in {
   def: Loadxs_simple_pat<load,        i32, L4_loadri_rr>;
   def: Loadxs_simple_pat<load,        i64, L4_loadrd_rr>;
 }
-
-// zext i1->i64
-def: Pat<(i64 (zext I1:$src1)),
-         (ToZext64 (C2_muxii PredRegs:$src1, 1, 0))>;
-
-// zext i32->i64
-def: Pat<(Zext64 I32:$src1),
-         (ToZext64 IntRegs:$src1)>;
 
 let AddedComplexity = 40 in
 multiclass T_StoreAbsReg_Pats <InstHexagon MI, RegisterClass RC, ValueType VT,

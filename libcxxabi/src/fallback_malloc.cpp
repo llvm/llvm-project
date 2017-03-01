@@ -194,8 +194,6 @@ size_t print_free_list () {
 
 namespace __cxxabiv1 {
 
-#pragma GCC visibility push(hidden)
-
 void * __malloc_with_fallback(size_t size) {
     void *ptr = std::malloc(size);
     if (NULL == ptr) // if malloc fails, fall back to emergency stash
@@ -220,7 +218,5 @@ void __free_with_fallback(void *ptr) {
     else
         std::free(ptr);
 }
-
-#pragma GCC visibility pop
 
 } // namespace __cxxabiv1

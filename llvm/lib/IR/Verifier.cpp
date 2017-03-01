@@ -297,6 +297,9 @@ class Verifier : public InstVisitor<Verifier>, VerifierSupport {
   // constant expressions, we can arrive at a particular user many times.
   SmallPtrSet<const Value *, 32> GlobalValueVisited;
 
+  // Keeps track of duplicate function argument debug info.
+  SmallVector<const DILocalVariable *, 16> DebugFnArgs;
+
   TBAAVerifier TBAAVerifyHelper;
 
   void checkAtomicMemAccessSize(Type *Ty, const Instruction *I);
@@ -498,6 +501,7 @@ private:
   void verifySiblingFuncletUnwinds();
 
   void verifyFragmentExpression(const DbgInfoIntrinsic &I);
+  void verifyFnArgs(const DbgInfoIntrinsic &I);
 
   /// Module-level debug info verification...
   void verifyCompileUnits();
@@ -1947,6 +1951,8 @@ void Verifier::verifySiblingFuncletUnwinds() {
 // visitFunction - Verify that a function is ok.
 //
 void Verifier::visitFunction(const Function &F) {
+  DebugFnArgs.clear();
+
   visitGlobalValue(F);
 
   // Check function arguments.
@@ -4349,6 +4355,8 @@ void Verifier::visitDbgIntrinsic(StringRef Kind, DbgIntrinsicTy &DII) {
                                " variable and !dbg attachment",
            &DII, BB, F, Var, Var->getScope()->getSubprogram(), Loc,
            Loc->getScope()->getSubprogram());
+
+  verifyFnArgs(DII);
 }
 
 static uint64_t getVariableSize(const DILocalVariable &V) {
@@ -4415,6 +4423,36 @@ void Verifier::verifyFragmentExpression(const DbgInfoIntrinsic &I) {
   AssertDI(FragSize + FragOffset <= VarSize,
          "fragment is larger than or outside of variable", &I, V, E);
   AssertDI(FragSize != VarSize, "fragment covers entire variable", &I, V, E);
+}
+
+void Verifier::verifyFnArgs(const DbgInfoIntrinsic &I) {
+  DILocalVariable *Var;
+  if (auto *DV = dyn_cast<DbgValueInst>(&I)) {
+    // For performance reasons only check non-inlined ones.
+    if (DV->getDebugLoc()->getInlinedAt())
+      return;
+    Var = DV->getVariable();
+  } else {
+    auto *DD = cast<DbgDeclareInst>(&I);
+    if (DD->getDebugLoc()->getInlinedAt())
+      return;
+    Var = DD->getVariable();
+  }
+  AssertDI(Var, "dbg intrinsic without variable");
+
+  unsigned ArgNo = Var->getArg();
+  if (!ArgNo)
+    return;
+
+  // Verify there are no duplicate function argument debug info entries.
+  // These will cause hard-to-debug assertions in the DWARF backend.
+  if (DebugFnArgs.size() < ArgNo)
+    DebugFnArgs.resize(ArgNo, nullptr);
+
+  auto *Prev = DebugFnArgs[ArgNo - 1];
+  DebugFnArgs[ArgNo - 1] = Var;
+  AssertDI(!Prev || (Prev == Var), "conflicting debug info for argument", &I,
+           Prev, Var);
 }
 
 void Verifier::verifyCompileUnits() {
