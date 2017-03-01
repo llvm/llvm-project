@@ -886,7 +886,6 @@ static void mergeThunks(OutputSection *OS,
   std::merge(OS->Sections.begin(), OS->Sections.end(), Thunks.begin(),
              Thunks.end(), std::back_inserter(Tmp), MergeCmp);
   OS->Sections = std::move(Tmp);
-  OS->Size = 0;
   OS->assignOffsets<ELFT>();
 }
 

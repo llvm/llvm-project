@@ -172,8 +172,8 @@ protected:
     else
       log_file[0] = '\0';
     bool success = m_interpreter.GetDebugger().EnableLog(
-        channel.c_str(), args.GetConstArgumentVector(), log_file,
-        m_options.log_options, result.GetErrorStream());
+        channel, args.GetArgumentArrayRef(), log_file, m_options.log_options,
+        result.GetErrorStream());
     if (success)
       result.SetStatus(eReturnStatusSuccessFinishNoResult);
     else
@@ -233,7 +233,7 @@ protected:
       Log::DisableAllLogChannels(&result.GetErrorStream());
       result.SetStatus(eReturnStatusSuccessFinishNoResult);
     } else {
-      if (Log::DisableLogChannel(channel, args.GetConstArgumentVector(),
+      if (Log::DisableLogChannel(channel, args.GetArgumentArrayRef(),
                                  result.GetErrorStream()))
         result.SetStatus(eReturnStatusSuccessFinishNoResult);
     }
