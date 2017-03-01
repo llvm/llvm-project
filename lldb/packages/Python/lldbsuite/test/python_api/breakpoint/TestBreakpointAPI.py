@@ -69,6 +69,9 @@ class BreakpointAPITestCase(TestBase):
         self.assertTrue(breakpoint and
                         breakpoint.GetNumLocations() == 1,
                         VALID_BREAKPOINT)
+        location = breakpoint.GetLocationAtIndex(0)
+        self.assertTrue(location.IsValid())
 
         self.assertTrue(self.dbg.DeleteTarget(target))
         self.assertFalse(breakpoint.IsValid())
+        self.assertFalse(location.IsValid())

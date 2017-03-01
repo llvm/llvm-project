@@ -234,7 +234,7 @@ The adjusted pointer is computed by the personality routine during phase 1
   Requires:  exception is native
 */
 void *__cxa_get_exception_ptr(void *unwind_exception) throw() {
-#if _LIBCXXABI_ARM_EHABI
+#if defined(_LIBCXXABI_ARM_EHABI)
     return reinterpret_cast<void*>(
         static_cast<_Unwind_Control_Block*>(unwind_exception)->barrier_cache.bitpattern[0]);
 #else
@@ -243,7 +243,7 @@ void *__cxa_get_exception_ptr(void *unwind_exception) throw() {
 #endif
 }
 
-#if _LIBCXXABI_ARM_EHABI
+#if defined(_LIBCXXABI_ARM_EHABI)
 /*
 The routine to be called before the cleanup.  This will save __cxa_exception in
 __cxa_eh_globals, so that __cxa_end_cleanup() can recover later.
@@ -325,7 +325,7 @@ asm (
     "	bl	abort\n"
     "	.popsection"
 );
-#endif  // _LIBCXXABI_ARM_EHABI
+#endif  // defined(_LIBCXXABI_ARM_EHABI)
     
 /*
 This routine can catch foreign or native exceptions.  If native, the exception
@@ -385,7 +385,7 @@ __cxa_begin_catch(void* unwind_arg) throw()
             globals->caughtExceptions = exception_header;
         }
         globals->uncaughtExceptions -= 1;   // Not atomically, since globals are thread-local
-#if _LIBCXXABI_ARM_EHABI
+#if defined(_LIBCXXABI_ARM_EHABI)
         return reinterpret_cast<void*>(exception_header->unwindHeader.barrier_cache.bitpattern[0]);
 #else
         return exception_header->adjustedPtr;

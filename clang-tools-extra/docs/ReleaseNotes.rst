@@ -67,6 +67,10 @@ Improvements to clang-tidy
 
   Finds misleading indentation where braces should be introduced or the code should be reformatted.
 
+- Added `ParameterThreshold` to `readability-function-size`.
+
+  Finds functions that have more then `ParameterThreshold` parameters and emits a warning.
+
 - New `safety-no-assembler
   <http://clang.llvm.org/extra/clang-tidy/checks/safety-no-assembler.html>`_ check
 

@@ -55,7 +55,7 @@ __cxa_get_exception_ptr(void *exceptionObject) throw();
 extern _LIBCXXABI_FUNC_VIS void *
 __cxa_begin_catch(void *exceptionObject) throw();
 extern _LIBCXXABI_FUNC_VIS void __cxa_end_catch();
-#if _LIBCXXABI_ARM_EHABI
+#if defined(_LIBCXXABI_ARM_EHABI)
 extern _LIBCXXABI_FUNC_VIS bool
 __cxa_begin_cleanup(void *exceptionObject) throw();
 extern _LIBCXXABI_FUNC_VIS void __cxa_end_cleanup();

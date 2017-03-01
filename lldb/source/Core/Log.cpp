@@ -59,27 +59,26 @@ static void ListCategories(Stream &stream, const ChannelMap::value_type &entry) 
 }
 
 static uint32_t GetFlags(Stream &stream, const ChannelMap::value_type &entry,
-                  const char **categories) {
+                         llvm::ArrayRef<const char *> categories) {
   bool list_categories = false;
   uint32_t flags = 0;
-  for (size_t i = 0; categories[i]; ++i) {
-    if (llvm::StringRef("all").equals_lower(categories[i])) {
+  for (const char *category : categories) {
+    if (llvm::StringRef("all").equals_lower(category)) {
       flags |= UINT32_MAX;
       continue;
     }
-    if (llvm::StringRef("default").equals_lower(categories[i])) {
+    if (llvm::StringRef("default").equals_lower(category)) {
       flags |= entry.second.channel.default_flags;
       continue;
     }
-    auto cat = llvm::find_if(entry.second.channel.categories,
-                             [&](const Log::Category &c) {
-                               return c.name.equals_lower(categories[i]);
-                             });
+    auto cat = llvm::find_if(
+        entry.second.channel.categories,
+        [&](const Log::Category &c) { return c.name.equals_lower(category); });
     if (cat != entry.second.channel.categories.end()) {
       flags |= cat->flag;
       continue;
     }
-    stream.Format("error: unrecognized log category '{0}'\n", categories[i]);
+    stream.Format("error: unrecognized log category '{0}'\n", category);
     list_categories = true;
   }
   if (list_categories)
@@ -237,31 +236,32 @@ void Log::Unregister(llvm::StringRef name) {
 
 bool Log::EnableLogChannel(
     const std::shared_ptr<llvm::raw_ostream> &log_stream_sp,
-    uint32_t log_options, llvm::StringRef channel, const char **categories,
-    Stream &error_stream) {
+    uint32_t log_options, llvm::StringRef channel,
+    llvm::ArrayRef<const char *> categories, Stream &error_stream) {
   auto iter = g_channel_map->find(channel);
   if (iter == g_channel_map->end()) {
     error_stream.Format("Invalid log channel '{0}'.\n", channel);
     return false;
   }
-  uint32_t flags = categories && categories[0]
-                       ? GetFlags(error_stream, *iter, categories)
-                       : iter->second.channel.default_flags;
+  uint32_t flags = categories.empty()
+                       ? iter->second.channel.default_flags
+                       : GetFlags(error_stream, *iter, categories);
   iter->second.channel.Enable(iter->second.log, log_stream_sp, log_options,
                               flags);
   return true;
 }
 
-bool Log::DisableLogChannel(llvm::StringRef channel, const char **categories,
+bool Log::DisableLogChannel(llvm::StringRef channel,
+                            llvm::ArrayRef<const char *> categories,
                             Stream &error_stream) {
   auto iter = g_channel_map->find(channel);
   if (iter == g_channel_map->end()) {
     error_stream.Format("Invalid log channel '{0}'.\n", channel);
     return false;
   }
-  uint32_t flags = categories && categories[0]
-                       ? GetFlags(error_stream, *iter, categories)
-                       : UINT32_MAX;
+  uint32_t flags = categories.empty()
+                       ? UINT32_MAX
+                       : GetFlags(error_stream, *iter, categories);
   iter->second.channel.Disable(flags);
   return true;
 }

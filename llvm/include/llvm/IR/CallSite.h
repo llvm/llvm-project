@@ -583,6 +583,11 @@ public:
            dataOperandHasImpliedAttr(OpNo + 1, Attribute::ReadNone);
   }
 
+  bool doesNotReadMemory(unsigned OpNo) const {
+    return dataOperandHasImpliedAttr(OpNo + 1, Attribute::WriteOnly) ||
+           dataOperandHasImpliedAttr(OpNo + 1, Attribute::ReadNone);
+  }
+
   /// Return true if the return value is known to be not null.
   /// This may be because it has the nonnull attribute, or because at least
   /// one byte is dereferenceable and the pointer is in addrspace(0).

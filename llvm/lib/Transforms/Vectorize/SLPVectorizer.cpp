@@ -212,14 +212,14 @@ static unsigned getSameOpcode(ArrayRef<Value *> VL) {
 /// Flag set: NSW, NUW, exact, and all of fast-math.
 static void propagateIRFlags(Value *I, ArrayRef<Value *> VL) {
   if (auto *VecOp = dyn_cast<Instruction>(I)) {
-    if (auto *Intersection = dyn_cast<Instruction>(VL[0])) {
-      // Intersection is initialized to the 0th scalar,
-      // so start counting from index '1'.
+    if (auto *I0 = dyn_cast<Instruction>(VL[0])) {
+      // VecOVp is initialized to the 0th scalar, so start counting from index
+      // '1'.
+      VecOp->copyIRFlags(I0);
       for (int i = 1, e = VL.size(); i < e; ++i) {
         if (auto *Scalar = dyn_cast<Instruction>(VL[i]))
-          Intersection->andIRFlags(Scalar);
+          VecOp->andIRFlags(Scalar);
       }
-      VecOp->copyIRFlags(Intersection);
     }
   }
 }
@@ -304,7 +304,8 @@ public:
   typedef SmallVector<Instruction *, 16> InstrList;
   typedef SmallPtrSet<Value *, 16> ValueSet;
   typedef SmallVector<StoreInst *, 8> StoreList;
-  typedef MapVector<Value *, SmallVector<DebugLoc, 2>> ExtraValueToDebugLocsMap;
+  typedef MapVector<Value *, SmallVector<Instruction *, 2>>
+      ExtraValueToDebugLocsMap;
 
   BoUpSLP(Function *Func, ScalarEvolution *Se, TargetTransformInfo *Tti,
           TargetLibraryInfo *TLi, AliasAnalysis *Aa, LoopInfo *Li,
@@ -4250,14 +4251,6 @@ class HorizontalReduction {
   MapVector<Instruction *, Value *> ExtraArgs;
 
   BinaryOperator *ReductionRoot = nullptr;
-  // After successfull horizontal reduction vectorization attempt for PHI node
-  // vectorizer tries to update root binary op by combining vectorized tree and
-  // the ReductionPHI node. But during vectorization this ReductionPHI can be
-  // vectorized itself and replaced by the undef value, while the instruction
-  // itself is marked for deletion. This 'marked for deletion' PHI node then can
-  // be used in new binary operation, causing "Use still stuck around after Def
-  // is destroyed" crash upon PHI node deletion.
-  WeakVH ReductionPHI;
 
   /// The opcode of the reduction.
   Instruction::BinaryOps ReductionOpcode = Instruction::BinaryOpsEnd;
@@ -4318,7 +4311,6 @@ public:
     ReductionOpcode = B->getOpcode();
     ReducedValueOpcode = 0;
     ReductionRoot = B;
-    ReductionPHI = Phi;
 
     // We currently only support adds.
     if ((ReductionOpcode != Instruction::Add &&
@@ -4406,9 +4398,9 @@ public:
           Stack.push_back(std::make_pair(I, 0));
           continue;
         }
-        // NextV is an extra argument for TreeN (its parent operation).
-        markExtraArg(Stack.back(), NextV);
       }
+      // NextV is an extra argument for TreeN (its parent operation).
+      markExtraArg(Stack.back(), NextV);
     }
     return true;
   }
@@ -4439,7 +4431,7 @@ public:
     // The same extra argument may be used several time, so log each attempt
     // to use it.
     for (auto &Pair : ExtraArgs)
-      ExternallyUsedValues[Pair.second].push_back(Pair.first->getDebugLoc());
+      ExternallyUsedValues[Pair.second].push_back(Pair.first);
     while (i < NumReducedVals - ReduxWidth + 1 && ReduxWidth > 2) {
       auto VL = makeArrayRef(&ReducedVals[i], ReduxWidth);
       V.buildTree(VL, ExternallyUsedValues, ReductionOps);
@@ -4467,11 +4459,12 @@ public:
 
       // Emit a reduction.
       Value *ReducedSubTree =
-          emitReduction(VectorizedRoot, Builder, ReduxWidth);
+          emitReduction(VectorizedRoot, Builder, ReduxWidth, ReductionOps);
       if (VectorizedTree) {
         Builder.SetCurrentDebugLocation(Loc);
         VectorizedTree = Builder.CreateBinOp(ReductionOpcode, VectorizedTree,
                                              ReducedSubTree, "bin.rdx");
+        propagateIRFlags(VectorizedTree, ReductionOps);
       } else
         VectorizedTree = ReducedSubTree;
       i += ReduxWidth;
@@ -4485,24 +4478,21 @@ public:
         Builder.SetCurrentDebugLocation(I->getDebugLoc());
         VectorizedTree =
             Builder.CreateBinOp(ReductionOpcode, VectorizedTree, I);
+        propagateIRFlags(VectorizedTree, ReductionOps);
       }
       for (auto &Pair : ExternallyUsedValues) {
         assert(!Pair.second.empty() &&
                "At least one DebugLoc must be inserted");
         // Add each externally used value to the final reduction.
-        for (auto &DL : Pair.second) {
-          Builder.SetCurrentDebugLocation(DL);
+        for (auto *I : Pair.second) {
+          Builder.SetCurrentDebugLocation(I->getDebugLoc());
           VectorizedTree = Builder.CreateBinOp(ReductionOpcode, VectorizedTree,
                                                Pair.first, "bin.extra");
+          propagateIRFlags(VectorizedTree, I);
         }
       }
       // Update users.
-      if (ReductionPHI && !isa<UndefValue>(ReductionPHI)) {
-        assert(ReductionRoot && "Need a reduction operation");
-        ReductionRoot->setOperand(0, VectorizedTree);
-        ReductionRoot->setOperand(1, ReductionPHI);
-      } else
-        ReductionRoot->replaceAllUsesWith(VectorizedTree);
+      ReductionRoot->replaceAllUsesWith(VectorizedTree);
     }
     return VectorizedTree != nullptr;
   }
@@ -4539,7 +4529,7 @@ private:
 
   /// \brief Emit a horizontal reduction of the vectorized value.
   Value *emitReduction(Value *VectorizedValue, IRBuilder<> &Builder,
-                       unsigned ReduxWidth) {
+                       unsigned ReduxWidth, ArrayRef<Value *> RedOps) {
     assert(VectorizedValue && "Need to have a vectorized tree node");
     assert(isPowerOf2_32(ReduxWidth) &&
            "We only handle power-of-two reductions for now");
@@ -4566,6 +4556,7 @@ private:
           TmpVec, UndefValue::get(TmpVec->getType()), UpperHalf, "rdx.shuf");
         TmpVec = Builder.CreateBinOp(ReductionOpcode, TmpVec, Shuf, "bin.rdx");
       }
+      propagateIRFlags(TmpVec, RedOps);
     }
 
     // The result is in the first element of the vector.

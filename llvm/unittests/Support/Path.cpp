@@ -968,6 +968,33 @@ TEST(Support, NormalizePath) {
   EXPECT_PATH_IS(Path6, "a\\", "a/");
 
 #undef EXPECT_PATH_IS
+
+#if defined(LLVM_ON_WIN32)
+  SmallString<64> PathHome;
+  path::home_directory(PathHome);
+
+  const char *Path7a = "~/aaa";
+  SmallString<64> Path7(Path7a);
+  path::native(Path7);
+  EXPECT_TRUE(Path7.endswith("\\aaa"));
+  EXPECT_TRUE(Path7.startswith(PathHome));
+  EXPECT_EQ(Path7.size(), PathHome.size() + strlen(Path7a + 1));
+
+  const char *Path8a = "~";
+  SmallString<64> Path8(Path8a);
+  path::native(Path8);
+  EXPECT_EQ(Path8, PathHome);
+
+  const char *Path9a = "~aaa";
+  SmallString<64> Path9(Path9a);
+  path::native(Path9);
+  EXPECT_EQ(Path9, "~aaa");
+
+  const char *Path10a = "aaa/~/b";
+  SmallString<64> Path10(Path10a);
+  path::native(Path10);
+  EXPECT_EQ(Path10, "aaa\\~\\b");
+#endif
 }
 
 TEST(Support, RemoveLeadingDotSlash) {
