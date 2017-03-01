@@ -274,6 +274,15 @@ Changes to the MIPS Target
 * Fixed several crashes involving FastISel.
 * Corrected the corrected definitions for aui/daui/dahi/dati for MIPSR6.
 
+Changes to the X86 Target
+-------------------------
+
+**During this release the X86 target has:**
+
+* Added support AMD Ryzen (znver1) CPUs.
+* Gained support for using VEX encoding on AVX-512 CPUs to reduce code size when possible.
+* Improved AVX-512 codegen.
+
 Changes to the OCaml bindings
 -----------------------------
 
