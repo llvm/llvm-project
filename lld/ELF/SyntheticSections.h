@@ -458,7 +458,7 @@ private:
 
   std::vector<Entry> Symbols;
   size_t MaskWords;
-  size_t NBuckets;
+  size_t NBuckets = 0;
   size_t Size = 0;
 };
 

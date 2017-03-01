@@ -147,14 +147,13 @@ void UseOverrideCheck::check(const MatchFinder::MatchResult &Result) {
       // end of the declaration of the function, but prefer to put it on the
       // same line as the declaration if the beginning brace for the start of
       // the body falls on the next line.
-      Token LastNonCommentToken;
-      for (Token T : Tokens) {
-        if (!T.is(tok::comment)) {
-          LastNonCommentToken = T;
-        }
-      }
-      InsertLoc = LastNonCommentToken.getEndLoc();
       ReplacementText = " override";
+      auto LastTokenIter = std::prev(Tokens.end());
+      // When try statement is used instead of compound statement as
+      // method body - insert override keyword before it.
+      if (LastTokenIter->is(tok::kw_try))
+        LastTokenIter = std::prev(LastTokenIter);
+      InsertLoc = LastTokenIter->getEndLoc();
     }
 
     if (!InsertLoc.isValid()) {

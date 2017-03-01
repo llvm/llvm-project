@@ -25,3 +25,8 @@ Options
 
    Flag functions exceeding this number of control statements. The default is
    `-1` (ignore the number of branches).
+
+.. option:: ParameterThreshold
+
+   Flag functions that exceed a specified number of parameters. The default 
+   is 6.
