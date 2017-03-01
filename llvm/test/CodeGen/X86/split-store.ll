@@ -1,8 +1,8 @@
 ; RUN: llc -mtriple=x86_64-unknown-unknown -force-split-store < %s | FileCheck %s
 
 ; CHECK-LABEL: int32_float_pair
-; CHECK: movl %edi, (%rsi)
-; CHECK: movss %xmm0, 4(%rsi)
+; CHECK-DAG: movl %edi, (%rsi)
+; CHECK-DAG: movss %xmm0, 4(%rsi)
 define void @int32_float_pair(i32 %tmp1, float %tmp2, i64* %ref.tmp) {
 entry:
   %t0 = bitcast float %tmp2 to i32
@@ -15,8 +15,8 @@ entry:
 }
 
 ; CHECK-LABEL: float_int32_pair
-; CHECK: movss %xmm0, (%rsi)
-; CHECK: movl %edi, 4(%rsi)
+; CHECK-DAG: movss %xmm0, (%rsi)
+; CHECK-DAG: movl %edi, 4(%rsi)
 define void @float_int32_pair(float %tmp1, i32 %tmp2, i64* %ref.tmp) {
 entry:
   %t0 = bitcast float %tmp1 to i32
@@ -29,9 +29,9 @@ entry:
 }
 
 ; CHECK-LABEL: int16_float_pair
-; CHECK: movzwl	%di, %eax
-; CHECK: movl %eax, (%rsi)
-; CHECK: movss %xmm0, 4(%rsi)
+; CHECK-DAG: movzwl	%di, %eax
+; CHECK-DAG: movl %eax, (%rsi)
+; CHECK-DAG: movss %xmm0, 4(%rsi)
 define void @int16_float_pair(i16 signext %tmp1, float %tmp2, i64* %ref.tmp) {
 entry:
   %t0 = bitcast float %tmp2 to i32
@@ -44,9 +44,9 @@ entry:
 }
 
 ; CHECK-LABEL: int8_float_pair
-; CHECK: movzbl	%dil, %eax
-; CHECK: movl %eax, (%rsi)
-; CHECK: movss %xmm0, 4(%rsi)
+; CHECK-DAG: movzbl	%dil, %eax
+; CHECK-DAG: movl %eax, (%rsi)
+; CHECK-DAG: movss %xmm0, 4(%rsi)
 define void @int8_float_pair(i8 signext %tmp1, float %tmp2, i64* %ref.tmp) {
 entry:
   %t0 = bitcast float %tmp2 to i32
@@ -146,10 +146,9 @@ entry:
 ; CHECK: movw	%di, (%rdx)
 ; CHECK: shrl	$16, %edi
 ; CHECK: movb	%dil, 2(%rdx)
-; CHECK: movl	%esi, %eax
-; CHECK: shrl	$16, %eax
-; CHECK: movb	%al, 6(%rdx)
-; CHECK: movw	%si, 4(%rdx)
+; CHECK: movw    %si, 4(%rdx)
+; CHECK: shrl    $16, %esi
+; CHECK: movb    %sil, 6(%rdx)
 define void @int24_int24_pair(i24 signext %tmp1, i24 signext %tmp2, i48* %ref.tmp) {
 entry:
   %t1 = zext i24 %tmp2 to i48

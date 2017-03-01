@@ -56,11 +56,16 @@ MDNode *MDBuilder::createUnpredictable() {
   return MDNode::get(Context, None);
 }
 
-MDNode *MDBuilder::createFunctionEntryCount(uint64_t Count) {
+MDNode *MDBuilder::createFunctionEntryCount(
+    uint64_t Count, const DenseSet<GlobalValue::GUID> *Imports) {
   Type *Int64Ty = Type::getInt64Ty(Context);
-  return MDNode::get(Context,
-                     {createString("function_entry_count"),
-                      createConstant(ConstantInt::get(Int64Ty, Count))});
+  SmallVector<Metadata *, 8> Ops;
+  Ops.push_back(createString("function_entry_count"));
+  Ops.push_back(createConstant(ConstantInt::get(Int64Ty, Count)));
+  if (Imports)
+    for (auto ID : *Imports)
+      Ops.push_back(createConstant(ConstantInt::get(Int64Ty, ID)));
+  return MDNode::get(Context, Ops);
 }
 
 MDNode *MDBuilder::createFunctionSectionPrefix(StringRef Prefix) {

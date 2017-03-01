@@ -9254,7 +9254,7 @@ static SDValue performSTORECombine(SDNode *N,
   return SDValue();
 }
 
-  /// This function handles the log2-shuffle pattern produced by the
+/// This function handles the log2-shuffle pattern produced by the
 /// LoopVectorizer for the across vector reduction. It consists of
 /// log2(NumVectorElements) steps and, in each step, 2^(s) elements
 /// are reduced, where s is an induction variable from 0 to

@@ -66,7 +66,7 @@ static typename ELFT::uint getAddend(InputSectionBase &Sec,
 template <class ELFT, class RelT>
 static ResolvedReloc resolveReloc(InputSectionBase &Sec, RelT &Rel) {
   SymbolBody &B = Sec.getFile<ELFT>()->getRelocTargetSym(Rel);
-  auto *D = dyn_cast<DefinedRegular<ELFT>>(&B);
+  auto *D = dyn_cast<DefinedRegular>(&B);
   if (!D || !D->Section)
     return {nullptr, 0};
   typename ELFT::uint Offset = D->Value;
@@ -215,7 +215,7 @@ template <class ELFT> void elf::markLive() {
   };
 
   auto MarkSymbol = [&](const SymbolBody *Sym) {
-    if (auto *D = dyn_cast_or_null<DefinedRegular<ELFT>>(Sym))
+    if (auto *D = dyn_cast_or_null<DefinedRegular>(Sym))
       Enqueue({D->Section, D->Value});
   };
 

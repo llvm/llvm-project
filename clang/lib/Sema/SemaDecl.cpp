@@ -13637,9 +13637,6 @@ CreateNewDecl:
   if (Invalid)
     New->setInvalidDecl();
 
-  if (Attr)
-    ProcessDeclAttributeList(S, New, Attr);
-
   // Set the lexical context. If the tag has a C++ scope specifier, the
   // lexical context will be different from the semantic context.
   New->setLexicalDeclContext(CurContext);
@@ -13657,6 +13654,9 @@ CreateNewDecl:
 
   if (TUK == TUK_Definition)
     New->startDefinition();
+
+  if (Attr)
+    ProcessDeclAttributeList(S, New, Attr);
 
   // If this has an identifier, add it to the scope stack.
   if (TUK == TUK_Friend) {

@@ -2378,6 +2378,19 @@ MipsAsmParser::tryExpandInstruction(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
   case Mips::Usw:
     return expandUxw(Inst, IDLoc, Out, STI) ? MER_Fail : MER_Success;
   case Mips::NORImm:
+  case Mips::NORImm64:
+    return expandAliasImmediate(Inst, IDLoc, Out, STI) ? MER_Fail : MER_Success;
+  case Mips::SLTImm64:
+    if (isInt<16>(Inst.getOperand(2).getImm())) {
+      Inst.setOpcode(Mips::SLTi64);
+      return MER_NotAMacro;
+    }
+    return expandAliasImmediate(Inst, IDLoc, Out, STI) ? MER_Fail : MER_Success;
+  case Mips::SLTUImm64:
+    if (isInt<16>(Inst.getOperand(2).getImm())) {
+      Inst.setOpcode(Mips::SLTiu64);
+      return MER_NotAMacro;
+    }
     return expandAliasImmediate(Inst, IDLoc, Out, STI) ? MER_Fail : MER_Success;
   case Mips::ADDi:   case Mips::ADDi_MM:
   case Mips::ADDiu:  case Mips::ADDiu_MM:
@@ -3868,8 +3881,17 @@ bool MipsAsmParser::expandAliasImmediate(MCInst &Inst, SMLoc IDLoc,
     case Mips::ANDi64:
       FinalOpcode = Mips::AND64;
       break;
+    case Mips::NORImm64:
+      FinalOpcode = Mips::NOR64;
+      break;
     case Mips::ORi64:
       FinalOpcode = Mips::OR64;
+      break;
+    case Mips::SLTImm64:
+      FinalOpcode = Mips::SLT64;
+      break;
+    case Mips::SLTUImm64:
+      FinalOpcode = Mips::SLTu64;
       break;
     case Mips::XORi64:
       FinalOpcode = Mips::XOR64;

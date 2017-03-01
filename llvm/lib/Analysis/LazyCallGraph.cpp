@@ -817,7 +817,7 @@ void LazyCallGraph::RefSCC::switchOutgoingEdgeToCall(Node &SourceN,
   assert(G->lookupRefSCC(SourceN) == this && "Source must be in this RefSCC.");
   assert(G->lookupRefSCC(TargetN) != this &&
          "Target must not be in this RefSCC.");
-#ifdef EXPENSIVE_CEHCKS
+#ifdef EXPENSIVE_CHECKS
   assert(G->lookupRefSCC(TargetN)->isDescendantOf(*this) &&
          "Target must be a descendant of the Source.");
 #endif
@@ -839,7 +839,7 @@ void LazyCallGraph::RefSCC::switchOutgoingEdgeToRef(Node &SourceN,
   assert(G->lookupRefSCC(SourceN) == this && "Source must be in this RefSCC.");
   assert(G->lookupRefSCC(TargetN) != this &&
          "Target must not be in this RefSCC.");
-#ifdef EXPENSIVE_CEHCKS
+#ifdef EXPENSIVE_CHECKS
   assert(G->lookupRefSCC(TargetN)->isDescendantOf(*this) &&
          "Target must be a descendant of the Source.");
 #endif
@@ -876,7 +876,7 @@ void LazyCallGraph::RefSCC::insertOutgoingEdge(Node &SourceN, Node &TargetN,
 
   RefSCC &TargetC = *G->lookupRefSCC(TargetN);
   assert(&TargetC != this && "Target must not be in this RefSCC.");
-#ifdef EXPENSIVE_CEHCKS
+#ifdef EXPENSIVE_CHECKS
   assert(TargetC.isDescendantOf(*this) &&
          "Target must be a descendant of the Source.");
 #endif
@@ -896,7 +896,7 @@ LazyCallGraph::RefSCC::insertIncomingRefEdge(Node &SourceN, Node &TargetN) {
   assert(G->lookupRefSCC(TargetN) == this && "Target must be in this RefSCC.");
   RefSCC &SourceC = *G->lookupRefSCC(SourceN);
   assert(&SourceC != this && "Source must not be in this RefSCC.");
-#ifdef EXPENSIVE_CEHCKS
+#ifdef EXPENSIVE_CHECKS
   assert(SourceC.isDescendantOf(*this) &&
          "Source must be a descendant of the Target.");
 #endif
@@ -1449,7 +1449,7 @@ void LazyCallGraph::RefSCC::handleTrivialEdgeInsertion(Node &SourceN,
     return;
   }
 
-#ifdef EXPENSIVE_CEHCKS
+#ifdef EXPENSIVE_CHECKS
   assert(TargetRC.isDescendantOf(*this) &&
          "Target must be a descendant of the Source.");
 #endif

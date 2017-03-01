@@ -313,6 +313,17 @@ bool ARMInstructionSelector::select(MachineInstr &I) const {
     I.setDesc(TII.get(ARM::ADDri));
     MIB.addImm(0).add(predOps(ARMCC::AL)).add(condCodeOp());
     break;
+  case G_CONSTANT: {
+    unsigned Reg = I.getOperand(0).getReg();
+    if (MRI.getType(Reg).getSizeInBits() != 32)
+      return false;
+
+    assert(RBI.getRegBank(Reg, MRI, TRI)->getID() == ARM::GPRRegBankID &&
+           "Expected constant to live in a GPR");
+    I.setDesc(TII.get(ARM::MOVi));
+    MIB.add(predOps(ARMCC::AL)).add(condCodeOp());
+    break;
+  }
   case G_STORE:
   case G_LOAD: {
     const auto &MemOp = **I.memoperands_begin();

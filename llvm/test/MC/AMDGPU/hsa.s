@@ -214,7 +214,7 @@ amd_kernel_code_t_minimal:
 // ASM-LABEL: {{^}}amd_kernel_code_t_minimal:
 // ASM: .amd_kernel_code_t
 // ASM:	amd_code_version_major = 1
-// ASM:	amd_code_version_minor = 0
+// ASM:	amd_code_version_minor = 1
 // ASM:	amd_machine_kind = 1
 // ASM:	amd_machine_version_major = 7
 // ASM:	amd_machine_version_minor = 0

@@ -277,6 +277,39 @@ S11 s11;
 
 }  // namespace Field
 
+namespace Method {
+#if defined(FIRST)
+struct S1 {
+  void A() {}
+};
+#elif defined(SECOND)
+struct S1 {
+  private:
+  void A() {}
+};
+#else
+S1 s1;
+// expected-error@second.h:* {{'Method::S1' has different definitions in different modules; first difference is definition in module 'SecondModule' found private access specifier}}
+// expected-note@first.h:* {{but in 'FirstModule' found method}}
+#endif
+
+#if defined(FIRST)
+struct S2 {
+  void A() {}
+  void B() {}
+};
+#elif defined(SECOND)
+struct S2 {
+  void B() {}
+  void A() {}
+};
+#else
+S2 s2;
+// expected-error@second.h:* {{'Method::S2' has different definitions in different modules; first difference is definition in module 'SecondModule' found method 'B'}}
+// expected-note@first.h:* {{but in 'FirstModule' found method 'A'}}
+#endif
+}  // namespace Method
+
 // Naive parsing of AST can lead to cycles in processing.  Ensure
 // self-references don't trigger an endless cycles of AST node processing.
 namespace SelfReference {
@@ -324,6 +357,8 @@ struct S {
   unsigned b : 2*2 + 5/2;
 
   mutable int c = sizeof(x + y);
+
+  void method() {}
 };
 #elif defined(SECOND)
 typedef int INT;
@@ -344,6 +379,8 @@ struct S {
   unsigned b : 2 * 2 + 5 / 2;
 
   mutable int c = sizeof(x + y);
+
+  void method() {}
 };
 #else
 S s;
@@ -369,6 +406,8 @@ struct T {
 
   mutable int c = sizeof(x + y);
 
+  void method() {}
+
   private:
 };
 #elif defined(SECOND)
@@ -390,6 +429,8 @@ struct T {
   unsigned b : 2 * 2 + 5 / 2;
 
   mutable int c = sizeof(x + y);
+
+  void method() {}
 
   public:
 };

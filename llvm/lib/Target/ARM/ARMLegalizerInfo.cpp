@@ -55,6 +55,8 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) {
   setAction({G_GEP, p0}, Legal);
   setAction({G_GEP, 1, s32}, Legal);
 
+  setAction({G_CONSTANT, s32}, Legal);
+
   if (ST.hasVFP2()) {
     setAction({G_FADD, s32}, Legal);
     setAction({G_FADD, s64}, Legal);

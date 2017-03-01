@@ -1343,22 +1343,26 @@ static bool allocaWouldBeStaticInEntry(const AllocaInst *AI ) {
   return isa<Constant>(AI->getArraySize()) && !AI->isUsedWithInAlloca();
 }
 
-/// Update inlined instructions' line numbers to
-/// to encode location where these instructions are inlined.
-static void fixupLineNumbers(Function *Fn, Function::iterator FI,
-                             Instruction *TheCall, bool CalleeHasDebugInfo) {
+/// Update inlined instructions' line numbers to to encode location where these
+/// instructions are inlined.  Also strip all debug intrinsics that were inlined
+/// into a nodebug function; there is no debug info the backend could produce
+/// for a function without a DISubprogram attachment.
+static void fixupDebugInfo(Function *Fn, Function::iterator FI,
+                           Instruction *TheCall, bool CalleeHasDebugInfo) {
+  bool CallerHasDebugInfo = Fn->getSubprogram();
+  bool StripDebugInfo = !CallerHasDebugInfo && CalleeHasDebugInfo;
+  SmallVector<DbgInfoIntrinsic *, 8> IntrinsicsToErase;
   const DebugLoc &TheCallDL = TheCall->getDebugLoc();
-  if (!TheCallDL)
-    return;
 
   auto &Ctx = Fn->getContext();
-  DILocation *InlinedAtNode = TheCallDL;
+  DILocation *InlinedAtNode = nullptr;
 
   // Create a unique call site, not to be confused with any other call from the
   // same location.
-  InlinedAtNode = DILocation::getDistinct(
-      Ctx, InlinedAtNode->getLine(), InlinedAtNode->getColumn(),
-      InlinedAtNode->getScope(), InlinedAtNode->getInlinedAt());
+  if (TheCallDL)
+    InlinedAtNode = DILocation::getDistinct(
+        Ctx, TheCallDL->getLine(), TheCallDL->getColumn(),
+        TheCallDL->getScope(), TheCallDL->getInlinedAt());
 
   // Cache the inlined-at nodes as they're built so they are reused, without
   // this every instruction's inlined-at chain would become distinct from each
@@ -1368,6 +1372,17 @@ static void fixupLineNumbers(Function *Fn, Function::iterator FI,
   for (; FI != Fn->end(); ++FI) {
     for (BasicBlock::iterator BI = FI->begin(), BE = FI->end();
          BI != BE; ++BI) {
+      if (StripDebugInfo) {
+        // Inlining into a nodebug function.
+        if (auto *DI = dyn_cast<DbgInfoIntrinsic>(BI))
+          // Mark dead debug intrinsics for deletion.
+          IntrinsicsToErase.push_back(DI);
+        else
+          // Remove the dangling debug location.
+          BI->setDebugLoc(DebugLoc());
+        continue;
+      }
+
       if (DebugLoc DL = BI->getDebugLoc()) {
         BI->setDebugLoc(
             updateInlinedAtInfo(DL, InlinedAtNode, BI->getContext(), IANodes));
@@ -1390,6 +1405,9 @@ static void fixupLineNumbers(Function *Fn, Function::iterator FI,
       BI->setDebugLoc(TheCallDL);
     }
   }
+
+  for (auto *DI : IntrinsicsToErase)
+    DI->eraseFromParent();
 }
 /// Update the block frequencies of the caller after a callee has been inlined.
 ///
@@ -1710,8 +1728,8 @@ bool llvm::InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
     // For 'nodebug' functions, the associated DISubprogram is always null.
     // Conservatively avoid propagating the callsite debug location to
     // instructions inlined from a function whose DISubprogram is not null.
-    fixupLineNumbers(Caller, FirstNewBlock, TheCall,
-                     CalledFunc->getSubprogram() != nullptr);
+    fixupDebugInfo(Caller, FirstNewBlock, TheCall,
+                   CalledFunc->getSubprogram() != nullptr);
 
     // Clone existing noalias metadata if necessary.
     CloneAliasScopeMetadata(CS, VMap);

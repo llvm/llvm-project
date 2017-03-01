@@ -28,6 +28,18 @@ using namespace llvm::ELF;
 using namespace lld;
 using namespace lld::elf;
 
+InputSectionBase *DefinedRegular::NullInputSection;
+
+DefinedSynthetic *ElfSym::Etext;
+DefinedSynthetic *ElfSym::Etext2;
+DefinedSynthetic *ElfSym::Edata;
+DefinedSynthetic *ElfSym::Edata2;
+DefinedSynthetic *ElfSym::End;
+DefinedSynthetic *ElfSym::End2;
+DefinedRegular *ElfSym::MipsGpDisp;
+DefinedRegular *ElfSym::MipsLocalGp;
+DefinedRegular *ElfSym::MipsGp;
+
 template <class ELFT>
 static typename ELFT::uint getSymVA(const SymbolBody &Body, int64_t &Addend) {
   typedef typename ELFT::uint uintX_t;
@@ -43,7 +55,7 @@ static typename ELFT::uint getSymVA(const SymbolBody &Body, int64_t &Addend) {
     return Sec->Addr + D.Value;
   }
   case SymbolBody::DefinedRegularKind: {
-    auto &D = cast<DefinedRegular<ELFT>>(Body);
+    auto &D = cast<DefinedRegular>(Body);
     InputSectionBase *IS = D.Section;
 
     // According to the ELF spec reference to a local symbol from outside
@@ -188,7 +200,7 @@ template <class ELFT> typename ELFT::uint SymbolBody::getPltVA() const {
 template <class ELFT> typename ELFT::uint SymbolBody::getSize() const {
   if (const auto *C = dyn_cast<DefinedCommon>(this))
     return C->Size;
-  if (const auto *DR = dyn_cast<DefinedRegular<ELFT>>(this))
+  if (const auto *DR = dyn_cast<DefinedRegular>(this))
     return DR->Size;
   if (const auto *S = dyn_cast<SharedSymbol>(this))
     return S->getSize<ELFT>();
@@ -197,7 +209,7 @@ template <class ELFT> typename ELFT::uint SymbolBody::getSize() const {
 
 template <class ELFT>
 const OutputSection *SymbolBody::getOutputSection() const {
-  if (auto *S = dyn_cast<DefinedRegular<ELFT>>(this)) {
+  if (auto *S = dyn_cast<DefinedRegular>(this)) {
     if (S->Section)
       return S->Section->template getOutputSection<ELFT>();
     return nullptr;
@@ -263,7 +275,7 @@ Defined::Defined(Kind K, StringRefZ Name, bool IsLocal, uint8_t StOther,
                  uint8_t Type)
     : SymbolBody(K, Name, IsLocal, StOther, Type) {}
 
-template <class ELFT> bool DefinedRegular<ELFT>::isMipsPIC() const {
+template <class ELFT> bool DefinedRegular::isMipsPIC() const {
   if (!Section || !isFunc())
     return false;
   return (this->StOther & STO_MIPS_MIPS16) == STO_MIPS_PIC ||
@@ -416,10 +428,10 @@ template const OutputSection *
 template const OutputSection *
     SymbolBody::template getOutputSection<ELF64BE>() const;
 
-template class elf::DefinedRegular<ELF32LE>;
-template class elf::DefinedRegular<ELF32BE>;
-template class elf::DefinedRegular<ELF64LE>;
-template class elf::DefinedRegular<ELF64BE>;
+template bool DefinedRegular::template isMipsPIC<ELF32LE>() const;
+template bool DefinedRegular::template isMipsPIC<ELF32BE>() const;
+template bool DefinedRegular::template isMipsPIC<ELF64LE>() const;
+template bool DefinedRegular::template isMipsPIC<ELF64BE>() const;
 
 template uint64_t SharedSymbol::template getAlignment<ELF32LE>() const;
 template uint64_t SharedSymbol::template getAlignment<ELF32BE>() const;

@@ -24,5 +24,6 @@ Options
 
 .. option:: StrictMode
 
-   When non-zero, the check will ignore leading and trailing underscores and
-   case when comparing parameter names.
+   When zero (default value), the check will ignore leading and trailing
+   underscores and case when comparing names -- otherwise they are taken into
+   account.

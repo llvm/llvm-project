@@ -63,9 +63,8 @@ template <class ELFT> static SymbolBody *addRegular(SymbolAssignment *Cmd) {
       Cmd->Name, /*Type*/ 0, Visibility, /*CanOmitFromDynSym*/ false,
       /*File*/ nullptr);
   Sym->Binding = STB_GLOBAL;
-  replaceBody<DefinedRegular<ELFT>>(Sym, Cmd->Name, /*IsLocal=*/false,
-                                    Visibility, STT_NOTYPE, 0, 0, nullptr,
-                                    nullptr);
+  replaceBody<DefinedRegular>(Sym, Cmd->Name, /*IsLocal=*/false, Visibility,
+                              STT_NOTYPE, 0, 0, nullptr, nullptr);
   return Sym->body();
 }
 
@@ -131,7 +130,7 @@ void LinkerScript<ELFT>::assignSymbol(SymbolAssignment *Cmd, bool InSec) {
     return;
   }
 
-  cast<DefinedRegular<ELFT>>(Cmd->Sym)->Value = Cmd->Expression(Dot);
+  cast<DefinedRegular>(Cmd->Sym)->Value = Cmd->Expression(Dot);
 }
 
 template <class ELFT>
@@ -973,7 +972,7 @@ template <class ELFT> bool LinkerScript<ELFT>::isDefined(StringRef S) {
 
 template <class ELFT> bool LinkerScript<ELFT>::isAbsolute(StringRef S) {
   SymbolBody *Sym = Symtab<ELFT>::X->find(S);
-  auto *DR = dyn_cast_or_null<DefinedRegular<ELFT>>(Sym);
+  auto *DR = dyn_cast_or_null<DefinedRegular>(Sym);
   return DR && !DR->Section;
 }
 

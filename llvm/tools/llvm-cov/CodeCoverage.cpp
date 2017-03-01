@@ -818,8 +818,10 @@ int CodeCoverageTool::report(int argc, const char **argv,
   if (Err)
     return Err;
 
-  if (ViewOpts.Format == CoverageViewOptions::OutputFormat::HTML)
+  if (ViewOpts.Format == CoverageViewOptions::OutputFormat::HTML) {
     error("HTML output for summary reports is not yet supported.");
+    return 1;
+  }
 
   auto Coverage = load();
   if (!Coverage)
@@ -839,6 +841,11 @@ int CodeCoverageTool::export_(int argc, const char **argv,
   auto Err = commandLineParser(argc, argv);
   if (Err)
     return Err;
+
+  if (ViewOpts.Format != CoverageViewOptions::OutputFormat::Text) {
+    error("Coverage data can only be exported as textual JSON.");
+    return 1;
+  }
 
   auto Coverage = load();
   if (!Coverage) {

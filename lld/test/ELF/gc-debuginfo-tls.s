@@ -6,7 +6,7 @@
 
 # NOGC:      Symbol {
 # NOGC:        Name: patatino
-# NOGC-NEXT:   Value: 0x1000
+# NOGC-NEXT:   Value: 0x0
 # NOGC-NEXT:   Size: 0
 # NOGC-NEXT:   Binding: Local
 # NOGC-NEXT:   Type: TLS

@@ -483,7 +483,7 @@ template <class ELFT> static bool includeInSymtab(const SymbolBody &B) {
   if (!B.isLocal() && !B.symbol()->IsUsedInRegularObj)
     return false;
 
-  if (auto *D = dyn_cast<DefinedRegular<ELFT>>(&B)) {
+  if (auto *D = dyn_cast<DefinedRegular>(&B)) {
     // Always include absolute symbols.
     if (!D->Section)
       return true;
@@ -507,7 +507,7 @@ template <class ELFT> void Writer<ELFT>::copyLocalSymbols() {
       if (!B->IsLocal)
         fatal(toString(F) +
               ": broken object: getLocalSymbols returns a non-local symbol");
-      auto *DR = dyn_cast<DefinedRegular<ELFT>>(B);
+      auto *DR = dyn_cast<DefinedRegular>(B);
 
       // No reason to keep local undefined symbol in symtab.
       if (!DR)
@@ -527,17 +527,18 @@ template <class ELFT> void Writer<ELFT>::addSectionSymbols() {
   // Create one STT_SECTION symbol for each output section we might
   // have a relocation with.
   for (OutputSection *Sec : OutputSections) {
-    InputSection *IS = nullptr;
-    if (!Sec->Sections.empty())
-      IS = Sec->Sections[0];
-    if (!IS || isa<SyntheticSection>(IS) || IS->Type == SHT_REL ||
+    if (Sec->Sections.empty())
+      continue;
+
+    InputSection *IS = Sec->Sections[0];
+    if (isa<SyntheticSection>(IS) || IS->Type == SHT_REL ||
         IS->Type == SHT_RELA)
       continue;
-    auto *B = new (BAlloc)
-        DefinedRegular<ELFT>("", /*IsLocal=*/true, /*StOther*/ 0, STT_SECTION,
-                             /*Value*/ 0, /*Size*/ 0, IS, nullptr);
 
-    In<ELFT>::SymTab->addSymbol(B);
+    auto *Sym =
+        make<DefinedRegular>("", /*IsLocal=*/true, /*StOther=*/0, STT_SECTION,
+                             /*Value=*/0, /*Size=*/0, IS, nullptr);
+    In<ELFT>::SymTab->addSymbol(Sym);
   }
 }
 
@@ -788,15 +789,14 @@ template <class ELFT> void Writer<ELFT>::addReservedSymbols() {
     // to GOT. Default offset is 0x7ff0.
     // See "Global Data Symbols" in Chapter 6 in the following document:
     // ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
-    ElfSym<ELFT>::MipsGp =
-        Symtab<ELFT>::X->addAbsolute("_gp", STV_HIDDEN, STB_LOCAL);
+    ElfSym::MipsGp = Symtab<ELFT>::X->addAbsolute("_gp", STV_HIDDEN, STB_LOCAL);
 
     // On MIPS O32 ABI, _gp_disp is a magic symbol designates offset between
     // start of function and 'gp' pointer into GOT. To simplify relocation
     // calculation we assign _gp value to it and calculate corresponding
     // relocations as relative to this value.
     if (Symtab<ELFT>::X->find("_gp_disp"))
-      ElfSym<ELFT>::MipsGpDisp =
+      ElfSym::MipsGpDisp =
           Symtab<ELFT>::X->addAbsolute("_gp_disp", STV_HIDDEN, STB_LOCAL);
 
     // The __gnu_local_gp is a magic symbol equal to the current value of 'gp'
@@ -804,7 +804,7 @@ template <class ELFT> void Writer<ELFT>::addReservedSymbols() {
     // in case of using -mno-shared option.
     // https://sourceware.org/ml/binutils/2004-12/msg00094.html
     if (Symtab<ELFT>::X->find("__gnu_local_gp"))
-      ElfSym<ELFT>::MipsLocalGp =
+      ElfSym::MipsLocalGp =
           Symtab<ELFT>::X->addAbsolute("__gnu_local_gp", STV_HIDDEN, STB_LOCAL);
   }
 
@@ -847,9 +847,9 @@ template <class ELFT> void Writer<ELFT>::addReservedSymbols() {
     Sym2 = addOptionalSynthetic<ELFT>(S, nullptr, 0, STV_DEFAULT);
   };
 
-  Define("_end", ElfSym<ELFT>::End, ElfSym<ELFT>::End2);
-  Define("_etext", ElfSym<ELFT>::Etext, ElfSym<ELFT>::Etext2);
-  Define("_edata", ElfSym<ELFT>::Edata, ElfSym<ELFT>::Edata2);
+  Define("_end", ElfSym::End, ElfSym::End2);
+  Define("_etext", ElfSym::Etext, ElfSym::Etext2);
+  Define("_edata", ElfSym::Edata, ElfSym::Edata2);
 }
 
 // Sort input sections by section name suffixes for
@@ -883,7 +883,7 @@ static void sortBySymbolsOrder(ArrayRef<OutputSection *> OutputSections) {
   DenseMap<InputSectionBase *, int> SectionOrder;
   for (elf::ObjectFile<ELFT> *File : Symtab<ELFT>::X->getObjectFiles()) {
     for (SymbolBody *Body : File->getSymbols()) {
-      auto *D = dyn_cast<DefinedRegular<ELFT>>(Body);
+      auto *D = dyn_cast<DefinedRegular>(Body);
       if (!D || !D->Section)
         continue;
       int &Priority = SectionOrder[D->Section];
@@ -1652,18 +1652,16 @@ template <class ELFT> void Writer<ELFT>::fixPredefinedSymbols() {
       LastRO = &P;
   }
   if (Last)
-    Set(ElfSym<ELFT>::End, ElfSym<ELFT>::End2, Last->First, Last->p_memsz);
+    Set(ElfSym::End, ElfSym::End2, Last->First, Last->p_memsz);
   if (LastRO)
-    Set(ElfSym<ELFT>::Etext, ElfSym<ELFT>::Etext2, LastRO->First,
-        LastRO->p_filesz);
+    Set(ElfSym::Etext, ElfSym::Etext2, LastRO->First, LastRO->p_filesz);
   if (LastRW)
-    Set(ElfSym<ELFT>::Edata, ElfSym<ELFT>::Edata2, LastRW->First,
-        LastRW->p_filesz);
+    Set(ElfSym::Edata, ElfSym::Edata2, LastRW->First, LastRW->p_filesz);
 
   // Setup MIPS _gp_disp/__gnu_local_gp symbols which should
   // be equal to the _gp symbol's value.
   if (Config->EMachine == EM_MIPS) {
-    if (!ElfSym<ELFT>::MipsGp->Value) {
+    if (!ElfSym::MipsGp->Value) {
       // Find GP-relative section with the lowest address
       // and use this address to calculate default _gp value.
       uintX_t Gp = -1;
@@ -1671,12 +1669,12 @@ template <class ELFT> void Writer<ELFT>::fixPredefinedSymbols() {
         if ((OS->Flags & SHF_MIPS_GPREL) && OS->Addr < Gp)
           Gp = OS->Addr;
       if (Gp != (uintX_t)-1)
-        ElfSym<ELFT>::MipsGp->Value = Gp + 0x7ff0;
+        ElfSym::MipsGp->Value = Gp + 0x7ff0;
     }
-    if (ElfSym<ELFT>::MipsGpDisp)
-      ElfSym<ELFT>::MipsGpDisp->Value = ElfSym<ELFT>::MipsGp->Value;
-    if (ElfSym<ELFT>::MipsLocalGp)
-      ElfSym<ELFT>::MipsLocalGp->Value = ElfSym<ELFT>::MipsGp->Value;
+    if (ElfSym::MipsGpDisp)
+      ElfSym::MipsGpDisp->Value = ElfSym::MipsGp->Value;
+    if (ElfSym::MipsLocalGp)
+      ElfSym::MipsLocalGp->Value = ElfSym::MipsGp->Value;
   }
 }
 

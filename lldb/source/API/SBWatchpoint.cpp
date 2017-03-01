@@ -27,28 +27,24 @@
 using namespace lldb;
 using namespace lldb_private;
 
-SBWatchpoint::SBWatchpoint() : m_opaque_sp() {}
+SBWatchpoint::SBWatchpoint() {}
 
 SBWatchpoint::SBWatchpoint(const lldb::WatchpointSP &wp_sp)
-    : m_opaque_sp(wp_sp) {
+    : m_opaque_wp(wp_sp) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
 
   if (log) {
     SBStream sstr;
     GetDescription(sstr, lldb::eDescriptionLevelBrief);
-    log->Printf("SBWatchpoint::SBWatchpoint (const lldb::WatchpointSP &wp_sp"
-                "=%p)  => this.sp = %p (%s)",
-                static_cast<void *>(wp_sp.get()),
-                static_cast<void *>(m_opaque_sp.get()), sstr.GetData());
+    LLDB_LOG(log, "watchpoint = {0} ({1})", wp_sp.get(), sstr.GetData());
   }
 }
 
 SBWatchpoint::SBWatchpoint(const SBWatchpoint &rhs)
-    : m_opaque_sp(rhs.m_opaque_sp) {}
+    : m_opaque_wp(rhs.m_opaque_wp) {}
 
 const SBWatchpoint &SBWatchpoint::operator=(const SBWatchpoint &rhs) {
-  if (this != &rhs)
-    m_opaque_sp = rhs.m_opaque_sp;
+  m_opaque_wp = rhs.m_opaque_wp;
   return *this;
 }
 
@@ -74,7 +70,7 @@ watch_id_t SBWatchpoint::GetID() {
   return watch_id;
 }
 
-bool SBWatchpoint::IsValid() const { return (bool)m_opaque_sp; }
+bool SBWatchpoint::IsValid() const { return bool(m_opaque_wp.lock()); }
 
 SBError SBWatchpoint::GetError() {
   SBError sb_error;
@@ -223,11 +219,11 @@ bool SBWatchpoint::GetDescription(SBStream &description,
   return true;
 }
 
-void SBWatchpoint::Clear() { m_opaque_sp.reset(); }
+void SBWatchpoint::Clear() { m_opaque_wp.reset(); }
 
-lldb::WatchpointSP SBWatchpoint::GetSP() const { return m_opaque_sp; }
+lldb::WatchpointSP SBWatchpoint::GetSP() const { return m_opaque_wp.lock(); }
 
-void SBWatchpoint::SetSP(const lldb::WatchpointSP &sp) { m_opaque_sp = sp; }
+void SBWatchpoint::SetSP(const lldb::WatchpointSP &sp) { m_opaque_wp = sp; }
 
 bool SBWatchpoint::EventIsWatchpointEvent(const lldb::SBEvent &event) {
   return Watchpoint::WatchpointEventData::GetEventDataFromEvent(event.get()) !=
@@ -245,7 +241,7 @@ SBWatchpoint::GetWatchpointEventTypeFromEvent(const SBEvent &event) {
 SBWatchpoint SBWatchpoint::GetWatchpointFromEvent(const lldb::SBEvent &event) {
   SBWatchpoint sb_watchpoint;
   if (event.IsValid())
-    sb_watchpoint.m_opaque_sp =
+    sb_watchpoint =
         Watchpoint::WatchpointEventData::GetWatchpointFromEvent(event.GetSP());
   return sb_watchpoint;
 }

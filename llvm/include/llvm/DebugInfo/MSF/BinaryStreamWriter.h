@@ -14,6 +14,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/MSF/BinaryStreamArray.h"
+#include "llvm/DebugInfo/MSF/BinaryStreamError.h"
 #include "llvm/DebugInfo/MSF/BinaryStreamRef.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
@@ -123,10 +124,9 @@ public:
   template <typename T> Error writeArray(ArrayRef<T> Array) {
     if (Array.empty())
       return Error::success();
-
     if (Array.size() > UINT32_MAX / sizeof(T))
-      return make_error<msf::MSFError>(
-          msf::msf_error_code::insufficient_buffer);
+      return make_error<BinaryStreamError>(
+          stream_error_code::invalid_array_size);
 
     return writeBytes(
         ArrayRef<uint8_t>(reinterpret_cast<const uint8_t *>(Array.data()),

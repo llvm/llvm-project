@@ -1531,18 +1531,27 @@ DIE *DwarfUnit::getOrCreateStaticMemberDIE(const DIDerivedType *DT) {
   return &StaticMemberDIE;
 }
 
-void DwarfUnit::emitHeader(bool UseOffsets) {
+void DwarfUnit::emitCommonHeader(bool UseOffsets, dwarf::UnitType UT) {
   // Emit size of content not including length itself
   Asm->OutStreamer->AddComment("Length of Unit");
   Asm->EmitInt32(getHeaderSize() + getUnitDie().getSize());
 
   Asm->OutStreamer->AddComment("DWARF version number");
-  Asm->EmitInt16(DD->getDwarfVersion());
-  Asm->OutStreamer->AddComment("Offset Into Abbrev. Section");
+  unsigned Version = DD->getDwarfVersion();
+  Asm->EmitInt16(Version);
+
+  // DWARF v5 reorders the address size and adds a unit type.
+  if (Version >= 5) {
+    Asm->OutStreamer->AddComment("DWARF Unit Type");
+    Asm->EmitInt8(UT);
+    Asm->OutStreamer->AddComment("Address Size (in bytes)");
+    Asm->EmitInt8(Asm->getDataLayout().getPointerSize());
+  }
 
   // We share one abbreviations table across all units so it's always at the
   // start of the section. Use a relocatable offset where needed to ensure
   // linking doesn't invalidate that offset.
+  Asm->OutStreamer->AddComment("Offset Into Abbrev. Section");
   const TargetLoweringObjectFile &TLOF = Asm->getObjFileLowering();
   if (UseOffsets)
     Asm->EmitInt32(0);
@@ -1550,12 +1559,16 @@ void DwarfUnit::emitHeader(bool UseOffsets) {
     Asm->emitDwarfSymbolReference(
         TLOF.getDwarfAbbrevSection()->getBeginSymbol(), false);
 
-  Asm->OutStreamer->AddComment("Address Size (in bytes)");
-  Asm->EmitInt8(Asm->getDataLayout().getPointerSize());
+  if (Version <= 4) {
+    Asm->OutStreamer->AddComment("Address Size (in bytes)");
+    Asm->EmitInt8(Asm->getDataLayout().getPointerSize());
+  }
 }
 
 void DwarfTypeUnit::emitHeader(bool UseOffsets) {
-  DwarfUnit::emitHeader(UseOffsets);
+  DwarfUnit::emitCommonHeader(UseOffsets, 
+                              DD->useSplitDwarf() ? dwarf::DW_UT_split_type
+                                                  : dwarf::DW_UT_type);
   Asm->OutStreamer->AddComment("Type Signature");
   Asm->OutStreamer->EmitIntValue(TypeSignature, sizeof(TypeSignature));
   Asm->OutStreamer->AddComment("Type DIE Offset");

@@ -1887,6 +1887,10 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
       ParseStructUnionBody(StartLoc, TagType, TagOrTempResult.get());
   }
 
+  if (!TagOrTempResult.isInvalid())
+    // Delayed proccessing of attributes.
+    Actions.ProcessDeclAttributeDelayed(TagOrTempResult.get(), attrs.getList());
+
   const char *PrevSpec = nullptr;
   unsigned DiagID;
   bool Result;

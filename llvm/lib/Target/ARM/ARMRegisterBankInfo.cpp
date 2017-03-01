@@ -240,6 +240,7 @@ ARMRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
                           ? &ARM::ValueMappings[ARM::DPR3OpsIdx]
                           : &ARM::ValueMappings[ARM::SPR3OpsIdx];
     break;
+  case G_CONSTANT:
   case G_FRAME_INDEX:
     OperandsMapping =
         getOperandsMapping({&ARM::ValueMappings[ARM::GPR3OpsIdx], nullptr});

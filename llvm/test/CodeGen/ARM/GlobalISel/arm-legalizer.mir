@@ -13,6 +13,8 @@
 
   define void @test_gep() { ret void }
 
+  define void @test_constants() { ret void }
+
   define void @test_fadd_s32() #0 { ret void }
   define void @test_fadd_s64() #0 { ret void }
 
@@ -266,6 +268,24 @@ body:             |
     %2(p0) = G_GEP %0, %1(s32)
 
     %r0 = COPY %2(p0)
+    BX_RET 14, _, implicit %r0
+...
+---
+name:            test_constants
+# CHECK-LABEL: name: test_constants
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+body:             |
+  bb.0:
+    %0(s32) = G_CONSTANT 42
+    ; CHECK: {{%[0-9]+}}(s32) = G_CONSTANT 42
+
+    %r0 = COPY %0(s32)
     BX_RET 14, _, implicit %r0
 ...
 ---
