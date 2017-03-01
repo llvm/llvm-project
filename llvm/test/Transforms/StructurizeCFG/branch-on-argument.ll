@@ -3,14 +3,17 @@
 ; CHECK-LABEL: @invert_branch_on_arg_inf_loop(
 ; CHECK: entry:
 ; CHECK: %arg.inv = xor i1 %arg, true
-; CHECK: phi i1 [ false, %Flow1 ], [ %arg.inv, %entry ]
 define void @invert_branch_on_arg_inf_loop(i32 addrspace(1)* %out, i1 %arg) {
 entry:
-  br i1 %arg, label %for.end, label %for.body
+  br i1 %arg, label %for.end, label %sesestart
+sesestart:
+  br label %for.body
 
 for.body:                                         ; preds = %entry, %for.body
   store i32 999, i32 addrspace(1)* %out, align 4
-  br label %for.body
+  br i1 %arg, label %for.body, label %seseend
+seseend:
+  ret void
 
 for.end:                                          ; preds = %Flow
   ret void

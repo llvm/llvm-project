@@ -2039,6 +2039,9 @@ def override_keyword_hides_virtual_member_function : Error<
   "%select{function|functions}1">;
 def err_function_marked_override_not_overriding : Error<
   "%0 marked 'override' but does not override any member functions">;
+def warn_destructor_marked_not_override_overriding : Warning <
+  "%0 overrides a destructor but is not marked 'override'">,
+  InGroup<CXX11WarnOverrideDestructor>, DefaultIgnore;
 def warn_function_marked_not_override_overriding : Warning <
   "%0 overrides a member function but is not marked 'override'">,
   InGroup<CXX11WarnOverrideMethod>;

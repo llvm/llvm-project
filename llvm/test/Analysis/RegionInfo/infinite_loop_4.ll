@@ -38,12 +38,14 @@ define void @normal_condition() nounwind {
 }
 ; CHECK-NOT: =>
 ; CHECK: [0] 0 => <Function Return>
-; CHECK-NEXT: [1] 7 => 3
-; STAT: 2 region - The # of regions
+; CHECK-NEXT: [1] 2 => 10
+; CHECK_NEXT: [2] 5 => 6
+; STAT: 3 region - The # of regions
 ; STAT: 1 region - The # of simple regions
 
 ; BBIT: 0, 7, 1, 2, 5, 11, 6, 10, 8, 9, 13, 14, 12, 3, 4,
-; BBIT: 7, 1, 2, 5, 11, 6, 10, 8, 9, 13, 14, 12,
-
-; RNIT: 0, 7 => 3, 3, 4,
-; RNIT: 7, 1, 2, 5, 11, 6, 10, 8, 9, 13, 14, 12,
+; BBIT: 2, 5, 11, 6, 12,
+; BBIT: 5, 11, 12,
+; RNIT: 0, 7, 1, 2 => 10, 10, 8, 9, 13, 14, 3, 4,
+; RNIT: 2, 5 => 6, 6,
+; RNIT: 5, 11, 12,

@@ -1,4 +1,4 @@
-//===-- DWARFDebugRangeList.h -----------------------------------*- C++ -*-===//
+//===- DWARFDebugRangeList.h ------------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,10 +7,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_DEBUGINFO_DWARFDEBUGRANGELIST_H
-#define LLVM_LIB_DEBUGINFO_DWARFDEBUGRANGELIST_H
+#ifndef LLVM_DEBUGINFO_DWARF_DWARFDEBUGRANGELIST_H
+#define LLVM_DEBUGINFO_DWARF_DWARFDEBUGRANGELIST_H
 
 #include "llvm/Support/DataExtractor.h"
+#include <cassert>
+#include <cstdint>
+#include <utility>
 #include <vector>
 
 namespace llvm {
@@ -34,12 +37,14 @@ public:
     // address past the end of the address range. The ending address must
     // be greater than or equal to the beginning address.
     uint64_t EndAddress;
+
     // The end of any given range list is marked by an end of list entry,
     // which consists of a 0 for the beginning address offset
     // and a 0 for the ending address offset.
     bool isEndOfListEntry() const {
       return (StartAddress == 0) && (EndAddress == 0);
     }
+
     // A base address selection entry consists of:
     // 1. The value of the largest representable address offset
     // (for example, 0xffffffff when the size of an address is 32 bits).
@@ -63,6 +68,7 @@ private:
 
 public:
   DWARFDebugRangeList() { clear(); }
+
   void clear();
   void dump(raw_ostream &OS) const;
   bool extract(DataExtractor data, uint32_t *offset_ptr);
@@ -74,6 +80,6 @@ public:
   DWARFAddressRangesVector getAbsoluteRanges(uint64_t BaseAddress) const;
 };
 
-}  // namespace llvm
+} // end namespace llvm
 
-#endif  // LLVM_DEBUGINFO_DWARFDEBUGRANGELIST_H
+#endif // LLVM_DEBUGINFO_DWARF_DWARFDEBUGRANGELIST_H

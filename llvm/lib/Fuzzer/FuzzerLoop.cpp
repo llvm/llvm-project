@@ -61,57 +61,6 @@ static void MissingExternalApiFunction(const char *FnName) {
 // Only one Fuzzer per process.
 static Fuzzer *F;
 
-void Fuzzer::ResetEdgeCoverage() {
-  CHECK_EXTERNAL_FUNCTION(__sanitizer_reset_coverage);
-  EF->__sanitizer_reset_coverage();
-}
-
-void Fuzzer::ResetCounters() {
-  if (Options.UseCounters)
-    EF->__sanitizer_update_counter_bitset_and_clear_counters(0);
-}
-
-void Fuzzer::PrepareCounters(Fuzzer::Coverage *C) {
-  if (Options.UseCounters) {
-    size_t NumCounters = EF->__sanitizer_get_number_of_counters();
-    C->CounterBitmap.resize(NumCounters);
-  }
-}
-
-// Records data to a maximum coverage tracker. Returns true if additional
-// coverage was discovered.
-bool Fuzzer::RecordMaxCoverage(Fuzzer::Coverage *C) {
-  bool Res = false;
-
-  uint64_t NewBlockCoverage = EF->__sanitizer_get_total_unique_coverage();
-  if (NewBlockCoverage > C->BlockCoverage) {
-    Res = true;
-    C->BlockCoverage = NewBlockCoverage;
-  }
-
-  if (Options.UseIndirCalls &&
-      EF->__sanitizer_get_total_unique_caller_callee_pairs) {
-    uint64_t NewCallerCalleeCoverage =
-        EF->__sanitizer_get_total_unique_caller_callee_pairs();
-    if (NewCallerCalleeCoverage > C->CallerCalleeCoverage) {
-      Res = true;
-      C->CallerCalleeCoverage = NewCallerCalleeCoverage;
-    }
-  }
-
-  if (Options.UseCounters) {
-    uint64_t CounterDelta =
-        EF->__sanitizer_update_counter_bitset_and_clear_counters(
-            C->CounterBitmap.data());
-    if (CounterDelta > 0) {
-      Res = true;
-      C->CounterBitmapBits += CounterDelta;
-    }
-  }
-
-  return Res;
-}
-
 // Leak detection is expensive, so we first check if there were more mallocs
 // than frees (using the sanitizer malloc hooks) and only then try to call lsan.
 struct MallocFreeTracer {
@@ -506,11 +455,6 @@ size_t Fuzzer::RunOne(const uint8_t *Data, size_t Size) {
       }))
     Res = NumFeatures;
 
-  if (!TPC.UsingTracePcGuard()) {
-    if (!Res && RecordMaxCoverage(&MaxCoverage))
-      Res = 1;
-  }
-
   auto TimeOfUnit =
       duration_cast<seconds>(UnitStopTime - UnitStartTime).count();
   if (!(TotalNumberOfRuns & (TotalNumberOfRuns - 1)) &&
@@ -544,7 +488,6 @@ void Fuzzer::ExecuteCallback(const uint8_t *Data, size_t Size) {
   CurrentUnitSize = Size;
   AllocTracer.Start(Options.TraceMalloc);
   UnitStartTime = system_clock::now();
-  ResetCounters();  // Reset coverage right before the callback.
   TPC.ResetMaps();
   RunningCB = true;
   int Res = CB(DataCopy, Size);
@@ -767,9 +710,7 @@ void Fuzzer::MutateAndTestOne() {
 }
 
 void Fuzzer::ResetCoverage() {
-  ResetEdgeCoverage();
   MaxCoverage.Reset();
-  PrepareCounters(&MaxCoverage);
 }
 
 void Fuzzer::Loop() {

@@ -1,4 +1,4 @@
-//===-- DWARFContext.cpp --------------------------------------------------===//
+//===- DWARFContext.cpp ---------------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,23 +7,45 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/DWARF/DWARFAcceleratorTable.h"
+#include "llvm/DebugInfo/DWARF/DWARFCompileUnit.h"
+#include "llvm/DebugInfo/DWARF/DWARFContext.h"
+#include "llvm/DebugInfo/DWARF/DWARFDebugAbbrev.h"
+#include "llvm/DebugInfo/DWARF/DWARFDebugAranges.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugArangeSet.h"
+#include "llvm/DebugInfo/DWARF/DWARFDebugFrame.h"
+#include "llvm/DebugInfo/DWARF/DWARFDebugLine.h"
+#include "llvm/DebugInfo/DWARF/DWARFDebugLoc.h"
+#include "llvm/DebugInfo/DWARF/DWARFDebugMacro.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugPubTable.h"
+#include "llvm/DebugInfo/DWARF/DWARFDebugRangeList.h"
+#include "llvm/DebugInfo/DWARF/DWARFDie.h"
+#include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
+#include "llvm/DebugInfo/DWARF/DWARFGdbIndex.h"
+#include "llvm/DebugInfo/DWARF/DWARFSection.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnitIndex.h"
 #include "llvm/Object/Decompressor.h"
 #include "llvm/Object/MachO.h"
+#include "llvm/Object/ObjectFile.h"
 #include "llvm/Object/RelocVisitor.h"
-#include "llvm/Support/Compression.h"
-#include "llvm/Support/Dwarf.h"
-#include "llvm/Support/ELF.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/DataExtractor.h"
+#include "llvm/Support/Debug.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/Format.h"
-#include "llvm/Support/Path.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
+#include <cstdint>
+#include <string>
+#include <utility>
+#include <vector>
+
 using namespace llvm;
 using namespace dwarf;
 using namespace object;
@@ -756,9 +778,9 @@ DWARFContextInMemory::DWARFContextInMemory(const object::ObjectFile &Obj,
           // we need to perform the same computation.
           StringRef SecName;
           RSec->getName(SecName);
-//           llvm::dbgs() << "Name: '" << SecName
-//                        << "', RSec: " << RSec->getRawDataRefImpl()
-//                        << ", Section: " << Section.getRawDataRefImpl() << "\n";
+//           dbgs() << "Name: '" << SecName
+//                  << "', RSec: " << RSec->getRawDataRefImpl()
+//                  << ", Section: " << Section.getRawDataRefImpl() << "\n";
           SectionLoadAddress = L->getSectionLoadAddress(*RSec);
           if (SectionLoadAddress != 0)
             SymAddr += SectionLoadAddress - RSec->getAddress();
@@ -840,4 +862,4 @@ StringRef *DWARFContextInMemory::MapSectionToMember(StringRef Name) {
       .Default(nullptr);
 }
 
-void DWARFContextInMemory::anchor() { }
+void DWARFContextInMemory::anchor() {}

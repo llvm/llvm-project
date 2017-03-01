@@ -150,3 +150,19 @@ Add support for mergeable sections in the Wasm writer, such as for strings and
 floating-point constants.
 
 //===---------------------------------------------------------------------===//
+
+The function @dynamic_alloca_redzone in test/CodeGen/WebAssembly/userstack.ll
+ends up with a tee_local in its prolog which has an unused result, requiring
+an extra drop:
+
+    get_global  $push8=, 0
+    tee_local   $push9=, 1, $pop8
+    drop        $pop9
+    [...]
+
+The prologue code initially thinks it needs an FP register, but later it
+turns out to be unneeded, so one could either approach this by being more
+clever about not inserting code for an FP in the first place, or optimizing
+away the copy later.
+
+//===---------------------------------------------------------------------===//

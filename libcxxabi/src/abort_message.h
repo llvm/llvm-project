@@ -10,24 +10,18 @@
 #ifndef __ABORT_MESSAGE_H_
 #define __ABORT_MESSAGE_H_
 
-#include <stdio.h>
-
-#pragma GCC visibility push(hidden)
+#include "cxxabi.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-__attribute__((visibility("hidden"), noreturn))
-       void abort_message(const char* format, ...) 
-            __attribute__((format(printf, 1, 2)));
-
+_LIBCXXABI_HIDDEN _LIBCXXABI_NORETURN void
+abort_message(const char *format, ...) __attribute__((format(printf, 1, 2)));
 
 #ifdef __cplusplus
 }
 #endif
-
-#pragma GCC visibility pop
 
 #endif
 

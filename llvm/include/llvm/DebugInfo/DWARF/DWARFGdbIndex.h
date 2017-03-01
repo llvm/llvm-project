@@ -1,4 +1,4 @@
-//===-- DWARFGdbIndex.h -----------------------------------------*- C++ -*-===//
+//===- DWARFGdbIndex.h ------------------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,14 +7,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_DEBUGINFO_DWARFGDBINDEX_H
-#define LLVM_LIB_DEBUGINFO_DWARFGDBINDEX_H
+#ifndef LLVM_DEBUGINFO_DWARF_DWARFGDBINDEX_H
+#define LLVM_DEBUGINFO_DWARF_DWARFGDBINDEX_H
 
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/DataExtractor.h"
-#include "llvm/Support/Error.h"
-#include "llvm/Support/raw_ostream.h"
+#include <cstdint>
+#include <utility>
 
 namespace llvm {
+
+class raw_ostream;
+
 class DWARFGdbIndex {
   uint32_t Version;
 
@@ -63,6 +68,7 @@ public:
   bool HasContent = false;
   bool HasError = false;
 };
-}
 
-#endif // LLVM_LIB_DEBUGINFO_DWARFGDBINDEX_H
+} // end namespace llvm
+
+#endif // LLVM_DEBUGINFO_DWARF_DWARFGDBINDEX_H
