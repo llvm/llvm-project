@@ -401,8 +401,12 @@ lldb::StopInfoSP Thread::GetStopInfo() {
   if (have_valid_stop_info && !plan_overrides_trace) {
     return m_stop_info_sp;
   } else if (have_valid_completed_plan) {
+    bool is_swift_error_value;
+    lldb::ValueObjectSP return_value_sp =
+        GetReturnValueObject(&is_swift_error_value);
     return StopInfo::CreateStopReasonWithPlan(
-        completed_plan_sp, GetReturnValueObject(), GetExpressionVariable());
+        completed_plan_sp, return_value_sp, GetExpressionVariable(),
+        is_swift_error_value);
   } else {
     GetPrivateStopInfo();
     return m_stop_info_sp;
