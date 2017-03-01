@@ -4330,7 +4330,7 @@ ARMAsmParser::parseMSRMaskOperand(OperandVector &Operands) {
 
       // If some specific flag is already set, it means that some letter is
       // present more than once, this is not acceptable.
-      if (FlagsVal == ~0U || (FlagsVal & Flag))
+      if (Flag == ~0U || (FlagsVal & Flag))
         return MatchOperand_NoMatch;
       FlagsVal |= Flag;
     }

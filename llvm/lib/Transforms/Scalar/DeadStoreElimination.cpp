@@ -551,7 +551,7 @@ static bool memoryIsNotModifiedBetween(Instruction *FirstI,
       Instruction *I = &*BI;
       if (I->mayWriteToMemory() && I != SecondI) {
         auto Res = AA->getModRefInfo(I, MemLoc);
-        if (Res != MRI_NoModRef)
+        if (Res & MRI_Mod)
           return false;
       }
     }
