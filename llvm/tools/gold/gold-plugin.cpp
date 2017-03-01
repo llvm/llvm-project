@@ -106,7 +106,6 @@ static std::list<claimed_file> Modules;
 static DenseMap<int, void *> FDToLeaderHandle;
 static StringMap<ResolutionInfo> ResInfo;
 static std::vector<std::string> Cleanup;
-static llvm::TargetOptions TargetOpts;
 
 namespace options {
   enum OutputType {

@@ -871,11 +871,20 @@ public:
 template <class _Key, class _Hash, class _Equal, class _Alloc>
 struct __diagnose_hash_table_helper {
   static constexpr bool __trigger_diagnostics()
-  _LIBCPP_DIAGNOSE_WARNING(!__invokable<_Hash const&, _Key const&>::value,
-    "the specified hash functor does not provide a const call operator")
-  _LIBCPP_DIAGNOSE_WARNING(!__invokable<_Equal const&, _Key const&, _Key const&>::value,
-    "the specified comparator type does not provide a const call operator")
-  { return true; }
+    _LIBCPP_DIAGNOSE_WARNING(__has_enabled_hash<_Key, _Hash>::value
+                         && !__invokable<_Hash const&, _Key const&>::value,
+      "the specified hash functor does not provide a const call operator")
+    _LIBCPP_DIAGNOSE_WARNING(is_copy_constructible<_Equal>::value
+                          && !__invokable<_Equal const&, _Key const&, _Key const&>::value,
+      "the specified comparator type does not provide a const call operator")
+  {
+    static_assert(__has_enabled_hash<_Key, _Hash>::value,
+      "the specified hash functor does not meet the requirements for an "
+      "enabled hash");
+    static_assert(is_copy_constructible<_Equal>::value,
+      "the specified comparator is required to be copy constructible");
+    return true;
+  }
 };
 
 template <class _Key, class _Value, class _Hash, class _Equal, class _Alloc>
@@ -950,6 +959,10 @@ private:
     typedef unique_ptr<__next_pointer[], __bucket_list_deleter> __bucket_list;
     typedef allocator_traits<__pointer_allocator>          __pointer_alloc_traits;
     typedef typename __bucket_list_deleter::pointer       __node_pointer_pointer;
+
+#ifndef _LIBCPP_CXX03_LANG
+    static_assert(__diagnose_hash_table_helper<_Tp, _Hash, _Equal, _Alloc>::__trigger_diagnostics(), "");
+#endif
 
     // --- Member data begin ---
     __bucket_list                                         __bucket_list_;
@@ -1482,13 +1495,13 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__hash_table(__hash_table&& __u,
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
 __hash_table<_Tp, _Hash, _Equal, _Alloc>::~__hash_table()
 {
+#if defined(_LIBCPP_CXX03_LANG)
     static_assert((is_copy_constructible<key_equal>::value),
                  "Predicate must be copy-constructible.");
     static_assert((is_copy_constructible<hasher>::value),
                  "Hasher must be copy-constructible.");
-#ifndef _LIBCPP_CXX03_LANG
-    static_assert(__diagnose_hash_table_helper<_Tp, _Hash, _Equal, _Alloc>::__trigger_diagnostics(), "");
 #endif
+
     __deallocate_node(__p1_.first().__next_);
 #if _LIBCPP_DEBUG_LEVEL >= 2
     __get_db()->__erase_c(this);

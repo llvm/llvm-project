@@ -122,7 +122,8 @@ public:
     if (auto EC = checkOffset(Offset, 1))
       return EC;
 
-    if (auto EC = Stream->readLongestContiguousChunk(Offset, Buffer))
+    if (auto EC =
+            Stream->readLongestContiguousChunk(ViewOffset + Offset, Buffer))
       return EC;
     // This StreamRef might refer to a smaller window over a larger stream.  In
     // that case we will have read out more bytes than we should return, because

@@ -22,8 +22,6 @@ extern "C" void android_set_abort_message(const char* msg);
 #endif // __ANDROID_API__ >= 21
 #endif // __BIONIC__
 
-#pragma GCC visibility push(hidden)
-
 #ifdef __APPLE__
 #   if defined(__has_include) && __has_include(<CrashReporterClient.h>)
 #       define HAVE_CRASHREPORTERCLIENT_H
@@ -31,7 +29,6 @@ extern "C" void android_set_abort_message(const char* msg);
 #   endif
 #endif
 
-__attribute__((visibility("hidden"), noreturn))
 void abort_message(const char* format, ...)
 {
     // write message to stderr
@@ -79,5 +76,3 @@ void abort_message(const char* format, ...)
 
     abort();
 }
-
-#pragma GCC visibility pop

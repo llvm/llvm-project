@@ -1,4 +1,4 @@
-//===-- DWARFUnitIndex.cpp ------------------------------------------------===//
+//===- DWARFUnitIndex.cpp -------------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,12 +7,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/DebugInfo/DWARF/DWARFUnitIndex.h"
-
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/DebugInfo/DWARF/DWARFUnitIndex.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/Format.h"
+#include "llvm/Support/raw_ostream.h"
+#include <cinttypes>
+#include <cstdint>
 
-namespace llvm {
+using namespace llvm;
 
 bool DWARFUnitIndex::Header::parse(DataExtractor IndexData,
                                    uint32_t *OffsetPtr) {
@@ -152,6 +156,7 @@ DWARFUnitIndex::Entry::getOffset(DWARFSectionKind Sec) const {
       return &Contributions[i];
   return nullptr;
 }
+
 const DWARFUnitIndex::Entry::SectionContribution *
 DWARFUnitIndex::Entry::getOffset() const {
   return &Contributions[Index->InfoColumn];
@@ -164,5 +169,4 @@ DWARFUnitIndex::getFromOffset(uint32_t Offset) const {
       if (Contribs[InfoColumn].Offset == Offset)
         return &Rows[i];
   return nullptr;
-}
 }

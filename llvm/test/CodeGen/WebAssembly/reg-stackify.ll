@@ -1,9 +1,9 @@
-; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -verify-machineinstrs | FileCheck %s
+; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -disable-wasm-explicit-locals -verify-machineinstrs | FileCheck %s
 
 ; Test the register stackifier pass.
 
 target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
-target triple = "wasm32-unknown-unknown"
+target triple = "wasm32-unknown-unknown-wasm"
 
 ; No because of pointer aliasing.
 
@@ -126,7 +126,6 @@ false:
 
 ; CHECK-LABEL: multiple_uses:
 ; CHECK: .param       i32, i32, i32{{$}}
-; CHECK-NEXT: .local       i32{{$}}
 ; CHECK-NEXT: block   {{$}}
 ; CHECK-NEXT: i32.load    $push[[NUM0:[0-9]+]]=, 0($2){{$}}
 ; CHECK-NEXT: tee_local   $push[[NUM1:[0-9]+]]=, $3=, $pop[[NUM0]]{{$}}
@@ -449,8 +448,7 @@ bb10:                                             ; preds = %bb9, %bb
 
 ; CHECK-LABEL: stackpointer_dependency:
 ; CHECK:      call {{.+}}, stackpointer_callee@FUNCTION,
-; CHECK:      i32.const $push[[L0:.+]]=, 0
-; CHECK-NEXT: i32.store __stack_pointer($pop[[L0]]),
+; CHECK-NEXT: set_global 0,
 declare i32 @stackpointer_callee(i8* readnone, i8* readnone)
 declare i8* @llvm.frameaddress(i32)
 define i32 @stackpointer_dependency(i8* readnone) {

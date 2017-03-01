@@ -46,6 +46,12 @@ using namespace llvm;
 
 static cl::opt<bool> PreserveTiedOps("hexbit-keep-tied", cl::Hidden,
   cl::init(true), cl::desc("Preserve subregisters in tied operands"));
+static cl::opt<bool> GenExtract("hexbit-extract", cl::Hidden,
+  cl::init(true), cl::desc("Generate extract instructions"));
+
+static cl::opt<unsigned> MaxExtract("hexbit-max-extract", cl::Hidden,
+  cl::init(UINT_MAX));
+static unsigned CountExtract = 0;
 
 namespace llvm {
 
@@ -1765,6 +1771,8 @@ namespace {
           const BitTracker::RegisterCell &RC);
     bool simplifyTstbit(MachineInstr *MI, BitTracker::RegisterRef RD,
           const BitTracker::RegisterCell &RC);
+    bool simplifyExtractLow(MachineInstr *MI, BitTracker::RegisterRef RD,
+          const BitTracker::RegisterCell &RC, const RegisterSet &AVs);
 
     const HexagonInstrInfo &HII;
     const HexagonRegisterInfo &HRI;
@@ -2208,6 +2216,196 @@ bool BitSimplification::simplifyTstbit(MachineInstr *MI,
   return false;
 }
 
+// Detect whether RD is a bitfield extract (sign- or zero-extended) of
+// some register from the AVs set. Create a new corresponding instruction
+// at the location of MI. The intent is to recognize situations where
+// a sequence of instructions performs an operation that is equivalent to
+// an extract operation, such as a shift left followed by a shift right.
+bool BitSimplification::simplifyExtractLow(MachineInstr *MI,
+      BitTracker::RegisterRef RD, const BitTracker::RegisterCell &RC,
+      const RegisterSet &AVs) {
+  if (!GenExtract)
+    return false;
+  if (CountExtract >= MaxExtract)
+    return false;
+  CountExtract++;
+
+  unsigned W = RC.width();
+  unsigned RW = W;
+  unsigned Len;
+  bool Signed;
+
+  // The code is mostly class-independent, except for the part that generates
+  // the extract instruction, and establishes the source register (in case it
+  // needs to use a subregister).
+  const TargetRegisterClass *FRC = HBS::getFinalVRegClass(RD, MRI);
+  if (FRC != &Hexagon::IntRegsRegClass && FRC != &Hexagon::DoubleRegsRegClass)
+    return false;
+  assert(RD.Sub == 0);
+
+  // Observation:
+  // If the cell has a form of 00..0xx..x with k zeros and n remaining
+  // bits, this could be an extractu of the n bits, but it could also be
+  // an extractu of a longer field which happens to have 0s in the top
+  // bit positions.
+  // The same logic applies to sign-extended fields.
+  //
+  // Do not check for the extended extracts, since it would expand the
+  // search space quite a bit. The search may be expensive as it is.
+
+  const BitTracker::BitValue &TopV = RC[W-1];
+
+  // Eliminate candidates that have self-referential bits, since they
+  // cannot be extracts from other registers. Also, skip registers that
+  // have compile-time constant values.
+  bool IsConst = true;
+  for (unsigned I = 0; I != W; ++I) {
+    const BitTracker::BitValue &V = RC[I];
+    if (V.Type == BitTracker::BitValue::Ref && V.RefI.Reg == RD.Reg)
+      return false;
+    IsConst = IsConst && (V.is(0) || V.is(1));
+  }
+  if (IsConst)
+    return false;
+
+  if (TopV.is(0) || TopV.is(1)) {
+    bool S = TopV.is(1);
+    for (--W; W > 0 && RC[W-1].is(S); --W)
+      ;
+    Len = W;
+    Signed = S;
+    // The sign bit must be a part of the field being extended.
+    if (Signed)
+      ++Len;
+  } else {
+    // This could still be a sign-extended extract.
+    assert(TopV.Type == BitTracker::BitValue::Ref);
+    if (TopV.RefI.Reg == RD.Reg || TopV.RefI.Pos == W-1)
+      return false;
+    for (--W; W > 0 && RC[W-1] == TopV; --W)
+      ;
+    // The top bits of RC are copies of TopV. One occurrence of TopV will
+    // be a part of the field.
+    Len = W + 1;
+    Signed = true;
+  }
+
+  // This would be just a copy. It should be handled elsewhere.
+  if (Len == RW)
+    return false;
+
+  DEBUG({
+    dbgs() << __func__ << " on reg: " << PrintReg(RD.Reg, &HRI, RD.Sub)
+           << ", MI: " << *MI;
+    dbgs() << "Cell: " << RC << '\n';
+    dbgs() << "Expected bitfield size: " << Len << " bits, "
+           << (Signed ? "sign" : "zero") << "-extended\n";
+  });
+
+  bool Changed = false;
+
+  for (unsigned R = AVs.find_first(); R != 0; R = AVs.find_next(R)) {
+    const BitTracker::RegisterCell &SC = BT.lookup(R);
+    unsigned SW = SC.width();
+
+    // The source can be longer than the destination, as long as its size is
+    // a multiple of the size of the destination. Also, we would need to be
+    // able to refer to the subregister in the source that would be of the
+    // same size as the destination, but only check the sizes here.
+    if (SW < RW || (SW % RW) != 0)
+      continue;
+
+    // The field can start at any offset in SC as long as it contains Len
+    // bits and does not cross subregister boundary (if the source register
+    // is longer than the destination).
+    unsigned Off = 0;
+    while (Off <= SW-Len) {
+      unsigned OE = (Off+Len)/RW;
+      if (OE != Off/RW) {
+        // The assumption here is that if the source (R) is longer than the
+        // destination, then the destination is a sequence of words of
+        // size RW, and each such word in R can be accessed via a subregister.
+        //
+        // If the beginning and the end of the field cross the subregister
+        // boundary, advance to the next subregister.
+        Off = OE*RW;
+        continue;
+      }
+      if (HBS::isEqual(RC, 0, SC, Off, Len))
+        break;
+      ++Off;
+    }
+
+    if (Off > SW-Len)
+      continue;
+
+    // Found match.
+    unsigned ExtOpc = 0;
+    if (Off == 0) {
+      if (Len == 8)
+        ExtOpc = Signed ? Hexagon::A2_sxtb : Hexagon::A2_zxtb;
+      else if (Len == 16)
+        ExtOpc = Signed ? Hexagon::A2_sxth : Hexagon::A2_zxth;
+      else if (Len < 10 && !Signed)
+        ExtOpc = Hexagon::A2_andir;
+    }
+    if (ExtOpc == 0) {
+      ExtOpc =
+          Signed ? (RW == 32 ? Hexagon::S4_extract  : Hexagon::S4_extractp)
+                 : (RW == 32 ? Hexagon::S2_extractu : Hexagon::S2_extractup);
+    }
+    unsigned SR = 0;
+    // This only recognizes isub_lo and isub_hi.
+    if (RW != SW && RW*2 != SW)
+      continue;
+    if (RW != SW)
+      SR = (Off/RW == 0) ? Hexagon::isub_lo : Hexagon::isub_hi;
+
+    if (!validateReg({R,SR}, ExtOpc, 1))
+      continue;
+
+    // Don't generate the same instruction as the one being optimized.
+    if (MI->getOpcode() == ExtOpc) {
+      // All possible ExtOpc's have the source in operand(1).
+      const MachineOperand &SrcOp = MI->getOperand(1);
+      if (SrcOp.getReg() == R)
+        continue;
+    }
+
+    DebugLoc DL = MI->getDebugLoc();
+    MachineBasicBlock &B = *MI->getParent();
+    unsigned NewR = MRI.createVirtualRegister(FRC);
+    auto MIB = BuildMI(B, MI, DL, HII.get(ExtOpc), NewR)
+                  .addReg(R, 0, SR);
+    switch (ExtOpc) {
+      case Hexagon::A2_sxtb:
+      case Hexagon::A2_zxtb:
+      case Hexagon::A2_sxth:
+      case Hexagon::A2_zxth:
+        break;
+      case Hexagon::A2_andir:
+        MIB.addImm((1u << Len) - 1);
+        break;
+      case Hexagon::S4_extract:
+      case Hexagon::S2_extractu:
+      case Hexagon::S4_extractp:
+      case Hexagon::S2_extractup:
+        MIB.addImm(Len)
+           .addImm(Off);
+        break;
+      default:
+        llvm_unreachable("Unexpected opcode");
+    }
+
+    HBS::replaceReg(RD.Reg, NewR, MRI);
+    BT.put(BitTracker::RegisterRef(NewR), RC);
+    Changed = true;
+    break;
+  }
+
+  return Changed;
+}
+
 bool BitSimplification::processBlock(MachineBasicBlock &B,
       const RegisterSet &AVs) {
   if (!BT.reached(&B))
@@ -2245,12 +2443,14 @@ bool BitSimplification::processBlock(MachineBasicBlock &B,
 
     if (FRC->getID() == Hexagon::DoubleRegsRegClassID) {
       bool T = genPackhl(MI, RD, RC);
+      T = T || simplifyExtractLow(MI, RD, RC, AVB);
       Changed |= T;
       continue;
     }
 
     if (FRC->getID() == Hexagon::IntRegsRegClassID) {
-      bool T = genExtractHalf(MI, RD, RC);
+      bool T = simplifyExtractLow(MI, RD, RC, AVB);
+      T = T || genExtractHalf(MI, RD, RC);
       T = T || genCombineHalf(MI, RD, RC);
       T = T || genExtractLow(MI, RD, RC);
       Changed |= T;

@@ -1,9 +1,9 @@
-; RUN: llc < %s -asm-verbose=false -verify-machineinstrs -disable-block-placement | FileCheck %s
+; RUN: llc < %s -asm-verbose=false -verify-machineinstrs -disable-block-placement -disable-wasm-explicit-locals | FileCheck %s
 
 ; Test irreducible CFG handling.
 
 target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
-target triple = "wasm32-unknown-unknown"
+target triple = "wasm32-unknown-unknown-wasm"
 
 ; A simple loop with two entries.
 

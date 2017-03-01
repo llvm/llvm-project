@@ -1582,7 +1582,11 @@ void CompilerInvocation::setLangDefaults(LangOptions &Opts, InputKind IK,
     case IK_PreprocessedCXX:
     case IK_ObjCXX:
     case IK_PreprocessedObjCXX:
-      LangStd = LangStandard::lang_gnucxx98;
+      // The PS4 uses C++11 as the default C++ standard.
+      if (T.isPS4())
+        LangStd = LangStandard::lang_gnucxx11;
+      else
+        LangStd = LangStandard::lang_gnucxx98;
       break;
     case IK_RenderScript:
       LangStd = LangStandard::lang_c99;

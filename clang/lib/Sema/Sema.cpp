@@ -1237,14 +1237,14 @@ BlockScopeInfo *Sema::getCurBlock() {
   return CurBSI;
 }
 
-LambdaScopeInfo *Sema::getCurLambda(bool IgnoreCapturedRegions) {
+LambdaScopeInfo *Sema::getCurLambda(bool IgnoreNonLambdaCapturingScope) {
   if (FunctionScopes.empty())
     return nullptr;
 
   auto I = FunctionScopes.rbegin();
-  if (IgnoreCapturedRegions) {
+  if (IgnoreNonLambdaCapturingScope) {
     auto E = FunctionScopes.rend();
-    while (I != E && isa<CapturedRegionScopeInfo>(*I))
+    while (I != E && isa<CapturingScopeInfo>(*I) && !isa<LambdaScopeInfo>(*I))
       ++I;
     if (I == E)
       return nullptr;

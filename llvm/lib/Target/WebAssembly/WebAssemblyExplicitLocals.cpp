@@ -31,6 +31,14 @@ using namespace llvm;
 
 #define DEBUG_TYPE "wasm-explicit-locals"
 
+// A command-line option to disable this pass. Note that this produces output
+// which is not valid WebAssembly, though it may be more convenient for writing
+// LLVM unit tests with.
+static cl::opt<bool> DisableWebAssemblyExplicitLocals(
+    "disable-wasm-explicit-locals", cl::ReallyHidden,
+    cl::desc("WebAssembly: Disable emission of get_local/set_local."),
+    cl::init(false));
+
 namespace {
 class WebAssemblyExplicitLocals final : public MachineFunctionPass {
   StringRef getPassName() const override {
@@ -163,6 +171,10 @@ bool WebAssemblyExplicitLocals::runOnMachineFunction(MachineFunction &MF) {
   DEBUG(dbgs() << "********** Make Locals Explicit **********\n"
                   "********** Function: "
                << MF.getName() << '\n');
+
+  // Disable this pass if directed to do so.
+  if (DisableWebAssemblyExplicitLocals)
+    return false;
 
   // Disable this pass if we aren't doing direct wasm object emission.
   if (MF.getSubtarget<WebAssemblySubtarget>()
