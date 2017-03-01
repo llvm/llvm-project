@@ -3823,36 +3823,44 @@ bool Parser::ParseCXX11AttributeArgs(IdentifierInfo *AttrName,
     return false;
   }
 
-  if (ScopeName && ScopeName->getName() == "gnu")
+  if (ScopeName && ScopeName->getName() == "gnu") {
     // GNU-scoped attributes have some special cases to handle GNU-specific
     // behaviors.
     ParseGNUAttributeArgs(AttrName, AttrNameLoc, Attrs, EndLoc, ScopeName,
                           ScopeLoc, AttributeList::AS_CXX11, nullptr);
-  else {
-    unsigned NumArgs =
+    return true;
+  }
+
+  unsigned NumArgs;
+  // Some Clang-scoped attributes have some special parsing behavior.
+  if (ScopeName && ScopeName->getName() == "clang")
+    NumArgs =
+        ParseClangAttributeArgs(AttrName, AttrNameLoc, Attrs, EndLoc, ScopeName,
+                                ScopeLoc, AttributeList::AS_CXX11);
+  else
+    NumArgs =
         ParseAttributeArgsCommon(AttrName, AttrNameLoc, Attrs, EndLoc,
                                  ScopeName, ScopeLoc, AttributeList::AS_CXX11);
-    
-    const AttributeList *Attr = Attrs.getList();
-    if (Attr && IsBuiltInOrStandardCXX11Attribute(AttrName, ScopeName)) {
-      // If the attribute is a standard or built-in attribute and we are
-      // parsing an argument list, we need to determine whether this attribute
-      // was allowed to have an argument list (such as [[deprecated]]), and how
-      // many arguments were parsed (so we can diagnose on [[deprecated()]]).
-      if (Attr->getMaxArgs() && !NumArgs) {
-        // The attribute was allowed to have arguments, but none were provided
-        // even though the attribute parsed successfully. This is an error.
-        Diag(LParenLoc, diag::err_attribute_requires_arguments) << AttrName;
-        Attr->setInvalid(true);
-      } else if (!Attr->getMaxArgs()) {
-        // The attribute parsed successfully, but was not allowed to have any
-        // arguments. It doesn't matter whether any were provided -- the
-        // presence of the argument list (even if empty) is diagnosed.
-        Diag(LParenLoc, diag::err_cxx11_attribute_forbids_arguments)
-            << AttrName
-            << FixItHint::CreateRemoval(SourceRange(LParenLoc, *EndLoc));
-        Attr->setInvalid(true);
-      }
+
+  const AttributeList *Attr = Attrs.getList();
+  if (Attr && IsBuiltInOrStandardCXX11Attribute(AttrName, ScopeName)) {
+    // If the attribute is a standard or built-in attribute and we are
+    // parsing an argument list, we need to determine whether this attribute
+    // was allowed to have an argument list (such as [[deprecated]]), and how
+    // many arguments were parsed (so we can diagnose on [[deprecated()]]).
+    if (Attr->getMaxArgs() && !NumArgs) {
+      // The attribute was allowed to have arguments, but none were provided
+      // even though the attribute parsed successfully. This is an error.
+      Diag(LParenLoc, diag::err_attribute_requires_arguments) << AttrName;
+      Attr->setInvalid(true);
+    } else if (!Attr->getMaxArgs()) {
+      // The attribute parsed successfully, but was not allowed to have any
+      // arguments. It doesn't matter whether any were provided -- the
+      // presence of the argument list (even if empty) is diagnosed.
+      Diag(LParenLoc, diag::err_cxx11_attribute_forbids_arguments)
+          << AttrName
+          << FixItHint::CreateRemoval(SourceRange(LParenLoc, *EndLoc));
+      Attr->setInvalid(true);
     }
   }
   return true;
