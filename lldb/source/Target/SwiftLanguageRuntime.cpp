@@ -58,6 +58,7 @@
 #include "lldb/Symbol/TypeList.h"
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/ExecutionContext.h"
+#include "lldb/Target/ProcessStructReader.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
@@ -67,7 +68,6 @@
 
 #include "lldb/Utility/CleanUp.h"
 #include "lldb/Utility/LLDBAssert.h"
-#include "lldb/Utility/ProcessStructReader.h"
 #include "lldb/Utility/StringLexer.h"
 
 // FIXME: we should not need this
