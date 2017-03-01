@@ -67,6 +67,9 @@ add_lldb_library(lldbCore
   VMRange.cpp
 
   LINK_LIBS
+    swiftBasic
+    swiftFrontend
+    swiftSerialization
     lldbBreakpoint
     lldbDataFormatters
     lldbExpression

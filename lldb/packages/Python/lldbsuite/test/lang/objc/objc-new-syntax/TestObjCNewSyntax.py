@@ -33,6 +33,10 @@ class ObjCNewSyntaxTestCase(TestBase):
         compiler_version=[
             '<',
             '7.0.0'])
+    @expectedFailureAll(
+        oslist=['macosx'],
+        debug_info='gmodules',
+        bugnumber = "<rdar://problem/30496829>")
     @skipIf(macos_version=["<", "10.12"])
     @expectedFailureAll(archs=["i[3-6]86"])
     def test_expr(self):

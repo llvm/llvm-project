@@ -1,5 +1,7 @@
 if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
   include_directories(${LIBXML2_INCLUDE_DIR})
+elseif (CMAKE_SYSTEM_NAME MATCHES "Linux")
+  list(APPEND LLDB_PLUGINS lldbPluginProcessLinux)
 endif()
 
 add_lldb_library(lldbPluginProcessGDBRemote PLUGIN
@@ -26,6 +28,7 @@ add_lldb_library(lldbPluginProcessGDBRemote PLUGIN
     lldbUtility
     lldbPluginProcessUtility
     lldbPluginPlatformMacOSX
+    ${LLDB_PLUGINS}
   LINK_COMPONENTS
     Support
   )

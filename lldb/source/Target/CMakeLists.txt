@@ -63,6 +63,10 @@ add_lldb_library(lldbTarget
   UnwindAssembly.cpp
 
   LINK_LIBS
+    swiftAST
+    swiftBasic
+    swiftFrontend
+    swiftRemoteAST
     lldbBreakpoint
     lldbCore
     lldbExpression

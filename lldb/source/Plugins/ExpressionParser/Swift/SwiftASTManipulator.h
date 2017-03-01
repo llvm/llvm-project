@@ -130,7 +130,8 @@ public:
   static void WrapExpression(Stream &wrapped_stream, const char *text,
                              uint32_t language_flags,
                              const EvaluateExpressionOptions &options,
-                             const Expression::SwiftGenericInfo &generic_info);
+                             const Expression::SwiftGenericInfo &generic_info,
+                             uint32_t &first_body_line);
 
   void FindSpecialNames(llvm::SmallVectorImpl<swift::Identifier> &names,
                         llvm::StringRef prefix);

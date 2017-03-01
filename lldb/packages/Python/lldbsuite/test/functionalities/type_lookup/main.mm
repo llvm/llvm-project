@@ -28,6 +28,28 @@ private:
 
 typedef MyCPPClass MyClass;
 
+@interface MyObjCClass : NSObject {
+  int x;
+}
+- (id)init;
+- (int)read;
+@end
+
+@implementation MyObjCClass {
+  int y;
+}
+- (id)init {
+  if (self = [super init]) {
+    self->x = 12;
+    self->y = 24;
+  }
+  return self;
+}
+- (int)read {
+  return self->x + self->y;
+}
+@end
+
 int main (int argc, const char * argv[])
 {
   MyClass my_cpp(3.1415);

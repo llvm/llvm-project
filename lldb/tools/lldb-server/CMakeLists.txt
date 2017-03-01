@@ -23,27 +23,6 @@ endif ()
 
 include_directories(../../source)
 
-# start swift mod
-set(SWIFT_ALL_LIBS
-    swiftBasic
-    swiftAST
-    swiftIDE
-    swiftIRGen
-    swiftFrontend
-    swiftSerialization
-    swiftClangImporter
-    swiftMarkup
-    swiftParse
-    swiftSema
-    swiftSIL
-    swiftSILGen
-    swiftSILOptimizer
-    swiftASTSectionImporter
-    swiftRemoteAST
-    swiftLLVMPasses
-    swiftOption
-    )
-# end swift mod
 
 set(LLDB_SYSTEM_LIBS)
 if (NOT LLDB_DISABLE_LIBEDIT)
@@ -80,15 +59,6 @@ if (LLVM_BUILD_STATIC)
   endif()
 endif()
 
-# start swift mod
-if(LLDB_BUILT_STANDALONE)
-  # this needs to be linked statially
-  list(APPEND LLDB_SYSTEM_LIBS ${PATH_TO_CMARK_BUILD}/src/libcmark.a)
-else()
-  list(APPEND LLDB_SYSTEM_LIBS libcmark_static)
-endif()
-# end swift mod
-
 add_lldb_tool(lldb-server INCLUDE_IN_FRAMEWORK
     Acceptor.cpp
     lldb-gdbserver.cpp
@@ -104,7 +74,6 @@ add_lldb_tool(lldb-server INCLUDE_IN_FRAMEWORK
       lldbInterpreter
       ${EXTRA_LLDB_LIBS}
       ${LLDB_SYSTEM_LIBS}
-      ${SWIFT_ALL_LIBS}
 
     LINK_COMPONENTS
       Support

@@ -31,7 +31,6 @@ add_lldb_library(lldbExpression
     lldbUtility
     lldbPluginExpressionParserClang
     lldbPluginExpressionParserSwift
-
   LINK_COMPONENTS
     Core
     ExecutionEngine
