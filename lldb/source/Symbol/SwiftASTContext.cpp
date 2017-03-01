@@ -3765,7 +3765,7 @@ bool SwiftASTContext::LoadLibraryUsingPaths(
     StreamString &all_dlopen_errors) {
   VALID_OR_RETURN(false);
 
-  Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_TYPES | LIBLLDB_LOG_TEMPORARY));
+  Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_TYPES));
 
   SwiftLanguageRuntime *runtime = process.GetSwiftLanguageRuntime();
   if (!runtime) {
