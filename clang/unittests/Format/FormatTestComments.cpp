@@ -1683,6 +1683,14 @@ TEST_F(FormatTestComments, IgnoresIf0Contents) {
                    "void f(  ) {  }\n"
                    "#endif\n"
                    "void g(  ) {  }\n"));
+  EXPECT_EQ("#ifdef SWIG\n"
+            "}{)(&*(^%%#%@! fsadj f;ldjs ,:;| <<<>>>][)(][\n"
+            "#endif\n"
+            "void f() {}",
+            format("#ifdef SWIG\n"
+                   "}{)(&*(^%%#%@! fsadj f;ldjs ,:;| <<<>>>][)(][\n"
+                   "#endif\n"
+                   "void f(  ) {  }"));
   EXPECT_EQ("enum E {\n"
             "  One,\n"
             "  Two,\n"

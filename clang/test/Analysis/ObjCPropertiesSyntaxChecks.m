@@ -59,3 +59,10 @@
 @interface IWithoutImpl : NSObject {}
 @property(copy) NSMutableString *mutableStr; // no-warning
 @end
+
+@protocol SomeProtocol
+// Don't warn on protocol properties because it is possible to
+// conform to them correctly; it is only synthesized setters that
+// that are definitely incorrect.
+@property (copy) NSMutableString *myProp; // no-crash // no-warning
+@end

@@ -8959,6 +8959,7 @@ void ASTReader::diagnoseOdrViolations() {
         ProtectedSpecifer,
         StaticAssert,
         Field,
+        CXXMethod,
         Other
       } FirstDiffType = Other,
         SecondDiffType = Other;
@@ -8984,6 +8985,8 @@ void ASTReader::diagnoseOdrViolations() {
           return StaticAssert;
         case Decl::Field:
           return Field;
+        case Decl::CXXMethod:
+          return CXXMethod;
         }
       };
 
@@ -9070,6 +9073,7 @@ void ASTReader::diagnoseOdrViolations() {
         FieldSingleMutable,
         FieldSingleInitializer,
         FieldDifferentInitializers,
+        MethodName,
       };
 
       // These lambdas have the common portions of the ODR diagnostics.  This
@@ -9286,6 +9290,25 @@ void ASTReader::diagnoseOdrViolations() {
             Diagnosed = true;
             break;
           }
+        }
+
+        break;
+      }
+      case CXXMethod: {
+        const CXXMethodDecl *FirstMethod = cast<CXXMethodDecl>(FirstDecl);
+        const CXXMethodDecl *SecondMethod = cast<CXXMethodDecl>(SecondDecl);
+        IdentifierInfo *FirstII = FirstMethod->getIdentifier();
+        IdentifierInfo *SecondII = SecondMethod->getIdentifier();
+        if (FirstII->getName() != SecondII->getName()) {
+          ODRDiagError(FirstMethod->getLocation(),
+                       FirstMethod->getSourceRange(), MethodName)
+              << FirstII;
+          ODRDiagNote(SecondMethod->getLocation(),
+                      SecondMethod->getSourceRange(), MethodName)
+              << SecondII;
+
+          Diagnosed = true;
+          break;
         }
 
         break;
