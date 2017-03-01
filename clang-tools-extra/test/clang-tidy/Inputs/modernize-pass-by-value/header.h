@@ -1,4 +1,7 @@
 class ThreadId {
+public:
+  ThreadId(const ThreadId &) {}
+  ThreadId(ThreadId &&) {}
 };
 
 struct A {

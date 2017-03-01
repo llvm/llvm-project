@@ -6,6 +6,8 @@
 #include HEADER
 
 struct A {
+  A(const A &) {}
+  A(A &&) {}
 };
 
 struct B {
