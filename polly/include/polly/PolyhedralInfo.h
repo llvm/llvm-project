@@ -22,7 +22,7 @@
 
 namespace llvm {
 class Loop;
-}
+} // namespace llvm
 
 namespace polly {
 
@@ -96,6 +96,6 @@ private:
 namespace llvm {
 class PassRegistry;
 void initializePolyhedralInfoPass(llvm::PassRegistry &);
-}
+} // namespace llvm
 
 #endif

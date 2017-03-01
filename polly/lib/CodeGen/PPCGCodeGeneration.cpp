@@ -2490,7 +2490,7 @@ public:
     AU.addPreserved<ScopInfoRegionPass>();
   }
 };
-}
+} // namespace
 
 char PPCGCodeGeneration::ID = 1;
 

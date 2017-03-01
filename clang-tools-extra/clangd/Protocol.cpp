@@ -457,3 +457,116 @@ DocumentFormattingParams::parse(llvm::yaml::MappingNode *Params) {
   }
   return Result;
 }
+
+llvm::Optional<Diagnostic> Diagnostic::parse(llvm::yaml::MappingNode *Params) {
+  Diagnostic Result;
+  for (auto &NextKeyValue : *Params) {
+    auto *KeyString = dyn_cast<llvm::yaml::ScalarNode>(NextKeyValue.getKey());
+    if (!KeyString)
+      return llvm::None;
+
+    llvm::SmallString<10> KeyStorage;
+    StringRef KeyValue = KeyString->getValue(KeyStorage);
+
+    llvm::SmallString<10> Storage;
+    if (KeyValue == "range") {
+      auto *Value =
+          dyn_cast_or_null<llvm::yaml::MappingNode>(NextKeyValue.getValue());
+      if (!Value)
+        return llvm::None;
+      auto Parsed = Range::parse(Value);
+      if (!Parsed)
+        return llvm::None;
+      Result.range = std::move(*Parsed);
+    } else if (KeyValue == "severity") {
+      auto *Value =
+          dyn_cast_or_null<llvm::yaml::ScalarNode>(NextKeyValue.getValue());
+      if (!Value)
+        return llvm::None;
+      long long Val;
+      if (llvm::getAsSignedInteger(Value->getValue(Storage), 0, Val))
+        return llvm::None;
+      Result.severity = Val;
+    } else if (KeyValue == "message") {
+      auto *Value =
+          dyn_cast_or_null<llvm::yaml::ScalarNode>(NextKeyValue.getValue());
+      if (!Value)
+        return llvm::None;
+      Result.message = Value->getValue(Storage);
+    } else {
+      return llvm::None;
+    }
+  }
+  return Result;
+}
+
+llvm::Optional<CodeActionContext>
+CodeActionContext::parse(llvm::yaml::MappingNode *Params) {
+  CodeActionContext Result;
+  for (auto &NextKeyValue : *Params) {
+    auto *KeyString = dyn_cast<llvm::yaml::ScalarNode>(NextKeyValue.getKey());
+    if (!KeyString)
+      return llvm::None;
+
+    llvm::SmallString<10> KeyStorage;
+    StringRef KeyValue = KeyString->getValue(KeyStorage);
+    auto *Value = NextKeyValue.getValue();
+
+    llvm::SmallString<10> Storage;
+    if (KeyValue == "diagnostics") {
+      auto *Seq = dyn_cast<llvm::yaml::SequenceNode>(Value);
+      if (!Seq)
+        return llvm::None;
+      for (auto &Item : *Seq) {
+        auto *I = dyn_cast<llvm::yaml::MappingNode>(&Item);
+        if (!I)
+          return llvm::None;
+        auto Parsed = Diagnostic::parse(I);
+        if (!Parsed)
+          return llvm::None;
+        Result.diagnostics.push_back(std::move(*Parsed));
+      }
+    } else {
+      return llvm::None;
+    }
+  }
+  return Result;
+}
+
+llvm::Optional<CodeActionParams>
+CodeActionParams::parse(llvm::yaml::MappingNode *Params) {
+  CodeActionParams Result;
+  for (auto &NextKeyValue : *Params) {
+    auto *KeyString = dyn_cast<llvm::yaml::ScalarNode>(NextKeyValue.getKey());
+    if (!KeyString)
+      return llvm::None;
+
+    llvm::SmallString<10> KeyStorage;
+    StringRef KeyValue = KeyString->getValue(KeyStorage);
+    auto *Value =
+        dyn_cast_or_null<llvm::yaml::MappingNode>(NextKeyValue.getValue());
+    if (!Value)
+      return llvm::None;
+
+    llvm::SmallString<10> Storage;
+    if (KeyValue == "textDocument") {
+      auto Parsed = TextDocumentIdentifier::parse(Value);
+      if (!Parsed)
+        return llvm::None;
+      Result.textDocument = std::move(*Parsed);
+    } else if (KeyValue == "range") {
+      auto Parsed = Range::parse(Value);
+      if (!Parsed)
+        return llvm::None;
+      Result.range = std::move(*Parsed);
+    } else if (KeyValue == "context") {
+      auto Parsed = CodeActionContext::parse(Value);
+      if (!Parsed)
+        return llvm::None;
+      Result.context = std::move(*Parsed);
+    } else {
+      return llvm::None;
+    }
+  }
+  return Result;
+}

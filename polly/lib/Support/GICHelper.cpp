@@ -225,7 +225,7 @@ DEFINE_ISLPTR(multi_pw_aff)
 DEFINE_ISLPTR(union_pw_aff)
 DEFINE_ISLPTR(multi_union_pw_aff)
 DEFINE_ISLPTR(union_pw_multi_aff)
-}
+} // namespace polly
 
 void polly::foreachElt(const IslPtr<isl_map> &Map,
                        const std::function<void(IslPtr<isl_basic_map>)> &F) {
