@@ -1,6 +1,8 @@
 ; RUN: opt %loadPolly -pass-remarks-missed="polly-detect" -polly-allow-nonaffine-loops -analyze  -polly-detect < %s 2>&1 | FileCheck %s
 ; RUN: opt %loadPolly -pass-remarks-missed="polly-detect" -polly-allow-nonaffine-loops=false -analyze  -polly-detect < %s 2>&1 | FileCheck %s
 
+; XFAIL: *
+
 ; void func (int param0, int N, int *A)
 ; {
 ;   for (int i = 0; i < N; i++)

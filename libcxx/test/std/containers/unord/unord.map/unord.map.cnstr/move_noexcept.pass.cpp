@@ -38,6 +38,8 @@ struct some_hash
     typedef T value_type;
     some_hash();
     some_hash(const some_hash&);
+
+    std::size_t operator()(T const&) const;
 };
 
 int main()

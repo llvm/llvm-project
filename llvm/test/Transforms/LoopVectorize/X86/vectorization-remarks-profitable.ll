@@ -1,4 +1,4 @@
-; RUN: opt < %s -loop-vectorize -pass-remarks-analysis='loop-vectorize' -mtriple=x86_64-unknown-linux -S 2>&1 | FileCheck %s
+; RUN: opt < %s -loop-vectorize -pass-remarks-missed='loop-vectorize' -mtriple=x86_64-unknown-linux -S 2>&1 | FileCheck %s
 
 ; Verify analysis remarks are generated when interleaving is not beneficial.
 ; CHECK: remark: vectorization-remarks-profitable.c:5:17: the cost-model indicates that vectorization is not beneficial

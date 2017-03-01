@@ -1,9 +1,9 @@
-; RUN: llc < %s -asm-verbose=false | FileCheck %s
+; RUN: llc < %s -asm-verbose=false -disable-wasm-explicit-locals | FileCheck %s
 
 ; Test that function pointer casts are replaced with wrappers.
 
 target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
-target triple = "wasm32-unknown-unknown"
+target triple = "wasm32-unknown-unknown-wasm"
 
 ; CHECK-LABEL: test:
 ; CHECK-NEXT: call        .Lbitcast@FUNCTION{{$}}
@@ -20,11 +20,10 @@ target triple = "wasm32-unknown-unknown"
 ; CHECK-NEXT: call        foo2@FUNCTION{{$}}
 ; CHECK-NEXT: call        foo1@FUNCTION{{$}}
 ; CHECK-NEXT: call        foo3@FUNCTION{{$}}
-; CHECK-NEXT: .endfunc
+; CHECK-NEXT: end_function
 
 ; CHECK-LABEL: test_varargs:
-; CHECK-NEXT: .local      i32
-; CHECK:      store
+; CHECK:      set_global
 ; CHECK:      i32.const   $push[[L3:[0-9]+]]=, 0{{$}}
 ; CHECK-NEXT: call        vararg@FUNCTION, $pop[[L3]]{{$}}
 ; CHECK-NEXT: i32.const   $push[[L4:[0-9]+]]=, 0{{$}}
@@ -32,25 +31,23 @@ target triple = "wasm32-unknown-unknown"
 ; CHECK-NEXT: call        plain@FUNCTION, $[[L5]]{{$}}
 
 ; CHECK-LABEL: .Lbitcast:
-; CHECK-NEXT: .local      i32
 ; CHECK-NEXT: call        has_i32_arg@FUNCTION, $0{{$}}
-; CHECK-NEXT: .endfunc
+; CHECK-NEXT: end_function
 
 ; CHECK-LABEL: .Lbitcast.1:
 ; CHECK-NEXT: call        $drop=, has_i32_ret@FUNCTION{{$}}
-; CHECK-NEXT: .endfunc
+; CHECK-NEXT: end_function
 
 ; CHECK-LABEL: .Lbitcast.2:
 ; CHECK-NEXT: .param      i32
 ; CHECK-NEXT: call        foo0@FUNCTION{{$}}
-; CHECK-NEXT: .endfunc
+; CHECK-NEXT: end_function
 
 ; CHECK-LABEL: .Lbitcast.3:
 ; CHECK-NEXT: .result     i32
-; CHECK-NEXT: .local      i32
 ; CHECK-NEXT: call        foo1@FUNCTION{{$}}
 ; CHECK-NEXT: copy_local  $push0=, $0
-; CHECK-NEXT: .endfunc
+; CHECK-NEXT: end_function
 
 declare void @has_i32_arg(i32)
 declare i32 @has_i32_ret()

@@ -1,9 +1,9 @@
-; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -verify-machineinstrs | FileCheck %s
+; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -disable-wasm-explicit-locals -verify-machineinstrs | FileCheck %s
 
 ; Test varargs constructs.
 
 target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
-target triple = "wasm32-unknown-unknown"
+target triple = "wasm32-unknown-unknown-wasm"
 
 ; Test va_start.
 
@@ -52,7 +52,6 @@ entry:
 ; CHECK-LABEL: arg_i8:
 ; CHECK-NEXT: .param     i32{{$}}
 ; CHECK-NEXT: .result    i32{{$}}
-; CHECK-NEXT: .local     i32{{$}}
 ; CHECK-NEXT: i32.load   $push[[NUM0:[0-9]+]]=, 0($0){{$}}
 ; CHECK-NEXT: tee_local  $push[[NUM1:[0-9]+]]=, $1=, $pop[[NUM0]]{{$}}
 ; CHECK-NEXT: i32.const  $push[[NUM2:[0-9]+]]=, 4{{$}}
@@ -71,7 +70,6 @@ entry:
 ; CHECK-LABEL: arg_i32:
 ; CHECK-NEXT: .param     i32{{$}}
 ; CHECK-NEXT: .result    i32{{$}}
-; CHECK-NEXT: .local     i32{{$}}
 ; CHECK-NEXT: i32.load   $push[[NUM0:[0-9]+]]=, 0($0){{$}}
 ; CHECK-NEXT: i32.const  $push[[NUM1:[0-9]+]]=, 3{{$}}
 ; CHECK-NEXT: i32.add    $push[[NUM2:[0-9]+]]=, $pop[[NUM0]], $pop[[NUM1]]{{$}}
@@ -93,7 +91,6 @@ entry:
 
 ; CHECK-LABEL: arg_i128:
 ; CHECK-NEXT: .param i32, i32{{$}}
-; CHECK-NEXT: .local
 ; CHECK: i32.and
 ; CHECK: i64.load
 ; CHECK: i64.load
@@ -123,8 +120,8 @@ define void @caller_none() {
 ; disabling it.
 
 ; CHECK-LABEL: caller_some
-; CHECK: i32.store
-; CHECK: i64.store
+; CHECK-DAG: i32.store
+; CHECK-DAG: i64.store
 define void @caller_some() {
   call void (...) @callee(i32 0, double 2.0)
   ret void

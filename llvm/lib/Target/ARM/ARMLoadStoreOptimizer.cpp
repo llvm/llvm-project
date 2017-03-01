@@ -609,13 +609,12 @@ MachineInstr *ARMLoadStoreOpt::CreateLoadStoreMulti(
   // Exception: If the base register is in the input reglist, Thumb1 LDM is
   // non-writeback.
   // It's also not possible to merge an STR of the base register in Thumb1.
-  if (isThumb1 && isi32Load(Opcode) && ContainsReg(Regs, Base)) {
+  if (isThumb1 && ContainsReg(Regs, Base)) {
     assert(Base != ARM::SP && "Thumb1 does not allow SP in register list");
-    if (Opcode == ARM::tLDRi) {
+    if (Opcode == ARM::tLDRi)
       Writeback = false;
-    } else if (Opcode == ARM::tSTRi) {
+    else if (Opcode == ARM::tSTRi)
       return nullptr;
-    }
   }
 
   ARM_AM::AMSubMode Mode = ARM_AM::ia;

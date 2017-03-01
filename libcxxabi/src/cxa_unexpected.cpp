@@ -14,14 +14,10 @@
 namespace __cxxabiv1
 {
 
-#pragma GCC visibility push(default)
-
 extern "C"
 {
 
 }
-
-#pragma GCC visibility pop
 
 }  // namespace __cxxabiv1
 

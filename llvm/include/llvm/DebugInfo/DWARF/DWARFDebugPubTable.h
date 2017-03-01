@@ -1,4 +1,4 @@
-//===-- DWARFDebugPubTable.h ------------------------------------*- C++ -*-===//
+//===- DWARFDebugPubTable.h -------------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,13 +7,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_DEBUGINFO_DWARFDEBUGPUBTABLE_H
-#define LLVM_LIB_DEBUGINFO_DWARFDEBUGPUBTABLE_H
+#ifndef LLVM_DEBUGINFO_DWARF_DWARFDEBUGPUBTABLE_H
+#define LLVM_DEBUGINFO_DWARF_DWARFDEBUGPUBTABLE_H
 
-#include "llvm/ADT/iterator_range.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/Support/DataExtractor.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Dwarf.h"
+#include <cstdint>
 #include <vector>
 
 namespace llvm {
@@ -28,7 +28,7 @@ public:
     uint32_t SecOffset;
 
     /// An entry of the various gnu_pub* debug sections.
-    llvm::dwarf::PubIndexEntryDescriptor Descriptor;
+    dwarf::PubIndexEntryDescriptor Descriptor;
 
     /// The name of the object as given by the DW_AT_name attribute of the
     /// referenced DIE.
@@ -68,10 +68,12 @@ private:
 
 public:
   DWARFDebugPubTable(StringRef Data, bool LittleEndian, bool GnuStyle);
+
   void dump(StringRef Name, raw_ostream &OS) const;
 
   ArrayRef<Set> getData() { return Sets; }
 };
-}
 
-#endif
+} // end namespace llvm
+
+#endif // LLVM_DEBUGINFO_DWARF_DWARFDEBUGPUBTABLE_H

@@ -29,13 +29,10 @@ EXT_FUNC(LLVMFuzzerCustomCrossOver, size_t,
 EXT_FUNC(__lsan_enable, void, (), false);
 EXT_FUNC(__lsan_disable, void, (), false);
 EXT_FUNC(__lsan_do_recoverable_leak_check, int, (), false);
-EXT_FUNC(__sanitizer_get_number_of_counters, size_t, (), false);
 EXT_FUNC(__sanitizer_install_malloc_and_free_hooks, int,
          (void (*malloc_hook)(const volatile void *, size_t),
           void (*free_hook)(const volatile void *)),
          false);
-EXT_FUNC(__sanitizer_get_total_unique_caller_callee_pairs, size_t, (), false);
-EXT_FUNC(__sanitizer_get_total_unique_coverage, size_t, (), true);
 EXT_FUNC(__sanitizer_print_memory_profile, int, (size_t), false);
 EXT_FUNC(__sanitizer_print_stack_trace, void, (), true);
 EXT_FUNC(__sanitizer_symbolize_pc, void,
@@ -43,10 +40,7 @@ EXT_FUNC(__sanitizer_symbolize_pc, void,
 EXT_FUNC(__sanitizer_get_module_and_offset_for_pc, int,
          (void *pc, char *module_path,
          size_t module_path_len,void **pc_offset), false);
-EXT_FUNC(__sanitizer_reset_coverage, void, (), true);
 EXT_FUNC(__sanitizer_set_death_callback, void, (void (*)(void)), true);
 EXT_FUNC(__sanitizer_set_report_fd, void, (void*), false);
-EXT_FUNC(__sanitizer_update_counter_bitset_and_clear_counters, uintptr_t,
-  (uint8_t*), false);
 EXT_FUNC(__sanitizer_dump_coverage, void, (const uintptr_t *, uintptr_t),
          false);

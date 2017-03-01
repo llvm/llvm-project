@@ -1,10 +1,13 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -march=hexagon -hexbit-extract=0 < %s | FileCheck %s
 
 ; Make sure we don't generate zxtb to transfer a predicate register into
 ; a general purpose register.
 
 ; CHECK: r0 = p0
 ; CHECK-NOT: zxtb(p
+; CHECK-NOT: and(p
+; CHECK-NOT: extract(p
+; CHECK-NOT: extractu(p
 
 target triple = "hexagon"
 

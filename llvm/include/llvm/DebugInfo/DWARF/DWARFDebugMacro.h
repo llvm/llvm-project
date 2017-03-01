@@ -1,4 +1,4 @@
-//===-- DWARFDebugMacro.h ---------------------------------------*- C++ -*-===//
+//===- DWARFDebugMacro.h ----------------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -50,6 +50,7 @@ public:
 
   /// Print the macro list found within the debug_macinfo section.
   void dump(raw_ostream &OS) const;
+
   /// Parse the debug_macinfo section accessible via the 'data' parameter.
   void parse(DataExtractor data);
 };
