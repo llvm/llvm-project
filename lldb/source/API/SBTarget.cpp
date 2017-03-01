@@ -1031,7 +1031,7 @@ SBTarget::BreakpointCreateForException(lldb::LanguageType language,
           args.AppendArgument(extra_args.GetStringAtIndex(i));
           args.AppendArgument(extra_args.GetStringAtIndex(i + 1));
         }
-        Breakpoint *bkpt = sb_bp.get();
+        BreakpointSP bkpt = sb_bp.GetSP();
         Breakpoint::BreakpointPreconditionSP pre_condition_sp =
             bkpt->GetPrecondition();
         if (pre_condition_sp)
