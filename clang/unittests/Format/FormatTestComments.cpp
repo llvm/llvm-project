@@ -1683,14 +1683,6 @@ TEST_F(FormatTestComments, IgnoresIf0Contents) {
                    "void f(  ) {  }\n"
                    "#endif\n"
                    "void g(  ) {  }\n"));
-  EXPECT_EQ("#ifdef SWIG\n"
-            "}{)(&*(^%%#%@! fsadj f;ldjs ,:;| <<<>>>][)(][\n"
-            "#endif\n"
-            "void f() {}",
-            format("#ifdef SWIG\n"
-                   "}{)(&*(^%%#%@! fsadj f;ldjs ,:;| <<<>>>][)(][\n"
-                   "#endif\n"
-                   "void f(  ) {  }"));
   EXPECT_EQ("enum E {\n"
             "  One,\n"
             "  Two,\n"
@@ -1809,6 +1801,22 @@ TEST_F(FormatTestComments, IgnoresIf0Contents) {
                    "#endif\n"
                    "Five\n"
                    "};"));
+
+  // Ignore stuff in SWIG-blocks.
+  EXPECT_EQ("#ifdef SWIG\n"
+            "}{)(&*(^%%#%@! fsadj f;ldjs ,:;| <<<>>>][)(][\n"
+            "#endif\n"
+            "void f() {}",
+            format("#ifdef SWIG\n"
+                   "}{)(&*(^%%#%@! fsadj f;ldjs ,:;| <<<>>>][)(][\n"
+                   "#endif\n"
+                   "void f(  ) {  }"));
+  EXPECT_EQ("#ifndef SWIG\n"
+            "void f() {}\n"
+            "#endif",
+            format("#ifndef SWIG\n"
+                   "void f(      ) {       }\n"
+                   "#endif"));
 }
 
 TEST_F(FormatTestComments, DontCrashOnBlockComments) {

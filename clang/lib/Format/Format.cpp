@@ -308,6 +308,7 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("DisableFormat", Style.DisableFormat);
     IO.mapOptional("ExperimentalAutoDetectBinPacking",
                    Style.ExperimentalAutoDetectBinPacking);
+    IO.mapOptional("FixNamespaceComments", Style.FixNamespaceComments);
     IO.mapOptional("ForEachMacros", Style.ForEachMacros);
     IO.mapOptional("IncludeCategories", Style.IncludeCategories);
     IO.mapOptional("IncludeIsMainRegex", Style.IncludeIsMainRegex);
@@ -529,6 +530,7 @@ FormatStyle getLLVMStyle() {
   LLVMStyle.Cpp11BracedListStyle = true;
   LLVMStyle.DerivePointerAlignment = false;
   LLVMStyle.ExperimentalAutoDetectBinPacking = false;
+  LLVMStyle.FixNamespaceComments = true;
   LLVMStyle.ForEachMacros.push_back("foreach");
   LLVMStyle.ForEachMacros.push_back("Q_FOREACH");
   LLVMStyle.ForEachMacros.push_back("BOOST_FOREACH");
@@ -676,6 +678,7 @@ FormatStyle getMozillaStyle() {
   MozillaStyle.ConstructorInitializerIndentWidth = 2;
   MozillaStyle.ContinuationIndentWidth = 2;
   MozillaStyle.Cpp11BracedListStyle = false;
+  MozillaStyle.FixNamespaceComments = false;
   MozillaStyle.IndentCaseLabels = true;
   MozillaStyle.ObjCSpaceAfterProperty = true;
   MozillaStyle.ObjCSpaceBeforeProtocolList = false;
@@ -696,6 +699,7 @@ FormatStyle getWebKitStyle() {
   Style.BreakConstructorInitializersBeforeComma = true;
   Style.Cpp11BracedListStyle = false;
   Style.ColumnLimit = 0;
+  Style.FixNamespaceComments = false;
   Style.IndentWidth = 4;
   Style.NamespaceIndentation = FormatStyle::NI_Inner;
   Style.ObjCBlockIndentWidth = 4;
@@ -713,6 +717,7 @@ FormatStyle getGNUStyle() {
   Style.BreakBeforeTernaryOperators = true;
   Style.Cpp11BracedListStyle = false;
   Style.ColumnLimit = 79;
+  Style.FixNamespaceComments = false;
   Style.SpaceBeforeParens = FormatStyle::SBPO_Always;
   Style.Standard = FormatStyle::LS_Cpp03;
   return Style;
@@ -1829,20 +1834,32 @@ tooling::Replacements reformat(const FormatStyle &Style, StringRef Code,
     return tooling::Replacements();
   auto Env = Environment::CreateVirtualEnvironment(Code, FileName, Ranges);
 
-  if (Style.Language == FormatStyle::LK_JavaScript &&
-      Style.JavaScriptQuotes != FormatStyle::JSQS_Leave) {
-    JavaScriptRequoter Requoter(*Env, Expanded);
-    tooling::Replacements Requotes = Requoter.process();
-    if (!Requotes.empty()) {
-      auto NewCode = applyAllReplacements(Code, Requotes);
+  auto reformatAfterApplying = [&] (TokenAnalyzer& Fixer) {
+    tooling::Replacements Fixes = Fixer.process();
+    if (!Fixes.empty()) {
+      auto NewCode = applyAllReplacements(Code, Fixes);
       if (NewCode) {
         auto NewEnv = Environment::CreateVirtualEnvironment(
             *NewCode, FileName,
-            tooling::calculateRangesAfterReplacements(Requotes, Ranges));
+            tooling::calculateRangesAfterReplacements(Fixes, Ranges));
         Formatter Format(*NewEnv, Expanded, IncompleteFormat);
-        return Requotes.merge(Format.process());
+        return Fixes.merge(Format.process());
       }
     }
+    Formatter Format(*Env, Expanded, IncompleteFormat);
+    return Format.process();
+  };
+
+  if (Style.Language == FormatStyle::LK_Cpp &&
+      Style.FixNamespaceComments) {
+    NamespaceEndCommentsFixer CommentsFixer(*Env, Expanded);
+    return reformatAfterApplying(CommentsFixer);
+  }
+
+  if (Style.Language == FormatStyle::LK_JavaScript &&
+      Style.JavaScriptQuotes != FormatStyle::JSQS_Leave) {
+    JavaScriptRequoter Requoter(*Env, Expanded);
+    return reformatAfterApplying(Requoter);
   }
 
   Formatter Format(*Env, Expanded, IncompleteFormat);

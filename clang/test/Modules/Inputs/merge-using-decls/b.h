@@ -29,7 +29,7 @@ template<typename T> struct D : X, T {
   using typename X::t;
 };
 
-#if __cplusplus <= 199711L // C++11 does not allow access declerations
+#if __cplusplus <= 199711L // C++11 does not allow access declarations
 template<typename T> struct E : X, T {
   // Mismatch in using/access-declaration-ness.
   T::value;
@@ -49,7 +49,7 @@ template<typename T> struct F : X, T {
 typedef C<YB>::type I;
 typedef D<YBRev>::t I;
 
-#if __cplusplus <= 199711L // C++11 does not allow access declerations
+#if __cplusplus <= 199711L // C++11 does not allow access declarations
 typedef E<YB>::type I;
 #endif
 

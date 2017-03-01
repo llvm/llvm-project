@@ -471,6 +471,10 @@ the configuration (without a prefix: ``Auto``).
   NOTE: This is an experimental flag, that might go away or be renamed. Do
   not use this in config files, etc. Use at your own risk.
 
+**FixNamespaceComments** (``bool``)
+  If ``true``, clang-format adds missing namespace end comments and
+  fixes invalid existing ones.
+
 **ForEachMacros** (``std::vector<std::string>``)
   A vector of macros that should be interpreted as foreach loops
   instead of as function calls.
@@ -561,6 +565,9 @@ the configuration (without a prefix: ``Auto``).
 
 
 
+**JavaScriptWrapImports** (``bool``)
+  Whether to wrap JavaScript import/export statements.
+
 **KeepEmptyLinesAtTheStartOfBlocks** (``bool``)
   If true, empty lines at the start of blocks are kept.
 
@@ -573,13 +580,16 @@ the configuration (without a prefix: ``Auto``).
     Do not use.
 
   * ``LK_Cpp`` (in configuration: ``Cpp``)
-    Should be used for C, C++, ObjectiveC, ObjectiveC++.
+    Should be used for C, C++.
 
   * ``LK_Java`` (in configuration: ``Java``)
     Should be used for Java.
 
   * ``LK_JavaScript`` (in configuration: ``JavaScript``)
     Should be used for JavaScript.
+
+  * ``LK_ObjC`` (in configuration: ``ObjC``)
+    Should be used for Objective-C, Objective-C++.
 
   * ``LK_Proto`` (in configuration: ``Proto``)
     Should be used for Protocol Buffers
@@ -754,6 +764,9 @@ the configuration (without a prefix: ``Auto``).
 
   * ``UT_ForIndentation`` (in configuration: ``ForIndentation``)
     Use tabs only for indentation.
+
+  * ``UT_ForContinuationAndIndentation`` (in configuration: ``ForContinuationAndIndentation``)
+    Use tabs only for line continuation and indentation.
 
   * ``UT_Always`` (in configuration: ``Always``)
     Use tabs whenever we need to fill whitespace that spans at least from

@@ -87,7 +87,6 @@ static bool compareByFilePosition(InputSection *A, InputSection *B) {
 template <class ELFT> void OutputSection::finalize() {
   if ((this->Flags & SHF_LINK_ORDER) && !this->Sections.empty()) {
     std::sort(Sections.begin(), Sections.end(), compareByFilePosition<ELFT>);
-    Size = 0;
     assignOffsets<ELFT>();
 
     // We must preserve the link order dependency of sections with the
@@ -133,7 +132,7 @@ void OutputSection::addSection(InputSectionBase *C) {
 // This function is called after we sort input sections
 // and scan relocations to setup sections' offsets.
 template <class ELFT> void OutputSection::assignOffsets() {
-  uint64_t Off = this->Size;
+  uint64_t Off = 0;
   for (InputSection *S : Sections) {
     Off = alignTo(Off, S->Alignment);
     S->OutSecOff = Off;

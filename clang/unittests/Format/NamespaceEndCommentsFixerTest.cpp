@@ -345,6 +345,18 @@ TEST_F(NamespaceEndCommentsFixerTest,
                                     "}\n"
                                     "}\n"));
 }
+
+TEST_F(NamespaceEndCommentsFixerTest,
+       DoesNotAddEndCommentForUnbalancedRBracesAfterNamespaceEnd) {
+  EXPECT_EQ("namespace {\n"
+            "  int i;\n"
+            "} // namespace\n"
+            "}",
+            fixNamespaceEndComments("namespace {\n"
+                                    "  int i;\n"
+                                    "} // namespace\n"
+                                    "}"));
+}
 } // end namespace
 } // end namespace format
 } // end namespace clang
