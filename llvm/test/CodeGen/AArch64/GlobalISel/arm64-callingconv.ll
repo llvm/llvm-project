@@ -80,3 +80,17 @@ define void @test_varargs() {
   call void(i32, double, i64, ...) @varargs(i32 42, double 1.0, i64 12, i8 3, i16 1, i32 4, float 1.0, double 2.0)
   ret void
 }
+
+; signext/zeroext parameters on the stack: not part of any real ABI as far as I
+; know, but ELF currently allocates 8 bytes for a signext parameter on the
+; stack. The ADJCALLSTACK ops should reflect this, even if the difference is
+; theoretical.
+declare void @stack_ext_needed([8 x i64], i8 signext %in)
+; CHECK-LABEL: name: test_stack_ext_needed
+; CHECK: ADJCALLSTACKDOWN 8
+; CHECK: BL @stack_ext_needed
+; CHECK: ADJCALLSTACKUP 8
+define void @test_stack_ext_needed() {
+  call void @stack_ext_needed([8 x i64] undef, i8 signext 42)
+  ret void
+}
