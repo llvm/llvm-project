@@ -4410,6 +4410,7 @@ bool AsmParser::parseDirectiveComm(bool IsLocal) {
     return Error(Pow2AlignmentLoc, "invalid '.comm' or '.lcomm' directive "
                                    "alignment, can't be less than zero");
 
+  Sym->redefineIfPossible();
   if (!Sym->isUndefined())
     return Error(IDLoc, "invalid symbol redefinition");
 

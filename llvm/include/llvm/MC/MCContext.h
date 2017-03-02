@@ -83,10 +83,6 @@ namespace llvm {
     /// Bindings of names to symbols.
     SymbolTable Symbols;
 
-    /// Sections can have a corresponding symbol. This maps one to the
-    /// other.
-    DenseMap<const MCSection *, MCSymbol *> SectionSymbols;
-
     /// A mapping from a local label number and an instance count to a symbol.
     /// For example, in the assembly
     ///     1:
@@ -232,6 +228,13 @@ namespace llvm {
     MCSymbol *getOrCreateDirectionalLocalSymbol(unsigned LocalLabelVal,
                                                 unsigned Instance);
 
+    MCSectionELF *createELFSectionImpl(StringRef Section, unsigned Type,
+                                       unsigned Flags, SectionKind K,
+                                       unsigned EntrySize,
+                                       const MCSymbolELF *Group,
+                                       unsigned UniqueID,
+                                       const MCSectionELF *Associated);
+
   public:
     explicit MCContext(const MCAsmInfo *MAI, const MCRegisterInfo *MRI,
                        const MCObjectFileInfo *MOFI,
@@ -288,8 +291,6 @@ namespace llvm {
     /// \param Name - The symbol name, which must be unique across all symbols.
     MCSymbol *getOrCreateSymbol(const Twine &Name);
 
-    MCSymbolELF *getOrCreateSectionSymbol(const MCSectionELF &Section);
-
     /// Gets a symbol that will be defined to the final stack offset of a local
     /// variable after codegen.
     ///
@@ -340,43 +341,22 @@ namespace llvm {
 
     MCSectionELF *getELFSection(const Twine &Section, unsigned Type,
                                 unsigned Flags) {
-      return getELFSection(Section, Type, Flags, nullptr);
-    }
-
-    MCSectionELF *getELFSection(const Twine &Section, unsigned Type,
-                                unsigned Flags, const char *BeginSymName) {
-      return getELFSection(Section, Type, Flags, 0, "", BeginSymName);
+      return getELFSection(Section, Type, Flags, 0, "");
     }
 
     MCSectionELF *getELFSection(const Twine &Section, unsigned Type,
                                 unsigned Flags, unsigned EntrySize,
                                 const Twine &Group) {
-      return getELFSection(Section, Type, Flags, EntrySize, Group, nullptr);
+      return getELFSection(Section, Type, Flags, EntrySize, Group, ~0);
     }
 
     MCSectionELF *getELFSection(const Twine &Section, unsigned Type,
                                 unsigned Flags, unsigned EntrySize,
-                                const Twine &Group, const char *BeginSymName) {
-      return getELFSection(Section, Type, Flags, EntrySize, Group, ~0,
-                           BeginSymName);
-    }
-
-    MCSectionELF *getELFSection(const Twine &Section, unsigned Type,
-                                unsigned Flags, unsigned EntrySize,
-                                const Twine &Group, unsigned UniqueID) {
-      return getELFSection(Section, Type, Flags, EntrySize, Group, UniqueID,
-                           nullptr);
-    }
-
-    MCSectionELF *getELFSection(const Twine &Section, unsigned Type,
-                                unsigned Flags, unsigned EntrySize,
-                                const Twine &Group, unsigned UniqueID,
-                                const char *BeginSymName);
+                                const Twine &Group, unsigned UniqueID);
 
     MCSectionELF *getELFSection(const Twine &Section, unsigned Type,
                                 unsigned Flags, unsigned EntrySize,
                                 const MCSymbolELF *Group, unsigned UniqueID,
-                                const char *BeginSymName,
                                 const MCSectionELF *Associated);
 
     /// Get a section with the provided group identifier. This section is

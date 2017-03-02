@@ -34,7 +34,6 @@ foo:
 // ASM: .section .debug_info
 
 // ASM: .section .debug_abbrev
-// ASM-NEXT: .Lsection_abbrev:
 // ASM-NEXT: [[ABBREV_LABEL:.Ltmp[0-9]+]]
 
 // Second instance of the section has the CU
