@@ -124,12 +124,12 @@ public:
   std::string getParentContextString(const DIScope *Context) const;
 
   /// Add a new global name to the compile unit.
-  virtual void addGlobalName(StringRef Name, const DIE &Die,
-                             const DIScope *Context) = 0;
+  virtual void addGlobalName(StringRef Name, DIE &Die, const DIScope *Context) {
+  }
 
   /// Add a new global type to the compile unit.
   virtual void addGlobalType(const DIType *Ty, const DIE &Die,
-                             const DIScope *Context) = 0;
+                             const DIScope *Context) {}
 
   /// Returns the DIE map slot for the specified debug variable.
   ///
@@ -256,10 +256,13 @@ public:
   DIE *getOrCreateSubprogramDIE(const DISubprogram *SP, bool Minimal = false);
 
   void applySubprogramAttributes(const DISubprogram *SP, DIE &SPDie,
-                                 bool SkipSPAttributes = false);
+                                 bool Minimal = false);
 
   /// Find existing DIE or create new DIE for the given type.
   DIE *getOrCreateTypeDIE(const MDNode *N);
+
+  /// Get context owner's DIE.
+  DIE *createTypeDIE(const DICompositeType *Ty);
 
   /// Get context owner's DIE.
   DIE *getOrCreateContextDIE(const DIScope *Context);
@@ -279,13 +282,11 @@ public:
   virtual unsigned getHeaderSize() const {
     return sizeof(int16_t) + // DWARF version number
            sizeof(int32_t) + // Offset Into Abbrev. Section
-           sizeof(int8_t) +  // Pointer Size (in bytes)
-           (DD->getDwarfVersion() >= 5 ? sizeof(int8_t)
-                                       : 0); // DWARF v5 unit type
+           sizeof(int8_t);   // Pointer Size (in bytes)
   }
 
   /// Emit the header for this unit, not including the initial length field.
-  virtual void emitHeader(bool UseOffsets) = 0;
+  virtual void emitHeader(bool UseOffsets);
 
   virtual DwarfCompileUnit &getCU() = 0;
 
@@ -304,14 +305,6 @@ protected:
   template <typename T> T *resolve(TypedDINodeRef<T> Ref) const {
     return Ref.resolve();
   }
-
-  /// If this is a named finished type then include it in the list of types for
-  /// the accelerator tables.
-  void updateAcceleratorTables(const DIScope *Context, const DIType *Ty,
-                               const DIE &TyDIE);
-
-  /// Emit the common part of the header for this unit.
-  void emitCommonHeader(bool UseOffsets, dwarf::UnitType UT);
 
 private:
   void constructTypeDIE(DIE &Buffer, const DIBasicType *BTy);
@@ -337,6 +330,11 @@ private:
   /// Set D as anonymous type for index which can be reused later.
   void setIndexTyDie(DIE *D) { IndexTyDie = D; }
 
+  /// If this is a named finished type then include it in the list of types for
+  /// the accelerator tables.
+  void updateAcceleratorTables(const DIScope *Context, const DIType *Ty,
+                               const DIE &TyDIE);
+
   virtual bool isDwoUnit() const = 0;
 };
 
@@ -356,19 +354,12 @@ public:
   void setTypeSignature(uint64_t Signature) { TypeSignature = Signature; }
   void setType(const DIE *Ty) { this->Ty = Ty; }
 
-  /// Get context owner's DIE.
-  DIE *createTypeDIE(const DICompositeType *Ty);
-
   /// Emit the header for this unit, not including the initial length field.
   void emitHeader(bool UseOffsets) override;
   unsigned getHeaderSize() const override {
     return DwarfUnit::getHeaderSize() + sizeof(uint64_t) + // Type Signature
            sizeof(uint32_t);                               // Type DIE Offset
   }
-  void addGlobalName(StringRef Name, const DIE &Die,
-                     const DIScope *Context) override;
-  void addGlobalType(const DIType *Ty, const DIE &Die,
-                     const DIScope *Context) override;
   DwarfCompileUnit &getCU() override { return CU; }
 };
 } // end llvm namespace

@@ -674,7 +674,7 @@ DIE *DwarfUnit::getOrCreateContextDIE(const DIScope *Context) {
   return getDIE(Context);
 }
 
-DIE *DwarfTypeUnit::createTypeDIE(const DICompositeType *Ty) {
+DIE *DwarfUnit::createTypeDIE(const DICompositeType *Ty) {
   auto *Context = resolve(Ty->getScope());
   DIE *ContextDIE = getOrCreateContextDIE(Context);
 
@@ -1188,12 +1188,8 @@ bool DwarfUnit::applySubprogramDefinitionAttributes(const DISubprogram *SP,
 }
 
 void DwarfUnit::applySubprogramAttributes(const DISubprogram *SP, DIE &SPDie,
-                                          bool SkipSPAttributes) {
-  // If -fdebug-info-for-profiling is enabled, need to emit the subprogram
-  // and its source location.
-  bool SkipSPSourceLocation = SkipSPAttributes &&
-                              !Asm->TM.Options.DebugInfoForProfiling;
-  if (!SkipSPSourceLocation)
+                                          bool Minimal) {
+  if (!Minimal)
     if (applySubprogramDefinitionAttributes(SP, SPDie))
       return;
 
@@ -1201,12 +1197,11 @@ void DwarfUnit::applySubprogramAttributes(const DISubprogram *SP, DIE &SPDie,
   if (!SP->getName().empty())
     addString(SPDie, dwarf::DW_AT_name, SP->getName());
 
-  if (!SkipSPSourceLocation)
-    addSourceLine(SPDie, SP);
-
   // Skip the rest of the attributes under -gmlt to save space.
-  if (SkipSPAttributes)
+  if (Minimal)
     return;
+
+  addSourceLine(SPDie, SP);
 
   // Add the prototype if we have a prototype and we have a C like
   // language.
@@ -1539,27 +1534,18 @@ DIE *DwarfUnit::getOrCreateStaticMemberDIE(const DIDerivedType *DT) {
   return &StaticMemberDIE;
 }
 
-void DwarfUnit::emitCommonHeader(bool UseOffsets, dwarf::UnitType UT) {
+void DwarfUnit::emitHeader(bool UseOffsets) {
   // Emit size of content not including length itself
   Asm->OutStreamer->AddComment("Length of Unit");
   Asm->EmitInt32(getHeaderSize() + getUnitDie().getSize());
 
   Asm->OutStreamer->AddComment("DWARF version number");
-  unsigned Version = DD->getDwarfVersion();
-  Asm->EmitInt16(Version);
-
-  // DWARF v5 reorders the address size and adds a unit type.
-  if (Version >= 5) {
-    Asm->OutStreamer->AddComment("DWARF Unit Type");
-    Asm->EmitInt8(UT);
-    Asm->OutStreamer->AddComment("Address Size (in bytes)");
-    Asm->EmitInt8(Asm->getDataLayout().getPointerSize());
-  }
+  Asm->EmitInt16(DD->getDwarfVersion());
+  Asm->OutStreamer->AddComment("Offset Into Abbrev. Section");
 
   // We share one abbreviations table across all units so it's always at the
   // start of the section. Use a relocatable offset where needed to ensure
   // linking doesn't invalidate that offset.
-  Asm->OutStreamer->AddComment("Offset Into Abbrev. Section");
   const TargetLoweringObjectFile &TLOF = Asm->getObjFileLowering();
   if (UseOffsets)
     Asm->EmitInt32(0);
@@ -1567,16 +1553,12 @@ void DwarfUnit::emitCommonHeader(bool UseOffsets, dwarf::UnitType UT) {
     Asm->emitDwarfSymbolReference(
         TLOF.getDwarfAbbrevSection()->getBeginSymbol(), false);
 
-  if (Version <= 4) {
-    Asm->OutStreamer->AddComment("Address Size (in bytes)");
-    Asm->EmitInt8(Asm->getDataLayout().getPointerSize());
-  }
+  Asm->OutStreamer->AddComment("Address Size (in bytes)");
+  Asm->EmitInt8(Asm->getDataLayout().getPointerSize());
 }
 
 void DwarfTypeUnit::emitHeader(bool UseOffsets) {
-  DwarfUnit::emitCommonHeader(UseOffsets, 
-                              DD->useSplitDwarf() ? dwarf::DW_UT_split_type
-                                                  : dwarf::DW_UT_type);
+  DwarfUnit::emitHeader(UseOffsets);
   Asm->OutStreamer->AddComment("Type Signature");
   Asm->OutStreamer->EmitIntValue(TypeSignature, sizeof(TypeSignature));
   Asm->OutStreamer->AddComment("Type DIE Offset");
@@ -1589,14 +1571,4 @@ bool DwarfTypeUnit::isDwoUnit() const {
   // Since there are no skeleton type units, all type units are dwo type units
   // when split DWARF is being used.
   return DD->useSplitDwarf();
-}
-
-void DwarfTypeUnit::addGlobalName(StringRef Name, const DIE &Die,
-                                  const DIScope *Context) {
-  getCU().addGlobalNameForTypeUnit(Name, Context);
-}
-
-void DwarfTypeUnit::addGlobalType(const DIType *Ty, const DIE &Die,
-                                  const DIScope *Context) {
-  getCU().addGlobalTypeUnitType(Ty, Context);
 }
