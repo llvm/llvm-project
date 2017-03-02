@@ -304,6 +304,17 @@ StringRef llvm::dwarf::ApplePropertyString(unsigned Prop) {
   }
 }
 
+StringRef llvm::dwarf::UnitTypeString(unsigned UT) {
+  switch (UT) {
+  default:
+    return StringRef();
+#define HANDLE_DW_UT(ID, NAME)                                                 \
+  case DW_UT_##NAME:                                                           \
+    return "DW_UT_" #NAME;
+#include "llvm/Support/Dwarf.def"
+  }
+}
+
 StringRef llvm::dwarf::AtomTypeString(unsigned AT) {
   switch (AT) {
   case dwarf::DW_ATOM_null:
