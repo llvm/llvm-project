@@ -1199,6 +1199,8 @@ SwiftLanguage::GetStringPrinterEscapingHelper(
                  return retval;
                };
   }
+
+  llvm_unreachable("Unhandled StringPrinter in switch.");
 }
 
 static void SplitDottedName(llvm::StringRef name,
