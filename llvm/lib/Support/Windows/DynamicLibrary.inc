@@ -9,8 +9,6 @@
 //
 // This file provides the Win32 specific implementation of DynamicLibrary.
 //
-// FIXME: This file leaks OpenedHandles!
-//
 //===----------------------------------------------------------------------===//
 
 #include "WindowsSupport.h"
@@ -35,7 +33,7 @@ using namespace sys;
 
 typedef BOOL (WINAPI *fpEnumerateLoadedModules)(HANDLE,PENUMLOADED_MODULES_CALLBACK64,PVOID);
 static fpEnumerateLoadedModules fEnumerateLoadedModules;
-static DenseSet<HMODULE> *OpenedHandles;
+static llvm::ManagedStatic<DenseSet<HMODULE> > OpenedHandles;
 
 static bool loadDebugHelp(void) {
   HMODULE hLib = ::LoadLibraryW(L"Dbghelp.dll");
@@ -59,9 +57,6 @@ DynamicLibrary DynamicLibrary::getPermanentLibrary(const char *filename,
 
   if (!filename) {
     // When no file is specified, enumerate all DLLs and EXEs in the process.
-    if (OpenedHandles == 0)
-      OpenedHandles = new DenseSet<HMODULE>();
-
     if (!fEnumerateLoadedModules) {
       if (!loadDebugHelp()) {
         assert(false && "These APIs should always be available");
@@ -89,15 +84,24 @@ DynamicLibrary DynamicLibrary::getPermanentLibrary(const char *filename,
     return DynamicLibrary();
   }
 
-  if (OpenedHandles == 0)
-    OpenedHandles = new DenseSet<HMODULE>();
-
   // If we've already loaded this library, FreeLibrary() the handle in order to
   // keep the internal refcount at +1.
   if (!OpenedHandles->insert(a_handle).second)
     FreeLibrary(a_handle);
 
   return DynamicLibrary(a_handle);
+}
+
+DynamicLibrary DynamicLibrary::addPermanentLibrary(void *handle,
+                                                   std::string *errMsg) {
+  SmartScopedLock<true> lock(*SymbolsMutex);
+  // If we've already loaded this library, tell the caller.
+  if (!OpenedHandles->insert((HMODULE)handle).second) {
+    MakeErrMsg(errMsg, "Library already loaded");
+    return DynamicLibrary();
+  }
+
+  return DynamicLibrary(handle);
 }
 
 // Stack probing routines are in the support library (e.g. libgcc), but we don't
@@ -137,7 +141,7 @@ void* DynamicLibrary::SearchForAddressOfSymbol(const char* symbolName) {
   }
 
   // Now search the libraries.
-  if (OpenedHandles) {
+  if (OpenedHandles.isConstructed()) {
     for (DenseSet<HMODULE>::iterator I = OpenedHandles->begin(),
          E = OpenedHandles->end(); I != E; ++I) {
       FARPROC ptr = GetProcAddress((HMODULE)*I, symbolName);

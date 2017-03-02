@@ -582,6 +582,7 @@ public:
         _LIBCPP_INLINE_VISIBILITY
         wait_for(const chrono::duration<_Rep, _Period>& __rel_time) const;
     template <class _Clock, class _Duration>
+        _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS
         future_status
         wait_until(const chrono::time_point<_Clock, _Duration>& __abs_time) const;
 
@@ -1674,6 +1675,7 @@ class _LIBCPP_TYPE_VIS promise<void>
 public:
     promise();
     template <class _Allocator>
+        _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS
         promise(allocator_arg_t, const _Allocator& __a);
 #ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
     _LIBCPP_INLINE_VISIBILITY

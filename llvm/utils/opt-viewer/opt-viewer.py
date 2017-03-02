@@ -90,7 +90,7 @@ class SourceFileRenderer:
 <tr>
 <td></td>
 <td>{r.RelativeHotness}</td>
-<td class=\"column-entry-{r.color}\">{r.Pass}</td>
+<td class=\"column-entry-{r.color}\">{r.PassWithDiffPrefix}</td>
 <td><pre style="display:inline">{indent}</pre><span class=\"column-entry-yellow\"> {r.message}&nbsp;</span></td>
 <td class=\"column-entry-yellow\">{inlining_context}</td>
 </tr>'''.format(**locals()), file=self.stream)
@@ -133,7 +133,7 @@ class IndexRenderer:
 <td class=\"column-entry-{odd}\"><a href={r.Link}>{r.DebugLocString}</a></td>
 <td class=\"column-entry-{odd}\">{r.RelativeHotness}</td>
 <td class=\"column-entry-{odd}\">{escaped_name}</td>
-<td class=\"column-entry-{r.color}\">{r.Pass}</td>
+<td class=\"column-entry-{r.color}\">{r.PassWithDiffPrefix}</td>
 </tr>'''.format(**locals()), file=self.stream)
 
     def render(self, all_remarks):
@@ -190,7 +190,7 @@ def generate_report(pmap, all_remarks, file_remarks, source_dir, output_dir, sho
     pmap(_render_file_bound, file_remarks.items())
 
     if should_display_hotness:
-        sorted_remarks = sorted(all_remarks.itervalues(), key=lambda r: (r.Hotness, r.__dict__), reverse=True)
+        sorted_remarks = sorted(all_remarks.itervalues(), key=lambda r: (r.Hotness, r.File, r.Line, r.Column, r.__dict__), reverse=True)
     else:
         sorted_remarks = sorted(all_remarks.itervalues(), key=lambda r: (r.File, r.Line, r.Column, r.__dict__))
     IndexRenderer(args.output_dir).render(sorted_remarks)

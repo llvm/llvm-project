@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
 """Utility for opening a file using the default application in a cross-platform
 manner. Modified from http://code.activestate.com/recipes/511443/.
 """

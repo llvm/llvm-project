@@ -16,7 +16,7 @@ New entries should be added directly below the "Version" header.
 Version 5.0
 -----------
 
-* rTBD - Remove std::num_get template methods which should be inline
+* r296729 - Remove std::num_get template methods which should be inline
 
   These functions should never have had visible definitions in the dylib but
   since they were previously not specified with 'inline' they accidentally

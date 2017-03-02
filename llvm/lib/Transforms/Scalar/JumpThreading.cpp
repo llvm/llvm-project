@@ -999,7 +999,7 @@ bool JumpThreadingPass::SimplifyPartiallyRedundantLoad(LoadInst *LI) {
                                  &IsLoadCSE, &NumScanedInst);
 
     // If PredBB has a single predecessor, continue scanning through the single
-    // precessor.
+    // predecessor.
     BasicBlock *SinglePredBB = PredBB;
     while (!PredAvailable && SinglePredBB && BBIt == SinglePredBB->begin() &&
            NumScanedInst < DefMaxInstsToScan) {

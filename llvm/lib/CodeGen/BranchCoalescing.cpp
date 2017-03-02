@@ -390,7 +390,7 @@ void BranchCoalescing::moveAndUpdatePHIs(MachineBasicBlock *SourceMBB,
 /// the TargetMBB if there are no uses of it within the TargetMBB PHI nodes.
 ///
 /// \param[in] MI the machine instruction to move.
-/// \param[in] MBB the machine basic block to move to
+/// \param[in] TargetMBB the machine basic block to move to
 /// \return true if it is safe to move MI to beginning of TargetMBB, 
 ///         false otherwise.
 ///
@@ -421,7 +421,7 @@ bool BranchCoalescing::canMoveToBeginning(const MachineInstr &MI,
 /// it's own MBB.
 ///
 /// \param[in] MI the machine instruction to move.
-/// \param[in] MBB the machine basic block to move to
+/// \param[in] TargetMBB the machine basic block to move to
 /// \return true if it is safe to move MI to end of TargetMBB, 
 ///         false otherwise.
 ///

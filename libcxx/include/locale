@@ -623,17 +623,20 @@ protected:
     ~num_get() {}
 
     template <class _Fp>
-    inline iter_type __do_get_floating_point
+    _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS
+    iter_type __do_get_floating_point
                             (iter_type __b, iter_type __e, ios_base& __iob,
                              ios_base::iostate& __err, _Fp& __v) const;
 
     template <class _Signed>
-    inline iter_type __do_get_signed
+    _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS
+    iter_type __do_get_signed
                             (iter_type __b, iter_type __e, ios_base& __iob,
                              ios_base::iostate& __err, _Signed& __v) const;
 
     template <class _Unsigned>
-    inline iter_type __do_get_unsigned
+    _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS
+    iter_type __do_get_unsigned
                             (iter_type __b, iter_type __e, ios_base& __iob,
                              ios_base::iostate& __err, _Unsigned& __v) const;
 

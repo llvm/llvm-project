@@ -185,7 +185,7 @@ TEST_F(FormatTest, RemovesEmptyLines) {
   EXPECT_EQ("namespace N {\n"
             "\n"
             "int i;\n"
-            "}  // namespace N",
+            "}",
             format("namespace N {\n"
                    "\n"
                    "int    i;\n"
@@ -281,8 +281,7 @@ TEST_F(FormatTest, RemovesEmptyLines) {
                    "}", LLVMWithNoNamespaceFix));
   EXPECT_EQ("namespace {\n"
             "int i;\n"
-            "\n"
-            "} // namespace",
+            "}",
             format("namespace {\n"
                    "int i;\n"
                    "\n"
@@ -5460,7 +5459,7 @@ TEST_F(FormatTest, IncorrectCodeMissingSemicolon) {
   EXPECT_EQ("namespace N {\n"
             "void f() {}\n"
             "void g()\n"
-            "}",
+            "} // namespace N",
             format("namespace N  { void f( ) { } void g( ) }"));
 }
 
@@ -6140,8 +6139,8 @@ TEST_F(FormatTest, FormatStarDependingOnContext) {
                "  void f() {}\n"
                "  int *a;\n"
                "};\n"
-               "}\n"
-               "}");
+               "} // namespace b\n"
+               "} // namespace a");
 }
 
 TEST_F(FormatTest, SpecialTokensAtEndOfLine) {
@@ -7934,7 +7933,7 @@ TEST_F(FormatTest, StroustrupBraceBreaking) {
                "struct B {\n"
                "  int x;\n"
                "};\n"
-               "}\n",
+               "} // namespace a\n",
                StroustrupBraceStyle);
 
   verifyFormat("void foo()\n"

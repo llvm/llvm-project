@@ -49,6 +49,9 @@ public:
       Listener->onDocumentRemove(Uri);
   }
   /// Retrieve a document from the store. Empty string if it's unknown.
+  ///
+  /// This function is thread-safe. It returns a copy to avoid handing out
+  /// references to unguarded data.
   std::string getDocument(StringRef Uri) const {
     // FIXME: This could be a reader lock.
     std::lock_guard<std::mutex> Guard(DocsMutex);
@@ -59,6 +62,9 @@ public:
   void addListener(DocumentStoreListener *DSL) { Listeners.push_back(DSL); }
 
   /// Get name and constents of all documents in this store.
+  ///
+  /// This function is thread-safe. It returns a copies to avoid handing out
+  /// references to unguarded data.
   std::vector<std::pair<std::string, std::string>> getAllDocuments() const {
     std::vector<std::pair<std::string, std::string>> AllDocs;
     std::lock_guard<std::mutex> Guard(DocsMutex);

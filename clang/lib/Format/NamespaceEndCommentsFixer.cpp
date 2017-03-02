@@ -23,7 +23,7 @@ namespace clang {
 namespace format {
 
 namespace {
-// The maximal number of lines that a short namespace spans.
+// The maximal number of unwrapped lines that a short namespace spans.
 // Short namespaces don't need an end comment.
 static const int kShortNamespaceMaxLines = 1;
 
@@ -58,14 +58,6 @@ std::string computeEndCommentText(StringRef NamespaceName, bool AddNewline) {
   if (AddNewline)
     text += '\n';
   return text;
-}
-
-bool isShort(const FormatToken *NamespaceTok, const FormatToken *RBraceTok,
-             const SourceManager &SourceMgr) {
-  int StartLine =
-      SourceMgr.getSpellingLineNumber(NamespaceTok->Tok.getLocation());
-  int EndLine = SourceMgr.getSpellingLineNumber(RBraceTok->Tok.getLocation());
-  return EndLine - StartLine + 1 <= kShortNamespaceMaxLines;
 }
 
 bool hasEndComment(const FormatToken *RBraceTok) {
@@ -151,7 +143,8 @@ tooling::Replacements NamespaceEndCommentsFixer::analyze(
     const std::string EndCommentText =
         computeEndCommentText(NamespaceName, AddNewline);
     if (!hasEndComment(RBraceTok)) {
-      if (!isShort(NamespaceTok, RBraceTok, SourceMgr))
+      bool isShort = I - StartLineIndex <= kShortNamespaceMaxLines + 1;
+      if (!isShort)
         addEndComment(RBraceTok, EndCommentText, SourceMgr, &Fixes);
       continue;
     }

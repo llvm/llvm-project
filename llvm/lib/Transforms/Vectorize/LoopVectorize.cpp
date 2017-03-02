@@ -6326,9 +6326,16 @@ LoopVectorizationCostModel::getSmallestAndWidestTypes() {
         T = ST->getValueOperand()->getType();
 
       // Ignore loaded pointer types and stored pointer types that are not
-      // consecutive. However, we do want to take consecutive stores/loads of
-      // pointer vectors into account.
-      if (T->isPointerTy() && !isConsecutiveLoadOrStore(&I))
+      // vectorizable.
+      //
+      // FIXME: The check here attempts to predict whether a load or store will
+      //        be vectorized. We only know this for certain after a VF has
+      //        been selected. Here, we assume that if an access can be
+      //        vectorized, it will be. We should also look at extending this
+      //        optimization to non-pointer types.
+      //
+      if (T->isPointerTy() && !isConsecutiveLoadOrStore(&I) &&
+          !Legal->isAccessInterleaved(&I) && !Legal->isLegalGatherOrScatter(&I))
         continue;
 
       MinWidth = std::min(MinWidth,

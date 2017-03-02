@@ -383,8 +383,14 @@ bool HexagonEarlyIfConversion::isValidCandidate(const MachineBasicBlock *B)
       unsigned R = MO.getReg();
       if (!TargetRegisterInfo::isVirtualRegister(R))
         continue;
-      if (MRI->getRegClass(R) != &Hexagon::PredRegsRegClass)
-        continue;
+      switch (MRI->getRegClass(R)->getID()) {
+        case Hexagon::PredRegsRegClassID:
+        case Hexagon::VecPredRegsRegClassID:
+        case Hexagon::VecPredRegs128BRegClassID:
+          break;
+        default:
+          continue;
+      }
       for (auto U = MRI->use_begin(R); U != MRI->use_end(); ++U)
         if (U->getParent()->isPHI())
           return false;

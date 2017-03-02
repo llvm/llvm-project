@@ -192,13 +192,13 @@ protected:
       return false;
     }
 
-    const bool qualify_cxx_base_classes = false;
 
     DumpValueObjectOptions::DeclPrintingHelper helper = [&valobj_sp](
         ConstString type, ConstString var, const DumpValueObjectOptions &opts,
         Stream &stream) -> bool {
       const ValueObject::GetExpressionPathFormat format = ValueObject::
           GetExpressionPathFormat::eGetExpressionPathFormatHonorPointers;
+      const bool qualify_cxx_base_classes = false;
       valobj_sp->GetExpressionPath(stream, qualify_cxx_base_classes, format);
       stream.PutCString(" =");
       return true;

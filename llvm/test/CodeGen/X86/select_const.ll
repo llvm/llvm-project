@@ -291,3 +291,29 @@ define <2 x double> @sel_constants_fmul_constant_vec(i1 %cond) {
   %bo = fmul <2 x double> %sel, <double 5.1, double 3.14>
   ret <2 x double> %bo
 }
+
+; 4294967297 = 0x100000001.
+; This becomes an opaque constant via ConstantHoisting, so we don't fold it into the select.
+
+define i64 @opaque_constant(i1 %cond, i64 %x) {
+; CHECK-LABEL: opaque_constant:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    testb $1, %dil
+; CHECK-NEXT:    movl $23, %ecx
+; CHECK-NEXT:    movq $-4, %rax
+; CHECK-NEXT:    cmoveq %rcx, %rax
+; CHECK-NEXT:    movabsq $4294967297, %rcx # imm = 0x100000001
+; CHECK-NEXT:    andq %rcx, %rax
+; CHECK-NEXT:    xorl %edx, %edx
+; CHECK-NEXT:    cmpq %rcx, %rsi
+; CHECK-NEXT:    sete %dl
+; CHECK-NEXT:    subq %rdx, %rax
+; CHECK-NEXT:    retq
+  %sel = select i1 %cond, i64 -4, i64 23
+  %bo = and i64 %sel, 4294967297
+  %cmp = icmp eq i64 %x, 4294967297
+  %sext = sext i1 %cmp to i64
+  %add = add i64 %bo, %sext
+  ret i64 %add
+}
+
