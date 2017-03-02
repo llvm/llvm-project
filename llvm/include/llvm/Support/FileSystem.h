@@ -141,40 +141,35 @@ public:
 ///               a platform-specific member to store the result.
 class file_status
 {
-  #if defined(LLVM_ON_UNIX)
-  dev_t fs_st_dev;
-  ino_t fs_st_ino;
-  time_t fs_st_atime;
-  time_t fs_st_mtime;
-  uid_t fs_st_uid;
-  gid_t fs_st_gid;
-  off_t fs_st_size;
-  #elif defined (LLVM_ON_WIN32)
-  uint32_t LastAccessedTimeHigh;
-  uint32_t LastAccessedTimeLow;
-  uint32_t LastWriteTimeHigh;
-  uint32_t LastWriteTimeLow;
-  uint32_t VolumeSerialNumber;
-  uint32_t FileSizeHigh;
-  uint32_t FileSizeLow;
-  uint32_t FileIndexHigh;
-  uint32_t FileIndexLow;
-  #endif
   friend bool equivalent(file_status A, file_status B);
-  file_type Type;
-  perms Perms;
+
+  #if defined(LLVM_ON_UNIX)
+  dev_t fs_st_dev = 0;
+  ino_t fs_st_ino = 0;
+  time_t fs_st_atime = 0;
+  time_t fs_st_mtime = 0;
+  uid_t fs_st_uid = 0;
+  gid_t fs_st_gid = 0;
+  off_t fs_st_size = 0;
+  #elif defined (LLVM_ON_WIN32)
+  uint32_t LastAccessedTimeHigh = 0;
+  uint32_t LastAccessedTimeLow = 0;
+  uint32_t LastWriteTimeHigh = 0;
+  uint32_t LastWriteTimeLow = 0;
+  uint32_t VolumeSerialNumber = 0;
+  uint32_t FileSizeHigh = 0;
+  uint32_t FileSizeLow = 0;
+  uint32_t FileIndexHigh = 0;
+  uint32_t FileIndexLow = 0;
+  #endif
+  file_type Type = file_type::status_error;
+  perms Perms = perms_not_known;
 
 public:
   #if defined(LLVM_ON_UNIX)
-  file_status()
-      : fs_st_dev(0), fs_st_ino(0), fs_st_atime(0), fs_st_mtime(0),
-        fs_st_uid(0), fs_st_gid(0), fs_st_size(0),
-        Type(file_type::status_error), Perms(perms_not_known) {}
+  file_status() = default;
 
-  file_status(file_type Type)
-      : fs_st_dev(0), fs_st_ino(0), fs_st_atime(0), fs_st_mtime(0),
-        fs_st_uid(0), fs_st_gid(0), fs_st_size(0), Type(Type),
-        Perms(perms_not_known) {}
+  file_status(file_type Type) : Type(Type) {}
 
   file_status(file_type Type, perms Perms, dev_t Dev, ino_t Ino, time_t ATime,
               time_t MTime, uid_t UID, gid_t GID, off_t Size)
@@ -182,17 +177,9 @@ public:
         fs_st_uid(UID), fs_st_gid(GID), fs_st_size(Size), Type(Type),
         Perms(Perms) {}
   #elif defined(LLVM_ON_WIN32)
-  file_status()
-      : LastAccessedTimeHigh(0), LastAccessedTimeLow(0), LastWriteTimeHigh(0),
-        LastWriteTimeLow(0), VolumeSerialNumber(0), FileSizeHigh(0),
-        FileSizeLow(0), FileIndexHigh(0), FileIndexLow(0),
-        Type(file_type::status_error), Perms(perms_not_known) {}
+  file_status() = default;
 
-  file_status(file_type Type)
-      : LastAccessedTimeHigh(0), LastAccessedTimeLow(0), LastWriteTimeHigh(0),
-        LastWriteTimeLow(0), VolumeSerialNumber(0), FileSizeHigh(0),
-        FileSizeLow(0), FileIndexHigh(0), FileIndexLow(0), Type(Type),
-        Perms(perms_not_known) {}
+  file_status(file_type Type) : Type(Type) {}
 
   file_status(file_type Type, uint32_t LastAccessTimeHigh,
               uint32_t LastAccessTimeLow, uint32_t LastWriteTimeHigh,
@@ -204,7 +191,7 @@ public:
         LastWriteTimeLow(LastWriteTimeLow),
         VolumeSerialNumber(VolumeSerialNumber), FileSizeHigh(FileSizeHigh),
         FileSizeLow(FileSizeLow), FileIndexHigh(FileIndexHigh),
-        FileIndexLow(FileIndexLow), Type(Type), Perms(perms_not_known) {}
+        FileIndexLow(FileIndexLow), Type(Type) {}
   #endif
 
   // getters
@@ -222,9 +209,11 @@ public:
   uint32_t getUser() const {
     return 9999; // Not applicable to Windows, so...
   }
+
   uint32_t getGroup() const {
     return 9999; // Not applicable to Windows, so...
   }
+
   uint64_t getSize() const {
     return (uint64_t(FileSizeHigh) << 32) + FileSizeLow;
   }
@@ -271,12 +260,12 @@ struct file_magic {
     return V != unknown;
   }
 
-  file_magic() : V(unknown) {}
+  file_magic() = default;
   file_magic(Impl V) : V(V) {}
   operator Impl() const { return V; }
 
 private:
-  Impl V;
+  Impl V = unknown;
 };
 
 /// @}
@@ -796,6 +785,7 @@ public:
 };
 
 namespace detail {
+
   struct DirIterState;
 
   std::error_code directory_iterator_construct(DirIterState &, StringRef);
@@ -811,6 +801,7 @@ namespace detail {
     intptr_t IterationHandle = 0;
     directory_entry CurrentEntry;
   };
+
 } // end namespace detail
 
 /// directory_iterator - Iterates through the entries in path. There is no
@@ -862,12 +853,14 @@ public:
 };
 
 namespace detail {
+
   /// Keeps state for the recursive_directory_iterator.
   struct RecDirIterState {
     std::stack<directory_iterator, std::vector<directory_iterator>> Stack;
     uint16_t Level = 0;
     bool HasNoPushRequest = false;
   };
+
 } // end namespace detail
 
 /// recursive_directory_iterator - Same as directory_iterator except for it

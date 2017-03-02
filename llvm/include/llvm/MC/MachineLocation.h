@@ -36,7 +36,7 @@ public:
   /// Create a direct register location.
   explicit MachineLocation(unsigned R) : IsRegister(true), Register(R) {}
   /// Create a register-indirect location with an offset.
-  MachineLocation(unsigned R, int O) : Register(R) {}
+  MachineLocation(unsigned R, int O) : Register(R), Offset(O) {}
 
   bool operator==(const MachineLocation &Other) const {
       return IsRegister == Other.IsRegister && Register == Other.Register &&

@@ -58,6 +58,18 @@ static void MaybeDumpRegisters(void *context) {
   SignalContext::DumpAllRegisters(context);
 }
 
+static void MaybeReportNonExecRegion(uptr pc) {
+#if SANITIZER_FREEBSD || SANITIZER_LINUX
+  MemoryMappingLayout proc_maps(/*cache_enabled*/ true);
+  uptr start, end, protection;
+  while (proc_maps.Next(&start, &end, nullptr, nullptr, 0, &protection)) {
+    if (pc >= start && pc < end &&
+        !(protection & MemoryMappingLayout::kProtectionExecute))
+      Report("Hint: PC is at a non-executable region. Maybe a wild jump?\n");
+  }
+#endif
+}
+
 void ErrorDeadlySignal::Print() {
   Decorator d;
   Printf("%s", d.Warning());
@@ -77,6 +89,7 @@ void ErrorDeadlySignal::Print() {
     if (addr < GetPageSizeCached())
       Report("Hint: address points to the zero page.\n");
   }
+  MaybeReportNonExecRegion(pc);
   scariness.Print();
   BufferedStackTrace stack;
   GetStackTraceWithPcBpAndContext(&stack, kStackTraceMax, pc, bp, context,

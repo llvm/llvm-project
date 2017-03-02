@@ -201,15 +201,12 @@ static void combineKnownMetadata(Instruction *ReplInst, Instruction *I) {
 class GVNHoist {
 public:
   GVNHoist(DominatorTree *DT, AliasAnalysis *AA, MemoryDependenceResults *MD,
-           MemorySSA *MSSA, bool OptForMinSize)
+           MemorySSA *MSSA)
       : DT(DT), AA(AA), MD(MD), MSSA(MSSA),
         MSSAUpdater(make_unique<MemorySSAUpdater>(MSSA)),
-        OptForMinSize(OptForMinSize), HoistingGeps(OptForMinSize),
-        HoistedCtr(0) {
-    // Hoist as far as possible when optimizing for code-size.
-    if (OptForMinSize)
-      MaxNumberOfBBSInPath = -1;
-  }
+        HoistingGeps(false),
+        HoistedCtr(0)
+  { }
 
   bool run(Function &F) {
     VN.setDomTree(DT);
@@ -255,7 +252,6 @@ private:
   MemoryDependenceResults *MD;
   MemorySSA *MSSA;
   std::unique_ptr<MemorySSAUpdater> MSSAUpdater;
-  const bool OptForMinSize;
   const bool HoistingGeps;
   DenseMap<const Value *, unsigned> DFSNumber;
   BBSideEffectsSet BBSideEffects;
@@ -509,11 +505,6 @@ private:
   bool safeToHoistScalar(const BasicBlock *HoistBB,
                          SmallPtrSetImpl<const BasicBlock *> &WL,
                          int &NBBsOnAllPaths) {
-    // Enable scalar hoisting at -Oz as it is safe to hoist scalars to a place
-    // where they are partially needed.
-    if (OptForMinSize)
-      return true;
-
     // Check that the hoisted expression is needed on all paths.
     if (!hoistingFromAllPaths(HoistBB, WL))
       return false;
@@ -927,13 +918,8 @@ private:
                 Intr->getIntrinsicID() == Intrinsic::assume)
               continue;
           }
-          if (Call->mayHaveSideEffects()) {
-            if (!OptForMinSize)
-              break;
-            // We may continue hoisting across calls which write to memory.
-            if (Call->mayThrow())
-              break;
-          }
+          if (Call->mayHaveSideEffects())
+            break;
 
           if (Call->isConvergent())
             break;
@@ -975,7 +961,7 @@ public:
     auto &MD = getAnalysis<MemoryDependenceWrapperPass>().getMemDep();
     auto &MSSA = getAnalysis<MemorySSAWrapperPass>().getMSSA();
 
-    GVNHoist G(&DT, &AA, &MD, &MSSA, F.optForMinSize());
+    GVNHoist G(&DT, &AA, &MD, &MSSA);
     return G.run(F);
   }
 
@@ -995,7 +981,7 @@ PreservedAnalyses GVNHoistPass::run(Function &F, FunctionAnalysisManager &AM) {
   AliasAnalysis &AA = AM.getResult<AAManager>(F);
   MemoryDependenceResults &MD = AM.getResult<MemoryDependenceAnalysis>(F);
   MemorySSA &MSSA = AM.getResult<MemorySSAAnalysis>(F).getMSSA();
-  GVNHoist G(&DT, &AA, &MD, &MSSA, F.optForMinSize());
+  GVNHoist G(&DT, &AA, &MD, &MSSA);
   if (!G.run(F))
     return PreservedAnalyses::all();
 

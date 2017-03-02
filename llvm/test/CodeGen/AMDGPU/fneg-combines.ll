@@ -1195,9 +1195,8 @@ define void @v_fneg_fp_round_fneg_f64_to_f32(float addrspace(1)* %out, double ad
 ; GCN: {{buffer|flat}}_load_dwordx2 v{{\[}}[[A_LO:[0-9]+]]:[[A_HI:[0-9]+]]{{\]}}
 ; GCN-DAG: v_cvt_f32_f64_e32 [[RESULT:v[0-9]+]], v{{\[}}[[A_LO]]:[[A_HI]]{{\]}}
 ; GCN-DAG: v_xor_b32_e32 v[[NEG_A_HI:[0-9]+]], 0x80000000, v[[A_HI]]
-; GCN-DAG: v_mov_b32_e32 v[[NEG_A_LO:[0-9]+]], v[[A_LO]]
 ; GCN: buffer_store_dword [[RESULT]]
-; GCN: buffer_store_dwordx2 v{{\[}}[[NEG_A_LO]]:[[NEG_A_HI]]{{\]}}
+; GCN: buffer_store_dwordx2 v{{\[}}[[A_LO]]:[[NEG_A_HI]]{{\]}}
 define void @v_fneg_fp_round_store_use_fneg_f64_to_f32(float addrspace(1)* %out, double addrspace(1)* %a.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64

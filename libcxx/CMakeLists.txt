@@ -19,7 +19,6 @@ set(CMAKE_MODULE_PATH
   ${CMAKE_MODULE_PATH}
   )
 
-
 if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   project(libcxx CXX C)
 
@@ -600,10 +599,15 @@ add_subdirectory(lib)
 if (LIBCXX_INCLUDE_BENCHMARKS)
   add_subdirectory(benchmarks)
 endif()
+
+# Create the lit.site.cfg file even when LIBCXX_INCLUDE_TESTS is OFF or
+# LLVM_FOUND is OFF. This allows users to run the tests manually using
+# LIT without requiring a full LLVM checkout.
+add_subdirectory(test)
 if (LIBCXX_INCLUDE_TESTS)
-  add_subdirectory(test)
   add_subdirectory(lib/abi)
 endif()
+
 if (LIBCXX_INCLUDE_DOCS)
   add_subdirectory(docs)
 endif()

@@ -111,7 +111,7 @@ TU_4_version:
         .short 4               # DWARF version number
         .long .debug_abbrev    # Offset Into Abbrev. Section
         .byte 8                # Address Size (in bytes)
-        .quad 0x1122334455667788 # Type Signature
+        .quad 0x0011223344556677 # Type Signature
         .long TU_4_type-TU_4_start # Type offset
 # The type-unit DIE, which has a name.
         .byte 2

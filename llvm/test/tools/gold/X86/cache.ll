@@ -2,7 +2,7 @@
 ; RUN: opt -module-summary %s -o %t.o
 ; RUN: opt -module-summary %p/Inputs/cache.ll -o %t2.o
 
-; RUN: rm -Rf %t.cache && mkdir %t.cache
+; RUN: rm -Rf %t.cache
 ; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold.so \
 ; RUN:     --plugin-opt=thinlto \
 ; RUN:     --plugin-opt=cache-dir=%t.cache \
@@ -16,7 +16,7 @@
 ; RUN: opt -module-hash -module-summary %s -o %t.o
 ; RUN: opt -module-hash -module-summary %p/Inputs/cache.ll -o %t2.o
 
-; RUN: rm -Rf %t.cache && mkdir %t.cache
+; RUN: rm -Rf %t.cache
 ; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold.so \
 ; RUN:     --plugin-opt=thinlto \
 ; RUN:     --plugin-opt=cache-dir=%t.cache \

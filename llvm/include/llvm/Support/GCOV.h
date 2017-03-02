@@ -63,7 +63,7 @@ struct Options {
 /// read operations.
 class GCOVBuffer {
 public:
-  GCOVBuffer(MemoryBuffer *B) : Buffer(B), Cursor(0) {}
+  GCOVBuffer(MemoryBuffer *B) : Buffer(B) {}
 
   /// readGCNOFormat - Check GCNO signature is valid at the beginning of buffer.
   bool readGCNOFormat() {
@@ -234,16 +234,14 @@ public:
 
 private:
   MemoryBuffer *Buffer;
-  uint64_t Cursor;
+  uint64_t Cursor = 0;
 };
 
 /// GCOVFile - Collects coverage information for one pair of coverage file
 /// (.gcno and .gcda).
 class GCOVFile {
 public:
-  GCOVFile()
-      : GCNOInitialized(false), Checksum(0), RunCount(0),
-        ProgramCount(0) {}
+  GCOVFile() = default;
 
   bool readGCNO(GCOVBuffer &Buffer);
   bool readGCDA(GCOVBuffer &Buffer);
@@ -253,21 +251,21 @@ public:
   void collectLineCounts(FileInfo &FI);
 
 private:
-  bool GCNOInitialized;
+  bool GCNOInitialized = false;
   GCOV::GCOVVersion Version;
-  uint32_t Checksum;
+  uint32_t Checksum = 0;
   SmallVector<std::unique_ptr<GCOVFunction>, 16> Functions;
-  uint32_t RunCount;
-  uint32_t ProgramCount;
+  uint32_t RunCount = 0;
+  uint32_t ProgramCount = 0;
 };
 
 /// GCOVEdge - Collects edge information.
 struct GCOVEdge {
-  GCOVEdge(GCOVBlock &S, GCOVBlock &D) : Src(S), Dst(D), Count(0) {}
+  GCOVEdge(GCOVBlock &S, GCOVBlock &D) : Src(S), Dst(D) {}
 
   GCOVBlock &Src;
   GCOVBlock &Dst;
-  uint64_t Count;
+  uint64_t Count = 0;
 };
 
 /// GCOVFunction - Collects function information.
@@ -276,7 +274,8 @@ public:
   typedef pointee_iterator<SmallVectorImpl<
       std::unique_ptr<GCOVBlock>>::const_iterator> BlockIterator;
 
-  GCOVFunction(GCOVFile &P) : Parent(P), Ident(0), LineNumber(0) {}
+  GCOVFunction(GCOVFile &P) : Parent(P) {}
+
   bool readGCNO(GCOVBuffer &Buffer, GCOV::GCOVVersion Version);
   bool readGCDA(GCOVBuffer &Buffer, GCOV::GCOVVersion Version);
   StringRef getName() const { return Name; }
@@ -297,9 +296,9 @@ public:
 
 private:
   GCOVFile &Parent;
-  uint32_t Ident;
+  uint32_t Ident = 0;
   uint32_t Checksum;
-  uint32_t LineNumber;
+  uint32_t LineNumber = 0;
   StringRef Name;
   StringRef Filename;
   SmallVector<std::unique_ptr<GCOVBlock>, 16> Blocks;
@@ -309,10 +308,10 @@ private:
 /// GCOVBlock - Collects block information.
 class GCOVBlock {
   struct EdgeWeight {
-    EdgeWeight(GCOVBlock *D) : Dst(D), Count(0) {}
+    EdgeWeight(GCOVBlock *D) : Dst(D) {}
 
     GCOVBlock *Dst;
-    uint64_t Count;
+    uint64_t Count = 0;
   };
 
   struct SortDstEdgesFunctor {
@@ -324,8 +323,7 @@ class GCOVBlock {
 public:
   typedef SmallVectorImpl<GCOVEdge *>::const_iterator EdgeIterator;
 
-  GCOVBlock(GCOVFunction &P, uint32_t N)
-      : Parent(P), Number(N), Counter(0), DstEdgesAreSorted(true) {}
+  GCOVBlock(GCOVFunction &P, uint32_t N) : Parent(P), Number(N) {}
   ~GCOVBlock();
 
   const GCOVFunction &getParent() const { return Parent; }
@@ -370,8 +368,8 @@ public:
 private:
   GCOVFunction &Parent;
   uint32_t Number;
-  uint64_t Counter;
-  bool DstEdgesAreSorted;
+  uint64_t Counter = 0;
+  bool DstEdgesAreSorted = true;
   SmallVector<GCOVEdge *, 16> SrcEdges;
   SmallVector<GCOVEdge *, 16> DstEdges;
   SmallVector<uint32_t, 16> Lines;
@@ -389,30 +387,28 @@ class FileInfo {
   typedef DenseMap<uint32_t, BlockVector> BlockLines;
 
   struct LineData {
-    LineData() : LastLine(0) {}
+    LineData() = default;
+
     BlockLines Blocks;
     FunctionLines Functions;
-    uint32_t LastLine;
+    uint32_t LastLine = 0;
   };
 
   struct GCOVCoverage {
-    GCOVCoverage(StringRef Name)
-        : Name(Name), LogicalLines(0), LinesExec(0), Branches(0),
-          BranchesExec(0), BranchesTaken(0) {}
+    GCOVCoverage(StringRef Name) : Name(Name) {}
 
     StringRef Name;
 
-    uint32_t LogicalLines;
-    uint32_t LinesExec;
+    uint32_t LogicalLines = 0;
+    uint32_t LinesExec = 0;
 
-    uint32_t Branches;
-    uint32_t BranchesExec;
-    uint32_t BranchesTaken;
+    uint32_t Branches = 0;
+    uint32_t BranchesExec = 0;
+    uint32_t BranchesTaken = 0;
   };
 
 public:
-  FileInfo(const GCOV::Options &Options)
-      : Options(Options), RunCount(0), ProgramCount(0) {}
+  FileInfo(const GCOV::Options &Options) : Options(Options) {}
 
   void addBlockLine(StringRef Filename, uint32_t Line, const GCOVBlock *Block) {
     if (Line > LineInfo[Filename].LastLine)
@@ -449,8 +445,8 @@ private:
 
   const GCOV::Options &Options;
   StringMap<LineData> LineInfo;
-  uint32_t RunCount;
-  uint32_t ProgramCount;
+  uint32_t RunCount = 0;
+  uint32_t ProgramCount = 0;
 
   typedef SmallVector<std::pair<std::string, GCOVCoverage>, 4> FileCoverageList;
   typedef MapVector<const GCOVFunction *, GCOVCoverage> FuncCoverageMap;

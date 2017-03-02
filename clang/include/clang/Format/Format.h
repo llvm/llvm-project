@@ -349,6 +349,10 @@ struct FormatStyle {
   /// not use this in config files, etc. Use at your own risk.
   bool ExperimentalAutoDetectBinPacking;
 
+  /// \brief If ``true``, clang-format adds missing namespace end comments and
+  /// fixes invalid existing ones.
+  bool FixNamespaceComments;
+
   /// \brief A vector of macros that should be interpreted as foreach loops
   /// instead of as function calls.
   ///
@@ -679,6 +683,7 @@ struct FormatStyle {
            DisableFormat == R.DisableFormat &&
            ExperimentalAutoDetectBinPacking ==
                R.ExperimentalAutoDetectBinPacking &&
+           FixNamespaceComments == R.FixNamespaceComments &&
            ForEachMacros == R.ForEachMacros &&
            IncludeCategories == R.IncludeCategories &&
            IndentCaseLabels == R.IndentCaseLabels &&

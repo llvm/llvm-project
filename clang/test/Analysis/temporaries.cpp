@@ -493,3 +493,13 @@ namespace PR16629 {
     clang_analyzer_eval(x == 47); // expected-warning{{TRUE}}
   }
 }
+
+namespace PR32088 {
+  void testReturnFromStmtExprInitializer() {
+    // We shouldn't try to destroy the object pointed to by `obj' upon return.
+    const NonTrivial &obj = ({
+      return; // no-crash
+      NonTrivial(42);
+    });
+  }
+}

@@ -62,13 +62,14 @@ namespace rdf {
     NodeList getAllReachingDefs(RegisterRef RefRR, NodeAddr<RefNode*> RefA) {
       return getAllReachingDefs(RefRR, RefA, false, false, NoRegs);
     }
-    NodeSet getAllReachingDefsRec(RegisterRef RefRR, NodeAddr<RefNode*> RefA,
-        NodeSet &Visited, const NodeSet &Defs);
     NodeSet getAllReachedUses(RegisterRef RefRR, NodeAddr<DefNode*> DefA,
         const RegisterAggr &DefRRs);
     NodeSet getAllReachedUses(RegisterRef RefRR, NodeAddr<DefNode*> DefA) {
       return getAllReachedUses(RefRR, DefA, NoRegs);
     }
+
+    std::pair<NodeSet,bool> getAllReachingDefsRec(RegisterRef RefRR,
+        NodeAddr<RefNode*> RefA, NodeSet &Visited, const NodeSet &Defs);
 
     LiveMapType &getLiveMap() { return LiveMap; }
     const LiveMapType &getLiveMap() const { return LiveMap; }
@@ -125,6 +126,10 @@ namespace rdf {
     MachineBasicBlock *getBlockWithRef(NodeId RN) const;
     void traverse(MachineBasicBlock *B, RefMap &LiveIn);
     void emptify(RefMap &M);
+
+    std::pair<NodeSet,bool> getAllReachingDefsRecImpl(RegisterRef RefRR,
+        NodeAddr<RefNode*> RefA, NodeSet &Visited, const NodeSet &Defs,
+        unsigned Nest, unsigned MaxNest);
   };
 } // namespace rdf
 } // namespace llvm

@@ -402,6 +402,9 @@ namespace llvm {
 
   /// This pass frees the memory occupied by the MachineFunction.
   FunctionPass *createFreeMachineFunctionPass();
+
+  /// This pass combine basic blocks guarded by the same branch.
+  extern char &BranchCoalescingID;
 } // End llvm namespace
 
 /// Target machine pass initializer for passes with dependencies. Use with

@@ -1543,4 +1543,121 @@ TEST(DWARFDebugInfo, TestFindAttrs) {
   EXPECT_EQ(DieMangled, toString(NameOpt, ""));
 }
 
+TEST(DWARFDebugInfo, TestImplicitConstAbbrevs) {
+  uint16_t Version = 5;
+
+  const uint8_t AddrSize = sizeof(void *);
+  initLLVMIfNeeded();
+  Triple Triple = getHostTripleForAddrSize(AddrSize);
+  auto ExpectedDG = dwarfgen::Generator::create(Triple, Version);
+  if (HandleExpectedError(ExpectedDG))
+    return;
+  dwarfgen::Generator *DG = ExpectedDG.get().get();
+  dwarfgen::CompileUnit &CU = DG->addCompileUnit();
+  dwarfgen::DIE CUDie = CU.getUnitDIE();
+  const dwarf::Attribute Attr = DW_AT_lo_user;
+  const int64_t Val1 = 42;
+  const int64_t Val2 = 43;
+
+  auto FirstVal1DIE = CUDie.addChild(DW_TAG_class_type);
+  FirstVal1DIE.addAttribute(Attr, DW_FORM_implicit_const, Val1);
+
+  auto SecondVal1DIE = CUDie.addChild(DW_TAG_class_type);
+  SecondVal1DIE.addAttribute(Attr, DW_FORM_implicit_const, Val1);
+
+  auto Val2DIE = CUDie.addChild(DW_TAG_class_type);
+  Val2DIE.addAttribute(Attr, DW_FORM_implicit_const, Val2);
+
+  MemoryBufferRef FileBuffer(DG->generate(), "dwarf");
+  auto Obj = object::ObjectFile::createObjectFile(FileBuffer);
+  EXPECT_TRUE((bool)Obj);
+  DWARFContextInMemory DwarfContext(*Obj.get());
+  DWARFCompileUnit *U = DwarfContext.getCompileUnitAtIndex(0);
+  EXPECT_TRUE((bool)U);
+
+  const auto *Abbrevs = U->getAbbreviations();
+  EXPECT_TRUE((bool)Abbrevs);
+
+  // Let's find implicit_const abbrevs and verify,
+  // that there are exactly two of them and both of them
+  // can be dumped correctly.
+  typedef decltype(Abbrevs->begin()) AbbrevIt;
+  AbbrevIt Val1Abbrev = Abbrevs->end();
+  AbbrevIt Val2Abbrev = Abbrevs->end();
+  for(auto it = Abbrevs->begin(); it != Abbrevs->end(); ++it) {
+    if (it->getNumAttributes() == 0)
+      continue; // root abbrev for DW_TAG_compile_unit
+
+    auto A = it->getAttrByIndex(0);
+    EXPECT_EQ(A, Attr);
+
+    auto FormValue = it->getAttributeValue(/* offset */ 0, A, *U);
+    EXPECT_TRUE((bool)FormValue);
+    EXPECT_EQ(FormValue->getForm(), dwarf::DW_FORM_implicit_const);
+
+    const auto V = FormValue->getAsSignedConstant();
+    EXPECT_TRUE((bool)V);
+
+    auto VerifyAbbrevDump = [&V](AbbrevIt it) {
+      std::string S;
+      llvm::raw_string_ostream OS(S);
+      it->dump(OS);
+      auto FormPos = OS.str().find("DW_FORM_implicit_const");
+      EXPECT_NE(FormPos, std::string::npos);
+      auto ValPos = S.find_first_of("-0123456789", FormPos);
+      EXPECT_NE(ValPos, std::string::npos);
+      int64_t Val = std::atoll(S.substr(ValPos).c_str());
+      EXPECT_EQ(Val, *V);
+    };
+
+    switch(*V) {
+    case Val1:
+      EXPECT_EQ(Val1Abbrev, Abbrevs->end());
+      Val1Abbrev = it;
+      VerifyAbbrevDump(it);
+      break;
+    case Val2:
+      EXPECT_EQ(Val2Abbrev, Abbrevs->end());
+      Val2Abbrev = it;
+      VerifyAbbrevDump(it);
+      break;
+    default:
+      FAIL() << "Unexpected attribute value: " << *V;
+    }
+  }
+
+  // Now let's make sure that two Val1-DIEs refer to the same abbrev,
+  // and Val2-DIE refers to another one.
+  auto DieDG = U->getUnitDIE(false);
+  auto it = DieDG.begin();
+  std::multimap<int64_t, decltype(it->getAbbreviationDeclarationPtr())> DIEs;
+  const DWARFAbbreviationDeclaration *AbbrevPtrVal1 = nullptr;
+  const DWARFAbbreviationDeclaration *AbbrevPtrVal2 = nullptr;
+  for (; it != DieDG.end(); ++it) {
+    const auto *AbbrevPtr = it->getAbbreviationDeclarationPtr();
+    EXPECT_TRUE((bool)AbbrevPtr);
+    auto FormValue = it->find(Attr);
+    EXPECT_TRUE((bool)FormValue);
+    const auto V = FormValue->getAsSignedConstant();
+    EXPECT_TRUE((bool)V);
+    switch(*V) {
+    case Val1:
+      AbbrevPtrVal1 = AbbrevPtr;
+      break;
+    case Val2:
+      AbbrevPtrVal2 = AbbrevPtr;
+      break;
+    default:
+      FAIL() << "Unexpected attribute value: " << *V;
+    }
+    DIEs.insert(std::make_pair(*V, AbbrevPtr));
+  }
+  EXPECT_EQ(DIEs.count(Val1), 2u);
+  EXPECT_EQ(DIEs.count(Val2), 1u);
+  auto Val1Range = DIEs.equal_range(Val1);
+  for (auto it = Val1Range.first; it != Val1Range.second; ++it)
+    EXPECT_EQ(it->second, AbbrevPtrVal1);
+  EXPECT_EQ(DIEs.find(Val2)->second, AbbrevPtrVal2);
+}
+
 } // end anonymous namespace

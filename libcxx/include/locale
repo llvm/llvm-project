@@ -623,17 +623,17 @@ protected:
     ~num_get() {}
 
     template <class _Fp>
-    iter_type __do_get_floating_point
+    inline iter_type __do_get_floating_point
                             (iter_type __b, iter_type __e, ios_base& __iob,
                              ios_base::iostate& __err, _Fp& __v) const;
 
     template <class _Signed>
-    iter_type __do_get_signed
+    inline iter_type __do_get_signed
                             (iter_type __b, iter_type __e, ios_base& __iob,
                              ios_base::iostate& __err, _Signed& __v) const;
 
     template <class _Unsigned>
-    iter_type __do_get_unsigned
+    inline iter_type __do_get_unsigned
                             (iter_type __b, iter_type __e, ios_base& __iob,
                              ios_base::iostate& __err, _Unsigned& __v) const;
 

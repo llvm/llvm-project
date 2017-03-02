@@ -493,6 +493,8 @@ void Parser::Initialize() {
   Ident_strict = nullptr;
   Ident_replacement = nullptr;
 
+  Ident_language = Ident_defined_in = Ident_generated_declaration = nullptr;
+
   Ident__except = nullptr;
 
   Ident__exception_code = Ident__exception_info = nullptr;

@@ -256,7 +256,9 @@ static bool CC_Hexagon (unsigned ValNo, MVT ValVT, MVT LocVT,
     return false;
   }
 
-  if (LocVT == MVT::i1 || LocVT == MVT::i8 || LocVT == MVT::i16) {
+  if (LocVT == MVT::i1) {
+    LocVT = MVT::i32;
+  } else if (LocVT == MVT::i8 || LocVT == MVT::i16) {
     LocVT = MVT::i32;
     ValVT = MVT::i32;
     if (ArgFlags.isSExt())
@@ -1160,10 +1162,25 @@ SDValue HexagonTargetLowering::LowerFormalArguments(
       EVT RegVT = VA.getLocVT();
       if (RegVT == MVT::i8 || RegVT == MVT::i16 ||
           RegVT == MVT::i32 || RegVT == MVT::f32) {
-        unsigned VReg =
+        unsigned VReg = 
           RegInfo.createVirtualRegister(&Hexagon::IntRegsRegClass);
         RegInfo.addLiveIn(VA.getLocReg(), VReg);
-        InVals.push_back(DAG.getCopyFromReg(Chain, dl, VReg, RegVT));
+        SDValue Copy = DAG.getCopyFromReg(Chain, dl, VReg, RegVT);
+        // Treat values of type MVT::i1 specially: they are passed in
+        // registers of type i32, but they need to remain as values of
+        // type i1 for consistency of the argument lowering.
+        if (VA.getValVT() == MVT::i1) {
+          // Generate a copy into a predicate register and use the value
+          // of the register as the "InVal".
+          unsigned PReg =
+            RegInfo.createVirtualRegister(&Hexagon::PredRegsRegClass);
+          SDNode *T = DAG.getMachineNode(Hexagon::C2_tfrrp, dl, MVT::i1,
+                                         Copy.getValue(0));
+          Copy = DAG.getCopyToReg(Copy.getValue(1), dl, PReg, SDValue(T, 0));
+          Copy = DAG.getCopyFromReg(Copy, dl, PReg, MVT::i1);
+        }
+        InVals.push_back(Copy);
+        Chain = Copy.getValue(1);
       } else if (RegVT == MVT::i64 || RegVT == MVT::f64) {
         unsigned VReg =
           RegInfo.createVirtualRegister(&Hexagon::DoubleRegsRegClass);

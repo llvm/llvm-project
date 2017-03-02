@@ -2048,6 +2048,7 @@ void UnwrappedLineParser::addUnwrappedLine() {
   });
   CurrentLines->push_back(std::move(*Line));
   Line->Tokens.clear();
+  Line->MatchingOpeningBlockLineIndex = UnwrappedLine::kInvalidIndex;
   if (CurrentLines == &Lines && !PreprocessorDirectives.empty()) {
     CurrentLines->append(
         std::make_move_iterator(PreprocessorDirectives.begin()),

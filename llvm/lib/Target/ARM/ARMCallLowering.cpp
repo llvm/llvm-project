@@ -57,8 +57,8 @@ struct OutgoingValueHandler : public CallLowering::ValueHandler {
 
   unsigned getStackAddress(uint64_t Size, int64_t Offset,
                            MachinePointerInfo &MPO) override {
-    // FIXME: Support smaller sizes (which may require extensions).
-    assert((Size == 4 || Size == 8) && "Unsupported size");
+    assert((Size == 1 || Size == 2 || Size == 4 || Size == 8) &&
+           "Unsupported size");
 
     LLT p0 = LLT::pointer(0, 32);
     LLT s32 = LLT::scalar(32);
@@ -72,7 +72,6 @@ struct OutgoingValueHandler : public CallLowering::ValueHandler {
     MIRBuilder.buildGEP(AddrReg, SPReg, OffsetReg);
 
     MPO = MachinePointerInfo::getStack(MIRBuilder.getMF(), Offset);
-    StackSize = std::max(StackSize, Size + Offset);
     return AddrReg;
   }
 
@@ -91,12 +90,14 @@ struct OutgoingValueHandler : public CallLowering::ValueHandler {
 
   void assignValueToAddress(unsigned ValVReg, unsigned Addr, uint64_t Size,
                             MachinePointerInfo &MPO, CCValAssign &VA) override {
-    // FIXME: Support smaller sizes (which may require extensions).
-    assert((Size == 4 || Size == 8) && "Unsupported size");
+    assert((Size == 1 || Size == 2 || Size == 4 || Size == 8) &&
+           "Unsupported size");
 
+    unsigned ExtReg = extendRegister(ValVReg, VA);
     auto MMO = MIRBuilder.getMF().getMachineMemOperand(
-        MPO, MachineMemOperand::MOStore, Size, /* Alignment */ 0);
-    MIRBuilder.buildStore(ValVReg, Addr, *MMO);
+        MPO, MachineMemOperand::MOStore, VA.getLocVT().getStoreSize(),
+        /* Alignment */ 0);
+    MIRBuilder.buildStore(ExtReg, Addr, *MMO);
   }
 
   unsigned assignCustomValue(const CallLowering::ArgInfo &Arg,
@@ -128,6 +129,17 @@ struct OutgoingValueHandler : public CallLowering::ValueHandler {
     assignValueToReg(NewRegs[1], NextVA.getLocReg(), NextVA);
 
     return 1;
+  }
+
+  bool assignArg(unsigned ValNo, MVT ValVT, MVT LocVT,
+                 CCValAssign::LocInfo LocInfo,
+                 const CallLowering::ArgInfo &Info, CCState &State) override {
+    if (AssignFn(ValNo, ValVT, LocVT, LocInfo, Info.Flags, State))
+      return true;
+
+    StackSize =
+        std::max(StackSize, static_cast<uint64_t>(State.getNextStackOffset()));
+    return false;
   }
 
   MachineInstrBuilder &MIB;

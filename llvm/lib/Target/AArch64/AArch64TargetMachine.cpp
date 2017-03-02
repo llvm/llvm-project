@@ -139,6 +139,11 @@ static cl::opt<bool>
                            cl::desc("Enable the loop data prefetch pass"),
                            cl::init(true));
 
+static cl::opt<int> EnableGlobalISelAtO(
+    "aarch64-enable-global-isel-at-O", cl::Hidden,
+    cl::desc("Enable GlobalISel at or below an opt level (-1 to disable)"),
+    cl::init(-1));
+
 extern "C" void LLVMInitializeAArch64Target() {
   // Register the target.
   RegisterTargetMachine<AArch64leTargetMachine> X(getTheAArch64leTarget());
@@ -358,6 +363,8 @@ public:
   void addPostRegAlloc() override;
   void addPreSched2() override;
   void addPreEmitPass() override;
+
+  bool isGlobalISelEnabled() const override;
 };
 
 } // end anonymous namespace
@@ -466,6 +473,10 @@ bool AArch64PassConfig::addGlobalInstructionSelect() {
   return false;
 }
 #endif
+
+bool AArch64PassConfig::isGlobalISelEnabled() const {
+  return TM->getOptLevel() <= EnableGlobalISelAtO;
+}
 
 bool AArch64PassConfig::addILPOpts() {
   if (EnableCondOpt)

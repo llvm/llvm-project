@@ -54,8 +54,9 @@ static int getSeverity(DiagnosticsEngine::Level L) {
   llvm_unreachable("Unknown diagnostic level!");
 }
 
-ASTManager::ASTManager(JSONOutput &Output, DocumentStore &Store)
-    : Output(Output), Store(Store),
+ASTManager::ASTManager(JSONOutput &Output, DocumentStore &Store,
+                       bool RunSynchronously)
+    : Output(Output), Store(Store), RunSynchronously(RunSynchronously),
       PCHs(std::make_shared<PCHContainerOperations>()),
       ClangWorker([this]() { runWorker(); }) {}
 
@@ -67,9 +68,8 @@ void ASTManager::runWorker() {
       std::unique_lock<std::mutex> Lock(RequestLock);
       // Check if there's another request pending. We keep parsing until
       // our one-element queue is empty.
-      ClangRequestCV.wait(Lock, [this] {
-        return !RequestQueue.empty() || Done;
-      });
+      ClangRequestCV.wait(Lock,
+                          [this] { return !RequestQueue.empty() || Done; });
 
       if (RequestQueue.empty() && Done)
         return;
@@ -78,49 +78,67 @@ void ASTManager::runWorker() {
       RequestQueue.pop_back();
     } // unlock.
 
-    auto &Unit = ASTs[File]; // Only one thread can access this at a time.
-
-    if (!Unit) {
-      Unit = createASTUnitForFile(File, this->Store);
-    } else {
-      // Do a reparse if this wasn't the first parse.
-      // FIXME: This might have the wrong working directory if it changed in the
-      // meantime.
-      Unit->Reparse(PCHs, getRemappedFiles(this->Store));
-    }
-
-    if (!Unit)
-      continue;
-
-    // Send the diagnotics to the editor.
-    // FIXME: If the diagnostic comes from a different file, do we want to
-    // show them all? Right now we drop everything not coming from the
-    // main file.
-    // FIXME: Send FixIts to the editor.
-    std::string Diagnostics;
-    for (ASTUnit::stored_diag_iterator D = Unit->stored_diag_begin(),
-                                       DEnd = Unit->stored_diag_end();
-         D != DEnd; ++D) {
-      if (!D->getLocation().isValid() ||
-          !D->getLocation().getManager().isInMainFile(D->getLocation()))
-        continue;
-      Position P;
-      P.line = D->getLocation().getSpellingLineNumber() - 1;
-      P.character = D->getLocation().getSpellingColumnNumber();
-      Range R = {P, P};
-      Diagnostics +=
-          R"({"range":)" + Range::unparse(R) +
-          R"(,"severity":)" + std::to_string(getSeverity(D->getLevel())) +
-          R"(,"message":")" + llvm::yaml::escape(D->getMessage()) +
-          R"("},)";
-    }
-
-    if (!Diagnostics.empty())
-      Diagnostics.pop_back(); // Drop trailing comma.
-    Output.writeMessage(
-        R"({"jsonrpc":"2.0","method":"textDocument/publishDiagnostics","params":{"uri":")" +
-        File + R"(","diagnostics":[)" + Diagnostics + R"(]}})");
+    parseFileAndPublishDiagnostics(File);
   }
+}
+
+void ASTManager::parseFileAndPublishDiagnostics(StringRef File) {
+  auto &Unit = ASTs[File]; // Only one thread can access this at a time.
+
+  if (!Unit) {
+    Unit = createASTUnitForFile(File, this->Store);
+  } else {
+    // Do a reparse if this wasn't the first parse.
+    // FIXME: This might have the wrong working directory if it changed in the
+    // meantime.
+    Unit->Reparse(PCHs, getRemappedFiles(this->Store));
+  }
+
+  if (!Unit)
+    return;
+
+  // Send the diagnotics to the editor.
+  // FIXME: If the diagnostic comes from a different file, do we want to
+  // show them all? Right now we drop everything not coming from the
+  // main file.
+  std::string Diagnostics;
+  DiagnosticToReplacementMap LocalFixIts; // Temporary storage
+  for (ASTUnit::stored_diag_iterator D = Unit->stored_diag_begin(),
+                                     DEnd = Unit->stored_diag_end();
+       D != DEnd; ++D) {
+    if (!D->getLocation().isValid() ||
+        !D->getLocation().getManager().isInMainFile(D->getLocation()))
+      continue;
+    Position P;
+    P.line = D->getLocation().getSpellingLineNumber() - 1;
+    P.character = D->getLocation().getSpellingColumnNumber();
+    Range R = {P, P};
+    Diagnostics +=
+        R"({"range":)" + Range::unparse(R) +
+        R"(,"severity":)" + std::to_string(getSeverity(D->getLevel())) +
+        R"(,"message":")" + llvm::yaml::escape(D->getMessage()) +
+        R"("},)";
+
+    // We convert to Replacements to become independent of the SourceManager.
+    clangd::Diagnostic Diag = {R, getSeverity(D->getLevel()), D->getMessage()};
+    auto &FixItsForDiagnostic = LocalFixIts[Diag];
+    for (const FixItHint &Fix : D->getFixIts()) {
+      FixItsForDiagnostic.push_back(clang::tooling::Replacement(
+          Unit->getSourceManager(), Fix.RemoveRange, Fix.CodeToInsert));
+    }
+  }
+
+  // Put FixIts into place.
+  {
+    std::lock_guard<std::mutex> Guard(FixItLock);
+    FixIts = std::move(LocalFixIts);
+  }
+
+  if (!Diagnostics.empty())
+    Diagnostics.pop_back(); // Drop trailing comma.
+  Output.writeMessage(
+      R"({"jsonrpc":"2.0","method":"textDocument/publishDiagnostics","params":{"uri":")" +
+      File + R"(","diagnostics":[)" + Diagnostics + R"(]}})");
 }
 
 ASTManager::~ASTManager() {
@@ -134,6 +152,10 @@ ASTManager::~ASTManager() {
 }
 
 void ASTManager::onDocumentAdd(StringRef Uri) {
+  if (RunSynchronously) {
+    parseFileAndPublishDiagnostics(Uri);
+    return;
+  }
   std::lock_guard<std::mutex> Guard(RequestLock);
   // Currently we discard all pending requests and just enqueue the latest one.
   RequestQueue.clear();
@@ -200,4 +222,13 @@ ASTManager::createASTUnitForFile(StringRef Uri, const DocumentStore &Docs) {
       /*CacheCodeCompletionResults=*/true,
       /*IncludeBriefCommentsInCodeCompletion=*/true,
       /*AllowPCHWithCompilerErrors=*/true));
+}
+
+llvm::ArrayRef<clang::tooling::Replacement>
+ASTManager::getFixIts(const clangd::Diagnostic &D) {
+  std::lock_guard<std::mutex> Guard(FixItLock);
+  auto I = FixIts.find(D);
+  if (I != FixIts.end())
+    return I->second;
+  return llvm::None;
 }

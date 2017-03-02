@@ -1956,8 +1956,8 @@ size_t Process::RemoveBreakpointOpcodesFromBuffer(addr_t bp_addr, size_t size,
 
   if (m_breakpoint_site_list.FindInRange(bp_addr, bp_addr + size,
                                          bp_sites_in_range)) {
-    bp_sites_in_range.ForEach([bp_addr, size, buf, &bytes_removed](
-                                  BreakpointSite *bp_site) -> void {
+    bp_sites_in_range.ForEach([bp_addr, size,
+                               buf](BreakpointSite *bp_site) -> void {
       if (bp_site->GetType() == BreakpointSite::eSoftware) {
         addr_t intersect_addr;
         size_t intersect_size;

@@ -1040,8 +1040,7 @@ static unsigned getAddressSpaceOperand(Value *I) {
 
 bool llvm::sortMemAccesses(ArrayRef<Value *> VL, const DataLayout &DL,
                            ScalarEvolution &SE,
-                           SmallVectorImpl<Value *> &Sorted,
-                           SmallVectorImpl<unsigned> *Mask) {
+                           SmallVectorImpl<Value *> &Sorted) {
   SmallVector<std::pair<int64_t, Value *>, 4> OffValPairs;
   OffValPairs.reserve(VL.size());
   Sorted.reserve(VL.size());
@@ -1051,6 +1050,7 @@ bool llvm::sortMemAccesses(ArrayRef<Value *> VL, const DataLayout &DL,
   Value *Ptr0 = getPointerOperand(VL[0]);
   const SCEV *Scev0 = SE.getSCEV(Ptr0);
   Value *Obj0 = GetUnderlyingObject(Ptr0, DL);
+
   for (auto *Val : VL) {
     // The only kind of access we care about here is load.
     if (!isa<LoadInst>(Val))
@@ -1077,29 +1077,14 @@ bool llvm::sortMemAccesses(ArrayRef<Value *> VL, const DataLayout &DL,
     OffValPairs.emplace_back(Diff->getAPInt().getSExtValue(), Val);
   }
 
-  SmallVector<unsigned, 4> UseOrder(VL.size());
-  for (unsigned i = 0; i < VL.size(); i++)
-    UseOrder[i] = i;
-
-  // Sort the memory accesses and keep the order of their uses in UseOrder.
-  std::sort(UseOrder.begin(), UseOrder.end(),
-            [&OffValPairs](unsigned Left, unsigned Right) {
-              return OffValPairs[Left].first < OffValPairs[Right].first;
+  std::sort(OffValPairs.begin(), OffValPairs.end(),
+            [](const std::pair<int64_t, Value *> &Left,
+               const std::pair<int64_t, Value *> &Right) {
+              return Left.first < Right.first;
             });
 
-  for (unsigned i = 0; i < VL.size(); i++)
-    Sorted.emplace_back(OffValPairs[UseOrder[i]].second);
-
-  // Sort UseOrder to compute the Mask.
-  if (Mask) {
-    Mask->reserve(VL.size());
-    for (unsigned i = 0; i < VL.size(); i++)
-      Mask->emplace_back(i);
-    std::sort(Mask->begin(), Mask->end(),
-              [&UseOrder](unsigned Left, unsigned Right) {
-                return UseOrder[Left] < UseOrder[Right];
-              });
-  }
+  for (auto &it : OffValPairs)
+    Sorted.push_back(it.second);
 
   return true;
 }
