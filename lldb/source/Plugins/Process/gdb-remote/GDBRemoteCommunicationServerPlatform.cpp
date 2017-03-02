@@ -83,8 +83,8 @@ GDBRemoteCommunicationServerPlatform::GDBRemoteCommunicationServerPlatform(
       &GDBRemoteCommunicationServerPlatform::Handle_jSignalsInfo);
 
   RegisterPacketHandler(StringExtractorGDBRemote::eServerPacketType_interrupt,
-                        [this](StringExtractorGDBRemote packet, Error &error,
-                               bool &interrupt, bool &quit) {
+                        [](StringExtractorGDBRemote packet, Error &error,
+                           bool &interrupt, bool &quit) {
                           error.SetErrorString("interrupt received");
                           interrupt = true;
                           return PacketResult::Success;

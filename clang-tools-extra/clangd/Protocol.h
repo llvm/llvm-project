@@ -44,6 +44,15 @@ struct Position {
   /// Character offset on a line in a document (zero-based).
   int character;
 
+  friend bool operator==(const Position &LHS, const Position &RHS) {
+    return std::tie(LHS.line, LHS.character) ==
+           std::tie(RHS.line, RHS.character);
+  }
+  friend bool operator<(const Position &LHS, const Position &RHS) {
+    return std::tie(LHS.line, LHS.character) <
+           std::tie(RHS.line, RHS.character);
+  }
+
   static llvm::Optional<Position> parse(llvm::yaml::MappingNode *Params);
   static std::string unparse(const Position &P);
 };
@@ -54,6 +63,13 @@ struct Range {
 
   /// The range's end position.
   Position end;
+
+  friend bool operator==(const Range &LHS, const Range &RHS) {
+    return std::tie(LHS.start, LHS.end) == std::tie(RHS.start, RHS.end);
+  }
+  friend bool operator<(const Range &LHS, const Range &RHS) {
+    return std::tie(LHS.start, LHS.end) < std::tie(RHS.start, RHS.end);
+  }
 
   static llvm::Optional<Range> parse(llvm::yaml::MappingNode *Params);
   static std::string unparse(const Range &P);
@@ -169,6 +185,51 @@ struct DocumentFormattingParams {
   FormattingOptions options;
 
   static llvm::Optional<DocumentFormattingParams>
+  parse(llvm::yaml::MappingNode *Params);
+};
+
+struct Diagnostic {
+  /// The range at which the message applies.
+  Range range;
+
+  /// The diagnostic's severity. Can be omitted. If omitted it is up to the
+  /// client to interpret diagnostics as error, warning, info or hint.
+  int severity;
+
+  /// The diagnostic's message.
+  std::string message;
+
+  friend bool operator==(const Diagnostic &LHS, const Diagnostic &RHS) {
+    return std::tie(LHS.range, LHS.severity, LHS.message) ==
+           std::tie(RHS.range, RHS.severity, RHS.message);
+  }
+  friend bool operator<(const Diagnostic &LHS, const Diagnostic &RHS) {
+    return std::tie(LHS.range, LHS.severity, LHS.message) <
+           std::tie(RHS.range, RHS.severity, RHS.message);
+  }
+
+  static llvm::Optional<Diagnostic> parse(llvm::yaml::MappingNode *Params);
+};
+
+struct CodeActionContext {
+  /// An array of diagnostics.
+  std::vector<Diagnostic> diagnostics;
+
+  static llvm::Optional<CodeActionContext>
+  parse(llvm::yaml::MappingNode *Params);
+};
+
+struct CodeActionParams {
+  /// The document in which the command was invoked.
+  TextDocumentIdentifier textDocument;
+
+  /// The range for which the command was invoked.
+  Range range;
+
+  /// Context carrying additional information.
+  CodeActionContext context;
+
+  static llvm::Optional<CodeActionParams>
   parse(llvm::yaml::MappingNode *Params);
 };
 

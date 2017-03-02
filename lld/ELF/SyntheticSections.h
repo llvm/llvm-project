@@ -521,11 +521,10 @@ public:
   // The CU vector portion of the constant pool.
   std::vector<std::vector<std::pair<uint32_t, uint8_t>>> CuVectors;
 
-  std::vector<AddressEntry<ELFT>> AddressArea;
+  std::vector<AddressEntry> AddressArea;
 
 private:
-  void parseDebugSections();
-  void readDwarf(InputSection *I);
+  void readDwarf(InputSection *Sec);
 
   uint32_t CuTypesOffset;
   uint32_t SymTabOffset;

@@ -4147,8 +4147,7 @@ bool ParseRegisters(XMLNode feature_node, GdbServerTargetInfo &target_info,
         reg_node.ForEachAttribute([&target_info, &gdb_group, &gdb_type,
                                    &reg_name, &alt_name, &set_name, &value_regs,
                                    &invalidate_regs, &encoding_set, &format_set,
-                                   &reg_info, &cur_reg_num, &reg_offset,
-                                   &dwarf_opcode_bytes](
+                                   &reg_info, &reg_offset, &dwarf_opcode_bytes](
                                       const llvm::StringRef &name,
                                       const llvm::StringRef &value) -> bool {
           if (name == "name") {
@@ -4310,7 +4309,7 @@ bool ProcessGDBRemote::GetGDBServerRegisterInfo(ArchSpec &arch_to_use) {
     XMLNode target_node = xml_document.GetRootElement("target");
     if (target_node) {
       XMLNode feature_node;
-      target_node.ForEachChildElement([&target_info, this, &feature_node](
+      target_node.ForEachChildElement([&target_info, &feature_node](
                                           const XMLNode &node) -> bool {
         llvm::StringRef name = node.GetName();
         if (name == "architecture") {
@@ -4436,8 +4435,8 @@ Error ProcessGDBRemote::GetLoadedModuleList(LoadedModuleInfoList &list) {
           LoadedModuleInfoList::LoadedModuleInfo module;
 
           library.ForEachAttribute(
-              [log, &module](const llvm::StringRef &name,
-                             const llvm::StringRef &value) -> bool {
+              [&module](const llvm::StringRef &name,
+                        const llvm::StringRef &value) -> bool {
 
                 if (name == "name")
                   module.set_name(value.str());

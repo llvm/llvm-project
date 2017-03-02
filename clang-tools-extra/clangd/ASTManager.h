@@ -12,6 +12,8 @@
 
 #include "DocumentStore.h"
 #include "JSONRPCDispatcher.h"
+#include "Protocol.h"
+#include "clang/Tooling/Core/Replacement.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include <condition_variable>
 #include <deque>
@@ -29,16 +31,26 @@ namespace clangd {
 
 class ASTManager : public DocumentStoreListener {
 public:
-  ASTManager(JSONOutput &Output, DocumentStore &Store);
+  ASTManager(JSONOutput &Output, DocumentStore &Store, bool RunSynchronously);
   ~ASTManager() override;
 
   void onDocumentAdd(StringRef Uri) override;
   // FIXME: Implement onDocumentRemove
   // FIXME: Implement codeComplete
 
+  /// Get the fixes associated with a certain diagnostic as replacements.
+  llvm::ArrayRef<clang::tooling::Replacement>
+  getFixIts(const clangd::Diagnostic &D);
+
+  DocumentStore &getStore() const { return Store; }
+
 private:
   JSONOutput &Output;
   DocumentStore &Store;
+
+  // Set to true if requests should block instead of being processed
+  // asynchronously.
+  bool RunSynchronously;
 
   /// Loads a compilation database for URI. May return nullptr if it fails. The
   /// database is cached for subsequent accesses.
@@ -50,12 +62,18 @@ private:
   createASTUnitForFile(StringRef Uri, const DocumentStore &Docs);
 
   void runWorker();
+  void parseFileAndPublishDiagnostics(StringRef File);
 
   /// Clang objects.
   llvm::StringMap<std::unique_ptr<clang::ASTUnit>> ASTs;
   llvm::StringMap<std::unique_ptr<clang::tooling::CompilationDatabase>>
       CompilationDatabases;
   std::shared_ptr<clang::PCHContainerOperations> PCHs;
+
+  typedef std::map<clangd::Diagnostic, std::vector<clang::tooling::Replacement>>
+      DiagnosticToReplacementMap;
+  DiagnosticToReplacementMap FixIts;
+  std::mutex FixItLock;
 
   /// Queue of requests.
   std::deque<std::string> RequestQueue;

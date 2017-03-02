@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s modernize-use-override %t
+// RUN: %check_clang_tidy %s modernize-use-override %t -- -- -std=c++11 -fexceptions
 
 #define ABSTRACT = 0
 

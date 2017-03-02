@@ -157,6 +157,11 @@ set(LIBCXXABI_LIBCXX_LIBRARY_PATH "" CACHE PATH "The path to libc++ library.")
 option(LIBCXXABI_ENABLE_SHARED "Build libc++abi as a shared library." ON)
 option(LIBCXXABI_ENABLE_STATIC "Build libc++abi as a static library." ON)
 
+option(LIBCXXABI_BAREMETAL "Build libc++abi for baremetal targets." OFF)
+# The default terminate handler attempts to demangle uncaught exceptions, which
+# causes extra I/O and demangling code to be pulled in.
+option(LIBCXXABI_SILENT_TERMINATE "Set this to make the terminate handler default to a silent alternative" OFF)
+
 if (NOT LIBCXXABI_ENABLE_SHARED AND NOT LIBCXXABI_ENABLE_STATIC)
   message(FATAL_ERROR "libc++abi must be built as either a shared or static library.")
 endif()
@@ -432,11 +437,15 @@ endif()
 
 # Define LIBCXXABI_USE_LLVM_UNWINDER for conditional compilation.
 if (LIBCXXABI_USE_LLVM_UNWINDER)
-  add_definitions(-DLIBCXXABI_USE_LLVM_UNWINDER=1)
+  add_definitions(-DLIBCXXABI_USE_LLVM_UNWINDER)
 endif()
 
 if (LIBCXXABI_SILENT_TERMINATE)
-  add_definitions(-DLIBCXXABI_SILENT_TERMINATE=1)
+  add_definitions(-DLIBCXXABI_SILENT_TERMINATE)
+endif()
+
+if (LIBCXXABI_BAREMETAL)
+    add_definitions(-DLIBCXXABI_BAREMETAL)
 endif()
 
 string(REPLACE ";" " " LIBCXXABI_CXX_FLAGS "${LIBCXXABI_CXX_FLAGS}")

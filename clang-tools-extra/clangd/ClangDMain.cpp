@@ -11,13 +11,20 @@
 #include "DocumentStore.h"
 #include "JSONRPCDispatcher.h"
 #include "ProtocolHandlers.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Program.h"
 #include <iostream>
 #include <string>
 using namespace clang::clangd;
 
+static llvm::cl::opt<bool>
+    RunSynchronously("run-synchronously",
+                     llvm::cl::desc("parse on main thread"),
+                     llvm::cl::init(false), llvm::cl::Hidden);
+
 int main(int argc, char *argv[]) {
+  llvm::cl::ParseCommandLineOptions(argc, argv, "clangd");
   llvm::raw_ostream &Outs = llvm::outs();
   llvm::raw_ostream &Logs = llvm::errs();
   JSONOutput Out(Outs, Logs);
@@ -28,14 +35,14 @@ int main(int argc, char *argv[]) {
   // Set up a document store and intialize all the method handlers for JSONRPC
   // dispatching.
   DocumentStore Store;
-  ASTManager AST(Out, Store);
+  ASTManager AST(Out, Store, RunSynchronously);
   Store.addListener(&AST);
   JSONRPCDispatcher Dispatcher(llvm::make_unique<Handler>(Out));
   Dispatcher.registerHandler("initialize",
                              llvm::make_unique<InitializeHandler>(Out));
   auto ShutdownPtr = llvm::make_unique<ShutdownHandler>(Out);
   auto *ShutdownHandler = ShutdownPtr.get();
-  Dispatcher.registerHandler("shutdown",std::move(ShutdownPtr));
+  Dispatcher.registerHandler("shutdown", std::move(ShutdownPtr));
   Dispatcher.registerHandler(
       "textDocument/didOpen",
       llvm::make_unique<TextDocumentDidOpenHandler>(Out, Store));
@@ -52,6 +59,8 @@ int main(int argc, char *argv[]) {
   Dispatcher.registerHandler(
       "textDocument/formatting",
       llvm::make_unique<TextDocumentFormattingHandler>(Out, Store));
+  Dispatcher.registerHandler("textDocument/codeAction",
+                             llvm::make_unique<CodeActionHandler>(Out, AST));
 
   while (std::cin.good()) {
     // A Language Server Protocol message starts with a HTTP header, delimited
