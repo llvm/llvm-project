@@ -392,4 +392,6 @@ def opt_remarks_filename: S<"opt-remarks-filename">,
 def opt_remarks_with_hotness: F<"opt-remarks-with-hotness">,
   HelpText<"Include hotness informations in the optimization remarks file">;
 def save_temps: F<"save-temps">;
+def thinlto_cache_dir: J<"thinlto-cache-dir=">,
+  HelpText<"Path to ThinLTO cached object file directory">;
 def thinlto_jobs: J<"thinlto-jobs=">, HelpText<"Number of ThinLTO jobs">;

@@ -22,6 +22,7 @@
 
 namespace clang {
 namespace clangd {
+class ASTManager;
 class DocumentStore;
 
 struct InitializeHandler : Handler {
@@ -34,7 +35,8 @@ struct InitializeHandler : Handler {
           "textDocumentSync": 1,
           "documentFormattingProvider": true,
           "documentRangeFormattingProvider": true,
-          "documentOnTypeFormattingProvider": {"firstTriggerCharacter":"}","moreTriggerCharacter":[]}
+          "documentOnTypeFormattingProvider": {"firstTriggerCharacter":"}","moreTriggerCharacter":[]},
+          "codeActionProvider": true
         }}})");
   }
 };
@@ -100,6 +102,16 @@ struct TextDocumentFormattingHandler : Handler {
 
 private:
   DocumentStore &Store;
+};
+
+struct CodeActionHandler : Handler {
+  CodeActionHandler(JSONOutput &Output, ASTManager &AST)
+      : Handler(Output), AST(AST) {}
+
+  void handleMethod(llvm::yaml::MappingNode *Params, StringRef ID) override;
+
+private:
+  ASTManager &AST;
 };
 
 } // namespace clangd

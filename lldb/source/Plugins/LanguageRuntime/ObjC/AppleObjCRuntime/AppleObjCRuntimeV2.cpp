@@ -600,14 +600,12 @@ protected:
             }
             iterator->second->Describe(
                 nullptr,
-                [objc_runtime, &std_out](const char *name,
-                                         const char *type) -> bool {
+                [&std_out](const char *name, const char *type) -> bool {
                   std_out.Printf("  instance method name = %s type = %s\n",
                                  name, type);
                   return false;
                 },
-                [objc_runtime, &std_out](const char *name,
-                                         const char *type) -> bool {
+                [&std_out](const char *name, const char *type) -> bool {
                   std_out.Printf("  class method name = %s type = %s\n", name,
                                  type);
                   return false;

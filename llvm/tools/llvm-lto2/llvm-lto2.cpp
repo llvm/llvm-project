@@ -284,7 +284,7 @@ int main(int argc, char **argv) {
 
   NativeObjectCache Cache;
   if (!CacheDir.empty())
-    Cache = localCache(CacheDir, AddFile);
+    Cache = check(localCache(CacheDir, AddFile), "failed to create cache");
 
   check(Lto.run(AddStream, Cache), "LTO::run failed");
 }

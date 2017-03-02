@@ -1,4 +1,4 @@
-; RUN: rm -rf %t.cache && mkdir %t.cache
+; RUN: rm -rf %t.cache
 ; RUN: opt -module-hash -module-summary %s -o %t.bc
 
 ; RUN: llvm-lto2 -o %t.o %t.bc -cache-dir %t.cache -r=%t.bc,globalfunc,plx

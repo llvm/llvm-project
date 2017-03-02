@@ -2530,8 +2530,8 @@ static bool isConsumerInterestedIn(ASTContext &Ctx, Decl *D, bool HasBody) {
 
   // An ImportDecl or VarDecl imported from a module will get emitted when
   // we import the relevant module.
-  if ((isa<ImportDecl>(D) || isa<VarDecl>(D)) && Ctx.DeclMustBeEmitted(D) &&
-      D->getImportedOwningModule())
+  if ((isa<ImportDecl>(D) || isa<VarDecl>(D)) && D->getImportedOwningModule() &&
+      Ctx.DeclMustBeEmitted(D))
     return false;
 
   if (isa<FileScopeAsmDecl>(D) || 

@@ -1439,11 +1439,8 @@ define zeroext i8 @extractelement_v2i1_alt(<2 x i64> %a, <2 x i64> %b) {
 ; SKX-NEXT:    kmovw %k0, %eax
 ; SKX-NEXT:    andl $1, %eax
 ; SKX-NEXT:    testb %al, %al
-; SKX-NEXT:    je LBB51_2
-; SKX-NEXT:  ## BB#1:
-; SKX-NEXT:    movb $-1, %al
-; SKX-NEXT:  LBB51_2:
-; SKX-NEXT:    addb $4, %al
+; SKX-NEXT:    sete %al
+; SKX-NEXT:    addb $3, %al
 ; SKX-NEXT:    movzbl %al, %eax
 ; SKX-NEXT:    retq
   %t1 = icmp ugt <2 x i64> %a, %b
@@ -1555,11 +1552,8 @@ define zeroext i8 @extractelement_v64i1_alt(<64 x i8> %a, <64 x i8> %b) {
 ; SKX-NEXT:    kmovw %k0, %eax
 ; SKX-NEXT:    andl $1, %eax
 ; SKX-NEXT:    testb %al, %al
-; SKX-NEXT:    je LBB55_2
-; SKX-NEXT:  ## BB#1:
-; SKX-NEXT:    movb $-1, %al
-; SKX-NEXT:  LBB55_2:
-; SKX-NEXT:    addb $4, %al
+; SKX-NEXT:    sete %al
+; SKX-NEXT:    addb $3, %al
 ; SKX-NEXT:    movzbl %al, %eax
 ; SKX-NEXT:    retq
   %t1 = icmp ugt <64 x i8> %a, %b

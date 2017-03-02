@@ -236,8 +236,8 @@ entry:
   ret i32 %tmp
 
 ; CHECK-LABEL: va9:
-; CHECK: addiu   $sp, $sp, -32
-; CHECK: lw      $2, 52($sp)
+; CHECK: addiu   $sp, $sp, -24
+; CHECK: lw      $2, 44($sp)
 }
 
 ; double

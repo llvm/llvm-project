@@ -45,6 +45,7 @@ namespace ISD {
     unsigned OrigAlign : 5;    ///< Log 2 of original alignment
     unsigned IsInConsecutiveRegsLast : 1;
     unsigned IsInConsecutiveRegs : 1;
+    unsigned IsCopyElisionCandidate : 1; ///< Argument copy elision candidate
 
     unsigned ByValSize; ///< Byval struct size
 
@@ -54,7 +55,8 @@ namespace ISD {
           IsReturned(0), IsSplit(0), IsInAlloca(0), IsSplitEnd(0),
           IsSwiftSelf(0), IsSwiftError(0), IsHva(0), IsHvaStart(0),
           IsSecArgPass(0), ByValAlign(0), OrigAlign(0),
-          IsInConsecutiveRegsLast(0), IsInConsecutiveRegs(0), ByValSize(0) {
+          IsInConsecutiveRegsLast(0), IsInConsecutiveRegs(0),
+          IsCopyElisionCandidate(0), ByValSize(0) {
       static_assert(sizeof(*this) == 2 * sizeof(unsigned), "flags are too big");
     }
 
@@ -108,6 +110,9 @@ namespace ISD {
 
     bool isSplitEnd()   const { return IsSplitEnd; }
     void setSplitEnd()  { IsSplitEnd = 1; }
+
+    bool isCopyElisionCandidate()  const { return IsCopyElisionCandidate; }
+    void setCopyElisionCandidate() { IsCopyElisionCandidate = 1; }
 
     unsigned getByValAlign() const { return (1U << ByValAlign) / 2; }
     void setByValAlign(unsigned A) {

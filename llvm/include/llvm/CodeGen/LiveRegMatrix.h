@@ -141,7 +141,7 @@ public:
   /// Use MCRegUnitIterator to enumerate all regunits in the desired PhysReg.
   /// This returns a reference to an internal Query data structure that is only
   /// valid until the next query() call.
-  LiveIntervalUnion::Query &query(LiveInterval &VirtReg, unsigned RegUnit);
+  LiveIntervalUnion::Query &query(const LiveRange &LR, unsigned RegUnit);
 
   /// Directly access the live interval unions per regunit.
   /// This returns an array indexed by the regunit number.

@@ -8,9 +8,10 @@ target triple = "i386-apple-darwin10.0.0"
 @.str = internal constant [4 x i8] c"%p\0A\00"    ; <[4 x i8]*> [#uses=1]
 @llvm.used = appending global [1 x i8*] [i8* bitcast (i8* (%struct.S*, i32, %struct.S*)* @_Z4test1SiS_ to i8*)], section "llvm.metadata" ; <[1 x i8*]*> [#uses=0]
 
-; Verify that %esi gets spilled before the call.
+; Verify that %s1 gets spilled before the call.
 ; CHECK: Z4test1SiS
-; CHECK: movl %esi,{{.*}}(%ebp) 
+; CHECK: leal 8(%ebp), %[[reg:[^ ]*]]
+; CHECK: movl %[[reg]],{{.*}}(%ebp) ## 4-byte Spill
 ; CHECK: calll __Z6throwsv
 
 define i8* @_Z4test1SiS_(%struct.S* byval %s1, i32 %n, %struct.S* byval %s2) ssp personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {

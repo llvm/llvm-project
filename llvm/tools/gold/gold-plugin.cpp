@@ -835,7 +835,7 @@ static ld_plugin_status allSymbolsReadHook() {
 
   NativeObjectCache Cache;
   if (!options::cache_dir.empty())
-    Cache = localCache(options::cache_dir, AddFile);
+    Cache = check(localCache(options::cache_dir, AddFile));
 
   check(Lto->run(AddStream, Cache));
 

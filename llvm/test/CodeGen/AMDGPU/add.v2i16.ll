@@ -191,10 +191,10 @@ define void @v_test_add_v2i16_zext_to_v2i32(<2 x i32> addrspace(1)* %out, <2 x i
 ; GFX9: flat_load_dword [[A:v[0-9]+]]
 ; GFX9: flat_load_dword [[B:v[0-9]+]]
 
+; GFX9: v_mov_b32_e32 v{{[0-9]+}}, 0{{$}}
 ; GFX9: v_pk_add_u16 [[ADD:v[0-9]+]], [[A]], [[B]]
 ; GFX9-DAG: v_and_b32_e32 v[[ELT0:[0-9]+]], 0xffff, [[ADD]]
 ; GFX9-DAG: v_lshrrev_b32_e32 v[[ELT1:[0-9]+]], 16, [[ADD]]
-; GFX9-DAG: v_mov_b32_e32 v{{[0-9]+}}, 0{{$}}
 ; GFX9: buffer_store_dwordx4
 
 ; VI: flat_load_ushort v[[A_LO:[0-9]+]]
@@ -203,9 +203,9 @@ define void @v_test_add_v2i16_zext_to_v2i32(<2 x i32> addrspace(1)* %out, <2 x i
 ; VI: flat_load_ushort v[[B_HI:[0-9]+]]
 
 ; VI: v_mov_b32_e32 v{{[0-9]+}}, 0{{$}}
-; VI: v_add_u16_e32
-; VI: v_add_u16_e32
 ; VI: v_mov_b32_e32 v{{[0-9]+}}, 0{{$}}
+; VI: v_add_u16_e32
+; VI: v_add_u16_e32
 
 ; VI: buffer_store_dwordx4
 define void @v_test_add_v2i16_zext_to_v2i64(<2 x i64> addrspace(1)* %out, <2 x i16> addrspace(1)* %in0, <2 x i16> addrspace(1)* %in1) #1 {

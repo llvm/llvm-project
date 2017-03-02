@@ -1,4 +1,4 @@
-//===--- Allocator.h - Simple memory allocation abstraction -----*- C++ -*-===//
+//===- Allocator.h - Simple memory allocation abstraction -------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -144,12 +144,11 @@ public:
                 "that objects larger than a slab go into their own memory "
                 "allocation.");
 
-  BumpPtrAllocatorImpl()
-      : CurPtr(nullptr), End(nullptr), BytesAllocated(0), Allocator() {}
+  BumpPtrAllocatorImpl() = default;
+
   template <typename T>
   BumpPtrAllocatorImpl(T &&Allocator)
-      : CurPtr(nullptr), End(nullptr), BytesAllocated(0),
-        Allocator(std::forward<T &&>(Allocator)) {}
+      : Allocator(std::forward<T &&>(Allocator)) {}
 
   // Manually implement a move constructor as we must clear the old allocator's
   // slabs as a matter of correctness.
@@ -292,10 +291,10 @@ private:
   /// \brief The current pointer into the current slab.
   ///
   /// This points to the next free byte in the slab.
-  char *CurPtr;
+  char *CurPtr = nullptr;
 
   /// \brief The end of the current slab.
-  char *End;
+  char *End = nullptr;
 
   /// \brief The slabs allocated so far.
   SmallVector<void *, 4> Slabs;
@@ -306,7 +305,7 @@ private:
   /// \brief How many bytes we've allocated.
   ///
   /// Used so that we can compute how much space was wasted.
-  size_t BytesAllocated;
+  size_t BytesAllocated = 0;
 
   /// \brief The allocator instance we use to get slabs of memory.
   AllocatorT Allocator;

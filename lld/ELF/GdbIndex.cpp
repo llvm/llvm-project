@@ -59,149 +59,40 @@
 //===----------------------------------------------------------------------===//
 
 #include "GdbIndex.h"
+#include "Memory.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugPubTable.h"
 #include "llvm/Object/ELFObjectFile.h"
 
 using namespace llvm;
 using namespace llvm::object;
+using namespace lld;
 using namespace lld::elf;
 
-template <class ELFT>
-GdbIndexBuilder<ELFT>::GdbIndexBuilder(InputSection *DebugInfoSec)
-    : DebugInfoSec(DebugInfoSec) {
-  if (Expected<std::unique_ptr<object::ObjectFile>> Obj =
-          object::ObjectFile::createObjectFile(
-              DebugInfoSec->template getFile<ELFT>()->MB))
-    Dwarf.reset(new DWARFContextInMemory(*Obj.get(), this));
-  else
-    error(toString(DebugInfoSec->template getFile<ELFT>()) +
-          ": error creating DWARF context");
-}
-
-template <class ELFT>
-std::vector<std::pair<typename ELFT::uint, typename ELFT::uint>>
-GdbIndexBuilder<ELFT>::readCUList() {
-  std::vector<std::pair<uintX_t, uintX_t>> Ret;
-  for (std::unique_ptr<DWARFCompileUnit> &CU : Dwarf->compile_units())
-    Ret.push_back(
-        {DebugInfoSec->OutSecOff + CU->getOffset(), CU->getLength() + 4});
-  return Ret;
-}
-
-template <class ELFT>
-std::vector<std::pair<StringRef, uint8_t>>
-GdbIndexBuilder<ELFT>::readPubNamesAndTypes() {
-  const bool IsLE = ELFT::TargetEndianness == llvm::support::little;
-  StringRef Data[] = {Dwarf->getGnuPubNamesSection(),
-                      Dwarf->getGnuPubTypesSection()};
-
-  std::vector<std::pair<StringRef, uint8_t>> Ret;
-  for (StringRef D : Data) {
-    DWARFDebugPubTable PubTable(D, IsLE, true);
-    for (const DWARFDebugPubTable::Set &S : PubTable.getData())
-      for (const DWARFDebugPubTable::Entry &E : S.Entries)
-        Ret.push_back({E.Name, E.Descriptor.toBits()});
-  }
-  return Ret;
-}
-
 std::pair<bool, GdbSymbol *> GdbHashTab::add(uint32_t Hash, size_t Offset) {
-  if (Size * 4 / 3 >= Table.size())
-    expand();
+  GdbSymbol *&Sym = Map[Offset];
+  if (Sym)
+    return {false, Sym};
+  Sym = make<GdbSymbol>(Hash, Offset);
+  return {true, Sym};
+}
 
-  GdbSymbol **Slot = findSlot(Hash, Offset);
-  bool New = false;
-  if (*Slot == nullptr) {
-    ++Size;
-    *Slot = new (Alloc) GdbSymbol(Hash, Offset);
-    New = true;
+void GdbHashTab::finalizeContents() {
+  Table.resize(std::max<uint64_t>(1024, NextPowerOf2(Map.size() * 4 / 3)));
+
+  for (auto &P : Map) {
+    GdbSymbol *Sym = P.second;
+
+    uint32_t I = Sym->NameHash & (Table.size() - 1);
+    uint32_t Step = ((Sym->NameHash * 17) & (Table.size() - 1)) | 1;
+
+    for (;;) {
+      if (Table[I]) {
+        I = (I + Step) & (Table.size() - 1);
+        continue;
+      }
+
+      Table[I] = Sym;
+      break;
+    }
   }
-  return {New, *Slot};
-}
-
-void GdbHashTab::expand() {
-  if (Table.empty()) {
-    Table.resize(InitialSize);
-    return;
-  }
-  std::vector<GdbSymbol *> NewTable(Table.size() * 2);
-  NewTable.swap(Table);
-
-  for (GdbSymbol *Sym : NewTable) {
-    if (!Sym)
-      continue;
-    GdbSymbol **Slot = findSlot(Sym->NameHash, Sym->NameOffset);
-    *Slot = Sym;
-  }
-}
-
-// Methods finds a slot for symbol with given hash. The step size used to find
-// the next candidate slot when handling a hash collision is specified in
-// .gdb_index section format. The hash value for a table entry is computed by
-// applying an iterative hash function to the symbol's name.
-GdbSymbol **GdbHashTab::findSlot(uint32_t Hash, size_t Offset) {
-  uint32_t Index = Hash & (Table.size() - 1);
-  uint32_t Step = ((Hash * 17) & (Table.size() - 1)) | 1;
-
-  for (;;) {
-    GdbSymbol *S = Table[Index];
-    if (!S || ((S->NameOffset == Offset) && (S->NameHash == Hash)))
-      return &Table[Index];
-    Index = (Index + Step) & (Table.size() - 1);
-  }
-}
-
-template <class ELFT>
-static InputSectionBase *findSection(ArrayRef<InputSectionBase *> Arr,
-                                     uint64_t Offset) {
-  for (InputSectionBase *S : Arr)
-    if (S && S != &InputSection::Discarded)
-      if (Offset >= S->Offset && Offset < S->Offset + S->getSize<ELFT>())
-        return S;
-  return nullptr;
-}
-
-template <class ELFT>
-std::vector<AddressEntry<ELFT>>
-GdbIndexBuilder<ELFT>::readAddressArea(size_t CurrentCU) {
-  std::vector<AddressEntry<ELFT>> Ret;
-  for (const auto &CU : Dwarf->compile_units()) {
-    DWARFAddressRangesVector Ranges;
-    CU->collectAddressRanges(Ranges);
-
-    ArrayRef<InputSectionBase *> Sections =
-        DebugInfoSec->template getFile<ELFT>()->getSections();
-
-    for (std::pair<uint64_t, uint64_t> &R : Ranges)
-      if (InputSectionBase *S = findSection<ELFT>(Sections, R.first))
-        Ret.push_back(
-            {S, R.first - S->Offset, R.second - S->Offset, CurrentCU});
-    ++CurrentCU;
-  }
-  return Ret;
-}
-
-// We return file offset as load address for allocatable sections. That is
-// currently used for collecting address ranges in readAddressArea(). We are
-// able then to find section index that range belongs to.
-template <class ELFT>
-uint64_t GdbIndexBuilder<ELFT>::getSectionLoadAddress(
-    const object::SectionRef &Sec) const {
-  if (static_cast<const ELFSectionRef &>(Sec).getFlags() & ELF::SHF_ALLOC)
-    return static_cast<const ELFSectionRef &>(Sec).getOffset();
-  return 0;
-}
-
-template <class ELFT>
-std::unique_ptr<LoadedObjectInfo> GdbIndexBuilder<ELFT>::clone() const {
-  return {};
-}
-
-namespace lld {
-namespace elf {
-template class GdbIndexBuilder<ELF32LE>;
-template class GdbIndexBuilder<ELF32BE>;
-template class GdbIndexBuilder<ELF64LE>;
-template class GdbIndexBuilder<ELF64BE>;
-}
 }

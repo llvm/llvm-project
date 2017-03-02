@@ -27,6 +27,8 @@
 #include "Threads.h"
 #include "Writer.h"
 #include "lld/Config/Version.h"
+#include "llvm/DebugInfo/DWARF/DWARFDebugPubTable.h"
+#include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Support/Dwarf.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/MD5.h"
@@ -1479,12 +1481,19 @@ template <class ELFT> void GnuHashTableSection<ELFT>::writeTo(uint8_t *Buf) {
   write32<E>(Buf + 12, getShift2());
   Buf += 16;
 
+  // Write a bloom filter and a hash table.
   writeBloomFilter(Buf);
   Buf += sizeof(uintX_t) * MaskWords;
-
   writeHashTable(Buf);
 }
 
+// This function writes a 2-bit bloom filter. This bloom filter alone
+// usually filters out 80% or more of all symbol lookups [1].
+// The dynamic linker uses the hash table only when a symbol is not
+// filtered out by a bloom filter.
+//
+// [1] Ulrich Drepper (2011), "How To Write Shared Libraries" (Ver. 4.1.2),
+//     p.9, https://www.akkadia.org/drepper/dsohowto.pdf
 template <class ELFT>
 void GnuHashTableSection<ELFT>::writeBloomFilter(uint8_t *Buf) {
   typedef typename ELFT::Off Elf_Off;
@@ -1685,13 +1694,6 @@ GdbIndexSection<ELFT>::GdbIndexSection()
     : SyntheticSection(0, SHT_PROGBITS, 1, ".gdb_index"),
       StringPool(llvm::StringTableBuilder::ELF) {}
 
-template <class ELFT> void GdbIndexSection<ELFT>::parseDebugSections() {
-  for (InputSectionBase *S : InputSections)
-    if (InputSection *IS = dyn_cast<InputSection>(S))
-      if (IS->OutSec && IS->Name == ".debug_info")
-        readDwarf(IS);
-}
-
 // Iterative hash function for symbol's name is described in .gdb_index format
 // specification. Note that we use one for version 5 to 7 here, it is different
 // for version 4.
@@ -1702,20 +1704,93 @@ static uint32_t hash(StringRef Str) {
   return R;
 }
 
-template <class ELFT> void GdbIndexSection<ELFT>::readDwarf(InputSection *I) {
-  GdbIndexBuilder<ELFT> Builder(I);
-  if (ErrorCount)
+static std::vector<std::pair<uint64_t, uint64_t>>
+readCuList(DWARFContext &Dwarf, InputSection *Sec) {
+  std::vector<std::pair<uint64_t, uint64_t>> Ret;
+  for (std::unique_ptr<DWARFCompileUnit> &CU : Dwarf.compile_units())
+    Ret.push_back({Sec->OutSecOff + CU->getOffset(), CU->getLength() + 4});
+  return Ret;
+}
+
+template <class ELFT>
+static InputSectionBase *findSection(ArrayRef<InputSectionBase *> Arr,
+                                     uint64_t Offset) {
+  for (InputSectionBase *S : Arr)
+    if (S && S != &InputSection::Discarded)
+      if (Offset >= S->Offset && Offset < S->Offset + S->getSize<ELFT>())
+        return S;
+  return nullptr;
+}
+
+template <class ELFT>
+static std::vector<AddressEntry>
+readAddressArea(DWARFContext &Dwarf, InputSection *Sec, size_t CurrentCU) {
+  std::vector<AddressEntry> Ret;
+
+  for (std::unique_ptr<DWARFCompileUnit> &CU : Dwarf.compile_units()) {
+    DWARFAddressRangesVector Ranges;
+    CU->collectAddressRanges(Ranges);
+
+    ArrayRef<InputSectionBase *> Sections =
+        Sec->template getFile<ELFT>()->getSections();
+
+    for (std::pair<uint64_t, uint64_t> &R : Ranges)
+      if (InputSectionBase *S = findSection<ELFT>(Sections, R.first))
+        Ret.push_back(
+            {S, R.first - S->Offset, R.second - S->Offset, CurrentCU});
+    ++CurrentCU;
+  }
+  return Ret;
+}
+
+static std::vector<std::pair<StringRef, uint8_t>>
+readPubNamesAndTypes(DWARFContext &Dwarf, bool IsLE) {
+  StringRef Data[] = {Dwarf.getGnuPubNamesSection(),
+                      Dwarf.getGnuPubTypesSection()};
+
+  std::vector<std::pair<StringRef, uint8_t>> Ret;
+  for (StringRef D : Data) {
+    DWARFDebugPubTable PubTable(D, IsLE, true);
+    for (const DWARFDebugPubTable::Set &Set : PubTable.getData())
+      for (const DWARFDebugPubTable::Entry &Ent : Set.Entries)
+        Ret.push_back({Ent.Name, Ent.Descriptor.toBits()});
+  }
+  return Ret;
+}
+
+class ObjInfoTy : public llvm::LoadedObjectInfo {
+  uint64_t getSectionLoadAddress(const object::SectionRef &Sec) const override {
+    auto &S = static_cast<const object::ELFSectionRef &>(Sec);
+    if (S.getFlags() & ELF::SHF_ALLOC)
+      return S.getOffset();
+    return 0;
+  }
+
+  std::unique_ptr<llvm::LoadedObjectInfo> clone() const override { return {}; }
+};
+
+template <class ELFT> void GdbIndexSection<ELFT>::readDwarf(InputSection *Sec) {
+  elf::ObjectFile<ELFT> *File = Sec->template getFile<ELFT>();
+
+  Expected<std::unique_ptr<object::ObjectFile>> Obj =
+      object::ObjectFile::createObjectFile(File->MB);
+  if (!Obj) {
+    error(toString(File) + ": error creating DWARF context");
     return;
+  }
+
+  ObjInfoTy ObjInfo;
+  DWARFContextInMemory Dwarf(*Obj.get(), &ObjInfo);
 
   size_t CuId = CompilationUnits.size();
-  std::vector<std::pair<uintX_t, uintX_t>> CuList = Builder.readCUList();
-  CompilationUnits.insert(CompilationUnits.end(), CuList.begin(), CuList.end());
+  for (std::pair<uint64_t, uint64_t> &P : readCuList(Dwarf, Sec))
+    CompilationUnits.push_back(P);
 
-  std::vector<AddressEntry<ELFT>> AddrArea = Builder.readAddressArea(CuId);
-  AddressArea.insert(AddressArea.end(), AddrArea.begin(), AddrArea.end());
+  for (AddressEntry &Ent : readAddressArea<ELFT>(Dwarf, Sec, CuId))
+    AddressArea.push_back(Ent);
 
   std::vector<std::pair<StringRef, uint8_t>> NamesAndTypes =
-      Builder.readPubNamesAndTypes();
+      readPubNamesAndTypes(Dwarf, ELFT::TargetEndianness == support::little);
 
   for (std::pair<StringRef, uint8_t> &Pair : NamesAndTypes) {
     uint32_t Hash = hash(Pair.first);
@@ -1730,9 +1805,7 @@ template <class ELFT> void GdbIndexSection<ELFT>::readDwarf(InputSection *I) {
       continue;
     }
 
-    std::vector<std::pair<uint32_t, uint8_t>> &CuVec =
-        CuVectors[Sym->CuVectorIndex];
-    CuVec.push_back({CuId, Pair.second});
+    CuVectors[Sym->CuVectorIndex].push_back({CuId, Pair.second});
   }
 }
 
@@ -1741,7 +1814,12 @@ template <class ELFT> void GdbIndexSection<ELFT>::finalizeContents() {
     return;
   Finalized = true;
 
-  parseDebugSections();
+  for (InputSectionBase *S : InputSections)
+    if (InputSection *IS = dyn_cast<InputSection>(S))
+      if (IS->OutSec && IS->Name == ".debug_info")
+        readDwarf(IS);
+
+  SymbolTable.finalizeContents();
 
   // GdbIndex header consist from version fields
   // and 5 more fields with different kinds of offsets.
@@ -1782,7 +1860,7 @@ template <class ELFT> void GdbIndexSection<ELFT>::writeTo(uint8_t *Buf) {
   }
 
   // Write the address area.
-  for (AddressEntry<ELFT> &E : AddressArea) {
+  for (AddressEntry &E : AddressArea) {
     uintX_t BaseAddr =
         E.Section->OutSec->Addr + E.Section->template getOffset<ELFT>(0);
     write64le(Buf, BaseAddr + E.LowAddress);

@@ -1,5 +1,3 @@
-include(AddLLVM) # for add_lit_testsuite
-
 macro(pythonize_bool var)
   if (${var})
     set(${var} True)
@@ -66,12 +64,15 @@ if (LIBCXX_BUILD_EXTERNAL_THREAD_LIBRARY)
   list(APPEND LIBCXX_TEST_DEPS cxx_external_threads)
 endif()
 
-add_lit_testsuite(check-cxx
-  "Running libcxx tests"
-  ${CMAKE_CURRENT_BINARY_DIR}
-  DEPENDS cxx ${LIBCXX_TEST_DEPS})
+if (LIBCXX_INCLUDE_TESTS)
+  include(AddLLVM) # for add_lit_testsuite
+  add_lit_testsuite(check-cxx
+    "Running libcxx tests"
+    ${CMAKE_CURRENT_BINARY_DIR}
+    DEPENDS cxx ${LIBCXX_TEST_DEPS})
 
-add_custom_target(check-libcxx DEPENDS check-cxx)
+  add_custom_target(check-libcxx DEPENDS check-cxx)
+endif()
 
 if (LIBCXX_GENERATE_COVERAGE)
   include(CodeCoverage)

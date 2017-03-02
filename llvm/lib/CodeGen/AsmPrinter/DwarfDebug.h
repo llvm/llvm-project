@@ -89,7 +89,7 @@ public:
     assert(!MInsn && "Already initialized?");
 
     assert((!E || E->isValid()) && "Expected valid expression");
-    assert(~FI && "Expected valid index");
+    assert(FI != INT_MAX && "Expected valid index");
 
     FrameIndexExprs.push_back({FI, E});
   }

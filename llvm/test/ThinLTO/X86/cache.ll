@@ -10,7 +10,7 @@
 ; RUN: ls %t.cache | count 1
 
 ; Verify that enabling caching is ignoring module without hash with llvm-lto2
-; RUN: rm -Rf %t.cache && mkdir %t.cache
+; RUN: rm -Rf %t.cache
 ; RUN: llvm-lto2 -o %t.o %t2.bc  %t.bc -cache-dir %t.cache \
 ; RUN:  -r=%t2.bc,_main,plx \
 ; RUN:  -r=%t2.bc,_globalfunc,lx \
@@ -30,7 +30,7 @@
 ; RUN: ls %t.cache | count 3
 
 ; Verify that enabling caching is working with llvm-lto2
-; RUN: rm -Rf %t.cache && mkdir %t.cache
+; RUN: rm -Rf %t.cache
 ; RUN: llvm-lto2 -o %t.o %t2.bc  %t.bc -cache-dir %t.cache \
 ; RUN:  -r=%t2.bc,_main,plx \
 ; RUN:  -r=%t2.bc,_globalfunc,lx \

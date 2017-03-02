@@ -9,7 +9,7 @@
 
 // libc++ cannot safely provide the auto_ptr constructor without rvalue
 // references.
-// REQUIRES-ANY: c++11, c++14
+// REQUIRES: c++11 || c++14
 
 // <memory>
 

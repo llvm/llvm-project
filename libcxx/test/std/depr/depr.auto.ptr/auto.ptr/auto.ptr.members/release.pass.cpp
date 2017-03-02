@@ -16,7 +16,7 @@
 #include <memory>
 #include <cassert>
 
-// REQUIRES-ANY: c++98, c++03, c++11, c++14
+// REQUIRES: c++98 || c++03 || c++11 || c++14
 
 #include "../A.h"
 

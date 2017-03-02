@@ -7,7 +7,6 @@ set(LIBCXXABI_SOURCES
   cxa_exception_storage.cpp
   cxa_guard.cpp
   cxa_handlers.cpp
-  cxa_new_delete.cpp
   cxa_unexpected.cpp
   cxa_vector.cpp
   cxa_virtual.cpp
@@ -20,6 +19,11 @@ set(LIBCXXABI_SOURCES
   fallback_malloc.cpp
   private_typeinfo.cpp
 )
+
+# FIXME: This file should only be compiled in special configurations such
+#  as building the Apple system dylib where libc++abi is expected to provide
+#  the new/delete definitions instead of libc++.
+list(APPEND LIBCXXABI_SOURCES stdlib_new_delete.cpp)
 
 if (LIBCXXABI_ENABLE_EXCEPTIONS)
   list(APPEND LIBCXXABI_SOURCES cxa_exception.cpp)

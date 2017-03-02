@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ProtocolHandlers.h"
+#include "ASTManager.h"
 #include "DocumentStore.h"
 #include "clang/Format/Format.h"
 using namespace clang;
@@ -58,18 +59,9 @@ static Position offsetToPosition(StringRef Code, size_t Offset) {
   return {Lines, Cols};
 }
 
-static std::string formatCode(StringRef Code, StringRef Filename,
-                              ArrayRef<tooling::Range> Ranges, StringRef ID) {
-  // Call clang-format.
-  // FIXME: Don't ignore style.
-  format::FormatStyle Style = format::getLLVMStyle();
-  // On windows FileManager doesn't like file://. Just strip it, clang-format
-  // doesn't need it.
-  Filename.consume_front("file://");
-  tooling::Replacements Replacements =
-      format::reformat(Style, Code, Ranges, Filename);
-
-  // Now turn the replacements into the format specified by the Language Server
+template <typename T>
+static std::string replacementsToEdits(StringRef Code, const T &Replacements) {
+  // Turn the replacements into the format specified by the Language Server
   // Protocol. Fuse them into one big JSON array.
   std::string Edits;
   for (auto &R : Replacements) {
@@ -83,6 +75,21 @@ static std::string formatCode(StringRef Code, StringRef Filename,
   if (!Edits.empty())
     Edits.pop_back();
 
+  return Edits;
+}
+
+static std::string formatCode(StringRef Code, StringRef Filename,
+                              ArrayRef<tooling::Range> Ranges, StringRef ID) {
+  // Call clang-format.
+  // FIXME: Don't ignore style.
+  format::FormatStyle Style = format::getLLVMStyle();
+  // On windows FileManager doesn't like file://. Just strip it, clang-format
+  // doesn't need it.
+  Filename.consume_front("file://");
+  tooling::Replacements Replacements =
+      format::reformat(Style, Code, Ranges, Filename);
+
+  std::string Edits = replacementsToEdits(Code, Replacements);
   return R"({"jsonrpc":"2.0","id":)" + ID.str() +
          R"(,"result":[)" + Edits + R"(]})";
 }
@@ -137,4 +144,37 @@ void TextDocumentFormattingHandler::handleMethod(
   std::string Code = Store.getDocument(DFP->textDocument.uri);
   writeMessage(formatCode(Code, DFP->textDocument.uri,
                           {clang::tooling::Range(0, Code.size())}, ID));
+}
+
+void CodeActionHandler::handleMethod(llvm::yaml::MappingNode *Params,
+                                     StringRef ID) {
+  auto CAP = CodeActionParams::parse(Params);
+  if (!CAP) {
+    Output.log("Failed to decode CodeActionParams!\n");
+    return;
+  }
+
+  // We provide a code action for each diagnostic at the requested location
+  // which has FixIts available.
+  std::string Code = AST.getStore().getDocument(CAP->textDocument.uri);
+  std::string Commands;
+  for (Diagnostic &D : CAP->context.diagnostics) {
+    std::vector<clang::tooling::Replacement> Fixes = AST.getFixIts(D);
+    std::string Edits = replacementsToEdits(Code, Fixes);
+
+    if (!Edits.empty())
+      Commands +=
+          R"({"title":"Apply FixIt ')" + llvm::yaml::escape(D.message) +
+          R"('", "command": "clangd.applyFix", "arguments": [")" +
+          llvm::yaml::escape(CAP->textDocument.uri) +
+          R"(", [)" + Edits +
+          R"(]]},)";
+  }
+  if (!Commands.empty())
+    Commands.pop_back();
+
+  writeMessage(
+      R"({"jsonrpc":"2.0","id":)" + ID.str() +
+      R"(, "result": [)" + Commands +
+      R"(]})");
 }

@@ -417,10 +417,10 @@ define void @v_insertelement_v2i16_dynamic_sgpr(<2 x i16> addrspace(1)* %out, <2
 
 ; GFX89-DAG: s_mov_b32 [[MASKK:s[0-9]+]], 0xffff{{$}}
 ; GFX89-DAG: v_lshlrev_b32_e32 [[SCALED_IDX:v[0-9]+]], 16, [[IDX]]
-; GFX89: v_lshlrev_b32_e64 [[MASK:v[0-9]+]], [[SCALED_IDX]], [[MASKK]]
+; GFX89-DAG: v_lshlrev_b32_e64 [[MASK:v[0-9]+]], [[SCALED_IDX]], [[MASKK]]
 
-; CI: v_lshlrev_b32_e32 [[SCALED_IDX:v[0-9]+]], 16, [[IDX]]
-; CI: v_lshl_b32_e32 [[MASK:v[0-9]+]], 0xffff, [[SCALED_IDX]]
+; CI-DAG: v_lshlrev_b32_e32 [[SCALED_IDX:v[0-9]+]], 16, [[IDX]]
+; CI-DAG: v_lshl_b32_e32 [[MASK:v[0-9]+]], 0xffff, [[SCALED_IDX]]
 
 ; GCN: v_bfi_b32 [[RESULT:v[0-9]+]], [[MASK]], [[K]], [[VEC]]
 ; GCN: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
@@ -444,10 +444,10 @@ define void @v_insertelement_v2i16_dynamic_vgpr(<2 x i16> addrspace(1)* %out, <2
 
 ; GFX89-DAG: s_mov_b32 [[MASKK:s[0-9]+]], 0xffff{{$}}
 ; GFX89-DAG: v_lshlrev_b32_e32 [[SCALED_IDX:v[0-9]+]], 16, [[IDX]]
-; GFX89: v_lshlrev_b32_e64 [[MASK:v[0-9]+]], [[SCALED_IDX]], [[MASKK]]
+; GFX89-DAG: v_lshlrev_b32_e64 [[MASK:v[0-9]+]], [[SCALED_IDX]], [[MASKK]]
 
-; CI: v_lshlrev_b32_e32 [[SCALED_IDX:v[0-9]+]], 16, [[IDX]]
-; CI: v_lshl_b32_e32 [[MASK:v[0-9]+]], 0xffff, [[SCALED_IDX]]
+; CI-DAG: v_lshlrev_b32_e32 [[SCALED_IDX:v[0-9]+]], 16, [[IDX]]
+; CI-DAG: v_lshl_b32_e32 [[MASK:v[0-9]+]], 0xffff, [[SCALED_IDX]]
 
 ; GCN: v_bfi_b32 [[RESULT:v[0-9]+]], [[MASK]], [[K]], [[VEC]]
 ; GCN: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]

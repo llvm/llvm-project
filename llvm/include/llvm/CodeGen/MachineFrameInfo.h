@@ -559,8 +559,7 @@ public:
     return Objects[ObjectIdx+NumFixedObjects].isAliased;
   }
 
-  /// isImmutableObjectIndex - Returns true if the specified index corresponds
-  /// to an immutable object.
+  /// Returns true if the specified index corresponds to an immutable object.
   bool isImmutableObjectIndex(int ObjectIdx) const {
     // Tail calling functions can clobber their function arguments.
     if (HasTailCall)
@@ -568,6 +567,13 @@ public:
     assert(unsigned(ObjectIdx+NumFixedObjects) < Objects.size() &&
            "Invalid Object Idx!");
     return Objects[ObjectIdx+NumFixedObjects].isImmutable;
+  }
+
+  /// Marks the immutability of an object.
+  void setIsImmutableObjectIndex(int ObjectIdx, bool Immutable) {
+    assert(unsigned(ObjectIdx+NumFixedObjects) < Objects.size() &&
+           "Invalid Object Idx!");
+    Objects[ObjectIdx+NumFixedObjects].isImmutable = Immutable;
   }
 
   /// Returns true if the specified index corresponds to a spill slot.

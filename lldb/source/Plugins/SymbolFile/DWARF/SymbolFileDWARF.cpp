@@ -1937,7 +1937,7 @@ void SymbolFileDWARF::Index() {
     std::vector<NameToDIE> namespace_index(num_compile_units);
 
     std::vector<bool> clear_cu_dies(num_compile_units, false);
-    auto parser_fn = [this, debug_info, &function_basename_index,
+    auto parser_fn = [debug_info, &function_basename_index,
                       &function_fullname_index, &function_method_index,
                       &function_selector_index, &objc_class_selectors_index,
                       &global_index, &type_index,
@@ -1953,7 +1953,7 @@ void SymbolFileDWARF::Index() {
       return cu_idx;
     };
 
-    auto extract_fn = [this, debug_info, num_compile_units](uint32_t cu_idx) {
+    auto extract_fn = [debug_info](uint32_t cu_idx) {
       DWARFCompileUnit *dwarf_cu = debug_info->GetCompileUnitAtIndex(cu_idx);
       if (dwarf_cu) {
         // dwarf_cu->ExtractDIEsIfNeeded(false) will return zero if the

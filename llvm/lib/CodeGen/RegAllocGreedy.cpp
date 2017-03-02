@@ -698,7 +698,7 @@ unsigned RAGreedy::canReassign(LiveInterval &VirtReg, unsigned PrevReg) {
     MCRegUnitIterator Units(PhysReg, TRI);
     for (; Units.isValid(); ++Units) {
       // Instantiate a "subquery", not to be confused with the Queries array.
-      LiveIntervalUnion::Query subQ(&VirtReg, &Matrix->getLiveUnions()[*Units]);
+      LiveIntervalUnion::Query subQ(VirtReg, Matrix->getLiveUnions()[*Units]);
       if (subQ.checkInterference())
         break;
     }
