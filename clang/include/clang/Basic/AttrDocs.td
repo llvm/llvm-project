@@ -657,7 +657,8 @@ def NoDebugDocs : Documentation {
   let Content = [{
 The ``nodebug`` attribute allows you to suppress debugging information for a
 function or method, or for a variable that is not a parameter or a non-static
-data member.
+data member. It will also suppress debug information for any code that is
+inlined into a ``nodebug`` function or method.
   }];
 }
 
