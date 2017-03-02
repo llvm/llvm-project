@@ -45,7 +45,9 @@ def err_expected_colon_after_setter_name : Error<
   "must end with ':'">;
 def err_expected_string_literal : Error<"expected string literal "
   "%select{in %1|for diagnostic message in static_assert|"
-          "for optional message in 'availability' attribute}0">;
+          "for optional message in 'availability' attribute|"
+          "for %select{language|source container}1 name in "
+          "'external_source_symbol' attribute}0">;
 def err_invalid_string_udl : Error<
   "string literal with user-defined suffix cannot be used here">;
 def err_invalid_character_udl : Error<
