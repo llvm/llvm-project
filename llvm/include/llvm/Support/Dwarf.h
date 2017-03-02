@@ -29,7 +29,7 @@ class StringRef;
 namespace dwarf {
 
 //===----------------------------------------------------------------------===//
-// DWARF constants as gleaned from the DWARF Debugging Information Format V.5
+// Dwarf constants as gleaned from the DWARF Debugging Information Format V.4
 // reference manual http://www.dwarfstd.org/.
 //
 
@@ -305,15 +305,7 @@ enum ApplePropertyAttributes {
 #include "llvm/Support/Dwarf.def"
 };
 
-/// Constants for unit types in DWARF v5.
-enum UnitType : unsigned char {
-#define HANDLE_DW_UT(ID, NAME) DW_UT_##NAME = ID,
-#include "llvm/Support/Dwarf.def"
-  DW_UT_lo_user = 0x80,
-  DW_UT_hi_user = 0xff
-};
-
-// Constants for the DWARF v5 Accelerator Table Proposal
+// Constants for the DWARF5 Accelerator Table Proposal
 enum AcceleratorTable {
   // Data layout descriptors.
   DW_ATOM_null = 0u,       // Marker as the end of a list of atoms.
@@ -381,7 +373,6 @@ StringRef LNExtendedString(unsigned Encoding);
 StringRef MacinfoString(unsigned Encoding);
 StringRef CallFrameString(unsigned Encoding);
 StringRef ApplePropertyString(unsigned);
-StringRef UnitTypeString(unsigned);
 StringRef AtomTypeString(unsigned Atom);
 StringRef GDBIndexEntryKindString(GDBIndexEntryKind Kind);
 StringRef GDBIndexEntryLinkageString(GDBIndexEntryLinkage Linkage);

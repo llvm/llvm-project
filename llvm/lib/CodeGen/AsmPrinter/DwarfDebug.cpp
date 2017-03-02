@@ -1220,12 +1220,11 @@ void DwarfDebug::endFunction(const MachineFunction *MF) {
   TheCU.addRange(RangeSpan(Asm->getFunctionBegin(), Asm->getFunctionEnd()));
 
   // Under -gmlt, skip building the subprogram if there are no inlined
-  // subroutines inside it. But with -fdebug-info-for-profiling, the subprogram
-  // is still needed as we need its source location.
-  if (!Asm->TM.Options.DebugInfoForProfiling &&
-      TheCU.getCUNode()->getEmissionKind() == DICompileUnit::LineTablesOnly &&
+  // subroutines inside it.
+  if (TheCU.getCUNode()->getEmissionKind() == DICompileUnit::LineTablesOnly &&
       LScopes.getAbstractScopesList().empty() && !IsDarwin) {
     assert(InfoHolder.getScopeVariables().empty());
+    assert(DbgValues.empty());
     // FIXME: This wouldn't be true in LTO with a -g (with inlining) CU followed
     // by a -gmlt CU. Add a test and remove this assertion.
     assert(AbstractVariables.empty());
@@ -1362,18 +1361,6 @@ void DwarfDebug::emitAccelTypes() {
 /// computeIndexValue - Compute the gdb index value for the DIE and CU.
 static dwarf::PubIndexEntryDescriptor computeIndexValue(DwarfUnit *CU,
                                                         const DIE *Die) {
-  // Entities that ended up only in a Type Unit reference the CU instead (since
-  // the pub entry has offsets within the CU there's no real offset that can be
-  // provided anyway). As it happens all such entities (namespaces and types,
-  // types only in C++ at that) are rendered as TYPE+EXTERNAL. If this turns out
-  // not to be true it would be necessary to persist this information from the
-  // point at which the entry is added to the index data structure - since by
-  // the time the index is built from that, the original type/namespace DIE in a
-  // type unit has already been destroyed so it can't be queried for properties
-  // like tag, etc.
-  if (Die->getTag() == dwarf::DW_TAG_compile_unit)
-    return dwarf::PubIndexEntryDescriptor(dwarf::GIEK_TYPE,
-                                          dwarf::GIEL_EXTERNAL);
   dwarf::GDBIndexEntryLinkage Linkage = dwarf::GIEL_STATIC;
 
   // We could have a specification DIE that has our most of our knowledge,
