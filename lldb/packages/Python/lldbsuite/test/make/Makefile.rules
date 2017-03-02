@@ -244,7 +244,12 @@ endif
 
 CFLAGS += -include $(THIS_FILE_DIR)test_common.h $(TRIPLE_CFLAGS)
 CFLAGS_NO_ARCH := $(CFLAGS)
-CFLAGS += $(ARCHFLAG)$(ARCH)
+
+ifeq "$(ARCHFLAG)" "-arch"
+    CFLAGS += $(ARCHFLAG) $(ARCH)
+else
+    CFLAGS += $(ARCHFLAG)$(ARCH)
+endif
 
 SWIFTFLAGS += $(TRIPLE_SWIFTFLAGS)
 
@@ -437,7 +442,10 @@ endif
 ifneq "$(strip $(SWIFT_SOURCES))" ""
 	OBJECTS +=$(strip $(SWIFT_SOURCES:.swift=.o))
 	LDFLAGS +=-L"$(SWIFTLIBS)"
-	SWIFTFLAGS +=-sdk "$(SWIFTSDKROOT)"
+	ifneq "$(TRIPLE)" ""
+		SWIFTFLAGS += -target $(TRIPLE)
+	endif
+	SWIFTFLAGS += -sdk "$(SWIFTSDKROOT)"
 	USESWIFTDRIVER = 1
 endif
 
