@@ -661,14 +661,7 @@ static void EmitGenDwarfInfo(MCStreamer *MCOS,
   // The 2 byte DWARF version.
   MCOS->EmitIntValue(context.getDwarfVersion(), 2);
 
-  // The DWARF v5 header has unit type, address size, abbrev offset.
-  // Earlier versions have abbrev offset, address size.
   const MCAsmInfo &AsmInfo = *context.getAsmInfo();
-  int AddrSize = AsmInfo.getPointerSize();
-  if (context.getDwarfVersion() >= 5) {
-    MCOS->EmitIntValue(dwarf::DW_UT_compile, 1);
-    MCOS->EmitIntValue(AddrSize, 1);
-  }
   // The 4 byte offset to the debug abbrevs from the start of the .debug_abbrev,
   // it is at the start of that section so this is zero.
   if (AbbrevSectionSymbol == nullptr)
@@ -676,8 +669,11 @@ static void EmitGenDwarfInfo(MCStreamer *MCOS,
   else
     MCOS->EmitSymbolValue(AbbrevSectionSymbol, 4,
                           AsmInfo.needsDwarfSectionOffsetDirective());
-  if (context.getDwarfVersion() <= 4)
-    MCOS->EmitIntValue(AddrSize, 1);
+
+  const MCAsmInfo *asmInfo = context.getAsmInfo();
+  int AddrSize = asmInfo->getPointerSize();
+  // The 1 byte size of an address.
+  MCOS->EmitIntValue(AddrSize, 1);
 
   // Second part: the compile_unit DIE.
 

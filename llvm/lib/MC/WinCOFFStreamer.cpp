@@ -75,9 +75,10 @@ void MCWinCOFFStreamer::InitSections(bool NoExecStack) {
   SwitchSection(getContext().getObjectFileInfo()->getTextSection());
 }
 
-void MCWinCOFFStreamer::EmitLabel(MCSymbol *S, SMLoc Loc) {
+void MCWinCOFFStreamer::EmitLabel(MCSymbol *S) {
   auto *Symbol = cast<MCSymbolCOFF>(S);
-  MCObjectStreamer::EmitLabel(Symbol, Loc);
+  assert(Symbol->isUndefined() && "Cannot define a symbol twice!");
+  MCObjectStreamer::EmitLabel(Symbol);
 }
 
 void MCWinCOFFStreamer::EmitAssemblerFlag(MCAssemblerFlag Flag) {

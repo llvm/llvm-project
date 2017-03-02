@@ -1093,8 +1093,9 @@ inline void ARMELFStreamer::SwitchToEHSection(StringRef Prefix,
   const MCSymbolELF *Group = FnSection.getGroup();
   if (Group)
     Flags |= ELF::SHF_GROUP;
-  MCSectionELF *EHSection = getContext().getELFSection(
-      EHSecName, Type, Flags, 0, Group, FnSection.getUniqueID(), &FnSection);
+  MCSectionELF *EHSection =
+      getContext().getELFSection(EHSecName, Type, Flags, 0, Group,
+                                 FnSection.getUniqueID(), nullptr, &FnSection);
 
   assert(EHSection && "Failed to get the required EH section");
 

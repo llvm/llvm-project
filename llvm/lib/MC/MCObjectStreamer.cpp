@@ -153,8 +153,8 @@ void MCObjectStreamer::EmitCFIEndProcImpl(MCDwarfFrameInfo &Frame) {
   EmitLabel(Frame.End);
 }
 
-void MCObjectStreamer::EmitLabel(MCSymbol *Symbol, SMLoc Loc) {
-  MCStreamer::EmitLabel(Symbol, Loc);
+void MCObjectStreamer::EmitLabel(MCSymbol *Symbol) {
+  MCStreamer::EmitLabel(Symbol);
 
   getAssembler().registerSymbol(*Symbol);
 
