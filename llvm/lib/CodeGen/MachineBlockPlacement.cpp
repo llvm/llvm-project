@@ -36,7 +36,6 @@
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
-#include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
@@ -85,19 +84,6 @@ static cl::opt<unsigned> ExitBlockBias(
 
 // Definition:
 // - Outlining: placement of a basic block outside the chain or hot path.
-
-static cl::opt<bool> OutlineOptionalBranches(
-    "outline-optional-branches",
-    cl::desc("Outlining optional branches will place blocks that are optional "
-              "branches, i.e. branches with a common post dominator, outside "
-              "the hot path or chain"),
-    cl::init(false), cl::Hidden);
-
-static cl::opt<unsigned> OutlineOptionalThreshold(
-    "outline-optional-threshold",
-    cl::desc("Don't outline optional branches that are a single block with an "
-             "instruction count below this threshold"),
-    cl::init(4), cl::Hidden);
 
 static cl::opt<unsigned> LoopToColdBlockRatio(
     "loop-to-cold-block-ratio",
@@ -335,9 +321,6 @@ class MachineBlockPlacement : public MachineFunctionPass {
   /// \brief A handle to the target's lowering info.
   const TargetLoweringBase *TLI;
 
-  /// \brief A handle to the dominator tree.
-  MachineDominatorTree *MDT;
-
   /// \brief A handle to the post dominator tree.
   MachinePostDominatorTree *MPDT;
 
@@ -347,10 +330,6 @@ class MachineBlockPlacement : public MachineFunctionPass {
   /// since tail duplication affects placement decisions of later blocks, it
   /// must be done inline.
   TailDuplicator TailDup;
-
-  /// \brief A set of blocks that are unavoidably execute, i.e. they dominate
-  /// all terminators of the MachineFunction.
-  SmallPtrSet<const MachineBasicBlock *, 4> UnavoidableBlocks;
 
   /// \brief Allocator and owner of BlockChain structures.
   ///
@@ -446,7 +425,6 @@ class MachineBlockPlacement : public MachineFunctionPass {
   void rotateLoopWithProfile(
       BlockChain &LoopChain, const MachineLoop &L,
       const BlockFilterSet &LoopBlockSet);
-  void collectMustExecuteBBs();
   void buildCFGChains();
   void optimizeBranches();
   void alignBlocks();
@@ -490,7 +468,6 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<MachineBranchProbabilityInfo>();
     AU.addRequired<MachineBlockFrequencyInfo>();
-    AU.addRequired<MachineDominatorTree>();
     if (TailDupPlacement)
       AU.addRequired<MachinePostDominatorTree>();
     AU.addRequired<MachineLoopInfo>();
@@ -506,7 +483,6 @@ INITIALIZE_PASS_BEGIN(MachineBlockPlacement, "block-placement",
                       "Branch Probability Basic Block Placement", false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineBranchProbabilityInfo)
 INITIALIZE_PASS_DEPENDENCY(MachineBlockFrequencyInfo)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
 INITIALIZE_PASS_DEPENDENCY(MachinePostDominatorTree)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
 INITIALIZE_PASS_END(MachineBlockPlacement, "block-placement",
@@ -1065,42 +1041,6 @@ bool MachineBlockPlacement::canTailDuplicateUnplacedPreds(
   return true;
 }
 
-/// When the option OutlineOptionalBranches is on, this method
-/// checks if the fallthrough candidate block \p Succ (of block
-/// \p BB) also has other unscheduled predecessor blocks which
-/// are also successors of \p BB (forming triangular shape CFG).
-/// If none of such predecessors are small, it returns true.
-/// The caller can choose to select \p Succ as the layout successors
-/// so that \p Succ's predecessors (optional branches) can be
-/// outlined.
-/// FIXME: fold this with more general layout cost analysis.
-bool MachineBlockPlacement::shouldPredBlockBeOutlined(
-    const MachineBasicBlock *BB, const MachineBasicBlock *Succ,
-    const BlockChain &Chain, const BlockFilterSet *BlockFilter,
-    BranchProbability SuccProb, BranchProbability HotProb) {
-  if (!OutlineOptionalBranches)
-    return false;
-  // If we outline optional branches, look whether Succ is unavoidable, i.e.
-  // dominates all terminators of the MachineFunction. If it does, other
-  // successors must be optional. Don't do this for cold branches.
-  if (SuccProb > HotProb.getCompl() && UnavoidableBlocks.count(Succ) > 0) {
-    for (MachineBasicBlock *Pred : Succ->predecessors()) {
-      // Check whether there is an unplaced optional branch.
-      if (Pred == Succ || (BlockFilter && !BlockFilter->count(Pred)) ||
-          BlockToChain[Pred] == &Chain)
-        continue;
-      // Check whether the optional branch has exactly one BB.
-      if (Pred->pred_size() > 1 || *Pred->pred_begin() != BB)
-        continue;
-      // Check whether the optional branch is small.
-      if (Pred->size() < OutlineOptionalThreshold)
-        return false;
-    }
-    return true;
-  } else
-    return false;
-}
-
 // When profile is not present, return the StaticLikelyProb.
 // When profile is available, we need to handle the triangle-shape CFG.
 static BranchProbability getLayoutSuccessorProbThreshold(
@@ -1356,13 +1296,6 @@ MachineBlockPlacement::selectBestSuccessor(
     auto RealSuccProb = MBPI->getEdgeProbability(BB, Succ);
     BranchProbability SuccProb =
         getAdjustedProbability(RealSuccProb, AdjustedSumProb);
-
-    // This heuristic is off by default.
-    if (shouldPredBlockBeOutlined(BB, Succ, Chain, BlockFilter, SuccProb,
-                                  HotProb)) {
-      BestSucc.BB = Succ;
-      return BestSucc;
-    }
 
     BlockChain &SuccChain = *BlockToChain[Succ];
     // Skip the edge \c BB->Succ if block \c Succ has a better layout
@@ -2131,31 +2064,6 @@ void MachineBlockPlacement::buildLoopChains(const MachineLoop &L) {
   EHPadWorkList.clear();
 }
 
-/// When OutlineOpitonalBranches is on, this method collects BBs that
-/// dominates all terminator blocks of the function \p F.
-void MachineBlockPlacement::collectMustExecuteBBs() {
-  if (OutlineOptionalBranches) {
-    // Find the nearest common dominator of all of F's terminators.
-    MachineBasicBlock *Terminator = nullptr;
-    for (MachineBasicBlock &MBB : *F) {
-      if (MBB.succ_size() == 0) {
-        if (Terminator == nullptr)
-          Terminator = &MBB;
-        else
-          Terminator = MDT->findNearestCommonDominator(Terminator, &MBB);
-      }
-    }
-
-    // MBBs dominating this common dominator are unavoidable.
-    UnavoidableBlocks.clear();
-    for (MachineBasicBlock &MBB : *F) {
-      if (MDT->dominates(&MBB, Terminator)) {
-        UnavoidableBlocks.insert(&MBB);
-      }
-    }
-  }
-}
-
 void MachineBlockPlacement::buildCFGChains() {
   // Ensure that every BB in the function has an associated chain to simplify
   // the assumptions of the remaining algorithm.
@@ -2189,9 +2097,6 @@ void MachineBlockPlacement::buildCFGChains() {
       BB = NextBB;
     }
   }
-
-  // Turned on with OutlineOptionalBranches option
-  collectMustExecuteBBs();
 
   // Build any loop-based chains.
   PreferredLoopExit = nullptr;
@@ -2587,7 +2492,6 @@ bool MachineBlockPlacement::runOnMachineFunction(MachineFunction &MF) {
   MLI = &getAnalysis<MachineLoopInfo>();
   TII = MF.getSubtarget().getInstrInfo();
   TLI = MF.getSubtarget().getTargetLowering();
-  MDT = &getAnalysis<MachineDominatorTree>();
   MPDT = nullptr;
 
   // Initialize PreferredLoopExit to nullptr here since it may never be set if
@@ -2624,8 +2528,7 @@ bool MachineBlockPlacement::runOnMachineFunction(MachineFunction &MF) {
                             /*AfterBlockPlacement=*/true)) {
       // Redo the layout if tail merging creates/removes/moves blocks.
       BlockToChain.clear();
-      // Must redo the dominator tree if blocks were changed.
-      MDT->runOnMachineFunction(MF);
+      // Must redo the post-dominator tree if blocks were changed.
       if (MPDT)
         MPDT->runOnMachineFunction(MF);
       ChainAllocator.DestroyAll();

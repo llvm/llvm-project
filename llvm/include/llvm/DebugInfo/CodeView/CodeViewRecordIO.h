@@ -17,8 +17,8 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/CodeView/CodeViewError.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
-#include "llvm/DebugInfo/MSF/BinaryStreamReader.h"
-#include "llvm/DebugInfo/MSF/BinaryStreamWriter.h"
+#include "llvm/Support/BinaryStreamReader.h"
+#include "llvm/Support/BinaryStreamWriter.h"
 #include "llvm/Support/Error.h"
 #include <cassert>
 #include <cstdint>

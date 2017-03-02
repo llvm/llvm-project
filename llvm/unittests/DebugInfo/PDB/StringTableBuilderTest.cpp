@@ -9,11 +9,11 @@
 
 #include "ErrorChecking.h"
 
-#include "llvm/DebugInfo/MSF/BinaryByteStream.h"
-#include "llvm/DebugInfo/MSF/BinaryStreamReader.h"
-#include "llvm/DebugInfo/MSF/BinaryStreamWriter.h"
 #include "llvm/DebugInfo/PDB/Native/StringTable.h"
 #include "llvm/DebugInfo/PDB/Native/StringTableBuilder.h"
+#include "llvm/Support/BinaryByteStream.h"
+#include "llvm/Support/BinaryStreamReader.h"
+#include "llvm/Support/BinaryStreamWriter.h"
 
 #include "gtest/gtest.h"
 

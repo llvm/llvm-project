@@ -10,12 +10,12 @@
 #include "llvm/DebugInfo/PDB/Native/DbiStreamBuilder.h"
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/DebugInfo/MSF/BinaryStreamWriter.h"
 #include "llvm/DebugInfo/MSF/MSFBuilder.h"
 #include "llvm/DebugInfo/MSF/MappedBlockStream.h"
 #include "llvm/DebugInfo/PDB/Native/DbiStream.h"
 #include "llvm/DebugInfo/PDB/Native/RawError.h"
 #include "llvm/Object/COFF.h"
+#include "llvm/Support/BinaryStreamWriter.h"
 #include "llvm/Support/COFF.h"
 
 using namespace llvm;

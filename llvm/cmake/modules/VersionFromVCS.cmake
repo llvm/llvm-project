@@ -28,10 +28,11 @@ function(add_version_info_from_vcs VERS)
   elseif( EXISTS ${SOURCE_DIR}/.git )
     set(result "${result}git")
     # Try to get a ref-id
-    if( EXISTS ${SOURCE_DIR}/.git/svn )
-      find_program(git_executable NAMES git git.exe git.cmd)
-      if( git_executable )
-        set(is_git_svn_rev_exact false)
+    find_program(git_executable NAMES git git.exe git.cmd)
+
+    if( git_executable )
+      if( EXISTS ${SOURCE_DIR}/.git/svn )
+        # Get the repository URL
         execute_process(COMMAND
           ${git_executable} svn info
           WORKING_DIRECTORY ${SOURCE_DIR}
@@ -43,42 +44,37 @@ function(add_version_info_from_vcs VERS)
           if(svn_url)
             set(LLVM_REPOSITORY ${CMAKE_MATCH_1} PARENT_SCOPE)
           endif()
-
-          string(REGEX REPLACE "^(.*\n)?Revision: ([^\n]+).*"
-            "\\2" git_svn_rev_number "${git_output}")
-          set(SVN_REVISION ${git_svn_rev_number} PARENT_SCOPE)
-          set(git_svn_rev "-svn-${git_svn_rev}")
-
-          # Determine if the HEAD points directly at a subversion revision.
-          execute_process(COMMAND ${git_executable} svn find-rev HEAD
-            WORKING_DIRECTORY ${SOURCE_DIR}
-            TIMEOUT 5
-            RESULT_VARIABLE git_result
-            OUTPUT_VARIABLE git_output)
-          if( git_result EQUAL 0 )
-            string(STRIP "${git_output}" git_head_svn_rev_number)
-            if( git_head_svn_rev_number EQUAL git_svn_rev_number )
-              set(is_git_svn_rev_exact true)
-            endif()
-          endif()
-        else()
-          set(git_svn_rev "")
         endif()
-        execute_process(COMMAND
-          ${git_executable} rev-parse --short HEAD
+
+        # Get the svn revision number for this git commit if one exists.
+        execute_process(COMMAND ${git_executable} svn find-rev HEAD
           WORKING_DIRECTORY ${SOURCE_DIR}
           TIMEOUT 5
           RESULT_VARIABLE git_result
-          OUTPUT_VARIABLE git_output)
-
-        if( git_result EQUAL 0 AND NOT is_git_svn_rev_exact )
-          string(STRIP "${git_output}" git_ref_id)
-          set(GIT_COMMIT ${git_ref_id} PARENT_SCOPE)
-          set(result "${result}${git_svn_rev}-${git_ref_id}")
+          OUTPUT_VARIABLE git_head_svn_rev_number
+          OUTPUT_STRIP_TRAILING_WHITESPACE)
+        if( git_result EQUAL 0 AND git_output)
+          set(SVN_REVISION ${git_head_svn_rev_number} PARENT_SCOPE)
+          set(git_svn_rev "-svn-${git_head_svn_rev_number}")
         else()
-          set(result "${result}${git_svn_rev}")
+          set(git_svn_rev "")
         endif()
+      endif()
 
+      # Get the git ref id
+      execute_process(COMMAND
+        ${git_executable} rev-parse --short HEAD
+        WORKING_DIRECTORY ${SOURCE_DIR}
+        TIMEOUT 5
+        RESULT_VARIABLE git_result
+        OUTPUT_VARIABLE git_ref_id
+        OUTPUT_STRIP_TRAILING_WHITESPACE)
+
+      if( git_result EQUAL 0 )
+        set(GIT_COMMIT ${git_ref_id} PARENT_SCOPE)
+        set(result "${result}${git_svn_rev}-${git_ref_id}")
+      else()
+        set(result "${result}${git_svn_rev}")
       endif()
     endif()
   endif()

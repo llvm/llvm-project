@@ -7,10 +7,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/DebugInfo/MSF/BinaryStreamReader.h"
+#include "llvm/Support/BinaryStreamReader.h"
 
-#include "llvm/DebugInfo/MSF/BinaryStreamError.h"
-#include "llvm/DebugInfo/MSF/BinaryStreamRef.h"
+#include "llvm/Support/BinaryStreamError.h"
+#include "llvm/Support/BinaryStreamRef.h"
 
 using namespace llvm;
 

@@ -58,19 +58,23 @@ void test() {
   const unsigned os = Expectations::os;
   SampleItem oa[os];
   const int *oa1 = Expectations::oa1;
+  ((void)oa1); // Prevent unused warning
   const int *oa2 = Expectations::oa2;
+  ((void)oa2); // Prevent unused warning
   std::minstd_rand g;
   SampleIterator end;
   end = std::experimental::sample(PopulationIterator(ia),
                                   PopulationIterator(ia + is),
                                   SampleIterator(oa), os, g);
-  assert(end.base() - oa == std::min(os, is));
-  assert(std::equal(oa, oa + os, oa1));
+  assert(static_cast<std::size_t>(end.base() - oa) == std::min(os, is));
+  // sample() is deterministic but non-reproducible;
+  // its results can vary between implementations.
+  LIBCPP_ASSERT(std::equal(oa, oa + os, oa1));
   end = std::experimental::sample(PopulationIterator(ia),
                                   PopulationIterator(ia + is),
                                   SampleIterator(oa), os, std::move(g));
-  assert(end.base() - oa == std::min(os, is));
-  assert(std::equal(oa, oa + os, oa2));
+  assert(static_cast<std::size_t>(end.base() - oa) == std::min(os, is));
+  LIBCPP_ASSERT(std::equal(oa, oa + os, oa2));
 }
 
 template <template<class...> class PopulationIteratorType, class PopulationItem,
@@ -119,7 +123,7 @@ void test_small_population() {
   end = std::experimental::sample(PopulationIterator(ia),
                                   PopulationIterator(ia + is),
                                   SampleIterator(oa), os, g);
-  assert(end.base() - oa == std::min(os, is));
+  assert(static_cast<std::size_t>(end.base() - oa) == std::min(os, is));
   assert(std::equal(oa, end.base(), oa1));
 }
 

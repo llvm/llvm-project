@@ -20,10 +20,9 @@ set(LIBCXXABI_SOURCES
   private_typeinfo.cpp
 )
 
-# FIXME: This file should only be compiled in special configurations such
-#  as building the Apple system dylib where libc++abi is expected to provide
-#  the new/delete definitions instead of libc++.
-list(APPEND LIBCXXABI_SOURCES stdlib_new_delete.cpp)
+if (LIBCXXABI_ENABLE_NEW_DELETE_DEFINITIONS)
+  list(APPEND LIBCXXABI_SOURCES stdlib_new_delete.cpp)
+endif()
 
 if (LIBCXXABI_ENABLE_EXCEPTIONS)
   list(APPEND LIBCXXABI_SOURCES cxa_exception.cpp)

@@ -53,7 +53,8 @@ __throw_bad_alloc()
 
 }  // std
 
-#if !defined(__GLIBCXX__) && !defined(_LIBCPP_ABI_MICROSOFT)
+#if !defined(__GLIBCXX__) && !defined(_LIBCPP_ABI_MICROSOFT) && \
+    !defined(_LIBCPP_DISABLE_NEW_DELETE_DEFINITIONS)
 
 // Implement all new and delete operators as weak definitions
 // in this shared library, so that they can be overridden by programs
@@ -298,4 +299,4 @@ operator delete[] (void* ptr, size_t, std::align_val_t alignment) _NOEXCEPT
 }
 
 #endif // !_LIBCPP_HAS_NO_ALIGNED_ALLOCATION
-#endif // !__GLIBCXX__ && !_LIBCPP_ABI_MICROSOFT
+#endif // !__GLIBCXX__ && !_LIBCPP_ABI_MICROSOFT && !_LIBCPP_DISABLE_NEW_DELETE_DEFINITIONS

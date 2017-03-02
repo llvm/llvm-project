@@ -10,10 +10,10 @@
 #include "ErrorChecking.h"
 #include "gtest/gtest.h"
 
-#include "llvm/DebugInfo/MSF/BinaryByteStream.h"
-#include "llvm/DebugInfo/MSF/BinaryStreamReader.h"
-#include "llvm/DebugInfo/MSF/BinaryStreamWriter.h"
 #include "llvm/DebugInfo/PDB/Native/HashTable.h"
+#include "llvm/Support/BinaryByteStream.h"
+#include "llvm/Support/BinaryStreamReader.h"
+#include "llvm/Support/BinaryStreamWriter.h"
 
 #include <vector>
 
