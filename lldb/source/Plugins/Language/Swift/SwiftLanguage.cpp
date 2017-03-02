@@ -28,7 +28,7 @@
 
 #include "lldb/Target/SwiftLanguageRuntime.h"
 
-#include "ObjCRuntimeSyntheticProvider.cpp"
+#include "ObjCRuntimeSyntheticProvider.h"
 #include "SwiftFormatters.h"
 
 #include <functional>
