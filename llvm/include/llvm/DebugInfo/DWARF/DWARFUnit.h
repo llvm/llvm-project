@@ -127,8 +127,8 @@ class DWARFUnit {
 
   uint32_t Offset;
   uint32_t Length;
-  uint16_t Version;
   const DWARFAbbreviationDeclarationSet *Abbrevs;
+  uint16_t Version;
   uint8_t UnitType;
   uint8_t AddrSize;
   uint64_t BaseAddr;

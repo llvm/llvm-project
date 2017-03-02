@@ -19,7 +19,7 @@ CHECK-LABEL: .debug_types contents:
 
 The v4 type unit header.
 
-CHECK: 0x00000000: Type Unit: length = 0x0000001f version = 0x0004 abbr_offset = 0x0000 addr_size = 0x08 name = 'V4_type_unit' type_signature = 0x1122334455667788 type_offset = 0x001c (next unit at 0x00000023)
+CHECK: 0x00000000: Type Unit: length = 0x0000001f version = 0x0004 abbr_offset = 0x0000 addr_size = 0x08 name = 'V4_type_unit' type_signature = 0x0011223344556677 type_offset = 0x001c (next unit at 0x00000023)
 CHECK: 0x00000017: DW_TAG_type_unit
 
 FIXME: DWARF v5 wants type units in .debug_info[.dwo] not .debug_types[.dwo].

@@ -31,10 +31,14 @@
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Target/TargetRegisterInfo.h"
 
 using namespace llvm;
 using namespace rdf;
+
+static cl::opt<unsigned> MaxRecNest("rdf-liveness-max-rec", cl::init(25),
+  cl::Hidden, cl::desc("Maximum recursion level"));
 
 namespace llvm {
 namespace rdf {
@@ -247,8 +251,18 @@ NodeList Liveness::getAllReachingDefs(RegisterRef RefRR,
 }
 
 
-NodeSet Liveness::getAllReachingDefsRec(RegisterRef RefRR,
-      NodeAddr<RefNode*> RefA, NodeSet &Visited, const NodeSet &Defs) {
+std::pair<NodeSet,bool>
+Liveness::getAllReachingDefsRec(RegisterRef RefRR, NodeAddr<RefNode*> RefA,
+      NodeSet &Visited, const NodeSet &Defs) {
+  return getAllReachingDefsRecImpl(RefRR, RefA, Visited, Defs, 0, MaxRecNest);
+}
+
+
+std::pair<NodeSet,bool>
+Liveness::getAllReachingDefsRecImpl(RegisterRef RefRR, NodeAddr<RefNode*> RefA,
+      NodeSet &Visited, const NodeSet &Defs, unsigned Nest, unsigned MaxNest) {
+  if (Nest > MaxNest)
+    return { {}, false };
   // Collect all defined registers. Do not consider phis to be defining
   // anything, only collect "real" definitions.
   RegisterAggr DefRRs(PRI);
@@ -260,7 +274,7 @@ NodeSet Liveness::getAllReachingDefsRec(RegisterRef RefRR,
 
   NodeList RDs = getAllReachingDefs(RefRR, RefA, false, true, DefRRs);
   if (RDs.empty())
-    return Defs;
+    return { Defs, true };
 
   // Make a copy of the preexisting definitions and add the newly found ones.
   NodeSet TmpDefs = Defs;
@@ -279,12 +293,15 @@ NodeSet Liveness::getAllReachingDefsRec(RegisterRef RefRR,
     Visited.insert(PA.Id);
     // Go over all phi uses and get the reaching defs for each use.
     for (auto U : PA.Addr->members_if(DFG.IsRef<NodeAttrs::Use>, DFG)) {
-      const auto &T = getAllReachingDefsRec(RefRR, U, Visited, TmpDefs);
-      Result.insert(T.begin(), T.end());
+      const auto &T = getAllReachingDefsRecImpl(RefRR, U, Visited, TmpDefs,
+                                                Nest+1, MaxNest);
+      if (!T.second)
+        return { T.first, false };
+      Result.insert(T.first.begin(), T.first.end());
     }
   }
 
-  return Result;
+  return { Result, true };
 }
 
 

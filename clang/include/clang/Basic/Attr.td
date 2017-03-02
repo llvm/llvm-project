@@ -527,6 +527,17 @@ def Availability : InheritableAttr {
   let Documentation = [AvailabilityDocs];
 }
 
+def ExternalSourceSymbol : InheritableAttr {
+  let Spellings = [GNU<"external_source_symbol">,
+                   CXX11<"clang", "external_source_symbol">];
+  let Args = [StringArgument<"language", 1>,
+              StringArgument<"definedIn", 1>,
+              BoolArgument<"generatedDeclaration", 1>];
+  let HasCustomParsing = 1;
+//  let Subjects = SubjectList<[Named]>;
+  let Documentation = [ExternalSourceSymbolDocs];
+}
+
 def Blocks : InheritableAttr {
   let Spellings = [GNU<"blocks">];
   let Args = [EnumArgument<"Type", "BlockType", ["byref"], ["ByRef"]>];

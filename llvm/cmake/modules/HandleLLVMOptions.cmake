@@ -12,6 +12,12 @@ include(AddLLVMDefinitions)
 include(CheckCCompilerFlag)
 include(CheckCXXCompilerFlag)
 
+if(CMAKE_LINKER MATCHES "lld-link.exe" OR (WIN32 AND LLVM_USE_LINKER STREQUAL "lld"))
+  set(LINKER_IS_LLD_LINK TRUE)
+else()
+  set(LINKER_IS_LLD_LINK FALSE)
+endif()
+
 # Ninja Job Pool support
 # The following only works with the Ninja generator in CMake >= 3.0.
 set(LLVM_PARALLEL_COMPILE_JOBS "" CACHE STRING
@@ -37,7 +43,7 @@ if(LLVM_PARALLEL_LINK_JOBS)
 endif()
 
 
-if (CMAKE_LINKER MATCHES "lld-link.exe")
+if (LINKER_IS_LLD_LINK)
   # Pass /MANIFEST:NO so that CMake doesn't run mt.exe on our binaries.  Adding
   # manifests with mt.exe breaks LLD's symbol tables and takes as much time as
   # the link. See PR24476.
@@ -407,11 +413,13 @@ if( MSVC )
   # "Enforce type conversion rules".
   append("/Zc:rvalueCast" CMAKE_CXX_FLAGS)
 
-  if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  if (CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND NOT LLVM_ENABLE_LTO)
     # clang-cl and cl by default produce non-deterministic binaries because
     # link.exe /incremental requires a timestamp in the .obj file.  clang-cl
     # has the flag /Brepro to force deterministic binaries. We want to pass that
-    # whenever you're building with clang unless you're passing /incremental.
+    # whenever you're building with clang unless you're passing /incremental
+    # or using LTO (/Brepro with LTO would result in a warning about the flag
+    # being unused, because we're not generating object files).
     # This checks CMAKE_CXX_COMPILER_ID in addition to check_cxx_compiler_flag()
     # because cl.exe does not emit an error on flags it doesn't understand,
     # letting check_cxx_compiler_flag() claim it understands all flags.
@@ -561,7 +569,7 @@ macro(append_common_sanitizer_flags)
   elseif (CLANG_CL)
     # Keep frame pointers around.
     append("/Oy-" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
-    if (CMAKE_LINKER MATCHES "lld-link.exe")
+    if (LINKER_IS_LLD_LINK)
       # Use DWARF debug info with LLD.
       append("-gdwarf" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
     else()
@@ -699,20 +707,29 @@ append_if(LLVM_BUILD_INSTRUMENTED_COVERAGE "-fprofile-instr-generate='${LLVM_PRO
 
 set(LLVM_ENABLE_LTO OFF CACHE STRING "Build LLVM with LTO. May be specified as Thin or Full to use a particular kind of LTO")
 string(TOUPPER "${LLVM_ENABLE_LTO}" uppercase_LLVM_ENABLE_LTO)
+if(LLVM_ENABLE_LTO AND LLVM_ON_WIN32 AND NOT LINKER_IS_LLD_LINK)
+  message(FATAL_ERROR "When compiling for Windows, LLVM_ENABLE_LTO requires using lld as the linker (point CMAKE_LINKER at lld-link.exe)")
+endif()
 if(uppercase_LLVM_ENABLE_LTO STREQUAL "THIN")
-  append("-flto=thin" CMAKE_CXX_FLAGS CMAKE_C_FLAGS
-                      CMAKE_EXE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
+  append("-flto=thin" CMAKE_CXX_FLAGS CMAKE_C_FLAGS)
+  if(NOT LINKER_IS_LLD_LINK)
+    append("-flto=thin" CMAKE_EXE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
+  endif()
   # On darwin, enable the lto cache. This improves initial build time a little
   # since we re-link a lot of the same objects, and significantly improves
   # incremental build time.
   append_if(APPLE "-Wl,-cache_path_lto,${PROJECT_BINARY_DIR}/lto.cache"
             CMAKE_EXE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
 elseif(uppercase_LLVM_ENABLE_LTO STREQUAL "FULL")
-  append("-flto=full" CMAKE_CXX_FLAGS CMAKE_C_FLAGS
-                 CMAKE_EXE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
+  append("-flto=full" CMAKE_CXX_FLAGS CMAKE_C_FLAGS)
+  if(NOT LINKER_IS_LLD_LINK)
+    append("-flto=full" CMAKE_EXE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
+  endif()
 elseif(LLVM_ENABLE_LTO)
-  append("-flto" CMAKE_CXX_FLAGS CMAKE_C_FLAGS
-                 CMAKE_EXE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
+  append("-flto" CMAKE_CXX_FLAGS CMAKE_C_FLAGS)
+  if(NOT LINKER_IS_LLD_LINK)
+    append("-flto" CMAKE_EXE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
+  endif()
 endif()
 
 # This option makes utils/extract_symbols.py be used to determine the list of

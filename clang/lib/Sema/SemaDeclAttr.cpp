@@ -2409,6 +2409,32 @@ static void handleAvailabilityAttr(Sema &S, Decl *D,
   }
 }
 
+static void handleExternalSourceSymbolAttr(Sema &S, Decl *D,
+                                           const AttributeList &Attr) {
+  if (!checkAttributeAtLeastNumArgs(S, Attr, 1))
+    return;
+  assert(checkAttributeAtMostNumArgs(S, Attr, 3) &&
+         "Invalid number of arguments in an external_source_symbol attribute");
+
+  if (!isa<NamedDecl>(D)) {
+    S.Diag(Attr.getLoc(), diag::warn_attribute_wrong_decl_type)
+        << Attr.getName() << ExpectedNamedDecl;
+    return;
+  }
+
+  StringRef Language;
+  if (const auto *SE = dyn_cast_or_null<StringLiteral>(Attr.getArgAsExpr(0)))
+    Language = SE->getString();
+  StringRef DefinedIn;
+  if (const auto *SE = dyn_cast_or_null<StringLiteral>(Attr.getArgAsExpr(1)))
+    DefinedIn = SE->getString();
+  bool IsGeneratedDeclaration = Attr.getArgAsIdent(2) != nullptr;
+
+  D->addAttr(::new (S.Context) ExternalSourceSymbolAttr(
+      Attr.getRange(), S.Context, Language, DefinedIn, IsGeneratedDeclaration,
+      Attr.getAttributeSpellingListIndex()));
+}
+
 template <class T>
 static T *mergeVisibilityAttr(Sema &S, Decl *D, SourceRange range,
                               typename T::VisibilityType value,
@@ -5804,6 +5830,9 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
     break;
   case AttributeList::AT_ExtVectorType:
     handleExtVectorTypeAttr(S, scope, D, Attr);
+    break;
+  case AttributeList::AT_ExternalSourceSymbol:
+    handleExternalSourceSymbolAttr(S, D, Attr);
     break;
   case AttributeList::AT_MinSize:
     handleMinSizeAttr(S, D, Attr);

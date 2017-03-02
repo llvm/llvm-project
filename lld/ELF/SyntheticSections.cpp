@@ -1479,12 +1479,19 @@ template <class ELFT> void GnuHashTableSection<ELFT>::writeTo(uint8_t *Buf) {
   write32<E>(Buf + 12, getShift2());
   Buf += 16;
 
+  // Write a bloom filter and a hash table.
   writeBloomFilter(Buf);
   Buf += sizeof(uintX_t) * MaskWords;
-
   writeHashTable(Buf);
 }
 
+// This function writes a 2-bit bloom filter. This bloom filter alone
+// usually filters out 80% or more of all symbol lookups [1].
+// The dynamic linker uses the hash table only when a symbol is not
+// filtered out by a bloom filter.
+//
+// [1] Ulrich Drepper (2011), "How To Write Shared Libraries" (Ver. 4.1.2),
+//     p.9, https://www.akkadia.org/drepper/dsohowto.pdf
 template <class ELFT>
 void GnuHashTableSection<ELFT>::writeBloomFilter(uint8_t *Buf) {
   typedef typename ELFT::Off Elf_Off;
