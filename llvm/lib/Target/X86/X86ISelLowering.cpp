@@ -29027,6 +29027,16 @@ static SDValue combineExtractVectorElt(SDNode *N, SelectionDAG &DAG,
   EVT VT = N->getValueType(0);
   SDLoc dl(InputVector);
 
+  // Detect mmx extraction of all bits as a i64. It works better as a bitcast.
+  if (InputVector.getOpcode() == ISD::BITCAST && InputVector.hasOneUse() &&
+      VT == MVT::i64 && SrcVT == MVT::v1i64 && isNullConstant(EltIdx)) {
+    SDValue MMXSrc = InputVector.getOperand(0);
+
+    // The bitcast source is a direct mmx result.
+    if (MMXSrc.getValueType() == MVT::x86mmx)
+      return DAG.getBitcast(VT, InputVector);
+  }
+
   // Detect mmx to i32 conversion through a v2i32 elt extract.
   if (InputVector.getOpcode() == ISD::BITCAST && InputVector.hasOneUse() &&
       VT == MVT::i32 && SrcVT == MVT::v2i32 && isNullConstant(EltIdx)) {

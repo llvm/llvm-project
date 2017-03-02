@@ -646,3 +646,200 @@ define void @no_interleave(<4 x float> %a0) {
   store <4 x float> %v0, <4 x float>* @g, align 16
   ret void
 }
+
+define void @load_factor2_wide2(<16 x i32>* %ptr) {
+; NEON-LABEL:    @load_factor2_wide2(
+; NEON-NEXT:       [[TMP1:%.*]] = bitcast <16 x i32>* %ptr to i32*
+; NEON-NEXT:       [[TMP2:%.*]] = bitcast i32* [[TMP1]] to i8*
+; NEON-NEXT:       [[VLDN:%.*]] = call { <4 x i32>, <4 x i32> } @llvm.arm.neon.vld2.v4i32.p0i8(i8* [[TMP2]], i32 4)
+; NEON-NEXT:       [[TMP3:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[VLDN]], 1
+; NEON-NEXT:       [[TMP4:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[VLDN]], 0
+; NEON-NEXT:       [[TMP5:%.*]] = getelementptr i32, i32* [[TMP1]], i32 8
+; NEON-NEXT:       [[TMP6:%.*]] = bitcast i32* [[TMP5]] to i8*
+; NEON-NEXT:       [[VLDN1:%.*]] = call { <4 x i32>, <4 x i32> } @llvm.arm.neon.vld2.v4i32.p0i8(i8* [[TMP6]], i32 4)
+; NEON-NEXT:       [[TMP7:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[VLDN1]], 1
+; NEON-NEXT:       [[TMP8:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[VLDN1]], 0
+; NEON-NEXT:       [[TMP9:%.*]] = shufflevector <4 x i32> [[TMP3]], <4 x i32> [[TMP7]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; NEON-NEXT:       [[TMP10:%.*]] = shufflevector <4 x i32> [[TMP4]], <4 x i32> [[TMP8]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; NEON-NEXT:       ret void
+; NO_NEON-LABEL: @load_factor2_wide2(
+; NO_NEON-NOT:     @llvm.arm.neon
+; NO_NEON:         ret void
+;
+  %interleaved.vec = load <16 x i32>, <16 x i32>* %ptr, align 4
+  %v0 = shufflevector <16 x i32> %interleaved.vec, <16 x i32> undef, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
+  %v1 = shufflevector <16 x i32> %interleaved.vec, <16 x i32> undef, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
+  ret void
+}
+
+define void @load_factor2_wide3(<24 x i32>* %ptr) {
+; NEON-LABEL:    @load_factor2_wide3(
+; NEON-NEXT:       [[TMP1:%.*]] = bitcast <24 x i32>* [[PTR:%.*]] to i32*
+; NEON-NEXT:       [[TMP2:%.*]] = bitcast i32* [[TMP1]] to i8*
+; NEON-NEXT:       [[VLDN:%.*]] = call { <4 x i32>, <4 x i32> } @llvm.arm.neon.vld2.v4i32.p0i8(i8* [[TMP2]], i32 4)
+; NEON-NEXT:       [[TMP3:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[VLDN]], 1
+; NEON-NEXT:       [[TMP4:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[VLDN]], 0
+; NEON-NEXT:       [[TMP5:%.*]] = getelementptr i32, i32* [[TMP1]], i32 8
+; NEON-NEXT:       [[TMP6:%.*]] = bitcast i32* [[TMP5]] to i8*
+; NEON-NEXT:       [[VLDN1:%.*]] = call { <4 x i32>, <4 x i32> } @llvm.arm.neon.vld2.v4i32.p0i8(i8* [[TMP6]], i32 4)
+; NEON-NEXT:       [[TMP7:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[VLDN1]], 1
+; NEON-NEXT:       [[TMP8:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[VLDN1]], 0
+; NEON-NEXT:       [[TMP9:%.*]] = getelementptr i32, i32* [[TMP5]], i32 8
+; NEON-NEXT:       [[TMP10:%.*]] = bitcast i32* [[TMP9]] to i8*
+; NEON-NEXT:       [[VLDN2:%.*]] = call { <4 x i32>, <4 x i32> } @llvm.arm.neon.vld2.v4i32.p0i8(i8* [[TMP10]], i32 4)
+; NEON-NEXT:       [[TMP11:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[VLDN2]], 1
+; NEON-NEXT:       [[TMP12:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[VLDN2]], 0
+; NEON-NEXT:       [[TMP13:%.*]] = shufflevector <4 x i32> [[TMP3]], <4 x i32> [[TMP7]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; NEON-NEXT:       [[TMP14:%.*]] = shufflevector <4 x i32> [[TMP11]], <4 x i32> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
+; NEON-NEXT:       [[TMP15:%.*]] = shufflevector <8 x i32> [[TMP13]], <8 x i32> [[TMP14]], <12 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11>
+; NEON-NEXT:       [[TMP16:%.*]] = shufflevector <4 x i32> [[TMP4]], <4 x i32> [[TMP8]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; NEON-NEXT:       [[TMP17:%.*]] = shufflevector <4 x i32> [[TMP12]], <4 x i32> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
+; NEON-NEXT:       [[TMP18:%.*]] = shufflevector <8 x i32> [[TMP16]], <8 x i32> [[TMP17]], <12 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11>
+; NEON-NEXT:       ret void
+; NO_NEON-LABEL: @load_factor2_wide3(
+; NO_NEON-NOT:     @llvm.arm.neon
+; NO_NEON:         ret void
+;
+  %interleaved.vec = load <24 x i32>, <24 x i32>* %ptr, align 4
+  %v0 = shufflevector <24 x i32> %interleaved.vec, <24 x i32> undef, <12 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 16, i32 18, i32 20, i32 22>
+  %v1 = shufflevector <24 x i32> %interleaved.vec, <24 x i32> undef, <12 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15, i32 17, i32 19, i32 21, i32 23>
+  ret void
+}
+
+define void @load_factor3_wide(<24 x i32>* %ptr) {
+; NEON-LABEL:    @load_factor3_wide(
+; NEON-NEXT:       [[TMP1:%.*]] = bitcast <24 x i32>* %ptr to i32*
+; NEON-NEXT:       [[TMP2:%.*]] = bitcast i32* [[TMP1]] to i8*
+; NEON-NEXT:       [[VLDN:%.*]] = call { <4 x i32>, <4 x i32>, <4 x i32> } @llvm.arm.neon.vld3.v4i32.p0i8(i8* [[TMP2]], i32 4)
+; NEON-NEXT:       [[TMP3:%.*]] = extractvalue { <4 x i32>, <4 x i32>, <4 x i32> } [[VLDN]], 2
+; NEON-NEXT:       [[TMP4:%.*]] = extractvalue { <4 x i32>, <4 x i32>, <4 x i32> } [[VLDN]], 1
+; NEON-NEXT:       [[TMP5:%.*]] = extractvalue { <4 x i32>, <4 x i32>, <4 x i32> } [[VLDN]], 0
+; NEON-NEXT:       [[TMP6:%.*]] = getelementptr i32, i32* [[TMP1]], i32 12
+; NEON-NEXT:       [[TMP7:%.*]] = bitcast i32* [[TMP6]] to i8*
+; NEON-NEXT:       [[VLDN1:%.*]] = call { <4 x i32>, <4 x i32>, <4 x i32> } @llvm.arm.neon.vld3.v4i32.p0i8(i8* [[TMP7]], i32 4)
+; NEON-NEXT:       [[TMP8:%.*]] = extractvalue { <4 x i32>, <4 x i32>, <4 x i32> } [[VLDN1]], 2
+; NEON-NEXT:       [[TMP9:%.*]] = extractvalue { <4 x i32>, <4 x i32>, <4 x i32> } [[VLDN1]], 1
+; NEON-NEXT:       [[TMP10:%.*]] = extractvalue { <4 x i32>, <4 x i32>, <4 x i32> } [[VLDN1]], 0
+; NEON-NEXT:       [[TMP11:%.*]] = shufflevector <4 x i32> [[TMP3]], <4 x i32> [[TMP8]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; NEON-NEXT:       [[TMP12:%.*]] = shufflevector <4 x i32> [[TMP4]], <4 x i32> [[TMP9]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; NEON-NEXT:       [[TMP13:%.*]] = shufflevector <4 x i32> [[TMP5]], <4 x i32> [[TMP10]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; NEON-NEXT:       ret void
+; NO_NEON-LABEL: @load_factor3_wide(
+; NO_NEON-NOT:     @llvm.arm.neon
+; NO_NEON:         ret void
+;
+  %interleaved.vec = load <24 x i32>, <24 x i32>* %ptr, align 4
+  %v0 = shufflevector <24 x i32> %interleaved.vec, <24 x i32> undef, <8 x i32> <i32 0, i32 3, i32 6, i32 9, i32 12, i32 15, i32 18, i32 21>
+  %v1 = shufflevector <24 x i32> %interleaved.vec, <24 x i32> undef, <8 x i32> <i32 1, i32 4, i32 7, i32 10, i32 13, i32 16, i32 19, i32 22>
+  %v2 = shufflevector <24 x i32> %interleaved.vec, <24 x i32> undef, <8 x i32> <i32 2, i32 5, i32 8, i32 11, i32 14, i32 17, i32 20, i32 23>
+  ret void
+}
+
+define void @load_factor4_wide(<32 x i32>* %ptr) {
+; NEON-LABEL:    @load_factor4_wide(
+; NEON-NEXT:       [[TMP1:%.*]] = bitcast <32 x i32>* %ptr to i32*
+; NEON-NEXT:       [[TMP2:%.*]] = bitcast i32* [[TMP1]] to i8*
+; NEON-NEXT:       [[VLDN:%.*]] = call { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } @llvm.arm.neon.vld4.v4i32.p0i8(i8* [[TMP2]], i32 4)
+; NEON-NEXT:       [[TMP3:%.*]] = extractvalue { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } [[VLDN]], 3
+; NEON-NEXT:       [[TMP4:%.*]] = extractvalue { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } [[VLDN]], 2
+; NEON-NEXT:       [[TMP5:%.*]] = extractvalue { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } [[VLDN]], 1
+; NEON-NEXT:       [[TMP6:%.*]] = extractvalue { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } [[VLDN]], 0
+; NEON-NEXT:       [[TMP7:%.*]] = getelementptr i32, i32* [[TMP1]], i32 16
+; NEON-NEXT:       [[TMP8:%.*]] = bitcast i32* [[TMP7]] to i8*
+; NEON-NEXT:       [[VLDN1:%.*]] = call { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } @llvm.arm.neon.vld4.v4i32.p0i8(i8* [[TMP8]], i32 4)
+; NEON-NEXT:       [[TMP9:%.*]] = extractvalue { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } [[VLDN1]], 3
+; NEON-NEXT:       [[TMP10:%.*]] = extractvalue { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } [[VLDN1]], 2
+; NEON-NEXT:       [[TMP11:%.*]] = extractvalue { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } [[VLDN1]], 1
+; NEON-NEXT:       [[TMP12:%.*]] = extractvalue { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } [[VLDN1]], 0
+; NEON-NEXT:       [[TMP13:%.*]] = shufflevector <4 x i32> [[TMP3]], <4 x i32> [[TMP9]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; NEON-NEXT:       [[TMP14:%.*]] = shufflevector <4 x i32> [[TMP4]], <4 x i32> [[TMP10]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; NEON-NEXT:       [[TMP15:%.*]] = shufflevector <4 x i32> [[TMP5]], <4 x i32> [[TMP11]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; NEON-NEXT:       [[TMP16:%.*]] = shufflevector <4 x i32> [[TMP6]], <4 x i32> [[TMP12]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; NEON-NEXT:       ret void
+; NO_NEON-LABEL: @load_factor4_wide(
+; NO_NEON-NOT:     @llvm.arm.neon
+; NO_NEON:         ret void
+;
+  %interleaved.vec = load <32 x i32>, <32 x i32>* %ptr, align 4
+  %v0 = shufflevector <32 x i32> %interleaved.vec, <32 x i32> undef, <8 x i32> <i32 0, i32 4, i32 8, i32 12, i32 16, i32 20, i32 24, i32 28>
+  %v1 = shufflevector <32 x i32> %interleaved.vec, <32 x i32> undef, <8 x i32> <i32 1, i32 5, i32 9, i32 13, i32 17, i32 21, i32 25, i32 29>
+  %v2 = shufflevector <32 x i32> %interleaved.vec, <32 x i32> undef, <8 x i32> <i32 2, i32 6, i32 10, i32 14, i32 18, i32 22, i32 26, i32 30>
+  %v3 = shufflevector <32 x i32> %interleaved.vec, <32 x i32> undef, <8 x i32> <i32 3, i32 7, i32 11, i32 15, i32 19, i32 23, i32 27, i32 31>
+  ret void
+}
+
+define void @store_factor2_wide(<16 x i32>* %ptr, <8 x i32> %v0, <8 x i32> %v1) {
+; NEON-LABEL:    @store_factor2_wide(
+; NEON-NEXT:       [[TMP1:%.*]] = bitcast <16 x i32>* %ptr to i32*
+; NEON-NEXT:       [[TMP2:%.*]] = bitcast i32* [[TMP1]] to i8*
+; NEON-NEXT:       [[TMP3:%.*]] = shufflevector <8 x i32> %v0, <8 x i32> %v1, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; NEON-NEXT:       [[TMP4:%.*]] = shufflevector <8 x i32> %v0, <8 x i32> %v1, <4 x i32> <i32 8, i32 9, i32 10, i32 11>
+; NEON-NEXT:       call void @llvm.arm.neon.vst2.p0i8.v4i32(i8* [[TMP2]], <4 x i32> [[TMP3]], <4 x i32> [[TMP4]], i32 4)
+; NEON-NEXT:       [[TMP5:%.*]] = getelementptr i32, i32* [[TMP1]], i32 8
+; NEON-NEXT:       [[TMP6:%.*]] = bitcast i32* [[TMP5]] to i8*
+; NEON-NEXT:       [[TMP7:%.*]] = shufflevector <8 x i32> %v0, <8 x i32> %v1, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+; NEON-NEXT:       [[TMP8:%.*]] = shufflevector <8 x i32> %v0, <8 x i32> %v1, <4 x i32> <i32 12, i32 13, i32 14, i32 15>
+; NEON-NEXT:       call void @llvm.arm.neon.vst2.p0i8.v4i32(i8* [[TMP6]], <4 x i32> [[TMP7]], <4 x i32> [[TMP8]], i32 4)
+; NEON-NEXT:       ret void
+; NO_NEON-LABEL: @store_factor2_wide(
+; NO_NEON-NOT:     @llvm.arm.neon
+; NO_NEON:         ret void
+;
+  %interleaved.vec = shufflevector <8 x i32> %v0, <8 x i32> %v1, <16 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11, i32 4, i32 12, i32 5, i32 13, i32 6, i32 14, i32 7, i32 15>
+  store <16 x i32> %interleaved.vec, <16 x i32>* %ptr, align 4
+  ret void
+}
+
+define void @store_factor3_wide(<24 x i32>* %ptr, <8 x i32> %v0, <8 x i32> %v1, <8 x i32> %v2) {
+; NEON-LABEL:    @store_factor3_wide(
+; NEON:            [[TMP1:%.*]] = bitcast <24 x i32>* %ptr to i32*
+; NEON-NEXT:       [[TMP2:%.*]] = bitcast i32* [[TMP1]] to i8*
+; NEON-NEXT:       [[TMP3:%.*]] = shufflevector <16 x i32> %s0, <16 x i32> %s1, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; NEON-NEXT:       [[TMP4:%.*]] = shufflevector <16 x i32> %s0, <16 x i32> %s1, <4 x i32> <i32 8, i32 9, i32 10, i32 11>
+; NEON-NEXT:       [[TMP5:%.*]] = shufflevector <16 x i32> %s0, <16 x i32> %s1, <4 x i32> <i32 16, i32 17, i32 18, i32 19>
+; NEON-NEXT:       call void @llvm.arm.neon.vst3.p0i8.v4i32(i8* [[TMP2]], <4 x i32> [[TMP3]], <4 x i32> [[TMP4]], <4 x i32> [[TMP5]], i32 4)
+; NEON-NEXT:       [[TMP6:%.*]] = getelementptr i32, i32* [[TMP1]], i32 12
+; NEON-NEXT:       [[TMP7:%.*]] = bitcast i32* [[TMP6]] to i8*
+; NEON-NEXT:       [[TMP8:%.*]] = shufflevector <16 x i32> %s0, <16 x i32> %s1, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+; NEON-NEXT:       [[TMP9:%.*]] = shufflevector <16 x i32> %s0, <16 x i32> %s1, <4 x i32> <i32 12, i32 13, i32 14, i32 15>
+; NEON-NEXT:       [[TMP10:%.*]] = shufflevector <16 x i32> %s0, <16 x i32> %s1, <4 x i32> <i32 20, i32 21, i32 22, i32 23>
+; NEON-NEXT:       call void @llvm.arm.neon.vst3.p0i8.v4i32(i8* [[TMP7]], <4 x i32> [[TMP8]], <4 x i32> [[TMP9]], <4 x i32> [[TMP10]], i32 4)
+; NEON-NEXT:       ret void
+; NO_NEON-LABEL: @store_factor3_wide(
+; NO_NEON-NOT:     @llvm.arm.neon
+; NO_NEON:         ret void
+;
+  %s0 = shufflevector <8 x i32> %v0, <8 x i32> %v1, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %s1 = shufflevector <8 x i32> %v2, <8 x i32> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %interleaved.vec = shufflevector <16 x i32> %s0, <16 x i32> %s1, <24 x i32> <i32 0, i32 8, i32 16, i32 1, i32 9, i32 17, i32 2, i32 10, i32 18, i32 3, i32 11, i32 19, i32 4, i32 12, i32 20, i32 5, i32 13, i32 21, i32 6, i32 14, i32 22, i32 7, i32 15, i32 23>
+  store <24 x i32> %interleaved.vec, <24 x i32>* %ptr, align 4
+  ret void
+}
+
+define void @store_factor4_wide(<32 x i32>* %ptr, <8 x i32> %v0, <8 x i32> %v1, <8 x i32> %v2, <8 x i32> %v3) {
+; NEON-LABEL:    @store_factor4_wide(
+; NEON:            [[TMP1:%.*]] = bitcast <32 x i32>* %ptr to i32*
+; NEON-NEXT:       [[TMP2:%.*]] = bitcast i32* [[TMP1]] to i8*
+; NEON-NEXT:       [[TMP3:%.*]] = shufflevector <16 x i32> %s0, <16 x i32> %s1, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; NEON-NEXT:       [[TMP4:%.*]] = shufflevector <16 x i32> %s0, <16 x i32> %s1, <4 x i32> <i32 8, i32 9, i32 10, i32 11>
+; NEON-NEXT:       [[TMP5:%.*]] = shufflevector <16 x i32> %s0, <16 x i32> %s1, <4 x i32> <i32 16, i32 17, i32 18, i32 19>
+; NEON-NEXT:       [[TMP6:%.*]] = shufflevector <16 x i32> %s0, <16 x i32> %s1, <4 x i32> <i32 24, i32 25, i32 26, i32 27>
+; NEON-NEXT:       call void @llvm.arm.neon.vst4.p0i8.v4i32(i8* [[TMP2]], <4 x i32> [[TMP3]], <4 x i32> [[TMP4]], <4 x i32> [[TMP5]], <4 x i32> [[TMP6]], i32 4)
+; NEON-NEXT:       [[TMP7:%.*]] = getelementptr i32, i32* [[TMP1]], i32 16
+; NEON-NEXT:       [[TMP8:%.*]] = bitcast i32* [[TMP7]] to i8*
+; NEON-NEXT:       [[TMP9:%.*]] = shufflevector <16 x i32> %s0, <16 x i32> %s1, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+; NEON-NEXT:       [[TMP10:%.*]] = shufflevector <16 x i32> %s0, <16 x i32> %s1, <4 x i32> <i32 12, i32 13, i32 14, i32 15>
+; NEON-NEXT:       [[TMP11:%.*]] = shufflevector <16 x i32> %s0, <16 x i32> %s1, <4 x i32> <i32 20, i32 21, i32 22, i32 23>
+; NEON-NEXT:       [[TMP12:%.*]] = shufflevector <16 x i32> %s0, <16 x i32> %s1, <4 x i32> <i32 28, i32 29, i32 30, i32 31>
+; NEON-NEXT:       call void @llvm.arm.neon.vst4.p0i8.v4i32(i8* [[TMP8]], <4 x i32> [[TMP9]], <4 x i32> [[TMP10]], <4 x i32> [[TMP11]], <4 x i32> [[TMP12]], i32 4)
+; NEON-NEXT:       ret void
+; NO_NEON-LABEL: @store_factor4_wide(
+; NO_NEON-NOT:     @llvm.arm.neon
+; NO_NEON:         ret void
+;
+  %s0 = shufflevector <8 x i32> %v0, <8 x i32> %v1, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %s1 = shufflevector <8 x i32> %v2, <8 x i32> %v3, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %interleaved.vec = shufflevector <16 x i32> %s0, <16 x i32> %s1, <32 x i32> <i32 0, i32 8, i32 16, i32 24, i32 1, i32 9, i32 17, i32 25, i32 2, i32 10, i32 18, i32 26, i32 3, i32 11, i32 19, i32 27, i32 4, i32 12, i32 20, i32 28, i32 5, i32 13, i32 21, i32 29, i32 6, i32 14, i32 22, i32 30, i32 7, i32 15, i32 23, i32 31>
+  store <32 x i32> %interleaved.vec, <32 x i32>* %ptr, align 4
+  ret void
+}

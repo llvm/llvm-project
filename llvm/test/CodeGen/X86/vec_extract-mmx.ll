@@ -8,15 +8,14 @@ define i32 @test0(<1 x i64>* %v4) nounwind {
 ; X32-NEXT:    pushl %ebp
 ; X32-NEXT:    movl %esp, %ebp
 ; X32-NEXT:    andl $-8, %esp
-; X32-NEXT:    subl $24, %esp
+; X32-NEXT:    subl $8, %esp
 ; X32-NEXT:    movl 8(%ebp), %eax
 ; X32-NEXT:    movl (%eax), %ecx
 ; X32-NEXT:    movl 4(%eax), %eax
 ; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; X32-NEXT:    movl %ecx, (%esp)
 ; X32-NEXT:    pshufw $238, (%esp), %mm0 # mm0 = mem[2,3,2,3]
-; X32-NEXT:    movq %mm0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movd %mm0, %eax
 ; X32-NEXT:    addl $32, %eax
 ; X32-NEXT:    movl %ebp, %esp
 ; X32-NEXT:    popl %ebp
@@ -45,18 +44,11 @@ entry:
 define i32 @test1(i32* nocapture readonly %ptr) nounwind {
 ; X32-LABEL: test1:
 ; X32:       # BB#0: # %entry
-; X32-NEXT:    pushl %ebp
-; X32-NEXT:    movl %esp, %ebp
-; X32-NEXT:    andl $-8, %esp
-; X32-NEXT:    subl $16, %esp
-; X32-NEXT:    movl 8(%ebp), %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movd (%eax), %mm0
 ; X32-NEXT:    pshufw $232, %mm0, %mm0 # mm0 = mm0[0,2,2,3]
-; X32-NEXT:    movq %mm0, (%esp)
-; X32-NEXT:    movl (%esp), %eax
+; X32-NEXT:    movd %mm0, %eax
 ; X32-NEXT:    emms
-; X32-NEXT:    movl %ebp, %esp
-; X32-NEXT:    popl %ebp
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test1:
@@ -87,17 +79,10 @@ entry:
 define i32 @test2(i32* nocapture readonly %ptr) nounwind {
 ; X32-LABEL: test2:
 ; X32:       # BB#0: # %entry
-; X32-NEXT:    pushl %ebp
-; X32-NEXT:    movl %esp, %ebp
-; X32-NEXT:    andl $-8, %esp
-; X32-NEXT:    subl $16, %esp
-; X32-NEXT:    movl 8(%ebp), %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    pshufw $232, (%eax), %mm0 # mm0 = mem[0,2,2,3]
-; X32-NEXT:    movq %mm0, (%esp)
-; X32-NEXT:    movl (%esp), %eax
+; X32-NEXT:    movd %mm0, %eax
 ; X32-NEXT:    emms
-; X32-NEXT:    movl %ebp, %esp
-; X32-NEXT:    popl %ebp
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test2:

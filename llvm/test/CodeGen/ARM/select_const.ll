@@ -273,3 +273,54 @@ define i32 @select_C1_C2_signext(i1 signext %cond) {
   ret i32 %sel
 }
 
+; 4295032833 = 0x100010001.
+; This becomes an opaque constant via ConstantHoisting, so we don't fold it into the select.
+
+define i64 @opaque_constant1(i1 %cond, i64 %x) {
+; CHECK-LABEL: opaque_constant1:
+; CHECK:       @ BB#0:
+; CHECK-NEXT:    .save {r4, lr}
+; CHECK-NEXT:    push {r4, lr}
+; CHECK-NEXT:    ands r12, r0, #1
+; CHECK-NEXT:    mov lr, #1
+; CHECK-NEXT:    mov r0, #23
+; CHECK-NEXT:    eor r3, r3, #1
+; CHECK-NEXT:    orr lr, lr, #65536
+; CHECK-NEXT:    mvnne r0, #3
+; CHECK-NEXT:    movne r12, #1
+; CHECK-NEXT:    and r4, r0, lr
+; CHECK-NEXT:    eor r2, r2, lr
+; CHECK-NEXT:    subs r0, r4, #1
+; CHECK-NEXT:    sbc r1, r12, #0
+; CHECK-NEXT:    orrs r2, r2, r3
+; CHECK-NEXT:    movne r0, r4
+; CHECK-NEXT:    movne r1, r12
+; CHECK-NEXT:    pop {r4, lr}
+; CHECK-NEXT:    mov pc, lr
+  %sel = select i1 %cond, i64 -4, i64 23
+  %bo = and i64 %sel, 4295032833  ; 0x100010001
+  %cmp = icmp eq i64 %x, 4295032833
+  %sext = sext i1 %cmp to i64
+  %add = add i64 %bo, %sext
+  ret i64 %add
+}
+
+; 65537 == 0x10001.
+; This becomes an opaque constant via ConstantHoisting, so we don't fold it into the select.
+
+define i64 @opaque_constant2(i1 %cond, i64 %x) {
+; CHECK-LABEL: opaque_constant2:
+; CHECK:       @ BB#0:
+; CHECK-NEXT:    mov r1, #1
+; CHECK-NEXT:    tst r0, #1
+; CHECK-NEXT:    orr r1, r1, #65536
+; CHECK-NEXT:    mov r0, r1
+; CHECK-NEXT:    moveq r0, #23
+; CHECK-NEXT:    and r0, r0, r1
+; CHECK-NEXT:    mov r1, #0
+; CHECK-NEXT:    mov pc, lr
+  %sel = select i1 %cond, i64 65537, i64 23
+  %bo = and i64 %sel, 65537
+  ret i64 %bo
+}
+

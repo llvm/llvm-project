@@ -3057,37 +3057,25 @@ HexagonTargetLowering::getRegForInlineAsmConstraint(
         return std::make_pair(0U, &Hexagon::DoubleRegsRegClass);
       }
     case 'q': // q0-q3
-      switch (VT.SimpleTy) {
+      switch (VT.getSizeInBits()) {
       default:
-        llvm_unreachable("getRegForInlineAsmConstraint Unhandled data type");
-      case MVT::v1024i1:
-      case MVT::v512i1:
-      case MVT::v32i16:
-      case MVT::v16i32:
-      case MVT::v64i8:
-      case MVT::v8i64:
+        llvm_unreachable("getRegForInlineAsmConstraint Unhandled vector size");
+      case 512:
         return std::make_pair(0U, &Hexagon::VecPredRegsRegClass);
+      case 1024:
+        return std::make_pair(0U, &Hexagon::VecPredRegs128BRegClass);
       }
     case 'v': // V0-V31
-      switch (VT.SimpleTy) {
+      switch (VT.getSizeInBits()) {
       default:
-        llvm_unreachable("getRegForInlineAsmConstraint Unhandled data type");
-      case MVT::v16i32:
-      case MVT::v32i16:
-      case MVT::v64i8:
-      case MVT::v8i64:
+        llvm_unreachable("getRegForInlineAsmConstraint Unhandled vector size");
+      case 512:
         return std::make_pair(0U, &Hexagon::VectorRegsRegClass);
-      case MVT::v32i32:
-      case MVT::v64i16:
-      case MVT::v16i64:
-      case MVT::v128i8:
+      case 1024:
         if (Subtarget.hasV60TOps() && UseHVX && UseHVXDbl)
           return std::make_pair(0U, &Hexagon::VectorRegs128BRegClass);
         return std::make_pair(0U, &Hexagon::VecDblRegsRegClass);
-      case MVT::v256i8:
-      case MVT::v128i16:
-      case MVT::v64i32:
-      case MVT::v32i64:
+      case 2048:
         return std::make_pair(0U, &Hexagon::VecDblRegs128BRegClass);
       }
 

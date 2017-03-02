@@ -2951,7 +2951,7 @@ void SelectionDAGBuilder::visitBitCast(const User &I) {
                              DestVT, N)); // convert types.
   // Check if the original LLVM IR Operand was a ConstantInt, because getValue()
   // might fold any kind of constant expression to an integer constant and that
-  // is not what we are looking for. Only regcognize a bitcast of a genuine
+  // is not what we are looking for. Only recognize a bitcast of a genuine
   // constant integer as an opaque constant.
   else if(ConstantInt *C = dyn_cast<ConstantInt>(I.getOperand(0)))
     setValue(&I, DAG.getConstant(C->getValue(), dl, DestVT, /*isTarget=*/false,

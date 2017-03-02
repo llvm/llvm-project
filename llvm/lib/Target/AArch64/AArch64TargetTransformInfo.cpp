@@ -509,8 +509,10 @@ int AArch64TTIImpl::getInterleavedMemoryOpCost(unsigned Opcode, Type *VecTy,
     unsigned SubVecSize = DL.getTypeSizeInBits(SubVecTy);
 
     // ldN/stN only support legal vector types of size 64 or 128 in bits.
-    if (NumElts % Factor == 0 && (SubVecSize == 64 || SubVecSize == 128))
-      return Factor;
+    // Accesses having vector types that are a multiple of 128 bits can be
+    // matched to more than one ldN/stN instruction.
+    if (NumElts % Factor == 0 && (SubVecSize == 64 || SubVecSize % 128 == 0))
+      return Factor * ((SubVecSize + 127) / 128);
   }
 
   return BaseT::getInterleavedMemoryOpCost(Opcode, VecTy, Factor, Indices,

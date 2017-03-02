@@ -13282,6 +13282,13 @@ Value *ARMTargetLowering::emitStoreConditional(IRBuilder<> &Builder, Value *Val,
               Addr});
 }
 
+/// A helper function for determining the number of interleaved accesses we
+/// will generate when lowering accesses of the given type.
+static unsigned getNumInterleavedAccesses(VectorType *VecTy,
+                                          const DataLayout &DL) {
+  return (DL.getTypeSizeInBits(VecTy) + 127) / 128;
+}
+
 /// \brief Lower an interleaved load into a vldN intrinsic.
 ///
 /// E.g. Lower an interleaved load (Factor = 2):
@@ -13310,8 +13317,11 @@ bool ARMTargetLowering::lowerInterleavedLoad(
   bool EltIs64Bits = DL.getTypeSizeInBits(EltTy) == 64;
 
   // Skip if we do not have NEON and skip illegal vector types and vector types
-  // with i64/f64 elements (vldN doesn't support i64/f64 elements).
-  if (!Subtarget->hasNEON() || (VecSize != 64 && VecSize != 128) || EltIs64Bits)
+  // with i64/f64 elements (vldN doesn't support i64/f64 elements). We can
+  // "legalize" wide vector types into multiple interleaved accesses as long as
+  // the vector types are divisible by 128.
+  if (!Subtarget->hasNEON() || (VecSize != 64 && VecSize % 128 != 0) ||
+      EltIs64Bits)
     return false;
 
   // Skip if the vector has f16 elements: even though we could do an i16 vldN,
@@ -13319,43 +13329,87 @@ bool ARMTargetLowering::lowerInterleavedLoad(
   if (EltTy->isHalfTy())
     return false;
 
+  unsigned NumLoads = getNumInterleavedAccesses(VecTy, DL);
+
   // A pointer vector can not be the return type of the ldN intrinsics. Need to
   // load integer vectors first and then convert to pointer vectors.
   if (EltTy->isPointerTy())
     VecTy =
         VectorType::get(DL.getIntPtrType(EltTy), VecTy->getVectorNumElements());
 
-  static const Intrinsic::ID LoadInts[3] = {Intrinsic::arm_neon_vld2,
-                                            Intrinsic::arm_neon_vld3,
-                                            Intrinsic::arm_neon_vld4};
-
   IRBuilder<> Builder(LI);
-  SmallVector<Value *, 2> Ops;
 
-  Type *Int8Ptr = Builder.getInt8PtrTy(LI->getPointerAddressSpace());
-  Ops.push_back(Builder.CreateBitCast(LI->getPointerOperand(), Int8Ptr));
-  Ops.push_back(Builder.getInt32(LI->getAlignment()));
+  // The base address of the load.
+  Value *BaseAddr = LI->getPointerOperand();
+
+  if (NumLoads > 1) {
+    // If we're going to generate more than one load, reset the sub-vector type
+    // to something legal.
+    VecTy = VectorType::get(VecTy->getVectorElementType(),
+                            VecTy->getVectorNumElements() / NumLoads);
+
+    // We will compute the pointer operand of each load from the original base
+    // address using GEPs. Cast the base address to a pointer to the scalar
+    // element type.
+    BaseAddr = Builder.CreateBitCast(
+        BaseAddr, VecTy->getVectorElementType()->getPointerTo(
+                      LI->getPointerAddressSpace()));
+  }
 
   assert(isTypeLegal(EVT::getEVT(VecTy)) && "Illegal vldN vector type!");
 
-  Type *Tys[] = { VecTy, Int8Ptr };
+  Type *Int8Ptr = Builder.getInt8PtrTy(LI->getPointerAddressSpace());
+  Type *Tys[] = {VecTy, Int8Ptr};
+  static const Intrinsic::ID LoadInts[3] = {Intrinsic::arm_neon_vld2,
+                                            Intrinsic::arm_neon_vld3,
+                                            Intrinsic::arm_neon_vld4};
   Function *VldnFunc =
       Intrinsic::getDeclaration(LI->getModule(), LoadInts[Factor - 2], Tys);
-  CallInst *VldN = Builder.CreateCall(VldnFunc, Ops, "vldN");
 
-  // Replace uses of each shufflevector with the corresponding vector loaded
-  // by ldN.
-  for (unsigned i = 0; i < Shuffles.size(); i++) {
-    ShuffleVectorInst *SV = Shuffles[i];
-    unsigned Index = Indices[i];
+  // Holds sub-vectors extracted from the load intrinsic return values. The
+  // sub-vectors are associated with the shufflevector instructions they will
+  // replace.
+  DenseMap<ShuffleVectorInst *, SmallVector<Value *, 4>> SubVecs;
 
-    Value *SubVec = Builder.CreateExtractValue(VldN, Index);
+  for (unsigned LoadCount = 0; LoadCount < NumLoads; ++LoadCount) {
 
-    // Convert the integer vector to pointer vector if the element is pointer.
-    if (EltTy->isPointerTy())
-      SubVec = Builder.CreateIntToPtr(SubVec, SV->getType());
+    // If we're generating more than one load, compute the base address of
+    // subsequent loads as an offset from the previous.
+    if (LoadCount > 0)
+      BaseAddr = Builder.CreateConstGEP1_32(
+          BaseAddr, VecTy->getVectorNumElements() * Factor);
 
-    SV->replaceAllUsesWith(SubVec);
+    SmallVector<Value *, 2> Ops;
+    Ops.push_back(Builder.CreateBitCast(BaseAddr, Int8Ptr));
+    Ops.push_back(Builder.getInt32(LI->getAlignment()));
+
+    CallInst *VldN = Builder.CreateCall(VldnFunc, Ops, "vldN");
+
+    // Replace uses of each shufflevector with the corresponding vector loaded
+    // by ldN.
+    for (unsigned i = 0; i < Shuffles.size(); i++) {
+      ShuffleVectorInst *SV = Shuffles[i];
+      unsigned Index = Indices[i];
+
+      Value *SubVec = Builder.CreateExtractValue(VldN, Index);
+
+      // Convert the integer vector to pointer vector if the element is pointer.
+      if (EltTy->isPointerTy())
+        SubVec = Builder.CreateIntToPtr(SubVec, SV->getType());
+
+      SubVecs[SV].push_back(SubVec);
+    }
+  }
+
+  // Replace uses of the shufflevector instructions with the sub-vectors
+  // returned by the load intrinsic. If a shufflevector instruction is
+  // associated with more than one sub-vector, those sub-vectors will be
+  // concatenated into a single wide vector.
+  for (ShuffleVectorInst *SVI : Shuffles) {
+    auto &SubVec = SubVecs[SVI];
+    auto *WideVec =
+        SubVec.size() > 1 ? concatenateVectors(Builder, SubVec) : SubVec[0];
+    SVI->replaceAllUsesWith(WideVec);
   }
 
   return true;
@@ -13406,8 +13460,10 @@ bool ARMTargetLowering::lowerInterleavedStore(StoreInst *SI,
   bool EltIs64Bits = DL.getTypeSizeInBits(EltTy) == 64;
 
   // Skip if we do not have NEON and skip illegal vector types and vector types
-  // with i64/f64 elements (vstN doesn't support i64/f64 elements).
-  if (!Subtarget->hasNEON() || (SubVecSize != 64 && SubVecSize != 128) ||
+  // with i64/f64 elements (vldN doesn't support i64/f64 elements). We can
+  // "legalize" wide vector types into multiple interleaved accesses as long as
+  // the vector types are divisible by 128.
+  if (!Subtarget->hasNEON() || (SubVecSize != 64 && SubVecSize % 128 != 0) ||
       EltIs64Bits)
     return false;
 
@@ -13415,6 +13471,8 @@ bool ARMTargetLowering::lowerInterleavedStore(StoreInst *SI,
   // we can't hold the f16 vectors and will end up converting via f32.
   if (EltTy->isHalfTy())
     return false;
+
+  unsigned NumStores = getNumInterleavedAccesses(SubVecTy, DL);
 
   Value *Op0 = SVI->getOperand(0);
   Value *Op1 = SVI->getOperand(1);
@@ -13434,46 +13492,75 @@ bool ARMTargetLowering::lowerInterleavedStore(StoreInst *SI,
     SubVecTy = VectorType::get(IntTy, LaneLen);
   }
 
-  static const Intrinsic::ID StoreInts[3] = {Intrinsic::arm_neon_vst2,
-                                             Intrinsic::arm_neon_vst3,
-                                             Intrinsic::arm_neon_vst4};
-  SmallVector<Value *, 6> Ops;
+  // The base address of the store.
+  Value *BaseAddr = SI->getPointerOperand();
 
-  Type *Int8Ptr = Builder.getInt8PtrTy(SI->getPointerAddressSpace());
-  Ops.push_back(Builder.CreateBitCast(SI->getPointerOperand(), Int8Ptr));
+  if (NumStores > 1) {
+    // If we're going to generate more than one store, reset the lane length
+    // and sub-vector type to something legal.
+    LaneLen /= NumStores;
+    SubVecTy = VectorType::get(SubVecTy->getVectorElementType(), LaneLen);
+
+    // We will compute the pointer operand of each store from the original base
+    // address using GEPs. Cast the base address to a pointer to the scalar
+    // element type.
+    BaseAddr = Builder.CreateBitCast(
+        BaseAddr, SubVecTy->getVectorElementType()->getPointerTo(
+                      SI->getPointerAddressSpace()));
+  }
 
   assert(isTypeLegal(EVT::getEVT(SubVecTy)) && "Illegal vstN vector type!");
 
-  Type *Tys[] = { Int8Ptr, SubVecTy };
-  Function *VstNFunc = Intrinsic::getDeclaration(
-      SI->getModule(), StoreInts[Factor - 2], Tys);
-
-  // Split the shufflevector operands into sub vectors for the new vstN call.
   auto Mask = SVI->getShuffleMask();
-  for (unsigned i = 0; i < Factor; i++) {
-    if (Mask[i] >= 0) {
-      Ops.push_back(Builder.CreateShuffleVector(
-          Op0, Op1, createSequentialMask(Builder, Mask[i], LaneLen, 0)));
-    } else {
-      unsigned StartMask = 0;
-      for (unsigned j = 1; j < LaneLen; j++) {
-        if (Mask[j*Factor + i] >= 0) {
-          StartMask = Mask[j*Factor + i] - j;
-          break;
-        }
-      }
-      // Note: If all elements in a chunk are undefs, StartMask=0!
-      // Note: Filling undef gaps with random elements is ok, since
-      // those elements were being written anyway (with undefs).
-      // In the case of all undefs we're defaulting to using elems from 0
-      // Note: StartMask cannot be negative, it's checked in isReInterleaveMask
-      Ops.push_back(Builder.CreateShuffleVector(
-          Op0, Op1, createSequentialMask(Builder, StartMask, LaneLen, 0)));
-    }
-  }
 
-  Ops.push_back(Builder.getInt32(SI->getAlignment()));
-  Builder.CreateCall(VstNFunc, Ops);
+  Type *Int8Ptr = Builder.getInt8PtrTy(SI->getPointerAddressSpace());
+  Type *Tys[] = {Int8Ptr, SubVecTy};
+  static const Intrinsic::ID StoreInts[3] = {Intrinsic::arm_neon_vst2,
+                                             Intrinsic::arm_neon_vst3,
+                                             Intrinsic::arm_neon_vst4};
+
+  for (unsigned StoreCount = 0; StoreCount < NumStores; ++StoreCount) {
+
+    // If we generating more than one store, we compute the base address of
+    // subsequent stores as an offset from the previous.
+    if (StoreCount > 0)
+      BaseAddr = Builder.CreateConstGEP1_32(BaseAddr, LaneLen * Factor);
+
+    SmallVector<Value *, 6> Ops;
+    Ops.push_back(Builder.CreateBitCast(BaseAddr, Int8Ptr));
+
+    Function *VstNFunc =
+        Intrinsic::getDeclaration(SI->getModule(), StoreInts[Factor - 2], Tys);
+
+    // Split the shufflevector operands into sub vectors for the new vstN call.
+    for (unsigned i = 0; i < Factor; i++) {
+      unsigned IdxI = StoreCount * LaneLen * Factor + i;
+      if (Mask[IdxI] >= 0) {
+        Ops.push_back(Builder.CreateShuffleVector(
+            Op0, Op1, createSequentialMask(Builder, Mask[IdxI], LaneLen, 0)));
+      } else {
+        unsigned StartMask = 0;
+        for (unsigned j = 1; j < LaneLen; j++) {
+          unsigned IdxJ = StoreCount * LaneLen * Factor + j;
+          if (Mask[IdxJ * Factor + IdxI] >= 0) {
+            StartMask = Mask[IdxJ * Factor + IdxI] - IdxJ;
+            break;
+          }
+        }
+        // Note: If all elements in a chunk are undefs, StartMask=0!
+        // Note: Filling undef gaps with random elements is ok, since
+        // those elements were being written anyway (with undefs).
+        // In the case of all undefs we're defaulting to using elems from 0
+        // Note: StartMask cannot be negative, it's checked in
+        // isReInterleaveMask
+        Ops.push_back(Builder.CreateShuffleVector(
+            Op0, Op1, createSequentialMask(Builder, StartMask, LaneLen, 0)));
+      }
+    }
+
+    Ops.push_back(Builder.getInt32(SI->getAlignment()));
+    Builder.CreateCall(VstNFunc, Ops);
+  }
   return true;
 }
 
