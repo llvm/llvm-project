@@ -86,6 +86,24 @@
                                             </li>
 
                                             <li>
+                                              Fix local variable lookup in the lldb expression parser.
+
+                                              <p>
+                                                The injection of local variables into the clang expression parser is 
+                                                currently done incorrectly - it happens too late in the lookup.  This results
+                                                in namespace variables & functions, same named types and ivars shadowing 
+                                                locals when it should be the other way around.  An attempt was made to fix
+                                                this by manually inserting all the visible local variables into wrapper function
+                                                in the expression text.  This mostly gets the job done but that method 
+                                                means you have to realize all the types
+                                                and locations of all local variables for even the simplest of expressions, and
+                                                when run on large programs (e.g. lldb) it would cause unacceptable delays.  And
+                                                it was very fragile since an error in realizing any of the locals would cause
+                                                all expressions run in that context to fail.  We need to fix this by adjusting
+                                                the points where name lookup calls out to lldb in clang.
+                                              </p>
+                                            </li>
+                                            <li>
                                               Fix the event handling/process control machinery to support calling SB & Commands 
                                               everywhere, and to support non-stop debugging
                                               <p>
