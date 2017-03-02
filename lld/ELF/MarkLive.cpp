@@ -64,15 +64,16 @@ static typename ELFT::uint getAddend(InputSectionBase &Sec,
 }
 
 template <class ELFT, class RelT>
-static ResolvedReloc resolveReloc(InputSectionBase &Sec, RelT &Rel) {
+static void resolveReloc(InputSectionBase &Sec, RelT &Rel,
+                         std::function<void(ResolvedReloc)> Fn) {
   SymbolBody &B = Sec.getFile<ELFT>()->getRelocTargetSym(Rel);
   auto *D = dyn_cast<DefinedRegular>(&B);
   if (!D || !D->Section)
-    return {nullptr, 0};
+    return;
   typename ELFT::uint Offset = D->Value;
   if (D->isSection())
     Offset += getAddend<ELFT>(Sec, Rel);
-  return {D->Section->Repl, Offset};
+  Fn({D->Section->Repl, Offset});
 }
 
 // Calls Fn for each section that Sec refers to via relocations.
@@ -81,10 +82,10 @@ static void forEachSuccessor(InputSection &Sec,
                              std::function<void(ResolvedReloc)> Fn) {
   if (Sec.AreRelocsRela) {
     for (const typename ELFT::Rela &Rel : Sec.template relas<ELFT>())
-      Fn(resolveReloc<ELFT>(Sec, Rel));
+      resolveReloc<ELFT>(Sec, Rel, Fn);
   } else {
     for (const typename ELFT::Rel &Rel : Sec.template rels<ELFT>())
-      Fn(resolveReloc<ELFT>(Sec, Rel));
+      resolveReloc<ELFT>(Sec, Rel, Fn);
   }
   for (InputSectionBase *IS : Sec.DependentSections)
     Fn({IS, 0});
@@ -116,7 +117,7 @@ static void scanEhFrameSection(EhInputSection<ELFT> &EH, ArrayRef<RelTy> Rels,
     if (read32<E>(Piece.data().data() + 4) == 0) {
       // This is a CIE, we only need to worry about the first relocation. It is
       // known to point to the personality function.
-      Enqueue(resolveReloc<ELFT>(EH, Rels[FirstRelI]));
+      resolveReloc<ELFT>(EH, Rels[FirstRelI], Enqueue);
       continue;
     }
     // This is a FDE. The relocations point to the described function or to
@@ -127,12 +128,13 @@ static void scanEhFrameSection(EhInputSection<ELFT> &EH, ArrayRef<RelTy> Rels,
       const RelTy &Rel = Rels[I2];
       if (Rel.r_offset >= PieceEnd)
         break;
-      ResolvedReloc R = resolveReloc<ELFT>(EH, Rels[I2]);
-      if (!R.Sec || R.Sec == &InputSection::Discarded)
-        continue;
-      if (R.Sec->Flags & SHF_EXECINSTR)
-        continue;
-      Enqueue({R.Sec, 0});
+      resolveReloc<ELFT>(EH, Rels[I2], [&](ResolvedReloc R) {
+        if (!R.Sec || R.Sec == &InputSection::Discarded)
+          return;
+        if (R.Sec->Flags & SHF_EXECINSTR)
+          return;
+        Enqueue({R.Sec, 0});
+      });
     }
   }
 }
@@ -188,7 +190,7 @@ template <class ELFT> void elf::markLive() {
     // the ELF spec doesn't allow a relocation to point to a deduplicated
     // COMDAT section directly. Unfortunately this happens in practice (e.g.
     // .eh_frame) so we need to add a check.
-    if (!R.Sec || R.Sec == &InputSection::Discarded)
+    if (R.Sec == &InputSection::Discarded)
       return;
 
     // We don't gc non alloc sections.
