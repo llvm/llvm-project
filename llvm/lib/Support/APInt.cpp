@@ -81,6 +81,7 @@ void APInt::initSlowCase(uint64_t val, bool isSigned) {
   if (isSigned && int64_t(val) < 0)
     for (unsigned i = 1; i < getNumWords(); ++i)
       pVal[i] = -1ULL;
+  clearUnusedBits();
 }
 
 void APInt::initSlowCase(const APInt& that) {

@@ -49,9 +49,9 @@ define i32 @t4(i32 %a) {
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    movq _v4@{{.*}}(%rip), %rax
 ; CHECK-NEXT:    cmpl $1, (%rax)
-; CHECK-NEXT:    sbbl %eax, %eax
-; CHECK-NEXT:    andl $32768, %eax ## imm = 0x8000
-; CHECK-NEXT:    leal 65536(%rax,%rax), %eax
+; CHECK-NEXT:    movw $1, %ax
+; CHECK-NEXT:    adcw $0, %ax
+; CHECK-NEXT:    shll $16, %eax
 ; CHECK-NEXT:    retq
   %t0 = load i32, i32* @v4, align 4
   %not.tobool = icmp eq i32 %t0, 0

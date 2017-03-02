@@ -8028,6 +8028,173 @@ static bool isOnlyUsedInEntryBlock(const Argument *A, bool FastISel) {
   return true;
 }
 
+typedef DenseMap<const Argument *,
+                 std::pair<const AllocaInst *, const StoreInst *>>
+    ArgCopyElisionMapTy;
+
+/// Scan the entry block of the function in FuncInfo for arguments that look
+/// like copies into a local alloca. Record any copied arguments in
+/// ArgCopyElisionCandidates.
+static void
+findArgumentCopyElisionCandidates(const DataLayout &DL,
+                                  FunctionLoweringInfo *FuncInfo,
+                                  ArgCopyElisionMapTy &ArgCopyElisionCandidates) {
+  // Record the state of every static alloca used in the entry block. Argument
+  // allocas are all used in the entry block, so we need approximately as many
+  // entries as we have arguments.
+  enum StaticAllocaInfo { Unknown, Clobbered, Elidable };
+  SmallDenseMap<const AllocaInst *, StaticAllocaInfo, 8> StaticAllocas;
+  unsigned NumArgs = FuncInfo->Fn->getArgumentList().size();
+  StaticAllocas.reserve(NumArgs * 2);
+
+  auto GetInfoIfStaticAlloca = [&](const Value *V) -> StaticAllocaInfo * {
+    if (!V)
+      return nullptr;
+    V = V->stripPointerCasts();
+    const auto *AI = dyn_cast<AllocaInst>(V);
+    if (!AI || !AI->isStaticAlloca() || !FuncInfo->StaticAllocaMap.count(AI))
+      return nullptr;
+    auto Iter = StaticAllocas.insert({AI, Unknown});
+    return &Iter.first->second;
+  };
+
+  // Look for stores of arguments to static allocas. Look through bitcasts and
+  // GEPs to handle type coercions, as long as the alloca is fully initialized
+  // by the store. Any non-store use of an alloca escapes it and any subsequent
+  // unanalyzed store might write it.
+  // FIXME: Handle structs initialized with multiple stores.
+  for (const Instruction &I : FuncInfo->Fn->getEntryBlock()) {
+    // Look for stores, and handle non-store uses conservatively.
+    const auto *SI = dyn_cast<StoreInst>(&I);
+    if (!SI) {
+      // We will look through cast uses, so ignore them completely.
+      if (I.isCast())
+        continue;
+      // Ignore debug info intrinsics, they don't escape or store to allocas.
+      if (isa<DbgInfoIntrinsic>(I))
+        continue;
+      // This is an unknown instruction. Assume it escapes or writes to all
+      // static alloca operands.
+      for (const Use &U : I.operands()) {
+        if (StaticAllocaInfo *Info = GetInfoIfStaticAlloca(U))
+          *Info = StaticAllocaInfo::Clobbered;
+      }
+      continue;
+    }
+
+    // If the stored value is a static alloca, mark it as escaped.
+    if (StaticAllocaInfo *Info = GetInfoIfStaticAlloca(SI->getValueOperand()))
+      *Info = StaticAllocaInfo::Clobbered;
+
+    // Check if the destination is a static alloca.
+    const Value *Dst = SI->getPointerOperand()->stripPointerCasts();
+    StaticAllocaInfo *Info = GetInfoIfStaticAlloca(Dst);
+    if (!Info)
+      continue;
+    const AllocaInst *AI = cast<AllocaInst>(Dst);
+
+    // Skip allocas that have been initialized or clobbered.
+    if (*Info != StaticAllocaInfo::Unknown)
+      continue;
+
+    // Check if the stored value is an argument, and that this store fully
+    // initializes the alloca. Don't elide copies from the same argument twice.
+    const Value *Val = SI->getValueOperand()->stripPointerCasts();
+    const auto *Arg = dyn_cast<Argument>(Val);
+    if (!Arg || Arg->hasInAllocaAttr() || Arg->hasByValAttr() ||
+        Arg->getType()->isEmptyTy() ||
+        DL.getTypeStoreSize(Arg->getType()) !=
+            DL.getTypeAllocSize(AI->getAllocatedType()) ||
+        ArgCopyElisionCandidates.count(Arg)) {
+      *Info = StaticAllocaInfo::Clobbered;
+      continue;
+    }
+
+    DEBUG(dbgs() << "Found argument copy elision candidate: " << *AI << '\n');
+
+    // Mark this alloca and store for argument copy elision.
+    *Info = StaticAllocaInfo::Elidable;
+    ArgCopyElisionCandidates.insert({Arg, {AI, SI}});
+
+    // Stop scanning if we've seen all arguments. This will happen early in -O0
+    // builds, which is useful, because -O0 builds have large entry blocks and
+    // many allocas.
+    if (ArgCopyElisionCandidates.size() == NumArgs)
+      break;
+  }
+}
+
+/// Try to elide argument copies from memory into a local alloca. Succeeds if
+/// ArgVal is a load from a suitable fixed stack object.
+static void tryToElideArgumentCopy(
+    FunctionLoweringInfo *FuncInfo, SmallVectorImpl<SDValue> &Chains,
+    DenseMap<int, int> &ArgCopyElisionFrameIndexMap,
+    SmallPtrSetImpl<const Instruction *> &ElidedArgCopyInstrs,
+    ArgCopyElisionMapTy &ArgCopyElisionCandidates, const Argument &Arg,
+    SDValue ArgVal, bool &ArgHasUses) {
+  // Check if this is a load from a fixed stack object.
+  auto *LNode = dyn_cast<LoadSDNode>(ArgVal);
+  if (!LNode)
+    return;
+  auto *FINode = dyn_cast<FrameIndexSDNode>(LNode->getBasePtr().getNode());
+  if (!FINode)
+    return;
+
+  // Check that the fixed stack object is the right size and alignment.
+  // Look at the alignment that the user wrote on the alloca instead of looking
+  // at the stack object.
+  auto ArgCopyIter = ArgCopyElisionCandidates.find(&Arg);
+  assert(ArgCopyIter != ArgCopyElisionCandidates.end());
+  const AllocaInst *AI = ArgCopyIter->second.first;
+  int FixedIndex = FINode->getIndex();
+  int &AllocaIndex = FuncInfo->StaticAllocaMap[AI];
+  int OldIndex = AllocaIndex;
+  MachineFrameInfo &MFI = FuncInfo->MF->getFrameInfo();
+  if (MFI.getObjectSize(FixedIndex) != MFI.getObjectSize(OldIndex)) {
+    DEBUG(dbgs() << "  argument copy elision failed due to bad fixed stack "
+                    "object size\n");
+    return;
+  }
+  unsigned RequiredAlignment = AI->getAlignment();
+  if (!RequiredAlignment) {
+    RequiredAlignment = FuncInfo->MF->getDataLayout().getABITypeAlignment(
+        AI->getAllocatedType());
+  }
+  if (MFI.getObjectAlignment(FixedIndex) < RequiredAlignment) {
+    DEBUG(dbgs() << "  argument copy elision failed: alignment of alloca "
+                    "greater than stack argument alignment ("
+                 << RequiredAlignment << " vs "
+                 << MFI.getObjectAlignment(FixedIndex) << ")\n");
+    return;
+  }
+
+  // Perform the elision. Delete the old stack object and replace its only use
+  // in the variable info map. Mark the stack object as mutable.
+  DEBUG({
+    dbgs() << "Eliding argument copy from " << Arg << " to " << *AI << '\n'
+           << "  Replacing frame index " << OldIndex << " with " << FixedIndex
+           << '\n';
+  });
+  MFI.RemoveStackObject(OldIndex);
+  MFI.setIsImmutableObjectIndex(FixedIndex, false);
+  AllocaIndex = FixedIndex;
+  ArgCopyElisionFrameIndexMap.insert({OldIndex, FixedIndex});
+  Chains.push_back(ArgVal.getValue(1));
+
+  // Avoid emitting code for the store implementing the copy.
+  const StoreInst *SI = ArgCopyIter->second.second;
+  ElidedArgCopyInstrs.insert(SI);
+
+  // Check for uses of the argument again so that we can avoid exporting ArgVal
+  // if it is't used by anything other than the store.
+  for (const Value *U : Arg.users()) {
+    if (U != SI) {
+      ArgHasUses = true;
+      break;
+    }
+  }
+}
+
 void SelectionDAGISel::LowerArguments(const Function &F) {
   SelectionDAG &DAG = SDB->DAG;
   SDLoc dl = SDB->getCurSDLoc();
@@ -8049,6 +8216,12 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
                          ISD::InputArg::NoArgIndex, 0);
     Ins.push_back(RetArg);
   }
+
+  // Look for stores of arguments to static allocas. Mark such arguments with a
+  // flag to ask the target to give us the memory location of that argument if
+  // available.
+  ArgCopyElisionMapTy ArgCopyElisionCandidates;
+  findArgumentCopyElisionCandidates(DL, FuncInfo, ArgCopyElisionCandidates);
 
   // Set up the incoming argument description vector.
   unsigned Idx = 0;
@@ -8127,6 +8300,8 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
       if (NeedsRegBlock)
         Flags.setInConsecutiveRegs();
       Flags.setOrigAlign(OriginalAlignment);
+      if (ArgCopyElisionCandidates.count(&Arg))
+        Flags.setCopyElisionCandidate();
 
       MVT RegisterVT = TLI->getRegisterType(*CurDAG->getContext(), VT);
       unsigned NumRegs = TLI->getNumRegisters(*CurDAG->getContext(), VT);
@@ -8199,19 +8374,33 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
     ++i;
   }
 
+  SmallVector<SDValue, 4> Chains;
+  DenseMap<int, int> ArgCopyElisionFrameIndexMap;
   for (const Argument &Arg : F.args()) {
     ++Idx;
     SmallVector<SDValue, 4> ArgValues;
     SmallVector<EVT, 4> ValueVTs;
     ComputeValueVTs(*TLI, DAG.getDataLayout(), Arg.getType(), ValueVTs);
     unsigned NumValues = ValueVTs.size();
+    if (NumValues == 0)
+      continue;
+
+    bool ArgHasUses = !Arg.use_empty();
+
+    // Elide the copying store if the target loaded this argument from a
+    // suitable fixed stack object.
+    if (Ins[i].Flags.isCopyElisionCandidate()) {
+      tryToElideArgumentCopy(FuncInfo, Chains, ArgCopyElisionFrameIndexMap,
+                             ElidedArgCopyInstrs, ArgCopyElisionCandidates, Arg,
+                             InVals[i], ArgHasUses);
+    }
 
     // If this argument is unused then remember its value. It is used to generate
     // debugging information.
     bool isSwiftErrorArg =
         TLI->supportSwiftError() &&
         F.getAttributes().hasAttribute(Idx, Attribute::SwiftError);
-    if (Arg.use_empty() && NumValues && !isSwiftErrorArg) {
+    if (!ArgHasUses && !isSwiftErrorArg) {
       SDB->setUnusedArgValue(&Arg, InVals[i]);
 
       // Also remember any frame index for use in FastISel.
@@ -8228,16 +8417,15 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
       // Even an apparant 'unused' swifterror argument needs to be returned. So
       // we do generate a copy for it that can be used on return from the
       // function.
-      if (!Arg.use_empty() || isSwiftErrorArg) {
+      if (ArgHasUses || isSwiftErrorArg) {
         Optional<ISD::NodeType> AssertOp;
         if (F.getAttributes().hasAttribute(Idx, Attribute::SExt))
           AssertOp = ISD::AssertSext;
         else if (F.getAttributes().hasAttribute(Idx, Attribute::ZExt))
           AssertOp = ISD::AssertZext;
 
-        ArgValues.push_back(getCopyFromParts(DAG, dl, &InVals[i],
-                                             NumParts, PartVT, VT,
-                                             nullptr, AssertOp));
+        ArgValues.push_back(getCopyFromParts(DAG, dl, &InVals[i], NumParts,
+                                             PartVT, VT, nullptr, AssertOp));
       }
 
       i += NumParts;
@@ -8291,7 +8479,25 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
     }
   }
 
+  if (!Chains.empty()) {
+    Chains.push_back(NewRoot);
+    NewRoot = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, Chains);
+  }
+
+  DAG.setRoot(NewRoot);
+
   assert(i == InVals.size() && "Argument register count mismatch!");
+
+  // If any argument copy elisions occurred and we have debug info, update the
+  // stale frame indices used in the dbg.declare variable info table.
+  MachineFunction::VariableDbgInfoMapTy &DbgDeclareInfo = MF->getVariableDbgInfo();
+  if (!DbgDeclareInfo.empty() && !ArgCopyElisionFrameIndexMap.empty()) {
+    for (MachineFunction::VariableDbgInfo &VI : DbgDeclareInfo) {
+      auto I = ArgCopyElisionFrameIndexMap.find(VI.Slot);
+      if (I != ArgCopyElisionFrameIndexMap.end())
+        VI.Slot = I->second;
+    }
+  }
 
   // Finally, if the target has anything special to do, allow it to do so.
   EmitFunctionEntryCode();

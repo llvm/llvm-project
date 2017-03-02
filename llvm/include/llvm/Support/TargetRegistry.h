@@ -1,4 +1,4 @@
-//===-- Support/TargetRegistry.h - Target Registration ----------*- C++ -*-===//
+//===- Support/TargetRegistry.h - Target Registration -----------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -20,15 +20,22 @@
 #define LLVM_SUPPORT_TARGETREGISTRY_H
 
 #include "llvm-c/Disassembler.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/Support/CodeGen.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormattedStream.h"
+#include <algorithm>
 #include <cassert>
+#include <cstddef>
+#include <iterator>
 #include <memory>
 #include <string>
 
 namespace llvm {
+
 class AsmPrinter;
 class MCAsmBackend;
 class MCAsmInfo;
@@ -36,22 +43,20 @@ class MCAsmParser;
 class MCCodeEmitter;
 class MCContext;
 class MCDisassembler;
-class MCInstrAnalysis;
 class MCInstPrinter;
+class MCInstrAnalysis;
 class MCInstrInfo;
 class MCRegisterInfo;
+class MCRelocationInfo;
 class MCStreamer;
 class MCSubtargetInfo;
 class MCSymbolizer;
-class MCRelocationInfo;
 class MCTargetAsmParser;
 class MCTargetOptions;
 class MCTargetStreamer;
+class raw_pwrite_stream;
 class TargetMachine;
 class TargetOptions;
-class raw_ostream;
-class raw_pwrite_stream;
-class formatted_raw_ostream;
 
 MCStreamer *createNullStreamer(MCContext &Ctx);
 MCStreamer *createAsmStreamer(MCContext &Ctx,
@@ -232,38 +237,33 @@ private:
   MCCodeEmitterCtorTy MCCodeEmitterCtorFn;
 
   // Construction functions for the various object formats, if registered.
-  COFFStreamerCtorTy COFFStreamerCtorFn;
-  MachOStreamerCtorTy MachOStreamerCtorFn;
-  ELFStreamerCtorTy ELFStreamerCtorFn;
-  WasmStreamerCtorTy WasmStreamerCtorFn;
+  COFFStreamerCtorTy COFFStreamerCtorFn = nullptr;
+  MachOStreamerCtorTy MachOStreamerCtorFn = nullptr;
+  ELFStreamerCtorTy ELFStreamerCtorFn = nullptr;
+  WasmStreamerCtorTy WasmStreamerCtorFn = nullptr;
 
   /// Construction function for this target's null TargetStreamer, if
   /// registered (default = nullptr).
-  NullTargetStreamerCtorTy NullTargetStreamerCtorFn;
+  NullTargetStreamerCtorTy NullTargetStreamerCtorFn = nullptr;
 
   /// Construction function for this target's asm TargetStreamer, if
   /// registered (default = nullptr).
-  AsmTargetStreamerCtorTy AsmTargetStreamerCtorFn;
+  AsmTargetStreamerCtorTy AsmTargetStreamerCtorFn = nullptr;
 
   /// Construction function for this target's obj TargetStreamer, if
   /// registered (default = nullptr).
-  ObjectTargetStreamerCtorTy ObjectTargetStreamerCtorFn;
+  ObjectTargetStreamerCtorTy ObjectTargetStreamerCtorFn = nullptr;
 
   /// MCRelocationInfoCtorFn - Construction function for this target's
   /// MCRelocationInfo, if registered (default = llvm::createMCRelocationInfo)
-  MCRelocationInfoCtorTy MCRelocationInfoCtorFn;
+  MCRelocationInfoCtorTy MCRelocationInfoCtorFn = nullptr;
 
   /// MCSymbolizerCtorFn - Construction function for this target's
   /// MCSymbolizer, if registered (default = llvm::createMCSymbolizer)
-  MCSymbolizerCtorTy MCSymbolizerCtorFn;
+  MCSymbolizerCtorTy MCSymbolizerCtorFn = nullptr;
 
 public:
-  Target()
-      : COFFStreamerCtorFn(nullptr), MachOStreamerCtorFn(nullptr),
-        ELFStreamerCtorFn(nullptr), WasmStreamerCtorFn(nullptr),
-        NullTargetStreamerCtorFn(nullptr),
-        AsmTargetStreamerCtorFn(nullptr), ObjectTargetStreamerCtorFn(nullptr),
-        MCRelocationInfoCtorFn(nullptr), MCSymbolizerCtorFn(nullptr) {}
+  Target() = default;
 
   /// @name Target Information
   /// @{
@@ -564,12 +564,14 @@ struct TargetRegistry {
 
   class iterator
       : public std::iterator<std::forward_iterator_tag, Target, ptrdiff_t> {
-    const Target *Current;
-    explicit iterator(Target *T) : Current(T) {}
     friend struct TargetRegistry;
 
+    const Target *Current = nullptr;
+
+    explicit iterator(Target *T) : Current(T) {}
+
   public:
-    iterator() : Current(nullptr) {}
+    iterator() = default;
 
     bool operator==(const iterator &x) const { return Current == x.Current; }
     bool operator!=(const iterator &x) const { return !operator==(x); }
@@ -1167,6 +1169,7 @@ private:
     return new MCCodeEmitterImpl();
   }
 };
-}
 
-#endif
+} // end namespace llvm
+
+#endif // LLVM_SUPPORT_TARGETREGISTRY_H

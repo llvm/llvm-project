@@ -178,7 +178,7 @@ bool LiveRegMatrix::checkRegUnitInterference(LiveInterval &VirtReg,
 LiveIntervalUnion::Query &LiveRegMatrix::query(LiveInterval &VirtReg,
                                                unsigned RegUnit) {
   LiveIntervalUnion::Query &Q = Queries[RegUnit];
-  Q.init(UserTag, &VirtReg, &Matrix[RegUnit]);
+  Q.init(UserTag, VirtReg, Matrix[RegUnit]);
   return Q;
 }
 

@@ -126,25 +126,24 @@ collectInterferingVRegs(unsigned MaxInterferingRegs) {
     CheckedFirstInterference = true;
 
     // Quickly skip interference check for empty sets.
-    if (VirtReg->empty() || LiveUnion->empty()) {
+    if (LR->empty() || LiveUnion->empty()) {
       SeenAllInterferences = true;
       return 0;
     }
 
-    // In most cases, the union will start before VirtReg.
-    VirtRegI = VirtReg->begin();
+    // In most cases, the union will start before LR.
+    LRI = LR->begin();
     LiveUnionI.setMap(LiveUnion->getMap());
-    LiveUnionI.find(VirtRegI->start);
+    LiveUnionI.find(LRI->start);
   }
 
-  LiveInterval::iterator VirtRegEnd = VirtReg->end();
+  LiveRange::const_iterator LREnd = LR->end();
   LiveInterval *RecentReg = nullptr;
   while (LiveUnionI.valid()) {
-    assert(VirtRegI != VirtRegEnd && "Reached end of VirtReg");
+    assert(LRI != LREnd && "Reached end of LR");
 
     // Check for overlapping interference.
-    while (VirtRegI->start < LiveUnionI.stop() &&
-           VirtRegI->end > LiveUnionI.start()) {
+    while (LRI->start < LiveUnionI.stop() && LRI->end > LiveUnionI.start()) {
       // This is an overlap, record the interfering register.
       LiveInterval *VReg = LiveUnionI.value();
       if (VReg != RecentReg && !isSeenInterference(VReg)) {
@@ -161,20 +160,20 @@ collectInterferingVRegs(unsigned MaxInterferingRegs) {
     }
 
     // The iterators are now not overlapping, LiveUnionI has been advanced
-    // beyond VirtRegI.
-    assert(VirtRegI->end <= LiveUnionI.start() && "Expected non-overlap");
+    // beyond LRI.
+    assert(LRI->end <= LiveUnionI.start() && "Expected non-overlap");
 
     // Advance the iterator that ends first.
-    VirtRegI = VirtReg->advanceTo(VirtRegI, LiveUnionI.start());
-    if (VirtRegI == VirtRegEnd)
+    LRI = LR->advanceTo(LRI, LiveUnionI.start());
+    if (LRI == LREnd)
       break;
 
     // Detect overlap, handle above.
-    if (VirtRegI->start < LiveUnionI.stop())
+    if (LRI->start < LiveUnionI.stop())
       continue;
 
     // Still not overlapping. Catch up LiveUnionI.
-    LiveUnionI.advanceTo(VirtRegI->start);
+    LiveUnionI.advanceTo(LRI->start);
   }
   SeenAllInterferences = true;
   return InterferingVRegs.size();

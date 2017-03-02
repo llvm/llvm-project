@@ -9,19 +9,21 @@
 define i32 @main() nounwind {
 ; CHECK-LABEL: main:
 ; CHECK:       # BB#0: # %entry
+; CHECK-NEXT:    cmpq $0, {{.*}}(%rip)
+; CHECK-NEXT:    movb $-106, %al
+; CHECK-NEXT:    jne .LBB0_2
+; CHECK-NEXT:  # BB#1: # %entry
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    cmpq {{.*}}(%rip), %rax
-; CHECK-NEXT:    sbbl %eax, %eax
-; CHECK-NEXT:    andl $150, %eax
+; CHECK-NEXT:  .LBB0_2: # %entry
 ; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:    jle .LBB0_1
-; CHECK-NEXT:  # BB#2: # %if.then
+; CHECK-NEXT:    jle .LBB0_3
+; CHECK-NEXT:  # BB#4: # %if.then
 ; CHECK-NEXT:    movl $1, {{.*}}(%rip)
 ; CHECK-NEXT:    movl $1, %esi
-; CHECK-NEXT:    jmp .LBB0_3
-; CHECK-NEXT:  .LBB0_1: # %entry.if.end_crit_edge
+; CHECK-NEXT:    jmp .LBB0_5
+; CHECK-NEXT:  .LBB0_3: # %entry.if.end_crit_edge
 ; CHECK-NEXT:    movl {{.*}}(%rip), %esi
-; CHECK-NEXT:  .LBB0_3: # %if.end
+; CHECK-NEXT:  .LBB0_5: # %if.end
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    movl $.L.str, %edi
 ; CHECK-NEXT:    xorl %eax, %eax

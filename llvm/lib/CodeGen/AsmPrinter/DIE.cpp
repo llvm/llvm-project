@@ -42,6 +42,8 @@ void DIEAbbrevData::Profile(FoldingSetNodeID &ID) const {
   // overloads.  Otherwise MSVC 2010 thinks this call is ambiguous.
   ID.AddInteger(unsigned(Attribute));
   ID.AddInteger(unsigned(Form));
+  if (Form == dwarf::DW_FORM_implicit_const)
+    ID.AddInteger(Value);
 }
 
 //===----------------------------------------------------------------------===//
@@ -107,8 +109,12 @@ void DIEAbbrev::print(raw_ostream &O) {
     O << "  "
       << dwarf::AttributeString(Data[i].getAttribute())
       << "  "
-      << dwarf::FormEncodingString(Data[i].getForm())
-      << '\n';
+      << dwarf::FormEncodingString(Data[i].getForm());
+
+    if (Data[i].getForm() == dwarf::DW_FORM_implicit_const)
+      O << " " << Data[i].getValue();
+
+    O << '\n';
   }
 }
 
@@ -359,57 +365,35 @@ LLVM_DUMP_METHOD void DIEValue::dump() const {
 void DIEInteger::EmitValue(const AsmPrinter *Asm, dwarf::Form Form) const {
   switch (Form) {
   case dwarf::DW_FORM_implicit_const:
-    LLVM_FALLTHROUGH;
   case dwarf::DW_FORM_flag_present:
     // Emit something to keep the lines and comments in sync.
     // FIXME: Is there a better way to do this?
     Asm->OutStreamer->AddBlankLine();
     return;
   case dwarf::DW_FORM_flag:
-    LLVM_FALLTHROUGH;
   case dwarf::DW_FORM_ref1:
-    LLVM_FALLTHROUGH;
   case dwarf::DW_FORM_data1:
-    LLVM_FALLTHROUGH;
   case dwarf::DW_FORM_ref2:
-    LLVM_FALLTHROUGH;
   case dwarf::DW_FORM_data2:
-    LLVM_FALLTHROUGH;
   case dwarf::DW_FORM_strp:
-    LLVM_FALLTHROUGH;
   case dwarf::DW_FORM_ref4:
-    LLVM_FALLTHROUGH;
   case dwarf::DW_FORM_data4:
-    LLVM_FALLTHROUGH;
   case dwarf::DW_FORM_ref8:
-    LLVM_FALLTHROUGH;
   case dwarf::DW_FORM_ref_sig8:
-    LLVM_FALLTHROUGH;
   case dwarf::DW_FORM_data8:
-    LLVM_FALLTHROUGH;
   case dwarf::DW_FORM_GNU_ref_alt:
-    LLVM_FALLTHROUGH;
   case dwarf::DW_FORM_GNU_strp_alt:
-    LLVM_FALLTHROUGH;
   case dwarf::DW_FORM_line_strp:
-    LLVM_FALLTHROUGH;
   case dwarf::DW_FORM_sec_offset:
-    LLVM_FALLTHROUGH;
   case dwarf::DW_FORM_strp_sup:
-    LLVM_FALLTHROUGH;
   case dwarf::DW_FORM_ref_sup:
-    LLVM_FALLTHROUGH;
   case dwarf::DW_FORM_addr:
-    LLVM_FALLTHROUGH;
   case dwarf::DW_FORM_ref_addr:
     Asm->OutStreamer->EmitIntValue(Integer, SizeOf(Asm, Form));
     return;
   case dwarf::DW_FORM_GNU_str_index:
-    LLVM_FALLTHROUGH;
   case dwarf::DW_FORM_GNU_addr_index:
-    LLVM_FALLTHROUGH;
   case dwarf::DW_FORM_ref_udata:
-    LLVM_FALLTHROUGH;
   case dwarf::DW_FORM_udata:
     Asm->EmitULEB128(Integer);
     return;
@@ -424,34 +408,33 @@ void DIEInteger::EmitValue(const AsmPrinter *Asm, dwarf::Form Form) const {
 ///
 unsigned DIEInteger::SizeOf(const AsmPrinter *AP, dwarf::Form Form) const {
   switch (Form) {
-  case dwarf::DW_FORM_implicit_const: LLVM_FALLTHROUGH;
-  case dwarf::DW_FORM_flag_present: return 0;
-  case dwarf::DW_FORM_flag:  LLVM_FALLTHROUGH;
-  case dwarf::DW_FORM_ref1:  LLVM_FALLTHROUGH;
-  case dwarf::DW_FORM_data1: return sizeof(int8_t);
-  case dwarf::DW_FORM_ref2:  LLVM_FALLTHROUGH;
-  case dwarf::DW_FORM_data2: return sizeof(int16_t);
-  case dwarf::DW_FORM_ref4:  LLVM_FALLTHROUGH;
-  case dwarf::DW_FORM_data4: return sizeof(int32_t);
-  case dwarf::DW_FORM_ref8:  LLVM_FALLTHROUGH;
-  case dwarf::DW_FORM_ref_sig8:  LLVM_FALLTHROUGH;
-  case dwarf::DW_FORM_data8: return sizeof(int64_t);
+  case dwarf::DW_FORM_implicit_const:
+  case dwarf::DW_FORM_flag_present:
+    return 0;
+  case dwarf::DW_FORM_flag:
+  case dwarf::DW_FORM_ref1:
+  case dwarf::DW_FORM_data1:
+    return sizeof(int8_t);
+  case dwarf::DW_FORM_ref2:
+  case dwarf::DW_FORM_data2:
+    return sizeof(int16_t);
+  case dwarf::DW_FORM_ref4:
+  case dwarf::DW_FORM_data4:
+    return sizeof(int32_t);
+  case dwarf::DW_FORM_ref8:
+  case dwarf::DW_FORM_ref_sig8:
+  case dwarf::DW_FORM_data8:
+    return sizeof(int64_t);
   case dwarf::DW_FORM_ref_addr:
     if (AP->getDwarfVersion() == 2)
       return AP->getPointerSize();
     LLVM_FALLTHROUGH;
   case dwarf::DW_FORM_strp:
-    LLVM_FALLTHROUGH;
   case dwarf::DW_FORM_GNU_ref_alt:
-    LLVM_FALLTHROUGH;
   case dwarf::DW_FORM_GNU_strp_alt:
-    LLVM_FALLTHROUGH;
   case dwarf::DW_FORM_line_strp:
-    LLVM_FALLTHROUGH;
   case dwarf::DW_FORM_sec_offset:
-    LLVM_FALLTHROUGH;
   case dwarf::DW_FORM_strp_sup:
-    LLVM_FALLTHROUGH;
   case dwarf::DW_FORM_ref_sup:
     switch (AP->OutStreamer->getContext().getDwarfFormat()) {
     case dwarf::DWARF32:
@@ -461,11 +444,8 @@ unsigned DIEInteger::SizeOf(const AsmPrinter *AP, dwarf::Form Form) const {
     }
     llvm_unreachable("Invalid DWARF format");
   case dwarf::DW_FORM_GNU_str_index:
-    LLVM_FALLTHROUGH;
   case dwarf::DW_FORM_GNU_addr_index:
-    LLVM_FALLTHROUGH;
   case dwarf::DW_FORM_ref_udata:
-    LLVM_FALLTHROUGH;
   case dwarf::DW_FORM_udata:
     return getULEB128Size(Integer);
   case dwarf::DW_FORM_sdata:

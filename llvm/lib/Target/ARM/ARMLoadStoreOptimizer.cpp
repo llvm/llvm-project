@@ -2195,7 +2195,7 @@ bool ARMPreAllocLoadStoreOpt::RescheduleOps(MachineBasicBlock *MBB,
     else {
       SmallPtrSet<MachineInstr*, 4> MemOps;
       SmallSet<unsigned, 4> MemRegs;
-      for (int i = NumMove-1; i >= 0; --i) {
+      for (size_t i = Ops.size() - NumMove, e = Ops.size(); i != e; ++i) {
         MemOps.insert(Ops[i]);
         MemRegs.insert(Ops[i]->getOperand(0).getReg());
       }

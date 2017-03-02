@@ -240,11 +240,12 @@ public:
   APInt(unsigned numBits, uint64_t val, bool isSigned = false)
       : BitWidth(numBits), VAL(0) {
     assert(BitWidth && "bitwidth too small");
-    if (isSingleWord())
+    if (isSingleWord()) {
       VAL = val;
-    else
+      clearUnusedBits();
+    } else {
       initSlowCase(val, isSigned);
-    clearUnusedBits();
+    }
   }
 
   /// \brief Construct an APInt of numBits width, initialized as bigVal[].

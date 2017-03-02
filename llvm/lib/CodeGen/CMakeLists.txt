@@ -4,6 +4,7 @@ add_llvm_library(LLVMCodeGen
   Analysis.cpp
   AtomicExpandPass.cpp
   BasicTargetTransformInfo.cpp
+  BranchCoalescing.cpp
   BranchFolding.cpp
   BranchRelaxation.cpp
   BuiltinGCs.cpp

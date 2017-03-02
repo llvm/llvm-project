@@ -25,14 +25,19 @@
 #define LLVM_SUPPORT_GENERICDOMTREE_H
 
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/GraphTraits.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/Compiler.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
+#include <cassert>
+#include <cstddef>
+#include <iterator>
+#include <memory>
+#include <type_traits>
+#include <utility>
+#include <vector>
 
 namespace llvm {
 
@@ -47,7 +52,7 @@ template <typename GT> struct DominatorTreeBaseTraits {
       typename std::remove_pointer<typename GT::NodeRef>::type>;
 };
 
-} // End namespace detail
+} // end namespace detail
 
 template <typename GT>
 using DominatorTreeBaseByGraphTraits =
@@ -59,13 +64,16 @@ template <class NodeT> class DominatorBase {
 protected:
   std::vector<NodeT *> Roots;
   bool IsPostDominators;
+
   explicit DominatorBase(bool isPostDom)
       : Roots(), IsPostDominators(isPostDom) {}
+
   DominatorBase(DominatorBase &&Arg)
       : Roots(std::move(Arg.Roots)),
         IsPostDominators(std::move(Arg.IsPostDominators)) {
     Arg.Roots.clear();
   }
+
   DominatorBase &operator=(DominatorBase &&RHS) {
     Roots = std::move(RHS.Roots);
     IsPostDominators = std::move(RHS.IsPostDominators);
@@ -85,19 +93,21 @@ public:
   bool isPostDominator() const { return IsPostDominators; }
 };
 
-struct PostDominatorTree;
-
 /// \brief Base class for the actual dominator tree node.
 template <class NodeT> class DomTreeNodeBase {
+  friend struct PostDominatorTree;
+  template <class N> friend class DominatorTreeBase;
+
   NodeT *TheBB;
   DomTreeNodeBase<NodeT> *IDom;
   std::vector<DomTreeNodeBase<NodeT> *> Children;
-  mutable int DFSNumIn, DFSNumOut;
-
-  template <class N> friend class DominatorTreeBase;
-  friend struct PostDominatorTree;
+  mutable int DFSNumIn = -1;
+  mutable int DFSNumOut = -1;
 
 public:
+  DomTreeNodeBase(NodeT *BB, DomTreeNodeBase<NodeT> *iDom)
+      : TheBB(BB), IDom(iDom) {}
+
   typedef typename std::vector<DomTreeNodeBase<NodeT> *>::iterator iterator;
   typedef typename std::vector<DomTreeNodeBase<NodeT> *>::const_iterator
       const_iterator;
@@ -109,12 +119,10 @@ public:
 
   NodeT *getBlock() const { return TheBB; }
   DomTreeNodeBase<NodeT> *getIDom() const { return IDom; }
+
   const std::vector<DomTreeNodeBase<NodeT> *> &getChildren() const {
     return Children;
   }
-
-  DomTreeNodeBase(NodeT *BB, DomTreeNodeBase<NodeT> *iDom)
-      : TheBB(BB), IDom(iDom), DFSNumIn(-1), DFSNumOut(-1) {}
 
   std::unique_ptr<DomTreeNodeBase<NodeT>>
   addChild(std::unique_ptr<DomTreeNodeBase<NodeT>> C) {
@@ -206,9 +214,6 @@ void Calculate(DominatorTreeBaseByGraphTraits<GraphTraits<N>> &DT, FuncT &F);
 /// This class is a generic template over graph nodes. It is instantiated for
 /// various graphs in the LLVM IR or in the code generator.
 template <class NodeT> class DominatorTreeBase : public DominatorBase<NodeT> {
-  DominatorTreeBase(const DominatorTreeBase &) = delete;
-  DominatorTreeBase &operator=(const DominatorTreeBase &) = delete;
-
   bool dominatedBySlowTreeWalk(const DomTreeNodeBase<NodeT> *A,
                                const DomTreeNodeBase<NodeT> *B) const {
     assert(A != B);
@@ -239,16 +244,16 @@ protected:
   DomTreeNodeMapType DomTreeNodes;
   DomTreeNodeBase<NodeT> *RootNode;
 
-  mutable bool DFSInfoValid;
-  mutable unsigned int SlowQueries;
+  mutable bool DFSInfoValid = false;
+  mutable unsigned int SlowQueries = 0;
   // Information record used during immediate dominators computation.
   struct InfoRec {
-    unsigned DFSNum;
-    unsigned Parent;
-    unsigned Semi;
-    NodeT *Label;
+    unsigned DFSNum = 0;
+    unsigned Parent = 0;
+    unsigned Semi = 0;
+    NodeT *Label = nullptr;
 
-    InfoRec() : DFSNum(0), Parent(0), Semi(0), Label(nullptr) {}
+    InfoRec() = default;
   };
 
   DenseMap<NodeT *, NodeT *> IDoms;
@@ -336,7 +341,7 @@ protected:
 
 public:
   explicit DominatorTreeBase(bool isPostDom)
-      : DominatorBase<NodeT>(isPostDom), DFSInfoValid(false), SlowQueries(0) {}
+      : DominatorBase<NodeT>(isPostDom) {}
 
   DominatorTreeBase(DominatorTreeBase &&Arg)
       : DominatorBase<NodeT>(
@@ -348,6 +353,7 @@ public:
         Vertex(std::move(Arg.Vertex)), Info(std::move(Arg.Info)) {
     Arg.wipe();
   }
+
   DominatorTreeBase &operator=(DominatorTreeBase &&RHS) {
     DominatorBase<NodeT>::operator=(
         std::move(static_cast<DominatorBase<NodeT> &>(RHS)));
@@ -361,6 +367,9 @@ public:
     RHS.wipe();
     return *this;
   }
+
+  DominatorTreeBase(const DominatorTreeBase &) = delete;
+  DominatorTreeBase &operator=(const DominatorTreeBase &) = delete;
 
   /// compare - Return false if the other dominator tree base matches this
   /// dominator tree base. Otherwise return true.
@@ -720,7 +729,6 @@ public:
   /// updateDFSNumbers - Assign In and Out numbers to the nodes while walking
   /// dominator tree in dfs order.
   void updateDFSNumbers() const {
-
     if (DFSInfoValid) {
       SlowQueries = 0;
       return;
@@ -807,6 +815,6 @@ bool DominatorTreeBase<NodeT>::properlyDominates(const NodeT *A,
                    getNode(const_cast<NodeT *>(B)));
 }
 
-}
+} // end namespace llvm
 
-#endif
+#endif // LLVM_SUPPORT_GENERICDOMTREE_H

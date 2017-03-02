@@ -260,3 +260,34 @@ define i64 @select_2_or_inc(i64 %x) {
   ret i64 %retval.0
 }
 
+define <4 x i32> @sel_constants_add_constant_vec(i1 %cond) {
+; CHECK-LABEL: sel_constants_add_constant_vec:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    testb $1, %dil
+; CHECK-NEXT:    jne .LBB22_1
+; CHECK-NEXT:  # BB#2:
+; CHECK-NEXT:    movaps {{.*#+}} xmm0 = [12,13,14,15]
+; CHECK-NEXT:    retq
+; CHECK-NEXT:  .LBB22_1:
+; CHECK-NEXT:    movaps {{.*#+}} xmm0 = [4294967293,14,4,4]
+; CHECK-NEXT:    retq
+  %sel = select i1 %cond, <4 x i32> <i32 -4, i32 12, i32 1, i32 0>, <4 x i32> <i32 11, i32 11, i32 11, i32 11>
+  %bo = add <4 x i32> %sel, <i32 1, i32 2, i32 3, i32 4>
+  ret <4 x i32> %bo
+}
+
+define <2 x double> @sel_constants_fmul_constant_vec(i1 %cond) {
+; CHECK-LABEL: sel_constants_fmul_constant_vec:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    testb $1, %dil
+; CHECK-NEXT:    jne .LBB23_1
+; CHECK-NEXT:  # BB#2:
+; CHECK-NEXT:    movaps {{.*#+}} xmm0 = [1.188300e+02,3.454000e+01]
+; CHECK-NEXT:    retq
+; CHECK-NEXT:  .LBB23_1:
+; CHECK-NEXT:    movaps {{.*#+}} xmm0 = [-2.040000e+01,3.768000e+01]
+; CHECK-NEXT:    retq
+  %sel = select i1 %cond, <2 x double> <double -4.0, double 12.0>, <2 x double> <double 23.3, double 11.0>
+  %bo = fmul <2 x double> %sel, <double 5.1, double 3.14>
+  ret <2 x double> %bo
+}
