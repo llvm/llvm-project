@@ -236,3 +236,24 @@ TEST(TrailingObjects, Realignment) {
                 reinterpret_cast<char *>(C + 1) + 1, alignof(long))));
 }
 }
+
+// Test the use of TrailingObjects with a template class. This
+// previously failed to compile due to a bug in MSVC's member access
+// control/lookup handling for OverloadToken.
+template <typename Derived>
+class Class5Tmpl : private llvm::TrailingObjects<Derived, float, int> {
+  using TrailingObjects = typename llvm::TrailingObjects<Derived, float>;
+  friend TrailingObjects;
+
+  size_t numTrailingObjects(
+      typename TrailingObjects::template OverloadToken<float>) const {
+    return 1;
+  }
+
+  size_t numTrailingObjects(
+      typename TrailingObjects::template OverloadToken<int>) const {
+    return 2;
+  }
+};
+
+class Class5 : public Class5Tmpl<Class5> {};
