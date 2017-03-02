@@ -47,7 +47,7 @@ Version 4.0
   Symbol added: _ZTSSt18bad_variant_access
   Symbol added: _ZNKSt18bad_variant_access4whatEv
 
-* rTBD - Remove std::string::append template methods which should be inline
+* r285537 - Remove std::string::append template methods which should be inline
 
   These functions should never have had visible definitions in the dylib but
   since they were previously not specified with 'inline' they accidentally
@@ -133,3 +133,5 @@ Version 4.0
   Symbol added: _ZTISt12bad_any_cast
   Symbol added: _ZTSSt12bad_any_cast
   Symbol added: _ZTVSt12bad_any_cast
+
+  
