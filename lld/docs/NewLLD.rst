@@ -90,7 +90,7 @@ between speed, simplicity and extensibility.
 
   Visiting the same archive files multiple makes the linker slower.
 
-  Here is how LLD approached the problem. Instead of memorizing only undefined symbols,
+  Here is how LLD approaches the problem. Instead of memorizing only undefined symbols,
   we program LLD so that it memorizes all symbols.
   When it sees an undefined symbol that can be resolved by extracting an object file
   from an archive file it previously visited, it immediately extracts the file and link it.
@@ -180,7 +180,7 @@ Once you understand their functions, the code of the linker should look obvious 
 * SymbolTable
 
   SymbolTable is basically a hash table from strings to Symbols
-  with a logic to resolve symbol conflicts. It resolves conflicts by symbol type.
+  with logic to resolve symbol conflicts. It resolves conflicts by symbol type.
 
   - If we add Defined and Undefined symbols, the symbol table will keep the former.
   - If we add Defined and Lazy symbols, it will keep the former.
@@ -233,11 +233,11 @@ There are mainly three actors in this linker.
 
 * Driver
 
-  The linking process is driven by the driver. The driver
+  The linking process is driven by the driver. The driver:
 
   - processes command line options,
   - creates a symbol table,
-  - creates an InputFile for each input file and put all symbols in it into the symbol table,
+  - creates an InputFile for each input file and puts all symbols within into the symbol table,
   - checks if there's no remaining undefined symbols,
   - creates a writer,
   - and passes the symbol table to the writer to write the result to a file.
