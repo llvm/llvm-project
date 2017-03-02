@@ -8018,7 +8018,8 @@ ASTReader::getSourceDescriptor(unsigned ID) {
 
   // If there is only a single PCH, return it instead.
   // Chained PCH are not suported.
-  if (ModuleMgr.size() == 1) {
+  const auto &PCHChain = ModuleMgr.pch_modules();
+  if (std::distance(std::begin(PCHChain), std::end(PCHChain))) {
     ModuleFile &MF = ModuleMgr.getPrimaryModule();
     StringRef ModuleName = llvm::sys::path::filename(MF.OriginalSourceFileName);
     StringRef FileName = llvm::sys::path::filename(MF.FileName);
