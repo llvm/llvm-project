@@ -35,19 +35,16 @@ void AvoidCStyleCastsCheck::registerMatchers(
 }
 
 static bool needsConstCast(QualType SourceType, QualType DestType) {
-  for (;;) {
+  while ((SourceType->isPointerType() && DestType->isPointerType()) ||
+         (SourceType->isReferenceType() && DestType->isReferenceType())) {
+    SourceType = SourceType->getPointeeType();
+    DestType = DestType->getPointeeType();
     if (SourceType.isConstQualified() && !DestType.isConstQualified()) {
       return (SourceType->isPointerType() == DestType->isPointerType()) &&
              (SourceType->isReferenceType() == DestType->isReferenceType());
     }
-    if ((SourceType->isPointerType() && DestType->isPointerType()) ||
-        (SourceType->isReferenceType() && DestType->isReferenceType())) {
-      SourceType = SourceType->getPointeeType();
-      DestType = DestType->getPointeeType();
-   } else {
-     return false;
-   }
   }
+  return false;
 }
 
 static bool pointedUnqualifiedTypesAreEqual(QualType T1, QualType T2) {
@@ -61,7 +58,6 @@ static bool pointedUnqualifiedTypesAreEqual(QualType T1, QualType T2) {
 
 void AvoidCStyleCastsCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *CastExpr = Result.Nodes.getNodeAs<CStyleCastExpr>("cast");
-
   auto ParenRange = CharSourceRange::getTokenRange(CastExpr->getLParenLoc(),
                                                    CastExpr->getRParenLoc());
   // Ignore casts in macros.
@@ -79,8 +75,10 @@ void AvoidCStyleCastsCheck::check(const MatchFinder::MatchResult &Result) {
            T->isMemberFunctionPointerType();
   };
 
-  const QualType DestTypeAsWritten = CastExpr->getTypeAsWritten();
-  const QualType SourceTypeAsWritten = CastExpr->getSubExprAsWritten()->getType();
+  const QualType DestTypeAsWritten =
+      CastExpr->getTypeAsWritten().getUnqualifiedType();
+  const QualType SourceTypeAsWritten =
+      CastExpr->getSubExprAsWritten()->getType().getUnqualifiedType();
   const QualType SourceType = SourceTypeAsWritten.getCanonicalType();
   const QualType DestType = DestTypeAsWritten.getCanonicalType();
 
@@ -97,11 +95,6 @@ void AvoidCStyleCastsCheck::check(const MatchFinder::MatchResult &Result) {
           << FixItHint::CreateRemoval(ParenRange);
       return;
     }
-    if (SourceType == DestType) {
-      diag(CastExpr->getLocStart(),
-           "possibly redundant cast between typedefs of the same type");
-      return;
-    }
   }
 
   // The rest of this check is only relevant to C++.
@@ -115,9 +108,11 @@ void AvoidCStyleCastsCheck::check(const MatchFinder::MatchResult &Result) {
   // compiled as C++.
   if (getCurrentMainFile().endswith(".c"))
     return;
+
+  SourceManager &SM = *Result.SourceManager;
+
   // Ignore code in .c files #included in other files (which shouldn't be done,
   // but people still do this for test and other purposes).
-  SourceManager &SM = *Result.SourceManager;
   if (SM.getFilename(SM.getSpellingLoc(CastExpr->getLocStart())).endswith(".c"))
     return;
 
@@ -145,21 +140,7 @@ void AvoidCStyleCastsCheck::check(const MatchFinder::MatchResult &Result) {
   };
   auto ReplaceWithNamedCast = [&](StringRef CastType) {
     Diag << CastType;
-    std::string CastText = (CastType + "<" + DestTypeString + ">").str();
-    ReplaceWithCast(std::move(CastText));
-  };
-  auto ReplaceWithCtorCall = [&]() {
-    std::string CastText;
-    if (!DestTypeAsWritten.hasQualifiers() &&
-        DestTypeAsWritten->isRecordType() &&
-        !DestTypeAsWritten->isElaboratedTypeSpecifier()) {
-      Diag << "constructor call syntax";
-      CastText = DestTypeString.str(); // FIXME: Validate DestTypeString, maybe.
-    } else {
-      Diag << "static_cast";
-      CastText = ("static_cast<" + DestTypeString + ">").str();
-    }
-    ReplaceWithCast(std::move(CastText));
+    ReplaceWithCast((CastType + "<" + DestTypeString + ">").str());
   };
 
   // Suggest appropriate C++ cast. See [expr.cast] for cast notation semantics.
@@ -168,11 +149,24 @@ void AvoidCStyleCastsCheck::check(const MatchFinder::MatchResult &Result) {
     ReplaceWithNamedCast("static_cast");
     return;
   case CK_ConstructorConversion:
-    ReplaceWithCtorCall();
+    if (!DestTypeAsWritten.hasQualifiers() &&
+        DestTypeAsWritten->isRecordType() &&
+        !DestTypeAsWritten->isElaboratedTypeSpecifier()) {
+      Diag << "constructor call syntax";
+      // FIXME: Validate DestTypeString, maybe.
+      ReplaceWithCast(DestTypeString.str());
+    } else {
+      ReplaceWithNamedCast("static_cast");
+    }
     return;
   case CK_NoOp:
     if (FnToFnCast) {
       ReplaceWithNamedCast("static_cast");
+      return;
+    }
+    if (SourceType == DestType) {
+      Diag << "static_cast (if needed, the cast may be redundant)";
+      ReplaceWithCast(("static_cast<" + DestTypeString + ">").str());
       return;
     }
     if (needsConstCast(SourceType, DestType) &&
@@ -204,7 +198,10 @@ void AvoidCStyleCastsCheck::check(const MatchFinder::MatchResult &Result) {
   case CK_BitCast:
     // FIXME: Suggest const_cast<...>(reinterpret_cast<...>(...)) replacement.
     if (!needsConstCast(SourceType, DestType)) {
-      ReplaceWithNamedCast("reinterpret_cast");
+      if (SourceType->isVoidPointerType())
+        ReplaceWithNamedCast("static_cast");
+      else
+        ReplaceWithNamedCast("reinterpret_cast");
       return;
     }
     break;

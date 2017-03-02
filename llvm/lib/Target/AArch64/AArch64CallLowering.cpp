@@ -136,7 +136,6 @@ struct OutgoingArgHandler : public CallLowering::ValueHandler {
     MIRBuilder.buildGEP(AddrReg, SPReg, OffsetReg);
 
     MPO = MachinePointerInfo::getStack(MIRBuilder.getMF(), Offset);
-    StackSize = std::max(StackSize, Size + Offset);
     return AddrReg;
   }
 
@@ -158,9 +157,14 @@ struct OutgoingArgHandler : public CallLowering::ValueHandler {
                  CCValAssign::LocInfo LocInfo,
                  const CallLowering::ArgInfo &Info,
                  CCState &State) override {
+    bool Res;
     if (Info.IsFixed)
-      return AssignFn(ValNo, ValVT, LocVT, LocInfo, Info.Flags, State);
-    return  AssignFnVarArg(ValNo, ValVT, LocVT, LocInfo, Info.Flags, State);
+      Res = AssignFn(ValNo, ValVT, LocVT, LocInfo, Info.Flags, State);
+    else
+      Res = AssignFnVarArg(ValNo, ValVT, LocVT, LocInfo, Info.Flags, State);
+
+    StackSize = State.getNextStackOffset();
+    return Res;
   }
 
   MachineInstrBuilder MIB;

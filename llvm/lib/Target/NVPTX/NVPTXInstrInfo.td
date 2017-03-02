@@ -2450,6 +2450,7 @@ let mayLoad=1, hasSideEffects=0 in {
   defm LDV_i32 : LD_VEC<Int32Regs>;
   defm LDV_i64 : LD_VEC<Int64Regs>;
   defm LDV_f16 : LD_VEC<Float16Regs>;
+  defm LDV_f16x2 : LD_VEC<Float16x2Regs>;
   defm LDV_f32 : LD_VEC<Float32Regs>;
   defm LDV_f64 : LD_VEC<Float64Regs>;
 }

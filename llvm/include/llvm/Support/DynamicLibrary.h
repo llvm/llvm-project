@@ -68,6 +68,15 @@ namespace sys {
     static DynamicLibrary getPermanentLibrary(const char *filename,
                                               std::string *errMsg = nullptr);
 
+    /// Registers an externally loaded library. The library will be unloaded
+    /// when the program terminates.
+    ///
+    /// It is safe to call this function multiple times for the same library.
+    ///
+    /// \returns An empty \p DynamicLibrary if the library was already loaded.
+    static DynamicLibrary addPermanentLibrary(void *handle,
+                                              std::string *errMsg = nullptr);
+
     /// This function permanently loads the dynamic library at the given path.
     /// Use this instead of getPermanentLibrary() when you won't need to get
     /// symbols from the library itself.

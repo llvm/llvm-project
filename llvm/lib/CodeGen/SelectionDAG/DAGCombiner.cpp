@@ -1761,8 +1761,9 @@ SDValue DAGCombiner::foldBinOpIntoSelect(SDNode *BO) {
           BinOpcode == ISD::FDIV || BinOpcode == ISD::FREM) &&
          "Unexpected binary operator");
 
+  // Bail out if any constants are opaque because we can't constant fold those.
   SDValue C1 = BO->getOperand(1);
-  if (!isConstantOrConstantVector(C1) &&
+  if (!isConstantOrConstantVector(C1, true) &&
       !isConstantFPBuildVectorOrConstantFP(C1))
     return SDValue();
 
@@ -1774,12 +1775,12 @@ SDValue DAGCombiner::foldBinOpIntoSelect(SDNode *BO) {
     return SDValue();
 
   SDValue CT = Sel.getOperand(1);
-  if (!isConstantOrConstantVector(CT) &&
+  if (!isConstantOrConstantVector(CT, true) &&
       !isConstantFPBuildVectorOrConstantFP(CT))
     return SDValue();
 
   SDValue CF = Sel.getOperand(2);
-  if (!isConstantOrConstantVector(CF) &&
+  if (!isConstantOrConstantVector(CF, true) &&
       !isConstantFPBuildVectorOrConstantFP(CF))
     return SDValue();
 

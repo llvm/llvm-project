@@ -242,3 +242,22 @@ bb5:                                              ; preds = %entry
   br label %bb
 }
 
+; Negative test. Must not trigger the select-cmp-br combine because the result
+; of the select is used in both flows following the br (the special case where
+; the conditional branch has the same target for both flows).
+define i32 @test6(i32 %arg, i1 %arg1) {
+; CHECK-LABEL: @test6(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 undef, label [[BB:%.*]], label [[BB]]
+; CHECK:       bb:
+; CHECK-NEXT:    [[TMP:%.*]] = select i1 [[ARG1:%.*]], i32 [[ARG:%.*]], i32 0
+; CHECK-NEXT:    ret i32 [[TMP]]
+;
+entry:
+  %tmp = select i1 %arg1, i32 %arg, i32 0
+  %tmp2 = icmp eq i32 %tmp, 0
+  br i1 %tmp2, label %bb, label %bb
+
+bb:                                               ; preds = %entry, %entry
+  ret i32 %tmp
+}

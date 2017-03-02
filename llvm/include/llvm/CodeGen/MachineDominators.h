@@ -21,6 +21,7 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/Support/GenericDomTree.h"
 #include "llvm/Support/GenericDomTreeConstruction.h"
+#include <memory>
 
 namespace llvm {
 
@@ -60,7 +61,7 @@ class MachineDominatorTree : public MachineFunctionPass {
   mutable SmallSet<MachineBasicBlock *, 32> NewBBs;
 
   /// The DominatorTreeBase that is used to compute a normal dominator tree
-  DominatorTreeBase<MachineBasicBlock>* DT;
+  std::unique_ptr<DominatorTreeBase<MachineBasicBlock>> DT;
 
   /// \brief Apply all the recorded critical edges to the DT.
   /// This updates the underlying DT information in a way that uses
@@ -74,9 +75,9 @@ public:
 
   MachineDominatorTree();
 
-  ~MachineDominatorTree() override;
-
   DominatorTreeBase<MachineBasicBlock> &getBase() {
+    if (!DT)
+      DT.reset(new DominatorTreeBase<MachineBasicBlock>(false));
     applySplitCriticalEdges();
     return *DT;
   }
@@ -242,21 +243,6 @@ public:
     assert(Inserted &&
            "A basic block inserted via edge splitting cannot appear twice");
     CriticalEdgesToSplit.push_back({FromBB, ToBB, NewBB});
-  }
-
-  /// \brief Returns *false* if the other dominator tree matches this dominator
-  /// tree.
-  inline bool compare(const MachineDominatorTree &Other) const {
-    const MachineDomTreeNode *R = getRootNode();
-    const MachineDomTreeNode *OtherR = Other.getRootNode();
-
-    if (!R || !OtherR || R->getBlock() != OtherR->getBlock())
-      return true;
-
-    if (DT->compare(*Other.DT))
-      return true;
-
-    return false;
   }
 
   /// \brief Verify the correctness of the domtree by re-computing it.

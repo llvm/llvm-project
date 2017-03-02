@@ -40,11 +40,11 @@ class Remark(yaml.YAMLObject):
     # Work-around for http://pyyaml.org/ticket/154.
     yaml_loader = Loader
 
-    def __getattr__(self, name):
-        # If hotness is missing, assume 0
-        if name == 'Hotness':
-            return 0
-        raise AttributeError(name)
+    def initmissing(self):
+        if not hasattr(self, 'Hotness'):
+            self.Hotness = 0
+        if not hasattr(self, 'Args'):
+            self.Args = []
 
     @property
     def File(self):
@@ -88,6 +88,18 @@ class Remark(yaml.YAMLObject):
         else:
             return value
 
+    def getDiffPrefix(self):
+        if hasattr(self, 'Added'):
+            if self.Added:
+                return '+'
+            else:
+                return '-'
+        return ''
+
+    @property
+    def PassWithDiffPrefix(self):
+        return self.getDiffPrefix() + self.Pass
+
     @property
     def message(self):
         # Args is a list of mappings (dictionaries)
@@ -103,7 +115,22 @@ class Remark(yaml.YAMLObject):
 
     @property
     def key(self):
-        return (self.__class__, self.Pass, self.Name, self.File, self.Line, self.Column, self.Function)
+        k = (self.__class__, self.PassWithDiffPrefix, self.Name, self.File, self.Line, self.Column, self.Function)
+        for arg in self.Args:
+            for (key, value) in arg.iteritems():
+                if type(value) is dict:
+                    value = tuple(value.items())
+                k += (key, value)
+        return k
+
+    def __hash__(self):
+        return hash(self.key)
+
+    def __eq__(self, other):
+        return self.key == other.key
+
+    def __repr__(self):
+        return str(self.key)
 
 
 class Analysis(Remark):
@@ -146,6 +173,7 @@ def get_remarks(input_file):
     with open(input_file) as f:
         docs = yaml.load_all(f, Loader=Loader)
         for remark in docs:
+            remark.initmissing()
             # Avoid remarks withoug debug location or if they are duplicated
             if not hasattr(remark, 'DebugLoc') or remark.key in all_remarks:
                 continue
@@ -153,6 +181,11 @@ def get_remarks(input_file):
 
             file_remarks[remark.File][remark.Line].append(remark)
 
+            # If we're reading a back a diff yaml file, max_hotness is already
+            # captured which may actually be less than the max hotness found
+            # in the file.
+            if hasattr(remark, 'max_hotness'):
+                max_hotness = remark.max_hotness
             max_hotness = max(max_hotness, remark.Hotness)
 
     return max_hotness, all_remarks, file_remarks

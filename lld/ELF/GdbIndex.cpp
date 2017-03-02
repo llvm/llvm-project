@@ -77,22 +77,17 @@ std::pair<bool, GdbSymbol *> GdbHashTab::add(uint32_t Hash, size_t Offset) {
 }
 
 void GdbHashTab::finalizeContents() {
-  Table.resize(std::max<uint64_t>(1024, NextPowerOf2(Map.size() * 4 / 3)));
+  uint32_t Size = std::max<uint32_t>(1024, NextPowerOf2(Map.size() * 4 / 3));
+  uint32_t Mask = Size - 1;
+  Table.resize(Size);
 
   for (auto &P : Map) {
     GdbSymbol *Sym = P.second;
+    uint32_t I = Sym->NameHash & Mask;
+    uint32_t Step = ((Sym->NameHash * 17) & Mask) | 1;
 
-    uint32_t I = Sym->NameHash & (Table.size() - 1);
-    uint32_t Step = ((Sym->NameHash * 17) & (Table.size() - 1)) | 1;
-
-    for (;;) {
-      if (Table[I]) {
-        I = (I + Step) & (Table.size() - 1);
-        continue;
-      }
-
-      Table[I] = Sym;
-      break;
-    }
+    while (Table[I])
+      I = (I + Step) & Mask;
+    Table[I] = Sym;
   }
 }

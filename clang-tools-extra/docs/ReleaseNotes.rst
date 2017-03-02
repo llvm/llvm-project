@@ -62,6 +62,11 @@ Improvements to clang-tidy
 
   Finds modification of the ``std`` or ``posix`` namespace.
 
+- Improved `cppcoreguidelines-no-malloc 
+  <http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines-no-malloc.html>`_ check
+
+  Allow custom memory management functions to be considered as well.
+
 - New `readability-misleading-indentation
   <http://clang.llvm.org/extra/clang-tidy/checks/readability-misleading-indentation.html>`_ check
 
