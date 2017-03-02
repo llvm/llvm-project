@@ -1,4 +1,4 @@
-//===----- ConstantBuilder.h - Builder for LLVM IR constants ----*- C++ -*-===//
+//===- ConstantInitBuilder.h - Builder for LLVM IR constants ----*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -8,24 +8,26 @@
 //===----------------------------------------------------------------------===//
 //
 // This class provides a convenient interface for building complex
-// global initializers.
+// global initializers of the sort that are frequently required for
+// language ABIs.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_LIB_CODEGEN_CONSTANTBUILDER_H
-#define LLVM_CLANG_LIB_CODEGEN_CONSTANTBUILDER_H
+#ifndef LLVM_CLANG_CODEGEN_CONSTANTINITBUILDER_H
+#define LLVM_CLANG_CODEGEN_CONSTANTINITBUILDER_H
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/Constants.h"
-
-#include "CodeGenModule.h"
+#include "llvm/IR/GlobalValue.h"
+#include "clang/AST/CharUnits.h"
 
 #include <vector>
 
 namespace clang {
 namespace CodeGen {
 
+class CodeGenModule;
 class ConstantStructBuilder;
 class ConstantArrayBuilder;
 
@@ -144,9 +146,7 @@ public:
     }
 
     /// Add an integer value of type size_t.
-    void addSize(CharUnits size) {
-      add(Builder.CGM.getSize(size));
-    }
+    void addSize(CharUnits size);
 
     /// Add an integer value of a specific type.
     void addInt(llvm::IntegerType *intTy, uint64_t value,
@@ -165,7 +165,7 @@ public:
     }
 
     /// Add a bunch of new values to this initializer.
-    void addAll(ArrayRef<llvm::Constant *> values) {
+    void addAll(llvm::ArrayRef<llvm::Constant *> values) {
       assert(!Finished && "cannot add more values after finishing builder");
       assert(!Frozen && "cannot add values while subbuilder is active");
       Builder.Buffer.append(values.begin(), values.end());
@@ -216,20 +216,9 @@ public:
     ///
     /// The returned pointer will have type T*, where T is the given
     /// position.
-    llvm::Constant *getAddrOfCurrentPosition(llvm::Type *type) {
-      // Make a global variable.  We will replace this with a GEP to this
-      // position after installing the initializer.
-      auto dummy =
-        new llvm::GlobalVariable(Builder.CGM.getModule(), type, true,
-                                 llvm::GlobalVariable::PrivateLinkage,
-                                 nullptr, "");
-      Builder.SelfReferences.emplace_back(dummy);
-      auto &entry = Builder.SelfReferences.back();
-      (void) getGEPIndicesToCurrentPosition(entry.Indices);
-      return dummy;
-    }
+    llvm::Constant *getAddrOfCurrentPosition(llvm::Type *type);
 
-    ArrayRef<llvm::Constant*> getGEPIndicesToCurrentPosition(
+    llvm::ArrayRef<llvm::Constant*> getGEPIndicesToCurrentPosition(
                              llvm::SmallVectorImpl<llvm::Constant*> &indices) {
       getGEPIndicesTo(indices, Builder.Buffer.size());
       return indices;
@@ -240,23 +229,7 @@ public:
 
   private:
     void getGEPIndicesTo(llvm::SmallVectorImpl<llvm::Constant*> &indices,
-                         size_t position) const {
-      // Recurse on the parent builder if present.
-      if (Parent) {
-        Parent->getGEPIndicesTo(indices, Begin);
-
-      // Otherwise, add an index to drill into the first level of pointer. 
-      } else {
-        assert(indices.empty());
-        indices.push_back(llvm::ConstantInt::get(Builder.CGM.Int32Ty, 0));
-      }
-
-      assert(position >= Begin);
-      // We have to use i32 here because struct GEPs demand i32 indices.
-      // It's rather unlikely to matter in practice.
-      indices.push_back(llvm::ConstantInt::get(Builder.CGM.Int32Ty,
-                                               position - Begin));
-    }
+                         size_t position) const;
   };
 
   template <class Impl>
@@ -313,36 +286,12 @@ private:
                                      bool constant = false,
                                      llvm::GlobalValue::LinkageTypes linkage
                                        = llvm::GlobalValue::InternalLinkage,
-                                     unsigned addressSpace = 0) {
-    auto GV = new llvm::GlobalVariable(CGM.getModule(),
-                                       initializer->getType(),
-                                       constant,
-                                       linkage,
-                                       initializer,
-                                       name,
-                                       /*insert before*/ nullptr,
-                                       llvm::GlobalValue::NotThreadLocal,
-                                       addressSpace);
-    GV->setAlignment(alignment.getQuantity());
-    resolveSelfReferences(GV);
-    return GV;
-  }
+                                     unsigned addressSpace = 0);
 
   void setGlobalInitializer(llvm::GlobalVariable *GV,
-                            llvm::Constant *initializer) {
-    GV->setInitializer(initializer);
-    resolveSelfReferences(GV);
-  }
+                            llvm::Constant *initializer);
 
-  void resolveSelfReferences(llvm::GlobalVariable *GV) {
-    for (auto &entry : SelfReferences) {
-      llvm::Constant *resolvedReference =
-        llvm::ConstantExpr::getInBoundsGetElementPtr(
-          GV->getValueType(), GV, entry.Indices);
-      entry.Dummy->replaceAllUsesWith(resolvedReference);
-      entry.Dummy->eraseFromParent();
-    }
-  }
+  void resolveSelfReferences(llvm::GlobalVariable *GV);
 };
 
 /// A helper class of ConstantInitBuilder, used for building constant
@@ -370,20 +319,7 @@ public:
 private:
   /// Form an array constant from the values that have been added to this
   /// builder.
-  llvm::Constant *finishImpl() {
-    markFinished();
-
-    auto &buffer = getBuffer();
-    assert((Begin < buffer.size() ||
-            (Begin == buffer.size() && EltTy))
-           && "didn't add any array elements without element type");
-    auto elts = llvm::makeArrayRef(buffer).slice(Begin);
-    auto eltTy = EltTy ? EltTy : elts[0]->getType();
-    auto type = llvm::ArrayType::get(eltTy, elts.size());
-    auto constant = llvm::ConstantArray::get(type, elts);
-    buffer.erase(buffer.begin() + Begin, buffer.end());
-    return constant;
-  }
+  llvm::Constant *finishImpl();
 };
 
 inline ConstantArrayBuilder
@@ -408,23 +344,7 @@ class ConstantStructBuilder
     : AggregateBuilder(builder, parent), Ty(ty) {}
 
   /// Finish the struct.
-  llvm::Constant *finishImpl() {
-    markFinished();
-
-    auto &buffer = getBuffer();
-    assert(Begin < buffer.size() && "didn't add any struct elements?");
-    auto elts = llvm::makeArrayRef(buffer).slice(Begin);
-
-    llvm::Constant *constant;
-    if (Ty) {
-      constant = llvm::ConstantStruct::get(Ty, elts);
-    } else {
-      constant = llvm::ConstantStruct::getAnon(elts, /*packed*/ false);
-    }
-
-    buffer.erase(buffer.begin() + Begin, buffer.end());
-    return constant;
-  }
+  llvm::Constant *finishImpl();
 };
 
 inline ConstantStructBuilder

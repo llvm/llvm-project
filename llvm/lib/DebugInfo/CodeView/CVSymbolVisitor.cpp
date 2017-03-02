@@ -11,7 +11,7 @@
 
 #include "llvm/DebugInfo/CodeView/CodeViewError.h"
 #include "llvm/DebugInfo/CodeView/SymbolVisitorCallbacks.h"
-#include "llvm/DebugInfo/MSF/BinaryByteStream.h"
+#include "llvm/Support/BinaryByteStream.h"
 
 using namespace llvm;
 using namespace llvm::codeview;

@@ -12,6 +12,7 @@
 {'type': 'I', 'is_defined': True, 'name': '__ZNKSt16bad_array_length4whatEv'}
 {'type': 'FUNC', 'is_defined': True, 'name': '__ZNKSt16nested_exception14rethrow_nestedEv'}
 {'type': 'FUNC', 'is_defined': True, 'name': '__ZNKSt18bad_variant_access4whatEv'}
+{'type': 'FUNC', 'is_defined': True, 'name': '__ZNKSt19bad_optional_access4whatEv'}
 {'type': 'U', 'is_defined': False, 'name': '__ZNKSt20bad_array_new_length4whatEv'}
 {'type': 'I', 'is_defined': True, 'name': '__ZNKSt20bad_array_new_length4whatEv'}
 {'type': 'FUNC', 'is_defined': True, 'name': '__ZNKSt3__110__time_put8__do_putEPcRS1_PK2tmcc'}

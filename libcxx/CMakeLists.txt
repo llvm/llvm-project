@@ -157,6 +157,16 @@ option(LIBCXX_ENABLE_ABI_LINKER_SCRIPT
       "Use and install a linker script for the given ABI library"
       ${ENABLE_LINKER_SCRIPT_DEFAULT_VALUE})
 
+set(ENABLE_NEW_DELETE_DEFAULT ON)
+if (LIBCXXABI_ENABLE_NEW_DELETE_DEFINITIONS)
+  set(ENABLE_NEW_DELETE_DEFAULT OFF)
+endif()
+
+option(LIBCXX_ENABLE_NEW_DELETE_DEFINITIONS
+    "Build libc++ with definitions for operator new/delete. This option can
+    be used to disable the definitions when libc++abi is expected to provide
+    them" ${ENABLE_NEW_DELETE_DEFAULT})
+
 # Build libc++abi with libunwind. We need this option to determine whether to
 # link with libunwind or libgcc_s while running the test cases.
 option(LIBCXXABI_USE_LLVM_UNWINDER "Build and use the LLVM unwinder." OFF)
@@ -432,6 +442,10 @@ add_compile_flags_if_supported(-fvisibility-inlines-hidden)
 # Let the library headers know they are currently being used to build the
 # library.
 add_definitions(-D_LIBCPP_BUILDING_LIBRARY)
+
+if (NOT LIBCXX_ENABLE_NEW_DELETE_DEFINITIONS)
+  add_definitions(-D_LIBCPP_DISABLE_NEW_DELETE_DEFINITIONS)
+endif()
 
 # Warning flags ===============================================================
 add_definitions(-D_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

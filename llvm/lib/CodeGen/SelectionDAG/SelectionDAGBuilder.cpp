@@ -634,10 +634,6 @@ RegsForValue::RegsForValue(LLVMContext &Context, const TargetLowering &TLI,
   }
 }
 
-/// getCopyFromRegs - Emit a series of CopyFromReg nodes that copies from
-/// this value and returns the result as a ValueVT value.  This uses
-/// Chain/Flag as the input and updates them for the output Chain/Flag.
-/// If the Flag pointer is NULL, no flag is used.
 SDValue RegsForValue::getCopyFromRegs(SelectionDAG &DAG,
                                       FunctionLoweringInfo &FuncInfo,
                                       const SDLoc &dl, SDValue &Chain,
@@ -739,10 +735,6 @@ SDValue RegsForValue::getCopyFromRegs(SelectionDAG &DAG,
   return DAG.getNode(ISD::MERGE_VALUES, dl, DAG.getVTList(ValueVTs), Values);
 }
 
-/// getCopyToRegs - Emit a series of CopyToReg nodes that copies the
-/// specified value into the registers specified by this object.  This uses
-/// Chain/Flag as the input and updates them for the output Chain/Flag.
-/// If the Flag pointer is NULL, no flag is used.
 void RegsForValue::getCopyToRegs(SDValue Val, SelectionDAG &DAG,
                                  const SDLoc &dl, SDValue &Chain, SDValue *Flag,
                                  const Value *V,
@@ -796,9 +788,6 @@ void RegsForValue::getCopyToRegs(SDValue Val, SelectionDAG &DAG,
     Chain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, Chains);
 }
 
-/// AddInlineAsmOperands - Add this value to the specified inlineasm node
-/// operand list.  This adds the code marker and includes the number of
-/// values added into it.
 void RegsForValue::AddInlineAsmOperands(unsigned Code, bool HasMatching,
                                         unsigned MatchingIdx, const SDLoc &dl,
                                         SelectionDAG &DAG,
@@ -850,12 +839,6 @@ void SelectionDAGBuilder::init(GCFunctionInfo *gfi, AliasAnalysis &aa,
   LPadToCallSiteMap.clear();
 }
 
-/// clear - Clear out the current SelectionDAG and the associated
-/// state and prepare this SelectionDAGBuilder object to be used
-/// for a new block. This doesn't clear out information about
-/// additional blocks that are needed to complete switch lowering
-/// or PHI node updating; that information is cleared out as it is
-/// consumed.
 void SelectionDAGBuilder::clear() {
   NodeMap.clear();
   UnusedArgNodeMap.clear();
@@ -867,21 +850,10 @@ void SelectionDAGBuilder::clear() {
   StatepointLowering.clear();
 }
 
-/// clearDanglingDebugInfo - Clear the dangling debug information
-/// map. This function is separated from the clear so that debug
-/// information that is dangling in a basic block can be properly
-/// resolved in a different basic block. This allows the
-/// SelectionDAG to resolve dangling debug information attached
-/// to PHI nodes.
 void SelectionDAGBuilder::clearDanglingDebugInfo() {
   DanglingDebugInfoMap.clear();
 }
 
-/// getRoot - Return the current virtual root of the Selection DAG,
-/// flushing any PendingLoad items. This must be done before emitting
-/// a store or any other node that may need to be ordered after any
-/// prior load instructions.
-///
 SDValue SelectionDAGBuilder::getRoot() {
   if (PendingLoads.empty())
     return DAG.getRoot();
@@ -901,10 +873,6 @@ SDValue SelectionDAGBuilder::getRoot() {
   return Root;
 }
 
-/// getControlRoot - Similar to getRoot, but instead of flushing all the
-/// PendingLoad items, flush all the PendingExports items. It is necessary
-/// to do this before emitting a terminator instruction.
-///
 SDValue SelectionDAGBuilder::getControlRoot() {
   SDValue Root = DAG.getRoot();
 
@@ -4809,9 +4777,9 @@ SDDbgValue *SelectionDAGBuilder::getDbgValue(SDValue N,
 #  define setjmp_undefined_for_msvc
 #endif
 
-/// visitIntrinsicCall - Lower the call to the specified intrinsic function.  If
-/// we want to emit this as a call to a named external function, return the name
-/// otherwise lower it and return null.
+/// Lower the call to the specified intrinsic function. If we want to emit this
+/// as a call to a named external function, return the name. Otherwise, lower it
+/// and return null.
 const char *
 SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I, unsigned Intrinsic) {
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
@@ -5974,8 +5942,7 @@ void SelectionDAGBuilder::LowerCallTo(ImmutableCallSite CS, SDValue Callee,
   }
 }
 
-/// IsOnlyUsedInZeroEqualityComparison - Return true if it only matters that the
-/// value is equal or not-equal to zero.
+/// Return true if it only matters that the value is equal or not-equal to zero.
 static bool IsOnlyUsedInZeroEqualityComparison(const Value *V) {
   for (const User *U : V->users()) {
     if (const ICmpInst *IC = dyn_cast<ICmpInst>(U))
@@ -6029,8 +5996,8 @@ static SDValue getMemCmpLoad(const Value *PtrVal, MVT LoadVT,
   return LoadVal;
 }
 
-/// processIntegerCallValue - Record the value for an instruction that
-/// produces an integer result, converting the type where necessary.
+/// Record the value for an instruction that produces an integer result,
+/// converting the type where necessary.
 void SelectionDAGBuilder::processIntegerCallValue(const Instruction &I,
                                                   SDValue Value,
                                                   bool IsSigned) {
@@ -6043,8 +6010,8 @@ void SelectionDAGBuilder::processIntegerCallValue(const Instruction &I,
   setValue(&I, Value);
 }
 
-/// See if we can lower a memcmp call into an optimized form.  If so, return
-/// true and lower it, otherwise return false and it will be lowered like a
+/// See if we can lower a memcmp call into an optimized form. If so, return
+/// true and lower it. Otherwise return false, and it will be lowered like a
 /// normal call.
 /// The caller already checked that \p I calls the appropriate LibFunc with a
 /// correct prototype.
@@ -6139,8 +6106,8 @@ bool SelectionDAGBuilder::visitMemCmpCall(const CallInst &I) {
   return false;
 }
 
-/// See if we can lower a memchr call into an optimized form.  If so, return
-/// true and lower it, otherwise return false and it will be lowered like a
+/// See if we can lower a memchr call into an optimized form. If so, return
+/// true and lower it. Otherwise return false, and it will be lowered like a
 /// normal call.
 /// The caller already checked that \p I calls the appropriate LibFunc with a
 /// correct prototype.
@@ -6163,8 +6130,8 @@ bool SelectionDAGBuilder::visitMemChrCall(const CallInst &I) {
   return false;
 }
 
-/// See if we can lower a mempcpy call into an optimized form.  If so, return
-/// true and lower it, otherwise return false and it will be lowered like a
+/// See if we can lower a mempcpy call into an optimized form. If so, return
+/// true and lower it. Otherwise return false, and it will be lowered like a
 /// normal call.
 /// The caller already checked that \p I calls the appropriate LibFunc with a
 /// correct prototype.
@@ -6309,8 +6276,8 @@ bool SelectionDAGBuilder::visitUnaryFloatCall(const CallInst &I,
 }
 
 /// See if we can lower a binary floating-point operation into an SDNode with
-/// the specified Opcode.  If so, return true and lower it, otherwise return
-/// false and it will be lowered like a normal call.
+/// the specified Opcode. If so, return true and lower it. Otherwise return
+/// false, and it will be lowered like a normal call.
 /// The caller already checked that \p I calls the appropriate LibFunc with a
 /// correct prototype.
 bool SelectionDAGBuilder::visitBinaryFloatCall(const CallInst &I,

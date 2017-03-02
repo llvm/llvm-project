@@ -141,6 +141,9 @@ option(LIBCXXABI_HAS_EXTERNAL_THREAD_API
 option(LIBCXXABI_BUILD_EXTERNAL_THREAD_LIBRARY
   "Build libc++abi with an externalized threading library.
    This option may only be set to ON when LIBCXXABI_ENABLE_THREADS=ON" OFF)
+option(LIBCXXABI_ENABLE_NEW_DELETE_DEFINITIONS
+    "Build libc++abi with definitions for operator new/delete. Normally libc++
+    provides these definitions" OFF)
 option(LIBCXXABI_BUILD_32_BITS "Build 32 bit libc++abi." ${LLVM_BUILD_32_BITS})
 option(LIBCXXABI_INCLUDE_TESTS "Generate build targets for the libc++abi unit tests." ${LLVM_INCLUDE_TESTS})
 set(LIBCXXABI_TARGET_TRIPLE "" CACHE STRING "Target triple for cross compiling.")
@@ -409,7 +412,10 @@ if (LIBCXXABI_HAS_EXTERNAL_THREAD_API)
   endif()
 endif()
 
-if (LIBCXXABI_BUILD_EXTERNAL_THREAD_LIBRARY AND LIBCXXABI_ENABLE_SHARED)
+set(LIBCXXABI_HAS_UNDEFINED_SYMBOLS ((NOT LIBCXXABI_ENABLE_NEW_DELETE_DEFINITIONS)
+    OR (LIBCXXABI_BUILD_EXTERNAL_THREAD_LIBRARY AND LIBCXXABI_ENABLE_SHARED)))
+
+if (LIBCXXABI_HAS_UNDEFINED_SYMBOLS)
   # Need to allow unresolved symbols if this is to work with shared library builds
   if (APPLE)
     add_link_flags("-undefined dynamic_lookup")
