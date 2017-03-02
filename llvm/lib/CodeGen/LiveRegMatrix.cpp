@@ -175,10 +175,10 @@ bool LiveRegMatrix::checkRegUnitInterference(LiveInterval &VirtReg,
   return Result;
 }
 
-LiveIntervalUnion::Query &LiveRegMatrix::query(LiveInterval &VirtReg,
+LiveIntervalUnion::Query &LiveRegMatrix::query(const LiveRange &LR,
                                                unsigned RegUnit) {
   LiveIntervalUnion::Query &Q = Queries[RegUnit];
-  Q.init(UserTag, VirtReg, Matrix[RegUnit]);
+  Q.init(UserTag, LR, Matrix[RegUnit]);
   return Q;
 }
 
@@ -196,9 +196,12 @@ LiveRegMatrix::checkInterference(LiveInterval &VirtReg, unsigned PhysReg) {
     return IK_RegUnit;
 
   // Check the matrix for virtual register interference.
-  for (MCRegUnitIterator Units(PhysReg, TRI); Units.isValid(); ++Units)
-    if (query(VirtReg, *Units).checkInterference())
-      return IK_VirtReg;
+  bool Interference = foreachUnit(TRI, VirtReg, PhysReg,
+                                  [&](unsigned Unit, const LiveRange &LR) {
+    return query(LR, Unit).checkInterference();
+  });
+  if (Interference)
+    return IK_VirtReg;
 
   return IK_Free;
 }

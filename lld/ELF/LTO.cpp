@@ -150,10 +150,10 @@ std::vector<InputFile *> BitcodeCompiler::compile() {
   // specified, configure LTO to use it as the cache directory.
   lto::NativeObjectCache Cache;
   if (!Config->ThinLTOCacheDir.empty())
-    Cache = lto::localCache(Config->ThinLTOCacheDir,
-                            [&](size_t Task, StringRef Path) {
-                              Files[Task] = check(MemoryBuffer::getFile(Path));
-                            });
+    Cache = check(lto::localCache(
+        Config->ThinLTOCacheDir, [&](size_t Task, StringRef Path) {
+          Files[Task] = check(MemoryBuffer::getFile(Path));
+        }));
 
   checkError(LTOObj->run(
       [&](size_t Task) {
