@@ -54,6 +54,7 @@ public:
   const TargetInstrInfo *TII;
   const TargetLowering *TLI;
   bool FastISelFailed;
+  SmallPtrSet<const Instruction *, 4> ElidedArgCopyInstrs;
 
   static char ID;
 

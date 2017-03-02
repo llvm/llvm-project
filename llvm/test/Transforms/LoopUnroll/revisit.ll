@@ -138,11 +138,11 @@ l0.0.latch:
 ; CHECK-CHILDREN: LoopUnrollPass on Loop at depth 2 containing: %l0.0<header>
 ; CHECK-CHILDREN-NOT: LoopUnrollPass
 ;
-; Revisit the children of the outer loop that are part of the prologue.
+; Revisit the children of the outer loop that are part of the epilogue.
 ; 
-; CHECK: LoopUnrollPass on Loop at depth 2 containing: %l0.0.0.prol<header>
+; CHECK: LoopUnrollPass on Loop at depth 2 containing: %l0.0.0.epil<header>
 ; CHECK-NOT: LoopUnrollPass
-; CHECK: LoopUnrollPass on Loop at depth 2 containing: %l0.0.1.prol<header>
+; CHECK: LoopUnrollPass on Loop at depth 2 containing: %l0.0.1.epil<header>
 ; CHECK-NOT: LoopUnrollPass
 l0.latch:
   br label %l0

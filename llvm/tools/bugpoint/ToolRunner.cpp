@@ -355,37 +355,62 @@ Expected<int> CustomExecutor::ExecuteProgram(
 // Tokenize the CommandLine to the command and the args to allow
 // defining a full command line as the command instead of just the
 // executed program. We cannot just pass the whole string after the command
-// as a single argument because then program sees only a single
+// as a single argument because then the program sees only a single
 // command line argument (with spaces in it: "foo bar" instead
 // of "foo" and "bar").
 //
-// code borrowed from:
-// http://oopweb.com/CPP/Documents/CPPHOWTO/Volume/C++Programming-HOWTO-7.html
+// Spaces are used as a delimiter; however repeated, leading, and trailing
+// whitespace are ignored. Simple escaping is allowed via the '\'
+// character, as seen below:
+//
+// Two consecutive '\' evaluate to a single '\'.
+// A space after a '\' evaluates to a space that is not interpreted as a
+// delimiter.
+// Any other instances of the '\' character are removed.
+//
+// Example:
+// '\\' -> '\'
+// '\ ' -> ' '
+// 'exa\mple' -> 'example'
+//
 static void lexCommand(std::string &Message, const std::string &CommandLine,
                        std::string &CmdPath, std::vector<std::string> &Args) {
 
-  std::string Command = "";
-  std::string delimiters = " ";
+  std::string Token;
+  std::string Command;
+  bool FoundPath = false;
 
-  std::string::size_type lastPos = CommandLine.find_first_not_of(delimiters, 0);
-  std::string::size_type pos = CommandLine.find_first_of(delimiters, lastPos);
+  // first argument is the PATH.
+  // Skip repeated whitespace, leading whitespace and trailing whitespace.
+  for (std::size_t Pos = 0u; Pos <= CommandLine.size(); ++Pos) {
+    if ('\\' == CommandLine[Pos]) {
+      if (Pos + 1 < CommandLine.size())
+        Token.push_back(CommandLine[++Pos]);
 
-  while (std::string::npos != pos || std::string::npos != lastPos) {
-    std::string token = CommandLine.substr(lastPos, pos - lastPos);
-    if (Command == "")
-      Command = token;
-    else
-      Args.push_back(token);
-    // Skip delimiters.  Note the "not_of"
-    lastPos = CommandLine.find_first_not_of(delimiters, pos);
-    // Find next "non-delimiter"
-    pos = CommandLine.find_first_of(delimiters, lastPos);
+      continue;
+    }
+    if (' ' == CommandLine[Pos] || CommandLine.size() == Pos) {
+      if (Token.empty())
+        continue;
+
+      if (!FoundPath) {
+        Command = Token;
+        FoundPath = true;
+        Token.clear();
+        continue;
+      }
+
+      Args.push_back(Token);
+      Token.clear();
+      continue;
+    }
+    Token.push_back(CommandLine[Pos]);
   }
 
   auto Path = sys::findProgramByName(Command);
   if (!Path) {
-    Message = std::string("Cannot find '") + Command + "' in PATH: " +
-              Path.getError().message() + "\n";
+    Message = std::string("Cannot find '") + Command +
+              "' in PATH: " + Path.getError().message() + "\n";
     return;
   }
   CmdPath = *Path;

@@ -262,7 +262,7 @@ std::pair<NodeSet,bool>
 Liveness::getAllReachingDefsRecImpl(RegisterRef RefRR, NodeAddr<RefNode*> RefA,
       NodeSet &Visited, const NodeSet &Defs, unsigned Nest, unsigned MaxNest) {
   if (Nest > MaxNest)
-    return { {}, false };
+    return { NodeSet(), false };
   // Collect all defined registers. Do not consider phis to be defining
   // anything, only collect "real" definitions.
   RegisterAggr DefRRs(PRI);

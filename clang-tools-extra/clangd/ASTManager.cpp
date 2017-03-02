@@ -224,11 +224,11 @@ ASTManager::createASTUnitForFile(StringRef Uri, const DocumentStore &Docs) {
       /*AllowPCHWithCompilerErrors=*/true));
 }
 
-llvm::ArrayRef<clang::tooling::Replacement>
+std::vector<clang::tooling::Replacement>
 ASTManager::getFixIts(const clangd::Diagnostic &D) {
   std::lock_guard<std::mutex> Guard(FixItLock);
   auto I = FixIts.find(D);
   if (I != FixIts.end())
     return I->second;
-  return llvm::None;
+  return {};
 }

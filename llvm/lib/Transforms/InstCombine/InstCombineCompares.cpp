@@ -3950,7 +3950,7 @@ bool InstCombiner::replacedSelectWithOperand(SelectInst *SI,
   assert((SIOpd == 1 || SIOpd == 2) && "Invalid select operand!");
   if (isChainSelectCmpBranch(SI) && Icmp->getPredicate() == ICmpInst::ICMP_EQ) {
     BasicBlock *Succ = SI->getParent()->getTerminator()->getSuccessor(1);
-    // The check for the unique predecessor is not the best that can be
+    // The check for the single predecessor is not the best that can be
     // done. But it protects efficiently against cases like when SI's
     // home block has two successors, Succ and Succ1, and Succ1 predecessor
     // of Succ. Then SI can't be replaced by SIOpd because the use that gets
@@ -3958,8 +3958,10 @@ bool InstCombiner::replacedSelectWithOperand(SelectInst *SI,
     // guarantees that the path all uses of SI (outside SI's parent) are on
     // is disjoint from all other paths out of SI. But that information
     // is more expensive to compute, and the trade-off here is in favor
-    // of compile-time.
-    if (Succ->getUniquePredecessor() && dominatesAllUses(SI, Icmp, Succ)) {
+    // of compile-time. It should also be noticed that we check for a single
+    // predecessor and not only uniqueness. This to handle the situation when
+    // Succ and Succ1 points to the same basic block.
+    if (Succ->getSinglePredecessor() && dominatesAllUses(SI, Icmp, Succ)) {
       NumSel++;
       SI->replaceUsesOutsideBlock(SI->getOperand(SIOpd), SI->getParent());
       return true;

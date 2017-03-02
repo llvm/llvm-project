@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
 """Methods for reporting bugs."""
 
 import subprocess, sys, os

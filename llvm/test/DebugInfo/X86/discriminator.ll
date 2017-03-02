@@ -59,4 +59,4 @@ attributes #0 = { nounwind uwtable "less-precise-fpmad"="false" "no-frame-pointe
 
 ; CHECK: Address            Line   Column File   ISA Discriminator Flags
 ; CHECK: ------------------ ------ ------ ------ --- ------------- -------------
-; CHECK: 0x0000000000000011      2      0      1   0            42 {{$}}
+; CHECK: 0x000000000000000a      2      0      1   0            42 {{$}}

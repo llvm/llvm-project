@@ -42,8 +42,8 @@ static cl::opt<cl::boolOrDefault>
 EnableFastISelOption("fast-isel", cl::Hidden,
   cl::desc("Enable the \"fast\" instruction selector"));
 
-static cl::opt<bool>
-    EnableGlobalISel("global-isel", cl::Hidden, cl::init(false),
+static cl::opt<cl::boolOrDefault>
+    EnableGlobalISel("global-isel", cl::Hidden,
                      cl::desc("Enable the \"global\" instruction selector"));
 
 void LLVMTargetMachine::initAsmInfo() {
@@ -149,7 +149,9 @@ addPassesToGenerateCode(LLVMTargetMachine *TM, PassManagerBase &PM,
     TM->setFastISel(true);
 
   // Ask the target for an isel.
-  if (LLVM_UNLIKELY(EnableGlobalISel)) {
+  // Enable GlobalISel if the target wants to, but allow that to be overriden.
+  if (EnableGlobalISel == cl::BOU_TRUE || (EnableGlobalISel == cl::BOU_UNSET &&
+                                           PassConfig->isGlobalISelEnabled())) {
     if (PassConfig->addIRTranslator())
       return nullptr;
 
@@ -177,7 +179,7 @@ addPassesToGenerateCode(LLVMTargetMachine *TM, PassManagerBase &PM,
 
     // Provide a fallback path when we do not want to abort on
     // not-yet-supported input.
-    if (LLVM_UNLIKELY(!PassConfig->isGlobalISelAbortEnabled()) &&
+    if (!PassConfig->isGlobalISelAbortEnabled() &&
         PassConfig->addInstSelector())
       return nullptr;
 

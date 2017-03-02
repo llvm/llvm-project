@@ -46,9 +46,9 @@ using namespace llvm::support;
 
 namespace {
 
-class DiscontiguousStream : public WritableBinaryStream {
+class BrokenStream : public WritableBinaryStream {
 public:
-  DiscontiguousStream(MutableArrayRef<uint8_t> Data, endianness Endian,
+  BrokenStream(MutableArrayRef<uint8_t> Data, endianness Endian,
                       uint32_t Align)
       : Data(Data), PartitionIndex(alignDown(Data.size() / 2, Align)),
         Endian(Endian) {}
@@ -169,7 +169,7 @@ protected:
     for (uint32_t I = 0; I < NumEndians; ++I) {
       auto InByteStream =
           llvm::make_unique<BinaryByteStream>(InputData, Endians[I]);
-      auto InBrokenStream = llvm::make_unique<DiscontiguousStream>(
+      auto InBrokenStream = llvm::make_unique<BrokenStream>(
           BrokenInputData, Endians[I], Align);
 
       Streams[I * 2].Input = std::move(InByteStream);
@@ -184,7 +184,7 @@ protected:
     for (uint32_t I = 0; I < NumEndians; ++I) {
       Streams[I * 2].Output =
           llvm::make_unique<MutableBinaryByteStream>(OutputData, Endians[I]);
-      Streams[I * 2 + 1].Output = llvm::make_unique<DiscontiguousStream>(
+      Streams[I * 2 + 1].Output = llvm::make_unique<BrokenStream>(
           BrokenOutputData, Endians[I], Align);
     }
   }
@@ -193,7 +193,7 @@ protected:
     for (uint32_t I = 0; I < NumEndians; ++I) {
       Streams[I * 2].Output =
           llvm::make_unique<MutableBinaryByteStream>(InputData, Endians[I]);
-      Streams[I * 2 + 1].Output = llvm::make_unique<DiscontiguousStream>(
+      Streams[I * 2 + 1].Output = llvm::make_unique<BrokenStream>(
           BrokenInputData, Endians[I], Align);
     }
   }
@@ -202,7 +202,7 @@ protected:
     for (uint32_t I = 0; I < NumEndians; ++I) {
       Streams[I * 2].Input =
           llvm::make_unique<BinaryByteStream>(OutputData, Endians[I]);
-      Streams[I * 2 + 1].Input = llvm::make_unique<DiscontiguousStream>(
+      Streams[I * 2 + 1].Input = llvm::make_unique<BrokenStream>(
           BrokenOutputData, Endians[I], Align);
     }
   }
@@ -509,26 +509,34 @@ TEST_F(BinaryStreamTest, StreamReaderObject) {
     int X;
     double Y;
     char Z;
+
+    bool operator==(const Foo &Other) const {
+      return X == Other.X && Y == Other.Y && Z == Other.Z;
+    }
   };
 
   std::vector<Foo> Foos;
   Foos.push_back({-42, 42.42, 42});
   Foos.push_back({100, 3.1415, static_cast<char>(-89)});
+  Foos.push_back({200, 2.718, static_cast<char>(-12) });
 
   const uint8_t *Bytes = reinterpret_cast<const uint8_t *>(&Foos[0]);
 
-  initializeInput(makeArrayRef(Bytes, 2 * sizeof(Foo)), alignof(Foo));
+  initializeInput(makeArrayRef(Bytes, 3 * sizeof(Foo)), alignof(Foo));
 
   for (auto &Stream : Streams) {
     // 1. Reading object pointers.
     BinaryStreamReader Reader(*Stream.Input);
     const Foo *FPtrOut = nullptr;
     const Foo *GPtrOut = nullptr;
+    const Foo *HPtrOut = nullptr;
     ASSERT_NO_ERROR(Reader.readObject(FPtrOut));
     ASSERT_NO_ERROR(Reader.readObject(GPtrOut));
+    ASSERT_NO_ERROR(Reader.readObject(HPtrOut));
     EXPECT_EQ(0U, Reader.bytesRemaining());
-    EXPECT_EQ(0, ::memcmp(&Foos[0], FPtrOut, sizeof(Foo)));
-    EXPECT_EQ(0, ::memcmp(&Foos[1], GPtrOut, sizeof(Foo)));
+    EXPECT_EQ(Foos[0], *FPtrOut);
+    EXPECT_EQ(Foos[1], *GPtrOut);
+    EXPECT_EQ(Foos[2], *HPtrOut);
   }
 }
 

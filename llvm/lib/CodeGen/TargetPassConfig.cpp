@@ -707,6 +707,10 @@ void TargetPassConfig::addMachineSSAOptimization() {
 
   addPass(&MachineLICMID, false);
   addPass(&MachineCSEID, false);
+
+  // Coalesce basic blocks with the same branch condition
+  addPass(&BranchCoalescingID);
+
   addPass(&MachineSinkingID);
 
   addPass(&PeepholeOptimizerID);
@@ -906,6 +910,11 @@ void TargetPassConfig::addBlockPlacement() {
 //===---------------------------------------------------------------------===//
 /// GlobalISel Configuration
 //===---------------------------------------------------------------------===//
+
+bool TargetPassConfig::isGlobalISelEnabled() const {
+  return false;
+}
+
 bool TargetPassConfig::isGlobalISelAbortEnabled() const {
   return EnableGlobalISelAbort == 1;
 }

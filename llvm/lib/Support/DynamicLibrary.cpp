@@ -76,6 +76,18 @@ DynamicLibrary DynamicLibrary::getPermanentLibrary(const char *filename,
   return DynamicLibrary(handle);
 }
 
+DynamicLibrary DynamicLibrary::addPermanentLibrary(void *handle,
+                                                   std::string *errMsg) {
+  SmartScopedLock<true> lock(*SymbolsMutex);
+  // If we've already loaded this library, tell the caller.
+  if (!OpenedHandles->insert(handle).second) {
+    if (errMsg) *errMsg = "Library already loaded";
+    return DynamicLibrary();
+  }
+
+  return DynamicLibrary(handle);
+}
+
 void *DynamicLibrary::getAddressOfSymbol(const char *symbolName) {
   if (!isValid())
     return nullptr;

@@ -46,8 +46,11 @@ static void commitEntry(StringRef TempFilename, StringRef EntryPath) {
   }
 }
 
-NativeObjectCache lto::localCache(StringRef CacheDirectoryPath,
-                                  AddFileFn AddFile) {
+Expected<NativeObjectCache> lto::localCache(StringRef CacheDirectoryPath,
+                                            AddFileFn AddFile) {
+  if (std::error_code EC = sys::fs::create_directories(CacheDirectoryPath))
+    return errorCodeToError(EC);
+
   return [=](unsigned Task, StringRef Key) -> AddStreamFn {
     // First, see if we have a cache hit.
     SmallString<64> EntryPath;
