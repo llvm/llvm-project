@@ -43,7 +43,7 @@ def changed_symbols(old, new):
             continue
         new_sym = _find_by_key(new, old_sym['name'])
         if (new_sym is not None and not new_sym in old
-                and cmp(old_sym, new_sym) != 0):
+                and old_sym != new_sym):
             changed += [(old_sym, new_sym)]
     return changed
 

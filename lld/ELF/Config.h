@@ -86,6 +86,7 @@ struct Configuration {
   llvm::StringRef OptRemarksFilename;
   llvm::StringRef SoName;
   llvm::StringRef Sysroot;
+  llvm::StringRef ThinLTOCacheDir;
   std::string RPath;
   std::vector<VersionDefinition> VersionDefinitions;
   std::vector<llvm::StringRef> AuxiliaryList;

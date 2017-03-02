@@ -427,7 +427,7 @@ VariableList *StackFrame::GetVariableList(bool get_file_globals) {
       m_variable_list_sp.reset(new VariableList());
       frame_block->AppendBlockVariables(can_create, get_child_variables,
                                         stop_if_child_block_is_inlined_function,
-                                        [this](Variable *v) { return true; },
+                                        [](Variable *v) { return true; },
                                         m_variable_list_sp.get());
     }
   }
