@@ -198,12 +198,48 @@
                                               SomeVectorLikeType that it gets from the synthetic children.
                                               </p>
                                             </li>
-                            
+
+                                            <li>
+                                              Recover thread information lazily
+                                              <p>
+                                                LLDB stores all the user intentions for a thread in the ThreadPlans stored in 
+                                                the Thread class.  That allows us to reliably implement a very natural model for
+                                                users moving through a debug session.  For example, if step-over stops at a breakpoint
+                                                in an function in a younger region of the stack, continue will complete the step-over
+                                                rather than having to manually step out.  But that means that it is important that
+                                                the Thread objects live as long as the Threads they represent.  For programs with many
+                                                threads, but only one that you are debugging, that makes stepping less efficient,
+                                                since now you have to fetch the thread list on every step or stepping doesn't work
+                                                correctly.  This is especially an issue when the threads are provided by an
+                                                Operating System plugin, where it may take non-trivial work to reconstruct the 
+                                                thread list.  It would be better to fetch threads lazily but keep "unseen" threads in 
+                                                a holding area, and only retire them when we know we've fetched the whole thread list
+                                                and ensured they are no longer alive.
+                                              </p>
+                                            </li>
                                             <li>
                                               Add an extension point in the breakpoint search machinery.
                                               <p>
                                                 This would allow highly customizable, algorithmic breakpoint types, like "break on every 
                                                 use of some particular instruction, or instruction pattern, etc."
+                                              </p>
+                                            </li>
+                            
+                                            <li>
+                                              Make Python-backed commands first class citizens
+                                              <p>
+                                                As it stands, Python commands have no way to advertise their options.  They are
+                                                required to parse their arguments by hand.  That leads to inconsistency, and more
+                                                importantly means they can't take advantage of auto-generated help and command
+                                                completion.  This leaves python-backed commands feeling worse than built-in ones.
+                                              </p>
+                                              <p>
+                                                As part of this job, it would also be great to hook automatically hook the "type" of an option value
+                                                or argument (e.g. eArgTypeShlibName) to sensible default completers.  You need to be able to
+                                                over-ride this in more complicated scenarios (like in "break set" where the presence of
+                                                a "-s" option limits the search for completion of a "-n" option.)  But in common cases it is
+                                                unnecessary busy-work to have to supply the completer AND the type.  If this worked, then 
+                                                it would be easier for Python commands to also get correct completers.
                                               </p>
                                             </li>
 
