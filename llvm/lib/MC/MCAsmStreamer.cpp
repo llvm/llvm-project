@@ -130,7 +130,7 @@ public:
   void ChangeSection(MCSection *Section, const MCExpr *Subsection) override;
 
   void EmitLOHDirective(MCLOHType Kind, const MCLOHArgs &Args) override;
-  void EmitLabel(MCSymbol *Symbol) override;
+  void EmitLabel(MCSymbol *Symbol, SMLoc Loc = SMLoc()) override;
 
   void EmitAssemblerFlag(MCAssemblerFlag Flag) override;
   void EmitLinkerOptions(ArrayRef<std::string> Options) override;
@@ -395,9 +395,8 @@ void MCAsmStreamer::ChangeSection(MCSection *Section,
   Section->PrintSwitchToSection(*MAI, OS, Subsection);
 }
 
-void MCAsmStreamer::EmitLabel(MCSymbol *Symbol) {
-  assert(Symbol->isUndefined() && "Cannot define a symbol twice!");
-  MCStreamer::EmitLabel(Symbol);
+void MCAsmStreamer::EmitLabel(MCSymbol *Symbol, SMLoc Loc) {
+  MCStreamer::EmitLabel(Symbol, Loc);
 
   Symbol->print(OS, MAI);
   OS << MAI->getLabelSuffix();
