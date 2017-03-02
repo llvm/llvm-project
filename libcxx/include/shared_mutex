@@ -220,6 +220,7 @@ public:
             return try_lock_until(chrono::steady_clock::now() + __rel_time);
         }
     template <class _Clock, class _Duration>
+        _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS
         bool
         try_lock_until(const chrono::time_point<_Clock, _Duration>& __abs_time);
     void unlock();
@@ -235,6 +236,7 @@ public:
             return try_lock_shared_until(chrono::steady_clock::now() + __rel_time);
         }
     template <class _Clock, class _Duration>
+        _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS
         bool
         try_lock_shared_until(const chrono::time_point<_Clock, _Duration>& __abs_time);
     void unlock_shared();

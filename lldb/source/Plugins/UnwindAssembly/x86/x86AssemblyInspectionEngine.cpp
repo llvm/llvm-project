@@ -979,11 +979,12 @@ bool x86AssemblyInspectionEngine::AugmentUnwindPlanFromCallSite(
     offset += insn_len;
     m_cur_insn = data + offset;
 
-    if (reinstate_unwind_state) {
-      // that was the last instruction of this function
-      if (offset >= size)
-        continue;
+    // offset is pointing beyond the bounds of the
+    // function; stop looping.
+    if (offset >= size) 
+      continue;
 
+    if (reinstate_unwind_state) {
       UnwindPlan::RowSP new_row(new UnwindPlan::Row());
       *new_row = *original_last_row;
       new_row->SetOffset(offset);

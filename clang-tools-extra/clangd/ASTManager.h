@@ -39,7 +39,10 @@ public:
   // FIXME: Implement codeComplete
 
   /// Get the fixes associated with a certain diagnostic as replacements.
-  llvm::ArrayRef<clang::tooling::Replacement>
+  ///
+  /// This function is thread-safe. It returns a copy to avoid handing out
+  /// references to unguarded data.
+  std::vector<clang::tooling::Replacement>
   getFixIts(const clangd::Diagnostic &D);
 
   DocumentStore &getStore() const { return Store; }

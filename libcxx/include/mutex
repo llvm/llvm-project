@@ -248,6 +248,7 @@ public:
         bool try_lock_for(const chrono::duration<_Rep, _Period>& __d)
             {return try_lock_until(chrono::steady_clock::now() + __d);}
     template <class _Clock, class _Duration>
+        _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS
         bool try_lock_until(const chrono::time_point<_Clock, _Duration>& __t);
     void unlock() _NOEXCEPT;
 };
@@ -291,6 +292,7 @@ public:
         bool try_lock_for(const chrono::duration<_Rep, _Period>& __d)
             {return try_lock_until(chrono::steady_clock::now() + __d);}
     template <class _Clock, class _Duration>
+        _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS
         bool try_lock_until(const chrono::time_point<_Clock, _Duration>& __t);
     void unlock() _NOEXCEPT;
 };
