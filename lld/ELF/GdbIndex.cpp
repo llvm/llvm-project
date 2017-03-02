@@ -68,64 +68,10 @@ using namespace llvm::object;
 using namespace lld;
 using namespace lld::elf;
 
-class lld::elf::ObjInfoTy : public llvm::LoadedObjectInfo {
-  uint64_t getSectionLoadAddress(const object::SectionRef &Sec) const override {
-    auto &S = static_cast<const ELFSectionRef &>(Sec);
-    if (S.getFlags() & ELF::SHF_ALLOC)
-      return S.getOffset();
-    return 0;
-  }
-
-  std::unique_ptr<llvm::LoadedObjectInfo> clone() const override { return {}; }
-};
-
-template <class ELFT>
-GdbIndexBuilder<ELFT>::GdbIndexBuilder(InputSection *Sec)
-    : DebugInfoSec(Sec), ObjInfo(new ObjInfoTy) {
-  elf::ObjectFile<ELFT> *File = Sec->template getFile<ELFT>();
-  Expected<std::unique_ptr<object::ObjectFile>> Obj =
-      object::ObjectFile::createObjectFile(File->MB);
-
-  if (Obj)
-    Dwarf.reset(new DWARFContextInMemory(*Obj.get(), ObjInfo.get()));
-  else
-    error(toString(File) + ": error creating DWARF context");
-}
-
-template <class ELFT> GdbIndexBuilder<ELFT>::~GdbIndexBuilder() {}
-
-template <class ELFT>
-std::vector<std::pair<typename ELFT::uint, typename ELFT::uint>>
-GdbIndexBuilder<ELFT>::readCUList() {
-  std::vector<std::pair<uintX_t, uintX_t>> Ret;
-  for (std::unique_ptr<DWARFCompileUnit> &CU : Dwarf->compile_units())
-    Ret.push_back(
-        {DebugInfoSec->OutSecOff + CU->getOffset(), CU->getLength() + 4});
-  return Ret;
-}
-
-template <class ELFT>
-std::vector<std::pair<StringRef, uint8_t>>
-GdbIndexBuilder<ELFT>::readPubNamesAndTypes() {
-  const bool IsLE = ELFT::TargetEndianness == llvm::support::little;
-  StringRef Data[] = {Dwarf->getGnuPubNamesSection(),
-                      Dwarf->getGnuPubTypesSection()};
-
-  std::vector<std::pair<StringRef, uint8_t>> Ret;
-  for (StringRef D : Data) {
-    DWARFDebugPubTable PubTable(D, IsLE, true);
-    for (const DWARFDebugPubTable::Set &S : PubTable.getData())
-      for (const DWARFDebugPubTable::Entry &E : S.Entries)
-        Ret.push_back({E.Name, E.Descriptor.toBits()});
-  }
-  return Ret;
-}
-
 std::pair<bool, GdbSymbol *> GdbHashTab::add(uint32_t Hash, size_t Offset) {
-  GdbSymbol *&Sym = Map[{Hash, Offset}];
+  GdbSymbol *&Sym = Map[Offset];
   if (Sym)
     return {false, Sym};
-  ++Size;
   Sym = make<GdbSymbol>(Hash, Offset);
   return {true, Sym};
 }
@@ -150,38 +96,3 @@ void GdbHashTab::finalizeContents() {
     }
   }
 }
-
-template <class ELFT>
-static InputSectionBase *findSection(ArrayRef<InputSectionBase *> Arr,
-                                     uint64_t Offset) {
-  for (InputSectionBase *S : Arr)
-    if (S && S != &InputSection::Discarded)
-      if (Offset >= S->Offset && Offset < S->Offset + S->getSize<ELFT>())
-        return S;
-  return nullptr;
-}
-
-template <class ELFT>
-std::vector<AddressEntry<ELFT>>
-GdbIndexBuilder<ELFT>::readAddressArea(size_t CurrentCU) {
-  std::vector<AddressEntry<ELFT>> Ret;
-  for (const auto &CU : Dwarf->compile_units()) {
-    DWARFAddressRangesVector Ranges;
-    CU->collectAddressRanges(Ranges);
-
-    ArrayRef<InputSectionBase *> Sections =
-        DebugInfoSec->template getFile<ELFT>()->getSections();
-
-    for (std::pair<uint64_t, uint64_t> &R : Ranges)
-      if (InputSectionBase *S = findSection<ELFT>(Sections, R.first))
-        Ret.push_back(
-            {S, R.first - S->Offset, R.second - S->Offset, CurrentCU});
-    ++CurrentCU;
-  }
-  return Ret;
-}
-
-template class elf::GdbIndexBuilder<ELF32LE>;
-template class elf::GdbIndexBuilder<ELF32BE>;
-template class elf::GdbIndexBuilder<ELF64LE>;
-template class elf::GdbIndexBuilder<ELF64BE>;

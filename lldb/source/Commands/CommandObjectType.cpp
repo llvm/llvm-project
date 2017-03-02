@@ -1188,8 +1188,7 @@ protected:
         category_closure(category_sp);
     } else {
       DataVisualization::Categories::ForEach(
-          [this, &command, &result, &category_regex, &formatter_regex,
-           &category_closure](
+          [&category_regex, &category_closure](
               const lldb::TypeCategoryImplSP &category) -> bool {
             if (category_regex) {
               bool escape = true;

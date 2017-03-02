@@ -194,10 +194,9 @@ protected:
 
     const bool qualify_cxx_base_classes = false;
 
-    DumpValueObjectOptions::DeclPrintingHelper helper =
-        [&valobj_sp, qualify_cxx_base_classes](
-            ConstString type, ConstString var,
-            const DumpValueObjectOptions &opts, Stream &stream) -> bool {
+    DumpValueObjectOptions::DeclPrintingHelper helper = [&valobj_sp](
+        ConstString type, ConstString var, const DumpValueObjectOptions &opts,
+        Stream &stream) -> bool {
       const ValueObject::GetExpressionPathFormat format = ValueObject::
           GetExpressionPathFormat::eGetExpressionPathFormatHonorPointers;
       valobj_sp->GetExpressionPath(stream, qualify_cxx_base_classes, format);

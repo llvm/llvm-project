@@ -521,7 +521,7 @@ public:
   // The CU vector portion of the constant pool.
   std::vector<std::vector<std::pair<uint32_t, uint8_t>>> CuVectors;
 
-  std::vector<AddressEntry<ELFT>> AddressArea;
+  std::vector<AddressEntry> AddressArea;
 
 private:
   void readDwarf(InputSection *Sec);
