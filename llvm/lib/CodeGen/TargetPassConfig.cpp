@@ -903,6 +903,11 @@ void TargetPassConfig::addBlockPlacement() {
 //===---------------------------------------------------------------------===//
 /// GlobalISel Configuration
 //===---------------------------------------------------------------------===//
+
+bool TargetPassConfig::isGlobalISelEnabled() const {
+  return false;
+}
+
 bool TargetPassConfig::isGlobalISelAbortEnabled() const {
   return EnableGlobalISelAbort == 1;
 }

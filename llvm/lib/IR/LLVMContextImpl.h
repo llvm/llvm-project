@@ -612,19 +612,17 @@ template <> struct MDNodeSubsetEqualImpl<DISubprogram> {
   typedef MDNodeKeyImpl<DISubprogram> KeyTy;
   static bool isSubsetEqual(const KeyTy &LHS, const DISubprogram *RHS) {
     return isDeclarationOfODRMember(LHS.IsDefinition, LHS.Scope,
-                                    LHS.LinkageName, LHS.TemplateParams, RHS);
+                                    LHS.LinkageName, RHS);
   }
   static bool isSubsetEqual(const DISubprogram *LHS, const DISubprogram *RHS) {
     return isDeclarationOfODRMember(LHS->isDefinition(), LHS->getRawScope(),
-                                    LHS->getRawLinkageName(),
-                                    LHS->getRawTemplateParams(), RHS);
+                                    LHS->getRawLinkageName(), RHS);
   }
 
   /// Subprograms compare equal if they declare the same function in an ODR
   /// type.
   static bool isDeclarationOfODRMember(bool IsDefinition, const Metadata *Scope,
                                        const MDString *LinkageName,
-                                       const Metadata *TemplateParams,
                                        const DISubprogram *RHS) {
     // Check whether the LHS is eligible.
     if (IsDefinition || !Scope || !LinkageName)
@@ -635,14 +633,8 @@ template <> struct MDNodeSubsetEqualImpl<DISubprogram> {
       return false;
 
     // Compare to the RHS.
-    // FIXME: We need to compare template parameters here to avoid incorrect
-    // collisions in mapMetadata when RF_MoveDistinctMDs and a ODR-DISubprogram
-    // has a non-ODR template parameter (i.e., a DICompositeType that does not
-    // have an identifier). Eventually we should decouple ODR logic from
-    // uniquing logic.
     return IsDefinition == RHS->isDefinition() && Scope == RHS->getRawScope() &&
-           LinkageName == RHS->getRawLinkageName() &&
-           TemplateParams == RHS->getRawTemplateParams();
+           LinkageName == RHS->getRawLinkageName();
   }
 };
 

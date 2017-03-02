@@ -388,7 +388,7 @@ MachineBasicBlock *BranchFolder::SplitMBBAt(MachineBasicBlock &CurMBB,
   NewMBB->splice(NewMBB->end(), &CurMBB, BBI1, CurMBB.end());
 
   // NewMBB belongs to the same loop as CurMBB.
-  if (MLI)
+  if (MLI) 
     if (MachineLoop *ML = MLI->getLoopFor(&CurMBB))
       ML->addBasicBlockToLoop(NewMBB, MLI->getBase());
 
@@ -436,7 +436,7 @@ static void FixTail(MachineBasicBlock *CurMBB, MachineBasicBlock *SuccBB,
   MachineFunction::iterator I = std::next(MachineFunction::iterator(CurMBB));
   MachineBasicBlock *TBB = nullptr, *FBB = nullptr;
   SmallVector<MachineOperand, 4> Cond;
-  DebugLoc dl = CurMBB->findBranchDebugLoc();
+  DebugLoc dl;  // FIXME: this is nowhere
   if (I != MF->end() && !TII->analyzeBranch(*CurMBB, TBB, FBB, Cond, true)) {
     MachineBasicBlock *NextBB = &*I;
     if (TBB == NextBB && !Cond.empty() && !FBB) {
@@ -1043,7 +1043,7 @@ bool BranchFolder::TailMergeBlocks(MachineFunction &MF) {
 
         // Remove the unconditional branch at the end, if any.
         if (TBB && (Cond.empty() || FBB)) {
-          DebugLoc dl = PBB->findBranchDebugLoc();
+          DebugLoc dl;  // FIXME: this is nowhere
           TII->removeBranch(*PBB);
           if (!Cond.empty())
             // reinsert conditional branch only, for now
