@@ -124,12 +124,12 @@ public:
   std::string getParentContextString(const DIScope *Context) const;
 
   /// Add a new global name to the compile unit.
-  virtual void addGlobalName(StringRef Name, DIE &Die, const DIScope *Context) {
-  }
+  virtual void addGlobalName(StringRef Name, const DIE &Die,
+                             const DIScope *Context) = 0;
 
   /// Add a new global type to the compile unit.
   virtual void addGlobalType(const DIType *Ty, const DIE &Die,
-                             const DIScope *Context) {}
+                             const DIScope *Context) = 0;
 
   /// Returns the DIE map slot for the specified debug variable.
   ///
@@ -262,9 +262,6 @@ public:
   DIE *getOrCreateTypeDIE(const MDNode *N);
 
   /// Get context owner's DIE.
-  DIE *createTypeDIE(const DICompositeType *Ty);
-
-  /// Get context owner's DIE.
   DIE *getOrCreateContextDIE(const DIScope *Context);
 
   /// Construct DIEs for types that contain vtables.
@@ -306,6 +303,11 @@ protected:
     return Ref.resolve();
   }
 
+  /// If this is a named finished type then include it in the list of types for
+  /// the accelerator tables.
+  void updateAcceleratorTables(const DIScope *Context, const DIType *Ty,
+                               const DIE &TyDIE);
+
 private:
   void constructTypeDIE(DIE &Buffer, const DIBasicType *BTy);
   void constructTypeDIE(DIE &Buffer, const DIDerivedType *DTy);
@@ -330,11 +332,6 @@ private:
   /// Set D as anonymous type for index which can be reused later.
   void setIndexTyDie(DIE *D) { IndexTyDie = D; }
 
-  /// If this is a named finished type then include it in the list of types for
-  /// the accelerator tables.
-  void updateAcceleratorTables(const DIScope *Context, const DIType *Ty,
-                               const DIE &TyDIE);
-
   virtual bool isDwoUnit() const = 0;
 };
 
@@ -354,12 +351,19 @@ public:
   void setTypeSignature(uint64_t Signature) { TypeSignature = Signature; }
   void setType(const DIE *Ty) { this->Ty = Ty; }
 
+  /// Get context owner's DIE.
+  DIE *createTypeDIE(const DICompositeType *Ty);
+
   /// Emit the header for this unit, not including the initial length field.
   void emitHeader(bool UseOffsets) override;
   unsigned getHeaderSize() const override {
     return DwarfUnit::getHeaderSize() + sizeof(uint64_t) + // Type Signature
            sizeof(uint32_t);                               // Type DIE Offset
   }
+  void addGlobalName(StringRef Name, const DIE &Die,
+                     const DIScope *Context) override;
+  void addGlobalType(const DIType *Ty, const DIE &Die,
+                     const DIScope *Context) override;
   DwarfCompileUnit &getCU() override { return CU; }
 };
 } // end llvm namespace
