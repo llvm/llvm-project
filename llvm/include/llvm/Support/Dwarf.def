@@ -19,7 +19,8 @@
       defined HANDLE_DW_CC || defined HANDLE_DW_LNS ||                         \
       defined HANDLE_DW_LNE || defined HANDLE_DW_LNCT ||                       \
       defined HANDLE_DW_MACRO || defined HANDLE_DW_RLE ||                      \
-      defined HANDLE_DW_CFA || defined HANDLE_DW_APPLE_PROPERTY)
+      defined HANDLE_DW_CFA || defined HANDLE_DW_APPLE_PROPERTY ||             \
+      defined HANDLE_DW_UT)
 #error "Missing macro definition of HANDLE_DW*"
 #endif
 
@@ -85,6 +86,10 @@
 
 #ifndef HANDLE_DW_APPLE_PROPERTY
 #define HANDLE_DW_APPLE_PROPERTY(ID, NAME)
+#endif
+
+#ifndef HANDLE_DW_UT
+#define HANDLE_DW_UT(ID, NAME)
 #endif
 
 HANDLE_DW_TAG(0x0000, null)
@@ -268,7 +273,7 @@ HANDLE_DW_AT(0x6c, const_expr)
 HANDLE_DW_AT(0x6d, enum_class)
 HANDLE_DW_AT(0x6e, linkage_name)
 
-// New in DWARF 5:
+// New in DWARF v5:
 HANDLE_DW_AT(0x6f, string_length_bit_size)
 HANDLE_DW_AT(0x70, string_length_byte_size)
 HANDLE_DW_AT(0x71, rank)
@@ -622,7 +627,7 @@ HANDLE_DW_LANG(0x0011, ObjC_plus_plus)
 HANDLE_DW_LANG(0x0012, UPC)
 HANDLE_DW_LANG(0x0013, D)
 
-// New in DWARF 5:
+// New in DWARF v5:
 HANDLE_DW_LANG(0x0014, Python)
 HANDLE_DW_LANG(0x0015, OpenCL)
 HANDLE_DW_LANG(0x0016, Go)
@@ -792,6 +797,13 @@ HANDLE_DW_APPLE_PROPERTY(0x1000, nullability)
 HANDLE_DW_APPLE_PROPERTY(0x2000, null_resettable)
 HANDLE_DW_APPLE_PROPERTY(0x4000, class)
 
+// DWARF v5 Unit Types.
+HANDLE_DW_UT(0x01, compile)
+HANDLE_DW_UT(0x02, type)
+HANDLE_DW_UT(0x03, partial)
+HANDLE_DW_UT(0x04, skeleton)
+HANDLE_DW_UT(0x05, split_compile)
+HANDLE_DW_UT(0x06, split_type)
 
 #undef HANDLE_DW_TAG
 #undef HANDLE_DW_AT
@@ -809,3 +821,4 @@ HANDLE_DW_APPLE_PROPERTY(0x4000, class)
 #undef HANDLE_DW_RLE
 #undef HANDLE_DW_CFA
 #undef HANDLE_DW_APPLE_PROPERTY
+#undef HANDLE_DW_UT

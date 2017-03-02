@@ -124,6 +124,7 @@ class DWARFUnit {
   uint32_t Length;
   uint16_t Version;
   const DWARFAbbreviationDeclarationSet *Abbrevs;
+  uint8_t UnitType;
   uint8_t AddrSize;
   uint64_t BaseAddr;
   // The compile unit debug information entry items.
@@ -152,7 +153,7 @@ class DWARFUnit {
 protected:
   virtual bool extractImpl(DataExtractor debug_info, uint32_t *offset_ptr);
   /// Size in bytes of the unit header.
-  virtual uint32_t getHeaderSize() const { return 11; }
+  virtual uint32_t getHeaderSize() const { return Version <= 4 ? 11 : 12; }
 
 public:
   DWARFUnit(DWARFContext &Context, const DWARFSection &Section,
@@ -208,6 +209,7 @@ public:
   const DWARFAbbreviationDeclarationSet *getAbbreviations() const {
     return Abbrevs;
   }
+  uint8_t getUnitType() const { return UnitType; }
   uint8_t getAddressByteSize() const { return AddrSize; }
   uint8_t getRefAddrByteSize() const {
     if (Version == 2)

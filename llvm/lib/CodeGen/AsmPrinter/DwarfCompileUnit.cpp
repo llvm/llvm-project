@@ -690,7 +690,10 @@ void DwarfCompileUnit::emitHeader(bool UseOffsets) {
     Asm->OutStreamer->EmitLabel(LabelBegin);
   }
 
-  DwarfUnit::emitHeader(UseOffsets);
+  dwarf::UnitType UT = Skeleton ? dwarf::DW_UT_split_compile
+                                : DD->useSplitDwarf() ? dwarf::DW_UT_skeleton
+                                                      : dwarf::DW_UT_compile;
+  DwarfUnit::emitCommonHeader(UseOffsets, UT);
 }
 
 /// addGlobalName - Add a new global name to the compile unit.
