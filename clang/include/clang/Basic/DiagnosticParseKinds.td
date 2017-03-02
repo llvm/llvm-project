@@ -859,6 +859,12 @@ def err_availability_query_repeated_platform: Error<
 def err_availability_query_repeated_star : Error<
   "'*' query has already been specified">;
 
+// External source symbol attribute
+def err_external_source_symbol_expected_keyword : Error<
+  "expected 'language', 'defined_in', or 'generated_declaration'">;
+def err_external_source_symbol_duplicate_clause : Error<
+  "duplicate %0 clause in an 'external_source_symbol' attribute">;
+
 // Type safety attributes
 def err_type_safety_unknown_flag : Error<
   "invalid comparison flag %0; use 'layout_compatible' or 'must_be_null'">;
