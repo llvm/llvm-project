@@ -24,6 +24,7 @@ class SwiftTypeMetadataTest(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @decorators.swiftTest
+    @decorators.skipIfLinux # <rdar://problem/30783388> test crashing sometimes when run on linux
     def test_swift_type_metadata(self):
         """Test that LLDB can effectively use the type metadata to reconstruct dynamic types for Swift"""
         self.build()
