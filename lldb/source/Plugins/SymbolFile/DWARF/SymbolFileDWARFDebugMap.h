@@ -11,6 +11,7 @@
 #define SymbolFileDWARF_SymbolFileDWARFDebugMap_h_
 
 #include <bitset>
+#include <map>
 #include <vector>
 
 #include "lldb/Core/RangeMap.h"

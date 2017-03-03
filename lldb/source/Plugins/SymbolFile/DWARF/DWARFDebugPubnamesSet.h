@@ -11,6 +11,7 @@
 #define SymbolFileDWARF_DWARFDebugPubnamesSet_h_
 
 #include "SymbolFileDWARF.h"
+#include <map>
 #include <string>
 #include <vector>
 #if __cplusplus >= 201103L || defined(_MSC_VER)
@@ -18,6 +19,8 @@
 #else
 #include <ext/hash_map>
 #endif
+
+#include "lldb/Core/STLUtils.h"
 
 class DWARFDebugPubnamesSet {
 public:
