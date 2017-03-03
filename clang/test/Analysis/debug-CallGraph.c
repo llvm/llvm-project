@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=debug.DumpCallGraph %s -fblocks 2>&1 | FileCheck %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=debug.DumpCallGraph %s -fblocks 2>&1 | FileCheck %s
 
 int get5() {
   return 5;

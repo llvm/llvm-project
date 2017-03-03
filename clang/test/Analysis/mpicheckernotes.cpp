@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=optin.mpi.MPI-Checker -analyzer-output=text -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=optin.mpi.MPI-Checker -analyzer-output=text -verify %s
 
 // MPI-Checker test file to test note diagnostics.
 

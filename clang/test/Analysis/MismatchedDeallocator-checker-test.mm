@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=core,unix.MismatchedDeallocator -fblocks -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,unix.MismatchedDeallocator -fblocks -verify %s
 
 #include "Inputs/system-header-simulator-objc.h"
 #include "Inputs/system-header-simulator-cxx.h"

@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=core,alpha.core.BoolAssignment -analyzer-store=region -verify -std=c99 -Dbool=_Bool %s
-// RUN: %clang_cc1 -analyze -analyzer-checker=core,alpha.core.BoolAssignment -analyzer-store=region -verify -x c++ %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.core.BoolAssignment -analyzer-store=region -verify -std=c99 -Dbool=_Bool %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.core.BoolAssignment -analyzer-store=region -verify -x c++ %s
 
 // Test C++'s bool and C's _Bool.
 // FIXME: We stopped warning on these when SValBuilder got smarter about
@@ -43,8 +43,11 @@ void test_BOOL_initialization(int y) {
     return;
   }
   if (y > 200 && y < 250) {
-    // FIXME: Currently we are loosing this warning due to a SymbolCast in RHS.
+#ifdef ANALYZER_CM_Z3
+    BOOL x = y; // expected-warning {{Assignment of a non-Boolean value}}
+#else
     BOOL x = y; // no-warning
+#endif
     return;
   }
   if (y >= 127 && y < 150) {

@@ -1,4 +1,4 @@
-// RUN: %clang --analyze %s -Xanalyzer -analyzer-config -Xanalyzer path-diagnostics-alternate=false -o %t > /dev/null 2>&1
+// RUN: %clang_analyze_cc1 %s -analyzer-checker=core.NullDereference -analyzer-output=plist -analyzer-config path-diagnostics-alternate=false -o %t > /dev/null 2>&1
 // RUN: FileCheck -input-file %t %s
 
 static inline bug(int *p) {

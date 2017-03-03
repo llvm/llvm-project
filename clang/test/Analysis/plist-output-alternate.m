@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=core,osx.cocoa.RetainCount,alpha.core -fblocks -analyzer-output=plist -analyzer-config path-diagnostics-alternate=false -o %t %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,osx.cocoa.RetainCount,alpha.core -fblocks -analyzer-output=plist -analyzer-config path-diagnostics-alternate=false -o %t %s
 // RUN: FileCheck --input-file %t %s
 
 void test_null_init(void) {

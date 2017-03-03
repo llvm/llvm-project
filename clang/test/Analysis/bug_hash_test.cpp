@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++11 -analyze -analyzer-checker=core,debug.DumpBugHash -analyzer-output=plist %s -o %t.plist
+// RUN: %clang_analyze_cc1 -std=c++11 -analyzer-checker=core,debug.DumpBugHash -analyzer-output=plist %s -o %t.plist
 // RUN: FileCheck --input-file=%t.plist %s
 
 int function(int p) {

@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple i386-apple-darwin10 -w -std=c++11 -analyze -analyzer-checker=osx.NumberObjectConversion %s -verify
-// RUN: %clang_cc1 -triple i386-apple-darwin10 -w -std=c++11 -analyze -analyzer-checker=osx.NumberObjectConversion -analyzer-config osx.NumberObjectConversion:Pedantic=true -DPEDANTIC %s -verify
+// RUN: %clang_analyze_cc1 -triple i386-apple-darwin10 -w -std=c++11 -analyzer-checker=osx.NumberObjectConversion %s -verify
+// RUN: %clang_analyze_cc1 -triple i386-apple-darwin10 -w -std=c++11 -analyzer-checker=osx.NumberObjectConversion -analyzer-config osx.NumberObjectConversion:Pedantic=true -DPEDANTIC %s -verify
 
 #define NULL ((void *)0)
 #include "Inputs/system-header-simulator-cxx.h" // for nullptr

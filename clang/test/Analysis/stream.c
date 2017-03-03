@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=alpha.unix.Stream -analyzer-store region -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=alpha.unix.Stream -analyzer-store region -verify %s
 
 typedef __typeof__(sizeof(int)) size_t;
 typedef struct _IO_FILE FILE;

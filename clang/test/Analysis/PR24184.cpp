@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -w -analyze -analyzer-eagerly-assume -fcxx-exceptions -analyzer-checker=core -analyzer-checker=alpha.core.PointerArithm,alpha.core.CastToStruct -analyzer-max-loop 64 -verify %s
-// RUN: %clang_cc1 -w -analyze -analyzer-checker=core -analyzer-checker=cplusplus -fcxx-exceptions -analyzer-checker alpha.core.PointerArithm,alpha.core.CastToStruct -analyzer-max-loop 63 -verify %s
+// RUN: %clang_analyze_cc1 -w -analyzer-eagerly-assume -fcxx-exceptions -analyzer-checker=core -analyzer-checker=alpha.core.PointerArithm,alpha.core.CastToStruct -analyzer-max-loop 64 -verify %s
+// RUN: %clang_analyze_cc1 -w -analyzer-checker=core -analyzer-checker=cplusplus -fcxx-exceptions -analyzer-checker alpha.core.PointerArithm,alpha.core.CastToStruct -analyzer-max-loop 63 -verify %s
 
 // These tests used to hit an assertion in the bug report. Test case from http://llvm.org/PR24184.
 typedef struct {

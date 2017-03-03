@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -w -fblocks -analyze -analyzer-checker=core,osx.API,unix.Malloc -verify %s
-// RUN: %clang_cc1 -w -fblocks -fobjc-arc -analyze -analyzer-checker=core,osx.API,unix.Malloc -verify %s
+// RUN: %clang_analyze_cc1 -w -fblocks -analyzer-checker=core,osx.API,unix.Malloc -verify %s
+// RUN: %clang_analyze_cc1 -w -fblocks -fobjc-arc -analyzer-checker=core,osx.API,unix.Malloc -verify %s
 
 #include "Inputs/system-header-simulator-objc.h"
 

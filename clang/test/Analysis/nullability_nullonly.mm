@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -analyze -fobjc-arc -analyzer-checker=core,nullability.NullPassedToNonnull,nullability.NullReturnedFromNonnull -DNOSYSTEMHEADERS=0 -verify %s
-// RUN: %clang_cc1 -analyze -fobjc-arc -analyzer-checker=core,nullability.NullPassedToNonnull,nullability.NullReturnedFromNonnull -analyzer-config nullability:NoDiagnoseCallsToSystemHeaders=true -DNOSYSTEMHEADERS=1 -verify %s
+// RUN: %clang_analyze_cc1 -fobjc-arc -analyzer-checker=core,nullability.NullPassedToNonnull,nullability.NullReturnedFromNonnull -DNOSYSTEMHEADERS=0 -verify %s
+// RUN: %clang_analyze_cc1 -fobjc-arc -analyzer-checker=core,nullability.NullPassedToNonnull,nullability.NullReturnedFromNonnull -analyzer-config nullability:NoDiagnoseCallsToSystemHeaders=true -DNOSYSTEMHEADERS=1 -verify %s
 
 #include "Inputs/system-header-simulator-for-nullability.h"
 

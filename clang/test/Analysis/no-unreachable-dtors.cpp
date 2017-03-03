@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=debug.Stats -verify -Wno-unreachable-code %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=debug.Stats -verify -Wno-unreachable-code %s
 
 struct S {
   ~S();

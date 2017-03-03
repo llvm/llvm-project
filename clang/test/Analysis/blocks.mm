@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -analyze -analyzer-checker=core -fblocks -analyzer-opt-analyze-nested-blocks -verify -x objective-c++ %s
-// RUN: %clang_cc1 -std=c++11 -fsyntax-only -analyze -analyzer-checker=core,debug.DumpCFG -fblocks -analyzer-opt-analyze-nested-blocks  %s > %t 2>&1
+// RUN: %clang_analyze_cc1 -triple x86_64-apple-darwin10 -analyzer-checker=core -fblocks -analyzer-opt-analyze-nested-blocks -verify -x objective-c++ %s
+// RUN: %clang_analyze_cc1 -std=c++11 -analyzer-checker=core,debug.DumpCFG -fblocks -analyzer-opt-analyze-nested-blocks %s > %t 2>&1
 // RUN: FileCheck --input-file=%t %s
 
 // expected-no-diagnostics

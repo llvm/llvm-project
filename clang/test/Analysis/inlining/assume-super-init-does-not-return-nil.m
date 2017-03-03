@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=core,osx -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,osx -verify %s
 
 typedef signed char BOOL;
 

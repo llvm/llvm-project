@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=alpha.core.FixedAddr,alpha.core.PointerArithm,alpha.core.PointerSub,debug.ExprInspection -analyzer-store=region -verify -triple x86_64-apple-darwin9 -Wno-tautological-pointer-compare %s
-// RUN: %clang_cc1 -analyze -analyzer-checker=alpha.core.FixedAddr,alpha.core.PointerArithm,alpha.core.PointerSub,debug.ExprInspection -analyzer-store=region -verify -triple i686-apple-darwin9 -Wno-tautological-pointer-compare %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=alpha.core.FixedAddr,alpha.core.PointerArithm,alpha.core.PointerSub,debug.ExprInspection -analyzer-store=region -verify -triple x86_64-apple-darwin9 -Wno-tautological-pointer-compare %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=alpha.core.FixedAddr,alpha.core.PointerArithm,alpha.core.PointerSub,debug.ExprInspection -analyzer-store=region -verify -triple i686-apple-darwin9 -Wno-tautological-pointer-compare %s
 
 void clang_analyzer_eval(int);
 
@@ -213,7 +213,12 @@ void comparisons_imply_size(int *lhs, int *rhs) {
   }
 
   clang_analyzer_eval(lhs <= rhs); // expected-warning{{TRUE}}
+// FIXME: In Z3ConstraintManager, ptrdiff_t is mapped to signed bitvector. However, this does not directly imply the unsigned comparison.
+#ifdef ANALYZER_CM_Z3
+  clang_analyzer_eval((rhs - lhs) >= 0); // expected-warning{{UNKNOWN}}
+#else
   clang_analyzer_eval((rhs - lhs) >= 0); // expected-warning{{TRUE}}
+#endif
   clang_analyzer_eval((rhs - lhs) > 0); // expected-warning{{UNKNOWN}}
 
   if (lhs >= rhs) {
@@ -223,7 +228,11 @@ void comparisons_imply_size(int *lhs, int *rhs) {
 
   clang_analyzer_eval(lhs == rhs); // expected-warning{{FALSE}}
   clang_analyzer_eval(lhs < rhs); // expected-warning{{TRUE}}
+#ifdef ANALYZER_CM_Z3
+  clang_analyzer_eval((rhs - lhs) > 0); // expected-warning{{UNKNOWN}}
+#else
   clang_analyzer_eval((rhs - lhs) > 0); // expected-warning{{TRUE}}
+#endif
 }
 
 void size_implies_comparison(int *lhs, int *rhs) {
@@ -234,7 +243,11 @@ void size_implies_comparison(int *lhs, int *rhs) {
     return;
   }
 
+#ifdef ANALYZER_CM_Z3
+  clang_analyzer_eval(lhs <= rhs); // expected-warning{{UNKNOWN}}
+#else
   clang_analyzer_eval(lhs <= rhs); // expected-warning{{TRUE}}
+#endif
   clang_analyzer_eval((rhs - lhs) >= 0); // expected-warning{{TRUE}}
   clang_analyzer_eval((rhs - lhs) > 0); // expected-warning{{UNKNOWN}}
 
@@ -244,7 +257,11 @@ void size_implies_comparison(int *lhs, int *rhs) {
   }
 
   clang_analyzer_eval(lhs == rhs); // expected-warning{{FALSE}}
+#ifdef ANALYZER_CM_Z3
+  clang_analyzer_eval(lhs < rhs); // expected-warning{{UNKNOWN}}
+#else
   clang_analyzer_eval(lhs < rhs); // expected-warning{{TRUE}}
+#endif
   clang_analyzer_eval((rhs - lhs) > 0); // expected-warning{{TRUE}}
 }
 
@@ -255,30 +272,42 @@ void size_implies_comparison(int *lhs, int *rhs) {
 void zero_implies_reversed_equal(int *lhs, int *rhs) {
   clang_analyzer_eval((rhs - lhs) == 0); // expected-warning{{UNKNOWN}}
   if ((rhs - lhs) == 0) {
-    // FIXME: Should be FALSE.
+#ifdef ANALYZER_CM_Z3
+    clang_analyzer_eval(rhs != lhs); // expected-warning{{FALSE}}
+    clang_analyzer_eval(rhs == lhs); // expected-warning{{TRUE}}
+#else
     clang_analyzer_eval(rhs != lhs); // expected-warning{{UNKNOWN}}
-    // FIXME: Should be TRUE.
     clang_analyzer_eval(rhs == lhs); // expected-warning{{UNKNOWN}}
+#endif
     return;
   }
   clang_analyzer_eval((rhs - lhs) == 0); // expected-warning{{FALSE}}
-  // FIXME: Should be FALSE.
+#ifdef ANALYZER_CM_Z3
+  clang_analyzer_eval(rhs == lhs); // expected-warning{{FALSE}}
+  clang_analyzer_eval(rhs != lhs); // expected-warning{{TRUE}}
+#else
   clang_analyzer_eval(rhs == lhs); // expected-warning{{UNKNOWN}}
-  // FIXME: Should be TRUE.
   clang_analyzer_eval(rhs != lhs); // expected-warning{{UNKNOWN}}
+#endif
 }
 
 void canonical_equal(int *lhs, int *rhs) {
   clang_analyzer_eval(lhs == rhs); // expected-warning{{UNKNOWN}}
   if (lhs == rhs) {
-    // FIXME: Should be TRUE.
+#ifdef ANALYZER_CM_Z3
+    clang_analyzer_eval(rhs == lhs); // expected-warning{{TRUE}}
+#else
     clang_analyzer_eval(rhs == lhs); // expected-warning{{UNKNOWN}}
+#endif
     return;
   }
   clang_analyzer_eval(lhs == rhs); // expected-warning{{FALSE}}
 
-  // FIXME: Should be FALSE.
+#ifdef ANALYZER_CM_Z3
+  clang_analyzer_eval(rhs == lhs); // expected-warning{{FALSE}}
+#else
   clang_analyzer_eval(rhs == lhs); // expected-warning{{UNKNOWN}}
+#endif
 }
 
 void compare_element_region_and_base(int *p) {

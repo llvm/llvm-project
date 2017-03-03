@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -emit-pch -o %t %s
-// RUN: %clang_cc1 -error-on-deserialized-decl S1_method -include-pch %t -analyze -analyzer-checker=core %s
-// RUN: %clang_cc1 -include-pch %t -analyze -analyzer-checker=core -verify %s
+// RUN: %clang_analyze_cc1 -error-on-deserialized-decl S1_method -include-pch %t -analyzer-checker=core %s
+// RUN: %clang_analyze_cc1 -include-pch %t -analyzer-checker=core -verify %s
 
 #ifndef HEADER
 #define HEADER

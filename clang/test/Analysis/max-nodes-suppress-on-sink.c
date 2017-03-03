@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=core,unix.Malloc,debug.ExprInspection -analyzer-config max-nodes=12 -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,unix.Malloc,debug.ExprInspection -analyzer-config max-nodes=12 -verify %s
 
 // Here we test how "suppress on sink" feature of certain bugtypes interacts
 // with reaching analysis limits.
