@@ -270,6 +270,12 @@ def parseOptionsAndInitTestdirs():
     if args.h:
         do_help = True
 
+    if args.lldb_platform_name and args.apple_sdk == "macosx":
+        # We likely know better here.
+        sdk = getSDKForPlatform(args.lldb_platform_name)
+        if sdk != None:
+            args.apple_sdk = sdk
+
     if args.compilers:
         configuration.compilers = args.compilers
     else:
@@ -1037,6 +1043,33 @@ def isMultiprocessTestRunner():
     return not (
         configuration.is_inferior_test_runner or configuration.no_multiprocess_test_runner)
 
+def getSDKForPlatform(platform):
+    sdks = {
+        'ios-simulator': 'iphonesimulator',
+        'tvos-simulator': 'appletvsimulator',
+        'watchos-simulator': 'watchsimulator',
+        'remote-ios': 'iphoneos',
+        'remote-tvos': 'appletvos',
+        'remote-watchos': 'watchos'
+    }
+    if platform in sdks:
+        return sdks[platform]
+    else:
+        return None
+
+def getInfixForPlatform(platform):
+    infixes = {
+        'ios-simulator': '-apple-ios',
+        'tvos-simulator': '-apple-tvos',
+        'watchos-simulator': '-apple-watchos',
+        'remote-ios': '-apple-ios',
+        'remote-tvos': '-apple-tvos',
+        'remote-watchos': '-apple-watchos'
+    }
+    if platform in infixes:
+        return infixes[platform]
+    else:
+        return None
 
 def getVersionForSDK(sdk):
     sdk = str.lower(sdk)
@@ -1057,9 +1090,10 @@ def getPathForSDK(sdk):
 
 
 def setDefaultTripleForPlatform():
-    if configuration.lldb_platform_name == 'ios-simulator':
-        triple_str = 'x86_64-apple-ios%s' % (
-            getVersionForSDK('iphonesimulator'))
+    infix = getInfixForPlatform(configuration.lldb_platform_name)
+    sdk = getSDKForPlatform(configuration.lldb_platform_name)
+    if infix != None and sdk != None and len(configuration.archs) > 0:
+        triple_str = configuration.archs[0] + infix + getVersionForSDK(sdk)
         os.environ['TRIPLE'] = triple_str
         return {'TRIPLE': triple_str}
     return {}
