@@ -16,20 +16,19 @@ target datalayout = "e-m:o-p:32:32-f64:32:64-f80:128-n8:16:32-S128"
 ; CHECK-NEXT: movl 20(%esp), %edx
 ; CHECK-NEXT: paddd (%edx), %xmm0
 ; CHECK-NEXT: movdqa %xmm0, (%edx)
-; CHECK-NEXT:	movl	(%edx), %esi
-; CHECK-NEXT:	movl	4(%edx), %edi
-; CHECK-NEXT:	shll	$4, %ecx
-; CHECK-NEXT:	movl	8(%edx), %ebx
-; CHECK-NEXT:	movl	12(%edx), %edx
+; CHECK-NEXT: movl (%edx), %esi
+; CHECK-NEXT: movl 12(%edx), %edi
+; CHECK-NEXT: movl 8(%edx), %ebx
+; CHECK-NEXT: movl 4(%edx), %edx
+; CHECK-NEXT: shll	$4, %ecx
 ; CHECK-NEXT: movl %esi, 12(%eax,%ecx)
-; CHECK-NEXT: movl %edi, (%eax,%ecx)
+; CHECK-NEXT: movl %edx, (%eax,%ecx)
 ; CHECK-NEXT: movl %ebx, 8(%eax,%ecx)
-; CHECK-NEXT: movl %edx, 4(%eax,%ecx)
+; CHECK-NEXT: movl %edi, 4(%eax,%ecx)
 ; CHECK-NEXT: popl %esi
 ; CHECK-NEXT: popl %edi
 ; CHECK-NEXT: popl %ebx
 ; CHECK-NEXT: retl
-
 define void @test_extractelement_legalization_storereuse(<4 x i32> %a, i32* nocapture %x, i32* nocapture readonly %y, i32 %i) #0 {
 entry:
   %0 = bitcast i32* %y to <4 x i32>*

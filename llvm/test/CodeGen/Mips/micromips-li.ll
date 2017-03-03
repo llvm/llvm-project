@@ -13,6 +13,6 @@ entry:
   ret i32 0
 }
 
-; CHECK: addiu  ${{[0-9]+}}, $zero, 2148
 ; CHECK: li16   ${{[2-7]|16|17}}, 1
+; CHECK: addiu  ${{[0-9]+}}, $zero, 2148
 ; CHECK: ori ${{[0-9]+}}, $zero, 33332

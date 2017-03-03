@@ -1,4 +1,4 @@
-//=-- CoverageMapping.h - Code coverage mapping support ---------*- C++ -*-=//
+//===- CoverageMapping.h - Code coverage mapping support --------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -12,24 +12,41 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_PROFILEDATA_COVERAGEMAPPING_H_
-#define LLVM_PROFILEDATA_COVERAGEMAPPING_H_
+#ifndef LLVM_PROFILEDATA_COVERAGE_COVERAGEMAPPING_H
+#define LLVM_PROFILEDATA_COVERAGE_COVERAGEMAPPING_H
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Hashing.h"
-#include "llvm/ADT/StringSet.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/ADT/iterator.h"
+#include "llvm/ADT/iterator_range.h"
+#include "llvm/ADT/None.h"
+#include "llvm/ADT/StringSet.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ProfileData/InstrProf.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Endian.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cassert>
+#include <cstdint>
+#include <iterator>
+#include <memory>
+#include <string>
 #include <system_error>
 #include <tuple>
+#include <utility>
+#include <vector>
 
 namespace llvm {
+
+class IndexedInstrProfReader;
+
 namespace coverage {
+
+class CoverageMappingReader;
+struct CoverageMappingRecord;
 
 enum class coveragemap_error {
   success = 0,
@@ -68,19 +85,6 @@ private:
   coveragemap_error Err;
 };
 
-} // end of coverage namespace.
-} // end of llvm namespace
-
-namespace llvm {
-class IndexedInstrProfReader;
-namespace coverage {
-
-class CoverageMappingReader;
-struct CoverageMappingRecord;
-
-class CoverageMapping;
-struct CounterExpressions;
-
 /// \brief A Counter is an abstract value that describes how to compute the
 /// execution count for a region of code using the collected profile count data.
 struct Counter {
@@ -91,13 +95,13 @@ struct Counter {
       EncodingTagBits + 1;
 
 private:
-  CounterKind Kind;
-  unsigned ID;
+  CounterKind Kind = Zero;
+  unsigned ID = 0;
 
   Counter(CounterKind Kind, unsigned ID) : Kind(Kind), ID(ID) {}
 
 public:
-  Counter() : Kind(Zero), ID(0) {}
+  Counter() = default;
 
   CounterKind getKind() const { return Kind; }
 
@@ -153,8 +157,9 @@ struct CounterExpression {
 class CounterExpressionBuilder {
   /// \brief A list of all the counter expressions
   std::vector<CounterExpression> Expressions;
+
   /// \brief A lookup table for the index of a given expression.
-  llvm::DenseMap<CounterExpression, unsigned> ExpressionIndices;
+  DenseMap<CounterExpression, unsigned> ExpressionIndices;
 
   /// \brief Return the counter which corresponds to the given expression.
   ///
@@ -238,7 +243,6 @@ struct CounterMappingRegion {
                                 LineEnd, ColumnEnd, SkippedRegion);
   }
 
-
   inline std::pair<unsigned, unsigned> startLoc() const {
     return std::pair<unsigned, unsigned>(LineStart, ColumnStart);
   }
@@ -269,7 +273,7 @@ public:
 
   void setCounts(ArrayRef<uint64_t> Counts) { CounterValues = Counts; }
 
-  void dump(const Counter &C, llvm::raw_ostream &OS) const;
+  void dump(const Counter &C, raw_ostream &OS) const;
   void dump(const Counter &C) const { dump(C, dbgs()); }
 
   /// \brief Return the number of times that a region of code associated with
@@ -390,13 +394,14 @@ struct CoverageSegment {
 /// provides a sequence of CoverageSegments to iterate through, as well as the
 /// list of expansions that can be further processed.
 class CoverageData {
+  friend class CoverageMapping;
+
   std::string Filename;
   std::vector<CoverageSegment> Segments;
   std::vector<ExpansionRecord> Expansions;
-  friend class CoverageMapping;
 
 public:
-  CoverageData() {}
+  CoverageData() = default;
 
   CoverageData(StringRef Filename) : Filename(Filename) {}
 
@@ -422,18 +427,17 @@ public:
 class CoverageMapping {
   StringSet<> FunctionNames;
   std::vector<FunctionRecord> Functions;
-  unsigned MismatchedFunctionCount;
+  unsigned MismatchedFunctionCount = 0;
 
-  CoverageMapping() : MismatchedFunctionCount(0) {}
-
-  CoverageMapping(const CoverageMapping &) = delete;
-  const CoverageMapping &operator=(const CoverageMapping &) = delete;
-
+  CoverageMapping() = default;
   /// \brief Add a function record corresponding to \p Record.
   Error loadFunctionRecord(const CoverageMappingRecord &Record,
                            IndexedInstrProfReader &ProfileReader);
 
 public:
+  CoverageMapping(const CoverageMapping &) = delete;
+  CoverageMapping &operator=(const CoverageMapping &) = delete;
+
   /// \brief Load the coverage mapping using the given readers.
   static Expected<std::unique_ptr<CoverageMapping>>
   load(CoverageMappingReader &CoverageReader,
@@ -517,14 +521,17 @@ template <class IntPtrT> struct CovMapFunctionRecordV1 {
   template <support::endianness Endian> uint64_t getFuncHash() const {
     return support::endian::byte_swap<uint64_t, Endian>(FuncHash);
   }
+
   // Return the coverage map data size for the funciton.
   template <support::endianness Endian> uint32_t getDataSize() const {
     return support::endian::byte_swap<uint32_t, Endian>(DataSize);
   }
+
   // Return function lookup key. The value is consider opaque.
   template <support::endianness Endian> IntPtrT getFuncNameRef() const {
     return support::endian::byte_swap<IntPtrT, Endian>(NamePtr);
   }
+
   // Return the PGO name of the function */
   template <support::endianness Endian>
   Error getFuncName(InstrProfSymtab &ProfileNames, StringRef &FuncName) const {
@@ -545,14 +552,17 @@ struct CovMapFunctionRecord {
   template <support::endianness Endian> uint64_t getFuncHash() const {
     return support::endian::byte_swap<uint64_t, Endian>(FuncHash);
   }
+
   // Return the coverage map data size for the funciton.
   template <support::endianness Endian> uint32_t getDataSize() const {
     return support::endian::byte_swap<uint32_t, Endian>(DataSize);
   }
+
   // Return function lookup key. The value is consider opaque.
   template <support::endianness Endian> uint64_t getFuncNameRef() const {
     return support::endian::byte_swap<uint64_t, Endian>(NameRef);
   }
+
   // Return the PGO name of the function */
   template <support::endianness Endian>
   Error getFuncName(InstrProfSymtab &ProfileNames, StringRef &FuncName) const {
@@ -570,12 +580,15 @@ struct CovMapHeader {
   template <support::endianness Endian> uint32_t getNRecords() const {
     return support::endian::byte_swap<uint32_t, Endian>(NRecords);
   }
+
   template <support::endianness Endian> uint32_t getFilenamesSize() const {
     return support::endian::byte_swap<uint32_t, Endian>(FilenamesSize);
   }
+
   template <support::endianness Endian> uint32_t getCoverageSize() const {
     return support::endian::byte_swap<uint32_t, Endian>(CoverageSize);
   }
+
   template <support::endianness Endian> uint32_t getVersion() const {
     return support::endian::byte_swap<uint32_t, Endian>(Version);
   }
@@ -635,4 +648,4 @@ template<> struct DenseMapInfo<coverage::CounterExpression> {
 
 } // end namespace llvm
 
-#endif // LLVM_PROFILEDATA_COVERAGEMAPPING_H_
+#endif // LLVM_PROFILEDATA_COVERAGE_COVERAGEMAPPING_H

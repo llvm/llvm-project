@@ -18,16 +18,23 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/StringRef.h"
+#include "llvm/ProfileData/ProfileCommon.h"
+#include "llvm/ProfileData/SampleProf.h"
 #include "llvm/ProfileData/SampleProfWriter.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorOr.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/LEB128.h"
-#include "llvm/Support/LineIterator.h"
-#include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/Regex.h"
+#include "llvm/Support/raw_ostream.h"
+#include <algorithm>
+#include <cstdint>
+#include <memory>
+#include <system_error>
+#include <utility>
+#include <vector>
 
-using namespace llvm::sampleprof;
 using namespace llvm;
+using namespace sampleprof;
 
 /// \brief Write samples to a text file.
 ///

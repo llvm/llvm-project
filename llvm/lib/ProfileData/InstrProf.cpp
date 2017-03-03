@@ -1,4 +1,4 @@
-//=-- InstrProf.cpp - Instrumented profiling format support -----------------=//
+//===- InstrProf.cpp - Instrumented profiling format support --------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -12,19 +12,46 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ProfileData/InstrProf.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
+#include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
+#include "llvm/IR/Instruction.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
+#include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/Type.h"
+#include "llvm/ProfileData/InstrProf.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Compression.h"
+#include "llvm/Support/Endian.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/ManagedStatic.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/SwapByteOrder.h"
+#include <algorithm>
+#include <cassert>
+#include <cstddef>
+#include <cstring>
+#include <cstdint>
+#include <memory>
+#include <string>
+#include <system_error>
+#include <utility>
+#include <vector>
 
 using namespace llvm;
 
@@ -46,8 +73,7 @@ static cl::opt<unsigned> StaticFuncStripDirNamePrefix(
     cl::desc("Strip specified level of directory name from source path in "
              "the profile counter name for static functions."));
 
-namespace {
-std::string getInstrProfErrString(instrprof_error Err) {
+static std::string getInstrProfErrString(instrprof_error Err) {
   switch (Err) {
   case instrprof_error::success:
     return "Success";
@@ -89,15 +115,19 @@ std::string getInstrProfErrString(instrprof_error Err) {
   llvm_unreachable("A value of instrprof_error has no message.");
 }
 
+namespace {
+
 // FIXME: This class is only here to support the transition to llvm::Error. It
 // will be removed once this transition is complete. Clients should prefer to
 // deal with the Error value directly, rather than converting to error_code.
 class InstrProfErrorCategoryType : public std::error_category {
   const char *name() const noexcept override { return "llvm.instrprof"; }
+
   std::string message(int IE) const override {
     return getInstrProfErrString(static_cast<instrprof_error>(IE));
   }
 };
+
 } // end anonymous namespace
 
 static ManagedStatic<InstrProfErrorCategoryType> ErrorCategory;
@@ -231,7 +261,6 @@ std::string getPGOFuncNameVarName(StringRef FuncName,
 GlobalVariable *createPGOFuncNameVar(Module &M,
                                      GlobalValue::LinkageTypes Linkage,
                                      StringRef PGOFuncName) {
-
   // We generally want to match the function's linkage, but available_externally
   // and extern_weak both have the wrong semantics, and anything that doesn't
   // need to link across compilation units doesn't need to be visible at all.
@@ -276,7 +305,7 @@ void InstrProfSymtab::create(Module &M, bool InLTO) {
 
 Error collectPGOFuncNameStrings(const std::vector<std::string> &NameStrs,
                                 bool doCompression, std::string &Result) {
-  assert(NameStrs.size() && "No name data to emit");
+  assert(!NameStrs.empty() && "No name data to emit");
 
   uint8_t Header[16], *P = Header;
   std::string UncompressedNameStrings =
@@ -589,6 +618,7 @@ void ValueProfRecord::deserializeTo(InstrProfRecord &Record,
 void ValueProfRecord::swapBytes(support::endianness Old,
                                 support::endianness New) {
   using namespace support;
+
   if (Old == New)
     return;
 
@@ -625,6 +655,7 @@ void ValueProfData::deserializeTo(InstrProfRecord &Record,
 template <class T>
 static T swapToHostOrder(const unsigned char *&D, support::endianness Orig) {
   using namespace support;
+
   if (Orig == little)
     return endian::readNext<T, little, unaligned>(D);
   else
@@ -659,6 +690,7 @@ ValueProfData::getValueProfData(const unsigned char *D,
                                 const unsigned char *const BufferEnd,
                                 support::endianness Endianness) {
   using namespace support;
+
   if (D + sizeof(ValueProfData) > BufferEnd)
     return make_error<InstrProfError>(instrprof_error::truncated);
 
@@ -681,6 +713,7 @@ ValueProfData::getValueProfData(const unsigned char *D,
 
 void ValueProfData::swapBytesToHost(support::endianness Endianness) {
   using namespace support;
+
   if (Endianness == getHostEndianness())
     return;
 
@@ -696,6 +729,7 @@ void ValueProfData::swapBytesToHost(support::endianness Endianness) {
 
 void ValueProfData::swapBytesFromHost(support::endianness Endianness) {
   using namespace support;
+
   if (Endianness == getHostEndianness())
     return;
 
@@ -890,4 +924,5 @@ bool canRenameComdatFunc(const Function &F, bool CheckAddressTaken) {
   }
   return true;
 }
+
 } // end namespace llvm

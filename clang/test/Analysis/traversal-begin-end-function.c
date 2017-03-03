@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=core,debug.DumpTraversal %s | FileCheck %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.DumpTraversal %s | FileCheck %s
 
 void inline_callee(int i);
 

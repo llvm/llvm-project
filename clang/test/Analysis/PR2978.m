@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=core,alpha.core,osx.cocoa.Dealloc %s -verify
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.core,osx.cocoa.Dealloc %s -verify
 
 // Tests for the checker which checks missing/extra ivar 'release' calls 
 // in dealloc.

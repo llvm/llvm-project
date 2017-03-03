@@ -1,5 +1,5 @@
 // REQUIRES: asserts
-// RUN: %clang_cc1 -analyze -analyzer-checker=core -analyzer-stats -fblocks %s 2>&1 | FileCheck %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core -analyzer-stats -fblocks %s 2>&1 | FileCheck %s
 @interface I
 int f() {
   return 0;

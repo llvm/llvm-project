@@ -6027,11 +6027,9 @@ bool SelectionDAGBuilder::visitMemCmpCall(const CallInst &I) {
   }
 
   const SelectionDAGTargetInfo &TSI = DAG.getSelectionDAGInfo();
-  std::pair<SDValue, SDValue> Res =
-    TSI.EmitTargetCodeForMemcmp(DAG, getCurSDLoc(), DAG.getRoot(),
-                                getValue(LHS), getValue(RHS), getValue(Size),
-                                MachinePointerInfo(LHS),
-                                MachinePointerInfo(RHS));
+  std::pair<SDValue, SDValue> Res = TSI.EmitTargetCodeForMemcmp(
+      DAG, getCurSDLoc(), DAG.getRoot(), getValue(LHS), getValue(RHS),
+      getValue(Size), MachinePointerInfo(LHS), MachinePointerInfo(RHS));
   if (Res.first.getNode()) {
     processIntegerCallValue(I, Res.first, true);
     PendingLoads.push_back(Res.second);
@@ -6040,70 +6038,61 @@ bool SelectionDAGBuilder::visitMemCmpCall(const CallInst &I) {
 
   // memcmp(S1,S2,2) != 0 -> (*(short*)LHS != *(short*)RHS)  != 0
   // memcmp(S1,S2,4) != 0 -> (*(int*)LHS != *(int*)RHS)  != 0
-  if (CSize && IsOnlyUsedInZeroEqualityComparison(&I)) {
-    bool ActuallyDoIt = true;
-    MVT LoadVT;
-    Type *LoadTy;
-    switch (CSize->getZExtValue()) {
-    default:
-      LoadVT = MVT::Other;
-      LoadTy = nullptr;
-      ActuallyDoIt = false;
-      break;
-    case 2:
-      LoadVT = MVT::i16;
-      LoadTy = Type::getInt16Ty(CSize->getContext());
-      break;
-    case 4:
-      LoadVT = MVT::i32;
-      LoadTy = Type::getInt32Ty(CSize->getContext());
-      break;
-    case 8:
-      LoadVT = MVT::i64;
-      LoadTy = Type::getInt64Ty(CSize->getContext());
-      break;
-        /*
-    case 16:
-      LoadVT = MVT::v4i32;
-      LoadTy = Type::getInt32Ty(CSize->getContext());
-      LoadTy = VectorType::get(LoadTy, 4);
-      break;
-         */
-    }
+  if (!CSize || !IsOnlyUsedInZeroEqualityComparison(&I))
+    return false;
 
-    // This turns into unaligned loads.  We only do this if the target natively
-    // supports the MVT we'll be loading or if it is small enough (<= 4) that
-    // we'll only produce a small number of byte loads.
-
-    // Require that we can find a legal MVT, and only do this if the target
-    // supports unaligned loads of that type.  Expanding into byte loads would
-    // bloat the code.
-    const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-    if (ActuallyDoIt && CSize->getZExtValue() > 4) {
-      unsigned DstAS = LHS->getType()->getPointerAddressSpace();
-      unsigned SrcAS = RHS->getType()->getPointerAddressSpace();
-      // TODO: Handle 5 byte compare as 4-byte + 1 byte.
-      // TODO: Handle 8 byte compare on x86-32 as two 32-bit loads.
-      // TODO: Check alignment of src and dest ptrs.
-      if (!TLI.isTypeLegal(LoadVT) ||
-          !TLI.allowsMisalignedMemoryAccesses(LoadVT, SrcAS) ||
-          !TLI.allowsMisalignedMemoryAccesses(LoadVT, DstAS))
-        ActuallyDoIt = false;
-    }
-
-    if (ActuallyDoIt) {
-      SDValue LHSVal = getMemCmpLoad(LHS, LoadVT, LoadTy, *this);
-      SDValue RHSVal = getMemCmpLoad(RHS, LoadVT, LoadTy, *this);
-
-      SDValue Res = DAG.getSetCC(getCurSDLoc(), MVT::i1, LHSVal, RHSVal,
-                                 ISD::SETNE);
-      processIntegerCallValue(I, Res, false);
-      return true;
-    }
+  MVT LoadVT;
+  Type *LoadTy;
+  switch (CSize->getZExtValue()) {
+  default:
+    return false;
+  case 2:
+    LoadVT = MVT::i16;
+    LoadTy = Type::getInt16Ty(CSize->getContext());
+    break;
+  case 4:
+    LoadVT = MVT::i32;
+    LoadTy = Type::getInt32Ty(CSize->getContext());
+    break;
+  case 8:
+    LoadVT = MVT::i64;
+    LoadTy = Type::getInt64Ty(CSize->getContext());
+    break;
+  /*
+  case 16:
+    LoadVT = MVT::v4i32;
+    LoadTy = Type::getInt32Ty(CSize->getContext());
+    LoadTy = VectorType::get(LoadTy, 4);
+    break;
+  */
   }
 
+  // This turns into unaligned loads.  We only do this if the target natively
+  // supports the MVT we'll be loading or if it is small enough (<= 4) that
+  // we'll only produce a small number of byte loads.
 
-  return false;
+  // Require that we can find a legal MVT, and only do this if the target
+  // supports unaligned loads of that type.  Expanding into byte loads would
+  // bloat the code.
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  if (CSize->getZExtValue() > 4) {
+    unsigned DstAS = LHS->getType()->getPointerAddressSpace();
+    unsigned SrcAS = RHS->getType()->getPointerAddressSpace();
+    // TODO: Handle 5 byte compare as 4-byte + 1 byte.
+    // TODO: Handle 8 byte compare on x86-32 as two 32-bit loads.
+    // TODO: Check alignment of src and dest ptrs.
+    if (!TLI.isTypeLegal(LoadVT) ||
+        !TLI.allowsMisalignedMemoryAccesses(LoadVT, SrcAS) ||
+        !TLI.allowsMisalignedMemoryAccesses(LoadVT, DstAS))
+      return false;
+  }
+
+  SDValue LHSVal = getMemCmpLoad(LHS, LoadVT, LoadTy, *this);
+  SDValue RHSVal = getMemCmpLoad(RHS, LoadVT, LoadTy, *this);
+  SDValue SetCC =
+      DAG.getSetCC(getCurSDLoc(), MVT::i1, LHSVal, RHSVal, ISD::SETNE);
+  processIntegerCallValue(I, SetCC, false);
+  return true;
 }
 
 /// See if we can lower a memchr call into an optimized form. If so, return

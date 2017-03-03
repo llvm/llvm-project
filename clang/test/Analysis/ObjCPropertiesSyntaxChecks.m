@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -w -fblocks -analyze -analyzer-checker=osx.ObjCProperty %s -verify
+// RUN: %clang_analyze_cc1 -w -fblocks -analyzer-checker=osx.ObjCProperty %s -verify
 
 #include "Inputs/system-header-simulator-objc.h"
 

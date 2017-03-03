@@ -1,4 +1,4 @@
-// RUN: %clang -target x86_64-unknown-freebsd --analyze %s
+// RUN: %clang_analyze_cc1 -triple x86_64-unknown-freebsd %s
 
 #include "Inputs/system-header-simulator.h"
 

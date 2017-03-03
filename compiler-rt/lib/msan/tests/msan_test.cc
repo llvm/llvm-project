@@ -3602,6 +3602,18 @@ TEST(MemorySanitizer, ICmpVectorRelational) {
   EXPECT_POISONED(_mm_cmpgt_epi16(poisoned(_mm_set1_epi16(6), _mm_set1_epi16(0xF)),
                                poisoned(_mm_set1_epi16(7), _mm_set1_epi16(0))));
 }
+
+TEST(MemorySanitizer, stmxcsr_ldmxcsr) {
+  U4 x = _mm_getcsr();
+  EXPECT_NOT_POISONED(x);
+
+  _mm_setcsr(x);
+
+  __msan_poison(&x, sizeof(x));
+  U4 origin = __LINE__;
+  __msan_set_origin(&x, sizeof(x), origin);
+  EXPECT_UMR_O(_mm_setcsr(x), origin);
+}
 #endif
 
 // Volatile bitfield store is implemented as load-mask-store

@@ -5,6 +5,7 @@ import platform
 import tempfile
 import threading
 
+from lit.ShCommands import GlobItem
 import lit.ShUtil as ShUtil
 import lit.Test as Test
 import lit.util
@@ -140,6 +141,15 @@ def executeShCmd(cmd, shenv, results, timeout=0):
         timeoutInfo = 'Reached timeout of {} seconds'.format(timeout)
 
     return (finalExitCode, timeoutInfo)
+
+def expand_glob_expressions(cmd, args):
+    result = [args[0]]
+    for arg in args[1:]:
+        if isinstance(arg, GlobItem):
+            result.extend(arg.resolve())
+        else:
+            result.append(arg)
+    return result
 
 def quote_windows_command(seq):
     """
@@ -371,6 +381,9 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
                     f.close()
                     named_temp_files.append(f.name)
                     args[i] = f.name
+
+        # Expand all glob expressions
+        args = expand_glob_expressions(j, args)
 
         # On Windows, do our own command line quoting for better compatibility
         # with some core utility distributions.

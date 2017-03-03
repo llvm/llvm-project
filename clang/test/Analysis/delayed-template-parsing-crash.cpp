@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=core -std=c++11 -fdelayed-template-parsing -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core -std=c++11 -fdelayed-template-parsing -verify %s
 // expected-no-diagnostics
 
 template <class T> struct remove_reference      {typedef T type;};

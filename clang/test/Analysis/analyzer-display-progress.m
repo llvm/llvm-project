@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fblocks -analyze -analyzer-display-progress %s 2>&1 | FileCheck %s
+// RUN: %clang_analyze_cc1 -fblocks -analyzer-display-progress %s 2>&1 | FileCheck %s
 
 #include "Inputs/system-header-simulator-objc.h"
 

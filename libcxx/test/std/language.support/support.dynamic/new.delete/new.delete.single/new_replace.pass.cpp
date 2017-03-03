@@ -43,9 +43,11 @@ struct A
     ~A() {A_constructed = false;}
 };
 
+A *volatile ap;
+
 int main()
 {
-    A* ap = new A;
+    ap = new A;
     assert(ap);
     assert(A_constructed);
     assert(new_called);

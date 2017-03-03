@@ -7499,7 +7499,7 @@ bool BuildVectorSDNode::isConstantSplat(APInt &SplatValue,
     unsigned BitPos = j * EltBitSize;
 
     if (OpVal.isUndef())
-      SplatUndef |= APInt::getBitsSet(sz, BitPos, BitPos + EltBitSize);
+      SplatUndef.setBits(BitPos, BitPos + EltBitSize);
     else if (ConstantSDNode *CN = dyn_cast<ConstantSDNode>(OpVal))
       SplatValue |= CN->getAPIntValue().zextOrTrunc(EltBitSize).
                     zextOrTrunc(sz) << BitPos;

@@ -159,7 +159,12 @@ option(LIBCXX_ENABLE_ABI_LINKER_SCRIPT
 
 set(ENABLE_NEW_DELETE_DEFAULT ON)
 if (LIBCXXABI_ENABLE_NEW_DELETE_DEFINITIONS)
-  set(ENABLE_NEW_DELETE_DEFAULT OFF)
+# FIXME: This option should default to off. Unfortunatly GCC 4.9 fails to link
+# programs to due undefined references to new/delete in libc++abi so to work
+# around this libc++abi currently defaults LIBCXXABI_ENABLE_NEW_DELETE_DEFINITIONS
+# to ON. Once the GCC bug has been worked around this option should be changed
+# back to OFF.
+  set(ENABLE_NEW_DELETE_DEFAULT ON)
 endif()
 
 option(LIBCXX_ENABLE_NEW_DELETE_DEFINITIONS

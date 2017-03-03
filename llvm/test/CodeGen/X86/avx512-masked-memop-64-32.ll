@@ -32,6 +32,7 @@ define void @test3(<16 x i32> %trigger, <16 x i32>* %addr, <16 x i32> %val) {
 ; AVX512-NEXT:    vpxord %zmm2, %zmm2, %zmm2
 ; AVX512-NEXT:    vpcmpeqd %zmm2, %zmm0, %k1
 ; AVX512-NEXT:    vmovdqu32 %zmm1, (%rdi) {%k1}
+; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %mask = icmp eq <16 x i32> %trigger, zeroinitializer
   call void @llvm.masked.store.v16i32.p0v16i32(<16 x i32>%val, <16 x i32>* %addr, i32 4, <16 x i1>%mask)
@@ -56,6 +57,7 @@ define void @test13(<16 x i32> %trigger, <16 x float>* %addr, <16 x float> %val)
 ; AVX512-NEXT:    vpxord %zmm2, %zmm2, %zmm2
 ; AVX512-NEXT:    vpcmpeqd %zmm2, %zmm0, %k1
 ; AVX512-NEXT:    vmovups %zmm1, (%rdi) {%k1}
+; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %mask = icmp eq <16 x i32> %trigger, zeroinitializer
   call void @llvm.masked.store.v16f32.p0v16f32(<16 x float>%val, <16 x float>* %addr, i32 4, <16 x i1>%mask)
@@ -67,6 +69,7 @@ define void @one_mask_bit_set5(<8 x double>* %addr, <8 x double> %val) {
 ; AVX512:       ## BB#0:
 ; AVX512-NEXT:    vextractf32x4 $3, %zmm0, %xmm0
 ; AVX512-NEXT:    vmovlps %xmm0, 48(%rdi)
+; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   call void @llvm.masked.store.v8f64.p0v8f64(<8 x double> %val, <8 x double>* %addr, i32 4, <8 x i1><i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 true, i1 false>)
   ret void
@@ -143,6 +146,7 @@ define void @test_store_16i64(<16 x i64>* %ptrs, <16 x i1> %mask, <16 x i64> %sr
 ; AVX512F-NEXT:    vmovdqu64 %zmm1, (%rdi) {%k1}
 ; AVX512F-NEXT:    kshiftrw $8, %k1, %k1
 ; AVX512F-NEXT:    vmovdqu64 %zmm2, 64(%rdi) {%k1}
+; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
 ; SKX-LABEL: test_store_16i64:
@@ -152,6 +156,7 @@ define void @test_store_16i64(<16 x i64>* %ptrs, <16 x i1> %mask, <16 x i64> %sr
 ; SKX-NEXT:    vmovdqu64 %zmm1, (%rdi) {%k1}
 ; SKX-NEXT:    kshiftrw $8, %k1, %k1
 ; SKX-NEXT:    vmovdqu64 %zmm2, 64(%rdi) {%k1}
+; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
   call void @llvm.masked.store.v16i64.p0v16i64(<16 x i64> %src0, <16 x i64>* %ptrs, i32 4, <16 x i1> %mask)
   ret void
@@ -167,6 +172,7 @@ define void @test_store_16f64(<16 x double>* %ptrs, <16 x i1> %mask, <16 x doubl
 ; AVX512F-NEXT:    vmovupd %zmm1, (%rdi) {%k1}
 ; AVX512F-NEXT:    kshiftrw $8, %k1, %k1
 ; AVX512F-NEXT:    vmovupd %zmm2, 64(%rdi) {%k1}
+; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
 ; SKX-LABEL: test_store_16f64:
@@ -176,6 +182,7 @@ define void @test_store_16f64(<16 x double>* %ptrs, <16 x i1> %mask, <16 x doubl
 ; SKX-NEXT:    vmovupd %zmm1, (%rdi) {%k1}
 ; SKX-NEXT:    kshiftrw $8, %k1, %k1
 ; SKX-NEXT:    vmovupd %zmm2, 64(%rdi) {%k1}
+; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
   call void @llvm.masked.store.v16f64.p0v16f64(<16 x double> %src0, <16 x double>* %ptrs, i32 4, <16 x i1> %mask)
   ret void

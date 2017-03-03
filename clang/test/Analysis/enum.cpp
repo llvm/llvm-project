@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -analyze -std=c++11 -analyzer-checker=debug.ExprInspection %s
+// RUN: %clang_analyze_cc1 -std=c++11 -analyzer-checker=debug.ExprInspection %s
 
 void clang_analyzer_eval(bool);
 

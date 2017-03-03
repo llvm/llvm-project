@@ -233,6 +233,7 @@ define <2 x i64> @imulq128(<2 x i64> %y, <2 x i64> %x) {
 ; AVX512DQ-NEXT:    ## kill: %XMM0<def> %XMM0<kill> %ZMM0<def>
 ; AVX512DQ-NEXT:    vpmullq %zmm0, %zmm1, %zmm0
 ; AVX512DQ-NEXT:    ## kill: %XMM0<def> %XMM0<kill> %ZMM0<kill>
+; AVX512DQ-NEXT:    vzeroupper
 ; AVX512DQ-NEXT:    retq
 ;
 ; SKX-LABEL: imulq128:

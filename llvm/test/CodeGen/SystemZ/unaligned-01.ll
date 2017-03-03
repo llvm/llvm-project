@@ -1,7 +1,10 @@
 ; Check that unaligned accesses are allowed in general.  We check the
 ; few exceptions (like CRL) in their respective test files.
 ;
-; RUN: llc < %s -mtriple=s390x-linux-gnu | FileCheck %s
+; FIXME: -combiner-alias-analysis (the default for SystemZ) stops
+;        f1 from being optimized.
+; RUN: llc < %s -mtriple=s390x-linux-gnu -combiner-alias-analysis=false \
+; RUN:   | FileCheck %s
 
 ; Check that these four byte stores become a single word store.
 define void @f1(i8 *%ptr) {

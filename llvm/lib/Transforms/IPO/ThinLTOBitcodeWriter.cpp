@@ -241,6 +241,8 @@ void filterModule(
 void forEachVirtualFunction(Constant *C, function_ref<void(Function *)> Fn) {
   if (auto *F = dyn_cast<Function>(C))
     return Fn(F);
+  if (isa<GlobalValue>(C))
+    return;
   for (Value *Op : C->operands())
     forEachVirtualFunction(cast<Constant>(Op), Fn);
 }

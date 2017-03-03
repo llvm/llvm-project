@@ -7498,7 +7498,7 @@ X86TargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
     // a constant pool load than it is to do a movd + shuffle.
     if (ExtVT == MVT::i64 && !Subtarget.is64Bit() &&
         (!IsAllConstants || Idx == 0)) {
-      if (DAG.MaskedValueIsZero(Item, APInt::getBitsSet(64, 32, 64))) {
+      if (DAG.MaskedValueIsZero(Item, APInt::getHighBitsSet(64, 32))) {
         // Handle SSE only.
         assert(VT == MVT::v2i64 && "Expected an SSE value type!");
         MVT VecVT = MVT::v4i32;
@@ -16033,7 +16033,7 @@ static SDValue LowerVectorAllZeroTest(SDValue Op, const X86Subtarget &Subtarget,
   for (unsigned i = 0, e = VecIns.size(); i < e; ++i)
     VecIns[i] = DAG.getBitcast(TestVT, VecIns[i]);
 
-  // If more than one full vectors are evaluated, OR them first before PTEST.
+  // If more than one full vector is evaluated, OR them first before PTEST.
   for (unsigned Slot = 0, e = VecIns.size(); e - Slot > 1; Slot += 2, e += 1) {
     // Each iteration will OR 2 nodes and append the result until there is only
     // 1 node left, i.e. the final OR'd value of all vectors.
@@ -16042,8 +16042,7 @@ static SDValue LowerVectorAllZeroTest(SDValue Op, const X86Subtarget &Subtarget,
     VecIns.push_back(DAG.getNode(ISD::OR, DL, TestVT, LHS, RHS));
   }
 
-  return DAG.getNode(X86ISD::PTEST, DL, MVT::i32,
-                     VecIns.back(), VecIns.back());
+  return DAG.getNode(X86ISD::PTEST, DL, MVT::i32, VecIns.back(), VecIns.back());
 }
 
 /// \brief return true if \c Op has a use that doesn't just read flags.
@@ -33864,22 +33863,19 @@ static SDValue combineGatherScatter(SDNode *N, SelectionDAG &DAG) {
   return SDValue();
 }
 
-// Helper function of performSETCCCombine. It is to materialize "setb reg"
-// as "sbb reg,reg", since it can be extended without zext and produces
-// an all-ones bit which is more useful than 0/1 in some cases.
-static SDValue MaterializeSETB(const SDLoc &DL, SDValue EFLAGS,
-                               SelectionDAG &DAG, MVT VT) {
+/// Materialize "setb reg" as "sbb reg,reg", since it produces an all-ones bit
+/// which is more useful than 0/1 in some cases.
+static SDValue materializeSBB(SDNode *N, SDValue EFLAGS, SelectionDAG &DAG) {
+  SDLoc DL(N);
+  // "Condition code B" is also known as "the carry flag" (CF).
+  SDValue CF = DAG.getConstant(X86::COND_B, DL, MVT::i8);
+  SDValue SBB = DAG.getNode(X86ISD::SETCC_CARRY, DL, MVT::i8, CF, EFLAGS);
+  MVT VT = N->getSimpleValueType(0);
   if (VT == MVT::i8)
-    return DAG.getNode(ISD::AND, DL, VT,
-                       DAG.getNode(X86ISD::SETCC_CARRY, DL, MVT::i8,
-                                   DAG.getConstant(X86::COND_B, DL, MVT::i8),
-                                   EFLAGS),
-                       DAG.getConstant(1, DL, VT));
-  assert (VT == MVT::i1 && "Unexpected type for SECCC node");
-  return DAG.getNode(ISD::TRUNCATE, DL, MVT::i1,
-                     DAG.getNode(X86ISD::SETCC_CARRY, DL, MVT::i8,
-                                 DAG.getConstant(X86::COND_B, DL, MVT::i8),
-                                 EFLAGS));
+    return DAG.getNode(ISD::AND, DL, VT, SBB, DAG.getConstant(1, DL, VT));
+
+  assert(VT == MVT::i1 && "Unexpected type for SETCC node");
+  return DAG.getNode(ISD::TRUNCATE, DL, MVT::i1, SBB);
 }
 
 // Optimize  RES = X86ISD::SETCC CONDCODE, EFLAG_INPUT
@@ -33903,15 +33899,12 @@ static SDValue combineX86SetCC(SDNode *N, SelectionDAG &DAG,
                                    EFLAGS.getNode()->getVTList(),
                                    EFLAGS.getOperand(1), EFLAGS.getOperand(0));
       SDValue NewEFLAGS = SDValue(NewSub.getNode(), EFLAGS.getResNo());
-      return MaterializeSETB(DL, NewEFLAGS, DAG, N->getSimpleValueType(0));
+      return materializeSBB(N, NewEFLAGS, DAG);
     }
   }
 
-  // Materialize "setb reg" as "sbb reg,reg", since it can be extended without
-  // a zext and produces an all-ones bit which is more useful than 0/1 in some
-  // cases.
   if (CC == X86::COND_B)
-    return MaterializeSETB(DL, EFLAGS, DAG, N->getSimpleValueType(0));
+    return materializeSBB(N, EFLAGS, DAG);
 
   // Try to simplify the EFLAGS and condition code operands.
   if (SDValue Flags = combineSetCCEFLAGS(EFLAGS, CC, DAG))

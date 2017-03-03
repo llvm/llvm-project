@@ -118,6 +118,7 @@ public:
 
 INITIALIZE_PASS_BEGIN(SIAnnotateControlFlow, DEBUG_TYPE,
                       "Annotate SI Control Flow", false, false)
+INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(DivergenceAnalysis)
 INITIALIZE_PASS_END(SIAnnotateControlFlow, DEBUG_TYPE,
                     "Annotate SI Control Flow", false, false)

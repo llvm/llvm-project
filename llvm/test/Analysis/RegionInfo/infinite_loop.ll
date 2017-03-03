@@ -16,4 +16,6 @@ define void @normal_condition() nounwind {
 }
 ; CHECK-NOT: =>
 ; CHECK: [0] 0 => <Function Return>
-; STAT: 1 region - The # of regions
+; CHECK: [1] 1 => 4
+; STAT: 2 region - The # of regions
+; STAT: 1 region - The # of simple regions

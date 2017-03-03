@@ -415,6 +415,7 @@ define void @test12(<8 x i32> %trigger, <8 x i32>* %addr, <8 x i32> %val) {
 ; AVX512F-NEXT:    kshiftlw $8, %k0, %k0
 ; AVX512F-NEXT:    kshiftrw $8, %k0, %k1
 ; AVX512F-NEXT:    vmovdqu32 %zmm1, (%rdi) {%k1}
+; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
 ; SKX-LABEL: test12:
@@ -422,6 +423,7 @@ define void @test12(<8 x i32> %trigger, <8 x i32>* %addr, <8 x i32> %val) {
 ; SKX-NEXT:    vpxor %ymm2, %ymm2, %ymm2
 ; SKX-NEXT:    vpcmpeqd %ymm2, %ymm0, %k1
 ; SKX-NEXT:    vmovdqu32 %ymm1, (%rdi) {%k1}
+; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
   %mask = icmp eq <8 x i32> %trigger, zeroinitializer
   call void @llvm.masked.store.v8i32.p0v8i32(<8 x i32>%val, <8 x i32>* %addr, i32 4, <8 x i1>%mask)
@@ -998,12 +1000,14 @@ define void @one_mask_bit_set3(<4 x i64>* %addr, <4 x i64> %val) {
 ; AVX512F:       ## BB#0:
 ; AVX512F-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; AVX512F-NEXT:    vmovlps %xmm0, 16(%rdi)
+; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
 ; SKX-LABEL: one_mask_bit_set3:
 ; SKX:       ## BB#0:
 ; SKX-NEXT:    vextracti128 $1, %ymm0, %xmm0
 ; SKX-NEXT:    vmovq %xmm0, 16(%rdi)
+; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
   call void @llvm.masked.store.v4i64.p0v4i64(<4 x i64> %val, <4 x i64>* %addr, i32 4, <4 x i1><i1 false, i1 false, i1 true, i1 false>)
   ret void
@@ -1023,6 +1027,7 @@ define void @one_mask_bit_set4(<4 x double>* %addr, <4 x double> %val) {
 ; AVX512:       ## BB#0:
 ; AVX512-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; AVX512-NEXT:    vmovhpd %xmm0, 24(%rdi)
+; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   call void @llvm.masked.store.v4f64.p0v4f64(<4 x double> %val, <4 x double>* %addr, i32 4, <4 x i1><i1 false, i1 false, i1 false, i1 true>)
   ret void
@@ -1042,6 +1047,7 @@ define void @one_mask_bit_set5(<8 x double>* %addr, <8 x double> %val) {
 ; AVX512:       ## BB#0:
 ; AVX512-NEXT:    vextractf32x4 $3, %zmm0, %xmm0
 ; AVX512-NEXT:    vmovlps %xmm0, 48(%rdi)
+; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   call void @llvm.masked.store.v8f64.p0v8f64(<8 x double> %val, <8 x double>* %addr, i32 4, <8 x i1><i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 true, i1 false>)
   ret void

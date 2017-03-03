@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin9 -analyze -analyzer-checker=core,alpha.core -analyzer-store=region -verify %s
+// RUN: %clang_analyze_cc1 -triple x86_64-apple-darwin9 -analyzer-checker=core,alpha.core -analyzer-store=region -verify %s
 // expected-no-diagnostics
 
 // PR 4164: http://llvm.org/bugs/show_bug.cgi?id=4164

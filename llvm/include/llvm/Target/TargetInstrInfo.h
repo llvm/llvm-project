@@ -1142,7 +1142,7 @@ public:
   /// Return true if the specified instruction can be predicated.
   /// By default, this returns true for every instruction with a
   /// PredicateOperand.
-  virtual bool isPredicable(MachineInstr &MI) const {
+  virtual bool isPredicable(const MachineInstr &MI) const {
     return MI.getDesc().isPredicable();
   }
 

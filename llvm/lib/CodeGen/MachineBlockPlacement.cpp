@@ -36,7 +36,6 @@
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
-#include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
@@ -51,6 +50,7 @@
 #include "llvm/Target/TargetLowering.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
 #include <algorithm>
+#include <forward_list>
 #include <functional>
 #include <utility>
 using namespace llvm;
@@ -85,19 +85,6 @@ static cl::opt<unsigned> ExitBlockBias(
 
 // Definition:
 // - Outlining: placement of a basic block outside the chain or hot path.
-
-static cl::opt<bool> OutlineOptionalBranches(
-    "outline-optional-branches",
-    cl::desc("Outlining optional branches will place blocks that are optional "
-              "branches, i.e. branches with a common post dominator, outside "
-              "the hot path or chain"),
-    cl::init(false), cl::Hidden);
-
-static cl::opt<unsigned> OutlineOptionalThreshold(
-    "outline-optional-threshold",
-    cl::desc("Don't outline optional branches that are a single block with an "
-             "instruction count below this threshold"),
-    cl::init(4), cl::Hidden);
 
 static cl::opt<unsigned> LoopToColdBlockRatio(
     "loop-to-cold-block-ratio",
@@ -155,6 +142,14 @@ static cl::opt<unsigned> TailDupPlacementPenalty(
              "pressure. This parameter controls the penalty to account for that. "
              "Percent as integer."),
     cl::init(2),
+    cl::Hidden);
+
+// Heuristic for triangle chains.
+static cl::opt<unsigned> TriangleChainCount(
+    "triangle-chain-count",
+    cl::desc("Number of triangle-shaped-CFG's that need to be in a row for the "
+             "triangle tail duplication heuristic to kick in. 0 to disable."),
+    cl::init(3),
     cl::Hidden);
 
 extern cl::opt<unsigned> StaticLikelyProb;
@@ -335,9 +330,6 @@ class MachineBlockPlacement : public MachineFunctionPass {
   /// \brief A handle to the target's lowering info.
   const TargetLoweringBase *TLI;
 
-  /// \brief A handle to the dominator tree.
-  MachineDominatorTree *MDT;
-
   /// \brief A handle to the post dominator tree.
   MachinePostDominatorTree *MPDT;
 
@@ -347,10 +339,6 @@ class MachineBlockPlacement : public MachineFunctionPass {
   /// since tail duplication affects placement decisions of later blocks, it
   /// must be done inline.
   TailDuplicator TailDup;
-
-  /// \brief A set of blocks that are unavoidably execute, i.e. they dominate
-  /// all terminators of the MachineFunction.
-  SmallPtrSet<const MachineBasicBlock *, 4> UnavoidableBlocks;
 
   /// \brief Allocator and owner of BlockChain structures.
   ///
@@ -446,7 +434,6 @@ class MachineBlockPlacement : public MachineFunctionPass {
   void rotateLoopWithProfile(
       BlockChain &LoopChain, const MachineLoop &L,
       const BlockFilterSet &LoopBlockSet);
-  void collectMustExecuteBBs();
   void buildCFGChains();
   void optimizeBranches();
   void alignBlocks();
@@ -478,6 +465,9 @@ class MachineBlockPlacement : public MachineFunctionPass {
   bool canTailDuplicateUnplacedPreds(
       const MachineBasicBlock *BB, MachineBasicBlock *Succ,
       const BlockChain &Chain, const BlockFilterSet *BlockFilter);
+  /// Find chains of triangles to tail-duplicate where a global analysis works,
+  /// but a local analysis would not find them.
+  void precomputeTriangleChains();
 
 public:
   static char ID; // Pass identification, replacement for typeid
@@ -490,7 +480,6 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<MachineBranchProbabilityInfo>();
     AU.addRequired<MachineBlockFrequencyInfo>();
-    AU.addRequired<MachineDominatorTree>();
     if (TailDupPlacement)
       AU.addRequired<MachinePostDominatorTree>();
     AU.addRequired<MachineLoopInfo>();
@@ -506,7 +495,6 @@ INITIALIZE_PASS_BEGIN(MachineBlockPlacement, "block-placement",
                       "Branch Probability Basic Block Placement", false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineBranchProbabilityInfo)
 INITIALIZE_PASS_DEPENDENCY(MachineBlockFrequencyInfo)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
 INITIALIZE_PASS_DEPENDENCY(MachinePostDominatorTree)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
 INITIALIZE_PASS_END(MachineBlockPlacement, "block-placement",
@@ -1065,40 +1053,125 @@ bool MachineBlockPlacement::canTailDuplicateUnplacedPreds(
   return true;
 }
 
-/// When the option OutlineOptionalBranches is on, this method
-/// checks if the fallthrough candidate block \p Succ (of block
-/// \p BB) also has other unscheduled predecessor blocks which
-/// are also successors of \p BB (forming triangular shape CFG).
-/// If none of such predecessors are small, it returns true.
-/// The caller can choose to select \p Succ as the layout successors
-/// so that \p Succ's predecessors (optional branches) can be
-/// outlined.
-/// FIXME: fold this with more general layout cost analysis.
-bool MachineBlockPlacement::shouldPredBlockBeOutlined(
-    const MachineBasicBlock *BB, const MachineBasicBlock *Succ,
-    const BlockChain &Chain, const BlockFilterSet *BlockFilter,
-    BranchProbability SuccProb, BranchProbability HotProb) {
-  if (!OutlineOptionalBranches)
-    return false;
-  // If we outline optional branches, look whether Succ is unavoidable, i.e.
-  // dominates all terminators of the MachineFunction. If it does, other
-  // successors must be optional. Don't do this for cold branches.
-  if (SuccProb > HotProb.getCompl() && UnavoidableBlocks.count(Succ) > 0) {
-    for (MachineBasicBlock *Pred : Succ->predecessors()) {
-      // Check whether there is an unplaced optional branch.
-      if (Pred == Succ || (BlockFilter && !BlockFilter->count(Pred)) ||
-          BlockToChain[Pred] == &Chain)
-        continue;
-      // Check whether the optional branch has exactly one BB.
-      if (Pred->pred_size() > 1 || *Pred->pred_begin() != BB)
-        continue;
-      // Check whether the optional branch is small.
-      if (Pred->size() < OutlineOptionalThreshold)
-        return false;
+/// Find chains of triangles where we believe it would be profitable to
+/// tail-duplicate them all, but a local analysis would not find them.
+/// There are 3 ways this can be profitable:
+/// 1) The post-dominators marked 50% are actually taken 55% (This shrinks with
+///    longer chains)
+/// 2) The chains are statically correlated. Branch probabilities have a very
+///    U-shaped distribution.
+///    [http://nrs.harvard.edu/urn-3:HUL.InstRepos:24015805]
+///    If the branches in a chain are likely to be from the same side of the
+///    distribution as their predecessor, but are independent at runtime, this
+///    transformation is profitable. (Because the cost of being wrong is a small
+///    fixed cost, unlike the standard triangle layout where the cost of being
+///    wrong scales with the # of triangles.)
+/// 3) The chains are dynamically correlated. If the probability that a previous
+///    branch was taken positively influences whether the next branch will be
+///    taken
+/// We believe that 2 and 3 are common enough to justify the small margin in 1.
+void MachineBlockPlacement::precomputeTriangleChains() {
+  struct TriangleChain {
+    unsigned Count;
+    std::forward_list<MachineBasicBlock*> Edges;
+    TriangleChain(MachineBasicBlock* src, MachineBasicBlock *dst) {
+      Edges.push_front(src);
+      Edges.push_front(dst);
+      Count = 1;
     }
-    return true;
-  } else
-    return false;
+
+    void append(MachineBasicBlock *dst) {
+      assert(!Edges.empty() && Edges.front()->isSuccessor(dst) &&
+             "Attempting to append a block that is not a successor.");
+      Edges.push_front(dst);
+      ++Count;
+    }
+
+    MachineBasicBlock *getKey() {
+      return Edges.front();
+    }
+  };
+
+  if (TriangleChainCount == 0)
+    return;
+
+  DEBUG(dbgs() << "Pre-computing triangle chains.\n");
+  // Map from last block to the chain that contains it. This allows us to extend
+  // chains as we find new triangles.
+  DenseMap<const MachineBasicBlock *, TriangleChain> TriangleChainMap;
+  for (MachineBasicBlock &BB : *F) {
+    // If BB doesn't have 2 successors, it doesn't start a triangle.
+    if (BB.succ_size() != 2)
+      continue;
+    MachineBasicBlock *PDom = nullptr;
+    for (MachineBasicBlock *Succ : BB.successors()) {
+      if (!MPDT->dominates(Succ, &BB))
+        continue;
+      PDom = Succ;
+      break;
+    }
+    // If BB doesn't have a post-dominating successor, it doesn't form a
+    // triangle.
+    if (PDom == nullptr)
+      continue;
+    // If PDom has a hint that it is low probability, skip this triangle.
+    if (MBPI->getEdgeProbability(&BB, PDom) < BranchProbability(50, 100))
+      continue;
+    // If PDom isn't eligible for duplication, this isn't the kind of triangle
+    // we're looking for.
+    if (!shouldTailDuplicate(PDom))
+      continue;
+    bool CanTailDuplicate = true;
+    // If PDom can't tail-duplicate into it's non-BB predecessors, then this
+    // isn't the kind of triangle we're looking for.
+    for (MachineBasicBlock* Pred : PDom->predecessors()) {
+      if (Pred == &BB)
+        continue;
+      if (!TailDup.canTailDuplicate(PDom, Pred)) {
+        CanTailDuplicate = false;
+        break;
+      }
+    }
+    // If we can't tail-duplicate PDom to its predecessors, then skip this
+    // triangle.
+    if (!CanTailDuplicate)
+      continue;
+
+    // Now we have an interesting triangle. Insert it if it's not part of an
+    // existing chain
+    // Note: This cannot be replaced with a call insert() or emplace() because
+    // the find key is BB, but the insert/emplace key is PDom.
+    auto Found = TriangleChainMap.find(&BB);
+    // If it is, remove the chain from the map, grow it, and put it back in the
+    // map with the end as the new key.
+    if (Found != TriangleChainMap.end()) {
+      TriangleChain Chain = std::move(Found->second);
+      TriangleChainMap.erase(Found);
+      Chain.append(PDom);
+      TriangleChainMap.insert(std::make_pair(Chain.getKey(), std::move(Chain)));
+    } else {
+      auto InsertResult = TriangleChainMap.try_emplace(PDom, &BB, PDom);
+      assert (InsertResult.second && "Block seen twice.");
+      (void) InsertResult;
+    }
+  }
+
+  for (auto &ChainPair : TriangleChainMap) {
+    TriangleChain &Chain = ChainPair.second;
+    // Benchmarking has shown that due to branch correlation duplicating 2 or
+    // more triangles is profitable, despite the calculations assuming
+    // independence.
+    if (Chain.Count < TriangleChainCount)
+      continue;
+    MachineBasicBlock *dst = Chain.Edges.front();
+    Chain.Edges.pop_front();
+    for (MachineBasicBlock *src : Chain.Edges) {
+      DEBUG(dbgs() << "Marking edge: " << getBlockName(src) << "->" <<
+            getBlockName(dst) << " as pre-computed based on triangles.\n");
+      ComputedEdges[src] = { dst, true };
+      dst = src;
+    }
+  }
 }
 
 // When profile is not present, return the StaticLikelyProb.
@@ -1356,13 +1429,6 @@ MachineBlockPlacement::selectBestSuccessor(
     auto RealSuccProb = MBPI->getEdgeProbability(BB, Succ);
     BranchProbability SuccProb =
         getAdjustedProbability(RealSuccProb, AdjustedSumProb);
-
-    // This heuristic is off by default.
-    if (shouldPredBlockBeOutlined(BB, Succ, Chain, BlockFilter, SuccProb,
-                                  HotProb)) {
-      BestSucc.BB = Succ;
-      return BestSucc;
-    }
 
     BlockChain &SuccChain = *BlockToChain[Succ];
     // Skip the edge \c BB->Succ if block \c Succ has a better layout
@@ -2131,31 +2197,6 @@ void MachineBlockPlacement::buildLoopChains(const MachineLoop &L) {
   EHPadWorkList.clear();
 }
 
-/// When OutlineOpitonalBranches is on, this method collects BBs that
-/// dominates all terminator blocks of the function \p F.
-void MachineBlockPlacement::collectMustExecuteBBs() {
-  if (OutlineOptionalBranches) {
-    // Find the nearest common dominator of all of F's terminators.
-    MachineBasicBlock *Terminator = nullptr;
-    for (MachineBasicBlock &MBB : *F) {
-      if (MBB.succ_size() == 0) {
-        if (Terminator == nullptr)
-          Terminator = &MBB;
-        else
-          Terminator = MDT->findNearestCommonDominator(Terminator, &MBB);
-      }
-    }
-
-    // MBBs dominating this common dominator are unavoidable.
-    UnavoidableBlocks.clear();
-    for (MachineBasicBlock &MBB : *F) {
-      if (MDT->dominates(&MBB, Terminator)) {
-        UnavoidableBlocks.insert(&MBB);
-      }
-    }
-  }
-}
-
 void MachineBlockPlacement::buildCFGChains() {
   // Ensure that every BB in the function has an associated chain to simplify
   // the assumptions of the remaining algorithm.
@@ -2189,9 +2230,6 @@ void MachineBlockPlacement::buildCFGChains() {
       BB = NextBB;
     }
   }
-
-  // Turned on with OutlineOptionalBranches option
-  collectMustExecuteBBs();
 
   // Build any loop-based chains.
   PreferredLoopExit = nullptr;
@@ -2587,7 +2625,6 @@ bool MachineBlockPlacement::runOnMachineFunction(MachineFunction &MF) {
   MLI = &getAnalysis<MachineLoopInfo>();
   TII = MF.getSubtarget().getInstrInfo();
   TLI = MF.getSubtarget().getTargetLowering();
-  MDT = &getAnalysis<MachineDominatorTree>();
   MPDT = nullptr;
 
   // Initialize PreferredLoopExit to nullptr here since it may never be set if
@@ -2600,6 +2637,7 @@ bool MachineBlockPlacement::runOnMachineFunction(MachineFunction &MF) {
     if (MF.getFunction()->optForSize())
       TailDupSize = 1;
     TailDup.initMF(MF, MBPI, /* LayoutMode */ true, TailDupSize);
+    precomputeTriangleChains();
   }
 
   assert(BlockToChain.empty());
@@ -2624,8 +2662,7 @@ bool MachineBlockPlacement::runOnMachineFunction(MachineFunction &MF) {
                             /*AfterBlockPlacement=*/true)) {
       // Redo the layout if tail merging creates/removes/moves blocks.
       BlockToChain.clear();
-      // Must redo the dominator tree if blocks were changed.
-      MDT->runOnMachineFunction(MF);
+      // Must redo the post-dominator tree if blocks were changed.
       if (MPDT)
         MPDT->runOnMachineFunction(MF);
       ChainAllocator.DestroyAll();

@@ -29,16 +29,22 @@ test(S s, typename S::size_type pos1, typename S::size_type n1,
      SV sv, typename S::size_type pos2, typename S::size_type n2,
      S expected)
 {
+    typedef typename S::size_type SizeT;
     static_assert((!std::is_same<S, SV>::value), "");
-    const typename S::size_type old_size = s.size();
+
+    // String and string_view may not always share the same size type,
+    // but both types should have the same size (ex. int vs long)
+    static_assert(sizeof(SizeT) == sizeof(typename SV::size_type), "");
+
+    const SizeT old_size = s.size();
     S s0 = s;
     if (pos1 <= old_size && pos2 <= sv.size())
     {
         s.replace(pos1, n1, sv, pos2, n2);
         LIBCPP_ASSERT(s.__invariants());
         assert(s == expected);
-        typename S::size_type xlen = std::min(n1, old_size - pos1);
-        typename S::size_type rlen = std::min(n2, sv.size() - pos2);
+        SizeT xlen = std::min<SizeT>(n1, old_size - pos1);
+        SizeT rlen = std::min<SizeT>(n2, sv.size() - pos2);
         assert(s.size() == old_size - xlen + rlen);
     }
 #ifndef TEST_HAS_NO_EXCEPTIONS
@@ -64,16 +70,17 @@ test_npos(S s, typename S::size_type pos1, typename S::size_type n1,
           SV sv, typename S::size_type pos2,
           S expected)
 {
+    typedef typename S::size_type SizeT;
     static_assert((!std::is_same<S, SV>::value), "");
-    const typename S::size_type old_size = s.size();
+    const SizeT old_size = s.size();
     S s0 = s;
     if (pos1 <= old_size && pos2 <= sv.size())
     {
         s.replace(pos1, n1, sv, pos2);
         LIBCPP_ASSERT(s.__invariants());
         assert(s == expected);
-        typename S::size_type xlen = std::min(n1, old_size - pos1);
-        typename S::size_type rlen = std::min(S::npos, sv.size() - pos2);
+        SizeT xlen = std::min<SizeT>(n1, old_size - pos1);
+        SizeT rlen = std::min<SizeT>(S::npos, sv.size() - pos2);
         assert(s.size() == old_size - xlen + rlen);
     }
 #ifndef TEST_HAS_NO_EXCEPTIONS

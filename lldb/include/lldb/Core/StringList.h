@@ -49,8 +49,6 @@ public:
 
   void AppendList(StringList strings);
 
-  bool ReadFileLines(FileSpec &input_file);
-
   size_t GetSize() const;
 
   void SetSize(size_t n) { m_strings.resize(n); }

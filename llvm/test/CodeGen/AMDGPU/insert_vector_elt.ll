@@ -253,9 +253,11 @@ define void @dynamic_insertelement_v2i8(<2 x i8> addrspace(1)* %out, <2 x i8> %a
 ; GCN: buffer_load_ubyte v{{[0-9]+}}, off
 ; GCN: buffer_load_ubyte v{{[0-9]+}}, off
 
-; GCN-DAG: buffer_store_byte v{{[0-9]+}}, off, s{{\[[0-9]+:[0-9]+\]}}, s{{[0-9]+}} offset:4
-; GCN-DAG: buffer_store_byte v{{[0-9]+}}, off, s{{\[[0-9]+:[0-9]+\]}}, s{{[0-9]+}} offset:5
 ; GCN-DAG: buffer_store_byte v{{[0-9]+}}, off, s{{\[[0-9]+:[0-9]+\]}}, s{{[0-9]+}} offset:6
+; GCN-DAG: buffer_store_byte v{{[0-9]+}}, off, s{{\[[0-9]+:[0-9]+\]}}, s{{[0-9]+}} offset:5
+; GCN-DAG: buffer_store_byte v{{[0-9]+}}, off, s{{\[[0-9]+:[0-9]+\]}}, s{{[0-9]+}} offset:4
+
+; GCN: buffer_store_byte v{{[0-9]+}}, v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, s{{[0-9]+}} offen{{$}}
 
 ; GCN-NO-TONGA: buffer_load_ubyte
 ; GCN-NO-TONGA: buffer_load_ubyte

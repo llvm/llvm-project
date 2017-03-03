@@ -94,12 +94,20 @@ declare <4 x float>  @llvm.masked.expandload.v4f32(float*, <4 x i1>, <4 x float>
 declare <2 x i64>    @llvm.masked.expandload.v2i64(i64*, <2 x i1>, <2 x i64>)
 
 define void @test6(float* %base, <16 x float> %V) {
-; ALL-LABEL: test6:
-; ALL:       # BB#0:
-; ALL-NEXT:    movw $-2049, %ax # imm = 0xF7FF
-; ALL-NEXT:    kmovw %eax, %k1
-; ALL-NEXT:    vcompressps %zmm0, (%rdi) {%k1}
-; ALL-NEXT:    retq
+; SKX-LABEL: test6:
+; SKX:       # BB#0:
+; SKX-NEXT:    movw $-2049, %ax # imm = 0xF7FF
+; SKX-NEXT:    kmovw %eax, %k1
+; SKX-NEXT:    vcompressps %zmm0, (%rdi) {%k1}
+; SKX-NEXT:    vzeroupper
+; SKX-NEXT:    retq
+;
+; KNL-LABEL: test6:
+; KNL:       # BB#0:
+; KNL-NEXT:    movw $-2049, %ax # imm = 0xF7FF
+; KNL-NEXT:    kmovw %eax, %k1
+; KNL-NEXT:    vcompressps %zmm0, (%rdi) {%k1}
+; KNL-NEXT:    retq
   call void @llvm.masked.compressstore.v16f32(<16 x float> %V, float* %base, <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 false, i1 true, i1 true, i1 true, i1 true>)
   ret void
 }
@@ -110,6 +118,7 @@ define void @test7(float* %base, <8 x float> %V, <8 x i1> %mask) {
 ; SKX-NEXT:    vpsllw $15, %xmm1, %xmm1
 ; SKX-NEXT:    vpmovw2m %xmm1, %k1
 ; SKX-NEXT:    vcompressps %ymm0, (%rdi) {%k1}
+; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
 ;
 ; KNL-LABEL: test7:
@@ -132,6 +141,7 @@ define void @test8(double* %base, <8 x double> %V, <8 x i1> %mask) {
 ; SKX-NEXT:    vpsllw $15, %xmm1, %xmm1
 ; SKX-NEXT:    vpmovw2m %xmm1, %k1
 ; SKX-NEXT:    vcompresspd %zmm0, (%rdi) {%k1}
+; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
 ;
 ; KNL-LABEL: test8:
@@ -151,6 +161,7 @@ define void @test9(i64* %base, <8 x i64> %V, <8 x i1> %mask) {
 ; SKX-NEXT:    vpsllw $15, %xmm1, %xmm1
 ; SKX-NEXT:    vpmovw2m %xmm1, %k1
 ; SKX-NEXT:    vpcompressq %zmm0, (%rdi) {%k1}
+; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
 ;
 ; KNL-LABEL: test9:
@@ -170,6 +181,7 @@ define void @test10(i64* %base, <4 x i64> %V, <4 x i1> %mask) {
 ; SKX-NEXT:    vpslld $31, %xmm1, %xmm1
 ; SKX-NEXT:    vptestmd %xmm1, %xmm1, %k1
 ; SKX-NEXT:    vpcompressq %ymm0, (%rdi) {%k1}
+; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
 ;
 ; KNL-LABEL: test10:
@@ -340,16 +352,28 @@ define <16 x double> @test16(double* %base, <16 x double> %src0, <16 x i32> %tri
 }
 
 define void @test17(float* %base, <32 x float> %V, <32 x i32> %trigger) {
-; ALL-LABEL: test17:
-; ALL:       # BB#0:
-; ALL-NEXT:    vpxord %zmm4, %zmm4, %zmm4
-; ALL-NEXT:    vpcmpeqd %zmm4, %zmm3, %k1
-; ALL-NEXT:    vpcmpeqd %zmm4, %zmm2, %k2
-; ALL-NEXT:    kmovw %k2, %eax
-; ALL-NEXT:    popcntl %eax, %eax
-; ALL-NEXT:    vcompressps %zmm1, (%rdi,%rax,4) {%k1}
-; ALL-NEXT:    vcompressps %zmm0, (%rdi) {%k2}
-; ALL-NEXT:    retq
+; SKX-LABEL: test17:
+; SKX:       # BB#0:
+; SKX-NEXT:    vpxord %zmm4, %zmm4, %zmm4
+; SKX-NEXT:    vpcmpeqd %zmm4, %zmm3, %k1
+; SKX-NEXT:    vpcmpeqd %zmm4, %zmm2, %k2
+; SKX-NEXT:    kmovw %k2, %eax
+; SKX-NEXT:    popcntl %eax, %eax
+; SKX-NEXT:    vcompressps %zmm1, (%rdi,%rax,4) {%k1}
+; SKX-NEXT:    vcompressps %zmm0, (%rdi) {%k2}
+; SKX-NEXT:    vzeroupper
+; SKX-NEXT:    retq
+;
+; KNL-LABEL: test17:
+; KNL:       # BB#0:
+; KNL-NEXT:    vpxord %zmm4, %zmm4, %zmm4
+; KNL-NEXT:    vpcmpeqd %zmm4, %zmm3, %k1
+; KNL-NEXT:    vpcmpeqd %zmm4, %zmm2, %k2
+; KNL-NEXT:    kmovw %k2, %eax
+; KNL-NEXT:    popcntl %eax, %eax
+; KNL-NEXT:    vcompressps %zmm1, (%rdi,%rax,4) {%k1}
+; KNL-NEXT:    vcompressps %zmm0, (%rdi) {%k2}
+; KNL-NEXT:    retq
   %mask = icmp eq <32 x i32> %trigger, zeroinitializer
   call void @llvm.masked.compressstore.v32f32(<32 x float> %V, float* %base, <32 x i1> %mask)
   ret void
@@ -365,6 +389,7 @@ define void @test18(double* %base, <16 x double> %V, <16 x i1> %mask) {
 ; SKX-NEXT:    popcntl %eax, %eax
 ; SKX-NEXT:    vcompresspd %zmm1, (%rdi,%rax,8) {%k2}
 ; SKX-NEXT:    vcompresspd %zmm0, (%rdi) {%k1}
+; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
 ;
 ; KNL-LABEL: test18:

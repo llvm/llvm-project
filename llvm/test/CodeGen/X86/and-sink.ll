@@ -80,8 +80,8 @@ define i32 @and_sink3(i1 %c, i32* %p) {
 ; CHECK: testb $1,
 ; CHECK: je
 ; CHECK: movzbl
-; CHECK: movl $0, A
-; CHECK: testl %
+; CHECK-DAG: movl $0, A
+; CHECK-DAG: testl %
 ; CHECK: je
 
 ; CHECK-CGP-LABEL: @and_sink3(
@@ -109,11 +109,11 @@ define i32 @and_sink4(i32 %a, i32 %b, i1 %c) {
 ; CHECK: testb $1,
 ; CHECK: je
 ; CHECK-NOT: andl
-; CHECK: movl $0, A
-; CHECK: testl [[REG1:%[a-z0-9]+]], [[REG2:%[a-z0-9]+]]
+; CHECK-DAG: movl $0, A
+; CHECK-DAG: testl [[REG1:%[a-z0-9]+]], [[REG2:%[a-z0-9]+]]
 ; CHECK: jne
-; CHECK: movl {{%[a-z0-9]+}}, B
-; CHECK: testl [[REG1]], [[REG2]]
+; CHECK-DAG: movl {{%[a-z0-9]+}}, B
+; CHECK-DAG: testl [[REG1]], [[REG2]]
 ; CHECK: je
 
 ; CHECK-CGP-LABEL: @and_sink4(
@@ -148,11 +148,11 @@ define i32 @and_sink5(i32 %a, i32 %b, i32 %a2, i32 %b2, i1 %c) {
 ; CHECK-LABEL: and_sink5:
 ; CHECK: testb $1,
 ; CHECK: je
-; CHECK: andl {{[0-9]+\(%[a-z0-9]+\)}}, [[REG:%[a-z0-9]+]]
-; CHECK: movl $0, A
+; CHECK-DAG: andl {{[0-9]+\(%[a-z0-9]+\)}}, [[REG:%[a-z0-9]+]]
+; CHECK-DAG: movl $0, A
 ; CHECK: jne
-; CHECK: movl {{%[a-z0-9]+}}, B
-; CHECK: testl [[REG]], [[REG]]
+; CHECK-DAG: movl {{%[a-z0-9]+}}, B
+; CHECK-DAG: testl [[REG]], [[REG]]
 ; CHECK: je
 
 ; CHECK-CGP-LABEL: @and_sink5(

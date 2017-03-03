@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=alpha.unix.BlockInCriticalSection -std=c++11 -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=alpha.unix.BlockInCriticalSection -std=c++11 -verify %s
 
 void sleep(int x) {}
 

@@ -12,3 +12,6 @@
 
 /// General Purpose Registers: RAX, RCX,...
 def GPRRegBank : RegisterBank<"GPR", [GR64]>;
+
+/// Floating Point/Vector Registers
+def VECRRegBank : RegisterBank<"VECR", [VR512]>;

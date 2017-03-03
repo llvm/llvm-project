@@ -1,4 +1,4 @@
-// RUN: %clang --analyze -Xanalyzer -analyzer-output=text -fno-caret-diagnostics %s 2>&1 | FileCheck %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core.NullDereference -analyzer-output=text -fno-caret-diagnostics %s 2>&1 | FileCheck %s
 
 void testA() {
   int *p = 0;

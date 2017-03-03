@@ -93,6 +93,7 @@ define void @test_mask_store_32xi8(<32 x i1> %mask, <32 x i8>* %addr, <32 x i8> 
 ; CHECK-NEXT:    vpsllw $7, %ymm0, %ymm0
 ; CHECK-NEXT:    vpmovb2m %ymm0, %k1
 ; CHECK-NEXT:    vmovdqu8 %ymm1, (%rdi) {%k1}
+; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   call void @llvm.masked.store.v32i8.p0v32i8(<32 x i8> %val, <32 x i8>* %addr, i32 4, <32 x i1>%mask)
   ret void
@@ -105,6 +106,7 @@ define void @test_mask_store_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x i8> 
 ; CHECK-NEXT:    vpsllw $7, %zmm0, %zmm0
 ; CHECK-NEXT:    vpmovb2m %zmm0, %k1
 ; CHECK-NEXT:    vmovdqu8 %zmm1, (%rdi) {%k1}
+; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   call void @llvm.masked.store.v64i8.p0v64i8(<64 x i8> %val, <64 x i8>* %addr, i32 4, <64 x i1>%mask)
   ret void
@@ -129,6 +131,7 @@ define void @test_mask_store_16xi16(<16 x i1> %mask, <16 x i16>* %addr, <16 x i1
 ; CHECK-NEXT:    vpsllw $7, %xmm0, %xmm0
 ; CHECK-NEXT:    vpmovb2m %xmm0, %k1
 ; CHECK-NEXT:    vmovdqu16 %ymm1, (%rdi) {%k1}
+; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   call void @llvm.masked.store.v16i16.p0v16i16(<16 x i16> %val, <16 x i16>* %addr, i32 4, <16 x i1>%mask)
   ret void
@@ -141,6 +144,7 @@ define void @test_mask_store_32xi16(<32 x i1> %mask, <32 x i16>* %addr, <32 x i1
 ; CHECK-NEXT:    vpsllw $7, %ymm0, %ymm0
 ; CHECK-NEXT:    vpmovb2m %ymm0, %k1
 ; CHECK-NEXT:    vmovdqu16 %zmm1, (%rdi) {%k1}
+; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   call void @llvm.masked.store.v32i16.p0v32i16(<32 x i16> %val, <32 x i16>* %addr, i32 4, <32 x i1>%mask)
   ret void

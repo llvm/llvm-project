@@ -61,7 +61,7 @@ static cl::opt<int>
                    cl::desc("Maximum length of dependent chains to hoist "
                             "(default = 10, unlimited = -1)"));
 
-namespace {
+namespace llvm {
 
 // Provides a sorting function based on the execution order of two instructions.
 struct SortByDFSIn {
@@ -363,7 +363,7 @@ private:
             ReachedNewPt = true;
           }
         }
-        if (defClobbersUseOrDef(Def, MU, *AA))
+        if (MemorySSAUtil::defClobbersUseOrDef(Def, MU, *AA))
           return true;
       }
 

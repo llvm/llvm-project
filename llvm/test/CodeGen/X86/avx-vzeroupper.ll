@@ -1,8 +1,9 @@
 ; RUN: llc < %s -x86-use-vzeroupper -mtriple=x86_64-apple-darwin -mattr=+avx | FileCheck %s
-; RUN: llc < %s -x86-use-vzeroupper -mtriple=x86_64-apple-darwin -mattr=+avx,+fast-partial-ymm-write | FileCheck --check-prefix=FASTYMM %s
+; RUN: llc < %s -x86-use-vzeroupper -mtriple=x86_64-apple-darwin -mattr=+avx512f | FileCheck %s
+; RUN: llc < %s -x86-use-vzeroupper -mtriple=x86_64-apple-darwin -mattr=+avx,+fast-partial-ymm-or-zmm-write | FileCheck --check-prefix=FAST-YMM-ZMM %s
 ; RUN: llc < %s -x86-use-vzeroupper -mtriple=x86_64-apple-darwin -mcpu=btver2 | FileCheck --check-prefix=BTVER2 %s
 
-; FASTYMM-NOT: vzeroupper
+; FAST-YMM-ZMM-NOT: vzeroupper
 ; BTVER2-NOT: vzeroupper
 
 declare i32 @foo()

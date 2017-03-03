@@ -160,13 +160,22 @@ define <8 x i32> @test11_unsigned(<8 x i32> %x, <8 x i32> %y) nounwind {
 }
 
 define i16 @test12(<16 x i64> %a, <16 x i64> %b) nounwind {
-; CHECK-LABEL: test12:
-; CHECK:       ## BB#0:
-; CHECK-NEXT:    vpcmpeqq %zmm2, %zmm0, %k0
-; CHECK-NEXT:    vpcmpeqq %zmm3, %zmm1, %k1
-; CHECK-NEXT:    kunpckbw %k0, %k1, %k0
-; CHECK-NEXT:    kmovw %k0, %eax
-; CHECK-NEXT:    retq
+; KNL-LABEL: test12:
+; KNL:       ## BB#0:
+; KNL-NEXT:    vpcmpeqq %zmm2, %zmm0, %k0
+; KNL-NEXT:    vpcmpeqq %zmm3, %zmm1, %k1
+; KNL-NEXT:    kunpckbw %k0, %k1, %k0
+; KNL-NEXT:    kmovw %k0, %eax
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: test12:
+; SKX:       ## BB#0:
+; SKX-NEXT:    vpcmpeqq %zmm2, %zmm0, %k0
+; SKX-NEXT:    vpcmpeqq %zmm3, %zmm1, %k1
+; SKX-NEXT:    kunpckbw %k0, %k1, %k0
+; SKX-NEXT:    kmovw %k0, %eax
+; SKX-NEXT:    vzeroupper
+; SKX-NEXT:    retq
   %res = icmp eq <16 x i64> %a, %b
   %res1 = bitcast <16 x i1> %res to i16
   ret i16 %res1
@@ -326,6 +335,7 @@ define i32 @test12_v32i32(<32 x i32> %a, <32 x i32> %b) nounwind {
 ; SKX-NEXT:    vpcmpeqd %zmm3, %zmm1, %k1
 ; SKX-NEXT:    kunpckwd %k0, %k1, %k0
 ; SKX-NEXT:    kmovd %k0, %eax
+; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
   %res = icmp eq <32 x i32> %a, %b
   %res1 = bitcast <32 x i1> %res to i32
@@ -637,6 +647,7 @@ define i64 @test12_v64i16(<64 x i16> %a, <64 x i16> %b) nounwind {
 ; SKX-NEXT:    vpcmpeqw %zmm3, %zmm1, %k1
 ; SKX-NEXT:    kunpckdq %k0, %k1, %k0
 ; SKX-NEXT:    kmovq %k0, %rax
+; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
   %res = icmp eq <64 x i16> %a, %b
   %res1 = bitcast <64 x i1> %res to i64
@@ -892,6 +903,7 @@ define <16 x i8>@test29(<16 x i32> %x, <16 x i32> %y, <16 x i32> %x1, <16 x i32>
 ; SKX-NEXT:    vpcmpgtd %zmm3, %zmm2, %k1
 ; SKX-NEXT:    kxorw %k1, %k0, %k0
 ; SKX-NEXT:    vpmovm2b %k0, %xmm0
+; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
   %x_gt_y = icmp sgt <16 x i32> %x, %y
   %x1_gt_y1 = icmp sgt <16 x i32> %x1, %y1

@@ -27,13 +27,4 @@
 
 //#define LLDB_CONFIG_FCNTL_GETPATH_SUPPORTED 1
 
-#if _HAS_EXCEPTIONS == 0
-// Due to a bug in <thread>, when _HAS_EXCEPTIONS == 0 the header will try to
-// call
-// uncaught_exception() without having a declaration for it.  The fix for this
-// is
-// to manually #include <eh.h>, which contains this declaration.
-#include <eh.h>
-#endif
-
 #endif // #ifndef liblldb_Platform_Config_h_
