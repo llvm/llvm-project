@@ -1,4 +1,4 @@
-//=-- CoverageMappingReader.cpp - Code coverage mapping reader ----*- C++ -*-=//
+//===- CoverageMappingReader.cpp - Code coverage mapping reader -*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -12,15 +12,34 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ProfileData/Coverage/CoverageMappingReader.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Triple.h" 
+#include "llvm/Object/Binary.h"
+#include "llvm/Object/Error.h"
 #include "llvm/Object/MachOUniversal.h"
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/ProfileData/Coverage/CoverageMappingReader.h"
+#include "llvm/ProfileData/InstrProf.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
+#include <algorithm>
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
+#include <limits>
+#include <memory>
+#include <utility>
+#include <vector>
 
 using namespace llvm;
 using namespace coverage;
@@ -226,9 +245,8 @@ Error RawCoverageMappingReader::readMappingRegionsSubArray(
 }
 
 Error RawCoverageMappingReader::read() {
-
   // Read the virtual file mapping.
-  llvm::SmallVector<unsigned, 8> VirtualFileMapping;
+  SmallVector<unsigned, 8> VirtualFileMapping;
   uint64_t NumFileMappings;
   if (auto Err = readSize(NumFileMappings))
     return Err;
@@ -349,7 +367,10 @@ static Expected<bool> isCoverageMappingDummy(uint64_t Hash, StringRef Mapping) {
 }
 
 namespace {
+
 struct CovMapFuncRecordReader {
+  virtual ~CovMapFuncRecordReader() = default;
+
   // The interface to read coverage mapping function records for a module.
   //
   // \p Buf points to the buffer containing the \c CovHeader of the coverage
@@ -359,26 +380,24 @@ struct CovMapFuncRecordReader {
   // greater than \p End if not.
   virtual Expected<const char *> readFunctionRecords(const char *Buf,
                                                      const char *End) = 0;
-  virtual ~CovMapFuncRecordReader() {}
+
   template <class IntPtrT, support::endianness Endian>
   static Expected<std::unique_ptr<CovMapFuncRecordReader>>
-  get(coverage::CovMapVersion Version, InstrProfSymtab &P,
+  get(CovMapVersion Version, InstrProfSymtab &P,
       std::vector<BinaryCoverageReader::ProfileMappingRecord> &R,
       std::vector<StringRef> &F);
 };
 
 // A class for reading coverage mapping function records for a module.
-template <coverage::CovMapVersion Version, class IntPtrT,
-          support::endianness Endian>
+template <CovMapVersion Version, class IntPtrT, support::endianness Endian>
 class VersionedCovMapFuncRecordReader : public CovMapFuncRecordReader {
-  typedef typename coverage::CovMapTraits<
+  typedef typename CovMapTraits<
       Version, IntPtrT>::CovMapFuncRecordType FuncRecordType;
-  typedef typename coverage::CovMapTraits<Version, IntPtrT>::NameRefType
-      NameRefType;
+  typedef typename CovMapTraits<Version, IntPtrT>::NameRefType  NameRefType;
 
   // Maps function's name references to the indexes of their records
   // in \c Records.
-  llvm::DenseMap<NameRefType, size_t> FunctionRecords;
+  DenseMap<NameRefType, size_t> FunctionRecords;
   InstrProfSymtab &ProfileNames;
   std::vector<StringRef> &Filenames;
   std::vector<BinaryCoverageReader::ProfileMappingRecord> &Records;
@@ -432,14 +451,16 @@ public:
       std::vector<BinaryCoverageReader::ProfileMappingRecord> &R,
       std::vector<StringRef> &F)
       : ProfileNames(P), Filenames(F), Records(R) {}
-  ~VersionedCovMapFuncRecordReader() override {}
+
+  ~VersionedCovMapFuncRecordReader() override = default;
 
   Expected<const char *> readFunctionRecords(const char *Buf,
                                              const char *End) override {
     using namespace support;
+
     if (Buf + sizeof(CovMapHeader) > End)
       return make_error<CoverageMapError>(coveragemap_error::malformed);
-    auto CovHeader = reinterpret_cast<const coverage::CovMapHeader *>(Buf);
+    auto CovHeader = reinterpret_cast<const CovMapHeader *>(Buf);
     uint32_t NRecords = CovHeader->getNRecords<Endian>();
     uint32_t FilenamesSize = CovHeader->getFilenamesSize<Endian>();
     uint32_t CoverageSize = CovHeader->getCoverageSize<Endian>();
@@ -490,14 +511,16 @@ public:
     return Buf;
   }
 };
+
 } // end anonymous namespace
 
 template <class IntPtrT, support::endianness Endian>
 Expected<std::unique_ptr<CovMapFuncRecordReader>> CovMapFuncRecordReader::get(
-    coverage::CovMapVersion Version, InstrProfSymtab &P,
+    CovMapVersion Version, InstrProfSymtab &P,
     std::vector<BinaryCoverageReader::ProfileMappingRecord> &R,
     std::vector<StringRef> &F) {
   using namespace coverage;
+
   switch (Version) {
   case CovMapVersion::Version1:
     return llvm::make_unique<VersionedCovMapFuncRecordReader<
@@ -518,11 +541,12 @@ static Error readCoverageMappingData(
     std::vector<BinaryCoverageReader::ProfileMappingRecord> &Records,
     std::vector<StringRef> &Filenames) {
   using namespace coverage;
+
   // Read the records in the coverage data section.
   auto CovHeader =
-      reinterpret_cast<const coverage::CovMapHeader *>(Data.data());
+      reinterpret_cast<const CovMapHeader *>(Data.data());
   CovMapVersion Version = (CovMapVersion)CovHeader->getVersion<Endian>();
-  if (Version > coverage::CovMapVersion::CurrentVersion)
+  if (Version > CovMapVersion::CurrentVersion)
     return make_error<CoverageMapError>(coveragemap_error::unsupported_version);
   Expected<std::unique_ptr<CovMapFuncRecordReader>> ReaderExpected =
       CovMapFuncRecordReader::get<T, Endian>(Version, ProfileNames, Records,
@@ -538,6 +562,7 @@ static Error readCoverageMappingData(
   }
   return Error::success();
 }
+
 static const char *TestingFormatMagic = "llvmcovmtestdata";
 
 static Error loadTestingFormat(StringRef Data, InstrProfSymtab &ProfileNames,
@@ -595,21 +620,21 @@ static Error loadBinaryFormat(MemoryBufferRef ObjectBuffer,
                               StringRef &CoverageMapping,
                               uint8_t &BytesInAddress,
                               support::endianness &Endian, StringRef Arch) {
-  auto BinOrErr = object::createBinary(ObjectBuffer);
+  auto BinOrErr = createBinary(ObjectBuffer);
   if (!BinOrErr)
     return BinOrErr.takeError();
   auto Bin = std::move(BinOrErr.get());
   std::unique_ptr<ObjectFile> OF;
-  if (auto *Universal = dyn_cast<object::MachOUniversalBinary>(Bin.get())) {
+  if (auto *Universal = dyn_cast<MachOUniversalBinary>(Bin.get())) {
     // If we have a universal binary, try to look up the object for the
     // appropriate architecture.
     auto ObjectFileOrErr = Universal->getObjectForArch(Arch);
     if (!ObjectFileOrErr)
       return ObjectFileOrErr.takeError();
     OF = std::move(ObjectFileOrErr.get());
-  } else if (isa<object::ObjectFile>(Bin.get())) {
+  } else if (isa<ObjectFile>(Bin.get())) {
     // For any other object file, upcast and take ownership.
-    OF.reset(cast<object::ObjectFile>(Bin.release()));
+    OF.reset(cast<ObjectFile>(Bin.release()));
     // If we've asked for a particular arch, make sure they match.
     if (!Arch.empty() && OF->getArch() != Triple(Arch).getArch())
       return errorCodeToError(object_error::arch_not_found);

@@ -1200,6 +1200,7 @@ define void @isel_crash_32b(i8* %cV_R.addr) {
 ; X32-AVX512VL-NEXT:    vmovdqa %ymm1, {{[0-9]+}}(%esp)
 ; X32-AVX512VL-NEXT:    movl %ebp, %esp
 ; X32-AVX512VL-NEXT:    popl %ebp
+; X32-AVX512VL-NEXT:    vzeroupper
 ; X32-AVX512VL-NEXT:    retl
 ;
 ; X64-AVX512VL-LABEL: isel_crash_32b:
@@ -1223,6 +1224,7 @@ define void @isel_crash_32b(i8* %cV_R.addr) {
 ; X64-AVX512VL-NEXT:    vmovdqa %ymm1, {{[0-9]+}}(%rsp)
 ; X64-AVX512VL-NEXT:    movq %rbp, %rsp
 ; X64-AVX512VL-NEXT:    popq %rbp
+; X64-AVX512VL-NEXT:    vzeroupper
 ; X64-AVX512VL-NEXT:    retq
 eintry:
   %__a.addr.i = alloca <4 x i64>, align 16
@@ -1347,6 +1349,7 @@ define void @isel_crash_16w(i16* %cV_R.addr) {
 ; X32-AVX512VL-NEXT:    vmovdqa %ymm1, {{[0-9]+}}(%esp)
 ; X32-AVX512VL-NEXT:    movl %ebp, %esp
 ; X32-AVX512VL-NEXT:    popl %ebp
+; X32-AVX512VL-NEXT:    vzeroupper
 ; X32-AVX512VL-NEXT:    retl
 ;
 ; X64-AVX512VL-LABEL: isel_crash_16w:
@@ -1370,6 +1373,7 @@ define void @isel_crash_16w(i16* %cV_R.addr) {
 ; X64-AVX512VL-NEXT:    vmovdqa %ymm1, {{[0-9]+}}(%rsp)
 ; X64-AVX512VL-NEXT:    movq %rbp, %rsp
 ; X64-AVX512VL-NEXT:    popq %rbp
+; X64-AVX512VL-NEXT:    vzeroupper
 ; X64-AVX512VL-NEXT:    retq
 eintry:
   %__a.addr.i = alloca <4 x i64>, align 16
@@ -1437,28 +1441,28 @@ entry:
 }
 
 define void @isel_crash_8d(i32* %cV_R.addr) {
-; X32-AVX2-LABEL: isel_crash_8d:
-; X32-AVX2:       ## BB#0: ## %eintry
-; X32-AVX2-NEXT:    pushl %ebp
-; X32-AVX2-NEXT:  Lcfi9:
-; X32-AVX2-NEXT:    .cfi_def_cfa_offset 8
-; X32-AVX2-NEXT:  Lcfi10:
-; X32-AVX2-NEXT:    .cfi_offset %ebp, -8
-; X32-AVX2-NEXT:    movl %esp, %ebp
-; X32-AVX2-NEXT:  Lcfi11:
-; X32-AVX2-NEXT:    .cfi_def_cfa_register %ebp
-; X32-AVX2-NEXT:    andl $-32, %esp
-; X32-AVX2-NEXT:    subl $128, %esp
-; X32-AVX2-NEXT:    movl 8(%ebp), %eax
-; X32-AVX2-NEXT:    vxorps %ymm0, %ymm0, %ymm0
-; X32-AVX2-NEXT:    vmovaps %ymm0, (%esp)
-; X32-AVX2-NEXT:    vbroadcastss (%eax), %ymm1
-; X32-AVX2-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%esp)
-; X32-AVX2-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%esp)
-; X32-AVX2-NEXT:    movl %ebp, %esp
-; X32-AVX2-NEXT:    popl %ebp
-; X32-AVX2-NEXT:    vzeroupper
-; X32-AVX2-NEXT:    retl
+; X32-LABEL: isel_crash_8d:
+; X32:       ## BB#0: ## %eintry
+; X32-NEXT:    pushl %ebp
+; X32-NEXT:  Lcfi9:
+; X32-NEXT:    .cfi_def_cfa_offset 8
+; X32-NEXT:  Lcfi10:
+; X32-NEXT:    .cfi_offset %ebp, -8
+; X32-NEXT:    movl %esp, %ebp
+; X32-NEXT:  Lcfi11:
+; X32-NEXT:    .cfi_def_cfa_register %ebp
+; X32-NEXT:    andl $-32, %esp
+; X32-NEXT:    subl $128, %esp
+; X32-NEXT:    movl 8(%ebp), %eax
+; X32-NEXT:    vxorps %ymm0, %ymm0, %ymm0
+; X32-NEXT:    vmovaps %ymm0, (%esp)
+; X32-NEXT:    vbroadcastss (%eax), %ymm1
+; X32-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%esp)
+; X32-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%esp)
+; X32-NEXT:    movl %ebp, %esp
+; X32-NEXT:    popl %ebp
+; X32-NEXT:    vzeroupper
+; X32-NEXT:    retl
 ;
 ; X64-AVX2-LABEL: isel_crash_8d:
 ; X64-AVX2:       ## BB#0: ## %eintry
@@ -1484,28 +1488,6 @@ define void @isel_crash_8d(i32* %cV_R.addr) {
 ; X64-AVX2-NEXT:    vzeroupper
 ; X64-AVX2-NEXT:    retq
 ;
-; X32-AVX512VL-LABEL: isel_crash_8d:
-; X32-AVX512VL:       ## BB#0: ## %eintry
-; X32-AVX512VL-NEXT:    pushl %ebp
-; X32-AVX512VL-NEXT:  Lcfi9:
-; X32-AVX512VL-NEXT:    .cfi_def_cfa_offset 8
-; X32-AVX512VL-NEXT:  Lcfi10:
-; X32-AVX512VL-NEXT:    .cfi_offset %ebp, -8
-; X32-AVX512VL-NEXT:    movl %esp, %ebp
-; X32-AVX512VL-NEXT:  Lcfi11:
-; X32-AVX512VL-NEXT:    .cfi_def_cfa_register %ebp
-; X32-AVX512VL-NEXT:    andl $-32, %esp
-; X32-AVX512VL-NEXT:    subl $128, %esp
-; X32-AVX512VL-NEXT:    movl 8(%ebp), %eax
-; X32-AVX512VL-NEXT:    vxorps %ymm0, %ymm0, %ymm0
-; X32-AVX512VL-NEXT:    vmovaps %ymm0, (%esp)
-; X32-AVX512VL-NEXT:    vbroadcastss (%eax), %ymm1
-; X32-AVX512VL-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%esp)
-; X32-AVX512VL-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%esp)
-; X32-AVX512VL-NEXT:    movl %ebp, %esp
-; X32-AVX512VL-NEXT:    popl %ebp
-; X32-AVX512VL-NEXT:    retl
-;
 ; X64-AVX512VL-LABEL: isel_crash_8d:
 ; X64-AVX512VL:       ## BB#0: ## %eintry
 ; X64-AVX512VL-NEXT:    pushq %rbp
@@ -1526,6 +1508,7 @@ define void @isel_crash_8d(i32* %cV_R.addr) {
 ; X64-AVX512VL-NEXT:    vmovdqa %ymm1, {{[0-9]+}}(%rsp)
 ; X64-AVX512VL-NEXT:    movq %rbp, %rsp
 ; X64-AVX512VL-NEXT:    popq %rbp
+; X64-AVX512VL-NEXT:    vzeroupper
 ; X64-AVX512VL-NEXT:    retq
 eintry:
   %__a.addr.i = alloca <4 x i64>, align 16
@@ -1676,6 +1659,7 @@ define void @isel_crash_4q(i64* %cV_R.addr) {
 ; X32-AVX512VL-NEXT:    vmovdqa %ymm1, {{[0-9]+}}(%esp)
 ; X32-AVX512VL-NEXT:    movl %ebp, %esp
 ; X32-AVX512VL-NEXT:    popl %ebp
+; X32-AVX512VL-NEXT:    vzeroupper
 ; X32-AVX512VL-NEXT:    retl
 ;
 ; X64-AVX512VL-LABEL: isel_crash_4q:
@@ -1698,6 +1682,7 @@ define void @isel_crash_4q(i64* %cV_R.addr) {
 ; X64-AVX512VL-NEXT:    vmovdqa %ymm1, {{[0-9]+}}(%rsp)
 ; X64-AVX512VL-NEXT:    movq %rbp, %rsp
 ; X64-AVX512VL-NEXT:    popq %rbp
+; X64-AVX512VL-NEXT:    vzeroupper
 ; X64-AVX512VL-NEXT:    retq
 eintry:
   %__a.addr.i = alloca <4 x i64>, align 16

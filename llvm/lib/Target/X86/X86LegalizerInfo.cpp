@@ -19,6 +19,7 @@
 #include "llvm/Target/TargetOpcodes.h"
 
 using namespace llvm;
+using namespace TargetOpcode;
 
 #ifndef LLVM_BUILD_GLOBAL_ISEL
 #error "You shouldn't build this"
@@ -28,6 +29,8 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI) : Subtarget(STI) {
 
   setLegalizerInfo32bit();
   setLegalizerInfo64bit();
+  setLegalizerInfoSSE1();
+  setLegalizerInfoSSE2();
 
   computeTables();
 }
@@ -39,8 +42,8 @@ void X86LegalizerInfo::setLegalizerInfo32bit() {
   const LLT s32 = LLT::scalar(32);
 
   for (auto Ty : {s8, s16, s32}) {
-    setAction({TargetOpcode::G_ADD, Ty}, Legal);
-    setAction({TargetOpcode::G_SUB, Ty}, Legal);
+    setAction({G_ADD, Ty}, Legal);
+    setAction({G_SUB, Ty}, Legal);
   }
 }
 
@@ -51,6 +54,36 @@ void X86LegalizerInfo::setLegalizerInfo64bit() {
 
   const LLT s64 = LLT::scalar(64);
 
-  setAction({TargetOpcode::G_ADD, s64}, Legal);
-  setAction({TargetOpcode::G_SUB, s64}, Legal);
+  setAction({G_ADD, s64}, Legal);
+  setAction({G_SUB, s64}, Legal);
+}
+
+void X86LegalizerInfo::setLegalizerInfoSSE1() {
+  if (!Subtarget.hasSSE1())
+    return;
+
+  const LLT s32 = LLT::scalar(32);
+  const LLT v4s32 = LLT::vector(4, 32);
+
+  for (unsigned BinOp : {G_FADD, G_FSUB, G_FMUL, G_FDIV})
+    for (auto Ty : {s32, v4s32})
+      setAction({BinOp, Ty}, Legal);
+}
+
+void X86LegalizerInfo::setLegalizerInfoSSE2() {
+  if (!Subtarget.hasSSE2())
+    return;
+
+  const LLT s64 = LLT::scalar(64);
+  const LLT v4s32 = LLT::vector(4, 32);
+  const LLT v2s64 = LLT::vector(2, 64);
+
+  for (unsigned BinOp : {G_FADD, G_FSUB, G_FMUL, G_FDIV})
+    for (auto Ty : {s64, v2s64})
+      setAction({BinOp, Ty}, Legal);
+
+  for (unsigned BinOp : {G_ADD, G_SUB})
+    for (auto Ty : {v4s32})
+      setAction({BinOp, Ty}, Legal);
+
 }

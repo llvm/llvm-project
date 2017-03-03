@@ -81,6 +81,7 @@ define i32 @sad_16i8() nounwind {
 ; AVX512F-NEXT:    vpshufd {{.*#+}} zmm1 = zmm0[1,1,2,3,5,5,6,7,9,9,10,11,13,13,14,15]
 ; AVX512F-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
 ; AVX512F-NEXT:    vmovd %xmm0, %eax
+; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512BW-LABEL: sad_16i8:
@@ -106,6 +107,7 @@ define i32 @sad_16i8() nounwind {
 ; AVX512BW-NEXT:    vpshufd {{.*#+}} zmm1 = zmm0[1,1,2,3,5,5,6,7,9,9,10,11,13,13,14,15]
 ; AVX512BW-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
 ; AVX512BW-NEXT:    vmovd %xmm0, %eax
+; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
 entry:
   br label %vector.body
@@ -324,6 +326,7 @@ define i32 @sad_32i8() nounwind {
 ; AVX512F-NEXT:    vpshufd {{.*#+}} zmm1 = zmm0[1,1,2,3,5,5,6,7,9,9,10,11,13,13,14,15]
 ; AVX512F-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
 ; AVX512F-NEXT:    vmovd %xmm0, %eax
+; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512BW-LABEL: sad_32i8:
@@ -351,6 +354,7 @@ define i32 @sad_32i8() nounwind {
 ; AVX512BW-NEXT:    vpshufd {{.*#+}} zmm1 = zmm0[1,1,2,3,5,5,6,7,9,9,10,11,13,13,14,15]
 ; AVX512BW-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
 ; AVX512BW-NEXT:    vmovd %xmm0, %eax
+; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
 entry:
   br label %vector.body
@@ -799,6 +803,7 @@ define i32 @sad_avx64i8() nounwind {
 ; AVX512F-NEXT:    vpshufd {{.*#+}} zmm1 = zmm0[1,1,2,3,5,5,6,7,9,9,10,11,13,13,14,15]
 ; AVX512F-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
 ; AVX512F-NEXT:    vmovd %xmm0, %eax
+; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512BW-LABEL: sad_avx64i8:
@@ -827,6 +832,7 @@ define i32 @sad_avx64i8() nounwind {
 ; AVX512BW-NEXT:    vpshufd {{.*#+}} zmm1 = zmm0[1,1,2,3,5,5,6,7,9,9,10,11,13,13,14,15]
 ; AVX512BW-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
 ; AVX512BW-NEXT:    vmovd %xmm0, %eax
+; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
 entry:
   br label %vector.body
@@ -1264,6 +1270,7 @@ define i32 @sad_nonloop_32i8(<32 x i8>* nocapture readonly %p, i64, <32 x i8>* n
 ; AVX512F-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
 ; AVX512F-NEXT:    vpaddq %ymm1, %ymm0, %ymm0
 ; AVX512F-NEXT:    vmovd %xmm0, %eax
+; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512BW-LABEL: sad_nonloop_32i8:
@@ -1275,6 +1282,7 @@ define i32 @sad_nonloop_32i8(<32 x i8>* nocapture readonly %p, i64, <32 x i8>* n
 ; AVX512BW-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
 ; AVX512BW-NEXT:    vpaddq %ymm1, %ymm0, %ymm0
 ; AVX512BW-NEXT:    vmovd %xmm0, %eax
+; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
   %v1 = load <32 x i8>, <32 x i8>* %p, align 1
   %z1 = zext <32 x i8> %v1 to <32 x i32>

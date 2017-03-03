@@ -39,7 +39,7 @@ using namespace llvm;
 
 X86InstructionSelector::X86InstructionSelector(const X86Subtarget &STI,
                                                const X86RegisterBankInfo &RBI)
-    : InstructionSelector(), TII(*STI.getInstrInfo()),
+    : InstructionSelector(), STI(STI), TII(*STI.getInstrInfo()),
       TRI(*STI.getRegisterInfo()), RBI(RBI) {}
 
 // FIXME: This should be target-independent, inferred from the types declared
@@ -47,10 +47,22 @@ X86InstructionSelector::X86InstructionSelector(const X86Subtarget &STI,
 static const TargetRegisterClass *
 getRegClassForTypeOnBank(LLT Ty, const RegisterBank &RB) {
   if (RB.getID() == X86::GPRRegBankID) {
-    if (Ty.getSizeInBits() <= 32)
+    if (Ty.getSizeInBits() == 32)
       return &X86::GR32RegClass;
     if (Ty.getSizeInBits() == 64)
       return &X86::GR64RegClass;
+  }
+  if (RB.getID() == X86::VECRRegBankID) {
+    if (Ty.getSizeInBits() == 32)
+      return &X86::FR32XRegClass;
+    if (Ty.getSizeInBits() == 64)
+      return &X86::FR64XRegClass;
+    if (Ty.getSizeInBits() == 128)
+      return &X86::VR128XRegClass;
+    if (Ty.getSizeInBits() == 256)
+      return &X86::VR256XRegClass;
+    if (Ty.getSizeInBits() == 512)
+      return &X86::VR512RegClass;
   }
 
   llvm_unreachable("Unknown RegBank!");
@@ -89,6 +101,9 @@ static bool selectCopy(MachineInstr &I, const TargetInstrInfo &TII,
     assert((DstSize <= 64) && "GPRs cannot get more than 64-bit width values.");
     RC = getRegClassForTypeOnBank(MRI.getType(DstReg), RegBank);
     break;
+  case X86::VECRRegBankID:
+    RC = getRegClassForTypeOnBank(MRI.getType(DstReg), RegBank);
+    break;
   default:
     llvm_unreachable("Unknown RegBank!");
   }
@@ -96,10 +111,13 @@ static bool selectCopy(MachineInstr &I, const TargetInstrInfo &TII,
   // No need to constrain SrcReg. It will get constrained when
   // we hit another of its use or its defs.
   // Copies do not have constraints.
-  if (!RBI.constrainGenericRegister(DstReg, *RC, MRI)) {
-    DEBUG(dbgs() << "Failed to constrain " << TII.getName(I.getOpcode())
-                 << " operand\n");
-    return false;
+  const TargetRegisterClass *OldRC  = MRI.getRegClassOrNull(DstReg);
+  if (!OldRC || !RC->hasSubClassEq(OldRC)) {
+    if (!RBI.constrainGenericRegister(DstReg, *RC, MRI)) {
+        DEBUG(dbgs() << "Failed to constrain " << TII.getName(I.getOpcode())
+                     << " operand\n");
+        return false;
+      }
   }
   I.setDesc(TII.get(X86::COPY));
   return true;
@@ -127,5 +145,152 @@ bool X86InstructionSelector::select(MachineInstr &I) const {
   assert(I.getNumOperands() == I.getNumExplicitOperands() &&
          "Generic instruction has unexpected implicit operands\n");
 
+  // TODO: This should be implemented by tblgen, pattern with predicate not supported yet.
+  if (selectBinaryOp(I, MRI))
+    return true;
+
   return selectImpl(I);
 }
+
+unsigned X86InstructionSelector::getFAddOp(LLT &Ty,
+                                           const RegisterBank &RB) const {
+
+  if (X86::VECRRegBankID != RB.getID())
+    return TargetOpcode::G_FADD;
+
+  if (Ty == LLT::scalar(32)) {
+    if (STI.hasAVX512()) {
+      return X86::VADDSSZrr;
+    } else if (STI.hasAVX()) {
+      return X86::VADDSSrr;
+    } else if (STI.hasSSE1()) {
+      return X86::ADDSSrr;
+    }
+  } else if (Ty == LLT::scalar(64)) {
+    if (STI.hasAVX512()) {
+      return X86::VADDSDZrr;
+    } else if (STI.hasAVX()) {
+      return X86::VADDSDrr;
+    } else if (STI.hasSSE2()) {
+      return X86::ADDSDrr;
+    }
+  } else if (Ty == LLT::vector(4, 32)) {
+    if ((STI.hasAVX512()) && (STI.hasVLX())) {
+      return X86::VADDPSZ128rr;
+    } else if (STI.hasAVX()) {
+      return X86::VADDPSrr;
+    } else if (STI.hasSSE1()) {
+      return X86::ADDPSrr;
+    }
+  }
+
+  return TargetOpcode::G_FADD;
+}
+
+unsigned X86InstructionSelector::getFSubOp(LLT &Ty,
+                                           const RegisterBank &RB) const {
+
+  if (X86::VECRRegBankID != RB.getID())
+    return TargetOpcode::G_FSUB;
+
+  if (Ty == LLT::scalar(32)) {
+    if (STI.hasAVX512()) {
+      return X86::VSUBSSZrr;
+    } else if (STI.hasAVX()) {
+      return X86::VSUBSSrr;
+    } else if (STI.hasSSE1()) {
+      return X86::SUBSSrr;
+    }
+  } else if (Ty == LLT::scalar(64)) {
+    if (STI.hasAVX512()) {
+      return X86::VSUBSDZrr;
+    } else if (STI.hasAVX()) {
+      return X86::VSUBSDrr;
+    } else if (STI.hasSSE2()) {
+      return X86::SUBSDrr;
+    }
+  } else if (Ty == LLT::vector(4, 32)) {
+    if ((STI.hasAVX512()) && (STI.hasVLX())) {
+      return X86::VSUBPSZ128rr;
+    } else if (STI.hasAVX()) {
+      return X86::VSUBPSrr;
+    } else if (STI.hasSSE1()) {
+      return X86::SUBPSrr;
+    }
+  }
+
+  return TargetOpcode::G_FSUB;
+}
+
+unsigned X86InstructionSelector::getAddOp(LLT &Ty,
+                                          const RegisterBank &RB) const {
+
+  if (X86::VECRRegBankID != RB.getID())
+    return TargetOpcode::G_ADD;
+
+  if (Ty == LLT::vector(4, 32)) {
+    if (STI.hasAVX512() && STI.hasVLX()) {
+      return X86::VPADDDZ128rr;
+    } else if (STI.hasAVX()) {
+      return X86::VPADDDrr;
+    } else if (STI.hasSSE2()) {
+      return X86::PADDDrr;
+    }
+  }
+
+  return TargetOpcode::G_ADD;
+}
+
+unsigned X86InstructionSelector::getSubOp(LLT &Ty,
+                                          const RegisterBank &RB) const {
+
+  if (X86::VECRRegBankID != RB.getID())
+    return TargetOpcode::G_SUB;
+
+  if (Ty == LLT::vector(4, 32)) {
+    if (STI.hasAVX512() && STI.hasVLX()) {
+      return X86::VPSUBDZ128rr;
+    } else if (STI.hasAVX()) {
+      return X86::VPSUBDrr;
+    } else if (STI.hasSSE2()) {
+      return X86::PSUBDrr;
+    }
+  }
+
+  return TargetOpcode::G_SUB;
+}
+
+bool X86InstructionSelector::selectBinaryOp(MachineInstr &I,
+                                            MachineRegisterInfo &MRI) const {
+
+  LLT Ty = MRI.getType(I.getOperand(0).getReg());
+  const unsigned DefReg = I.getOperand(0).getReg();
+  const RegisterBank &RB = *RBI.getRegBank(DefReg, MRI, TRI);
+
+  unsigned NewOpc = I.getOpcode();
+
+  switch (I.getOpcode()) {
+  case TargetOpcode::G_FADD:
+    NewOpc = getFAddOp(Ty, RB);
+    break;
+  case TargetOpcode::G_FSUB:
+    NewOpc = getFSubOp(Ty, RB);
+    break;
+  case TargetOpcode::G_ADD:
+    NewOpc = getAddOp(Ty, RB);
+    break;
+  case TargetOpcode::G_SUB:
+    NewOpc = getSubOp(Ty, RB);
+    break;
+  default:
+    break;
+  }
+
+  if (NewOpc == I.getOpcode())
+    return false;
+
+  I.setDesc(TII.get(NewOpc));
+
+  return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
+}
+

@@ -1336,12 +1336,20 @@ define i16 @trunc_16i8_to_16i1(<16 x i8> %a) {
 }
 
 define i16 @trunc_16i32_to_16i1(<16 x i32> %a) {
-; ALL-LABEL: trunc_16i32_to_16i1:
-; ALL:       ## BB#0:
-; ALL-NEXT:    vpslld $31, %zmm0, %zmm0
-; ALL-NEXT:    vptestmd %zmm0, %zmm0, %k0
-; ALL-NEXT:    kmovw %k0, %eax
-; ALL-NEXT:    retq
+; KNL-LABEL: trunc_16i32_to_16i1:
+; KNL:       ## BB#0:
+; KNL-NEXT:    vpslld $31, %zmm0, %zmm0
+; KNL-NEXT:    vptestmd %zmm0, %zmm0, %k0
+; KNL-NEXT:    kmovw %k0, %eax
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: trunc_16i32_to_16i1:
+; SKX:       ## BB#0:
+; SKX-NEXT:    vpslld $31, %zmm0, %zmm0
+; SKX-NEXT:    vptestmd %zmm0, %zmm0, %k0
+; SKX-NEXT:    kmovw %k0, %eax
+; SKX-NEXT:    vzeroupper
+; SKX-NEXT:    retq
   %mask_b = trunc <16 x i32>%a to <16 x i1>
   %mask = bitcast <16 x i1> %mask_b to i16
   ret i16 %mask
@@ -1441,6 +1449,7 @@ define <8 x i16> @sext_8i1_8i16(<8 x i32> %a1, <8 x i32> %a2) nounwind {
 ; SKX:       ## BB#0:
 ; SKX-NEXT:    vpcmpgtd %ymm0, %ymm1, %k0
 ; SKX-NEXT:    vpmovm2w %k0, %xmm0
+; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
   %x = icmp slt <8 x i32> %a1, %a2
   %y = sext <8 x i1> %x to <8 x i16>
@@ -1482,11 +1491,18 @@ define <8 x i64> @sext_8i1_8i64(<8 x i32> %a1, <8 x i32> %a2) nounwind {
 }
 
 define void @extload_v8i64(<8 x i8>* %a, <8 x i64>* %res) {
-; ALL-LABEL: extload_v8i64:
-; ALL:       ## BB#0:
-; ALL-NEXT:    vpmovsxbq (%rdi), %zmm0
-; ALL-NEXT:    vmovdqa64 %zmm0, (%rsi)
-; ALL-NEXT:    retq
+; KNL-LABEL: extload_v8i64:
+; KNL:       ## BB#0:
+; KNL-NEXT:    vpmovsxbq (%rdi), %zmm0
+; KNL-NEXT:    vmovdqa64 %zmm0, (%rsi)
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: extload_v8i64:
+; SKX:       ## BB#0:
+; SKX-NEXT:    vpmovsxbq (%rdi), %zmm0
+; SKX-NEXT:    vmovdqa64 %zmm0, (%rsi)
+; SKX-NEXT:    vzeroupper
+; SKX-NEXT:    retq
   %sign_load = load <8 x i8>, <8 x i8>* %a
   %c = sext <8 x i8> %sign_load to <8 x i64>
   store <8 x i64> %c, <8 x i64>* %res

@@ -17,7 +17,6 @@
 
 // Other libraries and framework includes
 // Project includes
-#include "lldb/Core/STLUtils.h"
 #include "lldb/Host/PosixApi.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/lldb-private.h"
@@ -588,21 +587,6 @@ public:
   ///     indicates if the paths in this object have been resolved.
   //------------------------------------------------------------------
   void SetIsResolved(bool is_resolved) { m_is_resolved = is_resolved; }
-
-  //------------------------------------------------------------------
-  /// Read the file into an array of strings, one per line.
-  ///
-  /// Opens and reads the file in this object into an array of strings,
-  /// one string per line of the file. Returns a boolean indicating
-  /// success or failure.
-  ///
-  /// @param[out] lines
-  ///     The string array into which to read the file.
-  ///
-  /// @result
-  ///     Returns the number of lines that were read from the file.
-  //------------------------------------------------------------------
-  size_t ReadFileLines(STLStringArray &lines);
 
   //------------------------------------------------------------------
   /// Resolves user name and links in \a path, and overwrites the input

@@ -60,6 +60,7 @@ define <4 x float> @bar(<4 x float>* %a1p, <4 x float>* %a2p, <4 x float> %a3, <
 ; CHECK-NEXT:    vmovaps %xmm8, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    vmovaps %xmm9, (%rsp)
 ; CHECK-NEXT:    vmovaps {{[0-9]+}}(%rsp), %xmm3 # 16-byte Reload
+; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    callq foo
 ; CHECK-NEXT:    vmovaps {{[0-9]+}}(%rsp), %xmm1 # 16-byte Reload
 ; CHECK-NEXT:    vaddps {{[0-9]+}}(%rsp), %xmm1, %xmm1 # 16-byte Folded Reload

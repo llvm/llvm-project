@@ -22,6 +22,9 @@ class X86RegisterBankInfo;
 class X86RegisterInfo;
 class X86Subtarget;
 class X86TargetMachine;
+class LLT;
+class RegisterBank;
+class MachineRegisterInfo;
 
 class X86InstructionSelector : public InstructionSelector {
 public:
@@ -35,6 +38,14 @@ private:
   /// the patterns that don't require complex C++.
   bool selectImpl(MachineInstr &I) const;
 
+  // TODO: remove after selectImpl support pattern with a predicate.
+  unsigned getFAddOp(LLT &Ty, const RegisterBank &RB) const;
+  unsigned getFSubOp(LLT &Ty, const RegisterBank &RB) const;
+  unsigned getAddOp(LLT &Ty, const RegisterBank &RB) const;
+  unsigned getSubOp(LLT &Ty, const RegisterBank &RB) const;
+  bool selectBinaryOp(MachineInstr &I, MachineRegisterInfo &MRI) const;
+
+  const X86Subtarget &STI;
   const X86InstrInfo &TII;
   const X86RegisterInfo &TRI;
   const X86RegisterBankInfo &RBI;

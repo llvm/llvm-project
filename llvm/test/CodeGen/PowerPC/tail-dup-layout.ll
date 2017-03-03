@@ -95,6 +95,87 @@ exit:
 }
 
 ; Intended layout:
+; The chain-of-triangles based duplicating produces the layout
+; test1
+; test2
+; test3
+; test4
+; optional1
+; optional2
+; optional3
+; optional4
+; exit
+; even for 50/50 branches.
+; Tail duplication puts test n+1 at the end of optional n
+; so optional1 includes a copy of test2 at the end, and branches
+; to test3 (at the top) or falls through to optional 2.
+; The CHECK statements check for the whole string of tests
+; and then check that the correct test has been duplicated into the end of
+; the optional blocks and that the optional blocks are in the correct order.
+;CHECK-LABEL: straight_test_50:
+; test1 may have been merged with entry
+;CHECK: mr [[TAGREG:[0-9]+]], 3
+;CHECK: andi. {{[0-9]+}}, [[TAGREG]], 1
+;CHECK-NEXT: bc 12, 1, .[[OPT1LABEL:[_0-9A-Za-z]+]]
+;CHECK-NEXT: # %test2
+;CHECK-NEXT: rlwinm. {{[0-9]+}}, [[TAGREG]], 0, 30, 30
+;CHECK-NEXT: bne 0, .[[OPT2LABEL:[_0-9A-Za-z]+]]
+;CHECK-NEXT: .[[TEST3LABEL:[_0-9A-Za-z]+]]: # %test3
+;CHECK-NEXT: rlwinm. {{[0-9]+}}, [[TAGREG]], 0, 29, 29
+;CHECK-NEXT: bne 0, .[[OPT3LABEL:[_0-9A-Za-z]+]]
+;CHECK-NEXT: .[[TEST4LABEL:[_0-9A-Za-z]+]]: # %test4
+;CHECK-NEXT: rlwinm. {{[0-9]+}}, [[TAGREG]], 0, 28, 28
+;CHECK-NEXT: bne 0, .[[OPT4LABEL:[_0-9A-Za-z]+]]
+;CHECK-NEXT: .[[EXITLABEL:[_0-9A-Za-z]+]]: # %exit
+;CHECK: blr
+;CHECK-NEXT: .[[OPT1LABEL]]:
+;CHECK: rlwinm. {{[0-9]+}}, [[TAGREG]], 0, 30, 30
+;CHECK-NEXT: beq 0, .[[TEST3LABEL]]
+;CHECK-NEXT: .[[OPT2LABEL]]:
+;CHECK: rlwinm. {{[0-9]+}}, [[TAGREG]], 0, 29, 29
+;CHECK-NEXT: beq 0, .[[TEST4LABEL]]
+;CHECK-NEXT: .[[OPT3LABEL]]:
+;CHECK: rlwinm. {{[0-9]+}}, [[TAGREG]], 0, 28, 28
+;CHECK-NEXT: beq 0, .[[EXITLABEL]]
+;CHECK-NEXT: .[[OPT4LABEL]]:
+;CHECK: b .[[EXITLABEL]]
+
+define void @straight_test_50(i32 %tag) {
+entry:
+  br label %test1
+test1:
+  %tagbit1 = and i32 %tag, 1
+  %tagbit1eq0 = icmp eq i32 %tagbit1, 0
+  br i1 %tagbit1eq0, label %test2, label %optional1, !prof !2
+optional1:
+  call void @a()
+  br label %test2
+test2:
+  %tagbit2 = and i32 %tag, 2
+  %tagbit2eq0 = icmp eq i32 %tagbit2, 0
+  br i1 %tagbit2eq0, label %test3, label %optional2, !prof !2
+optional2:
+  call void @b()
+  br label %test3
+test3:
+  %tagbit3 = and i32 %tag, 4
+  %tagbit3eq0 = icmp eq i32 %tagbit3, 0
+  br i1 %tagbit3eq0, label %test4, label %optional3, !prof !2
+optional3:
+  call void @c()
+  br label %test4
+test4:
+  %tagbit4 = and i32 %tag, 8
+  %tagbit4eq0 = icmp eq i32 %tagbit4, 0
+  br i1 %tagbit4eq0, label %exit, label %optional4, !prof !1
+optional4:
+  call void @d()
+  br label %exit
+exit:
+  ret void
+}
+
+; Intended layout:
 ; The chain-based outlining produces the layout
 ; entry
 ; --- Begin loop ---

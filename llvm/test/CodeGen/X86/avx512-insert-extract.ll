@@ -148,6 +148,7 @@ define float @test7(<16 x float> %x, i32 %ind) nounwind {
 ; SKX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; SKX-NEXT:    movq %rbp, %rsp
 ; SKX-NEXT:    popq %rbp
+; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
   %e = extractelement <16 x float> %x, i32 %ind
   ret float %e
@@ -180,6 +181,7 @@ define double @test8(<8 x double> %x, i32 %ind) nounwind {
 ; SKX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; SKX-NEXT:    movq %rbp, %rsp
 ; SKX-NEXT:    popq %rbp
+; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
   %e = extractelement <8 x double> %x, i32 %ind
   ret double %e
@@ -212,6 +214,7 @@ define float @test9(<8 x float> %x, i32 %ind) nounwind {
 ; SKX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; SKX-NEXT:    movq %rbp, %rsp
 ; SKX-NEXT:    popq %rbp
+; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
   %e = extractelement <8 x float> %x, i32 %ind
   ret float %e
@@ -244,6 +247,7 @@ define i32 @test10(<16 x i32> %x, i32 %ind) nounwind {
 ; SKX-NEXT:    movl (%rsp,%rdi,4), %eax
 ; SKX-NEXT:    movq %rbp, %rsp
 ; SKX-NEXT:    popq %rbp
+; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
   %e = extractelement <16 x i32> %x, i32 %ind
   ret i32 %e
@@ -318,6 +322,7 @@ define i64 @test12(<16 x i64>%a, <16 x i64>%b, i64 %a1, i64 %b1) {
 ; SKX-NEXT:    testb %al, %al
 ; SKX-NEXT:    cmoveq %rsi, %rdi
 ; SKX-NEXT:    movq %rdi, %rax
+; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
   %cmpvector_func.i = icmp slt <16 x i64> %a, %b
   %extract24vector_func.i = extractelement <16 x i1> %cmpvector_func.i, i32 0
@@ -382,6 +387,7 @@ define i64 @test14(<8 x i64>%a, <8 x i64>%b, i64 %a1, i64 %b1) {
 ; SKX-NEXT:    testb %al, %al
 ; SKX-NEXT:    cmoveq %rsi, %rdi
 ; SKX-NEXT:    movq %rdi, %rax
+; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
   %cmpvector_func.i = icmp slt <8 x i64> %a, %b
   %extract24vector_func.i = extractelement <8 x i1> %cmpvector_func.i, i32 4
@@ -441,6 +447,7 @@ define i16 @test16(i1 *%addr, i16 %a) {
 ; SKX-NEXT:    vpermi2d %zmm1, %zmm0, %zmm2
 ; SKX-NEXT:    vpmovd2m %zmm2, %k0
 ; SKX-NEXT:    kmovw %k0, %eax
+; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
   %x = load i1 , i1 * %addr, align 128
   %a1 = bitcast i16 %a to <16 x i1>
@@ -477,6 +484,7 @@ define i8 @test17(i1 *%addr, i8 %a) {
 ; SKX-NEXT:    vpermi2q %zmm1, %zmm0, %zmm2
 ; SKX-NEXT:    vpmovq2m %zmm2, %k0
 ; SKX-NEXT:    kmovb %k0, %eax
+; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
   %x = load i1 , i1 * %addr, align 128
   %a1 = bitcast i8 %a to <8 x i1>
@@ -498,6 +506,7 @@ define i64 @extract_v8i64(<8 x i64> %x, i64* %dst) {
 ; SKX-NEXT:    vpextrq $1, %xmm0, %rax
 ; SKX-NEXT:    vextracti64x2 $1, %zmm0, %xmm0
 ; SKX-NEXT:    vpextrq $1, %xmm0, (%rdi)
+; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
   %r1 = extractelement <8 x i64> %x, i32 1
   %r2 = extractelement <8 x i64> %x, i32 3
@@ -518,6 +527,7 @@ define i64 @extract_v4i64(<4 x i64> %x, i64* %dst) {
 ; SKX-NEXT:    vpextrq $1, %xmm0, %rax
 ; SKX-NEXT:    vextracti128 $1, %ymm0, %xmm0
 ; SKX-NEXT:    vpextrq $1, %xmm0, (%rdi)
+; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
   %r1 = extractelement <4 x i64> %x, i32 1
   %r2 = extractelement <4 x i64> %x, i32 3
@@ -556,6 +566,7 @@ define i32 @extract_v16i32(<16 x i32> %x, i32* %dst) {
 ; SKX-NEXT:    vpextrd $1, %xmm0, %eax
 ; SKX-NEXT:    vextracti32x4 $1, %zmm0, %xmm0
 ; SKX-NEXT:    vpextrd $1, %xmm0, (%rdi)
+; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
   %r1 = extractelement <16 x i32> %x, i32 1
   %r2 = extractelement <16 x i32> %x, i32 5
@@ -576,6 +587,7 @@ define i32 @extract_v8i32(<8 x i32> %x, i32* %dst) {
 ; SKX-NEXT:    vpextrd $1, %xmm0, %eax
 ; SKX-NEXT:    vextracti128 $1, %ymm0, %xmm0
 ; SKX-NEXT:    vpextrd $1, %xmm0, (%rdi)
+; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
   %r1 = extractelement <8 x i32> %x, i32 1
   %r2 = extractelement <8 x i32> %x, i32 5
@@ -616,6 +628,7 @@ define i16 @extract_v32i16(<32 x i16> %x, i16* %dst) {
 ; SKX-NEXT:    vextracti32x4 $1, %zmm0, %xmm0
 ; SKX-NEXT:    vpextrw $1, %xmm0, (%rdi)
 ; SKX-NEXT:    ## kill: %AX<def> %AX<kill> %EAX<kill>
+; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
   %r1 = extractelement <32 x i16> %x, i32 1
   %r2 = extractelement <32 x i16> %x, i32 9
@@ -638,6 +651,7 @@ define i16 @extract_v16i16(<16 x i16> %x, i16* %dst) {
 ; SKX-NEXT:    vextracti128 $1, %ymm0, %xmm0
 ; SKX-NEXT:    vpextrw $1, %xmm0, (%rdi)
 ; SKX-NEXT:    ## kill: %AX<def> %AX<kill> %EAX<kill>
+; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
   %r1 = extractelement <16 x i16> %x, i32 1
   %r2 = extractelement <16 x i16> %x, i32 9
@@ -680,6 +694,7 @@ define i8 @extract_v64i8(<64 x i8> %x, i8* %dst) {
 ; SKX-NEXT:    vextracti32x4 $1, %zmm0, %xmm0
 ; SKX-NEXT:    vpextrb $1, %xmm0, (%rdi)
 ; SKX-NEXT:    ## kill: %AL<def> %AL<kill> %EAX<kill>
+; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
   %r1 = extractelement <64 x i8> %x, i32 1
   %r2 = extractelement <64 x i8> %x, i32 17
@@ -702,6 +717,7 @@ define i8 @extract_v32i8(<32 x i8> %x, i8* %dst) {
 ; SKX-NEXT:    vextracti128 $1, %ymm0, %xmm0
 ; SKX-NEXT:    vpextrb $1, %xmm0, (%rdi)
 ; SKX-NEXT:    ## kill: %AL<def> %AL<kill> %EAX<kill>
+; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
   %r1 = extractelement <32 x i8> %x, i32 1
   %r2 = extractelement <32 x i8> %x, i32 17
@@ -1272,6 +1288,7 @@ define i32 @test_insertelement_v32i1(i32 %a, i32 %b, <32 x i32> %x , <32 x i32> 
 ; SKX-NEXT:    vpermi2w %zmm1, %zmm0, %zmm2
 ; SKX-NEXT:    vpmovw2m %zmm2, %k0
 ; SKX-NEXT:    kmovd %k0, %eax
+; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
   %cmp_res_i1 = icmp ult i32 %a, %b
   %cmp_cmp_vec = icmp ult <32 x i32> %x, %y
@@ -1493,6 +1510,7 @@ define zeroext i8 @test_extractelement_v32i1(<32 x i8> %a, <32 x i8> %b) {
 ; SKX-NEXT:    kshiftrd $31, %k0, %k0
 ; SKX-NEXT:    kmovw %k0, %eax
 ; SKX-NEXT:    andl $1, %eax
+; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
   %t1 = icmp ugt <32 x i8> %a, %b
   %t2 = extractelement <32 x i1> %t1, i32 2
@@ -1525,6 +1543,7 @@ define zeroext i8 @test_extractelement_v64i1(<64 x i8> %a, <64 x i8> %b) {
 ; SKX-NEXT:    sete %al
 ; SKX-NEXT:    addb $3, %al
 ; SKX-NEXT:    movzbl %al, %eax
+; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
   %t1 = icmp ugt <64 x i8> %a, %b
   %t2 = extractelement <64 x i1> %t1, i32 63
@@ -1555,6 +1574,7 @@ define zeroext i8 @extractelement_v64i1_alt(<64 x i8> %a, <64 x i8> %b) {
 ; SKX-NEXT:    sete %al
 ; SKX-NEXT:    addb $3, %al
 ; SKX-NEXT:    movzbl %al, %eax
+; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
   %t1 = icmp ugt <64 x i8> %a, %b
   %t2 = extractelement <64 x i1> %t1, i32 63
@@ -1622,6 +1642,7 @@ define i64 @test_extractelement_variable_v4i64(<4 x i64> %t1, i32 %index) {
 ; SKX-NEXT:    movq (%rsp,%rdi,8), %rax
 ; SKX-NEXT:    movq %rbp, %rsp
 ; SKX-NEXT:    popq %rbp
+; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
   %t2 = extractelement <4 x i64> %t1, i32 %index
   ret i64 %t2
@@ -1666,6 +1687,7 @@ define i64 @test_extractelement_variable_v8i64(<8 x i64> %t1, i32 %index) {
 ; SKX-NEXT:    movq (%rsp,%rdi,8), %rax
 ; SKX-NEXT:    movq %rbp, %rsp
 ; SKX-NEXT:    popq %rbp
+; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
   %t2 = extractelement <8 x i64> %t1, i32 %index
   ret i64 %t2
@@ -1730,6 +1752,7 @@ define double @test_extractelement_variable_v4f64(<4 x double> %t1, i32 %index) 
 ; SKX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; SKX-NEXT:    movq %rbp, %rsp
 ; SKX-NEXT:    popq %rbp
+; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
   %t2 = extractelement <4 x double> %t1, i32 %index
   ret double %t2
@@ -1774,6 +1797,7 @@ define double @test_extractelement_variable_v8f64(<8 x double> %t1, i32 %index) 
 ; SKX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; SKX-NEXT:    movq %rbp, %rsp
 ; SKX-NEXT:    popq %rbp
+; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
   %t2 = extractelement <8 x double> %t1, i32 %index
   ret double %t2
@@ -1838,6 +1862,7 @@ define i32 @test_extractelement_variable_v8i32(<8 x i32> %t1, i32 %index) {
 ; SKX-NEXT:    movl (%rsp,%rdi,4), %eax
 ; SKX-NEXT:    movq %rbp, %rsp
 ; SKX-NEXT:    popq %rbp
+; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
   %t2 = extractelement <8 x i32> %t1, i32 %index
   ret i32 %t2
@@ -1882,6 +1907,7 @@ define i32 @test_extractelement_variable_v16i32(<16 x i32> %t1, i32 %index) {
 ; SKX-NEXT:    movl (%rsp,%rdi,4), %eax
 ; SKX-NEXT:    movq %rbp, %rsp
 ; SKX-NEXT:    popq %rbp
+; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
   %t2 = extractelement <16 x i32> %t1, i32 %index
   ret i32 %t2
@@ -1946,6 +1972,7 @@ define float @test_extractelement_variable_v8f32(<8 x float> %t1, i32 %index) {
 ; SKX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; SKX-NEXT:    movq %rbp, %rsp
 ; SKX-NEXT:    popq %rbp
+; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
   %t2 = extractelement <8 x float> %t1, i32 %index
   ret float %t2
@@ -1990,6 +2017,7 @@ define float @test_extractelement_variable_v16f32(<16 x float> %t1, i32 %index) 
 ; SKX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; SKX-NEXT:    movq %rbp, %rsp
 ; SKX-NEXT:    popq %rbp
+; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
   %t2 = extractelement <16 x float> %t1, i32 %index
   ret float %t2
@@ -2054,6 +2082,7 @@ define i16 @test_extractelement_variable_v16i16(<16 x i16> %t1, i32 %index) {
 ; SKX-NEXT:    movzwl (%rsp,%rdi,2), %eax
 ; SKX-NEXT:    movq %rbp, %rsp
 ; SKX-NEXT:    popq %rbp
+; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
   %t2 = extractelement <16 x i16> %t1, i32 %index
   ret i16 %t2
@@ -2099,6 +2128,7 @@ define i16 @test_extractelement_variable_v32i16(<32 x i16> %t1, i32 %index) {
 ; SKX-NEXT:    movzwl (%rsp,%rdi,2), %eax
 ; SKX-NEXT:    movq %rbp, %rsp
 ; SKX-NEXT:    popq %rbp
+; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
   %t2 = extractelement <32 x i16> %t1, i32 %index
   ret i16 %t2
@@ -2167,6 +2197,7 @@ define i8 @test_extractelement_variable_v32i8(<32 x i8> %t1, i32 %index) {
 ; SKX-NEXT:    movb (%rdi,%rax), %al
 ; SKX-NEXT:    movq %rbp, %rsp
 ; SKX-NEXT:    popq %rbp
+; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
 
   %t2 = extractelement <32 x i8> %t1, i32 %index
@@ -2215,6 +2246,7 @@ define i8 @test_extractelement_variable_v64i8(<64 x i8> %t1, i32 %index) {
 ; SKX-NEXT:    movb (%rdi,%rax), %al
 ; SKX-NEXT:    movq %rbp, %rsp
 ; SKX-NEXT:    popq %rbp
+; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
 
   %t2 = extractelement <64 x i8> %t1, i32 %index
@@ -2265,6 +2297,7 @@ define i8 @test_extractelement_variable_v64i8_indexi8(<64 x i8> %t1, i8 %index) 
 ; SKX-NEXT:    movb (%rax,%rcx), %al
 ; SKX-NEXT:    movq %rbp, %rsp
 ; SKX-NEXT:    popq %rbp
+; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
 
   %i  = add i8 %index, %index
@@ -2379,6 +2412,7 @@ define zeroext i8 @test_extractelement_varible_v8i1(<8 x i32> %a, <8 x i32> %b, 
 ; SKX-NEXT:    andl $1, %eax
 ; SKX-NEXT:    movq %rbp, %rsp
 ; SKX-NEXT:    popq %rbp
+; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
   %t1 = icmp ugt <8 x i32> %a, %b
   %t2 = extractelement <8 x i1> %t1, i32 %index
@@ -2431,6 +2465,7 @@ define zeroext i8 @test_extractelement_varible_v16i1(<16 x i32> %a, <16 x i32> %
 ; SKX-NEXT:    andl $1, %eax
 ; SKX-NEXT:    movq %rbp, %rsp
 ; SKX-NEXT:    popq %rbp
+; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
   %t1 = icmp ugt <16 x i32> %a, %b
   %t2 = extractelement <16 x i1> %t1, i32 %index
@@ -2487,6 +2522,7 @@ define zeroext i8 @test_extractelement_varible_v32i1(<32 x i8> %a, <32 x i8> %b,
 ; SKX-NEXT:    andl $1, %eax
 ; SKX-NEXT:    movq %rbp, %rsp
 ; SKX-NEXT:    popq %rbp
+; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
   %t1 = icmp ugt <32 x i8> %a, %b
   %t2 = extractelement <32 x i1> %t1, i32 %index

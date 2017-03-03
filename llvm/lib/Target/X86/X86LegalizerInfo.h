@@ -34,6 +34,8 @@ public:
 private:
   void setLegalizerInfo32bit();
   void setLegalizerInfo64bit();
+  void setLegalizerInfoSSE1();
+  void setLegalizerInfoSSE2();
 };
 } // End llvm namespace.
 #endif

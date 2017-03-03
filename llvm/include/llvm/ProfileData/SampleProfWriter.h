@@ -1,4 +1,4 @@
-//===- SampleProfWriter.h - Write LLVM sample profile data ----------------===//
+//===- SampleProfWriter.h - Write LLVM sample profile data ------*- C++ -*-===//
 //
 //                      The LLVM Compiler Infrastructure
 //
@@ -14,15 +14,18 @@
 #define LLVM_PROFILEDATA_SAMPLEPROFWRITER_H
 
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ProfileData/ProfileCommon.h"
+#include "llvm/IR/ProfileSummary.h"
 #include "llvm/ProfileData/SampleProf.h"
 #include "llvm/Support/ErrorOr.h"
-#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/raw_ostream.h"
+#include <algorithm>
+#include <cstdint>
+#include <memory>
+#include <system_error>
 
 namespace llvm {
-
 namespace sampleprof {
 
 enum SampleProfileFormat { SPF_None = 0, SPF_Text, SPF_Binary, SPF_GCC };
@@ -30,7 +33,7 @@ enum SampleProfileFormat { SPF_None = 0, SPF_Text, SPF_Binary, SPF_GCC };
 /// \brief Sample-based profile writer. Base class.
 class SampleProfileWriter {
 public:
-  virtual ~SampleProfileWriter() {}
+  virtual ~SampleProfileWriter() = default;
 
   /// Write sample profiles in \p S.
   ///
@@ -114,7 +117,7 @@ public:
 
 protected:
   SampleProfileWriterBinary(std::unique_ptr<raw_ostream> &OS)
-      : SampleProfileWriter(OS), NameTable() {}
+      : SampleProfileWriter(OS) {}
 
   std::error_code
   writeHeader(const StringMap<FunctionSamples> &ProfileMap) override;
@@ -133,8 +136,7 @@ private:
                               SampleProfileFormat Format);
 };
 
-} // End namespace sampleprof
-
-} // End namespace llvm
+} // end namespace sampleprof
+} // end namespace llvm
 
 #endif // LLVM_PROFILEDATA_SAMPLEPROFWRITER_H

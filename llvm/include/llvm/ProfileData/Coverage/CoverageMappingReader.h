@@ -1,4 +1,4 @@
-//=-- CoverageMappingReader.h - Code coverage mapping reader ------*- C++ -*-=//
+//===- CoverageMappingReader.h - Code coverage mapping reader ---*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -12,18 +12,20 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_PROFILEDATA_COVERAGEMAPPINGREADER_H
-#define LLVM_PROFILEDATA_COVERAGEMAPPINGREADER_H
+#ifndef LLVM_PROFILEDATA_COVERAGE_COVERAGEMAPPINGREADER_H
+#define LLVM_PROFILEDATA_COVERAGE_COVERAGEMAPPINGREADER_H
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Triple.h"
-#include "llvm/Object/ObjectFile.h"
 #include "llvm/ProfileData/Coverage/CoverageMapping.h"
 #include "llvm/ProfileData/InstrProf.h"
-#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include <cstddef>
+#include <cstdint>
 #include <iterator>
+#include <memory>
+#include <vector>
 
 namespace llvm {
 namespace coverage {
@@ -42,13 +44,14 @@ struct CoverageMappingRecord {
 /// \brief A file format agnostic iterator over coverage mapping data.
 class CoverageMappingIterator
     : public std::iterator<std::input_iterator_tag, CoverageMappingRecord> {
-  CoverageMappingReader *Reader;
+  CoverageMappingReader *Reader = nullptr;
   CoverageMappingRecord Record;
 
   void increment();
 
 public:
-  CoverageMappingIterator() : Reader(nullptr) {}
+  CoverageMappingIterator() = default;
+
   CoverageMappingIterator(CoverageMappingReader *Reader) : Reader(Reader) {
     increment();
   }
@@ -69,10 +72,11 @@ public:
 
 class CoverageMappingReader {
 public:
+  virtual ~CoverageMappingReader() = default;
+
   virtual Error readNextRecord(CoverageMappingRecord &Record) = 0;
   CoverageMappingIterator begin() { return CoverageMappingIterator(this); }
   CoverageMappingIterator end() { return CoverageMappingIterator(); }
-  virtual ~CoverageMappingReader() {}
 };
 
 /// \brief Base class for the raw coverage mapping and filenames data readers.
@@ -92,13 +96,12 @@ protected:
 class RawCoverageFilenamesReader : public RawCoverageReader {
   std::vector<StringRef> &Filenames;
 
-  RawCoverageFilenamesReader(const RawCoverageFilenamesReader &) = delete;
-  RawCoverageFilenamesReader &
-  operator=(const RawCoverageFilenamesReader &) = delete;
-
 public:
   RawCoverageFilenamesReader(StringRef Data, std::vector<StringRef> &Filenames)
       : RawCoverageReader(Data), Filenames(Filenames) {}
+  RawCoverageFilenamesReader(const RawCoverageFilenamesReader &) = delete;
+  RawCoverageFilenamesReader &
+  operator=(const RawCoverageFilenamesReader &) = delete;
 
   Error read();
 };
@@ -120,10 +123,6 @@ class RawCoverageMappingReader : public RawCoverageReader {
   std::vector<CounterExpression> &Expressions;
   std::vector<CounterMappingRegion> &MappingRegions;
 
-  RawCoverageMappingReader(const RawCoverageMappingReader &) = delete;
-  RawCoverageMappingReader &
-  operator=(const RawCoverageMappingReader &) = delete;
-
 public:
   RawCoverageMappingReader(StringRef MappingData,
                            ArrayRef<StringRef> TranslationUnitFilenames,
@@ -134,6 +133,9 @@ public:
         TranslationUnitFilenames(TranslationUnitFilenames),
         Filenames(Filenames), Expressions(Expressions),
         MappingRegions(MappingRegions) {}
+  RawCoverageMappingReader(const RawCoverageMappingReader &) = delete;
+  RawCoverageMappingReader &
+  operator=(const RawCoverageMappingReader &) = delete;
 
   Error read();
 
@@ -169,17 +171,17 @@ private:
   std::vector<StringRef> Filenames;
   std::vector<ProfileMappingRecord> MappingRecords;
   InstrProfSymtab ProfileNames;
-  size_t CurrentRecord;
+  size_t CurrentRecord = 0;
   std::vector<StringRef> FunctionsFilenames;
   std::vector<CounterExpression> Expressions;
   std::vector<CounterMappingRegion> MappingRegions;
 
+  BinaryCoverageReader() = default;
+
+public:
   BinaryCoverageReader(const BinaryCoverageReader &) = delete;
   BinaryCoverageReader &operator=(const BinaryCoverageReader &) = delete;
 
-  BinaryCoverageReader() : CurrentRecord(0) {}
-
-public:
   static Expected<std::unique_ptr<BinaryCoverageReader>>
   create(std::unique_ptr<MemoryBuffer> &ObjectBuffer,
          StringRef Arch);
@@ -190,4 +192,4 @@ public:
 } // end namespace coverage
 } // end namespace llvm
 
-#endif
+#endif // LLVM_PROFILEDATA_COVERAGE_COVERAGEMAPPINGREADER_H

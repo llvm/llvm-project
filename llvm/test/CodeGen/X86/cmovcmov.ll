@@ -249,16 +249,23 @@ attributes #0 = { nounwind }
 ; CMOV-DAG: cmpl %edx, %esi
 ; CMOV-DAG: movb $20, %al
 ; CMOV-DAG: movb $20, %dl
-; CMOV:   jl [[BB0:.LBB[0-9_]+]]
-; CMOV:   movl %ecx, %edx
-; CMOV: [[BB0]]:
-; CMOV:   jg [[BB1:.LBB[0-9_]+]]
-; CMOV:   movl %edx, %eax
-; CMOV: [[BB1]]:
+; CMOV:   jge [[BB2:.LBB[0-9_]+]]
+; CMOV:   jle [[BB3:.LBB[0-9_]+]]
+; CMOV: [[BB0:.LBB[0-9_]+]]
 ; CMOV:   testl %edi, %edi
-; CMOV:   je [[BB2:.LBB[0-9_]+]]
-; CMOV:   movl %edx, %eax
+; CMOV:   jne [[BB4:.LBB[0-9_]+]]
+; CMOV: [[BB1:.LBB[0-9_]+]]
+; CMOV:   movb %al, g8(%rip)
+; CMOV:   retq
 ; CMOV: [[BB2]]:
+; CMOV:   movl %ecx, %edx
+; CMOV:   jg [[BB0]]
+; CMOV: [[BB3]]:
+; CMOV:   movl %edx, %eax
+; CMOV:   testl %edi, %edi
+; CMOV:   je [[BB1]]
+; CMOV: [[BB4]]:
+; CMOV:   movl %edx, %eax
 ; CMOV:   movb %al, g8(%rip)
 ; CMOV:   retq
 define void @no_cascade_opt(i32 %v0, i32 %v1, i32 %v2, i32 %v3) {

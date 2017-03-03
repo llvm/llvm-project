@@ -74,6 +74,7 @@ private:
   SMLoc getLoc() const { return getParser().getTok().getLoc(); }
 
   bool parseSysAlias(StringRef Name, SMLoc NameLoc, OperandVector &Operands);
+  void createSysAlias(uint16_t Encoding, OperandVector &Operands, SMLoc S);
   AArch64CC::CondCode parseCondCodeString(StringRef Cond);
   bool parseCondCode(OperandVector &Operands, bool invertCondCode);
   unsigned matchRegisterNameAlias(StringRef Name, bool isVector);
@@ -2333,6 +2334,35 @@ AArch64AsmParser::tryParseOptionalShiftExtend(OperandVector &Operands) {
   return MatchOperand_Success;
 }
 
+static void setRequiredFeatureString(FeatureBitset FBS, std::string &Str) {
+  if (FBS[AArch64::HasV8_1aOps])
+    Str += "ARMv8.1a";
+  else if (FBS[AArch64::HasV8_2aOps])
+    Str += "ARMv8.2a";
+  else
+    Str += "(unknown)";
+}
+
+void AArch64AsmParser::createSysAlias(uint16_t Encoding, OperandVector &Operands,
+                                      SMLoc S) {
+  const uint16_t Op2 = Encoding & 7;
+  const uint16_t Cm = (Encoding & 0x78) >> 3;
+  const uint16_t Cn = (Encoding & 0x780) >> 7;
+  const uint16_t Op1 = (Encoding & 0x3800) >> 11;
+
+  const MCExpr *Expr = MCConstantExpr::create(Op1, getContext());
+
+  Operands.push_back(
+      AArch64Operand::CreateImm(Expr, S, getLoc(), getContext()));
+  Operands.push_back(
+      AArch64Operand::CreateSysCR(Cn, S, getLoc(), getContext()));
+  Operands.push_back(
+      AArch64Operand::CreateSysCR(Cm, S, getLoc(), getContext()));
+  Expr = MCConstantExpr::create(Op2, getContext());
+  Operands.push_back(
+      AArch64Operand::CreateImm(Expr, S, getLoc(), getContext()));
+}
+
 /// parseSysAlias - The IC, DC, AT, and TLBI instructions are simple aliases for
 /// the SYS instruction. Parse them specially so that we create a SYS MCInst.
 bool AArch64AsmParser::parseSysAlias(StringRef Name, SMLoc NameLoc,
@@ -2349,227 +2379,47 @@ bool AArch64AsmParser::parseSysAlias(StringRef Name, SMLoc NameLoc,
   StringRef Op = Tok.getString();
   SMLoc S = Tok.getLoc();
 
-  const MCExpr *Expr = nullptr;
-
-#define SYS_ALIAS(op1, Cn, Cm, op2)                                            \
-  do {                                                                         \
-    Expr = MCConstantExpr::create(op1, getContext());                          \
-    Operands.push_back(                                                        \
-        AArch64Operand::CreateImm(Expr, S, getLoc(), getContext()));           \
-    Operands.push_back(                                                        \
-        AArch64Operand::CreateSysCR(Cn, S, getLoc(), getContext()));           \
-    Operands.push_back(                                                        \
-        AArch64Operand::CreateSysCR(Cm, S, getLoc(), getContext()));           \
-    Expr = MCConstantExpr::create(op2, getContext());                          \
-    Operands.push_back(                                                        \
-        AArch64Operand::CreateImm(Expr, S, getLoc(), getContext()));           \
-  } while (false)
-
   if (Mnemonic == "ic") {
-    if (!Op.compare_lower("ialluis")) {
-      // SYS #0, C7, C1, #0
-      SYS_ALIAS(0, 7, 1, 0);
-    } else if (!Op.compare_lower("iallu")) {
-      // SYS #0, C7, C5, #0
-      SYS_ALIAS(0, 7, 5, 0);
-    } else if (!Op.compare_lower("ivau")) {
-      // SYS #3, C7, C5, #1
-      SYS_ALIAS(3, 7, 5, 1);
-    } else {
+    const AArch64IC::IC *IC = AArch64IC::lookupICByName(Op);
+    if (!IC)
       return TokError("invalid operand for IC instruction");
+    else if (!IC->haveFeatures(getSTI().getFeatureBits())) {
+      std::string Str("IC " + std::string(IC->Name) + " requires ");
+      setRequiredFeatureString(IC->getRequiredFeatures(), Str);
+      return TokError(Str.c_str());
     }
+    createSysAlias(IC->Encoding, Operands, S);
   } else if (Mnemonic == "dc") {
-    if (!Op.compare_lower("zva")) {
-      // SYS #3, C7, C4, #1
-      SYS_ALIAS(3, 7, 4, 1);
-    } else if (!Op.compare_lower("ivac")) {
-      // SYS #3, C7, C6, #1
-      SYS_ALIAS(0, 7, 6, 1);
-    } else if (!Op.compare_lower("isw")) {
-      // SYS #0, C7, C6, #2
-      SYS_ALIAS(0, 7, 6, 2);
-    } else if (!Op.compare_lower("cvac")) {
-      // SYS #3, C7, C10, #1
-      SYS_ALIAS(3, 7, 10, 1);
-    } else if (!Op.compare_lower("csw")) {
-      // SYS #0, C7, C10, #2
-      SYS_ALIAS(0, 7, 10, 2);
-    } else if (!Op.compare_lower("cvau")) {
-      // SYS #3, C7, C11, #1
-      SYS_ALIAS(3, 7, 11, 1);
-    } else if (!Op.compare_lower("civac")) {
-      // SYS #3, C7, C14, #1
-      SYS_ALIAS(3, 7, 14, 1);
-    } else if (!Op.compare_lower("cisw")) {
-      // SYS #0, C7, C14, #2
-      SYS_ALIAS(0, 7, 14, 2);
-    } else if (!Op.compare_lower("cvap")) {
-      if (getSTI().getFeatureBits()[AArch64::HasV8_2aOps]) {
-        // SYS #3, C7, C12, #1
-        SYS_ALIAS(3, 7, 12, 1);
-      } else {
-        return TokError("DC CVAP requires ARMv8.2a");
-      }
-    } else {
+    const AArch64DC::DC *DC = AArch64DC::lookupDCByName(Op);
+    if (!DC)
       return TokError("invalid operand for DC instruction");
+    else if (!DC->haveFeatures(getSTI().getFeatureBits())) {
+      std::string Str("DC " + std::string(DC->Name) + " requires ");
+      setRequiredFeatureString(DC->getRequiredFeatures(), Str);
+      return TokError(Str.c_str());
     }
+    createSysAlias(DC->Encoding, Operands, S);
   } else if (Mnemonic == "at") {
-    if (!Op.compare_lower("s1e1r")) {
-      // SYS #0, C7, C8, #0
-      SYS_ALIAS(0, 7, 8, 0);
-    } else if (!Op.compare_lower("s1e2r")) {
-      // SYS #4, C7, C8, #0
-      SYS_ALIAS(4, 7, 8, 0);
-    } else if (!Op.compare_lower("s1e3r")) {
-      // SYS #6, C7, C8, #0
-      SYS_ALIAS(6, 7, 8, 0);
-    } else if (!Op.compare_lower("s1e1w")) {
-      // SYS #0, C7, C8, #1
-      SYS_ALIAS(0, 7, 8, 1);
-    } else if (!Op.compare_lower("s1e2w")) {
-      // SYS #4, C7, C8, #1
-      SYS_ALIAS(4, 7, 8, 1);
-    } else if (!Op.compare_lower("s1e3w")) {
-      // SYS #6, C7, C8, #1
-      SYS_ALIAS(6, 7, 8, 1);
-    } else if (!Op.compare_lower("s1e0r")) {
-      // SYS #0, C7, C8, #3
-      SYS_ALIAS(0, 7, 8, 2);
-    } else if (!Op.compare_lower("s1e0w")) {
-      // SYS #0, C7, C8, #3
-      SYS_ALIAS(0, 7, 8, 3);
-    } else if (!Op.compare_lower("s12e1r")) {
-      // SYS #4, C7, C8, #4
-      SYS_ALIAS(4, 7, 8, 4);
-    } else if (!Op.compare_lower("s12e1w")) {
-      // SYS #4, C7, C8, #5
-      SYS_ALIAS(4, 7, 8, 5);
-    } else if (!Op.compare_lower("s12e0r")) {
-      // SYS #4, C7, C8, #6
-      SYS_ALIAS(4, 7, 8, 6);
-    } else if (!Op.compare_lower("s12e0w")) {
-      // SYS #4, C7, C8, #7
-      SYS_ALIAS(4, 7, 8, 7);
-    } else if (!Op.compare_lower("s1e1rp")) {
-      if (getSTI().getFeatureBits()[AArch64::HasV8_2aOps]) {
-        // SYS #0, C7, C9, #0
-        SYS_ALIAS(0, 7, 9, 0);
-      } else {
-        return TokError("AT S1E1RP requires ARMv8.2a");
-      }
-    } else if (!Op.compare_lower("s1e1wp")) {
-      if (getSTI().getFeatureBits()[AArch64::HasV8_2aOps]) {
-        // SYS #0, C7, C9, #1
-        SYS_ALIAS(0, 7, 9, 1);
-      } else {
-        return TokError("AT S1E1WP requires ARMv8.2a");
-      }
-    } else {
+    const AArch64AT::AT *AT = AArch64AT::lookupATByName(Op);
+    if (!AT)
       return TokError("invalid operand for AT instruction");
+    else if (!AT->haveFeatures(getSTI().getFeatureBits())) {
+      std::string Str("AT " + std::string(AT->Name) + " requires ");
+      setRequiredFeatureString(AT->getRequiredFeatures(), Str);
+      return TokError(Str.c_str());
     }
+    createSysAlias(AT->Encoding, Operands, S);
   } else if (Mnemonic == "tlbi") {
-    if (!Op.compare_lower("vmalle1is")) {
-      // SYS #0, C8, C3, #0
-      SYS_ALIAS(0, 8, 3, 0);
-    } else if (!Op.compare_lower("alle2is")) {
-      // SYS #4, C8, C3, #0
-      SYS_ALIAS(4, 8, 3, 0);
-    } else if (!Op.compare_lower("alle3is")) {
-      // SYS #6, C8, C3, #0
-      SYS_ALIAS(6, 8, 3, 0);
-    } else if (!Op.compare_lower("vae1is")) {
-      // SYS #0, C8, C3, #1
-      SYS_ALIAS(0, 8, 3, 1);
-    } else if (!Op.compare_lower("vae2is")) {
-      // SYS #4, C8, C3, #1
-      SYS_ALIAS(4, 8, 3, 1);
-    } else if (!Op.compare_lower("vae3is")) {
-      // SYS #6, C8, C3, #1
-      SYS_ALIAS(6, 8, 3, 1);
-    } else if (!Op.compare_lower("aside1is")) {
-      // SYS #0, C8, C3, #2
-      SYS_ALIAS(0, 8, 3, 2);
-    } else if (!Op.compare_lower("vaae1is")) {
-      // SYS #0, C8, C3, #3
-      SYS_ALIAS(0, 8, 3, 3);
-    } else if (!Op.compare_lower("alle1is")) {
-      // SYS #4, C8, C3, #4
-      SYS_ALIAS(4, 8, 3, 4);
-    } else if (!Op.compare_lower("vale1is")) {
-      // SYS #0, C8, C3, #5
-      SYS_ALIAS(0, 8, 3, 5);
-    } else if (!Op.compare_lower("vaale1is")) {
-      // SYS #0, C8, C3, #7
-      SYS_ALIAS(0, 8, 3, 7);
-    } else if (!Op.compare_lower("vmalle1")) {
-      // SYS #0, C8, C7, #0
-      SYS_ALIAS(0, 8, 7, 0);
-    } else if (!Op.compare_lower("alle2")) {
-      // SYS #4, C8, C7, #0
-      SYS_ALIAS(4, 8, 7, 0);
-    } else if (!Op.compare_lower("vale2is")) {
-      // SYS #4, C8, C3, #5
-      SYS_ALIAS(4, 8, 3, 5);
-    } else if (!Op.compare_lower("vale3is")) {
-      // SYS #6, C8, C3, #5
-      SYS_ALIAS(6, 8, 3, 5);
-    } else if (!Op.compare_lower("alle3")) {
-      // SYS #6, C8, C7, #0
-      SYS_ALIAS(6, 8, 7, 0);
-    } else if (!Op.compare_lower("vae1")) {
-      // SYS #0, C8, C7, #1
-      SYS_ALIAS(0, 8, 7, 1);
-    } else if (!Op.compare_lower("vae2")) {
-      // SYS #4, C8, C7, #1
-      SYS_ALIAS(4, 8, 7, 1);
-    } else if (!Op.compare_lower("vae3")) {
-      // SYS #6, C8, C7, #1
-      SYS_ALIAS(6, 8, 7, 1);
-    } else if (!Op.compare_lower("aside1")) {
-      // SYS #0, C8, C7, #2
-      SYS_ALIAS(0, 8, 7, 2);
-    } else if (!Op.compare_lower("vaae1")) {
-      // SYS #0, C8, C7, #3
-      SYS_ALIAS(0, 8, 7, 3);
-    } else if (!Op.compare_lower("alle1")) {
-      // SYS #4, C8, C7, #4
-      SYS_ALIAS(4, 8, 7, 4);
-    } else if (!Op.compare_lower("vale1")) {
-      // SYS #0, C8, C7, #5
-      SYS_ALIAS(0, 8, 7, 5);
-    } else if (!Op.compare_lower("vale2")) {
-      // SYS #4, C8, C7, #5
-      SYS_ALIAS(4, 8, 7, 5);
-    } else if (!Op.compare_lower("vale3")) {
-      // SYS #6, C8, C7, #5
-      SYS_ALIAS(6, 8, 7, 5);
-    } else if (!Op.compare_lower("vaale1")) {
-      // SYS #0, C8, C7, #7
-      SYS_ALIAS(0, 8, 7, 7);
-    } else if (!Op.compare_lower("ipas2e1")) {
-      // SYS #4, C8, C4, #1
-      SYS_ALIAS(4, 8, 4, 1);
-    } else if (!Op.compare_lower("ipas2le1")) {
-      // SYS #4, C8, C4, #5
-      SYS_ALIAS(4, 8, 4, 5);
-    } else if (!Op.compare_lower("ipas2e1is")) {
-      // SYS #4, C8, C4, #1
-      SYS_ALIAS(4, 8, 0, 1);
-    } else if (!Op.compare_lower("ipas2le1is")) {
-      // SYS #4, C8, C4, #5
-      SYS_ALIAS(4, 8, 0, 5);
-    } else if (!Op.compare_lower("vmalls12e1")) {
-      // SYS #4, C8, C7, #6
-      SYS_ALIAS(4, 8, 7, 6);
-    } else if (!Op.compare_lower("vmalls12e1is")) {
-      // SYS #4, C8, C3, #6
-      SYS_ALIAS(4, 8, 3, 6);
-    } else {
+    const AArch64TLBI::TLBI *TLBI = AArch64TLBI::lookupTLBIByName(Op);
+    if (!TLBI)
       return TokError("invalid operand for TLBI instruction");
+    else if (!TLBI->haveFeatures(getSTI().getFeatureBits())) {
+      std::string Str("TLBI " + std::string(TLBI->Name) + " requires ");
+      setRequiredFeatureString(TLBI->getRequiredFeatures(), Str);
+      return TokError(Str.c_str());
     }
+    createSysAlias(TLBI->Encoding, Operands, S);
   }
-
-#undef SYS_ALIAS
 
   Parser.Lex(); // Eat operand.
 
@@ -2583,12 +2433,10 @@ bool AArch64AsmParser::parseSysAlias(StringRef Name, SMLoc NameLoc,
     HasRegister = true;
   }
 
-  if (ExpectRegister && !HasRegister) {
+  if (ExpectRegister && !HasRegister)
     return TokError("specified " + Mnemonic + " op requires a register");
-  }
-  else if (!ExpectRegister && HasRegister) {
+  else if (!ExpectRegister && HasRegister)
     return TokError("specified " + Mnemonic + " op does not use a register");
-  }
 
   if (parseToken(AsmToken::EndOfStatement, "unexpected token in argument list"))
     return true;

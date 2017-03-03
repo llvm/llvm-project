@@ -50,6 +50,7 @@
 #include "llvm/Target/TargetLowering.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
 #include <algorithm>
+#include <forward_list>
 #include <functional>
 #include <utility>
 using namespace llvm;
@@ -141,6 +142,14 @@ static cl::opt<unsigned> TailDupPlacementPenalty(
              "pressure. This parameter controls the penalty to account for that. "
              "Percent as integer."),
     cl::init(2),
+    cl::Hidden);
+
+// Heuristic for triangle chains.
+static cl::opt<unsigned> TriangleChainCount(
+    "triangle-chain-count",
+    cl::desc("Number of triangle-shaped-CFG's that need to be in a row for the "
+             "triangle tail duplication heuristic to kick in. 0 to disable."),
+    cl::init(3),
     cl::Hidden);
 
 extern cl::opt<unsigned> StaticLikelyProb;
@@ -456,6 +465,9 @@ class MachineBlockPlacement : public MachineFunctionPass {
   bool canTailDuplicateUnplacedPreds(
       const MachineBasicBlock *BB, MachineBasicBlock *Succ,
       const BlockChain &Chain, const BlockFilterSet *BlockFilter);
+  /// Find chains of triangles to tail-duplicate where a global analysis works,
+  /// but a local analysis would not find them.
+  void precomputeTriangleChains();
 
 public:
   static char ID; // Pass identification, replacement for typeid
@@ -1039,6 +1051,127 @@ bool MachineBlockPlacement::canTailDuplicateUnplacedPreds(
     }
   }
   return true;
+}
+
+/// Find chains of triangles where we believe it would be profitable to
+/// tail-duplicate them all, but a local analysis would not find them.
+/// There are 3 ways this can be profitable:
+/// 1) The post-dominators marked 50% are actually taken 55% (This shrinks with
+///    longer chains)
+/// 2) The chains are statically correlated. Branch probabilities have a very
+///    U-shaped distribution.
+///    [http://nrs.harvard.edu/urn-3:HUL.InstRepos:24015805]
+///    If the branches in a chain are likely to be from the same side of the
+///    distribution as their predecessor, but are independent at runtime, this
+///    transformation is profitable. (Because the cost of being wrong is a small
+///    fixed cost, unlike the standard triangle layout where the cost of being
+///    wrong scales with the # of triangles.)
+/// 3) The chains are dynamically correlated. If the probability that a previous
+///    branch was taken positively influences whether the next branch will be
+///    taken
+/// We believe that 2 and 3 are common enough to justify the small margin in 1.
+void MachineBlockPlacement::precomputeTriangleChains() {
+  struct TriangleChain {
+    unsigned Count;
+    std::forward_list<MachineBasicBlock*> Edges;
+    TriangleChain(MachineBasicBlock* src, MachineBasicBlock *dst) {
+      Edges.push_front(src);
+      Edges.push_front(dst);
+      Count = 1;
+    }
+
+    void append(MachineBasicBlock *dst) {
+      assert(!Edges.empty() && Edges.front()->isSuccessor(dst) &&
+             "Attempting to append a block that is not a successor.");
+      Edges.push_front(dst);
+      ++Count;
+    }
+
+    MachineBasicBlock *getKey() {
+      return Edges.front();
+    }
+  };
+
+  if (TriangleChainCount == 0)
+    return;
+
+  DEBUG(dbgs() << "Pre-computing triangle chains.\n");
+  // Map from last block to the chain that contains it. This allows us to extend
+  // chains as we find new triangles.
+  DenseMap<const MachineBasicBlock *, TriangleChain> TriangleChainMap;
+  for (MachineBasicBlock &BB : *F) {
+    // If BB doesn't have 2 successors, it doesn't start a triangle.
+    if (BB.succ_size() != 2)
+      continue;
+    MachineBasicBlock *PDom = nullptr;
+    for (MachineBasicBlock *Succ : BB.successors()) {
+      if (!MPDT->dominates(Succ, &BB))
+        continue;
+      PDom = Succ;
+      break;
+    }
+    // If BB doesn't have a post-dominating successor, it doesn't form a
+    // triangle.
+    if (PDom == nullptr)
+      continue;
+    // If PDom has a hint that it is low probability, skip this triangle.
+    if (MBPI->getEdgeProbability(&BB, PDom) < BranchProbability(50, 100))
+      continue;
+    // If PDom isn't eligible for duplication, this isn't the kind of triangle
+    // we're looking for.
+    if (!shouldTailDuplicate(PDom))
+      continue;
+    bool CanTailDuplicate = true;
+    // If PDom can't tail-duplicate into it's non-BB predecessors, then this
+    // isn't the kind of triangle we're looking for.
+    for (MachineBasicBlock* Pred : PDom->predecessors()) {
+      if (Pred == &BB)
+        continue;
+      if (!TailDup.canTailDuplicate(PDom, Pred)) {
+        CanTailDuplicate = false;
+        break;
+      }
+    }
+    // If we can't tail-duplicate PDom to its predecessors, then skip this
+    // triangle.
+    if (!CanTailDuplicate)
+      continue;
+
+    // Now we have an interesting triangle. Insert it if it's not part of an
+    // existing chain
+    // Note: This cannot be replaced with a call insert() or emplace() because
+    // the find key is BB, but the insert/emplace key is PDom.
+    auto Found = TriangleChainMap.find(&BB);
+    // If it is, remove the chain from the map, grow it, and put it back in the
+    // map with the end as the new key.
+    if (Found != TriangleChainMap.end()) {
+      TriangleChain Chain = std::move(Found->second);
+      TriangleChainMap.erase(Found);
+      Chain.append(PDom);
+      TriangleChainMap.insert(std::make_pair(Chain.getKey(), std::move(Chain)));
+    } else {
+      auto InsertResult = TriangleChainMap.try_emplace(PDom, &BB, PDom);
+      assert (InsertResult.second && "Block seen twice.");
+      (void) InsertResult;
+    }
+  }
+
+  for (auto &ChainPair : TriangleChainMap) {
+    TriangleChain &Chain = ChainPair.second;
+    // Benchmarking has shown that due to branch correlation duplicating 2 or
+    // more triangles is profitable, despite the calculations assuming
+    // independence.
+    if (Chain.Count < TriangleChainCount)
+      continue;
+    MachineBasicBlock *dst = Chain.Edges.front();
+    Chain.Edges.pop_front();
+    for (MachineBasicBlock *src : Chain.Edges) {
+      DEBUG(dbgs() << "Marking edge: " << getBlockName(src) << "->" <<
+            getBlockName(dst) << " as pre-computed based on triangles.\n");
+      ComputedEdges[src] = { dst, true };
+      dst = src;
+    }
+  }
 }
 
 // When profile is not present, return the StaticLikelyProb.
@@ -2504,6 +2637,7 @@ bool MachineBlockPlacement::runOnMachineFunction(MachineFunction &MF) {
     if (MF.getFunction()->optForSize())
       TailDupSize = 1;
     TailDup.initMF(MF, MBPI, /* LayoutMode */ true, TailDupSize);
+    precomputeTriangleChains();
   }
 
   assert(BlockToChain.empty());

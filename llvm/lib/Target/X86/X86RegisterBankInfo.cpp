@@ -54,6 +54,13 @@ const RegisterBank &X86RegisterBankInfo::getRegBankFromRegClass(
       X86::GR64RegClass.hasSubClassEq(&RC))
     return getRegBank(X86::GPRRegBankID);
 
+  if (X86::FR32XRegClass.hasSubClassEq(&RC) ||
+      X86::FR64XRegClass.hasSubClassEq(&RC) ||
+      X86::VR128XRegClass.hasSubClassEq(&RC) ||
+      X86::VR256XRegClass.hasSubClassEq(&RC) ||
+      X86::VR512RegClass.hasSubClassEq(&RC))
+    return getRegBank(X86::VECRRegBankID);
+
   llvm_unreachable("Unsupported register kind yet.");
 }
 
@@ -71,26 +78,51 @@ X86RegisterBankInfo::getOperandsMapping(const MachineInstr &MI, bool isFP) {
     llvm_unreachable("Unsupported operand maping yet.");
 
   ValueMappingIdx ValMapIdx = VMI_None;
-  if (!isFP) {
+
+  if (Ty.isScalar()) {
+    if (!isFP) {
+      switch (Ty.getSizeInBits()) {
+      case 8:
+        ValMapIdx = VMI_3OpsGpr8Idx;
+        break;
+      case 16:
+        ValMapIdx = VMI_3OpsGpr16Idx;
+        break;
+      case 32:
+        ValMapIdx = VMI_3OpsGpr32Idx;
+        break;
+      case 64:
+        ValMapIdx = VMI_3OpsGpr64Idx;
+        break;
+      default:
+        llvm_unreachable("Unsupported register size.");
+      }
+    } else {
+      switch (Ty.getSizeInBits()) {
+      case 32:
+        ValMapIdx = VMI_3OpsFp32Idx;
+        break;
+      case 64:
+        ValMapIdx = VMI_3OpsFp64Idx;
+        break;
+      default:
+          llvm_unreachable("Unsupported register size.");
+      }
+    }
+  } else {
     switch (Ty.getSizeInBits()) {
-    case 8:
-      ValMapIdx = VMI_3OpsGpr8Idx;
+    case 128:
+      ValMapIdx = VMI_3OpsVec128Idx;
       break;
-    case 16:
-      ValMapIdx = VMI_3OpsGpr16Idx;
+    case 256:
+      ValMapIdx = VMI_3OpsVec256Idx;
       break;
-    case 32:
-      ValMapIdx = VMI_3OpsGpr32Idx;
-      break;
-    case 64:
-      ValMapIdx = VMI_3OpsGpr64Idx;
+    case 512:
+      ValMapIdx = VMI_3OpsVec512Idx;
       break;
     default:
       llvm_unreachable("Unsupported register size.");
-      break;
     }
-  } else {
-    llvm_unreachable("Floating point not supported yet.");
   }
 
   return InstructionMapping{DefaultMappingID, 1, &ValMappings[ValMapIdx],
@@ -113,6 +145,12 @@ X86RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case TargetOpcode::G_ADD:
   case TargetOpcode::G_SUB:
     return getOperandsMapping(MI, false);
+    break;
+  case TargetOpcode::G_FADD:
+  case TargetOpcode::G_FSUB:
+  case TargetOpcode::G_FMUL:
+  case TargetOpcode::G_FDIV:
+    return getOperandsMapping(MI, true);
     break;
   default:
     return InstructionMapping{};
