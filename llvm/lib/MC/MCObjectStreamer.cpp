@@ -572,6 +572,10 @@ void MCObjectStreamer::emitFill(const MCExpr &NumValues, int64_t Size,
   MCStreamer::emitFill(IntNumValues, Size, Expr);
 }
 
+void MCObjectStreamer::EmitFileDirective(StringRef Filename) {
+  getAssembler().addFileName(Filename);
+}
+
 void MCObjectStreamer::FinishImpl() {
   // If we are generating dwarf for assembly source files dump out the sections.
   if (getContext().getGenDwarfForAssembly())

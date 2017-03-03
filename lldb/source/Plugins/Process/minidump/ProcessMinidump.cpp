@@ -13,7 +13,6 @@
 
 // Other libraries and framework includes
 #include "lldb/Core/DataBufferLLVM.h"
-#include "lldb/Core/Log.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
@@ -24,6 +23,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/UnixSignals.h"
 #include "lldb/Utility/LLDBAssert.h"
+#include "lldb/Utility/Log.h"
 
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Threading.h"

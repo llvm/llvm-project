@@ -3,12 +3,6 @@ set(ASAN_LIT_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(ASAN_TESTSUITES)
 set(ASAN_DYNAMIC_TESTSUITES)
 
-# TODO(wwchrome): Re-enable Win64 asan tests when ready.
-# Disable tests for asan Win64 temporarily.
-if(OS_NAME MATCHES "Windows" AND CMAKE_SIZEOF_VOID_P EQUAL 8)
-  set(EXCLUDE_FROM_ALL TRUE)
-endif()
-
 macro(get_bits_for_arch arch bits)
   if (${arch} MATCHES "i386|i686|arm|mips|mipsel")
     set(${bits} 32)
@@ -113,9 +107,4 @@ if(COMPILER_RT_ASAN_HAS_STATIC_RUNTIME)
   if(NOT OS_NAME MATCHES "Windows")
     set(EXCLUDE_FROM_ALL FALSE)
   endif()
-endif()
-
-# TODO(wwchrome): Re-enable the tests for asan Win64 when ready.
-if(OS_NAME MATCHES "Windows" AND CMAKE_SIZEOF_VOID_P EQUAL 8)
-  set(EXCLUDE_FROM_ALL FALSE)
 endif()

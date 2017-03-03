@@ -7,12 +7,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_Log_h_
-#define liblldb_Log_h_
+#ifndef LLDB_UTILITY_LOG_H
+#define LLDB_UTILITY_LOG_H
 
 // Project includes
-#include "lldb/Core/Logging.h"
 #include "lldb/Utility/Flags.h"
+#include "lldb/Utility/Logging.h"
 #include "lldb/lldb-private.h"
 
 // Other libraries and framework includes
@@ -204,4 +204,4 @@ private:
       log_private->Format(__FILE__, __FUNCTION__, __VA_ARGS__);                \
   } while (0)
 
-#endif // liblldb_Log_h_
+#endif // LLDB_UTILITY_LOG_H

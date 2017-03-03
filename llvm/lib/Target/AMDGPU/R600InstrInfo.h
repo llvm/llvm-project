@@ -177,7 +177,7 @@ public:
 
   bool isPredicated(const MachineInstr &MI) const override;
 
-  bool isPredicable(MachineInstr &MI) const override;
+  bool isPredicable(const MachineInstr &MI) const override;
 
   bool isProfitableToDupForIfCvt(MachineBasicBlock &MBB, unsigned NumCyles,
                                  BranchProbability Probability) const override;

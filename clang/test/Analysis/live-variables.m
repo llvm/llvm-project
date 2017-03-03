@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=core -fobjc-arc -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core -fobjc-arc -verify %s
 // expected-no-diagnostics
 @interface NSObject
 @end

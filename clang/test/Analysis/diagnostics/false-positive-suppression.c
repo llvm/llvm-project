@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -I %S/Inputs -analyze -analyzer-checker=core,unix -verify %s
+// RUN: %clang_analyze_cc1 -I %S/Inputs -analyzer-checker=core,unix -verify %s
 // expected-no-diagnostics
 
 #include "include/sys/queue.h"

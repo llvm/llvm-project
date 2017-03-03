@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=core,alpha.core -analyzer-checker=deadcode.DeadStores -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.core -analyzer-checker=deadcode.DeadStores -verify %s
 //
 // This test exercises the live variables analysis (LiveVariables.cpp).
 // The case originally identified a non-termination bug.

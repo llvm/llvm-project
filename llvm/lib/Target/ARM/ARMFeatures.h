@@ -19,10 +19,10 @@
 namespace llvm {
 
 template<typename InstrType> // could be MachineInstr or MCInst
-bool IsCPSRDead(InstrType *Instr);
+bool IsCPSRDead(const InstrType *Instr);
 
 template<typename InstrType> // could be MachineInstr or MCInst
-inline bool isV8EligibleForIT(InstrType *Instr) {
+inline bool isV8EligibleForIT(const InstrType *Instr) {
   switch (Instr->getOpcode()) {
   default:
     return false;

@@ -8,10 +8,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Host/HostNativeThreadBase.h"
-#include "lldb/Core/Log.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/ThisThread.h"
 #include "lldb/Host/ThreadLauncher.h"
+#include "lldb/Utility/Log.h"
 #include "llvm/ADT/StringExtras.h"
 
 using namespace lldb;

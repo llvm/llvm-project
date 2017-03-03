@@ -43,8 +43,6 @@ public:
   //------------------------------------------------------------------
   /// @typedef DataExtractor::Type
   /// @brief Type enumerations used in the dump routines.
-  /// @see DataExtractor::Dump()
-  /// @see DataExtractor::DumpRawHexBytes()
   //------------------------------------------------------------------
   typedef enum {
     TypeUInt8,   ///< Format output as unsigned 8 bit integers
@@ -56,12 +54,6 @@ public:
     TypeULEB128, ///< Format output as ULEB128 numbers
     TypeSLEB128  ///< Format output as SLEB128 numbers
   } Type;
-
-  static void DumpHexBytes(Stream *s, const void *src, size_t src_len,
-                           uint32_t bytes_per_line,
-                           lldb::addr_t base_addr); // Pass LLDB_INVALID_ADDRESS
-                                                    // to not show address at
-                                                    // start of line
 
   //------------------------------------------------------------------
   /// Default constructor.
@@ -172,7 +164,9 @@ public:
   /// reference count on the data will be decremented, and if zero,
   /// the data will be freed.
   //------------------------------------------------------------------
-  ~DataExtractor();
+  virtual ~DataExtractor();
+
+  uint32_t getTargetByteSize() const { return m_target_byte_size; }
 
   //------------------------------------------------------------------
   /// Clears the object state.
@@ -223,73 +217,6 @@ public:
                           lldb::offset_t length, uint64_t base_addr,
                           uint32_t num_per_line, Type type,
                           const char *type_format = nullptr) const;
-
-  //------------------------------------------------------------------
-  /// Dumps \a item_count objects into the stream \a s.
-  ///
-  /// Dumps \a item_count objects using \a item_format, each of which
-  /// are \a item_byte_size bytes long starting at offset \a offset
-  /// bytes into the contained data, into the stream \a s. \a
-  /// num_per_line objects will be dumped on each line before a new
-  /// line will be output. If \a base_addr is a valid address, then
-  /// each new line of output will be preceded by the address value
-  /// plus appropriate offset, and a colon and space. Bitfield values
-  /// can be dumped by calling this function multiple times with the
-  /// same start offset, format and size, yet differing \a
-  /// item_bit_size and \a item_bit_offset values.
-  ///
-  /// @param[in] s
-  ///     The stream to dump the output to. This value can not be nullptr.
-  ///
-  /// @param[in] offset
-  ///     The offset into the data at which to start dumping.
-  ///
-  /// @param[in] item_format
-  ///     The format to use when dumping each item.
-  ///
-  /// @param[in] item_byte_size
-  ///     The byte size of each item.
-  ///
-  /// @param[in] item_count
-  ///     The number of items to dump.
-  ///
-  /// @param[in] num_per_line
-  ///     The number of items to display on each line.
-  ///
-  /// @param[in] base_addr
-  ///     The base address that gets added to the offset displayed on
-  ///     each line if the value is valid. Is \a base_addr is
-  ///     LLDB_INVALID_ADDRESS then no address values will be prepended
-  ///     to any lines.
-  ///
-  /// @param[in] item_bit_size
-  ///     If the value to display is a bitfield, this value should
-  ///     be the number of bits that the bitfield item has within the
-  ///     item's byte size value. This function will need to be called
-  ///     multiple times with identical \a offset and \a item_byte_size
-  ///     values in order to display multiple bitfield values that
-  ///     exist within the same integer value. If the items being
-  ///     displayed are not bitfields, this value should be zero.
-  ///
-  /// @param[in] item_bit_offset
-  ///     If the value to display is a bitfield, this value should
-  ///     be the offset in bits, or shift right amount, that the
-  ///     bitfield item occupies within the item's byte size value.
-  ///     This function will need to be called multiple times with
-  ///     identical \a offset and \a item_byte_size values in order
-  ///     to display multiple bitfield values that exist within the
-  ///     same integer value. If the items being displayed are not
-  ///     bitfields, this value should be zero.
-  ///
-  /// @return
-  ///     The offset at which dumping ended.
-  //------------------------------------------------------------------
-  lldb::offset_t Dump(Stream *s, lldb::offset_t offset,
-                      lldb::Format item_format, size_t item_byte_size,
-                      size_t item_count, size_t num_per_line,
-                      uint64_t base_addr, uint32_t item_bit_size,
-                      uint32_t item_bit_offset,
-                      ExecutionContextScope *exe_scope = nullptr) const;
 
   //------------------------------------------------------------------
   /// Dump a UUID value at \a offset.
@@ -571,38 +498,6 @@ public:
   double GetDouble(lldb::offset_t *offset_ptr) const;
 
   long double GetLongDouble(lldb::offset_t *offset_ptr) const;
-
-  //------------------------------------------------------------------
-  /// Extract a GNU encoded pointer value from \a *offset_ptr.
-  ///
-  /// @param[in,out] offset_ptr
-  ///     A pointer to an offset within the data that will be advanced
-  ///     by the appropriate number of bytes if the value is extracted
-  ///     correctly. If the offset is out of bounds or there are not
-  ///     enough bytes to extract this value, the offset will be left
-  ///     unmodified.
-  ///
-  /// @param[in] eh_ptr_enc
-  ///     The GNU pointer encoding type.
-  ///
-  /// @param[in] pc_rel_addr
-  ///     The PC relative address to use when the encoding is
-  ///     \c DW_GNU_EH_PE_pcrel.
-  ///
-  /// @param[in] text_addr
-  ///     The text (code) relative address to use when the encoding is
-  ///     \c DW_GNU_EH_PE_textrel.
-  ///
-  /// @param[in] data_addr
-  ///     The data relative address to use when the encoding is
-  ///     \c DW_GNU_EH_PE_datarel.
-  ///
-  /// @return
-  ///     The extracted GNU encoded pointer value.
-  //------------------------------------------------------------------
-  uint64_t GetGNUEHPointer(lldb::offset_t *offset_ptr, uint32_t eh_ptr_enc,
-                           lldb::addr_t pc_rel_addr, lldb::addr_t text_addr,
-                           lldb::addr_t data_addr);
 
   //------------------------------------------------------------------
   /// Extract an integer of size \a byte_size from \a *offset_ptr.

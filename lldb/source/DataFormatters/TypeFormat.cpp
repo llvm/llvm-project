@@ -19,6 +19,8 @@
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-public.h"
 
+#include "lldb/Core/DataExtractor.h"
+#include "lldb/Core/DumpDataExtractor.h"
 #include "lldb/DataFormatters/FormatManager.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Symbol/SymbolContext.h"
@@ -60,9 +62,9 @@ bool TypeFormatImpl_Format::FormatObject(ValueObject *valobj,
           return false;
 
         StreamString reg_sstr;
-        data.Dump(&reg_sstr, 0, GetFormat(), reg_info->byte_size, 1, UINT32_MAX,
-                  LLDB_INVALID_ADDRESS, 0, 0,
-                  exe_ctx.GetBestExecutionContextScope());
+        DumpDataExtractor(data, &reg_sstr, 0, GetFormat(), reg_info->byte_size,
+                          1, UINT32_MAX, LLDB_INVALID_ADDRESS, 0, 0,
+                          exe_ctx.GetBestExecutionContextScope());
         dest = reg_sstr.GetString();
       }
     } else {

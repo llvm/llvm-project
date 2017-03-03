@@ -9,8 +9,8 @@
 
 #include "lldb/API/SBError.h"
 #include "lldb/API/SBStream.h"
-#include "lldb/Core/Log.h"
 #include "lldb/Utility/Error.h"
+#include "lldb/Utility/Log.h"
 
 #include <stdarg.h>
 

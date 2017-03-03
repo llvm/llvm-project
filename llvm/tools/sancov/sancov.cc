@@ -180,7 +180,7 @@ struct CoverageStats {
 // --------- ERROR HANDLING ---------
 
 static void fail(const llvm::Twine &E) {
-  errs() << "Error: " << E << "\n";
+  errs() << "ERROR: " << E << "\n";
   exit(1);
 }
 
@@ -192,7 +192,7 @@ static void failIf(bool B, const llvm::Twine &E) {
 static void failIfError(std::error_code Error) {
   if (!Error)
     return;
-  errs() << "Error: " << Error.message() << "(" << Error.value() << ")\n";
+  errs() << "ERROR: " << Error.message() << "(" << Error.value() << ")\n";
   exit(1);
 }
 
@@ -202,7 +202,7 @@ template <typename T> static void failIfError(const ErrorOr<T> &E) {
 
 static void failIfError(Error Err) {
   if (Err) {
-    logAllUnhandledErrors(std::move(Err), errs(), "Error: ");
+    logAllUnhandledErrors(std::move(Err), errs(), "ERROR: ");
     exit(1);
   }
 }
@@ -1086,6 +1086,9 @@ static void readAndPrintRawCoverage(const std::vector<std::string> &FileNames,
 
 static std::unique_ptr<SymbolizedCoverage>
 merge(const std::vector<std::unique_ptr<SymbolizedCoverage>> &Coverages) {
+  if (Coverages.empty())
+    return nullptr;
+
   auto Result = make_unique<SymbolizedCoverage>();
 
   for (size_t I = 0; I < Coverages.size(); ++I) {
@@ -1168,11 +1171,17 @@ readSymbolizeAndMergeCmdArguments(std::vector<std::string> FileNames) {
       CoverageByObjFile[Iter->second].push_back(FileName);
     };
 
+    for (const auto &Pair : ObjFiles) {
+      auto FileName = Pair.second;
+      if (CoverageByObjFile.find(FileName) == CoverageByObjFile.end())
+        errs() << "WARNING: No coverage file for " << FileName << "\n";
+    }
+
     // Read raw coverage and symbolize it.
     for (const auto &Pair : CoverageByObjFile) {
       if (findSanitizerCovFunctions(Pair.first).empty()) {
         errs()
-            << "Ignoring " << Pair.first
+            << "WARNING: Ignoring " << Pair.first
             << " and its coverage because  __sanitizer_cov* functions were not "
                "found.\n";
         continue;

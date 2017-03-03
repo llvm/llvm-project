@@ -1493,7 +1493,7 @@ bool PPCInstrInfo::DefinesPredicate(MachineInstr &MI,
   return Found;
 }
 
-bool PPCInstrInfo::isPredicable(MachineInstr &MI) const {
+bool PPCInstrInfo::isPredicable(const MachineInstr &MI) const {
   unsigned OpC = MI.getOpcode();
   switch (OpC) {
   default:

@@ -19,6 +19,7 @@
 
 // Project includes
 #include "lldb/Core/DataExtractor.h"
+#include "lldb/Core/DumpDataExtractor.h"
 #include "lldb/Core/Scalar.h"
 #include "lldb/Host/StringConvert.h"
 #include "lldb/Interpreter/Args.h"
@@ -76,15 +77,15 @@ bool RegisterValue::Dump(Stream *s, const RegisterInfo *reg_info,
     if (format == eFormatDefault)
       format = reg_info->format;
 
-    data.Dump(s,
-              0,                    // Offset in "data"
-              format,               // Format to use when dumping
-              reg_info->byte_size,  // item_byte_size
-              1,                    // item_count
-              UINT32_MAX,           // num_per_line
-              LLDB_INVALID_ADDRESS, // base_addr
-              0,                    // item_bit_size
-              0);                   // item_bit_offset
+    DumpDataExtractor(data, s,
+                      0,                    // Offset in "data"
+                      format,               // Format to use when dumping
+                      reg_info->byte_size,  // item_byte_size
+                      1,                    // item_count
+                      UINT32_MAX,           // num_per_line
+                      LLDB_INVALID_ADDRESS, // base_addr
+                      0,                    // item_bit_size
+                      0);                   // item_bit_offset
     return true;
   }
   return false;

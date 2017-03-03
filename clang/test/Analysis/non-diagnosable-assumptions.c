@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -w -analyze -analyzer-checker=core.DivideZero -analyzer-output=text -verify %s
+// RUN: %clang_analyze_cc1 -w -analyzer-checker=core.DivideZero -analyzer-output=text -verify %s
 
 // This test file verifies the "Assuming..." diagnostic pieces that are being
 // reported when the branch condition was too complicated to explain.

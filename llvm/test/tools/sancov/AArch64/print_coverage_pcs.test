@@ -1,4 +1,4 @@
 REQUIRES: aarch64-registered-target
 RUN: not sancov -print-coverage-pcs %p/../Inputs/test-linux_android_aarch64 2>&1 | FileCheck %s --check-prefix=AARCH64
 
-AARCH64: Error: __sanitizer_cov* functions not found
+AARCH64: ERROR: __sanitizer_cov* functions not found

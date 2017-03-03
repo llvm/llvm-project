@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++11 -analyze -analyzer-checker=core,cplusplus,unix.Malloc,debug.ExprInspection %s -verify -analyzer-output=text
+// RUN: %clang_analyze_cc1 -std=c++11 -analyzer-checker=core,cplusplus,unix.Malloc,debug.ExprInspection %s -verify -analyzer-output=text
 
 extern "C" char *strdup(const char* s);
 extern "C" void free(void* ptr);

@@ -40,7 +40,7 @@
 #include <assert.h>
 #endif
 
-#include "lldb/Core/Log.h"
+#include "lldb/Utility/Log.h"
 #include "clang/AST/Decl.h"
 
 using namespace clang;

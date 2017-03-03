@@ -744,8 +744,7 @@ size_t CompilerType::ConvertStringToFloatValue(const char *s, uint8_t *dst,
 #define DEPTH_INCREMENT 2
 
 void CompilerType::DumpValue(ExecutionContext *exe_ctx, Stream *s,
-                             lldb::Format format,
-                             const lldb_private::DataExtractor &data,
+                             lldb::Format format, const DataExtractor &data,
                              lldb::offset_t data_byte_offset,
                              size_t data_byte_size, uint32_t bitfield_bit_size,
                              uint32_t bitfield_bit_offset, bool show_types,
@@ -759,7 +758,7 @@ void CompilerType::DumpValue(ExecutionContext *exe_ctx, Stream *s,
 }
 
 bool CompilerType::DumpTypeValue(Stream *s, lldb::Format format,
-                                 const lldb_private::DataExtractor &data,
+                                 const DataExtractor &data,
                                  lldb::offset_t byte_offset, size_t byte_size,
                                  uint32_t bitfield_bit_size,
                                  uint32_t bitfield_bit_offset,
@@ -772,7 +771,7 @@ bool CompilerType::DumpTypeValue(Stream *s, lldb::Format format,
 }
 
 void CompilerType::DumpSummary(ExecutionContext *exe_ctx, Stream *s,
-                               const lldb_private::DataExtractor &data,
+                               const DataExtractor &data,
                                lldb::offset_t data_byte_offset,
                                size_t data_byte_size) {
   if (IsValid())

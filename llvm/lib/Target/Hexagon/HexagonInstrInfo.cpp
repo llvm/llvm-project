@@ -1434,7 +1434,7 @@ bool HexagonInstrInfo::DefinesPredicate(
   return false;
 }
 
-bool HexagonInstrInfo::isPredicable(MachineInstr &MI) const {
+bool HexagonInstrInfo::isPredicable(const MachineInstr &MI) const {
   return MI.getDesc().isPredicable();
 }
 

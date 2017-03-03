@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=core,unix.API -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,unix.API -verify %s
 
 #ifndef O_RDONLY
 #define O_RDONLY 0

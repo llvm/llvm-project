@@ -75,34 +75,11 @@ void LiveRangeCalc::calculate(LiveInterval &LI, bool TrackSubRegs) {
         LI.createSubRangeFrom(*Alloc, ClassMask, LI);
       }
 
-      LaneBitmask Mask = SubMask;
-      for (LiveInterval::SubRange &S : LI.subranges()) {
-        // A Mask for subregs common to the existing subrange and current def.
-        LaneBitmask Common = S.LaneMask & Mask;
-        if (Common.none())
-          continue;
-        LiveInterval::SubRange *CommonRange;
-        // A Mask for subregs covered by the subrange but not the current def.
-        LaneBitmask RM = S.LaneMask & ~Mask;
-        if (RM.any()) {
-          // Split the subrange S into two parts: one covered by the current
-          // def (CommonRange), and the one not affected by it (updated S).
-          S.LaneMask = RM;
-          CommonRange = LI.createSubRangeFrom(*Alloc, Common, S);
-        } else {
-          assert(Common == S.LaneMask);
-          CommonRange = &S;
-        }
+      LI.refineSubRanges(*Alloc, SubMask,
+          [&MO, this](LiveInterval::SubRange &SR) {
         if (MO.isDef())
-          createDeadDef(*Indexes, *Alloc, *CommonRange, MO);
-        Mask &= ~Common;
-      }
-      // Create a new SubRange for subregs we did not cover yet.
-      if (Mask.any()) {
-        LiveInterval::SubRange *NewRange = LI.createSubRange(*Alloc, Mask);
-        if (MO.isDef())
-          createDeadDef(*Indexes, *Alloc, *NewRange, MO);
-      }
+          createDeadDef(*Indexes, *Alloc, SR, MO);
+      });
     }
 
     // Create the def in the main liverange. We do not have to do this if

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -w -triple i386-apple-darwin10 -fblocks -analyze -analyzer-checker=core.builtin,debug.ExprInspection -verify %s
+// RUN: %clang_analyze_cc1 -w -triple i386-apple-darwin10 -fblocks -analyzer-checker=core.builtin,debug.ExprInspection -verify %s
 
 #include "Inputs/system-header-simulator-objc.h"
 

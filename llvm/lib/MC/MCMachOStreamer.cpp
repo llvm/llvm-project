@@ -99,13 +99,6 @@ public:
   void EmitTBSSSymbol(MCSection *Section, MCSymbol *Symbol, uint64_t Size,
                       unsigned ByteAlignment = 0) override;
 
-  void EmitFileDirective(StringRef Filename) override {
-    // FIXME: Just ignore the .file; it isn't important enough to fail the
-    // entire assembly.
-
-    // report_fatal_error("unsupported directive: '.file'");
-  }
-
   void EmitIdent(StringRef IdentString) override {
     llvm_unreachable("macho doesn't support this directive");
   }

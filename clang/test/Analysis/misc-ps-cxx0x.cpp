@@ -1,4 +1,4 @@
-// RUN: %clang --analyze -std=c++11 %s -Xclang -verify -o /dev/null
+// RUN: %clang_analyze_cc1 -analyzer-checker=core.NullDereference,core.uninitialized.UndefReturn -std=c++11 %s -verify -o /dev/null
 
 void test_static_assert() {
   static_assert(sizeof(void *) == sizeof(void*), "test_static_assert");

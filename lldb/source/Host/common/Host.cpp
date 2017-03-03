@@ -50,7 +50,6 @@
 // Project includes
 
 #include "lldb/Core/ArchSpec.h"
-#include "lldb/Core/Log.h"
 #include "lldb/Host/FileSpec.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
@@ -65,6 +64,7 @@
 #include "lldb/Target/UnixSignals.h"
 #include "lldb/Utility/CleanUp.h"
 #include "lldb/Utility/Error.h"
+#include "lldb/Utility/Log.h"
 #include "lldb/lldb-private-forward.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/FileSystem.h"

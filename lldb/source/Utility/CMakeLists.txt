@@ -3,6 +3,8 @@ add_lldb_library(lldbUtility
   Error.cpp
   JSON.cpp
   LLDBAssert.cpp
+  Log.cpp
+  Logging.cpp
   NameMatches.cpp
   Range.cpp
   RegularExpression.cpp

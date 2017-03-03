@@ -15,6 +15,7 @@
 
 // Other libraries and framework includes
 // Project includes
+#include "lldb/Core/DumpDataExtractor.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Symbol/Block.h"
@@ -143,15 +144,15 @@ static bool DumpUInt(ExecutionContextScope *exe_scope, const Address &address,
     if (GetByteOrderAndAddressSize(exe_scope, address, byte_order, addr_size)) {
       DataExtractor data(&buf.front(), buf.size(), byte_order, addr_size);
 
-      data.Dump(strm,
-                0,                    // Start offset in "data"
-                eFormatHex,           // Print as characters
-                buf.size(),           // Size of item
-                1,                    // Items count
-                UINT32_MAX,           // num per line
-                LLDB_INVALID_ADDRESS, // base address
-                0,                    // bitfield bit size
-                0);                   // bitfield bit offset
+      DumpDataExtractor(data, strm,
+                        0,                    // Start offset in "data"
+                        eFormatHex,           // Print as characters
+                        buf.size(),           // Size of item
+                        1,                    // Items count
+                        UINT32_MAX,           // num per line
+                        LLDB_INVALID_ADDRESS, // base address
+                        0,                    // bitfield bit size
+                        0);                   // bitfield bit offset
 
       return true;
     }
@@ -181,16 +182,16 @@ static size_t ReadCStringFromMemory(ExecutionContextScope *exe_scope,
     if (len > bytes_read)
       len = bytes_read;
 
-    data.Dump(strm,
-              0,                    // Start offset in "data"
-              eFormatChar,          // Print as characters
-              1,                    // Size of item (1 byte for a char!)
-              len,                  // How many bytes to print?
-              UINT32_MAX,           // num per line
-              LLDB_INVALID_ADDRESS, // base address
-              0,                    // bitfield bit size
+    DumpDataExtractor(data, strm,
+                      0,                    // Start offset in "data"
+                      eFormatChar,          // Print as characters
+                      1,                    // Size of item (1 byte for a char!)
+                      len,                  // How many bytes to print?
+                      UINT32_MAX,           // num per line
+                      LLDB_INVALID_ADDRESS, // base address
+                      0,                    // bitfield bit size
 
-              0); // bitfield bit offset
+                      0); // bitfield bit offset
 
     total_len += bytes_read;
 

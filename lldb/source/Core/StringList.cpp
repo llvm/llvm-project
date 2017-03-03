@@ -9,8 +9,8 @@
 
 #include "lldb/Core/StringList.h"
 
-#include "lldb/Core/Log.h"
 #include "lldb/Host/FileSpec.h"
+#include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
 
 #include <string>

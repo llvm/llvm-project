@@ -22,12 +22,12 @@
 #include "Plugins/Process/Utility/RegisterContextLinux_mips64.h"
 #include "lldb/Core/DataBufferHeap.h"
 #include "lldb/Core/EmulateInstruction.h"
-#include "lldb/Core/Log.h"
 #include "lldb/Core/RegisterValue.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Utility/Error.h"
 #include "lldb/Utility/LLDBAssert.h"
+#include "lldb/Utility/Log.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-private-enumerations.h"
 #define NT_MIPS_MSA 0x600

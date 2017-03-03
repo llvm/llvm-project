@@ -16,8 +16,8 @@
 // Other libraries and framework includes
 #include "lldb/Core/DataBufferHeap.h"
 #include "lldb/Core/DataExtractor.h"
-#include "lldb/Core/Log.h"
 #include "lldb/Target/Process.h"
+#include "lldb/Utility/Log.h"
 
 #if defined(__linux__) || defined(__FreeBSD__)
 #include "Plugins/Process/elf-core/ProcessElfCore.h"

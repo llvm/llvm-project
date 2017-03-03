@@ -16,7 +16,7 @@
 
 namespace lldb_private {
 
-class DWARFDataExtractor : public lldb_private::DataExtractor {
+class DWARFDataExtractor : public DataExtractor {
 public:
   DWARFDataExtractor() : DataExtractor(), m_is_dwarf64(false) {}
 

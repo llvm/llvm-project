@@ -16,12 +16,12 @@
 #include <vector>
 
 #include "lldb/Core/DataEncoder.h"
-#include "lldb/Core/Log.h"
 #include "lldb/Core/RegisterValue.h"
 #include "lldb/Core/Scalar.h"
 #include "lldb/Core/VMRange.h"
 #include "lldb/Core/Value.h"
 #include "lldb/Core/dwarf.h"
+#include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
 
 #include "Plugins/ExpressionParser/Clang/ClangExpressionDeclMap.h"

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=core,unix.Malloc -analyzer-store=region -verify -fblocks %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,unix.Malloc -analyzer-store=region -verify -fblocks %s
 #import "Inputs/system-header-simulator-objc.h"
 #import "Inputs/system-header-simulator-for-malloc.h"
 
