@@ -149,7 +149,7 @@ void AvoidCStyleCastsCheck::check(const MatchFinder::MatchResult &Result) {
     ReplaceWithNamedCast("static_cast");
     return;
   case CK_ConstructorConversion:
-    if (!DestTypeAsWritten.hasQualifiers() &&
+    if (!CastExpr->getTypeAsWritten().hasQualifiers() &&
         DestTypeAsWritten->isRecordType() &&
         !DestTypeAsWritten->isElaboratedTypeSpecifier()) {
       Diag << "constructor call syntax";

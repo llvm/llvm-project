@@ -36,7 +36,7 @@ After:
 
     std::vector<std::pair<int, int>> w;
     w.emplace_back(21, 37);
-    // This will be fixed to w.push_back(21, 37); in next version
+    // This will be fixed to w.emplace_back(21L, 37L); in next version
     w.emplace_back(std::make_pair(21L, 37L);
 
 The other situation is when we pass arguments that will be converted to a type

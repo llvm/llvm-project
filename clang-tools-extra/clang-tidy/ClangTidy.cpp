@@ -183,7 +183,6 @@ public:
   }
 
   void Finish() {
-    // FIXME: Run clang-format on changes.
     if (ApplyFixes && TotalFixes > 0) {
       Rewriter Rewrite(SourceMgr, LangOpts);
       for (const auto &FileAndReplacements : FileReplacements) {
@@ -197,19 +196,28 @@ public:
           continue;
         }
         StringRef Code = Buffer.get()->getBuffer();
-        auto Style = format::getStyle("file", File, FormatStyle);
+        auto Style = format::getStyle(FormatStyle, File, "none");
         if (!Style) {
           llvm::errs() << llvm::toString(Style.takeError()) << "\n";
           continue;
         }
-        llvm::Expected<Replacements> CleanReplacements =
+        llvm::Expected<tooling::Replacements> Replacements =
             format::cleanupAroundReplacements(Code, FileAndReplacements.second,
                                               *Style);
-        if (!CleanReplacements) {
-          llvm::errs() << llvm::toString(CleanReplacements.takeError()) << "\n";
+        if (!Replacements) {
+          llvm::errs() << llvm::toString(Replacements.takeError()) << "\n";
           continue;
         }
-        if (!tooling::applyAllReplacements(CleanReplacements.get(), Rewrite)) {
+        if (llvm::Expected<tooling::Replacements> FormattedReplacements =
+                format::formatReplacements(Code, *Replacements, *Style)) {
+          Replacements = std::move(FormattedReplacements);
+          if (!Replacements)
+            llvm_unreachable("!Replacements");
+        } else {
+          llvm::errs() << llvm::toString(FormattedReplacements.takeError())
+                       << ". Skipping formatting.\n";
+        }
+        if (!tooling::applyAllReplacements(Replacements.get(), Rewrite)) {
           llvm::errs() << "Can't apply replacements for file " << File << "\n";
         }
       }
