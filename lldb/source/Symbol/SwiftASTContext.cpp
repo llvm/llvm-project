@@ -8438,18 +8438,10 @@ SwiftASTContext::GetTemplateArgument(void *type, size_t arg_idx,
           nominal_type_decl->getGenericSignature();
       if (!generic_sig)
         break;
-      for (auto depTy : generic_sig->getAllDependentTypes()) {
-        if (arg_idx == 0) {
-          return CompilerType(GetASTContext(),
-                              nominal_type_decl->mapTypeIntoContext(depTy)
-                                  ->castTo<swift::ArchetypeType>());
-        }
-
-        arg_idx--;
-      }
-
-      // Index was out of bounds...
-      break;
+      auto depTy = generic_sig->getGenericParams()[arg_idx];
+      return CompilerType(GetASTContext(),
+                          nominal_type_decl->mapTypeIntoContext(depTy)
+                              ->castTo<swift::ArchetypeType>());
     }
     case swift::TypeKind::BoundGenericClass:
     case swift::TypeKind::BoundGenericStruct:
