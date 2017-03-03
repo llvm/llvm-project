@@ -9,8 +9,8 @@
 
 define void @_Z19getClosestDiagonal3ii(%0* noalias sret, i32, i32) nounwind {
 ; CHECK: bl ___muldf3
-; CHECK: beq LBB0
 ; CHECK: bl ___muldf3
+; CHECK: beq LBB0
 ; CHECK: bl ___muldf3
 ; <label>:3
   switch i32 %1, label %4 [

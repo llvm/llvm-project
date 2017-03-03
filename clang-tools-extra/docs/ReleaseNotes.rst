@@ -87,6 +87,9 @@ Improvements to clang-tidy
   Finds and replaces explicit calls to the constructor in a return statement by
   a braced initializer list so that the return type is not needlessly repeated.
 
+- Support clang-formatting of the code around applied fixes (``-format-style``
+  command-line option).
+
 Improvements to include-fixer
 -----------------------------
 

@@ -18,7 +18,7 @@
 ; RUN: -disable-output < %s | \
 ; RUN: FileCheck %s -check-prefix=KERNEL-ASM
 
-; REQUIRES: pollyacc
+; REQUIRES: pollyacc,nvptx
 
 ; CHECK: Stmt_bb5
 ; CHECK-NEXT:       Domain :=

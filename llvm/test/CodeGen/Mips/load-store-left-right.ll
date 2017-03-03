@@ -250,18 +250,12 @@ entry:
 ; MIPS64-EB:     ld $[[PTR:[0-9]+]], %got_disp(struct_s0)(
 ; MIPS64R6:      ld $[[PTR:[0-9]+]], %got_disp(struct_s0)(
 
-; MIPS32-DAG:       lbu $[[R1:[0-9]+]], 0($[[PTR]])
-; MIPS32-DAG:       sb $[[R1]], 2($[[PTR]])
-; MIPS32-DAG:       lbu $[[R2:[0-9]+]], 1($[[PTR]])
-; MIPS32-DAG:       sb $[[R2]], 3($[[PTR]])
-
-; MIPS32R6:       lhu $[[R1:[0-9]+]], 0($[[PTR]])
-; MIPS32R6:       sh $[[R1]], 2($[[PTR]])
-
-; MIPS64-DAG:       lbu $[[R1:[0-9]+]], 0($[[PTR]])
-; MIPS64-DAG:       sb $[[R1]], 2($[[PTR]])
-; MIPS64-DAG:       lbu $[[R2:[0-9]+]], 1($[[PTR]])
-; MIPS64-DAG:       sb $[[R2]], 3($[[PTR]])
+; FIXME: We should be able to do better than this on MIPS32r6/MIPS64r6 since
+;        we have unaligned halfword load/store available
+; ALL-DAG:       lbu $[[R1:[0-9]+]], 0($[[PTR]])
+; ALL-DAG:       sb $[[R1]], 2($[[PTR]])
+; ALL-DAG:       lbu $[[R1:[0-9]+]], 1($[[PTR]])
+; ALL-DAG:       sb $[[R1]], 3($[[PTR]])
 
   %0 = load %struct.S0, %struct.S0* getelementptr inbounds (%struct.S0, %struct.S0* @struct_s0, i32 0), align 1
   store %struct.S0 %0, %struct.S0* getelementptr inbounds (%struct.S0, %struct.S0* @struct_s0, i32 1), align 1
@@ -274,54 +268,37 @@ entry:
 
 ; MIPS32-EL:     lw $[[PTR:[0-9]+]], %got(struct_s1)(
 ; MIPS32-EB:     lw $[[PTR:[0-9]+]], %got(struct_s1)(
-; MIPS32-EL-DAG:    lwl $[[R1:[0-9]+]], 3($[[PTR]])
-; MIPS32-EL-DAG:    lwr $[[R1]], 0($[[PTR]])
-; MIPS32-EL-DAG:    swl $[[R1]], 7($[[PTR]])
-; MIPS32-EL-DAG:    swr $[[R1]], 4($[[PTR]])
-; MIPS32-EB-DAG:    lwl $[[R1:[0-9]+]], 0($[[PTR]])
-; MIPS32-EB-DAG:    lwr $[[R1]], 3($[[PTR]])
-; MIPS32-EB-DAG:    swl $[[R1]], 4($[[PTR]])
-; MIPS32-EB-DAG:    swr $[[R1]], 7($[[PTR]])
-
-; MIPS32-NOLEFTRIGHT-DAG:    lbu $[[R1:[0-9]+]], 0($[[PTR]])
-; MIPS32-NOLEFTRIGHT-DAG:    sb $[[R1]], 4($[[PTR]])
-; MIPS32-NOLEFTRIGHT-DAG:    lbu $[[R1:[0-9]+]], 1($[[PTR]])
-; MIPS32-NOLEFTRIGHT-DAG:    sb $[[R1]], 5($[[PTR]])
-; MIPS32-NOLEFTRIGHT-DAG:    lbu $[[R1:[0-9]+]], 2($[[PTR]])
-; MIPS32-NOLEFTRIGHT-DAG:    sb $[[R1]], 6($[[PTR]])
-; MIPS32-NOLEFTRIGHT-DAG:    lbu $[[R1:[0-9]+]], 3($[[PTR]])
-; MIPS32-NOLEFTRIGHT-DAG:    sb $[[R1]], 7($[[PTR]])
+; MIPS32-DAG:    lbu $[[R1:[0-9]+]], 0($[[PTR]])
+; MIPS32-DAG:    sb $[[R1]], 4($[[PTR]])
+; MIPS32-DAG:    lbu $[[R1:[0-9]+]], 1($[[PTR]])
+; MIPS32-DAG:    sb $[[R1]], 5($[[PTR]])
+; MIPS32-DAG:    lbu $[[R1:[0-9]+]], 2($[[PTR]])
+; MIPS32-DAG:    sb $[[R1]], 6($[[PTR]])
+; MIPS32-DAG:    lbu $[[R1:[0-9]+]], 3($[[PTR]])
+; MIPS32-DAG:    sb $[[R1]], 7($[[PTR]])
 
 ; MIPS32R6:      lw $[[PTR:[0-9]+]], %got(struct_s1)(
-; MIPS32R6-DAG:  lw $[[R1:[0-9]+]], 0($[[PTR]])
-; MIPS32R6-DAG:  sw $[[R1]], 4($[[PTR]])
+; MIPS32R6-DAG:  lhu $[[R1:[0-9]+]], 0($[[PTR]])
+; MIPS32R6-DAG:  sh $[[R1]], 4($[[PTR]])
+; MIPS32R6-DAG:  lhu $[[R1:[0-9]+]], 2($[[PTR]])
+; MIPS32R6-DAG:  sh $[[R1]], 6($[[PTR]])
 
 ; MIPS64-EL:     ld $[[PTR:[0-9]+]], %got_disp(struct_s1)(
 ; MIPS64-EB:     ld $[[PTR:[0-9]+]], %got_disp(struct_s1)(
-
-; MIPS64-EL-DAG:    lwl $[[R1:[0-9]+]], 3($[[PTR]])
-; MIPS64-EL-DAG:    lwr $[[R1]], 0($[[PTR]])
-; MIPS64-EL-DAG:    swl $[[R1]], 7($[[PTR]])
-; MIPS64-EL-DAG:    swr $[[R1]], 4($[[PTR]])
-
-; MIPS64-EB-DAG:    lwl $[[R1:[0-9]+]], 0($[[PTR]])
-; MIPS64-EB-DAG:    lwr $[[R1]], 3($[[PTR]])
-; MIPS64-EB-DAG:    swl $[[R1]], 4($[[PTR]])
-; MIPS64-EB-DAG:    swr $[[R1]], 7($[[PTR]])
-
-
-; MIPS64-NOLEFTRIGHT-DAG:    lbu $[[R1:[0-9]+]], 0($[[PTR]])
-; MIPS64-NOLEFTRIGHT-DAG:    sb $[[R1]], 4($[[PTR]])
-; MIPS64-NOLEFTRIGHT-DAG:    lbu $[[R1:[0-9]+]], 1($[[PTR]])
-; MIPS64-NOLEFTRIGHT-DAG:    sb $[[R1]], 5($[[PTR]])
-; MIPS64-NOLEFTRIGHT-DAG:    lbu $[[R1:[0-9]+]], 2($[[PTR]])
-; MIPS64-NOLEFTRIGHT-DAG:    sb $[[R1]], 6($[[PTR]])
-; MIPS64-NOLEFTRIGHT-DAG:    lbu $[[R1:[0-9]+]], 3($[[PTR]])
-; MIPS64-NOLEFTRIGHT-DAG:    sb $[[R1]], 7($[[PTR]])
+; MIPS64-DAG:    lbu $[[R1:[0-9]+]], 0($[[PTR]])
+; MIPS64-DAG:    sb $[[R1]], 4($[[PTR]])
+; MIPS64-DAG:    lbu $[[R1:[0-9]+]], 1($[[PTR]])
+; MIPS64-DAG:    sb $[[R1]], 5($[[PTR]])
+; MIPS64-DAG:    lbu $[[R1:[0-9]+]], 2($[[PTR]])
+; MIPS64-DAG:    sb $[[R1]], 6($[[PTR]])
+; MIPS64-DAG:    lbu $[[R1:[0-9]+]], 3($[[PTR]])
+; MIPS64-DAG:    sb $[[R1]], 7($[[PTR]])
 
 ; MIPS64R6:      ld $[[PTR:[0-9]+]], %got_disp(struct_s1)(
-; MIPS64R6-DAG:  lw $[[R1:[0-9]+]], 0($[[PTR]])
-; MIPS64R6-DAG:  sw $[[R1]], 4($[[PTR]])
+; MIPS64R6-DAG:  lhu $[[R1:[0-9]+]], 0($[[PTR]])
+; MIPS64R6-DAG:  sh $[[R1]], 4($[[PTR]])
+; MIPS64R6-DAG:  lhu $[[R1:[0-9]+]], 2($[[PTR]])
+; MIPS64R6-DAG:  sh $[[R1]], 6($[[PTR]])
 
   %0 = load %struct.S1, %struct.S1* getelementptr inbounds (%struct.S1, %struct.S1* @struct_s1, i32 0), align 1
   store %struct.S1 %0, %struct.S1* getelementptr inbounds (%struct.S1, %struct.S1* @struct_s1, i32 1), align 1
@@ -359,21 +336,30 @@ entry:
 ; MIPS32R6-DAG:  sw $[[R1]],       12($[[PTR]])
 
 ; MIPS64-EL:     ld $[[PTR:[0-9]+]], %got_disp(struct_s2)(
-
-; MIPS64-EL-DAG: ldl $[[R1:[0-9]+]], 7($[[PTR]])
-; MIPS64-EL-DAG: ldr $[[R1]],        0($[[PTR]])
-; MIPS64-EL-DAG: sdl $[[R1]],       15($[[PTR]])
-; MIPS64-EL-DAG: sdr $[[R1]],        8($[[PTR]])
+; MIPS64-EL-DAG: lwl $[[R1:[0-9]+]], 3($[[PTR]])
+; MIPS64-EL-DAG: lwr $[[R1]],        0($[[PTR]])
+; MIPS64-EL-DAG: swl $[[R1]],       11($[[PTR]])
+; MIPS64-EL-DAG: swr $[[R1]],        8($[[PTR]])
+; MIPS64-EL-DAG: lwl $[[R1:[0-9]+]], 7($[[PTR]])
+; MIPS64-EL-DAG: lwr $[[R1]],        4($[[PTR]])
+; MIPS64-EL-DAG: swl $[[R1]],       15($[[PTR]])
+; MIPS64-EL-DAG: swr $[[R1]],       12($[[PTR]])
 
 ; MIPS64-EB:     ld $[[PTR:[0-9]+]], %got_disp(struct_s2)(
-; MIPS64-EB-DAG: ldl $[[R1:[0-9]+]], 0($[[PTR]])
-; MIPS64-EB-DAG: ldr $[[R1]],        7($[[PTR]])
-; MIPS64-EB-DAG: sdl $[[R1]],        8($[[PTR]])
-; MIPS64-EB-DAG: sdr $[[R1]],       15($[[PTR]])
+; MIPS64-EB-DAG: lwl $[[R1:[0-9]+]], 0($[[PTR]])
+; MIPS64-EB-DAG: lwr $[[R1]],        3($[[PTR]])
+; MIPS64-EB-DAG: swl $[[R1]],        8($[[PTR]])
+; MIPS64-EB-DAG: swr $[[R1]],       11($[[PTR]])
+; MIPS64-EB-DAG: lwl $[[R1:[0-9]+]], 4($[[PTR]])
+; MIPS64-EB-DAG: lwr $[[R1]],        7($[[PTR]])
+; MIPS64-EB-DAG: swl $[[R1]],       12($[[PTR]])
+; MIPS64-EB-DAG: swr $[[R1]],       15($[[PTR]])
 
 ; MIPS64R6:      ld $[[PTR:[0-9]+]], %got_disp(struct_s2)(
-; MIPS64R6-DAG:  ld $[[R1:[0-9]+]], 0($[[PTR]])
-; MIPS64R6-DAG:  sd $[[R1]],        8($[[PTR]])
+; MIPS64R6-DAG:  lw $[[R1:[0-9]+]], 0($[[PTR]])
+; MIPS64R6-DAG:  sw $[[R1]],        8($[[PTR]])
+; MIPS64R6-DAG:  lw $[[R1:[0-9]+]], 4($[[PTR]])
+; MIPS64R6-DAG:  sw $[[R1]],       12($[[PTR]])
 
   %0 = load %struct.S2, %struct.S2* getelementptr inbounds (%struct.S2, %struct.S2* @struct_s2, i32 0), align 1
   store %struct.S2 %0, %struct.S2* getelementptr inbounds (%struct.S2, %struct.S2* @struct_s2, i32 1), align 1
@@ -430,17 +416,17 @@ entry:
 ; MIPS64-EL-DAG: lwl $[[R1:[0-9]+]], 3($[[PTR]])
 ; MIPS64-EL-DAG: lwr $[[R1]],   0($[[PTR]])
 
-; MIPS64-EB: ld $[[SPTR:[0-9]+]], %got_disp(arr)(
+; MIPS64-EB:     ld $[[SPTR:[0-9]+]], %got_disp(arr)(
+; MIPS64-EB-DAG: lwl  $[[R1:[0-9]+]], 0($[[PTR]])
+; MIPS64-EB-DAG: lwr  $[[R1]],   3($[[PTR]])
+; MIPS64-EB-DAG: dsll $[[R1]], $[[R1]], 32
 ; MIPS64-EB-DAG: lbu  $[[R2:[0-9]+]], 5($[[PTR]])
 ; MIPS64-EB-DAG: lbu  $[[R3:[0-9]+]], 4($[[PTR]])
 ; MIPS64-EB-DAG: dsll $[[T0:[0-9]+]], $[[R3]], 8
 ; MIPS64-EB-DAG: or   $[[T1:[0-9]+]], $[[T0]], $[[R2]]
-; MIPS64-EB-DAG: lbu  $[[R4:[0-9]+]], 6($[[PTR]])
 ; MIPS64-EB-DAG: dsll $[[T1]], $[[T1]], 16
-; MIPS64-EB-DAG: lwl  $[[R1:[0-9]+]], 0($[[PTR]])
-; MIPS64-EB-DAG: lwr  $[[R1]],   3($[[PTR]])
-; MIPS64-EB-DAG: dsll $[[R5:[0-9]+]], $[[R1]], 32
-; MIPS64-EB-DAG: or   $[[T3:[0-9]+]], $[[R5]], $[[T1]]
+; MIPS64-EB-DAG: or   $[[T3:[0-9]+]], $[[R1]], $[[T1]]
+; MIPS64-EB-DAG: lbu  $[[R4:[0-9]+]], 6($[[PTR]])
 ; MIPS64-EB-DAG: dsll $[[T4:[0-9]+]], $[[R4]], 8
 ; MIPS64-EB-DAG: or   $4, $[[T3]], $[[T4]]
 

@@ -1,4 +1,4 @@
-//===- CodeGen/MachineInstBuilder.h - Simplify creation of MIs --*- C++ -*-===//
+//===- CodeGen/MachineInstrBuilder.h - Simplify creation of MIs --*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //

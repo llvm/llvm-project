@@ -10,6 +10,8 @@ entry:
 ; CHECK: vpop {d8}
 ; CHECK-NOT: vpopne
 ; CHECK: pop {r7, pc}
+; CHECK: vpop {d8}
+; CHECK: pop {r7, pc}
   br i1 undef, label %if.else, label %if.then
 
 if.then:                                          ; preds = %entry

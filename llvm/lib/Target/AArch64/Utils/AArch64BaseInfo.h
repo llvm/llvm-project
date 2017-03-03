@@ -278,6 +278,8 @@ struct SysAlias {
   bool haveFeatures(FeatureBitset ActiveFeatures) const {
     return (FeaturesRequired & ActiveFeatures) == FeaturesRequired;
   }
+
+  FeatureBitset getRequiredFeatures() const { return FeaturesRequired; }
 };
 
 struct SysAliasReg : SysAlias {

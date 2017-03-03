@@ -37,6 +37,7 @@ define <8 x i1> @test_8i1(<8 x i32> %a, <8 x i32> %b) {
 ; CHECK-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp) ## 2-byte Spill
 ; CHECK-NEXT:    vpcmpgtd %ymm1, %ymm0, %k0
 ; CHECK-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp) ## 2-byte Spill
+; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    callq _f
 ; CHECK-NEXT:    kmovw {{[0-9]+}}(%rsp), %k0 ## 2-byte Reload
 ; CHECK-NEXT:    kmovw {{[0-9]+}}(%rsp), %k1 ## 2-byte Reload
@@ -62,6 +63,7 @@ define <16 x i1> @test_16i1(<16 x i32> %a, <16 x i32> %b) {
 ; CHECK-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp) ## 2-byte Spill
 ; CHECK-NEXT:    vpcmpgtd %zmm1, %zmm0, %k0
 ; CHECK-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp) ## 2-byte Spill
+; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    callq _f
 ; CHECK-NEXT:    kmovw {{[0-9]+}}(%rsp), %k0 ## 2-byte Reload
 ; CHECK-NEXT:    kmovw {{[0-9]+}}(%rsp), %k1 ## 2-byte Reload
@@ -86,6 +88,7 @@ define <32 x i1> @test_32i1(<32 x i16> %a, <32 x i16> %b) {
 ; CHECK-NEXT:    kmovd %k0, {{[0-9]+}}(%rsp) ## 4-byte Spill
 ; CHECK-NEXT:    vpcmpgtw %zmm1, %zmm0, %k0
 ; CHECK-NEXT:    kmovd %k0, (%rsp) ## 4-byte Spill
+; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    callq _f
 ; CHECK-NEXT:    kmovd {{[0-9]+}}(%rsp), %k0 ## 4-byte Reload
 ; CHECK-NEXT:    kmovd (%rsp), %k1 ## 4-byte Reload
@@ -110,6 +113,7 @@ define <64 x i1> @test_64i1(<64 x i8> %a, <64 x i8> %b) {
 ; CHECK-NEXT:    kmovq %k0, {{[0-9]+}}(%rsp) ## 8-byte Spill
 ; CHECK-NEXT:    vpcmpgtb %zmm1, %zmm0, %k0
 ; CHECK-NEXT:    kmovq %k0, {{[0-9]+}}(%rsp) ## 8-byte Spill
+; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    callq _f
 ; CHECK-NEXT:    kmovq {{[0-9]+}}(%rsp), %k0 ## 8-byte Reload
 ; CHECK-NEXT:    kmovq {{[0-9]+}}(%rsp), %k1 ## 8-byte Reload

@@ -5,15 +5,15 @@
 @a7_8bit = external global i8
 @a8_8bit = external global i8
 
-define i8 @test_i8_args_8(i8 %arg1, i8 %arg2, i8 %arg3, i8 %arg4, 
+define i8 @test_i8_args_8(i8 %arg1, i8 %arg2, i8 %arg3, i8 %arg4,
 		                      i8 %arg5, i8 %arg6, i8 %arg7, i8 %arg8) {
 
 ; ALL-LABEL: name:            test_i8_args_8
 
-; X64: fixedStack:      
+; X64: fixedStack:
 ; X64:  id: [[STACK8:[0-9]+]], offset: 8, size: 1, alignment: 8, isImmutable: true, isAliased: false
 ; X64:  id: [[STACK0:[0-9]+]], offset: 0, size: 1, alignment: 16, isImmutable: true, isAliased: false
-; X64: liveins: %ecx, %edi, %edx, %esi, %r8d, %r9d 
+; X64: liveins: %ecx, %edi, %edx, %esi, %r8d, %r9d
 ; X64:      [[ARG1:%[0-9]+]](s8) = COPY %edi
 ; X64-NEXT: %{{[0-9]+}}(s8) = COPY %esi
 ; X64-NEXT: %{{[0-9]+}}(s8) = COPY %edx
@@ -25,7 +25,7 @@ define i8 @test_i8_args_8(i8 %arg1, i8 %arg2, i8 %arg3, i8 %arg4,
 ; X64-NEXT: [[ARG8_ADDR:%[0-9]+]](p0) = G_FRAME_INDEX %fixed-stack.[[STACK8]]
 ; X64-NEXT: [[ARG8:%[0-9]+]](s8) = G_LOAD [[ARG8_ADDR]](p0) :: (invariant load 1 from %fixed-stack.[[STACK8]], align 0)
 
-; X32: fixedStack:      
+; X32: fixedStack:
 ; X32:  id: [[STACK28:[0-9]+]], offset: 28, size: 1, alignment: 4, isImmutable: true, isAliased: false }
 ; X32:  id: [[STACK24:[0-9]+]], offset: 24, size: 1, alignment: 8, isImmutable: true, isAliased: false }
 ; X32:  id: [[STACK20:[0-9]+]], offset: 20, size: 1, alignment: 4, isImmutable: true, isAliased: false }
@@ -40,7 +40,7 @@ define i8 @test_i8_args_8(i8 %arg1, i8 %arg2, i8 %arg3, i8 %arg4,
 ; X32-NEXT:  [[ARG2:%[0-9]+]](s8) = G_LOAD [[ARG2_ADDR]](p0) :: (invariant load 1 from %fixed-stack.[[STACK4]], align 0)
 ; X32-NEXT:  [[ARG3_ADDR:%[0-9]+]](p0) = G_FRAME_INDEX %fixed-stack.[[STACK8]]
 ; X32-NEXT:  [[ARG3:%[0-9]+]](s8) = G_LOAD [[ARG3_ADDR]](p0) :: (invariant load 1 from %fixed-stack.[[STACK8]], align 0)
-; X32-NEXT:  [[ARG4_ADDR:%[0-9]+]](p0) = G_FRAME_INDEX %fixed-stack.[[STACK12]]    
+; X32-NEXT:  [[ARG4_ADDR:%[0-9]+]](p0) = G_FRAME_INDEX %fixed-stack.[[STACK12]]
 ; X32-NEXT:  [[ARG4:%[0-9]+]](s8) = G_LOAD [[ARG4_ADDR]](p0) :: (invariant load 1 from %fixed-stack.[[STACK12]], align 0)
 ; X32-NEXT:  [[ARG5_ADDR:%[0-9]+]](p0) = G_FRAME_INDEX %fixed-stack.[[STACK16]]
 ; X32-NEXT:  [[ARG5:%[0-9]+]](s8) = G_LOAD [[ARG5_ADDR]](p0) :: (invariant load 1 from %fixed-stack.[[STACK16]], align 0)
@@ -53,7 +53,7 @@ define i8 @test_i8_args_8(i8 %arg1, i8 %arg2, i8 %arg3, i8 %arg4,
 
 ; ALL-NEXT:  [[GADDR_A1:%[0-9]+]](p0) = G_GLOBAL_VALUE @a1_8bit
 ; ALL-NEXT:  [[GADDR_A7:%[0-9]+]](p0) = G_GLOBAL_VALUE @a7_8bit
-; ALL-NEXT:  [[GADDR_A8:%[0-9]+]](p0) = G_GLOBAL_VALUE @a8_8bit	
+; ALL-NEXT:  [[GADDR_A8:%[0-9]+]](p0) = G_GLOBAL_VALUE @a8_8bit
 ; ALL-NEXT:  G_STORE [[ARG1]](s8), [[GADDR_A1]](p0) :: (store 1 into @a1_8bit)
 ; ALL-NEXT:  G_STORE [[ARG7]](s8), [[GADDR_A7]](p0) :: (store 1 into @a7_8bit)
 ; ALL-NEXT:  G_STORE [[ARG8]](s8), [[GADDR_A8]](p0) :: (store 1 into @a8_8bit)
@@ -71,15 +71,15 @@ entry:
 @a7_32bit = external global i32
 @a8_32bit = external global i32
 
-define i32 @test_i32_args_8(i32 %arg1, i32 %arg2, i32 %arg3, i32 %arg4, 
+define i32 @test_i32_args_8(i32 %arg1, i32 %arg2, i32 %arg3, i32 %arg4,
 		                        i32 %arg5, i32 %arg6, i32 %arg7, i32 %arg8) {
 
 ; ALL-LABEL: name:            test_i32_args_8
 
-; X64: fixedStack:      
+; X64: fixedStack:
 ; X64:  id: [[STACK8:[0-9]+]], offset: 8, size: 4, alignment: 8, isImmutable: true, isAliased: false
 ; X64:  id: [[STACK0:[0-9]+]], offset: 0, size: 4, alignment: 16, isImmutable: true, isAliased: false
-; X64: liveins: %ecx, %edi, %edx, %esi, %r8d, %r9d 
+; X64: liveins: %ecx, %edi, %edx, %esi, %r8d, %r9d
 ; X64:      [[ARG1:%[0-9]+]](s32) = COPY %edi
 ; X64-NEXT: %{{[0-9]+}}(s32) = COPY %esi
 ; X64-NEXT: %{{[0-9]+}}(s32) = COPY %edx
@@ -91,7 +91,7 @@ define i32 @test_i32_args_8(i32 %arg1, i32 %arg2, i32 %arg3, i32 %arg4,
 ; X64-NEXT: [[ARG8_ADDR:%[0-9]+]](p0) = G_FRAME_INDEX %fixed-stack.[[STACK8]]
 ; X64-NEXT: [[ARG8:%[0-9]+]](s32) = G_LOAD [[ARG8_ADDR]](p0) :: (invariant load 4 from %fixed-stack.[[STACK8]], align 0)
 
-; X32: fixedStack:      
+; X32: fixedStack:
 ; X32:  id: [[STACK28:[0-9]+]], offset: 28, size: 4, alignment: 4, isImmutable: true, isAliased: false }
 ; X32:  id: [[STACK24:[0-9]+]], offset: 24, size: 4, alignment: 8, isImmutable: true, isAliased: false }
 ; X32:  id: [[STACK20:[0-9]+]], offset: 20, size: 4, alignment: 4, isImmutable: true, isAliased: false }
@@ -102,24 +102,24 @@ define i32 @test_i32_args_8(i32 %arg1, i32 %arg2, i32 %arg3, i32 %arg4,
 ; X32:  id: [[STACK0:[0-9]+]],  offset: 0, size: 4, alignment: 16, isImmutable: true, isAliased: false }
 ; X32:       [[ARG1_ADDR:%[0-9]+]](p0) = G_FRAME_INDEX %fixed-stack.[[STACK0]]
 ; X32-NEXT:  [[ARG1:%[0-9]+]](s32) = G_LOAD [[ARG1_ADDR]](p0) :: (invariant load 4 from %fixed-stack.[[STACK0]], align 0)
-; X32-NEXT:  [[ARG2_ADDR:%[0-9]+]](p0) = G_FRAME_INDEX %fixed-stack.[[STACK4]]  
+; X32-NEXT:  [[ARG2_ADDR:%[0-9]+]](p0) = G_FRAME_INDEX %fixed-stack.[[STACK4]]
 ; X32-NEXT:  [[ARG2:%[0-9]+]](s32) = G_LOAD [[ARG2_ADDR]](p0) :: (invariant load 4 from %fixed-stack.[[STACK4]], align 0)
-; X32-NEXT:  [[ARG3_ADDR:%[0-9]+]](p0) = G_FRAME_INDEX %fixed-stack.[[STACK8]]  
+; X32-NEXT:  [[ARG3_ADDR:%[0-9]+]](p0) = G_FRAME_INDEX %fixed-stack.[[STACK8]]
 ; X32-NEXT:  [[ARG3:%[0-9]+]](s32) = G_LOAD [[ARG3_ADDR]](p0) :: (invariant load 4 from %fixed-stack.[[STACK8]], align 0)
-; X32-NEXT:  [[ARG4_ADDR:%[0-9]+]](p0) = G_FRAME_INDEX %fixed-stack.[[STACK12]]   
+; X32-NEXT:  [[ARG4_ADDR:%[0-9]+]](p0) = G_FRAME_INDEX %fixed-stack.[[STACK12]]
 ; X32-NEXT:  [[ARG4:%[0-9]+]](s32) = G_LOAD [[ARG4_ADDR]](p0) :: (invariant load 4 from %fixed-stack.[[STACK12]], align 0)
-; X32-NEXT:  [[ARG5_ADDR:%[0-9]+]](p0) = G_FRAME_INDEX %fixed-stack.[[STACK16]] 
+; X32-NEXT:  [[ARG5_ADDR:%[0-9]+]](p0) = G_FRAME_INDEX %fixed-stack.[[STACK16]]
 ; X32-NEXT:  [[ARG5:%[0-9]+]](s32) = G_LOAD [[ARG5_ADDR]](p0) :: (invariant load 4 from %fixed-stack.[[STACK16]], align 0)
-; X32-NEXT:  [[ARG6_ADDR:%[0-9]+]](p0) = G_FRAME_INDEX %fixed-stack.[[STACK20]] 
+; X32-NEXT:  [[ARG6_ADDR:%[0-9]+]](p0) = G_FRAME_INDEX %fixed-stack.[[STACK20]]
 ; X32-NEXT:  [[ARG6:%[0-9]+]](s32) = G_LOAD [[ARG6_ADDR]](p0) :: (invariant load 4 from %fixed-stack.[[STACK20]], align 0)
-; X32-NEXT:  [[ARG7_ADDR:%[0-9]+]](p0) = G_FRAME_INDEX %fixed-stack.[[STACK24]] 
+; X32-NEXT:  [[ARG7_ADDR:%[0-9]+]](p0) = G_FRAME_INDEX %fixed-stack.[[STACK24]]
 ; X32-NEXT:  [[ARG7:%[0-9]+]](s32) = G_LOAD [[ARG7_ADDR]](p0) :: (invariant load 4 from %fixed-stack.[[STACK24]], align 0)
-; X32-NEXT:  [[ARG8_ADDR:%[0-9]+]](p0) = G_FRAME_INDEX %fixed-stack.[[STACK28]] 
+; X32-NEXT:  [[ARG8_ADDR:%[0-9]+]](p0) = G_FRAME_INDEX %fixed-stack.[[STACK28]]
 ; X32-NEXT:  [[ARG8:%[0-9]+]](s32) = G_LOAD [[ARG8_ADDR]](p0) :: (invariant load 4 from %fixed-stack.[[STACK28]], align 0)
 
 ; ALL-NEXT:  [[GADDR_A1:%[0-9]+]](p0) = G_GLOBAL_VALUE @a1_32bit
 ; ALL-NEXT:  [[GADDR_A7:%[0-9]+]](p0) = G_GLOBAL_VALUE @a7_32bit
-; ALL-NEXT:  [[GADDR_A8:%[0-9]+]](p0) = G_GLOBAL_VALUE @a8_32bit	
+; ALL-NEXT:  [[GADDR_A8:%[0-9]+]](p0) = G_GLOBAL_VALUE @a8_32bit
 ; ALL-NEXT:  G_STORE [[ARG1]](s32), [[GADDR_A1]](p0) :: (store 4 into @a1_32bit)
 ; ALL-NEXT:  G_STORE [[ARG7]](s32), [[GADDR_A7]](p0) :: (store 4 into @a7_32bit)
 ; ALL-NEXT:  G_STORE [[ARG8]](s32), [[GADDR_A8]](p0) :: (store 4 into @a8_32bit)
@@ -129,7 +129,7 @@ define i32 @test_i32_args_8(i32 %arg1, i32 %arg2, i32 %arg3, i32 %arg4,
 entry:
   store i32 %arg1, i32* @a1_32bit
   store i32 %arg7, i32* @a7_32bit
-  store i32 %arg8, i32* @a8_32bit 
+  store i32 %arg8, i32* @a8_32bit
   ret i32 %arg1
 }
 
@@ -137,11 +137,11 @@ entry:
 @a7_64bit = external global i64
 @a8_64bit = external global i64
 
-define i64 @test_i64_args_8(i64 %arg1, i64 %arg2, i64 %arg3, i64 %arg4, 
+define i64 @test_i64_args_8(i64 %arg1, i64 %arg2, i64 %arg3, i64 %arg4,
                             i64 %arg5, i64 %arg6, i64 %arg7, i64 %arg8) {
 
 ; ALL-LABEL: name:            test_i64_args_8
-; X64: fixedStack:      
+; X64: fixedStack:
 ; X64:  id: [[STACK8:[0-9]+]], offset: 8, size: 8, alignment: 8, isImmutable: true, isAliased: false
 ; X64:  id: [[STACK0:[0-9]+]], offset: 0, size: 8, alignment: 16, isImmutable: true, isAliased: false
 ; X64: liveins: %rcx, %rdi, %rdx, %rsi, %r8, %r9
@@ -156,22 +156,22 @@ define i64 @test_i64_args_8(i64 %arg1, i64 %arg2, i64 %arg3, i64 %arg4,
 ; X64-NEXT: [[ARG8_ADDR:%[0-9]+]](p0) = G_FRAME_INDEX %fixed-stack.[[STACK8]]
 ; X64-NEXT: [[ARG8:%[0-9]+]](s64) = G_LOAD [[ARG8_ADDR]](p0) :: (invariant load 8 from %fixed-stack.[[STACK8]], align 0)
 
-; X32: fixedStack:   
-; X32:  id: [[STACK60:[0-9]+]], offset: 60, size: 4, alignment: 4, isImmutable: true, isAliased: false }                                                                                                         
-; X32:  id: [[STACK56:[0-9]+]], offset: 56, size: 4, alignment: 8, isImmutable: true, isAliased: false }                                                                                                         
-; X32:  id: [[STACK52:[0-9]+]], offset: 52, size: 4, alignment: 4, isImmutable: true, isAliased: false }                                                                                                         
-; X32:  id: [[STACK48:[0-9]+]], offset: 48, size: 4, alignment: 16, isImmutable: true, isAliased: false }                                                                                                        
-; X32:  id: [[STACK44:[0-9]+]], offset: 44, size: 4, alignment: 4, isImmutable: true, isAliased: false }                                                                                                         
-; X32:  id: [[STACK40:[0-9]+]], offset: 40, size: 4, alignment: 8, isImmutable: true, isAliased: false }                                                                                                         
-; X32:  id: [[STACK36:[0-9]+]], offset: 36, size: 4, alignment: 4, isImmutable: true, isAliased: false }                                                                                                         
-; X32:  id: [[STACK32:[0-9]+]], offset: 32, size: 4, alignment: 16, isImmutable: true, isAliased: false }                                                                                                        
-; X32:  id: [[STACK28:[0-9]+]], offset: 28, size: 4, alignment: 4, isImmutable: true, isAliased: false }                                                                                                         
-; X32:  id: [[STACK24:[0-9]+]], offset: 24, size: 4, alignment: 8, isImmutable: true, isAliased: false }                                                                                                         
-; X32:  id: [[STACK20:[0-9]+]], offset: 20, size: 4, alignment: 4, isImmutable: true, isAliased: false }                                                                                                        
-; X32:  id: [[STACK16:[0-9]+]], offset: 16, size: 4, alignment: 16, isImmutable: true, isAliased: false }                                                                                                       
-; X32:  id: [[STACK12:[0-9]+]], offset: 12, size: 4, alignment: 4, isImmutable: true, isAliased: false }                                                                                                        
-; X32:  id: [[STACK8:[0-9]+]], offset: 8, size: 4, alignment: 8, isImmutable: true, isAliased: false }                                                                                                         
-; X32:  id: [[STACK4:[0-9]+]], offset: 4, size: 4, alignment: 4, isImmutable: true, isAliased: false }                                                                                                         
+; X32: fixedStack:
+; X32:  id: [[STACK60:[0-9]+]], offset: 60, size: 4, alignment: 4, isImmutable: true, isAliased: false }
+; X32:  id: [[STACK56:[0-9]+]], offset: 56, size: 4, alignment: 8, isImmutable: true, isAliased: false }
+; X32:  id: [[STACK52:[0-9]+]], offset: 52, size: 4, alignment: 4, isImmutable: true, isAliased: false }
+; X32:  id: [[STACK48:[0-9]+]], offset: 48, size: 4, alignment: 16, isImmutable: true, isAliased: false }
+; X32:  id: [[STACK44:[0-9]+]], offset: 44, size: 4, alignment: 4, isImmutable: true, isAliased: false }
+; X32:  id: [[STACK40:[0-9]+]], offset: 40, size: 4, alignment: 8, isImmutable: true, isAliased: false }
+; X32:  id: [[STACK36:[0-9]+]], offset: 36, size: 4, alignment: 4, isImmutable: true, isAliased: false }
+; X32:  id: [[STACK32:[0-9]+]], offset: 32, size: 4, alignment: 16, isImmutable: true, isAliased: false }
+; X32:  id: [[STACK28:[0-9]+]], offset: 28, size: 4, alignment: 4, isImmutable: true, isAliased: false }
+; X32:  id: [[STACK24:[0-9]+]], offset: 24, size: 4, alignment: 8, isImmutable: true, isAliased: false }
+; X32:  id: [[STACK20:[0-9]+]], offset: 20, size: 4, alignment: 4, isImmutable: true, isAliased: false }
+; X32:  id: [[STACK16:[0-9]+]], offset: 16, size: 4, alignment: 16, isImmutable: true, isAliased: false }
+; X32:  id: [[STACK12:[0-9]+]], offset: 12, size: 4, alignment: 4, isImmutable: true, isAliased: false }
+; X32:  id: [[STACK8:[0-9]+]], offset: 8, size: 4, alignment: 8, isImmutable: true, isAliased: false }
+; X32:  id: [[STACK4:[0-9]+]], offset: 4, size: 4, alignment: 4, isImmutable: true, isAliased: false }
 ; X32:  id: [[STACK0:[0-9]+]], offset: 0, size: 4, alignment: 16, isImmutable: true, isAliased: false }
 
 ; X32:      [[ARG1L_ADDR:%[0-9]+]](p0) = G_FRAME_INDEX %fixed-stack.[[STACK0]]
@@ -233,20 +233,20 @@ define i64 @test_i64_args_8(i64 %arg1, i64 %arg2, i64 %arg3, i64 %arg4,
 entry:
   store i64 %arg1, i64* @a1_64bit
   store i64 %arg7, i64* @a7_64bit
-  store i64 %arg8, i64* @a8_64bit 
+  store i64 %arg8, i64* @a8_64bit
   ret i64 %arg1
 }
 
 define float @test_float_args(float %arg1, float %arg2) {
-; ALL-LABEL:name:            test_float_args                                                                                                                                                              
+; ALL-LABEL:name:            test_float_args
 
-; X64: liveins: %xmm0, %xmm1 
+; X64: liveins: %xmm0, %xmm1
 ; X64:      [[ARG1:%[0-9]+]](s32) = COPY %xmm0
 ; X64-NEXT: [[ARG2:%[0-9]+]](s32) = COPY %xmm1
 ; X64-NEXT: %xmm0 = COPY [[ARG2:%[0-9]+]](s32)
 ; X64-NEXT: RET 0, implicit %xmm0
 
-; X32: fixedStack:      
+; X32: fixedStack:
 ; X32:  id: [[STACK4:[0-9]+]], offset: 4, size: 4, alignment: 4, isImmutable: true, isAliased: false }
 ; X32:  id: [[STACK0:[0-9]+]], offset: 0, size: 4, alignment: 16, isImmutable: true, isAliased: false }
 ; X32:       [[ARG1_ADDR:%[0-9]+]](p0) = G_FRAME_INDEX %fixed-stack.[[STACK0]]
@@ -255,19 +255,19 @@ define float @test_float_args(float %arg1, float %arg2) {
 ; X32-NEXT:  [[ARG2:%[0-9]+]](s32) = G_LOAD [[ARG2_ADDR:%[0-9]+]](p0) :: (invariant load 4 from %fixed-stack.[[STACK4]], align 0)
 ; X32-NEXT:  %fp0 = COPY [[ARG2:%[0-9]+]](s32)
 ; X32-NEXT:  RET 0, implicit %fp0
-  
+
   ret float %arg2
 }
 
 define double @test_double_args(double %arg1, double %arg2) {
-; ALL-LABEL:name:            test_double_args 
-; X64: liveins: %xmm0, %xmm1 
+; ALL-LABEL:name:            test_double_args
+; X64: liveins: %xmm0, %xmm1
 ; X64:     [[ARG1:%[0-9]+]](s64) = COPY %xmm0
 ; X64-NEXT: [[ARG2:%[0-9]+]](s64) = COPY %xmm1
 ; X64-NEXT: %xmm0 = COPY [[ARG2:%[0-9]+]](s64)
 ; X64-NEXT: RET 0, implicit %xmm0
 
-; X32: fixedStack:      
+; X32: fixedStack:
 ; X32:  id: [[STACK4:[0-9]+]], offset: 8, size: 8, alignment: 8, isImmutable: true, isAliased: false }
 ; X32:  id: [[STACK0:[0-9]+]], offset: 0, size: 8, alignment: 16, isImmutable: true, isAliased: false }
 ; X32:       [[ARG1_ADDR:%[0-9]+]](p0) = G_FRAME_INDEX %fixed-stack.[[STACK0]]

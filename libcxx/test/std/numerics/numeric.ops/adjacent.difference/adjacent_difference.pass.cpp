@@ -22,6 +22,7 @@
 #include <numeric>
 #include <cassert>
 
+#include "test_macros.h"
 #include "test_iterators.h"
 
 template <class InIter, class OutIter>
@@ -38,7 +39,7 @@ test()
         assert(ib[i] == ir[i]);
 }
 
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#if TEST_STD_VER >= 11
 
 class Y;
 
@@ -107,7 +108,7 @@ int main()
     test<const int*, random_access_iterator<int*> >();
     test<const int*, int*>();
 
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#if TEST_STD_VER >= 11
     X x[3] = {X(1), X(2), X(3)};
     Y y[3] = {Y(1), Y(2), Y(3)};
     std::adjacent_difference(x, x+3, y);

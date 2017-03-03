@@ -1119,8 +1119,11 @@ class Base(unittest2.TestCase):
                     compiler = compiler[2:]
                 if os.path.altsep is not None:
                     compiler = compiler.replace(os.path.altsep, os.path.sep)
-                components.extend(
-                    [x for x in compiler.split(os.path.sep) if x != ""])
+                path_components = [x for x in compiler.split(os.path.sep) if x != ""]
+
+                # Add at most 4 path components to avoid generating very long
+                # filenames
+                components.extend(path_components[-4:])
             elif c == 'a':
                 components.append(self.getArchitecture())
             elif c == 'm':

@@ -15,7 +15,7 @@
 
 #include "DWARFDIE.h"
 #include "SymbolFileDWARF.h"
-#include "lldb/lldb-private.h"
+#include "lldb/Core/STLUtils.h"
 #include "lldb/lldb-private.h"
 
 typedef std::multimap<const char *, dw_offset_t, CStringCompareFunctionObject>

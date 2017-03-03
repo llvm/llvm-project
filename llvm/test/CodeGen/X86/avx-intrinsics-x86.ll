@@ -149,6 +149,7 @@ define <4 x float> @test_x86_avx_cvt_pd2_ps_256(<4 x double> %a0) {
 ; AVX512VL-LABEL: test_x86_avx_cvt_pd2_ps_256:
 ; AVX512VL:       ## BB#0:
 ; AVX512VL-NEXT:    vcvtpd2ps %ymm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfd,0x5a,0xc0]
+; AVX512VL-NEXT:    vzeroupper ## encoding: [0xc5,0xf8,0x77]
 ; AVX512VL-NEXT:    retl ## encoding: [0xc3]
   %res = call <4 x float> @llvm.x86.avx.cvt.pd2.ps.256(<4 x double> %a0) ; <<4 x float>> [#uses=1]
   ret <4 x float> %res
@@ -166,6 +167,7 @@ define <4 x i32> @test_x86_avx_cvt_pd2dq_256(<4 x double> %a0) {
 ; AVX512VL-LABEL: test_x86_avx_cvt_pd2dq_256:
 ; AVX512VL:       ## BB#0:
 ; AVX512VL-NEXT:    vcvtpd2dq %ymm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xff,0xe6,0xc0]
+; AVX512VL-NEXT:    vzeroupper ## encoding: [0xc5,0xf8,0x77]
 ; AVX512VL-NEXT:    retl ## encoding: [0xc3]
   %res = call <4 x i32> @llvm.x86.avx.cvt.pd2dq.256(<4 x double> %a0) ; <<4 x i32>> [#uses=1]
   ret <4 x i32> %res
@@ -210,6 +212,7 @@ define <4 x i32> @test_x86_avx_cvtt_pd2dq_256(<4 x double> %a0) {
 ; AVX512VL-LABEL: test_x86_avx_cvtt_pd2dq_256:
 ; AVX512VL:       ## BB#0:
 ; AVX512VL-NEXT:    vcvttpd2dq %ymm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfd,0xe6,0xc0]
+; AVX512VL-NEXT:    vzeroupper ## encoding: [0xc5,0xf8,0x77]
 ; AVX512VL-NEXT:    retl ## encoding: [0xc3]
   %res = call <4 x i32> @llvm.x86.avx.cvtt.pd2dq.256(<4 x double> %a0) ; <<4 x i32>> [#uses=1]
   ret <4 x i32> %res
@@ -361,18 +364,12 @@ declare void @llvm.x86.avx.maskstore.pd(i8*, <2 x i64>, <2 x double>) nounwind
 
 
 define void @test_x86_avx_maskstore_pd_256(i8* %a0, <4 x i64> %mask, <4 x double> %a2) {
-; AVX-LABEL: test_x86_avx_maskstore_pd_256:
-; AVX:       ## BB#0:
-; AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
-; AVX-NEXT:    vmaskmovpd %ymm1, %ymm0, (%eax) ## encoding: [0xc4,0xe2,0x7d,0x2f,0x08]
-; AVX-NEXT:    vzeroupper ## encoding: [0xc5,0xf8,0x77]
-; AVX-NEXT:    retl ## encoding: [0xc3]
-;
-; AVX512VL-LABEL: test_x86_avx_maskstore_pd_256:
-; AVX512VL:       ## BB#0:
-; AVX512VL-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
-; AVX512VL-NEXT:    vmaskmovpd %ymm1, %ymm0, (%eax) ## encoding: [0xc4,0xe2,0x7d,0x2f,0x08]
-; AVX512VL-NEXT:    retl ## encoding: [0xc3]
+; CHECK-LABEL: test_x86_avx_maskstore_pd_256:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
+; CHECK-NEXT:    vmaskmovpd %ymm1, %ymm0, (%eax) ## encoding: [0xc4,0xe2,0x7d,0x2f,0x08]
+; CHECK-NEXT:    vzeroupper ## encoding: [0xc5,0xf8,0x77]
+; CHECK-NEXT:    retl ## encoding: [0xc3]
   call void @llvm.x86.avx.maskstore.pd.256(i8* %a0, <4 x i64> %mask, <4 x double> %a2)
   ret void
 }
@@ -392,18 +389,12 @@ declare void @llvm.x86.avx.maskstore.ps(i8*, <4 x i32>, <4 x float>) nounwind
 
 
 define void @test_x86_avx_maskstore_ps_256(i8* %a0, <8 x i32> %mask, <8 x float> %a2) {
-; AVX-LABEL: test_x86_avx_maskstore_ps_256:
-; AVX:       ## BB#0:
-; AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
-; AVX-NEXT:    vmaskmovps %ymm1, %ymm0, (%eax) ## encoding: [0xc4,0xe2,0x7d,0x2e,0x08]
-; AVX-NEXT:    vzeroupper ## encoding: [0xc5,0xf8,0x77]
-; AVX-NEXT:    retl ## encoding: [0xc3]
-;
-; AVX512VL-LABEL: test_x86_avx_maskstore_ps_256:
-; AVX512VL:       ## BB#0:
-; AVX512VL-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
-; AVX512VL-NEXT:    vmaskmovps %ymm1, %ymm0, (%eax) ## encoding: [0xc4,0xe2,0x7d,0x2e,0x08]
-; AVX512VL-NEXT:    retl ## encoding: [0xc3]
+; CHECK-LABEL: test_x86_avx_maskstore_ps_256:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
+; CHECK-NEXT:    vmaskmovps %ymm1, %ymm0, (%eax) ## encoding: [0xc4,0xe2,0x7d,0x2e,0x08]
+; CHECK-NEXT:    vzeroupper ## encoding: [0xc5,0xf8,0x77]
+; CHECK-NEXT:    retl ## encoding: [0xc3]
   call void @llvm.x86.avx.maskstore.ps.256(i8* %a0, <8 x i32> %mask, <8 x float> %a2)
   ret void
 }
@@ -475,16 +466,11 @@ declare <8 x float> @llvm.x86.avx.min.ps.256(<8 x float>, <8 x float>) nounwind 
 
 
 define i32 @test_x86_avx_movmsk_pd_256(<4 x double> %a0) {
-; AVX-LABEL: test_x86_avx_movmsk_pd_256:
-; AVX:       ## BB#0:
-; AVX-NEXT:    vmovmskpd %ymm0, %eax ## encoding: [0xc5,0xfd,0x50,0xc0]
-; AVX-NEXT:    vzeroupper ## encoding: [0xc5,0xf8,0x77]
-; AVX-NEXT:    retl ## encoding: [0xc3]
-;
-; AVX512VL-LABEL: test_x86_avx_movmsk_pd_256:
-; AVX512VL:       ## BB#0:
-; AVX512VL-NEXT:    vmovmskpd %ymm0, %eax ## encoding: [0xc5,0xfd,0x50,0xc0]
-; AVX512VL-NEXT:    retl ## encoding: [0xc3]
+; CHECK-LABEL: test_x86_avx_movmsk_pd_256:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    vmovmskpd %ymm0, %eax ## encoding: [0xc5,0xfd,0x50,0xc0]
+; CHECK-NEXT:    vzeroupper ## encoding: [0xc5,0xf8,0x77]
+; CHECK-NEXT:    retl ## encoding: [0xc3]
   %res = call i32 @llvm.x86.avx.movmsk.pd.256(<4 x double> %a0) ; <i32> [#uses=1]
   ret i32 %res
 }
@@ -492,16 +478,11 @@ declare i32 @llvm.x86.avx.movmsk.pd.256(<4 x double>) nounwind readnone
 
 
 define i32 @test_x86_avx_movmsk_ps_256(<8 x float> %a0) {
-; AVX-LABEL: test_x86_avx_movmsk_ps_256:
-; AVX:       ## BB#0:
-; AVX-NEXT:    vmovmskps %ymm0, %eax ## encoding: [0xc5,0xfc,0x50,0xc0]
-; AVX-NEXT:    vzeroupper ## encoding: [0xc5,0xf8,0x77]
-; AVX-NEXT:    retl ## encoding: [0xc3]
-;
-; AVX512VL-LABEL: test_x86_avx_movmsk_ps_256:
-; AVX512VL:       ## BB#0:
-; AVX512VL-NEXT:    vmovmskps %ymm0, %eax ## encoding: [0xc5,0xfc,0x50,0xc0]
-; AVX512VL-NEXT:    retl ## encoding: [0xc3]
+; CHECK-LABEL: test_x86_avx_movmsk_ps_256:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    vmovmskps %ymm0, %eax ## encoding: [0xc5,0xfc,0x50,0xc0]
+; CHECK-NEXT:    vzeroupper ## encoding: [0xc5,0xf8,0x77]
+; CHECK-NEXT:    retl ## encoding: [0xc3]
   %res = call i32 @llvm.x86.avx.movmsk.ps.256(<8 x float> %a0) ; <i32> [#uses=1]
   ret i32 %res
 }
@@ -514,20 +495,13 @@ declare i32 @llvm.x86.avx.movmsk.ps.256(<8 x float>) nounwind readnone
 
 
 define i32 @test_x86_avx_ptestc_256(<4 x i64> %a0, <4 x i64> %a1) {
-; AVX-LABEL: test_x86_avx_ptestc_256:
-; AVX:       ## BB#0:
-; AVX-NEXT:    vptest %ymm1, %ymm0 ## encoding: [0xc4,0xe2,0x7d,0x17,0xc1]
-; AVX-NEXT:    sbbl %eax, %eax ## encoding: [0x19,0xc0]
-; AVX-NEXT:    andl $1, %eax ## encoding: [0x83,0xe0,0x01]
-; AVX-NEXT:    vzeroupper ## encoding: [0xc5,0xf8,0x77]
-; AVX-NEXT:    retl ## encoding: [0xc3]
-;
-; AVX512VL-LABEL: test_x86_avx_ptestc_256:
-; AVX512VL:       ## BB#0:
-; AVX512VL-NEXT:    vptest %ymm1, %ymm0 ## encoding: [0xc4,0xe2,0x7d,0x17,0xc1]
-; AVX512VL-NEXT:    sbbl %eax, %eax ## encoding: [0x19,0xc0]
-; AVX512VL-NEXT:    andl $1, %eax ## encoding: [0x83,0xe0,0x01]
-; AVX512VL-NEXT:    retl ## encoding: [0xc3]
+; CHECK-LABEL: test_x86_avx_ptestc_256:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    vptest %ymm1, %ymm0 ## encoding: [0xc4,0xe2,0x7d,0x17,0xc1]
+; CHECK-NEXT:    sbbl %eax, %eax ## encoding: [0x19,0xc0]
+; CHECK-NEXT:    andl $1, %eax ## encoding: [0x83,0xe0,0x01]
+; CHECK-NEXT:    vzeroupper ## encoding: [0xc5,0xf8,0x77]
+; CHECK-NEXT:    retl ## encoding: [0xc3]
   %res = call i32 @llvm.x86.avx.ptestc.256(<4 x i64> %a0, <4 x i64> %a1) ; <i32> [#uses=1]
   ret i32 %res
 }
@@ -535,20 +509,13 @@ declare i32 @llvm.x86.avx.ptestc.256(<4 x i64>, <4 x i64>) nounwind readnone
 
 
 define i32 @test_x86_avx_ptestnzc_256(<4 x i64> %a0, <4 x i64> %a1) {
-; AVX-LABEL: test_x86_avx_ptestnzc_256:
-; AVX:       ## BB#0:
-; AVX-NEXT:    xorl %eax, %eax ## encoding: [0x31,0xc0]
-; AVX-NEXT:    vptest %ymm1, %ymm0 ## encoding: [0xc4,0xe2,0x7d,0x17,0xc1]
-; AVX-NEXT:    seta %al ## encoding: [0x0f,0x97,0xc0]
-; AVX-NEXT:    vzeroupper ## encoding: [0xc5,0xf8,0x77]
-; AVX-NEXT:    retl ## encoding: [0xc3]
-;
-; AVX512VL-LABEL: test_x86_avx_ptestnzc_256:
-; AVX512VL:       ## BB#0:
-; AVX512VL-NEXT:    xorl %eax, %eax ## encoding: [0x31,0xc0]
-; AVX512VL-NEXT:    vptest %ymm1, %ymm0 ## encoding: [0xc4,0xe2,0x7d,0x17,0xc1]
-; AVX512VL-NEXT:    seta %al ## encoding: [0x0f,0x97,0xc0]
-; AVX512VL-NEXT:    retl ## encoding: [0xc3]
+; CHECK-LABEL: test_x86_avx_ptestnzc_256:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    xorl %eax, %eax ## encoding: [0x31,0xc0]
+; CHECK-NEXT:    vptest %ymm1, %ymm0 ## encoding: [0xc4,0xe2,0x7d,0x17,0xc1]
+; CHECK-NEXT:    seta %al ## encoding: [0x0f,0x97,0xc0]
+; CHECK-NEXT:    vzeroupper ## encoding: [0xc5,0xf8,0x77]
+; CHECK-NEXT:    retl ## encoding: [0xc3]
   %res = call i32 @llvm.x86.avx.ptestnzc.256(<4 x i64> %a0, <4 x i64> %a1) ; <i32> [#uses=1]
   ret i32 %res
 }
@@ -556,20 +523,13 @@ declare i32 @llvm.x86.avx.ptestnzc.256(<4 x i64>, <4 x i64>) nounwind readnone
 
 
 define i32 @test_x86_avx_ptestz_256(<4 x i64> %a0, <4 x i64> %a1) {
-; AVX-LABEL: test_x86_avx_ptestz_256:
-; AVX:       ## BB#0:
-; AVX-NEXT:    xorl %eax, %eax ## encoding: [0x31,0xc0]
-; AVX-NEXT:    vptest %ymm1, %ymm0 ## encoding: [0xc4,0xe2,0x7d,0x17,0xc1]
-; AVX-NEXT:    sete %al ## encoding: [0x0f,0x94,0xc0]
-; AVX-NEXT:    vzeroupper ## encoding: [0xc5,0xf8,0x77]
-; AVX-NEXT:    retl ## encoding: [0xc3]
-;
-; AVX512VL-LABEL: test_x86_avx_ptestz_256:
-; AVX512VL:       ## BB#0:
-; AVX512VL-NEXT:    xorl %eax, %eax ## encoding: [0x31,0xc0]
-; AVX512VL-NEXT:    vptest %ymm1, %ymm0 ## encoding: [0xc4,0xe2,0x7d,0x17,0xc1]
-; AVX512VL-NEXT:    sete %al ## encoding: [0x0f,0x94,0xc0]
-; AVX512VL-NEXT:    retl ## encoding: [0xc3]
+; CHECK-LABEL: test_x86_avx_ptestz_256:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    xorl %eax, %eax ## encoding: [0x31,0xc0]
+; CHECK-NEXT:    vptest %ymm1, %ymm0 ## encoding: [0xc4,0xe2,0x7d,0x17,0xc1]
+; CHECK-NEXT:    sete %al ## encoding: [0x0f,0x94,0xc0]
+; CHECK-NEXT:    vzeroupper ## encoding: [0xc5,0xf8,0x77]
+; CHECK-NEXT:    retl ## encoding: [0xc3]
   %res = call i32 @llvm.x86.avx.ptestz.256(<4 x i64> %a0, <4 x i64> %a1) ; <i32> [#uses=1]
   ret i32 %res
 }
@@ -797,20 +757,13 @@ declare i32 @llvm.x86.avx.vtestc.pd(<2 x double>, <2 x double>) nounwind readnon
 
 
 define i32 @test_x86_avx_vtestc_pd_256(<4 x double> %a0, <4 x double> %a1) {
-; AVX-LABEL: test_x86_avx_vtestc_pd_256:
-; AVX:       ## BB#0:
-; AVX-NEXT:    vtestpd %ymm1, %ymm0 ## encoding: [0xc4,0xe2,0x7d,0x0f,0xc1]
-; AVX-NEXT:    sbbl %eax, %eax ## encoding: [0x19,0xc0]
-; AVX-NEXT:    andl $1, %eax ## encoding: [0x83,0xe0,0x01]
-; AVX-NEXT:    vzeroupper ## encoding: [0xc5,0xf8,0x77]
-; AVX-NEXT:    retl ## encoding: [0xc3]
-;
-; AVX512VL-LABEL: test_x86_avx_vtestc_pd_256:
-; AVX512VL:       ## BB#0:
-; AVX512VL-NEXT:    vtestpd %ymm1, %ymm0 ## encoding: [0xc4,0xe2,0x7d,0x0f,0xc1]
-; AVX512VL-NEXT:    sbbl %eax, %eax ## encoding: [0x19,0xc0]
-; AVX512VL-NEXT:    andl $1, %eax ## encoding: [0x83,0xe0,0x01]
-; AVX512VL-NEXT:    retl ## encoding: [0xc3]
+; CHECK-LABEL: test_x86_avx_vtestc_pd_256:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    vtestpd %ymm1, %ymm0 ## encoding: [0xc4,0xe2,0x7d,0x0f,0xc1]
+; CHECK-NEXT:    sbbl %eax, %eax ## encoding: [0x19,0xc0]
+; CHECK-NEXT:    andl $1, %eax ## encoding: [0x83,0xe0,0x01]
+; CHECK-NEXT:    vzeroupper ## encoding: [0xc5,0xf8,0x77]
+; CHECK-NEXT:    retl ## encoding: [0xc3]
   %res = call i32 @llvm.x86.avx.vtestc.pd.256(<4 x double> %a0, <4 x double> %a1) ; <i32> [#uses=1]
   ret i32 %res
 }
@@ -831,20 +784,13 @@ declare i32 @llvm.x86.avx.vtestc.ps(<4 x float>, <4 x float>) nounwind readnone
 
 
 define i32 @test_x86_avx_vtestc_ps_256(<8 x float> %a0, <8 x float> %a1) {
-; AVX-LABEL: test_x86_avx_vtestc_ps_256:
-; AVX:       ## BB#0:
-; AVX-NEXT:    vtestps %ymm1, %ymm0 ## encoding: [0xc4,0xe2,0x7d,0x0e,0xc1]
-; AVX-NEXT:    sbbl %eax, %eax ## encoding: [0x19,0xc0]
-; AVX-NEXT:    andl $1, %eax ## encoding: [0x83,0xe0,0x01]
-; AVX-NEXT:    vzeroupper ## encoding: [0xc5,0xf8,0x77]
-; AVX-NEXT:    retl ## encoding: [0xc3]
-;
-; AVX512VL-LABEL: test_x86_avx_vtestc_ps_256:
-; AVX512VL:       ## BB#0:
-; AVX512VL-NEXT:    vtestps %ymm1, %ymm0 ## encoding: [0xc4,0xe2,0x7d,0x0e,0xc1]
-; AVX512VL-NEXT:    sbbl %eax, %eax ## encoding: [0x19,0xc0]
-; AVX512VL-NEXT:    andl $1, %eax ## encoding: [0x83,0xe0,0x01]
-; AVX512VL-NEXT:    retl ## encoding: [0xc3]
+; CHECK-LABEL: test_x86_avx_vtestc_ps_256:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    vtestps %ymm1, %ymm0 ## encoding: [0xc4,0xe2,0x7d,0x0e,0xc1]
+; CHECK-NEXT:    sbbl %eax, %eax ## encoding: [0x19,0xc0]
+; CHECK-NEXT:    andl $1, %eax ## encoding: [0x83,0xe0,0x01]
+; CHECK-NEXT:    vzeroupper ## encoding: [0xc5,0xf8,0x77]
+; CHECK-NEXT:    retl ## encoding: [0xc3]
   %res = call i32 @llvm.x86.avx.vtestc.ps.256(<8 x float> %a0, <8 x float> %a1) ; <i32> [#uses=1]
   ret i32 %res
 }
@@ -865,20 +811,13 @@ declare i32 @llvm.x86.avx.vtestnzc.pd(<2 x double>, <2 x double>) nounwind readn
 
 
 define i32 @test_x86_avx_vtestnzc_pd_256(<4 x double> %a0, <4 x double> %a1) {
-; AVX-LABEL: test_x86_avx_vtestnzc_pd_256:
-; AVX:       ## BB#0:
-; AVX-NEXT:    xorl %eax, %eax ## encoding: [0x31,0xc0]
-; AVX-NEXT:    vtestpd %ymm1, %ymm0 ## encoding: [0xc4,0xe2,0x7d,0x0f,0xc1]
-; AVX-NEXT:    seta %al ## encoding: [0x0f,0x97,0xc0]
-; AVX-NEXT:    vzeroupper ## encoding: [0xc5,0xf8,0x77]
-; AVX-NEXT:    retl ## encoding: [0xc3]
-;
-; AVX512VL-LABEL: test_x86_avx_vtestnzc_pd_256:
-; AVX512VL:       ## BB#0:
-; AVX512VL-NEXT:    xorl %eax, %eax ## encoding: [0x31,0xc0]
-; AVX512VL-NEXT:    vtestpd %ymm1, %ymm0 ## encoding: [0xc4,0xe2,0x7d,0x0f,0xc1]
-; AVX512VL-NEXT:    seta %al ## encoding: [0x0f,0x97,0xc0]
-; AVX512VL-NEXT:    retl ## encoding: [0xc3]
+; CHECK-LABEL: test_x86_avx_vtestnzc_pd_256:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    xorl %eax, %eax ## encoding: [0x31,0xc0]
+; CHECK-NEXT:    vtestpd %ymm1, %ymm0 ## encoding: [0xc4,0xe2,0x7d,0x0f,0xc1]
+; CHECK-NEXT:    seta %al ## encoding: [0x0f,0x97,0xc0]
+; CHECK-NEXT:    vzeroupper ## encoding: [0xc5,0xf8,0x77]
+; CHECK-NEXT:    retl ## encoding: [0xc3]
   %res = call i32 @llvm.x86.avx.vtestnzc.pd.256(<4 x double> %a0, <4 x double> %a1) ; <i32> [#uses=1]
   ret i32 %res
 }
@@ -899,20 +838,13 @@ declare i32 @llvm.x86.avx.vtestnzc.ps(<4 x float>, <4 x float>) nounwind readnon
 
 
 define i32 @test_x86_avx_vtestnzc_ps_256(<8 x float> %a0, <8 x float> %a1) {
-; AVX-LABEL: test_x86_avx_vtestnzc_ps_256:
-; AVX:       ## BB#0:
-; AVX-NEXT:    xorl %eax, %eax ## encoding: [0x31,0xc0]
-; AVX-NEXT:    vtestps %ymm1, %ymm0 ## encoding: [0xc4,0xe2,0x7d,0x0e,0xc1]
-; AVX-NEXT:    seta %al ## encoding: [0x0f,0x97,0xc0]
-; AVX-NEXT:    vzeroupper ## encoding: [0xc5,0xf8,0x77]
-; AVX-NEXT:    retl ## encoding: [0xc3]
-;
-; AVX512VL-LABEL: test_x86_avx_vtestnzc_ps_256:
-; AVX512VL:       ## BB#0:
-; AVX512VL-NEXT:    xorl %eax, %eax ## encoding: [0x31,0xc0]
-; AVX512VL-NEXT:    vtestps %ymm1, %ymm0 ## encoding: [0xc4,0xe2,0x7d,0x0e,0xc1]
-; AVX512VL-NEXT:    seta %al ## encoding: [0x0f,0x97,0xc0]
-; AVX512VL-NEXT:    retl ## encoding: [0xc3]
+; CHECK-LABEL: test_x86_avx_vtestnzc_ps_256:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    xorl %eax, %eax ## encoding: [0x31,0xc0]
+; CHECK-NEXT:    vtestps %ymm1, %ymm0 ## encoding: [0xc4,0xe2,0x7d,0x0e,0xc1]
+; CHECK-NEXT:    seta %al ## encoding: [0x0f,0x97,0xc0]
+; CHECK-NEXT:    vzeroupper ## encoding: [0xc5,0xf8,0x77]
+; CHECK-NEXT:    retl ## encoding: [0xc3]
   %res = call i32 @llvm.x86.avx.vtestnzc.ps.256(<8 x float> %a0, <8 x float> %a1) ; <i32> [#uses=1]
   ret i32 %res
 }
@@ -933,20 +865,13 @@ declare i32 @llvm.x86.avx.vtestz.pd(<2 x double>, <2 x double>) nounwind readnon
 
 
 define i32 @test_x86_avx_vtestz_pd_256(<4 x double> %a0, <4 x double> %a1) {
-; AVX-LABEL: test_x86_avx_vtestz_pd_256:
-; AVX:       ## BB#0:
-; AVX-NEXT:    xorl %eax, %eax ## encoding: [0x31,0xc0]
-; AVX-NEXT:    vtestpd %ymm1, %ymm0 ## encoding: [0xc4,0xe2,0x7d,0x0f,0xc1]
-; AVX-NEXT:    sete %al ## encoding: [0x0f,0x94,0xc0]
-; AVX-NEXT:    vzeroupper ## encoding: [0xc5,0xf8,0x77]
-; AVX-NEXT:    retl ## encoding: [0xc3]
-;
-; AVX512VL-LABEL: test_x86_avx_vtestz_pd_256:
-; AVX512VL:       ## BB#0:
-; AVX512VL-NEXT:    xorl %eax, %eax ## encoding: [0x31,0xc0]
-; AVX512VL-NEXT:    vtestpd %ymm1, %ymm0 ## encoding: [0xc4,0xe2,0x7d,0x0f,0xc1]
-; AVX512VL-NEXT:    sete %al ## encoding: [0x0f,0x94,0xc0]
-; AVX512VL-NEXT:    retl ## encoding: [0xc3]
+; CHECK-LABEL: test_x86_avx_vtestz_pd_256:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    xorl %eax, %eax ## encoding: [0x31,0xc0]
+; CHECK-NEXT:    vtestpd %ymm1, %ymm0 ## encoding: [0xc4,0xe2,0x7d,0x0f,0xc1]
+; CHECK-NEXT:    sete %al ## encoding: [0x0f,0x94,0xc0]
+; CHECK-NEXT:    vzeroupper ## encoding: [0xc5,0xf8,0x77]
+; CHECK-NEXT:    retl ## encoding: [0xc3]
   %res = call i32 @llvm.x86.avx.vtestz.pd.256(<4 x double> %a0, <4 x double> %a1) ; <i32> [#uses=1]
   ret i32 %res
 }
@@ -967,20 +892,13 @@ declare i32 @llvm.x86.avx.vtestz.ps(<4 x float>, <4 x float>) nounwind readnone
 
 
 define i32 @test_x86_avx_vtestz_ps_256(<8 x float> %a0, <8 x float> %a1) {
-; AVX-LABEL: test_x86_avx_vtestz_ps_256:
-; AVX:       ## BB#0:
-; AVX-NEXT:    xorl %eax, %eax ## encoding: [0x31,0xc0]
-; AVX-NEXT:    vtestps %ymm1, %ymm0 ## encoding: [0xc4,0xe2,0x7d,0x0e,0xc1]
-; AVX-NEXT:    sete %al ## encoding: [0x0f,0x94,0xc0]
-; AVX-NEXT:    vzeroupper ## encoding: [0xc5,0xf8,0x77]
-; AVX-NEXT:    retl ## encoding: [0xc3]
-;
-; AVX512VL-LABEL: test_x86_avx_vtestz_ps_256:
-; AVX512VL:       ## BB#0:
-; AVX512VL-NEXT:    xorl %eax, %eax ## encoding: [0x31,0xc0]
-; AVX512VL-NEXT:    vtestps %ymm1, %ymm0 ## encoding: [0xc4,0xe2,0x7d,0x0e,0xc1]
-; AVX512VL-NEXT:    sete %al ## encoding: [0x0f,0x94,0xc0]
-; AVX512VL-NEXT:    retl ## encoding: [0xc3]
+; CHECK-LABEL: test_x86_avx_vtestz_ps_256:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    xorl %eax, %eax ## encoding: [0x31,0xc0]
+; CHECK-NEXT:    vtestps %ymm1, %ymm0 ## encoding: [0xc4,0xe2,0x7d,0x0e,0xc1]
+; CHECK-NEXT:    sete %al ## encoding: [0x0f,0x94,0xc0]
+; CHECK-NEXT:    vzeroupper ## encoding: [0xc5,0xf8,0x77]
+; CHECK-NEXT:    retl ## encoding: [0xc3]
   %res = call i32 @llvm.x86.avx.vtestz.ps.256(<8 x float> %a0, <8 x float> %a1) ; <i32> [#uses=1]
   ret i32 %res
 }
@@ -1024,6 +942,7 @@ define void @movnt_dq(i8* %p, <2 x i64> %a1) nounwind {
 ; AVX512VL-NEXT:    vpaddq LCPI65_0, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0xd4,0x05,A,A,A,A]
 ; AVX512VL-NEXT:    ## fixup A - offset: 4, value: LCPI65_0, kind: FK_Data_4
 ; AVX512VL-NEXT:    vmovntdq %ymm0, (%eax) ## EVEX TO VEX Compression encoding: [0xc5,0xfd,0xe7,0x00]
+; AVX512VL-NEXT:    vzeroupper ## encoding: [0xc5,0xf8,0x77]
 ; AVX512VL-NEXT:    retl ## encoding: [0xc3]
   %a2 = add <2 x i64> %a1, <i64 1, i64 1>
   %a3 = shufflevector <2 x i64> %a2, <2 x i64> undef, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
@@ -1044,6 +963,7 @@ define void @movnt_ps(i8* %p, <8 x float> %a) nounwind {
 ; AVX512VL:       ## BB#0:
 ; AVX512VL-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
 ; AVX512VL-NEXT:    vmovntps %ymm0, (%eax) ## EVEX TO VEX Compression encoding: [0xc5,0xfc,0x2b,0x00]
+; AVX512VL-NEXT:    vzeroupper ## encoding: [0xc5,0xf8,0x77]
 ; AVX512VL-NEXT:    retl ## encoding: [0xc3]
   tail call void @llvm.x86.avx.movnt.ps.256(i8* %p, <8 x float> %a) nounwind
   ret void
@@ -1067,6 +987,7 @@ define void @movnt_pd(i8* %p, <4 x double> %a1) nounwind {
 ; AVX512VL-NEXT:    vxorpd %ymm1, %ymm1, %ymm1 ## EVEX TO VEX Compression encoding: [0xc5,0xf5,0x57,0xc9]
 ; AVX512VL-NEXT:    vaddpd %ymm1, %ymm0, %ymm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfd,0x58,0xc1]
 ; AVX512VL-NEXT:    vmovntpd %ymm0, (%eax) ## EVEX TO VEX Compression encoding: [0xc5,0xfd,0x2b,0x00]
+; AVX512VL-NEXT:    vzeroupper ## encoding: [0xc5,0xf8,0x77]
 ; AVX512VL-NEXT:    retl ## encoding: [0xc3]
   %a2 = fadd <4 x double> %a1, <double 0x0, double 0x0, double 0x0, double 0x0>
   tail call void @llvm.x86.avx.movnt.pd.256(i8* %p, <4 x double> %a2) nounwind

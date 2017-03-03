@@ -263,6 +263,10 @@ bool isVI(const MCSubtargetInfo &STI);
 /// \p STI otherwise return \p Reg.
 unsigned getMCReg(unsigned Reg, const MCSubtargetInfo &STI);
 
+/// \brief Convert hardware register \p Reg to a pseudo register
+LLVM_READNONE
+unsigned mc2PseudoReg(unsigned Reg);
+
 /// \brief Can this operand also contain immediate values?
 bool isSISrcOperand(const MCInstrDesc &Desc, unsigned OpNo);
 

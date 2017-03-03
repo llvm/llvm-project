@@ -56,11 +56,11 @@ namespace {
 
     // Core algorithm state:
     // BlockState - Each block is either:
-    //   - PASS_THROUGH: There are neither YMM dirtying instructions nor
+    //   - PASS_THROUGH: There are neither YMM/ZMM dirtying instructions nor
     //                   vzeroupper instructions in this block.
     //   - EXITS_CLEAN: There is (or will be) a vzeroupper instruction in this
-    //                  block that will ensure that YMM is clean on exit.
-    //   - EXITS_DIRTY: An instruction in the block dirties YMM and no
+    //                  block that will ensure that YMM/ZMM is clean on exit.
+    //   - EXITS_DIRTY: An instruction in the block dirties YMM/ZMM and no
     //                  subsequent vzeroupper in the block clears it.
     //
     // AddedToDirtySuccessors - This flag is raised when a block is added to the
@@ -106,51 +106,54 @@ const char* VZeroUpperInserter::getBlockExitStateName(BlockExitState ST) {
   llvm_unreachable("Invalid block exit state.");
 }
 
-static bool isYmmReg(unsigned Reg) {
-  return (Reg >= X86::YMM0 && Reg <= X86::YMM15);
+/// VZEROUPPER cleans state that is related to Y/ZMM0-15 only.
+/// Thus, there is no need to check for Y/ZMM16 and above.
+static bool isYmmOrZmmReg(unsigned Reg) {
+  return (Reg >= X86::YMM0 && Reg <= X86::YMM15) ||
+         (Reg >= X86::ZMM0 && Reg <= X86::ZMM15);
 }
 
-static bool checkFnHasLiveInYmm(MachineRegisterInfo &MRI) {
+static bool checkFnHasLiveInYmmOrZmm(MachineRegisterInfo &MRI) {
   for (MachineRegisterInfo::livein_iterator I = MRI.livein_begin(),
        E = MRI.livein_end(); I != E; ++I)
-    if (isYmmReg(I->first))
+    if (isYmmOrZmmReg(I->first))
       return true;
 
   return false;
 }
 
-static bool clobbersAllYmmRegs(const MachineOperand &MO) {
+static bool clobbersAllYmmAndZmmRegs(const MachineOperand &MO) {
   for (unsigned reg = X86::YMM0; reg <= X86::YMM15; ++reg) {
+    if (!MO.clobbersPhysReg(reg))
+      return false;
+  }
+  for (unsigned reg = X86::ZMM0; reg <= X86::ZMM15; ++reg) {
     if (!MO.clobbersPhysReg(reg))
       return false;
   }
   return true;
 }
 
-static bool hasYmmReg(MachineInstr &MI) {
+static bool hasYmmOrZmmReg(MachineInstr &MI) {
   for (const MachineOperand &MO : MI.operands()) {
-    if (MI.isCall() && MO.isRegMask() && !clobbersAllYmmRegs(MO))
+    if (MI.isCall() && MO.isRegMask() && !clobbersAllYmmAndZmmRegs(MO))
       return true;
     if (!MO.isReg())
       continue;
     if (MO.isDebug())
       continue;
-    if (isYmmReg(MO.getReg()))
+    if (isYmmOrZmmReg(MO.getReg()))
       return true;
   }
   return false;
 }
 
-/// Check if any YMM register will be clobbered by this instruction.
-static bool callClobbersAnyYmmReg(MachineInstr &MI) {
+/// Check if given call instruction has a RegMask operand.
+static bool callHasRegMask(MachineInstr &MI) {
   assert(MI.isCall() && "Can only be called on call instructions.");
   for (const MachineOperand &MO : MI.operands()) {
-    if (!MO.isRegMask())
-      continue;
-    for (unsigned reg = X86::YMM0; reg <= X86::YMM15; ++reg) {
-      if (MO.clobbersPhysReg(reg))
-        return true;
-    }
+    if (MO.isRegMask())
+      return true;
   }
   return false;
 }
@@ -175,17 +178,20 @@ void VZeroUpperInserter::addDirtySuccessor(MachineBasicBlock &MBB) {
 /// Loop over all of the instructions in the basic block, inserting vzeroupper
 /// instructions before function calls.
 void VZeroUpperInserter::processBasicBlock(MachineBasicBlock &MBB) {
-
   // Start by assuming that the block is PASS_THROUGH which implies no unguarded
   // calls.
   BlockExitState CurState = PASS_THROUGH;
   BlockStates[MBB.getNumber()].FirstUnguardedCall = MBB.end();
 
   for (MachineInstr &MI : MBB) {
+    bool IsCall = MI.isCall();
+    bool IsReturn = MI.isReturn();
+    bool IsControlFlow = IsCall || IsReturn;
+
     // No need for vzeroupper before iret in interrupt handler function,
-    // epilogue will restore YMM registers if needed.
-    bool IsReturnFromX86INTR = IsX86INTR && MI.isReturn();
-    bool IsControlFlow = MI.isCall() || MI.isReturn();
+    // epilogue will restore YMM/ZMM registers if needed.
+    if (IsX86INTR && IsReturn)
+      continue;
 
     // An existing VZERO* instruction resets the state.
     if (MI.getOpcode() == X86::VZEROALL || MI.getOpcode() == X86::VZEROUPPER) {
@@ -194,30 +200,30 @@ void VZeroUpperInserter::processBasicBlock(MachineBasicBlock &MBB) {
     }
 
     // Shortcut: don't need to check regular instructions in dirty state.
-    if ((!IsControlFlow || IsReturnFromX86INTR) && CurState == EXITS_DIRTY)
+    if (!IsControlFlow && CurState == EXITS_DIRTY)
       continue;
 
-    if (hasYmmReg(MI)) {
-      // We found a ymm-using instruction; this could be an AVX instruction,
-      // or it could be control flow.
+    if (hasYmmOrZmmReg(MI)) {
+      // We found a ymm/zmm-using instruction; this could be an AVX/AVX512
+      // instruction, or it could be control flow.
       CurState = EXITS_DIRTY;
       continue;
     }
 
     // Check for control-flow out of the current function (which might
     // indirectly execute SSE instructions).
-    if (!IsControlFlow || IsReturnFromX86INTR)
+    if (!IsControlFlow)
       continue;
 
-    // If the call won't clobber any YMM register, skip it as well. It usually
-    // happens on helper function calls (such as '_chkstk', '_ftol2') where
-    // standard calling convention is not used (RegMask is not used to mark
-    // register clobbered and register usage (def/imp-def/use) is well-defined
-    // and explicitly specified.
-    if (MI.isCall() && !callClobbersAnyYmmReg(MI))
+    // If the call has no RegMask, skip it as well. It usually happens on
+    // helper function calls (such as '_chkstk', '_ftol2') where standard
+    // calling convention is not used (RegMask is not used to mark register
+    // clobbered and register usage (def/imp-def/use) is well-defined and
+    // explicitly specified.
+    if (IsCall && !callHasRegMask(MI))
       continue;
 
-    // The VZEROUPPER instruction resets the upper 128 bits of all AVX
+    // The VZEROUPPER instruction resets the upper 128 bits of YMM0-YMM15
     // registers. In addition, the processor changes back to Clean state, after
     // which execution of SSE instructions or AVX instructions has no transition
     // penalty. Add the VZEROUPPER instruction before any function call/return
@@ -226,7 +232,7 @@ void VZeroUpperInserter::processBasicBlock(MachineBasicBlock &MBB) {
     // predecessor block.
     if (CurState == EXITS_DIRTY) {
       // After the inserted VZEROUPPER the state becomes clean again, but
-      // other YMM may appear before other subsequent calls or even before
+      // other YMM/ZMM may appear before other subsequent calls or even before
       // the end of the BB.
       insertVZeroUpper(MI, MBB);
       CurState = EXITS_CLEAN;
@@ -257,30 +263,32 @@ void VZeroUpperInserter::processBasicBlock(MachineBasicBlock &MBB) {
 /// function calls.
 bool VZeroUpperInserter::runOnMachineFunction(MachineFunction &MF) {
   const X86Subtarget &ST = MF.getSubtarget<X86Subtarget>();
-  if (!ST.hasAVX() || ST.hasAVX512() || ST.hasFastPartialYMMWrite())
+  if (!ST.hasAVX() || ST.hasFastPartialYMMorZMMWrite())
     return false;
   TII = ST.getInstrInfo();
   MachineRegisterInfo &MRI = MF.getRegInfo();
   EverMadeChange = false;
   IsX86INTR = MF.getFunction()->getCallingConv() == CallingConv::X86_INTR;
 
-  bool FnHasLiveInYmm = checkFnHasLiveInYmm(MRI);
+  bool FnHasLiveInYmmOrZmm = checkFnHasLiveInYmmOrZmm(MRI);
 
-  // Fast check: if the function doesn't use any ymm registers, we don't need
-  // to insert any VZEROUPPER instructions.  This is constant-time, so it is
-  // cheap in the common case of no ymm use.
-  bool YMMUsed = FnHasLiveInYmm;
-  if (!YMMUsed) {
-    const TargetRegisterClass *RC = &X86::VR256RegClass;
-    for (TargetRegisterClass::iterator i = RC->begin(), e = RC->end(); i != e;
-         i++) {
-      if (!MRI.reg_nodbg_empty(*i)) {
-        YMMUsed = true;
-        break;
+  // Fast check: if the function doesn't use any ymm/zmm registers, we don't
+  // need to insert any VZEROUPPER instructions.  This is constant-time, so it
+  // is cheap in the common case of no ymm/zmm use.
+  bool YmmOrZmmUsed = FnHasLiveInYmmOrZmm;
+  const TargetRegisterClass *RCs[2] = {&X86::VR256RegClass, &X86::VR512RegClass};
+  for (auto *RC : RCs) {
+    if (!YmmOrZmmUsed) {
+      for (TargetRegisterClass::iterator i = RC->begin(), e = RC->end(); i != e;
+           i++) {
+        if (!MRI.reg_nodbg_empty(*i)) {
+          YmmOrZmmUsed = true;
+          break;
+        }
       }
     }
   }
-  if (!YMMUsed) {
+  if (!YmmOrZmmUsed) {
     return false;
   }
 
@@ -294,9 +302,9 @@ bool VZeroUpperInserter::runOnMachineFunction(MachineFunction &MF) {
   for (MachineBasicBlock &MBB : MF)
     processBasicBlock(MBB);
 
-  // If any YMM regs are live-in to this function, add the entry block to the
-  // DirtySuccessors list
-  if (FnHasLiveInYmm)
+  // If any YMM/ZMM regs are live-in to this function, add the entry block to
+  // the DirtySuccessors list
+  if (FnHasLiveInYmmOrZmm)
     addDirtySuccessor(MF.front());
 
   // Re-visit all blocks that are successors of EXITS_DIRTY blocks. Add

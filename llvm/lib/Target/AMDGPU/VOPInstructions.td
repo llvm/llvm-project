@@ -136,6 +136,8 @@ class VOP3_Real <VOP3_Pseudo ps, int EncodingFamily> :
   let Constraints        = ps.Constraints;
   let DisableEncoding    = ps.DisableEncoding;
   let TSFlags            = ps.TSFlags;
+  let UseNamedOperandTable = ps.UseNamedOperandTable;
+  let Uses                 = ps.Uses;
 }
 
 // XXX - Is there any reason to distingusih this from regular VOP3

@@ -207,8 +207,8 @@ protected:
   bool UseLeaForSP;
 
   /// True if there is no performance penalty to writing only the lower parts
-  /// of a YMM register without clearing the upper part.
-  bool HasFastPartialYMMWrite;
+  /// of a YMM or ZMM register without clearing the upper part.
+  bool HasFastPartialYMMorZMMWrite;
 
   /// True if hardware SQRTSS instruction is at least as fast (latency) as
   /// RSQRTSS followed by a Newton-Raphson iteration.
@@ -465,7 +465,9 @@ public:
   bool hasSSEUnalignedMem() const { return HasSSEUnalignedMem; }
   bool hasCmpxchg16b() const { return HasCmpxchg16b; }
   bool useLeaForSP() const { return UseLeaForSP; }
-  bool hasFastPartialYMMWrite() const { return HasFastPartialYMMWrite; }
+  bool hasFastPartialYMMorZMMWrite() const {
+    return HasFastPartialYMMorZMMWrite;
+  }
   bool hasFastScalarFSQRT() const { return HasFastScalarFSQRT; }
   bool hasFastVectorFSQRT() const { return HasFastVectorFSQRT; }
   bool hasFastLZCNT() const { return HasFastLZCNT; }
