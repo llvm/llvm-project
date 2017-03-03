@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=osx.cocoa.NonNilReturnValue,debug.ExprInspection -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=osx.cocoa.NonNilReturnValue,debug.ExprInspection -verify %s
 
 typedef unsigned int NSUInteger;
 typedef signed char BOOL;

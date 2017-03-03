@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=core,unix.Malloc,debug.ExprInspection,cplusplus -analyzer-config c++-inlining=destructors,cfg-temporary-dtors=true -Wno-null-dereference -Wno-inaccessible-base -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,unix.Malloc,debug.ExprInspection,cplusplus -analyzer-config c++-inlining=destructors,cfg-temporary-dtors=true -Wno-null-dereference -Wno-inaccessible-base -verify %s
 
 void clang_analyzer_eval(bool);
 void clang_analyzer_checkInlined(bool);

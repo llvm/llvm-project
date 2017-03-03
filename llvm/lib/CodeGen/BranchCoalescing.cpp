@@ -134,9 +134,9 @@ namespace {
 
 class BranchCoalescing : public MachineFunctionPass {
   struct CoalescingCandidateInfo {
-    MachineBasicBlock *BranchBlock;       //< Block containing the branch
-    MachineBasicBlock *BranchTargetBlock; //< Block branched to
-    MachineBasicBlock *FallThroughBlock;  //< Fall-through if branch not taken
+    MachineBasicBlock *BranchBlock;       // Block containing the branch
+    MachineBasicBlock *BranchTargetBlock; // Block branched to
+    MachineBasicBlock *FallThroughBlock;  // Fall-through if branch not taken
     SmallVector<MachineOperand, 4> Cond;
     bool MustMoveDown;
     bool MustMoveUp;

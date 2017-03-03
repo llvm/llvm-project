@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -analyze -analyzer-output=text -std=c++11 -analyzer-checker=alpha.clone.CloneChecker -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-output=text -std=c++11 -analyzer-checker=alpha.clone.CloneChecker -verify %s
 
 void log();
 

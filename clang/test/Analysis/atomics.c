@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=core,debug.ExprInspection -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -verify %s
 
 // Tests for c11 atomics. Many of these tests currently yield unknown
 // because we don't fully model the atomics and instead imprecisely

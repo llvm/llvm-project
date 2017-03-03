@@ -668,10 +668,10 @@ define <16 x i16> @merge_16i16_i16_0uu3zzuuuuuzCuEF_volatile(i16* %ptr) nounwind
 ; AVX1:       # BB#0:
 ; AVX1-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; AVX1-NEXT:    vpinsrw $0, (%rdi), %xmm0, %xmm1
+; AVX1-NEXT:    vpinsrw $3, 6(%rdi), %xmm1, %xmm1
 ; AVX1-NEXT:    vpinsrw $4, 24(%rdi), %xmm0, %xmm0
 ; AVX1-NEXT:    vpinsrw $6, 28(%rdi), %xmm0, %xmm0
 ; AVX1-NEXT:    vpinsrw $7, 30(%rdi), %xmm0, %xmm0
-; AVX1-NEXT:    vpinsrw $3, 6(%rdi), %xmm1, %xmm1
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; AVX1-NEXT:    retq
 ;
@@ -679,10 +679,10 @@ define <16 x i16> @merge_16i16_i16_0uu3zzuuuuuzCuEF_volatile(i16* %ptr) nounwind
 ; AVX2:       # BB#0:
 ; AVX2-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; AVX2-NEXT:    vpinsrw $0, (%rdi), %xmm0, %xmm1
+; AVX2-NEXT:    vpinsrw $3, 6(%rdi), %xmm1, %xmm1
 ; AVX2-NEXT:    vpinsrw $4, 24(%rdi), %xmm0, %xmm0
 ; AVX2-NEXT:    vpinsrw $6, 28(%rdi), %xmm0, %xmm0
 ; AVX2-NEXT:    vpinsrw $7, 30(%rdi), %xmm0, %xmm0
-; AVX2-NEXT:    vpinsrw $3, 6(%rdi), %xmm1, %xmm1
 ; AVX2-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
 ; AVX2-NEXT:    retq
 ;
@@ -690,10 +690,10 @@ define <16 x i16> @merge_16i16_i16_0uu3zzuuuuuzCuEF_volatile(i16* %ptr) nounwind
 ; AVX512F:       # BB#0:
 ; AVX512F-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; AVX512F-NEXT:    vpinsrw $0, (%rdi), %xmm0, %xmm1
+; AVX512F-NEXT:    vpinsrw $3, 6(%rdi), %xmm1, %xmm1
 ; AVX512F-NEXT:    vpinsrw $4, 24(%rdi), %xmm0, %xmm0
 ; AVX512F-NEXT:    vpinsrw $6, 28(%rdi), %xmm0, %xmm0
 ; AVX512F-NEXT:    vpinsrw $7, 30(%rdi), %xmm0, %xmm0
-; AVX512F-NEXT:    vpinsrw $3, 6(%rdi), %xmm1, %xmm1
 ; AVX512F-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
 ; AVX512F-NEXT:    retq
 ;
@@ -702,10 +702,10 @@ define <16 x i16> @merge_16i16_i16_0uu3zzuuuuuzCuEF_volatile(i16* %ptr) nounwind
 ; X32-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-AVX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; X32-AVX-NEXT:    vpinsrw $0, (%eax), %xmm0, %xmm1
+; X32-AVX-NEXT:    vpinsrw $3, 6(%eax), %xmm1, %xmm1
 ; X32-AVX-NEXT:    vpinsrw $4, 24(%eax), %xmm0, %xmm0
 ; X32-AVX-NEXT:    vpinsrw $6, 28(%eax), %xmm0, %xmm0
 ; X32-AVX-NEXT:    vpinsrw $7, 30(%eax), %xmm0, %xmm0
-; X32-AVX-NEXT:    vpinsrw $3, 6(%eax), %xmm1, %xmm1
 ; X32-AVX-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; X32-AVX-NEXT:    retl
   %ptr0 = getelementptr inbounds i16, i16* %ptr, i64 0

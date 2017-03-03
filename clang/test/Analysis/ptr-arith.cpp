@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -Wno-unused-value -std=c++14 -analyze -analyzer-checker=core,debug.ExprInspection,alpha.core.PointerArithm -verify %s
+// RUN: %clang_analyze_cc1 -Wno-unused-value -std=c++14 -analyzer-checker=core,debug.ExprInspection,alpha.core.PointerArithm -verify %s
 struct X {
   int *p;
   int zero;

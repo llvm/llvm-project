@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=core,unix.Malloc,unix.MismatchedDeallocator -analyzer-store region -std=c++11 -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,unix.Malloc,unix.MismatchedDeallocator -analyzer-store region -std=c++11 -verify %s
 // expected-no-diagnostics
 
 typedef __typeof(sizeof(int)) size_t;

@@ -107,7 +107,7 @@
 int main()
 {
     FILE* fp = 0;
-    fpos_t fpos = {};
+    fpos_t fpos = fpos_t();
     size_t s = 0;
     char* cp = 0;
     char arr[] = {'a', 'b'};

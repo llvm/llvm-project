@@ -157,8 +157,9 @@ define void @reorder_global_load_local_store_global_load(i32 addrspace(1)* %out,
 
 ; FUNC-LABEL: @reorder_local_offsets
 ; CI: ds_read2_b32 {{v\[[0-9]+:[0-9]+\]}}, {{v[0-9]+}} offset0:100 offset1:102
-; CI-DAG: ds_write2_b32 {{v[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} offset0:3 offset1:100
-; CI-DAG: ds_write_b32 {{v[0-9]+}}, {{v[0-9]+}} offset:408
+; CI: ds_write2_b32 {{v[0-9]+}}, {{v[0-9]+}}, {{v[0-9]+}} offset0:3 offset1:100
+; CI: ds_read_b32 {{v[0-9]+}}, {{v[0-9]+}} offset:12
+; CI: ds_write_b32 {{v[0-9]+}}, {{v[0-9]+}} offset:408
 ; CI: buffer_store_dword
 ; CI: s_endpgm
 define void @reorder_local_offsets(i32 addrspace(1)* nocapture %out, i32 addrspace(1)* noalias nocapture readnone %gptr, i32 addrspace(3)* noalias nocapture %ptr0) #0 {
@@ -180,12 +181,12 @@ define void @reorder_local_offsets(i32 addrspace(1)* nocapture %out, i32 addrspa
 }
 
 ; FUNC-LABEL: @reorder_global_offsets
-; CI-DAG: buffer_load_dword {{v[0-9]+}}, off, {{s\[[0-9]+:[0-9]+\]}}, 0 offset:400
-; CI-DAG: buffer_load_dword {{v[0-9]+}}, off, {{s\[[0-9]+:[0-9]+\]}}, 0 offset:408
-; CI-DAG: buffer_store_dword {{v[0-9]+}}, off, {{s\[[0-9]+:[0-9]+\]}}, 0 offset:12
-; CI-DAG: buffer_store_dword {{v[0-9]+}}, off, {{s\[[0-9]+:[0-9]+\]}}, 0 offset:400
-; CI-DAG: buffer_store_dword {{v[0-9]+}}, off, {{s\[[0-9]+:[0-9]+\]}}, 0 offset:408
-; CI: buffer_store_dword
+; CI: buffer_load_dword {{v[0-9]+}}, off, {{s\[[0-9]+:[0-9]+\]}}, 0 offset:400
+; CI: buffer_load_dword {{v[0-9]+}}, off, {{s\[[0-9]+:[0-9]+\]}}, 0 offset:408
+; CI: buffer_store_dword {{v[0-9]+}}, off, {{s\[[0-9]+:[0-9]+\]}}, 0 offset:12
+; CI: buffer_store_dword {{v[0-9]+}}, off, {{s\[[0-9]+:[0-9]+\]}}, 0 offset:400
+; CI: buffer_store_dword {{v[0-9]+}}, off, {{s\[[0-9]+:[0-9]+\]}}, 0 offset:408
+; CI: buffer_load_dword {{v[0-9]+}}, off, {{s\[[0-9]+:[0-9]+\]}}, 0 offset:12
 ; CI: s_endpgm
 define void @reorder_global_offsets(i32 addrspace(1)* nocapture %out, i32 addrspace(1)* noalias nocapture readnone %gptr, i32 addrspace(1)* noalias nocapture %ptr0) #0 {
   %ptr1 = getelementptr inbounds i32, i32 addrspace(1)* %ptr0, i32 3

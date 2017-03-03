@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=core,unix.Malloc -Wno-incompatible-library-redeclaration -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,unix.Malloc -Wno-incompatible-library-redeclaration -verify %s
 
 // Various tests to make the the analyzer is robust against custom
 // redeclarations of memory routines.

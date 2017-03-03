@@ -1,6 +1,7 @@
-; RUN: llc -march=x86-64 < %s
+; RUN: llc -march=x86-64 < %s | FileCheck %s
 
-; This testcase used to crash. See PR29132.
+; Check for a sane output. This testcase used to crash. See PR29132.
+; CHECK: leal -1
 
 target triple = "x86_64-unknown-linux-gnu"
 

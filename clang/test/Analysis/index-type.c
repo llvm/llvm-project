@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -analyze -analyzer-checker=core,alpha.security.ArrayBoundV2 -verify %s
-// RUN: %clang_cc1 -triple i386-apple-darwin10 -analyze -analyzer-checker=core,alpha.security.ArrayBoundV2 -DM32 -verify %s
+// RUN: %clang_analyze_cc1 -triple x86_64-apple-darwin10 -analyzer-checker=core,alpha.security.ArrayBoundV2 -verify %s
+// RUN: %clang_analyze_cc1 -triple i386-apple-darwin10 -analyzer-checker=core,alpha.security.ArrayBoundV2 -DM32 -verify %s
 // expected-no-diagnostics
 
 #define UINT_MAX (~0u)

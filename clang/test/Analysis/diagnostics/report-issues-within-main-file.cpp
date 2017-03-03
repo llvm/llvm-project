@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=core,unix -analyzer-output=plist-multi-file -analyzer-config report-in-main-source-file=true -analyzer-config path-diagnostics-alternate=false %s -o %t.plist
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,unix -analyzer-output=plist-multi-file -analyzer-config report-in-main-source-file=true -analyzer-config path-diagnostics-alternate=false %s -o %t.plist
 // RUN: FileCheck --input-file=%t.plist %s
 #include "Inputs/include/report-issues-within-main-file.h"
 

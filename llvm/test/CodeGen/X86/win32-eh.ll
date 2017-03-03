@@ -27,26 +27,23 @@ catch:
 
 ; CHECK-LABEL: _use_except_handler3:
 ; CHECK: pushl %ebp
-; CHECK-NEXT: movl %esp, %ebp
-; CHECK-NEXT: pushl %ebx
-; CHECK-NEXT: pushl %edi
-; CHECK-NEXT: pushl %esi
-; CHECK-NEXT: subl ${{[0-9]+}}, %esp
-; CHECK-NEXT: movl %esp, -36(%ebp)
-; CHECK-NEXT: movl $-1, -16(%ebp)
-; CHECK-NEXT: movl $L__ehtable$use_except_handler3, -20(%ebp)
-; CHECK-NEXT: leal -28(%ebp), %[[node:[^ ,]*]]
-; CHECK-NEXT: movl $__except_handler3, -24(%ebp)
-; CHECK-NEXT: movl %fs:0, %[[next:[^ ,]*]]
-; CHECK-NEXT: movl %[[next]], -28(%ebp)
-; CHECK-NEXT: movl %[[node]], %fs:0
-; CHECK-NEXT: movl $0, -16(%ebp)
-; CHECK-NEXT: calll _may_throw_or_crash
-
+; CHECK: movl %esp, %ebp
+; CHECK: pushl %ebx
+; CHECK: pushl %edi
+; CHECK: pushl %esi
+; CHECK: subl ${{[0-9]+}}, %esp
+; CHECK: movl $-1, -16(%ebp)
+; CHECK: movl $L__ehtable$use_except_handler3, -20(%ebp)
+; CHECK: leal -28(%ebp), %[[node:[^ ,]*]]
+; CHECK: movl $__except_handler3, -24(%ebp)
+; CHECK: movl %fs:0, %[[next:[^ ,]*]]
+; CHECK: movl %[[next]], -28(%ebp)
+; CHECK: movl %[[node]], %fs:0
+; CHECK: calll _may_throw_or_crash
 ; CHECK: movl -28(%ebp), %[[next:[^ ,]*]]
-; CHECK-NEXT: movl %[[next]], %fs:0
+; CHECK: movl %[[next]], %fs:0
 ; CHECK: retl
-; CHECK-NEXT: LBB1_2: # %catch{{$}}
+; CHECK: LBB1_2: # %catch{{$}}
 
 ; CHECK: .section .xdata,"dr"
 ; CHECK-LABEL: L__ehtable$use_except_handler3:
@@ -69,37 +66,23 @@ catch:
 
 ; CHECK-LABEL: _use_except_handler4:
 ; CHECK: pushl %ebp
-; CHECK-NEXT: movl %esp, %ebp
-; CHECK-NEXT: pushl %ebx
-; CHECK-NEXT: pushl %edi
-; CHECK-NEXT: pushl %esi
-; CHECK-NEXT: subl ${{[0-9]+}}, %esp
-; CHECK-NEXT: movl %ebp, %eax
-; CHECK-NEXT: movl %esp, -36(%ebp)
-; CHECK-NEXT: movl $-2, -16(%ebp)
-; CHECK-NEXT: movl $L__ehtable$use_except_handler4, %[[lsda:[^ ,]*]]
-; CHECK-NEXT: movl ___security_cookie, %[[seccookie:[^ ,]*]]
-; CHECK-NEXT: xorl %[[seccookie]], %[[lsda]]
-; CHECK-NEXT: movl %[[lsda]], -20(%ebp)
-; CHECK-NEXT: xorl %[[seccookie]], %[[tmp1:[^ ,]*]]
-; CHECK-NEXT: movl %[[tmp1]], -40(%ebp)
-; CHECK-NEXT: leal -28(%ebp), %[[node:[^ ,]*]]
-; CHECK-NEXT: movl $__except_handler4, -24(%ebp)
-; CHECK-NEXT: movl %fs:0, %[[next:[^ ,]*]]
-; CHECK-NEXT: movl %[[next]], -28(%ebp)
-; CHECK-NEXT: movl %[[node]], %fs:0
-; CHECK-NEXT: movl $0, -16(%ebp)
-; CHECK-NEXT: calll _may_throw_or_crash
-
+; CHECK: movl %esp, %ebp
+; CHECK: subl ${{[0-9]+}}, %esp
+; CHECK: movl %esp, -36(%ebp)
+; CHECK: movl $-2, -16(%ebp)
+; CHECK: movl $L__ehtable$use_except_handler4, %[[lsda:[^ ,]*]]
+; CHECK: xorl ___security_cookie, %[[lsda]]
+; CHECK: movl %[[lsda]], -20(%ebp)
+; CHECK: leal -28(%ebp), %[[node:[^ ,]*]]
+; CHECK: movl $__except_handler4, -24(%ebp)
+; CHECK: movl %fs:0, %[[next:[^ ,]*]]
+; CHECK: movl %[[next]], -28(%ebp)
+; CHECK: movl %[[node]], %fs:0
+; CHECK: calll _may_throw_or_crash
 ; CHECK: movl -28(%ebp), %[[next:[^ ,]*]]
-; CHECK-NEXT: movl %[[next]], %fs:0
-; CHECK-NEXT: addl $28, %esp
-; CHECK-NEXT: popl %esi
-; CHECK-NEXT: popl %edi
-; CHECK-NEXT: popl %ebx
-; CHECK-NEXT: popl %ebp
-; CHECK-NEXT: retl
-; CHECK-NEXT: LBB2_2: # %catch{{$}}
+; CHECK: movl %[[next]], %fs:0
+; CHECK: retl
+; CHECK: LBB2_2: # %catch{{$}}
 
 ; CHECK: .section .xdata,"dr"
 ; CHECK-LABEL: L__ehtable$use_except_handler4:
@@ -126,33 +109,26 @@ catch:
 
 ; CHECK-LABEL: _use_except_handler4_ssp:
 ; CHECK: pushl %ebp
-; CHECK-NEXT: movl %esp, %ebp
-; CHECK-NEXT: pushl %ebx
-; CHECK-NEXT: pushl %edi
-; CHECK-NEXT: pushl %esi
-; CHECK-NEXT: subl ${{[0-9]+}}, %esp
-; CHECK-NEXT: movl %ebp, %[[ehguard:[^ ,]*]]
-; CHECK-NEXT: movl %esp, -36(%ebp)
-; CHECK-NEXT: movl $-2, -16(%ebp)
-; CHECK-NEXT: movl $L__ehtable$use_except_handler4_ssp, %[[lsda:[^ ,]*]]
-; CHECK-NEXT: movl ___security_cookie, %[[seccookie:[^ ,]*]]
-; CHECK-NEXT: xorl %[[seccookie]], %[[lsda]]
-; CHECK-NEXT: movl %[[lsda]], -20(%ebp)
-; CHECK-NEXT: xorl %[[seccookie]], %[[ehguard]]
-; CHECK-NEXT: movl %[[ehguard]], -40(%ebp)
-; CHECK-NEXT: leal -28(%ebp), %[[node:[^ ,]*]]
-; CHECK-NEXT: movl $__except_handler4, -24(%ebp)
-; CHECK-NEXT: movl %fs:0, %[[next:[^ ,]*]]
-; CHECK-NEXT: movl %[[next]], -28(%ebp)
-; CHECK-NEXT: movl %[[node]], %fs:0
-; CHECK-NEXT: movl $0, -16(%ebp)
-; CHECK-NEXT: calll _may_throw_or_crash
+; CHECK: movl %esp, %ebp
+; CHECK: subl ${{[0-9]+}}, %esp
+; CHECK: movl %ebp, %[[ehguard:[^ ,]*]]
+; CHECK: movl %esp, -36(%ebp)
+; CHECK: movl $-2, -16(%ebp)
+; CHECK: movl $L__ehtable$use_except_handler4_ssp, %[[lsda:[^ ,]*]]
+; CHECK: xorl ___security_cookie, %[[lsda]]
+; CHECK: movl %[[lsda]], -20(%ebp)
+; CHECK: xorl ___security_cookie, %[[ehguard]]
+; CHECK: movl %[[ehguard]], -40(%ebp)
+; CHECK: leal -28(%ebp), %[[node:[^ ,]*]]
+; CHECK: movl $__except_handler4, -24(%ebp)
+; CHECK: movl %fs:0, %[[next:[^ ,]*]]
+; CHECK: movl %[[next]], -28(%ebp)
+; CHECK: movl %[[node]], %fs:0
+; CHECK: calll _may_throw_or_crash
 ; CHECK: movl -28(%ebp), %[[next:[^ ,]*]]
-; CHECK-NEXT: movl %[[next]], %fs:0   
+; CHECK: movl %[[next]], %fs:0   
 ; CHECK: retl
-; CHECK-NEXT: [[catch:[^ ,]*]]: # %catch{{$}}
-
-
+; CHECK: [[catch:[^ ,]*]]: # %catch{{$}}
 
 ; CHECK: .section .xdata,"dr"
 ; CHECK-LABEL: L__ehtable$use_except_handler4_ssp:
@@ -179,26 +155,23 @@ catch:
 
 ; CHECK-LABEL: _use_CxxFrameHandler3:
 ; CHECK: pushl %ebp
-; CHECK-NEXT: movl %esp, %ebp
-; CHECK-NEXT: pushl %ebx
-; CHECK-NEXT: pushl %edi
-; CHECK-NEXT: pushl %esi
-; CHECK-NEXT: subl ${{[0-9]+}}, %esp
-; CHECK-NEXT: movl %esp, -28(%ebp)
-; CHECK-NEXT: movl $-1, -16(%ebp)
-; CHECK-NEXT: leal -24(%ebp), %[[node:[^ ,]*]]
-; CHECK-NEXT: movl $___ehhandler$use_CxxFrameHandler3, -20(%ebp)
-; CHECK-NEXT: movl %fs:0, %[[next:[^ ,]*]]
-; CHECK-NEXT: movl %[[next]], -24(%ebp)
-; CHECK-NEXT: movl %[[node]], %fs:0
-; CHECK-NEXT: movl $0, -16(%ebp)
-; CHECK-NEXT: calll _may_throw_or_crash
+; CHECK: movl %esp, %ebp
+; CHECK: subl ${{[0-9]+}}, %esp
+; CHECK: movl %esp, -28(%ebp)
+; CHECK: movl $-1, -16(%ebp)
+; CHECK: leal -24(%ebp), %[[node:[^ ,]*]]
+; CHECK: movl $___ehhandler$use_CxxFrameHandler3, -20(%ebp)
+; CHECK: movl %fs:0, %[[next:[^ ,]*]]
+; CHECK: movl %[[next]], -24(%ebp)
+; CHECK: movl %[[node]], %fs:0
+; CHECK: movl $0, -16(%ebp)
+; CHECK: calll _may_throw_or_crash
 ; CHECK: movl -24(%ebp), %[[next:[^ ,]*]]
-; CHECK-NEXT: movl %[[next]], %fs:0
+; CHECK: movl %[[next]], %fs:0
 ; CHECK: retl
 
 ; CHECK: .section .xdata,"dr"
-; CHECK-NEXT: .p2align 2
+; CHECK: .p2align 2
 ; CHECK-LABEL: L__ehtable$use_CxxFrameHandler3:
 ; CHECK-NEXT:  .long   429065506
 ; CHECK-NEXT:  .long   2
@@ -212,8 +185,8 @@ catch:
 
 ; CHECK-LABEL: ___ehhandler$use_CxxFrameHandler3:
 ; CHECK: movl $L__ehtable$use_CxxFrameHandler3, %eax
-; CHECK-NEXT: jmp  ___CxxFrameHandler3 # TAILCALL
+; CHECK: jmp  ___CxxFrameHandler3 # TAILCALL
 
 ; CHECK: .safeseh __except_handler3
-; CHECK-NEXT: .safeseh __except_handler4
-; CHECK-NEXT: .safeseh ___ehhandler$use_CxxFrameHandler3
+; CHECK: .safeseh __except_handler4
+; CHECK: .safeseh ___ehhandler$use_CxxFrameHandler3

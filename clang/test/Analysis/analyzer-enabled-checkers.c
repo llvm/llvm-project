@@ -1,4 +1,4 @@
-// RUN: %clang -target x86_64-apple-darwin10 --analyze %s -o /dev/null -Xclang -analyzer-checker=core -Xclang -analyzer-list-enabled-checkers > %t 2>&1
+// RUN: %clang_analyze_cc1 -triple x86_64-apple-darwin10 %s -o /dev/null -analyzer-checker=core -analyzer-list-enabled-checkers > %t 2>&1
 // RUN: FileCheck --input-file=%t %s
 
 // CHECK: OVERVIEW: Clang Static Analyzer Enabled Checkers List

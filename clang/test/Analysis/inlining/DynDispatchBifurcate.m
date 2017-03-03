@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=core,osx -analyzer-config ipa=dynamic-bifurcate -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,osx -analyzer-config ipa=dynamic-bifurcate -verify %s
 
 #include "InlineObjCInstanceMethod.h"
 

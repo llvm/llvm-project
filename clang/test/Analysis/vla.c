@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=core -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core -verify %s
 
 // Zero-sized VLAs.
 void check_zero_sized_VLA(int x) {

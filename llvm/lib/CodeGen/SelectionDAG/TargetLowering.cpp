@@ -1099,7 +1099,7 @@ bool TargetLowering::SimplifyDemandedBits(SDValue Op,
     EVT InVT = Op.getOperand(0).getValueType();
     unsigned InBits = InVT.getScalarSizeInBits();
     APInt InMask    = APInt::getLowBitsSet(BitWidth, InBits);
-    APInt InSignBit = APInt::getBitsSet(BitWidth, InBits - 1, InBits);
+    APInt InSignBit = APInt::getOneBitSet(BitWidth, InBits - 1);
     APInt NewBits   = ~InMask & NewMask;
 
     // If none of the top bits are demanded, convert this into an any_extend.

@@ -111,3 +111,10 @@ v_mad_mixhi_f16 v1, v2, v3, v4 neg_lo:[0,0,0]
 
 // GFX9: invalid operand for instruction
 v_mad_mixhi_f16 v1, v2, v3, v4 neg_hi:[0,0,0]
+
+//
+// Constant bus restrictions
+//
+
+// GFX9: invalid operand (violates constant bus restrictions)
+v_pk_add_f16 v255, s1, s2

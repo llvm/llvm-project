@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -analyze -analyzer-checker=core,osx.cocoa.RetainCount,deadcode -verify -fblocks -analyzer-opt-analyze-nested-blocks -fobjc-arc -analyzer-config path-diagnostics-alternate=true -analyzer-output=plist-multi-file -o %t.plist %s
+// RUN: %clang_analyze_cc1 -triple x86_64-apple-darwin10 -analyzer-checker=core,osx.cocoa.RetainCount,deadcode -verify -fblocks -analyzer-opt-analyze-nested-blocks -fobjc-arc -analyzer-config path-diagnostics-alternate=true -analyzer-output=plist-multi-file -o %t.plist %s
 // RUN: FileCheck --input-file=%t.plist %s
 
 typedef signed char BOOL;

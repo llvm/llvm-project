@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown -analyze -analyzer-checker=alpha.security.MallocOverflow,unix -verify %s
+// RUN: %clang_analyze_cc1 -triple x86_64-unknown-unknown -analyzer-checker=alpha.security.MallocOverflow,unix -verify %s
 
 typedef __typeof__(sizeof(int)) size_t;
 extern void *malloc(size_t);

@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=core,osx.cocoa.ObjCGenerics,alpha.core.DynamicTypeChecker -verify -Wno-objc-method-access %s
-// RUN: %clang_cc1 -analyze -analyzer-checker=core,osx.cocoa.ObjCGenerics,alpha.core.DynamicTypeChecker -verify -Wno-objc-method-access %s -analyzer-output=plist -o %t.plist
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,osx.cocoa.ObjCGenerics,alpha.core.DynamicTypeChecker -verify -Wno-objc-method-access %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,osx.cocoa.ObjCGenerics,alpha.core.DynamicTypeChecker -verify -Wno-objc-method-access %s -analyzer-output=plist -o %t.plist
 // RUN: FileCheck --input-file %t.plist %s
 
 #if !__has_feature(objc_generics)

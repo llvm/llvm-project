@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=optin.mpi.MPI-Checker -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=optin.mpi.MPI-Checker -verify %s
 
 #include "MPIMock.h"
 

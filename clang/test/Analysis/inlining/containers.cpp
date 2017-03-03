@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -analyze -std=c++11 -analyzer-checker=core,unix.Malloc,debug.ExprInspection -analyzer-config c++-inlining=destructors -analyzer-config c++-container-inlining=false -verify %s
-// RUN: %clang_cc1 -analyze -std=c++11 -analyzer-checker=core,unix.Malloc,debug.ExprInspection -analyzer-config c++-inlining=destructors -analyzer-config c++-container-inlining=true -DINLINE=1 -verify %s
+// RUN: %clang_analyze_cc1 -std=c++11 -analyzer-checker=core,unix.Malloc,debug.ExprInspection -analyzer-config c++-inlining=destructors -analyzer-config c++-container-inlining=false -verify %s
+// RUN: %clang_analyze_cc1 -std=c++11 -analyzer-checker=core,unix.Malloc,debug.ExprInspection -analyzer-config c++-inlining=destructors -analyzer-config c++-container-inlining=true -DINLINE=1 -verify %s
 
 #ifndef HEADER
 

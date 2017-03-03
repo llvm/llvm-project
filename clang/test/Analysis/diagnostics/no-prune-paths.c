@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=core -analyzer-output=text -verify %s
-// RUN: %clang_cc1 -analyze -analyzer-checker=core -analyzer-output=text -analyzer-config prune-paths=false -DNPRUNE=1 -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core -analyzer-output=text -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core -analyzer-output=text -analyzer-config prune-paths=false -DNPRUNE=1 -verify %s
 
 // "prune-paths" is a debug option only; this is just a simple test to see that
 // it's being honored.
