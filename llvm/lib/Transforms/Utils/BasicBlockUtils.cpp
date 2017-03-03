@@ -438,7 +438,7 @@ BasicBlock *llvm::SplitBlockPredecessors(BasicBlock *BB,
 
   // The new block unconditionally branches to the old block.
   BranchInst *BI = BranchInst::Create(BB, NewBB);
-  BI->setDebugLoc(BB->getFirstNonPHI()->getDebugLoc());
+  BI->setDebugLoc(BB->getFirstNonPHIOrDbg()->getDebugLoc());
 
   // Move the edges from Preds to point to NewBB instead of BB.
   for (unsigned i = 0, e = Preds.size(); i != e; ++i) {
