@@ -158,6 +158,17 @@ An overview of all the command-line options:
                                    errors were found. If compiler errors have
                                    attached fix-its, clang-tidy will apply them as
                                    well.
+    -format-style=<string>       -
+                                   Style for formatting code around applied fixes:
+                                     - 'none' (default) turns off formatting
+                                     - 'file' (literally 'file', not a placeholder)
+                                       uses .clang-format file in the closest parent
+                                       directory
+                                     - '{ <json> }' specifies options inline, e.g.
+                                       -format-style='{BasedOnStyle: llvm, IndentWidth: 8}'
+                                     - 'llvm', 'google', 'webkit', 'mozilla'
+                                   See clang-format documentation for the up-to-date
+                                   information about formatting styles and options.
     -header-filter=<string>      -
                                    Regular expression matching the names of the
                                    headers to output diagnostics from. Diagnostics
@@ -179,6 +190,11 @@ An overview of all the command-line options:
                                    List all enabled checks and exit. Use with
                                    -checks=* to list all available checks.
     -p=<string>                  - Build path
+    -quiet                       -
+                                   Run clang-tidy in quiet mode. This suppresses
+                                   printing statistics about ignored warnings and
+                                   warnings treated as errors if the respective
+                                   options are specified.
     -style=<string>              -
                                    Fallback style for reformatting after inserting fixes
                                    if there is no clang-format config file found.
@@ -558,10 +574,10 @@ and once with the directive prefix set to ``CHECK-FIXES``, running
 against the fixed code (i.e., the code after generated fix-its are
 applied). In particular, ``CHECK-FIXES:`` can be used to check
 that code was not modified by fix-its, by checking that it is present
-unchanged in the fixed code.  The full set of `FileCheck`_ directives
+unchanged in the fixed code. The full set of `FileCheck`_ directives
 is available (e.g., ``CHECK-MESSAGES-SAME:``, ``CHECK-MESSAGES-NOT:``), though
 typically the basic ``CHECK`` forms (``CHECK-MESSAGES`` and ``CHECK-FIXES``)
-are sufficient for clang-tidy tests.  Note that the `FileCheck`_
+are sufficient for clang-tidy tests. Note that the `FileCheck`_
 documentation mostly assumes the default prefix (``CHECK``), and hence
 describes the directive as ``CHECK:``, ``CHECK-SAME:``, ``CHECK-NOT:``, etc.
 Replace ``CHECK`` by either ``CHECK-FIXES`` or ``CHECK-MESSAGES`` for

@@ -657,7 +657,7 @@ void ArchSpec::SetFlags(std::string elf_abi) {
   SetFlags(flag);
 }
 
-std::string ArchSpec::GetClangTargetCPU() {
+std::string ArchSpec::GetClangTargetCPU() const {
   std::string cpu;
   const llvm::Triple::ArchType machine = GetMachine();
 
