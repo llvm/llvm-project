@@ -22,6 +22,8 @@
 
 // C Includes
 // C++ Includes
+#include <map>
+#include <memory>
 #include <mutex>
 
 class ObjectContainerBSDArchive : public lldb_private::ObjectContainer {

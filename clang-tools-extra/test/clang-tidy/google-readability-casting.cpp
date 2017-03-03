@@ -81,6 +81,9 @@ void f(int a, double b, const char *cpc, const void *cpv, X *pX) {
   int b1 = (int)b;
   // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: {{.*}}; use static_cast [
   // CHECK-FIXES: int b1 = static_cast<int>(b);
+  b1 = (const int&)b;
+  // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: {{.*}}; use static_cast/const_cast/reinterpret_cast [
+  // CHECK-FIXES: b1 = (const int&)b;
 
   Y *pB = (Y*)pX;
   // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: {{.*}}; use static_cast/const_cast/reinterpret_cast [
@@ -271,11 +274,15 @@ void conversions() {
   auto s2a = (struct S)"";
   // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: C-style casts are discouraged; use static_cast [
   // CHECK-FIXES: auto s2a = static_cast<struct S>("");
+  auto s2b = (const S)"";
+  // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: C-style casts are discouraged; use static_cast [
+  // FIXME: This should be constructor call syntax: S("").
+  // CHECK-FIXES: auto s2b = static_cast<const S>("");
   ConvertibleToS c;
   auto s3 = (const S&)c;
   // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: C-style casts are discouraged; use static_cast/const_cast/reinterpret_cast [
   // CHECK-FIXES: auto s3 = (const S&)c;
-  // FIXME: This should be a static_cast
+  // FIXME: This should be a static_cast.
   // C HECK-FIXES: auto s3 = static_cast<const S&>(c);
   auto s4 = (S)c;
   // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: C-style casts are discouraged; use constructor call syntax [
@@ -284,7 +291,7 @@ void conversions() {
   auto s5 = (const S&)cr;
   // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: C-style casts are discouraged; use static_cast/const_cast/reinterpret_cast [
   // CHECK-FIXES: auto s5 = (const S&)cr;
-  // FIXME: This should be a static_cast
+  // FIXME: This should be a static_cast.
   // C HECK-FIXES: auto s5 = static_cast<const S&>(cr);
   auto s6 = (S)cr;
   // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: C-style casts are discouraged; use constructor call syntax [

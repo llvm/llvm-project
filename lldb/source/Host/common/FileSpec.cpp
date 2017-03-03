@@ -906,21 +906,6 @@ DataBufferSP FileSpec::ReadFileContentsAsCString(Error *error_ptr) {
   return data_sp;
 }
 
-size_t FileSpec::ReadFileLines(STLStringArray &lines) {
-  lines.clear();
-  char path[PATH_MAX];
-  if (GetPath(path, sizeof(path))) {
-    std::ifstream file_stream(path);
-
-    if (file_stream) {
-      std::string line;
-      while (getline(file_stream, line))
-        lines.push_back(line);
-    }
-  }
-  return lines.size();
-}
-
 FileSpec::EnumerateDirectoryResult
 FileSpec::ForEachItemInDirectory(llvm::StringRef dir_path,
                                  DirectoryCallback const &callback) {

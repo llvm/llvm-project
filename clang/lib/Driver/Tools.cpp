@@ -2235,6 +2235,9 @@ static bool useFramePointerForTargetByDefault(const ArgList &Args,
     case llvm::Triple::mips64el:
     case llvm::Triple::mips:
     case llvm::Triple::mipsel:
+    case llvm::Triple::ppc:
+    case llvm::Triple::ppc64:
+    case llvm::Triple::ppc64le:
     case llvm::Triple::systemz:
     case llvm::Triple::x86:
     case llvm::Triple::x86_64:

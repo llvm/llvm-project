@@ -12,6 +12,9 @@
 
 // C Includes
 // C++ Includes
+#include <map>
+#include <memory>
+
 // Other libraries and framework includes
 // Project includes
 #include "lldb/Breakpoint/StoppointCallbackContext.h"

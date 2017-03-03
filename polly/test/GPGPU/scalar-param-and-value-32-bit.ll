@@ -2,7 +2,7 @@
 ; RUN: -disable-output < %s | \
 ; RUN: FileCheck %s
 
-; REQUIRES: pollyacc
+; REQUIRES: pollyacc,nvptx
 ;
 ;    void foo(float A[], int n) {
 ;      for (long j = 0; j < n; j++)

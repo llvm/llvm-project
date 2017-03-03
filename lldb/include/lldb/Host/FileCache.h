@@ -9,6 +9,7 @@
 #ifndef liblldb_Host_FileCache_h
 #define liblldb_Host_FileCache_h
 
+#include <map>
 #include <stdint.h>
 
 #include "lldb/lldb-forward.h"

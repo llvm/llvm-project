@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// UNSUPPORTED: libcpp-has-no-threads
+// UNSUPPORTED: libcpp-has-no-threads, c++98, c++03
 
 // <mutex>
 
@@ -21,7 +21,6 @@
 
 int main()
 {
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
     {
     typedef std::mutex M;
 	M m0;
@@ -46,5 +45,4 @@ int main()
     assert(lk0.mutex() == nullptr);
     assert(lk0.owns_lock() == false);
     }
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
 }
