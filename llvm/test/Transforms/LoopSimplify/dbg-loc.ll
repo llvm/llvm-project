@@ -23,6 +23,7 @@ entry:
 
 for.body:                                         ; preds = %entry, %length.exit
   %begin.sink5 = phi %"Length"* [ %incdec.ptr, %length.exit ], [ %begin, %entry ]
+  tail call void @llvm.dbg.value(metadata %"Length"* %begin.sink5, i64 0, metadata !15, metadata !16), !dbg !17
   %m_type.i.i.i = getelementptr inbounds %"Length", %"Length"* %begin.sink5, i64 0, i32 2, !dbg !9
   %0 = load i8, i8* %m_type.i.i.i, align 1, !dbg !9
   %cmp.i.i = icmp eq i8 %0, 9, !dbg !7
@@ -68,6 +69,9 @@ eh.resume:                                        ; preds = %catch
   resume { i8*, i32 } undef, !dbg !13
 }
 
+; Function Attrs: nounwind readnone
+declare void @llvm.dbg.value(metadata, i64, metadata, metadata)
+
 ; CHECK-DAG: [[PREHEADER_LOC]] = !DILocation(line: 73, column: 27, scope: !{{[0-9]+}})
 ; CHECK-DAG: [[LOOPEXIT_LOC]] = !DILocation(line: 75, column: 9, scope: !{{[0-9]+}})
 ; CHECK-DAG: [[LPAD_PREHEADER_LOC]] = !DILocation(line: 85, column: 1, scope: !{{[0-9]+}})
@@ -93,3 +97,6 @@ eh.resume:                                        ; preds = %catch
                              file: !5,
                              isOptimized: true, flags: "-O2",
                              splitDebugFilename: "abc.debug", emissionKind: 2)
+!15 = !DILocalVariable(name: "begin", arg: 1, scope: !6, file: !5, line: 71)
+!16 = !DIExpression()
+!17 = !DILocation(line: 71, column: 32, scope: !6)
