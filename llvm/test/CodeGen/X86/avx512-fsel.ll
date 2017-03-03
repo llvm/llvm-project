@@ -12,18 +12,18 @@ define i32 @test(float %a, float %b)  {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    movb $1, %al
 ; CHECK-NEXT:    vucomiss %xmm1, %xmm0
-; CHECK-NEXT:    setnp %cl
-; CHECK-NEXT:    sete %dl
-; CHECK-NEXT:    setp %sil
-; CHECK-NEXT:    setne %dil
-; CHECK-NEXT:    andb %cl, %dl
-; CHECK-NEXT:    ## implicit-def: %R8D
-; CHECK-NEXT:    movb %dl, %r8b
-; CHECK-NEXT:    andl $1, %r8d
-; CHECK-NEXT:    kmovw %r8d, %k0
-; CHECK-NEXT:    orb %sil, %dil
+; CHECK-NEXT:    setp %cl
+; CHECK-NEXT:    setne %dl
+; CHECK-NEXT:    setnp %sil
+; CHECK-NEXT:    sete %dil
+; CHECK-NEXT:    andb %sil, %dil
 ; CHECK-NEXT:    ## implicit-def: %R8D
 ; CHECK-NEXT:    movb %dil, %r8b
+; CHECK-NEXT:    andl $1, %r8d
+; CHECK-NEXT:    kmovw %r8d, %k0
+; CHECK-NEXT:    orb %cl, %dl
+; CHECK-NEXT:    ## implicit-def: %R8D
+; CHECK-NEXT:    movb %dl, %r8b
 ; CHECK-NEXT:    andl $1, %r8d
 ; CHECK-NEXT:    kmovw %r8d, %k1
 ; CHECK-NEXT:    kmovw %k1, %ecx
