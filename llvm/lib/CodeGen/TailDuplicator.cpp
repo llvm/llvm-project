@@ -725,7 +725,6 @@ bool TailDuplicator::duplicateSimpleBB(
     if (PredTBB == NextBB && PredFBB == nullptr)
       PredTBB = nullptr;
 
-    auto DL = PredBB->findBranchDebugLoc();
     TII->removeBranch(*PredBB);
 
     if (!PredBB->isSuccessor(NewTarget))
@@ -736,7 +735,7 @@ bool TailDuplicator::duplicateSimpleBB(
     }
 
     if (PredTBB)
-      TII->insertBranch(*PredBB, PredTBB, PredFBB, PredCond, DL);
+      TII->insertBranch(*PredBB, PredTBB, PredFBB, PredCond, DebugLoc());
 
     TDBBs.push_back(PredBB);
   }
