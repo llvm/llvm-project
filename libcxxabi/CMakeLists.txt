@@ -141,9 +141,13 @@ option(LIBCXXABI_HAS_EXTERNAL_THREAD_API
 option(LIBCXXABI_BUILD_EXTERNAL_THREAD_LIBRARY
   "Build libc++abi with an externalized threading library.
    This option may only be set to ON when LIBCXXABI_ENABLE_THREADS=ON" OFF)
+
+# FIXME: This option should default to off. Unfortunatly GCC 4.9 fails to link
+# programs to due undefined references to new/delete in libc++abi. Once this
+# has been fixed or worked around the default value should be changed.
 option(LIBCXXABI_ENABLE_NEW_DELETE_DEFINITIONS
     "Build libc++abi with definitions for operator new/delete. Normally libc++
-    provides these definitions" OFF)
+    provides these definitions" ON)
 option(LIBCXXABI_BUILD_32_BITS "Build 32 bit libc++abi." ${LLVM_BUILD_32_BITS})
 option(LIBCXXABI_INCLUDE_TESTS "Generate build targets for the libc++abi unit tests." ${LLVM_INCLUDE_TESTS})
 set(LIBCXXABI_TARGET_TRIPLE "" CACHE STRING "Target triple for cross compiling.")
