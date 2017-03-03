@@ -306,9 +306,9 @@ cleanup:                                          ; preds = %entry, %if.then
   ret void
 ; CHECK-LABEL: TestCopySign
 ; CHECK-NOT:   call
-; CHECK:       callq __subtf3
-; CHECK-NOT:   call
 ; CHECK:       callq __gttf2
+; CHECK-NOT:   call
+; CHECK:       callq __subtf3
 ; CHECK-NOT:   call
 ; CHECK:       andps {{.*}}, %xmm0
 ; CHECK:       retq
