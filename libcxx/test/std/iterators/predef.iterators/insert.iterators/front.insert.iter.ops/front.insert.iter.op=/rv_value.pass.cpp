@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03
+
 // <iterator>
 
 // front_insert_iterator
@@ -15,9 +17,6 @@
 //   operator=(Cont::value_type&& value);
 
 #include <iterator>
-
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
-
 #include <list>
 #include <memory>
 #include <cassert>
@@ -31,11 +30,7 @@ test(C c)
     assert(c.front() == typename C::value_type());
 }
 
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
-
 int main()
 {
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
     test(std::list<std::unique_ptr<int> >());
-#endif
 }

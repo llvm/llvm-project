@@ -65,10 +65,6 @@ void StringList::AppendList(StringList strings) {
     m_strings.push_back(strings.GetStringAtIndex(i));
 }
 
-bool StringList::ReadFileLines(FileSpec &input_file) {
-  return input_file.ReadFileLines(m_strings);
-}
-
 size_t StringList::GetSize() const { return m_strings.size(); }
 
 size_t StringList::GetMaxStringLength() const {
