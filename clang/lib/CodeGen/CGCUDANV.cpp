@@ -15,7 +15,7 @@
 #include "CGCUDARuntime.h"
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
-#include "ConstantBuilder.h"
+#include "clang/CodeGen/ConstantInitBuilder.h"
 #include "clang/AST/Decl.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CallSite.h"
