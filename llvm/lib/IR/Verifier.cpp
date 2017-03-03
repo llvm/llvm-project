@@ -2123,6 +2123,8 @@ void Verifier::visitFunction(const Function &F) {
   if (!N)
     return;
 
+  visitDISubprogram(*N);
+
   // Check that all !dbg attachments lead to back to N (or, at least, another
   // subprogram that describes the same function).
   //

@@ -325,7 +325,7 @@ shouldBeDeferred(Function *Caller, CallSite CS, InlineCost IC,
   // one is set very low by getInlineCost, in anticipation that Caller will
   // be removed entirely.  We did not account for this above unless there
   // is only one caller of Caller.
-  if (callerWillBeRemoved && !Caller->hasOneUse())
+  if (callerWillBeRemoved && !Caller->use_empty())
     TotalSecondaryCost -= InlineConstants::LastCallToStaticBonus;
 
   if (inliningPreventsSomeOuterInline && TotalSecondaryCost < IC.getCost())

@@ -806,8 +806,6 @@ namespace llvm {
       return false;
     }
 
-    bool isMaskAndCmp0FoldingBeneficial(const Instruction &AndI) const override;
-
     bool hasAndNotCompare(SDValue Y) const override;
 
     /// Return the value type to use for ISD::SETCC.
