@@ -9,7 +9,7 @@
 #include "trigpiredD.h"
 
 INLINEATTR double
-MATH_MANGLE(sinpi)(double x)
+MATH_MANGLE(sincospi)(double x, __private double * cp)
 {
     double t;
     int i = MATH_PRIVATE(trigpired)(BUILTIN_ABS_F64(x), &t);
@@ -17,13 +17,22 @@ MATH_MANGLE(sinpi)(double x)
     double cc;
     double ss = MATH_PRIVATE(sincospired)(t, &cc);
 
-    int2 s = AS_INT2((i & 1) == 0 ? ss : cc);
-    s.hi ^= (i > 1 ? 0x80000000 : 0) ^ (AS_INT2(x).hi & 0x80000000);
+    int flip = i > 1 ? (int)0x80000000 : 0;
+    bool odd = (i & 1) != 0;
+
+    int2 s = AS_INT2(odd ? cc : ss);
+    s.hi ^= flip ^ (AS_INT2(x).hi & 0x80000000);
+    ss = -ss;
+    int2 c = AS_INT2(odd ? ss : cc);
+    c.hi ^= flip;
 
     if (!FINITE_ONLY_OPT()) {
-        s = BUILTIN_CLASS_F64(x, CLASS_SNAN|CLASS_QNAN|CLASS_NINF|CLASS_PINF) ? AS_INT2(QNANBITPATT_DP64) : s;
+        bool nori = BUILTIN_CLASS_F64(x, CLASS_SNAN|CLASS_QNAN|CLASS_NINF|CLASS_PINF);
+        s = nori ? AS_INT2(QNANBITPATT_DP64) : s;
+        c = nori ? AS_INT2(QNANBITPATT_DP64) : c;
     }
 
+    *cp = AS_DOUBLE(c);
     return AS_DOUBLE(s);
 }
 

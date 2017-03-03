@@ -11,22 +11,19 @@
 INLINEATTR half
 MATH_MANGLE(sin)(half x)
 {
-    half y = BUILTIN_ABS_F16(x);
-
     half r;
-    int regn = MATH_PRIVATE(trigred)(&r, y);
+    short i = MATH_PRIVATE(trigred)(&r, BUILTIN_ABS_F16(x));
 
     half cc;
     half ss = MATH_PRIVATE(sincosred)(r, &cc);
 
-    half s = (regn & 1) != 0 ? cc : ss;
-    half ns = -s;
-    s = (regn > 1) ^ (x < 0.0h) ? ns : s;
+    short s = AS_SHORT((i & (short)1) == (short)0 ? ss : cc);
+    s ^= (i > (short)1 ? (short)0x8000 : 0) ^ (AS_SHORT(x) & (short)0x8000);
 
     if (!FINITE_ONLY_OPT()) {
-        s = BUILTIN_CLASS_F16(x, CLASS_SNAN|CLASS_QNAN|CLASS_NINF|CLASS_PINF) ? AS_HALF((short)QNANBITPATT_HP16) : s;
+        s = BUILTIN_CLASS_F16(x, CLASS_SNAN|CLASS_QNAN|CLASS_NINF|CLASS_PINF) ? (short)QNANBITPATT_HP16 : s;
     }
 
-    return s;
+    return AS_HALF(s);
 }
 

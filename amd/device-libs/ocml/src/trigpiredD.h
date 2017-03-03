@@ -5,7 +5,7 @@
  * License. See LICENSE.TXT for details.
  *===------------------------------------------------------------------------*/
 
-extern short MATH_PRIVATE(trigred)(__private half *r, half x);
-extern half MATH_PRIVATE(sincosred)(half x, __private half *cp);
-extern CONSTATTR half MATH_PRIVATE(tanred)(half x, short regn);
+extern int MATH_PRIVATE(trigpired)(double x, __private double *r);
+extern double MATH_PRIVATE(sincospired)(double x, __private double *cp);
+extern CONSTATTR double MATH_PRIVATE(tanpired)(double x, int i);
 

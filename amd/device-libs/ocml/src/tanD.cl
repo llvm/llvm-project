@@ -11,19 +11,16 @@
 INLINEATTR double
 MATH_MANGLE(tan)(double x)
 {
-    double y = BUILTIN_ABS_F64(x);
-
     double r, rr;
-    int regn = MATH_PRIVATE(trigred)(&r, &rr, y);
+    int i = MATH_PRIVATE(trigred)(&r, &rr, BUILTIN_ABS_F64(x));
 
-    double tt = MATH_PRIVATE(tanred2)(r, rr, regn & 1);
-    int2 t = AS_INT2(tt);
-    t.hi ^= x < 0.0 ? (int)0x80000000 : 0;
+    int2 t = AS_INT2(MATH_PRIVATE(tanred2)(r, rr, i & 1));
+    t.hi ^= AS_INT2(x).hi & (int)0x80000000;
 
     if (!FINITE_ONLY_OPT()) {
-        return BUILTIN_CLASS_F64(x, CLASS_SNAN|CLASS_QNAN|CLASS_NINF|CLASS_PINF) ? AS_DOUBLE(QNANBITPATT_DP64) : AS_DOUBLE(t);
-    } else {
-	return AS_DOUBLE(t);
+        t = BUILTIN_CLASS_F64(x, CLASS_SNAN|CLASS_QNAN|CLASS_NINF|CLASS_PINF) ? AS_INT2(QNANBITPATT_DP64) : t;
     }
+
+    return AS_DOUBLE(t);
 }
 

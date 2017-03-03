@@ -24,12 +24,10 @@
 INLINEATTR double
 MATH_PRIVATE(sincosb)(double x, int n, __private double * cp)
 {
-    double y = BUILTIN_ABS_F64(x);
-
     double r0, r1;
-    int regn = MATH_PRIVATE(trigred)(&r0, &r1, y);
+    int regn = MATH_PRIVATE(trigred)(&r0, &r1, BUILTIN_ABS_F64(x));
 
-    // adjust reduced argument by by -pi/4 (n=0) or -3pi/4 (n=1)
+    // adjust reduced argument by -pi/4 (n=0) or -3pi/4 (n=1)
     regn = (regn - (r0 < 0.0) - n) & 3;
 
     const double piby4h = 0x1.921fb54442d18p-1;
@@ -50,15 +48,15 @@ MATH_PRIVATE(sincosb)(double x, int n, __private double * cp)
     int flip = regn > 1 ? (int)0x80000000 : 0;
 
     int2 s = AS_INT2((regn & 1) != 0 ? cc : ss);
-    s.hi ^= flip ^ (x < 0.0 ? (int)0x80000000 : 0);
+    s.hi ^= flip ^ (AS_INT2(x).hi & (int)0x80000000);
     ss = -ss;
     int2 c = AS_INT2(regn & 1 ? ss : cc);
     c.hi ^= flip;
 
     if (!FINITE_ONLY_OPT()) {
-        bool xgeinf = BUILTIN_CLASS_F64(x, CLASS_SNAN|CLASS_QNAN|CLASS_NINF|CLASS_PINF);
-        s = xgeinf ? AS_INT2(QNANBITPATT_DP64) : s;
-        c = xgeinf ? AS_INT2(QNANBITPATT_DP64) : c;
+        bool nori = BUILTIN_CLASS_F64(x, CLASS_SNAN|CLASS_QNAN|CLASS_NINF|CLASS_PINF);
+        s = nori ? AS_INT2(QNANBITPATT_DP64) : s;
+        c = nori ? AS_INT2(QNANBITPATT_DP64) : c;
     }
 
     *cp = AS_DOUBLE(c);

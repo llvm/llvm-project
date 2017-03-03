@@ -11,10 +11,8 @@
 INLINEATTR double
 MATH_MANGLE(cos)(double x)
 {
-    x = BUILTIN_ABS_F64(x);
-
     double r, rr;
-    int regn = MATH_PRIVATE(trigred)(&r, &rr, x);
+    int regn = MATH_PRIVATE(trigred)(&r, &rr, BUILTIN_ABS_F64(x));
 
     double cc;
     double ss = -MATH_PRIVATE(sincosred2)(r, rr, &cc);
@@ -23,9 +21,9 @@ MATH_MANGLE(cos)(double x)
     c.hi ^= regn > 1 ? (int)0x80000000 : 0;
 
     if (!FINITE_ONLY_OPT()) {
-        return BUILTIN_CLASS_F64(x, CLASS_SNAN|CLASS_QNAN|CLASS_NINF|CLASS_PINF) ? AS_DOUBLE(QNANBITPATT_DP64) : AS_DOUBLE(c);
-    } else {
-	return AS_DOUBLE(c);
+        c = BUILTIN_CLASS_F64(x, CLASS_SNAN|CLASS_QNAN|CLASS_NINF|CLASS_PINF) ? AS_INT2(QNANBITPATT_DP64) : c;
     }
+
+    return AS_DOUBLE(c);
 }
 
