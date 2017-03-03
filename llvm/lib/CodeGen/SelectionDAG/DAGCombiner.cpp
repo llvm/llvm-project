@@ -4856,9 +4856,9 @@ SDValue DAGCombiner::visitXOR(SDNode *N) {
       default:
         llvm_unreachable("Unhandled SetCC Equivalent!");
       case ISD::SETCC:
-        return DAG.getSetCC(SDLoc(N), VT, LHS, RHS, NotCC);
+        return DAG.getSetCC(SDLoc(N0), VT, LHS, RHS, NotCC);
       case ISD::SELECT_CC:
-        return DAG.getSelectCC(SDLoc(N), LHS, RHS, N0.getOperand(2),
+        return DAG.getSelectCC(SDLoc(N0), LHS, RHS, N0.getOperand(2),
                                N0.getOperand(3), NotCC);
       }
     }

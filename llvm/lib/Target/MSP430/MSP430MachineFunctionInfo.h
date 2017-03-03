@@ -33,14 +33,22 @@ class MSP430MachineFunctionInfo : public MachineFunctionInfo {
   /// VarArgsFrameIndex - FrameIndex for start of varargs area.
   int VarArgsFrameIndex;
 
+  /// SRetReturnReg - Some subtargets require that sret lowering includes
+  /// returning the value of the returned struct in a register. This field
+  /// holds the virtual register into which the sret argument is passed.
+  unsigned SRetReturnReg;
+
 public:
   MSP430MachineFunctionInfo() : CalleeSavedFrameSize(0) {}
 
   explicit MSP430MachineFunctionInfo(MachineFunction &MF)
-    : CalleeSavedFrameSize(0), ReturnAddrIndex(0) {}
+    : CalleeSavedFrameSize(0), ReturnAddrIndex(0), SRetReturnReg(0) {}
 
   unsigned getCalleeSavedFrameSize() const { return CalleeSavedFrameSize; }
   void setCalleeSavedFrameSize(unsigned bytes) { CalleeSavedFrameSize = bytes; }
+
+  unsigned getSRetReturnReg() const { return SRetReturnReg; }
+  void setSRetReturnReg(unsigned Reg) { SRetReturnReg = Reg; }
 
   int getRAIndex() const { return ReturnAddrIndex; }
   void setRAIndex(int Index) { ReturnAddrIndex = Index; }

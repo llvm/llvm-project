@@ -18,7 +18,7 @@
 #include "llvm/DebugInfo/CodeView/CVRecord.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
-#include "llvm/DebugInfo/MSF/BinaryStreamArray.h"
+#include "llvm/Support/BinaryStreamArray.h"
 #include "llvm/Support/Endian.h"
 #include <algorithm>
 #include <cstdint>

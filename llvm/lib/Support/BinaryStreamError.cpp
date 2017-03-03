@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/DebugInfo/MSF/BinaryStreamError.h"
+#include "llvm/Support/BinaryStreamError.h"
 #include "llvm/Support/ErrorHandling.h"
 
 using namespace llvm;

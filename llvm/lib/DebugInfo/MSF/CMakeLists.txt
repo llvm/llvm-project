@@ -1,7 +1,4 @@
 add_llvm_library(LLVMDebugInfoMSF
-  BinaryStreamError.cpp
-  BinaryStreamReader.cpp
-  BinaryStreamWriter.cpp
   MappedBlockStream.cpp
   MSFBuilder.cpp
   MSFCommon.cpp

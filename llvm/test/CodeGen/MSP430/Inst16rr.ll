@@ -4,34 +4,34 @@ target triple = "msp430-generic-generic"
 
 define i16 @mov(i16 %a, i16 %b) nounwind {
 ; CHECK-LABEL: mov:
-; CHECK: mov.w	r14, r15
+; CHECK: mov.w	r13, r12
 	ret i16 %b
 }
 
 define i16 @add(i16 %a, i16 %b) nounwind {
 ; CHECK-LABEL: add:
-; CHECK: add.w	r14, r15
+; CHECK: add.w	r13, r12
 	%1 = add i16 %a, %b
 	ret i16 %1
 }
 
 define i16 @and(i16 %a, i16 %b) nounwind {
 ; CHECK-LABEL: and:
-; CHECK: and.w	r14, r15
+; CHECK: and.w	r13, r12
 	%1 = and i16 %a, %b
 	ret i16 %1
 }
 
 define i16 @bis(i16 %a, i16 %b) nounwind {
 ; CHECK-LABEL: bis:
-; CHECK: bis.w	r14, r15
+; CHECK: bis.w	r13, r12
 	%1 = or i16 %a, %b
 	ret i16 %1
 }
 
 define i16 @bic(i16 %a, i16 %b) nounwind {
 ; CHECK-LABEL: bic:
-; CHECK: bic.w	r14, r15
+; CHECK: bic.w	r13, r12
         %1 = xor i16 %b, -1
         %2 = and i16 %a, %1
         ret i16 %2
@@ -39,7 +39,7 @@ define i16 @bic(i16 %a, i16 %b) nounwind {
 
 define i16 @xor(i16 %a, i16 %b) nounwind {
 ; CHECK-LABEL: xor:
-; CHECK: xor.w	r14, r15
+; CHECK: xor.w	r13, r12
 	%1 = xor i16 %a, %b
 	ret i16 %1
 }

@@ -9,10 +9,10 @@
 
 #include "llvm/DebugInfo/MSF/MappedBlockStream.h"
 
-#include "llvm/DebugInfo/MSF/BinaryStreamError.h"
 #include "llvm/DebugInfo/MSF/IMSFFile.h"
 #include "llvm/DebugInfo/MSF/MSFCommon.h"
 #include "llvm/DebugInfo/MSF/MSFStreamLayout.h"
+#include "llvm/Support/BinaryStreamError.h"
 
 using namespace llvm;
 using namespace llvm::msf;

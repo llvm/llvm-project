@@ -778,12 +778,22 @@ public:
 
   /// recalculate - compute a dominator tree for the given function
   template <class FT> void recalculate(FT &F) {
+    typedef GraphTraits<FT *> TraitsTy;
     reset();
     this->Vertex.push_back(nullptr);
 
     if (!this->IsPostDominators) {
+      // Initialize root
+      NodeT *entry = TraitsTy::getEntryNode(&F);
+      addRoot(entry);
+
       Calculate<FT, NodeT *>(*this, F);
     } else {
+      // Initialize the roots list
+      for (auto *Node : nodes(&F))
+        if (TraitsTy::child_begin(Node) == TraitsTy::child_end(Node))
+          addRoot(Node);
+
       Calculate<FT, Inverse<NodeT *>>(*this, F);
     }
   }

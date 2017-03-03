@@ -8,13 +8,13 @@
 // A BinaryStream which stores data in a single continguous memory buffer.
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DEBUGINFO_MSF_BINARYBYTESTREAM_H
-#define LLVM_DEBUGINFO_MSF_BINARYBYTESTREAM_H
+#ifndef LLVM_SUPPORT_BINARYBYTESTREAM_H
+#define LLVM_SUPPORT_BINARYBYTESTREAM_H
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/DebugInfo/MSF/BinaryStream.h"
-#include "llvm/DebugInfo/MSF/BinaryStreamError.h"
+#include "llvm/Support/BinaryStream.h"
+#include "llvm/Support/BinaryStreamError.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -189,4 +189,4 @@ private:
 
 } // end namespace llvm
 
-#endif // LLVM_DEBUGINFO_MSF_BYTESTREAM_H
+#endif // LLVM_SUPPORT_BYTESTREAM_H

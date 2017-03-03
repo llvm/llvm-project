@@ -616,33 +616,27 @@ public:
   void init(GCFunctionInfo *gfi, AliasAnalysis &aa,
             const TargetLibraryInfo *li);
 
-  /// clear - Clear out the current SelectionDAG and the associated
-  /// state and prepare this SelectionDAGBuilder object to be used
-  /// for a new block. This doesn't clear out information about
-  /// additional blocks that are needed to complete switch lowering
-  /// or PHI node updating; that information is cleared out as it is
-  /// consumed.
+  /// Clear out the current SelectionDAG and the associated state and prepare
+  /// this SelectionDAGBuilder object to be used for a new block. This doesn't
+  /// clear out information about additional blocks that are needed to complete
+  /// switch lowering or PHI node updating; that information is cleared out as
+  /// it is consumed.
   void clear();
 
-  /// clearDanglingDebugInfo - Clear the dangling debug information
-  /// map. This function is separated from the clear so that debug
-  /// information that is dangling in a basic block can be properly
-  /// resolved in a different basic block. This allows the
-  /// SelectionDAG to resolve dangling debug information attached
-  /// to PHI nodes.
+  /// Clear the dangling debug information map. This function is separated from
+  /// the clear so that debug information that is dangling in a basic block can
+  /// be properly resolved in a different basic block. This allows the
+  /// SelectionDAG to resolve dangling debug information attached to PHI nodes.
   void clearDanglingDebugInfo();
 
-  /// getRoot - Return the current virtual root of the Selection DAG,
-  /// flushing any PendingLoad items. This must be done before emitting
-  /// a store or any other node that may need to be ordered after any
-  /// prior load instructions.
-  ///
+  /// Return the current virtual root of the Selection DAG, flushing any
+  /// PendingLoad items. This must be done before emitting a store or any other
+  /// node that may need to be ordered after any prior load instructions.
   SDValue getRoot();
 
-  /// getControlRoot - Similar to getRoot, but instead of flushing all the
-  /// PendingLoad items, flush all the PendingExports items. It is necessary
-  /// to do this before emitting a terminator instruction.
-  ///
+  /// Similar to getRoot, but instead of flushing all the PendingLoad items,
+  /// flush all the PendingExports items. It is necessary to do this before
+  /// emitting a terminator instruction.
   SDValue getControlRoot();
 
   SDLoc getCurSDLoc() const {
@@ -960,26 +954,23 @@ private:
 /// type.
 ///
 struct RegsForValue {
-  /// ValueVTs - The value types of the values, which may not be legal, and
+  /// The value types of the values, which may not be legal, and
   /// may need be promoted or synthesized from one or more registers.
-  ///
   SmallVector<EVT, 4> ValueVTs;
 
-  /// RegVTs - The value types of the registers. This is the same size as
-  /// ValueVTs and it records, for each value, what the type of the assigned
-  /// register or registers are. (Individual values are never synthesized
-  /// from more than one type of register.)
+  /// The value types of the registers. This is the same size as ValueVTs and it
+  /// records, for each value, what the type of the assigned register or
+  /// registers are. (Individual values are never synthesized from more than one
+  /// type of register.)
   ///
   /// With virtual registers, the contents of RegVTs is redundant with TLI's
   /// getRegisterType member function, however when with physical registers
   /// it is necessary to have a separate record of the types.
-  ///
   SmallVector<MVT, 4> RegVTs;
 
-  /// Regs - This list holds the registers assigned to the values.
+  /// This list holds the registers assigned to the values.
   /// Each legal or promoted value requires one register, and each
   /// expanded value requires multiple registers.
-  ///
   SmallVector<unsigned, 4> Regs;
 
   RegsForValue();
@@ -989,33 +980,33 @@ struct RegsForValue {
   RegsForValue(LLVMContext &Context, const TargetLowering &TLI,
                const DataLayout &DL, unsigned Reg, Type *Ty);
 
-  /// append - Add the specified values to this one.
+  /// Add the specified values to this one.
   void append(const RegsForValue &RHS) {
     ValueVTs.append(RHS.ValueVTs.begin(), RHS.ValueVTs.end());
     RegVTs.append(RHS.RegVTs.begin(), RHS.RegVTs.end());
     Regs.append(RHS.Regs.begin(), RHS.Regs.end());
   }
 
-  /// getCopyFromRegs - Emit a series of CopyFromReg nodes that copies from
-  /// this value and returns the result as a ValueVTs value.  This uses
-  /// Chain/Flag as the input and updates them for the output Chain/Flag.
-  /// If the Flag pointer is NULL, no flag is used.
+  /// Emit a series of CopyFromReg nodes that copies from this value and returns
+  /// the result as a ValueVTs value. This uses Chain/Flag as the input and
+  /// updates them for the output Chain/Flag. If the Flag pointer is NULL, no
+  /// flag is used.
   SDValue getCopyFromRegs(SelectionDAG &DAG, FunctionLoweringInfo &FuncInfo,
                           const SDLoc &dl, SDValue &Chain, SDValue *Flag,
                           const Value *V = nullptr) const;
 
-  /// getCopyToRegs - Emit a series of CopyToReg nodes that copies the specified
-  /// value into the registers specified by this object.  This uses Chain/Flag
-  /// as the input and updates them for the output Chain/Flag.  If the Flag
-  /// pointer is nullptr, no flag is used.  If V is not nullptr, then it is used
-  /// in printing better diagnostic messages on error.
+  /// Emit a series of CopyToReg nodes that copies the specified value into the
+  /// registers specified by this object. This uses Chain/Flag as the input and
+  /// updates them for the output Chain/Flag. If the Flag pointer is nullptr, no
+  /// flag is used. If V is not nullptr, then it is used in printing better
+  /// diagnostic messages on error.
   void getCopyToRegs(SDValue Val, SelectionDAG &DAG, const SDLoc &dl,
                      SDValue &Chain, SDValue *Flag, const Value *V = nullptr,
                      ISD::NodeType PreferredExtendType = ISD::ANY_EXTEND) const;
 
-  /// AddInlineAsmOperands - Add this value to the specified inlineasm node
-  /// operand list.  This adds the code marker, matching input operand index
-  /// (if applicable), and includes the number of values added into it.
+  /// Add this value to the specified inlineasm node operand list. This adds the
+  /// code marker, matching input operand index (if applicable), and includes
+  /// the number of values added into it.
   void AddInlineAsmOperands(unsigned Kind, bool HasMatching,
                             unsigned MatchingIdx, const SDLoc &dl,
                             SelectionDAG &DAG, std::vector<SDValue> &Ops) const;

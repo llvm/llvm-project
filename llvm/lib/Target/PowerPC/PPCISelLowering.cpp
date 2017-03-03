@@ -11391,9 +11391,17 @@ SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
       if (BSwapOp.getValueType() == MVT::i16)
         BSwapOp = DAG.getNode(ISD::ANY_EXTEND, dl, MVT::i32, BSwapOp);
 
+      // If the type of BSWAP operand is wider than stored memory width
+      // it need to be shifted to the right side before STBRX.
+      EVT mVT = cast<StoreSDNode>(N)->getMemoryVT();
+      if (Op1VT.bitsGT(mVT)) {
+        int shift = Op1VT.getSizeInBits() - mVT.getSizeInBits();
+        BSwapOp = DAG.getNode(ISD::SRL, dl, Op1VT, BSwapOp,
+                              DAG.getConstant(shift, dl, MVT::i32));
+      }
+
       SDValue Ops[] = {
-        N->getOperand(0), BSwapOp, N->getOperand(2),
-        DAG.getValueType(N->getOperand(1).getValueType())
+        N->getOperand(0), BSwapOp, N->getOperand(2), DAG.getValueType(mVT)
       };
       return
         DAG.getMemIntrinsicNode(PPCISD::STBRX, dl, DAG.getVTList(MVT::Other),

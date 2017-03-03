@@ -9,7 +9,7 @@
 
 #include "llvm/DebugInfo/PDB/Native/GlobalsStream.h"
 #include "GSI.h"
-#include "llvm/DebugInfo/MSF/BinaryStreamReader.h"
+#include "llvm/Support/BinaryStreamReader.h"
 #include "llvm/Support/Error.h"
 #include <algorithm>
 

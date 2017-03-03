@@ -711,6 +711,18 @@ private:
   unsigned NextID;
 };
 
+
+// Internal MemorySSA utils, for use by MemorySSA classes and walkers
+class MemorySSAUtil
+{
+protected:
+  friend class MemorySSAWalker;
+  friend class GVNHoist;
+  // This function should not be used by new passes.
+  static bool defClobbersUseOrDef(MemoryDef *MD, const MemoryUseOrDef *MU,
+                                  AliasAnalysis &AA);
+};
+
 // This pass does eager building and then printing of MemorySSA. It is used by
 // the tests to be able to build, dump, and verify Memory SSA.
 class MemorySSAPrinterLegacyPass : public FunctionPass {
@@ -1044,10 +1056,6 @@ inline upward_defs_iterator upward_defs_begin(const MemoryAccessPair &Pair) {
 }
 
 inline upward_defs_iterator upward_defs_end() { return upward_defs_iterator(); }
-
-// Return true when MD may alias MU, return false otherwise.
-bool defClobbersUseOrDef(MemoryDef *MD, const MemoryUseOrDef *MU,
-                         AliasAnalysis &AA);
 
 } // end namespace llvm
 

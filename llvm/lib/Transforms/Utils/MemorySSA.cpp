@@ -269,8 +269,8 @@ static bool instructionClobbersQuery(MemoryDef *MD, const MemoryUseOrDef *MU,
 }
 
 // Return true when MD may alias MU, return false otherwise.
-bool defClobbersUseOrDef(MemoryDef *MD, const MemoryUseOrDef *MU,
-                         AliasAnalysis &AA) {
+bool MemorySSAUtil::defClobbersUseOrDef(MemoryDef *MD, const MemoryUseOrDef *MU,
+                                        AliasAnalysis &AA) {
   return instructionClobbersQuery(MD, MU, MemoryLocOrCall(MU), AA);
 }
 }
