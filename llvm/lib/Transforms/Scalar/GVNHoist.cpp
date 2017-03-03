@@ -24,7 +24,6 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/ValueTracking.h"
-#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/MemorySSA.h"
@@ -707,9 +706,6 @@ private:
         OtherGep = cast<GetElementPtrInst>(
             cast<StoreInst>(OtherInst)->getPointerOperand());
       ClonedGep->andIRFlags(OtherGep);
-      ClonedGep->setDebugLoc(
-          DILocation::getMergedLocation(
-            ClonedGep->getDebugLoc(), OtherGep->getDebugLoc()));
     }
 
     // Replace uses of Gep with ClonedGep in Repl.
@@ -858,9 +854,6 @@ private:
           }
 
           Repl->andIRFlags(I);
-          Repl->setDebugLoc(
-              DILocation::getMergedLocation(
-                Repl->getDebugLoc(), I->getDebugLoc()));
           combineKnownMetadata(Repl, I);
           I->replaceAllUsesWith(Repl);
           // Also invalidate the Alias Analysis cache.

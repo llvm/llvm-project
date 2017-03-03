@@ -4448,11 +4448,6 @@ bool X86TargetLowering::isCtlzFast() const {
   return Subtarget.hasFastLZCNT();
 }
 
-bool X86TargetLowering::isMaskAndCmp0FoldingBeneficial(
-    const Instruction &AndI) const {
-  return true;
-}
-
 bool X86TargetLowering::hasAndNotCompare(SDValue Y) const {
   if (!Subtarget.hasBMI())
     return false;
