@@ -1,4 +1,4 @@
-//=-- CoverageMappingWriter.cpp - Code coverage mapping writer -------------=//
+//===- CoverageMappingWriter.cpp - Code coverage mapping writer -----------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -12,8 +12,15 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ProfileData/Coverage/CoverageMappingWriter.h"
 #include "llvm/Support/LEB128.h"
+#include "llvm/Support/raw_ostream.h"
+#include <algorithm>
+#include <cassert>
+#include <limits>
+#include <vector>
 
 using namespace llvm;
 using namespace coverage;
@@ -27,14 +34,25 @@ void CoverageFilenamesSectionWriter::write(raw_ostream &OS) {
 }
 
 namespace {
+
 /// \brief Gather only the expressions that are used by the mapping
 /// regions in this function.
 class CounterExpressionsMinimizer {
   ArrayRef<CounterExpression> Expressions;
-  llvm::SmallVector<CounterExpression, 16> UsedExpressions;
+  SmallVector<CounterExpression, 16> UsedExpressions;
   std::vector<unsigned> AdjustedExpressionIDs;
 
 public:
+  CounterExpressionsMinimizer(ArrayRef<CounterExpression> Expressions,
+                              ArrayRef<CounterMappingRegion> MappingRegions)
+      : Expressions(Expressions) {
+    AdjustedExpressionIDs.resize(Expressions.size(), 0);
+    for (const auto &I : MappingRegions)
+      mark(I.Count);
+    for (const auto &I : MappingRegions)
+      gatherUsed(I.Count);
+  }
+
   void mark(Counter C) {
     if (!C.isExpression())
       return;
@@ -54,16 +72,6 @@ public:
     gatherUsed(E.RHS);
   }
 
-  CounterExpressionsMinimizer(ArrayRef<CounterExpression> Expressions,
-                              ArrayRef<CounterMappingRegion> MappingRegions)
-      : Expressions(Expressions) {
-    AdjustedExpressionIDs.resize(Expressions.size(), 0);
-    for (const auto &I : MappingRegions)
-      mark(I.Count);
-    for (const auto &I : MappingRegions)
-      gatherUsed(I.Count);
-  }
-
   ArrayRef<CounterExpression> getExpressions() const { return UsedExpressions; }
 
   /// \brief Adjust the given counter to correctly transition from the old
@@ -74,7 +82,8 @@ public:
     return C;
   }
 };
-}
+
+} // end anonymous namespace
 
 /// \brief Encode the counter.
 ///

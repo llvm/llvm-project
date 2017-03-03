@@ -1,4 +1,4 @@
-//=-- SampleProf.h - Sampling profiling format support --------------------===//
+//===- SampleProf.h - Sampling profiling format support ---------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -12,22 +12,29 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_PROFILEDATA_SAMPLEPROF_H_
-#define LLVM_PROFILEDATA_SAMPLEPROF_H_
+#ifndef LLVM_PROFILEDATA_SAMPLEPROF_H
+#define LLVM_PROFILEDATA_SAMPLEPROF_H
 
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorOr.h"
-#include "llvm/Support/raw_ostream.h"
-
+#include "llvm/Support/MathExtras.h"
+#include <algorithm>
+#include <cstdint>
 #include <map>
+#include <string>
 #include <system_error>
+#include <utility>
 
 namespace llvm {
+
+class raw_ostream;
 
 const std::error_category &sampleprof_category();
 
@@ -62,12 +69,13 @@ inline sampleprof_error MergeResult(sampleprof_error &Accumulator,
 } // end namespace llvm
 
 namespace std {
+
 template <>
 struct is_error_code_enum<llvm::sampleprof_error> : std::true_type {};
-}
+
+} // end namespace std
 
 namespace llvm {
-
 namespace sampleprof {
 
 static inline uint64_t SPMagic() {
@@ -90,8 +98,10 @@ static inline uint64_t SPVersion() { return 103; }
 /// (e.g., the two post-increment instructions in "if (p) x++; else y++;").
 struct LineLocation {
   LineLocation(uint32_t L, uint32_t D) : LineOffset(L), Discriminator(D) {}
+
   void print(raw_ostream &OS) const;
   void dump() const;
+
   bool operator<(const LineLocation &O) const {
     return LineOffset < O.LineOffset ||
            (LineOffset == O.LineOffset && Discriminator < O.Discriminator);
@@ -117,7 +127,7 @@ class SampleRecord {
 public:
   typedef StringMap<uint64_t> CallTargetMap;
 
-  SampleRecord() : NumSamples(0), CallTargets() {}
+  SampleRecord() = default;
 
   /// Increment the number of samples for this record by \p S.
   /// Optionally scale sample count \p S by \p Weight.
@@ -147,7 +157,7 @@ public:
   }
 
   /// Return true if this sample record contains function calls.
-  bool hasCalls() const { return CallTargets.size() > 0; }
+  bool hasCalls() const { return !CallTargets.empty(); }
 
   uint64_t getSamples() const { return NumSamples; }
   const CallTargetMap &getCallTargets() const { return CallTargets; }
@@ -166,7 +176,7 @@ public:
   void dump() const;
 
 private:
-  uint64_t NumSamples;
+  uint64_t NumSamples = 0;
   CallTargetMap CallTargets;
 };
 
@@ -183,9 +193,11 @@ typedef std::map<LineLocation, FunctionSamples> CallsiteSampleMap;
 /// within the body of the function.
 class FunctionSamples {
 public:
-  FunctionSamples() : Name(), TotalSamples(0), TotalHeadSamples(0) {}
+  FunctionSamples() = default;
+
   void print(raw_ostream &OS = dbgs(), unsigned Indent = 0) const;
   void dump() const;
+
   sampleprof_error addTotalSamples(uint64_t Num, uint64_t Weight = 1) {
     bool Overflowed;
     TotalSamples =
@@ -193,6 +205,7 @@ public:
     return Overflowed ? sampleprof_error::counter_overflow
                       : sampleprof_error::success;
   }
+
   sampleprof_error addHeadSamples(uint64_t Num, uint64_t Weight = 1) {
     bool Overflowed;
     TotalHeadSamples =
@@ -200,11 +213,13 @@ public:
     return Overflowed ? sampleprof_error::counter_overflow
                       : sampleprof_error::success;
   }
+
   sampleprof_error addBodySamples(uint32_t LineOffset, uint32_t Discriminator,
                                   uint64_t Num, uint64_t Weight = 1) {
     return BodySamples[LineLocation(LineOffset, Discriminator)].addSamples(
         Num, Weight);
   }
+
   sampleprof_error addCalledTargetSamples(uint32_t LineOffset,
                                           uint32_t Discriminator,
                                           const std::string &FName,
@@ -331,12 +346,12 @@ private:
   ///
   /// Samples are cumulative, they include all the samples collected
   /// inside this function and all its inlined callees.
-  uint64_t TotalSamples;
+  uint64_t TotalSamples = 0;
 
   /// Total number of samples collected at the head of the function.
   /// This is an approximation of the number of calls made to this function
   /// at runtime.
-  uint64_t TotalHeadSamples;
+  uint64_t TotalHeadSamples = 0;
 
   /// Map instruction locations to collected samples.
   ///
@@ -383,6 +398,7 @@ public:
                        return A->first < B->first;
                      });
   }
+
   const SamplesWithLocList &get() const { return V; }
 
 private:
@@ -390,7 +406,6 @@ private:
 };
 
 } // end namespace sampleprof
-
 } // end namespace llvm
 
-#endif // LLVM_PROFILEDATA_SAMPLEPROF_H_
+#endif // LLVM_PROFILEDATA_SAMPLEPROF_H
