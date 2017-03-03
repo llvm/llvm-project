@@ -13,11 +13,11 @@
 // MSP430 Return Value Calling Convention
 //===----------------------------------------------------------------------===//
 def RetCC_MSP430 : CallingConv<[
-  // i8 are returned in registers R15B, R14B, R13B, R12B
-  CCIfType<[i8], CCAssignToReg<[R15B, R14B, R13B, R12B]>>,
+  // i8 are returned in registers R12B, R13B, R14B, R15B
+  CCIfType<[i8], CCAssignToReg<[R12B, R13B, R14B, R15B]>>,
 
-  // i16 are returned in registers R15, R14, R13, R12
-  CCIfType<[i16], CCAssignToReg<[R15, R14, R13, R12]>>
+  // i16 are returned in registers R12, R13, R14, R15
+  CCIfType<[i16], CCAssignToReg<[R12, R13, R14, R15]>>
 ]>;
 
 //===----------------------------------------------------------------------===//

@@ -9,7 +9,7 @@
 
 #include "llvm/DebugInfo/CodeView/TypeSerializer.h"
 
-#include "llvm/DebugInfo/MSF/BinaryStreamWriter.h"
+#include "llvm/Support/BinaryStreamWriter.h"
 
 #include <string.h>
 

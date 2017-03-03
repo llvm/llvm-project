@@ -103,7 +103,7 @@ entry:
 }
 ; CHECK-LABEL: test_mixed_1
 ; CHECK:       movaps	%xmm1, 16(%{{(e|r)}}sp)
-; CHECK:       movaps	%xmm1, %xmm0
+; CHECK:       movaps	16(%{{(e|r)}}sp), %xmm0
 ; CHECK:       ret{{q|l}}
 
 define x86_vectorcallcc <4 x float> @test_mixed_2(%struct.HVA4 inreg %a, %struct.HVA4* %b, <4 x float> %c) {
@@ -149,7 +149,7 @@ entry:
 }
 ; CHECK-LABEL: test_mixed_5
 ; CHECK:       movaps	%xmm5, 16(%{{(e|r)}}sp)
-; CHECK:       movaps	%xmm5, %xmm0
+; CHECK:       movaps	16(%{{(e|r)}}sp), %xmm0
 ; CHECK:       ret{{[ql]}}
 
 define x86_vectorcallcc %struct.HVA4 @test_mixed_6(%struct.HVA4 inreg %a, %struct.HVA4* %b) {

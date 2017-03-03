@@ -7,12 +7,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/DebugInfo/MSF/BinaryByteStream.h"
-#include "llvm/DebugInfo/MSF/BinaryItemStream.h"
-#include "llvm/DebugInfo/MSF/BinaryStreamArray.h"
-#include "llvm/DebugInfo/MSF/BinaryStreamReader.h"
-#include "llvm/DebugInfo/MSF/BinaryStreamRef.h"
-#include "llvm/DebugInfo/MSF/BinaryStreamWriter.h"
+#include "llvm/Support/BinaryByteStream.h"
+#include "llvm/Support/BinaryItemStream.h"
+#include "llvm/Support/BinaryStreamArray.h"
+#include "llvm/Support/BinaryStreamReader.h"
+#include "llvm/Support/BinaryStreamRef.h"
+#include "llvm/Support/BinaryStreamWriter.h"
 #include "gtest/gtest.h"
 
 #include <unordered_map>
@@ -126,7 +126,7 @@ private:
   BumpPtrAllocator Allocator;
 };
 
-constexpr endianness Endians[] = { big, little, native };
+constexpr endianness Endians[] = {big, little, native};
 constexpr uint32_t NumEndians = llvm::array_lengthof(Endians);
 constexpr uint32_t NumStreams = 2 * NumEndians;
 

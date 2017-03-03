@@ -9,7 +9,7 @@
 
 #include "llvm/DebugInfo/CodeView/ModuleSubstream.h"
 
-#include "llvm/DebugInfo/MSF/BinaryStreamReader.h"
+#include "llvm/Support/BinaryStreamReader.h"
 
 using namespace llvm;
 using namespace llvm::codeview;

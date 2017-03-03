@@ -6,6 +6,7 @@ define i32 @combineTESTM_AND_1(<8 x i64> %a, <8 x i64> %b) {
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    vptestmq %zmm0, %zmm1, %k0
 ; CHECK-NEXT:    kmovb %k0, %eax
+; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   %and.i = and <8 x i64> %b, %a
   %test.i = tail call i8 @llvm.x86.avx512.ptestm.q.512(<8 x i64> %and.i, <8 x i64> %and.i, i8 -1)
@@ -19,6 +20,7 @@ define i32 @combineTESTM_AND_2(<8 x i64> %a, <8 x i64> %b , i8 %mask) {
 ; CHECK-NEXT:    kmovb %edi, %k1
 ; CHECK-NEXT:    vptestmq %zmm0, %zmm1, %k0 {%k1}
 ; CHECK-NEXT:    kmovb %k0, %eax
+; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   %and.i = and <8 x i64> %b, %a
   %test.i = tail call i8 @llvm.x86.avx512.ptestm.q.512(<8 x i64> %and.i, <8 x i64> %and.i, i8 %mask)
@@ -32,6 +34,7 @@ define i32 @combineTESTM_AND_mask_3(<8 x i64> %a, <8 x i64>* %bptr , i8 %mask) {
 ; CHECK-NEXT:    kmovb %esi, %k1
 ; CHECK-NEXT:    vptestmq (%rdi), %zmm0, %k0 {%k1}
 ; CHECK-NEXT:    kmovb %k0, %eax
+; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   %b = load <8 x i64>, <8 x i64>* %bptr
   %and.i = and <8 x i64> %a, %b
@@ -46,6 +49,7 @@ define i32 @combineTESTM_AND_mask_4(<8 x i64> %a, <8 x i64>* %bptr , i8 %mask) {
 ; CHECK-NEXT:    kmovb %esi, %k1
 ; CHECK-NEXT:    vptestmq (%rdi), %zmm0, %k0 {%k1}
 ; CHECK-NEXT:    kmovb %k0, %eax
+; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   %b = load <8 x i64>, <8 x i64>* %bptr
   %and.i = and <8 x i64> %b, %a

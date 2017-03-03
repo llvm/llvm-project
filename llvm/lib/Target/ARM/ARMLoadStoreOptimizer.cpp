@@ -2161,7 +2161,31 @@ bool ARMPreAllocLoadStoreOpt::RescheduleOps(MachineBasicBlock *MBB,
     unsigned LastBytes = 0;
     unsigned NumMove = 0;
     for (int i = Ops.size() - 1; i >= 0; --i) {
+      // Make sure each operation has the same kind.
       MachineInstr *Op = Ops[i];
+      unsigned LSMOpcode
+        = getLoadStoreMultipleOpcode(Op->getOpcode(), ARM_AM::ia);
+      if (LastOpcode && LSMOpcode != LastOpcode)
+        break;
+
+      // Check that we have a continuous set of offsets.
+      int Offset = getMemoryOpOffset(*Op);
+      unsigned Bytes = getLSMultipleTransferSize(Op);
+      if (LastBytes) {
+        if (Bytes != LastBytes || Offset != (LastOffset + (int)Bytes))
+          break;
+      }
+
+      // Don't try to reschedule too many instructions.
+      if (NumMove == 8) // FIXME: Tune this limit.
+        break;
+
+      // Found a mergable instruction; save information about it.
+      ++NumMove;
+      LastOffset = Offset;
+      LastBytes = Bytes;
+      LastOpcode = LSMOpcode;
+
       unsigned Loc = MI2LocMap[Op];
       if (Loc <= FirstLoc) {
         FirstLoc = Loc;
@@ -2171,23 +2195,6 @@ bool ARMPreAllocLoadStoreOpt::RescheduleOps(MachineBasicBlock *MBB,
         LastLoc = Loc;
         LastOp = Op;
       }
-
-      unsigned LSMOpcode
-        = getLoadStoreMultipleOpcode(Op->getOpcode(), ARM_AM::ia);
-      if (LastOpcode && LSMOpcode != LastOpcode)
-        break;
-
-      int Offset = getMemoryOpOffset(*Op);
-      unsigned Bytes = getLSMultipleTransferSize(Op);
-      if (LastBytes) {
-        if (Bytes != LastBytes || Offset != (LastOffset + (int)Bytes))
-          break;
-      }
-      LastOffset = Offset;
-      LastBytes = Bytes;
-      LastOpcode = LSMOpcode;
-      if (++NumMove == 8) // FIXME: Tune this limit.
-        break;
     }
 
     if (NumMove <= 1)

@@ -12,11 +12,11 @@
 
 #include "llvm/ADT/Optional.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
-#include "llvm/DebugInfo/MSF/BinaryByteStream.h"
-#include "llvm/DebugInfo/MSF/BinaryItemStream.h"
-#include "llvm/DebugInfo/MSF/BinaryStreamRef.h"
 #include "llvm/DebugInfo/PDB/Native/RawConstants.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/BinaryByteStream.h"
+#include "llvm/Support/BinaryItemStream.h"
+#include "llvm/Support/BinaryStreamRef.h"
 #include "llvm/Support/Error.h"
 
 #include <vector>

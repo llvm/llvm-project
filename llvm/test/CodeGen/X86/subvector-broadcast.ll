@@ -1341,6 +1341,7 @@ define void @fallback_broadcast_v4i64_to_v8i64(<4 x i64> %a, <8 x i64> %b) {
 ; X32-AVX512-NEXT:    vpandq %zmm2, %zmm1, %zmm1
 ; X32-AVX512-NEXT:    vmovdqu %ymm0, _ga4
 ; X32-AVX512-NEXT:    vmovdqu64 %zmm1, _gb4
+; X32-AVX512-NEXT:    vzeroupper
 ; X32-AVX512-NEXT:    retl
 ;
 ; X64-AVX1-LABEL: fallback_broadcast_v4i64_to_v8i64:
@@ -1391,6 +1392,7 @@ define void @fallback_broadcast_v4i64_to_v8i64(<4 x i64> %a, <8 x i64> %b) {
 ; X64-AVX512-NEXT:    vpandq %zmm2, %zmm1, %zmm1
 ; X64-AVX512-NEXT:    vmovdqu %ymm0, {{.*}}(%rip)
 ; X64-AVX512-NEXT:    vmovdqu64 %zmm1, {{.*}}(%rip)
+; X64-AVX512-NEXT:    vzeroupper
 ; X64-AVX512-NEXT:    retq
 entry:
   %0 = add <4 x i64> %a, <i64 1, i64 2, i64 3, i64 4>
@@ -1429,6 +1431,7 @@ define void @fallback_broadcast_v4f64_to_v8f64(<4 x double> %a, <8 x double> %b)
 ; X32-AVX512-NEXT:    vdivpd %zmm2, %zmm1, %zmm1
 ; X32-AVX512-NEXT:    vmovupd %ymm0, _ga2
 ; X32-AVX512-NEXT:    vmovupd %zmm1, _gb2
+; X32-AVX512-NEXT:    vzeroupper
 ; X32-AVX512-NEXT:    retl
 ;
 ; X64-AVX-LABEL: fallback_broadcast_v4f64_to_v8f64:
@@ -1454,6 +1457,7 @@ define void @fallback_broadcast_v4f64_to_v8f64(<4 x double> %a, <8 x double> %b)
 ; X64-AVX512-NEXT:    vdivpd %zmm2, %zmm1, %zmm1
 ; X64-AVX512-NEXT:    vmovupd %ymm0, {{.*}}(%rip)
 ; X64-AVX512-NEXT:    vmovupd %zmm1, {{.*}}(%rip)
+; X64-AVX512-NEXT:    vzeroupper
 ; X64-AVX512-NEXT:    retq
 entry:
   %0 = fadd <4 x double> %a, <double 1.0, double 2.0, double 3.0, double 4.0>

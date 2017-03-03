@@ -1,11 +1,11 @@
-# RUN: llc -mtriple=x86_64-linux-gnu -global-isel -run-pass=legalizer %s -o - | FileCheck %s 
+# RUN: llc -mtriple=x86_64-linux-gnu -global-isel -run-pass=legalizer %s -o - | FileCheck %s
 
 --- |
   ; ModuleID = '<stdin>'
   source_filename = "<stdin>"
   target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
   target triple = "x86_64--linux-gnu"
-  
+
   define i32 @test_add_i32(i32 %arg1, i32 %arg2) {
     %ret = add i32 %arg1, %arg2
     ret i32 %ret
@@ -19,7 +19,7 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
   - { id: 2, class: _ }
@@ -27,7 +27,7 @@ body:             |
   bb.1 (%ir-block.0):
     liveins: %edi, %esi
     ;  CHECK-LABEL: name: test_add_i32
-    ;  CHECK: [[VAL1:%.*]](s32) = COPY %edi  
+    ;  CHECK: [[VAL1:%.*]](s32) = COPY %edi
     ;  CHECK: [[VAL2:%.*]](s32) = COPY %esi
     ;  CHECK: [[RES:%.*]](s32) = G_ADD [[VAL1:%.*]], [[VAL2:%.*]]
 

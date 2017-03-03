@@ -1,4 +1,5 @@
-; RUN: llc < %s | FileCheck %s
+; RUN: llc --combiner-alias-analysis=false < %s | FileCheck %s
+; RUN: llc --combiner-alias-analysis=true  < %s | FileCheck %s
 
 ; This test checks that we do not merge stores together which have
 ; dependencies through their non-chain operands (e.g. one store is the

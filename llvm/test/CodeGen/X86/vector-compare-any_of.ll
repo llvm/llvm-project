@@ -68,6 +68,7 @@ define i64 @test_v4f64_sext(<4 x double> %a0, <4 x double> %a1) {
 ; AVX512-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
 ; AVX512-NEXT:    vpor %ymm1, %ymm0, %ymm0
 ; AVX512-NEXT:    vmovq %xmm0, %rax
+; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %c = fcmp ogt <4 x double> %a0, %a1
   %s = sext <4 x i1> %c to <4 x i64>
@@ -114,6 +115,7 @@ define i64 @test_v4f64_legal_sext(<4 x double> %a0, <4 x double> %a1) {
 ; AVX512-NEXT:    vpor %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    vmovd %xmm0, %eax
 ; AVX512-NEXT:    cltq
+; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %c = fcmp ogt <4 x double> %a0, %a1
   %s = sext <4 x i1> %c to <4 x i32>
@@ -196,6 +198,7 @@ define i32 @test_v8f32_sext(<8 x float> %a0, <8 x float> %a1) {
 ; AVX512-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
 ; AVX512-NEXT:    vpor %ymm1, %ymm0, %ymm0
 ; AVX512-NEXT:    vmovd %xmm0, %eax
+; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %c = fcmp ogt <8 x float> %a0, %a1
   %s = sext <8 x i1> %c to <8 x i32>
@@ -243,6 +246,7 @@ define i32 @test_v8f32_legal_sext(<8 x float> %a0, <8 x float> %a1) {
 ; AVX512-NEXT:    vpor %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    vmovd %xmm0, %eax
 ; AVX512-NEXT:    cwtl
+; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %c = fcmp ogt <8 x float> %a0, %a1
   %s = sext <8 x i1> %c to <8 x i16>
@@ -334,6 +338,7 @@ define i64 @test_v4i64_sext(<4 x i64> %a0, <4 x i64> %a1) {
 ; AVX512-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
 ; AVX512-NEXT:    vpor %ymm1, %ymm0, %ymm0
 ; AVX512-NEXT:    vmovq %xmm0, %rax
+; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %c = icmp sgt <4 x i64> %a0, %a1
   %s = sext <4 x i1> %c to <4 x i64>
@@ -394,6 +399,7 @@ define i64 @test_v4i64_legal_sext(<4 x i64> %a0, <4 x i64> %a1) {
 ; AVX512-NEXT:    vpor %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    vmovd %xmm0, %eax
 ; AVX512-NEXT:    cltq
+; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %c = icmp sgt <4 x i64> %a0, %a1
   %s = sext <4 x i1> %c to <4 x i32>
@@ -489,6 +495,7 @@ define i32 @test_v8i32_sext(<8 x i32> %a0, <8 x i32> %a1) {
 ; AVX512-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
 ; AVX512-NEXT:    vpor %ymm1, %ymm0, %ymm0
 ; AVX512-NEXT:    vmovd %xmm0, %eax
+; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %c = icmp sgt <8 x i32> %a0, %a1
   %s = sext <8 x i1> %c to <8 x i32>
@@ -549,6 +556,7 @@ define i32 @test_v8i32_legal_sext(<8 x i32> %a0, <8 x i32> %a1) {
 ; AVX512-NEXT:    vpor %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    vmovd %xmm0, %eax
 ; AVX512-NEXT:    cwtl
+; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %c = icmp sgt <8 x i32> %a0, %a1
   %s = sext <8 x i1> %c to <8 x i16>
@@ -662,6 +670,7 @@ define i16 @test_v16i16_sext(<16 x i16> %a0, <16 x i16> %a1) {
 ; AVX512-NEXT:    vpor %ymm1, %ymm0, %ymm0
 ; AVX512-NEXT:    vmovd %xmm0, %eax
 ; AVX512-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
+; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %c = icmp sgt <16 x i16> %a0, %a1
   %s = sext <16 x i1> %c to <16 x i16>
@@ -730,6 +739,7 @@ define i16 @test_v16i16_legal_sext(<16 x i16> %a0, <16 x i16> %a1) {
 ; AVX512-NEXT:    vpextrb $0, %xmm0, %eax
 ; AVX512-NEXT:    movsbl %al, %eax
 ; AVX512-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
+; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %c  = icmp sgt <16 x i16> %a0, %a1
   %s  = sext <16 x i1> %c to <16 x i8>
@@ -853,6 +863,7 @@ define i8 @test_v32i8_sext(<32 x i8> %a0, <32 x i8> %a1) {
 ; AVX512-NEXT:    vpor %ymm1, %ymm0, %ymm0
 ; AVX512-NEXT:    vpextrb $0, %xmm0, %eax
 ; AVX512-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
+; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %c  = icmp sgt <32 x i8> %a0, %a1
   %s  = sext <32 x i1> %c to <32 x i8>

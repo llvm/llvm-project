@@ -7,15 +7,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DEBUGINFO_MSF_BINARYSTREAMWRITER_H
-#define LLVM_DEBUGINFO_MSF_BINARYSTREAMWRITER_H
+#ifndef LLVM_SUPPORT_BINARYSTREAMWRITER_H
+#define LLVM_SUPPORT_BINARYSTREAMWRITER_H
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/DebugInfo/MSF/BinaryStreamArray.h"
-#include "llvm/DebugInfo/MSF/BinaryStreamError.h"
-#include "llvm/DebugInfo/MSF/BinaryStreamRef.h"
+#include "llvm/Support/BinaryStreamArray.h"
+#include "llvm/Support/BinaryStreamError.h"
+#include "llvm/Support/BinaryStreamRef.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include <cstdint>
@@ -162,4 +162,4 @@ protected:
 
 } // end namespace llvm
 
-#endif // LLVM_DEBUGINFO_MSF_BINARYSTREAMWRITER_H
+#endif // LLVM_SUPPORT_BINARYSTREAMWRITER_H

@@ -13,9 +13,9 @@ target triple = "x86_64-unknown-linux-gnu"
 ;; the same result in memory in the end.
 
 ; CHECK-LABEL: redundant_stores_merging:
-; CHECK:   movabsq $528280977409, %rax
+; CHECK:   movl    $123, e+8(%rip)
+; CHECK:   movabsq $1958505086977, %rax
 ; CHECK:   movq    %rax, e+4(%rip)
-; CHECK:   movl    $456, e+8(%rip)
 define void @redundant_stores_merging() {
 entry:
   store i32 1, i32* getelementptr inbounds (%structTy, %structTy* @e, i64 0, i32 1), align 4
@@ -26,9 +26,9 @@ entry:
 
 ;; This variant tests PR25154.
 ; CHECK-LABEL: redundant_stores_merging_reverse:
-; CHECK:   movabsq $528280977409, %rax
+; CHECK:   movl    $123, e+8(%rip)
+; CHECK:   movabsq $1958505086977, %rax
 ; CHECK:   movq    %rax, e+4(%rip)
-; CHECK:   movl    $456, e+8(%rip)
 define void @redundant_stores_merging_reverse() {
 entry:
   store i32 123, i32* getelementptr inbounds (%structTy, %structTy* @e, i64 0, i32 2), align 4
@@ -45,8 +45,9 @@ entry:
 ;; a movl, after the store to 3).
 
 ;; CHECK-LABEL: overlapping_stores_merging:
-;; CHECK:  movl    $1, b(%rip)
+;; CHECK:  movw    $0, b+2(%rip)
 ;; CHECK:  movw    $2, b+3(%rip)
+;; CHECK:  movw    $1, b(%rip)
 define void @overlapping_stores_merging() {
 entry:
   store i16 0, i16* bitcast (i8* getelementptr inbounds ([8 x i8], [8 x i8]* @b, i64 0, i64 2) to i16*), align 2

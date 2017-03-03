@@ -25,7 +25,6 @@
 #define LLVM_SUPPORT_GENERICDOMTREECONSTRUCTION_H
 
 #include "llvm/ADT/DepthFirstIterator.h"
-#include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/GenericDomTree.h"
 
@@ -40,10 +39,8 @@ public:
   df_iterator_dom_storage(BaseSet &Storage) : Storage(Storage) {}
 
   typedef typename BaseSet::iterator iterator;
-  std::pair<iterator, bool> insert(NodeRef To) {
-    auto Result = Storage.insert({To, InfoType()});
-
-    return Result;
+  std::pair<iterator, bool> insert(NodeRef N) {
+    return Storage.insert({N, InfoType()});
   }
   void completed(NodeRef) {}
 
@@ -58,6 +55,7 @@ unsigned ReverseDFSPass(DominatorTreeBaseByGraphTraits<GraphT> &DT,
       typename GraphT::NodeRef,
       typename DominatorTreeBaseByGraphTraits<GraphT>::InfoRec>
       DFStorage(DT.Info);
+  bool IsChildOfArtificialExit = (N != 0);
   for (auto I = idf_ext_begin(V, DFStorage), E = idf_ext_end(V, DFStorage);
        I != E; ++I) {
     typename GraphT::NodeRef BB = *I;
@@ -69,6 +67,11 @@ unsigned ReverseDFSPass(DominatorTreeBaseByGraphTraits<GraphT> &DT,
     if (I.getPathLength() > 1)
       BBInfo.Parent = DT.Info[I.getPath(I.getPathLength() - 2)].DFSNum;
     DT.Vertex.push_back(BB); // Vertex[n] = V;
+
+    if (IsChildOfArtificialExit)
+      BBInfo.Parent = 1;
+
+    IsChildOfArtificialExit = false;
   }
   return N;
 }
@@ -139,76 +142,33 @@ template <class FuncT, class NodeT>
 void Calculate(DominatorTreeBaseByGraphTraits<GraphTraits<NodeT>> &DT,
                FuncT &F) {
   typedef GraphTraits<NodeT> GraphT;
-  typedef GraphTraits<FuncT *> FuncGraphT;
   static_assert(std::is_pointer<typename GraphT::NodeRef>::value,
                 "NodeRef should be pointer type");
   typedef typename std::remove_pointer<typename GraphT::NodeRef>::type NodeType;
 
   unsigned N = 0;
-  bool NeedFakeRoot = DT.isPostDominator();
-  // If this is post dominators, push a fake node to start
-  if (NeedFakeRoot) {
+  bool MultipleRoots = (DT.Roots.size() > 1);
+  if (MultipleRoots) {
     auto &BBInfo = DT.Info[nullptr];
     BBInfo.DFSNum = BBInfo.Semi = ++N;
     BBInfo.Label = nullptr;
-    DT.Vertex.push_back(nullptr); // Vertex[n] = V;
-  } else {
-    // The root is the entry block of the CFG
-    DT.addRoot(FuncGraphT::getEntryNode(&F));
+
+    DT.Vertex.push_back(nullptr);       // Vertex[n] = V;
   }
 
   // Step #1: Number blocks in depth-first order and initialize variables used
   // in later stages of the algorithm.
-  if (DT.isPostDominator()) {
-    unsigned Total = 0;
-    for (auto I : nodes(&F)) {
-      ++Total;
-      // If it has no *successors*, it is definitely a root.
-      if (FuncGraphT::child_begin(I) == FuncGraphT::child_end(I)) {
-        N = ReverseDFSPass<GraphT>(DT, I, N);
-        DT.Info[I].Parent = 1;
-        DT.addRoot(I);
-      }
-    }
-    // Accounting for the virtual exit, see if we had any unreachable nodes
-    if (Total + 1 != N) {
-      // Make another DFS pass over all other nodes to find the unreachable
-      // blocks, and find the furthest paths we'll be able to make.
-      // Note that this looks N^2, but it's really 2N worst case, if every node
-      // is unreachable. This is because we are still going to only visit each
-      // unreachable node once, we may just visit it in two directions,
-      // depending on how lucky we get.
-      SmallPtrSet<NodeType *, 4> ConnectToExitBlock;
-      for (auto I : nodes(&F))
-        if (!DT.Info.count(I)) {
-          // Find the furthest away we can get by following successors, then
-          // follow them in reverse.  This gives us some reasonable answer about
-          // the post-dom tree inside any infinite loop.  In particular, it
-          // guarantees we get to the farthest away point along *some*
-          // path. This also matches GCC behavior.  If we really wanted a
-          // totally complete picture of dominance inside this infinite loop, we
-          // could do it with SCC-like algorithms to find the lowest and highest
-          // points in the infinite loop.  In theory, it would be nice to give
-          // the canonical backedge for the loop, but it's expensive.
-          auto *FurthestAway = *po_begin(I);
-          ConnectToExitBlock.insert(FurthestAway);
-          N = ReverseDFSPass<GraphT>(DT, FurthestAway, N);
-        }
-      // Finally, now everything should be visited, and anything with parent ==
-      // 0 should be connected to virtual exit.
-      for (auto *Node : ConnectToExitBlock) {
-        auto FindResult = DT.Info.find(Node);
-        assert(FindResult != DT.Info.end() &&
-               "Everything should have been visited by now");
-        if (FindResult->second.Parent == 0) {
-          FindResult->second.Parent = 1;
-          DT.addRoot(Node);
-        }
-      }
-    }
+  if (DT.isPostDominator()){
+    for (unsigned i = 0, e = static_cast<unsigned>(DT.Roots.size());
+         i != e; ++i)
+      N = ReverseDFSPass<GraphT>(DT, DT.Roots[i], N);
   } else {
-    N = DFSPass<GraphT>(DT, GraphTraits<FuncT *>::getEntryNode(&F), N);
+    N = DFSPass<GraphT>(DT, DT.Roots[0], N);
   }
+
+  // it might be that some blocks did not get a DFS number (e.g., blocks of
+  // infinite loops). In these cases an artificial exit node is required.
+  MultipleRoots |= (DT.isPostDominator() && N != GraphTraits<FuncT*>::size(&F));
 
   // When naively implemented, the Lengauer-Tarjan algorithm requires a separate
   // bucket for each vertex. However, this is unnecessary, because each vertex
@@ -274,11 +234,13 @@ void Calculate(DominatorTreeBaseByGraphTraits<GraphTraits<NodeT>> &DT,
       WIDom = DT.IDoms[WIDom];
   }
 
+  if (DT.Roots.empty()) return;
+
   // Add a node for the root.  This node might be the actual root, if there is
   // one exit block, or it may be the virtual exit (denoted by (BasicBlock *)0)
   // which postdominates all real exits if there are multiple exit blocks, or
   // an infinite loop.
-  typename GraphT::NodeRef Root = NeedFakeRoot ? nullptr : DT.Roots[0];
+  typename GraphT::NodeRef Root = !MultipleRoots ? DT.Roots[0] : nullptr;
 
   DT.RootNode =
       (DT.DomTreeNodes[Root] =

@@ -245,13 +245,20 @@ MSP430TargetLowering::getRegForInlineAsmConstraint(
 template<typename ArgT>
 static void ParseFunctionArgs(const SmallVectorImpl<ArgT> &Args,
                               SmallVectorImpl<unsigned> &Out) {
-  unsigned CurrentArgIndex = ~0U;
-  for (unsigned i = 0, e = Args.size(); i != e; i++) {
-    if (CurrentArgIndex == Args[i].OrigArgIndex) {
-      Out.back()++;
+  unsigned CurrentArgIndex;
+
+  if (Args.empty())
+    return;
+
+  CurrentArgIndex = Args[0].OrigArgIndex;
+  Out.push_back(0);
+
+  for (auto &Arg : Args) {
+    if (CurrentArgIndex == Arg.OrigArgIndex) {
+      Out.back() += 1;
     } else {
       Out.push_back(1);
-      CurrentArgIndex++;
+      CurrentArgIndex = Arg.OrigArgIndex;
     }
   }
 }
@@ -275,7 +282,7 @@ static void AnalyzeArguments(CCState &State,
                              SmallVectorImpl<CCValAssign> &ArgLocs,
                              const SmallVectorImpl<ArgT> &Args) {
   static const MCPhysReg RegList[] = {
-    MSP430::R15, MSP430::R14, MSP430::R13, MSP430::R12
+    MSP430::R12, MSP430::R13, MSP430::R14, MSP430::R15
   };
   static const unsigned NbRegs = array_lengthof(RegList);
 
@@ -288,7 +295,7 @@ static void AnalyzeArguments(CCState &State,
   ParseFunctionArgs(Args, ArgsParts);
 
   unsigned RegsLeft = NbRegs;
-  bool UseStack = false;
+  bool UsedStack = false;
   unsigned ValNo = 0;
 
   for (unsigned i = 0, e = ArgsParts.size(); i != e; i++) {
@@ -316,20 +323,22 @@ static void AnalyzeArguments(CCState &State,
 
     unsigned Parts = ArgsParts[i];
 
-    if (!UseStack && Parts <= RegsLeft) {
-      unsigned FirstVal = ValNo;
+    if (!UsedStack && Parts == 2 && RegsLeft == 1) {
+      // Special case for 32-bit register split, see EABI section 3.3.3
+      unsigned Reg = State.AllocateReg(RegList);
+      State.addLoc(CCValAssign::getReg(ValNo++, ArgVT, Reg, LocVT, LocInfo));
+      RegsLeft -= 1;
+
+      UsedStack = true;
+      CC_MSP430_AssignStack(ValNo++, ArgVT, LocVT, LocInfo, ArgFlags, State);
+    } else if (Parts <= RegsLeft) {
       for (unsigned j = 0; j < Parts; j++) {
         unsigned Reg = State.AllocateReg(RegList);
         State.addLoc(CCValAssign::getReg(ValNo++, ArgVT, Reg, LocVT, LocInfo));
         RegsLeft--;
       }
-
-      // Reverse the order of the pieces to agree with the "big endian" format
-      // required in the calling convention ABI.
-      SmallVectorImpl<CCValAssign>::iterator B = ArgLocs.begin() + FirstVal;
-      std::reverse(B, B + Parts);
     } else {
-      UseStack = true;
+      UsedStack = true;
       for (unsigned j = 0; j < Parts; j++)
         CC_MSP430_AssignStack(ValNo++, ArgVT, LocVT, LocInfo, ArgFlags, State);
     }
@@ -351,10 +360,6 @@ static void AnalyzeReturnValues(CCState &State,
                                 SmallVectorImpl<CCValAssign> &RVLocs,
                                 const SmallVectorImpl<ArgT> &Args) {
   AnalyzeRetResult(State, Args);
-
-  // Reverse splitted return values to get the "big endian" format required
-  // to agree with the calling convention ABI.
-  std::reverse(RVLocs.begin(), RVLocs.end());
 }
 
 SDValue MSP430TargetLowering::LowerFormalArguments(
@@ -496,7 +501,31 @@ SDValue MSP430TargetLowering::LowerCCCArguments(
     }
   }
 
+  for (unsigned i = 0, e = ArgLocs.size(); i != e; ++i) {
+    if (Ins[i].Flags.isSRet()) {
+      unsigned Reg = FuncInfo->getSRetReturnReg();
+      if (!Reg) {
+        Reg = MF.getRegInfo().createVirtualRegister(
+            getRegClassFor(MVT::i16));
+        FuncInfo->setSRetReturnReg(Reg);
+      }
+      SDValue Copy = DAG.getCopyToReg(DAG.getEntryNode(), dl, Reg, InVals[i]);
+      Chain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, Copy, Chain);
+    }
+  }
+
   return Chain;
+}
+
+bool
+MSP430TargetLowering::CanLowerReturn(CallingConv::ID CallConv,
+                                     MachineFunction &MF,
+                                     bool IsVarArg,
+                                     const SmallVectorImpl<ISD::OutputArg> &Outs,
+                                     LLVMContext &Context) const {
+  SmallVector<CCValAssign, 16> RVLocs;
+  CCState CCInfo(CallConv, IsVarArg, MF, RVLocs, Context);
+  return CCInfo.CheckReturn(Outs, RetCC_MSP430);
 }
 
 SDValue
@@ -505,6 +534,8 @@ MSP430TargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
                                   const SmallVectorImpl<ISD::OutputArg> &Outs,
                                   const SmallVectorImpl<SDValue> &OutVals,
                                   const SDLoc &dl, SelectionDAG &DAG) const {
+
+  MachineFunction &MF = DAG.getMachineFunction();
 
   // CCValAssign - represent the assignment of the return value to a location
   SmallVector<CCValAssign, 16> RVLocs;
@@ -535,6 +566,22 @@ MSP430TargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
     // avoiding something bad.
     Flag = Chain.getValue(1);
     RetOps.push_back(DAG.getRegister(VA.getLocReg(), VA.getLocVT()));
+  }
+
+  if (MF.getFunction()->hasStructRetAttr()) {
+    MSP430MachineFunctionInfo *FuncInfo = MF.getInfo<MSP430MachineFunctionInfo>();
+    unsigned Reg = FuncInfo->getSRetReturnReg();
+
+    if (!Reg)
+      llvm_unreachable("sret virtual register not created in entry block");
+
+    SDValue Val =
+      DAG.getCopyFromReg(Chain, dl, Reg, getPointerTy(DAG.getDataLayout()));
+    unsigned R12 = MSP430::R12;
+
+    Chain = DAG.getCopyToReg(Chain, dl, R12, Val, Flag);
+    Flag = Chain.getValue(1);
+    RetOps.push_back(DAG.getRegister(R12, getPointerTy(DAG.getDataLayout())));
   }
 
   unsigned Opc = (CallConv == CallingConv::MSP430_INTR ?

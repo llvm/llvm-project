@@ -60,34 +60,33 @@ equal:
 unequal:
   ret i8* %array2_ptr
 }
+
 ; CHECK-LABEL: func2:
-; CHECK: cmpld {{([0-9]+,)?}}4, 6
-; CHECK-DAG: std 6, 72(1)
-; CHECK-DAG: std 5, 64(1)
-; CHECK-DAG: std 6, -[[OFFSET1:[0-9]+]]
+; CHECK: ld [[REG2:[0-9]+]], 72(1)
+; CHECK: cmpld {{([0-9]+,)?}}4, [[REG2]]
+; CHECK-DAG: std [[REG2]], -[[OFFSET1:[0-9]+]]
 ; CHECK-DAG: std 4, -[[OFFSET2:[0-9]+]]
 ; CHECK: ld 3, -[[OFFSET2]](1)
 ; CHECK: ld 3, -[[OFFSET1]](1)
 
-; DARWIN32-LABEL: _func2
-; DARWIN32-DAG: addi r[[REG8:[0-9]+]], r[[REGSP:[0-9]+]], 36
-; DARWIN32-DAG: lwz r[[REG2:[0-9]+]], 44(r[[REGSP]])
+; DARWIN32: _func2:
+; DARWIN32: addi r[[REG1:[0-9]+]], r[[REGSP:[0-9]+]], 36
+; DARWIN32: lwz r[[REG2:[0-9]+]], 44(r[[REGSP]])
 ; DARWIN32: mr
-; DARWIN32: mr r[[REG7:[0-9]+]], r5
-; DARWIN32-DAG: cmplw {{(cr[0-9]+,)?}}r5, r[[REG2]]
-; DARWIN32-DAG: stw r[[REG7]], -[[OFFSET1:[0-9]+]]
-; DARWIN32-DAG: stw r[[REG2]], -[[OFFSET2:[0-9]+]]
-; DARWIN32-DAG: lwz r3, -[[OFFSET1]]
-; DARWIN32-DAG: lwz r3, -[[OFFSET2]]
-
+; DARWIN32: mr r[[REG3:[0-9]+]], r[[REGA:[0-9]+]]
+; DARWIN32: cmplw {{(cr[0-9]+,)?}}r[[REGA]], r[[REG2]]
+; DARWIN32: stw r[[REG3]], -[[OFFSET1:[0-9]+]]
+; DARWIN32: stw r[[REG2]], -[[OFFSET2:[0-9]+]]
+; DARWIN32: lwz r3, -[[OFFSET1]]
+; DARWIN32: lwz r3, -[[OFFSET2]]
 
 ; DARWIN64: _func2:
 ; DARWIN64: ld r[[REG2:[0-9]+]], 72(r1)
 ; DARWIN64: mr
 ; DARWIN64: mr r[[REG3:[0-9]+]], r[[REGA:[0-9]+]]
 ; DARWIN64: cmpld {{(cr[0-9]+,)?}}r[[REGA]], r[[REG2]]
-; DARWIN64: std r[[REG2]], -[[OFFSET2:[0-9]+]]
 ; DARWIN64: std r[[REG3]], -[[OFFSET1:[0-9]+]]
+; DARWIN64: std r[[REG2]], -[[OFFSET2:[0-9]+]]
 ; DARWIN64: ld r3, -[[OFFSET1]]
 ; DARWIN64: ld r3, -[[OFFSET2]]
 
@@ -107,24 +106,24 @@ unequal:
 }
 
 ; CHECK-LABEL: func3:
-; CHECK: cmpld {{([0-9]+,)?}}4, 6
-; CHECK-DAG: std 4, -[[OFFSET2:[0-9]+]](1)
-; CHECK-DAG: std 6, -[[OFFSET1:[0-9]+]](1)
+; CHECK: ld [[REG3:[0-9]+]], 72(1)
+; CHECK: ld [[REG4:[0-9]+]], 56(1)
+; CHECK: cmpld {{([0-9]+,)?}}[[REG4]], [[REG3]]
+; CHECK: std [[REG3]], -[[OFFSET1:[0-9]+]](1)
+; CHECK: std [[REG4]], -[[OFFSET2:[0-9]+]](1)
 ; CHECK: ld 3, -[[OFFSET2]](1)
 ; CHECK: ld 3, -[[OFFSET1]](1)
 
-; DARWIN32-LABEL: _func3:
-; DARWIN32-DAG: stw r[[REG8:[0-9]+]], 44(r[[REGSP:[0-9]+]])
-; DARWIN32-DAG: stw r[[REG5:[0-9]+]], 32(r[[REGSP]])
-; DARWIN32-DAG: addi r[[REG5a:[0-9]+]], r[[REGSP:[0-9]+]], 36
-; DARWIN32-DAG: addi r[[REG8a:[0-9]+]], r[[REGSP]], 24
-; DARWIN32-DAG: lwz r[[REG5a:[0-9]+]], 44(r[[REGSP]])
-; DARWIN32-DAG: lwz r[[REG8a:[0-9]+]], 32(r[[REGSP]])
-; DARWIN32-DAG: cmplw {{(cr[0-9]+,)?}}r[[REG8a]], r[[REG5a]]
-; DARWIN32-DAG: stw r[[REG5a]], -[[OFFSET1:[0-9]+]]
-; DARWIN32-DAG: stw r[[REG8a]], -[[OFFSET2:[0-9]+]]
-; DARWIN32-DAG: lwz r3, -[[OFFSET1:[0-9]+]]
-; DARWIN32-DAG: lwz r3, -[[OFFSET2:[0-9]+]]
+; DARWIN32: _func3:
+; DARWIN32: addi r[[REG1:[0-9]+]], r[[REGSP:[0-9]+]], 36
+; DARWIN32: addi r[[REG2:[0-9]+]], r[[REGSP]], 24
+; DARWIN32: lwz r[[REG3:[0-9]+]], 44(r[[REGSP]])
+; DARWIN32: lwz r[[REG4:[0-9]+]], 32(r[[REGSP]])
+; DARWIN32: cmplw {{(cr[0-9]+,)?}}r[[REG4]], r[[REG3]]
+; DARWIN32: stw r[[REG3]], -[[OFFSET1:[0-9]+]]
+; DARWIN32: stw r[[REG4]], -[[OFFSET2:[0-9]+]]
+; DARWIN32: lwz r3, -[[OFFSET2]]
+; DARWIN32: lwz r3, -[[OFFSET1]]
 
 ; DARWIN64: _func3:
 ; DARWIN64: ld r[[REG3:[0-9]+]], 72(r1)

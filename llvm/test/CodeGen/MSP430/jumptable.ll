@@ -11,9 +11,9 @@ entry:
   %i.addr = alloca i16, align 2
   store i16 %i, i16* %i.addr, align 2
   %0 = load i16, i16* %i.addr, align 2
-; CHECK: mov.w #2, r14
+; CHECK: mov.w #2, r13
 ; CHECK: call #__mulhi3hw_noint
-; CHECK: br .LJTI0_0(r15)
+; CHECK: br .LJTI0_0(r12)
   switch i16 %0, label %sw.default [
     i16 0, label %sw.bb
     i16 1, label %sw.bb1

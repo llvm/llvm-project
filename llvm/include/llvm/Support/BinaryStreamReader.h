@@ -7,13 +7,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DEBUGINFO_MSF_BINARYSTREAMREADER_H
-#define LLVM_DEBUGINFO_MSF_BINARYSTREAMREADER_H
+#ifndef LLVM_SUPPORT_BINARYSTREAMREADER_H
+#define LLVM_SUPPORT_BINARYSTREAMREADER_H
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/DebugInfo/MSF/BinaryStreamArray.h"
-#include "llvm/DebugInfo/MSF/BinaryStreamRef.h"
+#include "llvm/Support/BinaryStreamArray.h"
+#include "llvm/Support/BinaryStreamRef.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MathExtras.h"
@@ -231,4 +231,4 @@ private:
 };
 } // namespace llvm
 
-#endif // LLVM_DEBUGINFO_MSF_BINARYSTREAMREADER_H
+#endif // LLVM_SUPPORT_BINARYSTREAMREADER_H

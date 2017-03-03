@@ -1,4 +1,3 @@
-; XFAIL: *
 ; RUN: opt -S -o - -structurizecfg -verify-dom-info < %s | FileCheck %s
 
 ; CHECK-LABEL: @no_branch_to_entry_undef(

@@ -16,22 +16,22 @@ define void @foo(i64* %addr) {
   ; an LDMIA was created with both a FrameIndex and an offset, which
   ; is not allowed.
 
-; CHECK-WITH-LDRD-DAG: strd {{r[0-9]+}}, {{r[0-9]+}}, [sp, #8]
-; CHECK-WITH-LDRD-DAG: strd {{r[0-9]+}}, {{r[0-9]+}}, [sp]
+; CHECK-WITH-LDRD: strd {{r[0-9]+}}, {{r[0-9]+}}, [sp, #8]
+; CHECK-WITH-LDRD: strd {{r[0-9]+}}, {{r[0-9]+}}, [sp]
 
-; CHECK-WITH-LDRD-DAG: ldrd {{r[0-9]+}}, {{r[0-9]+}}, [sp, #8]
-; CHECK-WITH-LDRD-DAG: ldrd {{r[0-9]+}}, {{r[0-9]+}}, [sp]
+; CHECK-WITH-LDRD: ldrd {{r[0-9]+}}, {{r[0-9]+}}, [sp, #8]
+; CHECK-WITH-LDRD: ldrd {{r[0-9]+}}, {{r[0-9]+}}, [sp]
 
   ; We also want to ensure the register scavenger is working (i.e. an
   ; offset from sp can be generated), so we need two spills.
-; CHECK-WITHOUT-LDRD-DAG: add [[ADDRREG:[a-z0-9]+]], sp, #{{[0-9]+}}
-; CHECK-WITHOUT-LDRD-DAG: stm [[ADDRREG]], {r{{[0-9]+}}, r{{[0-9]+}}}
-; CHECK-WITHOUT-LDRD-DAG: stm sp, {r{{[0-9]+}}, r{{[0-9]+}}}
+; CHECK-WITHOUT-LDRD: add [[ADDRREG:[a-z0-9]+]], sp, #{{[0-9]+}}
+; CHECK-WITHOUT-LDRD: stm [[ADDRREG]], {r{{[0-9]+}}, r{{[0-9]+}}}
+; CHECK-WITHOUT-LDRD: stm sp, {r{{[0-9]+}}, r{{[0-9]+}}}
 
   ; In principle LLVM may have to recalculate the offset. At the moment
   ; it reuses the original though.
-; CHECK-WITHOUT-LDRD-DAG: ldm [[ADDRREG]], {r{{[0-9]+}}, r{{[0-9]+}}}
-; CHECK-WITHOUT-LDRD-DAG: ldm sp, {r{{[0-9]+}}, r{{[0-9]+}}}
+; CHECK-WITHOUT-LDRD: ldm [[ADDRREG]], {r{{[0-9]+}}, r{{[0-9]+}}}
+; CHECK-WITHOUT-LDRD: ldm sp, {r{{[0-9]+}}, r{{[0-9]+}}}
 
   store volatile i64 %val1, i64* %addr
   store volatile i64 %val2, i64* %addr

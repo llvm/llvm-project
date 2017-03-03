@@ -1,4 +1,4 @@
-//=-- InstrProfReader.cpp - Instrumented profiling reader -------------------=//
+//===- InstrProfReader.cpp - Instrumented profiling reader ----------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -12,9 +12,27 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ProfileData/InstrProfReader.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
-#include <cassert>
+#include "llvm/ADT/StringRef.h"
+#include "llvm/IR/ProfileSummary.h"
+#include "llvm/ProfileData/InstrProf.h"
+#include "llvm/ProfileData/InstrProfReader.h"
+#include "llvm/ProfileData/ProfileCommon.h"
+#include "llvm/Support/Endian.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/ErrorOr.h"
+#include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/SwapByteOrder.h"
+#include <algorithm>
+#include <cctype>
+#include <cstddef>
+#include <cstdint>
+#include <limits>
+#include <memory>
+#include <system_error>
+#include <utility>
+#include <vector>
 
 using namespace llvm;
 
@@ -77,7 +95,6 @@ IndexedInstrProfReader::create(const Twine &Path) {
     return std::move(E);
   return IndexedInstrProfReader::create(std::move(BufferOrError.get()));
 }
-
 
 Expected<std::unique_ptr<IndexedInstrProfReader>>
 IndexedInstrProfReader::create(std::unique_ptr<MemoryBuffer> Buffer) {
@@ -399,7 +416,6 @@ Error RawInstrProfReader<IntPtrT>::readRawCounts(
 template <class IntPtrT>
 Error RawInstrProfReader<IntPtrT>::readValueProfilingData(
     InstrProfRecord &Record) {
-
   Record.clearValueData();
   CurValueDataSize = 0;
   // Need to match the logic in value profile dumper code in compiler-rt:
@@ -455,9 +471,11 @@ Error RawInstrProfReader<IntPtrT>::readNextRecord(InstrProfRecord &Record) {
 }
 
 namespace llvm {
+
 template class RawInstrProfReader<uint32_t>;
 template class RawInstrProfReader<uint64_t>;
-}
+
+} // end namespace llvm
 
 InstrProfLookupTrait::hash_value_type
 InstrProfLookupTrait::ComputeHash(StringRef K) {
@@ -483,6 +501,8 @@ bool InstrProfLookupTrait::readValueProfilingData(
 
 data_type InstrProfLookupTrait::ReadData(StringRef K, const unsigned char *D,
                                          offset_type N) {
+  using namespace support;
+
   // Check if the data is corrupt. If so, don't try to read it.
   if (N % sizeof(uint64_t))
     return data_type();
@@ -490,7 +510,6 @@ data_type InstrProfLookupTrait::ReadData(StringRef K, const unsigned char *D,
   DataBuffer.clear();
   std::vector<uint64_t> CounterBuffer;
 
-  using namespace support;
   const unsigned char *End = D + N;
   while (D < End) {
     // Read hash.
@@ -568,9 +587,10 @@ InstrProfReaderIndex<HashTableImpl>::InstrProfReaderIndex(
 }
 
 bool IndexedInstrProfReader::hasFormat(const MemoryBuffer &DataBuffer) {
+  using namespace support;
+
   if (DataBuffer.getBufferSize() < 8)
     return false;
-  using namespace support;
   uint64_t Magic =
       endian::read<uint64_t, little, aligned>(DataBuffer.getBufferStart());
   // Verify that it's magical.
@@ -582,6 +602,7 @@ IndexedInstrProfReader::readSummary(IndexedInstrProf::ProfVersion Version,
                                     const unsigned char *Cur) {
   using namespace IndexedInstrProf;
   using namespace support;
+
   if (Version >= IndexedInstrProf::Version4) {
     const IndexedInstrProf::Summary *SummaryInLE =
         reinterpret_cast<const IndexedInstrProf::Summary *>(Cur);
@@ -618,6 +639,7 @@ IndexedInstrProfReader::readSummary(IndexedInstrProf::ProfVersion Version,
   } else {
     // For older version of profile data, we need to compute on the fly:
     using namespace IndexedInstrProf;
+
     InstrProfSummaryBuilder Builder(ProfileSummaryBuilder::DefaultCutoffs);
     // FIXME: This only computes an empty summary. Need to call addRecord for
     // all InstrProfRecords to get the correct summary.
@@ -627,13 +649,13 @@ IndexedInstrProfReader::readSummary(IndexedInstrProf::ProfVersion Version,
 }
 
 Error IndexedInstrProfReader::readHeader() {
+  using namespace support;
+
   const unsigned char *Start =
       (const unsigned char *)DataBuffer->getBufferStart();
   const unsigned char *Cur = Start;
   if ((const unsigned char *)DataBuffer->getBufferEnd() - Cur < 24)
     return error(instrprof_error::truncated);
-
-  using namespace support;
 
   auto *Header = reinterpret_cast<const IndexedInstrProf::Header *>(Cur);
   Cur += sizeof(IndexedInstrProf::Header);

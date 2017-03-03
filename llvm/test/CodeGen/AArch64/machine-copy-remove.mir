@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=aarch64--linux-gnu -run-pass=aarch64-copyelim %s -verify-machineinstrs -o - 2>&1 | FileCheck %s
+# RUN: llc -mtriple=aarch64--linux-gnu -run-pass=aarch64-copyelim %s -verify-machineinstrs -o - | FileCheck %s
 ---
 # Check that bb.0 COPY is seen through to allow the bb.1 COPY of XZR to be removed.
 # CHECK-LABEL: name: test1
@@ -293,3 +293,245 @@ body:             |
     RET_ReallyLR implicit %x0
 
 ...
+# Eliminate redundant MOVi32imm 7 in bb.1
+# Note: 32-bit compare/32-bit move imm
+# Kill marker should be removed from compare.
+# CHECK-LABEL: name: test10
+# CHECK: SUBSWri %w0, 7, 0, implicit-def %nzcv
+# CHECK: bb.1:
+# CHECK-NOT: MOVi32imm
+name:            test10
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    successors: %bb.1, %bb.2
+    liveins: %w0, %x1
+
+    dead %wzr = SUBSWri killed %w0, 7, 0, implicit-def %nzcv
+    Bcc 1, %bb.2, implicit killed %nzcv
+    B %bb.1
+
+  bb.1:
+    successors: %bb.2
+    liveins: %x1
+
+    %w0 = MOVi32imm 7
+    STRWui killed %w0, killed %x1, 0
+
+  bb.2:
+    RET_ReallyLR
+...
+# Eliminate redundant MOVi32imm 7 in bb.1
+# Note: 64-bit compare/32-bit move imm w/implicit def
+# Kill marker should be removed from compare.
+# CHECK-LABEL: name: test11
+# CHECK: SUBSXri %x0, 7, 0, implicit-def %nzcv
+# CHECK: bb.1:
+# CHECK-NOT: MOVi32imm
+name:            test11
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    successors: %bb.1, %bb.2
+    liveins: %x0, %x1
+
+    dead %xzr = SUBSXri killed %x0, 7, 0, implicit-def %nzcv
+    Bcc 1, %bb.2, implicit killed %nzcv
+    B %bb.1
+
+  bb.1:
+    successors: %bb.2
+    liveins: %x1
+
+    %w0 = MOVi32imm 7, implicit-def %x0
+    STRXui killed %x0, killed %x1, 0
+
+  bb.2:
+    RET_ReallyLR
+...
+# Eliminate redundant MOVi32imm 7 in bb.1
+# Note: 64-bit compare/32-bit move imm
+# Kill marker should be removed from compare.
+# CHECK-LABEL: name: test12
+# CHECK: SUBSXri %x0, 7, 0, implicit-def %nzcv
+# CHECK: bb.1:
+# CHECK-NOT: MOVi32imm
+name:            test12
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    successors: %bb.1, %bb.2
+    liveins: %x0, %x1
+
+    dead %xzr = SUBSXri killed %x0, 7, 0, implicit-def %nzcv
+    Bcc 1, %bb.2, implicit killed %nzcv
+    B %bb.1
+
+  bb.1:
+    successors: %bb.2
+    liveins: %x1
+
+    %w0 = MOVi32imm 7
+    STRWui killed %w0, killed %x1, 0
+
+  bb.2:
+    RET_ReallyLR
+...
+# Don't eliminate MOVi32imm 7 in bb.1 as we don't necessarily know the upper 32-bits.
+# Note: 32-bit compare/32-bit move imm w/implicit def
+# Kill marker should remain on compare.
+# CHECK-LABEL: name: test13
+# CHECK: SUBSWri killed %w0, 7, 0, implicit-def %nzcv
+# CHECK: bb.1:
+# CHECK: MOVi32imm
+name:            test13
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    successors: %bb.1, %bb.2
+    liveins: %w0, %x1
+
+    dead %wzr = SUBSWri killed %w0, 7, 0, implicit-def %nzcv
+    Bcc 1, %bb.2, implicit killed %nzcv
+    B %bb.1
+
+  bb.1:
+    successors: %bb.2
+    liveins: %x1
+
+    %w0 = MOVi32imm 7, implicit-def %x0
+    STRXui killed %x0, killed %x1, 0
+
+  bb.2:
+    RET_ReallyLR
+...
+# We can't eliminate the MOVi32imm because of the clobbering LDRWui.
+# CHECK-LABEL: name: test14
+# CHECK: bb.1:
+# CHECK: MOVi32imm
+name:            test14
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    successors: %bb.1, %bb.2
+    liveins: %w0, %x1, %x2
+
+    dead %wzr = SUBSWri killed %w0, 7, 0, implicit-def %nzcv
+    %w0 = LDRWui %x1, 0
+    STRWui killed %w0, killed %x2, 0
+    Bcc 1, %bb.2, implicit killed %nzcv
+    B %bb.1
+
+  bb.1:
+    successors: %bb.2
+    liveins: %x1
+
+    %w0 = MOVi32imm 7
+    STRWui killed %w0, killed %x1, 0
+
+  bb.2:
+    RET_ReallyLR
+...
+# We can't eliminate the MOVi32imm because of the clobbering LDRWui.
+# CHECK-LABEL: name: test15
+# CHECK: bb.1:
+# CHECK: MOVi32imm
+name:            test15
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    successors: %bb.1, %bb.2
+    liveins: %w0, %x1, %x2
+
+    dead %wzr = SUBSWri killed %w0, 7, 0, implicit-def %nzcv
+    Bcc 1, %bb.2, implicit killed %nzcv
+    B %bb.1
+
+  bb.1:
+    successors: %bb.2
+    liveins: %x1, %x2
+
+    %w0 = LDRWui %x1, 0
+    STRWui killed %w0, killed %x2, 0
+    %w0 = MOVi32imm 7
+    STRWui killed %w0, killed %x1, 0
+
+  bb.2:
+    RET_ReallyLR
+...
+# Check that bb.0 COPY is seen through to allow the bb.1 MOVi32imm to be removed.
+# CHECK-LABEL: name: test16
+# CHECK: bb.1:
+# CHECK-NOT: MOVi32imm
+name:            test16
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    successors: %bb.1, %bb.2
+    liveins: %w0, %x1
+
+    dead %wzr = SUBSWri %w0, 7, 0, implicit-def %nzcv
+    %w2 = COPY %w0
+    Bcc 1, %bb.2, implicit killed %nzcv
+    B %bb.1
+
+  bb.1:
+    successors: %bb.2
+    liveins: %x1
+
+    %w2 = MOVi32imm 7
+    STRWui killed %w2, killed %x1, 0
+
+  bb.2:
+    RET_ReallyLR
+...
+# Check that bb.1 MOVi32imm is not removed due to self clobbering compare.
+# CHECK-LABEL: name: test17
+# CHECK: bb.1:
+# CHECK: MOVi32imm
+name:            test17
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    successors: %bb.1, %bb.2
+    liveins: %w0, %x1
+
+    dead %w0 = SUBSWri killed %w0, 7, 0, implicit-def %nzcv
+    Bcc 1, %bb.2, implicit killed %nzcv
+    B %bb.1
+
+  bb.1:
+    successors: %bb.2
+    liveins: %x1
+
+    %w0 = MOVi32imm 7
+    STRWui killed %w0, killed %x1, 0
+
+  bb.2:
+    RET_ReallyLR
+...
+# Make sure the MOVi64imm is not removed.  In one version of this patch the
+# MOVi64imm immediate was truncated to 32 bits and incorrectly matched because
+# the low 32 bits of 4252017623040 are all zero.
+# CHECK-LABEL: name: test18
+# CHECK: bb.1:
+# CHECK: MOVi64imm
+name:            test18
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    successors: %bb.1, %bb.2
+    liveins: %x0, %x1
+
+    CBNZX killed %x0, %bb.2
+    B %bb.1
+
+  bb.1:
+    successors: %bb.2
+    liveins: %x1
+
+    %x0 = MOVi64imm 4252017623040
+    STRXui killed %x0, killed %x1, 0
+
+  bb.2:
+    RET_ReallyLR

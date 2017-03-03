@@ -7,7 +7,7 @@ define void @am1(i16* %a, i16 %b) nounwind {
 	ret void
 }
 ; CHECK-LABEL: am1:
-; CHECK:		mov.w	r14, 0(r15)
+; CHECK:		mov.w	r13, 0(r12)
 
 @foo = external global i16
 
@@ -16,7 +16,7 @@ define void @am2(i16 %a) nounwind {
 	ret void
 }
 ; CHECK-LABEL: am2:
-; CHECK:		mov.w	r15, &foo
+; CHECK:		mov.w	r12, &foo
 
 @bar = external global [2 x i8]
 
@@ -26,14 +26,14 @@ define void @am3(i16 %i, i8 %a) nounwind {
 	ret void
 }
 ; CHECK-LABEL: am3:
-; CHECK:		mov.b	r14, bar(r15)
+; CHECK:		mov.b	r13, bar(r12)
 
 define void @am4(i16 %a) nounwind {
 	store volatile i16 %a, i16* inttoptr(i16 32 to i16*)
 	ret void
 }
 ; CHECK-LABEL: am4:
-; CHECK:		mov.w	r15, &32
+; CHECK:		mov.w	r12, &32
 
 define void @am5(i16* nocapture %p, i16 %a) nounwind readonly {
 	%1 = getelementptr inbounds i16, i16* %p, i16 2
@@ -41,7 +41,7 @@ define void @am5(i16* nocapture %p, i16 %a) nounwind readonly {
 	ret void
 }
 ; CHECK-LABEL: am5:
-; CHECK:		mov.w	r14, 4(r15)
+; CHECK:		mov.w	r13, 4(r12)
 
 %S = type { i16, i16 }
 @baz = common global %S zeroinitializer, align 1
@@ -51,7 +51,7 @@ define void @am6(i16 %a) nounwind {
 	ret void
 }
 ; CHECK-LABEL: am6:
-; CHECK:		mov.w	r15, &baz+2
+; CHECK:		mov.w	r12, &baz+2
 
 %T = type { i16, [2 x i8] }
 @duh = external global %T
@@ -63,5 +63,5 @@ define void @am7(i16 %n, i8 %a) nounwind {
 	ret void
 }
 ; CHECK-LABEL: am7:
-; CHECK:		mov.b	r14, duh+2(r15)
+; CHECK:		mov.b	r13, duh+2(r12)
 

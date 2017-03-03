@@ -7,12 +7,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DEBUGINFO_MSF_BINARYITEMSTREAM_H
-#define LLVM_DEBUGINFO_MSF_BINARYITEMSTREAM_H
+#ifndef LLVM_SUPPORT_BINARYITEMSTREAM_H
+#define LLVM_SUPPORT_BINARYITEMSTREAM_H
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/DebugInfo/MSF/BinaryStream.h"
-#include "llvm/DebugInfo/MSF/BinaryStreamError.h"
+#include "llvm/Support/BinaryStream.h"
+#include "llvm/Support/BinaryStreamError.h"
 #include "llvm/Support/Error.h"
 #include <cstddef>
 #include <cstdint>
@@ -92,4 +92,4 @@ private:
 
 } // end namespace llvm
 
-#endif // LLVM_DEBUGINFO_MSF_BINARYITEMSTREAM_H
+#endif // LLVM_SUPPORT_BINARYITEMSTREAM_H

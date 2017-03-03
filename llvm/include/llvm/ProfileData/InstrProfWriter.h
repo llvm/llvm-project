@@ -1,4 +1,4 @@
-//=-- InstrProfWriter.h - Instrumented profiling writer -----------*- C++ -*-=//
+//===- InstrProfWriter.h - Instrumented profiling writer --------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -16,16 +16,19 @@
 #define LLVM_PROFILEDATA_INSTRPROFWRITER_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ProfileData/InstrProf.h"
-#include "llvm/Support/DataTypes.h"
+#include "llvm/Support/Endian.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/raw_ostream.h"
+#include <cstdint>
+#include <memory>
 
 namespace llvm {
 
 /// Writer for instrumentation based profile data.
-class ProfOStream;
 class InstrProfRecordWriterTrait;
+class ProfOStream;
 
 class InstrProfWriter {
 public:
@@ -35,7 +38,7 @@ public:
 private:
   bool Sparse;
   StringMap<ProfilingData> FunctionData;
-  ProfKind ProfileKind;
+  ProfKind ProfileKind = PF_Unknown;
   // Use raw pointer here for the incomplete type object.
   InstrProfRecordWriterTrait *InfoObj;
 
@@ -47,15 +50,20 @@ public:
   /// for this function and the hash and number of counts match, each counter is
   /// summed. Optionally scale counts by \p Weight.
   Error addRecord(InstrProfRecord &&I, uint64_t Weight = 1);
+
   /// Merge existing function counts from the given writer.
   Error mergeRecordsFromWriter(InstrProfWriter &&IPW);
+
   /// Write the profile to \c OS
   void write(raw_fd_ostream &OS);
+
   /// Write the profile in text format to \c OS
   void writeText(raw_fd_ostream &OS);
+
   /// Write \c Record in text format to \c OS
   static void writeRecordInText(const InstrProfRecord &Record,
                                 InstrProfSymtab &Symtab, raw_fd_ostream &OS);
+
   /// Write the profile, returning the raw data. For testing.
   std::unique_ptr<MemoryBuffer> writeBuffer();
 
@@ -82,4 +90,4 @@ private:
 
 } // end namespace llvm
 
-#endif
+#endif // LLVM_PROFILEDATA_INSTRPROFWRITER_H

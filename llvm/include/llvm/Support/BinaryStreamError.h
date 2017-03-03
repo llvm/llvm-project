@@ -7,9 +7,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DEBUGINFO_MSF_BINARYSTREAMERROR_H
-#define LLVM_DEBUGINFO_MSF_BINARYSTREAMERROR_H
+#ifndef LLVM_SUPPORT_BINARYSTREAMERROR_H
+#define LLVM_SUPPORT_BINARYSTREAMERROR_H
 
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 
 #include <string>
@@ -44,4 +45,4 @@ private:
 };
 } // namespace llvm
 
-#endif // LLVM_DEBUGINFO_MSF_BINARYSTREAMERROR_H
+#endif // LLVM_SUPPORT_BINARYSTREAMERROR_H

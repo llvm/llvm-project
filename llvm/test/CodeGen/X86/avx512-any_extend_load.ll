@@ -4,12 +4,20 @@
 
 
 define void @any_extend_load_v8i64(<8 x i8> * %ptr) {
-; ALL-LABEL: any_extend_load_v8i64:
-; ALL:       # BB#0:
-; ALL-NEXT:    vpmovzxbq {{.*#+}} zmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero,mem[1],zero,zero,zero,zero,zero,zero,zero,mem[2],zero,zero,zero,zero,zero,zero,zero,mem[3],zero,zero,zero,zero,zero,zero,zero,mem[4],zero,zero,zero,zero,zero,zero,zero,mem[5],zero,zero,zero,zero,zero,zero,zero,mem[6],zero,zero,zero,zero,zero,zero,zero,mem[7],zero,zero,zero,zero,zero,zero,zero
-; ALL-NEXT:    vpaddq {{.*}}(%rip){1to8}, %zmm0, %zmm0
-; ALL-NEXT:    vpmovqb %zmm0, (%rdi)
-; ALL-NEXT:    retq
+; KNL-LABEL: any_extend_load_v8i64:
+; KNL:       # BB#0:
+; KNL-NEXT:    vpmovzxbq {{.*#+}} zmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero,mem[1],zero,zero,zero,zero,zero,zero,zero,mem[2],zero,zero,zero,zero,zero,zero,zero,mem[3],zero,zero,zero,zero,zero,zero,zero,mem[4],zero,zero,zero,zero,zero,zero,zero,mem[5],zero,zero,zero,zero,zero,zero,zero,mem[6],zero,zero,zero,zero,zero,zero,zero,mem[7],zero,zero,zero,zero,zero,zero,zero
+; KNL-NEXT:    vpaddq {{.*}}(%rip){1to8}, %zmm0, %zmm0
+; KNL-NEXT:    vpmovqb %zmm0, (%rdi)
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: any_extend_load_v8i64:
+; SKX:       # BB#0:
+; SKX-NEXT:    vpmovzxbq {{.*#+}} zmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero,mem[1],zero,zero,zero,zero,zero,zero,zero,mem[2],zero,zero,zero,zero,zero,zero,zero,mem[3],zero,zero,zero,zero,zero,zero,zero,mem[4],zero,zero,zero,zero,zero,zero,zero,mem[5],zero,zero,zero,zero,zero,zero,zero,mem[6],zero,zero,zero,zero,zero,zero,zero,mem[7],zero,zero,zero,zero,zero,zero,zero
+; SKX-NEXT:    vpaddq {{.*}}(%rip){1to8}, %zmm0, %zmm0
+; SKX-NEXT:    vpmovqb %zmm0, (%rdi)
+; SKX-NEXT:    vzeroupper
+; SKX-NEXT:    retq
   %wide.load = load <8 x i8>, <8 x i8>* %ptr, align 1
   %1 = zext <8 x i8> %wide.load to <8 x i64>
   %2 = add nuw nsw <8 x i64> %1, <i64 4, i64 4, i64 4, i64 4, i64 4, i64 4, i64 4, i64 4>
@@ -33,6 +41,7 @@ define void @any_extend_load_v8i32(<8 x i8> * %ptr) {
 ; SKX-NEXT:    vpmovzxbd {{.*#+}} ymm0 = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero,mem[4],zero,zero,zero,mem[5],zero,zero,zero,mem[6],zero,zero,zero,mem[7],zero,zero,zero
 ; SKX-NEXT:    vpaddd {{.*}}(%rip){1to8}, %ymm0, %ymm0
 ; SKX-NEXT:    vpmovdb %ymm0, (%rdi)
+; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
   %wide.load = load <8 x i8>, <8 x i8>* %ptr, align 1
   %1 = zext <8 x i8> %wide.load to <8 x i32>
