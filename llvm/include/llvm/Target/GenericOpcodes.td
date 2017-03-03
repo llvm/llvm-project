@@ -443,12 +443,10 @@ def G_UNMERGE_VALUES : Instruction {
   let hasSideEffects = 0;
 }
 
-// Insert a sequence of smaller registers into a larger one at the specified
-// indices (interleaved with the values in the operand list "op0, bit0, op1,
-// bit1, ...")).
+// Insert a smaller register into a larger one at the specified bit-index.
 def G_INSERT : Instruction {
   let OutOperandList = (outs type0:$dst);
-  let InOperandList = (ins type0:$src, variable_ops);
+  let InOperandList = (ins type0:$src, type1:$op, unknown:$offset);
   let hasSideEffects = 0;
 }
 

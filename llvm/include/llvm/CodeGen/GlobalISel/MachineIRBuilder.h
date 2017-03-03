@@ -511,14 +511,8 @@ public:
     return MIB;
   }
 
-  template <typename... ArgTys>
   MachineInstrBuilder buildInsert(unsigned Res, unsigned Src,
-                                  unsigned Op, unsigned Index, ArgTys... Args) {
-    MachineInstrBuilder MIB =
-        buildInstr(TargetOpcode::G_INSERT).addDef(Res).addUse(Src);
-    addUsesWithIndices(MIB, Op, Index, Args...);
-    return MIB;
-  }
+                                  unsigned Op, unsigned Index);
 
   /// Build and insert either a G_INTRINSIC (if \p HasSideEffects is false) or
   /// G_INTRINSIC_W_SIDE_EFFECTS instruction. Its first operand will be the

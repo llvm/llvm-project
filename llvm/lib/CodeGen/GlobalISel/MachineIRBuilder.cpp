@@ -456,6 +456,15 @@ MachineInstrBuilder MachineIRBuilder::buildUnmerge(ArrayRef<unsigned> Res,
   return MIB;
 }
 
+MachineInstrBuilder MachineIRBuilder::buildInsert(unsigned Res, unsigned Src,
+                                                  unsigned Op, unsigned Index) {
+  return buildInstr(TargetOpcode::G_INSERT)
+      .addDef(Res)
+      .addUse(Src)
+      .addUse(Op)
+      .addImm(Index);
+}
+
 MachineInstrBuilder MachineIRBuilder::buildIntrinsic(Intrinsic::ID ID,
                                                      unsigned Res,
                                                      bool HasSideEffects) {
