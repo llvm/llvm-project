@@ -235,6 +235,10 @@ SWIFTFLAGS ?= -g -Onone -save-temps -Xfrontend -serialize-debugging-options
 SWIFT_MODULE_CACHE_PATH ?= /tmp/lldbtest.swift.modulecache.$(USER)
 SWIFTFLAGS += -module-cache-path $(SWIFT_MODULE_CACHE_PATH)
 
+ifneq (,$(findstring arm,$(ARCH)))
+	SWIFTFLAGS += -static-stdlib
+endif
+
 CFLAGS += $(FRAMEWORK_INCLUDES) $(CFLAGS_EXTRAS) -I$(LLDB_BASE_DIR)include
 ifeq "$(OS)" "Darwin"
 	ifneq "$(SDKROOT)" ""
