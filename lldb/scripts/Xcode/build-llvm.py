@@ -109,6 +109,13 @@ def get_common_linker_flags():
 def get_exe_linker_flags():
     return get_common_linker_flags()
 
+def with_devices_preset_suffix():
+    """Return a suffix for the LLDB-specific Swift build preset."""
+    if os.environ.get("LLDB_SWIFT_STDLIB_INCLUDES_DEVICES", None) is not None:
+        return "_with_devices"
+    else:
+        return ""
+
 def XCODE_REPOSITORIES():
     identifier = repo.identifier()
     if identifier == None:
@@ -119,9 +126,9 @@ def XCODE_REPOSITORIES():
 
 def BUILD_SCRIPT_FLAGS():
     return {
-        "Debug": ["--preset=LLDB_Swift_ReleaseAssert"],
-        "DebugClang": ["--preset=LLDB_Swift_DebugAssert"],
-        "Release": ["--preset=LLDB_Swift_ReleaseAssert"],
+        "Debug": ["--preset=LLDB_Swift_ReleaseAssert" + with_devices_preset_suffix()],
+        "DebugClang": ["--preset=LLDB_Swift_DebugAssert" + with_devices_preset_suffix()],
+        "Release": ["--preset=LLDB_Swift_ReleaseAssert" + with_devices_preset_suffix()],
     }
 
 
