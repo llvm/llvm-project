@@ -1,6 +1,6 @@
 // RUN: c-index-test core -print-source-symbols -- %s -std=c++14 -target x86_64-apple-macosx10.7 | FileCheck %s
 
-// CHECK: [[@LINE+1]]:7 | class/C++ | Cls | c:@S@Cls | <no-cgname> | Def | rel: 0
+// CHECK: [[@LINE+1]]:7 | class/C++ | Cls | [[Cls_USR:.*]] | <no-cgname> | Def | rel: 0
 class Cls {
   // CHECK: [[@LINE+2]]:3 | constructor/C++ | Cls | c:@S@Cls@F@Cls#I# | __ZN3ClsC1Ei | Decl,RelChild | rel: 1
   // CHECK-NEXT: RelChild | Cls | c:@S@Cls
@@ -10,6 +10,19 @@ class Cls {
   // CHECK: [[@LINE+1]]:3 | constructor/cxx-move-ctor/C++ | Cls | c:@S@Cls@F@Cls#&&$@S@Cls# | __ZN3ClsC1EOS_ | Decl,RelChild | rel: 1
   Cls(Cls &&);
 };
+
+// CHECK: [[@LINE+3]]:7 | class/C++ | SubCls1 | [[SubCls1_USR:.*]] | <no-cgname> | Def | rel: 0
+// CHECK: [[@LINE+2]]:24 | class/C++ | Cls | [[Cls_USR]] | <no-cgname> | Ref,RelBase,RelCont | rel: 1
+// CHECK-NEXT: RelBase,RelCont | SubCls1 | [[SubCls1_USR]]
+class SubCls1 : public Cls {};
+// CHECK: [[@LINE+1]]:13 | type-alias/C | ClsAlias | [[ClsAlias_USR:.*]] | <no-cgname> | Def | rel: 0
+typedef Cls ClsAlias;
+// CHECK: [[@LINE+5]]:7 | class/C++ | SubCls2 | [[SubCls2_USR:.*]] | <no-cgname> | Def | rel: 0
+// CHECK: [[@LINE+4]]:24 | type-alias/C | ClsAlias | [[ClsAlias_USR]] | <no-cgname> | Ref,RelCont | rel: 1
+// CHECK-NEXT: RelCont | SubCls2 | [[SubCls2_USR]]
+// CHECK: [[@LINE+2]]:24 | class/C++ | Cls | [[Cls_USR]] | <no-cgname> | Ref,Impl,RelBase,RelCont | rel: 1
+// CHECK-NEXT: RelBase,RelCont | SubCls2 | [[SubCls2_USR]]
+class SubCls2 : public ClsAlias {};
 
 template <typename TemplArg>
 class TemplCls {
