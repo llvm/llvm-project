@@ -83,6 +83,9 @@ DumpDataExtractor(const DataExtractor &DE, Stream *s, lldb::offset_t offset,
                   size_t item_count, size_t num_per_line, uint64_t base_addr,
                   uint32_t item_bit_size, uint32_t item_bit_offset,
                   ExecutionContextScope *exe_scope = nullptr);
+
+void DumpHexBytes(Stream *s, const void *src, size_t src_len,
+                  uint32_t bytes_per_line, lldb::addr_t base_addr);
 }
 
 #endif

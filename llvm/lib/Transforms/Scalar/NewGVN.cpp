@@ -1100,7 +1100,7 @@ const Expression *NewGVN::performSymbolicCmpEvaluation(Instruction *I) {
   auto Op0 = lookupOperandLeader(CI->getOperand(0));
   auto Op1 = lookupOperandLeader(CI->getOperand(1));
   auto OurPredicate = CI->getPredicate();
-  if (shouldSwapOperands(Op1, Op0)) {
+  if (shouldSwapOperands(Op0, Op1)) {
     std::swap(Op0, Op1);
     OurPredicate = CI->getSwappedPredicate();
   }
@@ -1162,7 +1162,7 @@ const Expression *NewGVN::performSymbolicCmpEvaluation(Instruction *I) {
       auto *BranchOp0 = lookupOperandLeader(BranchCond->getOperand(0));
       auto *BranchOp1 = lookupOperandLeader(BranchCond->getOperand(1));
       auto BranchPredicate = BranchCond->getPredicate();
-      if (shouldSwapOperands(BranchOp1, BranchOp0)) {
+      if (shouldSwapOperands(BranchOp0, BranchOp1)) {
         std::swap(BranchOp0, BranchOp1);
         BranchPredicate = BranchCond->getSwappedPredicate();
       }

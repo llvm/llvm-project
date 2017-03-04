@@ -229,6 +229,8 @@ HANDLE_TARGET_OPCODE(G_GLOBAL_VALUE)
 /// (typically a sub-register COPY after instruction selection).
 HANDLE_TARGET_OPCODE(G_EXTRACT)
 
+HANDLE_TARGET_OPCODE(G_UNMERGE_VALUES)
+
 /// Generic instruction to insert blocks of bits from the registers given into
 /// the source.
 HANDLE_TARGET_OPCODE(G_INSERT)
@@ -236,6 +238,8 @@ HANDLE_TARGET_OPCODE(G_INSERT)
 /// Generic instruction to paste a variable number of components together into a
 /// larger register.
 HANDLE_TARGET_OPCODE(G_SEQUENCE)
+
+HANDLE_TARGET_OPCODE(G_MERGE_VALUES)
 
 /// Generic pointer to int conversion.
 HANDLE_TARGET_OPCODE(G_PTRTOINT)

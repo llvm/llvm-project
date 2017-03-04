@@ -73,7 +73,6 @@
 #include "lldb/Core/ArchSpec.h"
 #include "lldb/Utility/Flags.h"
 
-#include "lldb/Core/DataExtractor.h"
 #include "lldb/Core/DumpDataExtractor.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
@@ -94,6 +93,7 @@
 #include "lldb/Target/ObjCLanguageRuntime.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegularExpression.h"

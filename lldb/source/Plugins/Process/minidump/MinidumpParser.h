@@ -16,7 +16,7 @@
 
 // Other libraries and framework includes
 #include "lldb/Core/ArchSpec.h"
-#include "lldb/Core/DataBuffer.h"
+#include "lldb/Utility/DataBuffer.h"
 #include "lldb/Utility/Error.h"
 
 #include "llvm/ADT/ArrayRef.h"

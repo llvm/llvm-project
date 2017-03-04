@@ -16,9 +16,9 @@
 // C++ Includes
 
 // Other libraries and framework includes
-#include "lldb/Core/DataBufferHeap.h"
 #include "lldb/Core/RegisterValue.h"
 #include "lldb/Host/common/NativeProcessProtocol.h"
+#include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Error.h"
 #include "lldb/Utility/Log.h"
 

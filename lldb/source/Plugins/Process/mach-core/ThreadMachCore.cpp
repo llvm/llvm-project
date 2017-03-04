@@ -13,7 +13,6 @@
 
 #include "lldb/Breakpoint/Watchpoint.h"
 #include "lldb/Core/ArchSpec.h"
-#include "lldb/Core/DataExtractor.h"
 #include "lldb/Core/State.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/Process.h"
@@ -21,6 +20,7 @@
 #include "lldb/Target/StopInfo.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Unwind.h"
+#include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/StreamString.h"
 
 #include "ProcessMachCore.h"

@@ -72,7 +72,7 @@ void GDBRemoteCommunication::History::AddPacket(char packet_char,
     m_packets[idx].type = type;
     m_packets[idx].bytes_transmitted = bytes_transmitted;
     m_packets[idx].packet_idx = m_total_packet_count;
-    m_packets[idx].tid = Host::GetCurrentThreadID();
+    m_packets[idx].tid = llvm::get_threadid();
   }
 }
 
@@ -87,7 +87,7 @@ void GDBRemoteCommunication::History::AddPacket(const std::string &src,
     m_packets[idx].type = type;
     m_packets[idx].bytes_transmitted = bytes_transmitted;
     m_packets[idx].packet_idx = m_total_packet_count;
-    m_packets[idx].tid = Host::GetCurrentThreadID();
+    m_packets[idx].tid = llvm::get_threadid();
   }
 }
 

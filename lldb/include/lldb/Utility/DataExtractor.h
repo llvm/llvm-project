@@ -7,8 +7,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_DataExtractor_h_
-#define liblldb_DataExtractor_h_
+#ifndef LLDB_UTILITY_DATAEXTRACTOR_H
+#define LLDB_UTILITY_DATAEXTRACTOR_H
+
+// Other libraries and framework includes
+#include "lldb/lldb-defines.h"
+#include "lldb/lldb-types.h"
+#include "llvm/ADT/SmallVector.h"
 
 // C Includes
 #include <limits.h>
@@ -16,11 +21,6 @@
 #include <string.h>
 
 // C++ Includes
-// Other libraries and framework includes
-#include "llvm/ADT/SmallVector.h"
-
-// Project includes
-#include "lldb/lldb-private.h"
 
 namespace lldb_private {
 
@@ -1138,9 +1138,9 @@ protected:
   lldb::ByteOrder
       m_byte_order;     ///< The byte order of the data we are extracting from.
   uint32_t m_addr_size; ///< The address size to use when extracting pointers or
-                        ///addresses
+                        /// addresses
   mutable lldb::DataBufferSP m_data_sp; ///< The shared pointer to data that can
-                                        ///be shared among multiple instances
+                                        /// be shared among multiple instances
   const uint32_t m_target_byte_size;
 };
 

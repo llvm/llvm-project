@@ -128,7 +128,7 @@ namespace {
     }
 
     void VisitType(QualType T) override {
-      if (Canonical)
+      if (Canonical && !T.isNull())
         T = Context.getCanonicalType(T);
 
       ID.AddPointer(T.getAsOpaquePtr());

@@ -9,8 +9,6 @@
 
 #include "lldb/Symbol/CompilerType.h"
 
-#include "lldb/Core/DataBufferHeap.h"
-#include "lldb/Core/DataExtractor.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Scalar.h"
 #include "lldb/Core/StreamFile.h"
@@ -20,6 +18,8 @@
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/DataBufferHeap.h"
+#include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StreamString.h"
 

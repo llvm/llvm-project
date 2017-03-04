@@ -18,11 +18,11 @@
 #include "llvm/ADT/StringRef.h"
 
 // Project includes
-#include "lldb/Core/DataExtractor.h"
 #include "lldb/Core/DumpDataExtractor.h"
 #include "lldb/Core/Scalar.h"
 #include "lldb/Host/StringConvert.h"
 #include "lldb/Interpreter/Args.h"
+#include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Error.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StreamString.h"

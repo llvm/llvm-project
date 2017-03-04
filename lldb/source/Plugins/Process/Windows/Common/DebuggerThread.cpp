@@ -14,7 +14,6 @@
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Host/FileSpec.h"
 #include "lldb/Host/Predicate.h"
-#include "lldb/Host/ThisThread.h"
 #include "lldb/Host/ThreadLauncher.h"
 #include "lldb/Host/windows/HostProcessWindows.h"
 #include "lldb/Host/windows/HostThreadWindows.h"
@@ -28,6 +27,7 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/ConvertUTF.h"
+#include "llvm/Support/Threading.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace lldb;
@@ -406,7 +406,7 @@ DebuggerThread::HandleCreateProcessEvent(const CREATE_PROCESS_DEBUG_INFO &info,
   llvm::raw_string_ostream name_stream(thread_name);
   name_stream << "lldb.plugin.process-windows.slave[" << process_id << "]";
   name_stream.flush();
-  ThisThread::SetName(thread_name.c_str());
+  llvm::set_thread_name(thread_name);
 
   // info.hProcess and info.hThread are closed automatically by Windows when
   // EXIT_PROCESS_DEBUG_EVENT is received.

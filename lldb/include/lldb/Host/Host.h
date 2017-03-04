@@ -100,14 +100,6 @@ public:
   static void Kill(lldb::pid_t pid, int signo);
 
   //------------------------------------------------------------------
-  /// Get the thread ID for the calling thread in the current process.
-  ///
-  /// @return
-  ///     The thread ID for the calling thread in the current process.
-  //------------------------------------------------------------------
-  static lldb::tid_t GetCurrentThreadID();
-
-  //------------------------------------------------------------------
   /// Get the thread token (the one returned by ThreadCreate when the thread was
   /// created) for the
   /// calling thread in the current process.

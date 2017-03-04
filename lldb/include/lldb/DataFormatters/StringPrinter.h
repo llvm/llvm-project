@@ -19,7 +19,7 @@
 // Project includes
 #include "lldb/lldb-forward.h"
 
-#include "lldb/Core/DataExtractor.h"
+#include "lldb/Utility/DataExtractor.h"
 
 namespace lldb_private {
 namespace formatters {

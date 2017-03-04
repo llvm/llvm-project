@@ -10,11 +10,11 @@
 #include "lldb/API/SBSection.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/API/SBTarget.h"
-#include "lldb/Core/DataBuffer.h"
-#include "lldb/Core/DataExtractor.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Symbol/ObjectFile.h"
+#include "lldb/Utility/DataBuffer.h"
+#include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
 

@@ -21,7 +21,6 @@
 #include <thread>
 
 // Other libraries and framework includes
-#include "lldb/Core/DataBuffer.h"
 #include "lldb/Core/RegisterValue.h"
 #include "lldb/Core/State.h"
 #include "lldb/Host/ConnectionFileDescriptor.h"
@@ -37,6 +36,7 @@
 #include "lldb/Interpreter/Args.h"
 #include "lldb/Target/FileAction.h"
 #include "lldb/Target/MemoryRegionInfo.h"
+#include "lldb/Utility/DataBuffer.h"
 #include "lldb/Utility/Endian.h"
 #include "lldb/Utility/JSON.h"
 #include "lldb/Utility/LLDBAssert.h"

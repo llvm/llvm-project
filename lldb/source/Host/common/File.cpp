@@ -25,10 +25,10 @@
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Process.h" // for llvm::sys::Process::FileDescriptorHasColors()
 
-#include "lldb/Core/DataBufferHeap.h"
 #include "lldb/Host/Config.h"
 #include "lldb/Host/FileSpec.h"
 #include "lldb/Host/FileSystem.h"
+#include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Error.h"
 #include "lldb/Utility/Log.h"
 

@@ -136,7 +136,7 @@ static cl::opt<bool> InsnsCost(
 
 // Flag to choose how to narrow complex lsr solution
 static cl::opt<bool> LSRExpNarrow(
-  "lsr-exp-narrow", cl::Hidden, cl::init(true),
+  "lsr-exp-narrow", cl::Hidden, cl::init(false),
   cl::desc("Narrow LSR complex solution using"
            " expectation of registers number"));
 

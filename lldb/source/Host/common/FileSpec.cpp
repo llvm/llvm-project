@@ -26,12 +26,12 @@
 #endif
 
 #include "lldb/Core/ArchSpec.h"
-#include "lldb/Core/DataBufferHeap.h"
 #include "lldb/Host/File.h"
 #include "lldb/Host/FileSpec.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Utility/CleanUp.h"
+#include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StreamString.h"

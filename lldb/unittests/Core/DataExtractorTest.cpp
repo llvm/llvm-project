@@ -9,7 +9,7 @@
 
 #include "gtest/gtest.h"
 
-#include "lldb/Core/DataExtractor.h"
+#include "lldb/Utility/DataExtractor.h"
 
 using namespace lldb_private;
 

@@ -13,7 +13,6 @@
 // Other libraries and framework includes
 // Project includes
 #include "CommandObjectPlatform.h"
-#include "lldb/Core/DataExtractor.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
@@ -27,6 +26,7 @@
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Platform.h"
 #include "lldb/Target/Process.h"
+#include "lldb/Utility/DataExtractor.h"
 
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/Threading.h"

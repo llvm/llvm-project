@@ -9,10 +9,6 @@ add_lldb_library(lldbCore
   Broadcaster.cpp
   Communication.cpp
   Connection.cpp
-  DataBufferHeap.cpp
-  DataBufferLLVM.cpp
-  DataEncoder.cpp
-  DataExtractor.cpp
   Debugger.cpp
   Disassembler.cpp
   DumpDataExtractor.cpp
@@ -47,7 +43,6 @@ add_lldb_library(lldbCore
   Timer.cpp
   UserID.cpp
   UserSettingsController.cpp
-  UUID.cpp
   Value.cpp
   ValueObject.cpp
   ValueObjectCast.cpp

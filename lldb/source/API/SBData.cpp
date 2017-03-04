@@ -13,9 +13,9 @@
 #include "lldb/API/SBError.h"
 #include "lldb/API/SBStream.h"
 
-#include "lldb/Core/DataBufferHeap.h"
-#include "lldb/Core/DataExtractor.h"
 #include "lldb/Core/DumpDataExtractor.h"
+#include "lldb/Utility/DataBufferHeap.h"
+#include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Stream.h"
 

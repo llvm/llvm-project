@@ -8,7 +8,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Expression/IRInterpreter.h"
-#include "lldb/Core/DataExtractor.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/Scalar.h"
@@ -17,6 +16,7 @@
 #include "lldb/Expression/IRExecutionUnit.h"
 #include "lldb/Expression/IRMemoryMap.h"
 #include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Endian.h"
 #include "lldb/Utility/Error.h"
 #include "lldb/Utility/Log.h"

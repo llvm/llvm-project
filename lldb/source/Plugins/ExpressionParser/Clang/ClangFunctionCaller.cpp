@@ -26,7 +26,6 @@
 #include "llvm/IR/Module.h"
 
 // Project includes
-#include "lldb/Core/DataExtractor.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/State.h"
 #include "lldb/Core/ValueObject.h"
@@ -43,6 +42,7 @@
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadPlan.h"
 #include "lldb/Target/ThreadPlanCallFunction.h"
+#include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Log.h"
 
 using namespace lldb_private;

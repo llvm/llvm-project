@@ -14,7 +14,6 @@
 #include <mutex>
 
 // Other libraries and framework includes
-#include "lldb/Core/DataBufferHeap.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
@@ -24,6 +23,7 @@
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/UnixSignals.h"
+#include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Log.h"
 
 #include "llvm/Support/ELF.h"

@@ -17,7 +17,6 @@
 // Project includes
 #include "CommandObjectMemory.h"
 #include "Plugins/ExpressionParser/Clang/ClangPersistentVariables.h"
-#include "lldb/Core/DataBufferHeap.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/DumpDataExtractor.h"
 #include "lldb/Core/Module.h"
@@ -41,6 +40,7 @@
 #include "lldb/Target/Process.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Thread.h"
+#include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/StreamString.h"
 
 #include "lldb/lldb-private.h"

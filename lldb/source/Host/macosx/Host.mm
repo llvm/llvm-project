@@ -56,8 +56,6 @@
 
 #include "lldb/Core/ArchSpec.h"
 #include "lldb/Core/Communication.h"
-#include "lldb/Core/DataBufferHeap.h"
-#include "lldb/Core/DataExtractor.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/StreamFile.h"
@@ -70,6 +68,8 @@
 #include "lldb/Target/Platform.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/CleanUp.h"
+#include "lldb/Utility/DataBufferHeap.h"
+#include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Endian.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/NameMatches.h"

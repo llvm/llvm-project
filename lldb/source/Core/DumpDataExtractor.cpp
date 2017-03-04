@@ -9,13 +9,13 @@
 
 #include "lldb/Core/DumpDataExtractor.h"
 
-#include "lldb/Core/DataExtractor.h"
 #include "lldb/Core/Disassembler.h"
 #include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/ExecutionContextScope.h"
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Stream.h"
 
 #include <bitset>
@@ -785,4 +785,18 @@ lldb::offset_t lldb_private::DumpDataExtractor(
                       LLDB_INVALID_ADDRESS, 0, 0);
   }
   return offset; // Return the offset at which we ended up
+}
+
+void lldb_private::DumpHexBytes(Stream *s, const void *src, size_t src_len,
+                                uint32_t bytes_per_line,
+                                lldb::addr_t base_addr) {
+  DataExtractor data(src, src_len, lldb::eByteOrderLittle, 4);
+  DumpDataExtractor(data, s,
+                    0,                  // Offset into "src"
+                    lldb::eFormatBytes, // Dump as hex bytes
+                    1,              // Size of each item is 1 for single bytes
+                    src_len,        // Number of bytes
+                    bytes_per_line, // Num bytes per line
+                    base_addr,      // Base address
+                    0, 0);          // Bitfield info
 }

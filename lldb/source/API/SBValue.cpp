@@ -17,7 +17,6 @@
 #include "lldb/API/SBTypeSynthetic.h"
 
 #include "lldb/Breakpoint/Watchpoint.h"
-#include "lldb/Core/DataExtractor.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/Scalar.h"
 #include "lldb/Core/Section.h"
@@ -37,6 +36,7 @@
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
+#include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Stream.h"
 

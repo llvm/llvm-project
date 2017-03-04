@@ -35,7 +35,6 @@ add_host_subdirectory(common
   common/Symbols.cpp
   common/TCPSocket.cpp
   common/Terminal.cpp
-  common/ThisThread.cpp
   common/ThreadLauncher.cpp
   common/XML.cpp
   common/UDPSocket.cpp
@@ -73,7 +72,6 @@ if (CMAKE_SYSTEM_NAME MATCHES "Windows")
     windows/PipeWindows.cpp
     windows/ProcessLauncherWindows.cpp
     windows/ProcessRunLock.cpp
-    windows/ThisThread.cpp
     windows/Windows.cpp
     )
 else()
@@ -107,7 +105,6 @@ else()
       macosx/HostInfoMacOSX.mm
       macosx/HostThreadMacOSX.mm
       macosx/Symbols.cpp
-      macosx/ThisThread.cpp
       macosx/cfcpp/CFCBundle.cpp
       macosx/cfcpp/CFCData.cpp
       macosx/cfcpp/CFCMutableArray.cpp
@@ -124,7 +121,6 @@ else()
       linux/HostInfoLinux.cpp
       linux/HostThreadLinux.cpp
       linux/LibcGlue.cpp
-      linux/ThisThread.cpp
       )
     list(APPEND LLDB_PLUGINS lldbPluginProcessLinux)
     if (CMAKE_SYSTEM_NAME MATCHES "Android")
@@ -138,7 +134,6 @@ else()
       freebsd/Host.cpp
       freebsd/HostInfoFreeBSD.cpp
       freebsd/HostThreadFreeBSD.cpp
-      freebsd/ThisThread.cpp
       )
 
   elseif (CMAKE_SYSTEM_NAME MATCHES "NetBSD")
@@ -146,7 +141,6 @@ else()
       netbsd/Host.cpp
       netbsd/HostInfoNetBSD.cpp
       netbsd/HostThreadNetBSD.cpp
-      netbsd/ThisThread.cpp
       )
   endif()
 endif()

@@ -12,7 +12,6 @@
 #include "ThreadMinidump.h"
 
 // Other libraries and framework includes
-#include "lldb/Core/DataBufferLLVM.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
@@ -22,6 +21,7 @@
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/UnixSignals.h"
+#include "lldb/Utility/DataBufferLLVM.h"
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/Log.h"
 
@@ -53,7 +53,7 @@ lldb::ProcessSP ProcessMinidump::CreateInstance(lldb::TargetSP target_sp,
   // Read enough data for the Minidump header
   constexpr size_t header_size = sizeof(MinidumpHeader);
   auto DataPtr =
-      DataBufferLLVM::CreateFromFileSpec(*crash_file, header_size, 0);
+      DataBufferLLVM::CreateFromPath(crash_file->GetPath(), header_size, 0);
   if (!DataPtr)
     return nullptr;
 
@@ -65,7 +65,7 @@ lldb::ProcessSP ProcessMinidump::CreateInstance(lldb::TargetSP target_sp,
   if (header == nullptr)
     return nullptr;
 
-  auto AllData = DataBufferLLVM::CreateFromFileSpec(*crash_file, -1, 0);
+  auto AllData = DataBufferLLVM::CreateFromPath(crash_file->GetPath(), -1, 0);
   if (!AllData)
     return nullptr;
 

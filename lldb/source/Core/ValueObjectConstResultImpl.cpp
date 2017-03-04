@@ -10,7 +10,6 @@
 
 #include "lldb/Core/ValueObjectConstResultImpl.h"
 
-#include "lldb/Core/DataExtractor.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ValueObjectChild.h"
 #include "lldb/Core/ValueObjectConstResult.h"
@@ -18,6 +17,7 @@
 #include "lldb/Core/ValueObjectConstResultChild.h"
 #include "lldb/Core/ValueObjectList.h"
 #include "lldb/Core/ValueObjectMemory.h"
+#include "lldb/Utility/DataExtractor.h"
 
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Symbol/ObjectFile.h"

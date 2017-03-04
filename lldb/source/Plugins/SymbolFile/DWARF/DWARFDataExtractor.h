@@ -11,8 +11,8 @@
 #define liblldb_DWARFDataExtractor_h_
 
 // Other libraries and framework includes.
-#include "lldb/Core/DataExtractor.h"
 #include "lldb/Core/dwarf.h"
+#include "lldb/Utility/DataExtractor.h"
 
 namespace lldb_private {
 

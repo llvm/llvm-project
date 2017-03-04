@@ -9067,6 +9067,12 @@ void ASTReader::diagnoseOdrViolations() {
         FieldSingleInitializer,
         FieldDifferentInitializers,
         MethodName,
+        MethodDeleted,
+        MethodVirtual,
+        MethodStatic,
+        MethodVolatile,
+        MethodConst,
+        MethodInline,
       };
 
       // These lambdas have the common portions of the ODR diagnostics.  This
@@ -9290,16 +9296,103 @@ void ASTReader::diagnoseOdrViolations() {
       case CXXMethod: {
         const CXXMethodDecl *FirstMethod = cast<CXXMethodDecl>(FirstDecl);
         const CXXMethodDecl *SecondMethod = cast<CXXMethodDecl>(SecondDecl);
-        IdentifierInfo *FirstII = FirstMethod->getIdentifier();
-        IdentifierInfo *SecondII = SecondMethod->getIdentifier();
-        if (FirstII->getName() != SecondII->getName()) {
+        auto FirstName = FirstMethod->getDeclName();
+        auto SecondName = SecondMethod->getDeclName();
+        if (FirstName != SecondName) {
           ODRDiagError(FirstMethod->getLocation(),
                        FirstMethod->getSourceRange(), MethodName)
-              << FirstII;
+              << FirstName;
           ODRDiagNote(SecondMethod->getLocation(),
                       SecondMethod->getSourceRange(), MethodName)
-              << SecondII;
+              << SecondName;
 
+          Diagnosed = true;
+          break;
+        }
+
+        const bool FirstDeleted = FirstMethod->isDeleted();
+        const bool SecondDeleted = SecondMethod->isDeleted();
+        if (FirstDeleted != SecondDeleted) {
+          ODRDiagError(FirstMethod->getLocation(),
+                       FirstMethod->getSourceRange(), MethodDeleted)
+              << FirstName << FirstDeleted;
+
+          ODRDiagNote(SecondMethod->getLocation(),
+                      SecondMethod->getSourceRange(), MethodDeleted)
+              << SecondName << SecondDeleted;
+          Diagnosed = true;
+          break;
+        }
+
+        const bool FirstVirtual = FirstMethod->isVirtualAsWritten();
+        const bool SecondVirtual = SecondMethod->isVirtualAsWritten();
+        const bool FirstPure = FirstMethod->isPure();
+        const bool SecondPure = SecondMethod->isPure();
+        if ((FirstVirtual || SecondVirtual) &&
+            (FirstVirtual != SecondVirtual || FirstPure != SecondPure)) {
+          ODRDiagError(FirstMethod->getLocation(),
+                       FirstMethod->getSourceRange(), MethodVirtual)
+              << FirstName << FirstPure << FirstVirtual;
+          ODRDiagNote(SecondMethod->getLocation(),
+                      SecondMethod->getSourceRange(), MethodVirtual)
+              << SecondName << SecondPure << SecondVirtual;
+          Diagnosed = true;
+          break;
+        }
+
+        // CXXMethodDecl::isStatic uses the canonical Decl.  With Decl merging,
+        // FirstDecl is the canonical Decl of SecondDecl, so the storage
+        // class needs to be checked instead.
+        const auto FirstStorage = FirstMethod->getStorageClass();
+        const auto SecondStorage = SecondMethod->getStorageClass();
+        const bool FirstStatic = FirstStorage == SC_Static;
+        const bool SecondStatic = SecondStorage == SC_Static;
+        if (FirstStatic != SecondStatic) {
+          ODRDiagError(FirstMethod->getLocation(),
+                       FirstMethod->getSourceRange(), MethodStatic)
+              << FirstName << FirstStatic;
+          ODRDiagNote(SecondMethod->getLocation(),
+                      SecondMethod->getSourceRange(), MethodStatic)
+              << SecondName << SecondStatic;
+          Diagnosed = true;
+          break;
+        }
+
+        const bool FirstVolatile = FirstMethod->isVolatile();
+        const bool SecondVolatile = SecondMethod->isVolatile();
+        if (FirstVolatile != SecondVolatile) {
+          ODRDiagError(FirstMethod->getLocation(),
+                       FirstMethod->getSourceRange(), MethodVolatile)
+              << FirstName << FirstVolatile;
+          ODRDiagNote(SecondMethod->getLocation(),
+                      SecondMethod->getSourceRange(), MethodVolatile)
+              << SecondName << SecondVolatile;
+          Diagnosed = true;
+          break;
+        }
+
+        const bool FirstConst = FirstMethod->isConst();
+        const bool SecondConst = SecondMethod->isConst();
+        if (FirstConst != SecondConst) {
+          ODRDiagError(FirstMethod->getLocation(),
+                       FirstMethod->getSourceRange(), MethodConst)
+              << FirstName << FirstConst;
+          ODRDiagNote(SecondMethod->getLocation(),
+                      SecondMethod->getSourceRange(), MethodConst)
+              << SecondName << SecondConst;
+          Diagnosed = true;
+          break;
+        }
+
+        const bool FirstInline = FirstMethod->isInlineSpecified();
+        const bool SecondInline = SecondMethod->isInlineSpecified();
+        if (FirstInline != SecondInline) {
+          ODRDiagError(FirstMethod->getLocation(),
+                       FirstMethod->getSourceRange(), MethodInline)
+              << FirstName << FirstInline;
+          ODRDiagNote(SecondMethod->getLocation(),
+                      SecondMethod->getSourceRange(), MethodInline)
+              << SecondName << SecondInline;
           Diagnosed = true;
           break;
         }

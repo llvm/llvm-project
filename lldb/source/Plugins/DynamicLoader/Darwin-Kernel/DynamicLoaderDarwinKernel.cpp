@@ -12,8 +12,6 @@
 
 #include "Plugins/Platform/MacOSX/PlatformDarwinKernel.h"
 #include "lldb/Breakpoint/StoppointCallbackContext.h"
-#include "lldb/Core/DataBuffer.h"
-#include "lldb/Core/DataBufferHeap.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
@@ -30,6 +28,8 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadPlanRunToAddress.h"
+#include "lldb/Utility/DataBuffer.h"
+#include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Log.h"
 
 #include "DynamicLoaderDarwinKernel.h"

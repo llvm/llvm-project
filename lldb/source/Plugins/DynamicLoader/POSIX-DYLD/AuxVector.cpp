@@ -14,9 +14,9 @@
 
 // C++ Includes
 // Other libraries and framework includes
-#include "lldb/Core/DataBufferHeap.h"
-#include "lldb/Core/DataExtractor.h"
 #include "lldb/Target/Process.h"
+#include "lldb/Utility/DataBufferHeap.h"
+#include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Log.h"
 
 #if defined(__linux__) || defined(__FreeBSD__)

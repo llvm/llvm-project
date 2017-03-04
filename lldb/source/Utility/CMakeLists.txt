@@ -1,5 +1,9 @@
 add_lldb_library(lldbUtility
   ConstString.cpp
+  DataBufferHeap.cpp
+  DataBufferLLVM.cpp
+  DataEncoder.cpp
+  DataExtractor.cpp
   Error.cpp
   JSON.cpp
   LLDBAssert.cpp
@@ -17,6 +21,7 @@ add_lldb_library(lldbUtility
   StringLexer.cpp
   TaskPool.cpp
   UriParser.cpp
+  UUID.cpp
   VASprintf.cpp
 
   LINK_LIBS

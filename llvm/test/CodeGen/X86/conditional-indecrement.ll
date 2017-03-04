@@ -14,6 +14,19 @@ define i32 @test1(i32 %a, i32 %b) nounwind readnone {
   ret i32 %retval.0
 }
 
+define i32 @test1_commute(i32 %a, i32 %b) nounwind readnone {
+; CHECK-LABEL: test1_commute:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    cmpl $1, %edi
+; CHECK-NEXT:    sbbl $-1, %esi
+; CHECK-NEXT:    movl %esi, %eax
+; CHECK-NEXT:    retq
+  %cmp = icmp ne i32 %a, 0
+  %inc = zext i1 %cmp to i32
+  %ret = add i32 %b, %inc
+  ret i32 %ret
+}
+
 define i32 @test2(i32 %a, i32 %b) nounwind readnone {
 ; CHECK-LABEL: test2:
 ; CHECK:       # BB#0:

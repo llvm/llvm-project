@@ -12,7 +12,7 @@
 
 // Project includes
 #include "lldb/Core/PluginInterface.h"
-#include "lldb/Core/UUID.h"
+#include "lldb/Utility/UUID.h"
 #include "lldb/Utility/Error.h"
 #include "lldb/lldb-private.h"
 

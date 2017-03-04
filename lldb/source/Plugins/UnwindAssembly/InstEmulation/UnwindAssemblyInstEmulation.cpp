@@ -11,8 +11,6 @@
 
 #include "lldb/Core/Address.h"
 #include "lldb/Core/ArchSpec.h"
-#include "lldb/Core/DataBufferHeap.h"
-#include "lldb/Core/DataExtractor.h"
 #include "lldb/Core/Disassembler.h"
 #include "lldb/Core/DumpDataExtractor.h"
 #include "lldb/Core/FormatEntity.h"
@@ -21,6 +19,8 @@
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
+#include "lldb/Utility/DataBufferHeap.h"
+#include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Error.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"

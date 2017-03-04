@@ -14,21 +14,21 @@
 #include <cstddef>
 #include <string>
 
+// Project includes
+#include "lldb/Utility/DataBuffer.h"
+#include "lldb/Utility/DataBufferHeap.h"
+#include "lldb/Utility/DataExtractor.h"
+#include "lldb/Utility/Endian.h"
+#include "lldb/Utility/Log.h"
+#include "lldb/Utility/Stream.h"
+#include "lldb/Utility/StreamString.h"
+#include "lldb/Utility/UUID.h"
+
 // Other libraries and framework includes
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/MathExtras.h"
-
-// Project includes
-#include "lldb/Core/DataBuffer.h"
-#include "lldb/Core/DataBufferHeap.h"
-#include "lldb/Core/DataExtractor.h"
-#include "lldb/Core/UUID.h"
-#include "lldb/Utility/Endian.h"
-#include "lldb/Utility/Log.h"
-#include "lldb/Utility/Stream.h"
-#include "lldb/Utility/StreamString.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -769,7 +769,6 @@ uint64_t DataExtractor::GetPointer(offset_t *offset_ptr) const {
 #endif
   return GetMaxU64(offset_ptr, m_addr_size);
 }
-
 
 size_t DataExtractor::ExtractBytes(offset_t offset, offset_t length,
                                    ByteOrder dst_byte_order, void *dst) const {

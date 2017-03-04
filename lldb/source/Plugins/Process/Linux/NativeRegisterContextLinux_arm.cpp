@@ -11,8 +11,8 @@
 
 #include "NativeRegisterContextLinux_arm.h"
 
-#include "lldb/Core/DataBufferHeap.h"
 #include "lldb/Core/RegisterValue.h"
+#include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Error.h"
 #include "lldb/Utility/Log.h"
 
