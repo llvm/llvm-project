@@ -1388,6 +1388,13 @@ public:
       Action != TypeSplitVector;
   }
 
+  /// Return true if a select of constants (select Cond, C1, C2) should be
+  /// transformed into simple math ops with the condition value. For example:
+  /// select Cond, C1, C1-1 --> add (zext Cond), C1-1
+  virtual bool convertSelectOfConstantsToMath() const {
+    return false;
+  }
+
   //===--------------------------------------------------------------------===//
   // TargetLowering Configuration Methods - These methods should be invoked by
   // the derived class constructor to configure this object for the target.

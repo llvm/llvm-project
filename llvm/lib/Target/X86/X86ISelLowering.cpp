@@ -34103,51 +34103,56 @@ static SDValue combineADC(SDNode *N, SelectionDAG &DAG,
 /// then try to convert it to an ADC or SBB. This replaces TEST+SET+{ADD/SUB}
 /// with CMP+{ADC, SBB}.
 static SDValue combineAddOrSubToADCOrSBB(SDNode *N, SelectionDAG &DAG) {
-  // Look through ZExts.
   bool IsSub = N->getOpcode() == ISD::SUB;
-  SDValue Y = N->getOperand(0);
-  SDValue Ext = N->getOperand(1);
+  SDValue X = N->getOperand(0);
+  SDValue Y = N->getOperand(1);
 
-  // If this is an add, canonicalize a zext to the RHS.
+  // If this is an add, canonicalize a zext operand to the RHS.
   // TODO: Incomplete? What if both sides are zexts?
-  if (!IsSub && Ext.getOpcode() != ISD::ZERO_EXTEND &&
-      Y.getOpcode() == ISD::ZERO_EXTEND)
-    std::swap(Ext, Y);
+  if (!IsSub && X.getOpcode() == ISD::ZERO_EXTEND &&
+      Y.getOpcode() != ISD::ZERO_EXTEND)
+    std::swap(X, Y);
 
-  if (Ext.getOpcode() != ISD::ZERO_EXTEND || !Ext.hasOneUse())
+  // Look through a one-use zext.
+  if (Y.getOpcode() == ISD::ZERO_EXTEND && Y.hasOneUse())
+    Y = Y.getOperand(0);
+
+  // If this is an add, canonicalize a setcc operand to the RHS.
+  // TODO: Incomplete? What if both sides are setcc?
+  if (!IsSub && X.getOpcode() == X86ISD::SETCC &&
+      Y.getOpcode() != X86ISD::SETCC)
+    std::swap(X, Y);
+
+  if (Y.getOpcode() != X86ISD::SETCC || !Y.hasOneUse())
     return SDValue();
 
-  SDValue SetCC = Ext.getOperand(0);
-  if (SetCC.getOpcode() != X86ISD::SETCC || !SetCC.hasOneUse())
-    return SDValue();
-
-  X86::CondCode CC = (X86::CondCode)SetCC.getConstantOperandVal(0);
+  X86::CondCode CC = (X86::CondCode)Y.getConstantOperandVal(0);
   if (CC != X86::COND_E && CC != X86::COND_NE)
     return SDValue();
 
-  SDValue Cmp = SetCC.getOperand(1);
+  SDValue Cmp = Y.getOperand(1);
   if (Cmp.getOpcode() != X86ISD::CMP || !Cmp.hasOneUse() ||
       !X86::isZeroNode(Cmp.getOperand(1)) ||
       !Cmp.getOperand(0).getValueType().isInteger())
     return SDValue();
 
-  // (cmp X, 1) sets the carry flag if X is 0.
   SDLoc DL(N);
-  SDValue X = Cmp.getOperand(0);
-  SDValue NewCmp = DAG.getNode(X86ISD::CMP, DL, MVT::i32, X,
-                               DAG.getConstant(1, DL, X.getValueType()));
+  EVT VT = N->getValueType(0);
 
-  EVT VT = Y.getValueType();
+  // (cmp Z, 1) sets the carry flag if Z is 0.
+  SDValue Z = Cmp.getOperand(0);
+  SDValue NewCmp = DAG.getNode(X86ISD::CMP, DL, MVT::i32, Z,
+                               DAG.getConstant(1, DL, Z.getValueType()));
 
-  // Y - (X != 0) --> sub Y, (zext(setne X, 0)) --> adc Y, -1, (cmp X, 1)
-  // Y + (X != 0) --> add Y, (zext(setne X, 0)) --> sbb Y, -1, (cmp X, 1)
+  // X - (Z != 0) --> sub X, (zext(setne Z, 0)) --> adc X, -1, (cmp Z, 1)
+  // X + (Z != 0) --> add X, (zext(setne Z, 0)) --> sbb X, -1, (cmp Z, 1)
   if (CC == X86::COND_NE)
-    return DAG.getNode(IsSub ? X86ISD::ADC : X86ISD::SBB, DL, VT, Y,
+    return DAG.getNode(IsSub ? X86ISD::ADC : X86ISD::SBB, DL, VT, X,
                        DAG.getConstant(-1ULL, DL, VT), NewCmp);
 
-  // Y - (X == 0) --> sub Y, (zext(sete  X, 0)) --> sbb Y, 0, (cmp X, 1)
-  // Y + (X == 0) --> add Y, (zext(sete  X, 0)) --> adc Y, 0, (cmp X, 1)
-  return DAG.getNode(IsSub ? X86ISD::SBB : X86ISD::ADC, DL, VT, Y,
+  // X - (Z == 0) --> sub X, (zext(sete  Z, 0)) --> sbb X, 0, (cmp Z, 1)
+  // X + (Z == 0) --> add X, (zext(sete  Z, 0)) --> adc X, 0, (cmp Z, 1)
+  return DAG.getNode(IsSub ? X86ISD::SBB : X86ISD::ADC, DL, VT, X,
                      DAG.getConstant(0, DL, VT), NewCmp);
 }
 

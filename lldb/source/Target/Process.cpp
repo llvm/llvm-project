@@ -14,6 +14,8 @@
 
 // Other libraries and framework includes
 #include "llvm/Support/ScopedPrinter.h"
+#include "llvm/Support/Threading.h"
+
 // Project includes
 #include "Plugins/Process/Utility/InferiorCallPOSIX.h"
 #include "lldb/Breakpoint/BreakpointLocation.h"
@@ -3733,8 +3735,8 @@ bool Process::StartPrivateStateThread(bool is_secondary_thread) {
   // Create a thread that watches our internal state and controls which
   // events make it to clients (into the DCProcess event queue).
   char thread_name[1024];
-
-  if (HostInfo::GetMaxThreadNameLength() <= 30) {
+  uint32_t max_len = llvm::get_max_thread_name_length();
+  if (max_len > 0 && max_len <= 30) {
     // On platforms with abbreviated thread name lengths, choose thread names
     // that fit within the limit.
     if (already_running)
