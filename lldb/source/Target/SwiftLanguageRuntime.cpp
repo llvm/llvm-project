@@ -31,10 +31,8 @@
 #include "swift/RemoteAST/RemoteAST.h"
 
 #include "lldb/Breakpoint/StoppointCallbackContext.h"
-#include "lldb/Core/DataBuffer.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Utility/Error.h"
-#include "lldb/Core/Log.h"
 #include "lldb/Core/Mangled.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
@@ -67,7 +65,9 @@
 #include "lldb/Target/ThreadPlanStepOverRange.h"
 
 #include "lldb/Utility/CleanUp.h"
+#include "lldb/Utility/DataBuffer.h"
 #include "lldb/Utility/LLDBAssert.h"
+#include "lldb/Utility/Log.h"
 #include "lldb/Utility/StringLexer.h"
 
 // FIXME: we should not need this

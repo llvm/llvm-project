@@ -12,13 +12,13 @@
 
 #include "SwiftHashedContainer.h"
 
-#include "lldb/Core/DataBufferHeap.h"
 #include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Symbol/SwiftASTContext.h"
 #include "lldb/Target/ObjCLanguageRuntime.h"
 #include "lldb/Target/Process.h"
+#include "lldb/Utility/DataBufferHeap.h"
 
 #include "Plugins/Language/ObjC/NSDictionary.h"
 

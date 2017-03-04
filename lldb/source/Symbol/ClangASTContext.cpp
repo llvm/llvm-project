@@ -9291,7 +9291,8 @@ bool ClangASTContext::DumpTypeValue(
     lldb::opaque_compiler_type_t type, Stream *s, lldb::Format format,
     const DataExtractor &data, lldb::offset_t byte_offset, size_t byte_size,
     uint32_t bitfield_bit_size, uint32_t bitfield_bit_offset,
-    ExecutionContextScope *exe_scope) {
+    ExecutionContextScope *exe_scope,
+    bool is_base_class) {
   if (!type)
     return false;
   if (IsAggregateType(type)) {

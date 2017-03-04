@@ -766,16 +766,8 @@ public:
       if (!err.Success()) {
         dump_stream.Printf("  <could not be read>\n");
       } else {
-<<<<<<< HEAD
-        DataExtractor extractor(data.GetBytes(), data.GetByteSize(),
-                                map.GetByteOrder(), map.GetAddressByteSize());
-
-        extractor.DumpHexBytes(&dump_stream, data.GetBytes(),
-                               data.GetByteSize(), 16, m_temporary_allocation);
-=======
         DumpHexBytes(&dump_stream, data.GetBytes(), data.GetByteSize(), 16,
                      load_addr);
->>>>>>> llvm/master
 
         dump_stream.PutChar('\n');
       }

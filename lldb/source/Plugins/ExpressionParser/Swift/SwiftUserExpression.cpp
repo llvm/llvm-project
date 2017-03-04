@@ -18,7 +18,6 @@
 #include "SwiftExpressionParser.h"
 #include "SwiftREPLMaterializer.h"
 
-#include "lldb/Core/Log.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/ExpressionParser.h"
@@ -31,6 +30,7 @@
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/SwiftLanguageRuntime.h"
 #include "lldb/Utility/LLDBAssert.h"
+#include "lldb/Utility/Log.h"
 
 #include "swift/AST/Type.h"
 #include "swift/AST/Types.h"

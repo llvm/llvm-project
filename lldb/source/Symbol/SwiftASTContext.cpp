@@ -72,8 +72,7 @@
 #include "Plugins/ExpressionParser/Swift/SwiftUserExpression.h"
 #include "lldb/Core/ArchSpec.h"
 #include "lldb/Core/Debugger.h"
-#include "lldb/Utility/Error.h"
-#include "lldb/Core/Log.h"
+#include "lldb/Core/DumpDataExtractor.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
@@ -93,7 +92,9 @@
 #include "lldb/Target/SwiftLanguageRuntime.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/CleanUp.h"
+#include "lldb/Utility/Error.h"
 #include "lldb/Utility/LLDBAssert.h"
+#include "lldb/Utility/Log.h"
 
 #include "Plugins/Platform/MacOSX/PlatformDarwin.h"
 #include "Plugins/SymbolFile/DWARF/DWARFASTParserSwift.h"
@@ -8606,7 +8607,7 @@ bool SwiftASTContext::DumpTypeValue(
       byte_size = 4;
       break;
     }
-    return data.Dump(s, byte_offset, format, byte_size, item_count, UINT32_MAX,
+    return DumpDataExtractor(data, s, byte_offset, format, byte_size, item_count, UINT32_MAX,
                      LLDB_INVALID_ADDRESS, bitfield_bit_size,
                      bitfield_bit_offset, exe_scope);
   } break;
@@ -8679,7 +8680,7 @@ bool SwiftASTContext::DumpTypeValue(
 
   case swift::TypeKind::ExistentialMetatype:
   case swift::TypeKind::Metatype: {
-    return data.Dump(s, byte_offset, eFormatPointer, byte_size, 1, UINT32_MAX,
+    return DumpDataExtractor(data, s, byte_offset, eFormatPointer, byte_size, 1, UINT32_MAX,
                      LLDB_INVALID_ADDRESS, bitfield_bit_size,
                      bitfield_bit_offset, exe_scope);
   } break;

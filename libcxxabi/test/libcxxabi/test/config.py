@@ -48,6 +48,8 @@ class Configuration(LibcxxConfiguration):
         if not self.get_lit_bool('has_cxa_thread_atexit_impl', True):
             self.config.available_features.add(
                 'libcxxabi-no-cxa-thread-atexit-impl')
+        if not self.get_lit_bool('llvm_unwinder', False):
+            self.config.available_features.add('libcxxabi-has-system-unwinder')
 
     def configure_compile_flags(self):
         self.cxx.compile_flags += ['-DLIBCXXABI_NO_TIMER']

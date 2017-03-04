@@ -12,12 +12,12 @@
 
 #include "SwiftASTManipulator.h"
 
-#include "lldb/Utility/ConstString.h"
-#include "lldb/Utility/Error.h"
-#include "lldb/Core/Log.h"
 #include "lldb/Expression/ExpressionParser.h"
 #include "lldb/Expression/ExpressionSourceCode.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/Error.h"
+#include "lldb/Utility/Log.h"
 #include "swift/AST/ASTContext.h"
 #include "swift/AST/ASTWalker.h"
 #include "swift/AST/Decl.h"
