@@ -18,10 +18,8 @@
 #include "Plugins/Process/Utility/RegisterContextDarwin_i386.h"
 #include "Plugins/Process/Utility/RegisterContextDarwin_x86_64.h"
 #include "lldb/Core/ArchSpec.h"
-#include "lldb/Core/DataBufferLLVM.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/FileSpecList.h"
-#include "lldb/Core/Log.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
@@ -29,7 +27,6 @@
 #include "lldb/Core/Section.h"
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Core/Timer.h"
-#include "lldb/Core/UUID.h"
 #include "lldb/Host/FileSpec.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Symbol/DWARFCallFrameInfo.h"
@@ -42,8 +39,11 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadList.h"
+#include "lldb/Utility/DataBufferLLVM.h"
 #include "lldb/Utility/Error.h"
+#include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
+#include "lldb/Utility/UUID.h"
 
 #include "lldb/Utility/SafeMachO.h"
 
@@ -859,7 +859,8 @@ ObjectFile *ObjectFileMachO::CreateInstance(const lldb::ModuleSP &module_sp,
                                             lldb::offset_t file_offset,
                                             lldb::offset_t length) {
   if (!data_sp) {
-    data_sp = DataBufferLLVM::CreateFromFileSpec(*file, length, file_offset);
+    data_sp =
+        DataBufferLLVM::CreateFromPath(file->GetPath(), length, file_offset);
     if (!data_sp)
       return nullptr;
     data_offset = 0;
@@ -870,7 +871,8 @@ ObjectFile *ObjectFileMachO::CreateInstance(const lldb::ModuleSP &module_sp,
 
   // Update the data to contain the entire file if it doesn't already
   if (data_sp->GetByteSize() < length) {
-    data_sp = DataBufferLLVM::CreateFromFileSpec(*file, length, file_offset);
+    data_sp =
+        DataBufferLLVM::CreateFromPath(file->GetPath(), length, file_offset);
     if (!data_sp)
       return nullptr;
     data_offset = 0;
@@ -2093,8 +2095,9 @@ UUID ObjectFileMachO::GetSharedCacheUUID(FileSpec dyld_shared_cache,
                                          const ByteOrder byte_order,
                                          const uint32_t addr_byte_size) {
   UUID dsc_uuid;
-  DataBufferSP DscData = DataBufferLLVM::CreateFromFileSpec(
-      dyld_shared_cache, sizeof(struct lldb_copy_dyld_cache_header_v1), 0);
+  DataBufferSP DscData = DataBufferLLVM::CreateFromPath(
+      dyld_shared_cache.GetPath(),
+      sizeof(struct lldb_copy_dyld_cache_header_v1), 0);
   if (!DscData)
     return dsc_uuid;
   DataExtractor dsc_header_data(DscData, byte_order, addr_byte_size);
@@ -2700,8 +2703,9 @@ size_t ObjectFileMachO::ParseSymtab() {
 
       // Process the dyld shared cache header to find the unmapped symbols
 
-      DataBufferSP dsc_data_sp = DataBufferLLVM::CreateFromFileSpec(
-          dsc_filespec, sizeof(struct lldb_copy_dyld_cache_header_v1), 0);
+      DataBufferSP dsc_data_sp = DataBufferLLVM::CreateFromPath(
+          dsc_filespec.GetPath(), sizeof(struct lldb_copy_dyld_cache_header_v1),
+          0);
       if (!dsc_uuid.IsValid()) {
         dsc_uuid = GetSharedCacheUUID(dsc_filespec, byte_order, addr_byte_size);
       }
@@ -2734,8 +2738,8 @@ size_t ObjectFileMachO::ParseSymtab() {
             mappingOffset >= sizeof(struct lldb_copy_dyld_cache_header_v1)) {
 
           DataBufferSP dsc_mapping_info_data_sp =
-              DataBufferLLVM::CreateFromFileSpec(
-                  dsc_filespec,
+              DataBufferLLVM::CreateFromPath(
+                  dsc_filespec.GetPath(),
                   sizeof(struct lldb_copy_dyld_cache_mapping_info),
                   mappingOffset);
 
@@ -2761,8 +2765,9 @@ size_t ObjectFileMachO::ParseSymtab() {
           if (localSymbolsOffset && localSymbolsSize) {
             // Map the local symbols
             DataBufferSP dsc_local_symbols_data_sp =
-                DataBufferLLVM::CreateFromFileSpec(
-                    dsc_filespec, localSymbolsSize, localSymbolsOffset);
+                DataBufferLLVM::CreateFromPath(dsc_filespec.GetPath(),
+                                               localSymbolsSize,
+                                               localSymbolsOffset);
 
             if (dsc_local_symbols_data_sp) {
               DataExtractor dsc_local_symbols_data(dsc_local_symbols_data_sp,

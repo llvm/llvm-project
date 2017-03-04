@@ -63,12 +63,16 @@ cxa_exception_from_exception_unwind_exception(_Unwind_Exception* unwind_exceptio
     return cxa_exception_from_thrown_object(unwind_exception + 1 );
 }
 
-static
-inline
-size_t
-cxa_exception_size_from_exception_thrown_size(size_t size)
-{
-    return size + sizeof (__cxa_exception);
+// Round s up to next multiple of a.
+static inline
+size_t aligned_allocation_size(size_t s, size_t a) {
+    return (s + a - 1) & ~(a - 1);
+}
+
+static inline
+size_t cxa_exception_size_from_exception_thrown_size(size_t size) {
+    return aligned_allocation_size(size + sizeof (__cxa_exception),
+                                   alignof(__cxa_exception));
 }
 
 static void setExceptionClass(_Unwind_Exception* unwind_exception) {
@@ -140,7 +144,7 @@ extern "C" {
 void *__cxa_allocate_exception(size_t thrown_size) throw() {
     size_t actual_size = cxa_exception_size_from_exception_thrown_size(thrown_size);
     __cxa_exception *exception_header =
-        static_cast<__cxa_exception *>(__malloc_with_fallback(actual_size));
+        static_cast<__cxa_exception *>(__aligned_malloc_with_fallback(actual_size));
     if (NULL == exception_header)
         std::terminate();
     std::memset(exception_header, 0, actual_size);
@@ -150,7 +154,7 @@ void *__cxa_allocate_exception(size_t thrown_size) throw() {
 
 //  Free a __cxa_exception object allocated with __cxa_allocate_exception.
 void __cxa_free_exception(void *thrown_object) throw() {
-    __free_with_fallback(cxa_exception_from_thrown_object(thrown_object));
+    __aligned_free_with_fallback(cxa_exception_from_thrown_object(thrown_object));
 }
 
 
@@ -159,7 +163,7 @@ void __cxa_free_exception(void *thrown_object) throw() {
 //  Otherwise, it will work like __cxa_allocate_exception.
 void * __cxa_allocate_dependent_exception () {
     size_t actual_size = sizeof(__cxa_dependent_exception);
-    void *ptr = __malloc_with_fallback(actual_size);
+    void *ptr = __aligned_malloc_with_fallback(actual_size);
     if (NULL == ptr)
         std::terminate();
     std::memset(ptr, 0, actual_size);
@@ -170,7 +174,7 @@ void * __cxa_allocate_dependent_exception () {
 //  This function shall free a dependent_exception.
 //  It does not affect the reference count of the primary exception.
 void __cxa_free_dependent_exception (void * dependent_exception) {
-    __free_with_fallback(dependent_exception);
+    __aligned_free_with_fallback(dependent_exception);
 }
 
 

@@ -30,10 +30,10 @@
 // LLDB includes
 #include "lldb/lldb-enumerations.h"
 
-#include "lldb/Core/Log.h"
 #include "lldb/Host/PseudoTerminal.h"
 #include "lldb/Target/ProcessLaunchInfo.h"
 #include "lldb/Utility/Error.h"
+#include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
 
 #include "CFBundle.h"

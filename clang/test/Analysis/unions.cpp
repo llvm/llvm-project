@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=core,unix.Malloc,debug.ExprInspection %s -verify
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,unix.Malloc,debug.ExprInspection %s -verify
 
 extern void clang_analyzer_eval(bool);
 extern "C" char *strdup(const char *s);

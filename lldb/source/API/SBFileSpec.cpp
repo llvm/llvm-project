@@ -12,8 +12,8 @@
 
 #include "lldb/API/SBFileSpec.h"
 #include "lldb/API/SBStream.h"
-#include "lldb/Core/Log.h"
 #include "lldb/Host/FileSpec.h"
+#include "lldb/Utility/Log.h"
 #include "lldb/Utility/Stream.h"
 
 #include "llvm/ADT/SmallString.h"

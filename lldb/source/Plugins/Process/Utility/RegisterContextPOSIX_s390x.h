@@ -17,8 +17,8 @@
 #include "RegisterContext_s390x.h"
 #include "RegisterInfoInterface.h"
 #include "lldb-s390x-register-enums.h"
-#include "lldb/Core/Log.h"
 #include "lldb/Target/RegisterContext.h"
+#include "lldb/Utility/Log.h"
 
 class ProcessMonitor;
 

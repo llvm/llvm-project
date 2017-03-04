@@ -15,8 +15,8 @@
 // Other libraries and framework includes
 // Project includes
 #include "Plugins/Process/Utility/RegisterContextPOSIX_arm64.h"
-#include "lldb/Core/DataBufferHeap.h"
-#include "lldb/Core/DataExtractor.h"
+#include "lldb/Utility/DataBufferHeap.h"
+#include "lldb/Utility/DataExtractor.h"
 
 class RegisterContextCorePOSIX_arm64 : public RegisterContextPOSIX_arm64 {
 public:

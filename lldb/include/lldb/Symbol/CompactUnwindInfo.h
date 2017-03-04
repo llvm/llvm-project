@@ -13,10 +13,10 @@
 #include <mutex>
 #include <vector>
 
-#include "lldb/Core/DataExtractor.h"
 #include "lldb/Core/RangeMap.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/UnwindPlan.h"
+#include "lldb/Utility/DataExtractor.h"
 #include "lldb/lldb-private.h"
 
 namespace lldb_private {

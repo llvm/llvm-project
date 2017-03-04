@@ -10,12 +10,13 @@
 #ifndef LLDB_CORE_DATABUFFERLLVM_H
 #define LLDB_CORE_DATABUFFERLLVM_H
 
-#include "lldb/Core/DataBuffer.h"
+#include "lldb/Utility/DataBuffer.h"
 
 #include <memory>
 
 namespace llvm {
 class MemoryBuffer;
+class Twine;
 }
 
 namespace lldb_private {
@@ -25,9 +26,7 @@ public:
   ~DataBufferLLVM();
 
   static std::shared_ptr<DataBufferLLVM>
-  CreateFromPath(llvm::StringRef Path, uint64_t Size, uint64_t Offset);
-  static std::shared_ptr<DataBufferLLVM>
-  CreateFromFileSpec(const FileSpec &F, uint64_t Size, uint64_t Offset);
+  CreateFromPath(const llvm::Twine &Path, uint64_t Size, uint64_t Offset);
 
   uint8_t *GetBytes() override;
   const uint8_t *GetBytes() const override;

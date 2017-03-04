@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -std=c99 -Dbool=_Bool -analyze -analyzer-checker=core,alpha.core.TestAfterDivZero -analyzer-output=text -verify %s
-// RUN: %clang_cc1 -x c++ -analyze -analyzer-checker=core,alpha.core.TestAfterDivZero -analyzer-output=text -verify %s
+// RUN: %clang_analyze_cc1 -std=c99 -Dbool=_Bool -analyzer-checker=core,alpha.core.TestAfterDivZero -analyzer-output=text -verify %s
+// RUN: %clang_analyze_cc1 -x c++ -analyzer-checker=core,alpha.core.TestAfterDivZero -analyzer-output=text -verify %s
 
 int var;
 

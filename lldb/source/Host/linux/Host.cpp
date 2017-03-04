@@ -21,14 +21,14 @@
 // Other libraries and framework includes
 #include "llvm/Support/ScopedPrinter.h"
 // Project includes
-#include "lldb/Core/Log.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/Error.h"
+#include "lldb/Utility/Log.h"
 
-#include "lldb/Core/DataBufferHeap.h"
-#include "lldb/Core/DataExtractor.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
+#include "lldb/Utility/DataBufferHeap.h"
+#include "lldb/Utility/DataExtractor.h"
 
 #include "Plugins/Process/Linux/ProcFileReader.h"
 #include "lldb/Core/ModuleSpec.h"

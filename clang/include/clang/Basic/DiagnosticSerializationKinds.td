@@ -140,7 +140,13 @@ def err_module_odr_violation_mismatch_decl_diff : Error<
   "%select{non-|}5mutable field %4|"
   "field %4 with %select{no|an}5 initalizer|"
   "field %4 with an initializer|"
-  "method %4}3">;
+  "method %4|"
+  "method %4 is %select{not deleted|deleted}5|"
+  "method %4 is %select{|pure }5%select{not virtual|virtual}6|"
+  "method %4 is %select{not static|static}5|"
+  "method %4 is %select{not volatile|volatile}5|"
+  "method %4 is %select{not const|const}5|"
+  "method %4 is %select{not inline|inline}5}3">;
 
 def note_module_odr_violation_mismatch_decl_diff : Note<"but in '%0' found "
   "%select{"
@@ -154,7 +160,13 @@ def note_module_odr_violation_mismatch_decl_diff : Note<"but in '%0' found "
   "%select{non-|}3mutable field %2|"
   "field %2 with %select{no|an}3 initializer|"
   "field %2 with a different initializer|"
-  "method %2}1">;
+  "method %2|"
+  "method %2 is %select{not deleted|deleted}3|"
+  "method %2 is %select{|pure }3%select{not virtual|virtual}4|"
+  "method %2 is %select{not static|static}3|"
+  "method %2 is %select{not volatile|volatile}3|"
+  "method %2 is %select{not const|const}3|"
+  "method %2 is %select{not inline|inline}3}1">;
 
 def warn_module_uses_date_time : Warning<
   "%select{precompiled header|module}0 uses __DATE__ or __TIME__">,

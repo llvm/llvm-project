@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=debug.ExprInspection -verify %s 2>&1 | FileCheck %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=debug.ExprInspection -verify %s 2>&1 | FileCheck %s
 
 // Self-tests for the debug.ExprInspection checker.
 

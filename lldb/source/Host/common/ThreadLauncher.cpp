@@ -10,10 +10,9 @@
 
 // lldb Includes
 #include "lldb/Host/ThreadLauncher.h"
-#include "lldb/Core/Log.h"
 #include "lldb/Host/HostNativeThread.h"
 #include "lldb/Host/HostThread.h"
-#include "lldb/Host/ThisThread.h"
+#include "lldb/Utility/Log.h"
 
 #if defined(_WIN32)
 #include "lldb/Host/windows/windows.h"

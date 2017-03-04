@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=core,unix -analyzer-eagerly-assume -verify %s
-// RUN: %clang_cc1 -analyze -analyzer-checker=core,unix -analyzer-eagerly-assume -analyzer-output=plist-multi-file -analyzer-config path-diagnostics-alternate=ture %s -o %t.plist
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,unix -analyzer-eagerly-assume -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,unix -analyzer-eagerly-assume -analyzer-output=plist-multi-file -analyzer-config path-diagnostics-alternate=ture %s -o %t.plist
 // RUN: FileCheck --input-file=%t.plist %s
 
 

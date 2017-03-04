@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux -std=c++14 -analyze -analyzer-checker=optin.performance -analyzer-config optin.performance.Padding:AllowedPad=2 -verify %s
+// RUN: %clang_analyze_cc1 -triple x86_64-unknown-linux -std=c++14 -analyzer-checker=optin.performance -analyzer-config optin.performance.Padding:AllowedPad=2 -verify %s
 
 // expected-warning@+7{{\
 Excessive padding in 'struct IntSandwich' (6 padding bytes, where 2 is optimal). \

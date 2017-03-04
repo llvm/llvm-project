@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++11 -analyze -analyzer-checker=core,alpha.core,debug.ExprInspection -verify %s
+// RUN: %clang_analyze_cc1 -std=c++11 -analyzer-checker=core,alpha.core,debug.ExprInspection -verify %s
 void clang_analyzer_eval(bool);
 
 struct X0 { };

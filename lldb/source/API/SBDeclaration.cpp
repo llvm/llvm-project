@@ -10,8 +10,8 @@
 
 #include "lldb/API/SBDeclaration.h"
 #include "lldb/API/SBStream.h"
-#include "lldb/Core/Log.h"
 #include "lldb/Symbol/Declaration.h"
+#include "lldb/Utility/Log.h"
 #include "lldb/Utility/Stream.h"
 
 #include <limits.h>

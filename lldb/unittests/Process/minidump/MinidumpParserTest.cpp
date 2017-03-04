@@ -19,10 +19,10 @@
 #include "gtest/gtest.h"
 
 #include "lldb/Core/ArchSpec.h"
-#include "lldb/Core/DataBufferLLVM.h"
-#include "lldb/Core/DataExtractor.h"
 #include "lldb/Host/FileSpec.h"
 #include "lldb/Target/MemoryRegionInfo.h"
+#include "lldb/Utility/DataBufferLLVM.h"
+#include "lldb/Utility/DataExtractor.h"
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"

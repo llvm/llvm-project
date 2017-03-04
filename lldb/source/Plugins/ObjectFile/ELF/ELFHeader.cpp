@@ -9,8 +9,8 @@
 
 #include <cstring>
 
-#include "lldb/Core/DataExtractor.h"
 #include "lldb/Core/Section.h"
+#include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Stream.h"
 
 #include "ELFHeader.h"

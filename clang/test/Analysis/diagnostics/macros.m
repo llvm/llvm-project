@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=core,osx -fblocks -analyzer-output=text -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,osx -fblocks -analyzer-output=text -verify %s
 
 #include "../Inputs/system-header-simulator-objc.h"
 

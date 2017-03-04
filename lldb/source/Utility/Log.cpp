@@ -8,14 +8,11 @@
 //===----------------------------------------------------------------------===//
 
 // Project includes
-#include "lldb/Core/Log.h"
-#include "lldb/Core/PluginManager.h"
-#include "lldb/Core/StreamFile.h"
-#include "lldb/Host/Host.h"
-#include "lldb/Host/ThisThread.h"
-#include "lldb/Interpreter/Args.h"
+#include "lldb/Utility/Log.h"
+
 #include "lldb/Utility/NameMatches.h"
 #include "lldb/Utility/StreamString.h"
+#include "lldb/Utility/VASPrintf.h"
 
 // Other libraries and framework includes
 #include "llvm/ADT/STLExtras.h"
@@ -24,6 +21,7 @@
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Signals.h"
+#include "llvm/Support/Threading.h"
 #include "llvm/Support/raw_ostream.h"
 
 // C Includes
@@ -142,18 +140,16 @@ void Log::Printf(const char *format, ...) {
 // a valid file handle, we also log to the file.
 //----------------------------------------------------------------------
 void Log::VAPrintf(const char *format, va_list args) {
-  std::string message_string;
-  llvm::raw_string_ostream message(message_string);
-  WriteHeader(message, "", "");
+  llvm::SmallString<64> FinalMessage;
+  llvm::raw_svector_ostream Stream(FinalMessage);
+  WriteHeader(Stream, "", "");
 
-  char *text;
-  vasprintf(&text, format, args);
-  message << text;
-  free(text);
+  llvm::SmallString<64> Content;
+  lldb_private::VASprintf(Content, format, args);
 
-  message << "\n";
+  Stream << Content << "\n";
 
-  WriteMessage(message.str());
+  WriteMessage(FinalMessage.str());
 }
 
 //----------------------------------------------------------------------
@@ -180,14 +176,10 @@ void Log::Error(const char *format, ...) {
 }
 
 void Log::VAError(const char *format, va_list args) {
-  char *arg_msg = nullptr;
-  ::vasprintf(&arg_msg, format, args);
+  llvm::SmallString<64> Content;
+  VASprintf(Content, format, args);
 
-  if (arg_msg == nullptr)
-    return;
-
-  Printf("error: %s", arg_msg);
-  free(arg_msg);
+  Printf("error: %s", Content.c_str());
 }
 
 //----------------------------------------------------------------------
@@ -208,17 +200,13 @@ void Log::Verbose(const char *format, ...) {
 // Printing of warnings that are not fatal.
 //----------------------------------------------------------------------
 void Log::Warning(const char *format, ...) {
-  char *arg_msg = nullptr;
+  llvm::SmallString<64> Content;
   va_list args;
   va_start(args, format);
-  ::vasprintf(&arg_msg, format, args);
+  VASprintf(Content, format, args);
   va_end(args);
 
-  if (arg_msg == nullptr)
-    return;
-
-  Printf("warning: %s", arg_msg);
-  free(arg_msg);
+  Printf("warning: %s", Content.c_str());
 }
 
 void Log::Register(llvm::StringRef name, Channel &channel) {
@@ -309,12 +297,12 @@ void Log::WriteHeader(llvm::raw_ostream &OS, llvm::StringRef file,
   // Add the process and thread if requested
   if (m_options.Test(LLDB_LOG_OPTION_PREPEND_PROC_AND_THREAD))
     OS << llvm::formatv("[{0,0+4}/{1,0+4}] ", getpid(),
-                        Host::GetCurrentThreadID());
+                        llvm::get_threadid());
 
   // Add the thread name if requested
   if (m_options.Test(LLDB_LOG_OPTION_PREPEND_THREAD_NAME)) {
     llvm::SmallString<32> thread_name;
-    ThisThread::GetName(thread_name);
+    llvm::get_thread_name(thread_name);
     if (!thread_name.empty())
       OS << thread_name;
   }

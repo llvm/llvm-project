@@ -14,7 +14,7 @@
 // C++ Includes
 // Other libraries and framework includes
 // Project includes
-#include "lldb/Core/Log.h"
+#include "lldb/Utility/Log.h"
 
 #define DWARF_LOG_DEBUG_INFO (1u << 1)
 #define DWARF_LOG_DEBUG_LINE (1u << 2)

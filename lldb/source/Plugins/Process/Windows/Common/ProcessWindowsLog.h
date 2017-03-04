@@ -10,7 +10,7 @@
 #ifndef liblldb_ProcessWindowsLog_h_
 #define liblldb_ProcessWindowsLog_h_
 
-#include "lldb/Core/Log.h"
+#include "lldb/Utility/Log.h"
 
 #define WINDOWS_LOG_PROCESS (1u << 1)     // Log process operations
 #define WINDOWS_LOG_EXCEPTION (1u << 1)   // Log exceptions

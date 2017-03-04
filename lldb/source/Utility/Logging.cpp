@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Core/Logging.h"
+#include "lldb/Utility/Logging.h"
 
 // C Includes
 // C++ Includes
@@ -16,9 +16,7 @@
 
 // Other libraries and framework includes
 // Project includes
-#include "lldb/Core/Log.h"
-#include "lldb/Core/StreamFile.h"
-#include "lldb/Interpreter/Args.h"
+#include "lldb/Utility/Log.h"
 
 using namespace lldb;
 using namespace lldb_private;

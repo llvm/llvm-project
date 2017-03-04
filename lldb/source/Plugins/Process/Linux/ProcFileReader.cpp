@@ -20,7 +20,7 @@
 #include <fstream>
 
 // LLDB Headers
-#include "lldb/Core/DataBufferHeap.h"
+#include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Error.h"
 
 using namespace lldb_private;

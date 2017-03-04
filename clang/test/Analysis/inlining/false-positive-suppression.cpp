@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=core -analyzer-config suppress-null-return-paths=false -verify %s
-// RUN: %clang_cc1 -analyze -analyzer-checker=core -verify -DSUPPRESSED=1 %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core -analyzer-config suppress-null-return-paths=false -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core -verify -DSUPPRESSED=1 %s
 
 namespace rdar12676053 {
   // Delta-reduced from a preprocessed file.

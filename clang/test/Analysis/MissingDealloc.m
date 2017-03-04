@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=osx.cocoa.Dealloc -fblocks -verify %s
-// RUN: %clang_cc1 -analyze -analyzer-checker=osx.cocoa.Dealloc -fblocks -verify -triple x86_64-apple-darwin10 -fobjc-arc %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=osx.cocoa.Dealloc -fblocks -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=osx.cocoa.Dealloc -fblocks -verify -triple x86_64-apple-darwin10 -fobjc-arc %s
 
 #define NON_ARC !__has_feature(objc_arc)
 

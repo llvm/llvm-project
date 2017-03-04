@@ -1,5 +1,4 @@
 NDK_ROOT := $(shell dirname $(CC))/../../../../..
-NDK_ROOT := $(shell realpath $(NDK_ROOT))
 
 ifeq "$(findstring 64, $(ARCH))" "64"
 	# lowest 64-bit API level

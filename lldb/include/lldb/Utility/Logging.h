@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_Core_Logging_h_
-#define liblldb_Core_Logging_h_
+#ifndef LLDB_UTILITY_LOGGING_H
+#define LLDB_UTILITY_LOGGING_H
 
 // Project includes
 #include "lldb/lldb-private.h"
@@ -66,4 +66,4 @@ void InitializeLog();
 
 } // namespace lldb_private
 
-#endif // liblldb_Core_Logging_h_
+#endif // LLDB_UTILITY_LOGGING_H

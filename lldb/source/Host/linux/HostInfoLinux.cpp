@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Host/linux/HostInfoLinux.h"
-#include "lldb/Core/Log.h"
+#include "lldb/Utility/Log.h"
 
 #include "llvm/Support/Threading.h"
 

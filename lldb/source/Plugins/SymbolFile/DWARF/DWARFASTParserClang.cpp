@@ -21,7 +21,6 @@
 #include "UniqueDWARFASTType.h"
 
 #include "Plugins/Language/ObjC/ObjCLanguage.h"
-#include "lldb/Core/Log.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/Value.h"
 #include "lldb/Host/Host.h"
@@ -37,6 +36,7 @@
 #include "lldb/Symbol/TypeMap.h"
 #include "lldb/Target/Language.h"
 #include "lldb/Utility/LLDBAssert.h"
+#include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
 
 #include "clang/AST/DeclCXX.h"

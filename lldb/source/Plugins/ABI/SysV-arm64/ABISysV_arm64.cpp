@@ -18,7 +18,6 @@
 #include "llvm/ADT/Triple.h"
 
 // Project includes
-#include "lldb/Core/Log.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/RegisterValue.h"
@@ -32,6 +31,7 @@
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Error.h"
+#include "lldb/Utility/Log.h"
 
 #include "Utility/ARM64_DWARF_Registers.h"
 

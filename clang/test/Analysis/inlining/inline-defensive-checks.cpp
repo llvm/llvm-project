@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=core -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core -verify %s
 // expected-no-diagnostics
 
 extern void __assert_fail (__const char *__assertion, __const char *__file,

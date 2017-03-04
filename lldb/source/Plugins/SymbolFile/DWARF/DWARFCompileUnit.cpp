@@ -10,6 +10,7 @@
 #include "DWARFCompileUnit.h"
 
 #include "Plugins/Language/ObjC/ObjCLanguage.h"
+#include "lldb/Core/DumpDataExtractor.h"
 #include "lldb/Core/Mangled.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/Timer.h"
@@ -328,10 +329,9 @@ bool DWARFCompileUnit::Verify(Stream *s) const {
     return true;
   } else {
     s->Printf("    0x%8.8x: ", m_offset);
-
-    m_dwarf2Data->get_debug_info_data().Dump(s, m_offset, lldb::eFormatHex, 1,
-                                             Size(), 32, LLDB_INVALID_ADDRESS,
-                                             0, 0);
+    DumpDataExtractor(m_dwarf2Data->get_debug_info_data(), s, m_offset,
+                      lldb::eFormatHex, 1, Size(), 32, LLDB_INVALID_ADDRESS, 0,
+                      0);
     s->EOL();
     if (valid_offset) {
       if (!length_OK)

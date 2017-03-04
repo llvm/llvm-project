@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=osx.SecKeychainAPI -fblocks %s -verify
+// RUN: %clang_analyze_cc1 -analyzer-checker=osx.SecKeychainAPI -fblocks %s -verify
 
 #include "Inputs/system-header-simulator-objc.h"
 

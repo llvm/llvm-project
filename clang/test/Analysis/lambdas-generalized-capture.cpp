@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++14 -fsyntax-only -analyze -analyzer-checker=core,deadcode,debug.ExprInspection -verify %s
+// RUN: %clang_analyze_cc1 -std=c++14 -analyzer-checker=core,deadcode,debug.ExprInspection -verify %s
 
 int clang_analyzer_eval(int);
 

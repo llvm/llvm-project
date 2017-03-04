@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -std=c++11 -analyze -analyzer-checker=core,cplusplus,alpha.cplusplus.IteratorPastEnd -analyzer-eagerly-assume -analyzer-config c++-container-inlining=false %s -verify
-// RUN: %clang_cc1 -std=c++11 -analyze -analyzer-checker=core,cplusplus,alpha.cplusplus.IteratorPastEnd -analyzer-eagerly-assume -analyzer-config c++-container-inlining=true -DINLINE=1 %s -verify
+// RUN: %clang_analyze_cc1 -std=c++11 -analyzer-checker=core,cplusplus,alpha.cplusplus.IteratorPastEnd -analyzer-eagerly-assume -analyzer-config c++-container-inlining=false %s -verify
+// RUN: %clang_analyze_cc1 -std=c++11 -analyzer-checker=core,cplusplus,alpha.cplusplus.IteratorPastEnd -analyzer-eagerly-assume -analyzer-config c++-container-inlining=true -DINLINE=1 %s -verify
 
 #include "Inputs/system-header-simulator-cxx.h"
 

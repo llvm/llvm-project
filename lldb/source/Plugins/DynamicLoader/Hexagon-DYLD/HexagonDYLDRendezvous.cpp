@@ -11,13 +11,13 @@
 // C++ Includes
 // Other libraries and framework includes
 #include "lldb/Core/ArchSpec.h"
-#include "lldb/Core/Log.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/Error.h"
+#include "lldb/Utility/Log.h"
 
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/Process.h"

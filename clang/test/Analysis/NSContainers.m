@@ -1,4 +1,4 @@
-// RUN: %clang_cc1  -Wno-objc-literal-conversion -analyze -analyzer-checker=core,osx.cocoa.NonNilReturnValue,osx.cocoa.NilArg,osx.cocoa.Loops,debug.ExprInspection -verify -Wno-objc-root-class %s
+// RUN: %clang_analyze_cc1  -Wno-objc-literal-conversion -analyzer-checker=core,osx.cocoa.NonNilReturnValue,osx.cocoa.NilArg,osx.cocoa.Loops,debug.ExprInspection -verify -Wno-objc-root-class %s
 
 void clang_analyzer_eval(int);
 

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=core -std=c++11 -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core -std=c++11 -verify %s
 
 // radar://11485149, PR12871
 class PlotPoint {

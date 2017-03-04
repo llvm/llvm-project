@@ -194,12 +194,25 @@ size_t print_free_list () {
 
 namespace __cxxabiv1 {
 
-void * __malloc_with_fallback(size_t size) {
-    void *ptr = std::malloc(size);
-    if (NULL == ptr) // if malloc fails, fall back to emergency stash
-        ptr = fallback_malloc(size);
-    return ptr;
+struct __attribute__((aligned)) __aligned_type  {};
+
+void * __aligned_malloc_with_fallback(size_t size) {
+#if defined(_WIN32)
+    if (void *dest = _aligned_malloc(size, alignof(__aligned_type)))
+      return dest;
+#elif defined(_LIBCPP_HAS_NO_ALIGNED_ALLOCATION)
+    if (void* dest = std::malloc(size))
+      return dest;
+#else
+    if (size == 0)
+        size = 1;
+    void* dest;
+    if (::posix_memalign(&dest, alignof(__aligned_type), size) == 0)
+        return dest;
+#endif
+    return fallback_malloc(size);
 }
+
 
 void * __calloc_with_fallback(size_t count, size_t size) {
     void *ptr = std::calloc(count, size);
@@ -210,6 +223,18 @@ void * __calloc_with_fallback(size_t count, size_t size) {
     if (NULL != ptr)
         std::memset(ptr, 0, size * count);
     return ptr;
+}
+
+void __aligned_free_with_fallback(void* ptr) {
+  if (is_fallback_ptr(ptr))
+        fallback_free(ptr);
+  else {
+#if defined(_WIN32)
+        ::_aligned_free(ptr);
+#else
+        std::free(ptr);
+#endif
+  }
 }
 
 void __free_with_fallback(void *ptr) {

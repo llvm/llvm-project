@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++11 -Wno-array-bounds -analyze -analyzer-checker=unix,core,alpha.security.ArrayBoundV2 -verify %s
+// RUN: %clang_analyze_cc1 -std=c++11 -Wno-array-bounds -analyzer-checker=unix,core,alpha.security.ArrayBoundV2 -verify %s
 
 // Tests doing an out-of-bounds access after the end of an array using:
 // - constant integer index

@@ -15,7 +15,7 @@
 // Other libraries and framework includes
 // Project includes
 #include "Plugins/Process/Utility/RegisterContextPOSIX_s390x.h"
-#include "lldb/Core/DataExtractor.h"
+#include "lldb/Utility/DataExtractor.h"
 
 class RegisterContextCorePOSIX_s390x : public RegisterContextPOSIX_s390x {
 public:
