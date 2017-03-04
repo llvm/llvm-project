@@ -14,13 +14,14 @@
 #include "SwiftExpressionVariable.h"
 #include "lldb/Expression/IRExecutionUnit.h"
 
-#include "lldb/Core/DataExtractor.h"
-#include "lldb/Core/Log.h"
-#include "lldb/Utility/StreamString.h"
 #include "lldb/Core/Value.h"
 
 #include "lldb/Symbol/SwiftASTContext.h" // Needed for llvm::isa<SwiftASTContext>(...)
 #include "lldb/Symbol/TypeSystem.h"
+
+#include "lldb/Utility/DataExtractor.h"
+#include "lldb/Utility/Log.h"
+#include "lldb/Utility/StreamString.h"
 
 #include "swift/AST/Decl.h"
 #include "swift/AST/ParameterList.h"

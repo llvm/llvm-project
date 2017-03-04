@@ -13,11 +13,12 @@
 #include "SwiftREPLMaterializer.h"
 #include "SwiftASTManipulator.h"
 
-#include "lldb/Core/Log.h"
+#include "lldb/Core/DumpDataExtractor.h"
 #include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/Expression/IRExecutionUnit.h"
 #include "lldb/Expression/IRMemoryMap.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/Log.h"
 
 #include "swift/Basic/Demangle.h"
 
@@ -189,7 +190,7 @@ public:
         DataExtractor extractor(data.GetBytes(), data.GetByteSize(),
                                 map.GetByteOrder(), map.GetAddressByteSize());
 
-        extractor.DumpHexBytes(&dump_stream, data.GetBytes(),
+        DumpHexBytes(&dump_stream, data.GetBytes(),
                                data.GetByteSize(), 16, load_addr);
 
         lldb::offset_t offset;
@@ -217,10 +218,7 @@ public:
       if (!err.Success()) {
         dump_stream.Printf("  <could not be read>\n");
       } else {
-        DataExtractor extractor(data.GetBytes(), data.GetByteSize(),
-                                map.GetByteOrder(), map.GetAddressByteSize());
-
-        extractor.DumpHexBytes(&dump_stream, data.GetBytes(),
+        DumpHexBytes(&dump_stream, data.GetBytes(),
                                data.GetByteSize(), 16, m_temporary_allocation);
 
         dump_stream.PutChar('\n');
@@ -398,10 +396,7 @@ public:
       if (!err.Success()) {
         dump_stream.Printf("  <could not be read>\n");
       } else {
-        DataExtractor extractor(data.GetBytes(), data.GetByteSize(),
-                                map.GetByteOrder(), map.GetAddressByteSize());
-
-        extractor.DumpHexBytes(&dump_stream, data.GetBytes(),
+        DumpHexBytes(&dump_stream, data.GetBytes(),
                                data.GetByteSize(), 16, load_addr);
 
         dump_stream.PutChar('\n');
@@ -426,10 +421,7 @@ public:
         if (!err.Success()) {
           dump_stream.Printf("  <could not be read>\n");
         } else {
-          DataExtractor extractor(data.GetBytes(), data.GetByteSize(),
-                                  map.GetByteOrder(), map.GetAddressByteSize());
-
-          extractor.DumpHexBytes(&dump_stream, data.GetBytes(),
+          DumpHexBytes(&dump_stream, data.GetBytes(),
                                  data.GetByteSize(), 16, target_address);
 
           dump_stream.PutChar('\n');

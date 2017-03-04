@@ -14,8 +14,8 @@
 
 #include "SwiftASTManipulator.h"
 
-#include "lldb/Core/Log.h"
 #include "lldb/Symbol/CompilerType.h"
+#include "lldb/Utility/Log.h"
 
 #include "swift/SIL/SILArgument.h"
 #include "swift/SIL/SILBasicBlock.h"

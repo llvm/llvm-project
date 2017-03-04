@@ -11,12 +11,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "SwiftFormatters.h"
-#include "lldb/Core/DataBufferHeap.h"
-#include "lldb/Utility/Error.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/DataFormatters/StringPrinter.h"
 #include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Target/Process.h"
+#include "lldb/Utility/DataBufferHeap.h"
+#include "lldb/Utility/Error.h"
 
 // FIXME: we should not need this
 #include "Plugins/Language/CPlusPlus/CxxStringTypes.h"
