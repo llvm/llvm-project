@@ -60,7 +60,7 @@ appearance in the list. Globs without '-'
 prefix add checks with matching names to the
 set, globs with the '-' prefix remove checks
 with matching names from the set of enabled
-checks.  This option's value is appended to the
+checks. This option's value is appended to the
 value of the 'Checks' option in .clang-tidy
 file, if any.
 )"),
@@ -120,12 +120,20 @@ well.
 )"),
                                cl::init(false), cl::cat(ClangTidyCategory));
 
-static cl::opt<std::string> FormatStyle("style", cl::desc(R"(
-Fallback style for reformatting after inserting fixes
-if there is no clang-format config file found.
+static cl::opt<std::string> FormatStyle("format-style", cl::desc(R"(
+Style for formatting code around applied fixes:
+  - 'none' (default) turns off formatting
+  - 'file' (literally 'file', not a placeholder)
+    uses .clang-format file in the closest parent
+    directory
+  - '{ <json> }' specifies options inline, e.g.
+    -format-style='{BasedOnStyle: llvm, IndentWidth: 8}'
+  - 'llvm', 'google', 'webkit', 'mozilla'
+See clang-format documentation for the up-to-date
+information about formatting styles and options.
 )"),
-                                        cl::init("llvm"),
-                                        cl::cat(ClangTidyCategory));
+                                   cl::init("none"),
+                                   cl::cat(ClangTidyCategory));
 
 static cl::opt<bool> ListChecks("list-checks", cl::desc(R"(
 List all enabled checks and exit. Use with
@@ -189,7 +197,7 @@ code with clang-apply-replacements.
                                         cl::cat(ClangTidyCategory));
 
 static cl::opt<bool> Quiet("quiet", cl::desc(R"(
-Run clang-tidy in quiet mode.  This suppresses
+Run clang-tidy in quiet mode. This suppresses
 printing statistics about ignored warnings and
 warnings treated as errors if the respective
 options are specified.

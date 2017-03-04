@@ -12,11 +12,8 @@
 #include "ObjectFileJIT.h"
 
 #include "lldb/Core/ArchSpec.h"
-#include "lldb/Core/DataBuffer.h"
-#include "lldb/Core/DataBufferHeap.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/FileSpecList.h"
-#include "lldb/Core/Log.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
@@ -24,7 +21,6 @@
 #include "lldb/Core/Section.h"
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Core/Timer.h"
-#include "lldb/Core/UUID.h"
 #include "lldb/Host/FileSpec.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Symbol/ObjectFile.h"
@@ -32,7 +28,11 @@
 #include "lldb/Target/Process.h"
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/DataBuffer.h"
+#include "lldb/Utility/DataBufferHeap.h"
+#include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
+#include "lldb/Utility/UUID.h"
 
 #ifndef __APPLE__
 #include "Utility/UuidCompatibility.h"

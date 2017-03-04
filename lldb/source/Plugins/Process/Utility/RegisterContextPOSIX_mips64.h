@@ -17,8 +17,8 @@
 #include "RegisterContext_mips.h"
 #include "RegisterInfoInterface.h"
 #include "lldb-mips-freebsd-register-enums.h"
-#include "lldb/Core/Log.h"
 #include "lldb/Target/RegisterContext.h"
+#include "lldb/Utility/Log.h"
 
 using namespace lldb_private;
 

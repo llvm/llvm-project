@@ -31,11 +31,6 @@
 #include <algorithm>
 #include <memory>
 
-#ifdef _MSC_VER
-// <future> depends on <eh.h> for __uncaught_exception.
-#include <eh.h>
-#endif
-
 #include <future>
 
 using namespace llvm;

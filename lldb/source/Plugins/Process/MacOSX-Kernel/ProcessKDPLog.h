@@ -10,7 +10,7 @@
 #ifndef liblldb_ProcessKDPLog_h_
 #define liblldb_ProcessKDPLog_h_
 
-#include "lldb/Core/Log.h"
+#include "lldb/Utility/Log.h"
 
 #define KDP_LOG_PROCESS (1u << 1)
 #define KDP_LOG_THREAD (1u << 2)

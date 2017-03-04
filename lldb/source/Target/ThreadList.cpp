@@ -15,7 +15,6 @@
 
 // Other libraries and framework includes
 // Project includes
-#include "lldb/Core/Log.h"
 #include "lldb/Core/State.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
@@ -23,6 +22,7 @@
 #include "lldb/Target/ThreadList.h"
 #include "lldb/Target/ThreadPlan.h"
 #include "lldb/Utility/LLDBAssert.h"
+#include "lldb/Utility/Log.h"
 
 using namespace lldb;
 using namespace lldb_private;

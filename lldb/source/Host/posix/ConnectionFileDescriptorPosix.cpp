@@ -43,12 +43,12 @@
 #endif
 // Project includes
 #include "lldb/Core/Communication.h"
-#include "lldb/Core/Log.h"
 #include "lldb/Core/Timer.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/Socket.h"
 #include "lldb/Host/common/TCPSocket.h"
 #include "lldb/Interpreter/Args.h"
+#include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
 
 using namespace lldb;

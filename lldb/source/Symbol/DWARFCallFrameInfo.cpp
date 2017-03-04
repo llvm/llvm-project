@@ -12,20 +12,143 @@
 #include <list>
 
 #include "lldb/Core/ArchSpec.h"
-#include "lldb/Core/Log.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/Section.h"
-#include "lldb/Core/Section.h"
 #include "lldb/Core/Timer.h"
+#include "lldb/Core/dwarf.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Symbol/DWARFCallFrameInfo.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/UnwindPlan.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/Thread.h"
+#include "lldb/Utility/Log.h"
 
 using namespace lldb;
 using namespace lldb_private;
+
+//----------------------------------------------------------------------
+// GetDwarfEHPtr
+//
+// Used for calls when the value type is specified by a DWARF EH Frame
+// pointer encoding.
+//----------------------------------------------------------------------
+static uint64_t
+GetGNUEHPointer(const DataExtractor &DE, offset_t *offset_ptr,
+                uint32_t eh_ptr_enc, addr_t pc_rel_addr, addr_t text_addr,
+                addr_t data_addr) //, BSDRelocs *data_relocs) const
+{
+  if (eh_ptr_enc == DW_EH_PE_omit)
+    return ULLONG_MAX; // Value isn't in the buffer...
+
+  uint64_t baseAddress = 0;
+  uint64_t addressValue = 0;
+  const uint32_t addr_size = DE.GetAddressByteSize();
+#ifdef LLDB_CONFIGURATION_DEBUG
+  assert(addr_size == 4 || addr_size == 8);
+#endif
+
+  bool signExtendValue = false;
+  // Decode the base part or adjust our offset
+  switch (eh_ptr_enc & 0x70) {
+  case DW_EH_PE_pcrel:
+    signExtendValue = true;
+    baseAddress = *offset_ptr;
+    if (pc_rel_addr != LLDB_INVALID_ADDRESS)
+      baseAddress += pc_rel_addr;
+    //      else
+    //          Log::GlobalWarning ("PC relative pointer encoding found with
+    //          invalid pc relative address.");
+    break;
+
+  case DW_EH_PE_textrel:
+    signExtendValue = true;
+    if (text_addr != LLDB_INVALID_ADDRESS)
+      baseAddress = text_addr;
+    //      else
+    //          Log::GlobalWarning ("text relative pointer encoding being
+    //          decoded with invalid text section address, setting base address
+    //          to zero.");
+    break;
+
+  case DW_EH_PE_datarel:
+    signExtendValue = true;
+    if (data_addr != LLDB_INVALID_ADDRESS)
+      baseAddress = data_addr;
+    //      else
+    //          Log::GlobalWarning ("data relative pointer encoding being
+    //          decoded with invalid data section address, setting base address
+    //          to zero.");
+    break;
+
+  case DW_EH_PE_funcrel:
+    signExtendValue = true;
+    break;
+
+  case DW_EH_PE_aligned: {
+    // SetPointerSize should be called prior to extracting these so the
+    // pointer size is cached
+    assert(addr_size != 0);
+    if (addr_size) {
+      // Align to a address size boundary first
+      uint32_t alignOffset = *offset_ptr % addr_size;
+      if (alignOffset)
+        offset_ptr += addr_size - alignOffset;
+    }
+  } break;
+
+  default:
+    break;
+  }
+
+  // Decode the value part
+  switch (eh_ptr_enc & DW_EH_PE_MASK_ENCODING) {
+  case DW_EH_PE_absptr: {
+    addressValue = DE.GetAddress(offset_ptr);
+    //          if (data_relocs)
+    //              addressValue = data_relocs->Relocate(*offset_ptr -
+    //              addr_size, *this, addressValue);
+  } break;
+  case DW_EH_PE_uleb128:
+    addressValue = DE.GetULEB128(offset_ptr);
+    break;
+  case DW_EH_PE_udata2:
+    addressValue = DE.GetU16(offset_ptr);
+    break;
+  case DW_EH_PE_udata4:
+    addressValue = DE.GetU32(offset_ptr);
+    break;
+  case DW_EH_PE_udata8:
+    addressValue = DE.GetU64(offset_ptr);
+    break;
+  case DW_EH_PE_sleb128:
+    addressValue = DE.GetSLEB128(offset_ptr);
+    break;
+  case DW_EH_PE_sdata2:
+    addressValue = (int16_t)DE.GetU16(offset_ptr);
+    break;
+  case DW_EH_PE_sdata4:
+    addressValue = (int32_t)DE.GetU32(offset_ptr);
+    break;
+  case DW_EH_PE_sdata8:
+    addressValue = (int64_t)DE.GetU64(offset_ptr);
+    break;
+  default:
+    // Unhandled encoding type
+    assert(eh_ptr_enc);
+    break;
+  }
+
+  // Since we promote everything to 64 bit, we may need to sign extend
+  if (signExtendValue && addr_size < sizeof(baseAddress)) {
+    uint64_t sign_bit = 1ull << ((addr_size * 8ull) - 1ull);
+    if (sign_bit & addressValue) {
+      uint64_t mask = ~sign_bit + 1;
+      addressValue |= mask;
+    }
+  }
+  return baseAddress + addressValue;
+}
 
 DWARFCallFrameInfo::DWARFCallFrameInfo(ObjectFile &objfile,
                                        SectionSP &section_sp,
@@ -223,9 +346,9 @@ DWARFCallFrameInfo::ParseCIE(const dw_offset_t cie_offset) {
             {
               uint8_t arg_ptr_encoding = m_cfi_data.GetU8(&offset);
               const lldb::addr_t pc_rel_addr = m_section_sp->GetFileAddress();
-              cie_sp->personality_loc = m_cfi_data.GetGNUEHPointer(
-                  &offset, arg_ptr_encoding, pc_rel_addr, LLDB_INVALID_ADDRESS,
-                  LLDB_INVALID_ADDRESS);
+              cie_sp->personality_loc = GetGNUEHPointer(
+                  m_cfi_data, &offset, arg_ptr_encoding, pc_rel_addr,
+                  LLDB_INVALID_ADDRESS, LLDB_INVALID_ADDRESS);
             }
             break;
 
@@ -361,14 +484,15 @@ void DWARFCallFrameInfo::GetFDEIndex() {
       const lldb::addr_t text_addr = LLDB_INVALID_ADDRESS;
       const lldb::addr_t data_addr = LLDB_INVALID_ADDRESS;
 
-      lldb::addr_t addr = m_cfi_data.GetGNUEHPointer(
-          &offset, cie->ptr_encoding, pc_rel_addr, text_addr, data_addr);
+      lldb::addr_t addr =
+          GetGNUEHPointer(m_cfi_data, &offset, cie->ptr_encoding, pc_rel_addr,
+                          text_addr, data_addr);
       if (clear_address_zeroth_bit)
         addr &= ~1ull;
 
-      lldb::addr_t length = m_cfi_data.GetGNUEHPointer(
-          &offset, cie->ptr_encoding & DW_EH_PE_MASK_ENCODING, pc_rel_addr,
-          text_addr, data_addr);
+      lldb::addr_t length = GetGNUEHPointer(
+          m_cfi_data, &offset, cie->ptr_encoding & DW_EH_PE_MASK_ENCODING,
+          pc_rel_addr, text_addr, data_addr);
       FDEEntryMap::Entry fde(addr, length, current_entry);
       m_fde_index.Append(fde);
     } else {
@@ -434,11 +558,12 @@ bool DWARFCallFrameInfo::FDEToUnwindPlan(dw_offset_t dwarf_offset,
   const lldb::addr_t pc_rel_addr = m_section_sp->GetFileAddress();
   const lldb::addr_t text_addr = LLDB_INVALID_ADDRESS;
   const lldb::addr_t data_addr = LLDB_INVALID_ADDRESS;
-  lldb::addr_t range_base = m_cfi_data.GetGNUEHPointer(
-      &offset, cie->ptr_encoding, pc_rel_addr, text_addr, data_addr);
-  lldb::addr_t range_len = m_cfi_data.GetGNUEHPointer(
-      &offset, cie->ptr_encoding & DW_EH_PE_MASK_ENCODING, pc_rel_addr,
-      text_addr, data_addr);
+  lldb::addr_t range_base =
+      GetGNUEHPointer(m_cfi_data, &offset, cie->ptr_encoding, pc_rel_addr,
+                      text_addr, data_addr);
+  lldb::addr_t range_len = GetGNUEHPointer(
+      m_cfi_data, &offset, cie->ptr_encoding & DW_EH_PE_MASK_ENCODING,
+      pc_rel_addr, text_addr, data_addr);
   AddressRange range(range_base, m_objfile.GetAddressByteSize(),
                      m_objfile.GetSectionList());
   range.SetByteSize(range_len);
@@ -449,8 +574,9 @@ bool DWARFCallFrameInfo::FDEToUnwindPlan(dw_offset_t dwarf_offset,
     uint32_t aug_data_len = (uint32_t)m_cfi_data.GetULEB128(&offset);
     if (aug_data_len != 0 && cie->lsda_addr_encoding != DW_EH_PE_omit) {
       offset_t saved_offset = offset;
-      lsda_data_file_address = m_cfi_data.GetGNUEHPointer(
-          &offset, cie->lsda_addr_encoding, pc_rel_addr, text_addr, data_addr);
+      lsda_data_file_address =
+          GetGNUEHPointer(m_cfi_data, &offset, cie->lsda_addr_encoding,
+                          pc_rel_addr, text_addr, data_addr);
       if (offset - saved_offset != aug_data_len) {
         // There is more in the augmentation region than we know how to process;
         // don't read anything.

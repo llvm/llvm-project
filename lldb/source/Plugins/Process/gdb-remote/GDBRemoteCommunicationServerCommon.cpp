@@ -22,7 +22,6 @@
 #include <cstring>
 
 // Other libraries and framework includes
-#include "lldb/Core/Log.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/StreamGDBRemote.h"
 #include "lldb/Host/Config.h"
@@ -38,6 +37,7 @@
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/Endian.h"
 #include "lldb/Utility/JSON.h"
+#include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
 #include "llvm/ADT/Triple.h"
 

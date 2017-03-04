@@ -21,7 +21,6 @@
 // Project includes
 #include "lldb/Expression/IRDynamicChecks.h"
 
-#include "lldb/Core/Log.h"
 #include "lldb/Expression/UtilityFunction.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/ObjCLanguageRuntime.h"
@@ -29,6 +28,7 @@
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/Log.h"
 
 using namespace llvm;
 using namespace lldb_private;

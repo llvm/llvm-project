@@ -14,11 +14,11 @@
 // C++ Includes
 // Other libraries and framework includes
 // Project includes
-#include "lldb/Core/Log.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/Value.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Core/ValueObjectList.h"
+#include "lldb/Utility/Log.h"
 
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Symbol/ObjectFile.h"

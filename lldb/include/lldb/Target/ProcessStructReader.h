@@ -13,10 +13,10 @@
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-types.h"
 
-#include "lldb/Core/DataExtractor.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Error.h"
 
 #include <initializer_list>

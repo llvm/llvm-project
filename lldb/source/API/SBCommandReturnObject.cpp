@@ -15,10 +15,10 @@
 #include "lldb/API/SBError.h"
 #include "lldb/API/SBStream.h"
 
-#include "lldb/Core/Log.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Error.h"
+#include "lldb/Utility/Log.h"
 
 using namespace lldb;
 using namespace lldb_private;

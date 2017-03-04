@@ -35,7 +35,7 @@ LLDB_BASE_DIR := $(THIS_FILE_DIR)../../../../../
 # If TRIPLE is not defined try to set the ARCH, CC, CFLAGS, and more
 # from the triple alone
 #----------------------------------------------------------------------
-TRIPLE_CFLAGS :=
+ARCH_CFLAGS :=
 ifneq "$(TRIPLE)" ""
 	triple_space = $(subst -, ,$(TRIPLE))
 	ARCH =$(word 1, $(triple_space))
@@ -52,17 +52,20 @@ ifneq "$(TRIPLE)" ""
 					ifeq "$(TRIPLE_VERSION)" ""
 						TRIPLE_VERSION =$(shell echo $(notdir $(SDKROOT)) | sed -e 's/.*\([0-9]\.[0-9]\).*/\1/')
 					endif
-					TRIPLE_CFLAGS :=-mios-version-min=$(TRIPLE_VERSION) -isysroot "$(SDKROOT)"
+					ARCH_CFLAGS :=-mios-version-min=$(TRIPLE_VERSION) -isysroot "$(SDKROOT)"
 				else
 					SDKROOT = $(shell xcrun --sdk iphonesimulator --show-sdk-path)
 					ifeq "$(TRIPLE_VERSION)" ""
 						TRIPLE_VERSION =$(shell echo $(notdir $(SDKROOT)) | sed -e 's/.*\([0-9]\.[0-9]\).*/\1/')
 					endif
-					TRIPLE_CFLAGS :=-mios-simulator-version-min=$(TRIPLE_VERSION) -isysroot "$(SDKROOT)"
+					ARCH_CFLAGS :=-mios-simulator-version-min=$(TRIPLE_VERSION) -isysroot "$(SDKROOT)"
 				endif
 			endif
 		endif
 	endif
+endif
+ifeq "$(OS)" "Android"
+	include $(THIS_FILE_DIR)/Android.rules
 endif
 
 #----------------------------------------------------------------------
@@ -199,13 +202,13 @@ else
 	CFLAGS += $(ARCHFLAG)$(ARCH) $(FRAMEWORK_INCLUDES) $(CFLAGS_EXTRAS) -I$(LLDB_BASE_DIR)include
 endif
 
-CFLAGS += -include $(THIS_FILE_DIR)test_common.h $(TRIPLE_CFLAGS)
+CFLAGS += -include $(THIS_FILE_DIR)test_common.h $(ARCH_CFLAGS)
 
 # Use this one if you want to build one part of the result without debug information:
 ifeq "$(OS)" "Darwin"
-	CFLAGS_NO_DEBUG = -O0 $(ARCHFLAG) $(ARCH) $(FRAMEWORK_INCLUDES) $(CFLAGS_EXTRAS) $(TRIPLE_CFLAGS)
+	CFLAGS_NO_DEBUG = -O0 $(ARCHFLAG) $(ARCH) $(FRAMEWORK_INCLUDES) $(CFLAGS_EXTRAS) $(ARCH_CFLAGS)
 else
-	CFLAGS_NO_DEBUG = -O0 $(ARCHFLAG)$(ARCH) $(FRAMEWORK_INCLUDES) $(CFLAGS_EXTRAS) $(TRIPLE_CFLAGS)
+	CFLAGS_NO_DEBUG = -O0 $(ARCHFLAG)$(ARCH) $(FRAMEWORK_INCLUDES) $(CFLAGS_EXTRAS) $(ARCH_CFLAGS)
 endif
 
 ifeq "$(MAKE_DWO)" "YES"
@@ -221,7 +224,7 @@ CXXFLAGS += -std=c++11
 CXXFLAGS += $(subst -fmodules,, $(CFLAGS))
 LD = $(CC)
 LDFLAGS ?= $(CFLAGS)
-LDFLAGS += $(LD_EXTRAS)
+LDFLAGS += $(LD_EXTRAS) $(ARCH_LDFLAGS)
 ifeq (,$(filter $(OS), Windows_NT Android))
 	ifneq (,$(filter YES,$(ENABLE_THREADS)))
 		LDFLAGS += -pthread

@@ -24,8 +24,8 @@
 #include "llvm/Pass.h"
 
 // Project includes
-#include "lldb/Core/Log.h"
 #include "lldb/Target/Process.h"
+#include "lldb/Utility/Log.h"
 
 using namespace lldb_private;
 namespace {

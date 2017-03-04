@@ -11,8 +11,8 @@
 #include "Plugins/ScriptInterpreter/Python/lldb-python.h"
 #endif
 
-#include "lldb/Core/Log.h"
 #include "lldb/Host/posix/HostInfoPosix.h"
+#include "lldb/Utility/Log.h"
 
 #include "clang/Basic/Version.h"
 #include "clang/Config/config.h"

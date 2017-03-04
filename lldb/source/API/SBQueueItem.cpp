@@ -13,10 +13,10 @@
 #include "lldb/API/SBQueueItem.h"
 #include "lldb/API/SBThread.h"
 #include "lldb/Core/Address.h"
-#include "lldb/Core/Log.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/QueueItem.h"
 #include "lldb/Target/Thread.h"
+#include "lldb/Utility/Log.h"
 
 using namespace lldb;
 using namespace lldb_private;

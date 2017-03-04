@@ -384,9 +384,9 @@ protected:
   lldb::ByteOrder
       m_byte_order;    ///< The byte order of the data we are extracting from.
   uint8_t m_addr_size; ///< The address size to use when extracting pointers or
-                       ///addresses
+                       /// addresses
   mutable lldb::DataBufferSP m_data_sp; ///< The shared pointer to data that can
-                                        ///be shared among multiple instances
+                                        /// be shared among multiple instances
 
 private:
   DISALLOW_COPY_AND_ASSIGN(DataEncoder);

@@ -7,18 +7,21 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_UUID_h_
-#define liblldb_UUID_h_
+#ifndef LLDB_UTILITY_UUID_H
+#define LLDB_UTILITY_UUID_H
 
 // C Includes
 // C++ Includes
+#include <stdint.h>
 #include <string>
 
-// Other libraries and framework includes
-// Project includes
-#include "lldb/lldb-private.h"
+namespace llvm {
+  class StringRef;
+}
 
 namespace lldb_private {
+
+  class Stream;
 
 class UUID {
 public:
@@ -93,4 +96,4 @@ bool operator>=(const UUID &lhs, const UUID &rhs);
 
 } // namespace lldb_private
 
-#endif // liblldb_UUID_h_
+#endif // LLDB_UTILITY_UUID_H

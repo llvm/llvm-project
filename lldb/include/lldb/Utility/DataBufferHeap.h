@@ -12,7 +12,7 @@
 
 #include <vector>
 
-#include "lldb/Core/DataBuffer.h"
+#include "lldb/Utility/DataBuffer.h"
 #include "lldb/lldb-private.h"
 
 namespace lldb_private {

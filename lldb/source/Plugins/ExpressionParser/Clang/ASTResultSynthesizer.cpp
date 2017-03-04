@@ -11,11 +11,11 @@
 
 #include "ClangPersistentVariables.h"
 
-#include "lldb/Core/Log.h"
 #include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Symbol/ClangASTImporter.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/LLDBAssert.h"
+#include "lldb/Utility/Log.h"
 #include "stdlib.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"

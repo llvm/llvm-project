@@ -13,8 +13,6 @@
 #include "llvm/Support/COFF.h"
 
 #include "lldb/Core/ArchSpec.h"
-#include "lldb/Core/DataBufferHeap.h"
-#include "lldb/Core/DataBufferLLVM.h"
 #include "lldb/Core/FileSpecList.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
@@ -22,13 +20,15 @@
 #include "lldb/Core/Section.h"
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Core/Timer.h"
-#include "lldb/Core/UUID.h"
 #include "lldb/Host/FileSpec.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/DataBufferHeap.h"
+#include "lldb/Utility/DataBufferLLVM.h"
 #include "lldb/Utility/StreamString.h"
+#include "lldb/Utility/UUID.h"
 
 #include "llvm/Support/MemoryBuffer.h"
 
@@ -67,7 +67,8 @@ ObjectFile *ObjectFilePECOFF::CreateInstance(const lldb::ModuleSP &module_sp,
                                              lldb::offset_t file_offset,
                                              lldb::offset_t length) {
   if (!data_sp) {
-    data_sp = DataBufferLLVM::CreateFromFileSpec(*file, length, file_offset);
+    data_sp =
+        DataBufferLLVM::CreateFromPath(file->GetPath(), length, file_offset);
     if (!data_sp)
       return nullptr;
     data_offset = 0;
@@ -78,7 +79,8 @@ ObjectFile *ObjectFilePECOFF::CreateInstance(const lldb::ModuleSP &module_sp,
 
   // Update the data to contain the entire file if it doesn't already
   if (data_sp->GetByteSize() < length) {
-    data_sp = DataBufferLLVM::CreateFromFileSpec(*file, length, file_offset);
+    data_sp =
+        DataBufferLLVM::CreateFromPath(file->GetPath(), length, file_offset);
     if (!data_sp)
       return nullptr;
   }

@@ -12,7 +12,6 @@
 // Other libraries and framework includes
 // Project includes
 #include "lldb/Target/ThreadPlanStepOverRange.h"
-#include "lldb/Core/Log.h"
 #include "lldb/Symbol/Block.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/Function.h"
@@ -23,6 +22,7 @@
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadPlanStepOut.h"
 #include "lldb/Target/ThreadPlanStepThrough.h"
+#include "lldb/Utility/Log.h"
 #include "lldb/Utility/Stream.h"
 
 using namespace lldb_private;

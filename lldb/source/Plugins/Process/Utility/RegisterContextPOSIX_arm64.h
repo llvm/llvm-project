@@ -16,8 +16,8 @@
 // Project includes
 #include "RegisterInfoInterface.h"
 #include "lldb-arm64-register-enums.h"
-#include "lldb/Core/Log.h"
 #include "lldb/Target/RegisterContext.h"
+#include "lldb/Utility/Log.h"
 
 class ProcessMonitor;
 

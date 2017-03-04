@@ -17,9 +17,9 @@
 // Other libraries and framework includes
 // Project includes
 #include "Plugins/Process/Utility/DynamicRegisterInfo.h"
-#include "lldb/Core/DataExtractor.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/DataExtractor.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-private.h"
 

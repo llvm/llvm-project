@@ -10,7 +10,6 @@
 #include "lldb/Host/common/NativeProcessProtocol.h"
 
 #include "lldb/Core/ArchSpec.h"
-#include "lldb/Core/Log.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/State.h"
 #include "lldb/Host/Host.h"
@@ -20,6 +19,7 @@
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/LLDBAssert.h"
+#include "lldb/Utility/Log.h"
 #include "lldb/lldb-enumerations.h"
 
 using namespace lldb;
