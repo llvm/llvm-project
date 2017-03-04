@@ -1,969 +1,968 @@
-    """
-    LLDB module which provides the abstract base class of lldb test case.
+"""
+LLDB module which provides the abstract base class of lldb test case.
 
-    The concrete subclass can override lldbtest.TesBase in order to inherit the
-    common behavior for unitest.TestCase.setUp/tearDown implemented in this file.
+The concrete subclass can override lldbtest.TesBase in order to inherit the
+common behavior for unitest.TestCase.setUp/tearDown implemented in this file.
 
-    The subclass should override the attribute mydir in order for the python runtime
-    to locate the individual test cases when running as part of a large test suite
-    or when running each test case as a separate python invocation.
+The subclass should override the attribute mydir in order for the python runtime
+to locate the individual test cases when running as part of a large test suite
+or when running each test case as a separate python invocation.
 
-    ./dotest.py provides a test driver which sets up the environment to run the
-    entire of part of the test suite .  Example:
+./dotest.py provides a test driver which sets up the environment to run the
+entire of part of the test suite .  Example:
 
-    # Exercises the test suite in the types directory....
-    /Volumes/data/lldb/svn/ToT/test $ ./dotest.py -A x86_64 types
-    ...
+# Exercises the test suite in the types directory....
+/Volumes/data/lldb/svn/ToT/test $ ./dotest.py -A x86_64 types
+...
 
-    Session logs for test failures/errors/unexpected successes will go into directory '2012-05-16-13_35_42'
-    Command invoked: python ./dotest.py -A x86_64 types
-    compilers=['clang']
+Session logs for test failures/errors/unexpected successes will go into directory '2012-05-16-13_35_42'
+Command invoked: python ./dotest.py -A x86_64 types
+compilers=['clang']
 
-    Configuration: arch=x86_64 compiler=clang
-    ----------------------------------------------------------------------
-    Collected 72 tests
+Configuration: arch=x86_64 compiler=clang
+----------------------------------------------------------------------
+Collected 72 tests
 
-    ........................................................................
-    ----------------------------------------------------------------------
-    Ran 72 tests in 135.468s
+........................................................................
+----------------------------------------------------------------------
+Ran 72 tests in 135.468s
 
-    OK
-    $
-    """
+OK
+$
+"""
 
-    from __future__ import absolute_import
-    from __future__ import print_function
+from __future__ import absolute_import
+from __future__ import print_function
 
-    # System modules
-    import abc
-    import collections
-    from functools import wraps
-    import gc
-    import glob
-    import inspect
-    import io
-    import os.path
-    import re
-    import signal
-    from subprocess import *
-    import sys
-    import time
-    import traceback
-    import types
-    import lldb
+# System modules
+import abc
+import collections
+from functools import wraps
+import gc
+import glob
+import inspect
+import io
+import os.path
+import re
+import signal
+from subprocess import *
+import sys
+import time
+import traceback
+import types
 
-    # Third-party modules
-    import unittest2
-    from six import add_metaclass
-    from six import StringIO as SixStringIO
-    import six
+# Third-party modules
+import unittest2
+from six import add_metaclass
+from six import StringIO as SixStringIO
+import six
 
-    # LLDB modules
-    import use_lldb_suite
-    import lldb
-    from . import configuration
-    from . import decorators
-    from . import lldbplatformutil
-    from . import lldbtest_config
-    from . import lldbutil
-    from . import lock
-    from . import test_categories
-    from lldbsuite.support import encoded_file
-    from lldbsuite.support import funcutils
+# LLDB modules
+import use_lldb_suite
+import lldb
+from . import configuration
+from . import decorators
+from . import lldbplatformutil
+from . import lldbtest_config
+from . import lldbutil
+from . import test_categories
+from lldbsuite.support import encoded_file
+from lldbsuite.support import funcutils
 
-    # dosep.py starts lots and lots of dotest instances
-    # This option helps you find if two (or more) dotest instances are using the same
-    # directory at the same time
-    # Enable it to cause test failures and stderr messages if dotest instances try to run in
-    # the same directory simultaneously
-    # it is disabled by default because it litters the test directories with
-    # ".dirlock" files
-    debug_confirm_directory_exclusivity = False
+# dosep.py starts lots and lots of dotest instances
+# This option helps you find if two (or more) dotest instances are using the same
+# directory at the same time
+# Enable it to cause test failures and stderr messages if dotest instances try to run in
+# the same directory simultaneously
+# it is disabled by default because it litters the test directories with
+# ".dirlock" files
+debug_confirm_directory_exclusivity = False
 
-    # See also dotest.parseOptionsAndInitTestdirs(), where the environment variables
-    # LLDB_COMMAND_TRACE and LLDB_DO_CLEANUP are set from '-t' and '-r dir'
-    # options.
+# See also dotest.parseOptionsAndInitTestdirs(), where the environment variables
+# LLDB_COMMAND_TRACE and LLDB_DO_CLEANUP are set from '-t' and '-r dir'
+# options.
 
-    # By default, traceAlways is False.
-    if "LLDB_COMMAND_TRACE" in os.environ and os.environ[
-            "LLDB_COMMAND_TRACE"] == "YES":
-        traceAlways = True
+# By default, traceAlways is False.
+if "LLDB_COMMAND_TRACE" in os.environ and os.environ[
+        "LLDB_COMMAND_TRACE"] == "YES":
+    traceAlways = True
+else:
+    traceAlways = False
+
+# By default, doCleanup is True.
+if "LLDB_DO_CLEANUP" in os.environ and os.environ["LLDB_DO_CLEANUP"] == "NO":
+    doCleanup = False
+else:
+    doCleanup = True
+
+
+#
+# Some commonly used assert messages.
+#
+
+COMMAND_FAILED_AS_EXPECTED = "Command has failed as expected"
+
+CURRENT_EXECUTABLE_SET = "Current executable set successfully"
+
+PROCESS_IS_VALID = "Process is valid"
+
+PROCESS_KILLED = "Process is killed successfully"
+
+PROCESS_EXITED = "Process exited successfully"
+
+PROCESS_STOPPED = "Process status should be stopped"
+
+RUN_SUCCEEDED = "Process is launched successfully"
+
+RUN_COMPLETED = "Process exited successfully"
+
+BACKTRACE_DISPLAYED_CORRECTLY = "Backtrace displayed correctly"
+
+BREAKPOINT_CREATED = "Breakpoint created successfully"
+
+BREAKPOINT_STATE_CORRECT = "Breakpoint state is correct"
+
+BREAKPOINT_PENDING_CREATED = "Pending breakpoint created successfully"
+
+BREAKPOINT_HIT_ONCE = "Breakpoint resolved with hit cout = 1"
+
+BREAKPOINT_HIT_TWICE = "Breakpoint resolved with hit cout = 2"
+
+BREAKPOINT_HIT_THRICE = "Breakpoint resolved with hit cout = 3"
+
+MISSING_EXPECTED_REGISTERS = "At least one expected register is unavailable."
+
+OBJECT_PRINTED_CORRECTLY = "Object printed correctly"
+
+SOURCE_DISPLAYED_CORRECTLY = "Source code displayed correctly"
+
+STEP_OUT_SUCCEEDED = "Thread step-out succeeded"
+
+STOPPED_DUE_TO_EXC_BAD_ACCESS = "Process should be stopped due to bad access exception"
+
+STOPPED_DUE_TO_ASSERT = "Process should be stopped due to an assertion"
+
+STOPPED_DUE_TO_BREAKPOINT = "Process should be stopped due to breakpoint"
+
+STOPPED_DUE_TO_BREAKPOINT_WITH_STOP_REASON_AS = "%s, %s" % (
+    STOPPED_DUE_TO_BREAKPOINT, "instead, the actual stop reason is: '%s'")
+
+STOPPED_DUE_TO_BREAKPOINT_CONDITION = "Stopped due to breakpoint condition"
+
+STOPPED_DUE_TO_BREAKPOINT_IGNORE_COUNT = "Stopped due to breakpoint and ignore count"
+
+STOPPED_DUE_TO_SIGNAL = "Process state is stopped due to signal"
+
+STOPPED_DUE_TO_STEP_IN = "Process state is stopped due to step in"
+
+STOPPED_DUE_TO_WATCHPOINT = "Process should be stopped due to watchpoint"
+
+DATA_TYPES_DISPLAYED_CORRECTLY = "Data type(s) displayed correctly"
+
+VALID_BREAKPOINT = "Got a valid breakpoint"
+
+VALID_BREAKPOINT_LOCATION = "Got a valid breakpoint location"
+
+VALID_COMMAND_INTERPRETER = "Got a valid command interpreter"
+
+VALID_FILESPEC = "Got a valid filespec"
+
+VALID_MODULE = "Got a valid module"
+
+VALID_PROCESS = "Got a valid process"
+
+VALID_SYMBOL = "Got a valid symbol"
+
+VALID_TARGET = "Got a valid target"
+
+VALID_PLATFORM = "Got a valid platform"
+
+VALID_TYPE = "Got a valid type"
+
+VALID_VARIABLE = "Got a valid variable"
+
+VARIABLES_DISPLAYED_CORRECTLY = "Variable(s) displayed correctly"
+
+WATCHPOINT_CREATED = "Watchpoint created successfully"
+
+
+def CMD_MSG(str):
+    '''A generic "Command '%s' returns successfully" message generator.'''
+    return "Command '%s' returns successfully" % str
+
+
+def COMPLETION_MSG(str_before, str_after):
+    '''A generic message generator for the completion mechanism.'''
+    return "'%s' successfully completes to '%s'" % (str_before, str_after)
+
+
+def EXP_MSG(str, actual, exe):
+    '''A generic "'%s' returns expected result" message generator if exe.
+    Otherwise, it generates "'%s' matches expected result" message.'''
+
+    return "'%s' %s expected result, got '%s'" % (
+        str, 'returns' if exe else 'matches', actual.strip())
+
+
+def SETTING_MSG(setting):
+    '''A generic "Value of setting '%s' is correct" message generator.'''
+    return "Value of setting '%s' is correct" % setting
+
+
+def EnvArray():
+    """Returns an env variable array from the os.environ map object."""
+    return list(map(lambda k,
+                    v: k + "=" + v,
+                    list(os.environ.keys()),
+                    list(os.environ.values())))
+
+
+def line_number(filename, string_to_match):
+    """Helper function to return the line number of the first matched string."""
+    with io.open(filename, mode='r', encoding="utf-8") as f:
+        for i, line in enumerate(f):
+            if line.find(string_to_match) != -1:
+                # Found our match.
+                return i + 1
+    raise Exception(
+        "Unable to find '%s' within file %s" %
+        (string_to_match, filename))
+
+def get_line(filename, line_number):
+    """Return the text of the line at the 1-based line number."""
+    with io.open(filename, mode='r', encoding="utf-8") as f:
+        return f.readlines()[line_number - 1]
+
+def pointer_size():
+    """Return the pointer size of the host system."""
+    import ctypes
+    a_pointer = ctypes.c_void_p(0xffff)
+    return 8 * ctypes.sizeof(a_pointer)
+
+
+def is_exe(fpath):
+    """Returns true if fpath is an executable."""
+    return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
+
+
+def which(program):
+    """Returns the full path to a program; None otherwise."""
+    fpath, fname = os.path.split(program)
+    if fpath:
+        if is_exe(program):
+            return program
     else:
-        traceAlways = False
-
-    # By default, doCleanup is True.
-    if "LLDB_DO_CLEANUP" in os.environ and os.environ["LLDB_DO_CLEANUP"] == "NO":
-        doCleanup = False
-    else:
-        doCleanup = True
-
-
-    #
-    # Some commonly used assert messages.
-    #
-
-    COMMAND_FAILED_AS_EXPECTED = "Command has failed as expected"
-
-    CURRENT_EXECUTABLE_SET = "Current executable set successfully"
-
-    PROCESS_IS_VALID = "Process is valid"
-
-    PROCESS_KILLED = "Process is killed successfully"
-
-    PROCESS_EXITED = "Process exited successfully"
-
-    PROCESS_STOPPED = "Process status should be stopped"
-
-    RUN_SUCCEEDED = "Process is launched successfully"
-
-    RUN_COMPLETED = "Process exited successfully"
-
-    BACKTRACE_DISPLAYED_CORRECTLY = "Backtrace displayed correctly"
-
-    BREAKPOINT_CREATED = "Breakpoint created successfully"
-
-    BREAKPOINT_STATE_CORRECT = "Breakpoint state is correct"
-
-    BREAKPOINT_PENDING_CREATED = "Pending breakpoint created successfully"
-
-    BREAKPOINT_HIT_ONCE = "Breakpoint resolved with hit cout = 1"
-
-    BREAKPOINT_HIT_TWICE = "Breakpoint resolved with hit cout = 2"
-
-    BREAKPOINT_HIT_THRICE = "Breakpoint resolved with hit cout = 3"
-
-    MISSING_EXPECTED_REGISTERS = "At least one expected register is unavailable."
-
-    OBJECT_PRINTED_CORRECTLY = "Object printed correctly"
-
-    SOURCE_DISPLAYED_CORRECTLY = "Source code displayed correctly"
-
-    STEP_OUT_SUCCEEDED = "Thread step-out succeeded"
-
-    STOPPED_DUE_TO_EXC_BAD_ACCESS = "Process should be stopped due to bad access exception"
-
-    STOPPED_DUE_TO_ASSERT = "Process should be stopped due to an assertion"
-
-    STOPPED_DUE_TO_BREAKPOINT = "Process should be stopped due to breakpoint"
-
-    STOPPED_DUE_TO_BREAKPOINT_WITH_STOP_REASON_AS = "%s, %s" % (
-        STOPPED_DUE_TO_BREAKPOINT, "instead, the actual stop reason is: '%s'")
-
-    STOPPED_DUE_TO_BREAKPOINT_CONDITION = "Stopped due to breakpoint condition"
-
-    STOPPED_DUE_TO_BREAKPOINT_IGNORE_COUNT = "Stopped due to breakpoint and ignore count"
-
-    STOPPED_DUE_TO_SIGNAL = "Process state is stopped due to signal"
-
-    STOPPED_DUE_TO_STEP_IN = "Process state is stopped due to step in"
-
-    STOPPED_DUE_TO_WATCHPOINT = "Process should be stopped due to watchpoint"
-
-    DATA_TYPES_DISPLAYED_CORRECTLY = "Data type(s) displayed correctly"
-
-    VALID_BREAKPOINT = "Got a valid breakpoint"
-
-    VALID_BREAKPOINT_LOCATION = "Got a valid breakpoint location"
-
-    VALID_COMMAND_INTERPRETER = "Got a valid command interpreter"
-
-    VALID_FILESPEC = "Got a valid filespec"
-
-    VALID_MODULE = "Got a valid module"
-
-    VALID_PROCESS = "Got a valid process"
-
-    VALID_SYMBOL = "Got a valid symbol"
-
-    VALID_TARGET = "Got a valid target"
-
-    VALID_PLATFORM = "Got a valid platform"
-
-    VALID_TYPE = "Got a valid type"
-
-    VALID_VARIABLE = "Got a valid variable"
-
-    VARIABLES_DISPLAYED_CORRECTLY = "Variable(s) displayed correctly"
-
-    WATCHPOINT_CREATED = "Watchpoint created successfully"
-
-
-    def CMD_MSG(str):
-        '''A generic "Command '%s' returns successfully" message generator.'''
-        return "Command '%s' returns successfully" % str
-
-
-    def COMPLETION_MSG(str_before, str_after):
-        '''A generic message generator for the completion mechanism.'''
-        return "'%s' successfully completes to '%s'" % (str_before, str_after)
-
-
-    def EXP_MSG(str, actual, exe):
-        '''A generic "'%s' returns expected result" message generator if exe.
-        Otherwise, it generates "'%s' matches expected result" message.'''
-
-        return "'%s' %s expected result, got '%s'" % (
-            str, 'returns' if exe else 'matches', actual.strip())
-
-
-    def SETTING_MSG(setting):
-        '''A generic "Value of setting '%s' is correct" message generator.'''
-        return "Value of setting '%s' is correct" % setting
-
-
-    def EnvArray():
-        """Returns an env variable array from the os.environ map object."""
-        return list(map(lambda k,
-                        v: k + "=" + v,
-                        list(os.environ.keys()),
-                        list(os.environ.values())))
-
-
-    def line_number(filename, string_to_match):
-        """Helper function to return the line number of the first matched string."""
-        with io.open(filename, mode='r', encoding="utf-8") as f:
-            for i, line in enumerate(f):
-                if line.find(string_to_match) != -1:
-                    # Found our match.
-                    return i + 1
-        raise Exception(
-            "Unable to find '%s' within file %s" %
-            (string_to_match, filename))
-
-    def get_line(filename, line_number):
-        """Return the text of the line at the 1-based line number."""
-        with io.open(filename, mode='r', encoding="utf-8") as f:
-            return f.readlines()[line_number - 1]
-
-    def pointer_size():
-        """Return the pointer size of the host system."""
-        import ctypes
-        a_pointer = ctypes.c_void_p(0xffff)
-        return 8 * ctypes.sizeof(a_pointer)
-
-
-    def is_exe(fpath):
-        """Returns true if fpath is an executable."""
-        return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
-
-
-    def which(program):
-        """Returns the full path to a program; None otherwise."""
-        fpath, fname = os.path.split(program)
-        if fpath:
-            if is_exe(program):
-                return program
-        else:
-            for path in os.environ["PATH"].split(os.pathsep):
-                exe_file = os.path.join(path, program)
-                if is_exe(exe_file):
-                    return exe_file
-        return None
-
-
-    class recording(SixStringIO):
+        for path in os.environ["PATH"].split(os.pathsep):
+            exe_file = os.path.join(path, program)
+            if is_exe(exe_file):
+                return exe_file
+    return None
+
+
+class recording(SixStringIO):
+    """
+    A nice little context manager for recording the debugger interactions into
+    our session object.  If trace flag is ON, it also emits the interactions
+    into the stderr.
+    """
+
+    def __init__(self, test, trace):
+        """Create a SixStringIO instance; record the session obj and trace flag."""
+        SixStringIO.__init__(self)
+        # The test might not have undergone the 'setUp(self)' phase yet, so that
+        # the attribute 'session' might not even exist yet.
+        self.session = getattr(test, "session", None) if test else None
+        self.trace = trace
+
+    def __enter__(self):
         """
-        A nice little context manager for recording the debugger interactions into
-        our session object.  If trace flag is ON, it also emits the interactions
-        into the stderr.
+        Context management protocol on entry to the body of the with statement.
+        Just return the SixStringIO object.
         """
+        return self
 
-        def __init__(self, test, trace):
-            """Create a SixStringIO instance; record the session obj and trace flag."""
-            SixStringIO.__init__(self)
-            # The test might not have undergone the 'setUp(self)' phase yet, so that
-            # the attribute 'session' might not even exist yet.
-            self.session = getattr(test, "session", None) if test else None
-            self.trace = trace
-
-        def __enter__(self):
-            """
-            Context management protocol on entry to the body of the with statement.
-            Just return the SixStringIO object.
-            """
-            return self
-
-        def __exit__(self, type, value, tb):
-            """
-            Context management protocol on exit from the body of the with statement.
-            If trace is ON, it emits the recordings into stderr.  Always add the
-            recordings to our session object.  And close the SixStringIO object, too.
-            """
-            if self.trace:
-                print(self.getvalue(), file=sys.stderr)
-            if self.session:
-                print(self.getvalue(), file=self.session)
-            self.close()
+    def __exit__(self, type, value, tb):
+        """
+        Context management protocol on exit from the body of the with statement.
+        If trace is ON, it emits the recordings into stderr.  Always add the
+        recordings to our session object.  And close the SixStringIO object, too.
+        """
+        if self.trace:
+            print(self.getvalue(), file=sys.stderr)
+        if self.session:
+            print(self.getvalue(), file=self.session)
+        self.close()
 
 
-    @add_metaclass(abc.ABCMeta)
-    class _BaseProcess(object):
+@add_metaclass(abc.ABCMeta)
+class _BaseProcess(object):
 
-        @abc.abstractproperty
-        def pid(self):
-            """Returns process PID if has been launched already."""
+    @abc.abstractproperty
+    def pid(self):
+        """Returns process PID if has been launched already."""
 
-        @abc.abstractmethod
-        def launch(self, executable, args):
-            """Launches new process with given executable and args."""
+    @abc.abstractmethod
+    def launch(self, executable, args):
+        """Launches new process with given executable and args."""
 
-        @abc.abstractmethod
-        def terminate(self):
-            """Terminates previously launched process.."""
-
-
-    class _LocalProcess(_BaseProcess):
-
-        def __init__(self, trace_on):
-            self._proc = None
-            self._trace_on = trace_on
-            self._delayafterterminate = 0.1
-
-        @property
-        def pid(self):
-            return self._proc.pid
-
-        def launch(self, executable, args):
-            self._proc = Popen(
-                [executable] + args,
-                stdout=open(
-                    os.devnull) if not self._trace_on else None,
-                stdin=PIPE)
-
-        def terminate(self):
-            if self._proc.poll() is None:
-                # Terminate _proc like it does the pexpect
-                signals_to_try = [
-                    sig for sig in [
-                        'SIGHUP',
-                        'SIGCONT',
-                        'SIGINT'] if sig in dir(signal)]
-                for sig in signals_to_try:
-                    try:
-                        self._proc.send_signal(getattr(signal, sig))
-                        time.sleep(self._delayafterterminate)
-                        if self._proc.poll() is not None:
-                            return
-                    except ValueError:
-                        pass  # Windows says SIGINT is not a valid signal to send
-                self._proc.terminate()
-                time.sleep(self._delayafterterminate)
-                if self._proc.poll() is not None:
-                    return
-                self._proc.kill()
-                time.sleep(self._delayafterterminate)
-
-        def poll(self):
-            return self._proc.poll()
+    @abc.abstractmethod
+    def terminate(self):
+        """Terminates previously launched process.."""
 
 
-    class _RemoteProcess(_BaseProcess):
+class _LocalProcess(_BaseProcess):
 
-        def __init__(self, install_remote):
-            self._pid = None
-            self._install_remote = install_remote
+    def __init__(self, trace_on):
+        self._proc = None
+        self._trace_on = trace_on
+        self._delayafterterminate = 0.1
 
-        @property
-        def pid(self):
-            return self._pid
+    @property
+    def pid(self):
+        return self._proc.pid
 
-        def launch(self, executable, args):
-            if self._install_remote:
-                src_path = executable
-                dst_path = lldbutil.append_to_process_working_directory(
-                    os.path.basename(executable))
+    def launch(self, executable, args):
+        self._proc = Popen(
+            [executable] + args,
+            stdout=open(
+                os.devnull) if not self._trace_on else None,
+            stdin=PIPE)
 
-                dst_file_spec = lldb.SBFileSpec(dst_path, False)
-                err = lldb.remote_platform.Install(
-                    lldb.SBFileSpec(src_path, True), dst_file_spec)
-                if err.Fail():
-                    raise Exception(
-                        "remote_platform.Install('%s', '%s') failed: %s" %
-                        (src_path, dst_path, err))
-            else:
-                dst_path = executable
-                dst_file_spec = lldb.SBFileSpec(executable, False)
+    def terminate(self):
+        if self._proc.poll() is None:
+            # Terminate _proc like it does the pexpect
+            signals_to_try = [
+                sig for sig in [
+                    'SIGHUP',
+                    'SIGCONT',
+                    'SIGINT'] if sig in dir(signal)]
+            for sig in signals_to_try:
+                try:
+                    self._proc.send_signal(getattr(signal, sig))
+                    time.sleep(self._delayafterterminate)
+                    if self._proc.poll() is not None:
+                        return
+                except ValueError:
+                    pass  # Windows says SIGINT is not a valid signal to send
+            self._proc.terminate()
+            time.sleep(self._delayafterterminate)
+            if self._proc.poll() is not None:
+                return
+            self._proc.kill()
+            time.sleep(self._delayafterterminate)
 
-            launch_info = lldb.SBLaunchInfo(args)
-            launch_info.SetExecutableFile(dst_file_spec, True)
-            launch_info.SetWorkingDirectory(
-                lldb.remote_platform.GetWorkingDirectory())
+    def poll(self):
+        return self._proc.poll()
 
-            # Redirect stdout and stderr to /dev/null
-            launch_info.AddSuppressFileAction(1, False, True)
-            launch_info.AddSuppressFileAction(2, False, True)
 
-            err = lldb.remote_platform.Launch(launch_info)
+class _RemoteProcess(_BaseProcess):
+
+    def __init__(self, install_remote):
+        self._pid = None
+        self._install_remote = install_remote
+
+    @property
+    def pid(self):
+        return self._pid
+
+    def launch(self, executable, args):
+        if self._install_remote:
+            src_path = executable
+            dst_path = lldbutil.append_to_process_working_directory(
+                os.path.basename(executable))
+
+            dst_file_spec = lldb.SBFileSpec(dst_path, False)
+            err = lldb.remote_platform.Install(
+                lldb.SBFileSpec(src_path, True), dst_file_spec)
             if err.Fail():
                 raise Exception(
-                    "remote_platform.Launch('%s', '%s') failed: %s" %
-                    (dst_path, args, err))
-            self._pid = launch_info.GetProcessID()
+                    "remote_platform.Install('%s', '%s') failed: %s" %
+                    (src_path, dst_path, err))
+        else:
+            dst_path = executable
+            dst_file_spec = lldb.SBFileSpec(executable, False)
 
-        def terminate(self):
-            lldb.remote_platform.Kill(self._pid)
+        launch_info = lldb.SBLaunchInfo(args)
+        launch_info.SetExecutableFile(dst_file_spec, True)
+        launch_info.SetWorkingDirectory(
+            lldb.remote_platform.GetWorkingDirectory())
 
-    # From 2.7's subprocess.check_output() convenience function.
-    # Return a tuple (stdoutdata, stderrdata).
+        # Redirect stdout and stderr to /dev/null
+        launch_info.AddSuppressFileAction(1, False, True)
+        launch_info.AddSuppressFileAction(2, False, True)
+
+        err = lldb.remote_platform.Launch(launch_info)
+        if err.Fail():
+            raise Exception(
+                "remote_platform.Launch('%s', '%s') failed: %s" %
+                (dst_path, args, err))
+        self._pid = launch_info.GetProcessID()
+
+    def terminate(self):
+        lldb.remote_platform.Kill(self._pid)
+
+# From 2.7's subprocess.check_output() convenience function.
+# Return a tuple (stdoutdata, stderrdata).
 
 
-    def system(commands, **kwargs):
-        r"""Run an os command with arguments and return its output as a byte string.
+def system(commands, **kwargs):
+    r"""Run an os command with arguments and return its output as a byte string.
 
-        If the exit code was non-zero it raises a CalledProcessError.  The
-        CalledProcessError object will have the return code in the returncode
-        attribute and output in the output attribute.
+    If the exit code was non-zero it raises a CalledProcessError.  The
+    CalledProcessError object will have the return code in the returncode
+    attribute and output in the output attribute.
 
-        The arguments are the same as for the Popen constructor.  Example:
+    The arguments are the same as for the Popen constructor.  Example:
 
-        >>> check_output(["ls", "-l", "/dev/null"])
-        'crw-rw-rw- 1 root root 1, 3 Oct 18  2007 /dev/null\n'
+    >>> check_output(["ls", "-l", "/dev/null"])
+    'crw-rw-rw- 1 root root 1, 3 Oct 18  2007 /dev/null\n'
 
-        The stdout argument is not allowed as it is used internally.
-        To capture standard error in the result, use stderr=STDOUT.
+    The stdout argument is not allowed as it is used internally.
+    To capture standard error in the result, use stderr=STDOUT.
 
-        >>> check_output(["/bin/sh", "-c",
-        ...               "ls -l non_existent_file ; exit 0"],
-        ...              stderr=STDOUT)
-        'ls: non_existent_file: No such file or directory\n'
+    >>> check_output(["/bin/sh", "-c",
+    ...               "ls -l non_existent_file ; exit 0"],
+    ...              stderr=STDOUT)
+    'ls: non_existent_file: No such file or directory\n'
+    """
+
+    # Assign the sender object to variable 'test' and remove it from kwargs.
+    test = kwargs.pop('sender', None)
+
+    # [['make', 'clean', 'foo'], ['make', 'foo']] -> ['make clean foo', 'make foo']
+    commandList = [' '.join(x) for x in commands]
+    output = ""
+    error = ""
+    for shellCommand in commandList:
+        if 'stdout' in kwargs:
+            raise ValueError(
+                'stdout argument not allowed, it will be overridden.')
+        if 'shell' in kwargs and kwargs['shell'] == False:
+            raise ValueError('shell=False not allowed')
+        process = Popen(
+            shellCommand,
+            stdout=PIPE,
+            stderr=PIPE,
+            shell=True,
+            universal_newlines=True,
+            **kwargs)
+        pid = process.pid
+        this_output, this_error = process.communicate()
+        retcode = process.poll()
+
+        # Enable trace on failure return while tracking down FreeBSD buildbot
+        # issues
+        trace = traceAlways
+        if not trace and retcode and sys.platform.startswith("freebsd"):
+            trace = True
+
+        with recording(test, trace) as sbuf:
+            print(file=sbuf)
+            print("os command:", shellCommand, file=sbuf)
+            print("with pid:", pid, file=sbuf)
+            print("stdout:", this_output, file=sbuf)
+            print("stderr:", this_error, file=sbuf)
+            print("retcode:", retcode, file=sbuf)
+            print(file=sbuf)
+
+        if retcode:
+            cmd = kwargs.get("args")
+            if cmd is None:
+                cmd = shellCommand
+            cpe = CalledProcessError(retcode, cmd)
+            # Ensure caller can access the stdout/stderr.
+            cpe.lldb_extensions = {
+                "stdout_content": this_output,
+                "stderr_content": this_error,
+                "command": shellCommand
+            }
+            raise cpe
+        output = output + this_output
+        error = error + this_error
+    return (output, error)
+
+
+def getsource_if_available(obj):
+    """
+    Return the text of the source code for an object if available.  Otherwise,
+    a print representation is returned.
+    """
+    import inspect
+    try:
+        return inspect.getsource(obj)
+    except:
+        return repr(obj)
+
+
+def builder_module():
+    if sys.platform.startswith("freebsd"):
+        return __import__("builder_freebsd")
+    if sys.platform.startswith("netbsd"):
+        return __import__("builder_netbsd")
+    if sys.platform.startswith("linux"):
+        # sys.platform with Python-3.x returns 'linux', but with
+        # Python-2.x it returns 'linux2'.
+        return __import__("builder_linux")
+    return __import__("builder_" + sys.platform)
+
+
+class Base(unittest2.TestCase):
+    """
+    Abstract base for performing lldb (see TestBase) or other generic tests (see
+    BenchBase for one example).  lldbtest.Base works with the test driver to
+    accomplish things.
+
+    """
+
+    # The concrete subclass should override this attribute.
+    mydir = None
+
+    # Keep track of the old current working directory.
+    oldcwd = None
+
+    @staticmethod
+    def compute_mydir(test_file):
+        '''Subclasses should call this function to correctly calculate the required "mydir" attribute as follows:
+
+            mydir = TestBase.compute_mydir(__file__)'''
+        test_dir = os.path.dirname(test_file)
+        return test_dir[len(os.environ["LLDB_TEST"]) + 1:]
+
+    def TraceOn(self):
+        """Returns True if we are in trace mode (tracing detailed test execution)."""
+        return traceAlways
+
+    @classmethod
+    def setUpClass(cls):
         """
-
-        # Assign the sender object to variable 'test' and remove it from kwargs.
-        test = kwargs.pop('sender', None)
-
-        # [['make', 'clean', 'foo'], ['make', 'foo']] -> ['make clean foo', 'make foo']
-        commandList = [' '.join(x) for x in commands]
-        output = ""
-        error = ""
-        for shellCommand in commandList:
-            if 'stdout' in kwargs:
-                raise ValueError(
-                    'stdout argument not allowed, it will be overridden.')
-            if 'shell' in kwargs and kwargs['shell'] == False:
-                raise ValueError('shell=False not allowed')
-            process = Popen(
-                shellCommand,
-                stdout=PIPE,
-                stderr=PIPE,
-                shell=True,
-                universal_newlines=True,
-                **kwargs)
-            pid = process.pid
-            this_output, this_error = process.communicate()
-            retcode = process.poll()
-
-            # Enable trace on failure return while tracking down FreeBSD buildbot
-            # issues
-            trace = traceAlways
-            if not trace and retcode and sys.platform.startswith("freebsd"):
-                trace = True
-
-            with recording(test, trace) as sbuf:
-                print(file=sbuf)
-                print("os command:", shellCommand, file=sbuf)
-                print("with pid:", pid, file=sbuf)
-                print("stdout:", this_output, file=sbuf)
-                print("stderr:", this_error, file=sbuf)
-                print("retcode:", retcode, file=sbuf)
-                print(file=sbuf)
-
-            if retcode:
-                cmd = kwargs.get("args")
-                if cmd is None:
-                    cmd = shellCommand
-                cpe = CalledProcessError(retcode, cmd)
-                # Ensure caller can access the stdout/stderr.
-                cpe.lldb_extensions = {
-                    "stdout_content": this_output,
-                    "stderr_content": this_error,
-                    "command": shellCommand
-                }
-                raise cpe
-            output = output + this_output
-            error = error + this_error
-        return (output, error)
-
-
-    def getsource_if_available(obj):
+        Python unittest framework class setup fixture.
+        Do current directory manipulation.
         """
-        Return the text of the source code for an object if available.  Otherwise,
-        a print representation is returned.
-        """
-        import inspect
-        try:
-            return inspect.getsource(obj)
-        except:
-            return repr(obj)
+        # Fail fast if 'mydir' attribute is not overridden.
+        if not cls.mydir or len(cls.mydir) == 0:
+            raise Exception("Subclasses must override the 'mydir' attribute.")
 
+        # Save old working directory.
+        cls.oldcwd = os.getcwd()
 
-    def builder_module():
-        if sys.platform.startswith("freebsd"):
-            return __import__("builder_freebsd")
-        if sys.platform.startswith("netbsd"):
-            return __import__("builder_netbsd")
-        if sys.platform.startswith("linux"):
-            # sys.platform with Python-3.x returns 'linux', but with
-            # Python-2.x it returns 'linux2'.
-            return __import__("builder_linux")
-        return __import__("builder_" + sys.platform)
-
-
-    class Base(unittest2.TestCase):
-        """
-        Abstract base for performing lldb (see TestBase) or other generic tests (see
-        BenchBase for one example).  lldbtest.Base works with the test driver to
-        accomplish things.
-
-        """
-
-        # The concrete subclass should override this attribute.
-        mydir = None
-
-        # Keep track of the old current working directory.
-        oldcwd = None
-
-        @staticmethod
-        def compute_mydir(test_file):
-            '''Subclasses should call this function to correctly calculate the required "mydir" attribute as follows:
-
-                mydir = TestBase.compute_mydir(__file__)'''
-            test_dir = os.path.dirname(test_file)
-            return test_dir[len(os.environ["LLDB_TEST"]) + 1:]
-
-        def TraceOn(self):
-            """Returns True if we are in trace mode (tracing detailed test execution)."""
-            return traceAlways
-
-        @classmethod
-        def setUpClass(cls):
-            """
-            Python unittest framework class setup fixture.
-            Do current directory manipulation.
-            """
-            # Fail fast if 'mydir' attribute is not overridden.
-            if not cls.mydir or len(cls.mydir) == 0:
-                raise Exception("Subclasses must override the 'mydir' attribute.")
-
-            # Save old working directory.
-            cls.oldcwd = os.getcwd()
-
-            # Change current working directory if ${LLDB_TEST} is defined.
-            # See also dotest.py which sets up ${LLDB_TEST}.
-            if ("LLDB_TEST" in os.environ):
-                full_dir = os.path.join(os.environ["LLDB_TEST"], cls.mydir)
-                if traceAlways:
-                    print("Change dir to:", full_dir, file=sys.stderr)
-                os.chdir(os.path.join(os.environ["LLDB_TEST"], cls.mydir))
-
-            if debug_confirm_directory_exclusivity:
-                cls.dir_lock = lock.Lock(os.path.join(full_dir, ".dirlock"))
-                try:
-                    cls.dir_lock.try_acquire()
-                    # write the class that owns the lock into the lock file
-                    cls.dir_lock.handle.write(cls.__name__)
-                except IOError as ioerror:
-                    # nothing else should have this directory lock
-                    # wait here until we get a lock
-                    cls.dir_lock.acquire()
-                    # read the previous owner from the lock file
-                    lock_id = cls.dir_lock.handle.read()
-                    print(
-                        "LOCK ERROR: {} wants to lock '{}' but it is already locked by '{}'".format(
-                            cls.__name__,
-                            full_dir,
-                            lock_id),
-                        file=sys.stderr)
-                    raise ioerror
-
-            # Set platform context.
-            cls.platformContext = lldbplatformutil.createPlatformContext()
-
-        @classmethod
-        def tearDownClass(cls):
-            """
-            Python unittest framework class teardown fixture.
-            Do class-wide cleanup.
-            """
-
-            if doCleanup:
-                # First, let's do the platform-specific cleanup.
-                module = builder_module()
-                module.cleanup()
-
-                # Subclass might have specific cleanup function defined.
-                if getattr(cls, "classCleanup", None):
-                    if traceAlways:
-                        print(
-                            "Call class-specific cleanup function for class:",
-                            cls,
-                            file=sys.stderr)
-                    try:
-                        cls.classCleanup()
-                    except:
-                        exc_type, exc_value, exc_tb = sys.exc_info()
-                        traceback.print_exception(exc_type, exc_value, exc_tb)
-
-            if debug_confirm_directory_exclusivity:
-                cls.dir_lock.release()
-                del cls.dir_lock
-
-            # Restore old working directory.
+        # Change current working directory if ${LLDB_TEST} is defined.
+        # See also dotest.py which sets up ${LLDB_TEST}.
+        if ("LLDB_TEST" in os.environ):
+            full_dir = os.path.join(os.environ["LLDB_TEST"], cls.mydir)
             if traceAlways:
-                print("Restore dir to:", cls.oldcwd, file=sys.stderr)
-            os.chdir(cls.oldcwd)
+                print("Change dir to:", full_dir, file=sys.stderr)
+            os.chdir(os.path.join(os.environ["LLDB_TEST"], cls.mydir))
 
-        @classmethod
-        def skipLongRunningTest(cls):
-            """
-            By default, we skip long running test case.
-            This can be overridden by passing '-l' to the test driver (dotest.py).
-            """
-            if "LLDB_SKIP_LONG_RUNNING_TEST" in os.environ and "NO" == os.environ[
-                    "LLDB_SKIP_LONG_RUNNING_TEST"]:
-                return False
-            else:
-                return True
-
-        def enableLogChannelsForCurrentTest(self):
-            if len(lldbtest_config.channels) == 0:
-                return
-
-            # if debug channels are specified in lldbtest_config.channels,
-            # create a new set of log files for every test
-            log_basename = self.getLogBasenameForCurrentTest()
-
-            # confirm that the file is writeable
-            host_log_path = "{}-host.log".format(log_basename)
-            open(host_log_path, 'w').close()
-
-            log_enable = "log enable -Tpn -f {} ".format(host_log_path)
-            for channel_with_categories in lldbtest_config.channels:
-                channel_then_categories = channel_with_categories.split(' ', 1)
-                channel = channel_then_categories[0]
-                if len(channel_then_categories) > 1:
-                    categories = channel_then_categories[1]
-                else:
-                    categories = "default"
-
-                if channel == "gdb-remote" and lldb.remote_platform is None:
-                    # communicate gdb-remote categories to debugserver
-                    os.environ["LLDB_DEBUGSERVER_LOG_FLAGS"] = categories
-
-                self.ci.HandleCommand(
-                    log_enable + channel_with_categories, self.res)
-                if not self.res.Succeeded():
-                    raise Exception(
-                        'log enable failed (check LLDB_LOG_OPTION env variable)')
-
-            # Communicate log path name to debugserver & lldb-server
-            # For remote debugging, these variables need to be set when starting the platform
-            # instance.
-            if lldb.remote_platform is None:
-                server_log_path = "{}-server.log".format(log_basename)
-                open(server_log_path, 'w').close()
-                os.environ["LLDB_DEBUGSERVER_LOG_FILE"] = server_log_path
-
-                # Communicate channels to lldb-server
-                os.environ["LLDB_SERVER_LOG_CHANNELS"] = ":".join(
-                    lldbtest_config.channels)
-
-            self.addTearDownHook(self.disableLogChannelsForCurrentTest)
-
-        def disableLogChannelsForCurrentTest(self):
-            # close all log files that we opened
-            for channel_and_categories in lldbtest_config.channels:
-                # channel format - <channel-name> [<category0> [<category1> ...]]
-                channel = channel_and_categories.split(' ', 1)[0]
-                self.ci.HandleCommand("log disable " + channel, self.res)
-                if not self.res.Succeeded():
-                    raise Exception(
-                        'log disable failed (check LLDB_LOG_OPTION env variable)')
-
-            # Retrieve the server log (if any) from the remote system. It is assumed the server log
-            # is writing to the "server.log" file in the current test directory. This can be
-            # achieved by setting LLDB_DEBUGSERVER_LOG_FILE="server.log" when starting remote
-            # platform. If the remote logging is not enabled, then just let the Get() command silently
-            # fail.
-            if lldb.remote_platform:
-                lldb.remote_platform.Get(
-                    lldb.SBFileSpec("server.log"), lldb.SBFileSpec(
-                        self.getLogBasenameForCurrentTest() + "-server.log"))
-
-        def setPlatformWorkingDir(self):
-            if not lldb.remote_platform or not configuration.lldb_platform_working_dir:
-                return
-
-            remote_test_dir = lldbutil.join_remote_paths(
-                configuration.lldb_platform_working_dir,
-                self.getArchitecture(),
-                str(self.test_number),
-                self.mydir)
-            error = lldb.remote_platform.MakeDirectory(
-                remote_test_dir, 448)  # 448 = 0o700
-            if error.Success():
-                lldb.remote_platform.SetWorkingDirectory(remote_test_dir)
-
-                # This function removes all files from the current working directory while leaving
-                # the directories in place. The cleaup is required to reduce the disk space required
-                # by the test suit while leaving the directories untached is neccessary because
-                # sub-directories might belong to an other test
-                def clean_working_directory():
-                    # TODO: Make it working on Windows when we need it for remote debugging support
-                    # TODO: Replace the heuristic to remove the files with a logic what collects the
-                    # list of files we have to remove during test runs.
-                    shell_cmd = lldb.SBPlatformShellCommand(
-                        "rm %s/*" % remote_test_dir)
-                    lldb.remote_platform.Run(shell_cmd)
-                self.addTearDownHook(clean_working_directory)
-            else:
-                print("error: making remote directory '%s': %s" % (
-                    remote_test_dir, error))
-
-        def setUp(self):
-            """Fixture for unittest test case setup.
-
-            It works with the test driver to conditionally skip tests and does other
-            initializations."""
-            #import traceback
-            # traceback.print_stack()
-
-            if "LIBCXX_PATH" in os.environ:
-                self.libcxxPath = os.environ["LIBCXX_PATH"]
-            else:
-                self.libcxxPath = None
-
-            if "LLDBMI_EXEC" in os.environ:
-                self.lldbMiExec = os.environ["LLDBMI_EXEC"]
-            else:
-                self.lldbMiExec = None
-
-            # If we spawn an lldb process for test (via pexpect), do not load the
-            # init file unless told otherwise.
-            if "NO_LLDBINIT" in os.environ and "NO" == os.environ["NO_LLDBINIT"]:
-                self.lldbOption = ""
-            else:
-                self.lldbOption = "--no-lldbinit"
-
-            # Assign the test method name to self.testMethodName.
-            #
-            # For an example of the use of this attribute, look at test/types dir.
-            # There are a bunch of test cases under test/types and we don't want the
-            # module cacheing subsystem to be confused with executable name "a.out"
-            # used for all the test cases.
-            self.testMethodName = self._testMethodName
-
-            # This is for the case of directly spawning 'lldb'/'gdb' and interacting
-            # with it using pexpect.
-            self.child = None
-            self.child_prompt = "(lldb) "
-            # If the child is interacting with the embedded script interpreter,
-            # there are two exits required during tear down, first to quit the
-            # embedded script interpreter and second to quit the lldb command
-            # interpreter.
-            self.child_in_script_interpreter = False
-
-            # These are for customized teardown cleanup.
-            self.dict = None
-            self.doTearDownCleanup = False
-            # And in rare cases where there are multiple teardown cleanups.
-            self.dicts = []
-            self.doTearDownCleanups = False
-
-            # List of spawned subproces.Popen objects
-            self.subprocesses = []
-
-            # List of forked process PIDs
-            self.forkedProcessPids = []
-
-            # Create a string buffer to record the session info, to be dumped into a
-            # test case specific file if test failure is encountered.
-            self.log_basename = self.getLogBasenameForCurrentTest()
-
-            session_file = "{}.log".format(self.log_basename)
-            # Python 3 doesn't support unbuffered I/O in text mode.  Open buffered.
-            self.session = encoded_file.open(session_file, "utf-8", mode="w")
-
-            # Optimistically set __errored__, __failed__, __expected__ to False
-            # initially.  If the test errored/failed, the session info
-            # (self.session) is then dumped into a session specific file for
-            # diagnosis.
-            self.__cleanup_errored__ = False
-            self.__errored__ = False
-            self.__failed__ = False
-            self.__expected__ = False
-            # We are also interested in unexpected success.
-            self.__unexpected__ = False
-            # And skipped tests.
-            self.__skipped__ = False
-
-            # See addTearDownHook(self, hook) which allows the client to add a hook
-            # function to be run during tearDown() time.
-            self.hooks = []
-
-            # See HideStdout(self).
-            self.sys_stdout_hidden = False
-
-            if self.platformContext:
-                # set environment variable names for finding shared libraries
-                self.dylibPath = self.platformContext.shlib_environment_var
-
-            # Create the debugger instance if necessary.
+        if debug_confirm_directory_exclusivity:
+            import lock
+            cls.dir_lock = lock.Lock(os.path.join(full_dir, ".dirlock"))
             try:
-                self.dbg = lldb.DBG
-            except AttributeError:
-                self.dbg = lldb.SBDebugger.Create()
+                cls.dir_lock.try_acquire()
+                # write the class that owns the lock into the lock file
+                cls.dir_lock.handle.write(cls.__name__)
+            except IOError as ioerror:
+                # nothing else should have this directory lock
+                # wait here until we get a lock
+                cls.dir_lock.acquire()
+                # read the previous owner from the lock file
+                lock_id = cls.dir_lock.handle.read()
+                print(
+                    "LOCK ERROR: {} wants to lock '{}' but it is already locked by '{}'".format(
+                        cls.__name__,
+                        full_dir,
+                        lock_id),
+                    file=sys.stderr)
+                raise ioerror
 
-            if not self.dbg:
-                raise Exception('Invalid debugger instance')
+        # Set platform context.
+        cls.platformContext = lldbplatformutil.createPlatformContext()
 
-            # Retrieve the associated command interpreter instance.
-            self.ci = self.dbg.GetCommandInterpreter()
-            if not self.ci:
-                raise Exception('Could not get the command interpreter')
+    @classmethod
+    def tearDownClass(cls):
+        """
+        Python unittest framework class teardown fixture.
+        Do class-wide cleanup.
+        """
 
-            # And the result object.
-            self.res = lldb.SBCommandReturnObject()
+        if doCleanup:
+            # First, let's do the platform-specific cleanup.
+            module = builder_module()
+            module.cleanup()
 
-            self.setPlatformWorkingDir()
-            self.enableLogChannelsForCurrentTest()
-
-            # Initialize debug_info
-            self.debug_info = None
-
-            lib_dir = os.environ["LLDB_LIB_DIR"]
-            self.dsym = None
-            self.framework_dir = None
-            self.darwinWithFramework = self.platformIsDarwin()
-            if sys.platform.startswith("darwin"):
-                # Handle the framework environment variable if it is set
-                if hasattr(lldbtest_config, 'lldbFrameworkPath'):
-                    framework_path = lldbtest_config.lldbFrameworkPath
-                    # Framework dir should be the directory containing the framework
-                    self.framework_dir = framework_path[:framework_path.rfind('LLDB.framework')]
-                # If a framework dir was not specified assume the Xcode build
-                # directory layout where the framework is in LLDB_LIB_DIR.
-                else:
-                    self.framework_dir = lib_dir
-                self.dsym = os.path.join(self.framework_dir, 'LLDB.framework', 'LLDB')
-                # If the framework binary doesn't exist, assume we didn't actually
-                # build a framework, and fallback to standard *nix behavior by
-                # setting framework_dir and dsym to None.
-                if not os.path.exists(self.dsym):
-                    self.framework_dir = None
-                    self.dsym = None
-                    self.darwinWithFramework = False
-
-        def setAsync(self, value):
-            """ Sets async mode to True/False and ensures it is reset after the testcase completes."""
-            old_async = self.dbg.GetAsync()
-            self.dbg.SetAsync(value)
-            self.addTearDownHook(lambda: self.dbg.SetAsync(old_async))
-
-        def cleanupSubprocesses(self):
-            # Ensure any subprocesses are cleaned up
-            for p in self.subprocesses:
-                p.terminate()
-                del p
-            del self.subprocesses[:]
-            # Ensure any forked processes are cleaned up
-            for pid in self.forkedProcessPids:
-                if os.path.exists("/proc/" + str(pid)):
-                    os.kill(pid, signal.SIGTERM)
-
-        def spawnSubprocess(self, executable, args=[], install_remote=True):
-            """ Creates a subprocess.Popen object with the specified executable and arguments,
-                saves it in self.subprocesses, and returns the object.
-                NOTE: if using this function, ensure you also call:
-
-                  self.addTearDownHook(self.cleanupSubprocesses)
-
-                otherwise the test suite will leak processes.
-            """
-            proc = _RemoteProcess(
-                install_remote) if lldb.remote_platform else _LocalProcess(self.TraceOn())
-            proc.launch(executable, args)
-            self.subprocesses.append(proc)
-            return proc
-
-        def forkSubprocess(self, executable, args=[]):
-            """ Fork a subprocess with its own group ID.
-                NOTE: if using this function, ensure you also call:
-
-                  self.addTearDownHook(self.cleanupSubprocesses)
-
-                otherwise the test suite will leak processes.
-            """
-            child_pid = os.fork()
-            if child_pid == 0:
-                # If more I/O support is required, this can be beefed up.
-                fd = os.open(os.devnull, os.O_RDWR)
-                os.dup2(fd, 1)
-                os.dup2(fd, 2)
-                # This call causes the child to have its of group ID
-                os.setpgid(0, 0)
-                os.execvp(executable, [executable] + args)
-            # Give the child time to get through the execvp() call
-            time.sleep(0.1)
-            self.forkedProcessPids.append(child_pid)
-            return child_pid
-
-        def HideStdout(self):
-            """Hide output to stdout from the user.
-
-            During test execution, there might be cases where we don't want to show the
-            standard output to the user.  For example,
-
-                self.runCmd(r'''sc print("\n\n\tHello!\n")''')
-
-            tests whether command abbreviation for 'script' works or not.  There is no
-            need to show the 'Hello' output to the user as long as the 'script' command
-            succeeds and we are not in TraceOn() mode (see the '-t' option).
-
-            In this case, the test method calls self.HideStdout(self) to redirect the
-            sys.stdout to a null device, and restores the sys.stdout upon teardown.
-
-            Note that you should only call this method at most once during a test case
-            execution.  Any subsequent call has no effect at all."""
-            if self.sys_stdout_hidden:
-                return
-
-            self.sys_stdout_hidden = True
-            old_stdout = sys.stdout
-            sys.stdout = open(os.devnull, 'w')
-
-            def restore_stdout():
-                sys.stdout = old_stdout
-            self.addTearDownHook(restore_stdout)
-
-        # =======================================================================
-        # Methods for customized teardown cleanups as well as execution of hooks.
-        # =======================================================================
-
-        def setTearDownCleanup(self, dictionary=None):
-            """Register a cleanup action at tearDown() time with a dictinary"""
-            self.dict = dictionary
-            self.doTearDownCleanup = True
-
-        def addTearDownCleanup(self, dictionary):
-            """Add a cleanup action at tearDown() time with a dictinary"""
-            self.dicts.append(dictionary)
-            self.doTearDownCleanups = True
-
-        def addTearDownHook(self, hook):
-            """
-            Add a function to be run during tearDown() time.
-
-            Hooks are executed in a first come first serve manner.
-            """
-            if six.callable(hook):
-                with recording(self, traceAlways) as sbuf:
+            # Subclass might have specific cleanup function defined.
+            if getattr(cls, "classCleanup", None):
+                if traceAlways:
                     print(
-                        "Adding tearDown hook:",
-                        getsource_if_available(hook),
-                        file=sbuf)
-                self.hooks.append(hook)
+                        "Call class-specific cleanup function for class:",
+                        cls,
+                        file=sys.stderr)
+                try:
+                    cls.classCleanup()
+                except:
+                    exc_type, exc_value, exc_tb = sys.exc_info()
+                    traceback.print_exception(exc_type, exc_value, exc_tb)
 
-            return self
+        if debug_confirm_directory_exclusivity:
+            cls.dir_lock.release()
+            del cls.dir_lock
+
+        # Restore old working directory.
+        if traceAlways:
+            print("Restore dir to:", cls.oldcwd, file=sys.stderr)
+        os.chdir(cls.oldcwd)
+
+    @classmethod
+    def skipLongRunningTest(cls):
+        """
+        By default, we skip long running test case.
+        This can be overridden by passing '-l' to the test driver (dotest.py).
+        """
+        if "LLDB_SKIP_LONG_RUNNING_TEST" in os.environ and "NO" == os.environ[
+                "LLDB_SKIP_LONG_RUNNING_TEST"]:
+            return False
+        else:
+            return True
+
+    def enableLogChannelsForCurrentTest(self):
+        if len(lldbtest_config.channels) == 0:
+            return
+
+        # if debug channels are specified in lldbtest_config.channels,
+        # create a new set of log files for every test
+        log_basename = self.getLogBasenameForCurrentTest()
+
+        # confirm that the file is writeable
+        host_log_path = "{}-host.log".format(log_basename)
+        open(host_log_path, 'w').close()
+
+        log_enable = "log enable -Tpn -f {} ".format(host_log_path)
+        for channel_with_categories in lldbtest_config.channels:
+            channel_then_categories = channel_with_categories.split(' ', 1)
+            channel = channel_then_categories[0]
+            if len(channel_then_categories) > 1:
+                categories = channel_then_categories[1]
+            else:
+                categories = "default"
+
+            if channel == "gdb-remote" and lldb.remote_platform is None:
+                # communicate gdb-remote categories to debugserver
+                os.environ["LLDB_DEBUGSERVER_LOG_FLAGS"] = categories
+
+            self.ci.HandleCommand(
+                log_enable + channel_with_categories, self.res)
+            if not self.res.Succeeded():
+                raise Exception(
+                    'log enable failed (check LLDB_LOG_OPTION env variable)')
+
+        # Communicate log path name to debugserver & lldb-server
+        # For remote debugging, these variables need to be set when starting the platform
+        # instance.
+        if lldb.remote_platform is None:
+            server_log_path = "{}-server.log".format(log_basename)
+            open(server_log_path, 'w').close()
+            os.environ["LLDB_DEBUGSERVER_LOG_FILE"] = server_log_path
+
+            # Communicate channels to lldb-server
+            os.environ["LLDB_SERVER_LOG_CHANNELS"] = ":".join(
+                lldbtest_config.channels)
+
+        self.addTearDownHook(self.disableLogChannelsForCurrentTest)
+
+    def disableLogChannelsForCurrentTest(self):
+        # close all log files that we opened
+        for channel_and_categories in lldbtest_config.channels:
+            # channel format - <channel-name> [<category0> [<category1> ...]]
+            channel = channel_and_categories.split(' ', 1)[0]
+            self.ci.HandleCommand("log disable " + channel, self.res)
+            if not self.res.Succeeded():
+                raise Exception(
+                    'log disable failed (check LLDB_LOG_OPTION env variable)')
+
+        # Retrieve the server log (if any) from the remote system. It is assumed the server log
+        # is writing to the "server.log" file in the current test directory. This can be
+        # achieved by setting LLDB_DEBUGSERVER_LOG_FILE="server.log" when starting remote
+        # platform. If the remote logging is not enabled, then just let the Get() command silently
+        # fail.
+        if lldb.remote_platform:
+            lldb.remote_platform.Get(
+                lldb.SBFileSpec("server.log"), lldb.SBFileSpec(
+                    self.getLogBasenameForCurrentTest() + "-server.log"))
+
+    def setPlatformWorkingDir(self):
+        if not lldb.remote_platform or not configuration.lldb_platform_working_dir:
+            return
+
+        remote_test_dir = lldbutil.join_remote_paths(
+            configuration.lldb_platform_working_dir,
+            self.getArchitecture(),
+            str(self.test_number),
+            self.mydir)
+        error = lldb.remote_platform.MakeDirectory(
+            remote_test_dir, 448)  # 448 = 0o700
+        if error.Success():
+            lldb.remote_platform.SetWorkingDirectory(remote_test_dir)
+
+            # This function removes all files from the current working directory while leaving
+            # the directories in place. The cleaup is required to reduce the disk space required
+            # by the test suit while leaving the directories untached is neccessary because
+            # sub-directories might belong to an other test
+            def clean_working_directory():
+                # TODO: Make it working on Windows when we need it for remote debugging support
+                # TODO: Replace the heuristic to remove the files with a logic what collects the
+                # list of files we have to remove during test runs.
+                shell_cmd = lldb.SBPlatformShellCommand(
+                    "rm %s/*" % remote_test_dir)
+                lldb.remote_platform.Run(shell_cmd)
+            self.addTearDownHook(clean_working_directory)
+        else:
+            print("error: making remote directory '%s': %s" % (
+                remote_test_dir, error))
+
+    def setUp(self):
+        """Fixture for unittest test case setup.
+
+        It works with the test driver to conditionally skip tests and does other
+        initializations."""
+        #import traceback
+        # traceback.print_stack()
+
+        if "LIBCXX_PATH" in os.environ:
+            self.libcxxPath = os.environ["LIBCXX_PATH"]
+        else:
+            self.libcxxPath = None
+
+        if "LLDBMI_EXEC" in os.environ:
+            self.lldbMiExec = os.environ["LLDBMI_EXEC"]
+        else:
+            self.lldbMiExec = None
+
+        # If we spawn an lldb process for test (via pexpect), do not load the
+        # init file unless told otherwise.
+        if "NO_LLDBINIT" in os.environ and "NO" == os.environ["NO_LLDBINIT"]:
+            self.lldbOption = ""
+        else:
+            self.lldbOption = "--no-lldbinit"
+
+        # Assign the test method name to self.testMethodName.
+        #
+        # For an example of the use of this attribute, look at test/types dir.
+        # There are a bunch of test cases under test/types and we don't want the
+        # module cacheing subsystem to be confused with executable name "a.out"
+        # used for all the test cases.
+        self.testMethodName = self._testMethodName
+
+        # This is for the case of directly spawning 'lldb'/'gdb' and interacting
+        # with it using pexpect.
+        self.child = None
+        self.child_prompt = "(lldb) "
+        # If the child is interacting with the embedded script interpreter,
+        # there are two exits required during tear down, first to quit the
+        # embedded script interpreter and second to quit the lldb command
+        # interpreter.
+        self.child_in_script_interpreter = False
+
+        # These are for customized teardown cleanup.
+        self.dict = None
+        self.doTearDownCleanup = False
+        # And in rare cases where there are multiple teardown cleanups.
+        self.dicts = []
+        self.doTearDownCleanups = False
+
+        # List of spawned subproces.Popen objects
+        self.subprocesses = []
+
+        # List of forked process PIDs
+        self.forkedProcessPids = []
+
+        # Create a string buffer to record the session info, to be dumped into a
+        # test case specific file if test failure is encountered.
+        self.log_basename = self.getLogBasenameForCurrentTest()
+
+        session_file = "{}.log".format(self.log_basename)
+        # Python 3 doesn't support unbuffered I/O in text mode.  Open buffered.
+        self.session = encoded_file.open(session_file, "utf-8", mode="w")
+
+        # Optimistically set __errored__, __failed__, __expected__ to False
+        # initially.  If the test errored/failed, the session info
+        # (self.session) is then dumped into a session specific file for
+        # diagnosis.
+        self.__cleanup_errored__ = False
+        self.__errored__ = False
+        self.__failed__ = False
+        self.__expected__ = False
+        # We are also interested in unexpected success.
+        self.__unexpected__ = False
+        # And skipped tests.
+        self.__skipped__ = False
+
+        # See addTearDownHook(self, hook) which allows the client to add a hook
+        # function to be run during tearDown() time.
+        self.hooks = []
+
+        # See HideStdout(self).
+        self.sys_stdout_hidden = False
+
+        if self.platformContext:
+            # set environment variable names for finding shared libraries
+            self.dylibPath = self.platformContext.shlib_environment_var
+
+        # Create the debugger instance if necessary.
+        try:
+            self.dbg = lldb.DBG
+        except AttributeError:
+            self.dbg = lldb.SBDebugger.Create()
+
+        if not self.dbg:
+            raise Exception('Invalid debugger instance')
+
+        # Retrieve the associated command interpreter instance.
+        self.ci = self.dbg.GetCommandInterpreter()
+        if not self.ci:
+            raise Exception('Could not get the command interpreter')
+
+        # And the result object.
+        self.res = lldb.SBCommandReturnObject()
+
+        self.setPlatformWorkingDir()
+        self.enableLogChannelsForCurrentTest()
+
+        # Initialize debug_info
+        self.debug_info = None
+
+        lib_dir = os.environ["LLDB_LIB_DIR"]
+        self.dsym = None
+        self.framework_dir = None
+        self.darwinWithFramework = self.platformIsDarwin()
+        if sys.platform.startswith("darwin"):
+            # Handle the framework environment variable if it is set
+            if hasattr(lldbtest_config, 'lldbFrameworkPath'):
+                framework_path = lldbtest_config.lldbFrameworkPath
+                # Framework dir should be the directory containing the framework
+                self.framework_dir = framework_path[:framework_path.rfind('LLDB.framework')]
+            # If a framework dir was not specified assume the Xcode build
+            # directory layout where the framework is in LLDB_LIB_DIR.
+            else:
+                self.framework_dir = lib_dir
+            self.dsym = os.path.join(self.framework_dir, 'LLDB.framework', 'LLDB')
+            # If the framework binary doesn't exist, assume we didn't actually
+            # build a framework, and fallback to standard *nix behavior by
+            # setting framework_dir and dsym to None.
+            if not os.path.exists(self.dsym):
+                self.framework_dir = None
+                self.dsym = None
+                self.darwinWithFramework = False
+
+    def setAsync(self, value):
+        """ Sets async mode to True/False and ensures it is reset after the testcase completes."""
+        old_async = self.dbg.GetAsync()
+        self.dbg.SetAsync(value)
+        self.addTearDownHook(lambda: self.dbg.SetAsync(old_async))
+
+    def cleanupSubprocesses(self):
+        # Ensure any subprocesses are cleaned up
+        for p in self.subprocesses:
+            p.terminate()
+            del p
+        del self.subprocesses[:]
+        # Ensure any forked processes are cleaned up
+        for pid in self.forkedProcessPids:
+            if os.path.exists("/proc/" + str(pid)):
+                os.kill(pid, signal.SIGTERM)
+
+    def spawnSubprocess(self, executable, args=[], install_remote=True):
+        """ Creates a subprocess.Popen object with the specified executable and arguments,
+            saves it in self.subprocesses, and returns the object.
+            NOTE: if using this function, ensure you also call:
+
+              self.addTearDownHook(self.cleanupSubprocesses)
+
+            otherwise the test suite will leak processes.
+        """
+        proc = _RemoteProcess(
+            install_remote) if lldb.remote_platform else _LocalProcess(self.TraceOn())
+        proc.launch(executable, args)
+        self.subprocesses.append(proc)
+        return proc
+
+    def forkSubprocess(self, executable, args=[]):
+        """ Fork a subprocess with its own group ID.
+            NOTE: if using this function, ensure you also call:
+
+              self.addTearDownHook(self.cleanupSubprocesses)
+
+            otherwise the test suite will leak processes.
+        """
+        child_pid = os.fork()
+        if child_pid == 0:
+            # If more I/O support is required, this can be beefed up.
+            fd = os.open(os.devnull, os.O_RDWR)
+            os.dup2(fd, 1)
+            os.dup2(fd, 2)
+            # This call causes the child to have its of group ID
+            os.setpgid(0, 0)
+            os.execvp(executable, [executable] + args)
+        # Give the child time to get through the execvp() call
+        time.sleep(0.1)
+        self.forkedProcessPids.append(child_pid)
+        return child_pid
+
+    def HideStdout(self):
+        """Hide output to stdout from the user.
+
+        During test execution, there might be cases where we don't want to show the
+        standard output to the user.  For example,
+
+            self.runCmd(r'''sc print("\n\n\tHello!\n")''')
+
+        tests whether command abbreviation for 'script' works or not.  There is no
+        need to show the 'Hello' output to the user as long as the 'script' command
+        succeeds and we are not in TraceOn() mode (see the '-t' option).
+
+        In this case, the test method calls self.HideStdout(self) to redirect the
+        sys.stdout to a null device, and restores the sys.stdout upon teardown.
+
+        Note that you should only call this method at most once during a test case
+        execution.  Any subsequent call has no effect at all."""
+        if self.sys_stdout_hidden:
+            return
+
+        self.sys_stdout_hidden = True
+        old_stdout = sys.stdout
+        sys.stdout = open(os.devnull, 'w')
+
+        def restore_stdout():
+            sys.stdout = old_stdout
+        self.addTearDownHook(restore_stdout)
+
+    # =======================================================================
+    # Methods for customized teardown cleanups as well as execution of hooks.
+    # =======================================================================
+
+    def setTearDownCleanup(self, dictionary=None):
+        """Register a cleanup action at tearDown() time with a dictinary"""
+        self.dict = dictionary
+        self.doTearDownCleanup = True
+
+    def addTearDownCleanup(self, dictionary):
+        """Add a cleanup action at tearDown() time with a dictinary"""
+        self.dicts.append(dictionary)
+        self.doTearDownCleanups = True
+
+    def addTearDownHook(self, hook):
+        """
+        Add a function to be run during tearDown() time.
+
+        Hooks are executed in a first come first serve manner.
+        """
+        if six.callable(hook):
+            with recording(self, traceAlways) as sbuf:
+                print(
+                    "Adding tearDown hook:",
+                    getsource_if_available(hook),
+                    file=sbuf)
+            self.hooks.append(hook)
+
+        return self
 
     def deletePexpectChild(self):
         # This is for the case of directly spawning 'lldb' and interacting with it
@@ -1379,8 +1378,6 @@
             option_str = ""
         if comp:
             option_str += " -C " + comp
-        if lldb.remote_platform:
-            option_str += ' --platform-name=%s' % (lldb.remote_platform_name)
         return option_str
 
     # ==================================================
@@ -1591,10 +1588,6 @@
             "llvm-build/Debug+Asserts/x86_64/Debug+Asserts/bin/clang",
             "llvm-build/Release/x86_64/Release/bin/clang",
             "llvm-build/Debug/x86_64/Debug/bin/clang",
-            "llvm-build/ReleaseAsserts/llvm-macosx-x86_64/bin/clang",
-            "llvm-build/DebugAsserts/llvm-macosx-x86_64/bin/clang",
-            "llvm-build/Release/llvm-macosx-x86_64/bin/clang",
-            "llvm-build/Debug/llvm-macosx-x86_64/bin/clang",
         ]
         lldb_root_path = os.path.join(
             os.path.dirname(__file__), "..", "..", "..", "..")
