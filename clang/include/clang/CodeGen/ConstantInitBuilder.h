@@ -485,8 +485,10 @@ class ConstantArrayBuilder
     : public ConstantArrayBuilderTemplateBase<ConstantInitBuilderTraits> {
   template <class Traits>
   friend class ConstantInitBuilderTemplateBase;
+
+  // The use of explicit qualification is a GCC workaround.
   template <class Impl, class Traits>
-  friend class ConstantAggregateBuilderTemplateBase;
+  friend class CodeGen::ConstantAggregateBuilderTemplateBase;
 
   ConstantArrayBuilder(ConstantInitBuilder &builder,
                        ConstantAggregateBuilderBase *parent,
@@ -500,8 +502,10 @@ class ConstantStructBuilder
     : public ConstantStructBuilderTemplateBase<ConstantInitBuilderTraits> {
   template <class Traits>
   friend class ConstantInitBuilderTemplateBase;
+
+  // The use of explicit qualification is a GCC workaround.
   template <class Impl, class Traits>
-  friend class ConstantAggregateBuilderTemplateBase;
+  friend class CodeGen::ConstantAggregateBuilderTemplateBase;
 
   ConstantStructBuilder(ConstantInitBuilder &builder,
                         ConstantAggregateBuilderBase *parent,
