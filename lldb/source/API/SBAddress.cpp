@@ -12,10 +12,10 @@
 #include "lldb/API/SBSection.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/Core/Address.h"
-#include "lldb/Core/Log.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Symbol/LineEntry.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
 
 using namespace lldb;

@@ -8,8 +8,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Expression/ExpressionVariable.h"
-#include "lldb/Core/Log.h"
 #include "lldb/Expression/IRExecutionUnit.h"
+#include "lldb/Utility/Log.h"
 
 using namespace lldb_private;
 

@@ -18,11 +18,11 @@
 
 #include "Plugins/ScriptInterpreter/Python/lldb-python.h"
 #include "lldb/Core/Debugger.h"
-#include "lldb/Core/Log.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/DataFormatters/LanguageCategory.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Language.h"
+#include "lldb/Utility/Log.h"
 
 using namespace lldb;
 using namespace lldb_private;

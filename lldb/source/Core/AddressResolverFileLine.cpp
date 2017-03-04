@@ -10,9 +10,9 @@
 #include "lldb/Core/AddressResolverFileLine.h"
 
 // Project includes
-#include "lldb/Core/Log.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/SymbolContext.h"
+#include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
 
 using namespace lldb;

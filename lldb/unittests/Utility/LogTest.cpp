@@ -9,10 +9,10 @@
 
 #include "gtest/gtest.h"
 
-#include "lldb/Core/Log.h"
-#include "lldb/Host/Host.h"
+#include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
 #include "llvm/Support/ManagedStatic.h"
+#include "llvm/Support/Threading.h"
 #include <thread>
 
 using namespace lldb;
@@ -74,8 +74,8 @@ TEST(LogTest, log_options) {
       GetLogString(LLDB_LOG_OPTION_PREPEND_FILE_FUNCTION, "Hello World {0}", 47));
 
   EXPECT_EQ(llvm::formatv("[{0,0+4}/{1,0+4}] Hello World 47\n",
-                          Host::GetCurrentProcessID(),
-                          Host::GetCurrentThreadID())
+                          ::getpid(),
+                          llvm::get_threadid_np())
                 .str(),
             GetLogString(LLDB_LOG_OPTION_PREPEND_PROC_AND_THREAD,
                          "Hello World {0}", 47));

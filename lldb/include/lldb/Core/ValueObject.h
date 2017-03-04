@@ -22,7 +22,7 @@
 #include "llvm/ADT/SmallVector.h"
 
 // Project includes
-#include "lldb/Core/DataExtractor.h"
+#include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Flags.h"
 
 #include "lldb/Core/UserID.h"

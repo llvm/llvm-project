@@ -10,7 +10,7 @@
 #include <sstream>
 
 #include "lldb/Core/ArchSpec.h"
-#include "lldb/Core/DataExtractor.h"
+#include "lldb/Core/DumpDataExtractor.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/StreamFile.h"
@@ -1019,10 +1019,10 @@ bool JavaASTContext::DumpTypeValue(
     uint32_t bitfield_bit_offset, ExecutionContextScope *exe_scope,
     bool is_base_class) {
   if (IsScalarType(type)) {
-    return data.Dump(s, data_offset, format, data_byte_size,
-                     1, // count
-                     UINT32_MAX, LLDB_INVALID_ADDRESS, bitfield_bit_size,
-                     bitfield_bit_offset, exe_scope);
+    return DumpDataExtractor(data, s, data_offset, format, data_byte_size,
+                             1, // count
+                             UINT32_MAX, LLDB_INVALID_ADDRESS,
+                             bitfield_bit_size, bitfield_bit_offset, exe_scope);
   }
   return false;
 }

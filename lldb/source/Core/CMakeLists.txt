@@ -10,12 +10,9 @@ add_lldb_library(lldbCore
   Communication.cpp
   Connection.cpp
   CxaDemangle.cpp
-  DataBufferHeap.cpp
-  DataBufferLLVM.cpp
-  DataEncoder.cpp
-  DataExtractor.cpp
   Debugger.cpp
   Disassembler.cpp
+  DumpDataExtractor.cpp
   DynamicLoader.cpp
   EmulateInstruction.cpp
   Event.cpp
@@ -26,8 +23,6 @@ add_lldb_library(lldbCore
   History.cpp
   IOHandler.cpp
   Listener.cpp
-  Log.cpp
-  Logging.cpp
   Mangled.cpp
   Module.cpp
   ModuleChild.cpp
@@ -49,7 +44,6 @@ add_lldb_library(lldbCore
   Timer.cpp
   UserID.cpp
   UserSettingsController.cpp
-  UUID.cpp
   Value.cpp
   ValueObject.cpp
   ValueObjectCast.cpp

@@ -3,7 +3,6 @@ add_lldb_unittest(LLDBCoreTests
   BroadcasterTest.cpp
   DataExtractorTest.cpp
   ListenerTest.cpp
-  LogTest.cpp
   ScalarTest.cpp
   StateTest.cpp
   StreamCallbackTest.cpp

@@ -7,9 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Core/DataBufferLLVM.h"
+#include "lldb/Utility/DataBufferLLVM.h"
 
-#include "lldb/Host/FileSpec.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 
@@ -24,7 +24,7 @@ DataBufferLLVM::DataBufferLLVM(std::unique_ptr<llvm::MemoryBuffer> MemBuffer)
 DataBufferLLVM::~DataBufferLLVM() {}
 
 std::shared_ptr<DataBufferLLVM>
-DataBufferLLVM::CreateFromPath(llvm::StringRef Path, uint64_t Size,
+DataBufferLLVM::CreateFromPath(const llvm::Twine &Path, uint64_t Size,
                                uint64_t Offset) {
   // If the file resides non-locally, pass the volatile flag so that we don't
   // mmap it.
@@ -35,12 +35,6 @@ DataBufferLLVM::CreateFromPath(llvm::StringRef Path, uint64_t Size,
     return nullptr;
   return std::shared_ptr<DataBufferLLVM>(
       new DataBufferLLVM(std::move(*Buffer)));
-}
-
-std::shared_ptr<DataBufferLLVM>
-DataBufferLLVM::CreateFromFileSpec(const FileSpec &F, uint64_t Size,
-                                   uint64_t Offset) {
-  return CreateFromPath(F.GetPath(), Size, Offset);
 }
 
 uint8_t *DataBufferLLVM::GetBytes() {

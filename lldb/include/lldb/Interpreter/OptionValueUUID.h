@@ -14,7 +14,7 @@
 // C++ Includes
 // Other libraries and framework includes
 // Project includes
-#include "lldb/Core/UUID.h"
+#include "lldb/Utility/UUID.h"
 #include "lldb/Interpreter/OptionValue.h"
 
 namespace lldb_private {

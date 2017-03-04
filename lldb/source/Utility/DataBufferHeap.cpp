@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Core/DataBufferHeap.h"
+#include "lldb/Utility/DataBufferHeap.h"
 
 // C Includes
 // C++ Includes

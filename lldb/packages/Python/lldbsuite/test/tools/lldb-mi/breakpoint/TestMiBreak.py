@@ -18,11 +18,16 @@ class MiBreakTestCase(lldbmi_testcase.MiTestCaseBase):
 
     @skipIfWindows  # llvm.org/pr24452: Get lldb-mi tests working on Windows
     @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races
+<<<<<<< HEAD
     @expectedFailureAll(
         oslist=[
             "linux",
             "macosx"],
         bugnumber="llvm.org/pr24717")
+=======
+    @expectedFlakeyLinux("llvm.org/pr24717")
+    @skipIfRemote   # We do not currently support remote debugging via the MI.
+>>>>>>> llvm/master
     def test_lldbmi_break_insert_function_pending(self):
         """Test that 'lldb-mi --interpreter' works for pending function breakpoints."""
 
@@ -49,11 +54,15 @@ class MiBreakTestCase(lldbmi_testcase.MiTestCaseBase):
 
     @skipIfWindows  # llvm.org/pr24452: Get lldb-mi tests working on Windows
     @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races
+<<<<<<< HEAD
     @expectedFailureAll(
         oslist=[
             "linux",
             "macosx"],
         bugnumber="llvm.org/pr24717")
+=======
+    @skipIfRemote   # We do not currently support remote debugging via the MI.
+>>>>>>> llvm/master
     def test_lldbmi_break_insert_function(self):
         """Test that 'lldb-mi --interpreter' works for function breakpoints."""
 
@@ -122,6 +131,7 @@ class MiBreakTestCase(lldbmi_testcase.MiTestCaseBase):
 
     @skipIfWindows  # llvm.org/pr24452: Get lldb-mi tests working on Windows
     @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races
+    @skipIfRemote   # We do not currently support remote debugging via the MI.
     def test_lldbmi_break_insert_file_line_pending(self):
         """Test that 'lldb-mi --interpreter' works for pending file:line breakpoints."""
 
@@ -151,6 +161,7 @@ class MiBreakTestCase(lldbmi_testcase.MiTestCaseBase):
 
     @skipIfWindows  # llvm.org/pr24452: Get lldb-mi tests working on Windows
     @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races
+    @skipIfRemote   # We do not currently support remote debugging via the MI.
     def test_lldbmi_break_insert_file_line(self):
         """Test that 'lldb-mi --interpreter' works for file:line breakpoints."""
 
@@ -188,6 +199,7 @@ class MiBreakTestCase(lldbmi_testcase.MiTestCaseBase):
 
     @skipIfWindows  # llvm.org/pr24452: Get lldb-mi tests working on Windows
     @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races
+    @skipIfRemote   # We do not currently support remote debugging via the MI.
     def test_lldbmi_break_insert_file_line_absolute_path(self):
         """Test that 'lldb-mi --interpreter' works for file:line breakpoints."""
 
@@ -215,6 +227,7 @@ class MiBreakTestCase(lldbmi_testcase.MiTestCaseBase):
 
     @skipIfWindows  # llvm.org/pr24452: Get lldb-mi tests working on Windows
     @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races
+    @skipIfRemote   # We do not currently support remote debugging via the MI.
     def test_lldbmi_break_insert_settings(self):
         """Test that 'lldb-mi --interpreter' can set breakpoints accoridng to global options."""
 
@@ -295,6 +308,7 @@ class MiBreakTestCase(lldbmi_testcase.MiTestCaseBase):
 
     @skipIfWindows  # llvm.org/pr24452: Get lldb-mi tests working on Windows
     @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races
+    @skipIfRemote   # We do not currently support remote debugging via the MI.
     def test_lldbmi_break_enable_disable(self):
         """Test that 'lldb-mi --interpreter' works for enabling / disabling breakpoints."""
 

@@ -14,12 +14,13 @@
 // Other libraries and framework includes
 // Project includes
 #include "lldb/Core/Broadcaster.h"
-#include "lldb/Core/DataExtractor.h"
+#include "lldb/Core/DumpDataExtractor.h"
 #include "lldb/Core/Event.h"
-#include "lldb/Core/Log.h"
 #include "lldb/Core/State.h"
 #include "lldb/Target/Process.h"
+#include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Endian.h"
+#include "lldb/Utility/Log.h"
 #include "lldb/Utility/Stream.h"
 
 using namespace lldb;
@@ -140,8 +141,8 @@ void EventDataBytes::Dump(Stream *s) const {
   } else if (!m_bytes.empty()) {
     DataExtractor data;
     data.SetData(m_bytes.data(), m_bytes.size(), endian::InlHostByteOrder());
-    data.Dump(s, 0, eFormatBytes, 1, m_bytes.size(), 32, LLDB_INVALID_ADDRESS,
-              0, 0);
+    DumpDataExtractor(data, s, 0, eFormatBytes, 1, m_bytes.size(), 32,
+                      LLDB_INVALID_ADDRESS, 0, 0);
   }
 }
 

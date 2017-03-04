@@ -13,8 +13,6 @@
 // C++ Includes
 // Other libraries and framework includes
 // Project includes
-#include "lldb/Core/DataBufferHeap.h"
-#include "lldb/Core/DataExtractor.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/State.h"
 #include "lldb/Symbol/ClangASTContext.h"
@@ -27,6 +25,8 @@
 #include "lldb/Target/Process.h"
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/DataBufferHeap.h"
+#include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Stream.h"
 
 using namespace lldb;

@@ -7,19 +7,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Core/DataEncoder.h"
+#include "lldb/Utility/DataEncoder.h"
+
+#include "lldb/Utility/DataBuffer.h"
+#include "lldb/Utility/Endian.h"
+
+#include "llvm/Support/MathExtras.h"
 
 // C Includes
 // C++ Includes
 #include <cassert>
 #include <cstddef>
-
-// Other libraries and framework includes
-#include "llvm/Support/MathExtras.h"
-
-// Project includes
-#include "lldb/Core/DataBuffer.h"
-#include "lldb/Utility/Endian.h"
 
 using namespace lldb;
 using namespace lldb_private;

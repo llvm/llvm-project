@@ -13,7 +13,6 @@
 // Project includes
 #include "NSSet.h"
 
-#include "lldb/Core/DataBufferHeap.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
@@ -21,6 +20,7 @@
 #include "lldb/Target/Language.h"
 #include "lldb/Target/ObjCLanguageRuntime.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Endian.h"
 #include "lldb/Utility/Error.h"
 #include "lldb/Utility/Stream.h"

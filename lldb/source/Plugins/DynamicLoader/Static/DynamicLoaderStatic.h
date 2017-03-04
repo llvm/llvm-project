@@ -14,7 +14,7 @@
 // C++ Includes
 // Other libraries and framework includes
 // Project includes
-#include "lldb/Core/UUID.h"
+#include "lldb/Utility/UUID.h"
 #include "lldb/Host/FileSpec.h"
 #include "lldb/Target/DynamicLoader.h"
 #include "lldb/Target/Process.h"

@@ -7,7 +7,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Core/UUID.h"
+#include "lldb/Utility/UUID.h"
+
+// Other libraries and framework includes
+// Project includes
+#include "lldb/Utility/Stream.h"
+
+#include "llvm/ADT/StringRef.h"
+
 // C Includes
 #include <ctype.h>
 #include <stdio.h>
@@ -15,10 +22,6 @@
 
 // C++ Includes
 #include <string>
-
-// Other libraries and framework includes
-// Project includes
-#include "lldb/Utility/Stream.h"
 
 namespace lldb_private {
 

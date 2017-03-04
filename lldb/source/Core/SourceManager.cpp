@@ -13,7 +13,6 @@
 // C++ Includes
 // Other libraries and framework includes
 // Project includes
-#include "lldb/Core/DataBuffer.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Host/FileSystem.h"
@@ -22,6 +21,7 @@
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/AnsiTerminal.h"
+#include "lldb/Utility/DataBuffer.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/Stream.h"
 

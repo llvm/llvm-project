@@ -8,9 +8,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "RegisterContextPOSIXCore_x86_64.h"
-#include "lldb/Core/DataExtractor.h"
 #include "lldb/Core/RegisterValue.h"
 #include "lldb/Target/Thread.h"
+#include "lldb/Utility/DataExtractor.h"
 
 using namespace lldb_private;
 

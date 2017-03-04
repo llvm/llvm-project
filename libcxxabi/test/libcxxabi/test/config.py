@@ -45,6 +45,9 @@ class Configuration(LibcxxConfiguration):
         # test_exception_storage_nodynmem.pass.cpp fails under this specific configuration
         if self.get_lit_bool('cxx_ext_threads', False) and self.get_lit_bool('libcxxabi_shared', False):
             self.config.available_features.add('libcxxabi-shared-externally-threaded')
+        if not self.get_lit_bool('has_cxa_thread_atexit_impl', True):
+            self.config.available_features.add(
+                'libcxxabi-no-cxa-thread-atexit-impl')
 
     def configure_compile_flags(self):
         self.cxx.compile_flags += ['-DLIBCXXABI_NO_TIMER']

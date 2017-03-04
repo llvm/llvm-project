@@ -12,7 +12,6 @@
 // Other libraries and framework includes
 // Project includes
 #include "lldb/Target/RegisterContext.h"
-#include "lldb/Core/DataExtractor.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/RegisterValue.h"
 #include "lldb/Core/Scalar.h"
@@ -23,6 +22,7 @@
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
+#include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Endian.h"
 
 using namespace lldb;

@@ -16,8 +16,8 @@
 // Project includes
 #include "RegisterContext_powerpc.h"
 #include "RegisterInfoInterface.h"
-#include "lldb/Core/Log.h"
 #include "lldb/Target/RegisterContext.h"
+#include "lldb/Utility/Log.h"
 
 class ProcessMonitor;
 

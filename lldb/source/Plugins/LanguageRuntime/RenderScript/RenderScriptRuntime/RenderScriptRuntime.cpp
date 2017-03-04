@@ -18,7 +18,7 @@
 
 #include "lldb/Breakpoint/StoppointCallbackContext.h"
 #include "lldb/Core/Debugger.h"
-#include "lldb/Core/Log.h"
+#include "lldb/Core/DumpDataExtractor.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/ValueObjectVariable.h"
 #include "lldb/DataFormatters/DumpValueObjectOptions.h"
@@ -40,6 +40,7 @@
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Error.h"
+#include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegularExpression.h"
 
 using namespace lldb;
@@ -3409,8 +3410,9 @@ bool RenderScriptRuntime::DumpAllocation(Stream &strm, StackFrame *frame_ptr,
           // Print the results to our stream.
           expr_result->Dump(strm, expr_options);
         } else {
-          alloc_data.Dump(&strm, offset, format, data_size - padding, 1, 1,
-                          LLDB_INVALID_ADDRESS, 0, 0);
+          DumpDataExtractor(alloc_data, &strm, offset, format,
+                            data_size - padding, 1, 1, LLDB_INVALID_ADDRESS, 0,
+                            0);
         }
         offset += data_size;
       }

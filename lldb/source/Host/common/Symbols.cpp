@@ -9,17 +9,17 @@
 
 #include "lldb/Host/Symbols.h"
 #include "lldb/Core/ArchSpec.h"
-#include "lldb/Core/DataBuffer.h"
-#include "lldb/Core/DataExtractor.h"
-#include "lldb/Core/Log.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/Timer.h"
-#include "lldb/Core/UUID.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/DataBuffer.h"
+#include "lldb/Utility/DataExtractor.h"
+#include "lldb/Utility/Log.h"
 #include "lldb/Utility/SafeMachO.h"
 #include "lldb/Utility/StreamString.h"
+#include "lldb/Utility/UUID.h"
 
 #include "llvm/Support/FileSystem.h"
 

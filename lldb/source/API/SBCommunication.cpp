@@ -10,8 +10,8 @@
 #include "lldb/API/SBCommunication.h"
 #include "lldb/API/SBBroadcaster.h"
 #include "lldb/Core/Communication.h"
-#include "lldb/Core/Log.h"
 #include "lldb/Host/ConnectionFileDescriptor.h"
+#include "lldb/Utility/Log.h"
 
 using namespace lldb;
 using namespace lldb_private;

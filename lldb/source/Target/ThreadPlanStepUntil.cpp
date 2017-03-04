@@ -13,11 +13,11 @@
 // Project includes
 #include "lldb/Target/ThreadPlanStepUntil.h"
 #include "lldb/Breakpoint/Breakpoint.h"
-#include "lldb/Core/Log.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/StopInfo.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/Log.h"
 
 using namespace lldb;
 using namespace lldb_private;

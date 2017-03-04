@@ -16,11 +16,11 @@
 #include "NativeRegisterContextLinux.h"
 #include "SingleStepCheck.h"
 
-#include "lldb/Core/Log.h"
 #include "lldb/Core/State.h"
 #include "lldb/Host/HostNativeThread.h"
 #include "lldb/Host/linux/Ptrace.h"
 #include "lldb/Utility/LLDBAssert.h"
+#include "lldb/Utility/Log.h"
 #include "lldb/lldb-enumerations.h"
 
 #include "llvm/ADT/SmallString.h"

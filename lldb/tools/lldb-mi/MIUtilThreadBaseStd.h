@@ -10,9 +10,6 @@
 #pragma once
 
 // Third party headers:
-#ifdef _MSC_VER
-#include <eh.h>
-#endif // _MSC_VER
 #include <mutex>
 #include <thread>
 

@@ -14,7 +14,7 @@
 
 // Project includes
 #include "lldb/Core/ArchSpec.h"
-#include "lldb/Core/UUID.h"
+#include "lldb/Utility/UUID.h"
 #include "lldb/Host/FileSpec.h"
 #include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Symbol/SwiftASTContext.h"

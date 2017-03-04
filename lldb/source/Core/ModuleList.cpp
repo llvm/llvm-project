@@ -16,7 +16,6 @@
 
 // Other libraries and framework includes
 // Project includes
-#include "lldb/Core/Log.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Host/FileSystem.h"
@@ -25,6 +24,7 @@
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Symbol/VariableList.h"
+#include "lldb/Utility/Log.h"
 
 #include "llvm/Support/Threading.h"
 

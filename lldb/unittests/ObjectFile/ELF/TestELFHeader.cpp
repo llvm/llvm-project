@@ -9,7 +9,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Plugins/ObjectFile/ELF/ELFHeader.h"
-#include "lldb/Core/DataExtractor.h"
+#include "lldb/Utility/DataExtractor.h"
 #include "gtest/gtest.h"
 
 using namespace lldb;

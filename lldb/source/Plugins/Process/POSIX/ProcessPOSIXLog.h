@@ -16,7 +16,7 @@
 // Other libraries and framework includes
 
 // Project includes
-#include "lldb/Core/Log.h"
+#include "lldb/Utility/Log.h"
 
 #define POSIX_LOG_PROCESS (1u << 1)
 #define POSIX_LOG_THREAD (1u << 2)

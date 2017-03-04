@@ -13,10 +13,10 @@
 #include <assert.h>
 
 #include "lldb/Core/FileSpecList.h"
-#include "lldb/Core/Log.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/Timer.h"
 #include "lldb/Host/Host.h"
+#include "lldb/Utility/Log.h"
 
 #include "LogChannelDWARF.h"
 #include "SymbolFileDWARF.h"
