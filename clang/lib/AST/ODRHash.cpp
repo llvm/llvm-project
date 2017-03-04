@@ -160,7 +160,7 @@ public:
   }
 
   void VisitNamedDecl(const NamedDecl *D) {
-    AddIdentifierInfo(D->getIdentifier());
+    Hash.AddDeclarationName(D->getDeclName());
     Inherited::VisitNamedDecl(D);
   }
 
@@ -196,10 +196,19 @@ public:
   }
 
   void VisitFunctionDecl(const FunctionDecl *D) {
+    ID.AddInteger(D->getStorageClass());
+    Hash.AddBoolean(D->isInlineSpecified());
+    Hash.AddBoolean(D->isVirtualAsWritten());
+    Hash.AddBoolean(D->isPure());
+    Hash.AddBoolean(D->isDeletedAsWritten());
+
     Inherited::VisitFunctionDecl(D);
   }
 
   void VisitCXXMethodDecl(const CXXMethodDecl *D) {
+    Hash.AddBoolean(D->isConst());
+    Hash.AddBoolean(D->isVolatile());
+
     Inherited::VisitCXXMethodDecl(D);
   }
 };

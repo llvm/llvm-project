@@ -15,7 +15,6 @@
 #include "ClangPersistentVariables.h"
 
 #include "lldb/Core/Address.h"
-#include "lldb/Core/Log.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/RegisterValue.h"
@@ -45,6 +44,7 @@
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/Endian.h"
 #include "lldb/Utility/Error.h"
+#include "lldb/Utility/Log.h"
 #include "lldb/lldb-private.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"

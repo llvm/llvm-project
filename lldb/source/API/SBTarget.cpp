@@ -34,7 +34,6 @@
 #include "lldb/Core/ArchSpec.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Disassembler.h"
-#include "lldb/Core/Log.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/STLUtils.h"
@@ -60,6 +59,7 @@
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/TargetList.h"
+#include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegularExpression.h"
 
 #include "../source/Commands/CommandObjectBreakpoint.h"

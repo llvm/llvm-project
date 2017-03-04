@@ -597,7 +597,7 @@ static bool isEligibleForITBlock(const MachineInstr *MI) {
 /// isPredicable - Return true if the specified instruction can be predicated.
 /// By default, this returns true for every instruction with a
 /// PredicateOperand.
-bool ARMBaseInstrInfo::isPredicable(MachineInstr &MI) const {
+bool ARMBaseInstrInfo::isPredicable(const MachineInstr &MI) const {
   if (!MI.isPredicable())
     return false;
 
@@ -607,7 +607,7 @@ bool ARMBaseInstrInfo::isPredicable(MachineInstr &MI) const {
   if (!isEligibleForITBlock(&MI))
     return false;
 
-  ARMFunctionInfo *AFI =
+  const ARMFunctionInfo *AFI =
       MI.getParent()->getParent()->getInfo<ARMFunctionInfo>();
 
   if (AFI->isThumb2Function()) {
@@ -623,7 +623,7 @@ bool ARMBaseInstrInfo::isPredicable(MachineInstr &MI) const {
 
 namespace llvm {
 
-template <> bool IsCPSRDead<MachineInstr>(MachineInstr *MI) {
+template <> bool IsCPSRDead<MachineInstr>(const MachineInstr *MI) {
   for (unsigned i = 0, e = MI->getNumOperands(); i != e; ++i) {
     const MachineOperand &MO = MI->getOperand(i);
     if (!MO.isReg() || MO.isUndef() || MO.isUse())

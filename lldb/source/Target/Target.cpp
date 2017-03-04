@@ -24,7 +24,6 @@
 #include "lldb/Breakpoint/Watchpoint.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Event.h"
-#include "lldb/Core/Log.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/Section.h"
@@ -57,6 +56,7 @@
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadSpec.h"
 #include "lldb/Utility/LLDBAssert.h"
+#include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
 
 using namespace lldb;

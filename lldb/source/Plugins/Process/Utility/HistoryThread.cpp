@@ -13,9 +13,9 @@
 #include "Plugins/Process/Utility/HistoryUnwind.h"
 #include "Plugins/Process/Utility/RegisterContextHistory.h"
 
-#include "lldb/Core/Log.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/StackFrameList.h"
+#include "lldb/Utility/Log.h"
 
 using namespace lldb;
 using namespace lldb_private;

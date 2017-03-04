@@ -13,9 +13,9 @@
 // Project includes
 #include "lldb/Core/ValueObjectSyntheticFilter.h"
 
-#include "lldb/Core/Log.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/DataFormatters/TypeSynthetic.h"
+#include "lldb/Utility/Log.h"
 
 using namespace lldb_private;
 

@@ -16,7 +16,6 @@
 
 // C++ Includes
 // Other libraries and framework includes
-#include "lldb/Core/Log.h"
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Host/ConnectionFileDescriptor.h"
 #include "lldb/Host/FileSpec.h"
@@ -28,6 +27,7 @@
 #include "lldb/Host/ThreadLauncher.h"
 #include "lldb/Target/Platform.h"
 #include "lldb/Target/Process.h"
+#include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/StreamString.h"
 #include "llvm/ADT/SmallString.h"
@@ -72,7 +72,7 @@ void GDBRemoteCommunication::History::AddPacket(char packet_char,
     m_packets[idx].type = type;
     m_packets[idx].bytes_transmitted = bytes_transmitted;
     m_packets[idx].packet_idx = m_total_packet_count;
-    m_packets[idx].tid = Host::GetCurrentThreadID();
+    m_packets[idx].tid = llvm::get_threadid();
   }
 }
 
@@ -87,7 +87,7 @@ void GDBRemoteCommunication::History::AddPacket(const std::string &src,
     m_packets[idx].type = type;
     m_packets[idx].bytes_transmitted = bytes_transmitted;
     m_packets[idx].packet_idx = m_total_packet_count;
-    m_packets[idx].tid = Host::GetCurrentThreadID();
+    m_packets[idx].tid = llvm::get_threadid();
   }
 }
 

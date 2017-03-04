@@ -152,6 +152,7 @@ public:
                 SMLoc Loc = SMLoc()) override;
   void emitFill(const MCExpr &NumValues, int64_t Size, int64_t Expr,
                 SMLoc Loc = SMLoc()) override;
+  void EmitFileDirective(StringRef Filename) override;
 
   void FinishImpl() override;
 

@@ -308,6 +308,101 @@ S2 s2;
 // expected-error@second.h:* {{'Method::S2' has different definitions in different modules; first difference is definition in module 'SecondModule' found method 'B'}}
 // expected-note@first.h:* {{but in 'FirstModule' found method 'A'}}
 #endif
+
+#if defined(FIRST)
+struct S3 {
+  static void A() {}
+  void A(int) {}
+};
+#elif defined(SECOND)
+struct S3 {
+  void A(int) {}
+  static void A() {}
+};
+#else
+S3 s3;
+// expected-error@second.h:* {{'Method::S3' has different definitions in different modules; first difference is definition in module 'SecondModule' found method 'A' is not static}}
+// expected-note@first.h:* {{but in 'FirstModule' found method 'A' is static}}
+#endif
+
+#if defined(FIRST)
+struct S4 {
+  virtual void A() {}
+  void B() {}
+};
+#elif defined(SECOND)
+struct S4 {
+  void A() {}
+  virtual void B() {}
+};
+#else
+S4 s4;
+// expected-error@second.h:* {{'Method::S4' has different definitions in different modules; first difference is definition in module 'SecondModule' found method 'A' is not virtual}}
+// expected-note@first.h:* {{but in 'FirstModule' found method 'A' is virtual}}
+#endif
+
+#if defined(FIRST)
+struct S5 {
+  virtual void A() = 0;
+  virtual void B() {};
+};
+#elif defined(SECOND)
+struct S5 {
+  virtual void A() {}
+  virtual void B() = 0;
+};
+#else
+S5 *s5;
+// expected-error@second.h:* {{'Method::S5' has different definitions in different modules; first difference is definition in module 'SecondModule' found method 'A' is virtual}}
+// expected-note@first.h:* {{but in 'FirstModule' found method 'A' is pure virtual}}
+#endif
+
+#if defined(FIRST)
+struct S6 {
+  inline void A() {}
+};
+#elif defined(SECOND)
+struct S6 {
+  void A() {}
+};
+#else
+S6 s6;
+// expected-error@second.h:* {{'Method::S6' has different definitions in different modules; first difference is definition in module 'SecondModule' found method 'A' is not inline}}
+// expected-note@first.h:* {{but in 'FirstModule' found method 'A' is inline}}
+#endif
+
+#if defined(FIRST)
+struct S7 {
+  void A() volatile {}
+  void A() {}
+};
+#elif defined(SECOND)
+struct S7 {
+  void A() {}
+  void A() volatile {}
+};
+#else
+S7 s7;
+// expected-error@second.h:* {{'Method::S7' has different definitions in different modules; first difference is definition in module 'SecondModule' found method 'A' is not volatile}}
+// expected-note@first.h:* {{but in 'FirstModule' found method 'A' is volatile}}
+#endif
+
+#if defined(FIRST)
+struct S8 {
+  void A() const {}
+  void A() {}
+};
+#elif defined(SECOND)
+struct S8 {
+  void A() {}
+  void A() const {}
+};
+#else
+S8 s8;
+// expected-error@second.h:* {{'Method::S8' has different definitions in different modules; first difference is definition in module 'SecondModule' found method 'A' is not const}}
+// expected-note@first.h:* {{but in 'FirstModule' found method 'A' is const}}
+#endif
+
 }  // namespace Method
 
 // Naive parsing of AST can lead to cycles in processing.  Ensure
@@ -359,6 +454,12 @@ struct S {
   mutable int c = sizeof(x + y);
 
   void method() {}
+  static void static_method() {}
+  virtual void virtual_method() {}
+  virtual void pure_virtual_method() = 0;
+  inline void inline_method() {}
+  void volatile_method() volatile {}
+  void const_method() const {}
 };
 #elif defined(SECOND)
 typedef int INT;
@@ -381,9 +482,15 @@ struct S {
   mutable int c = sizeof(x + y);
 
   void method() {}
+  static void static_method() {}
+  virtual void virtual_method() {}
+  virtual void pure_virtual_method() = 0;
+  inline void inline_method() {}
+  void volatile_method() volatile {}
+  void const_method() const {}
 };
 #else
-S s;
+S *s;
 #endif
 
 #if defined(FIRST)
@@ -407,6 +514,12 @@ struct T {
   mutable int c = sizeof(x + y);
 
   void method() {}
+  static void static_method() {}
+  virtual void virtual_method() {}
+  virtual void pure_virtual_method() = 0;
+  inline void inline_method() {}
+  void volatile_method() volatile {}
+  void const_method() const {}
 
   private:
 };
@@ -431,11 +544,17 @@ struct T {
   mutable int c = sizeof(x + y);
 
   void method() {}
+  static void static_method() {}
+  virtual void virtual_method() {}
+  virtual void pure_virtual_method() = 0;
+  inline void inline_method() {}
+  void volatile_method() volatile {}
+  void const_method() const {}
 
   public:
 };
 #else
-T t;
+T *t;
 // expected-error@second.h:* {{'AllDecls::T' has different definitions in different modules; first difference is definition in module 'SecondModule' found public access specifier}}
 // expected-note@first.h:* {{but in 'FirstModule' found private access specifier}}
 #endif

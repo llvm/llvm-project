@@ -20,8 +20,8 @@
 #include <sys/sysctl.h>
 
 // LLDB includes
-#include "lldb/Core/Log.h"
 #include "lldb/Utility/Error.h"
+#include "lldb/Utility/Log.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/lldb-enumerations.h"
 

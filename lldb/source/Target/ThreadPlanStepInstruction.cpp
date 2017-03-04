@@ -12,12 +12,12 @@
 // Other libraries and framework includes
 // Project includes
 #include "lldb/Target/ThreadPlanStepInstruction.h"
-#include "lldb/Core/Log.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/StopInfo.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/Log.h"
 #include "lldb/Utility/Stream.h"
 
 using namespace lldb;

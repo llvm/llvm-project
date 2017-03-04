@@ -21,7 +21,6 @@
 
 #include "Plugins/ExpressionParser/Clang/ClangPersistentVariables.h"
 #include "lldb/Core/Address.h"
-#include "lldb/Core/Log.h"
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Core/ValueObjectRegister.h"
 #include "lldb/Core/ValueObjectVariable.h"
@@ -41,6 +40,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/Log.h"
 #include "lldb/Utility/Stream.h"
 
 #include "lldb/API/SBAddress.h"

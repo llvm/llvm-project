@@ -370,6 +370,14 @@ public:
       return TIdInfo->TypeCheckedLoadConstVCalls;
     return {};
   }
+
+  /// Add a type test to the summary. This is used by WholeProgramDevirt if we
+  /// were unable to devirtualize a checked call.
+  void addTypeTest(GlobalValue::GUID Guid) {
+    if (!TIdInfo)
+      TIdInfo = llvm::make_unique<TypeIdInfo>();
+    TIdInfo->TypeTests.push_back(Guid);
+  }
 };
 
 template <> struct DenseMapInfo<FunctionSummary::VFuncId> {

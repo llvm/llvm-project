@@ -1,6 +1,7 @@
 add_lldb_unittest(UtilityTests
   ConstStringTest.cpp
   ErrorTest.cpp
+  LogTest.cpp
   NameMatchesTest.cpp
   StringExtractorTest.cpp
   TaskPoolTest.cpp

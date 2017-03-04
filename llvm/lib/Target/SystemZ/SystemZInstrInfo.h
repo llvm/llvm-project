@@ -215,7 +215,7 @@ public:
                     unsigned FalseReg) const override;
   bool FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI, unsigned Reg,
                      MachineRegisterInfo *MRI) const override;
-  bool isPredicable(MachineInstr &MI) const override;
+  bool isPredicable(const MachineInstr &MI) const override;
   bool isProfitableToIfCvt(MachineBasicBlock &MBB, unsigned NumCycles,
                            unsigned ExtraPredCycles,
                            BranchProbability Probability) const override;

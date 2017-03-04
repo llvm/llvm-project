@@ -9,7 +9,7 @@
 
 #include "ASTStructExtractor.h"
 
-#include "lldb/Core/Log.h"
+#include "lldb/Utility/Log.h"
 #include "stdlib.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"

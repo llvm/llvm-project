@@ -17,6 +17,13 @@
 
 using namespace llvm;
 
+void dumpInitialLength(DataExtractor &Data, uint32_t &Offset,
+                       DWARFYAML::InitialLength &InitialLength) {
+  InitialLength.TotalLength = Data.getU32(&Offset);
+  if (InitialLength.isDWARF64())
+    InitialLength.TotalLength64 = Data.getU64(&Offset);
+}
+
 void dumpDebugAbbrev(DWARFContextInMemory &DCtx, DWARFYAML::Data &Y) {
   auto AbbrevSetPtr = DCtx.getDebugAbbrev();
   if (AbbrevSetPtr) {
@@ -55,7 +62,7 @@ void dumpDebugARanges(DWARFContextInMemory &DCtx, DWARFYAML::Data &Y) {
 
   while (Set.extract(ArangesData, &Offset)) {
     DWARFYAML::ARange Range;
-    Range.Length = Set.getHeader().Length;
+    Range.Length.setLength(Set.getHeader().Length);
     Range.Version = Set.getHeader().Version;
     Range.CuOffset = Set.getHeader().CuOffset;
     Range.AddrSize = Set.getHeader().AddrSize;
@@ -74,11 +81,11 @@ void dumpPubSection(DWARFContextInMemory &DCtx, DWARFYAML::PubSection &Y,
                     StringRef Section) {
   DataExtractor PubSectionData(Section, DCtx.isLittleEndian(), 0);
   uint32_t Offset = 0;
-  Y.Length = PubSectionData.getU32(&Offset);
+  dumpInitialLength(PubSectionData, Offset, Y.Length);
   Y.Version = PubSectionData.getU16(&Offset);
   Y.UnitOffset = PubSectionData.getU32(&Offset);
   Y.UnitSize = PubSectionData.getU32(&Offset);
-  while (Offset < Y.Length) {
+  while (Offset < Y.Length.getLength()) {
     DWARFYAML::PubEntry NewEntry;
     NewEntry.DieOffset = PubSectionData.getU32(&Offset);
     if (Y.IsGNUStyle)
@@ -105,7 +112,7 @@ void dumpDebugPubSections(DWARFContextInMemory &DCtx, DWARFYAML::Data &Y) {
 void dumpDebugInfo(DWARFContextInMemory &DCtx, DWARFYAML::Data &Y) {
   for (const auto &CU : DCtx.compile_units()) {
     DWARFYAML::Unit NewUnit;
-    NewUnit.Length = CU->getLength();
+    NewUnit.Length.setLength(CU->getLength());
     NewUnit.Version = CU->getVersion();
     NewUnit.AbbrOffset = CU->getAbbreviations()->getOffset();
     NewUnit.AddrSize = CU->getAddressByteSize();
@@ -233,14 +240,9 @@ void dumpDebugLines(DWARFContextInMemory &DCtx, DWARFYAML::Data &Y) {
       DataExtractor LineData(DCtx.getLineSection().Data, DCtx.isLittleEndian(),
                              CU->getAddressByteSize());
       uint32_t Offset = *StmtOffset;
-      uint64_t SizeOfPrologueLength = 4;
-      DebugLines.TotalLength = LineData.getU32(&Offset);
-      uint64_t LineTableLength = DebugLines.TotalLength;
-      if (DebugLines.TotalLength == UINT32_MAX) {
-        DebugLines.TotalLength64 = LineData.getU64(&Offset);
-        LineTableLength = DebugLines.TotalLength64;
-        SizeOfPrologueLength = 8;
-      }
+      dumpInitialLength(LineData, Offset, DebugLines.Length);
+      uint64_t LineTableLength = DebugLines.Length.getLength();
+      uint64_t SizeOfPrologueLength = DebugLines.Length.isDWARF64() ? 8 : 4;
       DebugLines.Version = LineData.getU16(&Offset);
       DebugLines.PrologueLength =
           LineData.getUnsigned(&Offset, SizeOfPrologueLength);

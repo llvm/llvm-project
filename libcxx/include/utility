@@ -1560,12 +1560,17 @@ struct _LIBCPP_TEMPLATE_VIS hash<nullptr_t>
 #endif
 
 #ifndef _LIBCPP_CXX03_LANG
-template <class _Key, class _Hash = std::hash<_Key> >
-using __has_enabled_hash = integral_constant<bool,
-    is_default_constructible<_Hash>::value &&
+template <class _Key, class _Hash>
+using __check_hash_requirements = integral_constant<bool,
     is_copy_constructible<_Hash>::value &&
     is_move_constructible<_Hash>::value &&
     __invokable_r<size_t, _Hash, _Key const&>::value
+>;
+
+template <class _Key, class _Hash = std::hash<_Key> >
+using __has_enabled_hash = integral_constant<bool,
+    __check_hash_requirements<_Key, _Hash>::value &&
+    is_default_constructible<_Hash>::value
 >;
 
 #if _LIBCPP_STD_VER > 14

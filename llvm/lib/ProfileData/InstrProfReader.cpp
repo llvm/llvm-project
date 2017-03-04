@@ -250,7 +250,7 @@ Error TextInstrProfReader::readNextRecord(InstrProfRecord &Record) {
     return error(instrprof_error::malformed);
 
   // Read each counter and fill our internal storage with the values.
-  Record.Counts.clear();
+  Record.Clear();
   Record.Counts.reserve(NumCounters);
   for (uint64_t I = 0; I < NumCounters; ++I) {
     if (Line.is_at_end())

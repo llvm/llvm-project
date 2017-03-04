@@ -863,6 +863,37 @@ void LiveInterval::clearSubRanges() {
   SubRanges = nullptr;
 }
 
+void LiveInterval::refineSubRanges(BumpPtrAllocator &Allocator,
+    LaneBitmask LaneMask, std::function<void(LiveInterval::SubRange&)> Apply) {
+
+  LaneBitmask ToApply = LaneMask;
+  for (SubRange &SR : subranges()) {
+    LaneBitmask SRMask = SR.LaneMask;
+    LaneBitmask Matching = SRMask & LaneMask;
+    if (Matching.none())
+      continue;
+
+    SubRange *MatchingRange;
+    if (SRMask == Matching) {
+      // The subrange fits (it does not cover bits outside \p LaneMask).
+      MatchingRange = &SR;
+    } else {
+      // We have to split the subrange into a matching and non-matching part.
+      // Reduce lanemask of existing lane to non-matching part.
+      SR.LaneMask = SRMask & ~Matching;
+      // Create a new subrange for the matching part
+      MatchingRange = createSubRangeFrom(Allocator, Matching, SR);
+    }
+    Apply(*MatchingRange);
+    ToApply &= ~Matching;
+  }
+  // Create a new subrange if there are uncovered bits left.
+  if (ToApply.any()) {
+    SubRange *NewRange = createSubRange(Allocator, ToApply);
+    Apply(*NewRange);
+  }
+}
+
 unsigned LiveInterval::getSize() const {
   unsigned Sum = 0;
   for (const Segment &S : segments)

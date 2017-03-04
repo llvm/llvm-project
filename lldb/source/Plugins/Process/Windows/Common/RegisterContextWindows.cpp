@@ -7,9 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Core/DataBufferHeap.h"
 #include "lldb/Host/windows/HostThreadWindows.h"
 #include "lldb/Host/windows/windows.h"
+#include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Error.h"
 #include "lldb/lldb-private-types.h"
 

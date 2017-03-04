@@ -29,14 +29,14 @@ import json
 import glob
 import argparse
 import logging
-import subprocess
 from libear import build_libear, TemporaryDirectory
-from libscanbuild import command_entry_point, run_build, run_command
-from libscanbuild import duplicate_check, tempdir, initialize_logging
+from libscanbuild import command_entry_point, compiler_wrapper, \
+    wrapper_environment, run_command, run_build, reconfigure_logging
+from libscanbuild import duplicate_check, tempdir
 from libscanbuild.compilation import split_command
 from libscanbuild.shell import encode, decode
 
-__all__ = ['capture', 'intercept_build_main', 'intercept_build_wrapper']
+__all__ = ['capture', 'intercept_build_main', 'intercept_compiler_wrapper']
 
 GS = chr(0x1d)
 RS = chr(0x1e)
@@ -44,6 +44,7 @@ US = chr(0x1f)
 
 COMPILER_WRAPPER_CC = 'intercept-cc'
 COMPILER_WRAPPER_CXX = 'intercept-c++'
+TRACE_FILE_EXTENSION = '.cmd'  # same as in ear.c
 WRAPPER_ONLY_PLATFORMS = frozenset({'win32', 'cygwin'})
 
 
@@ -54,8 +55,8 @@ def intercept_build_main(bin_dir):
     parser = create_parser()
     args = parser.parse_args()
 
-    initialize_logging(args.verbose)
-    logging.debug('Parsed arguments: %s', args)
+    reconfigure_logging(args.verbose)
+    logging.debug('Raw arguments %s', sys.argv)
 
     if not args.build:
         parser.print_help()
@@ -126,12 +127,10 @@ def setup_environment(args, destination, bin_dir):
 
     if not libear_path:
         logging.debug('intercept gonna use compiler wrappers')
+        environment.update(wrapper_environment(args))
         environment.update({
             'CC': os.path.join(bin_dir, COMPILER_WRAPPER_CC),
-            'CXX': os.path.join(bin_dir, COMPILER_WRAPPER_CXX),
-            'INTERCEPT_BUILD_CC': c_compiler,
-            'INTERCEPT_BUILD_CXX': cxx_compiler,
-            'INTERCEPT_BUILD_VERBOSE': 'DEBUG' if args.verbose > 2 else 'INFO'
+            'CXX': os.path.join(bin_dir, COMPILER_WRAPPER_CXX)
         })
     elif sys.platform == 'darwin':
         logging.debug('intercept gonna preload libear on OSX')
@@ -146,42 +145,49 @@ def setup_environment(args, destination, bin_dir):
     return environment
 
 
-def intercept_build_wrapper(cplusplus):
-    """ Entry point for `intercept-cc` and `intercept-c++` compiler wrappers.
+@command_entry_point
+def intercept_compiler_wrapper():
+    """ Entry point for `intercept-cc` and `intercept-c++`. """
 
-    It does generate execution report into target directory. And execute
-    the wrapped compilation with the real compiler. The parameters for
-    report and execution are from environment variables.
+    return compiler_wrapper(intercept_compiler_wrapper_impl)
 
-    Those parameters which for 'libear' library can't have meaningful
-    values are faked. """
 
-    # initialize wrapper logging
-    logging.basicConfig(format='intercept: %(levelname)s: %(message)s',
-                        level=os.getenv('INTERCEPT_BUILD_VERBOSE', 'INFO'))
-    # write report
+def intercept_compiler_wrapper_impl(_, execution):
+    """ Implement intercept compiler wrapper functionality.
+
+    It does generate execution report into target directory.
+    The target directory name is from environment variables. """
+
+    message_prefix = 'execution report might be incomplete: %s'
+
+    target_dir = os.getenv('INTERCEPT_BUILD_TARGET_DIR')
+    if not target_dir:
+        logging.warning(message_prefix, 'missing target directory')
+        return
+    # write current execution info to the pid file
     try:
-        target_dir = os.getenv('INTERCEPT_BUILD_TARGET_DIR')
-        if not target_dir:
-            raise UserWarning('exec report target directory not found')
-        pid = str(os.getpid())
-        target_file = os.path.join(target_dir, pid + '.cmd')
-        logging.debug('writing exec report to: %s', target_file)
-        with open(target_file, 'ab') as handler:
-            working_dir = os.getcwd()
-            command = US.join(sys.argv) + US
-            content = RS.join([pid, pid, 'wrapper', working_dir, command]) + GS
-            handler.write(content.encode('utf-8'))
+        target_file_name = str(os.getpid()) + TRACE_FILE_EXTENSION
+        target_file = os.path.join(target_dir, target_file_name)
+        logging.debug('writing execution report to: %s', target_file)
+        write_exec_trace(target_file, execution)
     except IOError:
-        logging.exception('writing exec report failed')
-    except UserWarning as warning:
-        logging.warning(warning)
-    # execute with real compiler
-    compiler = os.getenv('INTERCEPT_BUILD_CXX', 'c++') if cplusplus \
-        else os.getenv('INTERCEPT_BUILD_CC', 'cc')
-    compilation = [compiler] + sys.argv[1:]
-    logging.debug('execute compiler: %s', compilation)
-    return subprocess.call(compilation)
+        logging.warning(message_prefix, 'io problem')
+
+
+def write_exec_trace(filename, entry):
+    """ Write execution report file.
+
+    This method shall be sync with the execution report writer in interception
+    library. The entry in the file is a JSON objects.
+
+    :param filename:    path to the output execution trace file,
+    :param entry:       the Execution object to append to that file. """
+
+    with open(filename, 'ab') as handler:
+        pid = str(entry.pid)
+        command = US.join(entry.cmd) + US
+        content = RS.join([pid, pid, 'wrapper', entry.cwd, command]) + GS
+        handler.write(content.encode('utf-8'))
 
 
 def parse_exec_trace(filename):

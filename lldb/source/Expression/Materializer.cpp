@@ -12,7 +12,7 @@
 // Other libraries and framework includes
 // Project includes
 #include "lldb/Expression/Materializer.h"
-#include "lldb/Core/Log.h"
+#include "lldb/Core/DumpDataExtractor.h"
 #include "lldb/Core/RegisterValue.h"
 #include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/Core/ValueObjectVariable.h"
@@ -26,6 +26,7 @@
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
+#include "lldb/Utility/Log.h"
 
 using namespace lldb_private;
 
@@ -370,11 +371,8 @@ public:
       if (!err.Success()) {
         dump_stream.Printf("  <could not be read>\n");
       } else {
-        DataExtractor extractor(data.GetBytes(), data.GetByteSize(),
-                                map.GetByteOrder(), map.GetAddressByteSize());
-
-        extractor.DumpHexBytes(&dump_stream, data.GetBytes(),
-                               data.GetByteSize(), 16, load_addr);
+        DumpHexBytes(&dump_stream, data.GetBytes(), data.GetByteSize(), 16,
+                     load_addr);
 
         dump_stream.PutChar('\n');
       }
@@ -398,11 +396,8 @@ public:
         if (!err.Success()) {
           dump_stream.Printf("  <could not be read>\n");
         } else {
-          DataExtractor extractor(data.GetBytes(), data.GetByteSize(),
-                                  map.GetByteOrder(), map.GetAddressByteSize());
-
-          extractor.DumpHexBytes(&dump_stream, data.GetBytes(),
-                                 data.GetByteSize(), 16, target_address);
+          DumpHexBytes(&dump_stream, data.GetBytes(), data.GetByteSize(), 16,
+                       target_address);
 
           dump_stream.PutChar('\n');
         }
@@ -711,8 +706,8 @@ public:
         DataExtractor extractor(data.GetBytes(), data.GetByteSize(),
                                 map.GetByteOrder(), map.GetAddressByteSize());
 
-        extractor.DumpHexBytes(&dump_stream, data.GetBytes(),
-                               data.GetByteSize(), 16, load_addr);
+        DumpHexBytes(&dump_stream, data.GetBytes(), data.GetByteSize(), 16,
+                     load_addr);
 
         lldb::offset_t offset;
 
@@ -739,11 +734,8 @@ public:
       if (!err.Success()) {
         dump_stream.Printf("  <could not be read>\n");
       } else {
-        DataExtractor extractor(data.GetBytes(), data.GetByteSize(),
-                                map.GetByteOrder(), map.GetAddressByteSize());
-
-        extractor.DumpHexBytes(&dump_stream, data.GetBytes(),
-                               data.GetByteSize(), 16, load_addr);
+        DumpHexBytes(&dump_stream, data.GetBytes(), data.GetByteSize(), 16,
+                     load_addr);
 
         dump_stream.PutChar('\n');
       }
@@ -981,8 +973,8 @@ public:
         DataExtractor extractor(data.GetBytes(), data.GetByteSize(),
                                 map.GetByteOrder(), map.GetAddressByteSize());
 
-        extractor.DumpHexBytes(&dump_stream, data.GetBytes(),
-                               data.GetByteSize(), 16, load_addr);
+        DumpHexBytes(&dump_stream, data.GetBytes(), data.GetByteSize(), 16,
+                     load_addr);
 
         lldb::offset_t offset;
 
@@ -1009,11 +1001,8 @@ public:
       if (!err.Success()) {
         dump_stream.Printf("  <could not be read>\n");
       } else {
-        DataExtractor extractor(data.GetBytes(), data.GetByteSize(),
-                                map.GetByteOrder(), map.GetAddressByteSize());
-
-        extractor.DumpHexBytes(&dump_stream, data.GetBytes(),
-                               data.GetByteSize(), 16, load_addr);
+        DumpHexBytes(&dump_stream, data.GetBytes(), data.GetByteSize(), 16,
+                     load_addr);
 
         dump_stream.PutChar('\n');
       }
@@ -1146,11 +1135,8 @@ public:
       if (!err.Success()) {
         dump_stream.Printf("  <could not be read>\n");
       } else {
-        DataExtractor extractor(data.GetBytes(), data.GetByteSize(),
-                                map.GetByteOrder(), map.GetAddressByteSize());
-
-        extractor.DumpHexBytes(&dump_stream, data.GetBytes(),
-                               data.GetByteSize(), 16, load_addr);
+        DumpHexBytes(&dump_stream, data.GetBytes(), data.GetByteSize(), 16,
+                     load_addr);
 
         dump_stream.PutChar('\n');
       }
@@ -1322,11 +1308,8 @@ public:
       if (!err.Success()) {
         dump_stream.Printf("  <could not be read>\n");
       } else {
-        DataExtractor extractor(data.GetBytes(), data.GetByteSize(),
-                                map.GetByteOrder(), map.GetAddressByteSize());
-
-        extractor.DumpHexBytes(&dump_stream, data.GetBytes(),
-                               data.GetByteSize(), 16, load_addr);
+        DumpHexBytes(&dump_stream, data.GetBytes(), data.GetByteSize(), 16,
+                     load_addr);
 
         dump_stream.PutChar('\n');
       }

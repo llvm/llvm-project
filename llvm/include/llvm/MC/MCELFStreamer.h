@@ -62,8 +62,6 @@ public:
   void EmitValueImpl(const MCExpr *Value, unsigned Size,
                      SMLoc Loc = SMLoc()) override;
 
-  void EmitFileDirective(StringRef Filename) override;
-
   void EmitIdent(StringRef IdentString) override;
 
   void EmitValueToAlignment(unsigned, int64_t, unsigned, unsigned) override;

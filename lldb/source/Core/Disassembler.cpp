@@ -16,8 +16,6 @@
 
 // Other libraries and framework includes
 // Project includes
-#include "lldb/Core/DataBufferHeap.h"
-#include "lldb/Core/DataExtractor.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/EmulateInstruction.h"
 #include "lldb/Core/Module.h"
@@ -37,6 +35,8 @@
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/DataBufferHeap.h"
+#include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Error.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/lldb-private.h"

@@ -10,8 +10,8 @@
 
 #include "lldb/DataFormatters/TypeCategoryMap.h"
 
-#include "lldb/Core/Log.h"
 #include "lldb/DataFormatters/FormatClasses.h"
+#include "lldb/Utility/Log.h"
 
 // C Includes
 // C++ Includes

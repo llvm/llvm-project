@@ -9,7 +9,6 @@
 
 #include "lldb/Symbol/SymbolContext.h"
 
-#include "lldb/Core/Log.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Host/Host.h"
@@ -23,6 +22,7 @@
 #include "lldb/Symbol/SymbolVendor.h"
 #include "lldb/Symbol/Variable.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/Log.h"
 
 using namespace lldb;
 using namespace lldb_private;

@@ -88,14 +88,13 @@ AArch64LegalizerInfo::AArch64LegalizerInfo() {
     setAction({BinOp, s64}, Libcall);
   }
 
-  // FIXME: what should we do about G_INSERTs with more than one source value?
-  // For now the default of not specifying means we'll fall back.
-  for (auto Ty : {s32, s64}) {
+  for (auto Ty : {s32, s64, p0}) {
     setAction({G_INSERT, Ty}, Legal);
     setAction({G_INSERT, 1, Ty}, Legal);
   }
   for (auto Ty : {s1, s8, s16}) {
     setAction({G_INSERT, Ty}, WidenScalar);
+    setAction({G_INSERT, 1, Ty}, Legal);
     // FIXME: Can't widen the sources because that violates the constraints on
     // G_INSERT (It seems entirely reasonable that inputs shouldn't overlap).
   }

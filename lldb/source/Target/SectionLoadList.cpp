@@ -13,12 +13,12 @@
 // C++ Includes
 // Other libraries and framework includes
 // Project includes
-#include "lldb/Core/Log.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Symbol/Block.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Symbol/SymbolContext.h"
+#include "lldb/Utility/Log.h"
 #include "lldb/Utility/Stream.h"
 
 using namespace lldb;

@@ -22,16 +22,21 @@
 #include <pthread.h>
 
 #if defined(__FreeBSD__)
-#include <pthread_np.h>
+#include <pthread_np.h> // For pthread_getthreadid_np()
+#endif
+
+#if defined(__FreeBSD__) || defined(__FreeBSD_kernel__)
+#include <errno.h>
+#include <unistd.h>
 #endif
 
 #if defined(__NetBSD__)
-#include <lwp.h>
+#include <lwp.h>  // For _lwp_self()
 #endif
 
 #if defined(__linux__)
-#include <unistd.h>
-#include <sys/syscall.h>
+#include <unistd.h> // For syscall()
+#include <sys/syscall.h>  // For syscall codes
 #endif
 
 #if defined(__NetBSD__) || defined(__FreeBSD__) || defined(__FreeBSD_kernel__)
@@ -108,9 +113,12 @@ void llvm::set_thread_name(const Twine &Name) {
   // Make sure the input is null terminated.
   SmallString<64> Storage;
   StringRef NameStr = Name.toNullTerminatedStringRef(Storage);
+  (void)NameStr;
 #if defined(__linux__)
 #if (defined(__GLIBC__) && defined(_GNU_SOURCE)) || defined(__ANDROID__)
+#if HAVE_PTHREAD_SETNAME_NP
   ::pthread_setname_np(::pthread_self(), NameStr.data());
+#endif
 #endif
 #elif defined(__FreeBSD__)
   ::pthread_set_name_np(::pthread_self(), NameStr.data());
@@ -126,13 +134,8 @@ void llvm::get_thread_name(SmallVectorImpl<char> &Name) {
   Name.clear();
 
 #if defined(__FreeBSD__) || defined(__FreeBSD_kernel__)
-#if defined(__FreeBSD_kernel__)
-  auto pid = ::pthread_self();
-#else
-  auto pid = ::getpid();
-#endif
-
-  int tid = ::pthread_getthreadid_np();
+  int pid = ::getpid();
+  uint64_t tid = get_threadid();
 
   struct kinfo_proc *kp = nullptr, *nkp;
   size_t len = 0;
@@ -173,10 +176,12 @@ void llvm::get_thread_name(SmallVectorImpl<char> &Name) {
   Name.append(buf, buf + strlen(buf));
 #elif defined(__linux__)
 #if (defined(__GLIBC__) && defined(_GNU_SOURCE)) || defined(__ANDROID__)
+#if HAVE_PTHREAD_GETNAME_NP
   constexpr int MAXNAMELEN = 16;
   char Buffer[MAXNAMELEN];
   if (0 == ::pthread_getname_np(::pthread_self(), Buffer, MAXNAMELEN))
     Name.append(Buffer, Buffer + strlen(Buffer));
+#endif
 #endif
 #endif
 }

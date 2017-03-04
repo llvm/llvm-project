@@ -849,7 +849,11 @@ void RAGreedy::evictInterference(LiveInterval &VirtReg, unsigned PhysReg,
   SmallVector<LiveInterval*, 8> Intfs;
   for (MCRegUnitIterator Units(PhysReg, TRI); Units.isValid(); ++Units) {
     LiveIntervalUnion::Query &Q = Matrix->query(VirtReg, *Units);
-    assert(Q.seenAllInterferences() && "Didn't check all interfererences.");
+    // We usually have the interfering VRegs cached so collectInterferingVRegs()
+    // should be fast, we may need to recalculate if when different physregs
+    // overlap the same register unit so we had different SubRanges queried
+    // against it.
+    Q.collectInterferingVRegs();
     ArrayRef<LiveInterval*> IVR = Q.interferingVRegs();
     Intfs.append(IVR.begin(), IVR.end());
   }

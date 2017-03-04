@@ -113,6 +113,36 @@ bool Legalizer::combineExtracts(MachineInstr &MI, MachineRegisterInfo &MRI,
   return Changed;
 }
 
+bool Legalizer::combineMerges(MachineInstr &MI, MachineRegisterInfo &MRI,
+                              const TargetInstrInfo &TII) {
+  if (MI.getOpcode() != TargetOpcode::G_UNMERGE_VALUES)
+    return false;
+
+  unsigned NumDefs = MI.getNumOperands() - 1;
+  unsigned SrcReg = MI.getOperand(NumDefs).getReg();
+  MachineInstr &MergeI = *MRI.def_instr_begin(SrcReg);
+  if (MergeI.getOpcode() != TargetOpcode::G_MERGE_VALUES)
+    return false;
+
+  if (MergeI.getNumOperands() - 1 != NumDefs)
+    return false;
+
+  // FIXME: is a COPY appropriate if the types mismatch? We know both registers
+  // are allocatable by now.
+  if (MRI.getType(MI.getOperand(0).getReg()) !=
+      MRI.getType(MergeI.getOperand(1).getReg()))
+    return false;
+
+  for (unsigned Idx = 0; Idx < NumDefs; ++Idx)
+    MRI.replaceRegWith(MI.getOperand(Idx).getReg(),
+                       MergeI.getOperand(Idx + 1).getReg());
+
+  MI.eraseFromParent();
+  if (MRI.use_empty(MergeI.getOperand(0).getReg()))
+    MergeI.eraseFromParent();
+  return true;
+}
+
 bool Legalizer::runOnMachineFunction(MachineFunction &MF) {
   // If the ISel pipeline failed, do not bother running that pass.
   if (MF.getProperties().hasProperty(
@@ -166,6 +196,7 @@ bool Legalizer::runOnMachineFunction(MachineFunction &MF) {
       NextMI = std::next(MI);
 
       Changed |= combineExtracts(*MI, MRI, TII);
+      Changed |= combineMerges(*MI, MRI, TII);
     }
   }
 

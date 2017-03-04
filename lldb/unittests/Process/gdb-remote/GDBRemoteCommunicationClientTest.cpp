@@ -6,21 +6,14 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-
-#if defined(_MSC_VER) && (_HAS_EXCEPTIONS == 0)
-// Workaround for MSVC standard library bug, which fails to include <thread>
-// when
-// exceptions are disabled.
-#include <eh.h>
-#endif
 #include <future>
 
 #include "GDBRemoteTestUtils.h"
 
 #include "Plugins/Process/gdb-remote/GDBRemoteCommunicationClient.h"
-#include "lldb/Core/DataBuffer.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/StructuredData.h"
+#include "lldb/Utility/DataBuffer.h"
 
 #include "llvm/ADT/ArrayRef.h"
 

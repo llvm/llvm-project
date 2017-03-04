@@ -47,7 +47,7 @@ void llvm::llvm_execute_on_thread(void (*Fn)(void *), void *UserData,
 
 unsigned llvm::heavyweight_hardware_concurrency() { return 1; }
 
-uint64_t llvm::get_threadid_np() { return 0; }
+uint64_t llvm::get_threadid() { return 0; }
 
 void llvm::set_thread_name(const Twine &Name) {}
 

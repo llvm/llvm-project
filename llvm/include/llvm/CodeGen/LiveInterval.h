@@ -227,15 +227,22 @@ namespace llvm {
     LiveRange(const LiveRange &Other, BumpPtrAllocator &Allocator) {
       assert(Other.segmentSet == nullptr &&
              "Copying of LiveRanges with active SegmentSets is not supported");
+      assign(Other, Allocator);
+    }
 
+    /// Copies values numbers and live segments from \p Other into this range.
+    void assign(const LiveRange &Other, BumpPtrAllocator &Allocator) {
+      if (this == &Other)
+        return;
+
+      assert(Other.segmentSet == nullptr &&
+             "Copying of LiveRanges with active SegmentSets is not supported");
       // Duplicate valnos.
-      for (const VNInfo *VNI : Other.valnos) {
+      for (const VNInfo *VNI : Other.valnos)
         createValueCopy(VNI, Allocator);
-      }
       // Now we can copy segments and remap their valnos.
-      for (const Segment &S : Other.segments) {
+      for (const Segment &S : Other.segments)
         segments.push_back(Segment(S.start, S.end, valnos[S.valno->id]));
-      }
     }
 
     /// advanceTo - Advance the specified iterator to point to the Segment
@@ -766,6 +773,19 @@ namespace llvm {
                                LaneBitmask LaneMask,
                                const MachineRegisterInfo &MRI,
                                const SlotIndexes &Indexes) const;
+
+    /// Refines the subranges to support \p LaneMask. This may only be called
+    /// for LI.hasSubrange()==true. Subregister ranges are split or created
+    /// until \p LaneMask can be matched exactly. \p Mod is executed on the
+    /// matching subranges.
+    ///
+    /// Example:
+    ///    Given an interval with subranges with lanemasks L0F00, L00F0 and
+    ///    L000F, refining for mask L0018. Will split the L00F0 lane into
+    ///    L00E0 and L0010 and the L000F lane into L0007 and L0008. The Mod
+    ///    function will be applied to the L0010 and L0008 subranges.
+    void refineSubRanges(BumpPtrAllocator &Allocator, LaneBitmask LaneMask,
+                         std::function<void(LiveInterval::SubRange&)> Mod);
 
     bool operator<(const LiveInterval& other) const {
       const SlotIndex &thisIndex = beginIndex();

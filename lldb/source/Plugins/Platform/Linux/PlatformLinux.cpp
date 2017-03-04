@@ -20,7 +20,6 @@
 // Other libraries and framework includes
 // Project includes
 #include "lldb/Core/Debugger.h"
-#include "lldb/Core/Log.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/State.h"
 #include "lldb/Host/FileSpec.h"
@@ -28,6 +27,7 @@
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/Error.h"
+#include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
 
 // Define these constants from Linux mman.h for use when targeting

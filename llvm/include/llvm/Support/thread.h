@@ -21,21 +21,7 @@
 
 #if LLVM_ENABLE_THREADS
 
-#ifdef _MSC_VER
-// concrt.h depends on eh.h for __uncaught_exception declaration
-// even if we disable exceptions.
-#include <eh.h>
-
-// Suppress 'C++ exception handler used, but unwind semantics are not enabled.'
-#pragma warning(push)
-#pragma warning(disable:4530)
-#endif
-
 #include <thread>
-
-#ifdef _MSC_VER
-#pragma warning(pop)
-#endif
 
 namespace llvm {
 typedef std::thread thread;
