@@ -401,7 +401,8 @@ class Configuration(object):
         if self.is_windows:
             self.config.available_features.add('windows')
 
-        # Attempt to detect the glibc version by querying
+        # Attempt to detect the glibc version by querying for __GLIBC__
+        # in 'features.h'.
         macros = self.cxx.dumpMacros(flags=['-include', 'features.h'])
         if macros is not None and '__GLIBC__' in macros:
             maj_v, min_v = (macros['__GLIBC__'], macros['__GLIBC_MINOR__'])
