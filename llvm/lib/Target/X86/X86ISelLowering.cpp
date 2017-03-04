@@ -28380,12 +28380,7 @@ static SDValue combineShuffle(SDNode *N, SelectionDAG &DAG,
                               const X86Subtarget &Subtarget) {
   SDLoc dl(N);
   EVT VT = N->getValueType(0);
-
-  // Don't create instructions with illegal types after legalize types has run.
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-  if (!DCI.isBeforeLegalize() && !TLI.isTypeLegal(VT.getVectorElementType()))
-    return SDValue();
-
   // If we have legalized the vector types, look for blends of FADD and FSUB
   // nodes that we can fuse into an ADDSUB node.
   if (TLI.isTypeLegal(VT))

@@ -103,19 +103,7 @@ Parser Extensions for If/Then/Else
 
 Now that we have the relevant tokens coming from the lexer and we have
 the AST node to build, our parsing logic is relatively straightforward.
-First we define a new parsing function:
-
-.. code-block:: ocaml
-
-    let rec parse_primary = parser
-      ...
-      (* ifexpr ::= 'if' expr 'then' expr 'else' expr *)
-      | [< 'Token.If; c=parse_expr;
-           'Token.Then ?? "expected 'then'"; t=parse_expr;
-           'Token.Else ?? "expected 'else'"; e=parse_expr >] ->
-          Ast.If (c, t, e)
-
-Next we hook it up as a primary expression:
+Next we add a new case for parsing a if-expression as a primary expression:
 
 .. code-block:: ocaml
 
