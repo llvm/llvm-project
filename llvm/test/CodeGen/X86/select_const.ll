@@ -174,10 +174,9 @@ define i32 @select_Cplus1_C_signext(i1 signext %cond) {
 define i32 @select_C_Cplus1(i1 %cond) {
 ; CHECK-LABEL: select_C_Cplus1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    andb $1, %dil
-; CHECK-NEXT:    cmpb $1, %dil
-; CHECK-NEXT:    movl $41, %eax
-; CHECK-NEXT:    adcl $0, %eax
+; CHECK-NEXT:    andl $1, %edi
+; CHECK-NEXT:    movl $42, %eax
+; CHECK-NEXT:    subl %edi, %eax
 ; CHECK-NEXT:    retq
   %sel = select i1 %cond, i32 41, i32 42
   ret i32 %sel
@@ -186,9 +185,9 @@ define i32 @select_C_Cplus1(i1 %cond) {
 define i32 @select_C_Cplus1_zeroext(i1 zeroext %cond) {
 ; CHECK-LABEL: select_C_Cplus1_zeroext:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    cmpb $1, %dil
-; CHECK-NEXT:    movl $41, %eax
-; CHECK-NEXT:    adcl $0, %eax
+; CHECK-NEXT:    movzbl %dil, %ecx
+; CHECK-NEXT:    movl $42, %eax
+; CHECK-NEXT:    subl %ecx, %eax
 ; CHECK-NEXT:    retq
   %sel = select i1 %cond, i32 41, i32 42
   ret i32 %sel
@@ -198,9 +197,9 @@ define i32 @select_C_Cplus1_signext(i1 signext %cond) {
 ; CHECK-LABEL: select_C_Cplus1_signext:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    andb $1, %dil
-; CHECK-NEXT:    cmpb $1, %dil
-; CHECK-NEXT:    movl $41, %eax
-; CHECK-NEXT:    adcl $0, %eax
+; CHECK-NEXT:    movzbl %dil, %ecx
+; CHECK-NEXT:    movl $42, %eax
+; CHECK-NEXT:    subl %ecx, %eax
 ; CHECK-NEXT:    retq
   %sel = select i1 %cond, i32 41, i32 42
   ret i32 %sel

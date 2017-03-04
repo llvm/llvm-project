@@ -81,7 +81,7 @@ void DebugCounter::push_back(const std::string &Val) {
       return;
     }
 
-    auto Res = Counters.insert({CounterID, {-1, -1}});
+    auto Res = Counters.insert({CounterID, {0, -1}});
     Res.first->second.first = CounterVal;
   } else if (CounterPair.first.endswith("-count")) {
     auto CounterName = CounterPair.first.drop_back(6);
@@ -92,7 +92,7 @@ void DebugCounter::push_back(const std::string &Val) {
       return;
     }
 
-    auto Res = Counters.insert({CounterID, {-1, -1}});
+    auto Res = Counters.insert({CounterID, {0, -1}});
     Res.first->second.second = CounterVal;
   } else {
     errs() << "DebugCounter Error: " << CounterPair.first

@@ -39,7 +39,7 @@ transforms to:
 Options
 -------
 
-.. option:: UserNullMacros
+.. option:: NullMacros
 
    Comma-separated list of macro names that will be transformed along with
    ``NULL``. By default this check will only replace the ``NULL`` macro and will
@@ -64,4 +64,4 @@ transforms to:
     int *p = nullptr;
   }
 
-if the :option:`UserNullMacros` option is set to ``MY_NULL``.
+if the :option:`NullMacros` option is set to ``MY_NULL``.

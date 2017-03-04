@@ -49,6 +49,8 @@ unsigned llvm::heavyweight_hardware_concurrency() { return 1; }
 
 uint64_t llvm::get_threadid() { return 0; }
 
+uint32_t llvm::get_max_thread_name_length() { return 0; }
+
 void llvm::set_thread_name(const Twine &Name) {}
 
 void llvm::get_thread_name(SmallVectorImpl<char> &Name) { Name.clear(); }

@@ -59,6 +59,8 @@ uint64_t llvm::get_threadid() {
   return uint64_t(::GetCurrentThreadId());
 }
 
+uint32_t llvm::get_max_thread_name_length() { return 0; }
+
 void llvm::set_thread_name(const Twine &Name) {
 #if defined(_MSC_VER)
   // Make sure the input is null terminated.

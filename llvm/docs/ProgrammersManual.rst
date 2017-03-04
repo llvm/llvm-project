@@ -3814,7 +3814,7 @@ doxygen info: `Function Class
 Superclasses: GlobalValue_, Constant_, User_, Value_
 
 The ``Function`` class represents a single procedure in LLVM.  It is actually
-one of the more complex classes in the LLVM hierarchy because it must keep track
+one of the mst complex classes in the LLVM hierarchy because it must keep track
 of a large amount of data.  The ``Function`` class keeps track of a list of
 BasicBlock_\ s, a list of formal Argument_\ s, and a SymbolTable_.
 

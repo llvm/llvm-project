@@ -137,6 +137,10 @@ void llvm_execute_on_thread(void (*UserFn)(void *), void *UserData,
   /// this.
   uint64_t get_threadid();
 
+  /// \brief Get the maximum length of a thread name on this platform.
+  /// A value of 0 means there is no limit.
+  uint32_t get_max_thread_name_length();
+
   /// \brief Set the name of the current thread.  Setting a thread's name can
   /// be helpful for enabling useful diagnostics under a debugger or when
   /// logging.  The level of support for setting a thread's name varies
