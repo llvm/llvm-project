@@ -15,6 +15,7 @@
 #ifndef LLVM_SUPPORT_THREADING_H
 #define LLVM_SUPPORT_THREADING_H
 
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX
 #include "llvm/Support/Compiler.h"
 #include <ciso646> // So we can check the C++ standard lib macros.
@@ -42,24 +43,26 @@
 #endif
 
 namespace llvm {
-  /// Returns true if LLVM is compiled with support for multi-threading, and
-  /// false otherwise.
-  bool llvm_is_multithreaded();
+class Twine;
 
-  /// llvm_execute_on_thread - Execute the given \p UserFn on a separate
-  /// thread, passing it the provided \p UserData and waits for thread
-  /// completion.
-  ///
-  /// This function does not guarantee that the code will actually be executed
-  /// on a separate thread or honoring the requested stack size, but tries to do
-  /// so where system support is available.
-  ///
-  /// \param UserFn - The callback to execute.
-  /// \param UserData - An argument to pass to the callback function.
-  /// \param RequestedStackSize - If non-zero, a requested size (in bytes) for
-  /// the thread stack.
-  void llvm_execute_on_thread(void (*UserFn)(void*), void *UserData,
-                              unsigned RequestedStackSize = 0);
+/// Returns true if LLVM is compiled with support for multi-threading, and
+/// false otherwise.
+bool llvm_is_multithreaded();
+
+/// llvm_execute_on_thread - Execute the given \p UserFn on a separate
+/// thread, passing it the provided \p UserData and waits for thread
+/// completion.
+///
+/// This function does not guarantee that the code will actually be executed
+/// on a separate thread or honoring the requested stack size, but tries to do
+/// so where system support is available.
+///
+/// \param UserFn - The callback to execute.
+/// \param UserData - An argument to pass to the callback function.
+/// \param RequestedStackSize - If non-zero, a requested size (in bytes) for
+/// the thread stack.
+void llvm_execute_on_thread(void (*UserFn)(void *), void *UserData,
+                            unsigned RequestedStackSize = 0);
 
 #if LLVM_THREADING_USE_STD_CALL_ONCE
 
@@ -127,6 +130,28 @@ namespace llvm {
   /// thread::hardware_concurrency().
   /// Returns 1 when LLVM is configured with LLVM_ENABLE_THREADS=OFF
   unsigned heavyweight_hardware_concurrency();
+
+  /// \brief Return the current thread id, as used in various OS system calls.
+  /// Note that not all platforms guarantee that the value returned will be
+  /// unique across the entire system, so portable code should not assume
+  /// this.
+  uint64_t get_threadid();
+
+  /// \brief Set the name of the current thread.  Setting a thread's name can
+  /// be helpful for enabling useful diagnostics under a debugger or when
+  /// logging.  The level of support for setting a thread's name varies
+  /// wildly across operating systems, and we only make a best effort to
+  /// perform the operation on supported platforms.  No indication of success
+  /// or failure is returned.
+  void set_thread_name(const Twine &Name);
+
+  /// \brief Get the name of the current thread.  The level of support for
+  /// getting a thread's name varies wildly across operating systems, and it
+  /// is not even guaranteed that if you can successfully set a thread's name
+  /// that you can later get it back.  This function is intended for diagnostic
+  /// purposes, and as with setting a thread's name no indication of whether
+  /// the operation succeeded or failed is returned.
+  void get_thread_name(SmallVectorImpl<char> &Name);
 }
 
 #endif

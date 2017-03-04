@@ -7702,7 +7702,7 @@ SDValue DAGCombiner::visitSIGN_EXTEND_INREG(SDNode *N) {
   }
 
   // fold (sext_in_reg x) -> (zext_in_reg x) if the sign bit is known zero.
-  if (DAG.MaskedValueIsZero(N0, APInt::getBitsSet(VTBits, EVTBits-1, EVTBits)))
+  if (DAG.MaskedValueIsZero(N0, APInt::getOneBitSet(VTBits, EVTBits - 1)))
     return DAG.getZeroExtendInReg(N0, SDLoc(N), EVT.getScalarType());
 
   // fold operands of sext_in_reg based on knowledge that the top bits are not

@@ -727,7 +727,7 @@ bool SystemZInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
   return true;
 }
 
-bool SystemZInstrInfo::isPredicable(MachineInstr &MI) const {
+bool SystemZInstrInfo::isPredicable(const MachineInstr &MI) const {
   unsigned Opcode = MI.getOpcode();
   if (Opcode == SystemZ::Return ||
       Opcode == SystemZ::Trap ||

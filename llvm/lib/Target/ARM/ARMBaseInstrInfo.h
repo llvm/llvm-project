@@ -163,7 +163,7 @@ public:
   bool DefinesPredicate(MachineInstr &MI,
                         std::vector<MachineOperand> &Pred) const override;
 
-  bool isPredicable(MachineInstr &MI) const override;
+  bool isPredicable(const MachineInstr &MI) const override;
 
   /// GetInstSize - Returns the size of the specified MachineInstr.
   ///

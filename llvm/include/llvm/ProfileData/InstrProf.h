@@ -671,6 +671,13 @@ struct InstrProfRecord {
         SR.sortByCount();
     }
   }
+
+  /// Clear value data entries and edge counters.
+  void Clear() {
+    Counts.clear();
+    clearValueData();
+  }
+
   /// Clear value data entries
   void clearValueData() {
     for (uint32_t Kind = IPVK_First; Kind <= IPVK_Last; ++Kind)

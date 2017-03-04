@@ -852,7 +852,7 @@ Value *InstCombiner::SimplifyShrShlDemandedBits(Instruction *Shr,
   unsigned ShrAmt = ShrOp1.getZExtValue();
 
   KnownOne.clearAllBits();
-  KnownZero = APInt::getBitsSet(KnownZero.getBitWidth(), 0, ShlAmt-1);
+  KnownZero = APInt::getLowBitsSet(KnownZero.getBitWidth(), ShlAmt - 1);
   KnownZero &= DemandedMask;
 
   APInt BitMask1(APInt::getAllOnesValue(BitWidth));

@@ -1,5 +1,6 @@
 ; RUN: llc -mtriple=i686-windows < %s | FileCheck %s
 
+declare void @addrof_i1(i1*)
 declare void @addrof_i32(i32*)
 declare void @addrof_i64(i64*)
 declare void @addrof_i128(i128*)
@@ -41,6 +42,7 @@ entry:
 ; CHECK: popl %[[csr]]
 ; CHECK: retl
 
+; We won't copy elide for types needing legalization such as i64 or i1.
 
 define i64 @split_i64(i64 %x) {
 entry:
@@ -58,8 +60,10 @@ entry:
 ; CHECK: andl $-8, %esp
 ; CHECK-DAG: movl 8(%ebp), %[[csr1]]
 ; CHECK-DAG: movl 12(%ebp), %[[csr2]]
-; CHECK-DAG: leal 8(%ebp), %[[reg:[^ ]*]]
-; CHECK: pushl %[[reg]]
+; CHECK: movl %edi, 4(%esp)
+; CHECK: movl %esi, (%esp)
+; CEHCK: movl %esp, %eax
+; CHECK: pushl %eax
 ; CHECK: calll _addrof_i64
 ; CHECK-DAG: movl %[[csr1]], %eax
 ; CHECK-DAG: movl %[[csr2]], %edx
@@ -69,6 +73,23 @@ entry:
 ; CHECK: popl %ebp
 ; CHECK: retl
 
+define i1 @i1_arg(i1 %x) {
+  %x.addr = alloca i1
+  store i1 %x, i1* %x.addr
+  call void @addrof_i1(i1* %x.addr)
+  ret i1 %x
+}
+
+; CHECK-LABEL: _i1_arg:
+; CHECK: pushl   %ebx
+; CHECK: movb 8(%esp), %bl
+; CHECK: leal 8(%esp), %eax
+; CHECK: pushl %eax
+; CHECK: calll _addrof_i1
+; CHECK: addl $4, %esp
+; CHECK: movl %ebx, %eax
+; CHECK: popl %ebx
+; CHECK: retl
 
 ; We can't copy elide when an i64 is split between registers and memory in a
 ; fastcc function.

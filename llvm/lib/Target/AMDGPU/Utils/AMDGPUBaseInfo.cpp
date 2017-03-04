@@ -547,6 +547,25 @@ unsigned getMCReg(unsigned Reg, const MCSubtargetInfo &STI) {
   return Reg;
 }
 
+unsigned mc2PseudoReg(unsigned Reg) {
+  switch (Reg) {
+  case AMDGPU::FLAT_SCR_ci:
+  case AMDGPU::FLAT_SCR_vi:
+    return FLAT_SCR;
+
+  case AMDGPU::FLAT_SCR_LO_ci:
+  case AMDGPU::FLAT_SCR_LO_vi:
+    return AMDGPU::FLAT_SCR_LO;
+
+  case AMDGPU::FLAT_SCR_HI_ci:
+  case AMDGPU::FLAT_SCR_HI_vi:
+    return AMDGPU::FLAT_SCR_HI;
+
+  default:
+    return Reg;
+  }
+}
+
 bool isSISrcOperand(const MCInstrDesc &Desc, unsigned OpNo) {
   assert(OpNo < Desc.NumOperands);
   unsigned OpType = Desc.OpInfo[OpNo].OperandType;

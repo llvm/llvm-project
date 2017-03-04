@@ -980,6 +980,12 @@ private:
   void errorExpTgt();
   OperandMatchResultTy parseExpTgtImpl(StringRef Str, uint8_t &Val);
 
+  bool validateOperandLimitations(const MCInst &Inst);
+  bool usesConstantBus(const MCInst &Inst, unsigned OpIdx);
+  bool isInlineConstant(const MCInst &Inst, unsigned OpIdx) const;
+  unsigned findImplicitSGPRReadInVOP(const MCInst &Inst) const;
+  bool isSGPR(unsigned Reg);
+
 public:
   OperandMatchResultTy parseOptionalOperand(OperandVector &Operands);
 
@@ -1886,6 +1892,128 @@ ArrayRef<unsigned> AMDGPUAsmParser::getMatchedVariants() const {
   return makeArrayRef(Variants);
 }
 
+unsigned AMDGPUAsmParser::findImplicitSGPRReadInVOP(const MCInst &Inst) const {
+  const MCInstrDesc &Desc = MII.get(Inst.getOpcode());
+  const unsigned Num = Desc.getNumImplicitUses();
+  for (unsigned i = 0; i < Num; ++i) {
+    unsigned Reg = Desc.ImplicitUses[i];
+    switch (Reg) {
+    case AMDGPU::FLAT_SCR:
+    case AMDGPU::VCC:
+    case AMDGPU::M0:
+      return Reg;
+    default:
+      break;
+    }
+  }
+  return AMDGPU::NoRegister;
+}
+
+bool AMDGPUAsmParser::isSGPR(unsigned Reg) {
+  const MCRegisterInfo *TRI = getContext().getRegisterInfo();
+  const MCRegisterClass SGPRClass = TRI->getRegClass(AMDGPU::SReg_32RegClassID);
+  const unsigned FirstSubReg = TRI->getSubReg(Reg, 1);
+  return SGPRClass.contains(FirstSubReg != 0 ? FirstSubReg : Reg) ||
+         Reg == AMDGPU::SCC;
+}
+
+// NB: This code is correct only when used to check constant
+// bus limitations because GFX7 support no f16 inline constants.
+// Note that there are no cases when a GFX7 opcode violates
+// constant bus limitations due to the use of an f16 constant.
+bool AMDGPUAsmParser::isInlineConstant(const MCInst &Inst,
+                                       unsigned OpIdx) const {
+  const MCInstrDesc &Desc = MII.get(Inst.getOpcode());
+
+  if (!AMDGPU::isSISrcOperand(Desc, OpIdx)) {
+    return false;
+  }
+
+  const MCOperand &MO = Inst.getOperand(OpIdx);
+
+  int64_t Val = MO.getImm();
+  auto OpSize = AMDGPU::getOperandSize(Desc, OpIdx);
+
+  switch (OpSize) { // expected operand size
+  case 8:
+    return AMDGPU::isInlinableLiteral64(Val, hasInv2PiInlineImm());
+  case 4:
+    return AMDGPU::isInlinableLiteral32(Val, hasInv2PiInlineImm());
+  case 2: {
+    const unsigned OperandType = Desc.OpInfo[OpIdx].OperandType;
+    if (OperandType == AMDGPU::OPERAND_REG_INLINE_C_V2INT16 ||
+        OperandType == AMDGPU::OPERAND_REG_INLINE_C_V2FP16) {
+      return AMDGPU::isInlinableLiteralV216(Val, hasInv2PiInlineImm());
+    } else {
+      return AMDGPU::isInlinableLiteral16(Val, hasInv2PiInlineImm());
+    }
+  }
+  default:
+    llvm_unreachable("invalid operand size");
+  }
+}
+
+bool AMDGPUAsmParser::usesConstantBus(const MCInst &Inst, unsigned OpIdx) {
+  const MCOperand &MO = Inst.getOperand(OpIdx);
+  if (MO.isImm()) {
+    return !isInlineConstant(Inst, OpIdx);
+  }
+  return !MO.isReg() || isSGPR(mc2PseudoReg(MO.getReg()));
+}
+
+bool AMDGPUAsmParser::validateOperandLimitations(const MCInst &Inst) {
+  const unsigned Opcode = Inst.getOpcode();
+  const MCInstrDesc &Desc = MII.get(Opcode);
+  unsigned ConstantBusUseCount = 0;
+
+  if (Desc.TSFlags &
+      (SIInstrFlags::VOPC |
+       SIInstrFlags::VOP1 | SIInstrFlags::VOP2 |
+       SIInstrFlags::VOP3 | SIInstrFlags::VOP3P)) {
+
+    // Check special imm operands (used by madmk, etc)
+    if (AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::imm) != -1) {
+      ++ConstantBusUseCount;
+    }
+
+    unsigned SGPRUsed = findImplicitSGPRReadInVOP(Inst);
+    if (SGPRUsed != AMDGPU::NoRegister) {
+      ++ConstantBusUseCount;
+    }
+
+    const int Src0Idx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::src0);
+    const int Src1Idx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::src1);
+    const int Src2Idx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::src2);
+
+    const int OpIndices[] = { Src0Idx, Src1Idx, Src2Idx };
+
+    for (int OpIdx : OpIndices) {
+      if (OpIdx == -1) break;
+
+      const MCOperand &MO = Inst.getOperand(OpIdx);
+      if (usesConstantBus(Inst, OpIdx)) {
+        if (MO.isReg()) {
+          const unsigned Reg = mc2PseudoReg(MO.getReg());
+          // Pairs of registers with a partial intersections like these
+          //   s0, s[0:1]
+          //   flat_scratch_lo, flat_scratch
+          //   flat_scratch_lo, flat_scratch_hi
+          // are theoretically valid but they are disabled anyway.
+          // Note that this code mimics SIInstrInfo::verifyInstruction
+          if (Reg != SGPRUsed) {
+            ++ConstantBusUseCount;
+          }
+          SGPRUsed = Reg;
+        } else { // Expression or a literal
+          ++ConstantBusUseCount;
+        }
+      }
+    }
+  }
+
+  return ConstantBusUseCount <= 1;
+}
+
 bool AMDGPUAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                               OperandVector &Operands,
                                               MCStreamer &Out,
@@ -1918,6 +2046,10 @@ bool AMDGPUAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   switch (Result) {
   default: break;
   case Match_Success:
+    if (!validateOperandLimitations(Inst)) {
+      return Error(IDLoc,
+                   "invalid operand (violates constant bus restrictions)");
+    }
     Inst.setLoc(IDLoc);
     Out.EmitInstruction(Inst, getSTI());
     return false;

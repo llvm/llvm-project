@@ -61,7 +61,7 @@ while start != end and start != end-1:
     cmd = [x % {'count':count, 'skip':firstcount } for x in args.command]
     print cmd
     try:
-        result = subprocess.call(cmd, shell=True, timeout=20)
+        result = subprocess.call(cmd, shell=args.shell, timeout=args.timeout)
         if result == 0:
            print("    PASSES! Setting start to count")
            start = count

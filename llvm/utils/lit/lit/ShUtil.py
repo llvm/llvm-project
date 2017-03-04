@@ -2,7 +2,7 @@ from __future__ import absolute_import
 import itertools
 
 import lit.util
-from lit.ShCommands import Command, Pipeline, Seq
+from lit.ShCommands import Command, GlobItem, Pipeline, Seq
 
 class ShLexer:
     def __init__(self, data, win32Escapes = False):
@@ -40,13 +40,15 @@ class ShLexer:
             return None
         
         self.pos = self.pos - 1 + len(chunk)
-        return chunk
+        return GlobItem(chunk) if '*' in chunk or '?' in chunk else chunk
         
     def lex_arg_slow(self, c):
         if c in "'\"":
             str = self.lex_arg_quoted(c)
         else:
             str = c
+        unquoted_glob_char = False
+        quoted_glob_char = False
         while self.pos != self.end:
             c = self.look()
             if c.isspace() or c in "|&;":
@@ -65,12 +67,12 @@ class ShLexer:
                 tok = self.lex_one_token()
                 assert isinstance(tok, tuple) and len(tok) == 1
                 return (tok[0], num)                    
-            elif c == '"':
+            elif c == '"' or c == "'":
                 self.eat()
-                str += self.lex_arg_quoted('"')
-            elif c == "'":
-                self.eat()
-                str += self.lex_arg_quoted("'")
+                quoted_arg = self.lex_arg_quoted(c)
+                if '*' in quoted_arg or '?' in quoted_arg:
+                    quoted_glob_char = True
+                str += quoted_arg
             elif not self.win32Escapes and c == '\\':
                 # Outside of a string, '\\' escapes everything.
                 self.eat()
@@ -79,9 +81,25 @@ class ShLexer:
                         "escape at end of quoted argument in: %r" % self.data)
                     return str
                 str += self.eat()
+            elif c in '*?':
+                unquoted_glob_char = True
+                str += self.eat()
             else:
                 str += self.eat()
-        return str
+        # If a quote character is present, lex_arg_quoted will remove the quotes
+        # and append the argument directly.  This causes a problem when the
+        # quoted portion contains a glob character, as the character will no
+        # longer be treated literally.  If glob characters occur *only* inside
+        # of quotes, then we can handle this by not globbing at all, and if
+        # glob characters occur *only* outside of quotes, we can still glob just
+        # fine.  But if a glob character occurs both inside and outside of
+        # quotes this presents a problem.  In practice this is such an obscure
+        # edge case that it doesn't seem worth the added complexity to support.
+        # By adding an assertion, it means some bot somewhere will catch this
+        # and flag the user of a non-portable test (which could almost certainly
+        # be re-written to work correctly without triggering this).
+        assert not (quoted_glob_char and unquoted_glob_char)
+        return GlobItem(str) if unquoted_glob_char else str
 
     def lex_arg_quoted(self, delim):
         str = ''
@@ -202,7 +220,7 @@ class ShParser:
                 break
 
             # If this is an argument, just add it to the current command.
-            if isinstance(tok, str):
+            if isinstance(tok, (str, GlobItem)):
                 args.append(self.lex())
                 continue
 

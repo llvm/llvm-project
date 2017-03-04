@@ -278,10 +278,6 @@ void MCWinCOFFStreamer::EmitTBSSSymbol(MCSection *Section, MCSymbol *Symbol,
   llvm_unreachable("not implemented");
 }
 
-void MCWinCOFFStreamer::EmitFileDirective(StringRef Filename) {
-  getAssembler().addFileName(Filename);
-}
-
 // TODO: Implement this if you want to emit .comment section in COFF obj files.
 void MCWinCOFFStreamer::EmitIdent(StringRef IdentString) {
   llvm_unreachable("not implemented");

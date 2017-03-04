@@ -60,7 +60,6 @@ public:
                     unsigned ByteAlignment) override;
   void EmitTBSSSymbol(MCSection *Section, MCSymbol *Symbol, uint64_t Size,
                       unsigned ByteAlignment) override;
-  void EmitFileDirective(StringRef Filename) override;
   void EmitIdent(StringRef IdentString) override;
   void EmitWinEHHandlerData() override;
   void FinishImpl() override;

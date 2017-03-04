@@ -13,7 +13,6 @@
 ///
 //===----------------------------------------------------------------------===//
 
-
 #ifndef LLVM_OBJECTYAML_DWARFYAML_H
 #define LLVM_OBJECTYAML_DWARFYAML_H
 
@@ -22,6 +21,26 @@
 
 namespace llvm {
 namespace DWARFYAML {
+
+struct InitialLength {
+  uint32_t TotalLength;
+  uint64_t TotalLength64;
+
+  bool isDWARF64() const { return TotalLength == UINT32_MAX; }
+
+  uint64_t getLength() const {
+    return isDWARF64() ? TotalLength64 : TotalLength;
+  }
+
+  void setLength(uint64_t Len) {
+    if (Len >= (uint64_t)UINT32_MAX) {
+      TotalLength64 = Len;
+      TotalLength = UINT32_MAX;
+    } else {
+      TotalLength = Len;
+    }
+  }
+};
 
 struct AttributeAbbrev {
   llvm::dwarf::Attribute Attribute;
@@ -41,7 +60,7 @@ struct ARangeDescriptor {
 };
 
 struct ARange {
-  uint32_t Length;
+  InitialLength Length;
   uint16_t Version;
   uint32_t CuOffset;
   uint8_t AddrSize;
@@ -58,7 +77,7 @@ struct PubEntry {
 struct PubSection {
   PubSection() : IsGNUStyle(false) {}
 
-  uint32_t Length;
+  InitialLength Length;
   uint16_t Version;
   uint32_t UnitOffset;
   uint32_t UnitSize;
@@ -78,7 +97,7 @@ struct Entry {
 };
 
 struct Unit {
-  uint32_t Length;
+  InitialLength Length;
   uint16_t Version;
   uint32_t AbbrOffset;
   uint8_t AddrSize;
@@ -104,8 +123,7 @@ struct LineTableOpcode {
 };
 
 struct LineTable {
-  uint32_t TotalLength;
-  uint64_t TotalLength64;
+  InitialLength Length;
   uint16_t Version;
   uint64_t PrologueLength;
   uint8_t MinInstLength;
@@ -130,7 +148,7 @@ struct Data {
 
   PubSection GNUPubNames;
   PubSection GNUPubTypes;
-  
+
   std::vector<Unit> CompileUnits;
 
   std::vector<LineTable> DebugLines;
@@ -203,13 +221,17 @@ template <> struct MappingTraits<DWARFYAML::FormValue> {
 template <> struct MappingTraits<DWARFYAML::File> {
   static void mapping(IO &IO, DWARFYAML::File &File);
 };
-  
+
 template <> struct MappingTraits<DWARFYAML::LineTableOpcode> {
   static void mapping(IO &IO, DWARFYAML::LineTableOpcode &LineTableOpcode);
 };
 
 template <> struct MappingTraits<DWARFYAML::LineTable> {
   static void mapping(IO &IO, DWARFYAML::LineTable &LineTable);
+};
+
+template <> struct MappingTraits<DWARFYAML::InitialLength> {
+  static void mapping(IO &IO, DWARFYAML::InitialLength &DWARF);
 };
 
 #define HANDLE_DW_TAG(unused, name)                                            \

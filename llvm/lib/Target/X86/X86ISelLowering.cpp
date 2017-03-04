@@ -2736,40 +2736,44 @@ X86TargetLowering::LowerMemArgument(SDValue Chain, CallingConv::ID CallConv,
   // This is an argument in memory. We might be able to perform copy elision.
   if (Flags.isCopyElisionCandidate()) {
     EVT ArgVT = Ins[i].ArgVT;
-    SDValue PartAddr;
-    if (Ins[i].PartOffset == 0) {
-      // If this is a one-part value or the first part of a multi-part value,
-      // create a stack object for the entire argument value type and return a
-      // load from our portion of it. This assumes that if the first part of an
-      // argument is in memory, the rest will also be in memory.
-      int FI = MFI.CreateFixedObject(ArgVT.getSizeInBits() / 8,
-                                     VA.getLocMemOffset(), /*Immutable=*/false);
-      PartAddr = DAG.getFrameIndex(FI, PtrVT);
-      return DAG.getLoad(
-          ValVT, dl, Chain, PartAddr,
-          MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), FI));
-    } else {
-      // This is not the first piece of an argument in memory. See if there is
-      // already a fixed stack object including this offset. If so, assume it
-      // was created by the PartOffset == 0 branch above and create a load from
-      // the appropriate offset into it.
-      int64_t PartBegin = VA.getLocMemOffset();
-      int64_t PartEnd = PartBegin + ValVT.getSizeInBits() / 8;
-      int FI = MFI.getObjectIndexBegin();
-      for (; MFI.isFixedObjectIndex(FI); ++FI) {
-        int64_t ObjBegin = MFI.getObjectOffset(FI);
-        int64_t ObjEnd = ObjBegin + MFI.getObjectSize(FI);
-        if (ObjBegin <= PartBegin && PartEnd <= ObjEnd)
-          break;
-      }
-      if (MFI.isFixedObjectIndex(FI)) {
-        SDValue Addr =
-            DAG.getNode(ISD::ADD, dl, PtrVT, DAG.getFrameIndex(FI, PtrVT),
-                        DAG.getIntPtrConstant(Ins[i].PartOffset, dl));
+    if (isTypeLegal(ArgVT)) {
+      SDValue PartAddr;
+      if (Ins[i].PartOffset == 0) {
+        // If this is a one-part value or the first part of a multi-part value,
+        // create a stack object for the entire argument value type and return a
+        // load from our portion of it. This assumes that if the first part of
+        // an argument is in memory, the rest will also be in memory.
+        unsigned SizeInBits = ArgVT.getSizeInBits();
+        assert(SizeInBits % 8 == 0);
+        int FI = MFI.CreateFixedObject(SizeInBits / 8, VA.getLocMemOffset(),
+                                       /*Immutable=*/false);
+        PartAddr = DAG.getFrameIndex(FI, PtrVT);
         return DAG.getLoad(
-            ValVT, dl, Chain, Addr,
-            MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), FI,
-                                              Ins[i].PartOffset));
+            ValVT, dl, Chain, PartAddr,
+            MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), FI));
+      } else {
+        // This is not the first piece of an argument in memory. See if there is
+        // already a fixed stack object including this offset. If so, assume it
+        // was created by the PartOffset == 0 branch above and create a load
+        // from the appropriate offset into it.
+        int64_t PartBegin = VA.getLocMemOffset();
+        int64_t PartEnd = PartBegin + ValVT.getSizeInBits() / 8;
+        int FI = MFI.getObjectIndexBegin();
+        for (; MFI.isFixedObjectIndex(FI); ++FI) {
+          int64_t ObjBegin = MFI.getObjectOffset(FI);
+          int64_t ObjEnd = ObjBegin + MFI.getObjectSize(FI);
+          if (ObjBegin <= PartBegin && PartEnd <= ObjEnd)
+            break;
+        }
+        if (MFI.isFixedObjectIndex(FI)) {
+          SDValue Addr =
+              DAG.getNode(ISD::ADD, dl, PtrVT, DAG.getFrameIndex(FI, PtrVT),
+                          DAG.getIntPtrConstant(Ins[i].PartOffset, dl));
+          return DAG.getLoad(
+              ValVT, dl, Chain, Addr,
+              MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), FI,
+                                                Ins[i].PartOffset));
+        }
       }
     }
   }
@@ -7498,7 +7502,7 @@ X86TargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
     // a constant pool load than it is to do a movd + shuffle.
     if (ExtVT == MVT::i64 && !Subtarget.is64Bit() &&
         (!IsAllConstants || Idx == 0)) {
-      if (DAG.MaskedValueIsZero(Item, APInt::getBitsSet(64, 32, 64))) {
+      if (DAG.MaskedValueIsZero(Item, APInt::getHighBitsSet(64, 32))) {
         // Handle SSE only.
         assert(VT == MVT::v2i64 && "Expected an SSE value type!");
         MVT VecVT = MVT::v4i32;
@@ -16033,7 +16037,7 @@ static SDValue LowerVectorAllZeroTest(SDValue Op, const X86Subtarget &Subtarget,
   for (unsigned i = 0, e = VecIns.size(); i < e; ++i)
     VecIns[i] = DAG.getBitcast(TestVT, VecIns[i]);
 
-  // If more than one full vectors are evaluated, OR them first before PTEST.
+  // If more than one full vector is evaluated, OR them first before PTEST.
   for (unsigned Slot = 0, e = VecIns.size(); e - Slot > 1; Slot += 2, e += 1) {
     // Each iteration will OR 2 nodes and append the result until there is only
     // 1 node left, i.e. the final OR'd value of all vectors.
@@ -16042,8 +16046,7 @@ static SDValue LowerVectorAllZeroTest(SDValue Op, const X86Subtarget &Subtarget,
     VecIns.push_back(DAG.getNode(ISD::OR, DL, TestVT, LHS, RHS));
   }
 
-  return DAG.getNode(X86ISD::PTEST, DL, MVT::i32,
-                     VecIns.back(), VecIns.back());
+  return DAG.getNode(X86ISD::PTEST, DL, MVT::i32, VecIns.back(), VecIns.back());
 }
 
 /// \brief return true if \c Op has a use that doesn't just read flags.
@@ -33864,22 +33867,19 @@ static SDValue combineGatherScatter(SDNode *N, SelectionDAG &DAG) {
   return SDValue();
 }
 
-// Helper function of performSETCCCombine. It is to materialize "setb reg"
-// as "sbb reg,reg", since it can be extended without zext and produces
-// an all-ones bit which is more useful than 0/1 in some cases.
-static SDValue MaterializeSETB(const SDLoc &DL, SDValue EFLAGS,
-                               SelectionDAG &DAG, MVT VT) {
+/// Materialize "setb reg" as "sbb reg,reg", since it produces an all-ones bit
+/// which is more useful than 0/1 in some cases.
+static SDValue materializeSBB(SDNode *N, SDValue EFLAGS, SelectionDAG &DAG) {
+  SDLoc DL(N);
+  // "Condition code B" is also known as "the carry flag" (CF).
+  SDValue CF = DAG.getConstant(X86::COND_B, DL, MVT::i8);
+  SDValue SBB = DAG.getNode(X86ISD::SETCC_CARRY, DL, MVT::i8, CF, EFLAGS);
+  MVT VT = N->getSimpleValueType(0);
   if (VT == MVT::i8)
-    return DAG.getNode(ISD::AND, DL, VT,
-                       DAG.getNode(X86ISD::SETCC_CARRY, DL, MVT::i8,
-                                   DAG.getConstant(X86::COND_B, DL, MVT::i8),
-                                   EFLAGS),
-                       DAG.getConstant(1, DL, VT));
-  assert (VT == MVT::i1 && "Unexpected type for SECCC node");
-  return DAG.getNode(ISD::TRUNCATE, DL, MVT::i1,
-                     DAG.getNode(X86ISD::SETCC_CARRY, DL, MVT::i8,
-                                 DAG.getConstant(X86::COND_B, DL, MVT::i8),
-                                 EFLAGS));
+    return DAG.getNode(ISD::AND, DL, VT, SBB, DAG.getConstant(1, DL, VT));
+
+  assert(VT == MVT::i1 && "Unexpected type for SETCC node");
+  return DAG.getNode(ISD::TRUNCATE, DL, MVT::i1, SBB);
 }
 
 // Optimize  RES = X86ISD::SETCC CONDCODE, EFLAG_INPUT
@@ -33903,15 +33903,12 @@ static SDValue combineX86SetCC(SDNode *N, SelectionDAG &DAG,
                                    EFLAGS.getNode()->getVTList(),
                                    EFLAGS.getOperand(1), EFLAGS.getOperand(0));
       SDValue NewEFLAGS = SDValue(NewSub.getNode(), EFLAGS.getResNo());
-      return MaterializeSETB(DL, NewEFLAGS, DAG, N->getSimpleValueType(0));
+      return materializeSBB(N, NewEFLAGS, DAG);
     }
   }
 
-  // Materialize "setb reg" as "sbb reg,reg", since it can be extended without
-  // a zext and produces an all-ones bit which is more useful than 0/1 in some
-  // cases.
   if (CC == X86::COND_B)
-    return MaterializeSETB(DL, EFLAGS, DAG, N->getSimpleValueType(0));
+    return materializeSBB(N, EFLAGS, DAG);
 
   // Try to simplify the EFLAGS and condition code operands.
   if (SDValue Flags = combineSetCCEFLAGS(EFLAGS, CC, DAG))
@@ -34107,15 +34104,21 @@ static SDValue combineADC(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
-/// fold (add Y, (sete  X, 0)) -> adc  0, Y
-///      (add Y, (setne X, 0)) -> sbb -1, Y
-///      (sub (sete  X, 0), Y) -> sbb  0, Y
-///      (sub (setne X, 0), Y) -> adc -1, Y
-static SDValue OptimizeConditionalInDecrement(SDNode *N, SelectionDAG &DAG) {
-  SDLoc DL(N);
-
+/// If this is an add or subtract where one operand is produced by a cmp+setcc,
+/// then try to convert it to an ADC or SBB. This replaces TEST+SET+{ADD/SUB}
+/// with CMP+{ADC, SBB}.
+static SDValue combineAddOrSubToADCOrSBB(SDNode *N, SelectionDAG &DAG) {
   // Look through ZExts.
-  SDValue Ext = N->getOperand(N->getOpcode() == ISD::SUB ? 1 : 0);
+  bool IsSub = N->getOpcode() == ISD::SUB;
+  SDValue Y = N->getOperand(0);
+  SDValue Ext = N->getOperand(1);
+
+  // If this is an add, canonicalize a zext to the RHS.
+  // TODO: Incomplete? What if both sides are zexts?
+  if (!IsSub && Ext.getOpcode() != ISD::ZERO_EXTEND &&
+      Y.getOpcode() == ISD::ZERO_EXTEND)
+    std::swap(Ext, Y);
+
   if (Ext.getOpcode() != ISD::ZERO_EXTEND || !Ext.hasOneUse())
     return SDValue();
 
@@ -34133,19 +34136,24 @@ static SDValue OptimizeConditionalInDecrement(SDNode *N, SelectionDAG &DAG) {
       !Cmp.getOperand(0).getValueType().isInteger())
     return SDValue();
 
-  SDValue CmpOp0 = Cmp.getOperand(0);
-  SDValue NewCmp = DAG.getNode(X86ISD::CMP, DL, MVT::i32, CmpOp0,
-                               DAG.getConstant(1, DL, CmpOp0.getValueType()));
+  // (cmp X, 1) sets the carry flag if X is 0.
+  SDLoc DL(N);
+  SDValue X = Cmp.getOperand(0);
+  SDValue NewCmp = DAG.getNode(X86ISD::CMP, DL, MVT::i32, X,
+                               DAG.getConstant(1, DL, X.getValueType()));
 
-  SDValue OtherVal = N->getOperand(N->getOpcode() == ISD::SUB ? 0 : 1);
+  EVT VT = Y.getValueType();
+
+  // Y - (X != 0) --> sub Y, (zext(setne X, 0)) --> adc Y, -1, (cmp X, 1)
+  // Y + (X != 0) --> add Y, (zext(setne X, 0)) --> sbb Y, -1, (cmp X, 1)
   if (CC == X86::COND_NE)
-    return DAG.getNode(N->getOpcode() == ISD::SUB ? X86ISD::ADC : X86ISD::SBB,
-                       DL, OtherVal.getValueType(), OtherVal,
-                       DAG.getConstant(-1ULL, DL, OtherVal.getValueType()),
-                       NewCmp);
-  return DAG.getNode(N->getOpcode() == ISD::SUB ? X86ISD::SBB : X86ISD::ADC,
-                     DL, OtherVal.getValueType(), OtherVal,
-                     DAG.getConstant(0, DL, OtherVal.getValueType()), NewCmp);
+    return DAG.getNode(IsSub ? X86ISD::ADC : X86ISD::SBB, DL, VT, Y,
+                       DAG.getConstant(-1ULL, DL, VT), NewCmp);
+
+  // Y - (X == 0) --> sub Y, (zext(sete  X, 0)) --> sbb Y, 0, (cmp X, 1)
+  // Y + (X == 0) --> add Y, (zext(sete  X, 0)) --> adc Y, 0, (cmp X, 1)
+  return DAG.getNode(IsSub ? X86ISD::SBB : X86ISD::ADC, DL, VT, Y,
+                     DAG.getConstant(0, DL, VT), NewCmp);
 }
 
 static SDValue combineLoopSADPattern(SDNode *N, SelectionDAG &DAG,
@@ -34236,7 +34244,7 @@ static SDValue combineAdd(SDNode *N, SelectionDAG &DAG,
       isHorizontalBinOp(Op0, Op1, true))
     return DAG.getNode(X86ISD::HADD, SDLoc(N), VT, Op0, Op1);
 
-  return OptimizeConditionalInDecrement(N, DAG);
+  return combineAddOrSubToADCOrSBB(N, DAG);
 }
 
 static SDValue combineSub(SDNode *N, SelectionDAG &DAG,
@@ -34269,7 +34277,7 @@ static SDValue combineSub(SDNode *N, SelectionDAG &DAG,
       isHorizontalBinOp(Op0, Op1, false))
     return DAG.getNode(X86ISD::HSUB, SDLoc(N), VT, Op0, Op1);
 
-  return OptimizeConditionalInDecrement(N, DAG);
+  return combineAddOrSubToADCOrSBB(N, DAG);
 }
 
 static SDValue combineVSZext(SDNode *N, SelectionDAG &DAG,

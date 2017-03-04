@@ -869,7 +869,7 @@ bool R600InstrInfo::isPredicated(const MachineInstr &MI) const {
   }
 }
 
-bool R600InstrInfo::isPredicable(MachineInstr &MI) const {
+bool R600InstrInfo::isPredicable(const MachineInstr &MI) const {
   // XXX: KILL* instructions can be predicated, but they must be the last
   // instruction in a clause, so this means any instructions after them cannot
   // be predicated.  Until we have proper support for instruction clauses in the
@@ -880,7 +880,7 @@ bool R600InstrInfo::isPredicable(MachineInstr &MI) const {
   } else if (MI.getOpcode() == AMDGPU::CF_ALU) {
     // If the clause start in the middle of MBB then the MBB has more
     // than a single clause, unable to predicate several clauses.
-    if (MI.getParent()->begin() != MachineBasicBlock::iterator(MI))
+    if (MI.getParent()->begin() != MachineBasicBlock::const_iterator(MI))
       return false;
     // TODO: We don't support KC merging atm
     return MI.getOperand(3).getImm() == 0 && MI.getOperand(4).getImm() == 0;
