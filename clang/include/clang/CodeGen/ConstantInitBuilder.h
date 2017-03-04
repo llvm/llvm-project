@@ -28,8 +28,6 @@ namespace clang {
 namespace CodeGen {
 
 class CodeGenModule;
-class ConstantStructBuilder;
-class ConstantArrayBuilder;
 
 /// A convenience builder class for complex constant initializers,
 /// especially for anonymous global structures used by various language
@@ -45,12 +43,12 @@ class ConstantArrayBuilder;
 ///      widgetDesc.addInt(CGM.SizeTy, widget.getPower());
 ///      widgetDesc.add(CGM.GetAddrOfConstantString(widget.getName()));
 ///      widgetDesc.add(CGM.GetAddrOfGlobal(widget.getInitializerDecl()));
-///      widgetArray.add(widgetDesc.finish());
+///      widgetDesc.finishAndAddTo(widgetArray);
 ///    }
-///    toplevel.add(widgetArray.finish());
+///    widgetArray.finishAndAddTo(toplevel);
 ///    auto global = toplevel.finishAndCreateGlobal("WIDGET_LIST", Align,
 ///                                                 /*constant*/ true);
-class ConstantInitBuilder {
+class ConstantInitBuilderBase {
   struct SelfReference {
     llvm::GlobalVariable *Dummy;
     llvm::SmallVector<llvm::Constant*, 4> Indices;
@@ -62,222 +60,19 @@ class ConstantInitBuilder {
   std::vector<SelfReference> SelfReferences;
   bool Frozen = false;
 
-public:
-  explicit ConstantInitBuilder(CodeGenModule &CGM) : CGM(CGM) {}
+  friend class ConstantAggregateBuilderBase;
+  template <class, class>
+  friend class ConstantAggregateBuilderTemplateBase;
 
-  ~ConstantInitBuilder() {
+  // The rule for CachedOffset is that anything which removes elements
+  // from the Buffer
+
+protected:
+  explicit ConstantInitBuilderBase(CodeGenModule &CGM) : CGM(CGM) {}
+
+  ~ConstantInitBuilderBase() {
     assert(Buffer.empty() && "didn't claim all values out of buffer");
   }
-
-  class AggregateBuilderBase {
-  protected:
-    ConstantInitBuilder &Builder;
-    AggregateBuilderBase *Parent;
-    size_t Begin;
-    bool Finished = false;
-    bool Frozen = false;
-
-    llvm::SmallVectorImpl<llvm::Constant*> &getBuffer() {
-      return Builder.Buffer;
-    }
-
-    const llvm::SmallVectorImpl<llvm::Constant*> &getBuffer() const {
-      return Builder.Buffer;
-    }
-
-    AggregateBuilderBase(ConstantInitBuilder &builder,
-                         AggregateBuilderBase *parent)
-        : Builder(builder), Parent(parent), Begin(builder.Buffer.size()) {
-      if (parent) {
-        assert(!parent->Frozen && "parent already has child builder active");
-        parent->Frozen = true;
-      } else {
-        assert(!builder.Frozen && "builder already has child builder active");
-        builder.Frozen = true;
-      }
-    }
-
-    ~AggregateBuilderBase() {
-      assert(Finished && "didn't finish aggregate builder");
-    }
-
-    void markFinished() {
-      assert(!Frozen && "child builder still active");
-      assert(!Finished && "builder already finished");
-      Finished = true;
-      if (Parent) {
-        assert(Parent->Frozen &&
-               "parent not frozen while child builder active");
-        Parent->Frozen = false;
-      } else {
-        assert(Builder.Frozen &&
-               "builder not frozen while child builder active");
-        Builder.Frozen = false;
-      }
-    }
-
-  public:
-    // Not copyable.
-    AggregateBuilderBase(const AggregateBuilderBase &) = delete;
-    AggregateBuilderBase &operator=(const AggregateBuilderBase &) = delete;
-
-    // Movable, mostly to allow returning.  But we have to write this out
-    // properly to satisfy the assert in the destructor.
-    AggregateBuilderBase(AggregateBuilderBase &&other)
-      : Builder(other.Builder), Parent(other.Parent), Begin(other.Begin),
-        Finished(other.Finished), Frozen(other.Frozen) {
-      other.Finished = false;
-    }
-    AggregateBuilderBase &operator=(AggregateBuilderBase &&other) = delete;
-
-    /// Abandon this builder completely.
-    void abandon() {
-      markFinished();
-      auto &buffer = Builder.Buffer;
-      buffer.erase(buffer.begin() + Begin, buffer.end());
-    }
-
-    /// Add a new value to this initializer.
-    void add(llvm::Constant *value) {
-      assert(value && "adding null value to constant initializer");
-      assert(!Finished && "cannot add more values after finishing builder");
-      assert(!Frozen && "cannot add values while subbuilder is active");
-      Builder.Buffer.push_back(value);
-    }
-
-    /// Add an integer value of type size_t.
-    void addSize(CharUnits size);
-
-    /// Add an integer value of a specific type.
-    void addInt(llvm::IntegerType *intTy, uint64_t value,
-                bool isSigned = false) {
-      add(llvm::ConstantInt::get(intTy, value, isSigned));
-    }
-
-    /// Add a null pointer of a specific type.
-    void addNullPointer(llvm::PointerType *ptrTy) {
-      add(llvm::ConstantPointerNull::get(ptrTy));
-    }
-
-    /// Add a bitcast of a value to a specific type.
-    void addBitCast(llvm::Constant *value, llvm::Type *type) {
-      add(llvm::ConstantExpr::getBitCast(value, type));
-    }
-
-    /// Add a bunch of new values to this initializer.
-    void addAll(llvm::ArrayRef<llvm::Constant *> values) {
-      assert(!Finished && "cannot add more values after finishing builder");
-      assert(!Frozen && "cannot add values while subbuilder is active");
-      Builder.Buffer.append(values.begin(), values.end());
-    }
-
-    /// An opaque class to hold the abstract position of a placeholder.
-    class PlaceholderPosition {
-      size_t Index;
-      friend class AggregateBuilderBase;
-      PlaceholderPosition(size_t index) : Index(index) {}
-    };
-
-    /// Add a placeholder value to the structure.  The returned position
-    /// can be used to set the value later; it will not be invalidated by
-    /// any intermediate operations except (1) filling the same position or
-    /// (2) finishing the entire builder.
-    ///
-    /// This is useful for emitting certain kinds of structure which
-    /// contain some sort of summary field, generaly a count, before any
-    /// of the data.  By emitting a placeholder first, the structure can
-    /// be emitted eagerly.
-    PlaceholderPosition addPlaceholder() {
-      assert(!Finished && "cannot add more values after finishing builder");
-      assert(!Frozen && "cannot add values while subbuilder is active");
-      Builder.Buffer.push_back(nullptr);
-      return Builder.Buffer.size() - 1;
-    }
-
-    /// Fill a previously-added placeholder.
-    void fillPlaceholderWithInt(PlaceholderPosition position,
-                                llvm::IntegerType *type, uint64_t value,
-                                bool isSigned = false) {
-      fillPlaceholder(position, llvm::ConstantInt::get(type, value, isSigned));
-    }
-
-    /// Fill a previously-added placeholder.
-    void fillPlaceholder(PlaceholderPosition position, llvm::Constant *value) {
-      assert(!Finished && "cannot change values after finishing builder");
-      assert(!Frozen && "cannot add values while subbuilder is active");
-      llvm::Constant *&slot = Builder.Buffer[position.Index];
-      assert(slot == nullptr && "placeholder already filled");
-      slot = value;
-    }
-
-    /// Produce an address which will eventually point to the the next
-    /// position to be filled.  This is computed with an indexed
-    /// getelementptr rather than by computing offsets.
-    ///
-    /// The returned pointer will have type T*, where T is the given
-    /// position.
-    llvm::Constant *getAddrOfCurrentPosition(llvm::Type *type);
-
-    llvm::ArrayRef<llvm::Constant*> getGEPIndicesToCurrentPosition(
-                             llvm::SmallVectorImpl<llvm::Constant*> &indices) {
-      getGEPIndicesTo(indices, Builder.Buffer.size());
-      return indices;
-    }
-
-    ConstantArrayBuilder beginArray(llvm::Type *eltTy = nullptr);
-    ConstantStructBuilder beginStruct(llvm::StructType *structTy = nullptr);
-
-  private:
-    void getGEPIndicesTo(llvm::SmallVectorImpl<llvm::Constant*> &indices,
-                         size_t position) const;
-  };
-
-  template <class Impl>
-  class AggregateBuilder : public AggregateBuilderBase {
-  protected:
-    AggregateBuilder(ConstantInitBuilder &builder,
-                     AggregateBuilderBase *parent)
-      : AggregateBuilderBase(builder, parent) {}
-
-    Impl &asImpl() { return *static_cast<Impl*>(this); }
-
-  public:
-    /// Given that this builder was created by beginning an array or struct
-    /// component on the given parent builder, finish the array/struct
-    /// component and add it to the parent.
-    ///
-    /// It is an intentional choice that the parent is passed in explicitly
-    /// despite it being redundant with information already kept in the
-    /// builder.  This aids in readability by making it easier to find the
-    /// places that add components to a builder, as well as "bookending"
-    /// the sub-builder more explicitly.
-    void finishAndAddTo(AggregateBuilderBase &parent) {
-      assert(Parent == &parent && "adding to non-parent builder");
-      parent.add(asImpl().finishImpl());
-    }
-
-    /// Given that this builder was created by beginning an array or struct
-    /// directly on a ConstantInitBuilder, finish the array/struct and
-    /// create a global variable with it as the initializer.
-    template <class... As>
-    llvm::GlobalVariable *finishAndCreateGlobal(As &&...args) {
-      assert(!Parent && "finishing non-root builder");
-      return Builder.createGlobal(asImpl().finishImpl(),
-                                  std::forward<As>(args)...);
-    }
-
-    /// Given that this builder was created by beginning an array or struct
-    /// directly on a ConstantInitBuilder, finish the array/struct and
-    /// set it as the initializer of the given global variable.
-    void finishAndSetAsInitializer(llvm::GlobalVariable *global) {
-      assert(!Parent && "finishing non-root builder");
-      return Builder.setGlobalInitializer(global, asImpl().finishImpl());
-    }
-  };
-
-  ConstantArrayBuilder beginArray(llvm::Type *eltTy = nullptr);
-
-  ConstantStructBuilder beginStruct(llvm::StructType *structTy = nullptr);
 
 private:
   llvm::GlobalVariable *createGlobal(llvm::Constant *initializer,
@@ -294,22 +89,302 @@ private:
   void resolveSelfReferences(llvm::GlobalVariable *GV);
 };
 
-/// A helper class of ConstantInitBuilder, used for building constant
-/// array initializers.
-class ConstantArrayBuilder
-    : public ConstantInitBuilder::AggregateBuilder<ConstantArrayBuilder> {
+/// A concrete base class for struct and array aggregate
+/// initializer builders.
+class ConstantAggregateBuilderBase {
+protected:
+  ConstantInitBuilderBase &Builder;
+  ConstantAggregateBuilderBase *Parent;
+  size_t Begin;
+  mutable size_t CachedOffsetEnd = 0;
+  bool Finished = false;
+  bool Frozen = false;
+  mutable CharUnits CachedOffsetFromGlobal;
+
+  llvm::SmallVectorImpl<llvm::Constant*> &getBuffer() {
+    return Builder.Buffer;
+  }
+
+  const llvm::SmallVectorImpl<llvm::Constant*> &getBuffer() const {
+    return Builder.Buffer;
+  }
+
+  ConstantAggregateBuilderBase(ConstantInitBuilderBase &builder,
+                               ConstantAggregateBuilderBase *parent)
+      : Builder(builder), Parent(parent), Begin(builder.Buffer.size()) {
+    if (parent) {
+      assert(!parent->Frozen && "parent already has child builder active");
+      parent->Frozen = true;
+    } else {
+      assert(!builder.Frozen && "builder already has child builder active");
+      builder.Frozen = true;
+    }
+  }
+
+  ~ConstantAggregateBuilderBase() {
+    assert(Finished && "didn't finish aggregate builder");
+  }
+
+  void markFinished() {
+    assert(!Frozen && "child builder still active");
+    assert(!Finished && "builder already finished");
+    Finished = true;
+    if (Parent) {
+      assert(Parent->Frozen &&
+             "parent not frozen while child builder active");
+      Parent->Frozen = false;
+    } else {
+      assert(Builder.Frozen &&
+             "builder not frozen while child builder active");
+      Builder.Frozen = false;
+    }
+  }
+
+public:
+  // Not copyable.
+  ConstantAggregateBuilderBase(const ConstantAggregateBuilderBase &) = delete;
+  ConstantAggregateBuilderBase &operator=(const ConstantAggregateBuilderBase &)
+    = delete;
+
+  // Movable, mostly to allow returning.  But we have to write this out
+  // properly to satisfy the assert in the destructor.
+  ConstantAggregateBuilderBase(ConstantAggregateBuilderBase &&other)
+    : Builder(other.Builder), Parent(other.Parent), Begin(other.Begin),
+      Finished(other.Finished), Frozen(other.Frozen) {
+    other.Finished = true;
+  }
+  ConstantAggregateBuilderBase &operator=(ConstantAggregateBuilderBase &&other)
+    = delete;
+
+  /// Abandon this builder completely.
+  void abandon() {
+    markFinished();
+    auto &buffer = Builder.Buffer;
+    buffer.erase(buffer.begin() + Begin, buffer.end());
+  }
+
+  /// Add a new value to this initializer.
+  void add(llvm::Constant *value) {
+    assert(value && "adding null value to constant initializer");
+    assert(!Finished && "cannot add more values after finishing builder");
+    assert(!Frozen && "cannot add values while subbuilder is active");
+    Builder.Buffer.push_back(value);
+  }
+
+  /// Add an integer value of type size_t.
+  void addSize(CharUnits size);
+
+  /// Add an integer value of a specific type.
+  void addInt(llvm::IntegerType *intTy, uint64_t value,
+              bool isSigned = false) {
+    add(llvm::ConstantInt::get(intTy, value, isSigned));
+  }
+
+  /// Add a null pointer of a specific type.
+  void addNullPointer(llvm::PointerType *ptrTy) {
+    add(llvm::ConstantPointerNull::get(ptrTy));
+  }
+
+  /// Add a bitcast of a value to a specific type.
+  void addBitCast(llvm::Constant *value, llvm::Type *type) {
+    add(llvm::ConstantExpr::getBitCast(value, type));
+  }
+
+  /// Add a bunch of new values to this initializer.
+  void addAll(llvm::ArrayRef<llvm::Constant *> values) {
+    assert(!Finished && "cannot add more values after finishing builder");
+    assert(!Frozen && "cannot add values while subbuilder is active");
+    Builder.Buffer.append(values.begin(), values.end());
+  }
+
+  /// Add a relative offset to the given target address, i.e. the
+  /// static difference between the target address and the address
+  /// of the relative offset.  The target must be known to be defined
+  /// in the current linkage unit.  The offset will have the given
+  /// integer type, which must be no wider than intptr_t.  Some
+  /// targets may not fully support this operation.
+  void addRelativeOffset(llvm::IntegerType *type, llvm::Constant *target) {
+    add(getRelativeOffset(type, target));
+  }
+
+  /// Add a relative offset to the target address, plus a small
+  /// constant offset.  This is primarily useful when the relative
+  /// offset is known to be a multiple of (say) four and therefore
+  /// the tag can be used to express an extra two bits of information.
+  void addTaggedRelativeOffset(llvm::IntegerType *type,
+                               llvm::Constant *address,
+                               unsigned tag) {
+    llvm::Constant *offset = getRelativeOffset(type, address);
+    if (tag) {
+      offset = llvm::ConstantExpr::getAdd(offset,
+                                          llvm::ConstantInt::get(type, tag));
+    }
+    add(offset);
+  }
+
+  /// Return the offset from the start of the initializer to the
+  /// next position, assuming no padding is required prior to it.
+  CharUnits getNextOffsetFromGlobal() const {
+    assert(!Finished && "cannot add more values after finishing builder");
+    assert(!Frozen && "cannot add values while subbuilder is active");
+    return getOffsetFromGlobalTo(Builder.Buffer.size());
+  }
+
+  /// An opaque class to hold the abstract position of a placeholder.
+  class PlaceholderPosition {
+    size_t Index;
+    friend class ConstantAggregateBuilderBase;
+    PlaceholderPosition(size_t index) : Index(index) {}
+  };
+
+  /// Add a placeholder value to the structure.  The returned position
+  /// can be used to set the value later; it will not be invalidated by
+  /// any intermediate operations except (1) filling the same position or
+  /// (2) finishing the entire builder.
+  ///
+  /// This is useful for emitting certain kinds of structure which
+  /// contain some sort of summary field, generaly a count, before any
+  /// of the data.  By emitting a placeholder first, the structure can
+  /// be emitted eagerly.
+  PlaceholderPosition addPlaceholder() {
+    assert(!Finished && "cannot add more values after finishing builder");
+    assert(!Frozen && "cannot add values while subbuilder is active");
+    Builder.Buffer.push_back(nullptr);
+    return Builder.Buffer.size() - 1;
+  }
+
+  /// Fill a previously-added placeholder.
+  void fillPlaceholderWithInt(PlaceholderPosition position,
+                              llvm::IntegerType *type, uint64_t value,
+                              bool isSigned = false) {
+    fillPlaceholder(position, llvm::ConstantInt::get(type, value, isSigned));
+  }
+
+  /// Fill a previously-added placeholder.
+  void fillPlaceholder(PlaceholderPosition position, llvm::Constant *value) {
+    assert(!Finished && "cannot change values after finishing builder");
+    assert(!Frozen && "cannot add values while subbuilder is active");
+    llvm::Constant *&slot = Builder.Buffer[position.Index];
+    assert(slot == nullptr && "placeholder already filled");
+    slot = value;
+  }
+
+  /// Produce an address which will eventually point to the the next
+  /// position to be filled.  This is computed with an indexed
+  /// getelementptr rather than by computing offsets.
+  ///
+  /// The returned pointer will have type T*, where T is the given
+  /// position.
+  llvm::Constant *getAddrOfCurrentPosition(llvm::Type *type);
+
+  llvm::ArrayRef<llvm::Constant*> getGEPIndicesToCurrentPosition(
+                           llvm::SmallVectorImpl<llvm::Constant*> &indices) {
+    getGEPIndicesTo(indices, Builder.Buffer.size());
+    return indices;
+  }
+
+protected:
+  llvm::Constant *finishArray(llvm::Type *eltTy);
+  llvm::Constant *finishStruct(llvm::StructType *structTy);
+
+private:
+  void getGEPIndicesTo(llvm::SmallVectorImpl<llvm::Constant*> &indices,
+                       size_t position) const;
+
+  llvm::Constant *getRelativeOffset(llvm::IntegerType *offsetType,
+                                    llvm::Constant *target);
+
+  CharUnits getOffsetFromGlobalTo(size_t index) const;
+};
+
+template <class Impl, class Traits>
+class ConstantAggregateBuilderTemplateBase
+    : public Traits::AggregateBuilderBase {
+  using super = typename Traits::AggregateBuilderBase;
+public:
+  using InitBuilder = typename Traits::InitBuilder;
+  using ArrayBuilder = typename Traits::ArrayBuilder;
+  using StructBuilder = typename Traits::StructBuilder;
+  using AggregateBuilderBase = typename Traits::AggregateBuilderBase;
+
+protected:
+  ConstantAggregateBuilderTemplateBase(InitBuilder &builder,
+                                       AggregateBuilderBase *parent)
+    : super(builder, parent) {}
+
+  Impl &asImpl() { return *static_cast<Impl*>(this); }
+
+public:
+  ArrayBuilder beginArray(llvm::Type *eltTy = nullptr) {
+    return ArrayBuilder(static_cast<InitBuilder&>(this->Builder), this, eltTy);
+  }
+
+  StructBuilder beginStruct(llvm::StructType *ty = nullptr) {
+    return StructBuilder(static_cast<InitBuilder&>(this->Builder), this, ty);
+  }
+
+  /// Given that this builder was created by beginning an array or struct
+  /// component on the given parent builder, finish the array/struct
+  /// component and add it to the parent.
+  ///
+  /// It is an intentional choice that the parent is passed in explicitly
+  /// despite it being redundant with information already kept in the
+  /// builder.  This aids in readability by making it easier to find the
+  /// places that add components to a builder, as well as "bookending"
+  /// the sub-builder more explicitly.
+  void finishAndAddTo(AggregateBuilderBase &parent) {
+    assert(this->Parent == &parent && "adding to non-parent builder");
+    parent.add(asImpl().finishImpl());
+  }
+
+  /// Given that this builder was created by beginning an array or struct
+  /// directly on a ConstantInitBuilder, finish the array/struct and
+  /// create a global variable with it as the initializer.
+  template <class... As>
+  llvm::GlobalVariable *finishAndCreateGlobal(As &&...args) {
+    assert(!this->Parent && "finishing non-root builder");
+    return this->Builder.createGlobal(asImpl().finishImpl(),
+                                      std::forward<As>(args)...);
+  }
+
+  /// Given that this builder was created by beginning an array or struct
+  /// directly on a ConstantInitBuilder, finish the array/struct and
+  /// set it as the initializer of the given global variable.
+  void finishAndSetAsInitializer(llvm::GlobalVariable *global) {
+    assert(!this->Parent && "finishing non-root builder");
+    return this->Builder.setGlobalInitializer(global, asImpl().finishImpl());
+  }
+};
+
+template <class Traits>
+class ConstantArrayBuilderTemplateBase
+  : public ConstantAggregateBuilderTemplateBase<typename Traits::ArrayBuilder,
+                                                Traits> {
+  using super =
+    ConstantAggregateBuilderTemplateBase<typename Traits::ArrayBuilder, Traits>;
+
+public:
+  using InitBuilder = typename Traits::InitBuilder;
+  using AggregateBuilderBase = typename Traits::AggregateBuilderBase;
+
+private:
   llvm::Type *EltTy;
-  friend class ConstantInitBuilder;
-  template <class Impl> friend class ConstantInitBuilder::AggregateBuilder;
-  ConstantArrayBuilder(ConstantInitBuilder &builder,
-                       AggregateBuilderBase *parent, llvm::Type *eltTy)
-    : AggregateBuilder(builder, parent), EltTy(eltTy) {}
+
+  template <class, class>
+  friend class ConstantAggregateBuilderTemplateBase;
+
+protected:
+  ConstantArrayBuilderTemplateBase(InitBuilder &builder,
+                                   AggregateBuilderBase *parent,
+                                   llvm::Type *eltTy)
+    : super(builder, parent), EltTy(eltTy) {}
+
 public:
   size_t size() const {
-    assert(!Finished);
-    assert(!Frozen);
-    assert(Begin <= getBuffer().size());
-    return getBuffer().size() - Begin;
+    assert(!this->Finished && "cannot query after finishing builder");
+    assert(!this->Frozen && "cannot query while sub-builder is active");
+    assert(this->Begin <= this->getBuffer().size());
+    return this->getBuffer().size() - this->Begin;
   }
 
   bool empty() const {
@@ -319,44 +394,120 @@ public:
 private:
   /// Form an array constant from the values that have been added to this
   /// builder.
-  llvm::Constant *finishImpl();
+  llvm::Constant *finishImpl() {
+    return AggregateBuilderBase::finishArray(EltTy);
+  }
 };
 
-inline ConstantArrayBuilder
-ConstantInitBuilder::beginArray(llvm::Type *eltTy) {
-  return ConstantArrayBuilder(*this, nullptr, eltTy);
-}
+/// A template class designed to allow other frontends to
+/// easily customize the builder classes used by ConstantInitBuilder,
+/// and thus to extend the API to work with the abstractions they
+/// prefer.  This would probably not be necessary if C++ just
+/// supported extension methods.
+template <class Traits>
+class ConstantStructBuilderTemplateBase
+  : public ConstantAggregateBuilderTemplateBase<typename Traits::StructBuilder,
+                                                Traits> {
+  using super =
+    ConstantAggregateBuilderTemplateBase<typename Traits::StructBuilder,Traits>;
 
-inline ConstantArrayBuilder
-ConstantInitBuilder::AggregateBuilderBase::beginArray(llvm::Type *eltTy) {
-  return ConstantArrayBuilder(Builder, this, eltTy);
-}
+public:
+  using InitBuilder = typename Traits::InitBuilder;
+  using AggregateBuilderBase = typename Traits::AggregateBuilderBase;
+
+private:
+  llvm::StructType *StructTy;
+
+  template <class, class>
+  friend class ConstantAggregateBuilderTemplateBase;
+
+protected:
+  ConstantStructBuilderTemplateBase(InitBuilder &builder,
+                                    AggregateBuilderBase *parent,
+                                    llvm::StructType *structTy)
+    : super(builder, parent), StructTy(structTy) {}
+
+private:
+  /// Form an array constant from the values that have been added to this
+  /// builder.
+  llvm::Constant *finishImpl() {
+    return AggregateBuilderBase::finishStruct(StructTy);
+  }
+};
+
+/// A template class designed to allow other frontends to
+/// easily customize the builder classes used by ConstantInitBuilder,
+/// and thus to extend the API to work with the abstractions they
+/// prefer.  This would probably not be necessary if C++ just
+/// supported extension methods.
+template <class Traits>
+class ConstantInitBuilderTemplateBase : public ConstantInitBuilderBase {
+protected:
+  ConstantInitBuilderTemplateBase(CodeGenModule &CGM)
+    : ConstantInitBuilderBase(CGM) {}
+
+public:
+  using InitBuilder = typename Traits::InitBuilder;
+  using ArrayBuilder = typename Traits::ArrayBuilder;
+  using StructBuilder = typename Traits::StructBuilder;
+
+  ArrayBuilder beginArray(llvm::Type *eltTy = nullptr) {
+    return ArrayBuilder(static_cast<InitBuilder&>(*this), nullptr, eltTy);
+  }
+
+  StructBuilder beginStruct(llvm::StructType *structTy = nullptr) {
+    return StructBuilder(static_cast<InitBuilder&>(*this), nullptr, structTy);
+  }
+};
+
+class ConstantInitBuilder;
+class ConstantStructBuilder;
+class ConstantArrayBuilder;
+
+struct ConstantInitBuilderTraits {
+  using InitBuilder = ConstantInitBuilder;
+  using AggregateBuilderBase = ConstantAggregateBuilderBase;
+  using ArrayBuilder = ConstantArrayBuilder;
+  using StructBuilder = ConstantStructBuilder;
+};
+
+/// The standard implementation of ConstantInitBuilder used in Clang.
+class ConstantInitBuilder
+    : public ConstantInitBuilderTemplateBase<ConstantInitBuilderTraits> {
+public:
+  explicit ConstantInitBuilder(CodeGenModule &CGM) :
+    ConstantInitBuilderTemplateBase(CGM) {}
+};
+
+/// A helper class of ConstantInitBuilder, used for building constant
+/// array initializers.
+class ConstantArrayBuilder
+    : public ConstantArrayBuilderTemplateBase<ConstantInitBuilderTraits> {
+  template <class Traits>
+  friend class ConstantInitBuilderTemplateBase;
+  template <class Impl, class Traits>
+  friend class ConstantAggregateBuilderTemplateBase;
+
+  ConstantArrayBuilder(ConstantInitBuilder &builder,
+                       ConstantAggregateBuilderBase *parent,
+                       llvm::Type *eltTy)
+    : ConstantArrayBuilderTemplateBase(builder, parent, eltTy) {}
+};
 
 /// A helper class of ConstantInitBuilder, used for building constant
 /// struct initializers.
 class ConstantStructBuilder
-    : public ConstantInitBuilder::AggregateBuilder<ConstantStructBuilder> {
-  llvm::StructType *Ty;
-  friend class ConstantInitBuilder;
-  template <class Impl> friend class ConstantInitBuilder::AggregateBuilder;
+    : public ConstantStructBuilderTemplateBase<ConstantInitBuilderTraits> {
+  template <class Traits>
+  friend class ConstantInitBuilderTemplateBase;
+  template <class Impl, class Traits>
+  friend class ConstantAggregateBuilderTemplateBase;
+
   ConstantStructBuilder(ConstantInitBuilder &builder,
-                        AggregateBuilderBase *parent, llvm::StructType *ty)
-    : AggregateBuilder(builder, parent), Ty(ty) {}
-
-  /// Finish the struct.
-  llvm::Constant *finishImpl();
+                        ConstantAggregateBuilderBase *parent,
+                        llvm::StructType *structTy)
+    : ConstantStructBuilderTemplateBase(builder, parent, structTy) {}
 };
-
-inline ConstantStructBuilder
-ConstantInitBuilder::beginStruct(llvm::StructType *structTy) {
-  return ConstantStructBuilder(*this, nullptr, structTy);
-}
-
-inline ConstantStructBuilder
-ConstantInitBuilder::AggregateBuilderBase::beginStruct(
-                                                  llvm::StructType *structTy) {
-  return ConstantStructBuilder(Builder, this, structTy);
-}
 
 }  // end namespace CodeGen
 }  // end namespace clang
