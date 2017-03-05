@@ -40,17 +40,29 @@ public:
   
   bool shouldWalkTypesOfTypeLocs() const { return false; }
 
-  bool VisitTypedefTypeLoc(TypedefTypeLoc TL) {
-    return IndexCtx.handleReference(TL.getTypedefNameDecl(), TL.getNameLoc(),
-                                    Parent, ParentDC, SymbolRoleSet(),
-                                    Relations);
-  }
-
 #define TRY_TO(CALL_EXPR)                                                      \
   do {                                                                         \
     if (!CALL_EXPR)                                                            \
       return false;                                                            \
   } while (0)
+
+  bool VisitTypedefTypeLoc(TypedefTypeLoc TL) {
+    if (IsBase) {
+      SourceLocation Loc = TL.getNameLoc();
+      TRY_TO(IndexCtx.handleReference(TL.getTypedefNameDecl(), Loc,
+                                      Parent, ParentDC, SymbolRoleSet()));
+      if (auto *CD = TL.getType()->getAsCXXRecordDecl()) {
+        TRY_TO(IndexCtx.handleReference(CD, Loc, Parent, ParentDC,
+                                        (unsigned)SymbolRole::Implicit,
+                                        Relations));
+      }
+    } else {
+      TRY_TO(IndexCtx.handleReference(TL.getTypedefNameDecl(), TL.getNameLoc(),
+                                      Parent, ParentDC, SymbolRoleSet(),
+                                      Relations));
+    }
+    return true;
+  }
 
   bool traverseParamVarHelper(ParmVarDecl *D) {
     TRY_TO(TraverseNestedNameSpecifierLoc(D->getQualifierLoc()));
