@@ -963,7 +963,12 @@ void DAGTypeLegalizer::SplitVecRes_ExtVecInRegOp(SDNode *N, SDValue &Lo,
 
   SDLoc dl(N);
   SDValue InLo, InHi;
-  GetSplitVector(N0, InLo, InHi);
+
+  if (getTypeAction(N0.getValueType()) == TargetLowering::TypeSplitVector)
+    GetSplitVector(N0, InLo, InHi);
+  else
+    std::tie(InLo, InHi) = DAG.SplitVectorOperand(N, 0);
+
   EVT InLoVT = InLo.getValueType();
   unsigned InNumElements = InLoVT.getVectorNumElements();
 

@@ -1992,27 +1992,6 @@ inline APInt add(const APInt &LHS, const APInt &RHS) { return LHS + RHS; }
 /// Performs subtraction on APInt values.
 inline APInt sub(const APInt &LHS, const APInt &RHS) { return LHS - RHS; }
 
-/// \brief Bitwise AND function for APInt.
-///
-/// Performs bitwise AND operation on APInt LHS and
-/// APInt RHS.
-inline APInt And(const APInt &LHS, const APInt &RHS) { return LHS & RHS; }
-
-/// \brief Bitwise OR function for APInt.
-///
-/// Performs bitwise OR operation on APInt LHS and APInt RHS.
-inline APInt Or(const APInt &LHS, const APInt &RHS) { return LHS | RHS; }
-
-/// \brief Bitwise XOR function for APInt.
-///
-/// Performs bitwise XOR operation on APInt.
-inline APInt Xor(const APInt &LHS, const APInt &RHS) { return LHS ^ RHS; }
-
-/// \brief Bitwise complement function.
-///
-/// Performs a bitwise complement operation on APInt.
-inline APInt Not(const APInt &APIVal) { return ~APIVal; }
-
 } // End of APIntOps namespace
 
 // See friend declaration above. This additional declaration is required in
