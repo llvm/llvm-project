@@ -225,14 +225,17 @@ public:
   }
 
   bool handleReferencedProtocols(const ObjCProtocolList &ProtList,
-                                 const ObjCContainerDecl *ContD) {
+                                 const ObjCContainerDecl *ContD,
+                                 SourceLocation SuperLoc) {
     ObjCInterfaceDecl::protocol_loc_iterator LI = ProtList.loc_begin();
     for (ObjCInterfaceDecl::protocol_iterator
          I = ProtList.begin(), E = ProtList.end(); I != E; ++I, ++LI) {
       SourceLocation Loc = *LI;
       ObjCProtocolDecl *PD = *I;
-      TRY_TO(IndexCtx.handleReference(PD, Loc, ContD, ContD,
-          SymbolRoleSet(),
+      SymbolRoleSet roles{};
+      if (Loc == SuperLoc)
+        roles |= (SymbolRoleSet)SymbolRole::Implicit;
+      TRY_TO(IndexCtx.handleReference(PD, Loc, ContD, ContD, roles,
           SymbolRelation{(unsigned)SymbolRole::RelationBaseOf, ContD}));
     }
     return true;
@@ -241,12 +244,26 @@ public:
   bool VisitObjCInterfaceDecl(const ObjCInterfaceDecl *D) {
     if (D->isThisDeclarationADefinition()) {
       TRY_TO(IndexCtx.handleDecl(D));
+      SourceLocation SuperLoc = D->getSuperClassLoc();
       if (auto *SuperD = D->getSuperClass()) {
-        TRY_TO(IndexCtx.handleReference(SuperD, D->getSuperClassLoc(), D, D,
-            SymbolRoleSet(),
+        bool hasSuperTypedef = false;
+        if (auto *TInfo = D->getSuperClassTInfo()) {
+          if (auto *TT = TInfo->getType()->getAs<TypedefType>()) {
+            if (auto *TD = TT->getDecl()) {
+              hasSuperTypedef = true;
+              TRY_TO(IndexCtx.handleReference(TD, SuperLoc, D, D,
+                                              SymbolRoleSet()));
+            }
+          }
+        }
+        SymbolRoleSet superRoles{};
+        if (hasSuperTypedef)
+          superRoles |= (SymbolRoleSet)SymbolRole::Implicit;
+        TRY_TO(IndexCtx.handleReference(SuperD, SuperLoc, D, D, superRoles,
             SymbolRelation{(unsigned)SymbolRole::RelationBaseOf, D}));
       }
-      TRY_TO(handleReferencedProtocols(D->getReferencedProtocols(), D));
+      TRY_TO(handleReferencedProtocols(D->getReferencedProtocols(), D,
+                                       SuperLoc));
       TRY_TO(IndexCtx.indexDeclContext(D));
     } else {
       return IndexCtx.handleReference(D, D->getLocation(), nullptr,
@@ -258,7 +275,8 @@ public:
   bool VisitObjCProtocolDecl(const ObjCProtocolDecl *D) {
     if (D->isThisDeclarationADefinition()) {
       TRY_TO(IndexCtx.handleDecl(D));
-      TRY_TO(handleReferencedProtocols(D->getReferencedProtocols(), D));
+      TRY_TO(handleReferencedProtocols(D->getReferencedProtocols(), D,
+                                       /*superLoc=*/SourceLocation()));
       TRY_TO(IndexCtx.indexDeclContext(D));
     } else {
       return IndexCtx.handleReference(D, D->getLocation(), nullptr,
@@ -306,7 +324,8 @@ public:
     if (!CategoryLoc.isValid())
       CategoryLoc = D->getLocation();
     TRY_TO(IndexCtx.handleDecl(D, CategoryLoc));
-    TRY_TO(handleReferencedProtocols(D->getReferencedProtocols(), D));
+    TRY_TO(handleReferencedProtocols(D->getReferencedProtocols(), D,
+                                     /*superLoc=*/SourceLocation()));
     TRY_TO(IndexCtx.indexDeclContext(D));
     return true;
   }
