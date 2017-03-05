@@ -6,19 +6,20 @@
  *===------------------------------------------------------------------------*/
 
 #include "mathH.h"
-#include "trigredH.h"
+#include "trigpiredH.h"
 
 INLINEATTR half
-MATH_MANGLE(sincos)(half x, __private half *cp)
+MATH_MANGLE(sincospi)(half x, __private half *cp)
 {
-    half r;
-    short regn = MATH_PRIVATE(trigred)(&r, BUILTIN_ABS_F16(x));
+    half t;
+    short i = MATH_PRIVATE(trigpired)(BUILTIN_ABS_F16(x), &t);
 
     half cc;
-    half ss = MATH_PRIVATE(sincosred)(r, &cc);
+    half ss = MATH_PRIVATE(sincospired)(t, &cc);
 
-    short flip = regn > (short)1 ? (short)0x8000 : (short)0;
-    bool odd = (regn & 1) != 0;
+    short flip = i > (short)1 ? (short)0x8000 : (short)0;
+    bool odd = (i & (short)1) != (short)0;
+
     short s = AS_SHORT(odd ? cc : ss);
     s ^= flip ^ (AS_SHORT(x) & (short)0x8000);
     ss = -ss;

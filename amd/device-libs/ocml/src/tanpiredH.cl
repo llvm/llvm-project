@@ -5,7 +5,21 @@
  * License. See LICENSE.TXT for details.
  *===------------------------------------------------------------------------*/
 
-extern short MATH_PRIVATE(trigred)(__private half *r, half x);
-extern half MATH_PRIVATE(sincosred)(half x, __private half *cp);
-extern CONSTATTR half MATH_PRIVATE(tanred)(half x, short regn);
+#include "mathH.h"
+#include "trigpiredH.h"
+
+CONSTATTR INLINEATTR half
+MATH_PRIVATE(tanpired)(half x, short i)
+{
+    half s = x * x;
+
+    half t = MATH_MAD(s, MATH_MAD(s, 0x1.3d8p+8h, 0x1.fe4p+4h), 0x1.508p+3h);
+
+    t = x * s * t;
+    t = MATH_MAD(x, 0x1.92p+1h, t);
+
+    half tr = -MATH_RCP(t);
+
+    return i ? tr : t;
+}
 

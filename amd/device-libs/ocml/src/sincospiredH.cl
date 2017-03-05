@@ -6,16 +6,21 @@
  *===------------------------------------------------------------------------*/
 
 #include "mathH.h"
-#include "trigredH.h"
 
 INLINEATTR half
-MATH_PRIVATE(sincosred)(half x, __private half *cp)
+MATH_PRIVATE(sincospired)(half x, __private half *cp)
 {
-    half t = x * x;
-    half s = MATH_MAD(x, t*MATH_MAD(t, 0x1.0bp-7h, -0x1.554p-3h), x);
-    half c = MATH_MAD(t, MATH_MAD(t, 0x1.4b4p-5h, -0x1.ffcp-2h), 1.0h);
 
-    *cp = c;
-    return s;
+    half t = x * x;
+
+    half sx = MATH_MAD(t, 0x1.b84p+0h, -0x1.46cp+2h);
+    sx = x * t * sx;
+    sx = MATH_MAD(x, 0x1.92p+1h, sx);
+
+    half cx = MATH_MAD(t, 0x1.fbp+1h, -0x1.3bcp+2h);
+    cx = MATH_MAD(t, cx, 1.0h);
+
+    *cp = cx;
+    return sx;
 }
 

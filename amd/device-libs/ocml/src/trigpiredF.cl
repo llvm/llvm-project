@@ -5,7 +5,16 @@
  * License. See LICENSE.TXT for details.
  *===------------------------------------------------------------------------*/
 
-extern short MATH_PRIVATE(trigred)(__private half *r, half x);
-extern half MATH_PRIVATE(sincosred)(half x, __private half *cp);
-extern CONSTATTR half MATH_PRIVATE(tanred)(half x, short regn);
+#include "mathF.h"
+#include "trigpiredF.h"
+
+INLINEATTR int
+MATH_PRIVATE(trigpired)(float x, __private float *r)
+{
+    float t = 2.0f * BUILTIN_FRACTION_F32(0.5f * x);
+    x = x > 1.0f ? t : x;
+    t = BUILTIN_RINT_F32(2.0f * x);
+    *r = MATH_MAD(t, -0.5f, x);
+    return (int)t & 0x3;
+}
 

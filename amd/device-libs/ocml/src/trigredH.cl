@@ -7,7 +7,7 @@
 
 #include "mathH.h"
 
-__attribute__((always_inline)) int
+__attribute__((always_inline)) short
 MATH_PRIVATE(trigred)(__private half *r, half hx)
 {
     const float twobypi = 0x1.45f306p-1f;
