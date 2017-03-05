@@ -499,7 +499,7 @@ define <4 x i64> @combine_pshufb_as_zext128(<32 x i8> %a0) {
 ; X32-LABEL: combine_pshufb_as_zext128:
 ; X32:       # BB#0:
 ; X32-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0]
-; X32-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,1,0,1]
+; X32-NEXT:    vperm2i128 {{.*#+}} ymm0 = ymm0[0,1,0,1]
 ; X32-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[15,14],zero,zero,zero,zero,zero,zero,ymm0[13,12],zero,zero,zero,zero,zero,zero,ymm0[31,30],zero,zero,zero,zero,zero,zero,ymm0[29,28],zero,zero,zero,zero,zero,zero
 ; X32-NEXT:    retl
 ;

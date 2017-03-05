@@ -2529,12 +2529,12 @@ SDValue SelectionDAGLegalize::ExpandBITREVERSE(SDValue Op, const SDLoc &dl) {
     APInt MaskHi4(Sz, 0), MaskHi2(Sz, 0), MaskHi1(Sz, 0);
     APInt MaskLo4(Sz, 0), MaskLo2(Sz, 0), MaskLo1(Sz, 0);
     for (unsigned J = 0; J != Sz; J += 8) {
-      MaskHi4 = MaskHi4.Or(APInt(Sz, 0xF0ull << J));
-      MaskLo4 = MaskLo4.Or(APInt(Sz, 0x0Full << J));
-      MaskHi2 = MaskHi2.Or(APInt(Sz, 0xCCull << J));
-      MaskLo2 = MaskLo2.Or(APInt(Sz, 0x33ull << J));
-      MaskHi1 = MaskHi1.Or(APInt(Sz, 0xAAull << J));
-      MaskLo1 = MaskLo1.Or(APInt(Sz, 0x55ull << J));
+      MaskHi4 = MaskHi4 | (0xF0ull << J);
+      MaskLo4 = MaskLo4 | (0x0Full << J);
+      MaskHi2 = MaskHi2 | (0xCCull << J);
+      MaskLo2 = MaskLo2 | (0x33ull << J);
+      MaskHi1 = MaskHi1 | (0xAAull << J);
+      MaskLo1 = MaskLo1 | (0x55ull << J);
     }
 
     // BSWAP if the type is wider than a single byte.

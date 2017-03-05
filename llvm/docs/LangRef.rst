@@ -195,7 +195,7 @@ linkage:
 ``private``
     Global values with "``private``" linkage are only directly
     accessible by objects in the current module. In particular, linking
-    code into a module with an private global value may cause the
+    code into a module with a private global value may cause the
     private to be renamed as necessary to avoid collisions. Because the
     symbol is private to the module, all references can be updated. This
     doesn't show up in any symbol table in the object file.

@@ -711,6 +711,10 @@ namespace llvm {
     bool shouldConvertConstantLoadToIntImm(const APInt &Imm,
                                            Type *Ty) const override;
 
+    bool convertSelectOfConstantsToMath() const override {
+      return true;
+    }
+
     bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override;
 
     bool getTgtMemIntrinsic(IntrinsicInfo &Info,

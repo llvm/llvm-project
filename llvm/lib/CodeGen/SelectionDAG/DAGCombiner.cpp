@@ -5725,8 +5725,6 @@ SDValue DAGCombiner::foldSelectOfConstants(SDNode *N) {
   // transforms in the other direction (create a select from a zext/sext). There
   // is also a target-independent combine here in DAGCombiner in the other
   // direction for (select Cond, -1, 0) when the condition is not i1.
-  // TODO: This could be generalized for any 2 constants that differ by 1:
-  // add ({s/z}ext Cond), C
   if (CondVT == MVT::i1 && !LegalOperations) {
     if (C1->isNullValue() && C2->isOne()) {
       // select Cond, 0, 1 --> zext (!Cond)
@@ -5754,6 +5752,25 @@ SDValue DAGCombiner::foldSelectOfConstants(SDNode *N) {
         Cond = DAG.getNode(ISD::SIGN_EXTEND, DL, VT, Cond);
       return Cond;
     }
+
+    // For any constants that differ by 1, we can transform the select into an
+    // extend and add. Use a target hook because some targets may prefer to
+    // transform in the other direction.
+    if (TLI.convertSelectOfConstantsToMath()) {
+      if (C1->getAPIntValue() - 1 == C2->getAPIntValue()) {
+        // select Cond, C1, C1-1 --> add (zext Cond), C1-1
+        if (VT != MVT::i1)
+          Cond = DAG.getNode(ISD::ZERO_EXTEND, DL, VT, Cond);
+        return DAG.getNode(ISD::ADD, DL, VT, Cond, N2);
+      }
+      if (C1->getAPIntValue() + 1 == C2->getAPIntValue()) {
+        // select Cond, C1, C1+1 --> add (sext Cond), C1+1
+        if (VT != MVT::i1)
+          Cond = DAG.getNode(ISD::SIGN_EXTEND, DL, VT, Cond);
+        return DAG.getNode(ISD::ADD, DL, VT, Cond, N2);
+      }
+    }
+
     return SDValue();
   }
 

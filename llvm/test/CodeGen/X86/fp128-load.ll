@@ -1,5 +1,7 @@
-; RUN: llc < %s -O2 -mtriple=x86_64-linux-android -mattr=+mmx | FileCheck %s
-; RUN: llc < %s -O2 -mtriple=x86_64-linux-gnu -mattr=+mmx | FileCheck %s
+; RUN: llc < %s -O2 -mtriple=x86_64-linux-android -mattr=+mmx \
+; RUN:     -enable-legalize-types-checking | FileCheck %s
+; RUN: llc < %s -O2 -mtriple=x86_64-linux-gnu -mattr=+mmx \
+; RUN:     -enable-legalize-types-checking | FileCheck %s
 
 ; __float128 myFP128 = 1.0L;  // x86_64-linux-android
 @my_fp128 = global fp128 0xL00000000000000003FFF000000000000, align 16
