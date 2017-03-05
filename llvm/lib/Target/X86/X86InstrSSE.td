@@ -5963,12 +5963,12 @@ multiclass SS41I_pmovx_patterns<string OpcPrefix, string ExtTy,
   }
 }
 
-defm : SS41I_pmovx_patterns<"VPMOVSX", "s", X86vsext, extloadi32i16>;
-defm : SS41I_pmovx_patterns<"VPMOVZX", "z", X86vzext, loadi16_anyext>;
+defm : SS41I_pmovx_patterns<"VPMOVSX", "s", sext_invec, extloadi32i16>;
+defm : SS41I_pmovx_patterns<"VPMOVZX", "z", zext_invec, loadi16_anyext>;
 
 let Predicates = [UseSSE41] in {
-  defm : SS41I_pmovx_patterns<"PMOVSX", "s", X86vsext, extloadi32i16>;
-  defm : SS41I_pmovx_patterns<"PMOVZX", "z", X86vzext, loadi16_anyext>;
+  defm : SS41I_pmovx_patterns<"PMOVSX", "s", sext_invec, extloadi32i16>;
+  defm : SS41I_pmovx_patterns<"PMOVZX", "z", zext_invec, loadi16_anyext>;
 }
 
 //===----------------------------------------------------------------------===//

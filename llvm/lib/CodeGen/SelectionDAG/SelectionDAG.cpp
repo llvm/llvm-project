@@ -2419,6 +2419,20 @@ void SelectionDAG::computeKnownBits(SDValue Op, APInt &KnownZero,
     }
     break;
   }
+  case ISD::ZERO_EXTEND_VECTOR_INREG: {
+    EVT InVT = Op.getOperand(0).getValueType();
+    unsigned InBits = InVT.getScalarSizeInBits();
+    APInt NewBits   = APInt::getHighBitsSet(BitWidth, BitWidth - InBits);
+    KnownZero = KnownZero.trunc(InBits);
+    KnownOne = KnownOne.trunc(InBits);
+    computeKnownBits(Op.getOperand(0), KnownZero, KnownOne,
+                     DemandedElts.zext(InVT.getVectorNumElements()),
+                     Depth + 1);
+    KnownZero = KnownZero.zext(BitWidth);
+    KnownOne = KnownOne.zext(BitWidth);
+    KnownZero |= NewBits;
+    break;
+  }
   case ISD::ZERO_EXTEND: {
     EVT InVT = Op.getOperand(0).getValueType();
     unsigned InBits = InVT.getScalarSizeInBits();
@@ -2432,6 +2446,7 @@ void SelectionDAG::computeKnownBits(SDValue Op, APInt &KnownZero,
     KnownZero |= NewBits;
     break;
   }
+  // TODO ISD::SIGN_EXTEND_VECTOR_INREG
   case ISD::SIGN_EXTEND: {
     EVT InVT = Op.getOperand(0).getValueType();
     unsigned InBits = InVT.getScalarSizeInBits();
@@ -2859,6 +2874,7 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, unsigned Depth) const {
   }
 
   case ISD::SIGN_EXTEND:
+  case ISD::SIGN_EXTEND_VECTOR_INREG:
     Tmp = VTBits - Op.getOperand(0).getScalarValueSizeInBits();
     return ComputeNumSignBits(Op.getOperand(0), Depth+1) + Tmp;
 

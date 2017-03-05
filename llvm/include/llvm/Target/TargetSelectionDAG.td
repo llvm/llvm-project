@@ -160,6 +160,10 @@ def SDTExtInreg : SDTypeProfile<1, 2, [     // sext_inreg
   SDTCisSameAs<0, 1>, SDTCisInt<0>, SDTCisVT<2, OtherVT>,
   SDTCisVTSmallerThanOp<2, 1>
 ]>;
+def SDTExtInvec : SDTypeProfile<1, 1, [     // sext_invec
+  SDTCisInt<0>, SDTCisVec<0>, SDTCisInt<1>, SDTCisVec<1>,
+  SDTCisOpSmallerThanOp<1, 0>, SDTCisSameSizeAs<0,1>
+]>;
 
 def SDTSetCC : SDTypeProfile<1, 3, [        // setcc
   SDTCisInt<0>, SDTCisSameAs<1, 2>, SDTCisVT<3, OtherVT>
@@ -406,6 +410,9 @@ def umax       : SDNode<"ISD::UMAX"      , SDTIntBinOp,
                                   [SDNPCommutative, SDNPAssociative]>;
 
 def sext_inreg : SDNode<"ISD::SIGN_EXTEND_INREG", SDTExtInreg>;
+def sext_invec : SDNode<"ISD::SIGN_EXTEND_VECTOR_INREG", SDTExtInvec>;
+def zext_invec : SDNode<"ISD::ZERO_EXTEND_VECTOR_INREG", SDTExtInvec>;
+
 def bitreverse : SDNode<"ISD::BITREVERSE" , SDTIntUnaryOp>;
 def bswap      : SDNode<"ISD::BSWAP"      , SDTIntUnaryOp>;
 def ctlz       : SDNode<"ISD::CTLZ"       , SDTIntUnaryOp>;
