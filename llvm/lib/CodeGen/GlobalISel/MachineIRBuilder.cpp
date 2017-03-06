@@ -416,6 +416,10 @@ MachineIRBuilder::buildSequence(unsigned Res,
   return MIB;
 }
 
+MachineInstrBuilder MachineIRBuilder::buildUndef(unsigned Res) {
+  return buildInstr(TargetOpcode::IMPLICIT_DEF).addDef(Res);
+}
+
 MachineInstrBuilder MachineIRBuilder::buildMerge(unsigned Res,
                                                  ArrayRef<unsigned> Ops) {
 
