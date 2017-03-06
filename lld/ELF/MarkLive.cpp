@@ -22,6 +22,7 @@
 
 #include "InputSection.h"
 #include "LinkerScript.h"
+#include "Memory.h"
 #include "OutputSections.h"
 #include "Strings.h"
 #include "SymbolTable.h"
@@ -63,17 +64,25 @@ static typename ELFT::uint getAddend(InputSectionBase &Sec,
   return Rel.r_addend;
 }
 
+// There are normally few input sections whose names are valid C
+// identifiers, so we just store a std::vector instead of a multimap.
+static DenseMap<StringRef, std::vector<InputSectionBase *>> CNamedSections;
+
 template <class ELFT, class RelT>
 static void resolveReloc(InputSectionBase &Sec, RelT &Rel,
                          std::function<void(ResolvedReloc)> Fn) {
   SymbolBody &B = Sec.getFile<ELFT>()->getRelocTargetSym(Rel);
-  auto *D = dyn_cast<DefinedRegular>(&B);
-  if (!D || !D->Section)
-    return;
-  typename ELFT::uint Offset = D->Value;
-  if (D->isSection())
-    Offset += getAddend<ELFT>(Sec, Rel);
-  Fn({D->Section->Repl, Offset});
+  if (auto *D = dyn_cast<DefinedRegular>(&B)) {
+    if (!D->Section)
+      return;
+    typename ELFT::uint Offset = D->Value;
+    if (D->isSection())
+      Offset += getAddend<ELFT>(Sec, Rel);
+    Fn({D->Section->Repl, Offset});
+  } else if (auto *U = dyn_cast<Undefined>(&B)) {
+    for (InputSectionBase *Sec : CNamedSections.lookup(U->getName()))
+      Fn({Sec, 0});
+  }
 }
 
 // Calls Fn for each section that Sec refers to via relocations.
@@ -184,6 +193,7 @@ template <class ELFT> static bool isReserved(InputSectionBase *Sec) {
 // sections to set their "Live" bits.
 template <class ELFT> void elf::markLive() {
   SmallVector<InputSection *, 256> Q;
+  CNamedSections.clear();
 
   auto Enqueue = [&](ResolvedReloc R) {
     // Skip over discarded sections. This in theory shouldn't happen, because
@@ -223,22 +233,11 @@ template <class ELFT> void elf::markLive() {
   for (StringRef S : Config->Undefined)
     MarkSymbol(Symtab<ELFT>::X->find(S));
 
-  // Remember which __start_* or __stop_* symbols are used so that we don't gc
-  // those sections.
-  DenseSet<StringRef> UsedStartStopNames;
-
   // Preserve externally-visible symbols if the symbols defined by this
   // file can interrupt other ELF file's symbols at runtime.
-  for (const Symbol *S : Symtab<ELFT>::X->getSymbols()) {
-    if (auto *U = dyn_cast_or_null<Undefined>(S->body())) {
-      StringRef Name = U->getName();
-      for (StringRef Prefix : {"__start_", "__stop_"})
-        if (Name.startswith(Prefix))
-          UsedStartStopNames.insert(Name.substr(Prefix.size()));
-    } else if (S->includeInDynsym()) {
+  for (const Symbol *S : Symtab<ELFT>::X->getSymbols())
+    if (S->includeInDynsym())
       MarkSymbol(S->body());
-    }
-  }
 
   // Preserve special sections and those which are specified in linker
   // script KEEP command.
@@ -248,9 +247,12 @@ template <class ELFT> void elf::markLive() {
     // referred by .eh_frame here.
     if (auto *EH = dyn_cast_or_null<EhInputSection<ELFT>>(Sec))
       scanEhFrameSection<ELFT>(*EH, Enqueue);
-    if (isReserved<ELFT>(Sec) || Script<ELFT>::X->shouldKeep(Sec) ||
-        UsedStartStopNames.count(Sec->Name))
+    if (isReserved<ELFT>(Sec) || Script<ELFT>::X->shouldKeep(Sec))
       Enqueue({Sec, 0});
+    else if (isValidCIdentifier(Sec->Name)) {
+      CNamedSections[Saver.save("__start_" + Sec->Name)].push_back(Sec);
+      CNamedSections[Saver.save("__end_" + Sec->Name)].push_back(Sec);
+    }
   }
 
   // Mark all reachable sections.

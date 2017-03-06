@@ -299,12 +299,14 @@ They are replaced by the single element selected by the user."
     (let ((symbol (clang-include-fixer--symbol-name .QuerySymbolInfos))
           ;; Add temporary highlighting so that the user knows which
           ;; symbols the current session is about.
-          (overlays (mapcar #'clang-include-fixer--highlight .QuerySymbolInfos)))
+          (overlays (remove nil
+                            (mapcar #'clang-include-fixer--highlight .QuerySymbolInfos))))
       (unwind-protect
           (save-excursion
             ;; While prompting, go to the closest overlay so that the user sees
             ;; some context.
-            (goto-char (clang-include-fixer--closest-overlay overlays))
+            (when overlays
+              (goto-char (clang-include-fixer--closest-overlay overlays)))
             (cl-flet ((header (info) (let-alist info .Header)))
               ;; The header-infos is already sorted by include-fixer.
               (let* ((header (completing-read
@@ -330,16 +332,17 @@ Raise a signal if the symbol name is not unique."
     (car symbols)))
 
 (defun clang-include-fixer--highlight (symbol-info)
-  "Add an overlay to highlight SYMBOL-INFO.
-Return the overlay object."
-  (let ((overlay (let-alist symbol-info
-                   (make-overlay
-                    (clang-include-fixer--filepos-to-bufferpos
-                     .Range.Offset 'approximate)
-                    (clang-include-fixer--filepos-to-bufferpos
-                     (+ .Range.Offset .Range.Length) 'approximate)))))
-    (overlay-put overlay 'face 'clang-include-fixer-highlight)
-    overlay))
+  "Add an overlay to highlight SYMBOL-INFO, if it points to a non-empty range.
+Return the overlay object, or nil."
+  (let-alist symbol-info
+    (unless (zerop .Range.Length)
+      (let ((overlay (make-overlay
+                      (clang-include-fixer--filepos-to-bufferpos
+                       .Range.Offset 'approximate)
+                      (clang-include-fixer--filepos-to-bufferpos
+                       (+ .Range.Offset .Range.Length) 'approximate))))
+        (overlay-put overlay 'face 'clang-include-fixer-highlight)
+        overlay))))
 
 (defun clang-include-fixer--closest-overlay (overlays)
   "Return the start of the overlay in OVERLAYS that is closest to point."

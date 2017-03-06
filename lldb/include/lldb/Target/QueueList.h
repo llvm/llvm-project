@@ -13,8 +13,8 @@
 #include <mutex>
 #include <vector>
 
-#include "lldb/Core/UserID.h"
 #include "lldb/Utility/Iterable.h"
+#include "lldb/Utility/UserID.h"
 #include "lldb/lldb-private.h"
 
 namespace lldb_private {

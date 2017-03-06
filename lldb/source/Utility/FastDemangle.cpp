@@ -13,7 +13,7 @@
 
 #include <functional>
 
-#include "lldb/Core/FastDemangle.h"
+#include "lldb/Utility/FastDemangle.h"
 #include "lldb/lldb-private.h"
 
 //#define DEBUG_FAILURES 1

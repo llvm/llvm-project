@@ -73,9 +73,8 @@ TEST(LogTest, log_options) {
       "World 47\n",
       GetLogString(LLDB_LOG_OPTION_PREPEND_FILE_FUNCTION, "Hello World {0}", 47));
 
-  EXPECT_EQ(llvm::formatv("[{0,0+4}/{1,0+4}] Hello World 47\n",
-                          ::getpid(),
-                          llvm::get_threadid_np())
+  EXPECT_EQ(llvm::formatv("[{0,0+4}/{1,0+4}] Hello World 47\n", ::getpid(),
+                          llvm::get_threadid())
                 .str(),
             GetLogString(LLDB_LOG_OPTION_PREPEND_PROC_AND_THREAD,
                          "Hello World {0}", 47));

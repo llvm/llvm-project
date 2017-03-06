@@ -26,12 +26,12 @@
 #include "lldb/Core/IOHandler.h"
 #include "lldb/Core/Listener.h"
 #include "lldb/Core/SourceManager.h"
-#include "lldb/Core/UserID.h"
 #include "lldb/Core/UserSettingsController.h"
 #include "lldb/Host/HostThread.h"
 #include "lldb/Host/Terminal.h"
 #include "lldb/Target/Platform.h"
 #include "lldb/Target/TargetList.h"
+#include "lldb/Utility/UserID.h"
 #include "lldb/lldb-public.h"
 
 #include "llvm/Support/Threading.h"

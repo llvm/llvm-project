@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Core/StreamCallback.h"
+#include "lldb/Utility/StreamCallback.h"
 #include "gtest/gtest.h"
 
 using namespace lldb;

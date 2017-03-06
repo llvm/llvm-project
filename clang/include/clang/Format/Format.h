@@ -100,6 +100,19 @@ struct FormatStyle {
 
   /// \brief If ``true``, aligns escaped newlines as far left as possible.
   /// Otherwise puts them into the right-most column.
+  /// \code
+  ///   true:
+  ///   #define A   \
+  ///     int aaaa; \
+  ///     int b;    \
+  ///     int dddddddddd;
+  ///
+  ///   false:
+  ///   #define A                                                                      \
+  ///     int aaaa;                                                                    \
+  ///     int b;                                                                       \
+  ///     int dddddddddd;
+  /// \endcode
   bool AlignEscapedNewlinesLeft;
 
   /// \brief If ``true``, horizontally align operands of binary and ternary
@@ -114,6 +127,11 @@ struct FormatStyle {
   bool AlignOperands;
 
   /// \brief If ``true``, aligns trailing comments.
+  /// \code
+  ///   true:                                   false:
+  ///   int a;     // My comment a      vs.     int a; // My comment a
+  ///   int b = 2; // comment  b                int b = 2; // comment about b
+  /// \endcode
   bool AlignTrailingComments;
 
   /// \brief Allow putting all parameters of a function declaration onto
@@ -126,6 +144,16 @@ struct FormatStyle {
   bool AllowShortBlocksOnASingleLine;
 
   /// \brief If ``true``, short case labels will be contracted to a single line.
+  /// \code
+  ///   true:                                   false:
+  ///   switch (a) {                    vs.     switch (a) {
+  ///   case 1: x = 1; break;                   case 1:
+  ///   case 2: return;                           x = 1;
+  ///   }                                         break;
+  ///                                           case 2:
+  ///                                             return;
+  ///                                           }
+  /// \endcode
   bool AllowShortCaseLabelsOnASingleLine;
 
   /// \brief Different styles for merging short functions containing at most one
@@ -192,10 +220,21 @@ struct FormatStyle {
   /// in a file look more consistent. Thus, it will only take effect if wrapping
   /// the string at that point leads to it being indented
   /// ``ContinuationIndentWidth`` spaces from the start of the line.
+  /// \code
+  ///    true:                                  false:
+  ///    aaaa =                         vs.     aaaa = "bbbb"
+  ///        "bbbb"                                    "cccc";
+  ///        "cccc";
+  /// \endcode
   bool AlwaysBreakBeforeMultilineStrings;
 
   /// \brief If ``true``, always break after the ``template<...>`` of a template
   /// declaration.
+  /// \code
+  ///    true:                                  false:
+  ///    template <typename T>          vs.     template <typename T> class C {};
+  ///    class C {};
+  /// \endcode
   bool AlwaysBreakTemplateDeclarations;
 
   /// \brief If ``false``, a function call's arguments will either be all on the
@@ -284,6 +323,13 @@ struct FormatStyle {
 
   /// \brief Always break constructor initializers before commas and align
   /// the commas with the colon.
+  /// \code
+  ///    true:                                  false:
+  ///    SomeClass::Constructor()       vs.     SomeClass::Constructor() : a(a),
+  ///        : a(a)                                                   b(b),
+  ///        , b(b)                                                   c(c) {}
+  ///        , c(c) {}
+  /// \endcode
   bool BreakConstructorInitializersBeforeComma;
 
   /// \brief Break after each annotation on a field in Java files.
@@ -351,6 +397,12 @@ struct FormatStyle {
 
   /// \brief If ``true``, clang-format adds missing namespace end comments and
   /// fixes invalid existing ones.
+  /// \code
+  ///    true:                                  false:
+  ///    namespace a {                  vs.     namespace a {
+  ///    foo();                                 foo();
+  ///    } // namespace a;                      }
+  /// \endcode
   bool FixNamespaceComments;
 
   /// \brief A vector of macros that should be interpreted as foreach loops
@@ -557,9 +609,18 @@ struct FormatStyle {
   bool SpaceAfterCStyleCast;
 
   /// \brief If \c true, a space will be inserted after the 'template' keyword.
+  /// \code
+  ///    true:                                  false:
+  ///    template <int> void foo();     vs.     template<int> void foo();
+  /// \endcode
   bool SpaceAfterTemplateKeyword;
 
   /// \brief If ``false``, spaces will be removed before assignment operators.
+  /// \code
+  ///    true:                                  false:
+  ///    int a = 5;                     vs.     int a=5;
+  ///    a += 42                                a+=42;
+  /// \endcode
   bool SpaceBeforeAssignmentOperators;
 
   /// \brief Different ways to put a space before opening parentheses.
@@ -592,6 +653,11 @@ struct FormatStyle {
 
   /// \brief If ``true``, spaces will be inserted after ``<`` and before ``>``
   /// in template argument lists.
+  /// \code
+  ///    true:                                  false:
+  ///    static_cast< int >(arg);       vs.     static_cast<int>(arg);
+  ///    std::function< void(int) > fct;        std::function<void(int)> fct;
+  /// \endcode
   bool SpacesInAngles;
 
   /// \brief If ``true``, spaces are inserted inside container literals (e.g.
@@ -599,12 +665,26 @@ struct FormatStyle {
   bool SpacesInContainerLiterals;
 
   /// \brief If ``true``, spaces may be inserted into C style casts.
+  /// \code
+  ///    true:                                  false:
+  ///    x = ( int32 )y                 vs.     x = (int32)y
+  /// \endcode
   bool SpacesInCStyleCastParentheses;
 
   /// \brief If ``true``, spaces will be inserted after ``(`` and before ``)``.
+  /// \code
+  ///    true:                                  false:
+  ///    t f( Deleted & ) & = delete;   vs.     t f(Deleted &) & = delete;
+  /// \endcode
   bool SpacesInParentheses;
 
   /// \brief If ``true``, spaces will be inserted after ``[`` and before ``]``.
+  /// Lambdas or unspecified size array declarations will not be affected.
+  /// \code
+  ///    true:                                  false:
+  ///    int a[ 5 ];                    vs.     int a[5];
+  ///    std::unique_ptr<int[]> foo() {} // Won't be affected
+  /// \endcode
   bool SpacesInSquareBrackets;
 
   /// \brief Supported language standards.
