@@ -21,6 +21,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/GlobalValue.h"
 #include "clang/AST/CharUnits.h"
+#include "clang/CodeGen/ConstantInitFuture.h"
 
 #include <vector>
 
@@ -60,18 +61,17 @@ class ConstantInitBuilderBase {
   std::vector<SelfReference> SelfReferences;
   bool Frozen = false;
 
+  friend class ConstantInitFuture;
   friend class ConstantAggregateBuilderBase;
   template <class, class>
   friend class ConstantAggregateBuilderTemplateBase;
-
-  // The rule for CachedOffset is that anything which removes elements
-  // from the Buffer
 
 protected:
   explicit ConstantInitBuilderBase(CodeGenModule &CGM) : CGM(CGM) {}
 
   ~ConstantInitBuilderBase() {
     assert(Buffer.empty() && "didn't claim all values out of buffer");
+    assert(SelfReferences.empty() && "didn't apply all self-references");
   }
 
 private:
@@ -83,10 +83,14 @@ private:
                                        = llvm::GlobalValue::InternalLinkage,
                                      unsigned addressSpace = 0);
 
+  ConstantInitFuture createFuture(llvm::Constant *initializer);
+
   void setGlobalInitializer(llvm::GlobalVariable *GV,
                             llvm::Constant *initializer);
 
   void resolveSelfReferences(llvm::GlobalVariable *GV);
+
+  void abandon(size_t newEnd);
 };
 
 /// A concrete base class for struct and array aggregate
@@ -99,6 +103,7 @@ protected:
   mutable size_t CachedOffsetEnd = 0;
   bool Finished = false;
   bool Frozen = false;
+  bool Packed = false;
   mutable CharUnits CachedOffsetFromGlobal;
 
   llvm::SmallVectorImpl<llvm::Constant*> &getBuffer() {
@@ -150,17 +155,32 @@ public:
   // properly to satisfy the assert in the destructor.
   ConstantAggregateBuilderBase(ConstantAggregateBuilderBase &&other)
     : Builder(other.Builder), Parent(other.Parent), Begin(other.Begin),
-      Finished(other.Finished), Frozen(other.Frozen) {
+      CachedOffsetEnd(other.CachedOffsetEnd),
+      Finished(other.Finished), Frozen(other.Frozen), Packed(other.Packed),
+      CachedOffsetFromGlobal(other.CachedOffsetFromGlobal) {
     other.Finished = true;
   }
   ConstantAggregateBuilderBase &operator=(ConstantAggregateBuilderBase &&other)
     = delete;
 
+  /// Return the number of elements that have been added to
+  /// this struct or array.
+  size_t size() const {
+    assert(!this->Finished && "cannot query after finishing builder");
+    assert(!this->Frozen && "cannot query while sub-builder is active");
+    assert(this->Begin <= this->getBuffer().size());
+    return this->getBuffer().size() - this->Begin;
+  }
+
+  /// Return true if no elements have yet been added to this struct or array.
+  bool empty() const {
+    return size() == 0;
+  }
+
   /// Abandon this builder completely.
   void abandon() {
     markFinished();
-    auto &buffer = Builder.Buffer;
-    buffer.erase(buffer.begin() + Begin, buffer.end());
+    Builder.abandon(Begin);
   }
 
   /// Add a new value to this initializer.
@@ -224,6 +244,9 @@ public:
 
   /// Return the offset from the start of the initializer to the
   /// next position, assuming no padding is required prior to it.
+  ///
+  /// This operation will not succeed if any unsized placeholders are
+  /// currently in place in the initializer.
   CharUnits getNextOffsetFromGlobal() const {
     assert(!Finished && "cannot add more values after finishing builder");
     assert(!Frozen && "cannot add values while subbuilder is active");
@@ -252,6 +275,9 @@ public:
     Builder.Buffer.push_back(nullptr);
     return Builder.Buffer.size() - 1;
   }
+
+  /// Add a placeholder, giving the expected type that will be filled in.
+  PlaceholderPosition addPlaceholderWithSize(llvm::Type *expectedType);
 
   /// Fill a previously-added placeholder.
   void fillPlaceholderWithInt(PlaceholderPosition position,
@@ -354,6 +380,19 @@ public:
     assert(!this->Parent && "finishing non-root builder");
     return this->Builder.setGlobalInitializer(global, asImpl().finishImpl());
   }
+
+  /// Given that this builder was created by beginning an array or struct
+  /// directly on a ConstantInitBuilder, finish the array/struct and
+  /// return a future which can be used to install the initializer in
+  /// a global later.
+  ///
+  /// This is useful for allowing a finished initializer to passed to
+  /// an API which will build the global.  However, the "future" preserves
+  /// a dependency on the original builder; it is an error to pass it aside.
+  ConstantInitFuture finishAndCreateFuture() {
+    assert(!this->Parent && "finishing non-root builder");
+    return this->Builder.createFuture(asImpl().finishImpl());
+  }
 };
 
 template <class Traits>
@@ -378,18 +417,6 @@ protected:
                                    AggregateBuilderBase *parent,
                                    llvm::Type *eltTy)
     : super(builder, parent), EltTy(eltTy) {}
-
-public:
-  size_t size() const {
-    assert(!this->Finished && "cannot query after finishing builder");
-    assert(!this->Frozen && "cannot query while sub-builder is active");
-    assert(this->Begin <= this->getBuffer().size());
-    return this->getBuffer().size() - this->Begin;
-  }
-
-  bool empty() const {
-    return size() == 0;
-  }
 
 private:
   /// Form an array constant from the values that have been added to this
@@ -425,7 +452,22 @@ protected:
   ConstantStructBuilderTemplateBase(InitBuilder &builder,
                                     AggregateBuilderBase *parent,
                                     llvm::StructType *structTy)
-    : super(builder, parent), StructTy(structTy) {}
+    : super(builder, parent), StructTy(structTy) {
+    if (structTy) this->Packed = structTy->isPacked();
+  }
+
+public:
+  void setPacked(bool packed) {
+    this->Packed = packed;
+  }
+
+  /// Use the given type for the struct if its element count is correct.
+  /// Don't add more elements after calling this.
+  void suggestType(llvm::StructType *structTy) {
+    if (this->size() == structTy->getNumElements()) {
+      StructTy = structTy;
+    }
+  }
 
 private:
   /// Form an array constant from the values that have been added to this
