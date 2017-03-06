@@ -465,7 +465,7 @@ TEST_F(ScalarEvolutionsTest, CommutativeExprOperandOrder) {
     });
 }
 
-TEST_F(ScalarEvolutionsTest, SCEVCompareComplexity) {
+TEST_F(ScalarEvolutionsTest, CompareSCEVComplexity) {
   FunctionType *FTy =
       FunctionType::get(Type::getVoidTy(Context), std::vector<Type *>(), false);
   Function *F = cast<Function>(M.getOrInsertFunction("f", FTy));
@@ -530,6 +530,42 @@ TEST_F(ScalarEvolutionsTest, SCEVCompareComplexity) {
   ScalarEvolution SE = buildSE(*F);
 
   EXPECT_NE(nullptr, SE.getSCEV(Acc[0]));
+}
+
+TEST_F(ScalarEvolutionsTest, CompareValueComplexity) {
+  IntegerType *IntPtrTy = M.getDataLayout().getIntPtrType(Context);
+  PointerType *IntPtrPtrTy = IntPtrTy->getPointerTo();
+
+  FunctionType *FTy =
+      FunctionType::get(Type::getVoidTy(Context), {IntPtrTy, IntPtrTy}, false);
+  Function *F = cast<Function>(M.getOrInsertFunction("f", FTy));
+  BasicBlock *EntryBB = BasicBlock::Create(Context, "entry", F);
+
+  Value *X = &*F->arg_begin();
+  Value *Y = &*std::next(F->arg_begin());
+
+  const int ValueDepth = 10;
+  for (int i = 0; i < ValueDepth; i++) {
+    X = new LoadInst(new IntToPtrInst(X, IntPtrPtrTy, "", EntryBB), "",
+                     /*isVolatile*/ false, EntryBB);
+    Y = new LoadInst(new IntToPtrInst(Y, IntPtrPtrTy, "", EntryBB), "",
+                     /*isVolatile*/ false, EntryBB);
+  }
+
+  auto *MulA = BinaryOperator::CreateMul(X, Y, "", EntryBB);
+  auto *MulB = BinaryOperator::CreateMul(Y, X, "", EntryBB);
+  ReturnInst::Create(Context, nullptr, EntryBB);
+
+  // This test isn't checking for correctness.  Today making A and B resolve to
+  // the same SCEV would require deeper searching in CompareValueComplexity,
+  // which will slow down compilation.  However, this test can fail (with LLVM's
+  // behavior still being correct) if we ever have a smarter
+  // CompareValueComplexity that is both fast and more accurate.
+
+  ScalarEvolution SE = buildSE(*F);
+  auto *A = SE.getSCEV(MulA);
+  auto *B = SE.getSCEV(MulB);
+  EXPECT_NE(A, B);
 }
 
 TEST_F(ScalarEvolutionsTest, SCEVAddExpr) {

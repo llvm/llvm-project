@@ -923,6 +923,14 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
 
     // SSE41 brings specific instructions for doing vector sign extend even in
     // cases where we don't have SRA.
+    setOperationAction(ISD::SIGN_EXTEND_VECTOR_INREG, MVT::v2i64, Legal);
+    setOperationAction(ISD::SIGN_EXTEND_VECTOR_INREG, MVT::v4i32, Legal);
+    setOperationAction(ISD::SIGN_EXTEND_VECTOR_INREG, MVT::v8i16, Legal);
+
+    setOperationAction(ISD::ZERO_EXTEND_VECTOR_INREG, MVT::v2i64, Legal);
+    setOperationAction(ISD::ZERO_EXTEND_VECTOR_INREG, MVT::v4i32, Legal);
+    setOperationAction(ISD::ZERO_EXTEND_VECTOR_INREG, MVT::v8i16, Legal);
+
     for (MVT VT : MVT::integer_vector_valuetypes()) {
       setLoadExtAction(ISD::SEXTLOAD, VT, MVT::v2i8, Custom);
       setLoadExtAction(ISD::SEXTLOAD, VT, MVT::v2i16, Custom);
@@ -5137,6 +5145,26 @@ static SDValue getOnesVector(EVT VT, const X86Subtarget &Subtarget,
   return DAG.getBitcast(VT, Vec);
 }
 
+static SDValue getExtendInVec(unsigned Opc, const SDLoc &DL, EVT VT, SDValue In,
+                              SelectionDAG &DAG) {
+  EVT InVT = In.getValueType();
+  assert((X86ISD::VSEXT == Opc || X86ISD::VZEXT == Opc) && "Unexpected opcode");
+
+  if (VT.is128BitVector() && InVT.is128BitVector())
+    return X86ISD::VSEXT == Opc ? DAG.getSignExtendVectorInReg(In, DL, VT)
+                                : DAG.getZeroExtendVectorInReg(In, DL, VT);
+
+  // For 256-bit vectors, we only need the lower (128-bit) input half.
+  // For 512-bit vectors, we only need the lower input half or quarter.
+  if (VT.getSizeInBits() > 128 && InVT.getSizeInBits() > 128) {
+    int Scale = VT.getScalarSizeInBits() / InVT.getScalarSizeInBits();
+    In = extractSubVector(In, 0, DAG, DL,
+                          std::max(128, (int)VT.getSizeInBits() / Scale));
+  }
+
+  return DAG.getNode(Opc, DL, VT, In);
+}
+
 /// Generate unpacklo/unpackhi shuffle mask.
 static void createUnpackShuffleMask(MVT VT, SmallVectorImpl<int> &Mask, bool Lo,
                                     bool Unary) {
@@ -5853,6 +5881,7 @@ static bool getFauxShuffleMask(SDValue N, SmallVectorImpl<int> &Mask,
     }
     return true;
   }
+  case ISD::ZERO_EXTEND_VECTOR_INREG:
   case X86ISD::VZEXT: {
     // TODO - add support for VPMOVZX with smaller input vector types.
     SDValue Src = N.getOperand(0);
@@ -9215,14 +9244,7 @@ static SDValue lowerVectorShuffleAsSpecificZeroOrAnyExtend(
     MVT ExtVT = MVT::getVectorVT(MVT::getIntegerVT(EltBits * Scale),
                                  NumElements / Scale);
     InputV = ShuffleOffset(InputV);
-
-    // For 256-bit vectors, we only need the lower (128-bit) input half.
-    // For 512-bit vectors, we only need the lower input half or quarter.
-    if (VT.getSizeInBits() > 128)
-      InputV = extractSubVector(InputV, 0, DAG, DL,
-                                std::max(128, (int)VT.getSizeInBits() / Scale));
-
-    InputV = DAG.getNode(X86ISD::VZEXT, DL, ExtVT, InputV);
+    InputV = getExtendInVec(X86ISD::VZEXT, DL, ExtVT, InputV, DAG);
     return DAG.getBitcast(VT, InputV);
   }
 
@@ -15647,7 +15669,7 @@ SDValue X86TargetLowering::LowerTRUNCATE(SDValue Op, SelectionDAG &DAG) const {
     // word to byte only under BWI
     if (InVT == MVT::v16i16 && !Subtarget.hasBWI()) // v16i16 -> v16i8
       return DAG.getNode(X86ISD::VTRUNC, DL, VT,
-                         DAG.getNode(X86ISD::VSEXT, DL, MVT::v16i32, In));
+                         getExtendInVec(X86ISD::VSEXT, DL, MVT::v16i32, In, DAG));
     return DAG.getNode(X86ISD::VTRUNC, DL, VT, In);
   }
 
@@ -17625,8 +17647,8 @@ static SDValue LowerSIGN_EXTEND_AVX512(SDValue Op,
   if (VT.is512BitVector() && InVTElt != MVT::i1 &&
       (NumElts == 8 || NumElts == 16 || Subtarget.hasBWI())) {
     if (In.getOpcode() == X86ISD::VSEXT || In.getOpcode() == X86ISD::VZEXT)
-      return DAG.getNode(In.getOpcode(), dl, VT, In.getOperand(0));
-    return DAG.getNode(X86ISD::VSEXT, dl, VT, In);
+      return getExtendInVec(In.getOpcode(), dl, VT, In.getOperand(0), DAG);
+    return getExtendInVec(X86ISD::VSEXT, dl, VT, In, DAG);
   }
 
   if (InVTElt != MVT::i1)
@@ -17638,7 +17660,7 @@ static SDValue LowerSIGN_EXTEND_AVX512(SDValue Op,
 
   SDValue V;
   if (Subtarget.hasDQI()) {
-    V = DAG.getNode(X86ISD::VSEXT, dl, ExtVT, In);
+    V = getExtendInVec(X86ISD::VSEXT, dl, ExtVT, In, DAG);
     assert(!VT.is512BitVector() && "Unexpected vector type");
   } else {
     SDValue NegOne = getOnesVector(ExtVT, Subtarget, DAG, dl);
@@ -17690,11 +17712,15 @@ static SDValue LowerEXTEND_VECTOR_INREG(SDValue Op,
   assert((Op.getOpcode() != ISD::ZERO_EXTEND_VECTOR_INREG ||
           InVT == MVT::v64i8) && "Zero extend only for v64i8 input!");
 
-  // SSE41 targets can use the pmovsx* instructions directly.
-  unsigned ExtOpc = Op.getOpcode() == ISD::SIGN_EXTEND_VECTOR_INREG ?
-                      X86ISD::VSEXT : X86ISD::VZEXT;
-  if (Subtarget.hasSSE41())
+  // SSE41 targets can use the pmovsx* instructions directly for 128-bit results,
+  // so are legal and shouldn't occur here. AVX2/AVX512 pmovsx* instructions still
+  // need to be handled here for 256/512-bit results.
+  if (Subtarget.hasInt256()) {
+    assert(VT.getSizeInBits() > 128 && "Unexpected 128-bit vector extension");
+    unsigned ExtOpc = Op.getOpcode() == ISD::SIGN_EXTEND_VECTOR_INREG ?
+                        X86ISD::VSEXT : X86ISD::VZEXT;
     return DAG.getNode(ExtOpc, dl, VT, In);
+  }
 
   // We should only get here for sign extend.
   assert(Op.getOpcode() == ISD::SIGN_EXTEND_VECTOR_INREG &&
@@ -17779,8 +17805,8 @@ static SDValue LowerSIGN_EXTEND(SDValue Op, const X86Subtarget &Subtarget,
   MVT HalfVT = MVT::getVectorVT(VT.getVectorElementType(),
                                 VT.getVectorNumElements() / 2);
 
-  OpLo = DAG.getNode(X86ISD::VSEXT, dl, HalfVT, OpLo);
-  OpHi = DAG.getNode(X86ISD::VSEXT, dl, HalfVT, OpHi);
+  OpLo = DAG.getSignExtendVectorInReg(OpLo, dl, HalfVT);
+  OpHi = DAG.getSignExtendVectorInReg(OpHi, dl, HalfVT);
 
   return DAG.getNode(ISD::CONCAT_VECTORS, dl, VT, OpLo, OpHi);
 }
@@ -18095,7 +18121,7 @@ static SDValue LowerExtendedLoad(SDValue Op, const X86Subtarget &Subtarget,
   if (Ext == ISD::SEXTLOAD) {
     // If we have SSE4.1, we can directly emit a VSEXT node.
     if (Subtarget.hasSSE41()) {
-      SDValue Sext = DAG.getNode(X86ISD::VSEXT, dl, RegVT, SlicedVec);
+      SDValue Sext = getExtendInVec(X86ISD::VSEXT, dl, RegVT, SlicedVec, DAG);
       DAG.ReplaceAllUsesOfValueWith(SDValue(Ld, 1), TF);
       return Sext;
     }
@@ -18766,11 +18792,11 @@ static SDValue getTargetVShiftNode(unsigned Opc, const SDLoc &dl, MVT VT,
            ShAmt.getOperand(0).getSimpleValueType() == MVT::i16) {
     ShAmt = ShAmt.getOperand(0);
     ShAmt = DAG.getNode(ISD::SCALAR_TO_VECTOR, SDLoc(ShAmt), MVT::v8i16, ShAmt);
-    ShAmt = DAG.getNode(X86ISD::VZEXT, SDLoc(ShAmt), MVT::v2i64, ShAmt);
+    ShAmt = DAG.getZeroExtendVectorInReg(ShAmt, SDLoc(ShAmt), MVT::v2i64);
   } else if (Subtarget.hasSSE41() &&
              ShAmt.getOpcode() == ISD::EXTRACT_VECTOR_ELT) {
     ShAmt = DAG.getNode(ISD::SCALAR_TO_VECTOR, SDLoc(ShAmt), MVT::v4i32, ShAmt);
-    ShAmt = DAG.getNode(X86ISD::VZEXT, SDLoc(ShAmt), MVT::v2i64, ShAmt);
+    ShAmt = DAG.getZeroExtendVectorInReg(ShAmt, SDLoc(ShAmt), MVT::v2i64);
   } else {
     SmallVector<SDValue, 4> ShOps = {ShAmt, DAG.getConstant(0, dl, SVT),
                                      DAG.getUNDEF(SVT), DAG.getUNDEF(SVT)};
@@ -21061,8 +21087,8 @@ static SDValue LowerMUL(SDValue Op, const X86Subtarget &Subtarget,
     // Extract the lo parts and sign extend to i16
     SDValue ALo, BLo;
     if (Subtarget.hasSSE41()) {
-      ALo = DAG.getNode(X86ISD::VSEXT, dl, ExVT, A);
-      BLo = DAG.getNode(X86ISD::VSEXT, dl, ExVT, B);
+      ALo = DAG.getSignExtendVectorInReg(A, dl, ExVT);
+      BLo = DAG.getSignExtendVectorInReg(B, dl, ExVT);
     } else {
       const int ShufMask[] = {-1, 0, -1, 1, -1, 2, -1, 3,
                               -1, 4, -1, 5, -1, 6, -1, 7};
@@ -21081,8 +21107,8 @@ static SDValue LowerMUL(SDValue Op, const X86Subtarget &Subtarget,
                               -1, -1, -1, -1, -1, -1, -1, -1};
       AHi = DAG.getVectorShuffle(VT, dl, A, A, ShufMask);
       BHi = DAG.getVectorShuffle(VT, dl, B, B, ShufMask);
-      AHi = DAG.getNode(X86ISD::VSEXT, dl, ExVT, AHi);
-      BHi = DAG.getNode(X86ISD::VSEXT, dl, ExVT, BHi);
+      AHi = DAG.getSignExtendVectorInReg(AHi, dl, ExVT);
+      BHi = DAG.getSignExtendVectorInReg(BHi, dl, ExVT);
     } else {
       const int ShufMask[] = {-1, 8,  -1, 9,  -1, 10, -1, 11,
                               -1, 12, -1, 13, -1, 14, -1, 15};
@@ -21243,8 +21269,8 @@ static SDValue LowerMULH(SDValue Op, const X86Subtarget &Subtarget,
                          DAG.getVectorShuffle(MVT::v16i16, dl, Lo, Hi, HiMask));
     }
 
-    SDValue ExA = DAG.getNode(ExSSE41, dl, MVT::v16i16, A);
-    SDValue ExB = DAG.getNode(ExSSE41, dl, MVT::v16i16, B);
+    SDValue ExA = getExtendInVec(ExSSE41, dl, MVT::v16i16, A, DAG);
+    SDValue ExB = getExtendInVec(ExSSE41, dl, MVT::v16i16, B, DAG);
     SDValue Mul = DAG.getNode(ISD::MUL, dl, MVT::v16i16, ExA, ExB);
     SDValue MulH = DAG.getNode(ISD::SRL, dl, MVT::v16i16, Mul,
                                DAG.getConstant(8, dl, MVT::v16i16));
@@ -21260,8 +21286,8 @@ static SDValue LowerMULH(SDValue Op, const X86Subtarget &Subtarget,
   // Extract the lo parts and zero/sign extend to i16.
   SDValue ALo, BLo;
   if (Subtarget.hasSSE41()) {
-    ALo = DAG.getNode(ExSSE41, dl, ExVT, A);
-    BLo = DAG.getNode(ExSSE41, dl, ExVT, B);
+    ALo = getExtendInVec(ExSSE41, dl, ExVT, A, DAG);
+    BLo = getExtendInVec(ExSSE41, dl, ExVT, B, DAG);
   } else {
     const int ShufMask[] = {-1, 0, -1, 1, -1, 2, -1, 3,
                             -1, 4, -1, 5, -1, 6, -1, 7};
@@ -21280,8 +21306,8 @@ static SDValue LowerMULH(SDValue Op, const X86Subtarget &Subtarget,
                             -1, -1, -1, -1, -1, -1, -1, -1};
     AHi = DAG.getVectorShuffle(VT, dl, A, A, ShufMask);
     BHi = DAG.getVectorShuffle(VT, dl, B, B, ShufMask);
-    AHi = DAG.getNode(ExSSE41, dl, ExVT, AHi);
-    BHi = DAG.getNode(ExSSE41, dl, ExVT, BHi);
+    AHi = getExtendInVec(ExSSE41, dl, ExVT, AHi, DAG);
+    BHi = getExtendInVec(ExSSE41, dl, ExVT, BHi, DAG);
   } else {
     const int ShufMask[] = {-1, 8,  -1, 9,  -1, 10, -1, 11,
                             -1, 12, -1, 13, -1, 14, -1, 15};
@@ -26458,7 +26484,7 @@ static bool matchUnaryVectorShuffle(MVT MaskVT, ArrayRef<int> Mask,
   unsigned NumMaskElts = Mask.size();
   unsigned MaskEltSize = MaskVT.getScalarSizeInBits();
 
-  // Match against a VZEXT instruction.
+  // Match against a ZERO_EXTEND_VECTOR_INREG/VZEXT instruction.
   // TODO: Add 512-bit vector support (split AVX512F and AVX512BW).
   if (AllowIntDomain && ((MaskVT.is128BitVector() && Subtarget.hasSSE41()) ||
                          (MaskVT.is256BitVector() && Subtarget.hasInt256()))) {
@@ -26477,7 +26503,8 @@ static bool matchUnaryVectorShuffle(MVT MaskVT, ArrayRef<int> Mask,
           V1 = extractSubVector(V1, 0, DAG, DL, SrcSize);
         DstVT = MVT::getIntegerVT(Scale * MaskEltSize);
         DstVT = MVT::getVectorVT(DstVT, NumDstElts);
-        Shuffle = X86ISD::VZEXT;
+        Shuffle = SrcVT != MaskVT ? unsigned(X86ISD::VZEXT)
+                                  : unsigned(ISD::ZERO_EXTEND_VECTOR_INREG);
         return true;
       }
     }
@@ -32169,7 +32196,7 @@ static SDValue combineMaskedLoad(SDNode *N, SelectionDAG &DAG,
                                      Mld->getBasePtr(), NewMask, WideSrc0,
                                      Mld->getMemoryVT(), Mld->getMemOperand(),
                                      ISD::NON_EXTLOAD);
-  SDValue NewVec = DAG.getNode(X86ISD::VSEXT, dl, VT, WideLd);
+  SDValue NewVec = getExtendInVec(X86ISD::VSEXT, dl, VT, WideLd, DAG);
   return DCI.CombineTo(N, NewVec, WideLd.getValue(1), true);
 }
 
