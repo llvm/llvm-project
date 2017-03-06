@@ -51,7 +51,8 @@ extern "C" void __clear_cache(void *start, void *end);
 namespace __xray {
 
 bool patchFunctionEntry(const bool Enable, uint32_t FuncId,
-                        const XRaySledEntry &Sled) XRAY_NEVER_INSTRUMENT {
+                        const XRaySledEntry &Sled,
+                        void (*Trampoline)()) XRAY_NEVER_INSTRUMENT {
   if (Enable) {
     // lis 0, FuncId[16..32]
     // li 0, FuncId[0..15]
@@ -93,3 +94,7 @@ bool patchFunctionTailExit(const bool Enable, const uint32_t FuncId,
 bool probeRequiredCPUFeatures() XRAY_NEVER_INSTRUMENT { return true; }
 
 } // namespace __xray
+
+extern "C" void __xray_ArgLoggerEntry() XRAY_NEVER_INSTRUMENT {
+  // FIXME: this will have to be implemented in the trampoline assembly file
+}

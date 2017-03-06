@@ -48,6 +48,9 @@ static const int16_t cSledLength = 8;
 // This is the function to call when we encounter the entry or exit sleds.
 std::atomic<void (*)(int32_t, XRayEntryType)> XRayPatchedFunction{nullptr};
 
+// This is the function to call from the arg1-enabled sleds/trampolines.
+std::atomic<void (*)(int32_t, XRayEntryType, uint64_t)> XRayArgLogger{nullptr};
+
 // MProtectHelper is an RAII wrapper for calls to mprotect(...) that will undo
 // any successful mprotect(...) changes. This is used to make a page writeable
 // and executable, and upon destruction if it was successful in doing so returns
@@ -185,13 +188,16 @@ XRayPatchingStatus controlPatching(bool Enable) XRAY_NEVER_INSTRUMENT {
     bool Success = false;
     switch (Sled.Kind) {
     case XRayEntryType::ENTRY:
-      Success = patchFunctionEntry(Enable, FuncId, Sled);
+      Success = patchFunctionEntry(Enable, FuncId, Sled, __xray_FunctionEntry);
       break;
     case XRayEntryType::EXIT:
       Success = patchFunctionExit(Enable, FuncId, Sled);
       break;
     case XRayEntryType::TAIL:
       Success = patchFunctionTailExit(Enable, FuncId, Sled);
+      break;
+    case XRayEntryType::LOG_ARGS_ENTRY:
+      Success = patchFunctionEntry(Enable, FuncId, Sled, __xray_ArgLoggerEntry);
       break;
     default:
       Report("Unsupported sled kind: %d\n", int(Sled.Kind));
@@ -211,3 +217,16 @@ XRayPatchingStatus __xray_patch() XRAY_NEVER_INSTRUMENT {
 XRayPatchingStatus __xray_unpatch() XRAY_NEVER_INSTRUMENT {
   return controlPatching(false);
 }
+
+int __xray_set_handler_arg1(void (*Handler)(int32_t, XRayEntryType, uint64_t))
+{
+  if (!XRayInitialized.load(std::memory_order_acquire)) {
+    return 0;
+  }
+  // A relaxed write might not be visible even if the current thread gets
+  // scheduled on a different CPU/NUMA node.  We need to wait for everyone to
+  // have this handler installed for consistency of collected data across CPUs.
+  XRayArgLogger.store(Handler, std::memory_order_release);
+  return 1;
+}
+int __xray_remove_handler_arg1() { return __xray_set_handler_arg1(nullptr); }

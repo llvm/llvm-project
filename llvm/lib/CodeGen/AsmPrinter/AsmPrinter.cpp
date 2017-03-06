@@ -2756,8 +2756,11 @@ void AsmPrinter::recordSled(MCSymbol *Sled, const MachineInstr &MI,
   SledKind Kind) {
   auto Fn = MI.getParent()->getParent()->getFunction();
   auto Attr = Fn->getFnAttribute("function-instrument");
+  bool LogArgs = Fn->hasFnAttribute("xray-log-args");
   bool AlwaysInstrument =
     Attr.isStringAttribute() && Attr.getValueAsString() == "xray-always";
+  if (Kind == SledKind::FUNCTION_ENTER && LogArgs)
+    Kind = SledKind::LOG_ARGS_ENTER;
   Sleds.emplace_back(
     XRayFunctionEntry{ Sled, CurrentFnSym, Kind, AlwaysInstrument, Fn });
 }

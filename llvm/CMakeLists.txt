@@ -719,6 +719,30 @@ configure_file(
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/Support/DataTypes.h.cmake
   ${LLVM_INCLUDE_DIR}/llvm/Support/DataTypes.h)
 
+# Add target for generating source rpm package.
+set(LLVM_SRPM_USER_BINARY_SPECFILE ${CMAKE_CURRENT_SOURCE_DIR}/llvm.spec.in
+    CACHE FILEPATH ".spec file to use for srpm generation")
+set(LLVM_SRPM_BINARY_SPECFILE ${CMAKE_CURRENT_BINARY_DIR}/llvm.spec)
+set(LLVM_SRPM_DIR "${CMAKE_CURRENT_BINARY_DIR}/srpm")
+
+# SVN_REVISION and GIT_COMMIT get set by the call to add_version_info_from_vcs.
+# DUMMY_VAR contains a version string which we don't care about.
+add_version_info_from_vcs(DUMMY_VAR)
+if ( SVN_REVISION )
+  set(LLVM_RPM_SPEC_REVISION "r${SVN_REVISION}")
+elseif ( GIT_COMMIT )
+  set (LLVM_RPM_SPEC_REVISION "g${GIT_COMMIT}")
+endif()
+
+configure_file(
+  ${LLVM_SRPM_USER_BINARY_SPECFILE}
+  ${LLVM_SRPM_BINARY_SPECFILE} @ONLY)
+
+add_custom_target(srpm
+  COMMAND cpack -G TGZ --config CPackSourceConfig.cmake -B ${LLVM_SRPM_DIR}/SOURCES
+  COMMAND rpmbuild -bs --define '_topdir ${LLVM_SRPM_DIR}' ${LLVM_SRPM_BINARY_SPECFILE})
+
+
 # They are not referenced. See set_output_directory().
 set( CMAKE_RUNTIME_OUTPUT_DIRECTORY ${LLVM_BINARY_DIR}/bin )
 set( CMAKE_LIBRARY_OUTPUT_DIRECTORY ${LLVM_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX} )

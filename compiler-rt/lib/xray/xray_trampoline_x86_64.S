@@ -53,6 +53,9 @@
 
 	.text
 	.file "xray_trampoline_x86.S"
+
+//===----------------------------------------------------------------------===//
+
 	.globl __xray_FunctionEntry
 	.align 16, 0x90
 	.type __xray_FunctionEntry,@function
@@ -80,6 +83,8 @@ __xray_FunctionEntry:
 .Ltmp1:
 	.size __xray_FunctionEntry, .Ltmp1-__xray_FunctionEntry
 	.cfi_endproc
+
+//===----------------------------------------------------------------------===//
 
 	.globl __xray_FunctionExit
 	.align 16, 0x90
@@ -117,6 +122,8 @@ __xray_FunctionExit:
 	.size __xray_FunctionExit, .Ltmp3-__xray_FunctionExit
 	.cfi_endproc
 
+//===----------------------------------------------------------------------===//
+
 	.global __xray_FunctionTailExit
 	.align 16, 0x90
 	.type __xray_FunctionTailExit,@function
@@ -144,4 +151,40 @@ __xray_FunctionTailExit:
 	retq
 .Ltmp5:
 	.size __xray_FunctionTailExit, .Ltmp5-__xray_FunctionTailExit
+	.cfi_endproc
+
+//===----------------------------------------------------------------------===//
+
+	.globl __xray_ArgLoggerEntry
+	.align 16, 0x90
+	.type __xray_ArgLoggerEntry,@function
+__xray_ArgLoggerEntry:
+	.cfi_startproc
+	pushq	%rbp
+	.cfi_def_cfa_offset 16
+	SAVE_REGISTERS
+
+	// Again, these function pointer loads must be atomic; MOV is fine.
+	movq	_ZN6__xray13XRayArgLoggerE(%rip), %rax
+	testq	%rax, %rax
+	jne	.Larg1entryLog
+
+	// If [arg1 logging handler] not set, defer to no-arg logging.
+	movq	_ZN6__xray19XRayPatchedFunctionE(%rip), %rax
+	testq	%rax, %rax
+	je	.Larg1entryFail
+
+.Larg1entryLog:
+	movq	%rdi, %rdx	// first argument will become the third
+	xorq	%rsi, %rsi	// XRayEntryType::ENTRY into the second
+	movl	%r10d, %edi	// 32-bit function ID becomes the first
+	callq	*%rax
+
+.Larg1entryFail:
+	RESTORE_REGISTERS
+	popq	%rbp
+	retq
+
+.Larg1entryEnd:
+	.size __xray_ArgLoggerEntry, .Larg1entryEnd-__xray_ArgLoggerEntry
 	.cfi_endproc
