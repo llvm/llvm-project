@@ -5985,6 +5985,12 @@ def warn_objc_circular_container : Warning<
   "adding '%0' to '%1' might cause circular dependency in container">,
   InGroup<DiagGroup<"objc-circular-container">>;
 def note_objc_circular_container_declared_here : Note<"'%0' declared here">;
+def warn_objc_unsafe_perform_selector : Warning<
+  "%0 is incompatible with selectors that return a "
+  "%select{struct|union|vector}1 type">,
+  InGroup<DiagGroup<"objc-unsafe-perform-selector">>;
+def note_objc_unsafe_perform_selector_method_declared_here :  Note<
+  "method %0 that returns %1 declared here">;
 
 def warn_setter_getter_impl_required : Warning<
   "property %0 requires method %1 to be defined - "
