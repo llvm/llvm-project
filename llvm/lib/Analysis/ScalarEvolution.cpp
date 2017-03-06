@@ -132,10 +132,15 @@ static cl::opt<unsigned> AddOpsInlineThreshold(
     cl::desc("Threshold for inlining multiplication operands into a SCEV"),
     cl::init(500));
 
-static cl::opt<unsigned>
-    MaxCompareDepth("scalar-evolution-max-compare-depth", cl::Hidden,
-                    cl::desc("Maximum depth of recursive compare complexity"),
-                    cl::init(32));
+static cl::opt<unsigned> MaxSCEVCompareDepth(
+    "scalar-evolution-max-scev-compare-depth", cl::Hidden,
+    cl::desc("Maximum depth of recursive SCEV complexity comparisons"),
+    cl::init(32));
+
+static cl::opt<unsigned> MaxValueCompareDepth(
+    "scalar-evolution-max-value-compare-depth", cl::Hidden,
+    cl::desc("Maximum depth of recursive value complexity comparisons"),
+    cl::init(2));
 
 static cl::opt<unsigned>
     MaxAddExprDepth("scalar-evolution-max-addexpr-depth", cl::Hidden,
@@ -496,7 +501,7 @@ static int
 CompareValueComplexity(SmallSet<std::pair<Value *, Value *>, 8> &EqCache,
                        const LoopInfo *const LI, Value *LV, Value *RV,
                        unsigned Depth) {
-  if (Depth > MaxCompareDepth || EqCache.count({LV, RV}))
+  if (Depth > MaxValueCompareDepth || EqCache.count({LV, RV}))
     return 0;
 
   // Order pointer values after integer values. This helps SCEVExpander form
@@ -583,7 +588,7 @@ static int CompareSCEVComplexity(
   if (LType != RType)
     return (int)LType - (int)RType;
 
-  if (Depth > MaxCompareDepth || EqCacheSCEV.count({LHS, RHS}))
+  if (Depth > MaxSCEVCompareDepth || EqCacheSCEV.count({LHS, RHS}))
     return 0;
   // Aside from the getSCEVType() ordering, the particular ordering
   // isn't very important except that it's beneficial to be consistent,
