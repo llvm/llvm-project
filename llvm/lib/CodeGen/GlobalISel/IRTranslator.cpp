@@ -341,7 +341,7 @@ bool IRTranslator::translateExtractValue(const User &U,
   uint64_t Offset = 8 * DL->getIndexedOffsetInType(Src->getType(), Indices);
 
   unsigned Res = getOrCreateVReg(U);
-  MIRBuilder.buildExtract(Res, Offset, getOrCreateVReg(*Src));
+  MIRBuilder.buildExtract(Res, getOrCreateVReg(*Src), Offset);
 
   return true;
 }
