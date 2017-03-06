@@ -3242,13 +3242,13 @@ void CallArgList::freeArgumentMemory(CodeGenFunction &CGF) const {
 
 void CodeGenFunction::EmitNonNullArgCheck(RValue RV, QualType ArgType,
                                           SourceLocation ArgLoc,
-                                          const FunctionDecl *FD,
+                                          AbstractCallee AC,
                                           unsigned ParmNum) {
-  if (!SanOpts.has(SanitizerKind::NonnullAttribute) || !FD)
+  if (!SanOpts.has(SanitizerKind::NonnullAttribute) || !AC.getDecl())
     return;
-  auto PVD = ParmNum < FD->getNumParams() ? FD->getParamDecl(ParmNum) : nullptr;
+  auto PVD = ParmNum < AC.getNumParams() ? AC.getParamDecl(ParmNum) : nullptr;
   unsigned ArgNo = PVD ? PVD->getFunctionScopeIndex() : ParmNum;
-  auto NNAttr = getNonNullAttr(FD, PVD, ArgType, ArgNo);
+  auto NNAttr = getNonNullAttr(AC.getDecl(), PVD, ArgType, ArgNo);
   if (!NNAttr)
     return;
   SanitizerScope SanScope(this);
@@ -3268,8 +3268,7 @@ void CodeGenFunction::EmitNonNullArgCheck(RValue RV, QualType ArgType,
 void CodeGenFunction::EmitCallArgs(
     CallArgList &Args, ArrayRef<QualType> ArgTypes,
     llvm::iterator_range<CallExpr::const_arg_iterator> ArgRange,
-    const FunctionDecl *CalleeDecl, unsigned ParamsToSkip,
-    EvaluationOrder Order) {
+    AbstractCallee AC, unsigned ParamsToSkip, EvaluationOrder Order) {
   assert((int)ArgTypes.size() == (ArgRange.end() - ArgRange.begin()));
 
   // We *have* to evaluate arguments from right to left in the MS C++ ABI,
@@ -3284,9 +3283,9 @@ void CodeGenFunction::EmitCallArgs(
 
   auto MaybeEmitImplicitObjectSize = [&](unsigned I, const Expr *Arg,
                                          RValue EmittedArg) {
-    if (CalleeDecl == nullptr || I >= CalleeDecl->getNumParams())
+    if (!AC.hasFunctionDecl() || I >= AC.getNumParams())
       return;
-    auto *PS = CalleeDecl->getParamDecl(I)->getAttr<PassObjectSizeAttr>();
+    auto *PS = AC.getParamDecl(I)->getAttr<PassObjectSizeAttr>();
     if (PS == nullptr)
       return;
 
@@ -3328,7 +3327,7 @@ void CodeGenFunction::EmitCallArgs(
            "The code below depends on only adding one arg per EmitCallArg");
     (void)InitialArgSize;
     RValue RVArg = Args.back().RV;
-    EmitNonNullArgCheck(RVArg, ArgTypes[Idx], (*Arg)->getExprLoc(), CalleeDecl,
+    EmitNonNullArgCheck(RVArg, ArgTypes[Idx], (*Arg)->getExprLoc(), AC,
                         ParamsToSkip + Idx);
     // @llvm.objectsize should never have side-effects and shouldn't need
     // destruction/cleanups, so we can safely "emit" it after its arg,
