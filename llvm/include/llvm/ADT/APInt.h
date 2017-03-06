@@ -612,17 +612,6 @@ public:
   /// \returns *this decremented by one.
   APInt &operator--();
 
-  /// \brief Unary bitwise complement operator.
-  ///
-  /// Performs a bitwise complement operation on this APInt.
-  ///
-  /// \returns an APInt that is the bitwise complement of *this
-  APInt operator~() const {
-    APInt Result(*this);
-    Result.flipAllBits();
-    return Result;
-  }
-
   /// \brief Logical negation operator.
   ///
   /// Performs logical negation operation on this APInt.
@@ -798,7 +787,6 @@ public:
       return APInt(getBitWidth(), VAL & RHS.VAL);
     return AndSlowCase(RHS);
   }
-  APInt And(const APInt &RHS) const { return this->operator&(RHS); }
 
   /// \brief Bitwise OR operator.
   ///
@@ -812,14 +800,6 @@ public:
     return OrSlowCase(RHS);
   }
 
-  /// \brief Bitwise OR function.
-  ///
-  /// Performs a bitwise or on *this and RHS. This is implemented by simply
-  /// calling operator|.
-  ///
-  /// \returns An APInt value representing the bitwise OR of *this and RHS.
-  APInt Or(const APInt &RHS) const { return this->operator|(RHS); }
-
   /// \brief Bitwise XOR operator.
   ///
   /// Performs a bitwise XOR operation on *this and RHS.
@@ -831,14 +811,6 @@ public:
       return APInt(BitWidth, VAL ^ RHS.VAL);
     return XorSlowCase(RHS);
   }
-
-  /// \brief Bitwise XOR function.
-  ///
-  /// Performs a bitwise XOR operation on *this and RHS. This is implemented
-  /// through the usage of operator^.
-  ///
-  /// \returns An APInt value representing the bitwise XOR of *this and RHS.
-  APInt Xor(const APInt &RHS) const { return this->operator^(RHS); }
 
   /// \brief Multiplication operator.
   ///
@@ -1750,6 +1722,14 @@ inline bool operator==(uint64_t V1, const APInt &V2) { return V2 == V1; }
 
 inline bool operator!=(uint64_t V1, const APInt &V2) { return V2 != V1; }
 
+/// \brief Unary bitwise complement operator.
+///
+/// \returns an APInt that is the bitwise complement of \p v.
+inline APInt operator~(APInt v) {
+  v.flipAllBits();
+  return v;
+}
+
 inline APInt operator&(APInt a, uint64_t RHS) {
   a &= RHS;
   return a;
@@ -1981,37 +1961,6 @@ inline APInt urem(const APInt &LHS, const APInt &RHS) { return LHS.urem(RHS); }
 ///
 /// Performs multiplication on APInt values.
 inline APInt mul(const APInt &LHS, const APInt &RHS) { return LHS * RHS; }
-
-/// \brief Function for addition operation.
-///
-/// Performs addition on APInt values.
-inline APInt add(const APInt &LHS, const APInt &RHS) { return LHS + RHS; }
-
-/// \brief Function for subtraction operation.
-///
-/// Performs subtraction on APInt values.
-inline APInt sub(const APInt &LHS, const APInt &RHS) { return LHS - RHS; }
-
-/// \brief Bitwise AND function for APInt.
-///
-/// Performs bitwise AND operation on APInt LHS and
-/// APInt RHS.
-inline APInt And(const APInt &LHS, const APInt &RHS) { return LHS & RHS; }
-
-/// \brief Bitwise OR function for APInt.
-///
-/// Performs bitwise OR operation on APInt LHS and APInt RHS.
-inline APInt Or(const APInt &LHS, const APInt &RHS) { return LHS | RHS; }
-
-/// \brief Bitwise XOR function for APInt.
-///
-/// Performs bitwise XOR operation on APInt.
-inline APInt Xor(const APInt &LHS, const APInt &RHS) { return LHS ^ RHS; }
-
-/// \brief Bitwise complement function.
-///
-/// Performs a bitwise complement operation on APInt.
-inline APInt Not(const APInt &APIVal) { return ~APIVal; }
 
 } // End of APIntOps namespace
 

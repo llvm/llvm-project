@@ -761,6 +761,30 @@ TEST(APIntTest, rvalue_arithmetic) {
   }
 }
 
+TEST(APIntTest, rvalue_invert) {
+  // Lamdba to return an APInt by value, but also provide the raw value of the
+  // allocated data.
+  auto getRValue = [](const char *HexString, uint64_t const *&RawData) {
+    APInt V(129, HexString, 16);
+    RawData = V.getRawData();
+    return V;
+  };
+
+  APInt One(129, 1);
+  APInt NegativeTwo(129, -2ULL, true);
+
+  const uint64_t *RawData = nullptr;
+
+  {
+    // ~1 = -2
+    APInt NegL = ~One;
+    EXPECT_EQ(NegL, NegativeTwo);
+
+    APInt NegR = ~getRValue("1", RawData);
+    EXPECT_EQ(NegR, NegativeTwo);
+    EXPECT_EQ(NegR.getRawData(), RawData);
+  }
+}
 
 // Tests different div/rem varaints using scheme (a * b + c) / a
 void testDiv(APInt a, APInt b, APInt c) {

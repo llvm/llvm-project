@@ -26503,8 +26503,8 @@ static bool matchUnaryVectorShuffle(MVT MaskVT, ArrayRef<int> Mask,
           V1 = extractSubVector(V1, 0, DAG, DL, SrcSize);
         DstVT = MVT::getIntegerVT(Scale * MaskEltSize);
         DstVT = MVT::getVectorVT(DstVT, NumDstElts);
-        Shuffle = (SrcVT != MaskVT ? X86ISD::VZEXT
-                                   : ISD::ZERO_EXTEND_VECTOR_INREG);
+        Shuffle = SrcVT != MaskVT ? unsigned(X86ISD::VZEXT)
+                                  : unsigned(ISD::ZERO_EXTEND_VECTOR_INREG);
         return true;
       }
     }
