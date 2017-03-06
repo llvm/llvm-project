@@ -147,14 +147,16 @@ private:
   uint8_t *HashBuf;
 };
 
-// For each copy relocation, we create an instance of this class to
-// reserve space in .bss or .bss.rel.ro.
-template <class ELFT> class CopyRelSection final : public SyntheticSection {
+// Section used for storing copy relocations. We create two sections now,
+// .bss.rel.ro for RelRo case and .bss for regular case.
+template <class ELFT> class BssRelSection final : public SyntheticSection {
   typedef typename ELFT::uint uintX_t;
 
 public:
-  CopyRelSection(bool ReadOnly, uintX_t AddrAlign, size_t Size);
+  BssRelSection(bool RelRo);
   void writeTo(uint8_t *) override {}
+  bool empty() const override { return getSize() == 0; }
+  size_t addCopyRelocation(uintX_t AddrAlign, size_t Size);
   size_t getSize() const override { return Size; }
   size_t Size;
 };
@@ -760,6 +762,8 @@ SymbolBody *addSyntheticLocal(StringRef Name, uint8_t Type, uint64_t Value,
 template <class ELFT> struct In {
   static InputSection *ARMAttributes;
   static BuildIdSection<ELFT> *BuildId;
+  static BssRelSection<ELFT> *Bss;
+  static BssRelSection<ELFT> *BssRelRo;
   static InputSection *Common;
   static DynamicSection<ELFT> *Dynamic;
   static StringTableSection<ELFT> *DynStrTab;
@@ -789,6 +793,8 @@ template <class ELFT> struct In {
 };
 
 template <class ELFT> InputSection *In<ELFT>::ARMAttributes;
+template <class ELFT> BssRelSection<ELFT> *In<ELFT>::Bss;
+template <class ELFT> BssRelSection<ELFT> *In<ELFT>::BssRelRo;
 template <class ELFT> BuildIdSection<ELFT> *In<ELFT>::BuildId;
 template <class ELFT> InputSection *In<ELFT>::Common;
 template <class ELFT> DynamicSection<ELFT> *In<ELFT>::Dynamic;

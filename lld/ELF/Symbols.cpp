@@ -114,14 +114,10 @@ static typename ELFT::uint getSymVA(const SymbolBody &Body, int64_t &Addend) {
       return 0;
     return In<ELFT>::Common->OutSec->Addr + In<ELFT>::Common->OutSecOff +
            cast<DefinedCommon>(Body).Offset;
-  case SymbolBody::SharedKind: {
-    auto &SS = cast<SharedSymbol>(Body);
-    if (SS.NeedsCopy)
-      return SS.Section->OutSec->Addr + SS.Section->OutSecOff;
-    if (SS.NeedsPltAddr)
+  case SymbolBody::SharedKind:
+    if (cast<SharedSymbol>(Body).NeedsPltAddr)
       return Body.getPltVA<ELFT>();
     return 0;
-  }
   case SymbolBody::UndefinedKind:
     return 0;
   case SymbolBody::LazyArchiveKind:
@@ -134,7 +130,7 @@ static typename ELFT::uint getSymVA(const SymbolBody &Body, int64_t &Addend) {
 
 SymbolBody::SymbolBody(Kind K, StringRefZ Name, bool IsLocal, uint8_t StOther,
                        uint8_t Type)
-    : SymbolKind(K), NeedsCopy(false), NeedsPltAddr(false), IsLocal(IsLocal),
+    : SymbolKind(K), NeedsPltAddr(false), IsLocal(IsLocal),
       IsInGlobalMipsGot(false), Is32BitMipsGot(false), IsInIplt(false),
       IsInIgot(false), Type(Type), StOther(StOther), Name(Name) {}
 
@@ -145,10 +141,9 @@ bool SymbolBody::isPreemptible() const {
     return false;
 
   // Shared symbols resolve to the definition in the DSO. The exceptions are
-  // symbols with copy relocations (which resolve to .bss) or preempt plt
-  // entries (which resolve to that plt entry).
+  // symbols that needs plt entries (which resolve to that plt entry).
   if (isShared())
-    return !NeedsCopy && !NeedsPltAddr;
+    return !NeedsPltAddr;
 
   // That's all that can be preempted in a non-DSO.
   if (!Config->Shared)
@@ -217,11 +212,8 @@ const OutputSection *SymbolBody::getOutputSection() const {
     return nullptr;
   }
 
-  if (auto *S = dyn_cast<SharedSymbol>(this)) {
-    if (S->NeedsCopy)
-      return S->Section->OutSec;
+  if (auto *S = dyn_cast<SharedSymbol>(this))
     return nullptr;
-  }
 
   if (isa<DefinedCommon>(this)) {
     if (Config->DefineCommon)

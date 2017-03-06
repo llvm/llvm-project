@@ -376,10 +376,17 @@ void BuildIdSection<ELFT>::computeHash(
 }
 
 template <class ELFT>
-CopyRelSection<ELFT>::CopyRelSection(bool ReadOnly, uintX_t AddrAlign, size_t S)
-    : SyntheticSection(SHF_ALLOC, SHT_NOBITS, AddrAlign,
-                       ReadOnly ? ".bss.rel.ro" : ".bss"),
-      Size(S) {}
+BssRelSection<ELFT>::BssRelSection(bool RelRo)
+    : SyntheticSection(SHF_ALLOC | SHF_WRITE, SHT_NOBITS, 0,
+                       RelRo ? ".bss.rel.ro" : ".bss"),
+      Size(0) {}
+
+template <class ELFT>
+size_t BssRelSection<ELFT>::addCopyRelocation(uintX_t AddrAlign, size_t Size) {
+  OutSec->updateAlignment(AddrAlign);
+  this->Size = alignTo(this->Size, AddrAlign) + Size;
+  return this->Size - Size;
+}
 
 template <class ELFT>
 void BuildIdSection<ELFT>::writeBuildId(ArrayRef<uint8_t> Buf) {
@@ -2303,10 +2310,10 @@ template class elf::BuildIdSection<ELF32BE>;
 template class elf::BuildIdSection<ELF64LE>;
 template class elf::BuildIdSection<ELF64BE>;
 
-template class elf::CopyRelSection<ELF32LE>;
-template class elf::CopyRelSection<ELF32BE>;
-template class elf::CopyRelSection<ELF64LE>;
-template class elf::CopyRelSection<ELF64BE>;
+template class elf::BssRelSection<ELF32LE>;
+template class elf::BssRelSection<ELF32BE>;
+template class elf::BssRelSection<ELF64LE>;
+template class elf::BssRelSection<ELF64BE>;
 
 template class elf::GotSection<ELF32LE>;
 template class elf::GotSection<ELF32BE>;
