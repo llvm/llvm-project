@@ -19,6 +19,51 @@
 using namespace clang;
 using namespace CodeGen;
 
+llvm::Type *ConstantInitFuture::getType() const {
+  assert(Data && "dereferencing null future");
+  if (Data.is<llvm::Constant*>()) {
+    return Data.get<llvm::Constant*>()->getType();
+  } else {
+    return Data.get<ConstantInitBuilderBase*>()->Buffer[0]->getType();
+  }
+}
+
+void ConstantInitFuture::abandon() {
+  assert(Data && "abandoning null future");
+  if (auto builder = Data.dyn_cast<ConstantInitBuilderBase*>()) {
+    builder->abandon(0);
+  }
+  Data = nullptr;
+}
+
+void ConstantInitFuture::installInGlobal(llvm::GlobalVariable *GV) {
+  assert(Data && "installing null future");
+  if (Data.is<llvm::Constant*>()) {
+    GV->setInitializer(Data.get<llvm::Constant*>());
+  } else {
+    auto &builder = *Data.get<ConstantInitBuilderBase*>();
+    assert(builder.Buffer.size() == 1);
+    builder.setGlobalInitializer(GV, builder.Buffer[0]);
+    builder.Buffer.clear();
+    Data = nullptr;
+  }
+}
+
+ConstantInitFuture
+ConstantInitBuilderBase::createFuture(llvm::Constant *initializer) {
+  assert(Buffer.empty() && "buffer not current empty");
+  Buffer.push_back(initializer);
+  return ConstantInitFuture(this);
+}
+
+// Only used in this file.
+inline ConstantInitFuture::ConstantInitFuture(ConstantInitBuilderBase *builder)
+    : Data(builder) {
+  assert(!builder->Frozen);
+  assert(builder->Buffer.size() == 1);
+  assert(builder->Buffer[0] != nullptr);
+}
+
 llvm::GlobalVariable *
 ConstantInitBuilderBase::createGlobal(llvm::Constant *initializer,
                                       const llvm::Twine &name,
@@ -53,8 +98,27 @@ void ConstantInitBuilderBase::resolveSelfReferences(llvm::GlobalVariable *GV) {
     llvm::Constant *resolvedReference =
       llvm::ConstantExpr::getInBoundsGetElementPtr(
         GV->getValueType(), GV, entry.Indices);
-    entry.Dummy->replaceAllUsesWith(resolvedReference);
-    entry.Dummy->eraseFromParent();
+    auto dummy = entry.Dummy;
+    dummy->replaceAllUsesWith(resolvedReference);
+    dummy->eraseFromParent();
+  }
+  SelfReferences.clear();
+}
+
+void ConstantInitBuilderBase::abandon(size_t newEnd) {
+  // Remove all the entries we've added.
+  Buffer.erase(Buffer.begin() + newEnd, Buffer.end());
+
+  // If we're abandoning all the way to the beginning, destroy
+  // all the self-references, because we might not get another
+  // opportunity.
+  if (newEnd == 0) {
+    for (auto &entry : SelfReferences) {
+      auto dummy = entry.Dummy;
+      dummy->replaceAllUsesWith(llvm::UndefValue::get(dummy->getType()));
+      dummy->eraseFromParent();
+    }
+    SelfReferences.clear();
   }
 }
 
@@ -115,6 +179,27 @@ void ConstantAggregateBuilderBase::getGEPIndicesTo(
                                            position - Begin));
 }
 
+ConstantAggregateBuilderBase::PlaceholderPosition
+ConstantAggregateBuilderBase::addPlaceholderWithSize(llvm::Type *type) {
+  // Bring the offset up to the last field.
+  CharUnits offset = getNextOffsetFromGlobal();
+
+  // Create the placeholder.
+  auto position = addPlaceholder();
+
+  // Advance the offset past that field.
+  auto &layout = Builder.CGM.getDataLayout();
+  if (!Packed)
+    offset = offset.alignTo(CharUnits::fromQuantity(
+                                layout.getABITypeAlignment(type)));
+  offset += CharUnits::fromQuantity(layout.getTypeStoreSize(type));
+
+  CachedOffsetEnd = Builder.Buffer.size();
+  CachedOffsetFromGlobal = offset;
+
+  return position;
+}
+
 CharUnits ConstantAggregateBuilderBase::getOffsetFromGlobalTo(size_t end) const{
   size_t cacheEnd = CachedOffsetEnd;
   assert(cacheEnd <= end);
@@ -144,8 +229,9 @@ CharUnits ConstantAggregateBuilderBase::getOffsetFromGlobalTo(size_t end) const{
       assert(element != nullptr &&
              "cannot compute offset when a placeholder is present");
       llvm::Type *elementType = element->getType();
-      offset = offset.alignTo(CharUnits::fromQuantity(
-                                layout.getABITypeAlignment(elementType)));
+      if (!Packed)
+        offset = offset.alignTo(CharUnits::fromQuantity(
+                                  layout.getABITypeAlignment(elementType)));
       offset += CharUnits::fromQuantity(layout.getTypeStoreSize(elementType));
     } while (++cacheEnd != end);
   }
@@ -176,14 +262,17 @@ ConstantAggregateBuilderBase::finishStruct(llvm::StructType *ty) {
   markFinished();
 
   auto &buffer = getBuffer();
-  assert(Begin < buffer.size() && "didn't add any struct elements?");
   auto elts = llvm::makeArrayRef(buffer).slice(Begin);
+
+  if (ty == nullptr && elts.empty())
+    ty = llvm::StructType::get(Builder.CGM.getLLVMContext(), {}, Packed);
 
   llvm::Constant *constant;
   if (ty) {
+    assert(ty->isPacked() == Packed);
     constant = llvm::ConstantStruct::get(ty, elts);
   } else {
-    constant = llvm::ConstantStruct::getAnon(elts, /*packed*/ false);
+    constant = llvm::ConstantStruct::getAnon(elts, Packed);
   }
 
   buffer.erase(buffer.begin() + Begin, buffer.end());
