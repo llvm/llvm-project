@@ -82,7 +82,8 @@ static constexpr int64_t MinOffset{std::numeric_limits<int32_t>::min()};
 static constexpr int64_t MaxOffset{std::numeric_limits<int32_t>::max()};
 
 bool patchFunctionEntry(const bool Enable, const uint32_t FuncId,
-                        const XRaySledEntry &Sled) XRAY_NEVER_INSTRUMENT {
+                        const XRaySledEntry &Sled,
+                        void (*Trampoline)()) XRAY_NEVER_INSTRUMENT {
   // Here we do the dance of replacing the following sled:
   //
   // xray_sled_n:
@@ -103,13 +104,12 @@ bool patchFunctionEntry(const bool Enable, const uint32_t FuncId,
   // 4. Do an atomic write over the jmp instruction for the "mov r10d"
   // opcode and first operand.
   //
-  // Prerequisite is to compute the relative offset to the
-  // __xray_FunctionEntry function's address.
-  int64_t TrampolineOffset = reinterpret_cast<int64_t>(__xray_FunctionEntry) -
+  // Prerequisite is to compute the relative offset to the trampoline's address.
+  int64_t TrampolineOffset = reinterpret_cast<int64_t>(Trampoline) -
                              (static_cast<int64_t>(Sled.Address) + 11);
   if (TrampolineOffset < MinOffset || TrampolineOffset > MaxOffset) {
     Report("XRay Entry trampoline (%p) too far from sled (%p)\n",
-           __xray_FunctionEntry, reinterpret_cast<void *>(Sled.Address));
+           Trampoline, reinterpret_cast<void *>(Sled.Address));
     return false;
   }
   if (Enable) {
