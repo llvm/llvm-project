@@ -98,7 +98,7 @@ public:
   bool VisitFunctionDecl(FunctionDecl *FD) {
     // We skip function template definitions, as their semantics is
     // only determined when they are instantiated.
-    if (includeInGraph(FD)) {
+    if (includeInGraph(FD) && FD->isThisDeclarationADefinition()) {
       // Add all blocks declared inside this function to the graph.
       addNodesForBlocks(FD);
       // If this function has external linkage, anything could call it.
