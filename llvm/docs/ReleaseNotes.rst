@@ -225,6 +225,10 @@ Changes to the ARM Targets
 A lot of work has also been done in LLD for ARM, which now supports more
 relocations and TLS.
 
+Note: From the next release (5.0), the "vulcan" target will be renamed to
+"thunderx2t99", including command line options, assembly directives, etc. This
+release (4.0) will be the last one to accept "vulcan" as its name.
+
 Changes to the AVR Target
 -----------------------------
 
