@@ -222,6 +222,7 @@ public:
     FUNCTION_ENTER = 0,
     FUNCTION_EXIT = 1,
     TAIL_CALL = 2,
+    LOG_ARGS_ENTER = 3,
   };
 
   // The table will contain these structs that point to the sled, the function

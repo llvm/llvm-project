@@ -11395,9 +11395,12 @@ SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
       // it need to be shifted to the right side before STBRX.
       EVT mVT = cast<StoreSDNode>(N)->getMemoryVT();
       if (Op1VT.bitsGT(mVT)) {
-        int shift = Op1VT.getSizeInBits() - mVT.getSizeInBits();
+        int Shift = Op1VT.getSizeInBits() - mVT.getSizeInBits();
         BSwapOp = DAG.getNode(ISD::SRL, dl, Op1VT, BSwapOp,
-                              DAG.getConstant(shift, dl, MVT::i32));
+                              DAG.getConstant(Shift, dl, MVT::i32));
+        // Need to truncate if this is a bswap of i64 stored as i32/i16.
+        if (Op1VT == MVT::i64)
+          BSwapOp = DAG.getNode(ISD::TRUNCATE, dl, MVT::i32, BSwapOp);
       }
 
       SDValue Ops[] = {

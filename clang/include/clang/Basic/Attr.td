@@ -450,6 +450,15 @@ def XRayInstrument : InheritableAttr {
   let Documentation = [XRayDocs];
 }
 
+def XRayLogArgs : InheritableAttr {
+  let Spellings = [GNU<"xray_log_args">, CXX11<"clang", "xray_log_args">];
+  let Subjects = SubjectList<
+      [CXXMethod, ObjCMethod, Function], WarnDiag, "ExpectedFunctionOrMethod"
+  >;
+  let Args = [UnsignedArgument<"ArgumentCount">];
+  let Documentation = [XRayDocs];
+}
+
 def TLSModel : InheritableAttr {
   let Spellings = [GCC<"tls_model">];
   let Subjects = SubjectList<[TLSVar], ErrorDiag, "ExpectedTLSVar">;

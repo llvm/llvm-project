@@ -134,8 +134,9 @@ inline static bool patchSled(const bool Enable, const uint32_t FuncId,
 }
 
 bool patchFunctionEntry(const bool Enable, const uint32_t FuncId,
-                        const XRaySledEntry &Sled) XRAY_NEVER_INSTRUMENT {
-  return patchSled(Enable, FuncId, Sled, __xray_FunctionEntry);
+                        const XRaySledEntry &Sled,
+                        void (*Trampoline)()) XRAY_NEVER_INSTRUMENT {
+  return patchSled(Enable, FuncId, Sled, Trampoline);
 }
 
 bool patchFunctionExit(const bool Enable, const uint32_t FuncId,
@@ -151,3 +152,7 @@ bool patchFunctionTailExit(const bool Enable, const uint32_t FuncId,
 }
 
 } // namespace __xray
+
+extern "C" void __xray_ArgLoggerEntry() XRAY_NEVER_INSTRUMENT {
+  // FIXME: this will have to be implemented in the trampoline assembly file
+}

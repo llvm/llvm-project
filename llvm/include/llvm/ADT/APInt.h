@@ -612,17 +612,6 @@ public:
   /// \returns *this decremented by one.
   APInt &operator--();
 
-  /// \brief Unary bitwise complement operator.
-  ///
-  /// Performs a bitwise complement operation on this APInt.
-  ///
-  /// \returns an APInt that is the bitwise complement of *this
-  APInt operator~() const {
-    APInt Result(*this);
-    Result.flipAllBits();
-    return Result;
-  }
-
   /// \brief Logical negation operator.
   ///
   /// Performs logical negation operation on this APInt.
@@ -1732,6 +1721,14 @@ struct APInt::mu {
 inline bool operator==(uint64_t V1, const APInt &V2) { return V2 == V1; }
 
 inline bool operator!=(uint64_t V1, const APInt &V2) { return V2 != V1; }
+
+/// \brief Unary bitwise complement operator.
+///
+/// \returns an APInt that is the bitwise complement of \p v.
+inline APInt operator~(APInt v) {
+  v.flipAllBits();
+  return v;
+}
 
 inline APInt operator&(APInt a, uint64_t RHS) {
   a &= RHS;

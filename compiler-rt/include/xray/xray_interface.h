@@ -18,7 +18,13 @@
 
 extern "C" {
 
-enum XRayEntryType { ENTRY = 0, EXIT = 1, TAIL = 2 };
+// Synchronize this with AsmPrinter::SledKind in LLVM.
+enum XRayEntryType {
+  ENTRY = 0,
+  EXIT = 1,
+  TAIL = 2,
+  LOG_ARGS_ENTRY = 3,
+};
 
 // Provide a function to invoke for when instrumentation points are hit. This is
 // a user-visible control surface that overrides the default implementation. The
@@ -60,6 +66,17 @@ extern XRayPatchingStatus __xray_patch();
 // Reverses the effect of __xray_patch(). See XRayPatchingStatus for possible
 // result values.
 extern XRayPatchingStatus __xray_unpatch();
+
+// Use XRay to log the first argument of each (instrumented) function call.
+// When this function exits, all threads will have observed the effect and
+// start logging their subsequent affected function calls (if patched).
+//
+// Returns 1 on success, 0 on error.
+extern int __xray_set_handler_arg1(void (*)(int32_t, XRayEntryType, uint64_t));
+
+// Disables the XRay handler used to log first arguments of function calls.
+// Returns 1 on success, 0 on error.
+extern int __xray_remove_handler_arg1();
 }
 
 #endif

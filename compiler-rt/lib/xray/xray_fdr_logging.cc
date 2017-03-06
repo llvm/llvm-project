@@ -494,6 +494,7 @@ void fdrLoggingHandleArg0(int32_t FuncId,
 
   switch (Entry) {
   case XRayEntryType::ENTRY:
+  case XRayEntryType::LOG_ARGS_ENTRY:
     FuncRecord.RecordKind = uint8_t(FunctionRecord::RecordKinds::FunctionEnter);
     break;
   case XRayEntryType::EXIT:

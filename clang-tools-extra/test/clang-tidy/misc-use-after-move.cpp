@@ -282,7 +282,7 @@ void moveInInitList() {
   S s{std::move(a)};
   a.foo();
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: 'a' used after it was moved
-  // CHECK-MESSAGES: [[@LINE-3]]:6: note: move occurred here
+  // CHECK-MESSAGES: [[@LINE-3]]:7: note: move occurred here
 }
 
 void lambdas() {
@@ -396,6 +396,21 @@ void movedTypeIsDependentType() {
   // CHECK-MESSAGES: [[@LINE-3]]:3: note: move occurred here
 }
 template void movedTypeIsDependentType<A>();
+
+// We handle the case correctly where the move consists of an implicit call
+// to a conversion operator.
+void implicitConversionOperator() {
+  struct Convertible {
+    operator A() && { return A(); }
+  };
+  void takeA(A a);
+
+  Convertible convertible;
+  takeA(std::move(convertible));
+  convertible;
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: 'convertible' used after it was moved
+  // CHECK-MESSAGES: [[@LINE-3]]:9: note: move occurred here
+}
 
 // Using decltype on an expression is not a use.
 void decltypeIsNotUse() {
