@@ -30,7 +30,8 @@ from now, will be version 5.0.0.
 
 Non-comprehensive list of changes in this release
 =================================================
-* Minimum compiler version to build has been raised to GCC 4.8 and VS 2015.
+* The minimum compiler version required for building LLVM has been raised to
+  4.8 for GCC and 2017 for Visual Studio.
 
 * The C API functions ``LLVMAddFunctionAttr``, ``LLVMGetFunctionAttr``,
   ``LLVMRemoveFunctionAttr``, ``LLVMAddAttribute``, ``LLVMRemoveAttribute``,
