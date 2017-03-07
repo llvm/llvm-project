@@ -57,13 +57,6 @@ Non-comprehensive list of changes in this release
   with LLVM option ``-adce-remove-loops`` when the loop body otherwise has
   no live operations.
 
-* The GVNHoist pass is now enabled by default. The new pass based on Global
-  Value Numbering detects similar computations in branch code and replaces
-  multiple instances of the same computation with a unique expression.  The
-  transform benefits code size and generates better schedules.  GVNHoist is
-  more aggressive at ``-Os`` and ``-Oz``, hoisting more expressions at the
-  expense of execution time degradations.
-
  * The llvm-cov tool can now export coverage data as json. Its html output mode
    has also improved.
 
