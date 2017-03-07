@@ -79,18 +79,18 @@ template <typename FPtrTy> static FPtrTy CastToFPtr(void *VPtr) {
 }
 
 static FileSpec::EnumerateDirectoryResult
-LoadPluginCallback(void *baton, llvm::sys::fs::file_type ft,
+LoadPluginCallback(void *baton, FileSpec::FileType file_type,
                    const FileSpec &file_spec) {
   //    PluginManager *plugin_manager = (PluginManager *)baton;
   Error error;
 
-  namespace fs = llvm::sys::fs;
   // If we have a regular file, a symbolic link or unknown file type, try
   // and process the file. We must handle unknown as sometimes the directory
   // enumeration might be enumerating a file system that doesn't have correct
   // file type information.
-  if (ft == fs::file_type::regular_file || ft == fs::file_type::symlink_file ||
-      ft == fs::file_type::type_unknown) {
+  if (file_type == FileSpec::eFileTypeRegular ||
+      file_type == FileSpec::eFileTypeSymbolicLink ||
+      file_type == FileSpec::eFileTypeUnknown) {
     FileSpec plugin_file_spec(file_spec);
     plugin_file_spec.ResolvePath();
 
@@ -135,8 +135,9 @@ LoadPluginCallback(void *baton, llvm::sys::fs::file_type ft,
     }
   }
 
-  if (ft == fs::file_type::directory_file ||
-      ft == fs::file_type::symlink_file || ft == fs::file_type::type_unknown) {
+  if (file_type == FileSpec::eFileTypeUnknown ||
+      file_type == FileSpec::eFileTypeDirectory ||
+      file_type == FileSpec::eFileTypeSymbolicLink) {
     // Try and recurse into anything that a directory or symbolic link.
     // We must also do this for unknown as sometimes the directory enumeration
     // might be enumerating a file system that doesn't have correct file type

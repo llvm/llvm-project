@@ -53,7 +53,7 @@ uint32_t OutputSection::getPhdrFlags() const {
 template <class ELFT>
 void OutputSection::writeHeaderTo(typename ELFT::Shdr *Shdr) {
   Shdr->sh_entsize = Entsize;
-  Shdr->sh_addralign = Addralign;
+  Shdr->sh_addralign = Alignment;
   Shdr->sh_type = Type;
   Shdr->sh_offset = Offset;
   Shdr->sh_flags = Flags;
@@ -65,7 +65,7 @@ void OutputSection::writeHeaderTo(typename ELFT::Shdr *Shdr) {
 }
 
 OutputSection::OutputSection(StringRef Name, uint32_t Type, uint64_t Flags)
-    : Name(Name), Addralign(1), Flags(Flags), Type(Type) {}
+    : Name(Name), Alignment(1), Flags(Flags), Type(Type) {}
 
 template <typename ELFT>
 static bool compareByFilePosition(InputSection *A, InputSection *B) {

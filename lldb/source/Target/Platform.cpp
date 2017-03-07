@@ -42,8 +42,6 @@
 #include "lldb/Utility/Error.h"
 #include "lldb/Utility/Log.h"
 
-#include "llvm/Support/FileSystem.h"
-
 // Define these constants from POSIX mman.h rather than include the file
 // so that they will be correct even when compiled on Linux.
 #define MAP_PRIVATE 2
@@ -543,18 +541,17 @@ struct RecurseCopyBaton {
 };
 
 static FileSpec::EnumerateDirectoryResult
-RecurseCopy_Callback(void *baton, llvm::sys::fs::file_type ft,
+RecurseCopy_Callback(void *baton, FileSpec::FileType file_type,
                      const FileSpec &src) {
   RecurseCopyBaton *rc_baton = (RecurseCopyBaton *)baton;
-  namespace fs = llvm::sys::fs;
-  switch (ft) {
-  case fs::file_type::fifo_file:
-  case fs::file_type::socket_file:
+  switch (file_type) {
+  case FileSpec::eFileTypePipe:
+  case FileSpec::eFileTypeSocket:
     // we have no way to copy pipes and sockets - ignore them and continue
     return FileSpec::eEnumerateDirectoryResultNext;
     break;
 
-  case fs::file_type::directory_file: {
+  case FileSpec::eFileTypeDirectory: {
     // make the new directory and get in there
     FileSpec dst_dir = rc_baton->dst;
     if (!dst_dir.GetFilename())
@@ -584,7 +581,7 @@ RecurseCopy_Callback(void *baton, llvm::sys::fs::file_type ft,
     return FileSpec::eEnumerateDirectoryResultNext;
   } break;
 
-  case fs::file_type::symlink_file: {
+  case FileSpec::eFileTypeSymbolicLink: {
     // copy the file and keep going
     FileSpec dst_file = rc_baton->dst;
     if (!dst_file.GetFilename())
@@ -606,7 +603,7 @@ RecurseCopy_Callback(void *baton, llvm::sys::fs::file_type ft,
     return FileSpec::eEnumerateDirectoryResultNext;
   } break;
 
-  case fs::file_type::regular_file: {
+  case FileSpec::eFileTypeRegular: {
     // copy the file and keep going
     FileSpec dst_file = rc_baton->dst;
     if (!dst_file.GetFilename())
@@ -619,13 +616,15 @@ RecurseCopy_Callback(void *baton, llvm::sys::fs::file_type ft,
     return FileSpec::eEnumerateDirectoryResultNext;
   } break;
 
-  default:
+  case FileSpec::eFileTypeInvalid:
+  case FileSpec::eFileTypeOther:
+  case FileSpec::eFileTypeUnknown:
     rc_baton->error.SetErrorStringWithFormat(
         "invalid file detected during copy: %s", src.GetPath().c_str());
     return FileSpec::eEnumerateDirectoryResultQuit; // got an error, bail out
     break;
   }
-  llvm_unreachable("Unhandled file_type!");
+  llvm_unreachable("Unhandled FileSpec::FileType!");
 }
 
 Error Platform::Install(const FileSpec &src, const FileSpec &dst) {
@@ -693,9 +692,8 @@ Error Platform::Install(const FileSpec &src, const FileSpec &dst) {
   if (GetSupportsRSync()) {
     error = PutFile(src, dst);
   } else {
-    namespace fs = llvm::sys::fs;
-    switch (fs::get_file_type(src.GetPath())) {
-    case fs::file_type::directory_file: {
+    switch (src.GetFileType()) {
+    case FileSpec::eFileTypeDirectory: {
       if (GetFileExists(fixed_dst))
         Unlink(fixed_dst);
       uint32_t permissions = src.GetPermissions();
@@ -715,13 +713,13 @@ Error Platform::Install(const FileSpec &src, const FileSpec &dst) {
       }
     } break;
 
-    case fs::file_type::regular_file:
+    case FileSpec::eFileTypeRegular:
       if (GetFileExists(fixed_dst))
         Unlink(fixed_dst);
       error = PutFile(src, fixed_dst);
       break;
 
-    case fs::file_type::symlink_file: {
+    case FileSpec::eFileTypeSymbolicLink: {
       if (GetFileExists(fixed_dst))
         Unlink(fixed_dst);
       FileSpec src_resolved;
@@ -729,13 +727,15 @@ Error Platform::Install(const FileSpec &src, const FileSpec &dst) {
       if (error.Success())
         error = CreateSymlink(dst, src_resolved);
     } break;
-    case fs::file_type::fifo_file:
+    case FileSpec::eFileTypePipe:
       error.SetErrorString("platform install doesn't handle pipes");
       break;
-    case fs::file_type::socket_file:
+    case FileSpec::eFileTypeSocket:
       error.SetErrorString("platform install doesn't handle sockets");
       break;
-    default:
+    case FileSpec::eFileTypeInvalid:
+    case FileSpec::eFileTypeUnknown:
+    case FileSpec::eFileTypeOther:
       error.SetErrorString(
           "platform install doesn't handle non file or directory items");
       break;
@@ -1236,8 +1236,7 @@ Error Platform::PutFile(const FileSpec &source, const FileSpec &destination,
 
   uint32_t source_open_options =
       File::eOpenOptionRead | File::eOpenOptionCloseOnExec;
-  namespace fs = llvm::sys::fs;
-  if (fs::get_file_type(source.GetPath()) == fs::file_type::symlink_file)
+  if (source.GetFileType() == FileSpec::eFileTypeSymbolicLink)
     source_open_options |= File::eOpenOptionDontFollowSymlinks;
 
   File source_file(source, source_open_options, lldb::eFilePermissionsUserRW);

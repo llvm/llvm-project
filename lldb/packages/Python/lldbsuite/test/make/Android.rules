@@ -14,22 +14,51 @@ endif
 ifeq "$(ARCH)" "arm"
 	SYSROOT_ARCH := arm
 	STL_ARCH := armeabi-v7a
+	TRIPLE_ARCH := armv7
 	ARCH_CFLAGS += -march=armv7-a -mfloat-abi=softfp -mfpu=vfpv3-d16 -marm
 else ifeq "$(ARCH)" "aarch64"
 	SYSROOT_ARCH := arm64
+	TRIPLE_ARCH := aarch64
 	STL_ARCH := arm64-v8a
 else ifeq "$(ARCH)" "i386"
 	SYSROOT_ARCH := x86
 	STL_ARCH := x86
+	TRIPLE_ARCH := i686
 else ifeq "$(ARCH)" "mips64r6"
 	SYSROOT_ARCH := mips64
 	STL_ARCH := mips64
+	TRIPLE_ARCH := mips64el
 else ifeq "$(ARCH)" "mips32"
 	SYSROOT_ARCH := mips
 	STL_ARCH := mips
+	TRIPLE_ARCH := mipsel
 else
 	SYSROOT_ARCH := $(ARCH)
 	STL_ARCH := $(ARCH)
+	TRIPLE_ARCH := $(ARCH)
+endif
+
+ifeq "$(findstring 86,$(ARCH))" "86"
+	TOOLCHAIN_DIR := $(STL_ARCH)-4.9
+else
+	TOOLCHAIN_DIR := $(TRIPLE_ARCH)-linux-android-4.9
+endif
+
+ifeq "$(HOST_OS)" "Linux"
+	HOST_TAG := linux-x86_64
+else ifeq "$(HOST_OS)" "Darwin"
+	HOST_TAG := darwin-x86_64
+else
+	HOST_TAG := windows-x86_64
+endif
+
+ifeq "$(findstring clang,$(CC))" "clang"
+	ARCH_CFLAGS += \
+		-target $(TRIPLE_ARCH)-none-linux-android \
+		-gcc-toolchain $(NDK_ROOT)/toolchains/$(TOOLCHAIN_DIR)/prebuilt/$(HOST_TAG)
+	ARCH_LDFLAGS += \
+		-target $(TRIPLE_ARCH)-none-linux-android \
+		-gcc-toolchain $(NDK_ROOT)/toolchains/$(TOOLCHAIN_DIR)/prebuilt/$(HOST_TAG)
 endif
 
 ARCH_CFLAGS += \

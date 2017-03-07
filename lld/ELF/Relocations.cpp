@@ -918,7 +918,7 @@ void createThunks(ArrayRef<OutputSection *> OutputSections) {
       return TS;
     auto *TOS = cast<OutputSection>(IS->OutSec);
     TS = make<ThunkSection<ELFT>>(TOS, IS->OutSecOff);
-    ThunkSections[OS].push_back(TS);
+    ThunkSections[TOS].push_back(TS);
     ThunkedSections[IS] = TS;
     return TS;
   };
