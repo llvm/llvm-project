@@ -8,6 +8,7 @@
   define void @test_inserts_3() { ret void }
   define void @test_inserts_4() { ret void }
   define void @test_inserts_5() { ret void }
+  define void @test_inserts_6() { ret void }
 ...
 
 ---
@@ -69,7 +70,7 @@ body: |
     ; CHECK-LABEL: name: test_inserts_3
     ; CHECK: [[LO:%[0-9]+]](s64) = G_LOAD
     ; CHECK: [[HI:%[0-9]+]](s64) = G_LOAD
-    ; CHECK: [[NEWLO:%[0-9]+]](s64) = G_INSERT [[LO]], %0(p0), 0
+    ; CHECK: [[NEWLO:%[0-9]+]](s64) = G_PTRTOINT %0(p0)
     ; CHECK: G_STORE [[NEWLO]](s64)
     ; CHECK: G_STORE [[HI]]
     %0:_(p0) = COPY %x0
@@ -116,6 +117,24 @@ body: |
     %0:_(s64) = COPY %x0
     %1:_(s64) = COPY %x1
     %2:_(s64) = COPY %x2
+    %3:_(s128) = G_MERGE_VALUES %0, %1
+    %4:_(s128) = G_INSERT %3, %2, 32
+    RET_ReallyLR
+...
+
+---
+name:            test_inserts_6
+body: |
+  bb.0:
+    liveins: %x0, %x1, %x2
+
+
+    ; CHECK-LABEL: name: test_inserts_6
+    ; CHECK: [[VAL_LO:%[0-9]+]](s64) = G_INSERT %0, %2(s32), 32
+    ; CHECK: %4(s128) = G_MERGE_VALUES [[VAL_LO]](s64), %1(s64)
+    %0:_(s64) = COPY %x0
+    %1:_(s64) = COPY %x1
+    %2:_(s32) = COPY %w2
     %3:_(s128) = G_MERGE_VALUES %0, %1
     %4:_(s128) = G_INSERT %3, %2, 32
     RET_ReallyLR

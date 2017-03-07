@@ -31,7 +31,7 @@ from now, will be version 5.0.0.
 Non-comprehensive list of changes in this release
 =================================================
 * The minimum compiler version required for building LLVM has been raised to
-  4.8 for GCC and 2017 for Visual Studio.
+  4.8 for GCC and 2015 for Visual Studio.
 
 * The C API functions ``LLVMAddFunctionAttr``, ``LLVMGetFunctionAttr``,
   ``LLVMRemoveFunctionAttr``, ``LLVMAddAttribute``, ``LLVMRemoveAttribute``,
@@ -57,15 +57,8 @@ Non-comprehensive list of changes in this release
   with LLVM option ``-adce-remove-loops`` when the loop body otherwise has
   no live operations.
 
-* The GVNHoist pass is now enabled by default. The new pass based on Global
-  Value Numbering detects similar computations in branch code and replaces
-  multiple instances of the same computation with a unique expression.  The
-  transform benefits code size and generates better schedules.  GVNHoist is
-  more aggressive at ``-Os`` and ``-Oz``, hoisting more expressions at the
-  expense of execution time degradations.
-
- * The llvm-cov tool can now export coverage data as json. Its html output mode
-   has also improved.
+* The llvm-cov tool can now export coverage data as json. Its html output mode
+  has also improved.
 
 Improvements to ThinLTO (-flto=thin)
 ------------------------------------
