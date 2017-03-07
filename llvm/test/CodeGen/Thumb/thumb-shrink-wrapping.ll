@@ -505,14 +505,9 @@ if.end:                                           ; preds = %for.body, %if.else
 ; CHECK-NEXT: str r1, {{\[}}[[TMP_SP]]]
 ; CHECK-NEXT: str r1, {{\[}}[[TMP_SP]], #4]
 ; CHECK-NEXT: str r1, {{\[}}[[TMP_SP]], #8]
-; Thumb has quite a strange way for moving stuff
-; in around. Oh well, match the current sequence.
-; CHECK: push {r1}
-; CHECK-NEXT: pop {r0}
-; CHECK: push {r1}
-; CHECK-NEXT: pop {r2}
-; CHECK: push {r1}
-; CHECK-NEXT: pop {r3}
+; CHECK:      movs r0, r1
+; CHECK-NEXT: movs r2, r1
+; CHECK-NEXT: movs r3, r1
 ; CHECK-NEXT: bl
 ; CHECK-NEXT: lsls r0, r0, #3
 ;

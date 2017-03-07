@@ -19,8 +19,6 @@
 #include "PlatformDarwin.h"
 #include "lldb/Host/FileSpec.h"
 
-#include "llvm/Support/FileSystem.h"
-
 class PlatformRemoteiOS : public PlatformDarwin {
 public:
   PlatformRemoteiOS();
@@ -116,7 +114,7 @@ protected:
 
   static lldb_private::FileSpec::EnumerateDirectoryResult
   GetContainedFilesIntoVectorOfStringsCallback(
-      void *baton, llvm::sys::fs::file_type ft,
+      void *baton, lldb_private::FileSpec::FileType file_type,
       const lldb_private::FileSpec &file_spec);
 
   uint32_t FindFileInAllSDKs(const char *platform_file_path,

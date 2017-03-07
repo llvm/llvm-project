@@ -54,11 +54,17 @@ void Thumb1InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
         .addReg(SrcReg, getKillRegState(KillSrc))
         .add(predOps(ARMCC::AL));
   else {
-    // FIXME: The performance consequences of this are going to be atrocious.
-    // Some things to try that should be better:
-    //   * 'mov hi, $src; mov $dst, hi', with hi as either r10 or r11
-    //   * 'movs $dst, $src' if cpsr isn't live
-    // See: http://lists.llvm.org/pipermail/llvm-dev/2014-August/075998.html
+    // FIXME: Can also use 'mov hi, $src; mov $dst, hi',
+    // with hi as either r10 or r11.
+
+    const TargetRegisterInfo *RegInfo = st.getRegisterInfo();
+    if (MBB.computeRegisterLiveness(RegInfo, ARM::CPSR, I)
+        == MachineBasicBlock::LQR_Dead) {
+      BuildMI(MBB, I, DL, get(ARM::tMOVSr), DestReg)
+          .addReg(SrcReg, getKillRegState(KillSrc))
+          ->addRegisterDead(ARM::CPSR, RegInfo);
+      return;
+    }
 
     // 'MOV lo, lo' is unpredictable on < v6, so use the stack to do it
     BuildMI(MBB, I, DL, get(ARM::tPUSH))

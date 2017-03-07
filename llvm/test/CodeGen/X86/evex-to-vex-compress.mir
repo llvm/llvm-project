@@ -119,6 +119,14 @@ body: |
   %ymm0 = VPANDQZ256rm                         %ymm0, %rip, 1, _, %rax, _                     
   ; CHECK: %ymm0 = VPANDYrr                    %ymm0, %ymm1
   %ymm0 = VPANDQZ256rr                         %ymm0, %ymm1                                   
+  ; CHECK: %ymm0 = VPANDNYrm                    %ymm0, %rip, 1, _, %rax, _
+  %ymm0 = VPANDNDZ256rm                         %ymm0, %rip, 1, _, %rax, _                     
+  ; CHECK: %ymm0 = VPANDNYrr                    %ymm0, %ymm1  
+  %ymm0 = VPANDNDZ256rr                         %ymm0, %ymm1                                   
+  ; CHECK: %ymm0 = VPANDNYrm                    %ymm0, %rip, 1, _, %rax, _
+  %ymm0 = VPANDNQZ256rm                         %ymm0, %rip, 1, _, %rax, _                     
+  ; CHECK: %ymm0 = VPANDNYrr                    %ymm0, %ymm1
+  %ymm0 = VPANDNQZ256rr                         %ymm0, %ymm1                                   
   ; CHECK: %ymm0 = VPAVGBYrm                   %ymm0, %rip, 1, _, %rax, _
   %ymm0 = VPAVGBZ256rm                         %ymm0, %rip, 1, _, %rax, _                     
   ; CHECK: %ymm0 = VPAVGBYrr                   %ymm0, %ymm1
@@ -347,13 +355,13 @@ body: |
   %ymm0 = VMAXCPSZ256rm                        %ymm0, %rip, 1, _, %rax, _                     
   ; CHECK: %ymm0 = VMAXCPSYrr                  %ymm0, %ymm1
   %ymm0 = VMAXCPSZ256rr                        %ymm0, %ymm1                                   
-  ; CHECK: %ymm0 = VMAXPDYrm                   %ymm0, %rip, 1, _, %rax, _
+  ; CHECK: %ymm0 = VMAXCPDYrm                  %ymm0, %rip, 1, _, %rax, _
   %ymm0 = VMAXPDZ256rm                         %ymm0, %rip, 1, _, %rax, _                     
-  ; CHECK: %ymm0 = VMAXPDYrr                   %ymm0, %ymm1
+  ; CHECK: %ymm0 = VMAXCPDYrr                  %ymm0, %ymm1
   %ymm0 = VMAXPDZ256rr                         %ymm0, %ymm1                                   
-  ; CHECK: %ymm0 = VMAXPSYrm                   %ymm0, %rip, 1, _, %rax, _
+  ; CHECK: %ymm0 = VMAXCPSYrm                  %ymm0, %rip, 1, _, %rax, _
   %ymm0 = VMAXPSZ256rm                         %ymm0, %rip, 1, _, %rax, _                     
-  ; CHECK: %ymm0 = VMAXPSYrr                   %ymm0, %ymm1
+  ; CHECK: %ymm0 = VMAXCPSYrr                  %ymm0, %ymm1
   %ymm0 = VMAXPSZ256rr                         %ymm0, %ymm1                                   
   ; CHECK: %ymm0 = VMINCPDYrm                  %ymm0, %rip, 1, _, %rax, _
   %ymm0 = VMINCPDZ256rm                        %ymm0, %rip, 1, _, %rax, _                     
@@ -363,13 +371,13 @@ body: |
   %ymm0 = VMINCPSZ256rm                        %ymm0, %rip, 1, _, %rax, _                     
   ; CHECK: %ymm0 = VMINCPSYrr                  %ymm0, %ymm1
   %ymm0 = VMINCPSZ256rr                        %ymm0, %ymm1                                   
-  ; CHECK: %ymm0 = VMINPDYrm                   %ymm0, %rip, 1, _, %rax, _
+  ; CHECK: %ymm0 = VMINCPDYrm                  %ymm0, %rip, 1, _, %rax, _
   %ymm0 = VMINPDZ256rm                         %ymm0, %rip, 1, _, %rax, _                     
-  ; CHECK: %ymm0 = VMINPDYrr                   %ymm0, %ymm1
+  ; CHECK: %ymm0 = VMINCPDYrr                  %ymm0, %ymm1
   %ymm0 = VMINPDZ256rr                         %ymm0, %ymm1                                   
-  ; CHECK: %ymm0 = VMINPSYrm                   %ymm0, %rip, 1, _, %rax, _
+  ; CHECK: %ymm0 = VMINCPSYrm                  %ymm0, %rip, 1, _, %rax, _
   %ymm0 = VMINPSZ256rm                         %ymm0, %rip, 1, _, %rax, _                     
-  ; CHECK: %ymm0 = VMINPSYrr                   %ymm0, %ymm1
+  ; CHECK: %ymm0 = VMINCPSYrr                  %ymm0, %ymm1
   %ymm0 = VMINPSZ256rr                         %ymm0, %ymm1                                   
   ; CHECK: %ymm0 = VXORPDYrm                   %ymm0, %rip, 1, _, %rax, _
   %ymm0 = VXORPDZ256rm                         %ymm0, %rip, 1, _, %rax, _                     
@@ -687,6 +695,12 @@ body: |
   %ymm0 = VPMOVZXWQZ256rm                      %rip, 1, _, %rax, _                            
   ; CHECK: %ymm0 = VPMOVZXWQYrr                %xmm0                                      
   %ymm0 = VPMOVZXWQZ256rr                      %xmm0                                                 
+  ; CHECK: %ymm0 = VBROADCASTF128              %rip, 1, _, %rax, _
+  %ymm0 = VBROADCASTF32X4Z256rm                %rip, 1, _, %rax, _
+  ; CHECK: %ymm0 = VBROADCASTSDYrm             %rip, 1, _, %rax, _
+  %ymm0 = VBROADCASTF32X2Z256m                 %rip, 1, _, %rax, _
+  ; CHECK: %ymm0 = VBROADCASTSDYrr             %xmm0
+  %ymm0 = VBROADCASTF32X2Z256r                 %xmm0
   ; CHECK: %ymm0 = VBROADCASTSDYrm             %rip, 1, _, %rax, _
   %ymm0 = VBROADCASTSDZ256m                    %rip, 1, _, %rax, _                            
   ; CHECK: %ymm0 = VBROADCASTSDYrr             %xmm0
@@ -707,6 +721,12 @@ body: |
   %ymm0 = VPBROADCASTWZ256m                    %rip, 1, _, %rax, _                            
   ; CHECK: %ymm0 = VPBROADCASTWYrr             %xmm0
   %ymm0 = VPBROADCASTWZ256r                    %xmm0                                          
+  ; CHECK: %ymm0 = VBROADCASTI128              %rip, 1, _, %rax, _
+  %ymm0 = VBROADCASTI32X4Z256rm                %rip, 1, _, %rax, _
+  ; CHECK: %ymm0 = VPBROADCASTQYrm             %rip, 1, _, %rax, _
+  %ymm0 = VBROADCASTI32X2Z256m                 %rip, 1, _, %rax, _
+  ; CHECK: %ymm0 = VPBROADCASTQYrr             %xmm0
+  %ymm0 = VBROADCASTI32X2Z256r                 %xmm0
   ; CHECK: %ymm0 = VPBROADCASTQYrm             %rip, 1, _, %rax, _  
   %ymm0 = VPBROADCASTQZ256m                    %rip, 1, _, %rax, _                            
   ; CHECK: %ymm0 = VPBROADCASTQYrr             %xmm0                                      
@@ -1039,13 +1059,13 @@ body: |
   %xmm0 = VMAXCPSZ128rm                        %xmm0, %rip, 1, _, %rax, _                          
   ; CHECK: %xmm0 = VMAXCPSrr                   %xmm0, %xmm1
   %xmm0 = VMAXCPSZ128rr                        %xmm0, %xmm1                                        
-  ; CHECK: %xmm0 = VMAXPDrm                    %xmm0, %rip, 1, _, %rax, _
+  ; CHECK: %xmm0 = VMAXCPDrm                   %xmm0, %rip, 1, _, %rax, _
   %xmm0 = VMAXPDZ128rm                         %xmm0, %rip, 1, _, %rax, _                          
-  ; CHECK: %xmm0 = VMAXPDrr                    %xmm0, %xmm1
+  ; CHECK: %xmm0 = VMAXCPDrr                   %xmm0, %xmm1
   %xmm0 = VMAXPDZ128rr                         %xmm0, %xmm1                                        
-  ; CHECK: %xmm0 = VMAXPSrm                    %xmm0, %rip, 1, _, %rax, _
+  ; CHECK: %xmm0 = VMAXCPSrm                   %xmm0, %rip, 1, _, %rax, _
   %xmm0 = VMAXPSZ128rm                         %xmm0, %rip, 1, _, %rax, _                          
-  ; CHECK: %xmm0 = VMAXPSrr                    %xmm0, %xmm1
+  ; CHECK: %xmm0 = VMAXCPSrr                   %xmm0, %xmm1
   %xmm0 = VMAXPSZ128rr                         %xmm0, %xmm1                                        
   ; CHECK: %xmm0 = VMINCPDrm                   %xmm0, %rip, 1, _, %rax, _
   %xmm0 = VMINCPDZ128rm                        %xmm0, %rip, 1, _, %rax, _                          
@@ -1055,13 +1075,13 @@ body: |
   %xmm0 = VMINCPSZ128rm                        %xmm0, %rip, 1, _, %rax, _                          
   ; CHECK: %xmm0 = VMINCPSrr                   %xmm0, %xmm1
   %xmm0 = VMINCPSZ128rr                        %xmm0, %xmm1                                        
-  ; CHECK: %xmm0 = VMINPDrm                    %xmm0, %rip, 1, _, %rax, _
+  ; CHECK: %xmm0 = VMINCPDrm                   %xmm0, %rip, 1, _, %rax, _
   %xmm0 = VMINPDZ128rm                         %xmm0, %rip, 1, _, %rax, _                          
-  ; CHECK: %xmm0 = VMINPDrr                    %xmm0, %xmm1
+  ; CHECK: %xmm0 = VMINCPDrr                   %xmm0, %xmm1
   %xmm0 = VMINPDZ128rr                         %xmm0, %xmm1                                        
-  ; CHECK: %xmm0 = VMINPSrm                    %xmm0, %rip, 1, _, %rax, _
+  ; CHECK: %xmm0 = VMINCPSrm                   %xmm0, %rip, 1, _, %rax, _
   %xmm0 = VMINPSZ128rm                         %xmm0, %rip, 1, _, %rax, _                          
-  ; CHECK: %xmm0 = VMINPSrr                    %xmm0, %xmm1
+  ; CHECK: %xmm0 = VMINCPSrr                   %xmm0, %xmm1
   %xmm0 = VMINPSZ128rr                         %xmm0, %xmm1                                        
   ; CHECK: %xmm0 = VMULPDrm                    %xmm0, %rip, 1, _, %rax, _
   %xmm0 = VMULPDZ128rm                         %xmm0, %rip, 1, _, %rax, _                          
@@ -1119,6 +1139,14 @@ body: |
   %xmm0 = VPANDQZ128rm                         %xmm0, %rip, 1, _, %rax, _                          
   ; CHECK: %xmm0 = VPANDrr                     %xmm0, %xmm1  
   %xmm0 = VPANDQZ128rr                         %xmm0, %xmm1                                        
+  ; CHECK: %xmm0 = VPANDNrm                    %xmm0, %rip, 1, _, %rax, _
+  %xmm0 = VPANDNDZ128rm                        %xmm0, %rip, 1, _, %rax, _                          
+  ; CHECK: %xmm0 = VPANDNrr                    %xmm0, %xmm1
+  %xmm0 = VPANDNDZ128rr                        %xmm0, %xmm1                                        
+  ; CHECK: %xmm0 = VPANDNrm                    %xmm0, %rip, 1, _, %rax, _
+  %xmm0 = VPANDNQZ128rm                        %xmm0, %rip, 1, _, %rax, _                          
+  ; CHECK: %xmm0 = VPANDNrr                    %xmm0, %xmm1  
+  %xmm0 = VPANDNQZ128rr                        %xmm0, %xmm1                                        
   ; CHECK: %xmm0 = VPAVGBrm                    %xmm0, %rip, 1, _, %rax, _
   %xmm0 = VPAVGBZ128rm                         %xmm0, %rip, 1, _, %rax, _                          
   ; CHECK: %xmm0 = VPAVGBrr                    %xmm0, %xmm1  
@@ -1707,6 +1735,10 @@ body: |
   %xmm0 = VPBROADCASTWZ128m                    %rip, _, _, _, _                                    
   ; CHECK: %xmm0 = VPBROADCASTWrr              %xmm0                                   
   %xmm0 = VPBROADCASTWZ128r                    %xmm0                                                                                             
+  ; CHECK: %xmm0 = VPBROADCASTQrm              %rip, _, _, _, _
+  %xmm0 = VBROADCASTI32X2Z128m                 %rip, _, _, _, _
+  ; CHECK: %xmm0 = VPBROADCASTQrr              %xmm0
+  %xmm0 = VBROADCASTI32X2Z128r                 %xmm0
   ; CHECK: %xmm0 = VCVTPS2PHrr                 %xmm0, 2
   %xmm0 = VCVTPS2PHZ128rr                      %xmm0, 2                                            
   ; CHECK: VCVTPS2PHmr                         %rdi, %xmm0, 1, _, 0, _, _              
@@ -1778,19 +1810,19 @@ body: |
   %xmm0 = VMAXCSSZrm                           %xmm0, %rip, 1, _, %rax, _                              
   ; CHECK: %xmm0 = VMAXCSSrr                   %xmm0, %xmm1
   %xmm0 = VMAXCSSZrr                           %xmm0, %xmm1                                            
-  ; CHECK: %xmm0 = VMAXSDrm                    %xmm0, %rip, 1, _, %rax, _
+  ; CHECK: %xmm0 = VMAXCSDrm                   %xmm0, %rip, 1, _, %rax, _
   %xmm0 = VMAXSDZrm                            %xmm0, %rip, 1, _, %rax, _                              
   ; CHECK: %xmm0 = VMAXSDrm_Int                %xmm0, %rip, 1, _, %rax, _
   %xmm0 = VMAXSDZrm_Int                        %xmm0, %rip, 1, _, %rax, _                              
-  ; CHECK: %xmm0 = VMAXSDrr                    %xmm0, %xmm1
+  ; CHECK: %xmm0 = VMAXCSDrr                   %xmm0, %xmm1
   %xmm0 = VMAXSDZrr                            %xmm0, %xmm1                                            
   ; CHECK: %xmm0 = VMAXSDrr_Int                %xmm0, %xmm1
   %xmm0 = VMAXSDZrr_Int                        %xmm0, %xmm1                                            
-  ; CHECK: %xmm0 = VMAXSSrm                    %xmm0, %rip, 1, _, %rax, _
+  ; CHECK: %xmm0 = VMAXCSSrm                   %xmm0, %rip, 1, _, %rax, _
   %xmm0 = VMAXSSZrm                            %xmm0, %rip, 1, _, %rax, _                              
   ; CHECK: %xmm0 = VMAXSSrm_Int                %xmm0, %rip, 1, _, %rax, _
   %xmm0 = VMAXSSZrm_Int                        %xmm0, %rip, 1, _, %rax, _                              
-  ; CHECK: %xmm0 = VMAXSSrr                    %xmm0, %xmm1
+  ; CHECK: %xmm0 = VMAXCSSrr                   %xmm0, %xmm1
   %xmm0 = VMAXSSZrr                            %xmm0, %xmm1                                            
   ; CHECK: %xmm0 = VMAXSSrr_Int                %xmm0, %xmm1
   %xmm0 = VMAXSSZrr_Int                        %xmm0, %xmm1                                            
@@ -1802,19 +1834,19 @@ body: |
   %xmm0 = VMINCSSZrm                           %xmm0, %rip, 1, _, %rax, _                              
   ; CHECK: %xmm0 = VMINCSSrr                   %xmm0, %xmm1
   %xmm0 = VMINCSSZrr                           %xmm0, %xmm1                                            
-  ; CHECK: %xmm0 = VMINSDrm                    %xmm0, %rip, 1, _, %rax, _
+  ; CHECK: %xmm0 = VMINCSDrm                   %xmm0, %rip, 1, _, %rax, _
   %xmm0 = VMINSDZrm                            %xmm0, %rip, 1, _, %rax, _                              
   ; CHECK: %xmm0 = VMINSDrm_Int                %xmm0, %rip, 1, _, %rax, _
   %xmm0 = VMINSDZrm_Int                        %xmm0, %rip, 1, _, %rax, _                              
-  ; CHECK: %xmm0 = VMINSDrr                    %xmm0, %xmm1
+  ; CHECK: %xmm0 = VMINCSDrr                   %xmm0, %xmm1
   %xmm0 = VMINSDZrr                            %xmm0, %xmm1                                            
   ; CHECK: %xmm0 = VMINSDrr_Int                %xmm0, %xmm1
   %xmm0 = VMINSDZrr_Int                        %xmm0, %xmm1                                            
-  ; CHECK: %xmm0 = VMINSSrm                    %xmm0, %rip, 1, _, %rax, _
+  ; CHECK: %xmm0 = VMINCSSrm                   %xmm0, %rip, 1, _, %rax, _
   %xmm0 = VMINSSZrm                            %xmm0, %rip, 1, _, %rax, _                              
   ; CHECK: %xmm0 = VMINSSrm_Int                %xmm0, %rip, 1, _, %rax, _
   %xmm0 = VMINSSZrm_Int                        %xmm0, %rip, 1, _, %rax, _                              
-  ; CHECK: %xmm0 = VMINSSrr                    %xmm0, %xmm1
+  ; CHECK: %xmm0 = VMINCSSrr                   %xmm0, %xmm1
   %xmm0 = VMINSSZrr                            %xmm0, %xmm1                                            
   ; CHECK: %xmm0 = VMINSSrr_Int                %xmm0, %xmm1
   %xmm0 = VMINSSZrr_Int                        %xmm0, %xmm1                                            
@@ -2058,6 +2090,8 @@ body: |
   VPEXTRWZmr                                   %rdi, 1, _, 0, _,  %xmm0, 3                             
   ; CHECK: %eax = VPEXTRWri                    %xmm0, 1                                                     
   %eax = VPEXTRWZrr                            %xmm0, 1                                                    
+  ; CHECK: %eax = VPEXTRWrr_REV               %xmm0, 1      
+  %eax = VPEXTRWZrr_REV                        %xmm0, 1                                                     
   ; CHECK: %xmm0 = VPINSRBrm                   %xmm0, %rsi, 1, _, 0, _, 3      
   %xmm0 = VPINSRBZrm                           %xmm0, %rsi, 1, _, 0, _, 3                              
   ; CHECK: %xmm0 = VPINSRBrr                   %xmm0, %edi, 5      
@@ -2090,12 +2124,8 @@ body: |
   %xmm0 = VSQRTSSZr                            %xmm0, _                                                
   ; CHECK: %xmm0 = VSQRTSSr_Int                %xmm0, _                                              
   %xmm0 = VSQRTSSZr_Int                        %xmm0, _                                                
-  ; CHECK: %rdi = VCVTSD2SI64rm                %rdi, %xmm0, 1, _, 0
-  %rdi = VCVTSD2SI64Zrm                        %rdi, %xmm0, 1, _, 0                                    
   ; CHECK: %rdi = VCVTSD2SI64rr                %xmm0
   %rdi = VCVTSD2SI64Zrr                        %xmm0                                                   
-  ; CHECK: %edi = VCVTSD2SIrm                  %rdi, %xmm0, 1, _, 0
-  %edi = VCVTSD2SIZrm                          %rdi, %xmm0, 1, _, 0                                    
   ; CHECK: %edi = VCVTSD2SIrr                  %xmm0
   %edi = VCVTSD2SIZrr                          %xmm0                                                   
   ; CHECK: %xmm0 = VCVTSD2SSrm                 %xmm0, %rdi, 1, _, 0, _
@@ -2118,16 +2148,28 @@ body: |
   %xmm0 = VCVTSI2SSZrr                         %xmm0, _                                                
   ; CHECK: %xmm0 = Int_VCVTSI2SSrr             %xmm0, _
   %xmm0 = VCVTSI2SSZrr_Int                     %xmm0, _                                                
+  ; CHECK: %xmm0 = VCVTSI2SD64rm               %xmm0, %rdi, 1, _, 0, _
+  %xmm0 = VCVTSI642SDZrm                       %xmm0, %rdi, 1, _, 0, _
+  ; CHECK: %xmm0 = Int_VCVTSI2SD64rm           %xmm0, %rdi, 1, _, 0, _
+  %xmm0 = VCVTSI642SDZrm_Int                   %xmm0, %rdi, 1, _, 0, _
+  ; CHECK: %xmm0 = VCVTSI2SD64rr               %xmm0, _
+  %xmm0 = VCVTSI642SDZrr                       %xmm0, _
+  ; CHECK: %xmm0 = Int_VCVTSI2SD64rr           %xmm0, _
+  %xmm0 = VCVTSI642SDZrr_Int                   %xmm0, _
+  ; CHECK: %xmm0 = VCVTSI2SS64rm               %xmm0, %rdi, 1, _, 0, _ 
+  %xmm0 = VCVTSI642SSZrm                       %xmm0, %rdi, 1, _, 0, _
+  ; CHECK: %xmm0 = Int_VCVTSI2SS64rm           %xmm0, %rdi, 1, _, 0, _
+  %xmm0 = VCVTSI642SSZrm_Int                   %xmm0, %rdi, 1, _, 0, _
+  ; CHECK: %xmm0 = VCVTSI2SS64rr               %xmm0, _ 
+  %xmm0 = VCVTSI642SSZrr                       %xmm0, _
+  ; CHECK: %xmm0 = Int_VCVTSI2SS64rr           %xmm0, _
+  %xmm0 = VCVTSI642SSZrr_Int                   %xmm0, _
   ; CHECK: %xmm0 = VCVTSS2SDrm                 %xmm0, %rdi, 1, _, 0, _
   %xmm0 = VCVTSS2SDZrm                         %xmm0, %rdi, 1, _, 0, _                                 
   ; CHECK: %xmm0 = VCVTSS2SDrr                 %xmm0, _
   %xmm0 = VCVTSS2SDZrr                         %xmm0, _                                                
-  ; CHECK: %rdi = VCVTSS2SI64rm                %rdi, %xmm0, 1, _, 0
-  %rdi = VCVTSS2SI64Zrm                        %rdi, %xmm0, 1, _, 0                                    
   ; CHECK: %rdi = VCVTSS2SI64rr                %xmm0
   %rdi = VCVTSS2SI64Zrr                        %xmm0                                                   
-  ; CHECK: %edi = VCVTSS2SIrm                  %rdi, %xmm0, 1, _, 0
-  %edi = VCVTSS2SIZrm                          %rdi, %xmm0, 1, _, 0                                    
   ; CHECK: %edi = VCVTSS2SIrr                  %xmm0
   %edi = VCVTSS2SIZrr                          %xmm0                                                   
   ; CHECK: %rdi = VCVTTSD2SI64rm               %rdi, %xmm0, 1, _, 0
@@ -2174,6 +2216,12 @@ body: |
   %xmm0 = VMOVSDZrm                            %rip, _, _, _, _                                        
   ; CHECK: %xmm0 = VMOVSDrr                    %xmm0, _
   %xmm0 = VMOVSDZrr                            %xmm0, _                                                
+  ; CHECK: %xmm0 = VMOVSDrr_REV                %xmm0, _
+  %xmm0 = VMOVSDZrr_REV                        %xmm0, _                                                
+  ; CHECK: %rax = VMOVSDto64rr                 %xmm0
+  %rax = VMOVSDto64Zrr                         %xmm0
+  ; CHECK: VMOVSDto64mr                        %rdi, %xmm0, _, _, _, _
+  VMOVSDto64Zmr                                %rdi, %xmm0, _, _, _, _
   ; CHECK: VMOVSSmr                            %rdi, %xmm0, _, _, _, _
   VMOVSSZmr                                    %rdi, %xmm0, _, _, _, _                                 
   ; CHECK: %xmm0 = VMOVSSrm                    %rip, _, _, _, _
@@ -2182,8 +2230,14 @@ body: |
   %xmm0 = VMOVSSZrr                            %xmm0, _                                                
   ; CHECK: %xmm0 = VMOVSSrr_REV                %xmm0, _
   %xmm0 = VMOVSSZrr_REV                        %xmm0, _                                                
+  ; CHECK: VMOVSS2DImr                         %rdi, %xmm0, _, _, _, _
+  VMOVSS2DIZmr                                 %rdi, %xmm0, _, _, _, _
+  ; CHECK: %eax = VMOVSS2DIrr                  %xmm0
+  %eax = VMOVSS2DIZrr                          %xmm0
   ; CHECK: %xmm0 = VMOV64toPQIrr               %rdi
   %xmm0 = VMOV64toPQIZrr                       %rdi                                                    
+  ; CHECK: %xmm0 = VMOV64toPQIrm               %rdi, _, _, _, _
+  %xmm0 = VMOV64toPQIZrm                       %rdi, _, _, _, _
   ; CHECK: %xmm0 = VMOV64toSDrr                %rdi 
   %xmm0 = VMOV64toSDZrr                        %rdi                                                    
   ; CHECK: %xmm0 = VMOVDI2PDIrm                %rip, _, _, _, _
@@ -2197,11 +2251,15 @@ body: |
   ; CHECK: VMOVPDI2DImr                        %rdi, %xmm0, _, _, _, _
   VMOVPDI2DIZmr                                %rdi, %xmm0, _, _, _, _                                 
   ; CHECK: %edi = VMOVPDI2DIrr                 %xmm0
-  %edi = VMOVPDI2DIZrr                         %xmm0                                                   
+  %edi = VMOVPDI2DIZrr                         %xmm0
+  ; CHECK: %xmm0 = VMOVPQI2QIrr                %xmm0
+  %xmm0 = VMOVPQI2QIZrr                        %xmm0
   ; CHECK: VMOVPQI2QImr                        %rdi, %xmm0, _, _, _, _
   VMOVPQI2QIZmr                                %rdi, %xmm0, _, _, _, _                                 
   ; CHECK: %rdi = VMOVPQIto64rr                %xmm0
   %rdi = VMOVPQIto64Zrr                        %xmm0                                                   
+  ; CHECK: VMOVPQIto64mr                       %rdi, %xmm0, _, _, _, _
+  VMOVPQIto64Zmr                               %rdi, %xmm0, _, _, _, _
   ; CHECK: %xmm0 = VMOVQI2PQIrm                %rip, _, _, _, _
   %xmm0 = VMOVQI2PQIZrm                        %rip, _, _, _, _                                        
   ; CHECK: %xmm0 = VMOVZPQILo2PQIrr            %xmm0                                               
@@ -2238,6 +2296,14 @@ body: |
   VUCOMISSZrm                                  %xmm0, %rdi, _, _, _, _, implicit-def %eflags           
   ; CHECK: VUCOMISSrr                          %xmm0, %xmm1, implicit-def %eflags 
   VUCOMISSZrr                                  %xmm0, %xmm1, implicit-def %eflags 
+  ; CHECK: VEXTRACTPSmr                        %rdi, 1, _, 0, _, %xmm0, _
+  VEXTRACTPSZmr                                %rdi, 1, _, 0, _, %xmm0, _
+  ; CHECK: %eax = VEXTRACTPSrr                 %xmm0, _
+  %eax = VEXTRACTPSZrr                         %xmm0, _
+  ; CHECK: %xmm0 = VINSERTPSrm                 %xmm0, %rdi, _, _, _, _, _
+  %xmm0 = VINSERTPSZrm                         %xmm0, %rdi, _, _, _, _, _
+  ; CHECK: %xmm0 = VINSERTPSrr                 %xmm0, %xmm0, _ 
+  %xmm0 = VINSERTPSZrr                         %xmm0, %xmm0, _
 
   RET 0, %zmm0, %zmm1                          
 ...
@@ -2350,6 +2416,14 @@ body: |
   %ymm16 = VPANDQZ256rm                        %ymm16, %rip, 1, _, %rax, _                   
   ; CHECK: %ymm16 = VPANDQZ256rr               %ymm16, %ymm1
   %ymm16 = VPANDQZ256rr                        %ymm16, %ymm1                                 
+  ; CHECK: %ymm16 = VPANDNDZ256rm               %ymm16, %rip, 1, _, %rax, _
+  %ymm16 = VPANDNDZ256rm                        %ymm16, %rip, 1, _, %rax, _                   
+  ; CHECK: %ymm16 = VPANDNDZ256rr               %ymm16, %ymm1  
+  %ymm16 = VPANDNDZ256rr                        %ymm16, %ymm1                                 
+  ; CHECK: %ymm16 = VPANDNQZ256rm               %ymm16, %rip, 1, _, %rax, _
+  %ymm16 = VPANDNQZ256rm                        %ymm16, %rip, 1, _, %rax, _                   
+  ; CHECK: %ymm16 = VPANDNQZ256rr               %ymm16, %ymm1
+  %ymm16 = VPANDNQZ256rr                        %ymm16, %ymm1                                 
   ; CHECK: %ymm16 = VPAVGBZ256rm               %ymm16, %rip, 1, _, %rax, _
   %ymm16 = VPAVGBZ256rm                        %ymm16, %rip, 1, _, %rax, _                   
   ; CHECK: %ymm16 = VPAVGBZ256rr               %ymm16, %ymm1
@@ -2918,6 +2992,12 @@ body: |
   %ymm16 = VPMOVZXWQZ256rm                     %rip, 1, _, %rax, _                           
   ; CHECK: %ymm16 = VPMOVZXWQZ256rr            %xmm0    
   %ymm16 = VPMOVZXWQZ256rr                     %xmm0                                                 
+  ; CHECK: %ymm16 = VBROADCASTF32X2Z256m       %rip, 1, _, %rax, _
+  %ymm16 = VBROADCASTF32X2Z256m                %rip, 1, _, %rax, _
+  ; CHECK: %ymm16 = VBROADCASTF32X2Z256r       %xmm16
+  %ymm16 = VBROADCASTF32X2Z256r                %xmm16
+  ; CHECK: %ymm16 = VBROADCASTF32X4Z256rm      %rip, 1, _, %rax, _
+  %ymm16 = VBROADCASTF32X4Z256rm               %rip, 1, _, %rax, _
   ; CHECK: %ymm16 = VBROADCASTSDZ256m          %rip, 1, _, %rax, _
   %ymm16 = VBROADCASTSDZ256m                   %rip, 1, _, %rax, _                           
   ; CHECK: %ymm16 = VBROADCASTSDZ256r          %xmm0
@@ -2938,6 +3018,12 @@ body: |
   %ymm16 = VPBROADCASTWZ256m                   %rip, 1, _, %rax, _                           
   ; CHECK: %ymm16 = VPBROADCASTWZ256r          %xmm0
   %ymm16 = VPBROADCASTWZ256r                   %xmm0                                         
+  ; CHECK: %ymm16 = VBROADCASTI32X4Z256rm      %rip, 1, _, %rax, _
+  %ymm16 = VBROADCASTI32X4Z256rm               %rip, 1, _, %rax, _
+  ; CHECK: %ymm16 = VBROADCASTI32X2Z256m       %rip, 1, _, %rax, _
+  %ymm16 = VBROADCASTI32X2Z256m                %rip, 1, _, %rax, _
+  ; CHECK: %ymm16 = VBROADCASTI32X2Z256r       %xmm16
+  %ymm16 = VBROADCASTI32X2Z256r                %xmm16
   ; CHECK: %ymm16 = VPBROADCASTQZ256m          %rip, 1, _, %rax, _  
   %ymm16 = VPBROADCASTQZ256m                   %rip, 1, _, %rax, _                           
   ; CHECK: %ymm16 = VPBROADCASTQZ256r          %xmm0  
@@ -3350,6 +3436,14 @@ body: |
   %xmm16 = VPANDQZ128rm                        %xmm16, %rip, 1, _, %rax, _                               
   ; CHECK: %xmm16 = VPANDQZ128rr               %xmm16, %xmm1  
   %xmm16 = VPANDQZ128rr                        %xmm16, %xmm1                                             
+  ; CHECK: %xmm16 = VPANDNDZ128rm              %xmm16, %rip, 1, _, %rax, _
+  %xmm16 = VPANDNDZ128rm                       %xmm16, %rip, 1, _, %rax, _                               
+  ; CHECK: %xmm16 = VPANDNDZ128rr              %xmm16, %xmm1
+  %xmm16 = VPANDNDZ128rr                       %xmm16, %xmm1                                             
+  ; CHECK: %xmm16 = VPANDNQZ128rm              %xmm16, %rip, 1, _, %rax, _
+  %xmm16 = VPANDNQZ128rm                       %xmm16, %rip, 1, _, %rax, _                               
+  ; CHECK: %xmm16 = VPANDNQZ128rr              %xmm16, %xmm1  
+  %xmm16 = VPANDNQZ128rr                       %xmm16, %xmm1                                             
   ; CHECK: %xmm16 = VPAVGBZ128rm               %xmm16, %rip, 1, _, %rax, _
   %xmm16 = VPAVGBZ128rm                        %xmm16, %rip, 1, _, %rax, _                               
   ; CHECK: %xmm16 = VPAVGBZ128rr               %xmm16, %xmm1  
@@ -3938,6 +4032,10 @@ body: |
   %xmm16 = VPBROADCASTWZ128m                   %rip, _, _, _, _                                          
   ; CHECK: %xmm16 = VPBROADCASTWZ128r          %xmm16
   %xmm16 = VPBROADCASTWZ128r                   %xmm16                                                                                            
+  ; CHECK: %xmm16 = VBROADCASTI32X2Z128m       %rip, _, _, _, _
+  %xmm16 = VBROADCASTI32X2Z128m                %rip, _, _, _, _
+  ; CHECK: %xmm16 = VBROADCASTI32X2Z128r       %xmm0
+  %xmm16 = VBROADCASTI32X2Z128r                %xmm0
   ; CHECK: %xmm16 = VCVTPS2PHZ128rr            %xmm16, 2
   %xmm16 = VCVTPS2PHZ128rr                     %xmm16, 2                                                 
   ; CHECK: VCVTPS2PHZ128mr                     %rdi, %xmm16, 1, _, 0, _, _  
@@ -3958,6 +4056,14 @@ body: |
   %xmm16 = VPALIGNRZ128rmi                     %xmm16, _, _, _, _, _, _                                  
   ; CHECK: %xmm16 = VPALIGNRZ128rri            %xmm16, %xmm1, 15
   %xmm16 = VPALIGNRZ128rri                     %xmm16, %xmm1, 15
+  ; CHECK: VEXTRACTPSZmr                       %rdi, 1, _, 0, _, %xmm16, _
+  VEXTRACTPSZmr                                %rdi, 1, _, 0, _, %xmm16, _
+  ; CHECK: %eax = VEXTRACTPSZrr                %xmm16, _
+  %eax = VEXTRACTPSZrr                         %xmm16, _
+  ; CHECK: %xmm16 = VINSERTPSZrm               %xmm16, %rdi, _, _, _, _, _
+  %xmm16 = VINSERTPSZrm                        %xmm16, %rdi, _, _, _, _, _
+  ; CHECK: %xmm16 = VINSERTPSZrr               %xmm16, %xmm16, _ 
+  %xmm16 = VINSERTPSZrr                        %xmm16, %xmm16, _
     
       RET 0, %zmm0, %zmm1
 ...
@@ -4288,6 +4394,8 @@ body: |
   VPEXTRWZmr                                   %rdi, 1, _, 0, _,  %xmm16, 3                               
   ; CHECK: %eax = VPEXTRWZrr                   %xmm16, 1      
   %eax = VPEXTRWZrr                            %xmm16, 1                                                     
+  ; CHECK: %eax = VPEXTRWZrr_REV               %xmm16, 1      
+  %eax = VPEXTRWZrr_REV                        %xmm16, 1                                                     
   ; CHECK: %xmm16 = VPINSRBZrm                 %xmm16, %rsi, 1, _, 0, _, 3      
   %xmm16 = VPINSRBZrm                          %xmm16, %rsi, 1, _, 0, _, 3                                
   ; CHECK: %xmm16 = VPINSRBZrr                 %xmm16, %edi, 5      
@@ -4348,6 +4456,22 @@ body: |
   %xmm16 = VCVTSI2SSZrr                        %xmm16, _                                                  
   ; CHECK: %xmm16 = VCVTSI2SSZrr_Int           %xmm16, _
   %xmm16 = VCVTSI2SSZrr_Int                    %xmm16, _                                                  
+  ; CHECK: %xmm16 = VCVTSI642SDZrm             %xmm16, %rdi, 1, _, 0, _
+  %xmm16 = VCVTSI642SDZrm                      %xmm16, %rdi, 1, _, 0, _
+  ; CHECK: %xmm16 = VCVTSI642SDZrm_Int         %xmm16, %rdi, 1, _, 0, _
+  %xmm16 = VCVTSI642SDZrm_Int                  %xmm16, %rdi, 1, _, 0, _
+  ; CHECK: %xmm16 = VCVTSI642SDZrr             %xmm16, _
+  %xmm16 = VCVTSI642SDZrr                      %xmm16, _
+  ; CHECK: %xmm16 = VCVTSI642SDZrr_Int         %xmm16, _
+  %xmm16 = VCVTSI642SDZrr_Int                  %xmm16, _
+  ; CHECK: %xmm16 = VCVTSI642SSZrm             %xmm16, %rdi, 1, _, 0, _ 
+  %xmm16 = VCVTSI642SSZrm                      %xmm16, %rdi, 1, _, 0, _
+  ; CHECK: %xmm16 = VCVTSI642SSZrm_Int         %xmm16, %rdi, 1, _, 0, _
+  %xmm16 = VCVTSI642SSZrm_Int                  %xmm16, %rdi, 1, _, 0, _
+  ; CHECK: %xmm16 = VCVTSI642SSZrr             %xmm16, _ 
+  %xmm16 = VCVTSI642SSZrr                      %xmm16, _
+  ; CHECK: %xmm16 = VCVTSI642SSZrr_Int         %xmm16, _
+  %xmm16 = VCVTSI642SSZrr_Int                  %xmm16, _
   ; CHECK: %xmm16 = VCVTSS2SDZrm               %xmm16, %rdi, 1, _, 0, _
   %xmm16 = VCVTSS2SDZrm                        %xmm16, %rdi, 1, _, 0, _                                   
   ; CHECK: %xmm16 = VCVTSS2SDZrr               %xmm16, _
@@ -4404,6 +4528,12 @@ body: |
   %xmm16 = VMOVSDZrm                           %rip, _, _, _, _                                           
   ; CHECK: %xmm16 = VMOVSDZrr                  %xmm16, _
   %xmm16 = VMOVSDZrr                           %xmm16, _                                                  
+  ; CHECK: %xmm16 = VMOVSDZrr_REV              %xmm16, _
+  %xmm16 = VMOVSDZrr_REV                       %xmm16, _                                                
+  ; CHECK: %rax = VMOVSDto64Zrr                %xmm16
+  %rax = VMOVSDto64Zrr                         %xmm16
+  ; CHECK: VMOVSDto64Zmr                       %rdi, %xmm16, _, _, _, _
+  VMOVSDto64Zmr                                %rdi, %xmm16, _, _, _, _
   ; CHECK: VMOVSSZmr                           %rdi, %xmm16, _, _, _, _
   VMOVSSZmr                                    %rdi, %xmm16, _, _, _, _                                   
   ; CHECK: %xmm16 = VMOVSSZrm                  %rip, _, _, _, _
@@ -4412,8 +4542,14 @@ body: |
   %xmm16 = VMOVSSZrr                           %xmm16, _                                                  
   ; CHECK: %xmm16 = VMOVSSZrr_REV              %xmm16, _
   %xmm16 = VMOVSSZrr_REV                       %xmm16, _                                                  
+  ; CHECK: VMOVSS2DIZmr                        %rdi, %xmm16, _, _, _, _
+  VMOVSS2DIZmr                                 %rdi, %xmm16, _, _, _, _
+  ; CHECK: %eax = VMOVSS2DIZrr                 %xmm16
+  %eax = VMOVSS2DIZrr                          %xmm16
   ; CHECK: %xmm16 = VMOV64toPQIZrr             %rdi
   %xmm16 = VMOV64toPQIZrr                      %rdi                                                       
+  ; CHECK: %xmm16 = VMOV64toPQIZrm             %rdi, _, _, _, _
+  %xmm16 = VMOV64toPQIZrm                      %rdi, _, _, _, _
   ; CHECK: %xmm16 = VMOV64toSDZrr              %rdi 
   %xmm16 = VMOV64toSDZrr                       %rdi                                                       
   ; CHECK: %xmm16 = VMOVDI2PDIZrm              %rip, _, _, _, _
@@ -4428,10 +4564,14 @@ body: |
   VMOVPDI2DIZmr                                %rdi, %xmm16, _, _, _, _                                   
   ; CHECK: %edi = VMOVPDI2DIZrr                %xmm16
   %edi = VMOVPDI2DIZrr                         %xmm16                                                     
+  ; CHECK: %xmm16 = VMOVPQI2QIZrr              %xmm16
+  %xmm16 = VMOVPQI2QIZrr                       %xmm16
   ; CHECK: VMOVPQI2QIZmr                       %rdi, %xmm16, _, _, _, _
   VMOVPQI2QIZmr                                %rdi, %xmm16, _, _, _, _                                   
   ; CHECK: %rdi = VMOVPQIto64Zrr               %xmm16
   %rdi = VMOVPQIto64Zrr                        %xmm16                                                     
+  ; CHECK: VMOVPQIto64Zmr                      %rdi, %xmm16, _, _, _, _
+  VMOVPQIto64Zmr                               %rdi, %xmm16, _, _, _, _
   ; CHECK: %xmm16 = VMOVQI2PQIZrm              %rip, _, _, _, _
   %xmm16 = VMOVQI2PQIZrm                       %rip, _, _, _, _                                           
   ; CHECK: %xmm16 = VMOVZPQILo2PQIZrr          %xmm16

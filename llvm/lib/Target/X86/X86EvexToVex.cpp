@@ -23,7 +23,6 @@
 #include "MCTargetDesc/X86BaseInfo.h"
 #include "X86.h"
 #include "X86InstrInfo.h"
-#include "X86InstrTablesInfo.h"
 #include "X86Subtarget.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -37,6 +36,13 @@
 #include <cstdint>
 
 using namespace llvm;
+
+// Including the generated EVEX2VEX tables.
+struct X86EvexToVexCompressTableEntry {
+  uint16_t EvexOpcode;
+  uint16_t VexOpcode;
+};
+#include "X86GenEVEX2VEXTables.inc"
 
 #define EVEX2VEX_DESC "Compressing EVEX instrs to VEX encoding when possible"
 #define EVEX2VEX_NAME "x86-evex-to-vex-compress"

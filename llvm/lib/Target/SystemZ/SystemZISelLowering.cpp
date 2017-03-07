@@ -4737,7 +4737,7 @@ const char *SystemZTargetLowering::getTargetNodeName(unsigned Opcode) const {
 // Return true if VT is a vector whose elements are a whole number of bytes
 // in width.
 static bool canTreatAsByteVector(EVT VT) {
-  return VT.isVector() && VT.getScalarSizeInBits() % 8 == 0;
+  return VT.isVector() && VT.getScalarSizeInBits() % 8 == 0 && VT.isSimple();
 }
 
 // Try to simplify an EXTRACT_VECTOR_ELT from a vector of type VecVT

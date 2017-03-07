@@ -26,7 +26,6 @@
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Utility/Log.h"
 
-#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Threading.h"
 
 using namespace lldb;
@@ -767,8 +766,7 @@ Error ModuleList::GetSharedModule(const ModuleSpec &module_spec,
       auto search_path_spec = module_search_paths_ptr->GetFileSpecAtIndex(idx);
       if (!search_path_spec.ResolvePath())
         continue;
-      namespace fs = llvm::sys::fs;
-      if (!fs::is_directory(search_path_spec.GetPath()))
+      if (!search_path_spec.Exists() || !search_path_spec.IsDirectory())
         continue;
       search_path_spec.AppendPathComponent(
           module_spec.GetFileSpec().GetFilename().AsCString());

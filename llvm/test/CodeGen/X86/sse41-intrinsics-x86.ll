@@ -88,7 +88,7 @@ define <4 x float> @test_x86_sse41_insertps(<4 x float> %a0, <4 x float> %a1) {
 ;
 ; SKX-LABEL: test_x86_sse41_insertps:
 ; SKX:       ## BB#0:
-; SKX-NEXT:    vinsertps $17, %xmm1, %xmm0, %xmm0 ## encoding: [0x62,0xf3,0x7d,0x08,0x21,0xc1,0x11]
+; SKX-NEXT:    vinsertps $17, %xmm1, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe3,0x79,0x21,0xc1,0x11]
 ; SKX-NEXT:    ## xmm0 = zero,xmm1[0],xmm0[2,3]
 ; SKX-NEXT:    retl ## encoding: [0xc3]
   %res = call <4 x float> @llvm.x86.sse41.insertps(<4 x float> %a0, <4 x float> %a1, i8 17) ; <<4 x float>> [#uses=1]
