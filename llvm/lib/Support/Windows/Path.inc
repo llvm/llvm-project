@@ -551,7 +551,7 @@ handle_status_error:
   return mapWindowsError(LastError);
 }
 
-std::error_code status(const Twine &path, file_status &result) {
+std::error_code status(const Twine &path, file_status &result, bool Follow) {
   SmallString<128> path_storage;
   SmallVector<wchar_t, 128> path_utf16;
 
@@ -568,28 +568,19 @@ std::error_code status(const Twine &path, file_status &result) {
   if (attr == INVALID_FILE_ATTRIBUTES)
     return getStatus(INVALID_HANDLE_VALUE, result);
 
+  DWORD Flags = FILE_FLAG_BACKUP_SEMANTICS;
   // Handle reparse points.
-  if (attr & FILE_ATTRIBUTE_REPARSE_POINT) {
-    ScopedFileHandle h(
-      ::CreateFileW(path_utf16.begin(),
-                    0, // Attributes only.
-                    FILE_SHARE_DELETE | FILE_SHARE_READ | FILE_SHARE_WRITE,
-                    NULL,
-                    OPEN_EXISTING,
-                    FILE_FLAG_BACKUP_SEMANTICS,
-                    0));
-    if (!h)
-      return getStatus(INVALID_HANDLE_VALUE, result);
-  }
+  if (!Follow && (attr & FILE_ATTRIBUTE_REPARSE_POINT))
+    Flags |= FILE_FLAG_OPEN_REPARSE_POINT;
 
   ScopedFileHandle h(
       ::CreateFileW(path_utf16.begin(), 0, // Attributes only.
                     FILE_SHARE_DELETE | FILE_SHARE_READ | FILE_SHARE_WRITE,
-                    NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, 0));
-    if (!h)
-      return getStatus(INVALID_HANDLE_VALUE, result);
+                    NULL, OPEN_EXISTING, Flags, 0));
+  if (!h)
+    return getStatus(INVALID_HANDLE_VALUE, result);
 
-    return getStatus(h, result);
+  return getStatus(h, result);
 }
 
 std::error_code status(int FD, file_status &Result) {

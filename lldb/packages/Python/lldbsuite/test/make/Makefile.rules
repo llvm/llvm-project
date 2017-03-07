@@ -32,6 +32,22 @@ LLDB_BASE_DIR := $(THIS_FILE_DIR)../../../../../
 
 
 #----------------------------------------------------------------------
+# If OS is not defined, use 'uname -s' to determine the OS name.
+#
+# uname on Windows gives "windows32", but most environments standardize
+# on "Windows_NT", so we'll make it consistent here.  When running
+# tests from Visual Studio, the environment variable isn't inherited
+# all the way down to the process spawned for make.
+#----------------------------------------------------------------------
+HOST_OS = $(shell uname -s)
+ifeq "$(HOST_OS)" "windows32"
+	HOST_OS = Windows_NT
+endif
+ifeq "$(OS)" ""
+	OS = $(HOST_OS)
+endif
+
+#----------------------------------------------------------------------
 # If TRIPLE is not defined try to set the ARCH, CC, CFLAGS, and more
 # from the triple alone
 #----------------------------------------------------------------------
@@ -66,22 +82,6 @@ ifneq "$(TRIPLE)" ""
 endif
 ifeq "$(OS)" "Android"
 	include $(THIS_FILE_DIR)/Android.rules
-endif
-
-#----------------------------------------------------------------------
-# If OS is not defined, use 'uname -s' to determine the OS name.
-#
-# uname on Windows gives "windows32", but most environments standardize
-# on "Windows_NT", so we'll make it consistent here.  When running
-# tests from Visual Studio, the environment variable isn't inherited
-# all the way down to the process spawned for make.
-#----------------------------------------------------------------------
-HOST_OS = $(shell uname -s)
-ifeq "$(HOST_OS)" "windows32"
-	HOST_OS = Windows_NT
-endif
-ifeq "$(OS)" ""
-	OS = $(HOST_OS)
 endif
 
 #----------------------------------------------------------------------

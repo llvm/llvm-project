@@ -22,5 +22,5 @@ for.body7:                                        ; preds = %for.body7, %for.con
   br i1 false, label %for.body7, label %for.end18
 
 for.end18:                                        ; preds = %for.body7
-  unreachable
+  ret void
 }

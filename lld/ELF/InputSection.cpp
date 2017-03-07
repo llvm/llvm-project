@@ -53,7 +53,7 @@ static ArrayRef<uint8_t> getSectionContents(elf::ObjectFile<ELFT> *File,
 InputSectionBase::InputSectionBase(InputFile *File, uint64_t Flags,
                                    uint32_t Type, uint64_t Entsize,
                                    uint32_t Link, uint32_t Info,
-                                   uint64_t Addralign, ArrayRef<uint8_t> Data,
+                                   uint64_t Alignment, ArrayRef<uint8_t> Data,
                                    StringRef Name, Kind SectionKind)
     : File(File), Data(Data), Name(Name), SectionKind(SectionKind),
       Live(!Config->GcSections || !(Flags & SHF_ALLOC)), Assigned(false),
@@ -64,7 +64,7 @@ InputSectionBase::InputSectionBase(InputFile *File, uint64_t Flags,
 
   // The ELF spec states that a value of 0 means the section has
   // no alignment constraits.
-  uint64_t V = std::max<uint64_t>(Addralign, 1);
+  uint64_t V = std::max<uint64_t>(Alignment, 1);
   if (!isPowerOf2_64(V))
     fatal(toString(File) + ": section sh_addralign is not a power of 2");
 
@@ -73,7 +73,7 @@ InputSectionBase::InputSectionBase(InputFile *File, uint64_t Flags,
   // We might want to relax this in the future.
   if (V > UINT32_MAX)
     fatal(toString(File) + ": section sh_addralign is too large");
-  Alignment = V;
+  this->Alignment = V;
 }
 
 template <class ELFT>
@@ -188,10 +188,10 @@ std::string InputSectionBase::getLocation(uint64_t Offset) {
 
 InputSectionBase InputSectionBase::Discarded;
 
-InputSection::InputSection(uint64_t Flags, uint32_t Type, uint64_t Addralign,
+InputSection::InputSection(uint64_t Flags, uint32_t Type, uint64_t Alignment,
                            ArrayRef<uint8_t> Data, StringRef Name, Kind K)
     : InputSectionBase(nullptr, Flags, Type,
-                       /*Entsize*/ 0, /*Link*/ 0, /*Info*/ 0, Addralign, Data,
+                       /*Entsize*/ 0, /*Link*/ 0, /*Info*/ 0, Alignment, Data,
                        Name, K) {}
 
 template <class ELFT>

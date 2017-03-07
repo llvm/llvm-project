@@ -500,6 +500,8 @@ static std::error_code fillStatus(int StatRet, const struct stat &Status,
     Type = file_type::fifo_file;
   else if (S_ISSOCK(Status.st_mode))
     Type = file_type::socket_file;
+  else if (S_ISLNK(Status.st_mode))
+    Type = file_type::symlink_file;
 
   perms Perms = static_cast<perms>(Status.st_mode);
   Result =
@@ -510,12 +512,12 @@ static std::error_code fillStatus(int StatRet, const struct stat &Status,
   return std::error_code();
 }
 
-std::error_code status(const Twine &Path, file_status &Result) {
+std::error_code status(const Twine &Path, file_status &Result, bool Follow) {
   SmallString<128> PathStorage;
   StringRef P = Path.toNullTerminatedStringRef(PathStorage);
 
   struct stat Status;
-  int StatRet = ::stat(P.begin(), &Status);
+  int StatRet = (Follow ? ::stat : ::lstat)(P.begin(), &Status);
   return fillStatus(StatRet, Status, Result);
 }
 

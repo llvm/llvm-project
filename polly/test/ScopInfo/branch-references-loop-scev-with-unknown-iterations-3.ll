@@ -79,5 +79,5 @@ then:
   br label %end
 
 end:
-  unreachable
+  ret void
 }

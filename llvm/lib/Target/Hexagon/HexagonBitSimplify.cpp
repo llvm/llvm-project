@@ -2375,7 +2375,9 @@ bool BitSimplification::simplifyExtractLow(MachineInstr *MI,
     DebugLoc DL = MI->getDebugLoc();
     MachineBasicBlock &B = *MI->getParent();
     unsigned NewR = MRI.createVirtualRegister(FRC);
-    auto MIB = BuildMI(B, MI, DL, HII.get(ExtOpc), NewR)
+    auto At = MI->isPHI() ? B.getFirstNonPHI()
+                          : MachineBasicBlock::iterator(MI);
+    auto MIB = BuildMI(B, At, DL, HII.get(ExtOpc), NewR)
                   .addReg(R, 0, SR);
     switch (ExtOpc) {
       case Hexagon::A2_sxtb:

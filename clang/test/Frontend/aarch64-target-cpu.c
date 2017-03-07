@@ -9,6 +9,6 @@
 // RUN: %clang_cc1 -triple aarch64-unknown-unknown -target-cpu exynos-m1 -verify %s
 // RUN: %clang_cc1 -triple aarch64-unknown-unknown -target-cpu generic -verify %s
 // RUN: %clang_cc1 -triple aarch64-unknown-unknown -target-cpu kryo -verify %s
-// RUN: %clang_cc1 -triple aarch64-unknown-unknown -target-cpu vulcan -verify %s
+// RUN: %clang_cc1 -triple aarch64-unknown-unknown -target-cpu thunderx2t99 -verify %s
 //
 // expected-no-diagnostics

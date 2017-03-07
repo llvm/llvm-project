@@ -481,9 +481,9 @@ inline bool is_local(int FD) {
 
 /// @brief Does status represent a directory?
 ///
-/// @param status A file_status previously returned from status.
-/// @returns status.type() == file_type::directory_file.
-file_type get_file_type(const Twine &Path);
+/// @param Path The path to get the type of.
+/// @returns A value from the file_type enumeration indicating the type of file.
+file_type get_file_type(const Twine &Path, bool follow = true);
 
 /// @brief Does status represent a directory?
 ///
@@ -552,9 +552,12 @@ std::error_code is_other(const Twine &path, bool &result);
 ///
 /// @param path Input path.
 /// @param result Set to the file status.
+/// @param follow When true, follows symlinks.  Otherwise, the symlink itself is
+///               statted.
 /// @returns errc::success if result has been successfully set, otherwise a
 ///          platform-specific error_code.
-std::error_code status(const Twine &path, file_status &result);
+std::error_code status(const Twine &path, file_status &result,
+                       bool follow = true);
 
 /// @brief A version for when a file descriptor is already available.
 std::error_code status(int FD, file_status &Result);

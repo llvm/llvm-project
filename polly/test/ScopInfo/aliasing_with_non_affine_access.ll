@@ -40,7 +40,7 @@ if.then148:                                       ; preds = %for.end143
   br label %if.end149
 
 if.end149:                                        ; preds = %if.then148, %for.end143
-  unreachable
+  ret void
 }
 
 define void @test2(%struct.info** %ppIdxInfo, i64 %n) {
@@ -63,7 +63,7 @@ if.then148:                                       ; preds = %for.end143
   br label %if.end149
 
 if.end149:                                        ; preds = %if.then148, %for.end143
-  unreachable
+  ret void
 }
 
 define i32 @test3(i32* %x, i32 %n) {

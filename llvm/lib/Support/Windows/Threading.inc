@@ -61,11 +61,8 @@ uint64_t llvm::get_threadid() {
 
 uint32_t llvm::get_max_thread_name_length() { return 0; }
 
-void llvm::set_thread_name(const Twine &Name) {
 #if defined(_MSC_VER)
-  // Make sure the input is null terminated.
-  SmallString<64> Storage;
-  StringRef NameStr = Name.toNullTerminatedStringRef(Storage);
+static void SetThreadName(DWORD Id, LPCSTR Name) {
   constexpr DWORD MS_VC_EXCEPTION = 0x406D1388;
 
 #pragma pack(push, 8)
@@ -79,8 +76,8 @@ void llvm::set_thread_name(const Twine &Name) {
 
   THREADNAME_INFO info;
   info.dwType = 0x1000;
-  info.szName = NameStr.data();
-  info.dwThreadId = ::GetCurrentThreadId();
+  info.szName = Name;
+  info.dwThreadId = Id;
   info.dwFlags = 0;
 
   __try {
@@ -89,6 +86,15 @@ void llvm::set_thread_name(const Twine &Name) {
   }
   __except (EXCEPTION_EXECUTE_HANDLER) {
   }
+}
+#endif
+
+void llvm::set_thread_name(const Twine &Name) {
+#if defined(_MSC_VER)
+  // Make sure the input is null terminated.
+  SmallString<64> Storage;
+  StringRef NameStr = Name.toNullTerminatedStringRef(Storage);
+  SetThreadName(::GetCurrentThreadId(), NameStr.data());
 #endif
 }
 

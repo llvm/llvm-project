@@ -21,11 +21,11 @@
 ;    }
 ;
 ; CHECK: Assumed Context:
-; CHECK:  [n] -> {  : n <= 100 }
+; CHECK:  [n] -> {  : n >= 101 }
 
-; AST: if (n <= 100)
-; AST:     for (int c0 = 0; c0 <= min(99, n - 1); c0 += 1)
-; AST:       for (int c1 = 0; c1 <= min(n - c0 - 1, -c0 + 99); c1 += 1)
+; AST: if (1 && 0 == n >= 101)
+; AST:     for (int c0 = 0; c0 < n; c0 += 1)
+; AST:       for (int c1 = 0; c1 < n - c0; c1 += 1)
 ; AST:         Stmt_if_end_7(c0, c1);
 ;
 ; AST-NOT: for

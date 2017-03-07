@@ -1021,7 +1021,6 @@ TEST(APIntTest, fromString) {
   EXPECT_EQ(APInt(32, uint64_t(-3LL)), APInt(32,  "-11", 2));
   EXPECT_EQ(APInt(32, uint64_t(-4LL)), APInt(32, "-100", 2));
 
-
   EXPECT_EQ(APInt(32,  0), APInt(32,  "0",  8));
   EXPECT_EQ(APInt(32,  1), APInt(32,  "1",  8));
   EXPECT_EQ(APInt(32,  7), APInt(32,  "7",  8));
@@ -1043,7 +1042,6 @@ TEST(APIntTest, fromString) {
   EXPECT_EQ(APInt(32, uint64_t(-15LL)), APInt(32,  "-17", 8));
   EXPECT_EQ(APInt(32, uint64_t(-16LL)), APInt(32,  "-20", 8));
 
-
   EXPECT_EQ(APInt(32,  0), APInt(32,  "0", 10));
   EXPECT_EQ(APInt(32,  1), APInt(32,  "1", 10));
   EXPECT_EQ(APInt(32,  9), APInt(32,  "9", 10));
@@ -1057,7 +1055,6 @@ TEST(APIntTest, fromString) {
   EXPECT_EQ(APInt(32, uint64_t(-10LL)), APInt(32, "-10", 10));
   EXPECT_EQ(APInt(32, uint64_t(-19LL)), APInt(32, "-19", 10));
   EXPECT_EQ(APInt(32, uint64_t(-20LL)), APInt(32, "-20", 10));
-
 
   EXPECT_EQ(APInt(32,  0), APInt(32,  "0", 16));
   EXPECT_EQ(APInt(32,  1), APInt(32,  "1", 16));
@@ -1079,7 +1076,7 @@ TEST(APIntTest, fromString) {
   EXPECT_EQ(APInt(32, 36), APInt(32, "10", 36));
   EXPECT_EQ(APInt(32, 71), APInt(32, "1Z", 36));
   EXPECT_EQ(APInt(32, 72), APInt(32, "20", 36));
-  
+
   EXPECT_EQ(APInt(32,  uint64_t(-0LL)), APInt(32,  "-0", 36));
   EXPECT_EQ(APInt(32,  uint64_t(-1LL)), APInt(32,  "-1", 36));
   EXPECT_EQ(APInt(32, uint64_t(-35LL)), APInt(32,  "-Z", 36));

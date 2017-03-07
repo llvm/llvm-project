@@ -73,8 +73,9 @@ AARCH64_CPU_NAME("falkor", AK_ARMV8A, FK_CRYPTO_NEON_FP_ARMV8, false,
                 (AArch64::AEK_SIMD | AArch64::AEK_CRC | AArch64::AEK_CRYPTO))
 AARCH64_CPU_NAME("kryo", AK_ARMV8A, FK_CRYPTO_NEON_FP_ARMV8, false,
                 (AArch64::AEK_SIMD | AArch64::AEK_CRC | AArch64::AEK_CRYPTO))
-AARCH64_CPU_NAME("vulcan", AK_ARMV8_1A, FK_CRYPTO_NEON_FP_ARMV8, false,
-                (AArch64::AEK_SIMD | AArch64::AEK_CRC | AArch64::AEK_CRYPTO))
+AARCH64_CPU_NAME("thunderx2t99", AK_ARMV8_1A, FK_CRYPTO_NEON_FP_ARMV8, false,
+                (AArch64::AEK_SIMD | AArch64::AEK_LSE | AArch64::AEK_CRC |
+                 AArch64::AEK_CRYPTO))
 AARCH64_CPU_NAME("thunderx", AK_ARMV8A, FK_CRYPTO_NEON_FP_ARMV8, false,
                 (AArch64::AEK_SIMD | AArch64::AEK_CRC | AArch64::AEK_CRYPTO | AArch64::AEK_FP | AArch64::AEK_PROFILE))
 AARCH64_CPU_NAME("thunderxt88", AK_ARMV8A, FK_CRYPTO_NEON_FP_ARMV8, false,

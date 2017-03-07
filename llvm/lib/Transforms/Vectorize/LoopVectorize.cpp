@@ -5675,7 +5675,9 @@ void LoopVectorizationCostModel::collectLoopUniforms(unsigned VF) {
         continue;
       auto *OI = cast<Instruction>(OV);
       if (all_of(OI->users(), [&](User *U) -> bool {
-            return isOutOfScope(U) || Worklist.count(cast<Instruction>(U));
+            auto *J = cast<Instruction>(U);
+            return !TheLoop->contains(J) || Worklist.count(J) ||
+                   (OI == getPointerOperand(J) && isUniformDecision(J, VF));
           })) {
         Worklist.insert(OI);
         DEBUG(dbgs() << "LV: Found uniform instruction: " << *OI << "\n");
