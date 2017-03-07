@@ -21,6 +21,8 @@
 #include "lldb/Utility/ConstString.h"
 #include "lldb/lldb-private.h"
 
+#include "llvm/ADT/Triple.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatVariadic.h"
 
 namespace lldb_private {
@@ -45,17 +47,6 @@ namespace lldb_private {
 //----------------------------------------------------------------------
 class FileSpec {
 public:
-  typedef enum FileType {
-    eFileTypeInvalid = -1,
-    eFileTypeUnknown = 0,
-    eFileTypeDirectory,
-    eFileTypePipe,
-    eFileTypeRegular,
-    eFileTypeSocket,
-    eFileTypeSymbolicLink,
-    eFileTypeOther
-  } FileType;
-
   enum PathSyntax {
     ePathSyntaxPosix,
     ePathSyntaxWindows,
@@ -84,7 +75,8 @@ public:
   explicit FileSpec(llvm::StringRef path, bool resolve_path,
                     PathSyntax syntax = ePathSyntaxHostNative);
 
-  explicit FileSpec(llvm::StringRef path, bool resolve_path, ArchSpec arch);
+  explicit FileSpec(llvm::StringRef path, bool resolve_path,
+                    const llvm::Triple &Triple);
 
   //------------------------------------------------------------------
   /// Copy constructor
@@ -453,8 +445,6 @@ public:
   //------------------------------------------------------------------
   ConstString GetFileNameStrippingExtension() const;
 
-  FileType GetFileType() const;
-
   //------------------------------------------------------------------
   /// Return the current permissions of the path.
   ///
@@ -469,20 +459,6 @@ public:
   //------------------------------------------------------------------
   uint32_t GetPermissions() const;
 
-  bool IsDirectory() const {
-    return GetFileType() == FileSpec::eFileTypeDirectory;
-  }
-
-  bool IsPipe() const { return GetFileType() == FileSpec::eFileTypePipe; }
-
-  bool IsRegularFile() const {
-    return GetFileType() == FileSpec::eFileTypeRegular;
-  }
-
-  bool IsSocket() const { return GetFileType() == FileSpec::eFileTypeSocket; }
-
-  bool IsSymbolicLink() const;
-
   //------------------------------------------------------------------
   /// Get the memory cost of this object.
   ///
@@ -496,55 +472,6 @@ public:
   /// @see ConstString::StaticMemorySize ()
   //------------------------------------------------------------------
   size_t MemorySize() const;
-
-  //------------------------------------------------------------------
-  /// Read part of, or the entire contents of, a file into a heap based data
-  /// buffer.
-  ///
-  /// Returns a shared pointer to a data buffer that contains all or
-  /// part of the contents of a file. The data copies into a heap based
-  /// buffer that lives in the DataBuffer shared pointer object returned.
-  /// The data that is cached will start \a offset bytes into the
-  /// file, and \a length bytes will be mapped. If \a length is
-  /// greater than the number of bytes available in the file starting
-  /// at \a offset, the number of bytes will be appropriately
-  /// truncated. The final number of bytes that get mapped can be
-  /// verified using the DataBuffer::GetByteSize() function.
-  ///
-  /// @param[in] offset
-  ///     The offset in bytes from the beginning of the file where
-  ///     memory mapping should begin.
-  ///
-  /// @param[in] length
-  ///     The size in bytes that should be mapped starting \a offset
-  ///     bytes into the file. If \a length is \c SIZE_MAX, map
-  ///     as many bytes as possible.
-  ///
-  /// @return
-  ///     A shared pointer to the memory mapped data. This shared
-  ///     pointer can contain a nullptr DataBuffer pointer, so the contained
-  ///     pointer must be checked prior to using it.
-  //------------------------------------------------------------------
-  lldb::DataBufferSP ReadFileContents(off_t offset = 0,
-                                      size_t length = SIZE_MAX,
-                                      Error *error_ptr = nullptr) const;
-
-  size_t ReadFileContents(off_t file_offset, void *dst, size_t dst_len,
-                          Error *error_ptr) const;
-
-  //------------------------------------------------------------------
-  /// Read the entire contents of a file as data that can be used
-  /// as a C string.
-  ///
-  /// Read the entire contents of a file and ensure that the data
-  /// is NULL terminated so it can be used as a C string.
-  ///
-  /// @return
-  ///     A shared pointer to the data. This shared pointer can
-  ///     contain a nullptr DataBuffer pointer, so the contained pointer
-  ///     must be checked prior to using it.
-  //------------------------------------------------------------------
-  lldb::DataBufferSP ReadFileContentsAsCString(Error *error_ptr = nullptr);
 
   //------------------------------------------------------------------
   /// Normalize a pathname by collapsing redundant separators and
@@ -569,7 +496,8 @@ public:
   void SetFile(llvm::StringRef path, bool resolve_path,
                PathSyntax syntax = ePathSyntaxHostNative);
 
-  void SetFile(llvm::StringRef path, bool resolve_path, ArchSpec arch);
+  void SetFile(llvm::StringRef path, bool resolve_path,
+               const llvm::Triple &Triple);
 
   bool IsResolved() const { return m_is_resolved; }
 
@@ -642,7 +570,7 @@ public:
   };
 
   typedef EnumerateDirectoryResult (*EnumerateDirectoryCallbackType)(
-      void *baton, FileType file_type, const FileSpec &spec);
+      void *baton, llvm::sys::fs::file_type file_type, const FileSpec &spec);
 
   static EnumerateDirectoryResult
   EnumerateDirectory(llvm::StringRef dir_path, bool find_directories,
@@ -650,8 +578,8 @@ public:
                      EnumerateDirectoryCallbackType callback,
                      void *callback_baton);
 
-  typedef std::function<EnumerateDirectoryResult(FileType file_type,
-                                                 const FileSpec &spec)>
+  typedef std::function<EnumerateDirectoryResult(
+      llvm::sys::fs::file_type file_type, const FileSpec &spec)>
       DirectoryCallback;
 
   static EnumerateDirectoryResult

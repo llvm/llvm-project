@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 // Project includes
+#include "lldb/Target/TargetList.h"
 #include "lldb/Core/Broadcaster.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Event.h"
@@ -22,7 +23,6 @@
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/Platform.h"
 #include "lldb/Target/Process.h"
-#include "lldb/Target/TargetList.h"
 
 // Other libraries and framework includes
 #include "llvm/ADT/SmallString.h"
@@ -362,7 +362,7 @@ Error TargetList::CreateTargetInternal(Debugger &debugger,
   char resolved_bundle_exe_path[PATH_MAX];
   resolved_bundle_exe_path[0] = '\0';
   if (file) {
-    if (file.GetFileType() == FileSpec::eFileTypeDirectory)
+    if (llvm::sys::fs::is_directory(file.GetPath()))
       user_exe_path_is_bundle = true;
 
     if (file.IsRelative() && !user_exe_path.empty()) {

@@ -51,4 +51,15 @@
     (goto-char (point-max))
     (should (equal (clang-include-fixer--symbol-at-point) "bbb::cc"))))
 
+(ert-deftest clang-include-fixer--highlight ()
+  (with-temp-buffer
+    (insert "util::Status foo;\n")
+    (setq buffer-file-coding-system 'utf-8-unix)
+    (should (equal nil (clang-include-fixer--highlight
+                        '((Range . ((Offset . 0) (Length . 0)))))))
+    (let ((overlay (clang-include-fixer--highlight
+                    '((Range . ((Offset . 1) (Length . 12)))))))
+      (should (equal 2 (overlay-start overlay)))
+      (should (equal 14 (overlay-end overlay))))))
+
 ;;; clang-include-fixer-test.el ends here

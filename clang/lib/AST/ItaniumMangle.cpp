@@ -4034,6 +4034,12 @@ recurse:
     mangleExpression(cast<CoawaitExpr>(E)->getOperand());
     break;
 
+  case Expr::DependentCoawaitExprClass:
+    // FIXME: Propose a non-vendor mangling.
+    Out << "v18co_await";
+    mangleExpression(cast<DependentCoawaitExpr>(E)->getOperand());
+    break;
+
   case Expr::CoyieldExprClass:
     // FIXME: Propose a non-vendor mangling.
     Out << "v18co_yield";

@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Core/StreamCallback.h"
+#include "lldb/Utility/StreamCallback.h"
 
 using namespace lldb_private;
 

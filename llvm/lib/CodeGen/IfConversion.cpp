@@ -2148,7 +2148,8 @@ void IfConverter::MergeBlocks(BBInfo &ToBBI, BBInfo &FromBBI, bool AddEdges) {
   // unknown probabilities into known ones.
   // FIXME: This usage is too tricky and in the future we would like to
   // eliminate all unknown probabilities in MBB.
-  ToBBI.BB->normalizeSuccProbs();
+  if (ToBBI.IsBrAnalyzable)
+    ToBBI.BB->normalizeSuccProbs();
 
   SmallVector<MachineBasicBlock *, 4> FromSuccs(FromMBB.succ_begin(),
                                                 FromMBB.succ_end());
@@ -2228,7 +2229,8 @@ void IfConverter::MergeBlocks(BBInfo &ToBBI, BBInfo &FromBBI, bool AddEdges) {
 
   // Normalize the probabilities of ToBBI.BB's successors with all adjustment
   // we've done above.
-  ToBBI.BB->normalizeSuccProbs();
+  if (ToBBI.IsBrAnalyzable && FromBBI.IsBrAnalyzable)
+    ToBBI.BB->normalizeSuccProbs();
 
   ToBBI.Predicate.append(FromBBI.Predicate.begin(), FromBBI.Predicate.end());
   FromBBI.Predicate.clear();

@@ -12,8 +12,8 @@
 
 #include "lldb/Core/AddressRange.h"
 #include "lldb/Core/Mangled.h"
-#include "lldb/Core/UserID.h"
 #include "lldb/Symbol/SymbolContextScope.h"
+#include "lldb/Utility/UserID.h"
 #include "lldb/lldb-private.h"
 
 namespace lldb_private {

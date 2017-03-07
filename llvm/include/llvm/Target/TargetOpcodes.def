@@ -364,7 +364,7 @@ HANDLE_TARGET_OPCODE(G_FREM)
 /// Generic FP exponentiation.
 HANDLE_TARGET_OPCODE(G_FPOW)
 
-/// Generic float to signed-int conversion
+/// Generic FP extension.
 HANDLE_TARGET_OPCODE(G_FPEXT)
 
 /// Generic float to signed-int conversion

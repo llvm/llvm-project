@@ -15,8 +15,12 @@ define <8 x i32> @test_v8i32_args(<8 x i32> %arg1) {
 ; X64: liveins: %xmm0, %xmm1
 ; X64:      [[ARG1L:%[0-9]+]](<4 x s32>) = COPY %xmm0
 ; X64-NEXT: [[ARG1H:%[0-9]+]](<4 x s32>) = COPY %xmm1
-; X64-NEXT: [[ARG1:%[0-9]+]](<8 x s32>) = G_SEQUENCE [[ARG1L:%[0-9]+]](<4 x s32>), 0, [[ARG1H:%[0-9]+]](<4 x s32>), 128
-; X64-NEXT: [[RETL:%[0-9]+]](<4 x s32>), [[RETH:%[0-9]+]](<4 x s32>) = G_EXTRACT [[ARG1:%[0-9]+]](<8 x s32>), 0, 128
+; X64-NEXT: [[UNDEF:%[0-9]+]](<8 x s32>) = IMPLICIT_DEF
+; X64-NEXT: [[ARG1_TMP0:%[0-9]+]](<8 x s32>) = G_INSERT [[UNDEF]], [[ARG1L]](<4 x s32>), 0
+; X64-NEXT: [[ARG1_TMP1:%[0-9]+]](<8 x s32>) = G_INSERT [[ARG1_TMP0]], [[ARG1H]](<4 x s32>), 128
+; X64-NEXT: [[ARG1:%[0-9]+]](<8 x s32>) = COPY [[ARG1_TMP1]]
+; X64-NEXT: [[RETL:%[0-9]+]](<4 x s32>) = G_EXTRACT [[ARG1:%[0-9]+]](<8 x s32>), 0
+; X64-NEXT: [[RETH:%[0-9]+]](<4 x s32>) = G_EXTRACT [[ARG1:%[0-9]+]](<8 x s32>), 128
 ; X64-NEXT: %xmm0 = COPY [[RETL:%[0-9]+]](<4 x s32>)
 ; X64-NEXT: %xmm1 = COPY [[RETH:%[0-9]+]](<4 x s32>)
 ; X64-NEXT: RET 0, implicit %xmm0, implicit %xmm1

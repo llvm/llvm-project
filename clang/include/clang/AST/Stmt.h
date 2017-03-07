@@ -253,6 +253,14 @@ protected:
     unsigned NumArgs : 32 - 8 - 1 - NumExprBits;
   };
 
+  class CoawaitExprBitfields {
+    friend class CoawaitExpr;
+
+    unsigned : NumExprBits;
+
+    unsigned IsImplicit : 1;
+  };
+
   union {
     StmtBitfields StmtBits;
     CompoundStmtBitfields CompoundStmtBits;
@@ -269,6 +277,7 @@ protected:
     ObjCIndirectCopyRestoreExprBitfields ObjCIndirectCopyRestoreExprBits;
     InitListExprBitfields InitListExprBits;
     TypeTraitExprBitfields TypeTraitExprBits;
+    CoawaitExprBitfields CoawaitBits;
   };
 
   friend class ASTStmtReader;

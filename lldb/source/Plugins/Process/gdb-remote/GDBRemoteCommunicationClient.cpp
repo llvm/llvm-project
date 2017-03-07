@@ -20,7 +20,6 @@
 // Other libraries and framework includes
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/State.h"
-#include "lldb/Core/StreamGDBRemote.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/StringConvert.h"
 #include "lldb/Interpreter/Args.h"
@@ -32,6 +31,7 @@
 #include "lldb/Utility/JSON.h"
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/StreamGDBRemote.h"
 #include "lldb/Utility/StreamString.h"
 
 // Project includes
@@ -1660,7 +1660,7 @@ bool GDBRemoteCommunicationClient::GetWorkingDir(FileSpec &working_dir) {
       return false;
     std::string cwd;
     response.GetHexByteString(cwd);
-    working_dir.SetFile(cwd, false, GetHostArchitecture());
+    working_dir.SetFile(cwd, false, GetHostArchitecture().GetTriple());
     return !cwd.empty();
   }
   return false;
@@ -3191,7 +3191,7 @@ bool GDBRemoteCommunicationClient::GetModuleInfo(
       StringExtractor extractor(value);
       std::string path;
       extractor.GetHexByteString(path);
-      module_spec.GetFileSpec() = FileSpec(path, false, arch_spec);
+      module_spec.GetFileSpec() = FileSpec(path, false, arch_spec.GetTriple());
     }
   }
 
@@ -3225,7 +3225,8 @@ ParseModuleSpec(StructuredData::Dictionary *dict) {
 
   if (!dict->GetValueForKeyAsString("file_path", string))
     return llvm::None;
-  result.GetFileSpec() = FileSpec(string, false, result.GetArchitecture());
+  result.GetFileSpec() =
+      FileSpec(string, false, result.GetArchitecture().GetTriple());
 
   return result;
 }

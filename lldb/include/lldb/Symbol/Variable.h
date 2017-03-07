@@ -15,9 +15,9 @@
 
 #include "lldb/Core/Mangled.h"
 #include "lldb/Core/RangeMap.h"
-#include "lldb/Core/UserID.h"
 #include "lldb/Expression/DWARFExpression.h"
 #include "lldb/Symbol/Declaration.h"
+#include "lldb/Utility/UserID.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-private.h"
 

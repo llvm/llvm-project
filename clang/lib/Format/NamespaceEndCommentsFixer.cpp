@@ -135,7 +135,10 @@ tooling::Replacements NamespaceEndCommentsFixer::analyze(
       NamespaceTok = NamespaceTok->getNextNonComment();
     if (NamespaceTok->isNot(tok::kw_namespace))
       continue;
-    const FormatToken *RBraceTok = EndLine->First;
+    FormatToken *RBraceTok = EndLine->First;
+    if (RBraceTok->Finalized)
+      continue;
+    RBraceTok->Finalized = true;
     const std::string NamespaceName = computeName(NamespaceTok);
     bool AddNewline = (I + 1 < E) &&
                       AnnotatedLines[I + 1]->First->NewlinesBefore == 0 &&

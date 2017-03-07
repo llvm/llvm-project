@@ -1,8 +1,8 @@
 ; RUN: opt -loop-unroll -unroll-threshold=2000 -S < %s | llc -march=r600 -mcpu=cypress | FileCheck %s
-; XFAIL: *
 ; REQUIRES: asserts
 
-; CHECK: {{^}}@alu_limits:
+; CHECK: {{^}}alu_limits:
+; CHECK: CF_END
 
 %struct.foo = type {i32, i32, i32}
 

@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Core/History.h"
+#include "lldb/Utility/History.h"
 
 // C Includes
 #include <inttypes.h>

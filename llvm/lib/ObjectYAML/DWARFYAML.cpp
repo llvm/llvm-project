@@ -54,6 +54,8 @@ void MappingTraits<DWARFYAML::AttributeAbbrev>::mapping(
     IO &IO, DWARFYAML::AttributeAbbrev &AttAbbrev) {
   IO.mapRequired("Attribute", AttAbbrev.Attribute);
   IO.mapRequired("Form", AttAbbrev.Form);
+  if(AttAbbrev.Form == dwarf::DW_FORM_implicit_const)
+    IO.mapRequired("Value", AttAbbrev.Value);
 }
 
 void MappingTraits<DWARFYAML::ARangeDescriptor>::mapping(

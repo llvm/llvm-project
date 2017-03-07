@@ -10,8 +10,8 @@
 #ifndef lldb_Plugins_SymbolFile_PDB_SymbolFilePDB_h_
 #define lldb_Plugins_SymbolFile_PDB_SymbolFilePDB_h_
 
-#include "lldb/Core/UserID.h"
 #include "lldb/Symbol/SymbolFile.h"
+#include "lldb/Utility/UserID.h"
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/DebugInfo/PDB/IPDBSession.h"

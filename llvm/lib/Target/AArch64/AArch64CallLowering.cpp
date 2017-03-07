@@ -200,15 +200,8 @@ void AArch64CallLowering::splitToValueTypes(
                 OrigArg.Flags, OrigArg.IsFixed});
   }
 
-  SmallVector<uint64_t, 4> BitOffsets;
-  for (auto Offset : Offsets)
-    BitOffsets.push_back(Offset * 8);
-
-  SmallVector<unsigned, 8> SplitRegs;
-  for (auto I = &SplitArgs[FirstRegIdx]; I != SplitArgs.end(); ++I)
-    SplitRegs.push_back(I->Reg);
-
-  PerformArgSplit(SplitRegs, BitOffsets);
+  for (unsigned i = 0; i < Offsets.size(); ++i)
+    PerformArgSplit(SplitArgs[FirstRegIdx + i].Reg, Offsets[i] * 8);
 }
 
 bool AArch64CallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
@@ -230,8 +223,8 @@ bool AArch64CallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
 
     SmallVector<ArgInfo, 8> SplitArgs;
     splitToValueTypes(OrigArg, SplitArgs, DL, MRI,
-                      [&](ArrayRef<unsigned> Regs, ArrayRef<uint64_t> Offsets) {
-                        MIRBuilder.buildExtract(Regs, Offsets, VReg);
+                      [&](unsigned Reg, uint64_t Offset) {
+                        MIRBuilder.buildExtract(Reg, VReg, Offset);
                       });
 
     OutgoingArgHandler Handler(MIRBuilder, MRI, MIB, AssignFn, AssignFn);
@@ -256,10 +249,24 @@ bool AArch64CallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
   for (auto &Arg : Args) {
     ArgInfo OrigArg{VRegs[i], Arg.getType()};
     setArgFlags(OrigArg, i + 1, DL, F);
+    bool Split = false;
+    LLT Ty = MRI.getType(VRegs[i]);
+    unsigned Dst = VRegs[i];
+
     splitToValueTypes(OrigArg, SplitArgs, DL, MRI,
-                      [&](ArrayRef<unsigned> Regs, ArrayRef<uint64_t> Offsets) {
-                        MIRBuilder.buildSequence(VRegs[i], Regs, Offsets);
+                      [&](unsigned Reg, uint64_t Offset) {
+                        if (!Split) {
+                          Split = true;
+                          Dst = MRI.createGenericVirtualRegister(Ty);
+                          MIRBuilder.buildUndef(Dst);
+                        }
+                        unsigned Tmp = MRI.createGenericVirtualRegister(Ty);
+                        MIRBuilder.buildInsert(Tmp, Dst, Reg, Offset);
+                        Dst = Tmp;
                       });
+
+    if (Dst != VRegs[i])
+      MIRBuilder.buildCopy(VRegs[i], Dst);
     ++i;
   }
 
@@ -307,8 +314,8 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   SmallVector<ArgInfo, 8> SplitArgs;
   for (auto &OrigArg : OrigArgs) {
     splitToValueTypes(OrigArg, SplitArgs, DL, MRI,
-                      [&](ArrayRef<unsigned> Regs, ArrayRef<uint64_t> Offsets) {
-                        MIRBuilder.buildExtract(Regs, Offsets, OrigArg.Reg);
+                      [&](unsigned Reg, uint64_t Offset) {
+                        MIRBuilder.buildExtract(Reg, OrigArg.Reg, Offset);
                       });
   }
 
@@ -360,11 +367,9 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
     SmallVector<uint64_t, 8> RegOffsets;
     SmallVector<unsigned, 8> SplitRegs;
     splitToValueTypes(OrigRet, SplitArgs, DL, MRI,
-                      [&](ArrayRef<unsigned> Regs, ArrayRef<uint64_t> Offsets) {
-                        std::copy(Offsets.begin(), Offsets.end(),
-                                  std::back_inserter(RegOffsets));
-                        std::copy(Regs.begin(), Regs.end(),
-                                  std::back_inserter(SplitRegs));
+                      [&](unsigned Reg, uint64_t Offset) {
+                        RegOffsets.push_back(Offset);
+                        SplitRegs.push_back(Reg);
                       });
 
     CallReturnHandler Handler(MIRBuilder, MRI, MIB, RetAssignFn);

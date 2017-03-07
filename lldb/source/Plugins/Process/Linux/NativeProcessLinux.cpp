@@ -49,6 +49,7 @@
 #include "ProcFileReader.h"
 #include "Procfs.h"
 
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Threading.h"
 
 #include <linux/unistd.h>
@@ -224,9 +225,8 @@ Error NativeProcessProtocol::Launch(
 
   // Verify the working directory is valid if one was specified.
   FileSpec working_dir{launch_info.GetWorkingDirectory()};
-  if (working_dir &&
-      (!working_dir.ResolvePath() ||
-       working_dir.GetFileType() != FileSpec::eFileTypeDirectory)) {
+  if (working_dir && (!working_dir.ResolvePath() ||
+                      !llvm::sys::fs::is_directory(working_dir.GetPath()))) {
     error.SetErrorStringWithFormat("No such file or directory: %s",
                                    working_dir.GetCString());
     return error;

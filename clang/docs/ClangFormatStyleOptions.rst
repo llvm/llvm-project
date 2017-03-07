@@ -213,6 +213,20 @@ the configuration (without a prefix: ``Auto``).
   If ``true``, aligns escaped newlines as far left as possible.
   Otherwise puts them into the right-most column.
 
+  .. code-block:: c++
+
+    true:
+    #define A   \
+      int aaaa; \
+      int b;    \
+      int dddddddddd;
+
+    false:
+    #define A                                                                      \
+      int aaaa;                                                                    \
+      int b;                                                                       \
+      int dddddddddd;
+
 **AlignOperands** (``bool``)
   If ``true``, horizontally align operands of binary and ternary
   expressions.
@@ -228,6 +242,12 @@ the configuration (without a prefix: ``Auto``).
 **AlignTrailingComments** (``bool``)
   If ``true``, aligns trailing comments.
 
+  .. code-block:: c++
+
+    true:                                   false:
+    int a;     // My comment a      vs.     int a; // My comment a
+    int b = 2; // comment  b                int b = 2; // comment about b
+
 **AllowAllParametersOfDeclarationOnNextLine** (``bool``)
   Allow putting all parameters of a function declaration onto
   the next line even if ``BinPackParameters`` is ``false``.
@@ -239,6 +259,17 @@ the configuration (without a prefix: ``Auto``).
 
 **AllowShortCaseLabelsOnASingleLine** (``bool``)
   If ``true``, short case labels will be contracted to a single line.
+
+  .. code-block:: c++
+
+    true:                                   false:
+    switch (a) {                    vs.     switch (a) {
+    case 1: x = 1; break;                   case 1:
+    case 2: return;                           x = 1;
+    }                                         break;
+                                            case 2:
+                                              return;
+                                            }
 
 **AllowShortFunctionsOnASingleLine** (``ShortFunctionStyle``)
   Dependent on the value, ``int f() { return 0; }`` can be put on a
@@ -316,9 +347,22 @@ the configuration (without a prefix: ``Auto``).
   the string at that point leads to it being indented
   ``ContinuationIndentWidth`` spaces from the start of the line.
 
+  .. code-block:: c++
+
+     true:                                  false:
+     aaaa =                         vs.     aaaa = "bbbb"
+         "bbbb"                                    "cccc";
+         "cccc";
+
 **AlwaysBreakTemplateDeclarations** (``bool``)
   If ``true``, always break after the ``template<...>`` of a template
   declaration.
+
+  .. code-block:: c++
+
+     true:                                  false:
+     template <typename T>          vs.     template <typename T> class C {};
+     class C {};
 
 **BinPackArguments** (``bool``)
   If ``false``, a function call's arguments will either be all on the
@@ -411,6 +455,14 @@ the configuration (without a prefix: ``Auto``).
   Always break constructor initializers before commas and align
   the commas with the colon.
 
+  .. code-block:: c++
+
+     true:                                  false:
+     SomeClass::Constructor()       vs.     SomeClass::Constructor() : a(a),
+         : a(a)                                                   b(b),
+         , b(b)                                                   c(c) {}
+         , c(c) {}
+
 **BreakStringLiterals** (``bool``)
   Allow breaking string literals when formatting.
 
@@ -474,6 +526,13 @@ the configuration (without a prefix: ``Auto``).
 **FixNamespaceComments** (``bool``)
   If ``true``, clang-format adds missing namespace end comments and
   fixes invalid existing ones.
+
+  .. code-block:: c++
+
+     true:                                  false:
+     namespace a {                  vs.     namespace a {
+     foo();                                 foo();
+     } // namespace a;                      }
 
 **ForEachMacros** (``std::vector<std::string>``)
   A vector of macros that should be interpreted as foreach loops
@@ -683,8 +742,19 @@ the configuration (without a prefix: ``Auto``).
 **SpaceAfterTemplateKeyword** (``bool``)
   If ``true``, a space will be inserted after the 'template' keyword.
 
+  .. code-block:: c++
+
+     true:                                  false:
+     template <int> void foo();     vs.     template<int> void foo();
+
 **SpaceBeforeAssignmentOperators** (``bool``)
   If ``false``, spaces will be removed before assignment operators.
+
+  .. code-block:: c++
+
+     true:                                  false:
+     int a = 5;                     vs.     int a=5;
+     a += 42                                a+=42;
 
 **SpaceBeforeParens** (``SpaceBeforeParensOptions``)
   Defines in which cases to put a space before opening parentheses.
@@ -721,8 +791,19 @@ the configuration (without a prefix: ``Auto``).
   If ``true``, spaces will be inserted after ``<`` and before ``>``
   in template argument lists.
 
+  .. code-block:: c++
+
+     true:                                  false:
+     static_cast< int >(arg);       vs.     static_cast<int>(arg);
+     std::function< void(int) > fct;        std::function<void(int)> fct;
+
 **SpacesInCStyleCastParentheses** (``bool``)
   If ``true``, spaces may be inserted into C style casts.
+
+  .. code-block:: c++
+
+     true:                                  false:
+     x = ( int32 )y                 vs.     x = (int32)y
 
 **SpacesInContainerLiterals** (``bool``)
   If ``true``, spaces are inserted inside container literals (e.g.
@@ -731,8 +812,20 @@ the configuration (without a prefix: ``Auto``).
 **SpacesInParentheses** (``bool``)
   If ``true``, spaces will be inserted after ``(`` and before ``)``.
 
+  .. code-block:: c++
+
+     true:                                  false:
+     t f( Deleted & ) & = delete;   vs.     t f(Deleted &) & = delete;
+
 **SpacesInSquareBrackets** (``bool``)
   If ``true``, spaces will be inserted after ``[`` and before ``]``.
+  Lambdas or unspecified size array declarations will not be affected.
+
+  .. code-block:: c++
+
+     true:                                  false:
+     int a[ 5 ];                    vs.     int a[5];
+     std::unique_ptr<int[]> foo() {} // Won't be affected
 
 **Standard** (``LanguageStandard``)
   Format compatible with this standard, e.g. use ``A<A<int> >``

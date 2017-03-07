@@ -2266,6 +2266,52 @@ static void checkCocoaAPI(Sema &S, const ObjCMessageExpr *Msg) {
                      edit::rewriteObjCRedundantCallWithLiteral);
 }
 
+static void checkFoundationAPI(Sema &S, SourceLocation Loc,
+                               const ObjCMethodDecl *Method,
+                               ArrayRef<Expr *> Args, QualType ReceiverType,
+                               bool IsClassObjectCall) {
+  // Check if this is a performSelector method that uses a selector that returns
+  // a record or a vector type.
+  if (Method->getMethodFamily() != OMF_performSelector || Args.empty())
+    return;
+  const auto *SE = dyn_cast<ObjCSelectorExpr>(Args[0]->IgnoreParens());
+  if (!SE)
+    return;
+  ObjCMethodDecl *ImpliedMethod;
+  if (!IsClassObjectCall) {
+    const auto *OPT = ReceiverType->getAs<ObjCObjectPointerType>();
+    if (!OPT || !OPT->getInterfaceDecl())
+      return;
+    ImpliedMethod =
+        OPT->getInterfaceDecl()->lookupInstanceMethod(SE->getSelector());
+    if (!ImpliedMethod)
+      ImpliedMethod =
+          OPT->getInterfaceDecl()->lookupPrivateMethod(SE->getSelector());
+  } else {
+    const auto *IT = ReceiverType->getAs<ObjCInterfaceType>();
+    if (!IT)
+      return;
+    ImpliedMethod = IT->getDecl()->lookupClassMethod(SE->getSelector());
+    if (!ImpliedMethod)
+      ImpliedMethod =
+          IT->getDecl()->lookupPrivateClassMethod(SE->getSelector());
+  }
+  if (!ImpliedMethod)
+    return;
+  QualType Ret = ImpliedMethod->getReturnType();
+  if (Ret->isRecordType() || Ret->isVectorType() || Ret->isExtVectorType()) {
+    QualType Ret = ImpliedMethod->getReturnType();
+    S.Diag(Loc, diag::warn_objc_unsafe_perform_selector)
+        << Method->getSelector()
+        << (!Ret->isRecordType()
+                ? /*Vector*/ 2
+                : Ret->isUnionType() ? /*Union*/ 1 : /*Struct*/ 0);
+    S.Diag(ImpliedMethod->getLocStart(),
+           diag::note_objc_unsafe_perform_selector_method_declared_here)
+        << ImpliedMethod->getSelector() << Ret;
+  }
+}
+
 /// \brief Diagnose use of %s directive in an NSString which is being passed
 /// as formatting string to formatting method.
 static void
@@ -2468,6 +2514,9 @@ ExprResult Sema::BuildClassMessage(TypeSourceInfo *ReceiverTypeInfo,
     if (!isImplicit)
       checkCocoaAPI(*this, Result);
   }
+  if (Method)
+    checkFoundationAPI(*this, SelLoc, Method, makeArrayRef(Args, NumArgs),
+                       ReceiverType, /*IsClassObjectCall=*/true);
   return MaybeBindToTemporary(Result);
 }
 
@@ -2993,6 +3042,26 @@ ExprResult Sema::BuildInstanceMessage(Expr *Receiver,
                                      isImplicit);
     if (!isImplicit)
       checkCocoaAPI(*this, Result);
+  }
+  if (Method) {
+    bool IsClassObjectCall = ClassMessage;
+    // 'self' message receivers in class methods should be treated as message
+    // sends to the class object in order for the semantic checks to be
+    // performed correctly. Messages to 'super' already count as class messages,
+    // so they don't need to be handled here.
+    if (Receiver && isSelfExpr(Receiver)) {
+      if (const auto *OPT = ReceiverType->getAs<ObjCObjectPointerType>()) {
+        if (OPT->getObjectType()->isObjCClass()) {
+          if (const auto *CurMeth = getCurMethodDecl()) {
+            IsClassObjectCall = true;
+            ReceiverType =
+                Context.getObjCInterfaceType(CurMeth->getClassInterface());
+          }
+        }
+      }
+    }
+    checkFoundationAPI(*this, SelLoc, Method, makeArrayRef(Args, NumArgs),
+                       ReceiverType, IsClassObjectCall);
   }
 
   if (getLangOpts().ObjCAutoRefCount) {

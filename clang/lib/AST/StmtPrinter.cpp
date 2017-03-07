@@ -2475,6 +2475,13 @@ void StmtPrinter::VisitCoawaitExpr(CoawaitExpr *S) {
   PrintExpr(S->getOperand());
 }
 
+
+void StmtPrinter::VisitDependentCoawaitExpr(DependentCoawaitExpr *S) {
+  OS << "co_await ";
+  PrintExpr(S->getOperand());
+}
+
+
 void StmtPrinter::VisitCoyieldExpr(CoyieldExpr *S) {
   OS << "co_yield ";
   PrintExpr(S->getOperand());

@@ -38,6 +38,8 @@ void dumpDebugAbbrev(DWARFContextInMemory &DCtx, DWARFYAML::Data &Y) {
           DWARFYAML::AttributeAbbrev AttAbrv;
           AttAbrv.Attribute = Attribute.Attr;
           AttAbrv.Form = Attribute.Form;
+          if (AttAbrv.Form == dwarf::DW_FORM_implicit_const)
+            AttAbrv.Value = *Attribute.ByteSizeOrValue;
           Abbrv.Attributes.push_back(AttAbrv);
         }
         Y.AbbrevDecls.push_back(Abbrv);
@@ -175,6 +177,8 @@ void dumpDebugInfo(DWARFContextInMemory &DCtx, DWARFYAML::Data &Y) {
             case dwarf::DW_FORM_data8:
             case dwarf::DW_FORM_sdata:
             case dwarf::DW_FORM_udata:
+            case dwarf::DW_FORM_ref_sup4:
+            case dwarf::DW_FORM_ref_sup8:
               if (auto Val = FormValue.getValue().getAsUnsignedConstant())
                 NewValue.Value = Val.getValue();
               break;
@@ -196,7 +200,6 @@ void dumpDebugInfo(DWARFContextInMemory &DCtx, DWARFYAML::Data &Y) {
             case dwarf::DW_FORM_GNU_strp_alt:
             case dwarf::DW_FORM_line_strp:
             case dwarf::DW_FORM_strp_sup:
-            case dwarf::DW_FORM_ref_sup:
             case dwarf::DW_FORM_GNU_str_index:
               if (auto Val = FormValue.getValue().getAsCStringOffset())
                 NewValue.Value = Val.getValue();

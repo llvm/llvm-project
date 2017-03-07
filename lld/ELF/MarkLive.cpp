@@ -22,6 +22,7 @@
 
 #include "InputSection.h"
 #include "LinkerScript.h"
+#include "Memory.h"
 #include "OutputSections.h"
 #include "Strings.h"
 #include "SymbolTable.h"
@@ -54,7 +55,7 @@ template <class ELFT>
 static typename ELFT::uint getAddend(InputSectionBase &Sec,
                                      const typename ELFT::Rel &Rel) {
   return Target->getImplicitAddend(Sec.Data.begin() + Rel.r_offset,
-                                   Rel.getType(Config->Mips64EL));
+                                   Rel.getType(Config->isMips64EL()));
 }
 
 template <class ELFT>
@@ -63,17 +64,25 @@ static typename ELFT::uint getAddend(InputSectionBase &Sec,
   return Rel.r_addend;
 }
 
+// There are normally few input sections whose names are valid C
+// identifiers, so we just store a std::vector instead of a multimap.
+static DenseMap<StringRef, std::vector<InputSectionBase *>> CNamedSections;
+
 template <class ELFT, class RelT>
 static void resolveReloc(InputSectionBase &Sec, RelT &Rel,
                          std::function<void(ResolvedReloc)> Fn) {
   SymbolBody &B = Sec.getFile<ELFT>()->getRelocTargetSym(Rel);
-  auto *D = dyn_cast<DefinedRegular>(&B);
-  if (!D || !D->Section)
-    return;
-  typename ELFT::uint Offset = D->Value;
-  if (D->isSection())
-    Offset += getAddend<ELFT>(Sec, Rel);
-  Fn({D->Section->Repl, Offset});
+  if (auto *D = dyn_cast<DefinedRegular>(&B)) {
+    if (!D->Section)
+      return;
+    typename ELFT::uint Offset = D->Value;
+    if (D->isSection())
+      Offset += getAddend<ELFT>(Sec, Rel);
+    Fn({D->Section->Repl, Offset});
+  } else if (auto *U = dyn_cast<Undefined>(&B)) {
+    for (InputSectionBase *Sec : CNamedSections.lookup(U->getName()))
+      Fn({Sec, 0});
+  }
 }
 
 // Calls Fn for each section that Sec refers to via relocations.
@@ -106,7 +115,7 @@ static void forEachSuccessor(InputSection &Sec,
 // the gc pass. With that we would be able to also gc some sections holding
 // LSDAs and personality functions if we found that they were unused.
 template <class ELFT, class RelTy>
-static void scanEhFrameSection(EhInputSection<ELFT> &EH, ArrayRef<RelTy> Rels,
+static void scanEhFrameSection(EhInputSection &EH, ArrayRef<RelTy> Rels,
                                std::function<void(ResolvedReloc)> Enqueue) {
   const endianness E = ELFT::TargetEndianness;
   for (unsigned I = 0, N = EH.Pieces.size(); I < N; ++I) {
@@ -140,19 +149,19 @@ static void scanEhFrameSection(EhInputSection<ELFT> &EH, ArrayRef<RelTy> Rels,
 }
 
 template <class ELFT>
-static void scanEhFrameSection(EhInputSection<ELFT> &EH,
+static void scanEhFrameSection(EhInputSection &EH,
                                std::function<void(ResolvedReloc)> Enqueue) {
   if (!EH.NumRelocations)
     return;
 
   // Unfortunately we need to split .eh_frame early since some relocations in
   // .eh_frame keep other section alive and some don't.
-  EH.split();
+  EH.split<ELFT>();
 
   if (EH.AreRelocsRela)
-    scanEhFrameSection(EH, EH.template relas<ELFT>(), Enqueue);
+    scanEhFrameSection<ELFT>(EH, EH.template relas<ELFT>(), Enqueue);
   else
-    scanEhFrameSection(EH, EH.template rels<ELFT>(), Enqueue);
+    scanEhFrameSection<ELFT>(EH, EH.template rels<ELFT>(), Enqueue);
 }
 
 // We do not garbage-collect two types of sections:
@@ -184,6 +193,7 @@ template <class ELFT> static bool isReserved(InputSectionBase *Sec) {
 // sections to set their "Live" bits.
 template <class ELFT> void elf::markLive() {
   SmallVector<InputSection *, 256> Q;
+  CNamedSections.clear();
 
   auto Enqueue = [&](ResolvedReloc R) {
     // Skip over discarded sections. This in theory shouldn't happen, because
@@ -200,7 +210,7 @@ template <class ELFT> void elf::markLive() {
     // Usually, a whole section is marked as live or dead, but in mergeable
     // (splittable) sections, each piece of data has independent liveness bit.
     // So we explicitly tell it which offset is in use.
-    if (auto *MS = dyn_cast<MergeInputSection<ELFT>>(R.Sec))
+    if (auto *MS = dyn_cast<MergeInputSection>(R.Sec))
       MS->markLiveAt(R.Offset);
 
     if (R.Sec->Live)
@@ -223,22 +233,11 @@ template <class ELFT> void elf::markLive() {
   for (StringRef S : Config->Undefined)
     MarkSymbol(Symtab<ELFT>::X->find(S));
 
-  // Remember which __start_* or __stop_* symbols are used so that we don't gc
-  // those sections.
-  DenseSet<StringRef> UsedStartStopNames;
-
   // Preserve externally-visible symbols if the symbols defined by this
   // file can interrupt other ELF file's symbols at runtime.
-  for (const Symbol *S : Symtab<ELFT>::X->getSymbols()) {
-    if (auto *U = dyn_cast_or_null<Undefined>(S->body())) {
-      StringRef Name = U->getName();
-      for (StringRef Prefix : {"__start_", "__stop_"})
-        if (Name.startswith(Prefix))
-          UsedStartStopNames.insert(Name.substr(Prefix.size()));
-    } else if (S->includeInDynsym()) {
+  for (const Symbol *S : Symtab<ELFT>::X->getSymbols())
+    if (S->includeInDynsym())
       MarkSymbol(S->body());
-    }
-  }
 
   // Preserve special sections and those which are specified in linker
   // script KEEP command.
@@ -246,11 +245,14 @@ template <class ELFT> void elf::markLive() {
     // .eh_frame is always marked as live now, but also it can reference to
     // sections that contain personality. We preserve all non-text sections
     // referred by .eh_frame here.
-    if (auto *EH = dyn_cast_or_null<EhInputSection<ELFT>>(Sec))
+    if (auto *EH = dyn_cast_or_null<EhInputSection>(Sec))
       scanEhFrameSection<ELFT>(*EH, Enqueue);
-    if (isReserved<ELFT>(Sec) || Script<ELFT>::X->shouldKeep(Sec) ||
-        UsedStartStopNames.count(Sec->Name))
+    if (isReserved<ELFT>(Sec) || Script<ELFT>::X->shouldKeep(Sec))
       Enqueue({Sec, 0});
+    else if (isValidCIdentifier(Sec->Name)) {
+      CNamedSections[Saver.save("__start_" + Sec->Name)].push_back(Sec);
+      CNamedSections[Saver.save("__end_" + Sec->Name)].push_back(Sec);
+    }
   }
 
   // Mark all reachable sections.

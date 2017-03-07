@@ -61,11 +61,8 @@ void X86CallLowering::splitToValueTypes(const ArgInfo &OrigArg,
     ArgInfo Info = ArgInfo{MRI.createGenericVirtualRegister(LLT{*PartTy, DL}),
                            PartTy, OrigArg.Flags};
     SplitArgs.push_back(Info);
-    BitOffsets.push_back(PartVT.getSizeInBits() * i);
-    SplitRegs.push_back(Info.Reg);
+    PerformArgSplit(Info.Reg, PartVT.getSizeInBits() * i);
   }
-
-  PerformArgSplit(SplitRegs, BitOffsets);
 }
 
 namespace {
@@ -113,8 +110,8 @@ bool X86CallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
 
     SmallVector<ArgInfo, 8> SplitArgs;
     splitToValueTypes(OrigArg, SplitArgs, DL, MRI,
-                      [&](ArrayRef<unsigned> Regs, ArrayRef<uint64_t> Offsets) {
-                        MIRBuilder.buildExtract(Regs, Offsets, VReg);
+                      [&](unsigned Reg, uint64_t Offset) {
+                        MIRBuilder.buildExtract(Reg, VReg, Offset);
                       });
 
     FuncReturnHandler Handler(MIRBuilder, MRI, MIB, RetCC_X86);
@@ -184,10 +181,22 @@ bool X86CallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
   for (auto &Arg : F.getArgumentList()) {
     ArgInfo OrigArg(VRegs[Idx], Arg.getType());
     setArgFlags(OrigArg, Idx + 1, DL, F);
+    LLT Ty = MRI.getType(VRegs[Idx]);
+    unsigned Dst = VRegs[Idx];
+    bool Split = false;
     splitToValueTypes(OrigArg, SplitArgs, DL, MRI,
-                      [&](ArrayRef<unsigned> Regs, ArrayRef<uint64_t> Offsets) {
-                            MIRBuilder.buildSequence(VRegs[Idx], Regs, Offsets);
+                      [&](unsigned Reg, uint64_t Offset) {
+                        if (!Split) {
+                          Split = true;
+                          Dst = MRI.createGenericVirtualRegister(Ty);
+                          MIRBuilder.buildUndef(Dst);
+                        }
+                        unsigned Tmp = MRI.createGenericVirtualRegister(Ty);
+                        MIRBuilder.buildInsert(Tmp, Dst, Reg, Offset);
+                        Dst = Tmp;
                       });
+    if (Dst != VRegs[Idx])
+      MIRBuilder.buildCopy(VRegs[Idx], Dst);
     Idx++;
   }
 

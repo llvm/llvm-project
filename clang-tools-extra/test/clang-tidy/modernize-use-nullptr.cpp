@@ -244,3 +244,20 @@ void f() {
   bool a;
   a = ZZ(Hash());
 }
+
+// Test on ignoring substituted template types.
+template<typename T>
+class TemplateClass {
+ public:
+  explicit TemplateClass(int a, T default_value = 0) {}
+
+  void h(T *default_value = 0) {}
+
+  void f(int* p = 0) {}
+// CHECK-MESSAGES: :[[@LINE-1]]:19: warning: use nullptr
+// CHECK-FIXES: void f(int* p = nullptr) {}
+};
+
+void IgnoreSubstTemplateType() {
+  TemplateClass<int*> a(1);
+}

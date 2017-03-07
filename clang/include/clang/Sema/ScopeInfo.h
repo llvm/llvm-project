@@ -135,6 +135,10 @@ public:
   /// false if there is an invocation of an initializer on 'self'.
   bool ObjCWarnForNoInitDelegation : 1;
 
+  /// \brief True only when this function has not already built, or attempted
+  /// to build, the initial and final coroutine suspend points
+  bool NeedsCoroutineSuspends : 1;
+
   /// First 'return' statement in the current function.
   SourceLocation FirstReturnLoc;
 
@@ -158,6 +162,9 @@ public:
 
   /// \brief The promise object for this coroutine, if any.
   VarDecl *CoroutinePromise = nullptr;
+
+  /// \brief The initial and final coroutine suspend points.
+  std::pair<Stmt *, Stmt *> CoroutineSuspends;
 
   /// \brief The list of coroutine control flow constructs (co_await, co_yield,
   /// co_return) that occur within the function or block. Empty if and only if
@@ -376,7 +383,25 @@ public:
         (HasIndirectGoto ||
           (HasBranchProtectedScope && HasBranchIntoScope));
   }
-  
+
+  void setNeedsCoroutineSuspends(bool value = true) {
+    assert((!value || CoroutineSuspends.first == nullptr) &&
+            "we already have valid suspend points");
+    NeedsCoroutineSuspends = value;
+  }
+
+  bool hasInvalidCoroutineSuspends() const {
+    return !NeedsCoroutineSuspends && CoroutineSuspends.first == nullptr;
+  }
+
+  void setCoroutineSuspends(Stmt *Initial, Stmt *Final) {
+    assert(Initial && Final && "suspend points cannot be null");
+    assert(CoroutineSuspends.first == nullptr && "suspend points already set");
+    NeedsCoroutineSuspends = false;
+    CoroutineSuspends.first = Initial;
+    CoroutineSuspends.second = Final;
+  }
+
   FunctionScopeInfo(DiagnosticsEngine &Diag)
     : Kind(SK_Function),
       HasBranchProtectedScope(false),
@@ -391,6 +416,7 @@ public:
       ObjCWarnForNoDesignatedInitChain(false),
       ObjCIsSecondaryInit(false),
       ObjCWarnForNoInitDelegation(false),
+      NeedsCoroutineSuspends(true),
       ErrorTrap(Diag) { }
 
   virtual ~FunctionScopeInfo();

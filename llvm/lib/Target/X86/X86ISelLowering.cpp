@@ -2744,44 +2744,40 @@ X86TargetLowering::LowerMemArgument(SDValue Chain, CallingConv::ID CallConv,
   // This is an argument in memory. We might be able to perform copy elision.
   if (Flags.isCopyElisionCandidate()) {
     EVT ArgVT = Ins[i].ArgVT;
-    if (isTypeLegal(ArgVT)) {
-      SDValue PartAddr;
-      if (Ins[i].PartOffset == 0) {
-        // If this is a one-part value or the first part of a multi-part value,
-        // create a stack object for the entire argument value type and return a
-        // load from our portion of it. This assumes that if the first part of
-        // an argument is in memory, the rest will also be in memory.
-        unsigned SizeInBits = ArgVT.getSizeInBits();
-        assert(SizeInBits % 8 == 0);
-        int FI = MFI.CreateFixedObject(SizeInBits / 8, VA.getLocMemOffset(),
-                                       /*Immutable=*/false);
-        PartAddr = DAG.getFrameIndex(FI, PtrVT);
+    SDValue PartAddr;
+    if (Ins[i].PartOffset == 0) {
+      // If this is a one-part value or the first part of a multi-part value,
+      // create a stack object for the entire argument value type and return a
+      // load from our portion of it. This assumes that if the first part of an
+      // argument is in memory, the rest will also be in memory.
+      int FI = MFI.CreateFixedObject(ArgVT.getStoreSize(), VA.getLocMemOffset(),
+                                     /*Immutable=*/false);
+      PartAddr = DAG.getFrameIndex(FI, PtrVT);
+      return DAG.getLoad(
+          ValVT, dl, Chain, PartAddr,
+          MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), FI));
+    } else {
+      // This is not the first piece of an argument in memory. See if there is
+      // already a fixed stack object including this offset. If so, assume it
+      // was created by the PartOffset == 0 branch above and create a load from
+      // the appropriate offset into it.
+      int64_t PartBegin = VA.getLocMemOffset();
+      int64_t PartEnd = PartBegin + ValVT.getSizeInBits() / 8;
+      int FI = MFI.getObjectIndexBegin();
+      for (; MFI.isFixedObjectIndex(FI); ++FI) {
+        int64_t ObjBegin = MFI.getObjectOffset(FI);
+        int64_t ObjEnd = ObjBegin + MFI.getObjectSize(FI);
+        if (ObjBegin <= PartBegin && PartEnd <= ObjEnd)
+          break;
+      }
+      if (MFI.isFixedObjectIndex(FI)) {
+        SDValue Addr =
+            DAG.getNode(ISD::ADD, dl, PtrVT, DAG.getFrameIndex(FI, PtrVT),
+                        DAG.getIntPtrConstant(Ins[i].PartOffset, dl));
         return DAG.getLoad(
-            ValVT, dl, Chain, PartAddr,
-            MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), FI));
-      } else {
-        // This is not the first piece of an argument in memory. See if there is
-        // already a fixed stack object including this offset. If so, assume it
-        // was created by the PartOffset == 0 branch above and create a load
-        // from the appropriate offset into it.
-        int64_t PartBegin = VA.getLocMemOffset();
-        int64_t PartEnd = PartBegin + ValVT.getSizeInBits() / 8;
-        int FI = MFI.getObjectIndexBegin();
-        for (; MFI.isFixedObjectIndex(FI); ++FI) {
-          int64_t ObjBegin = MFI.getObjectOffset(FI);
-          int64_t ObjEnd = ObjBegin + MFI.getObjectSize(FI);
-          if (ObjBegin <= PartBegin && PartEnd <= ObjEnd)
-            break;
-        }
-        if (MFI.isFixedObjectIndex(FI)) {
-          SDValue Addr =
-              DAG.getNode(ISD::ADD, dl, PtrVT, DAG.getFrameIndex(FI, PtrVT),
-                          DAG.getIntPtrConstant(Ins[i].PartOffset, dl));
-          return DAG.getLoad(
-              ValVT, dl, Chain, Addr,
-              MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), FI,
-                                                Ins[i].PartOffset));
-        }
+            ValVT, dl, Chain, Addr,
+            MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), FI,
+                                              Ins[i].PartOffset));
       }
     }
   }

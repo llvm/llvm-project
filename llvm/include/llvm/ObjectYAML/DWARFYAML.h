@@ -45,6 +45,7 @@ struct InitialLength {
 struct AttributeAbbrev {
   llvm::dwarf::Attribute Attribute;
   llvm::dwarf::Form Form;
+  llvm::yaml::Hex64 Value; // Some DWARF5 attributes have values
 };
 
 struct Abbrev {

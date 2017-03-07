@@ -566,37 +566,31 @@ void APInt::setBit(unsigned bitPosition) {
     pVal[whichWord(bitPosition)] |= maskBit(bitPosition);
 }
 
-void APInt::setBits(unsigned loBit, unsigned hiBit) {
-  assert(hiBit <= BitWidth && "hiBit out of range");
-  assert(loBit <= hiBit && loBit <= BitWidth && "loBit out of range");
+void APInt::setBitsSlowCase(unsigned loBit, unsigned hiBit) {
+  unsigned loWord = whichWord(loBit);
+  unsigned hiWord = whichWord(hiBit);
 
-  if (loBit == hiBit)
-    return;
+  // Create an initial mask for the low word with zeroes below loBit.
+  uint64_t loMask = UINT64_MAX << whichBit(loBit);
 
-  if (isSingleWord())
-    *this |= APInt::getBitsSet(BitWidth, loBit, hiBit);
-  else {
-    unsigned hiBit1 = hiBit - 1;
-    unsigned loWord = whichWord(loBit);
-    unsigned hiWord = whichWord(hiBit1);
-    if (loWord == hiWord) {
-      // Set bits are all within the same word, create a [loBit,hiBit) mask.
-      uint64_t mask = UINT64_MAX;
-      mask >>= (APINT_BITS_PER_WORD - (hiBit - loBit));
-      mask <<= whichBit(loBit);
-      pVal[loWord] |= mask;
-    } else {
-      // Set bits span multiple words, create a lo mask with set bits starting
-      // at loBit, a hi mask with set bits below hiBit and set all bits of the
-      // words in between.
-      uint64_t loMask = UINT64_MAX << whichBit(loBit);
-      uint64_t hiMask = UINT64_MAX >> (64 - whichBit(hiBit1) - 1);
-      pVal[loWord] |= loMask;
+  // If hiBit is not aligned, we need a high mask.
+  unsigned hiShiftAmt = whichBit(hiBit);
+  if (hiShiftAmt != 0) {
+    // Create a high mask with zeros above hiBit.
+    uint64_t hiMask = UINT64_MAX >> (APINT_BITS_PER_WORD - hiShiftAmt);
+    // If loWord and hiWord are equal, then we combine the masks. Otherwise,
+    // set the bits in hiWord.
+    if (hiWord == loWord)
+      loMask &= hiMask;
+    else
       pVal[hiWord] |= hiMask;
-      for (unsigned word = loWord + 1; word < hiWord; ++word)
-        pVal[word] = UINT64_MAX;
-    }
   }
+  // Apply the mask to the low word.
+  pVal[loWord] |= loMask;
+
+  // Fill any words between loWord and hiWord with all ones.
+  for (unsigned word = loWord + 1; word < hiWord; ++word)
+    pVal[word] = UINT64_MAX;
 }
 
 /// Set the given bit to 0 whose position is given as "bitPosition".

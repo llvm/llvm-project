@@ -43,6 +43,9 @@ void FunctionScopeInfo::Clear() {
   SwitchStack.clear();
   Returns.clear();
   CoroutinePromise = nullptr;
+  NeedsCoroutineSuspends = true;
+  CoroutineSuspends.first = nullptr;
+  CoroutineSuspends.second = nullptr;
   CoroutineStmts.clear();
   ErrorTrap.reset();
   PossiblyUnreachableDiags.clear();
