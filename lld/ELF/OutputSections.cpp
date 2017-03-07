@@ -65,7 +65,7 @@ void OutputSection::writeHeaderTo(typename ELFT::Shdr *Shdr) {
 }
 
 OutputSection::OutputSection(StringRef Name, uint32_t Type, uint64_t Flags)
-    : Name(Name), Alignment(1), Flags(Flags), Type(Type) {}
+    : Name(Name), Flags(Flags), Alignment(1), Type(Type) {}
 
 template <typename ELFT>
 static bool compareByFilePosition(InputSection *A, InputSection *B) {

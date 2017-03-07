@@ -1740,42 +1740,6 @@ struct isl_basic_set *isl_basic_set_finalize(struct isl_basic_set *bset)
 	return bset_from_bmap(isl_basic_map_finalize(bset_to_bmap(bset)));
 }
 
-struct isl_set *isl_set_finalize(struct isl_set *set)
-{
-	int i;
-
-	if (!set)
-		return NULL;
-	for (i = 0; i < set->n; ++i) {
-		set->p[i] = isl_basic_set_finalize(set->p[i]);
-		if (!set->p[i])
-			goto error;
-	}
-	return set;
-error:
-	isl_set_free(set);
-	return NULL;
-}
-
-struct isl_map *isl_map_finalize(struct isl_map *map)
-{
-	int i;
-
-	if (!map)
-		return NULL;
-	for (i = 0; i < map->n; ++i) {
-		map->p[i] = isl_basic_map_finalize(map->p[i]);
-		if (!map->p[i])
-			goto error;
-	}
-	ISL_F_CLR(map, ISL_MAP_NORMALIZED);
-	return map;
-error:
-	isl_map_free(map);
-	return NULL;
-}
-
-
 /* Remove definition of any div that is defined in terms of the given variable.
  * The div itself is not removed.  Functions such as
  * eliminate_divs_ineq depend on the other divs remaining in place.
@@ -5218,36 +5182,6 @@ __isl_give isl_basic_map *isl_basic_map_drop_redundant_divs(
 	bmap = isl_basic_map_simplify(bmap);
 
 	return isl_basic_map_drop_redundant_divs(bmap);
-}
-
-struct isl_basic_set *isl_basic_set_drop_redundant_divs(
-	struct isl_basic_set *bset)
-{
-	isl_basic_map *bmap = bset_to_bmap(bset);
-	return bset_from_bmap(isl_basic_map_drop_redundant_divs(bmap));
-}
-
-struct isl_map *isl_map_drop_redundant_divs(struct isl_map *map)
-{
-	int i;
-
-	if (!map)
-		return NULL;
-	for (i = 0; i < map->n; ++i) {
-		map->p[i] = isl_basic_map_drop_redundant_divs(map->p[i]);
-		if (!map->p[i])
-			goto error;
-	}
-	ISL_F_CLR(map, ISL_MAP_NORMALIZED);
-	return map;
-error:
-	isl_map_free(map);
-	return NULL;
-}
-
-struct isl_set *isl_set_drop_redundant_divs(struct isl_set *set)
-{
-	return set_from_map(isl_map_drop_redundant_divs(set_to_map(set)));
 }
 
 /* Does "bmap" satisfy any equality that involves more than 2 variables

@@ -397,12 +397,15 @@ protected:
                                      lldb::addr_t base_addr,
                                      bool value_is_offset);
 
+  Error UpdateAutomaticSignalFiltering() override;
+
 private:
   //------------------------------------------------------------------
   // For ProcessGDBRemote only
   //------------------------------------------------------------------
   std::string m_partial_profile_data;
   std::map<uint64_t, uint32_t> m_thread_id_to_used_usec_map;
+  uint64_t m_last_signals_version = 0;
 
   static bool NewThreadNotifyBreakpointHit(void *baton,
                                            StoppointCallbackContext *context,

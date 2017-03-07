@@ -44,6 +44,7 @@ using namespace llvm;
 llvm::Statistic RejectStatistics[] = {
     SCOP_STAT(CFG, ""),
     SCOP_STAT(InvalidTerminator, "Unsupported terminator instruction"),
+    SCOP_STAT(UnreachableInExit, "Unreachable in exit block"),
     SCOP_STAT(IrreducibleRegion, "Irreducible loops"),
     SCOP_STAT(LastCFG, ""),
     SCOP_STAT(AffFunc, ""),
@@ -187,6 +188,24 @@ const DebugLoc &ReportInvalidTerminator::getDebugLoc() const {
 
 bool ReportInvalidTerminator::classof(const RejectReason *RR) {
   return RR->getKind() == RejectReasonKind::InvalidTerminator;
+}
+
+//===----------------------------------------------------------------------===//
+// UnreachableInExit.
+
+std::string ReportUnreachableInExit::getMessage() const {
+  std::string BBName = BB->getName();
+  return "Unreachable in exit block" + BBName;
+}
+
+const DebugLoc &ReportUnreachableInExit::getDebugLoc() const { return DbgLoc; }
+
+std::string ReportUnreachableInExit::getEndUserMessage() const {
+  return "Unreachable in exit block.";
+}
+
+bool ReportUnreachableInExit::classof(const RejectReason *RR) {
+  return RR->getKind() == RejectReasonKind::UnreachableInExit;
 }
 
 //===----------------------------------------------------------------------===//
