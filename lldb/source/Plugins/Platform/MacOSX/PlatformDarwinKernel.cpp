@@ -398,7 +398,7 @@ void PlatformDarwinKernel::GetUserSpecifiedDirectoriesToSearch() {
   for (uint32_t i = 0; i < user_dirs_count; i++) {
     FileSpec dir = user_dirs.GetFileSpecAtIndex(i);
     dir.ResolvePath();
-    if (llvm::sys::fs::is_directory(dir.GetPath()))
+    if (llvm::sys::fs::is_directory(dir.GetPath())) {
       m_search_directories.push_back(dir);
     }
   }
