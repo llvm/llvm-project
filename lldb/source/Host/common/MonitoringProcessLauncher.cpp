@@ -17,8 +17,6 @@
 #include "lldb/Utility/Error.h"
 #include "lldb/Utility/Log.h"
 
-#include "llvm/Support/FileSystem.h"
-
 using namespace lldb;
 using namespace lldb_private;
 
@@ -40,8 +38,8 @@ MonitoringProcessLauncher::LaunchProcess(const ProcessLaunchInfo &launch_info,
 
   FileSpec exe_spec(resolved_info.GetExecutableFile());
 
-  llvm::sys::fs::file_status stats;
-  if (status(exe_spec.GetPath(), stats) || !is_regular_file(stats)) {
+  FileSpec::FileType file_type = exe_spec.GetFileType();
+  if (file_type != FileSpec::eFileTypeRegular) {
     ModuleSpec module_spec(exe_spec, arch_spec);
     lldb::ModuleSP exe_module_sp;
     error =
@@ -54,7 +52,7 @@ MonitoringProcessLauncher::LaunchProcess(const ProcessLaunchInfo &launch_info,
       exe_spec = exe_module_sp->GetFileSpec();
   }
 
-  if (exists(stats)) {
+  if (exe_spec.Exists()) {
     exe_spec.GetPath(exe_path, sizeof(exe_path));
   } else {
     resolved_info.GetExecutableFile().GetPath(exe_path, sizeof(exe_path));

@@ -229,7 +229,7 @@ FileSpec Symbols::LocateExecutableSymbolFile(const ModuleSpec &module_spec) {
     for (size_t idx = 0; idx < num_directories; ++idx) {
       FileSpec dirspec = debug_file_search_paths.GetFileSpecAtIndex(idx);
       dirspec.ResolvePath();
-      if (!llvm::sys::fs::is_directory(dirspec.GetPath()))
+      if (!dirspec.Exists() || !dirspec.IsDirectory())
         continue;
 
       std::vector<std::string> files;

@@ -29,8 +29,6 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
 
-#include "llvm/Support/FileSystem.h"
-
 using namespace lldb;
 using namespace lldb_private;
 
@@ -254,9 +252,9 @@ Error PlatformiOSSimulator::ResolveExecutable(
 }
 
 static FileSpec::EnumerateDirectoryResult
-EnumerateDirectoryCallback(void *baton, llvm::sys::fs::file_type ft,
+EnumerateDirectoryCallback(void *baton, FileSpec::FileType file_type,
                            const FileSpec &file_spec) {
-  if (ft == llvm::sys::fs::file_type::directory_file) {
+  if (file_type == FileSpec::eFileTypeDirectory) {
     const char *filename = file_spec.GetFilename().GetCString();
     if (filename &&
         strncmp(filename, "iPhoneSimulator", strlen("iPhoneSimulator")) == 0) {
