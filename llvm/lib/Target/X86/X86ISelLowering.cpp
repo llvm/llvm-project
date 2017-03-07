@@ -70,6 +70,13 @@ static cl::opt<bool> ExperimentalVectorWideningLegalization(
              "rather than promotion."),
     cl::Hidden);
 
+static cl::opt<int> ExperimentalPrefLoopAlignment(
+    "x86-experimental-pref-loop-alignment", cl::init(4),
+    cl::desc("Sets the preferable loop alignment for experiments "
+             "(the last x86-experimental-pref-loop-alignment bits"
+             " of the loop header PC will be 0)."),
+    cl::Hidden);
+
 X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
                                      const X86Subtarget &STI)
     : TargetLowering(TM), Subtarget(STI) {
@@ -1724,7 +1731,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   MaxStoresPerMemcpyOptSize = 4;
   MaxStoresPerMemmove = 8; // For @llvm.memmove -> sequence of stores
   MaxStoresPerMemmoveOptSize = 4;
-  setPrefLoopAlignment(4); // 2^4 bytes.
+  // Set loop alignment to 2^ExperimentalPrefLoopAlignment bytes (default: 2^4).
+  setPrefLoopAlignment(ExperimentalPrefLoopAlignment);
 
   // An out-of-order CPU can speculatively execute past a predictable branch,
   // but a conditional move could be stalled by an expensive earlier operation.

@@ -23,6 +23,7 @@ def ThunderXT8XModel : SchedMachineModel {
   let MicroOpBufferSize = 0;  // ThunderX T88/T81/T83 are in-order.
   let LoadLatency = 3;        // Optimistic load latency.
   let MispredictPenalty = 8;  // Branch mispredict penalty.
+  let PostRAScheduler = 1;    // Use PostRA scheduler.
   let CompleteModel = 1;
 }
 

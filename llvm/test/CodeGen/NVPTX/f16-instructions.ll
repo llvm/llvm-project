@@ -161,6 +161,20 @@ define half @test_load(half* %a) #0 {
   ret half %r
 }
 
+; CHECK-LABEL: .visible .func test_halfp0a1(
+; CHECK-DAG: ld.param.u64 %[[FROM:rd?[0-9]+]], [test_halfp0a1_param_0];
+; CHECK-DAG: ld.param.u64 %[[TO:rd?[0-9]+]], [test_halfp0a1_param_1];
+; CHECK-DAG: ld.u8        [[B0:%r[sd]?[0-9]+]], [%[[FROM]]]
+; CHECK-DAG: st.u8        [%[[TO]]], [[B0]]
+; CHECK-DAG: ld.u8        [[B1:%r[sd]?[0-9]+]], [%[[FROM]]+1]
+; CHECK-DAG: st.u8        [%[[TO]]+1], [[B1]]
+; CHECK: ret
+define void @test_halfp0a1(half * noalias readonly %from, half * %to) {
+  %1 = load half, half * %from , align 1
+  store half %1, half * %to , align 1
+  ret void
+}
+
 declare half @test_callee(half %a, half %b) #0
 
 ; CHECK-LABEL: test_call(

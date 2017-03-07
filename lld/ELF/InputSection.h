@@ -78,7 +78,7 @@ public:
 
   InputSectionBase(InputFile *File, uint64_t Flags, uint32_t Type,
                    uint64_t Entsize, uint32_t Link, uint32_t Info,
-                   uint64_t Addralign, ArrayRef<uint8_t> Data, StringRef Name,
+                   uint64_t Alignment, ArrayRef<uint8_t> Data, StringRef Name,
                    Kind SectionKind);
   OutputSection *OutSec = nullptr;
 
@@ -252,7 +252,7 @@ public:
 // .eh_frame. It also includes the synthetic sections themselves.
 class InputSection : public InputSectionBase {
 public:
-  InputSection(uint64_t Flags, uint32_t Type, uint64_t Addralign,
+  InputSection(uint64_t Flags, uint32_t Type, uint64_t Alignment,
                ArrayRef<uint8_t> Data, StringRef Name, Kind K = Regular);
   template <class ELFT>
   InputSection(ObjectFile<ELFT> *F, const typename ELFT::Shdr *Header,

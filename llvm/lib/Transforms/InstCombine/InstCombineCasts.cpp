@@ -463,6 +463,23 @@ Instruction *InstCombiner::shrinkBitwiseLogic(TruncInst &Trunc) {
   return BinaryOperator::Create(LogicOp->getOpcode(), NarrowOp0, NarrowC);
 }
 
+/// Try to narrow the width of a splat shuffle. This could be generalized to any
+/// shuffle with a constant operand, but we limit the transform to avoid
+/// creating a shuffle type that targets may not be able to lower effectively.
+static Instruction *shrinkSplatShuffle(TruncInst &Trunc,
+                                       InstCombiner::BuilderTy &Builder) {
+  auto *Shuf = dyn_cast<ShuffleVectorInst>(Trunc.getOperand(0));
+  if (Shuf && Shuf->hasOneUse() && isa<UndefValue>(Shuf->getOperand(1)) &&
+      Shuf->getMask()->getSplatValue()) {
+    // trunc (shuf X, Undef, SplatMask) --> shuf (trunc X), Undef, SplatMask
+    Constant *NarrowUndef = UndefValue::get(Trunc.getType());
+    Value *NarrowOp = Builder.CreateTrunc(Shuf->getOperand(0), Trunc.getType());
+    return new ShuffleVectorInst(NarrowOp, NarrowUndef, Shuf->getMask());
+  }
+
+  return nullptr;
+}
+
 Instruction *InstCombiner::visitTrunc(TruncInst &CI) {
   if (Instruction *Result = commonCastTransforms(CI))
     return Result;
@@ -552,6 +569,9 @@ Instruction *InstCombiner::visitTrunc(TruncInst &CI) {
   }
 
   if (Instruction *I = shrinkBitwiseLogic(CI))
+    return I;
+
+  if (Instruction *I = shrinkSplatShuffle(CI, *Builder))
     return I;
 
   if (Src->hasOneUse() && isa<IntegerType>(SrcTy) &&

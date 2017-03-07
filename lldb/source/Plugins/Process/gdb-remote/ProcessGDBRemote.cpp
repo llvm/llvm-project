@@ -80,8 +80,8 @@
 #include "lldb/Host/Host.h"
 
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/Threading.h"
+#include "llvm/Support/raw_ostream.h"
 
 #define DEBUGSERVER_BASENAME "debugserver"
 using namespace lldb;
@@ -3737,6 +3737,43 @@ bool ProcessGDBRemote::NewThreadNotifyBreakpointHit(
   if (log)
     log->Printf("Hit New Thread Notification breakpoint.");
   return false;
+}
+
+Error ProcessGDBRemote::UpdateAutomaticSignalFiltering() {
+  Log *log(ProcessGDBRemoteLog::GetLogIfAllCategoriesSet(GDBR_LOG_PROCESS));
+  LLDB_LOG(log, "Check if need to update ignored signals");
+
+  // QPassSignals package is not supported by the server,
+  // there is no way we can ignore any signals on server side.
+  if (!m_gdb_comm.GetQPassSignalsSupported())
+    return Error();
+
+  // No signals, nothing to send.
+  if (m_unix_signals_sp == nullptr)
+    return Error();
+
+  // Signals' version hasn't changed, no need to send anything.
+  uint64_t new_signals_version = m_unix_signals_sp->GetVersion();
+  if (new_signals_version == m_last_signals_version) {
+    LLDB_LOG(log, "Signals' version hasn't changed. version={0}",
+             m_last_signals_version);
+    return Error();
+  }
+
+  auto signals_to_ignore =
+      m_unix_signals_sp->GetFilteredSignals(false, false, false);
+  Error error = m_gdb_comm.SendSignalsToIgnore(signals_to_ignore);
+
+  LLDB_LOG(log,
+           "Signals' version changed. old version={0}, new version={1}, "
+           "signals ignored={2}, update result={3}",
+           m_last_signals_version, new_signals_version,
+           signals_to_ignore.size(), error);
+
+  if (error.Success())
+    m_last_signals_version = new_signals_version;
+
+  return error;
 }
 
 bool ProcessGDBRemote::StartNoticingNewThreads() {

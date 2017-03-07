@@ -81,8 +81,8 @@ size_t MutationDispatcher::Mutate_CustomCrossOver(uint8_t *Data, size_t Size,
   const Unit &Other = (*Corpus)[Idx];
   if (Other.empty())
     return 0;
-  MutateInPlaceHere.resize(MaxSize);
-  auto &U = MutateInPlaceHere;
+  CustomCrossOverInPlaceHere.resize(MaxSize);
+  auto &U = CustomCrossOverInPlaceHere;
   size_t NewSize = EF->LLVMFuzzerCustomCrossOver(
       Data, Size, Other.data(), Other.size(), U.data(), U.size(), Rand.Rand());
   if (!NewSize)

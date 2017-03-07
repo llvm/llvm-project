@@ -143,6 +143,9 @@ private:
 
   const InputCorpus *Corpus = nullptr;
   std::vector<uint8_t> MutateInPlaceHere;
+  // CustomCrossOver needs its own buffer as a custom implementation may call
+  // LLVMFuzzerMutate, which in turn may resize MutateInPlaceHere.
+  std::vector<uint8_t> CustomCrossOverInPlaceHere;
 
   std::vector<Mutator> Mutators;
   std::vector<Mutator> DefaultMutators;

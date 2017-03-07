@@ -87,6 +87,7 @@ GDBRemoteCommunicationClient::GDBRemoteCommunicationClient()
       m_supports_jThreadExtendedInfo(eLazyBoolCalculate),
       m_supports_jLoadedDynamicLibrariesInfos(eLazyBoolCalculate),
       m_supports_jGetSharedCacheInfo(eLazyBoolCalculate),
+      m_supports_QPassSignals(eLazyBoolCalculate),
       m_supports_qProcessInfoPID(true), m_supports_qfProcessInfo(true),
       m_supports_qUserName(true), m_supports_qGroupName(true),
       m_supports_qThreadStopInfo(true), m_supports_z0(true),
@@ -148,6 +149,13 @@ bool GDBRemoteCommunicationClient::GetEchoSupported() {
     GetRemoteQSupported();
   }
   return m_supports_qEcho == eLazyBoolYes;
+}
+
+bool GDBRemoteCommunicationClient::GetQPassSignalsSupported() {
+  if (m_supports_QPassSignals == eLazyBoolCalculate) {
+    GetRemoteQSupported();
+  }
+  return m_supports_QPassSignals == eLazyBoolYes;
 }
 
 bool GDBRemoteCommunicationClient::GetAugmentedLibrariesSVR4ReadSupported() {
@@ -418,6 +426,11 @@ void GDBRemoteCommunicationClient::GetRemoteQSupported() {
       m_supports_qEcho = eLazyBoolYes;
     else
       m_supports_qEcho = eLazyBoolNo;
+
+    if (::strstr(response_cstr, "QPassSignals+"))
+      m_supports_QPassSignals = eLazyBoolYes;
+    else
+      m_supports_QPassSignals = eLazyBoolNo;
 
     const char *packet_size_str = ::strstr(response_cstr, "PacketSize=");
     if (packet_size_str) {
@@ -3568,6 +3581,26 @@ GDBRemoteCommunicationClient::GetSupportedStructuredDataPlugins() {
   return m_supported_async_json_packets_sp
              ? m_supported_async_json_packets_sp->GetAsArray()
              : nullptr;
+}
+
+Error GDBRemoteCommunicationClient::SendSignalsToIgnore(
+    llvm::ArrayRef<int32_t> signals) {
+  // Format packet:
+  // QPassSignals:<hex_sig1>;<hex_sig2>...;<hex_sigN>
+  auto range = llvm::make_range(signals.begin(), signals.end());
+  std::string packet = formatv("QPassSignals:{0:$[;]@(x-2)}", range).str();
+
+  StringExtractorGDBRemote response;
+  auto send_status = SendPacketAndWaitForResponse(packet, response, false);
+
+  if (send_status != GDBRemoteCommunication::PacketResult::Success)
+    return Error("Sending QPassSignals packet failed");
+
+  if (response.IsOKResponse()) {
+    return Error();
+  } else {
+    return Error("Unknown error happened during sending QPassSignals packet.");
+  }
 }
 
 Error GDBRemoteCommunicationClient::ConfigureRemoteStructuredData(

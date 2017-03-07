@@ -19,6 +19,7 @@
 #include "clang/Frontend/MultiplexConsumer.h"
 #include "clang/Frontend/Utils.h"
 #include "clang/Lex/HeaderSearch.h"
+#include "clang/Lex/LiteralSupport.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Parse/ParseAST.h"
@@ -187,6 +188,42 @@ FrontendAction::CreateWrappedASTConsumer(CompilerInstance &CI,
   return llvm::make_unique<MultiplexConsumer>(std::move(Consumers));
 }
 
+// For preprocessed files, if the first line is the linemarker and specifies
+// the original source file name, use that name as the input file name.
+static bool ReadOriginalFileName(CompilerInstance &CI, std::string &InputFile)
+{
+  bool Invalid = false;
+  auto &SourceMgr = CI.getSourceManager();
+  auto MainFileID = SourceMgr.getMainFileID();
+  const auto *MainFileBuf = SourceMgr.getBuffer(MainFileID, &Invalid);
+  if (Invalid)
+    return false;
+
+  std::unique_ptr<Lexer> RawLexer(
+      new Lexer(MainFileID, MainFileBuf, SourceMgr, CI.getLangOpts()));
+
+  // If the first line has the syntax of
+  //
+  // # NUM "FILENAME"
+  //
+  // we use FILENAME as the input file name.
+  Token T;
+  if (RawLexer->LexFromRawLexer(T) || T.getKind() != tok::hash)
+    return false;
+  if (RawLexer->LexFromRawLexer(T) || T.isAtStartOfLine() ||
+      T.getKind() != tok::numeric_constant)
+    return false;
+  RawLexer->LexFromRawLexer(T);
+  if (T.isAtStartOfLine() || T.getKind() != tok::string_literal)
+    return false;
+
+  StringLiteralParser Literal(T, CI.getPreprocessor());
+  if (Literal.hadError)
+    return false;
+  InputFile = Literal.GetString().str();
+  return true;
+}
+
 bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
                                      const FrontendInputFile &Input) {
   assert(!Instance && "Already processing a source file!");
@@ -338,6 +375,13 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
     if (!isModelParsingAction())
       CI.createASTContext();
 
+    // For preprocessed files, check if the first line specifies the original
+    // source file name with a linemarker.
+    std::string OrigFile;
+    if (Input.isPreprocessed())
+      if (ReadOriginalFileName(CI, OrigFile))
+        InputFile = OrigFile;
+
     std::unique_ptr<ASTConsumer> Consumer =
         CreateWrappedASTConsumer(CI, InputFile);
     if (!Consumer)
@@ -430,9 +474,9 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
 
   // If there is a layout overrides file, attach an external AST source that
   // provides the layouts from that file.
-  if (!CI.getFrontendOpts().OverrideRecordLayoutsFile.empty() && 
+  if (!CI.getFrontendOpts().OverrideRecordLayoutsFile.empty() &&
       CI.hasASTContext() && !CI.getASTContext().getExternalSource()) {
-    IntrusiveRefCntPtr<ExternalASTSource> 
+    IntrusiveRefCntPtr<ExternalASTSource>
       Override(new LayoutOverrideSource(
                      CI.getFrontendOpts().OverrideRecordLayoutsFile));
     CI.getASTContext().setExternalSource(Override);

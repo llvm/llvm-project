@@ -2778,6 +2778,10 @@ Error Process::Launch(ProcessLaunchInfo &launch_info) {
             if (!m_os_ap)
                 LoadOperatingSystemPlugin(false);
 
+            // We successfully launched the process and stopped,
+            // now it the right time to set up signal filters before resuming.
+            UpdateAutomaticSignalFiltering();
+
             // Note, the stop event was consumed above, but not handled. This
             // was done
             // to give DidLaunch a chance to run. The target is either stopped
@@ -3256,6 +3260,10 @@ Error Process::PrivateResume() {
                 "private state: %s",
                 m_mod_id.GetStopID(), StateAsCString(m_public_state.GetValue()),
                 StateAsCString(m_private_state.GetValue()));
+
+  // If signals handing status changed we might want to update
+  // our signal filters before resuming.
+  UpdateAutomaticSignalFiltering();
 
   Error error(WillResume());
   // Tell the process it is about to resume before the thread list
@@ -6218,4 +6226,10 @@ bool Process::RouteAsyncStructuredData(
   // Route the structured data to the plugin.
   find_it->second->HandleArrivalOfStructuredData(*this, type_name, object_sp);
   return true;
+}
+
+Error Process::UpdateAutomaticSignalFiltering() {
+  // Default implementation does nothign.
+  // No automatic signal filtering to speak of.
+  return Error();
 }

@@ -171,6 +171,18 @@ bool IRTranslator::translateBinaryOp(unsigned Opcode, const User &U,
   return true;
 }
 
+bool IRTranslator::translateFSub(const User &U, MachineIRBuilder &MIRBuilder) {
+  // -0.0 - X --> G_FNEG
+  if (isa<Constant>(U.getOperand(0)) &&
+      U.getOperand(0) == ConstantFP::getZeroValueForNegation(U.getType())) {
+    MIRBuilder.buildInstr(TargetOpcode::G_FNEG)
+        .addDef(getOrCreateVReg(U))
+        .addUse(getOrCreateVReg(*U.getOperand(1)));
+    return true;
+  }
+  return translateBinaryOp(TargetOpcode::G_FSUB, U, MIRBuilder);
+}
+
 bool IRTranslator::translateCompare(const User &U,
                                     MachineIRBuilder &MIRBuilder) {
   const CmpInst *CI = dyn_cast<CmpInst>(&U);
@@ -384,12 +396,17 @@ bool IRTranslator::translateSelect(const User &U,
 
 bool IRTranslator::translateBitCast(const User &U,
                                     MachineIRBuilder &MIRBuilder) {
+  // If we're bitcasting to the source type, we can reuse the source vreg.
   if (LLT{*U.getOperand(0)->getType(), *DL} == LLT{*U.getType(), *DL}) {
+    // Get the source vreg now, to avoid invalidating ValToVReg.
+    unsigned SrcReg = getOrCreateVReg(*U.getOperand(0));
     unsigned &Reg = ValToVReg[&U];
+    // If we already assigned a vreg for this bitcast, we can't change that.
+    // Emit a copy to satisfy the users we already emitted.
     if (Reg)
-      MIRBuilder.buildCopy(Reg, getOrCreateVReg(*U.getOperand(0)));
+      MIRBuilder.buildCopy(Reg, SrcReg);
     else
-      Reg = getOrCreateVReg(*U.getOperand(0));
+      Reg = SrcReg;
     return true;
   }
   return translateCast(TargetOpcode::G_BITCAST, U, MIRBuilder);
@@ -728,6 +745,9 @@ bool IRTranslator::translateCall(const User &U, MachineIRBuilder &MIRBuilder) {
       MIRBuilder.buildIntrinsic(ID, Res, !CI.doesNotAccessMemory());
 
   for (auto &Arg : CI.arg_operands()) {
+    // Some intrinsics take metadata parameters. Reject them.
+    if (isa<MetadataAsValue>(Arg))
+      return false;
     if (ConstantInt *CI = dyn_cast<ConstantInt>(Arg))
       MIB.addImm(CI->getSExtValue());
     else

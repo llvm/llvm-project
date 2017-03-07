@@ -123,12 +123,14 @@ void UnixSignals::AddSignal(int signo, const char *name, bool default_suppress,
   Signal new_signal(name, default_suppress, default_stop, default_notify,
                     description, alias);
   m_signals.insert(std::make_pair(signo, new_signal));
+  ++m_version;
 }
 
 void UnixSignals::RemoveSignal(int signo) {
   collection::iterator pos = m_signals.find(signo);
   if (pos != m_signals.end())
     m_signals.erase(pos);
+  ++m_version;
 }
 
 const char *UnixSignals::GetSignalAsCString(int signo) const {
@@ -217,6 +219,7 @@ bool UnixSignals::SetShouldSuppress(int signo, bool value) {
   collection::iterator pos = m_signals.find(signo);
   if (pos != m_signals.end()) {
     pos->second.m_suppress = value;
+    ++m_version;
     return true;
   }
   return false;
@@ -240,6 +243,7 @@ bool UnixSignals::SetShouldStop(int signo, bool value) {
   collection::iterator pos = m_signals.find(signo);
   if (pos != m_signals.end()) {
     pos->second.m_stop = value;
+    ++m_version;
     return true;
   }
   return false;
@@ -263,6 +267,7 @@ bool UnixSignals::SetShouldNotify(int signo, bool value) {
   collection::iterator pos = m_signals.find(signo);
   if (pos != m_signals.end()) {
     pos->second.m_notify = value;
+    ++m_version;
     return true;
   }
   return false;
@@ -283,4 +288,38 @@ int32_t UnixSignals::GetSignalAtIndex(int32_t index) const {
   auto it = m_signals.begin();
   std::advance(it, index);
   return it->first;
+}
+
+uint64_t UnixSignals::GetVersion() const { return m_version; }
+
+std::vector<int32_t>
+UnixSignals::GetFilteredSignals(llvm::Optional<bool> should_suppress,
+                                llvm::Optional<bool> should_stop,
+                                llvm::Optional<bool> should_notify) {
+  std::vector<int32_t> result;
+  for (int32_t signo = GetFirstSignalNumber();
+       signo != LLDB_INVALID_SIGNAL_NUMBER;
+       signo = GetNextSignalNumber(signo)) {
+
+    bool signal_suppress = false;
+    bool signal_stop = false;
+    bool signal_notify = false;
+    GetSignalInfo(signo, signal_suppress, signal_stop, signal_notify);
+
+    // If any of filtering conditions are not met,
+    // we move on to the next signal.
+    if (should_suppress.hasValue() &&
+        signal_suppress != should_suppress.getValue())
+      continue;
+
+    if (should_stop.hasValue() && signal_stop != should_stop.getValue())
+      continue;
+
+    if (should_notify.hasValue() && signal_notify != should_notify.getValue())
+      continue;
+
+    result.push_back(signo);
+  }
+
+  return result;
 }

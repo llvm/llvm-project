@@ -28,7 +28,7 @@ await.ready:
   call void @print(i32 %val)
   br label %exit  
 exit:
-  call void @llvm.coro.end(i8* null, i1 false)
+  call i1 @llvm.coro.end(i8* null, i1 false)
   ret void
 }
 
@@ -50,5 +50,5 @@ declare i8* @llvm.coro.frame() #5
 declare i8 @llvm.coro.suspend(token, i1) #3
 declare void @"\01??3@YAXPEAX@Z"(i8*) local_unnamed_addr #10
 declare i8* @llvm.coro.free(token, i8* nocapture readonly) #2
-declare void @llvm.coro.end(i8*, i1) #3
+declare i1 @llvm.coro.end(i8*, i1) #3
 

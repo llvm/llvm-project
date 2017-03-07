@@ -2071,8 +2071,21 @@ SDValue NVPTXTargetLowering::LowerSelect(SDValue Op, SelectionDAG &DAG) const {
 SDValue NVPTXTargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
   if (Op.getValueType() == MVT::i1)
     return LowerLOADi1(Op, DAG);
-  else
-    return SDValue();
+
+  // v2f16 is legal, so we can't rely on legalizer to handle unaligned
+  // loads and have to handle it here.
+  if (Op.getValueType() == MVT::v2f16) {
+    LoadSDNode *Load = cast<LoadSDNode>(Op);
+    EVT MemVT = Load->getMemoryVT();
+    if (!allowsMemoryAccess(*DAG.getContext(), DAG.getDataLayout(), MemVT,
+                            Load->getAddressSpace(), Load->getAlignment())) {
+      SDValue Ops[2];
+      std::tie(Ops[0], Ops[1]) = expandUnalignedLoad(Load, DAG);
+      return DAG.getMergeValues(Ops, SDLoc(Op));
+    }
+  }
+
+  return SDValue();
 }
 
 // v = ld i1* addr
@@ -2098,16 +2111,23 @@ SDValue NVPTXTargetLowering::LowerLOADi1(SDValue Op, SelectionDAG &DAG) const {
 }
 
 SDValue NVPTXTargetLowering::LowerSTORE(SDValue Op, SelectionDAG &DAG) const {
-  EVT ValVT = Op.getOperand(1).getValueType();
-  switch (ValVT.getSimpleVT().SimpleTy) {
-  case MVT::i1:
+  StoreSDNode *Store = cast<StoreSDNode>(Op);
+  EVT VT = Store->getMemoryVT();
+
+  if (VT == MVT::i1)
     return LowerSTOREi1(Op, DAG);
-  default:
-    if (ValVT.isVector())
-      return LowerSTOREVector(Op, DAG);
-    else
-      return SDValue();
-  }
+
+  // v2f16 is legal, so we can't rely on legalizer to handle unaligned
+  // stores and have to handle it here.
+  if (VT == MVT::v2f16 &&
+      !allowsMemoryAccess(*DAG.getContext(), DAG.getDataLayout(), VT,
+                          Store->getAddressSpace(), Store->getAlignment()))
+    return expandUnalignedStore(Store, DAG);
+
+  if (VT.isVector())
+    return LowerSTOREVector(Op, DAG);
+
+  return SDValue();
 }
 
 SDValue

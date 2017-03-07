@@ -130,8 +130,15 @@ protected:
   virtual void onStartCompileUnit(const DWARFYAML::Unit &CU) {
     writeInitialLength(CU.Length, OS, DebugInfo.IsLittleEndian);
     writeInteger((uint16_t)CU.Version, OS, DebugInfo.IsLittleEndian);
-    writeInteger((uint32_t)CU.AbbrOffset, OS, DebugInfo.IsLittleEndian);
-    writeInteger((uint8_t)CU.AddrSize, OS, DebugInfo.IsLittleEndian);
+    if(CU.Version >= 5) {
+      writeInteger((uint8_t)CU.Type, OS, DebugInfo.IsLittleEndian);
+      writeInteger((uint8_t)CU.AddrSize, OS, DebugInfo.IsLittleEndian);
+      writeInteger((uint32_t)CU.AbbrOffset, OS, DebugInfo.IsLittleEndian);
+    }else {
+      writeInteger((uint32_t)CU.AbbrOffset, OS, DebugInfo.IsLittleEndian);
+      writeInteger((uint8_t)CU.AddrSize, OS, DebugInfo.IsLittleEndian);
+    }
+    
   }
 
   virtual void onStartDIE(const DWARFYAML::Unit &CU,

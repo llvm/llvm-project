@@ -438,3 +438,53 @@ for.end:
   %tmp5 = phi i32 [ %tmp2, %for.body ]
   ret i32 %tmp5
 }
+
+; INTER-LABEL: bitcast_pointer_operand
+;
+; Check that a pointer operand having a user other than a memory access is
+; recognized as uniform after vectorization. In this test case, %tmp1 is a
+; bitcast that is used by a load and a getelementptr instruction (%tmp2). Once
+; %tmp2 is marked uniform, %tmp1 should be marked uniform as well.
+;
+; INTER:       LV: Found uniform instruction: %cond = icmp slt i64 %i.next, %n
+; INTER-NEXT:  LV: Found uniform instruction: %tmp2 = getelementptr inbounds i8, i8* %tmp1, i64 3
+; INTER-NEXT:  LV: Found uniform instruction: %tmp6 = getelementptr inbounds i8, i8* %B, i64 %i
+; INTER-NEXT:  LV: Found uniform instruction: %tmp1 = bitcast i64* %tmp0 to i8*
+; INTER-NEXT:  LV: Found uniform instruction: %tmp0 = getelementptr inbounds i64, i64* %A, i64 %i
+; INTER-NEXT:  LV: Found uniform instruction: %i = phi i64 [ 0, %entry ], [ %i.next, %for.body ]
+; INTER-NEXT:  LV: Found uniform instruction: %i.next = add nuw nsw i64 %i, 1
+; INTER:       vector.body:
+; INTER-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %vector.ph ], [ [[INDEX_NEXT:%.*]], %vector.body ]
+; INTER-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, i64* %A, i64 [[INDEX]]
+; INTER-NEXT:    [[TMP5:%.*]] = bitcast i64* [[TMP4]] to <32 x i8>*
+; INTER-NEXT:    [[WIDE_VEC:%.*]] = load <32 x i8>, <32 x i8>* [[TMP5]], align 1
+; INTER-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <32 x i8> [[WIDE_VEC]], <32 x i8> undef, <4 x i32> <i32 0, i32 8, i32 16, i32 24>
+; INTER-NEXT:    [[STRIDED_VEC5:%.*]] = shufflevector <32 x i8> [[WIDE_VEC]], <32 x i8> undef, <4 x i32> <i32 3, i32 11, i32 19, i32 27>
+; INTER-NEXT:    [[TMP6:%.*]] = xor <4 x i8> [[STRIDED_VEC5]], [[STRIDED_VEC]]
+; INTER-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, i8* %B, i64 [[INDEX]]
+; INTER-NEXT:    [[TMP8:%.*]] = bitcast i8* [[TMP7]] to <4 x i8>*
+; INTER-NEXT:    store <4 x i8> [[TMP6]], <4 x i8>* [[TMP8]], align 1
+; INTER-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 4
+; INTER:         br i1 {{.*}}, label %middle.block, label %vector.body
+;
+define void @bitcast_pointer_operand(i64* %A, i8* %B, i64 %n) {
+entry:
+  br label %for.body
+
+for.body:
+  %i = phi i64 [ 0, %entry ], [ %i.next, %for.body ]
+  %tmp0 = getelementptr inbounds i64, i64* %A, i64 %i
+  %tmp1 = bitcast i64* %tmp0 to i8*
+  %tmp2 = getelementptr inbounds i8, i8* %tmp1, i64 3
+  %tmp3 = load i8, i8* %tmp2, align 1
+  %tmp4 = load i8, i8* %tmp1, align 1
+  %tmp5 = xor i8 %tmp3, %tmp4
+  %tmp6 = getelementptr inbounds i8, i8* %B, i64 %i
+  store i8 %tmp5, i8* %tmp6
+  %i.next = add nuw nsw i64 %i, 1
+  %cond = icmp slt i64 %i.next, %n
+  br i1 %cond, label %for.body, label %for.end
+
+for.end:
+  ret void
+}

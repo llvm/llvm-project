@@ -22,6 +22,7 @@
 #include "CoroInternal.h"
 #include "llvm/Analysis/CallGraphSCCPass.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Verifier.h"
@@ -142,6 +143,33 @@ static void replaceFallthroughCoroEnd(IntrinsicInst *End,
   auto *BB = NewE->getParent();
   BB->splitBasicBlock(NewE);
   BB->getTerminator()->eraseFromParent();
+}
+
+// In Resumers, we replace unwind coro.end with True to force the immediate
+// unwind to caller.
+static void replaceUnwindCoroEnds(coro::Shape &Shape, ValueToValueMapTy &VMap) {
+  if (Shape.CoroEnds.empty())
+    return;
+
+  LLVMContext &Context = Shape.CoroEnds.front()->getContext();
+  auto *True = ConstantInt::getTrue(Context);
+  for (CoroEndInst *CE : Shape.CoroEnds) {
+    if (!CE->isUnwind())
+      continue;
+
+    auto *NewCE = cast<IntrinsicInst>(VMap[CE]);
+
+    // If coro.end has an associated bundle, add cleanupret instruction.
+    if (auto Bundle = NewCE->getOperandBundle(LLVMContext::OB_funclet)) {
+      Value *FromPad = Bundle->Inputs[0];
+      auto *CleanupRet = CleanupReturnInst::Create(FromPad, nullptr, NewCE);
+      NewCE->getParent()->splitBasicBlock(NewCE);
+      CleanupRet->getParent()->getTerminator()->eraseFromParent();
+    }
+
+    NewCE->replaceAllUsesWith(True);
+    NewCE->eraseFromParent();
+  }
 }
 
 // Rewrite final suspend point handling. We do not use suspend index to
@@ -270,9 +298,7 @@ static Function *createClone(Function &F, Twine Suffix, coro::Shape &Shape,
 
   // Remove coro.end intrinsics.
   replaceFallthroughCoroEnd(Shape.CoroEnds.front(), VMap);
-  // FIXME: coming in upcoming patches:
-  // replaceUnwindCoroEnds(Shape.CoroEnds, VMap);
-
+  replaceUnwindCoroEnds(Shape, VMap);
   // Eliminate coro.free from the clones, replacing it with 'null' in cleanup,
   // to suppress deallocation code.
   coro::replaceCoroFree(cast<CoroIdInst>(VMap[Shape.CoroBegin->getId()]),
@@ -284,8 +310,16 @@ static Function *createClone(Function &F, Twine Suffix, coro::Shape &Shape,
 }
 
 static void removeCoroEnds(coro::Shape &Shape) {
-  for (CoroEndInst *CE : Shape.CoroEnds)
+  if (Shape.CoroEnds.empty())
+    return;
+
+  LLVMContext &Context = Shape.CoroEnds.front()->getContext();
+  auto *False = ConstantInt::getFalse(Context);
+
+  for (CoroEndInst *CE : Shape.CoroEnds) {
+    CE->replaceAllUsesWith(False);
     CE->eraseFromParent();
+  }
 }
 
 static void replaceFrameSize(coro::Shape &Shape) {
