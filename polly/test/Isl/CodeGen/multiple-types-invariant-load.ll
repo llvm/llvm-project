@@ -31,6 +31,6 @@ bb11:
 
 bb12:
   %tmp13 = phi float [ undef, %bb11 ], [ 1.000000e+00, %bb4 ]
-  unreachable
+  ret void
 }
 

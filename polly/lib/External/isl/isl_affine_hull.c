@@ -338,32 +338,6 @@ error:
 	return NULL;
 }
 
-__isl_give isl_set *isl_set_recession_cone(__isl_take isl_set *set)
-{
-	int i;
-
-	if (!set)
-		return NULL;
-	if (set->n == 0)
-		return set;
-
-	set = isl_set_remove_divs(set);
-	set = isl_set_cow(set);
-	if (!set)
-		return NULL;
-
-	for (i = 0; i < set->n; ++i) {
-		set->p[i] = isl_basic_set_recession_cone(set->p[i]);
-		if (!set->p[i])
-			goto error;
-	}
-
-	return set;
-error:
-	isl_set_free(set);
-	return NULL;
-}
-
 /* Move "sample" to a point that is one up (or down) from the original
  * point in dimension "pos".
  */

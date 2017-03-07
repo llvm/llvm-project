@@ -35,10 +35,10 @@ entry:
 
 while.body.740:                                   ; preds = %if.else.864, %if.then.862
   %curr.3 = phi i32 [ %inc863, %if.then.862 ], [ undef, %if.else.864 ]
-  unreachable
+  ret void
 
 sw.bb.748:                                        ; preds = %entry
-  unreachable
+  ret void
 
 if.then.813:                                      ; preds = %entry
   %conv823903 = and i32 undef, undef

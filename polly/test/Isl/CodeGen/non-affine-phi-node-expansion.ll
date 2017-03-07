@@ -53,5 +53,5 @@ bb14:                                             ; preds = %bb13
   br label %bb15
 
 bb15:                                             ; preds = %bb14
-  unreachable
+  ret void
 }

@@ -29,8 +29,6 @@
 #include "lldb/Utility/Error.h"
 #include "lldb/Utility/StreamString.h"
 
-#include "llvm/Support/FileSystem.h"
-
 using namespace lldb;
 using namespace lldb_private;
 
@@ -63,7 +61,7 @@ Error FileSystem::MakeDirectory(const FileSpec &file_spec,
         return error;
       } break;
       case EEXIST: {
-        if (llvm::sys::fs::is_directory(file_spec.GetPath()))
+        if (file_spec.IsDirectory())
           return Error(); // It is a directory and it already exists
       } break;
       }
@@ -85,9 +83,9 @@ Error FileSystem::DeleteDirectory(const FileSpec &file_spec, bool recurse) {
       FileSpec::ForEachItemInDirectory(
           file_spec.GetCString(),
           [&error, &sub_directories](
-              llvm::sys::fs::file_type ft,
+              FileSpec::FileType file_type,
               const FileSpec &spec) -> FileSpec::EnumerateDirectoryResult {
-            if (ft == llvm::sys::fs::file_type::directory_file) {
+            if (file_type == FileSpec::eFileTypeDirectory) {
               // Save all directorires and process them after iterating through
               // this directory
               sub_directories.push_back(spec);

@@ -1428,6 +1428,13 @@ bool ScopDetection::isValidRegion(DetectionContext &Context) const {
     return false;
   }
 
+  DebugLoc DbgLoc;
+  if (isa<UnreachableInst>(CurRegion.getExit()->getTerminator())) {
+    DEBUG(dbgs() << "Unreachable in exit\n");
+    return invalid<ReportUnreachableInExit>(Context, /*Assert=*/true,
+                                            CurRegion.getExit(), DbgLoc);
+  }
+
   if (!CurRegion.getEntry()->getName().count(OnlyRegion)) {
     DEBUG({
       dbgs() << "Region entry does not match -polly-region-only";
@@ -1445,7 +1452,6 @@ bool ScopDetection::isValidRegion(DetectionContext &Context) const {
   if (!allBlocksValid(Context))
     return false;
 
-  DebugLoc DbgLoc;
   if (!isReducibleRegion(CurRegion, DbgLoc))
     return invalid<ReportIrreducibleRegion>(Context, /*Assert=*/true,
                                             &CurRegion, DbgLoc);

@@ -50,8 +50,6 @@
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadSpec.h"
 
-#include "llvm/Support/FileSystem.h"
-
 // C Includes
 // C++ Includes
 #include <cerrno>
@@ -4138,21 +4136,20 @@ protected:
         module_sp->SetSymbolFileFileSpec(FileSpec());
       }
 
-      namespace fs = llvm::sys::fs;
       if (module_spec.GetUUID().IsValid()) {
         StreamString ss_symfile_uuid;
         module_spec.GetUUID().Dump(&ss_symfile_uuid);
         result.AppendErrorWithFormat(
             "symbol file '%s' (%s) does not match any existing module%s\n",
             symfile_path, ss_symfile_uuid.GetData(),
-            !fs::is_regular_file(symbol_fspec.GetPath())
+            (symbol_fspec.GetFileType() != FileSpec::eFileTypeRegular)
                 ? "\n       please specify the full path to the symbol file"
                 : "");
       } else {
         result.AppendErrorWithFormat(
             "symbol file '%s' does not match any existing module%s\n",
             symfile_path,
-            !fs::is_regular_file(symbol_fspec.GetPath())
+            (symbol_fspec.GetFileType() != FileSpec::eFileTypeRegular)
                 ? "\n       please specify the full path to the symbol file"
                 : "");
       }
