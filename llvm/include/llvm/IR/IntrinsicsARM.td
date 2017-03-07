@@ -67,7 +67,7 @@ def int_arm_isb : GCCBuiltin<"__builtin_arm_isb">, MSBuiltin<"__isb">,
 // VFP
 
 def int_arm_get_fpscr : GCCBuiltin<"__builtin_arm_get_fpscr">,
-                       Intrinsic<[llvm_i32_ty], [], [IntrNoMem]>;
+                       Intrinsic<[llvm_i32_ty], [], []>;
 def int_arm_set_fpscr : GCCBuiltin<"__builtin_arm_set_fpscr">,
                        Intrinsic<[], [llvm_i32_ty], []>;
 def int_arm_vcvtr     : Intrinsic<[llvm_float_ty], [llvm_anyfloat_ty],

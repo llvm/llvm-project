@@ -80,6 +80,7 @@ set(Tests
   BufferOverflowOnInput
   CallerCalleeTest
   CounterTest
+  CustomCrossOverAndMutateTest
   CustomCrossOverTest
   CustomMutatorTest
   CxxStringEqTest

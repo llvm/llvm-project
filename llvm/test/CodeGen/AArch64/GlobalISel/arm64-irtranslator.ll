@@ -1209,3 +1209,21 @@ define void @test_load_store_atomics(i8* %addr) {
 
   ret void
 }
+
+define float @test_fneg_f32(float %x) {
+; CHECK-LABEL: name: test_fneg_f32
+; CHECK: [[ARG:%[0-9]+]](s32) = COPY %s0
+; CHECK: [[RES:%[0-9]+]](s32) = G_FNEG [[ARG]]
+; CHECK: %s0 = COPY [[RES]](s32)
+  %neg = fsub float -0.000000e+00, %x
+  ret float %neg
+}
+
+define double @test_fneg_f64(double %x) {
+; CHECK-LABEL: name: test_fneg_f64
+; CHECK: [[ARG:%[0-9]+]](s64) = COPY %d0
+; CHECK: [[RES:%[0-9]+]](s64) = G_FNEG [[ARG]]
+; CHECK: %d0 = COPY [[RES]](s64)
+  %neg = fsub double -0.000000e+00, %x
+  ret double %neg
+}

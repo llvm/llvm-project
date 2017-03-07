@@ -638,17 +638,26 @@ bool ScopDetection::isValidIntrinsicInst(IntrinsicInst &II,
   return false;
 }
 
-bool ScopDetection::isInvariant(const Value &Val, const Region &Reg) const {
+bool ScopDetection::isInvariant(Value &Val, const Region &Reg,
+                                DetectionContext &Ctx) const {
   // A reference to function argument or constant value is invariant.
   if (isa<Argument>(Val) || isa<Constant>(Val))
     return true;
 
-  const Instruction *I = dyn_cast<Instruction>(&Val);
+  Instruction *I = dyn_cast<Instruction>(&Val);
   if (!I)
     return false;
 
   if (!Reg.contains(I))
     return true;
+
+  // Loads within the SCoP may read arbitrary values, need to hoist them. If it
+  // is not hoistable, it will be rejected later, but here we assume it is and
+  // that makes the value invariant.
+  if (auto LI = dyn_cast<LoadInst>(I)) {
+    Ctx.RequiredILS.insert(LI);
+    return true;
+  }
 
   if (I->mayHaveSideEffects())
     return false;
@@ -663,7 +672,7 @@ bool ScopDetection::isInvariant(const Value &Val, const Region &Reg) const {
     return false;
 
   for (const Use &Operand : I->operands())
-    if (!isInvariant(*Operand, Reg))
+    if (!isInvariant(*Operand, Reg, Ctx))
       return false;
 
   return true;
@@ -911,7 +920,7 @@ bool ScopDetection::isValidAccess(Instruction *Inst, const SCEV *AF,
 
   // Check that the base address of the access is invariant in the current
   // region.
-  if (!isInvariant(*BV, Context.CurRegion))
+  if (!isInvariant(*BV, Context.CurRegion, Context))
     return invalid<ReportVariantBasePtr>(Context, /*Assert=*/true, BV, Inst);
 
   AF = SE->getMinusSCEV(AF, BP);

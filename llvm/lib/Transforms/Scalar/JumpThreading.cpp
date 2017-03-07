@@ -808,7 +808,12 @@ bool JumpThreadingPass::ProcessBlock(BasicBlock *BB) {
     // TODO: This should be extended to handle switches as well.
     BranchInst *CondBr = dyn_cast<BranchInst>(BB->getTerminator());
     Constant *CondConst = dyn_cast<Constant>(CondCmp->getOperand(1));
-    if (CondBr && CondConst && CondBr->isConditional()) {
+    if (CondBr && CondConst) {
+      // We should have returned as soon as we turn a conditional branch to
+      // unconditional. Because its no longer interesting as far as jump
+      // threading is concerned.
+      assert(CondBr->isConditional() && "Threading on unconditional terminator");
+
       LazyValueInfo::Tristate Ret =
         LVI->getPredicateAt(CondCmp->getPredicate(), CondCmp->getOperand(0),
                             CondConst, CondBr);
@@ -831,10 +836,12 @@ bool JumpThreadingPass::ProcessBlock(BasicBlock *BB) {
         }
         return true;
       }
-    }
 
-    if (CondBr && CondConst && TryToUnfoldSelect(CondCmp, BB))
-      return true;
+      // We did not manage to simplify this branch, try to see whether
+      // CondCmp depends on a known phi-select pattern.
+      if (TryToUnfoldSelect(CondCmp, BB))
+        return true;
+    }
   }
 
   // Check for some cases that are worth simplifying.  Right now we want to look

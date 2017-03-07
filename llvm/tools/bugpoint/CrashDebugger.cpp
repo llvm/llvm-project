@@ -731,7 +731,8 @@ bool ReduceCrashingInstructions::TestInsts(
       for (BasicBlock::iterator I = FI->begin(), E = FI->end(); I != E;) {
         Instruction *Inst = &*I++;
         if (!Instructions.count(Inst) && !isa<TerminatorInst>(Inst) &&
-            !Inst->isEHPad() && !Inst->getType()->isTokenTy()) {
+            !Inst->isEHPad() && !Inst->getType()->isTokenTy() &&
+            !Inst->isSwiftError()) {
           if (!Inst->getType()->isVoidTy())
             Inst->replaceAllUsesWith(UndefValue::get(Inst->getType()));
           Inst->eraseFromParent();
@@ -1015,7 +1016,8 @@ static Error ReduceInsts(BugDriver &BD,
                 // TODO: Should this be some kind of interrupted error?
                 return Error::success();
 
-              if (I->isEHPad() || I->getType()->isTokenTy())
+              if (I->isEHPad() || I->getType()->isTokenTy() ||
+                  I->isSwiftError())
                 continue;
 
               outs() << "Checking instruction: " << *I;
