@@ -11,8 +11,10 @@
 #define DEBUG_TYPE "amdloweratomic"
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/DebugInfo/Symbolize/Symbolize.h"
+#include "llvm/Demangle/Demangle.h"
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
@@ -63,8 +65,9 @@ llvm::cl::opt<AMDGPUSynchronizationScope>
                      llvm::cl::Hidden,
                      llvm::cl::desc("AMD OCL 1.x atomic scope for x86/x86-64"));
 
-llvm::Value *LowerOCL1XAtomic(IRBuilder<> &llvmBuilder,
-                             CallSite * CS);
+Value *LowerOCL1XAtomic(IRBuilder<> &llvmBuilder, const CallSite &CS,
+                        const Function &Callee, StringRef DemangledName,
+                        bool Unsigned);
 }
 
 // Pass for lowering OCL 2.0 atomics
@@ -72,21 +75,23 @@ namespace llvm {
 class AMDGPUConvertAtomicLibCalls : public ModulePass {
 public:
   static char ID; // Pass identification, replacement for typeid
-  AMDGPUConvertAtomicLibCalls() : ModulePass(ID) {
+  AMDGPUConvertAtomicLibCalls() : ModulePass(ID), Context(nullptr) {
     initializeAMDGPUConvertAtomicLibCallsPass(*PassRegistry::getPassRegistry());
   }
   virtual bool runOnModule(Module &M);
 
 private:
-  Module *Mod;
-  void setModule(Module *M);
-  Value *lowerAtomic(StringRef Name, CallSite *CS);
-  Value *lowerAtomicLoad(IRBuilder<> LlvmBuilder, CallSite *CS);
-  Value *lowerAtomicStore(IRBuilder<> LlvmBuilder, StringRef Name,
-                          CallSite *CS);
-  Value *lowerAtomicCmpXchg(IRBuilder<> LlvmBuilder, CallSite *CS, bool isWeak);
-  Value *lowerAtomicRMW(IRBuilder<> LlvmBuilder, StringRef Name, CallSite *CS);
-  Value *lowerAtomicInit(IRBuilder<> LlvmBuilder, CallSite *CS);
+  LLVMContext *Context;
+  Value *lowerAtomic(const CallSite &CS);
+  Value *lowerAtomicLoad(IRBuilder<> &LlvmBuilder, const CallSite &CS);
+  Value *lowerAtomicStore(IRBuilder<> &LlvmBuilder, StringRef Name,
+                          const CallSite &CS);
+  Value *lowerAtomicCmpXchg(IRBuilder<> &LlvmBuilder, const CallSite &CS,
+                            bool isWeak);
+  Value *lowerAtomicRMW(IRBuilder<> &LlvmBuilder, StringRef Name,
+                        StringRef DemangledName, bool TestAndSet,
+                        const CallSite &CS);
+  Value *lowerAtomicInit(IRBuilder<> &LlvmBuilder, const CallSite &CS);
 };
 }
 
@@ -100,72 +105,50 @@ INITIALIZE_PASS(
 char &llvm::AMDGPUConvertAtomicLibCallsID = AMDGPUConvertAtomicLibCalls::ID;
 
 namespace llvm {
-ModulePass *createAMDGPUConvertAtomicLibCallsPass() { return new AMDGPUConvertAtomicLibCalls(); }
+ModulePass *createAMDGPUConvertAtomicLibCallsPass() {
+  return new AMDGPUConvertAtomicLibCalls();
+}
 }
 
-void AMDGPUConvertAtomicLibCalls::setModule(Module *M) { Mod = M; }
-
 static bool isOCLAtomicLoad(StringRef FuncName) {
-  if (!FuncName.startswith("_Z") ||
-      FuncName.find("atomic_load") == StringRef::npos)
-    return false;
-  return true;
+  return FuncName.startswith("atomic_load");
 }
 
 static bool isOCLAtomicStore(StringRef FuncName) {
-  if (!FuncName.startswith("_Z") ||
-      FuncName.find("atomic_store") == StringRef::npos)
-    return false;
-  return true;
+  return FuncName.startswith("atomic_store");
 }
 
 static bool isOCLAtomicCmpXchgStrong(StringRef FuncName) {
-  if (!FuncName.startswith("_Z") ||
-      FuncName.find("atomic_compare_exchange_strong") == StringRef::npos)
-    return false;
-  return true;
+  return FuncName.startswith("atomic_compare_exchange_strong");
 }
 
 static bool isOCLAtomicCmpXchgWeak(StringRef FuncName) {
-  if (!FuncName.startswith("_Z") ||
-      FuncName.find("atomic_compare_exchange_weak") == StringRef::npos)
-    return false;
-  return true;
+  return FuncName.startswith("atomic_compare_exchange_weak");
 }
 
 static bool isOCLAtomicRMW(StringRef FuncName) {
-  if (!FuncName.startswith("_Z") ||
-      ((FuncName.find("atomic_fetch_add") == StringRef::npos) &&
-       (FuncName.find("atomic_fetch_sub") == StringRef::npos) &&
-       (FuncName.find("atomic_fetch_or") == StringRef::npos) &&
-       (FuncName.find("atomic_fetch_xor") == StringRef::npos) &&
-       (FuncName.find("atomic_fetch_and") == StringRef::npos) &&
-       (FuncName.find("atomic_fetch_min") == StringRef::npos) &&
-       (FuncName.find("atomic_fetch_max") == StringRef::npos) &&
-       (FuncName.find("atomic_exchange") == StringRef::npos)))
-    return false;
-  return true;
+  return StringSwitch<bool>(FuncName)
+      .StartsWith("atomic_fetch_add", true)
+      .StartsWith("atomic_fetch_sub", true)
+      .StartsWith("atomic_fetch_or", true)
+      .StartsWith("atomic_fetch_xor", true)
+      .StartsWith("atomic_fetch_and", true)
+      .StartsWith("atomic_fetch_min", true)
+      .StartsWith("atomic_fetch_max", true)
+      .StartsWith("atomic_exchange", true)
+      .Default(false);
 }
 
 static bool isOCLAtomicTestAndSet(StringRef FuncName) {
-  if (!FuncName.startswith("_Z") ||
-      FuncName.find("atomic_flag_test_and_set") == StringRef::npos)
-    return false;
-  return true;
+  return FuncName.startswith("atomic_flag_test_and_set");
 }
 
 static bool isOCLAtomicFlagClear(StringRef FuncName) {
-  if (!FuncName.startswith("_Z") ||
-      FuncName.find("atomic_flag_clear") == StringRef::npos)
-    return false;
-  return true;
+  return FuncName.startswith("atomic_flag_clear");
 }
 
 static bool isOCLAtomicInit(StringRef FuncName) {
-  if (!FuncName.startswith("_Z") ||
-      FuncName.find("atomic_init") == StringRef::npos)
-    return false;
-  return true;
+  return FuncName.startswith("atomic_init");
 }
 
 static AtomicOrdering MemoryOrderSpir2LLVM(Value *SpirMemOrd) {
@@ -227,41 +210,65 @@ static AMDGPUSynchronizationScope getDefaultMemScope(Value *Ptr) {
   return AMDGPUSynchronizationScope::Agent;
 }
 
-static AtomicOrdering getMemoryOrder(CallSite *CS, unsigned MemOrderPos) {
-  return CS->getNumArgOperands() > MemOrderPos
-    ? MemoryOrderSpir2LLVM(CS->getArgOperand(MemOrderPos))
+static AtomicOrdering getMemoryOrder(const CallSite &CS, unsigned MemOrderPos) {
+  return CS.getNumArgOperands() > MemOrderPos
+             ? MemoryOrderSpir2LLVM(CS.getArgOperand(MemOrderPos))
              : AtomicOrdering::SequentiallyConsistent;
 }
 
-static AMDGPUSynchronizationScope getMemoryScope(CallSite *CS,
+static AMDGPUSynchronizationScope getMemoryScope(const CallSite &CS,
                                                  unsigned MemScopePos) {
-  return CS->getNumArgOperands() > MemScopePos
-    ? MemoryScopeOpenCL2LLVM(CS->getArgOperand(MemScopePos))
-             : getDefaultMemScope(CS->getInstruction()->getOperand(0));
+  return CS.getNumArgOperands() > MemScopePos
+             ? MemoryScopeOpenCL2LLVM(CS.getArgOperand(MemScopePos))
+             : getDefaultMemScope(CS.getInstruction()->getOperand(0));
 }
 
-Value *AMDGPUConvertAtomicLibCalls::lowerAtomic(StringRef Name, CallSite *CS) {
-  IRBuilder<> LlvmBuilder(Mod->getContext());
-  LlvmBuilder.SetInsertPoint(CS->getInstruction());
+static const Function *getCallee(const CallSite &CS) {
+  const Function *Callee = CS.getCalledFunction();
+  if (!Callee) { // function call via the pointer
+    const Value *Val = CS.getCalledValue();
+    if (const Constant *C = dyn_cast<Constant>(Val)) {
+      Callee = dyn_cast_or_null<Function>(C->getOperand(0));
+    }
+  }
+  return Callee;
+}
 
-  if (isOCLAtomicLoad(Name))
+Value *AMDGPUConvertAtomicLibCalls::lowerAtomic(const CallSite &CS) {
+  const Function *Callee = getCallee(CS);
+  if (!Callee || !Callee->hasName())
+    return nullptr;
+
+  StringRef Name = Callee->getName();
+  IRBuilder<> LlvmBuilder(*Context);
+  LlvmBuilder.SetInsertPoint(CS.getInstruction());
+  std::unique_ptr<char> Buf(
+      itaniumDemangle(Name.str().c_str(), nullptr, nullptr, nullptr));
+  StringRef DemangledName(Buf.get());
+  if (DemangledName.empty())
+    return nullptr;
+
+  if (isOCLAtomicLoad(DemangledName))
     return lowerAtomicLoad(LlvmBuilder, CS);
-  if (isOCLAtomicStore(Name) || isOCLAtomicFlagClear(Name))
-    return lowerAtomicStore(LlvmBuilder, Name, CS);
-  if (isOCLAtomicCmpXchgStrong(Name))
+  if (isOCLAtomicStore(DemangledName) || isOCLAtomicFlagClear(DemangledName))
+    return lowerAtomicStore(LlvmBuilder, DemangledName, CS);
+  if (isOCLAtomicCmpXchgStrong(DemangledName))
     return lowerAtomicCmpXchg(LlvmBuilder, CS, false);
-  if (isOCLAtomicCmpXchgWeak(Name))
+  if (isOCLAtomicCmpXchgWeak(DemangledName))
     return lowerAtomicCmpXchg(LlvmBuilder, CS, true);
-  if (isOCLAtomicRMW(Name) || isOCLAtomicTestAndSet(Name))
-    return lowerAtomicRMW(LlvmBuilder, Name, CS);
-  if (isOCLAtomicInit(Name))
+  const bool TestAndSet = isOCLAtomicTestAndSet(DemangledName);
+  if (isOCLAtomicRMW(DemangledName) || TestAndSet)
+    return lowerAtomicRMW(LlvmBuilder, Name, DemangledName, TestAndSet, CS);
+  if (isOCLAtomicInit(DemangledName))
     return lowerAtomicInit(LlvmBuilder, CS);
-  return AMDOCL1XAtomic::LowerOCL1XAtomic(LlvmBuilder, CS);
+  return AMDOCL1XAtomic::LowerOCL1XAtomic(
+      LlvmBuilder, CS, *Callee, DemangledName,
+      isMangledTypeUnsigned(Name[Name.size() - 1]));
 }
 
-Value *AMDGPUConvertAtomicLibCalls::lowerAtomicLoad(IRBuilder<> LlvmBuilder,
-                                           CallSite *Inst) {
-  Value *Ptr = Inst->getArgOperand(0);
+Value *AMDGPUConvertAtomicLibCalls::lowerAtomicLoad(IRBuilder<> &LlvmBuilder,
+                                                    const CallSite &Inst) {
+  Value *Ptr = Inst.getArgOperand(0);
   AtomicOrdering MemOrd = getMemoryOrder(Inst, 1);
   AMDGPUSynchronizationScope memScope = getMemoryScope(Inst, 2);
   Type *PtrType = Ptr->getType();
@@ -269,7 +276,7 @@ Value *AMDGPUConvertAtomicLibCalls::lowerAtomicLoad(IRBuilder<> LlvmBuilder,
   if (ValType->isFloatTy() || ValType->isDoubleTy()) {
     unsigned AddrSpace = dyn_cast<PointerType>(PtrType)->getAddressSpace();
     Type *IntType =
-      IntegerType::get(Mod->getContext(), ValType->getPrimitiveSizeInBits());
+        IntegerType::get(*Context, ValType->getPrimitiveSizeInBits());
     Type *IntPtrType = PointerType::get(IntType, AddrSpace);
     Ptr = LlvmBuilder.CreateCast(Instruction::BitCast, Ptr, IntPtrType);
   }
@@ -284,15 +291,14 @@ Value *AMDGPUConvertAtomicLibCalls::lowerAtomicLoad(IRBuilder<> LlvmBuilder,
   return LdInst;
 }
 
-Value *AMDGPUConvertAtomicLibCalls::lowerAtomicStore(IRBuilder<> LlvmBuilder,
-                                            StringRef FuncName,
-                                            CallSite *Inst) {
-  bool isAtomicClear = isOCLAtomicFlagClear(FuncName);
-  Value *Ptr = Inst->getArgOperand(0);
-  Value *Val =
-      isAtomicClear
-          ? ConstantInt::get(IntegerType::get(Mod->getContext(), 32), 0)
-          : Inst->getArgOperand(1);
+Value *AMDGPUConvertAtomicLibCalls::lowerAtomicStore(IRBuilder<> &LlvmBuilder,
+                                                     StringRef FuncName,
+                                                     const CallSite &Inst) {
+  const bool isAtomicClear = isOCLAtomicFlagClear(FuncName);
+  Value *Ptr = Inst.getArgOperand(0);
+  Value *Val = isAtomicClear
+                   ? ConstantInt::get(IntegerType::get(*Context, 32), 0)
+                   : Inst.getArgOperand(1);
   AtomicOrdering MemOrd =
       isAtomicClear ? getMemoryOrder(Inst, 1) : getMemoryOrder(Inst, 2);
   AMDGPUSynchronizationScope memScope =
@@ -302,7 +308,7 @@ Value *AMDGPUConvertAtomicLibCalls::lowerAtomicStore(IRBuilder<> LlvmBuilder,
     unsigned addrSpace =
         dyn_cast<PointerType>(Ptr->getType())->getAddressSpace();
     Type *IntType =
-        IntegerType::get(Mod->getContext(), ValType->getPrimitiveSizeInBits());
+        IntegerType::get(*Context, ValType->getPrimitiveSizeInBits());
     Type *IntPtrType = PointerType::get(IntType, addrSpace);
     Ptr = LlvmBuilder.CreateCast(Instruction::BitCast, Ptr, IntPtrType);
     Val = LlvmBuilder.CreateCast(Instruction::BitCast, Val, IntType);
@@ -315,12 +321,12 @@ Value *AMDGPUConvertAtomicLibCalls::lowerAtomicStore(IRBuilder<> LlvmBuilder,
   return StInst;
 }
 
-Value *AMDGPUConvertAtomicLibCalls::lowerAtomicCmpXchg(IRBuilder<> llvmBuilder,
-                                                       CallSite *Inst,
+Value *AMDGPUConvertAtomicLibCalls::lowerAtomicCmpXchg(IRBuilder<> &llvmBuilder,
+                                                       const CallSite &Inst,
                                                        bool isWeak) {
-  Value *Ptr = Inst->getArgOperand(0);
-  Value *Expected = Inst->getArgOperand(1);
-  Value *Desired = Inst->getArgOperand(2);
+  Value *Ptr = Inst.getArgOperand(0);
+  Value *Expected = Inst.getArgOperand(1);
+  Value *Desired = Inst.getArgOperand(2);
   AtomicOrdering MemOrdSuccess = getMemoryOrder(Inst, 3);
   AtomicOrdering MemOrdFailure = getMemoryOrder(Inst, 4);
   AMDGPUSynchronizationScope memScope = getMemoryScope(Inst, 5);
@@ -341,54 +347,52 @@ Value *AMDGPUConvertAtomicLibCalls::lowerAtomicCmpXchg(IRBuilder<> llvmBuilder,
   return Cas1;
 }
 
-static AtomicRMWInst::BinOp atomicFetchBinOp(StringRef Name, bool IsSigned) {
-  const char *FuncName = Name.data();
-  if (strstr(FuncName, "atomic_fetch_add"))
+static AtomicRMWInst::BinOp atomicFetchBinOp(StringRef Name, bool IsSigned,
+                                             bool TestAndSet) {
+  if (Name.startswith("atomic_fetch_add"))
     return AtomicRMWInst::Add;
-  if (strstr(FuncName, "atomic_fetch_sub"))
+  if (Name.startswith("atomic_fetch_sub"))
     return AtomicRMWInst::Sub;
-  if (strstr(FuncName, "atomic_fetch_and"))
+  if (Name.startswith("atomic_fetch_and"))
     return AtomicRMWInst::And;
-  if (strstr(FuncName, "atomic_fetch_or"))
+  if (Name.startswith("atomic_fetch_or"))
     return AtomicRMWInst::Or;
-  if (strstr(FuncName, "atomic_fetch_xor"))
+  if (Name.startswith("atomic_fetch_xor"))
     return AtomicRMWInst::Xor;
-  if (strstr(FuncName, "atomic_fetch_max"))
+  if (Name.startswith("atomic_fetch_max"))
     return IsSigned ? AtomicRMWInst::Max : AtomicRMWInst::UMax;
-  if (strstr(FuncName, "atomic_fetch_min"))
+  if (Name.startswith("atomic_fetch_min"))
     return IsSigned ? AtomicRMWInst::Min : AtomicRMWInst::UMin;
-  if (strstr(FuncName, "atomic_exchange") ||
-      strstr(FuncName, "atomic_flag_test_and_set"))
+  if (Name.startswith("atomic_exchange") || TestAndSet)
     return AtomicRMWInst::Xchg;
-  assert(0 && "internal error");
   return AtomicRMWInst::BAD_BINOP;
 }
 
-Value *AMDGPUConvertAtomicLibCalls::lowerAtomicRMW(IRBuilder<> LlvmBuilder,
-                                          StringRef FuncName, CallSite *Inst) {
-  LLVMContext &llvmContext = Mod->getContext();
-  bool TestAndSet =
-    strstr(FuncName.data(), "atomic_flag_test_and_set") ? true : false;
-  Value *Ptr = Inst->getArgOperand(0);
-  Value *Val = TestAndSet
-                   ? ConstantInt::get(IntegerType::get(llvmContext, 32), 1)
-                   : Inst->getArgOperand(1);
+Value *AMDGPUConvertAtomicLibCalls::lowerAtomicRMW(IRBuilder<> &LlvmBuilder,
+                                                   StringRef FuncName,
+                                                   StringRef DemangledName,
+                                                   bool TestAndSet,
+                                                   const CallSite &Inst) {
+  Value *Ptr = Inst.getArgOperand(0);
+  Value *Val = TestAndSet ? ConstantInt::get(IntegerType::get(*Context, 32), 1)
+                          : Inst.getArgOperand(1);
   AtomicOrdering MemOrd =
-    TestAndSet ? getMemoryOrder(Inst, 1) : getMemoryOrder(Inst, 2);
+      TestAndSet ? getMemoryOrder(Inst, 1) : getMemoryOrder(Inst, 2);
   AMDGPUSynchronizationScope memScope =
-    TestAndSet ? getMemoryScope(Inst, 2) : getMemoryScope(Inst, 3);
+      TestAndSet ? getMemoryScope(Inst, 2) : getMemoryScope(Inst, 3);
   Type *PtrType = Ptr->getType();
   Type *ValType = Val->getType();
   if (ValType->isFloatTy() || ValType->isDoubleTy()) {
     unsigned addrSpace = dyn_cast<PointerType>(PtrType)->getAddressSpace();
     Type *IntType =
-        IntegerType::get(llvmContext, ValType->getPrimitiveSizeInBits());
+        IntegerType::get(*Context, ValType->getPrimitiveSizeInBits());
     Type *IntPtrType = PointerType::get(IntType, addrSpace);
     Ptr = LlvmBuilder.CreateCast(Instruction::BitCast, Ptr, IntPtrType);
     Val = LlvmBuilder.CreateCast(Instruction::BitCast, Val, IntType);
   }
-  AtomicRMWInst::BinOp BinOp =
-    atomicFetchBinOp(FuncName, !containsUnsignedAtomicType(FuncName));
+  const AtomicRMWInst::BinOp BinOp = atomicFetchBinOp(
+      DemangledName, !containsUnsignedAtomicType(FuncName), TestAndSet);
+  assert(AtomicRMWInst::BAD_BINOP != BinOp);
   Value *AtomicRMW = LlvmBuilder.CreateAtomicRMW(
       BinOp, Ptr, Val, MemOrd,
       (SynchronizationScope)AMDGPUSynchronizationScope::System);
@@ -396,37 +400,26 @@ Value *AMDGPUConvertAtomicLibCalls::lowerAtomicRMW(IRBuilder<> LlvmBuilder,
       (SynchronizationScope)memScope);
   if (ValType->isFloatTy() || ValType->isDoubleTy()) {
     AtomicRMW =
-      LlvmBuilder.CreateCast(Instruction::BitCast, AtomicRMW, ValType);
+        LlvmBuilder.CreateCast(Instruction::BitCast, AtomicRMW, ValType);
   }
   if (TestAndSet) {
     AtomicRMW = LlvmBuilder.CreateCast(Instruction::Trunc, AtomicRMW,
-                                       IntegerType::get(llvmContext, 1));
+                                       IntegerType::get(*Context, 1));
   }
   return AtomicRMW;
 }
 
-Value *AMDGPUConvertAtomicLibCalls::lowerAtomicInit(IRBuilder<> llvmBuilder,
-                                           CallSite *Inst) {
-  Value *Ptr = Inst->getArgOperand(0);
-  Value *Val = Inst->getArgOperand(1);
+Value *AMDGPUConvertAtomicLibCalls::lowerAtomicInit(IRBuilder<> &llvmBuilder,
+                                                    const CallSite &Inst) {
+  Value *Ptr = Inst.getArgOperand(0);
+  Value *Val = Inst.getArgOperand(1);
   Value *StInst = llvmBuilder.CreateStore(Val, Ptr, true);
   return StInst;
 }
 
-const Function *getCallee(CallSite &CS) {
-  const Function *Callee = CS.getCalledFunction();
-  if (!Callee) { // function call via the pointer
-    const Value *Val = CS.getCalledValue();
-    if (const Constant *C = dyn_cast<Constant>(Val)) {
-      Callee = dyn_cast_or_null<Function>(C->getOperand(0));
-    }
-  }
-  return Callee;
-}
-
 bool AMDGPUConvertAtomicLibCalls::runOnModule(Module &M) {
 
-  setModule(&M);
+  Context = &M.getContext();
   bool Changed = false;
   for (Module::iterator MF = M.begin(), E = M.end(); MF != E; ++MF) {
     for (Function::iterator BB = MF->begin(), MFE = MF->end(); BB != MFE;
@@ -437,10 +430,7 @@ bool AMDGPUConvertAtomicLibCalls::runOnModule(Module &M) {
         Instr++;
         if (!CS)
           continue;
-        const Function *Callee = getCallee(CS);
-        if (!Callee || !Callee->hasName())
-          continue;
-        Value *newAtomicInstr = lowerAtomic(Callee->getName(), &CS);
+        Value *newAtomicInstr = lowerAtomic(CS);
         if (newAtomicInstr) {
           CS.getInstruction()->replaceAllUsesWith(newAtomicInstr);
           CS->eraseFromParent();
@@ -458,80 +448,74 @@ using namespace llvm;
 
 enum InstType { RMW, CMPXCHG, BAD };
 struct Entry {
-  const char *Name;
+  StringRef Name;
   InstType Type;
   AtomicRMWInst::BinOp Op;
   unsigned Nop;
 };
 
-static const Entry Table[] = {{"add", RMW, AtomicRMWInst::Add, 2},
-                        {"sub", RMW, AtomicRMWInst::Sub, 2},
-                        {"xchg", RMW, AtomicRMWInst::Xchg, 2},
-                        {"inc", RMW, AtomicRMWInst::Add, 1},
-                        {"dec", RMW, AtomicRMWInst::Sub, 1},
-                        {"min", RMW, AtomicRMWInst::Min, 2},
-                        {"max", RMW, AtomicRMWInst::Max, 2},
-                        {"and", RMW, AtomicRMWInst::And, 2},
-                        {"or", RMW, AtomicRMWInst::Or, 2},
-                        {"xor", RMW, AtomicRMWInst::Xor, 2},
-                        {"cmpxchg", CMPXCHG, AtomicRMWInst::BAD_BINOP, 3}};
+static const Entry Table[] = {
+    {"add", RMW, AtomicRMWInst::Add, 2},
+    {"sub", RMW, AtomicRMWInst::Sub, 2},
+    {"xchg", RMW, AtomicRMWInst::Xchg, 2},
+    {"inc", RMW, AtomicRMWInst::Add, 1},
+    {"dec", RMW, AtomicRMWInst::Sub, 1},
+    {"min", RMW, AtomicRMWInst::Min, 2},
+    {"max", RMW, AtomicRMWInst::Max, 2},
+    {"and", RMW, AtomicRMWInst::And, 2},
+    {"or", RMW, AtomicRMWInst::Or, 2},
+    {"xor", RMW, AtomicRMWInst::Xor, 2},
+    {"cmpxchg", CMPXCHG, AtomicRMWInst::BAD_BINOP, 3}};
 
-bool ParseOCL1XAtomic(StringRef N, InstType &TP, AtomicRMWInst::BinOp &OP,
-                      unsigned &NOP) {
-  size_t Pos = N.find("atomic_"); // 32bit
-  size_t Len = strlen("atomic_");
-  if (Pos == StringRef::npos) {
-    Pos = N.find("atom_"); // 64bit
-    Len = strlen("atom_");
-  }
-  if (Pos != StringRef::npos) {
-    StringRef Needle = N.substr(Pos + Len, N.size());
-    int I;
-    int Num = array_lengthof(Table);
-    for (I = 0; I < Num; ++I) {
-      if (Needle.startswith(Table[I].Name)) {
+bool ParseOCL1XAtomic(StringRef Name, InstType &TP, AtomicRMWInst::BinOp &OP,
+                      unsigned &NOP, bool Unsigned) {
+  const size_t Len = Name.startswith("atomic_")
+                         ? strlen("atomic_")
+                         : (Name.startswith("atom_") ? strlen("atom_") : 0);
+  if (Len) {
+    const StringRef Needle = Name.slice(Len, Name.find('('));
+    size_t I;
+    const size_t Num = array_lengthof(Table);
+    for (I = 0; I < Num; ++I)
+      if (Needle == Table[I].Name)
         break;
-      }
-    }
 
     if (I == Num) {
-      return false; // we have a user-defined function that has 'atomic_' in it's name
+      return false; // we have a user-defined function that has 'atomic_' in
+                    // it's name
     } else {
       OP = Table[I].Op;
       TP = Table[I].Type;
       NOP = Table[I].Nop;
       // Need to determine min/max or umin/umax
-      if ((OP == AtomicRMWInst::Min || OP == AtomicRMWInst::Max) &&
-          isMangledTypeUnsigned(N[N.size()-1]))
-        OP = (OP == AtomicRMWInst::Min) ? AtomicRMWInst::UMin : AtomicRMWInst::UMax;
+      if ((OP == AtomicRMWInst::Min || OP == AtomicRMWInst::Max) && Unsigned)
+        OP = (OP == AtomicRMWInst::Min) ? AtomicRMWInst::UMin
+                                        : AtomicRMWInst::UMax;
       return true;
     }
   }
   return false;
 }
 
-Value *LowerOCL1XAtomic(IRBuilder<> &Builder, CallSite * CS) {
-
-  const Function *F = getCallee(*CS);
-  if (!F || !F->hasName() || !F->getName().startswith("_Z")) {
-    return NULL;
-  }
+Value *LowerOCL1XAtomic(IRBuilder<> &Builder, const CallSite &CS,
+                        const Function &Callee, StringRef DemangledName,
+                        bool Unsigned) {
 
   InstType Type = BAD;
   AtomicRMWInst::BinOp Op = AtomicRMWInst::BAD_BINOP;
   unsigned NumOp = 0;
 
-  if (!ParseOCL1XAtomic(F->getName(), Type, Op, NumOp))
+  if (!ParseOCL1XAtomic(DemangledName, Type, Op, NumOp, Unsigned))
     return nullptr;
 
-  assert(CS->arg_size() == NumOp && "Incorrect number of arguments");
+  assert(CS.arg_size() == NumOp && "Incorrect number of arguments");
 
-  llvm::Value *P = CS->getArgument(0);
-  llvm::Value *NI = NULL;
+  Value *P = CS.getArgument(0);
+  Value *NI = nullptr;
   AtomicOrdering Order = AtomicOrdering(OCL1XAtomicOrder.getValue());
   if (Type == RMW) {
-    llvm::Value *V =
-      NumOp == 2 ? CS->getArgument(1)
+    Value *V = NumOp == 2
+                   ? CS.getArgument(1)
                    : ConstantInt::get(P->getType()->getPointerElementType(), 1);
     bool NeedCast = !V->getType()->isIntegerTy();
     if (NeedCast) {
@@ -548,11 +532,11 @@ Value *LowerOCL1XAtomic(IRBuilder<> &Builder, CallSite * CS) {
     dyn_cast<AtomicRMWInst>(NI)->setSynchScope(
         (SynchronizationScope)OCL1XAtomicScope.getValue());
     if (NeedCast) {
-      NI = Builder.CreateBitCast(NI, F->getReturnType());
+      NI = Builder.CreateBitCast(NI, Callee.getReturnType());
     }
   } else if (Type == CMPXCHG) {
     NI = Builder.CreateAtomicCmpXchg(
-      P, CS->getArgument(1), CS->getArgument(2), Order, Order,
+        P, CS.getArgument(1), CS.getArgument(2), Order, Order,
         (SynchronizationScope)
             AMDGPUSynchronizationScope::System); // TBD Valery - what is
                                                  // FailureOrdering?
@@ -563,7 +547,7 @@ Value *LowerOCL1XAtomic(IRBuilder<> &Builder, CallSite * CS) {
     llvm_unreachable("InValid atomic builtin");
   }
 
-  DEBUG(dbgs() << *F << " => " << *NI << '\n');
+  DEBUG(dbgs() << Callee << " => " << *NI << '\n');
   return NI;
 }
 }
