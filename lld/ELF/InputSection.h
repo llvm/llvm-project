@@ -28,8 +28,9 @@ class SymbolBody;
 struct SectionPiece;
 
 class DefinedRegular;
+class SyntheticSection;
 template <class ELFT> class EhFrameSection;
-template <class ELFT> class MergeSyntheticSection;
+class MergeSyntheticSection;
 template <class ELFT> class ObjectFile;
 class OutputSection;
 
@@ -62,6 +63,8 @@ public:
   uint32_t Type;
   uint32_t Link;
   uint32_t Info;
+
+  static InputSectionBase Discarded;
 
   InputSectionBase()
       : SectionKind(Regular), Live(false), Assigned(false), Repl(this) {
@@ -156,26 +159,23 @@ static_assert(sizeof(SectionPiece) == 2 * sizeof(size_t),
               "SectionPiece is too big");
 
 // This corresponds to a SHF_MERGE section of an input file.
-template <class ELFT> class MergeInputSection : public InputSectionBase {
-  typedef typename ELFT::uint uintX_t;
-  typedef typename ELFT::Sym Elf_Sym;
-  typedef typename ELFT::Shdr Elf_Shdr;
-
+class MergeInputSection : public InputSectionBase {
 public:
-  MergeInputSection(ObjectFile<ELFT> *F, const Elf_Shdr *Header,
+  template <class ELFT>
+  MergeInputSection(ObjectFile<ELFT> *F, const typename ELFT::Shdr *Header,
                     StringRef Name);
   static bool classof(const InputSectionBase *S);
   void splitIntoPieces();
 
   // Mark the piece at a given offset live. Used by GC.
-  void markLiveAt(uintX_t Offset) {
+  void markLiveAt(uint64_t Offset) {
     assert(this->Flags & llvm::ELF::SHF_ALLOC);
     LiveOffsets.insert(Offset);
   }
 
   // Translate an offset in the input section to an offset
   // in the output section.
-  uintX_t getOffset(uintX_t Offset) const;
+  uint64_t getOffset(uint64_t Offset) const;
 
   // Splittable sections are handled as a sequence of data
   // rather than a single large blob of data.
@@ -197,13 +197,13 @@ public:
   }
 
   // Returns the SectionPiece at a given input section offset.
-  SectionPiece *getSectionPiece(uintX_t Offset);
-  const SectionPiece *getSectionPiece(uintX_t Offset) const;
+  SectionPiece *getSectionPiece(uint64_t Offset);
+  const SectionPiece *getSectionPiece(uint64_t Offset) const;
 
   // MergeInputSections are aggregated to a synthetic input sections,
   // and then added to an OutputSection. This pointer points to a
   // synthetic MergeSyntheticSection which this section belongs to.
-  MergeSyntheticSection<ELFT> *MergeSec = nullptr;
+  MergeSyntheticSection *MergeSec = nullptr;
 
 private:
   void splitStrings(ArrayRef<uint8_t> A, size_t Size);
@@ -211,10 +211,10 @@ private:
 
   std::vector<uint32_t> Hashes;
 
-  mutable llvm::DenseMap<uintX_t, uintX_t> OffsetMap;
+  mutable llvm::DenseMap<uint64_t, uint64_t> OffsetMap;
   mutable std::once_flag InitOffsetMap;
 
-  llvm::DenseSet<uintX_t> LiveOffsets;
+  llvm::DenseSet<uint64_t> LiveOffsets;
 };
 
 struct EhSectionPiece : public SectionPiece {
@@ -231,19 +231,19 @@ struct EhSectionPiece : public SectionPiece {
 };
 
 // This corresponds to a .eh_frame section of an input file.
-template <class ELFT> class EhInputSection : public InputSectionBase {
+class EhInputSection : public InputSectionBase {
 public:
-  typedef typename ELFT::Shdr Elf_Shdr;
-  typedef typename ELFT::uint uintX_t;
-  EhInputSection(ObjectFile<ELFT> *F, const Elf_Shdr *Header, StringRef Name);
+  template <class ELFT>
+  EhInputSection(ObjectFile<ELFT> *F, const typename ELFT::Shdr *Header,
+                 StringRef Name);
   static bool classof(const InputSectionBase *S);
-  void split();
-  template <class RelTy> void split(ArrayRef<RelTy> Rels);
+  template <class ELFT> void split();
+  template <class ELFT, class RelTy> void split(ArrayRef<RelTy> Rels);
 
   // Splittable sections are handled as a sequence of data
   // rather than a single large blob of data.
   std::vector<EhSectionPiece> Pieces;
-  EhFrameSection<ELFT> *EHSec = nullptr;
+  SyntheticSection *EHSec = nullptr;
 };
 
 // This is a section that is added directly to an output section
@@ -252,14 +252,11 @@ public:
 // .eh_frame. It also includes the synthetic sections themselves.
 class InputSection : public InputSectionBase {
 public:
-  InputSection();
   InputSection(uint64_t Flags, uint32_t Type, uint64_t Addralign,
                ArrayRef<uint8_t> Data, StringRef Name, Kind K = Regular);
   template <class ELFT>
   InputSection(ObjectFile<ELFT> *F, const typename ELFT::Shdr *Header,
                StringRef Name);
-
-  static InputSection Discarded;
 
   // Write this section to a mmap'ed file, assuming Buf is pointing to
   // beginning of the output section.

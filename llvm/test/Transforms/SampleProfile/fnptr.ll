@@ -8,10 +8,10 @@
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/fnptr.prof | opt -analyze -branch-prob | FileCheck %s
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/fnptr.binprof | opt -analyze -branch-prob | FileCheck %s
 
-; CHECK:   edge for.body3 -> if.then probability is 0x19f584f3 / 0x80000000 = 20.28%
-; CHECK:   edge for.body3 -> if.else probability is 0x660a7b0d / 0x80000000 = 79.72%
-; CHECK:   edge for.inc -> for.inc12 probability is 0x000f92fb / 0x80000000 = 0.05%
-; CHECK:   edge for.inc -> for.body3 probability is 0x7ff06d05 / 0x80000000 = 99.95%
+; CHECK:   edge for.body3 -> if.then probability is 0x1a56a56a / 0x80000000 = 20.58%
+; CHECK:   edge for.body3 -> if.else probability is 0x65a95a96 / 0x80000000 = 79.42%
+; CHECK:   edge for.inc -> for.inc12 probability is 0x000fbd1c / 0x80000000 = 0.05%
+; CHECK:   edge for.inc -> for.body3 probability is 0x7ff042e4 / 0x80000000 = 99.95%
 ; CHECK:   edge for.inc12 -> for.end14 probability is 0x04000000 / 0x80000000 = 3.12%
 ; CHECK:   edge for.inc12 -> for.cond1.preheader probability is 0x7c000000 / 0x80000000 = 96.88%
 

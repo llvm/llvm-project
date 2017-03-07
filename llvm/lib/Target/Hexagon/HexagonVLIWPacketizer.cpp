@@ -440,7 +440,7 @@ bool HexagonPacketizerList::promoteToDotNew(MachineInstr &MI,
 }
 
 bool HexagonPacketizerList::demoteToDotOld(MachineInstr &MI) {
-  int NewOpcode = HII->getDotOldOp(MI.getOpcode());
+  int NewOpcode = HII->getDotOldOp(MI);
   MI.setDesc(HII->get(NewOpcode));
   return true;
 }

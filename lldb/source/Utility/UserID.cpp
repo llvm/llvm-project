@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Core/UserID.h"
+#include "lldb/Utility/UserID.h"
 #include "lldb/Utility/Stream.h"
 
 #include <inttypes.h>

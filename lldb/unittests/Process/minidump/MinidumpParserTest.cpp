@@ -53,7 +53,7 @@ public:
     llvm::SmallString<128> filename = inputs_folder;
     llvm::sys::path::append(filename, minidump_filename);
 
-    auto BufferPtr = DataBufferLLVM::CreateFromPath(filename, load_size, 0);
+    auto BufferPtr = DataBufferLLVM::CreateSliceFromPath(filename, load_size, 0);
 
     llvm::Optional<MinidumpParser> optional_parser =
         MinidumpParser::Create(BufferPtr);

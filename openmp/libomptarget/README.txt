@@ -31,11 +31,13 @@ following host architectures:
 * Intel(R) 64 architecture
 * IBM(R) Power architecture (big endian)
 * IBM(R) Power architecture (little endian)
+* ARM(R) AArch64 architecture (little endian)
 
 The currently supported offloading device architectures are:
 * Intel(R) 64 architecture (generic 64-bit plugin - mostly for testing purposes)
 * IBM(R) Power architecture (big endian) (generic 64-bit plugin - mostly for testing purposes)
 * IBM(R) Power architecture (little endian) (generic 64-bit plugin - mostly for testing purposes)
+* ARM(R) AArch64 architecture (little endian) (generic 64-bit plugin - mostly for testing purposes)
 * CUDA(R) enabled 64-bit NVIDIA(R) GPU architectures
 
 Supported RTL Build Configurations

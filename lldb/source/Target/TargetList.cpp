@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 // Project includes
+#include "lldb/Target/TargetList.h"
 #include "lldb/Core/Broadcaster.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Event.h"
@@ -22,7 +23,6 @@
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/Platform.h"
 #include "lldb/Target/Process.h"
-#include "lldb/Target/TargetList.h"
 
 // Other libraries and framework includes
 #include "llvm/ADT/SmallString.h"

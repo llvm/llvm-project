@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Core/StreamGDBRemote.h"
+#include "lldb/Utility/StreamGDBRemote.h"
 #include <stdio.h>
 
 using namespace lldb;

@@ -63,7 +63,13 @@ define void @test_multiple_args(i64 %in) {
 ; CHECK: [[I64:%[0-9]+]](s64) = COPY %x0
 ; CHECK: [[I8:%[0-9]+]](s8) = COPY %w1
 ; CHECK: [[ADDR:%[0-9]+]](p0) = COPY %x2
-; CHECK: [[ARG:%[0-9]+]](s192) = G_SEQUENCE [[DBL]](s64), 0, [[I64]](s64), 64, [[I8]](s8), 128
+
+; CHECK: [[UNDEF:%[0-9]+]](s192) = IMPLICIT_DEF
+; CHECK: [[ARG0:%[0-9]+]](s192) = G_INSERT [[UNDEF]], [[DBL]](s64), 0
+; CHECK: [[ARG1:%[0-9]+]](s192) = G_INSERT [[ARG0]], [[I64]](s64), 64
+; CHECK: [[ARG2:%[0-9]+]](s192) = G_INSERT [[ARG1]], [[I8]](s8), 128
+; CHECK: [[ARG:%[0-9]+]](s192) = COPY [[ARG2]]
+
 ; CHECK: G_STORE [[ARG]](s192), [[ADDR]](p0)
 ; CHECK: RET_ReallyLR
 define void @test_struct_formal({double, i64, i8} %in, {double, i64, i8}* %addr) {
@@ -75,7 +81,11 @@ define void @test_struct_formal({double, i64, i8} %in, {double, i64, i8}* %addr)
 ; CHECK-LABEL: name: test_struct_return
 ; CHECK: [[ADDR:%[0-9]+]](p0) = COPY %x0
 ; CHECK: [[VAL:%[0-9]+]](s192) = G_LOAD [[ADDR]](p0)
-; CHECK: [[DBL:%[0-9]+]](s64), [[I64:%[0-9]+]](s64), [[I32:%[0-9]+]](s32) = G_EXTRACT [[VAL]](s192), 0, 64, 128
+
+; CHECK: [[DBL:%[0-9]+]](s64) = G_EXTRACT [[VAL]](s192), 0
+; CHECK: [[I64:%[0-9]+]](s64) = G_EXTRACT [[VAL]](s192), 64
+; CHECK: [[I32:%[0-9]+]](s32) = G_EXTRACT [[VAL]](s192), 128
+
 ; CHECK: %d0 = COPY [[DBL]](s64)
 ; CHECK: %x0 = COPY [[I64]](s64)
 ; CHECK: %w1 = COPY [[I32]](s32)
@@ -87,7 +97,12 @@ define {double, i64, i32} @test_struct_return({double, i64, i32}* %addr) {
 
 ; CHECK-LABEL: name: test_arr_call
 ; CHECK: [[ARG:%[0-9]+]](s256) = G_LOAD
-; CHECK: [[E0:%[0-9]+]](s64), [[E1:%[0-9]+]](s64), [[E2:%[0-9]+]](s64), [[E3:%[0-9]+]](s64) = G_EXTRACT [[ARG]](s256), 0, 64, 128, 192
+
+; CHECK: [[E0:%[0-9]+]](s64) = G_EXTRACT [[ARG]](s256), 0
+; CHECK: [[E1:%[0-9]+]](s64) = G_EXTRACT [[ARG]](s256), 64
+; CHECK: [[E2:%[0-9]+]](s64) = G_EXTRACT [[ARG]](s256), 128
+; CHECK: [[E3:%[0-9]+]](s64) = G_EXTRACT [[ARG]](s256), 192
+
 ; CHECK: %x0 = COPY [[E0]](s64)
 ; CHECK: %x1 = COPY [[E1]](s64)
 ; CHECK: %x2 = COPY [[E2]](s64)

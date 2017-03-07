@@ -320,7 +320,8 @@ body:             |
     %0(s32) = COPY %r0
     %1(s32) = COPY %r1
     %2(s64) = G_SEQUENCE %0(s32), 0, %1(s32), 32
-    %3(s32), %4(s32) = G_EXTRACT %2(s64), 0, 32
+    %3(s32) = G_EXTRACT %2(s64), 0
+    %4(s32) = G_EXTRACT %2(s64), 32
     %r0 = COPY %3(s32)
     %r1 = COPY %4(s32)
     BX_RET 14, _, implicit %r0, implicit %r1

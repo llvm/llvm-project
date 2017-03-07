@@ -876,7 +876,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
       return;
     if (Decompressor::isCompressedELFSection(S->Flags, S->Name))
       S->uncompress<ELFT>();
-    if (auto *MS = dyn_cast<MergeInputSection<ELFT>>(S))
+    if (auto *MS = dyn_cast<MergeInputSection>(S))
       MS->splitIntoPieces();
   });
 

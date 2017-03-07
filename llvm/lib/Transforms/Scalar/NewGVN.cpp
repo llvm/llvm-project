@@ -289,8 +289,6 @@ class NewGVN : public FunctionPass {
   // Deletion info.
   SmallPtrSet<Instruction *, 8> InstructionsToErase;
 
-  // The set of things we gave unknown expressions to due to debug counting.
-  SmallPtrSet<Instruction *, 8> DebugUnknownExprs;
 public:
   static char ID; // Pass identification, replacement for typeid.
   NewGVN() : FunctionPass(ID) {
@@ -1718,7 +1716,6 @@ void NewGVN::cleanupTables() {
   DominatedInstRange.clear();
   MemoryAccessToClass.clear();
   PredicateToUsers.clear();
-  DebugUnknownExprs.clear();
 }
 
 std::pair<unsigned, unsigned> NewGVN::assignDFSNumbers(BasicBlock *B,
@@ -1730,6 +1727,16 @@ std::pair<unsigned, unsigned> NewGVN::assignDFSNumbers(BasicBlock *B,
   }
 
   for (auto &I : *B) {
+    // There's no need to call isInstructionTriviallyDead more than once on
+    // an instruction. Therefore, once we know that an instruction is dead
+    // we change its DFS number so that it doesn't get value numbered.
+    if (isInstructionTriviallyDead(&I, TLI)) {
+      InstrDFS[&I] = 0;
+      DEBUG(dbgs() << "Skipping trivially dead instruction " << I << "\n");
+      markInstructionForDeletion(&I);
+      continue;
+    }
+
     InstrDFS[&I] = End++;
     DFSToInstr.emplace_back(&I);
   }
@@ -1800,23 +1807,13 @@ void NewGVN::valueNumberMemoryPhi(MemoryPhi *MP) {
 // congruence finding, and updating mappings.
 void NewGVN::valueNumberInstruction(Instruction *I) {
   DEBUG(dbgs() << "Processing instruction " << *I << "\n");
-  // There's no need to call isInstructionTriviallyDead more than once on
-  // an instruction. Therefore, once we know that an instruction is dead
-  // we change its DFS number so that it doesn't get numbered again.
-  if (InstrDFS[I] != 0 && isInstructionTriviallyDead(I, TLI)) {
-    InstrDFS[I] = 0;
-    DEBUG(dbgs() << "Skipping unused instruction\n");
-    markInstructionForDeletion(I);
-    return;
-  }
   if (!I->isTerminator()) {
     const Expression *Symbolized = nullptr;
     if (DebugCounter::shouldExecute(VNCounter)) {
       Symbolized = performSymbolicEvaluation(I);
     } else {
-      // Used to track which we marked unknown so we can skip verification of
-      // comparisons.
-      DebugUnknownExprs.insert(I);
+      // Mark the instruction as unused so we don't value number it again.
+      InstrDFS[I] = 0;
     }
     // If we couldn't come up with a symbolic expression, use the unknown
     // expression
@@ -1933,7 +1930,7 @@ void NewGVN::verifyComparisons(Function &F) {
     if (!ReachableBlocks.count(&BB))
       continue;
     for (auto &I : BB) {
-      if (InstructionsToErase.count(&I) || DebugUnknownExprs.count(&I))
+      if (InstrDFS.lookup(&I) == 0)
         continue;
       if (isa<CmpInst>(&I)) {
         auto *CurrentVal = ValueToClass.lookup(&I);

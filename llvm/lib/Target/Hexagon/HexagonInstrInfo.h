@@ -404,7 +404,7 @@ public:
                           const MachineBranchProbabilityInfo *MBPI) const;
   int getDotNewPredOp(const MachineInstr &MI,
                       const MachineBranchProbabilityInfo *MBPI) const;
-  int getDotOldOp(const int opc) const;
+  int getDotOldOp(const MachineInstr &MI) const;
   HexagonII::SubInstructionGroup getDuplexCandidateGroup(const MachineInstr &MI)
                                                          const;
   short getEquivalentHWInstr(const MachineInstr &MI) const;

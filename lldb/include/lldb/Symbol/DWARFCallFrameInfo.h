@@ -17,10 +17,10 @@
 #include "lldb/Utility/Flags.h"
 
 #include "lldb/Core/RangeMap.h"
-#include "lldb/Core/VMRange.h"
 #include "lldb/Core/dwarf.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/UnwindPlan.h"
+#include "lldb/Utility/VMRange.h"
 #include "lldb/lldb-private.h"
 
 namespace lldb_private {

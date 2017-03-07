@@ -381,6 +381,11 @@ void ASTStmtReader::VisitCoawaitExpr(CoawaitExpr *S) {
   llvm_unreachable("unimplemented");
 }
 
+void ASTStmtReader::VisitDependentCoawaitExpr(DependentCoawaitExpr *S) {
+  // FIXME: Implement coroutine serialization.
+  llvm_unreachable("unimplemented");
+}
+
 void ASTStmtReader::VisitCoyieldExpr(CoyieldExpr *S) {
   // FIXME: Implement coroutine serialization.
   llvm_unreachable("unimplemented");

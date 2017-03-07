@@ -140,6 +140,7 @@ HANDLE_DW_TAG(0x0032, try_block)
 HANDLE_DW_TAG(0x0033, variant_part)
 HANDLE_DW_TAG(0x0034, variable)
 HANDLE_DW_TAG(0x0035, volatile_type)
+// New in DWARF v3:
 HANDLE_DW_TAG(0x0036, dwarf_procedure)
 HANDLE_DW_TAG(0x0037, restrict_type)
 HANDLE_DW_TAG(0x0038, interface_type)
@@ -150,11 +151,11 @@ HANDLE_DW_TAG(0x003c, partial_unit)
 HANDLE_DW_TAG(0x003d, imported_unit)
 HANDLE_DW_TAG(0x003f, condition)
 HANDLE_DW_TAG(0x0040, shared_type)
+// New in DWARF v4:
 HANDLE_DW_TAG(0x0041, type_unit)
 HANDLE_DW_TAG(0x0042, rvalue_reference_type)
 HANDLE_DW_TAG(0x0043, template_alias)
-
-// New in DWARF v5.
+// New in DWARF v5:
 HANDLE_DW_TAG(0x0044, coarray_type)
 HANDLE_DW_TAG(0x0045, generic_subrange)
 HANDLE_DW_TAG(0x0046, dynamic_type)
@@ -163,8 +164,7 @@ HANDLE_DW_TAG(0x0048, call_site)
 HANDLE_DW_TAG(0x0049, call_site_parameter)
 HANDLE_DW_TAG(0x004a, skeleton_unit)
 HANDLE_DW_TAG(0x004b, immutable_type)
-
-// User-defined tags.
+// Vendor extensions:
 HANDLE_DW_TAG(0x4081, MIPS_loop)
 HANDLE_DW_TAG(0x4101, format_label)
 HANDLE_DW_TAG(0x4102, function_template)
@@ -239,6 +239,7 @@ HANDLE_DW_AT(0x4a, use_location)
 HANDLE_DW_AT(0x4b, variable_parameter)
 HANDLE_DW_AT(0x4c, virtuality)
 HANDLE_DW_AT(0x4d, vtable_elem_location)
+// New in DWARF v3:
 HANDLE_DW_AT(0x4e, allocated)
 HANDLE_DW_AT(0x4f, associated)
 HANDLE_DW_AT(0x50, data_location)
@@ -266,13 +267,13 @@ HANDLE_DW_AT(0x65, endianity)
 HANDLE_DW_AT(0x66, elemental)
 HANDLE_DW_AT(0x67, pure)
 HANDLE_DW_AT(0x68, recursive)
+// New in DWARF v4:
 HANDLE_DW_AT(0x69, signature)
 HANDLE_DW_AT(0x6a, main_subprogram)
 HANDLE_DW_AT(0x6b, data_bit_offset)
 HANDLE_DW_AT(0x6c, const_expr)
 HANDLE_DW_AT(0x6d, enum_class)
 HANDLE_DW_AT(0x6e, linkage_name)
-
 // New in DWARF v5:
 HANDLE_DW_AT(0x6f, string_length_bit_size)
 HANDLE_DW_AT(0x70, string_length_byte_size)
@@ -304,7 +305,7 @@ HANDLE_DW_AT(0x89, export_symbols)
 HANDLE_DW_AT(0x8a, deleted)
 HANDLE_DW_AT(0x8b, defaulted)
 HANDLE_DW_AT(0x8c, loclists_base)
-
+// Vendor extensions:
 HANDLE_DW_AT(0x2002, MIPS_loop_begin)
 HANDLE_DW_AT(0x2003, MIPS_tail_loop_begin)
 HANDLE_DW_AT(0x2004, MIPS_epilog_begin)
@@ -320,11 +321,9 @@ HANDLE_DW_AT(0x200d, MIPS_stride_elem)
 HANDLE_DW_AT(0x200e, MIPS_ptr_dopetype)
 HANDLE_DW_AT(0x200f, MIPS_allocatable_dopetype)
 HANDLE_DW_AT(0x2010, MIPS_assumed_shape_dopetype)
-
 // This one appears to have only been implemented by Open64 for
 // fortran and may conflict with other extensions.
 HANDLE_DW_AT(0x2011, MIPS_assumed_size)
-
 // GNU extensions
 HANDLE_DW_AT(0x2101, sf_names)
 HANDLE_DW_AT(0x2102, src_info)
@@ -334,10 +333,8 @@ HANDLE_DW_AT(0x2105, body_begin)
 HANDLE_DW_AT(0x2106, body_end)
 HANDLE_DW_AT(0x2107, GNU_vector)
 HANDLE_DW_AT(0x2110, GNU_template_name)
-
 HANDLE_DW_AT(0x210f, GNU_odr_signature)
 HANDLE_DW_AT(0x2119, GNU_macros)
-
 // Extensions for Fission proposal.
 HANDLE_DW_AT(0x2130, GNU_dwo_name)
 HANDLE_DW_AT(0x2131, GNU_dwo_id)
@@ -346,7 +343,6 @@ HANDLE_DW_AT(0x2133, GNU_addr_base)
 HANDLE_DW_AT(0x2134, GNU_pubnames)
 HANDLE_DW_AT(0x2135, GNU_pubtypes)
 HANDLE_DW_AT(0x2136, GNU_discriminator)
-
 // Borland extensions.
 HANDLE_DW_AT(0x3b11, BORLAND_property_read)
 HANDLE_DW_AT(0x3b12, BORLAND_property_write)
@@ -365,12 +361,10 @@ HANDLE_DW_AT(0x3b28, BORLAND_Delphi_ABI)
 HANDLE_DW_AT(0x3b29, BORLAND_Delphi_return)
 HANDLE_DW_AT(0x3b30, BORLAND_Delphi_frameptr)
 HANDLE_DW_AT(0x3b31, BORLAND_closure)
-
 // LLVM project extensions.
 HANDLE_DW_AT(0x3e00, LLVM_include_path)
 HANDLE_DW_AT(0x3e01, LLVM_config_macros)
 HANDLE_DW_AT(0x3e02, LLVM_isysroot)
-
 // Apple extensions.
 HANDLE_DW_AT(0x3fe1, APPLE_optimized)
 HANDLE_DW_AT(0x3fe2, APPLE_flags)
@@ -408,26 +402,34 @@ HANDLE_DW_FORM(0x13, ref4)
 HANDLE_DW_FORM(0x14, ref8)
 HANDLE_DW_FORM(0x15, ref_udata)
 HANDLE_DW_FORM(0x16, indirect)
+// New in DWARF v4:
 HANDLE_DW_FORM(0x17, sec_offset)
 HANDLE_DW_FORM(0x18, exprloc)
 HANDLE_DW_FORM(0x19, flag_present)
-
-// New in DWARF v5.
+// This was defined out of sequence.
+HANDLE_DW_FORM(0x20, ref_sig8)
+// New in DWARF v5:
 HANDLE_DW_FORM(0x1a, strx)
 HANDLE_DW_FORM(0x1b, addrx)
-HANDLE_DW_FORM(0x1c, ref_sup)
+HANDLE_DW_FORM(0x1c, ref_sup4)
 HANDLE_DW_FORM(0x1d, strp_sup)
 HANDLE_DW_FORM(0x1e, data16)
 HANDLE_DW_FORM(0x1f, line_strp)
-HANDLE_DW_FORM(0x20, ref_sig8)
 HANDLE_DW_FORM(0x21, implicit_const)
 HANDLE_DW_FORM(0x22, loclistx)
 HANDLE_DW_FORM(0x23, rnglistx)
-
+HANDLE_DW_FORM(0x24, ref_sup8)
+HANDLE_DW_FORM(0x25, strx1)
+HANDLE_DW_FORM(0x26, strx2)
+HANDLE_DW_FORM(0x27, strx3)
+HANDLE_DW_FORM(0x28, strx4)
+HANDLE_DW_FORM(0x29, addrx1)
+HANDLE_DW_FORM(0x2a, addrx2)
+HANDLE_DW_FORM(0x2b, addrx3)
+HANDLE_DW_FORM(0x2c, addrx4)
 // Extensions for Fission proposal
 HANDLE_DW_FORM(0x1f01, GNU_addr_index)
 HANDLE_DW_FORM(0x1f02, GNU_str_index)
-
 // Alternate debug sections proposal (output of "dwz" tool).
 HANDLE_DW_FORM(0x1f20, GNU_ref_alt)
 HANDLE_DW_FORM(0x1f21, GNU_strp_alt)
@@ -467,7 +469,6 @@ HANDLE_DW_OP(0x24, shl)
 HANDLE_DW_OP(0x25, shr)
 HANDLE_DW_OP(0x26, shra)
 HANDLE_DW_OP(0x27, xor)
-HANDLE_DW_OP(0x2f, skip)
 HANDLE_DW_OP(0x28, bra)
 HANDLE_DW_OP(0x29, eq)
 HANDLE_DW_OP(0x2a, ge)
@@ -475,6 +476,7 @@ HANDLE_DW_OP(0x2b, gt)
 HANDLE_DW_OP(0x2c, le)
 HANDLE_DW_OP(0x2d, lt)
 HANDLE_DW_OP(0x2e, ne)
+HANDLE_DW_OP(0x2f, skip)
 HANDLE_DW_OP(0x30, lit0)
 HANDLE_DW_OP(0x31, lit1)
 HANDLE_DW_OP(0x32, lit2)
@@ -578,6 +580,7 @@ HANDLE_DW_OP(0x93, piece)
 HANDLE_DW_OP(0x94, deref_size)
 HANDLE_DW_OP(0x95, xderef_size)
 HANDLE_DW_OP(0x96, nop)
+// New in DWARF v3:
 HANDLE_DW_OP(0x97, push_object_address)
 HANDLE_DW_OP(0x98, call2)
 HANDLE_DW_OP(0x99, call4)
@@ -585,8 +588,10 @@ HANDLE_DW_OP(0x9a, call_ref)
 HANDLE_DW_OP(0x9b, form_tls_address)
 HANDLE_DW_OP(0x9c, call_frame_cfa)
 HANDLE_DW_OP(0x9d, bit_piece)
+// New in DWARF v4:
 HANDLE_DW_OP(0x9e, implicit_value)
 HANDLE_DW_OP(0x9f, stack_value)
+// New in DWARF v5:
 HANDLE_DW_OP(0xa0, implicit_pointer)
 HANDLE_DW_OP(0xa1, addrx)
 HANDLE_DW_OP(0xa2, constx)
@@ -597,11 +602,9 @@ HANDLE_DW_OP(0xa6, deref_type)
 HANDLE_DW_OP(0xa7, xderef_type)
 HANDLE_DW_OP(0xa8, convert)
 HANDLE_DW_OP(0xa9, reinterpret)
-
-// Vendor extensions.
+// Vendor extensions:
 // Extensions for GNU-style thread-local storage.
 HANDLE_DW_OP(0xe0, GNU_push_tls_address)
-
 // Extensions for Fission proposal.
 HANDLE_DW_OP(0xfb, GNU_addr_index)
 HANDLE_DW_OP(0xfc, GNU_const_index)
@@ -617,7 +620,6 @@ HANDLE_DW_LANG(0x0007, Fortran77)
 HANDLE_DW_LANG(0x0008, Fortran90)
 HANDLE_DW_LANG(0x0009, Pascal83)
 HANDLE_DW_LANG(0x000a, Modula2)
-
 // New in DWARF v3:
 HANDLE_DW_LANG(0x000b, Java)
 HANDLE_DW_LANG(0x000c, C99)
@@ -628,10 +630,8 @@ HANDLE_DW_LANG(0x0010, ObjC)
 HANDLE_DW_LANG(0x0011, ObjC_plus_plus)
 HANDLE_DW_LANG(0x0012, UPC)
 HANDLE_DW_LANG(0x0013, D)
-
 // New in DWARF v4:
 HANDLE_DW_LANG(0x0014, Python)
-
 // New in DWARF v5:
 HANDLE_DW_LANG(0x0015, OpenCL)
 HANDLE_DW_LANG(0x0016, Go)
@@ -650,8 +650,7 @@ HANDLE_DW_LANG(0x0022, Fortran03)
 HANDLE_DW_LANG(0x0023, Fortran08)
 HANDLE_DW_LANG(0x0024, RenderScript)
 HANDLE_DW_LANG(0x0025, BLISS)
-
-// Vendor extensions.
+// Vendor extensions:
 HANDLE_DW_LANG(0x8001, Mips_Assembler)
 HANDLE_DW_LANG(0x8e57, GOOGLE_RenderScript)
 HANDLE_DW_LANG(0xb000, BORLAND_Delphi)
@@ -665,6 +664,7 @@ HANDLE_DW_ATE(0x05, signed)
 HANDLE_DW_ATE(0x06, signed_char)
 HANDLE_DW_ATE(0x07, unsigned)
 HANDLE_DW_ATE(0x08, unsigned_char)
+// New in DWARF v3:
 HANDLE_DW_ATE(0x09, imaginary_float)
 HANDLE_DW_ATE(0x0a, packed_decimal)
 HANDLE_DW_ATE(0x0b, numeric_string)
@@ -672,7 +672,9 @@ HANDLE_DW_ATE(0x0c, edited)
 HANDLE_DW_ATE(0x0d, signed_fixed)
 HANDLE_DW_ATE(0x0e, unsigned_fixed)
 HANDLE_DW_ATE(0x0f, decimal_float)
+// New in DWARF v4:
 HANDLE_DW_ATE(0x10, UTF)
+// New in DWARF v5:
 HANDLE_DW_ATE(0x11, UCS)
 HANDLE_DW_ATE(0x12, ASCII)
 
@@ -690,8 +692,10 @@ HANDLE_DW_DEFAULTED(0x02, out_of_class)
 HANDLE_DW_CC(0x01, normal)
 HANDLE_DW_CC(0x02, program)
 HANDLE_DW_CC(0x03, nocall)
+// New in DWARF v5:
 HANDLE_DW_CC(0x04, pass_by_reference)
 HANDLE_DW_CC(0x05, pass_by_value)
+// Vendor extensions:
 HANDLE_DW_CC(0x41, GNU_borland_fastcall_i386)
 HANDLE_DW_CC(0xb0, BORLAND_safecall)
 HANDLE_DW_CC(0xb1, BORLAND_stdcall)
@@ -706,6 +710,7 @@ HANDLE_DW_CC(0xc0, LLVM_vectorcall)
 HANDLE_DW_LNE(0x01, end_sequence)
 HANDLE_DW_LNE(0x02, set_address)
 HANDLE_DW_LNE(0x03, define_file)
+// New in DWARF v4:
 HANDLE_DW_LNE(0x04, set_discriminator)
 
 // Line Number Standard Opcode Encodings.
@@ -719,6 +724,7 @@ HANDLE_DW_LNS(0x06, negate_stmt)
 HANDLE_DW_LNS(0x07, set_basic_block)
 HANDLE_DW_LNS(0x08, const_add_pc)
 HANDLE_DW_LNS(0x09, fixed_advance_pc)
+// New in DWARF v3:
 HANDLE_DW_LNS(0x0a, set_prologue_end)
 HANDLE_DW_LNS(0x0b, set_epilogue_begin)
 HANDLE_DW_LNS(0x0c, set_isa)
@@ -730,6 +736,7 @@ HANDLE_DW_LNCT(0x03, timestamp)
 HANDLE_DW_LNCT(0x04, size)
 HANDLE_DW_LNCT(0x05, MD5)
 
+// DWARF v5 Macro information.
 HANDLE_DW_MACRO(0x01, define)
 HANDLE_DW_MACRO(0x02, undef)
 HANDLE_DW_MACRO(0x03, start_file)
@@ -743,7 +750,7 @@ HANDLE_DW_MACRO(0x0a, import_sup)
 HANDLE_DW_MACRO(0x0b, define_strx)
 HANDLE_DW_MACRO(0x0c, undef_strx)
 
-// Range list entry encoding values.
+// DWARF v5 Range List Entry encoding values.
 HANDLE_DW_RLE(0x00, end_of_list)
 HANDLE_DW_RLE(0x01, base_addressx)
 HANDLE_DW_RLE(0x02, startx_endx)
@@ -772,6 +779,7 @@ HANDLE_DW_CFA(0x0b, restore_state)
 HANDLE_DW_CFA(0x0c, def_cfa)
 HANDLE_DW_CFA(0x0d, def_cfa_register)
 HANDLE_DW_CFA(0x0e, def_cfa_offset)
+// New in DWARF v3:
 HANDLE_DW_CFA(0x0f, def_cfa_expression)
 HANDLE_DW_CFA(0x10, expression)
 HANDLE_DW_CFA(0x11, offset_extended_sf)
@@ -780,6 +788,7 @@ HANDLE_DW_CFA(0x13, def_cfa_offset_sf)
 HANDLE_DW_CFA(0x14, val_offset)
 HANDLE_DW_CFA(0x15, val_offset_sf)
 HANDLE_DW_CFA(0x16, val_expression)
+// Vendor extensions:
 HANDLE_DW_CFA(0x1d, MIPS_advance_loc8)
 HANDLE_DW_CFA(0x2d, GNU_window_save)
 HANDLE_DW_CFA(0x2e, GNU_args_size)

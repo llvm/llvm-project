@@ -987,7 +987,7 @@ that ``SwiftProtocol`` actually originates from a Swift module:
 
 .. code-block:: objc
 
-  __attribute__((external_source_symbol(language=Swift,defined_in="module")))
+  __attribute__((external_source_symbol(language="Swift",defined_in="module")))
   @protocol SwiftProtocol
   @required
   - (void) method;

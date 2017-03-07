@@ -36,8 +36,7 @@ public:
                             ArrayRef<unsigned> VRegs) const override;
 private:
   /// A function of this type is used to perform value split action.
-  typedef std::function<void(ArrayRef<unsigned>, ArrayRef<uint64_t>)>
-      SplitArgTy;
+  typedef std::function<void(unsigned, uint64_t)> SplitArgTy;
 
   void splitToValueTypes(const ArgInfo &OrigArgInfo,
                          SmallVectorImpl<ArgInfo> &SplitArgs,

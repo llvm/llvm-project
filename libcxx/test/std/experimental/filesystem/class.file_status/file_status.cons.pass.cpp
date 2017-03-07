@@ -30,8 +30,8 @@ int main() {
   {
     static_assert(std::is_nothrow_default_constructible<file_status>::value,
                   "The default constructor must be noexcept");
-    static_assert(!test_convertible<file_status>(),
-                  "The default constructor must be explicit");
+    static_assert(test_convertible<file_status>(),
+                  "The default constructor must not be explicit");
     const file_status f;
     assert(f.type()  == file_type::none);
     assert(f.permissions() == perms::unknown);

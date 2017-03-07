@@ -23,10 +23,10 @@ namespace elf {
 struct PhdrEntry;
 class SymbolBody;
 struct EhSectionPiece;
-template <class ELFT> class EhInputSection;
+class EhInputSection;
 class InputSection;
 class InputSectionBase;
-template <class ELFT> class MergeInputSection;
+class MergeInputSection;
 class OutputSection;
 template <class ELFT> class ObjectFile;
 template <class ELFT> class SharedFile;
@@ -98,8 +98,6 @@ public:
 // until Writer is initialized.
 struct Out {
   static uint8_t First;
-  static OutputSection *Bss;
-  static OutputSection *BssRelRo;
   static OutputSection *Opd;
   static uint8_t *OpdBuf;
   static PhdrEntry *TlsPhdr;

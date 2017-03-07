@@ -1069,7 +1069,19 @@ LValue CodeGenFunction::EmitLValue(const Expr *E) {
     const auto *cleanups = cast<ExprWithCleanups>(E);
     enterFullExpression(cleanups);
     RunCleanupsScope Scope(*this);
-    return EmitLValue(cleanups->getSubExpr());
+    LValue LV = EmitLValue(cleanups->getSubExpr());
+    if (LV.isSimple()) {
+      // Defend against branches out of gnu statement expressions surrounded by
+      // cleanups.
+      llvm::Value *V = LV.getPointer();
+      Scope.ForceCleanup({&V});
+      return LValue::MakeAddr(Address(V, LV.getAlignment()), LV.getType(),
+                              getContext(), LV.getAlignmentSource(),
+                              LV.getTBAAInfo());
+    }
+    // FIXME: Is it possible to create an ExprWithCleanups that produces a
+    // bitfield lvalue or some other non-simple lvalue?
+    return LV;
   }
 
   case Expr::CXXDefaultArgExprClass:

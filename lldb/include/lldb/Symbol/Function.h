@@ -12,10 +12,10 @@
 
 #include "lldb/Core/AddressRange.h"
 #include "lldb/Core/Mangled.h"
-#include "lldb/Core/UserID.h"
 #include "lldb/Expression/DWARFExpression.h"
 #include "lldb/Symbol/Block.h"
 #include "lldb/Symbol/Declaration.h"
+#include "lldb/Utility/UserID.h"
 
 namespace lldb_private {
 

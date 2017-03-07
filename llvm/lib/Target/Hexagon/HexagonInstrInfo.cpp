@@ -3563,10 +3563,31 @@ int HexagonInstrInfo::getDotNewPredOp(const MachineInstr &MI,
   llvm_unreachable(nullptr);
 }
 
-int HexagonInstrInfo::getDotOldOp(const int opc) const {
-  int NewOp = opc;
+int HexagonInstrInfo::getDotOldOp(const MachineInstr &MI) const {
+  int NewOp = MI.getOpcode();
   if (isPredicated(NewOp) && isPredicatedNew(NewOp)) { // Get predicate old form
     NewOp = Hexagon::getPredOldOpcode(NewOp);
+    const MachineFunction &MF = *MI.getParent()->getParent();
+    const HexagonSubtarget &HST = MF.getSubtarget<HexagonSubtarget>();
+    // All Hexagon architectures have prediction bits on dot-new branches,
+    // but only Hexagon V60+ has prediction bits on dot-old ones. Make sure
+    // to pick the right opcode when converting back to dot-old.
+    if (!HST.getFeatureBits()[Hexagon::ArchV60]) {
+      switch (NewOp) {
+      case Hexagon::J2_jumptpt:
+        NewOp = Hexagon::J2_jumpt;
+        break;
+      case Hexagon::J2_jumpfpt:
+        NewOp = Hexagon::J2_jumpf;
+        break;
+      case Hexagon::J2_jumprtpt:
+        NewOp = Hexagon::J2_jumprt;
+        break;
+      case Hexagon::J2_jumprfpt:
+        NewOp = Hexagon::J2_jumprf;
+        break;
+      }
+    }
     assert(NewOp >= 0 &&
            "Couldn't change predicate new instruction to its old form.");
   }

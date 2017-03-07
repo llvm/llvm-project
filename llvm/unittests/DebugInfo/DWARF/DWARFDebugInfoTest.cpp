@@ -1283,9 +1283,6 @@ TEST(DWARFDebugInfo, TestFindRecurse) {
   StringRef AbsDieName("abs");
   // Scope to allow us to re-use the same DIE names
   {
-    // Create a compile unit DIE that has an abbreviation that says it has
-    // children, but doesn't have any actual attributes. This helps us test
-    // a DIE that has only one child: a NULL DIE.
     auto CUDie = CU.getUnitDIE();
     auto FuncSpecDie = CUDie.addChild(DW_TAG_subprogram);
     auto FuncDie = CUDie.addChild(DW_TAG_subprogram);
@@ -1495,9 +1492,6 @@ TEST(DWARFDebugInfo, TestFindAttrs) {
   StringRef DieMangled("_Z3fooi");
   // Scope to allow us to re-use the same DIE names
   {
-    // Create a compile unit DIE that has an abbreviation that says it has
-    // children, but doesn't have any actual attributes. This helps us test
-    // a DIE that has only one child: a NULL DIE.
     auto CUDie = CU.getUnitDIE();
     auto FuncSpecDie = CUDie.addChild(DW_TAG_subprogram);
     auto FuncDie = CUDie.addChild(DW_TAG_subprogram);

@@ -398,7 +398,7 @@ void UseAfterMoveCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *MovingCall = Result.Nodes.getNodeAs<Expr>("moving-call");
   const auto *Arg = Result.Nodes.getNodeAs<DeclRefExpr>("arg");
 
-  if (!MovingCall || !MovingCall->getExprLoc().isValid())
+  if (!MovingCall)
     MovingCall = CallMove;
 
   Stmt *FunctionBody = nullptr;

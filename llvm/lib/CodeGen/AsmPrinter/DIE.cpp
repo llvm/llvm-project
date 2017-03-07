@@ -373,20 +373,27 @@ void DIEInteger::EmitValue(const AsmPrinter *Asm, dwarf::Form Form) const {
   case dwarf::DW_FORM_flag:
   case dwarf::DW_FORM_ref1:
   case dwarf::DW_FORM_data1:
+  case dwarf::DW_FORM_strx1:
+  case dwarf::DW_FORM_addrx1:
   case dwarf::DW_FORM_ref2:
   case dwarf::DW_FORM_data2:
+  case dwarf::DW_FORM_strx2:
+  case dwarf::DW_FORM_addrx2:
   case dwarf::DW_FORM_strp:
   case dwarf::DW_FORM_ref4:
   case dwarf::DW_FORM_data4:
+  case dwarf::DW_FORM_ref_sup4:
+  case dwarf::DW_FORM_strx4:
+  case dwarf::DW_FORM_addrx4:
   case dwarf::DW_FORM_ref8:
   case dwarf::DW_FORM_ref_sig8:
   case dwarf::DW_FORM_data8:
+  case dwarf::DW_FORM_ref_sup8:
   case dwarf::DW_FORM_GNU_ref_alt:
   case dwarf::DW_FORM_GNU_strp_alt:
   case dwarf::DW_FORM_line_strp:
   case dwarf::DW_FORM_sec_offset:
   case dwarf::DW_FORM_strp_sup:
-  case dwarf::DW_FORM_ref_sup:
   case dwarf::DW_FORM_addr:
   case dwarf::DW_FORM_ref_addr:
     Asm->OutStreamer->EmitIntValue(Integer, SizeOf(Asm, Form));
@@ -414,16 +421,24 @@ unsigned DIEInteger::SizeOf(const AsmPrinter *AP, dwarf::Form Form) const {
   case dwarf::DW_FORM_flag:
   case dwarf::DW_FORM_ref1:
   case dwarf::DW_FORM_data1:
+  case dwarf::DW_FORM_strx1:
+  case dwarf::DW_FORM_addrx1:
     return sizeof(int8_t);
   case dwarf::DW_FORM_ref2:
   case dwarf::DW_FORM_data2:
+  case dwarf::DW_FORM_strx2:
+  case dwarf::DW_FORM_addrx2:
     return sizeof(int16_t);
   case dwarf::DW_FORM_ref4:
   case dwarf::DW_FORM_data4:
+  case dwarf::DW_FORM_ref_sup4:
+  case dwarf::DW_FORM_strx4:
+  case dwarf::DW_FORM_addrx4:
     return sizeof(int32_t);
   case dwarf::DW_FORM_ref8:
   case dwarf::DW_FORM_ref_sig8:
   case dwarf::DW_FORM_data8:
+  case dwarf::DW_FORM_ref_sup8:
     return sizeof(int64_t);
   case dwarf::DW_FORM_ref_addr:
     if (AP->getDwarfVersion() == 2)
@@ -435,7 +450,6 @@ unsigned DIEInteger::SizeOf(const AsmPrinter *AP, dwarf::Form Form) const {
   case dwarf::DW_FORM_line_strp:
   case dwarf::DW_FORM_sec_offset:
   case dwarf::DW_FORM_strp_sup:
-  case dwarf::DW_FORM_ref_sup:
     switch (AP->OutStreamer->getContext().getDwarfFormat()) {
     case dwarf::DWARF32:
       return 4;

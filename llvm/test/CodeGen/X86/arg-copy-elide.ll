@@ -60,10 +60,8 @@ entry:
 ; CHECK: andl $-8, %esp
 ; CHECK-DAG: movl 8(%ebp), %[[csr1]]
 ; CHECK-DAG: movl 12(%ebp), %[[csr2]]
-; CHECK: movl %edi, 4(%esp)
-; CHECK: movl %esi, (%esp)
-; CEHCK: movl %esp, %eax
-; CHECK: pushl %eax
+; CHECK-DAG: leal 8(%ebp), %[[reg:[^ ]*]]
+; CHECK: pushl %[[reg]]
 ; CHECK: calll _addrof_i64
 ; CHECK-DAG: movl %[[csr1]], %eax
 ; CHECK-DAG: movl %[[csr2]], %edx

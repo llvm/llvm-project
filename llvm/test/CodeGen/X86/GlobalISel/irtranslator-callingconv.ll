@@ -206,14 +206,25 @@ define i64 @test_i64_args_8(i64 %arg1, i64 %arg2, i64 %arg3, i64 %arg4,
 ; X32-NEXT: [[ARG8L:%[0-9]+]](s32) = G_LOAD [[ARG8L_ADDR]](p0) :: (invariant load 4 from %fixed-stack.[[STACK56]], align 0)
 ; X32-NEXT: [[ARG8H_ADDR:%[0-9]+]](p0) = G_FRAME_INDEX %fixed-stack.[[STACK60]]
 ; X32-NEXT: [[ARG8H:%[0-9]+]](s32) = G_LOAD [[ARG8H_ADDR]](p0) :: (invariant load 4 from %fixed-stack.[[STACK60]], align 0)
-; X32-NEXT: [[ARG1:%[0-9]+]](s64) = G_SEQUENCE [[ARG1L:%[0-9]+]](s32), 0, [[ARG1H:%[0-9]+]](s32), 32
-; X32-NEXT: %{{[0-9]+}}(s64) = G_SEQUENCE %{{[0-9]+}}(s32), 0, %{{[0-9]+}}(s32), 32
-; X32-NEXT: %{{[0-9]+}}(s64) = G_SEQUENCE %{{[0-9]+}}(s32), 0, %{{[0-9]+}}(s32), 32
-; X32-NEXT: %{{[0-9]+}}(s64) = G_SEQUENCE %{{[0-9]+}}(s32), 0, %{{[0-9]+}}(s32), 32
-; X32-NEXT: %{{[0-9]+}}(s64) = G_SEQUENCE %{{[0-9]+}}(s32), 0, %{{[0-9]+}}(s32), 32
-; X32-NEXT: %{{[0-9]+}}(s64) = G_SEQUENCE %{{[0-9]+}}(s32), 0, %{{[0-9]+}}(s32), 32
-; X32-NEXT: [[ARG7:%[0-9]+]](s64) = G_SEQUENCE [[ARG7L:%[0-9]+]](s32), 0, [[ARG7H:%[0-9]+]](s32), 32
-; X32-NEXT: [[ARG8:%[0-9]+]](s64) = G_SEQUENCE [[ARG8L:%[0-9]+]](s32), 0, [[ARG8H:%[0-9]+]](s32), 32
+
+; X32-NEXT: [[UNDEF:%[0-9]+]](s64) = IMPLICIT_DEF
+; X32-NEXT: [[ARG1_TMP0:%[0-9]+]](s64) = G_INSERT [[UNDEF]], [[ARG1L]](s32), 0
+; X32-NEXT: [[ARG1_TMP1:%[0-9]+]](s64) = G_INSERT [[ARG1_TMP0]], [[ARG1H]](s32), 32
+; X32-NEXT: [[ARG1:%[0-9]+]](s64) = COPY [[ARG1_TMP1]]
+  ; ... a bunch more that we don't track ...
+  ; X32: IMPLICIT_DEF
+  ; X32: IMPLICIT_DEF
+  ; X32: IMPLICIT_DEF
+  ; X32: IMPLICIT_DEF
+  ; X32: IMPLICIT_DEF
+; X32: [[UNDEF:%[0-9]+]](s64) = IMPLICIT_DEF
+; X32-NEXT: [[ARG7_TMP0:%[0-9]+]](s64) = G_INSERT [[UNDEF]], [[ARG7L]](s32), 0
+; X32-NEXT: [[ARG7_TMP1:%[0-9]+]](s64) = G_INSERT [[ARG7_TMP0]], [[ARG7H]](s32), 32
+; X32-NEXT: [[ARG7:%[0-9]+]](s64) = COPY [[ARG7_TMP1]]
+; X32-NEXT: [[UNDEF:%[0-9]+]](s64) = IMPLICIT_DEF
+; X32-NEXT: [[ARG8_TMP0:%[0-9]+]](s64) = G_INSERT [[UNDEF]], [[ARG8L]](s32), 0
+; X32-NEXT: [[ARG8_TMP1:%[0-9]+]](s64) = G_INSERT [[ARG8_TMP0]], [[ARG8H]](s32), 32
+; X32-NEXT: [[ARG8:%[0-9]+]](s64) = COPY [[ARG8_TMP1]]
 
 ; ALL-NEXT: [[GADDR_A1:%[0-9]+]](p0) = G_GLOBAL_VALUE @a1_64bit
 ; ALL-NEXT: [[GADDR_A7:%[0-9]+]](p0) = G_GLOBAL_VALUE @a7_64bit
@@ -225,7 +236,8 @@ define i64 @test_i64_args_8(i64 %arg1, i64 %arg2, i64 %arg3, i64 %arg4,
 ; X64-NEXT: %rax = COPY [[ARG1]](s64)
 ; X64-NEXT: RET 0, implicit %rax
 
-; X32-NEXT: [[RETL:%[0-9]+]](s32), [[RETH:%[0-9]+]](s32) = G_EXTRACT [[ARG1:%[0-9]+]](s64), 0, 32
+; X32-NEXT: [[RETL:%[0-9]+]](s32) = G_EXTRACT [[ARG1:%[0-9]+]](s64), 0
+; X32-NEXT: [[RETH:%[0-9]+]](s32) = G_EXTRACT [[ARG1:%[0-9]+]](s64), 32
 ; X32-NEXT: %eax = COPY [[RETL:%[0-9]+]](s32)
 ; X32-NEXT: %edx = COPY [[RETH:%[0-9]+]](s32)
 ; X32-NEXT: RET 0, implicit %eax, implicit %edx

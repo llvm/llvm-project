@@ -128,14 +128,21 @@ static Optional<uint8_t> getFixedByteSize(dwarf::Form Form, const T *U) {
     case DW_FORM_flag:
     case DW_FORM_data1:
     case DW_FORM_ref1:
+    case DW_FORM_strx1:
+    case DW_FORM_addrx1:
       return 1;
 
     case DW_FORM_data2:
     case DW_FORM_ref2:
+    case DW_FORM_strx2:
+    case DW_FORM_addrx2:
       return 2;
 
     case DW_FORM_data4:
     case DW_FORM_ref4:
+    case DW_FORM_ref_sup4:
+    case DW_FORM_strx4:
+    case DW_FORM_addrx4:
       return 4;
 
     case DW_FORM_strp:
@@ -144,7 +151,6 @@ static Optional<uint8_t> getFixedByteSize(dwarf::Form Form, const T *U) {
     case DW_FORM_line_strp:
     case DW_FORM_sec_offset:
     case DW_FORM_strp_sup:
-    case DW_FORM_ref_sup:
       if (U)
         return U->getDwarfOffsetByteSize();
       return None;
@@ -152,6 +158,7 @@ static Optional<uint8_t> getFixedByteSize(dwarf::Form Form, const T *U) {
     case DW_FORM_data8:
     case DW_FORM_ref8:
     case DW_FORM_ref_sig8:
+    case DW_FORM_ref_sup8:
       return 8;
 
     case DW_FORM_flag_present:
@@ -219,7 +226,14 @@ static bool skipFormValue(dwarf::Form Form, const DataExtractor &DebugInfoData,
       case DW_FORM_ref4:
       case DW_FORM_ref8:
       case DW_FORM_ref_sig8:
-      case DW_FORM_ref_sup:
+      case DW_FORM_ref_sup4:
+      case DW_FORM_ref_sup8:
+      case DW_FORM_strx1:
+      case DW_FORM_strx2:
+      case DW_FORM_strx4:
+      case DW_FORM_addrx1:
+      case DW_FORM_addrx2:
+      case DW_FORM_addrx4:
       case DW_FORM_sec_offset:
       case DW_FORM_strp:
       case DW_FORM_strp_sup:
@@ -347,14 +361,21 @@ bool DWARFFormValue::extractValue(const DataExtractor &data,
     case DW_FORM_data1:
     case DW_FORM_ref1:
     case DW_FORM_flag:
+    case DW_FORM_strx1:
+    case DW_FORM_addrx1:
       Value.uval = data.getU8(offset_ptr);
       break;
     case DW_FORM_data2:
     case DW_FORM_ref2:
+    case DW_FORM_strx2:
+    case DW_FORM_addrx2:
       Value.uval = data.getU16(offset_ptr);
       break;
     case DW_FORM_data4:
-    case DW_FORM_ref4: {
+    case DW_FORM_ref4:
+    case DW_FORM_ref_sup4:
+    case DW_FORM_strx4:
+    case DW_FORM_addrx4: {
       Value.uval = data.getU32(offset_ptr);
       if (!U)
         break;
@@ -365,6 +386,7 @@ bool DWARFFormValue::extractValue(const DataExtractor &data,
     }
     case DW_FORM_data8:
     case DW_FORM_ref8:
+    case DW_FORM_ref_sup8:
       Value.uval = data.getU64(offset_ptr);
       break;
     case DW_FORM_sdata:
@@ -386,8 +408,7 @@ bool DWARFFormValue::extractValue(const DataExtractor &data,
     case DW_FORM_GNU_ref_alt:
     case DW_FORM_GNU_strp_alt:
     case DW_FORM_line_strp:
-    case DW_FORM_strp_sup:
-    case DW_FORM_ref_sup: {
+    case DW_FORM_strp_sup: {
       if (!U)
         return false;
       RelocAddrMap::const_iterator AI = U->getRelocMap()->find(*offset_ptr);
