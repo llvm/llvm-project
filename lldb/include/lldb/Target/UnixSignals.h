@@ -14,11 +14,13 @@
 // C++ Includes
 #include <map>
 #include <string>
+#include <vector>
 
 // Other libraries and framework includes
 // Project includes
 #include "lldb/Utility/ConstString.h"
 #include "lldb/lldb-private.h"
+#include "llvm/ADT/Optional.h"
 
 namespace lldb_private {
 
@@ -88,6 +90,19 @@ public:
 
   void RemoveSignal(int signo);
 
+  // Returns a current version of the data stored in this class.
+  // Version gets incremented each time Set... method is called.
+  uint64_t GetVersion() const;
+
+  // Returns a vector of signals that meet criteria provided in arguments.
+  // Each should_[suppress|stop|notify] flag can be
+  // None  - no filtering by this flag
+  // true  - only signals that have it set to true are returned
+  // false - only signals that have it set to true are returned
+  std::vector<int32_t> GetFilteredSignals(llvm::Optional<bool> should_suppress,
+                                          llvm::Optional<bool> should_stop,
+                                          llvm::Optional<bool> should_notify);
+
 protected:
   //------------------------------------------------------------------
   // Classes that inherit from UnixSignals can see and modify these
@@ -110,6 +125,12 @@ protected:
   typedef std::map<int32_t, Signal> collection;
 
   collection m_signals;
+
+  // This version gets incremented every time something is changing in
+  // this class, including when we call AddSignal from the constructor.
+  // So after the object is constructed m_version is going to be > 0
+  // if it has at least one signal registered in it.
+  uint64_t m_version = 0;
 
   // GDBRemote signals need to be copyable.
   UnixSignals(const UnixSignals &rhs);

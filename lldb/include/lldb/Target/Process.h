@@ -2631,7 +2631,7 @@ public:
   bool RunPreResumeActions();
 
   void ClearPreResumeActions();
-  
+
   void ClearPreResumeAction(PreResumeActionCallback callback, void *baton);
 
   ProcessRunLock &GetRunLock();
@@ -3169,6 +3169,8 @@ protected:
   }
 
   Error StopForDestroyOrDetach(lldb::EventSP &exit_event_sp);
+
+  virtual Error UpdateAutomaticSignalFiltering();
 
   bool StateChangedIsExternallyHijacked();
 
