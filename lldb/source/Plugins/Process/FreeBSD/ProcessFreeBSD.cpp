@@ -362,8 +362,9 @@ Error ProcessFreeBSD::DoLaunch(Module *module, ProcessLaunchInfo &launch_info) {
   assert(m_monitor == NULL);
 
   FileSpec working_dir = launch_info.GetWorkingDirectory();
-  if (working_dir &&
-      (!working_dir.ResolvePath() || !llvm::sys::fs::is_directory(working_dir.GetPath())) {
+  namespace fs = llvm::sys::fs;
+  if (working_dir && (!working_dir.ResolvePath() ||
+                      !fs::is_directory(working_dir.GetPath()))) {
     error.SetErrorStringWithFormat("No such file or directory: %s",
                                    working_dir.GetCString());
     return error;
