@@ -316,6 +316,12 @@ def G_SMULH : Instruction {
 // Floating Point Unary Ops.
 //------------------------------------------------------------------------------
 
+def G_FNEG : Instruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src);
+  let hasSideEffects = 0;
+}
+
 def G_FPEXT : Instruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type1:$src);
