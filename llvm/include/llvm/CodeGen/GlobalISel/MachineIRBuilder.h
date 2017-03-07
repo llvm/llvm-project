@@ -338,6 +338,9 @@ public:
   /// \return The newly created instruction.
   MachineInstrBuilder buildZExtOrTrunc(unsigned Res, unsigned Op);
 
+  /// Build and insert an appropriate cast between two registers of equal size.
+  MachineInstrBuilder buildCast(unsigned Dst, unsigned Src);
+
   /// Build and insert G_BR \p Dest
   ///
   /// G_BR is an unconditional branch to \p Dest.

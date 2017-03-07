@@ -362,6 +362,26 @@ MachineInstrBuilder MachineIRBuilder::buildZExtOrTrunc(unsigned Res,
   return buildInstr(Opcode).addDef(Res).addUse(Op);
 }
 
+
+MachineInstrBuilder MachineIRBuilder::buildCast(unsigned Dst, unsigned Src) {
+  LLT SrcTy = MRI->getType(Src);
+  LLT DstTy = MRI->getType(Dst);
+  if (SrcTy == DstTy)
+    return buildCopy(Dst, Src);
+
+  unsigned Opcode;
+  if (SrcTy.isPointer() && DstTy.isScalar())
+    Opcode = TargetOpcode::G_PTRTOINT;
+  else if (DstTy.isPointer() && SrcTy.isScalar())
+    Opcode = TargetOpcode::G_INTTOPTR;
+  else {
+    assert(!SrcTy.isPointer() && !DstTy.isPointer() && "n G_ADDRCAST yet");
+    Opcode = TargetOpcode::G_BITCAST;
+  }
+
+  return buildInstr(Opcode).addDef(Dst).addUse(Src);
+}
+
 MachineInstrBuilder MachineIRBuilder::buildExtract(ArrayRef<unsigned> Results,
                                                    ArrayRef<uint64_t> Indices,
                                                    unsigned Src) {
@@ -462,6 +482,11 @@ MachineInstrBuilder MachineIRBuilder::buildUnmerge(ArrayRef<unsigned> Res,
 
 MachineInstrBuilder MachineIRBuilder::buildInsert(unsigned Res, unsigned Src,
                                                   unsigned Op, unsigned Index) {
+  if (MRI->getType(Res).getSizeInBits() == MRI->getType(Op).getSizeInBits()) {
+    assert(Index == 0 && "insertion past the end of a register");
+    return buildCast(Res, Op);
+  }
+
   return buildInstr(TargetOpcode::G_INSERT)
       .addDef(Res)
       .addUse(Src)
