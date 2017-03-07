@@ -27,7 +27,6 @@
 
 #include "lldb/Core/StringList.h"
 #include "lldb/Host/FileSpec.h"
-#include "lldb/Host/FileSystem.h"
 #include "lldb/Utility/CleanUp.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/Stream.h"
@@ -45,10 +44,18 @@ using namespace lldb_private;
 
 namespace {
 
+static constexpr FileSpec::PathSyntax GetNativeSyntax() {
+#if defined(LLVM_ON_WIN32)
+  return FileSpec::ePathSyntaxWindows;
+#else
+  return FileSpec::ePathSyntaxPosix;
+#endif
+}
+
 bool PathSyntaxIsPosix(FileSpec::PathSyntax syntax) {
   return (syntax == FileSpec::ePathSyntaxPosix ||
           (syntax == FileSpec::ePathSyntaxHostNative &&
-           FileSystem::GetNativePathSyntax() == FileSpec::ePathSyntaxPosix));
+           GetNativeSyntax() == FileSpec::ePathSyntaxPosix));
 }
 
 const char *GetPathSeparators(FileSpec::PathSyntax syntax) {
@@ -82,13 +89,6 @@ void Denormalize(llvm::SmallVectorImpl<char> &path,
     return;
 
   std::replace(path.begin(), path.end(), '/', '\\');
-}
-
-bool GetFileStats(const FileSpec *file_spec, struct stat *stats_ptr) {
-  char resolved_path[PATH_MAX];
-  if (file_spec->GetPath(resolved_path, sizeof(resolved_path)))
-    return FileSystem::Stat(resolved_path, stats_ptr) == 0;
-  return false;
 }
 
 size_t FilenamePos(llvm::StringRef str, FileSpec::PathSyntax syntax) {
@@ -273,7 +273,7 @@ void FileSpec::Resolve(llvm::SmallVectorImpl<char> &path) {
   }
 }
 
-FileSpec::FileSpec() : m_syntax(FileSystem::GetNativePathSyntax()) {}
+FileSpec::FileSpec() : m_syntax(GetNativeSyntax()) {}
 
 //------------------------------------------------------------------
 // Default constructor that can take an optional full path to a
@@ -336,9 +336,7 @@ void FileSpec::SetFile(llvm::StringRef pathname, bool resolve,
   m_filename.Clear();
   m_directory.Clear();
   m_is_resolved = false;
-  m_syntax = (syntax == ePathSyntaxHostNative)
-                 ? FileSystem::GetNativePathSyntax()
-                 : syntax;
+  m_syntax = (syntax == ePathSyntaxHostNative) ? GetNativeSyntax() : syntax;
 
   if (pathname.empty())
     return;
@@ -615,16 +613,10 @@ void FileSpec::Dump(Stream *s) const {
 //------------------------------------------------------------------
 // Returns true if the file exists.
 //------------------------------------------------------------------
-bool FileSpec::Exists() const {
-  struct stat file_stats;
-  return GetFileStats(this, &file_stats);
-}
+bool FileSpec::Exists() const { return llvm::sys::fs::exists(GetPath()); }
 
 bool FileSpec::Readable() const {
-  const uint32_t permissions = GetPermissions();
-  if (permissions & eFilePermissionsEveryoneR)
-    return true;
-  return false;
+  return GetPermissions() & llvm::sys::fs::perms::all_read;
 }
 
 bool FileSpec::ResolveExecutableLocation() {
@@ -677,19 +669,21 @@ bool FileSpec::ResolvePath() {
 }
 
 uint64_t FileSpec::GetByteSize() const {
-  struct stat file_stats;
-  if (GetFileStats(this, &file_stats))
-    return file_stats.st_size;
-  return 0;
+  uint64_t Size = 0;
+  if (llvm::sys::fs::file_size(GetPath(), Size))
+    return 0;
+  return Size;
 }
 
 FileSpec::PathSyntax FileSpec::GetPathSyntax() const { return m_syntax; }
 
 uint32_t FileSpec::GetPermissions() const {
-  uint32_t file_permissions = 0;
-  if (*this)
-    FileSystem::GetFilePermissions(*this, file_permissions);
-  return file_permissions;
+  namespace fs = llvm::sys::fs;
+  fs::file_status st;
+  if (fs::status(GetPath(), st))
+    return fs::perms::perms_not_known;
+
+  return st.permissions();
 }
 
 //------------------------------------------------------------------

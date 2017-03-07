@@ -75,7 +75,9 @@ void llvm::computePeelCount(Loop *L, unsigned LoopSize,
   // its only back edge. If there is such Phi, peeling 1 iteration from the
   // loop is profitable, because starting from 2nd iteration we will have an
   // invariant instead of this Phi.
-  if (auto *BackEdge = L->getLoopLatch()) {
+  if (LoopSize <= UP.Threshold) {
+    BasicBlock *BackEdge = L->getLoopLatch();
+    assert(BackEdge && "Loop is not in simplified form?");
     BasicBlock *Header = L->getHeader();
     // Iterate over Phis to find one with invariant input on back edge.
     bool FoundCandidate = false;
