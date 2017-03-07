@@ -945,6 +945,19 @@ define i8* @test_select_ptr(i1 %tst, i8* %lhs, i8* %rhs) {
   ret i8* %res
 }
 
+; CHECK-LABEL: name: test_vselect_vec
+; CHECK: [[TST32:%[0-9]+]](<4 x s32>) = COPY %q0
+; CHECK: [[LHS:%[0-9]+]](<4 x s32>) = COPY %q1
+; CHECK: [[RHS:%[0-9]+]](<4 x s32>) = COPY %q2
+; CHECK: [[TST:%[0-9]+]](<4 x s1>) = G_TRUNC [[TST32]](<4 x s32>)
+; CHECK: [[RES:%[0-9]+]](<4 x s32>) = G_SELECT [[TST]](<4 x s1>), [[LHS]], [[RHS]]
+; CHECK: %q0 = COPY [[RES]]
+define <4 x i32> @test_vselect_vec(<4 x i32> %tst32, <4 x i32> %lhs, <4 x i32> %rhs) {
+  %tst = trunc <4 x i32> %tst32 to <4 x i1>
+  %res = select <4 x i1> %tst, <4 x i32> %lhs, <4 x i32> %rhs
+  ret <4 x i32> %res
+}
+
 ; CHECK-LABEL: name: test_fptosi
 ; CHECK: [[FPADDR:%[0-9]+]](p0) = COPY %x0
 ; CHECK: [[FP:%[0-9]+]](s32) = G_LOAD [[FPADDR]](p0)
