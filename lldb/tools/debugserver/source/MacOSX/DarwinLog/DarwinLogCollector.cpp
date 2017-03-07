@@ -692,7 +692,7 @@ void DarwinLogCollector::CancelActivityStream() {
 
   DNBLogThreadedIf(LOG_DARWIN_LOG, "DarwinLogCollector::%s(): canceling "
                                    "activity stream %p",
-                   __FUNCTION__, m_activity_stream);
+                   __FUNCTION__, reinterpret_cast<void *>(m_activity_stream));
   (*s_os_activity_stream_cancel)(m_activity_stream);
   m_activity_stream = nullptr;
 }

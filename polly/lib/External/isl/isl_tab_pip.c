@@ -5035,14 +5035,6 @@ error:
 	return isl_stat_error;
 }
 
-isl_stat isl_basic_set_foreach_lexopt(__isl_keep isl_basic_set *bset, int max,
-	isl_stat (*fn)(__isl_take isl_basic_set *dom,
-		__isl_take isl_aff_list *list, void *user),
-	void *user)
-{
-	return isl_basic_map_foreach_lexopt(bset, max, fn, user);
-}
-
 /* Check if the given sequence of len variables starting at pos
  * represents a trivial (i.e., zero) solution.
  * The variables are assumed to be non-negative and to come in pairs,

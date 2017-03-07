@@ -67,6 +67,7 @@ enum class RejectReasonKind {
   CFG,
   InvalidTerminator,
   IrreducibleRegion,
+  UnreachableInExit,
   LastCFG,
 
   // Non-Affinity
@@ -215,6 +216,30 @@ class ReportIrreducibleRegion : public ReportCFG {
 public:
   ReportIrreducibleRegion(Region *R, DebugLoc DbgLoc)
       : ReportCFG(RejectReasonKind::IrreducibleRegion), R(R), DbgLoc(DbgLoc) {}
+
+  /// @name LLVM-RTTI interface
+  //@{
+  static bool classof(const RejectReason *RR);
+  //@}
+
+  /// @name RejectReason interface
+  //@{
+  virtual std::string getMessage() const override;
+  virtual std::string getEndUserMessage() const override;
+  virtual const DebugLoc &getDebugLoc() const override;
+  //@}
+};
+
+//===----------------------------------------------------------------------===//
+/// Captures regions with an unreachable in the exit block.
+class ReportUnreachableInExit : public ReportCFG {
+  BasicBlock *BB;
+  DebugLoc DbgLoc;
+
+public:
+  ReportUnreachableInExit(BasicBlock *BB, DebugLoc DbgLoc)
+      : ReportCFG(RejectReasonKind::UnreachableInExit), BB(BB), DbgLoc(DbgLoc) {
+  }
 
   /// @name LLVM-RTTI interface
   //@{

@@ -35,10 +35,10 @@ struct PhdrEntry {
 
   uint64_t p_paddr = 0;
   uint64_t p_vaddr = 0;
-  uint64_t p_align = 0;
   uint64_t p_memsz = 0;
   uint64_t p_filesz = 0;
   uint64_t p_offset = 0;
+  uint32_t p_align = 0;
   uint32_t p_type = 0;
   uint32_t p_flags = 0;
 

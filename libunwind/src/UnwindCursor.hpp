@@ -693,7 +693,8 @@ struct EHABISectionIterator {
     return _Self(addressSpace, sects, 0);
   }
   static _Self end(A& addressSpace, const UnwindInfoSections& sects) {
-    return _Self(addressSpace, sects, sects.arm_section_length);
+    return _Self(addressSpace, sects,
+                 sects.arm_section_length / sizeof(EHABIIndexEntry));
   }
 
   EHABISectionIterator(A& addressSpace, const UnwindInfoSections& sects, size_t i)

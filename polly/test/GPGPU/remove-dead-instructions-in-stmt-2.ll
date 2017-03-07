@@ -35,5 +35,5 @@ for.end:                                          ; preds = %for.body3
   br label %for.cond1.loopexit
 
 for.inc55:                                        ; preds = %for.cond1.loopexit
-  unreachable
+  ret void
 }

@@ -32,9 +32,9 @@ namespace elf {
 
 class SyntheticSection : public InputSection {
 public:
-  SyntheticSection(uint64_t Flags, uint32_t Type, uint64_t Addralign,
+  SyntheticSection(uint64_t Flags, uint32_t Type, uint64_t Alignment,
                    StringRef Name)
-      : InputSection(Flags, Type, Addralign, {}, Name,
+      : InputSection(Flags, Type, Alignment, {}, Name,
                      InputSectionBase::Synthetic) {
     this->Live = true;
   }
