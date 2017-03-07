@@ -451,6 +451,9 @@ public:
   MachineInstrBuilder buildExtract(ArrayRef<unsigned> Results,
                                    ArrayRef<uint64_t> Indices, unsigned Src);
 
+  /// Build and insert \p Res = IMPLICIT_DEF.
+  MachineInstrBuilder buildUndef(unsigned Dst);
+
   /// Build and insert \p Res<def> = G_SEQUENCE \p Op0, \p Idx0...
   ///
   /// G_SEQUENCE inserts each element of Ops into an IMPLICIT_DEF register,
