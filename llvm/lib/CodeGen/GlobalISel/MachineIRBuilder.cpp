@@ -568,9 +568,10 @@ MachineInstrBuilder MachineIRBuilder::buildSelect(unsigned Res, unsigned Tst,
   if (ResTy.isScalar() || ResTy.isPointer())
     assert(MRI->getType(Tst).isScalar() && "type mismatch");
   else
-    assert(MRI->getType(Tst).isVector() &&
-           MRI->getType(Tst).getNumElements() ==
-               MRI->getType(Op0).getNumElements() &&
+    assert((MRI->getType(Tst).isScalar() ||
+            (MRI->getType(Tst).isVector() &&
+             MRI->getType(Tst).getNumElements() ==
+                 MRI->getType(Op0).getNumElements())) &&
            "type mismatch");
 #endif
 
