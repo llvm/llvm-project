@@ -15,13 +15,17 @@ entry:
 
 ; CHECK-LABEL: name: debug_value
 ; CHECK: [[IN:%[0-9]+]](s32) = COPY %w0
-; CHECK: DBG_VALUE debug-use [[IN]](s32), debug-use _, !11, !12, debug-location !13
-; CHECK: DBG_VALUE debug-use %1(p0), debug-use _, !11, !15, debug-location !13
 define void @debug_value(i32 %in) #0 !dbg !7 {
   %addr = alloca i32
+; CHECK: DBG_VALUE debug-use [[IN]](s32), debug-use _, !11, !12, debug-location !13
   call void @llvm.dbg.value(metadata i32 %in, i64 0, metadata !11, metadata !12), !dbg !13
   store i32 %in, i32* %addr
+; CHECK: DBG_VALUE debug-use %1(p0), debug-use _, !11, !15, debug-location !13
   call void @llvm.dbg.value(metadata i32* %addr, i64 0, metadata !11, metadata !15), !dbg !13
+; CHECK: DBG_VALUE 123, 0, !11, !12, debug-location !13
+  call void @llvm.dbg.value(metadata i32 123, i64 0, metadata !11, metadata !12), !dbg !13
+; CHECK: DBG_VALUE float 1.000000e+00, 0, !11, !12, debug-location !13
+  call void @llvm.dbg.value(metadata float 1.000000e+00, i64 0, metadata !11, metadata !12), !dbg !13
   ret void
 }
 
