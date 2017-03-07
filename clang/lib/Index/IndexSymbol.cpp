@@ -185,10 +185,18 @@ SymbolInfo index::getSymbolInfo(const Decl *D) {
       Info.Lang = SymbolLanguage::ObjC;
       break;
     case Decl::ObjCCategory:
-    case Decl::ObjCCategoryImpl:
+    case Decl::ObjCCategoryImpl: {
       Info.Kind = SymbolKind::Extension;
       Info.Lang = SymbolLanguage::ObjC;
+      const ObjCInterfaceDecl *ClsD = nullptr;
+      if (auto *CatD = dyn_cast<ObjCCategoryDecl>(D))
+        ClsD = CatD->getClassInterface();
+      else
+        ClsD = cast<ObjCCategoryImplDecl>(D)->getClassInterface();
+      if (isUnitTestCase(ClsD))
+        Info.Properties |= (unsigned)SymbolProperty::UnitTest;
       break;
+    }
     case Decl::ObjCMethod:
       if (cast<ObjCMethodDecl>(D)->isInstanceMethod()) {
         const ObjCMethodDecl *MD = cast<ObjCMethodDecl>(D);

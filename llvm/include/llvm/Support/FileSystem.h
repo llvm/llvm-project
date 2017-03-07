@@ -483,6 +483,12 @@ inline bool is_local(int FD) {
 ///
 /// @param status A file_status previously returned from status.
 /// @returns status.type() == file_type::directory_file.
+file_type get_file_type(const Twine &Path);
+
+/// @brief Does status represent a directory?
+///
+/// @param status A file_status previously returned from status.
+/// @returns status.type() == file_type::directory_file.
 bool is_directory(file_status status);
 
 /// @brief Is path a directory?

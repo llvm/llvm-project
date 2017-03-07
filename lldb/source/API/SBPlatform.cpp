@@ -19,6 +19,8 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/Error.h"
 
+#include "llvm/Support/FileSystem.h"
+
 #include <functional>
 
 using namespace lldb;
@@ -363,7 +365,7 @@ SBError SBPlatform::Put(SBFileSpec &src, SBFileSpec &dst) {
     if (src.Exists()) {
       uint32_t permissions = src.ref().GetPermissions();
       if (permissions == 0) {
-        if (src.ref().GetFileType() == FileSpec::eFileTypeDirectory)
+        if (llvm::sys::fs::is_directory(src.ref().GetPath()))
           permissions = eFilePermissionsDirectoryDefault;
         else
           permissions = eFilePermissionsFileDefault;

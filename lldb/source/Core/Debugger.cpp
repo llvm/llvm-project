@@ -557,7 +557,7 @@ bool Debugger::LoadPlugin(const FileSpec &spec, Error &error) {
 }
 
 static FileSpec::EnumerateDirectoryResult
-LoadPluginCallback(void *baton, FileSpec::FileType file_type,
+LoadPluginCallback(void *baton, llvm::sys::fs::file_type ft,
                    const FileSpec &file_spec) {
   Error error;
 
@@ -569,13 +569,13 @@ LoadPluginCallback(void *baton, FileSpec::FileType file_type,
 
   Debugger *debugger = (Debugger *)baton;
 
+  namespace fs = llvm::sys::fs;
   // If we have a regular file, a symbolic link or unknown file type, try
   // and process the file. We must handle unknown as sometimes the directory
   // enumeration might be enumerating a file system that doesn't have correct
   // file type information.
-  if (file_type == FileSpec::eFileTypeRegular ||
-      file_type == FileSpec::eFileTypeSymbolicLink ||
-      file_type == FileSpec::eFileTypeUnknown) {
+  if (ft == fs::file_type::regular_file || ft == fs::file_type::symlink_file ||
+      ft == fs::file_type::type_unknown) {
     FileSpec plugin_file_spec(file_spec);
     plugin_file_spec.ResolvePath();
 
@@ -588,9 +588,9 @@ LoadPluginCallback(void *baton, FileSpec::FileType file_type,
     debugger->LoadPlugin(plugin_file_spec, plugin_load_error);
 
     return FileSpec::eEnumerateDirectoryResultNext;
-  } else if (file_type == FileSpec::eFileTypeUnknown ||
-             file_type == FileSpec::eFileTypeDirectory ||
-             file_type == FileSpec::eFileTypeSymbolicLink) {
+  } else if (ft == fs::file_type::directory_file ||
+             ft == fs::file_type::symlink_file ||
+             ft == fs::file_type::type_unknown) {
     // Try and recurse into anything that a directory or symbolic link.
     // We must also do this for unknown as sometimes the directory enumeration
     // might be enumerating a file system that doesn't have correct file type

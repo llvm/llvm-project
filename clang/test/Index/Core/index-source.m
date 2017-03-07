@@ -188,7 +188,7 @@ extern int setjmp(jmp_buf);
 @end
 
 // CHECK: [[@LINE+2]]:17 | class/ObjC | I3 | c:objc(cs)I3 | _OBJC_CLASS_$_I3 | Ref,RelCont | rel: 1
-// CHECK: [[@LINE+1]]:20 | extension/ObjC | I3 | c:objc(cy)I3@bar | <no-cgname> | Def | rel: 0
+// CHECK: [[@LINE+1]]:20 | extension/ObjC | bar | c:objc(cy)I3@bar | <no-cgname> | Def | rel: 0
 @implementation I3(bar)
 @end
 

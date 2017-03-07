@@ -21,6 +21,8 @@
 
 #include "PlatformDarwin.h"
 
+#include "llvm/Support/FileSystem.h"
+
 class PlatformRemoteAppleWatch : public PlatformDarwin {
 public:
   PlatformRemoteAppleWatch();
@@ -118,7 +120,7 @@ protected:
 
   static lldb_private::FileSpec::EnumerateDirectoryResult
   GetContainedFilesIntoVectorOfStringsCallback(
-      void *baton, lldb_private::FileSpec::FileType file_type,
+      void *baton, llvm::sys::fs::file_type ft,
       const lldb_private::FileSpec &file_spec);
 
   uint32_t FindFileInAllSDKs(const char *platform_file_path,
