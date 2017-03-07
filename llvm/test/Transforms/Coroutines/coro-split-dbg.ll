@@ -38,7 +38,7 @@ coro_Cleanup:                                     ; preds = %for.cond
   br label %coro_Suspend, !dbg !36
 
 coro_Suspend:                                     ; preds = %for.cond, %if.then, %coro_Cleanup
-  tail call void @llvm.coro.end(i8* null, i1 false) #9, !dbg !38
+  tail call i1 @llvm.coro.end(i8* null, i1 false) #9, !dbg !38
   ret i8* %2, !dbg !39
 }
 
@@ -57,7 +57,7 @@ declare i8 @llvm.coro.suspend(token, i1) #7
 declare void @llvm.lifetime.end(i64, i8* nocapture) #4
 declare i8* @llvm.coro.free(token, i8* nocapture readonly) #5
 declare void @free(i8* nocapture) local_unnamed_addr #6
-declare void @llvm.coro.end(i8*, i1) #7
+declare i1 @llvm.coro.end(i8*, i1) #7
 declare i8* @llvm.coro.subfn.addr(i8* nocapture readonly, i8) #5
 
 declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #1

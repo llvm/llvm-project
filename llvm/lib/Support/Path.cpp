@@ -953,9 +953,9 @@ bool status_known(file_status s) {
   return s.type() != file_type::status_error;
 }
 
-file_type get_file_type(const Twine &Path) {
+file_type get_file_type(const Twine &Path, bool Follow) {
   file_status st;
-  if (status(Path, st))
+  if (status(Path, st, Follow))
     return file_type::status_error;
   return st.type();
 }

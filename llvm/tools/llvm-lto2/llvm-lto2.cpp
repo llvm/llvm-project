@@ -157,9 +157,11 @@ int main(int argc, char **argv) {
         Res.FinalDefinitionInLinkageUnit = true;
       else if (C == 'x')
         Res.VisibleToRegularObj = true;
-      else
+      else {
         llvm::errs() << "invalid character " << C << " in resolution: " << R
                      << '\n';
+        return 1;
+      }
     }
     CommandLineResolutions[{FileName, SymbolName}].push_back(Res);
   }

@@ -45,7 +45,7 @@ public:
     ExynosM1,
     Falkor,
     Kryo,
-    Vulcan,
+    ThunderX2T99,
     ThunderX,
     ThunderXT81,
     ThunderXT83,

@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-scops -analyze -polly-allow-nonaffine < %s \
+; RUN: opt %loadPolly -polly-scops -analyze -polly-allow-nonaffine -polly-invariant-load-hoisting=true < %s \
 ; RUN:  -debug 2>&1 | FileCheck %s
 
 ; REQUIRES: asserts

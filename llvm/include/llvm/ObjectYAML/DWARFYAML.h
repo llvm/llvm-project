@@ -100,6 +100,7 @@ struct Entry {
 struct Unit {
   InitialLength Length;
   uint16_t Version;
+  llvm::dwarf::UnitType Type; // Added in DWARF 5
   uint32_t AbbrOffset;
   uint8_t AddrSize;
   std::vector<Entry> Entries;
@@ -282,6 +283,16 @@ template <> struct ScalarEnumerationTraits<dwarf::Form> {
   static void enumeration(IO &io, dwarf::Form &value) {
 #include "llvm/Support/Dwarf.def"
     io.enumFallback<Hex16>(value);
+  }
+};
+
+#define HANDLE_DW_UT(unused, name)                                             \
+  io.enumCase(value, "DW_UT_" #name, dwarf::DW_UT_##name);
+
+template <> struct ScalarEnumerationTraits<dwarf::UnitType> {
+  static void enumeration(IO &io, dwarf::UnitType &value) {
+#include "llvm/Support/Dwarf.def"
+    io.enumFallback<Hex8>(value);
   }
 };
 

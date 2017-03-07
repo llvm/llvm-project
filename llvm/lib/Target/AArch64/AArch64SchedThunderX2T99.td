@@ -1,4 +1,4 @@
-//=- AArch64SchedVulcan.td - Vulcan Scheduling Defs ----------*- tablegen -*-=//
+//=- AArch64SchedThunderX2T99.td - Cavium ThunderX T99 Scheduling ---*- tablegen -*-=//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -6,23 +6,23 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-// 1. Introduction
 //
-// This file defines the machine model for Broadcom Vulcan to support
-// instruction scheduling and other instruction cost heuristics.
+// This file defines the scheduling model for Cavium ThunderX2T99
+// processors.
+// Based on Broadcom Vulcan.
 //
 //===----------------------------------------------------------------------===//
 
 //===----------------------------------------------------------------------===//
 // 2. Pipeline Description.
 
-def VulcanModel : SchedMachineModel {
+def ThunderX2T99Model : SchedMachineModel {
   let IssueWidth            =   4; // 4 micro-ops dispatched at a time.
   let MicroOpBufferSize     = 180; // 180 entries in micro-op re-order buffer.
   let LoadLatency           =   4; // Optimistic load latency.
   let MispredictPenalty     =  12; // Extra cycles for mispredicted branch.
   // Determined via a mix of micro-arch details and experimentation.
-  let LoopMicroOpBufferSize =  32; 
+  let LoopMicroOpBufferSize =  32;
   let PostRAScheduler       =   1; // Using PostRA sched.
   let CompleteModel         =   1;
 }
@@ -30,155 +30,155 @@ def VulcanModel : SchedMachineModel {
 // Define the issue ports.
 
 // Port 0: ALU, FP/SIMD.
-def VulcanP0 : ProcResource<1>;
+def THX2T99P0 : ProcResource<1>;
 
 // Port 1: ALU, FP/SIMD, integer mul/div.
-def VulcanP1 : ProcResource<1>;
+def THX2T99P1 : ProcResource<1>;
 
 // Port 2: ALU, Branch.
-def VulcanP2 : ProcResource<1>;
+def THX2T99P2 : ProcResource<1>;
 
 // Port 3: Store data.
-def VulcanP3 : ProcResource<1>;
+def THX2T99P3 : ProcResource<1>;
 
 // Port 4: Load/store.
-def VulcanP4 : ProcResource<1>;
+def THX2T99P4 : ProcResource<1>;
 
 // Port 5: Load/store.
-def VulcanP5 : ProcResource<1>;
+def THX2T99P5 : ProcResource<1>;
 
-let SchedModel = VulcanModel in {
+let SchedModel = ThunderX2T99Model in {
 
 // Define groups for the functional units on each issue port.  Each group
 // created will be used by a WriteRes later on.
 //
 // NOTE: Some groups only contain one member.  This is a way to create names for
 // the various functional units that share a single issue port.  For example,
-// "VulcanI1" for ALU ops on port 1 and "VulcanF1" for FP ops on port 1.
+// "THX2T99I1" for ALU ops on port 1 and "THX2T99F1" for FP ops on port 1.
 
 // Integer divide and multiply micro-ops only on port 1.
-def VulcanI1 : ProcResGroup<[VulcanP1]>;
+def THX2T99I1 : ProcResGroup<[THX2T99P1]>;
 
 // Branch micro-ops only on port 2.
-def VulcanI2 : ProcResGroup<[VulcanP2]>;
+def THX2T99I2 : ProcResGroup<[THX2T99P2]>;
 
 // ALU micro-ops on ports 0, 1, and 2.
-def VulcanI012 : ProcResGroup<[VulcanP0, VulcanP1, VulcanP2]>;
+def THX2T99I012 : ProcResGroup<[THX2T99P0, THX2T99P1, THX2T99P2]>;
 
 // Crypto FP/SIMD micro-ops only on port 1.
-def VulcanF1 : ProcResGroup<[VulcanP1]>;
+def THX2T99F1 : ProcResGroup<[THX2T99P1]>;
 
 // FP/SIMD micro-ops on ports 0 and 1.
-def VulcanF01 : ProcResGroup<[VulcanP0, VulcanP1]>;
+def THX2T99F01 : ProcResGroup<[THX2T99P0, THX2T99P1]>;
 
 // Store data micro-ops only on port 3.
-def VulcanSD : ProcResGroup<[VulcanP3]>;
+def THX2T99SD : ProcResGroup<[THX2T99P3]>;
 
 // Load/store micro-ops on ports 4 and 5.
-def VulcanLS01 : ProcResGroup<[VulcanP4, VulcanP5]>;
+def THX2T99LS01 : ProcResGroup<[THX2T99P4, THX2T99P5]>;
 
 // 60 entry unified scheduler.
-def VulcanAny : ProcResGroup<[VulcanP0, VulcanP1, VulcanP2,
-                              VulcanP3, VulcanP4, VulcanP5]> {
+def THX2T99Any : ProcResGroup<[THX2T99P0, THX2T99P1, THX2T99P2,
+                              THX2T99P3, THX2T99P4, THX2T99P5]> {
   let BufferSize=60;
 }
 
 // Define commonly used write types for InstRW specializations.
-// All definitions follow the format: VulcanWrite_<NumCycles>Cyc_<Resources>.
+// All definitions follow the format: THX2T99Write_<NumCycles>Cyc_<Resources>.
 
 // 3 cycles on I1.
-def VulcanWrite_3Cyc_I1 : SchedWriteRes<[VulcanI1]> { let Latency = 3; }
+def THX2T99Write_3Cyc_I1 : SchedWriteRes<[THX2T99I1]> { let Latency = 3; }
 
 // 4 cycles on I1.
-def VulcanWrite_4Cyc_I1 : SchedWriteRes<[VulcanI1]> { let Latency = 4; }
+def THX2T99Write_4Cyc_I1 : SchedWriteRes<[THX2T99I1]> { let Latency = 4; }
 
 // 1 cycle on I0, I1, or I2.
-def VulcanWrite_1Cyc_I012 : SchedWriteRes<[VulcanI012]> { let Latency = 1; }
+def THX2T99Write_1Cyc_I012 : SchedWriteRes<[THX2T99I012]> { let Latency = 1; }
 
 // 5 cycles on F1.
-def VulcanWrite_5Cyc_F1 : SchedWriteRes<[VulcanF1]> { let Latency = 5; }
+def THX2T99Write_5Cyc_F1 : SchedWriteRes<[THX2T99F1]> { let Latency = 5; }
 
 // 7 cycles on F1.
-def VulcanWrite_7Cyc_F1 : SchedWriteRes<[VulcanF1]> { let Latency = 7; }
+def THX2T99Write_7Cyc_F1 : SchedWriteRes<[THX2T99F1]> { let Latency = 7; }
 
 // 4 cycles on F0 or F1.
-def VulcanWrite_4Cyc_F01 : SchedWriteRes<[VulcanF01]> { let Latency = 4; }
+def THX2T99Write_4Cyc_F01 : SchedWriteRes<[THX2T99F01]> { let Latency = 4; }
 
 // 5 cycles on F0 or F1.
-def VulcanWrite_5Cyc_F01 : SchedWriteRes<[VulcanF01]> { let Latency = 5; }
+def THX2T99Write_5Cyc_F01 : SchedWriteRes<[THX2T99F01]> { let Latency = 5; }
 
 // 6 cycles on F0 or F1.
-def VulcanWrite_6Cyc_F01 : SchedWriteRes<[VulcanF01]> { let Latency = 6; }
+def THX2T99Write_6Cyc_F01 : SchedWriteRes<[THX2T99F01]> { let Latency = 6; }
 
 // 7 cycles on F0 or F1.
-def VulcanWrite_7Cyc_F01 : SchedWriteRes<[VulcanF01]> { let Latency = 7; }
+def THX2T99Write_7Cyc_F01 : SchedWriteRes<[THX2T99F01]> { let Latency = 7; }
 
 // 8 cycles on F0 or F1.
-def VulcanWrite_8Cyc_F01 : SchedWriteRes<[VulcanF01]> { let Latency = 8; }
+def THX2T99Write_8Cyc_F01 : SchedWriteRes<[THX2T99F01]> { let Latency = 8; }
 
 // 16 cycles on F0 or F1.
-def VulcanWrite_16Cyc_F01 : SchedWriteRes<[VulcanF01]> {
+def THX2T99Write_16Cyc_F01 : SchedWriteRes<[THX2T99F01]> {
   let Latency = 16;
   let ResourceCycles = [8];
 }
 
 // 23 cycles on F0 or F1.
-def VulcanWrite_23Cyc_F01 : SchedWriteRes<[VulcanF01]> {
+def THX2T99Write_23Cyc_F01 : SchedWriteRes<[THX2T99F01]> {
   let Latency = 23;
   let ResourceCycles = [11];
 }
 
 // 1 cycles on LS0 or LS1.
-def VulcanWrite_1Cyc_LS01 : SchedWriteRes<[VulcanLS01]> { let Latency = 1; }
+def THX2T99Write_1Cyc_LS01 : SchedWriteRes<[THX2T99LS01]> { let Latency = 1; }
 
 // 4 cycles on LS0 or LS1.
-def VulcanWrite_4Cyc_LS01 : SchedWriteRes<[VulcanLS01]> { let Latency = 4; }
+def THX2T99Write_4Cyc_LS01 : SchedWriteRes<[THX2T99LS01]> { let Latency = 4; }
 
 // 5 cycles on LS0 or LS1.
-def VulcanWrite_5Cyc_LS01 : SchedWriteRes<[VulcanLS01]> { let Latency = 5; }
+def THX2T99Write_5Cyc_LS01 : SchedWriteRes<[THX2T99LS01]> { let Latency = 5; }
 
 // 6 cycles on LS0 or LS1.
-def VulcanWrite_6Cyc_LS01 : SchedWriteRes<[VulcanLS01]> { let Latency = 6; }
+def THX2T99Write_6Cyc_LS01 : SchedWriteRes<[THX2T99LS01]> { let Latency = 6; }
 
 // 5 cycles on LS0 or LS1 and I0, I1, or I2.
-def VulcanWrite_5Cyc_LS01_I012 : SchedWriteRes<[VulcanLS01, VulcanI012]> {
+def THX2T99Write_5Cyc_LS01_I012 : SchedWriteRes<[THX2T99LS01, THX2T99I012]> {
   let Latency = 5;
   let NumMicroOps = 2;
 }
 
 // 5 cycles on LS0 or LS1 and 2 of I0, I1, or I2.
-def VulcanWrite_6Cyc_LS01_I012_I012 : 
-  SchedWriteRes<[VulcanLS01, VulcanI012, VulcanI012]> {
+def THX2T99Write_6Cyc_LS01_I012_I012 : 
+  SchedWriteRes<[THX2T99LS01, THX2T99I012, THX2T99I012]> {
   let Latency = 6;
   let NumMicroOps = 3;
 }
 
 // 1 cycles on LS0 or LS1 and F0 or F1.
-def VulcanWrite_1Cyc_LS01_F01 : SchedWriteRes<[VulcanLS01, VulcanF01]> {
+def THX2T99Write_1Cyc_LS01_F01 : SchedWriteRes<[THX2T99LS01, THX2T99F01]> {
   let Latency = 1;
   let NumMicroOps = 2;
 }
 
 // 5 cycles on LS0 or LS1 and F0 or F1.
-def VulcanWrite_5Cyc_LS01_F01 : SchedWriteRes<[VulcanLS01, VulcanF01]> {
+def THX2T99Write_5Cyc_LS01_F01 : SchedWriteRes<[THX2T99LS01, THX2T99F01]> {
   let Latency = 5;
   let NumMicroOps = 2;
 }
 
 // 6 cycles on LS0 or LS1 and F0 or F1.
-def VulcanWrite_6Cyc_LS01_F01 : SchedWriteRes<[VulcanLS01, VulcanF01]> {
+def THX2T99Write_6Cyc_LS01_F01 : SchedWriteRes<[THX2T99LS01, THX2T99F01]> {
   let Latency = 6;
   let NumMicroOps = 2;
 }
 
 // 7 cycles on LS0 or LS1 and F0 or F1.
-def VulcanWrite_7Cyc_LS01_F01 : SchedWriteRes<[VulcanLS01, VulcanF01]> {
+def THX2T99Write_7Cyc_LS01_F01 : SchedWriteRes<[THX2T99LS01, THX2T99F01]> {
   let Latency = 7;
   let NumMicroOps = 2;
 }
 
 // 8 cycles on LS0 or LS1 and F0 or F1.
-def VulcanWrite_8Cyc_LS01_F01 : SchedWriteRes<[VulcanLS01, VulcanF01]> {
+def THX2T99Write_8Cyc_LS01_F01 : SchedWriteRes<[THX2T99LS01, THX2T99F01]> {
   let Latency = 8;
   let NumMicroOps = 2;
 }
@@ -202,7 +202,7 @@ def : ReadAdvance<ReadVLD,     0>;
 //===----------------------------------------------------------------------===//
 // 3. Instruction Tables.
 
-let SchedModel = VulcanModel in {
+let SchedModel = ThunderX2T99Model in {
 
 //---
 // 3.1 Branch Instructions
@@ -211,7 +211,7 @@ let SchedModel = VulcanModel in {
 // Branch, immed
 // Branch and link, immed
 // Compare and branch
-def : WriteRes<WriteBr,      [VulcanI2]> { let Latency = 1; }
+def : WriteRes<WriteBr,      [THX2T99I2]> { let Latency = 1; }
 
 def : WriteRes<WriteSys,     []> { let Latency = 1; }
 def : WriteRes<WriteBarrier, []> { let Latency = 1; }
@@ -222,7 +222,7 @@ def : WriteRes<WriteAtomic,  []> { let Unsupported = 1; }
 // Branch, register
 // Branch and link, register != LR
 // Branch and link, register = LR
-def : WriteRes<WriteBrReg,   [VulcanI2]> { let Latency = 1; }
+def : WriteRes<WriteBrReg,   [THX2T99I2]> { let Latency = 1; }
 
 //---
 // 3.2 Arithmetic and Logical Instructions
@@ -233,25 +233,25 @@ def : WriteRes<WriteBrReg,   [VulcanI2]> { let Latency = 1; }
 // Conditional compare
 // Conditional select
 // Address generation
-def : WriteRes<WriteI,       [VulcanI012]> { let Latency = 1; }
+def : WriteRes<WriteI,       [THX2T99I012]> { let Latency = 1; }
 def : InstRW<[WriteI], (instrs COPY)>;
 
 // ALU, extend and/or shift
-def : WriteRes<WriteISReg,   [VulcanI012]> {
+def : WriteRes<WriteISReg,   [THX2T99I012]> {
   let Latency = 2;
   let ResourceCycles = [2];
 }
 
-def : WriteRes<WriteIEReg,   [VulcanI012]> {
+def : WriteRes<WriteIEReg,   [THX2T99I012]> {
   let Latency = 2;
   let ResourceCycles = [2];
 }
 
 // Move immed
-def : WriteRes<WriteImm,     [VulcanI012]> { let Latency = 1; }
+def : WriteRes<WriteImm,     [THX2T99I012]> { let Latency = 1; }
 
 // Variable shift
-def : WriteRes<WriteIS,      [VulcanI012]> { let Latency = 1; }
+def : WriteRes<WriteIS,      [THX2T99I012]> { let Latency = 1; }
 
 //---
 // 3.4 Divide and Multiply Instructions
@@ -259,33 +259,33 @@ def : WriteRes<WriteIS,      [VulcanI012]> { let Latency = 1; }
 
 // Divide, W-form
 // Latency range of 13-23.  Take the average.
-def : WriteRes<WriteID32,    [VulcanI1]> {
+def : WriteRes<WriteID32,    [THX2T99I1]> {
   let Latency = 18;
   let ResourceCycles = [18];
 }
 
 // Divide, X-form
 // Latency range of 13-39.  Take the average.
-def : WriteRes<WriteID64,    [VulcanI1]> {
+def : WriteRes<WriteID64,    [THX2T99I1]> {
   let Latency = 26;
   let ResourceCycles = [26];
 }
 
 // Multiply accumulate, W-form
-def : WriteRes<WriteIM32,    [VulcanI012]> { let Latency = 5; }
+def : WriteRes<WriteIM32,    [THX2T99I012]> { let Latency = 5; }
 
 // Multiply accumulate, X-form
-def : WriteRes<WriteIM64,    [VulcanI012]> { let Latency = 5; }
+def : WriteRes<WriteIM64,    [THX2T99I012]> { let Latency = 5; }
 
 // Bitfield extract, two reg
-def : WriteRes<WriteExtr,    [VulcanI012]> { let Latency = 1; }
+def : WriteRes<WriteExtr,    [THX2T99I012]> { let Latency = 1; }
 
 // Bitfield move, basic
 // Bitfield move, insert
 // NOTE: Handled by WriteIS.
 
 // Count leading
-def : InstRW<[VulcanWrite_3Cyc_I1], (instregex "^CLS(W|X)r$",
+def : InstRW<[THX2T99Write_3Cyc_I1], (instregex "^CLS(W|X)r$",
                                                "^CLZ(W|X)r$")>;
 
 // Reverse bits/bytes
@@ -300,13 +300,13 @@ def : InstRW<[VulcanWrite_3Cyc_I1], (instregex "^CLS(W|X)r$",
 // Load register, unscaled immed
 // Load register, immed unprivileged
 // Load register, unsigned immed
-def : WriteRes<WriteLD,      [VulcanLS01]> { let Latency = 4; }
+def : WriteRes<WriteLD,      [THX2T99LS01]> { let Latency = 4; }
 
 // Load register, immed post-index
 // NOTE: Handled by WriteLD, WriteI.
 // Load register, immed pre-index
 // NOTE: Handled by WriteLD, WriteAdr.
-def : WriteRes<WriteAdr,     [VulcanI012]> { let Latency = 1; }
+def : WriteRes<WriteAdr,     [THX2T99I012]> { let Latency = 1; }
 
 // Load register offset, basic
 // Load register, register offset, scale by 4/8
@@ -314,15 +314,15 @@ def : WriteRes<WriteAdr,     [VulcanI012]> { let Latency = 1; }
 // Load register offset, extend
 // Load register, register offset, extend, scale by 4/8
 // Load register, register offset, extend, scale by 2
-def VulcanWriteLDIdx : SchedWriteVariant<[
-  SchedVar<ScaledIdxPred, [VulcanWrite_6Cyc_LS01_I012_I012]>,
-  SchedVar<NoSchedPred,   [VulcanWrite_5Cyc_LS01_I012]>]>;
-def : SchedAlias<WriteLDIdx, VulcanWriteLDIdx>;
+def THX2T99WriteLDIdx : SchedWriteVariant<[
+  SchedVar<ScaledIdxPred, [THX2T99Write_6Cyc_LS01_I012_I012]>,
+  SchedVar<NoSchedPred,   [THX2T99Write_5Cyc_LS01_I012]>]>;
+def : SchedAlias<WriteLDIdx, THX2T99WriteLDIdx>;
 
-def VulcanReadAdrBase : SchedReadVariant<[
+def THX2T99ReadAdrBase : SchedReadVariant<[
   SchedVar<ScaledIdxPred, [ReadDefault]>,
   SchedVar<NoSchedPred,   [ReadDefault]>]>;
-def : SchedAlias<ReadAdrBase, VulcanReadAdrBase>;
+def : SchedAlias<ReadAdrBase, THX2T99ReadAdrBase>;
 
 // Load pair, immed offset, normal
 // Load pair, immed offset, signed words, base != SP
@@ -347,7 +347,7 @@ def : WriteRes<WriteLDHi,    []> {
 // Store register, unscaled immed
 // Store register, immed unprivileged
 // Store register, unsigned immed
-def : WriteRes<WriteST,      [VulcanLS01, VulcanSD]> {
+def : WriteRes<WriteST,      [THX2T99LS01, THX2T99SD]> {
   let Latency = 1;
   let NumMicroOps = 2;
 }
@@ -364,14 +364,14 @@ def : WriteRes<WriteST,      [VulcanLS01, VulcanSD]> {
 // Store register, register offset, extend
 // Store register, register offset, extend, scale by 4/8
 // Store register, register offset, extend, scale by 1
-def : WriteRes<WriteSTIdx, [VulcanLS01, VulcanSD, VulcanI012]> {
+def : WriteRes<WriteSTIdx, [THX2T99LS01, THX2T99SD, THX2T99I012]> {
   let Latency = 1;
   let NumMicroOps = 3;
 }
 
 // Store pair, immed offset, W-form
 // Store pair, immed offset, X-form
-def : WriteRes<WriteSTP,     [VulcanLS01, VulcanSD]> {
+def : WriteRes<WriteSTP,     [THX2T99LS01, THX2T99SD]> {
   let Latency = 1;
   let NumMicroOps = 2;
 }
@@ -389,35 +389,35 @@ def : WriteRes<WriteSTP,     [VulcanLS01, VulcanSD]> {
 // FP absolute value
 // FP min/max
 // FP negate
-def : WriteRes<WriteF,       [VulcanF01]> { let Latency = 5; }
+def : WriteRes<WriteF,       [THX2T99F01]> { let Latency = 5; }
 
 // FP arithmetic
-def : InstRW<[VulcanWrite_6Cyc_F01], (instregex "^FADD", "^FSUB")>;
+def : InstRW<[THX2T99Write_6Cyc_F01], (instregex "^FADD", "^FSUB")>;
 
 // FP compare
-def : WriteRes<WriteFCmp,    [VulcanF01]> { let Latency = 5; }
+def : WriteRes<WriteFCmp,    [THX2T99F01]> { let Latency = 5; }
 
 // FP divide, S-form
 // FP square root, S-form
-def : WriteRes<WriteFDiv,    [VulcanF01]> {
+def : WriteRes<WriteFDiv,    [THX2T99F01]> {
   let Latency = 16;
   let ResourceCycles = [8];
 }
 
 // FP divide, D-form
 // FP square root, D-form
-def : InstRW<[VulcanWrite_23Cyc_F01], (instrs FDIVDrr, FSQRTDr)>;
+def : InstRW<[THX2T99Write_23Cyc_F01], (instrs FDIVDrr, FSQRTDr)>;
 
 // FP multiply
 // FP multiply accumulate
-def : WriteRes<WriteFMul, [VulcanF01]> { let Latency = 6; }
+def : WriteRes<WriteFMul, [THX2T99F01]> { let Latency = 6; }
 
 // FP round to integral
-def : InstRW<[VulcanWrite_7Cyc_F01],
+def : InstRW<[THX2T99Write_7Cyc_F01],
             (instregex "^FRINT(A|I|M|N|P|X|Z)(Sr|Dr)")>;
 
 // FP select
-def : InstRW<[VulcanWrite_4Cyc_F01], (instregex "^FCSEL")>;
+def : InstRW<[THX2T99Write_4Cyc_F01], (instregex "^FCSEL")>;
 
 //---
 // 3.9 FP Miscellaneous Instructions
@@ -426,16 +426,16 @@ def : InstRW<[VulcanWrite_4Cyc_F01], (instregex "^FCSEL")>;
 // FP convert, from vec to vec reg
 // FP convert, from gen to vec reg
 // FP convert, from vec to gen reg
-def : WriteRes<WriteFCvt, [VulcanF01]> { let Latency = 7; }
+def : WriteRes<WriteFCvt, [THX2T99F01]> { let Latency = 7; }
 
 // FP move, immed
 // FP move, register
-def : WriteRes<WriteFImm, [VulcanF01]> { let Latency = 4; }
+def : WriteRes<WriteFImm, [THX2T99F01]> { let Latency = 4; }
 
 // FP transfer, from gen to vec reg
 // FP transfer, from vec to gen reg
-def : WriteRes<WriteFCopy, [VulcanF01]> { let Latency = 4; }
-def : InstRW<[VulcanWrite_5Cyc_F01], (instrs FMOVXDHighr, FMOVDXHighr)>;
+def : WriteRes<WriteFCopy, [THX2T99F01]> { let Latency = 4; }
+def : InstRW<[THX2T99Write_5Cyc_F01], (instrs FMOVXDHighr, FMOVDXHighr)>;
 
 //---
 // 3.12 ASIMD Integer Instructions
@@ -470,39 +470,39 @@ def : InstRW<[VulcanWrite_5Cyc_F01], (instrs FMOVXDHighr, FMOVDXHighr)>;
 // ASIMD shift by register, basic, Q-form
 // ASIMD shift by register, complex, D-form
 // ASIMD shift by register, complex, Q-form
-def : WriteRes<WriteV, [VulcanF01]> { let Latency = 7; }
+def : WriteRes<WriteV, [THX2T99F01]> { let Latency = 7; }
 
 // ASIMD arith, reduce, 4H/4S
 // ASIMD arith, reduce, 8B/8H
 // ASIMD arith, reduce, 16B
-def : InstRW<[VulcanWrite_5Cyc_F01], 
+def : InstRW<[THX2T99Write_5Cyc_F01], 
             (instregex "^ADDVv", "^SADDLVv", "^UADDLVv")>;
 
 // ASIMD logical (MOV, MVN, ORN, ORR)
-def : InstRW<[VulcanWrite_5Cyc_F01], (instregex "^ORRv", "^ORNv", "^NOTv")>;
+def : InstRW<[THX2T99Write_5Cyc_F01], (instregex "^ORRv", "^ORNv", "^NOTv")>;
 
 // ASIMD polynomial (8x8) multiply long
-def : InstRW<[VulcanWrite_5Cyc_F01], (instrs PMULLv8i8, PMULLv16i8)>;
+def : InstRW<[THX2T99Write_5Cyc_F01], (instrs PMULLv8i8, PMULLv16i8)>;
 
 //---
 // 3.13 ASIMD Floating-point Instructions
 //---
 
 // ASIMD FP absolute value
-def : InstRW<[VulcanWrite_5Cyc_F01], (instregex "^FABSv")>;
+def : InstRW<[THX2T99Write_5Cyc_F01], (instregex "^FABSv")>;
 
 // ASIMD FP arith, normal, D-form
 // ASIMD FP arith, normal, Q-form
-def : InstRW<[VulcanWrite_6Cyc_F01], (instregex "^FABDv", "^FADDv", "^FSUBv")>;
+def : InstRW<[THX2T99Write_6Cyc_F01], (instregex "^FABDv", "^FADDv", "^FSUBv")>;
 
 // ASIMD FP arith,pairwise, D-form
 // ASIMD FP arith, pairwise, Q-form
-def : InstRW<[VulcanWrite_6Cyc_F01], (instregex "^FADDPv")>;
+def : InstRW<[THX2T99Write_6Cyc_F01], (instregex "^FADDPv")>;
 
 // ASIMD FP compare, D-form
 // ASIMD FP compare, Q-form
-def : InstRW<[VulcanWrite_5Cyc_F01], (instregex "^FACGEv", "^FACGTv")>;
-def : InstRW<[VulcanWrite_5Cyc_F01], (instregex "^FCMEQv", "^FCMGEv",
+def : InstRW<[THX2T99Write_5Cyc_F01], (instregex "^FACGEv", "^FACGTv")>;
+def : InstRW<[THX2T99Write_5Cyc_F01], (instregex "^FCMEQv", "^FCMGEv",
                                                 "^FCMGTv", "^FCMLEv",
                                                 "^FCMLTv")>;
 
@@ -513,42 +513,42 @@ def : InstRW<[VulcanWrite_5Cyc_F01], (instregex "^FCMEQv", "^FCMGEv",
 // NOTE: Handled by WriteV.
 
 // ASIMD FP divide, D-form, F32
-def : InstRW<[VulcanWrite_16Cyc_F01], (instrs FDIVv2f32)>;
+def : InstRW<[THX2T99Write_16Cyc_F01], (instrs FDIVv2f32)>;
 
 // ASIMD FP divide, Q-form, F32
-def : InstRW<[VulcanWrite_16Cyc_F01], (instrs FDIVv4f32)>;
+def : InstRW<[THX2T99Write_16Cyc_F01], (instrs FDIVv4f32)>;
 
 // ASIMD FP divide, Q-form, F64
-def : InstRW<[VulcanWrite_23Cyc_F01], (instrs FDIVv2f64)>;
+def : InstRW<[THX2T99Write_23Cyc_F01], (instrs FDIVv2f64)>;
 
 // ASIMD FP max/min, normal, D-form
 // ASIMD FP max/min, normal, Q-form
-def : InstRW<[VulcanWrite_5Cyc_F01], (instregex "^FMAXv", "^FMAXNMv",
+def : InstRW<[THX2T99Write_5Cyc_F01], (instregex "^FMAXv", "^FMAXNMv",
                                                 "^FMINv", "^FMINNMv")>;
 
 // ASIMD FP max/min, pairwise, D-form
 // ASIMD FP max/min, pairwise, Q-form
-def : InstRW<[VulcanWrite_5Cyc_F01], (instregex "^FMAXPv", "^FMAXNMPv",
+def : InstRW<[THX2T99Write_5Cyc_F01], (instregex "^FMAXPv", "^FMAXNMPv",
                                                 "^FMINPv", "^FMINNMPv")>;
 
 // ASIMD FP max/min, reduce
-def : InstRW<[VulcanWrite_5Cyc_F01], (instregex "^FMAXVv", "^FMAXNMVv",
+def : InstRW<[THX2T99Write_5Cyc_F01], (instregex "^FMAXVv", "^FMAXNMVv",
                                                 "^FMINVv", "^FMINNMVv")>;
 
 // ASIMD FP multiply, D-form, FZ
 // ASIMD FP multiply, D-form, no FZ
 // ASIMD FP multiply, Q-form, FZ
 // ASIMD FP multiply, Q-form, no FZ
-def : InstRW<[VulcanWrite_6Cyc_F01], (instregex "^FMULv", "^FMULXv")>;
+def : InstRW<[THX2T99Write_6Cyc_F01], (instregex "^FMULv", "^FMULXv")>;
 
 // ASIMD FP multiply accumulate, Dform, FZ
 // ASIMD FP multiply accumulate, Dform, no FZ
 // ASIMD FP multiply accumulate, Qform, FZ
 // ASIMD FP multiply accumulate, Qform, no FZ
-def : InstRW<[VulcanWrite_6Cyc_F01], (instregex "^FMLAv", "^FMLSv")>;
+def : InstRW<[THX2T99Write_6Cyc_F01], (instregex "^FMLAv", "^FMLSv")>;
 
 // ASIMD FP negate
-def : InstRW<[VulcanWrite_5Cyc_F01], (instregex "^FNEGv")>;
+def : InstRW<[THX2T99Write_5Cyc_F01], (instregex "^FNEGv")>;
 
 // ASIMD FP round, D-form
 // ASIMD FP round, Q-form
@@ -559,39 +559,39 @@ def : InstRW<[VulcanWrite_5Cyc_F01], (instregex "^FNEGv")>;
 //--
 
 // ASIMD bit reverse
-def : InstRW<[VulcanWrite_5Cyc_F01], (instregex "^RBITv")>;
+def : InstRW<[THX2T99Write_5Cyc_F01], (instregex "^RBITv")>;
 
 // ASIMD bitwise insert, D-form
 // ASIMD bitwise insert, Q-form
-def : InstRW<[VulcanWrite_5Cyc_F01], (instregex "^BIFv", "^BITv", "^BSLv")>;
+def : InstRW<[THX2T99Write_5Cyc_F01], (instregex "^BIFv", "^BITv", "^BSLv")>;
 
 // ASIMD count, D-form
 // ASIMD count, Q-form
-def : InstRW<[VulcanWrite_5Cyc_F01], (instregex "^CLSv", "^CLZv", "^CNTv")>;
+def : InstRW<[THX2T99Write_5Cyc_F01], (instregex "^CLSv", "^CLZv", "^CNTv")>;
 
 // ASIMD duplicate, gen reg
 // ASIMD duplicate, element
-def : InstRW<[VulcanWrite_5Cyc_F01], (instregex "^DUPv")>;
+def : InstRW<[THX2T99Write_5Cyc_F01], (instregex "^DUPv")>;
 
 // ASIMD extract
-def : InstRW<[VulcanWrite_5Cyc_F01], (instregex "^EXTv")>;
+def : InstRW<[THX2T99Write_5Cyc_F01], (instregex "^EXTv")>;
 
 // ASIMD extract narrow
 // ASIMD extract narrow, saturating
 // NOTE: Handled by WriteV.
 
 // ASIMD insert, element to element
-def : InstRW<[VulcanWrite_5Cyc_F01], (instregex "^INSv")>;
+def : InstRW<[THX2T99Write_5Cyc_F01], (instregex "^INSv")>;
 
 // ASIMD move, integer immed
-def : InstRW<[VulcanWrite_5Cyc_F01], (instregex "^MOVIv", "^MOVIDv")>;
+def : InstRW<[THX2T99Write_5Cyc_F01], (instregex "^MOVIv", "^MOVIDv")>;
 
 // ASIMD move, FP immed
-def : InstRW<[VulcanWrite_5Cyc_F01], (instregex "^FMOVv")>;
+def : InstRW<[THX2T99Write_5Cyc_F01], (instregex "^FMOVv")>;
 
 // ASIMD reciprocal estimate, D-form
 // ASIMD reciprocal estimate, Q-form
-def : InstRW<[VulcanWrite_5Cyc_F01], 
+def : InstRW<[THX2T99Write_5Cyc_F01], 
             (instregex "^FRECPEv", "^FRECPXv", "^URECPEv",
                                    "^FRSQRTEv", "^URSQRTEv")>;
 
@@ -599,31 +599,31 @@ def : InstRW<[VulcanWrite_5Cyc_F01],
 // ASIMD reciprocal step, D-form, no FZ
 // ASIMD reciprocal step, Q-form, FZ
 // ASIMD reciprocal step, Q-form, no FZ
-def : InstRW<[VulcanWrite_6Cyc_F01], (instregex "^FRECPSv", "^FRSQRTSv")>;
+def : InstRW<[THX2T99Write_6Cyc_F01], (instregex "^FRECPSv", "^FRSQRTSv")>;
 
 // ASIMD reverse
-def : InstRW<[VulcanWrite_5Cyc_F01], 
+def : InstRW<[THX2T99Write_5Cyc_F01], 
             (instregex "^REV16v", "^REV32v", "^REV64v")>;
 
 // ASIMD table lookup, D-form
 // ASIMD table lookup, Q-form
-def : InstRW<[VulcanWrite_8Cyc_F01], (instregex "^TBLv", "^TBXv")>;
+def : InstRW<[THX2T99Write_8Cyc_F01], (instregex "^TBLv", "^TBXv")>;
 
 // ASIMD transfer, element to word or word
-def : InstRW<[VulcanWrite_5Cyc_F01], (instregex "^UMOVv")>;
+def : InstRW<[THX2T99Write_5Cyc_F01], (instregex "^UMOVv")>;
 
 // ASIMD transfer, element to gen reg
-def : InstRW<[VulcanWrite_6Cyc_F01], (instregex "^SMOVv", "^UMOVv")>;
+def : InstRW<[THX2T99Write_6Cyc_F01], (instregex "^SMOVv", "^UMOVv")>;
 
 // ASIMD transfer gen reg to element
-def : InstRW<[VulcanWrite_5Cyc_F01], (instregex "^INSv")>;
+def : InstRW<[THX2T99Write_5Cyc_F01], (instregex "^INSv")>;
 
 // ASIMD transpose
-def : InstRW<[VulcanWrite_5Cyc_F01], (instregex "^TRN1v", "^TRN2v",
+def : InstRW<[THX2T99Write_5Cyc_F01], (instregex "^TRN1v", "^TRN2v",
                                                 "^UZP1v", "^UZP2v")>;
 
 // ASIMD unzip/zip
-def : InstRW<[VulcanWrite_5Cyc_F01], (instregex "^ZIP1v", "^ZIP2v")>;
+def : InstRW<[THX2T99Write_5Cyc_F01], (instregex "^ZIP1v", "^ZIP2v")>;
 
 //--
 // 3.15 ASIMD Load Instructions 
@@ -631,114 +631,114 @@ def : InstRW<[VulcanWrite_5Cyc_F01], (instregex "^ZIP1v", "^ZIP2v")>;
 
 // ASIMD load, 1 element, multiple, 1 reg, D-form
 // ASIMD load, 1 element, multiple, 1 reg, Q-form
-def : InstRW<[VulcanWrite_4Cyc_LS01], 
+def : InstRW<[THX2T99Write_4Cyc_LS01], 
             (instregex "^LD1Onev(8b|4h|2s|1d|16b|8h|4s|2d)$")>;
-def : InstRW<[VulcanWrite_4Cyc_LS01, WriteAdr], 
+def : InstRW<[THX2T99Write_4Cyc_LS01, WriteAdr], 
             (instregex "^LD1Onev(8b|4h|2s|1d|16b|8h|4s|2d)_POST$")>;
 
 // ASIMD load, 1 element, multiple, 2 reg, D-form
 // ASIMD load, 1 element, multiple, 2 reg, Q-form
-def : InstRW<[VulcanWrite_4Cyc_LS01], 
+def : InstRW<[THX2T99Write_4Cyc_LS01], 
             (instregex "^LD1Twov(8b|4h|2s|1d|16b|8h|4s|2d)$")>;
-def : InstRW<[VulcanWrite_4Cyc_LS01, WriteAdr], 
+def : InstRW<[THX2T99Write_4Cyc_LS01, WriteAdr], 
             (instregex "^LD1Twov(8b|4h|2s|1d|16b|8h|4s|2d)_POST$")>;
 
 // ASIMD load, 1 element, multiple, 3 reg, D-form
 // ASIMD load, 1 element, multiple, 3 reg, Q-form
-def : InstRW<[VulcanWrite_5Cyc_LS01], 
+def : InstRW<[THX2T99Write_5Cyc_LS01], 
             (instregex "^LD1Threev(8b|4h|2s|1d|16b|8h|4s|2d)$")>;
-def : InstRW<[VulcanWrite_5Cyc_LS01, WriteAdr], 
+def : InstRW<[THX2T99Write_5Cyc_LS01, WriteAdr], 
             (instregex "^LD1Threev(8b|4h|2s|1d|16b|8h|4s|2d)_POST$")>;
 
 // ASIMD load, 1 element, multiple, 4 reg, D-form
 // ASIMD load, 1 element, multiple, 4 reg, Q-form
-def : InstRW<[VulcanWrite_6Cyc_LS01], 
+def : InstRW<[THX2T99Write_6Cyc_LS01], 
             (instregex "^LD1Fourv(8b|4h|2s|1d|16b|8h|4s|2d)$")>;
-def : InstRW<[VulcanWrite_6Cyc_LS01, WriteAdr], 
+def : InstRW<[THX2T99Write_6Cyc_LS01, WriteAdr], 
             (instregex "^LD1Fourv(8b|4h|2s|1d|16b|8h|4s|2d)_POST$")>;
 
 // ASIMD load, 1 element, one lane, B/H/S
 // ASIMD load, 1 element, one lane, D
-def : InstRW<[VulcanWrite_5Cyc_LS01_F01], (instregex "^LD1i(8|16|32|64)$")>;
-def : InstRW<[VulcanWrite_5Cyc_LS01_F01, WriteAdr], 
+def : InstRW<[THX2T99Write_5Cyc_LS01_F01], (instregex "^LD1i(8|16|32|64)$")>;
+def : InstRW<[THX2T99Write_5Cyc_LS01_F01, WriteAdr], 
             (instregex "^LD1i(8|16|32|64)_POST$")>;
 
 // ASIMD load, 1 element, all lanes, D-form, B/H/S
 // ASIMD load, 1 element, all lanes, D-form, D
 // ASIMD load, 1 element, all lanes, Q-form
-def : InstRW<[VulcanWrite_5Cyc_LS01_F01], 
+def : InstRW<[THX2T99Write_5Cyc_LS01_F01], 
             (instregex "^LD1Rv(8b|4h|2s|1d|16b|8h|4s|2d)$")>;
-def : InstRW<[VulcanWrite_5Cyc_LS01_F01, WriteAdr], 
+def : InstRW<[THX2T99Write_5Cyc_LS01_F01, WriteAdr], 
             (instregex "^LD1Rv(8b|4h|2s|1d|16b|8h|4s|2d)_POST$")>;
 
 // ASIMD load, 2 element, multiple, D-form, B/H/S
 // ASIMD load, 2 element, multiple, Q-form, D
-def : InstRW<[VulcanWrite_5Cyc_LS01_F01], 
+def : InstRW<[THX2T99Write_5Cyc_LS01_F01], 
             (instregex "^LD2Twov(8b|4h|2s|16b|8h|4s|2d)$")>;
-def : InstRW<[VulcanWrite_5Cyc_LS01_F01, WriteAdr], 
+def : InstRW<[THX2T99Write_5Cyc_LS01_F01, WriteAdr], 
             (instregex "^LD2Twov(8b|4h|2s|16b|8h|4s|2d)_POST$")>;
 
 // ASIMD load, 2 element, one lane, B/H
 // ASIMD load, 2 element, one lane, S
 // ASIMD load, 2 element, one lane, D
-def : InstRW<[VulcanWrite_5Cyc_LS01_F01], (instregex "^LD2i(8|16|32|64)$")>;
-def : InstRW<[VulcanWrite_5Cyc_LS01_F01, WriteAdr], 
+def : InstRW<[THX2T99Write_5Cyc_LS01_F01], (instregex "^LD2i(8|16|32|64)$")>;
+def : InstRW<[THX2T99Write_5Cyc_LS01_F01, WriteAdr], 
             (instregex "^LD2i(8|16|32|64)_POST$")>;
 
 // ASIMD load, 2 element, all lanes, D-form, B/H/S
 // ASIMD load, 2 element, all lanes, D-form, D
 // ASIMD load, 2 element, all lanes, Q-form
-def : InstRW<[VulcanWrite_5Cyc_LS01_F01], 
+def : InstRW<[THX2T99Write_5Cyc_LS01_F01], 
             (instregex "^LD2Rv(8b|4h|2s|1d|16b|8h|4s|2d)$")>;
-def : InstRW<[VulcanWrite_5Cyc_LS01_F01, WriteAdr], 
+def : InstRW<[THX2T99Write_5Cyc_LS01_F01, WriteAdr], 
             (instregex "^LD2Rv(8b|4h|2s|1d|16b|8h|4s|2d)_POST$")>;
 
 // ASIMD load, 3 element, multiple, D-form, B/H/S
 // ASIMD load, 3 element, multiple, Q-form, B/H/S
 // ASIMD load, 3 element, multiple, Q-form, D
-def : InstRW<[VulcanWrite_8Cyc_LS01_F01], 
+def : InstRW<[THX2T99Write_8Cyc_LS01_F01], 
             (instregex "^LD3Threev(8b|4h|2s|16b|8h|4s|2d)$")>;
-def : InstRW<[VulcanWrite_8Cyc_LS01_F01, WriteAdr], 
+def : InstRW<[THX2T99Write_8Cyc_LS01_F01, WriteAdr], 
             (instregex "^LD3Threev(8b|4h|2s|16b|8h|4s|2d)_POST$")>;
 
 // ASIMD load, 3 element, one lone, B/H
 // ASIMD load, 3 element, one lane, S
 // ASIMD load, 3 element, one lane, D
-def : InstRW<[VulcanWrite_7Cyc_LS01_F01], (instregex "^LD3i(8|16|32|64)$")>;
-def : InstRW<[VulcanWrite_7Cyc_LS01_F01, WriteAdr], 
+def : InstRW<[THX2T99Write_7Cyc_LS01_F01], (instregex "^LD3i(8|16|32|64)$")>;
+def : InstRW<[THX2T99Write_7Cyc_LS01_F01, WriteAdr], 
             (instregex "^LD3i(8|16|32|64)_POST$")>;
 
 // ASIMD load, 3 element, all lanes, D-form, B/H/S
 // ASIMD load, 3 element, all lanes, D-form, D
 // ASIMD load, 3 element, all lanes, Q-form, B/H/S
 // ASIMD load, 3 element, all lanes, Q-form, D
-def : InstRW<[VulcanWrite_7Cyc_LS01_F01], 
+def : InstRW<[THX2T99Write_7Cyc_LS01_F01], 
             (instregex "^LD3Rv(8b|4h|2s|1d|16b|8h|4s|2d)$")>;
-def : InstRW<[VulcanWrite_7Cyc_LS01_F01, WriteAdr], 
+def : InstRW<[THX2T99Write_7Cyc_LS01_F01, WriteAdr], 
             (instregex "^LD3Rv(8b|4h|2s|1d|16b|8h|4s|2d)_POST$")>;
 
 // ASIMD load, 4 element, multiple, D-form, B/H/S
 // ASIMD load, 4 element, multiple, Q-form, B/H/S
 // ASIMD load, 4 element, multiple, Q-form, D
-def : InstRW<[VulcanWrite_8Cyc_LS01_F01], 
+def : InstRW<[THX2T99Write_8Cyc_LS01_F01], 
             (instregex "^LD4Fourv(8b|4h|2s|16b|8h|4s|2d)$")>;
-def : InstRW<[VulcanWrite_8Cyc_LS01_F01, WriteAdr], 
+def : InstRW<[THX2T99Write_8Cyc_LS01_F01, WriteAdr], 
             (instregex "^LD4Fourv(8b|4h|2s|16b|8h|4s|2d)_POST$")>;
 
 // ASIMD load, 4 element, one lane, B/H
 // ASIMD load, 4 element, one lane, S
 // ASIMD load, 4 element, one lane, D
-def : InstRW<[VulcanWrite_6Cyc_LS01_F01], (instregex "^LD4i(8|16|32|64)$")>;
-def : InstRW<[VulcanWrite_6Cyc_LS01_F01, WriteAdr], 
+def : InstRW<[THX2T99Write_6Cyc_LS01_F01], (instregex "^LD4i(8|16|32|64)$")>;
+def : InstRW<[THX2T99Write_6Cyc_LS01_F01, WriteAdr], 
             (instregex "^LD4i(8|16|32|64)_POST$")>;
 
 // ASIMD load, 4 element, all lanes, D-form, B/H/S
 // ASIMD load, 4 element, all lanes, D-form, D
 // ASIMD load, 4 element, all lanes, Q-form, B/H/S
 // ASIMD load, 4 element, all lanes, Q-form, D
-def : InstRW<[VulcanWrite_6Cyc_LS01_F01], 
+def : InstRW<[THX2T99Write_6Cyc_LS01_F01], 
             (instregex "^LD4Rv(8b|4h|2s|1d|16b|8h|4s|2d)$")>;
-def : InstRW<[VulcanWrite_6Cyc_LS01_F01, WriteAdr], 
+def : InstRW<[THX2T99Write_6Cyc_LS01_F01, WriteAdr], 
             (instregex "^LD4Rv(8b|4h|2s|1d|16b|8h|4s|2d)_POST$")>;
 
 //--
@@ -747,82 +747,82 @@ def : InstRW<[VulcanWrite_6Cyc_LS01_F01, WriteAdr],
 
 // ASIMD store, 1 element, multiple, 1 reg, D-form
 // ASIMD store, 1 element, multiple, 1 reg, Q-form
-def : InstRW<[VulcanWrite_1Cyc_LS01], 
+def : InstRW<[THX2T99Write_1Cyc_LS01], 
             (instregex "^ST1Onev(8b|4h|2s|1d|16b|8h|4s|2d)$")>;
-def : InstRW<[VulcanWrite_1Cyc_LS01, WriteAdr], 
+def : InstRW<[THX2T99Write_1Cyc_LS01, WriteAdr], 
             (instregex "^ST1Onev(8b|4h|2s|1d|16b|8h|4s|2d)_POST$")>;
 
 // ASIMD store, 1 element, multiple, 2 reg, D-form
 // ASIMD store, 1 element, multiple, 2 reg, Q-form
-def : InstRW<[VulcanWrite_1Cyc_LS01], 
+def : InstRW<[THX2T99Write_1Cyc_LS01], 
             (instregex "^ST1Twov(8b|4h|2s|1d|16b|8h|4s|2d)$")>;
-def : InstRW<[VulcanWrite_1Cyc_LS01, WriteAdr], 
+def : InstRW<[THX2T99Write_1Cyc_LS01, WriteAdr], 
             (instregex "^ST1Twov(8b|4h|2s|1d|16b|8h|4s|2d)_POST$")>;
 
 // ASIMD store, 1 element, multiple, 3 reg, D-form
 // ASIMD store, 1 element, multiple, 3 reg, Q-form
-def : InstRW<[VulcanWrite_1Cyc_LS01], 
+def : InstRW<[THX2T99Write_1Cyc_LS01], 
             (instregex "^ST1Threev(8b|4h|2s|1d|16b|8h|4s|2d)$")>;
-def : InstRW<[VulcanWrite_1Cyc_LS01, WriteAdr], 
+def : InstRW<[THX2T99Write_1Cyc_LS01, WriteAdr], 
             (instregex "^ST1Threev(8b|4h|2s|1d|16b|8h|4s|2d)_POST$")>;
 
 // ASIMD store, 1 element, multiple, 4 reg, D-form
 // ASIMD store, 1 element, multiple, 4 reg, Q-form
-def : InstRW<[VulcanWrite_1Cyc_LS01], 
+def : InstRW<[THX2T99Write_1Cyc_LS01], 
             (instregex "^ST1Fourv(8b|4h|2s|1d|16b|8h|4s|2d)$")>;
-def : InstRW<[VulcanWrite_1Cyc_LS01, WriteAdr], 
+def : InstRW<[THX2T99Write_1Cyc_LS01, WriteAdr], 
             (instregex "^ST1Fourv(8b|4h|2s|1d|16b|8h|4s|2d)_POST$")>;
 
 // ASIMD store, 1 element, one lane, B/H/S
 // ASIMD store, 1 element, one lane, D
-def : InstRW<[VulcanWrite_1Cyc_LS01_F01], 
+def : InstRW<[THX2T99Write_1Cyc_LS01_F01], 
             (instregex "^ST1i(8|16|32|64)$")>;
-def : InstRW<[VulcanWrite_1Cyc_LS01_F01, WriteAdr], 
+def : InstRW<[THX2T99Write_1Cyc_LS01_F01, WriteAdr], 
             (instregex "^ST1i(8|16|32|64)_POST$")>;
 
 // ASIMD store, 2 element, multiple, D-form, B/H/S
 // ASIMD store, 2 element, multiple, Q-form, B/H/S
 // ASIMD store, 2 element, multiple, Q-form, D
-def : InstRW<[VulcanWrite_1Cyc_LS01_F01], 
+def : InstRW<[THX2T99Write_1Cyc_LS01_F01], 
             (instregex "^ST2Twov(8b|4h|2s|16b|8h|4s|2d)$")>;
-def : InstRW<[VulcanWrite_1Cyc_LS01_F01, WriteAdr], 
+def : InstRW<[THX2T99Write_1Cyc_LS01_F01, WriteAdr], 
             (instregex "^ST2Twov(8b|4h|2s|16b|8h|4s|2d)_POST$")>;
 
 // ASIMD store, 2 element, one lane, B/H/S
 // ASIMD store, 2 element, one lane, D
-def : InstRW<[VulcanWrite_1Cyc_LS01_F01], 
+def : InstRW<[THX2T99Write_1Cyc_LS01_F01], 
             (instregex "^ST2i(8|16|32|64)$")>;
-def : InstRW<[VulcanWrite_1Cyc_LS01_F01, WriteAdr], 
+def : InstRW<[THX2T99Write_1Cyc_LS01_F01, WriteAdr], 
             (instregex "^ST2i(8|16|32|64)_POST$")>;
 
 // ASIMD store, 3 element, multiple, D-form, B/H/S
 // ASIMD store, 3 element, multiple, Q-form, B/H/S
 // ASIMD store, 3 element, multiple, Q-form, D
-def : InstRW<[VulcanWrite_1Cyc_LS01_F01], 
+def : InstRW<[THX2T99Write_1Cyc_LS01_F01], 
             (instregex "^ST3Threev(8b|4h|2s|16b|8h|4s|2d)$")>;
-def : InstRW<[VulcanWrite_1Cyc_LS01_F01, WriteAdr], 
+def : InstRW<[THX2T99Write_1Cyc_LS01_F01, WriteAdr], 
             (instregex "^ST3Threev(8b|4h|2s|16b|8h|4s|2d)_POST$")>;
 
 // ASIMD store, 3 element, one lane, B/H
 // ASIMD store, 3 element, one lane, S
 // ASIMD store, 3 element, one lane, D
-def : InstRW<[VulcanWrite_1Cyc_LS01_F01], (instregex "^ST3i(8|16|32|64)$")>;
-def : InstRW<[VulcanWrite_1Cyc_LS01_F01, WriteAdr], 
+def : InstRW<[THX2T99Write_1Cyc_LS01_F01], (instregex "^ST3i(8|16|32|64)$")>;
+def : InstRW<[THX2T99Write_1Cyc_LS01_F01, WriteAdr], 
             (instregex "^ST3i(8|16|32|64)_POST$")>;
 
 // ASIMD store, 4 element, multiple, D-form, B/H/S
 // ASIMD store, 4 element, multiple, Q-form, B/H/S
 // ASIMD store, 4 element, multiple, Q-form, D
-def : InstRW<[VulcanWrite_1Cyc_LS01_F01], 
+def : InstRW<[THX2T99Write_1Cyc_LS01_F01], 
             (instregex "^ST4Fourv(8b|4h|2s|16b|8h|4s|2d)$")>;
-def : InstRW<[VulcanWrite_1Cyc_LS01_F01, WriteAdr], 
+def : InstRW<[THX2T99Write_1Cyc_LS01_F01, WriteAdr], 
             (instregex "^ST4Fourv(8b|4h|2s|16b|8h|4s|2d)_POST$")>;
 
 // ASIMD store, 4 element, one lane, B/H
 // ASIMD store, 4 element, one lane, S
 // ASIMD store, 4 element, one lane, D
-def : InstRW<[VulcanWrite_1Cyc_LS01_F01], (instregex "^ST4i(8|16|32|64)$")>;
-def : InstRW<[VulcanWrite_1Cyc_LS01_F01, WriteAdr], 
+def : InstRW<[THX2T99Write_1Cyc_LS01_F01], (instregex "^ST4i(8|16|32|64)$")>;
+def : InstRW<[THX2T99Write_1Cyc_LS01_F01, WriteAdr], 
             (instregex "^ST4i(8|16|32|64)_POST$")>;
 
 //--
@@ -830,23 +830,23 @@ def : InstRW<[VulcanWrite_1Cyc_LS01_F01, WriteAdr],
 //--
 
 // Crypto AES ops
-def : InstRW<[VulcanWrite_5Cyc_F1], (instregex "^AES")>;
+def : InstRW<[THX2T99Write_5Cyc_F1], (instregex "^AES")>;
 
 // Crypto polynomial (64x64) multiply long
-def : InstRW<[VulcanWrite_5Cyc_F1], (instrs PMULLv1i64, PMULLv2i64)>;
+def : InstRW<[THX2T99Write_5Cyc_F1], (instrs PMULLv1i64, PMULLv2i64)>;
 
 // Crypto SHA1 xor ops
 // Crypto SHA1 schedule acceleration ops
 // Crypto SHA256 schedule acceleration op (1 u-op)
 // Crypto SHA256 schedule acceleration op (2 u-ops)
 // Crypto SHA256 hash acceleration ops
-def : InstRW<[VulcanWrite_7Cyc_F1], (instregex "^SHA")>;
+def : InstRW<[THX2T99Write_7Cyc_F1], (instregex "^SHA")>;
 
 //--
 // 3.18 CRC
 //--
 
 // CRC checksum ops
-def : InstRW<[VulcanWrite_4Cyc_I1], (instregex "^CRC32")>;
+def : InstRW<[THX2T99Write_4Cyc_I1], (instregex "^CRC32")>;
 
-} // SchedModel = VulcanModel
+} // SchedModel = ThunderX2T99Model

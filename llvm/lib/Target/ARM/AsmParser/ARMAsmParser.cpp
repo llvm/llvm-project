@@ -8940,7 +8940,7 @@ unsigned ARMAsmParser::checkTargetMatchPredicate(MCInst &Inst) {
         inITBlock())
       return Match_RequiresNotITBlock;
     // LSL with zero immediate is not allowed in an IT block
-    if (Opc == ARM::tLSLri && Inst.getOperand(4).getImm() == 0 && inITBlock())
+    if (Opc == ARM::tLSLri && Inst.getOperand(3).getImm() == 0 && inITBlock())
       return Match_RequiresNotITBlock;
   } else if (isThumbOne()) {
     // Some high-register supporting Thumb1 encodings only allow both registers

@@ -12,7 +12,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "gtest/gtest.h"
+#include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/Support/PointerLikeTypeTraits.h"
 
 using namespace llvm;
 
@@ -278,4 +280,35 @@ TEST(SmallPtrSetTest, EraseTest) {
   // Test when set grows big.
   SmallPtrSet<int *, 2> A;
   checkEraseAndIterators(A);
+}
+
+// Verify that const pointers work for count and find even when the underlying
+// SmallPtrSet is not for a const pointer type.
+TEST(SmallPtrSetTest, ConstTest) {
+  SmallPtrSet<int *, 8> IntSet;
+  int A;
+  int *B = &A;
+  const int *C = &A;
+  IntSet.insert(B);
+  EXPECT_EQ(IntSet.count(B), 1u);
+  EXPECT_EQ(IntSet.count(C), 1u);
+  // FIXME: We can't unit test find right now because ABI_BREAKING_CHECKS breaks
+  // find().
+  //  EXPECT_NE(IntSet.find(B), IntSet.end());
+  //  EXPECT_NE(IntSet.find(C), IntSet.end());
+}
+
+// Verify that we automatically get the const version of PointerLikeTypeTraits
+// filled in for us, even for a non-pointer type
+using TestPair = PointerIntPair<int *, 1>;
+
+TEST(SmallPtrSetTest, ConstNonPtrTest) {
+  SmallPtrSet<TestPair, 8> IntSet;
+  int A[1];
+  TestPair Pair(&A[0], 1);
+  IntSet.insert(Pair);
+  EXPECT_EQ(IntSet.count(Pair), 1u);
+  // FIXME: We can't unit test find right now because ABI_BREAKING_CHECKS breaks
+  // find().
+  //  EXPECT_NE(IntSet.find(Pair), IntSet.end());
 }

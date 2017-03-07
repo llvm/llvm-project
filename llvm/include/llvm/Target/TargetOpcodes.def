@@ -364,6 +364,9 @@ HANDLE_TARGET_OPCODE(G_FREM)
 /// Generic FP exponentiation.
 HANDLE_TARGET_OPCODE(G_FPOW)
 
+/// Generic FP negation.
+HANDLE_TARGET_OPCODE(G_FNEG)
+
 /// Generic FP extension.
 HANDLE_TARGET_OPCODE(G_FPEXT)
 

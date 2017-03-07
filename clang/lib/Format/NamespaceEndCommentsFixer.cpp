@@ -139,20 +139,34 @@ tooling::Replacements NamespaceEndCommentsFixer::analyze(
     if (RBraceTok->Finalized)
       continue;
     RBraceTok->Finalized = true;
+    const FormatToken *EndCommentPrevTok = RBraceTok;
+    // Namespaces often end with '};'. In that case, attach namespace end
+    // comments to the semicolon tokens.
+    if (RBraceTok->Next && RBraceTok->Next->is(tok::semi)) {
+      EndCommentPrevTok = RBraceTok->Next;
+    }
+    // The next token in the token stream after the place where the end comment
+    // token must be. This is either the next token on the current line or the
+    // first token on the next line.
+    const FormatToken *EndCommentNextTok = EndCommentPrevTok->Next;
+    if (EndCommentNextTok && EndCommentNextTok->is(tok::comment))
+      EndCommentNextTok = EndCommentNextTok->Next;
+    if (!EndCommentNextTok && I + 1 < E)
+      EndCommentNextTok = AnnotatedLines[I + 1]->First;
+    bool AddNewline = EndCommentNextTok &&
+                      EndCommentNextTok->NewlinesBefore == 0 &&
+                      EndCommentNextTok->isNot(tok::eof);
     const std::string NamespaceName = computeName(NamespaceTok);
-    bool AddNewline = (I + 1 < E) &&
-                      AnnotatedLines[I + 1]->First->NewlinesBefore == 0 &&
-                      AnnotatedLines[I + 1]->First->isNot(tok::eof);
     const std::string EndCommentText =
         computeEndCommentText(NamespaceName, AddNewline);
-    if (!hasEndComment(RBraceTok)) {
+    if (!hasEndComment(EndCommentPrevTok)) {
       bool isShort = I - StartLineIndex <= kShortNamespaceMaxLines + 1;
       if (!isShort)
-        addEndComment(RBraceTok, EndCommentText, SourceMgr, &Fixes);
+        addEndComment(EndCommentPrevTok, EndCommentText, SourceMgr, &Fixes);
       continue;
     }
-    if (!validEndComment(RBraceTok, NamespaceName))
-      updateEndComment(RBraceTok, EndCommentText, SourceMgr, &Fixes);
+    if (!validEndComment(EndCommentPrevTok, NamespaceName))
+      updateEndComment(EndCommentPrevTok, EndCommentText, SourceMgr, &Fixes);
   }
   return Fixes;
 }

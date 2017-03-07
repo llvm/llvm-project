@@ -10,6 +10,8 @@
 //
 // At the time of writing, the ARM trampolines weren't written yet.
 // XFAIL: arm || aarch64
+// See the mailing list discussion of r296998.
+// UNSUPPORTED: powerpc64le
 
 #include "xray/xray_interface.h"
 

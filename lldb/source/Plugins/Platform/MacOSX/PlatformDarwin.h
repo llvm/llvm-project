@@ -18,7 +18,6 @@
 #include "Plugins/Platform/POSIX/PlatformPOSIX.h"
 #include "lldb/Host/FileSpec.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/FileSystem.h"
 
 #include <string>
 #include <tuple>
@@ -113,7 +112,7 @@ protected:
   };
 
   static lldb_private::FileSpec::EnumerateDirectoryResult
-  DirectoryEnumerator(void *baton, llvm::sys::fs::file_type file_type,
+  DirectoryEnumerator(void *baton, lldb_private::FileSpec::FileType file_type,
                       const lldb_private::FileSpec &spec);
 
   static lldb_private::FileSpec

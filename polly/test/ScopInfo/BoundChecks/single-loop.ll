@@ -22,11 +22,11 @@
 ; We should detect this kernel as a SCoP and derive run-time conditions such
 ; that the bound-checked blocks are not part of the optimized SCoP.
 
-; CHECK: Assumed Context:
-; CHECK:  [n] -> {  : n <= 100 }
+; CHECK: Invalid Context:
+; CHECK:  [n] -> {  : n >= 101 }
 
-; AST: if (n <= 100)
-; AST:     for (int c0 = 0; c0 <= min(99, n - 1); c0 += 1)
+; AST: if (1 && 0 == n >= 101)
+; AST:     for (int c0 = 0; c0 < n; c0 += 1)
 ; AST:       Stmt_if_end_4(c0);
 ;
 ; AST-NOT: for

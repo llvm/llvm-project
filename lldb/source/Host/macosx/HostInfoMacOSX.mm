@@ -18,7 +18,6 @@
 #include "lldb/Utility/SafeMachO.h"
 
 #include "llvm/ADT/SmallString.h"
-#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 
 // C++ Includes
@@ -153,7 +152,7 @@ bool HostInfoMacOSX::ComputeSupportExeDirectory(FileSpec &file_spec) {
     // the lldb driver.
     raw_path.append("/../bin");
     FileSpec support_dir_spec(raw_path, true);
-    if (!llvm::sys::fs::is_directory(support_dir_spec.GetPath())) {
+    if (!support_dir_spec.Exists() || !support_dir_spec.IsDirectory()) {
       Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST);
       if (log)
         log->Printf("HostInfoMacOSX::%s(): failed to find support directory",

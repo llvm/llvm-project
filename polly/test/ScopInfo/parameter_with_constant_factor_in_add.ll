@@ -41,7 +41,7 @@ for.body276:                                      ; preds = %for.body276, %for.c
   br i1 false, label %for.body276, label %for.end291
 
 for.end291:                                       ; preds = %for.body276
-  unreachable
+  ret void
 
 for.inc299:                                       ; preds = %for.cond261.preheader
   %indvars.iv.next190 = add i64 %indvars.iv189, %2

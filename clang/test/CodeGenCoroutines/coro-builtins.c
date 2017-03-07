@@ -43,7 +43,7 @@ void f(int n) {
   __builtin_coro_free(__builtin_coro_frame());
 
   // CHECK-NEXT: %[[FRAME6:.+]] = call i8* @llvm.coro.frame() 
-  // CHECK-NEXT: call void @llvm.coro.end(i8* %[[FRAME6]], i1 false)
+  // CHECK-NEXT: call i1 @llvm.coro.end(i8* %[[FRAME6]], i1 false)
   __builtin_coro_end(__builtin_coro_frame(), 0);
 
   // CHECK-NEXT: call i8 @llvm.coro.suspend(token none, i1 true)

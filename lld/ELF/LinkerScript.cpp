@@ -449,7 +449,7 @@ template <class ELFT> void LinkerScript<ELFT>::switchTo(OutputSection *Sec) {
 
   CurOutSec = Sec;
 
-  Dot = alignTo(Dot, CurOutSec->Addralign);
+  Dot = alignTo(Dot, CurOutSec->Alignment);
   CurOutSec->Addr = isTbss<ELFT>(CurOutSec) ? Dot + ThreadBssOffset : Dot;
 
   // If neither AT nor AT> is specified for an allocatable section, the linker
@@ -1862,7 +1862,7 @@ Expr ScriptParser::readPrimary() {
   if (Tok == "ALIGNOF") {
     StringRef Name = readParenLiteral();
     return [=](uint64_t Dot) {
-      return ScriptBase->getOutputSection(Location, Name)->Addralign;
+      return ScriptBase->getOutputSection(Location, Name)->Alignment;
     };
   }
   if (Tok == "SIZEOF_HEADERS")

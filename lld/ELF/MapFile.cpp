@@ -102,7 +102,7 @@ static void writeMapFile2(raw_fd_ostream &OS,
      << " Align Out     In      File    Symbol\n";
 
   for (OutputSection *Sec : OutputSections) {
-    writeOutSecLine(OS, Width, Sec->Addr, Sec->Size, Sec->Addralign, Sec->Name);
+    writeOutSecLine(OS, Width, Sec->Addr, Sec->Size, Sec->Alignment, Sec->Name);
     OS << '\n';
 
     StringRef PrevName = "";

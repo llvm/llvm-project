@@ -24,7 +24,7 @@ cleanup:
   call void @free(i8* %mem)
   br label %suspend
 suspend:
-  call void @llvm.coro.end(i8* %hdl, i1 0)  
+  call i1 @llvm.coro.end(i8* %hdl, i1 0)  
   ret i8* %hdl
 }
 
@@ -52,7 +52,7 @@ declare void @llvm.coro.resume(i8*)
 declare void @llvm.coro.destroy(i8*)
   
 declare i8* @llvm.coro.begin(token, i8*)
-declare void @llvm.coro.end(i8*, i1) 
+declare i1 @llvm.coro.end(i8*, i1) 
 
 declare noalias i8* @malloc(i32)
 declare void @print(i32)

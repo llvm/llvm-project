@@ -188,9 +188,6 @@ __isl_give isl_basic_map *isl_basic_map_remove_dims(
 __isl_give isl_basic_map *isl_basic_map_eliminate(
 	__isl_take isl_basic_map *bmap,
 	enum isl_dim_type type, unsigned first, unsigned n);
-ISL_DEPRECATED
-__isl_give isl_basic_map *isl_basic_map_from_basic_set(
-	__isl_take isl_basic_set *bset, __isl_take isl_space *dim);
 __isl_export
 __isl_give isl_basic_map *isl_basic_map_sample(__isl_take isl_basic_map *bmap);
 __isl_export
@@ -274,12 +271,6 @@ __isl_give isl_pw_multi_aff *isl_map_lexmax_pw_multi_aff(
 
 void isl_basic_map_print_internal(__isl_keep isl_basic_map *bmap,
 	FILE *out, int indent);
-
-ISL_DEPRECATED
-struct isl_basic_map *isl_map_copy_basic_map(struct isl_map *map);
-ISL_DEPRECATED
-__isl_give isl_map *isl_map_drop_basic_map(__isl_take isl_map *map,
-						__isl_keep isl_basic_map *bmap);
 
 __isl_give isl_val *isl_basic_map_plain_get_val_if_fixed(
 	__isl_keep isl_basic_map *bmap,
@@ -519,9 +510,6 @@ __isl_give isl_basic_map *isl_basic_map_from_domain_and_range(
 	__isl_take isl_basic_set *domain, __isl_take isl_basic_set *range);
 __isl_give isl_map *isl_map_from_domain_and_range(__isl_take isl_set *domain,
 	__isl_take isl_set *range);
-ISL_DEPRECATED
-__isl_give isl_map *isl_map_from_set(__isl_take isl_set *set,
-	__isl_take isl_space *dim);
 __isl_export
 __isl_give isl_basic_map *isl_map_sample(__isl_take isl_map *map);
 
@@ -629,9 +617,6 @@ int isl_map_n_basic_map(__isl_keep isl_map *map);
 __isl_export
 isl_stat isl_map_foreach_basic_map(__isl_keep isl_map *map,
 	isl_stat (*fn)(__isl_take isl_basic_map *bmap, void *user), void *user);
-
-ISL_DEPRECATED
-__isl_give isl_map *isl_set_lifting(__isl_take isl_set *set);
 
 __isl_give isl_map *isl_map_fixed_power_val(__isl_take isl_map *map,
 	__isl_take isl_val *exp);

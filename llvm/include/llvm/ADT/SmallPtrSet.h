@@ -18,6 +18,7 @@
 #include "llvm/Config/abi-breaking.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/PointerLikeTypeTraits.h"
+#include "llvm/Support/type_traits.h"
 #include <cassert>
 #include <cstddef>
 #include <cstring>
@@ -343,7 +344,9 @@ struct RoundUpToPowerOfTwo {
 /// to avoid encoding a particular small size in the interface boundary.
 template <typename PtrType>
 class SmallPtrSetImpl : public SmallPtrSetImplBase {
+  using ConstPtrType = typename add_const_past_pointer<PtrType>::type;
   typedef PointerLikeTypeTraits<PtrType> PtrTraits;
+  typedef PointerLikeTypeTraits<ConstPtrType> ConstPtrTraits;
 
 protected:
   // Constructors that forward to the base.
@@ -375,13 +378,12 @@ public:
   bool erase(PtrType Ptr) {
     return erase_imp(PtrTraits::getAsVoidPointer(Ptr));
   }
-
   /// count - Return 1 if the specified pointer is in the set, 0 otherwise.
-  size_type count(PtrType Ptr) const {
+  size_type count(ConstPtrType Ptr) const {
     return find(Ptr) != endPtr() ? 1 : 0;
   }
-  iterator find(PtrType Ptr) const {
-    auto *P = find_imp(PtrTraits::getAsVoidPointer(Ptr));
+  iterator find(ConstPtrType Ptr) const {
+    auto *P = find_imp(ConstPtrTraits::getAsVoidPointer(Ptr));
     return iterator(P, EndPointer());
   }
 

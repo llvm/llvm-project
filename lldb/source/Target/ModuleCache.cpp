@@ -59,19 +59,15 @@ public:
   void Delete();
 };
 
-static FileSpec JoinPath(const FileSpec &path1, const char *path2) {
+FileSpec JoinPath(const FileSpec &path1, const char *path2) {
   FileSpec result_spec(path1);
   result_spec.AppendPathComponent(path2);
   return result_spec;
 }
 
-static Error MakeDirectory(const FileSpec &dir_path) {
-  llvm::sys::fs::file_status st;
-  if (status(dir_path.GetPath(), st))
-    return Error("Could not stat path");
-
-  if (exists(st)) {
-    if (!is_directory(st))
+Error MakeDirectory(const FileSpec &dir_path) {
+  if (dir_path.Exists()) {
+    if (!dir_path.IsDirectory())
       return Error("Invalid existing path");
 
     return Error();

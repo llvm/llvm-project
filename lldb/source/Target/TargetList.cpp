@@ -362,7 +362,7 @@ Error TargetList::CreateTargetInternal(Debugger &debugger,
   char resolved_bundle_exe_path[PATH_MAX];
   resolved_bundle_exe_path[0] = '\0';
   if (file) {
-    if (llvm::sys::fs::is_directory(file.GetPath()))
+    if (file.GetFileType() == FileSpec::eFileTypeDirectory)
       user_exe_path_is_bundle = true;
 
     if (file.IsRelative() && !user_exe_path.empty()) {

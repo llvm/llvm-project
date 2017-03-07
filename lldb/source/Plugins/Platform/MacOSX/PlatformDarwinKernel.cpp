@@ -36,8 +36,6 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
 
-#include "llvm/Support/FileSystem.h"
-
 #include <CoreFoundation/CoreFoundation.h>
 
 #include "Host/macosx/cfcpp/CFCBundle.h"
@@ -383,7 +381,7 @@ void PlatformDarwinKernel::CollectKextAndKernelDirectories() {
 
   // Add simple directory /Applications/Xcode.app/Contents/Developer/../Symbols
   FileSpec possible_dir(developer_dir + "/../Symbols", true);
-  if (llvm::sys::fs::is_directory(possible_dir.GetPath()))
+  if (possible_dir.Exists() && possible_dir.IsDirectory())
     m_search_directories.push_back(possible_dir);
 
   // Add simple directory of the current working directory
@@ -398,7 +396,7 @@ void PlatformDarwinKernel::GetUserSpecifiedDirectoriesToSearch() {
   for (uint32_t i = 0; i < user_dirs_count; i++) {
     FileSpec dir = user_dirs.GetFileSpecAtIndex(i);
     dir.ResolvePath();
-    if (llvm::sys::fs::is_directory(dir.GetPath())) {
+    if (dir.Exists() && dir.IsDirectory()) {
       m_search_directories.push_back(dir);
     }
   }
@@ -414,7 +412,7 @@ void PlatformDarwinKernel::AddRootSubdirsToSearchPaths(
       nullptr};
   for (int i = 0; subdirs[i] != nullptr; i++) {
     FileSpec testdir(dir + subdirs[i], true);
-    if (llvm::sys::fs::is_directory(testdir.GetPath()))
+    if (testdir.Exists() && testdir.IsDirectory())
       thisp->m_search_directories.push_back(testdir);
   }
 
@@ -437,12 +435,12 @@ void PlatformDarwinKernel::AddSDKSubdirsToSearchPaths(const std::string &dir) {
 // Helper function to find *.sdk and *.kdk directories in a given directory.
 FileSpec::EnumerateDirectoryResult
 PlatformDarwinKernel::FindKDKandSDKDirectoriesInDirectory(
-    void *baton, llvm::sys::fs::file_type ft, const FileSpec &file_spec) {
+    void *baton, FileSpec::FileType file_type, const FileSpec &file_spec) {
   static ConstString g_sdk_suffix = ConstString("sdk");
   static ConstString g_kdk_suffix = ConstString("kdk");
 
   PlatformDarwinKernel *thisp = (PlatformDarwinKernel *)baton;
-  if (ft == llvm::sys::fs::file_type::directory_file &&
+  if (file_type == FileSpec::eFileTypeDirectory &&
       (file_spec.GetFileNameExtension() == g_sdk_suffix ||
        file_spec.GetFileNameExtension() == g_kdk_suffix)) {
     AddRootSubdirsToSearchPaths(thisp, file_spec.GetPath());
@@ -488,19 +486,20 @@ void PlatformDarwinKernel::SearchForKextsAndKernelsRecursively() {
 
 FileSpec::EnumerateDirectoryResult
 PlatformDarwinKernel::GetKernelsAndKextsInDirectoryWithRecursion(
-    void *baton, llvm::sys::fs::file_type ft, const FileSpec &file_spec) {
-  return GetKernelsAndKextsInDirectoryHelper(baton, ft, file_spec, true);
+    void *baton, FileSpec::FileType file_type, const FileSpec &file_spec) {
+  return GetKernelsAndKextsInDirectoryHelper(baton, file_type, file_spec, true);
 }
 
 FileSpec::EnumerateDirectoryResult
 PlatformDarwinKernel::GetKernelsAndKextsInDirectoryNoRecursion(
-    void *baton, llvm::sys::fs::file_type ft, const FileSpec &file_spec) {
-  return GetKernelsAndKextsInDirectoryHelper(baton, ft, file_spec, false);
+    void *baton, FileSpec::FileType file_type, const FileSpec &file_spec) {
+  return GetKernelsAndKextsInDirectoryHelper(baton, file_type, file_spec,
+                                             false);
 }
 
 FileSpec::EnumerateDirectoryResult
 PlatformDarwinKernel::GetKernelsAndKextsInDirectoryHelper(
-    void *baton, llvm::sys::fs::file_type ft, const FileSpec &file_spec,
+    void *baton, FileSpec::FileType file_type, const FileSpec &file_spec,
     bool recurse) {
   static ConstString g_kext_suffix = ConstString("kext");
   static ConstString g_dsym_suffix = ConstString("dSYM");
@@ -513,8 +512,8 @@ PlatformDarwinKernel::GetKernelsAndKextsInDirectoryHelper(
                 file_spec.GetPath().c_str());
 
   PlatformDarwinKernel *thisp = (PlatformDarwinKernel *)baton;
-  if (ft == llvm::sys::fs::file_type::regular_file ||
-      ft == llvm::sys::fs::file_type::symlink_file) {
+  if (file_type == FileSpec::eFileTypeRegular ||
+      file_type == FileSpec::eFileTypeSymbolicLink) {
     ConstString filename = file_spec.GetFilename();
     if ((strncmp(filename.GetCString(), "kernel", 6) == 0 ||
          strncmp(filename.GetCString(), "mach", 4) == 0) &&
@@ -525,17 +524,17 @@ PlatformDarwinKernel::GetKernelsAndKextsInDirectoryHelper(
         thisp->m_kernel_binaries_without_dsyms.push_back(file_spec);
       return FileSpec::eEnumerateDirectoryResultNext;
     }
-  } else if (ft == llvm::sys::fs::file_type::directory_file &&
+  } else if (file_type == FileSpec::eFileTypeDirectory &&
              file_spec_extension == g_kext_suffix) {
     AddKextToMap(thisp, file_spec);
     // Look to see if there is a PlugIns subdir with more kexts
     FileSpec contents_plugins(file_spec.GetPath() + "/Contents/PlugIns", false);
     std::string search_here_too;
-    if (llvm::sys::fs::is_directory(contents_plugins.GetPath())) {
+    if (contents_plugins.Exists() && contents_plugins.IsDirectory()) {
       search_here_too = contents_plugins.GetPath();
     } else {
       FileSpec plugins(file_spec.GetPath() + "/PlugIns", false);
-      if (llvm::sys::fs::is_directory(plugins.GetPath())) {
+      if (plugins.Exists() && plugins.IsDirectory()) {
         search_here_too = plugins.GetPath();
       }
     }
@@ -592,7 +591,7 @@ bool PlatformDarwinKernel::KextHasdSYMSibling(
   std::string filename = dsym_fspec.GetFilename().AsCString();
   filename += ".dSYM";
   dsym_fspec.GetFilename() = ConstString(filename);
-  if (llvm::sys::fs::is_directory(dsym_fspec.GetPath())) {
+  if (dsym_fspec.Exists() && dsym_fspec.IsDirectory()) {
     return true;
   }
   // Should probably get the CFBundleExecutable here or call
@@ -606,7 +605,7 @@ bool PlatformDarwinKernel::KextHasdSYMSibling(
   deep_bundle_str += executable_name.AsCString();
   deep_bundle_str += ".dSYM";
   dsym_fspec.SetFile(deep_bundle_str, true);
-  if (llvm::sys::fs::is_directory(dsym_fspec.GetPath())) {
+  if (dsym_fspec.Exists() && dsym_fspec.IsDirectory()) {
     return true;
   }
 
@@ -616,7 +615,7 @@ bool PlatformDarwinKernel::KextHasdSYMSibling(
   shallow_bundle_str += executable_name.AsCString();
   shallow_bundle_str += ".dSYM";
   dsym_fspec.SetFile(shallow_bundle_str, true);
-  if (llvm::sys::fs::is_directory(dsym_fspec.GetPath())) {
+  if (dsym_fspec.Exists() && dsym_fspec.IsDirectory()) {
     return true;
   }
   return false;
@@ -630,7 +629,7 @@ bool PlatformDarwinKernel::KernelHasdSYMSibling(const FileSpec &kernel_binary) {
   std::string filename = kernel_binary.GetFilename().AsCString();
   filename += ".dSYM";
   kernel_dsym.GetFilename() = ConstString(filename);
-  if (llvm::sys::fs::is_directory(kernel_dsym.GetPath())) {
+  if (kernel_dsym.Exists() && kernel_dsym.IsDirectory()) {
     return true;
   }
   return false;

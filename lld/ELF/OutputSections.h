@@ -48,9 +48,9 @@ public:
 
   uint32_t getPhdrFlags() const;
 
-  void updateAlignment(uint64_t Alignment) {
-    if (Alignment > Addralign)
-      Addralign = Alignment;
+  void updateAlignment(uint32_t Val) {
+    if (Val > Alignment)
+      Alignment = Val;
   }
 
   // If true, this section will be page aligned on disk.
@@ -70,11 +70,11 @@ public:
   // The following fields correspond to Elf_Shdr members.
   uint64_t Size = 0;
   uint64_t Entsize = 0;
-  uint64_t Addralign = 0;
   uint64_t Offset = 0;
   uint64_t Flags = 0;
   uint64_t LMAOffset = 0;
   uint64_t Addr = 0;
+  uint32_t Alignment = 0;
   uint32_t ShName = 0;
   uint32_t Type = 0;
   uint32_t Info = 0;

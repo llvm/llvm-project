@@ -728,7 +728,7 @@ void PhdrEntry::add(OutputSection *Sec) {
   Last = Sec;
   if (!First)
     First = Sec;
-  p_align = std::max(p_align, Sec->Addralign);
+  p_align = std::max(p_align, Sec->Alignment);
   if (p_type == PT_LOAD)
     Sec->FirstInPtLoad = First;
 }
@@ -1454,7 +1454,7 @@ template <class ELFT> void Writer<ELFT>::assignAddresses() {
     VA += getHeaderSize<ELFT>();
   uintX_t ThreadBssOffset = 0;
   for (OutputSection *Sec : OutputSections) {
-    uintX_t Alignment = Sec->Addralign;
+    uintX_t Alignment = Sec->Alignment;
     if (Sec->PageAlign)
       Alignment = std::max<uintX_t>(Alignment, Config->MaxPageSize);
 
@@ -1485,7 +1485,7 @@ static uintX_t getFileAlignment(uintX_t Off, OutputSection *Sec) {
   OutputSection *First = Sec->FirstInPtLoad;
   // If the section is not in a PT_LOAD, we just have to align it.
   if (!First)
-    return alignTo(Off, Sec->Addralign);
+    return alignTo(Off, Sec->Alignment);
 
   // The first section in a PT_LOAD has to have congruent offset and address
   // module the page size.
