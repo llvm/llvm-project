@@ -237,6 +237,7 @@ void initializeMachineLICMPass(PassRegistry&);
 void initializeMachineLoopInfoPass(PassRegistry&);
 void initializeMachineModuleInfoPass(PassRegistry&);
 void initializeMachineOptimizationRemarkEmitterPassPass(PassRegistry&);
+void initializeMachineOutlinerPass(PassRegistry&);
 void initializeMachinePipelinerPass(PassRegistry&);
 void initializeMachinePostDominatorTreePass(PassRegistry&);
 void initializeMachineRegionInfoPassPass(PassRegistry&);

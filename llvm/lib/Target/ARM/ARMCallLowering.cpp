@@ -118,8 +118,8 @@ struct OutgoingValueHandler : public CallLowering::ValueHandler {
 
     unsigned NewRegs[] = {MRI.createGenericVirtualRegister(LLT::scalar(32)),
                           MRI.createGenericVirtualRegister(LLT::scalar(32))};
-
-    MIRBuilder.buildExtract(NewRegs, {0, 32}, Arg.Reg);
+    MIRBuilder.buildExtract(NewRegs[0], Arg.Reg, 0);
+    MIRBuilder.buildExtract(NewRegs[1], Arg.Reg, 32);
 
     bool IsLittle = MIRBuilder.getMF().getSubtarget<ARMSubtarget>().isLittle();
     if (!IsLittle)

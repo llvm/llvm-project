@@ -10383,3 +10383,83 @@ namespace {
 char LDTLSCleanup::ID = 0;
 FunctionPass*
 llvm::createCleanupLocalDynamicTLSPass() { return new LDTLSCleanup(); }
+
+unsigned X86InstrInfo::getOutliningBenefit(size_t SequenceSize,
+                                           size_t Occurrences) const {
+  unsigned NotOutlinedSize = SequenceSize * Occurrences;
+
+  // Sequence appears once in outlined function (Sequence.size())
+  // One return instruction (+1)
+  // One call per occurrence (Occurrences)
+  unsigned OutlinedSize = (SequenceSize + 1) + Occurrences;
+
+  // Return the number of instructions saved by outlining this sequence.
+  return NotOutlinedSize > OutlinedSize ? NotOutlinedSize - OutlinedSize : 0;
+}
+
+bool X86InstrInfo::isFunctionSafeToOutlineFrom(MachineFunction &MF) const {
+  return MF.getFunction()->hasFnAttribute(Attribute::NoRedZone);
+}
+
+X86GenInstrInfo::MachineOutlinerInstrType
+X86InstrInfo::getOutliningType(MachineInstr &MI) const {
+
+  // Don't outline returns or basic block terminators.
+  if (MI.isReturn() || MI.isTerminator())
+    return MachineOutlinerInstrType::Illegal;
+
+  // Don't outline anything that modifies or reads from the stack pointer.
+  //
+  // FIXME: There are instructions which are being manually built without
+  // explicit uses/defs so we also have to check the MCInstrDesc. We should be
+  // able to remove the extra checks once those are fixed up. For example,
+  // sometimes we might get something like %RAX<def> = POP64r 1. This won't be
+  // caught by modifiesRegister or readsRegister even though the instruction
+  // really ought to be formed so that modifiesRegister/readsRegister would
+  // catch it.
+  if (MI.modifiesRegister(X86::RSP, &RI) || MI.readsRegister(X86::RSP, &RI) ||
+      MI.getDesc().hasImplicitUseOfPhysReg(X86::RSP) ||
+      MI.getDesc().hasImplicitDefOfPhysReg(X86::RSP))
+    return MachineOutlinerInstrType::Illegal;
+
+  if (MI.readsRegister(X86::RIP, &RI) ||
+      MI.getDesc().hasImplicitUseOfPhysReg(X86::RIP) ||
+      MI.getDesc().hasImplicitDefOfPhysReg(X86::RIP))
+    return MachineOutlinerInstrType::Illegal;
+
+  if (MI.isPosition())
+    return MachineOutlinerInstrType::Illegal;
+
+  for (const MachineOperand &MOP : MI.operands())
+    if (MOP.isCPI() || MOP.isJTI() || MOP.isCFIIndex() || MOP.isFI() ||
+        MOP.isTargetIndex())
+      return MachineOutlinerInstrType::Illegal;
+
+  // Don't allow debug values to impact outlining type.
+  if (MI.isDebugValue() || MI.isIndirectDebugValue())
+    return MachineOutlinerInstrType::Invisible;
+
+  return MachineOutlinerInstrType::Legal;
+}
+
+void X86InstrInfo::insertOutlinerEpilogue(MachineBasicBlock &MBB,
+                                          MachineFunction &MF) const {
+
+  MachineInstr *retq = BuildMI(MF, DebugLoc(), get(X86::RETQ));
+  MBB.insert(MBB.end(), retq);
+}
+
+void X86InstrInfo::insertOutlinerPrologue(MachineBasicBlock &MBB,
+                                          MachineFunction &MF) const {
+  return;
+}
+
+MachineBasicBlock::iterator
+X86InstrInfo::insertOutlinedCall(Module &M, MachineBasicBlock &MBB,
+                                 MachineBasicBlock::iterator &It,
+                                 MachineFunction &MF) const {
+  It = MBB.insert(It,
+                  BuildMI(MF, DebugLoc(), get(X86::CALL64pcrel32))
+                      .addGlobalAddress(M.getNamedValue(MF.getName())));
+  return It;
+}

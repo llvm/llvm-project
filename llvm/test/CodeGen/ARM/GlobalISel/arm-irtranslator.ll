@@ -258,8 +258,10 @@ define arm_aapcscc double @test_double_aapcscc(double %p0, double %p1, double %p
 ; CHECK: [[FIP5:%[0-9]+]](p0) = G_FRAME_INDEX %fixed-stack.[[P5]]
 ; CHECK: [[VREGP5:%[0-9]+]](s64) = G_LOAD [[FIP5]](p0)
 ; CHECK: [[VREGV:%[0-9]+]](s64) = G_FADD [[VREGP1]], [[VREGP5]]
-; LITTLE: [[VREGVLO:%[0-9]+]](s32), [[VREGVHI:%[0-9]+]](s32) = G_EXTRACT [[VREGV]](s64), 0, 32
-; BIG: [[VREGVHI:%[0-9]+]](s32), [[VREGVLO:%[0-9]+]](s32) = G_EXTRACT [[VREGV]](s64), 0, 32
+; LITTLE: [[VREGVLO:%[0-9]+]](s32) = G_EXTRACT [[VREGV]](s64), 0
+; LITTLE: [[VREGVHI:%[0-9]+]](s32) = G_EXTRACT [[VREGV]](s64), 32
+; BIG: [[VREGVHI:%[0-9]+]](s32) = G_EXTRACT [[VREGV]](s64), 0
+; BIG: [[VREGVLO:%[0-9]+]](s32) = G_EXTRACT [[VREGV]](s64), 32
 ; CHECK-DAG: %r0 = COPY [[VREGVLO]]
 ; CHECK-DAG: %r1 = COPY [[VREGVHI]]
 ; CHECK: BX_RET 14, _, implicit %r0, implicit %r1
@@ -303,8 +305,10 @@ define arm_aapcscc double @test_double_gap_aapcscc(float %filler, double %p0,
 ; CHECK: [[FIP1:%[0-9]+]](p0) = G_FRAME_INDEX %fixed-stack.[[P1]]
 ; CHECK: [[VREGP1:%[0-9]+]](s64) = G_LOAD [[FIP1]](p0)
 ; CHECK: [[VREGV:%[0-9]+]](s64) = G_FADD [[VREGP0]], [[VREGP1]]
-; LITTLE: [[VREGVLO:%[0-9]+]](s32), [[VREGVHI:%[0-9]+]](s32) = G_EXTRACT [[VREGV]](s64), 0, 32
-; BIG: [[VREGVHI:%[0-9]+]](s32), [[VREGVLO:%[0-9]+]](s32) = G_EXTRACT [[VREGV]](s64), 0, 32
+; LITTLE: [[VREGVLO:%[0-9]+]](s32) = G_EXTRACT [[VREGV]](s64), 0
+; LITTLE: [[VREGVHI:%[0-9]+]](s32) = G_EXTRACT [[VREGV]](s64), 32
+; BIG: [[VREGVHI:%[0-9]+]](s32) = G_EXTRACT [[VREGV]](s64), 0
+; BIG: [[VREGVLO:%[0-9]+]](s32) = G_EXTRACT [[VREGV]](s64), 32
 ; CHECK-DAG: %r0 = COPY [[VREGVLO]]
 ; CHECK-DAG: %r1 = COPY [[VREGVHI]]
 ; CHECK: BX_RET 14, _, implicit %r0, implicit %r1
@@ -326,8 +330,10 @@ define arm_aapcscc double @test_double_gap2_aapcscc(double %p0, float %filler,
 ; CHECK: [[FIP1:%[0-9]+]](p0) = G_FRAME_INDEX %fixed-stack.[[P1]]
 ; CHECK: [[VREGP1:%[0-9]+]](s64) = G_LOAD [[FIP1]](p0)
 ; CHECK: [[VREGV:%[0-9]+]](s64) = G_FADD [[VREGP0]], [[VREGP1]]
-; LITTLE: [[VREGVLO:%[0-9]+]](s32), [[VREGVHI:%[0-9]+]](s32) = G_EXTRACT [[VREGV]](s64), 0, 32
-; BIG: [[VREGVHI:%[0-9]+]](s32), [[VREGVLO:%[0-9]+]](s32) = G_EXTRACT [[VREGV]](s64), 0, 32
+; LITTLE: [[VREGVLO:%[0-9]+]](s32) = G_EXTRACT [[VREGV]](s64), 0
+; LITTLE: [[VREGVHI:%[0-9]+]](s32) = G_EXTRACT [[VREGV]](s64), 32
+; BIG: [[VREGVHI:%[0-9]+]](s32) = G_EXTRACT [[VREGV]](s64), 0
+; BIG: [[VREGVLO:%[0-9]+]](s32) = G_EXTRACT [[VREGV]](s64), 32
 ; CHECK-DAG: %r0 = COPY [[VREGVLO]]
 ; CHECK-DAG: %r1 = COPY [[VREGVHI]]
 ; CHECK: BX_RET 14, _, implicit %r0, implicit %r1
@@ -489,7 +495,8 @@ define arm_aapcscc double @test_call_aapcs_fp_params(double %a, float %b) {
 ; CHECK-DAG: [[BVREG:%[0-9]+]](s32) = COPY %r2
 ; CHECK: ADJCALLSTACKDOWN 16, 14, _, implicit-def %sp, implicit %sp
 ; CHECK-DAG: %r0 = COPY [[BVREG]]
-; CHECK-DAG: [[A1:%[0-9]+]](s32), [[A2:%[0-9]+]](s32) = G_EXTRACT [[AVREG]](s64), 0, 32
+; CHECK-DAG: [[A1:%[0-9]+]](s32) = G_EXTRACT [[AVREG]](s64), 0
+; CHECK-DAG: [[A2:%[0-9]+]](s32) = G_EXTRACT [[AVREG]](s64), 32
 ; LITTLE-DAG: %r2 = COPY [[A1]]
 ; LITTLE-DAG: %r3 = COPY [[A2]]
 ; BIG-DAG: %r2 = COPY [[A2]]
@@ -508,7 +515,8 @@ define arm_aapcscc double @test_call_aapcs_fp_params(double %a, float %b) {
 ; LITTLE: [[RVREG:%[0-9]+]](s64) = G_SEQUENCE [[R1]](s32), 0, [[R2]](s32), 32
 ; BIG: [[RVREG:%[0-9]+]](s64) = G_SEQUENCE [[R2]](s32), 0, [[R1]](s32), 32
 ; CHECK: ADJCALLSTACKUP 16, 0, 14, _, implicit-def %sp, implicit %sp
-; CHECK: [[R1:%[0-9]+]](s32), [[R2:%[0-9]+]](s32) = G_EXTRACT [[RVREG]](s64), 0, 32
+; CHECK: [[R1:%[0-9]+]](s32) = G_EXTRACT [[RVREG]](s64), 0
+; CHECK: [[R2:%[0-9]+]](s32) = G_EXTRACT [[RVREG]](s64), 32
 ; LITTLE-DAG: %r0 = COPY [[R1]]
 ; LITTLE-DAG: %r1 = COPY [[R2]]
 ; BIG-DAG: %r0 = COPY [[R2]]

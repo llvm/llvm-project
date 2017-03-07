@@ -1009,6 +1009,46 @@ Value *llvm::SimplifyMulInst(Value *Op0, Value *Op1, const DataLayout &DL,
                            RecursionLimit);
 }
 
+/// Check for common or similar folds of integer division or integer remainder.
+static Value *simplifyDivRem(Value *Op0, Value *Op1, bool IsDiv) {
+  Type *Ty = Op0->getType();
+
+  // X / undef -> undef
+  // X % undef -> undef
+  if (match(Op1, m_Undef()))
+    return Op1;
+
+  // X / 0 -> undef
+  // X % 0 -> undef
+  // We don't need to preserve faults!
+  if (match(Op1, m_Zero()))
+    return UndefValue::get(Ty);
+
+  // undef / X -> 0
+  // undef % X -> 0
+  if (match(Op0, m_Undef()))
+    return Constant::getNullValue(Ty);
+
+  // 0 / X -> 0
+  // 0 % X -> 0
+  if (match(Op0, m_Zero()))
+    return Op0;
+
+  // X / X -> 1
+  // X % X -> 0
+  if (Op0 == Op1)
+    return IsDiv ? ConstantInt::get(Ty, 1) : Constant::getNullValue(Ty);
+
+  // X / 1 -> X
+  // X % 1 -> 0
+  // If this is a boolean op (single-bit type), we can't have division-by-zero
+  // or remainder-by-zero, so assume the divisor is 1.
+  if (match(Op1, m_One()) || Ty->isIntegerTy(1))
+    return IsDiv ? Op0 : Constant::getNullValue(Ty);
+
+  return nullptr;
+}
+
 /// Given operands for an SDiv or UDiv, see if we can fold the result.
 /// If not, this returns null.
 static Value *SimplifyDiv(Instruction::BinaryOps Opcode, Value *Op0, Value *Op1,
@@ -1017,35 +1057,10 @@ static Value *SimplifyDiv(Instruction::BinaryOps Opcode, Value *Op0, Value *Op1,
     if (Constant *C1 = dyn_cast<Constant>(Op1))
       return ConstantFoldBinaryOpOperands(Opcode, C0, C1, Q.DL);
 
+  if (Value *V = simplifyDivRem(Op0, Op1, true))
+    return V;
+
   bool isSigned = Opcode == Instruction::SDiv;
-
-  // X / undef -> undef
-  if (match(Op1, m_Undef()))
-    return Op1;
-
-  // X / 0 -> undef, we don't need to preserve faults!
-  if (match(Op1, m_Zero()))
-    return UndefValue::get(Op1->getType());
-
-  // undef / X -> 0
-  if (match(Op0, m_Undef()))
-    return Constant::getNullValue(Op0->getType());
-
-  // 0 / X -> 0, we don't need to preserve faults!
-  if (match(Op0, m_Zero()))
-    return Op0;
-
-  // X / 1 -> X
-  if (match(Op1, m_One()))
-    return Op0;
-
-  if (Op0->getType()->isIntegerTy(1))
-    // It can't be division by zero, hence it must be division by one.
-    return Op0;
-
-  // X / X -> 1
-  if (Op0 == Op1)
-    return ConstantInt::get(Op0->getType(), 1);
 
   // (X * Y) / Y -> X if the multiplication does not overflow.
   Value *X = nullptr, *Y = nullptr;
@@ -1193,33 +1208,8 @@ static Value *SimplifyRem(Instruction::BinaryOps Opcode, Value *Op0, Value *Op1,
     if (Constant *C1 = dyn_cast<Constant>(Op1))
       return ConstantFoldBinaryOpOperands(Opcode, C0, C1, Q.DL);
 
-  // X % undef -> undef
-  if (match(Op1, m_Undef()))
-    return Op1;
-
-  // undef % X -> 0
-  if (match(Op0, m_Undef()))
-    return Constant::getNullValue(Op0->getType());
-
-  // 0 % X -> 0, we don't need to preserve faults!
-  if (match(Op0, m_Zero()))
-    return Op0;
-
-  // X % 0 -> undef, we don't need to preserve faults!
-  if (match(Op1, m_Zero()))
-    return UndefValue::get(Op0->getType());
-
-  // X % 1 -> 0
-  if (match(Op1, m_One()))
-    return Constant::getNullValue(Op0->getType());
-
-  if (Op0->getType()->isIntegerTy(1))
-    // It can't be remainder by zero, hence it must be remainder by one.
-    return Constant::getNullValue(Op0->getType());
-
-  // X % X -> 0
-  if (Op0 == Op1)
-    return Constant::getNullValue(Op0->getType());
+  if (Value *V = simplifyDivRem(Op0, Op1, false))
+    return V;
 
   // (X % Y) % Y -> X % Y
   if ((Opcode == Instruction::SRem &&

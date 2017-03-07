@@ -362,34 +362,45 @@ MachineInstrBuilder MachineIRBuilder::buildZExtOrTrunc(unsigned Res,
   return buildInstr(Opcode).addDef(Res).addUse(Op);
 }
 
-MachineInstrBuilder MachineIRBuilder::buildExtract(ArrayRef<unsigned> Results,
-                                                   ArrayRef<uint64_t> Indices,
-                                                   unsigned Src) {
-#ifndef NDEBUG
-  assert(Results.size() == Indices.size() && "inconsistent number of regs");
-  assert(!Results.empty() && "invalid trivial extract");
-  assert(std::is_sorted(Indices.begin(), Indices.end()) &&
-         "extract offsets must be in ascending order");
 
+MachineInstrBuilder MachineIRBuilder::buildCast(unsigned Dst, unsigned Src) {
+  LLT SrcTy = MRI->getType(Src);
+  LLT DstTy = MRI->getType(Dst);
+  if (SrcTy == DstTy)
+    return buildCopy(Dst, Src);
+
+  unsigned Opcode;
+  if (SrcTy.isPointer() && DstTy.isScalar())
+    Opcode = TargetOpcode::G_PTRTOINT;
+  else if (DstTy.isPointer() && SrcTy.isScalar())
+    Opcode = TargetOpcode::G_INTTOPTR;
+  else {
+    assert(!SrcTy.isPointer() && !DstTy.isPointer() && "n G_ADDRCAST yet");
+    Opcode = TargetOpcode::G_BITCAST;
+  }
+
+  return buildInstr(Opcode).addDef(Dst).addUse(Src);
+}
+
+MachineInstrBuilder MachineIRBuilder::buildExtract(unsigned Res, unsigned Src,
+                                                   uint64_t Index) {
+#ifndef NDEBUG
   assert(MRI->getType(Src).isValid() && "invalid operand type");
-  for (auto Res : Results)
-    assert(MRI->getType(Res).isValid() && "invalid operand type");
+  assert(MRI->getType(Res).isValid() && "invalid operand type");
+  assert(Index + MRI->getType(Res).getSizeInBits() <=
+             MRI->getType(Src).getSizeInBits() &&
+         "extracting off end of register");
 #endif
 
-  auto MIB = BuildMI(getMF(), DL, getTII().get(TargetOpcode::G_EXTRACT));
-  for (auto Res : Results)
-    MIB.addDef(Res);
+  if (MRI->getType(Res).getSizeInBits() == MRI->getType(Src).getSizeInBits()) {
+    assert(Index == 0 && "insertion past the end of a register");
+    return buildCast(Res, Src);
+  }
 
-  MIB.addUse(Src);
-
-  for (auto Idx : Indices)
-    MIB.addImm(Idx);
-
-  getMBB().insert(getInsertPt(), MIB);
-  if (InsertedInstr)
-    InsertedInstr(MIB);
-
-  return MIB;
+  return buildInstr(TargetOpcode::G_EXTRACT)
+      .addDef(Res)
+      .addUse(Src)
+      .addImm(Index);
 }
 
 MachineInstrBuilder
@@ -414,6 +425,10 @@ MachineIRBuilder::buildSequence(unsigned Res,
     MIB.addImm(Indices[i]);
   }
   return MIB;
+}
+
+MachineInstrBuilder MachineIRBuilder::buildUndef(unsigned Res) {
+  return buildInstr(TargetOpcode::IMPLICIT_DEF).addDef(Res);
 }
 
 MachineInstrBuilder MachineIRBuilder::buildMerge(unsigned Res,
@@ -458,6 +473,11 @@ MachineInstrBuilder MachineIRBuilder::buildUnmerge(ArrayRef<unsigned> Res,
 
 MachineInstrBuilder MachineIRBuilder::buildInsert(unsigned Res, unsigned Src,
                                                   unsigned Op, unsigned Index) {
+  if (MRI->getType(Res).getSizeInBits() == MRI->getType(Op).getSizeInBits()) {
+    assert(Index == 0 && "insertion past the end of a register");
+    return buildCast(Res, Op);
+  }
+
   return buildInstr(TargetOpcode::G_INSERT)
       .addDef(Res)
       .addUse(Src)

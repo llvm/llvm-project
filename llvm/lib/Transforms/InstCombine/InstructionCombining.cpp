@@ -1321,22 +1321,19 @@ Value *InstCombiner::SimplifyVectorOp(BinaryOperator &Inst) {
   assert(cast<VectorType>(LHS->getType())->getNumElements() == VWidth);
   assert(cast<VectorType>(RHS->getType())->getNumElements() == VWidth);
 
-  // If both arguments of binary operation are shuffles, which use the same
-  // mask and shuffle within a single vector, it is worthwhile to move the
-  // shuffle after binary operation:
+  // If both arguments of the binary operation are shuffles that use the same
+  // mask and shuffle within a single vector, move the shuffle after the binop:
   //   Op(shuffle(v1, m), shuffle(v2, m)) -> shuffle(Op(v1, v2), m)
-  if (isa<ShuffleVectorInst>(LHS) && isa<ShuffleVectorInst>(RHS)) {
-    ShuffleVectorInst *LShuf = cast<ShuffleVectorInst>(LHS);
-    ShuffleVectorInst *RShuf = cast<ShuffleVectorInst>(RHS);
-    if (isa<UndefValue>(LShuf->getOperand(1)) &&
-        isa<UndefValue>(RShuf->getOperand(1)) &&
-        LShuf->getOperand(0)->getType() == RShuf->getOperand(0)->getType() &&
-        LShuf->getMask() == RShuf->getMask()) {
-      Value *NewBO = CreateBinOpAsGiven(Inst, LShuf->getOperand(0),
-          RShuf->getOperand(0), Builder);
-      return Builder->CreateShuffleVector(NewBO,
-          UndefValue::get(NewBO->getType()), LShuf->getMask());
-    }
+  auto *LShuf = dyn_cast<ShuffleVectorInst>(LHS);
+  auto *RShuf = dyn_cast<ShuffleVectorInst>(RHS);
+  if (LShuf && RShuf && LShuf->getMask() == RShuf->getMask() &&
+      isa<UndefValue>(LShuf->getOperand(1)) &&
+      isa<UndefValue>(RShuf->getOperand(1)) &&
+      LShuf->getOperand(0)->getType() == RShuf->getOperand(0)->getType()) {
+    Value *NewBO = CreateBinOpAsGiven(Inst, LShuf->getOperand(0),
+                                      RShuf->getOperand(0), Builder);
+    return Builder->CreateShuffleVector(
+        NewBO, UndefValue::get(NewBO->getType()), LShuf->getMask());
   }
 
   // If one argument is a shuffle within one vector, the other is a constant,

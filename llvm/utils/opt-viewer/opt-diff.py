@@ -21,6 +21,7 @@ import argparse
 from collections import defaultdict
 from multiprocessing import cpu_count, Pool
 import os, os.path
+import fnmatch
 
 def find_files(dir_or_file):
     if os.path.isfile(dir_or_file):
@@ -29,7 +30,8 @@ def find_files(dir_or_file):
     all = []
     for dir, subdirs, files in os.walk(dir_or_file):
         for file in files:
-            all.append( os.path.join(dir, file))
+            if fnmatch.fnmatch(file, "*.opt.yaml"):
+                all.append( os.path.join(dir, file))
     return all
 
 if __name__ == '__main__':

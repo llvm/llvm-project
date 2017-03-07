@@ -515,8 +515,10 @@ body:             |
     %2(s64) = G_SEQUENCE %0(s32), 0, %1(s32), 1
     ; CHECK: %[[DREG]] = VMOVDRR [[IN1]], [[IN2]]
 
-    %3(s32), %4(s32) = G_EXTRACT %2(s64), 0, 32
-    ; CHECK: [[OUT1:%[0-9]+]], [[OUT2:%[0-9]+]] = VMOVRRD %[[DREG]]
+    %3(s32) = G_EXTRACT %2(s64), 0
+    %4(s32) = G_EXTRACT %2(s64), 32
+    ; CHECK: [[OUT1:%[0-9]+]] = VGETLNi32 %[[DREG]], 0
+    ; CHECK: [[OUT2:%[0-9]+]] = VGETLNi32 %[[DREG]], 1
 
     %r0 = COPY %3
     ; CHECK: %r0 = COPY [[OUT1]]

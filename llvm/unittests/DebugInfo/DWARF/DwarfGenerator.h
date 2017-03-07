@@ -129,9 +129,6 @@ public:
   /// \returns the newly created DIE object that is now a child owned by this
   /// object.
   dwarfgen::DIE addChild(dwarf::Tag Tag);
-  
-  /// Force a DIE to say it has children even when it doesn't.
-  void setForceChildren();
 };
 
 /// A DWARF compile unit used to generate DWARF compile/type units.

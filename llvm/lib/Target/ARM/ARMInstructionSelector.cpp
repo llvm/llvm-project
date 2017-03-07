@@ -148,23 +148,19 @@ static bool selectExtract(MachineInstrBuilder &MIB, const ARMBaseInstrInfo &TII,
   (void)VReg0;
   assert(MRI.getType(VReg0).getSizeInBits() == 32 &&
          RBI.getRegBank(VReg0, MRI, TRI)->getID() == ARM::GPRRegBankID &&
-         "Unsupported operand for G_SEQUENCE");
+         "Unsupported operand for G_EXTRACT");
   unsigned VReg1 = MIB->getOperand(1).getReg();
   (void)VReg1;
-  assert(MRI.getType(VReg1).getSizeInBits() == 32 &&
-         RBI.getRegBank(VReg1, MRI, TRI)->getID() == ARM::GPRRegBankID &&
-         "Unsupported operand for G_SEQUENCE");
-  unsigned VReg2 = MIB->getOperand(2).getReg();
-  (void)VReg2;
-  assert(MRI.getType(VReg2).getSizeInBits() == 64 &&
-         RBI.getRegBank(VReg2, MRI, TRI)->getID() == ARM::FPRRegBankID &&
-         "Unsupported operand for G_SEQUENCE");
+  assert(MRI.getType(VReg1).getSizeInBits() == 64 &&
+         RBI.getRegBank(VReg1, MRI, TRI)->getID() == ARM::FPRRegBankID &&
+         "Unsupported operand for G_EXTRACT");
+  assert(MIB->getOperand(2).getImm() % 32 == 0 &&
+         "Unsupported operand for G_EXTRACT");
 
   // Remove the operands corresponding to the offsets.
-  MIB->RemoveOperand(4);
-  MIB->RemoveOperand(3);
+  MIB->getOperand(2).setImm(MIB->getOperand(2).getImm() / 32);
 
-  MIB->setDesc(TII.get(ARM::VMOVRRD));
+  MIB->setDesc(TII.get(ARM::VGETLNi32));
   MIB.add(predOps(ARMCC::AL));
 
   return true;

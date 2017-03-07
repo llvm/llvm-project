@@ -338,6 +338,9 @@ public:
   /// \return The newly created instruction.
   MachineInstrBuilder buildZExtOrTrunc(unsigned Res, unsigned Op);
 
+  /// Build and insert an appropriate cast between two registers of equal size.
+  MachineInstrBuilder buildCast(unsigned Dst, unsigned Src);
+
   /// Build and insert G_BR \p Dest
   ///
   /// G_BR is an unconditional branch to \p Dest.
@@ -437,19 +440,16 @@ public:
   MachineInstrBuilder buildStore(unsigned Val, unsigned Addr,
                                  MachineMemOperand &MMO);
 
-  /// Build and insert `Res0<def>, ... = G_EXTRACT Src, Idx0, ...`.
-  ///
-  /// If \p Res[i] has size N bits, G_EXTRACT sets \p Res[i] to bits `[Idxs[i],
-  /// Idxs[i] + N)` of \p Src.
+  /// Build and insert `Res0<def>, ... = G_EXTRACT Src, Idx0`.
   ///
   /// \pre setBasicBlock or setMI must have been called.
-  /// \pre Indices must be in ascending order of bit position.
-  /// \pre Each member of \p Results and \p Src must be a generic
-  ///      virtual register.
+  /// \pre \p Res and \p Src must be generic virtual registers.
   ///
   /// \return a MachineInstrBuilder for the newly created instruction.
-  MachineInstrBuilder buildExtract(ArrayRef<unsigned> Results,
-                                   ArrayRef<uint64_t> Indices, unsigned Src);
+  MachineInstrBuilder buildExtract(unsigned Res, unsigned Src, uint64_t Index);
+
+  /// Build and insert \p Res = IMPLICIT_DEF.
+  MachineInstrBuilder buildUndef(unsigned Dst);
 
   /// Build and insert \p Res<def> = G_SEQUENCE \p Op0, \p Idx0...
   ///

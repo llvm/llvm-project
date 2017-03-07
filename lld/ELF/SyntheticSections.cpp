@@ -1087,7 +1087,7 @@ template <class ELFT> void DynamicSection<ELFT>::finalizeContents() {
 
   this->Link = In<ELFT>::DynStrTab->OutSec->SectionIndex;
   if (In<ELFT>::RelaDyn->OutSec->Size > 0) {
-    bool IsRela = Config->Rela;
+    bool IsRela = Config->isRela();
     add({IsRela ? DT_RELA : DT_REL, In<ELFT>::RelaDyn});
     add({IsRela ? DT_RELASZ : DT_RELSZ, In<ELFT>::RelaDyn->OutSec->Size});
     add({IsRela ? DT_RELAENT : DT_RELENT,
@@ -1107,7 +1107,7 @@ template <class ELFT> void DynamicSection<ELFT>::finalizeContents() {
     add({DT_PLTRELSZ, In<ELFT>::RelaPlt->OutSec->Size});
     add({Config->EMachine == EM_MIPS ? DT_MIPS_PLTGOT : DT_PLTGOT,
          In<ELFT>::GotPlt});
-    add({DT_PLTREL, uint64_t(Config->Rela ? DT_RELA : DT_REL)});
+    add({DT_PLTREL, uint64_t(Config->isRela() ? DT_RELA : DT_REL)});
   }
 
   add({DT_SYMTAB, In<ELFT>::DynSymTab});
@@ -1215,10 +1215,10 @@ template <class ELFT> uint32_t DynamicReloc<ELFT>::getSymIndex() const {
 
 template <class ELFT>
 RelocationSection<ELFT>::RelocationSection(StringRef Name, bool Sort)
-    : SyntheticSection(SHF_ALLOC, Config->Rela ? SHT_RELA : SHT_REL,
+    : SyntheticSection(SHF_ALLOC, Config->isRela() ? SHT_RELA : SHT_REL,
                        sizeof(uintX_t), Name),
       Sort(Sort) {
-  this->Entsize = Config->Rela ? sizeof(Elf_Rela) : sizeof(Elf_Rel);
+  this->Entsize = Config->isRela() ? sizeof(Elf_Rela) : sizeof(Elf_Rel);
 }
 
 template <class ELFT>
@@ -1230,21 +1230,21 @@ void RelocationSection<ELFT>::addReloc(const DynamicReloc<ELFT> &Reloc) {
 
 template <class ELFT, class RelTy>
 static bool compRelocations(const RelTy &A, const RelTy &B) {
-  bool AIsRel = A.getType(Config->Mips64EL) == Target->RelativeRel;
-  bool BIsRel = B.getType(Config->Mips64EL) == Target->RelativeRel;
+  bool AIsRel = A.getType(Config->isMips64EL()) == Target->RelativeRel;
+  bool BIsRel = B.getType(Config->isMips64EL()) == Target->RelativeRel;
   if (AIsRel != BIsRel)
     return AIsRel;
 
-  return A.getSymbol(Config->Mips64EL) < B.getSymbol(Config->Mips64EL);
+  return A.getSymbol(Config->isMips64EL()) < B.getSymbol(Config->isMips64EL());
 }
 
 template <class ELFT> void RelocationSection<ELFT>::writeTo(uint8_t *Buf) {
   uint8_t *BufBegin = Buf;
   for (const DynamicReloc<ELFT> &Rel : Relocs) {
     auto *P = reinterpret_cast<Elf_Rela *>(Buf);
-    Buf += Config->Rela ? sizeof(Elf_Rela) : sizeof(Elf_Rel);
+    Buf += Config->isRela() ? sizeof(Elf_Rela) : sizeof(Elf_Rel);
 
-    if (Config->Rela)
+    if (Config->isRela())
       P->r_addend = Rel.getAddend();
     P->r_offset = Rel.getOffset();
     if (Config->EMachine == EM_MIPS && Rel.getInputSec() == In<ELFT>::MipsGot)
@@ -1252,11 +1252,11 @@ template <class ELFT> void RelocationSection<ELFT>::writeTo(uint8_t *Buf) {
       // allocated in the end of the GOT. We need to adjust the offset to take
       // in account 'local' and 'global' GOT entries.
       P->r_offset += In<ELFT>::MipsGot->getTlsOffset();
-    P->setSymbolAndType(Rel.getSymIndex(), Rel.Type, Config->Mips64EL);
+    P->setSymbolAndType(Rel.getSymIndex(), Rel.Type, Config->isMips64EL());
   }
 
   if (Sort) {
-    if (Config->Rela)
+    if (Config->isRela())
       std::stable_sort((Elf_Rela *)BufBegin,
                        (Elf_Rela *)BufBegin + Relocs.size(),
                        compRelocations<ELFT, Elf_Rela>);

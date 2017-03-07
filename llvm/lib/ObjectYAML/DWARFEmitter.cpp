@@ -19,6 +19,8 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/SwapByteOrder.h"
 
+#include "DWARFVisitor.h"
+
 #include <algorithm>
 
 using namespace llvm;
@@ -72,6 +74,8 @@ void DWARFYAML::EmitDebugAbbrev(raw_ostream &OS, const DWARFYAML::Data &DI) {
     for (auto Attr : AbbrevDecl.Attributes) {
       encodeULEB128(Attr.Attribute, OS);
       encodeULEB128(Attr.Form, OS);
+      if (Attr.Form == dwarf::DW_FORM_implicit_const)
+        encodeSLEB128(Attr.Value, OS);
     }
     encodeULEB128(0, OS);
     encodeULEB128(0, OS);
@@ -117,130 +121,65 @@ void DWARFYAML::EmitPubSection(raw_ostream &OS,
   }
 }
 
-void DWARFYAML::EmitDebugInfo(raw_ostream &OS, const DWARFYAML::Data &DI) {
+/// \brief An extension of the DWARFYAML::ConstVisitor which writes compile
+/// units and DIEs to a stream.
+class DumpVisitor : public DWARFYAML::ConstVisitor {
+  raw_ostream &OS;
 
-  for (auto CU : DI.CompileUnits) {
-    writeInitialLength(CU.Length, OS, DI.IsLittleEndian);
-    writeInteger((uint16_t)CU.Version, OS, DI.IsLittleEndian);
-    writeInteger((uint32_t)CU.AbbrOffset, OS, DI.IsLittleEndian);
-    writeInteger((uint8_t)CU.AddrSize, OS, DI.IsLittleEndian);
-
-    auto FirstAbbrevCode = CU.Entries[0].AbbrCode;
-
-    for (auto Entry : CU.Entries) {
-      encodeULEB128(Entry.AbbrCode, OS);
-      if (Entry.AbbrCode == 0u)
-        continue;
-      bool Indirect = false;
-      assert(Entry.AbbrCode - FirstAbbrevCode < DI.AbbrevDecls.size() &&
-             "Out of range AbbCode");
-      auto &Abbrev = DI.AbbrevDecls[Entry.AbbrCode - FirstAbbrevCode];
-
-      auto FormVal = Entry.Values.begin();
-      auto AbbrForm = Abbrev.Attributes.begin();
-      for (;
-           FormVal != Entry.Values.end() && AbbrForm != Abbrev.Attributes.end();
-           ++FormVal, ++AbbrForm) {
-        dwarf::Form Form = AbbrForm->Form;
-        do {
-          Indirect = false;
-          switch (Form) {
-          case dwarf::DW_FORM_addr:
-            writeVariableSizedInteger(FormVal->Value, CU.AddrSize, OS,
-                                      DI.IsLittleEndian);
-            break;
-          case dwarf::DW_FORM_ref_addr: {
-            // TODO: Handle DWARF32/DWARF64 after Line Table data is done
-            auto writeSize = CU.Version == 2 ? CU.AddrSize : 4;
-            writeVariableSizedInteger(FormVal->Value, writeSize, OS,
-                                      DI.IsLittleEndian);
-            break;
-          }
-          case dwarf::DW_FORM_exprloc:
-          case dwarf::DW_FORM_block:
-            encodeULEB128(FormVal->BlockData.size(), OS);
-            OS.write(reinterpret_cast<char *>(&FormVal->BlockData[0]),
-                     FormVal->BlockData.size());
-            break;
-          case dwarf::DW_FORM_block1: {
-            auto writeSize = FormVal->BlockData.size();
-            writeInteger((uint8_t)writeSize, OS, DI.IsLittleEndian);
-            OS.write(reinterpret_cast<char *>(&FormVal->BlockData[0]),
-                     FormVal->BlockData.size());
-            break;
-          }
-          case dwarf::DW_FORM_block2: {
-            auto writeSize = FormVal->BlockData.size();
-            writeInteger((uint16_t)writeSize, OS, DI.IsLittleEndian);
-            OS.write(reinterpret_cast<char *>(&FormVal->BlockData[0]),
-                     FormVal->BlockData.size());
-            break;
-          }
-          case dwarf::DW_FORM_block4: {
-            auto writeSize = FormVal->BlockData.size();
-            writeInteger((uint32_t)writeSize, OS, DI.IsLittleEndian);
-            OS.write(reinterpret_cast<char *>(&FormVal->BlockData[0]),
-                     FormVal->BlockData.size());
-            break;
-          }
-          case dwarf::DW_FORM_data1:
-          case dwarf::DW_FORM_ref1:
-          case dwarf::DW_FORM_flag:
-            writeInteger((uint8_t)FormVal->Value, OS, DI.IsLittleEndian);
-            break;
-          case dwarf::DW_FORM_data2:
-          case dwarf::DW_FORM_ref2:
-            writeInteger((uint16_t)FormVal->Value, OS, DI.IsLittleEndian);
-            break;
-          case dwarf::DW_FORM_data4:
-          case dwarf::DW_FORM_ref4:
-            writeInteger((uint32_t)FormVal->Value, OS, DI.IsLittleEndian);
-            break;
-          case dwarf::DW_FORM_data8:
-          case dwarf::DW_FORM_ref8:
-            writeInteger((uint64_t)FormVal->Value, OS, DI.IsLittleEndian);
-            break;
-          case dwarf::DW_FORM_sdata:
-            encodeSLEB128(FormVal->Value, OS);
-            break;
-          case dwarf::DW_FORM_udata:
-          case dwarf::DW_FORM_ref_udata:
-            encodeULEB128(FormVal->Value, OS);
-            break;
-          case dwarf::DW_FORM_string:
-            OS.write(FormVal->CStr.data(), FormVal->CStr.size());
-            OS.write('\0');
-            break;
-          case dwarf::DW_FORM_indirect:
-            encodeULEB128(FormVal->Value, OS);
-            Indirect = true;
-            Form = static_cast<dwarf::Form>((uint64_t)FormVal->Value);
-            ++FormVal;
-            break;
-          case dwarf::DW_FORM_strp:
-          case dwarf::DW_FORM_sec_offset:
-          case dwarf::DW_FORM_GNU_ref_alt:
-          case dwarf::DW_FORM_GNU_strp_alt:
-          case dwarf::DW_FORM_line_strp:
-          case dwarf::DW_FORM_strp_sup:
-          case dwarf::DW_FORM_ref_sup:
-            // TODO: Handle DWARF32/64
-            writeInteger((uint32_t)FormVal->Value, OS, DI.IsLittleEndian);
-            break;
-          case dwarf::DW_FORM_ref_sig8:
-            writeInteger((uint64_t)FormVal->Value, OS, DI.IsLittleEndian);
-            break;
-          case dwarf::DW_FORM_GNU_addr_index:
-          case dwarf::DW_FORM_GNU_str_index:
-            encodeULEB128(FormVal->Value, OS);
-            break;
-          default:
-            break;
-          }
-        } while (Indirect);
-      }
-    }
+protected:
+  virtual void onStartCompileUnit(const DWARFYAML::Unit &CU) {
+    writeInitialLength(CU.Length, OS, DebugInfo.IsLittleEndian);
+    writeInteger((uint16_t)CU.Version, OS, DebugInfo.IsLittleEndian);
+    writeInteger((uint32_t)CU.AbbrOffset, OS, DebugInfo.IsLittleEndian);
+    writeInteger((uint8_t)CU.AddrSize, OS, DebugInfo.IsLittleEndian);
   }
+
+  virtual void onStartDIE(const DWARFYAML::Unit &CU,
+                          const DWARFYAML::Entry &DIE) {
+    encodeULEB128(DIE.AbbrCode, OS);
+  }
+
+  virtual void onValue(const uint8_t U) {
+    writeInteger(U, OS, DebugInfo.IsLittleEndian);
+  }
+
+  virtual void onValue(const uint16_t U) {
+    writeInteger(U, OS, DebugInfo.IsLittleEndian);
+  }
+  virtual void onValue(const uint32_t U) {
+    writeInteger(U, OS, DebugInfo.IsLittleEndian);
+  }
+  virtual void onValue(const uint64_t U, const bool LEB = false) {
+    if (LEB)
+      encodeULEB128(U, OS);
+    else
+      writeInteger(U, OS, DebugInfo.IsLittleEndian);
+  }
+
+  virtual void onValue(const int64_t S, const bool LEB = false) {
+    if (LEB)
+      encodeSLEB128(S, OS);
+    else
+      writeInteger(S, OS, DebugInfo.IsLittleEndian);
+  }
+
+  virtual void onValue(const StringRef String) {
+    OS.write(String.data(), String.size());
+    OS.write('\0');
+  }
+
+  virtual void onValue(const MemoryBufferRef MBR) {
+    OS.write(MBR.getBufferStart(), MBR.getBufferSize());
+  }
+
+public:
+  DumpVisitor(const DWARFYAML::Data &DI, raw_ostream &Out)
+      : DWARFYAML::ConstVisitor(DI), OS(Out) {}
+};
+
+void DWARFYAML::EmitDebugInfo(raw_ostream &OS, const DWARFYAML::Data &DI) {
+  DumpVisitor Visitor(DI, OS);
+  Visitor.traverseDebugInfo();
 }
 
 static void EmitFileEntry(raw_ostream &OS, const DWARFYAML::File &File) {

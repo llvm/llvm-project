@@ -92,7 +92,6 @@ DWARFAbbreviationDeclaration::extract(DataExtractor Data,
           case DW_FORM_line_strp:
           case DW_FORM_sec_offset:
           case DW_FORM_strp_sup:
-          case DW_FORM_ref_sup:
             ++FixedAttributeSize->NumDwarfOffsets;
             break;
 
