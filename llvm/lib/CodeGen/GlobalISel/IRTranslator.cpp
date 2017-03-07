@@ -384,12 +384,17 @@ bool IRTranslator::translateSelect(const User &U,
 
 bool IRTranslator::translateBitCast(const User &U,
                                     MachineIRBuilder &MIRBuilder) {
+  // If we're bitcasting to the source type, we can reuse the source vreg.
   if (LLT{*U.getOperand(0)->getType(), *DL} == LLT{*U.getType(), *DL}) {
+    // Get the source vreg now, to avoid invalidating ValToVReg.
+    unsigned SrcReg = getOrCreateVReg(*U.getOperand(0));
     unsigned &Reg = ValToVReg[&U];
+    // If we already assigned a vreg for this bitcast, we can't change that.
+    // Emit a copy to satisfy the users we already emitted.
     if (Reg)
-      MIRBuilder.buildCopy(Reg, getOrCreateVReg(*U.getOperand(0)));
+      MIRBuilder.buildCopy(Reg, SrcReg);
     else
-      Reg = getOrCreateVReg(*U.getOperand(0));
+      Reg = SrcReg;
     return true;
   }
   return translateCast(TargetOpcode::G_BITCAST, U, MIRBuilder);
