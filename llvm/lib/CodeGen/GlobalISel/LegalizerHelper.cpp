@@ -202,8 +202,8 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
       if (OpSegSize != OpSize) {
         // A genuine extract is needed.
         OpSegReg = MRI.createGenericVirtualRegister(LLT::scalar(OpSegSize));
-        MIRBuilder.buildExtract(OpSegReg, std::max(OpSegStart, (int64_t)0),
-                                OpReg);
+        MIRBuilder.buildExtract(OpSegReg, OpReg,
+                                std::max(OpSegStart, (int64_t)0));
       }
 
       unsigned DstReg = MRI.createGenericVirtualRegister(NarrowTy);

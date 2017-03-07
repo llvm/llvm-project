@@ -382,34 +382,25 @@ MachineInstrBuilder MachineIRBuilder::buildCast(unsigned Dst, unsigned Src) {
   return buildInstr(Opcode).addDef(Dst).addUse(Src);
 }
 
-MachineInstrBuilder MachineIRBuilder::buildExtract(ArrayRef<unsigned> Results,
-                                                   ArrayRef<uint64_t> Indices,
-                                                   unsigned Src) {
+MachineInstrBuilder MachineIRBuilder::buildExtract(unsigned Res, unsigned Src,
+                                                   uint64_t Index) {
 #ifndef NDEBUG
-  assert(Results.size() == Indices.size() && "inconsistent number of regs");
-  assert(!Results.empty() && "invalid trivial extract");
-  assert(std::is_sorted(Indices.begin(), Indices.end()) &&
-         "extract offsets must be in ascending order");
-
   assert(MRI->getType(Src).isValid() && "invalid operand type");
-  for (auto Res : Results)
-    assert(MRI->getType(Res).isValid() && "invalid operand type");
+  assert(MRI->getType(Res).isValid() && "invalid operand type");
+  assert(Index + MRI->getType(Res).getSizeInBits() <=
+             MRI->getType(Src).getSizeInBits() &&
+         "extracting off end of register");
 #endif
 
-  auto MIB = BuildMI(getMF(), DL, getTII().get(TargetOpcode::G_EXTRACT));
-  for (auto Res : Results)
-    MIB.addDef(Res);
+  if (MRI->getType(Res).getSizeInBits() == MRI->getType(Src).getSizeInBits()) {
+    assert(Index == 0 && "insertion past the end of a register");
+    return buildCast(Res, Src);
+  }
 
-  MIB.addUse(Src);
-
-  for (auto Idx : Indices)
-    MIB.addImm(Idx);
-
-  getMBB().insert(getInsertPt(), MIB);
-  if (InsertedInstr)
-    InsertedInstr(MIB);
-
-  return MIB;
+  return buildInstr(TargetOpcode::G_EXTRACT)
+      .addDef(Res)
+      .addUse(Src)
+      .addImm(Index);
 }
 
 MachineInstrBuilder

@@ -46,8 +46,7 @@ private:
   typedef std::function<void(MachineIRBuilder &, int, CCValAssign &)>
       MemHandler;
 
-  typedef std::function<void(ArrayRef<unsigned>, ArrayRef<uint64_t>)>
-      SplitArgTy;
+  typedef std::function<void(unsigned, uint64_t)> SplitArgTy;
 
   void splitToValueTypes(const ArgInfo &OrigArgInfo,
                          SmallVectorImpl<ArgInfo> &SplitArgs,
