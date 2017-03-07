@@ -45,7 +45,7 @@ define <2 x double> @test_x86_sse2_cvtsi642sd(<2 x double> %a0, i64 %a1) {
 ;
 ; SKX-LABEL: test_x86_sse2_cvtsi642sd:
 ; SKX:       ## BB#0:
-; SKX-NEXT:    vcvtsi2sdq %rdi, %xmm0, %xmm0 ## encoding: [0x62,0xf1,0xff,0x08,0x2a,0xc7]
+; SKX-NEXT:    vcvtsi2sdq %rdi, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe1,0xfb,0x2a,0xc7]
 ; SKX-NEXT:    retq ## encoding: [0xc3]
   %res = call <2 x double> @llvm.x86.sse2.cvtsi642sd(<2 x double> %a0, i64 %a1) ; <<2 x double>> [#uses=1]
   ret <2 x double> %res

@@ -35,7 +35,9 @@ public:
     if (!Body)
       return;
     TheBuildResult = SawFunctionBody;
-    if (CFG::buildCFG(nullptr, Body, Result.Context, CFG::BuildOptions()))
+    CFG::BuildOptions Options;
+    Options.AddImplicitDtors = true;
+    if (CFG::buildCFG(nullptr, Body, Result.Context, Options))
         TheBuildResult = BuiltCFG;
   }
 };
@@ -71,6 +73,16 @@ TEST(CFG, DeleteExpressionOnDependentType) {
   const char *Code = "template<class T>\n"
                      "void f(T t) {\n"
                      "  delete t;\n"
+                     "}\n";
+  EXPECT_EQ(BuiltCFG, BuildCFG(Code));
+}
+
+// Constructing a CFG on a function template with a variable of incomplete type
+// should not crash.
+TEST(CFG, VariableOfIncompleteType) {
+  const char *Code = "template<class T> void f() {\n"
+                     "  class Undefined;\n"
+                     "  Undefined u;\n"
                      "}\n";
   EXPECT_EQ(BuiltCFG, BuildCFG(Code));
 }

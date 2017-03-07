@@ -953,6 +953,13 @@ bool status_known(file_status s) {
   return s.type() != file_type::status_error;
 }
 
+file_type get_file_type(const Twine &Path) {
+  file_status st;
+  if (status(Path, st))
+    return file_type::status_error;
+  return st.type();
+}
+
 bool is_directory(file_status status) {
   return status.type() == file_type::directory_file;
 }

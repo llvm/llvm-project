@@ -45,7 +45,7 @@ define <4 x float> @test_x86_sse_cvtsi642ss(<4 x float> %a0, i64 %a1) {
 ;
 ; SKX-LABEL: test_x86_sse_cvtsi642ss:
 ; SKX:       ## BB#0:
-; SKX-NEXT:    vcvtsi2ssq %rdi, %xmm0, %xmm0 ## encoding: [0x62,0xf1,0xfe,0x08,0x2a,0xc7]
+; SKX-NEXT:    vcvtsi2ssq %rdi, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe1,0xfa,0x2a,0xc7]
 ; SKX-NEXT:    retq ## encoding: [0xc3]
   %res = call <4 x float> @llvm.x86.sse.cvtsi642ss(<4 x float> %a0, i64 %a1) ; <<4 x float>> [#uses=1]
   ret <4 x float> %res

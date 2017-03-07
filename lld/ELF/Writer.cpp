@@ -312,7 +312,7 @@ template <class ELFT> void Writer<ELFT>::createSyntheticSections() {
   In<ELFT>::DynStrTab = make<StringTableSection<ELFT>>(".dynstr", true);
   In<ELFT>::Dynamic = make<DynamicSection<ELFT>>();
   In<ELFT>::RelaDyn = make<RelocationSection<ELFT>>(
-      Config->Rela ? ".rela.dyn" : ".rel.dyn", Config->ZCombreloc);
+      Config->isRela() ? ".rela.dyn" : ".rel.dyn", Config->ZCombreloc);
   In<ELFT>::ShStrTab = make<StringTableSection<ELFT>>(".shstrtab", false);
 
   Out::ElfHeader = make<OutputSection>("", 0, SHF_ALLOC);
@@ -421,7 +421,7 @@ template <class ELFT> void Writer<ELFT>::createSyntheticSections() {
   // We always need to add rel[a].plt to output if it has entries.
   // Even for static linking it can contain R_[*]_IRELATIVE relocations.
   In<ELFT>::RelaPlt = make<RelocationSection<ELFT>>(
-      Config->Rela ? ".rela.plt" : ".rel.plt", false /*Sort*/);
+      Config->isRela() ? ".rela.plt" : ".rel.plt", false /*Sort*/);
   Add(In<ELFT>::RelaPlt);
 
   // The RelaIplt immediately follows .rel.plt (.rel.dyn for ARM) to ensure
@@ -774,10 +774,10 @@ static Symbol *addOptionalRegular(StringRef Name, InputSectionBase *IS,
 template <class ELFT> void Writer<ELFT>::addRelIpltSymbols() {
   if (In<ELFT>::DynSymTab)
     return;
-  StringRef S = Config->Rela ? "__rela_iplt_start" : "__rel_iplt_start";
+  StringRef S = Config->isRela() ? "__rela_iplt_start" : "__rel_iplt_start";
   addOptionalRegular<ELFT>(S, In<ELFT>::RelaIplt, 0);
 
-  S = Config->Rela ? "__rela_iplt_end" : "__rel_iplt_end";
+  S = Config->isRela() ? "__rela_iplt_end" : "__rel_iplt_end";
   addOptionalRegular<ELFT>(S, In<ELFT>::RelaIplt, -1);
 }
 
