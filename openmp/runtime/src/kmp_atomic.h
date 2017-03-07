@@ -729,15 +729,19 @@ void __kmpc_atomic_float10_div_fp( ident_t *id_ref, int gtid, long double * lhs,
 
 // Reverse operations
 void __kmpc_atomic_fixed1_sub_rev_fp(  ident_t *id_ref, int gtid, char * lhs, _Quad rhs );
+void __kmpc_atomic_fixed1u_sub_rev_fp( ident_t *id_ref, int gtid, unsigned char * lhs, _Quad rhs );
 void __kmpc_atomic_fixed1_div_rev_fp(  ident_t *id_ref, int gtid, char * lhs, _Quad rhs );
 void __kmpc_atomic_fixed1u_div_rev_fp( ident_t *id_ref, int gtid, unsigned char * lhs, _Quad rhs );
 void __kmpc_atomic_fixed2_sub_rev_fp(  ident_t *id_ref, int gtid, short * lhs, _Quad rhs );
+void __kmpc_atomic_fixed2u_sub_rev_fp( ident_t *id_ref, int gtid, unsigned short * lhs, _Quad rhs );
 void __kmpc_atomic_fixed2_div_rev_fp(  ident_t *id_ref, int gtid, short * lhs, _Quad rhs );
 void __kmpc_atomic_fixed2u_div_rev_fp( ident_t *id_ref, int gtid, unsigned short * lhs, _Quad rhs );
 void __kmpc_atomic_fixed4_sub_rev_fp(  ident_t *id_ref, int gtid, kmp_int32 * lhs, _Quad rhs );
+void __kmpc_atomic_fixed4u_sub_rev_fp( ident_t *id_ref, int gtid, kmp_uint32 * lhs, _Quad rhs );
 void __kmpc_atomic_fixed4_div_rev_fp(  ident_t *id_ref, int gtid, kmp_int32 * lhs, _Quad rhs );
 void __kmpc_atomic_fixed4u_div_rev_fp( ident_t *id_ref, int gtid, kmp_uint32 * lhs, _Quad rhs );
 void __kmpc_atomic_fixed8_sub_rev_fp(  ident_t *id_ref, int gtid, kmp_int64 * lhs, _Quad rhs );
+void __kmpc_atomic_fixed8u_sub_rev_fp( ident_t *id_ref, int gtid, kmp_uint64 * lhs, _Quad rhs );
 void __kmpc_atomic_fixed8_div_rev_fp(  ident_t *id_ref, int gtid, kmp_int64 * lhs, _Quad rhs );
 void __kmpc_atomic_fixed8u_div_rev_fp( ident_t *id_ref, int gtid, kmp_uint64 * lhs, _Quad rhs );
 void __kmpc_atomic_float4_sub_rev_fp(  ident_t *id_ref, int gtid, float * lhs, _Quad rhs );

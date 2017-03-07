@@ -26,11 +26,16 @@ public:
   ~DataBufferLLVM();
 
   static std::shared_ptr<DataBufferLLVM>
-  CreateFromPath(const llvm::Twine &Path, uint64_t Size, uint64_t Offset);
+  CreateSliceFromPath(const llvm::Twine &Path, uint64_t Size, uint64_t Offset, bool Private = false);
+
+  static std::shared_ptr<DataBufferLLVM>
+  CreateFromPath(const llvm::Twine &Path, bool NullTerminate = false, bool Private = false);
 
   uint8_t *GetBytes() override;
   const uint8_t *GetBytes() const override;
   lldb::offset_t GetByteSize() const override;
+
+  char *GetChars() { return reinterpret_cast<char *>(GetBytes()); }
 
 private:
   /// \brief Construct a DataBufferLLVM from \p Buffer.  \p Buffer must be a

@@ -39,6 +39,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/DataBufferLLVM.h"
 #include "lldb/Utility/Error.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegularExpression.h"
@@ -2536,7 +2537,7 @@ bool RenderScriptRuntime::LoadAllocation(Stream &strm, const uint32_t alloc_id,
   }
 
   // Read file into data buffer
-  DataBufferSP data_sp(file.ReadFileContents());
+  auto data_sp = DataBufferLLVM::CreateFromPath(file.GetPath());
 
   // Cast start of buffer to FileHeader and use pointer to read metadata
   void *file_buf = data_sp->GetBytes();
@@ -3074,7 +3075,7 @@ bool RSModuleDescriptor::ParseRSInfo() {
   const addr_t size = info_sym->GetByteSize();
   const FileSpec fs = m_module->GetFileSpec();
 
-  const DataBufferSP buffer = fs.ReadFileContents(addr, size);
+  auto buffer = DataBufferLLVM::CreateSliceFromPath(fs.GetPath(), size, addr);
   if (!buffer)
     return false;
 

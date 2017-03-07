@@ -33,6 +33,7 @@
 #include "lldb/Utility/CleanUp.h"
 
 #include "llvm/ADT/SmallString.h"
+#include "llvm/Support/FileSystem.h"
 
 using namespace lldb_private;
 
@@ -109,7 +110,7 @@ typedef struct DiskFilesOrDirectoriesBaton {
 } DiskFilesOrDirectoriesBaton;
 
 FileSpec::EnumerateDirectoryResult
-DiskFilesOrDirectoriesCallback(void *baton, FileSpec::FileType file_type,
+DiskFilesOrDirectoriesCallback(void *baton, llvm::sys::fs::file_type file_type,
                                const FileSpec &spec) {
   const char *name = spec.GetFilename().AsCString();
 
@@ -138,10 +139,10 @@ DiskFilesOrDirectoriesCallback(void *baton, FileSpec::FileType file_type,
     strcpy(end_ptr, name);
 
     bool isa_directory = false;
-    if (file_type == FileSpec::eFileTypeDirectory)
+    if (file_type == llvm::sys::fs::file_type::directory_file)
       isa_directory = true;
-    else if (file_type == FileSpec::eFileTypeSymbolicLink) {
-      if (FileSpec(partial_name_copy, false).IsDirectory())
+    else if (file_type == llvm::sys::fs::file_type::symlink_file) {
+      if (llvm::sys::fs::is_directory(partial_name_copy))
         isa_directory = true;
     }
 

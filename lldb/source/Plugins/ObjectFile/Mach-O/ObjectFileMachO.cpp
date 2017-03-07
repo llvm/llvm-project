@@ -860,7 +860,7 @@ ObjectFile *ObjectFileMachO::CreateInstance(const lldb::ModuleSP &module_sp,
                                             lldb::offset_t length) {
   if (!data_sp) {
     data_sp =
-        DataBufferLLVM::CreateFromPath(file->GetPath(), length, file_offset);
+        DataBufferLLVM::CreateSliceFromPath(file->GetPath(), length, file_offset);
     if (!data_sp)
       return nullptr;
     data_offset = 0;
@@ -872,7 +872,7 @@ ObjectFile *ObjectFileMachO::CreateInstance(const lldb::ModuleSP &module_sp,
   // Update the data to contain the entire file if it doesn't already
   if (data_sp->GetByteSize() < length) {
     data_sp =
-        DataBufferLLVM::CreateFromPath(file->GetPath(), length, file_offset);
+        DataBufferLLVM::CreateSliceFromPath(file->GetPath(), length, file_offset);
     if (!data_sp)
       return nullptr;
     data_offset = 0;
@@ -911,7 +911,8 @@ size_t ObjectFileMachO::GetModuleSpecifications(
       size_t header_and_load_cmds =
           header.sizeofcmds + MachHeaderSizeFromMagic(header.magic);
       if (header_and_load_cmds >= data_sp->GetByteSize()) {
-        data_sp = file.ReadFileContents(file_offset, header_and_load_cmds);
+        data_sp = DataBufferLLVM::CreateSliceFromPath(
+            file.GetPath(), header_and_load_cmds, file_offset);
         data.SetData(data_sp);
         data_offset = MachHeaderSizeFromMagic(header.magic);
       }
@@ -1123,8 +1124,8 @@ bool ObjectFileMachO::ParseHeader() {
                   ReadMemory(process_sp, m_memory_addr, header_and_lc_size);
             } else {
               // Read in all only the load command data from the file on disk
-              data_sp =
-                  m_file.ReadFileContents(m_file_offset, header_and_lc_size);
+              data_sp = DataBufferLLVM::CreateSliceFromPath(
+                  m_file.GetPath(), header_and_lc_size, m_file_offset);
               if (data_sp->GetByteSize() != header_and_lc_size)
                 return false;
             }
@@ -2095,7 +2096,7 @@ UUID ObjectFileMachO::GetSharedCacheUUID(FileSpec dyld_shared_cache,
                                          const ByteOrder byte_order,
                                          const uint32_t addr_byte_size) {
   UUID dsc_uuid;
-  DataBufferSP DscData = DataBufferLLVM::CreateFromPath(
+  DataBufferSP DscData = DataBufferLLVM::CreateSliceFromPath(
       dyld_shared_cache.GetPath(),
       sizeof(struct lldb_copy_dyld_cache_header_v1), 0);
   if (!DscData)
@@ -2703,7 +2704,7 @@ size_t ObjectFileMachO::ParseSymtab() {
 
       // Process the dyld shared cache header to find the unmapped symbols
 
-      DataBufferSP dsc_data_sp = DataBufferLLVM::CreateFromPath(
+      DataBufferSP dsc_data_sp = DataBufferLLVM::CreateSliceFromPath(
           dsc_filespec.GetPath(), sizeof(struct lldb_copy_dyld_cache_header_v1),
           0);
       if (!dsc_uuid.IsValid()) {
@@ -2738,7 +2739,7 @@ size_t ObjectFileMachO::ParseSymtab() {
             mappingOffset >= sizeof(struct lldb_copy_dyld_cache_header_v1)) {
 
           DataBufferSP dsc_mapping_info_data_sp =
-              DataBufferLLVM::CreateFromPath(
+              DataBufferLLVM::CreateSliceFromPath(
                   dsc_filespec.GetPath(),
                   sizeof(struct lldb_copy_dyld_cache_mapping_info),
                   mappingOffset);
@@ -2765,7 +2766,7 @@ size_t ObjectFileMachO::ParseSymtab() {
           if (localSymbolsOffset && localSymbolsSize) {
             // Map the local symbols
             DataBufferSP dsc_local_symbols_data_sp =
-                DataBufferLLVM::CreateFromPath(dsc_filespec.GetPath(),
+                DataBufferLLVM::CreateSliceFromPath(dsc_filespec.GetPath(),
                                                localSymbolsSize,
                                                localSymbolsOffset);
 

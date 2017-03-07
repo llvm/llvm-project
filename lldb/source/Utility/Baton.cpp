@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Core/Baton.h"
+#include "lldb/Utility/Baton.h"
 
 // C Includes
 // C++ Includes

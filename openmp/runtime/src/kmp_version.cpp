@@ -89,7 +89,9 @@ int const __kmp_version_major = KMP_VERSION_MAJOR;
 int const __kmp_version_minor = KMP_VERSION_MINOR;
 int const __kmp_version_build = KMP_VERSION_BUILD;
 int const __kmp_openmp_version =
-    #if OMP_45_ENABLED
+    #if OMP_50_ENABLED
+        201611;
+    #elif OMP_45_ENABLED
         201511;
     #elif OMP_40_ENABLED
         201307;

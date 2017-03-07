@@ -19,9 +19,9 @@
 // Project includes
 #include "lldb/Breakpoint/StoppointLocation.h"
 #include "lldb/Breakpoint/WatchpointOptions.h"
-#include "lldb/Core/UserID.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/UserID.h"
 #include "lldb/lldb-private.h"
 
 namespace lldb_private {

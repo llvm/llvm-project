@@ -8,13 +8,15 @@
 //===----------------------------------------------------------------------===//
 #include "lldb/Core/Timer.h"
 
+#include "lldb/Host/Host.h"
+#include "lldb/Utility/Stream.h"
+
+#include "llvm/Support/ThreadLocal.h"
+
 #include <algorithm>
 #include <map>
 #include <mutex>
 #include <vector>
-
-#include "lldb/Host/Host.h"
-#include "lldb/Utility/Stream.h"
 
 #include <stdio.h>
 

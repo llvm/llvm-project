@@ -245,7 +245,7 @@ template <endianness E> static int16_t readSignedLo16(const uint8_t *Loc) {
 
 template <class RelTy>
 static uint32_t getMipsPairType(const RelTy *Rel, const SymbolBody &Sym) {
-  switch (Rel->getType(Config->Mips64EL)) {
+  switch (Rel->getType(Config->isMips64EL())) {
   case R_MIPS_HI16:
     return R_MIPS_LO16;
   case R_MIPS_GOT16:
@@ -263,7 +263,7 @@ template <class ELFT, class RelTy>
 static int32_t findMipsPairedAddend(const uint8_t *Buf, const uint8_t *BufLoc,
                                     SymbolBody &Sym, const RelTy *Rel,
                                     const RelTy *End) {
-  uint32_t SymIndex = Rel->getSymbol(Config->Mips64EL);
+  uint32_t SymIndex = Rel->getSymbol(Config->isMips64EL());
   uint32_t Type = getMipsPairType(Rel, Sym);
 
   // Some MIPS relocations use addend calculated from addend of the relocation
@@ -274,16 +274,16 @@ static int32_t findMipsPairedAddend(const uint8_t *Buf, const uint8_t *BufLoc,
     return 0;
 
   for (const RelTy *RI = Rel; RI != End; ++RI) {
-    if (RI->getType(Config->Mips64EL) != Type)
+    if (RI->getType(Config->isMips64EL()) != Type)
       continue;
-    if (RI->getSymbol(Config->Mips64EL) != SymIndex)
+    if (RI->getSymbol(Config->isMips64EL()) != SymIndex)
       continue;
     const endianness E = ELFT::TargetEndianness;
     return ((read32<E>(BufLoc) & 0xffff) << 16) +
            readSignedLo16<E>(Buf + RI->r_offset);
   }
   warn("can't find matching " + toString(Type) + " relocation for " +
-       toString(Rel->getType(Config->Mips64EL)));
+       toString(Rel->getType(Config->isMips64EL())));
   return 0;
 }
 
@@ -479,23 +479,20 @@ template <class ELFT> static void addCopyRelSymbol(SharedSymbol *SS) {
   // See if this symbol is in a read-only segment. If so, preserve the symbol's
   // memory protection by reserving space in the .bss.rel.ro section.
   bool IsReadOnly = isReadOnly<ELFT>(SS);
-  OutputSection *OSec = IsReadOnly ? Out::BssRelRo : Out::Bss;
-
-  // Create a SyntheticSection in Out to hold the .bss and the Copy Reloc.
-  auto *ISec =
-      make<CopyRelSection<ELFT>>(IsReadOnly, SS->getAlignment<ELFT>(), SymSize);
-  OSec->addSection(ISec);
+  BssRelSection<ELFT> *RelSec = IsReadOnly ? In<ELFT>::BssRelRo : In<ELFT>::Bss;
+  uintX_t Off = RelSec->addCopyRelocation(SS->getAlignment<ELFT>(), SymSize);
 
   // Look through the DSO's dynamic symbol table for aliases and create a
   // dynamic symbol for each one. This causes the copy relocation to correctly
   // interpose any aliases.
   for (SharedSymbol *Sym : getSymbolsAt<ELFT>(SS)) {
-    Sym->NeedsCopy = true;
-    Sym->Section = ISec;
     Sym->symbol()->IsUsedInRegularObj = true;
+    replaceBody<DefinedRegular>(Sym->symbol(), Sym->getName(),
+                                /*IsLocal=*/false, Sym->StOther, Sym->Type, Off,
+                                Sym->getSize<ELFT>(), RelSec, nullptr);
   }
 
-  In<ELFT>::RelaDyn->addReloc({Target->CopyRel, ISec, 0, false, SS, 0});
+  In<ELFT>::RelaDyn->addReloc({Target->CopyRel, RelSec, Off, false, SS, 0});
 }
 
 template <class ELFT>
@@ -535,14 +532,12 @@ static RelExpr adjustExpr(const elf::ObjectFile<ELFT> &File, SymbolBody &Body,
   if (Body.isObject()) {
     // Produce a copy relocation.
     auto *B = cast<SharedSymbol>(&Body);
-    if (!B->NeedsCopy) {
-      if (Config->ZNocopyreloc)
-        error(S.getLocation<ELFT>(RelOff) + ": unresolvable relocation " +
-              toString(Type) + " against symbol '" + toString(*B) +
-              "'; recompile with -fPIC or remove '-z nocopyreloc'");
+    if (Config->ZNocopyreloc)
+      error(S.getLocation<ELFT>(RelOff) + ": unresolvable relocation " +
+            toString(Type) + " against symbol '" + toString(*B) +
+            "'; recompile with -fPIC or remove '-z nocopyreloc'");
 
-      addCopyRelSymbol<ELFT>(B);
-    }
+    addCopyRelSymbol<ELFT>(B);
     return Expr;
   }
   if (Body.isFunc()) {
@@ -579,7 +574,7 @@ template <class ELFT, class RelTy>
 static int64_t computeAddend(const elf::ObjectFile<ELFT> &File,
                              const uint8_t *SectionData, const RelTy *End,
                              const RelTy &RI, RelExpr Expr, SymbolBody &Body) {
-  uint32_t Type = RI.getType(Config->Mips64EL);
+  uint32_t Type = RI.getType(Config->isMips64EL());
   int64_t Addend = getAddend<ELFT>(RI);
   const uint8_t *BufLoc = SectionData + RI.r_offset;
   if (!RelTy::IsRela)
@@ -631,7 +626,7 @@ mergeMipsN32RelTypes(uint32_t Type, uint32_t Offset, RelTy *I, RelTy *E) {
   uint32_t Processed = 0;
   for (; I != E && Offset == I->r_offset; ++I) {
     ++Processed;
-    Type |= I->getType(Config->Mips64EL) << (8 * Processed);
+    Type |= I->getType(Config->isMips64EL()) << (8 * Processed);
   }
   return std::make_pair(Type, Processed);
 }
@@ -664,7 +659,7 @@ static void scanRelocs(InputSectionBase &C, ArrayRef<RelTy> Rels) {
   const uint8_t *Buf = SectionData.begin();
 
   ArrayRef<EhSectionPiece> Pieces;
-  if (auto *Eh = dyn_cast<EhInputSection<ELFT>>(&C))
+  if (auto *Eh = dyn_cast<EhInputSection>(&C))
     Pieces = Eh->Pieces;
 
   ArrayRef<EhSectionPiece>::iterator PieceI = Pieces.begin();
@@ -673,7 +668,7 @@ static void scanRelocs(InputSectionBase &C, ArrayRef<RelTy> Rels) {
   for (auto I = Rels.begin(), E = Rels.end(); I != E; ++I) {
     const RelTy &RI = *I;
     SymbolBody &Body = File->getRelocTargetSym(RI);
-    uint32_t Type = RI.getType(Config->Mips64EL);
+    uint32_t Type = RI.getType(Config->isMips64EL());
 
     if (Config->MipsN32Abi) {
       uint32_t Processed;
