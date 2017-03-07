@@ -306,6 +306,10 @@ public:
     MMI.deleteMachineFunctionFor(F);
     return true;
   }
+  
+  StringRef getPassName() const override {
+    return "Free MachineFunction";
+  } 
 };
 char FreeMachineFunction::ID;
 } // end anonymous namespace

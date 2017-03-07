@@ -110,7 +110,7 @@ The LLVM IR for this coroutine looks like this:
     call void @free(i8* %mem)
     br label %suspend
   suspend:
-    call void @llvm.coro.end(i8* %hdl, i1 false)
+    %unused = call i1 @llvm.coro.end(i8* %hdl, i1 false)
     ret i8* %hdl
   }
 
@@ -440,7 +440,7 @@ store the current value produced by a coroutine.
     call void @free(i8* %mem)
     br label %suspend
   suspend:
-    call void @llvm.coro.end(i8* %hdl, i1 false)
+    %unused = call i1 @llvm.coro.end(i8* %hdl, i1 false)
     ret i8* %hdl
   }
 
@@ -955,41 +955,90 @@ A frontend should emit exactly one `coro.id` intrinsic per coroutine.
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 ::
 
-  declare void @llvm.coro.end(i8* <handle>, i1 <unwind>)
+  declare i1 @llvm.coro.end(i8* <handle>, i1 <unwind>)
 
 Overview:
 """""""""
 
 The '``llvm.coro.end``' marks the point where execution of the resume part of 
-the coroutine should end and control returns back to the caller.
+the coroutine should end and control should return to the caller.
 
 
 Arguments:
 """"""""""
 
-The first argument should refer to the coroutine handle of the enclosing coroutine.
+The first argument should refer to the coroutine handle of the enclosing
+coroutine. A frontend is allowed to supply null as the first parameter, in this
+case `coro-early` pass will replace the null with an appropriate coroutine 
+handle value.
 
 The second argument should be `true` if this coro.end is in the block that is 
-part of the unwind sequence leaving the coroutine body due to exception prior to
-the first reaching any suspend points, and `false` otherwise.
+part of the unwind sequence leaving the coroutine body due to an exception and 
+`false` otherwise.
 
 Semantics:
 """"""""""
-The `coro.end`_ intrinsic is a no-op during an initial invocation of the 
-coroutine. When the coroutine resumes, the intrinsic marks the point when 
-coroutine need to return control back to the caller.
+The purpose of this intrinsic is to allow frontends to mark the cleanup and
+other code that is only relevant during the initial invocation of the coroutine
+and should not be present in resume and destroy parts. 
 
-This intrinsic is removed by the CoroSplit pass when a coroutine is split into
-the start, resume and destroy parts. In start part, the intrinsic is removed,
-in resume and destroy parts, it is replaced with `ret void` instructions and
+This intrinsic is lowered when a coroutine is split into
+the start, resume and destroy parts. In the start part, it is a no-op,
+in resume and destroy parts, it is replaced with `ret void` instruction and
 the rest of the block containing `coro.end` instruction is discarded.
-
 In landing pads it is replaced with an appropriate instruction to unwind to 
-caller.
+caller. The handling of coro.end differs depending on whether the target is 
+using landingpad or WinEH exception model.
 
-A frontend is allowed to supply null as the first parameter, in this case 
-`coro-early` pass will replace the null with an appropriate coroutine handle
-value.
+For landingpad based exception model, it is expected that frontend uses the 
+`coro.end`_ intrinsic as follows:
+
+.. code-block:: llvm
+
+    ehcleanup:
+      %InResumePart = call i1 @llvm.coro.end(i8* null, i1 true)
+      br i1 %InResumePart, label %eh.resume, label %cleanup.cont
+
+    cleanup.cont:
+      ; rest of the cleanup
+
+    eh.resume:
+      %exn = load i8*, i8** %exn.slot, align 8
+      %sel = load i32, i32* %ehselector.slot, align 4
+      %lpad.val = insertvalue { i8*, i32 } undef, i8* %exn, 0
+      %lpad.val29 = insertvalue { i8*, i32 } %lpad.val, i32 %sel, 1
+      resume { i8*, i32 } %lpad.val29
+
+The `CoroSpit` pass replaces `coro.end` with ``True`` in the resume functions,
+thus leading to immediate unwind to the caller, whereas in start function it
+is replaced with ``False``, thus allowing to proceed to the rest of the cleanup
+code that is only needed during initial invocation of the coroutine.
+
+For Windows Exception handling model, a frontend should attach a funclet bundle
+referring to an enclosing cleanuppad as follows:
+
+.. code-block:: text
+
+    ehcleanup: 
+      %tok = cleanuppad within none []
+      %unused = call i1 @llvm.coro.end(i8* null, i1 true) [ "funclet"(token %tok) ]
+      cleanupret from %tok unwind label %RestOfTheCleanup
+
+The `CoroSplit` pass, if the funclet bundle is present, will insert 
+``cleanupret from %tok unwind to caller`` before
+the `coro.end`_ intrinsic and will remove the rest of the block.
+
+The following table summarizes the handling of `coro.end`_ intrinsic.
+
++--------------------------+-------------------+-------------------------------+
+|                          | In Start Function | In Resume/Destroy Functions   |
++--------------------------+-------------------+-------------------------------+
+|unwind=false              | nothing           |``ret void``                   |
++------------+-------------+-------------------+-------------------------------+
+|            | WinEH       | nothing           |``cleanupret unwind to caller``|
+|unwind=true +-------------+-------------------+-------------------------------+
+|            | Landingpad  | nothing           | nothing                       |
++------------+-------------+-------------------+-------------------------------+
 
 .. _coro.suspend:
 .. _suspend points:

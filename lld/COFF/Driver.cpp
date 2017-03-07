@@ -418,8 +418,8 @@ static std::string getMapFile(const opt::InputArgList &Args) {
 }
 
 // Returns true if a given file is a LLVM bitcode file. If it is a
-// static library, this function look at the first file in the archive
-// to determine if it's a bitcode file.
+// static library, this function returns true if all files in the
+// archive are bitcode files.
 static bool isBitcodeFile(StringRef Path) {
   using namespace sys::fs;
 
@@ -433,14 +433,18 @@ static bool isBitcodeFile(StringRef Path) {
   if (Magic == file_magic::archive) {
     std::unique_ptr<Archive> File =
         check(Archive::create(MB->getMemBufferRef()));
+
     Error Err = Error::success();
     for (const ErrorOr<Archive::Child> &COrErr : File->children(Err)) {
       if (Err)
-        return true;
+        return false;
       Archive::Child C = check(COrErr);
       MemoryBufferRef MBRef = check(C.getMemoryBufferRef());
-      return identify_magic(MBRef.getBuffer()) == file_magic::bitcode;
+      if (identify_magic(MBRef.getBuffer()) != file_magic::bitcode)
+        return false;
     }
+    if (Err)
+      return false;
     return true;
   }
 
