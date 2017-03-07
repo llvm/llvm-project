@@ -41,6 +41,7 @@
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/DataBufferHeap.h"
+#include "lldb/Utility/DataBufferLLVM.h"
 #include "lldb/Utility/StreamString.h"
 
 #include "lldb/lldb-private.h"
@@ -1358,8 +1359,9 @@ protected:
       size_t length = SIZE_MAX;
       if (item_byte_size > 1)
         length = item_byte_size;
-      lldb::DataBufferSP data_sp(m_memory_options.m_infile.ReadFileContents(
-          m_memory_options.m_infile_offset, length));
+      auto data_sp = DataBufferLLVM::CreateSliceFromPath(
+          m_memory_options.m_infile.GetPath(), length,
+          m_memory_options.m_infile_offset);
       if (data_sp) {
         length = data_sp->GetByteSize();
         if (length > 0) {

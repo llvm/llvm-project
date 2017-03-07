@@ -59,25 +59,25 @@ void no_specialization() {
 template <typename... T>
 struct std::experimental::coroutine_traits<int, T...> {};
 
-int no_promise_type() {
-  co_await a; // expected-error {{this function cannot be a coroutine: 'std::experimental::coroutine_traits<int>' has no member named 'promise_type'}}
+int no_promise_type() { // expected-error {{this function cannot be a coroutine: 'std::experimental::coroutine_traits<int>' has no member named 'promise_type'}}
+  co_await a;
 }
 
 template <>
 struct std::experimental::coroutine_traits<double, double> { typedef int promise_type; };
-double bad_promise_type(double) {
-  co_await a; // expected-error {{this function cannot be a coroutine: 'experimental::coroutine_traits<double, double>::promise_type' (aka 'int') is not a class}}
+double bad_promise_type(double) { // expected-error {{this function cannot be a coroutine: 'experimental::coroutine_traits<double, double>::promise_type' (aka 'int') is not a class}}
+  co_await a;
 }
 
 template <>
 struct std::experimental::coroutine_traits<double, int> {
   struct promise_type {};
 };
-double bad_promise_type_2(int) {
+double bad_promise_type_2(int) { // expected-error {{no member named 'initial_suspend'}}
   co_yield 0; // expected-error {{no member named 'yield_value' in 'std::experimental::coroutine_traits<double, int>::promise_type'}}
 }
 
-struct promise; // expected-note 2{{forward declaration}}
+struct promise; // expected-note {{forward declaration}}
 struct promise_void;
 struct void_tag {};
 template <typename... T>
@@ -94,9 +94,7 @@ struct coroutine_handle;
 }
 
 // FIXME: This diagnostic is terrible.
-void undefined_promise() { // expected-error {{variable has incomplete type 'promise_type'}}
-  // FIXME: This diagnostic doesn't make any sense.
-  // expected-error@-2 {{incomplete definition of type 'promise'}}
+void undefined_promise() { // expected-error {{this function cannot be a coroutine: 'experimental::coroutine_traits<void>::promise_type' (aka 'promise') is an incomplete type}}
   co_await a;
 }
 
@@ -216,6 +214,13 @@ auto deduced_return_coroutine() {
 }
 
 struct outer {};
+struct await_arg_1 {};
+struct await_arg_2 {};
+
+namespace adl_ns {
+struct coawait_arg_type {};
+awaitable operator co_await(coawait_arg_type);
+}
 
 namespace dependent_operator_co_await_lookup {
   template<typename T> void await_template(T t) {
@@ -238,6 +243,94 @@ namespace dependent_operator_co_await_lookup {
   };
   template void await_template(outer); // expected-note {{instantiation}}
   template void await_template_2(outer);
+
+  struct transform_awaitable {};
+  struct transformed {};
+
+  struct transform_promise {
+    typedef transform_awaitable await_arg;
+    coro<transform_promise> get_return_object();
+    transformed initial_suspend();
+    ::adl_ns::coawait_arg_type final_suspend();
+    transformed await_transform(transform_awaitable);
+  };
+  template <class AwaitArg>
+  struct basic_promise {
+    typedef AwaitArg await_arg;
+    coro<basic_promise> get_return_object();
+    awaitable initial_suspend();
+    awaitable final_suspend();
+  };
+
+  awaitable operator co_await(await_arg_1);
+
+  template <typename T, typename U>
+  coro<T> await_template_3(U t) {
+    co_await t;
+  }
+
+  template coro<basic_promise<await_arg_1>> await_template_3<basic_promise<await_arg_1>>(await_arg_1);
+
+  template <class T, int I = 0>
+  struct dependent_member {
+    coro<T> mem_fn() const {
+      co_await typename T::await_arg{}; // expected-error {{call to function 'operator co_await'}}}
+    }
+    template <class U>
+    coro<T> dep_mem_fn(U t) {
+      co_await t;
+    }
+  };
+
+  template <>
+  struct dependent_member<long> {
+    // FIXME this diagnostic is terrible
+    coro<transform_promise> mem_fn() const { // expected-error {{no member named 'await_ready' in 'dependent_operator_co_await_lookup::transformed'}}
+      // expected-note@-1 {{call to 'initial_suspend' implicitly required by the initial suspend point}}
+      // expected-note@+1 {{function is a coroutine due to use of 'co_await' here}}
+      co_await transform_awaitable{};
+      // expected-error@-1 {{no member named 'await_ready'}}
+    }
+    template <class R, class U>
+    coro<R> dep_mem_fn(U u) { co_await u; }
+  };
+
+  awaitable operator co_await(await_arg_2); // expected-note {{'operator co_await' should be declared prior to the call site}}
+
+  template struct dependent_member<basic_promise<await_arg_1>, 0>;
+  template struct dependent_member<basic_promise<await_arg_2>, 0>; // expected-note {{in instantiation}}
+
+  template <>
+  coro<transform_promise>
+      // FIXME this diagnostic is terrible
+      dependent_member<long>::dep_mem_fn<transform_promise>(int) { // expected-error {{no member named 'await_ready' in 'dependent_operator_co_await_lookup::transformed'}}
+    //expected-note@-1 {{call to 'initial_suspend' implicitly required by the initial suspend point}}
+    //expected-note@+1 {{function is a coroutine due to use of 'co_await' here}}
+    co_await transform_awaitable{};
+    // expected-error@-1 {{no member named 'await_ready'}}
+  }
+
+  void operator co_await(transform_awaitable) = delete;
+  awaitable operator co_await(transformed);
+
+  template coro<transform_promise>
+      dependent_member<long>::dep_mem_fn<transform_promise>(transform_awaitable);
+
+  template <>
+  coro<transform_promise> dependent_member<long>::dep_mem_fn<transform_promise>(long) {
+    co_await transform_awaitable{};
+  }
+
+  template <>
+  struct dependent_member<int> {
+    coro<transform_promise> mem_fn() const {
+      co_await transform_awaitable{};
+    }
+  };
+
+  template coro<transform_promise> await_template_3<transform_promise>(transform_awaitable);
+  template struct dependent_member<transform_promise>;
+  template coro<transform_promise> dependent_member<transform_promise>::dep_mem_fn(transform_awaitable);
 }
 
 struct yield_fn_tag {};
@@ -293,6 +386,7 @@ struct bad_promise_2 {
   // FIXME: We shouldn't offer a typo-correction here!
   suspend_always final_suspend(); // expected-note {{here}}
 };
+// FIXME: This shouldn't happen twice
 coro<bad_promise_2> missing_initial_suspend() { // expected-error {{no member named 'initial_suspend' in 'bad_promise_2'}}
   co_await a;
 }
@@ -313,7 +407,8 @@ struct bad_promise_4 {
 };
 // FIXME: This diagnostic is terrible.
 coro<bad_promise_4> bad_initial_suspend() { // expected-error {{no member named 'await_ready' in 'not_awaitable'}}
-  co_await a;
+  // expected-note@-1 {{call to 'initial_suspend' implicitly required by the initial suspend point}}
+  co_await a; // expected-note {{function is a coroutine due to use of 'co_await' here}}
 }
 
 struct bad_promise_5 {
@@ -323,7 +418,8 @@ struct bad_promise_5 {
 };
 // FIXME: This diagnostic is terrible.
 coro<bad_promise_5> bad_final_suspend() { // expected-error {{no member named 'await_ready' in 'not_awaitable'}}
-  co_await a;
+  // expected-note@-1 {{call to 'final_suspend' implicitly required by the final suspend point}}
+  co_await a; // expected-note {{function is a coroutine due to use of 'co_await' here}}
 }
 
 struct bad_promise_6 {
@@ -354,18 +450,68 @@ namespace std {
 int *current_exception();
 }
 
-struct bad_promise_8 {
+struct bad_promise_base {
+private:
+  void return_void();
+};
+struct bad_promise_8 : bad_promise_base {
   coro<bad_promise_8> get_return_object();
   suspend_always initial_suspend();
   suspend_always final_suspend();
-  void return_void();
   void set_exception();                                   // expected-note {{function not viable}}
   void set_exception(int *) __attribute__((unavailable)); // expected-note {{explicitly made unavailable}}
   void set_exception(void *);                             // expected-note {{candidate function}}
 };
 coro<bad_promise_8> calls_set_exception() {
   // expected-error@-1 {{call to unavailable member function 'set_exception'}}
+  // FIXME: also warn about private 'return_void' here. Even though building
+  // the call to set_exception has already failed.
   co_await a;
+}
+
+struct bad_promise_9 {
+  coro<bad_promise_9> get_return_object();
+  suspend_always initial_suspend();
+  suspend_always final_suspend();
+  void await_transform(void *);                                // expected-note {{candidate}}
+  awaitable await_transform(int) __attribute__((unavailable)); // expected-note {{explicitly made unavailable}}
+  void return_void();
+};
+coro<bad_promise_9> calls_await_transform() {
+  co_await 42; // expected-error {{call to unavailable member function 'await_transform'}}
+  // expected-note@-1 {{call to 'await_transform' implicitly required by 'co_await' here}}
+}
+
+struct bad_promise_10 {
+  coro<bad_promise_10> get_return_object();
+  suspend_always initial_suspend();
+  suspend_always final_suspend();
+  int await_transform;
+  void return_void();
+};
+coro<bad_promise_10> bad_coawait() {
+  // FIXME this diagnostic is terrible
+  co_await 42; // expected-error {{called object type 'int' is not a function or function pointer}}
+  // expected-note@-1 {{call to 'await_transform' implicitly required by 'co_await' here}}
+}
+
+struct call_operator {
+  template <class... Args>
+  awaitable operator()(Args...) const { return a; }
+};
+void ret_void();
+struct good_promise_1 {
+  coro<good_promise_1> get_return_object();
+  suspend_always initial_suspend();
+  suspend_always final_suspend();
+  static const call_operator await_transform;
+  using Fn = void (*)();
+  Fn return_void = ret_void;
+};
+const call_operator good_promise_1::await_transform;
+coro<good_promise_1> ok_static_coawait() {
+  // FIXME this diagnostic is terrible
+  co_await 42;
 }
 
 template<> struct std::experimental::coroutine_traits<int, int, const char**>

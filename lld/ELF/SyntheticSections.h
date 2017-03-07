@@ -82,7 +82,7 @@ public:
 private:
   uint64_t Size = 0;
   template <class RelTy>
-  void addSectionAux(EhInputSection<ELFT> *S, llvm::ArrayRef<RelTy> Rels);
+  void addSectionAux(EhInputSection *S, llvm::ArrayRef<RelTy> Rels);
 
   template <class RelTy>
   CieRecord *addCie(EhSectionPiece &Piece, ArrayRef<RelTy> Rels);
@@ -92,7 +92,7 @@ private:
 
   uintX_t getFdePc(uint8_t *Buf, size_t Off, uint8_t Enc);
 
-  std::vector<EhInputSection<ELFT> *> Sections;
+  std::vector<EhInputSection *> Sections;
   std::vector<CieRecord *> Cies;
 
   // CIE records are uniquified by their contents and personality functions.
@@ -640,14 +640,11 @@ public:
 // with different attributes in a single output sections. To do that
 // we put them into MergeSyntheticSection synthetic input sections which are
 // attached to regular output sections.
-template <class ELFT>
 class MergeSyntheticSection final : public SyntheticSection {
-  typedef typename ELFT::uint uintX_t;
-
 public:
-  MergeSyntheticSection(StringRef Name, uint32_t Type, uintX_t Flags,
-                        uintX_t Alignment);
-  void addSection(MergeInputSection<ELFT> *MS);
+  MergeSyntheticSection(StringRef Name, uint32_t Type, uint64_t Flags,
+                        uint64_t Alignment);
+  void addSection(MergeInputSection *MS);
   void writeTo(uint8_t *Buf) override;
   void finalizeContents() override;
   bool shouldTailMerge() const;
@@ -659,7 +656,7 @@ private:
 
   bool Finalized = false;
   llvm::StringTableBuilder Builder;
-  std::vector<MergeInputSection<ELFT> *> Sections;
+  std::vector<MergeInputSection *> Sections;
 };
 
 // .MIPS.abiflags section.
@@ -753,7 +750,7 @@ private:
 
 template <class ELFT> InputSection *createCommonSection();
 InputSection *createInterpSection();
-template <class ELFT> MergeInputSection<ELFT> *createCommentSection();
+template <class ELFT> MergeInputSection *createCommentSection();
 template <class ELFT>
 SymbolBody *addSyntheticLocal(StringRef Name, uint8_t Type, uint64_t Value,
                               uint64_t Size, InputSectionBase *Section);

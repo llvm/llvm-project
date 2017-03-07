@@ -63,6 +63,7 @@
 #include "lldb/Target/ProcessLaunchInfo.h"
 #include "lldb/Target/UnixSignals.h"
 #include "lldb/Utility/CleanUp.h"
+#include "lldb/Utility/DataBufferLLVM.h"
 #include "lldb/Utility/Error.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/lldb-private-forward.h"
@@ -586,11 +587,11 @@ Error Host::RunShellCommand(const Args &args, const FileSpec &working_dir,
             error.SetErrorStringWithFormat(
                 "shell command output is too large to fit into a std::string");
           } else {
-            std::vector<char> command_output(file_size);
-            output_file_spec.ReadFileContents(0, command_output.data(),
-                                              file_size, &error);
+            auto Buffer =
+                DataBufferLLVM::CreateFromPath(output_file_spec.GetPath());
             if (error.Success())
-              command_output_ptr->assign(command_output.data(), file_size);
+              command_output_ptr->assign(Buffer->GetChars(),
+                                         Buffer->GetByteSize());
           }
         }
       }

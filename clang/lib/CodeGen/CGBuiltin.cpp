@@ -7982,6 +7982,21 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     // instruction, but it will create a memset that won't be optimized away.
     return Builder.CreateMemSet(Ops[0], Ops[1], Ops[2], 1, true);
   }
+  case X86::BI__ud2:
+    // llvm.trap makes a ud2a instruction on x86.
+    return EmitTrapCall(Intrinsic::trap);
+  case X86::BI__int2c: {
+    // This syscall signals a driver assertion failure in x86 NT kernels.
+    llvm::FunctionType *FTy = llvm::FunctionType::get(VoidTy, false);
+    llvm::InlineAsm *IA =
+        llvm::InlineAsm::get(FTy, "int $$0x2c", "", /*SideEffects=*/true);
+    llvm::AttributeSet NoReturnAttr =
+        AttributeSet::get(getLLVMContext(), llvm::AttributeSet::FunctionIndex,
+                          llvm::Attribute::NoReturn);
+    CallSite CS = Builder.CreateCall(IA);
+    CS.setAttributes(NoReturnAttr);
+    return CS.getInstruction();
+  }
   }
 }
 

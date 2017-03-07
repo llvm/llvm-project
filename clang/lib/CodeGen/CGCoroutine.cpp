@@ -21,6 +21,13 @@ namespace clang {
 namespace CodeGen {
 
 struct CGCoroData {
+
+  // Stores the jump destination just before the final suspend. Coreturn
+  // statements jumps to this point after calling return_xxx promise member.
+  CodeGenFunction::JumpDest FinalJD;
+
+  unsigned CoreturnCount = 0;
+
   // Stores the llvm.coro.id emitted in the function so that we can supply it
   // as the first argument to coro.begin, coro.alloc and coro.free intrinsics.
   // Note: llvm.coro.id returns a token that cannot be directly expressed in a
@@ -59,10 +66,18 @@ static void createCoroData(CodeGenFunction &CGF,
   CurCoro.Data->CoroIdExpr = CoroIdExpr;
 }
 
+void CodeGenFunction::EmitCoreturnStmt(CoreturnStmt const &S) {
+  ++CurCoro.Data->CoreturnCount;
+  EmitStmt(S.getPromiseCall());
+  EmitBranchThroughCleanup(CurCoro.Data->FinalJD);
+}
+
 void CodeGenFunction::EmitCoroutineBody(const CoroutineBodyStmt &S) {
   auto *NullPtr = llvm::ConstantPointerNull::get(Builder.getInt8PtrTy());
   auto &TI = CGM.getContext().getTargetInfo();
   unsigned NewAlign = TI.getNewAlign() / TI.getCharWidth();
+
+  auto *FinalBB = createBasicBlock("coro.final");
 
   auto *CoroId = Builder.CreateCall(
       CGM.getIntrinsic(llvm::Intrinsic::coro_id),
@@ -70,8 +85,27 @@ void CodeGenFunction::EmitCoroutineBody(const CoroutineBodyStmt &S) {
   createCoroData(*this, CurCoro, CoroId);
 
   EmitScalarExpr(S.getAllocate());
-  // FIXME: Emit the rest of the coroutine.
+
+  // FIXME: Setup cleanup scopes.
+
+  EmitStmt(S.getPromiseDeclStmt());
+
+  CurCoro.Data->FinalJD = getJumpDestInCurrentScope(FinalBB);
+
+  // FIXME: Emit initial suspend and more before the body.
+
+  EmitStmt(S.getBody());
+
+  // See if we need to generate final suspend.
+  const bool CanFallthrough = Builder.GetInsertBlock();
+  const bool HasCoreturns = CurCoro.Data->CoreturnCount > 0;
+  if (CanFallthrough || HasCoreturns) {
+    EmitBlock(FinalBB);
+    // FIXME: Emit final suspend.
+  }
   EmitStmt(S.getDeallocate());
+
+  // FIXME: Emit return for the coroutine return object.
 }
 
 // Emit coroutine intrinsic and patch up arguments of the token type.

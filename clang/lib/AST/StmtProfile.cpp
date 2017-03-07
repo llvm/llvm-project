@@ -1725,6 +1725,10 @@ void StmtProfiler::VisitCoawaitExpr(const CoawaitExpr *S) {
   VisitExpr(S);
 }
 
+void StmtProfiler::VisitDependentCoawaitExpr(const DependentCoawaitExpr *S) {
+  VisitExpr(S);
+}
+
 void StmtProfiler::VisitCoyieldExpr(const CoyieldExpr *S) {
   VisitExpr(S);
 }

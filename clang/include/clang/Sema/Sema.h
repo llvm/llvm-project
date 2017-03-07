@@ -26,6 +26,7 @@
 #include "clang/AST/MangleNumberingContext.h"
 #include "clang/AST/NSAPI.h"
 #include "clang/AST/PrettyPrinter.h"
+#include "clang/AST/StmtCXX.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/APINotes/APINotesManager.h"
 #include "clang/AST/TypeOrdering.h"
@@ -103,6 +104,7 @@ namespace clang {
   class CodeCompletionAllocator;
   class CodeCompletionTUInfo;
   class CodeCompletionResult;
+  class CoroutineBodyStmt;
   class Decl;
   class DeclAccessPair;
   class DeclContext;
@@ -8235,12 +8237,17 @@ public:
   //
   ExprResult ActOnCoawaitExpr(Scope *S, SourceLocation KwLoc, Expr *E);
   ExprResult ActOnCoyieldExpr(Scope *S, SourceLocation KwLoc, Expr *E);
-  StmtResult ActOnCoreturnStmt(SourceLocation KwLoc, Expr *E);
+  StmtResult ActOnCoreturnStmt(Scope *S, SourceLocation KwLoc, Expr *E);
 
-  ExprResult BuildCoawaitExpr(SourceLocation KwLoc, Expr *E);
+  ExprResult BuildResolvedCoawaitExpr(SourceLocation KwLoc, Expr *E,
+                                      bool IsImplicit = false);
+  ExprResult BuildUnresolvedCoawaitExpr(SourceLocation KwLoc, Expr *E,
+                                        UnresolvedLookupExpr* Lookup);
   ExprResult BuildCoyieldExpr(SourceLocation KwLoc, Expr *E);
-  StmtResult BuildCoreturnStmt(SourceLocation KwLoc, Expr *E);
-
+  StmtResult BuildCoreturnStmt(SourceLocation KwLoc, Expr *E,
+                               bool IsImplicit = false);
+  StmtResult BuildCoroutineBodyStmt(CoroutineBodyStmt::CtorArgs);
+  VarDecl *buildCoroutinePromise(SourceLocation Loc);
   void CheckCompletedCoroutineBody(FunctionDecl *FD, Stmt *&Body);
 
   //===--------------------------------------------------------------------===//

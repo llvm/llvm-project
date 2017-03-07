@@ -1829,6 +1829,8 @@ TARGET_HEADER_BUILTIN(__emulu, "ULLiUiUi", "nh", "intrin.h", ALL_MS_LANGUAGES, "
 TARGET_HEADER_BUILTIN(_AddressOfReturnAddress, "v*", "nh", "intrin.h", ALL_MS_LANGUAGES, "")
 
 TARGET_HEADER_BUILTIN(__stosb, "vUc*Ucz", "nh", "intrin.h", ALL_MS_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(__int2c, "v",       "nr", "intrin.h", ALL_MS_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(__ud2,   "v",       "nr", "intrin.h", ALL_MS_LANGUAGES, "")
 
 #undef BUILTIN
 #undef TARGET_BUILTIN

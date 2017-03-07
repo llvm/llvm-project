@@ -659,7 +659,7 @@ static void scanRelocs(InputSectionBase &C, ArrayRef<RelTy> Rels) {
   const uint8_t *Buf = SectionData.begin();
 
   ArrayRef<EhSectionPiece> Pieces;
-  if (auto *Eh = dyn_cast<EhInputSection<ELFT>>(&C))
+  if (auto *Eh = dyn_cast<EhInputSection>(&C))
     Pieces = Eh->Pieces;
 
   ArrayRef<EhSectionPiece>::iterator PieceI = Pieces.begin();

@@ -8899,8 +8899,7 @@ let CategoryName = "Coroutines Issue" in {
 def err_return_in_coroutine : Error<
   "return statement not allowed in coroutine; did you mean 'co_return'?">;
 def note_declared_coroutine_here : Note<
-  "function is a coroutine due to use of "
-  "'%select{co_await|co_yield|co_return}0' here">;
+  "function is a coroutine due to use of '%0' here">;
 def err_coroutine_objc_method : Error<
   "Objective-C methods as coroutines are not yet supported">;
 def err_coroutine_unevaluated_context : Error<
@@ -8920,6 +8919,8 @@ def err_implied_std_coroutine_traits_promise_type_not_found : Error<
   "this function cannot be a coroutine: %q0 has no member named 'promise_type'">;
 def err_implied_std_coroutine_traits_promise_type_not_class : Error<
   "this function cannot be a coroutine: %0 is not a class">;
+def err_coroutine_promise_type_incomplete : Error<
+  "this function cannot be a coroutine: %0 is an incomplete type">;
 def err_coroutine_traits_missing_specialization : Error<
   "this function cannot be a coroutine: missing definition of "
   "specialization %q0">;
@@ -8930,6 +8931,11 @@ def err_malformed_std_current_exception : Error<
   "'std::current_exception' must be a function">;
 def err_coroutine_promise_return_ill_formed : Error<
   "%0 declares both 'return_value' and 'return_void'">;
+def note_coroutine_promise_implicit_await_transform_required_here : Note<
+  "call to 'await_transform' implicitly required by 'co_await' here">;
+def note_coroutine_promise_call_implicitly_required : Note<
+  "call to '%select{initial_suspend|final_suspend}0' implicitly "
+  "required by the %select{initial suspend point|final suspend point}0">;
 }
 
 let CategoryName = "Documentation Issue" in {

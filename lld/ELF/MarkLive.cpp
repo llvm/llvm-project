@@ -115,7 +115,7 @@ static void forEachSuccessor(InputSection &Sec,
 // the gc pass. With that we would be able to also gc some sections holding
 // LSDAs and personality functions if we found that they were unused.
 template <class ELFT, class RelTy>
-static void scanEhFrameSection(EhInputSection<ELFT> &EH, ArrayRef<RelTy> Rels,
+static void scanEhFrameSection(EhInputSection &EH, ArrayRef<RelTy> Rels,
                                std::function<void(ResolvedReloc)> Enqueue) {
   const endianness E = ELFT::TargetEndianness;
   for (unsigned I = 0, N = EH.Pieces.size(); I < N; ++I) {
@@ -149,19 +149,19 @@ static void scanEhFrameSection(EhInputSection<ELFT> &EH, ArrayRef<RelTy> Rels,
 }
 
 template <class ELFT>
-static void scanEhFrameSection(EhInputSection<ELFT> &EH,
+static void scanEhFrameSection(EhInputSection &EH,
                                std::function<void(ResolvedReloc)> Enqueue) {
   if (!EH.NumRelocations)
     return;
 
   // Unfortunately we need to split .eh_frame early since some relocations in
   // .eh_frame keep other section alive and some don't.
-  EH.split();
+  EH.split<ELFT>();
 
   if (EH.AreRelocsRela)
-    scanEhFrameSection(EH, EH.template relas<ELFT>(), Enqueue);
+    scanEhFrameSection<ELFT>(EH, EH.template relas<ELFT>(), Enqueue);
   else
-    scanEhFrameSection(EH, EH.template rels<ELFT>(), Enqueue);
+    scanEhFrameSection<ELFT>(EH, EH.template rels<ELFT>(), Enqueue);
 }
 
 // We do not garbage-collect two types of sections:
@@ -210,7 +210,7 @@ template <class ELFT> void elf::markLive() {
     // Usually, a whole section is marked as live or dead, but in mergeable
     // (splittable) sections, each piece of data has independent liveness bit.
     // So we explicitly tell it which offset is in use.
-    if (auto *MS = dyn_cast<MergeInputSection<ELFT>>(R.Sec))
+    if (auto *MS = dyn_cast<MergeInputSection>(R.Sec))
       MS->markLiveAt(R.Offset);
 
     if (R.Sec->Live)
@@ -245,7 +245,7 @@ template <class ELFT> void elf::markLive() {
     // .eh_frame is always marked as live now, but also it can reference to
     // sections that contain personality. We preserve all non-text sections
     // referred by .eh_frame here.
-    if (auto *EH = dyn_cast_or_null<EhInputSection<ELFT>>(Sec))
+    if (auto *EH = dyn_cast_or_null<EhInputSection>(Sec))
       scanEhFrameSection<ELFT>(*EH, Enqueue);
     if (isReserved<ELFT>(Sec) || Script<ELFT>::X->shouldKeep(Sec))
       Enqueue({Sec, 0});

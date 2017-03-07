@@ -408,8 +408,10 @@ class _LIBCPP_TYPE_VIS file_status
 public:
     // constructors
     _LIBCPP_INLINE_VISIBILITY
-    explicit file_status(file_type __ft = file_type::none,
-                         perms __prms   = perms::unknown) _NOEXCEPT
+    file_status() _NOEXCEPT : file_status(file_type::none) {}
+    _LIBCPP_INLINE_VISIBILITY
+    explicit file_status(file_type __ft,
+                         perms __prms = perms::unknown) _NOEXCEPT
       : __ft_(__ft), __prms_(__prms)
     {}
 

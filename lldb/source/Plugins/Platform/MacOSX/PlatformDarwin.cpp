@@ -37,6 +37,7 @@
 #include "lldb/Symbol/SymbolVendor.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/DataBufferLLVM.h"
 #include "lldb/Utility/Error.h"
 #include "lldb/Utility/Log.h"
 #include "llvm/ADT/STLExtras.h"
@@ -1154,13 +1155,16 @@ const char *PlatformDarwin::GetDeveloperDirectory() {
         xcode_dir_path.append(xcode_select_prefix_dir);
       xcode_dir_path.append("/usr/share/xcode-select/xcode_dir_path");
       temp_file_spec.SetFile(xcode_dir_path, false);
-      size_t bytes_read = temp_file_spec.ReadFileContents(
-          0, developer_dir_path, sizeof(developer_dir_path), NULL);
-      if (bytes_read > 0) {
-        developer_dir_path[bytes_read] = '\0';
-        while (developer_dir_path[bytes_read - 1] == '\r' ||
-               developer_dir_path[bytes_read - 1] == '\n')
-          developer_dir_path[--bytes_read] = '\0';
+      auto dir_buffer =
+          DataBufferLLVM::CreateFromPath(temp_file_spec.GetPath(), true);
+      if (dir_buffer && dir_buffer->GetByteSize() > 0) {
+        llvm::StringRef path_ref(dir_buffer->GetChars());
+        // Trim tailing newlines and make sure there is enough room for a null
+        // terminator.
+        path_ref =
+            path_ref.rtrim("\r\n").take_front(sizeof(developer_dir_path) - 1);
+        ::memcpy(developer_dir_path, path_ref.data(), path_ref.size());
+        developer_dir_path[path_ref.size()] = '\0';
         developer_dir_path_valid = true;
       }
     }

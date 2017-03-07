@@ -163,9 +163,9 @@ static typename ELFT::uint getOutFlags(InputSectionBase *S) {
 template <class ELFT> static void combineMergableSections() {
   typedef typename ELFT::uint uintX_t;
 
-  std::vector<MergeSyntheticSection<ELFT> *> MergeSections;
+  std::vector<MergeSyntheticSection *> MergeSections;
   for (InputSectionBase *&S : InputSections) {
-    MergeInputSection<ELFT> *MS = dyn_cast<MergeInputSection<ELFT>>(S);
+    MergeInputSection *MS = dyn_cast<MergeInputSection>(S);
     if (!MS)
       continue;
 
@@ -179,13 +179,13 @@ template <class ELFT> static void combineMergableSections() {
     uintX_t Alignment = std::max<uintX_t>(MS->Alignment, MS->Entsize);
 
     auto I =
-        llvm::find_if(MergeSections, [=](MergeSyntheticSection<ELFT> *Sec) {
+        llvm::find_if(MergeSections, [=](MergeSyntheticSection *Sec) {
           return Sec->Name == OutsecName && Sec->Flags == Flags &&
                  Sec->Alignment == Alignment;
         });
     if (I == MergeSections.end()) {
-      MergeSyntheticSection<ELFT> *Syn = make<MergeSyntheticSection<ELFT>>(
-          OutsecName, MS->Type, Flags, Alignment);
+      MergeSyntheticSection *Syn =
+          make<MergeSyntheticSection>(OutsecName, MS->Type, Flags, Alignment);
       MergeSections.push_back(Syn);
       I = std::prev(MergeSections.end());
       S = Syn;
@@ -491,7 +491,7 @@ template <class ELFT> static bool includeInSymtab(const SymbolBody &B) {
     // Exclude symbols pointing to garbage-collected sections.
     if (!D->Section->Live)
       return false;
-    if (auto *S = dyn_cast<MergeInputSection<ELFT>>(D->Section))
+    if (auto *S = dyn_cast<MergeInputSection>(D->Section))
       if (!S->getSectionPiece(D->Value)->Live)
         return false;
   }
@@ -910,7 +910,7 @@ void Writer<ELFT>::forEachRelSec(std::function<void(InputSectionBase &)> Fn) {
     // processed by InputSection::relocateNonAlloc.
     if (!(IS->Flags & SHF_ALLOC))
       continue;
-    if (isa<InputSection>(IS) || isa<EhInputSection<ELFT>>(IS))
+    if (isa<InputSection>(IS) || isa<EhInputSection>(IS))
       Fn(*IS);
   }
 }

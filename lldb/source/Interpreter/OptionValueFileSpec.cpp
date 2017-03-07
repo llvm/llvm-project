@@ -15,6 +15,7 @@
 #include "lldb/Interpreter/Args.h"
 #include "lldb/Interpreter/CommandCompletions.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
+#include "lldb/Utility/DataBufferLLVM.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -118,10 +119,8 @@ OptionValueFileSpec::GetFileContents(bool null_terminate) {
     const auto file_mod_time = FileSystem::GetModificationTime(m_current_value);
     if (m_data_sp && m_data_mod_time == file_mod_time)
       return m_data_sp;
-    if (null_terminate)
-      m_data_sp = m_current_value.ReadFileContentsAsCString();
-    else
-      m_data_sp = m_current_value.ReadFileContents();
+    m_data_sp = DataBufferLLVM::CreateFromPath(m_current_value.GetPath(),
+                                               null_terminate);
     m_data_mod_time = file_mod_time;
   }
   return m_data_sp;
