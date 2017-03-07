@@ -417,11 +417,34 @@ static std::string getMapFile(const opt::InputArgList &Args) {
   return (OutFile.substr(0, OutFile.rfind('.')) + ".map").str();
 }
 
+// Returns true if a given file is a LLVM bitcode file. If it is a
+// static library, this function look at the first file in the archive
+// to determine if it's a bitcode file.
 static bool isBitcodeFile(StringRef Path) {
+  using namespace sys::fs;
+
   std::unique_ptr<MemoryBuffer> MB = check(
       MemoryBuffer::getFile(Path, -1, false, true), "could not open " + Path);
-  StringRef Buf = MB->getBuffer();
-  return sys::fs::identify_magic(Buf) == sys::fs::file_magic::bitcode;
+  file_magic Magic = identify_magic(MB->getBuffer());
+
+  if (Magic == file_magic::bitcode)
+    return true;
+
+  if (Magic == file_magic::archive) {
+    std::unique_ptr<Archive> File =
+        check(Archive::create(MB->getMemBufferRef()));
+    Error Err = Error::success();
+    for (const ErrorOr<Archive::Child> &COrErr : File->children(Err)) {
+      if (Err)
+        return true;
+      Archive::Child C = check(COrErr);
+      MemoryBufferRef MBRef = check(C.getMemoryBufferRef());
+      return identify_magic(MBRef.getBuffer()) == file_magic::bitcode;
+    }
+    return true;
+  }
+
+  return false;
 }
 
 // Create response file contents and invoke the MSVC linker.
