@@ -57,8 +57,8 @@ Non-comprehensive list of changes in this release
   with LLVM option ``-adce-remove-loops`` when the loop body otherwise has
   no live operations.
 
- * The llvm-cov tool can now export coverage data as json. Its html output mode
-   has also improved.
+* The llvm-cov tool can now export coverage data as json. Its html output mode
+  has also improved.
 
 Improvements to ThinLTO (-flto=thin)
 ------------------------------------
