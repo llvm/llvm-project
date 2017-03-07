@@ -195,24 +195,29 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
         continue;
       }
 
-      int64_t OpSegStart = DstStart - OpStart;
-      int64_t OpSegSize =
-          std::min(NarrowSize - OpSegStart, OpSegStart + OpSize);
-      unsigned OpSegReg = OpReg;
-      if (OpSegSize != OpSize) {
+      // OpSegStart is where this destination segment would start in OpReg if it
+      // extended infinitely in both directions.
+      int64_t ExtractOffset, InsertOffset, SegSize;
+      if (OpStart < DstStart) {
+        InsertOffset = 0;
+        ExtractOffset = DstStart - OpStart;
+        SegSize = std::min(NarrowSize, OpStart + OpSize - DstStart);
+      } else {
+        InsertOffset = OpStart - DstStart;
+        ExtractOffset = 0;
+        SegSize =
+            std::min(NarrowSize - InsertOffset, OpStart + OpSize - DstStart);
+      }
+
+      unsigned SegReg = OpReg;
+      if (ExtractOffset != 0 || SegSize != OpSize) {
         // A genuine extract is needed.
-        OpSegReg = MRI.createGenericVirtualRegister(LLT::scalar(OpSegSize));
-        MIRBuilder.buildExtract(OpSegReg, OpReg,
-                                std::max(OpSegStart, (int64_t)0));
+        SegReg = MRI.createGenericVirtualRegister(LLT::scalar(SegSize));
+        MIRBuilder.buildExtract(SegReg, OpReg, ExtractOffset);
       }
 
       unsigned DstReg = MRI.createGenericVirtualRegister(NarrowTy);
-      MIRBuilder.buildInstr(TargetOpcode::G_INSERT)
-          .addDef(DstReg)
-          .addUse(SrcRegs[i])
-          .addUse(OpSegReg)
-          .addImm(std::max((int64_t)0, -OpSegStart));
-
+      MIRBuilder.buildInsert(DstReg, SrcRegs[i], SegReg, InsertOffset);
       DstRegs.push_back(DstReg);
     }
 
