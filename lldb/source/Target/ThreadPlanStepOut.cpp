@@ -13,7 +13,6 @@
 // Project includes
 #include "lldb/Target/ThreadPlanStepOut.h"
 #include "lldb/Breakpoint/Breakpoint.h"
-#include "lldb/Core/Log.h"
 #include "lldb/Core/Value.h"
 #include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/Symbol/Block.h"
@@ -27,6 +26,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/ThreadPlanStepOverRange.h"
 #include "lldb/Target/ThreadPlanStepThrough.h"
+#include "lldb/Utility/Log.h"
 
 using namespace lldb;
 using namespace lldb_private;

@@ -25,9 +25,9 @@
 #include "clang/Basic/TargetOptions.h"
 
 // Project includes
-#include "lldb/Core/Log.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/Log.h"
 
 #include "RenderScriptExpressionOpts.h"
 #include "RenderScriptRuntime.h"

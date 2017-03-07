@@ -242,6 +242,7 @@ public:
 
   void writeRelocations(const MCAssembler &Asm, const MCSectionELF &Sec);
 
+  using MCObjectWriter::isSymbolRefDifferenceFullyResolvedImpl;
   bool isSymbolRefDifferenceFullyResolvedImpl(const MCAssembler &Asm,
                                               const MCSymbol &SymA,
                                               const MCFragment &FB, bool InSet,
@@ -902,6 +903,8 @@ void ELFObjectWriter::computeSymbolTable(
 
   StrTabBuilder.finalize();
 
+  // File symbols are emitted first and handled separately from normal symbols,
+  // i.e. a non-STT_FILE symbol with the same name may appear.
   for (const std::string &Name : FileNames)
     Writer.writeSymbol(StrTabBuilder.getOffset(Name),
                        ELF::STT_FILE | ELF::STB_LOCAL, 0, 0, ELF::STV_DEFAULT,

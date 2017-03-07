@@ -348,13 +348,6 @@ void MCELFStreamer::EmitValueToAlignment(unsigned ByteAlignment,
                                          ValueSize, MaxBytesToEmit);
 }
 
-// Add a symbol for the file name of this module. They start after the
-// null symbol and don't count as normal symbol, i.e. a non-STT_FILE symbol
-// with the same name may appear.
-void MCELFStreamer::EmitFileDirective(StringRef Filename) {
-  getAssembler().addFileName(Filename);
-}
-
 void MCELFStreamer::EmitIdent(StringRef IdentString) {
   MCSection *Comment = getAssembler().getContext().getELFSection(
       ".comment", ELF::SHT_PROGBITS, ELF::SHF_MERGE | ELF::SHF_STRINGS, 1, "");

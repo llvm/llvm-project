@@ -10,12 +10,13 @@
 #include "lldb/API/SBSection.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/API/SBTarget.h"
-#include "lldb/Core/DataBuffer.h"
-#include "lldb/Core/DataExtractor.h"
-#include "lldb/Core/Log.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Symbol/ObjectFile.h"
+#include "lldb/Utility/DataBuffer.h"
+#include "lldb/Utility/DataBufferLLVM.h"
+#include "lldb/Utility/DataExtractor.h"
+#include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
 
 using namespace lldb;
@@ -165,8 +166,8 @@ SBData SBSection::GetSectionData(uint64_t offset, uint64_t size) {
             else
               file_size = 0;
           }
-          DataBufferSP data_buffer_sp(
-              objfile->GetFileSpec().ReadFileContents(file_offset, file_size));
+          auto data_buffer_sp = DataBufferLLVM::CreateSliceFromPath(
+              objfile->GetFileSpec().GetPath(), file_size, file_offset);
           if (data_buffer_sp && data_buffer_sp->GetByteSize() > 0) {
             DataExtractorSP data_extractor_sp(
                 new DataExtractor(data_buffer_sp, objfile->GetByteOrder(),

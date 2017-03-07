@@ -881,7 +881,7 @@ define void @test_extractvalue_agg(%struct.nested* %addr, {i8, i32}* %addr2) {
 ; CHECK-LABEL: name: test_insertvalue
 ; CHECK: [[VAL:%[0-9]+]](s32) = COPY %w1
 ; CHECK: [[STRUCT:%[0-9]+]](s128) = G_LOAD
-; CHECK: [[NEWSTRUCT:%[0-9]+]](s128) = G_INSERT [[STRUCT]](s128), [[VAL]](s32), 64
+; CHECK: [[NEWSTRUCT:%[0-9]+]](s128) = G_INSERT [[STRUCT]], [[VAL]](s32), 64
 ; CHECK: G_STORE [[NEWSTRUCT]](s128),
 define void @test_insertvalue(%struct.nested* %addr, i32 %val) {
   %struct = load %struct.nested, %struct.nested* %addr
@@ -890,10 +890,30 @@ define void @test_insertvalue(%struct.nested* %addr, i32 %val) {
   ret void
 }
 
+define [1 x i64] @test_trivial_insert([1 x i64] %s, i64 %val) {
+; CHECK-LABEL: name: test_trivial_insert
+; CHECK: [[STRUCT:%[0-9]+]](s64) = COPY %x0
+; CHECK: [[VAL:%[0-9]+]](s64) = COPY %x1
+; CHECK: [[RES:%[0-9]+]](s64) = COPY [[VAL]](s64)
+; CHECK: %x0 = COPY [[RES]]
+  %res = insertvalue [1 x i64] %s, i64 %val, 0
+  ret [1 x i64] %res
+}
+
+define [1 x i8*] @test_trivial_insert_ptr([1 x i8*] %s, i8* %val) {
+; CHECK-LABEL: name: test_trivial_insert_ptr
+; CHECK: [[STRUCT:%[0-9]+]](s64) = COPY %x0
+; CHECK: [[VAL:%[0-9]+]](p0) = COPY %x1
+; CHECK: [[RES:%[0-9]+]](s64) = G_PTRTOINT [[VAL]](p0)
+; CHECK: %x0 = COPY [[RES]]
+  %res = insertvalue [1 x i8*] %s, i8* %val, 0
+  ret [1 x i8*] %res
+}
+
 ; CHECK-LABEL: name: test_insertvalue_agg
 ; CHECK: [[SMALLSTRUCT:%[0-9]+]](s64) = G_LOAD
 ; CHECK: [[STRUCT:%[0-9]+]](s128) = G_LOAD
-; CHECK: [[RES:%[0-9]+]](s128) = G_INSERT [[STRUCT]](s128), [[SMALLSTRUCT]](s64), 32
+; CHECK: [[RES:%[0-9]+]](s128) = G_INSERT [[STRUCT]], [[SMALLSTRUCT]](s64), 32
 ; CHECK: G_STORE [[RES]](s128)
 define void @test_insertvalue_agg(%struct.nested* %addr, {i8, i32}* %addr2) {
   %smallstruct = load {i8, i32}, {i8, i32}* %addr2

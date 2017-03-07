@@ -330,6 +330,12 @@ ScanOperands:
     // to the worklist etc.
     if (NeedsReanalyzing) {
       assert(N->getNodeId() == ReadyToProcess && "Node ID recalculated?");
+
+      // Remove any result values from SoftenedFloats as N will be revisited
+      // again.
+      for (unsigned i = 0, NumResults = N->getNumValues(); i < NumResults; ++i)
+        SoftenedFloats.erase(SDValue(N, i));
+
       N->setNodeId(NewNode);
       // Recompute the NodeId and correct processed operands, adding the node to
       // the worklist if ready.
@@ -748,6 +754,8 @@ void DAGTypeLegalizer::ReplaceValueWith(SDValue From, SDValue To) {
     // new uses of From due to CSE. If this happens, replace the new uses of
     // From with To.
   } while (!From.use_empty());
+
+  SoftenedFloats.erase(From);
 }
 
 void DAGTypeLegalizer::SetPromotedInteger(SDValue Op, SDValue Result) {

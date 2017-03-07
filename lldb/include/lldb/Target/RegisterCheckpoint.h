@@ -10,8 +10,8 @@
 #ifndef liblldb_RegisterCheckpoint_h_
 #define liblldb_RegisterCheckpoint_h_
 
-#include "lldb/Core/UserID.h"
 #include "lldb/Target/StackID.h"
+#include "lldb/Utility/UserID.h"
 #include "lldb/lldb-private.h"
 
 namespace lldb_private {

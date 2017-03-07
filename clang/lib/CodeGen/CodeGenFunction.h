@@ -305,6 +305,31 @@ public:
     ~CGCapturedStmtRAII() { CGF.CapturedStmtInfo = PrevCapturedStmtInfo; }
   };
 
+  /// An abstract representation of regular/ObjC call/message targets.
+  class AbstractCallee {
+    /// The function declaration of the callee.
+    const Decl *CalleeDecl;
+
+  public:
+    AbstractCallee() : CalleeDecl(nullptr) {}
+    AbstractCallee(const FunctionDecl *FD) : CalleeDecl(FD) {}
+    AbstractCallee(const ObjCMethodDecl *OMD) : CalleeDecl(OMD) {}
+    bool hasFunctionDecl() const {
+      return dyn_cast_or_null<FunctionDecl>(CalleeDecl);
+    }
+    const Decl *getDecl() const { return CalleeDecl; }
+    unsigned getNumParams() const {
+      if (const auto *FD = dyn_cast<FunctionDecl>(CalleeDecl))
+        return FD->getNumParams();
+      return cast<ObjCMethodDecl>(CalleeDecl)->param_size();
+    }
+    const ParmVarDecl *getParamDecl(unsigned I) const {
+      if (const auto *FD = dyn_cast<FunctionDecl>(CalleeDecl))
+        return FD->getParamDecl(I);
+      return *(cast<ObjCMethodDecl>(CalleeDecl)->param_begin() + I);
+    }
+  };
+
   /// \brief Sanitizers enabled for this function.
   SanitizerSet SanOpts;
 
@@ -555,14 +580,10 @@ public:
       CGF.DidCallStackSave = false;
     }
 
-    /// \brief Exit this cleanup scope, emitting any accumulated
-    /// cleanups.
+    /// \brief Exit this cleanup scope, emitting any accumulated cleanups.
     ~RunCleanupsScope() {
-      if (PerformCleanup) {
-        CGF.DidCallStackSave = OldDidCallStackSave;
-        CGF.PopCleanupBlocks(CleanupStackDepth,
-                             LifetimeExtendedCleanupStackSize);
-      }
+      if (PerformCleanup)
+        ForceCleanup();
     }
 
     /// \brief Determine whether this scope requires any cleanups.
@@ -572,11 +593,15 @@ public:
 
     /// \brief Force the emission of cleanups now, instead of waiting
     /// until this object is destroyed.
-    void ForceCleanup() {
+    /// \param ValuesToReload - A list of values that need to be available at
+    /// the insertion point after cleanup emission. If cleanup emission created
+    /// a shared cleanup block, these value pointers will be rewritten.
+    /// Otherwise, they not will be modified.
+    void ForceCleanup(std::initializer_list<llvm::Value**> ValuesToReload = {}) {
       assert(PerformCleanup && "Already forced cleanup");
       CGF.DidCallStackSave = OldDidCallStackSave;
-      CGF.PopCleanupBlocks(CleanupStackDepth,
-                           LifetimeExtendedCleanupStackSize);
+      CGF.PopCleanupBlocks(CleanupStackDepth, LifetimeExtendedCleanupStackSize,
+                           ValuesToReload);
       PerformCleanup = false;
     }
   };
@@ -738,13 +763,17 @@ public:
 
   /// \brief Takes the old cleanup stack size and emits the cleanup blocks
   /// that have been added.
-  void PopCleanupBlocks(EHScopeStack::stable_iterator OldCleanupStackSize);
+  void
+  PopCleanupBlocks(EHScopeStack::stable_iterator OldCleanupStackSize,
+                   std::initializer_list<llvm::Value **> ValuesToReload = {});
 
   /// \brief Takes the old cleanup stack size and emits the cleanup blocks
   /// that have been added, then adds all lifetime-extended cleanups from
   /// the given position to the stack.
-  void PopCleanupBlocks(EHScopeStack::stable_iterator OldCleanupStackSize,
-                        size_t OldLifetimeExtendedStackSize);
+  void
+  PopCleanupBlocks(EHScopeStack::stable_iterator OldCleanupStackSize,
+                   size_t OldLifetimeExtendedStackSize,
+                   std::initializer_list<llvm::Value **> ValuesToReload = {});
 
   void ResolveBranchFixups(llvm::BasicBlock *Target);
 
@@ -2481,6 +2510,7 @@ public:
   void EmitObjCAutoreleasePoolStmt(const ObjCAutoreleasePoolStmt &S);
 
   void EmitCoroutineBody(const CoroutineBodyStmt &S);
+  void EmitCoreturnStmt(const CoreturnStmt &S);
   RValue EmitCoroutineIntrinsic(const CallExpr *E, unsigned int IID);
 
   void EnterCXXTryStmt(const CXXTryStmt &S, bool IsFnTryBlock = false);
@@ -3467,7 +3497,7 @@ public:
   /// \brief Create a check for a function parameter that may potentially be
   /// declared as non-null.
   void EmitNonNullArgCheck(RValue RV, QualType ArgType, SourceLocation ArgLoc,
-                           const FunctionDecl *FD, unsigned ParmNum);
+                           AbstractCallee AC, unsigned ParmNum);
 
   /// EmitCallArg - Emit a single call argument.
   void EmitCallArg(CallArgList &args, const Expr *E, QualType ArgType);
@@ -3569,7 +3599,7 @@ public:
   template <typename T>
   void EmitCallArgs(CallArgList &Args, const T *CallArgTypeInfo,
                     llvm::iterator_range<CallExpr::const_arg_iterator> ArgRange,
-                    const FunctionDecl *CalleeDecl = nullptr,
+                    AbstractCallee AC = AbstractCallee(),
                     unsigned ParamsToSkip = 0,
                     EvaluationOrder Order = EvaluationOrder::Default) {
     SmallVector<QualType, 16> ArgTypes;
@@ -3611,12 +3641,12 @@ public:
     for (auto *A : llvm::make_range(Arg, ArgRange.end()))
       ArgTypes.push_back(CallArgTypeInfo ? getVarArgType(A) : A->getType());
 
-    EmitCallArgs(Args, ArgTypes, ArgRange, CalleeDecl, ParamsToSkip, Order);
+    EmitCallArgs(Args, ArgTypes, ArgRange, AC, ParamsToSkip, Order);
   }
 
   void EmitCallArgs(CallArgList &Args, ArrayRef<QualType> ArgTypes,
                     llvm::iterator_range<CallExpr::const_arg_iterator> ArgRange,
-                    const FunctionDecl *CalleeDecl = nullptr,
+                    AbstractCallee AC = AbstractCallee(),
                     unsigned ParamsToSkip = 0,
                     EvaluationOrder Order = EvaluationOrder::Default);
 

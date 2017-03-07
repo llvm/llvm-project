@@ -10,6 +10,7 @@
 #include "clang/Driver/ToolChain.h"
 #include "Tools.h"
 #include "clang/Basic/ObjCRuntime.h"
+#include "clang/Basic/VirtualFileSystem.h"
 #include "clang/Config/config.h"
 #include "clang/Driver/Action.h"
 #include "clang/Driver/Driver.h"
@@ -74,6 +75,10 @@ ToolChain::ToolChain(const Driver &D, const llvm::Triple &T,
     if (!isThreadModelSupported(A->getValue()))
       D.Diag(diag::err_drv_invalid_thread_model_for_target)
           << A->getValue() << A->getAsString(Args);
+
+  std::string CandidateLibPath = getArchSpecificLibPath();
+  if (getVFS().exists(CandidateLibPath))
+    getFilePaths().push_back(CandidateLibPath);
 }
 
 ToolChain::~ToolChain() {
@@ -318,6 +323,14 @@ const char *ToolChain::getCompilerRTArgString(const llvm::opt::ArgList &Args,
                                               StringRef Component,
                                               bool Shared) const {
   return Args.MakeArgString(getCompilerRT(Args, Component, Shared));
+}
+
+std::string ToolChain::getArchSpecificLibPath() const {
+  SmallString<128> Path(getDriver().ResourceDir);
+  StringRef OSLibName = getTriple().isOSFreeBSD() ? "freebsd" : getOS();
+  llvm::sys::path::append(Path, "lib", OSLibName,
+                          llvm::Triple::getArchTypeName(getArch()));
+  return Path.str();
 }
 
 bool ToolChain::needsProfileRT(const ArgList &Args) {

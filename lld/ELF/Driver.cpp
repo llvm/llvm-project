@@ -803,10 +803,6 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   Target = createTarget();
   ScriptBase = Script<ELFT>::X = make<LinkerScript<ELFT>>();
 
-  Config->Rela =
-      ELFT::Is64Bits || Config->EMachine == EM_X86_64 || Config->MipsN32Abi;
-  Config->Mips64EL =
-      (Config->EMachine == EM_MIPS && Config->EKind == ELF64LEKind);
   Config->MaxPageSize = getMaxPageSize(Args);
   Config->ImageBase = getImageBase(Args);
 
@@ -876,7 +872,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
       return;
     if (Decompressor::isCompressedELFSection(S->Flags, S->Name))
       S->uncompress<ELFT>();
-    if (auto *MS = dyn_cast<MergeInputSection<ELFT>>(S))
+    if (auto *MS = dyn_cast<MergeInputSection>(S))
       MS->splitIntoPieces();
   });
 

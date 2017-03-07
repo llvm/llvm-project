@@ -175,7 +175,8 @@ define arm_aapcscc double @test_double_softfp(double %f0, double %f1) {
 ; CHECK-DAG: vmov [[F0:d[0-9]+]], r0, r1
 ; CHECK-DAG: vmov [[F1:d[0-9]+]], r2, r3
 ; CHECK: vadd.f64 [[FV:d[0-9]+]], [[F0]], [[F1]]
-; CHECK: vmov r0, r1, [[FV]]
+; CHECK: vmov.32 r0, [[FV]][0]
+; CHECK: vmov.32 r1, [[FV]][1]
 ; CHECK: bx lr
 entry:
   %v = fadd double %f0, %f1

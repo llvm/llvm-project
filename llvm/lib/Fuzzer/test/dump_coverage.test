@@ -1,6 +1,6 @@
 RUN: rm -rf %t_workdir && mkdir -p %t_workdir
 RUN: env ASAN_OPTIONS=coverage_dir='"%t_workdir"' not LLVMFuzzer-NullDerefTest -dump_coverage=1 2>&1 | FileCheck %s
-RUN: xargs sancov -covered-functions LLVMFuzzer-NullDerefTest* %t_workdir/*.sancov | FileCheck %s --check-prefix=SANCOV
+RUN: sancov -covered-functions LLVMFuzzer-NullDerefTest* %t_workdir/*.sancov | FileCheck %s --check-prefix=SANCOV
 RUN: env ASAN_OPTIONS=coverage_dir='"%t_workdir"' LLVMFuzzer-DSOTest -dump_coverage=1 -runs=0 2>&1 | FileCheck %s --check-prefix=DSO
 RUN: env ASAN_OPTIONS=coverage_dir='"%t_workdir"' not LLVMFuzzer-NullDerefTest -dump_coverage=0 2>&1 | FileCheck %s --check-prefix=NOCOV
 

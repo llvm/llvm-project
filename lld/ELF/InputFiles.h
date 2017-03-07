@@ -166,7 +166,7 @@ public:
 
   template <typename RelT>
   SymbolBody &getRelocTargetSym(const RelT &Rel) const {
-    uint32_t SymIndex = Rel.getSymbol(Config->Mips64EL);
+    uint32_t SymIndex = Rel.getSymbol(Config->isMips64EL());
     return getSymbolBody(SymIndex);
   }
 

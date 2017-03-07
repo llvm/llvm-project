@@ -10,8 +10,8 @@
 #ifndef lldb_IRMemoryMap_h_
 #define lldb_IRMemoryMap_h_
 
-#include "lldb/Core/DataBufferHeap.h"
-#include "lldb/Core/UserID.h"
+#include "lldb/Utility/DataBufferHeap.h"
+#include "lldb/Utility/UserID.h"
 #include "lldb/lldb-public.h"
 
 #include <map>

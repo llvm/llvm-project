@@ -539,8 +539,7 @@ static inline bool isGlobalMemoryObject(AliasAnalysis *AA, MachineInstr *MI) {
 
 /// Returns true if the two MIs need a chain edge between them.
 /// This is called on normal stores and loads.
-static bool MIsNeedChainEdge(AliasAnalysis *AA, const MachineFrameInfo *MFI,
-                             const DataLayout &DL, MachineInstr *MIa,
+static bool MIsNeedChainEdge(AliasAnalysis *AA, MachineInstr *MIa,
                              MachineInstr *MIb) {
   const MachineFunction *MF = MIa->getParent()->getParent();
   const TargetInstrInfo *TII = MF->getSubtarget().getInstrInfo();
@@ -600,8 +599,7 @@ static bool MIsNeedChainEdge(AliasAnalysis *AA, const MachineFrameInfo *MFI,
 
 void ScheduleDAGInstrs::addChainDependency (SUnit *SUa, SUnit *SUb,
                                             unsigned Latency) {
-  if (MIsNeedChainEdge(AAForDep, &MFI, MF.getDataLayout(), SUa->getInstr(),
-                       SUb->getInstr())) {
+  if (MIsNeedChainEdge(AAForDep, SUa->getInstr(), SUb->getInstr())) {
     SDep Dep(SUa, SDep::MayAliasMem);
     Dep.setLatency(Latency);
     SUb->addPred(Dep);

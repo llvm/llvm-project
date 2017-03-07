@@ -362,14 +362,16 @@ void HexagonExpandCondsets::updateDeadsInRange(unsigned Reg, LaneBitmask LM,
   if (Range.empty())
     return;
 
-  auto IsRegDef = [this,Reg,LM] (MachineOperand &Op) -> bool {
+  // Return two booleans: { def-modifes-reg, def-covers-reg }.
+  auto IsRegDef = [this,Reg,LM] (MachineOperand &Op) -> std::pair<bool,bool> {
     if (!Op.isReg() || !Op.isDef())
-      return false;
+      return { false, false };
     unsigned DR = Op.getReg(), DSR = Op.getSubReg();
     if (!TargetRegisterInfo::isVirtualRegister(DR) || DR != Reg)
-      return false;
+      return { false, false };
     LaneBitmask SLM = getLaneMask(DR, DSR);
-    return (SLM & LM).any();
+    LaneBitmask A = SLM & LM;
+    return { A.any(), A == SLM };
   };
 
   // The splitting step will create pairs of predicated definitions without
@@ -453,20 +455,27 @@ void HexagonExpandCondsets::updateDeadsInRange(unsigned Reg, LaneBitmask LM,
   // Remove <dead> flags from all defs that are not dead after live range
   // extension, and collect all def operands. They will be used to generate
   // the necessary implicit uses.
+  // At the same time, add <dead> flag to all defs that are actually dead.
+  // This can happen, for example, when a mux with identical inputs is
+  // replaced with a COPY: the use of the predicate register disappears and
+  // the dead can become dead.
   std::set<RegisterRef> DefRegs;
   for (auto &Seg : Range) {
     if (!Seg.start.isRegister())
       continue;
     MachineInstr *DefI = LIS->getInstructionFromIndex(Seg.start);
     for (auto &Op : DefI->operands()) {
-      if (Seg.start.isDead() || !IsRegDef(Op))
-        continue;
-      DefRegs.insert(Op);
-      Op.setIsDead(false);
+      auto P = IsRegDef(Op);
+      if (P.second && Seg.end.isDead()) {
+        Op.setIsDead(true);
+      } else if (P.first) {
+        DefRegs.insert(Op);
+        Op.setIsDead(false);
+      }
     }
   }
 
-  // Finally, add implicit uses to each predicated def that is reached
+  // Now, add implicit uses to each predicated def that is reached
   // by other defs.
   for (auto &Seg : Range) {
     if (!Seg.start.isRegister() || !Range.liveAt(Seg.start.getPrevSlot()))
@@ -486,6 +495,7 @@ void HexagonExpandCondsets::updateDeadsInRange(unsigned Reg, LaneBitmask LM,
     for (RegisterRef R : ImpUses)
       MachineInstrBuilder(MF, DefI).addReg(R.Reg, RegState::Implicit, R.Sub);
   }
+
 }
 
 void HexagonExpandCondsets::updateDeadFlags(unsigned Reg) {
@@ -622,6 +632,12 @@ bool HexagonExpandCondsets::split(MachineInstr &MI,
   bool ReadUndef = MD.isUndef();
   MachineBasicBlock::iterator At = MI;
 
+  auto updateRegs = [&UpdRegs] (const MachineInstr &MI) -> void {
+    for (auto &Op : MI.operands())
+      if (Op.isReg())
+        UpdRegs.insert(Op.getReg());
+  };
+
   // If this is a mux of the same register, just replace it with COPY.
   // Ideally, this would happen earlier, so that register coalescing would
   // see it.
@@ -630,6 +646,8 @@ bool HexagonExpandCondsets::split(MachineInstr &MI,
   if (ST.isReg() && SF.isReg()) {
     RegisterRef RT(ST);
     if (RT == RegisterRef(SF)) {
+      // Copy regs to update first.
+      updateRegs(MI);
       MI.setDesc(HII->get(TargetOpcode::COPY));
       unsigned S = getRegState(ST);
       while (MI.getNumOperands() > 1)
@@ -651,9 +669,7 @@ bool HexagonExpandCondsets::split(MachineInstr &MI,
   LIS->InsertMachineInstrInMaps(*TfrF);
 
   // Will need to recalculate live intervals for all registers in MI.
-  for (auto &Op : MI.operands())
-    if (Op.isReg())
-      UpdRegs.insert(Op.getReg());
+  updateRegs(MI);
 
   removeInstr(MI);
   return true;

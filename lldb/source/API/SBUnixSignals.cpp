@@ -8,10 +8,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Core/Log.h"
 #include "lldb/Target/Platform.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/UnixSignals.h"
+#include "lldb/Utility/Log.h"
 #include "lldb/lldb-defines.h"
 
 #include "lldb/API/SBUnixSignals.h"

@@ -375,7 +375,8 @@ DWARF:
         - Attribute:       DW_AT_type
           Form:            DW_FORM_ref4
   debug_aranges:   
-    - Length:          44
+    - Length:          
+        TotalLength:     44
       Version:         2
       CuOffset:        0
       AddrSize:        8
@@ -384,7 +385,8 @@ DWARF:
         - Address:         0x0000000100000F50
           Length:          52
   debug_info:      
-    - Length:          117
+    - Length:          
+        TotalLength:     117
       Version:         4
       AbbrOffset:      0
       AddrSize:        8
@@ -452,7 +454,8 @@ DWARF:
         - AbbrCode:        0x00000000
           Values:          
   debug_line:      
-    - TotalLength:     65
+    - Length:          
+        TotalLength:     65
       Version:         2
       PrologueLength:  36
       MinInstLength:   1
@@ -508,7 +511,8 @@ DWARF:
 
 #CHECK: DWARF:           
 #CHECK:   debug_info:      
-#CHECK:     - Length:          117
+#CHECK:     - Length:          
+#CHECK:         TotalLength:     117
 #CHECK:       Version:         4
 #CHECK:       AbbrOffset:      0
 #CHECK:       AddrSize:        8

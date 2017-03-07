@@ -142,7 +142,7 @@ entry:
   ret i32 %cond
 
 ; CHECK-LABEL: @exttest7
-; CHECK-DAG: cmplwi {{[0-9]+}}, 3, 5
+; CHECK-DAG: cmpwi {{[0-9]+}}, 3, 5
 ; CHECK-DAG: li [[REG1:[0-9]+]], 8
 ; CHECK-DAG: li [[REG2:[0-9]+]], 7
 ; CHECK: isel 3, [[REG2]], [[REG1]],

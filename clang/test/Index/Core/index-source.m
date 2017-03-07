@@ -202,18 +202,25 @@ extern int setjmp(jmp_buf);
 @protocol MyEnumerating
 @end
 
-// CHECK: [[@LINE+4]]:41 | type-alias/C | MyEnumerator | c:index-source.m@T@MyEnumerator | <no-cgname> | Def | rel: 0
+// CHECK: [[@LINE+4]]:41 | type-alias/C | MyEnumerator | [[MyEnumerator_USR:.*]] | <no-cgname> | Def | rel: 0
 // CHECK: [[@LINE+3]]:26 | protocol/ObjC | MyEnumerating | c:objc(pl)MyEnumerating | <no-cgname> | Ref,RelCont | rel: 1
 // CHECK: [[@LINE+2]]:9 | class/ObjC | MyGenCls | c:objc(cs)MyGenCls | _OBJC_CLASS_$_MyGenCls | Ref,RelCont | rel: 1
 // CHECK: [[@LINE+1]]:18 | class/ObjC | Base | c:objc(cs)Base | _OBJC_CLASS_$_Base | Ref,RelCont | rel: 1
 typedef MyGenCls<Base *><MyEnumerating> MyEnumerator;
 
-// CHECK: [[@LINE+5]]:12 | class/ObjC | PermanentEnumerator | c:objc(cs)PermanentEnumerator | _OBJC_CLASS_$_PermanentEnumerator | Decl | rel: 0
-// CHECK: [[@LINE+4]]:34 | class/ObjC | MyGenCls | c:objc(cs)MyGenCls | _OBJC_CLASS_$_MyGenCls | Ref,RelBase,RelCont | rel: 1
-// CHECK-NEXT: RelBase,RelCont | PermanentEnumerator | c:objc(cs)PermanentEnumerator
-// CHECK: [[@LINE+2]]:34 | protocol/ObjC | MyEnumerating | c:objc(pl)MyEnumerating | <no-cgname> | Ref,RelBase,RelCont | rel: 1
-// CHECK-NEXT: RelBase,RelCont | PermanentEnumerator | c:objc(cs)PermanentEnumerator
+// CHECK: [[@LINE+7]]:12 | class/ObjC | PermanentEnumerator | [[PermanentEnumerator_USR:.*]] | _OBJC_CLASS_$_PermanentEnumerator | Decl | rel: 0
+// CHECK: [[@LINE+6]]:34 | type-alias/C | MyEnumerator | [[MyEnumerator_USR]] | <no-cgname> | Ref,RelCont | rel: 1
+// CHECK-NEXT: RelCont | PermanentEnumerator | [[PermanentEnumerator_USR]]
+// CHECK: [[@LINE+4]]:34 | class/ObjC | MyGenCls | c:objc(cs)MyGenCls | _OBJC_CLASS_$_MyGenCls | Ref,Impl,RelBase,RelCont | rel: 1
+// CHECK-NEXT: RelBase,RelCont | PermanentEnumerator | [[PermanentEnumerator_USR]]
+// CHECK: [[@LINE+2]]:34 | protocol/ObjC | MyEnumerating | c:objc(pl)MyEnumerating | <no-cgname> | Ref,Impl,RelBase,RelCont | rel: 1
+// CHECK-NEXT: RelBase,RelCont | PermanentEnumerator | [[PermanentEnumerator_USR]]
 @interface PermanentEnumerator : MyEnumerator
+@end
+
+// CHECK: [[@LINE+2]]:48 | protocol/ObjC | Prot1 | c:objc(pl)Prot1 | <no-cgname> | Ref,RelBase,RelCont | rel: 1
+// CHECK: [[@LINE+1]]:35 | protocol/ObjC | MyEnumerating | c:objc(pl)MyEnumerating | <no-cgname> | Ref,Impl,RelBase,RelCont | rel: 1
+@interface PermanentEnumerator2 : MyEnumerator<Prot1>
 @end
 
 @interface I4

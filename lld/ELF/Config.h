@@ -113,7 +113,6 @@ struct Configuration {
   bool GdbIndex;
   bool GnuHash;
   bool ICF;
-  bool Mips64EL = false;
   bool MipsN32Abi = false;
   bool NoGnuUnique;
   bool NoUndefinedVersion;
@@ -163,6 +162,26 @@ struct Configuration {
   unsigned Optimize;
   unsigned ThinLTOJobs;
 
+  // The ELF spec defines two types of relocation table entries, RELA and
+  // REL. RELA is a triplet of (offset, info, addend) while REL is a
+  // tuple of (offset, info). Addends for REL are implicit and read from
+  // the location where the relocations are applied. So, REL is more
+  // compact than RELA but requires a bit of more work to process.
+  //
+  // (From the linker writer's view, this distinction is not necessary.
+  // If the ELF had chosen whichever and sticked with it, it would have
+  // been easier to write code to process relocations, but it's too late
+  // to change the spec.)
+  //
+  // Each ABI defines its relocation type. This function returns that.
+  // As far as we know, all 64-bit ABIs are using RELA. A few 32-bit ABIs
+  // are using RELA too.
+  bool isRela() const {
+    bool is64 = (EKind == ELF64LEKind || EKind == ELF64BEKind);
+    bool isX32Abi = (EKind == ELF32LEKind && EMachine == llvm::ELF::EM_X86_64);
+    return is64 || isX32Abi || MipsN32Abi;
+  }
+
   // Returns true if we need to pass through relocations in input
   // files to the output file. Usually false because we consume
   // relocations.
@@ -170,6 +189,21 @@ struct Configuration {
 
   // Returns true if we are creating position-independent code.
   bool pic() const { return Pie || Shared; }
+
+  // Returns true if the target is the little-endian MIPS64. The reason
+  // why we have this function only for the MIPS is because we use this
+  // function often. Some ELF headers for MIPS64EL are in a mixed-endian
+  // (which is horrible and I'd say that's a serious spec bug), and we
+  // need to know whether we are reading MIPS ELF files or not in various
+  // places.
+  //
+  // (Note that MIPS64EL is not a typo for MIPS64LE. This is the official
+  // name whatever that means. A fun hypothesis is that "EL" is short for
+  // little-endian written in the little-endian order, but I don't know
+  // if that's true.)
+  bool isMips64EL() const {
+    return EMachine == llvm::ELF::EM_MIPS && EKind == ELF64LEKind;
+  }
 };
 
 // The only instance of Configuration struct.

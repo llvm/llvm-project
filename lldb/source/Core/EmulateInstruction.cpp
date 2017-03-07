@@ -16,7 +16,6 @@
 // Other libraries and framework includes
 // Project includes
 #include "lldb/Core/Address.h"
-#include "lldb/Core/DataExtractor.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/RegisterValue.h"
 #include "lldb/Core/StreamFile.h"
@@ -25,6 +24,7 @@
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
+#include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Endian.h"
 #include "lldb/Utility/Error.h"
 #include "lldb/Utility/StreamString.h"

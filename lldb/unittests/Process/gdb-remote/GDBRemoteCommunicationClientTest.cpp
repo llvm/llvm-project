@@ -11,9 +11,9 @@
 #include "GDBRemoteTestUtils.h"
 
 #include "Plugins/Process/gdb-remote/GDBRemoteCommunicationClient.h"
-#include "lldb/Core/DataBuffer.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/StructuredData.h"
+#include "lldb/Utility/DataBuffer.h"
 
 #include "llvm/ADT/ArrayRef.h"
 

@@ -4194,11 +4194,16 @@ class CoawaitExpr : public CoroutineSuspendExpr {
   friend class ASTStmtReader;
 public:
   CoawaitExpr(SourceLocation CoawaitLoc, Expr *Operand, Expr *Ready,
-              Expr *Suspend, Expr *Resume)
+              Expr *Suspend, Expr *Resume, bool IsImplicit = false)
       : CoroutineSuspendExpr(CoawaitExprClass, CoawaitLoc, Operand, Ready,
-                             Suspend, Resume) {}
-  CoawaitExpr(SourceLocation CoawaitLoc, QualType Ty, Expr *Operand)
-      : CoroutineSuspendExpr(CoawaitExprClass, CoawaitLoc, Ty, Operand) {}
+                             Suspend, Resume) {
+      CoawaitBits.IsImplicit = IsImplicit;
+  }
+  CoawaitExpr(SourceLocation CoawaitLoc, QualType Ty, Expr *Operand,
+              bool IsImplicit = false)
+      : CoroutineSuspendExpr(CoawaitExprClass, CoawaitLoc, Ty, Operand) {
+    CoawaitBits.IsImplicit = IsImplicit;
+  }
   CoawaitExpr(EmptyShell Empty)
       : CoroutineSuspendExpr(CoawaitExprClass, Empty) {}
 
@@ -4207,8 +4212,54 @@ public:
     return getCommonExpr();
   }
 
+  bool isImplicit() const { return CoawaitBits.IsImplicit; }
+  void setIsImplicit(bool value = true) { CoawaitBits.IsImplicit = value; }
+
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == CoawaitExprClass;
+  }
+};
+
+/// \brief Represents a 'co_await' expression while the type of the promise
+/// is dependent.
+class DependentCoawaitExpr : public Expr {
+  SourceLocation KeywordLoc;
+  Stmt *SubExprs[2];
+
+  friend class ASTStmtReader;
+
+public:
+  DependentCoawaitExpr(SourceLocation KeywordLoc, QualType Ty, Expr *Op,
+                       UnresolvedLookupExpr *OpCoawait)
+      : Expr(DependentCoawaitExprClass, Ty, VK_RValue, OK_Ordinary,
+             /*TypeDependent*/ true, /*ValueDependent*/ true,
+             /*InstantiationDependent*/ true,
+             Op->containsUnexpandedParameterPack()),
+        KeywordLoc(KeywordLoc) {
+    assert(Op->isTypeDependent() && Ty->isDependentType() &&
+           "wrong constructor for non-dependent co_await/co_yield expression");
+    SubExprs[0] = Op;
+    SubExprs[1] = OpCoawait;
+  }
+
+  DependentCoawaitExpr(EmptyShell Empty)
+      : Expr(DependentCoawaitExprClass, Empty) {}
+
+  Expr *getOperand() const { return cast<Expr>(SubExprs[0]); }
+  UnresolvedLookupExpr *getOperatorCoawaitLookup() const {
+    return cast<UnresolvedLookupExpr>(SubExprs[1]);
+  }
+  SourceLocation getKeywordLoc() const { return KeywordLoc; }
+
+  SourceLocation getLocStart() const LLVM_READONLY { return KeywordLoc; }
+  SourceLocation getLocEnd() const LLVM_READONLY {
+    return getOperand()->getLocEnd();
+  }
+
+  child_range children() { return child_range(SubExprs, SubExprs + 2); }
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == DependentCoawaitExprClass;
   }
 };
 

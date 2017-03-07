@@ -128,7 +128,7 @@ namespace {
     }
 
     void VisitType(QualType T) override {
-      if (Canonical)
+      if (Canonical && !T.isNull())
         T = Context.getCanonicalType(T);
 
       ID.AddPointer(T.getAsOpaquePtr());
@@ -1722,6 +1722,10 @@ void StmtProfiler::VisitCoreturnStmt(const CoreturnStmt *S) {
 }
 
 void StmtProfiler::VisitCoawaitExpr(const CoawaitExpr *S) {
+  VisitExpr(S);
+}
+
+void StmtProfiler::VisitDependentCoawaitExpr(const DependentCoawaitExpr *S) {
   VisitExpr(S);
 }
 

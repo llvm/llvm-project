@@ -62,11 +62,24 @@ void SubtargetFeatureInfo::emitSubtargetFeatureFlagEnumeration(
 void SubtargetFeatureInfo::emitNameTable(
     std::map<Record *, SubtargetFeatureInfo, LessRecordByID> &SubtargetFeatures,
     raw_ostream &OS) {
+  // Need to sort the name table so that lookup by the log of the enum value
+  // gives the proper name. More specifically, for a feature of value 1<<n,
+  // SubtargetFeatureNames[n] should be the name of the feature.
+  uint64_t IndexUB = 0;
+  for (const auto &SF : SubtargetFeatures)
+    if (IndexUB <= SF.second.Index)
+      IndexUB = SF.second.Index+1;
+
+  std::vector<std::string> Names;
+  if (IndexUB > 0)
+    Names.resize(IndexUB);
+  for (const auto &SF : SubtargetFeatures)
+    Names[SF.second.Index] = SF.second.getEnumName();
+
   OS << "static const char *SubtargetFeatureNames[] = {\n";
-  for (const auto &SF : SubtargetFeatures) {
-    const SubtargetFeatureInfo &SFI = SF.second;
-    OS << "  \"" << SFI.getEnumName() << "\",\n";
-  }
+  for (uint64_t I = 0; I < IndexUB; ++I)
+    OS << "  \"" << Names[I] << "\",\n";
+
   // A small number of targets have no predicates. Null terminate the array to
   // avoid a zero-length array.
   OS << "  nullptr\n"

@@ -9,7 +9,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Symbol/OCamlASTContext.h"
-#include "lldb/Core/Log.h"
+#include "lldb/Core/DumpDataExtractor.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/StreamFile.h"
@@ -19,6 +19,7 @@
 #include "lldb/Symbol/Type.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/Log.h"
 
 #include "Plugins/SymbolFile/DWARF/DWARFASTParserOCaml.h"
 
@@ -621,9 +622,9 @@ bool OCamlASTContext::DumpTypeValue(
   }
 
   if (IsScalarType(type)) {
-    return data.Dump(s, byte_offset, format, byte_size, 1, SIZE_MAX,
-                     LLDB_INVALID_ADDRESS, bitfield_bit_size,
-                     bitfield_bit_offset, exe_scope);
+    return DumpDataExtractor(data, s, byte_offset, format, byte_size, 1,
+                             SIZE_MAX, LLDB_INVALID_ADDRESS, bitfield_bit_size,
+                             bitfield_bit_offset, exe_scope);
   }
 
   return false;

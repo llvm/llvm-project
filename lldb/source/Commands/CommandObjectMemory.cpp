@@ -17,9 +17,8 @@
 // Project includes
 #include "CommandObjectMemory.h"
 #include "Plugins/ExpressionParser/Clang/ClangPersistentVariables.h"
-#include "lldb/Core/DataBufferHeap.h"
-#include "lldb/Core/DataExtractor.h"
 #include "lldb/Core/Debugger.h"
+#include "lldb/Core/DumpDataExtractor.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Core/ValueObjectMemory.h"
@@ -41,6 +40,8 @@
 #include "lldb/Target/Process.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Thread.h"
+#include "lldb/Utility/DataBufferHeap.h"
+#include "lldb/Utility/DataBufferLLVM.h"
 #include "lldb/Utility/StreamString.h"
 
 #include "lldb/lldb-private.h"
@@ -861,10 +862,10 @@ protected:
     }
 
     assert(output_stream);
-    size_t bytes_dumped =
-        data.Dump(output_stream, 0, format, item_byte_size, item_count,
-                  num_per_line / target->GetArchitecture().GetDataByteSize(),
-                  addr, 0, 0, exe_scope);
+    size_t bytes_dumped = DumpDataExtractor(
+        data, output_stream, 0, format, item_byte_size, item_count,
+        num_per_line / target->GetArchitecture().GetDataByteSize(), addr, 0, 0,
+        exe_scope);
     m_next_addr = addr + bytes_dumped;
     output_stream->EOL();
     return true;
@@ -1131,10 +1132,10 @@ protected:
         DataExtractor data(dumpbuffer.GetBytes(), dumpbuffer.GetByteSize(),
                            process->GetByteOrder(),
                            process->GetAddressByteSize());
-        data.Dump(&result.GetOutputStream(), 0, lldb::eFormatBytesWithASCII, 1,
-                  dumpbuffer.GetByteSize(), 16,
-                  found_location + m_memory_options.m_offset.GetCurrentValue(),
-                  0, 0);
+        DumpDataExtractor(
+            data, &result.GetOutputStream(), 0, lldb::eFormatBytesWithASCII, 1,
+            dumpbuffer.GetByteSize(), 16,
+            found_location + m_memory_options.m_offset.GetCurrentValue(), 0, 0);
         result.GetOutputStream().EOL();
       }
 
@@ -1358,8 +1359,9 @@ protected:
       size_t length = SIZE_MAX;
       if (item_byte_size > 1)
         length = item_byte_size;
-      lldb::DataBufferSP data_sp(m_memory_options.m_infile.ReadFileContents(
-          m_memory_options.m_infile_offset, length));
+      auto data_sp = DataBufferLLVM::CreateSliceFromPath(
+          m_memory_options.m_infile.GetPath(), length,
+          m_memory_options.m_infile_offset);
       if (data_sp) {
         length = data_sp->GetByteSize();
         if (length > 0) {

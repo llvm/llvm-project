@@ -111,8 +111,8 @@ StringRef elf::getOutputSectionName(StringRef Name) {
   }
 
   for (StringRef V :
-       {".text.", ".rodata.", ".data.rel.ro.", ".data.", ".bss.",
-        ".init_array.", ".fini_array.", ".ctors.", ".dtors.", ".tbss.",
+       {".text.", ".rodata.", ".data.rel.ro.", ".data.", ".bss.rel.ro.",
+        ".bss.", ".init_array.", ".fini_array.", ".ctors.", ".dtors.", ".tbss.",
         ".gcc_except_table.", ".tdata.", ".ARM.exidx."}) {
     StringRef Prefix = V.drop_back();
     if (Name.startswith(V) || Name == Prefix)
@@ -163,9 +163,9 @@ static typename ELFT::uint getOutFlags(InputSectionBase *S) {
 template <class ELFT> static void combineMergableSections() {
   typedef typename ELFT::uint uintX_t;
 
-  std::vector<MergeSyntheticSection<ELFT> *> MergeSections;
+  std::vector<MergeSyntheticSection *> MergeSections;
   for (InputSectionBase *&S : InputSections) {
-    MergeInputSection<ELFT> *MS = dyn_cast<MergeInputSection<ELFT>>(S);
+    MergeInputSection *MS = dyn_cast<MergeInputSection>(S);
     if (!MS)
       continue;
 
@@ -179,13 +179,13 @@ template <class ELFT> static void combineMergableSections() {
     uintX_t Alignment = std::max<uintX_t>(MS->Alignment, MS->Entsize);
 
     auto I =
-        llvm::find_if(MergeSections, [=](MergeSyntheticSection<ELFT> *Sec) {
+        llvm::find_if(MergeSections, [=](MergeSyntheticSection *Sec) {
           return Sec->Name == OutsecName && Sec->Flags == Flags &&
                  Sec->Alignment == Alignment;
         });
     if (I == MergeSections.end()) {
-      MergeSyntheticSection<ELFT> *Syn = make<MergeSyntheticSection<ELFT>>(
-          OutsecName, MS->Type, Flags, Alignment);
+      MergeSyntheticSection *Syn =
+          make<MergeSyntheticSection>(OutsecName, MS->Type, Flags, Alignment);
       MergeSections.push_back(Syn);
       I = std::prev(MergeSections.end());
       S = Syn;
@@ -309,14 +309,10 @@ template <class ELFT> void Writer<ELFT>::createSyntheticSections() {
 
   auto Add = [](InputSectionBase *Sec) { InputSections.push_back(Sec); };
 
-  // Create singleton output sections.
-  Out::Bss = make<OutputSection>(".bss", SHT_NOBITS, SHF_ALLOC | SHF_WRITE);
-  Out::BssRelRo =
-      make<OutputSection>(".bss.rel.ro", SHT_NOBITS, SHF_ALLOC | SHF_WRITE);
   In<ELFT>::DynStrTab = make<StringTableSection<ELFT>>(".dynstr", true);
   In<ELFT>::Dynamic = make<DynamicSection<ELFT>>();
   In<ELFT>::RelaDyn = make<RelocationSection<ELFT>>(
-      Config->Rela ? ".rela.dyn" : ".rel.dyn", Config->ZCombreloc);
+      Config->isRela() ? ".rela.dyn" : ".rel.dyn", Config->ZCombreloc);
   In<ELFT>::ShStrTab = make<StringTableSection<ELFT>>(".shstrtab", false);
 
   Out::ElfHeader = make<OutputSection>("", 0, SHF_ALLOC);
@@ -349,6 +345,11 @@ template <class ELFT> void Writer<ELFT>::createSyntheticSections() {
     In<ELFT>::Common = Common;
     Add(Common);
   }
+
+  In<ELFT>::Bss = make<BssRelSection<ELFT>>(false /*RelRo*/);
+  Add(In<ELFT>::Bss);
+  In<ELFT>::BssRelRo = make<BssRelSection<ELFT>>(true /*RelRo*/);
+  Add(In<ELFT>::BssRelRo);
 
   // Add MIPS-specific sections.
   bool HasDynSymTab =
@@ -420,7 +421,7 @@ template <class ELFT> void Writer<ELFT>::createSyntheticSections() {
   // We always need to add rel[a].plt to output if it has entries.
   // Even for static linking it can contain R_[*]_IRELATIVE relocations.
   In<ELFT>::RelaPlt = make<RelocationSection<ELFT>>(
-      Config->Rela ? ".rela.plt" : ".rel.plt", false /*Sort*/);
+      Config->isRela() ? ".rela.plt" : ".rel.plt", false /*Sort*/);
   Add(In<ELFT>::RelaPlt);
 
   // The RelaIplt immediately follows .rel.plt (.rel.dyn for ARM) to ensure
@@ -490,7 +491,7 @@ template <class ELFT> static bool includeInSymtab(const SymbolBody &B) {
     // Exclude symbols pointing to garbage-collected sections.
     if (!D->Section->Live)
       return false;
-    if (auto *S = dyn_cast<MergeInputSection<ELFT>>(D->Section))
+    if (auto *S = dyn_cast<MergeInputSection>(D->Section))
       if (!S->getSectionPiece(D->Value)->Live)
         return false;
   }
@@ -595,7 +596,7 @@ template <class ELFT> bool elf::isRelroSection(const OutputSection *Sec) {
     return true;
   if (In<ELFT>::Got && Sec == In<ELFT>::Got->OutSec)
     return true;
-  if (Sec == Out::BssRelRo)
+  if (Sec == In<ELFT>::BssRelRo->OutSec)
     return true;
 
   StringRef S = Sec->Name;
@@ -773,10 +774,10 @@ static Symbol *addOptionalRegular(StringRef Name, InputSectionBase *IS,
 template <class ELFT> void Writer<ELFT>::addRelIpltSymbols() {
   if (In<ELFT>::DynSymTab)
     return;
-  StringRef S = Config->Rela ? "__rela_iplt_start" : "__rel_iplt_start";
+  StringRef S = Config->isRela() ? "__rela_iplt_start" : "__rel_iplt_start";
   addOptionalRegular<ELFT>(S, In<ELFT>::RelaIplt, 0);
 
-  S = Config->Rela ? "__rela_iplt_end" : "__rel_iplt_end";
+  S = Config->isRela() ? "__rela_iplt_end" : "__rel_iplt_end";
   addOptionalRegular<ELFT>(S, In<ELFT>::RelaIplt, -1);
 }
 
@@ -909,7 +910,7 @@ void Writer<ELFT>::forEachRelSec(std::function<void(InputSectionBase &)> Fn) {
     // processed by InputSection::relocateNonAlloc.
     if (!(IS->Flags & SHF_ALLOC))
       continue;
-    if (isa<InputSection>(IS) || isa<EhInputSection<ELFT>>(IS))
+    if (isa<InputSection>(IS) || isa<EhInputSection>(IS))
       Fn(*IS);
   }
 }
@@ -1159,27 +1160,18 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   // Dynamic section must be the last one in this list and dynamic
   // symbol table section (DynSymTab) must be the first one.
   finalizeSynthetic<ELFT>(
-      {In<ELFT>::DynSymTab, In<ELFT>::GnuHashTab, In<ELFT>::HashTab,
-       In<ELFT>::SymTab,    In<ELFT>::ShStrTab,   In<ELFT>::StrTab,
-       In<ELFT>::VerDef,    In<ELFT>::DynStrTab,  In<ELFT>::GdbIndex,
-       In<ELFT>::Got,       In<ELFT>::MipsGot,    In<ELFT>::IgotPlt,
-       In<ELFT>::GotPlt,    In<ELFT>::RelaDyn,    In<ELFT>::RelaIplt,
-       In<ELFT>::RelaPlt,   In<ELFT>::Plt,        In<ELFT>::Iplt,
-       In<ELFT>::Plt,       In<ELFT>::EhFrameHdr, In<ELFT>::VerSym,
-       In<ELFT>::VerNeed,   In<ELFT>::Dynamic});
+      {In<ELFT>::DynSymTab,  In<ELFT>::Bss,      In<ELFT>::BssRelRo,
+       In<ELFT>::GnuHashTab, In<ELFT>::HashTab,  In<ELFT>::SymTab,
+       In<ELFT>::ShStrTab,   In<ELFT>::StrTab,   In<ELFT>::VerDef,
+       In<ELFT>::DynStrTab,  In<ELFT>::GdbIndex, In<ELFT>::Got,
+       In<ELFT>::MipsGot,    In<ELFT>::IgotPlt,  In<ELFT>::GotPlt,
+       In<ELFT>::RelaDyn,    In<ELFT>::RelaIplt, In<ELFT>::RelaPlt,
+       In<ELFT>::Plt,        In<ELFT>::Iplt,     In<ELFT>::Plt,
+       In<ELFT>::EhFrameHdr, In<ELFT>::VerSym,   In<ELFT>::VerNeed,
+       In<ELFT>::Dynamic});
 }
 
 template <class ELFT> void Writer<ELFT>::addPredefinedSections() {
-  // Add BSS sections.
-  auto Add = [=](OutputSection *Sec) {
-    if (!Sec->Sections.empty()) {
-      Sec->assignOffsets<ELFT>();
-      OutputSections.push_back(Sec);
-    }
-  };
-  Add(Out::Bss);
-  Add(Out::BssRelRo);
-
   // ARM ABI requires .ARM.exidx to be terminated by some piece of data.
   // We have the terminater synthetic section class. Add that at the end.
   auto *OS = dyn_cast_or_null<OutputSection>(findSection(".ARM.exidx"));

@@ -9,7 +9,7 @@
 
 #include "lldb/Host/linux/HostThreadLinux.h"
 #include "Plugins/Process/Linux/ProcFileReader.h"
-#include "lldb/Core/DataBuffer.h"
+#include "lldb/Utility/DataBuffer.h"
 
 #include "llvm/ADT/SmallVector.h"
 

@@ -18,8 +18,8 @@
 #ifdef LLDB_USE_BUILTIN_DEMANGLER
 // Provide a fast-path demangler implemented in FastDemangle.cpp until it can
 // replace the existing C++ demangler with a complete implementation
+#include "lldb/Utility/FastDemangle.h"
 #include "llvm/Demangle/Demangle.h"
-#include "lldb/Core/FastDemangle.h"
 #else
 #include <cxxabi.h>
 #endif
@@ -28,11 +28,11 @@
 
 #include "Plugins/Language/CPlusPlus/CPlusPlusLanguage.h"
 #include "Plugins/Language/ObjC/ObjCLanguage.h"
-#include "lldb/Core/Log.h"
-#include "lldb/Core/Logging.h"
 #include "lldb/Core/Mangled.h"
 #include "lldb/Core/Timer.h"
 #include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/Log.h"
+#include "lldb/Utility/Logging.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/Stream.h"
 #include <ctype.h>

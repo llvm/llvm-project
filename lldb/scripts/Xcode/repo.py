@@ -11,7 +11,7 @@ def identifier():
 	except:
 		pass
 	try:
-		git_remote_and_branch = subprocess.check_output(["git", "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"]).rstrip()
+		git_remote_and_branch = subprocess.check_output(["git", "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"], stderr=subprocess.STDOUT).rstrip()
 		git_remote = git_remote_and_branch.split("/")[0]
 		git_branch = "/".join(git_remote_and_branch.split("/")[1:])
 		git_url = subprocess.check_output(["git", "remote", "get-url", git_remote]).rstrip()

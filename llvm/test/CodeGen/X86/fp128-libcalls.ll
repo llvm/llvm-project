@@ -1,5 +1,7 @@
-; RUN: llc < %s -O2 -mtriple=x86_64-linux-android -mattr=+mmx | FileCheck %s
-; RUN: llc < %s -O2 -mtriple=x86_64-linux-gnu -mattr=+mmx | FileCheck %s
+; RUN: llc < %s -O2 -mtriple=x86_64-linux-android -mattr=+mmx \
+; RUN:     -enable-legalize-types-checking | FileCheck %s
+; RUN: llc < %s -O2 -mtriple=x86_64-linux-gnu -mattr=+mmx \
+; RUN:     -enable-legalize-types-checking | FileCheck %s
 
 ; Check all soft floating point library function calls.
 

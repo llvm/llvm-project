@@ -196,6 +196,7 @@ private:
                         MachineBasicBlock::iterator Def,
                         MachineBasicBlock::iterator BBEnd) {
     const R600RegisterInfo &TRI = TII->getRegisterInfo();
+    //TODO: change this to defs?
     for (MachineInstr::const_mop_iterator
            MOI = Def->operands_begin(),
            MOE = Def->operands_end(); MOI != MOE; ++MOI) {
@@ -218,15 +219,17 @@ private:
         if (AluInstCount >= TII->getMaxAlusPerClause())
           return false;
 
+        // TODO: Is this true? kill flag appears to work OK below
         // Register kill flags have been cleared by the time we get to this
         // pass, but it is safe to assume that all uses of this register
         // occur in the same basic block as its definition, because
         // it is illegal for the scheduler to schedule them in
         // different blocks.
-        if (UseI->findRegisterUseOperandIdx(MOI->getReg()))
+        if (UseI->readsRegister(MOI->getReg()))
           LastUseCount = AluInstCount;
 
-        if (UseI != Def && UseI->findRegisterDefOperandIdx(MOI->getReg()) != -1)
+        // Exit early if the current use kills the register
+        if (UseI != Def && UseI->killsRegister(MOI->getReg()))
           break;
       }
       if (LastUseCount)

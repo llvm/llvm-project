@@ -54,6 +54,8 @@ void MappingTraits<DWARFYAML::AttributeAbbrev>::mapping(
     IO &IO, DWARFYAML::AttributeAbbrev &AttAbbrev) {
   IO.mapRequired("Attribute", AttAbbrev.Attribute);
   IO.mapRequired("Form", AttAbbrev.Form);
+  if(AttAbbrev.Form == dwarf::DW_FORM_implicit_const)
+    IO.mapRequired("Value", AttAbbrev.Value);
 }
 
 void MappingTraits<DWARFYAML::ARangeDescriptor>::mapping(
@@ -144,9 +146,7 @@ void MappingTraits<DWARFYAML::LineTableOpcode>::mapping(
 
 void MappingTraits<DWARFYAML::LineTable>::mapping(
     IO &IO, DWARFYAML::LineTable &LineTable) {
-  IO.mapRequired("TotalLength", LineTable.TotalLength);
-  if (LineTable.TotalLength == UINT32_MAX)
-    IO.mapRequired("TotalLength64", LineTable.TotalLength64);
+  IO.mapRequired("Length", LineTable.Length);
   IO.mapRequired("Version", LineTable.Version);
   IO.mapRequired("PrologueLength", LineTable.PrologueLength);
   IO.mapRequired("MinInstLength", LineTable.MinInstLength);
@@ -160,6 +160,13 @@ void MappingTraits<DWARFYAML::LineTable>::mapping(
   IO.mapRequired("IncludeDirs", LineTable.IncludeDirs);
   IO.mapRequired("Files", LineTable.Files);
   IO.mapRequired("Opcodes", LineTable.Opcodes);
+}
+
+void MappingTraits<DWARFYAML::InitialLength>::mapping(
+    IO &IO, DWARFYAML::InitialLength &InitialLength) {
+  IO.mapRequired("TotalLength", InitialLength.TotalLength);
+  if (InitialLength.isDWARF64())
+    IO.mapRequired("TotalLength64", InitialLength.TotalLength64);
 }
 
 } // namespace llvm::yaml

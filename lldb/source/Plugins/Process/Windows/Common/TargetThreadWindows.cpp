@@ -7,14 +7,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Core/Log.h"
-#include "lldb/Core/Logging.h"
 #include "lldb/Core/State.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/HostNativeThreadBase.h"
 #include "lldb/Host/windows/HostThreadWindows.h"
 #include "lldb/Host/windows/windows.h"
 #include "lldb/Target/RegisterContext.h"
+#include "lldb/Utility/Log.h"
+#include "lldb/Utility/Logging.h"
 
 #include "ProcessWindows.h"
 #include "ProcessWindowsLog.h"

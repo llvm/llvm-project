@@ -1117,15 +1117,19 @@ kmp_set_disp_num_buffers                    890
 
             %ifdef HAVE_QUAD
             __kmpc_atomic_fixed1_sub_rev_fp
+            __kmpc_atomic_fixed1u_sub_rev_fp
             __kmpc_atomic_fixed1_div_rev_fp
             __kmpc_atomic_fixed1u_div_rev_fp
             __kmpc_atomic_fixed2_sub_rev_fp
+            __kmpc_atomic_fixed2u_sub_rev_fp
             __kmpc_atomic_fixed2_div_rev_fp
             __kmpc_atomic_fixed2u_div_rev_fp
             __kmpc_atomic_fixed4_sub_rev_fp
+            __kmpc_atomic_fixed4u_sub_rev_fp
             __kmpc_atomic_fixed4_div_rev_fp
             __kmpc_atomic_fixed4u_div_rev_fp
             __kmpc_atomic_fixed8_sub_rev_fp
+            __kmpc_atomic_fixed8u_sub_rev_fp
             __kmpc_atomic_fixed8_div_rev_fp
             __kmpc_atomic_fixed8u_div_rev_fp
             __kmpc_atomic_float4_sub_rev_fp

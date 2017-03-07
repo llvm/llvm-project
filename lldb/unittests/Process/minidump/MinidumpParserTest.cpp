@@ -19,10 +19,10 @@
 #include "gtest/gtest.h"
 
 #include "lldb/Core/ArchSpec.h"
-#include "lldb/Core/DataBufferLLVM.h"
-#include "lldb/Core/DataExtractor.h"
 #include "lldb/Host/FileSpec.h"
 #include "lldb/Target/MemoryRegionInfo.h"
+#include "lldb/Utility/DataBufferLLVM.h"
+#include "lldb/Utility/DataExtractor.h"
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
@@ -53,7 +53,7 @@ public:
     llvm::SmallString<128> filename = inputs_folder;
     llvm::sys::path::append(filename, minidump_filename);
 
-    auto BufferPtr = DataBufferLLVM::CreateFromPath(filename, load_size, 0);
+    auto BufferPtr = DataBufferLLVM::CreateSliceFromPath(filename, load_size, 0);
 
     llvm::Optional<MinidumpParser> optional_parser =
         MinidumpParser::Create(BufferPtr);

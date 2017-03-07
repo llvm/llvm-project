@@ -20,7 +20,7 @@
 // Project includes
 #include "lldb/Core/ModuleList.h"
 #include "lldb/Core/StructuredData.h"
-#include "lldb/Core/UUID.h"
+#include "lldb/Utility/UUID.h"
 #include "lldb/Host/FileSpec.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/QueueItem.h"

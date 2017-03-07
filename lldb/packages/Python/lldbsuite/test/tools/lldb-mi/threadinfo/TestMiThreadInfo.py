@@ -16,6 +16,7 @@ class MiThreadInfoTestCase(lldbmi_testcase.MiTestCaseBase):
 
     @skipIfWindows  # pthreads not supported on Windows
     @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races
+    @skipIfRemote   # We do not currently support remote debugging via the MI.
     def test_lldbmi_thread_info(self):
         """Test that -thread-info prints thread info and the current-thread-id"""
 

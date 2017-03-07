@@ -66,10 +66,6 @@ define <8 x double> @combine_permvar_8f64_identity_mask(<8 x double> %x0, <8 x d
 define <8 x i64> @combine_permvar_8i64_identity(<8 x i64> %x0, <8 x i64> %x1) {
 ; X32-LABEL: combine_permvar_8i64_identity:
 ; X32:       # BB#0:
-; X32-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [7,0,6,0,5,0,4,0,3,0,2,0,1,0,0,0]
-; X32-NEXT:    vpermq %zmm0, %zmm1, %zmm0
-; X32-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [7,0,14,0,5,0,12,0,3,0,10,0,1,0,8,0]
-; X32-NEXT:    vpermq %zmm0, %zmm1, %zmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: combine_permvar_8i64_identity:
@@ -189,10 +185,6 @@ define <8 x double> @combine_vpermt2var_8f64_movddup_mask(<8 x double> %x0, <8 x
 define <8 x i64> @combine_vpermt2var_8i64_identity(<8 x i64> %x0, <8 x i64> %x1) {
 ; X32-LABEL: combine_vpermt2var_8i64_identity:
 ; X32:       # BB#0:
-; X32-NEXT:    vmovdqa64 {{.*#+}} zmm2 = <u,u,6,0,5,0,4,0,3,0,2,0,1,0,0,0>
-; X32-NEXT:    vpermi2q %zmm1, %zmm0, %zmm2
-; X32-NEXT:    vmovdqa64 {{.*#+}} zmm0 = <u,u,14,0,5,0,12,0,3,0,10,0,1,0,8,0>
-; X32-NEXT:    vpermi2q %zmm2, %zmm2, %zmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: combine_vpermt2var_8i64_identity:
@@ -648,8 +640,7 @@ define <16 x i32> @combine_permvar_as_vpbroadcastd512(<16 x i32> %x0) {
 define <8 x i64> @combine_permvar_as_vpbroadcastq512(<8 x i64> %x0) {
 ; X32-LABEL: combine_permvar_as_vpbroadcastq512:
 ; X32:       # BB#0:
-; X32-NEXT:    vpxord %zmm1, %zmm1, %zmm1
-; X32-NEXT:    vpermq %zmm0, %zmm1, %zmm0
+; X32-NEXT:    vbroadcastsd %xmm0, %zmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: combine_permvar_as_vpbroadcastq512:
@@ -663,8 +654,7 @@ define <8 x i64> @combine_permvar_as_vpbroadcastq512(<8 x i64> %x0) {
 define <8 x i64> @combine_permvar_8i64_as_permq(<8 x i64> %x0, <8 x i64> %x1) {
 ; X32-LABEL: combine_permvar_8i64_as_permq:
 ; X32:       # BB#0:
-; X32-NEXT:    vmovdqa64 {{.*#+}} zmm1 = <3,0,2,0,1,0,u,u,u,u,6,0,5,0,4,0>
-; X32-NEXT:    vpermq %zmm0, %zmm1, %zmm0
+; X32-NEXT:    vpermq {{.*#+}} zmm0 = zmm0[3,2,1,0,7,6,5,4]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: combine_permvar_8i64_as_permq:
@@ -679,8 +669,7 @@ define <8 x i64> @combine_permvar_8i64_as_permq_mask(<8 x i64> %x0, <8 x i64> %x
 ; X32:       # BB#0:
 ; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    kmovd %eax, %k1
-; X32-NEXT:    vmovdqa64 {{.*#+}} zmm2 = <3,0,2,0,1,0,u,u,u,u,6,0,5,0,4,0>
-; X32-NEXT:    vpermq %zmm0, %zmm2, %zmm1 {%k1}
+; X32-NEXT:    vpermq {{.*#+}} zmm1 {%k1} = zmm0[3,2,1,0,7,6,5,4]
 ; X32-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; X32-NEXT:    retl
 ;
@@ -872,10 +861,6 @@ define <8 x double> @combine_vpermi2var_8f64_as_shufpd(<8 x double> %x0, <8 x do
 define <8 x i64> @combine_vpermi2var_8i64_identity(<8 x i64> %x0, <8 x i64> %x1) {
 ; X32-LABEL: combine_vpermi2var_8i64_identity:
 ; X32:       # BB#0:
-; X32-NEXT:    vmovdqa64 {{.*#+}} zmm2 = <u,u,6,0,5,0,4,0,3,0,2,0,1,0,0,0>
-; X32-NEXT:    vpermi2q %zmm1, %zmm0, %zmm2
-; X32-NEXT:    vmovdqa64 {{.*#+}} zmm0 = <u,u,14,0,5,0,12,0,3,0,10,0,1,0,8,0>
-; X32-NEXT:    vpermi2q %zmm2, %zmm2, %zmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: combine_vpermi2var_8i64_identity:
@@ -973,10 +958,8 @@ define <8 x double> @combine_vpermi2var_8f64_as_vpermpd(<8 x double> %x0, <8 x d
 define <8 x i64> @combine_vpermt2var_8i64_as_vpermq(<8 x i64> %x0, <8 x i64> %x1) {
 ; X32-LABEL: combine_vpermt2var_8i64_as_vpermq:
 ; X32:       # BB#0:
-; X32-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [3,0,2,0,1,0,0,0,7,0,6,0,5,0,4,0]
-; X32-NEXT:    vpermi2q %zmm1, %zmm0, %zmm2
-; X32-NEXT:    vmovdqa64 {{.*#+}} zmm0 = [12,0,5,0,14,0,7,0,8,0,1,0,10,0,3,0]
-; X32-NEXT:    vpermi2q %zmm2, %zmm2, %zmm0
+; X32-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [7,0,6,0,5,0,4,0,3,0,2,0,1,0,0,0]
+; X32-NEXT:    vpermq %zmm0, %zmm1, %zmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: combine_vpermt2var_8i64_as_vpermq:
@@ -1136,9 +1119,7 @@ define <16 x float> @combine_vpermi2var_vpermvar_16f32_as_vperm2_zero(<16 x floa
 define <8 x i64> @combine_vpermvar_insertion_as_broadcast_v8i64(i64 %a0) {
 ; X32-LABEL: combine_vpermvar_insertion_as_broadcast_v8i64:
 ; X32:       # BB#0:
-; X32-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
-; X32-NEXT:    vpxord %zmm1, %zmm1, %zmm1
-; X32-NEXT:    vpermq %zmm0, %zmm1, %zmm0
+; X32-NEXT:    vbroadcastsd {{[0-9]+}}(%esp), %zmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: combine_vpermvar_insertion_as_broadcast_v8i64:

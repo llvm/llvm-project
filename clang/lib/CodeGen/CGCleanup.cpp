@@ -418,11 +418,15 @@ void CodeGenFunction::ResolveBranchFixups(llvm::BasicBlock *Block) {
 }
 
 /// Pops cleanup blocks until the given savepoint is reached.
-void CodeGenFunction::PopCleanupBlocks(EHScopeStack::stable_iterator Old) {
+void CodeGenFunction::PopCleanupBlocks(
+    EHScopeStack::stable_iterator Old,
+    std::initializer_list<llvm::Value **> ValuesToReload) {
   assert(Old.isValid());
 
+  bool HadBranches = false;
   while (EHStack.stable_begin() != Old) {
     EHCleanupScope &Scope = cast<EHCleanupScope>(*EHStack.begin());
+    HadBranches |= Scope.hasBranches();
 
     // As long as Old strictly encloses the scope's enclosing normal
     // cleanup, we're going to emit another normal cleanup which
@@ -432,14 +436,41 @@ void CodeGenFunction::PopCleanupBlocks(EHScopeStack::stable_iterator Old) {
 
     PopCleanupBlock(FallThroughIsBranchThrough);
   }
+
+  // If we didn't have any branches, the insertion point before cleanups must
+  // dominate the current insertion point and we don't need to reload any
+  // values.
+  if (!HadBranches)
+    return;
+
+  // Spill and reload all values that the caller wants to be live at the current
+  // insertion point.
+  for (llvm::Value **ReloadedValue : ValuesToReload) {
+    auto *Inst = dyn_cast_or_null<llvm::Instruction>(*ReloadedValue);
+    if (!Inst)
+      continue;
+    Address Tmp =
+        CreateDefaultAlignTempAlloca(Inst->getType(), "tmp.exprcleanup");
+
+    // Find an insertion point after Inst and spill it to the temporary.
+    llvm::BasicBlock::iterator InsertBefore;
+    if (auto *Invoke = dyn_cast<llvm::InvokeInst>(Inst))
+      InsertBefore = Invoke->getNormalDest()->getFirstInsertionPt();
+    else
+      InsertBefore = std::next(Inst->getIterator());
+    CGBuilderTy(CGM, &*InsertBefore).CreateStore(Inst, Tmp);
+
+    // Reload the value at the current insertion point.
+    *ReloadedValue = Builder.CreateLoad(Tmp);
+  }
 }
 
 /// Pops cleanup blocks until the given savepoint is reached, then add the
 /// cleanups from the given savepoint in the lifetime-extended cleanups stack.
-void
-CodeGenFunction::PopCleanupBlocks(EHScopeStack::stable_iterator Old,
-                                  size_t OldLifetimeExtendedSize) {
-  PopCleanupBlocks(Old);
+void CodeGenFunction::PopCleanupBlocks(
+    EHScopeStack::stable_iterator Old, size_t OldLifetimeExtendedSize,
+    std::initializer_list<llvm::Value **> ValuesToReload) {
+  PopCleanupBlocks(Old, ValuesToReload);
 
   // Move our deferred cleanups onto the EH stack.
   for (size_t I = OldLifetimeExtendedSize,

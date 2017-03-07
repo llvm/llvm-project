@@ -1508,6 +1508,63 @@ public:
     return false;
   }
 
+  /// \brief Return how many instructions would be saved by outlining a
+  /// sequence containing \p SequenceSize instructions that appears
+  /// \p Occurrences times in a module.
+  virtual unsigned getOutliningBenefit(size_t SequenceSize, size_t Occurrences)
+  const {
+    llvm_unreachable(
+        "Target didn't implement TargetInstrInfo::getOutliningBenefit!");
+  }
+
+  /// Represents how an instruction should be mapped by the outliner.
+  /// \p Legal instructions are those which are safe to outline.
+  /// \p Illegal instructions are those which cannot be outlined.
+  /// \p Invisible instructions are instructions which can be outlined, but
+  /// shouldn't actually impact the outlining result.
+  enum MachineOutlinerInstrType {Legal, Illegal, Invisible};
+
+  /// Return true if the instruction is legal to outline.
+  virtual MachineOutlinerInstrType getOutliningType(MachineInstr &MI) const {
+    llvm_unreachable(
+        "Target didn't implement TargetInstrInfo::getOutliningType!");
+  }
+
+  /// Insert a custom epilogue for outlined functions.
+  /// This may be empty, in which case no epilogue or return statement will be
+  /// emitted.
+  virtual void insertOutlinerEpilogue(MachineBasicBlock &MBB,
+                                      MachineFunction &MF) const {
+    llvm_unreachable(
+        "Target didn't implement TargetInstrInfo::insertOutlinerEpilogue!");
+  }
+
+  /// Insert a call to an outlined function into the program.
+  /// Returns an iterator to the spot where we inserted the call. This must be
+  /// implemented by the target.
+  virtual MachineBasicBlock::iterator
+  insertOutlinedCall(Module &M, MachineBasicBlock &MBB,
+                     MachineBasicBlock::iterator &It, MachineFunction &MF)
+  const {
+    llvm_unreachable(
+        "Target didn't implement TargetInstrInfo::insertOutlinedCall!");
+  }
+
+  /// Insert a custom prologue for outlined functions.
+  /// This may be empty, in which case no prologue will be emitted.
+  virtual void insertOutlinerPrologue(MachineBasicBlock &MBB,
+                                      MachineFunction &MF) const {
+    llvm_unreachable(
+        "Target didn't implement TargetInstrInfo::insertOutlinerPrologue!");
+  }
+
+  /// Return true if the function can safely be outlined from.
+  /// By default, this means that the function has no red zone.
+  virtual bool isFunctionSafeToOutlineFrom(MachineFunction &F) const {
+    llvm_unreachable("Target didn't implement "
+                     "TargetInstrInfo::isFunctionSafeToOutlineFrom!");
+  }
+
 private:
   unsigned CallFrameSetupOpcode, CallFrameDestroyOpcode;
   unsigned CatchRetOpcode;

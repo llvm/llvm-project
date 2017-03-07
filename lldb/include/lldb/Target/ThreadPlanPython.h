@@ -18,13 +18,13 @@
 // Other libraries and framework includes
 // Project includes
 #include "lldb/Core/StructuredData.h"
-#include "lldb/Core/UserID.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/StopInfo.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadPlan.h"
 #include "lldb/Target/ThreadPlanTracer.h"
+#include "lldb/Utility/UserID.h"
 #include "lldb/lldb-private.h"
 
 namespace lldb_private {

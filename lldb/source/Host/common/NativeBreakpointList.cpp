@@ -9,7 +9,7 @@
 
 #include "lldb/Host/common/NativeBreakpointList.h"
 
-#include "lldb/Core/Log.h"
+#include "lldb/Utility/Log.h"
 
 #include "lldb/Host/common/NativeBreakpoint.h"
 #include "lldb/Host/common/SoftwareBreakpoint.h"

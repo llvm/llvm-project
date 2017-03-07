@@ -10,5 +10,5 @@ import os.path
 this_dir = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(os.path.dirname(this_dir))
 
-from libscanbuild.analyze import analyze_build_wrapper
-sys.exit(analyze_build_wrapper(True))
+from libscanbuild.analyze import analyze_compiler_wrapper
+sys.exit(analyze_compiler_wrapper())

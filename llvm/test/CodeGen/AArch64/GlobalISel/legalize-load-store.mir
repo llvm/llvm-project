@@ -59,7 +59,7 @@ body: |
     ; CHECK: [[OFFSET1:%[0-9]+]](s64) = G_CONSTANT i64 8
     ; CHECK: [[GEP1:%[0-9]+]](p0) = G_GEP %0, [[OFFSET1]](s64)
     ; CHECK: [[LOAD1:%[0-9]+]](s64) = G_LOAD [[GEP1]](p0) :: (load 16 from %ir.addr)
-    ; CHECK: %8(s128) = G_SEQUENCE [[LOAD0]](s64), 0, [[LOAD1]](s64), 64
+    ; CHECK: %8(s128) = G_MERGE_VALUES [[LOAD0]](s64), [[LOAD1]](s64)
     %8(s128) = G_LOAD %0(p0) :: (load 16 from %ir.addr)
 ...
 
@@ -112,6 +112,6 @@ body: |
     ; CHECK: [[GEP1:%[0-9]+]](p0) = G_GEP %0, [[OFFSET1]](s64)
     ; CHECK: G_STORE %6(s64), [[GEP1]](p0) :: (store 16 into %ir.addr)
     %6(s64) = G_PTRTOINT %0(p0)
-    %7(s128) = G_SEQUENCE %5, 0, %6, 64
+    %7(s128) = G_MERGE_VALUES %5, %6
     G_STORE %7, %0 :: (store 16 into %ir.addr)
 ...

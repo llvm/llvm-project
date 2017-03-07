@@ -84,6 +84,18 @@ static void computeCacheKey(
     Data[3] = I >> 24;
     Hasher.update(ArrayRef<uint8_t>{Data, 4});
   };
+  auto AddUint64 = [&](uint64_t I) {
+    uint8_t Data[8];
+    Data[0] = I;
+    Data[1] = I >> 8;
+    Data[2] = I >> 16;
+    Data[3] = I >> 24;
+    Data[4] = I >> 32;
+    Data[5] = I >> 40;
+    Data[6] = I >> 48;
+    Data[7] = I >> 56;
+    Hasher.update(ArrayRef<uint8_t>{Data, 8});
+  };
   AddString(Conf.CPU);
   // FIXME: Hash more of Options. For now all clients initialize Options from
   // command-line flags (which is unsupported in production), but may set
@@ -112,10 +124,16 @@ static void computeCacheKey(
     // The export list can impact the internalization, be conservative here
     Hasher.update(ArrayRef<uint8_t>((uint8_t *)&F, sizeof(F)));
 
-  // Include the hash for every module we import functions from
+  // Include the hash for every module we import functions from. The set of
+  // imported symbols for each module may affect code generation and is
+  // sensitive to link order, so include that as well.
   for (auto &Entry : ImportList) {
     auto ModHash = Index.getModuleHash(Entry.first());
     Hasher.update(ArrayRef<uint8_t>((uint8_t *)&ModHash[0], sizeof(ModHash)));
+
+    AddUint64(Entry.second.size());
+    for (auto &Fn : Entry.second)
+      AddUint64(Fn.first);
   }
 
   // Include the hash for the resolved ODR.

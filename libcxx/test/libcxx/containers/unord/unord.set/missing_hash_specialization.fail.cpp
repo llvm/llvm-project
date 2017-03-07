@@ -23,14 +23,48 @@
 #include <utility>
 
 using VT = std::pair<int, int>;
-using Set = std::unordered_set<VT>;
+
+struct BadHashNoCopy {
+  BadHashNoCopy() = default;
+  BadHashNoCopy(BadHashNoCopy const&) = delete;
+
+  template <class T>
+  size_t operator()(T const&) const { return 0; }
+};
+
+struct BadHashNoCall {
+
+};
+
+
+struct GoodHashNoDefault {
+  explicit GoodHashNoDefault(void*) {}
+  template <class T>
+  size_t operator()(T const&) const { return 0; }
+};
 
 int main() {
 
-  Set s; // expected-error@__hash_table:* {{the specified hash functor does not meet the requirements for an enabled hash}}
+  {
+    using Set = std::unordered_set<VT>;
+    Set s; // expected-error@__hash_table:* {{the specified hash does not meet the Hash requirements}}
+
 
   // FIXME: It would be great to suppress the below diagnostic all together.
   //        but for now it's sufficient that it appears last. However there is
   //        currently no way to test the order diagnostics are issued.
   // expected-error@memory:* {{call to implicitly-deleted default constructor of 'std::__1::hash<std::__1::pair<int, int> >'}}
+  }
+  {
+    using Set = std::unordered_set<int, BadHashNoCopy>;
+    Set s; // expected-error@__hash_table:* {{the specified hash does not meet the Hash requirements}}
+  }
+  {
+    using Set = std::unordered_set<int, BadHashNoCall>;
+    Set s; // expected-error@__hash_table:* {{the specified hash does not meet the Hash requirements}}
+  }
+  {
+    using Set = std::unordered_set<int, GoodHashNoDefault>;
+    Set s(/*bucketcount*/42, GoodHashNoDefault(nullptr));
+  }
 }

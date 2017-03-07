@@ -14,8 +14,6 @@
 #include <mutex>
 
 // Other libraries and framework includes
-#include "lldb/Core/DataBufferHeap.h"
-#include "lldb/Core/Log.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
@@ -25,6 +23,9 @@
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/UnixSignals.h"
+#include "lldb/Utility/DataBufferHeap.h"
+#include "lldb/Utility/DataBufferLLVM.h"
+#include "lldb/Utility/Log.h"
 
 #include "llvm/Support/ELF.h"
 #include "llvm/Support/Threading.h"
@@ -61,7 +62,8 @@ lldb::ProcessSP ProcessElfCore::CreateInstance(lldb::TargetSP target_sp,
     // to ignore possible presence of the header extension.
     const size_t header_size = sizeof(llvm::ELF::Elf64_Ehdr);
 
-    lldb::DataBufferSP data_sp(crash_file->ReadFileContents(0, header_size));
+    auto data_sp =
+        DataBufferLLVM::CreateSliceFromPath(crash_file->GetPath(), header_size, 0);
     if (data_sp && data_sp->GetByteSize() == header_size &&
         elf::ELFHeader::MagicBytesMatch(data_sp->GetBytes())) {
       elf::ELFHeader elf_header;

@@ -18,9 +18,7 @@
 #include <mutex>
 
 // Other libraries and framework includes
-#include "lldb/Core/DataBuffer.h"
 #include "lldb/Core/Debugger.h"
-#include "lldb/Core/Log.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
@@ -31,6 +29,9 @@
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
+#include "lldb/Utility/DataBuffer.h"
+#include "lldb/Utility/DataBufferLLVM.h"
+#include "lldb/Utility/Log.h"
 
 // Project includes
 #include "ProcessMachCore.h"
@@ -66,7 +67,8 @@ lldb::ProcessSP ProcessMachCore::CreateInstance(lldb::TargetSP target_sp,
   lldb::ProcessSP process_sp;
   if (crash_file) {
     const size_t header_size = sizeof(llvm::MachO::mach_header);
-    lldb::DataBufferSP data_sp(crash_file->ReadFileContents(0, header_size));
+    auto data_sp =
+        DataBufferLLVM::CreateSliceFromPath(crash_file->GetPath(), header_size, 0);
     if (data_sp && data_sp->GetByteSize() == header_size) {
       DataExtractor data(data_sp, lldb::eByteOrderLittle, 4);
 

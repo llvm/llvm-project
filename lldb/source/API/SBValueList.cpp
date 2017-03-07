@@ -10,8 +10,8 @@
 #include "lldb/API/SBValueList.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/API/SBValue.h"
-#include "lldb/Core/Log.h"
 #include "lldb/Core/ValueObjectList.h"
+#include "lldb/Utility/Log.h"
 
 #include <vector>
 

@@ -154,20 +154,22 @@ AArch64RedundantCopyElimination::knownRegValInBlock(
     // Track clobbered registers.
     trackRegDefs(PredI, ClobberedRegs, TRI);
 
+    bool IsCMN = false;
     switch (PredI.getOpcode()) {
     default:
       break;
 
+    // CMN is an alias for ADDS with a dead destination register.
+    case AArch64::ADDSWri:
+    case AArch64::ADDSXri:
+      IsCMN = true;
     // CMP is an alias for SUBS with a dead destination register.
     case AArch64::SUBSWri:
     case AArch64::SUBSXri: {
-      unsigned SrcReg = PredI.getOperand(1).getReg();
+      MCPhysReg SrcReg = PredI.getOperand(1).getReg();
+
       // Must not be a symbolic immediate.
       if (!PredI.getOperand(2).isImm())
-        return None;
-
-      // FIXME: For simplicity, give up on non-zero shifts.
-      if (PredI.getOperand(3).getImm())
         return None;
 
       // The src register must not be modified between the cmp and conditional
@@ -176,8 +178,13 @@ AArch64RedundantCopyElimination::knownRegValInBlock(
         return None;
 
       // We've found the Cmp that sets NZCV.
+      int32_t KnownImm = PredI.getOperand(2).getImm();
+      int32_t Shift = PredI.getOperand(3).getImm();
+      KnownImm <<= Shift;
+      if (IsCMN)
+        KnownImm = -KnownImm;
       FirstUse = PredI;
-      return RegImm(PredI.getOperand(1).getReg(), PredI.getOperand(2).getImm());
+      return RegImm(SrcReg, KnownImm);
     }
     }
 

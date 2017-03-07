@@ -82,7 +82,7 @@ public:
 private:
   uint64_t Size = 0;
   template <class RelTy>
-  void addSectionAux(EhInputSection<ELFT> *S, llvm::ArrayRef<RelTy> Rels);
+  void addSectionAux(EhInputSection *S, llvm::ArrayRef<RelTy> Rels);
 
   template <class RelTy>
   CieRecord *addCie(EhSectionPiece &Piece, ArrayRef<RelTy> Rels);
@@ -92,7 +92,7 @@ private:
 
   uintX_t getFdePc(uint8_t *Buf, size_t Off, uint8_t Enc);
 
-  std::vector<EhInputSection<ELFT> *> Sections;
+  std::vector<EhInputSection *> Sections;
   std::vector<CieRecord *> Cies;
 
   // CIE records are uniquified by their contents and personality functions.
@@ -147,14 +147,16 @@ private:
   uint8_t *HashBuf;
 };
 
-// For each copy relocation, we create an instance of this class to
-// reserve space in .bss or .bss.rel.ro.
-template <class ELFT> class CopyRelSection final : public SyntheticSection {
+// Section used for storing copy relocations. We create two sections now,
+// .bss.rel.ro for RelRo case and .bss for regular case.
+template <class ELFT> class BssRelSection final : public SyntheticSection {
   typedef typename ELFT::uint uintX_t;
 
 public:
-  CopyRelSection(bool ReadOnly, uintX_t AddrAlign, size_t Size);
+  BssRelSection(bool RelRo);
   void writeTo(uint8_t *) override {}
+  bool empty() const override { return getSize() == 0; }
+  size_t addCopyRelocation(uintX_t AddrAlign, size_t Size);
   size_t getSize() const override { return Size; }
   size_t Size;
 };
@@ -638,14 +640,11 @@ public:
 // with different attributes in a single output sections. To do that
 // we put them into MergeSyntheticSection synthetic input sections which are
 // attached to regular output sections.
-template <class ELFT>
 class MergeSyntheticSection final : public SyntheticSection {
-  typedef typename ELFT::uint uintX_t;
-
 public:
-  MergeSyntheticSection(StringRef Name, uint32_t Type, uintX_t Flags,
-                        uintX_t Alignment);
-  void addSection(MergeInputSection<ELFT> *MS);
+  MergeSyntheticSection(StringRef Name, uint32_t Type, uint64_t Flags,
+                        uint64_t Alignment);
+  void addSection(MergeInputSection *MS);
   void writeTo(uint8_t *Buf) override;
   void finalizeContents() override;
   bool shouldTailMerge() const;
@@ -657,7 +656,7 @@ private:
 
   bool Finalized = false;
   llvm::StringTableBuilder Builder;
-  std::vector<MergeInputSection<ELFT> *> Sections;
+  std::vector<MergeInputSection *> Sections;
 };
 
 // .MIPS.abiflags section.
@@ -751,7 +750,7 @@ private:
 
 template <class ELFT> InputSection *createCommonSection();
 InputSection *createInterpSection();
-template <class ELFT> MergeInputSection<ELFT> *createCommentSection();
+template <class ELFT> MergeInputSection *createCommentSection();
 template <class ELFT>
 SymbolBody *addSyntheticLocal(StringRef Name, uint8_t Type, uint64_t Value,
                               uint64_t Size, InputSectionBase *Section);
@@ -760,6 +759,8 @@ SymbolBody *addSyntheticLocal(StringRef Name, uint8_t Type, uint64_t Value,
 template <class ELFT> struct In {
   static InputSection *ARMAttributes;
   static BuildIdSection<ELFT> *BuildId;
+  static BssRelSection<ELFT> *Bss;
+  static BssRelSection<ELFT> *BssRelRo;
   static InputSection *Common;
   static DynamicSection<ELFT> *Dynamic;
   static StringTableSection<ELFT> *DynStrTab;
@@ -789,6 +790,8 @@ template <class ELFT> struct In {
 };
 
 template <class ELFT> InputSection *In<ELFT>::ARMAttributes;
+template <class ELFT> BssRelSection<ELFT> *In<ELFT>::Bss;
+template <class ELFT> BssRelSection<ELFT> *In<ELFT>::BssRelRo;
 template <class ELFT> BuildIdSection<ELFT> *In<ELFT>::BuildId;
 template <class ELFT> InputSection *In<ELFT>::Common;
 template <class ELFT> DynamicSection<ELFT> *In<ELFT>::Dynamic;
