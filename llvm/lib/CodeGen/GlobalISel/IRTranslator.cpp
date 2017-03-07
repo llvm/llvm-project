@@ -826,40 +826,42 @@ bool IRTranslator::translateLandingPad(const User &U,
   MIRBuilder.buildInstr(TargetOpcode::EH_LABEL)
     .addSym(MF->addLandingPad(&MBB));
 
+  LLT Ty{*LP.getType(), *DL};
+  unsigned Undef = MRI->createGenericVirtualRegister(Ty);
+  MIRBuilder.buildUndef(Undef);
+
   SmallVector<LLT, 2> Tys;
   for (Type *Ty : cast<StructType>(LP.getType())->elements())
     Tys.push_back(LLT{*Ty, *DL});
   assert(Tys.size() == 2 && "Only two-valued landingpads are supported");
 
   // Mark exception register as live in.
-  SmallVector<unsigned, 2> Regs;
-  SmallVector<uint64_t, 2> Offsets;
-  if (unsigned Reg = TLI.getExceptionPointerRegister(PersonalityFn)) {
-    MBB.addLiveIn(Reg);
-    unsigned VReg = MRI->createGenericVirtualRegister(Tys[0]);
-    MIRBuilder.buildCopy(VReg, Reg);
-    Regs.push_back(VReg);
-    Offsets.push_back(0);
-  }
+  unsigned ExceptionReg = TLI.getExceptionPointerRegister(PersonalityFn);
+  if (!ExceptionReg)
+    return false;
 
-  if (unsigned Reg = TLI.getExceptionSelectorRegister(PersonalityFn)) {
-    MBB.addLiveIn(Reg);
+  MBB.addLiveIn(ExceptionReg);
+  unsigned VReg = MRI->createGenericVirtualRegister(Tys[0]),
+           Tmp = MRI->createGenericVirtualRegister(Ty);
+  MIRBuilder.buildCopy(VReg, ExceptionReg);
+  MIRBuilder.buildInsert(Tmp, Undef, VReg, 0);
 
-    // N.b. the exception selector register always has pointer type and may not
-    // match the actual IR-level type in the landingpad so an extra cast is
-    // needed.
-    unsigned PtrVReg = MRI->createGenericVirtualRegister(Tys[0]);
-    MIRBuilder.buildCopy(PtrVReg, Reg);
+  unsigned SelectorReg = TLI.getExceptionSelectorRegister(PersonalityFn);
+  if (!SelectorReg)
+    return false;
 
-    unsigned VReg = MRI->createGenericVirtualRegister(Tys[1]);
-    MIRBuilder.buildInstr(TargetOpcode::G_PTRTOINT)
-        .addDef(VReg)
-        .addUse(PtrVReg);
-    Regs.push_back(VReg);
-    Offsets.push_back(Tys[0].getSizeInBits());
-  }
+  MBB.addLiveIn(SelectorReg);
 
-  MIRBuilder.buildSequence(getOrCreateVReg(LP), Regs, Offsets);
+  // N.b. the exception selector register always has pointer type and may not
+  // match the actual IR-level type in the landingpad so an extra cast is
+  // needed.
+  unsigned PtrVReg = MRI->createGenericVirtualRegister(Tys[0]);
+  MIRBuilder.buildCopy(PtrVReg, SelectorReg);
+
+  VReg = MRI->createGenericVirtualRegister(Tys[1]);
+  MIRBuilder.buildInstr(TargetOpcode::G_PTRTOINT).addDef(VReg).addUse(PtrVReg);
+  MIRBuilder.buildInsert(getOrCreateVReg(LP), Tmp, VReg,
+                         Tys[0].getSizeInBits());
   return true;
 }
 
