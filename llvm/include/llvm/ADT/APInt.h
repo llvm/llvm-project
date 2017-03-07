@@ -196,15 +196,6 @@ class LLVM_NODISCARD APInt {
   /// out-of-line slow case for shl
   APInt shlSlowCase(unsigned shiftAmt) const;
 
-  /// out-of-line slow case for operator&
-  APInt AndSlowCase(const APInt &RHS) const;
-
-  /// out-of-line slow case for operator|
-  APInt OrSlowCase(const APInt &RHS) const;
-
-  /// out-of-line slow case for operator^
-  APInt XorSlowCase(const APInt &RHS) const;
-
   /// out-of-line slow case for operator=
   APInt &AssignSlowCase(const APInt &RHS);
 
@@ -782,42 +773,6 @@ public:
   /// \name Binary Operators
   /// @{
 
-  /// \brief Bitwise AND operator.
-  ///
-  /// Performs a bitwise AND operation on *this and RHS.
-  ///
-  /// \returns An APInt value representing the bitwise AND of *this and RHS.
-  APInt operator&(const APInt &RHS) const {
-    assert(BitWidth == RHS.BitWidth && "Bit widths must be the same");
-    if (isSingleWord())
-      return APInt(getBitWidth(), VAL & RHS.VAL);
-    return AndSlowCase(RHS);
-  }
-
-  /// \brief Bitwise OR operator.
-  ///
-  /// Performs a bitwise OR operation on *this and RHS.
-  ///
-  /// \returns An APInt value representing the bitwise OR of *this and RHS.
-  APInt operator|(const APInt &RHS) const {
-    assert(BitWidth == RHS.BitWidth && "Bit widths must be the same");
-    if (isSingleWord())
-      return APInt(getBitWidth(), VAL | RHS.VAL);
-    return OrSlowCase(RHS);
-  }
-
-  /// \brief Bitwise XOR operator.
-  ///
-  /// Performs a bitwise XOR operation on *this and RHS.
-  ///
-  /// \returns An APInt value representing the bitwise XOR of *this and RHS.
-  APInt operator^(const APInt &RHS) const {
-    assert(BitWidth == RHS.BitWidth && "Bit widths must be the same");
-    if (isSingleWord())
-      return APInt(BitWidth, VAL ^ RHS.VAL);
-    return XorSlowCase(RHS);
-  }
-
   /// \brief Multiplication operator.
   ///
   /// Multiplies this APInt by RHS and returns the result.
@@ -1143,7 +1098,11 @@ public:
 
   /// This operation tests if there are any pairs of corresponding bits
   /// between this APInt and RHS that are both set.
-  bool intersects(const APInt &RHS) const { return (*this & RHS) != 0; }
+  bool intersects(const APInt &RHS) const {
+    APInt temp(*this);
+    temp &= RHS;
+    return temp != 0;
+  }
 
   /// @}
   /// \name Resizing Operators
@@ -1771,6 +1730,16 @@ inline APInt operator~(APInt v) {
   return v;
 }
 
+inline APInt operator&(APInt a, const APInt &b) {
+  a &= b;
+  return a;
+}
+
+inline APInt operator&(const APInt &a, APInt &&b) {
+  b &= a;
+  return std::move(b);
+}
+
 inline APInt operator&(APInt a, uint64_t RHS) {
   a &= RHS;
   return a;
@@ -1781,6 +1750,16 @@ inline APInt operator&(uint64_t LHS, APInt b) {
   return b;
 }
 
+inline APInt operator|(APInt a, const APInt &b) {
+  a |= b;
+  return a;
+}
+
+inline APInt operator|(const APInt &a, APInt &&b) {
+  b |= a;
+  return std::move(b);
+}
+
 inline APInt operator|(APInt a, uint64_t RHS) {
   a |= RHS;
   return a;
@@ -1789,6 +1768,16 @@ inline APInt operator|(APInt a, uint64_t RHS) {
 inline APInt operator|(uint64_t LHS, APInt b) {
   b |= LHS;
   return b;
+}
+
+inline APInt operator^(APInt a, const APInt &b) {
+  a ^= b;
+  return a;
+}
+
+inline APInt operator^(const APInt &a, APInt &&b) {
+  b ^= a;
+  return std::move(b);
 }
 
 inline APInt operator^(APInt a, uint64_t RHS) {

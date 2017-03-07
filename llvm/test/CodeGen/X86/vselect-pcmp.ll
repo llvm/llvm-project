@@ -31,23 +31,14 @@ define <16 x i8> @signbit_sel_v16i8(<16 x i8> %x, <16 x i8> %y, <16 x i8> %mask)
 ; Sorry 16-bit, you're not important enough to support?
 
 define <8 x i16> @signbit_sel_v8i16(<8 x i16> %x, <8 x i16> %y, <8 x i16> %mask) {
-; AVX12F-LABEL: signbit_sel_v8i16:
-; AVX12F:       # BB#0:
-; AVX12F-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; AVX12F-NEXT:    vpcmpgtw %xmm2, %xmm3, %xmm2
-; AVX12F-NEXT:    vpandn %xmm1, %xmm2, %xmm1
-; AVX12F-NEXT:    vpand %xmm2, %xmm0, %xmm0
-; AVX12F-NEXT:    vpor %xmm1, %xmm0, %xmm0
-; AVX12F-NEXT:    retq
-;
-; AVX512VL-LABEL: signbit_sel_v8i16:
-; AVX512VL:       # BB#0:
-; AVX512VL-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; AVX512VL-NEXT:    vpcmpgtw %xmm2, %xmm3, %xmm2
-; AVX512VL-NEXT:    vpandnq %xmm1, %xmm2, %xmm1
-; AVX512VL-NEXT:    vpand %xmm2, %xmm0, %xmm0
-; AVX512VL-NEXT:    vpor %xmm1, %xmm0, %xmm0
-; AVX512VL-NEXT:    retq
+; AVX-LABEL: signbit_sel_v8i16:
+; AVX:       # BB#0:
+; AVX-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; AVX-NEXT:    vpcmpgtw %xmm2, %xmm3, %xmm2
+; AVX-NEXT:    vpandn %xmm1, %xmm2, %xmm1
+; AVX-NEXT:    vpand %xmm2, %xmm0, %xmm0
+; AVX-NEXT:    vpor %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    retq
   %tr = icmp slt <8 x i16> %mask, zeroinitializer
   %z = select <8 x i1> %tr, <8 x i16> %x, <8 x i16> %y
   ret <8 x i16> %z
@@ -176,23 +167,14 @@ define <16 x i16> @signbit_sel_v16i16(<16 x i16> %x, <16 x i16> %y, <16 x i16> %
 ; AVX2-NEXT:    vpor %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
 ;
-; AVX512F-LABEL: signbit_sel_v16i16:
-; AVX512F:       # BB#0:
-; AVX512F-NEXT:    vpxor %ymm3, %ymm3, %ymm3
-; AVX512F-NEXT:    vpcmpgtw %ymm2, %ymm3, %ymm2
-; AVX512F-NEXT:    vpandn %ymm1, %ymm2, %ymm1
-; AVX512F-NEXT:    vpand %ymm2, %ymm0, %ymm0
-; AVX512F-NEXT:    vpor %ymm1, %ymm0, %ymm0
-; AVX512F-NEXT:    retq
-;
-; AVX512VL-LABEL: signbit_sel_v16i16:
-; AVX512VL:       # BB#0:
-; AVX512VL-NEXT:    vpxor %ymm3, %ymm3, %ymm3
-; AVX512VL-NEXT:    vpcmpgtw %ymm2, %ymm3, %ymm2
-; AVX512VL-NEXT:    vpandnq %ymm1, %ymm2, %ymm1
-; AVX512VL-NEXT:    vpand %ymm2, %ymm0, %ymm0
-; AVX512VL-NEXT:    vpor %ymm1, %ymm0, %ymm0
-; AVX512VL-NEXT:    retq
+; AVX512-LABEL: signbit_sel_v16i16:
+; AVX512:       # BB#0:
+; AVX512-NEXT:    vpxor %ymm3, %ymm3, %ymm3
+; AVX512-NEXT:    vpcmpgtw %ymm2, %ymm3, %ymm2
+; AVX512-NEXT:    vpandn %ymm1, %ymm2, %ymm1
+; AVX512-NEXT:    vpand %ymm2, %ymm0, %ymm0
+; AVX512-NEXT:    vpor %ymm1, %ymm0, %ymm0
+; AVX512-NEXT:    retq
   %tr = icmp slt <16 x i16> %mask, zeroinitializer
   %z = select <16 x i1> %tr, <16 x i16> %x, <16 x i16> %y
   ret <16 x i16> %z

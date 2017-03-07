@@ -461,31 +461,6 @@ APInt& APInt::operator^=(const APInt& RHS) {
   return *this;
 }
 
-APInt APInt::AndSlowCase(const APInt& RHS) const {
-  unsigned numWords = getNumWords();
-  uint64_t* val = getMemory(numWords);
-  for (unsigned i = 0; i < numWords; ++i)
-    val[i] = pVal[i] & RHS.pVal[i];
-  return APInt(val, getBitWidth());
-}
-
-APInt APInt::OrSlowCase(const APInt& RHS) const {
-  unsigned numWords = getNumWords();
-  uint64_t *val = getMemory(numWords);
-  for (unsigned i = 0; i < numWords; ++i)
-    val[i] = pVal[i] | RHS.pVal[i];
-  return APInt(val, getBitWidth());
-}
-
-APInt APInt::XorSlowCase(const APInt& RHS) const {
-  unsigned numWords = getNumWords();
-  uint64_t *val = getMemory(numWords);
-  for (unsigned i = 0; i < numWords; ++i)
-    val[i] = pVal[i] ^ RHS.pVal[i];
-
-  return APInt(val, getBitWidth());
-}
-
 APInt APInt::operator*(const APInt& RHS) const {
   assert(BitWidth == RHS.BitWidth && "Bit widths must be the same");
   if (isSingleWord())

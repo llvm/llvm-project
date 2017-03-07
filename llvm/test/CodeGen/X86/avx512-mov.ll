@@ -4,7 +4,7 @@
 define i32 @test1(float %x) {
 ; CHECK-LABEL: test1:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    vmovd %xmm0, %eax ## encoding: [0x62,0xf1,0x7d,0x08,0x7e,0xc0]
+; CHECK-NEXT:    vmovd %xmm0, %eax ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0x7e,0xc0]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
    %res = bitcast float %x to i32
    ret i32 %res
