@@ -352,6 +352,13 @@ void RegisterBankInfo::applyDefaultMapping(const OperandsMapper &OpdMapper) {
       DEBUG(dbgs() << " is not a register, nothing to be done\n");
       continue;
     }
+    if (!MO.getReg()) {
+      DEBUG(dbgs() << " is %%noreg, nothing to be done\n");
+      continue;
+    }
+    assert(OpdMapper.getInstrMapping().getOperandMapping(OpIdx).NumBreakDowns !=
+               0 &&
+           "Invalid mapping");
     assert(OpdMapper.getInstrMapping().getOperandMapping(OpIdx).NumBreakDowns ==
                1 &&
            "This mapping is too complex for this function");
