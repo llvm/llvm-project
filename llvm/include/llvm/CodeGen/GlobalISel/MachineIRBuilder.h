@@ -338,6 +338,9 @@ public:
   /// \return The newly created instruction.
   MachineInstrBuilder buildZExtOrTrunc(unsigned Res, unsigned Op);
 
+  /// Build and insert an appropriate cast between two registers of equal size.
+  MachineInstrBuilder buildCast(unsigned Dst, unsigned Src);
+
   /// Build and insert G_BR \p Dest
   ///
   /// G_BR is an unconditional branch to \p Dest.
@@ -437,19 +440,16 @@ public:
   MachineInstrBuilder buildStore(unsigned Val, unsigned Addr,
                                  MachineMemOperand &MMO);
 
-  /// Build and insert `Res0<def>, ... = G_EXTRACT Src, Idx0, ...`.
-  ///
-  /// If \p Res[i] has size N bits, G_EXTRACT sets \p Res[i] to bits `[Idxs[i],
-  /// Idxs[i] + N)` of \p Src.
+  /// Build and insert `Res0<def>, ... = G_EXTRACT Src, Idx0`.
   ///
   /// \pre setBasicBlock or setMI must have been called.
-  /// \pre Indices must be in ascending order of bit position.
-  /// \pre Each member of \p Results and \p Src must be a generic
-  ///      virtual register.
+  /// \pre \p Res and \p Src must be generic virtual registers.
   ///
   /// \return a MachineInstrBuilder for the newly created instruction.
-  MachineInstrBuilder buildExtract(ArrayRef<unsigned> Results,
-                                   ArrayRef<uint64_t> Indices, unsigned Src);
+  MachineInstrBuilder buildExtract(unsigned Res, unsigned Src, uint64_t Index);
+
+  /// Build and insert \p Res = IMPLICIT_DEF.
+  MachineInstrBuilder buildUndef(unsigned Dst);
 
   /// Build and insert \p Res<def> = G_SEQUENCE \p Op0, \p Idx0...
   ///
@@ -467,6 +467,31 @@ public:
   MachineInstrBuilder buildSequence(unsigned Res,
                                     ArrayRef<unsigned> Ops,
                                     ArrayRef<uint64_t> Indices);
+
+  /// Build and insert \p Res<def> = G_MERGE_VALUES \p Op0, ...
+  ///
+  /// G_MERGE_VALUES combines the input elements contiguously into a larger
+  /// register.
+  ///
+  /// \pre setBasicBlock or setMI must have been called.
+  /// \pre The entire register \p Res (and no more) must be covered by the input
+  ///      registers.
+  /// \pre The type of all \p Ops registers must be identical.
+  ///
+  /// \return a MachineInstrBuilder for the newly created instruction.
+  MachineInstrBuilder buildMerge(unsigned Res, ArrayRef<unsigned> Ops);
+
+  /// Build and insert \p Res0<def>, ... = G_UNMERGE_VALUES \p Op
+  ///
+  /// G_UNMERGE_VALUES splits contiguous bits of the input into multiple
+  ///
+  /// \pre setBasicBlock or setMI must have been called.
+  /// \pre The entire register \p Res (and no more) must be covered by the input
+  ///      registers.
+  /// \pre The type of all \p Res registers must be identical.
+  ///
+  /// \return a MachineInstrBuilder for the newly created instruction.
+  MachineInstrBuilder buildUnmerge(ArrayRef<unsigned> Res, unsigned Op);
 
   void addUsesWithIndices(MachineInstrBuilder MIB) {}
 
@@ -486,14 +511,8 @@ public:
     return MIB;
   }
 
-  template <typename... ArgTys>
   MachineInstrBuilder buildInsert(unsigned Res, unsigned Src,
-                                  unsigned Op, unsigned Index, ArgTys... Args) {
-    MachineInstrBuilder MIB =
-        buildInstr(TargetOpcode::G_INSERT).addDef(Res).addUse(Src);
-    addUsesWithIndices(MIB, Op, Index, Args...);
-    return MIB;
-  }
+                                  unsigned Op, unsigned Index);
 
   /// Build and insert either a G_INTRINSIC (if \p HasSideEffects is false) or
   /// G_INTRINSIC_W_SIDE_EFFECTS instruction. Its first operand will be the
