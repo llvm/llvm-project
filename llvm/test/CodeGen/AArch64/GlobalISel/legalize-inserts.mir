@@ -7,6 +7,7 @@
   define void @test_inserts_2() { ret void }
   define void @test_inserts_3() { ret void }
   define void @test_inserts_4() { ret void }
+  define void @test_inserts_5() { ret void }
 ...
 
 ---
@@ -96,5 +97,26 @@ body: |
     %2:_(p0) = COPY %x2
     %3:_(s8) = G_INSERT %1(s8), %0(s1), 0
     G_STORE %3(s8), %2(p0) :: (store 1)
+    RET_ReallyLR
+...
+
+---
+name:            test_inserts_5
+body: |
+  bb.0:
+    liveins: %x0, %x1, %x2
+
+
+    ; CHECK-LABEL: name: test_inserts_5
+    ; CHECK: [[INS_LO:%[0-9]+]](s32) = G_EXTRACT %2(s64), 0
+    ; CHECK: [[VAL_LO:%[0-9]+]](s64) = G_INSERT %0, [[INS_LO]](s32), 32
+    ; CHECK: [[INS_HI:%[0-9]+]](s32) = G_EXTRACT %2(s64), 32
+    ; CHECK: [[VAL_HI:%[0-9]+]](s64) = G_INSERT %1, [[INS_HI]](s32), 0
+    ; CHECK: %4(s128) = G_MERGE_VALUES [[VAL_LO]](s64), [[VAL_HI]](s64)
+    %0:_(s64) = COPY %x0
+    %1:_(s64) = COPY %x1
+    %2:_(s64) = COPY %x2
+    %3:_(s128) = G_MERGE_VALUES %0, %1
+    %4:_(s128) = G_INSERT %3, %2, 32
     RET_ReallyLR
 ...

@@ -73,7 +73,7 @@ define void @odd_type(i42* %addr) {
 
   ; RegBankSelect crashed when given invalid mappings, and AArch64's
   ; implementation produce valid-but-nonsense mappings for G_SEQUENCE.
-; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to map instruction: %vreg0<def>(s128) = G_SEQUENCE %vreg1, 0, %vreg2, 64; GPR:%vreg1,%vreg2 (in function: sequence_mapping)
+; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to map instruction
 ; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for sequence_mapping
 ; FALLBACK-WITH-REPORT-OUT-LABEL: sequence_mapping:
 define void @sequence_mapping([2 x i64] %in) {
@@ -81,7 +81,7 @@ define void @sequence_mapping([2 x i64] %in) {
 }
 
   ; Legalizer was asserting when it enountered an unexpected default action.
-; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to legalize instruction: %vreg9<def>(s128) = G_INSERT %vreg10, %vreg0, 32; (in function: legal_default)
+; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to map instruction
 ; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for legal_default
 ; FALLBACK-WITH-REPORT-LABEL: legal_default:
 define void @legal_default([8 x i8] %in) {
