@@ -41,6 +41,7 @@
 #include "lldb/Utility/Error.h"
 #include "lldb/Utility/Log.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Threading.h"
 
 #if defined(__APPLE__)
@@ -201,8 +202,15 @@ Error PlatformDarwin::ResolveSymbolFile(Target &target,
                                         FileSpec &sym_file) {
   Error error;
   sym_file = sym_spec.GetSymbolFileSpec();
-  if (sym_file.Exists()) {
-    if (sym_file.GetFileType() == FileSpec::eFileTypeDirectory) {
+
+  llvm::sys::fs::file_status st;
+  if (status(sym_file.GetPath(), st)) {
+    error.SetErrorString("Could not stat file!");
+    return error;
+  }
+
+  if (exists(st)) {
+    if (is_directory(st)) {
       sym_file = Symbols::FindSymbolFileInBundle(
           sym_file, sym_spec.GetUUIDPtr(), sym_spec.GetArchitecturePtr());
     }
@@ -1194,7 +1202,7 @@ const char *PlatformDarwin::GetDeveloperDirectory() {
           developer_dir_path[i] = '\0';
 
           FileSpec devel_dir(developer_dir_path, false);
-          if (devel_dir.Exists() && devel_dir.IsDirectory()) {
+          if (llvm::sys::fs::is_directory(devel_dir.GetPath())) {
             developer_dir_path_valid = true;
           }
         }
@@ -1439,9 +1447,8 @@ bool PlatformDarwin::SDKSupportsModules(SDKType desired_type,
   return false;
 }
 
-FileSpec::EnumerateDirectoryResult
-PlatformDarwin::DirectoryEnumerator(void *baton, FileSpec::FileType file_type,
-                                    const FileSpec &spec) {
+FileSpec::EnumerateDirectoryResult PlatformDarwin::DirectoryEnumerator(
+    void *baton, llvm::sys::fs::file_type file_type, const FileSpec &spec) {
   SDKEnumeratorInfo *enumerator_info = static_cast<SDKEnumeratorInfo *>(baton);
 
   if (SDKSupportsModules(enumerator_info->sdk_type, spec)) {
@@ -1456,8 +1463,9 @@ FileSpec PlatformDarwin::FindSDKInXcodeForModules(SDKType sdk_type,
                                                   const FileSpec &sdks_spec) {
   // Look inside Xcode for the required installed iOS SDK version
 
-  if (!sdks_spec.IsDirectory())
+  if (!llvm::sys::fs::is_directory(sdks_spec.GetPath())) {
     return FileSpec();
+  }
 
   const bool find_directories = true;
   const bool find_files = false;
@@ -1471,7 +1479,7 @@ FileSpec PlatformDarwin::FindSDKInXcodeForModules(SDKType sdk_type,
                                find_files, find_other, DirectoryEnumerator,
                                &enumerator_info);
 
-  if (enumerator_info.found_path.IsDirectory())
+  if (llvm::sys::fs::is_directory(enumerator_info.found_path.GetPath()))
     return enumerator_info.found_path;
   else
     return FileSpec();
@@ -1630,7 +1638,7 @@ void PlatformDarwin::AddClangModuleCompilationOptionsForSDKType(
     sysroot_spec = GetSDKDirectoryForModules(sdk_type);
   }
 
-  if (sysroot_spec.IsDirectory()) {
+  if (llvm::sys::fs::is_directory(sysroot_spec.GetPath())) {
     options.push_back("-isysroot");
     options.push_back(sysroot_spec.GetPath());
   }
