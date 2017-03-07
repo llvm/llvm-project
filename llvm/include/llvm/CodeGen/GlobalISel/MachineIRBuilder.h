@@ -468,6 +468,31 @@ public:
                                     ArrayRef<unsigned> Ops,
                                     ArrayRef<uint64_t> Indices);
 
+  /// Build and insert \p Res<def> = G_MERGE_VALUES \p Op0, ...
+  ///
+  /// G_MERGE_VALUES combines the input elements contiguously into a larger
+  /// register.
+  ///
+  /// \pre setBasicBlock or setMI must have been called.
+  /// \pre The entire register \p Res (and no more) must be covered by the input
+  ///      registers.
+  /// \pre The type of all \p Ops registers must be identical.
+  ///
+  /// \return a MachineInstrBuilder for the newly created instruction.
+  MachineInstrBuilder buildMerge(unsigned Res, ArrayRef<unsigned> Ops);
+
+  /// Build and insert \p Res0<def>, ... = G_UNMERGE_VALUES \p Op
+  ///
+  /// G_UNMERGE_VALUES splits contiguous bits of the input into multiple
+  ///
+  /// \pre setBasicBlock or setMI must have been called.
+  /// \pre The entire register \p Res (and no more) must be covered by the input
+  ///      registers.
+  /// \pre The type of all \p Res registers must be identical.
+  ///
+  /// \return a MachineInstrBuilder for the newly created instruction.
+  MachineInstrBuilder buildUnmerge(ArrayRef<unsigned> Res, unsigned Op);
+
   void addUsesWithIndices(MachineInstrBuilder MIB) {}
 
   template <typename... ArgTys>

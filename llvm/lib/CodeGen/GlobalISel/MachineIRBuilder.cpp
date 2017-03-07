@@ -416,6 +416,46 @@ MachineIRBuilder::buildSequence(unsigned Res,
   return MIB;
 }
 
+MachineInstrBuilder MachineIRBuilder::buildMerge(unsigned Res,
+                                                 ArrayRef<unsigned> Ops) {
+
+#ifndef NDEBUG
+  assert(!Ops.empty() && "invalid trivial sequence");
+  LLT Ty = MRI->getType(Ops[0]);
+  for (auto Reg : Ops)
+    assert(MRI->getType(Reg) == Ty && "type mismatch in input list");
+  assert(Ops.size() * MRI->getType(Ops[0]).getSizeInBits() ==
+             MRI->getType(Res).getSizeInBits() &&
+         "input operands do not cover output register");
+#endif
+
+  MachineInstrBuilder MIB = buildInstr(TargetOpcode::G_MERGE_VALUES);
+  MIB.addDef(Res);
+  for (unsigned i = 0; i < Ops.size(); ++i)
+    MIB.addUse(Ops[i]);
+  return MIB;
+}
+
+MachineInstrBuilder MachineIRBuilder::buildUnmerge(ArrayRef<unsigned> Res,
+                                                   unsigned Op) {
+
+#ifndef NDEBUG
+  assert(!Res.empty() && "invalid trivial sequence");
+  LLT Ty = MRI->getType(Res[0]);
+  for (auto Reg : Res)
+    assert(MRI->getType(Reg) == Ty && "type mismatch in input list");
+  assert(Res.size() * MRI->getType(Res[0]).getSizeInBits() ==
+             MRI->getType(Op).getSizeInBits() &&
+         "input operands do not cover output register");
+#endif
+
+  MachineInstrBuilder MIB = buildInstr(TargetOpcode::G_UNMERGE_VALUES);
+  for (unsigned i = 0; i < Res.size(); ++i)
+    MIB.addDef(Res[i]);
+  MIB.addUse(Op);
+  return MIB;
+}
+
 MachineInstrBuilder MachineIRBuilder::buildIntrinsic(Intrinsic::ID ID,
                                                      unsigned Res,
                                                      bool HasSideEffects) {
