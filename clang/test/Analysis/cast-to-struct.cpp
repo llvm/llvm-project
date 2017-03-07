@@ -65,3 +65,17 @@ void intToStruct(int *P) {
   void *VP = P;
   Abc = (struct ABC *)VP;
 }
+
+// https://llvm.org/bugs/show_bug.cgi?id=31173
+void dontCrash1(struct AB X) {
+  struct UndefS *S = (struct UndefS *)&X;
+}
+
+struct S;
+struct T {
+  struct S *P;
+};
+extern struct S Var1, Var2;
+void dontCrash2() {
+  ((struct T *) &Var1)->P = &Var2;
+}
