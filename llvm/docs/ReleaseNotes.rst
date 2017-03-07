@@ -30,7 +30,8 @@ from now, will be version 5.0.0.
 
 Non-comprehensive list of changes in this release
 =================================================
-* Minimum compiler version to build has been raised to GCC 4.8 and VS 2015.
+* The minimum compiler version required for building LLVM has been raised to
+  4.8 for GCC and 2017 for Visual Studio.
 
 * The C API functions ``LLVMAddFunctionAttr``, ``LLVMGetFunctionAttr``,
   ``LLVMRemoveFunctionAttr``, ``LLVMAddAttribute``, ``LLVMRemoveAttribute``,
@@ -224,6 +225,10 @@ Changes to the ARM Targets
 
 A lot of work has also been done in LLD for ARM, which now supports more
 relocations and TLS.
+
+Note: From the next release (5.0), the "vulcan" target will be renamed to
+"thunderx2t99", including command line options, assembly directives, etc. This
+release (4.0) will be the last one to accept "vulcan" as its name.
 
 Changes to the AVR Target
 -----------------------------
