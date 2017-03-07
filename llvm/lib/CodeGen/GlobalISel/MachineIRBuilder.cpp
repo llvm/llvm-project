@@ -138,8 +138,7 @@ MachineInstrBuilder MachineIRBuilder::buildConstDbgValue(const Constant &C,
     else
       MIB.addImm(CI->getZExtValue());
   } else if (auto *CFP = dyn_cast<ConstantFP>(&C)) {
-    assert(isa<ConstantFP>(C) && "Unexpected constant dbg value");
-    MIB.addFPImm(&cast<ConstantFP>(C));
+    MIB.addFPImm(CFP);
   } else {
     // Insert %noreg if we didn't find a usable constant and had to drop it.
     MIB.addReg(0U);
