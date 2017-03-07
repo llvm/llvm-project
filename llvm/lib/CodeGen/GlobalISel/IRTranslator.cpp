@@ -733,6 +733,9 @@ bool IRTranslator::translateCall(const User &U, MachineIRBuilder &MIRBuilder) {
       MIRBuilder.buildIntrinsic(ID, Res, !CI.doesNotAccessMemory());
 
   for (auto &Arg : CI.arg_operands()) {
+    // Some intrinsics take metadata parameters. Reject them.
+    if (isa<MetadataAsValue>(Arg))
+      return false;
     if (ConstantInt *CI = dyn_cast<ConstantInt>(Arg))
       MIB.addImm(CI->getSExtValue());
     else
