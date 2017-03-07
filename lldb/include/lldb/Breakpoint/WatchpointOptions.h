@@ -17,8 +17,8 @@
 
 // Other libraries and framework includes
 // Project includes
-#include "lldb/Core/Baton.h"
 #include "lldb/Core/StringList.h"
+#include "lldb/Utility/Baton.h"
 #include "lldb/lldb-private.h"
 
 namespace lldb_private {

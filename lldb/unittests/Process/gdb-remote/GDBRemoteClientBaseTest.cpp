@@ -13,7 +13,7 @@
 #include "Plugins/Process/Utility/LinuxSignals.h"
 #include "Plugins/Process/gdb-remote/GDBRemoteClientBase.h"
 #include "Plugins/Process/gdb-remote/GDBRemoteCommunicationServer.h"
-#include "lldb/Core/StreamGDBRemote.h"
+#include "lldb/Utility/StreamGDBRemote.h"
 
 #include "llvm/ADT/STLExtras.h"
 

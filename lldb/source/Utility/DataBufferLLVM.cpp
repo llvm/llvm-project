@@ -24,13 +24,28 @@ DataBufferLLVM::DataBufferLLVM(std::unique_ptr<llvm::MemoryBuffer> MemBuffer)
 DataBufferLLVM::~DataBufferLLVM() {}
 
 std::shared_ptr<DataBufferLLVM>
-DataBufferLLVM::CreateFromPath(const llvm::Twine &Path, uint64_t Size,
-                               uint64_t Offset) {
+DataBufferLLVM::CreateSliceFromPath(const llvm::Twine &Path, uint64_t Size,
+                               uint64_t Offset, bool Private) {
   // If the file resides non-locally, pass the volatile flag so that we don't
   // mmap it.
-  bool Volatile = !llvm::sys::fs::is_local(Path);
+  if (!Private)
+    Private = !llvm::sys::fs::is_local(Path);
 
-  auto Buffer = llvm::MemoryBuffer::getFileSlice(Path, Size, Offset, Volatile);
+  auto Buffer = llvm::MemoryBuffer::getFileSlice(Path, Size, Offset, Private);
+  if (!Buffer)
+    return nullptr;
+  return std::shared_ptr<DataBufferLLVM>(
+      new DataBufferLLVM(std::move(*Buffer)));
+}
+
+std::shared_ptr<DataBufferLLVM>
+DataBufferLLVM::CreateFromPath(const llvm::Twine &Path, bool NullTerminate, bool Private) {
+  // If the file resides non-locally, pass the volatile flag so that we don't
+  // mmap it.
+  if (!Private)
+    Private = !llvm::sys::fs::is_local(Path);
+
+  auto Buffer = llvm::MemoryBuffer::getFile(Path, -1, NullTerminate, Private);
   if (!Buffer)
     return nullptr;
   return std::shared_ptr<DataBufferLLVM>(

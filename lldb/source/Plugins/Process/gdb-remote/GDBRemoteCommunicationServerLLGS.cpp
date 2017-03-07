@@ -12,7 +12,7 @@
 #include "lldb/Host/Config.h"
 
 #include "GDBRemoteCommunicationServerLLGS.h"
-#include "lldb/Core/StreamGDBRemote.h"
+#include "lldb/Utility/StreamGDBRemote.h"
 
 // C Includes
 // C++ Includes

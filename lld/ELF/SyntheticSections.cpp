@@ -110,14 +110,15 @@ static ArrayRef<uint8_t> getVersion() {
 // With this feature, you can identify LLD-generated binaries easily
 // by "objdump -s -j .comment <file>".
 // The returned object is a mergeable string section.
-template <class ELFT> MergeInputSection<ELFT> *elf::createCommentSection() {
+template <class ELFT> MergeInputSection *elf::createCommentSection() {
   typename ELFT::Shdr Hdr = {};
   Hdr.sh_flags = SHF_MERGE | SHF_STRINGS;
   Hdr.sh_type = SHT_PROGBITS;
   Hdr.sh_entsize = 1;
   Hdr.sh_addralign = 1;
 
-  auto *Ret = make<MergeInputSection<ELFT>>(/*file=*/nullptr, &Hdr, ".comment");
+  auto *Ret =
+      make<MergeInputSection>((ObjectFile<ELFT> *)nullptr, &Hdr, ".comment");
   Ret->Data = getVersion();
   Ret->splitIntoPieces();
   return Ret;
@@ -429,7 +430,7 @@ template <class ELFT>
 template <class RelTy>
 CieRecord *EhFrameSection<ELFT>::addCie(EhSectionPiece &Piece,
                                         ArrayRef<RelTy> Rels) {
-  auto *Sec = cast<EhInputSection<ELFT>>(Piece.ID);
+  auto *Sec = cast<EhInputSection>(Piece.ID);
   const endianness E = ELFT::TargetEndianness;
   if (read32<E>(Piece.data().data() + 4) != 0)
     fatal(toString(Sec) + ": CIE expected at beginning of .eh_frame");
@@ -457,7 +458,7 @@ template <class ELFT>
 template <class RelTy>
 bool EhFrameSection<ELFT>::isFdeLive(EhSectionPiece &Piece,
                                      ArrayRef<RelTy> Rels) {
-  auto *Sec = cast<EhInputSection<ELFT>>(Piece.ID);
+  auto *Sec = cast<EhInputSection>(Piece.ID);
   unsigned FirstRelI = Piece.FirstRelocation;
   if (FirstRelI == (unsigned)-1)
     return false;
@@ -476,7 +477,7 @@ bool EhFrameSection<ELFT>::isFdeLive(EhSectionPiece &Piece,
 // one and associates FDEs to the CIE.
 template <class ELFT>
 template <class RelTy>
-void EhFrameSection<ELFT>::addSectionAux(EhInputSection<ELFT> *Sec,
+void EhFrameSection<ELFT>::addSectionAux(EhInputSection *Sec,
                                          ArrayRef<RelTy> Rels) {
   const endianness E = ELFT::TargetEndianness;
 
@@ -507,7 +508,7 @@ void EhFrameSection<ELFT>::addSectionAux(EhInputSection<ELFT> *Sec,
 
 template <class ELFT>
 void EhFrameSection<ELFT>::addSection(InputSectionBase *C) {
-  auto *Sec = cast<EhInputSection<ELFT>>(C);
+  auto *Sec = cast<EhInputSection>(C);
   Sec->EHSec = this;
   updateAlignment(Sec->Alignment);
   Sections.push_back(Sec);
@@ -515,7 +516,7 @@ void EhFrameSection<ELFT>::addSection(InputSectionBase *C) {
   // .eh_frame is a sequence of CIE or FDE records. This function
   // splits it into pieces so that we can call
   // SplitInputSection::getSectionPiece on the section.
-  Sec->split();
+  Sec->split<ELFT>();
   if (Sec->Pieces.empty())
     return;
 
@@ -604,7 +605,7 @@ template <class ELFT> void EhFrameSection<ELFT>::writeTo(uint8_t *Buf) {
     }
   }
 
-  for (EhInputSection<ELFT> *S : Sections)
+  for (EhInputSection *S : Sections)
     S->template relocate<ELFT>(Buf, nullptr);
 
   // Construct .eh_frame_hdr. .eh_frame_hdr is a binary search table
@@ -2134,33 +2135,27 @@ template <class ELFT> bool VersionNeedSection<ELFT>::empty() const {
   return getNeedNum() == 0;
 }
 
-template <class ELFT>
-MergeSyntheticSection<ELFT>::MergeSyntheticSection(StringRef Name,
-                                                   uint32_t Type, uintX_t Flags,
-                                                   uintX_t Alignment)
+MergeSyntheticSection::MergeSyntheticSection(StringRef Name, uint32_t Type,
+                                             uint64_t Flags, uint64_t Alignment)
     : SyntheticSection(Flags, Type, Alignment, Name),
       Builder(StringTableBuilder::RAW, Alignment) {}
 
-template <class ELFT>
-void MergeSyntheticSection<ELFT>::addSection(MergeInputSection<ELFT> *MS) {
+void MergeSyntheticSection::addSection(MergeInputSection *MS) {
   assert(!Finalized);
   MS->MergeSec = this;
   Sections.push_back(MS);
 }
 
-template <class ELFT> void MergeSyntheticSection<ELFT>::writeTo(uint8_t *Buf) {
-  Builder.write(Buf);
-}
+void MergeSyntheticSection::writeTo(uint8_t *Buf) { Builder.write(Buf); }
 
-template <class ELFT>
-bool MergeSyntheticSection<ELFT>::shouldTailMerge() const {
+bool MergeSyntheticSection::shouldTailMerge() const {
   return (this->Flags & SHF_STRINGS) && Config->Optimize >= 2;
 }
 
-template <class ELFT> void MergeSyntheticSection<ELFT>::finalizeTailMerge() {
+void MergeSyntheticSection::finalizeTailMerge() {
   // Add all string pieces to the string table builder to create section
   // contents.
-  for (MergeInputSection<ELFT> *Sec : Sections)
+  for (MergeInputSection *Sec : Sections)
     for (size_t I = 0, E = Sec->Pieces.size(); I != E; ++I)
       if (Sec->Pieces[I].Live)
         Builder.add(Sec->getData(I));
@@ -2171,18 +2166,18 @@ template <class ELFT> void MergeSyntheticSection<ELFT>::finalizeTailMerge() {
   // finalize() fixed tail-optimized strings, so we can now get
   // offsets of strings. Get an offset for each string and save it
   // to a corresponding StringPiece for easy access.
-  for (MergeInputSection<ELFT> *Sec : Sections)
+  for (MergeInputSection *Sec : Sections)
     for (size_t I = 0, E = Sec->Pieces.size(); I != E; ++I)
       if (Sec->Pieces[I].Live)
         Sec->Pieces[I].OutputOff = Builder.getOffset(Sec->getData(I));
 }
 
-template <class ELFT> void MergeSyntheticSection<ELFT>::finalizeNoTailMerge() {
+void MergeSyntheticSection::finalizeNoTailMerge() {
   // Add all string pieces to the string table builder to create section
   // contents. Because we are not tail-optimizing, offsets of strings are
   // fixed when they are added to the builder (string table builder contains
   // a hash table from strings to offsets).
-  for (MergeInputSection<ELFT> *Sec : Sections)
+  for (MergeInputSection *Sec : Sections)
     for (size_t I = 0, E = Sec->Pieces.size(); I != E; ++I)
       if (Sec->Pieces[I].Live)
         Sec->Pieces[I].OutputOff = Builder.add(Sec->getData(I));
@@ -2190,7 +2185,7 @@ template <class ELFT> void MergeSyntheticSection<ELFT>::finalizeNoTailMerge() {
   Builder.finalizeInOrder();
 }
 
-template <class ELFT> void MergeSyntheticSection<ELFT>::finalizeContents() {
+void MergeSyntheticSection::finalizeContents() {
   if (Finalized)
     return;
   Finalized = true;
@@ -2200,9 +2195,9 @@ template <class ELFT> void MergeSyntheticSection<ELFT>::finalizeContents() {
     finalizeNoTailMerge();
 }
 
-template <class ELFT> size_t MergeSyntheticSection<ELFT>::getSize() const {
+size_t MergeSyntheticSection::getSize() const {
   // We should finalize string builder to know the size.
-  const_cast<MergeSyntheticSection<ELFT> *>(this)->finalizeContents();
+  const_cast<MergeSyntheticSection *>(this)->finalizeContents();
   return Builder.getSize();
 }
 
@@ -2272,10 +2267,10 @@ template InputSection *elf::createCommonSection<ELF32BE>();
 template InputSection *elf::createCommonSection<ELF64LE>();
 template InputSection *elf::createCommonSection<ELF64BE>();
 
-template MergeInputSection<ELF32LE> *elf::createCommentSection();
-template MergeInputSection<ELF32BE> *elf::createCommentSection();
-template MergeInputSection<ELF64LE> *elf::createCommentSection();
-template MergeInputSection<ELF64BE> *elf::createCommentSection();
+template MergeInputSection *elf::createCommentSection<ELF32LE>();
+template MergeInputSection *elf::createCommentSection<ELF32BE>();
+template MergeInputSection *elf::createCommentSection<ELF64LE>();
+template MergeInputSection *elf::createCommentSection<ELF64BE>();
 
 template SymbolBody *elf::addSyntheticLocal<ELF32LE>(StringRef, uint8_t,
                                                      uint64_t, uint64_t,
@@ -2394,11 +2389,6 @@ template class elf::VersionDefinitionSection<ELF32LE>;
 template class elf::VersionDefinitionSection<ELF32BE>;
 template class elf::VersionDefinitionSection<ELF64LE>;
 template class elf::VersionDefinitionSection<ELF64BE>;
-
-template class elf::MergeSyntheticSection<ELF32LE>;
-template class elf::MergeSyntheticSection<ELF32BE>;
-template class elf::MergeSyntheticSection<ELF64LE>;
-template class elf::MergeSyntheticSection<ELF64BE>;
 
 template class elf::MipsRldMapSection<ELF32LE>;
 template class elf::MipsRldMapSection<ELF32BE>;

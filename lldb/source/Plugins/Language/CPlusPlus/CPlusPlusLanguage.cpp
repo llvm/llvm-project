@@ -24,7 +24,6 @@
 #include "llvm/Support/Threading.h"
 
 // Project includes
-#include "lldb/Core/FastDemangle.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/UniqueCStringMap.h"
 #include "lldb/DataFormatters/CXXFunctionPointer.h"
@@ -32,6 +31,7 @@
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/DataFormatters/VectorType.h"
 #include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/FastDemangle.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegularExpression.h"
 

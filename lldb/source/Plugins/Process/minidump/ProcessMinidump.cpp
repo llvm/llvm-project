@@ -53,7 +53,7 @@ lldb::ProcessSP ProcessMinidump::CreateInstance(lldb::TargetSP target_sp,
   // Read enough data for the Minidump header
   constexpr size_t header_size = sizeof(MinidumpHeader);
   auto DataPtr =
-      DataBufferLLVM::CreateFromPath(crash_file->GetPath(), header_size, 0);
+      DataBufferLLVM::CreateSliceFromPath(crash_file->GetPath(), header_size, 0);
   if (!DataPtr)
     return nullptr;
 
@@ -65,7 +65,7 @@ lldb::ProcessSP ProcessMinidump::CreateInstance(lldb::TargetSP target_sp,
   if (header == nullptr)
     return nullptr;
 
-  auto AllData = DataBufferLLVM::CreateFromPath(crash_file->GetPath(), -1, 0);
+  auto AllData = DataBufferLLVM::CreateSliceFromPath(crash_file->GetPath(), -1, 0);
   if (!AllData)
     return nullptr;
 

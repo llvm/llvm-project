@@ -25,7 +25,7 @@ _start:
         .quad 0
 
         .section used_in_script,"a"
-        .quad 0
+        .quad __start_used_in_script
 
         .section used_in_reloc,"a"
         .quad 0

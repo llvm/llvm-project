@@ -21,7 +21,7 @@
 // Project includes
 #include "lldb/Breakpoint/BreakpointLocationCollection.h"
 #include "lldb/Breakpoint/StoppointLocation.h"
-#include "lldb/Core/UserID.h"
+#include "lldb/Utility/UserID.h"
 #include "lldb/lldb-forward.h"
 
 namespace lldb_private {

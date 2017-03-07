@@ -22,11 +22,11 @@
 #include "lldb/Core/Broadcaster.h"
 #include "lldb/Core/Event.h"
 #include "lldb/Core/StructuredData.h"
-#include "lldb/Core/UserID.h"
 #include "lldb/Core/UserSettingsController.h"
 #include "lldb/Target/ExecutionContextScope.h"
 #include "lldb/Target/RegisterCheckpoint.h"
 #include "lldb/Target/StackFrameList.h"
+#include "lldb/Utility/UserID.h"
 #include "lldb/lldb-private.h"
 
 #define LLDB_THREAD_MAX_STOP_EXC_DATA 8

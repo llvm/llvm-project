@@ -22,6 +22,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/AnsiTerminal.h"
 #include "lldb/Utility/DataBuffer.h"
+#include "lldb/Utility/DataBufferLLVM.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/Stream.h"
 
@@ -439,7 +440,7 @@ void SourceManager::File::CommonInitializer(const FileSpec &file_spec,
   }
 
   if (m_mod_time != llvm::sys::TimePoint<>())
-    m_data_sp = m_file_spec.ReadFileContents();
+    m_data_sp = DataBufferLLVM::CreateFromPath(m_file_spec.GetPath());
 }
 
 uint32_t SourceManager::File::GetLineOffset(uint32_t line) {
@@ -517,7 +518,7 @@ void SourceManager::File::UpdateIfNeeded() {
   if (curr_mod_time != llvm::sys::TimePoint<>() &&
       m_mod_time != curr_mod_time) {
     m_mod_time = curr_mod_time;
-    m_data_sp = m_file_spec.ReadFileContents();
+    m_data_sp = DataBufferLLVM::CreateFromPath(m_file_spec.GetPath());
     m_offsets.clear();
   }
 }

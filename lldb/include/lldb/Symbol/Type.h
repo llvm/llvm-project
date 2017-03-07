@@ -11,11 +11,11 @@
 #define liblldb_Type_h_
 
 #include "lldb/Core/ClangForward.h"
-#include "lldb/Core/UserID.h"
 #include "lldb/Symbol/CompilerDecl.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Symbol/Declaration.h"
 #include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/UserID.h"
 #include "lldb/lldb-private.h"
 
 #include "llvm/ADT/APSInt.h"

@@ -21,6 +21,7 @@
 #include "lldb/Core/RangeMap.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Host/FileSystem.h"
+#include "lldb/Utility/DataBufferLLVM.h"
 #include "lldb/Utility/RegularExpression.h"
 
 //#define DEBUG_OSO_DMAP // DO NOT CHECKIN WITH THIS NOT COMMENTED OUT
@@ -1477,7 +1478,7 @@ SymbolFileDWARFDebugMap::GetASTData(lldb::LanguageType language) {
       if (file_spec.Exists()) {
         // We found the source data for the AST data blob.
         // Read it in and add it to our return vector.
-        ast_datas.push_back(file_spec.ReadFileContents());
+        ast_datas.push_back(DataBufferLLVM::CreateFromPath(file_spec.GetPath()));
         if (log)
           log->Printf("SymbolFileDWARFDebugMap::%s() - found and loaded AST "
                       "data from file %s",

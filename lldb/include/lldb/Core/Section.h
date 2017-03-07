@@ -15,10 +15,10 @@
 
 #include "lldb/Core/ModuleChild.h"
 #include "lldb/Core/RangeMap.h"
-#include "lldb/Core/UserID.h"
-#include "lldb/Core/VMRange.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/UserID.h"
+#include "lldb/Utility/VMRange.h"
 #include "lldb/lldb-private.h"
 #include <limits.h>
 

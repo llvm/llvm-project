@@ -89,7 +89,7 @@ void Log::Channel::Enable(Log &log,
                           uint32_t options, uint32_t flags) {
   log.GetMask().Set(flags);
   if (log.GetMask().Get()) {
-    log.GetOptions().Set(options);
+    log.GetOptions().Reset(options);
     log.SetStream(stream_sp);
     log_ptr.store(&log, std::memory_order_release);
   }

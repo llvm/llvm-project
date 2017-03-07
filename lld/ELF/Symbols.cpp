@@ -212,7 +212,7 @@ const OutputSection *SymbolBody::getOutputSection() const {
     return nullptr;
   }
 
-  if (auto *S = dyn_cast<SharedSymbol>(this))
+  if (isa<SharedSymbol>(this))
     return nullptr;
 
   if (isa<DefinedCommon>(this)) {

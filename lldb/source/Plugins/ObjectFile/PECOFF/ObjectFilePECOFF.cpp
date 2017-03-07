@@ -68,7 +68,7 @@ ObjectFile *ObjectFilePECOFF::CreateInstance(const lldb::ModuleSP &module_sp,
                                              lldb::offset_t length) {
   if (!data_sp) {
     data_sp =
-        DataBufferLLVM::CreateFromPath(file->GetPath(), length, file_offset);
+        DataBufferLLVM::CreateSliceFromPath(file->GetPath(), length, file_offset);
     if (!data_sp)
       return nullptr;
     data_offset = 0;
@@ -80,7 +80,7 @@ ObjectFile *ObjectFilePECOFF::CreateInstance(const lldb::ModuleSP &module_sp,
   // Update the data to contain the entire file if it doesn't already
   if (data_sp->GetByteSize() < length) {
     data_sp =
-        DataBufferLLVM::CreateFromPath(file->GetPath(), length, file_offset);
+        DataBufferLLVM::CreateSliceFromPath(file->GetPath(), length, file_offset);
     if (!data_sp)
       return nullptr;
   }
@@ -430,7 +430,10 @@ bool ObjectFilePECOFF::ParseCOFFOptionalHeader(lldb::offset_t *offset_ptr) {
 
 DataExtractor ObjectFilePECOFF::ReadImageData(uint32_t offset, size_t size) {
   if (m_file) {
-    DataBufferSP buffer_sp(m_file.ReadFileContents(offset, size));
+    // A bit of a hack, but we intend to write to this buffer, so we can't 
+    // mmap it.
+    auto buffer_sp =
+        DataBufferLLVM::CreateSliceFromPath(m_file.GetPath(), size, offset, true);
     return DataExtractor(buffer_sp, GetByteOrder(), GetAddressByteSize());
   }
   ProcessSP process_sp(m_process_wp.lock());
