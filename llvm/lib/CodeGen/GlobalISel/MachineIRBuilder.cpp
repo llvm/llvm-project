@@ -138,8 +138,7 @@ MachineInstrBuilder MachineIRBuilder::buildConstDbgValue(const Constant &C,
     else
       MIB.addImm(CI->getZExtValue());
   } else if (auto *CFP = dyn_cast<ConstantFP>(&C)) {
-    assert(isa<ConstantFP>(C) && "Unexpected constant dbg value");
-    MIB.addFPImm(&cast<ConstantFP>(C));
+    MIB.addFPImm(CFP);
   } else {
     // Insert %noreg if we didn't find a usable constant and had to drop it.
     MIB.addReg(0U);
@@ -569,9 +568,10 @@ MachineInstrBuilder MachineIRBuilder::buildSelect(unsigned Res, unsigned Tst,
   if (ResTy.isScalar() || ResTy.isPointer())
     assert(MRI->getType(Tst).isScalar() && "type mismatch");
   else
-    assert(MRI->getType(Tst).isVector() &&
-           MRI->getType(Tst).getNumElements() ==
-               MRI->getType(Op0).getNumElements() &&
+    assert((MRI->getType(Tst).isScalar() ||
+            (MRI->getType(Tst).isVector() &&
+             MRI->getType(Tst).getNumElements() ==
+                 MRI->getType(Op0).getNumElements())) &&
            "type mismatch");
 #endif
 
