@@ -269,6 +269,15 @@ static EnumInfoCache *GetEnumInfoCache(const swift::ASTContext *a) {
   return pos->second.get();
 }
 
+namespace {
+  bool IsDirectory(const FileSpec &spec) {
+    return llvm::sys::fs::is_directory(spec.GetPath());
+  }
+  bool IsRegularFile(const FileSpec &spec) {
+    return llvm::sys::fs::is_regular_file(spec.GetPath());
+  }
+}
+
 llvm::LLVMContext &SwiftASTContext::GetGlobalLLVMContext() {
   // TODO check with Sean.  Do we really want this to be static across
   // an LLDB managing multiple Swift processes?
@@ -1505,11 +1514,9 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
               if (path_spec.Exists()) {
                 static const ConstString s_hmap_extension("hmap");
 
-                if (path_spec.GetFileType() ==
-                    FileSpec::FileType::eFileTypeDirectory) {
+                if (IsDirectory(path_spec)) {
                   swift_ast_sp->AddModuleSearchPath(search_path.c_str());
-                } else if (path_spec.GetFileType() ==
-                               FileSpec::FileType::eFileTypeRegular &&
+                } else if (IsRegularFile(path_spec) &&
                            path_spec.GetFileNameExtension() ==
                                s_hmap_extension) {
                   std::string argument("-I");
@@ -2256,7 +2263,7 @@ static bool SDKSupportsSwift(const FileSpec &sdk_path, SDKType desired_type) {
 }
 
 FileSpec::EnumerateDirectoryResult
-DirectoryEnumerator(void *baton, FileSpec::FileType file_type,
+DirectoryEnumerator(void *baton, llvm::sys::fs::file_type file_type,
                     const FileSpec &spec) {
   SDKEnumeratorInfo *enumerator_info = static_cast<SDKEnumeratorInfo *>(baton);
 
@@ -2271,7 +2278,7 @@ DirectoryEnumerator(void *baton, FileSpec::FileType file_type,
 static ConstString EnumerateSDKsForVersion(FileSpec sdks_spec, SDKType sdk_type,
                                            uint32_t least_major,
                                            uint32_t least_minor) {
-  if (!sdks_spec.IsDirectory())
+  if (!IsDirectory(sdks_spec))
     return ConstString();
 
   const bool find_directories = true;
@@ -2288,7 +2295,7 @@ static ConstString EnumerateSDKsForVersion(FileSpec sdks_spec, SDKType sdk_type,
                                find_files, find_other, DirectoryEnumerator,
                                &enumerator_info);
 
-  if (enumerator_info.found_path.IsDirectory())
+  if (IsDirectory(enumerator_info.found_path))
     return ConstString(enumerator_info.found_path.GetPath());
   else
     return ConstString();
@@ -2315,11 +2322,11 @@ static ConstString GetSDKDirectory(SDKType sdk_type, uint32_t least_major,
       // path.
 
       std::string WatchOS_candidate_path = sdks_path + "/WatchOS.platform/";
-      if (FileSpec(WatchOS_candidate_path.c_str(), false).IsDirectory()) {
+      if (IsDirectory(FileSpec(WatchOS_candidate_path.c_str(), false))) {
         sdks_path = WatchOS_candidate_path;
       } else {
         std::string watchOS_candidate_path = sdks_path + "/watchOS.platform/";
-        if (FileSpec(watchOS_candidate_path.c_str(), false).IsDirectory()) {
+        if (IsDirectory(FileSpec(watchOS_candidate_path.c_str(), false))) {
           sdks_path = watchOS_candidate_path;
         } else {
           return ConstString();
@@ -2437,7 +2444,7 @@ static ConstString GetResourceDir() {
         FileSpec swift_clang_dir_spec = swift_dir_spec;
         swift_clang_dir_spec.AppendPathComponent("clang");
 
-        if (swift_clang_dir_spec.IsDirectory()) {
+        if (IsDirectory(swift_clang_dir_spec)) {
           g_cached_resource_dir = ConstString(swift_dir_spec.GetPath());
           if (log)
             log->Printf("%s: found Swift resource dir via "
@@ -2463,7 +2470,7 @@ static ConstString GetResourceDir() {
           log->Printf("%s: trying toolchain-based lib path: %s", __FUNCTION__,
                       xcode_toolchain_path.c_str());
 
-        if (FileSpec(xcode_toolchain_path, false).IsDirectory()) {
+        if (IsDirectory(FileSpec(xcode_toolchain_path, false))) {
           g_cached_resource_dir = ConstString(xcode_toolchain_path);
           if (log)
             log->Printf("%s: found Swift resource dir via "
@@ -2490,7 +2497,7 @@ static ConstString GetResourceDir() {
           log->Printf("%s: trying Xcode-based lib path: %s", __FUNCTION__,
                       xcode_contents_path.c_str());
 
-        if (FileSpec(xcode_contents_path, false).IsDirectory()) {
+        if (IsDirectory(FileSpec(xcode_contents_path, false))) {
           g_cached_resource_dir = ConstString(xcode_contents_path);
           if (log)
             log->Printf("%s: found Swift resource dir via "
@@ -2517,7 +2524,7 @@ static ConstString GetResourceDir() {
                       "path: %s",
                       __FUNCTION__, cl_tools_path.c_str());
 
-        if (FileSpec(cl_tools_path, false).IsDirectory()) {
+        if (IsDirectory(FileSpec(cl_tools_path, false))) {
           g_cached_resource_dir = ConstString(cl_tools_path);
           if (log)
             log->Printf("%s: found Swift resource dir via "
@@ -2595,7 +2602,7 @@ static ConstString GetResourceDir() {
                                     build_tree_resource_dir.c_str());
                     FileSpec swift_resource_dir_spec(
                         build_tree_resource_dir.c_str(), false);
-                    if (swift_resource_dir_spec.IsDirectory())
+                    if (IsDirectory(swift_resource_dir_spec))
                     {
                         g_cached_resource_dir =
                             ConstString(swift_resource_dir_spec.GetPath());
