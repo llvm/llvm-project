@@ -64,6 +64,7 @@ public:
 
 private:
   bool setupEntryBlockAndCallSites(Function &F);
+  bool undoSwiftErrorSelect(Function &F);
   void substituteLPadValues(LandingPadInst *LPI, Value *ExnVal, Value *SelVal);
   Value *setupFunctionContext(Function &F, ArrayRef<LandingPadInst *> LPads);
   void lowerIncomingArguments(Function &F);
@@ -458,6 +459,25 @@ bool SjLjEHPrepare::setupEntryBlockAndCallSites(Function &F) {
   return true;
 }
 
+bool SjLjEHPrepare::undoSwiftErrorSelect(Function &F) {
+  // We have inserted dummy copies 'select true, arg, undef' in the entry block
+  // for arguments to simplify this pass.
+  // swifterror arguments cannot be used in this way. Undo the select for the
+  // swifterror argument.
+  for (auto &AI : F.args()) {
+    if (AI.isSwiftError()) {
+      assert(AI.hasOneUse() && "Must have converted the argument to a select");
+      auto *Select = dyn_cast<SelectInst>(AI.use_begin()->getUser());
+      assert(Select && "There must be single select user");
+      auto *OrigSwiftError = cast<Argument>(Select->getTrueValue());
+      Select->replaceAllUsesWith(OrigSwiftError);
+      Select->eraseFromParent();
+      return true;
+    }
+  }
+  return false;
+}
+
 bool SjLjEHPrepare::runOnFunction(Function &F) {
   Module &M = *F.getParent();
   RegisterFn = M.getOrInsertFunction(
@@ -476,5 +496,7 @@ bool SjLjEHPrepare::runOnFunction(Function &F) {
   FuncCtxFn = Intrinsic::getDeclaration(&M, Intrinsic::eh_sjlj_functioncontext);
 
   bool Res = setupEntryBlockAndCallSites(F);
+  if (Res)
+    Res |= undoSwiftErrorSelect(F);
   return Res;
 }
