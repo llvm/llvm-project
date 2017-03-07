@@ -26,6 +26,8 @@ define void @debug_value(i32 %in) #0 !dbg !7 {
   call void @llvm.dbg.value(metadata i32 123, i64 0, metadata !11, metadata !12), !dbg !13
 ; CHECK: DBG_VALUE float 1.000000e+00, 0, !11, !12, debug-location !13
   call void @llvm.dbg.value(metadata float 1.000000e+00, i64 0, metadata !11, metadata !12), !dbg !13
+; CHECK: DBG_VALUE _, 0, !11, !12, debug-location !13
+  call void @llvm.dbg.value(metadata i32* null, i64 0, metadata !11, metadata !12), !dbg !13
   ret void
 }
 
