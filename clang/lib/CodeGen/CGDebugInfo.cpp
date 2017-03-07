@@ -273,8 +273,8 @@ StringRef CGDebugInfo::getObjCMethodName(const ObjCMethodDecl *OMD) {
          << OC->getIdentifier()->getNameStart() << ')';
     }
   } else if (const auto *OCD = dyn_cast<ObjCCategoryImplDecl>(DC)) {
-    OS << ((const NamedDecl *)OCD)->getIdentifier()->getNameStart() << '('
-       << OCD->getIdentifier()->getNameStart() << ')';
+    OS << OCD->getClassInterface()->getName() << '('
+       << OCD->getName() << ')';
   } else if (isa<ObjCProtocolDecl>(DC)) {
     // We can extract the type of the class from the self pointer.
     if (ImplicitParamDecl *SelfDecl = OMD->getSelfDecl()) {

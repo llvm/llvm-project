@@ -1126,7 +1126,6 @@ void ASTDeclReader::VisitObjCImplDecl(ObjCImplDecl *D) {
 
 void ASTDeclReader::VisitObjCCategoryImplDecl(ObjCCategoryImplDecl *D) {
   VisitObjCImplDecl(D);
-  D->setIdentifier(Record.getIdentifierInfo());
   D->CategoryNameLoc = ReadSourceLocation();
 }
 
