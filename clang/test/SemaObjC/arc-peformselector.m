@@ -27,6 +27,7 @@
   return [self performSelector : @selector(init)];
   return [self performSelector : sel1]; // expected-warning {{performSelector may cause a leak because its selector is unknown}} \
 					// expected-note {{used here}}
+  return [self performSelector: (@selector(PlusZero))];
 
   return [self performSelector : @selector(PlusZero)];
   return [self performSelector : @selector(PlusOne)]; // expected-error {{performSelector names a selector which retains the object}}
