@@ -848,6 +848,8 @@ unsigned ContinuationIndenter::moveStateToNextToken(LineState &State,
         (Current.IsMultiline ? Current.LastLineColumnWidth
                              : State.Column + Current.ColumnWidth) -
         strlen("${");
+  bool CanBreakProtrudingToken = !State.Stack.back().NoLineBreak &&
+                                 !State.Stack.back().NoLineBreakInOperand;
   moveStatePastScopeOpener(State, Newline);
   moveStatePastFakeRParens(State);
 
@@ -861,7 +863,9 @@ unsigned ContinuationIndenter::moveStateToNextToken(LineState &State,
 
   State.Column += Current.ColumnWidth;
   State.NextToken = State.NextToken->Next;
-  unsigned Penalty = breakProtrudingToken(Current, State, DryRun);
+  unsigned Penalty = 0;
+  if (CanBreakProtrudingToken)
+    Penalty = breakProtrudingToken(Current, State, DryRun);
   if (State.Column > getColumnLimit(State)) {
     unsigned ExcessCharacters = State.Column - getColumnLimit(State);
     Penalty += Style.PenaltyExcessCharacter * ExcessCharacters;
@@ -1183,7 +1187,6 @@ unsigned ContinuationIndenter::breakProtrudingToken(const FormatToken &Current,
     }
   } else if (Current.is(TT_BlockComment)) {
     if (!Current.isTrailingComment() || !Style.ReflowComments ||
-        CommentPragmasRegex.match(Current.TokenText.substr(2)) ||
         // If a comment token switches formatting, like
         // /* clang-format on */, we don't want to break it further,
         // but we may still want to adjust its indentation.
@@ -1234,8 +1237,8 @@ unsigned ContinuationIndenter::breakProtrudingToken(const FormatToken &Current,
     RemainingTokenColumns = Token->getLineLengthAfterSplitBefore(
         LineIndex, TailOffset, RemainingTokenColumns, ColumnLimit, SplitBefore);
     while (RemainingTokenColumns > RemainingSpace) {
-      BreakableToken::Split Split =
-          Token->getSplit(LineIndex, TailOffset, ColumnLimit);
+      BreakableToken::Split Split = Token->getSplit(
+          LineIndex, TailOffset, ColumnLimit, CommentPragmasRegex);
       if (Split.first == StringRef::npos) {
         // The last line's penalty is handled in addNextStateToQueue().
         if (LineIndex < EndIndex - 1)

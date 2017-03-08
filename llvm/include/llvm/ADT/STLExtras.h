@@ -358,21 +358,27 @@ template <class... Ts> struct index_sequence_for;
 namespace detail {
 using std::declval;
 
+// We have to alias this since inlining the actual type at the usage site
+// in the parameter list of iterator_facade_base<> below ICEs MSVC 2017.
+template<typename... Iters> struct ZipTupleType {
+  typedef std::tuple<decltype(*declval<Iters>())...> type;
+};
+
 template <typename ZipType, typename... Iters>
 using zip_traits = iterator_facade_base<
     ZipType, typename std::common_type<std::bidirectional_iterator_tag,
                                        typename std::iterator_traits<
                                            Iters>::iterator_category...>::type,
     // ^ TODO: Implement random access methods.
-    std::tuple<decltype(*declval<Iters>())...>,
+    typename ZipTupleType<Iters...>::type,
     typename std::iterator_traits<typename std::tuple_element<
         0, std::tuple<Iters...>>::type>::difference_type,
     // ^ FIXME: This follows boost::make_zip_iterator's assumption that all
     // inner iterators have the same difference_type. It would fail if, for
     // instance, the second field's difference_type were non-numeric while the
     // first is.
-    std::tuple<decltype(*declval<Iters>())...> *,
-    std::tuple<decltype(*declval<Iters>())...>>;
+    typename ZipTupleType<Iters...>::type *,
+    typename ZipTupleType<Iters...>::type>;
 
 template <typename ZipType, typename... Iters>
 struct zip_common : public zip_traits<ZipType, Iters...> {

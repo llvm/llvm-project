@@ -149,6 +149,8 @@ CharUnits CodeGenFunction::getNaturalTypeAlignment(QualType T,
       Alignment = CGM.getClassPointerAlignment(RD);
     } else {
       Alignment = getContext().getTypeAlignInChars(T);
+      if (T.getQualifiers().hasUnaligned())
+        Alignment = CharUnits::One();
     }
 
     // Cap to the global maximum type alignment unless the alignment
