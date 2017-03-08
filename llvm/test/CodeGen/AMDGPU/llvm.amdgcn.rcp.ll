@@ -14,6 +14,24 @@ define void @rcp_undef_f32(float addrspace(1)* %out) #1 {
   ret void
 }
 
+; FUNC-LABEL: {{^}}rcp_2_f32:
+; SI-NOT: v_rcp_f32
+; SI: v_mov_b32_e32 v{{[0-9]+}}, 0.5
+define void @rcp_2_f32(float addrspace(1)* %out) #1 {
+  %rcp = call float @llvm.amdgcn.rcp.f32(float 2.0)
+  store float %rcp, float addrspace(1)* %out, align 4
+  ret void
+}
+
+; FUNC-LABEL: {{^}}rcp_10_f32:
+; SI-NOT: v_rcp_f32
+; SI: v_mov_b32_e32 v{{[0-9]+}}, 0x3dcccccd
+define void @rcp_10_f32(float addrspace(1)* %out) #1 {
+  %rcp = call float @llvm.amdgcn.rcp.f32(float 10.0)
+  store float %rcp, float addrspace(1)* %out, align 4
+  ret void
+}
+
 ; FUNC-LABEL: {{^}}safe_no_fp32_denormals_rcp_f32:
 ; SI: v_rcp_f32_e32 [[RESULT:v[0-9]+]], s{{[0-9]+}}
 ; SI-NOT: [[RESULT]]

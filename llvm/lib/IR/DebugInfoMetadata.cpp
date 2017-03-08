@@ -612,10 +612,23 @@ bool DIExpression::isValid() const {
         return false;
       break;
     }
+    case dwarf::DW_OP_swap: {
+      // Must be more than one implicit element on the stack.
+
+      // FIXME: A better way to implement this would be to add a local variable
+      // that keeps track of the stack depth and introduce something like a
+      // DW_LLVM_OP_implicit_location as a placeholder for the location this
+      // DIExpression is attached to, or else pass the number of implicit stack
+      // elements into isValid.
+      if (getNumElements() == 1)
+        return false;
+      break;
+    }
     case dwarf::DW_OP_constu:
     case dwarf::DW_OP_plus:
     case dwarf::DW_OP_minus:
     case dwarf::DW_OP_deref:
+    case dwarf::DW_OP_xderef:
       break;
     }
   }

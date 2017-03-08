@@ -8,7 +8,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Driver/ToolChain.h"
-#include "Tools.h"
+#include "ToolChains/CommonArgs.h"
+#include "ToolChains/Arch/ARM.h"
+#include "ToolChains/Clang.h"
 #include "clang/Basic/ObjCRuntime.h"
 #include "clang/Basic/VirtualFileSystem.h"
 #include "clang/Config/config.h"

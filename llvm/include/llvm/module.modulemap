@@ -284,12 +284,12 @@ module LLVM_Utils {
     header "Support/ConvertUTF.h"
     export *
   }
-}
 
-module LLVM_CodeGen_MachineValueType {
-  requires cplusplus
-  header "CodeGen/MachineValueType.h"
-  export *
+  module LLVM_CodeGen_MachineValueType {
+    requires cplusplus
+    header "CodeGen/MachineValueType.h"
+    export *
+  }
 }
 
 // This is used for a $src == $build compilation. Otherwise we use

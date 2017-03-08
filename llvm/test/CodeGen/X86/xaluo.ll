@@ -1409,7 +1409,6 @@ define {i64, i1} @usuboovf(i64 %a, i64 %b) {
 ; KNL-NEXT:    subq %rdi, %rax
 ; KNL-NEXT:    sbbb %dl, %dl
 ; KNL-NEXT:    orb %cl, %dl
-; KNL-NEXT:    andb $1, %dl
 ; KNL-NEXT:    retq
   %t0 = call {i64, i1} @llvm.usub.with.overflow.i64(i64 %a, i64 %a)
   %v0 = extractvalue {i64, i1} %t0, 0

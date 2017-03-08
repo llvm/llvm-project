@@ -48,10 +48,15 @@ static cl::opt<bool> PreserveTiedOps("hexbit-keep-tied", cl::Hidden,
   cl::init(true), cl::desc("Preserve subregisters in tied operands"));
 static cl::opt<bool> GenExtract("hexbit-extract", cl::Hidden,
   cl::init(true), cl::desc("Generate extract instructions"));
+static cl::opt<bool> GenBitSplit("hexbit-bitsplit", cl::Hidden,
+  cl::init(true), cl::desc("Generate bitsplit instructions"));
 
 static cl::opt<unsigned> MaxExtract("hexbit-max-extract", cl::Hidden,
   cl::init(UINT_MAX));
 static unsigned CountExtract = 0;
+static cl::opt<unsigned> MaxBitSplit("hexbit-max-bitsplit", cl::Hidden,
+  cl::init(UINT_MAX));
+static unsigned CountBitSplit = 0;
 
 namespace llvm {
 
@@ -1769,6 +1774,8 @@ namespace {
           const BitTracker::RegisterCell &RC);
     bool genExtractLow(MachineInstr *MI, BitTracker::RegisterRef RD,
           const BitTracker::RegisterCell &RC);
+    bool genBitSplit(MachineInstr *MI, BitTracker::RegisterRef RD,
+          const BitTracker::RegisterCell &RC, const RegisterSet &AVs);
     bool simplifyTstbit(MachineInstr *MI, BitTracker::RegisterRef RD,
           const BitTracker::RegisterCell &RC);
     bool simplifyExtractLow(MachineInstr *MI, BitTracker::RegisterRef RD,
@@ -2155,6 +2162,117 @@ bool BitSimplification::genExtractLow(MachineInstr *MI,
   return false;
 }
 
+bool BitSimplification::genBitSplit(MachineInstr *MI,
+      BitTracker::RegisterRef RD, const BitTracker::RegisterCell &RC,
+      const RegisterSet &AVs) {
+  if (!GenBitSplit)
+    return false;
+  if (CountBitSplit >= MaxBitSplit)
+    return false;
+
+  unsigned Opc = MI->getOpcode();
+  switch (Opc) {
+    case Hexagon::A4_bitsplit:
+    case Hexagon::A4_bitspliti:
+      return false;
+  }
+
+  unsigned W = RC.width();
+  if (W != 32)
+    return false;
+
+  auto ctlz = [] (const BitTracker::RegisterCell &C) -> unsigned {
+    unsigned Z = C.width();
+    while (Z > 0 && C[Z-1].is(0))
+      --Z;
+    return C.width() - Z;
+  };
+
+  // Count the number of leading zeros in the target RC.
+  unsigned Z = ctlz(RC);
+  if (Z == 0 || Z == W)
+    return false;
+
+  // A simplistic analysis: assume the source register (the one being split)
+  // is fully unknown, and that all its bits are self-references.
+  const BitTracker::BitValue &B0 = RC[0];
+  if (B0.Type != BitTracker::BitValue::Ref)
+    return false;
+
+  unsigned SrcR = B0.RefI.Reg;
+  unsigned SrcSR = 0;
+  unsigned Pos = B0.RefI.Pos;
+
+  // All the non-zero bits should be consecutive bits from the same register.
+  for (unsigned i = 1; i < W-Z; ++i) {
+    const BitTracker::BitValue &V = RC[i];
+    if (V.Type != BitTracker::BitValue::Ref)
+      return false;
+    if (V.RefI.Reg != SrcR || V.RefI.Pos != Pos+i)
+      return false;
+  }
+
+  // Now, find the other bitfield among AVs.
+  for (unsigned S = AVs.find_first(); S; S = AVs.find_next(S)) {
+    // The number of leading zeros here should be the number of trailing
+    // non-zeros in RC.
+    if (!BT.has(S))
+      continue;
+    const BitTracker::RegisterCell &SC = BT.lookup(S);
+    if (SC.width() != W || ctlz(SC) != W-Z)
+      continue;
+    // The Z lower bits should now match SrcR.
+    const BitTracker::BitValue &S0 = SC[0];
+    if (S0.Type != BitTracker::BitValue::Ref || S0.RefI.Reg != SrcR)
+      continue;
+    unsigned P = S0.RefI.Pos;
+
+    if (Pos <= P && (Pos + W-Z) != P)
+      continue;
+    if (P < Pos && (P + Z) != Pos)
+      continue;
+    // The starting bitfield position must be at a subregister boundary.
+    if (std::min(P, Pos) != 0 && std::min(P, Pos) != 32)
+      continue;
+
+    unsigned I;
+    for (I = 1; I < Z; ++I) {
+      const BitTracker::BitValue &V = SC[I];
+      if (V.Type != BitTracker::BitValue::Ref)
+        break;
+      if (V.RefI.Reg != SrcR || V.RefI.Pos != P+I)
+        break;
+    }
+    if (I != Z)
+      continue;
+
+    // Generate bitsplit where S is defined.
+    CountBitSplit++;
+    MachineInstr *DefS = MRI.getVRegDef(S);
+    assert(DefS != nullptr);
+    DebugLoc DL = DefS->getDebugLoc();
+    MachineBasicBlock &B = *DefS->getParent();
+    auto At = MI->isPHI() ? B.getFirstNonPHI()
+                          : MachineBasicBlock::iterator(DefS);
+    if (MRI.getRegClass(SrcR)->getID() == Hexagon::DoubleRegsRegClassID)
+      SrcSR = (std::min(Pos, P) == 32) ? Hexagon::isub_hi : Hexagon::isub_lo;
+    unsigned NewR = MRI.createVirtualRegister(&Hexagon::DoubleRegsRegClass);
+    BuildMI(B, At, DL, HII.get(Hexagon::A4_bitspliti), NewR)
+      .addReg(SrcR, 0, SrcSR)
+      .addImm(Pos <= P ? W-Z : Z);
+    if (Pos <= P) {
+      HBS::replaceRegWithSub(RD.Reg, NewR, Hexagon::isub_lo, MRI);
+      HBS::replaceRegWithSub(S,      NewR, Hexagon::isub_hi, MRI);
+    } else {
+      HBS::replaceRegWithSub(S,      NewR, Hexagon::isub_lo, MRI);
+      HBS::replaceRegWithSub(RD.Reg, NewR, Hexagon::isub_hi, MRI);
+    }
+    return true;
+  }
+
+  return false;
+}
+
 // Check for tstbit simplification opportunity, where the bit being checked
 // can be tracked back to another register. For example:
 //   vreg2 = S2_lsr_i_r  vreg1, 5
@@ -2305,6 +2423,8 @@ bool BitSimplification::simplifyExtractLow(MachineInstr *MI,
   bool Changed = false;
 
   for (unsigned R = AVs.find_first(); R != 0; R = AVs.find_next(R)) {
+    if (!BT.has(R))
+      continue;
     const BitTracker::RegisterCell &SC = BT.lookup(R);
     unsigned SW = SC.width();
 
@@ -2451,7 +2571,8 @@ bool BitSimplification::processBlock(MachineBasicBlock &B,
     }
 
     if (FRC->getID() == Hexagon::IntRegsRegClassID) {
-      bool T = simplifyExtractLow(MI, RD, RC, AVB);
+      bool T = genBitSplit(MI, RD, RC, AVB);
+      T = T || simplifyExtractLow(MI, RD, RC, AVB);
       T = T || genExtractHalf(MI, RD, RC);
       T = T || genCombineHalf(MI, RD, RC);
       T = T || genExtractLow(MI, RD, RC);

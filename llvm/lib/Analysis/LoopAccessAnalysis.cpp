@@ -498,7 +498,7 @@ class AccessAnalysis {
 public:
   /// \brief Read or write access location.
   typedef PointerIntPair<Value *, 1, bool> MemAccessInfo;
-  typedef SmallPtrSet<MemAccessInfo, 8> MemAccessInfoSet;
+  typedef SmallVector<MemAccessInfo, 8> MemAccessInfoList;
 
   AccessAnalysis(const DataLayout &Dl, AliasAnalysis *AA, LoopInfo *LI,
                  MemoryDepChecker::DepCandidates &DA,
@@ -550,7 +550,7 @@ public:
     DepChecker.clearDependences();
   }
 
-  MemAccessInfoSet &getDependenciesToCheck() { return CheckDeps; }
+  MemAccessInfoList &getDependenciesToCheck() { return CheckDeps; }
 
 private:
   typedef SetVector<MemAccessInfo> PtrAccessSet;
@@ -564,8 +564,8 @@ private:
 
   const DataLayout &DL;
 
-  /// Set of accesses that need a further dependence check.
-  MemAccessInfoSet CheckDeps;
+  /// List of accesses that need a further dependence check.
+  MemAccessInfoList CheckDeps;
 
   /// Set of pointers that are read only.
   SmallPtrSet<Value*, 16> ReadOnlyPtr;
@@ -822,7 +822,7 @@ void AccessAnalysis::processMemAccesses() {
           // there is no other write to the ptr - this is an optimization to
           // catch "a[i] = a[i] + " without having to do a dependence check).
           if ((IsWrite || IsReadOnlyPtr) && SetHasWrite) {
-            CheckDeps.insert(Access);
+            CheckDeps.push_back(Access);
             IsRTCheckAnalysisNeeded = true;
           }
 
@@ -1530,12 +1530,14 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
 }
 
 bool MemoryDepChecker::areDepsSafe(DepCandidates &AccessSets,
-                                   MemAccessInfoSet &CheckDeps,
+                                   MemAccessInfoList &CheckDeps,
                                    const ValueToValueMap &Strides) {
 
   MaxSafeDepDistBytes = -1;
-  while (!CheckDeps.empty()) {
-    MemAccessInfo CurAccess = *CheckDeps.begin();
+  SmallPtrSet<MemAccessInfo, 8> Visited;
+  for (MemAccessInfo CurAccess : CheckDeps) {
+    if (Visited.count(CurAccess))
+      continue;
 
     // Get the relevant memory access set.
     EquivalenceClasses<MemAccessInfo>::iterator I =
@@ -1549,7 +1551,7 @@ bool MemoryDepChecker::areDepsSafe(DepCandidates &AccessSets,
 
     // Check every access pair.
     while (AI != AE) {
-      CheckDeps.erase(*AI);
+      Visited.insert(*AI);
       EquivalenceClasses<MemAccessInfo>::member_iterator OI = std::next(AI);
       while (OI != AE) {
         // Check every accessing instruction pair in program order.

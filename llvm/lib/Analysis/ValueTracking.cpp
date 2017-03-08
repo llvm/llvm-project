@@ -3781,6 +3781,8 @@ bool llvm::isGuaranteedToTransferExecutionToSuccessor(const Instruction *I) {
     return false;
   if (isa<ReturnInst>(I))
     return false;
+  if (isa<UnreachableInst>(I))
+    return false;
 
   // Calls can throw, or contain an infinite loop, or kill the process.
   if (auto CS = ImmutableCallSite(I)) {
