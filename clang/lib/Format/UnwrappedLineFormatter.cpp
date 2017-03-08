@@ -908,7 +908,7 @@ void UnwrappedLineFormatter::formatFirstToken(const AnnotatedLine &Line,
   if (RootToken.is(tok::eof)) {
     unsigned Newlines = std::min(RootToken.NewlinesBefore, 1u);
     Whitespaces->replaceWhitespace(RootToken, Newlines, /*Spaces=*/0,
-                                   /*TargetColumn=*/0);
+                                   /*StartOfTokenColumn=*/0);
     return;
   }
   unsigned Newlines =
