@@ -1022,10 +1022,11 @@ template <class ELFT> void Writer<ELFT>::sortSections() {
 }
 
 template <class ELFT>
-static void finalizeSynthetic(const std::vector<SyntheticSection *> &Sections) {
+static void applySynthetic(const std::vector<SyntheticSection *> &Sections,
+                           std::function<void(SyntheticSection *)> Fn) {
   for (SyntheticSection *SS : Sections)
     if (SS && SS->OutSec && !SS->empty()) {
-      SS->finalizeContents();
+      Fn(SS);
       SS->OutSec->template assignOffsets<ELFT>();
     }
 }
@@ -1082,9 +1083,10 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   addRelIpltSymbols();
 
   // This responsible for splitting up .eh_frame section into
-  // pieces. The relocation scan uses those peaces, so this has to be
+  // pieces. The relocation scan uses those pieces, so this has to be
   // earlier.
-  finalizeSynthetic<ELFT>({In<ELFT>::EhFrame});
+  applySynthetic<ELFT>({In<ELFT>::EhFrame},
+                       [](SyntheticSection *SS) { SS->finalizeContents(); });
 
   // Scan relocations. This must be done after every symbol is declared so that
   // we can correctly decide if a dynamic relocation is needed.
@@ -1145,21 +1147,9 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     fixHeaders();
   }
 
-  // Some architectures use small displacements for jump instructions.
-  // It is linker's responsibility to create thunks containing long
-  // jump instructions if jump targets are too far. Create thunks.
-  if (Target->NeedsThunks)
-    createThunks<ELFT>(OutputSections);
-
-  // Fill other section headers. The dynamic table is finalized
-  // at the end because some tags like RELSZ depend on result
-  // of finalizing other sections.
-  for (OutputSection *Sec : OutputSections)
-    Sec->finalize<ELFT>();
-
   // Dynamic section must be the last one in this list and dynamic
   // symbol table section (DynSymTab) must be the first one.
-  finalizeSynthetic<ELFT>(
+  applySynthetic<ELFT>(
       {In<ELFT>::DynSymTab,  In<ELFT>::Bss,      In<ELFT>::BssRelRo,
        In<ELFT>::GnuHashTab, In<ELFT>::HashTab,  In<ELFT>::SymTab,
        In<ELFT>::ShStrTab,   In<ELFT>::StrTab,   In<ELFT>::VerDef,
@@ -1168,7 +1158,32 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
        In<ELFT>::RelaDyn,    In<ELFT>::RelaIplt, In<ELFT>::RelaPlt,
        In<ELFT>::Plt,        In<ELFT>::Iplt,     In<ELFT>::Plt,
        In<ELFT>::EhFrameHdr, In<ELFT>::VerSym,   In<ELFT>::VerNeed,
-       In<ELFT>::Dynamic});
+       In<ELFT>::Dynamic},
+      [](SyntheticSection *SS) { SS->finalizeContents(); });
+
+  // Some architectures use small displacements for jump instructions.
+  // It is linker's responsibility to create thunks containing long
+  // jump instructions if jump targets are too far. Create thunks.
+  if (Target->NeedsThunks) {
+    // FIXME: only ARM Interworking and Mips LA25 Thunks are implemented,
+    // these
+    // do not require address information. To support range extension Thunks
+    // we need to assign addresses so that we can tell if jump instructions
+    // are out of range. This will need to turn into a loop that converges
+    // when no more Thunks are added
+    if (createThunks<ELFT>(OutputSections))
+      applySynthetic<ELFT>({In<ELFT>::MipsGot},
+                           [](SyntheticSection *SS) { SS->updateAllocSize(); });
+  }
+  // Fill other section headers. The dynamic table is finalized
+  // at the end because some tags like RELSZ depend on result
+  // of finalizing other sections.
+  for (OutputSection *Sec : OutputSections)
+    Sec->finalize<ELFT>();
+
+  // createThunks may have added local symbols to the static symbol table
+  applySynthetic<ELFT>({In<ELFT>::SymTab, In<ELFT>::ShStrTab, In<ELFT>::StrTab},
+                       [](SyntheticSection *SS) { SS->postThunkContents(); });
 }
 
 template <class ELFT> void Writer<ELFT>::addPredefinedSections() {

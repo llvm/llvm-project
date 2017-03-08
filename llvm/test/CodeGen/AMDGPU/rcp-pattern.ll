@@ -117,6 +117,35 @@ define void @rcp_fabs_fneg_pat_multi_use_f32(float addrspace(1)* %out, float %sr
   ret void
 }
 
+; FUNC-LABEL: {{^}}div_arcp_2_x_pat_f32:
+; GCN: v_mul_f32_e32 [[MUL:v[0-9]+]], 0.5, v{{[0-9]+}}
+; GCN: buffer_store_dword [[MUL]]
+define void @div_arcp_2_x_pat_f32(float addrspace(1)* %out) #0 {
+  %x = load float, float addrspace(1)* undef
+  %rcp = fdiv arcp float %x, 2.0
+  store float %rcp, float addrspace(1)* %out, align 4
+  ret void
+}
+
+; FUNC-LABEL: {{^}}div_arcp_k_x_pat_f32:
+; GCN: v_mul_f32_e32 [[MUL:v[0-9]+]], 0x3dcccccd, v{{[0-9]+}}
+; GCN: buffer_store_dword [[MUL]]
+define void @div_arcp_k_x_pat_f32(float addrspace(1)* %out) #0 {
+  %x = load float, float addrspace(1)* undef
+  %rcp = fdiv arcp float %x, 10.0
+  store float %rcp, float addrspace(1)* %out, align 4
+  ret void
+}
+
+; FUNC-LABEL: {{^}}div_arcp_neg_k_x_pat_f32:
+; GCN: v_mul_f32_e32 [[MUL:v[0-9]+]], 0xbdcccccd, v{{[0-9]+}}
+; GCN: buffer_store_dword [[MUL]]
+define void @div_arcp_neg_k_x_pat_f32(float addrspace(1)* %out) #0 {
+  %x = load float, float addrspace(1)* undef
+  %rcp = fdiv arcp float %x, -10.0
+  store float %rcp, float addrspace(1)* %out, align 4
+  ret void
+}
 
 declare float @llvm.fabs.f32(float) #1
 declare float @llvm.sqrt.f32(float) #1

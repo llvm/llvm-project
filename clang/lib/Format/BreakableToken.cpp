@@ -200,7 +200,8 @@ BreakableStringLiteral::BreakableStringLiteral(
 
 BreakableToken::Split
 BreakableStringLiteral::getSplit(unsigned LineIndex, unsigned TailOffset,
-                                 unsigned ColumnLimit) const {
+                                 unsigned ColumnLimit,
+                                 llvm::Regex &CommentPragmasRegex) const {
   return getStringSplit(Line.substr(TailOffset),
                         StartColumn + Prefix.size() + Postfix.size(),
                         ColumnLimit, Style.TabWidth, Encoding);
@@ -231,9 +232,13 @@ BreakableComment::BreakableComment(const FormatToken &Token,
 
 unsigned BreakableComment::getLineCount() const { return Lines.size(); }
 
-BreakableToken::Split BreakableComment::getSplit(unsigned LineIndex,
-                                                 unsigned TailOffset,
-                                                 unsigned ColumnLimit) const {
+BreakableToken::Split
+BreakableComment::getSplit(unsigned LineIndex, unsigned TailOffset,
+                           unsigned ColumnLimit,
+                           llvm::Regex &CommentPragmasRegex) const {
+  // Don't break lines matching the comment pragmas regex.
+  if (CommentPragmasRegex.match(Content[LineIndex]))
+    return Split(StringRef::npos, 0);
   return getCommentSplit(Content[LineIndex].substr(TailOffset),
                          getContentStartColumn(LineIndex, TailOffset),
                          ColumnLimit, Style.TabWidth, Encoding);

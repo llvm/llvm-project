@@ -43,6 +43,11 @@ public:
   virtual void writeTo(uint8_t *Buf) = 0;
   virtual size_t getSize() const = 0;
   virtual void finalizeContents() {}
+  // If the section has the SHF_ALLOC flag and the size may be changed if
+  // thunks are added, update the section size.
+  virtual void updateAllocSize() {}
+  // If any additional finalization of contents are needed post thunk creation.
+  virtual void postThunkContents() {}
   virtual bool empty() const { return false; }
   uint64_t getVA() const;
 
@@ -168,6 +173,7 @@ public:
   MipsGotSection();
   void writeTo(uint8_t *Buf) override;
   size_t getSize() const override { return Size; }
+  void updateAllocSize() override;
   void finalizeContents() override;
   bool empty() const override;
   void addEntry(SymbolBody &Sym, int64_t Addend, RelExpr Expr);
@@ -366,8 +372,6 @@ template <class ELFT> class DynamicSection final : public SyntheticSection {
   };
 
   // finalizeContents() fills this vector with the section contents.
-  // finalizeContents()cannot directly create final section contents because
-  // when the function is called, symbol or section addresses are not fixed yet.
   std::vector<Entry> Entries;
 
 public:
@@ -416,6 +420,7 @@ public:
   SymbolTableSection(StringTableSection<ELFT> &StrTabSec);
 
   void finalizeContents() override;
+  void postThunkContents() override;
   void writeTo(uint8_t *Buf) override;
   size_t getSize() const override { return getNumSymbols() * sizeof(Elf_Sym); }
   void addSymbol(SymbolBody *Body);

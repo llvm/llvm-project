@@ -10,28 +10,53 @@ endif()
 
 add_clang_library(clangDriver
   Action.cpp
-  Arch/AArch64.cpp
-  Arch/ARM.cpp
-  Arch/Mips.cpp
-  Arch/PPC.cpp
-  Arch/Sparc.cpp
-  Arch/SystemZ.cpp
-  Arch/X86.cpp
   Compilation.cpp
-  CrossWindowsToolChain.cpp
   Distro.cpp
   Driver.cpp
   DriverOptions.cpp
   Job.cpp
-  MSVCToolChain.cpp
-  MinGWToolChain.cpp
   Multilib.cpp
   Phases.cpp
   SanitizerArgs.cpp
   Tool.cpp
   ToolChain.cpp
-  ToolChains.cpp
-  Tools.cpp
+  ToolChains/Arch/AArch64.cpp
+  ToolChains/Arch/ARM.cpp
+  ToolChains/Arch/Mips.cpp
+  ToolChains/Arch/PPC.cpp
+  ToolChains/Arch/Sparc.cpp
+  ToolChains/Arch/SystemZ.cpp
+  ToolChains/Arch/X86.cpp
+  ToolChains/AMDGPU.cpp
+  ToolChains/AVR.cpp
+  ToolChains/Bitrig.cpp
+  ToolChains/Clang.cpp
+  ToolChains/CloudABI.cpp
+  ToolChains/CommonArgs.cpp
+  ToolChains/Contiki.cpp
+  ToolChains/CrossWindows.cpp
+  ToolChains/Cuda.cpp
+  ToolChains/Darwin.cpp
+  ToolChains/DragonFly.cpp
+  ToolChains/FreeBSD.cpp
+  ToolChains/Fuchsia.cpp
+  ToolChains/Gnu.cpp
+  ToolChains/Haiku.cpp
+  ToolChains/Hexagon.cpp
+  ToolChains/Linux.cpp
+  ToolChains/Mips.cpp
+  ToolChains/MinGW.cpp
+  ToolChains/Minix.cpp
+  ToolChains/MSVC.cpp
+  ToolChains/Myriad.cpp
+  ToolChains/NaCl.cpp
+  ToolChains/NetBSD.cpp
+  ToolChains/OpenBSD.cpp
+  ToolChains/PS4CPU.cpp
+  ToolChains/Solaris.cpp
+  ToolChains/TCE.cpp
+  ToolChains/WebAssembly.cpp
+  ToolChains/XCore.cpp
   Types.cpp
 
   DEPENDS

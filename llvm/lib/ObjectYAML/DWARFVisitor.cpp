@@ -34,10 +34,14 @@ void DWARFYAML::VisitorImpl<T>::onVariableSizeValue(uint64_t U, unsigned Size) {
   }
 }
 
+unsigned getOffsetSize(const DWARFYAML::Unit &Unit) {
+  return Unit.Length.isDWARF64() ? 8 : 4;
+}
+
 unsigned getRefSize(const DWARFYAML::Unit &Unit) {
   if (Unit.Version == 2)
     return Unit.AddrSize;
-  return Unit.Length.isDWARF64() ? 8 : 4;
+  return getOffsetSize(Unit);
 }
 
 template <typename T> void DWARFYAML::VisitorImpl<T>::traverseDebugInfo() {
@@ -149,7 +153,7 @@ template <typename T> void DWARFYAML::VisitorImpl<T>::traverseDebugInfo() {
           case dwarf::DW_FORM_GNU_strp_alt:
           case dwarf::DW_FORM_line_strp:
           case dwarf::DW_FORM_strp_sup:
-            onVariableSizeValue(FormVal->Value, getRefSize(Unit));
+            onVariableSizeValue(FormVal->Value, getOffsetSize(Unit));
             break;
           case dwarf::DW_FORM_ref_sig8:
             onValue((uint64_t)FormVal->Value);

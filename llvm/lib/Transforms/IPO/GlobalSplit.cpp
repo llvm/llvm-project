@@ -85,7 +85,16 @@ bool splitGlobal(GlobalVariable &GV) {
       uint64_t ByteOffset = cast<ConstantInt>(
               cast<ConstantAsMetadata>(Type->getOperand(0))->getValue())
               ->getZExtValue();
-      if (ByteOffset < SplitBegin || ByteOffset >= SplitEnd)
+      // Type metadata may be attached one byte after the end of the vtable, for
+      // classes without virtual methods in Itanium ABI. AFAIK, it is never
+      // attached to the first byte of a vtable. Subtract one to get the right
+      // slice.
+      // This is making an assumption that vtable groups are the only kinds of
+      // global variables that !type metadata can be attached to, and that they
+      // are either Itanium ABI vtable groups or contain a single vtable (i.e.
+      // Microsoft ABI vtables).
+      uint64_t AttachedTo = (ByteOffset == 0) ? ByteOffset : ByteOffset - 1;
+      if (AttachedTo < SplitBegin || AttachedTo >= SplitEnd)
         continue;
       SplitGV->addMetadata(
           LLVMContext::MD_type,

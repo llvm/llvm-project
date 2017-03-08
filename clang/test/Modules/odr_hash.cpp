@@ -430,6 +430,99 @@ struct NestedNamespaceSpecifier {};
 #endif
 }  // namespace SelfReference
 
+namespace TypeDef {
+#if defined(FIRST)
+struct S1 {
+  typedef int a;
+};
+#elif defined(SECOND)
+struct S1 {
+  typedef double a;
+};
+#else
+S1 s1;
+// expected-error@first.h:* {{'TypeDef::S1::a' from module 'FirstModule' is not present in definition of 'TypeDef::S1' in module 'SecondModule'}}
+// expected-note@second.h:* {{declaration of 'a' does not match}}
+#endif
+
+#if defined(FIRST)
+struct S2 {
+  typedef int a;
+};
+#elif defined(SECOND)
+struct S2 {
+  typedef int b;
+};
+#else
+S2 s2;
+// expected-error@first.h:* {{'TypeDef::S2::a' from module 'FirstModule' is not present in definition of 'TypeDef::S2' in module 'SecondModule'}}
+// expected-note@second.h:* {{definition has no member 'a'}}
+#endif
+
+#if defined(FIRST)
+typedef int T;
+struct S3 {
+  typedef T a;
+};
+#elif defined(SECOND)
+typedef double T;
+struct S3 {
+  typedef T a;
+};
+#else
+S3 s3;
+// expected-error@first.h:* {{'TypeDef::S3::a' from module 'FirstModule' is not present in definition of 'TypeDef::S3' in module 'SecondModule'}}
+// expected-note@second.h:* {{declaration of 'a' does not match}}
+#endif
+}  // namespace TypeDef
+
+namespace Using {
+#if defined(FIRST)
+struct S1 {
+  using a = int;
+};
+#elif defined(SECOND)
+struct S1 {
+  using a = double;
+};
+#else
+S1 s1;
+// expected-error@first.h:* {{'Using::S1::a' from module 'FirstModule' is not present in definition of 'Using::S1' in module 'SecondModule'}}
+// expected-note@second.h:* {{declaration of 'a' does not match}}
+#endif
+
+#if defined(FIRST)
+struct S2 {
+  using a = int;
+};
+#elif defined(SECOND)
+struct S2 {
+  using b = int;
+};
+#else
+S2 s2;
+// expected-error@first.h:* {{'Using::S2::a' from module 'FirstModule' is not present in definition of 'Using::S2' in module 'SecondModule'}}
+// expected-note@second.h:* {{definition has no member 'a'}}
+#endif
+
+#if defined(FIRST)
+typedef int T;
+struct S3 {
+  using a = T;
+};
+#elif defined(SECOND)
+typedef double T;
+struct S3 {
+  using a = T;
+};
+#else
+S3 s3;
+// expected-error@first.h:* {{'Using::S3::a' from module 'FirstModule' is not present in definition of 'Using::S3' in module 'SecondModule'}}
+// expected-note@second.h:* {{declaration of 'a' does not match}}
+#endif
+}  // namespace Using
+
+
 // Interesting cases that should not cause errors.  struct S should not error
 // while struct T should error at the access specifier mismatch at the end.
 namespace AllDecls {
@@ -460,6 +553,9 @@ struct S {
   inline void inline_method() {}
   void volatile_method() volatile {}
   void const_method() const {}
+
+  typedef int typedef_int;
+  using using_int = int;
 };
 #elif defined(SECOND)
 typedef int INT;
@@ -488,6 +584,9 @@ struct S {
   inline void inline_method() {}
   void volatile_method() volatile {}
   void const_method() const {}
+
+  typedef int typedef_int;
+  using using_int = int;
 };
 #else
 S *s;
@@ -521,6 +620,9 @@ struct T {
   void volatile_method() volatile {}
   void const_method() const {}
 
+  typedef int typedef_int;
+  using using_int = int;
+
   private:
 };
 #elif defined(SECOND)
@@ -550,6 +652,9 @@ struct T {
   inline void inline_method() {}
   void volatile_method() volatile {}
   void const_method() const {}
+
+  typedef int typedef_int;
+  using using_int = int;
 
   public:
 };

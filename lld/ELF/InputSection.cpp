@@ -84,7 +84,6 @@ InputSectionBase::InputSectionBase(elf::ObjectFile<ELFT> *File,
                        Hdr->sh_entsize, Hdr->sh_link, Hdr->sh_info,
                        Hdr->sh_addralign, getSectionContents(File, Hdr), Name,
                        SectionKind) {
-  this->Offset = Hdr->sh_offset;
 }
 
 template <class ELFT> size_t InputSectionBase::getSize() const {
@@ -92,6 +91,12 @@ template <class ELFT> size_t InputSectionBase::getSize() const {
     return S->getSize();
 
   return Data.size();
+}
+
+uint64_t InputSectionBase::getOffset() const {
+  const uint8_t *FileStart = (const uint8_t *)File->MB.getBufferStart();
+  const uint8_t *SecStart = Data.begin();
+  return SecStart - FileStart;
 }
 
 template <class ELFT>
