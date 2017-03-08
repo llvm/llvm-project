@@ -334,7 +334,7 @@ define i16 @test13(i32 %a, i32 %b) {
 ; KNL-LABEL: test13:
 ; KNL:       ## BB#0:
 ; KNL-NEXT:    cmpl %esi, %edi
-; KNL-NEXT:    setb %al
+; KNL-NEXT:    sbbb %al, %al
 ; KNL-NEXT:    andl $1, %eax
 ; KNL-NEXT:    kmovw %eax, %k0
 ; KNL-NEXT:    movw $-4, %ax
@@ -348,7 +348,7 @@ define i16 @test13(i32 %a, i32 %b) {
 ; SKX-LABEL: test13:
 ; SKX:       ## BB#0:
 ; SKX-NEXT:    cmpl %esi, %edi
-; SKX-NEXT:    setb %al
+; SKX-NEXT:    sbbb %al, %al
 ; SKX-NEXT:    andl $1, %eax
 ; SKX-NEXT:    kmovw %eax, %k0
 ; SKX-NEXT:    movw $-4, %ax
@@ -1276,7 +1276,7 @@ define i32 @test_insertelement_v32i1(i32 %a, i32 %b, <32 x i32> %x , <32 x i32> 
 ; SKX-LABEL: test_insertelement_v32i1:
 ; SKX:       ## BB#0:
 ; SKX-NEXT:    cmpl %esi, %edi
-; SKX-NEXT:    setb %al
+; SKX-NEXT:    sbbb %al, %al
 ; SKX-NEXT:    andl $1, %eax
 ; SKX-NEXT:    kmovw %eax, %k0
 ; SKX-NEXT:    vpcmpltud %zmm2, %zmm0, %k1
@@ -1301,7 +1301,7 @@ define i8 @test_iinsertelement_v4i1(i32 %a, i32 %b, <4 x i32> %x , <4 x i32> %y)
 ; KNL-LABEL: test_iinsertelement_v4i1:
 ; KNL:       ## BB#0:
 ; KNL-NEXT:    cmpl %esi, %edi
-; KNL-NEXT:    setb %al
+; KNL-NEXT:    sbbb %al, %al
 ; KNL-NEXT:    andl $1, %eax
 ; KNL-NEXT:    kmovw %eax, %k1
 ; KNL-NEXT:    vpbroadcastd {{.*}}(%rip), %xmm2
@@ -1341,7 +1341,7 @@ define i8 @test_iinsertelement_v4i1(i32 %a, i32 %b, <4 x i32> %x , <4 x i32> %y)
 ; SKX-LABEL: test_iinsertelement_v4i1:
 ; SKX:       ## BB#0:
 ; SKX-NEXT:    cmpl %esi, %edi
-; SKX-NEXT:    setb %al
+; SKX-NEXT:    sbbb %al, %al
 ; SKX-NEXT:    andl $1, %eax
 ; SKX-NEXT:    kmovw %eax, %k0
 ; SKX-NEXT:    vpcmpltud %xmm1, %xmm0, %k1
@@ -1364,7 +1364,7 @@ define i8 @test_iinsertelement_v2i1(i32 %a, i32 %b, <2 x i64> %x , <2 x i64> %y)
 ; KNL-LABEL: test_iinsertelement_v2i1:
 ; KNL:       ## BB#0:
 ; KNL-NEXT:    cmpl %esi, %edi
-; KNL-NEXT:    setb %al
+; KNL-NEXT:    sbbb %al, %al
 ; KNL-NEXT:    andl $1, %eax
 ; KNL-NEXT:    kmovw %eax, %k1
 ; KNL-NEXT:    vmovdqa {{.*#+}} xmm2 = [9223372036854775808,9223372036854775808]
@@ -1386,7 +1386,7 @@ define i8 @test_iinsertelement_v2i1(i32 %a, i32 %b, <2 x i64> %x , <2 x i64> %y)
 ; SKX-LABEL: test_iinsertelement_v2i1:
 ; SKX:       ## BB#0:
 ; SKX-NEXT:    cmpl %esi, %edi
-; SKX-NEXT:    setb %al
+; SKX-NEXT:    sbbb %al, %al
 ; SKX-NEXT:    andl $1, %eax
 ; SKX-NEXT:    kmovw %eax, %k0
 ; SKX-NEXT:    vpcmpltuq %xmm1, %xmm0, %k1

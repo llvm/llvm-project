@@ -306,20 +306,14 @@ public:
     return MRVFunctionsTracked;
   }
 
-  void markOverdefined(Value *V) {
-    assert(!V->getType()->isStructTy() &&
-           "structs should use markAnythingOverdefined");
-    markOverdefined(ValueState[V], V);
-  }
-
-  /// markAnythingOverdefined - Mark the specified value overdefined.  This
+  /// markOverdefined - Mark the specified value overdefined.  This
   /// works with both scalars and structs.
-  void markAnythingOverdefined(Value *V) {
+  void markOverdefined(Value *V) {
     if (auto *STy = dyn_cast<StructType>(V->getType()))
       for (unsigned i = 0, e = STy->getNumElements(); i != e; ++i)
         markOverdefined(getStructValueState(V, i), V);
     else
-      markOverdefined(V);
+      markOverdefined(ValueState[V], V);
   }
 
   // isStructLatticeConstant - Return true if all the lattice values
@@ -513,12 +507,12 @@ private:
   void visitCmpInst(CmpInst &I);
   void visitExtractValueInst(ExtractValueInst &EVI);
   void visitInsertValueInst(InsertValueInst &IVI);
-  void visitLandingPadInst(LandingPadInst &I) { markAnythingOverdefined(&I); }
+  void visitLandingPadInst(LandingPadInst &I) { markOverdefined(&I); }
   void visitFuncletPadInst(FuncletPadInst &FPI) {
-    markAnythingOverdefined(&FPI);
+    markOverdefined(&FPI);
   }
   void visitCatchSwitchInst(CatchSwitchInst &CPI) {
-    markAnythingOverdefined(&CPI);
+    markOverdefined(&CPI);
     visitTerminatorInst(CPI);
   }
 
@@ -538,16 +532,16 @@ private:
   void visitUnreachableInst(TerminatorInst &I) { /*returns void*/ }
   void visitFenceInst     (FenceInst &I) { /*returns void*/ }
   void visitAtomicCmpXchgInst(AtomicCmpXchgInst &I) {
-    markAnythingOverdefined(&I);
+    markOverdefined(&I);
   }
   void visitAtomicRMWInst (AtomicRMWInst &I) { markOverdefined(&I); }
   void visitAllocaInst    (Instruction &I) { markOverdefined(&I); }
-  void visitVAArgInst     (Instruction &I) { markAnythingOverdefined(&I); }
+  void visitVAArgInst     (Instruction &I) { markOverdefined(&I); }
 
   void visitInstruction(Instruction &I) {
     // If a new instruction is added to LLVM that we don't handle.
     DEBUG(dbgs() << "SCCP: Don't know how to handle: " << I << '\n');
-    markAnythingOverdefined(&I);   // Just in case
+    markOverdefined(&I);   // Just in case
   }
 };
 
@@ -693,7 +687,7 @@ void SCCPSolver::visitPHINode(PHINode &PN) {
   // If this PN returns a struct, just mark the result overdefined.
   // TODO: We could do a lot better than this if code actually uses this.
   if (PN.getType()->isStructTy())
-    return markAnythingOverdefined(&PN);
+    return markOverdefined(&PN);
 
   if (getValueState(&PN).isOverdefined())
     return;  // Quick exit
@@ -803,7 +797,7 @@ void SCCPSolver::visitExtractValueInst(ExtractValueInst &EVI) {
   // If this returns a struct, mark all elements over defined, we don't track
   // structs in structs.
   if (EVI.getType()->isStructTy())
-    return markAnythingOverdefined(&EVI);
+    return markOverdefined(&EVI);
 
   // If this is extracting from more than one level of struct, we don't know.
   if (EVI.getNumIndices() != 1)
@@ -828,7 +822,7 @@ void SCCPSolver::visitInsertValueInst(InsertValueInst &IVI) {
   // If this has more than one index, we can't handle it, drive all results to
   // undef.
   if (IVI.getNumIndices() != 1)
-    return markAnythingOverdefined(&IVI);
+    return markOverdefined(&IVI);
 
   Value *Aggr = IVI.getAggregateOperand();
   unsigned Idx = *IVI.idx_begin();
@@ -857,7 +851,7 @@ void SCCPSolver::visitSelectInst(SelectInst &I) {
   // If this select returns a struct, just mark the result overdefined.
   // TODO: We could do a lot better than this if code actually uses this.
   if (I.getType()->isStructTy())
-    return markAnythingOverdefined(&I);
+    return markOverdefined(&I);
 
   LatticeVal CondValue = getValueState(I.getCondition());
   if (CondValue.isUnknown())
@@ -1028,7 +1022,7 @@ void SCCPSolver::visitStoreInst(StoreInst &SI) {
 void SCCPSolver::visitLoadInst(LoadInst &I) {
   // If this load is of a struct, just mark the result overdefined.
   if (I.getType()->isStructTy())
-    return markAnythingOverdefined(&I);
+    return markOverdefined(&I);
 
   LatticeVal PtrVal = getValueState(I.getOperand(0));
   if (PtrVal.isUnknown()) return;   // The pointer is not resolved yet!
@@ -1114,7 +1108,7 @@ CallOverdefined:
     }
 
     // Otherwise, we don't know anything about this call, mark it overdefined.
-    return markAnythingOverdefined(I);
+    return markOverdefined(I);
   }
 
   // If this is a local function that doesn't have its address taken, mark its
@@ -1552,7 +1546,7 @@ static bool runSCCP(Function &F, const DataLayout &DL,
 
   // Mark all arguments to the function as being overdefined.
   for (Argument &AI : F.args())
-    Solver.markAnythingOverdefined(&AI);
+    Solver.markOverdefined(&AI);
 
   // Solve for constants.
   bool ResolvedUndefs = true;
@@ -1735,7 +1729,7 @@ static bool runIPSCCP(Module &M, const DataLayout &DL,
 
     // Assume nothing about the incoming arguments.
     for (Argument &AI : F.args())
-      Solver.markAnythingOverdefined(&AI);
+      Solver.markOverdefined(&AI);
   }
 
   // Loop over global variables.  We inform the solver about any internal global

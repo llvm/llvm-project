@@ -1,22 +1,22 @@
-; RUN: sed -e "s,SRC_COMPDIR,%p/Inputs,g" %s > %t.ll
+; RUN: sed -e "s,SRC_COMPDIR,%/p/Inputs,g" %s > %t.ll
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx800 -filetype=obj -O0 -o %t.o %t.ll
 ; RUN: llvm-objdump -triple=amdgcn-amd-amdhsa -mcpu=gfx800 -disassemble -line-numbers %t.o | FileCheck --check-prefix=LINE %t.ll
 ; RUN: llvm-objdump -triple=amdgcn-amd-amdhsa -mcpu=gfx800 -disassemble -source %t.o | FileCheck --check-prefix=SOURCE %t.ll
 
 ; Prologue.
 ; LINE:      source_lines_test:
-; LINE-NEXT: ; SRC_COMPDIR/source-lines.cl:1
+; LINE-NEXT: ; {{.*}}source-lines.cl:1
 ; Kernel.
-; LINE: ; SRC_COMPDIR/source-lines.cl:2
+; LINE: ; {{.*}}source-lines.cl:2
 ; LINE: v_mov_b32_e32 v{{[0-9]+}}, 0x777
-; LINE: ; SRC_COMPDIR/source-lines.cl:3
+; LINE: ; {{.*}}source-lines.cl:3
 ; LINE: v_mov_b32_e32 v{{[0-9]+}}, 0x888
-; LINE: ; SRC_COMPDIR/source-lines.cl:4
+; LINE: ; {{.*}}source-lines.cl:4
 ; LINE: v_add_i32_e32
-; LINE: ; SRC_COMPDIR/source-lines.cl:5
+; LINE: ; {{.*}}source-lines.cl:5
 ; LINE: flat_store_dword
 ; Epilogue.
-; LINE:      ; SRC_COMPDIR/source-lines.cl:6
+; LINE:      ; {{.*}}source-lines.cl:6
 ; LINE-NEXT: s_endpgm
 
 ; Prologue.

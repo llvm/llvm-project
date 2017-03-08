@@ -524,6 +524,16 @@ void SIInsertWaits::handleSendMsg(MachineBasicBlock &MBB,
   }
 }
 
+/// Return true if \p MBB has one successor immediately following, and is its
+/// only predecessor
+static bool hasTrivialSuccessor(const MachineBasicBlock &MBB) {
+  if (MBB.succ_size() != 1)
+    return false;
+
+  const MachineBasicBlock *Succ = *MBB.succ_begin();
+  return (Succ->pred_size() == 1) && MBB.isLayoutSuccessor(Succ);
+}
+
 // FIXME: Insert waits listed in Table 4.2 "Required User-Inserted Wait States"
 // around other non-memory instructions.
 bool SIInsertWaits::runOnMachineFunction(MachineFunction &MF) {
@@ -642,8 +652,10 @@ bool SIInsertWaits::runOnMachineFunction(MachineFunction &MF) {
         EndPgmBlocks.push_back(&MBB);
     }
 
-    // Wait for everything at the end of the MBB
-    Changes |= insertWait(MBB, MBB.getFirstTerminator(), LastIssued);
+    // Wait for everything at the end of the MBB. If there is only one
+    // successor, we can defer this until the uses there.
+    if (!hasTrivialSuccessor(MBB))
+      Changes |= insertWait(MBB, MBB.getFirstTerminator(), LastIssued);
   }
 
   if (HaveScalarStores) {

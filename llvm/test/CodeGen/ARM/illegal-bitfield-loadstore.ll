@@ -31,36 +31,24 @@ define void @i24_or(i24* %a) {
 define void @i24_and_or(i24* %a) {
 ; LE-LABEL: i24_and_or:
 ; LE:       @ BB#0:
-; LE-NEXT:    ldrb r1, [r0, #2]
-; LE-NEXT:    ldrh r2, [r0]
-; LE-NEXT:    orr r1, r2, r1, lsl #16
-; LE-NEXT:    ldr r2, .LCPI1_0
+; LE-NEXT:    ldrb r2, [r0, #2]
+; LE-NEXT:    ldrh r1, [r0]
+; LE-NEXT:    strb r2, [r0, #2]
+; LE-NEXT:    mov r2, #16256
 ; LE-NEXT:    orr r1, r1, #384
+; LE-NEXT:    orr r2, r2, #49152
 ; LE-NEXT:    and r1, r1, r2
 ; LE-NEXT:    strh r1, [r0]
-; LE-NEXT:    lsr r1, r1, #16
-; LE-NEXT:    strb r1, [r0, #2]
 ; LE-NEXT:    mov pc, lr
-; LE-NEXT:    .p2align 2
-; LE-NEXT:  @ BB#1:
-; LE-NEXT:  .LCPI1_0:
-; LE-NEXT:    .long 16777088 @ 0xffff80
 ;
 ; BE-LABEL: i24_and_or:
 ; BE:       @ BB#0:
 ; BE-NEXT:    ldrh r1, [r0]
-; BE-NEXT:    mov r2, #384
-; BE-NEXT:    orr r1, r2, r1, lsl #8
-; BE-NEXT:    ldr r2, .LCPI1_0
-; BE-NEXT:    and r1, r1, r2
-; BE-NEXT:    strb r1, [r0, #2]
-; BE-NEXT:    lsr r1, r1, #8
+; BE-NEXT:    mov r2, #128
+; BE-NEXT:    strb r2, [r0, #2]
+; BE-NEXT:    orr r1, r1, #1
 ; BE-NEXT:    strh r1, [r0]
 ; BE-NEXT:    mov pc, lr
-; BE-NEXT:    .p2align 2
-; BE-NEXT:  @ BB#1:
-; BE-NEXT:  .LCPI1_0:
-; BE-NEXT:    .long 16777088 @ 0xffff80
   %b = load i24, i24* %a, align 1
   %c = and i24 %b, -128
   %d = or i24 %c, 384
@@ -71,37 +59,28 @@ define void @i24_and_or(i24* %a) {
 define void @i24_insert_bit(i24* %a, i1 zeroext %bit) {
 ; LE-LABEL: i24_insert_bit:
 ; LE:       @ BB#0:
-; LE-NEXT:    ldrb r2, [r0, #2]
-; LE-NEXT:    ldrh r3, [r0]
-; LE-NEXT:    orr r2, r3, r2, lsl #16
-; LE-NEXT:    ldr r3, .LCPI2_0
-; LE-NEXT:    and r2, r2, r3
-; LE-NEXT:    lsr r3, r2, #16
-; LE-NEXT:    orr r1, r2, r1, lsl #13
+; LE-NEXT:    ldrb r3, [r0, #2]
+; LE-NEXT:    ldrh r2, [r0]
 ; LE-NEXT:    strb r3, [r0, #2]
+; LE-NEXT:    mov r3, #255
+; LE-NEXT:    orr r3, r3, #57088
+; LE-NEXT:    and r2, r2, r3
+; LE-NEXT:    orr r1, r2, r1, lsl #13
 ; LE-NEXT:    strh r1, [r0]
 ; LE-NEXT:    mov pc, lr
-; LE-NEXT:    .p2align 2
-; LE-NEXT:  @ BB#1:
-; LE-NEXT:  .LCPI2_0:
-; LE-NEXT:    .long 16769023 @ 0xffdfff
 ;
 ; BE-LABEL: i24_insert_bit:
 ; BE:       @ BB#0:
-; BE-NEXT:    ldrh r2, [r0]
 ; BE-NEXT:    ldrb r3, [r0, #2]
-; BE-NEXT:    orr r2, r3, r2, lsl #8
-; BE-NEXT:    ldr r3, .LCPI2_0
-; BE-NEXT:    and r2, r2, r3
+; BE-NEXT:    ldrh r2, [r0]
+; BE-NEXT:    strb r3, [r0, #2]
+; BE-NEXT:    mov r3, #57088
+; BE-NEXT:    orr r3, r3, #16711680
+; BE-NEXT:    and r2, r3, r2, lsl #8
 ; BE-NEXT:    orr r1, r2, r1, lsl #13
-; BE-NEXT:    strb r2, [r0, #2]
 ; BE-NEXT:    lsr r1, r1, #8
 ; BE-NEXT:    strh r1, [r0]
 ; BE-NEXT:    mov pc, lr
-; BE-NEXT:    .p2align 2
-; BE-NEXT:  @ BB#1:
-; BE-NEXT:  .LCPI2_0:
-; BE-NEXT:    .long 16769023 @ 0xffdfff
   %extbit = zext i1 %bit to i24
   %b = load i24, i24* %a, align 1
   %extbit.shl = shl nuw nsw i24 %extbit, 13
@@ -207,17 +186,17 @@ define void @i56_insert_bit(i56* %a, i1 zeroext %bit) {
 ; BE:       @ BB#0:
 ; BE-NEXT:    .save {r11, lr}
 ; BE-NEXT:    push {r11, lr}
-; BE-NEXT:    mov r2, r0
+; BE-NEXT:    mov r3, r0
 ; BE-NEXT:    ldr lr, [r0]
-; BE-NEXT:    ldrh r12, [r2, #4]!
-; BE-NEXT:    ldrb r3, [r2, #2]
-; BE-NEXT:    orr r12, r3, r12, lsl #8
-; BE-NEXT:    orr r3, r12, lr, lsl #24
-; BE-NEXT:    bic r3, r3, #8192
-; BE-NEXT:    orr r1, r3, r1, lsl #13
-; BE-NEXT:    strb r3, [r2, #2]
-; BE-NEXT:    lsr r3, r1, #8
-; BE-NEXT:    strh r3, [r2]
+; BE-NEXT:    ldrh r12, [r3, #4]!
+; BE-NEXT:    ldrb r2, [r3, #2]
+; BE-NEXT:    strb r2, [r3, #2]
+; BE-NEXT:    orr r2, r2, r12, lsl #8
+; BE-NEXT:    orr r2, r2, lr, lsl #24
+; BE-NEXT:    bic r2, r2, #8192
+; BE-NEXT:    orr r1, r2, r1, lsl #13
+; BE-NEXT:    lsr r2, r1, #8
+; BE-NEXT:    strh r2, [r3]
 ; BE-NEXT:    bic r2, lr, #255
 ; BE-NEXT:    orr r1, r2, r1, lsr #24
 ; BE-NEXT:    str r1, [r0]

@@ -7461,6 +7461,9 @@ SDValue DAGCombiner::visitAssertZext(SDNode *N) {
 /// See if the specified operand can be simplified with the knowledge that only
 /// the bits specified by Mask are used.  If so, return the simpler operand,
 /// otherwise return a null SDValue.
+///
+/// (This exists alongside SimplifyDemandedBits because GetDemandedBits can
+/// simplify nodes with multiple uses more aggressively.)
 SDValue DAGCombiner::GetDemandedBits(SDValue V, const APInt &Mask) {
   switch (V.getOpcode()) {
   default: break;
@@ -7496,6 +7499,14 @@ SDValue DAGCombiner::GetDemandedBits(SDValue V, const APInt &Mask) {
         return DAG.getNode(ISD::SRL, SDLoc(V), V.getValueType(),
                            SimplifyLHS, V.getOperand(1));
     }
+    break;
+  case ISD::AND: {
+    // X & -1 -> X (ignoring bits which aren't demanded).
+    ConstantSDNode *AndVal = isConstOrConstSplat(V.getOperand(1));
+    if (AndVal && (AndVal->getAPIntValue() & Mask) == Mask)
+      return V.getOperand(0);
+    break;
+  }
   }
   return SDValue();
 }

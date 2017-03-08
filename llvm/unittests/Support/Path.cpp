@@ -444,31 +444,6 @@ protected:
   }
 
   void TearDown() override { ASSERT_NO_ERROR(fs::remove(TestDirectory.str())); }
-
-  SmallVector<Triple::ArchType, 4> UnsupportedArchs;
-  SmallVector<Triple::OSType, 4> UnsupportedOSs;
-  SmallVector<Triple::EnvironmentType, 1> UnsupportedEnvironments;
-
-  bool isUnsupportedOSOrEnvironment() {
-    Triple Host(Triple::normalize(sys::getProcessTriple()));
-
-    if (find(UnsupportedEnvironments, Host.getEnvironment()) !=
-        UnsupportedEnvironments.end())
-      return true;
-
-    if (is_contained(UnsupportedOSs, Host.getOS()))
-      return true;
-
-    if (is_contained(UnsupportedArchs, Host.getArch()))
-      return true;
-
-    return false;
-  }
-
-  FileSystemTest() {
-    UnsupportedArchs.push_back(Triple::mips);
-    UnsupportedArchs.push_back(Triple::mipsel);
-  }
 };
 
 TEST_F(FileSystemTest, Unique) {
@@ -1189,36 +1164,6 @@ TEST_F(FileSystemTest, OpenFileForRead) {
   }
 
   ::close(FileDescriptor);
-}
-
-#define CHECK_UNSUPPORTED() \
-  do { \
-    if (isUnsupportedOSOrEnvironment()) \
-      return; \
-  } while (0); \
-
-TEST_F(FileSystemTest, is_local) {
-  CHECK_UNSUPPORTED();
-
-  SmallString<128> CurrentPath;
-  ASSERT_NO_ERROR(fs::current_path(CurrentPath));
-
-  bool Result;
-  ASSERT_NO_ERROR(fs::is_local(CurrentPath, Result));
-  EXPECT_TRUE(Result);
-  EXPECT_TRUE(fs::is_local(CurrentPath));
-
-  int FD;
-  SmallString<64> TempPath;
-  ASSERT_NO_ERROR(fs::createTemporaryFile("prefix", "temp", FD, TempPath));
-  FileRemover Cleanup(TempPath);
-
-  // Make sure it exists.
-  ASSERT_TRUE(sys::fs::exists(Twine(TempPath)));
-
-  ASSERT_NO_ERROR(fs::is_local(FD, Result));
-  EXPECT_TRUE(Result);
-  EXPECT_TRUE(fs::is_local(FD));
 }
 
 TEST_F(FileSystemTest, set_current_path) {
