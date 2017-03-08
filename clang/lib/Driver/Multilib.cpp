@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Driver/Multilib.h"
-#include "Tools.h"
+#include "ToolChains/CommonArgs.h"
 #include "clang/Driver/Options.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
