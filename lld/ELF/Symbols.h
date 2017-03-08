@@ -43,8 +43,7 @@ public:
     DefinedRegularKind = DefinedFirst,
     SharedKind,
     DefinedCommonKind,
-    DefinedSyntheticKind,
-    DefinedLast = DefinedSyntheticKind,
+    DefinedLast = DefinedCommonKind,
     UndefinedKind,
     LazyArchiveKind,
     LazyObjectKind,
@@ -84,7 +83,7 @@ public:
   template <class ELFT> typename ELFT::uint getGotPltVA() const;
   template <class ELFT> typename ELFT::uint getPltVA() const;
   template <class ELFT> typename ELFT::uint getSize() const;
-  template <class ELFT> const OutputSection *getOutputSection() const;
+  template <class ELFT> OutputSection *getOutputSection() const;
 
   // The file from which this symbol was created.
   InputFile *File = nullptr;
@@ -102,6 +101,10 @@ protected:
   const unsigned SymbolKind : 8;
 
 public:
+  // True if the linker has to generate a copy relocation.
+  // For SharedSymbol only.
+  unsigned NeedsCopy : 1;
+
   // True the symbol should point to its PLT entry.
   // For SharedSymbol only.
   unsigned NeedsPltAddr : 1;
@@ -152,7 +155,7 @@ public:
 
 class DefinedCommon : public Defined {
 public:
-  DefinedCommon(StringRef N, uint64_t Size, uint64_t Alignment, uint8_t StOther,
+  DefinedCommon(StringRef N, uint64_t Size, uint32_t Alignment, uint8_t StOther,
                 uint8_t Type, InputFile *File);
 
   static bool classof(const SymbolBody *S) {
@@ -164,7 +167,7 @@ public:
   uint64_t Offset;
 
   // The maximum alignment we have seen for this symbol.
-  uint64_t Alignment;
+  uint32_t Alignment;
 
   uint64_t Size;
 };
@@ -173,11 +176,10 @@ public:
 class DefinedRegular : public Defined {
 public:
   DefinedRegular(StringRefZ Name, bool IsLocal, uint8_t StOther, uint8_t Type,
-                 uint64_t Value, uint64_t Size, InputSectionBase *Section,
+                 uint64_t Value, uint64_t Size, SectionBase *Section,
                  InputFile *File)
       : Defined(SymbolBody::DefinedRegularKind, Name, IsLocal, StOther, Type),
-        Value(Value), Size(Size),
-        Section(Section ? Section->Repl : NullInputSection) {
+        Value(Value), Size(Size), Section(Section) {
     this->File = File;
   }
 
@@ -190,37 +192,7 @@ public:
 
   uint64_t Value;
   uint64_t Size;
-
-  // The input section this symbol belongs to. Notice that this is
-  // a reference to a pointer. We are using two levels of indirections
-  // because of ICF. If ICF decides two sections need to be merged, it
-  // manipulates this Section pointers so that they point to the same
-  // section. This is a bit tricky, so be careful to not be confused.
-  // If this is null, the symbol is an absolute symbol.
-  InputSectionBase *&Section;
-
-private:
-  static InputSectionBase *NullInputSection;
-};
-
-// DefinedSynthetic is a class to represent linker-generated ELF symbols.
-// The difference from the regular symbol is that DefinedSynthetic symbols
-// don't belong to any input files or sections. Thus, its constructor
-// takes an output section to calculate output VA, etc.
-// If Section is null, this symbol is relative to the image base.
-class DefinedSynthetic : public Defined {
-public:
-  DefinedSynthetic(StringRef Name, uint64_t Value, const OutputSection *Section)
-      : Defined(SymbolBody::DefinedSyntheticKind, Name, /*IsLocal=*/false,
-                llvm::ELF::STV_HIDDEN, 0 /* Type */),
-        Value(Value), Section(Section) {}
-
-  static bool classof(const SymbolBody *S) {
-    return S->kind() == SymbolBody::DefinedSyntheticKind;
-  }
-
-  uint64_t Value;
-  const OutputSection *Section;
+  SectionBase *Section;
 };
 
 class Undefined : public SymbolBody {
@@ -261,10 +233,13 @@ public:
     return getSym<ELFT>().st_size;
   }
 
-  template <class ELFT> uint64_t getAlignment() const;
+  template <class ELFT> uint32_t getAlignment() const;
 
   // This field is a pointer to the symbol's version definition.
   const void *Verdef;
+
+  // Section is significant only when NeedsCopy is true.
+  InputSection *Section = nullptr;
 
 private:
   template <class ELFT> const typename ELFT::Sym &getSym() const {
@@ -327,16 +302,16 @@ public:
 // DefinedRegular symbols.
 struct ElfSym {
   // The content for _etext and etext symbols.
-  static DefinedSynthetic *Etext;
-  static DefinedSynthetic *Etext2;
+  static DefinedRegular *Etext;
+  static DefinedRegular *Etext2;
 
   // The content for _edata and edata symbols.
-  static DefinedSynthetic *Edata;
-  static DefinedSynthetic *Edata2;
+  static DefinedRegular *Edata;
+  static DefinedRegular *Edata2;
 
   // The content for _end and end symbols.
-  static DefinedSynthetic *End;
-  static DefinedSynthetic *End2;
+  static DefinedRegular *End;
+  static DefinedRegular *End2;
 
   // The content for _gp_disp/__gnu_local_gp symbols for MIPS target.
   static DefinedRegular *MipsGpDisp;
@@ -388,8 +363,8 @@ struct Symbol {
   // This field is used to store the Symbol's SymbolBody. This instantiation of
   // AlignedCharArrayUnion gives us a struct with a char array field that is
   // large and aligned enough to store any derived class of SymbolBody.
-  llvm::AlignedCharArrayUnion<DefinedCommon, DefinedRegular, DefinedSynthetic,
-                              Undefined, SharedSymbol, LazyArchive, LazyObject>
+  llvm::AlignedCharArrayUnion<DefinedCommon, DefinedRegular, Undefined,
+                              SharedSymbol, LazyArchive, LazyObject>
       Body;
 
   SymbolBody *body() { return reinterpret_cast<SymbolBody *>(Body.buffer); }

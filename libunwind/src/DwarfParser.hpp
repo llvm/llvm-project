@@ -542,7 +542,8 @@ bool CFI_Parser<A>::parseInstructions(A &addressSpace, pint_t instructions,
       results->cfaRegister = 0;
       results->cfaExpression = (int64_t)p;
       length = addressSpace.getULEB128(p, instructionsEnd);
-      p += length;
+      assert(length < std::numeric_limits<pint_t>::max() && "pointer overflow");
+      p += static_cast<pint_t>(length);
       _LIBUNWIND_TRACE_DWARF("DW_CFA_def_cfa_expression(expression=0x%" PRIx64
                              ", length=%" PRIu64 ")\n",
                              results->cfaExpression, length);
@@ -557,7 +558,8 @@ bool CFI_Parser<A>::parseInstructions(A &addressSpace, pint_t instructions,
       results->savedRegisters[reg].location = kRegisterAtExpression;
       results->savedRegisters[reg].value = (int64_t)p;
       length = addressSpace.getULEB128(p, instructionsEnd);
-      p += length;
+      assert(length < std::numeric_limits<pint_t>::max() && "pointer overflow");
+      p += static_cast<pint_t>(length);
       _LIBUNWIND_TRACE_DWARF("DW_CFA_expression(reg=%" PRIu64 ", "
                              "expression=0x%" PRIx64 ", "
                              "length=%" PRIu64 ")\n",
@@ -636,7 +638,8 @@ bool CFI_Parser<A>::parseInstructions(A &addressSpace, pint_t instructions,
       results->savedRegisters[reg].location = kRegisterIsExpression;
       results->savedRegisters[reg].value = (int64_t)p;
       length = addressSpace.getULEB128(p, instructionsEnd);
-      p += length;
+      assert(length < std::numeric_limits<pint_t>::max() && "pointer overflow");
+      p += static_cast<pint_t>(length);
       _LIBUNWIND_TRACE_DWARF("DW_CFA_val_expression(reg=%" PRIu64 ", "
                              "expression=0x%" PRIx64 ", length=%" PRIu64 ")\n",
                              reg, results->savedRegisters[reg].value, length);

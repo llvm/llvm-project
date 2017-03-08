@@ -73,7 +73,7 @@ FunctionSizeCheck::FunctionSizeCheck(StringRef Name, ClangTidyContext *Context)
       LineThreshold(Options.get("LineThreshold", -1U)),
       StatementThreshold(Options.get("StatementThreshold", 800U)),
       BranchThreshold(Options.get("BranchThreshold", -1U)),
-      ParameterThreshold(Options.get("ParameterThreshold", 6)) {}
+      ParameterThreshold(Options.get("ParameterThreshold", -1U)) {}
 
 void FunctionSizeCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "LineThreshold", LineThreshold);

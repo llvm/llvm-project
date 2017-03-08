@@ -260,7 +260,7 @@ Error PlatformRemoteAppleWatch::ResolveExecutable(
 
 FileSpec::EnumerateDirectoryResult
 PlatformRemoteAppleWatch::GetContainedFilesIntoVectorOfStringsCallback(
-    void *baton, FileSpec::FileType file_type, const FileSpec &file_spec) {
+    void *baton, llvm::sys::fs::file_type ft, const FileSpec &file_spec) {
   ((PlatformRemoteAppleWatch::SDKDirectoryInfoCollection *)baton)
       ->push_back(PlatformRemoteAppleWatch::SDKDirectoryInfo(file_spec));
   return FileSpec::eEnumerateDirectoryResultNext;

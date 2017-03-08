@@ -31,6 +31,8 @@ using namespace lld;
 using namespace lld::elf;
 
 uint8_t Out::First;
+OutputSection *Out::Bss;
+OutputSection *Out::BssRelRo;
 OutputSection *Out::Opd;
 uint8_t *Out::OpdBuf;
 PhdrEntry *Out::TlsPhdr;
@@ -65,7 +67,9 @@ void OutputSection::writeHeaderTo(typename ELFT::Shdr *Shdr) {
 }
 
 OutputSection::OutputSection(StringRef Name, uint32_t Type, uint64_t Flags)
-    : Name(Name), Flags(Flags), Alignment(1), Type(Type) {}
+    : SectionBase(Output, Name, Flags, /*Entsize*/ 0, /*Alignment*/ 1, Type,
+                  /*Info*/ 0,
+                  /*Link*/ 0) {}
 
 template <typename ELFT>
 static bool compareByFilePosition(InputSection *A, InputSection *B) {
@@ -134,7 +138,7 @@ template <class ELFT> void OutputSection::assignOffsets() {
   for (InputSection *S : Sections) {
     Off = alignTo(Off, S->Alignment);
     S->OutSecOff = Off;
-    Off += S->template getSize<ELFT>();
+    Off += S->getSize();
   }
   this->Size = Off;
 }
@@ -297,7 +301,7 @@ static SectionKey createKey(InputSectionBase *C, StringRef OutsecName) {
 
   typedef typename ELFT::uint uintX_t;
 
-  uintX_t Alignment = 0;
+  uint32_t Alignment = 0;
   uintX_t Flags = 0;
   if (Config->Relocatable && (C->Flags & SHF_MERGE)) {
     Alignment = std::max<uintX_t>(C->Alignment, C->Entsize);

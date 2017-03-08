@@ -154,7 +154,7 @@ private:
 // Returns a hash value for S. Note that the information about
 // relocation targets is not included in the hash value.
 template <class ELFT> static uint32_t getHash(InputSection *S) {
-  return hash_combine(S->Flags, S->template getSize<ELFT>(), S->NumRelocations);
+  return hash_combine(S->Flags, S->getSize(), S->NumRelocations);
 }
 
 // Returns true if section S is subject of ICF.
@@ -222,8 +222,7 @@ bool ICF<ELFT>::constantEq(ArrayRef<RelTy> RelsA, ArrayRef<RelTy> RelsB) {
 template <class ELFT>
 bool ICF<ELFT>::equalsConstant(const InputSection *A, const InputSection *B) {
   if (A->NumRelocations != B->NumRelocations || A->Flags != B->Flags ||
-      A->template getSize<ELFT>() != B->template getSize<ELFT>() ||
-      A->Data != B->Data)
+      A->getSize() != B->getSize() || A->Data != B->Data)
     return false;
 
   if (A->AreRelocsRela)

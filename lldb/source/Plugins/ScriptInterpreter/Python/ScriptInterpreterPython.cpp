@@ -51,6 +51,7 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/FileSystem.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -2575,9 +2576,13 @@ bool ScriptInterpreterPython::LoadScriptingModule(
                              Locker::NoSTDIN,
                    Locker::FreeAcquiredLock |
                        (init_session ? Locker::TearDownSession : 0));
+    namespace fs = llvm::sys::fs;
+    fs::file_status st;
+    std::error_code ec = status(target_file.GetPath(), st);
 
-    if (target_file.GetFileType() == FileSpec::eFileTypeInvalid ||
-        target_file.GetFileType() == FileSpec::eFileTypeUnknown) {
+    if (ec || st.type() == fs::file_type::status_error ||
+        st.type() == fs::file_type::type_unknown ||
+        st.type() == fs::file_type::file_not_found) {
       // if not a valid file of any sort, check if it might be a filename still
       // dot can't be used but / and \ can, and if either is found, reject
       if (strchr(pathname, '\\') || strchr(pathname, '/')) {
@@ -2586,9 +2591,7 @@ bool ScriptInterpreterPython::LoadScriptingModule(
       }
       basename = pathname; // not a filename, probably a package of some sort,
                            // let it go through
-    } else if (target_file.GetFileType() == FileSpec::eFileTypeDirectory ||
-               target_file.GetFileType() == FileSpec::eFileTypeRegular ||
-               target_file.GetFileType() == FileSpec::eFileTypeSymbolicLink) {
+    } else if (is_directory(st) || is_regular_file(st)) {
       std::string directory = target_file.GetDirectory().GetCString();
       replace_all(directory, "\\", "\\\\");
       replace_all(directory, "'", "\\'");

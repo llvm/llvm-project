@@ -479,20 +479,23 @@ template <class ELFT> static void addCopyRelSymbol(SharedSymbol *SS) {
   // See if this symbol is in a read-only segment. If so, preserve the symbol's
   // memory protection by reserving space in the .bss.rel.ro section.
   bool IsReadOnly = isReadOnly<ELFT>(SS);
-  BssRelSection<ELFT> *RelSec = IsReadOnly ? In<ELFT>::BssRelRo : In<ELFT>::Bss;
-  uintX_t Off = RelSec->addCopyRelocation(SS->getAlignment<ELFT>(), SymSize);
+  OutputSection *OSec = IsReadOnly ? Out::BssRelRo : Out::Bss;
+
+  // Create a SyntheticSection in Out to hold the .bss and the Copy Reloc.
+  auto *ISec =
+      make<CopyRelSection<ELFT>>(IsReadOnly, SS->getAlignment<ELFT>(), SymSize);
+  OSec->addSection(ISec);
 
   // Look through the DSO's dynamic symbol table for aliases and create a
   // dynamic symbol for each one. This causes the copy relocation to correctly
   // interpose any aliases.
   for (SharedSymbol *Sym : getSymbolsAt<ELFT>(SS)) {
+    Sym->NeedsCopy = true;
+    Sym->Section = ISec;
     Sym->symbol()->IsUsedInRegularObj = true;
-    replaceBody<DefinedRegular>(Sym->symbol(), Sym->getName(),
-                                /*IsLocal=*/false, Sym->StOther, Sym->Type, Off,
-                                Sym->getSize<ELFT>(), RelSec, nullptr);
   }
 
-  In<ELFT>::RelaDyn->addReloc({Target->CopyRel, RelSec, Off, false, SS, 0});
+  In<ELFT>::RelaDyn->addReloc({Target->CopyRel, ISec, 0, false, SS, 0});
 }
 
 template <class ELFT>
@@ -532,12 +535,14 @@ static RelExpr adjustExpr(const elf::ObjectFile<ELFT> &File, SymbolBody &Body,
   if (Body.isObject()) {
     // Produce a copy relocation.
     auto *B = cast<SharedSymbol>(&Body);
-    if (Config->ZNocopyreloc)
-      error(S.getLocation<ELFT>(RelOff) + ": unresolvable relocation " +
-            toString(Type) + " against symbol '" + toString(*B) +
-            "'; recompile with -fPIC or remove '-z nocopyreloc'");
+    if (!B->NeedsCopy) {
+      if (Config->ZNocopyreloc)
+        error(S.getLocation<ELFT>(RelOff) + ": unresolvable relocation " +
+              toString(Type) + " against symbol '" + toString(*B) +
+              "'; recompile with -fPIC or remove '-z nocopyreloc'");
 
-    addCopyRelSymbol<ELFT>(B);
+      addCopyRelSymbol<ELFT>(B);
+    }
     return Expr;
   }
   if (Body.isFunc()) {
@@ -895,7 +900,7 @@ static void mergeThunks(OutputSection *OS,
 // FIXME: All Thunks are assumed to be in range of the relocation. Range
 // extension Thunks are not yet supported.
 template <class ELFT>
-void createThunks(ArrayRef<OutputSection *> OutputSections) {
+bool createThunks(ArrayRef<OutputSection *> OutputSections) {
   // Track Symbols that already have a Thunk
   DenseMap<SymbolBody *, Thunk<ELFT> *> ThunkedSymbols;
   // Track InputSections that have a ThunkSection placed in front
@@ -928,7 +933,7 @@ void createThunks(ArrayRef<OutputSection *> OutputSections) {
     if (TS == nullptr) {
       uint32_t Off = 0;
       for (auto *IS : OS->Sections) {
-        Off = IS->OutSecOff + IS->template getSize<ELFT>();
+        Off = IS->OutSecOff + IS->getSize();
         if ((IS->Flags & SHF_EXECINSTR) == 0)
           break;
       }
@@ -977,6 +982,7 @@ void createThunks(ArrayRef<OutputSection *> OutputSections) {
   // Merge all created synthetic ThunkSections back into OutputSection
   for (auto &KV : ThunkSections)
     mergeThunks<ELFT>(KV.first, KV.second);
+  return !ThunkSections.empty();
 }
 
 template void scanRelocations<ELF32LE>(InputSectionBase &);
@@ -984,9 +990,9 @@ template void scanRelocations<ELF32BE>(InputSectionBase &);
 template void scanRelocations<ELF64LE>(InputSectionBase &);
 template void scanRelocations<ELF64BE>(InputSectionBase &);
 
-template void createThunks<ELF32LE>(ArrayRef<OutputSection *>);
-template void createThunks<ELF32BE>(ArrayRef<OutputSection *>);
-template void createThunks<ELF64LE>(ArrayRef<OutputSection *>);
-template void createThunks<ELF64BE>(ArrayRef<OutputSection *>);
+template bool createThunks<ELF32LE>(ArrayRef<OutputSection *>);
+template bool createThunks<ELF32BE>(ArrayRef<OutputSection *>);
+template bool createThunks<ELF64LE>(ArrayRef<OutputSection *>);
+template bool createThunks<ELF64BE>(ArrayRef<OutputSection *>);
 }
 }

@@ -35,4 +35,4 @@ bad_typeid::bad_typeid() _NOEXCEPT
 {
 }
 
-} // namespace
+} // namespace std

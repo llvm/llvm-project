@@ -377,17 +377,10 @@ void BuildIdSection<ELFT>::computeHash(
 }
 
 template <class ELFT>
-BssRelSection<ELFT>::BssRelSection(bool RelRo)
-    : SyntheticSection(SHF_ALLOC | SHF_WRITE, SHT_NOBITS, 0,
-                       RelRo ? ".bss.rel.ro" : ".bss"),
-      Size(0) {}
-
-template <class ELFT>
-size_t BssRelSection<ELFT>::addCopyRelocation(uintX_t AddrAlign, size_t Size) {
-  OutSec->updateAlignment(AddrAlign);
-  this->Size = alignTo(this->Size, AddrAlign) + Size;
-  return this->Size - Size;
-}
+CopyRelSection<ELFT>::CopyRelSection(bool ReadOnly, uintX_t AddrAlign, size_t S)
+    : SyntheticSection(SHF_ALLOC, SHT_NOBITS, AddrAlign,
+                       ReadOnly ? ".bss.rel.ro" : ".bss"),
+      Size(S) {}
 
 template <class ELFT>
 void BuildIdSection<ELFT>::writeBuildId(ArrayRef<uint8_t> Buf) {
@@ -467,7 +460,8 @@ bool EhFrameSection<ELFT>::isFdeLive(EhSectionPiece &Piece,
   auto *D = dyn_cast<DefinedRegular>(&B);
   if (!D || !D->Section)
     return false;
-  InputSectionBase *Target = D->Section->Repl;
+  auto *Target =
+      cast<InputSectionBase>(cast<InputSectionBase>(D->Section)->Repl);
   return Target && Target->Live;
 }
 
@@ -717,8 +711,7 @@ void MipsGotSection<ELFT>::addEntry(SymbolBody &Sym, int64_t Addend,
     // method calculate number of "pages" required to cover all saved output
     // section and allocate appropriate number of GOT entries.
     auto *DefSym = cast<DefinedRegular>(&Sym);
-    PageIndexMap.insert(
-        {DefSym->Section->template getOutputSection<ELFT>(), 0});
+    PageIndexMap.insert({DefSym->Section->getOutputSection(), 0});
     return;
   }
   if (Sym.isTls()) {
@@ -789,7 +782,7 @@ typename MipsGotSection<ELFT>::uintX_t
 MipsGotSection<ELFT>::getPageEntryOffset(const SymbolBody &B,
                                          int64_t Addend) const {
   const OutputSection *OutSec =
-      cast<DefinedRegular>(&B)->Section->template getOutputSection<ELFT>();
+      cast<DefinedRegular>(&B)->Section->getOutputSection();
   uintX_t SecAddr = getMipsPageAddr(OutSec->Addr);
   uintX_t SymAddr = getMipsPageAddr(B.getVA<ELFT>(Addend));
   uintX_t Index = PageIndexMap.lookup(OutSec) + (SymAddr - SecAddr) / 0xffff;
@@ -844,6 +837,10 @@ unsigned MipsGotSection<ELFT>::getLocalEntriesNum() const {
 }
 
 template <class ELFT> void MipsGotSection<ELFT>::finalizeContents() {
+  updateAllocSize();
+}
+
+template <class ELFT> void MipsGotSection<ELFT>::updateAllocSize() {
   PageEntriesNum = 0;
   for (std::pair<const OutputSection *, size_t> &P : PageIndexMap) {
     // For each output section referenced by GOT page relocations calculate
@@ -1198,7 +1195,7 @@ template <class ELFT> void DynamicSection<ELFT>::writeTo(uint8_t *Buf) {
 
 template <class ELFT>
 typename ELFT::uint DynamicReloc<ELFT>::getOffset() const {
-  return InputSec->OutSec->Addr + InputSec->getOffset<ELFT>(OffsetInSec);
+  return InputSec->OutSec->Addr + InputSec->getOffset(OffsetInSec);
 }
 
 template <class ELFT> int64_t DynamicReloc<ELFT>::getAddend() const {
@@ -1330,8 +1327,12 @@ template <class ELFT> void SymbolTableSection<ELFT>::finalizeContents() {
       S.Symbol->DynsymIndex = ++I;
     return;
   }
+}
 
-  // If it is a .symtab, move all local symbols before global symbols.
+template <class ELFT> void SymbolTableSection<ELFT>::postThunkContents() {
+  if (this->Type == SHT_DYNSYM)
+    return;
+  // move all local symbols before global symbols.
   auto It = std::stable_partition(
       Symbols.begin(), Symbols.end(), [](const SymbolTableEntry &S) {
         return S.Symbol->isLocal() ||
@@ -1357,8 +1358,8 @@ size_t SymbolTableSection<ELFT>::getSymbolIndex(SymbolBody *Body) {
     // This is used for -r, so we have to handle multiple section
     // symbols being combined.
     if (Body->Type == STT_SECTION && E.Symbol->Type == STT_SECTION)
-      return cast<DefinedRegular>(Body)->Section->OutSec ==
-             cast<DefinedRegular>(E.Symbol)->Section->OutSec;
+      return cast<DefinedRegular>(Body)->Section->getOutputSection() ==
+             cast<DefinedRegular>(E.Symbol)->Section->getOutputSection();
     return false;
   });
   if (I == Symbols.end())
@@ -1725,7 +1726,8 @@ static InputSectionBase *findSection(ArrayRef<InputSectionBase *> Arr,
                                      uint64_t Offset) {
   for (InputSectionBase *S : Arr)
     if (S && S != &InputSection::Discarded)
-      if (Offset >= S->Offset && Offset < S->Offset + S->getSize<ELFT>())
+      if (Offset >= S->getOffsetInFile() &&
+          Offset < S->getOffsetInFile() + S->getSize())
         return S;
   return nullptr;
 }
@@ -1744,8 +1746,8 @@ readAddressArea(DWARFContext &Dwarf, InputSection *Sec, size_t CurrentCU) {
 
     for (std::pair<uint64_t, uint64_t> &R : Ranges)
       if (InputSectionBase *S = findSection<ELFT>(Sections, R.first))
-        Ret.push_back(
-            {S, R.first - S->Offset, R.second - S->Offset, CurrentCU});
+        Ret.push_back({S, R.first - S->getOffsetInFile(),
+                       R.second - S->getOffsetInFile(), CurrentCU});
     ++CurrentCU;
   }
   return Ret;
@@ -1869,8 +1871,7 @@ template <class ELFT> void GdbIndexSection<ELFT>::writeTo(uint8_t *Buf) {
 
   // Write the address area.
   for (AddressEntry &E : AddressArea) {
-    uintX_t BaseAddr =
-        E.Section->OutSec->Addr + E.Section->template getOffset<ELFT>(0);
+    uintX_t BaseAddr = E.Section->OutSec->Addr + E.Section->getOffset(0);
     write64le(Buf, BaseAddr + E.LowAddress);
     write64le(Buf + 8, BaseAddr + E.HighAddress);
     write32le(Buf + 16, E.CuIndex);
@@ -2136,7 +2137,7 @@ template <class ELFT> bool VersionNeedSection<ELFT>::empty() const {
 }
 
 MergeSyntheticSection::MergeSyntheticSection(StringRef Name, uint32_t Type,
-                                             uint64_t Flags, uint64_t Alignment)
+                                             uint64_t Flags, uint32_t Alignment)
     : SyntheticSection(Flags, Type, Alignment, Name),
       Builder(StringTableBuilder::RAW, Alignment) {}
 
@@ -2228,8 +2229,7 @@ void ARMExidxSentinelSection<ELFT>::writeTo(uint8_t *Buf) {
   auto RI = cast<OutputSection>(this->OutSec)->Sections.rbegin();
   InputSection *LE = *(++RI);
   InputSection *LC = cast<InputSection>(LE->template getLinkOrderDep<ELFT>());
-  uint64_t S = LC->OutSec->Addr +
-               LC->template getOffset<ELFT>(LC->template getSize<ELFT>());
+  uint64_t S = LC->OutSec->Addr + LC->getOffset(LC->getSize());
   uint64_t P = this->getVA();
   Target->relocateOne(Buf, R_ARM_PREL31, S - P);
   write32le(Buf + 4, 0x1);
@@ -2305,10 +2305,10 @@ template class elf::BuildIdSection<ELF32BE>;
 template class elf::BuildIdSection<ELF64LE>;
 template class elf::BuildIdSection<ELF64BE>;
 
-template class elf::BssRelSection<ELF32LE>;
-template class elf::BssRelSection<ELF32BE>;
-template class elf::BssRelSection<ELF64LE>;
-template class elf::BssRelSection<ELF64BE>;
+template class elf::CopyRelSection<ELF32LE>;
+template class elf::CopyRelSection<ELF32BE>;
+template class elf::CopyRelSection<ELF64LE>;
+template class elf::CopyRelSection<ELF64BE>;
 
 template class elf::GotSection<ELF32LE>;
 template class elf::GotSection<ELF32BE>;

@@ -111,8 +111,8 @@ StringRef elf::getOutputSectionName(StringRef Name) {
   }
 
   for (StringRef V :
-       {".text.", ".rodata.", ".data.rel.ro.", ".data.", ".bss.rel.ro.",
-        ".bss.", ".init_array.", ".fini_array.", ".ctors.", ".dtors.", ".tbss.",
+       {".text.", ".rodata.", ".data.rel.ro.", ".data.", ".bss.",
+        ".init_array.", ".fini_array.", ".ctors.", ".dtors.", ".tbss.",
         ".gcc_except_table.", ".tdata.", ".ARM.exidx."}) {
     StringRef Prefix = V.drop_back();
     if (Name.startswith(V) || Name == Prefix)
@@ -176,7 +176,7 @@ template <class ELFT> static void combineMergableSections() {
 
     StringRef OutsecName = getOutputSectionName(MS->Name);
     uintX_t Flags = getOutFlags<ELFT>(MS);
-    uintX_t Alignment = std::max<uintX_t>(MS->Alignment, MS->Entsize);
+    uint32_t Alignment = std::max<uintX_t>(MS->Alignment, MS->Entsize);
 
     auto I =
         llvm::find_if(MergeSections, [=](MergeSyntheticSection *Sec) {
@@ -309,6 +309,10 @@ template <class ELFT> void Writer<ELFT>::createSyntheticSections() {
 
   auto Add = [](InputSectionBase *Sec) { InputSections.push_back(Sec); };
 
+  // Create singleton output sections.
+  Out::Bss = make<OutputSection>(".bss", SHT_NOBITS, SHF_ALLOC | SHF_WRITE);
+  Out::BssRelRo =
+      make<OutputSection>(".bss.rel.ro", SHT_NOBITS, SHF_ALLOC | SHF_WRITE);
   In<ELFT>::DynStrTab = make<StringTableSection<ELFT>>(".dynstr", true);
   In<ELFT>::Dynamic = make<DynamicSection<ELFT>>();
   In<ELFT>::RelaDyn = make<RelocationSection<ELFT>>(
@@ -345,11 +349,6 @@ template <class ELFT> void Writer<ELFT>::createSyntheticSections() {
     In<ELFT>::Common = Common;
     Add(Common);
   }
-
-  In<ELFT>::Bss = make<BssRelSection<ELFT>>(false /*RelRo*/);
-  Add(In<ELFT>::Bss);
-  In<ELFT>::BssRelRo = make<BssRelSection<ELFT>>(true /*RelRo*/);
-  Add(In<ELFT>::BssRelRo);
 
   // Add MIPS-specific sections.
   bool HasDynSymTab =
@@ -454,7 +453,7 @@ template <class ELFT> void Writer<ELFT>::createSyntheticSections() {
 }
 
 template <class ELFT>
-static bool shouldKeepInSymtab(InputSectionBase *Sec, StringRef SymName,
+static bool shouldKeepInSymtab(SectionBase *Sec, StringRef SymName,
                                const SymbolBody &B) {
   if (B.isFile() || B.isSection())
     return false;
@@ -486,12 +485,17 @@ template <class ELFT> static bool includeInSymtab(const SymbolBody &B) {
 
   if (auto *D = dyn_cast<DefinedRegular>(&B)) {
     // Always include absolute symbols.
-    if (!D->Section)
+    SectionBase *Sec = D->Section;
+    if (!Sec)
       return true;
-    // Exclude symbols pointing to garbage-collected sections.
-    if (!D->Section->Live)
-      return false;
-    if (auto *S = dyn_cast<MergeInputSection>(D->Section))
+    if (auto *IS = dyn_cast<InputSectionBase>(Sec)) {
+      Sec = IS->Repl;
+      IS = cast<InputSectionBase>(Sec);
+      // Exclude symbols pointing to garbage-collected sections.
+      if (!IS->Live)
+        return false;
+    }
+    if (auto *S = dyn_cast<MergeInputSection>(Sec))
       if (!S->getSectionPiece(D->Value)->Live)
         return false;
   }
@@ -516,7 +520,7 @@ template <class ELFT> void Writer<ELFT>::copyLocalSymbols() {
       if (!includeInSymtab<ELFT>(*B))
         continue;
 
-      InputSectionBase *Sec = DR->Section;
+      SectionBase *Sec = DR->Section;
       if (!shouldKeepInSymtab<ELFT>(Sec, B->getName(), *B))
         continue;
       In<ELFT>::SymTab->addSymbol(B);
@@ -596,7 +600,7 @@ template <class ELFT> bool elf::isRelroSection(const OutputSection *Sec) {
     return true;
   if (In<ELFT>::Got && Sec == In<ELFT>::Got->OutSec)
     return true;
-  if (Sec == In<ELFT>::BssRelRo->OutSec)
+  if (Sec == Out::BssRelRo)
     return true;
 
   StringRef S = Sec->Name;
@@ -734,35 +738,27 @@ void PhdrEntry::add(OutputSection *Sec) {
 }
 
 template <class ELFT>
-static DefinedSynthetic *
-addOptionalSynthetic(StringRef Name, OutputSection *Sec,
-                     typename ELFT::uint Val, uint8_t StOther = STV_HIDDEN) {
-  if (SymbolBody *S = Symtab<ELFT>::X->find(Name))
-    if (!S->isInCurrentDSO())
-      return cast<DefinedSynthetic>(
-          Symtab<ELFT>::X->addSynthetic(Name, Sec, Val, StOther)->body());
-  return nullptr;
-}
-
-template <class ELFT>
-static Symbol *addRegular(StringRef Name, InputSectionBase *Sec,
-                          typename ELFT::uint Value) {
+static Symbol *addRegular(StringRef Name, SectionBase *Sec, uint64_t Value,
+                          uint8_t StOther = STV_HIDDEN,
+                          uint8_t Binding = STB_WEAK) {
   // The linker generated symbols are added as STB_WEAK to allow user defined
   // ones to override them.
-  return Symtab<ELFT>::X->addRegular(Name, STV_HIDDEN, STT_NOTYPE, Value,
-                                     /*Size=*/0, STB_WEAK, Sec,
+  return Symtab<ELFT>::X->addRegular(Name, StOther, STT_NOTYPE, Value,
+                                     /*Size=*/0, Binding, Sec,
                                      /*File=*/nullptr);
 }
 
 template <class ELFT>
-static Symbol *addOptionalRegular(StringRef Name, InputSectionBase *IS,
-                                  typename ELFT::uint Value) {
+static DefinedRegular *
+addOptionalRegular(StringRef Name, SectionBase *Sec, uint64_t Val,
+                   uint8_t StOther = STV_HIDDEN, uint8_t Binding = STB_GLOBAL) {
   SymbolBody *S = Symtab<ELFT>::X->find(Name);
   if (!S)
     return nullptr;
   if (S->isInCurrentDSO())
-    return S->symbol();
-  return addRegular<ELFT>(Name, IS, Value);
+    return nullptr;
+  return cast<DefinedRegular>(
+      addRegular<ELFT>(Name, Sec, Val, StOther, Binding)->body());
 }
 
 // The beginning and the ending of .rel[a].plt section are marked
@@ -775,10 +771,10 @@ template <class ELFT> void Writer<ELFT>::addRelIpltSymbols() {
   if (In<ELFT>::DynSymTab)
     return;
   StringRef S = Config->isRela() ? "__rela_iplt_start" : "__rel_iplt_start";
-  addOptionalRegular<ELFT>(S, In<ELFT>::RelaIplt, 0);
+  addOptionalRegular<ELFT>(S, In<ELFT>::RelaIplt, 0, STV_HIDDEN, STB_WEAK);
 
   S = Config->isRela() ? "__rela_iplt_end" : "__rel_iplt_end";
-  addOptionalRegular<ELFT>(S, In<ELFT>::RelaIplt, -1);
+  addOptionalRegular<ELFT>(S, In<ELFT>::RelaIplt, -1, STV_HIDDEN, STB_WEAK);
 }
 
 // The linker is expected to define some symbols depending on
@@ -838,14 +834,13 @@ template <class ELFT> void Writer<ELFT>::addReservedSymbols() {
     return;
 
   // __ehdr_start is the location of ELF file headers.
-  addOptionalSynthetic<ELFT>("__ehdr_start", Out::ElfHeader, 0);
+  addOptionalRegular<ELFT>("__ehdr_start", Out::ElfHeader, 0, STV_HIDDEN);
 
-  auto Define = [](StringRef S, DefinedSynthetic *&Sym1,
-                   DefinedSynthetic *&Sym2) {
-    Sym1 = addOptionalSynthetic<ELFT>(S, nullptr, 0, STV_DEFAULT);
+  auto Define = [](StringRef S, DefinedRegular *&Sym1, DefinedRegular *&Sym2) {
+    Sym1 = addOptionalRegular<ELFT>(S, Out::ElfHeader, 0, STV_DEFAULT);
     assert(S.startswith("_"));
     S = S.substr(1);
-    Sym2 = addOptionalSynthetic<ELFT>(S, nullptr, 0, STV_DEFAULT);
+    Sym2 = addOptionalRegular<ELFT>(S, Out::ElfHeader, 0, STV_DEFAULT);
   };
 
   Define("_end", ElfSym::End, ElfSym::End2);
@@ -881,7 +876,7 @@ static void sortBySymbolsOrder(ArrayRef<OutputSection *> OutputSections) {
     SymbolOrder.insert({S, Priority++});
 
   // Build a map from sections to their priorities.
-  DenseMap<InputSectionBase *, int> SectionOrder;
+  DenseMap<SectionBase *, int> SectionOrder;
   for (elf::ObjectFile<ELFT> *File : Symtab<ELFT>::X->getObjectFiles()) {
     for (SymbolBody *Body : File->getSymbols()) {
       auto *D = dyn_cast<DefinedRegular>(Body);
@@ -1022,10 +1017,11 @@ template <class ELFT> void Writer<ELFT>::sortSections() {
 }
 
 template <class ELFT>
-static void finalizeSynthetic(const std::vector<SyntheticSection *> &Sections) {
+static void applySynthetic(const std::vector<SyntheticSection *> &Sections,
+                           std::function<void(SyntheticSection *)> Fn) {
   for (SyntheticSection *SS : Sections)
     if (SS && SS->OutSec && !SS->empty()) {
-      SS->finalizeContents();
+      Fn(SS);
       SS->OutSec->template assignOffsets<ELFT>();
     }
 }
@@ -1082,9 +1078,10 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   addRelIpltSymbols();
 
   // This responsible for splitting up .eh_frame section into
-  // pieces. The relocation scan uses those peaces, so this has to be
+  // pieces. The relocation scan uses those pieces, so this has to be
   // earlier.
-  finalizeSynthetic<ELFT>({In<ELFT>::EhFrame});
+  applySynthetic<ELFT>({In<ELFT>::EhFrame},
+                       [](SyntheticSection *SS) { SS->finalizeContents(); });
 
   // Scan relocations. This must be done after every symbol is declared so that
   // we can correctly decide if a dynamic relocation is needed.
@@ -1145,33 +1142,55 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     fixHeaders();
   }
 
+  // Dynamic section must be the last one in this list and dynamic
+  // symbol table section (DynSymTab) must be the first one.
+  applySynthetic<ELFT>(
+      {In<ELFT>::DynSymTab, In<ELFT>::GnuHashTab, In<ELFT>::HashTab,
+       In<ELFT>::SymTab,    In<ELFT>::ShStrTab,   In<ELFT>::StrTab,
+       In<ELFT>::VerDef,    In<ELFT>::DynStrTab,  In<ELFT>::GdbIndex,
+       In<ELFT>::Got,       In<ELFT>::MipsGot,    In<ELFT>::IgotPlt,
+       In<ELFT>::GotPlt,    In<ELFT>::RelaDyn,    In<ELFT>::RelaIplt,
+       In<ELFT>::RelaPlt,   In<ELFT>::Plt,        In<ELFT>::Iplt,
+       In<ELFT>::Plt,       In<ELFT>::EhFrameHdr, In<ELFT>::VerSym,
+       In<ELFT>::VerNeed,   In<ELFT>::Dynamic},
+      [](SyntheticSection *SS) { SS->finalizeContents(); });
+
   // Some architectures use small displacements for jump instructions.
   // It is linker's responsibility to create thunks containing long
   // jump instructions if jump targets are too far. Create thunks.
-  if (Target->NeedsThunks)
-    createThunks<ELFT>(OutputSections);
-
+  if (Target->NeedsThunks) {
+    // FIXME: only ARM Interworking and Mips LA25 Thunks are implemented,
+    // these
+    // do not require address information. To support range extension Thunks
+    // we need to assign addresses so that we can tell if jump instructions
+    // are out of range. This will need to turn into a loop that converges
+    // when no more Thunks are added
+    if (createThunks<ELFT>(OutputSections))
+      applySynthetic<ELFT>({In<ELFT>::MipsGot},
+                           [](SyntheticSection *SS) { SS->updateAllocSize(); });
+  }
   // Fill other section headers. The dynamic table is finalized
   // at the end because some tags like RELSZ depend on result
   // of finalizing other sections.
   for (OutputSection *Sec : OutputSections)
     Sec->finalize<ELFT>();
 
-  // Dynamic section must be the last one in this list and dynamic
-  // symbol table section (DynSymTab) must be the first one.
-  finalizeSynthetic<ELFT>(
-      {In<ELFT>::DynSymTab,  In<ELFT>::Bss,      In<ELFT>::BssRelRo,
-       In<ELFT>::GnuHashTab, In<ELFT>::HashTab,  In<ELFT>::SymTab,
-       In<ELFT>::ShStrTab,   In<ELFT>::StrTab,   In<ELFT>::VerDef,
-       In<ELFT>::DynStrTab,  In<ELFT>::GdbIndex, In<ELFT>::Got,
-       In<ELFT>::MipsGot,    In<ELFT>::IgotPlt,  In<ELFT>::GotPlt,
-       In<ELFT>::RelaDyn,    In<ELFT>::RelaIplt, In<ELFT>::RelaPlt,
-       In<ELFT>::Plt,        In<ELFT>::Iplt,     In<ELFT>::Plt,
-       In<ELFT>::EhFrameHdr, In<ELFT>::VerSym,   In<ELFT>::VerNeed,
-       In<ELFT>::Dynamic});
+  // createThunks may have added local symbols to the static symbol table
+  applySynthetic<ELFT>({In<ELFT>::SymTab, In<ELFT>::ShStrTab, In<ELFT>::StrTab},
+                       [](SyntheticSection *SS) { SS->postThunkContents(); });
 }
 
 template <class ELFT> void Writer<ELFT>::addPredefinedSections() {
+  // Add BSS sections.
+  auto Add = [=](OutputSection *Sec) {
+    if (!Sec->Sections.empty()) {
+      Sec->assignOffsets<ELFT>();
+      OutputSections.push_back(Sec);
+    }
+  };
+  Add(Out::Bss);
+  Add(Out::BssRelRo);
+
   // ARM ABI requires .ARM.exidx to be terminated by some piece of data.
   // We have the terminater synthetic section class. Add that at the end.
   auto *OS = dyn_cast_or_null<OutputSection>(findSection(".ARM.exidx"));
@@ -1185,8 +1204,10 @@ template <class ELFT> void Writer<ELFT>::addStartEndSymbols() {
   auto Define = [&](StringRef Start, StringRef End, OutputSection *OS) {
     // These symbols resolve to the image base if the section does not exist.
     // A special value -1 indicates end of the section.
-    addOptionalSynthetic<ELFT>(Start, OS, 0);
-    addOptionalSynthetic<ELFT>(End, OS, OS ? -1 : 0);
+    if (!OS && Config->pic())
+      OS = Out::ElfHeader;
+    addOptionalRegular<ELFT>(Start, OS, 0);
+    addOptionalRegular<ELFT>(End, OS, OS ? -1 : 0);
   };
 
   Define("__preinit_array_start", "__preinit_array_end", Out::PreinitArray);
@@ -1207,8 +1228,8 @@ void Writer<ELFT>::addStartStopSymbols(OutputSection *Sec) {
   StringRef S = Sec->Name;
   if (!isValidCIdentifier(S))
     return;
-  addOptionalSynthetic<ELFT>(Saver.save("__start_" + S), Sec, 0, STV_DEFAULT);
-  addOptionalSynthetic<ELFT>(Saver.save("__stop_" + S), Sec, -1, STV_DEFAULT);
+  addOptionalRegular<ELFT>(Saver.save("__start_" + S), Sec, 0, STV_DEFAULT);
+  addOptionalRegular<ELFT>(Saver.save("__stop_" + S), Sec, -1, STV_DEFAULT);
 }
 
 template <class ELFT> OutputSection *Writer<ELFT>::findSection(StringRef Name) {
@@ -1454,7 +1475,7 @@ template <class ELFT> void Writer<ELFT>::assignAddresses() {
     VA += getHeaderSize<ELFT>();
   uintX_t ThreadBssOffset = 0;
   for (OutputSection *Sec : OutputSections) {
-    uintX_t Alignment = Sec->Alignment;
+    uint32_t Alignment = Sec->Alignment;
     if (Sec->PageAlign)
       Alignment = std::max<uintX_t>(Alignment, Config->MaxPageSize);
 
@@ -1615,7 +1636,7 @@ static uint16_t getELFType() {
 // to each section. This function fixes some predefined
 // symbol values that depend on section address and size.
 template <class ELFT> void Writer<ELFT>::fixPredefinedSymbols() {
-  auto Set = [](DefinedSynthetic *S1, DefinedSynthetic *S2, OutputSection *Sec,
+  auto Set = [](DefinedRegular *S1, DefinedRegular *S2, OutputSection *Sec,
                 uint64_t Value) {
     if (S1) {
       S1->Section = Sec;
