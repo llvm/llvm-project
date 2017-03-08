@@ -112,7 +112,7 @@ struct Relocation {
 template <class ELFT> void scanRelocations(InputSectionBase &);
 
 template <class ELFT>
-void createThunks(ArrayRef<OutputSection *> OutputSections);
+bool createThunks(ArrayRef<OutputSection *> OutputSections);
 
 // Return a int64_t to make sure we get the sign extension out of the way as
 // early as possible.

@@ -16,6 +16,7 @@
 // Other libraries and framework includes
 // Project includes
 #include "lldb/Utility/Stream.h"
+#include "llvm/Support/FileSystem.h"
 
 using namespace lldb_private;
 using namespace std;
@@ -150,32 +151,23 @@ size_t FileSpecList::GetFilesMatchingPartialPath(const char *path,
                                                  FileSpecList &matches) {
 #if 0 // FIXME: Just sketching...
     matches.Clear();
-    FileSpec path_spec = FileSpec (path);
-    if (path_spec.Exists ())
-    {
-        FileSpec::FileType type = path_spec.GetFileType();
-        if (type == FileSpec::eFileTypeSymbolicLink)
-            // Shouldn't there be a Resolve on a file spec that real-path's it?
-        {
-        }
-
-        if (type == FileSpec::eFileTypeRegular
-            || (type == FileSpec::eFileTypeDirectory && dir_okay))
-        {
-            matches.Append (path_spec);
-            return 1;
-        }
-        else if (type == FileSpec::eFileTypeDirectory)
-        {
-            // Fill the match list with all the files in the directory:
-        }
-        else
-        {
-            return 0;
-        }
-    }
-    else
-    {
+    using namespace llvm::sys::fs;
+    file_status stats;
+    if (status(path, stats, false))
+      return 0;
+    if (exists(stats)) {
+      if (is_symlink_file(stats)) {
+        // Shouldn't there be a method that realpath's a file?
+      }
+      if (is_regular_file(stats) || (is_directory(stats) && dir_okay)) {
+        matches.Append(FileSpec(path));
+        return 1;
+      } else if (is_directory(stats)) {
+        // Fill the match list with all the files in the directory:
+      } else {
+        return 0;
+      }
+    } else {
         ConstString dir_name = path_spec.GetDirectory();
         ConstString file_name = GetFilename();
         if (dir_name == nullptr)

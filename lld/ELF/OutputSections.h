@@ -98,6 +98,8 @@ public:
 // until Writer is initialized.
 struct Out {
   static uint8_t First;
+  static OutputSection *Bss;
+  static OutputSection *BssRelRo;
   static OutputSection *Opd;
   static uint8_t *OpdBuf;
   static PhdrEntry *TlsPhdr;
@@ -112,7 +114,7 @@ struct Out {
 struct SectionKey {
   StringRef Name;
   uint64_t Flags;
-  uint64_t Alignment;
+  uint32_t Alignment;
 };
 }
 }

@@ -29,7 +29,7 @@ void rdar10579586(char x);
     if (error != ((void*)0))
         return error;
 
-    rdar10579586(buffer->str_c); // expected-warning {{Function call argument is an uninitialized value}}
+    rdar10579586(buffer->str_c); // expected-warning {{1st function call argument is an uninitialized value}}
     free(buffer);
     return ((void*)0);
 }

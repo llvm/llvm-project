@@ -6471,8 +6471,9 @@ TEST_F(FormatTest, BreaksStringLiteralsWithin_TMacro) {
       "_T(\"aaaaaaaaaaaaaa\")\n"
       "_T(\"aaaaaaaaaaaa\")",
       format("  _T(\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\")", Style));
-  EXPECT_EQ("f(x, _T(\"aaaaaaaaa\")\n"
-            "     _T(\"aaaaaa\"),\n"
+  EXPECT_EQ("f(x,\n"
+            "  _T(\"aaaaaaaaaaaa\")\n"
+            "  _T(\"aaa\"),\n"
             "  z);",
             format("f(x, _T(\"aaaaaaaaaaaaaaa\"), z);", Style));
 
@@ -6502,6 +6503,90 @@ TEST_F(FormatTest, BreaksStringLiteralsWithin_TMacro) {
             format("f(\n"
                    "\n"
                    "_T(\"XXXXXXXXXXXXXXXXXXXXXXXXXXXXXn\"));"));
+}
+
+TEST_F(FormatTest, BreaksStringLiteralOperands) {
+  // In a function call with two operands, the second can be broken with no line
+  // break before it.
+  EXPECT_EQ("func(a, \"long long \"\n"
+            "        \"long long\");",
+            format("func(a, \"long long long long\");",
+                   getLLVMStyleWithColumns(24)));
+  // In a function call with three operands, the second must be broken with a
+  // line break before it.
+  EXPECT_EQ("func(a,\n"
+            "     \"long long long \"\n"
+            "     \"long\",\n"
+            "     c);",
+            format("func(a, \"long long long long\", c);",
+                   getLLVMStyleWithColumns(24)));
+  // In a function call with three operands, the third must be broken with a
+  // line break before it.
+  EXPECT_EQ("func(a, b,\n"
+            "     \"long long long \"\n"
+            "     \"long\");",
+            format("func(a, b, \"long long long long\");",
+                   getLLVMStyleWithColumns(24)));
+  // In a function call with three operands, both the second and the third must
+  // be broken with a line break before them.
+  EXPECT_EQ("func(a,\n"
+            "     \"long long long \"\n"
+            "     \"long\",\n"
+            "     \"long long long \"\n"
+            "     \"long\");",
+            format("func(a, \"long long long long\", \"long long long long\");",
+                   getLLVMStyleWithColumns(24)));
+  // In a chain of << with two operands, the second can be broken with no line
+  // break before it.
+  EXPECT_EQ("a << \"line line \"\n"
+            "     \"line\";",
+            format("a << \"line line line\";",
+                   getLLVMStyleWithColumns(20)));
+  // In a chain of << with three operands, the second can be broken with no line
+  // break before it.
+  EXPECT_EQ("abcde << \"line \"\n"
+            "         \"line line\"\n"
+            "      << c;",
+            format("abcde << \"line line line\" << c;",
+                   getLLVMStyleWithColumns(20)));
+  // In a chain of << with three operands, the third must be broken with a line
+  // break before it.
+  EXPECT_EQ("a << b\n"
+            "  << \"line line \"\n"
+            "     \"line\";",
+            format("a << b << \"line line line\";",
+                   getLLVMStyleWithColumns(20)));
+  // In a chain of << with three operands, the second can be broken with no line
+  // break before it and the third must be broken with a line break before it.
+  EXPECT_EQ("abcd << \"line line \"\n"
+            "        \"line\"\n"
+            "     << \"line line \"\n"
+            "        \"line\";",
+            format("abcd << \"line line line\" << \"line line line\";",
+                   getLLVMStyleWithColumns(20)));
+  // In a chain of binary operators with two operands, the second can be broken
+  // with no line break before it.
+  EXPECT_EQ("abcd + \"line line \"\n"
+            "       \"line line\";",
+            format("abcd + \"line line line line\";",
+                   getLLVMStyleWithColumns(20)));
+  // In a chain of binary operators with three operands, the second must be
+  // broken with a line break before it.
+  EXPECT_EQ("abcd +\n"
+            "    \"line line \"\n"
+            "    \"line line\" +\n"
+            "    e;",
+            format("abcd + \"line line line line\" + e;",
+                   getLLVMStyleWithColumns(20)));
+  // In a function call with two operands, with AlignAfterOpenBracket enabled,
+  // the first must be broken with a line break before it.
+  FormatStyle Style = getLLVMStyleWithColumns(25);
+  Style.AlignAfterOpenBracket = FormatStyle::BAS_AlwaysBreak;
+  EXPECT_EQ("someFunction(\n"
+            "    \"long long long \"\n"
+            "    \"long\",\n"
+            "    a);",
+            format("someFunction(\"long long long long\", a);", Style));
 }
 
 TEST_F(FormatTest, DontSplitStringLiteralsWithEscapedNewlines) {

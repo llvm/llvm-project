@@ -659,23 +659,7 @@ bool ScopDetection::isInvariant(Value &Val, const Region &Reg,
     return true;
   }
 
-  if (I->mayHaveSideEffects())
-    return false;
-
-  if (isa<SelectInst>(I))
-    return false;
-
-  // When Val is a Phi node, it is likely not invariant. We do not check whether
-  // Phi nodes are actually invariant, we assume that Phi nodes are usually not
-  // invariant.
-  if (isa<PHINode>(*I))
-    return false;
-
-  for (const Use &Operand : I->operands())
-    if (!isInvariant(*Operand, Reg, Ctx))
-      return false;
-
-  return true;
+  return false;
 }
 
 /// Remove smax of smax(0, size) expressions from a SCEV expression and

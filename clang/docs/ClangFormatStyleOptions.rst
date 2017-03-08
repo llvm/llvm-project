@@ -283,11 +283,31 @@ the configuration (without a prefix: ``Auto``).
   * ``SFS_Empty`` (in configuration: ``Empty``)
     Only merge empty functions.
 
+    .. code-block:: c++
+
+      void f() { bar(); }
+      void f2() {
+        bar2();
+      }
+
   * ``SFS_Inline`` (in configuration: ``Inline``)
     Only merge functions defined inside a class. Implies "empty".
 
+    .. code-block:: c++
+
+      class {
+        void f() { foo(); }
+      };
+
   * ``SFS_All`` (in configuration: ``All``)
     Merge all functions fitting on a single line.
+
+    .. code-block:: c++
+
+      class {
+        void f() { foo(); }
+      };
+      void f() { bar(); }
 
 
 
@@ -325,17 +345,77 @@ the configuration (without a prefix: ``Auto``).
     Break after return type automatically.
     ``PenaltyReturnTypeOnItsOwnLine`` is taken into account.
 
+    .. code-block:: c++
+
+      class A {
+        int f() { return 0; };
+      };
+      int f();
+      int f() { return 1; }
+
   * ``RTBS_All`` (in configuration: ``All``)
     Always break after the return type.
+
+    .. code-block:: c++
+
+      class A {
+        int
+        f() {
+          return 0;
+        };
+      };
+      int
+      f();
+      int
+      f() {
+        return 1;
+      }
 
   * ``RTBS_TopLevel`` (in configuration: ``TopLevel``)
     Always break after the return types of top-level functions.
 
+    .. code-block:: c++
+
+      class A {
+        int f() { return 0; };
+      };
+      int
+      f();
+      int
+      f() {
+        return 1;
+      }
+
   * ``RTBS_AllDefinitions`` (in configuration: ``AllDefinitions``)
     Always break after the return type of function definitions.
 
+    .. code-block:: c++
+
+      class A {
+        int
+        f() {
+          return 0;
+        };
+      };
+      int f();
+      int
+      f() {
+        return 1;
+      }
+
   * ``RTBS_TopLevelDefinitions`` (in configuration: ``TopLevelDefinitions``)
     Always break after the return type of top-level definitions.
+
+    .. code-block:: c++
+
+      class A {
+        int f() { return 0; };
+      };
+      int f();
+      int
+      f() {
+        return 1;
+      }
 
 
 
@@ -722,11 +802,23 @@ the configuration (without a prefix: ``Auto``).
   * ``PAS_Left`` (in configuration: ``Left``)
     Align pointer to the left.
 
+    .. code-block:: c++
+
+      int\* a;
+
   * ``PAS_Right`` (in configuration: ``Right``)
     Align pointer to the right.
 
+    .. code-block:: c++
+
+      int \*a;
+
   * ``PAS_Middle`` (in configuration: ``Middle``)
     Align pointer in the middle.
+
+    .. code-block:: c++
+
+      int \* a;
 
 
 
@@ -736,8 +828,19 @@ the configuration (without a prefix: ``Auto``).
 **SortIncludes** (``bool``)
   If ``true``, clang-format will sort ``#includes``.
 
+  .. code-block:: c++
+
+     false:                                 true:
+     #include "b.h"                 vs.     #include "a.h"
+     #include "a.h"                         #include "b.h"
+
 **SpaceAfterCStyleCast** (``bool``)
-  If ``true``, a space may be inserted after C style casts.
+  If ``true``, a space is inserted after C style casts.
+
+  .. code-block:: c++
+
+     true:                                  false:
+     (int)i;                        vs.     (int) i;
 
 **SpaceAfterTemplateKeyword** (``bool``)
   If ``true``, a space will be inserted after the 'template' keyword.

@@ -42,15 +42,13 @@ DefinedRegular *ElfSym::MipsGp;
 
 template <class ELFT>
 static typename ELFT::uint getSymVA(const SymbolBody &Body, int64_t &Addend) {
-  typedef typename ELFT::uint uintX_t;
-
   switch (Body.kind()) {
   case SymbolBody::DefinedSyntheticKind: {
     auto &D = cast<DefinedSynthetic>(Body);
     const OutputSection *Sec = D.Section;
     if (!Sec)
       return D.Value;
-    if (D.Value == uintX_t(-1))
+    if (D.Value == uint64_t(-1))
       return Sec->Addr + Sec->Size;
     return Sec->Addr + D.Value;
   }
@@ -69,7 +67,7 @@ static typename ELFT::uint getSymVA(const SymbolBody &Body, int64_t &Addend) {
     if (!IS)
       return D.Value;
 
-    uintX_t Offset = D.Value;
+    uint64_t Offset = D.Value;
 
     // An object in an SHF_MERGE section might be referenced via a
     // section symbol (as a hack for reducing the number of local
@@ -87,7 +85,7 @@ static typename ELFT::uint getSymVA(const SymbolBody &Body, int64_t &Addend) {
       Addend = 0;
     }
 
-    const OutputSection *OutSec = IS->getOutputSection<ELFT>();
+    const OutputSection *OutSec = IS->getOutputSection();
 
     // In the typical case, this is actually very simple and boils
     // down to adding together 3 numbers:
@@ -99,7 +97,7 @@ static typename ELFT::uint getSymVA(const SymbolBody &Body, int64_t &Addend) {
     // If you understand the data structures involved with this next
     // line (and how they get built), then you have a pretty good
     // understanding of the linker.
-    uintX_t VA = (OutSec ? OutSec->Addr : 0) + IS->getOffset<ELFT>(Offset);
+    uint64_t VA = (OutSec ? OutSec->Addr : 0) + IS->getOffset(Offset);
 
     if (D.isTls() && !Config->Relocatable) {
       if (!Out::TlsPhdr)
@@ -114,10 +112,14 @@ static typename ELFT::uint getSymVA(const SymbolBody &Body, int64_t &Addend) {
       return 0;
     return In<ELFT>::Common->OutSec->Addr + In<ELFT>::Common->OutSecOff +
            cast<DefinedCommon>(Body).Offset;
-  case SymbolBody::SharedKind:
-    if (cast<SharedSymbol>(Body).NeedsPltAddr)
+  case SymbolBody::SharedKind: {
+    auto &SS = cast<SharedSymbol>(Body);
+    if (SS.NeedsCopy)
+      return SS.Section->OutSec->Addr + SS.Section->OutSecOff;
+    if (SS.NeedsPltAddr)
       return Body.getPltVA<ELFT>();
     return 0;
+  }
   case SymbolBody::UndefinedKind:
     return 0;
   case SymbolBody::LazyArchiveKind:
@@ -130,7 +132,7 @@ static typename ELFT::uint getSymVA(const SymbolBody &Body, int64_t &Addend) {
 
 SymbolBody::SymbolBody(Kind K, StringRefZ Name, bool IsLocal, uint8_t StOther,
                        uint8_t Type)
-    : SymbolKind(K), NeedsPltAddr(false), IsLocal(IsLocal),
+    : SymbolKind(K), NeedsCopy(false), NeedsPltAddr(false), IsLocal(IsLocal),
       IsInGlobalMipsGot(false), Is32BitMipsGot(false), IsInIplt(false),
       IsInIgot(false), Type(Type), StOther(StOther), Name(Name) {}
 
@@ -141,9 +143,10 @@ bool SymbolBody::isPreemptible() const {
     return false;
 
   // Shared symbols resolve to the definition in the DSO. The exceptions are
-  // symbols that needs plt entries (which resolve to that plt entry).
+  // symbols with copy relocations (which resolve to .bss) or preempt plt
+  // entries (which resolve to that plt entry).
   if (isShared())
-    return !NeedsPltAddr;
+    return !NeedsCopy && !NeedsPltAddr;
 
   // That's all that can be preempted in a non-DSO.
   if (!Config->Shared)
@@ -208,12 +211,15 @@ template <class ELFT>
 const OutputSection *SymbolBody::getOutputSection() const {
   if (auto *S = dyn_cast<DefinedRegular>(this)) {
     if (S->Section)
-      return S->Section->template getOutputSection<ELFT>();
+      return S->Section->getOutputSection();
     return nullptr;
   }
 
-  if (isa<SharedSymbol>(this))
+  if (auto *S = dyn_cast<SharedSymbol>(this)) {
+    if (S->NeedsCopy)
+      return S->Section->OutSec;
     return nullptr;
+  }
 
   if (isa<DefinedCommon>(this)) {
     if (Config->DefineCommon)
@@ -283,7 +289,7 @@ Undefined::Undefined(StringRefZ Name, bool IsLocal, uint8_t StOther,
   this->File = File;
 }
 
-DefinedCommon::DefinedCommon(StringRef Name, uint64_t Size, uint64_t Alignment,
+DefinedCommon::DefinedCommon(StringRef Name, uint64_t Size, uint32_t Alignment,
                              uint8_t StOther, uint8_t Type, InputFile *File)
     : Defined(SymbolBody::DefinedCommonKind, Name, /*IsLocal=*/false, StOther,
               Type),
@@ -294,11 +300,11 @@ DefinedCommon::DefinedCommon(StringRef Name, uint64_t Size, uint64_t Alignment,
 // If a shared symbol is referred via a copy relocation, its alignment
 // becomes part of the ABI. This function returns a symbol alignment.
 // Because symbols don't have alignment attributes, we need to infer that.
-template <class ELFT> uint64_t SharedSymbol::getAlignment() const {
+template <class ELFT> uint32_t SharedSymbol::getAlignment() const {
   auto *File = cast<SharedFile<ELFT>>(this->File);
-  uint64_t SecAlign = File->getSection(getSym<ELFT>())->sh_addralign;
+  uint32_t SecAlign = File->getSection(getSym<ELFT>())->sh_addralign;
   uint64_t SymValue = getSym<ELFT>().st_value;
-  uint64_t SymAlign = uint64_t(1) << countTrailingZeros(SymValue);
+  uint32_t SymAlign = uint32_t(1) << countTrailingZeros(SymValue);
   return std::min(SecAlign, SymAlign);
 }
 
@@ -427,7 +433,7 @@ template bool DefinedRegular::template isMipsPIC<ELF32BE>() const;
 template bool DefinedRegular::template isMipsPIC<ELF64LE>() const;
 template bool DefinedRegular::template isMipsPIC<ELF64BE>() const;
 
-template uint64_t SharedSymbol::template getAlignment<ELF32LE>() const;
-template uint64_t SharedSymbol::template getAlignment<ELF32BE>() const;
-template uint64_t SharedSymbol::template getAlignment<ELF64LE>() const;
-template uint64_t SharedSymbol::template getAlignment<ELF64BE>() const;
+template uint32_t SharedSymbol::template getAlignment<ELF32LE>() const;
+template uint32_t SharedSymbol::template getAlignment<ELF32BE>() const;
+template uint32_t SharedSymbol::template getAlignment<ELF64LE>() const;
+template uint32_t SharedSymbol::template getAlignment<ELF64BE>() const;
