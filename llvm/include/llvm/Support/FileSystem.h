@@ -361,6 +361,13 @@ std::error_code set_current_path(const Twine &path);
 ///          returns error if the file didn't exist.
 std::error_code remove(const Twine &path, bool IgnoreNonExisting = true);
 
+/// @brief Recursively delete a directory.
+///
+/// @param path Input path.
+/// @returns errc::success if path has been removed or didn't exist, otherwise a
+///          platform-specific error code.
+std::error_code remove_directories(const Twine &path, bool IgnoreErrors = true);
+
 /// @brief Rename \a from to \a to. Files are renamed as if by POSIX rename().
 ///
 /// @param from The path to rename from.
@@ -482,8 +489,10 @@ inline bool is_local(int FD) {
 /// @brief Does status represent a directory?
 ///
 /// @param Path The path to get the type of.
+/// @param follow For symbolic links, indicates whether to return the file type
+///               of the link itself, or of the target.
 /// @returns A value from the file_type enumeration indicating the type of file.
-file_type get_file_type(const Twine &Path, bool follow = true);
+file_type get_file_type(const Twine &Path, bool Follow = true);
 
 /// @brief Does status represent a directory?
 ///
@@ -494,8 +503,8 @@ bool is_directory(file_status status);
 /// @brief Is path a directory?
 ///
 /// @param path Input path.
-/// @param result Set to true if \a path is a directory, false if it is not.
-///               Undefined otherwise.
+/// @param result Set to true if \a path is a directory (after following
+///               symlinks, false if it is not. Undefined otherwise.
 /// @returns errc::success if result has been successfully set, otherwise a
 ///          platform-specific error_code.
 std::error_code is_directory(const Twine &path, bool &result);
@@ -516,8 +525,8 @@ bool is_regular_file(file_status status);
 /// @brief Is path a regular file?
 ///
 /// @param path Input path.
-/// @param result Set to true if \a path is a regular file, false if it is not.
-///               Undefined otherwise.
+/// @param result Set to true if \a path is a regular file (after following
+///               symlinks), false if it is not. Undefined otherwise.
 /// @returns errc::success if result has been successfully set, otherwise a
 ///          platform-specific error_code.
 std::error_code is_regular_file(const Twine &path, bool &result);
@@ -531,8 +540,32 @@ inline bool is_regular_file(const Twine &Path) {
   return Result;
 }
 
+/// @brief Does status represent a symlink file?
+///
+/// @param status A file_status previously returned from status.
+/// @returns status_known(status) && status.type() == file_type::symlink_file.
+bool is_symlink_file(file_status status);
+
+/// @brief Is path a symlink file?
+///
+/// @param path Input path.
+/// @param result Set to true if \a path is a symlink file, false if it is not.
+///               Undefined otherwise.
+/// @returns errc::success if result has been successfully set, otherwise a
+///          platform-specific error_code.
+std::error_code is_symlink_file(const Twine &path, bool &result);
+
+/// @brief Simpler version of is_symlink_file for clients that don't need to
+///        differentiate between an error and false.
+inline bool is_symlink_file(const Twine &Path) {
+  bool Result;
+  if (is_symlink_file(Path, Result))
+    return false;
+  return Result;
+}
+
 /// @brief Does this status represent something that exists but is not a
-///        directory, regular file, or symlink?
+///        directory or regular file?
 ///
 /// @param status A file_status previously returned from status.
 /// @returns exists(s) && !is_regular_file(s) && !is_directory(s)
@@ -766,12 +799,13 @@ std::string getMainExecutable(const char *argv0, void *MainExecAddr);
 /// called.
 class directory_entry {
   std::string Path;
+  bool FollowSymlinks;
   mutable file_status Status;
 
 public:
-  explicit directory_entry(const Twine &path, file_status st = file_status())
-    : Path(path.str())
-    , Status(st) {}
+  explicit directory_entry(const Twine &path, bool follow_symlinks = true,
+                           file_status st = file_status())
+      : Path(path.str()), FollowSymlinks(follow_symlinks), Status(st) {}
 
   directory_entry() = default;
 
@@ -797,7 +831,7 @@ namespace detail {
 
   struct DirIterState;
 
-  std::error_code directory_iterator_construct(DirIterState &, StringRef);
+  std::error_code directory_iterator_construct(DirIterState &, StringRef, bool);
   std::error_code directory_iterator_increment(DirIterState &);
   std::error_code directory_iterator_destruct(DirIterState &);
 
@@ -818,18 +852,24 @@ namespace detail {
 /// it call report_fatal_error on error.
 class directory_iterator {
   std::shared_ptr<detail::DirIterState> State;
+  bool FollowSymlinks = true;
 
 public:
-  explicit directory_iterator(const Twine &path, std::error_code &ec) {
+  explicit directory_iterator(const Twine &path, std::error_code &ec,
+                              bool follow_symlinks = true)
+      : FollowSymlinks(follow_symlinks) {
     State = std::make_shared<detail::DirIterState>();
     SmallString<128> path_storage;
-    ec = detail::directory_iterator_construct(*State,
-            path.toStringRef(path_storage));
+    ec = detail::directory_iterator_construct(
+        *State, path.toStringRef(path_storage), FollowSymlinks);
   }
 
-  explicit directory_iterator(const directory_entry &de, std::error_code &ec) {
+  explicit directory_iterator(const directory_entry &de, std::error_code &ec,
+                              bool follow_symlinks = true)
+      : FollowSymlinks(follow_symlinks) {
     State = std::make_shared<detail::DirIterState>();
-    ec = detail::directory_iterator_construct(*State, de.path());
+    ec =
+        detail::directory_iterator_construct(*State, de.path(), FollowSymlinks);
   }
 
   /// Construct end iterator.
@@ -876,12 +916,15 @@ namespace detail {
 /// recurses down into child directories.
 class recursive_directory_iterator {
   std::shared_ptr<detail::RecDirIterState> State;
+  bool Follow;
 
 public:
   recursive_directory_iterator() = default;
-  explicit recursive_directory_iterator(const Twine &path, std::error_code &ec)
-      : State(std::make_shared<detail::RecDirIterState>()) {
-    State->Stack.push(directory_iterator(path, ec));
+  explicit recursive_directory_iterator(const Twine &path, std::error_code &ec,
+                                        bool follow_symlinks = true)
+      : State(std::make_shared<detail::RecDirIterState>()),
+        Follow(follow_symlinks) {
+    State->Stack.push(directory_iterator(path, ec, Follow));
     if (State->Stack.top() == directory_iterator())
       State.reset();
   }
@@ -896,7 +939,7 @@ public:
       file_status st;
       if ((ec = State->Stack.top()->status(st))) return *this;
       if (is_directory(st)) {
-        State->Stack.push(directory_iterator(*State->Stack.top(), ec));
+        State->Stack.push(directory_iterator(*State->Stack.top(), ec, Follow));
         if (ec) return *this;
         if (State->Stack.top() != end_itr) {
           ++State->Level;

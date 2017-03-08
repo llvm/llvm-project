@@ -26,6 +26,7 @@
 // These two headers must be included last, and make sure shlobj is required
 // after Windows.h to make sure it picks up our definition of _WIN32_WINNT
 #include "WindowsSupport.h"
+#include <shellapi.h>
 #include <shlobj.h>
 
 #undef max
@@ -693,7 +694,8 @@ int mapped_file_region::alignment() {
 }
 
 std::error_code detail::directory_iterator_construct(detail::DirIterState &it,
-                                                StringRef path){
+                                                     StringRef path,
+                                                     bool follow_symlinks) {
   SmallVector<wchar_t, 128> path_utf16;
 
   if (std::error_code ec = widenPath(path, path_utf16))
@@ -738,7 +740,7 @@ std::error_code detail::directory_iterator_construct(detail::DirIterState &it,
   it.IterationHandle = intptr_t(FindHandle.take());
   SmallString<128> directory_entry_path(path);
   path::append(directory_entry_path, directory_entry_name_utf8);
-  it.CurrentEntry = directory_entry(directory_entry_path);
+  it.CurrentEntry = directory_entry(directory_entry_path, follow_symlinks);
 
   return std::error_code();
 }
@@ -920,6 +922,33 @@ std::error_code getPathFromOpenFD(int FD, SmallVectorImpl<char> &ResultPath) {
 
   return windows::UTF16ToUTF8(TempPath.data(), CharCount, ResultPath);
 }
+
+std::error_code remove_directories(const Twine &path, bool IgnoreErrors) {
+  // Convert to utf-16.
+  SmallVector<wchar_t, 128> Path16;
+  std::error_code EC = widenPath(path, Path16);
+  if (EC && !IgnoreErrors)
+    return EC;
+
+  // SHFileOperation() accepts a list of paths, and so must be double null-
+  // terminated to indicate the end of the list.  The buffer is already null
+  // terminated, but since that null character is not considered part of the
+  // vector's size, pushing another one will just consume that byte.  So we
+  // need to push 2 null terminators.
+  Path16.push_back(0);
+  Path16.push_back(0);
+
+  SHFILEOPSTRUCTW shfos = {};
+  shfos.wFunc = FO_DELETE;
+  shfos.pFrom = Path16.data();
+  shfos.fFlags = FOF_NO_UI;
+
+  int result = ::SHFileOperationW(&shfos);
+  if (result != 0 && !IgnoreErrors)
+    return mapWindowsError(result);
+  return std::error_code();
+}
+
 } // end namespace fs
 
 namespace path {

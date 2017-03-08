@@ -193,9 +193,12 @@ bool IRTranslator::translateCompare(const User &U,
   CmpInst::Predicate Pred =
       CI ? CI->getPredicate() : static_cast<CmpInst::Predicate>(
                                     cast<ConstantExpr>(U).getPredicate());
-
   if (CmpInst::isIntPredicate(Pred))
     MIRBuilder.buildICmp(Pred, Res, Op0, Op1);
+  else if (Pred == CmpInst::FCMP_FALSE)
+    MIRBuilder.buildConstant(Res, 0);
+  else if  (Pred == CmpInst::FCMP_TRUE)
+    MIRBuilder.buildConstant(Res, 1);
   else
     MIRBuilder.buildFCmp(Pred, Res, Op0, Op1);
 

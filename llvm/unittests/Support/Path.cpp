@@ -743,6 +743,39 @@ TEST_F(FileSystemTest, DirectoryIteration) {
   ASSERT_NO_ERROR(fs::remove(Twine(TestDirectory) + "/reclevel"));
 }
 
+TEST_F(FileSystemTest, Remove) {
+  SmallString<64> BaseDir;
+  SmallString<64> Paths[4];
+  int fds[4];
+  ASSERT_NO_ERROR(fs::createUniqueDirectory("fs_remove", BaseDir));
+
+  ASSERT_NO_ERROR(fs::create_directories(Twine(BaseDir) + "/foo/bar/baz"));
+  ASSERT_NO_ERROR(fs::create_directories(Twine(BaseDir) + "/foo/bar/buzz"));
+  ASSERT_NO_ERROR(fs::createUniqueFile(
+      Twine(BaseDir) + "/foo/bar/baz/%%%%%%.tmp", fds[0], Paths[0]));
+  ASSERT_NO_ERROR(fs::createUniqueFile(
+      Twine(BaseDir) + "/foo/bar/baz/%%%%%%.tmp", fds[1], Paths[1]));
+  ASSERT_NO_ERROR(fs::createUniqueFile(
+      Twine(BaseDir) + "/foo/bar/buzz/%%%%%%.tmp", fds[2], Paths[2]));
+  ASSERT_NO_ERROR(fs::createUniqueFile(
+      Twine(BaseDir) + "/foo/bar/buzz/%%%%%%.tmp", fds[3], Paths[3]));
+
+  for (int fd : fds)
+    ::close(fd);
+
+  EXPECT_TRUE(fs::exists(Twine(BaseDir) + "/foo/bar/baz"));
+  EXPECT_TRUE(fs::exists(Twine(BaseDir) + "/foo/bar/buzz"));
+  EXPECT_TRUE(fs::exists(Paths[0]));
+  EXPECT_TRUE(fs::exists(Paths[1]));
+  EXPECT_TRUE(fs::exists(Paths[2]));
+  EXPECT_TRUE(fs::exists(Paths[3]));
+
+  ASSERT_NO_ERROR(fs::remove_directories("D:/footest"));
+
+  ASSERT_NO_ERROR(fs::remove_directories(BaseDir));
+  ASSERT_FALSE(fs::exists(BaseDir));
+}
+
 const char archive[] = "!<arch>\x0A";
 const char bitcode[] = "\xde\xc0\x17\x0b";
 const char coff_object[] = "\x00\x00......";
