@@ -1032,6 +1032,21 @@ public:
     return LangAS::opencl_global;
   }
 
+  /// \returns Target specific vtbl ptr address space.
+  virtual unsigned getVtblPtrAddressSpace() const {
+    return 0;
+  }
+
+  /// \returns If a target requires an address within a target specific address
+  /// space \p AddressSpace to be converted in order to be used, then return the
+  /// corresponding target specific DWARF address space.
+  ///
+  /// \returns Otherwise return None and no conversion will be emitted in the
+  /// DWARF.
+  virtual Optional<unsigned> getDWARFAddressSpace(unsigned AddressSpace) const {
+    return None;
+  }
+
   /// \brief Check the target is valid after it is fully initialized.
   virtual bool validateTarget(DiagnosticsEngine &Diags) const {
     return true;
