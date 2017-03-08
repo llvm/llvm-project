@@ -282,6 +282,28 @@ TEST(SmallPtrSetTest, EraseTest) {
   checkEraseAndIterators(A);
 }
 
+// Verify that dereferencing and iteration work.
+TEST(SmallPtrSetTest, dereferenceAndIterate) {
+  int Ints[] = {0, 1, 2, 3, 4, 5, 6, 7};
+  SmallPtrSet<const int *, 4> S;
+  for (int &I : Ints) {
+    EXPECT_EQ(&I, *S.insert(&I).first);
+    EXPECT_EQ(&I, *S.find(&I));
+  }
+
+  // Iterate from each and count how many times each element is found.
+  int Found[sizeof(Ints)/sizeof(int)] = {0};
+  for (int &I : Ints)
+    for (auto F = S.find(&I), E = S.end(); F != E; ++F)
+      ++Found[*F - Ints];
+
+  // Sort.  We should hit the first element just once and the final element N
+  // times.
+  std::sort(std::begin(Found), std::end(Found));
+  for (auto F = std::begin(Found), E = std::end(Found); F != E; ++F)
+    EXPECT_EQ(F - Found + 1, *F);
+}
+
 // Verify that const pointers work for count and find even when the underlying
 // SmallPtrSet is not for a const pointer type.
 TEST(SmallPtrSetTest, ConstTest) {
@@ -292,10 +314,8 @@ TEST(SmallPtrSetTest, ConstTest) {
   IntSet.insert(B);
   EXPECT_EQ(IntSet.count(B), 1u);
   EXPECT_EQ(IntSet.count(C), 1u);
-  // FIXME: We can't unit test find right now because ABI_BREAKING_CHECKS breaks
-  // find().
-  //  EXPECT_NE(IntSet.find(B), IntSet.end());
-  //  EXPECT_NE(IntSet.find(C), IntSet.end());
+  EXPECT_NE(IntSet.find(B), IntSet.end());
+  EXPECT_NE(IntSet.find(C), IntSet.end());
 }
 
 // Verify that we automatically get the const version of PointerLikeTypeTraits
@@ -308,7 +328,5 @@ TEST(SmallPtrSetTest, ConstNonPtrTest) {
   TestPair Pair(&A[0], 1);
   IntSet.insert(Pair);
   EXPECT_EQ(IntSet.count(Pair), 1u);
-  // FIXME: We can't unit test find right now because ABI_BREAKING_CHECKS breaks
-  // find().
-  //  EXPECT_NE(IntSet.find(Pair), IntSet.end());
+  EXPECT_NE(IntSet.find(Pair), IntSet.end());
 }

@@ -50,7 +50,7 @@ MachThread::MachThread(MachProcess *process, bool is_64_bit,
   DNBLogThreadedIf(LOG_THREAD | LOG_VERBOSE,
                    "MachThread::MachThread ( process = %p, tid = 0x%8.8" PRIx64
                    ", seq_id = %u )",
-                   &m_process, m_unique_id, m_seq_id);
+                   reinterpret_cast<void *>(&m_process), m_unique_id, m_seq_id);
 }
 
 MachThread::~MachThread() {

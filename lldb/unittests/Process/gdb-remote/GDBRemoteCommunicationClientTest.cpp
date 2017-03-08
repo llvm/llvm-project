@@ -307,3 +307,27 @@ TEST_F(GDBRemoteCommunicationClientTest, TestPacketSpeedJSON) {
       << ss.GetString();
   ASSERT_EQ(10, num_packets);
 }
+
+TEST_F(GDBRemoteCommunicationClientTest, SendSignalsToIgnore) {
+  TestClient client;
+  MockServer server;
+  Connect(client, server);
+  if (HasFailure())
+    return;
+
+  const lldb::tid_t tid = 0x47;
+  const uint32_t reg_num = 4;
+  std::future<Error> result = std::async(std::launch::async, [&] {
+    return client.SendSignalsToIgnore({2, 3, 5, 7, 0xB, 0xD, 0x11});
+  });
+
+  HandlePacket(server, "QPassSignals:02;03;05;07;0b;0d;11", "OK");
+  EXPECT_TRUE(result.get().Success());
+
+  result = std::async(std::launch::async, [&] {
+    return client.SendSignalsToIgnore(std::vector<int32_t>());
+  });
+
+  HandlePacket(server, "QPassSignals:", "OK");
+  EXPECT_TRUE(result.get().Success());
+}

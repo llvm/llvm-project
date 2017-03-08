@@ -211,6 +211,20 @@ public:
 
     Inherited::VisitCXXMethodDecl(D);
   }
+
+  void VisitTypedefNameDecl(const TypedefNameDecl *D) {
+    AddQualType(D->getUnderlyingType());
+
+    Inherited::VisitTypedefNameDecl(D);
+  }
+
+  void VisitTypedefDecl(const TypedefDecl *D) {
+    Inherited::VisitTypedefDecl(D);
+  }
+
+  void VisitTypeAliasDecl(const TypeAliasDecl *D) {
+    Inherited::VisitTypeAliasDecl(D);
+  }
 };
 
 // Only allow a small portion of Decl's to be processed.  Remove this once
@@ -226,6 +240,8 @@ bool ODRHash::isWhitelistedDecl(const Decl *D, const CXXRecordDecl *Parent) {
     case Decl::CXXMethod:
     case Decl::Field:
     case Decl::StaticAssert:
+    case Decl::TypeAlias:
+    case Decl::Typedef:
       return true;
   }
 }
@@ -313,6 +329,7 @@ public:
 
   void VisitTypedefType(const TypedefType *T) {
     AddDecl(T->getDecl());
+    Hash.AddQualType(T->getDecl()->getUnderlyingType());
     VisitType(T);
   }
 };

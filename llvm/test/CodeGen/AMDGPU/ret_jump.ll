@@ -15,7 +15,6 @@
 ; GCN-NEXT: s_branch [[FINAL_BB:BB[0-9]+_[0-9]+]]
 
 ; GCN-NEXT: [[UNREACHABLE_BB]]:
-; GCN-NEXT: s_or_b64 exec, exec, [[XOR_EXEC]]
 ; GCN-NEXT: [[FINAL_BB]]:
 ; GCN-NEXT: .Lfunc_end0
 define amdgpu_ps <{ i32, i32, i32, i32, i32, i32, i32, i32, i32, float, float, float, float, float, float, float, float, float, float, float, float, float, float }> @main([9 x <16 x i8>] addrspace(2)* byval %arg, [17 x <16 x i8>] addrspace(2)* byval %arg1, [17 x <8 x i32>] addrspace(2)* byval %arg2, i32 addrspace(2)* byval %arg3, float inreg %arg4, i32 inreg %arg5, <2 x i32> %arg6, <2 x i32> %arg7, <2 x i32> %arg8, <3 x i32> %arg9, <2 x i32> %arg10, <2 x i32> %arg11, <2 x i32> %arg12, float %arg13, float %arg14, float %arg15, float %arg16, float %arg17, i32 %arg18, i32 %arg19, float %arg20, i32 %arg21) #0 {

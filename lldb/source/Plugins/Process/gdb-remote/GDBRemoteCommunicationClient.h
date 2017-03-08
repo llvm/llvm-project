@@ -347,6 +347,8 @@ public:
 
   bool GetEchoSupported();
 
+  bool GetQPassSignalsSupported();
+
   bool GetAugmentedLibrariesSVR4ReadSupported();
 
   bool GetQXferFeaturesReadSupported();
@@ -450,6 +452,9 @@ public:
 
   void ServeSymbolLookups(lldb_private::Process *process);
 
+  // Sends QPassSignals packet to the server with given signals to ignore.
+  Error SendSignalsToIgnore(llvm::ArrayRef<int32_t> signals);
+
   //------------------------------------------------------------------
   /// Return the feature set supported by the gdb-remote server.
   ///
@@ -527,6 +532,7 @@ protected:
   LazyBool m_supports_jThreadExtendedInfo;
   LazyBool m_supports_jLoadedDynamicLibrariesInfos;
   LazyBool m_supports_jGetSharedCacheInfo;
+  LazyBool m_supports_QPassSignals;
 
   bool m_supports_qProcessInfoPID : 1, m_supports_qfProcessInfo : 1,
       m_supports_qUserName : 1, m_supports_qGroupName : 1,

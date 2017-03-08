@@ -50,7 +50,7 @@ unsigned AMDGPUCallLowering::lowerParameterPtr(MachineIRBuilder &MIRBuilder,
   const Function &F = *MF.getFunction();
   const DataLayout &DL = F.getParent()->getDataLayout();
   PointerType *PtrTy = PointerType::get(ParamTy, AMDGPUAS::CONSTANT_ADDRESS);
-  LLT PtrType(*PtrTy, DL);
+  LLT PtrType = getLLTForType(*PtrTy, DL);
   unsigned DstReg = MRI.createGenericVirtualRegister(PtrType);
   unsigned KernArgSegmentPtr =
       TRI->getPreloadedValue(MF, SIRegisterInfo::KERNARG_SEGMENT_PTR);

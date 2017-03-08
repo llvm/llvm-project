@@ -4377,6 +4377,10 @@ The current supported vocabulary is limited:
 - ``DW_OP_plus, 93`` adds ``93`` to the working expression.
 - ``DW_OP_bit_piece, 16, 8`` specifies the offset and size (``16`` and ``8``
   here, respectively) of the variable piece from the working expression.
+- ``DW_OP_swap`` swaps top two stack entries.
+- ``DW_OP_xderef`` provides extended dereference mechanism. The entry at the top
+  of the stack is treated as an address. The second stack entry is treated as an
+  address space identifier.
 
 .. code-block:: text
 
@@ -4384,6 +4388,7 @@ The current supported vocabulary is limited:
     !1 = !DIExpression(DW_OP_plus, 3)
     !2 = !DIExpression(DW_OP_bit_piece, 3, 7)
     !3 = !DIExpression(DW_OP_deref, DW_OP_plus, 3, DW_OP_bit_piece, 3, 7)
+    !4 = !DIExpression(DW_OP_constu, 2, DW_OP_swap, DW_OP_xderef)
 
 DIObjCProperty
 """"""""""""""
