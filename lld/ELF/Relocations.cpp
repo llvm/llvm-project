@@ -895,7 +895,7 @@ static void mergeThunks(OutputSection *OS,
 // FIXME: All Thunks are assumed to be in range of the relocation. Range
 // extension Thunks are not yet supported.
 template <class ELFT>
-void createThunks(ArrayRef<OutputSection *> OutputSections) {
+bool createThunks(ArrayRef<OutputSection *> OutputSections) {
   // Track Symbols that already have a Thunk
   DenseMap<SymbolBody *, Thunk<ELFT> *> ThunkedSymbols;
   // Track InputSections that have a ThunkSection placed in front
@@ -977,6 +977,7 @@ void createThunks(ArrayRef<OutputSection *> OutputSections) {
   // Merge all created synthetic ThunkSections back into OutputSection
   for (auto &KV : ThunkSections)
     mergeThunks<ELFT>(KV.first, KV.second);
+  return !ThunkSections.empty();
 }
 
 template void scanRelocations<ELF32LE>(InputSectionBase &);
@@ -984,9 +985,9 @@ template void scanRelocations<ELF32BE>(InputSectionBase &);
 template void scanRelocations<ELF64LE>(InputSectionBase &);
 template void scanRelocations<ELF64BE>(InputSectionBase &);
 
-template void createThunks<ELF32LE>(ArrayRef<OutputSection *>);
-template void createThunks<ELF32BE>(ArrayRef<OutputSection *>);
-template void createThunks<ELF64LE>(ArrayRef<OutputSection *>);
-template void createThunks<ELF64BE>(ArrayRef<OutputSection *>);
+template bool createThunks<ELF32LE>(ArrayRef<OutputSection *>);
+template bool createThunks<ELF32BE>(ArrayRef<OutputSection *>);
+template bool createThunks<ELF64LE>(ArrayRef<OutputSection *>);
+template bool createThunks<ELF64BE>(ArrayRef<OutputSection *>);
 }
 }

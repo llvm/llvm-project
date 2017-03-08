@@ -58,11 +58,12 @@ public:
 
   // These corresponds to the fields in Elf_Shdr.
   uint64_t Flags;
-  uint64_t Offset = 0;
   uint64_t Entsize;
   uint32_t Type;
   uint32_t Link;
   uint32_t Info;
+
+  uint64_t getOffset() const;
 
   static InputSectionBase Discarded;
 

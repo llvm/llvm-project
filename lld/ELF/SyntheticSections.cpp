@@ -844,6 +844,10 @@ unsigned MipsGotSection<ELFT>::getLocalEntriesNum() const {
 }
 
 template <class ELFT> void MipsGotSection<ELFT>::finalizeContents() {
+  updateAllocSize();
+}
+
+template <class ELFT> void MipsGotSection<ELFT>::updateAllocSize() {
   PageEntriesNum = 0;
   for (std::pair<const OutputSection *, size_t> &P : PageIndexMap) {
     // For each output section referenced by GOT page relocations calculate
@@ -1330,8 +1334,12 @@ template <class ELFT> void SymbolTableSection<ELFT>::finalizeContents() {
       S.Symbol->DynsymIndex = ++I;
     return;
   }
+}
 
-  // If it is a .symtab, move all local symbols before global symbols.
+template <class ELFT> void SymbolTableSection<ELFT>::postThunkContents() {
+  if (this->Type == SHT_DYNSYM)
+    return;
+  // move all local symbols before global symbols.
   auto It = std::stable_partition(
       Symbols.begin(), Symbols.end(), [](const SymbolTableEntry &S) {
         return S.Symbol->isLocal() ||
@@ -1725,7 +1733,8 @@ static InputSectionBase *findSection(ArrayRef<InputSectionBase *> Arr,
                                      uint64_t Offset) {
   for (InputSectionBase *S : Arr)
     if (S && S != &InputSection::Discarded)
-      if (Offset >= S->Offset && Offset < S->Offset + S->getSize<ELFT>())
+      if (Offset >= S->getOffset() &&
+          Offset < S->getOffset() + S->getSize<ELFT>())
         return S;
   return nullptr;
 }
@@ -1744,8 +1753,8 @@ readAddressArea(DWARFContext &Dwarf, InputSection *Sec, size_t CurrentCU) {
 
     for (std::pair<uint64_t, uint64_t> &R : Ranges)
       if (InputSectionBase *S = findSection<ELFT>(Sections, R.first))
-        Ret.push_back(
-            {S, R.first - S->Offset, R.second - S->Offset, CurrentCU});
+        Ret.push_back({S, R.first - S->getOffset(), R.second - S->getOffset(),
+                       CurrentCU});
     ++CurrentCU;
   }
   return Ret;
