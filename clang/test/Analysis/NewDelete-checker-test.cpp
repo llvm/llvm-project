@@ -244,7 +244,7 @@ void testUninitDeleteArray() {
 
 void testUninitFree() {
   int *x;
-  free(x); // expected-warning{{Function call argument is an uninitialized value}}
+  free(x); // expected-warning{{1st function call argument is an uninitialized value}}
 }
 
 void testUninitDeleteSink() {
