@@ -107,7 +107,7 @@ struct Type {
 void shouldNotCrash() {
   decltype(nullptr) p;
   if (getSymbol())
-    invokeF(p); // expected-warning{{Function call argument is an uninit}}
+    invokeF(p); // expected-warning{{1st function call argument is an uninit}}
   if (getSymbol())
     invokeF(nullptr);
   if (getSymbol()) {

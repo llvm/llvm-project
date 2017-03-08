@@ -2480,6 +2480,7 @@ bool BitSimplification::simplifyExtractLow(MachineInstr *MI,
       continue;
     if (RW != SW)
       SR = (Off/RW == 0) ? Hexagon::isub_lo : Hexagon::isub_hi;
+    Off = Off % RW;
 
     if (!validateReg({R,SR}, ExtOpc, 1))
       continue;

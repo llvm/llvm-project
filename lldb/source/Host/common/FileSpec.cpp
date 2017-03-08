@@ -27,7 +27,6 @@
 
 #include "lldb/Core/StringList.h"
 #include "lldb/Host/FileSpec.h"
-#include "lldb/Host/FileSystem.h"
 #include "lldb/Utility/CleanUp.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/Stream.h"
@@ -45,10 +44,18 @@ using namespace lldb_private;
 
 namespace {
 
+static constexpr FileSpec::PathSyntax GetNativeSyntax() {
+#if defined(LLVM_ON_WIN32)
+  return FileSpec::ePathSyntaxWindows;
+#else
+  return FileSpec::ePathSyntaxPosix;
+#endif
+}
+
 bool PathSyntaxIsPosix(FileSpec::PathSyntax syntax) {
   return (syntax == FileSpec::ePathSyntaxPosix ||
           (syntax == FileSpec::ePathSyntaxHostNative &&
-           FileSystem::GetNativePathSyntax() == FileSpec::ePathSyntaxPosix));
+           GetNativeSyntax() == FileSpec::ePathSyntaxPosix));
 }
 
 const char *GetPathSeparators(FileSpec::PathSyntax syntax) {
@@ -82,13 +89,6 @@ void Denormalize(llvm::SmallVectorImpl<char> &path,
     return;
 
   std::replace(path.begin(), path.end(), '/', '\\');
-}
-
-bool GetFileStats(const FileSpec *file_spec, struct stat *stats_ptr) {
-  char resolved_path[PATH_MAX];
-  if (file_spec->GetPath(resolved_path, sizeof(resolved_path)))
-    return FileSystem::Stat(resolved_path, stats_ptr) == 0;
-  return false;
 }
 
 size_t FilenamePos(llvm::StringRef str, FileSpec::PathSyntax syntax) {
@@ -273,7 +273,7 @@ void FileSpec::Resolve(llvm::SmallVectorImpl<char> &path) {
   }
 }
 
-FileSpec::FileSpec() : m_syntax(FileSystem::GetNativePathSyntax()) {}
+FileSpec::FileSpec() : m_syntax(GetNativeSyntax()) {}
 
 //------------------------------------------------------------------
 // Default constructor that can take an optional full path to a
@@ -336,9 +336,7 @@ void FileSpec::SetFile(llvm::StringRef pathname, bool resolve,
   m_filename.Clear();
   m_directory.Clear();
   m_is_resolved = false;
-  m_syntax = (syntax == ePathSyntaxHostNative)
-                 ? FileSystem::GetNativePathSyntax()
-                 : syntax;
+  m_syntax = (syntax == ePathSyntaxHostNative) ? GetNativeSyntax() : syntax;
 
   if (pathname.empty())
     return;
@@ -615,16 +613,10 @@ void FileSpec::Dump(Stream *s) const {
 //------------------------------------------------------------------
 // Returns true if the file exists.
 //------------------------------------------------------------------
-bool FileSpec::Exists() const {
-  struct stat file_stats;
-  return GetFileStats(this, &file_stats);
-}
+bool FileSpec::Exists() const { return llvm::sys::fs::exists(GetPath()); }
 
 bool FileSpec::Readable() const {
-  const uint32_t permissions = GetPermissions();
-  if (permissions & eFilePermissionsEveryoneR)
-    return true;
-  return false;
+  return GetPermissions() & llvm::sys::fs::perms::all_read;
 }
 
 bool FileSpec::ResolveExecutableLocation() {
@@ -677,67 +669,21 @@ bool FileSpec::ResolvePath() {
 }
 
 uint64_t FileSpec::GetByteSize() const {
-  struct stat file_stats;
-  if (GetFileStats(this, &file_stats))
-    return file_stats.st_size;
-  return 0;
+  uint64_t Size = 0;
+  if (llvm::sys::fs::file_size(GetPath(), Size))
+    return 0;
+  return Size;
 }
 
 FileSpec::PathSyntax FileSpec::GetPathSyntax() const { return m_syntax; }
 
-FileSpec::FileType FileSpec::GetFileType() const {
-  struct stat file_stats;
-  if (GetFileStats(this, &file_stats)) {
-    mode_t file_type = file_stats.st_mode & S_IFMT;
-    switch (file_type) {
-    case S_IFDIR:
-      return eFileTypeDirectory;
-    case S_IFREG:
-      return eFileTypeRegular;
-#ifndef _WIN32
-    case S_IFIFO:
-      return eFileTypePipe;
-    case S_IFSOCK:
-      return eFileTypeSocket;
-    case S_IFLNK:
-      return eFileTypeSymbolicLink;
-#endif
-    default:
-      break;
-    }
-    return eFileTypeUnknown;
-  }
-  return eFileTypeInvalid;
-}
-
-bool FileSpec::IsSymbolicLink() const {
-  char resolved_path[PATH_MAX];
-  if (!GetPath(resolved_path, sizeof(resolved_path)))
-    return false;
-
-#ifdef _WIN32
-  std::wstring wpath;
-  if (!llvm::ConvertUTF8toWide(resolved_path, wpath))
-    return false;
-  auto attrs = ::GetFileAttributesW(wpath.c_str());
-  if (attrs == INVALID_FILE_ATTRIBUTES)
-    return false;
-
-  return (attrs & FILE_ATTRIBUTE_REPARSE_POINT);
-#else
-  struct stat file_stats;
-  if (::lstat(resolved_path, &file_stats) != 0)
-    return false;
-
-  return (file_stats.st_mode & S_IFMT) == S_IFLNK;
-#endif
-}
-
 uint32_t FileSpec::GetPermissions() const {
-  uint32_t file_permissions = 0;
-  if (*this)
-    FileSystem::GetFilePermissions(*this, file_permissions);
-  return file_permissions;
+  namespace fs = llvm::sys::fs;
+  fs::file_status st;
+  if (fs::status(GetPath(), st, false))
+    return fs::perms::perms_not_known;
+
+  return st.permissions();
 }
 
 //------------------------------------------------------------------
@@ -853,7 +799,8 @@ FileSpec::ForEachItemInDirectory(llvm::StringRef dir_path,
     }
 
     do {
-      FileSpec::FileType file_type = eFileTypeUnknown;
+      namespace fs = llvm::sys::fs;
+      fs::file_type ft = fs::file_type::type_unknown;
       if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
         size_t len = wcslen(ffd.cFileName);
 
@@ -863,11 +810,11 @@ FileSpec::ForEachItemInDirectory(llvm::StringRef dir_path,
         if (len == 2 && ffd.cFileName[0] == L'.' && ffd.cFileName[1] == L'.')
           continue;
 
-        file_type = eFileTypeDirectory;
+        ft = fs::file_type::directory_file;
       } else if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DEVICE) {
-        file_type = eFileTypeOther;
+        ft = fs::file_type::type_unknown;
       } else {
-        file_type = eFileTypeRegular;
+        ft = fs::file_type::regular_file;
       }
 
       std::string fileName;
@@ -879,7 +826,7 @@ FileSpec::ForEachItemInDirectory(llvm::StringRef dir_path,
       // Don't resolve the file type or path
       FileSpec child_path_spec(child_path.data(), false);
 
-      EnumerateDirectoryResult result = callback(file_type, child_path_spec);
+      EnumerateDirectoryResult result = callback(ft, child_path_spec);
 
       switch (result) {
       case eEnumerateDirectoryResultNext:
@@ -940,37 +887,38 @@ FileSpec::ForEachItemInDirectory(llvm::StringRef dir_path,
             continue;
         }
 
-        FileSpec::FileType file_type = eFileTypeUnknown;
+        using namespace llvm::sys::fs;
+        file_type ft = file_type::type_unknown;
 
         switch (dp->d_type) {
         default:
         case DT_UNKNOWN:
-          file_type = eFileTypeUnknown;
+          ft = file_type::type_unknown;
           break;
         case DT_FIFO:
-          file_type = eFileTypePipe;
+          ft = file_type::fifo_file;
           break;
         case DT_CHR:
-          file_type = eFileTypeOther;
+          ft = file_type::character_file;
           break;
         case DT_DIR:
-          file_type = eFileTypeDirectory;
+          ft = file_type::directory_file;
           break;
         case DT_BLK:
-          file_type = eFileTypeOther;
+          ft = file_type::block_file;
           break;
         case DT_REG:
-          file_type = eFileTypeRegular;
+          ft = file_type::regular_file;
           break;
         case DT_LNK:
-          file_type = eFileTypeSymbolicLink;
+          ft = file_type::symlink_file;
           break;
         case DT_SOCK:
-          file_type = eFileTypeSocket;
+          ft = file_type::socket_file;
           break;
 #if !defined(__OpenBSD__)
         case DT_WHT:
-          file_type = eFileTypeOther;
+          ft = file_type::type_unknown;
           break;
 #endif
         }
@@ -985,8 +933,7 @@ FileSpec::ForEachItemInDirectory(llvm::StringRef dir_path,
         // Don't resolve the file type or path
         FileSpec child_path_spec(child_path, false);
 
-        EnumerateDirectoryResult result =
-            callback(file_type, child_path_spec);
+        EnumerateDirectoryResult result = callback(ft, child_path_spec);
 
         switch (result) {
         case eEnumerateDirectoryResultNext:
@@ -1040,14 +987,14 @@ FileSpec::EnumerateDirectory(llvm::StringRef dir_path, bool find_directories,
                              void *callback_baton) {
   return ForEachItemInDirectory(
       dir_path,
-      [&find_directories, &find_files, &find_other, &callback,
-       &callback_baton](FileType file_type, const FileSpec &file_spec) {
+      [&find_directories, &find_files, &find_other, &callback, &callback_baton](
+          llvm::sys::fs::file_type file_type, const FileSpec &file_spec) {
         switch (file_type) {
-        case FileType::eFileTypeDirectory:
+        case llvm::sys::fs::file_type::directory_file:
           if (find_directories)
             return callback(callback_baton, file_type, file_spec);
           break;
-        case FileType::eFileTypeRegular:
+        case llvm::sys::fs::file_type::regular_file:
           if (find_files)
             return callback(callback_baton, file_type, file_spec);
           break;

@@ -72,6 +72,8 @@
 #include "SymbolFileDWARFDebugMap.h"
 #include "SymbolFileDWARFDwo.h"
 
+#include "llvm/Support/FileSystem.h"
+
 #include <map>
 
 #include <ctype.h>
@@ -191,7 +193,9 @@ static const char *resolveCompDir(const char *path_from_dwarf) {
   if (!is_symlink)
     return local_path;
 
-  if (!local_path_spec.IsSymbolicLink())
+  namespace fs = llvm::sys::fs;
+  if (fs::get_file_type(local_path_spec.GetPath(), false) !=
+      fs::file_type::symlink_file)
     return local_path;
 
   FileSpec resolved_local_path_spec;

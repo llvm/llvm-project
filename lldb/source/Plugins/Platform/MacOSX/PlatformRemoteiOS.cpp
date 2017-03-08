@@ -255,7 +255,7 @@ Error PlatformRemoteiOS::ResolveExecutable(
 
 FileSpec::EnumerateDirectoryResult
 PlatformRemoteiOS::GetContainedFilesIntoVectorOfStringsCallback(
-    void *baton, FileSpec::FileType file_type, const FileSpec &file_spec) {
+    void *baton, llvm::sys::fs::file_type ft, const FileSpec &file_spec) {
   ((PlatformRemoteiOS::SDKDirectoryInfoCollection *)baton)
       ->push_back(PlatformRemoteiOS::SDKDirectoryInfo(file_spec));
   return FileSpec::eEnumerateDirectoryResultNext;

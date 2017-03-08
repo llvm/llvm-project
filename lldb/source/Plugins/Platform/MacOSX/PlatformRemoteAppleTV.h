@@ -18,6 +18,8 @@
 // Project includes
 #include "lldb/Host/FileSpec.h"
 
+#include "llvm/Support/FileSystem.h"
+
 #include "PlatformDarwin.h"
 
 class PlatformRemoteAppleTV : public PlatformDarwin {
@@ -116,7 +118,7 @@ protected:
 
   static lldb_private::FileSpec::EnumerateDirectoryResult
   GetContainedFilesIntoVectorOfStringsCallback(
-      void *baton, lldb_private::FileSpec::FileType file_type,
+      void *baton, llvm::sys::fs::file_type ft,
       const lldb_private::FileSpec &file_spec);
 
   uint32_t FindFileInAllSDKs(const char *platform_file_path,

@@ -984,6 +984,18 @@ std::error_code is_regular_file(const Twine &path, bool &result) {
   return std::error_code();
 }
 
+bool is_symlink_file(file_status status) {
+  return status.type() == file_type::symlink_file;
+}
+
+std::error_code is_symlink_file(const Twine &path, bool &result) {
+  file_status st;
+  if (std::error_code ec = status(path, st, false))
+    return ec;
+  result = is_symlink_file(st);
+  return std::error_code();
+}
+
 bool is_other(file_status status) {
   return exists(status) &&
          !is_regular_file(status) &&

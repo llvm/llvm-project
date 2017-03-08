@@ -520,3 +520,16 @@ define <3 x i31> @wide_splat3(<3 x i33> %x) {
   ret <3 x i31> %trunc
 }
 
+; TODO: The shuffle extends the length of the input vector. Should we shrink this?
+
+define <8 x i8> @wide_lengthening_splat(<4 x i16> %v) {
+; CHECK-LABEL: @wide_lengthening_splat(
+; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x i16> %v, <4 x i16> undef, <8 x i32> zeroinitializer
+; CHECK-NEXT:    [[TR:%.*]] = trunc <8 x i16> [[SHUF]] to <8 x i8>
+; CHECK-NEXT:    ret <8 x i8> [[TR]]
+;
+  %shuf = shufflevector <4 x i16> %v, <4 x i16> %v, <8 x i32> zeroinitializer
+  %tr = trunc <8 x i16> %shuf to <8 x i8>
+  ret <8 x i8> %tr
+}
+

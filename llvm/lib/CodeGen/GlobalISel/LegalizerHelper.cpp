@@ -539,6 +539,38 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
     MI.eraseFromParent();
     return Legalized;
   }
+  case TargetOpcode::G_FNEG: {
+    // TODO: Handle vector types once we are able to
+    // represent them.
+    if (Ty.isVector())
+      return UnableToLegalize;
+    unsigned Res = MI.getOperand(0).getReg();
+    Type *ZeroTy;
+    LLVMContext &Ctx = MIRBuilder.getMF().getFunction()->getContext();
+    switch (Ty.getSizeInBits()) {
+    case 16:
+      ZeroTy = Type::getHalfTy(Ctx);
+      break;
+    case 32:
+      ZeroTy = Type::getFloatTy(Ctx);
+      break;
+    case 64:
+      ZeroTy = Type::getDoubleTy(Ctx);
+      break;
+    default:
+      llvm_unreachable("unexpected floating-point type");
+    }
+    ConstantFP &ZeroForNegation =
+        *cast<ConstantFP>(ConstantFP::getZeroValueForNegation(ZeroTy));
+    unsigned Zero = MRI.createGenericVirtualRegister(Ty);
+    MIRBuilder.buildFConstant(Zero, ZeroForNegation);
+    MIRBuilder.buildInstr(TargetOpcode::G_FSUB)
+        .addDef(Res)
+        .addUse(Zero)
+        .addUse(MI.getOperand(1).getReg());
+    MI.eraseFromParent();
+    return Legalized;
+  }
   }
 }
 
