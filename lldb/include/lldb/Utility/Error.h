@@ -68,6 +68,8 @@ public:
 
   explicit Error(ValueType err, lldb::ErrorType type = lldb::eErrorTypeGeneric);
 
+  /* implicit */ Error(std::error_code EC);
+
   explicit Error(const char *format, ...) __attribute__((format(printf, 2, 3)));
 
   Error(const Error &rhs);

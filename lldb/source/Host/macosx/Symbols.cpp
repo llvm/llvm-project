@@ -38,6 +38,8 @@
 #include "lldb/Utility/UUID.h"
 #include "mach/machine.h"
 
+#include "llvm/Support/FileSystem.h"
+
 using namespace lldb;
 using namespace lldb_private;
 using namespace llvm::MachO;
@@ -101,7 +103,7 @@ int LocateMacOSXFilesUsingDebugSymbols(const ModuleSpec &module_spec,
             }
             FileSpec dsym_filespec(path, path[0] == '~');
 
-            if (dsym_filespec.GetFileType() == FileSpec::eFileTypeDirectory) {
+            if (llvm::sys::fs::is_directory(dsym_filespec.GetPath())) {
               dsym_filespec =
                   Symbols::FindSymbolFileInBundle(dsym_filespec, uuid, arch);
               ++items_found;
@@ -164,8 +166,10 @@ int LocateMacOSXFilesUsingDebugSymbols(const ModuleSpec &module_spec,
                 FileSpec file_spec(path, true);
                 ModuleSpecList module_specs;
                 ModuleSpec matched_module_spec;
-                switch (file_spec.GetFileType()) {
-                case FileSpec::eFileTypeDirectory: // Bundle directory?
+                using namespace llvm::sys::fs;
+                switch (get_file_type(file_spec.GetPath())) {
+
+                case file_type::directory_file: // Bundle directory?
                 {
                   CFCBundle bundle(path);
                   CFCReleaser<CFURLRef> bundle_exe_url(
@@ -193,15 +197,17 @@ int LocateMacOSXFilesUsingDebugSymbols(const ModuleSpec &module_spec,
                   }
                 } break;
 
-                case FileSpec::eFileTypePipe:   // Forget pipes
-                case FileSpec::eFileTypeSocket: // We can't process socket files
-                case FileSpec::eFileTypeInvalid: // File doesn't exist...
+                case file_type::fifo_file:      // Forget pipes
+                case file_type::socket_file:    // We can't process socket files
+                case file_type::file_not_found: // File doesn't exist...
+                case file_type::status_error:
                   break;
 
-                case FileSpec::eFileTypeUnknown:
-                case FileSpec::eFileTypeRegular:
-                case FileSpec::eFileTypeSymbolicLink:
-                case FileSpec::eFileTypeOther:
+                case file_type::type_unknown:
+                case file_type::regular_file:
+                case file_type::symlink_file:
+                case file_type::block_file:
+                case file_type::character_file:
                   if (ObjectFile::GetModuleSpecifications(file_spec, 0, 0,
                                                           module_specs) &&
                       module_specs.FindMatchingModuleSpec(module_spec,

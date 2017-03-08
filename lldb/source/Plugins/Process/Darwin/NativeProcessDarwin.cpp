@@ -31,6 +31,8 @@
 
 #include "MachException.h"
 
+#include "llvm/Support/FileSystem.h"
+
 using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::process_darwin;
@@ -63,7 +65,7 @@ Error NativeProcessProtocol::Launch(
   FileSpec working_dir(launch_info.GetWorkingDirectory());
   if (working_dir &&
       (!working_dir.ResolvePath() ||
-       working_dir.GetFileType() != FileSpec::eFileTypeDirectory)) {
+       !llvm::sys::fs::is_directory(working_dir.GetPath())) {
     error.SetErrorStringWithFormat("No such file or directory: %s",
                                    working_dir.GetCString());
     return error;

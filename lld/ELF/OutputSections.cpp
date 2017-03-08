@@ -31,6 +31,8 @@ using namespace lld;
 using namespace lld::elf;
 
 uint8_t Out::First;
+OutputSection *Out::Bss;
+OutputSection *Out::BssRelRo;
 OutputSection *Out::Opd;
 uint8_t *Out::OpdBuf;
 PhdrEntry *Out::TlsPhdr;
@@ -134,7 +136,7 @@ template <class ELFT> void OutputSection::assignOffsets() {
   for (InputSection *S : Sections) {
     Off = alignTo(Off, S->Alignment);
     S->OutSecOff = Off;
-    Off += S->template getSize<ELFT>();
+    Off += S->getSize();
   }
   this->Size = Off;
 }

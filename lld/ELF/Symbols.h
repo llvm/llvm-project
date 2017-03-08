@@ -102,6 +102,10 @@ protected:
   const unsigned SymbolKind : 8;
 
 public:
+  // True if the linker has to generate a copy relocation.
+  // For SharedSymbol only.
+  unsigned NeedsCopy : 1;
+
   // True the symbol should point to its PLT entry.
   // For SharedSymbol only.
   unsigned NeedsPltAddr : 1;
@@ -265,6 +269,9 @@ public:
 
   // This field is a pointer to the symbol's version definition.
   const void *Verdef;
+
+  // Section is significant only when NeedsCopy is true.
+  InputSection *Section = nullptr;
 
 private:
   template <class ELFT> const typename ELFT::Sym &getSym() const {

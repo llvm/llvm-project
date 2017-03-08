@@ -59,21 +59,16 @@ public:
   void Delete();
 };
 
-FileSpec JoinPath(const FileSpec &path1, const char *path2) {
+static FileSpec JoinPath(const FileSpec &path1, const char *path2) {
   FileSpec result_spec(path1);
   result_spec.AppendPathComponent(path2);
   return result_spec;
 }
 
-Error MakeDirectory(const FileSpec &dir_path) {
-  if (dir_path.Exists()) {
-    if (!dir_path.IsDirectory())
-      return Error("Invalid existing path");
+static Error MakeDirectory(const FileSpec &dir_path) {
+  namespace fs = llvm::sys::fs;
 
-    return Error();
-  }
-
-  return FileSystem::MakeDirectory(dir_path, eFilePermissionsDirectoryDefault);
+  return fs::create_directories(dir_path.GetPath(), true, fs::perms::owner_all);
 }
 
 FileSpec GetModuleDirectory(const FileSpec &root_dir_spec, const UUID &uuid) {

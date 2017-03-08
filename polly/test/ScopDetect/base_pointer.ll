@@ -179,9 +179,10 @@ entry:
 
 for.i:
   %indvar.i = phi i64 [ %indvar.i.next, %for.i.inc ], [ 0, %entry ]
-; To get an instruction inside a region, we use a function without side
-; effects on which SCEV blocks, but for which it is still clear that the
-; return value remains invariant throughout the whole loop.
+; A function return value, even with readnone nounwind attributes, is not
+; considered a valid base pointer because it can return a pointer that aliases
+; with something else (e.g. %A or a global) or return a different pointer at
+; every call (e.g. malloc)
   %ptr = call float* @getNextBasePtr(float* %A)
   br label %S1
 
@@ -201,7 +202,7 @@ exit:
 }
 
 ; CHECK-LABEL: base_pointer_is_inst_inside_invariant_1
-; CHECK: Valid Region for Scop: for.i => exit
+; CHECK-NOT: Valid Region for Scop
 
 declare float* @getNextBasePtr2(float*) readnone nounwind
 
@@ -231,7 +232,7 @@ exit:
 }
 
 ; CHECK-LABEL: base_pointer_is_inst_inside_invariant_2
-; CHECK: Valid Region for Scop: for.i => exit
+; CHECK-NOT: Valid Region for Scop
 
 declare float* @getNextBasePtr3(float*, i64) readnone nounwind
 

@@ -66,8 +66,8 @@ static void writeInputSection(raw_fd_ostream &OS, const InputSection *IS,
   int Width = ELFT::Is64Bits ? 16 : 8;
   StringRef Name = IS->Name;
   if (Name != PrevName) {
-    writeInSecLine(OS, Width, IS->OutSec->Addr + IS->OutSecOff,
-                   IS->template getSize<ELFT>(), IS->Alignment, Name);
+    writeInSecLine(OS, Width, IS->OutSec->Addr + IS->OutSecOff, IS->getSize(),
+                   IS->Alignment, Name);
     OS << '\n';
     PrevName = Name;
   }
@@ -75,8 +75,8 @@ static void writeInputSection(raw_fd_ostream &OS, const InputSection *IS,
   elf::ObjectFile<ELFT> *File = IS->template getFile<ELFT>();
   if (!File)
     return;
-  writeFileLine(OS, Width, IS->OutSec->Addr + IS->OutSecOff,
-                IS->template getSize<ELFT>(), IS->Alignment, toString(File));
+  writeFileLine(OS, Width, IS->OutSec->Addr + IS->OutSecOff, IS->getSize(),
+                IS->Alignment, toString(File));
   OS << '\n';
 
   for (SymbolBody *Sym : File->getSymbols()) {
