@@ -1607,6 +1607,27 @@ TEST_F(FormatTestJS, JSDocAnnotations) {
       " * @param This is a long comment but no type\n"
       " */",
       getGoogleJSStyleWithColumns(20));
+  // Don't break @param line, but reindent it and reflow unrelated lines.
+  verifyFormat("{\n"
+               "  /**\n"
+               "   * long long long\n"
+               "   * long\n"
+               "   * @param {this.is.a.long.path.to.a.Type} a\n"
+               "   * long long long\n"
+               "   * long long\n"
+               "   */\n"
+               "  function f(a) {}\n"
+               "}",
+               "{\n"
+               "/**\n"
+               " * long long long long\n"
+               " * @param {this.is.a.long.path.to.a.Type} a\n"
+               " * long long long long\n"
+               " * long\n"
+               " */\n"
+               "  function f(a) {}\n"
+               "}",
+               getGoogleJSStyleWithColumns(20));
 }
 
 TEST_F(FormatTestJS, RequoteStringsSingle) {
@@ -1695,6 +1716,5 @@ TEST_F(FormatTestJS, ImportComments) {
                getGoogleJSStyleWithColumns(25));
   verifyFormat("// taze: x from 'location'", getGoogleJSStyleWithColumns(10));
 }
-
 } // end namespace tooling
 } // end namespace clang

@@ -79,7 +79,8 @@ private:
 /// to merge the two values.  Do this now.
 static void RewriteUsesOfClonedInstructions(BasicBlock *OrigHeader,
                                             BasicBlock *OrigPreheader,
-                                            ValueToValueMapTy &ValueMap) {
+                                            ValueToValueMapTy &ValueMap,
+                                SmallVectorImpl<PHINode*> *InsertedPHIs) {
   // Remove PHI node entries that are no longer live.
   BasicBlock::iterator I, E = OrigHeader->end();
   for (I = OrigHeader->begin(); PHINode *PN = dyn_cast<PHINode>(I); ++I)
@@ -87,7 +88,7 @@ static void RewriteUsesOfClonedInstructions(BasicBlock *OrigHeader,
 
   // Now fix up users of the instructions in OrigHeader, inserting PHI nodes
   // as necessary.
-  SSAUpdater SSA;
+  SSAUpdater SSA(InsertedPHIs);
   for (I = OrigHeader->begin(); I != E; ++I) {
     Value *OrigHeaderVal = &*I;
 
@@ -169,6 +170,38 @@ static void RewriteUsesOfClonedInstructions(BasicBlock *OrigHeader,
             NewVal = UndefValue::get(OrigHeaderVal->getType());
           U = MetadataAsValue::get(C, ValueAsMetadata::get(NewVal));
         }
+      }
+    }
+  }
+}
+
+/// Propagate dbg.value intrinsics through the newly inserted Phis.
+static void insertDebugValues(BasicBlock *OrigHeader,
+                              SmallVectorImpl<PHINode*> &InsertedPHIs) {
+  ValueToValueMapTy DbgValueMap;
+
+  // Map existing PHI nodes to their dbg.values.
+  for (auto &I : *OrigHeader) {
+    if (auto DbgII = dyn_cast<DbgInfoIntrinsic>(&I)) {
+      if (auto *Loc = dyn_cast_or_null<PHINode>(DbgII->getVariableLocation()))
+        DbgValueMap.insert({Loc, DbgII});
+    }
+  }
+
+  // Then iterate through the new PHIs and look to see if they use one of the
+  // previously mapped PHIs. If so, insert a new dbg.value intrinsic that will
+  // propagate the info through the new PHI.
+  LLVMContext &C = OrigHeader->getContext();
+  for (auto PHI : InsertedPHIs) {
+    for (auto VI : PHI->operand_values()) {
+      auto V = DbgValueMap.find(VI);
+      if (V != DbgValueMap.end()) {
+        auto *DbgII = cast<DbgInfoIntrinsic>(V->second);
+        Instruction *NewDbgII = DbgII->clone();
+        auto PhiMAV = MetadataAsValue::get(C, ValueAsMetadata::get(PHI));
+        NewDbgII->setOperand(0, PhiMAV);
+        BasicBlock *Parent = PHI->getParent();
+        NewDbgII->insertBefore(Parent->getFirstNonPHIOrDbgOrLifetime());
       }
     }
   }
@@ -347,9 +380,18 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
   // remove the corresponding incoming values from the PHI nodes in OrigHeader.
   LoopEntryBranch->eraseFromParent();
 
+
+  SmallVector<PHINode*, 2> InsertedPHIs;
   // If there were any uses of instructions in the duplicated block outside the
   // loop, update them, inserting PHI nodes as required
-  RewriteUsesOfClonedInstructions(OrigHeader, OrigPreheader, ValueMap);
+  RewriteUsesOfClonedInstructions(OrigHeader, OrigPreheader, ValueMap,
+                                  &InsertedPHIs);
+
+  // Attach dbg.value intrinsics to the new phis if that phi uses a value that
+  // previously had debug metadata attached. This keeps the debug info
+  // up-to-date in the loop body.
+  if (!InsertedPHIs.empty())
+    insertDebugValues(OrigHeader, InsertedPHIs);
 
   // NewHeader is now the header of the loop.
   L->moveToHeader(NewHeader);

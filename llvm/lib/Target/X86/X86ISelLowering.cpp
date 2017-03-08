@@ -27591,7 +27591,7 @@ static bool combineX86ShufflesRecursively(ArrayRef<SDValue> SrcOps,
          "Can only combine shuffles of the same vector register size.");
 
   // Extract target shuffle mask and resolve sentinels and inputs.
-  SmallVector<int, 16> OpMask;
+  SmallVector<int, 64> OpMask;
   SmallVector<SDValue, 2> OpInputs;
   if (!resolveTargetShuffleInputs(Op, OpInputs, OpMask))
     return false;
@@ -27634,8 +27634,7 @@ static bool combineX86ShufflesRecursively(ArrayRef<SDValue> SrcOps,
           (RootRatio == 1) != (OpRatio == 1)) &&
          "Must not have a ratio for both incoming and op masks!");
 
-  SmallVector<int, 16> Mask;
-  Mask.reserve(MaskWidth);
+  SmallVector<int, 64> Mask((unsigned)MaskWidth, SM_SentinelUndef);
 
   // Merge this shuffle operation's mask into our accumulated mask. Note that
   // this shuffle's mask will be the first applied to the input, followed by the
@@ -27645,7 +27644,7 @@ static bool combineX86ShufflesRecursively(ArrayRef<SDValue> SrcOps,
     int RootIdx = i / RootRatio;
     if (RootMask[RootIdx] < 0) {
       // This is a zero or undef lane, we're done.
-      Mask.push_back(RootMask[RootIdx]);
+      Mask[i] = RootMask[RootIdx];
       continue;
     }
 
@@ -27655,7 +27654,7 @@ static bool combineX86ShufflesRecursively(ArrayRef<SDValue> SrcOps,
     // than the SrcOp we're currently inserting.
     if ((RootMaskedIdx < (SrcOpIndex * MaskWidth)) ||
         (((SrcOpIndex + 1) * MaskWidth) <= RootMaskedIdx)) {
-      Mask.push_back(RootMaskedIdx);
+      Mask[i] = RootMaskedIdx;
       continue;
     }
 
@@ -27665,7 +27664,7 @@ static bool combineX86ShufflesRecursively(ArrayRef<SDValue> SrcOps,
     if (OpMask[OpIdx] < 0) {
       // The incoming lanes are zero or undef, it doesn't matter which ones we
       // are using.
-      Mask.push_back(OpMask[OpIdx]);
+      Mask[i] = OpMask[OpIdx];
       continue;
     }
 
@@ -27681,7 +27680,7 @@ static bool combineX86ShufflesRecursively(ArrayRef<SDValue> SrcOps,
       OpMaskedIdx += InputIdx1 * MaskWidth;
     }
 
-    Mask.push_back(OpMaskedIdx);
+    Mask[i] = OpMaskedIdx;
   }
 
   // Handle the all undef/zero cases early.
@@ -27734,7 +27733,7 @@ static bool combineX86ShufflesRecursively(ArrayRef<SDValue> SrcOps,
   // elements, and shrink them to the half-width mask. It does this in a loop
   // so it will reduce the size of the mask to the minimal width mask which
   // performs an equivalent shuffle.
-  SmallVector<int, 16> WidenedMask;
+  SmallVector<int, 64> WidenedMask;
   while (Mask.size() > 1 && canWidenShuffleElements(Mask, WidenedMask)) {
     Mask = std::move(WidenedMask);
   }

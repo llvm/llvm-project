@@ -336,11 +336,12 @@ def parse_crash(filename):
 
     match = re.match(r'(.*)\.info\.txt', filename)
     name = match.group(1) if match else None
-    with open(filename) as handler:
-        lines = handler.readlines()
+    with open(filename, mode='rb') as handler:
+        # this is a workaround to fix windows read '\r\n' as new lines.
+        lines = [line.decode().rstrip() for line in handler.readlines()]
         return {
-            'source': lines[0].rstrip(),
-            'problem': lines[1].rstrip(),
+            'source': lines[0],
+            'problem': lines[1],
             'file': name,
             'info': name + '.info.txt',
             'stderr': name + '.stderr.txt'

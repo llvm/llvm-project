@@ -1552,8 +1552,8 @@ inline bool isHeaderDeletion(const tooling::Replacement &Replace) {
 // tokens and returns an offset after the sequence.
 unsigned getOffsetAfterTokenSequence(
     StringRef FileName, StringRef Code, const FormatStyle &Style,
-    std::function<unsigned(const SourceManager &, Lexer &, Token &)>
-        GetOffsetAfterSequense) {
+    llvm::function_ref<unsigned(const SourceManager &, Lexer &, Token &)>
+        GetOffsetAfterSequence) {
   std::unique_ptr<Environment> Env =
       Environment::CreateVirtualEnvironment(Code, FileName, /*Ranges=*/{});
   const SourceManager &SourceMgr = Env->getSourceManager();
@@ -1562,7 +1562,7 @@ unsigned getOffsetAfterTokenSequence(
   Token Tok;
   // Get the first token.
   Lex.LexFromRawLexer(Tok);
-  return GetOffsetAfterSequense(SourceMgr, Lex, Tok);
+  return GetOffsetAfterSequence(SourceMgr, Lex, Tok);
 }
 
 // Check if a sequence of tokens is like "#<Name> <raw_identifier>". If it is,
