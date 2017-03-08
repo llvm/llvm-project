@@ -15,6 +15,7 @@
 // C++ Includes
 #include <cerrno>
 #include <cstdarg>
+#include <system_error>
 
 // Other libraries and framework includes
 #include "llvm/ADT/SmallVector.h"
@@ -30,6 +31,10 @@ Error::Error() : m_code(0), m_type(eErrorTypeInvalid), m_string() {}
 
 Error::Error(ValueType err, ErrorType type)
     : m_code(err), m_type(type), m_string() {}
+
+Error::Error(std::error_code EC)
+    : m_code(EC.value()), m_type(ErrorType::eErrorTypeGeneric),
+      m_string(EC.message()) {}
 
 Error::Error(const Error &rhs) = default;
 

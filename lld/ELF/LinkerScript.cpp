@@ -407,7 +407,7 @@ template <class ELFT> void LinkerScript<ELFT>::output(InputSection *S) {
   uintX_t Pos = IsTbss ? Dot + ThreadBssOffset : Dot;
   Pos = alignTo(Pos, S->Alignment);
   S->OutSecOff = Pos - CurOutSec->Addr;
-  Pos += S->template getSize<ELFT>();
+  Pos += S->getSize();
 
   // Update output section size after adding each section. This is so that
   // SIZEOF works correctly in the case below:

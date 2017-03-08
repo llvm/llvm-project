@@ -35,7 +35,6 @@ struct Symbol;
 // is one add* function per symbol type.
 template <class ELFT> class SymbolTable {
   typedef typename ELFT::Sym Elf_Sym;
-  typedef typename ELFT::uint uintX_t;
 
 public:
   void addFile(InputFile *File);
@@ -58,11 +57,11 @@ public:
                        InputFile *File);
 
   Symbol *addRegular(StringRef Name, uint8_t StOther, uint8_t Type,
-                     uintX_t Value, uintX_t Size, uint8_t Binding,
+                     uint64_t Value, uint64_t Size, uint8_t Binding,
                      InputSectionBase *Section, InputFile *File);
 
-  Symbol *addSynthetic(StringRef N, const OutputSection *Section, uintX_t Value,
-                       uint8_t StOther);
+  Symbol *addSynthetic(StringRef N, const OutputSection *Section,
+                       uint64_t Value, uint8_t StOther);
 
   void addShared(SharedFile<ELFT> *F, StringRef Name, const Elf_Sym &Sym,
                  const typename ELFT::Verdef *Verdef);

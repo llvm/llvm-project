@@ -58,11 +58,12 @@ public:
 
   // These corresponds to the fields in Elf_Shdr.
   uint64_t Flags;
-  uint64_t Offset = 0;
   uint64_t Entsize;
   uint32_t Type;
   uint32_t Link;
   uint32_t Info;
+
+  uint64_t getOffsetInFile() const;
 
   static InputSectionBase Discarded;
 
@@ -110,9 +111,9 @@ public:
   llvm::TinyPtrVector<InputSectionBase *> DependentSections;
 
   // Returns the size of this section (even if this is a common or BSS.)
-  template <class ELFT> size_t getSize() const;
+  size_t getSize() const;
 
-  template <class ELFT> OutputSection *getOutputSection() const;
+  OutputSection *getOutputSection() const;
 
   template <class ELFT> ObjectFile<ELFT> *getFile() const;
 
@@ -120,12 +121,12 @@ public:
     return getFile<ELFT>()->getObj();
   }
 
-  template <class ELFT> uint64_t getOffset(const DefinedRegular &Sym) const;
+  uint64_t getOffset(const DefinedRegular &Sym) const;
 
   template <class ELFT> InputSectionBase *getLinkOrderDep() const;
   // Translate an offset in the input section to an offset in the output
   // section.
-  template <class ELFT> uint64_t getOffset(uint64_t Offset) const;
+  uint64_t getOffset(uint64_t Offset) const;
 
   template <class ELFT> void uncompress();
 

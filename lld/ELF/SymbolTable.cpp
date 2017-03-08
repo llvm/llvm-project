@@ -379,7 +379,7 @@ static void reportDuplicate(SymbolBody *Existing, InputSectionBase *ErrSec,
 template <typename ELFT>
 Symbol *
 SymbolTable<ELFT>::addRegular(StringRef Name, uint8_t StOther, uint8_t Type,
-                              uintX_t Value, uintX_t Size, uint8_t Binding,
+                              uint64_t Value, uint64_t Size, uint8_t Binding,
                               InputSectionBase *Section, InputFile *File) {
   Symbol *S;
   bool WasInserted;
@@ -398,7 +398,7 @@ SymbolTable<ELFT>::addRegular(StringRef Name, uint8_t StOther, uint8_t Type,
 template <typename ELFT>
 Symbol *SymbolTable<ELFT>::addSynthetic(StringRef N,
                                         const OutputSection *Section,
-                                        uintX_t Value, uint8_t StOther) {
+                                        uint64_t Value, uint8_t StOther) {
   Symbol *S;
   bool WasInserted;
   std::tie(S, WasInserted) = insert(N, STT_NOTYPE, getVisibility(StOther),
