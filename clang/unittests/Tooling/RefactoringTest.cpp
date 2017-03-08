@@ -1173,8 +1173,10 @@ TEST_F(AtomicChangeTest, YAMLToAtomicChange) {
   EXPECT_EQ(ExpectedChange.getKey(), ActualChange.getKey());
   EXPECT_EQ(ExpectedChange.getFilePath(), ActualChange.getFilePath());
   EXPECT_EQ(ExpectedChange.getError(), ActualChange.getError());
-  EXPECT_EQ(ExpectedChange.getInsertedHeaders(), ActualChange.getInsertedHeaders());
-  EXPECT_EQ(ExpectedChange.getRemovedHeaders(), ActualChange.getRemovedHeaders());
+  EXPECT_EQ(ExpectedChange.getInsertedHeaders(),
+            ActualChange.getInsertedHeaders());
+  EXPECT_EQ(ExpectedChange.getRemovedHeaders(),
+            ActualChange.getRemovedHeaders());
   EXPECT_EQ(ExpectedChange.getReplacements().size(),
             ActualChange.getReplacements().size());
   EXPECT_EQ(2u, ActualChange.getReplacements().size());
@@ -1189,6 +1191,22 @@ TEST_F(AtomicChangeTest, CheckKeyAndKeyFile) {
   AtomicChange Change(Context.Sources, DefaultLoc);
   EXPECT_EQ("input.cpp:20", Change.getKey());
   EXPECT_EQ("input.cpp", Change.getFilePath());
+}
+
+TEST_F(AtomicChangeTest, Replace) {
+  setUp();
+  AtomicChange Change(Context.Sources, DefaultLoc);
+  llvm::Error Err = Change.replace(Context.Sources, DefaultLoc, 2, "aa");
+  ASSERT_TRUE(!Err);
+  EXPECT_EQ(Change.getReplacements().size(), 1u);
+  EXPECT_EQ(*Change.getReplacements().begin(),
+            Replacement(Context.Sources, DefaultLoc, 2, "aa"));
+
+  // Add a new replacement that conflicts with the existing one.
+  Err = Change.replace(Context.Sources, DefaultLoc, 3, "ab");
+  EXPECT_TRUE((bool)Err);
+  llvm::consumeError(std::move(Err));
+  EXPECT_EQ(Change.getReplacements().size(), 1u);
 }
 
 TEST_F(AtomicChangeTest, InsertBefore) {

@@ -63,7 +63,7 @@ public:
   uint32_t Link;
   uint32_t Info;
 
-  uint64_t getOffset() const;
+  uint64_t getOffsetInFile() const;
 
   static InputSectionBase Discarded;
 
@@ -79,7 +79,7 @@ public:
 
   InputSectionBase(InputFile *File, uint64_t Flags, uint32_t Type,
                    uint64_t Entsize, uint32_t Link, uint32_t Info,
-                   uint64_t Alignment, ArrayRef<uint8_t> Data, StringRef Name,
+                   uint32_t Alignment, ArrayRef<uint8_t> Data, StringRef Name,
                    Kind SectionKind);
   OutputSection *OutSec = nullptr;
 
@@ -111,9 +111,9 @@ public:
   llvm::TinyPtrVector<InputSectionBase *> DependentSections;
 
   // Returns the size of this section (even if this is a common or BSS.)
-  template <class ELFT> size_t getSize() const;
+  size_t getSize() const;
 
-  template <class ELFT> OutputSection *getOutputSection() const;
+  OutputSection *getOutputSection() const;
 
   template <class ELFT> ObjectFile<ELFT> *getFile() const;
 
@@ -121,12 +121,12 @@ public:
     return getFile<ELFT>()->getObj();
   }
 
-  template <class ELFT> uint64_t getOffset(const DefinedRegular &Sym) const;
+  uint64_t getOffset(const DefinedRegular &Sym) const;
 
   template <class ELFT> InputSectionBase *getLinkOrderDep() const;
   // Translate an offset in the input section to an offset in the output
   // section.
-  template <class ELFT> uint64_t getOffset(uint64_t Offset) const;
+  uint64_t getOffset(uint64_t Offset) const;
 
   template <class ELFT> void uncompress();
 
@@ -253,7 +253,7 @@ public:
 // .eh_frame. It also includes the synthetic sections themselves.
 class InputSection : public InputSectionBase {
 public:
-  InputSection(uint64_t Flags, uint32_t Type, uint64_t Alignment,
+  InputSection(uint64_t Flags, uint32_t Type, uint32_t Alignment,
                ArrayRef<uint8_t> Data, StringRef Name, Kind K = Regular);
   template <class ELFT>
   InputSection(ObjectFile<ELFT> *F, const typename ELFT::Shdr *Header,

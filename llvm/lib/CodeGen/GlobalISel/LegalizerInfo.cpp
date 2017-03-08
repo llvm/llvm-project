@@ -42,6 +42,7 @@ LegalizerInfo::LegalizerInfo() : TablesInitialized(false) {
 
   DefaultActions[TargetOpcode::G_BRCOND] = WidenScalar;
   DefaultActions[TargetOpcode::G_INSERT] = NarrowScalar;
+  DefaultActions[TargetOpcode::G_FNEG] = Lower;
 }
 
 void LegalizerInfo::computeTables() {
@@ -95,6 +96,9 @@ LegalizerInfo::getAction(const InstrAspect &Aspect) const {
     auto DefaultAction = DefaultActions.find(Aspect.Opcode);
     if (DefaultAction != DefaultActions.end() && DefaultAction->second == Legal)
       return std::make_pair(Legal, Ty);
+
+    if (DefaultAction != DefaultActions.end() && DefaultAction->second == Lower)
+      return std::make_pair(Lower, Ty);
 
     if (DefaultAction == DefaultActions.end() ||
         DefaultAction->second != NarrowScalar)

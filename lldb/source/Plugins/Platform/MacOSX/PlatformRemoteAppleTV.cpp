@@ -250,7 +250,7 @@ Error PlatformRemoteAppleTV::ResolveExecutable(
 
 FileSpec::EnumerateDirectoryResult
 PlatformRemoteAppleTV::GetContainedFilesIntoVectorOfStringsCallback(
-    void *baton, FileSpec::FileType file_type, const FileSpec &file_spec) {
+    void *baton, llvm::sys::fs::file_type ft, const FileSpec &file_spec) {
   ((PlatformRemoteAppleTV::SDKDirectoryInfoCollection *)baton)
       ->push_back(PlatformRemoteAppleTV::SDKDirectoryInfo(file_spec));
   return FileSpec::eEnumerateDirectoryResultNext;

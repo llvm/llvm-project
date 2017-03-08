@@ -53,7 +53,7 @@ static ArrayRef<uint8_t> getSectionContents(elf::ObjectFile<ELFT> *File,
 InputSectionBase::InputSectionBase(InputFile *File, uint64_t Flags,
                                    uint32_t Type, uint64_t Entsize,
                                    uint32_t Link, uint32_t Info,
-                                   uint64_t Alignment, ArrayRef<uint8_t> Data,
+                                   uint32_t Alignment, ArrayRef<uint8_t> Data,
                                    StringRef Name, Kind SectionKind)
     : File(File), Data(Data), Name(Name), SectionKind(SectionKind),
       Live(!Config->GcSections || !(Flags & SHF_ALLOC)), Assigned(false),
@@ -64,15 +64,9 @@ InputSectionBase::InputSectionBase(InputFile *File, uint64_t Flags,
 
   // The ELF spec states that a value of 0 means the section has
   // no alignment constraits.
-  uint64_t V = std::max<uint64_t>(Alignment, 1);
+  uint32_t V = std::max<uint64_t>(Alignment, 1);
   if (!isPowerOf2_64(V))
     fatal(toString(File) + ": section sh_addralign is not a power of 2");
-
-  // We reject object files having insanely large alignments even though
-  // they are allowed by the spec. I think 4GB is a reasonable limitation.
-  // We might want to relax this in the future.
-  if (V > UINT32_MAX)
-    fatal(toString(File) + ": section sh_addralign is too large");
   this->Alignment = V;
 }
 
@@ -84,24 +78,27 @@ InputSectionBase::InputSectionBase(elf::ObjectFile<ELFT> *File,
                        Hdr->sh_entsize, Hdr->sh_link, Hdr->sh_info,
                        Hdr->sh_addralign, getSectionContents(File, Hdr), Name,
                        SectionKind) {
+  // We reject object files having insanely large alignments even though
+  // they are allowed by the spec. I think 4GB is a reasonable limitation.
+  // We might want to relax this in the future.
+  if (Hdr->sh_addralign > UINT32_MAX)
+    fatal(toString(File) + ": section sh_addralign is too large");
 }
 
-template <class ELFT> size_t InputSectionBase::getSize() const {
+size_t InputSectionBase::getSize() const {
   if (auto *S = dyn_cast<SyntheticSection>(this))
     return S->getSize();
 
   return Data.size();
 }
 
-uint64_t InputSectionBase::getOffset() const {
+uint64_t InputSectionBase::getOffsetInFile() const {
   const uint8_t *FileStart = (const uint8_t *)File->MB.getBufferStart();
   const uint8_t *SecStart = Data.begin();
   return SecStart - FileStart;
 }
 
-template <class ELFT>
 uint64_t InputSectionBase::getOffset(uint64_t Offset) const {
-  typedef typename ELFT::uint uintX_t;
   switch (kind()) {
   case Regular:
     return cast<InputSection>(this)->OutSecOff + Offset;
@@ -109,7 +106,7 @@ uint64_t InputSectionBase::getOffset(uint64_t Offset) const {
     // For synthetic sections we treat offset -1 as the end of the section.
     // The same approach is used for synthetic symbols (DefinedSynthetic).
     return cast<InputSection>(this)->OutSecOff +
-           (Offset == uintX_t(-1) ? getSize<ELFT>() : Offset);
+           (Offset == uint64_t(-1) ? getSize() : Offset);
   case EHFrame:
     // The file crtbeginT.o has relocations pointing to the start of an empty
     // .eh_frame that is known to be the first in the link. It does that to
@@ -124,7 +121,6 @@ uint64_t InputSectionBase::getOffset(uint64_t Offset) const {
   llvm_unreachable("invalid section kind");
 }
 
-template <class ELFT>
 OutputSection *InputSectionBase::getOutputSection() const {
   if (auto *MS = dyn_cast<MergeInputSection>(this))
     return MS->MergeSec ? MS->MergeSec->OutSec : nullptr;
@@ -154,9 +150,8 @@ template <class ELFT> void InputSectionBase::uncompress() {
   Data = ArrayRef<uint8_t>((uint8_t *)OutputBuf, Size);
 }
 
-template <class ELFT>
 uint64_t InputSectionBase::getOffset(const DefinedRegular &Sym) const {
-  return getOffset<ELFT>(Sym.Value);
+  return getOffset(Sym.Value);
 }
 
 template <class ELFT>
@@ -193,7 +188,7 @@ std::string InputSectionBase::getLocation(uint64_t Offset) {
 
 InputSectionBase InputSectionBase::Discarded;
 
-InputSection::InputSection(uint64_t Flags, uint32_t Type, uint64_t Alignment,
+InputSection::InputSection(uint64_t Flags, uint32_t Type, uint32_t Alignment,
                            ArrayRef<uint8_t> Data, StringRef Name, Kind K)
     : InputSectionBase(nullptr, Flags, Type,
                        /*Entsize*/ 0, /*Link*/ 0, /*Info*/ 0, Alignment, Data,
@@ -239,7 +234,7 @@ void InputSection::copyRelocations(uint8_t *Buf, ArrayRef<RelTy> Rels) {
     // Output section VA is zero for -r, so r_offset is an offset within the
     // section, but for --emit-relocs it is an virtual address.
     P->r_offset = RelocatedSection->OutSec->Addr +
-                  RelocatedSection->getOffset<ELFT>(Rel.r_offset);
+                  RelocatedSection->getOffset(Rel.r_offset);
     P->setSymbolAndType(In<ELFT>::SymTab->getSymbolIndex(&Body), Type,
                         Config->isMips64EL());
 
@@ -457,7 +452,7 @@ void InputSection::relocateNonAlloc(uint8_t *Buf, ArrayRef<RelTy> Rels) {
   typedef typename ELFT::uint uintX_t;
   for (const RelTy &Rel : Rels) {
     uint32_t Type = Rel.getType(Config->isMips64EL());
-    uintX_t Offset = this->getOffset<ELFT>(Rel.r_offset);
+    uint64_t Offset = getOffset(Rel.r_offset);
     uint8_t *BufLoc = Buf + Offset;
     int64_t Addend = getAddend<ELFT>(Rel);
     if (!RelTy::IsRela)
@@ -502,11 +497,11 @@ void InputSectionBase::relocate(uint8_t *Buf, uint8_t *BufEnd) {
   typedef typename ELFT::uint uintX_t;
   const unsigned Bits = sizeof(uintX_t) * 8;
   for (const Relocation &Rel : Relocations) {
-    uintX_t Offset = getOffset<ELFT>(Rel.Offset);
+    uint64_t Offset = getOffset(Rel.Offset);
     uint8_t *BufLoc = Buf + Offset;
     uint32_t Type = Rel.Type;
 
-    uintX_t AddrLoc = getOutputSection<ELFT>()->Addr + Offset;
+    uintX_t AddrLoc = getOutputSection()->Addr + Offset;
     RelExpr Expr = Rel.Expr;
     uint64_t TargetVA = SignExtend64<Bits>(
         getRelocTargetVA<ELFT>(Type, Rel.Addend, AddrLoc, *Rel.Sym, Expr));
@@ -813,34 +808,10 @@ template InputSectionBase *InputSectionBase::getLinkOrderDep<ELF32BE>() const;
 template InputSectionBase *InputSectionBase::getLinkOrderDep<ELF64LE>() const;
 template InputSectionBase *InputSectionBase::getLinkOrderDep<ELF64BE>() const;
 
-template OutputSection *InputSectionBase::getOutputSection<ELF32LE>() const;
-template OutputSection *InputSectionBase::getOutputSection<ELF32BE>() const;
-template OutputSection *InputSectionBase::getOutputSection<ELF64LE>() const;
-template OutputSection *InputSectionBase::getOutputSection<ELF64BE>() const;
-
 template InputSectionBase *InputSection::getRelocatedSection<ELF32LE>();
 template InputSectionBase *InputSection::getRelocatedSection<ELF32BE>();
 template InputSectionBase *InputSection::getRelocatedSection<ELF64LE>();
 template InputSectionBase *InputSection::getRelocatedSection<ELF64BE>();
-
-template uint64_t
-InputSectionBase::getOffset<ELF32LE>(const DefinedRegular &Sym) const;
-template uint64_t
-InputSectionBase::getOffset<ELF32BE>(const DefinedRegular &Sym) const;
-template uint64_t
-InputSectionBase::getOffset<ELF64LE>(const DefinedRegular &Sym) const;
-template uint64_t
-InputSectionBase::getOffset<ELF64BE>(const DefinedRegular &Sym) const;
-
-template uint64_t InputSectionBase::getOffset<ELF32LE>(uint64_t Offset) const;
-template uint64_t InputSectionBase::getOffset<ELF32BE>(uint64_t Offset) const;
-template uint64_t InputSectionBase::getOffset<ELF64LE>(uint64_t Offset) const;
-template uint64_t InputSectionBase::getOffset<ELF64BE>(uint64_t Offset) const;
-
-template size_t InputSectionBase::getSize<ELF32LE>() const;
-template size_t InputSectionBase::getSize<ELF32BE>() const;
-template size_t InputSectionBase::getSize<ELF64LE>() const;
-template size_t InputSectionBase::getSize<ELF64BE>() const;
 
 template elf::ObjectFile<ELF32LE> *InputSectionBase::getFile<ELF32LE>() const;
 template elf::ObjectFile<ELF32BE> *InputSectionBase::getFile<ELF32BE>() const;

@@ -482,8 +482,10 @@ inline bool is_local(int FD) {
 /// @brief Does status represent a directory?
 ///
 /// @param Path The path to get the type of.
+/// @param follow For symbolic links, indicates whether to return the file type
+///               of the link itself, or of the target.
 /// @returns A value from the file_type enumeration indicating the type of file.
-file_type get_file_type(const Twine &Path, bool follow = true);
+file_type get_file_type(const Twine &Path, bool Follow = true);
 
 /// @brief Does status represent a directory?
 ///
@@ -494,8 +496,8 @@ bool is_directory(file_status status);
 /// @brief Is path a directory?
 ///
 /// @param path Input path.
-/// @param result Set to true if \a path is a directory, false if it is not.
-///               Undefined otherwise.
+/// @param result Set to true if \a path is a directory (after following
+///               symlinks, false if it is not. Undefined otherwise.
 /// @returns errc::success if result has been successfully set, otherwise a
 ///          platform-specific error_code.
 std::error_code is_directory(const Twine &path, bool &result);
@@ -516,8 +518,8 @@ bool is_regular_file(file_status status);
 /// @brief Is path a regular file?
 ///
 /// @param path Input path.
-/// @param result Set to true if \a path is a regular file, false if it is not.
-///               Undefined otherwise.
+/// @param result Set to true if \a path is a regular file (after following
+///               symlinks), false if it is not. Undefined otherwise.
 /// @returns errc::success if result has been successfully set, otherwise a
 ///          platform-specific error_code.
 std::error_code is_regular_file(const Twine &path, bool &result);
@@ -531,8 +533,32 @@ inline bool is_regular_file(const Twine &Path) {
   return Result;
 }
 
+/// @brief Does status represent a symlink file?
+///
+/// @param status A file_status previously returned from status.
+/// @returns status_known(status) && status.type() == file_type::symlink_file.
+bool is_symlink_file(file_status status);
+
+/// @brief Is path a symlink file?
+///
+/// @param path Input path.
+/// @param result Set to true if \a path is a symlink file, false if it is not.
+///               Undefined otherwise.
+/// @returns errc::success if result has been successfully set, otherwise a
+///          platform-specific error_code.
+std::error_code is_symlink_file(const Twine &path, bool &result);
+
+/// @brief Simpler version of is_symlink_file for clients that don't need to
+///        differentiate between an error and false.
+inline bool is_symlink_file(const Twine &Path) {
+  bool Result;
+  if (is_symlink_file(Path, Result))
+    return false;
+  return Result;
+}
+
 /// @brief Does this status represent something that exists but is not a
-///        directory, regular file, or symlink?
+///        directory or regular file?
 ///
 /// @param status A file_status previously returned from status.
 /// @returns exists(s) && !is_regular_file(s) && !is_directory(s)

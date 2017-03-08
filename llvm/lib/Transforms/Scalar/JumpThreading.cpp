@@ -17,6 +17,7 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/BlockFrequencyInfoImpl.h"
@@ -91,6 +92,7 @@ namespace {
     bool runOnFunction(Function &F) override;
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
+      AU.addRequired<AAResultsWrapperPass>();
       AU.addRequired<LazyValueInfoWrapperPass>();
       AU.addPreserved<LazyValueInfoWrapperPass>();
       AU.addPreserved<GlobalsAAWrapperPass>();
@@ -106,6 +108,7 @@ INITIALIZE_PASS_BEGIN(JumpThreading, "jump-threading",
                 "Jump Threading", false, false)
 INITIALIZE_PASS_DEPENDENCY(LazyValueInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
 INITIALIZE_PASS_END(JumpThreading, "jump-threading",
                 "Jump Threading", false, false)
 
@@ -123,6 +126,7 @@ bool JumpThreading::runOnFunction(Function &F) {
     return false;
   auto TLI = &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
   auto LVI = &getAnalysis<LazyValueInfoWrapperPass>().getLVI();
+  auto AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
   std::unique_ptr<BlockFrequencyInfo> BFI;
   std::unique_ptr<BranchProbabilityInfo> BPI;
   bool HasProfileData = F.getEntryCount().hasValue();
@@ -131,7 +135,8 @@ bool JumpThreading::runOnFunction(Function &F) {
     BPI.reset(new BranchProbabilityInfo(F, LI));
     BFI.reset(new BlockFrequencyInfo(F, *BPI, LI));
   }
-  return Impl.runImpl(F, TLI, LVI, HasProfileData, std::move(BFI),
+
+  return Impl.runImpl(F, TLI, LVI, AA, HasProfileData, std::move(BFI),
                       std::move(BPI));
 }
 
@@ -140,6 +145,8 @@ PreservedAnalyses JumpThreadingPass::run(Function &F,
 
   auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);
   auto &LVI = AM.getResult<LazyValueAnalysis>(F);
+  auto &AA = AM.getResult<AAManager>(F);
+
   std::unique_ptr<BlockFrequencyInfo> BFI;
   std::unique_ptr<BranchProbabilityInfo> BPI;
   bool HasProfileData = F.getEntryCount().hasValue();
@@ -148,8 +155,9 @@ PreservedAnalyses JumpThreadingPass::run(Function &F,
     BPI.reset(new BranchProbabilityInfo(F, LI));
     BFI.reset(new BlockFrequencyInfo(F, *BPI, LI));
   }
-  bool Changed =
-      runImpl(F, &TLI, &LVI, HasProfileData, std::move(BFI), std::move(BPI));
+
+  bool Changed = runImpl(F, &TLI, &LVI, &AA, HasProfileData, std::move(BFI),
+                         std::move(BPI));
 
   if (!Changed)
     return PreservedAnalyses::all();
@@ -159,13 +167,15 @@ PreservedAnalyses JumpThreadingPass::run(Function &F,
 }
 
 bool JumpThreadingPass::runImpl(Function &F, TargetLibraryInfo *TLI_,
-                                LazyValueInfo *LVI_, bool HasProfileData_,
+                                LazyValueInfo *LVI_, AliasAnalysis *AA_,
+                                bool HasProfileData_,
                                 std::unique_ptr<BlockFrequencyInfo> BFI_,
                                 std::unique_ptr<BranchProbabilityInfo> BPI_) {
 
   DEBUG(dbgs() << "Jump threading on function '" << F.getName() << "'\n");
   TLI = TLI_;
   LVI = LVI_;
+  AA = AA_;
   BFI.reset();
   BPI.reset();
   // When profile data is available, we need to update edge weights after
@@ -953,8 +963,8 @@ bool JumpThreadingPass::SimplifyPartiallyRedundantLoad(LoadInst *LI) {
   // the entry to its block.
   BasicBlock::iterator BBIt(LI);
   bool IsLoadCSE;
-  if (Value *AvailableVal =
-        FindAvailableLoadedValue(LI, LoadBB, BBIt, DefMaxInstsToScan, nullptr, &IsLoadCSE)) {
+  if (Value *AvailableVal = FindAvailableLoadedValue(
+          LI, LoadBB, BBIt, DefMaxInstsToScan, AA, &IsLoadCSE)) {
     // If the value of the load is locally available within the block, just use
     // it.  This frequently occurs for reg2mem'd allocas.
 
@@ -1001,9 +1011,8 @@ bool JumpThreadingPass::SimplifyPartiallyRedundantLoad(LoadInst *LI) {
     // Scan the predecessor to see if the value is available in the pred.
     BBIt = PredBB->end();
     unsigned NumScanedInst = 0;
-    Value *PredAvailable =
-        FindAvailableLoadedValue(LI, PredBB, BBIt, DefMaxInstsToScan, nullptr,
-                                 &IsLoadCSE, &NumScanedInst);
+    Value *PredAvailable = FindAvailableLoadedValue(
+        LI, PredBB, BBIt, DefMaxInstsToScan, AA, &IsLoadCSE, &NumScanedInst);
 
     // If PredBB has a single predecessor, continue scanning through the single
     // predecessor.
@@ -1014,8 +1023,8 @@ bool JumpThreadingPass::SimplifyPartiallyRedundantLoad(LoadInst *LI) {
       if (SinglePredBB) {
         BBIt = SinglePredBB->end();
         PredAvailable = FindAvailableLoadedValue(
-            LI, SinglePredBB, BBIt, (DefMaxInstsToScan - NumScanedInst),
-            nullptr, &IsLoadCSE, &NumScanedInst);
+            LI, SinglePredBB, BBIt, (DefMaxInstsToScan - NumScanedInst), AA,
+            &IsLoadCSE, &NumScanedInst);
       }
     }
 

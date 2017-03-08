@@ -107,7 +107,7 @@ std::string elf::ObjectFile<ELFT>::getLineInfo(InputSectionBase *S,
   // section. See comments for ObjectInfo class.
   DILineInfo Info;
   Tbl->getFileLineInfoForAddress(
-      S->getOffset() + Offset, nullptr,
+      S->getOffsetInFile() + Offset, nullptr,
       DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath, Info);
   if (Info.Line == 0)
     return "";

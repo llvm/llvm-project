@@ -248,9 +248,9 @@ Error PlatformAppleWatchSimulator::ResolveExecutable(
 }
 
 static FileSpec::EnumerateDirectoryResult
-EnumerateDirectoryCallback(void *baton, FileSpec::FileType file_type,
+EnumerateDirectoryCallback(void *baton, llvm::sys::fs::file_type ft,
                            const FileSpec &file_spec) {
-  if (file_type == FileSpec::eFileTypeDirectory) {
+  if (ft == llvm::sys::fs::file_type::directory_file) {
     const char *filename = file_spec.GetFilename().GetCString();
     if (filename &&
         strncmp(filename, "AppleWatchSimulator",

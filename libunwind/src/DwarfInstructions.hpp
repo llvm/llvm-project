@@ -480,7 +480,7 @@ DwarfInstructions<A, R>::evaluateExpression(pint_t expression, A &addressSpace,
 
     case DW_OP_plus_uconst:
       // pop stack, add uelb128 constant, push result
-      *sp += addressSpace.getULEB128(p, expressionEnd);
+      *sp += static_cast<pint_t>(addressSpace.getULEB128(p, expressionEnd));
       if (log)
         fprintf(stderr, "add constant\n");
       break;
