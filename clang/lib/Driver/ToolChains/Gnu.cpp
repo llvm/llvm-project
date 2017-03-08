@@ -347,10 +347,9 @@ static void linkXRayRuntimeDeps(const ToolChain &TC, const ArgList &Args,
   CmdArgs.push_back("-lrt");
   CmdArgs.push_back("-lm");
   CmdArgs.push_back("-latomic");
-  if (TC.GetCXXStdlibType(Args) == ToolChain::CST_Libcxx)
-    CmdArgs.push_back("-lc++");
-  else
-    CmdArgs.push_back("-lstdc++");
+
+  TC.AddCXXStdlibLibArgs(Args, CmdArgs);
+
   if (TC.getTriple().getOS() != llvm::Triple::FreeBSD)
     CmdArgs.push_back("-ldl");
 }

@@ -132,6 +132,11 @@ AtomicChange AtomicChange::convertFromYAML(llvm::StringRef YAMLContent) {
   return E;
 }
 
+llvm::Error AtomicChange::replace(const SourceManager &SM, SourceLocation Loc,
+                                  unsigned Length, llvm::StringRef Text) {
+  return Replaces.add(Replacement(SM, Loc, Length, Text));
+}
+
 llvm::Error AtomicChange::insert(const SourceManager &SM, SourceLocation Loc,
                                  llvm::StringRef Text, bool InsertAfter) {
   if (Text.empty())

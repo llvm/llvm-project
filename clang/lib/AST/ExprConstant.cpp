@@ -5677,6 +5677,8 @@ static CharUnits GetAlignOfType(EvalInfo &Info, QualType T) {
     T = Ref->getPointeeType();
 
   // __alignof is defined to return the preferred alignment.
+  if (T.getQualifiers().hasUnaligned())
+    return CharUnits::One();
   return Info.Ctx.toCharUnitsFromBits(
     Info.Ctx.getPreferredTypeAlign(T.getTypePtr()));
 }

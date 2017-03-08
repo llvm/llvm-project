@@ -162,10 +162,27 @@ struct FormatStyle {
     /// \brief Never merge functions into a single line.
     SFS_None,
     /// \brief Only merge empty functions.
+    /// \code
+    ///   void f() { bar(); }
+    ///   void f2() {
+    ///     bar2();
+    ///   }
+    /// \endcode
     SFS_Empty,
     /// \brief Only merge functions defined inside a class. Implies "empty".
+    /// \code
+    ///   class {
+    ///     void f() { foo(); }
+    ///   };
+    /// \endcode
     SFS_Inline,
     /// \brief Merge all functions fitting on a single line.
+    /// \code
+    ///   class {
+    ///     void f() { foo(); }
+    ///   };
+    ///   void f() { bar(); }
+    /// \endcode
     SFS_All,
   };
 
@@ -181,6 +198,7 @@ struct FormatStyle {
   bool AllowShortLoopsOnASingleLine;
 
   /// \brief Different ways to break after the function definition return type.
+  /// This option is deprecated and is retained for backwards compatibility.
   enum DefinitionReturnTypeBreakingStyle {
     /// Break after return type automatically.
     /// ``PenaltyReturnTypeOnItsOwnLine`` is taken into account.
@@ -196,14 +214,69 @@ struct FormatStyle {
   enum ReturnTypeBreakingStyle {
     /// Break after return type automatically.
     /// ``PenaltyReturnTypeOnItsOwnLine`` is taken into account.
+    /// \code
+    ///   class A {
+    ///     int f() { return 0; };
+    ///   };
+    ///   int f();
+    ///   int f() { return 1; }
+    /// \endcode
     RTBS_None,
     /// Always break after the return type.
+    /// \code
+    ///   class A {
+    ///     int
+    ///     f() {
+    ///       return 0;
+    ///     };
+    ///   };
+    ///   int
+    ///   f();
+    ///   int
+    ///   f() {
+    ///     return 1;
+    ///   }
+    /// \endcode
     RTBS_All,
     /// Always break after the return types of top-level functions.
+    /// \code
+    ///   class A {
+    ///     int f() { return 0; };
+    ///   };
+    ///   int
+    ///   f();
+    ///   int
+    ///   f() {
+    ///     return 1;
+    ///   }
+    /// \endcode
     RTBS_TopLevel,
     /// Always break after the return type of function definitions.
+    /// \code
+    ///   class A {
+    ///     int
+    ///     f() {
+    ///       return 0;
+    ///     };
+    ///   };
+    ///   int f();
+    ///   int
+    ///   f() {
+    ///     return 1;
+    ///   }
+    /// \endcode
     RTBS_AllDefinitions,
     /// Always break after the return type of top-level definitions.
+    /// \code
+    ///   class A {
+    ///     int f() { return 0; };
+    ///   };
+    ///   int f();
+    ///   int
+    ///   f() {
+    ///     return 1;
+    ///   }
+    /// \endcode
     RTBS_TopLevelDefinitions,
   };
 
@@ -589,10 +662,19 @@ struct FormatStyle {
   /// \brief The ``&`` and ``*`` alignment style.
   enum PointerAlignmentStyle {
     /// Align pointer to the left.
+    /// \code
+    ///   int* a;
+    /// \endcode
     PAS_Left,
     /// Align pointer to the right.
+    /// \code
+    ///   int *a;
+    /// \endcode
     PAS_Right,
     /// Align pointer in the middle.
+    /// \code
+    ///   int * a;
+    /// \endcode
     PAS_Middle
   };
 
@@ -603,9 +685,18 @@ struct FormatStyle {
   bool ReflowComments;
 
   /// \brief If ``true``, clang-format will sort ``#includes``.
+  /// \code
+  ///    false:                                 true:
+  ///    #include "b.h"                 vs.     #include "a.h"
+  ///    #include "a.h"                         #include "b.h"
+  /// \endcode
   bool SortIncludes;
 
-  /// \brief If ``true``, a space may be inserted after C style casts.
+  /// \brief If ``true``, a space is inserted after C style casts.
+  /// \code
+  ///    true:                                  false:
+  ///    (int)i;                        vs.     (int) i;
+  /// \endcode
   bool SpaceAfterCStyleCast;
 
   /// \brief If \c true, a space will be inserted after the 'template' keyword.

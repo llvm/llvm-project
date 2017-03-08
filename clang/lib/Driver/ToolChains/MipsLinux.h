@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_MIPS_H
-#define LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_MIPS_H
+#ifndef LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_MIPS_LINUX_H
+#define LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_MIPS_LINUX_H
 
 #include "Linux.h"
 #include "clang/Driver/ToolChain.h"
@@ -59,4 +59,4 @@ private:
 } // end namespace driver
 } // end namespace clang
 
-#endif // LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_MIPS_H
+#endif // LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_MIPS_LINUX_H

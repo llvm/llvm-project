@@ -28,7 +28,7 @@
 #include "ToolChains/Linux.h"
 #include "ToolChains/MinGW.h"
 #include "ToolChains/Minix.h"
-#include "ToolChains/Mips.h"
+#include "ToolChains/MipsLinux.h"
 #include "ToolChains/MSVC.h"
 #include "ToolChains/Myriad.h"
 #include "ToolChains/NaCl.h"

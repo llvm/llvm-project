@@ -2758,9 +2758,23 @@ static bool isSameEntity(NamedDecl *X, NamedDecl *Y) {
                         CtorY->getInheritedConstructor().getConstructor()))
         return false;
     }
+    ASTContext &C = FuncX->getASTContext();
+    if (!C.hasSameType(FuncX->getType(), FuncY->getType())) {
+      // We can get functions with different types on the redecl chain in C++17
+      // if they have differing exception specifications and at least one of
+      // the excpetion specs is unresolved.
+      // FIXME: Do we need to check for C++14 deduced return types here too?
+      auto *XFPT = FuncX->getType()->getAs<FunctionProtoType>();
+      auto *YFPT = FuncY->getType()->getAs<FunctionProtoType>();
+      if (C.getLangOpts().CPlusPlus1z && XFPT && YFPT &&
+          (isUnresolvedExceptionSpec(XFPT->getExceptionSpecType()) ||
+           isUnresolvedExceptionSpec(YFPT->getExceptionSpecType())) &&
+          C.hasSameFunctionTypeIgnoringExceptionSpec(FuncX->getType(),
+                                                     FuncY->getType()))
+        return true;
+      return false;
+    }
     return FuncX->getLinkageInternal() == FuncY->getLinkageInternal() &&
-           FuncX->getASTContext().hasSameType(FuncX->getType(),
-                                              FuncY->getType()) &&
            hasSameOverloadableAttrs(FuncX, FuncY);
   }
 

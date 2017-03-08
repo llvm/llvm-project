@@ -848,6 +848,8 @@ unsigned ContinuationIndenter::moveStateToNextToken(LineState &State,
         (Current.IsMultiline ? Current.LastLineColumnWidth
                              : State.Column + Current.ColumnWidth) -
         strlen("${");
+  bool CanBreakProtrudingToken = !State.Stack.back().NoLineBreak &&
+                                 !State.Stack.back().NoLineBreakInOperand;
   moveStatePastScopeOpener(State, Newline);
   moveStatePastFakeRParens(State);
 
@@ -861,7 +863,9 @@ unsigned ContinuationIndenter::moveStateToNextToken(LineState &State,
 
   State.Column += Current.ColumnWidth;
   State.NextToken = State.NextToken->Next;
-  unsigned Penalty = breakProtrudingToken(Current, State, DryRun);
+  unsigned Penalty = 0;
+  if (CanBreakProtrudingToken)
+    Penalty = breakProtrudingToken(Current, State, DryRun);
   if (State.Column > getColumnLimit(State)) {
     unsigned ExcessCharacters = State.Column - getColumnLimit(State);
     Penalty += Style.PenaltyExcessCharacter * ExcessCharacters;
