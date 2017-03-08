@@ -1056,6 +1056,17 @@ define void @float_comparison(float* %a.addr, float* %b.addr, i1* %bool.addr) {
   ret void
 }
 
+; CHECK-LABEL: name: trivial_float_comparison
+; CHECK: [[R1:%[0-9]+]](s1) = G_CONSTANT i1 false
+; CHECK: [[R2:%[0-9]+]](s1) = G_CONSTANT i1 true
+; CHECK: G_ADD [[R1]], [[R2]]
+define i1 @trivial_float_comparison(double %a, double %b) {
+  %r1 = fcmp false double %a, %b
+  %r2 = fcmp true double %a, %b
+  %sum = add i1 %r1, %r2
+  ret i1 %sum
+}
+
 @var = global i32 0
 
 define i32* @test_global() {
