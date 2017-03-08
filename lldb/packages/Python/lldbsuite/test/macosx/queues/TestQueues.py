@@ -18,6 +18,7 @@ class TestQueues(TestBase):
 
     @skipUnlessDarwin
     @add_test_categories(['pyapi'])
+    @expectedFailureAll(bugnumber="rdar://30915340")
     def test_with_python_api(self):
         """Test queues inspection SB APIs."""
         self.build()
