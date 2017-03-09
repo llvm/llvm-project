@@ -717,6 +717,7 @@ bool IRTranslator::translateCall(const User &U, MachineIRBuilder &MIRBuilder) {
     for (auto &Arg: CI.arg_operands())
       Args.push_back(getOrCreateVReg(*Arg));
 
+    MF->getFrameInfo().setHasCalls(true);
     return CLI->lowerCall(MIRBuilder, CI, Res, Args, [&]() {
       return getOrCreateVReg(*CI.getCalledValue());
     });
