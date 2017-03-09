@@ -28,8 +28,7 @@ FindAllMacros::CreateMacroSymbol(const Token &MacroNameTok,
   if (FilePath.empty())
     return llvm::None;
   return SymbolInfo(MacroNameTok.getIdentifierInfo()->getName(),
-                    SymbolInfo::SymbolKind::Macro, FilePath,
-                    SM->getSpellingLineNumber(info->getDefinitionLoc()), {});
+                    SymbolInfo::SymbolKind::Macro, FilePath, {});
 }
 
 void FindAllMacros::MacroDefined(const Token &MacroNameTok,

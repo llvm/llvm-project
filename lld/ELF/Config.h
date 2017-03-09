@@ -142,6 +142,7 @@ struct Configuration {
   bool ZNow;
   bool ZOrigin;
   bool ZRelro;
+  bool ZText;
   bool ExitEarly;
   bool ZWxneeded;
   DiscardPolicy Discard;

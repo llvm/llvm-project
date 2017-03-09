@@ -142,7 +142,8 @@ bool PlatformHasDifferentMemcpyAndMemmove();
     COMMON_INTERCEPTOR_READ_STRING_OF_LEN((ctx), (s), REAL(strlen)(s), (n))
 
 #ifndef COMMON_INTERCEPTOR_ON_DLOPEN
-#define COMMON_INTERCEPTOR_ON_DLOPEN(filename, flag) {}
+#define COMMON_INTERCEPTOR_ON_DLOPEN(filename, flag) \
+  CheckNoDeepBind(filename, flag);
 #endif
 
 #ifndef COMMON_INTERCEPTOR_GET_TLS_RANGE

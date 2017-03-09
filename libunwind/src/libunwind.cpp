@@ -24,6 +24,7 @@
 #include <stdlib.h>
 
 
+#include "AddressSpace.hpp"
 #include "UnwindCursor.hpp"
 
 using namespace libunwind;

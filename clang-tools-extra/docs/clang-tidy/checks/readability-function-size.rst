@@ -29,4 +29,4 @@ Options
 .. option:: ParameterThreshold
 
    Flag functions that exceed a specified number of parameters. The default 
-   is 6.
+   is `-1` (ignore the number of parameters).

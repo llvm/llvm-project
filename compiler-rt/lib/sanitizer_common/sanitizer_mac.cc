@@ -886,6 +886,10 @@ void PrintModuleMap() {
   Printf("End of module map.\n");
 }
 
+void CheckNoDeepBind(const char *filename, int flag) {
+  // Do nothing.
+}
+
 }  // namespace __sanitizer
 
 #endif  // SANITIZER_MAC
