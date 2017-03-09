@@ -21,7 +21,6 @@
 #include "libunwind.h"
 #include "dwarf2.h"
 
-#include "AddressSpace.hpp"
 #include "config.h"
 
 namespace libunwind {

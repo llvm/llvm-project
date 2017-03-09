@@ -214,3 +214,51 @@ TEST_F(LogChannelTest, LogThread) {
   EXPECT_TRUE(stream_sp->str() == "" || stream_sp->str() == "Hello World\n")
       << "str(): " << stream_sp->str();
 }
+
+TEST_F(LogChannelTest, LogVerboseThread) {
+  // Test that we are able to concurrently check the verbose flag of a log
+  // channel and enable it.
+  std::string message;
+  std::shared_ptr<llvm::raw_string_ostream> stream_sp(
+      new llvm::raw_string_ostream(message));
+  StreamString err;
+  EXPECT_TRUE(Log::EnableLogChannel(stream_sp, 0, "chan", {}, err));
+
+  Log *log = test_channel.GetLogIfAll(FOO);
+
+  // Start logging on one thread. Concurrently, try enabling the log channel
+  // (with different log options).
+  std::thread log_thread([log] { LLDB_LOGV(log, "Hello World"); });
+  EXPECT_TRUE(Log::EnableLogChannel(stream_sp, LLDB_LOG_OPTION_VERBOSE, "chan",
+                                    {}, err));
+  log_thread.join();
+  EXPECT_TRUE(Log::DisableLogChannel("chan", {}, err));
+
+  // The log thread either managed to write to the log, or it didn't. In either
+  // case, we should not trip any undefined behavior (run the test under TSAN to
+  // verify this).
+  EXPECT_TRUE(stream_sp->str() == "" || stream_sp->str() == "Hello World\n")
+      << "str(): " << stream_sp->str();
+}
+
+TEST_F(LogChannelTest, LogGetLogThread) {
+  // Test that we are able to concurrently get mask of a Log object and disable
+  // it.
+  std::string message;
+  std::shared_ptr<llvm::raw_string_ostream> stream_sp(
+      new llvm::raw_string_ostream(message));
+  StreamString err;
+  EXPECT_TRUE(Log::EnableLogChannel(stream_sp, 0, "chan", {}, err));
+  Log *log = test_channel.GetLogIfAll(FOO);
+
+  // Try fetching the log on one thread. Concurrently, try disabling the log
+  // channel.
+  uint32_t mask;
+  std::thread log_thread([log, &mask] { mask = log->GetMask().Get(); });
+  EXPECT_TRUE(Log::DisableLogChannel("chan", {}, err));
+  log_thread.join();
+
+  // The mask should be either zero of "FOO". In either case, we should not trip
+  // any undefined behavior (run the test under TSAN to verify this).
+  EXPECT_TRUE(mask == 0 || mask == FOO) << "mask: " << mask;
+}

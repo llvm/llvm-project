@@ -9,6 +9,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "config.h"
+#include "AddressSpace.hpp"
 #include "DwarfParser.hpp"
 #include "unwind_ext.h"
 

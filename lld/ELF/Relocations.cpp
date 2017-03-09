@@ -520,11 +520,12 @@ static RelExpr adjustExpr(const elf::ObjectFile<ELFT> &File, SymbolBody &Body,
   // only memory. We can hack around it if we are producing an executable and
   // the refered symbol can be preemepted to refer to the executable.
   if (Config->Shared || (Config->pic() && !isRelExpr(Expr))) {
-    error(S.getLocation<ELFT>(RelOff) + ": can't create dynamic relocation " +
-          toString(Type) + " against " +
-          (Body.getName().empty() ? "local symbol in readonly segment"
-                                  : "symbol '" + toString(Body) + "'") +
-          " defined in " + toString(Body.File));
+    if (Config->ZText)
+      error(S.getLocation<ELFT>(RelOff) + ": can't create dynamic relocation " +
+            toString(Type) + " against " +
+            (Body.getName().empty() ? "local symbol in readonly segment"
+                                    : "symbol '" + toString(Body) + "'") +
+            " defined in " + toString(Body.File));
     return Expr;
   }
   if (Body.getVisibility() != STV_DEFAULT) {
