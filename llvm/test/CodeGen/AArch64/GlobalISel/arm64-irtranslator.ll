@@ -1262,3 +1262,12 @@ define double @test_fneg_f64(double %x) {
   %neg = fsub double -0.000000e+00, %x
   ret double %neg
 }
+
+define void @test_trivial_inlineasm() {
+; CHECK-LABEL: name: test_trivial_inlineasm
+; CHECK: INLINEASM $wibble, 1
+; CHECK: INLINEASM $wibble, 0
+  call void asm sideeffect "wibble", ""()
+  call void asm "wibble", ""()
+  ret void
+}
