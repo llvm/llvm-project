@@ -65,6 +65,18 @@ private:
   /// and thus, is tainted.
   static bool isStdin(const Expr *E, CheckerContext &C);
 
+  /// This is called from getPointedToSymbol() to resolve symbol references for
+  /// the region underlying a LazyCompoundVal. This is the default binding
+  /// for the LCV, which could be a conjured symbol from a function call that
+  /// initialized the region. It only returns the conjured symbol if the LCV
+  /// covers the entire region, e.g. we avoid false positives by not returning
+  /// a default bindingc for an entire struct if the symbol for only a single
+  /// field or element within it is requested.
+  // TODO: Return an appropriate symbol for sub-fields/elements of an LCV so
+  // that they are also appropriately tainted.
+  static SymbolRef getLCVSymbol(CheckerContext &C,
+                                nonloc::LazyCompoundVal &LCV);
+
   /// \brief Given a pointer argument, get the symbol of the value it contains
   /// (points to).
   static SymbolRef getPointedToSymbol(CheckerContext &C, const Expr *Arg);
@@ -461,6 +473,27 @@ bool GenericTaintChecker::checkPre(const CallExpr *CE, CheckerContext &C) const{
   return false;
 }
 
+SymbolRef GenericTaintChecker::getLCVSymbol(CheckerContext &C,
+                                            nonloc::LazyCompoundVal &LCV) {
+  StoreManager &StoreMgr = C.getStoreManager();
+
+  // getLCVSymbol() is reached in a PostStmt so we can always expect a default
+  // binding to exist if one is present.
+  if (Optional<SVal> binding = StoreMgr.getDefaultBinding(LCV)) {
+    SymbolRef Sym = binding->getAsSymbol();
+    if (!Sym)
+      return nullptr;
+
+    // If the LCV covers an entire base region return the default conjured symbol.
+    if (LCV.getRegion() == LCV.getRegion()->getBaseRegion())
+      return Sym;
+  }
+
+  // Otherwise, return a nullptr as there's not yet a functional way to taint
+  // sub-regions of LCVs.
+  return nullptr;
+}
+
 SymbolRef GenericTaintChecker::getPointedToSymbol(CheckerContext &C,
                                                   const Expr* Arg) {
   ProgramStateRef State = C.getState();
@@ -476,6 +509,10 @@ SymbolRef GenericTaintChecker::getPointedToSymbol(CheckerContext &C,
     dyn_cast<PointerType>(Arg->getType().getCanonicalType().getTypePtr());
   SVal Val = State->getSVal(*AddrLoc,
                             ArgTy ? ArgTy->getPointeeType(): QualType());
+
+  if (auto LCV = Val.getAs<nonloc::LazyCompoundVal>())
+    return getLCVSymbol(C, *LCV);
+
   return Val.getAsSymbol();
 }
 
