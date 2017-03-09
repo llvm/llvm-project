@@ -586,18 +586,18 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
       return true;
     }
 
-    unsigned Reg = getOrCreateVReg(*Address);
-    auto RegDef = MRI->def_instr_begin(Reg);
     assert(DI.getVariable()->isValidLocationForIntrinsic(
                MIRBuilder.getDebugLoc()) &&
            "Expected inlined-at fields to agree");
-
-    if (RegDef != MRI->def_instr_end() &&
-        RegDef->getOpcode() == TargetOpcode::G_FRAME_INDEX) {
-      MIRBuilder.buildFIDbgValue(RegDef->getOperand(1).getIndex(),
-                                 DI.getVariable(), DI.getExpression());
+    auto AI = dyn_cast<AllocaInst>(Address);
+    if (AI && AI->isStaticAlloca()) {
+      // Static allocas are tracked at the MF level, no need for DBG_VALUE
+      // instructions (in fact, they get ignored if they *do* exist).
+      MF->setVariableDbgInfo(DI.getVariable(), DI.getExpression(),
+                             getOrCreateFrameIndex(*AI), DI.getDebugLoc());
     } else
-      MIRBuilder.buildDirectDbgValue(Reg, DI.getVariable(), DI.getExpression());
+      MIRBuilder.buildDirectDbgValue(getOrCreateVReg(*Address),
+                                     DI.getVariable(), DI.getExpression());
     return true;
   }
   case Intrinsic::vaend:
