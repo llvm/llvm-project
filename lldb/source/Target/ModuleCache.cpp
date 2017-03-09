@@ -109,7 +109,7 @@ void DeleteExistingModule(const FileSpec &root_dir_spec,
     return;
 
   const auto module_spec_dir = GetModuleDirectory(root_dir_spec, module_uuid);
-  FileSystem::DeleteDirectory(module_spec_dir, true);
+  llvm::sys::fs::remove_directories(module_spec_dir.GetPath());
   lock.Delete();
 }
 

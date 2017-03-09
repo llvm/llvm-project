@@ -17,6 +17,7 @@
 
 // Other libraries and framework includes
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/RWMutex.h"
 // C++ Includes
 #include <atomic>
@@ -55,6 +56,7 @@ public:
   // necessary to enable a log channel in an atomic manner.
   class Channel {
     std::atomic<Log *> log_ptr;
+    friend class Log;
 
   public:
     const llvm::ArrayRef<Category> categories;
@@ -66,29 +68,26 @@ public:
           default_flags(default_flags) {}
 
     // This function is safe to call at any time
-    // FIXME: Not true yet, mask access is not atomic
+    // If the channel is disabled after (or concurrently with) this function
+    // returning a non-null Log pointer, it is still safe to attempt to write to
+    // the Log object -- the output will be discarded.
     Log *GetLogIfAll(uint32_t mask) {
-      Log *log = log_ptr.load(std::memory_order_acquire);
+      Log *log = log_ptr.load(std::memory_order_relaxed);
       if (log && log->GetMask().AllSet(mask))
         return log;
       return nullptr;
     }
 
     // This function is safe to call at any time
-    // FIXME: Not true yet, mask access is not atomic
+    // If the channel is disabled after (or concurrently with) this function
+    // returning a non-null Log pointer, it is still safe to attempt to write to
+    // the Log object -- the output will be discarded.
     Log *GetLogIfAny(uint32_t mask) {
-      Log *log = log_ptr.load(std::memory_order_acquire);
+      Log *log = log_ptr.load(std::memory_order_relaxed);
       if (log && log->GetMask().AnySet(mask))
         return log;
       return nullptr;
     }
-
-    // Calls to Enable and disable need to be serialized externally.
-    void Enable(Log &log, const std::shared_ptr<llvm::raw_ostream> &stream_sp,
-                uint32_t options, uint32_t flags);
-
-    // Calls to Enable and disable need to be serialized externally.
-    void Disable(uint32_t flags);
   };
 
   //------------------------------------------------------------------
@@ -115,12 +114,13 @@ public:
 
   //------------------------------------------------------------------
   // Member functions
+  //
+  // These functions are safe to call at any time you have a Log* obtained from
+  // the Channel class. If logging is disabled between you obtaining the Log
+  // object and writing to it, the output will be silently discarded.
   //------------------------------------------------------------------
-  Log();
-
-  Log(const std::shared_ptr<llvm::raw_ostream> &stream_sp);
-
-  ~Log();
+  Log(Channel &channel) : m_channel(channel) {}
+  ~Log() = default;
 
   void PutCString(const char *cstr);
   void PutString(llvm::StringRef str);
@@ -136,9 +136,6 @@ public:
 
   void VAPrintf(const char *format, va_list args);
 
-  void LogIf(uint32_t mask, const char *fmt, ...)
-      __attribute__((format(printf, 3, 4)));
-
   void Error(const char *fmt, ...) __attribute__((format(printf, 2, 3)));
 
   void VAError(const char *format, va_list args);
@@ -147,38 +144,24 @@ public:
 
   void Warning(const char *fmt, ...) __attribute__((format(printf, 2, 3)));
 
-  Flags &GetOptions();
+  const Flags GetOptions() const;
 
-  const Flags &GetOptions() const;
-
-  Flags &GetMask();
-
-  const Flags &GetMask() const;
+  const Flags GetMask() const;
 
   bool GetVerbose() const;
 
-  void SetStream(const std::shared_ptr<llvm::raw_ostream> &stream_sp) {
-    llvm::sys::ScopedWriter lock(m_stream_mutex);
-    m_stream_sp = stream_sp;
-  }
-
-  std::shared_ptr<llvm::raw_ostream> GetStream() {
-    llvm::sys::ScopedReader lock(m_stream_mutex);
-    return m_stream_sp;
-  }
-
-protected:
-  //------------------------------------------------------------------
-  // Member variables
-  //------------------------------------------------------------------
-  llvm::sys::RWMutex m_stream_mutex; // Protects m_stream_sp
-  std::shared_ptr<llvm::raw_ostream> m_stream_sp;
-
-  Flags m_options;
-  Flags m_mask_bits;
-
 private:
-  DISALLOW_COPY_AND_ASSIGN(Log);
+  Channel &m_channel;
+
+  // The mutex makes sure enable/disable operations are thread-safe. The options
+  // and mask variables are atomic to enable their reading in
+  // Channel::GetLogIfAny without taking the mutex to speed up the fast path.
+  // Their modification however, is still protected by this mutex.
+  llvm::sys::RWMutex m_mutex;
+
+  std::shared_ptr<llvm::raw_ostream> m_stream_sp;
+  std::atomic<uint32_t> m_options{0};
+  std::atomic<uint32_t> m_mask{0};
 
   void WriteHeader(llvm::raw_ostream &OS, llvm::StringRef file,
                    llvm::StringRef function);
@@ -186,6 +169,26 @@ private:
 
   void Format(llvm::StringRef file, llvm::StringRef function,
               const llvm::formatv_object_base &payload);
+
+  std::shared_ptr<llvm::raw_ostream> GetStream() {
+    llvm::sys::ScopedReader lock(m_mutex);
+    return m_stream_sp;
+  }
+
+  void Enable(const std::shared_ptr<llvm::raw_ostream> &stream_sp,
+              uint32_t options, uint32_t flags);
+
+  void Disable(uint32_t flags);
+
+  typedef llvm::StringMap<Log> ChannelMap;
+  static llvm::ManagedStatic<ChannelMap> g_channel_map;
+
+  static void ListCategories(Stream &stream,
+                             const ChannelMap::value_type &entry);
+  static uint32_t GetFlags(Stream &stream, const ChannelMap::value_type &entry,
+                           llvm::ArrayRef<const char *> categories);
+
+  DISALLOW_COPY_AND_ASSIGN(Log);
 };
 
 } // namespace lldb_private

@@ -319,7 +319,7 @@ static int compareDefinedNonCommon(Symbol *S, bool WasInserted, uint8_t Binding,
 
 template <class ELFT>
 Symbol *SymbolTable<ELFT>::addCommon(StringRef N, uint64_t Size,
-                                     uint64_t Alignment, uint8_t Binding,
+                                     uint32_t Alignment, uint8_t Binding,
                                      uint8_t StOther, uint8_t Type,
                                      InputFile *File) {
   Symbol *S;
@@ -369,7 +369,8 @@ static void reportDuplicate(SymbolBody *Existing, InputSectionBase *ErrSec,
     return;
   }
 
-  std::string OldLoc = D->Section->template getLocation<ELFT>(D->Value);
+  std::string OldLoc =
+      cast<InputSectionBase>(D->Section)->template getLocation<ELFT>(D->Value);
   std::string NewLoc = ErrSec->getLocation<ELFT>(ErrOffset);
 
   print(NewLoc + ": duplicate symbol '" + toString(*Existing) + "'");
@@ -377,10 +378,10 @@ static void reportDuplicate(SymbolBody *Existing, InputSectionBase *ErrSec,
 }
 
 template <typename ELFT>
-Symbol *
-SymbolTable<ELFT>::addRegular(StringRef Name, uint8_t StOther, uint8_t Type,
-                              uint64_t Value, uint64_t Size, uint8_t Binding,
-                              InputSectionBase *Section, InputFile *File) {
+Symbol *SymbolTable<ELFT>::addRegular(StringRef Name, uint8_t StOther,
+                                      uint8_t Type, uint64_t Value,
+                                      uint64_t Size, uint8_t Binding,
+                                      SectionBase *Section, InputFile *File) {
   Symbol *S;
   bool WasInserted;
   std::tie(S, WasInserted) = insert(Name, Type, getVisibility(StOther),
@@ -391,24 +392,8 @@ SymbolTable<ELFT>::addRegular(StringRef Name, uint8_t StOther, uint8_t Type,
     replaceBody<DefinedRegular>(S, Name, /*IsLocal=*/false, StOther, Type,
                                 Value, Size, Section, File);
   else if (Cmp == 0)
-    reportDuplicate<ELFT>(S->body(), Section, Value);
-  return S;
-}
-
-template <typename ELFT>
-Symbol *SymbolTable<ELFT>::addSynthetic(StringRef N,
-                                        const OutputSection *Section,
-                                        uint64_t Value, uint8_t StOther) {
-  Symbol *S;
-  bool WasInserted;
-  std::tie(S, WasInserted) = insert(N, STT_NOTYPE, getVisibility(StOther),
-                                    /*CanOmitFromDynSym*/ false, nullptr);
-  int Cmp = compareDefinedNonCommon<ELFT>(S, WasInserted, STB_GLOBAL,
-                                          /*IsAbsolute*/ false, /*Value*/ 0);
-  if (Cmp > 0)
-    replaceBody<DefinedSynthetic>(S, N, Value, Section);
-  else if (Cmp == 0)
-    reportDuplicate(S->body(), nullptr);
+    reportDuplicate<ELFT>(S->body(),
+                          dyn_cast_or_null<InputSectionBase>(Section), Value);
   return S;
 }
 

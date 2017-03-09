@@ -34,20 +34,22 @@ class MergeSyntheticSection;
 template <class ELFT> class ObjectFile;
 class OutputSection;
 
-// This corresponds to a section of an input file.
-class InputSectionBase {
+// This is the base class of all sections that lld handles. Some are sections in
+// input files, some are sections in the produced output file and some exist
+// just as a convenience for implementing special ways of combining some
+// sections.
+class SectionBase {
 public:
-  enum Kind { Regular, EHFrame, Merge, Synthetic, };
+  enum Kind { Regular, EHFrame, Merge, Synthetic, Output };
 
   Kind kind() const { return (Kind)SectionKind; }
-  // The file this section is from.
-  InputFile *File;
-
-  ArrayRef<uint8_t> Data;
 
   StringRef Name;
 
   unsigned SectionKind : 3;
+
+  // The next two bit fields are only used by InputSectionBase, but we
+  // put them here so the struct packs better.
 
   // The garbage collector sets sections' Live bits.
   // If GC is disabled, all sections are considered live by default.
@@ -63,12 +65,48 @@ public:
   uint32_t Link;
   uint32_t Info;
 
+  OutputSection *getOutputSection();
+  const OutputSection *getOutputSection() const {
+    return const_cast<SectionBase *>(this)->getOutputSection();
+  }
+
+  // Translate an offset in the input section to an offset in the output
+  // section.
+  uint64_t getOffset(uint64_t Offset) const;
+
+  uint64_t getOffset(const DefinedRegular &Sym) const;
+
+protected:
+  SectionBase(Kind SectionKind, StringRef Name, uint64_t Flags,
+              uint64_t Entsize, uint64_t Alignment, uint32_t Type,
+              uint32_t Info, uint32_t Link)
+      : Name(Name), SectionKind(SectionKind), Alignment(Alignment),
+        Flags(Flags), Entsize(Entsize), Type(Type), Link(Link), Info(Info) {
+    Live = false;
+    Assigned = false;
+  }
+};
+
+// This corresponds to a section of an input file.
+class InputSectionBase : public SectionBase {
+public:
+  static bool classof(const SectionBase *S);
+
+  // The file this section is from.
+  InputFile *File;
+
+  ArrayRef<uint8_t> Data;
   uint64_t getOffsetInFile() const;
 
   static InputSectionBase Discarded;
 
   InputSectionBase()
-      : SectionKind(Regular), Live(false), Assigned(false), Repl(this) {
+      : SectionBase(Regular, "", /*Flags*/ 0, /*Entsize*/ 0, /*Alignment*/ 0,
+                    /*Type*/ 0,
+                    /*Info*/ 0, /*Link*/ 0),
+        Repl(this) {
+    Live = false;
+    Assigned = false;
     NumRelocations = 0;
     AreRelocsRela = false;
   }
@@ -79,7 +117,7 @@ public:
 
   InputSectionBase(InputFile *File, uint64_t Flags, uint32_t Type,
                    uint64_t Entsize, uint32_t Link, uint32_t Info,
-                   uint64_t Alignment, ArrayRef<uint8_t> Data, StringRef Name,
+                   uint32_t Alignment, ArrayRef<uint8_t> Data, StringRef Name,
                    Kind SectionKind);
   OutputSection *OutSec = nullptr;
 
@@ -113,20 +151,13 @@ public:
   // Returns the size of this section (even if this is a common or BSS.)
   size_t getSize() const;
 
-  OutputSection *getOutputSection() const;
-
   template <class ELFT> ObjectFile<ELFT> *getFile() const;
 
   template <class ELFT> llvm::object::ELFFile<ELFT> getObj() const {
     return getFile<ELFT>()->getObj();
   }
 
-  uint64_t getOffset(const DefinedRegular &Sym) const;
-
   template <class ELFT> InputSectionBase *getLinkOrderDep() const;
-  // Translate an offset in the input section to an offset in the output
-  // section.
-  uint64_t getOffset(uint64_t Offset) const;
 
   template <class ELFT> void uncompress();
 
@@ -165,7 +196,7 @@ public:
   template <class ELFT>
   MergeInputSection(ObjectFile<ELFT> *F, const typename ELFT::Shdr *Header,
                     StringRef Name);
-  static bool classof(const InputSectionBase *S);
+  static bool classof(const SectionBase *S);
   void splitIntoPieces();
 
   // Mark the piece at a given offset live. Used by GC.
@@ -237,7 +268,7 @@ public:
   template <class ELFT>
   EhInputSection(ObjectFile<ELFT> *F, const typename ELFT::Shdr *Header,
                  StringRef Name);
-  static bool classof(const InputSectionBase *S);
+  static bool classof(const SectionBase *S);
   template <class ELFT> void split();
   template <class ELFT, class RelTy> void split(ArrayRef<RelTy> Rels);
 
@@ -253,7 +284,7 @@ public:
 // .eh_frame. It also includes the synthetic sections themselves.
 class InputSection : public InputSectionBase {
 public:
-  InputSection(uint64_t Flags, uint32_t Type, uint64_t Alignment,
+  InputSection(uint64_t Flags, uint32_t Type, uint32_t Alignment,
                ArrayRef<uint8_t> Data, StringRef Name, Kind K = Regular);
   template <class ELFT>
   InputSection(ObjectFile<ELFT> *F, const typename ELFT::Shdr *Header,
@@ -267,7 +298,7 @@ public:
   // to. The writer sets a value.
   uint64_t OutSecOff = 0;
 
-  static bool classof(const InputSectionBase *S);
+  static bool classof(const SectionBase *S);
 
   template <class ELFT> InputSectionBase *getRelocatedSection();
 

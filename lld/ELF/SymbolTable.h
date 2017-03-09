@@ -58,10 +58,7 @@ public:
 
   Symbol *addRegular(StringRef Name, uint8_t StOther, uint8_t Type,
                      uint64_t Value, uint64_t Size, uint8_t Binding,
-                     InputSectionBase *Section, InputFile *File);
-
-  Symbol *addSynthetic(StringRef N, const OutputSection *Section,
-                       uint64_t Value, uint8_t StOther);
+                     SectionBase *Section, InputFile *File);
 
   void addShared(SharedFile<ELFT> *F, StringRef Name, const Elf_Sym &Sym,
                  const typename ELFT::Verdef *Verdef);
@@ -71,7 +68,7 @@ public:
   Symbol *addBitcode(StringRef Name, uint8_t Binding, uint8_t StOther,
                      uint8_t Type, bool CanOmitFromDynSym, BitcodeFile *File);
 
-  Symbol *addCommon(StringRef N, uint64_t Size, uint64_t Alignment,
+  Symbol *addCommon(StringRef N, uint64_t Size, uint32_t Alignment,
                     uint8_t Binding, uint8_t StOther, uint8_t Type,
                     InputFile *File);
 

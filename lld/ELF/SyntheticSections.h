@@ -32,7 +32,7 @@ namespace elf {
 
 class SyntheticSection : public InputSection {
 public:
-  SyntheticSection(uint64_t Flags, uint32_t Type, uint64_t Alignment,
+  SyntheticSection(uint64_t Flags, uint32_t Type, uint32_t Alignment,
                    StringRef Name)
       : InputSection(Flags, Type, Alignment, {}, Name,
                      InputSectionBase::Synthetic) {
@@ -646,7 +646,7 @@ public:
 class MergeSyntheticSection final : public SyntheticSection {
 public:
   MergeSyntheticSection(StringRef Name, uint32_t Type, uint64_t Flags,
-                        uint64_t Alignment);
+                        uint32_t Alignment);
   void addSection(MergeInputSection *MS);
   void writeTo(uint8_t *Buf) override;
   void finalizeContents() override;

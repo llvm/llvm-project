@@ -599,6 +599,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->ZOrigin = hasZOption(Args, "origin");
   Config->ZRelro = !hasZOption(Args, "norelro");
   Config->ZStackSize = getZOptionValue(Args, "stack-size", 0);
+  Config->ZText = !hasZOption(Args, "notext");
   Config->ZWxneeded = hasZOption(Args, "wxneeded");
 
   if (Config->LTOO > 3)

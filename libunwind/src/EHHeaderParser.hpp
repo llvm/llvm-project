@@ -15,7 +15,6 @@
 
 #include "libunwind.h"
 
-#include "AddressSpace.hpp"
 #include "DwarfParser.hpp"
 
 namespace libunwind {
