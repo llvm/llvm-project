@@ -124,7 +124,7 @@ void ScriptLexer::tokenize(MemoryBufferRef MB) {
     // so that you can write "file-name.cpp" as one bare token, for example.
     size_t Pos = S.find_first_not_of(
         "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
-        "0123456789_.$/\\~=+[]*?-!<>^");
+        "0123456789_.$/\\~=+[]*?-!<>^:");
 
     // A character that cannot start a word (which is usually a
     // punctuation) forms a single character token.
@@ -169,7 +169,7 @@ bool ScriptLexer::atEOF() { return Error || Tokens.size() == Pos; }
 // Split a given string as an expression.
 // This function returns "3", "*" and "5" for "3*5" for example.
 static std::vector<StringRef> tokenizeExpr(StringRef S) {
-  StringRef Ops = "+-*/"; // List of operators
+  StringRef Ops = "+-*/:"; // List of operators
 
   // Quoted strings are literal strings, so we don't want to split it.
   if (S.startswith("\""))
@@ -229,20 +229,29 @@ StringRef ScriptLexer::next() {
   return Tokens[Pos++];
 }
 
-StringRef ScriptLexer::peek(unsigned N) {
-  StringRef Tok;
-  for (unsigned I = 0; I <= N; ++I) {
-    Tok = next();
-    if (Error)
-      return "";
-  }
-  Pos = Pos - N - 1;
+StringRef ScriptLexer::peek() {
+  StringRef Tok = next();
+  if (Error)
+    return "";
+  Pos = Pos - 1;
   return Tok;
 }
 
 bool ScriptLexer::consume(StringRef Tok) {
   if (peek() == Tok) {
     skip();
+    return true;
+  }
+  return false;
+}
+
+// Consumes Tok followed by ":". Space is allowed between Tok and ":".
+bool ScriptLexer::consumeLabel(StringRef Tok) {
+  if (consume((Tok + ":").str()))
+    return true;
+  if (Tokens.size() >= Pos + 2 && Tokens[Pos] == Tok &&
+      Tokens[Pos + 1] == ":") {
+    Pos += 2;
     return true;
   }
   return false;

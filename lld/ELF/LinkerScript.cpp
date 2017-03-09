@@ -1055,8 +1055,9 @@ private:
   std::vector<SymbolVersion> readVersionExtern();
   void readAnonymousDeclaration();
   void readVersionDeclaration(StringRef VerStr);
-  std::vector<SymbolVersion> readSymbols();
-  void readLocals();
+
+  std::pair<std::vector<SymbolVersion>, std::vector<SymbolVersion>>
+  readSymbols();
 
   ScriptConfiguration &Opt = *ScriptConfig;
   bool IsUnderSysroot;
@@ -1918,50 +1919,49 @@ unsigned ScriptParser::readPhdrType() {
   return Ret;
 }
 
-// Reads a list of symbols, e.g. "{ global: foo; bar; local: *; };".
+// Reads an anonymous version declaration.
 void ScriptParser::readAnonymousDeclaration() {
-  // Read global symbols first. "global:" is default, so if there's
-  // no label, we assume global symbols.
-  if (peek() != "local") {
-    if (consume("global"))
-      expect(":");
-    for (SymbolVersion V : readSymbols())
-      Config->VersionScriptGlobals.push_back(V);
+  std::vector<SymbolVersion> Locals;
+  std::vector<SymbolVersion> Globals;
+  std::tie(Locals, Globals) = readSymbols();
+
+  for (SymbolVersion V : Locals) {
+    if (V.Name == "*")
+      Config->DefaultSymbolVersion = VER_NDX_LOCAL;
+    else
+      Config->VersionScriptLocals.push_back(V);
   }
-  readLocals();
-  expect("}");
+
+  for (SymbolVersion V : Globals)
+    Config->VersionScriptGlobals.push_back(V);
+
   expect(";");
 }
 
-void ScriptParser::readLocals() {
-  if (!consume("local"))
-    return;
-  expect(":");
-  std::vector<SymbolVersion> Locals = readSymbols();
-  for (SymbolVersion V : Locals) {
-    if (V.Name == "*") {
-      Config->DefaultSymbolVersion = VER_NDX_LOCAL;
-      continue;
-    }
-    Config->VersionScriptLocals.push_back(V);
-  }
-}
-
-// Reads a list of symbols, e.g. "VerStr { global: foo; bar; local: *; };".
+// Reads a non-anonymous version definition,
+// e.g. "VerStr { global: foo; bar; local: *; };".
 void ScriptParser::readVersionDeclaration(StringRef VerStr) {
-  // Identifiers start at 2 because 0 and 1 are reserved
-  // for VER_NDX_LOCAL and VER_NDX_GLOBAL constants.
-  uint16_t VersionId = Config->VersionDefinitions.size() + 2;
-  Config->VersionDefinitions.push_back({VerStr, VersionId});
+  // Read a symbol list.
+  std::vector<SymbolVersion> Locals;
+  std::vector<SymbolVersion> Globals;
+  std::tie(Locals, Globals) = readSymbols();
 
-  // Read global symbols.
-  if (peek() != "local") {
-    if (consume("global"))
-      expect(":");
-    Config->VersionDefinitions.back().Globals = readSymbols();
+  for (SymbolVersion V : Locals) {
+    if (V.Name == "*")
+      Config->DefaultSymbolVersion = VER_NDX_LOCAL;
+    else
+      Config->VersionScriptLocals.push_back(V);
   }
-  readLocals();
-  expect("}");
+
+  // Create a new version definition and add that to the global symbols.
+  VersionDefinition Ver;
+  Ver.Name = VerStr;
+  Ver.Globals = Globals;
+
+  // User-defined version number starts from 2 because 0 and 1 are
+  // reserved for VER_NDX_LOCAL and VER_NDX_GLOBAL, respectively.
+  Ver.Id = Config->VersionDefinitions.size() + 2;
+  Config->VersionDefinitions.push_back(Ver);
 
   // Each version may have a parent version. For example, "Ver2"
   // defined as "Ver2 { global: foo; local: *; } Ver1;" has "Ver1"
@@ -1973,23 +1973,35 @@ void ScriptParser::readVersionDeclaration(StringRef VerStr) {
   expect(";");
 }
 
-// Reads a list of symbols for a versions cript.
-std::vector<SymbolVersion> ScriptParser::readSymbols() {
-  std::vector<SymbolVersion> Ret;
-  for (;;) {
-    if (consume("extern")) {
-      for (SymbolVersion V : readVersionExtern())
-        Ret.push_back(V);
+// Reads a list of symbols, e.g. "{ global: foo; bar; local: *; };".
+std::pair<std::vector<SymbolVersion>, std::vector<SymbolVersion>>
+ScriptParser::readSymbols() {
+  std::vector<SymbolVersion> Locals;
+  std::vector<SymbolVersion> Globals;
+  std::vector<SymbolVersion> *V = &Globals;
+
+  while (!Error) {
+    if (consume("}"))
+      break;
+    if (consumeLabel("local")) {
+      V = &Locals;
+      continue;
+    }
+    if (consumeLabel("global")) {
+      V = &Globals;
       continue;
     }
 
-    if (peek() == "}" || (peek() == "local" && peek(1) == ":") || Error)
-      break;
-    StringRef Tok = next();
-    Ret.push_back({unquote(Tok), false, hasWildcard(Tok)});
+    if (consume("extern")) {
+      std::vector<SymbolVersion> Ext = readVersionExtern();
+      V->insert(V->end(), Ext.begin(), Ext.end());
+    } else {
+      StringRef Tok = next();
+      V->push_back({unquote(Tok), false, hasWildcard(Tok)});
+    }
     expect(";");
   }
-  return Ret;
+  return {Locals, Globals};
 }
 
 // Reads an "extern C++" directive, e.g.,
@@ -2010,7 +2022,6 @@ std::vector<SymbolVersion> ScriptParser::readVersionExtern() {
   }
 
   expect("}");
-  expect(";");
   return Ret;
 }
 
