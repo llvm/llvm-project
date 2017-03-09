@@ -63,21 +63,10 @@ template <class ELFT> static SymbolBody *addRegular(SymbolAssignment *Cmd) {
       Cmd->Name, /*Type*/ 0, Visibility, /*CanOmitFromDynSym*/ false,
       /*File*/ nullptr);
   Sym->Binding = STB_GLOBAL;
+  OutputSection *Sec =
+      Cmd->Expression.IsAbsolute() ? nullptr : Cmd->Expression.Section();
   replaceBody<DefinedRegular>(Sym, Cmd->Name, /*IsLocal=*/false, Visibility,
-                              STT_NOTYPE, 0, 0, nullptr, nullptr);
-  return Sym->body();
-}
-
-template <class ELFT> static SymbolBody *addSynthetic(SymbolAssignment *Cmd) {
-  Symbol *Sym;
-  uint8_t Visibility = Cmd->Hidden ? STV_HIDDEN : STV_DEFAULT;
-  const OutputSection *Sec =
-      ScriptConfig->HasSections ? nullptr : Cmd->Expression.Section();
-  std::tie(Sym, std::ignore) = Symtab<ELFT>::X->insert(
-      Cmd->Name, /*Type*/ 0, Visibility, /*CanOmitFromDynSym*/ false,
-      /*File*/ nullptr);
-  Sym->Binding = STB_GLOBAL;
-  replaceBody<DefinedSynthetic>(Sym, Cmd->Name, 0, Sec);
+                              STT_NOTYPE, 0, 0, Sec, nullptr);
   return Sym->body();
 }
 
@@ -119,18 +108,14 @@ void LinkerScript<ELFT>::assignSymbol(SymbolAssignment *Cmd, bool InSec) {
   if (!Cmd->Sym)
     return;
 
-  if (auto *Body = dyn_cast<DefinedSynthetic>(Cmd->Sym)) {
-    Body->Section = Cmd->Expression.Section();
-    if (Body->Section) {
-      uint64_t VA = 0;
-      if (Body->Section->Flags & SHF_ALLOC)
-        VA = Body->Section->Addr;
-      Body->Value = Cmd->Expression(Dot) - VA;
-    }
-    return;
+  auto *Sym = cast<DefinedRegular>(Cmd->Sym);
+  Sym->Value = Cmd->Expression(Dot);
+  if (!Cmd->Expression.IsAbsolute()) {
+    Sym->Section = Cmd->Expression.Section();
+    if (auto *Sec = dyn_cast_or_null<OutputSection>(Sym->Section))
+      if (Sec->Flags & SHF_ALLOC)
+        Sym->Value -= Sec->Addr;
   }
-
-  cast<DefinedRegular>(Cmd->Sym)->Value = Cmd->Expression(Dot);
 }
 
 template <class ELFT>
@@ -144,12 +129,7 @@ void LinkerScript<ELFT>::addSymbol(SymbolAssignment *Cmd) {
   if (Cmd->Provide && (!B || B->isDefined()))
     return;
 
-  // Otherwise, create a new symbol if one does not exist or an
-  // undefined one does exist.
-  if (Cmd->Expression.IsAbsolute())
-    Cmd->Sym = addRegular<ELFT>(Cmd);
-  else
-    Cmd->Sym = addSynthetic<ELFT>(Cmd);
+  Cmd->Sym = addRegular<ELFT>(Cmd);
 
   // If there are sections, then let the value be assigned later in
   // `assignAddresses`.
@@ -321,6 +301,19 @@ LinkerScript<ELFT>::createInputSectionList(OutputSectionCommand &OutCmd) {
 
 template <class ELFT>
 void LinkerScript<ELFT>::processCommands(OutputSectionFactory &Factory) {
+  // A symbol can be assigned before any section is mentioned in the linker
+  // script. In an DSO, the symbol values are addresses, so the only important
+  // section values are:
+  // * SHN_UNDEF
+  // * SHN_ABS
+  // * Any value meaning a regular section.
+  // To handle that, create a dummy aether section that fills the void before
+  // the linker scripts switches to another section. It has an index of one
+  // which will map to whatever the first actual section is.
+  Aether = make<OutputSection>("", 0, SHF_ALLOC);
+  Aether->SectionIndex = 1;
+  CurOutSec = Aether;
+
   for (unsigned I = 0; I < Opt.Commands.size(); ++I) {
     auto Iter = Opt.Commands.begin() + I;
     const std::unique_ptr<BaseCommand> &Base1 = *Iter;
@@ -385,6 +378,7 @@ void LinkerScript<ELFT>::processCommands(OutputSectionFactory &Factory) {
         Factory.addInputSec<ELFT>(S, Cmd->Name);
     }
   }
+  CurOutSec = nullptr;
 }
 
 // Add sections that didn't match any sections command.
@@ -772,18 +766,6 @@ template <class ELFT>
 void LinkerScript<ELFT>::assignAddresses(std::vector<PhdrEntry> &Phdrs) {
   // Assign addresses as instructed by linker script SECTIONS sub-commands.
   Dot = 0;
-
-  // A symbol can be assigned before any section is mentioned in the linker
-  // script. In an DSO, the symbol values are addresses, so the only important
-  // section values are:
-  // * SHN_UNDEF
-  // * SHN_ABS
-  // * Any value meaning a regular section.
-  // To handle that, create a dummy aether section that fills the void before
-  // the linker scripts switches to another section. It has an index of one
-  // which will map to whatever the first actual section is.
-  auto *Aether = make<OutputSection>("", 0, SHF_ALLOC);
-  Aether->SectionIndex = 1;
   switchTo(Aether);
 
   for (const std::unique_ptr<BaseCommand> &Base : Opt.Commands) {
@@ -924,8 +906,8 @@ template <class ELFT> bool LinkerScript<ELFT>::hasPhdrsCommands() {
 }
 
 template <class ELFT>
-const OutputSection *LinkerScript<ELFT>::getOutputSection(const Twine &Loc,
-                                                          StringRef Name) {
+OutputSection *LinkerScript<ELFT>::getOutputSection(const Twine &Loc,
+                                                    StringRef Name) {
   static OutputSection FakeSec("", 0, 0);
 
   for (OutputSection *Sec : *OutputSections)
@@ -976,7 +958,7 @@ template <class ELFT> bool LinkerScript<ELFT>::isAbsolute(StringRef S) {
 // specific section but isn't absolute at the same time, so we try
 // to find suitable section for it as well.
 template <class ELFT>
-const OutputSection *LinkerScript<ELFT>::getSymbolSection(StringRef S) {
+OutputSection *LinkerScript<ELFT>::getSymbolSection(StringRef S) {
   if (SymbolBody *Sym = Symtab<ELFT>::X->find(S))
     return Sym->getOutputSection<ELFT>();
   return CurOutSec;
@@ -1634,7 +1616,7 @@ Expr ScriptParser::readExpr() {
 static Expr combine(StringRef Op, Expr L, Expr R) {
   auto IsAbs = [=] { return L.IsAbsolute() && R.IsAbsolute(); };
   auto GetOutSec = [=] {
-    const OutputSection *S = L.Section();
+    OutputSection *S = L.Section();
     return S ? S : R.Section();
   };
 

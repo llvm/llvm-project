@@ -34,6 +34,7 @@
 
 #include "polly/DependenceInfo.h"
 #include "polly/LinkAllPasses.h"
+#include "polly/Options.h"
 #include "polly/ScopInfo.h"
 #include "llvm/Support/CommandLine.h"
 #include "isl/flow.h"
@@ -52,7 +53,7 @@ cl::opt<int> DCEPreciseSteps(
     cl::desc("The number of precise steps between two approximating "
              "iterations. (A value of -1 schedules another approximation stage "
              "before the actual dead code elimination."),
-    cl::ZeroOrMore, cl::init(-1));
+    cl::ZeroOrMore, cl::init(-1), cl::cat(PollyCategory));
 
 class DeadCodeElim : public ScopPass {
 public:

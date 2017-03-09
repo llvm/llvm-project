@@ -29,7 +29,6 @@ public:
   static FileSpec::PathSyntax GetNativePathSyntax();
 
   static Error MakeDirectory(const FileSpec &file_spec, uint32_t mode);
-  static Error DeleteDirectory(const FileSpec &file_spec, bool recurse);
 
   static Error GetFilePermissions(const FileSpec &file_spec,
                                   uint32_t &file_permissions);

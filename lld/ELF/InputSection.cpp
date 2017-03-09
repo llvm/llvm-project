@@ -53,26 +53,21 @@ static ArrayRef<uint8_t> getSectionContents(elf::ObjectFile<ELFT> *File,
 InputSectionBase::InputSectionBase(InputFile *File, uint64_t Flags,
                                    uint32_t Type, uint64_t Entsize,
                                    uint32_t Link, uint32_t Info,
-                                   uint64_t Alignment, ArrayRef<uint8_t> Data,
+                                   uint32_t Alignment, ArrayRef<uint8_t> Data,
                                    StringRef Name, Kind SectionKind)
-    : File(File), Data(Data), Name(Name), SectionKind(SectionKind),
-      Live(!Config->GcSections || !(Flags & SHF_ALLOC)), Assigned(false),
-      Flags(Flags), Entsize(Entsize), Type(Type), Link(Link), Info(Info),
-      Repl(this) {
+    : SectionBase(SectionKind, Name, Flags, Entsize, Alignment, Type, Info,
+                  Link),
+      File(File), Data(Data), Repl(this) {
+  Live = !Config->GcSections || !(Flags & SHF_ALLOC);
+  Assigned = false;
   NumRelocations = 0;
   AreRelocsRela = false;
 
   // The ELF spec states that a value of 0 means the section has
   // no alignment constraits.
-  uint64_t V = std::max<uint64_t>(Alignment, 1);
+  uint32_t V = std::max<uint64_t>(Alignment, 1);
   if (!isPowerOf2_64(V))
     fatal(toString(File) + ": section sh_addralign is not a power of 2");
-
-  // We reject object files having insanely large alignments even though
-  // they are allowed by the spec. I think 4GB is a reasonable limitation.
-  // We might want to relax this in the future.
-  if (V > UINT32_MAX)
-    fatal(toString(File) + ": section sh_addralign is too large");
   this->Alignment = V;
 }
 
@@ -84,6 +79,11 @@ InputSectionBase::InputSectionBase(elf::ObjectFile<ELFT> *File,
                        Hdr->sh_entsize, Hdr->sh_link, Hdr->sh_info,
                        Hdr->sh_addralign, getSectionContents(File, Hdr), Name,
                        SectionKind) {
+  // We reject object files having insanely large alignments even though
+  // they are allowed by the spec. I think 4GB is a reasonable limitation.
+  // We might want to relax this in the future.
+  if (Hdr->sh_addralign > UINT32_MAX)
+    fatal(toString(File) + ": section sh_addralign is too large");
 }
 
 size_t InputSectionBase::getSize() const {
@@ -99,15 +99,20 @@ uint64_t InputSectionBase::getOffsetInFile() const {
   return SecStart - FileStart;
 }
 
-uint64_t InputSectionBase::getOffset(uint64_t Offset) const {
+uint64_t SectionBase::getOffset(uint64_t Offset) const {
   switch (kind()) {
+  case Output: {
+    auto *OS = cast<OutputSection>(this);
+    // For output sections we treat offset -1 as the end of the section.
+    return Offset == uint64_t(-1) ? OS->Size : Offset;
+  }
   case Regular:
     return cast<InputSection>(this)->OutSecOff + Offset;
-  case Synthetic:
+  case Synthetic: {
+    auto *IS = cast<InputSection>(this);
     // For synthetic sections we treat offset -1 as the end of the section.
-    // The same approach is used for synthetic symbols (DefinedSynthetic).
-    return cast<InputSection>(this)->OutSecOff +
-           (Offset == uint64_t(-1) ? getSize() : Offset);
+    return IS->OutSecOff + (Offset == uint64_t(-1) ? IS->getSize() : Offset);
+  }
   case EHFrame:
     // The file crtbeginT.o has relocations pointing to the start of an empty
     // .eh_frame that is known to be the first in the link. It does that to
@@ -122,12 +127,14 @@ uint64_t InputSectionBase::getOffset(uint64_t Offset) const {
   llvm_unreachable("invalid section kind");
 }
 
-OutputSection *InputSectionBase::getOutputSection() const {
+OutputSection *SectionBase::getOutputSection() {
+  if (auto *IS = dyn_cast<InputSection>(this))
+    return IS->OutSec;
   if (auto *MS = dyn_cast<MergeInputSection>(this))
     return MS->MergeSec ? MS->MergeSec->OutSec : nullptr;
   if (auto *EH = dyn_cast<EhInputSection>(this))
     return EH->EHSec->OutSec;
-  return OutSec;
+  return cast<OutputSection>(this);
 }
 
 // Uncompress section contents. Note that this function is called
@@ -151,7 +158,7 @@ template <class ELFT> void InputSectionBase::uncompress() {
   Data = ArrayRef<uint8_t>((uint8_t *)OutputBuf, Size);
 }
 
-uint64_t InputSectionBase::getOffset(const DefinedRegular &Sym) const {
+uint64_t SectionBase::getOffset(const DefinedRegular &Sym) const {
   return getOffset(Sym.Value);
 }
 
@@ -189,7 +196,7 @@ std::string InputSectionBase::getLocation(uint64_t Offset) {
 
 InputSectionBase InputSectionBase::Discarded;
 
-InputSection::InputSection(uint64_t Flags, uint32_t Type, uint64_t Alignment,
+InputSection::InputSection(uint64_t Flags, uint32_t Type, uint32_t Alignment,
                            ArrayRef<uint8_t> Data, StringRef Name, Kind K)
     : InputSectionBase(nullptr, Flags, Type,
                        /*Entsize*/ 0, /*Link*/ 0, /*Info*/ 0, Alignment, Data,
@@ -200,9 +207,13 @@ InputSection::InputSection(elf::ObjectFile<ELFT> *F,
                            const typename ELFT::Shdr *Header, StringRef Name)
     : InputSectionBase(F, Header, Name, InputSectionBase::Regular) {}
 
-bool InputSection::classof(const InputSectionBase *S) {
-  return S->kind() == InputSectionBase::Regular ||
-         S->kind() == InputSectionBase::Synthetic;
+bool InputSection::classof(const SectionBase *S) {
+  return S->kind() == SectionBase::Regular ||
+         S->kind() == SectionBase::Synthetic;
+}
+
+bool InputSectionBase::classof(const SectionBase *S) {
+  return S->kind() != Output;
 }
 
 template <class ELFT> InputSectionBase *InputSection::getRelocatedSection() {
@@ -249,14 +260,14 @@ void InputSection::copyRelocations(uint8_t *Buf, ArrayRef<RelTy> Rels) {
       // avoid having to parse and recreate .eh_frame, we just replace any
       // relocation in it pointing to discarded sections with R_*_NONE, which
       // hopefully creates a frame that is ignored at runtime.
-      InputSectionBase *Section = cast<DefinedRegular>(Body).Section;
+      SectionBase *Section = cast<DefinedRegular>(Body).Section;
       if (Section == &InputSection::Discarded) {
         P->setSymbolAndType(0, 0, false);
         continue;
       }
 
       if (Config->isRela()) {
-        P->r_addend += Body.getVA<ELFT>() - Section->OutSec->Addr;
+        P->r_addend += Body.getVA<ELFT>() - Section->getOutputSection()->Addr;
       } else if (Config->Relocatable) {
         const uint8_t *BufLoc = RelocatedSection->Data.begin() + Rel.r_offset;
         RelocatedSection->Relocations.push_back(
@@ -588,7 +599,7 @@ EhInputSection::EhInputSection(elf::ObjectFile<ELFT> *F,
   this->Live = true;
 }
 
-bool EhInputSection::classof(const InputSectionBase *S) {
+bool EhInputSection::classof(const SectionBase *S) {
   return S->kind() == InputSectionBase::EHFrame;
 }
 
@@ -711,7 +722,7 @@ void MergeInputSection::splitIntoPieces() {
       this->getSectionPiece(Off)->Live = true;
 }
 
-bool MergeInputSection::classof(const InputSectionBase *S) {
+bool MergeInputSection::classof(const SectionBase *S) {
   return S->kind() == InputSectionBase::Merge;
 }
 
