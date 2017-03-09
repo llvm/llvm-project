@@ -27,16 +27,16 @@ import re
 import itertools
 import json
 import glob
-import argparse
 import logging
 from libear import build_libear, TemporaryDirectory
 from libscanbuild import command_entry_point, compiler_wrapper, \
-    wrapper_environment, run_command, run_build, reconfigure_logging
+    wrapper_environment, run_command, run_build
 from libscanbuild import duplicate_check, tempdir
 from libscanbuild.compilation import split_command
+from libscanbuild.arguments import parse_args_for_intercept_build
 from libscanbuild.shell import encode, decode
 
-__all__ = ['capture', 'intercept_build_main', 'intercept_compiler_wrapper']
+__all__ = ['capture', 'intercept_build', 'intercept_compiler_wrapper']
 
 GS = chr(0x1d)
 RS = chr(0x1e)
@@ -49,23 +49,14 @@ WRAPPER_ONLY_PLATFORMS = frozenset({'win32', 'cygwin'})
 
 
 @command_entry_point
-def intercept_build_main(bin_dir):
+def intercept_build():
     """ Entry point for 'intercept-build' command. """
 
-    parser = create_parser()
-    args = parser.parse_args()
-
-    reconfigure_logging(args.verbose)
-    logging.debug('Raw arguments %s', sys.argv)
-
-    if not args.build:
-        parser.print_help()
-        return 0
-
-    return capture(args, bin_dir)
+    args = parse_args_for_intercept_build()
+    return capture(args)
 
 
-def capture(args, bin_dir):
+def capture(args):
     """ The entry point of build command interception. """
 
     def post_processing(commands):
@@ -95,7 +86,7 @@ def capture(args, bin_dir):
 
     with TemporaryDirectory(prefix='intercept-', dir=tempdir()) as tmp_dir:
         # run the build command
-        environment = setup_environment(args, tmp_dir, bin_dir)
+        environment = setup_environment(args, tmp_dir)
         exit_code = run_build(args.build, env=environment)
         # read the intercepted exec calls
         exec_traces = itertools.chain.from_iterable(
@@ -109,7 +100,7 @@ def capture(args, bin_dir):
         return exit_code
 
 
-def setup_environment(args, destination, bin_dir):
+def setup_environment(args, destination):
     """ Sets up the environment for the build command.
 
     It sets the required environment variables and execute the given command.
@@ -129,8 +120,8 @@ def setup_environment(args, destination, bin_dir):
         logging.debug('intercept gonna use compiler wrappers')
         environment.update(wrapper_environment(args))
         environment.update({
-            'CC': os.path.join(bin_dir, COMPILER_WRAPPER_CC),
-            'CXX': os.path.join(bin_dir, COMPILER_WRAPPER_CXX)
+            'CC': COMPILER_WRAPPER_CC,
+            'CXX': COMPILER_WRAPPER_CXX
         })
     elif sys.platform == 'darwin':
         logging.debug('intercept gonna preload libear on OSX')
@@ -270,62 +261,3 @@ def entry_hash(entry):
     command = ' '.join(decode(entry['command'])[1:])
 
     return '<>'.join([filename, directory, command])
-
-
-def create_parser():
-    """ Command line argument parser factory method. """
-
-    parser = argparse.ArgumentParser(
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-
-    parser.add_argument(
-        '--verbose', '-v',
-        action='count',
-        default=0,
-        help="""Enable verbose output from '%(prog)s'. A second and third
-                flag increases verbosity.""")
-    parser.add_argument(
-        '--cdb',
-        metavar='<file>',
-        default="compile_commands.json",
-        help="""The JSON compilation database.""")
-    group = parser.add_mutually_exclusive_group()
-    group.add_argument(
-        '--append',
-        action='store_true',
-        help="""Append new entries to existing compilation database.""")
-
-    advanced = parser.add_argument_group('advanced options')
-    advanced.add_argument(
-        '--override-compiler',
-        action='store_true',
-        help="""Always resort to the compiler wrapper even when better
-                intercept methods are available.""")
-    advanced.add_argument(
-        '--use-cc',
-        metavar='<path>',
-        dest='cc',
-        default='cc',
-        help="""When '%(prog)s' analyzes a project by interposing a compiler
-                wrapper, which executes a real compiler for compilation and
-                do other tasks (record the compiler invocation). Because of
-                this interposing, '%(prog)s' does not know what compiler your
-                project normally uses. Instead, it simply overrides the CC
-                environment variable, and guesses your default compiler.
-
-                If you need '%(prog)s' to use a specific compiler for
-                *compilation* then you can use this option to specify a path
-                to that compiler.""")
-    advanced.add_argument(
-        '--use-c++',
-        metavar='<path>',
-        dest='cxx',
-        default='c++',
-        help="""This is the same as "--use-cc" but for C++ code.""")
-
-    parser.add_argument(
-        dest='build',
-        nargs=argparse.REMAINDER,
-        help="""Command to run.""")
-
-    return parser

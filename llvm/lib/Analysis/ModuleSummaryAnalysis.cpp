@@ -410,9 +410,8 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
     // be listed on the llvm.used or llvm.compiler.used global and marked as
     // referenced from there.
     ModuleSymbolTable::CollectAsmSymbols(
-        Triple(M.getTargetTriple()), M.getModuleInlineAsm(),
-        [&M, &Index, &CantBePromoted](StringRef Name,
-                                      object::BasicSymbolRef::Flags Flags) {
+        M, [&M, &Index, &CantBePromoted](StringRef Name,
+                                         object::BasicSymbolRef::Flags Flags) {
           // Symbols not marked as Weak or Global are local definitions.
           if (Flags & (object::BasicSymbolRef::SF_Weak |
                        object::BasicSymbolRef::SF_Global))

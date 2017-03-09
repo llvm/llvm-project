@@ -4,12 +4,27 @@ namespace std {
 namespace experimental {
 template <typename... T>
 struct coroutine_traits;
+
+template <class Promise = void>
+struct coroutine_handle {
+  coroutine_handle() = default;
+  static coroutine_handle from_address(void *) { return {}; }
+};
+
+template <>
+struct coroutine_handle<void> {
+  static coroutine_handle from_address(void *) { return {}; }
+  coroutine_handle() = default;
+  template <class PromiseType>
+  coroutine_handle(coroutine_handle<PromiseType>) {}
+};
+
 }
 }
 
 struct suspend_always {
   bool await_ready();
-  void await_suspend();
+  void await_suspend(std::experimental::coroutine_handle<>);
   void await_resume();
 };
 

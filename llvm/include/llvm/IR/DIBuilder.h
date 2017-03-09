@@ -168,12 +168,15 @@ namespace llvm {
     DIDerivedType *createQualifiedType(unsigned Tag, DIType *FromTy);
 
     /// Create debugging information entry for a pointer.
-    /// \param PointeeTy   Type pointed by this pointer.
-    /// \param SizeInBits  Size.
-    /// \param AlignInBits Alignment. (optional)
-    /// \param Name        Pointer type name. (optional)
+    /// \param PointeeTy         Type pointed by this pointer.
+    /// \param SizeInBits        Size.
+    /// \param AlignInBits       Alignment. (optional)
+    /// \param DWARFAddressSpace DWARF address space. (optional)
+    /// \param Name              Pointer type name. (optional)
     DIDerivedType *createPointerType(DIType *PointeeTy, uint64_t SizeInBits,
                                      uint32_t AlignInBits = 0,
+                                     Optional<unsigned> DWARFAddressSpace =
+                                         None,
                                      StringRef Name = "");
 
     /// Create debugging information entry for a pointer to member.
@@ -190,7 +193,9 @@ namespace llvm {
     /// style reference or rvalue reference type.
     DIDerivedType *createReferenceType(unsigned Tag, DIType *RTy,
                                        uint64_t SizeInBits = 0,
-                                       uint32_t AlignInBits = 0);
+                                       uint32_t AlignInBits = 0,
+                                       Optional<unsigned> DWARFAddressSpace =
+                                           None);
 
     /// Create debugging information entry for a typedef.
     /// \param Ty          Original type.

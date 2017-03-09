@@ -1549,11 +1549,10 @@ RValue CodeGenFunction::EmitLoadOfLValue(LValue LV, SourceLocation Loc) {
     return EmitLoadOfGlobalRegLValue(LV);
 
   assert(LV.isBitField() && "Unknown LValue type!");
-  return EmitLoadOfBitfieldLValue(LV, Loc);
+  return EmitLoadOfBitfieldLValue(LV);
 }
 
-RValue CodeGenFunction::EmitLoadOfBitfieldLValue(LValue LV,
-                                                 SourceLocation Loc) {
+RValue CodeGenFunction::EmitLoadOfBitfieldLValue(LValue LV) {
   const CGBitFieldInfo &Info = LV.getBitFieldInfo();
 
   // Get the output type.
@@ -1578,7 +1577,7 @@ RValue CodeGenFunction::EmitLoadOfBitfieldLValue(LValue LV,
                               "bf.clear");
   }
   Val = Builder.CreateIntCast(Val, ResLTy, Info.IsSigned, "bf.cast");
-  EmitScalarRangeCheck(Val, LV.getType(), Loc);
+
   return RValue::get(Val);
 }
 

@@ -65,6 +65,18 @@ private:
   /// and thus, is tainted.
   static bool isStdin(const Expr *E, CheckerContext &C);
 
+  /// This is called from getPointedToSymbol() to resolve symbol references for
+  /// the region underlying a LazyCompoundVal. This is the default binding
+  /// for the LCV, which could be a conjured symbol from a function call that
+  /// initialized the region. It only returns the conjured symbol if the LCV
+  /// covers the entire region, e.g. we avoid false positives by not returning
+  /// a default bindingc for an entire struct if the symbol for only a single
+  /// field or element within it is requested.
+  // TODO: Return an appropriate symbol for sub-fields/elements of an LCV so
+  // that they are also appropriately tainted.
+  static SymbolRef getLCVSymbol(CheckerContext &C,
+                                nonloc::LazyCompoundVal &LCV);
+
   /// \brief Given a pointer argument, get the symbol of the value it contains
   /// (points to).
   static SymbolRef getPointedToSymbol(CheckerContext &C, const Expr *Arg);
@@ -101,6 +113,22 @@ private:
   bool generateReportIfTainted(const Expr *E, const char Msg[],
                                CheckerContext &C) const;
 
+  /// The bug visitor prints a diagnostic message at the location where a given
+  /// variable was tainted.
+  class TaintBugVisitor
+      : public BugReporterVisitorImpl<TaintBugVisitor> {
+  private:
+    const SVal V;
+
+  public:
+    TaintBugVisitor(const SVal V) : V(V) {}
+    void Profile(llvm::FoldingSetNodeID &ID) const override { ID.Add(V); }
+
+    std::shared_ptr<PathDiagnosticPiece> VisitNode(const ExplodedNode *N,
+                                                   const ExplodedNode *PrevN,
+                                                   BugReporterContext &BRC,
+                                                   BugReport &BR) override;
+  };
 
   typedef SmallVector<unsigned, 2> ArgVector;
 
@@ -193,6 +221,28 @@ const char GenericTaintChecker::MsgTaintedBufferSize[] =
 /// ReturnValueIndex, or indexes of the pointer/reference argument, which
 /// points to data, which should be tainted on return.
 REGISTER_SET_WITH_PROGRAMSTATE(TaintArgsOnPostVisit, unsigned)
+
+std::shared_ptr<PathDiagnosticPiece>
+GenericTaintChecker::TaintBugVisitor::VisitNode(const ExplodedNode *N,
+    const ExplodedNode *PrevN, BugReporterContext &BRC, BugReport &BR) {
+
+  // Find the ExplodedNode where the taint was first introduced
+  if (!N->getState()->isTainted(V) || PrevN->getState()->isTainted(V))
+    return nullptr;
+
+  const Stmt *S = PathDiagnosticLocation::getStmt(N);
+  if (!S)
+    return nullptr;
+
+  const LocationContext *NCtx = N->getLocationContext();
+  PathDiagnosticLocation L =
+      PathDiagnosticLocation::createBegin(S, BRC.getSourceManager(), NCtx);
+  if (!L.isValid() || !L.asLocation().isValid())
+    return nullptr;
+
+  return std::make_shared<PathDiagnosticEventPiece>(
+      L, "Taint originated here");
+}
 
 GenericTaintChecker::TaintPropagationRule
 GenericTaintChecker::TaintPropagationRule::getTaintPropagationRule(
@@ -423,6 +473,27 @@ bool GenericTaintChecker::checkPre(const CallExpr *CE, CheckerContext &C) const{
   return false;
 }
 
+SymbolRef GenericTaintChecker::getLCVSymbol(CheckerContext &C,
+                                            nonloc::LazyCompoundVal &LCV) {
+  StoreManager &StoreMgr = C.getStoreManager();
+
+  // getLCVSymbol() is reached in a PostStmt so we can always expect a default
+  // binding to exist if one is present.
+  if (Optional<SVal> binding = StoreMgr.getDefaultBinding(LCV)) {
+    SymbolRef Sym = binding->getAsSymbol();
+    if (!Sym)
+      return nullptr;
+
+    // If the LCV covers an entire base region return the default conjured symbol.
+    if (LCV.getRegion() == LCV.getRegion()->getBaseRegion())
+      return Sym;
+  }
+
+  // Otherwise, return a nullptr as there's not yet a functional way to taint
+  // sub-regions of LCVs.
+  return nullptr;
+}
+
 SymbolRef GenericTaintChecker::getPointedToSymbol(CheckerContext &C,
                                                   const Expr* Arg) {
   ProgramStateRef State = C.getState();
@@ -438,6 +509,10 @@ SymbolRef GenericTaintChecker::getPointedToSymbol(CheckerContext &C,
     dyn_cast<PointerType>(Arg->getType().getCanonicalType().getTypePtr());
   SVal Val = State->getSVal(*AddrLoc,
                             ArgTy ? ArgTy->getPointeeType(): QualType());
+
+  if (auto LCV = Val.getAs<nonloc::LazyCompoundVal>())
+    return getLCVSymbol(C, *LCV);
+
   return Val.getAsSymbol();
 }
 
@@ -635,8 +710,13 @@ bool GenericTaintChecker::generateReportIfTainted(const Expr *E,
 
   // Check for taint.
   ProgramStateRef State = C.getState();
-  if (!State->isTainted(getPointedToSymbol(C, E)) &&
-      !State->isTainted(E, C.getLocationContext()))
+  const SymbolRef PointedToSym = getPointedToSymbol(C, E);
+  SVal TaintedSVal;
+  if (State->isTainted(PointedToSym))
+    TaintedSVal = nonloc::SymbolVal(PointedToSym);
+  else if (State->isTainted(E, C.getLocationContext()))
+    TaintedSVal = C.getSVal(E);
+  else
     return false;
 
   // Generate diagnostic.
@@ -644,6 +724,7 @@ bool GenericTaintChecker::generateReportIfTainted(const Expr *E,
     initBugType();
     auto report = llvm::make_unique<BugReport>(*BT, Msg, N);
     report->addRange(E->getSourceRange());
+    report->addVisitor(llvm::make_unique<TaintBugVisitor>(TaintedSVal));
     C.emitReport(std::move(report));
     return true;
   }

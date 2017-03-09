@@ -13,5 +13,5 @@ import os.path
 this_dir = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(os.path.dirname(this_dir))
 
-from libscanbuild.intercept import intercept_build_main
-sys.exit(intercept_build_main(this_dir))
+from libscanbuild.intercept import intercept_build
+sys.exit(intercept_build())

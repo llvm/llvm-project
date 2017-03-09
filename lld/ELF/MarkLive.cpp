@@ -78,7 +78,7 @@ static void resolveReloc(InputSectionBase &Sec, RelT &Rel,
     typename ELFT::uint Offset = D->Value;
     if (D->isSection())
       Offset += getAddend<ELFT>(Sec, Rel);
-    Fn({D->Section->Repl, Offset});
+    Fn({cast<InputSectionBase>(D->Section)->Repl, Offset});
   } else if (auto *U = dyn_cast<Undefined>(&B)) {
     for (InputSectionBase *Sec : CNamedSections.lookup(U->getName()))
       Fn({Sec, 0});
@@ -223,7 +223,7 @@ template <class ELFT> void elf::markLive() {
 
   auto MarkSymbol = [&](const SymbolBody *Sym) {
     if (auto *D = dyn_cast_or_null<DefinedRegular>(Sym))
-      Enqueue({D->Section, D->Value});
+      Enqueue({cast<InputSectionBase>(D->Section), D->Value});
   };
 
   // Add GC root symbols.

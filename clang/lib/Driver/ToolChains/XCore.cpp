@@ -16,7 +16,7 @@
 #include <cstdlib> // ::getenv
 
 using namespace clang::driver;
-using namespace clang::driver::toolchains;;
+using namespace clang::driver::toolchains;
 using namespace clang;
 using namespace llvm::opt;
 

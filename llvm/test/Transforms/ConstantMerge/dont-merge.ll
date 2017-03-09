@@ -42,3 +42,41 @@ define void @test3() {
   call void asm sideeffect "T3A, T3B",""() ; invisible use of T3A and T3B
   ret void
 }
+
+; Don't merge constants with !type annotations.
+
+@T4A1 = internal constant i32 2, !type !0
+@T4A2 = internal unnamed_addr constant i32 2, !type !1
+
+@T4B1 = internal constant i32 3, !type !0
+@T4B2 = internal unnamed_addr constant i32 3, !type !0
+
+@T4C1 = internal constant i32 4, !type !0
+@T4C2 = unnamed_addr constant i32 4
+
+@T4D1 = unnamed_addr constant i32 5, !type !0
+@T4D2 = internal constant i32 5
+
+!0 = !{i64 0, !"typeinfo name for A"}
+!1 = !{i64 0, !"typeinfo name for B"}
+
+; CHECK: @T4A1
+; CHECK: @T4A2
+; CHECK: @T4B1
+; CHECK: @T4B2
+; CHECK: @T4C1
+; CHECK: @T4C2
+; CHECK: @T4D1
+; CHECK: @T4D2
+
+define void @test4(i32** %P1, i32** %P2, i32** %P3, i32** %P4, i32** %P5, i32** %P6, i32** %P7, i32** %P8) {
+        store i32* @T4A1, i32** %P1
+        store i32* @T4A2, i32** %P2
+        store i32* @T4B1, i32** %P3
+        store i32* @T4B2, i32** %P4
+        store i32* @T4C1, i32** %P5
+        store i32* @T4C2, i32** %P6
+        store i32* @T4D1, i32** %P7
+        store i32* @T4D2, i32** %P8
+        ret void
+}

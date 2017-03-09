@@ -330,49 +330,33 @@ void MemsetRanges::addRange(int64_t Start, int64_t Size, Value *Ptr,
 
 namespace {
 
-  class MemCpyOptLegacyPass : public FunctionPass {
-    MemCpyOptPass Impl;
+class MemCpyOptLegacyPass : public FunctionPass {
+  MemCpyOptPass Impl;
 
-  public:
-    static char ID; // Pass identification, replacement for typeid
+public:
+  static char ID; // Pass identification, replacement for typeid
 
-    MemCpyOptLegacyPass() : FunctionPass(ID) {
-      initializeMemCpyOptLegacyPassPass(*PassRegistry::getPassRegistry());
-    }
+  MemCpyOptLegacyPass() : FunctionPass(ID) {
+    initializeMemCpyOptLegacyPassPass(*PassRegistry::getPassRegistry());
+  }
 
-    bool runOnFunction(Function &F) override;
+  bool runOnFunction(Function &F) override;
 
-  private:
-    // This transformation requires dominator postdominator info
-    void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.setPreservesCFG();
-      AU.addRequired<AssumptionCacheTracker>();
-      AU.addRequired<DominatorTreeWrapperPass>();
-      AU.addRequired<MemoryDependenceWrapperPass>();
-      AU.addRequired<AAResultsWrapperPass>();
-      AU.addRequired<TargetLibraryInfoWrapperPass>();
-      AU.addPreserved<GlobalsAAWrapperPass>();
-      AU.addPreserved<MemoryDependenceWrapperPass>();
-    }
+private:
+  // This transformation requires dominator postdominator info
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
+    AU.addRequired<AssumptionCacheTracker>();
+    AU.addRequired<DominatorTreeWrapperPass>();
+    AU.addRequired<MemoryDependenceWrapperPass>();
+    AU.addRequired<AAResultsWrapperPass>();
+    AU.addRequired<TargetLibraryInfoWrapperPass>();
+    AU.addPreserved<GlobalsAAWrapperPass>();
+    AU.addPreserved<MemoryDependenceWrapperPass>();
+  }
+};
 
-    // Helper functions
-    bool processStore(StoreInst *SI, BasicBlock::iterator &BBI);
-    bool processMemSet(MemSetInst *SI, BasicBlock::iterator &BBI);
-    bool processMemCpy(MemCpyInst *M);
-    bool processMemMove(MemMoveInst *M);
-    bool performCallSlotOptzn(Instruction *cpy, Value *cpyDst, Value *cpySrc,
-                              uint64_t cpyLen, unsigned cpyAlign, CallInst *C);
-    bool processMemCpyMemCpyDependence(MemCpyInst *M, MemCpyInst *MDep);
-    bool processMemSetMemCpyDependence(MemCpyInst *M, MemSetInst *MDep);
-    bool performMemCpyToMemSetOptzn(MemCpyInst *M, MemSetInst *MDep);
-    bool processByValArgument(CallSite CS, unsigned ArgNo);
-    Instruction *tryMergingIntoMemset(Instruction *I, Value *StartPtr,
-                                      Value *ByteVal);
-
-    bool iterateOnFunction(Function &F);
-  };
-
-  char MemCpyOptLegacyPass::ID = 0;
+char MemCpyOptLegacyPass::ID = 0;
 
 } // end anonymous namespace
 
