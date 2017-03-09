@@ -4236,7 +4236,9 @@ public:
              /*InstantiationDependent*/ true,
              Op->containsUnexpandedParameterPack()),
         KeywordLoc(KeywordLoc) {
-    assert(Op->isTypeDependent() && Ty->isDependentType() &&
+    // NOTE: A co_await expression is dependent on the coroutines promise
+    // type and may be dependent even when the `Op` expression is not.
+    assert(Ty->isDependentType() &&
            "wrong constructor for non-dependent co_await/co_yield expression");
     SubExprs[0] = Op;
     SubExprs[1] = OpCoawait;
