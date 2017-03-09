@@ -598,7 +598,7 @@ void llvm::thinLTOInternalizeModule(Module &TheModule,
   // the current module.
   StringSet<> AsmUndefinedRefs;
   ModuleSymbolTable::CollectAsmSymbols(
-      Triple(TheModule.getTargetTriple()), TheModule.getModuleInlineAsm(),
+      TheModule,
       [&AsmUndefinedRefs](StringRef Name, object::BasicSymbolRef::Flags Flags) {
         if (Flags & object::BasicSymbolRef::SF_Undefined)
           AsmUndefinedRefs.insert(Name);

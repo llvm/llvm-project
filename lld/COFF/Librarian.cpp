@@ -104,7 +104,18 @@ static ImportNameType getNameType(StringRef Sym, StringRef ExtName) {
 
 static std::string replace(StringRef S, StringRef From, StringRef To) {
   size_t Pos = S.find(From);
-  assert(Pos != StringRef::npos);
+
+  // From and To may be mangled, but substrings in S may not.
+  if (Pos == StringRef::npos && From.startswith("_") && To.startswith("_")) {
+    From = From.substr(1);
+    To = To.substr(1);
+    Pos = S.find(From);
+  }
+
+  if (Pos == StringRef::npos) {
+    error(S + ": replacing '" + From + "' with '" + To + "' failed");
+    return "";
+  }
   return (Twine(S.substr(0, Pos)) + To + S.substr(Pos + From.size())).str();
 }
 

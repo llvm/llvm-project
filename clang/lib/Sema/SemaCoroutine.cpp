@@ -39,14 +39,16 @@ static QualType lookupPromiseType(Sema &S, const FunctionProtoType *FnType,
   // FIXME: Cache std::coroutine_traits once we've found it.
   NamespaceDecl *StdExp = S.lookupStdExperimentalNamespace();
   if (!StdExp) {
-    S.Diag(KwLoc, diag::err_implied_std_coroutine_traits_not_found);
+    S.Diag(KwLoc, diag::err_implied_coroutine_type_not_found)
+        << "std::experimental::coroutine_traits";
     return QualType();
   }
 
   LookupResult Result(S, &S.PP.getIdentifierTable().get("coroutine_traits"),
                       FuncLoc, Sema::LookupOrdinaryName);
   if (!S.LookupQualifiedName(Result, StdExp)) {
-    S.Diag(KwLoc, diag::err_implied_std_coroutine_traits_not_found);
+    S.Diag(KwLoc, diag::err_implied_coroutine_type_not_found)
+        << "std::experimental::coroutine_traits";
     return QualType();
   }
 
@@ -76,7 +78,7 @@ static QualType lookupPromiseType(Sema &S, const FunctionProtoType *FnType,
   if (CoroTrait.isNull())
     return QualType();
   if (S.RequireCompleteType(KwLoc, CoroTrait,
-                            diag::err_coroutine_traits_missing_specialization))
+                            diag::err_coroutine_type_missing_specialization))
     return QualType();
 
   auto *RD = CoroTrait->getAsCXXRecordDecl();
@@ -114,6 +116,51 @@ static QualType lookupPromiseType(Sema &S, const FunctionProtoType *FnType,
     return QualType();
 
   return PromiseType;
+}
+
+/// Look up the std::coroutine_traits<...>::promise_type for the given
+/// function type.
+static QualType lookupCoroutineHandleType(Sema &S, QualType PromiseType,
+                                          SourceLocation Loc) {
+  if (PromiseType.isNull())
+    return QualType();
+
+  NamespaceDecl *StdExp = S.lookupStdExperimentalNamespace();
+  assert(StdExp && "Should already be diagnosed");
+
+  LookupResult Result(S, &S.PP.getIdentifierTable().get("coroutine_handle"),
+                      Loc, Sema::LookupOrdinaryName);
+  if (!S.LookupQualifiedName(Result, StdExp)) {
+    S.Diag(Loc, diag::err_implied_coroutine_type_not_found)
+        << "std::experimental::coroutine_handle";
+    return QualType();
+  }
+
+  ClassTemplateDecl *CoroHandle = Result.getAsSingle<ClassTemplateDecl>();
+  if (!CoroHandle) {
+    Result.suppressDiagnostics();
+    // We found something weird. Complain about the first thing we found.
+    NamedDecl *Found = *Result.begin();
+    S.Diag(Found->getLocation(), diag::err_malformed_std_coroutine_handle);
+    return QualType();
+  }
+
+  // Form template argument list for coroutine_handle<Promise>.
+  TemplateArgumentListInfo Args(Loc, Loc);
+  Args.addArgument(TemplateArgumentLoc(
+      TemplateArgument(PromiseType),
+      S.Context.getTrivialTypeSourceInfo(PromiseType, Loc)));
+
+  // Build the template-id.
+  QualType CoroHandleType =
+      S.CheckTemplateIdType(TemplateName(CoroHandle), Loc, Args);
+  if (CoroHandleType.isNull())
+    return QualType();
+  if (S.RequireCompleteType(Loc, CoroHandleType,
+                            diag::err_coroutine_type_missing_specialization))
+    return QualType();
+
+  return CoroHandleType;
 }
 
 static bool isValidCoroutineContext(Sema &S, SourceLocation Loc,
@@ -237,6 +284,32 @@ static Expr *buildBuiltinCall(Sema &S, SourceLocation Loc, Builtin::ID Id,
   return Call.get();
 }
 
+static ExprResult buildCoroutineHandle(Sema &S, QualType PromiseType,
+                                       SourceLocation Loc) {
+  QualType CoroHandleType = lookupCoroutineHandleType(S, PromiseType, Loc);
+  if (CoroHandleType.isNull())
+    return ExprError();
+
+  DeclContext *LookupCtx = S.computeDeclContext(CoroHandleType);
+  LookupResult Found(S, &S.PP.getIdentifierTable().get("from_address"), Loc,
+                     Sema::LookupOrdinaryName);
+  if (!S.LookupQualifiedName(Found, LookupCtx)) {
+    S.Diag(Loc, diag::err_coroutine_handle_missing_member)
+        << "from_address";
+    return ExprError();
+  }
+
+  Expr *FramePtr =
+      buildBuiltinCall(S, Loc, Builtin::BI__builtin_coro_frame, {});
+
+  CXXScopeSpec SS;
+  ExprResult FromAddr =
+      S.BuildDeclarationNameExpr(SS, Found, /*NeedsADL=*/false);
+  if (FromAddr.isInvalid())
+    return ExprError();
+
+  return S.ActOnCallExpr(nullptr, FromAddr.get(), Loc, FramePtr, Loc);
+}
 
 struct ReadySuspendResumeResult {
   bool IsInvalid;
@@ -261,18 +334,23 @@ static ExprResult buildMemberCall(Sema &S, Expr *Base, SourceLocation Loc,
 
 /// Build calls to await_ready, await_suspend, and await_resume for a co_await
 /// expression.
-static ReadySuspendResumeResult buildCoawaitCalls(Sema &S, SourceLocation Loc,
-                                                  Expr *E) {
+static ReadySuspendResumeResult buildCoawaitCalls(Sema &S, VarDecl *CoroPromise,
+                                                  SourceLocation Loc, Expr *E) {
   // Assume invalid until we see otherwise.
   ReadySuspendResumeResult Calls = {true, {}};
 
+  ExprResult CoroHandleRes = buildCoroutineHandle(S, CoroPromise->getType(), Loc);
+  if (CoroHandleRes.isInvalid())
+    return Calls;
+  Expr *CoroHandle = CoroHandleRes.get();
+
   const StringRef Funcs[] = {"await_ready", "await_suspend", "await_resume"};
+  MultiExprArg Args[] = {None, CoroHandle, None};
   for (size_t I = 0, N = llvm::array_lengthof(Funcs); I != N; ++I) {
     Expr *Operand = new (S.Context) OpaqueValueExpr(
       Loc, E->getType(), VK_LValue, E->getObjectKind(), E);
 
-    // FIXME: Pass coroutine handle to await_suspend.
-    ExprResult Result = buildMemberCall(S, Operand, Loc, Funcs[I], None);
+    ExprResult Result = buildMemberCall(S, Operand, Loc, Funcs[I], Args[I]);
     if (Result.isInvalid())
       return Calls;
     Calls.Results[I] = Result.get();
@@ -473,7 +551,8 @@ ExprResult Sema::BuildResolvedCoawaitExpr(SourceLocation Loc, Expr *E,
     E = CreateMaterializeTemporaryExpr(E->getType(), E, true);
 
   // Build the await_ready, await_suspend, await_resume calls.
-  ReadySuspendResumeResult RSS = buildCoawaitCalls(*this, Loc, E);
+  ReadySuspendResumeResult RSS =
+      buildCoawaitCalls(*this, Coroutine->CoroutinePromise, Loc, E);
   if (RSS.IsInvalid)
     return ExprError();
 
@@ -526,7 +605,8 @@ ExprResult Sema::BuildCoyieldExpr(SourceLocation Loc, Expr *E) {
     E = CreateMaterializeTemporaryExpr(E->getType(), E, true);
 
   // Build the await_ready, await_suspend, await_resume calls.
-  ReadySuspendResumeResult RSS = buildCoawaitCalls(*this, Loc, E);
+  ReadySuspendResumeResult RSS =
+      buildCoawaitCalls(*this, Coroutine->CoroutinePromise, Loc, E);
   if (RSS.IsInvalid)
     return ExprError();
 
@@ -677,14 +757,30 @@ void Sema::CheckCompletedCoroutineBody(FunctionDecl *FD, Stmt *&Body) {
   FunctionScopeInfo *Fn = getCurFunction();
   assert(Fn && Fn->CoroutinePromise && "not a coroutine");
 
+  if (!Body) {
+    assert(FD->isInvalidDecl() &&
+           "a null body is only allowed for invalid declarations");
+    return;
+  }
+
+  if (isa<CoroutineBodyStmt>(Body)) {
+    // FIXME(EricWF): Nothing todo. the body is already a transformed coroutine
+    // body statement.
+    return;
+  }
+
   // Coroutines [stmt.return]p1:
   //   A return statement shall not appear in a coroutine.
   if (Fn->FirstReturnLoc.isValid()) {
     Diag(Fn->FirstReturnLoc, diag::err_return_in_coroutine);
-    auto *First = Fn->CoroutineStmts[0];
-    Diag(First->getLocStart(), diag::note_declared_coroutine_here)
-        << (isa<CoawaitExpr>(First) ? "co_await" :
-            isa<CoyieldExpr>(First) ? "co_yield" : "co_return");
+    // FIXME: Every Coroutine statement may be invalid and therefore not added
+    // to CoroutineStmts. Find another way to provide location information.
+    if (!Fn->CoroutineStmts.empty()) {
+      auto *First = Fn->CoroutineStmts[0];
+      Diag(First->getLocStart(), diag::note_declared_coroutine_here)
+          << (isa<CoawaitExpr>(First) ? "co_await" :
+              isa<CoyieldExpr>(First) ? "co_yield" : "co_return");
+    }
   }
   SubStmtBuilder Builder(*this, *FD, *Fn, Body);
   if (Builder.isInvalid())

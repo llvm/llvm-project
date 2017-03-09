@@ -113,10 +113,10 @@ entry:
   ret void
 }
 
-; GCN-LABEL: {{^}}unsafe_mad_sub0_src0:
+; GCN-LABEL: {{^}}nsz_mad_sub0_src0:
 ; GCN-NOT: v_mac_f32
 ; GCN: v_mad_f32 v{{[0-9]+}}, -v{{[0-9]+}}, v{{[0-9]+}}, v{{[-0-9]}}
-define void @unsafe_mad_sub0_src0(float addrspace(1)* %out, float addrspace(1)* %in) #1 {
+define void @nsz_mad_sub0_src0(float addrspace(1)* %out, float addrspace(1)* %in) #1 {
 entry:
   %b_ptr = getelementptr float, float addrspace(1)* %in, i32 1
   %c_ptr = getelementptr float, float addrspace(1)* %in, i32 2
@@ -173,10 +173,10 @@ entry:
   ret void
 }
 
-; GCN-LABEL: {{^}}unsafe_mad_sub0_src1:
+; GCN-LABEL: {{^}}nsz_mad_sub0_src1:
 ; GCN-NOT: v_mac_f32
 ; GCN: v_mad_f32 v{{[0-9]+}}, -v{{[0-9]+}}, v{{[0-9]+}}, v{{[-0-9]}}
-define void @unsafe_mad_sub0_src1(float addrspace(1)* %out, float addrspace(1)* %in) #1 {
+define void @nsz_mad_sub0_src1(float addrspace(1)* %out, float addrspace(1)* %in) #1 {
 entry:
   %b_ptr = getelementptr float, float addrspace(1)* %in, i32 1
   %c_ptr = getelementptr float, float addrspace(1)* %in, i32 2
@@ -281,7 +281,7 @@ bb:
 
 declare i32 @llvm.amdgcn.workitem.id.x() #2
 
-attributes #0 = { nounwind "unsafe-fp-math"="false" }
-attributes #1 = { nounwind "unsafe-fp-math"="true" }
+attributes #0 = { nounwind "no-signed-zeros-fp-math"="false" }
+attributes #1 = { nounwind "no-signed-zeros-fp-math"="true" }
 attributes #2 = { nounwind readnone }
 attributes #3 = { nounwind }

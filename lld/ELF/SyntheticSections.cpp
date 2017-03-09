@@ -460,7 +460,8 @@ bool EhFrameSection<ELFT>::isFdeLive(EhSectionPiece &Piece,
   auto *D = dyn_cast<DefinedRegular>(&B);
   if (!D || !D->Section)
     return false;
-  InputSectionBase *Target = D->Section->Repl;
+  auto *Target =
+      cast<InputSectionBase>(cast<InputSectionBase>(D->Section)->Repl);
   return Target && Target->Live;
 }
 
@@ -1357,8 +1358,8 @@ size_t SymbolTableSection<ELFT>::getSymbolIndex(SymbolBody *Body) {
     // This is used for -r, so we have to handle multiple section
     // symbols being combined.
     if (Body->Type == STT_SECTION && E.Symbol->Type == STT_SECTION)
-      return cast<DefinedRegular>(Body)->Section->OutSec ==
-             cast<DefinedRegular>(E.Symbol)->Section->OutSec;
+      return cast<DefinedRegular>(Body)->Section->getOutputSection() ==
+             cast<DefinedRegular>(E.Symbol)->Section->getOutputSection();
     return false;
   });
   if (I == Symbols.end())

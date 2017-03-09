@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Mips.h"
+#include "MipsLinux.h"
 #include "Arch/Mips.h"
 #include "CommonArgs.h"
 #include "clang/Config/config.h"

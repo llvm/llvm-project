@@ -352,22 +352,26 @@ template <> struct MDNodeKeyImpl<DIDerivedType> {
   uint64_t SizeInBits;
   uint64_t OffsetInBits;
   uint32_t AlignInBits;
+  Optional<unsigned> DWARFAddressSpace;
   unsigned Flags;
   Metadata *ExtraData;
 
   MDNodeKeyImpl(unsigned Tag, MDString *Name, Metadata *File, unsigned Line,
                 Metadata *Scope, Metadata *BaseType, uint64_t SizeInBits,
-                uint32_t AlignInBits, uint64_t OffsetInBits, unsigned Flags,
+                uint32_t AlignInBits, uint64_t OffsetInBits,
+                Optional<unsigned> DWARFAddressSpace, unsigned Flags,
                 Metadata *ExtraData)
       : Tag(Tag), Name(Name), File(File), Line(Line), Scope(Scope),
         BaseType(BaseType), SizeInBits(SizeInBits), OffsetInBits(OffsetInBits),
-        AlignInBits(AlignInBits), Flags(Flags), ExtraData(ExtraData) {}
+        AlignInBits(AlignInBits), DWARFAddressSpace(DWARFAddressSpace),
+        Flags(Flags), ExtraData(ExtraData) {}
   MDNodeKeyImpl(const DIDerivedType *N)
       : Tag(N->getTag()), Name(N->getRawName()), File(N->getRawFile()),
         Line(N->getLine()), Scope(N->getRawScope()),
         BaseType(N->getRawBaseType()), SizeInBits(N->getSizeInBits()),
         OffsetInBits(N->getOffsetInBits()), AlignInBits(N->getAlignInBits()),
-        Flags(N->getFlags()), ExtraData(N->getRawExtraData()) {}
+        DWARFAddressSpace(N->getDWARFAddressSpace()), Flags(N->getFlags()),
+        ExtraData(N->getRawExtraData()) {}
 
   bool isKeyOf(const DIDerivedType *RHS) const {
     return Tag == RHS->getTag() && Name == RHS->getRawName() &&
@@ -375,7 +379,9 @@ template <> struct MDNodeKeyImpl<DIDerivedType> {
            Scope == RHS->getRawScope() && BaseType == RHS->getRawBaseType() &&
            SizeInBits == RHS->getSizeInBits() &&
            AlignInBits == RHS->getAlignInBits() &&
-           OffsetInBits == RHS->getOffsetInBits() && Flags == RHS->getFlags() &&
+           OffsetInBits == RHS->getOffsetInBits() &&
+           DWARFAddressSpace == RHS->getDWARFAddressSpace() &&
+           Flags == RHS->getFlags() &&
            ExtraData == RHS->getRawExtraData();
   }
   unsigned getHashValue() const {

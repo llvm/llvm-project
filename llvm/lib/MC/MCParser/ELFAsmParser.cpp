@@ -743,6 +743,7 @@ bool ELFAsmParser::ParseDirectiveSymver(StringRef, SMLoc) {
   const MCExpr *Value = MCSymbolRefExpr::create(Sym, getContext());
 
   getStreamer().EmitAssignment(Alias, Value);
+  getStreamer().emitELFSymverDirective(Alias, Sym);
   return false;
 }
 

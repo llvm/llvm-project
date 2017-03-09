@@ -1189,7 +1189,7 @@ std::error_code identify_magic(const Twine &Path, file_magic &Result) {
 }
 
 std::error_code directory_entry::status(file_status &result) const {
-  return fs::status(Path, result);
+  return fs::status(Path, result, FollowSymlinks);
 }
 
 } // end namespace fs

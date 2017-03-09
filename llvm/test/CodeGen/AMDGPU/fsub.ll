@@ -121,5 +121,14 @@ define void @v_fneg_fsub_nsz_false_attribute_f32(float addrspace(1)* %out, float
   ret void
 }
 
+; FUNC-LABEL: {{^}}v_fsub_0_nsz_attribute_f32:
+; SI-NOT: v_sub
+define void @v_fsub_0_nsz_attribute_f32(float addrspace(1)* %out, float addrspace(1)* %in) #0 {
+  %a = load float, float addrspace(1)* %in, align 4
+  %result = fsub float %a, 0.0
+  store float %result, float addrspace(1)* %out, align 4
+  ret void
+}
+
 attributes #0 = { nounwind "no-signed-zeros-fp-math"="true" }
 attributes #1 = { nounwind "no-signed-zeros-fp-math"="false" }

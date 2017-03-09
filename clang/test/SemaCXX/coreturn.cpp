@@ -1,23 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin9 %s -std=c++14 -fcoroutines-ts -fsyntax-only -Wignored-qualifiers -Wno-error=return-type -verify -fblocks -Wno-unreachable-code -Wno-unused-value
 
-struct awaitable {
-  bool await_ready();
-  void await_suspend(); // FIXME: coroutine_handle
-  void await_resume();
-} a;
-
-struct suspend_always {
-  bool await_ready() { return false; }
-  void await_suspend() {}
-  void await_resume() {}
-};
-
-struct suspend_never {
-  bool await_ready() { return true; }
-  void await_suspend() {}
-  void await_resume() {}
-};
-
 namespace std {
 namespace experimental {
 
@@ -25,9 +7,36 @@ template <class Ret, typename... T>
 struct coroutine_traits { using promise_type = typename Ret::promise_type; };
 
 template <class Promise = void>
-struct coroutine_handle {};
+struct coroutine_handle {
+  static coroutine_handle from_address(void *);
+};
+template <>
+struct coroutine_handle<void> {
+  template <class PromiseType>
+  coroutine_handle(coroutine_handle<PromiseType>);
+  static coroutine_handle from_address(void *);
+};
+
 }
 }
+
+struct awaitable {
+  bool await_ready();
+  void await_suspend(std::experimental::coroutine_handle<>); // FIXME: coroutine_handle
+  void await_resume();
+} a;
+
+struct suspend_always {
+  bool await_ready() { return false; }
+  void await_suspend(std::experimental::coroutine_handle<>) {}
+  void await_resume() {}
+};
+
+struct suspend_never {
+  bool await_ready() { return true; }
+  void await_suspend(std::experimental::coroutine_handle<>) {}
+  void await_resume() {}
+};
 
 struct promise_void {
   void get_return_object();
