@@ -117,6 +117,7 @@ LegalizerHelper::libcall(MachineInstr &MI) {
     auto &CLI = *MIRBuilder.getMF().getSubtarget().getCallLowering();
     auto &TLI = *MIRBuilder.getMF().getSubtarget().getTargetLowering();
     const char *Name = TLI.getLibcallName(getRTLibDesc(MI.getOpcode(), Size));
+    MIRBuilder.getMF().getFrameInfo().setHasCalls(true);
     CLI.lowerCall(
         MIRBuilder, MachineOperand::CreateES(Name),
         {MI.getOperand(0).getReg(), Ty},
