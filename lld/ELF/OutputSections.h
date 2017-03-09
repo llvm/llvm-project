@@ -11,6 +11,7 @@
 #define LLD_ELF_OUTPUT_SECTIONS_H
 
 #include "Config.h"
+#include "InputSection.h"
 #include "Relocations.h"
 
 #include "lld/Core/LLVM.h"
@@ -37,9 +38,13 @@ class DefinedRegular;
 // It is composed of multiple InputSections.
 // The writer creates multiple OutputSections and assign them unique,
 // non-overlapping file offsets and VAs.
-class OutputSection final {
+class OutputSection final : public SectionBase {
 public:
   OutputSection(StringRef Name, uint32_t Type, uint64_t Flags);
+
+  static bool classof(const SectionBase *S) {
+    return S->kind() == SectionBase::Output;
+  }
 
   uint64_t getLMA() const { return Addr + LMAOffset; }
   template <typename ELFT> void writeHeaderTo(typename ELFT::Shdr *SHdr);
@@ -65,20 +70,12 @@ public:
   // formula: Off = Off_first + VA - VA_first.
   OutputSection *FirstInPtLoad = nullptr;
 
-  StringRef Name;
-
   // The following fields correspond to Elf_Shdr members.
   uint64_t Size = 0;
-  uint64_t Entsize = 0;
   uint64_t Offset = 0;
-  uint64_t Flags = 0;
   uint64_t LMAOffset = 0;
   uint64_t Addr = 0;
-  uint32_t Alignment = 0;
   uint32_t ShName = 0;
-  uint32_t Type = 0;
-  uint32_t Info = 0;
-  uint32_t Link = 0;
 
   void addSection(InputSectionBase *C);
   void sort(std::function<int(InputSectionBase *S)> Order);

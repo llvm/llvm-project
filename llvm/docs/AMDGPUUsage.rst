@@ -19,19 +19,23 @@ Address Spaces
 
 The AMDGPU back-end uses the following address space mapping:
 
-   ============= ============================================
-   Address Space Memory Space
-   ============= ============================================
-   0             Private
-   1             Global
-   2             Constant
-   3             Local
-   4             Generic (Flat)
-   5             Region
-   ============= ============================================
+   ================== =================== ==============
+   LLVM Address Space DWARF Address Space Memory Space
+   ================== =================== ==============
+   0                  1                   Private
+   1                  N/A                 Global
+   2                  N/A                 Constant
+   3                  2                   Local
+   4                  N/A                 Generic (Flat)
+   5                  N/A                 Region
+   ================== =================== ==============
 
 The terminology in the table, aside from the region memory space, is from the
 OpenCL standard.
+
+LLVM Address Space is used throughout LLVM (for example, in LLVM IR). DWARF
+Address Space is emitted in DWARF, and is used by tools, such as debugger,
+profiler and others.
 
 Trap Handler ABI
 ----------------

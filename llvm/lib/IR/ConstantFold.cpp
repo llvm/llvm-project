@@ -2231,7 +2231,8 @@ Constant *llvm::ConstantFoldGetElementPtr(Type *PointeeTy, Constant *C,
     ConstantInt *Factor = ConstantInt::get(CI->getType(), NumElements);
     NewIdxs[i] = ConstantExpr::getSRem(CI, Factor);
 
-    Constant *PrevIdx = cast<Constant>(Idxs[i - 1]);
+    Constant *PrevIdx = NewIdxs[i-1] ? NewIdxs[i-1] :
+                           cast<Constant>(Idxs[i - 1]);
     Constant *Div = ConstantExpr::getSDiv(CI, Factor);
 
     unsigned CommonExtendedWidth =

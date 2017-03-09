@@ -1181,7 +1181,7 @@ RValue AtomicInfo::convertAtomicTempToRValue(Address addr,
   if (LVal.isBitField())
     return CGF.EmitLoadOfBitfieldLValue(
         LValue::MakeBitfield(addr, LVal.getBitFieldInfo(), LVal.getType(),
-                             LVal.getAlignmentSource()), loc);
+                             LVal.getAlignmentSource()));
   if (LVal.isVectorElt())
     return CGF.EmitLoadOfLValue(
         LValue::MakeVectorElt(addr, LVal.getVectorIdx(), LVal.getType(),

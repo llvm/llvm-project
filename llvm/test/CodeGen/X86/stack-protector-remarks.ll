@@ -30,6 +30,18 @@
 ; RUN: llc %s -mtriple=x86_64-unknown-unknown -o /dev/null 2>&1 | FileCheck %s -check-prefix=NOREMARK -allow-empty
 ; NOREMARK-NOT: ssp
 
+; RUN: llc %s -mtriple=x86_64-unknown-unknown -o /dev/null -pass-remarks-output=%t.yaml
+; RUN: cat %t.yaml | FileCheck %s -check-prefix=YAML
+; YAML:      --- !Passed
+; YAML-NEXT: Pass:            stack-protector
+; YAML-NEXT: Name:            StackProtectorRequested
+; YAML-NEXT: Function:        attribute_ssp
+; YAML-NEXT: Args:
+; YAML-NEXT:   - String:          'Stack protection applied to function '
+; YAML-NEXT:   - Function:        attribute_ssp
+; YAML-NEXT:   - String:          ' due to a function attribute or command-line switch'
+; YAML-NEXT: ...
+
 define void @nossp() ssp {
   ret void
 }

@@ -178,15 +178,21 @@ ExprInspection checks
   This function explains the value of its argument in a human-readable manner
   in the warning message. You can make as many overrides of its prototype
   in the test code as necessary to explain various integral, pointer,
-  or even record-type values.
+  or even record-type values. To simplify usage in C code (where overloading
+  the function declaration is not allowed), you may append an arbitrary suffix
+  to the function name, without affecting functionality.
 
   Example usage::
 
     void clang_analyzer_explain(int);
     void clang_analyzer_explain(void *);
 
+    // Useful in C code
+    void clang_analyzer_explain_int(int);
+
     void foo(int param, void *ptr) {
       clang_analyzer_explain(param); // expected-warning{{argument 'param'}}
+      clang_analyzer_explain_int(param); // expected-warning{{argument 'param'}}
       if (!ptr)
         clang_analyzer_explain(ptr); // expected-warning{{memory address '0'}}
     }

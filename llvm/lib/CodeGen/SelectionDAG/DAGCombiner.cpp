@@ -9142,7 +9142,7 @@ SDValue DAGCombiner::visitFADD(SDNode *N) {
                        GetNegatedExpression(N0, DAG, LegalOperations), Flags);
 
   // FIXME: Auto-upgrade the target/function-level option.
-  if (Options.UnsafeFPMath || N->getFlags()->hasNoSignedZeros()) {
+  if (Options.NoSignedZerosFPMath || N->getFlags()->hasNoSignedZeros()) {
     // fold (fadd A, 0) -> A
     if (ConstantFPSDNode *N1C = isConstOrConstSplatFP(N1))
       if (N1C->isZero())
@@ -9285,7 +9285,7 @@ SDValue DAGCombiner::visitFSUB(SDNode *N) {
                        GetNegatedExpression(N1, DAG, LegalOperations), Flags);
 
   // FIXME: Auto-upgrade the target/function-level option.
-  if (Options.UnsafeFPMath || N->getFlags()->hasNoSignedZeros()) {
+  if (Options.NoSignedZerosFPMath  || N->getFlags()->hasNoSignedZeros()) {
     // (fsub 0, B) -> -B
     if (N0CFP && N0CFP->isZero()) {
       if (isNegatibleForFree(N1, LegalOperations, TLI, &Options))

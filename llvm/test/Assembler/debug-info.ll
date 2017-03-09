@@ -37,8 +37,8 @@
 !13 = distinct !{}
 !14 = !DIFile(filename: "", directory: "")
 
-; CHECK-NEXT: !13 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !6, size: 32, align: 32)
-!15 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !7, size: 32, align: 32)
+; CHECK-NEXT: !13 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !6, size: 32, align: 32, dwarfAddressSpace: 1)
+!15 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !7, size: 32, align: 32, dwarfAddressSpace: 1)
 
 ; CHECK-NEXT: !14 = !DICompositeType(tag: DW_TAG_structure_type, name: "MyType", file: !10, line: 2, size: 32, align: 32, identifier: "MangledMyType")
 ; CHECK-NEXT: !15 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "Base", scope: !14, file: !10, line: 3, size: 128, align: 32, offset: 64, flags: DIFlagPublic, elements: !16, runtimeLang: DW_LANG_C_plus_plus_11, vtableHolder: !15, templateParams: !18, identifier: "MangledBase")

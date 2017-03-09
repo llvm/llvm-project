@@ -853,6 +853,13 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DIDerivedType *DTy) {
   // Add source line info if available and TyDesc is not a forward declaration.
   if (!DTy->isForwardDecl())
     addSourceLine(Buffer, DTy);
+
+  // If DWARF address space value is other than None, add it for pointer and
+  // reference types as DW_AT_address_class.
+  if (DTy->getDWARFAddressSpace() && (Tag == dwarf::DW_TAG_pointer_type ||
+                                      Tag == dwarf::DW_TAG_reference_type))
+    addUInt(Buffer, dwarf::DW_AT_address_class, dwarf::DW_FORM_data4,
+            DTy->getDWARFAddressSpace().getValue());
 }
 
 void DwarfUnit::constructSubprogramArguments(DIE &Buffer, DITypeRefArray Args) {

@@ -445,6 +445,13 @@ struct DevirtModule {
 
   void rebuildGlobal(VTableBits &B);
 
+  // Apply the summary resolution for Slot to all virtual calls in SlotInfo.
+  void importResolution(VTableSlot Slot, VTableSlotInfo &SlotInfo);
+
+  // If we were able to eliminate all unsafe uses for a type checked load,
+  // eliminate the associated type tests by replacing them with true.
+  void removeRedundantTypeTests();
+
   bool run();
 
   // Lower the module using the action and summary passed as command line
@@ -1103,6 +1110,52 @@ void DevirtModule::scanTypeCheckedLoadUsers(Function *TypeCheckedLoadFunc) {
   }
 }
 
+void DevirtModule::importResolution(VTableSlot Slot, VTableSlotInfo &SlotInfo) {
+  const WholeProgramDevirtResolution &Res =
+      Summary->getTypeIdSummary(cast<MDString>(Slot.TypeID)->getString())
+          .WPDRes[Slot.ByteOffset];
+
+  if (Res.TheKind == WholeProgramDevirtResolution::SingleImpl) {
+    // The type of the function in the declaration is irrelevant because every
+    // call site will cast it to the correct type.
+    auto *SingleImpl = M.getOrInsertFunction(
+        Res.SingleImplName, Type::getVoidTy(M.getContext()), nullptr);
+
+    // This is the import phase so we should not be exporting anything.
+    bool IsExported = false;
+    applySingleImplDevirt(SlotInfo, SingleImpl, IsExported);
+    assert(!IsExported);
+  }
+
+  for (auto &CSByConstantArg : SlotInfo.ConstCSInfo) {
+    auto I = Res.ResByArg.find(CSByConstantArg.first);
+    if (I == Res.ResByArg.end())
+      continue;
+    auto &ResByArg = I->second;
+    // FIXME: We should figure out what to do about the "function name" argument
+    // to the apply* functions, as the function names are unavailable during the
+    // importing phase. For now we just pass the empty string. This does not
+    // impact correctness because the function names are just used for remarks.
+    switch (ResByArg.TheKind) {
+    case WholeProgramDevirtResolution::ByArg::UniformRetVal:
+      applyUniformRetValOpt(CSByConstantArg.second, "", ResByArg.Info);
+      break;
+    default:
+      break;
+    }
+  }
+}
+
+void DevirtModule::removeRedundantTypeTests() {
+  auto True = ConstantInt::getTrue(M.getContext());
+  for (auto &&U : NumUnsafeUsesForTypeTest) {
+    if (U.second == 0) {
+      U.first->replaceAllUsesWith(True);
+      U.first->eraseFromParent();
+    }
+  }
+}
+
 bool DevirtModule::run() {
   Function *TypeTestFunc =
       M.getFunction(Intrinsic::getName(Intrinsic::type_test));
@@ -1124,6 +1177,17 @@ bool DevirtModule::run() {
 
   if (TypeCheckedLoadFunc)
     scanTypeCheckedLoadUsers(TypeCheckedLoadFunc);
+
+  if (Action == PassSummaryAction::Import) {
+    for (auto &S : CallSlots)
+      importResolution(S.first, S.second);
+
+    removeRedundantTypeTests();
+
+    // The rest of the code is only necessary when exporting or during regular
+    // LTO, so we are done.
+    return true;
+  }
 
   // Rebuild type metadata into a map for easy lookup.
   std::vector<VTableBits> Bits;
@@ -1223,17 +1287,7 @@ bool DevirtModule::run() {
     }
   }
 
-  // If we were able to eliminate all unsafe uses for a type checked load,
-  // eliminate the type test by replacing it with true.
-  if (TypeCheckedLoadFunc) {
-    auto True = ConstantInt::getTrue(M.getContext());
-    for (auto &&U : NumUnsafeUsesForTypeTest) {
-      if (U.second == 0) {
-        U.first->replaceAllUsesWith(True);
-        U.first->eraseFromParent();
-      }
-    }
-  }
+  removeRedundantTypeTests();
 
   // Rebuild each global we touched as part of virtual constant propagation to
   // include the before and after bytes.

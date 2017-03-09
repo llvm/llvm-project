@@ -50,20 +50,95 @@ void ModuleSymbolTable::addModule(Module *M) {
   for (GlobalAlias &GA : M->aliases())
     SymTab.push_back(&GA);
 
-  CollectAsmSymbols(Triple(M->getTargetTriple()), M->getModuleInlineAsm(),
-                    [this](StringRef Name, BasicSymbolRef::Flags Flags) {
-                      SymTab.push_back(new (AsmSymbols.Allocate())
-                                           AsmSymbol(Name, Flags));
-                    });
+  CollectAsmSymbols(*M, [this](StringRef Name, BasicSymbolRef::Flags Flags) {
+    SymTab.push_back(new (AsmSymbols.Allocate()) AsmSymbol(Name, Flags));
+  });
+}
+
+// Ensure ELF .symver aliases get the same binding as the defined symbol
+// they alias with.
+static void handleSymverAliases(const Module &M, RecordStreamer &Streamer) {
+  if (Streamer.symverAliases().empty())
+    return;
+
+  // The name in the assembler will be mangled, but the name in the IR
+  // might not, so we first compute a mapping from mangled name to GV.
+  Mangler Mang;
+  SmallString<64> MangledName;
+  StringMap<const GlobalValue *> MangledNameMap;
+  auto GetMangledName = [&](const GlobalValue &GV) {
+    if (!GV.hasName())
+      return;
+
+    MangledName.clear();
+    MangledName.reserve(GV.getName().size() + 1);
+    Mang.getNameWithPrefix(MangledName, &GV, /*CannotUsePrivateLabel=*/false);
+    MangledNameMap[MangledName] = &GV;
+  };
+  for (const Function &F : M)
+    GetMangledName(F);
+  for (const GlobalVariable &GV : M.globals())
+    GetMangledName(GV);
+  for (const GlobalAlias &GA : M.aliases())
+    GetMangledName(GA);
+
+  // Walk all the recorded .symver aliases, and set up the binding
+  // for each alias.
+  for (auto &Symver : Streamer.symverAliases()) {
+    const MCSymbol *Aliasee = Symver.first;
+    MCSymbolAttr Attr = MCSA_Invalid;
+
+    // First check if the aliasee binding was recorded in the asm.
+    RecordStreamer::State state = Streamer.getSymbolState(Aliasee);
+    switch (state) {
+    case RecordStreamer::Global:
+    case RecordStreamer::DefinedGlobal:
+      Attr = MCSA_Global;
+      break;
+    case RecordStreamer::UndefinedWeak:
+    case RecordStreamer::DefinedWeak:
+      Attr = MCSA_Weak;
+      break;
+    default:
+      break;
+    }
+
+    // If we don't have a symbol attribute from assembly, then check if
+    // the aliasee was defined in the IR.
+    if (Attr == MCSA_Invalid) {
+      const auto *GV = M.getNamedValue(Aliasee->getName());
+      if (!GV) {
+        auto MI = MangledNameMap.find(Aliasee->getName());
+        if (MI != MangledNameMap.end())
+          GV = MI->second;
+        else
+          continue;
+      }
+      if (GV->hasExternalLinkage())
+        Attr = MCSA_Global;
+      else if (GV->hasLocalLinkage())
+        Attr = MCSA_Local;
+      else if (GV->isWeakForLinker())
+        Attr = MCSA_Weak;
+    }
+    if (Attr == MCSA_Invalid)
+      continue;
+
+    // Set the detected binding on each alias with this aliasee.
+    for (auto &Alias : Symver.second)
+      Streamer.EmitSymbolAttribute(Alias, Attr);
+  }
 }
 
 void ModuleSymbolTable::CollectAsmSymbols(
-    const Triple &TT, StringRef InlineAsm,
+    const Module &M,
     function_ref<void(StringRef, BasicSymbolRef::Flags)> AsmSymbol) {
+  StringRef InlineAsm = M.getModuleInlineAsm();
   if (InlineAsm.empty())
     return;
 
   std::string Err;
+  const Triple TT(M.getTargetTriple());
   const Target *T = TargetRegistry::lookupTarget(TT.str(), Err);
   assert(T && T->hasMCAsmParser());
 
@@ -105,6 +180,8 @@ void ModuleSymbolTable::CollectAsmSymbols(
   Parser->setTargetParser(*TAP);
   if (Parser->Run(false))
     return;
+
+  handleSymverAliases(M, Streamer);
 
   for (auto &KV : Streamer) {
     StringRef Key = KV.first();
