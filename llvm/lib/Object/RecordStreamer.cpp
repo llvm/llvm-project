@@ -110,3 +110,8 @@ void RecordStreamer::EmitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
                                       unsigned ByteAlignment) {
   markDefined(*Symbol);
 }
+
+void RecordStreamer::emitELFSymverDirective(MCSymbol *Alias,
+                                            const MCSymbol *Aliasee) {
+  SymverAliasMap[Aliasee].push_back(Alias);
+}

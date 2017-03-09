@@ -155,6 +155,10 @@ bool AMDGPUTTIImpl::isLegalToVectorizeStoreChain(unsigned ChainSizeInBytes,
 }
 
 unsigned AMDGPUTTIImpl::getMaxInterleaveFactor(unsigned VF) {
+  // Disable unrolling if the loop is not vectorized.
+  if (VF == 1)
+    return 1;
+
   // Semi-arbitrary large amount.
   return 64;
 }

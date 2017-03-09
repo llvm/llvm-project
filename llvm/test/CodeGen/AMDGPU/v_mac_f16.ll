@@ -217,7 +217,7 @@ entry:
   ret void
 }
 
-; GCN-LABEL: {{^}}mac_f16_neg_a_unsafe_fp_math:
+; GCN-LABEL: {{^}}mac_f16_neg_a_nsz_fp_math:
 ; SI: v_cvt_f32_f16_e32 [[CVT_A:v[0-9]+]], v{{[0-9]+}}
 ; SI: v_cvt_f32_f16_e32 [[CVT_B:v[0-9]+]], v{{[0-9]+}}
 ; SI: v_cvt_f32_f16_e32 [[CVT_C:v[0-9]+]], v{{[0-9]+}}
@@ -226,7 +226,7 @@ entry:
 ; VI-NOT: v_mac_f16
 ; VI:     v_mad_f16 v{{[0-9]+}}, -v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]}}
 ; GCN:    s_endpgm
-define void @mac_f16_neg_a_unsafe_fp_math(
+define void @mac_f16_neg_a_nsz_fp_math(
     half addrspace(1)* %r,
     half addrspace(1)* %a,
     half addrspace(1)* %b,
@@ -244,7 +244,7 @@ entry:
   ret void
 }
 
-; GCN-LABEL: {{^}}mac_f16_neg_b_unsafe_fp_math:
+; GCN-LABEL: {{^}}mac_f16_neg_b_nsz_fp_math:
 ; SI: v_cvt_f32_f16_e32 [[CVT_A:v[0-9]+]], v{{[0-9]+}}
 ; SI: v_cvt_f32_f16_e32 [[CVT_B:v[0-9]+]], v{{[0-9]+}}
 ; SI: v_cvt_f32_f16_e32 [[CVT_C:v[0-9]+]], v{{[0-9]+}}
@@ -253,7 +253,7 @@ entry:
 ; VI-NOT: v_mac_f16
 ; VI:     v_mad_f16 v{{[0-9]+}}, -v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]}}
 ; GCN:    s_endpgm
-define void @mac_f16_neg_b_unsafe_fp_math(
+define void @mac_f16_neg_b_nsz_fp_math(
     half addrspace(1)* %r,
     half addrspace(1)* %a,
     half addrspace(1)* %b,
@@ -271,7 +271,7 @@ entry:
   ret void
 }
 
-; GCN-LABEL: {{^}}mac_f16_neg_c_unsafe_fp_math:
+; GCN-LABEL: {{^}}mac_f16_neg_c_nsz_fp_math:
 ; SI: v_cvt_f32_f16_e32 [[CVT_A:v[0-9]+]], v{{[0-9]+}}
 ; SI: v_cvt_f32_f16_e32 [[CVT_B:v[0-9]+]], v{{[0-9]+}}
 ; SI: v_cvt_f32_f16_e32 [[CVT_C:v[0-9]+]], v{{[0-9]+}}
@@ -280,7 +280,7 @@ entry:
 ; VI-NOT: v_mac_f16
 ; VI:     v_mad_f16 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}, -v{{[0-9]}}
 ; GCN:    s_endpgm
-define void @mac_f16_neg_c_unsafe_fp_math(
+define void @mac_f16_neg_c_nsz_fp_math(
     half addrspace(1)* %r,
     half addrspace(1)* %a,
     half addrspace(1)* %b,
@@ -552,7 +552,7 @@ entry:
   ret void
 }
 
-; GCN-LABEL: {{^}}mac_v2f16_neg_a_unsafe_fp_math:
+; GCN-LABEL: {{^}}mac_v2f16_neg_a_nsz_fp_math:
 ; SI: v_cvt_f32_f16_e32 [[CVT0:v[0-9]+]], {{v[0-9]+}}
 ; SI: v_cvt_f32_f16_e32 [[CVT1:v[0-9]+]], {{v[0-9]+}}
 ; SI: v_cvt_f32_f16_e32 [[CVT2:v[0-9]+]], {{v[0-9]+}}
@@ -567,7 +567,7 @@ entry:
 ; VI:     v_mad_f16 v{{[0-9]+}}, -v{{[0-9]+}}, v{{[0-9]+}}, v{{[-0-9]}}
 ; VI:     v_mad_f16 v{{[0-9]+}}, -v{{[0-9]+}}, v{{[0-9]+}}, v{{[-0-9]}}
 ; GCN:    s_endpgm
-define void @mac_v2f16_neg_a_unsafe_fp_math(
+define void @mac_v2f16_neg_a_nsz_fp_math(
     <2 x half> addrspace(1)* %r,
     <2 x half> addrspace(1)* %a,
     <2 x half> addrspace(1)* %b,
@@ -585,7 +585,7 @@ entry:
   ret void
 }
 
-; GCN-LABEL: {{^}}mac_v2f16_neg_b_unsafe_fp_math:
+; GCN-LABEL: {{^}}mac_v2f16_neg_b_nsz_fp_math:
 ; SI: v_cvt_f32_f16_e32 [[CVT0:v[0-9]+]], {{v[0-9]+}}
 ; SI: v_cvt_f32_f16_e32 [[CVT1:v[0-9]+]], {{v[0-9]+}}
 ; SI: v_cvt_f32_f16_e32 [[CVT2:v[0-9]+]], {{v[0-9]+}}
@@ -600,7 +600,7 @@ entry:
 ; VI:     v_mad_f16 v{{[0-9]+}}, -v{{[0-9]+}}, v{{[0-9]+}}, v{{[-0-9]}}
 ; VI:     v_mad_f16 v{{[0-9]+}}, -v{{[0-9]+}}, v{{[0-9]+}}, v{{[-0-9]}}
 ; GCN:    s_endpgm
-define void @mac_v2f16_neg_b_unsafe_fp_math(
+define void @mac_v2f16_neg_b_nsz_fp_math(
     <2 x half> addrspace(1)* %r,
     <2 x half> addrspace(1)* %a,
     <2 x half> addrspace(1)* %b,
@@ -618,7 +618,7 @@ entry:
   ret void
 }
 
-; GCN-LABEL: {{^}}mac_v2f16_neg_c_unsafe_fp_math:
+; GCN-LABEL: {{^}}mac_v2f16_neg_c_nsz_fp_math:
 ; SI: v_cvt_f32_f16_e32 [[CVT0:v[0-9]+]], {{v[0-9]+}}
 ; SI: v_cvt_f32_f16_e32 [[CVT1:v[0-9]+]], {{v[0-9]+}}
 ; SI: v_cvt_f32_f16_e32 [[CVT2:v[0-9]+]], {{v[0-9]+}}
@@ -633,7 +633,7 @@ entry:
 ; VI:     v_mad_f16 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}, -v{{[-0-9]}}
 ; VI:     v_mad_f16 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}, -v{{[-0-9]}}
 ; GCN:    s_endpgm
-define void @mac_v2f16_neg_c_unsafe_fp_math(
+define void @mac_v2f16_neg_c_nsz_fp_math(
     <2 x half> addrspace(1)* %r,
     <2 x half> addrspace(1)* %a,
     <2 x half> addrspace(1)* %b,
@@ -651,5 +651,5 @@ entry:
   ret void
 }
 
-attributes #0 = { nounwind "unsafe-fp-math"="false" }
-attributes #1 = { nounwind "unsafe-fp-math"="true" }
+attributes #0 = { nounwind "no-signed-zeros-fp-math"="false" }
+attributes #1 = { nounwind "no-signed-zeros-fp-math"="true" }

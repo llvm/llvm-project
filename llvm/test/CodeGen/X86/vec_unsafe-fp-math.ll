@@ -1,4 +1,4 @@
-; RUN: llc < %s -enable-unsafe-fp-math -mtriple=x86_64-unknown-unknown -mcpu=corei7 | FileCheck %s
+; RUN: llc < %s -enable-unsafe-fp-math -enable-no-signed-zeros-fp-math -mtriple=x86_64-unknown-unknown -mcpu=corei7 | FileCheck %s
 
 ; Make sure that vectors get the same benefits as scalars when using unsafe-fp-math.
 

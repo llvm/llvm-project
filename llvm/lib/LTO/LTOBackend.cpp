@@ -354,7 +354,7 @@ static void handleAsmUndefinedRefs(Module &Mod, TargetMachine &TM) {
   // llvm.compiler.used to prevent optimization to drop these from the output.
   StringSet<> AsmUndefinedRefs;
   ModuleSymbolTable::CollectAsmSymbols(
-      Triple(Mod.getTargetTriple()), Mod.getModuleInlineAsm(),
+      Mod,
       [&AsmUndefinedRefs](StringRef Name, object::BasicSymbolRef::Flags Flags) {
         if (Flags & object::BasicSymbolRef::SF_Undefined)
           AsmUndefinedRefs.insert(Name);

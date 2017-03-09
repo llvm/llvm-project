@@ -26,6 +26,7 @@
 namespace llvm {
 
 class GlobalValue;
+class RecordStreamer;
 
 class ModuleSymbolTable {
 public:
@@ -52,7 +53,7 @@ public:
   /// For each found symbol, call \p AsmSymbol with the name of the symbol found
   /// and the associated flags.
   static void CollectAsmSymbols(
-      const Triple &TheTriple, StringRef InlineAsm,
+      const Module &M,
       function_ref<void(StringRef, object::BasicSymbolRef::Flags)> AsmSymbol);
 };
 

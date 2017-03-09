@@ -1024,15 +1024,21 @@ template <> struct DOTGraphTraits<BoUpSLP *> : public DefaultDOTGraphTraits {
 
   DOTGraphTraits(bool isSimple = false) : DefaultDOTGraphTraits(isSimple) {}
 
-  std::string getNodeLabel(const TreeEntry *Entry, const BoUpSLP *) {
+  std::string getNodeLabel(const TreeEntry *Entry, const BoUpSLP *R) {
     std::string Str;
     raw_string_ostream OS(Str);
     if (isSplat(Entry->Scalars)) {
       OS << "<splat> " << *Entry->Scalars[0];
       return Str;
     }
-    for (auto V : Entry->Scalars)
-      OS << *V << "\n";
+    for (auto V : Entry->Scalars) {
+      OS << *V;
+      if (std::any_of(
+              R->ExternalUses.begin(), R->ExternalUses.end(),
+              [&](const BoUpSLP::ExternalUser &EU) { return EU.Scalar == V; }))
+        OS << " <extract>";
+      OS << "\n";
+    }
     return Str;
   }
 

@@ -45,40 +45,6 @@ Error FileSystem::MakeDirectory(const FileSpec &file_spec,
   return error;
 }
 
-Error FileSystem::DeleteDirectory(const FileSpec &file_spec, bool recurse) {
-  Error error;
-  std::wstring path_buffer;
-  if (!llvm::ConvertUTF8toWide(file_spec.GetPath(), path_buffer)) {
-    error.SetErrorString(PATH_CONVERSION_ERROR);
-    return error;
-  }
-  if (!recurse) {
-    BOOL result = ::RemoveDirectoryW(path_buffer.c_str());
-    if (!result)
-      error.SetError(::GetLastError(), lldb::eErrorTypeWin32);
-  } else {
-    // SHFileOperation() accepts a list of paths, and so must be
-    // double-null-terminated to
-    // indicate the end of the list. The first null terminator is there only in
-    // the backing
-    // store but not the actual vector contents, and so we need to push twice.
-    path_buffer.push_back(0);
-    path_buffer.push_back(0);
-
-    SHFILEOPSTRUCTW shfos = {};
-    shfos.wFunc = FO_DELETE;
-    shfos.pFrom = (LPCWSTR)path_buffer.data();
-    shfos.fFlags = FOF_NO_UI;
-
-    int result = ::SHFileOperationW(&shfos);
-    // TODO(zturner): Correctly handle the intricacies of SHFileOperation return
-    // values.
-    if (result != 0)
-      error.SetErrorStringWithFormat("SHFileOperation failed");
-  }
-  return error;
-}
-
 Error FileSystem::GetFilePermissions(const FileSpec &file_spec,
                                      uint32_t &file_permissions) {
   Error error;
