@@ -72,8 +72,8 @@ bool ExprInspectionChecker::evalCall(const CallExpr *CE,
           &ExprInspectionChecker::analyzerWarnIfReached)
     .Case("clang_analyzer_warnOnDeadSymbol",
           &ExprInspectionChecker::analyzerWarnOnDeadSymbol)
-    .Case("clang_analyzer_explain", &ExprInspectionChecker::analyzerExplain)
-    .Case("clang_analyzer_dump", &ExprInspectionChecker::analyzerDump)
+    .StartsWith("clang_analyzer_explain", &ExprInspectionChecker::analyzerExplain)
+    .StartsWith("clang_analyzer_dump", &ExprInspectionChecker::analyzerDump)
     .Case("clang_analyzer_getExtent", &ExprInspectionChecker::analyzerGetExtent)
     .Case("clang_analyzer_printState",
           &ExprInspectionChecker::analyzerPrintState)
