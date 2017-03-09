@@ -151,6 +151,12 @@ void coreturn(int n) {
   co_return 42;
 }
 
+template <class T>
+void co_await_non_dependent_arg(T) {
+  co_await a;
+}
+template void co_await_non_dependent_arg(int);
+
 void mixed_yield() {
   co_yield 0; // expected-note {{use of 'co_yield'}}
   return; // expected-error {{not allowed in coroutine}}

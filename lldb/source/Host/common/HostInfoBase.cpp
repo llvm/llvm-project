@@ -46,7 +46,7 @@ struct HostInfoBaseFields {
       // Remove the LLDB temporary directory if we have one. Set "recurse" to
       // true to all files that were created for the LLDB process can be cleaned
       // up.
-      FileSystem::DeleteDirectory(m_lldb_process_tmp_dir, true);
+      llvm::sys::fs::remove_directories(m_lldb_process_tmp_dir.GetPath());
     }
   }
 

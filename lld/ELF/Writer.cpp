@@ -435,12 +435,11 @@ template <class ELFT> void Writer<ELFT>::createSyntheticSections() {
   In<ELFT>::Iplt = make<PltSection<ELFT>>(0);
   Add(In<ELFT>::Iplt);
 
-  if (Config->EhFrameHdr) {
-    In<ELFT>::EhFrameHdr = make<EhFrameHeader<ELFT>>();
-    Add(In<ELFT>::EhFrameHdr);
-  }
-
   if (!Config->Relocatable) {
+    if (Config->EhFrameHdr) {
+      In<ELFT>::EhFrameHdr = make<EhFrameHeader<ELFT>>();
+      Add(In<ELFT>::EhFrameHdr);
+    }
     In<ELFT>::EhFrame = make<EhFrameSection<ELFT>>();
     Add(In<ELFT>::EhFrame);
   }
