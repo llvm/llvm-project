@@ -146,6 +146,12 @@ cl::opt<int>
                           "lifetime analysis; 0=no limit"),
                  cl::init(1000000), cl::cat(PollyCategory));
 
+cl::opt<bool> DelicmOverapproximateWrites(
+    "polly-delicm-overapproximate-writes",
+    cl::desc(
+        "Do more PHI writes than necessary in order to avoid partial accesses"),
+    cl::init(false), cl::Hidden, cl::cat(PollyCategory));
+
 STATISTIC(DeLICMAnalyzed, "Number of successfully analyzed SCoPs");
 STATISTIC(DeLICMOutOfQuota,
           "Analyses aborted because max_operations was reached");
@@ -386,6 +392,26 @@ MemoryAccess *getInputAccessOf(Value *InputVal, ScopStmt *Stmt) {
       return MA;
   }
   return nullptr;
+}
+
+/// Try to find a 'natural' extension of a mapped to elements outside its
+/// domain.
+///
+/// @param Relevant The map with mapping that may not be modified.
+/// @param Universe The domain to which @p Relevant needs to be extended.
+///
+/// @return A map with that associates the domain elements of @p Relevant to the
+///         same elements and in addition the elements of @p Universe to some
+///         undefined elements. The function prefers to return simple maps.
+IslPtr<isl_union_map> expandMapping(IslPtr<isl_union_map> Relevant,
+                                    IslPtr<isl_union_set> Universe) {
+  Relevant = give(isl_union_map_coalesce(Relevant.take()));
+  auto RelevantDomain = give(isl_union_map_domain(Relevant.copy()));
+  auto Simplified =
+      give(isl_union_map_gist_domain(Relevant.take(), RelevantDomain.take()));
+  Simplified = give(isl_union_map_coalesce(Simplified.take()));
+  return give(
+      isl_union_map_intersect_domain(Simplified.take(), Universe.take()));
 }
 
 /// Represent the knowledge of the contents of any array elements in any zone or
@@ -1299,17 +1325,24 @@ private:
     simplify(WritesTarget);
 
     // { DomainWrite[] }
-    auto ExpandedWritesDom = give(isl_union_map_domain(WritesTarget.copy()));
     auto UniverseWritesDom = give(isl_union_set_empty(ParamSpace.copy()));
 
     for (auto *MA : DefUse.getPHIIncomings(SAI))
       UniverseWritesDom = give(isl_union_set_add_set(UniverseWritesDom.take(),
                                                      getDomainFor(MA).take()));
 
+    auto RelevantWritesTarget = WritesTarget;
+    if (DelicmOverapproximateWrites)
+      WritesTarget = expandMapping(WritesTarget, UniverseWritesDom);
+
+    auto ExpandedWritesDom = give(isl_union_map_domain(WritesTarget.copy()));
     if (!isl_union_set_is_subset(UniverseWritesDom.keep(),
                                  ExpandedWritesDom.keep())) {
       DEBUG(dbgs() << "    Reject because did not find PHI write mapping for "
                       "all instances\n");
+      if (DelicmOverapproximateWrites)
+        DEBUG(dbgs() << "      Relevant Mapping:    " << RelevantWritesTarget
+                     << '\n');
       DEBUG(dbgs() << "      Deduced Mapping:     " << WritesTarget << '\n');
       DEBUG(dbgs() << "      Missing instances:    "
                    << give(isl_union_set_subtract(UniverseWritesDom.copy(),

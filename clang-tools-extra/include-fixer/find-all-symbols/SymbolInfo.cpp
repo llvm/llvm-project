@@ -32,7 +32,6 @@ template <> struct MappingTraits<SymbolAndSignals> {
     io.mapRequired("Name", Symbol.Symbol.Name);
     io.mapRequired("Contexts", Symbol.Symbol.Contexts);
     io.mapRequired("FilePath", Symbol.Symbol.FilePath);
-    io.mapRequired("LineNumber", Symbol.Symbol.LineNumber);
     io.mapRequired("Type", Symbol.Symbol.Type);
     io.mapRequired("Seen", Symbol.Signals.Seen);
     io.mapRequired("Used", Symbol.Signals.Used);
@@ -74,21 +73,18 @@ namespace clang {
 namespace find_all_symbols {
 
 SymbolInfo::SymbolInfo(llvm::StringRef Name, SymbolKind Type,
-                       llvm::StringRef FilePath, int LineNumber,
+                       llvm::StringRef FilePath,
                        const std::vector<Context> &Contexts)
-    : Name(Name), Type(Type), FilePath(FilePath), Contexts(Contexts),
-      LineNumber(LineNumber) {}
+    : Name(Name), Type(Type), FilePath(FilePath), Contexts(Contexts) {}
 
 bool SymbolInfo::operator==(const SymbolInfo &Symbol) const {
-  return std::tie(Name, Type, FilePath, LineNumber, Contexts) ==
-         std::tie(Symbol.Name, Symbol.Type, Symbol.FilePath, Symbol.LineNumber,
-                  Symbol.Contexts);
+  return std::tie(Name, Type, FilePath, Contexts) ==
+         std::tie(Symbol.Name, Symbol.Type, Symbol.FilePath, Symbol.Contexts);
 }
 
 bool SymbolInfo::operator<(const SymbolInfo &Symbol) const {
-  return std::tie(Name, Type, FilePath, LineNumber, Contexts) <
-         std::tie(Symbol.Name, Symbol.Type, Symbol.FilePath, Symbol.LineNumber,
-                  Symbol.Contexts);
+  return std::tie(Name, Type, FilePath, Contexts) <
+         std::tie(Symbol.Name, Symbol.Type, Symbol.FilePath, Symbol.Contexts);
 }
 
 std::string SymbolInfo::getQualifiedName() const {

@@ -20,7 +20,11 @@
 
 namespace clang {
 namespace find_all_symbols {
-/// \brief Contains all information for a Symbol.
+/// \brief Describes a named symbol from a header.
+/// Symbols with the same qualified name and type (e.g. function overloads)
+/// that appear in the same header are represented by a single SymbolInfo.
+///
+/// TODO: keep track of instances, e.g. overload locations and signatures.
 class SymbolInfo {
 public:
   /// \brief The SymbolInfo Type.
@@ -66,10 +70,10 @@ public:
 
   // The default constructor is required by YAML traits in
   // LLVM_YAML_IS_DOCUMENT_LIST_VECTOR.
-  SymbolInfo() : Type(SymbolKind::Unknown), LineNumber(-1) {}
+  SymbolInfo() : Type(SymbolKind::Unknown) {}
 
   SymbolInfo(llvm::StringRef Name, SymbolKind Type, llvm::StringRef FilePath,
-             int LineNumber, const std::vector<Context> &Contexts);
+             const std::vector<Context> &Contexts);
 
   void SetFilePath(llvm::StringRef Path) { FilePath = Path; }
 
@@ -89,9 +93,6 @@ public:
   const std::vector<SymbolInfo::Context> &getContexts() const {
     return Contexts;
   }
-
-  /// \brief Get a 1-based line number of the symbol's declaration.
-  int getLineNumber() const { return LineNumber; }
 
   bool operator<(const SymbolInfo &Symbol) const;
 
@@ -121,9 +122,6 @@ private:
   ///
   /// If the symbol is declared in `TranslationUnitDecl`, it has no context.
   std::vector<Context> Contexts;
-
-  /// \brief The 1-based line number of of the symbol's declaration.
-  int LineNumber;
 };
 
 struct SymbolAndSignals {
