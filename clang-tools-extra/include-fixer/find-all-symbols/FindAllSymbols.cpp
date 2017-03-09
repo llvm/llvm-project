@@ -109,8 +109,7 @@ CreateSymbolInfo(const NamedDecl *ND, const SourceManager &SM,
   std::string FilePath = getIncludePath(SM, Loc, Collector);
   if (FilePath.empty()) return llvm::None;
 
-  return SymbolInfo(ND->getNameAsString(), Type, FilePath,
-                    SM.getExpansionLineNumber(Loc), GetContexts(ND));
+  return SymbolInfo(ND->getNameAsString(), Type, FilePath, GetContexts(ND));
 }
 
 } // namespace
@@ -196,7 +195,7 @@ void FindAllSymbols::registerMatchers(MatchFinder *MatchFinder) {
       anyOf(hasDeclContext(enumDecl(HasNSOrTUCtxMatcher)), ExternCMatcher));
 
   // Most of the time we care about all matchable decls, or all types.
-  auto Types = namedDecl(anyOf(CRecords, CXXRecords, Enums, Typedefs));
+  auto Types = namedDecl(anyOf(CRecords, CXXRecords, Enums));
   auto Decls = namedDecl(anyOf(CRecords, CXXRecords, Enums, Typedefs, Vars,
                                EnumConstants, Functions));
 
@@ -219,8 +218,8 @@ void FindAllSymbols::registerMatchers(MatchFinder *MatchFinder) {
       typeLoc(isExpansionInMainFile(),
               loc(qualType(hasDeclaration(Types.bind("use"))))),
       this);
-  // Uses of typedefs: these are transparent to hasDeclaration, so we need to
-  // handle them explicitly.
+  // Uses of typedefs: these are often transparent to hasDeclaration, so we need
+  // to handle them explicitly.
   MatchFinder->addMatcher(
       typeLoc(isExpansionInMainFile(),
               loc(typedefType(hasDeclaration(Typedefs.bind("use"))))),

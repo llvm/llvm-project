@@ -585,7 +585,7 @@ the configuration (without a prefix: ``Auto``).
 
 **DerivePointerAlignment** (``bool``)
   If ``true``, analyze the formatted file for the most common
-  alignment of ``&`` and ``\*``. ``PointerAlignment`` is then used only as
+  alignment of ``&`` and ``*``. ``PointerAlignment`` is then used only as
   fallback.
 
 **DisableFormat** (``bool``)
@@ -659,7 +659,7 @@ the configuration (without a prefix: ``Auto``).
         Priority:        2
       - Regex:           '^(<|"(gtest|isl|json)/)'
         Priority:        3
-      - Regex:           '.\*'
+      - Regex:           '.*'
         Priority:        1
 
 **IncludeIsMainRegex** (``std::string``)
@@ -804,21 +804,21 @@ the configuration (without a prefix: ``Auto``).
 
     .. code-block:: c++
 
-      int\* a;
+      int* a;
 
   * ``PAS_Right`` (in configuration: ``Right``)
     Align pointer to the right.
 
     .. code-block:: c++
 
-      int \*a;
+      int *a;
 
   * ``PAS_Middle`` (in configuration: ``Middle``)
     Align pointer in the middle.
 
     .. code-block:: c++
 
-      int \* a;
+      int * a;
 
 
 

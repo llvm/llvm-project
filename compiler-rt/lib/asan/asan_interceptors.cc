@@ -228,9 +228,11 @@ DECLARE_REAL_AND_INTERCEPTOR(void, free, void *)
 // Strict init-order checking is dlopen-hostile:
 // https://github.com/google/sanitizers/issues/178
 #define COMMON_INTERCEPTOR_ON_DLOPEN(filename, flag)                           \
-  if (flags()->strict_init_order) {                                            \
-    StopInitOrderChecking();                                                   \
-  }
+  do {                                                                         \
+    if (flags()->strict_init_order)                                            \
+      StopInitOrderChecking();                                                 \
+    CheckNoDeepBind(filename, flag);                                           \
+  } while (false)
 #define COMMON_INTERCEPTOR_ON_EXIT(ctx) OnExit()
 #define COMMON_INTERCEPTOR_LIBRARY_LOADED(filename, handle) \
   CoverageUpdateMapping()

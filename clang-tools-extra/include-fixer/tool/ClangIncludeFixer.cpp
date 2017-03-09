@@ -178,7 +178,7 @@ createSymbolIndexManager(StringRef FilePath) {
       for (size_t I = 0, E = CommaSplits.size(); I != E; ++I)
         Symbols.push_back(
             {SymbolInfo(Split.first.trim(), SymbolInfo::SymbolKind::Unknown,
-                        CommaSplits[I].trim(), 1, {}),
+                        CommaSplits[I].trim(), {}),
              // Use fake "seen" signal for tests, so first header wins.
              SymbolInfo::Signals(/*Seen=*/static_cast<unsigned>(E - I),
                                  /*Used=*/0)});

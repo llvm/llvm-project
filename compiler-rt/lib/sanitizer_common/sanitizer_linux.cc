@@ -1460,6 +1460,19 @@ void MaybeReexec() {
 
 void PrintModuleMap() { }
 
+void CheckNoDeepBind(const char *filename, int flag) {
+  if (flag & RTLD_DEEPBIND) {
+    Report(
+        "You are trying to dlopen a %s shared library with RTLD_DEEPBIND flag"
+        " which is incompatibe with sanitizer runtime "
+        "(see https://github.com/google/sanitizers/issues/611 for details"
+        "). If you want to run %s library under sanitizers please remove "
+        "RTLD_DEEPBIND from dlopen flags.\n",
+        filename, filename);
+    Die();
+  }
+}
+
 uptr FindAvailableMemoryRange(uptr size, uptr alignment, uptr left_padding) {
   UNREACHABLE("FindAvailableMemoryRange is not available");
   return 0;

@@ -49,6 +49,33 @@ static bool extractConstantMask(const Constant *C, unsigned MaskEltSizeInBits,
   unsigned CstEltSizeInBits = CstTy->getScalarSizeInBits();
   unsigned NumCstElts = CstTy->getVectorNumElements();
 
+  assert((CstSizeInBits % MaskEltSizeInBits) == 0 &&
+         "Unaligned shuffle mask size");
+
+  unsigned NumMaskElts = CstSizeInBits / MaskEltSizeInBits;
+  UndefElts = APInt(NumMaskElts, 0);
+  RawMask.resize(NumMaskElts, 0);
+
+  // Fast path - if the constants match the mask size then copy direct.
+  if (MaskEltSizeInBits == CstEltSizeInBits) {
+    assert(NumCstElts == NumMaskElts && "Unaligned shuffle mask size");
+    for (unsigned i = 0; i != NumMaskElts; ++i) {
+      Constant *COp = C->getAggregateElement(i);
+      if (!COp || (!isa<UndefValue>(COp) && !isa<ConstantInt>(COp)))
+        return false;
+
+      if (isa<UndefValue>(COp)) {
+        UndefElts.setBit(i);
+        RawMask[i] = 0;
+        continue;
+      }
+
+      auto *Elt = cast<ConstantInt>(COp);
+      RawMask[i] = Elt->getValue().getZExtValue();
+    }
+    return true;
+  }
+
   // Extract all the undef/constant element data and pack into single bitsets.
   APInt UndefBits(CstSizeInBits, 0);
   APInt MaskBits(CstSizeInBits, 0);
@@ -69,13 +96,6 @@ static bool extractConstantMask(const Constant *C, unsigned MaskEltSizeInBits,
   }
 
   // Now extract the undef/constant bit data into the raw shuffle masks.
-  assert((CstSizeInBits % MaskEltSizeInBits) == 0 &&
-         "Unaligned shuffle mask size");
-
-  unsigned NumMaskElts = CstSizeInBits / MaskEltSizeInBits;
-  UndefElts = APInt(NumMaskElts, 0);
-  RawMask.resize(NumMaskElts, 0);
-
   for (unsigned i = 0; i != NumMaskElts; ++i) {
     unsigned BitOffset = i * MaskEltSizeInBits;
     APInt EltUndef = UndefBits.extractBits(MaskEltSizeInBits, BitOffset);
