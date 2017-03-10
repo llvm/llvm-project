@@ -204,133 +204,104 @@ std::string polly::getIslCompatibleName(const std::string &Prefix,
   return getIslCompatibleName(Prefix, ValStr, Suffix);
 }
 
-#define DEFINE_ISLPTR(TYPE)                                                    \
-  template <> void IslPtr<isl_##TYPE>::dump() const { isl_##TYPE##_dump(Obj); }
-
-namespace polly {
-DEFINE_ISLPTR(id)
-DEFINE_ISLPTR(val)
-DEFINE_ISLPTR(space)
-DEFINE_ISLPTR(basic_map)
-DEFINE_ISLPTR(map)
-DEFINE_ISLPTR(union_map)
-DEFINE_ISLPTR(basic_set)
-DEFINE_ISLPTR(set)
-DEFINE_ISLPTR(union_set)
-DEFINE_ISLPTR(aff)
-DEFINE_ISLPTR(multi_aff)
-DEFINE_ISLPTR(pw_aff)
-DEFINE_ISLPTR(pw_multi_aff)
-DEFINE_ISLPTR(multi_pw_aff)
-DEFINE_ISLPTR(union_pw_aff)
-DEFINE_ISLPTR(multi_union_pw_aff)
-DEFINE_ISLPTR(union_pw_multi_aff)
-} // namespace polly
-
-void polly::foreachElt(const IslPtr<isl_map> &Map,
-                       const std::function<void(IslPtr<isl_basic_map>)> &F) {
+void polly::foreachElt(const isl::map &Map,
+                       const std::function<void(isl::basic_map)> &F) {
   isl_map_foreach_basic_map(
       Map.keep(),
       [](__isl_take isl_basic_map *BMap, void *User) -> isl_stat {
         auto &F =
-            *static_cast<const std::function<void(IslPtr<isl_basic_map>)> *>(
-                User);
+            *static_cast<const std::function<void(isl::basic_map)> *>(User);
         F(give(BMap));
         return isl_stat_ok;
       },
       const_cast<void *>(static_cast<const void *>(&F)));
 }
 
-void polly::foreachElt(const IslPtr<isl_set> &Set,
-                       const std::function<void(IslPtr<isl_basic_set>)> &F) {
+void polly::foreachElt(const isl::set &Set,
+                       const std::function<void(isl::basic_set)> &F) {
   isl_set_foreach_basic_set(
       Set.keep(),
       [](__isl_take isl_basic_set *BSet, void *User) -> isl_stat {
         auto &F =
-            *static_cast<const std::function<void(IslPtr<isl_basic_set>)> *>(
-                User);
+            *static_cast<const std::function<void(isl::basic_set)> *>(User);
         F(give(BSet));
         return isl_stat_ok;
       },
       const_cast<void *>(static_cast<const void *>(&F)));
 }
 
-void polly::foreachElt(const IslPtr<isl_union_map> &UMap,
-                       const std::function<void(IslPtr<isl_map> Map)> &F) {
+void polly::foreachElt(const isl::union_map &UMap,
+                       const std::function<void(isl::map Map)> &F) {
   isl_union_map_foreach_map(
       UMap.keep(),
       [](__isl_take isl_map *Map, void *User) -> isl_stat {
-        auto &F =
-            *static_cast<const std::function<void(IslPtr<isl_map>)> *>(User);
+        auto &F = *static_cast<const std::function<void(isl::map)> *>(User);
         F(give(Map));
         return isl_stat_ok;
       },
       const_cast<void *>(static_cast<const void *>(&F)));
 }
 
-void polly::foreachElt(const IslPtr<isl_union_set> &USet,
-                       const std::function<void(IslPtr<isl_set> Set)> &F) {
+void polly::foreachElt(const isl::union_set &USet,
+                       const std::function<void(isl::set Set)> &F) {
   isl_union_set_foreach_set(
       USet.keep(),
       [](__isl_take isl_set *Set, void *User) -> isl_stat {
-        auto &F =
-            *static_cast<const std::function<void(IslPtr<isl_set>)> *>(User);
+        auto &F = *static_cast<const std::function<void(isl::set)> *>(User);
         F(give(Set));
         return isl_stat_ok;
       },
       const_cast<void *>(static_cast<const void *>(&F)));
 }
 
-void polly::foreachElt(const IslPtr<isl_union_pw_aff> &UPwAff,
-                       const std::function<void(IslPtr<isl_pw_aff>)> &F) {
+void polly::foreachElt(const isl::union_pw_aff &UPwAff,
+                       const std::function<void(isl::pw_aff)> &F) {
   isl_union_pw_aff_foreach_pw_aff(
       UPwAff.keep(),
       [](__isl_take isl_pw_aff *PwAff, void *User) -> isl_stat {
-        auto &F =
-            *static_cast<const std::function<void(IslPtr<isl_pw_aff>)> *>(User);
+        auto &F = *static_cast<const std::function<void(isl::pw_aff)> *>(User);
         F(give(PwAff));
         return isl_stat_ok;
       },
       const_cast<void *>(static_cast<const void *>(&F)));
 }
 
-isl_stat polly::foreachEltWithBreak(
-    const IslPtr<isl_map> &Map,
-    const std::function<isl_stat(IslPtr<isl_basic_map>)> &F) {
+isl_stat
+polly::foreachEltWithBreak(const isl::map &Map,
+                           const std::function<isl_stat(isl::basic_map)> &F) {
   return isl_map_foreach_basic_map(
       Map.keep(),
       [](__isl_take isl_basic_map *BMap, void *User) -> isl_stat {
-        auto &F = *static_cast<
-            const std::function<isl_stat(IslPtr<isl_basic_map>)> *>(User);
+        auto &F =
+            *static_cast<const std::function<isl_stat(isl::basic_map)> *>(User);
         return F(give(BMap));
       },
       const_cast<void *>(static_cast<const void *>(&F)));
 }
 
-isl_stat polly::foreachEltWithBreak(
-    const IslPtr<isl_union_map> &UMap,
-    const std::function<isl_stat(IslPtr<isl_map> Map)> &F) {
+isl_stat
+polly::foreachEltWithBreak(const isl::union_map &UMap,
+                           const std::function<isl_stat(isl::map Map)> &F) {
   return isl_union_map_foreach_map(
       UMap.keep(),
       [](__isl_take isl_map *Map, void *User) -> isl_stat {
         auto &F =
-            *static_cast<const std::function<isl_stat(IslPtr<isl_map> Map)> *>(
-                User);
+            *static_cast<const std::function<isl_stat(isl::map Map)> *>(User);
         return F(give(Map));
       },
       const_cast<void *>(static_cast<const void *>(&F)));
 }
 
 isl_stat polly::foreachPieceWithBreak(
-    const IslPtr<isl_pw_aff> &PwAff,
-    const std::function<isl_stat(IslPtr<isl_set>, IslPtr<isl_aff>)> &F) {
+    const isl::pw_aff &PwAff,
+    const std::function<isl_stat(isl::set, isl::aff)> &F) {
   return isl_pw_aff_foreach_piece(
       PwAff.keep(),
       [](__isl_take isl_set *Domain, __isl_take isl_aff *Aff,
          void *User) -> isl_stat {
-        auto &F = *static_cast<
-            const std::function<isl_stat(IslPtr<isl_set>, IslPtr<isl_aff>)> *>(
-            User);
+        auto &F =
+            *static_cast<const std::function<isl_stat(isl::set, isl::aff)> *>(
+                User);
         return F(give(Domain), give(Aff));
       },
       const_cast<void *>(static_cast<const void *>(&F)));

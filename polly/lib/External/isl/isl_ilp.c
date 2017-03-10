@@ -483,12 +483,15 @@ enum isl_lp_result isl_set_opt(__isl_keep isl_set *set, int max,
 	__isl_keep isl_aff *obj, isl_int *opt)
 {
 	enum isl_lp_result res;
+	isl_bool aligned;
 
 	if (!set || !obj)
 		return isl_lp_error;
 
-	if (isl_space_match(set->dim, isl_dim_param,
-			    obj->ls->dim, isl_dim_param))
+	aligned = isl_set_space_has_equal_params(set, obj->ls->dim);
+	if (aligned < 0)
+		return isl_lp_error;
+	if (aligned)
 		return isl_set_opt_aligned(set, max, obj, opt);
 
 	set = isl_set_copy(set);

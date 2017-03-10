@@ -3936,8 +3936,7 @@ isl_bool isl_map_plain_is_disjoint(__isl_keep isl_map *map1,
 	if (disjoint < 0 || disjoint)
 		return disjoint;
 
-	match = isl_space_match(map1->dim, isl_dim_param,
-				map2->dim, isl_dim_param);
+	match = isl_map_has_equal_params(map1, map2);
 	if (match < 0 || !match)
 		return match < 0 ? isl_bool_error : isl_bool_false;
 

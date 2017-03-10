@@ -27,11 +27,10 @@ namespace {
 /// Print a schedule to @p OS.
 ///
 /// Prints the schedule for each statements on a new line.
-void printSchedule(raw_ostream &OS, const IslPtr<isl_union_map> &Schedule,
+void printSchedule(raw_ostream &OS, const isl::union_map &Schedule,
                    int indent) {
-  foreachElt(Schedule, [&OS, indent](IslPtr<isl_map> Map) {
-    OS.indent(indent) << Map << "\n";
-  });
+  foreachElt(Schedule,
+             [&OS, indent](isl::map Map) { OS.indent(indent) << Map << "\n"; });
 }
 
 /// Flatten the schedule stored in an polly::Scop.
@@ -41,7 +40,7 @@ private:
   const FlattenSchedule &operator=(const FlattenSchedule &) = delete;
 
   std::shared_ptr<isl_ctx> IslCtx;
-  IslPtr<isl_union_map> OldSchedule;
+  isl::union_map OldSchedule;
 
 public:
   static char ID;

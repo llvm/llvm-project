@@ -1211,25 +1211,34 @@ bool DevirtModule::run() {
         if (!FS)
           continue;
         // FIXME: Only add live functions.
-        for (FunctionSummary::VFuncId VF : FS->type_test_assume_vcalls())
-          for (Metadata *MD : MetadataByGUID[VF.GUID])
+        for (FunctionSummary::VFuncId VF : FS->type_test_assume_vcalls()) {
+          for (Metadata *MD : MetadataByGUID[VF.GUID]) {
             CallSlots[{MD, VF.Offset}].CSInfo.SummaryHasTypeTestAssumeUsers =
                 true;
-        for (FunctionSummary::VFuncId VF : FS->type_checked_load_vcalls())
-          for (Metadata *MD : MetadataByGUID[VF.GUID])
+          }
+        }
+        for (FunctionSummary::VFuncId VF : FS->type_checked_load_vcalls()) {
+          for (Metadata *MD : MetadataByGUID[VF.GUID]) {
             CallSlots[{MD, VF.Offset}]
                 .CSInfo.SummaryTypeCheckedLoadUsers.push_back(FS);
+          }
+        }
         for (const FunctionSummary::ConstVCall &VC :
-             FS->type_test_assume_const_vcalls())
-          for (Metadata *MD : MetadataByGUID[VC.VFunc.GUID])
+             FS->type_test_assume_const_vcalls()) {
+          for (Metadata *MD : MetadataByGUID[VC.VFunc.GUID]) {
             CallSlots[{MD, VC.VFunc.Offset}]
-                .ConstCSInfo[VC.Args].SummaryHasTypeTestAssumeUsers = true;
+                .ConstCSInfo[VC.Args]
+                .SummaryHasTypeTestAssumeUsers = true;
+          }
+        }
         for (const FunctionSummary::ConstVCall &VC :
-             FS->type_checked_load_const_vcalls())
-          for (Metadata *MD : MetadataByGUID[VC.VFunc.GUID])
+             FS->type_checked_load_const_vcalls()) {
+          for (Metadata *MD : MetadataByGUID[VC.VFunc.GUID]) {
             CallSlots[{MD, VC.VFunc.Offset}]
                 .ConstCSInfo[VC.Args]
                 .SummaryTypeCheckedLoadUsers.push_back(FS);
+          }
+        }
       }
     }
   }

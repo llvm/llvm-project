@@ -507,30 +507,39 @@ void MCObjectFileInfo::initELFMCObjectFileInfo(const Triple &T) {
   COFFDebugSymbolsSection = nullptr;
   COFFDebugTypesSection = nullptr;
 
+  unsigned DebugSecType = ELF::SHT_PROGBITS;
+
+  // MIPS .debug_* sections should have SHT_MIPS_DWARF section type
+  // to distinguish among sections contain DWARF and ECOFF debug formats.
+  // Sections with ECOFF debug format are obsoleted and marked by SHT_PROGBITS.
+  if (T.getArch() == Triple::mips || T.getArch() == Triple::mipsel ||
+      T.getArch() == Triple::mips64 || T.getArch() == Triple::mips64el)
+    DebugSecType = ELF::SHT_MIPS_DWARF;
+
   // Debug Info Sections.
   DwarfAbbrevSection =
-      Ctx->getELFSection(".debug_abbrev", ELF::SHT_PROGBITS, 0);
-  DwarfInfoSection = Ctx->getELFSection(".debug_info", ELF::SHT_PROGBITS, 0);
-  DwarfLineSection = Ctx->getELFSection(".debug_line", ELF::SHT_PROGBITS, 0);
-  DwarfFrameSection = Ctx->getELFSection(".debug_frame", ELF::SHT_PROGBITS, 0);
+      Ctx->getELFSection(".debug_abbrev", DebugSecType, 0);
+  DwarfInfoSection = Ctx->getELFSection(".debug_info", DebugSecType, 0);
+  DwarfLineSection = Ctx->getELFSection(".debug_line", DebugSecType, 0);
+  DwarfFrameSection = Ctx->getELFSection(".debug_frame", DebugSecType, 0);
   DwarfPubNamesSection =
-      Ctx->getELFSection(".debug_pubnames", ELF::SHT_PROGBITS, 0);
+      Ctx->getELFSection(".debug_pubnames", DebugSecType, 0);
   DwarfPubTypesSection =
-      Ctx->getELFSection(".debug_pubtypes", ELF::SHT_PROGBITS, 0);
+      Ctx->getELFSection(".debug_pubtypes", DebugSecType, 0);
   DwarfGnuPubNamesSection =
-      Ctx->getELFSection(".debug_gnu_pubnames", ELF::SHT_PROGBITS, 0);
+      Ctx->getELFSection(".debug_gnu_pubnames", DebugSecType, 0);
   DwarfGnuPubTypesSection =
-      Ctx->getELFSection(".debug_gnu_pubtypes", ELF::SHT_PROGBITS, 0);
+      Ctx->getELFSection(".debug_gnu_pubtypes", DebugSecType, 0);
   DwarfStrSection =
-      Ctx->getELFSection(".debug_str", ELF::SHT_PROGBITS,
+      Ctx->getELFSection(".debug_str", DebugSecType,
                          ELF::SHF_MERGE | ELF::SHF_STRINGS, 1, "");
-  DwarfLocSection = Ctx->getELFSection(".debug_loc", ELF::SHT_PROGBITS, 0);
+  DwarfLocSection = Ctx->getELFSection(".debug_loc", DebugSecType, 0);
   DwarfARangesSection =
-      Ctx->getELFSection(".debug_aranges", ELF::SHT_PROGBITS, 0);
+      Ctx->getELFSection(".debug_aranges", DebugSecType, 0);
   DwarfRangesSection =
-      Ctx->getELFSection(".debug_ranges", ELF::SHT_PROGBITS, 0);
+      Ctx->getELFSection(".debug_ranges", DebugSecType, 0);
   DwarfMacinfoSection =
-      Ctx->getELFSection(".debug_macinfo", ELF::SHT_PROGBITS, 0);
+      Ctx->getELFSection(".debug_macinfo", DebugSecType, 0);
 
   // DWARF5 Experimental Debug Info
 
@@ -546,27 +555,27 @@ void MCObjectFileInfo::initELFMCObjectFileInfo(const Triple &T) {
 
   // Fission Sections
   DwarfInfoDWOSection =
-      Ctx->getELFSection(".debug_info.dwo", ELF::SHT_PROGBITS, 0);
+      Ctx->getELFSection(".debug_info.dwo", DebugSecType, 0);
   DwarfTypesDWOSection =
-      Ctx->getELFSection(".debug_types.dwo", ELF::SHT_PROGBITS, 0);
+      Ctx->getELFSection(".debug_types.dwo", DebugSecType, 0);
   DwarfAbbrevDWOSection =
-      Ctx->getELFSection(".debug_abbrev.dwo", ELF::SHT_PROGBITS, 0);
+      Ctx->getELFSection(".debug_abbrev.dwo", DebugSecType, 0);
   DwarfStrDWOSection =
-      Ctx->getELFSection(".debug_str.dwo", ELF::SHT_PROGBITS,
+      Ctx->getELFSection(".debug_str.dwo", DebugSecType,
                          ELF::SHF_MERGE | ELF::SHF_STRINGS, 1, "");
   DwarfLineDWOSection =
-      Ctx->getELFSection(".debug_line.dwo", ELF::SHT_PROGBITS, 0);
+      Ctx->getELFSection(".debug_line.dwo", DebugSecType, 0);
   DwarfLocDWOSection =
-      Ctx->getELFSection(".debug_loc.dwo", ELF::SHT_PROGBITS, 0);
+      Ctx->getELFSection(".debug_loc.dwo", DebugSecType, 0);
   DwarfStrOffDWOSection =
-      Ctx->getELFSection(".debug_str_offsets.dwo", ELF::SHT_PROGBITS, 0);
-  DwarfAddrSection = Ctx->getELFSection(".debug_addr", ELF::SHT_PROGBITS, 0);
+      Ctx->getELFSection(".debug_str_offsets.dwo", DebugSecType, 0);
+  DwarfAddrSection = Ctx->getELFSection(".debug_addr", DebugSecType, 0);
 
   // DWP Sections
   DwarfCUIndexSection =
-      Ctx->getELFSection(".debug_cu_index", ELF::SHT_PROGBITS, 0);
+      Ctx->getELFSection(".debug_cu_index", DebugSecType, 0);
   DwarfTUIndexSection =
-      Ctx->getELFSection(".debug_tu_index", ELF::SHT_PROGBITS, 0);
+      Ctx->getELFSection(".debug_tu_index", DebugSecType, 0);
 
   StackMapSection =
       Ctx->getELFSection(".llvm_stackmaps", ELF::SHT_PROGBITS, ELF::SHF_ALLOC);

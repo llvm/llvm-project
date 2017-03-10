@@ -266,6 +266,44 @@ define amdgpu_ps <2 x float> @extract_elt0_elt1_buffer_load_format_v4f32(<4 x i3
   ret <2 x float> %shuf
 }
 
+; The initial insertion point is at the extractelement
+; CHECK-LABEL: @extract01_bitcast_buffer_load_format_v4f32(
+; CHECK-NEXT: %tmp = call <2 x float> @llvm.amdgcn.buffer.load.format.v2f32(<4 x i32> undef, i32 %arg, i32 16, i1 false, i1 false)
+; CHECK-NEXT: %1 = shufflevector <2 x float> %tmp, <2 x float> undef, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+; CHECK-NEXT: %tmp1 = bitcast <4 x float> %1 to <2 x double>
+; CHECK-NEXT: %tmp2 = extractelement <2 x double> %tmp1, i32 0
+; CHECK-NEXT: ret double %tmp2
+define double @extract01_bitcast_buffer_load_format_v4f32(i32 %arg) #0 {
+  %tmp = call <4 x float> @llvm.amdgcn.buffer.load.format.v4f32(<4 x i32> undef, i32 %arg, i32 16, i1 false, i1 false) #3
+  %tmp1 = bitcast <4 x float> %tmp to <2 x double>
+  %tmp2 = extractelement <2 x double> %tmp1, i32 0
+  ret double %tmp2
+}
+
+; CHECK-LABEL: @extract0_bitcast_buffer_load_format_v4f32(
+; CHECK-NEXT: %tmp = call float @llvm.amdgcn.buffer.load.format.f32(<4 x i32> undef, i32 %arg, i32 16, i1 false, i1 false)
+; CHECK-NEXT: %tmp2 = bitcast float %tmp to i32
+; CHECK-NEXT: ret i32 %tmp2
+define i32 @extract0_bitcast_buffer_load_format_v4f32(i32 %arg) #0 {
+  %tmp = call <4 x float> @llvm.amdgcn.buffer.load.format.v4f32(<4 x i32> undef, i32 %arg, i32 16, i1 false, i1 false) #3
+  %tmp1 = bitcast <4 x float> %tmp to <4 x i32>
+  %tmp2 = extractelement <4 x i32> %tmp1, i32 0
+  ret i32 %tmp2
+}
+
+; CHECK-LABEL: @extract_lo16_0_bitcast_buffer_load_format_v4f32(
+; CHECK-NEXT: %tmp = call float @llvm.amdgcn.buffer.load.format.f32(<4 x i32> undef, i32 %arg, i32 16, i1 false, i1 false)
+; CHECK-NEXT: %1 = insertelement <4 x float> undef, float %tmp, i64 0
+; CHECK-NEXT: %tmp1 = bitcast <4 x float> %1 to <8 x i16>
+; CHECK-NEXT: %tmp2 = extractelement <8 x i16> %tmp1, i32 0
+; CHECK-NEXT: ret i16 %tmp2
+define i16 @extract_lo16_0_bitcast_buffer_load_format_v4f32(i32 %arg) #0 {
+  %tmp = call <4 x float> @llvm.amdgcn.buffer.load.format.v4f32(<4 x i32> undef, i32 %arg, i32 16, i1 false, i1 false) #3
+  %tmp1 = bitcast <4 x float> %tmp to <8 x i16>
+  %tmp2 = extractelement <8 x i16> %tmp1, i32 0
+  ret i16 %tmp2
+}
+
 declare float @llvm.amdgcn.buffer.load.f32(<4 x i32>, i32, i32, i1, i1) #1
 declare <1 x float> @llvm.amdgcn.buffer.load.v1f32(<4 x i32>, i32, i32, i1, i1) #1
 declare <2 x float> @llvm.amdgcn.buffer.load.v2f32(<4 x i32>, i32, i32, i1, i1) #1

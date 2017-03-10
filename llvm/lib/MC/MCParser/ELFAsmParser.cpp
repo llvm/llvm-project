@@ -395,7 +395,10 @@ bool ELFAsmParser::maybeParseSectionType(StringRef &TypeName) {
     return TokError("expected '@<type>', '%<type>' or \"<type>\"");
   if (!L.is(AsmToken::String))
     Lex();
-  if (getParser().parseIdentifier(TypeName))
+  if (L.is(AsmToken::Integer)) {
+    TypeName = getTok().getString();
+    Lex();
+  } else if (getParser().parseIdentifier(TypeName))
     return TokError("expected identifier in directive");
   return false;
 }
@@ -580,7 +583,7 @@ EndStmt:
       Type = ELF::SHT_NOTE;
     else if (TypeName == "unwind")
       Type = ELF::SHT_X86_64_UNWIND;
-    else
+    else if (TypeName.getAsInteger(0, Type))
       return TokError("unknown section type");
   }
 
