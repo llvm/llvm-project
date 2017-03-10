@@ -1327,6 +1327,13 @@ bool CodeGenFunction::EmitScalarRangeCheck(llvm::Value *Value, QualType Ty,
   if (!NeedsBoolCheck && !NeedsEnumCheck)
     return false;
 
+  // Single-bit booleans don't need to be checked. Special-case this to avoid
+  // a bit width mismatch when handling bitfield values. This is handled by
+  // EmitFromMemory for the non-bitfield case.
+  if (IsBool &&
+      cast<llvm::IntegerType>(Value->getType())->getBitWidth() == 1)
+    return false;
+
   llvm::APInt Min, End;
   if (!getRangeForType(*this, Ty, Min, End, /*StrictEnums=*/true, IsBool))
     return true;
@@ -1549,10 +1556,11 @@ RValue CodeGenFunction::EmitLoadOfLValue(LValue LV, SourceLocation Loc) {
     return EmitLoadOfGlobalRegLValue(LV);
 
   assert(LV.isBitField() && "Unknown LValue type!");
-  return EmitLoadOfBitfieldLValue(LV);
+  return EmitLoadOfBitfieldLValue(LV, Loc);
 }
 
-RValue CodeGenFunction::EmitLoadOfBitfieldLValue(LValue LV) {
+RValue CodeGenFunction::EmitLoadOfBitfieldLValue(LValue LV,
+                                                 SourceLocation Loc) {
   const CGBitFieldInfo &Info = LV.getBitFieldInfo();
 
   // Get the output type.
@@ -1577,7 +1585,7 @@ RValue CodeGenFunction::EmitLoadOfBitfieldLValue(LValue LV) {
                               "bf.clear");
   }
   Val = Builder.CreateIntCast(Val, ResLTy, Info.IsSigned, "bf.cast");
-
+  EmitScalarRangeCheck(Val, LV.getType(), Loc);
   return RValue::get(Val);
 }
 
