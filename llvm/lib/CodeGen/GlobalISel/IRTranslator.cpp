@@ -1067,7 +1067,16 @@ bool IRTranslator::translate(const Constant &C, unsigned Reg) {
     EntryBuilder.buildConstant(Reg, 0);
   else if (auto GV = dyn_cast<GlobalValue>(&C))
     EntryBuilder.buildGlobalValue(Reg, GV);
-  else if (auto CE = dyn_cast<ConstantExpr>(&C)) {
+  else if (auto CAZ = dyn_cast<ConstantAggregateZero>(&C)) {
+    if (!CAZ->getType()->isVectorTy())
+      return false;
+    std::vector<unsigned> Ops;
+    for (unsigned i = 0; i < CAZ->getNumElements(); ++i) {
+      Constant &Elt = *CAZ->getElementValue(i);
+      Ops.push_back(getOrCreateVReg(Elt));
+    }
+    EntryBuilder.buildMerge(Reg, Ops);
+  } else if (auto CE = dyn_cast<ConstantExpr>(&C)) {
     switch(CE->getOpcode()) {
 #define HANDLE_INST(NUM, OPCODE, CLASS)                         \
       case Instruction::OPCODE: return translate##OPCODE(*CE, EntryBuilder);

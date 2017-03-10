@@ -1303,3 +1303,28 @@ define i32 @test_singleelementvector(i32 %elt){
   %res = extractelement <1 x i32> %vec, i32 0
   ret i32 %res
 }
+
+define <2 x i32> @test_constantaggzerovector_v2i32() {
+; CHECK-LABEL: name: test_constantaggzerovector_v2i32
+; CHECK: [[ZERO:%[0-9]+]](s32) = G_CONSTANT i32 0
+; CHECK: [[VEC:%[0-9]+]](<2 x s32>) = G_MERGE_VALUES [[ZERO]](s32), [[ZERO]](s32)
+; CHECK: %d0 = COPY [[VEC]](<2 x s32>)
+  ret <2 x i32> zeroinitializer
+}
+
+define <2 x float> @test_constantaggzerovector_v2f32() {
+; CHECK-LABEL: name: test_constantaggzerovector_v2f32
+; CHECK: [[ZERO:%[0-9]+]](s32) = G_FCONSTANT float 0.000000e+00
+; CHECK: [[VEC:%[0-9]+]](<2 x s32>) = G_MERGE_VALUES [[ZERO]](s32), [[ZERO]](s32)
+; CHECK: %d0 = COPY [[VEC]](<2 x s32>)
+  ret <2 x float> zeroinitializer
+}
+
+define i32 @test_constantaggzerovector_v3i32() {
+; CHECK-LABEL: name: test_constantaggzerovector_v3i32
+; CHECK: [[ZERO:%[0-9]+]](s32) = G_CONSTANT i32 0
+; CHECK: [[VEC:%[0-9]+]](<3 x s32>) = G_MERGE_VALUES [[ZERO]](s32), [[ZERO]](s32), [[ZERO]](s32)
+; CHECK: G_EXTRACT_VECTOR_ELT [[VEC]](<3 x s32>)
+  %elt = extractelement <3 x i32> zeroinitializer, i32 1
+  ret i32 %elt
+}
