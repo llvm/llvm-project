@@ -1,16 +1,17 @@
 // REQUIRES: amdgpu-registered-target
 // RUN: %clang_cc1 -triple amdgcn-- -target-cpu tahiti -verify -S -o - %s
 
-// FIXME: We only get one error if the functions are the other order in the
-// file.
-
 #pragma OPENCL EXTENSION cl_khr_fp64 : enable
 typedef unsigned long ulong;
 typedef unsigned int uint;
 
-ulong test_s_memrealtime()
+// To get all errors for feature checking we need to put them in one function
+// since Clang will stop codegen for the next function if it finds error during
+// codegen of the previous function.
+void test_target_builtin(global int* out, int a)
 {
-  return __builtin_amdgcn_s_memrealtime(); // expected-error {{'__builtin_amdgcn_s_memrealtime' needs target feature s-memrealtime}}
+  __builtin_amdgcn_s_memrealtime(); // expected-error {{'__builtin_amdgcn_s_memrealtime' needs target feature s-memrealtime}}
+  *out = __builtin_amdgcn_mov_dpp(a, 0, 0, 0, false); // expected-error {{'__builtin_amdgcn_mov_dpp' needs target feature dpp}}
 }
 
 void test_s_sleep(int x)
@@ -92,3 +93,12 @@ void test_s_getreg(global int* out, int a)
 {
   *out = __builtin_amdgcn_s_getreg(a); // expected-error {{argument to '__builtin_amdgcn_s_getreg' must be a constant integer}}
 }
+
+void test_mov_dpp2(global int* out, int a, int b, int c, int d, bool e)
+{
+  *out = __builtin_amdgcn_mov_dpp(a, b, 0, 0, false); // expected-error {{argument to '__builtin_amdgcn_mov_dpp' must be a constant integer}}
+  *out = __builtin_amdgcn_mov_dpp(a, 0, c, 0, false); // expected-error {{argument to '__builtin_amdgcn_mov_dpp' must be a constant integer}}
+  *out = __builtin_amdgcn_mov_dpp(a, 0, 0, d, false); // expected-error {{argument to '__builtin_amdgcn_mov_dpp' must be a constant integer}}
+  *out = __builtin_amdgcn_mov_dpp(a, 0, 0, 0, e); // expected-error {{argument to '__builtin_amdgcn_mov_dpp' must be a constant integer}}
+}
+
