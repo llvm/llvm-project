@@ -48,6 +48,22 @@ The following build steps are performed:
     CC=$LLVM_BUILD/bin/clang cmake -DLLVM_DIR=$LLVM_BUILD -DAMDHSACOD=$HSA_DIR/bin/x86_64/amdhsacod ..
     make
 
+It is also possible to use compiler that only has AMDGPU target enabled if you build prepare-builtins separately
+with host compiler and pass explicit target option to CMake:
+
+    export LLVM_BUILD=... (path to LLVM build)
+    # Build prepare-builtins
+    cd utils
+    mkdir build
+    cd build
+    cmake -DLLVM_BUILD=$LLVM_BUILD ..
+    make
+    # Build bitcode libraries
+    cd ../..
+    mkdir build
+    cd build
+    CC=$LLVM_BUILD/bin/clang cmake -DLLVM_DIR=$LLVM_BUILD -DAMDHSACOD=$HSA_DIR/bin/x86_64/amdhsacod -DCMAKE_C_FLAGS="-target amdgcn--amdhsa" -DCMAKE_CXX_FLAGS="-target amdgcn--amdhsa" -DPREPARE_BUILTINS=`cd ../utils/build/prepare-builtins/; pwd`/prepare-builtins ..
+
 To install artifacts:
     make install
 
