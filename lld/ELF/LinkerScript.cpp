@@ -63,7 +63,7 @@ template <class ELFT> static SymbolBody *addRegular(SymbolAssignment *Cmd) {
       Cmd->Name, /*Type*/ 0, Visibility, /*CanOmitFromDynSym*/ false,
       /*File*/ nullptr);
   Sym->Binding = STB_GLOBAL;
-  OutputSection *Sec =
+  SectionBase *Sec =
       Cmd->Expression.IsAbsolute() ? nullptr : Cmd->Expression.Section();
   replaceBody<DefinedRegular>(Sym, Cmd->Name, /*IsLocal=*/false, Visibility,
                               STT_NOTYPE, 0, 0, Sec, nullptr);
@@ -1617,7 +1617,7 @@ Expr ScriptParser::readExpr() {
 static Expr combine(StringRef Op, Expr L, Expr R) {
   auto IsAbs = [=] { return L.IsAbsolute() && R.IsAbsolute(); };
   auto GetOutSec = [=] {
-    OutputSection *S = L.Section();
+    SectionBase *S = L.Section();
     return S ? S : R.Section();
   };
 
