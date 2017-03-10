@@ -235,7 +235,9 @@ namespace {
     SDValue visitADDLike(SDValue N0, SDValue N1, SDNode *LocReference);
     SDValue visitSUB(SDNode *N);
     SDValue visitADDC(SDNode *N);
+    SDValue visitUADDO(SDNode *N);
     SDValue visitSUBC(SDNode *N);
+    SDValue visitUSUBO(SDNode *N);
     SDValue visitADDE(SDNode *N);
     SDValue visitSUBE(SDNode *N);
     SDValue visitMUL(SDNode *N);
@@ -1399,7 +1401,9 @@ SDValue DAGCombiner::visit(SDNode *N) {
   case ISD::ADD:                return visitADD(N);
   case ISD::SUB:                return visitSUB(N);
   case ISD::ADDC:               return visitADDC(N);
+  case ISD::UADDO:              return visitUADDO(N);
   case ISD::SUBC:               return visitSUBC(N);
+  case ISD::USUBO:              return visitUSUBO(N);
   case ISD::ADDE:               return visitADDE(N);
   case ISD::SUBE:               return visitSUBE(N);
   case ISD::MUL:                return visitMUL(N);
@@ -1717,12 +1721,12 @@ SDValue DAGCombiner::foldBinOpIntoSelect(SDNode *BO) {
   EVT VT = Sel.getValueType();
   SDLoc DL(Sel);
   SDValue NewCT = DAG.getNode(BinOpcode, DL, VT, CT, C1);
-  assert((isConstantOrConstantVector(NewCT) ||
+  assert((NewCT.isUndef() || isConstantOrConstantVector(NewCT) ||
           isConstantFPBuildVectorOrConstantFP(NewCT)) &&
          "Failed to constant fold a binop with constant operands");
 
   SDValue NewCF = DAG.getNode(BinOpcode, DL, VT, CF, C1);
-  assert((isConstantOrConstantVector(NewCF) ||
+  assert((NewCF.isUndef() || isConstantOrConstantVector(NewCF) ||
           isConstantFPBuildVectorOrConstantFP(NewCF)) &&
          "Failed to constant fold a binop with constant operands");
 
@@ -1922,6 +1926,39 @@ SDValue DAGCombiner::visitADDC(SDNode *N) {
   if (DAG.computeOverflowKind(N0, N1) == SelectionDAG::OFK_Never)
     return CombineTo(N, DAG.getNode(ISD::ADD, DL, VT, N0, N1),
                      DAG.getNode(ISD::CARRY_FALSE, DL, MVT::Glue));
+
+  return SDValue();
+}
+
+SDValue DAGCombiner::visitUADDO(SDNode *N) {
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+  EVT VT = N0.getValueType();
+  if (VT.isVector())
+    return SDValue();
+
+  EVT CarryVT = N->getValueType(1);
+  SDLoc DL(N);
+
+  // If the flag result is dead, turn this into an ADD.
+  if (!N->hasAnyUseOfValue(1))
+    return CombineTo(N, DAG.getNode(ISD::ADD, DL, VT, N0, N1),
+                     DAG.getUNDEF(CarryVT));
+
+  // canonicalize constant to RHS.
+  ConstantSDNode *N0C = dyn_cast<ConstantSDNode>(N0);
+  ConstantSDNode *N1C = dyn_cast<ConstantSDNode>(N1);
+  if (N0C && !N1C)
+    return DAG.getNode(ISD::UADDO, DL, N->getVTList(), N1, N0);
+
+  // fold (uaddo x, 0) -> x + no carry out
+  if (isNullConstant(N1))
+    return CombineTo(N, N0, DAG.getConstant(0, DL, CarryVT));
+
+  // If it cannot overflow, transform into an add.
+  if (DAG.computeOverflowKind(N0, N1) == SelectionDAG::OFK_Never)
+    return CombineTo(N, DAG.getNode(ISD::ADD, DL, VT, N0, N1),
+                     DAG.getConstant(0, DL, CarryVT));
 
   return SDValue();
 }
@@ -2129,6 +2166,38 @@ SDValue DAGCombiner::visitSUBC(SDNode *N) {
   if (isAllOnesConstant(N0))
     return CombineTo(N, DAG.getNode(ISD::XOR, DL, VT, N1, N0),
                      DAG.getNode(ISD::CARRY_FALSE, DL, MVT::Glue));
+
+  return SDValue();
+}
+
+SDValue DAGCombiner::visitUSUBO(SDNode *N) {
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+  EVT VT = N0.getValueType();
+  if (VT.isVector())
+    return SDValue();
+
+  EVT CarryVT = N->getValueType(1);
+  SDLoc DL(N);
+
+  // If the flag result is dead, turn this into an SUB.
+  if (!N->hasAnyUseOfValue(1))
+    return CombineTo(N, DAG.getNode(ISD::SUB, DL, VT, N0, N1),
+                     DAG.getUNDEF(CarryVT));
+
+  // fold (usubo x, x) -> 0 + no borrow
+  if (N0 == N1)
+    return CombineTo(N, DAG.getConstant(0, DL, VT),
+                     DAG.getConstant(0, DL, CarryVT));
+
+  // fold (usubo x, 0) -> x + no borrow
+  if (isNullConstant(N1))
+    return CombineTo(N, N0, DAG.getConstant(0, DL, CarryVT));
+
+  // Canonicalize (usubo -1, x) -> ~x, i.e. (xor x, -1) + no borrow
+  if (isAllOnesConstant(N0))
+    return CombineTo(N, DAG.getNode(ISD::XOR, DL, VT, N1, N0),
+                     DAG.getConstant(0, DL, CarryVT));
 
   return SDValue();
 }
@@ -2417,6 +2486,9 @@ SDValue DAGCombiner::visitSDIV(SDNode *N) {
   if (N1C && N1C->isAllOnesValue())
     return DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(0, DL, VT), N0);
 
+  if (SDValue V = simplifyDivRem(N, DAG))
+    return V;
+
   if (SDValue NewSel = foldBinOpIntoSelect(N))
     return NewSel;
 
@@ -2482,9 +2554,6 @@ SDValue DAGCombiner::visitSDIV(SDNode *N) {
     if (SDValue DivRem = useDivRem(N))
         return DivRem;
 
-  if (SDValue V = simplifyDivRem(N, DAG))
-    return V;
-
   return SDValue();
 }
 
@@ -2507,6 +2576,9 @@ SDValue DAGCombiner::visitUDIV(SDNode *N) {
     if (SDValue Folded = DAG.FoldConstantArithmetic(ISD::UDIV, DL, VT,
                                                     N0C, N1C))
       return Folded;
+
+  if (SDValue V = simplifyDivRem(N, DAG))
+    return V;
 
   if (SDValue NewSel = foldBinOpIntoSelect(N))
     return NewSel;
@@ -2553,9 +2625,6 @@ SDValue DAGCombiner::visitUDIV(SDNode *N) {
     if (SDValue DivRem = useDivRem(N))
         return DivRem;
 
-  if (SDValue V = simplifyDivRem(N, DAG))
-    return V;
-
   return SDValue();
 }
 
@@ -2574,6 +2643,9 @@ SDValue DAGCombiner::visitREM(SDNode *N) {
   if (N0C && N1C)
     if (SDValue Folded = DAG.FoldConstantArithmetic(Opcode, DL, VT, N0C, N1C))
       return Folded;
+
+  if (SDValue V = simplifyDivRem(N, DAG))
+    return V;
 
   if (SDValue NewSel = foldBinOpIntoSelect(N))
     return NewSel;
@@ -2628,9 +2700,6 @@ SDValue DAGCombiner::visitREM(SDNode *N) {
   // sdiv, srem -> sdivrem
   if (SDValue DivRem = useDivRem(N))
     return DivRem.getValue(1);
-
-  if (SDValue V = simplifyDivRem(N, DAG))
-    return V;
 
   return SDValue();
 }

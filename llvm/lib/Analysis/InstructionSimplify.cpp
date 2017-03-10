@@ -1024,6 +1024,17 @@ static Value *simplifyDivRem(Value *Op0, Value *Op1, bool IsDiv) {
   if (match(Op1, m_Zero()))
     return UndefValue::get(Ty);
 
+  // If any element of a constant divisor vector is zero, the whole op is undef.
+  auto *Op1C = dyn_cast<Constant>(Op1);
+  if (Op1C && Ty->isVectorTy()) {
+    unsigned NumElts = Ty->getVectorNumElements();
+    for (unsigned i = 0; i != NumElts; ++i) {
+      Constant *Elt = Op1C->getAggregateElement(i);
+      if (Elt && Elt->isNullValue())
+        return UndefValue::get(Ty);
+    }
+  }
+
   // undef / X -> 0
   // undef % X -> 0
   if (match(Op0, m_Undef()))
@@ -1041,9 +1052,9 @@ static Value *simplifyDivRem(Value *Op0, Value *Op1, bool IsDiv) {
 
   // X / 1 -> X
   // X % 1 -> 0
-  // If this is a boolean op (single-bit type), we can't have division-by-zero
-  // or remainder-by-zero, so assume the divisor is 1.
-  if (match(Op1, m_One()) || Ty->isIntegerTy(1))
+  // If this is a boolean op (single-bit element type), we can't have
+  // division-by-zero or remainder-by-zero, so assume the divisor is 1.
+  if (match(Op1, m_One()) || Ty->getScalarType()->isIntegerTy(1))
     return IsDiv ? Op0 : Constant::getNullValue(Ty);
 
   return nullptr;

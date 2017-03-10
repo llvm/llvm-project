@@ -1,4 +1,4 @@
-//===------ DumpModulePass.cpp ----------------------------------*- C++ -*-===//
+//===------ DumpModulePass.h ------------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //

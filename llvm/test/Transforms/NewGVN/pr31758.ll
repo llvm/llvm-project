@@ -10,9 +10,6 @@ define void @tinkywinky() {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    br label [[BB90:%.*]]
 ; CHECK:       bb90:
-; CHECK-NEXT:    [[TMP91:%.*]] = bitcast %struct.dipsy** undef to %struct.patatino**
-; CHECK-NEXT:    [[TMP92:%.*]] = load %struct.patatino*, %struct.patatino** [[TMP91]], align 8
-; CHECK-NEXT:    [[TMP136:%.*]] = load %struct.patatino*, %struct.patatino** [[TMP91]], align 8
 ; CHECK-NEXT:    br label [[BB90]]
 ; CHECK:       bb138:
 ; CHECK-NEXT:    store i8 undef, i8* null

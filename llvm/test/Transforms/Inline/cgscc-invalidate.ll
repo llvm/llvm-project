@@ -65,15 +65,15 @@ entry:
 ; The 'test3_' prefixed functions test the scenario of not inlining preserving
 ; dominators after splitting an SCC into two smaller SCCs.
 
-; The first function gets visited first and we end up inlining everything we
-; can into this routine. That splits test3_g into a separate SCC that is enqued
-; for later processing.
-define void @test3_f() {
-; CHECK-LABEL: define void @test3_f()
+; This function ends up split into a separate SCC, which can cause its analyses
+; to become stale if the splitting doesn't properly invalidate things. Also, as
+; a consequence of being split out, test3_f is too large to inline by the time
+; we get here.
+define void @test3_g() {
+; CHECK-LABEL: define void @test3_g()
 entry:
-  ; Create the first edge in the SCC cycle.
-  call void @test3_g()
-; CHECK-NOT: @test3_g()
+  ; Create the second edge in the SCC cycle.
+  call void @test3_f()
 ; CHECK: call void @test3_f()
 
   ; Pull interesting CFG into this function.
@@ -84,15 +84,15 @@ entry:
 ; CHECK: ret void
 }
 
-; This function ends up split into a separate SCC, which can cause its analyses
-; to become stale if the splitting doesn't properly invalidate things. Also, as
-; a consequence of being split out, test3_f is too large to inline by the time
-; we get here.
-define void @test3_g() {
-; CHECK-LABEL: define void @test3_g()
+; The second function gets visited first and we end up inlining everything we
+; can into this routine. That splits test3_g into a separate SCC that is enqued
+; for later processing.
+define void @test3_f() {
+; CHECK-LABEL: define void @test3_f()
 entry:
-  ; Create the second edge in the SCC cycle.
-  call void @test3_f()
+  ; Create the first edge in the SCC cycle.
+  call void @test3_g()
+; CHECK-NOT: @test3_g()
 ; CHECK: call void @test3_f()
 
   ; Pull interesting CFG into this function.

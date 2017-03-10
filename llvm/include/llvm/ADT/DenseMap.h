@@ -53,6 +53,9 @@ class DenseMapIterator;
 template <typename DerivedT, typename KeyT, typename ValueT, typename KeyInfoT,
           typename BucketT>
 class DenseMapBase : public DebugEpochBase {
+  template <typename T>
+  using const_arg_type_t = typename const_pointer_or_const_ref<T>::type;
+
 public:
   typedef unsigned size_type;
   typedef KeyT key_type;
@@ -119,18 +122,18 @@ public:
   }
 
   /// Return 1 if the specified key is in the map, 0 otherwise.
-  size_type count(const KeyT &Val) const {
+  size_type count(const_arg_type_t<KeyT> Val) const {
     const BucketT *TheBucket;
     return LookupBucketFor(Val, TheBucket) ? 1 : 0;
   }
 
-  iterator find(const KeyT &Val) {
+  iterator find(const_arg_type_t<KeyT> Val) {
     BucketT *TheBucket;
     if (LookupBucketFor(Val, TheBucket))
       return iterator(TheBucket, getBucketsEnd(), *this, true);
     return end();
   }
-  const_iterator find(const KeyT &Val) const {
+  const_iterator find(const_arg_type_t<KeyT> Val) const {
     const BucketT *TheBucket;
     if (LookupBucketFor(Val, TheBucket))
       return const_iterator(TheBucket, getBucketsEnd(), *this, true);
@@ -159,7 +162,7 @@ public:
 
   /// lookup - Return the entry for the specified key, or a default
   /// constructed value if no such entry exists.
-  ValueT lookup(const KeyT &Val) const {
+  ValueT lookup(const_arg_type_t<KeyT> Val) const {
     const BucketT *TheBucket;
     if (LookupBucketFor(Val, TheBucket))
       return TheBucket->getSecond();

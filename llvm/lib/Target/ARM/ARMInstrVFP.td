@@ -532,8 +532,6 @@ def VCMPEH : AHuI<0b11101, 0b11, 0b0100, 0b11, 0,
                   IIC_fpCMP16, "vcmpe", ".f16\t$Sd, $Sm",
                   []>;
 
-
-// FIXME: Verify encoding after integrated assembler is working.
 def VCMPD  : ADuI<0b11101, 0b11, 0b0100, 0b01, 0,
                   (outs), (ins DPR:$Dd, DPR:$Dm),
                   IIC_fpCMP64, "vcmp", ".f64\t$Dd, $Dm",
@@ -606,7 +604,6 @@ def VCMPEZH : AHuI<0b11101, 0b11, 0b0101, 0b11, 0,
   let Inst{5}   = 0;
 }
 
-// FIXME: Verify encoding after integrated assembler is working.
 def VCMPZD  : ADuI<0b11101, 0b11, 0b0101, 0b01, 0,
                    (outs), (ins DPR:$Dd),
                    IIC_fpCMP64, "vcmp", ".f64\t$Dd, #0",
@@ -680,7 +677,6 @@ def VCVTSD  : VFPAI<(outs SPR:$Sd), (ins DPR:$Dm), VFPUnaryFrm,
 
 // Between half, single and double-precision.  For disassembly only.
 
-// FIXME: Verify encoding after integrated assembler is working.
 def VCVTBHS: ASuI<0b11101, 0b11, 0b0010, 0b01, 0, (outs SPR:$Sd), (ins SPR:$Sm),
                  /* FIXME */ IIC_fpCVTSH, "vcvtb", ".f32.f16\t$Sd, $Sm",
                  [/* For disassembly only; pattern left blank */]>,
@@ -1513,7 +1509,6 @@ def VTOUIZH : AVConv1IsH_Encode<0b11101, 0b11, 0b1100, 0b1001,
 
 // And the Z bit '0' variants, i.e. use the rounding mode specified by FPSCR.
 let Uses = [FPSCR] in {
-// FIXME: Verify encoding after integrated assembler is working.
 def VTOSIRD : AVConv1IsD_Encode<0b11101, 0b11, 0b1101, 0b1011,
                                 (outs SPR:$Sd), (ins DPR:$Dm),
                                 IIC_fpCVTDI, "vcvtr", ".s32.f64\t$Sd, $Dm",

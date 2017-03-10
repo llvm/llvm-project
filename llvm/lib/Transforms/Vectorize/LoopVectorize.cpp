@@ -3657,7 +3657,7 @@ void InnerLoopVectorizer::fixupIVUsers(PHINode *OrigPhi,
 
 namespace {
 struct CSEDenseMapInfo {
-  static bool canHandle(Instruction *I) {
+  static bool canHandle(const Instruction *I) {
     return isa<InsertElementInst>(I) || isa<ExtractElementInst>(I) ||
            isa<ShuffleVectorInst>(I) || isa<GetElementPtrInst>(I);
   }
@@ -3667,12 +3667,12 @@ struct CSEDenseMapInfo {
   static inline Instruction *getTombstoneKey() {
     return DenseMapInfo<Instruction *>::getTombstoneKey();
   }
-  static unsigned getHashValue(Instruction *I) {
+  static unsigned getHashValue(const Instruction *I) {
     assert(canHandle(I) && "Unknown instruction!");
     return hash_combine(I->getOpcode(), hash_combine_range(I->value_op_begin(),
                                                            I->value_op_end()));
   }
-  static bool isEqual(Instruction *LHS, Instruction *RHS) {
+  static bool isEqual(const Instruction *LHS, const Instruction *RHS) {
     if (LHS == getEmptyKey() || RHS == getEmptyKey() ||
         LHS == getTombstoneKey() || RHS == getTombstoneKey())
       return LHS == RHS;
