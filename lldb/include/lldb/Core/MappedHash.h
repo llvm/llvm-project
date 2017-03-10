@@ -353,7 +353,11 @@ public:
     bool IsValid() const {
       return m_header.version == 1 &&
              m_header.hash_function == eHashFunctionDJB &&
-             m_header.bucket_count > 0 && m_header.hashes_count > 0;
+             m_header.bucket_count > 0;
+    }
+
+    bool HasContent() const {
+        return IsValid() && m_header.hashes_count > 0;
     }
 
     uint32_t GetHashIndex(uint32_t bucket_idx) const {
