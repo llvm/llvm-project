@@ -31,6 +31,7 @@
 #include "polly/PolyhedralInfo.h"
 #include "polly/ScopDetection.h"
 #include "polly/ScopInfo.h"
+#include "polly/Simplify.h"
 #include "polly/Support/DumpModulePass.h"
 #include "llvm/Analysis/CFGPrinter.h"
 #include "llvm/IR/LegacyPassManager.h"
@@ -188,6 +189,11 @@ static cl::opt<bool>
                  cl::desc("Eliminate scalar loop carried dependences"),
                  cl::Hidden, cl::init(false), cl::cat(PollyCategory));
 
+static cl::opt<bool>
+    EnableSimplify("polly-enable-simplify",
+                   cl::desc("Simplify SCoP after optimizations"),
+                   cl::init(false), cl::cat(PollyCategory));
+
 namespace polly {
 void initializePollyPasses(PassRegistry &Registry) {
   initializeCodeGenerationPass(Registry);
@@ -211,6 +217,7 @@ void initializePollyPasses(PassRegistry &Registry) {
   initializeCodegenCleanupPass(Registry);
   initializeFlattenSchedulePass(Registry);
   initializeDeLICMPass(Registry);
+  initializeSimplifyPass(Registry);
   initializeDumpModulePass(Registry);
 }
 
@@ -266,6 +273,8 @@ void registerPollyPasses(llvm::legacy::PassManagerBase &PM) {
 
   if (EnableDeLICM)
     PM.add(polly::createDeLICMPass());
+  if (EnableSimplify)
+    PM.add(polly::createSimplifyPass());
 
   if (ImportJScop)
     PM.add(polly::createJSONImporterPass());

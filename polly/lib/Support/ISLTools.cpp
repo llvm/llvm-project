@@ -29,8 +29,7 @@ namespace {
 /// @param Amount Value added to the shifted dimension.
 ///
 /// @return An isl_multi_aff for the map with this shifted dimension.
-IslPtr<isl_multi_aff> makeShiftDimAff(IslPtr<isl_space> Space, int Pos,
-                                      int Amount) {
+isl::multi_aff makeShiftDimAff(isl::space Space, int Pos, int Amount) {
   auto Identity = give(isl_multi_aff_identity(Space.take()));
   if (Amount == 0)
     return Identity;
@@ -45,8 +44,8 @@ IslPtr<isl_multi_aff> makeShiftDimAff(IslPtr<isl_space> Space, int Pos,
 /// @param FromSpace2 { Space2[] }
 ///
 /// @return { [Space1[] -> Space2[]] -> [Space2[] -> Space1[]] }
-IslPtr<isl_basic_map> makeTupleSwapBasicMap(IslPtr<isl_space> FromSpace1,
-                                            IslPtr<isl_space> FromSpace2) {
+isl::basic_map makeTupleSwapBasicMap(isl::space FromSpace1,
+                                     isl::space FromSpace2) {
   assert(isl_space_is_set(FromSpace1.keep()) != isl_bool_false);
   assert(isl_space_is_set(FromSpace2.keep()) != isl_bool_false);
 
@@ -72,69 +71,64 @@ IslPtr<isl_basic_map> makeTupleSwapBasicMap(IslPtr<isl_space> FromSpace1,
   return Result;
 }
 
-/// Like makeTupleSwapBasicMap(IslPtr<isl_space>,IslPtr<isl_space>), but returns
+/// Like makeTupleSwapBasicMap(isl::space,isl::space), but returns
 /// an isl_map.
-IslPtr<isl_map> makeTupleSwapMap(IslPtr<isl_space> FromSpace1,
-                                 IslPtr<isl_space> FromSpace2) {
+isl::map makeTupleSwapMap(isl::space FromSpace1, isl::space FromSpace2) {
   auto BMapResult =
       makeTupleSwapBasicMap(std::move(FromSpace1), std::move(FromSpace2));
   return give(isl_map_from_basic_map(BMapResult.take()));
 }
 } // anonymous namespace
 
-IslPtr<isl_map> polly::beforeScatter(IslPtr<isl_map> Map, bool Strict) {
+isl::map polly::beforeScatter(isl::map Map, bool Strict) {
   auto RangeSpace = give(isl_space_range(isl_map_get_space(Map.keep())));
   auto ScatterRel = give(Strict ? isl_map_lex_gt(RangeSpace.take())
                                 : isl_map_lex_ge(RangeSpace.take()));
   return give(isl_map_apply_range(Map.take(), ScatterRel.take()));
 }
 
-IslPtr<isl_union_map> polly::beforeScatter(IslPtr<isl_union_map> UMap,
-                                           bool Strict) {
+isl::union_map polly::beforeScatter(isl::union_map UMap, bool Strict) {
   auto Result = give(isl_union_map_empty(isl_union_map_get_space(UMap.keep())));
-  foreachElt(UMap, [=, &Result](IslPtr<isl_map> Map) {
+  foreachElt(UMap, [=, &Result](isl::map Map) {
     auto After = beforeScatter(Map, Strict);
     Result = give(isl_union_map_add_map(Result.take(), After.take()));
   });
   return Result;
 }
 
-IslPtr<isl_map> polly::afterScatter(IslPtr<isl_map> Map, bool Strict) {
+isl::map polly::afterScatter(isl::map Map, bool Strict) {
   auto RangeSpace = give(isl_space_range(isl_map_get_space(Map.keep())));
   auto ScatterRel = give(Strict ? isl_map_lex_lt(RangeSpace.take())
                                 : isl_map_lex_le(RangeSpace.take()));
   return give(isl_map_apply_range(Map.take(), ScatterRel.take()));
 }
 
-IslPtr<isl_union_map> polly::afterScatter(const IslPtr<isl_union_map> &UMap,
-                                          bool Strict) {
+isl::union_map polly::afterScatter(const isl::union_map &UMap, bool Strict) {
   auto Result = give(isl_union_map_empty(isl_union_map_get_space(UMap.keep())));
-  foreachElt(UMap, [=, &Result](IslPtr<isl_map> Map) {
+  foreachElt(UMap, [=, &Result](isl::map Map) {
     auto After = afterScatter(Map, Strict);
     Result = give(isl_union_map_add_map(Result.take(), After.take()));
   });
   return Result;
 }
 
-IslPtr<isl_map> polly::betweenScatter(IslPtr<isl_map> From, IslPtr<isl_map> To,
-                                      bool InclFrom, bool InclTo) {
+isl::map polly::betweenScatter(isl::map From, isl::map To, bool InclFrom,
+                               bool InclTo) {
   auto AfterFrom = afterScatter(From, !InclFrom);
   auto BeforeTo = beforeScatter(To, !InclTo);
 
   return give(isl_map_intersect(AfterFrom.take(), BeforeTo.take()));
 }
 
-IslPtr<isl_union_map> polly::betweenScatter(IslPtr<isl_union_map> From,
-                                            IslPtr<isl_union_map> To,
-                                            bool InclFrom, bool InclTo) {
+isl::union_map polly::betweenScatter(isl::union_map From, isl::union_map To,
+                                     bool InclFrom, bool InclTo) {
   auto AfterFrom = afterScatter(From, !InclFrom);
   auto BeforeTo = beforeScatter(To, !InclTo);
 
   return give(isl_union_map_intersect(AfterFrom.take(), BeforeTo.take()));
 }
 
-IslPtr<isl_map> polly::singleton(IslPtr<isl_union_map> UMap,
-                                 IslPtr<isl_space> ExpectedSpace) {
+isl::map polly::singleton(isl::union_map UMap, isl::space ExpectedSpace) {
   if (!UMap)
     return nullptr;
 
@@ -148,8 +142,7 @@ IslPtr<isl_map> polly::singleton(IslPtr<isl_union_map> UMap,
   return Result;
 }
 
-IslPtr<isl_set> polly::singleton(IslPtr<isl_union_set> USet,
-                                 IslPtr<isl_space> ExpectedSpace) {
+isl::set polly::singleton(isl::union_set USet, isl::space ExpectedSpace) {
   if (!USet)
     return nullptr;
 
@@ -163,16 +156,15 @@ IslPtr<isl_set> polly::singleton(IslPtr<isl_union_set> USet,
   return Result;
 }
 
-unsigned polly::getNumScatterDims(const IslPtr<isl_union_map> &Schedule) {
+unsigned polly::getNumScatterDims(const isl::union_map &Schedule) {
   unsigned Dims = 0;
-  foreachElt(Schedule, [&Dims](IslPtr<isl_map> Map) {
+  foreachElt(Schedule, [&Dims](isl::map Map) {
     Dims = std::max(Dims, isl_map_dim(Map.keep(), isl_dim_out));
   });
   return Dims;
 }
 
-IslPtr<isl_space>
-polly::getScatterSpace(const IslPtr<isl_union_map> &Schedule) {
+isl::space polly::getScatterSpace(const isl::union_map &Schedule) {
   if (!Schedule)
     return nullptr;
   auto Dims = getNumScatterDims(Schedule);
@@ -181,10 +173,10 @@ polly::getScatterSpace(const IslPtr<isl_union_map> &Schedule) {
   return give(isl_space_add_dims(ScatterSpace.take(), isl_dim_set, Dims));
 }
 
-IslPtr<isl_union_map> polly::makeIdentityMap(const IslPtr<isl_union_set> &USet,
-                                             bool RestrictDomain) {
+isl::union_map polly::makeIdentityMap(const isl::union_set &USet,
+                                      bool RestrictDomain) {
   auto Result = give(isl_union_map_empty(isl_union_set_get_space(USet.keep())));
-  foreachElt(USet, [=, &Result](IslPtr<isl_set> Set) {
+  foreachElt(USet, [=, &Result](isl::set Set) {
     auto IdentityMap = give(isl_map_identity(
         isl_space_map_from_set(isl_set_get_space(Set.keep()))));
     if (RestrictDomain)
@@ -195,7 +187,7 @@ IslPtr<isl_union_map> polly::makeIdentityMap(const IslPtr<isl_union_set> &USet,
   return Result;
 }
 
-IslPtr<isl_map> polly::reverseDomain(IslPtr<isl_map> Map) {
+isl::map polly::reverseDomain(isl::map Map) {
   auto DomSpace =
       give(isl_space_unwrap(isl_space_domain(isl_map_get_space(Map.keep()))));
   auto Space1 = give(isl_space_domain(DomSpace.copy()));
@@ -204,16 +196,16 @@ IslPtr<isl_map> polly::reverseDomain(IslPtr<isl_map> Map) {
   return give(isl_map_apply_domain(Map.take(), Swap.take()));
 }
 
-IslPtr<isl_union_map> polly::reverseDomain(const IslPtr<isl_union_map> &UMap) {
+isl::union_map polly::reverseDomain(const isl::union_map &UMap) {
   auto Result = give(isl_union_map_empty(isl_union_map_get_space(UMap.keep())));
-  foreachElt(UMap, [=, &Result](IslPtr<isl_map> Map) {
+  foreachElt(UMap, [=, &Result](isl::map Map) {
     auto Reversed = reverseDomain(std::move(Map));
     Result = give(isl_union_map_add_map(Result.take(), Reversed.take()));
   });
   return Result;
 }
 
-IslPtr<isl_set> polly::shiftDim(IslPtr<isl_set> Set, int Pos, int Amount) {
+isl::set polly::shiftDim(isl::set Set, int Pos, int Amount) {
   int NumDims = isl_set_dim(Set.keep(), isl_dim_set);
   if (Pos < 0)
     Pos = NumDims + Pos;
@@ -225,50 +217,48 @@ IslPtr<isl_set> polly::shiftDim(IslPtr<isl_set> Set, int Pos, int Amount) {
   return give(isl_set_apply(Set.take(), TranslatorMap.take()));
 }
 
-IslPtr<isl_union_set> polly::shiftDim(IslPtr<isl_union_set> USet, int Pos,
-                                      int Amount) {
+isl::union_set polly::shiftDim(isl::union_set USet, int Pos, int Amount) {
   auto Result = give(isl_union_set_empty(isl_union_set_get_space(USet.keep())));
-  foreachElt(USet, [=, &Result](IslPtr<isl_set> Set) {
+  foreachElt(USet, [=, &Result](isl::set Set) {
     auto Shifted = shiftDim(Set, Pos, Amount);
     Result = give(isl_union_set_add_set(Result.take(), Shifted.take()));
   });
   return Result;
 }
 
-void polly::simplify(IslPtr<isl_set> &Set) {
+void polly::simplify(isl::set &Set) {
   Set = give(isl_set_compute_divs(Set.take()));
   Set = give(isl_set_detect_equalities(Set.take()));
   Set = give(isl_set_coalesce(Set.take()));
 }
 
-void polly::simplify(IslPtr<isl_union_set> &USet) {
+void polly::simplify(isl::union_set &USet) {
   USet = give(isl_union_set_compute_divs(USet.take()));
   USet = give(isl_union_set_detect_equalities(USet.take()));
   USet = give(isl_union_set_coalesce(USet.take()));
 }
 
-void polly::simplify(IslPtr<isl_map> &Map) {
+void polly::simplify(isl::map &Map) {
   Map = give(isl_map_compute_divs(Map.take()));
   Map = give(isl_map_detect_equalities(Map.take()));
   Map = give(isl_map_coalesce(Map.take()));
 }
 
-void polly::simplify(IslPtr<isl_union_map> &UMap) {
+void polly::simplify(isl::union_map &UMap) {
   UMap = give(isl_union_map_compute_divs(UMap.take()));
   UMap = give(isl_union_map_detect_equalities(UMap.take()));
   UMap = give(isl_union_map_coalesce(UMap.take()));
 }
 
-IslPtr<isl_union_map>
-polly::computeReachingWrite(IslPtr<isl_union_map> Schedule,
-                            IslPtr<isl_union_map> Writes, bool Reverse,
-                            bool InclPrevDef, bool InclNextDef) {
+isl::union_map polly::computeReachingWrite(isl::union_map Schedule,
+                                           isl::union_map Writes, bool Reverse,
+                                           bool InclPrevDef, bool InclNextDef) {
 
   // { Scatter[] }
   auto ScatterSpace = getScatterSpace(Schedule);
 
   // { ScatterRead[] -> ScatterWrite[] }
-  IslPtr<isl_map> Relation;
+  isl::map Relation;
   if (Reverse)
     Relation = give(InclPrevDef ? isl_map_lex_lt(ScatterSpace.take())
                                 : isl_map_lex_le(ScatterSpace.take()));
@@ -319,12 +309,10 @@ polly::computeReachingWrite(IslPtr<isl_union_map> Schedule,
   return ReachableWriteDomain;
 }
 
-IslPtr<isl_union_map> polly::computeArrayUnused(IslPtr<isl_union_map> Schedule,
-                                                IslPtr<isl_union_map> Writes,
-                                                IslPtr<isl_union_map> Reads,
-                                                bool ReadEltInSameInst,
-                                                bool IncludeLastRead,
-                                                bool IncludeWrite) {
+isl::union_map
+polly::computeArrayUnused(isl::union_map Schedule, isl::union_map Writes,
+                          isl::union_map Reads, bool ReadEltInSameInst,
+                          bool IncludeLastRead, bool IncludeWrite) {
   // { Element[] -> Scatter[] }
   auto ReadActions =
       give(isl_union_map_apply_domain(Schedule.copy(), Reads.take()));
@@ -366,9 +354,8 @@ IslPtr<isl_union_map> polly::computeArrayUnused(IslPtr<isl_union_map> Schedule,
       isl_union_map_domain_factor_domain(BetweenLastReadOverwrite.take())));
 }
 
-IslPtr<isl_union_set> polly::convertZoneToTimepoints(IslPtr<isl_union_set> Zone,
-                                                     bool InclStart,
-                                                     bool InclEnd) {
+isl::union_set polly::convertZoneToTimepoints(isl::union_set Zone,
+                                              bool InclStart, bool InclEnd) {
   if (!InclStart && InclEnd)
     return Zone;
 

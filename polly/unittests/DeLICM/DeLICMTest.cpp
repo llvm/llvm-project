@@ -22,9 +22,9 @@ using namespace polly;
 namespace {
 
 /// Get the universes of all spaces in @p USet.
-IslPtr<isl_union_set> unionSpace(const IslPtr<isl_union_set> &USet) {
+isl::union_set unionSpace(const isl::union_set &USet) {
   auto Result = give(isl_union_set_empty(isl_union_set_get_space(USet.keep())));
-  foreachElt(USet, [=, &Result](IslPtr<isl_set> Set) {
+  foreachElt(USet, [=, &Result](isl::set Set) {
     auto Space = give(isl_set_get_space(Set.keep()));
     auto Universe = give(isl_set_universe(Space.take()));
     Result = give(isl_union_set_add_set(Result.take(), Universe.take()));
@@ -32,9 +32,8 @@ IslPtr<isl_union_set> unionSpace(const IslPtr<isl_union_set> &USet) {
   return Result;
 }
 
-void completeLifetime(IslPtr<isl_union_set> Universe,
-                      IslPtr<isl_union_set> &Unknown,
-                      IslPtr<isl_union_set> &Undef) {
+void completeLifetime(isl::union_set Universe, isl::union_set &Unknown,
+                      isl::union_set &Undef) {
   if (!Unknown) {
     assert(Undef);
     Unknown = give(isl_union_set_subtract(Universe.copy(), Undef.copy()));
@@ -104,7 +103,7 @@ bool checkIsConflictingNonsymmetric(Knowledge Existing, Knowledge Proposed) {
 
   // Add a space the universe that does not occur anywhere else to ensure
   // robustness. Use &NewId to ensure that this Id is unique.
-  IslPtr<isl_id> NewId = give(isl_id_alloc(Ctx.get(), "Unrelated", &NewId));
+  isl::id NewId = give(isl_id_alloc(Ctx.get(), "Unrelated", &NewId));
   // The space must contains at least one dimension to allow order
   // modifications.
   auto NewSpace = give(isl_space_set_alloc(Ctx.get(), 0, 1));
