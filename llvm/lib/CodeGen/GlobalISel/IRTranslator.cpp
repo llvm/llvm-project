@@ -787,7 +787,7 @@ bool IRTranslator::translateInvoke(const User &U,
   const BasicBlock *ReturnBB = I.getSuccessor(0);
   const BasicBlock *EHPadBB = I.getSuccessor(1);
 
-  const Value *Callee(I.getCalledValue());
+  const Value *Callee = I.getCalledValue();
   const Function *Fn = dyn_cast<Function>(Callee);
   if (isa<InlineAsm>(Callee))
     return false;
@@ -815,8 +815,9 @@ bool IRTranslator::translateInvoke(const User &U,
   for (auto &Arg: I.arg_operands())
     Args.push_back(getOrCreateVReg(*Arg));
 
- CLI->lowerCall(MIRBuilder, I, Res, Args,
-                 [&]() { return getOrCreateVReg(*I.getCalledValue()); });
+  if (!CLI->lowerCall(MIRBuilder, I, Res, Args,
+                      [&]() { return getOrCreateVReg(*I.getCalledValue()); }))
+    return false;
 
   MCSymbol *EndSymbol = Context.createTempSymbol();
   MIRBuilder.buildInstr(TargetOpcode::EH_LABEL).addSym(EndSymbol);
