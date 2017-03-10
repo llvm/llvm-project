@@ -171,6 +171,18 @@ bool IRTranslator::translateBinaryOp(unsigned Opcode, const User &U,
   return true;
 }
 
+bool IRTranslator::translateFSub(const User &U, MachineIRBuilder &MIRBuilder) {
+  // -0.0 - X --> G_FNEG
+  if (isa<Constant>(U.getOperand(0)) &&
+      U.getOperand(0) == ConstantFP::getZeroValueForNegation(U.getType())) {
+    MIRBuilder.buildInstr(TargetOpcode::G_FNEG)
+        .addDef(getOrCreateVReg(U))
+        .addUse(getOrCreateVReg(*U.getOperand(1)));
+    return true;
+  }
+  return translateBinaryOp(TargetOpcode::G_FSUB, U, MIRBuilder);
+}
+
 bool IRTranslator::translateCompare(const User &U,
                                     MachineIRBuilder &MIRBuilder) {
   const CmpInst *CI = dyn_cast<CmpInst>(&U);
@@ -703,13 +715,32 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
   return false;
 }
 
+bool IRTranslator::translateInlineAsm(const CallInst &CI,
+                                      MachineIRBuilder &MIRBuilder) {
+  const InlineAsm &IA = cast<InlineAsm>(*CI.getCalledValue());
+  if (!IA.getConstraintString().empty())
+    return false;
+
+  unsigned ExtraInfo = 0;
+  if (IA.hasSideEffects())
+    ExtraInfo |= InlineAsm::Extra_HasSideEffects;
+  if (IA.getDialect() == InlineAsm::AD_Intel)
+    ExtraInfo |= InlineAsm::Extra_AsmDialect;
+
+  MIRBuilder.buildInstr(TargetOpcode::INLINEASM)
+    .addExternalSymbol(IA.getAsmString().c_str())
+    .addImm(ExtraInfo);
+
+  return true;
+}
+
 bool IRTranslator::translateCall(const User &U, MachineIRBuilder &MIRBuilder) {
   const CallInst &CI = cast<CallInst>(U);
   auto TII = MF->getTarget().getIntrinsicInfo();
   const Function *F = CI.getCalledFunction();
 
   if (CI.isInlineAsm())
-    return false;
+    return translateInlineAsm(CI, MIRBuilder);
 
   if (!F || !F->isIntrinsic()) {
     unsigned Res = CI.getType()->isVoidTy() ? 0 : getOrCreateVReg(CI);
