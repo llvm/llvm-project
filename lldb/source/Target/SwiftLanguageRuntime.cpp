@@ -26,7 +26,7 @@
 #include "swift/AST/Mangle.h"
 #include "swift/AST/Module.h"
 #include "swift/AST/Types.h"
-#include "swift/Basic/Demangle.h"
+#include "swift/Demangling/Demangle.h"
 #include "swift/Remote/MemoryReader.h"
 #include "swift/RemoteAST/RemoteAST.h"
 
@@ -3722,7 +3722,7 @@ SwiftDemangleNodeKindToCString(const swift::Demangle::Node::Kind node_kind) {
     return #e;
 
   switch (node_kind) {
-#include "swift/Basic/DemangleNodes.def"
+#include "swift/Demangling/DemangleNodes.def"
   }
   return "swift::Demangle::Node::Kind::???";
 #undef NODE

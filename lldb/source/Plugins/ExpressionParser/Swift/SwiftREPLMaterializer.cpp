@@ -19,7 +19,7 @@
 #include "lldb/Expression/IRMemoryMap.h"
 #include "lldb/Target/Target.h"
 
-#include "swift/Basic/Demangle.h"
+#include "swift/Demangling/Demangle.h"
 
 using namespace lldb_private;
 

@@ -22,7 +22,7 @@ void SwiftMangledNameVisitor::accept(swift::Demangle::NodePointer pointer) {
   }
   const swift::Demangle::Node::Kind node_kind = pointer->getKind();
   switch (node_kind) {
-#include "swift/Basic/DemangleNodes.def"
+#include "swift/Demangling/DemangleNodes.def"
   }
 }
 
@@ -38,7 +38,7 @@ void SwiftMangledNameVisitor::accept(swift::Demangle::NodePointer pointer) {
     };                                                                         \
     visit##e(cur_node);                                                        \
   }
-#include "swift/Basic/DemangleNodes.def"
+#include "swift/Demangling/DemangleNodes.def"
 
 void SwiftMangledNameVisitor::visit(const char *mangled_name) {
   if (mangled_name && mangled_name[0]) {
