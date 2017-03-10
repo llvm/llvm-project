@@ -69,3 +69,81 @@ define <4 x i32> @udiv_vec0(<4 x i32> %x) {
   ret <4 x i32> %div
 }
 
+; Make sure we handle undef before we try to fold constants from the select with the 0.
+; These used to assert because we can't fold div/rem-by-0 into APInt.
+
+define i32 @sel_urem0(i1 %cond) {
+; CHECK-LABEL: sel_urem0:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    retq
+  %sel = select i1 %cond, i32 23, i32 234
+  %rem = urem i32 %sel, 0
+  ret i32 %rem
+}
+
+define i32 @sel_srem0(i1 %cond) {
+; CHECK-LABEL: sel_srem0:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    retq
+  %sel = select i1 %cond, i32 23, i32 234
+  %rem = srem i32 %sel, 0
+  ret i32 %rem
+}
+
+define i32 @sel_udiv0(i1 %cond) {
+; CHECK-LABEL: sel_udiv0:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    retq
+  %sel = select i1 %cond, i32 23, i32 234
+  %div = udiv i32 %sel, 0
+  ret i32 %div
+}
+
+define i32 @sel_sdiv0(i1 %cond) {
+; CHECK-LABEL: sel_sdiv0:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    retq
+  %sel = select i1 %cond, i32 23, i32 234
+  %div = sdiv i32 %sel, 0
+  ret i32 %div
+}
+
+; Make sure we handle undef before we try to fold constants from the select with the vector 0.
+; These used to assert because we can't fold div/rem-by-0 into APInt.
+
+define <4 x i32> @sel_urem0_vec(i1 %cond) {
+; CHECK-LABEL: sel_urem0_vec:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    retq
+  %sel = select i1 %cond, <4 x i32> <i32 -1, i32 0, i32 1, i32 2>, <4 x i32> <i32 11, i32 12, i32 13, i32 14>
+  %rem = urem <4 x i32> %sel, zeroinitializer
+  ret <4 x i32> %rem
+}
+
+define <4 x i32> @sel_srem0_vec(i1 %cond) {
+; CHECK-LABEL: sel_srem0_vec:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    retq
+  %sel = select i1 %cond, <4 x i32> <i32 -1, i32 0, i32 1, i32 2>, <4 x i32> <i32 11, i32 12, i32 13, i32 14>
+  %rem = srem <4 x i32> %sel, zeroinitializer
+  ret <4 x i32> %rem
+}
+
+define <4 x i32> @sel_udiv0_vec(i1 %cond) {
+; CHECK-LABEL: sel_udiv0_vec:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    retq
+  %sel = select i1 %cond, <4 x i32> <i32 -1, i32 0, i32 1, i32 2>, <4 x i32> <i32 11, i32 12, i32 13, i32 14>
+  %div = udiv <4 x i32> %sel, zeroinitializer
+  ret <4 x i32> %div
+}
+
+define <4 x i32> @sel_sdiv0_vec(i1 %cond) {
+; CHECK-LABEL: sel_sdiv0_vec:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    retq
+  %sel = select i1 %cond, <4 x i32> <i32 -1, i32 0, i32 1, i32 2>, <4 x i32> <i32 11, i32 12, i32 13, i32 14>
+  %div = sdiv <4 x i32> %sel, zeroinitializer
+  ret <4 x i32> %div
+}
+

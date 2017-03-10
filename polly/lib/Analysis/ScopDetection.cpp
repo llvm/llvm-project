@@ -53,6 +53,7 @@
 #include "polly/Support/ScopLocation.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/RegionIterator.h"
 #include "llvm/Analysis/ScalarEvolution.h"
@@ -343,6 +344,8 @@ bool ScopDetection::addOverApproximatedRegion(Region *AR,
 bool ScopDetection::onlyValidRequiredInvariantLoads(
     InvariantLoadsSetTy &RequiredILS, DetectionContext &Context) const {
   Region &CurRegion = Context.CurRegion;
+  const DataLayout &DL =
+      CurRegion.getEntry()->getParent()->getParent()->getDataLayout();
 
   if (!PollyInvariantLoadHoisting && !RequiredILS.empty())
     return false;
@@ -351,10 +354,16 @@ bool ScopDetection::onlyValidRequiredInvariantLoads(
     if (!isHoistableLoad(Load, CurRegion, *LI, *SE, *DT))
       return false;
 
-    for (auto NonAffineRegion : Context.NonAffineSubRegionSet)
+    for (auto NonAffineRegion : Context.NonAffineSubRegionSet) {
+
+      if (isSafeToLoadUnconditionally(Load->getPointerOperand(),
+                                      Load->getAlignment(), DL))
+        continue;
+
       if (NonAffineRegion->contains(Load) &&
           Load->getParent() != NonAffineRegion->getEntry())
         return false;
+    }
   }
 
   Context.RequiredILS.insert(RequiredILS.begin(), RequiredILS.end());

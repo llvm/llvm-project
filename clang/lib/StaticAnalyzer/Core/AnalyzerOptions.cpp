@@ -230,7 +230,7 @@ bool AnalyzerOptions::shouldSuppressInlinedDefensiveChecks() {
 bool AnalyzerOptions::shouldSuppressFromCXXStandardLibrary() {
   return getBooleanOption(SuppressFromCXXStandardLibrary,
                           "suppress-c++-stdlib",
-                          /* Default = */ false);
+                          /* Default = */ true);
 }
 
 bool AnalyzerOptions::shouldReportIssuesInMainSourceFile() {

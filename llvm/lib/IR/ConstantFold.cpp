@@ -1209,10 +1209,15 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode,
     SmallVector<Constant*, 16> Result;
     Type *Ty = IntegerType::get(VTy->getContext(), 32);
     for (unsigned i = 0, e = VTy->getNumElements(); i != e; ++i) {
-      Constant *LHS =
-        ConstantExpr::getExtractElement(C1, ConstantInt::get(Ty, i));
-      Constant *RHS =
-        ConstantExpr::getExtractElement(C2, ConstantInt::get(Ty, i));
+      Constant *ExtractIdx = ConstantInt::get(Ty, i);
+      Constant *LHS = ConstantExpr::getExtractElement(C1, ExtractIdx);
+      Constant *RHS = ConstantExpr::getExtractElement(C2, ExtractIdx);
+
+      // If any element of a divisor vector is zero, the whole op is undef.
+      if ((Opcode == Instruction::SDiv || Opcode == Instruction::UDiv ||
+           Opcode == Instruction::SRem || Opcode == Instruction::URem) &&
+          RHS->isNullValue())
+        return UndefValue::get(VTy);
 
       Result.push_back(ConstantExpr::get(Opcode, LHS, RHS));
     }

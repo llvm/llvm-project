@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=thumb-eabi -mcpu=arm1156t2-s -mattr=+thumb2,+t2xtpk %s -o - | FileCheck %s
+; RUN: llc -mtriple=thumb-eabi -mcpu=arm1156t2-s -mattr=+thumb2 %s -o - | FileCheck %s
 
 ; CHECK: test1
 ; CHECK: pkhbt   r0, r0, r1, lsl #16

@@ -96,6 +96,7 @@ define {double, i64, i32} @test_struct_return({double, i64, i32}* %addr) {
 }
 
 ; CHECK-LABEL: name: test_arr_call
+; CHECK: hasCalls: true
 ; CHECK: [[ARG:%[0-9]+]](s256) = G_LOAD
 
 ; CHECK: [[E0:%[0-9]+]](s64) = G_EXTRACT [[ARG]](s256), 0

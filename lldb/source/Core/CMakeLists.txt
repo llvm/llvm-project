@@ -74,4 +74,4 @@ add_lldb_library(lldbCore
 
 # Needed to properly resolve references in a debug build.
 # TODO: Remove once we have better layering
-set_target_properties(lldbCore PROPERTIES LINK_INTERFACE_MULTIPLICITY 3)
+set_target_properties(lldbCore PROPERTIES LINK_INTERFACE_MULTIPLICITY 4)

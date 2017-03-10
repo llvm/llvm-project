@@ -70,6 +70,9 @@ static cl::opt<bool> HexagonV60ArchVariant("mv60", cl::Hidden, cl::init(false),
 static cl::opt<bool> HexagonV62ArchVariant("mv62", cl::Hidden, cl::init(false),
   cl::desc("Build for Hexagon V62"));
 
+static cl::opt<bool> EnableHVX("mhvx", cl::Hidden, cl::init(false),
+  cl::desc("Enable Hexagon Vector Extension (HVX)"));
+
 static StringRef DefaultArch = "hexagonv60";
 
 static StringRef HexagonGetArchVariant() {
@@ -249,8 +252,11 @@ static bool LLVM_ATTRIBUTE_UNUSED checkFeature(MCSubtargetInfo* STI, uint64_t F)
 StringRef Hexagon_MC::ParseHexagonTriple(const Triple &TT, StringRef CPU) {
   StringRef CPUName = Hexagon_MC::selectHexagonCPU(TT, CPU);
   StringRef FS = "";
-  if (CPUName.equals_lower("hexagonv60") || CPUName.equals_lower("hexagonv62"))
-    FS = "+hvx";
+  if (EnableHVX) {
+    if (CPUName.equals_lower("hexagonv60") ||
+        CPUName.equals_lower("hexagonv62"))
+      FS = "+hvx";
+  }
   return FS;
 }
 

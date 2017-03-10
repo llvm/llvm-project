@@ -1,7 +1,4 @@
-; NewGVN lets DCE take care of the dead code
-; Some of it is gotten, some of it is not, because NewGVN does
-; not attempt to spend large amounts of time doing DCE
-; RUN: opt -tbaa -basicaa -newgvn -dce -S < %s | FileCheck %s
+; RUN: opt -tbaa -basicaa -newgvn -S < %s | FileCheck %s
 
 define i32 @test1(i8* %p, i8* %q) {
 ; CHECK: @test1(i8* %p, i8* %q)
@@ -106,7 +103,7 @@ define i32 @test9(i32* %p, i32* %q) {
 
 
 declare void @clobber()
-declare i32 @foo(i8*) readonly nounwind
+declare i32 @foo(i8*) readonly
 
 ; CHECK: [[TAGC]] = !{[[TYPEC:!.*]], [[TYPEC]], i64 0}
 ; CHECK: [[TYPEC]] = !{!"C", [[TYPEA:!.*]]}

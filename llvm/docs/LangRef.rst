@@ -6329,7 +6329,9 @@ The value produced is the unsigned integer quotient of the two operands.
 Note that unsigned integer division and signed integer division are
 distinct operations; for signed integer division, use '``sdiv``'.
 
-Division by zero leads to undefined behavior.
+Division by zero is undefined behavior. For vectors, if any element
+of the divisor is zero, the operation has undefined behavior.
+
 
 If the ``exact`` keyword is present, the result value of the ``udiv`` is
 a :ref:`poison value <poisonvalues>` if %op1 is not a multiple of %op2 (as
@@ -6374,9 +6376,10 @@ rounded towards zero.
 Note that signed integer division and unsigned integer division are
 distinct operations; for unsigned integer division, use '``udiv``'.
 
-Division by zero leads to undefined behavior. Overflow also leads to
-undefined behavior; this is a rare case, but can occur, for example, by
-doing a 32-bit division of -2147483648 by -1.
+Division by zero is undefined behavior. For vectors, if any element
+of the divisor is zero, the operation has undefined behavior.
+Overflow also leads to undefined behavior; this is a rare case, but can
+occur, for example, by doing a 32-bit division of -2147483648 by -1.
 
 If the ``exact`` keyword is present, the result value of the ``sdiv`` is
 a :ref:`poison value <poisonvalues>` if the result would be rounded.
@@ -6459,8 +6462,10 @@ remainder.
 
 Note that unsigned integer remainder and signed integer remainder are
 distinct operations; for signed integer remainder, use '``srem``'.
-
-Taking the remainder of a division by zero leads to undefined behavior.
+ 
+Taking the remainder of a division by zero is undefined behavior.
+For vectors, if any element of the divisor is zero, the operation has 
+undefined behavior.
 
 Example:
 """"""""
@@ -6510,7 +6515,9 @@ operation <http://en.wikipedia.org/wiki/Modulo_operation>`_.
 Note that signed integer remainder and unsigned integer remainder are
 distinct operations; for unsigned integer remainder, use '``urem``'.
 
-Taking the remainder of a division by zero leads to undefined behavior.
+Taking the remainder of a division by zero is undefined behavior.
+For vectors, if any element of the divisor is zero, the operation has 
+undefined behavior.
 Overflow also leads to undefined behavior; this is a rare case, but can
 occur, for example, by taking the remainder of a 32-bit division of
 -2147483648 by -1. (The remainder doesn't actually overflow, but this

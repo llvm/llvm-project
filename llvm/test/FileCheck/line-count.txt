@@ -1,15 +1,15 @@
 ; RUN: FileCheck  -input-file %s %s
-2
-3 aaa
-4 bbb
-5 ccc
-6 CHECK: [[@LINE-3]] {{a}}aa
-7 CHECK: [[@LINE-3]] {{b}}bb
-8 CHECK: [[@LINE-3]] {{c}}cc
-9 foobar
-10 CHECK: [[@LINE-1]] {{foo}}bar
-11
-12 arst CHECK: [[@LINE]] {{a}}rst
-13
+; RUN: not FileCheck -check-prefix BAD -input-file %s %s
+3
+4 aaa
+5 bbb
+6 ccc
+7 CHECK: [[@LINE-3]] {{a}}aa
+8 CHECK: [[@LINE-3]] {{b}}bb
+9 CHECK: [[@LINE-3]] {{c}}cc
+10 foobar
+11 CHECK: [[@LINE-1]] {{foo}}bar
+12
+13 arst CHECK: [[@LINE]] {{a}}rst
 14
-
+15 BAD: [[@LINE:cant-have-regex]]

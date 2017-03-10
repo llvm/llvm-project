@@ -287,7 +287,15 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
 ///
 bool llvm::isInstructionTriviallyDead(Instruction *I,
                                       const TargetLibraryInfo *TLI) {
-  if (!I->use_empty() || isa<TerminatorInst>(I)) return false;
+  if (!I->use_empty())
+    return false;
+  return wouldInstructionBeTriviallyDead(I, TLI);
+}
+
+bool llvm::wouldInstructionBeTriviallyDead(Instruction *I,
+                                           const TargetLibraryInfo *TLI) {
+  if (isa<TerminatorInst>(I))
+    return false;
 
   // We don't want the landingpad-like instructions removed by anything this
   // general.
@@ -307,7 +315,8 @@ bool llvm::isInstructionTriviallyDead(Instruction *I,
     return true;
   }
 
-  if (!I->mayHaveSideEffects()) return true;
+  if (!I->mayHaveSideEffects())
+    return true;
 
   // Special case intrinsics that "may have side effects" but can be deleted
   // when dead.
@@ -334,7 +343,8 @@ bool llvm::isInstructionTriviallyDead(Instruction *I,
     }
   }
 
-  if (isAllocLikeFn(I, TLI)) return true;
+  if (isAllocLikeFn(I, TLI))
+    return true;
 
   if (CallInst *CI = isFreeCall(I, TLI))
     if (Constant *C = dyn_cast<Constant>(CI->getArgOperand(0)))

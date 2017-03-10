@@ -36,6 +36,7 @@ class InputSection;
 class OutputSection;
 class OutputSectionFactory;
 class InputSectionBase;
+class SectionBase;
 
 // This represents an expression in the linker script.
 // ScriptParser::readExpr reads an expression and returns an Expr.
@@ -47,13 +48,13 @@ struct Expr {
 
   // If expression is section-relative the function below is used
   // to get the output section pointer.
-  std::function<OutputSection *()> Section;
+  std::function<SectionBase *()> Section;
 
   uint64_t operator()(uint64_t Dot) const { return Val(Dot); }
   operator bool() const { return (bool)Val; }
 
   Expr(std::function<uint64_t(uint64_t)> Val, std::function<bool()> IsAbsolute,
-       std::function<OutputSection *()> Section)
+       std::function<SectionBase *()> Section)
       : Val(Val), IsAbsolute(IsAbsolute), Section(Section) {}
   template <typename T>
   Expr(T V) : Expr(V, [] { return true; }, [] { return nullptr; }) {}

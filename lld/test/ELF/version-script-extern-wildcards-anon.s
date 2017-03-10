@@ -7,6 +7,7 @@
 # RUN:       extern "C++" { \
 # RUN:         "foo(int)"; \
 # RUN:         z*; \
+# RUN:         std::q*; \
 # RUN:       }; \
 # RUN:       local: *; \
 # RUN:       }; ' > %t.script
@@ -50,6 +51,15 @@
 # CHECK-NEXT:     Other:
 # CHECK-NEXT:     Section:
 # CHECK-NEXT:   }
+# CHECK-NEXT:   Symbol {
+# CHECK-NEXT:     Name: _ZSt3qux
+# CHECK-NEXT:     Value:
+# CHECK-NEXT:     Size:
+# CHECK-NEXT:     Binding: Global
+# CHECK-NEXT:     Type:
+# CHECK-NEXT:     Other:
+# CHECK-NEXT:     Section:
+# CHECK-NEXT:   }
 # CHECK-NEXT: ]
 
 .global _Z3fooi
@@ -60,3 +70,5 @@ _Z3bari:
 _Z3zedi:
 .global _Z3bazi
 _Z3bazi:
+.global _ZSt3qux
+_ZSt3qux:

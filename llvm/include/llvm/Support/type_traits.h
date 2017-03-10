@@ -95,6 +95,15 @@ struct add_const_past_pointer<
   typedef const typename std::remove_pointer<T>::type *type;
 };
 
+template <typename T, typename Enable = void>
+struct const_pointer_or_const_ref {
+  using type = const T &;
+};
+template <typename T>
+struct const_pointer_or_const_ref<
+    T, typename std::enable_if<std::is_pointer<T>::value>::type> {
+  using type = typename add_const_past_pointer<T>::type;
+};
 }
 
 // If the compiler supports detecting whether a class is final, define

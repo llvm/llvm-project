@@ -293,6 +293,15 @@ class CGDebugInfo {
   /// Create a new lexical block node and push it on the stack.
   void CreateLexicalBlock(SourceLocation Loc);
 
+  /// If target-specific LLVM \p AddressSpace directly maps to target-specific
+  /// DWARF address space, appends extended dereferencing mechanism to complex
+  /// expression \p Expr. Otherwise, does nothing.
+  ///
+  /// Extended dereferencing mechanism is has the following format:
+  ///     DW_OP_constu <DWARF Address Space> DW_OP_swap DW_OP_xderef
+  void AppendAddressSpaceXDeref(unsigned AddressSpace,
+                                SmallVectorImpl<int64_t> &Expr) const;
+
 public:
   CGDebugInfo(CodeGenModule &CGM);
   ~CGDebugInfo();

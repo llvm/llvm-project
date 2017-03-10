@@ -340,7 +340,7 @@ static uint64_t mul_1(uint64_t dest[], uint64_t x[], unsigned len, uint64_t y) {
 
 /// Multiplies integer array x by integer array y and stores the result into
 /// the integer array dest. Note that dest's size must be >= xlen + ylen.
-/// @brief Generalized multiplicate of integer arrays.
+/// @brief Generalized multiplication of integer arrays.
 static void mul(uint64_t dest[], uint64_t x[], unsigned xlen, uint64_t y[],
                 unsigned ylen) {
   dest[xlen] = mul_1(dest, x, xlen, y[0]);
@@ -495,11 +495,11 @@ bool APInt::ult(const APInt& RHS) const {
   if (n1 < n2)
     return true;
 
-  // If magnitude of RHS is greather than LHS, return false.
+  // If magnitude of RHS is greater than LHS, return false.
   if (n2 < n1)
     return false;
 
-  // If they bot fit in a word, just compare the low order word
+  // If they both fit in a word, just compare the low order word
   if (n1 <= APINT_BITS_PER_WORD && n2 <= APINT_BITS_PER_WORD)
     return pVal[0] < RHS.pVal[0];
 
@@ -529,7 +529,7 @@ bool APInt::slt(const APInt& RHS) const {
   if (lhsNeg != rhsNeg)
     return lhsNeg;
 
-  // Otherwise we can just use an unsigned comparision, because even negative
+  // Otherwise we can just use an unsigned comparison, because even negative
   // numbers compare correctly this way if both have the same signed-ness.
   return ult(RHS);
 }
@@ -545,7 +545,7 @@ void APInt::setBitsSlowCase(unsigned loBit, unsigned hiBit) {
   unsigned loWord = whichWord(loBit);
   unsigned hiWord = whichWord(hiBit);
 
-  // Create an initial mask for the low word with zeroes below loBit.
+  // Create an initial mask for the low word with zeros below loBit.
   uint64_t loMask = UINT64_MAX << whichBit(loBit);
 
   // If hiBit is not aligned, we need a high mask.
@@ -1678,7 +1678,7 @@ static void KnuthDiv(unsigned *u, unsigned *v, unsigned *q, unsigned* r,
   if (r) {
     // The value d is expressed by the "shift" value above since we avoided
     // multiplication by d by using a shift left. So, all we have to do is
-    // shift right here. In order to mak
+    // shift right here.
     if (shift) {
       unsigned carry = 0;
       DEBUG(dbgs() << "KnuthDiv: remainder:");

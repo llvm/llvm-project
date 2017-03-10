@@ -55,8 +55,8 @@ defm EQ : ComparisonFP<SETOEQ, "eq  ", 0x5b, 0x61>;
 defm NE : ComparisonFP<SETUNE, "ne  ", 0x5c, 0x62>;
 } // isCommutable = 1
 defm LT : ComparisonFP<SETOLT, "lt  ", 0x5d, 0x63>;
-defm LE : ComparisonFP<SETOLE, "le  ", 0x5e, 0x64>;
-defm GT : ComparisonFP<SETOGT, "gt  ", 0x5f, 0x65>;
+defm LE : ComparisonFP<SETOLE, "le  ", 0x5f, 0x65>;
+defm GT : ComparisonFP<SETOGT, "gt  ", 0x5e, 0x64>;
 defm GE : ComparisonFP<SETOGE, "ge  ", 0x60, 0x66>;
 
 } // Defs = [ARGUMENTS]

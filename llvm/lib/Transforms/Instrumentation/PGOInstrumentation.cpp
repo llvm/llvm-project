@@ -796,7 +796,7 @@ void PGOUseFunc::setInstrumentedCounts(
     NewEdge1.InMST = true;
     getBBInfo(InstrBB).setBBInfoCount(CountValue);
   }
-  ProfileCountSize =  CountFromProfile.size();
+  ProfileCountSize = CountFromProfile.size();
   CountPosition = I;
 }
 
@@ -977,7 +977,7 @@ static void setProfMetadata(Module *M, Instruction *TI,
     Weights.push_back(scaleBranchCount(ECI, Scale));
 
   DEBUG(dbgs() << "Weight is: ";
-        for (const auto &W : Weights) { dbgs() << W << " "; } 
+        for (const auto &W : Weights) { dbgs() << W << " "; }
         dbgs() << "\n";);
   TI->setMetadata(llvm::LLVMContext::MD_prof, MDB.createBranchWeights(Weights));
 }
@@ -1025,8 +1025,8 @@ void SelectInstVisitor::instrumentOneSelectInst(SelectInst &SI) {
   Builder.CreateCall(
       Intrinsic::getDeclaration(M, Intrinsic::instrprof_increment_step),
       {llvm::ConstantExpr::getBitCast(FuncNameVar, I8PtrTy),
-       Builder.getInt64(FuncHash),
-       Builder.getInt32(TotalNumCtrs), Builder.getInt32(*CurCtrIdx), Step});
+       Builder.getInt64(FuncHash), Builder.getInt32(TotalNumCtrs),
+       Builder.getInt32(*CurCtrIdx), Step});
   ++(*CurCtrIdx);
 }
 
@@ -1380,4 +1380,4 @@ template <> struct DOTGraphTraits<PGOUseFunc *> : DefaultDOTGraphTraits {
     return Result;
   }
 };
-}
+} // namespace llvm
