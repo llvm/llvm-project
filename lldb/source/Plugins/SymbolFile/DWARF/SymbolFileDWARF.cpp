@@ -448,19 +448,19 @@ void SymbolFileDWARF::InitializeObject() {
   if (m_data_apple_names.m_data.GetByteSize() > 0) {
     m_apple_names_ap.reset(new DWARFMappedHash::MemoryTable(
         m_data_apple_names.m_data, get_debug_str_data(), ".apple_names"));
-    if (m_apple_names_ap->IsValid())
-      m_using_apple_tables = true;
-    else
+    if (!m_apple_names_ap->IsValid())
       m_apple_names_ap.reset();
+    if (m_apple_names_ap->HasContent())
+      m_using_apple_tables = true;
   }
   get_apple_types_data();
   if (m_data_apple_types.m_data.GetByteSize() > 0) {
     m_apple_types_ap.reset(new DWARFMappedHash::MemoryTable(
         m_data_apple_types.m_data, get_debug_str_data(), ".apple_types"));
-    if (m_apple_types_ap->IsValid())
-      m_using_apple_tables = true;
-    else
+    if (!m_apple_types_ap->IsValid())
       m_apple_types_ap.reset();
+    if (m_apple_types_ap->HasContent())
+      m_using_apple_tables = true;
   }
 
   get_apple_namespaces_data();
@@ -468,20 +468,20 @@ void SymbolFileDWARF::InitializeObject() {
     m_apple_namespaces_ap.reset(new DWARFMappedHash::MemoryTable(
         m_data_apple_namespaces.m_data, get_debug_str_data(),
         ".apple_namespaces"));
-    if (m_apple_namespaces_ap->IsValid())
-      m_using_apple_tables = true;
-    else
+    if (!m_apple_namespaces_ap->IsValid())
       m_apple_namespaces_ap.reset();
+    if (m_apple_namespaces_ap->HasContent())
+      m_using_apple_tables = true;
   }
 
   get_apple_objc_data();
   if (m_data_apple_objc.m_data.GetByteSize() > 0) {
     m_apple_objc_ap.reset(new DWARFMappedHash::MemoryTable(
         m_data_apple_objc.m_data, get_debug_str_data(), ".apple_objc"));
-    if (m_apple_objc_ap->IsValid())
-      m_using_apple_tables = true;
-    else
+    if (!m_apple_objc_ap->IsValid())
       m_apple_objc_ap.reset();
+    if (m_apple_objc_ap->HasContent())
+      m_using_apple_tables = true;
   }
 }
 

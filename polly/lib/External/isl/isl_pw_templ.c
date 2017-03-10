@@ -330,10 +330,14 @@ static __isl_give PW *FN(PW,align_params_pw_set_and)(__isl_take PW *pw,
 	__isl_give PW *(*fn)(__isl_take PW *pw, __isl_take isl_set *set))
 {
 	isl_ctx *ctx;
+	isl_bool aligned;
 
 	if (!pw || !set)
 		goto error;
-	if (isl_space_match(pw->dim, isl_dim_param, set->dim, isl_dim_param))
+	aligned = isl_set_space_has_equal_params(set, pw->dim);
+	if (aligned < 0)
+		goto error;
+	if (aligned)
 		return fn(pw, set);
 	ctx = FN(PW,get_ctx)(pw);
 	if (!isl_space_has_named_params(pw->dim) ||
@@ -935,6 +939,7 @@ static __isl_give PW *FN(PW,gist_aligned)(__isl_take PW *pw,
 {
 	int i;
 	int is_universe;
+	isl_bool aligned;
 	isl_basic_set *hull = NULL;
 
 	if (!pw || !context)
@@ -953,8 +958,10 @@ static __isl_give PW *FN(PW,gist_aligned)(__isl_take PW *pw,
 		return pw;
 	}
 
-	if (!isl_space_match(pw->dim, isl_dim_param,
-				context->dim, isl_dim_param)) {
+	aligned = isl_set_space_has_equal_params(context, pw->dim);
+	if (aligned < 0)
+		goto error;
+	if (!aligned) {
 		pw = FN(PW,align_params)(pw, isl_set_get_space(context));
 		context = isl_set_align_params(context, FN(PW,get_space)(pw));
 	}

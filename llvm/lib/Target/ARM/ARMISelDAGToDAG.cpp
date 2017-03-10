@@ -3095,38 +3095,6 @@ void ARMDAGToDAGISel::Select(SDNode *N) {
     return;
   }
   case ARMISD::UMLAL:{
-    // UMAAL is similar to UMLAL but it adds two 32-bit values to the
-    // 64-bit multiplication result.
-    if (Subtarget->hasV6Ops() && Subtarget->hasDSP() &&
-        N->getOperand(2).getOpcode() == ARMISD::ADDC &&
-        N->getOperand(3).getOpcode() == ARMISD::ADDE) {
-
-      SDValue Addc = N->getOperand(2);
-      SDValue Adde = N->getOperand(3);
-
-      if (Adde.getOperand(2).getNode() == Addc.getNode()) {
-
-        ConstantSDNode *Op0 = dyn_cast<ConstantSDNode>(Adde.getOperand(0));
-        ConstantSDNode *Op1 = dyn_cast<ConstantSDNode>(Adde.getOperand(1));
-
-        if (Op0 && Op1 && Op0->getZExtValue() == 0 && Op1->getZExtValue() == 0)
-        {
-          // Select UMAAL instead: UMAAL RdLo, RdHi, Rn, Rm
-          // RdLo = one operand to be added, lower 32-bits of res
-          // RdHi = other operand to be added, upper 32-bits of res
-          // Rn = first multiply operand
-          // Rm = second multiply operand
-          SDValue Ops[] = { N->getOperand(0), N->getOperand(1),
-                            Addc.getOperand(0), Addc.getOperand(1),
-                            getAL(CurDAG, dl),
-                            CurDAG->getRegister(0, MVT::i32) };
-          unsigned opc = Subtarget->isThumb() ? ARM::t2UMAAL : ARM::UMAAL;
-          CurDAG->SelectNodeTo(N, opc, MVT::i32, MVT::i32, Ops);
-          return;
-        }
-      }
-    }
-
     if (Subtarget->isThumb()) {
       SDValue Ops[] = { N->getOperand(0), N->getOperand(1), N->getOperand(2),
                         N->getOperand(3), getAL(CurDAG, dl),

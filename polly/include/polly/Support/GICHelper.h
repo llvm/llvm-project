@@ -24,6 +24,9 @@
 #include "isl/set.h"
 #include "isl/union_map.h"
 #include "isl/union_set.h"
+
+#include "isl-noexceptions.h"
+
 #include <functional>
 #include <string>
 
@@ -176,151 +179,15 @@ std::string getIslCompatibleName(const std::string &Prefix,
                                  const std::string &Middle,
                                  const std::string &Suffix);
 
-/// IslObjTraits<isl_*> is a static class to invoke common functions that all
-/// ISL objects have: isl_*_copy, isl_*_free, isl_*_get_ctx and isl_*_to_str.
-/// These functions follow a common naming scheme, but not a base class
-/// hierarchy (as ISL is written in C). As such, the functions are accessible
-/// only by constructing the function name using the preprocessor. This class
-/// serves to make these names accessible to a C++ template scheme.
-///
-/// There is an isl_obj polymorphism layer, but its implementation is
-/// incomplete.
-template <typename T> class IslObjTraits;
+// Make isl::give available in polly namespace. We do this as there was
+// previously a function polly::give() which did the very same thing and we
+// did not want yet to introduce the isl:: prefix to each call of give.
+using isl::give;
 
-#define DECLARE_TRAITS(TYPE)                                                   \
-  template <> class IslObjTraits<isl_##TYPE> {                                 \
-  public:                                                                      \
-    static __isl_give isl_##TYPE *copy(__isl_keep isl_##TYPE *Obj) {           \
-      return isl_##TYPE##_copy(Obj);                                           \
-    }                                                                          \
-    static void free(__isl_take isl_##TYPE *Obj) { isl_##TYPE##_free(Obj); }   \
-    static isl_ctx *get_ctx(__isl_keep isl_##TYPE *Obj) {                      \
-      return isl_##TYPE##_get_ctx(Obj);                                        \
-    }                                                                          \
-    static std::string to_str(__isl_keep isl_##TYPE *Obj) {                    \
-      if (!Obj)                                                                \
-        return "null";                                                         \
-      char *cstr = isl_##TYPE##_to_str(Obj);                                   \
-      if (!cstr)                                                               \
-        return "null";                                                         \
-      std::string Result{cstr};                                                \
-      ::free(cstr);                                                            \
-      return Result;                                                           \
-    }                                                                          \
-  };
-
-DECLARE_TRAITS(id)
-DECLARE_TRAITS(val)
-DECLARE_TRAITS(space)
-DECLARE_TRAITS(basic_map)
-DECLARE_TRAITS(map)
-DECLARE_TRAITS(union_map)
-DECLARE_TRAITS(basic_set)
-DECLARE_TRAITS(set)
-DECLARE_TRAITS(union_set)
-DECLARE_TRAITS(aff)
-DECLARE_TRAITS(multi_aff)
-DECLARE_TRAITS(pw_aff)
-DECLARE_TRAITS(pw_multi_aff)
-DECLARE_TRAITS(multi_pw_aff)
-DECLARE_TRAITS(union_pw_aff)
-DECLARE_TRAITS(multi_union_pw_aff)
-DECLARE_TRAITS(union_pw_multi_aff)
-
-/// Smart pointer to an ISL object.
-///
-/// An object of this class owns an reference of an ISL object, meaning if will
-/// free it when destroyed. Most ISL objects are reference counted such that we
-/// gain an automatic memory management.
-///
-/// Function parameters in the ISL API are annotated using either __isl_keep
-/// __isl_take. Return values that are objects are annotated using __is_give,
-/// meaning the caller is responsible for releasing the object. When annotated
-/// with __isl_keep, use the keep() function to pass a plain pointer to the ISL
-/// object. For __isl_take-annotated parameters, use either copy() to increase
-/// the reference counter by one, or take() to pass the ownership to the called
-/// function. When IslPtr loses ownership, it cannot be used anymore and won't
-/// free the object when destroyed. Use the give() function to wrap the
-/// ownership of a returned isl_* object into an IstPtr<isl_*>.
-///
-/// There is purposefully no implicit conversion from/to plain isl_* pointers to
-/// avoid difficult to find bugs because keep/copy/take would have been
-/// required.
-template <typename T> class IslPtr {
-  typedef IslPtr<T> ThisTy;
-  typedef IslObjTraits<T> Traits;
-
-private:
-  T *Obj;
-
-  explicit IslPtr(__isl_take T *Obj) : Obj(Obj) {}
-
-public:
-  IslPtr() : Obj(nullptr) {}
-  /* implicit */ IslPtr(std::nullptr_t That) : IslPtr() {}
-
-  /* implicit */ IslPtr(const ThisTy &That)
-      : IslPtr(IslObjTraits<T>::copy(That.Obj)) {}
-  /* implicit */ IslPtr(ThisTy &&That) : IslPtr(That.Obj) {
-    That.Obj = nullptr;
-  }
-  ~IslPtr() {
-    if (Obj)
-      Traits::free(Obj);
-  }
-
-  ThisTy &operator=(const ThisTy &That) {
-    if (Obj)
-      Traits::free(Obj);
-    this->Obj = Traits::copy(That.Obj);
-    return *this;
-  }
-  ThisTy &operator=(ThisTy &&That) {
-    swap(*this, That);
-    return *this;
-  }
-
-  explicit operator bool() const { return Obj; }
-
-  static void swap(ThisTy &LHS, ThisTy &RHS) { std::swap(LHS.Obj, RHS.Obj); }
-
-  static ThisTy give(__isl_take T *Obj) { return ThisTy(Obj); }
-  T *keep() const { return Obj; }
-  __isl_give T *take() {
-    auto *Result = Obj;
-    Obj = nullptr;
-    return Result;
-  }
-  __isl_give T *copy() const { return Traits::copy(Obj); }
-
-  isl_ctx *getCtx() const { return Traits::get_ctx(Obj); }
-  std::string toStr() const { return Traits::to_str(Obj); }
-
-  /// Print a string representation of this ISL object to stderr.
-  ///
-  /// This function is meant to be called from a debugger and therefore must
-  /// not be declared inline: The debugger needs a valid function pointer to
-  /// call, even if the method is not used.
-  ///
-  /// Note that the string representation of isl_*_dump is different than the
-  /// one for isl_printer/isl_*_to_str().
-  void dump() const;
-};
-
-template <typename T> static IslPtr<T> give(__isl_take T *Obj) {
-  return IslPtr<T>::give(Obj);
-}
-
-template <typename T>
-llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const IslPtr<T> &Obj) {
-  OS << IslObjTraits<T>::to_str(Obj.keep());
-  return OS;
-}
-
-template <typename T>
-llvm::DiagnosticInfoOptimizationBase &
-operator<<(llvm::DiagnosticInfoOptimizationBase &OS, const IslPtr<T> &Obj) {
-  OS << IslObjTraits<T>::to_str(Obj.keep());
+inline llvm::DiagnosticInfoOptimizationBase &
+operator<<(llvm::DiagnosticInfoOptimizationBase &OS,
+           const isl::union_map &Obj) {
+  OS << Obj.to_str();
   return OS;
 }
 
@@ -328,36 +195,36 @@ operator<<(llvm::DiagnosticInfoOptimizationBase &OS, const IslPtr<T> &Obj) {
 ///
 /// This basically wraps isl_map_foreach_basic_map() and allows to call back
 /// C++11 closures.
-void foreachElt(const IslPtr<isl_map> &Map,
-                const std::function<void(IslPtr<isl_basic_map>)> &F);
+void foreachElt(const isl::map &Map,
+                const std::function<void(isl::basic_map)> &F);
 
 /// Enumerate all isl_basic_sets of an isl_set.
 ///
 /// This basically wraps isl_set_foreach_basic_set() and allows to call back
 /// C++11 closures.
-void foreachElt(const IslPtr<isl_set> &Set,
-                const std::function<void(IslPtr<isl_basic_set>)> &F);
+void foreachElt(const isl::set &Set,
+                const std::function<void(isl::basic_set)> &F);
 
 /// Enumerate all isl_maps of an isl_union_map.
 ///
 /// This basically wraps isl_union_map_foreach_map() and allows to call back
 /// C++11 closures.
-void foreachElt(const IslPtr<isl_union_map> &UMap,
-                const std::function<void(IslPtr<isl_map> Map)> &F);
+void foreachElt(const isl::union_map &UMap,
+                const std::function<void(isl::map Map)> &F);
 
 /// Enumerate all isl_sets of an isl_union_set.
 ///
 /// This basically wraps isl_union_set_foreach_set() and allows to call back
 /// C++11 closures.
-void foreachElt(const IslPtr<isl_union_set> &USet,
-                const std::function<void(IslPtr<isl_set> Set)> &F);
+void foreachElt(const isl::union_set &USet,
+                const std::function<void(isl::set Set)> &F);
 
 /// Enumerate all isl_pw_aff of an isl_union_pw_aff.
 ///
 /// This basically wraps isl_union_pw_aff(), but also allows to call back C++11
 /// closures.
-void foreachElt(const IslPtr<isl_union_pw_aff> &UPwAff,
-                const std::function<void(IslPtr<isl_pw_aff>)> &F);
+void foreachElt(const isl::union_pw_aff &UPwAff,
+                const std::function<void(isl::pw_aff)> &F);
 
 /// Enumerate all polyhedra of an isl_map.
 ///
@@ -371,9 +238,8 @@ void foreachElt(const IslPtr<isl_union_pw_aff> &UPwAff,
 ///
 /// @return The isl_stat returned by the last callback invocation; isl_stat_ok
 ///         if the collection was empty.
-isl_stat
-foreachEltWithBreak(const IslPtr<isl_map> &Map,
-                    const std::function<isl_stat(IslPtr<isl_basic_map>)> &F);
+isl_stat foreachEltWithBreak(const isl::map &Map,
+                             const std::function<isl_stat(isl::basic_map)> &F);
 
 /// Enumerate all isl_maps of an isl_union_map.
 ///
@@ -388,9 +254,8 @@ foreachEltWithBreak(const IslPtr<isl_map> &Map,
 ///
 /// @return The isl_stat returned by the last callback invocation; isl_stat_ok
 ///         if the collection was initially empty.
-isl_stat
-foreachEltWithBreak(const IslPtr<isl_union_map> &UMap,
-                    const std::function<isl_stat(IslPtr<isl_map> Map)> &F);
+isl_stat foreachEltWithBreak(const isl::union_map &UMap,
+                             const std::function<isl_stat(isl::map Map)> &F);
 
 /// Enumerate all pieces of an isl_pw_aff.
 ///
@@ -404,9 +269,9 @@ foreachEltWithBreak(const IslPtr<isl_union_map> &UMap,
 ///
 /// @return The isl_stat returned by the last callback invocation; isl_stat_ok
 ///         if the collection was initially empty.
-isl_stat foreachPieceWithBreak(
-    const IslPtr<isl_pw_aff> &PwAff,
-    const std::function<isl_stat(IslPtr<isl_set>, IslPtr<isl_aff>)> &F);
+isl_stat
+foreachPieceWithBreak(const isl::pw_aff &PwAff,
+                      const std::function<isl_stat(isl::set, isl::aff)> &F);
 
 /// Scoped limit of ISL operations.
 ///

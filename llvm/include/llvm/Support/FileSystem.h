@@ -489,7 +489,7 @@ inline bool is_local(int FD) {
 /// @brief Does status represent a directory?
 ///
 /// @param Path The path to get the type of.
-/// @param follow For symbolic links, indicates whether to return the file type
+/// @param Follow For symbolic links, indicates whether to return the file type
 ///               of the link itself, or of the target.
 /// @returns A value from the file_type enumeration indicating the type of file.
 file_type get_file_type(const Twine &Path, bool Follow = true);

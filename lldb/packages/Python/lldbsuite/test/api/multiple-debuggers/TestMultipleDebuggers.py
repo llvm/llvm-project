@@ -19,6 +19,7 @@ class TestMultipleSimultaneousDebuggers(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @skipIfNoSBHeaders
+    @expectedFailureAll(bugnumber="rdar://30564102")
     @expectedFailureAll(
         archs="i[3-6]86",
         bugnumber="multi-process-driver.cpp creates an x64 target")

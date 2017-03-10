@@ -588,6 +588,65 @@ void APInt::flipBit(unsigned bitPosition) {
   else setBit(bitPosition);
 }
 
+void APInt::insertBits(const APInt &subBits, unsigned bitPosition) {
+  unsigned subBitWidth = subBits.getBitWidth();
+  assert(0 < subBitWidth && (subBitWidth + bitPosition) <= BitWidth &&
+         "Illegal bit insertion");
+
+  // Insertion is a direct copy.
+  if (subBitWidth == BitWidth) {
+    *this = subBits;
+    return;
+  }
+
+  // Single word result can be done as a direct bitmask.
+  if (isSingleWord()) {
+    uint64_t mask = UINT64_MAX >> (APINT_BITS_PER_WORD - subBitWidth);
+    VAL &= ~(mask << bitPosition);
+    VAL |= (subBits.VAL << bitPosition);
+    return;
+  }
+
+  unsigned loBit = whichBit(bitPosition);
+  unsigned loWord = whichWord(bitPosition);
+  unsigned hi1Word = whichWord(bitPosition + subBitWidth - 1);
+
+  // Insertion within a single word can be done as a direct bitmask.
+  if (loWord == hi1Word) {
+    uint64_t mask = UINT64_MAX >> (APINT_BITS_PER_WORD - subBitWidth);
+    pVal[loWord] &= ~(mask << loBit);
+    pVal[loWord] |= (subBits.VAL << loBit);
+    return;
+  }
+
+  // Insert on word boundaries.
+  if (loBit == 0) {
+    // Direct copy whole words.
+    unsigned numWholeSubWords = subBitWidth / APINT_BITS_PER_WORD;
+    memcpy(pVal + loWord, subBits.getRawData(),
+           numWholeSubWords * APINT_WORD_SIZE);
+
+    // Mask+insert remaining bits.
+    unsigned remainingBits = subBitWidth % APINT_BITS_PER_WORD;
+    if (remainingBits != 0) {
+      uint64_t mask = UINT64_MAX >> (APINT_BITS_PER_WORD - remainingBits);
+      pVal[hi1Word] &= ~mask;
+      pVal[hi1Word] |= subBits.getWord(subBitWidth - 1);
+    }
+    return;
+  }
+
+  // General case - set/clear individual bits in dst based on src.
+  // TODO - there is scope for optimization here, but at the moment this code
+  // path is barely used so prefer readability over performance.
+  for (unsigned i = 0; i != subBitWidth; ++i) {
+    if (subBits[i])
+      setBit(bitPosition + i);
+    else
+      clearBit(bitPosition + i);
+  }
+}
+
 APInt APInt::extractBits(unsigned numBits, unsigned bitPosition) const {
   assert(numBits > 0 && "Can't extract zero bits");
   assert(bitPosition < BitWidth && (numBits + bitPosition) <= BitWidth &&

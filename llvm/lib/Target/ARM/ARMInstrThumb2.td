@@ -139,7 +139,7 @@ def imm1_255_neg : PatLeaf<(i32 imm), [{
 
 def imm0_255_not : PatLeaf<(i32 imm), [{
   return (uint32_t)(~N->getZExtValue()) < 255;
-}], imm_comp_XFORM>;
+}], imm_not_XFORM>;
 
 def lo5AllOne : PatLeaf<(i32 imm), [{
   // Returns true if all low 5-bits are 1.

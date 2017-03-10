@@ -2155,7 +2155,7 @@ static bool continuesLineComment(const FormatToken &FormatTok,
   // Scan for '{//'. If found, use the column of '{' as a min column for line
   // comment section continuation.
   const FormatToken *PreviousToken = nullptr;
-  for (const UnwrappedLineNode Node : Line.Tokens) {
+  for (const UnwrappedLineNode &Node : Line.Tokens) {
     if (PreviousToken && PreviousToken->is(tok::l_brace) &&
         isLineComment(*Node.Tok)) {
       MinColumnToken = PreviousToken;

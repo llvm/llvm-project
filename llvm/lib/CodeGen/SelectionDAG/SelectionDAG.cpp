@@ -7523,11 +7523,11 @@ bool BuildVectorSDNode::isConstantSplat(APInt &SplatValue,
     if (OpVal.isUndef())
       SplatUndef.setBits(BitPos, BitPos + EltBitSize);
     else if (ConstantSDNode *CN = dyn_cast<ConstantSDNode>(OpVal))
-      SplatValue |= CN->getAPIntValue().zextOrTrunc(EltBitSize).
-                    zextOrTrunc(sz) << BitPos;
+      SplatValue.insertBits(CN->getAPIntValue().zextOrTrunc(EltBitSize),
+                            BitPos);
     else if (ConstantFPSDNode *CN = dyn_cast<ConstantFPSDNode>(OpVal))
-      SplatValue |= CN->getValueAPF().bitcastToAPInt().zextOrTrunc(sz) <<BitPos;
-     else
+      SplatValue.insertBits(CN->getValueAPF().bitcastToAPInt(), BitPos);
+    else
       return false;
   }
 

@@ -5318,12 +5318,11 @@ static bool getTargetConstantBitsFromNode(SDValue Op, unsigned EltSizeInBits,
       return true;
     }
     if (auto *CInt = dyn_cast<ConstantInt>(Cst)) {
-      Mask |= CInt->getValue().zextOrTrunc(SizeInBits).shl(BitOffset);
+      Mask.insertBits(CInt->getValue(), BitOffset);
       return true;
     }
     if (auto *CFP = dyn_cast<ConstantFP>(Cst)) {
-      APInt CstBits = CFP->getValueAPF().bitcastToAPInt();
-      Mask |= CstBits.zextOrTrunc(SizeInBits).shl(BitOffset);
+      Mask.insertBits(CFP->getValueAPF().bitcastToAPInt(), BitOffset);
       return true;
     }
     return false;
@@ -5340,7 +5339,7 @@ static bool getTargetConstantBitsFromNode(SDValue Op, unsigned EltSizeInBits,
       }
       auto *Cst = cast<ConstantSDNode>(Src);
       APInt Bits = Cst->getAPIntValue().zextOrTrunc(SrcEltSizeInBits);
-      MaskBits |= Bits.zext(SizeInBits).shl(BitOffset);
+      MaskBits.insertBits(Bits, BitOffset);
     }
     return SplitBitData();
   }

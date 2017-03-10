@@ -1,7 +1,7 @@
 @ RUN: not llvm-mc -triple armv7a--none-eabi -filetype obj < %s -o /dev/null 2>&1 | FileCheck %s
 
   .set v1, -undef
-@ CHECK: <unknown>:0: error: expression could not be evaluated
+@ CHECK: 3:12: error: expression could not be evaluated
 
   .comm common, 4
   .set v3, common
