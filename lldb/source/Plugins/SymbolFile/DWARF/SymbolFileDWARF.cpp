@@ -476,9 +476,9 @@ void SymbolFileDWARF::InitializeObject() {
     m_apple_exttypes_ap.reset(new DWARFMappedHash::MemoryTable(
         m_data_apple_exttypes.m_data, get_debug_str_data(), ".apple_exttypes"));
     if (!m_apple_exttypes_ap->IsValid())
-      m_using_apple_tables = true;
-    else
       m_apple_exttypes_ap.reset();
+    if (m_apple_exttypes_ap->HasContent())
+      m_using_apple_tables = true;
   }
 
   get_apple_namespaces_data();
