@@ -37,7 +37,7 @@
 #include "swift/AST/Module.h"
 #include "swift/AST/Type.h"
 #include "swift/AST/Types.h"
-#include "swift/Basic/ManglingMacros.h"
+#include "swift/Demangling/ManglingMacros.h"
 #include "llvm/Support/ConvertUTF.h"
 
 #include "Plugins/Language/ObjC/Cocoa.h"

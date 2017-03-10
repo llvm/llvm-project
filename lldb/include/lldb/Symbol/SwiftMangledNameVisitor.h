@@ -13,7 +13,7 @@
 #ifndef liblldb_SwiftMangledNameVisitor_h_
 #define liblldb_SwiftMangledNameVisitor_h_
 
-#include "swift/Basic/Demangle.h"
+#include "swift/Demangling/Demangle.h"
 
 namespace lldb_private {
 class SwiftMangledNameVisitor {
@@ -21,7 +21,7 @@ public:
 #define NODE(e)                                                                \
   virtual void visit##e(swift::Demangle::NodePointer pointer);                 \
   void accept##e(swift::Demangle::NodePointer cur_node);
-#include "swift/Basic/DemangleNodes.def"
+#include "swift/Demangling/DemangleNodes.def"
 
   virtual ~SwiftMangledNameVisitor() {}
 

@@ -20,7 +20,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/Log.h"
 
-#include "swift/Basic/Demangle.h"
+#include "swift/Demangling/Demangle.h"
 
 using namespace lldb_private;
 

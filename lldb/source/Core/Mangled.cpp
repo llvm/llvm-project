@@ -32,7 +32,7 @@
 #include <cxxabi.h>
 #endif
 
-#include "swift/Basic/Demangle.h"
+#include "swift/Demangling/Demangle.h"
 #include "llvm/ADT/DenseMap.h"
 
 #include "Plugins/Language/CPlusPlus/CPlusPlusLanguage.h"
