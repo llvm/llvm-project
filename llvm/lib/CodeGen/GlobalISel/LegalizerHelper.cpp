@@ -570,6 +570,24 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
     MI.eraseFromParent();
     return Legalized;
   }
+  case TargetOpcode::G_FSUB: {
+    // Lower (G_FSUB LHS, RHS) to (G_FADD LHS, (G_FNEG RHS)).
+    // First, check if G_FNEG is marked as Lower. If so, we may
+    // end up with an infinite loop as G_FSUB is used to legalize G_FNEG.
+    if (LI.getAction({G_FNEG, Ty}).first == LegalizerInfo::Lower)
+      return UnableToLegalize;
+    unsigned Res = MI.getOperand(0).getReg();
+    unsigned LHS = MI.getOperand(1).getReg();
+    unsigned RHS = MI.getOperand(2).getReg();
+    unsigned Neg = MRI.createGenericVirtualRegister(Ty);
+    MIRBuilder.buildInstr(TargetOpcode::G_FNEG).addDef(Neg).addUse(RHS);
+    MIRBuilder.buildInstr(TargetOpcode::G_FADD)
+        .addDef(Res)
+        .addUse(LHS)
+        .addUse(Neg);
+    MI.eraseFromParent();
+    return Legalized;
+  }
   }
 }
 
