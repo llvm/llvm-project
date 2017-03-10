@@ -151,7 +151,6 @@ bool Legalizer::runOnMachineFunction(MachineFunction &MF) {
   DEBUG(dbgs() << "Legalize Machine IR for: " << MF.getName() << '\n');
   init(MF);
   const TargetPassConfig &TPC = getAnalysis<TargetPassConfig>();
-  const LegalizerInfo &LegalizerInfo = *MF.getSubtarget().getLegalizerInfo();
   MachineOptimizationRemarkEmitter MORE(MF, /*MBFI=*/nullptr);
   LegalizerHelper Helper(MF);
 
@@ -173,7 +172,7 @@ bool Legalizer::runOnMachineFunction(MachineFunction &MF) {
       if (!isPreISelGenericOpcode(MI->getOpcode()))
         continue;
 
-      auto Res = Helper.legalizeInstr(*MI, LegalizerInfo);
+      auto Res = Helper.legalizeInstr(*MI);
 
       // Error out if we couldn't legalize this instruction. We may want to fall
       // back to DAG ISel instead in the future.

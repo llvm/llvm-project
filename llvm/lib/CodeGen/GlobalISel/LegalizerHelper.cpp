@@ -29,14 +29,13 @@
 using namespace llvm;
 
 LegalizerHelper::LegalizerHelper(MachineFunction &MF)
-  : MRI(MF.getRegInfo()) {
+    : MRI(MF.getRegInfo()), LI(*MF.getSubtarget().getLegalizerInfo()) {
   MIRBuilder.setMF(MF);
 }
 
 LegalizerHelper::LegalizeResult
-LegalizerHelper::legalizeInstrStep(MachineInstr &MI,
-                                   const LegalizerInfo &LegalizerInfo) {
-  auto Action = LegalizerInfo.getAction(MI, MRI);
+LegalizerHelper::legalizeInstrStep(MachineInstr &MI) {
+  auto Action = LI.getAction(MI, MRI);
   switch (std::get<0>(Action)) {
   case LegalizerInfo::Legal:
     return AlreadyLegal;
@@ -51,16 +50,15 @@ LegalizerHelper::legalizeInstrStep(MachineInstr &MI,
   case LegalizerInfo::FewerElements:
     return fewerElementsVector(MI, std::get<1>(Action), std::get<2>(Action));
   case LegalizerInfo::Custom:
-    return LegalizerInfo.legalizeCustom(MI, MRI, MIRBuilder) ? Legalized
-                                                             : UnableToLegalize;
+    return LI.legalizeCustom(MI, MRI, MIRBuilder) ? Legalized
+                                                  : UnableToLegalize;
   default:
     return UnableToLegalize;
   }
 }
 
 LegalizerHelper::LegalizeResult
-LegalizerHelper::legalizeInstr(MachineInstr &MI,
-                               const LegalizerInfo &LegalizerInfo) {
+LegalizerHelper::legalizeInstr(MachineInstr &MI) {
   SmallVector<MachineInstr *, 4> WorkList;
   MIRBuilder.recordInsertions(
       [&](MachineInstr *MI) { WorkList.push_back(MI); });
@@ -70,7 +68,7 @@ LegalizerHelper::legalizeInstr(MachineInstr &MI,
   LegalizeResult Res;
   unsigned Idx = 0;
   do {
-    Res = legalizeInstrStep(*WorkList[Idx], LegalizerInfo);
+    Res = legalizeInstrStep(*WorkList[Idx]);
     if (Res == UnableToLegalize) {
       MIRBuilder.stopRecordingInsertions();
       return UnableToLegalize;
