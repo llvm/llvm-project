@@ -976,6 +976,36 @@ bool IRTranslator::translateVAArg(const User &U, MachineIRBuilder &MIRBuilder) {
   return true;
 }
 
+bool IRTranslator::translateInsertElement(const User &U,
+                                          MachineIRBuilder &MIRBuilder) {
+  // If it is a <1 x Ty> vector, use the scalar as it is
+  // not a legal vector type in LLT.
+  if (U.getType()->getVectorNumElements() == 1) {
+    unsigned Elt = getOrCreateVReg(*U.getOperand(1));
+    ValToVReg[&U] = Elt;
+    return true;
+  }
+  MIRBuilder.buildInsertVectorElement(
+      getOrCreateVReg(U), getOrCreateVReg(*U.getOperand(0)),
+      getOrCreateVReg(*U.getOperand(1)), getOrCreateVReg(*U.getOperand(2)));
+  return true;
+}
+
+bool IRTranslator::translateExtractElement(const User &U,
+                                           MachineIRBuilder &MIRBuilder) {
+  // If it is a <1 x Ty> vector, use the scalar as it is
+  // not a legal vector type in LLT.
+  if (U.getOperand(0)->getType()->getVectorNumElements() == 1) {
+    unsigned Elt = getOrCreateVReg(*U.getOperand(0));
+    ValToVReg[&U] = Elt;
+    return true;
+  }
+  MIRBuilder.buildExtractVectorElement(getOrCreateVReg(U),
+                                       getOrCreateVReg(*U.getOperand(0)),
+                                       getOrCreateVReg(*U.getOperand(1)));
+  return true;
+}
+
 bool IRTranslator::translatePHI(const User &U, MachineIRBuilder &MIRBuilder) {
   const PHINode &PI = cast<PHINode>(U);
   auto MIB = MIRBuilder.buildInstr(TargetOpcode::PHI);

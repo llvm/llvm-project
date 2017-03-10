@@ -582,6 +582,46 @@ MachineInstrBuilder MachineIRBuilder::buildSelect(unsigned Res, unsigned Tst,
       .addUse(Op1);
 }
 
+MachineInstrBuilder MachineIRBuilder::buildInsertVectorElement(unsigned Res,
+                                                               unsigned Val,
+                                                               unsigned Elt,
+                                                               unsigned Idx) {
+#ifndef NDEBUG
+  LLT ResTy = MRI->getType(Res);
+  LLT ValTy = MRI->getType(Val);
+  LLT EltTy = MRI->getType(Elt);
+  LLT IdxTy = MRI->getType(Idx);
+  assert(ResTy.isVector() && ValTy.isVector() && "invalid operand type");
+  assert(EltTy.isScalar() && IdxTy.isScalar() && "invalid operand type");
+  assert(ResTy.getNumElements() == ValTy.getNumElements() && "type mismatch");
+  assert(ResTy.getElementType() == EltTy && "type mismatch");
+#endif
+
+  return buildInstr(TargetOpcode::G_INSERT_VECTOR_ELT)
+      .addDef(Res)
+      .addUse(Val)
+      .addUse(Elt)
+      .addUse(Idx);
+}
+
+MachineInstrBuilder MachineIRBuilder::buildExtractVectorElement(unsigned Res,
+                                                                unsigned Val,
+                                                                unsigned Idx) {
+#ifndef NDEBUG
+  LLT ResTy = MRI->getType(Res);
+  LLT ValTy = MRI->getType(Val);
+  LLT IdxTy = MRI->getType(Idx);
+  assert(ValTy.isVector() && "invalid operand type");
+  assert(ResTy.isScalar() && IdxTy.isScalar() && "invalid operand type");
+  assert(ValTy.getElementType() == ResTy && "type mismatch");
+#endif
+
+  return buildInstr(TargetOpcode::G_EXTRACT_VECTOR_ELT)
+      .addDef(Res)
+      .addUse(Val)
+      .addUse(Idx);
+}
+
 void MachineIRBuilder::validateTruncExt(unsigned Dst, unsigned Src,
                                         bool IsExtend) {
 #ifndef NDEBUG
