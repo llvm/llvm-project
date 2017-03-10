@@ -1571,6 +1571,65 @@ bool MachineInstr::isSafeToMove(AliasAnalysis *AA, bool &SawStore) const {
   return true;
 }
 
+bool MachineInstr::mayAlias(AliasAnalysis *AA, MachineInstr &Other,
+                            bool UseTBAA) {
+  const MachineFunction *MF = getParent()->getParent();
+  const TargetInstrInfo *TII = MF->getSubtarget().getInstrInfo();
+
+  // If neither instruction stores to memory, they can't alias in any
+  // meaningful way, even if they read from the same address.
+  if (!mayStore() && !Other.mayStore())
+    return false;
+
+  // Let the target decide if memory accesses cannot possibly overlap.
+  if (TII->areMemAccessesTriviallyDisjoint(*this, Other, AA))
+    return false;
+
+  if (!AA)
+    return true;
+
+  // FIXME: Need to handle multiple memory operands to support all targets.
+  if (!hasOneMemOperand() || !Other.hasOneMemOperand())
+    return true;
+
+  MachineMemOperand *MMOa = *memoperands_begin();
+  MachineMemOperand *MMOb = *Other.memoperands_begin();
+
+  if (!MMOa->getValue() || !MMOb->getValue())
+    return true;
+
+  // The following interface to AA is fashioned after DAGCombiner::isAlias
+  // and operates with MachineMemOperand offset with some important
+  // assumptions:
+  //   - LLVM fundamentally assumes flat address spaces.
+  //   - MachineOperand offset can *only* result from legalization and
+  //     cannot affect queries other than the trivial case of overlap
+  //     checking.
+  //   - These offsets never wrap and never step outside
+  //     of allocated objects.
+  //   - There should never be any negative offsets here.
+  //
+  // FIXME: Modify API to hide this math from "user"
+  // FIXME: Even before we go to AA we can reason locally about some
+  // memory objects. It can save compile time, and possibly catch some
+  // corner cases not currently covered.
+
+  assert ((MMOa->getOffset() >= 0) && "Negative MachineMemOperand offset");
+  assert ((MMOb->getOffset() >= 0) && "Negative MachineMemOperand offset");
+
+  int64_t MinOffset = std::min(MMOa->getOffset(), MMOb->getOffset());
+  int64_t Overlapa = MMOa->getSize() + MMOa->getOffset() - MinOffset;
+  int64_t Overlapb = MMOb->getSize() + MMOb->getOffset() - MinOffset;
+
+  AliasResult AAResult =
+      AA->alias(MemoryLocation(MMOa->getValue(), Overlapa,
+                               UseTBAA ? MMOa->getAAInfo() : AAMDNodes()),
+                MemoryLocation(MMOb->getValue(), Overlapb,
+                               UseTBAA ? MMOb->getAAInfo() : AAMDNodes()));
+
+  return (AAResult != NoAlias);
+}
+
 /// hasOrderedMemoryRef - Return true if this instruction may have an ordered
 /// or volatile memory reference, or if the information describing the memory
 /// reference is not available. Return false if it is known to have no ordered

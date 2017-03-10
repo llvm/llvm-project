@@ -73,6 +73,12 @@ static cl::opt<bool> MatchFullLines(
              "Allows leading and trailing whitespace if --strict-whitespace\n"
              "is not also passed."));
 
+static cl::opt<bool> EnableVarScope(
+    "enable-var-scope", cl::init(false),
+    cl::desc("Enables scope for regex variables. Variables with names that\n"
+             "do not start with '$' will be reset at the beginning of\n"
+             "each CHECK-LABEL block."));
+
 typedef cl::list<std::string>::const_iterator prefix_iterator;
 
 //===----------------------------------------------------------------------===//
@@ -263,15 +269,19 @@ bool Pattern::ParsePattern(StringRef PatternStr, StringRef Prefix,
       // is relaxed, more strict check is performed in \c EvaluateExpression.
       bool IsExpression = false;
       for (unsigned i = 0, e = Name.size(); i != e; ++i) {
-        if (i == 0 && Name[i] == '@') {
-          if (NameEnd != StringRef::npos) {
-            SM.PrintMessage(SMLoc::getFromPointer(Name.data()),
-                            SourceMgr::DK_Error,
-                            "invalid name in named regex definition");
-            return true;
+        if (i == 0) {
+          if (Name[i] == '$')  // Global vars start with '$'
+            continue;
+          if (Name[i] == '@') {
+            if (NameEnd != StringRef::npos) {
+              SM.PrintMessage(SMLoc::getFromPointer(Name.data()),
+                              SourceMgr::DK_Error,
+                              "invalid name in named regex definition");
+              return true;
+            }
+            IsExpression = true;
+            continue;
           }
-          IsExpression = true;
-          continue;
         }
         if (Name[i] != '_' && !isalnum(Name[i]) &&
             (!IsExpression || (Name[i] != '+' && Name[i] != '-'))) {
@@ -1262,6 +1272,18 @@ static void DumpCommandLine(int argc, char **argv) {
   errs() << "\n";
 }
 
+// Remove local variables from \p VariableTable. Global variables
+// (start with '$') are preserved.
+static void ClearLocalVars(StringMap<StringRef> &VariableTable) {
+  SmallVector<StringRef, 16> LocalVars;
+  for (const auto &Var : VariableTable)
+    if (Var.first()[0] != '$')
+      LocalVars.push_back(Var.first());
+
+  for (const auto &Var : LocalVars)
+    VariableTable.erase(Var);
+}
+
 /// Check the input to FileCheck provided in the \p Buffer against the \p
 /// CheckStrings read from the check file.
 ///
@@ -1297,6 +1319,9 @@ bool CheckInput(SourceMgr &SM, StringRef Buffer,
       Buffer = Buffer.substr(MatchLabelPos + MatchLabelLen);
       ++j;
     }
+
+    if (EnableVarScope)
+      ClearLocalVars(VariableTable);
 
     for (; i != j; ++i) {
       const CheckString &CheckStr = CheckStrings[i];

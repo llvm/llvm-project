@@ -1345,7 +1345,7 @@ define {i64, i1} @uaddoovf(i64 %a, i64 %b) {
 ; SDAG-NEXT:    movzbl %dil, %ecx
 ; SDAG-NEXT:    movzbl %sil, %eax
 ; SDAG-NEXT:    addq %rcx, %rax
-; SDAG-NEXT:    setb %dl
+; SDAG-NEXT:    xorl %edx, %edx
 ; SDAG-NEXT:    retq
 ;
 ; FAST-LABEL: uaddoovf:
@@ -1353,7 +1353,7 @@ define {i64, i1} @uaddoovf(i64 %a, i64 %b) {
 ; FAST-NEXT:    movzbl %dil, %ecx
 ; FAST-NEXT:    movzbl %sil, %eax
 ; FAST-NEXT:    addq %rcx, %rax
-; FAST-NEXT:    setb %dl
+; FAST-NEXT:    xorl %edx, %edx
 ; FAST-NEXT:    retq
 ;
 ; KNL-LABEL: uaddoovf:
@@ -1361,7 +1361,7 @@ define {i64, i1} @uaddoovf(i64 %a, i64 %b) {
 ; KNL-NEXT:    movzbl %dil, %ecx
 ; KNL-NEXT:    movzbl %sil, %eax
 ; KNL-NEXT:    addq %rcx, %rax
-; KNL-NEXT:    setb %dl
+; KNL-NEXT:    xorl %edx, %edx
 ; KNL-NEXT:    retq
   %1 = and i64 %a, 255
   %2 = and i64 %b, 255
@@ -1372,43 +1372,23 @@ define {i64, i1} @uaddoovf(i64 %a, i64 %b) {
 define {i64, i1} @usuboovf(i64 %a, i64 %b) {
 ; SDAG-LABEL: usuboovf:
 ; SDAG:       ## BB#0:
-; SDAG-NEXT:    subq %rdi, %rdi
-; SDAG-NEXT:    sbbb %r8b, %r8b
-; SDAG-NEXT:    movq $-1, %rax
-; SDAG-NEXT:    subq %rsi, %rax
-; SDAG-NEXT:    sbbb %cl, %cl
-; SDAG-NEXT:    subq %rdi, %rax
-; SDAG-NEXT:    sbbb %dl, %dl
-; SDAG-NEXT:    orb %cl, %dl
-; SDAG-NEXT:    orb %r8b, %dl
-; SDAG-NEXT:    andb $1, %dl
+; SDAG-NEXT:    notq %rsi
+; SDAG-NEXT:    xorl %edx, %edx
+; SDAG-NEXT:    movq %rsi, %rax
 ; SDAG-NEXT:    retq
 ;
 ; FAST-LABEL: usuboovf:
 ; FAST:       ## BB#0:
-; FAST-NEXT:    subq %rdi, %rdi
-; FAST-NEXT:    sbbb %r8b, %r8b
-; FAST-NEXT:    movq $-1, %rax
-; FAST-NEXT:    subq %rsi, %rax
-; FAST-NEXT:    sbbb %cl, %cl
-; FAST-NEXT:    subq %rdi, %rax
-; FAST-NEXT:    sbbb %dl, %dl
-; FAST-NEXT:    orb %cl, %dl
-; FAST-NEXT:    orb %r8b, %dl
-; FAST-NEXT:    andb $1, %dl
+; FAST-NEXT:    notq %rsi
+; FAST-NEXT:    xorl %edx, %edx
+; FAST-NEXT:    movq %rsi, %rax
 ; FAST-NEXT:    retq
 ;
 ; KNL-LABEL: usuboovf:
 ; KNL:       ## BB#0:
-; KNL-NEXT:    subq %rdi, %rdi
-; KNL-NEXT:    sbbb %dl, %dl
-; KNL-NEXT:    movq $-1, %rax
-; KNL-NEXT:    subq %rsi, %rax
-; KNL-NEXT:    sbbb %cl, %cl
-; KNL-NEXT:    orb %dl, %cl
-; KNL-NEXT:    subq %rdi, %rax
-; KNL-NEXT:    sbbb %dl, %dl
-; KNL-NEXT:    orb %cl, %dl
+; KNL-NEXT:    notq %rsi
+; KNL-NEXT:    xorl %edx, %edx
+; KNL-NEXT:    movq %rsi, %rax
 ; KNL-NEXT:    retq
   %t0 = call {i64, i1} @llvm.usub.with.overflow.i64(i64 %a, i64 %a)
   %v0 = extractvalue {i64, i1} %t0, 0

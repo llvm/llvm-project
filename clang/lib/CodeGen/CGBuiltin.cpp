@@ -8401,6 +8401,14 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
 
   case AMDGPU::BI__builtin_amdgcn_ds_swizzle:
     return emitBinaryBuiltin(*this, E, Intrinsic::amdgcn_ds_swizzle);
+  case AMDGPU::BI__builtin_amdgcn_mov_dpp: {
+    llvm::SmallVector<llvm::Value *, 5> Args;
+    for (unsigned I = 0; I != 5; ++I)
+      Args.push_back(EmitScalarExpr(E->getArg(I)));
+    Value *F = CGM.getIntrinsic(Intrinsic::amdgcn_mov_dpp,
+                                    Args[0]->getType());
+    return Builder.CreateCall(F, Args);
+  }
   case AMDGPU::BI__builtin_amdgcn_div_fixup:
   case AMDGPU::BI__builtin_amdgcn_div_fixupf:
   case AMDGPU::BI__builtin_amdgcn_div_fixuph:

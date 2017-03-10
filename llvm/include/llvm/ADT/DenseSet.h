@@ -48,6 +48,8 @@ class DenseSetImpl {
   static_assert(sizeof(typename MapTy::value_type) == sizeof(ValueT),
                 "DenseMap buckets unexpectedly large!");
   MapTy TheMap;
+  template <typename T>
+  using const_arg_type_t = typename const_pointer_or_const_ref<T>::type;
 
 public:
   typedef ValueT key_type;
@@ -78,7 +80,7 @@ public:
   }
 
   /// Return 1 if the specified key is in the set, 0 otherwise.
-  size_type count(const ValueT &V) const {
+  size_type count(const_arg_type_t<ValueT> V) const {
     return TheMap.count(V);
   }
 
@@ -154,8 +156,8 @@ public:
   const_iterator begin() const { return ConstIterator(TheMap.begin()); }
   const_iterator end() const { return ConstIterator(TheMap.end()); }
 
-  iterator find(const ValueT &V) { return Iterator(TheMap.find(V)); }
-  const_iterator find(const ValueT &V) const {
+  iterator find(const_arg_type_t<ValueT> V) { return Iterator(TheMap.find(V)); }
+  const_iterator find(const_arg_type_t<ValueT> V) const {
     return ConstIterator(TheMap.find(V));
   }
 

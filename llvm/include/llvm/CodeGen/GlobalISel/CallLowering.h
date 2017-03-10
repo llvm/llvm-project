@@ -177,11 +177,10 @@ public:
     return false;
   }
 
-  /// This hook must be implemented to lower the given call instruction,
-  /// including argument and return value marshalling.
+  /// Lower the given call instruction, including argument and return value
+  /// marshalling.
   ///
-  /// \p CI is either a CallInst or InvokeInst reference (other instantiations
-  /// will fail at link time).
+  /// \p CI is the call/invoke instruction.
   ///
   /// \p ResReg is a register where the call's return value should be stored (or
   /// 0 if there is no return value).
@@ -195,8 +194,7 @@ public:
   /// range of an immediate jump.
   ///
   /// \return true if the lowering succeeded, false otherwise.
-  template <typename CallInstTy>
-  bool lowerCall(MachineIRBuilder &MIRBuilder, const CallInstTy &CI,
+  bool lowerCall(MachineIRBuilder &MIRBuilder, ImmutableCallSite CS,
                  unsigned ResReg, ArrayRef<unsigned> ArgRegs,
                  std::function<unsigned()> GetCalleeReg) const;
 };

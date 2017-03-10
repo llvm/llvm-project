@@ -598,18 +598,18 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
       return true;
     }
 
-    unsigned Reg = getOrCreateVReg(*Address);
-    auto RegDef = MRI->def_instr_begin(Reg);
     assert(DI.getVariable()->isValidLocationForIntrinsic(
                MIRBuilder.getDebugLoc()) &&
            "Expected inlined-at fields to agree");
-
-    if (RegDef != MRI->def_instr_end() &&
-        RegDef->getOpcode() == TargetOpcode::G_FRAME_INDEX) {
-      MIRBuilder.buildFIDbgValue(RegDef->getOperand(1).getIndex(),
-                                 DI.getVariable(), DI.getExpression());
+    auto AI = dyn_cast<AllocaInst>(Address);
+    if (AI && AI->isStaticAlloca()) {
+      // Static allocas are tracked at the MF level, no need for DBG_VALUE
+      // instructions (in fact, they get ignored if they *do* exist).
+      MF->setVariableDbgInfo(DI.getVariable(), DI.getExpression(),
+                             getOrCreateFrameIndex(*AI), DI.getDebugLoc());
     } else
-      MIRBuilder.buildDirectDbgValue(Reg, DI.getVariable(), DI.getExpression());
+      MIRBuilder.buildDirectDbgValue(getOrCreateVReg(*Address),
+                                     DI.getVariable(), DI.getExpression());
     return true;
   }
   case Intrinsic::vaend:
@@ -715,13 +715,32 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
   return false;
 }
 
+bool IRTranslator::translateInlineAsm(const CallInst &CI,
+                                      MachineIRBuilder &MIRBuilder) {
+  const InlineAsm &IA = cast<InlineAsm>(*CI.getCalledValue());
+  if (!IA.getConstraintString().empty())
+    return false;
+
+  unsigned ExtraInfo = 0;
+  if (IA.hasSideEffects())
+    ExtraInfo |= InlineAsm::Extra_HasSideEffects;
+  if (IA.getDialect() == InlineAsm::AD_Intel)
+    ExtraInfo |= InlineAsm::Extra_AsmDialect;
+
+  MIRBuilder.buildInstr(TargetOpcode::INLINEASM)
+    .addExternalSymbol(IA.getAsmString().c_str())
+    .addImm(ExtraInfo);
+
+  return true;
+}
+
 bool IRTranslator::translateCall(const User &U, MachineIRBuilder &MIRBuilder) {
   const CallInst &CI = cast<CallInst>(U);
   auto TII = MF->getTarget().getIntrinsicInfo();
   const Function *F = CI.getCalledFunction();
 
   if (CI.isInlineAsm())
-    return false;
+    return translateInlineAsm(CI, MIRBuilder);
 
   if (!F || !F->isIntrinsic()) {
     unsigned Res = CI.getType()->isVoidTy() ? 0 : getOrCreateVReg(CI);
@@ -729,7 +748,8 @@ bool IRTranslator::translateCall(const User &U, MachineIRBuilder &MIRBuilder) {
     for (auto &Arg: CI.arg_operands())
       Args.push_back(getOrCreateVReg(*Arg));
 
-    return CLI->lowerCall(MIRBuilder, CI, Res, Args, [&]() {
+    MF->getFrameInfo().setHasCalls(true);
+    return CLI->lowerCall(MIRBuilder, &CI, Res, Args, [&]() {
       return getOrCreateVReg(*CI.getCalledValue());
     });
   }
@@ -767,7 +787,7 @@ bool IRTranslator::translateInvoke(const User &U,
   const BasicBlock *ReturnBB = I.getSuccessor(0);
   const BasicBlock *EHPadBB = I.getSuccessor(1);
 
-  const Value *Callee(I.getCalledValue());
+  const Value *Callee = I.getCalledValue();
   const Function *Fn = dyn_cast<Function>(Callee);
   if (isa<InlineAsm>(Callee))
     return false;
@@ -795,8 +815,9 @@ bool IRTranslator::translateInvoke(const User &U,
   for (auto &Arg: I.arg_operands())
     Args.push_back(getOrCreateVReg(*Arg));
 
- CLI->lowerCall(MIRBuilder, I, Res, Args,
-                 [&]() { return getOrCreateVReg(*I.getCalledValue()); });
+  if (!CLI->lowerCall(MIRBuilder, &I, Res, Args,
+                      [&]() { return getOrCreateVReg(*I.getCalledValue()); }))
+    return false;
 
   MCSymbol *EndSymbol = Context.createTempSymbol();
   MIRBuilder.buildInstr(TargetOpcode::EH_LABEL).addSym(EndSymbol);

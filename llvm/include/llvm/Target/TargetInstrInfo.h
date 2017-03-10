@@ -1437,10 +1437,17 @@ public:
     return nullptr;
   }
 
-  // Sometimes, it is possible for the target
-  // to tell, even without aliasing information, that two MIs access different
-  // memory addresses. This function returns true if two MIs access different
-  // memory addresses and false otherwise.
+  /// Sometimes, it is possible for the target
+  /// to tell, even without aliasing information, that two MIs access different
+  /// memory addresses. This function returns true if two MIs access different
+  /// memory addresses and false otherwise.
+  ///
+  /// Assumes any physical registers used to compute addresses have the same
+  /// value for both instructions. (This is the most useful assumption for
+  /// post-RA scheduling.)
+  ///
+  /// See also MachineInstr::mayAlias, which is implemented on top of this
+  /// function.
   virtual bool
   areMemAccessesTriviallyDisjoint(MachineInstr &MIa, MachineInstr &MIb,
                                   AliasAnalysis *AA = nullptr) const {

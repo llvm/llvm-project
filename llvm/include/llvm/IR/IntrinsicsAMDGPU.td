@@ -666,10 +666,12 @@ def int_amdgcn_s_memrealtime :
 
 // llvm.amdgcn.ds.permute <index> <src>
 def int_amdgcn_ds_permute :
+  GCCBuiltin<"__builtin_amdgcn_ds_permute">,
   Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [IntrNoMem, IntrConvergent]>;
 
 // llvm.amdgcn.ds.bpermute <index> <src>
 def int_amdgcn_ds_bpermute :
+  GCCBuiltin<"__builtin_amdgcn_ds_bpermute">,
   Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [IntrNoMem, IntrConvergent]>;
 
 }

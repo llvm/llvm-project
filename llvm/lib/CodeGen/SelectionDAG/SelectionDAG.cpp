@@ -3657,6 +3657,12 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
   if (Cst1->isOpaque() || Cst2->isOpaque())
     return SDValue();
 
+  // Division/remainder with a zero divisor is undefined behavior.
+  if ((Opcode == ISD::SDIV || Opcode == ISD::UDIV ||
+       Opcode == ISD::SREM || Opcode == ISD::UREM) &&
+      Cst2->isNullValue())
+    return getUNDEF(VT);
+
   std::pair<APInt, bool> Folded = FoldValue(Opcode, Cst1->getAPIntValue(),
                                             Cst2->getAPIntValue());
   if (!Folded.second)

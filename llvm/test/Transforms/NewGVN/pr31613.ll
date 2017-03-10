@@ -85,7 +85,6 @@ define void @e() {
 ; CHECK:       l:
 ; CHECK-NEXT:    br label [[R:%.*]]
 ; CHECK:       q:
-; CHECK-NEXT:    [[M:%.*]] = load %struct.a*, %struct.a** null
 ; CHECK-NEXT:    br label [[R]]
 ; CHECK:       r:
 ; CHECK-NEXT:    switch i32 undef, label [[N:%.*]] [
@@ -95,7 +94,6 @@ define void @e() {
 ; CHECK-NEXT:    store i32 undef, i32* [[F]], !g !0
 ; CHECK-NEXT:    br label [[H]]
 ; CHECK:       n:
-; CHECK-NEXT:    [[O:%.*]] = load %struct.a*, %struct.a** null
 ; CHECK-NEXT:    ret void
 ;
   %f = alloca i32

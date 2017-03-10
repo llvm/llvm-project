@@ -69,7 +69,7 @@ TEST(STLExtrasTest, EnumerateLValue) {
 
   // Test an empty range.
   IntResults.clear();
-  const std::vector<int> baz;
+  const std::vector<int> baz{};
   for (auto X : llvm::enumerate(baz)) {
     IntResults.emplace_back(X.Index, X.Value);
   }

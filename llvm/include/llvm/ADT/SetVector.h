@@ -119,6 +119,12 @@ public:
     return vector_.rend();
   }
 
+  /// \brief Return the first element of the SetVector.
+  const T &front() const {
+    assert(!empty() && "Cannot call front() on empty SetVector!");
+    return vector_.front();
+  }
+
   /// \brief Return the last element of the SetVector.
   const T &back() const {
     assert(!empty() && "Cannot call back() on empty SetVector!");
