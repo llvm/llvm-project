@@ -16,6 +16,7 @@
 
 // Mangling
 #define MATH_MANGLE(N) OCML_MANGLE_F16(N)
+#define MATH_MANGLE2(N) OCML_MANGLE_2F16(N)
 #define MATH_PRIVATE(N) MANGLE3(__ocmlpriv,N,f16)
 #define MATH_UPMANGLE(N) OCML_MANGLE_F32(N)
 
@@ -51,6 +52,20 @@
 #define EMAX_HP16         15
 #define MANTLENGTH_HP16   11
 #define BASEDIGITS_HP16   5
+
+#define UGEN(N) \
+INLINEATTR half2 \
+MATH_MANGLE2(N)(half2 x) \
+{ \
+    return (half2)(MATH_MANGLE(N)(x.lo), MATH_MANGLE(N)(x.hi)); \
+}
+
+#define BGEN(N) \
+INLINEATTR half2 \
+MATH_MANGLE2(N)(half2 x, half2 y) \
+{ \
+    return (half2)(MATH_MANGLE(N)(x.lo, y.lo), MATH_MANGLE(N)(x.hi, y.hi)); \
+}
 
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 

@@ -8,6 +8,8 @@
 #include "mathH.h"
 #include "trigpiredH.h"
 
+CONSTATTR UGEN(tanpi)
+
 CONSTATTR INLINEATTR half
 MATH_MANGLE(tanpi)(half x)
 {

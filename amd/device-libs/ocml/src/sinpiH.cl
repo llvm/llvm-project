@@ -8,6 +8,8 @@
 #include "mathH.h"
 #include "trigpiredH.h"
 
+UGEN(sinpi)
+
 INLINEATTR half
 MATH_MANGLE(sinpi)(half x)
 {

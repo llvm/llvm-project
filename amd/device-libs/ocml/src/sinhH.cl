@@ -7,6 +7,8 @@
 
 #include "mathH.h"
 
+PUREATTR UGEN(sinh)
+
 PUREATTR INLINEATTR half
 MATH_MANGLE(sinh)(half hx)
 {

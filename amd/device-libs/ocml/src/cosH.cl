@@ -8,6 +8,8 @@
 #include "mathH.h"
 #include "trigredH.h"
 
+UGEN(cos)
+
 INLINEATTR half
 MATH_MANGLE(cos)(half x)
 {

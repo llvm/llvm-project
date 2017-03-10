@@ -14,46 +14,75 @@
 
 #define ATTR __attribute__((always_inline, overloadable))
 
-#define float_suf _f32
-#define double_suf _f64
-#define half_suf _f16
+#define float_ssuf _f32
+#define double_ssuf _f64
+#define half_ssuf _f16
+#define half_psuf _2f16
 
-#define ONAME(F,T) C(__ocml_,C(F,T##_suf))
+#define SNAME(F,T) C(__ocml_,C(F,T##_ssuf))
+#define PNAME(F,T) C(__ocml_,C(F,T##_psuf))
 
-#define LIST2(F,T) ONAME(F,T)(x.s0), ONAME(F,T)(x.s1)
-#define LIST3(F,T) ONAME(F,T)(x.s0), ONAME(F,T)(x.s1), ONAME(F,T)(x.s2)
-#define LIST4(F,T) LIST2(F,T), ONAME(F,T)(x.s2), ONAME(F,T)(x.s3)
-#define LIST8(F,T) LIST4(F,T), ONAME(F,T)(x.s4), ONAME(F,T)(x.s5), ONAME(F,T)(x.s6), ONAME(F,T)(x.s7)
-#define LIST16(F,T) LIST8(F,T), ONAME(F,T)(x.s8), ONAME(F,T)(x.s9), ONAME(F,T)(x.sa), ONAME(F,T)(x.sb), \
-                                ONAME(F,T)(x.sc), ONAME(F,T)(x.sd), ONAME(F,T)(x.se), ONAME(F,T)(x.sf)
+#define SLST2(F,T) SNAME(F,T)(x.s0), SNAME(F,T)(x.s1)
+#define SLST3(F,T) SNAME(F,T)(x.s0), SNAME(F,T)(x.s1), SNAME(F,T)(x.s2)
+#define SLST4(F,T) SLST2(F,T), SNAME(F,T)(x.s2), SNAME(F,T)(x.s3)
+#define SLST8(F,T) SLST4(F,T), SNAME(F,T)(x.s4), SNAME(F,T)(x.s5), SNAME(F,T)(x.s6), SNAME(F,T)(x.s7)
+#define SLST16(F,T) SLST8(F,T), SNAME(F,T)(x.s8), SNAME(F,T)(x.s9), SNAME(F,T)(x.sa), SNAME(F,T)(x.sb), \
+                                SNAME(F,T)(x.sc), SNAME(F,T)(x.sd), SNAME(F,T)(x.se), SNAME(F,T)(x.sf)
 
-#define WRAPN(N,F,OT,IT,ST) \
+#define PLST3(F,T) PNAME(F,T)(x.s01), SNAME(F,T)(x.s2)
+#define PLST4(F,T) PNAME(F,T)(x.s01), PNAME(F,T)(x.s23)
+#define PLST8(F,T) PLST4(F,T), PNAME(F,T)(x.s45), PNAME(F,T)(x.s67)
+#define PLST16(F,T) PLST8(F,T), PNAME(F,T)(x.s89), PNAME(F,T)(x.sab), PNAME(F,T)(x.scd), PNAME(F,T)(x.sef)
+
+#define SWRAPN(N,F,OT,IT,ST) \
 ATTR OT##N \
 F(IT##N x) \
 { \
-    return (OT##N) ( LIST##N(F,ST) ); \
+    return (OT##N) ( SLST##N(F,ST) ); \
+}
+
+#define PWRAPN(N,F,OT,IT,ST) \
+ATTR OT##N \
+F(IT##N x) \
+{ \
+    return (OT##N) ( PLST##N(F,ST) ); \
 }
 
 #define WRAP1(F,OT,IT,ST) \
 ATTR OT \
 F(IT x) \
 { \
-    return ONAME(F,ST)(x); \
+    return SNAME(F,ST)(x); \
 }
 
-#define WRAP(F,OT,IT,ST) \
-    WRAPN(16,F,OT,IT,ST) \
-    WRAPN(8,F,OT,IT,ST) \
-    WRAPN(4,F,OT,IT,ST) \
-    WRAPN(3,F,OT,IT,ST) \
-    WRAPN(2,F,OT,IT,ST) \
+#define WRAP2(F,OT,IT,ST) \
+ATTR OT##2 \
+F(IT##2 x) \
+{ \
+    return PNAME(F,ST)(x); \
+}
+
+#define SWRAP(F,OT,IT,ST) \
+    SWRAPN(16,F,OT,IT,ST) \
+    SWRAPN(8,F,OT,IT,ST) \
+    SWRAPN(4,F,OT,IT,ST) \
+    SWRAPN(3,F,OT,IT,ST) \
+    SWRAPN(2,F,OT,IT,ST) \
     WRAP1(F,OT,IT,ST)
 
-WRAP(ilogb,int,float,float)
-WRAP(ilogb,int,double,double)
-WRAP(ilogb,int,half,half)
+#define PWRAP(F,OT,IT,ST) \
+    PWRAPN(16,F,OT,IT,ST) \
+    PWRAPN(8,F,OT,IT,ST) \
+    PWRAPN(4,F,OT,IT,ST) \
+    PWRAPN(3,F,OT,IT,ST) \
+    WRAP2(F,OT,IT,ST) \
+    WRAP1(F,OT,IT,ST)
 
-WRAP(nan,float,uint,float)
-WRAP(nan,double,ulong,double)
-WRAP(nan,half,ushort,half)
+SWRAP(ilogb,int,float,float)
+SWRAP(ilogb,int,double,double)
+PWRAP(ilogb,int,half,half)
+
+SWRAP(nan,float,uint,float)
+SWRAP(nan,double,ulong,double)
+PWRAP(nan,half,ushort,half)
 

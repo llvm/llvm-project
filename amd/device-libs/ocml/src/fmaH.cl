@@ -7,6 +7,12 @@
 
 #include "mathH.h"
 
+CONSTATTR half2
+MATH_MANGLE2(fma)(half2 a, half2 b, half2 c)
+{
+    return BUILTIN_FMA_2F16(a, b, c);
+}
+
 CONSTATTR half
 MATH_MANGLE(fma)(half a, half b, half c)
 {

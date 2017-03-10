@@ -7,6 +7,8 @@
 
 #include "mathH.h"
 
+CONSTATTR UGEN(asin)
+
 CONSTATTR half
 MATH_MANGLE(asin)(half x)
 {

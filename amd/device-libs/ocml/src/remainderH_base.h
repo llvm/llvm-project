@@ -5,8 +5,6 @@
  * License. See LICENSE.TXT for details.
  *===------------------------------------------------------------------------*/
 
-#include "mathH.h"
-
 CONSTATTR static inline bool
 samesign(half x, half y)
 {
