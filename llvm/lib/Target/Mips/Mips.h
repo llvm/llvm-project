@@ -32,7 +32,6 @@ namespace llvm {
   FunctionPass *createMipsHazardSchedule();
   FunctionPass *createMipsLongBranchPass(MipsTargetMachine &TM);
   FunctionPass *createMipsConstantIslandPass();
-  FunctionPass *createMipsExpandPseudoPass();
 } // end namespace llvm;
 
 #endif

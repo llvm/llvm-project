@@ -372,6 +372,9 @@ static bool is_local_impl(struct STATVFS &Vfs) {
   default:
     return true;
   }
+#elif defined(__CYGWIN__)
+  // Cygwin doesn't expose this information; would need to use Win32 API.
+  return false;
 #else
   return !!(STATVFS_F_FLAG(Vfs) & MNT_LOCAL);
 #endif

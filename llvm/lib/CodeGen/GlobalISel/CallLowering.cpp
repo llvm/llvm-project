@@ -23,48 +23,37 @@
 
 using namespace llvm;
 
-template<typename CallInstTy>
 bool CallLowering::lowerCall(
-    MachineIRBuilder &MIRBuilder, const CallInstTy &CI, unsigned ResReg,
+    MachineIRBuilder &MIRBuilder, ImmutableCallSite CS, unsigned ResReg,
     ArrayRef<unsigned> ArgRegs, std::function<unsigned()> GetCalleeReg) const {
-  auto &DL = CI.getParent()->getParent()->getParent()->getDataLayout();
+  auto &DL = CS.getParent()->getParent()->getParent()->getDataLayout();
 
   // First step is to marshall all the function's parameters into the correct
   // physregs and memory locations. Gather the sequence of argument types that
   // we'll pass to the assigner function.
   SmallVector<ArgInfo, 8> OrigArgs;
   unsigned i = 0;
-  unsigned NumFixedArgs = CI.getFunctionType()->getNumParams();
-  for (auto &Arg : CI.arg_operands()) {
+  unsigned NumFixedArgs = CS.getFunctionType()->getNumParams();
+  for (auto &Arg : CS.args()) {
     ArgInfo OrigArg{ArgRegs[i], Arg->getType(), ISD::ArgFlagsTy{},
                     i < NumFixedArgs};
-    setArgFlags(OrigArg, i + 1, DL, CI);
+    setArgFlags(OrigArg, i + 1, DL, CS);
     OrigArgs.push_back(OrigArg);
     ++i;
   }
 
   MachineOperand Callee = MachineOperand::CreateImm(0);
-  if (Function *F = CI.getCalledFunction())
+  if (const Function *F = CS.getCalledFunction())
     Callee = MachineOperand::CreateGA(F, 0);
   else
     Callee = MachineOperand::CreateReg(GetCalleeReg(), false);
 
-  ArgInfo OrigRet{ResReg, CI.getType(), ISD::ArgFlagsTy{}};
+  ArgInfo OrigRet{ResReg, CS.getType(), ISD::ArgFlagsTy{}};
   if (!OrigRet.Ty->isVoidTy())
-    setArgFlags(OrigRet, AttributeSet::ReturnIndex, DL, CI);
+    setArgFlags(OrigRet, AttributeSet::ReturnIndex, DL, CS);
 
   return lowerCall(MIRBuilder, Callee, OrigRet, OrigArgs);
 }
-
-template bool
-CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, const CallInst &CI,
-                        unsigned ResReg, ArrayRef<unsigned> ArgRegs,
-                        std::function<unsigned()> GetCalleeReg) const;
-
-template bool
-CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, const InvokeInst &CI,
-                        unsigned ResReg, ArrayRef<unsigned> ArgRegs,
-                        std::function<unsigned()> GetCalleeReg) const;
 
 template <typename FuncInfoTy>
 void CallLowering::setArgFlags(CallLowering::ArgInfo &Arg, unsigned OpIdx,

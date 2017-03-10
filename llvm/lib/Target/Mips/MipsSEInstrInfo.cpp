@@ -540,11 +540,20 @@ unsigned MipsSEInstrInfo::getAnalyzableBrOpc(unsigned Opc) const {
 
 void MipsSEInstrInfo::expandRetRA(MachineBasicBlock &MBB,
                                   MachineBasicBlock::iterator I) const {
+
+  MachineInstrBuilder MIB;
   if (Subtarget.isGP64bit())
-    BuildMI(MBB, I, I->getDebugLoc(), get(Mips::PseudoReturn64))
-        .addReg(Mips::RA_64);
+    MIB = BuildMI(MBB, I, I->getDebugLoc(), get(Mips::PseudoReturn64))
+              .addReg(Mips::RA_64, RegState::Undef);
   else
-    BuildMI(MBB, I, I->getDebugLoc(), get(Mips::PseudoReturn)).addReg(Mips::RA);
+    MIB = BuildMI(MBB, I, I->getDebugLoc(), get(Mips::PseudoReturn))
+              .addReg(Mips::RA, RegState::Undef);
+
+  // Retain any imp-use flags.
+  for (auto & MO : I->operands()) {
+    if (MO.isImplicit())
+      MIB.add(MO);
+  }
 }
 
 void MipsSEInstrInfo::expandERet(MachineBasicBlock &MBB,

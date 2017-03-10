@@ -827,6 +827,13 @@ inline CastClass_match<OpTy, Instruction::ZExt> m_ZExt(const OpTy &Op) {
   return CastClass_match<OpTy, Instruction::ZExt>(Op);
 }
 
+template <typename OpTy>
+inline match_combine_or<CastClass_match<OpTy, Instruction::ZExt>,
+                        CastClass_match<OpTy, Instruction::SExt>>
+m_ZExtOrSExt(const OpTy &Op) {
+  return m_CombineOr(m_ZExt(Op), m_SExt(Op));
+}
+
 /// \brief Matches UIToFP.
 template <typename OpTy>
 inline CastClass_match<OpTy, Instruction::UIToFP> m_UIToFP(const OpTy &Op) {

@@ -86,6 +86,10 @@ BUILTIN(__builtin_amdgcn_sicmpl, "LUiLiLiIi", "nc")
 BUILTIN(__builtin_amdgcn_fcmp, "LUiddIi", "nc")
 BUILTIN(__builtin_amdgcn_fcmpf, "LUiffIi", "nc")
 BUILTIN(__builtin_amdgcn_ds_swizzle, "iiIi", "nc")
+BUILTIN(__builtin_amdgcn_ds_permute, "iii", "nc")
+BUILTIN(__builtin_amdgcn_ds_bpermute, "iii", "nc")
+BUILTIN(__builtin_amdgcn_readfirstlane, "ii", "nc")
+BUILTIN(__builtin_amdgcn_readlane, "iii", "nc")
 BUILTIN(__builtin_amdgcn_fmed3f, "ffff", "nc")
 
 //===----------------------------------------------------------------------===//
@@ -103,6 +107,7 @@ TARGET_BUILTIN(__builtin_amdgcn_frexp_exph, "sh", "nc", "16-bit-insts")
 TARGET_BUILTIN(__builtin_amdgcn_fracth, "hh", "nc", "16-bit-insts")
 TARGET_BUILTIN(__builtin_amdgcn_classh, "bhi", "nc", "16-bit-insts")
 TARGET_BUILTIN(__builtin_amdgcn_s_memrealtime, "LUi", "n", "s-memrealtime")
+TARGET_BUILTIN(__builtin_amdgcn_mov_dpp, "iiIiIiIiIb", "nc", "dpp")
 
 //===----------------------------------------------------------------------===//
 // GFX9+ only builtins.

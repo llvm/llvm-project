@@ -28,10 +28,11 @@ public:
   static StringRef skipSpace(StringRef S);
   bool atEOF();
   StringRef next();
-  StringRef peek(unsigned N = 0);
+  StringRef peek();
   void skip();
   bool consume(StringRef Tok);
   void expect(StringRef Expect);
+  bool consumeLabel(StringRef Tok);
   std::string getCurrentLocation();
 
   std::vector<MemoryBufferRef> MBs;

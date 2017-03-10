@@ -1744,10 +1744,11 @@ namespace {
 // This is by no means complete
   class BitSimplification : public Transformation {
   public:
-    BitSimplification(BitTracker &bt, const HexagonInstrInfo &hii,
-        const HexagonRegisterInfo &hri, MachineRegisterInfo &mri,
-        MachineFunction &mf)
-      : Transformation(true), HII(hii), HRI(hri), MRI(mri), MF(mf), BT(bt) {}
+    BitSimplification(BitTracker &bt, const MachineDominatorTree &mdt,
+        const HexagonInstrInfo &hii, const HexagonRegisterInfo &hri,
+        MachineRegisterInfo &mri, MachineFunction &mf)
+      : Transformation(true), MDT(mdt), HII(hii), HRI(hri), MRI(mri),
+        MF(mf), BT(bt) {}
 
     bool processBlock(MachineBasicBlock &B, const RegisterSet &AVs) override;
 
@@ -1781,6 +1782,11 @@ namespace {
     bool simplifyExtractLow(MachineInstr *MI, BitTracker::RegisterRef RD,
           const BitTracker::RegisterCell &RC, const RegisterSet &AVs);
 
+    // Cache of created instructions to avoid creating duplicates.
+    // XXX Currently only used by genBitSplit.
+    std::vector<MachineInstr*> NewMIs;
+
+    const MachineDominatorTree &MDT;
     const HexagonInstrInfo &HII;
     const HexagonRegisterInfo &HRI;
     MachineRegisterInfo &MRI;
@@ -2252,14 +2258,43 @@ bool BitSimplification::genBitSplit(MachineInstr *MI,
     assert(DefS != nullptr);
     DebugLoc DL = DefS->getDebugLoc();
     MachineBasicBlock &B = *DefS->getParent();
-    auto At = MI->isPHI() ? B.getFirstNonPHI()
-                          : MachineBasicBlock::iterator(DefS);
+    auto At = DefS->isPHI() ? B.getFirstNonPHI()
+                            : MachineBasicBlock::iterator(DefS);
     if (MRI.getRegClass(SrcR)->getID() == Hexagon::DoubleRegsRegClassID)
       SrcSR = (std::min(Pos, P) == 32) ? Hexagon::isub_hi : Hexagon::isub_lo;
-    unsigned NewR = MRI.createVirtualRegister(&Hexagon::DoubleRegsRegClass);
-    BuildMI(B, At, DL, HII.get(Hexagon::A4_bitspliti), NewR)
-      .addReg(SrcR, 0, SrcSR)
-      .addImm(Pos <= P ? W-Z : Z);
+    if (!validateReg({SrcR,SrcSR}, Hexagon::A4_bitspliti, 1))
+      continue;
+    unsigned ImmOp = Pos <= P ? W-Z : Z;
+
+    // Find an existing bitsplit instruction if one already exists.
+    unsigned NewR = 0;
+    for (MachineInstr *In : NewMIs) {
+      if (In->getOpcode() != Hexagon::A4_bitspliti)
+        continue;
+      MachineOperand &Op1 = In->getOperand(1);
+      if (Op1.getReg() != SrcR || Op1.getSubReg() != SrcSR)
+        continue;
+      if (In->getOperand(2).getImm() != ImmOp)
+        continue;
+      // Check if the target register is available here.
+      MachineOperand &Op0 = In->getOperand(0);
+      MachineInstr *DefI = MRI.getVRegDef(Op0.getReg());
+      assert(DefI != nullptr);
+      if (!MDT.dominates(DefI, &*At))
+        continue;
+
+      // Found one that can be reused.
+      assert(Op0.getSubReg() == 0);
+      NewR = Op0.getReg();
+      break;
+    }
+    if (!NewR) {
+      NewR = MRI.createVirtualRegister(&Hexagon::DoubleRegsRegClass);
+      auto NewBS = BuildMI(B, At, DL, HII.get(Hexagon::A4_bitspliti), NewR)
+                      .addReg(SrcR, 0, SrcSR)
+                      .addImm(ImmOp);
+      NewMIs.push_back(NewBS);
+    }
     if (Pos <= P) {
       HBS::replaceRegWithSub(RD.Reg, NewR, Hexagon::isub_lo, MRI);
       HBS::replaceRegWithSub(S,      NewR, Hexagon::isub_hi, MRI);
@@ -2635,7 +2670,7 @@ bool HexagonBitSimplify::runOnMachineFunction(MachineFunction &MF) {
 
   BT.run();
   RegisterSet ABS;  // Available registers for BS.
-  BitSimplification BitS(BT, HII, HRI, MRI, MF);
+  BitSimplification BitS(BT, *MDT, HII, HRI, MRI, MF);
   Changed |= visitBlock(Entry, BitS, ABS);
 
   Changed = DeadCodeElimination(MF, *MDT).run() || Changed;

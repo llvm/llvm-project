@@ -2387,6 +2387,7 @@ bool AMDGPUTargetInfo::initFeatureMap(
     case GK_GFX8:
       Features["s-memrealtime"] = true;
       Features["16-bit-insts"] = true;
+      Features["dpp"] = true;
       break;
 
     case GK_NONE:

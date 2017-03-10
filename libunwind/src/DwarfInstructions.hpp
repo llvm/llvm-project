@@ -18,7 +18,6 @@
 #include <stdlib.h>
 
 #include "dwarf2.h"
-#include "AddressSpace.hpp"
 #include "Registers.hpp"
 #include "DwarfParser.hpp"
 #include "config.h"

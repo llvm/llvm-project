@@ -746,19 +746,51 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
   Module &M = *InitialC.begin()->getFunction().getParent();
   ProfileSummaryInfo *PSI = MAM.getCachedResult<ProfileSummaryAnalysis>(M);
 
-  // We use a worklist of nodes to process so that we can handle if the SCC
-  // structure changes and some nodes are no longer part of the current SCC. We
-  // also need to use an updatable pointer for the SCC as a consequence.
-  SmallVector<LazyCallGraph::Node *, 16> Nodes;
-  for (auto &N : InitialC)
-    Nodes.push_back(&N);
+  // We use a single common worklist for calls across the entire SCC. We
+  // process these in-order and append new calls introduced during inlining to
+  // the end.
+  //
+  // Note that this particular order of processing is actually critical to
+  // avoid very bad behaviors. Consider *highly connected* call graphs where
+  // each function contains a small amonut of code and a couple of calls to
+  // other functions. Because the LLVM inliner is fundamentally a bottom-up
+  // inliner, it can handle gracefully the fact that these all appear to be
+  // reasonable inlining candidates as it will flatten things until they become
+  // too big to inline, and then move on and flatten another batch.
+  //
+  // However, when processing call edges *within* an SCC we cannot rely on this
+  // bottom-up behavior. As a consequence, with heavily connected *SCCs* of
+  // functions we can end up incrementally inlining N calls into each of
+  // N functions because each incremental inlining decision looks good and we
+  // don't have a topological ordering to prevent explosions.
+  //
+  // To compensate for this, we don't process transitive edges made immediate
+  // by inlining until we've done one pass of inlining across the entire SCC.
+  // Large, highly connected SCCs still lead to some amount of code bloat in
+  // this model, but it is uniformly spread across all the functions in the SCC
+  // and eventually they all become too large to inline, rather than
+  // incrementally maknig a single function grow in a super linear fashion.
+  SmallVector<std::pair<CallSite, int>, 16> Calls;
+
+  // Populate the initial list of calls in this SCC.
+  for (auto &N : InitialC) {
+    // We want to generally process call sites top-down in order for
+    // simplifications stemming from replacing the call with the returned value
+    // after inlining to be visible to subsequent inlining decisions.
+    // FIXME: Using instructions sequence is a really bad way to do this.
+    // Instead we should do an actual RPO walk of the function body.
+    for (Instruction &I : instructions(N.getFunction()))
+      if (auto CS = CallSite(&I))
+        if (Function *Callee = CS.getCalledFunction())
+          if (!Callee->isDeclaration())
+            Calls.push_back({CS, -1});
+  }
+  if (Calls.empty())
+    return PreservedAnalyses::all();
+
+  // Capture updatable variables for the current SCC and RefSCC.
   auto *C = &InitialC;
   auto *RC = &C->getOuterRefSCC();
-
-  // We also use a secondary worklist of call sites within a particular node to
-  // allow quickly continuing to inline through newly inlined call sites where
-  // possible.
-  SmallVector<std::pair<CallSite, int>, 16> Calls;
 
   // When inlining a callee produces new call sites, we want to keep track of
   // the fact that they were inlined from the callee.  This allows us to avoid
@@ -775,11 +807,17 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
   // defer deleting these to make it easier to handle the call graph updates.
   SmallVector<Function *, 4> DeadFunctions;
 
-  do {
-    auto &N = *Nodes.pop_back_val();
+  // Loop forward over all of the calls. Note that we cannot cache the size as
+  // inlining can introduce new calls that need to be processed.
+  for (int i = 0; i < (int)Calls.size(); ++i) {
+    // We expect the calls to typically be batched with sequences of calls that
+    // have the same caller, so we first set up some shared infrastructure for
+    // this caller. We also do any pruning we can at this layer on the caller
+    // alone.
+    Function &F = *Calls[i].first.getCaller();
+    LazyCallGraph::Node &N = *CG.lookup(F);
     if (CG.lookupSCC(N) != C)
       continue;
-    Function &F = N.getFunction();
     if (F.hasFnAttribute(Attribute::OptimizeNone))
       continue;
 
@@ -813,23 +851,14 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
     // Get the remarks emission analysis for the caller.
     auto &ORE = FAM.getResult<OptimizationRemarkEmitterAnalysis>(F);
 
-    // We want to generally process call sites top-down in order for
-    // simplifications stemming from replacing the call with the returned value
-    // after inlining to be visible to subsequent inlining decisions. So we
-    // walk the function backwards and then process the back of the vector.
-    // FIXME: Using reverse is a really bad way to do this. Instead we should
-    // do an actual PO walk of the function body.
-    for (Instruction &I : reverse(instructions(F)))
-      if (auto CS = CallSite(&I))
-        if (Function *Callee = CS.getCalledFunction())
-          if (!Callee->isDeclaration())
-            Calls.push_back({CS, -1});
-
+    // Now process as many calls as we have within this caller in the sequnece.
+    // We bail out as soon as the caller has to change so we can update the
+    // call graph and prepare the context of that new caller.
     bool DidInline = false;
-    while (!Calls.empty()) {
+    for (; i < (int)Calls.size() && Calls[i].first.getCaller() == &F; ++i) {
       int InlineHistoryID;
       CallSite CS;
-      std::tie(CS, InlineHistoryID) = Calls.pop_back_val();
+      std::tie(CS, InlineHistoryID) = Calls[i];
       Function &Callee = *CS.getCalledFunction();
 
       if (InlineHistoryID != -1 &&
@@ -886,6 +915,10 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
       }
     }
 
+    // Back the call index up by one to put us in a good position to go around
+    // the outer loop.
+    --i;
+
     if (!DidInline)
       continue;
     Changed = true;
@@ -914,7 +947,7 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
     C = &updateCGAndAnalysisManagerForFunctionPass(CG, *C, N, AM, UR);
     DEBUG(dbgs() << "Updated inlining SCC: " << *C << "\n");
     RC = &C->getOuterRefSCC();
-  } while (!Nodes.empty());
+  }
 
   // Now that we've finished inlining all of the calls across this SCC, delete
   // all of the trivially dead functions, updating the call graph and the CGSCC

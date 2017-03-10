@@ -123,6 +123,12 @@ private:
   bool isAlignedMemNode(const MemSDNode *N) const;
   bool isPositiveHalfWord(const SDNode *N) const;
 
+  // DAG preprocessing functions.
+  void ppSimplifyOrSelect0(std::vector<SDNode*> &&Nodes);
+  void ppAddrReorderAddShl(std::vector<SDNode*> &&Nodes);
+  void ppAddrRewriteAndSrl(std::vector<SDNode*> &&Nodes);
+  void ppHoistZextI1(std::vector<SDNode*> &&Nodes);
+
   SmallDenseMap<SDNode *,int> RootWeights;
   SmallDenseMap<SDNode *,int> RootHeights;
   SmallDenseMap<const Value *,int> GAUsesInFunction;
@@ -976,15 +982,52 @@ SelectInlineAsmMemoryOperand(const SDValue &Op, unsigned ConstraintID,
 }
 
 
-void HexagonDAGToDAGISel::PreprocessISelDAG() {
-  SelectionDAG &DAG = *CurDAG;
-  std::vector<SDNode*> Nodes;
-  for (SDNode &Node : DAG.allnodes())
-    Nodes.push_back(&Node);
+static bool isMemOPCandidate(SDNode *I, SDNode *U) {
+  // I is an operand of U. Check if U is an arithmetic (binary) operation
+  // usable in a memop, where the other operand is a loaded value, and the
+  // result of U is stored in the same location.
 
-  // Simplify: (or (select c x 0) z)  ->  (select c (or x z) z)
-  //           (or (select c 0 y) z)  ->  (select c z (or y z))
-  // This may not be the right thing for all targets, so do it here.
+  if (!U->hasOneUse())
+    return false;
+  unsigned Opc = U->getOpcode();
+  switch (Opc) {
+    case ISD::ADD:
+    case ISD::SUB:
+    case ISD::AND:
+    case ISD::OR:
+      break;
+    default:
+      return false;
+  }
+
+  SDValue S0 = U->getOperand(0);
+  SDValue S1 = U->getOperand(1);
+  SDValue SY = (S0.getNode() == I) ? S1 : S0;
+
+  SDNode *UUse = *U->use_begin();
+  if (UUse->getNumValues() != 1)
+    return false;
+
+  // Check if one of the inputs to U is a load instruction and the output
+  // is used by a store instruction. If so and they also have the same
+  // base pointer, then don't preoprocess this node sequence as it
+  // can be matched to a memop.
+  SDNode *SYNode = SY.getNode();
+  if (UUse->getOpcode() == ISD::STORE && SYNode->getOpcode() == ISD::LOAD) {
+    SDValue LDBasePtr = cast<MemSDNode>(SYNode)->getBasePtr();
+    SDValue STBasePtr = cast<MemSDNode>(UUse)->getBasePtr();
+    if (LDBasePtr == STBasePtr)
+      return true;
+  }
+  return false;
+}
+
+
+// Transform: (or (select c x 0) z)  ->  (select c (or x z) z)
+//            (or (select c 0 y) z)  ->  (select c z (or y z))
+void HexagonDAGToDAGISel::ppSimplifyOrSelect0(std::vector<SDNode*> &&Nodes) {
+  SelectionDAG &DAG = *CurDAG;
+
   for (auto I : Nodes) {
     if (I->getOpcode() != ISD::OR)
       continue;
@@ -1022,13 +1065,17 @@ void HexagonDAGToDAGISel::PreprocessISelDAG() {
       }
     }
   }
+}
 
-  // Transform: (store ch val (add x (add (shl y c) e)))
-  //        to: (store ch val (add x (shl (add y d) c))),
-  // where e = (shl d c) for some integer d.
-  // The purpose of this is to enable generation of loads/stores with
-  // shifted addressing mode, i.e. mem(x+y<<#c). For that, the shift
-  // value c must be 0, 1 or 2.
+// Transform: (store ch val (add x (add (shl y c) e)))
+//        to: (store ch val (add x (shl (add y d) c))),
+// where e = (shl d c) for some integer d.
+// The purpose of this is to enable generation of loads/stores with
+// shifted addressing mode, i.e. mem(x+y<<#c). For that, the shift
+// value c must be 0, 1 or 2.
+void HexagonDAGToDAGISel::ppAddrReorderAddShl(std::vector<SDNode*> &&Nodes) {
+  SelectionDAG &DAG = *CurDAG;
+
   for (auto I : Nodes) {
     if (I->getOpcode() != ISD::STORE)
       continue;
@@ -1075,20 +1122,24 @@ void HexagonDAGToDAGISel::PreprocessISelDAG() {
     SDValue NewShl = DAG.getNode(ISD::SHL, DL, VT, NewAdd, C);
     ReplaceNode(T0.getNode(), NewShl.getNode());
   }
+}
 
-  // Transform (load ch (add x (and (srl y c) Mask)))
-  //       to: (load ch (add x (shl (srl y d) d-c)))
-  // where
-  // Mask = 00..0 111..1 0.0
-  //          |     |     +-- d-c 0s, and d-c is 0, 1 or 2.
-  //          |     +-------- 1s
-  //          +-------------- at most c 0s
-  // Motivating example:
-  // DAG combiner optimizes (add x (shl (srl y 5) 2))
-  //                     to (add x (and (srl y 3) 1FFFFFFC))
-  // which results in a constant-extended and(##...,lsr). This transformation
-  // undoes this simplification for cases where the shl can be folded into
-  // an addressing mode.
+// Transform: (load ch (add x (and (srl y c) Mask)))
+//        to: (load ch (add x (shl (srl y d) d-c)))
+// where
+// Mask = 00..0 111..1 0.0
+//          |     |     +-- d-c 0s, and d-c is 0, 1 or 2.
+//          |     +-------- 1s
+//          +-------------- at most c 0s
+// Motivating example:
+// DAG combiner optimizes (add x (shl (srl y 5) 2))
+//                     to (add x (and (srl y 3) 1FFFFFFC))
+// which results in a constant-extended and(##...,lsr). This transformation
+// undoes this simplification for cases where the shl can be folded into
+// an addressing mode.
+void HexagonDAGToDAGISel::ppAddrRewriteAndSrl(std::vector<SDNode*> &&Nodes) {
+  SelectionDAG &DAG = *CurDAG;
+
   for (SDNode *N : Nodes) {
     unsigned Opc = N->getOpcode();
     if (Opc != ISD::LOAD && Opc != ISD::STORE)
@@ -1147,15 +1198,116 @@ void HexagonDAGToDAGISel::PreprocessISelDAG() {
     SDValue NewShl = DAG.getNode(ISD::SHL, dl, VT, NewSrl, DC);
     ReplaceNode(T0.getNode(), NewShl.getNode());
   }
+}
+
+// Transform: (op ... (zext i1 c) ...) -> (select c (op ... 0 ...)
+//                                                  (op ... 1 ...))
+void HexagonDAGToDAGISel::ppHoistZextI1(std::vector<SDNode*> &&Nodes) {
+  SelectionDAG &DAG = *CurDAG;
+
+  for (SDNode *N : Nodes) {
+    unsigned Opc = N->getOpcode();
+    if (Opc != ISD::ZERO_EXTEND)
+      continue;
+    SDValue OpI1 = N->getOperand(0);
+    EVT OpVT = OpI1.getValueType();
+    if (!OpVT.isSimple() || OpVT.getSimpleVT() != MVT::i1)
+      continue;
+    for (auto I = N->use_begin(), E = N->use_end(); I != E; ++I) {
+      SDNode *U = *I;
+      if (U->getNumValues() != 1)
+        continue;
+      EVT UVT = U->getValueType(0);
+      if (!UVT.isSimple() || !UVT.isInteger() || UVT.getSimpleVT() == MVT::i1)
+        continue;
+      if (isMemOPCandidate(N, U))
+        continue;
+
+      // Potentially simplifiable operation.
+      unsigned I1N = I.getOperandNo();
+      SmallVector<SDValue,2> Ops(U->getNumOperands());
+      for (unsigned i = 0, n = U->getNumOperands(); i != n; ++i)
+        Ops[i] = U->getOperand(i);
+      EVT BVT = Ops[I1N].getValueType();
+
+      SDLoc dl(U);
+      SDValue C0 = DAG.getConstant(0, dl, BVT);
+      SDValue C1 = DAG.getConstant(1, dl, BVT);
+      SDValue If0, If1;
+
+      if (isa<MachineSDNode>(U)) {
+        unsigned UseOpc = U->getMachineOpcode();
+        Ops[I1N] = C0;
+        If0 = SDValue(DAG.getMachineNode(UseOpc, dl, UVT, Ops), 0);
+        Ops[I1N] = C1;
+        If1 = SDValue(DAG.getMachineNode(UseOpc, dl, UVT, Ops), 0);
+      } else {
+        unsigned UseOpc = U->getOpcode();
+        Ops[I1N] = C0;
+        If0 = DAG.getNode(UseOpc, dl, UVT, Ops);
+        Ops[I1N] = C1;
+        If1 = DAG.getNode(UseOpc, dl, UVT, Ops);
+      }
+      SDValue Sel = DAG.getNode(ISD::SELECT, dl, UVT, OpI1, If1, If0);
+      DAG.ReplaceAllUsesWith(U, Sel.getNode());
+    }
+  }
+}
+
+void HexagonDAGToDAGISel::PreprocessISelDAG() {
+  // Repack all nodes before calling each preprocessing function,
+  // because each of them can modify the set of nodes.
+  auto getNodes = [this] () -> std::vector<SDNode*> {
+    std::vector<SDNode*> T;
+    T.reserve(CurDAG->allnodes_size());
+    for (SDNode &N : CurDAG->allnodes())
+      T.push_back(&N);
+    return T;
+  };
+
+  // Transform: (or (select c x 0) z)  ->  (select c (or x z) z)
+  //            (or (select c 0 y) z)  ->  (select c z (or y z))
+  ppSimplifyOrSelect0(getNodes());
+
+  // Transform: (store ch val (add x (add (shl y c) e)))
+  //        to: (store ch val (add x (shl (add y d) c))),
+  // where e = (shl d c) for some integer d.
+  // The purpose of this is to enable generation of loads/stores with
+  // shifted addressing mode, i.e. mem(x+y<<#c). For that, the shift
+  // value c must be 0, 1 or 2.
+  ppAddrReorderAddShl(getNodes());
+
+  // Transform: (load ch (add x (and (srl y c) Mask)))
+  //        to: (load ch (add x (shl (srl y d) d-c)))
+  // where
+  // Mask = 00..0 111..1 0.0
+  //          |     |     +-- d-c 0s, and d-c is 0, 1 or 2.
+  //          |     +-------- 1s
+  //          +-------------- at most c 0s
+  // Motivating example:
+  // DAG combiner optimizes (add x (shl (srl y 5) 2))
+  //                     to (add x (and (srl y 3) 1FFFFFFC))
+  // which results in a constant-extended and(##...,lsr). This transformation
+  // undoes this simplification for cases where the shl can be folded into
+  // an addressing mode.
+  ppAddrRewriteAndSrl(getNodes());
+
+  // Transform: (op ... (zext i1 c) ...) -> (select c (op ... 0 ...)
+  //                                                  (op ... 1 ...))
+  ppHoistZextI1(getNodes());
+
+  DEBUG_WITH_TYPE("isel", {
+    dbgs() << "Preprocessed (Hexagon) selection DAG:";
+    CurDAG->dump();
+  });
 
   if (EnableAddressRebalancing) {
     rebalanceAddressTrees();
 
-    DEBUG(
-      dbgs() << "************* SelectionDAG after preprocessing: ***********\n";
+    DEBUG_WITH_TYPE("isel", {
+      dbgs() << "Address tree balanced selection DAG:";
       CurDAG->dump();
-      dbgs() << "************* End SelectionDAG after preprocessing ********\n";
-    );
+    });
   }
 }
 

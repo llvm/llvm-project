@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=thumb-eabi -mcpu=arm1156t2-s -mattr=+thumb2,+t2xtpk,+dsp %s -o - | FileCheck %s
-; RUN: llc -mtriple=thumb-eabi -mcpu=arm1156t2-s -mattr=+thumb2,+t2xtpk,+dsp -arm-use-mulops=false %s -o - | FileCheck %s -check-prefix=NO_MULOPS
+; RUN: llc -mtriple=thumb-eabi -mcpu=arm1156t2-s -mattr=+thumb2,+dsp %s -o - | FileCheck %s
+; RUN: llc -mtriple=thumb-eabi -mcpu=arm1156t2-s -mattr=+thumb2,+dsp -arm-use-mulops=false %s -o - | FileCheck %s -check-prefix=NO_MULOPS
 
 define i32 @f3(i32 %a, i16 %x, i32 %y) {
 ; CHECK: f3

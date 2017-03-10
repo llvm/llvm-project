@@ -1111,6 +1111,8 @@ template <class ELFT> void DynamicSection<ELFT>::finalizeContents() {
   add({DT_SYMENT, sizeof(Elf_Sym)});
   add({DT_STRTAB, In<ELFT>::DynStrTab});
   add({DT_STRSZ, In<ELFT>::DynStrTab->getSize()});
+  if (!Config->ZText)
+    add({DT_TEXTREL, (uint64_t)0});
   if (In<ELFT>::GnuHashTab)
     add({DT_GNU_HASH, In<ELFT>::GnuHashTab});
   if (In<ELFT>::HashTab)
