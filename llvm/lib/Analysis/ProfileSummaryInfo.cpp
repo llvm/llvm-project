@@ -124,18 +124,7 @@ bool ProfileSummaryInfo::isColdCount(uint64_t C) {
 
 bool ProfileSummaryInfo::isHotBB(const BasicBlock *B, BlockFrequencyInfo *BFI) {
   auto Count = BFI->getBlockProfileCount(B);
-  if (Count && isHotCount(*Count))
-    return true;
-  // Use extractProfTotalWeight to get BB count.
-  // For Sample PGO, BFI may not provide accurate BB count due to errors
-  // magnified during sample count propagation. This serves as a backup plan
-  // to ensure all hot BB will not be missed.
-  // The query currently has false positives as branch instruction cloning does
-  // not update/scale branch weights. Unlike false negatives, this will not cause
-  // performance problem.
-  uint64_t TotalCount;
-  auto *TI = B->getTerminator();
-  return extractProfTotalWeight(TI, TotalCount) && isHotCount(TotalCount);
+  return Count && isHotCount(*Count);
 }
 
 bool ProfileSummaryInfo::isColdBB(const BasicBlock *B,

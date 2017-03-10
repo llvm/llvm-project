@@ -910,7 +910,7 @@ let isAdd = 1 in {
   def tADC :                      // A8.6.2
     T1sItDPEncode<0b0101, (outs tGPR:$Rdn), (ins tGPR:$Rn, tGPR:$Rm), IIC_iALUr,
                   "adc", "\t$Rdn, $Rm",
-                  [(set tGPR:$Rdn, (adde tGPR:$Rn, tGPR:$Rm))]>, Sched<[WriteALU]>;
+                  []>, Sched<[WriteALU]>;
 
   // Add immediate
   def tADDi3 :                    // A8.6.4 T1
@@ -937,6 +937,43 @@ let isAdd = 1 in {
                   IIC_iALUr,
                   "add", "\t$Rd, $Rn, $Rm",
                   [(set tGPR:$Rd, (add tGPR:$Rn, tGPR:$Rm))]>, Sched<[WriteALU]>;
+
+  /// Similar to the above except these set the 's' bit so the
+  /// instruction modifies the CPSR register.
+  ///
+  /// These opcodes will be converted to the real non-S opcodes by
+  /// AdjustInstrPostInstrSelection after giving then an optional CPSR operand.
+  let hasPostISelHook = 1, Defs = [CPSR] in {
+    let isCommutable = 1 in
+    def tADCS : tPseudoInst<(outs tGPR:$Rdn), (ins tGPR:$Rn, tGPR:$Rm),
+                            2, IIC_iALUr,
+                            [(set tGPR:$Rdn, CPSR, (ARMadde tGPR:$Rn, tGPR:$Rm,
+                                                            CPSR))]>,
+                Requires<[IsThumb1Only]>,
+                Sched<[WriteALU]>;
+
+    def tADDSi3 : tPseudoInst<(outs tGPR:$Rd), (ins tGPR:$Rm, imm0_7:$imm3),
+                              2, IIC_iALUi,
+                              [(set tGPR:$Rd, CPSR, (ARMaddc tGPR:$Rm,
+                                                             imm0_7:$imm3))]>,
+                  Requires<[IsThumb1Only]>,
+                  Sched<[WriteALU]>;
+
+    def tADDSi8 : tPseudoInst<(outs tGPR:$Rdn), (ins tGPR:$Rn, imm0_255:$imm8),
+                              2, IIC_iALUi,
+                              [(set tGPR:$Rdn, CPSR, (ARMaddc tGPR:$Rn,
+                                                      imm8_255:$imm8))]>,
+                  Requires<[IsThumb1Only]>,
+                  Sched<[WriteALU]>;
+
+    let isCommutable = 1 in
+    def tADDSrr : tPseudoInst<(outs tGPR:$Rd), (ins tGPR:$Rn, tGPR:$Rm),
+                              2, IIC_iALUr,
+                              [(set tGPR:$Rd, CPSR, (ARMaddc tGPR:$Rn,
+                                                             tGPR:$Rm))]>,
+                  Requires<[IsThumb1Only]>,
+                  Sched<[WriteALU]>;
+  }
 
   let hasSideEffects = 0 in
   def tADDhirr : T1pIt<(outs GPR:$Rdn), (ins GPR:$Rn, GPR:$Rm), IIC_iALUr,
@@ -1197,7 +1234,7 @@ def tSBC :                      // A8.6.151
   T1sItDPEncode<0b0110, (outs tGPR:$Rdn), (ins tGPR:$Rn, tGPR:$Rm),
                 IIC_iALUr,
                 "sbc", "\t$Rdn, $Rm",
-                [(set tGPR:$Rdn, (sube tGPR:$Rn, tGPR:$Rm))]>,
+                []>,
                 Sched<[WriteALU]>;
 
 // Subtract immediate
@@ -1225,6 +1262,41 @@ def tSUBrr :                    // A8.6.212
                 "sub", "\t$Rd, $Rn, $Rm",
                 [(set tGPR:$Rd, (sub tGPR:$Rn, tGPR:$Rm))]>,
                 Sched<[WriteALU]>;
+
+/// Similar to the above except these set the 's' bit so the
+/// instruction modifies the CPSR register.
+///
+/// These opcodes will be converted to the real non-S opcodes by
+/// AdjustInstrPostInstrSelection after giving then an optional CPSR operand.
+let hasPostISelHook = 1, Defs = [CPSR] in {
+  def tSBCS : tPseudoInst<(outs tGPR:$Rdn), (ins tGPR:$Rn, tGPR:$Rm),
+                          2, IIC_iALUr,
+                          [(set tGPR:$Rdn, CPSR, (ARMsube tGPR:$Rn, tGPR:$Rm,
+                                                          CPSR))]>,
+              Requires<[IsThumb1Only]>,
+              Sched<[WriteALU]>;
+
+  def tSUBSi3 : tPseudoInst<(outs tGPR:$Rd), (ins tGPR:$Rm, imm0_7:$imm3),
+                            2, IIC_iALUi,
+                            [(set tGPR:$Rd, CPSR, (ARMsubc tGPR:$Rm,
+                                                           imm0_7:$imm3))]>,
+                Requires<[IsThumb1Only]>,
+                Sched<[WriteALU]>;
+
+  def tSUBSi8 : tPseudoInst<(outs tGPR:$Rdn), (ins tGPR:$Rn, imm0_255:$imm8),
+                            2, IIC_iALUi,
+                            [(set tGPR:$Rdn, CPSR, (ARMsubc tGPR:$Rn,
+                                                            imm8_255:$imm8))]>,
+                Requires<[IsThumb1Only]>,
+                Sched<[WriteALU]>;
+
+  def tSUBSrr : tPseudoInst<(outs tGPR:$Rd), (ins tGPR:$Rn, tGPR:$Rm),
+                            2, IIC_iALUr,
+                            [(set tGPR:$Rd, CPSR, (ARMsubc tGPR:$Rn,
+                                                           tGPR:$Rm))]>,
+                Requires<[IsThumb1Only]>,
+                Sched<[WriteALU]>;
+}
 
 // Sign-extend byte
 def tSXTB :                     // A8.6.222
@@ -1386,21 +1458,11 @@ def : T1Pat<(ARMcmpZ tGPR:$Rn, imm0_255:$imm8),
 def : T1Pat<(ARMcmpZ tGPR:$Rn, tGPR:$Rm),
             (tCMPr   tGPR:$Rn, tGPR:$Rm)>;
 
-// Add with carry
-def : T1Pat<(addc   tGPR:$lhs, imm0_7:$rhs),
-            (tADDi3 tGPR:$lhs, imm0_7:$rhs)>;
-def : T1Pat<(addc   tGPR:$lhs, imm8_255:$rhs),
-            (tADDi8 tGPR:$lhs, imm8_255:$rhs)>;
-def : T1Pat<(addc   tGPR:$lhs, tGPR:$rhs),
-            (tADDrr tGPR:$lhs, tGPR:$rhs)>;
-
 // Subtract with carry
-def : T1Pat<(addc   tGPR:$lhs, imm0_7_neg:$rhs),
-            (tSUBi3 tGPR:$lhs, imm0_7_neg:$rhs)>;
-def : T1Pat<(addc   tGPR:$lhs, imm8_255_neg:$rhs),
-            (tSUBi8 tGPR:$lhs, imm8_255_neg:$rhs)>;
-def : T1Pat<(subc   tGPR:$lhs, tGPR:$rhs),
-            (tSUBrr tGPR:$lhs, tGPR:$rhs)>;
+def : T1Pat<(ARMaddc tGPR:$lhs, imm0_7_neg:$rhs),
+            (tSUBSi3 tGPR:$lhs, imm0_7_neg:$rhs)>;
+def : T1Pat<(ARMaddc tGPR:$lhs, imm8_255_neg:$rhs),
+            (tSUBSi8 tGPR:$lhs, imm8_255_neg:$rhs)>;
 
 // Bswap 16 with load/store
 def : T1Pat<(srl (bswap (extloadi16 t_addrmode_is2:$addr)), (i32 16)),
