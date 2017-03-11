@@ -1941,7 +1941,7 @@ TEST(LazyCallGraphTest, ReplaceNodeFunction) {
   LazyCallGraph::RefSCC &RC2 = *I++;
   EXPECT_EQ(CG.postorder_ref_scc_end(), I);
 
-  ASSERT_EQ(2u, RC1.size());
+  ASSERT_EQ(2, RC1.size());
   LazyCallGraph::SCC &C1 = RC1[0];
   LazyCallGraph::SCC &C2 = RC1[1];
 
@@ -2036,7 +2036,7 @@ TEST(LazyCallGraphTest, RemoveFunctionWithSpurriousRef) {
   LazyCallGraph::RefSCC &RC2 = *I++;
   EXPECT_EQ(CG.postorder_ref_scc_end(), I);
 
-  ASSERT_EQ(2u, RC1.size());
+  ASSERT_EQ(2, RC1.size());
   LazyCallGraph::SCC &C1 = RC1[0];
   LazyCallGraph::SCC &C2 = RC1[1];
 
