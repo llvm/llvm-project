@@ -5,14 +5,6 @@
 /// Presburger formula. On top of this, isl provides various tools for
 /// Polyhedral compilation ranging from dependence analysis over scheduling
 /// to AST generation.
-///
-///
-/// WARNING: Even though these bindings have been throughly tested and the
-///          design has been reviewed by various members of the isl community,
-///          we do not yet provide any stability guarantees for this interface.
-///          We do not expect any larger changes to the interface, but want to
-///          reserve the freedom to improve the bindings based on insights that
-///          only become visible after shipping these bindings with isl itself.
 
 #ifndef ISL_CPP_NOEXCEPTIONS
 #define ISL_CPP_NOEXCEPTIONS
@@ -173,7 +165,7 @@ public:
   inline __isl_keep isl_aff *keep() const;
   inline __isl_give isl_aff *take();
   inline explicit operator bool() const;
-  inline ctx get_ctx() const;
+  inline isl::ctx get_ctx() const;
   inline bool is_null() const;
   inline std::string to_str() const;
   inline isl::aff add(isl::aff aff2) const;
@@ -208,7 +200,7 @@ public:
   inline __isl_keep isl_ast_build *keep() const;
   inline __isl_give isl_ast_build *take();
   inline explicit operator bool() const;
-  inline ctx get_ctx() const;
+  inline isl::ctx get_ctx() const;
   inline bool is_null() const;
   inline isl::ast_expr access_from(isl::pw_multi_aff pma) const;
   inline isl::ast_expr access_from(isl::multi_pw_aff mpa) const;
@@ -245,7 +237,7 @@ public:
   inline __isl_keep isl_ast_expr *keep() const;
   inline __isl_give isl_ast_expr *take();
   inline explicit operator bool() const;
-  inline ctx get_ctx() const;
+  inline isl::ctx get_ctx() const;
   inline bool is_null() const;
   inline std::string to_str() const;
   inline std::string to_C_str() const;
@@ -276,7 +268,7 @@ public:
   inline __isl_keep isl_ast_node *keep() const;
   inline __isl_give isl_ast_node *take();
   inline explicit operator bool() const;
-  inline ctx get_ctx() const;
+  inline isl::ctx get_ctx() const;
   inline bool is_null() const;
   inline std::string to_str() const;
   inline std::string to_C_str() const;
@@ -308,7 +300,7 @@ public:
   inline __isl_keep isl_basic_map *keep() const;
   inline __isl_give isl_basic_map *take();
   inline explicit operator bool() const;
-  inline ctx get_ctx() const;
+  inline isl::ctx get_ctx() const;
   inline bool is_null() const;
   inline std::string to_str() const;
   inline isl::basic_map affine_hull() const;
@@ -364,7 +356,7 @@ public:
   inline __isl_keep isl_basic_set *keep() const;
   inline __isl_give isl_basic_set *take();
   inline explicit operator bool() const;
-  inline ctx get_ctx() const;
+  inline isl::ctx get_ctx() const;
   inline bool is_null() const;
   inline std::string to_str() const;
   inline isl::basic_set affine_hull() const;
@@ -412,7 +404,7 @@ public:
   inline __isl_keep isl_id *keep() const;
   inline __isl_give isl_id *take();
   inline explicit operator bool() const;
-  inline ctx get_ctx() const;
+  inline isl::ctx get_ctx() const;
   inline bool is_null() const;
   inline std::string to_str() const;
 };
@@ -443,7 +435,7 @@ public:
   inline __isl_keep isl_local_space *keep() const;
   inline __isl_give isl_local_space *take();
   inline explicit operator bool() const;
-  inline ctx get_ctx() const;
+  inline isl::ctx get_ctx() const;
   inline bool is_null() const;
 };
 
@@ -474,7 +466,7 @@ public:
   inline __isl_keep isl_map *keep() const;
   inline __isl_give isl_map *take();
   inline explicit operator bool() const;
-  inline ctx get_ctx() const;
+  inline isl::ctx get_ctx() const;
   inline bool is_null() const;
   inline std::string to_str() const;
   inline isl::basic_map affine_hull() const;
@@ -544,7 +536,7 @@ public:
   inline __isl_keep isl_multi_aff *keep() const;
   inline __isl_give isl_multi_aff *take();
   inline explicit operator bool() const;
-  inline ctx get_ctx() const;
+  inline isl::ctx get_ctx() const;
   inline bool is_null() const;
   inline std::string to_str() const;
   inline isl::multi_aff add(isl::multi_aff multi2) const;
@@ -584,7 +576,7 @@ public:
   inline __isl_keep isl_multi_pw_aff *keep() const;
   inline __isl_give isl_multi_pw_aff *take();
   inline explicit operator bool() const;
-  inline ctx get_ctx() const;
+  inline isl::ctx get_ctx() const;
   inline bool is_null() const;
   inline std::string to_str() const;
   inline isl::multi_pw_aff add(isl::multi_pw_aff multi2) const;
@@ -626,7 +618,7 @@ public:
   inline __isl_keep isl_multi_union_pw_aff *keep() const;
   inline __isl_give isl_multi_union_pw_aff *take();
   inline explicit operator bool() const;
-  inline ctx get_ctx() const;
+  inline isl::ctx get_ctx() const;
   inline bool is_null() const;
   inline std::string to_str() const;
   inline isl::multi_union_pw_aff add(isl::multi_union_pw_aff multi2) const;
@@ -662,7 +654,7 @@ public:
   inline __isl_keep isl_multi_val *keep() const;
   inline __isl_give isl_multi_val *take();
   inline explicit operator bool() const;
-  inline ctx get_ctx() const;
+  inline isl::ctx get_ctx() const;
   inline bool is_null() const;
   inline std::string to_str() const;
   inline isl::multi_val add(isl::multi_val multi2) const;
@@ -698,7 +690,7 @@ public:
   inline __isl_keep isl_point *keep() const;
   inline __isl_give isl_point *take();
   inline explicit operator bool() const;
-  inline ctx get_ctx() const;
+  inline isl::ctx get_ctx() const;
   inline bool is_null() const;
   inline std::string to_str() const;
 };
@@ -732,7 +724,7 @@ public:
   inline __isl_keep isl_pw_aff *keep() const;
   inline __isl_give isl_pw_aff *take();
   inline explicit operator bool() const;
-  inline ctx get_ctx() const;
+  inline isl::ctx get_ctx() const;
   inline bool is_null() const;
   inline std::string to_str() const;
   inline isl::pw_aff add(isl::pw_aff pwaff2) const;
@@ -776,7 +768,7 @@ public:
   inline __isl_keep isl_pw_multi_aff *keep() const;
   inline __isl_give isl_pw_multi_aff *take();
   inline explicit operator bool() const;
-  inline ctx get_ctx() const;
+  inline isl::ctx get_ctx() const;
   inline bool is_null() const;
   inline std::string to_str() const;
   inline isl::pw_multi_aff add(isl::pw_multi_aff pma2) const;
@@ -814,7 +806,7 @@ public:
   inline __isl_keep isl_schedule *keep() const;
   inline __isl_give isl_schedule *take();
   inline explicit operator bool() const;
-  inline ctx get_ctx() const;
+  inline isl::ctx get_ctx() const;
   inline bool is_null() const;
   inline std::string to_str() const;
   inline isl::union_map get_map() const;
@@ -848,7 +840,7 @@ public:
   inline __isl_keep isl_schedule_constraints *keep() const;
   inline __isl_give isl_schedule_constraints *take();
   inline explicit operator bool() const;
-  inline ctx get_ctx() const;
+  inline isl::ctx get_ctx() const;
   inline bool is_null() const;
   inline std::string to_str() const;
   inline isl::union_map get_coincidence() const;
@@ -885,7 +877,7 @@ public:
   inline __isl_keep isl_schedule_node *keep() const;
   inline __isl_give isl_schedule_node *take();
   inline explicit operator bool() const;
-  inline ctx get_ctx() const;
+  inline isl::ctx get_ctx() const;
   inline bool is_null() const;
   inline std::string to_str() const;
   inline isl::boolean band_member_get_coincident(int pos) const;
@@ -927,7 +919,7 @@ public:
   inline __isl_keep isl_set *keep() const;
   inline __isl_give isl_set *take();
   inline explicit operator bool() const;
-  inline ctx get_ctx() const;
+  inline isl::ctx get_ctx() const;
   inline bool is_null() const;
   inline std::string to_str() const;
   inline isl::set add_dims(isl::dim type, unsigned int n) const;
@@ -993,7 +985,7 @@ public:
   inline __isl_keep isl_space *keep() const;
   inline __isl_give isl_space *take();
   inline explicit operator bool() const;
-  inline ctx get_ctx() const;
+  inline isl::ctx get_ctx() const;
   inline bool is_null() const;
   inline std::string to_str() const;
   inline isl::space domain() const;
@@ -1028,7 +1020,7 @@ public:
   inline __isl_keep isl_union_access_info *keep() const;
   inline __isl_give isl_union_access_info *take();
   inline explicit operator bool() const;
-  inline ctx get_ctx() const;
+  inline isl::ctx get_ctx() const;
   inline bool is_null() const;
   inline std::string to_str() const;
   inline isl::union_flow compute_flow() const;
@@ -1063,7 +1055,7 @@ public:
   inline __isl_keep isl_union_flow *keep() const;
   inline __isl_give isl_union_flow *take();
   inline explicit operator bool() const;
-  inline ctx get_ctx() const;
+  inline isl::ctx get_ctx() const;
   inline bool is_null() const;
   inline std::string to_str() const;
   inline isl::union_map get_full_may_dependence() const;
@@ -1103,7 +1095,7 @@ public:
   inline __isl_keep isl_union_map *keep() const;
   inline __isl_give isl_union_map *take();
   inline explicit operator bool() const;
-  inline ctx get_ctx() const;
+  inline isl::ctx get_ctx() const;
   inline bool is_null() const;
   inline std::string to_str() const;
   inline isl::union_map add_map(isl::map map) const;
@@ -1191,7 +1183,7 @@ public:
   inline __isl_keep isl_union_pw_aff *keep() const;
   inline __isl_give isl_union_pw_aff *take();
   inline explicit operator bool() const;
-  inline ctx get_ctx() const;
+  inline isl::ctx get_ctx() const;
   inline bool is_null() const;
   inline std::string to_str() const;
   inline isl::union_pw_aff add(isl::union_pw_aff upa2) const;
@@ -1233,7 +1225,7 @@ public:
   inline __isl_keep isl_union_pw_multi_aff *keep() const;
   inline __isl_give isl_union_pw_multi_aff *take();
   inline explicit operator bool() const;
-  inline ctx get_ctx() const;
+  inline isl::ctx get_ctx() const;
   inline bool is_null() const;
   inline std::string to_str() const;
   inline isl::union_pw_multi_aff add(isl::union_pw_multi_aff upma2) const;
@@ -1271,7 +1263,7 @@ public:
   inline __isl_keep isl_union_set *keep() const;
   inline __isl_give isl_union_set *take();
   inline explicit operator bool() const;
-  inline ctx get_ctx() const;
+  inline isl::ctx get_ctx() const;
   inline bool is_null() const;
   inline std::string to_str() const;
   inline isl::union_set affine_hull() const;
@@ -1326,7 +1318,7 @@ public:
   inline __isl_keep isl_val *keep() const;
   inline __isl_give isl_val *take();
   inline explicit operator bool() const;
-  inline ctx get_ctx() const;
+  inline isl::ctx get_ctx() const;
   inline bool is_null() const;
   inline std::string to_str() const;
   inline isl::val two_exp() const;
@@ -1448,8 +1440,8 @@ aff::operator bool() const {
   return !is_null();
 }
 
-ctx aff::get_ctx() const {
-  return ctx(isl_aff_get_ctx(ptr));
+isl::ctx aff::get_ctx() const {
+  return isl::ctx(isl_aff_get_ctx(ptr));
 }
 
 bool aff::is_null() const {
@@ -1553,8 +1545,8 @@ ast_build::operator bool() const {
   return !is_null();
 }
 
-ctx ast_build::get_ctx() const {
-  return ctx(isl_ast_build_get_ctx(ptr));
+isl::ctx ast_build::get_ctx() const {
+  return isl::ctx(isl_ast_build_get_ctx(ptr));
 }
 
 bool ast_build::is_null() const {
@@ -1658,8 +1650,8 @@ ast_expr::operator bool() const {
   return !is_null();
 }
 
-ctx ast_expr::get_ctx() const {
-  return ctx(isl_ast_expr_get_ctx(ptr));
+isl::ctx ast_expr::get_ctx() const {
+  return isl::ctx(isl_ast_expr_get_ctx(ptr));
 }
 
 bool ast_expr::is_null() const {
@@ -1745,8 +1737,8 @@ ast_node::operator bool() const {
   return !is_null();
 }
 
-ctx ast_node::get_ctx() const {
-  return ctx(isl_ast_node_get_ctx(ptr));
+isl::ctx ast_node::get_ctx() const {
+  return isl::ctx(isl_ast_node_get_ctx(ptr));
 }
 
 bool ast_node::is_null() const {
@@ -1837,8 +1829,8 @@ basic_map::operator bool() const {
   return !is_null();
 }
 
-ctx basic_map::get_ctx() const {
-  return ctx(isl_basic_map_get_ctx(ptr));
+isl::ctx basic_map::get_ctx() const {
+  return isl::ctx(isl_basic_map_get_ctx(ptr));
 }
 
 bool basic_map::is_null() const {
@@ -2047,8 +2039,8 @@ basic_set::operator bool() const {
   return !is_null();
 }
 
-ctx basic_set::get_ctx() const {
-  return ctx(isl_basic_set_get_ctx(ptr));
+isl::ctx basic_set::get_ctx() const {
+  return isl::ctx(isl_basic_set_get_ctx(ptr));
 }
 
 bool basic_set::is_null() const {
@@ -2217,8 +2209,8 @@ id::operator bool() const {
   return !is_null();
 }
 
-ctx id::get_ctx() const {
-  return ctx(isl_id_get_ctx(ptr));
+isl::ctx id::get_ctx() const {
+  return isl::ctx(isl_id_get_ctx(ptr));
 }
 
 bool id::is_null() const {
@@ -2302,8 +2294,8 @@ local_space::operator bool() const {
   return !is_null();
 }
 
-ctx local_space::get_ctx() const {
-  return ctx(isl_local_space_get_ctx(ptr));
+isl::ctx local_space::get_ctx() const {
+  return isl::ctx(isl_local_space_get_ctx(ptr));
 }
 
 bool local_space::is_null() const {
@@ -2377,8 +2369,8 @@ map::operator bool() const {
   return !is_null();
 }
 
-ctx map::get_ctx() const {
-  return ctx(isl_map_get_ctx(ptr));
+isl::ctx map::get_ctx() const {
+  return isl::ctx(isl_map_get_ctx(ptr));
 }
 
 bool map::is_null() const {
@@ -2468,7 +2460,7 @@ isl::map map::flatten_range() const {
 isl::stat map::foreach_basic_map(std::function<isl::stat(isl::basic_map)> &&fn) const {
   auto fn_lambda = [](isl_basic_map *arg_0, void *arg_1) -> isl_stat {
     auto *func = (std::function<isl::stat(isl::basic_map)> *)arg_1;
-    stat ret = (*func)(isl::manage(arg_0));
+    isl::stat ret = (*func)(isl::manage(arg_0));
     return isl_stat(ret);
   };
   auto res = isl_map_foreach_basic_map(get(), fn_lambda, &fn);
@@ -2662,8 +2654,8 @@ multi_aff::operator bool() const {
   return !is_null();
 }
 
-ctx multi_aff::get_ctx() const {
-  return ctx(isl_multi_aff_get_ctx(ptr));
+isl::ctx multi_aff::get_ctx() const {
+  return isl::ctx(isl_multi_aff_get_ctx(ptr));
 }
 
 bool multi_aff::is_null() const {
@@ -2792,8 +2784,8 @@ multi_pw_aff::operator bool() const {
   return !is_null();
 }
 
-ctx multi_pw_aff::get_ctx() const {
-  return ctx(isl_multi_pw_aff_get_ctx(ptr));
+isl::ctx multi_pw_aff::get_ctx() const {
+  return isl::ctx(isl_multi_pw_aff_get_ctx(ptr));
 }
 
 bool multi_pw_aff::is_null() const {
@@ -2932,8 +2924,8 @@ multi_union_pw_aff::operator bool() const {
   return !is_null();
 }
 
-ctx multi_union_pw_aff::get_ctx() const {
-  return ctx(isl_multi_union_pw_aff_get_ctx(ptr));
+isl::ctx multi_union_pw_aff::get_ctx() const {
+  return isl::ctx(isl_multi_union_pw_aff_get_ctx(ptr));
 }
 
 bool multi_union_pw_aff::is_null() const {
@@ -3042,8 +3034,8 @@ multi_val::operator bool() const {
   return !is_null();
 }
 
-ctx multi_val::get_ctx() const {
-  return ctx(isl_multi_val_get_ctx(ptr));
+isl::ctx multi_val::get_ctx() const {
+  return isl::ctx(isl_multi_val_get_ctx(ptr));
 }
 
 bool multi_val::is_null() const {
@@ -3152,8 +3144,8 @@ point::operator bool() const {
   return !is_null();
 }
 
-ctx point::get_ctx() const {
-  return ctx(isl_point_get_ctx(ptr));
+isl::ctx point::get_ctx() const {
+  return isl::ctx(isl_point_get_ctx(ptr));
 }
 
 bool point::is_null() const {
@@ -3252,8 +3244,8 @@ pw_aff::operator bool() const {
   return !is_null();
 }
 
-ctx pw_aff::get_ctx() const {
-  return ctx(isl_pw_aff_get_ctx(ptr));
+isl::ctx pw_aff::get_ctx() const {
+  return isl::ctx(isl_pw_aff_get_ctx(ptr));
 }
 
 bool pw_aff::is_null() const {
@@ -3283,7 +3275,7 @@ isl::pw_aff pw_aff::add(isl::pw_aff pwaff2) const {
 isl::stat pw_aff::foreach_piece(std::function<isl::stat(isl::set, isl::aff)> &&fn) const {
   auto fn_lambda = [](isl_set *arg_0, isl_aff *arg_1, void *arg_2) -> isl_stat {
     auto *func = (std::function<isl::stat(isl::set, isl::aff)> *)arg_2;
-    stat ret = (*func)(isl::manage(arg_0), isl::manage(arg_1));
+    isl::stat ret = (*func)(isl::manage(arg_0), isl::manage(arg_1));
     return isl_stat(ret);
   };
   auto res = isl_pw_aff_foreach_piece(get(), fn_lambda, &fn);
@@ -3407,8 +3399,8 @@ pw_multi_aff::operator bool() const {
   return !is_null();
 }
 
-ctx pw_multi_aff::get_ctx() const {
-  return ctx(isl_pw_multi_aff_get_ctx(ptr));
+isl::ctx pw_multi_aff::get_ctx() const {
+  return isl::ctx(isl_pw_multi_aff_get_ctx(ptr));
 }
 
 bool pw_multi_aff::is_null() const {
@@ -3527,8 +3519,8 @@ schedule::operator bool() const {
   return !is_null();
 }
 
-ctx schedule::get_ctx() const {
-  return ctx(isl_schedule_get_ctx(ptr));
+isl::ctx schedule::get_ctx() const {
+  return isl::ctx(isl_schedule_get_ctx(ptr));
 }
 
 bool schedule::is_null() const {
@@ -3627,8 +3619,8 @@ schedule_constraints::operator bool() const {
   return !is_null();
 }
 
-ctx schedule_constraints::get_ctx() const {
-  return ctx(isl_schedule_constraints_get_ctx(ptr));
+isl::ctx schedule_constraints::get_ctx() const {
+  return isl::ctx(isl_schedule_constraints_get_ctx(ptr));
 }
 
 bool schedule_constraints::is_null() const {
@@ -3742,8 +3734,8 @@ schedule_node::operator bool() const {
   return !is_null();
 }
 
-ctx schedule_node::get_ctx() const {
-  return ctx(isl_schedule_node_get_ctx(ptr));
+isl::ctx schedule_node::get_ctx() const {
+  return isl::ctx(isl_schedule_node_get_ctx(ptr));
 }
 
 bool schedule_node::is_null() const {
@@ -3882,8 +3874,8 @@ set::operator bool() const {
   return !is_null();
 }
 
-ctx set::get_ctx() const {
-  return ctx(isl_set_get_ctx(ptr));
+isl::ctx set::get_ctx() const {
+  return isl::ctx(isl_set_get_ctx(ptr));
 }
 
 bool set::is_null() const {
@@ -3958,7 +3950,7 @@ isl::set set::flatten() const {
 isl::stat set::foreach_basic_set(std::function<isl::stat(isl::basic_set)> &&fn) const {
   auto fn_lambda = [](isl_basic_set *arg_0, void *arg_1) -> isl_stat {
     auto *func = (std::function<isl::stat(isl::basic_set)> *)arg_1;
-    stat ret = (*func)(isl::manage(arg_0));
+    isl::stat ret = (*func)(isl::manage(arg_0));
     return isl_stat(ret);
   };
   auto res = isl_set_foreach_basic_set(get(), fn_lambda, &fn);
@@ -4147,8 +4139,8 @@ space::operator bool() const {
   return !is_null();
 }
 
-ctx space::get_ctx() const {
-  return ctx(isl_space_get_ctx(ptr));
+isl::ctx space::get_ctx() const {
+  return isl::ctx(isl_space_get_ctx(ptr));
 }
 
 bool space::is_null() const {
@@ -4252,8 +4244,8 @@ union_access_info::operator bool() const {
   return !is_null();
 }
 
-ctx union_access_info::get_ctx() const {
-  return ctx(isl_union_access_info_get_ctx(ptr));
+isl::ctx union_access_info::get_ctx() const {
+  return isl::ctx(isl_union_access_info_get_ctx(ptr));
 }
 
 bool union_access_info::is_null() const {
@@ -4357,8 +4349,8 @@ union_flow::operator bool() const {
   return !is_null();
 }
 
-ctx union_flow::get_ctx() const {
-  return ctx(isl_union_flow_get_ctx(ptr));
+isl::ctx union_flow::get_ctx() const {
+  return isl::ctx(isl_union_flow_get_ctx(ptr));
 }
 
 bool union_flow::is_null() const {
@@ -4487,8 +4479,8 @@ union_map::operator bool() const {
   return !is_null();
 }
 
-ctx union_map::get_ctx() const {
-  return ctx(isl_union_map_get_ctx(ptr));
+isl::ctx union_map::get_ctx() const {
+  return isl::ctx(isl_union_map_get_ctx(ptr));
 }
 
 bool union_map::is_null() const {
@@ -4608,7 +4600,7 @@ isl::union_map union_map::flat_range_product(isl::union_map umap2) const {
 isl::stat union_map::foreach_map(std::function<isl::stat(isl::map)> &&fn) const {
   auto fn_lambda = [](isl_map *arg_0, void *arg_1) -> isl_stat {
     auto *func = (std::function<isl::stat(isl::map)> *)arg_1;
-    stat ret = (*func)(isl::manage(arg_0));
+    isl::stat ret = (*func)(isl::manage(arg_0));
     return isl_stat(ret);
   };
   auto res = isl_union_map_foreach_map(get(), fn_lambda, &fn);
@@ -4862,8 +4854,8 @@ union_pw_aff::operator bool() const {
   return !is_null();
 }
 
-ctx union_pw_aff::get_ctx() const {
-  return ctx(isl_union_pw_aff_get_ctx(ptr));
+isl::ctx union_pw_aff::get_ctx() const {
+  return isl::ctx(isl_union_pw_aff_get_ctx(ptr));
 }
 
 bool union_pw_aff::is_null() const {
@@ -4898,7 +4890,7 @@ isl::union_pw_aff union_pw_aff::empty(isl::space space) {
 isl::stat union_pw_aff::foreach_pw_aff(std::function<isl::stat(isl::pw_aff)> &&fn) const {
   auto fn_lambda = [](isl_pw_aff *arg_0, void *arg_1) -> isl_stat {
     auto *func = (std::function<isl::stat(isl::pw_aff)> *)arg_1;
-    stat ret = (*func)(isl::manage(arg_0));
+    isl::stat ret = (*func)(isl::manage(arg_0));
     return isl_stat(ret);
   };
   auto res = isl_union_pw_aff_foreach_pw_aff(get(), fn_lambda, &fn);
@@ -5007,8 +4999,8 @@ union_pw_multi_aff::operator bool() const {
   return !is_null();
 }
 
-ctx union_pw_multi_aff::get_ctx() const {
-  return ctx(isl_union_pw_multi_aff_get_ctx(ptr));
+isl::ctx union_pw_multi_aff::get_ctx() const {
+  return isl::ctx(isl_union_pw_multi_aff_get_ctx(ptr));
 }
 
 bool union_pw_multi_aff::is_null() const {
@@ -5127,8 +5119,8 @@ union_set::operator bool() const {
   return !is_null();
 }
 
-ctx union_set::get_ctx() const {
-  return ctx(isl_union_set_get_ctx(ptr));
+isl::ctx union_set::get_ctx() const {
+  return isl::ctx(isl_union_set_get_ctx(ptr));
 }
 
 bool union_set::is_null() const {
@@ -5178,7 +5170,7 @@ isl::union_set union_set::detect_equalities() const {
 isl::stat union_set::foreach_point(std::function<isl::stat(isl::point)> &&fn) const {
   auto fn_lambda = [](isl_point *arg_0, void *arg_1) -> isl_stat {
     auto *func = (std::function<isl::stat(isl::point)> *)arg_1;
-    stat ret = (*func)(isl::manage(arg_0));
+    isl::stat ret = (*func)(isl::manage(arg_0));
     return isl_stat(ret);
   };
   auto res = isl_union_set_foreach_point(get(), fn_lambda, &fn);
@@ -5188,7 +5180,7 @@ isl::stat union_set::foreach_point(std::function<isl::stat(isl::point)> &&fn) co
 isl::stat union_set::foreach_set(std::function<isl::stat(isl::set)> &&fn) const {
   auto fn_lambda = [](isl_set *arg_0, void *arg_1) -> isl_stat {
     auto *func = (std::function<isl::stat(isl::set)> *)arg_1;
-    stat ret = (*func)(isl::manage(arg_0));
+    isl::stat ret = (*func)(isl::manage(arg_0));
     return isl_stat(ret);
   };
   auto res = isl_union_set_foreach_set(get(), fn_lambda, &fn);
@@ -5342,8 +5334,8 @@ val::operator bool() const {
   return !is_null();
 }
 
-ctx val::get_ctx() const {
-  return ctx(isl_val_get_ctx(ptr));
+isl::ctx val::get_ctx() const {
+  return isl::ctx(isl_val_get_ctx(ptr));
 }
 
 bool val::is_null() const {

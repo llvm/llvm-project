@@ -162,10 +162,58 @@ void mixed_yield() {
   return; // expected-error {{not allowed in coroutine}}
 }
 
+void mixed_yield_invalid() {
+  co_yield blah; // expected-error {{use of undeclared identifier}}
+  // expected-note@-1 {{function is a coroutine due to use of 'co_yield'}}
+  return; // expected-error {{return statement not allowed in coroutine}}
+}
+
+template <class T>
+void mixed_yield_template(T) {
+  co_yield blah; // expected-error {{use of undeclared identifier}}
+  // expected-note@-1 {{function is a coroutine due to use of 'co_yield'}}
+  return; // expected-error {{return statement not allowed in coroutine}}
+}
+
+template <class T>
+void mixed_yield_template2(T) {
+  co_yield 42;
+  // expected-note@-1 {{function is a coroutine due to use of 'co_yield'}}
+  return; // expected-error {{return statement not allowed in coroutine}}
+}
+
+template <class T>
+void mixed_yield_template3(T v) {
+  co_yield blah(v);
+  // expected-note@-1 {{function is a coroutine due to use of 'co_yield'}}
+  return; // expected-error {{return statement not allowed in coroutine}}
+}
+
 void mixed_await() {
   co_await a; // expected-note {{use of 'co_await'}}
   return; // expected-error {{not allowed in coroutine}}
 }
+
+void mixed_await_invalid() {
+  co_await 42; // expected-error {{'int' is not a structure or union}}
+  // expected-note@-1 {{function is a coroutine due to use of 'co_await'}}
+  return; // expected-error {{not allowed in coroutine}}
+}
+
+template <class T>
+void mixed_await_template(T) {
+  co_await 42;
+  // expected-note@-1 {{function is a coroutine due to use of 'co_await'}}
+  return; // expected-error {{not allowed in coroutine}}
+}
+
+template <class T>
+void mixed_await_template2(T v) {
+  co_await v; // expected-error {{'long' is not a structure or union}}
+  // expected-note@-1 {{function is a coroutine due to use of 'co_await'}}
+  return; // expected-error {{not allowed in coroutine}}
+}
+template void mixed_await_template2(long); // expected-note {{requested here}}
 
 void only_coreturn(void_tag) {
   co_return; // OK
@@ -174,6 +222,33 @@ void only_coreturn(void_tag) {
 void mixed_coreturn(void_tag, bool b) {
   if (b)
     co_return; // expected-note {{use of 'co_return'}}
+  else
+    return; // expected-error {{not allowed in coroutine}}
+}
+
+void mixed_coreturn_invalid(bool b) {
+  if (b)
+    co_return; // expected-note {{use of 'co_return'}}
+    // expected-error@-1 {{no member named 'return_void' in 'promise'}}
+  else
+    return; // expected-error {{not allowed in coroutine}}
+}
+
+template <class T>
+void mixed_coreturn_template(void_tag, bool b, T v) {
+  if (b)
+    co_return v; // expected-note {{use of 'co_return'}}
+    // expected-error@-1 {{no member named 'return_value' in 'promise_void'}}
+  else
+    return; // expected-error {{not allowed in coroutine}}
+}
+template void mixed_coreturn_template(void_tag, bool, int); // expected-note {{requested here}}
+
+template <class T>
+void mixed_coreturn_template2(bool b, T) {
+  if (b)
+    co_return v; // expected-note {{use of 'co_return'}}
+    // expected-error@-1 {{use of undeclared identifier 'v'}}
   else
     return; // expected-error {{not allowed in coroutine}}
 }

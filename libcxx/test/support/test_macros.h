@@ -188,9 +188,11 @@ inline void DoNotOptimize(Tp const& value) {
   asm volatile("" : : "g"(value) : "memory");
 }
 #else
+#include <intrin.h>
 template <class Tp>
-inline void DoNotOptimize(Tp const&) {
-  // FIXME: Do something here...
+inline void DoNotOptimize(Tp const& value) {
+  const volatile void* volatile = __builtin_addressof(value);
+  _ReadWriteBarrier();
 }
 #endif
 

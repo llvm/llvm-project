@@ -238,11 +238,9 @@ IntrusiveRefCntPtr<FileSystem> vfs::getRealFileSystem() {
 
 namespace {
 class RealFSDirIter : public clang::vfs::detail::DirIterImpl {
-  std::string Path;
   llvm::sys::fs::directory_iterator Iter;
 public:
-  RealFSDirIter(const Twine &_Path, std::error_code &EC)
-      : Path(_Path.str()), Iter(Path, EC) {
+  RealFSDirIter(const Twine &Path, std::error_code &EC) : Iter(Path, EC) {
     if (!EC && Iter != llvm::sys::fs::directory_iterator()) {
       llvm::sys::fs::file_status S;
       EC = Iter->status(S);

@@ -40,13 +40,15 @@ void FunctionScopeInfo::Clear() {
   FirstCXXTryLoc = SourceLocation();
   FirstSEHTryLoc = SourceLocation();
 
-  SwitchStack.clear();
-  Returns.clear();
+  // Coroutine state
+  FirstCoroutineStmtLoc = SourceLocation();
   CoroutinePromise = nullptr;
   NeedsCoroutineSuspends = true;
   CoroutineSuspends.first = nullptr;
   CoroutineSuspends.second = nullptr;
-  CoroutineStmts.clear();
+
+  SwitchStack.clear();
+  Returns.clear();
   ErrorTrap.reset();
   PossiblyUnreachableDiags.clear();
   WeakObjectUses.clear();
