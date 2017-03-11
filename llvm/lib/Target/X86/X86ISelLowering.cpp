@@ -5308,8 +5308,8 @@ static bool getTargetConstantBitsFromNode(SDValue Op, unsigned EltSizeInBits,
   };
 
   // Collect constant bits and insert into mask/undef bit masks.
-  auto CollectConstantBits = [SizeInBits](const Constant *Cst, APInt &Mask,
-                                          APInt &Undefs, unsigned BitOffset) {
+  auto CollectConstantBits = [](const Constant *Cst, APInt &Mask, APInt &Undefs,
+                                unsigned BitOffset) {
     if (!Cst)
       return false;
     unsigned CstSizeInBits = Cst->getType()->getPrimitiveSizeInBits();

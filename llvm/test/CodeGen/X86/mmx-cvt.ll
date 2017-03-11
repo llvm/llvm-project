@@ -262,8 +262,7 @@ define <2 x double> @sitofp_v2i32_v2f64(<1 x i64>*) nounwind {
 ; X86-NEXT:    movq (%eax), %mm0
 ; X86-NEXT:    paddd %mm0, %mm0
 ; X86-NEXT:    movq %mm0, (%esp)
-; X86-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; X86-NEXT:    cvtdq2pd %xmm0, %xmm0
+; X86-NEXT:    cvtdq2pd (%esp), %xmm0
 ; X86-NEXT:    movl %ebp, %esp
 ; X86-NEXT:    popl %ebp
 ; X86-NEXT:    retl

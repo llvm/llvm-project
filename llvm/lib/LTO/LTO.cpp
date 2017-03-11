@@ -50,6 +50,12 @@ using namespace object;
 
 #define DEBUG_TYPE "lto"
 
+// The values are (type identifier, summary) pairs.
+typedef DenseMap<
+    GlobalValue::GUID,
+    TinyPtrVector<const std::pair<const std::string, TypeIdSummary> *>>
+    TypeIdSummariesByGuidTy;
+
 // Returns a unique hash for the Module considering the current list of
 // export/import and other global analysis results.
 // The hash is produced in \p Key.
@@ -58,7 +64,8 @@ static void computeCacheKey(
     StringRef ModuleID, const FunctionImporter::ImportMapTy &ImportList,
     const FunctionImporter::ExportSetTy &ExportList,
     const std::map<GlobalValue::GUID, GlobalValue::LinkageTypes> &ResolvedODR,
-    const GVSummaryMapTy &DefinedGlobals) {
+    const GVSummaryMapTy &DefinedGlobals,
+    const TypeIdSummariesByGuidTy &TypeIdSummariesByGuid) {
   // Compute the unique hash for this entry.
   // This is based on the current compiler version, the module itself, the
   // export list, the hash for every single module in the import list, the
@@ -144,12 +151,68 @@ static void computeCacheKey(
                                     sizeof(GlobalValue::LinkageTypes)));
   }
 
+  std::set<GlobalValue::GUID> UsedTypeIds;
+
+  auto AddUsedTypeIds = [&](GlobalValueSummary *GS) {
+    auto *FS = dyn_cast_or_null<FunctionSummary>(GS);
+    if (!FS)
+      return;
+    for (auto &TT : FS->type_tests())
+      UsedTypeIds.insert(TT);
+    for (auto &TT : FS->type_test_assume_vcalls())
+      UsedTypeIds.insert(TT.GUID);
+    for (auto &TT : FS->type_checked_load_vcalls())
+      UsedTypeIds.insert(TT.GUID);
+    for (auto &TT : FS->type_test_assume_const_vcalls())
+      UsedTypeIds.insert(TT.VFunc.GUID);
+    for (auto &TT : FS->type_checked_load_const_vcalls())
+      UsedTypeIds.insert(TT.VFunc.GUID);
+  };
+
   // Include the hash for the linkage type to reflect internalization and weak
-  // resolution.
+  // resolution, and collect any used type identifier resolutions.
   for (auto &GS : DefinedGlobals) {
     GlobalValue::LinkageTypes Linkage = GS.second->linkage();
     Hasher.update(
         ArrayRef<uint8_t>((const uint8_t *)&Linkage, sizeof(Linkage)));
+    AddUsedTypeIds(GS.second);
+  }
+
+  // Imported functions may introduce new uses of type identifier resolutions,
+  // so we need to collect their used resolutions as well.
+  for (auto &ImpM : ImportList)
+    for (auto &ImpF : ImpM.second)
+      AddUsedTypeIds(Index.findSummaryInModule(ImpF.first, ImpM.first()));
+
+  auto AddTypeIdSummary = [&](StringRef TId, const TypeIdSummary &S) {
+    AddString(TId);
+
+    AddUnsigned(S.TTRes.TheKind);
+    AddUnsigned(S.TTRes.SizeM1BitWidth);
+
+    AddUint64(S.WPDRes.size());
+    for (auto &WPD : S.WPDRes) {
+      AddUnsigned(WPD.first);
+      AddUnsigned(WPD.second.TheKind);
+      AddString(WPD.second.SingleImplName);
+
+      AddUint64(WPD.second.ResByArg.size());
+      for (auto &ByArg : WPD.second.ResByArg) {
+        AddUint64(ByArg.first.size());
+        for (uint64_t Arg : ByArg.first)
+          AddUint64(Arg);
+        AddUnsigned(ByArg.second.TheKind);
+        AddUint64(ByArg.second.Info);
+      }
+    }
+  };
+
+  // Include the hash for all type identifiers used by this module.
+  for (GlobalValue::GUID TId : UsedTypeIds) {
+    auto SummariesI = TypeIdSummariesByGuid.find(TId);
+    if (SummariesI != TypeIdSummariesByGuid.end())
+      for (auto *Summary : SummariesI->second)
+        AddTypeIdSummary(Summary->first, Summary->second);
   }
 
   if (!Conf.SampleProfile.empty()) {
@@ -702,6 +765,7 @@ class InProcessThinBackend : public ThinBackendProc {
   ThreadPool BackendThreadPool;
   AddStreamFn AddStream;
   NativeObjectCache Cache;
+  TypeIdSummariesByGuidTy TypeIdSummariesByGuid;
 
   Optional<Error> Err;
   std::mutex ErrMu;
@@ -714,7 +778,14 @@ public:
       AddStreamFn AddStream, NativeObjectCache Cache)
       : ThinBackendProc(Conf, CombinedIndex, ModuleToDefinedGVSummaries),
         BackendThreadPool(ThinLTOParallelismLevel),
-        AddStream(std::move(AddStream)), Cache(std::move(Cache)) {}
+        AddStream(std::move(AddStream)), Cache(std::move(Cache)) {
+    // Create a mapping from type identifier GUIDs to type identifier summaries.
+    // This allows backends to use the type identifier GUIDs stored in the
+    // function summaries to determine which type identifier summaries affect
+    // each function without needing to compute GUIDs in each backend.
+    for (auto &TId : CombinedIndex.typeIds())
+      TypeIdSummariesByGuid[GlobalValue::getGUID(TId.first)].push_back(&TId);
+  }
 
   Error runThinLTOBackendThread(
       AddStreamFn AddStream, NativeObjectCache Cache, unsigned Task,
@@ -723,7 +794,8 @@ public:
       const FunctionImporter::ExportSetTy &ExportList,
       const std::map<GlobalValue::GUID, GlobalValue::LinkageTypes> &ResolvedODR,
       const GVSummaryMapTy &DefinedGlobals,
-      MapVector<StringRef, BitcodeModule> &ModuleMap) {
+      MapVector<StringRef, BitcodeModule> &ModuleMap,
+      const TypeIdSummariesByGuidTy &TypeIdSummariesByGuid) {
     auto RunThinBackend = [&](AddStreamFn AddStream) {
       LTOLLVMContext BackendContext(Conf);
       Expected<std::unique_ptr<Module>> MOrErr = BM.parseModule(BackendContext);
@@ -746,7 +818,7 @@ public:
     SmallString<40> Key;
     // The module may be cached, this helps handling it.
     computeCacheKey(Key, Conf, CombinedIndex, ModuleID, ImportList, ExportList,
-                    ResolvedODR, DefinedGlobals);
+                    ResolvedODR, DefinedGlobals, TypeIdSummariesByGuid);
     if (AddStreamFn CacheAddStream = Cache(Task, Key))
       return RunThinBackend(CacheAddStream);
 
@@ -770,10 +842,11 @@ public:
             const std::map<GlobalValue::GUID, GlobalValue::LinkageTypes>
                 &ResolvedODR,
             const GVSummaryMapTy &DefinedGlobals,
-            MapVector<StringRef, BitcodeModule> &ModuleMap) {
+            MapVector<StringRef, BitcodeModule> &ModuleMap,
+            const TypeIdSummariesByGuidTy &TypeIdSummariesByGuid) {
           Error E = runThinLTOBackendThread(
-              AddStream, Cache, Task, BM, CombinedIndex, ImportList,
-              ExportList, ResolvedODR, DefinedGlobals, ModuleMap);
+              AddStream, Cache, Task, BM, CombinedIndex, ImportList, ExportList,
+              ResolvedODR, DefinedGlobals, ModuleMap, TypeIdSummariesByGuid);
           if (E) {
             std::unique_lock<std::mutex> L(ErrMu);
             if (Err)
@@ -782,9 +855,9 @@ public:
               Err = std::move(E);
           }
         },
-        BM, std::ref(CombinedIndex), std::ref(ImportList),
-        std::ref(ExportList), std::ref(ResolvedODR), std::ref(DefinedGlobals),
-        std::ref(ModuleMap));
+        BM, std::ref(CombinedIndex), std::ref(ImportList), std::ref(ExportList),
+        std::ref(ResolvedODR), std::ref(DefinedGlobals), std::ref(ModuleMap),
+        std::ref(TypeIdSummariesByGuid));
     return Error::success();
   }
 
