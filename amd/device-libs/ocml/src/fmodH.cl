@@ -5,6 +5,10 @@
  * License. See LICENSE.TXT for details.
  *===------------------------------------------------------------------------*/
 
+#include "mathH.h"
+
+CONSTATTR BGEN(fmod)
+
 #define COMPILING_FMOD
 #include "remainderH_base.h"
 

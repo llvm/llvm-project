@@ -7,11 +7,17 @@
 
 #include "mathH.h"
 
+CONSTATTR INLINEATTR half2
+MATH_MANGLE2(ldexp)(half2 x, int2 n)
+{
+    return (half2)(MATH_MANGLE(ldexp)(x.lo, n.lo), MATH_MANGLE(ldexp)(x.hi, n.hi));
+}
+
 CONSTATTR INLINEATTR half
 MATH_MANGLE(ldexp)(half x, int n)
 {
     if (AMD_OPT()) {
-        return BUILTIN_FLDEXP_F16(x, n);
+        return BUILTIN_FLDEXP_F16(x, BUILTIN_CLAMP_S32(n, SHRT_MIN, SHRT_MAX));
     } else {
         uint ux = (uint)AS_USHORT(x) & EXSIGNBIT_HP16;
         int e = (ux >> EXPSHIFTBITS_HP16) - EXPBIAS_HP16;

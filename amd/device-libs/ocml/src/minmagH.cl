@@ -7,6 +7,8 @@
 
 #include "mathH.h"
 
+CONSTATTR BGEN(minmag)
+
 CONSTATTR INLINEATTR half
 MATH_MANGLE(minmag)(half x, half y)
 {

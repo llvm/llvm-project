@@ -20,6 +20,7 @@
 #define AS_DOUBLE(X) __builtin_astype(X, double)
 #define AS_FLOAT(X) __builtin_astype(X, float)
 #define AS_HALF(X) __builtin_astype(X, half)
+#define AS_HALF2(X) __builtin_astype(X, half2)
 
 // Class mask bits
 #define CLASS_SNAN 0x001
@@ -38,12 +39,14 @@
 #define BUILTIN_ABS_F32 __llvm_fabs_f32
 #define BUILTIN_ABS_F64 __llvm_fabs_f64
 #define BUILTIN_ABS_F16 __llvm_fabs_f16
+#define BUILTIN_ABS_2F16 __llvm_fabs_2f16
 
 #define BUILTIN_BITALIGN_B32(A,B,C) ((((ulong)(A) << 32) | (ulong)(B)) >> ((C) & 0x1f))
 
 #define BUILTIN_CEIL_F32 __llvm_ceil_f32
 #define BUILTIN_CEIL_F64 __llvm_ceil_f64
 #define BUILTIN_CEIL_F16 __llvm_ceil_f16
+#define BUILTIN_CEIL_2F16 __llvm_ceil_2f16
 
 #define BUILTIN_CLASS_F32 __llvm_amdgcn_class_f32
 #define BUILTIN_CLASS_F64 __llvm_amdgcn_class_f64
@@ -52,12 +55,14 @@
 #define BUILTIN_COPYSIGN_F32 __llvm_copysign_f32
 #define BUILTIN_COPYSIGN_F64 __llvm_copysign_f64
 #define BUILTIN_COPYSIGN_F16 __llvm_copysign_f16
+#define BUILTIN_COPYSIGN_2F16 __llvm_copysign_2f16
 
 #define BUILTIN_FIRSTBIT_U32(X) ((X) == 0 ? -1 : __builtin_clz(X))
 
 #define BUILTIN_FLOOR_F32 __llvm_floor_f32
 #define BUILTIN_FLOOR_F64 __llvm_floor_f64
 #define BUILTIN_FLOOR_F16 __llvm_floor_f16
+#define BUILTIN_FLOOR_2F16 __llvm_floor_2f16
 
 #define BUILTIN_FRACTION_F32(X) ({ \
     float _fract_x = X; \
@@ -83,6 +88,7 @@
 #define BUILTIN_MAX_F32 __llvm_maxnum_f32
 #define BUILTIN_MAX_F64 __llvm_maxnum_f64
 #define BUILTIN_MAX_F16 __llvm_maxnum_f16
+#define BUILTIN_MAX_2F16 __llvm_maxnum_2f16
 
 #define BUILTIN_MAX_S32(A,B) ((A) < (B) ? (B) : (A))
 #define BUILTIN_MAX_U32(A,B) ((A) < (B) ? (B) : (A))
@@ -90,6 +96,7 @@
 #define BUILTIN_MIN_F32 __llvm_minnum_f32
 #define BUILTIN_MIN_F64 __llvm_minnum_f64
 #define BUILTIN_MIN_F16 __llvm_minnum_f16
+#define BUILTIN_MIN_2F16 __llvm_minnum_2f16
 
 #define BUILTIN_MIN_S32(A,B) ((A) < (B) ? (A) : (B))
 #define BUILTIN_MIN_U32(A,B) ((A) < (B) ? (A) : (B))
@@ -97,6 +104,7 @@
 #define BUILTIN_CANONICALIZE_F32(X) __llvm_canonicalize_f32(X)
 #define BUILTIN_CANONICALIZE_F64(X) __llvm_canonicalize_f64(X)
 #define BUILTIN_CANONICALIZE_F16(X) __llvm_canonicalize_f16(X)
+#define BUILTIN_CANONICALIZE_2F16(X) __llvm_canonicalize_2f16(X)
 
 #define BUILTIN_MULHI_U32(A,B) (((ulong)(A) * (ulong)(B)) >> 32)
 
@@ -121,6 +129,7 @@
 #define BUILTIN_RINT_F32 __llvm_rint_f32
 #define BUILTIN_RINT_F64 __llvm_rint_f64
 #define BUILTIN_RINT_F16 __llvm_rint_f16
+#define BUILTIN_RINT_2F16 __llvm_rint_2f16
 
 #define BUILTIN_SQRT_F32(X) ({ \
     float _bsqrt_x = X; \
@@ -143,6 +152,7 @@
 #define BUILTIN_TRUNC_F32 __llvm_trunc_f32
 #define BUILTIN_TRUNC_F64 __llvm_trunc_f64
 #define BUILTIN_TRUNC_F16 __llvm_trunc_f16
+#define BUILTIN_TRUNC_2F16 __llvm_trunc_2f16
 
 #define BUILTIN_DIV_F32(X,Y) ({ \
     float _div_x = X; \
@@ -168,6 +178,7 @@
 #define BUILTIN_FMA_F32 __llvm_fma_f32
 #define BUILTIN_FMA_F64 __llvm_fma_f64
 #define BUILTIN_FMA_F16 __llvm_fma_f16
+#define BUILTIN_FMA_2F16 __llvm_fma_2f16
 
 #define BUILTIN_FLDEXP_F32 __llvm_amdgcn_ldexp_f32
 #define BUILTIN_FLDEXP_F64 __llvm_amdgcn_ldexp_f64
@@ -184,16 +195,19 @@
 #define BUILTIN_CMAX_F32 __llvm_maxnum_f32
 #define BUILTIN_CMAX_F64 __llvm_maxnum_f64
 #define BUILTIN_CMAX_F16 __llvm_maxnum_f16
+#define BUILTIN_CMAX_2F16 __llvm_maxnum_2f16
 
 #define BUILTIN_CMIN_F32 __llvm_minnum_f32
 #define BUILTIN_CMIN_F64 __llvm_minnum_f64
 #define BUILTIN_CMIN_F16 __llvm_minnum_f16
+#define BUILTIN_CMIN_2F16 __llvm_minnum_2f16
 
 #define BUILTIN_TRIG_PREOP_F64 __llvm_amdgcn_trig_preop_f64
 
 #define BUILTIN_MAD_F32 __llvm_fmuladd_f32
 #define BUILTIN_MAD_F64 __llvm_fmuladd_f64
 #define BUILTIN_MAD_F16 __llvm_fmuladd_f16
+#define BUILTIN_MAD_2F16 __llvm_fmuladd_2f16
 
 // HW has ISA for max3, median3, and min3, median3 can be used to clamp
 #define BUILTIN_CLAMP_S32(X,L,H) ({ \
@@ -205,5 +219,6 @@
     _clamp_r; \
 })
 
-#define BUILTIN_CLAMP_F32(X,L,H) __llvm_minnum_f32(__llvm_maxnum_f32(X, L), H)
+#define BUILTIN_CLAMP_F32(X,L,H) __llvm_amdgcn_fmed3_f32(X,L,H)
+#define BUILTIN_CLAMP_F16(X,L,H) __llvm_amdgcn_fmed3_f16(X,L,H)
 

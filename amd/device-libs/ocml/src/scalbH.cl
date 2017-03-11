@@ -7,6 +7,8 @@
 
 #include "mathH.h"
 
+CONSTATTR BGEN(scalb)
+
 CONSTATTR INLINEATTR half
 MATH_MANGLE(scalb)(half x, half y)
 {

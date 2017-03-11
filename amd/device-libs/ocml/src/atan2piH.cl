@@ -10,6 +10,8 @@
 
 extern CONSTATTR half MATH_PRIVATE(atanred)(half);
 
+CONSTATTR BGEN(atan2pi)
+
 CONSTATTR half
 MATH_MANGLE(atan2pi)(half y, half x)
 {

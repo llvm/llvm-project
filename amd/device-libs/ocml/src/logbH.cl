@@ -7,6 +7,8 @@
 
 #include "mathH.h"
 
+CONSTATTR UGEN(logb)
+
 CONSTATTR INLINEATTR half
 MATH_MANGLE(logb)(half x)
 {

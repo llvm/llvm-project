@@ -5,6 +5,10 @@
  * License. See LICENSE.TXT for details.
  *===------------------------------------------------------------------------*/
 
+#include "mathH.h"
+
+PUREATTR BGEN(pow)
+
 #define COMPILING_POW
 #include "powH_base.h"
 
