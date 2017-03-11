@@ -310,7 +310,7 @@ namespace N {
 }
 
 namespace TypedefNamespace { typedef int F; };
-TypedefNamespace::F::NonexistentName BadNNSWithCXXScopeSpec; // expected-error {{'F' (aka 'int') is not a class, namespace, or enumeration}}
+TypedefNamespace::F::NonexistentName BadNNSWithCXXScopeSpec; // expected-error {{'TypedefNamespace::F' (aka 'int') is not a class, namespace, or enumeration}}
 
 namespace PR18587 {
 
@@ -449,7 +449,7 @@ namespace A {
 class B {
   typedef C D; // expected-error{{unknown type name 'C'}}
   A::D::F;
-  // expected-error@-1{{'D' (aka 'int') is not a class, namespace, or enumeration}}
+  // expected-error@-1{{'PR30619::A::B::D' (aka 'int') is not a class, namespace, or enumeration}}
 };
 }
 }

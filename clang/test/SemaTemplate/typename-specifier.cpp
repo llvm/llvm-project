@@ -102,7 +102,7 @@ D<long> struct_D;  // expected-note {{in instantiation of template class 'D<long
 
 template<typename T> struct E {
   typedef typename T::foo foo;
-  typedef typename foo::bar bar;  // expected-error {{type 'foo' (aka 'double') cannot be used prior to '::' because it has no members}}
+  typedef typename foo::bar bar;  // expected-error {{type 'E<F>::foo' (aka 'double') cannot be used prior to '::' because it has no members}}
 };
 
 struct F {

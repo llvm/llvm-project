@@ -73,7 +73,7 @@ std::error_code CodeObjectDisassembler::printNotes(const HSACodeObject *CodeObje
       return errorToErrorCode(Note.takeError());
 
     switch (Note->type) {
-    case AMDGPU::PT_NOTE::NT_AMDGPU_HSA_CODE_OBJECT_VERSION: {
+    case AMDGPU::ElfNote::NT_AMDGPU_HSA_CODE_OBJECT_VERSION: {
       auto VersionOr = Note->as<amdgpu_hsa_code_object_version>();
       if (!VersionOr)
         return errorToErrorCode(VersionOr.takeError());
@@ -86,7 +86,7 @@ std::error_code CodeObjectDisassembler::printNotes(const HSACodeObject *CodeObje
       break;
     }
 
-    case AMDGPU::PT_NOTE::NT_AMDGPU_HSA_ISA: {
+    case AMDGPU::ElfNote::NT_AMDGPU_HSA_ISA: {
       auto IsaOr = Note->as<amdgpu_hsa_isa>();
       if (!IsaOr)
         return errorToErrorCode(IsaOr.takeError());
@@ -111,7 +111,7 @@ static std::string getCPUName(const HSACodeObject *CodeObject) {
     if (!Note)
       return "";
 
-    if (Note->type == AMDGPU::PT_NOTE::NT_AMDGPU_HSA_ISA) {
+    if (Note->type == AMDGPU::ElfNote::NT_AMDGPU_HSA_ISA) {
       auto IsaOr = Note->as<amdgpu_hsa_isa>();
       if (!IsaOr)
         return "";

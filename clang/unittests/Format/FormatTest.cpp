@@ -1029,6 +1029,17 @@ TEST_F(FormatTest, FormatsClasses) {
   verifyFormat("class ::A::B {};");
 }
 
+TEST_F(FormatTest, BreakBeforeInheritanceComma) {
+  FormatStyle StyleWithInheritanceBreak = getLLVMStyle();
+  StyleWithInheritanceBreak.BreakBeforeInheritanceComma = true;
+
+  verifyFormat("class MyClass : public X {};", StyleWithInheritanceBreak);
+  verifyFormat("class MyClass\n"
+               "    : public X\n"
+               "    , public Y {};",
+               StyleWithInheritanceBreak);
+}
+
 TEST_F(FormatTest, FormatsVariableDeclarationsAfterStructOrClass) {
   verifyFormat("class A {\n} a, b;");
   verifyFormat("struct A {\n} a, b;");
@@ -8582,6 +8593,7 @@ TEST_F(FormatTest, ParsesConfigurationBools) {
   CHECK_PARSE_BOOL(BreakBeforeTernaryOperators);
   CHECK_PARSE_BOOL(BreakConstructorInitializersBeforeComma);
   CHECK_PARSE_BOOL(BreakStringLiterals);
+  CHECK_PARSE_BOOL(BreakBeforeInheritanceComma)
   CHECK_PARSE_BOOL(ConstructorInitializerAllOnOneLineOrOnePerLine);
   CHECK_PARSE_BOOL(DerivePointerAlignment);
   CHECK_PARSE_BOOL_FIELD(DerivePointerAlignment, "DerivePointerBinding");

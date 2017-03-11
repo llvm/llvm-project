@@ -209,11 +209,19 @@ static bool scheduleAdjacentImpl(ScheduleDAGMI *DAG, SUnit *ASU,
         Dep.setLatency(0);
 
     ++NumFused;
-    DEBUG(dbgs() << "Macro fuse ";
-          Preds ? BSU->print(dbgs(), DAG) : ASU->print(dbgs(), DAG);
-          dbgs() << " - ";
-          Preds ? ASU->print(dbgs(), DAG) : BSU->print(dbgs(), DAG);
-          dbgs() << '\n');
+    DEBUG({ SUnit *LSU = Preds ? BSU : ASU;
+            SUnit *RSU = Preds ? ASU : BSU;
+            const MachineInstr *LMI = Preds ? BMI : AMI;
+            const MachineInstr *RMI = Preds ? AMI : BMI;
+
+            dbgs() << DAG->MF.getName() << "(): Macro fuse ";
+            LSU->print(dbgs(), DAG);
+            dbgs() << " - ";
+            RSU->print(dbgs(), DAG);
+            dbgs() << " / " <<
+                      TII->getName(LMI->getOpcode()) << " - " <<
+                      TII->getName(RMI->getOpcode()) << '\n';
+          });
 
     return true;
   }

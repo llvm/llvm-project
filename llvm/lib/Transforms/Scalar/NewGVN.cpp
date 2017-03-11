@@ -222,9 +222,9 @@ class NewGVN : public FunctionPass {
 
   // This class is called INITIAL in the paper. It is the class everything
   // startsout in, and represents any value. Being an optimistic analysis,
-  // anything in the INITIAL class has the value TOP, which is indeterminate and
+  // anything in the TOP class has the value TOP, which is indeterminate and
   // equivalent to everything.
-  CongruenceClass *InitialClass;
+  CongruenceClass *TOPClass;
   std::vector<CongruenceClass *> CongruenceClasses;
   unsigned NextCongruenceNum;
 
@@ -716,10 +716,10 @@ const CallExpression *NewGVN::createCallExpression(CallInst *CI,
 Value *NewGVN::lookupOperandLeader(Value *V) const {
   CongruenceClass *CC = ValueToClass.lookup(V);
   if (CC) {
-    // Everything in INITIAL is represneted by undef, as it can be any value.
+    // Everything in TOP is represneted by undef, as it can be any value.
     // We do have to make sure we get the type right though, so we can't set the
     // RepLeader to undef.
-    if (CC == InitialClass)
+    if (CC == TOPClass)
       return UndefValue::get(V->getType());
     return CC->RepStoredValue ? CC->RepStoredValue : CC->RepLeader;
   }
@@ -743,7 +743,7 @@ MemoryAccess *NewGVN::lookupMemoryAccessEquiv(MemoryAccess *MA) const {
 // equivalent to the lattice value "TOP" in most lattices.  This is the initial
 // state of all memory accesses.
 bool NewGVN::isMemoryAccessTop(const MemoryAccess *MA) const {
-  return MemoryAccessToClass.lookup(MA) == InitialClass;
+  return MemoryAccessToClass.lookup(MA) == TOPClass;
 }
 
 LoadExpression *NewGVN::createLoadExpression(Type *LoadType, Value *PointerOp,
@@ -1382,7 +1382,7 @@ void NewGVN::moveValueToNewCongruenceClass(Instruction *I,
 
   ValueToClass[I] = NewClass;
   // See if we destroyed the class or need to swap leaders.
-  if (OldClass->Members.empty() && OldClass != InitialClass) {
+  if (OldClass->Members.empty() && OldClass != TOPClass) {
     if (OldClass->DefiningExpr) {
       OldClass->Dead = true;
       DEBUG(dbgs() << "Erasing expression " << OldClass->DefiningExpr
@@ -1427,9 +1427,9 @@ void NewGVN::moveValueToNewCongruenceClass(Instruction *I,
     }
 
     // We don't need to sort members if there is only 1, and we don't care about
-    // sorting the INITIAL class because everything either gets out of it or is
+    // sorting the TOP class because everything either gets out of it or is
     // unreachable.
-    if (OldClass->Members.size() == 1 || OldClass == InitialClass) {
+    if (OldClass->Members.size() == 1 || OldClass == TOPClass) {
       OldClass->RepLeader = *(OldClass->Members.begin());
     } else if (OldClass->NextLeader.first) {
       ++NumGVNAvoidedSortedLeaderChanges;
@@ -1646,27 +1646,27 @@ void NewGVN::processOutgoingEdges(TerminatorInst *TI, BasicBlock *B) {
   }
 }
 
-// The algorithm initially places the values of the routine in the INITIAL
-// congruence class. The leader of INITIAL is the undetermined value `TOP`.
-// When the algorithm has finished, values still in INITIAL are unreachable.
+// The algorithm initially places the values of the routine in the TOP
+// congruence class. The leader of TOP is the undetermined value `undef`.
+// When the algorithm has finished, values still in TOP are unreachable.
 void NewGVN::initializeCongruenceClasses(Function &F) {
   // FIXME now i can't remember why this is 2
   NextCongruenceNum = 2;
-  // Initialize all other instructions to be in INITIAL class.
+  // Initialize all other instructions to be in TOP class.
   CongruenceClass::MemberSet InitialValues;
-  InitialClass = createCongruenceClass(nullptr, nullptr);
-  InitialClass->RepMemoryAccess = MSSA->getLiveOnEntryDef();
+  TOPClass = createCongruenceClass(nullptr, nullptr);
+  TOPClass->RepMemoryAccess = MSSA->getLiveOnEntryDef();
   for (auto &B : F) {
     if (auto *MP = MSSA->getMemoryAccess(&B))
-      MemoryAccessToClass[MP] = InitialClass;
+      MemoryAccessToClass[MP] = TOPClass;
 
     for (auto &I : B) {
       // Don't insert void terminators into the class. We don't value number
-      // them, and they just end up sitting in INITIAL.
+      // them, and they just end up sitting in TOP.
       if (isa<TerminatorInst>(I) && I.getType()->isVoidTy())
         continue;
       InitialValues.insert(&I);
-      ValueToClass[&I] = InitialClass;
+      ValueToClass[&I] = TOPClass;
 
       // All memory accesses are equivalent to live on entry to start. They must
       // be initialized to something so that initial changes are noticed. For
@@ -1676,13 +1676,13 @@ void NewGVN::initializeCongruenceClasses(Function &F) {
       // other expression can generate a memory equivalence.  If we start
       // handling memcpy/etc, we can expand this.
       if (isa<StoreInst>(&I)) {
-        MemoryAccessToClass[MSSA->getMemoryAccess(&I)] = InitialClass;
-        ++InitialClass->StoreCount;
-        assert(InitialClass->StoreCount > 0);
+        MemoryAccessToClass[MSSA->getMemoryAccess(&I)] = TOPClass;
+        ++TOPClass->StoreCount;
+        assert(TOPClass->StoreCount > 0);
       }
     }
   }
-  InitialClass->Members.swap(InitialValues);
+  TOPClass->Members.swap(InitialValues);
 
   // Initialize arguments to be in their own unique congruence classes
   for (auto &FA : F.args())
@@ -1774,7 +1774,7 @@ void NewGVN::valueNumberMemoryPhi(MemoryPhi *MP) {
   // InitialClass.  Note: The only case this should happen is if we have at
   // least one self-argument.
   if (Filtered.begin() == Filtered.end()) {
-    if (setMemoryAccessEquivTo(MP, InitialClass))
+    if (setMemoryAccessEquivTo(MP, TOPClass))
       markMemoryUsersTouched(MP);
     return;
   }
@@ -2487,13 +2487,13 @@ bool NewGVN::eliminateInstructions(Function &F) {
     SmallPtrSet<Instruction *, 8> ProbablyDead;
     if (CC->Dead)
       continue;
-    // Everything still in the INITIAL class is unreachable or dead.
-    if (CC == InitialClass) {
+    // Everything still in the TOP class is unreachable or dead.
+    if (CC == TOPClass) {
 #ifndef NDEBUG
       for (auto M : CC->Members)
         assert((!ReachableBlocks.count(cast<Instruction>(M)->getParent()) ||
                 InstructionsToErase.count(cast<Instruction>(M))) &&
-               "Everything in INITIAL should be unreachable or dead at this "
+               "Everything in TOP should be unreachable or dead at this "
                "point");
 #endif
       continue;

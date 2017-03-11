@@ -55,11 +55,9 @@ public:
   ///
   /// Considered as an opaque blob, the legal code will use and define the same
   /// registers as \p MI.
-  LegalizeResult legalizeInstrStep(MachineInstr &MI,
-                                   const LegalizerInfo &LegalizerInfo);
+  LegalizeResult legalizeInstrStep(MachineInstr &MI);
 
-  LegalizeResult legalizeInstr(MachineInstr &MI,
-                               const LegalizerInfo &LegalizerInfo);
+  LegalizeResult legalizeInstr(MachineInstr &MI);
 
   /// Legalize an instruction by emiting a runtime library call instead.
   LegalizeResult libcall(MachineInstr &MI);
@@ -97,6 +95,7 @@ private:
 
   MachineIRBuilder MIRBuilder;
   MachineRegisterInfo &MRI;
+  const LegalizerInfo &LI;
 };
 
 } // End namespace llvm.

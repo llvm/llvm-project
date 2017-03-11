@@ -274,7 +274,7 @@ Expected<uint32_t> HSACodeObject::getTextSectionIdx() const {
 }
 
 Expected<uint32_t> HSACodeObject::getNoteSectionIdx() const {
-  return getSectionIdxByName(AMDGPU::PT_NOTE::SectionName);
+  return getSectionIdxByName(AMDGPU::ElfNote::SectionName);
 }
 
 Expected<const HSACodeObject::Elf_Shdr *> HSACodeObject::getTextSection() const {

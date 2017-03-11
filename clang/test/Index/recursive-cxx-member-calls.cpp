@@ -536,7 +536,7 @@ AttributeList::Kind AttributeList::getKind(const IdentifierInfo * Name) {
 // CHECK-tokens: Punctuation: ")" [49:73 - 49:74] CXXConstructor=StringRef:49:3 (Definition)
 // CHECK-tokens: Punctuation: "{" [49:75 - 49:76] CompoundStmt=
 // CHECK-tokens: Punctuation: "}" [49:76 - 49:77] CompoundStmt=
-// CHECK-tokens: Identifier: "iterator" [50:3 - 50:11] TypeRef=iterator:40:23
+// CHECK-tokens: Identifier: "iterator" [50:3 - 50:11] TypeRef=llvm::StringRef::iterator:40:23
 // CHECK-tokens: Identifier: "end" [50:12 - 50:15] CXXMethod=end:50:12 (Definition)
 // CHECK-tokens: Punctuation: "(" [50:15 - 50:16] CXXMethod=end:50:12 (Definition)
 // CHECK-tokens: Punctuation: ")" [50:16 - 50:17] CXXMethod=end:50:12 (Definition)
@@ -1681,7 +1681,7 @@ AttributeList::Kind AttributeList::getKind(const IdentifierInfo * Name) {
 // CHECK: 49:67: DeclRefExpr=length:49:38 Extent=[49:67 - 49:73]
 // CHECK: 49:75: CompoundStmt= Extent=[49:75 - 49:77]
 // CHECK: 50:12: CXXMethod=end:50:12 (Definition) (const) Extent=[50:3 - 50:40] [access=public]
-// CHECK: 50:3: TypeRef=iterator:40:23 Extent=[50:3 - 50:11]
+// CHECK: 50:3: TypeRef=llvm::StringRef::iterator:40:23 Extent=[50:3 - 50:11]
 // CHECK: 50:24: CompoundStmt= Extent=[50:24 - 50:40]
 // CHECK: 50:26: ReturnStmt= Extent=[50:26 - 50:37]
 // CHECK: 50:33: MemberRefExpr=Data:43:15 Extent=[50:33 - 50:37]

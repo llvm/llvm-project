@@ -1038,57 +1038,6 @@ static unsigned getAddressSpaceOperand(Value *I) {
   return -1;
 }
 
-bool llvm::sortMemAccesses(ArrayRef<Value *> VL, const DataLayout &DL,
-                           ScalarEvolution &SE,
-                           SmallVectorImpl<Value *> &Sorted) {
-  SmallVector<std::pair<int64_t, Value *>, 4> OffValPairs;
-  OffValPairs.reserve(VL.size());
-  Sorted.reserve(VL.size());
-
-  // Walk over the pointers, and map each of them to an offset relative to
-  // first pointer in the array.
-  Value *Ptr0 = getPointerOperand(VL[0]);
-  const SCEV *Scev0 = SE.getSCEV(Ptr0);
-  Value *Obj0 = GetUnderlyingObject(Ptr0, DL);
-
-  for (auto *Val : VL) {
-    // The only kind of access we care about here is load.
-    if (!isa<LoadInst>(Val))
-      return false;
-
-    Value *Ptr = getPointerOperand(Val);
-    assert(Ptr && "Expected value to have a pointer operand.");
-
-    // If a pointer refers to a different underlying object, bail - the
-    // pointers are by definition incomparable.
-    Value *CurrObj = GetUnderlyingObject(Ptr, DL);
-    if (CurrObj != Obj0)
-      return false;
-
-    const SCEVConstant *Diff =
-        dyn_cast<SCEVConstant>(SE.getMinusSCEV(SE.getSCEV(Ptr), Scev0));
-
-    // The pointers may not have a constant offset from each other, or SCEV
-    // may just not be smart enough to figure out they do. Regardless,
-    // there's nothing we can do.
-    if (!Diff)
-      return false;
-
-    OffValPairs.emplace_back(Diff->getAPInt().getSExtValue(), Val);
-  }
-
-  std::sort(OffValPairs.begin(), OffValPairs.end(),
-            [](const std::pair<int64_t, Value *> &Left,
-               const std::pair<int64_t, Value *> &Right) {
-              return Left.first < Right.first;
-            });
-
-  for (auto &it : OffValPairs)
-    Sorted.push_back(it.second);
-
-  return true;
-}
-
 /// Returns true if the memory operations \p A and \p B are consecutive.
 bool llvm::isConsecutiveAccess(Value *A, Value *B, const DataLayout &DL,
                                ScalarEvolution &SE, bool CheckType) {

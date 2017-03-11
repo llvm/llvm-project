@@ -1381,6 +1381,11 @@ public:
   /// be eliminated too.
   void removeMemoryAccess(MemoryAccess *MA);
 
+  /// Remove @p MA from this statement.
+  ///
+  /// In contrast to removeMemoryAccess(), no other access will be eliminated.
+  void removeSingleMemoryAccess(MemoryAccess *MA);
+
   typedef MemoryAccessVec::iterator iterator;
   typedef MemoryAccessVec::const_iterator const_iterator;
 

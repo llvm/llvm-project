@@ -61,8 +61,7 @@ public:
     DEBUG(printSchedule(dbgs(), OldSchedule, 2));
 
     auto Domains = give(S.getDomains());
-    auto RestrictedOldSchedule = give(
-        isl_union_map_intersect_domain(OldSchedule.copy(), Domains.copy()));
+    auto RestrictedOldSchedule = OldSchedule.intersect_domain(Domains);
     DEBUG(dbgs() << "Old schedule with domains:\n");
     DEBUG(printSchedule(dbgs(), RestrictedOldSchedule, 2));
 
@@ -71,8 +70,7 @@ public:
     DEBUG(dbgs() << "Flattened new schedule:\n");
     DEBUG(printSchedule(dbgs(), NewSchedule, 2));
 
-    NewSchedule =
-        give(isl_union_map_gist_domain(NewSchedule.take(), Domains.take()));
+    NewSchedule = NewSchedule.gist_domain(Domains);
     DEBUG(dbgs() << "Gisted, flattened new schedule:\n");
     DEBUG(printSchedule(dbgs(), NewSchedule, 2));
 

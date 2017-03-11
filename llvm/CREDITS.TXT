@@ -457,6 +457,10 @@ N: Adam Treat
 E: manyoso@yahoo.com
 D: C++ bugs filed, and C++ front-end bug fixes.
 
+N: Andrew Trick
+E: atrick@apple.com
+D: Instruction Scheduling, ...
+
 N: Lauro Ramos Venancio
 E: lauro.venancio@indt.org.br
 D: ARM backend improvements

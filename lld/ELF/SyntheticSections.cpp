@@ -506,6 +506,8 @@ void EhFrameSection<ELFT>::addSection(InputSectionBase *C) {
   Sec->EHSec = this;
   updateAlignment(Sec->Alignment);
   Sections.push_back(Sec);
+  for (auto *DS : Sec->DependentSections)
+    DependentSections.push_back(DS);
 
   // .eh_frame is a sequence of CIE or FDE records. This function
   // splits it into pieces so that we can call

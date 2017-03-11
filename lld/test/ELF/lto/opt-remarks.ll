@@ -1,9 +1,9 @@
 ; RUN: llvm-as %s -o %t.o
 
 ; RUN: rm -f %t.yaml
-; RUN: ld.lld -opt-remarks-filename %t.yaml %t.o -o %t -shared -save-temps
+; RUN: ld.lld --opt-remarks-filename %t.yaml %t.o -o %t -shared -save-temps
 ; RUN: llvm-dis %t.0.4.opt.bc -o - | FileCheck %s
-; RUN: ld.lld -opt-remarks-with-hotness -opt-remarks-filename %t.hot.yaml \
+; RUN: ld.lld --opt-remarks-with-hotness --opt-remarks-filename %t.hot.yaml \
 ; RUN:  %t.o -o %t -shared
 ; RUN: cat %t.yaml | FileCheck %s -check-prefix=YAML
 ; RUN: cat %t.hot.yaml | FileCheck %s -check-prefix=YAML-HOT

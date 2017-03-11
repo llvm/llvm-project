@@ -362,12 +362,7 @@ void OutputSectionFactory::addInputSec(InputSectionBase *IS,
     }
     Sec->Flags |= Flags;
   } else {
-    uint32_t Type = IS->Type;
-    if (IS->kind() == InputSectionBase::EHFrame) {
-      In<ELFT>::EhFrame->addSection(IS);
-      return;
-    }
-    Sec = make<OutputSection>(Key.Name, Type, Flags);
+    Sec = make<OutputSection>(Key.Name, IS->Type, Flags);
     OutputSections.push_back(Sec);
   }
 

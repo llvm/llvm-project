@@ -34,6 +34,7 @@ int test_aeabi_uldivmod(du_int a, du_int b, du_int expected_q, du_int expected_r
         "movs %R[r], r3\n"
         : [q] "=r" (q), [r] "=r"(r)
         : [a] "r"(a), [b] "r"(b)
+        : "lr", "r0", "r1", "r2", "r3"
         );
     if (q != expected_q || r != expected_r)
         printf("error in aeabi_uldivmod: %llX / %llX = %llX, R = %llX, expected %llX, %llX\n",
