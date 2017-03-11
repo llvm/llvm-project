@@ -130,11 +130,16 @@ isl_ctx *isl_union_set_get_ctx(__isl_keep isl_union_set *uset)
 	return uset ? uset->dim->ctx : NULL;
 }
 
+/* Return the space of "umap".
+ */
+__isl_keep isl_space *isl_union_map_peek_space(__isl_keep isl_union_map *umap)
+{
+	return umap ? umap->dim : NULL;
+}
+
 __isl_give isl_space *isl_union_map_get_space(__isl_keep isl_union_map *umap)
 {
-	if (!umap)
-		return NULL;
-	return isl_space_copy(umap->dim);
+	return isl_space_copy(isl_union_map_peek_space(umap));
 }
 
 /* Return the position of the parameter with the given name
@@ -328,6 +333,17 @@ __isl_null isl_union_set *isl_union_set_free(__isl_take isl_union_set *uset)
 	return isl_union_map_free(uset);
 }
 
+/* Do "umap" and "space" have the same parameters?
+ */
+isl_bool isl_union_map_space_has_equal_params(__isl_keep isl_union_map *umap,
+	__isl_keep isl_space *space)
+{
+	isl_space *umap_space;
+
+	umap_space = isl_union_map_peek_space(umap);
+	return isl_space_match(umap_space, isl_dim_param, space, isl_dim_param);
+}
+
 static int has_dim(const void *entry, const void *val)
 {
 	isl_map *map = (isl_map *)entry;
@@ -341,6 +357,7 @@ __isl_give isl_union_map *isl_union_map_add_map(__isl_take isl_union_map *umap,
 {
 	uint32_t hash;
 	struct isl_hash_table_entry *entry;
+	isl_bool aligned;
 
 	if (!map || !umap)
 		goto error;
@@ -350,7 +367,10 @@ __isl_give isl_union_map *isl_union_map_add_map(__isl_take isl_union_map *umap,
 		return umap;
 	}
 
-	if (!isl_space_match(map->dim, isl_dim_param, umap->dim, isl_dim_param)) {
+	aligned = isl_map_space_has_equal_params(map, umap->dim);
+	if (aligned < 0)
+		goto error;
+	if (!aligned) {
 		umap = isl_union_map_align_params(umap, isl_map_get_space(map));
 		map = isl_map_align_params(map, isl_union_map_get_space(umap));
 	}

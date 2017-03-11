@@ -164,6 +164,10 @@ __isl_give isl_set *isl_set_realign(__isl_take isl_set *set,
 __isl_give isl_map *isl_map_reset(__isl_take isl_map *map,
 	enum isl_dim_type type);
 
+__isl_keep isl_space *isl_basic_map_peek_space(
+	__isl_keep const isl_basic_map *bmap);
+__isl_keep isl_space *isl_basic_set_peek_space(__isl_keep isl_basic_set *bset);
+
 __isl_give isl_basic_set *isl_basic_set_reset_space(
 	__isl_take isl_basic_set *bset, __isl_take isl_space *dim);
 __isl_give isl_basic_map *isl_basic_map_reset_space(
@@ -429,6 +433,17 @@ __isl_give isl_mat *isl_basic_map_get_divs(__isl_keep isl_basic_map *bmap);
 
 __isl_give isl_map *isl_map_inline_foreach_basic_map(__isl_take isl_map *map,
 	__isl_give isl_basic_map *(*fn)(__isl_take isl_basic_map *bmap));
+
+isl_stat isl_map_check_named_params(__isl_keep isl_map *map);
+
+isl_bool isl_map_has_equal_params(__isl_keep isl_map *map1,
+	__isl_keep isl_map *map2);
+isl_bool isl_basic_set_space_has_equal_params(__isl_keep isl_basic_set *bset,
+	__isl_keep isl_space *space);
+isl_bool isl_set_space_has_equal_params(__isl_keep isl_set *set,
+	__isl_keep isl_space *space);
+isl_bool isl_map_space_has_equal_params(__isl_keep isl_map *map,
+	__isl_keep isl_space *space);
 
 __isl_give isl_map *isl_map_align_params_map_map_and(
 	__isl_take isl_map *map1, __isl_take isl_map *map2,

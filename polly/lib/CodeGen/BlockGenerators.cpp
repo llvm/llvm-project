@@ -281,6 +281,10 @@ void BlockGenerator::copyInstruction(ScopStmt &Stmt, Instruction *Inst,
   }
 
   if (auto *Store = dyn_cast<StoreInst>(Inst)) {
+    // Identified as redundant by -polly-simplify.
+    if (!Stmt.getArrayAccessOrNULLFor(Store))
+      return;
+
     generateArrayStore(Stmt, Store, BBMap, LTS, NewAccesses);
     return;
   }
@@ -1006,6 +1010,10 @@ void VectorBlockGenerator::copyInstruction(
 
   if (hasVectorOperands(Inst, VectorMap)) {
     if (auto *Store = dyn_cast<StoreInst>(Inst)) {
+      // Identified as redundant by -polly-simplify.
+      if (!Stmt.getArrayAccessOrNULLFor(Store))
+        return;
+
       copyStore(Stmt, Store, VectorMap, ScalarMaps, NewAccesses);
       return;
     }

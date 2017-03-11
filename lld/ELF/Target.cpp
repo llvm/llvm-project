@@ -1320,6 +1320,8 @@ RelExpr AArch64TargetInfo::getRelExpr(uint32_t Type,
   case R_AARCH64_ADR_GOT_PAGE:
   case R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21:
     return R_GOT_PAGE_PC;
+  case R_AARCH64_NONE:
+    return R_NONE;
   }
 }
 

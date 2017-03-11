@@ -32,7 +32,7 @@ namespace polly {
 /// @param Schedule The input schedule.
 ///
 /// @return The flattened schedule.
-IslPtr<isl_union_map> flattenSchedule(IslPtr<isl_union_map> Schedule);
+isl::union_map flattenSchedule(isl::union_map Schedule);
 } // namespace polly
 
 #endif /* POLLY_FLATTENALGO_H */
