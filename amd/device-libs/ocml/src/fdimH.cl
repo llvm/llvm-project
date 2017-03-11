@@ -7,6 +7,8 @@
 
 #include "mathH.h"
 
+CONSTATTR BGEN(fdim)
+
 CONSTATTR INLINEATTR half
 MATH_MANGLE(fdim)(half x, half y)
 {

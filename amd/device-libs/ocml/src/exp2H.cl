@@ -7,6 +7,8 @@
 
 #include "mathH.h"
 
+PUREATTR UGEN(exp2)
+
 PUREATTR INLINEATTR half
 MATH_MANGLE(exp2)(half x)
 {

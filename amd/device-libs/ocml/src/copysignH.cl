@@ -7,6 +7,12 @@
 
 #include "mathH.h"
 
+CONSTATTR INLINEATTR half2
+MATH_MANGLE2(copysign)(half2 x, half2 y)
+{
+    return BUILTIN_COPYSIGN_2F16(x, y);
+}
+
 CONSTATTR INLINEATTR half
 MATH_MANGLE(copysign)(half x, half y)
 {

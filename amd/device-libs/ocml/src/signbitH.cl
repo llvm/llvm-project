@@ -7,6 +7,14 @@
 
 #include "mathH.h"
 
+CONSTATTR INLINEATTR short2
+MATH_MANGLE2(signbit)(half2 x)
+{
+    return (short2)
+        (AS_SHORT(x.lo) < 0 ? (short)-1 : (short)0,
+         AS_SHORT(x.hi) < 0 ? (short)-1 : (short)0);
+}
+
 CONSTATTR INLINEATTR int
 MATH_MANGLE(signbit)(half x)
 {

@@ -7,6 +7,8 @@
 
 #include "mathH.h"
 
+CONSTATTR UGEN(acospi)
+
 CONSTATTR half
 MATH_MANGLE(acospi)(half x)
 {

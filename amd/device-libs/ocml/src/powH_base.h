@@ -5,8 +5,6 @@
  * License. See LICENSE.TXT for details.
  *===------------------------------------------------------------------------*/
 
-#include "mathH.h"
-
 PUREATTR half
 #if defined(COMPILING_POWR)
 MATH_MANGLE(powr)(half x, half y)

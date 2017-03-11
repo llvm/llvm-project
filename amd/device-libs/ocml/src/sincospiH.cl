@@ -8,6 +8,18 @@
 #include "mathH.h"
 #include "trigpiredH.h"
 
+INLINEATTR half2
+MATH_MANGLE2(sincospi)(half2 x, __private half2 *cp)
+{
+    half2 s;
+    half clo, chi;
+
+    s.lo = MATH_MANGLE(sincospi)(x.lo, &clo);
+    s.hi = MATH_MANGLE(sincospi)(x.hi, &chi);
+    *cp = (half2)(clo, chi);
+    return s;
+}
+
 INLINEATTR half
 MATH_MANGLE(sincospi)(half x, __private half *cp)
 {

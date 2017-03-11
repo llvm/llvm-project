@@ -7,6 +7,8 @@
 
 #include "mathH.h"
 
+PUREATTR UGEN(log)
+
 PUREATTR INLINEATTR half
 MATH_MANGLE(log)(half x)
 {

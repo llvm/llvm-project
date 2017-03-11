@@ -28,46 +28,57 @@ extern __attribute__((const)) half __llvm_log2_f16(half) __asm("llvm.log2.f16");
 extern __attribute__((const)) float __llvm_log2_f32(float) __asm("llvm.log2.f32");
 
 extern __attribute__((const)) half __llvm_fma_f16(half, half, half) __asm("llvm.fma.f16");
+extern __attribute__((const)) half2 __llvm_fma_2f16(half2, half2, half2) __asm("llvm.fma.v2f16");
 extern __attribute__((const)) float __llvm_fma_f32(float, float, float) __asm("llvm.fma.f32");
 extern __attribute__((const)) double __llvm_fma_f64(double, double, double) __asm("llvm.fma.f64");
 
 extern __attribute__((const)) half __llvm_fabs_f16(half) __asm("llvm.fabs.f16");
+extern __attribute__((const)) half2 __llvm_fabs_2f16(half2) __asm("llvm.fabs.v2f16");
 extern __attribute__((const)) float __llvm_fabs_f32(float) __asm("llvm.fabs.f32");
 extern __attribute__((const)) double __llvm_fabs_f64(double) __asm("llvm.fabs.f64");
 
 extern __attribute__((const)) half __llvm_minnum_f16(half, half) __asm("llvm.minnum.f16");
+extern __attribute__((const)) half2 __llvm_minnum_2f16(half2, half2) __asm("llvm.minnum.v2f16");
 extern __attribute__((const)) float __llvm_minnum_f32(float, float) __asm("llvm.minnum.f32");
 extern __attribute__((const)) double __llvm_minnum_f64(double, double) __asm("llvm.minnum.f64");
 
 extern __attribute__((const)) half __llvm_maxnum_f16(half, half) __asm("llvm.maxnum.f16");
+extern __attribute__((const)) half2 __llvm_maxnum_2f16(half2, half2) __asm("llvm.maxnum.v2f16");
 extern __attribute__((const)) float __llvm_maxnum_f32(float, float) __asm("llvm.maxnum.f32");
 extern __attribute__((const)) double __llvm_maxnum_f64(double, double) __asm("llvm.maxnum.f64");
 
 extern __attribute__((const)) half __llvm_copysign_f16(half, half) __asm("llvm.copysign.f16");
+extern __attribute__((const)) half2 __llvm_copysign_2f16(half2, half2) __asm("llvm.copysign.v2f16");
 extern __attribute__((const)) float __llvm_copysign_f32(float, float) __asm("llvm.copysign.f32");
 extern __attribute__((const)) double __llvm_copysign_f64(double, double) __asm("llvm.copysign.f64");
 
 extern __attribute__((const)) half __llvm_floor_f16(half) __asm("llvm.floor.f16");
+extern __attribute__((const)) half2 __llvm_floor_2f16(half2) __asm("llvm.floor.v2f16");
 extern __attribute__((const)) float __llvm_floor_f32(float) __asm("llvm.floor.f32");
 extern __attribute__((const)) double __llvm_floor_f64(double) __asm("llvm.floor.f64");
 
 extern __attribute__((const)) half __llvm_ceil_f16(half) __asm("llvm.ceil.f16");
+extern __attribute__((const)) half2 __llvm_ceil_2f16(half2) __asm("llvm.ceil.v2f16");
 extern __attribute__((const)) float __llvm_ceil_f32(float) __asm("llvm.ceil.f32");
 extern __attribute__((const)) double __llvm_ceil_f64(double) __asm("llvm.ceil.f64");
 
 extern __attribute__((const)) half __llvm_trunc_f16(half) __asm("llvm.trunc.f16");
+extern __attribute__((const)) half2 __llvm_trunc_2f16(half2) __asm("llvm.trunc.v2f16");
 extern __attribute__((const)) float __llvm_trunc_f32(float) __asm("llvm.trunc.f32");
 extern __attribute__((const)) double __llvm_trunc_f64(double) __asm("llvm.trunc.f64");
 
 extern __attribute__((const)) half __llvm_rint_f16(half) __asm("llvm.rint.f16");
+extern __attribute__((const)) half2 __llvm_rint_2f16(half2) __asm("llvm.rint.v2f16");
 extern __attribute__((const)) float __llvm_rint_f32(float) __asm("llvm.rint.f32");
 extern __attribute__((const)) double __llvm_rint_f64(double) __asm("llvm.rint.f64");
 
 extern __attribute__((const)) half __llvm_nearbyint_f16(half) __asm("llvm.nearbyint.f16");
+extern __attribute__((const)) half2 __llvm_nearbyint_2f16(half2) __asm("llvm.nearbyint.v2f16");
 extern __attribute__((const)) float __llvm_nearbyint_f32(float) __asm("llvm.nearbyint.f32");
 extern __attribute__((const)) double __llvm_nearbyint_f64(double) __asm("llvm.nearbyint.f64");
 
 extern __attribute__((const)) half __llvm_round_f16(half) __asm("llvm.round.f16");
+extern __attribute__((const)) half2 __llvm_round_2f16(half2) __asm("llvm.round.v2f16");
 extern __attribute__((const)) float __llvm_round_f32(float) __asm("llvm.round.f32");
 extern __attribute__((const)) double __llvm_round_f64(double) __asm("llvm.round.f64");
 
@@ -77,10 +88,12 @@ extern __attribute__((const)) int __llvm_ctpop_i32(int) __asm("llvm.ctpop.i32");
 extern __attribute__((const)) long __llvm_ctpop_i64(long) __asm("llvm.ctpop.i64");
 
 extern __attribute__((const)) half __llvm_fmuladd_f16(half, half, half) __asm("llvm.fmuladd.f16");
+extern __attribute__((const)) half2 __llvm_fmuladd_2f16(half2, half2, half2) __asm("llvm.fmuladd.v2f16");
 extern __attribute__((const)) float __llvm_fmuladd_f32(float, float, float) __asm("llvm.fmuladd.f32");
 extern __attribute__((const)) double __llvm_fmuladd_f64(double, double, double) __asm("llvm.fmuladd.f64");
 
 extern __attribute__((const)) half __llvm_canonicalize_f16(half) __asm("llvm.canonicalize.f16");
+extern __attribute__((const)) half2 __llvm_canonicalize_2f16(half2) __asm("llvm.canonicalize.v2f16");
 extern __attribute__((const)) float __llvm_canonicalize_f32(float) __asm("llvm.canonicalize.f32");
 extern __attribute__((const)) double __llvm_canonicalize_f64(double) __asm("llvm.canonicalize.f64");
 

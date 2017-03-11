@@ -7,6 +7,8 @@
 
 #include "mathH.h"
 
+UGEN(j1)
+
 INLINEATTR half
 MATH_MANGLE(j1)(half x)
 {

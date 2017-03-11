@@ -7,6 +7,8 @@
 
 #include "mathH.h"
 
+PUREATTR UGEN(ncdfinv)
+
 INLINEATTR PUREATTR half
 MATH_MANGLE(ncdfinv)(half x)
 {

@@ -7,6 +7,8 @@
 
 #include "mathH.h"
 
+PUREATTR UGEN(cbrt)
+
 PUREATTR half
 MATH_MANGLE(cbrt)(half x)
 {

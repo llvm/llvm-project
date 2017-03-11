@@ -7,6 +7,12 @@
 
 #include "mathH.h"
 
+CONSTATTR INLINEATTR int2
+MATH_MANGLE2(ilogb)(half2 x)
+{
+    return (int2)(MATH_MANGLE(ilogb)(x.lo), MATH_MANGLE(ilogb)(x.hi));
+}
+
 CONSTATTR INLINEATTR int
 MATH_MANGLE(ilogb)(half x)
 {

@@ -7,6 +7,12 @@
 
 #include "mathH.h"
 
+CONSTATTR INLINEATTR half2
+MATH_MANGLE2(nearbyint)(half2 x)
+{
+    return BUILTIN_RINT_2F16(x);
+}
+
 CONSTATTR INLINEATTR half
 MATH_MANGLE(nearbyint)(half x)
 {

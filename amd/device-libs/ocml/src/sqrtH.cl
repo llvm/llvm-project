@@ -7,6 +7,8 @@
 
 #include "mathH.h"
 
+CONSTATTR UGEN(sqrt)
+
 CONSTATTR INLINEATTR half
 MATH_MANGLE(sqrt)(half x)
 {

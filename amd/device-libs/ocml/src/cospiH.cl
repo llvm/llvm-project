@@ -8,6 +8,8 @@
 #include "mathH.h"
 #include "trigpiredH.h"
 
+UGEN(cospi)
+
 INLINEATTR half
 MATH_MANGLE(cospi)(half x)
 {

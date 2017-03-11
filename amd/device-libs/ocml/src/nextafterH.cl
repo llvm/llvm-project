@@ -7,6 +7,8 @@
 
 #include "mathH.h"
 
+CONSTATTR BGEN(nextafter)
+
 CONSTATTR INLINEATTR half
 MATH_MANGLE(nextafter)(half x, half y)
 {

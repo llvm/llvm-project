@@ -8,6 +8,8 @@
 #include "mathH.h"
 #include "trigredH.h"
 
+UGEN(tan)
+
 INLINEATTR half
 MATH_MANGLE(tan)(half x)
 {
