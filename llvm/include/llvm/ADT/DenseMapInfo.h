@@ -60,6 +60,16 @@ template<> struct DenseMapInfo<char> {
   }
 };
 
+// Provide DenseMapInfo for unsigned shorts.
+template <> struct DenseMapInfo<unsigned short> {
+  static inline unsigned short getEmptyKey() { return 0xFFFF; }
+  static inline unsigned short getTombstoneKey() { return 0xFFFF - 1; }
+  static unsigned getHashValue(const unsigned short &Val) { return Val * 37U; }
+  static bool isEqual(const unsigned short &LHS, const unsigned short &RHS) {
+    return LHS == RHS;
+  }
+};
+
 // Provide DenseMapInfo for unsigned ints.
 template<> struct DenseMapInfo<unsigned> {
   static inline unsigned getEmptyKey() { return ~0U; }
@@ -93,6 +103,14 @@ template<> struct DenseMapInfo<unsigned long long> {
                       const unsigned long long& RHS) {
     return LHS == RHS;
   }
+};
+
+// Provide DenseMapInfo for shorts.
+template <> struct DenseMapInfo<short> {
+  static inline short getEmptyKey() { return 0x7FFF; }
+  static inline short getTombstoneKey() { return -0x7FFF - 1; }
+  static unsigned getHashValue(const short &Val) { return Val * 37U; }
+  static bool isEqual(const short &LHS, const short &RHS) { return LHS == RHS; }
 };
 
 // Provide DenseMapInfo for ints.

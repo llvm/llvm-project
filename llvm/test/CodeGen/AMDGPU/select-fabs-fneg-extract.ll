@@ -372,9 +372,9 @@ define void @add_select_fneg_negk_f32(i32 %c) #0 {
 }
 
 ; GCN-LABEL: {{^}}add_select_fneg_inv2pi_f32:
-; GCN: v_mov_b32_e32 [[K:v[0-9]+]], 0xbe22f983
 ; GCN: buffer_load_dword [[X:v[0-9]+]]
 ; GCN: buffer_load_dword [[Y:v[0-9]+]]
+; GCN: v_mov_b32_e32 [[K:v[0-9]+]], 0xbe22f983
 
 ; GCN: v_cndmask_b32_e32 [[SELECT:v[0-9]+]], [[K]], [[X]], vcc
 ; GCN: v_subrev_f32_e32 v{{[0-9]+}}, [[SELECT]], [[Y]]
@@ -390,9 +390,9 @@ define void @add_select_fneg_inv2pi_f32(i32 %c) #0 {
 }
 
 ; GCN-LABEL: {{^}}add_select_fneg_neginv2pi_f32:
-; SI: v_mov_b32_e32 [[K:v[0-9]+]], 0x3e22f983
 ; GCN: buffer_load_dword [[X:v[0-9]+]]
 ; GCN: buffer_load_dword [[Y:v[0-9]+]]
+; SI: v_mov_b32_e32 [[K:v[0-9]+]], 0x3e22f983
 
 ; SI: v_cndmask_b32_e32 [[SELECT:v[0-9]+]], [[K]], [[X]], vcc
 ; VI: v_cndmask_b32_e32 [[SELECT:v[0-9]+]], 0.15915494, [[X]], vcc

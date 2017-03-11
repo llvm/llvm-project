@@ -382,6 +382,24 @@ TEST(LiveIntervalTest, SubRegMoveDown) {
   });
 }
 
+TEST(LiveIntervalTest, SubRegMoveUp) {
+  // handleMoveUp had a bug not updating valno of segment incoming to bb.2
+  // after swapping subreg definitions.
+  liveIntervalTest(R"MIR(
+    successors: %bb.1, %bb.2
+    undef %0.sub0 = IMPLICIT_DEF
+    %0.sub1 = IMPLICIT_DEF
+    S_CBRANCH_VCCNZ %bb.2, implicit undef %vcc
+    S_BRANCH %bb.1
+  bb.1:
+    S_NOP 0, implicit %0.sub1
+  bb.2:
+    S_NOP 0, implicit %0.sub1
+)MIR", [](MachineFunction &MF, LiveIntervals &LIS) {
+    testHandleMove(MF, LIS, 1, 0);
+  });
+}
+
 int main(int argc, char **argv) {
   ::testing::InitGoogleTest(&argc, argv);
   initLLVM();

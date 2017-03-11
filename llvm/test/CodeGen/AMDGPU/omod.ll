@@ -250,6 +250,17 @@ define amdgpu_ps void @v_omod_div2_f16_no_denormals(half %a) #3 {
   ret void
 }
 
+; GCN-LABEL: {{^}}v_omod_mac_to_mad:
+; GCN: v_mad_f32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]}} mul:2{{$}}
+define amdgpu_ps void @v_omod_mac_to_mad(float %b, float %a) #0 {
+  %mul = fmul float %a, %a
+  %add = fadd float %mul, %b
+  %mad = fmul float %add, 2.0
+  %res = fmul float %mad, %b
+  store float %res, float addrspace(1)* undef
+  ret void
+}
+
 declare i32 @llvm.amdgcn.workitem.id.x() #1
 declare float @llvm.fabs.f32(float) #1
 declare float @llvm.floor.f32(float) #1

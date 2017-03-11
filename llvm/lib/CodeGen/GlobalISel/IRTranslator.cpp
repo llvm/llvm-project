@@ -1050,9 +1050,7 @@ bool IRTranslator::translate(const Instruction &Inst) {
     case Instruction::OPCODE: return translate##OPCODE(Inst, CurBuilder);
 #include "llvm/IR/Instruction.def"
   default:
-    if (!TPC->isGlobalISelAbortEnabled())
-      return false;
-    llvm_unreachable("unknown opcode");
+    return false;
   }
 }
 
@@ -1082,14 +1080,10 @@ bool IRTranslator::translate(const Constant &C, unsigned Reg) {
       case Instruction::OPCODE: return translate##OPCODE(*CE, EntryBuilder);
 #include "llvm/IR/Instruction.def"
     default:
-      if (!TPC->isGlobalISelAbortEnabled())
-        return false;
-      llvm_unreachable("unknown opcode");
+      return false;
     }
-  } else if (!TPC->isGlobalISelAbortEnabled())
+  } else
     return false;
-  else
-    llvm_unreachable("unhandled constant kind");
 
   return true;
 }

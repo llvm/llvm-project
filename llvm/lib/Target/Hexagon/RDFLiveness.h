@@ -71,6 +71,9 @@ namespace rdf {
     std::pair<NodeSet,bool> getAllReachingDefsRec(RegisterRef RefRR,
         NodeAddr<RefNode*> RefA, NodeSet &Visited, const NodeSet &Defs);
 
+    NodeAddr<RefNode*> getNearestAliasedRef(RegisterRef RefRR,
+        NodeAddr<InstrNode*> IA);
+
     LiveMapType &getLiveMap() { return LiveMap; }
     const LiveMapType &getLiveMap() const { return LiveMap; }
     const RefMap &getRealUses(NodeId P) const {

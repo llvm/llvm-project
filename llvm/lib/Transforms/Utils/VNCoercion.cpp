@@ -190,13 +190,12 @@ static int analyzeLoadFromClobberingWrite(Type *LoadTy, Value *LoadPtr,
 /// This function is called when we have a
 /// memdep query of a load that ends up being a clobbering store.
 int analyzeLoadFromClobberingStore(Type *LoadTy, Value *LoadPtr,
-                                   StoreInst *DepSI) {
+                                   StoreInst *DepSI, const DataLayout &DL) {
   // Cannot handle reading from store of first-class aggregate yet.
   if (DepSI->getValueOperand()->getType()->isStructTy() ||
       DepSI->getValueOperand()->getType()->isArrayTy())
     return -1;
 
-  const DataLayout &DL = DepSI->getModule()->getDataLayout();
   Value *StorePtr = DepSI->getPointerOperand();
   uint64_t StoreSize =
       DL.getTypeSizeInBits(DepSI->getValueOperand()->getType());

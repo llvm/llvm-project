@@ -761,6 +761,10 @@ namespace rdf {
     NodeList getRelatedRefs(NodeAddr<InstrNode*> IA,
         NodeAddr<RefNode*> RA) const;
 
+    NodeAddr<BlockNode*> findBlock(MachineBasicBlock *BB) const {
+      return BlockNodes.at(BB);
+    }
+
     void unlinkUse(NodeAddr<UseNode*> UA, bool RemoveFromOwner) {
       unlinkUseDF(UA);
       if (RemoveFromOwner)
@@ -858,10 +862,6 @@ namespace rdf {
     void removeFromOwner(NodeAddr<RefNode*> RA) {
       NodeAddr<InstrNode*> IA = RA.Addr->getOwner(*this);
       IA.Addr->removeMember(RA, *this);
-    }
-
-    NodeAddr<BlockNode*> findBlock(MachineBasicBlock *BB) {
-      return BlockNodes[BB];
     }
 
     MachineFunction &MF;

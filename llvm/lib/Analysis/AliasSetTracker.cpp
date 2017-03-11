@@ -199,9 +199,10 @@ bool AliasSet::aliasesPointer(const Value *Ptr, uint64_t Size,
   // Check the unknown instructions...
   if (!UnknownInsts.empty()) {
     for (unsigned i = 0, e = UnknownInsts.size(); i != e; ++i)
-      if (AA.getModRefInfo(UnknownInsts[i],
-                           MemoryLocation(Ptr, Size, AAInfo)) != MRI_NoModRef)
-        return true;
+      if (auto *Inst = getUnknownInst(i))
+        if (AA.getModRefInfo(Inst, MemoryLocation(Ptr, Size, AAInfo)) !=
+            MRI_NoModRef)
+          return true;
   }
 
   return false;
@@ -217,10 +218,12 @@ bool AliasSet::aliasesUnknownInst(const Instruction *Inst,
     return false;
 
   for (unsigned i = 0, e = UnknownInsts.size(); i != e; ++i) {
-    ImmutableCallSite C1(getUnknownInst(i)), C2(Inst);
-    if (!C1 || !C2 || AA.getModRefInfo(C1, C2) != MRI_NoModRef ||
-        AA.getModRefInfo(C2, C1) != MRI_NoModRef)
-      return true;
+    if (auto *Inst = getUnknownInst(i)) {
+      ImmutableCallSite C1(Inst), C2(Inst);
+      if (!C1 || !C2 || AA.getModRefInfo(C1, C2) != MRI_NoModRef ||
+          AA.getModRefInfo(C2, C1) != MRI_NoModRef)
+        return true;
+    }
   }
 
   for (iterator I = begin(), E = end(); I != E; ++I)
@@ -471,7 +474,8 @@ void AliasSetTracker::add(const AliasSetTracker &AST) {
 
     // If there are any call sites in the alias set, add them to this AST.
     for (unsigned i = 0, e = AS.UnknownInsts.size(); i != e; ++i)
-      add(AS.UnknownInsts[i]);
+      if (auto *Inst = AS.getUnknownInst(i))
+        add(Inst);
 
     // Loop over all of the pointers in this alias set.
     for (AliasSet::iterator ASI = AS.begin(), E = AS.end(); ASI != E; ++ASI) {
@@ -489,19 +493,6 @@ void AliasSetTracker::add(const AliasSetTracker &AST) {
 // dangling pointers to deleted instructions.
 //
 void AliasSetTracker::deleteValue(Value *PtrVal) {
-  // If this is a call instruction, remove the callsite from the appropriate
-  // AliasSet (if present).
-  if (Instruction *Inst = dyn_cast<Instruction>(PtrVal)) {
-    if (Inst->mayReadOrWriteMemory()) {
-      // Scan all the alias sets to see if this call site is contained.
-      for (iterator I = begin(), E = end(); I != E;) {
-        iterator Cur = I++;
-        if (!Cur->Forward)
-          Cur->removeUnknownInst(*this, Inst);
-      }
-    }
-  }
-
   // First, look up the PointerRec for this pointer.
   PointerMapType::iterator I = PointerMap.find_as(PtrVal);
   if (I == PointerMap.end()) return;  // Noop
@@ -633,7 +624,8 @@ void AliasSet::print(raw_ostream &OS) const {
     OS << "\n    " << UnknownInsts.size() << " Unknown instructions: ";
     for (unsigned i = 0, e = UnknownInsts.size(); i != e; ++i) {
       if (i) OS << ", ";
-      UnknownInsts[i]->printAsOperand(OS);
+      if (auto *I = getUnknownInst(i))
+        I->printAsOperand(OS);
     }
   }
   OS << "\n";

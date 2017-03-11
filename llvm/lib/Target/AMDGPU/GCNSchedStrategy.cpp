@@ -179,16 +179,6 @@ void GCNMaxOccupancySchedStrategy::pickNodeFromQueue(SchedBoundary &Zone,
   }
 }
 
-static int getBidirectionalReasonRank(GenericSchedulerBase::CandReason Reason) {
-  switch (Reason) {
-  default:
-    return Reason;
-  case GenericSchedulerBase::RegCritical:
-  case GenericSchedulerBase::RegExcess:
-    return -Reason;
- }
-}
-
 // This function is mostly cut and pasted from
 // GenericScheduler::pickNodeBidirectional()
 SUnit *GCNMaxOccupancySchedStrategy::pickNodeBidirectional(bool &IsTopNode) {
@@ -261,9 +251,7 @@ SUnit *GCNMaxOccupancySchedStrategy::pickNodeBidirectional(bool &IsTopNode) {
     } else if (BotCand.Reason == RegCritical && BotCand.RPDelta.CriticalMax.getUnitInc() <= 0) {
       Cand = BotCand;
     } else {
-      int TopRank = getBidirectionalReasonRank(TopCand.Reason);
-      int BotRank = getBidirectionalReasonRank(BotCand.Reason);
-      if (TopRank > BotRank) {
+      if (BotCand.Reason > TopCand.Reason) {
         Cand = TopCand;
       } else {
         Cand = BotCand;

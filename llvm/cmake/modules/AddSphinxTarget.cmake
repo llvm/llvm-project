@@ -51,7 +51,7 @@ function (add_sphinx_target builder project)
         # FIXME: We might not ship all the tools that these man pages describe
         install(DIRECTORY "${SPHINX_BUILD_DIR}/" # Slash indicates contents of
                 COMPONENT "${project}-sphinx-man"
-                DESTINATION ${CMAKE_INSTALL_MANDIR}/man1)
+                DESTINATION share/man/man1)
 
       elseif (builder STREQUAL html)
         string(TOUPPER "${project}" project_upper)

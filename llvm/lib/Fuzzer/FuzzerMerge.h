@@ -43,7 +43,6 @@
 #include "FuzzerDefs.h"
 
 #include <istream>
-#include <set>
 
 namespace fuzzer {
 
@@ -63,6 +62,7 @@ struct Merger {
   bool Parse(const std::string &Str, bool ParseCoverage);
   void ParseOrExit(std::istream &IS, bool ParseCoverage);
   size_t Merge(std::vector<std::string> *NewFiles);
+  size_t ApproximateMemoryConsumption() const;
 };
 
 }  // namespace fuzzer

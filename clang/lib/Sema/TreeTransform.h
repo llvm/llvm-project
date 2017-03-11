@@ -6857,7 +6857,7 @@ TreeTransform<Derived>::TransformCoroutineBodyStmt(CoroutineBodyStmt *S) {
          ScopeInfo->NeedsCoroutineSuspends &&
          ScopeInfo->CoroutineSuspends.first == nullptr &&
          ScopeInfo->CoroutineSuspends.second == nullptr &&
-         ScopeInfo->CoroutineStmts.empty() && "expected clean scope info");
+         "expected clean scope info");
 
   // Set that we have (possibly-invalid) suspend points before we do anything
   // that may fail.
