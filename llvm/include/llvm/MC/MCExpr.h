@@ -351,30 +351,30 @@ private:
   Opcode Op;
   const MCExpr *Expr;
 
-  MCUnaryExpr(Opcode Op, const MCExpr *Expr)
-      : MCExpr(MCExpr::Unary, SMLoc()), Op(Op), Expr(Expr) {}
+  MCUnaryExpr(Opcode Op, const MCExpr *Expr, SMLoc Loc)
+      : MCExpr(MCExpr::Unary, Loc), Op(Op), Expr(Expr) {}
 
 public:
   /// \name Construction
   /// @{
 
   static const MCUnaryExpr *create(Opcode Op, const MCExpr *Expr,
-                                   MCContext &Ctx);
+                                   MCContext &Ctx, SMLoc Loc = SMLoc());
 
-  static const MCUnaryExpr *createLNot(const MCExpr *Expr, MCContext &Ctx) {
-    return create(LNot, Expr, Ctx);
+  static const MCUnaryExpr *createLNot(const MCExpr *Expr, MCContext &Ctx, SMLoc Loc = SMLoc()) {
+    return create(LNot, Expr, Ctx, Loc);
   }
 
-  static const MCUnaryExpr *createMinus(const MCExpr *Expr, MCContext &Ctx) {
-    return create(Minus, Expr, Ctx);
+  static const MCUnaryExpr *createMinus(const MCExpr *Expr, MCContext &Ctx, SMLoc Loc = SMLoc()) {
+    return create(Minus, Expr, Ctx, Loc);
   }
 
-  static const MCUnaryExpr *createNot(const MCExpr *Expr, MCContext &Ctx) {
-    return create(Not, Expr, Ctx);
+  static const MCUnaryExpr *createNot(const MCExpr *Expr, MCContext &Ctx, SMLoc Loc = SMLoc()) {
+    return create(Not, Expr, Ctx, Loc);
   }
 
-  static const MCUnaryExpr *createPlus(const MCExpr *Expr, MCContext &Ctx) {
-    return create(Plus, Expr, Ctx);
+  static const MCUnaryExpr *createPlus(const MCExpr *Expr, MCContext &Ctx, SMLoc Loc = SMLoc()) {
+    return create(Plus, Expr, Ctx, Loc);
   }
 
   /// @}

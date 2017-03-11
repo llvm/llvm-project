@@ -57,6 +57,7 @@ endif()
 # Setup CMake Options
 #===============================================================================
 include(CMakeDependentOption)
+include(HandleCompilerRT)
 
 # Basic options ---------------------------------------------------------------
 option(LIBCXX_ENABLE_ASSERTIONS "Enable assertions independent of build mode." OFF)

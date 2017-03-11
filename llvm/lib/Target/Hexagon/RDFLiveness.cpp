@@ -304,6 +304,65 @@ Liveness::getAllReachingDefsRecImpl(RegisterRef RefRR, NodeAddr<RefNode*> RefA,
   return { Result, true };
 }
 
+/// Find the nearest ref node aliased to RefRR, going upwards in the data
+/// flow, starting from the instruction immediately preceding Inst.
+NodeAddr<RefNode*> Liveness::getNearestAliasedRef(RegisterRef RefRR,
+      NodeAddr<InstrNode*> IA) {
+  NodeAddr<BlockNode*> BA = IA.Addr->getOwner(DFG);
+  NodeList Ins = BA.Addr->members(DFG);
+  NodeId FindId = IA.Id;
+  auto E = Ins.rend();
+  auto B = std::find_if(Ins.rbegin(), E,
+                        [FindId] (const NodeAddr<InstrNode*> T) {
+                          return T.Id == FindId;
+                        });
+  // Do not scan IA (which is what B would point to).
+  if (B != E)
+    ++B;
+
+  do {
+    // Process the range of instructions from B to E.
+    for (NodeAddr<InstrNode*> I : make_range(B, E)) {
+      NodeList Refs = I.Addr->members(DFG);
+      NodeAddr<RefNode*> Clob, Use;
+      // Scan all the refs in I aliased to RefRR, and return the one that
+      // is the closest to the output of I, i.e. def > clobber > use.
+      for (NodeAddr<RefNode*> R : Refs) {
+        if (!PRI.alias(R.Addr->getRegRef(DFG), RefRR))
+          continue;
+        if (DFG.IsDef(R)) {
+          // If it's a non-clobbering def, just return it.
+          if (!(R.Addr->getFlags() & NodeAttrs::Clobbering))
+            return R;
+          Clob = R;
+        } else {
+          Use = R;
+        }
+      }
+      if (Clob.Id != 0)
+        return Clob;
+      if (Use.Id != 0)
+        return Use;
+    }
+
+    // Go up to the immediate dominator, if any.
+    MachineBasicBlock *BB = BA.Addr->getCode();
+    BA = NodeAddr<BlockNode*>();
+    if (MachineDomTreeNode *N = MDT.getNode(BB)) {
+      if ((N = N->getIDom()))
+        BA = DFG.findBlock(N->getBlock());
+    }
+    if (!BA.Id)
+      break;
+
+    Ins = BA.Addr->members(DFG);
+    B = Ins.rbegin();
+    E = Ins.rend();
+  } while (true);
+
+  return NodeAddr<RefNode*>();
+}
+
 
 NodeSet Liveness::getAllReachedUses(RegisterRef RefRR,
       NodeAddr<DefNode*> DefA, const RegisterAggr &DefRRs) {

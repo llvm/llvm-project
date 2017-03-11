@@ -780,6 +780,52 @@ std::error_code detail::directory_iterator_increment(detail::DirIterState &it) {
   return std::error_code();
 }
 
+static std::error_code realPathFromHandle(HANDLE H,
+                                          SmallVectorImpl<char> &RealPath) {
+  RealPath.clear();
+  llvm::SmallVector<wchar_t, MAX_PATH> Buffer;
+  DWORD CountChars = ::GetFinalPathNameByHandleW(
+      H, Buffer.begin(), Buffer.capacity() - 1, FILE_NAME_NORMALIZED);
+  if (CountChars > Buffer.capacity()) {
+    // The buffer wasn't big enough, try again.  In this case the return value
+    // *does* indicate the size of the null terminator.
+    Buffer.reserve(CountChars);
+    CountChars = ::GetFinalPathNameByHandleW(
+        H, Buffer.data(), Buffer.capacity() - 1, FILE_NAME_NORMALIZED);
+  }
+  if (CountChars == 0)
+    return mapWindowsError(GetLastError());
+
+  const wchar_t *Data = Buffer.data();
+  if (CountChars >= 4) {
+    if (0 == ::memcmp(Data, L"\\\\?\\", 8)) {
+      CountChars -= 4;
+      Data += 4;
+    }
+  }
+
+  // Convert the result from UTF-16 to UTF-8.
+  return UTF16ToUTF8(Data, CountChars, RealPath);
+}
+
+static std::error_code directoryRealPath(const Twine &Name,
+                                         SmallVectorImpl<char> &RealPath) {
+  SmallVector<wchar_t, 128> PathUTF16;
+
+  if (std::error_code EC = widenPath(Name, PathUTF16))
+    return EC;
+
+  HANDLE H =
+      ::CreateFileW(PathUTF16.begin(), GENERIC_READ,
+                    FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                    NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
+  if (H == INVALID_HANDLE_VALUE)
+    return mapWindowsError(GetLastError());
+  std::error_code EC = realPathFromHandle(H, RealPath);
+  ::CloseHandle(H);
+  return EC;
+}
+
 std::error_code openFileForRead(const Twine &Name, int &ResultFD,
                                 SmallVectorImpl<char> *RealPath) {
   SmallVector<wchar_t, 128> PathUTF16;
@@ -811,20 +857,8 @@ std::error_code openFileForRead(const Twine &Name, int &ResultFD,
   }
 
   // Fetch the real name of the file, if the user asked
-  if (RealPath) {
-    RealPath->clear();
-    wchar_t RealPathUTF16[MAX_PATH];
-    DWORD CountChars =
-      ::GetFinalPathNameByHandleW(H, RealPathUTF16, MAX_PATH,
-                                  FILE_NAME_NORMALIZED);
-    if (CountChars > 0 && CountChars < MAX_PATH) {
-      // Convert the result from UTF-16 to UTF-8.
-      SmallString<MAX_PATH> RealPathUTF8;
-      if (!UTF16ToUTF8(RealPathUTF16, CountChars, RealPathUTF8))
-        RealPath->append(RealPathUTF8.data(),
-                         RealPathUTF8.data() + strlen(RealPathUTF8.data()));
-    }
-  }
+  if (RealPath)
+    realPathFromHandle(H, *RealPath);
 
   ResultFD = FD;
   return std::error_code();
@@ -946,6 +980,54 @@ std::error_code remove_directories(const Twine &path, bool IgnoreErrors) {
   int result = ::SHFileOperationW(&shfos);
   if (result != 0 && !IgnoreErrors)
     return mapWindowsError(result);
+  return std::error_code();
+}
+
+static void expandTildeExpr(SmallVectorImpl<char> &Path) {
+  // Path does not begin with a tilde expression.
+  if (Path.empty() || Path[0] != '~')
+    return;
+
+  StringRef PathStr(Path.begin(), Path.size());
+  PathStr = PathStr.drop_front();
+  StringRef Expr = PathStr.take_until(path::is_separator);
+
+  if (!Expr.empty()) {
+    // This is probably a ~username/ expression.  Don't support this on Windows.
+    return;
+  }
+
+  SmallString<128> HomeDir;
+  if (!path::home_directory(HomeDir)) {
+    // For some reason we couldn't get the home directory.  Just exit.
+    return;
+  }
+
+  // Overwrite the first character and insert the rest.
+  Path[0] = HomeDir[0];
+  Path.insert(Path.begin() + 1, HomeDir.begin() + 1, HomeDir.end());
+}
+
+std::error_code real_path(const Twine &path, SmallVectorImpl<char> &dest,
+                          bool expand_tilde) {
+  dest.clear();
+  if (path.isTriviallyEmpty())
+    return std::error_code();
+
+  if (expand_tilde) {
+    SmallString<128> Storage;
+    path.toVector(Storage);
+    expandTildeExpr(Storage);
+    return real_path(Storage, dest, false);
+  }
+
+  if (is_directory(path))
+    return directoryRealPath(path, dest);
+
+  int fd;
+  if (std::error_code EC = llvm::sys::fs::openFileForRead(path, fd, &dest))
+    return EC;
+  ::close(fd);
   return std::error_code();
 }
 

@@ -6,37 +6,40 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-// \file This file provides an implementation of debug counters.  Debug counters
-// are a tool that let you narrow down a miscompilation to a specific thing
-// happening.  To give a use case: Imagine you have a file, very large, and you
-// are trying to understand the minimal transformation that breaks it.  Bugpoint
-// and bisection is often helpful here in narrowing it down to a specific pass,
-// but it's still a very large file, and a very complicated pass to try to
-// debug.  That is where debug counting steps in.  You can instrument the pass
-// with a debug counter before it does a certain thing, and depending on the
-// counts, it will either execute that thing or not.  The debug counter itself
-// consists of a skip and a count.  Skip is the number of times shouldExecute
-// needs to be called before it returns true.  Count is the number of times to
-// return true once Skip is 0.  So a skip=47, count=2 ,would skip the first 47
-// executions by returning false from shouldExecute, then execute twice, and
-// then return false again.
-// Note that a counter set to a negative number will always execute.
-
-// For a concrete example, during predicateinfo creation, the renaming pass
-// replaces each use with a renamed use.
+/// \file
+/// \brief This file provides an implementation of debug counters.  Debug counters
+/// are a tool that let you narrow down a miscompilation to a specific thing
+/// happening.
 ///
-// If I use DEBUG_COUNTER to create a counter called "predicateinfo", and
-// variable name RenameCounter, and then instrument this renaming with a debug
-// counter, like so:
-//
-// if (!DebugCounter::shouldExecute(RenameCounter)
-// <continue or return or whatever not executing looks like>
-//
-// Now I can, from the command line, make it rename or not rename certain uses
-// by setting the skip and count.
-// So for example
-// bin/opt -debug-counter=predicateinfo-skip=47,predicateinfo-count=1
-// will skip renaming the first 47 uses, then rename one, then skip the rest.
+/// To give a use case: Imagine you have a file, very large, and you
+/// are trying to understand the minimal transformation that breaks it.  Bugpoint
+/// and bisection is often helpful here in narrowing it down to a specific pass,
+/// but it's still a very large file, and a very complicated pass to try to
+/// debug.  That is where debug counting steps in.  You can instrument the pass
+/// with a debug counter before it does a certain thing, and depending on the
+/// counts, it will either execute that thing or not.  The debug counter itself
+/// consists of a skip and a count.  Skip is the number of times shouldExecute
+/// needs to be called before it returns true.  Count is the number of times to
+/// return true once Skip is 0.  So a skip=47, count=2 ,would skip the first 47
+/// executions by returning false from shouldExecute, then execute twice, and
+/// then return false again.
+/// Note that a counter set to a negative number will always execute.
+/// For a concrete example, during predicateinfo creation, the renaming pass
+/// replaces each use with a renamed use.
+////
+/// If I use DEBUG_COUNTER to create a counter called "predicateinfo", and
+/// variable name RenameCounter, and then instrument this renaming with a debug
+/// counter, like so:
+///
+/// if (!DebugCounter::shouldExecute(RenameCounter)
+/// <continue or return or whatever not executing looks like>
+///
+/// Now I can, from the command line, make it rename or not rename certain uses
+/// by setting the skip and count.
+/// So for example
+/// bin/opt -debug-counter=predicateinfo-skip=47,predicateinfo-count=1
+/// will skip renaming the first 47 uses, then rename one, then skip the rest.
+//===----------------------------------------------------------------------===//
 
 #ifndef LLVM_SUPPORT_DEBUGCOUNTER_H
 #define LLVM_SUPPORT_DEBUGCOUNTER_H

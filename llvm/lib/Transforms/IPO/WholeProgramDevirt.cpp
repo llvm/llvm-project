@@ -320,15 +320,18 @@ struct CallSiteInfo {
   /// the llvm.type.checked.load intrinsic and therefore will require
   /// resolutions for llvm.type.test in order to implement CFI checks if
   /// devirtualization was unsuccessful. If devirtualization was successful, the
-  /// pass will clear this vector. If at the end of the pass the vector is
-  /// non-empty, we will need to add a use of llvm.type.test to each of the
-  /// function summaries in the vector.
+  /// pass will clear this vector by calling markDevirt(). If at the end of the
+  /// pass the vector is non-empty, we will need to add a use of llvm.type.test
+  /// to each of the function summaries in the vector.
   std::vector<FunctionSummary *> SummaryTypeCheckedLoadUsers;
 
   bool isExported() const {
     return SummaryHasTypeTestAssumeUsers ||
            !SummaryTypeCheckedLoadUsers.empty();
   }
+
+  /// As explained in the comment for SummaryTypeCheckedLoadUsers.
+  void markDevirt() { SummaryTypeCheckedLoadUsers.clear(); }
 };
 
 // Call site information collected for a specific VTableSlot.
@@ -377,6 +380,7 @@ struct DevirtModule {
   PointerType *Int8PtrTy;
   IntegerType *Int32Ty;
   IntegerType *Int64Ty;
+  IntegerType *IntPtrTy;
 
   bool RemarksEnabled;
 
@@ -399,6 +403,7 @@ struct DevirtModule {
         Int8PtrTy(Type::getInt8PtrTy(M.getContext())),
         Int32Ty(Type::getInt32Ty(M.getContext())),
         Int64Ty(Type::getInt64Ty(M.getContext())),
+        IntPtrTy(M.getDataLayout().getIntPtrType(M.getContext(), 0)),
         RemarksEnabled(areRemarksEnabled()) {}
 
   bool areRemarksEnabled();
@@ -431,17 +436,35 @@ struct DevirtModule {
                            CallSiteInfo &CSInfo,
                            WholeProgramDevirtResolution::ByArg *Res);
 
+  // Returns the global symbol name that is used to export information about the
+  // given vtable slot and list of arguments.
+  std::string getGlobalName(VTableSlot Slot, ArrayRef<uint64_t> Args,
+                            StringRef Name);
+
+  // This function is called during the export phase to create a symbol
+  // definition containing information about the given vtable slot and list of
+  // arguments.
+  void exportGlobal(VTableSlot Slot, ArrayRef<uint64_t> Args, StringRef Name,
+                    Constant *C);
+
+  // This function is called during the import phase to create a reference to
+  // the symbol definition created during the export phase.
+  Constant *importGlobal(VTableSlot Slot, ArrayRef<uint64_t> Args,
+                         StringRef Name, unsigned AbsWidth = 0);
+
   void applyUniqueRetValOpt(CallSiteInfo &CSInfo, StringRef FnName, bool IsOne,
                             Constant *UniqueMemberAddr);
   bool tryUniqueRetValOpt(unsigned BitWidth,
                           MutableArrayRef<VirtualCallTarget> TargetsForSlot,
-                          CallSiteInfo &CSInfo);
+                          CallSiteInfo &CSInfo,
+                          WholeProgramDevirtResolution::ByArg *Res,
+                          VTableSlot Slot, ArrayRef<uint64_t> Args);
 
   void applyVirtualConstProp(CallSiteInfo &CSInfo, StringRef FnName,
                              Constant *Byte, Constant *Bit);
   bool tryVirtualConstProp(MutableArrayRef<VirtualCallTarget> TargetsForSlot,
                            VTableSlotInfo &SlotInfo,
-                           WholeProgramDevirtResolution *Res);
+                           WholeProgramDevirtResolution *Res, VTableSlot Slot);
 
   void rebuildGlobal(VTableBits &B);
 
@@ -658,7 +681,7 @@ void DevirtModule::applySingleImplDevirt(VTableSlotInfo &SlotInfo,
     }
     if (CSInfo.isExported()) {
       IsExported = true;
-      CSInfo.SummaryTypeCheckedLoadUsers.clear();
+      CSInfo.markDevirt();
     }
   };
   Apply(SlotInfo.CSInfo);
@@ -736,7 +759,7 @@ void DevirtModule::applyUniformRetValOpt(CallSiteInfo &CSInfo, StringRef FnName,
     Call.replaceAndErase(
         "uniform-ret-val", FnName, RemarksEnabled,
         ConstantInt::get(cast<IntegerType>(Call.CS.getType()), TheRetVal));
-  CSInfo.SummaryTypeCheckedLoadUsers.clear();
+  CSInfo.markDevirt();
 }
 
 bool DevirtModule::tryUniformRetValOpt(
@@ -761,6 +784,48 @@ bool DevirtModule::tryUniformRetValOpt(
   return true;
 }
 
+std::string DevirtModule::getGlobalName(VTableSlot Slot,
+                                        ArrayRef<uint64_t> Args,
+                                        StringRef Name) {
+  std::string FullName = "__typeid_";
+  raw_string_ostream OS(FullName);
+  OS << cast<MDString>(Slot.TypeID)->getString() << '_' << Slot.ByteOffset;
+  for (uint64_t Arg : Args)
+    OS << '_' << Arg;
+  OS << '_' << Name;
+  return OS.str();
+}
+
+void DevirtModule::exportGlobal(VTableSlot Slot, ArrayRef<uint64_t> Args,
+                                StringRef Name, Constant *C) {
+  GlobalAlias *GA = GlobalAlias::create(Int8Ty, 0, GlobalValue::ExternalLinkage,
+                                        getGlobalName(Slot, Args, Name), C, &M);
+  GA->setVisibility(GlobalValue::HiddenVisibility);
+}
+
+Constant *DevirtModule::importGlobal(VTableSlot Slot, ArrayRef<uint64_t> Args,
+                                     StringRef Name, unsigned AbsWidth) {
+  Constant *C = M.getOrInsertGlobal(getGlobalName(Slot, Args, Name), Int8Ty);
+  auto *GV = dyn_cast<GlobalVariable>(C);
+  // We only need to set metadata if the global is newly created, in which
+  // case it would not have hidden visibility.
+  if (!GV || GV->getVisibility() == GlobalValue::HiddenVisibility)
+    return C;
+
+  GV->setVisibility(GlobalValue::HiddenVisibility);
+  auto SetAbsRange = [&](uint64_t Min, uint64_t Max) {
+    auto *MinC = ConstantAsMetadata::get(ConstantInt::get(IntPtrTy, Min));
+    auto *MaxC = ConstantAsMetadata::get(ConstantInt::get(IntPtrTy, Max));
+    GV->setMetadata(LLVMContext::MD_absolute_symbol,
+                    MDNode::get(M.getContext(), {MinC, MaxC}));
+  };
+  if (AbsWidth == IntPtrTy->getBitWidth())
+    SetAbsRange(~0ull, ~0ull); // Full set.
+  else if (AbsWidth)
+    SetAbsRange(0, 1ull << AbsWidth);
+  return GV;
+}
+
 void DevirtModule::applyUniqueRetValOpt(CallSiteInfo &CSInfo, StringRef FnName,
                                         bool IsOne,
                                         Constant *UniqueMemberAddr) {
@@ -771,11 +836,13 @@ void DevirtModule::applyUniqueRetValOpt(CallSiteInfo &CSInfo, StringRef FnName,
     Cmp = B.CreateZExt(Cmp, Call.CS->getType());
     Call.replaceAndErase("unique-ret-val", FnName, RemarksEnabled, Cmp);
   }
+  CSInfo.markDevirt();
 }
 
 bool DevirtModule::tryUniqueRetValOpt(
     unsigned BitWidth, MutableArrayRef<VirtualCallTarget> TargetsForSlot,
-    CallSiteInfo &CSInfo) {
+    CallSiteInfo &CSInfo, WholeProgramDevirtResolution::ByArg *Res,
+    VTableSlot Slot, ArrayRef<uint64_t> Args) {
   // IsOne controls whether we look for a 0 or a 1.
   auto tryUniqueRetValOptFor = [&](bool IsOne) {
     const TypeMemberInfo *UniqueMember = nullptr;
@@ -791,13 +858,20 @@ bool DevirtModule::tryUniqueRetValOpt(
     // checked for a uniform return value in tryUniformRetValOpt.
     assert(UniqueMember);
 
-    // Replace each call with the comparison.
     Constant *UniqueMemberAddr =
         ConstantExpr::getBitCast(UniqueMember->Bits->GV, Int8PtrTy);
     UniqueMemberAddr = ConstantExpr::getGetElementPtr(
         Int8Ty, UniqueMemberAddr,
         ConstantInt::get(Int64Ty, UniqueMember->Offset));
 
+    if (CSInfo.isExported()) {
+      Res->TheKind = WholeProgramDevirtResolution::ByArg::UniqueRetVal;
+      Res->Info = IsOne;
+
+      exportGlobal(Slot, Args, "unique_member", UniqueMemberAddr);
+    }
+
+    // Replace each call with the comparison.
     applyUniqueRetValOpt(CSInfo, TargetsForSlot[0].Fn->getName(), IsOne,
                          UniqueMemberAddr);
 
@@ -836,11 +910,12 @@ void DevirtModule::applyVirtualConstProp(CallSiteInfo &CSInfo, StringRef FnName,
       Call.replaceAndErase("virtual-const-prop", FnName, RemarksEnabled, Val);
     }
   }
+  CSInfo.markDevirt();
 }
 
 bool DevirtModule::tryVirtualConstProp(
-    MutableArrayRef<VirtualCallTarget> TargetsForSlot,
-    VTableSlotInfo &SlotInfo, WholeProgramDevirtResolution *Res) {
+    MutableArrayRef<VirtualCallTarget> TargetsForSlot, VTableSlotInfo &SlotInfo,
+    WholeProgramDevirtResolution *Res, VTableSlot Slot) {
   // This only works if the function returns an integer.
   auto RetType = dyn_cast<IntegerType>(TargetsForSlot[0].Fn->getReturnType());
   if (!RetType)
@@ -879,7 +954,8 @@ bool DevirtModule::tryVirtualConstProp(
     if (tryUniformRetValOpt(TargetsForSlot, CSByConstantArg.second, ResByArg))
       continue;
 
-    if (tryUniqueRetValOpt(BitWidth, TargetsForSlot, CSByConstantArg.second))
+    if (tryUniqueRetValOpt(BitWidth, TargetsForSlot, CSByConstantArg.second,
+                           ResByArg, Slot, CSByConstantArg.first))
       continue;
 
     // Find an allocation offset in bits in all vtables associated with the
@@ -919,9 +995,18 @@ bool DevirtModule::tryVirtualConstProp(
       for (auto &&Target : TargetsForSlot)
         Target.WasDevirt = true;
 
-    // Rewrite each call to a load from OffsetByte/OffsetBit.
     Constant *ByteConst = ConstantInt::get(Int32Ty, OffsetByte);
     Constant *BitConst = ConstantInt::get(Int8Ty, 1ULL << OffsetBit);
+
+    if (CSByConstantArg.second.isExported()) {
+      ResByArg->TheKind = WholeProgramDevirtResolution::ByArg::VirtualConstProp;
+      exportGlobal(Slot, CSByConstantArg.first, "byte",
+                   ConstantExpr::getIntToPtr(ByteConst, Int8PtrTy));
+      exportGlobal(Slot, CSByConstantArg.first, "bit",
+                   ConstantExpr::getIntToPtr(BitConst, Int8PtrTy));
+    }
+
+    // Rewrite each call to a load from OffsetByte/OffsetBit.
     applyVirtualConstProp(CSByConstantArg.second,
                           TargetsForSlot[0].Fn->getName(), ByteConst, BitConst);
   }
@@ -1140,6 +1225,20 @@ void DevirtModule::importResolution(VTableSlot Slot, VTableSlotInfo &SlotInfo) {
     case WholeProgramDevirtResolution::ByArg::UniformRetVal:
       applyUniformRetValOpt(CSByConstantArg.second, "", ResByArg.Info);
       break;
+    case WholeProgramDevirtResolution::ByArg::UniqueRetVal: {
+      Constant *UniqueMemberAddr =
+          importGlobal(Slot, CSByConstantArg.first, "unique_member");
+      applyUniqueRetValOpt(CSByConstantArg.second, "", ResByArg.Info,
+                           UniqueMemberAddr);
+      break;
+    }
+    case WholeProgramDevirtResolution::ByArg::VirtualConstProp: {
+      Constant *Byte = importGlobal(Slot, CSByConstantArg.first, "byte", 32);
+      Byte = ConstantExpr::getPtrToInt(Byte, Int32Ty);
+      Constant *Bit = importGlobal(Slot, CSByConstantArg.first, "bit", 8);
+      Bit = ConstantExpr::getPtrToInt(Bit, Int8Ty);
+      applyVirtualConstProp(CSByConstantArg.second, "", Byte, Bit);
+    }
     default:
       break;
     }
@@ -1261,7 +1360,7 @@ bool DevirtModule::run() {
                  .WPDRes[S.first.ByteOffset];
 
       if (!trySingleImplDevirt(TargetsForSlot, S.second, Res) &&
-          tryVirtualConstProp(TargetsForSlot, S.second, Res))
+          tryVirtualConstProp(TargetsForSlot, S.second, Res, S.first))
         DidVirtualConstProp = true;
 
       // Collect functions devirtualized at least for one call site for stats.

@@ -249,9 +249,11 @@ void X86MacroFusion::apply(ScheduleDAGInstrs *DAGInstrs) {
         SuccDep.setLatency(0);
 
     ++NumFused;
-    DEBUG(dbgs() << "Macro fuse ";
+    DEBUG(dbgs() << DAG->MF.getName() << "(): Macro fuse ";
           SU.print(dbgs(), DAG);
-          dbgs() << " - ExitSU" << '\n');
+          dbgs() << " - ExitSU"
+                 << " / " << DAG->TII->getName(Pred.getOpcode()) << " - "
+                 << DAG->TII->getName(Branch->getOpcode()) << '\n';);
 
     break;
   }

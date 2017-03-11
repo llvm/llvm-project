@@ -5,8 +5,9 @@ what goes in or not.
 
 The list is sorted by surname and formatted to allow easy grepping and
 beautification by scripts. The fields are: name (N), email (E), web-address
-(W), PGP key ID and fingerprint (P), description (D), and snail-mail address
-(S). Each entry should contain at least the (N), (E) and (D) fields.
+(W), PGP key ID and fingerprint (P), description (D), snail-mail address
+(S) and (I) IRC handle. Each entry should contain at least the (N), (E) and
+(D) fields.
 
 N: Justin Bogner
 E: mail@justinbogner.com
@@ -16,6 +17,11 @@ D: SelectionDAG (lib/CodeGen/SelectionDAG/*)
 N: Alex Bradbury
 E: asb@lowrisc.org
 D: RISC-V backend (lib/Target/RISCV/*)
+
+N: Matthias Braun
+E: matze@braunis.de
+I: MatzeB
+D: Instruction Scheduling
 
 N: Chandler Carruth
 E: chandlerc@gmail.com
@@ -29,6 +35,10 @@ D: parts of code generator not covered by someone else
 N: Eric Christopher
 E: echristo@gmail.com
 D: Debug Information, inline assembly
+
+N: Andrey Churbanov
+E: andrey.churbanov@intel.com
+D: OpenMP runtime library
 
 N: Greg Clayton
 E: gclayton@apple.com
@@ -187,10 +197,6 @@ N: Craig Topper
 E: craig.topper@gmail.com
 D: X86 Backend
 
-N: Andrew Trick
-E: atrick@apple.com
-D: Instruction Scheduling
-
 N: Ulrich Weigand
 E: uweigand@de.ibm.com
 D: SystemZ Backend
@@ -202,7 +208,3 @@ D: Release management (x.y.0 releases)
 N: whitequark
 E: whitequark@whitequark.org
 D: OCaml bindings
-
-N: Andrey Churbanov
-E: andrey.churbanov@intel.com
-D: OpenMP runtime library

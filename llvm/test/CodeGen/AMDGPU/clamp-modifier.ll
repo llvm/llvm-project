@@ -168,6 +168,23 @@ define amdgpu_kernel void @v_clamp_add_src_f64(double addrspace(1)* %out, double
   ret void
 }
 
+; GCN-LABEL: {{^}}v_clamp_mac_to_mad:
+; GCN: v_mad_f32 v{{[0-9]+}}, s{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]}} clamp{{$}}
+define amdgpu_kernel void @v_clamp_mac_to_mad(float addrspace(1)* %out, float addrspace(1)* %aptr, float %a) #0 {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
+  %out.gep = getelementptr float, float addrspace(1)* %out, i32 %tid
+  %b = load float, float addrspace(1)* %gep0
+
+  %mul = fmul float %a, %a
+  %add = fadd float %mul, %b
+  %max = call float @llvm.maxnum.f32(float %add, float 0.0)
+  %clamp = call float @llvm.minnum.f32(float %max, float 1.0)
+  %res = fadd float %clamp, %b
+  store float %res, float addrspace(1)* %out.gep
+  ret void
+}
+
 declare i32 @llvm.amdgcn.workitem.id.x() #1
 declare float @llvm.fabs.f32(float) #1
 declare float @llvm.floor.f32(float) #1

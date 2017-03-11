@@ -1766,20 +1766,26 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineFunction::iterator &MBB,
 
   const MachineOperand *Dst = getNamedOperand(MI, AMDGPU::OpName::vdst);
   const MachineOperand *Src0 = getNamedOperand(MI, AMDGPU::OpName::src0);
+  const MachineOperand *Src0Mods =
+    getNamedOperand(MI, AMDGPU::OpName::src0_modifiers);
   const MachineOperand *Src1 = getNamedOperand(MI, AMDGPU::OpName::src1);
+  const MachineOperand *Src1Mods =
+    getNamedOperand(MI, AMDGPU::OpName::src1_modifiers);
   const MachineOperand *Src2 = getNamedOperand(MI, AMDGPU::OpName::src2);
+  const MachineOperand *Clamp = getNamedOperand(MI, AMDGPU::OpName::clamp);
+  const MachineOperand *Omod = getNamedOperand(MI, AMDGPU::OpName::omod);
 
   return BuildMI(*MBB, MI, MI.getDebugLoc(),
                  get(IsF16 ? AMDGPU::V_MAD_F16 : AMDGPU::V_MAD_F32))
       .add(*Dst)
-      .addImm(0) // Src0 mods
+      .addImm(Src0Mods ? Src0Mods->getImm() : 0)
       .add(*Src0)
-      .addImm(0) // Src1 mods
+      .addImm(Src1Mods ? Src1Mods->getImm() : 0)
       .add(*Src1)
       .addImm(0) // Src mods
       .add(*Src2)
-      .addImm(0)  // clamp
-      .addImm(0); // omod
+      .addImm(Clamp ? Clamp->getImm() : 0)
+      .addImm(Omod ? Omod->getImm() : 0);
 }
 
 // It's not generally safe to move VALU instructions across these since it will

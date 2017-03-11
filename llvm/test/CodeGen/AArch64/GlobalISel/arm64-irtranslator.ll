@@ -1271,3 +1271,60 @@ define void @test_trivial_inlineasm() {
   call void asm "wibble", ""()
   ret void
 }
+
+define <2 x i32> @test_insertelement(<2 x i32> %vec, i32 %elt, i32 %idx){
+; CHECK-LABEL: name: test_insertelement
+; CHECK: [[VEC:%[0-9]+]](<2 x s32>) = COPY %d0
+; CHECK: [[ELT:%[0-9]+]](s32) = COPY %w0
+; CHECK: [[IDX:%[0-9]+]](s32) = COPY %w1
+; CHECK: [[RES:%[0-9]+]](<2 x s32>) = G_INSERT_VECTOR_ELT [[VEC]], [[ELT]](s32), [[IDX]](s32)
+; CHECK: %d0 = COPY [[RES]](<2 x s32>)
+  %res = insertelement <2 x i32> %vec, i32 %elt, i32 %idx
+  ret <2 x i32> %res
+}
+
+define i32 @test_extractelement(<2 x i32> %vec, i32 %idx) {
+; CHECK-LABEL: name: test_extractelement
+; CHECK: [[VEC:%[0-9]+]](<2 x s32>) = COPY %d0
+; CHECK: [[IDX:%[0-9]+]](s32) = COPY %w0
+; CHECK: [[RES:%[0-9]+]](s32) = G_EXTRACT_VECTOR_ELT [[VEC]](<2 x s32>), [[IDX]](s32)
+; CHECK: %w0 = COPY [[RES]](s32)
+  %res = extractelement <2 x i32> %vec, i32 %idx
+  ret i32 %res
+}
+
+define i32 @test_singleelementvector(i32 %elt){
+; CHECK-LABEL: name: test_singleelementvector
+; CHECK: [[ELT:%[0-9]+]](s32) = COPY %w0
+; CHECK-NOT: G_INSERT_VECTOR_ELT
+; CHECK-NOT: G_EXTRACT_VECTOR_ELT
+; CHECK: %w0 = COPY [[ELT]](s32)
+  %vec = insertelement <1 x i32> undef, i32 %elt, i32 0
+  %res = extractelement <1 x i32> %vec, i32 0
+  ret i32 %res
+}
+
+define <2 x i32> @test_constantaggzerovector_v2i32() {
+; CHECK-LABEL: name: test_constantaggzerovector_v2i32
+; CHECK: [[ZERO:%[0-9]+]](s32) = G_CONSTANT i32 0
+; CHECK: [[VEC:%[0-9]+]](<2 x s32>) = G_MERGE_VALUES [[ZERO]](s32), [[ZERO]](s32)
+; CHECK: %d0 = COPY [[VEC]](<2 x s32>)
+  ret <2 x i32> zeroinitializer
+}
+
+define <2 x float> @test_constantaggzerovector_v2f32() {
+; CHECK-LABEL: name: test_constantaggzerovector_v2f32
+; CHECK: [[ZERO:%[0-9]+]](s32) = G_FCONSTANT float 0.000000e+00
+; CHECK: [[VEC:%[0-9]+]](<2 x s32>) = G_MERGE_VALUES [[ZERO]](s32), [[ZERO]](s32)
+; CHECK: %d0 = COPY [[VEC]](<2 x s32>)
+  ret <2 x float> zeroinitializer
+}
+
+define i32 @test_constantaggzerovector_v3i32() {
+; CHECK-LABEL: name: test_constantaggzerovector_v3i32
+; CHECK: [[ZERO:%[0-9]+]](s32) = G_CONSTANT i32 0
+; CHECK: [[VEC:%[0-9]+]](<3 x s32>) = G_MERGE_VALUES [[ZERO]](s32), [[ZERO]](s32), [[ZERO]](s32)
+; CHECK: G_EXTRACT_VECTOR_ELT [[VEC]](<3 x s32>)
+  %elt = extractelement <3 x i32> zeroinitializer, i32 1
+  ret i32 %elt
+}

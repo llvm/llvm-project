@@ -3,9 +3,9 @@
 ; RUN: llc -march=amdgcn -mcpu=gfx901 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VI %s
 
 ; GCN-LABEL: {{^}}s_cvt_pkrtz_v2f16_f32:
-; GCN: s_load_dword [[X:s[0-9]+]]
-; GCN: s_load_dword [[Y:s[0-9]+]]
-; GCN: v_mov_b32_e32 [[VY:v[0-9]+]]
+; GCN-DAG: s_load_dword [[X:s[0-9]+]], s[0:1], 0x{{b|2c}}
+; GCN-DAG: s_load_dword [[SY:s[0-9]+]], s[0:1], 0x{{c|30}}
+; GCN: v_mov_b32_e32 [[VY:v[0-9]+]], [[SY]]
 ; SI: v_cvt_pkrtz_f16_f32_e32 v{{[0-9]+}}, [[X]], [[VY]]
 ; VI: v_cvt_pkrtz_f16_f32_e64 v{{[0-9]+}}, [[X]], [[VY]]
 define void @s_cvt_pkrtz_v2f16_f32(<2 x half> addrspace(1)* %out, float %x, float %y) #0 {

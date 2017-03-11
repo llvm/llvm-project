@@ -166,7 +166,7 @@ endif:
 
 ; GCN-LABEL: {{^}}uniform_if_else_ret:
 ; GCN: s_cmp_lg_u32 s{{[0-9]+}}, 0
-; GCN-NEXT: s_cbranch_scc0 [[IF_LABEL:[0-9_A-Za-z]+]]
+; GCN: s_cbranch_scc0 [[IF_LABEL:[0-9_A-Za-z]+]]
 
 ; GCN: v_mov_b32_e32 [[TWO:v[0-9]+]], 2
 ; GCN: buffer_store_dword [[TWO]]

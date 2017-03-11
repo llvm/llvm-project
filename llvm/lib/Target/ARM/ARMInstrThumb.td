@@ -28,11 +28,6 @@ def imm_sr : Operand<i32>, PatLeaf<(imm), [{
   let ParserMatchClass = ThumbSRImmAsmOperand;
 }
 
-def imm_comp_XFORM : SDNodeXForm<imm, [{
-  return CurDAG->getTargetConstant(~((uint32_t)N->getZExtValue()), SDLoc(N),
-                                   MVT::i32);
-}]>;
-
 def imm0_7_neg : PatLeaf<(i32 imm), [{
   return (uint32_t)-N->getZExtValue() < 8;
 }], imm_neg_XFORM>;
@@ -1609,7 +1604,7 @@ def : T1Pat<(i32 thumb_immshifted:$src),
                     (thumb_immshifted_shamt imm:$src))>;
 
 def : T1Pat<(i32 imm0_255_comp:$src),
-            (tMVN (tMOVi8 (imm_comp_XFORM imm:$src)))>;
+            (tMVN (tMOVi8 (imm_not_XFORM imm:$src)))>;
 
 def : T1Pat<(i32 imm256_510:$src),
             (tADDi8 (tMOVi8 255),
