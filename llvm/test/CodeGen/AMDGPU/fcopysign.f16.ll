@@ -10,11 +10,11 @@ declare <3 x half> @llvm.copysign.v3f16(<3 x half>, <3 x half>)
 declare <4 x half> @llvm.copysign.v4f16(<4 x half>, <4 x half>)
 
 ; GCN-LABEL: {{^}}test_copysign_f16:
-; SI: buffer_load_ushort v[[MAG:[0-9]+]]
 ; SI: buffer_load_ushort v[[SIGN:[0-9]+]]
+; SI: buffer_load_ushort v[[MAG:[0-9]+]]
 ; SI: s_brev_b32 s[[CONST:[0-9]+]], -2
-; SI: v_cvt_f32_f16_e32 v[[MAG_F32:[0-9]+]], v[[MAG]]
-; SI: v_cvt_f32_f16_e32 v[[SIGN_F32:[0-9]+]], v[[SIGN]]
+; SI-DAG: v_cvt_f32_f16_e32 v[[MAG_F32:[0-9]+]], v[[MAG]]
+; SI-DAG: v_cvt_f32_f16_e32 v[[SIGN_F32:[0-9]+]], v[[SIGN]]
 ; SI: v_bfi_b32 v[[OUT_F32:[0-9]+]], s[[CONST]], v[[MAG_F32]], v[[SIGN_F32]]
 ; SI: v_cvt_f16_f32_e32 v[[OUT:[0-9]+]], v[[OUT_F32]]
 ; VI: buffer_load_ushort v[[SIGN:[0-9]+]]

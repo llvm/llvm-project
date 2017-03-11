@@ -336,7 +336,7 @@ class XunitFormatter(ResultsFormatter):
             test_event,
             inner_content=(
                 '<error type={} message={}></error>'.format(
-                    "timeout",
+                    XunitFormatter._quote_attribute("timeout"),
                     XunitFormatter._quote_attribute(message))
             ))
         with self.lock:

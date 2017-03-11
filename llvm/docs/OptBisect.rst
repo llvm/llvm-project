@@ -189,12 +189,5 @@ Adding Finer Granularity
 
 Once the pass in which an incorrect transformation is performed has been
 determined, it may be useful to perform further analysis in order to determine
-which specific transformation is causing the problem.  Ideally all passes
-would be instrumented to allow skipping of individual transformations.  This
-functionality is available through the OptBisect object but it is impractical
-to proactively instrument every existing pass.  It is hoped that as developers
-find that they need a pass to be instrumented they will add the instrumentation
-and contribute it back to the LLVM source base.
-
-Helper functions will be added to simplify this level of instrumentation, but
-this work is not yet completed.  For more information, contact Andy Kaylor.
+which specific transformation is causing the problem.  Debug counters
+can be used for this purpose.

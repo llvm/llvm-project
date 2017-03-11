@@ -39,14 +39,6 @@ static void printPassMessage(const StringRef &Name, int PassNum,
          << "(" << PassNum << ") " << Name << " on " << TargetDesc << "\n";
 }
 
-static void printCaseMessage(int CaseNum, StringRef Msg, bool Running) {
-  if (Running)
-    errs() << "BISECT: running case (";
-  else
-    errs() << "BISECT: NOT running case (";
-  errs() << CaseNum << "): " << Msg << "\n";
-}
-
 static std::string getDescription(const Module &M) {
   return "module (" + M.getName().str() + ")";
 }
@@ -108,13 +100,3 @@ bool OptBisect::checkPass(const StringRef PassName,
   printPassMessage(PassName, CurBisectNum, TargetDesc, ShouldRun);
   return ShouldRun;
 }
-
-bool OptBisect::shouldRunCase(const Twine &Msg) {
-  if (!BisectEnabled)
-    return true;
-  int CurFuelNum = ++LastBisectNum;
-  bool ShouldRun = (OptBisectLimit == -1 || CurFuelNum <= OptBisectLimit);
-  printCaseMessage(CurFuelNum, Msg.str(), ShouldRun);
-  return ShouldRun;
-}
-

@@ -178,9 +178,9 @@ public:
 
   bool mergeCandidates(CoalescingCandidateInfo &SourceRegion,
                        CoalescingCandidateInfo &TargetRegion);
-  bool canMoveToBeginning(const MachineInstr &MI, 
+  bool canMoveToBeginning(const MachineInstr &MI,
                           const MachineBasicBlock &MBB) const;
-  bool canMoveToEnd(const MachineInstr &MI, 
+  bool canMoveToEnd(const MachineInstr &MI,
                     const MachineBasicBlock &MBB) const;
   bool canMerge(CoalescingCandidateInfo &SourceRegion,
                 CoalescingCandidateInfo &TargetRegion) const;
@@ -260,8 +260,8 @@ bool BranchCoalescing::canCoalesceBranch(CoalescingCandidateInfo &Cand) {
 
   // For now only consider triangles (i.e, BranchTargetBlock is set,
   // FalseMBB is null, and BranchTargetBlock is a successor to BranchBlock)
-  if (!Cand.BranchTargetBlock || (Cand.BranchTargetBlock && FalseMBB)
-      || !Cand.BranchBlock->isSuccessor(Cand.BranchTargetBlock)) { 
+  if (!Cand.BranchTargetBlock || FalseMBB ||
+      !Cand.BranchBlock->isSuccessor(Cand.BranchTargetBlock)) {
     DEBUG(dbgs() << "Does not form a triangle - skip\n");
     return false;
   }
@@ -276,10 +276,10 @@ bool BranchCoalescing::canCoalesceBranch(CoalescingCandidateInfo &Cand) {
   assert(Cand.BranchBlock->canFallThrough() &&
          "Expecting the block to fall through!");
 
-  // We have already ensured there are exactly two successors to 
-  // BranchBlock and that BranchTargetBlock is a successor to BranchBlock. 
+  // We have already ensured there are exactly two successors to
+  // BranchBlock and that BranchTargetBlock is a successor to BranchBlock.
   // Ensure the single fall though block is empty.
-  MachineBasicBlock *Succ = 
+  MachineBasicBlock *Succ =
     (*Cand.BranchBlock->succ_begin() == Cand.BranchTargetBlock)
     ? *Cand.BranchBlock->succ_rbegin()
     : *Cand.BranchBlock->succ_begin();
@@ -292,7 +292,7 @@ bool BranchCoalescing::canCoalesceBranch(CoalescingCandidateInfo &Cand) {
   }
 
   if (!Succ->isSuccessor(Cand.BranchTargetBlock)) {
-      DEBUG(dbgs() 
+      DEBUG(dbgs()
             << "Successor of fall through block is not branch taken block\n");
       return false;
   }
@@ -353,8 +353,8 @@ bool BranchCoalescing::identicalOperands(
 }
 
 ///
-/// Moves ALL PHI instructions in SourceMBB to beginning of TargetMBB 
-/// and update them to refer to the new block.  PHI node ordering 
+/// Moves ALL PHI instructions in SourceMBB to beginning of TargetMBB
+/// and update them to refer to the new block.  PHI node ordering
 /// cannot be assumed so it does not matter where the PHI instructions
 /// are moved to in TargetMBB.
 ///
@@ -386,19 +386,19 @@ void BranchCoalescing::moveAndUpdatePHIs(MachineBasicBlock *SourceMBB,
 
 ///
 /// This function checks if MI can be moved to the beginning of the TargetMBB
-/// following PHI instructions. A MI instruction can be moved to beginning of 
+/// following PHI instructions. A MI instruction can be moved to beginning of
 /// the TargetMBB if there are no uses of it within the TargetMBB PHI nodes.
 ///
 /// \param[in] MI the machine instruction to move.
 /// \param[in] TargetMBB the machine basic block to move to
-/// \return true if it is safe to move MI to beginning of TargetMBB, 
+/// \return true if it is safe to move MI to beginning of TargetMBB,
 ///         false otherwise.
 ///
-bool BranchCoalescing::canMoveToBeginning(const MachineInstr &MI, 
+bool BranchCoalescing::canMoveToBeginning(const MachineInstr &MI,
                                           const MachineBasicBlock &TargetMBB
                                           ) const {
 
-  DEBUG(dbgs() << "Checking if " << MI << " can move to beginning of " 
+  DEBUG(dbgs() << "Checking if " << MI << " can move to beginning of "
         << TargetMBB.getNumber() << "\n");
 
   for (auto &Def : MI.defs()) { // Looking at Def
@@ -417,19 +417,19 @@ bool BranchCoalescing::canMoveToBeginning(const MachineInstr &MI,
 ///
 /// This function checks if MI can be moved to the end of the TargetMBB,
 /// immediately before the first terminator.  A MI instruction can be moved
-/// to then end of the TargetMBB if no PHI node defines what MI uses within 
+/// to then end of the TargetMBB if no PHI node defines what MI uses within
 /// it's own MBB.
 ///
 /// \param[in] MI the machine instruction to move.
 /// \param[in] TargetMBB the machine basic block to move to
-/// \return true if it is safe to move MI to end of TargetMBB, 
+/// \return true if it is safe to move MI to end of TargetMBB,
 ///         false otherwise.
 ///
-bool BranchCoalescing::canMoveToEnd(const MachineInstr &MI, 
+bool BranchCoalescing::canMoveToEnd(const MachineInstr &MI,
                                     const MachineBasicBlock &TargetMBB
                                     ) const {
 
-  DEBUG(dbgs() << "Checking if " << MI << " can move to end of " 
+  DEBUG(dbgs() << "Checking if " << MI << " can move to end of "
         << TargetMBB.getNumber() << "\n");
 
   for (auto &Use : MI.uses()) {
@@ -437,9 +437,9 @@ bool BranchCoalescing::canMoveToEnd(const MachineInstr &MI,
       MachineInstr *DefInst = MRI->getVRegDef(Use.getReg());
       if (DefInst->isPHI() && DefInst->getParent() == MI.getParent()) {
         DEBUG(dbgs() << "    *** Cannot move this instruction ***\n");
-        return false; 
-      } else { 
-        DEBUG(dbgs() << "    *** def is in another block -- safe to move!\n"); 
+        return false;
+      } else {
+        DEBUG(dbgs() << "    *** def is in another block -- safe to move!\n");
       }
     }
   }
@@ -482,8 +482,8 @@ bool BranchCoalescing::validateCandidates(
 /// Merging involves moving the instructions in the
 /// TargetRegion.BranchTargetBlock (also SourceRegion.BranchBlock).
 ///
-/// This function first try to move instructions from the 
-/// TargetRegion.BranchTargetBlock down, to the beginning of the 
+/// This function first try to move instructions from the
+/// TargetRegion.BranchTargetBlock down, to the beginning of the
 /// SourceRegion.BranchTargetBlock. This is not possible if any register defined
 /// in TargetRegion.BranchTargetBlock is used in a PHI node in the
 /// SourceRegion.BranchTargetBlock. In this case, check whether the statement
@@ -492,7 +492,7 @@ bool BranchCoalescing::validateCandidates(
 /// be merged.
 ///
 /// Note that there is no analysis for moving instructions past the fall-through
-/// blocks because they are confirmed to be empty. An assert is thrown if they 
+/// blocks because they are confirmed to be empty. An assert is thrown if they
 /// are not.
 ///
 /// \param[in] SourceRegion The candidate to move statements from
@@ -666,7 +666,7 @@ bool BranchCoalescing::mergeCandidates(CoalescingCandidateInfo &SourceRegion,
   assert(TargetRegion.FallThroughBlock->empty() &&
          "FallThroughBlocks should be empty!");
 
-  // Transfer successor information and move PHIs down to the 
+  // Transfer successor information and move PHIs down to the
   // branch-taken block.
   TargetRegion.FallThroughBlock->transferSuccessorsAndUpdatePHIs(
       SourceRegion.FallThroughBlock);

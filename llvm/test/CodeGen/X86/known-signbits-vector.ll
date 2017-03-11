@@ -5,8 +5,7 @@
 define <2 x double> @signbits_sext_v2i64_sitofp_v2f64(i32 %a0, i32 %a1) nounwind {
 ; X32-LABEL: signbits_sext_v2i64_sitofp_v2f64:
 ; X32:       # BB#0:
-; X32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; X32-NEXT:    vcvtdq2pd %xmm0, %xmm0
+; X32-NEXT:    vcvtdq2pd {{[0-9]+}}(%esp), %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: signbits_sext_v2i64_sitofp_v2f64:

@@ -140,7 +140,7 @@ TEST(Isl, APIntToIslVal) {
   {
     APInt APNOne(32, (1ull << 32) - 1, false);
     auto IslNOne = valFromAPInt(IslCtx, APNOne, false);
-    auto IslRef = isl::val(IslCtx, (1ull << 32) - 1);
+    auto IslRef = isl::val(IslCtx, 32).two_exp().sub_ui(1);
     EXPECT_EQ(IslNOne, IslRef);
   }
 
@@ -227,7 +227,7 @@ TEST(Isl, IslValToAPInt) {
   }
 
   {
-    auto IslNOne = isl::val(IslCtx, (1ull << 32) - 1);
+    auto IslNOne = isl::val(IslCtx, 32).two_exp().sub_ui(1);
     auto APNOne = APIntFromVal(IslNOne);
     EXPECT_EQ((1ull << 32) - 1, APNOne);
     EXPECT_EQ(33u, APNOne.getBitWidth());

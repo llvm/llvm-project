@@ -103,11 +103,11 @@ define void @v_pack_v2i16_user(i32 addrspace(1)* %in0, i32 addrspace(1)* %in1) #
 }
 
 ; GCN-LABEL: {{^}}v_pack_v2i16_imm_lo:
-; GFX9: flat_load_dword [[VAL1:v[0-9]+]]
-; GFX9-DENORM: s_movk_i32 [[K:s[0-9]+]], 0x7b{{$}}
+; GFX9-DAG: flat_load_dword [[VAL1:v[0-9]+]]
+; GFX9-DENORM-DAG: s_movk_i32 [[K:s[0-9]+]], 0x7b{{$}}
 ; GFX9-DENORM: v_pack_b32_f16 [[PACKED:v[0-9]+]], [[K]], [[VAL1]]
 
-; GFX9-FLUSH: v_mov_b32_e32 [[K:v[0-9]+]], 0x7b{{$}}
+; GFX9-FLUSH-DAG: v_mov_b32_e32 [[K:v[0-9]+]], 0x7b{{$}}
 ; GFX9-FLUSH: v_lshl_or_b32 [[PACKED:v[0-9]+]], [[VAL1]], 16, [[K]]
 
 ; GFX9: ; use [[PACKED]]
@@ -144,10 +144,10 @@ define void @v_pack_v2i16_inline_imm_lo(i32 addrspace(1)* %in1) #0 {
 }
 
 ; GCN-LABEL: {{^}}v_pack_v2i16_imm_hi:
-; GFX9: flat_load_dword [[VAL0:v[0-9]+]]
+; GFX9-DAG: flat_load_dword [[VAL0:v[0-9]+]]
 ; GFX9-DENORM: v_pack_b32_f16 [[PACKED:v[0-9]+]], [[VAL0]], [[K]]
 
-; GFX9-FLUSH: s_movk_i32 [[K:s[0-9]+]], 0x7b{{$}}
+; GFX9-FLUSH-DAG: s_movk_i32 [[K:s[0-9]+]], 0x7b{{$}}
 ; GFX9-FLUSH: v_lshl_or_b32 [[PACKED:v[0-9]+]], [[K]], 16, [[VAL0]]
 
 ; GFX9: ; use [[PACKED]]

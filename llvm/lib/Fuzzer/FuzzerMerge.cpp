@@ -17,6 +17,7 @@
 
 #include <fstream>
 #include <iterator>
+#include <set>
 #include <sstream>
 
 namespace fuzzer {
@@ -88,7 +89,7 @@ bool Merger::Parse(std::istream &IS, bool ParseCoverage) {
       assert(ExpectedStartMarker < Files.size());
       ExpectedStartMarker++;
     } else if (Marker == "DONE") {
-      // DONE FILE_SIZE COV1 COV2 COV3 ...
+      // DONE FILE_ID COV1 COV2 COV3 ...
       size_t CurrentFileIdx = N;
       if (CurrentFileIdx != LastSeenStartMarker)
         return false;
@@ -109,6 +110,13 @@ bool Merger::Parse(std::istream &IS, bool ParseCoverage) {
 
   FirstNotProcessedFile = ExpectedStartMarker;
   return true;
+}
+
+size_t Merger::ApproximateMemoryConsumption() const  {
+  size_t Res = 0;
+  for (const auto &F: Files)
+    Res += sizeof(F) + F.Features.size() * sizeof(F.Features[0]);
+  return Res;
 }
 
 // Decides which files need to be merged (add thost to NewFiles).
@@ -262,6 +270,8 @@ void Fuzzer::CrashResistantMerge(const std::vector<std::string> &Args,
   IF.seekg(0, IF.beg);
   M.ParseOrExit(IF, true);
   IF.close();
+  Printf("MERGE-OUTER: consumed %zd bytes to parse the control file\n",
+         M.ApproximateMemoryConsumption());
   std::vector<std::string> NewFiles;
   size_t NumNewFeatures = M.Merge(&NewFiles);
   Printf("MERGE-OUTER: %zd new files with %zd new features added\n",

@@ -189,7 +189,7 @@ define void @s_insertelement_v2f16_1(<2 x half> addrspace(1)* %out, <2 x half> a
 }
 
 ; GCN-LABEL: {{^}}v_insertelement_v2i16_0:
-; GCN: flat_load_dword [[VEC:v[0-9]+]]
+; GCN-DAG: flat_load_dword [[VEC:v[0-9]+]]
 ; CIVI: v_and_b32_e32 [[ELT1:v[0-9]+]], 0xffff0000, [[VEC]]
 ; CIVI: v_or_b32_e32 [[RES:v[0-9]+]], 0x3e7, [[ELT1]]
 
@@ -258,11 +258,11 @@ define void @v_insertelement_v2i16_0_inlineimm(<2 x i16> addrspace(1)* %out, <2 
 ; FIXME: fold lshl_or c0, c1, v0 -> or (c0 << c1), v0
 
 ; GCN-LABEL: {{^}}v_insertelement_v2i16_1:
-; GCN: flat_load_dword [[VEC:v[0-9]+]]
+; GCN-DAG: flat_load_dword [[VEC:v[0-9]+]]
 ; CIVI: v_or_b32_e32 [[RES:v[0-9]+]], 0x3e70000, [[VEC]]
 
-; GFX9: s_movk_i32 [[K:s[0-9]+]], 0x3e7
-; GFX9: v_and_b32_e32 [[ELT0:v[0-9]+]], 0xffff, [[VEC]]
+; GFX9-DAG: s_movk_i32 [[K:s[0-9]+]], 0x3e7
+; GFX9-DAG: v_and_b32_e32 [[ELT0:v[0-9]+]], 0xffff, [[VEC]]
 ; GFX9: v_lshl_or_b32 [[RES:v[0-9]+]], [[K]], 16, [[ELT0]]
 
 ; GCN: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RES]]
@@ -295,13 +295,13 @@ define void @v_insertelement_v2i16_1_inlineimm(<2 x i16> addrspace(1)* %out, <2 
 }
 
 ; GCN-LABEL: {{^}}v_insertelement_v2f16_0:
-; GCN: flat_load_dword [[VEC:v[0-9]+]]
+; GCN-DAG: flat_load_dword [[VEC:v[0-9]+]]
 
 ; CIVI: v_and_b32_e32 [[ELT1:v[0-9]+]], 0xffff0000, [[VEC]]
 ; CIVI: v_or_b32_e32 [[RES:v[0-9]+]], 0x4500, [[ELT1]]
 
-; GFX9: v_mov_b32_e32 [[ELT0:v[0-9]+]], 0x4500{{$}}
-; GFX9: v_lshrrev_b32_e32 [[ELT1:v[0-9]+]], 16, [[VEC]]
+; GFX9-DAG: v_mov_b32_e32 [[ELT0:v[0-9]+]], 0x4500{{$}}
+; GFX9-DAG: v_lshrrev_b32_e32 [[ELT1:v[0-9]+]], 16, [[VEC]]
 ; GFX9: v_lshl_or_b32 [[RES:v[0-9]+]], [[ELT1]], 16, [[ELT0]]
 
 ; GCN: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RES]]
@@ -337,11 +337,11 @@ define void @v_insertelement_v2f16_0_inlineimm(<2 x half> addrspace(1)* %out, <2
 }
 
 ; GCN-LABEL: {{^}}v_insertelement_v2f16_1:
-; GCN: flat_load_dword [[VEC:v[0-9]+]]
+; GCN-DAG: flat_load_dword [[VEC:v[0-9]+]]
 ; CIVI: v_or_b32_e32 [[RES:v[0-9]+]], 0x45000000, [[VEC]]
 
-; GFX9: s_movk_i32 [[K:s[0-9]+]], 0x4500
-; GFX9: v_and_b32_e32 [[ELT0:v[0-9]+]], 0xffff, [[VEC]]
+; GFX9-DAG: s_movk_i32 [[K:s[0-9]+]], 0x4500
+; GFX9-DAG: v_and_b32_e32 [[ELT0:v[0-9]+]], 0xffff, [[VEC]]
 ; GFX9: v_lshl_or_b32 [[RES:v[0-9]+]], [[K]], 16, [[ELT0]]
 
 ; GCN: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RES]]
