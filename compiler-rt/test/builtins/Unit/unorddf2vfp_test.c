@@ -1,3 +1,4 @@
+// RUN: %clang_builtins %s %librt -o %t && %run %t
 //===-- unorddf2vfp_test.c - Test __unorddf2vfp ---------------------------===//
 //
 //                     The LLVM Compiler Infrastructure

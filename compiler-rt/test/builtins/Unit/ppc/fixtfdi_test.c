@@ -1,3 +1,5 @@
+// REQUIRES: powerpc-registered-target
+// RUN: %clang_builtins %s -o %t && %run %t
 #include <stdio.h>
 #include <limits.h>
 #include <stdint.h>

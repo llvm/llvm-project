@@ -13935,7 +13935,33 @@ X86TargetLowering::LowerEXTRACT_VECTOR_ELT(SDValue Op,
     if (SDValue Res = LowerEXTRACT_VECTOR_ELT_SSE4(Op, DAG))
       return Res;
 
-  // TODO: handle v16i8.
+  // TODO: We only extract a single element from v16i8, we can probably afford
+  // to be more aggressive here before using the default approach of spilling to
+  // stack.
+  if (VT.getSizeInBits() == 8 && Op->isOnlyUserOf(Vec.getNode())) {
+    // Extract either the lowest i32 or any i16, and extract the sub-byte.
+    int DWordIdx = IdxVal / 4;
+    if (DWordIdx == 0) {
+      SDValue Res = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, MVT::i32,
+                                DAG.getBitcast(MVT::v4i32, Vec),
+                                DAG.getIntPtrConstant(DWordIdx, dl));
+      int ShiftVal = (IdxVal % 4) * 8;
+      if (ShiftVal != 0)
+        Res = DAG.getNode(ISD::SRL, dl, MVT::i32, Res,
+                          DAG.getConstant(ShiftVal, dl, MVT::i32));
+      return DAG.getNode(ISD::TRUNCATE, dl, VT, Res);
+    }
+
+    int WordIdx = IdxVal / 2;
+    SDValue Res = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, MVT::i16,
+                              DAG.getBitcast(MVT::v8i16, Vec),
+                              DAG.getIntPtrConstant(WordIdx, dl));
+    int ShiftVal = (IdxVal % 2) * 8;
+    if (ShiftVal != 0)
+      Res = DAG.getNode(ISD::SRL, dl, MVT::i16, Res,
+                        DAG.getConstant(ShiftVal, dl, MVT::i16));
+    return DAG.getNode(ISD::TRUNCATE, dl, VT, Res);
+  }
 
   if (VT.getSizeInBits() == 32) {
     if (IdxVal == 0)
@@ -19881,7 +19907,6 @@ static SDValue getPrefetchNode(unsigned Opc, SDValue Op, SelectionDAG &DAG,
   MVT MaskVT =
     MVT::getVectorVT(MVT::i1, Index.getSimpleValueType().getVectorNumElements());
   SDValue VMask = getMaskNode(Mask, MaskVT, Subtarget, DAG, dl);
-  //SDVTList VTs = DAG.getVTList(MVT::Other);
   SDValue Ops[] = {VMask, Base, Scale, Index, Disp, Segment, Chain};
   SDNode *Res = DAG.getMachineNode(Opc, dl, MVT::Other, Ops);
   return SDValue(Res, 0);

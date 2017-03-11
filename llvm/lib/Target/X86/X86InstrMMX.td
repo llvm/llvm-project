@@ -294,6 +294,7 @@ def MMX_MOVQ64rm : MMXI<0x6F, MRMSrcMem, (outs VR64:$dst), (ins i64mem:$src),
                         [(set VR64:$dst, (load_mmx addr:$src))],
                         IIC_MMX_MOVQ_RM>;
 } // SchedRW
+
 let SchedRW = [WriteStore] in
 def MMX_MOVQ64mr : MMXI<0x7F, MRMDestMem, (outs), (ins i64mem:$dst, VR64:$src),
                         "movq\t{$src, $dst|$dst, $src}",
@@ -377,7 +378,6 @@ defm MMX_PHADD   : SS3I_binop_rm_int_mm<0x02, "phaddd", int_x86_ssse3_phadd_d,
                                    MMX_PHADDSUBD>;
 defm MMX_PHADDSW : SS3I_binop_rm_int_mm<0x03, "phaddsw",int_x86_ssse3_phadd_sw,
                                    MMX_PHADDSUBW>;
-
 
 // -- Subtraction
 defm MMX_PSUBB : MMXI_binop_rm_int<0xF8, "psubb", int_x86_mmx_psub_b,
@@ -576,9 +576,6 @@ def MMX_PSHUFWmi : MMXIi8<0x70, MRMSrcMem,
                                                    imm:$src2))],
                           IIC_MMX_PSHUF>, Sched<[WriteShuffleLd]>;
 
-
-
-
 // -- Conversion Instructions
 defm MMX_CVTPS2PI : sse12_cvt_pint<0x2D, VR128, VR64, int_x86_sse_cvtps2pi,
                       f64mem, load, "cvtps2pi\t{$src, $dst|$dst, $src}",
@@ -639,7 +636,6 @@ def MMX_PMOVMSKBrr : MMXI<0xD7, MRMSrcReg, (outs GR32orGR64:$dst),
                           [(set GR32orGR64:$dst,
                                 (int_x86_mmx_pmovmskb VR64:$src))]>;
 
-
 // Low word of XMM to MMX.
 def MMX_X86movdq2q : SDNode<"X86ISD::MOVDQ2Q", SDTypeProfile<1, 1,
                             [SDTCisVT<0, x86mmx>, SDTCisVT<1, v2i64>]>>;
@@ -671,5 +667,3 @@ def : Pat<(f64 (bitconvert (x86mmx VR64:$src))),
 def : Pat<(x86mmx (bitconvert (f64 FR64:$src))),
           (MMX_MOVFR642Qrr FR64:$src)>;
 }
-
-

@@ -1,3 +1,4 @@
+// RUN: %clang_builtins %s %librt -o %t && %run %t
 //===-- fixxfti_test.c - Test __fixxfti -----------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure

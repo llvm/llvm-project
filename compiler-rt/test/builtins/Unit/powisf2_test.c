@@ -1,3 +1,4 @@
+// RUN: %clang_builtins %s %librt -o %t && %run %t
 //===-- powisf2_test.cpp - Test __powisf2 ---------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
