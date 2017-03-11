@@ -1,7 +1,7 @@
 ; RUN: llc -mtriple mips-linux-gnu -O2 %s -o - | FileCheck %s
 ; Check struct X for dead variable xyz from inlined function foo.
 
-; CHECK: .section .debug_info,"",@progbits
+; CHECK: .section .debug_info,"",@0x7000001e
 ; CHECK:	DW_TAG_structure_type
 ; CHECK-NEXT:	info_string
 

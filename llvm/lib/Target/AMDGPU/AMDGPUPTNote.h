@@ -19,7 +19,7 @@
 
 namespace AMDGPU {
 
-namespace PT_NOTE {
+namespace ElfNote {
 
 const char SectionName[] = ".note";
 

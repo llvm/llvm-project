@@ -199,12 +199,32 @@ template <class ELFT> static void combineMergableSections() {
   V.erase(std::remove(V.begin(), V.end(), nullptr), V.end());
 }
 
+template <class ELFT> static void combineEhFrameSections() {
+  for (InputSectionBase *&S : InputSections) {
+    EhInputSection *ES = dyn_cast<EhInputSection>(S);
+    if (!ES)
+      continue;
+
+    if (!ES->Live)
+      continue;
+
+    In<ELFT>::EhFrame->addSection(ES);
+    S = nullptr;
+  }
+
+  std::vector<InputSectionBase *> &V = InputSections;
+  V.erase(std::remove(V.begin(), V.end(), nullptr), V.end());
+}
+
 // The main function of the writer.
 template <class ELFT> void Writer<ELFT>::run() {
   // Create linker-synthesized sections such as .got or .plt.
   // Such sections are of type input section.
   createSyntheticSections();
   combineMergableSections<ELFT>();
+
+  if (!Config->Relocatable)
+    combineEhFrameSections<ELFT>();
 
   // We need to create some reserved symbols such as _end. Create them.
   if (!Config->Relocatable)
@@ -906,6 +926,11 @@ void Writer<ELFT>::forEachRelSec(std::function<void(InputSectionBase &)> Fn) {
       continue;
     if (isa<InputSection>(IS) || isa<EhInputSection>(IS))
       Fn(*IS);
+  }
+
+  if (!Config->Relocatable) {
+    for (EhInputSection *ES : In<ELFT>::EhFrame->Sections)
+      Fn(*ES);
   }
 }
 

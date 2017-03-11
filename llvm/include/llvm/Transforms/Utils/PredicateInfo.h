@@ -6,47 +6,46 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-//
-// \file
-// \brief
-//
-// This file implements the PredicateInfo analysis, which creates an Extended
-// SSA form for operations used in branch comparisons and llvm.assume
-// comparisons.  Copies of these operations are inserted into the true/false
-// edge (and after assumes), and information attached to the copies.  All uses
-// of the original operation in blocks dominated by the true/false edge (and
-// assume), are replaced with uses of the copies.  This enables passes to easily
-// and sparsely propagate condition based info into the operations that may be
-// affected.
-//
-// Example:
-// %cmp = icmp eq i32 %x, 50
-// br i1 %cmp, label %true, label %false
-// true:
-// ret i32 %x
-// false:
-// ret i32 1
-//
-// will become
-//
-// %cmp = icmp eq i32, %x, 50
-// br i1 %cmp, label %true, label %false
-// true:
-// %x.0 = call @llvm.ssa_copy.i32(i32 %x)
-// ret i32 %x.0
-// false:
-// ret i32 1
-//
-// Using getPredicateInfoFor on x.0 will give you the comparison it is
-// dominated by (the icmp), and that you are located in the true edge of that
-// comparison, which tells you x.0 is 50.
-//
-// In order to reduce the number of copies inserted, predicateinfo is only
-// inserted where it would actually be live.  This means if there are no uses of
-// an operation dominated by the branch edges, or by an assume, the associated
-// predicate info is never inserted.
-//
-//
+///
+/// \file
+/// \brief  This file implements the PredicateInfo analysis, which creates an Extended
+/// SSA form for operations used in branch comparisons and llvm.assume
+/// comparisons.
+///
+/// Copies of these operations are inserted into the true/false edge (and after
+/// assumes), and information attached to the copies.  All uses of the original
+/// operation in blocks dominated by the true/false edge (and assume), are
+/// replaced with uses of the copies.  This enables passes to easily and sparsely
+/// propagate condition based info into the operations that may be affected.
+///
+/// Example:
+/// %cmp = icmp eq i32 %x, 50
+/// br i1 %cmp, label %true, label %false
+/// true:
+/// ret i32 %x
+/// false:
+/// ret i32 1
+///
+/// will become
+///
+/// %cmp = icmp eq i32, %x, 50
+/// br i1 %cmp, label %true, label %false
+/// true:
+/// %x.0 = call @llvm.ssa_copy.i32(i32 %x)
+/// ret i32 %x.0
+/// false:
+/// ret i32 1
+///
+/// Using getPredicateInfoFor on x.0 will give you the comparison it is
+/// dominated by (the icmp), and that you are located in the true edge of that
+/// comparison, which tells you x.0 is 50.
+///
+/// In order to reduce the number of copies inserted, predicateinfo is only
+/// inserted where it would actually be live.  This means if there are no uses of
+/// an operation dominated by the branch edges, or by an assume, the associated
+/// predicate info is never inserted.
+///
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_TRANSFORMS_UTILS_PREDICATEINFO_H

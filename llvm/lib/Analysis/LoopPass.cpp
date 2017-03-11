@@ -54,6 +54,8 @@ public:
     }
     return false;
   }
+
+  StringRef getPassName() const override { return "Print Loop IR"; }
 };
 
 char PrintLoopPassWrapper::ID = 0;

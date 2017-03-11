@@ -57,8 +57,10 @@ static bool startsNextParameter(const FormatToken &Current,
       Style.BreakConstructorInitializersBeforeComma)
     return true;
   return Previous.is(tok::comma) && !Current.isTrailingComment() &&
-         (Previous.isNot(TT_CtorInitializerComma) ||
-          !Style.BreakConstructorInitializersBeforeComma);
+         ((Previous.isNot(TT_CtorInitializerComma) ||
+          !Style.BreakConstructorInitializersBeforeComma) &&
+          (Previous.isNot(TT_InheritanceComma) ||
+          !Style.BreakBeforeInheritanceComma));
 }
 
 ContinuationIndenter::ContinuationIndenter(const FormatStyle &Style,
@@ -349,6 +351,11 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
   if (!DryRun)
     Whitespaces.replaceWhitespace(Current, /*Newlines=*/0, Spaces,
                                   State.Column + Spaces);
+
+  // If "BreakBeforeInheritanceComma" mode, don't break within the inheritance
+  // declaration unless there is multiple inheritance.
+  if (Style.BreakBeforeInheritanceComma && Current.is(TT_InheritanceColon))
+    State.Stack.back().NoLineBreak = true;
 
   if (Current.is(TT_SelectorName) &&
       !State.Stack.back().ObjCSelectorNameFound) {
@@ -737,10 +744,11 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
   if (PreviousNonComment && PreviousNonComment->is(tok::colon) &&
       PreviousNonComment->isOneOf(TT_ObjCMethodExpr, TT_DictLiteral))
     return ContinuationIndent;
-  if (NextNonComment->is(TT_CtorInitializerColon))
-    return State.FirstIndent + Style.ConstructorInitializerIndentWidth;
   if (NextNonComment->is(TT_CtorInitializerComma))
     return State.Stack.back().Indent;
+  if (NextNonComment->isOneOf(TT_CtorInitializerColon, TT_InheritanceColon,
+                              TT_InheritanceComma))
+    return State.FirstIndent + Style.ConstructorInitializerIndentWidth;
   if (Previous.is(tok::r_paren) && !Current.isBinaryOperator() &&
       !Current.isOneOf(tok::colon, tok::comment))
     return ContinuationIndent;
@@ -810,6 +818,9 @@ unsigned ContinuationIndenter::moveStateToNextToken(LineState &State,
       State.Stack.back().AvoidBinPacking = true;
     State.Stack.back().BreakBeforeParameter = false;
   }
+  if (Current.is(TT_InheritanceColon))
+    State.Stack.back().Indent =
+        State.FirstIndent + Style.ContinuationIndentWidth;
   if (Current.isOneOf(TT_BinaryOperator, TT_ConditionalExpr) && Newline)
     State.Stack.back().NestedBlockIndent =
         State.Column + Current.ColumnWidth + 1;

@@ -499,6 +499,41 @@ TEST_F(FileSystemTest, Unique) {
   ASSERT_NO_ERROR(fs::remove(TempPath));
 }
 
+TEST_F(FileSystemTest, RealPath) {
+  ASSERT_NO_ERROR(
+      fs::create_directories(Twine(TestDirectory) + "/test1/test2/test3"));
+  ASSERT_TRUE(fs::exists(Twine(TestDirectory) + "/test1/test2/test3"));
+
+  SmallString<64> RealBase;
+  SmallString<64> Expected;
+  SmallString<64> Actual;
+
+  // TestDirectory itself might be under a symlink or have been specified with
+  // a different case than the existing temp directory.  In such cases real_path
+  // on the concatenated path will differ in the TestDirectory portion from
+  // how we specified it.  Make sure to compare against the real_path of the
+  // TestDirectory, and not just the value of TestDirectory.
+  ASSERT_NO_ERROR(fs::real_path(TestDirectory, RealBase));
+  path::native(Twine(RealBase) + "/test1/test2", Expected);
+
+  ASSERT_NO_ERROR(fs::real_path(
+      Twine(TestDirectory) + "/././test1/../test1/test2/./test3/..", Actual));
+
+  EXPECT_EQ(Expected, Actual);
+
+  SmallString<64> HomeDir;
+  bool Result = llvm::sys::path::home_directory(HomeDir);
+  if (Result) {
+    ASSERT_NO_ERROR(fs::real_path(HomeDir, Expected));
+    ASSERT_NO_ERROR(fs::real_path("~", Actual, true));
+    EXPECT_EQ(Expected, Actual);
+    ASSERT_NO_ERROR(fs::real_path("~/", Actual, true));
+    EXPECT_EQ(Expected, Actual);
+  }
+
+  ASSERT_NO_ERROR(fs::remove_directories(Twine(TestDirectory) + "/test1"));
+}
+
 TEST_F(FileSystemTest, TempFiles) {
   // Create a temp file.
   int FileDescriptor;

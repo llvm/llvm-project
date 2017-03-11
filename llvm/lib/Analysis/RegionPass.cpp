@@ -206,6 +206,8 @@ public:
 
     return false;
   }
+
+  StringRef getPassName() const override { return "Print Region IR"; }
 };
 
 char PrintRegionPass::ID = 0;

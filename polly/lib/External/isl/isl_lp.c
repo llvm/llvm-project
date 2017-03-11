@@ -320,13 +320,16 @@ error:
 static __isl_give isl_val *isl_basic_set_opt_lp_val(
 	__isl_keep isl_basic_set *bset, int max, __isl_keep isl_aff *obj)
 {
+	isl_bool equal;
 	isl_val *res;
 
 	if (!bset || !obj)
 		return NULL;
 
-	if (isl_space_match(bset->dim, isl_dim_param,
-			    obj->ls->dim, isl_dim_param))
+	equal = isl_basic_set_space_has_equal_params(bset, obj->ls->dim);
+	if (equal < 0)
+		return NULL;
+	if (equal)
 		return isl_basic_set_opt_lp_val_aligned(bset, max, obj);
 
 	bset = isl_basic_set_copy(bset);

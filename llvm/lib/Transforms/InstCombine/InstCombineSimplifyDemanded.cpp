@@ -1584,6 +1584,9 @@ Value *InstCombiner::SimplifyDemandedVectorElts(Value *V, APInt DemandedElts,
       for (unsigned I = 0, E = II->getNumArgOperands(); I != E; ++I)
         Args.push_back(II->getArgOperand(I));
 
+      IRBuilderBase::InsertPointGuard Guard(*Builder);
+      Builder->SetInsertPoint(II);
+
       CallInst *NewCall = Builder->CreateCall(NewIntrin, Args);
       NewCall->takeName(II);
       NewCall->copyMetadata(*II);

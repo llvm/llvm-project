@@ -185,7 +185,7 @@ def o: JoinedOrSeparate<["-"], "o">, MetaVarName<"<path>">,
 def oformat: Separate<["--"], "oformat">, MetaVarName<"<format>">,
   HelpText<"Specify the binary format for the output object file">;
 
-def omagic: F<"omagic">, MetaVarName<"<magic>">,
+def omagic: Flag<["--"], "omagic">, MetaVarName<"<magic>">,
   HelpText<"Set the text and data sections to be readable and writable">;
 
 def pie: F<"pie">, HelpText<"Create a position independent executable">;
@@ -387,9 +387,9 @@ def lto_partitions: J<"lto-partitions=">,
   HelpText<"Number of LTO codegen partitions">;
 def disable_verify: F<"disable-verify">;
 def mllvm: S<"mllvm">;
-def opt_remarks_filename: S<"opt-remarks-filename">,
+def opt_remarks_filename: Separate<["--"], "opt-remarks-filename">,
   HelpText<"YAML output file for optimization remarks">;
-def opt_remarks_with_hotness: F<"opt-remarks-with-hotness">,
+def opt_remarks_with_hotness: Flag<["--"], "opt-remarks-with-hotness">,
   HelpText<"Include hotness informations in the optimization remarks file">;
 def save_temps: F<"save-temps">;
 def thinlto_cache_dir: J<"thinlto-cache-dir=">,

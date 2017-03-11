@@ -528,6 +528,10 @@ the configuration (without a prefix: ``Auto``).
 
 
 
+**BreakBeforeInheritanceComma** (``bool``)
+  If ``true``, in the class inheritance expression clang-format will
+  break before ``:`` and ``,`` if there is multiple inheritance.
+
 **BreakBeforeTernaryOperators** (``bool``)
   If ``true``, ternary operators will be placed after line breaks.
 

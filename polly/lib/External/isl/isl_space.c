@@ -869,7 +869,7 @@ static void get_ids(__isl_keep isl_space *dim, enum isl_dim_type type,
 		ids[i] = get_id(dim, type, first + i);
 }
 
-__isl_give isl_space *isl_space_extend(__isl_take isl_space *space,
+static __isl_give isl_space *space_extend(__isl_take isl_space *space,
 			unsigned nparam, unsigned n_in, unsigned n_out)
 {
 	isl_id **ids = NULL;
@@ -917,37 +917,43 @@ error:
 	return NULL;
 }
 
-__isl_give isl_space *isl_space_add_dims(__isl_take isl_space *dim,
+__isl_give isl_space *isl_space_extend(__isl_take isl_space *space,
+	unsigned nparam, unsigned n_in, unsigned n_out)
+{
+	return space_extend(space, nparam, n_in, n_out);
+}
+
+__isl_give isl_space *isl_space_add_dims(__isl_take isl_space *space,
 	enum isl_dim_type type, unsigned n)
 {
-	dim = isl_space_reset(dim, type);
-	if (!dim)
+	space = isl_space_reset(space, type);
+	if (!space)
 		return NULL;
 	switch (type) {
 	case isl_dim_param:
-		dim = isl_space_extend(dim,
-					dim->nparam + n, dim->n_in, dim->n_out);
-		if (dim && dim->nested[0] &&
-		    !(dim->nested[0] = isl_space_add_dims(dim->nested[0],
+		space = space_extend(space,
+				space->nparam + n, space->n_in, space->n_out);
+		if (space && space->nested[0] &&
+		    !(space->nested[0] = isl_space_add_dims(space->nested[0],
 						    isl_dim_param, n)))
 			goto error;
-		if (dim && dim->nested[1] &&
-		    !(dim->nested[1] = isl_space_add_dims(dim->nested[1],
+		if (space && space->nested[1] &&
+		    !(space->nested[1] = isl_space_add_dims(space->nested[1],
 						    isl_dim_param, n)))
 			goto error;
-		return dim;
+		return space;
 	case isl_dim_in:
-		return isl_space_extend(dim,
-					dim->nparam, dim->n_in + n, dim->n_out);
+		return space_extend(space,
+				space->nparam, space->n_in + n, space->n_out);
 	case isl_dim_out:
-		return isl_space_extend(dim,
-					dim->nparam, dim->n_in, dim->n_out + n);
+		return space_extend(space,
+				space->nparam, space->n_in, space->n_out + n);
 	default:
-		isl_die(dim->ctx, isl_error_invalid,
+		isl_die(space->ctx, isl_error_invalid,
 			"cannot add dimensions of specified type", goto error);
 	}
 error:
-	isl_space_free(dim);
+	isl_space_free(space);
 	return NULL;
 }
 
@@ -2357,6 +2363,23 @@ isl_bool isl_space_has_named_params(__isl_keep isl_space *space)
 		if (!space->ids[off + i])
 			return isl_bool_false;
 	return isl_bool_true;
+}
+
+/* Check that "space" has only named parameters, reporting an error
+ * if it does not.
+ */
+isl_stat isl_space_check_named_params(__isl_keep isl_space *space)
+{
+	isl_bool named;
+
+	named = isl_space_has_named_params(space);
+	if (named < 0)
+		return isl_stat_error;
+	if (!named)
+		isl_die(isl_space_get_ctx(space), isl_error_invalid,
+			"unaligned unnamed parameters", return isl_stat_error);
+
+	return isl_stat_ok;
 }
 
 /* Align the initial parameters of dim1 to match the order in dim2.

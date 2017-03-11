@@ -48,6 +48,7 @@ namespace format {
   TYPE(FunctionTypeLParen) \
   TYPE(ImplicitStringLiteral) \
   TYPE(InheritanceColon) \
+  TYPE(InheritanceComma) \
   TYPE(InlineASMBrace) \
   TYPE(InlineASMColon) \
   TYPE(JavaAnnotation) \

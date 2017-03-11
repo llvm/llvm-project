@@ -70,6 +70,8 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();
   }
+
+  StringRef getPassName() const override { return "Print Module IR"; }
 };
 
 class PrintFunctionPassWrapper : public FunctionPass {
@@ -91,6 +93,8 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();
   }
+
+  StringRef getPassName() const override { return "Print Function IR"; }
 };
 
 class PrintBasicBlockPass : public BasicBlockPass {
@@ -111,6 +115,8 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();
   }
+
+  StringRef getPassName() const override { return "Print BasicBlock IR"; }
 };
 
 }

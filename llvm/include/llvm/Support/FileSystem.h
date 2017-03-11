@@ -339,6 +339,16 @@ std::error_code create_link(const Twine &to, const Twine &from);
 /// specific error_code.
 std::error_code create_hard_link(const Twine &to, const Twine &from);
 
+/// @brief Collapse all . and .. patterns, resolve all symlinks, and optionally
+///        expand ~ expressions to the user's home directory.
+///
+/// @param path The path to resolve.
+/// @param output The location to store the resolved path.
+/// @param expand_tilde If true, resolves ~ expressions to the user's home
+///                     directory.
+std::error_code real_path(const Twine &path, SmallVectorImpl<char> &output,
+                          bool expand_tilde = false);
+
 /// @brief Get the current path.
 ///
 /// @param result Holds the current path on return.
@@ -489,7 +499,7 @@ inline bool is_local(int FD) {
 /// @brief Does status represent a directory?
 ///
 /// @param Path The path to get the type of.
-/// @param follow For symbolic links, indicates whether to return the file type
+/// @param Follow For symbolic links, indicates whether to return the file type
 ///               of the link itself, or of the target.
 /// @returns A value from the file_type enumeration indicating the type of file.
 file_type get_file_type(const Twine &Path, bool Follow = true);

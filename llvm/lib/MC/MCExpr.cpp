@@ -152,8 +152,8 @@ const MCBinaryExpr *MCBinaryExpr::create(Opcode Opc, const MCExpr *LHS,
 }
 
 const MCUnaryExpr *MCUnaryExpr::create(Opcode Opc, const MCExpr *Expr,
-                                       MCContext &Ctx) {
-  return new (Ctx) MCUnaryExpr(Opc, Expr);
+                                       MCContext &Ctx, SMLoc Loc) {
+  return new (Ctx) MCUnaryExpr(Opc, Expr, Loc);
 }
 
 const MCConstantExpr *MCConstantExpr::create(int64_t Value, MCContext &Ctx) {

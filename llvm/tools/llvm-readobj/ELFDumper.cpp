@@ -1003,6 +1003,7 @@ static const char *getElfSectionType(unsigned Arch, unsigned Type) {
     LLVM_READOBJ_ENUM_CASE(ELF, SHT_MIPS_REGINFO);
     LLVM_READOBJ_ENUM_CASE(ELF, SHT_MIPS_OPTIONS);
     LLVM_READOBJ_ENUM_CASE(ELF, SHT_MIPS_ABIFLAGS);
+    LLVM_READOBJ_ENUM_CASE(ELF, SHT_MIPS_DWARF);
     }
   }
 
@@ -2627,6 +2628,8 @@ std::string getSectionTypeString(unsigned Arch, unsigned Type) {
       return "MIPS_OPTIONS";
     case SHT_MIPS_ABIFLAGS:
       return "MIPS_ABIFLAGS";
+    case SHT_MIPS_DWARF:
+      return "SHT_MIPS_DWARF";
     }
   }
   switch (Type) {

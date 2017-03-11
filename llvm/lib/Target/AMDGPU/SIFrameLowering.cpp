@@ -393,6 +393,14 @@ static bool allStackObjectsAreDead(const MachineFrameInfo &MFI) {
   return true;
 }
 
+int SIFrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
+                                            unsigned &FrameReg) const {
+  const SIRegisterInfo *RI = MF.getSubtarget<SISubtarget>().getRegisterInfo();
+
+  FrameReg = RI->getFrameRegister(MF);
+  return MF.getFrameInfo().getObjectOffset(FI);
+}
+
 void SIFrameLowering::processFunctionBeforeFrameFinalized(
   MachineFunction &MF,
   RegScavenger *RS) const {

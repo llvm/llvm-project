@@ -422,6 +422,10 @@ struct FormatStyle {
   /// which should not be split into lines or otherwise changed.
   std::string CommentPragmas;
 
+  /// \brief If ``true``, in the class inheritance expression clang-format will
+  /// break before ``:`` and ``,`` if there is multiple inheritance.
+  bool BreakBeforeInheritanceComma;
+
   /// \brief If the constructor initializers don't fit on a line, put each
   /// initializer on its own line.
   bool ConstructorInitializerAllOnOneLineOrOnePerLine;
@@ -844,6 +848,7 @@ struct FormatStyle {
            BreakAfterJavaFieldAnnotations == R.BreakAfterJavaFieldAnnotations &&
            BreakStringLiterals == R.BreakStringLiterals &&
            ColumnLimit == R.ColumnLimit && CommentPragmas == R.CommentPragmas &&
+           BreakBeforeInheritanceComma == R.BreakBeforeInheritanceComma &&
            ConstructorInitializerAllOnOneLineOrOnePerLine ==
                R.ConstructorInitializerAllOnOneLineOrOnePerLine &&
            ConstructorInitializerIndentWidth ==

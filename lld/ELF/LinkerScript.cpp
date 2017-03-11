@@ -81,7 +81,7 @@ static bool isUnderSysroot(StringRef Path) {
 
 template <class ELFT>
 void LinkerScript<ELFT>::setDot(Expr E, const Twine &Loc, bool InSec) {
-  uintX_t Val = E(Dot);
+  uintX_t Val = E();
   if (Val < Dot) {
     if (InSec)
       error(Loc + ": unable to move location counter backward for: " +
@@ -109,7 +109,7 @@ void LinkerScript<ELFT>::assignSymbol(SymbolAssignment *Cmd, bool InSec) {
     return;
 
   auto *Sym = cast<DefinedRegular>(Cmd->Sym);
-  Sym->Value = Cmd->Expression(Dot);
+  Sym->Value = Cmd->Expression();
   if (!Cmd->Expression.IsAbsolute()) {
     Sym->Section = Cmd->Expression.Section();
     if (auto *Sec = dyn_cast_or_null<OutputSection>(Sym->Section))
@@ -329,7 +329,7 @@ void LinkerScript<ELFT>::processCommands(OutputSectionFactory &Factory) {
       // created by Writer<ELFT>. The LinkerScript<ELFT>::assignAddresses
       // will not be called, so ASSERT should be evaluated now.
       if (!Opt.HasSections)
-        Cmd->Expression(0);
+        Cmd->Expression();
       continue;
     }
 
@@ -368,7 +368,7 @@ void LinkerScript<ELFT>::processCommands(OutputSectionFactory &Factory) {
       // is given, input sections are aligned to that value, whether the
       // given value is larger or smaller than the original section alignment.
       if (Cmd->SubalignExpr) {
-        uint32_t Subalign = Cmd->SubalignExpr(0);
+        uint32_t Subalign = Cmd->SubalignExpr();
         for (InputSectionBase *S : V)
           S->Alignment = Subalign;
       }
@@ -470,7 +470,7 @@ template <class ELFT> void LinkerScript<ELFT>::process(BaseCommand &Base) {
   }
 
   if (auto *AssertCmd = dyn_cast<AssertCommand>(&Base)) {
-    AssertCmd->Expression(Dot);
+    AssertCmd->Expression();
     return;
   }
 
@@ -549,7 +549,7 @@ template <class ELFT>
 void LinkerScript<ELFT>::assignOffsets(OutputSectionCommand *Cmd) {
   if (Cmd->LMAExpr) {
     uintX_t D = Dot;
-    LMAOffset = [=] { return Cmd->LMAExpr(D) - D; };
+    LMAOffset = [=] { return Cmd->LMAExpr() - D; };
   }
   OutputSection *Sec = findSection<ELFT>(Cmd->Name, *OutputSections);
   if (!Sec)
@@ -560,7 +560,7 @@ void LinkerScript<ELFT>::assignOffsets(OutputSectionCommand *Cmd) {
 
   // Handle align (e.g. ".foo : ALIGN(16) { ... }").
   if (Cmd->AlignExpr)
-    Sec->updateAlignment(Cmd->AlignExpr(0));
+    Sec->updateAlignment(Cmd->AlignExpr());
 
   // Try and find an appropriate memory region to assign offsets in.
   CurMemRegion = findMemoryRegion(Cmd, Sec);
@@ -775,7 +775,7 @@ void LinkerScript<ELFT>::assignAddresses(std::vector<PhdrEntry> &Phdrs) {
     }
 
     if (auto *Cmd = dyn_cast<AssertCommand>(Base.get())) {
-      Cmd->Expression(Dot);
+      Cmd->Expression();
       continue;
     }
 
@@ -810,7 +810,7 @@ template <class ELFT> std::vector<PhdrEntry> LinkerScript<ELFT>::createPhdrs() {
       Phdr.add(Out::ProgramHeaders);
 
     if (Cmd.LMAExpr) {
-      Phdr.p_paddr = Cmd.LMAExpr(0);
+      Phdr.p_paddr = Cmd.LMAExpr();
       Phdr.HasLMA = true;
     }
   }
@@ -878,7 +878,7 @@ void LinkerScript<ELFT>::writeDataBytes(StringRef Name, uint8_t *Buf) {
   auto *Cmd = dyn_cast<OutputSectionCommand>(Opt.Commands[I].get());
   for (const std::unique_ptr<BaseCommand> &Base : Cmd->Commands)
     if (auto *Data = dyn_cast<BytesDataCommand>(Base.get()))
-      writeInt<ELFT>(Buf + Data->Offset, Data->Expression(0), Data->Size);
+      writeInt<ELFT>(Buf + Data->Offset, Data->Expression(), Data->Size);
 }
 
 template <class ELFT> bool LinkerScript<ELFT>::hasLMA(StringRef Name) {
@@ -938,6 +938,8 @@ template <class ELFT> uint64_t LinkerScript<ELFT>::getHeaderSize() {
 
 template <class ELFT>
 uint64_t LinkerScript<ELFT>::getSymbolValue(const Twine &Loc, StringRef S) {
+  if (S == ".")
+    return Dot;
   if (SymbolBody *B = Symtab<ELFT>::X->find(S))
     return B->getVA<ELFT>();
   error(Loc + ": symbol not found: " + S);
@@ -949,6 +951,8 @@ template <class ELFT> bool LinkerScript<ELFT>::isDefined(StringRef S) {
 }
 
 template <class ELFT> bool LinkerScript<ELFT>::isAbsolute(StringRef S) {
+  if (S == ".")
+    return false;
   SymbolBody *Sym = Symtab<ELFT>::X->find(S);
   auto *DR = dyn_cast_or_null<DefinedRegular>(Sym);
   return DR && !DR->Section;
@@ -1279,7 +1283,7 @@ void ScriptParser::readPhdrs() {
         expect("(");
         // Passing 0 for the value of dot is a bit of a hack. It means that
         // we accept expressions like ".|1".
-        PhdrCmd.Flags = readExpr()(0);
+        PhdrCmd.Flags = readExpr()();
         expect(")");
       } else
         setError("unexpected header attribute: " + Tok);
@@ -1444,10 +1448,10 @@ Expr ScriptParser::readAssert() {
   expect(",");
   StringRef Msg = unquote(next());
   expect(")");
-  return [=](uint64_t Dot) {
-    if (!E(Dot))
+  return [=] {
+    if (!E())
       error(Msg);
-    return Dot;
+    return ScriptBase->getDot();
   };
 }
 
@@ -1571,18 +1575,6 @@ SymbolAssignment *ScriptParser::readProvideOrAssignment(StringRef Tok) {
   return Cmd;
 }
 
-static uint64_t getSymbolValue(const Twine &Loc, StringRef S, uint64_t Dot) {
-  if (S == ".")
-    return Dot;
-  return ScriptBase->getSymbolValue(Loc, S);
-}
-
-static bool isAbsolute(StringRef S) {
-  if (S == ".")
-    return false;
-  return ScriptBase->isAbsolute(S);
-}
-
 SymbolAssignment *ScriptParser::readAssignment(StringRef Name) {
   StringRef Op = next();
   Expr E;
@@ -1595,9 +1587,7 @@ SymbolAssignment *ScriptParser::readAssignment(StringRef Name) {
   }
   if (Op == "+=") {
     std::string Loc = getCurrentLocation();
-    E = [=](uint64_t Dot) {
-      return getSymbolValue(Loc, Name, Dot) + E(Dot);
-    };
+    E = [=] { return ScriptBase->getSymbolValue(Loc, Name) + E(); };
   }
   return new SymbolAssignment(Name, E, getCurrentLocation());
 }
@@ -1622,41 +1612,41 @@ static Expr combine(StringRef Op, Expr L, Expr R) {
   };
 
   if (Op == "*")
-    return [=](uint64_t Dot) { return L(Dot) * R(Dot); };
+    return [=] { return L() * R(); };
   if (Op == "/") {
-    return [=](uint64_t Dot) -> uint64_t {
-      uint64_t RHS = R(Dot);
+    return [=]() -> uint64_t {
+      uint64_t RHS = R();
       if (RHS == 0) {
         error("division by zero");
         return 0;
       }
-      return L(Dot) / RHS;
+      return L() / RHS;
     };
   }
   if (Op == "+")
-    return {[=](uint64_t Dot) { return L(Dot) + R(Dot); }, IsAbs, GetOutSec};
+    return {[=] { return L() + R(); }, IsAbs, GetOutSec};
   if (Op == "-")
-    return {[=](uint64_t Dot) { return L(Dot) - R(Dot); }, IsAbs, GetOutSec};
+    return {[=] { return L() - R(); }, IsAbs, GetOutSec};
   if (Op == "<<")
-    return [=](uint64_t Dot) { return L(Dot) << R(Dot); };
+    return [=] { return L() << R(); };
   if (Op == ">>")
-    return [=](uint64_t Dot) { return L(Dot) >> R(Dot); };
+    return [=] { return L() >> R(); };
   if (Op == "<")
-    return [=](uint64_t Dot) { return L(Dot) < R(Dot); };
+    return [=] { return L() < R(); };
   if (Op == ">")
-    return [=](uint64_t Dot) { return L(Dot) > R(Dot); };
+    return [=] { return L() > R(); };
   if (Op == ">=")
-    return [=](uint64_t Dot) { return L(Dot) >= R(Dot); };
+    return [=] { return L() >= R(); };
   if (Op == "<=")
-    return [=](uint64_t Dot) { return L(Dot) <= R(Dot); };
+    return [=] { return L() <= R(); };
   if (Op == "==")
-    return [=](uint64_t Dot) { return L(Dot) == R(Dot); };
+    return [=] { return L() == R(); };
   if (Op == "!=")
-    return [=](uint64_t Dot) { return L(Dot) != R(Dot); };
+    return [=] { return L() != R(); };
   if (Op == "&")
-    return [=](uint64_t Dot) { return L(Dot) & R(Dot); };
+    return [=] { return L() & R(); };
   if (Op == "|")
-    return [=](uint64_t Dot) { return L(Dot) | R(Dot); };
+    return [=] { return L() | R(); };
   llvm_unreachable("invalid operator");
 }
 
@@ -1761,28 +1751,25 @@ Expr ScriptParser::readPrimary() {
 
   if (Tok == "~") {
     Expr E = readPrimary();
-    return [=](uint64_t Dot) { return ~E(Dot); };
+    return [=] { return ~E(); };
   }
   if (Tok == "-") {
     Expr E = readPrimary();
-    return [=](uint64_t Dot) { return -E(Dot); };
+    return [=] { return -E(); };
   }
 
   // Built-in functions are parsed here.
   // https://sourceware.org/binutils/docs/ld/Builtin-Functions.html.
   if (Tok == "ADDR") {
     StringRef Name = readParenLiteral();
-    return {[=](uint64_t Dot) {
-              return ScriptBase->getOutputSection(Location, Name)->Addr;
-            },
+    return {[=] { return ScriptBase->getOutputSection(Location, Name)->Addr; },
             [=] { return false; },
             [=] { return ScriptBase->getOutputSection(Location, Name); }};
   }
   if (Tok == "LOADADDR") {
     StringRef Name = readParenLiteral();
-    return [=](uint64_t Dot) {
-      return ScriptBase->getOutputSection(Location, Name)->getLMA();
-    };
+    return
+        [=] { return ScriptBase->getOutputSection(Location, Name)->getLMA(); };
   }
   if (Tok == "ASSERT")
     return readAssert();
@@ -1792,18 +1779,18 @@ Expr ScriptParser::readPrimary() {
     if (consume(",")) {
       Expr E2 = readExpr();
       expect(")");
-      return [=](uint64_t Dot) { return alignTo(E(Dot), E2(Dot)); };
+      return [=] { return alignTo(E(), E2()); };
     }
     expect(")");
-    return [=](uint64_t Dot) { return alignTo(Dot, E(Dot)); };
+    return [=] { return alignTo(ScriptBase->getDot(), E()); };
   }
   if (Tok == "CONSTANT") {
     StringRef Name = readParenLiteral();
-    return [=](uint64_t Dot) { return getConstant(Name); };
+    return [=] { return getConstant(Name); };
   }
   if (Tok == "DEFINED") {
     StringRef Name = readParenLiteral();
-    return [=](uint64_t Dot) { return ScriptBase->isDefined(Name) ? 1 : 0; };
+    return [=] { return ScriptBase->isDefined(Name) ? 1 : 0; };
   }
   if (Tok == "SEGMENT_START") {
     expect("(");
@@ -1811,7 +1798,7 @@ Expr ScriptParser::readPrimary() {
     expect(",");
     Expr E = readExpr();
     expect(")");
-    return [=](uint64_t Dot) { return E(Dot); };
+    return [=] { return E(); };
   }
   if (Tok == "DATA_SEGMENT_ALIGN") {
     expect("(");
@@ -1819,13 +1806,13 @@ Expr ScriptParser::readPrimary() {
     expect(",");
     readExpr();
     expect(")");
-    return [=](uint64_t Dot) { return alignTo(Dot, E(Dot)); };
+    return [=] { return alignTo(ScriptBase->getDot(), E()); };
   }
   if (Tok == "DATA_SEGMENT_END") {
     expect("(");
     expect(".");
     expect(")");
-    return [](uint64_t Dot) { return Dot; };
+    return []() { return ScriptBase->getDot(); };
   }
   // GNU linkers implements more complicated logic to handle
   // DATA_SEGMENT_RELRO_END. We instead ignore the arguments and just align to
@@ -1836,31 +1823,30 @@ Expr ScriptParser::readPrimary() {
     expect(",");
     readExpr();
     expect(")");
-    return [](uint64_t Dot) { return alignTo(Dot, Target->PageSize); };
+    return []() { return alignTo(ScriptBase->getDot(), Target->PageSize); };
   }
   if (Tok == "SIZEOF") {
     StringRef Name = readParenLiteral();
-    return [=](uint64_t Dot) { return ScriptBase->getOutputSectionSize(Name); };
+    return [=] { return ScriptBase->getOutputSectionSize(Name); };
   }
   if (Tok == "ALIGNOF") {
     StringRef Name = readParenLiteral();
-    return [=](uint64_t Dot) {
-      return ScriptBase->getOutputSection(Location, Name)->Alignment;
-    };
+    return
+        [=] { return ScriptBase->getOutputSection(Location, Name)->Alignment; };
   }
   if (Tok == "SIZEOF_HEADERS")
-    return [=](uint64_t Dot) { return ScriptBase->getHeaderSize(); };
+    return [=] { return ScriptBase->getHeaderSize(); };
 
   // Tok is a literal number.
   uint64_t V;
   if (readInteger(Tok, V))
-    return [=](uint64_t Dot) { return V; };
+    return [=] { return V; };
 
   // Tok is a symbol name.
   if (Tok != "." && !isValidCIdentifier(Tok))
     setError("malformed number: " + Tok);
-  return {[=](uint64_t Dot) { return getSymbolValue(Location, Tok, Dot); },
-          [=] { return isAbsolute(Tok); },
+  return {[=] { return ScriptBase->getSymbolValue(Location, Tok); },
+          [=] { return ScriptBase->isAbsolute(Tok); },
           [=] { return ScriptBase->getSymbolSection(Tok); }};
 }
 
@@ -1868,7 +1854,7 @@ Expr ScriptParser::readTernary(Expr Cond) {
   Expr L = readExpr();
   expect(":");
   Expr R = readExpr();
-  return [=](uint64_t Dot) { return Cond(Dot) ? L(Dot) : R(Dot); };
+  return [=] { return Cond() ? L() : R(); };
 }
 
 Expr ScriptParser::readParenExpr() {

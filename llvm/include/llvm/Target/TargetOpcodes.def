@@ -395,6 +395,12 @@ HANDLE_TARGET_OPCODE(G_PTR_MASK)
 /// Generic BRANCH instruction. This is an unconditional branch.
 HANDLE_TARGET_OPCODE(G_BR)
 
+/// Generic insertelement.
+HANDLE_TARGET_OPCODE(G_INSERT_VECTOR_ELT)
+
+/// Generic extractelement.
+HANDLE_TARGET_OPCODE(G_EXTRACT_VECTOR_ELT)
+
 // TODO: Add more generic opcodes as we move along.
 
 /// Marker for the end of the generic opcode.
