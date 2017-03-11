@@ -43,17 +43,17 @@ class SectionBase;
 // Later, we evaluate the expression by calling the function
 // with the value of special context variable ".".
 struct Expr {
-  std::function<uint64_t(uint64_t)> Val;
+  std::function<uint64_t()> Val;
   std::function<bool()> IsAbsolute;
 
   // If expression is section-relative the function below is used
   // to get the output section pointer.
   std::function<SectionBase *()> Section;
 
-  uint64_t operator()(uint64_t Dot) const { return Val(Dot); }
+  uint64_t operator()() const { return Val(); }
   operator bool() const { return (bool)Val; }
 
-  Expr(std::function<uint64_t(uint64_t)> Val, std::function<bool()> IsAbsolute,
+  Expr(std::function<uint64_t()> Val, std::function<bool()> IsAbsolute,
        std::function<SectionBase *()> Section)
       : Val(Val), IsAbsolute(IsAbsolute), Section(Section) {}
   template <typename T>
@@ -213,6 +213,7 @@ protected:
 public:
   virtual uint64_t getHeaderSize() = 0;
   virtual uint64_t getSymbolValue(const Twine &Loc, StringRef S) = 0;
+  uint64_t getDot() { return getSymbolValue("", "."); }
   virtual bool isDefined(StringRef S) = 0;
   virtual bool isAbsolute(StringRef S) = 0;
   virtual OutputSection *getSymbolSection(StringRef S) = 0;

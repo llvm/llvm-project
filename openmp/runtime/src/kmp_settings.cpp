@@ -2240,9 +2240,12 @@ __kmp_parse_affinity_env( char const * name, char const * value,
     if ( proclist ) {
         if ( ! type ) {
             KMP_WARNING( AffProcListNoType, name );
-            __kmp_affinity_type = affinity_explicit;
+            *out_type = affinity_explicit;
+# if OMP_40_ENABLED
+            __kmp_nested_proc_bind.bind_types[0] = proc_bind_intel;
+# endif
         }
-        else if ( __kmp_affinity_type != affinity_explicit ) {
+        else if ( *out_type != affinity_explicit ) {
             KMP_WARNING( AffProcListNotExplicit, name );
             KMP_ASSERT( *out_proclist != NULL );
             KMP_INTERNAL_FREE( *out_proclist );

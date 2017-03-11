@@ -1819,6 +1819,19 @@ void ScopStmt::removeMemoryAccess(MemoryAccess *MA) {
   InstructionToAccess.erase(MA->getAccessInstruction());
 }
 
+void ScopStmt::removeSingleMemoryAccess(MemoryAccess *MA) {
+  auto MAIt = std::find(MemAccs.begin(), MemAccs.end(), MA);
+  assert(MAIt != MemAccs.end());
+  MemAccs.erase(MAIt);
+
+  auto It = InstructionToAccess.find(MA->getAccessInstruction());
+  if (It != InstructionToAccess.end()) {
+    It->second.remove(MA);
+    if (It->second.empty())
+      InstructionToAccess.erase(MA->getAccessInstruction());
+  }
+}
+
 //===----------------------------------------------------------------------===//
 /// Scop class implement
 

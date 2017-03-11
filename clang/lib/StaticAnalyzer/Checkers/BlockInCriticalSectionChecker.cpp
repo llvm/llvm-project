@@ -29,7 +29,9 @@ namespace {
 class BlockInCriticalSectionChecker : public Checker<check::PostCall,
                                                      check::PreCall> {
 
-  CallDescription LockFn, UnlockFn, SleepFn, GetcFn, FgetsFn, ReadFn, RecvFn;
+  CallDescription LockFn, UnlockFn, SleepFn, GetcFn, FgetsFn, ReadFn, RecvFn,
+                  PthreadLockFn, PthreadTryLockFn, PthreadUnlockFn,
+                  MtxLock, MtxTimedLock, MtxTryLock, MtxUnlock;
 
   std::unique_ptr<BugType> BlockInCritSectionBugType;
 
@@ -39,6 +41,10 @@ class BlockInCriticalSectionChecker : public Checker<check::PostCall,
 
 public:
   BlockInCriticalSectionChecker();
+
+  bool isBlockingFunction(const CallEvent &Call) const;
+  bool isLockFunction(const CallEvent &Call) const;
+  bool isUnlockFunction(const CallEvent &Call) const;
 
   void checkPreCall(const CallEvent &Call, CheckerContext &C) const;
 
@@ -55,11 +61,50 @@ REGISTER_TRAIT_WITH_PROGRAMSTATE(MutexCounter, unsigned)
 
 BlockInCriticalSectionChecker::BlockInCriticalSectionChecker()
     : LockFn("lock"), UnlockFn("unlock"), SleepFn("sleep"), GetcFn("getc"),
-      FgetsFn("fgets"), ReadFn("read"), RecvFn("recv") {
+      FgetsFn("fgets"), ReadFn("read"), RecvFn("recv"),
+      PthreadLockFn("pthread_mutex_lock"),
+      PthreadTryLockFn("pthread_mutex_trylock"),
+      PthreadUnlockFn("pthread_mutex_unlock"),
+      MtxLock("mtx_lock"),
+      MtxTimedLock("mtx_timedlock"),
+      MtxTryLock("mtx_trylock"),
+      MtxUnlock("mtx_unlock") {
   // Initialize the bug type.
   BlockInCritSectionBugType.reset(
       new BugType(this, "Call to blocking function in critical section",
                         "Blocking Error"));
+}
+
+bool BlockInCriticalSectionChecker::isBlockingFunction(const CallEvent &Call) const {
+  if (Call.isCalled(SleepFn)
+      || Call.isCalled(GetcFn)
+      || Call.isCalled(FgetsFn)
+      || Call.isCalled(ReadFn)
+      || Call.isCalled(RecvFn)) {
+    return true;
+  }
+  return false;
+}
+
+bool BlockInCriticalSectionChecker::isLockFunction(const CallEvent &Call) const {
+  if (Call.isCalled(LockFn)
+      || Call.isCalled(PthreadLockFn)
+      || Call.isCalled(PthreadTryLockFn)
+      || Call.isCalled(MtxLock)
+      || Call.isCalled(MtxTimedLock)
+      || Call.isCalled(MtxTryLock)) {
+    return true;
+  }
+  return false;
+}
+
+bool BlockInCriticalSectionChecker::isUnlockFunction(const CallEvent &Call) const {
+  if (Call.isCalled(UnlockFn)
+       || Call.isCalled(PthreadUnlockFn)
+       || Call.isCalled(MtxUnlock)) {
+    return true;
+  }
+  return false;
 }
 
 void BlockInCriticalSectionChecker::checkPreCall(const CallEvent &Call,
@@ -68,21 +113,17 @@ void BlockInCriticalSectionChecker::checkPreCall(const CallEvent &Call,
 
 void BlockInCriticalSectionChecker::checkPostCall(const CallEvent &Call,
                                                   CheckerContext &C) const {
-  if (!Call.isCalled(LockFn)
-      && !Call.isCalled(SleepFn)
-      && !Call.isCalled(GetcFn)
-      && !Call.isCalled(FgetsFn)
-      && !Call.isCalled(ReadFn)
-      && !Call.isCalled(RecvFn)
-      && !Call.isCalled(UnlockFn))
+  if (!isBlockingFunction(Call)
+      && !isLockFunction(Call)
+      && !isUnlockFunction(Call))
     return;
 
   ProgramStateRef State = C.getState();
   unsigned mutexCount = State->get<MutexCounter>();
-  if (Call.isCalled(UnlockFn) && mutexCount > 0) {
+  if (isUnlockFunction(Call) && mutexCount > 0) {
     State = State->set<MutexCounter>(--mutexCount);
     C.addTransition(State);
-  } else if (Call.isCalled(LockFn)) {
+  } else if (isLockFunction(Call)) {
     State = State->set<MutexCounter>(++mutexCount);
     C.addTransition(State);
   } else if (mutexCount > 0) {
@@ -97,8 +138,11 @@ void BlockInCriticalSectionChecker::reportBlockInCritSection(
   if (!ErrNode)
     return;
 
-  auto R = llvm::make_unique<BugReport>(*BlockInCritSectionBugType,
-      "A blocking function %s is called inside a critical section.", ErrNode);
+  std::string msg;
+  llvm::raw_string_ostream os(msg);
+  os << "Call to blocking function '" << Call.getCalleeIdentifier()->getName()
+     << "' inside of critical section";
+  auto R = llvm::make_unique<BugReport>(*BlockInCritSectionBugType, os.str(), ErrNode);
   R->addRange(Call.getSourceRange());
   R->markInteresting(BlockDescSym);
   C.emitReport(std::move(R));

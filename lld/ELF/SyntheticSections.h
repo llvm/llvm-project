@@ -84,6 +84,8 @@ public:
 
   size_t NumFdes = 0;
 
+  std::vector<EhInputSection *> Sections;
+
 private:
   uint64_t Size = 0;
   template <class RelTy>
@@ -97,7 +99,6 @@ private:
 
   uintX_t getFdePc(uint8_t *Buf, size_t Off, uint8_t Enc);
 
-  std::vector<EhInputSection *> Sections;
   std::vector<CieRecord *> Cies;
 
   // CIE records are uniquified by their contents and personality functions.

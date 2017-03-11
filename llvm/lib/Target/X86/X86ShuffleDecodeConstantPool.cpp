@@ -91,8 +91,7 @@ static bool extractConstantMask(const Constant *C, unsigned MaskEltSizeInBits,
       continue;
     }
 
-    auto *Elt = cast<ConstantInt>(COp);
-    MaskBits |= Elt->getValue().zextOrTrunc(CstSizeInBits).shl(BitOffset);
+    MaskBits.insertBits(cast<ConstantInt>(COp)->getValue(), BitOffset);
   }
 
   // Now extract the undef/constant bit data into the raw shuffle masks.

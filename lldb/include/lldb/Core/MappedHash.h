@@ -356,10 +356,6 @@ public:
              m_header.bucket_count > 0;
     }
 
-    bool HasContent() const {
-        return IsValid() && m_header.hashes_count > 0;
-    }
-
     uint32_t GetHashIndex(uint32_t bucket_idx) const {
       if (m_hash_indexes && bucket_idx < m_header.bucket_count)
         return m_hash_indexes[bucket_idx];

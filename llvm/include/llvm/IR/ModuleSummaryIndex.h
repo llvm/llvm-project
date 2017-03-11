@@ -663,6 +663,10 @@ public:
     return ModulePathStringTable.count(M.getModuleIdentifier());
   }
 
+  const std::map<std::string, TypeIdSummary> &typeIds() const {
+    return TypeIdMap;
+  }
+
   TypeIdSummary &getTypeIdSummary(StringRef TypeId) {
     return TypeIdMap[TypeId];
   }

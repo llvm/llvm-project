@@ -34,9 +34,6 @@ public:
   /// values to the stack.
   unsigned getStackWidth(const MachineFunction &MF) const;
 
-  int getFrameIndexReference(const MachineFunction &MF, int FI,
-                             unsigned &FrameReg) const override;
-
   bool hasFP(const MachineFunction &MF) const override {
     return false;
   }

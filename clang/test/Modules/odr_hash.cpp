@@ -183,12 +183,12 @@ struct S5 {
 };
 #else
 S4 s4;
-// expected-error@second.h:* {{'Field::S4' has different definitions in different modules; first difference is definition in module 'SecondModule' found field 'x' with type 'B' (aka 'int')}}
-// expected-note@first.h:* {{but in 'FirstModule' found field 'x' with type 'A' (aka 'int')}}
+// expected-error@second.h:* {{'Field::S4' has different definitions in different modules; first difference is definition in module 'SecondModule' found field 'x' with type 'Field::B' (aka 'int')}}
+// expected-note@first.h:* {{but in 'FirstModule' found field 'x' with type 'Field::A' (aka 'int')}}
 
 S5 s5;
 // expected-error@second.h:* {{'Field::S5' has different definitions in different modules; first difference is definition in module 'SecondModule' found field 'x' with type 'int'}}
-// expected-note@first.h:* {{but in 'FirstModule' found field 'x' with type 'A' (aka 'int')}}
+// expected-note@first.h:* {{but in 'FirstModule' found field 'x' with type 'Field::A' (aka 'int')}}
 #endif
 
 #if defined(FIRST)

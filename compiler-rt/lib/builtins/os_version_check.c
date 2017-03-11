@@ -112,4 +112,9 @@ int32_t __isOSVersionAtLeast(int32_t Major, int32_t Minor, int32_t Subminor) {
   return Subminor <= GlobalSubminor;
 }
 
+#else
+
+/* Silence an empty translation unit warning. */
+typedef int unused;
+
 #endif

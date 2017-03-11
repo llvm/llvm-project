@@ -71,6 +71,40 @@ namespace polly {
 __isl_give isl_val *isl_valFromAPInt(isl_ctx *Ctx, const llvm::APInt Int,
                                      bool IsSigned);
 
+/// Translate an llvm::APInt to an isl::val.
+///
+/// Translate the bitsequence without sign information as provided by APInt into
+/// a signed isl::val type. Depending on the value of @p IsSigned @p Int is
+/// interpreted as unsigned value or as signed value in two's complement
+/// representation.
+///
+/// Input IsSigned                 Output
+///
+///     0        0           ->    0
+///     1        0           ->    1
+///    00        0           ->    0
+///    01        0           ->    1
+///    10        0           ->    2
+///    11        0           ->    3
+///
+///     0        1           ->    0
+///     1        1           ->   -1
+///    00        1           ->    0
+///    01        1           ->    1
+///    10        1           ->   -2
+///    11        1           ->   -1
+///
+/// @param Ctx      The isl_ctx to create the isl::val in.
+/// @param Int      The integer value to translate.
+/// @param IsSigned If the APInt should be interpreted as signed or unsigned
+///                 value.
+///
+/// @return The isl::val corresponding to @p Int.
+inline isl::val valFromAPInt(isl_ctx *Ctx, const llvm::APInt Int,
+                             bool IsSigned) {
+  return isl::manage(isl_valFromAPInt(Ctx, Int, IsSigned));
+}
+
 /// Translate isl_val to llvm::APInt.
 ///
 /// This function can only be called on isl_val values which are integers.
@@ -99,6 +133,37 @@ __isl_give isl_val *isl_valFromAPInt(isl_ctx *Ctx, const llvm::APInt Int,
 ///
 /// @return The APInt value corresponding to @p Val.
 llvm::APInt APIntFromVal(__isl_take isl_val *Val);
+
+/// Translate isl::val to llvm::APInt.
+///
+/// This function can only be called on isl::val values which are integers.
+/// Calling this function with a non-integral rational, NaN or infinity value
+/// is not allowed.
+///
+/// As the input isl::val may be negative, the APInt that this function returns
+/// must always be interpreted as signed two's complement value. The bitwidth of
+/// the generated APInt is always the minimal bitwidth necessary to model the
+/// provided integer when interpreting the bitpattern as signed value.
+///
+/// Some example conversions are:
+///
+///   Input      Bits    Signed  Bitwidth
+///       0 ->      0         0         1
+///      -1 ->      1        -1         1
+///       1 ->     01         1         2
+///      -2 ->     10        -2         2
+///       2 ->    010         2         3
+///      -3 ->    101        -3         3
+///       3 ->    011         3         3
+///      -4 ->    100        -4         3
+///       4 ->   0100         4         4
+///
+/// @param Val The isl val to translate.
+///
+/// @return The APInt value corresponding to @p Val.
+inline llvm::APInt APIntFromVal(isl::val V) {
+  return APIntFromVal(V.release());
+}
 
 /// Get c++ string from Isl objects.
 //@{

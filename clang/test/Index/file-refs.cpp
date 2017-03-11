@@ -98,7 +98,7 @@ void f() {
 // RUN:  -file-refs-at=%s:44:16 \
 // CHECK-NEXT: CallExpr=S:35:3
 // CHECK-NEXT: TypedefDecl=Cake:39:11 (Definition) =[39:11 - 39:15]
-// CHECK-NEXT: TypeRef=Cake:39:11 =[42:3 - 42:7]
-// CHECK-NEXT: TypeRef=Cake:39:11 =[44:14 - 44:18]
+// CHECK-NEXT: TypeRef=Test2::Cake:39:11 =[42:3 - 42:7]
+// CHECK-NEXT: TypeRef=Test2::Cake:39:11 =[44:14 - 44:18]
 
 // RUN:   %s | FileCheck %s

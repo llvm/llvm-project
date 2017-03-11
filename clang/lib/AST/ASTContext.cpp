@@ -8066,15 +8066,6 @@ QualType ASTContext::mergeTypes(QualType LHS, QualType RHS,
   Qualifiers LQuals = LHSCan.getLocalQualifiers();
   Qualifiers RQuals = RHSCan.getLocalQualifiers();
   if (LQuals != RQuals) {
-    if (getLangOpts().OpenCL) {
-      if (LHSCan.getUnqualifiedType() != RHSCan.getUnqualifiedType() ||
-          LQuals.getCVRQualifiers() != RQuals.getCVRQualifiers())
-        return QualType();
-      if (LQuals.isAddressSpaceSupersetOf(RQuals))
-        return LHS;
-      if (RQuals.isAddressSpaceSupersetOf(LQuals))
-        return RHS;
-    }
     // If any of these qualifiers are different, we have a type
     // mismatch.
     if (LQuals.getCVRQualifiers() != RQuals.getCVRQualifiers() ||
@@ -8199,6 +8190,20 @@ QualType ASTContext::mergeTypes(QualType LHS, QualType RHS,
     if (Unqualified) {
       LHSPointee = LHSPointee.getUnqualifiedType();
       RHSPointee = RHSPointee.getUnqualifiedType();
+    }
+    if (getLangOpts().OpenCL) {
+      Qualifiers LHSPteeQual = LHSPointee.getQualifiers();
+      Qualifiers RHSPteeQual = RHSPointee.getQualifiers();
+      // Blocks can't be an expression in a ternary operator (OpenCL v2.0
+      // 6.12.5) thus the following check is asymmetric.
+      if (!LHSPteeQual.isAddressSpaceSupersetOf(RHSPteeQual))
+        return QualType();
+      LHSPteeQual.removeAddressSpace();
+      RHSPteeQual.removeAddressSpace();
+      LHSPointee =
+          QualType(LHSPointee.getTypePtr(), LHSPteeQual.getAsOpaqueValue());
+      RHSPointee =
+          QualType(RHSPointee.getTypePtr(), RHSPteeQual.getAsOpaqueValue());
     }
     QualType ResultType = mergeTypes(LHSPointee, RHSPointee, OfBlockPointer,
                                      Unqualified);

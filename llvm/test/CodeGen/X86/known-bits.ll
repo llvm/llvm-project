@@ -197,10 +197,10 @@ define {i32, i1} @knownbits_uaddo_saddo(i64 %a0, i64 %a1) nounwind {
 ; X64-NEXT:    shlq $32, %rdi
 ; X64-NEXT:    shlq $32, %rsi
 ; X64-NEXT:    addq %rdi, %rsi
-; X64-NEXT:    setb %cl
+; X64-NEXT:    setb %al
 ; X64-NEXT:    seto %dl
-; X64-NEXT:    leal (%rsi,%rsi), %eax
-; X64-NEXT:    orb %cl, %dl
+; X64-NEXT:    orb %al, %dl
+; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    retq
   %1 = shl i64 %a0, 32
   %2 = shl i64 %a1, 32
@@ -247,11 +247,11 @@ define {i32, i1} @knownbits_usubo_ssubo(i64 %a0, i64 %a1) nounwind {
 ; X64:       # BB#0:
 ; X64-NEXT:    shlq $32, %rdi
 ; X64-NEXT:    shlq $32, %rsi
-; X64-NEXT:    subq %rsi, %rdi
-; X64-NEXT:    setb %cl
+; X64-NEXT:    cmpq %rsi, %rdi
+; X64-NEXT:    setb %al
 ; X64-NEXT:    seto %dl
-; X64-NEXT:    leal (%rdi,%rdi), %eax
-; X64-NEXT:    orb %cl, %dl
+; X64-NEXT:    orb %al, %dl
+; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    retq
   %1 = shl i64 %a0, 32
   %2 = shl i64 %a1, 32
