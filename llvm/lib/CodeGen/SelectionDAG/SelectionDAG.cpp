@@ -2308,14 +2308,14 @@ void SelectionDAG::computeKnownBits(SDValue Op, APInt &KnownZero,
     if (TLI->getBooleanContents(Op.getValueType().isVector(), false) ==
             TargetLowering::ZeroOrOneBooleanContent &&
         BitWidth > 1)
-      KnownZero |= APInt::getHighBitsSet(BitWidth, BitWidth - 1);
+      KnownZero.setBitsFrom(1);
     break;
   case ISD::SETCC:
     // If we know the result of a setcc has the top bits zero, use this info.
     if (TLI->getBooleanContents(Op.getOperand(0).getValueType()) ==
             TargetLowering::ZeroOrOneBooleanContent &&
         BitWidth > 1)
-      KnownZero |= APInt::getHighBitsSet(BitWidth, BitWidth - 1);
+      KnownZero.setBitsFrom(1);
     break;
   case ISD::SHL:
     if (const APInt *ShAmt = getValidShiftAmountConstant(Op)) {
@@ -2324,7 +2324,7 @@ void SelectionDAG::computeKnownBits(SDValue Op, APInt &KnownZero,
       KnownZero = KnownZero << *ShAmt;
       KnownOne = KnownOne << *ShAmt;
       // Low bits are known zero.
-      KnownZero |= APInt::getLowBitsSet(BitWidth, ShAmt->getZExtValue());
+      KnownZero.setLowBits(ShAmt->getZExtValue());
     }
     break;
   case ISD::SRL:
@@ -2334,8 +2334,7 @@ void SelectionDAG::computeKnownBits(SDValue Op, APInt &KnownZero,
       KnownZero = KnownZero.lshr(*ShAmt);
       KnownOne  = KnownOne.lshr(*ShAmt);
       // High bits are known zero.
-      APInt HighBits = APInt::getHighBitsSet(BitWidth, ShAmt->getZExtValue());
-      KnownZero |= HighBits;
+      KnownZero.setHighBits(ShAmt->getZExtValue());
     }
     break;
   case ISD::SRA:
@@ -2498,7 +2497,7 @@ void SelectionDAG::computeKnownBits(SDValue Op, APInt &KnownZero,
       if (TLI->getBooleanContents(Op.getOperand(0).getValueType()) ==
               TargetLowering::ZeroOrOneBooleanContent &&
           BitWidth > 1)
-        KnownZero.setBits(1, BitWidth);
+        KnownZero.setBitsFrom(1);
       break;
     }
     LLVM_FALLTHROUGH;
@@ -2549,7 +2548,7 @@ void SelectionDAG::computeKnownBits(SDValue Op, APInt &KnownZero,
       if (TLI->getBooleanContents(Op.getOperand(0).getValueType()) ==
               TargetLowering::ZeroOrOneBooleanContent &&
           BitWidth > 1)
-        KnownZero.setBits(1, BitWidth);
+        KnownZero.setBitsFrom(1);
       break;
     }
     LLVM_FALLTHROUGH;
@@ -2749,7 +2748,7 @@ void SelectionDAG::computeKnownBits(SDValue Op, APInt &KnownZero,
 
     KnownZero &= KnownZero2;
     KnownOne &= KnownOne2;
-    KnownZero |= APInt::getHighBitsSet(BitWidth, LeadZero);
+    KnownZero.setHighBits(LeadZero);
     break;
   }
   case ISD::UMAX: {
@@ -2765,7 +2764,7 @@ void SelectionDAG::computeKnownBits(SDValue Op, APInt &KnownZero,
 
     KnownZero &= KnownZero2;
     KnownOne &= KnownOne2;
-    KnownOne |= APInt::getHighBitsSet(BitWidth, LeadOne);
+    KnownOne.setHighBits(LeadOne);
     break;
   }
   case ISD::SMIN:

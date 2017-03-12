@@ -34,13 +34,6 @@ class X86VectorVTInfo<int numelts, ValueType eltvt, RegisterClass rc,
   ValueType KVT = !cast<ValueType>(!if (!eq (NumElts, 1), "i1",
                                                           "v" # NumElts # "i1"));
 
-  // The GPR register class that can hold the write mask.  Use GR8 for fewer
-  // than 8 elements.  Use shift-right and equal to work around the lack of
-  // !lt in tablegen.
-  RegisterClass MRC =
-    !cast<RegisterClass>("GR" #
-                         !if (!eq (!srl(NumElts, 3), 0), 8, NumElts));
-
   // Suffix used in the instruction mnemonic.
   string Suffix = suffix;
 

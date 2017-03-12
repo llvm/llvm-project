@@ -74,6 +74,7 @@ bool Merger::Parse(std::istream &IS, bool ParseCoverage) {
   size_t ExpectedStartMarker = 0;
   const size_t kInvalidStartMarker = -1;
   size_t LastSeenStartMarker = kInvalidStartMarker;
+  std::vector<uint32_t> TmpFeatures;
   while (std::getline(IS, Line, '\n')) {
     std::istringstream ISS1(Line);
     std::string Marker;
@@ -95,11 +96,11 @@ bool Merger::Parse(std::istream &IS, bool ParseCoverage) {
         return false;
       LastSeenStartMarker = kInvalidStartMarker;
       if (ParseCoverage) {
-        auto &V = Files[CurrentFileIdx].Features;
-        V.clear();
+        TmpFeatures.clear();  // use a vector from outer scope to avoid resizes.
         while (ISS1 >> std::hex >> N)
-          V.push_back(N);
-        std::sort(V.begin(), V.end());
+          TmpFeatures.push_back(N);
+        std::sort(TmpFeatures.begin(), TmpFeatures.end());
+        Files[CurrentFileIdx].Features = TmpFeatures;
       }
     } else {
       return false;
@@ -270,8 +271,8 @@ void Fuzzer::CrashResistantMerge(const std::vector<std::string> &Args,
   IF.seekg(0, IF.beg);
   M.ParseOrExit(IF, true);
   IF.close();
-  Printf("MERGE-OUTER: consumed %zd bytes to parse the control file\n",
-         M.ApproximateMemoryConsumption());
+  Printf("MERGE-OUTER: consumed %zdMb (%zdMb rss) to parse the control file\n",
+         M.ApproximateMemoryConsumption() >> 20, GetPeakRSSMb());
   std::vector<std::string> NewFiles;
   size_t NumNewFeatures = M.Merge(&NewFiles);
   Printf("MERGE-OUTER: %zd new files with %zd new features added\n",

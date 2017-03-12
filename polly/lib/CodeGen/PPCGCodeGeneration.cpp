@@ -2430,7 +2430,7 @@ public:
 
     /// In case a sequential kernel has more surrounding loops as any parallel
     /// kernel, the SCoP is probably mostly sequential. Hence, there is no
-    /// point in running it on a CPU.
+    /// point in running it on a GPU.
     if (NodeBuilder.DeepestSequential > NodeBuilder.DeepestParallel)
       SplitBlock->getTerminator()->setOperand(0, Builder.getFalse());
 

@@ -497,9 +497,9 @@ declare i32 @llvm.x86.avx.movmsk.ps.256(<8 x float>) nounwind readnone
 define i32 @test_x86_avx_ptestc_256(<4 x i64> %a0, <4 x i64> %a1) {
 ; CHECK-LABEL: test_x86_avx_ptestc_256:
 ; CHECK:       ## BB#0:
+; CHECK-NEXT:    xorl %eax, %eax ## encoding: [0x31,0xc0]
 ; CHECK-NEXT:    vptest %ymm1, %ymm0 ## encoding: [0xc4,0xe2,0x7d,0x17,0xc1]
-; CHECK-NEXT:    sbbl %eax, %eax ## encoding: [0x19,0xc0]
-; CHECK-NEXT:    andl $1, %eax ## encoding: [0x83,0xe0,0x01]
+; CHECK-NEXT:    setb %al ## encoding: [0x0f,0x92,0xc0]
 ; CHECK-NEXT:    vzeroupper ## encoding: [0xc5,0xf8,0x77]
 ; CHECK-NEXT:    retl ## encoding: [0xc3]
   %res = call i32 @llvm.x86.avx.ptestc.256(<4 x i64> %a0, <4 x i64> %a1) ; <i32> [#uses=1]
@@ -746,9 +746,9 @@ declare <8 x float> @llvm.x86.avx.vpermilvar.ps.256(<8 x float>, <8 x i32>) noun
 define i32 @test_x86_avx_vtestc_pd(<2 x double> %a0, <2 x double> %a1) {
 ; CHECK-LABEL: test_x86_avx_vtestc_pd:
 ; CHECK:       ## BB#0:
+; CHECK-NEXT:    xorl %eax, %eax ## encoding: [0x31,0xc0]
 ; CHECK-NEXT:    vtestpd %xmm1, %xmm0 ## encoding: [0xc4,0xe2,0x79,0x0f,0xc1]
-; CHECK-NEXT:    sbbl %eax, %eax ## encoding: [0x19,0xc0]
-; CHECK-NEXT:    andl $1, %eax ## encoding: [0x83,0xe0,0x01]
+; CHECK-NEXT:    setb %al ## encoding: [0x0f,0x92,0xc0]
 ; CHECK-NEXT:    retl ## encoding: [0xc3]
   %res = call i32 @llvm.x86.avx.vtestc.pd(<2 x double> %a0, <2 x double> %a1) ; <i32> [#uses=1]
   ret i32 %res
@@ -759,9 +759,9 @@ declare i32 @llvm.x86.avx.vtestc.pd(<2 x double>, <2 x double>) nounwind readnon
 define i32 @test_x86_avx_vtestc_pd_256(<4 x double> %a0, <4 x double> %a1) {
 ; CHECK-LABEL: test_x86_avx_vtestc_pd_256:
 ; CHECK:       ## BB#0:
+; CHECK-NEXT:    xorl %eax, %eax ## encoding: [0x31,0xc0]
 ; CHECK-NEXT:    vtestpd %ymm1, %ymm0 ## encoding: [0xc4,0xe2,0x7d,0x0f,0xc1]
-; CHECK-NEXT:    sbbl %eax, %eax ## encoding: [0x19,0xc0]
-; CHECK-NEXT:    andl $1, %eax ## encoding: [0x83,0xe0,0x01]
+; CHECK-NEXT:    setb %al ## encoding: [0x0f,0x92,0xc0]
 ; CHECK-NEXT:    vzeroupper ## encoding: [0xc5,0xf8,0x77]
 ; CHECK-NEXT:    retl ## encoding: [0xc3]
   %res = call i32 @llvm.x86.avx.vtestc.pd.256(<4 x double> %a0, <4 x double> %a1) ; <i32> [#uses=1]
@@ -773,9 +773,9 @@ declare i32 @llvm.x86.avx.vtestc.pd.256(<4 x double>, <4 x double>) nounwind rea
 define i32 @test_x86_avx_vtestc_ps(<4 x float> %a0, <4 x float> %a1) {
 ; CHECK-LABEL: test_x86_avx_vtestc_ps:
 ; CHECK:       ## BB#0:
+; CHECK-NEXT:    xorl %eax, %eax ## encoding: [0x31,0xc0]
 ; CHECK-NEXT:    vtestps %xmm1, %xmm0 ## encoding: [0xc4,0xe2,0x79,0x0e,0xc1]
-; CHECK-NEXT:    sbbl %eax, %eax ## encoding: [0x19,0xc0]
-; CHECK-NEXT:    andl $1, %eax ## encoding: [0x83,0xe0,0x01]
+; CHECK-NEXT:    setb %al ## encoding: [0x0f,0x92,0xc0]
 ; CHECK-NEXT:    retl ## encoding: [0xc3]
   %res = call i32 @llvm.x86.avx.vtestc.ps(<4 x float> %a0, <4 x float> %a1) ; <i32> [#uses=1]
   ret i32 %res
@@ -786,9 +786,9 @@ declare i32 @llvm.x86.avx.vtestc.ps(<4 x float>, <4 x float>) nounwind readnone
 define i32 @test_x86_avx_vtestc_ps_256(<8 x float> %a0, <8 x float> %a1) {
 ; CHECK-LABEL: test_x86_avx_vtestc_ps_256:
 ; CHECK:       ## BB#0:
+; CHECK-NEXT:    xorl %eax, %eax ## encoding: [0x31,0xc0]
 ; CHECK-NEXT:    vtestps %ymm1, %ymm0 ## encoding: [0xc4,0xe2,0x7d,0x0e,0xc1]
-; CHECK-NEXT:    sbbl %eax, %eax ## encoding: [0x19,0xc0]
-; CHECK-NEXT:    andl $1, %eax ## encoding: [0x83,0xe0,0x01]
+; CHECK-NEXT:    setb %al ## encoding: [0x0f,0x92,0xc0]
 ; CHECK-NEXT:    vzeroupper ## encoding: [0xc5,0xf8,0x77]
 ; CHECK-NEXT:    retl ## encoding: [0xc3]
   %res = call i32 @llvm.x86.avx.vtestc.ps.256(<8 x float> %a0, <8 x float> %a1) ; <i32> [#uses=1]

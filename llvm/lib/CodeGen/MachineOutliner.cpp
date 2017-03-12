@@ -1252,7 +1252,7 @@ MachineOutliner::createOutlinedFunction(Module &M, const OutlinedFunction &OF,
   // Create the function using an IR-level function.
   LLVMContext &C = M.getContext();
   Function *F = dyn_cast<Function>(
-      M.getOrInsertFunction(NameStream.str(), Type::getVoidTy(C), NULL));
+      M.getOrInsertFunction(NameStream.str(), Type::getVoidTy(C), nullptr));
   assert(F && "Function was null!");
 
   // NOTE: If this is linkonceodr, then we can take advantage of linker deduping

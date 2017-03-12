@@ -843,8 +843,6 @@ public:
                             UnrollFactor, LVL, CM) {}
 
 private:
-  void scalarizeInstruction(Instruction *Instr,
-                            bool IfPredicateInstr = false) override;
   void vectorizeMemoryInstruction(Instruction *Instr) override;
   Value *getBroadcastInstrs(Value *V) override;
   Value *getStepVector(Value *Val, int StartIdx, Value *Step,
@@ -3152,7 +3150,9 @@ void InnerLoopVectorizer::scalarizeInstruction(Instruction *Instr,
       // Start if-block.
       Value *Cmp = nullptr;
       if (IfPredicateInstr) {
-        Cmp = Builder.CreateExtractElement(Cond[Part], Builder.getInt32(Lane));
+        Cmp = Cond[Part];
+        if (Cmp->getType()->isVectorTy())
+          Cmp = Builder.CreateExtractElement(Cmp, Builder.getInt32(Lane));
         Cmp = Builder.CreateICmp(ICmpInst::ICMP_EQ, Cmp,
                                  ConstantInt::get(Cmp->getType(), 1));
       }
@@ -3167,7 +3167,11 @@ void InnerLoopVectorizer::scalarizeInstruction(Instruction *Instr,
         auto *NewOp = getScalarValue(Instr->getOperand(op), Part, Lane);
         Cloned->setOperand(op, NewOp);
       }
-      addNewMetadata(Cloned, Instr);
+      // FIXME: Limiting the versioning metadata to VF > 1 is incorrect. It was
+      // added as part of removing Unroller's specialized version of this
+      // method which was not setting versioning metadata.
+      if (VF > 1)
+        addNewMetadata(Cloned, Instr);
 
       // Place the cloned scalar in the new loop.
       Builder.Insert(Cloned);
@@ -6231,6 +6235,7 @@ LoopVectorizationCostModel::selectVectorizationFactor(bool OptForSize) {
     else {
       // If the trip count that we found modulo the vectorization factor is not
       // zero then we require a tail.
+      // FIXME: look for a smaller VF that does divide TC rather than give up.
       ORE->emit(createMissedAnalysis("NoTailLoopWithOptForSize")
                 << "cannot optimize for size and vectorize at the "
                    "same time. Enable vectorization of this loop "
@@ -7355,68 +7360,6 @@ void LoopVectorizationCostModel::collectValuesToIgnore() {
     SmallPtrSetImpl<Instruction *> &Casts = RedDes.getCastInsts();
     VecValuesToIgnore.insert(Casts.begin(), Casts.end());
   }
-}
-
-void InnerLoopUnroller::scalarizeInstruction(Instruction *Instr,
-                                             bool IfPredicateInstr) {
-  assert(!Instr->getType()->isAggregateType() && "Can't handle vectors");
-  // Holds vector parameters or scalars, in case of uniform vals.
-  SmallVector<VectorParts, 4> Params;
-
-  setDebugLocFromInst(Builder, Instr);
-
-  // Does this instruction return a value ?
-  bool IsVoidRetTy = Instr->getType()->isVoidTy();
-
-  // Initialize a new scalar map entry.
-  ScalarParts Entry(UF);
-
-  VectorParts Cond;
-  if (IfPredicateInstr)
-    Cond = createBlockInMask(Instr->getParent());
-
-  // For each vector unroll 'part':
-  for (unsigned Part = 0; Part < UF; ++Part) {
-    Entry[Part].resize(1);
-    // For each scalar that we create:
-
-    // Start an "if (pred) a[i] = ..." block.
-    Value *Cmp = nullptr;
-    if (IfPredicateInstr) {
-      if (Cond[Part]->getType()->isVectorTy())
-        Cond[Part] =
-            Builder.CreateExtractElement(Cond[Part], Builder.getInt32(0));
-      Cmp = Builder.CreateICmp(ICmpInst::ICMP_EQ, Cond[Part],
-                               ConstantInt::get(Cond[Part]->getType(), 1));
-    }
-
-    Instruction *Cloned = Instr->clone();
-    if (!IsVoidRetTy)
-      Cloned->setName(Instr->getName() + ".cloned");
-
-    // Replace the operands of the cloned instructions with their scalar
-    // equivalents in the new loop.
-    for (unsigned op = 0, e = Instr->getNumOperands(); op != e; ++op) {
-      auto *NewOp = getScalarValue(Instr->getOperand(op), Part, 0);
-      Cloned->setOperand(op, NewOp);
-    }
-
-    // Place the cloned scalar in the new loop.
-    Builder.Insert(Cloned);
-
-    // Add the cloned scalar to the scalar map entry.
-    Entry[Part][0] = Cloned;
-
-    // If we just cloned a new assumption, add it the assumption cache.
-    if (auto *II = dyn_cast<IntrinsicInst>(Cloned))
-      if (II->getIntrinsicID() == Intrinsic::assume)
-        AC->registerAssumption(II);
-
-    // End if-block.
-    if (IfPredicateInstr)
-      PredicatedInstructions.push_back(std::make_pair(Cloned, Cmp));
-  }
-  VectorLoopValueMap.initScalar(Instr, Entry);
 }
 
 void InnerLoopUnroller::vectorizeMemoryInstruction(Instruction *Instr) {

@@ -18,6 +18,7 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/Support/FormatVariadicDetails.h"
 #include "llvm/Support/NativeFormatting.h"
 
@@ -206,6 +207,17 @@ struct format_provider<
     }
     llvm::StringRef S = V;
     Stream << S.substr(0, N);
+  }
+};
+
+/// Implementation of format_provider<T> for llvm::Twine.
+///
+/// This follows the same rules as the string formatter.
+
+template <> struct format_provider<Twine> {
+  static void format(const Twine &V, llvm::raw_ostream &Stream,
+                     StringRef Style) {
+    format_provider<std::string>::format(V.str(), Stream, Style);
   }
 };
 

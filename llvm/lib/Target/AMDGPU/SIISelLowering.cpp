@@ -2924,11 +2924,6 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                                Op.getOperand(1), Op.getOperand(2));
     return DAG.getNode(ISD::BITCAST, DL, VT, Node);
   }
-  case AMDGPUIntrinsic::SI_packf16: { // Legacy name
-    EVT VT = Op.getValueType();
-    return DAG.getNode(AMDGPUISD::CVT_PKRTZ_F16_F32, DL, VT,
-                       Op.getOperand(1), Op.getOperand(2));
-  }
   default:
     return AMDGPUTargetLowering::LowerOperation(Op, DAG);
   }

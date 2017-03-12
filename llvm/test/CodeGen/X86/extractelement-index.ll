@@ -11,8 +11,9 @@
 define i8 @extractelement_v16i8_1(<16 x i8> %a) nounwind {
 ; SSE2-LABEL: extractelement_v16i8_1:
 ; SSE2:       # BB#0:
-; SSE2-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
-; SSE2-NEXT:    movb -{{[0-9]+}}(%rsp), %al
+; SSE2-NEXT:    movd %xmm0, %eax
+; SSE2-NEXT:    shrl $8, %eax
+; SSE2-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: extractelement_v16i8_1:
@@ -33,8 +34,9 @@ define i8 @extractelement_v16i8_1(<16 x i8> %a) nounwind {
 define i8 @extractelement_v16i8_11(<16 x i8> %a) nounwind {
 ; SSE2-LABEL: extractelement_v16i8_11:
 ; SSE2:       # BB#0:
-; SSE2-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
-; SSE2-NEXT:    movb -{{[0-9]+}}(%rsp), %al
+; SSE2-NEXT:    pextrw $5, %xmm0, %eax
+; SSE2-NEXT:    shrl $8, %eax
+; SSE2-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: extractelement_v16i8_11:
@@ -55,8 +57,8 @@ define i8 @extractelement_v16i8_11(<16 x i8> %a) nounwind {
 define i8 @extractelement_v16i8_14(<16 x i8> %a) nounwind {
 ; SSE2-LABEL: extractelement_v16i8_14:
 ; SSE2:       # BB#0:
-; SSE2-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
-; SSE2-NEXT:    movb -{{[0-9]+}}(%rsp), %al
+; SSE2-NEXT:    pextrw $7, %xmm0, %eax
+; SSE2-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: extractelement_v16i8_14:
@@ -77,8 +79,9 @@ define i8 @extractelement_v16i8_14(<16 x i8> %a) nounwind {
 define i8 @extractelement_v32i8_1(<32 x i8> %a) nounwind {
 ; SSE2-LABEL: extractelement_v32i8_1:
 ; SSE2:       # BB#0:
-; SSE2-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
-; SSE2-NEXT:    movb -{{[0-9]+}}(%rsp), %al
+; SSE2-NEXT:    movd %xmm0, %eax
+; SSE2-NEXT:    shrl $8, %eax
+; SSE2-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: extractelement_v32i8_1:
@@ -100,8 +103,9 @@ define i8 @extractelement_v32i8_1(<32 x i8> %a) nounwind {
 define i8 @extractelement_v32i8_17(<32 x i8> %a) nounwind {
 ; SSE2-LABEL: extractelement_v32i8_17:
 ; SSE2:       # BB#0:
-; SSE2-NEXT:    movaps %xmm1, -{{[0-9]+}}(%rsp)
-; SSE2-NEXT:    movb -{{[0-9]+}}(%rsp), %al
+; SSE2-NEXT:    movd %xmm1, %eax
+; SSE2-NEXT:    shrl $8, %eax
+; SSE2-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: extractelement_v32i8_17:
