@@ -1,4 +1,3 @@
-// RUN: %clang_builtins %s %librt -o %t && %run %t
 //===-- paritydi2_test.c - Test __paritydi2 -------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure

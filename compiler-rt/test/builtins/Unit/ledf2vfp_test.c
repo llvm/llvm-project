@@ -1,4 +1,3 @@
-// RUN: %clang_builtins %s %librt -o %t && %run %t
 //===-- ledf2vfp_test.c - Test __ledf2vfp ---------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure

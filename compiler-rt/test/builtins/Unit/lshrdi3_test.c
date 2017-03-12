@@ -1,4 +1,3 @@
-// RUN: %clang_builtins %s %librt -o %t && %run %t
 //===-- lshrdi3_test.c - Test __lshrdi3 -----------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure

@@ -1,4 +1,3 @@
-// RUN: %clang_builtins %s %librt -o %t && %run %t
 //===-- ctzsi2_test.c - Test __ctzsi2 -------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure

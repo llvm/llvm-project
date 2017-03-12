@@ -1,5 +1,3 @@
-// REQUIRES: native-run
-// RUN: %clang_builtins %s %librt -o %t && %run %t
 //===-- enable_execute_stack_test.c - Test __enable_execute_stack ----------===//
 //
 //                     The LLVM Compiler Infrastructure

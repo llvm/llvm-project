@@ -1,4 +1,3 @@
-// RUN: %clang_builtins %s %librt -o %t && %run %t
 //===-- ucmpdi2_test.c - Test __ucmpdi2 -----------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure

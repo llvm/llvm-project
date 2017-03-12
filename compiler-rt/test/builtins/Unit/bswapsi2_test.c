@@ -1,5 +1,3 @@
-// UNSUPPORTED: armv6m-target-arch
-// RUN: %clang_builtins %s %librt -o %t && %run %t
 //===-- bswapsi2_test.c - Test __bswapsi2 ---------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure

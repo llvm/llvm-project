@@ -1,4 +1,3 @@
-// RUN: %clang_builtins %s %librt -o %t && %run %t
 //===-- absvdi2_test.c - Test __absvdi2 -----------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure

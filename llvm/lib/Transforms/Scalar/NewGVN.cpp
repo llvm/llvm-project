@@ -203,14 +203,15 @@ template <> struct DenseMapInfo<const Expression *> {
 } // end namespace llvm
 
 namespace {
-class NewGVN : public FunctionPass {
+class NewGVN {
+  Function &F;
   DominatorTree *DT;
-  const DataLayout *DL;
-  const TargetLibraryInfo *TLI;
   AssumptionCache *AC;
+  const TargetLibraryInfo *TLI;
   AliasAnalysis *AA;
   MemorySSA *MSSA;
   MemorySSAWalker *MSSAWalker;
+  const DataLayout &DL;
   std::unique_ptr<PredicateInfo> PredInfo;
   BumpPtrAllocator ExpressionAllocator;
   ArrayRecycler<Value *> ArgRecycler;
@@ -290,26 +291,14 @@ class NewGVN : public FunctionPass {
   SmallPtrSet<Instruction *, 8> InstructionsToErase;
 
 public:
-  static char ID; // Pass identification, replacement for typeid.
-  NewGVN() : FunctionPass(ID) {
-    initializeNewGVNPass(*PassRegistry::getPassRegistry());
-  }
-
-  bool runOnFunction(Function &F) override;
-  bool runGVN(Function &F, DominatorTree *DT, AssumptionCache *AC,
-              TargetLibraryInfo *TLI, AliasAnalysis *AA, MemorySSA *MSSA);
+  NewGVN(Function &F, DominatorTree *DT, AssumptionCache *AC,
+         TargetLibraryInfo *TLI, AliasAnalysis *AA, MemorySSA *MSSA,
+         const DataLayout &DL)
+      : F(F), DT(DT), AC(AC), TLI(TLI), AA(AA), MSSA(MSSA), DL(DL),
+        PredInfo(make_unique<PredicateInfo>(F, *DT, *AC)) {}
+  bool runGVN();
 
 private:
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<AssumptionCacheTracker>();
-    AU.addRequired<DominatorTreeWrapperPass>();
-    AU.addRequired<TargetLibraryInfoWrapperPass>();
-    AU.addRequired<MemorySSAWrapperPass>();
-    AU.addRequired<AAResultsWrapperPass>();
-    AU.addPreserved<DominatorTreeWrapperPass>();
-    AU.addPreserved<GlobalsAAWrapperPass>();
-  }
-
   // Expression handling.
   const Expression *createExpression(Instruction *);
   const Expression *createBinaryExpression(unsigned, Type *, Value *, Value *);
@@ -408,11 +397,6 @@ private:
 };
 } // end anonymous namespace
 
-char NewGVN::ID = 0;
-
-// createGVNPass - The public interface to this file.
-FunctionPass *llvm::createNewGVNPass() { return new NewGVN(); }
-
 template <typename T>
 static bool equalsLoadStoreHelper(const T &LHS, const Expression &RHS) {
   if ((!isa<LoadExpression>(RHS) && !isa<StoreExpression>(RHS)) ||
@@ -447,15 +431,6 @@ static std::string getBlockName(const BasicBlock *B) {
   return DOTGraphTraits<const Function *>::getSimpleNodeLabel(B, nullptr);
 }
 #endif
-
-INITIALIZE_PASS_BEGIN(NewGVN, "newgvn", "Global Value Numbering", false, false)
-INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
-INITIALIZE_PASS_DEPENDENCY(MemorySSAWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(GlobalsAAWrapperPass)
-INITIALIZE_PASS_END(NewGVN, "newgvn", "Global Value Numbering", false, false)
 
 PHIExpression *NewGVN::createPHIExpression(Instruction *I) {
   BasicBlock *PHIBlock = I->getParent();
@@ -522,7 +497,7 @@ const Expression *NewGVN::createBinaryExpression(unsigned Opcode, Type *T,
   E->op_push_back(lookupOperandLeader(Arg1));
   E->op_push_back(lookupOperandLeader(Arg2));
 
-  Value *V = SimplifyBinOp(Opcode, E->getOperand(0), E->getOperand(1), *DL, TLI,
+  Value *V = SimplifyBinOp(Opcode, E->getOperand(0), E->getOperand(1), DL, TLI,
                            DT, AC);
   if (const Expression *SimplifiedE = checkSimplificationResults(E, nullptr, V))
     return SimplifiedE;
@@ -611,7 +586,7 @@ const Expression *NewGVN::createExpression(Instruction *I) {
     assert((E->getOperand(0)->getType() == I->getOperand(0)->getType() &&
             E->getOperand(1)->getType() == I->getOperand(1)->getType()));
     Value *V = SimplifyCmpInst(Predicate, E->getOperand(0), E->getOperand(1),
-                               *DL, TLI, DT, AC);
+                               DL, TLI, DT, AC);
     if (const Expression *SimplifiedE = checkSimplificationResults(E, I, V))
       return SimplifiedE;
   } else if (isa<SelectInst>(I)) {
@@ -620,23 +595,23 @@ const Expression *NewGVN::createExpression(Instruction *I) {
       assert(E->getOperand(1)->getType() == I->getOperand(1)->getType() &&
              E->getOperand(2)->getType() == I->getOperand(2)->getType());
       Value *V = SimplifySelectInst(E->getOperand(0), E->getOperand(1),
-                                    E->getOperand(2), *DL, TLI, DT, AC);
+                                    E->getOperand(2), DL, TLI, DT, AC);
       if (const Expression *SimplifiedE = checkSimplificationResults(E, I, V))
         return SimplifiedE;
     }
   } else if (I->isBinaryOp()) {
     Value *V = SimplifyBinOp(E->getOpcode(), E->getOperand(0), E->getOperand(1),
-                             *DL, TLI, DT, AC);
+                             DL, TLI, DT, AC);
     if (const Expression *SimplifiedE = checkSimplificationResults(E, I, V))
       return SimplifiedE;
   } else if (auto *BI = dyn_cast<BitCastInst>(I)) {
-    Value *V = SimplifyInstruction(BI, *DL, TLI, DT, AC);
+    Value *V = SimplifyInstruction(BI, DL, TLI, DT, AC);
     if (const Expression *SimplifiedE = checkSimplificationResults(E, I, V))
       return SimplifiedE;
   } else if (isa<GetElementPtrInst>(I)) {
     Value *V = SimplifyGEPInst(E->getType(),
                                ArrayRef<Value *>(E->op_begin(), E->op_end()),
-                               *DL, TLI, DT, AC);
+                               DL, TLI, DT, AC);
     if (const Expression *SimplifiedE = checkSimplificationResults(E, I, V))
       return SimplifiedE;
   } else if (AllConstant) {
@@ -651,7 +626,7 @@ const Expression *NewGVN::createExpression(Instruction *I) {
     for (Value *Arg : E->operands())
       C.emplace_back(cast<Constant>(Arg));
 
-    if (Value *V = ConstantFoldInstOperands(I, C, *DL, TLI))
+    if (Value *V = ConstantFoldInstOperands(I, C, DL, TLI))
       if (const Expression *SimplifiedE = checkSimplificationResults(E, I, V))
         return SimplifiedE;
   }
@@ -1946,18 +1921,9 @@ void NewGVN::verifyComparisons(Function &F) {
 }
 
 // This is the main transformation entry point.
-bool NewGVN::runGVN(Function &F, DominatorTree *_DT, AssumptionCache *_AC,
-                    TargetLibraryInfo *_TLI, AliasAnalysis *_AA,
-                    MemorySSA *_MSSA) {
+bool NewGVN::runGVN() {
   bool Changed = false;
   NumFuncArgs = F.arg_size();
-  DT = _DT;
-  AC = _AC;
-  TLI = _TLI;
-  AA = _AA;
-  MSSA = _MSSA;
-  PredInfo = make_unique<PredicateInfo>(F, *DT, *AC);
-  DL = &F.getParent()->getDataLayout();
   MSSAWalker = MSSA->getWalker();
 
   // Count number of instructions for sizing of hash tables, and come
@@ -2115,36 +2081,6 @@ bool NewGVN::runGVN(Function &F, DominatorTree *_DT, AssumptionCache *_AC,
 
   cleanupTables();
   return Changed;
-}
-
-bool NewGVN::runOnFunction(Function &F) {
-  if (skipFunction(F))
-    return false;
-  return runGVN(F, &getAnalysis<DominatorTreeWrapperPass>().getDomTree(),
-                &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F),
-                &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(),
-                &getAnalysis<AAResultsWrapperPass>().getAAResults(),
-                &getAnalysis<MemorySSAWrapperPass>().getMSSA());
-}
-
-PreservedAnalyses NewGVNPass::run(Function &F, AnalysisManager<Function> &AM) {
-  NewGVN Impl;
-
-  // Apparently the order in which we get these results matter for
-  // the old GVN (see Chandler's comment in GVN.cpp). I'll keep
-  // the same order here, just in case.
-  auto &AC = AM.getResult<AssumptionAnalysis>(F);
-  auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
-  auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);
-  auto &AA = AM.getResult<AAManager>(F);
-  auto &MSSA = AM.getResult<MemorySSAAnalysis>(F).getMSSA();
-  bool Changed = Impl.runGVN(F, &DT, &AC, &TLI, &AA, &MSSA);
-  if (!Changed)
-    return PreservedAnalyses::all();
-  PreservedAnalyses PA;
-  PA.preserve<DominatorTreeAnalysis>();
-  PA.preserve<GlobalsAA>();
-  return PA;
 }
 
 // Return true if V is a value that will always be available (IE can
@@ -2749,4 +2685,72 @@ bool NewGVN::shouldSwapOperands(const Value *A, const Value *B) const {
   // in this order, we order by rank, which will give a strict weak ordering to
   // everything but constants, and then we order by pointer address.
   return std::make_pair(getRank(A), A) > std::make_pair(getRank(B), B);
+}
+
+class NewGVNLegacyPass : public FunctionPass {
+public:
+  static char ID; // Pass identification, replacement for typeid.
+  NewGVNLegacyPass() : FunctionPass(ID) {
+    initializeNewGVNLegacyPassPass(*PassRegistry::getPassRegistry());
+  }
+  bool runOnFunction(Function &F) override;
+
+private:
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<AssumptionCacheTracker>();
+    AU.addRequired<DominatorTreeWrapperPass>();
+    AU.addRequired<TargetLibraryInfoWrapperPass>();
+    AU.addRequired<MemorySSAWrapperPass>();
+    AU.addRequired<AAResultsWrapperPass>();
+    AU.addPreserved<DominatorTreeWrapperPass>();
+    AU.addPreserved<GlobalsAAWrapperPass>();
+  }
+};
+
+bool NewGVNLegacyPass::runOnFunction(Function &F) {
+  if (skipFunction(F))
+    return false;
+  return NewGVN(F, &getAnalysis<DominatorTreeWrapperPass>().getDomTree(),
+                &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F),
+                &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(),
+                &getAnalysis<AAResultsWrapperPass>().getAAResults(),
+                &getAnalysis<MemorySSAWrapperPass>().getMSSA(),
+                F.getParent()->getDataLayout())
+      .runGVN();
+}
+
+INITIALIZE_PASS_BEGIN(NewGVNLegacyPass, "newgvn", "Global Value Numbering",
+                      false, false)
+INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
+INITIALIZE_PASS_DEPENDENCY(MemorySSAWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(GlobalsAAWrapperPass)
+INITIALIZE_PASS_END(NewGVNLegacyPass, "newgvn", "Global Value Numbering", false,
+                    false)
+
+char NewGVNLegacyPass::ID = 0;
+
+// createGVNPass - The public interface to this file.
+FunctionPass *llvm::createNewGVNPass() { return new NewGVNLegacyPass(); }
+
+PreservedAnalyses NewGVNPass::run(Function &F, AnalysisManager<Function> &AM) {
+  // Apparently the order in which we get these results matter for
+  // the old GVN (see Chandler's comment in GVN.cpp). I'll keep
+  // the same order here, just in case.
+  auto &AC = AM.getResult<AssumptionAnalysis>(F);
+  auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
+  auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);
+  auto &AA = AM.getResult<AAManager>(F);
+  auto &MSSA = AM.getResult<MemorySSAAnalysis>(F).getMSSA();
+  bool Changed =
+      NewGVN(F, &DT, &AC, &TLI, &AA, &MSSA, F.getParent()->getDataLayout())
+          .runGVN();
+  if (!Changed)
+    return PreservedAnalyses::all();
+  PreservedAnalyses PA;
+  PA.preserve<DominatorTreeAnalysis>();
+  PA.preserve<GlobalsAA>();
+  return PA;
 }

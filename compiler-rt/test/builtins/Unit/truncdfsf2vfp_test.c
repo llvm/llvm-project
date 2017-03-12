@@ -1,4 +1,3 @@
-// RUN: %clang_builtins %s %librt -o %t && %run %t
 //===-- truncdfsf2vfp_test.c - Test __truncdfsf2vfp -----------------------===//
 //
 //                     The LLVM Compiler Infrastructure

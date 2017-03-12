@@ -1,4 +1,3 @@
-// RUN: %clang_builtins %s %librt -o %t && %run %t
 //===--------------- subtf3_test.c - Test __subtf3 ------------------------===//
 //
 //                     The LLVM Compiler Infrastructure

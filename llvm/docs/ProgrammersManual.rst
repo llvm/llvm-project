@@ -1201,6 +1201,69 @@ Obviously, with so many optimizations, having a unified framework for this stuff
 is very nice.  Making your pass fit well into the framework makes it more
 maintainable and useful.
 
+.. _DebugCounters:
+
+Adding debug counters to aid in debugging your code
+---------------------------------------------------
+
+Sometimes, when writing new passes, or trying to track down bugs, it
+is useful to be able to control whether certain things in your pass
+happen or not.  For example, there are times the minimization tooling
+can only easily give you large testcases.  You would like to narrow
+your bug down to a specific transformation happening or not happening,
+automatically.  This is where debug counters help.  They provide a framework
+for making parts of your code only execute a certain number of times.
+
+The ``llvm/Support/DebugCounter.h`` (`doxygen
+<http://llvm.org/doxygen/DebugCounter_8h_source.html>`__) file
+provides a class named ``DebugCounter`` that can be used to create
+command line counter options that control execution of parts of your code.
+
+Define your DebugCounter like this:
+
+  .. code-block:: c++
+
+    DEBUG_COUNTER(DeleteAnInstruction, "passname-delete-instruction",
+                  "Controls which instructions get delete").
+
+  The ``DEBUG_COUNTER`` macro defines a static variable, whose name
+  is specified by the first argument.  The name of the counter
+  (which is used on the command line) is specified by the second
+  argument, and the description used in the help is specified by the
+  third argument.
+
+Whatever code you want that control, use ``DebugCounter::shouldExecute`` to control it.
+
+  .. code-block:: c++
+
+    if (DebugCounter::shouldExecute(DeleteAnInstruction))
+      I->eraseFromParent();
+
+That's all you have to do.  Now, using opt, you can control when this code triggers using
+the '``--debug-counter``' option.  There are two counters provided, ``skip`` and ``count``.
+``skip`` is the number of times to skip execution of the codepath.  ``count`` is the number
+of times, once we are done skipping, to execute the codepath.
+
+.. code-block:: none
+
+  $ opt --debug-counter=passname-delete-instruction-skip=1,passname-delete-instruction-count=2 -passname
+
+This will skip the above code the first time we hit it, then execute it twice, then skip the rest of the executions.
+
+So if executed on the following code:
+
+.. code-block:: llvm
+
+  %1 = add i32 %a, %b
+  %2 = add i32 %a, %b
+  %3 = add i32 %a, %b
+  %4 = add i32 %a, %b
+
+It would delete number ``%2`` and ``%3``.
+
+A utility is provided in `utils/bisect-skip-count` to binary search skip and count arguments. It can be used to automatically minimize
+the skip and count for a debug-counter variable.
+
 .. _ViewGraph:
 
 Viewing graphs while debugging code

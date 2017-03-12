@@ -1,4 +1,3 @@
-// RUN: %clang_builtins %s %librt -o %t && %run %t
 //===-- mulvsi3_test.c - Test __mulvsi3 -----------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure

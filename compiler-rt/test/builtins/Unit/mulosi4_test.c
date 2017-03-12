@@ -1,4 +1,3 @@
-// RUN: %clang_builtins %s %librt -o %t && %run %t
 //===-- mulosi4_test.c - Test __mulosi4 -----------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure

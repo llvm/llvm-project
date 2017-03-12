@@ -1559,6 +1559,17 @@ bool X86FastISel::X86SelectZExt(const Instruction *I) {
   // Handle zero-extension from i1 to i8, which is common.
   MVT SrcVT = TLI.getSimpleValueType(DL, I->getOperand(0)->getType());
   if (SrcVT == MVT::i1) {
+    if (!Subtarget->is64Bit()) {
+      // If this isn't a 64-bit target we need to constrain the reg class
+      // to avoid high registers here otherwise we might use a high register
+      // to copy from a mask register.
+      unsigned OldReg = ResultReg;
+      ResultReg = createResultReg(&X86::GR8_ABCD_LRegClass);
+      BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
+              TII.get(TargetOpcode::COPY), ResultReg)
+          .addReg(OldReg);
+    }
+
     // Set the high bits to zero.
     ResultReg = fastEmitZExtFromI1(MVT::i8, ResultReg, /*TODO: Kill=*/false);
     SrcVT = MVT::i8;

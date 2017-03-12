@@ -22,11 +22,11 @@
 // }
 
 DEFINE_COMPILERRT_PRIVATE_FUNCTION(call_apsr_d)
-    push {r7, lr}
-    ldr r7, [sp, #8]
-    blx r7
+    push {lr}
+    ldr ip, [sp, #4]
+    blx ip
     mrs r0, apsr
-    pop {r7, pc}
+    pop {pc}
 END_COMPILERRT_FUNCTION(call_apsr_d)
 
 // __attribute__((pcs("aapcs")))
