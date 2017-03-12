@@ -6325,6 +6325,7 @@ static unsigned CopyToFromAsymmetricReg(unsigned &DestReg, unsigned &SrcReg,
       return X86::KMOVWrk;
     }
     if (X86::GR8RegClass.contains(DestReg)) {
+      assert(!isHReg(DestReg) && "Cannot move between mask and h-reg");
       DestReg = getX86SubSuperRegister(DestReg, 32);
       return Subtarget.hasDQI() ? X86::KMOVBrk : X86::KMOVWrk;
     }
@@ -6348,6 +6349,7 @@ static unsigned CopyToFromAsymmetricReg(unsigned &DestReg, unsigned &SrcReg,
       return X86::KMOVWkr;
     }
     if (X86::GR8RegClass.contains(SrcReg)) {
+      assert(!isHReg(SrcReg) && "Cannot move between mask and h-reg");
       SrcReg = getX86SubSuperRegister(SrcReg, 32);
       return Subtarget.hasDQI() ? X86::KMOVBkr : X86::KMOVWkr;
     }
