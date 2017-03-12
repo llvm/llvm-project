@@ -15,8 +15,8 @@ define i32 @main() {
 ; CHECK-NEXT:    andl $16, %eax
 ; CHECK-NEXT:    cmpl $-1, %eax
 ; CHECK-NEXT:    sbbl $0, %ecx
-; CHECK-NEXT:    sbbl %eax, %eax
-; CHECK-NEXT:    andl $1, %eax
+; CHECK-NEXT:    setb %al
+; CHECK-NEXT:    movzbl %al, %eax
 ; CHECK-NEXT:    retl
 entry:
   %load = load i32, i32* @d, align 4

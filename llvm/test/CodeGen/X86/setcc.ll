@@ -21,9 +21,10 @@ define zeroext i16 @t1(i16 zeroext %x) nounwind readnone ssp {
 define zeroext i16 @t2(i16 zeroext %x) nounwind readnone ssp {
 ; CHECK-LABEL: t2:
 ; CHECK:       ## BB#0:
+; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    cmpl $26, %edi
-; CHECK-NEXT:    sbbl %eax, %eax
-; CHECK-NEXT:    andl $32, %eax
+; CHECK-NEXT:    setb %al
+; CHECK-NEXT:    shll $5, %eax
 ; CHECK-NEXT:    retq
   %t0 = icmp ult i16 %x, 26
   %if = select i1 %t0, i16 32, i16 0
@@ -33,9 +34,10 @@ define zeroext i16 @t2(i16 zeroext %x) nounwind readnone ssp {
 define i64 @t3(i64 %x) nounwind readnone ssp {
 ; CHECK-LABEL: t3:
 ; CHECK:       ## BB#0:
+; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    cmpq $18, %rdi
-; CHECK-NEXT:    sbbq %rax, %rax
-; CHECK-NEXT:    andl $64, %eax
+; CHECK-NEXT:    setb %al
+; CHECK-NEXT:    shlq $6, %rax
 ; CHECK-NEXT:    retq
   %t0 = icmp ult i64 %x, 18
   %if = select i1 %t0, i64 64, i64 0
