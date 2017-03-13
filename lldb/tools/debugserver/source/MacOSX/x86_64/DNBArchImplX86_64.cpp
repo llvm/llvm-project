@@ -17,7 +17,6 @@
 #include <sys/sysctl.h>
 #include <sys/types.h>
 
-#include "../HasAVX.h"
 #include "DNBLog.h"
 #include "MacOSX/x86_64/DNBArchImplX86_64.h"
 #include "MachProcess.h"
@@ -60,42 +59,64 @@ static bool ForceAVXRegs() {
 #define FORCE_AVX_REGS (0)
 #endif
 
+bool DetectHardwareFeature(const char *feature) {
+  int answer = 0;
+  size_t answer_size = sizeof(answer);
+  int error = ::sysctlbyname(feature, &answer, &answer_size, NULL, 0);
+  return error != 0 && answer != 0;
+}
+
+enum AVXPresence { eAVXUnknown = -1, eAVXNotPresent = 0, eAVXPresent = 1 };
+
+bool LogAVXAndReturn(AVXPresence has_avx, int err, const char * os_ver) {
+  DNBLogThreadedIf(LOG_THREAD,
+                   "CPUHasAVX(): g_has_avx = %i (err = %i, os_ver = %s)",
+                   has_avx, err, os_ver);
+  return (has_avx == eAVXPresent);
+}
+
 extern "C" bool CPUHasAVX() {
-  enum AVXPresence { eAVXUnknown = -1, eAVXNotPresent = 0, eAVXPresent = 1 };
-
   static AVXPresence g_has_avx = eAVXUnknown;
-  if (g_has_avx == eAVXUnknown) {
-    g_has_avx = eAVXNotPresent;
+  if (g_has_avx != eAVXUnknown)
+    return LogAVXAndReturn(g_has_avx, 0, "");
 
-    // Only xnu-2020 or later has AVX support, any versions before
-    // this have a busted thread_get_state RPC where it would truncate
-    // the thread state buffer (<rdar://problem/10122874>). So we need to
-    // verify the kernel version number manually or disable AVX support.
-    int mib[2];
-    char buffer[1024];
-    size_t length = sizeof(buffer);
-    uint64_t xnu_version = 0;
-    mib[0] = CTL_KERN;
-    mib[1] = KERN_VERSION;
-    int err = ::sysctl(mib, 2, &buffer, &length, NULL, 0);
-    if (err == 0) {
-      const char *xnu = strstr(buffer, "xnu-");
-      if (xnu) {
-        const char *xnu_version_cstr = xnu + 4;
-        xnu_version = strtoull(xnu_version_cstr, NULL, 0);
-        if (xnu_version >= 2020 && xnu_version != ULLONG_MAX) {
-          if (::HasAVX()) {
-            g_has_avx = eAVXPresent;
-          }
-        }
-      }
-    }
-    DNBLogThreadedIf(LOG_THREAD, "CPUHasAVX(): g_has_avx = %i (err = %i, errno "
-                                 "= %i, xnu_version = %llu)",
-                     g_has_avx, err, errno, xnu_version);
+  g_has_avx = eAVXNotPresent;
+
+  // OS X 10.7.3 and earlier have a bug in thread_get_state that truncated the
+  // size of the return. To work around this we have to disable AVX debugging
+  // on hosts prior to 10.7.3 (<rdar://problem/10122874>).
+  int mib[2];
+  char buffer[1024];
+  size_t length = sizeof(buffer);
+  mib[0] = CTL_KERN;
+  mib[1] = KERN_OSVERSION;
+
+  // KERN_OSVERSION returns the build number which is a number signifying the
+  // major version, a capitol letter signifying the minor version, and numbers
+  // signifying the build (ex: on 10.12.3, the returned value is 16D32).
+  int err = ::sysctl(mib, 2, &buffer, &length, NULL, 0);
+  if (err != 0)
+    return LogAVXAndReturn(g_has_avx, err, "");
+
+  size_t first_letter = 0;
+  for (; first_letter < length; ++first_letter) {
+    // This is looking for the first uppercase letter
+    if (isupper(buffer[first_letter]))
+      break;
   }
+  char letter = buffer[first_letter];
+  buffer[first_letter] = '\0';
+  auto major_ver = strtoull(buffer, NULL, 0);
+  buffer[first_letter] = letter;
 
-  return (g_has_avx == eAVXPresent);
+  // In this check we're looking to see that our major and minor version numer
+  // was >= 11E, which is the 10.7.4 release.
+  if (major_ver < 11 || (major_ver == 11 && letter < 'E'))
+    return LogAVXAndReturn(g_has_avx, err, buffer);
+  if (DetectHardwareFeature("hw.optional.avx1_0"))
+    g_has_avx = eAVXPresent;
+
+  return LogAVXAndReturn(g_has_avx, err, buffer);
 }
 
 uint64_t DNBArchImplX86_64::GetPC(uint64_t failValue) {
