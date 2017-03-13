@@ -16,6 +16,7 @@
 // C++ Includes
 // Other libraries and framework includes
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringSet.h"
 
 // Project includes
 #include "lldb/Core/FileSpecList.h"
@@ -31,9 +32,11 @@
 #include "lldb/Symbol/Variable.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/CleanUp.h"
+#include "lldb/Utility/TildeExpressionResolver.h"
 
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Path.h"
 
 using namespace lldb_private;
 
@@ -99,180 +102,127 @@ int CommandCompletions::SourceFiles(CommandInterpreter &interpreter,
   return matches.GetSize();
 }
 
-typedef struct DiskFilesOrDirectoriesBaton {
-  const char *remainder;
-  char *partial_name_copy;
-  bool only_directories;
-  bool *saw_directory;
-  StringList *matches;
-  char *end_ptr;
-  size_t baselen;
-} DiskFilesOrDirectoriesBaton;
-
-FileSpec::EnumerateDirectoryResult
-DiskFilesOrDirectoriesCallback(void *baton, llvm::sys::fs::file_type file_type,
-                               const FileSpec &spec) {
-  const char *name = spec.GetFilename().AsCString();
-
-  const DiskFilesOrDirectoriesBaton *parameters =
-      (DiskFilesOrDirectoriesBaton *)baton;
-  char *end_ptr = parameters->end_ptr;
-  char *partial_name_copy = parameters->partial_name_copy;
-  const char *remainder = parameters->remainder;
-
-  // Omit ".", ".." and any . files if the match string doesn't start with .
-  if (name[0] == '.') {
-    if (name[1] == '\0')
-      return FileSpec::eEnumerateDirectoryResultNext;
-    else if (name[1] == '.' && name[2] == '\0')
-      return FileSpec::eEnumerateDirectoryResultNext;
-    else if (remainder[0] != '.')
-      return FileSpec::eEnumerateDirectoryResultNext;
-  }
-
-  // If we found a directory, we put a "/" at the end of the name.
-
-  if (remainder[0] == '\0' || strstr(name, remainder) == name) {
-    if (strlen(name) + parameters->baselen >= PATH_MAX)
-      return FileSpec::eEnumerateDirectoryResultNext;
-
-    strcpy(end_ptr, name);
-
-    namespace fs = llvm::sys::fs;
-    bool isa_directory = false;
-    if (file_type == fs::file_type::directory_file)
-      isa_directory = true;
-    else if (file_type == fs::file_type::symlink_file)
-      isa_directory = fs::is_directory(partial_name_copy);
-
-    if (isa_directory) {
-      *parameters->saw_directory = true;
-      size_t len = strlen(parameters->partial_name_copy);
-      partial_name_copy[len] = '/';
-      partial_name_copy[len + 1] = '\0';
-    }
-    if (parameters->only_directories && !isa_directory)
-      return FileSpec::eEnumerateDirectoryResultNext;
-    parameters->matches->AppendString(partial_name_copy);
-  }
-
-  return FileSpec::eEnumerateDirectoryResultNext;
-}
-
-static int DiskFilesOrDirectories(llvm::StringRef partial_file_name,
+static int DiskFilesOrDirectories(const llvm::Twine &partial_name,
                                   bool only_directories, bool &saw_directory,
-                                  StringList &matches) {
-  // I'm going to  use the "glob" function with GLOB_TILDE for user directory
-  // expansion.
-  // If it is not defined on your host system, you'll need to implement it
-  // yourself...
+                                  StringList &matches,
+                                  TildeExpressionResolver &Resolver) {
+  matches.Clear();
 
-  size_t partial_name_len = partial_file_name.size();
+  llvm::SmallString<256> CompletionBuffer;
+  llvm::SmallString<256> Storage;
+  partial_name.toVector(CompletionBuffer);
 
-  if (partial_name_len >= PATH_MAX)
-    return matches.GetSize();
+  if (CompletionBuffer.size() >= PATH_MAX)
+    return 0;
 
-  // This copy of the string will be cut up into the directory part, and the
-  // remainder.  end_ptr below will point to the place of the remainder in this
-  // string.  Then when we've resolved the containing directory, and opened it,
-  // we'll read the directory contents and overwrite the partial_name_copy
-  // starting from end_ptr with each of the matches.  Thus we will preserve the
-  // form the user originally typed.
+  namespace fs = llvm::sys::fs;
+  namespace path = llvm::sys::path;
 
-  char partial_name_copy[PATH_MAX];
-  memcpy(partial_name_copy, partial_file_name.data(), partial_name_len);
-  partial_name_copy[partial_name_len] = '\0';
+  llvm::StringRef SearchDir;
+  llvm::StringRef PartialItem;
 
-  // We'll need to save a copy of the remainder for comparison, which we do
-  // here.
-  char remainder[PATH_MAX];
+  if (CompletionBuffer.startswith("~")) {
+    llvm::StringRef Buffer(CompletionBuffer);
+    size_t FirstSep = Buffer.find_if(path::is_separator);
 
-  // end_ptr will point past the last / in partial_name_copy, or if there is no
-  // slash to the beginning of the string.
-  char *end_ptr;
+    llvm::StringRef Username = Buffer.take_front(FirstSep);
+    llvm::StringRef Remainder;
+    if (FirstSep != llvm::StringRef::npos)
+      Remainder = Buffer.drop_front(FirstSep + 1);
 
-  end_ptr = strrchr(partial_name_copy, '/');
-
-  // This will store the resolved form of the containing directory
-  llvm::SmallString<64> containing_part;
-
-  if (end_ptr == nullptr) {
-    // There's no directory.  If the thing begins with a "~" then this is a bare
-    // user name.
-    if (*partial_name_copy == '~') {
-      // Nothing here but the user name.  We could just put a slash on the end,
-      // but for completeness sake we'll resolve the user name and only put a
-      // slash
-      // on the end if it exists.
-      llvm::SmallString<64> resolved_username(partial_name_copy);
-      FileSpec::ResolveUsername(resolved_username);
-
-      // Not sure how this would happen, a username longer than PATH_MAX?
-      // Still...
-      if (resolved_username.size() == 0) {
-        // The user name didn't resolve, let's look in the password database for
-        // matches.
-        // The user name database contains duplicates, and is not in
-        // alphabetical order, so
-        // we'll use a set to manage that for us.
-        FileSpec::ResolvePartialUsername(partial_name_copy, matches);
-        if (matches.GetSize() > 0)
-          saw_directory = true;
-        return matches.GetSize();
-      } else {
-        // The thing exists, put a '/' on the end, and return it...
-        // FIXME: complete user names here:
-        partial_name_copy[partial_name_len] = '/';
-        partial_name_copy[partial_name_len + 1] = '\0';
-        matches.AppendString(partial_name_copy);
-        saw_directory = true;
-        return matches.GetSize();
+    llvm::SmallString<PATH_MAX> Resolved;
+    if (!Resolver.ResolveExact(Username, Resolved)) {
+      // We couldn't resolve it as a full username.  If there were no slashes
+      // then this might be a partial username.   We try to resolve it as such
+      // but after that, we're done regardless of any matches.
+      if (FirstSep == llvm::StringRef::npos) {
+        llvm::StringSet<> MatchSet;
+        saw_directory = Resolver.ResolvePartial(Username, MatchSet);
+        for (const auto &S : MatchSet) {
+          Resolved = S.getKey();
+          path::append(Resolved, path::get_separator());
+          matches.AppendString(Resolved);
+        }
+        saw_directory = (matches.GetSize() > 0);
       }
-    } else {
-      // The containing part is the CWD, and the whole string is the remainder.
-      containing_part = ".";
-      strcpy(remainder, partial_name_copy);
-      end_ptr = partial_name_copy;
-    }
-  } else {
-    if (end_ptr == partial_name_copy) {
-      // We're completing a file or directory in the root volume.
-      containing_part = "/";
-    } else {
-      containing_part.append(partial_name_copy, end_ptr);
-    }
-    // Push end_ptr past the final "/" and set remainder.
-    end_ptr++;
-    strcpy(remainder, end_ptr);
-  }
-
-  // Look for a user name in the containing part, and if it's there, resolve it
-  // and stick the
-  // result back into the containing_part:
-
-  if (*partial_name_copy == '~') {
-    FileSpec::ResolveUsername(containing_part);
-    // User name doesn't exist, we're not getting any further...
-    if (containing_part.empty())
       return matches.GetSize();
+    }
+
+    // If there was no trailing slash, then we're done as soon as we resolve the
+    // expression to the correct directory.  Otherwise we need to continue
+    // looking for matches within that directory.
+    if (FirstSep == llvm::StringRef::npos) {
+      // Make sure it ends with a separator.
+      path::append(CompletionBuffer, path::get_separator());
+      saw_directory = true;
+      matches.AppendString(CompletionBuffer);
+      return 1;
+    }
+
+    // We want to keep the form the user typed, so we special case this to
+    // search in the fully resolved directory, but CompletionBuffer keeps the
+    // unmodified form that the user typed.
+    Storage = Resolved;
+    SearchDir = Resolved;
+  } else {
+    SearchDir = path::parent_path(CompletionBuffer);
   }
 
-  // Okay, containing_part is now the directory we want to open and look for
-  // files:
+  size_t FullPrefixLen = CompletionBuffer.size();
 
-  size_t baselen = end_ptr - partial_name_copy;
+  PartialItem = path::filename(CompletionBuffer);
+  if (PartialItem == ".")
+    PartialItem = llvm::StringRef();
 
-  DiskFilesOrDirectoriesBaton parameters;
-  parameters.remainder = remainder;
-  parameters.partial_name_copy = partial_name_copy;
-  parameters.only_directories = only_directories;
-  parameters.saw_directory = &saw_directory;
-  parameters.matches = &matches;
-  parameters.end_ptr = end_ptr;
-  parameters.baselen = baselen;
+  assert(!SearchDir.empty());
+  assert(!PartialItem.contains(path::get_separator()));
 
-  FileSpec::EnumerateDirectory(containing_part.c_str(), true, true, true,
-                               DiskFilesOrDirectoriesCallback, &parameters);
+  // SearchDir now contains the directory to search in, and Prefix contains the
+  // text we want to match against items in that directory.
+
+  std::error_code EC;
+  fs::directory_iterator Iter(SearchDir, EC, false);
+  fs::directory_iterator End;
+  for (; Iter != End && !EC; Iter.increment(EC)) {
+    auto &Entry = *Iter;
+
+    auto Name = path::filename(Entry.path());
+
+    // Omit ".", ".."
+    if (Name == "." || Name == ".." || !Name.startswith(PartialItem))
+      continue;
+
+    // We have a match.
+
+    fs::file_status st;
+    if ((EC = Entry.status(st)))
+      continue;
+
+    // If it's a symlink, then we treat it as a directory as long as the target
+    // is a directory.
+    bool is_dir = fs::is_directory(st);
+    if (fs::is_symlink_file(st)) {
+      fs::file_status target_st;
+      if (!fs::status(Entry.path(), target_st))
+        is_dir = fs::is_directory(target_st);
+    }
+    if (only_directories && !is_dir)
+      continue;
+
+    // Shrink it back down so that it just has the original prefix the user
+    // typed and remove the part of the name which is common to the located
+    // item and what the user typed.
+    CompletionBuffer.resize(FullPrefixLen);
+    Name = Name.drop_front(PartialItem.size());
+    CompletionBuffer.append(Name);
+
+    if (is_dir) {
+      saw_directory = true;
+      path::append(CompletionBuffer, path::get_separator());
+    }
+
+    matches.AppendString(CompletionBuffer);
+  }
 
   return matches.GetSize();
 }
@@ -283,9 +233,17 @@ int CommandCompletions::DiskFiles(CommandInterpreter &interpreter,
                                   int max_return_elements,
                                   SearchFilter *searcher, bool &word_complete,
                                   StringList &matches) {
-  int ret_val =
-      DiskFilesOrDirectories(partial_file_name, false, word_complete, matches);
-  word_complete = !word_complete;
+  word_complete = false;
+  StandardTildeExpressionResolver Resolver;
+  return DiskFiles(partial_file_name, matches, Resolver);
+}
+
+int CommandCompletions::DiskFiles(const llvm::Twine &partial_file_name,
+                                  StringList &matches,
+                                  TildeExpressionResolver &Resolver) {
+  bool word_complete;
+  int ret_val = DiskFilesOrDirectories(partial_file_name, false, word_complete,
+                                       matches, Resolver);
   return ret_val;
 }
 
@@ -293,9 +251,17 @@ int CommandCompletions::DiskDirectories(
     CommandInterpreter &interpreter, llvm::StringRef partial_file_name,
     int match_start_point, int max_return_elements, SearchFilter *searcher,
     bool &word_complete, StringList &matches) {
-  int ret_val =
-      DiskFilesOrDirectories(partial_file_name, true, word_complete, matches);
   word_complete = false;
+  StandardTildeExpressionResolver Resolver;
+  return DiskDirectories(partial_file_name, matches, Resolver);
+}
+
+int CommandCompletions::DiskDirectories(const llvm::Twine &partial_file_name,
+                                        StringList &matches,
+                                        TildeExpressionResolver &Resolver) {
+  bool word_complete;
+  int ret_val = DiskFilesOrDirectories(partial_file_name, true, word_complete,
+                                       matches, Resolver);
   return ret_val;
 }
 

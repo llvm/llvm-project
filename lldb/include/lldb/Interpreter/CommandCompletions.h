@@ -21,7 +21,10 @@
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/lldb-private.h"
 
+#include "llvm/ADT/Twine.h"
+
 namespace lldb_private {
+class TildeExpressionResolver;
 class CommandCompletions {
 public:
   //----------------------------------------------------------------------
@@ -76,11 +79,18 @@ public:
                        int max_return_elements, SearchFilter *searcher,
                        bool &word_complete, StringList &matches);
 
+  static int DiskFiles(const llvm::Twine &partial_file_name,
+                       StringList &matches, TildeExpressionResolver &Resolver);
+
   static int DiskDirectories(CommandInterpreter &interpreter,
                              llvm::StringRef partial_file_name,
                              int match_start_point, int max_return_elements,
                              SearchFilter *searcher, bool &word_complete,
                              StringList &matches);
+
+  static int DiskDirectories(const llvm::Twine &partial_file_name,
+                             StringList &matches,
+                             TildeExpressionResolver &Resolver);
 
   static int SourceFiles(CommandInterpreter &interpreter,
                          llvm::StringRef partial_file_name,

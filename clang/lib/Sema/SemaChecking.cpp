@@ -2193,6 +2193,16 @@ bool Sema::CheckX86BuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   case X86::BI__builtin_ia32_pternlogq256_maskz:
     i = 3; l = 0; u = 255;
     break;
+  case X86::BI__builtin_ia32_gatherpfdpd:
+  case X86::BI__builtin_ia32_gatherpfdps:
+  case X86::BI__builtin_ia32_gatherpfqpd:
+  case X86::BI__builtin_ia32_gatherpfqps:
+  case X86::BI__builtin_ia32_scatterpfdpd:
+  case X86::BI__builtin_ia32_scatterpfdps:
+  case X86::BI__builtin_ia32_scatterpfqpd:
+  case X86::BI__builtin_ia32_scatterpfqps:
+    i = 4; l = 1; u = 2;
+    break;
   case X86::BI__builtin_ia32_pcmpestrm128:
   case X86::BI__builtin_ia32_pcmpestri128:
   case X86::BI__builtin_ia32_pcmpestria128:

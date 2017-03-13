@@ -1030,6 +1030,23 @@ private:
       // The token type is already known.
       return;
 
+    if (Style.Language == FormatStyle::LK_JavaScript) {
+      if (Current.is(tok::exclaim)) {
+        if (Current.Previous &&
+            (Current.Previous->isOneOf(tok::identifier, tok::r_paren,
+                                       tok::r_square, tok::r_brace) ||
+             Current.Previous->Tok.isLiteral())) {
+          Current.Type = TT_JsNonNullAssertion;
+          return;
+        }
+        if (Current.Next &&
+            Current.Next->isOneOf(TT_BinaryOperator, Keywords.kw_as)) {
+          Current.Type = TT_JsNonNullAssertion;
+          return;
+        }
+      }
+    }
+
     // Line.MightBeFunctionDecl can only be true after the parentheses of a
     // function declaration have been found. In this case, 'Current' is a
     // trailing token of this declaration and thus cannot be a name.
@@ -2284,12 +2301,9 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
       // locations that should have whitespace following are identified by the
       // above set of follower tokens.
       return false;
-    // Postfix non-null assertion operator, as in `foo!.bar()`.
-    if (Right.is(tok::exclaim) && (Left.isOneOf(tok::identifier, tok::r_paren,
-                                                tok::r_square, tok::r_brace) ||
-                                   Left.Tok.isLiteral()))
+    if (Right.is(TT_JsNonNullAssertion))
       return false;
-    if (Left.is(tok::exclaim) && Right.is(Keywords.kw_as))
+    if (Left.is(TT_JsNonNullAssertion) && Right.is(Keywords.kw_as))
       return true; // "x! as string"
   } else if (Style.Language == FormatStyle::LK_Java) {
     if (Left.is(tok::r_square) && Right.is(tok::l_brace))
@@ -2526,11 +2540,10 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
       return true;
   } else if (Style.Language == FormatStyle::LK_JavaScript) {
     const FormatToken *NonComment = Right.getPreviousNonComment();
-    if (Left.isOneOf(tok::kw_return, tok::kw_continue, tok::kw_break,
-                     tok::kw_throw) ||
-        (NonComment &&
-         NonComment->isOneOf(tok::kw_return, tok::kw_continue, tok::kw_break,
-                             tok::kw_throw)))
+    if (NonComment &&
+        NonComment->isOneOf(tok::kw_return, tok::kw_continue, tok::kw_break,
+                            tok::kw_throw, Keywords.kw_interface,
+                            Keywords.kw_type))
       return false; // Otherwise a semicolon is inserted.
     if (Left.is(TT_JsFatArrow) && Right.is(tok::l_brace))
       return false;
@@ -2545,6 +2558,8 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
     if (Right.is(Keywords.kw_as))
       return false; // must not break before as in 'x as type' casts
     if (Left.is(Keywords.kw_as))
+      return true;
+    if (Left.is(TT_JsNonNullAssertion))
       return true;
     if (Left.is(Keywords.kw_declare) &&
         Right.isOneOf(Keywords.kw_module, tok::kw_namespace,

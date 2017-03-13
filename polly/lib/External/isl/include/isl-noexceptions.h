@@ -110,7 +110,7 @@ class ctx {
   isl_ctx *ptr;
 
 public:
-  ctx(isl_ctx *ctx)
+  /* implicit */ ctx(isl_ctx *ctx)
       : ptr(ctx) {}
   isl_ctx *release() {
     auto tmp = ptr;
