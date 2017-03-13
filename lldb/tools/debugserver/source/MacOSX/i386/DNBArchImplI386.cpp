@@ -406,30 +406,21 @@ kern_return_t DNBArchImplI386::GetFPUState(bool force) {
       }
       m_state.SetError(e_regSetFPU, Read, 0);
     } else {
+      mach_msg_type_number_t count = e_regSetWordSizeFPU;
+      int flavor = __i386_FLOAT_STATE;
+
       if (CPUHasAVX() || FORCE_AVX_REGS) {
-        mach_msg_type_number_t count = e_regSetWordSizeAVX;
-        m_state.SetError(e_regSetFPU, Read,
-                         ::thread_get_state(
-                             m_thread->MachPortNumber(), __i386_AVX_STATE,
-                             (thread_state_t)&m_state.context.fpu.avx, &count));
-        DNBLogThreadedIf(LOG_THREAD, "::thread_get_state (0x%4.4x, %u, &avx, "
-                                     "%u (%u passed in)) => 0x%8.8x",
-                         m_thread->MachPortNumber(), __i386_AVX_STATE, count,
-                         e_regSetWordSizeAVX,
-                         m_state.GetError(e_regSetFPU, Read));
-      } else {
-        mach_msg_type_number_t count = e_regSetWordSizeFPU;
-        m_state.SetError(
-            e_regSetFPU, Read,
-            ::thread_get_state(m_thread->MachPortNumber(), __i386_FLOAT_STATE,
-                               (thread_state_t)&m_state.context.fpu.no_avx,
-                               &count));
-        DNBLogThreadedIf(LOG_THREAD, "::thread_get_state (0x%4.4x, %u, &fpu, "
-                                     "%u (%u passed in) => 0x%8.8x",
-                         m_thread->MachPortNumber(), __i386_FLOAT_STATE, count,
-                         e_regSetWordSizeFPU,
-                         m_state.GetError(e_regSetFPU, Read));
+        count = e_regSetWordSizeAVX;
+        flavor = __i386_AVX_STATE;
       }
+      m_state.SetError(e_regSetFPU, Read,
+                       ::thread_get_state(m_thread->MachPortNumber(), flavor,
+                                          (thread_state_t)&m_state.context.fpu,
+                                          &count));
+      DNBLogThreadedIf(LOG_THREAD,
+                       "::thread_get_state (0x%4.4x, %u, &fpu, %u => 0x%8.8x",
+                       m_thread->MachPortNumber(), flavor, (uint32_t)count,
+                       m_state.GetError(e_regSetFPU, Read));
     }
   }
   return m_state.GetError(e_regSetFPU, Read);
