@@ -1345,14 +1345,6 @@ bool AArch64InstrInfo::hasShiftedReg(const MachineInstr &MI) const {
   case AArch64::BICSXrs:
   case AArch64::BICWrs:
   case AArch64::BICXrs:
-  case AArch64::CRC32Brr:
-  case AArch64::CRC32CBrr:
-  case AArch64::CRC32CHrr:
-  case AArch64::CRC32CWrr:
-  case AArch64::CRC32CXrr:
-  case AArch64::CRC32Hrr:
-  case AArch64::CRC32Wrr:
-  case AArch64::CRC32Xrr:
   case AArch64::EONWrs:
   case AArch64::EONXrs:
   case AArch64::EORWrs:

@@ -36,11 +36,11 @@ define i32 @test2(i64 %x) nounwind readnone {
 define i32 @test3(i64 %x) nounwind readnone {
 ; CHECK-LABEL: test3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    popcntq %rdi, %rax
-; CHECK-NEXT:    andb $63, %al
-; CHECK-NEXT:    cmpb $2, %al
-; CHECK-NEXT:    sbbl %eax, %eax
-; CHECK-NEXT:    andl $1, %eax
+; CHECK-NEXT:    popcntq %rdi, %rcx
+; CHECK-NEXT:    andb $63, %cl
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    cmpb $2, %cl
+; CHECK-NEXT:    setb %al
 ; CHECK-NEXT:    retq
   %count = tail call i64 @llvm.ctpop.i64(i64 %x)
   %cast = trunc i64 %count to i6 ; Too small for 0-64

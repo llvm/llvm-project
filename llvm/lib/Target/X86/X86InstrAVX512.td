@@ -5854,10 +5854,10 @@ multiclass avx512_cvt_s_int_round<bits<8> opc, X86VectorVTInfo SrcVT ,
                 !strconcat(asm,"\t{$rc, $src, $dst|$dst, $src, $rc}"),
                 [(set DstVT.RC:$dst, (OpNode (SrcVT.VT SrcVT.RC:$src),(i32 imm:$rc)))]>,
                 EVEX, VEX_LIG, EVEX_B, EVEX_RC;
-    def rm : SI<opc, MRMSrcMem, (outs DstVT.RC:$dst), (ins SrcVT.ScalarMemOp:$src),
+    def rm : SI<opc, MRMSrcMem, (outs DstVT.RC:$dst), (ins SrcVT.IntScalarMemOp:$src),
                 !strconcat(asm,"\t{$src, $dst|$dst, $src}"),
                 [(set DstVT.RC:$dst, (OpNode
-                      (SrcVT.VT (scalar_to_vector (SrcVT.ScalarLdFrag addr:$src))),
+                      (SrcVT.VT SrcVT.ScalarIntMemCPat:$src),
                       (i32 FROUND_CURRENT)))]>,
                 EVEX, VEX_LIG;
   } // Predicates = [HasAVX512]
@@ -5894,20 +5894,20 @@ defm VCVTSD2USI64Z: avx512_cvt_s_int_round<0x79, f64x_info, i64x_info,
 let Predicates = [HasAVX512] in {
   def : Pat<(i32 (int_x86_sse_cvtss2si (v4f32 VR128X:$src))),
             (VCVTSS2SIZrr VR128X:$src)>;
-  def : Pat<(i32 (int_x86_sse_cvtss2si (sse_load_f32 addr:$src))),
-            (VCVTSS2SIZrm addr:$src)>;
+  def : Pat<(i32 (int_x86_sse_cvtss2si sse_load_f32:$src)),
+            (VCVTSS2SIZrm sse_load_f32:$src)>;
   def : Pat<(i64 (int_x86_sse_cvtss2si64 (v4f32 VR128X:$src))),
             (VCVTSS2SI64Zrr VR128X:$src)>;
-  def : Pat<(i64 (int_x86_sse_cvtss2si64 (sse_load_f32 addr:$src))),
-            (VCVTSS2SI64Zrm addr:$src)>;
+  def : Pat<(i64 (int_x86_sse_cvtss2si64 sse_load_f32:$src)),
+            (VCVTSS2SI64Zrm sse_load_f32:$src)>;
   def : Pat<(i32 (int_x86_sse2_cvtsd2si (v2f64 VR128X:$src))),
             (VCVTSD2SIZrr VR128X:$src)>;
-  def : Pat<(i32 (int_x86_sse2_cvtsd2si (sse_load_f64 addr:$src))),
-            (VCVTSD2SIZrm addr:$src)>;
+  def : Pat<(i32 (int_x86_sse2_cvtsd2si sse_load_f64:$src)),
+            (VCVTSD2SIZrm sse_load_f64:$src)>;
   def : Pat<(i64 (int_x86_sse2_cvtsd2si64 (v2f64 VR128X:$src))),
             (VCVTSD2SI64Zrr VR128X:$src)>;
-  def : Pat<(i64 (int_x86_sse2_cvtsd2si64 (sse_load_f64 addr:$src))),
-            (VCVTSD2SI64Zrm addr:$src)>;
+  def : Pat<(i64 (int_x86_sse2_cvtsd2si64 sse_load_f64:$src)),
+            (VCVTSD2SI64Zrm sse_load_f64:$src)>;
 } // HasAVX512
 
 let Predicates = [HasAVX512] in {
@@ -6059,11 +6059,10 @@ multiclass avx512_cvt_fp_scalar<bits<8> opc, string OpcodeStr, X86VectorVTInfo _
                                        (i32 FROUND_CURRENT)))>,
                          EVEX_4V, VEX_LIG, Sched<[WriteCvtF2F]>;
   defm rm_Int : AVX512_maskable_scalar<opc, MRMSrcMem, _, (outs _.RC:$dst),
-                         (ins _.RC:$src1, _Src.ScalarMemOp:$src2), OpcodeStr,
+                         (ins _.RC:$src1, _Src.IntScalarMemOp:$src2), OpcodeStr,
                          "$src2, $src1", "$src1, $src2",
                          (_.VT (OpNode (_.VT _.RC:$src1),
-                                  (_Src.VT (scalar_to_vector
-                                            (_Src.ScalarLdFrag addr:$src2))),
+                                  (_Src.VT _Src.ScalarIntMemCPat:$src2),
                                   (i32 FROUND_CURRENT)))>,
                          EVEX_4V, VEX_LIG, Sched<[WriteCvtF2FLd, ReadAfterLd]>;
 

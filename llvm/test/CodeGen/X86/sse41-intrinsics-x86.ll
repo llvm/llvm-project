@@ -362,16 +362,16 @@ declare <2 x i64> @llvm.x86.sse41.pmuldq(<4 x i32>, <4 x i32>) nounwind readnone
 define i32 @test_x86_sse41_ptestc(<2 x i64> %a0, <2 x i64> %a1) {
 ; SSE41-LABEL: test_x86_sse41_ptestc:
 ; SSE41:       ## BB#0:
+; SSE41-NEXT:    xorl %eax, %eax ## encoding: [0x31,0xc0]
 ; SSE41-NEXT:    ptest %xmm1, %xmm0 ## encoding: [0x66,0x0f,0x38,0x17,0xc1]
-; SSE41-NEXT:    sbbl %eax, %eax ## encoding: [0x19,0xc0]
-; SSE41-NEXT:    andl $1, %eax ## encoding: [0x83,0xe0,0x01]
+; SSE41-NEXT:    setb %al ## encoding: [0x0f,0x92,0xc0]
 ; SSE41-NEXT:    retl ## encoding: [0xc3]
 ;
 ; VCHECK-LABEL: test_x86_sse41_ptestc:
 ; VCHECK:       ## BB#0:
+; VCHECK-NEXT:    xorl %eax, %eax ## encoding: [0x31,0xc0]
 ; VCHECK-NEXT:    vptest %xmm1, %xmm0 ## encoding: [0xc4,0xe2,0x79,0x17,0xc1]
-; VCHECK-NEXT:    sbbl %eax, %eax ## encoding: [0x19,0xc0]
-; VCHECK-NEXT:    andl $1, %eax ## encoding: [0x83,0xe0,0x01]
+; VCHECK-NEXT:    setb %al ## encoding: [0x0f,0x92,0xc0]
 ; VCHECK-NEXT:    retl ## encoding: [0xc3]
   %res = call i32 @llvm.x86.sse41.ptestc(<2 x i64> %a0, <2 x i64> %a1) ; <i32> [#uses=1]
   ret i32 %res
