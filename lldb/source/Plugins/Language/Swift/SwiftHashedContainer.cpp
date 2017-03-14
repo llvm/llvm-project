@@ -134,7 +134,7 @@ bool SwiftHashedContainerNativeBufferHandler::ReadBitmaskAtIndex(Index i) {
     m_bitmask_cache[effective_ptr] = data;
   }
 
-  const uint64_t mask = (1UL << offset);
+  const uint64_t mask = static_cast<uint64_t>(1UL << offset);
   const uint64_t value = (data & mask);
 #ifdef DICTIONARY_IS_BROKEN_AGAIN
   printf("data = 0x%" PRIx64 ", mask = 0x%" PRIx64 ", value = 0x%" PRIx64 "\n",
