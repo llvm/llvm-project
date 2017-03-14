@@ -28,7 +28,7 @@
 
 #include "lldb/Target/SwiftLanguageRuntime.h"
 
-#include "ObjCRuntimeSyntheticProvider.cpp"
+#include "ObjCRuntimeSyntheticProvider.h"
 #include "SwiftFormatters.h"
 
 #include <functional>
@@ -1199,6 +1199,8 @@ SwiftLanguage::GetStringPrinterEscapingHelper(
                  return retval;
                };
   }
+
+  llvm_unreachable("Unhandled StringPrinter in switch.");
 }
 
 static void SplitDottedName(llvm::StringRef name,

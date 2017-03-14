@@ -2938,6 +2938,8 @@ public:
     case swift::DiagnosticKind::Note:
       return eDiagnosticSeverityRemark;
     }
+
+    llvm_unreachable("Unhandled DiagnosticKind in switch.");
   }
 
   void PrintDiagnostics(DiagnosticManager &diagnostic_manager,
