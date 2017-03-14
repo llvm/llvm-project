@@ -37,13 +37,20 @@ using namespace llvm;
 #error "You shouldn't build this"
 #endif
 
+#define GET_GLOBALISEL_IMPL
 #include "AArch64GenGlobalISel.inc"
+#undef GET_GLOBALISEL_IMPL
 
 AArch64InstructionSelector::AArch64InstructionSelector(
     const AArch64TargetMachine &TM, const AArch64Subtarget &STI,
     const AArch64RegisterBankInfo &RBI)
-  : InstructionSelector(), TM(TM), STI(STI), TII(*STI.getInstrInfo()),
-      TRI(*STI.getRegisterInfo()), RBI(RBI) {}
+    : InstructionSelector(), TM(TM), STI(STI), TII(*STI.getInstrInfo()),
+      TRI(*STI.getRegisterInfo()), RBI(RBI)
+#define GET_GLOBALISEL_TEMPORARIES_INIT
+#include "AArch64GenGlobalISel.inc"
+#undef GET_GLOBALISEL_TEMPORARIES_INIT
+{
+}
 
 // FIXME: This should be target-independent, inferred from the types declared
 // for each class in the bank.
@@ -1212,4 +1219,51 @@ bool AArch64InstructionSelector::select(MachineInstr &I) const {
   }
 
   return false;
+}
+
+/// SelectArithImmed - Select an immediate value that can be represented as
+/// a 12-bit value shifted left by either 0 or 12.  If so, return true with
+/// Val set to the 12-bit value and Shift set to the shifter operand.
+bool AArch64InstructionSelector::selectArithImmed(
+    MachineOperand &Root, MachineOperand &Result1,
+    MachineOperand &Result2) const {
+  MachineInstr &MI = *Root.getParent();
+  MachineBasicBlock &MBB = *MI.getParent();
+  MachineFunction &MF = *MBB.getParent();
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+
+  // This function is called from the addsub_shifted_imm ComplexPattern,
+  // which lists [imm] as the list of opcode it's interested in, however
+  // we still need to check whether the operand is actually an immediate
+  // here because the ComplexPattern opcode list is only used in
+  // root-level opcode matching.
+  uint64_t Immed;
+  if (Root.isImm())
+    Immed = Root.getImm();
+  else if (Root.isCImm())
+    Immed = Root.getCImm()->getZExtValue();
+  else if (Root.isReg()) {
+    MachineInstr *Def = MRI.getVRegDef(Root.getReg());
+    if (Def->getOpcode() != TargetOpcode::G_CONSTANT)
+      return false;
+    Immed = Def->getOperand(1).getImm();
+  } else
+    return false;
+
+  unsigned ShiftAmt;
+
+  if (Immed >> 12 == 0) {
+    ShiftAmt = 0;
+  } else if ((Immed & 0xfff) == 0 && Immed >> 24 == 0) {
+    ShiftAmt = 12;
+    Immed = Immed >> 12;
+  } else
+    return false;
+
+  unsigned ShVal = AArch64_AM::getShifterImm(AArch64_AM::LSL, ShiftAmt);
+  Result1.ChangeToImmediate(Immed);
+  Result1.clearParent();
+  Result2.ChangeToImmediate(ShVal);
+  Result2.clearParent();
+  return true;
 }
