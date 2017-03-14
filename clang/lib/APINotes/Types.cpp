@@ -14,7 +14,7 @@
 #include "llvm/Support/raw_ostream.h"
 
 void clang::api_notes::ObjCMethodInfo::dump(llvm::raw_ostream &os) {
-    os << DesignatedInit << " " << FactoryAsInit << " " << Unavailable << " "
+    os << DesignatedInit << " " << Unavailable << " "
        << NullabilityAudited << " " << NumAdjustedNullable << " "
        << NullabilityPayload << " " << UnavailableMsg << "\n";
 }

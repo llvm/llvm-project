@@ -766,7 +766,7 @@ namespace {
     }
 
     void emitUnversionedInfo(raw_ostream &out, const ObjCMethodInfo &info) {
-      uint8_t payload = info.FactoryAsInit;
+      uint8_t payload = 0;
       payload = (payload << 1) | info.DesignatedInit;
       payload = (payload << 1) | info.Required;
       endian::Writer<little> writer(out);
