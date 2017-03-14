@@ -547,16 +547,17 @@ MemoryRegion *LinkerScript<ELFT>::findMemoryRegion(OutputSectionCommand *Cmd,
 // for a single sections command (e.g. ".text { *(.text); }").
 template <class ELFT>
 void LinkerScript<ELFT>::assignOffsets(OutputSectionCommand *Cmd) {
-  if (Cmd->LMAExpr) {
-    uintX_t D = Dot;
-    LMAOffset = [=] { return Cmd->LMAExpr() - D; };
-  }
   OutputSection *Sec = findSection<ELFT>(Cmd->Name, *OutputSections);
   if (!Sec)
     return;
 
   if (Cmd->AddrExpr && Sec->Flags & SHF_ALLOC)
     setDot(Cmd->AddrExpr, Cmd->Location);
+
+  if (Cmd->LMAExpr) {
+    uintX_t D = Dot;
+    LMAOffset = [=] { return Cmd->LMAExpr() - D; };
+  }
 
   // Handle align (e.g. ".foo : ALIGN(16) { ... }").
   if (Cmd->AlignExpr)
@@ -791,7 +792,7 @@ void LinkerScript<ELFT>::assignAddresses(std::vector<PhdrEntry> &Phdrs) {
       Sec->Addr = 0;
   }
 
-  allocateHeaders<ELFT>(Phdrs, *OutputSections, MinVA);
+  allocateHeaders(Phdrs, *OutputSections, MinVA);
 }
 
 // Creates program headers as instructed by PHDRS linker script command.
@@ -899,10 +900,6 @@ template <class ELFT> int LinkerScript<ELFT>::getSectionIndex(StringRef Name) {
       if (Cmd->Name == Name)
         return I;
   return INT_MAX;
-}
-
-template <class ELFT> bool LinkerScript<ELFT>::hasPhdrsCommands() {
-  return !Opt.PhdrsCommands.empty();
 }
 
 template <class ELFT>

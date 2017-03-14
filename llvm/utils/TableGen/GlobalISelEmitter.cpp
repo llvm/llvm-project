@@ -582,9 +582,9 @@ private:
   /// True if the instruction can be built solely by mutating the opcode.
   bool canMutate() const {
     for (const auto &Renderer : enumerate(OperandRenderers)) {
-      if (const auto *Copy = dyn_cast<CopyRenderer>(&*Renderer.Value)) {
+      if (const auto *Copy = dyn_cast<CopyRenderer>(&*Renderer.value())) {
         if (Matched.getOperand(Copy->getSymbolicName()).getOperandIndex() !=
-            Renderer.Index)
+            Renderer.index())
           return false;
       } else
         return false;

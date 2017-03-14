@@ -74,15 +74,17 @@ define zeroext i16 @test6() {
 }
 
 ; Accessing the bottom of a large array shouldn't require materializing a base
+; 
+; CHECK: movs [[REG:r[0-9]+]], #1
+; CHECK: str [[REG]], [sp, #16]
+; CHECK: str [[REG]], [sp, #4]
+
 define void @test7() {
   %arr = alloca [200 x i32], align 4
 
-  ; CHECK: movs [[REG:r[0-9]+]], #1
-  ; CHECK: str [[REG]], [sp, #4]
   %arrayidx = getelementptr inbounds [200 x i32], [200 x i32]* %arr, i32 0, i32 1
   store i32 1, i32* %arrayidx, align 4
 
-  ; CHECK: str [[REG]], [sp, #16]
   %arrayidx1 = getelementptr inbounds [200 x i32], [200 x i32]* %arr, i32 0, i32 4
   store i32 1, i32* %arrayidx1, align 4
 
@@ -96,30 +98,36 @@ define void @test8() {
   %arr1 = alloca [224 x i32], align 4
 
 ; CHECK: movs [[REG:r[0-9]+]], #1
-; CHECK: str [[REG]], [sp]
+; CHECK-DAG: str [[REG]], [sp]
   %arr1idx1 = getelementptr inbounds [224 x i32], [224 x i32]* %arr1, i32 0, i32 0
   store i32 1, i32* %arr1idx1, align 4
 
 ; Offset in range for sp-based store, but not for non-sp-based store
-; CHECK: str [[REG]], [sp, #128]
+; CHECK-DAG: str [[REG]], [sp, #128]
   %arr1idx2 = getelementptr inbounds [224 x i32], [224 x i32]* %arr1, i32 0, i32 32
   store i32 1, i32* %arr1idx2, align 4
 
-; CHECK: str [[REG]], [sp, #896]
+; CHECK-DAG: str [[REG]], [sp, #896]
   %arr2idx1 = getelementptr inbounds [224 x i32], [224 x i32]* %arr2, i32 0, i32 0
   store i32 1, i32* %arr2idx1, align 4
 
 ; %arr2 is in range, but this element of it is not
-; CHECK: str [[REG]], [{{r[0-9]+}}]
+; CHECK-DAG: ldr [[RA:r[0-9]+]], .LCPI7_2
+; CHECK-DAG: add [[RA]], sp
+; CHECK-DAG: str [[REG]], [{{r[0-9]+}}]
   %arr2idx2 = getelementptr inbounds [224 x i32], [224 x i32]* %arr2, i32 0, i32 32
   store i32 1, i32* %arr2idx2, align 4
 
 ; %arr3 is not in range
-; CHECK: str [[REG]], [{{r[0-9]+}}]
+; CHECK-DAG: ldr [[RB:r[0-9]+]], .LCPI7_3
+; CHECK-DAG: add [[RB]], sp
+; CHECK-DAG: str [[REG]], [{{r[0-9]+}}]
   %arr3idx1 = getelementptr inbounds [224 x i32], [224 x i32]* %arr3, i32 0, i32 0
   store i32 1, i32* %arr3idx1, align 4
 
-; CHECK: str [[REG]], [{{r[0-9]+}}]
+; CHECK-DAG: ldr [[RC:r[0-9]+]], .LCPI7_4
+; CHECK-DAG: add [[RC]], sp
+; CHECK-DAG: str [[REG]], [{{r[0-9]+}}]
   %arr3idx2 = getelementptr inbounds [224 x i32], [224 x i32]* %arr3, i32 0, i32 32
   store i32 1, i32* %arr3idx2, align 4
 

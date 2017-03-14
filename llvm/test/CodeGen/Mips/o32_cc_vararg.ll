@@ -29,9 +29,9 @@ entry:
 
 ; CHECK-LABEL: va1:
 ; CHECK: addiu   $sp, $sp, -16
+; CHECK: sw      $5, 20($sp)
 ; CHECK: sw      $7, 28($sp)
 ; CHECK: sw      $6, 24($sp)
-; CHECK: sw      $5, 20($sp)
 ; CHECK: lw      $2, 20($sp)
 }
 
@@ -83,8 +83,8 @@ entry:
 
 ; CHECK-LABEL: va3:
 ; CHECK: addiu   $sp, $sp, -16
-; CHECK: sw      $7, 28($sp)
 ; CHECK: sw      $6, 24($sp)
+; CHECK: sw      $7, 28($sp)
 ; CHECK: lw      $2, 24($sp)
 }
 

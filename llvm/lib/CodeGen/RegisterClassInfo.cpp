@@ -24,6 +24,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Target/TargetFrameLowering.h"
 #include "llvm/Target/TargetRegisterInfo.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
 #include <algorithm>
@@ -56,18 +57,20 @@ void RegisterClassInfo::runOnMachineFunction(const MachineFunction &mf) {
 
   // Does this MF have different CSRs?
   assert(TRI && "no register info set");
-  const MCPhysReg *CSR = TRI->getCalleeSavedRegs(MF);
-  if (Update || CSR != CalleeSaved) {
-    // Build a CSRNum map. Every CSR alias gets an entry pointing to the last
+
+  // Get the callee saved registers.
+  const MCPhysReg *CSR = MF->getRegInfo().getCalleeSavedRegs();
+  if (Update || CSR != CalleeSavedRegs) {
+    // Build a CSRAlias map. Every CSR alias saves the last
     // overlapping CSR.
-    CSRNum.clear();
-    CSRNum.resize(TRI->getNumRegs(), 0);
-    for (unsigned N = 0; unsigned Reg = CSR[N]; ++N)
-      for (MCRegAliasIterator AI(Reg, TRI, true); AI.isValid(); ++AI)
-        CSRNum[*AI] = N + 1; // 0 means no CSR, 1 means CalleeSaved[0], ...
+    CalleeSavedAliases.resize(TRI->getNumRegs(), 0);
+    for (const MCPhysReg *I = CSR; *I; ++I)
+      for (MCRegAliasIterator AI(*I, TRI, true); AI.isValid(); ++AI)
+        CalleeSavedAliases[*AI] = *I;
+
     Update = true;
   }
-  CalleeSaved = CSR;
+  CalleeSavedRegs = CSR;
 
   // Different reserved registers?
   const BitVector &RR = MF->getRegInfo().getReservedRegs();
@@ -111,7 +114,7 @@ void RegisterClassInfo::compute(const TargetRegisterClass *RC) const {
     unsigned Cost = TRI->getCostPerUse(PhysReg);
     MinCost = std::min(MinCost, Cost);
 
-    if (CSRNum[PhysReg])
+    if (CalleeSavedAliases[PhysReg])
       // PhysReg aliases a CSR, save it for later.
       CSRAlias.push_back(PhysReg);
     else {

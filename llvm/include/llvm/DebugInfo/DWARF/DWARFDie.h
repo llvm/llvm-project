@@ -146,14 +146,6 @@ public:
   /// exist in this DIE.
   Optional<DWARFFormValue> find(ArrayRef<dwarf::Attribute> Attrs) const;
 
-  /// Extract an attribute value from this DIE and recurse into any
-  /// DW_AT_specification or DW_AT_abstract_origin referenced DIEs.
-  ///
-  /// \param Attr the attribute to extract.
-  /// \returns an optional DWARFFormValue that will have the form value if the
-  /// attribute was successfully extracted.
-  Optional<DWARFFormValue> findRecursively(dwarf::Attribute Attr) const;
-
   /// Extract the first value of any attribute in Attrs from this DIE and
   /// recurse into any DW_AT_specification or DW_AT_abstract_origin referenced
   /// DIEs.

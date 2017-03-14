@@ -509,13 +509,16 @@ __isl_give MULTI(BASE) *FN(MULTI(BASE),align_params)(
 	__isl_take MULTI(BASE) *multi, __isl_take isl_space *model)
 {
 	isl_ctx *ctx;
+	isl_bool equal_params;
 	isl_reordering *exp;
 
 	if (!multi || !model)
 		goto error;
 
-	if (isl_space_match(multi->space, isl_dim_param,
-			     model, isl_dim_param)) {
+	equal_params = isl_space_has_equal_params(multi->space, model);
+	if (equal_params < 0)
+		goto error;
+	if (equal_params) {
 		isl_space_free(model);
 		return multi;
 	}
@@ -735,11 +738,14 @@ static __isl_give MULTI(BASE) *FN(MULTI(BASE),align_params_multi_multi_and)(
 		__isl_take MULTI(BASE) *multi2))
 {
 	isl_ctx *ctx;
+	isl_bool equal_params;
 
 	if (!multi1 || !multi2)
 		goto error;
-	if (isl_space_match(multi1->space, isl_dim_param,
-			    multi2->space, isl_dim_param))
+	equal_params = isl_space_has_equal_params(multi1->space, multi2->space);
+	if (equal_params < 0)
+		goto error;
+	if (equal_params)
 		return fn(multi1, multi2);
 	ctx = FN(MULTI(BASE),get_ctx)(multi1);
 	if (!isl_space_has_named_params(multi1->space) ||

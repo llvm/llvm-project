@@ -12,8 +12,11 @@
 
 #include "OutputStyle.h"
 
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/DebugInfo/CodeView/TypeDatabase.h"
 #include "llvm/Support/ScopedPrinter.h"
+
+#include <string>
 
 namespace llvm {
 class BitVector;
@@ -25,8 +28,6 @@ public:
   Error dump() override;
 
 private:
-  void discoverStreamPurposes();
-
   Error dumpFileHeaders();
   Error dumpStreamSummary();
   Error dumpFreePageMap();
@@ -51,7 +52,7 @@ private:
   PDBFile &File;
   ScopedPrinter P;
   codeview::TypeDatabase TypeDB;
-  std::vector<std::string> StreamPurposes;
+  SmallVector<std::string, 32> StreamPurposes;
 };
 }
 }

@@ -426,7 +426,9 @@ public:
   /// this target. The register should be in the order of desired callee-save
   /// stack frame offset. The first register is closest to the incoming stack
   /// pointer if stack grows down, and vice versa.
-  ///
+  /// Notice: This function does not take into account disabled CSRs.
+  ///         In most cases you will want to use instead the function 
+  ///         getCalleeSavedRegs that is implemented in MachineRegisterInfo.
   virtual const MCPhysReg*
   getCalleeSavedRegs(const MachineFunction *MF) const = 0;
 

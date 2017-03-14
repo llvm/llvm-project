@@ -1279,17 +1279,21 @@ TEST(DWARFDebugInfo, TestFindRecurse) {
   dwarfgen::Generator *DG = ExpectedDG.get().get();
   dwarfgen::CompileUnit &CU = DG->addCompileUnit();
   
-  StringRef SpecDieName("spec");
-  StringRef AbsDieName("abs");
+  StringRef SpecDieName = "spec";
+  StringRef SpecLinkageName = "spec_linkage";
+  StringRef AbsDieName = "abs";
   // Scope to allow us to re-use the same DIE names
   {
     auto CUDie = CU.getUnitDIE();
     auto FuncSpecDie = CUDie.addChild(DW_TAG_subprogram);
+    auto FuncAbsDie = CUDie.addChild(DW_TAG_subprogram);
     auto FuncDie = CUDie.addChild(DW_TAG_subprogram);
     auto VarAbsDie = CUDie.addChild(DW_TAG_variable);
     auto VarDie = CUDie.addChild(DW_TAG_variable);
     FuncSpecDie.addAttribute(DW_AT_name, DW_FORM_strp, SpecDieName);
-    FuncDie.addAttribute(DW_AT_specification, DW_FORM_ref4, FuncSpecDie);
+    FuncAbsDie.addAttribute(DW_AT_linkage_name, DW_FORM_strp, SpecLinkageName);
+    FuncAbsDie.addAttribute(DW_AT_specification, DW_FORM_ref4, FuncSpecDie);
+    FuncDie.addAttribute(DW_AT_abstract_origin, DW_FORM_ref4, FuncAbsDie);
     VarAbsDie.addAttribute(DW_AT_name, DW_FORM_strp, AbsDieName);
     VarDie.addAttribute(DW_AT_abstract_origin, DW_FORM_ref4, VarAbsDie);
   }
@@ -1309,41 +1313,43 @@ TEST(DWARFDebugInfo, TestFindRecurse) {
   EXPECT_TRUE(CUDie.isValid());
   
   auto FuncSpecDie = CUDie.getFirstChild();
-  auto FuncDie = FuncSpecDie.getSibling();
+  auto FuncAbsDie = FuncSpecDie.getSibling();
+  auto FuncDie = FuncAbsDie.getSibling();
   auto VarAbsDie = FuncDie.getSibling();
   auto VarDie = VarAbsDie.getSibling();
 
   // Make sure we can't extract the name from the specification die when using
   // DWARFDie::find() since it won't check the DW_AT_specification DIE.
-  EXPECT_FALSE(FuncDie.find(DW_AT_name).hasValue());
+  EXPECT_FALSE(FuncDie.find(DW_AT_name));
 
   // Make sure we can extract the name from the specification die when using
   // DWARFDie::findRecursively() since it should recurse through the
   // DW_AT_specification DIE.
   auto NameOpt = FuncDie.findRecursively(DW_AT_name);
-  EXPECT_TRUE(NameOpt.hasValue());
+  EXPECT_TRUE(NameOpt);
   // Test the dwarf::toString() helper function.
   auto StringOpt = toString(NameOpt);
-  EXPECT_TRUE(StringOpt.hasValue());
+  EXPECT_TRUE(StringOpt);
   EXPECT_EQ(SpecDieName, StringOpt.getValueOr(nullptr));
   // Test the dwarf::toString() helper function with a default value specified.
   EXPECT_EQ(SpecDieName, toString(NameOpt, nullptr));
+
+  auto LinkageNameOpt = FuncDie.findRecursively(DW_AT_linkage_name);
+  EXPECT_EQ(SpecLinkageName, toString(LinkageNameOpt).getValueOr(nullptr));
   
   // Make sure we can't extract the name from the abstract origin die when using
   // DWARFDie::find() since it won't check the DW_AT_abstract_origin DIE.
-  EXPECT_FALSE(VarDie.find(DW_AT_name).hasValue());
+  EXPECT_FALSE(VarDie.find(DW_AT_name));
   
   // Make sure we can extract the name from the abstract origin die when using
   // DWARFDie::findRecursively() since it should recurse through the
   // DW_AT_abstract_origin DIE.
   NameOpt = VarDie.findRecursively(DW_AT_name);
-  EXPECT_TRUE(NameOpt.hasValue());
+  EXPECT_TRUE(NameOpt);
   // Test the dwarf::toString() helper function.
   StringOpt = toString(NameOpt);
-  EXPECT_TRUE(StringOpt.hasValue());
+  EXPECT_TRUE(StringOpt);
   EXPECT_EQ(AbsDieName, StringOpt.getValueOr(nullptr));
-  // Test the dwarf::toString() helper function with a default value specified.
-  EXPECT_EQ(AbsDieName, toString(NameOpt, nullptr));
 }
 
 TEST(DWARFDebugInfo, TestDwarfToFunctions) {

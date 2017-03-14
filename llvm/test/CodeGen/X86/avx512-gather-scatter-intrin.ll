@@ -254,6 +254,7 @@ define void @scatter_mask_qps_execdomain(<8 x i64> %ind, <8 x float>* %src, i8 %
 define void @gather_qps(<8 x i64> %ind, <8 x float> %src, i8* %base, i8* %stbuf)  {
 ; CHECK-LABEL: gather_qps:
 ; CHECK:       ## BB#0:
+; CHECK-NEXT:    vxorps %ymm1, %ymm1, %ymm1
 ; CHECK-NEXT:    kxnorw %k0, %k0, %k1
 ; CHECK-NEXT:    kxnorw %k0, %k0, %k2
 ; CHECK-NEXT:    vgatherqps (%rdi,%zmm0,4), %ymm1 {%k2}
@@ -297,11 +298,11 @@ define <2 x double>@test_int_x86_avx512_gather3div2_df(<2 x double> %x0, i8* %x1
 ; CHECK-LABEL: test_int_x86_avx512_gather3div2_df:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovb %esi, %k1
-; CHECK-NEXT:    vmovapd %xmm0, %xmm2
-; CHECK-NEXT:    vgatherqpd (%rdi,%xmm1,4), %xmm2 {%k1}
+; CHECK-NEXT:    vgatherqpd (%rdi,%xmm1,4), %xmm0 {%k1}
 ; CHECK-NEXT:    kxnorw %k0, %k0, %k1
-; CHECK-NEXT:    vgatherqpd (%rdi,%xmm1,2), %xmm0 {%k1}
-; CHECK-NEXT:    vaddpd %xmm0, %xmm2, %xmm0
+; CHECK-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
+; CHECK-NEXT:    vgatherqpd (%rdi,%xmm1,2), %xmm2 {%k1}
+; CHECK-NEXT:    vaddpd %xmm2, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %res = call <2 x double> @llvm.x86.avx512.gather3div2.df(<2 x double> %x0, i8* %x1, <2 x i64> %x2, i8 %x3, i32 4)
   %res1 = call <2 x double> @llvm.x86.avx512.gather3div2.df(<2 x double> %x0, i8* %x1, <2 x i64> %x2, i8 -1, i32 2)
@@ -330,11 +331,11 @@ define <4 x double>@test_int_x86_avx512_gather3div4_df(<4 x double> %x0, i8* %x1
 ; CHECK-LABEL: test_int_x86_avx512_gather3div4_df:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovb %esi, %k1
-; CHECK-NEXT:    vmovapd %ymm0, %ymm2
-; CHECK-NEXT:    vgatherqpd (%rdi,%ymm1,4), %ymm2 {%k1}
+; CHECK-NEXT:    vgatherqpd (%rdi,%ymm1,4), %ymm0 {%k1}
 ; CHECK-NEXT:    kxnorw %k0, %k0, %k1
-; CHECK-NEXT:    vgatherqpd (%rdi,%ymm1,2), %ymm0 {%k1}
-; CHECK-NEXT:    vaddpd %ymm0, %ymm2, %ymm0
+; CHECK-NEXT:    vxorpd %ymm2, %ymm2, %ymm2
+; CHECK-NEXT:    vgatherqpd (%rdi,%ymm1,2), %ymm2 {%k1}
+; CHECK-NEXT:    vaddpd %ymm2, %ymm0, %ymm0
 ; CHECK-NEXT:    retq
   %res = call <4 x double> @llvm.x86.avx512.gather3div4.df(<4 x double> %x0, i8* %x1, <4 x i64> %x2, i8 %x3, i32 4)
   %res1 = call <4 x double> @llvm.x86.avx512.gather3div4.df(<4 x double> %x0, i8* %x1, <4 x i64> %x2, i8 -1, i32 2)
@@ -348,11 +349,11 @@ define <4 x i64>@test_int_x86_avx512_gather3div4_di(<4 x i64> %x0, i8* %x1, <4 x
 ; CHECK-LABEL: test_int_x86_avx512_gather3div4_di:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovb %esi, %k1
-; CHECK-NEXT:    vmovdqa %ymm0, %ymm2
-; CHECK-NEXT:    vpgatherqq (%rdi,%ymm1,8), %ymm2 {%k1}
-; CHECK-NEXT:    kxnorw %k0, %k0, %k1
 ; CHECK-NEXT:    vpgatherqq (%rdi,%ymm1,8), %ymm0 {%k1}
-; CHECK-NEXT:    vpaddq %ymm0, %ymm2, %ymm0
+; CHECK-NEXT:    kxnorw %k0, %k0, %k1
+; CHECK-NEXT:    vpxor %ymm2, %ymm2, %ymm2
+; CHECK-NEXT:    vpgatherqq (%rdi,%ymm1,8), %ymm2 {%k1}
+; CHECK-NEXT:    vpaddq %ymm2, %ymm0, %ymm0
 ; CHECK-NEXT:    retq
   %res = call <4 x i64> @llvm.x86.avx512.gather3div4.di(<4 x i64> %x0, i8* %x1, <4 x i64> %x2, i8 %x3, i32 8)
   %res1 = call <4 x i64> @llvm.x86.avx512.gather3div4.di(<4 x i64> %x0, i8* %x1, <4 x i64> %x2, i8 -1, i32 8)
@@ -366,11 +367,11 @@ define <4 x float>@test_int_x86_avx512_gather3div4_sf(<4 x float> %x0, i8* %x1, 
 ; CHECK-LABEL: test_int_x86_avx512_gather3div4_sf:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovb %esi, %k1
-; CHECK-NEXT:    vmovaps %xmm0, %xmm2
-; CHECK-NEXT:    vgatherqps (%rdi,%xmm1,4), %xmm2 {%k1}
+; CHECK-NEXT:    vgatherqps (%rdi,%xmm1,4), %xmm0 {%k1}
 ; CHECK-NEXT:    kxnorw %k0, %k0, %k1
-; CHECK-NEXT:    vgatherqps (%rdi,%xmm1,2), %xmm0 {%k1}
-; CHECK-NEXT:    vaddps %xmm0, %xmm2, %xmm0
+; CHECK-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; CHECK-NEXT:    vgatherqps (%rdi,%xmm1,2), %xmm2 {%k1}
+; CHECK-NEXT:    vaddps %xmm2, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %res = call <4 x float> @llvm.x86.avx512.gather3div4.sf(<4 x float> %x0, i8* %x1, <2 x i64> %x2, i8 %x3, i32 4)
   %res1 = call <4 x float> @llvm.x86.avx512.gather3div4.sf(<4 x float> %x0, i8* %x1, <2 x i64> %x2, i8 -1, i32 2)
@@ -385,7 +386,7 @@ define <4 x i32>@test_int_x86_avx512_gather3div4_si(<4 x i32> %x0, i8* %x1, <2 x
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovb %esi, %k1
 ; CHECK-NEXT:    kxnorw %k0, %k0, %k2
-; CHECK-NEXT:    vmovdqa %xmm0, %xmm2
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; CHECK-NEXT:    vpgatherqd (%rdi,%xmm1,4), %xmm2 {%k2}
 ; CHECK-NEXT:    vpgatherqd (%rdi,%xmm1,4), %xmm0 {%k1}
 ; CHECK-NEXT:    vpaddd %xmm0, %xmm2, %xmm0
@@ -402,11 +403,11 @@ define <4 x float>@test_int_x86_avx512_gather3div8_sf(<4 x float> %x0, i8* %x1, 
 ; CHECK-LABEL: test_int_x86_avx512_gather3div8_sf:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovb %esi, %k1
-; CHECK-NEXT:    vmovaps %xmm0, %xmm2
-; CHECK-NEXT:    vgatherqps (%rdi,%ymm1,4), %xmm2 {%k1}
+; CHECK-NEXT:    vgatherqps (%rdi,%ymm1,4), %xmm0 {%k1}
 ; CHECK-NEXT:    kxnorw %k0, %k0, %k1
-; CHECK-NEXT:    vgatherqps (%rdi,%ymm1,2), %xmm0 {%k1}
-; CHECK-NEXT:    vaddps %xmm0, %xmm2, %xmm0
+; CHECK-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; CHECK-NEXT:    vgatherqps (%rdi,%ymm1,2), %xmm2 {%k1}
+; CHECK-NEXT:    vaddps %xmm2, %xmm0, %xmm0
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   %res = call <4 x float> @llvm.x86.avx512.gather3div8.sf(<4 x float> %x0, i8* %x1, <4 x i64> %x2, i8 %x3, i32 4)
@@ -440,11 +441,11 @@ define <2 x double>@test_int_x86_avx512_gather3siv2_df(<2 x double> %x0, i8* %x1
 ; CHECK-LABEL: test_int_x86_avx512_gather3siv2_df:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovb %esi, %k1
-; CHECK-NEXT:    vmovapd %xmm0, %xmm2
-; CHECK-NEXT:    vgatherdpd (%rdi,%xmm1,4), %xmm2 {%k1}
+; CHECK-NEXT:    vgatherdpd (%rdi,%xmm1,4), %xmm0 {%k1}
 ; CHECK-NEXT:    kxnorw %k0, %k0, %k1
-; CHECK-NEXT:    vgatherdpd (%rdi,%xmm1,2), %xmm0 {%k1}
-; CHECK-NEXT:    vaddpd %xmm0, %xmm2, %xmm0
+; CHECK-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
+; CHECK-NEXT:    vgatherdpd (%rdi,%xmm1,2), %xmm2 {%k1}
+; CHECK-NEXT:    vaddpd %xmm2, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %res = call <2 x double> @llvm.x86.avx512.gather3siv2.df(<2 x double> %x0, i8* %x1, <4 x i32> %x2, i8 %x3, i32 4)
   %res1 = call <2 x double> @llvm.x86.avx512.gather3siv2.df(<2 x double> %x0, i8* %x1, <4 x i32> %x2, i8 -1, i32 2)
@@ -473,11 +474,11 @@ define <4 x double>@test_int_x86_avx512_gather3siv4_df(<4 x double> %x0, i8* %x1
 ; CHECK-LABEL: test_int_x86_avx512_gather3siv4_df:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovb %esi, %k1
-; CHECK-NEXT:    vmovapd %ymm0, %ymm2
-; CHECK-NEXT:    vgatherdpd (%rdi,%xmm1,4), %ymm2 {%k1}
+; CHECK-NEXT:    vgatherdpd (%rdi,%xmm1,4), %ymm0 {%k1}
 ; CHECK-NEXT:    kxnorw %k0, %k0, %k1
-; CHECK-NEXT:    vgatherdpd (%rdi,%xmm1,2), %ymm0 {%k1}
-; CHECK-NEXT:    vaddpd %ymm0, %ymm2, %ymm0
+; CHECK-NEXT:    vxorpd %ymm2, %ymm2, %ymm2
+; CHECK-NEXT:    vgatherdpd (%rdi,%xmm1,2), %ymm2 {%k1}
+; CHECK-NEXT:    vaddpd %ymm2, %ymm0, %ymm0
 ; CHECK-NEXT:    retq
   %res = call <4 x double> @llvm.x86.avx512.gather3siv4.df(<4 x double> %x0, i8* %x1, <4 x i32> %x2, i8 %x3, i32 4)
   %res1 = call <4 x double> @llvm.x86.avx512.gather3siv4.df(<4 x double> %x0, i8* %x1, <4 x i32> %x2, i8 -1, i32 2)
@@ -506,11 +507,11 @@ define <4 x float>@test_int_x86_avx512_gather3siv4_sf(<4 x float> %x0, i8* %x1, 
 ; CHECK-LABEL: test_int_x86_avx512_gather3siv4_sf:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovb %esi, %k1
-; CHECK-NEXT:    vmovaps %xmm0, %xmm2
-; CHECK-NEXT:    vgatherdps (%rdi,%xmm1,4), %xmm2 {%k1}
+; CHECK-NEXT:    vgatherdps (%rdi,%xmm1,4), %xmm0 {%k1}
 ; CHECK-NEXT:    kxnorw %k0, %k0, %k1
-; CHECK-NEXT:    vgatherdps (%rdi,%xmm1,2), %xmm0 {%k1}
-; CHECK-NEXT:    vaddps %xmm0, %xmm2, %xmm0
+; CHECK-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; CHECK-NEXT:    vgatherdps (%rdi,%xmm1,2), %xmm2 {%k1}
+; CHECK-NEXT:    vaddps %xmm2, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %res = call <4 x float> @llvm.x86.avx512.gather3siv4.sf(<4 x float> %x0, i8* %x1, <4 x i32> %x2, i8 %x3, i32 4)
   %res1 = call <4 x float> @llvm.x86.avx512.gather3siv4.sf(<4 x float> %x0, i8* %x1, <4 x i32> %x2, i8 -1, i32 2)
@@ -525,7 +526,7 @@ define <4 x i32>@test_int_x86_avx512_gather3siv4_si(<4 x i32> %x0, i8* %x1, <4 x
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovb %esi, %k1
 ; CHECK-NEXT:    kxnorw %k0, %k0, %k2
-; CHECK-NEXT:    vmovdqa %xmm0, %xmm2
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; CHECK-NEXT:    vpgatherdd (%rdi,%xmm1,4), %xmm2 {%k2}
 ; CHECK-NEXT:    vpgatherdd (%rdi,%xmm1,2), %xmm0 {%k1}
 ; CHECK-NEXT:    vpaddd %xmm0, %xmm2, %xmm0
@@ -542,11 +543,11 @@ define <8 x float>@test_int_x86_avx512_gather3siv8_sf(<8 x float> %x0, i8* %x1, 
 ; CHECK-LABEL: test_int_x86_avx512_gather3siv8_sf:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovb %esi, %k1
-; CHECK-NEXT:    vmovaps %ymm0, %ymm2
-; CHECK-NEXT:    vgatherdps (%rdi,%ymm1,4), %ymm2 {%k1}
+; CHECK-NEXT:    vgatherdps (%rdi,%ymm1,4), %ymm0 {%k1}
 ; CHECK-NEXT:    kxnorw %k0, %k0, %k1
-; CHECK-NEXT:    vgatherdps (%rdi,%ymm1,2), %ymm0 {%k1}
-; CHECK-NEXT:    vaddps %ymm0, %ymm2, %ymm0
+; CHECK-NEXT:    vxorps %ymm2, %ymm2, %ymm2
+; CHECK-NEXT:    vgatherdps (%rdi,%ymm1,2), %ymm2 {%k1}
+; CHECK-NEXT:    vaddps %ymm2, %ymm0, %ymm0
 ; CHECK-NEXT:    retq
   %res = call <8 x float> @llvm.x86.avx512.gather3siv8.sf(<8 x float> %x0, i8* %x1, <8 x i32> %x2, i8 %x3, i32 4)
   %res1 = call <8 x float> @llvm.x86.avx512.gather3siv8.sf(<8 x float> %x0, i8* %x1, <8 x i32> %x2, i8 -1, i32 2)
@@ -846,7 +847,7 @@ define <16 x float> @gather_mask_test(<16 x i32> %ind, <16 x float> %src, i8* %b
 ; CHECK-LABEL: gather_mask_test:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kxnorw %k0, %k0, %k1
-; CHECK-NEXT:    vmovaps %zmm1, %zmm2
+; CHECK-NEXT:    vxorps %zmm2, %zmm2, %zmm2
 ; CHECK-NEXT:    vgatherdps (%rdi,%zmm0,4), %zmm2 {%k1}
 ; CHECK-NEXT:    kxorw %k0, %k0, %k1
 ; CHECK-NEXT:    vmovaps %zmm1, %zmm3

@@ -205,20 +205,6 @@ struct MemoryRegion {
   uint32_t NegFlags;
 };
 
-class LinkerScriptBase {
-protected:
-  ~LinkerScriptBase() = default;
-  OutputSection *Aether;
-
-public:
-  virtual uint64_t getSymbolValue(const Twine &Loc, StringRef S) = 0;
-  uint64_t getDot() { return getSymbolValue("", "."); }
-  virtual bool isDefined(StringRef S) = 0;
-  virtual bool isAbsolute(StringRef S) = 0;
-  virtual OutputSection *getSymbolSection(StringRef S) = 0;
-  virtual OutputSection *getOutputSection(const Twine &Loc, StringRef S) = 0;
-  virtual uint64_t getOutputSectionSize(StringRef S) = 0;
-};
 
 // ScriptConfiguration holds linker script parse results.
 struct ScriptConfiguration {
@@ -239,6 +225,26 @@ struct ScriptConfiguration {
 };
 
 extern ScriptConfiguration *ScriptConfig;
+
+class LinkerScriptBase {
+protected:
+  ~LinkerScriptBase() = default;
+  OutputSection *Aether;
+
+  // "ScriptConfig" is a bit too long, so define a short name for it.
+  ScriptConfiguration &Opt = *ScriptConfig;
+
+public:
+  bool hasPhdrsCommands() { return !Opt.PhdrsCommands.empty(); }
+
+  virtual uint64_t getSymbolValue(const Twine &Loc, StringRef S) = 0;
+  uint64_t getDot() { return getSymbolValue("", "."); }
+  virtual bool isDefined(StringRef S) = 0;
+  virtual bool isAbsolute(StringRef S) = 0;
+  virtual OutputSection *getSymbolSection(StringRef S) = 0;
+  virtual OutputSection *getOutputSection(const Twine &Loc, StringRef S) = 0;
+  virtual uint64_t getOutputSectionSize(StringRef S) = 0;
+};
 
 // This is a runner of the linker script.
 template <class ELFT> class LinkerScript final : public LinkerScriptBase {
@@ -264,7 +270,6 @@ public:
   void assignOffsets(OutputSectionCommand *Cmd);
   void placeOrphanSections();
   void assignAddresses(std::vector<PhdrEntry> &Phdrs);
-  bool hasPhdrsCommands();
   uint64_t getSymbolValue(const Twine &Loc, StringRef S) override;
   bool isDefined(StringRef S) override;
   bool isAbsolute(StringRef S) override;
@@ -286,9 +291,6 @@ private:
 
   std::vector<InputSectionBase *>
   createInputSectionList(OutputSectionCommand &Cmd);
-
-  // "ScriptConfig" is a bit too long, so define a short name for it.
-  ScriptConfiguration &Opt = *ScriptConfig;
 
   std::vector<size_t> getPhdrIndices(StringRef SectionName);
   size_t getPhdrIndex(const Twine &Loc, StringRef PhdrName);

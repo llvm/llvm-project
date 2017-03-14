@@ -138,30 +138,30 @@ template <> struct MappingTraits<pdb::yaml::PdbInfoStream> {
   static void mapping(IO &IO, pdb::yaml::PdbInfoStream &Obj);
 };
 
-template <> struct MappingTraits<pdb::yaml::PdbDbiStream> {
-  static void mapping(IO &IO, pdb::yaml::PdbDbiStream &Obj);
+template <> struct MappingContextTraits<pdb::yaml::PdbDbiStream, pdb::yaml::SerializationContext> {
+  static void mapping(IO &IO, pdb::yaml::PdbDbiStream &Obj, pdb::yaml::SerializationContext &Context);
 };
 
 template <>
-struct MappingContextTraits<pdb::yaml::PdbTpiStream, llvm::BumpPtrAllocator> {
+struct MappingContextTraits<pdb::yaml::PdbTpiStream, pdb::yaml::SerializationContext> {
   static void mapping(IO &IO, pdb::yaml::PdbTpiStream &Obj,
-                      llvm::BumpPtrAllocator &Allocator);
+    pdb::yaml::SerializationContext &Context);
 };
 
 template <> struct MappingTraits<pdb::yaml::NamedStreamMapping> {
   static void mapping(IO &IO, pdb::yaml::NamedStreamMapping &Obj);
 };
 
-template <> struct MappingTraits<pdb::yaml::PdbSymbolRecord> {
-  static void mapping(IO &IO, pdb::yaml::PdbSymbolRecord &Obj);
+template <> struct MappingContextTraits<pdb::yaml::PdbSymbolRecord, pdb::yaml::SerializationContext> {
+  static void mapping(IO &IO, pdb::yaml::PdbSymbolRecord &Obj, pdb::yaml::SerializationContext &Context);
 };
 
-template <> struct MappingTraits<pdb::yaml::PdbModiStream> {
-  static void mapping(IO &IO, pdb::yaml::PdbModiStream &Obj);
+template <> struct MappingContextTraits<pdb::yaml::PdbModiStream, pdb::yaml::SerializationContext> {
+  static void mapping(IO &IO, pdb::yaml::PdbModiStream &Obj, pdb::yaml::SerializationContext &Context);
 };
 
-template <> struct MappingTraits<pdb::yaml::PdbDbiModuleInfo> {
-  static void mapping(IO &IO, pdb::yaml::PdbDbiModuleInfo &Obj);
+template <> struct MappingContextTraits<pdb::yaml::PdbDbiModuleInfo, pdb::yaml::SerializationContext> {
+  static void mapping(IO &IO, pdb::yaml::PdbDbiModuleInfo &Obj, pdb::yaml::SerializationContext &Context);
 };
 
 template <>

@@ -778,6 +778,84 @@ TEST_F(FileSystemTest, DirectoryIteration) {
   ASSERT_NO_ERROR(fs::remove(Twine(TestDirectory) + "/reclevel"));
 }
 
+#ifdef LLVM_ON_UNIX
+TEST_F(FileSystemTest, BrokenSymlinkDirectoryIteration) {
+  // Create a known hierarchy to recurse over.
+  ASSERT_NO_ERROR(fs::create_directories(Twine(TestDirectory) + "/symlink"));
+  ASSERT_NO_ERROR(
+      fs::create_link("no_such_file", Twine(TestDirectory) + "/symlink/a"));
+  ASSERT_NO_ERROR(
+      fs::create_directories(Twine(TestDirectory) + "/symlink/b/bb"));
+  ASSERT_NO_ERROR(
+      fs::create_link("no_such_file", Twine(TestDirectory) + "/symlink/b/ba"));
+  ASSERT_NO_ERROR(
+      fs::create_link("no_such_file", Twine(TestDirectory) + "/symlink/b/bc"));
+  ASSERT_NO_ERROR(
+      fs::create_link("no_such_file", Twine(TestDirectory) + "/symlink/c"));
+  ASSERT_NO_ERROR(
+      fs::create_directories(Twine(TestDirectory) + "/symlink/d/dd/ddd"));
+  ASSERT_NO_ERROR(fs::create_link(Twine(TestDirectory) + "/symlink/d/dd",
+                                  Twine(TestDirectory) + "/symlink/d/da"));
+  ASSERT_NO_ERROR(
+      fs::create_link("no_such_file", Twine(TestDirectory) + "/symlink/e"));
+
+  typedef std::vector<std::string> v_t;
+  v_t visited;
+
+  // The directory iterator doesn't stat the file, so we should be able to
+  // iterate over the whole directory.
+  std::error_code ec;
+  for (fs::directory_iterator i(Twine(TestDirectory) + "/symlink", ec), e;
+       i != e; i.increment(ec)) {
+    ASSERT_NO_ERROR(ec);
+    visited.push_back(path::filename(i->path()));
+  }
+  std::sort(visited.begin(), visited.end());
+  v_t expected = {"a", "b", "c", "d", "e"};
+  ASSERT_TRUE(visited.size() == expected.size());
+  ASSERT_TRUE(std::equal(visited.begin(), visited.end(), expected.begin()));
+  visited.clear();
+
+  // The recursive directory iterator has to stat the file, so we need to skip
+  // the broken symlinks.
+  for (fs::recursive_directory_iterator
+           i(Twine(TestDirectory) + "/symlink", ec),
+       e;
+       i != e; i.increment(ec)) {
+    ASSERT_NO_ERROR(ec);
+
+    fs::file_status status;
+    if (i->status(status) == std::errc::no_such_file_or_directory) {
+      i.no_push();
+      continue;
+    }
+
+    visited.push_back(path::filename(i->path()));
+  }
+  std::sort(visited.begin(), visited.end());
+  expected = {"b", "bb", "d", "da", "dd", "ddd", "ddd"};
+  ASSERT_TRUE(visited.size() == expected.size());
+  ASSERT_TRUE(std::equal(visited.begin(), visited.end(), expected.begin()));
+  visited.clear();
+
+  // This recursive directory iterator doesn't follow symlinks, so we don't need
+  // to skip them.
+  for (fs::recursive_directory_iterator
+           i(Twine(TestDirectory) + "/symlink", ec, /*follow_symlinks=*/false),
+       e;
+       i != e; i.increment(ec)) {
+    ASSERT_NO_ERROR(ec);
+    visited.push_back(path::filename(i->path()));
+  }
+  std::sort(visited.begin(), visited.end());
+  expected = {"a", "b", "ba", "bb", "bc", "c", "d", "da", "dd", "ddd", "e"};
+  ASSERT_TRUE(visited.size() == expected.size());
+  ASSERT_TRUE(std::equal(visited.begin(), visited.end(), expected.begin()));
+
+  ASSERT_NO_ERROR(fs::remove_directories(Twine(TestDirectory) + "/symlink"));
+}
+#endif
+
 TEST_F(FileSystemTest, Remove) {
   SmallString<64> BaseDir;
   SmallString<64> Paths[4];

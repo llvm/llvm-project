@@ -144,9 +144,10 @@ namespace EEVT {
     /// be a vector type VT.
     bool EnforceVectorSubVectorTypeIs(EEVT::TypeSet &VT, TreePattern &TP);
 
-    /// EnforceVectorSameNumElts - 'this' is now constrained to
-    /// be a vector with same num elements as VT.
-    bool EnforceVectorSameNumElts(EEVT::TypeSet &VT, TreePattern &TP);
+    /// EnforceSameNumElts - If VTOperand is a scalar, then 'this' is a scalar.
+    /// If VTOperand is a vector, then 'this' must have the same number of
+    /// elements.
+    bool EnforceSameNumElts(EEVT::TypeSet &VT, TreePattern &TP);
 
     /// EnforceSameSize - 'this' is now constrained to be the same size as VT.
     bool EnforceSameSize(EEVT::TypeSet &VT, TreePattern &TP);

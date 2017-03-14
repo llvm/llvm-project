@@ -14,7 +14,6 @@
 #include "LinkDiagnosticInfo.h"
 #include "llvm-c/Linker.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/StringSet.h"
 #include "llvm/IR/Comdat.h"
 #include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/IR/GlobalValue.h"
@@ -33,10 +32,17 @@ class ModuleLinker {
   std::unique_ptr<Module> SrcM;
 
   SetVector<GlobalValue *> ValuesToLink;
-  StringSet<> Internalize;
 
   /// For symbol clashes, prefer those from Src.
   unsigned Flags;
+
+  /// List of global value names that should be internalized.
+  StringSet<> Internalize;
+
+  /// Function that will perform the actual internalization. The reason for a
+  /// callback is that the linker cannot call internalizeModule without
+  /// creating a circular dependency between IPO and the linker.
+  std::function<void(Module &, const StringSet<> &)> InternalizeCallback;
 
   /// Used as the callback for lazy linking.
   /// The mover has just hit GV and we have to decide if it, and other members
@@ -46,9 +52,6 @@ class ModuleLinker {
 
   bool shouldOverrideFromSrc() { return Flags & Linker::OverrideFromSrc; }
   bool shouldLinkOnlyNeeded() { return Flags & Linker::LinkOnlyNeeded; }
-  bool shouldInternalizeLinkedSymbols() {
-    return Flags & Linker::InternalizeLinkedSymbols;
-  }
 
   bool shouldLinkFromSource(bool &LinkFromSrc, const GlobalValue &Dest,
                             const GlobalValue &Src);
@@ -104,8 +107,11 @@ class ModuleLinker {
   bool linkIfNeeded(GlobalValue &GV);
 
 public:
-  ModuleLinker(IRMover &Mover, std::unique_ptr<Module> SrcM, unsigned Flags)
-      : Mover(Mover), SrcM(std::move(SrcM)), Flags(Flags) {}
+  ModuleLinker(IRMover &Mover, std::unique_ptr<Module> SrcM, unsigned Flags,
+               std::function<void(Module &, const StringSet<> &)>
+                   InternalizeCallback = {})
+      : Mover(Mover), SrcM(std::move(SrcM)), Flags(Flags),
+        InternalizeCallback(std::move(InternalizeCallback)) {}
 
   bool run();
 };
@@ -383,7 +389,7 @@ void ModuleLinker::addLazyFor(GlobalValue &GV, const IRMover::ValueAdder &Add) {
       !shouldLinkOnlyNeeded())
     return;
 
-  if (shouldInternalizeLinkedSymbols())
+  if (InternalizeCallback)
     Internalize.insert(GV.getName());
   Add(GV);
 
@@ -397,7 +403,7 @@ void ModuleLinker::addLazyFor(GlobalValue &GV, const IRMover::ValueAdder &Add) {
       return;
     if (!LinkFromSrc)
       continue;
-    if (shouldInternalizeLinkedSymbols())
+    if (InternalizeCallback)
       Internalize.insert(GV2->getName());
     Add(*GV2);
   }
@@ -526,7 +532,7 @@ bool ModuleLinker::run() {
     }
   }
 
-  if (shouldInternalizeLinkedSymbols()) {
+  if (InternalizeCallback) {
     for (GlobalValue *GV : ValuesToLink)
       Internalize.insert(GV->getName());
   }
@@ -547,18 +553,19 @@ bool ModuleLinker::run() {
   if (HasErrors)
     return true;
 
-  for (auto &P : Internalize) {
-    GlobalValue *GV = DstM.getNamedValue(P.first());
-    GV->setLinkage(GlobalValue::InternalLinkage);
-  }
+  if (InternalizeCallback)
+    InternalizeCallback(DstM, Internalize);
 
   return false;
 }
 
 Linker::Linker(Module &M) : Mover(M) {}
 
-bool Linker::linkInModule(std::unique_ptr<Module> Src, unsigned Flags) {
-  ModuleLinker ModLinker(Mover, std::move(Src), Flags);
+bool Linker::linkInModule(
+    std::unique_ptr<Module> Src, unsigned Flags,
+    std::function<void(Module &, const StringSet<> &)> InternalizeCallback) {
+  ModuleLinker ModLinker(Mover, std::move(Src), Flags,
+                         std::move(InternalizeCallback));
   return ModLinker.run();
 }
 
@@ -571,10 +578,11 @@ bool Linker::linkInModule(std::unique_ptr<Module> Src, unsigned Flags) {
 /// true is returned and ErrorMsg (if not null) is set to indicate the problem.
 /// Upon failure, the Dest module could be in a modified state, and shouldn't be
 /// relied on to be consistent.
-bool Linker::linkModules(Module &Dest, std::unique_ptr<Module> Src,
-                         unsigned Flags) {
+bool Linker::linkModules(
+    Module &Dest, std::unique_ptr<Module> Src, unsigned Flags,
+    std::function<void(Module &, const StringSet<> &)> InternalizeCallback) {
   Linker L(Dest);
-  return L.linkInModule(std::move(Src), Flags);
+  return L.linkInModule(std::move(Src), Flags, std::move(InternalizeCallback));
 }
 
 //===----------------------------------------------------------------------===//

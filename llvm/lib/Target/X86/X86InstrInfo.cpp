@@ -10387,13 +10387,21 @@ FunctionPass*
 llvm::createCleanupLocalDynamicTLSPass() { return new LDTLSCleanup(); }
 
 unsigned X86InstrInfo::getOutliningBenefit(size_t SequenceSize,
-                                           size_t Occurrences) const {
+                                           size_t Occurrences,
+                                           bool CanBeTailCall) const {
   unsigned NotOutlinedSize = SequenceSize * Occurrences;
+  unsigned OutlinedSize;
 
-  // Sequence appears once in outlined function (Sequence.size())
-  // One return instruction (+1)
-  // One call per occurrence (Occurrences)
-  unsigned OutlinedSize = (SequenceSize + 1) + Occurrences;
+  // Is it a tail call?
+  if (CanBeTailCall) {
+    // If yes, we don't have to include a return instruction-- it's already in
+    // our sequence. So we have one occurrence of the sequence + #Occurrences
+    // calls.
+    OutlinedSize = SequenceSize + Occurrences;
+  } else {
+    // If not, add one for the return instruction.
+    OutlinedSize = (SequenceSize + 1) + Occurrences;
+  }
 
   // Return the number of instructions saved by outlining this sequence.
   return NotOutlinedSize > OutlinedSize ? NotOutlinedSize - OutlinedSize : 0;
@@ -10406,9 +10414,24 @@ bool X86InstrInfo::isFunctionSafeToOutlineFrom(MachineFunction &MF) const {
 X86GenInstrInfo::MachineOutlinerInstrType
 X86InstrInfo::getOutliningType(MachineInstr &MI) const {
 
-  // Don't outline returns or basic block terminators.
-  if (MI.isReturn() || MI.isTerminator())
+  // Don't allow debug values to impact outlining type.
+  if (MI.isDebugValue() || MI.isIndirectDebugValue())
+    return MachineOutlinerInstrType::Invisible;
+
+  // Is this a tail call? If yes, we can outline as a tail call.
+  if (isTailCall(MI))
+    return MachineOutlinerInstrType::Legal;
+
+  // Is this the terminator of a basic block?
+  if (MI.isTerminator() || MI.isReturn()) {
+
+    // Does its parent have any successors in its MachineFunction?
+    if (MI.getParent()->succ_empty())
+        return MachineOutlinerInstrType::Legal;
+
+    // It does, so we can't tail call it.
     return MachineOutlinerInstrType::Illegal;
+  }
 
   // Don't outline anything that modifies or reads from the stack pointer.
   //
@@ -10421,47 +10444,65 @@ X86InstrInfo::getOutliningType(MachineInstr &MI) const {
   // catch it.
   if (MI.modifiesRegister(X86::RSP, &RI) || MI.readsRegister(X86::RSP, &RI) ||
       MI.getDesc().hasImplicitUseOfPhysReg(X86::RSP) ||
-      MI.getDesc().hasImplicitDefOfPhysReg(X86::RSP))
+      MI.getDesc().hasImplicitDefOfPhysReg(X86::RSP)) 
     return MachineOutlinerInstrType::Illegal;
 
+  // Outlined calls change the instruction pointer, so don't read from it.
   if (MI.readsRegister(X86::RIP, &RI) ||
       MI.getDesc().hasImplicitUseOfPhysReg(X86::RIP) ||
       MI.getDesc().hasImplicitDefOfPhysReg(X86::RIP))
     return MachineOutlinerInstrType::Illegal;
 
+  // Positions can't safely be outlined.
   if (MI.isPosition())
     return MachineOutlinerInstrType::Illegal;
 
+  // Make sure none of the operands of this instruction do anything tricky.
   for (const MachineOperand &MOP : MI.operands())
     if (MOP.isCPI() || MOP.isJTI() || MOP.isCFIIndex() || MOP.isFI() ||
         MOP.isTargetIndex())
       return MachineOutlinerInstrType::Illegal;
 
-  // Don't allow debug values to impact outlining type.
-  if (MI.isDebugValue() || MI.isIndirectDebugValue())
-    return MachineOutlinerInstrType::Invisible;
-
   return MachineOutlinerInstrType::Legal;
 }
 
 void X86InstrInfo::insertOutlinerEpilogue(MachineBasicBlock &MBB,
-                                          MachineFunction &MF) const {
+                                          MachineFunction &MF,
+                                          bool IsTailCall) const {
 
+  // If we're a tail call, we already have a return, so don't do anything.
+  if (IsTailCall)
+    return;
+
+  // We're a normal call, so our sequence doesn't have a return instruction.
+  // Add it in.
   MachineInstr *retq = BuildMI(MF, DebugLoc(), get(X86::RETQ));
   MBB.insert(MBB.end(), retq);
 }
 
 void X86InstrInfo::insertOutlinerPrologue(MachineBasicBlock &MBB,
-                                          MachineFunction &MF) const {
+                                          MachineFunction &MF,
+                                          bool IsTailCall) const {
   return;
 }
 
 MachineBasicBlock::iterator
 X86InstrInfo::insertOutlinedCall(Module &M, MachineBasicBlock &MBB,
                                  MachineBasicBlock::iterator &It,
-                                 MachineFunction &MF) const {
-  It = MBB.insert(It,
+                                 MachineFunction &MF,
+                                 bool IsTailCall) const {
+  // Is it a tail call?
+  if (IsTailCall) {
+    // Yes, just insert a JMP.
+    It = MBB.insert(It,
+                  BuildMI(MF, DebugLoc(), get(X86::JMP_1))
+                      .addGlobalAddress(M.getNamedValue(MF.getName())));
+  } else {
+    // No, insert a call.
+    It = MBB.insert(It,
                   BuildMI(MF, DebugLoc(), get(X86::CALL64pcrel32))
                       .addGlobalAddress(M.getNamedValue(MF.getName())));
+  }
+
   return It;
 }

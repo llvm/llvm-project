@@ -231,11 +231,15 @@ __isl_give isl_union_map *isl_union_map_align_params(
 	__isl_take isl_union_map *umap, __isl_take isl_space *model)
 {
 	struct isl_union_align data = { NULL, NULL };
+	isl_bool equal_params;
 
 	if (!umap || !model)
 		goto error;
 
-	if (isl_space_match(umap->dim, isl_dim_param, model, isl_dim_param)) {
+	equal_params = isl_space_has_equal_params(umap->dim, model);
+	if (equal_params < 0)
+		goto error;
+	if (equal_params) {
 		isl_space_free(model);
 		return umap;
 	}
@@ -341,7 +345,7 @@ isl_bool isl_union_map_space_has_equal_params(__isl_keep isl_union_map *umap,
 	isl_space *umap_space;
 
 	umap_space = isl_union_map_peek_space(umap);
-	return isl_space_match(umap_space, isl_dim_param, space, isl_dim_param);
+	return isl_space_has_equal_params(umap_space, space);
 }
 
 static int has_dim(const void *entry, const void *val)

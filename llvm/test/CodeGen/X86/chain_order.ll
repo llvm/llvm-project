@@ -11,9 +11,9 @@ define void @cftx020(double* nocapture %a) {
 ; CHECK-NEXT:    vmovhpd {{.*#+}} xmm1 = xmm1[0],mem[0]
 ; CHECK-NEXT:    vaddpd %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    vmovupd (%rdi), %xmm1
-; CHECK-NEXT:    vsubpd 16(%rdi), %xmm1, %xmm1
 ; CHECK-NEXT:    vmovupd %xmm0, (%rdi)
-; CHECK-NEXT:    vmovupd %xmm1, 16(%rdi)
+; CHECK-NEXT:    vsubpd 16(%rdi), %xmm1, %xmm0
+; CHECK-NEXT:    vmovupd %xmm0, 16(%rdi)
 ; CHECK-NEXT:    retq
 entry:
   %0 = load double, double* %a, align 8
