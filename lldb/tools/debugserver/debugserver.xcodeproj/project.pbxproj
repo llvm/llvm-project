@@ -94,10 +94,8 @@
 		456F67641AD46CE9002850C2 /* CFBundle.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2695DD910D3EBFF6007E4CA2 /* CFBundle.cpp */; };
 		456F67651AD46CE9002850C2 /* PseudoTerminal.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF67ABFF0D34604D0022D128 /* PseudoTerminal.cpp */; };
 		456F67671AD46CE9002850C2 /* DNBArch.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 264D5D571293835600ED4C01 /* DNBArch.cpp */; };
-		456F67681AD46CE9002850C2 /* HasAVX.s in Sources */ = {isa = PBXBuildFile; fileRef = 4971AE7113D10F4F00649E37 /* HasAVX.s */; };
 		456F67691AD46CE9002850C2 /* DNBArchImplARM64.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 266B5ECF1460A68200E43F0A /* DNBArchImplARM64.cpp */; };
 		456F676B1AD46CE9002850C2 /* CoreFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 26ACA3340D3E956300A2120B /* CoreFoundation.framework */; settings = {ATTRIBUTES = (Required, ); }; };
-		4971AE7213D10F4F00649E37 /* HasAVX.s in Sources */ = {isa = PBXBuildFile; fileRef = 4971AE7113D10F4F00649E37 /* HasAVX.s */; };
 		49D404621E39260F00570CDC /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 49D404611E39260F00570CDC /* Foundation.framework */; };
 		AF48558C1D75126800D19C07 /* StdStringExtractor.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF48558B1D75126800D19C07 /* StdStringExtractor.cpp */; };
 		AF48558D1D75127500D19C07 /* StdStringExtractor.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF48558B1D75126800D19C07 /* StdStringExtractor.cpp */; };
@@ -210,8 +208,6 @@
 		26CF99A31142EB7400011AAB /* DNBArchImplX86_64.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DNBArchImplX86_64.h; sourceTree = "<group>"; };
 		26E6B9DA0D1329010037ECDD /* RNBDefs.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RNBDefs.h; sourceTree = "<group>"; };
 		456F67721AD46CE9002850C2 /* debugserver-nonui */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "debugserver-nonui"; sourceTree = BUILT_PRODUCTS_DIR; };
-		4971AE7013D10F4F00649E37 /* HasAVX.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = HasAVX.h; sourceTree = "<group>"; };
-		4971AE7113D10F4F00649E37 /* HasAVX.s */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.asm; path = HasAVX.s; sourceTree = "<group>"; };
 		49D404611E39260F00570CDC /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
 		49F530111331519C008956F6 /* MachRegisterStatesI386.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MachRegisterStatesI386.h; sourceTree = "<group>"; };
 		49F5301213316D7F008956F6 /* MachRegisterStatesX86_64.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MachRegisterStatesX86_64.h; sourceTree = "<group>"; };
@@ -413,8 +409,6 @@
 				26C637E90C71334A0024798E /* i386 */,
 				26C637FA0C71334A0024798E /* ppc */,
 				26CF99A11142EB7400011AAB /* x86_64 */,
-				4971AE7013D10F4F00649E37 /* HasAVX.h */,
-				4971AE7113D10F4F00649E37 /* HasAVX.s */,
 				26C637E80C71334A0024798E /* dbgnub-mig.defs */,
 				AFEC3363194A8B0B00FF05C6 /* Genealogy.cpp */,
 				AF0934BA18E12B92005A11FD /* Genealogy.h */,
@@ -626,7 +620,6 @@
 				23562ED91D342B0000AB2BD4 /* LogMessage.cpp in Sources */,
 				26CE05F1115C387C0022F371 /* PseudoTerminal.cpp in Sources */,
 				264D5D581293835600ED4C01 /* DNBArch.cpp in Sources */,
-				4971AE7213D10F4F00649E37 /* HasAVX.s in Sources */,
 				237821B01D4917D20028B7A1 /* LogFilterExactMatch.cpp in Sources */,
 				266B5ED11460A68200E43F0A /* DNBArchImplARM64.cpp in Sources */,
 			);
@@ -679,7 +672,6 @@
 				456F67641AD46CE9002850C2 /* CFBundle.cpp in Sources */,
 				456F67651AD46CE9002850C2 /* PseudoTerminal.cpp in Sources */,
 				456F67671AD46CE9002850C2 /* DNBArch.cpp in Sources */,
-				456F67681AD46CE9002850C2 /* HasAVX.s in Sources */,
 				23AC04D01D2F58AF0072351D /* LogFilterRegex.cpp in Sources */,
 				456F67691AD46CE9002850C2 /* DNBArchImplARM64.cpp in Sources */,
 			);

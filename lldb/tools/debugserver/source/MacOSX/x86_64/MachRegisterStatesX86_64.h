@@ -86,7 +86,7 @@ typedef struct {
 typedef struct { uint8_t __xmm_reg[16]; } __x86_64_xmm_reg;
 
 typedef struct {
-  int32_t __fpu_reserved[2];
+  uint32_t __fpu_reserved[2];
   __x86_64_fp_control_t __fpu_fcw;
   __x86_64_fp_status_t __fpu_fsw;
   uint8_t __fpu_ftw;
@@ -125,7 +125,7 @@ typedef struct {
   __x86_64_xmm_reg __fpu_xmm14;
   __x86_64_xmm_reg __fpu_xmm15;
   uint8_t __fpu_rsrv4[6 * 16];
-  int32_t __fpu_reserved1;
+  uint32_t __fpu_reserved1;
 } __x86_64_float_state_t;
 
 typedef struct {

@@ -37,7 +37,6 @@ set(DEBUGSERVER_USED_LIBS
   )
 
 add_lldb_tool(debugserver INCLUDE_IN_FRAMEWORK
-  HasAVX.s
   CFBundle.cpp
   CFString.cpp
   Genealogy.cpp
