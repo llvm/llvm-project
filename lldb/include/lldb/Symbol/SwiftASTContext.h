@@ -35,7 +35,7 @@ namespace swift {
 enum class IRGenDebugInfoKind : unsigned;
 class CanType;
 class IRGenOptions;
-class PrintOptions;
+struct PrintOptions;
 class SILModule;
 namespace irgen {
 class FixedTypeInfo;
@@ -43,7 +43,7 @@ class TypeInfo;
 }
 }
 
-class CachedMemberInfo;
+struct CachedMemberInfo;
 class DWARFASTParser;
 class SwiftEnumDescriptor;
 
