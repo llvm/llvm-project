@@ -17,7 +17,6 @@
 #include <sys/sysctl.h>
 #include <sys/types.h>
 
-#include "../HasAVX.h"
 #include "DNBLog.h"
 #include "MacOSX/x86_64/DNBArchImplX86_64.h"
 #include "MachProcess.h"
@@ -60,42 +59,64 @@ static bool ForceAVXRegs() {
 #define FORCE_AVX_REGS (0)
 #endif
 
+bool DetectHardwareFeature(const char *feature) {
+  int answer = 0;
+  size_t answer_size = sizeof(answer);
+  int error = ::sysctlbyname(feature, &answer, &answer_size, NULL, 0);
+  return error != 0 && answer != 0;
+}
+
+enum AVXPresence { eAVXUnknown = -1, eAVXNotPresent = 0, eAVXPresent = 1 };
+
+bool LogAVXAndReturn(AVXPresence has_avx, int err, const char * os_ver) {
+  DNBLogThreadedIf(LOG_THREAD,
+                   "CPUHasAVX(): g_has_avx = %i (err = %i, os_ver = %s)",
+                   has_avx, err, os_ver);
+  return (has_avx == eAVXPresent);
+}
+
 extern "C" bool CPUHasAVX() {
-  enum AVXPresence { eAVXUnknown = -1, eAVXNotPresent = 0, eAVXPresent = 1 };
-
   static AVXPresence g_has_avx = eAVXUnknown;
-  if (g_has_avx == eAVXUnknown) {
-    g_has_avx = eAVXNotPresent;
+  if (g_has_avx != eAVXUnknown)
+    return LogAVXAndReturn(g_has_avx, 0, "");
 
-    // Only xnu-2020 or later has AVX support, any versions before
-    // this have a busted thread_get_state RPC where it would truncate
-    // the thread state buffer (<rdar://problem/10122874>). So we need to
-    // verify the kernel version number manually or disable AVX support.
-    int mib[2];
-    char buffer[1024];
-    size_t length = sizeof(buffer);
-    uint64_t xnu_version = 0;
-    mib[0] = CTL_KERN;
-    mib[1] = KERN_VERSION;
-    int err = ::sysctl(mib, 2, &buffer, &length, NULL, 0);
-    if (err == 0) {
-      const char *xnu = strstr(buffer, "xnu-");
-      if (xnu) {
-        const char *xnu_version_cstr = xnu + 4;
-        xnu_version = strtoull(xnu_version_cstr, NULL, 0);
-        if (xnu_version >= 2020 && xnu_version != ULLONG_MAX) {
-          if (::HasAVX()) {
-            g_has_avx = eAVXPresent;
-          }
-        }
-      }
-    }
-    DNBLogThreadedIf(LOG_THREAD, "CPUHasAVX(): g_has_avx = %i (err = %i, errno "
-                                 "= %i, xnu_version = %llu)",
-                     g_has_avx, err, errno, xnu_version);
+  g_has_avx = eAVXNotPresent;
+
+  // OS X 10.7.3 and earlier have a bug in thread_get_state that truncated the
+  // size of the return. To work around this we have to disable AVX debugging
+  // on hosts prior to 10.7.3 (<rdar://problem/10122874>).
+  int mib[2];
+  char buffer[1024];
+  size_t length = sizeof(buffer);
+  mib[0] = CTL_KERN;
+  mib[1] = KERN_OSVERSION;
+
+  // KERN_OSVERSION returns the build number which is a number signifying the
+  // major version, a capitol letter signifying the minor version, and numbers
+  // signifying the build (ex: on 10.12.3, the returned value is 16D32).
+  int err = ::sysctl(mib, 2, &buffer, &length, NULL, 0);
+  if (err != 0)
+    return LogAVXAndReturn(g_has_avx, err, "");
+
+  size_t first_letter = 0;
+  for (; first_letter < length; ++first_letter) {
+    // This is looking for the first uppercase letter
+    if (isupper(buffer[first_letter]))
+      break;
   }
+  char letter = buffer[first_letter];
+  buffer[first_letter] = '\0';
+  auto major_ver = strtoull(buffer, NULL, 0);
+  buffer[first_letter] = letter;
 
-  return (g_has_avx == eAVXPresent);
+  // In this check we're looking to see that our major and minor version numer
+  // was >= 11E, which is the 10.7.4 release.
+  if (major_ver < 11 || (major_ver == 11 && letter < 'E'))
+    return LogAVXAndReturn(g_has_avx, err, buffer);
+  if (DetectHardwareFeature("hw.optional.avx1_0"))
+    g_has_avx = eAVXPresent;
+
+  return LogAVXAndReturn(g_has_avx, err, buffer);
 }
 
 uint64_t DNBArchImplX86_64::GetPC(uint64_t failValue) {
@@ -238,61 +259,65 @@ kern_return_t DNBArchImplX86_64::GetGPRState(bool force) {
 kern_return_t DNBArchImplX86_64::GetFPUState(bool force) {
   if (force || m_state.GetError(e_regSetFPU, Read)) {
     if (DEBUG_FPU_REGS) {
+      m_state.context.fpu.no_avx.__fpu_reserved[0] = -1;
+      m_state.context.fpu.no_avx.__fpu_reserved[1] = -1;
+      *(uint16_t *)&(m_state.context.fpu.no_avx.__fpu_fcw) = 0x1234;
+      *(uint16_t *)&(m_state.context.fpu.no_avx.__fpu_fsw) = 0x5678;
+      m_state.context.fpu.no_avx.__fpu_ftw = 1;
+      m_state.context.fpu.no_avx.__fpu_rsrv1 = UINT8_MAX;
+      m_state.context.fpu.no_avx.__fpu_fop = 2;
+      m_state.context.fpu.no_avx.__fpu_ip = 3;
+      m_state.context.fpu.no_avx.__fpu_cs = 4;
+      m_state.context.fpu.no_avx.__fpu_rsrv2 = 5;
+      m_state.context.fpu.no_avx.__fpu_dp = 6;
+      m_state.context.fpu.no_avx.__fpu_ds = 7;
+      m_state.context.fpu.no_avx.__fpu_rsrv3 = UINT16_MAX;
+      m_state.context.fpu.no_avx.__fpu_mxcsr = 8;
+      m_state.context.fpu.no_avx.__fpu_mxcsrmask = 9;
+      for (int i = 0; i < 16; ++i) {
+        if (i < 10) {
+          m_state.context.fpu.no_avx.__fpu_stmm0.__mmst_reg[i] = 'a';
+          m_state.context.fpu.no_avx.__fpu_stmm1.__mmst_reg[i] = 'b';
+          m_state.context.fpu.no_avx.__fpu_stmm2.__mmst_reg[i] = 'c';
+          m_state.context.fpu.no_avx.__fpu_stmm3.__mmst_reg[i] = 'd';
+          m_state.context.fpu.no_avx.__fpu_stmm4.__mmst_reg[i] = 'e';
+          m_state.context.fpu.no_avx.__fpu_stmm5.__mmst_reg[i] = 'f';
+          m_state.context.fpu.no_avx.__fpu_stmm6.__mmst_reg[i] = 'g';
+          m_state.context.fpu.no_avx.__fpu_stmm7.__mmst_reg[i] = 'h';
+        } else {
+          m_state.context.fpu.no_avx.__fpu_stmm0.__mmst_reg[i] = INT8_MIN;
+          m_state.context.fpu.no_avx.__fpu_stmm1.__mmst_reg[i] = INT8_MIN;
+          m_state.context.fpu.no_avx.__fpu_stmm2.__mmst_reg[i] = INT8_MIN;
+          m_state.context.fpu.no_avx.__fpu_stmm3.__mmst_reg[i] = INT8_MIN;
+          m_state.context.fpu.no_avx.__fpu_stmm4.__mmst_reg[i] = INT8_MIN;
+          m_state.context.fpu.no_avx.__fpu_stmm5.__mmst_reg[i] = INT8_MIN;
+          m_state.context.fpu.no_avx.__fpu_stmm6.__mmst_reg[i] = INT8_MIN;
+          m_state.context.fpu.no_avx.__fpu_stmm7.__mmst_reg[i] = INT8_MIN;
+        }
+
+        m_state.context.fpu.no_avx.__fpu_xmm0.__xmm_reg[i] = '0';
+        m_state.context.fpu.no_avx.__fpu_xmm1.__xmm_reg[i] = '1';
+        m_state.context.fpu.no_avx.__fpu_xmm2.__xmm_reg[i] = '2';
+        m_state.context.fpu.no_avx.__fpu_xmm3.__xmm_reg[i] = '3';
+        m_state.context.fpu.no_avx.__fpu_xmm4.__xmm_reg[i] = '4';
+        m_state.context.fpu.no_avx.__fpu_xmm5.__xmm_reg[i] = '5';
+        m_state.context.fpu.no_avx.__fpu_xmm6.__xmm_reg[i] = '6';
+        m_state.context.fpu.no_avx.__fpu_xmm7.__xmm_reg[i] = '7';
+        m_state.context.fpu.no_avx.__fpu_xmm8.__xmm_reg[i] = '8';
+        m_state.context.fpu.no_avx.__fpu_xmm9.__xmm_reg[i] = '9';
+        m_state.context.fpu.no_avx.__fpu_xmm10.__xmm_reg[i] = 'A';
+        m_state.context.fpu.no_avx.__fpu_xmm11.__xmm_reg[i] = 'B';
+        m_state.context.fpu.no_avx.__fpu_xmm12.__xmm_reg[i] = 'C';
+        m_state.context.fpu.no_avx.__fpu_xmm13.__xmm_reg[i] = 'D';
+        m_state.context.fpu.no_avx.__fpu_xmm14.__xmm_reg[i] = 'E';
+        m_state.context.fpu.no_avx.__fpu_xmm15.__xmm_reg[i] = 'F';
+      }
+      for (int i = 0; i < sizeof(m_state.context.fpu.no_avx.__fpu_rsrv4); ++i)
+        m_state.context.fpu.no_avx.__fpu_rsrv4[i] = INT8_MIN;
+      m_state.context.fpu.no_avx.__fpu_reserved1 = -1;
+      
       if (CPUHasAVX() || FORCE_AVX_REGS) {
-        m_state.context.fpu.avx.__fpu_reserved[0] = -1;
-        m_state.context.fpu.avx.__fpu_reserved[1] = -1;
-        *(uint16_t *)&(m_state.context.fpu.avx.__fpu_fcw) = 0x1234;
-        *(uint16_t *)&(m_state.context.fpu.avx.__fpu_fsw) = 0x5678;
-        m_state.context.fpu.avx.__fpu_ftw = 1;
-        m_state.context.fpu.avx.__fpu_rsrv1 = UINT8_MAX;
-        m_state.context.fpu.avx.__fpu_fop = 2;
-        m_state.context.fpu.avx.__fpu_ip = 3;
-        m_state.context.fpu.avx.__fpu_cs = 4;
-        m_state.context.fpu.avx.__fpu_rsrv2 = UINT8_MAX;
-        m_state.context.fpu.avx.__fpu_dp = 5;
-        m_state.context.fpu.avx.__fpu_ds = 6;
-        m_state.context.fpu.avx.__fpu_rsrv3 = UINT16_MAX;
-        m_state.context.fpu.avx.__fpu_mxcsr = 8;
-        m_state.context.fpu.avx.__fpu_mxcsrmask = 9;
-        int i;
-        for (i = 0; i < 16; ++i) {
-          if (i < 10) {
-            m_state.context.fpu.avx.__fpu_stmm0.__mmst_reg[i] = 'a';
-            m_state.context.fpu.avx.__fpu_stmm1.__mmst_reg[i] = 'b';
-            m_state.context.fpu.avx.__fpu_stmm2.__mmst_reg[i] = 'c';
-            m_state.context.fpu.avx.__fpu_stmm3.__mmst_reg[i] = 'd';
-            m_state.context.fpu.avx.__fpu_stmm4.__mmst_reg[i] = 'e';
-            m_state.context.fpu.avx.__fpu_stmm5.__mmst_reg[i] = 'f';
-            m_state.context.fpu.avx.__fpu_stmm6.__mmst_reg[i] = 'g';
-            m_state.context.fpu.avx.__fpu_stmm7.__mmst_reg[i] = 'h';
-          } else {
-            m_state.context.fpu.avx.__fpu_stmm0.__mmst_reg[i] = INT8_MIN;
-            m_state.context.fpu.avx.__fpu_stmm1.__mmst_reg[i] = INT8_MIN;
-            m_state.context.fpu.avx.__fpu_stmm2.__mmst_reg[i] = INT8_MIN;
-            m_state.context.fpu.avx.__fpu_stmm3.__mmst_reg[i] = INT8_MIN;
-            m_state.context.fpu.avx.__fpu_stmm4.__mmst_reg[i] = INT8_MIN;
-            m_state.context.fpu.avx.__fpu_stmm5.__mmst_reg[i] = INT8_MIN;
-            m_state.context.fpu.avx.__fpu_stmm6.__mmst_reg[i] = INT8_MIN;
-            m_state.context.fpu.avx.__fpu_stmm7.__mmst_reg[i] = INT8_MIN;
-          }
-
-          m_state.context.fpu.avx.__fpu_xmm0.__xmm_reg[i] = '0' + 2 * i;
-          m_state.context.fpu.avx.__fpu_xmm1.__xmm_reg[i] = '1' + 2 * i;
-          m_state.context.fpu.avx.__fpu_xmm2.__xmm_reg[i] = '2' + 2 * i;
-          m_state.context.fpu.avx.__fpu_xmm3.__xmm_reg[i] = '3' + 2 * i;
-          m_state.context.fpu.avx.__fpu_xmm4.__xmm_reg[i] = '4' + 2 * i;
-          m_state.context.fpu.avx.__fpu_xmm5.__xmm_reg[i] = '5' + 2 * i;
-          m_state.context.fpu.avx.__fpu_xmm6.__xmm_reg[i] = '6' + 2 * i;
-          m_state.context.fpu.avx.__fpu_xmm7.__xmm_reg[i] = '7' + 2 * i;
-          m_state.context.fpu.avx.__fpu_xmm8.__xmm_reg[i] = '8' + 2 * i;
-          m_state.context.fpu.avx.__fpu_xmm9.__xmm_reg[i] = '9' + 2 * i;
-          m_state.context.fpu.avx.__fpu_xmm10.__xmm_reg[i] = 'A' + 2 * i;
-          m_state.context.fpu.avx.__fpu_xmm11.__xmm_reg[i] = 'B' + 2 * i;
-          m_state.context.fpu.avx.__fpu_xmm12.__xmm_reg[i] = 'C' + 2 * i;
-          m_state.context.fpu.avx.__fpu_xmm13.__xmm_reg[i] = 'D' + 2 * i;
-          m_state.context.fpu.avx.__fpu_xmm14.__xmm_reg[i] = 'E' + 2 * i;
-          m_state.context.fpu.avx.__fpu_xmm15.__xmm_reg[i] = 'F' + 2 * i;
-
+        for (int i = 0; i < 16; ++i) {
           m_state.context.fpu.avx.__fpu_ymmh0.__xmm_reg[i] = '0' + i;
           m_state.context.fpu.avx.__fpu_ymmh1.__xmm_reg[i] = '1' + i;
           m_state.context.fpu.avx.__fpu_ymmh2.__xmm_reg[i] = '2' + i;
@@ -310,97 +335,25 @@ kern_return_t DNBArchImplX86_64::GetFPUState(bool force) {
           m_state.context.fpu.avx.__fpu_ymmh14.__xmm_reg[i] = 'E' + i;
           m_state.context.fpu.avx.__fpu_ymmh15.__xmm_reg[i] = 'F' + i;
         }
-        for (i = 0; i < sizeof(m_state.context.fpu.avx.__fpu_rsrv4); ++i)
-          m_state.context.fpu.avx.__fpu_rsrv4[i] = INT8_MIN;
-        m_state.context.fpu.avx.__fpu_reserved1 = -1;
-        for (i = 0; i < sizeof(m_state.context.fpu.avx.__avx_reserved1); ++i)
+        for (int i = 0; i < sizeof(m_state.context.fpu.avx.__avx_reserved1); ++i)
           m_state.context.fpu.avx.__avx_reserved1[i] = INT8_MIN;
-        m_state.SetError(e_regSetFPU, Read, 0);
-      } else {
-        m_state.context.fpu.no_avx.__fpu_reserved[0] = -1;
-        m_state.context.fpu.no_avx.__fpu_reserved[1] = -1;
-        *(uint16_t *)&(m_state.context.fpu.no_avx.__fpu_fcw) = 0x1234;
-        *(uint16_t *)&(m_state.context.fpu.no_avx.__fpu_fsw) = 0x5678;
-        m_state.context.fpu.no_avx.__fpu_ftw = 1;
-        m_state.context.fpu.no_avx.__fpu_rsrv1 = UINT8_MAX;
-        m_state.context.fpu.no_avx.__fpu_fop = 2;
-        m_state.context.fpu.no_avx.__fpu_ip = 3;
-        m_state.context.fpu.no_avx.__fpu_cs = 4;
-        m_state.context.fpu.no_avx.__fpu_rsrv2 = 5;
-        m_state.context.fpu.no_avx.__fpu_dp = 6;
-        m_state.context.fpu.no_avx.__fpu_ds = 7;
-        m_state.context.fpu.no_avx.__fpu_rsrv3 = UINT16_MAX;
-        m_state.context.fpu.no_avx.__fpu_mxcsr = 8;
-        m_state.context.fpu.no_avx.__fpu_mxcsrmask = 9;
-        int i;
-        for (i = 0; i < 16; ++i) {
-          if (i < 10) {
-            m_state.context.fpu.no_avx.__fpu_stmm0.__mmst_reg[i] = 'a';
-            m_state.context.fpu.no_avx.__fpu_stmm1.__mmst_reg[i] = 'b';
-            m_state.context.fpu.no_avx.__fpu_stmm2.__mmst_reg[i] = 'c';
-            m_state.context.fpu.no_avx.__fpu_stmm3.__mmst_reg[i] = 'd';
-            m_state.context.fpu.no_avx.__fpu_stmm4.__mmst_reg[i] = 'e';
-            m_state.context.fpu.no_avx.__fpu_stmm5.__mmst_reg[i] = 'f';
-            m_state.context.fpu.no_avx.__fpu_stmm6.__mmst_reg[i] = 'g';
-            m_state.context.fpu.no_avx.__fpu_stmm7.__mmst_reg[i] = 'h';
-          } else {
-            m_state.context.fpu.no_avx.__fpu_stmm0.__mmst_reg[i] = INT8_MIN;
-            m_state.context.fpu.no_avx.__fpu_stmm1.__mmst_reg[i] = INT8_MIN;
-            m_state.context.fpu.no_avx.__fpu_stmm2.__mmst_reg[i] = INT8_MIN;
-            m_state.context.fpu.no_avx.__fpu_stmm3.__mmst_reg[i] = INT8_MIN;
-            m_state.context.fpu.no_avx.__fpu_stmm4.__mmst_reg[i] = INT8_MIN;
-            m_state.context.fpu.no_avx.__fpu_stmm5.__mmst_reg[i] = INT8_MIN;
-            m_state.context.fpu.no_avx.__fpu_stmm6.__mmst_reg[i] = INT8_MIN;
-            m_state.context.fpu.no_avx.__fpu_stmm7.__mmst_reg[i] = INT8_MIN;
-          }
-
-          m_state.context.fpu.no_avx.__fpu_xmm0.__xmm_reg[i] = '0';
-          m_state.context.fpu.no_avx.__fpu_xmm1.__xmm_reg[i] = '1';
-          m_state.context.fpu.no_avx.__fpu_xmm2.__xmm_reg[i] = '2';
-          m_state.context.fpu.no_avx.__fpu_xmm3.__xmm_reg[i] = '3';
-          m_state.context.fpu.no_avx.__fpu_xmm4.__xmm_reg[i] = '4';
-          m_state.context.fpu.no_avx.__fpu_xmm5.__xmm_reg[i] = '5';
-          m_state.context.fpu.no_avx.__fpu_xmm6.__xmm_reg[i] = '6';
-          m_state.context.fpu.no_avx.__fpu_xmm7.__xmm_reg[i] = '7';
-          m_state.context.fpu.no_avx.__fpu_xmm8.__xmm_reg[i] = '8';
-          m_state.context.fpu.no_avx.__fpu_xmm9.__xmm_reg[i] = '9';
-          m_state.context.fpu.no_avx.__fpu_xmm10.__xmm_reg[i] = 'A';
-          m_state.context.fpu.no_avx.__fpu_xmm11.__xmm_reg[i] = 'B';
-          m_state.context.fpu.no_avx.__fpu_xmm12.__xmm_reg[i] = 'C';
-          m_state.context.fpu.no_avx.__fpu_xmm13.__xmm_reg[i] = 'D';
-          m_state.context.fpu.no_avx.__fpu_xmm14.__xmm_reg[i] = 'E';
-          m_state.context.fpu.no_avx.__fpu_xmm15.__xmm_reg[i] = 'F';
-        }
-        for (i = 0; i < sizeof(m_state.context.fpu.no_avx.__fpu_rsrv4); ++i)
-          m_state.context.fpu.no_avx.__fpu_rsrv4[i] = INT8_MIN;
-        m_state.context.fpu.no_avx.__fpu_reserved1 = -1;
-        m_state.SetError(e_regSetFPU, Read, 0);
       }
+      m_state.SetError(e_regSetFPU, Read, 0);
     } else {
+      mach_msg_type_number_t count = e_regSetWordSizeFPU;
+      int flavor = __x86_64_FLOAT_STATE;
       if (CPUHasAVX() || FORCE_AVX_REGS) {
-        mach_msg_type_number_t count = e_regSetWordSizeAVX;
-        m_state.SetError(e_regSetFPU, Read,
-                         ::thread_get_state(
-                             m_thread->MachPortNumber(), __x86_64_AVX_STATE,
-                             (thread_state_t)&m_state.context.fpu.avx, &count));
-        DNBLogThreadedIf(LOG_THREAD, "::thread_get_state (0x%4.4x, %u, &avx, "
-                                     "%u (%u passed in) carp) => 0x%8.8x",
-                         m_thread->MachPortNumber(), __x86_64_AVX_STATE,
-                         (uint32_t)count, e_regSetWordSizeAVX,
-                         m_state.GetError(e_regSetFPU, Read));
-      } else {
-        mach_msg_type_number_t count = e_regSetWordSizeFPU;
-        m_state.SetError(
-            e_regSetFPU, Read,
-            ::thread_get_state(m_thread->MachPortNumber(), __x86_64_FLOAT_STATE,
-                               (thread_state_t)&m_state.context.fpu.no_avx,
-                               &count));
-        DNBLogThreadedIf(LOG_THREAD, "::thread_get_state (0x%4.4x, %u, &fpu, "
-                                     "%u (%u passed in) => 0x%8.8x",
-                         m_thread->MachPortNumber(), __x86_64_FLOAT_STATE,
-                         (uint32_t)count, e_regSetWordSizeFPU,
-                         m_state.GetError(e_regSetFPU, Read));
+        count = e_regSetWordSizeAVX;
+        flavor = __x86_64_AVX_STATE;
       }
+      m_state.SetError(e_regSetFPU, Read,
+                       ::thread_get_state(m_thread->MachPortNumber(), flavor,
+                                          (thread_state_t)&m_state.context.fpu,
+                                          &count));
+      DNBLogThreadedIf(LOG_THREAD,
+                       "::thread_get_state (0x%4.4x, %u, &fpu, %u => 0x%8.8x",
+                       m_thread->MachPortNumber(), flavor, (uint32_t)count,
+                       m_state.GetError(e_regSetFPU, Read));
     }
   }
   return m_state.GetError(e_regSetFPU, Read);
