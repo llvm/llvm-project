@@ -932,10 +932,6 @@ uint64_t LinkerScript<ELFT>::getOutputSectionSize(StringRef Name) {
   return 0;
 }
 
-template <class ELFT> uint64_t LinkerScript<ELFT>::getHeaderSize() {
-  return elf::getHeaderSize<ELFT>();
-}
-
 template <class ELFT>
 uint64_t LinkerScript<ELFT>::getSymbolValue(const Twine &Loc, StringRef S) {
   if (S == ".")
@@ -1835,7 +1831,7 @@ Expr ScriptParser::readPrimary() {
         [=] { return ScriptBase->getOutputSection(Location, Name)->Alignment; };
   }
   if (Tok == "SIZEOF_HEADERS")
-    return [=] { return ScriptBase->getHeaderSize(); };
+    return [=] { return elf::getHeaderSize(); };
 
   // Tok is a literal number.
   uint64_t V;

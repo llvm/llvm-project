@@ -223,9 +223,9 @@ bool CommandObjectArgs::DoExecute(Args &args, CommandReturnObject &result) {
   result.GetOutputStream().Printf("Arguments : \n");
 
   for (auto entry : llvm::enumerate(args.entries())) {
-    result.GetOutputStream().Printf("%" PRIu64 " (%s): ", (uint64_t)entry.Index,
-                                    entry.Value.c_str());
-    value_list.GetValueAtIndex(entry.Index)->Dump(&result.GetOutputStream());
+    result.GetOutputStream().Printf(
+        "%" PRIu64 " (%s): ", (uint64_t)entry.index(), entry.value().c_str());
+    value_list.GetValueAtIndex(entry.index())->Dump(&result.GetOutputStream());
     result.GetOutputStream().Printf("\n");
   }
 

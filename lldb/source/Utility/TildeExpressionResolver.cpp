@@ -44,7 +44,7 @@ bool StandardTildeExpressionResolver::ResolvePartial(StringRef Expr,
   assert(Expr.empty() || Expr[0] == '~');
 
   Output.clear();
-#if defined(LLVM_ON_WIN32)
+#if defined(LLVM_ON_WIN32) || defined(__ANDROID__)
   return false;
 #else
   if (Expr.empty())
@@ -62,7 +62,8 @@ bool StandardTildeExpressionResolver::ResolvePartial(StringRef Expr,
 
     Buffer.resize(1);
     Buffer.append(ThisName);
-    Buffer.append(path::get_separator()) Output.insert(Buffer);
+    Buffer.append(path::get_separator());
+    Output.insert(Buffer);
   }
 
   return true;

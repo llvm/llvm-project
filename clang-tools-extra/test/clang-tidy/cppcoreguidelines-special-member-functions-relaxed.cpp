@@ -1,24 +1,23 @@
-// RUN: %check_clang_tidy %s cppcoreguidelines-special-member-functions %t
+// RUN: %check_clang_tidy %s cppcoreguidelines-special-member-functions %t -- -config="{CheckOptions: [{key: cppcoreguidelines-special-member-functions.AllowMissingMoveFunctions, value: 1}, {key: cppcoreguidelines-special-member-functions.AllowSoleDefaultDtor, value: 1}]}" --
 
 class DefinesDestructor {
   ~DefinesDestructor();
 };
-// CHECK-MESSAGES: [[@LINE-3]]:7: warning: class 'DefinesDestructor' defines a non-default destructor but does not define a copy constructor, a copy assignment operator, a move constructor or a move assignment operator [cppcoreguidelines-special-member-functions]
+// CHECK-MESSAGES: [[@LINE-3]]:7: warning: class 'DefinesDestructor' defines a non-default destructor but does not define a copy constructor or a copy assignment operator [cppcoreguidelines-special-member-functions]
 
 class DefinesDefaultedDestructor {
   ~DefinesDefaultedDestructor() = default;
 };
-// CHECK-MESSAGES: [[@LINE-3]]:7: warning: class 'DefinesDefaultedDestructor' defines a default destructor but does not define a copy constructor, a copy assignment operator, a move constructor or a move assignment operator [cppcoreguidelines-special-member-functions]
 
 class DefinesCopyConstructor {
   DefinesCopyConstructor(const DefinesCopyConstructor &);
 };
-// CHECK-MESSAGES: [[@LINE-3]]:7: warning: class 'DefinesCopyConstructor' defines a copy constructor but does not define a destructor, a copy assignment operator, a move constructor or a move assignment operator [cppcoreguidelines-special-member-functions]
+// CHECK-MESSAGES: [[@LINE-3]]:7: warning: class 'DefinesCopyConstructor' defines a copy constructor but does not define a destructor or a copy assignment operator [cppcoreguidelines-special-member-functions]
 
 class DefinesCopyAssignment {
   DefinesCopyAssignment &operator=(const DefinesCopyAssignment &);
 };
-// CHECK-MESSAGES: [[@LINE-3]]:7: warning: class 'DefinesCopyAssignment' defines a copy assignment operator but does not define a destructor, a copy constructor, a move constructor or a move assignment operator [cppcoreguidelines-special-member-functions]
+// CHECK-MESSAGES: [[@LINE-3]]:7: warning: class 'DefinesCopyAssignment' defines a copy assignment operator but does not define a destructor or a copy constructor [cppcoreguidelines-special-member-functions]
 
 class DefinesMoveConstructor {
   DefinesMoveConstructor(DefinesMoveConstructor &&);

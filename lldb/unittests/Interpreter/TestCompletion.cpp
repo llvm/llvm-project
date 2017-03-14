@@ -89,7 +89,7 @@ public:
     assert(Expr.empty() || Expr[0] == '~');
     Expr = Expr.drop_front();
 
-    SmallString<16> QualifiedName = "~";
+    SmallString<16> QualifiedName("~");
     for (const auto &User : UserDirectories) {
       if (!User.getKey().startswith(Expr))
         continue;
@@ -155,7 +155,7 @@ protected:
   }
 
   static bool HasEquivalentFile(const Twine &Path, const StringList &Paths) {
-    for (int I = 0; I < Paths.GetSize(); ++I) {
+    for (size_t I = 0; I < Paths.GetSize(); ++I) {
       if (fs::equivalent(Path, Paths[I]))
         return true;
     }
@@ -165,7 +165,7 @@ protected:
   static bool ContainsExactString(const Twine &Str, const StringList &Paths) {
     SmallString<16> Storage;
     StringRef Rendered = Str.toStringRef(Storage);
-    for (int I = 0; I < Paths.GetSize(); ++I) {
+    for (size_t I = 0; I < Paths.GetSize(); ++I) {
       if (Paths[I] == Rendered)
         return true;
     }
@@ -197,17 +197,20 @@ TEST_F(CompletionTest, DirCompletionAbsolute) {
   // by asserting an exact result count, and verifying against known
   // folders.
 
+  StandardTildeExpressionResolver Resolver;
   StringList Results;
   // When a directory is specified that doesn't end in a slash, it searches
   // for that directory, not items under it.
-  int Count = CommandCompletions::DiskDirectories2(BaseDir, Results);
-  ASSERT_EQ(1, Count);
+  size_t Count =
+      CommandCompletions::DiskDirectories(BaseDir, Results, Resolver);
+  ASSERT_EQ(1u, Count);
   ASSERT_EQ(Count, Results.GetSize());
   EXPECT_TRUE(HasEquivalentFile(BaseDir, Results));
 
   // When the same directory ends with a slash, it finds all children.
-  Count = CommandCompletions::DiskDirectories2(Twine(BaseDir) + "/", Results);
-  ASSERT_EQ(7, Count);
+  Count = CommandCompletions::DiskDirectories(Twine(BaseDir) + "/", Results,
+                                              Resolver);
+  ASSERT_EQ(7u, Count);
   ASSERT_EQ(Count, Results.GetSize());
   EXPECT_TRUE(HasEquivalentFile(DirFoo, Results));
   EXPECT_TRUE(HasEquivalentFile(DirFooA, Results));
@@ -219,9 +222,9 @@ TEST_F(CompletionTest, DirCompletionAbsolute) {
 
   // When a partial name matches, it returns all matches.  If it matches both
   // a full name AND some partial names, it returns all of them.
-  Count =
-      CommandCompletions::DiskDirectories2(Twine(BaseDir) + "/foo", Results);
-  ASSERT_EQ(4, Count);
+  Count = CommandCompletions::DiskDirectories(Twine(BaseDir) + "/foo", Results,
+                                              Resolver);
+  ASSERT_EQ(4u, Count);
   ASSERT_EQ(Count, Results.GetSize());
   EXPECT_TRUE(HasEquivalentFile(DirFoo, Results));
   EXPECT_TRUE(HasEquivalentFile(DirFooA, Results));
@@ -229,8 +232,9 @@ TEST_F(CompletionTest, DirCompletionAbsolute) {
   EXPECT_TRUE(HasEquivalentFile(DirFooC, Results));
 
   // If it matches only partial names, it still works as expected.
-  Count = CommandCompletions::DiskDirectories2(Twine(BaseDir) + "/b", Results);
-  ASSERT_EQ(2, Count);
+  Count = CommandCompletions::DiskDirectories(Twine(BaseDir) + "/b", Results,
+                                              Resolver);
+  ASSERT_EQ(2u, Count);
   ASSERT_EQ(Count, Results.GetSize());
   EXPECT_TRUE(HasEquivalentFile(DirBar, Results));
   EXPECT_TRUE(HasEquivalentFile(DirBaz, Results));
@@ -241,24 +245,28 @@ TEST_F(CompletionTest, FileCompletionAbsolute) {
   // all check this by asserting an exact result count, and verifying against
   // known folders.
 
+  StandardTildeExpressionResolver Resolver;
   StringList Results;
   // When an item is specified that doesn't end in a slash but exactly matches
   // one item, it returns that item.
-  int Count = CommandCompletions::DiskFiles2(Twine(BaseDir) + "/fooa", Results);
-  ASSERT_EQ(1, Count);
+  size_t Count = CommandCompletions::DiskFiles(Twine(BaseDir) + "/fooa",
+                                               Results, Resolver);
+  ASSERT_EQ(1u, Count);
   ASSERT_EQ(Count, Results.GetSize());
   EXPECT_TRUE(HasEquivalentFile(DirFooA, Results));
 
   // The previous check verified a directory match.  But it should work for
   // files too.
-  Count = CommandCompletions::DiskFiles2(Twine(BaseDir) + "/aa", Results);
-  ASSERT_EQ(1, Count);
+  Count =
+      CommandCompletions::DiskFiles(Twine(BaseDir) + "/aa", Results, Resolver);
+  ASSERT_EQ(1u, Count);
   ASSERT_EQ(Count, Results.GetSize());
   EXPECT_TRUE(HasEquivalentFile(FileAA, Results));
 
   // When it ends with a slash, it should find all files and directories.
-  Count = CommandCompletions::DiskFiles2(Twine(BaseDir) + "/", Results);
-  ASSERT_EQ(13, Count);
+  Count =
+      CommandCompletions::DiskFiles(Twine(BaseDir) + "/", Results, Resolver);
+  ASSERT_EQ(13u, Count);
   ASSERT_EQ(Count, Results.GetSize());
   EXPECT_TRUE(HasEquivalentFile(DirFoo, Results));
   EXPECT_TRUE(HasEquivalentFile(DirFooA, Results));
@@ -276,8 +284,9 @@ TEST_F(CompletionTest, FileCompletionAbsolute) {
   EXPECT_TRUE(HasEquivalentFile(FileBaz, Results));
 
   // When a partial name matches, it returns all file & directory matches.
-  Count = CommandCompletions::DiskFiles2(Twine(BaseDir) + "/foo", Results);
-  ASSERT_EQ(5, Count);
+  Count =
+      CommandCompletions::DiskFiles(Twine(BaseDir) + "/foo", Results, Resolver);
+  ASSERT_EQ(5u, Count);
   ASSERT_EQ(Count, Results.GetSize());
   EXPECT_TRUE(HasEquivalentFile(DirFoo, Results));
   EXPECT_TRUE(HasEquivalentFile(DirFooA, Results));
@@ -296,14 +305,14 @@ TEST_F(CompletionTest, DirCompletionUsername) {
   // Just resolving current user's home directory by itself should return the
   // directory.
   StringList Results;
-  int Count = CommandCompletions::DiskDirectories2("~", Results, &Resolver);
-  ASSERT_EQ(1, Count);
+  size_t Count = CommandCompletions::DiskDirectories("~", Results, Resolver);
+  ASSERT_EQ(1u, Count);
   ASSERT_EQ(Count, Results.GetSize());
   EXPECT_TRUE(ContainsExactString(Twine("~") + path::get_separator(), Results));
 
   // With a slash appended, it should return all items in the directory.
-  Count = CommandCompletions::DiskDirectories2("~/", Results, &Resolver);
-  ASSERT_EQ(7, Count);
+  Count = CommandCompletions::DiskDirectories("~/", Results, Resolver);
+  ASSERT_EQ(7u, Count);
   ASSERT_EQ(Count, Results.GetSize());
   EXPECT_TRUE(
       ContainsExactString(Twine("~/foo") + path::get_separator(), Results));
@@ -324,20 +333,20 @@ TEST_F(CompletionTest, DirCompletionUsername) {
   // match.
   // It shouldn't translate to the actual directory, it should keep the form the
   // user typed.
-  Count = CommandCompletions::DiskDirectories2("~Lars", Results, &Resolver);
-  ASSERT_EQ(1, Count);
+  Count = CommandCompletions::DiskDirectories("~Lars", Results, Resolver);
+  ASSERT_EQ(1u, Count);
   ASSERT_EQ(Count, Results.GetSize());
   EXPECT_TRUE(
       ContainsExactString(Twine("~Lars") + path::get_separator(), Results));
 
   // But with a username that is not found, no results are returned.
-  Count = CommandCompletions::DiskDirectories2("~Dave", Results, &Resolver);
-  ASSERT_EQ(0, Count);
+  Count = CommandCompletions::DiskDirectories("~Dave", Results, Resolver);
+  ASSERT_EQ(0u, Count);
   ASSERT_EQ(Count, Results.GetSize());
 
   // And if there are multiple matches, it should return all of them.
-  Count = CommandCompletions::DiskDirectories2("~La", Results, &Resolver);
-  ASSERT_EQ(2, Count);
+  Count = CommandCompletions::DiskDirectories("~La", Results, Resolver);
+  ASSERT_EQ(2u, Count);
   ASSERT_EQ(Count, Results.GetSize());
   EXPECT_TRUE(
       ContainsExactString(Twine("~Lars") + path::get_separator(), Results));

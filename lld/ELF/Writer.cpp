@@ -1228,10 +1228,15 @@ template <class ELFT> void Writer<ELFT>::addStartEndSymbols() {
   auto Define = [&](StringRef Start, StringRef End, OutputSection *OS) {
     // These symbols resolve to the image base if the section does not exist.
     // A special value -1 indicates end of the section.
-    if (!OS && Config->pic())
-      OS = Out::ElfHeader;
-    addOptionalRegular<ELFT>(Start, OS, 0);
-    addOptionalRegular<ELFT>(End, OS, OS ? -1 : 0);
+    if (OS) {
+      addOptionalRegular<ELFT>(Start, OS, 0);
+      addOptionalRegular<ELFT>(End, OS, -1);
+    } else {
+      if (Config->pic())
+        OS = Out::ElfHeader;
+      addOptionalRegular<ELFT>(Start, OS, 0);
+      addOptionalRegular<ELFT>(End, OS, 0);
+    }
   };
 
   Define("__preinit_array_start", "__preinit_array_end", Out::PreinitArray);
@@ -1443,7 +1448,7 @@ bool elf::allocateHeaders(std::vector<PhdrEntry> &Phdrs,
   if (FirstPTLoad == Phdrs.end())
     return false;
 
-  uint64_t HeaderSize = getHeaderSize<ELFT>();
+  uint64_t HeaderSize = getHeaderSize();
   if (HeaderSize > Min) {
     auto PhdrI =
         std::find_if(Phdrs.begin(), Phdrs.end(),
@@ -1496,7 +1501,7 @@ template <class ELFT> void Writer<ELFT>::fixHeaders() {
 template <class ELFT> void Writer<ELFT>::assignAddresses() {
   uintX_t VA = Config->ImageBase;
   if (AllocateHeader)
-    VA += getHeaderSize<ELFT>();
+    VA += getHeaderSize();
   uintX_t ThreadBssOffset = 0;
   for (OutputSection *Sec : OutputSections) {
     uint32_t Alignment = Sec->Alignment;

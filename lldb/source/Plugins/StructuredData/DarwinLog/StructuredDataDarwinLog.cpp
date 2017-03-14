@@ -746,8 +746,8 @@ private:
 
   int MatchAttributeIndex(llvm::StringRef attribute_name) const {
     for (const auto &Item : llvm::enumerate(s_filter_attributes)) {
-      if (attribute_name == Item.Value)
-        return Item.Index;
+      if (attribute_name == Item.value())
+        return Item.index();
     }
 
     // We didn't match anything.

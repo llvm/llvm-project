@@ -389,6 +389,12 @@ bool DenseMapInfo<SectionKey>::isEqual(const SectionKey &LHS,
          LHS.Flags == RHS.Flags && LHS.Alignment == RHS.Alignment;
 }
 
+uint64_t elf::getHeaderSize() {
+  if (Config->OFormatBinary)
+    return 0;
+  return Out::ElfHeader->Size + Out::ProgramHeaders->Size;
+}
+
 namespace lld {
 namespace elf {
 
