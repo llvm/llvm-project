@@ -35,11 +35,6 @@
  parameter has a nullability value. For 'audited' APIs, we assume the default
  nullability for any underspecified type.
 
- FactoryAsInit can have the following values:
-   C - Treat as class method.
-   I - Treat as initializer.
-   A - Automatically infer based on the name and type (default).
-
 ---
  Name: AppKit             # The name of the framework
 
@@ -98,8 +93,6 @@
 
        AvailabilityMsg: ""
 
-       FactoryAsInit: C               # Optional: Specifies if this method is a
-                                      # factory initializer (false/true)
        DesignatedInit: false          # Optional: Specifies if this method is a
                                       # designated initializer (false/true)
 
@@ -158,6 +151,16 @@ namespace {
     Instance,
   };
 
+  /// Old attribute deprecated in favor of SwiftName.
+  enum class FactoryAsInitKind {
+    /// Infer based on name and type (the default).
+    Infer,
+    /// Treat as a class method.
+    AsClassMethod,
+    /// Treat as an initializer.
+    AsInitializer
+  };
+
   struct AvailabilityItem {
     APIAvailability Mode = APIAvailability::Available;
     StringRef Msg;
@@ -186,8 +189,7 @@ namespace {
     AvailabilityItem Availability;
     Optional<bool> SwiftPrivate;
     StringRef SwiftName;
-    api_notes::FactoryAsInitKind FactoryAsInit
-      = api_notes::FactoryAsInitKind::Infer;
+    FactoryAsInitKind FactoryAsInit = FactoryAsInitKind::Infer;
     bool DesignatedInit = false;
     bool Required = false;
     StringRef ResultType;
@@ -330,11 +332,11 @@ namespace llvm {
     };
 
     template <>
-    struct ScalarEnumerationTraits<api_notes::FactoryAsInitKind > {
-      static void enumeration(IO &io, api_notes::FactoryAsInitKind  &value) {
-        io.enumCase(value, "A", api_notes::FactoryAsInitKind::Infer);
-        io.enumCase(value, "C", api_notes::FactoryAsInitKind::AsClassMethod);
-        io.enumCase(value, "I", api_notes::FactoryAsInitKind::AsInitializer);
+    struct ScalarEnumerationTraits<FactoryAsInitKind> {
+      static void enumeration(IO &io, FactoryAsInitKind  &value) {
+        io.enumCase(value, "A", FactoryAsInitKind::Infer);
+        io.enumCase(value, "C", FactoryAsInitKind::AsClassMethod);
+        io.enumCase(value, "I", FactoryAsInitKind::AsInitializer);
       }
     };
 
@@ -425,7 +427,7 @@ namespace llvm {
         io.mapOptional("SwiftPrivate",    m.SwiftPrivate);
         io.mapOptional("SwiftName",       m.SwiftName);
         io.mapOptional("FactoryAsInit",   m.FactoryAsInit,
-                                          api_notes::FactoryAsInitKind::Infer);
+                                          FactoryAsInitKind::Infer);
         io.mapOptional("DesignatedInit",  m.DesignatedInit, false);
         io.mapOptional("Required",        m.Required, false);
         io.mapOptional("ResultType",      m.ResultType, StringRef(""));
@@ -721,8 +723,10 @@ namespace {
       // Translate the initializer info.
       mInfo.DesignatedInit = meth.DesignatedInit;
       mInfo.Required = meth.Required;
-      if (meth.FactoryAsInit != FactoryAsInitKind::Infer)
-        mInfo.setFactoryAsInitKind(meth.FactoryAsInit);
+      if (meth.FactoryAsInit != FactoryAsInitKind::Infer) {
+        emitError("'FactoryAsInit' is no longer valid; "
+                  "use 'SwiftName' instead");
+      }
       mInfo.ResultType = meth.ResultType;
 
       // Translate parameter information.
@@ -1193,7 +1197,6 @@ namespace {
       handleParameters(method.Params, info);
       handleNullability(method.Nullability, method.NullabilityOfRet, info,
                         selector.count(':'));
-      method.FactoryAsInit = info.getFactoryAsInitKind();
       method.DesignatedInit = info.DesignatedInit;
       method.Required = info.Required;
       method.ResultType = copyString(info.ResultType);
