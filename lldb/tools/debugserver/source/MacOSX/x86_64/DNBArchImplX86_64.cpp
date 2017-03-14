@@ -63,7 +63,7 @@ bool DetectHardwareFeature(const char *feature) {
   int answer = 0;
   size_t answer_size = sizeof(answer);
   int error = ::sysctlbyname(feature, &answer, &answer_size, NULL, 0);
-  return error != 0 && answer != 0;
+  return error == 0 && answer != 0;
 }
 
 enum AVXPresence { eAVXUnknown = -1, eAVXNotPresent = 0, eAVXPresent = 1 };
