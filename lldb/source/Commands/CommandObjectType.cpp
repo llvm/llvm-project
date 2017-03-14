@@ -82,9 +82,9 @@ static bool WarnOnPotentialUnquotedUnsignedType(Args &command,
     return false;
 
   for (auto entry : llvm::enumerate(command.entries().drop_back())) {
-    if (entry.Value.ref != "unsigned")
+    if (entry.value().ref != "unsigned")
       continue;
-    auto next = command.entries()[entry.Index + 1].ref;
+    auto next = command.entries()[entry.index() + 1].ref;
     if (next == "int" || next == "short" || next == "char" || next == "long") {
       result.AppendWarningWithFormat(
           "unsigned %s being treated as two types. if you meant the combined "

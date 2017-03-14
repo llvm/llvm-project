@@ -211,7 +211,6 @@ protected:
   OutputSection *Aether;
 
 public:
-  virtual uint64_t getHeaderSize() = 0;
   virtual uint64_t getSymbolValue(const Twine &Loc, StringRef S) = 0;
   uint64_t getDot() { return getSymbolValue("", "."); }
   virtual bool isDefined(StringRef S) = 0;
@@ -266,7 +265,6 @@ public:
   void placeOrphanSections();
   void assignAddresses(std::vector<PhdrEntry> &Phdrs);
   bool hasPhdrsCommands();
-  uint64_t getHeaderSize() override;
   uint64_t getSymbolValue(const Twine &Loc, StringRef S) override;
   bool isDefined(StringRef S) override;
   bool isAbsolute(StringRef S) override;

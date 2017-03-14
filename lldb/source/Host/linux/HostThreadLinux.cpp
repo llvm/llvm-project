@@ -13,23 +13,12 @@
 
 #include "llvm/ADT/SmallVector.h"
 
-#include <pthread.h>
-
 using namespace lldb_private;
 
 HostThreadLinux::HostThreadLinux() : HostThreadPosix() {}
 
 HostThreadLinux::HostThreadLinux(lldb::thread_t thread)
     : HostThreadPosix(thread) {}
-
-void HostThreadLinux::SetName(lldb::thread_t thread, llvm::StringRef name) {
-#if (defined(__GLIBC__) && defined(_GNU_SOURCE)) || defined(__ANDROID__)
-  ::pthread_setname_np(thread, name.data());
-#else
-  (void)thread;
-  (void)name;
-#endif
-}
 
 void HostThreadLinux::GetName(lldb::thread_t thread,
                               llvm::SmallVectorImpl<char> &name) {

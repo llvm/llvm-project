@@ -75,9 +75,13 @@ static void parseSystemVersionPList(void *Unused) {
   if (&CFPropertyListCreateWithData)
     PListRef = CFPropertyListCreateWithData(
         NULL, FileContentsRef, kCFPropertyListImmutable, NULL, NULL);
-  else
+  else {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     PListRef = CFPropertyListCreateFromXMLData(NULL, FileContentsRef,
                                                kCFPropertyListImmutable, NULL);
+#pragma clang diagnostic pop
+  }
   if (!PListRef)
     goto Fail;
 
