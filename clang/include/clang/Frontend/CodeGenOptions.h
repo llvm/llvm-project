@@ -137,6 +137,8 @@ public:
     /// our CodeGenOptions, much as we set attrs on functions that we generate
     /// ourselves.
     bool PropagateAttrs = false;
+    /// If true, we use LLVM module internalizer.
+    bool Internalize = false;
     /// Bitwise combination of llvm::Linker::Flags, passed to the LLVM linker.
     unsigned LinkFlags = 0;
   };

@@ -375,7 +375,7 @@ void LinkerScript<ELFT>::processCommands(OutputSectionFactory &Factory) {
 
       // Add input sections to an output section.
       for (InputSectionBase *S : V)
-        Factory.addInputSec<ELFT>(S, Cmd->Name);
+        Factory.addInputSec(S, Cmd->Name);
     }
   }
   CurOutSec = nullptr;
@@ -386,7 +386,7 @@ template <class ELFT>
 void LinkerScript<ELFT>::addOrphanSections(OutputSectionFactory &Factory) {
   for (InputSectionBase *S : InputSections)
     if (S->Live && !S->OutSec)
-      Factory.addInputSec<ELFT>(S, getOutputSectionName(S->Name));
+      Factory.addInputSec(S, getOutputSectionName(S->Name));
 }
 
 template <class ELFT> static bool isTbss(OutputSection *Sec) {

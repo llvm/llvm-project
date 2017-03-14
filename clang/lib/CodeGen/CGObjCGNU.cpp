@@ -2207,7 +2207,7 @@ void CGObjCGNU::GenerateClass(const ObjCImplementationDecl *OID) {
       IvarNames.push_back(MakeConstantString(IVD->getNameAsString()));
       // Get the type encoding for this ivar
       std::string TypeStr;
-      Context.getObjCEncodingForType(IVD->getType(), TypeStr);
+      Context.getObjCEncodingForType(IVD->getType(), TypeStr, IVD);
       IvarTypes.push_back(MakeConstantString(TypeStr));
       // Get the offset
       uint64_t BaseOffset = ComputeIvarBaseOffset(CGM, OID, IVD);

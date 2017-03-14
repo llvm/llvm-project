@@ -136,7 +136,6 @@ public:
   OutputSectionFactory(std::vector<OutputSection *> &OutputSections);
   ~OutputSectionFactory();
 
-  template <class ELFT>
   void addInputSec(InputSectionBase *IS, StringRef OutsecName);
 
 private:

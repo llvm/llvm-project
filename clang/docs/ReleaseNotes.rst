@@ -128,6 +128,31 @@ AST Matchers
 
 ...
 
+
+clang-format
+------------
+
+* Option **BreakBeforeInheritanceComma** added to break before ``:`` and ``,``  in case of
+  multiple inheritance in a class declaration. Enabled by default in the Mozilla coding style.
+
+  .. code-block:: c++
+
+     true:                                  false:
+     class MyClass                  vs.     class MyClass : public X, public Y {
+         : public X                         };
+         , public Y {
+     };
+
+* Align block comment decorations
+
+  .. code-block:: c++
+
+     /* line 1
+      * line 2
+      */
+
+* The :doc:`ClangFormatStyleOptions` documentation provides detailled examples for most options.
+
 libclang
 --------
 

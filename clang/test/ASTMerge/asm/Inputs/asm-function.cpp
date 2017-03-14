@@ -9,3 +9,13 @@ unsigned char asmFunc(unsigned char a, unsigned char b) {
   res = bigres;
   return res;
 }
+
+int asmFunc2(int i) {
+  int res;
+  asm ("mov %1, %0 \t\n"
+       "inc %0 "
+      : "=r" (res)
+      : "r" (i)
+      : "cc");
+  return res;
+}

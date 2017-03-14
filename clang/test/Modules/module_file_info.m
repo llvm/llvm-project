@@ -29,11 +29,6 @@
 // CHECK:     CPU:
 // CHECK:     ABI:
 
-// CHECK: Diagnostic options:
-// CHECK:   IgnoreWarnings: Yes
-// CHECK:   Diagnostic flags:
-// CHECK:     -Wunused
-
 // CHECK: Header search options:
 // CHECK:   System root [-isysroot=]: '/'
 // CHECK:   Resource dir [ -resource-dir=]: '{{.*}}clang{{.*}}'
@@ -48,3 +43,8 @@
 // CHECK:   Predefined macros:
 // CHECK:     -DBLARG
 // CHECK:     -DWIBBLE=WOBBLE
+
+// CHECK: Diagnostic options:
+// CHECK:   IgnoreWarnings: Yes
+// CHECK:   Diagnostic flags:
+// CHECK:     -Wunused

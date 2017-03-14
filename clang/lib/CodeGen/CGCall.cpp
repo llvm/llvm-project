@@ -2912,19 +2912,7 @@ void CodeGenFunction::EmitFunctionEpilog(const CGFunctionInfo &FI,
 
   llvm::Instruction *Ret;
   if (RV) {
-    if (CurCodeDecl && SanOpts.has(SanitizerKind::ReturnsNonnullAttribute)) {
-      if (auto RetNNAttr = CurCodeDecl->getAttr<ReturnsNonNullAttr>()) {
-        SanitizerScope SanScope(this);
-        llvm::Value *Cond = Builder.CreateICmpNE(
-            RV, llvm::Constant::getNullValue(RV->getType()));
-        llvm::Constant *StaticData[] = {
-            EmitCheckSourceLocation(EndLoc),
-            EmitCheckSourceLocation(RetNNAttr->getLocation()),
-        };
-        EmitCheck(std::make_pair(Cond, SanitizerKind::ReturnsNonnullAttribute),
-                  SanitizerHandler::NonnullReturn, StaticData, None);
-      }
-    }
+    EmitReturnValueCheck(RV, EndLoc);
     Ret = Builder.CreateRet(RV);
   } else {
     Ret = Builder.CreateRetVoid();
@@ -2932,6 +2920,62 @@ void CodeGenFunction::EmitFunctionEpilog(const CGFunctionInfo &FI,
 
   if (RetDbgLoc)
     Ret->setDebugLoc(std::move(RetDbgLoc));
+}
+
+void CodeGenFunction::EmitReturnValueCheck(llvm::Value *RV,
+                                           SourceLocation EndLoc) {
+  // A current decl may not be available when emitting vtable thunks.
+  if (!CurCodeDecl)
+    return;
+
+  ReturnsNonNullAttr *RetNNAttr = nullptr;
+  if (SanOpts.has(SanitizerKind::ReturnsNonnullAttribute))
+    RetNNAttr = CurCodeDecl->getAttr<ReturnsNonNullAttr>();
+
+  if (!RetNNAttr && !requiresReturnValueNullabilityCheck())
+    return;
+
+  // Prefer the returns_nonnull attribute if it's present.
+  SourceLocation AttrLoc;
+  SanitizerMask CheckKind;
+  if (RetNNAttr) {
+    assert(!requiresReturnValueNullabilityCheck() &&
+           "Cannot check nullability and the nonnull attribute");
+    AttrLoc = RetNNAttr->getLocation();
+    CheckKind = SanitizerKind::ReturnsNonnullAttribute;
+  } else {
+    // FIXME: The runtime shouldn't refer to the 'returns_nonnull' attribute.
+    if (auto *DD = dyn_cast<DeclaratorDecl>(CurCodeDecl))
+      if (auto *TSI = DD->getTypeSourceInfo())
+        if (auto FTL = TSI->getTypeLoc().castAs<FunctionTypeLoc>())
+          AttrLoc = FTL.getReturnLoc().findNullabilityLoc();
+    CheckKind = SanitizerKind::NullabilityReturn;
+  }
+
+  SanitizerScope SanScope(this);
+
+  llvm::BasicBlock *Check = nullptr;
+  llvm::BasicBlock *NoCheck = nullptr;
+  if (requiresReturnValueNullabilityCheck()) {
+    // Before doing the nullability check, make sure that the preconditions for
+    // the check are met.
+    Check = createBasicBlock("nullcheck");
+    NoCheck = createBasicBlock("no.nullcheck");
+    Builder.CreateCondBr(RetValNullabilityPrecondition, Check, NoCheck);
+    EmitBlock(Check);
+  }
+
+  // Now do the null check. If the returns_nonnull attribute is present, this
+  // is done unconditionally.
+  llvm::Value *Cond = Builder.CreateIsNotNull(RV);
+  llvm::Constant *StaticData[] = {
+      EmitCheckSourceLocation(EndLoc), EmitCheckSourceLocation(AttrLoc),
+  };
+  EmitCheck(std::make_pair(Cond, CheckKind), SanitizerHandler::NonnullReturn,
+            StaticData, None);
+
+  if (requiresReturnValueNullabilityCheck())
+    EmitBlock(NoCheck);
 }
 
 static bool isInAllocaArgument(CGCXXABI &ABI, QualType type) {
@@ -3244,25 +3288,51 @@ void CodeGenFunction::EmitNonNullArgCheck(RValue RV, QualType ArgType,
                                           SourceLocation ArgLoc,
                                           AbstractCallee AC,
                                           unsigned ParmNum) {
-  if (!SanOpts.has(SanitizerKind::NonnullAttribute) || !AC.getDecl())
+  if (!AC.getDecl() || !(SanOpts.has(SanitizerKind::NonnullAttribute) ||
+                         SanOpts.has(SanitizerKind::NullabilityArg)))
     return;
+
+  // The param decl may be missing in a variadic function.
   auto PVD = ParmNum < AC.getNumParams() ? AC.getParamDecl(ParmNum) : nullptr;
   unsigned ArgNo = PVD ? PVD->getFunctionScopeIndex() : ParmNum;
-  auto NNAttr = getNonNullAttr(AC.getDecl(), PVD, ArgType, ArgNo);
-  if (!NNAttr)
+
+  // Prefer the nonnull attribute if it's present. 
+  const NonNullAttr *NNAttr = nullptr;
+  if (SanOpts.has(SanitizerKind::NonnullAttribute))
+    NNAttr = getNonNullAttr(AC.getDecl(), PVD, ArgType, ArgNo);
+
+  bool CanCheckNullability = false;
+  if (SanOpts.has(SanitizerKind::NullabilityArg) && !NNAttr && PVD) {
+    auto Nullability = PVD->getType()->getNullability(getContext());
+    CanCheckNullability = Nullability &&
+                          *Nullability == NullabilityKind::NonNull &&
+                          PVD->getTypeSourceInfo();
+  }
+
+  if (!NNAttr && !CanCheckNullability)
     return;
+
+  SourceLocation AttrLoc;
+  SanitizerMask CheckKind;
+  if (NNAttr) {
+    AttrLoc = NNAttr->getLocation();
+    CheckKind = SanitizerKind::NonnullAttribute;
+  } else {
+    AttrLoc = PVD->getTypeSourceInfo()->getTypeLoc().findNullabilityLoc();
+    CheckKind = SanitizerKind::NullabilityArg;
+  }
+
   SanitizerScope SanScope(this);
   assert(RV.isScalar());
   llvm::Value *V = RV.getScalarVal();
   llvm::Value *Cond =
       Builder.CreateICmpNE(V, llvm::Constant::getNullValue(V->getType()));
   llvm::Constant *StaticData[] = {
-      EmitCheckSourceLocation(ArgLoc),
-      EmitCheckSourceLocation(NNAttr->getLocation()),
+      EmitCheckSourceLocation(ArgLoc), EmitCheckSourceLocation(AttrLoc),
       llvm::ConstantInt::get(Int32Ty, ArgNo + 1),
   };
-  EmitCheck(std::make_pair(Cond, SanitizerKind::NonnullAttribute),
-            SanitizerHandler::NonnullArg, StaticData, None);
+  EmitCheck(std::make_pair(Cond, CheckKind), SanitizerHandler::NonnullArg,
+            StaticData, None);
 }
 
 void CodeGenFunction::EmitCallArgs(
