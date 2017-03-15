@@ -58,8 +58,8 @@ define i32* @const_then_var(%type1* %addr, i64 %idx) {
 ; CHECK: [[BASE:%[0-9]+]](p0) = COPY %x0
 ; CHECK: [[IDX:%[0-9]+]](s64) = COPY %x1
 ; CHECK: [[OFFSET1:%[0-9]+]](s64) = G_CONSTANT i64 272
-; CHECK: [[BASE1:%[0-9]+]](p0) = G_GEP [[BASE]], [[OFFSET1]](s64)
 ; CHECK: [[SIZE:%[0-9]+]](s64) = G_CONSTANT i64 4
+; CHECK: [[BASE1:%[0-9]+]](p0) = G_GEP [[BASE]], [[OFFSET1]](s64)
 ; CHECK: [[OFFSET2:%[0-9]+]](s64) = G_MUL [[SIZE]], [[IDX]]
 ; CHECK: [[BASE2:%[0-9]+]](p0) = G_GEP [[BASE1]], [[OFFSET2]](s64)
 ; CHECK: [[RES:%[0-9]+]](p0) = COPY [[BASE2]](p0)
@@ -74,9 +74,9 @@ define i32* @var_then_const(%type1* %addr, i64 %idx) {
 ; CHECK: [[BASE:%[0-9]+]](p0) = COPY %x0
 ; CHECK: [[IDX:%[0-9]+]](s64) = COPY %x1
 ; CHECK: [[SIZE:%[0-9]+]](s64) = G_CONSTANT i64 64
+; CHECK: [[OFFSET2:%[0-9]+]](s64) = G_CONSTANT i64 40
 ; CHECK: [[OFFSET1:%[0-9]+]](s64) = G_MUL [[SIZE]], [[IDX]]
 ; CHECK: [[BASE1:%[0-9]+]](p0) = G_GEP [[BASE]], [[OFFSET1]](s64)
-; CHECK: [[OFFSET2:%[0-9]+]](s64) = G_CONSTANT i64 40
 ; CHECK: [[BASE2:%[0-9]+]](p0) = G_GEP [[BASE1]], [[OFFSET2]](s64)
 ; CHECK: %x0 = COPY [[BASE2]](p0)
 
