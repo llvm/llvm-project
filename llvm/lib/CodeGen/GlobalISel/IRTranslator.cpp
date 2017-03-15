@@ -82,7 +82,8 @@ unsigned IRTranslator::getOrCreateVReg(const Value &Val) {
   // we need to concat together to produce the value.
   assert(Val.getType()->isSized() &&
          "Don't know how to create an empty vreg");
-  unsigned VReg = MRI->createGenericVirtualRegister(LLT{*Val.getType(), *DL});
+  unsigned VReg =
+      MRI->createGenericVirtualRegister(getLLTForType(*Val.getType(), *DL));
   ValReg = VReg;
 
   if (auto CV = dyn_cast<Constant>(&Val)) {
@@ -248,7 +249,7 @@ bool IRTranslator::translateSwitch(const User &U,
   const unsigned SwCondValue = getOrCreateVReg(*SwInst.getCondition());
   const BasicBlock *OrigBB = SwInst.getParent();
 
-  LLT LLTi1 = LLT(*Type::getInt1Ty(U.getContext()), *DL);
+  LLT LLTi1 = getLLTForType(*Type::getInt1Ty(U.getContext()), *DL);
   for (auto &CaseIt : SwInst.cases()) {
     const unsigned CaseValueReg = getOrCreateVReg(*CaseIt.getCaseValue());
     const unsigned Tst = MRI->createGenericVirtualRegister(LLTi1);
@@ -304,7 +305,7 @@ bool IRTranslator::translateLoad(const User &U, MachineIRBuilder &MIRBuilder) {
 
   unsigned Res = getOrCreateVReg(LI);
   unsigned Addr = getOrCreateVReg(*LI.getPointerOperand());
-  LLT VTy{*LI.getType(), *DL}, PTy{*LI.getPointerOperand()->getType(), *DL};
+
   MIRBuilder.buildLoad(
       Res, Addr,
       *MF->getMachineMemOperand(MachinePointerInfo(LI.getPointerOperand()),
@@ -322,8 +323,6 @@ bool IRTranslator::translateStore(const User &U, MachineIRBuilder &MIRBuilder) {
 
   unsigned Val = getOrCreateVReg(*SI.getValueOperand());
   unsigned Addr = getOrCreateVReg(*SI.getPointerOperand());
-  LLT VTy{*SI.getValueOperand()->getType(), *DL},
-      PTy{*SI.getPointerOperand()->getType(), *DL};
 
   MIRBuilder.buildStore(
       Val, Addr,
@@ -400,7 +399,8 @@ bool IRTranslator::translateSelect(const User &U,
 bool IRTranslator::translateBitCast(const User &U,
                                     MachineIRBuilder &MIRBuilder) {
   // If we're bitcasting to the source type, we can reuse the source vreg.
-  if (LLT{*U.getOperand(0)->getType(), *DL} == LLT{*U.getType(), *DL}) {
+  if (getLLTForType(*U.getOperand(0)->getType(), *DL) ==
+      getLLTForType(*U.getType(), *DL)) {
     // Get the source vreg now, to avoid invalidating ValToVReg.
     unsigned SrcReg = getOrCreateVReg(*U.getOperand(0));
     unsigned &Reg = ValToVReg[&U];
@@ -431,7 +431,7 @@ bool IRTranslator::translateGetElementPtr(const User &U,
 
   Value &Op0 = *U.getOperand(0);
   unsigned BaseReg = getOrCreateVReg(Op0);
-  LLT PtrTy{*Op0.getType(), *DL};
+  LLT PtrTy = getLLTForType(*Op0.getType(), *DL);
   unsigned PtrSize = DL->getPointerSizeInBits(PtrTy.getAddressSpace());
   LLT OffsetTy = LLT::scalar(PtrSize);
 
@@ -497,7 +497,7 @@ bool IRTranslator::translateGetElementPtr(const User &U,
 bool IRTranslator::translateMemfunc(const CallInst &CI,
                                     MachineIRBuilder &MIRBuilder,
                                     unsigned ID) {
-  LLT SizeTy{*CI.getArgOperand(2)->getType(), *DL};
+  LLT SizeTy = getLLTForType(*CI.getArgOperand(2)->getType(), *DL);
   Type *DstTy = CI.getArgOperand(0)->getType();
   if (cast<PointerType>(DstTy)->getAddressSpace() != 0 ||
       SizeTy.getSizeInBits() != DL->getPointerSizeInBits(0))
@@ -554,7 +554,7 @@ void IRTranslator::getStackGuard(unsigned DstReg,
 
 bool IRTranslator::translateOverflowIntrinsic(const CallInst &CI, unsigned Op,
                                               MachineIRBuilder &MIRBuilder) {
-  LLT Ty{*CI.getOperand(0)->getType(), *DL};
+  LLT Ty = getLLTForType(*CI.getOperand(0)->getType(), *DL);
   LLT s1 = LLT::scalar(1);
   unsigned Width = Ty.getSizeInBits();
   unsigned Res = MRI->createGenericVirtualRegister(Ty);
@@ -697,7 +697,7 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
     getStackGuard(getOrCreateVReg(CI), MIRBuilder);
     return true;
   case Intrinsic::stackprotector: {
-    LLT PtrTy{*CI.getArgOperand(0)->getType(), *DL};
+    LLT PtrTy = getLLTForType(*CI.getArgOperand(0)->getType(), *DL);
     unsigned GuardVal = MRI->createGenericVirtualRegister(PtrTy);
     getStackGuard(GuardVal, MIRBuilder);
 
@@ -867,7 +867,7 @@ bool IRTranslator::translateLandingPad(const User &U,
 
   SmallVector<LLT, 2> Tys;
   for (Type *Ty : cast<StructType>(LP.getType())->elements())
-    Tys.push_back(LLT{*Ty, *DL});
+    Tys.push_back(getLLTForType(*Ty, *DL));
   assert(Tys.size() == 2 && "Only two-valued landingpads are supported");
 
   // Mark exception register as live in.
@@ -930,7 +930,7 @@ bool IRTranslator::translateAlloca(const User &U,
   MIRBuilder.buildConstant(TySize, -DL->getTypeAllocSize(Ty));
   MIRBuilder.buildMul(AllocSize, NumElts, TySize);
 
-  LLT PtrTy = LLT{*AI.getType(), *DL};
+  LLT PtrTy = getLLTForType(*AI.getType(), *DL);
   auto &TLI = *MF->getSubtarget().getTargetLowering();
   unsigned SPReg = TLI.getStackPointerRegisterToSaveRestore();
 
