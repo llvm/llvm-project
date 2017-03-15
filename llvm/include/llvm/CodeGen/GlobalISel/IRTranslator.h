@@ -56,15 +56,6 @@ private:
   /// Mapping of the values of the current LLVM IR function
   /// to the related virtual registers.
   ValueToVReg ValToVReg;
-  // Constants are special because when we encounter one,
-  // we do not know at first where to insert the definition since
-  // this depends on all its uses.
-  // Thus, we will insert the sequences to materialize them when
-  // we know all their users.
-  // In the meantime, just keep it in a set.
-  // Note: Constants that end up as immediate in the related instructions,
-  // do not appear in that map.
-  SmallSetVector<const Constant *, 8> Constants;
 
   // N.b. it's not completely obvious that this will be sufficient for every
   // LLVM IR construct (with "invoke" being the obvious candidate to mess up our
