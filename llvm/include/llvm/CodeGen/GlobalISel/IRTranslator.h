@@ -388,8 +388,8 @@ private:
 
   /// Get the MachineBasicBlock that represents \p BB. Specifically, the block
   /// returned will be the head of the translated block (suitable for branch
-  /// destinations). If such basic block does not exist, it is created.
-  MachineBasicBlock &getOrCreateBB(const BasicBlock &BB);
+  /// destinations).
+  MachineBasicBlock &getMBB(const BasicBlock &BB);
 
   /// Record \p NewPred as a Machine predecessor to `Edge.second`, corresponding
   /// to `Edge.first` at the IR level. This is used when IRTranslation creates
@@ -405,7 +405,7 @@ private:
     auto RemappedEdge = MachinePreds.find(Edge);
     if (RemappedEdge != MachinePreds.end())
       return RemappedEdge->second;
-    return SmallVector<MachineBasicBlock *, 4>(1, &getOrCreateBB(*Edge.first));
+    return SmallVector<MachineBasicBlock *, 4>(1, &getMBB(*Edge.first));
   }
 
 public:
@@ -420,10 +420,10 @@ public:
   //   CallLowering = MF.subtarget.getCallLowering()
   //   F = MF.getParent()
   //   MIRBuilder.reset(MF)
-  //   MIRBuilder.getOrCreateBB(F.getEntryBB())
+  //   getMBB(F.getEntryBB())
   //   CallLowering->translateArguments(MIRBuilder, F, ValToVReg)
   //   for each bb in F
-  //     MIRBuilder.getOrCreateBB(bb)
+  //     getMBB(bb)
   //     for each inst in bb
   //       if (!translate(MIRBuilder, inst, ValToVReg, ConstantToSequence))
   //         report_fatal_error("Don't know how to translate input");

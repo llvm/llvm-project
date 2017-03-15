@@ -117,33 +117,35 @@ false:
 ; CHECK: G_BRCOND %[[regicmp100]](s1), %[[BB_CASE100]]
 ; CHECK: G_BR %[[BB_NOTCASE100_CHECKNEXT]]
 ;
+; CHECK: [[BB_DEFAULT:bb.[0-9]+.default]]:
+; CHECK-NEXT: successors: %[[BB_RET:bb.[0-9]+.return]](0x80000000)
+; CHECK: %[[regretdefault:[0-9]+]](s32) = G_ADD %0, %[[reg0]]
+; CHECK: G_BR %[[BB_RET]]
+;
 ; CHECK: [[BB_CASE100]]:
 ; CHECK-NEXT: successors: %[[BB_RET:bb.[0-9]+.return]](0x80000000)
 ; CHECK: %[[regretc100:[0-9]+]](s32) = G_ADD %0, %[[reg1]]
 ; CHECK: G_BR %[[BB_RET]]
-; CHECK: [[BB_NOTCASE100_CHECKNEXT]]:
-; CHECK-NEXT: successors: %[[BB_CASE200:bb.[0-9]+.case200]](0x40000000), %[[BB_NOTCASE200_CHECKNEXT:bb.[0-9]+.entry]](0x40000000)
-; CHECK: %[[regicmp200:[0-9]+]](s1) = G_ICMP intpred(eq), %[[reg200]](s32), %0
-; CHECK: G_BRCOND %[[regicmp200]](s1), %[[BB_CASE200]]
-; CHECK: G_BR %[[BB_NOTCASE200_CHECKNEXT]]
 ;
-; CHECK: [[BB_CASE200]]:
-; CHECK-NEXT: successors: %[[BB_RET:bb.[0-9]+.return]](0x80000000)
-; CHECK: %[[regretc200:[0-9]+]](s32) = G_ADD %0, %[[reg2]]
-; CHECK: G_BR %[[BB_RET]]
-; CHECK: [[BB_NOTCASE200_CHECKNEXT]]:
-; CHECK-NEXT: successors: %[[BB_DEFAULT:bb.[0-9]+.default]](0x80000000)
-; CHECK: G_BR %[[BB_DEFAULT]]
-;
-; CHECK: [[BB_DEFAULT]]:
+; CHECK: [[BB_CASE200:bb.[0-9]+.case200]]:
 ; CHECK-NEXT: successors: %[[BB_RET]](0x80000000)
-; CHECK: %[[regretdefault:[0-9]+]](s32) = G_ADD %0, %[[reg0]]
+; CHECK: %[[regretc200:[0-9]+]](s32) = G_ADD %0, %[[reg2]]
 ; CHECK: G_BR %[[BB_RET]]
 ;
 ; CHECK: [[BB_RET]]:
 ; CHECK-NEXT: %[[regret:[0-9]+]](s32) = PHI %[[regretdefault]](s32), %[[BB_DEFAULT]], %[[regretc100]](s32), %[[BB_CASE100]]
 ; CHECK:  %w0 = COPY %[[regret]](s32)
 ; CHECK:  RET_ReallyLR implicit %w0
+;
+; CHECK: [[BB_NOTCASE100_CHECKNEXT]]:
+; CHECK-NEXT: successors: %[[BB_CASE200]](0x40000000), %[[BB_NOTCASE200_CHECKNEXT:bb.[0-9]+.entry]](0x40000000)
+; CHECK: %[[regicmp200:[0-9]+]](s1) = G_ICMP intpred(eq), %[[reg200]](s32), %0
+; CHECK: G_BRCOND %[[regicmp200]](s1), %[[BB_CASE200]]
+; CHECK: G_BR %[[BB_NOTCASE200_CHECKNEXT]]
+;
+; CHECK: [[BB_NOTCASE200_CHECKNEXT]]:
+; CHECK-NEXT: successors: %[[BB_DEFAULT]](0x80000000)
+; CHECK: G_BR %[[BB_DEFAULT]]
 define i32 @switch(i32 %argc) {
 entry:
   switch i32 %argc, label %default [
@@ -172,13 +174,12 @@ return:
   ; %entry block is no longer a predecessor for the phi instruction. We need to
   ; use the correct lowered MachineBasicBlock instead.
 ; CHECK-LABEL: name: test_cfg_remap
+; CHECK: [[PHI_BLOCK:bb.[0-9]+.phi.block]]:
+; CHECK-NEXT: PHI %{{.*}}(s32), %[[NOTCASE57_BLOCK:bb.[0-9]+.entry]], %{{.*}}(s32),
 
-; CHECK: bb.5.entry:
-; CHECK-NEXT: successors: %[[PHI_BLOCK:bb.[0-9]+.phi.block]]
+; CHECK: [[NOTCASE57_BLOCK]]:
+; CHECK-NEXT: successors: %[[PHI_BLOCK]]
 ; CHECK: G_BR %[[PHI_BLOCK]]
-
-; CHECK: [[PHI_BLOCK]]:
-; CHECK-NEXT: PHI %{{.*}}(s32), %bb.5.entry
 define i32 @test_cfg_remap(i32 %in) {
 entry:
   switch i32 %in, label %phi.block [i32 1, label %next
@@ -378,11 +379,11 @@ define i64* @trivial_bitcast(i8* %a) {
 ; CHECK:     [[A:%[0-9]+]](p0) = COPY %x0
 ; CHECK:     G_BR %[[CAST:bb\.[0-9]+.cast]]
 
+; CHECK: [[END:bb\.[0-9]+.end]]:
+
 ; CHECK: [[CAST]]:
 ; CHECK:     {{%[0-9]+}}(p0) = COPY [[A]]
-; CHECK:     G_BR %[[END:bb\.[0-9]+.end]]
-
-; CHECK: [[END]]:
+; CHECK:     G_BR %[[END]]
 define i64* @trivial_bitcast_with_copy(i8* %a) {
   br label %cast
 
