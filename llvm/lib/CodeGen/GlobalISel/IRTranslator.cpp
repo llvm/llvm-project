@@ -861,7 +861,7 @@ bool IRTranslator::translateLandingPad(const User &U,
   MIRBuilder.buildInstr(TargetOpcode::EH_LABEL)
     .addSym(MF->addLandingPad(&MBB));
 
-  LLT Ty{*LP.getType(), *DL};
+  LLT Ty = getLLTForType(*LP.getType(), *DL);
   unsigned Undef = MRI->createGenericVirtualRegister(Ty);
   MIRBuilder.buildUndef(Undef);
 
