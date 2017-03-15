@@ -1074,6 +1074,13 @@ bool IRTranslator::translate(const Constant &C, unsigned Reg) {
       Ops.push_back(getOrCreateVReg(Elt));
     }
     EntryBuilder.buildMerge(Reg, Ops);
+  } else if (auto CV = dyn_cast<ConstantDataVector>(&C)) {
+    std::vector<unsigned> Ops;
+    for (unsigned i = 0; i < CV->getNumElements(); ++i) {
+      Constant &Elt = *CV->getElementAsConstant(i);
+      Ops.push_back(getOrCreateVReg(Elt));
+    }
+    EntryBuilder.buildMerge(Reg, Ops);
   } else if (auto CE = dyn_cast<ConstantExpr>(&C)) {
     switch(CE->getOpcode()) {
 #define HANDLE_INST(NUM, OPCODE, CLASS)                         \
