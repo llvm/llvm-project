@@ -13,7 +13,6 @@
 // be clueless and will emit "argument unused" warnings. If PR17239 is properly
 // fixed, this should not happen because the "/link" option is restricted to
 // consume only remaining args in its response file.
-// ARGS-NOT: warning
 // ARGS-NOT: argument unused during compilation
 // Identify the linker command
 // ARGS: link.exe

@@ -1118,6 +1118,69 @@ const internal::VariadicDynCastAllOfMatcher<
   Decl,
   ObjCInterfaceDecl> objcInterfaceDecl;
 
+/// \brief Matches Objective-C protocol declarations.
+///
+/// Example matches FooDelegate
+/// \code
+///   @protocol FooDelegate
+///   @end
+/// \endcode
+const internal::VariadicDynCastAllOfMatcher<
+  Decl,
+  ObjCProtocolDecl> objcProtocolDecl;
+
+/// \brief Matches Objective-C category declarations.
+///
+/// Example matches Foo (Additions)
+/// \code
+///   @interface Foo (Additions)
+///   @end
+/// \endcode
+const internal::VariadicDynCastAllOfMatcher<
+  Decl,
+  ObjCCategoryDecl> objcCategoryDecl;
+
+/// \brief Matches Objective-C method declarations.
+///
+/// Example matches both declaration and definition of -[Foo method]
+/// \code
+///   @interface Foo
+///   - (void)method;
+///   @end
+///
+///   @implementation Foo
+///   - (void)method {}
+///   @end
+/// \endcode
+const internal::VariadicDynCastAllOfMatcher<
+  Decl,
+  ObjCMethodDecl> objcMethodDecl;
+
+/// \brief Matches Objective-C instance variable declarations.
+///
+/// Example matches _enabled
+/// \code
+///   @implementation Foo {
+///     BOOL _enabled;
+///   }
+///   @end
+/// \endcode
+const internal::VariadicDynCastAllOfMatcher<
+  Decl,
+  ObjCIvarDecl> objcIvarDecl;
+
+/// \brief Matches Objective-C property declarations.
+///
+/// Example matches enabled
+/// \code
+///   @interface Foo
+///   @property BOOL enabled;
+///   @end
+/// \endcode
+const internal::VariadicDynCastAllOfMatcher<
+  Decl,
+  ObjCPropertyDecl> objcPropertyDecl;
+
 /// \brief Matches expressions that introduce cleanups to be run at the end
 /// of the sub-expression's evaluation.
 ///
