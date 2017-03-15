@@ -39,17 +39,17 @@
   define void @udiv_s32_gpr() { ret void }
   define void @udiv_s64_gpr() { ret void }
 
-  define void @fadd_s32_gpr() { ret void }
-  define void @fadd_s64_gpr() { ret void }
+  define void @fadd_s32_fpr() { ret void }
+  define void @fadd_s64_fpr() { ret void }
 
-  define void @fsub_s32_gpr() { ret void }
-  define void @fsub_s64_gpr() { ret void }
+  define void @fsub_s32_fpr() { ret void }
+  define void @fsub_s64_fpr() { ret void }
 
-  define void @fmul_s32_gpr() { ret void }
-  define void @fmul_s64_gpr() { ret void }
+  define void @fmul_s32_fpr() { ret void }
+  define void @fmul_s64_fpr() { ret void }
 
-  define void @fdiv_s32_gpr() { ret void }
-  define void @fdiv_s64_gpr() { ret void }
+  define void @fdiv_s32_fpr() { ret void }
+  define void @fdiv_s64_fpr() { ret void }
 
 ...
 
@@ -755,8 +755,8 @@ body:             |
 
 ---
 # Check that we select a s32 FPR G_FADD into FADDSrr.
-# CHECK-LABEL: name: fadd_s32_gpr
-name:            fadd_s32_gpr
+# CHECK-LABEL: name: fadd_s32_fpr
+name:            fadd_s32_fpr
 legalized:       true
 regBankSelected: true
 
@@ -783,8 +783,8 @@ body:             |
 ...
 
 ---
-# CHECK-LABEL: name: fadd_s64_gpr
-name:            fadd_s64_gpr
+# CHECK-LABEL: name: fadd_s64_fpr
+name:            fadd_s64_fpr
 legalized:       true
 regBankSelected: true
 
@@ -811,8 +811,8 @@ body:             |
 ...
 
 ---
-# CHECK-LABEL: name: fsub_s32_gpr
-name:            fsub_s32_gpr
+# CHECK-LABEL: name: fsub_s32_fpr
+name:            fsub_s32_fpr
 legalized:       true
 regBankSelected: true
 
@@ -839,8 +839,8 @@ body:             |
 ...
 
 ---
-# CHECK-LABEL: name: fsub_s64_gpr
-name:            fsub_s64_gpr
+# CHECK-LABEL: name: fsub_s64_fpr
+name:            fsub_s64_fpr
 legalized:       true
 regBankSelected: true
 
@@ -867,8 +867,8 @@ body:             |
 ...
 
 ---
-# CHECK-LABEL: name: fmul_s32_gpr
-name:            fmul_s32_gpr
+# CHECK-LABEL: name: fmul_s32_fpr
+name:            fmul_s32_fpr
 legalized:       true
 regBankSelected: true
 
@@ -895,8 +895,8 @@ body:             |
 ...
 
 ---
-# CHECK-LABEL: name: fmul_s64_gpr
-name:            fmul_s64_gpr
+# CHECK-LABEL: name: fmul_s64_fpr
+name:            fmul_s64_fpr
 legalized:       true
 regBankSelected: true
 
@@ -923,8 +923,8 @@ body:             |
 ...
 
 ---
-# CHECK-LABEL: name: fdiv_s32_gpr
-name:            fdiv_s32_gpr
+# CHECK-LABEL: name: fdiv_s32_fpr
+name:            fdiv_s32_fpr
 legalized:       true
 regBankSelected: true
 
@@ -951,8 +951,8 @@ body:             |
 ...
 
 ---
-# CHECK-LABEL: name: fdiv_s64_gpr
-name:            fdiv_s64_gpr
+# CHECK-LABEL: name: fdiv_s64_fpr
+name:            fdiv_s64_fpr
 legalized:       true
 regBankSelected: true
 
