@@ -190,9 +190,11 @@ bool IRTranslator::translateCompare(const User &U,
   if (CmpInst::isIntPredicate(Pred))
     MIRBuilder.buildICmp(Pred, Res, Op0, Op1);
   else if (Pred == CmpInst::FCMP_FALSE)
-    MIRBuilder.buildConstant(Res, 0);
-  else if  (Pred == CmpInst::FCMP_TRUE)
-    MIRBuilder.buildConstant(Res, 1);
+    MIRBuilder.buildCopy(
+        Res, getOrCreateVReg(*Constant::getNullValue(CI->getType())));
+  else if (Pred == CmpInst::FCMP_TRUE)
+    MIRBuilder.buildCopy(
+        Res, getOrCreateVReg(*Constant::getAllOnesValue(CI->getType())));
   else
     MIRBuilder.buildFCmp(Pred, Res, Op0, Op1);
 
@@ -426,9 +428,10 @@ bool IRTranslator::translateGetElementPtr(const User &U,
 
   Value &Op0 = *U.getOperand(0);
   unsigned BaseReg = getOrCreateVReg(Op0);
-  LLT PtrTy = getLLTForType(*Op0.getType(), *DL);
-  unsigned PtrSize = DL->getPointerSizeInBits(PtrTy.getAddressSpace());
-  LLT OffsetTy = LLT::scalar(PtrSize);
+  Type *PtrIRTy = Op0.getType();
+  LLT PtrTy = getLLTForType(*PtrIRTy, *DL);
+  Type *OffsetIRTy = DL->getIntPtrType(PtrIRTy);
+  LLT OffsetTy = getLLTForType(*OffsetIRTy, *DL);
 
   int64_t Offset = 0;
   for (gep_type_iterator GTI = gep_type_begin(&U), E = gep_type_end(&U);
@@ -450,8 +453,8 @@ bool IRTranslator::translateGetElementPtr(const User &U,
 
       if (Offset != 0) {
         unsigned NewBaseReg = MRI->createGenericVirtualRegister(PtrTy);
-        unsigned OffsetReg = MRI->createGenericVirtualRegister(OffsetTy);
-        MIRBuilder.buildConstant(OffsetReg, Offset);
+        unsigned OffsetReg =
+            getOrCreateVReg(*ConstantInt::get(OffsetIRTy, Offset));
         MIRBuilder.buildGEP(NewBaseReg, BaseReg, OffsetReg);
 
         BaseReg = NewBaseReg;
@@ -459,8 +462,8 @@ bool IRTranslator::translateGetElementPtr(const User &U,
       }
 
       // N = N + Idx * ElementSize;
-      unsigned ElementSizeReg = MRI->createGenericVirtualRegister(OffsetTy);
-      MIRBuilder.buildConstant(ElementSizeReg, ElementSize);
+      unsigned ElementSizeReg =
+          getOrCreateVReg(*ConstantInt::get(OffsetIRTy, ElementSize));
 
       unsigned IdxReg = getOrCreateVReg(*Idx);
       if (MRI->getType(IdxReg) != OffsetTy) {
@@ -479,8 +482,7 @@ bool IRTranslator::translateGetElementPtr(const User &U,
   }
 
   if (Offset != 0) {
-    unsigned OffsetReg = MRI->createGenericVirtualRegister(OffsetTy);
-    MIRBuilder.buildConstant(OffsetReg, Offset);
+    unsigned OffsetReg = getOrCreateVReg(*ConstantInt::get(OffsetIRTy, Offset));
     MIRBuilder.buildGEP(getOrCreateVReg(U), BaseReg, OffsetReg);
     return true;
   }
@@ -561,8 +563,8 @@ bool IRTranslator::translateOverflowIntrinsic(const CallInst &CI, unsigned Op,
                  .addUse(getOrCreateVReg(*CI.getOperand(1)));
 
   if (Op == TargetOpcode::G_UADDE || Op == TargetOpcode::G_USUBE) {
-    unsigned Zero = MRI->createGenericVirtualRegister(s1);
-    EntryBuilder.buildConstant(Zero, 0);
+    unsigned Zero = getOrCreateVReg(
+        *Constant::getNullValue(Type::getInt1Ty(CI.getContext())));
     MIB.addUse(Zero);
   }
 
@@ -914,7 +916,8 @@ bool IRTranslator::translateAlloca(const User &U,
 
   unsigned NumElts = getOrCreateVReg(*AI.getArraySize());
 
-  LLT IntPtrTy = LLT::scalar(DL->getPointerSizeInBits());
+  Type *IntPtrIRTy = DL->getIntPtrType(AI.getType());
+  LLT IntPtrTy = getLLTForType(*IntPtrIRTy, *DL);
   if (MRI->getType(NumElts) != IntPtrTy) {
     unsigned ExtElts = MRI->createGenericVirtualRegister(IntPtrTy);
     MIRBuilder.buildZExtOrTrunc(ExtElts, NumElts);
@@ -922,8 +925,8 @@ bool IRTranslator::translateAlloca(const User &U,
   }
 
   unsigned AllocSize = MRI->createGenericVirtualRegister(IntPtrTy);
-  unsigned TySize = MRI->createGenericVirtualRegister(IntPtrTy);
-  MIRBuilder.buildConstant(TySize, -DL->getTypeAllocSize(Ty));
+  unsigned TySize =
+      getOrCreateVReg(*ConstantInt::get(IntPtrIRTy, -DL->getTypeAllocSize(Ty)));
   MIRBuilder.buildMul(AllocSize, NumElts, TySize);
 
   LLT PtrTy = getLLTForType(*AI.getType(), *DL);

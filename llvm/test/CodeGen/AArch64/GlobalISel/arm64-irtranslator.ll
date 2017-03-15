@@ -1064,8 +1064,10 @@ define void @float_comparison(float* %a.addr, float* %b.addr, i1* %bool.addr) {
 }
 
 ; CHECK-LABEL: name: trivial_float_comparison
-; CHECK: [[R1:%[0-9]+]](s1) = G_CONSTANT i1 false
-; CHECK: [[R2:%[0-9]+]](s1) = G_CONSTANT i1 true
+; CHECK: [[ENTRY_R1:%[0-9]+]](s1) = G_CONSTANT i1 false
+; CHECK: [[ENTRY_R2:%[0-9]+]](s1) = G_CONSTANT i1 true
+; CHECK: [[R1:%[0-9]+]](s1) = COPY [[ENTRY_R1]](s1)
+; CHECK: [[R2:%[0-9]+]](s1) = COPY [[ENTRY_R2]](s1)
 ; CHECK: G_ADD [[R1]], [[R2]]
 define i1 @trivial_float_comparison(double %a, double %b) {
   %r1 = fcmp false double %a, %b
