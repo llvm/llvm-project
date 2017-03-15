@@ -1,0 +1,404 @@
+# RUN: llc -mtriple=aarch64-- -run-pass=instruction-select -verify-machineinstrs -global-isel %s -o - | FileCheck %s
+
+--- |
+  target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
+
+  define void @trunc() { ret void }
+
+  define void @anyext_gpr() { ret void }
+  define void @zext_gpr() { ret void }
+  define void @sext_gpr() { ret void }
+
+  define void @other_casts() { ret void }
+
+  define void @bitcast_s32_gpr() { ret void }
+  define void @bitcast_s32_fpr() { ret void }
+  define void @bitcast_s32_gpr_fpr() { ret void }
+  define void @bitcast_s32_fpr_gpr() { ret void }
+  define void @bitcast_s64_gpr() { ret void }
+  define void @bitcast_s64_fpr() { ret void }
+  define void @bitcast_s64_gpr_fpr() { ret void }
+  define void @bitcast_s64_fpr_gpr() { ret void }
+...
+
+---
+# CHECK-LABEL: name: trunc
+name:            trunc
+legalized:       true
+regBankSelected: true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: gpr32 }
+# CHECK-NEXT:  - { id: 1, class: gpr32 }
+# CHECK-NEXT:  - { id: 2, class: gpr64 }
+# CHECK-NEXT:  - { id: 3, class: gpr32 }
+# CHECK-NEXT:  - { id: 4, class: gpr32 }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+  - { id: 2, class: gpr }
+  - { id: 3, class: gpr }
+  - { id: 4, class: gpr }
+
+# CHECK:  body:
+# CHECK:    %1 = COPY %0
+# CHECK:    %3 = COPY %2.sub_32
+# CHECK:    %4 = COPY %2.sub_32
+body:             |
+  bb.0:
+    liveins: %w0, %x0
+
+    %0(s32) = COPY %w0
+    %1(s1) = G_TRUNC %0
+
+    %2(s64) = COPY %x0
+    %3(s32) = G_TRUNC %2
+    %4(s8) = G_TRUNC %2
+...
+
+---
+# CHECK-LABEL: name: anyext_gpr
+name:            anyext_gpr
+legalized:       true
+regBankSelected: true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: gpr32all }
+# CHECK-NEXT:  - { id: 1, class: gpr64all }
+# CHECK-NEXT:  - { id: 2, class: gpr32all }
+# CHECK-NEXT:  - { id: 3, class: gpr32all }
+# CHECK-NEXT:  - { id: 4, class: gpr64all }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+  - { id: 2, class: gpr }
+  - { id: 3, class: gpr }
+
+# CHECK:  body:
+# CHECK:    %0 = COPY %w0
+# CHECK:    %4 = SUBREG_TO_REG 0, %0, 15
+# CHECK:    %1 = COPY %4
+# CHECK:    %2 = COPY %w0
+# CHECK:    %3 = COPY %2
+body:             |
+  bb.0:
+    liveins: %w0
+
+    %0(s32) = COPY %w0
+    %1(s64) = G_ANYEXT %0
+    %2(s8) = COPY %w0
+    %3(s32) = G_ANYEXT %2
+...
+
+---
+# CHECK-LABEL: name: zext_gpr
+name:            zext_gpr
+legalized:       true
+regBankSelected: true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: gpr32 }
+# CHECK-NEXT:  - { id: 1, class: gpr64 }
+# CHECK-NEXT:  - { id: 2, class: gpr32 }
+# CHECK-NEXT:  - { id: 3, class: gpr32 }
+# CHECK-NEXT:  - { id: 4, class: gpr32 }
+# CHECK-NEXT:  - { id: 5, class: gpr64 }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+  - { id: 2, class: gpr }
+  - { id: 3, class: gpr }
+  - { id: 4, class: gpr }
+
+# CHECK:  body:
+# CHECK:    %0 = COPY %w0
+# CHECK:    %5 = SUBREG_TO_REG 0, %0, 15
+# CHECK:    %1 = UBFMXri %5, 0, 31
+# CHECK:    %2 = COPY %w0
+# CHECK:    %3 = UBFMWri %2, 0, 7
+# CHECK:    %4 = UBFMWri %2, 0, 7
+body:             |
+  bb.0:
+    liveins: %w0
+
+    %0(s32) = COPY %w0
+    %1(s64) = G_ZEXT %0
+    %2(s8) = COPY %w0
+    %3(s32) = G_ZEXT %2
+    %4(s16)= G_ZEXT %2
+...
+
+---
+# CHECK-LABEL: name: sext_gpr
+name:            sext_gpr
+legalized:       true
+regBankSelected: true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: gpr32 }
+# CHECK-NEXT:  - { id: 1, class: gpr64 }
+# CHECK-NEXT:  - { id: 2, class: gpr32 }
+# CHECK-NEXT:  - { id: 3, class: gpr32 }
+# CHECK-NEXT:  - { id: 4, class: gpr32 }
+# CHECK-NEXT:  - { id: 5, class: gpr64 }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+  - { id: 2, class: gpr }
+  - { id: 3, class: gpr }
+  - { id: 4, class: gpr }
+
+# CHECK:  body:
+# CHECK:    %0 = COPY %w0
+# CHECK:    %5 = SUBREG_TO_REG 0, %0, 15
+# CHECK:    %1 = SBFMXri %5, 0, 31
+# CHECK:    %2 = COPY %w0
+# CHECK:    %3 = SBFMWri %2, 0, 7
+# CHECK:    %4 = SBFMWri %2, 0, 7
+body:             |
+  bb.0:
+    liveins: %w0
+
+    %0(s32) = COPY %w0
+    %1(s64) = G_SEXT %0
+    %2(s8) = COPY %w0
+    %3(s32) = G_SEXT %2
+    %4(s16) = G_SEXT %2
+...
+
+---
+# CHECK-LABEL: name: other_casts
+name:            other_casts
+legalized:       true
+regBankSelected: true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: gpr64all }
+# CHECK-NEXT:  - { id: 1, class: fpr64 }
+# CHECK-NEXT:  - { id: 2, class: gpr64 }
+# CHECK-NEXT:  - { id: 3, class: gpr64 }
+# CHECK-NEXT:  - { id: 4, class: gpr32 }
+# CHECK-NEXT:  - { id: 5, class: gpr32 }
+# CHECK-NEXT:  - { id: 6, class: gpr32 }
+# CHECK-NEXT:  - { id: 7, class: gpr32 }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: fpr }
+  - { id: 2, class: gpr }
+  - { id: 3, class: gpr }
+  - { id: 4, class: gpr }
+  - { id: 5, class: gpr }
+  - { id: 6, class: gpr }
+  - { id: 7, class: gpr }
+# CHECK:  body:
+# CHECK:    %0 = COPY %x0
+# CHECK:    %1 = COPY %0
+# CHECK:    %2 = COPY %0
+# CHECK:    %3 = COPY %2
+# CHECK:    %4 = COPY %2.sub_32
+# CHECK:    %5 = COPY %2.sub_32
+# CHECK:    %6 = COPY %2.sub_32
+# CHECK:    %7 = COPY %2.sub_32
+body:             |
+  bb.0:
+    liveins: %x0
+    %0(s64) = COPY %x0
+    %1(<8 x s8>) = G_BITCAST %0(s64)
+    %2(p0) = G_INTTOPTR %0
+
+    %3(s64) = G_PTRTOINT %2
+    %4(s32) = G_PTRTOINT %2
+    %5(s16) = G_PTRTOINT %2
+    %6(s8) = G_PTRTOINT %2
+    %7(s1) = G_PTRTOINT %2
+...
+
+---
+# CHECK-LABEL: name: bitcast_s32_gpr
+name:            bitcast_s32_gpr
+legalized:       true
+regBankSelected: true
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: gpr32all }
+# CHECK-NEXT:  - { id: 1, class: gpr32all }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+
+# CHECK:  body:
+# CHECK:    %0 = COPY %w0
+# CHECK:    %1 = COPY %0
+body:             |
+  bb.0:
+    liveins: %w0
+
+    %0(s32) = COPY %w0
+    %1(s32) = G_BITCAST %0
+...
+
+---
+# CHECK-LABEL: name: bitcast_s32_fpr
+name:            bitcast_s32_fpr
+legalized:       true
+regBankSelected: true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: fpr32 }
+# CHECK-NEXT:  - { id: 1, class: fpr32 }
+registers:
+  - { id: 0, class: fpr }
+  - { id: 1, class: fpr }
+
+# CHECK:  body:
+# CHECK:    %0 = COPY %s0
+# CHECK:    %1 = COPY %0
+body:             |
+  bb.0:
+    liveins: %s0
+
+    %0(s32) = COPY %s0
+    %1(s32) = G_BITCAST %0
+...
+
+---
+# CHECK-LABEL: name: bitcast_s32_gpr_fpr
+name:            bitcast_s32_gpr_fpr
+legalized:       true
+regBankSelected: true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: gpr32all }
+# CHECK-NEXT:  - { id: 1, class: fpr32 }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: fpr }
+
+# CHECK:  body:
+# CHECK:    %0 = COPY %w0
+# CHECK:    %1 = COPY %0
+body:             |
+  bb.0:
+    liveins: %w0
+
+    %0(s32) = COPY %w0
+    %1(s32) = G_BITCAST %0
+...
+
+---
+# CHECK-LABEL: name: bitcast_s32_fpr_gpr
+name:            bitcast_s32_fpr_gpr
+legalized:       true
+regBankSelected: true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: fpr32 }
+# CHECK-NEXT:  - { id: 1, class: gpr32all }
+registers:
+  - { id: 0, class: fpr }
+  - { id: 1, class: gpr }
+
+# CHECK:  body:
+# CHECK:    %0 = COPY %s0
+# CHECK:    %1 = COPY %0
+body:             |
+  bb.0:
+    liveins: %s0
+
+    %0(s32) = COPY %s0
+    %1(s32) = G_BITCAST %0
+...
+
+---
+# CHECK-LABEL: name: bitcast_s64_gpr
+name:            bitcast_s64_gpr
+legalized:       true
+regBankSelected: true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: gpr64all }
+# CHECK-NEXT:  - { id: 1, class: gpr64all }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+
+# CHECK:  body:
+# CHECK:    %0 = COPY %x0
+# CHECK:    %1 = COPY %0
+body:             |
+  bb.0:
+    liveins: %x0
+
+    %0(s64) = COPY %x0
+    %1(s64) = G_BITCAST %0
+...
+
+---
+# CHECK-LABEL: name: bitcast_s64_fpr
+name:            bitcast_s64_fpr
+legalized:       true
+regBankSelected: true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: fpr64 }
+# CHECK-NEXT:  - { id: 1, class: fpr64 }
+registers:
+  - { id: 0, class: fpr }
+  - { id: 1, class: fpr }
+
+# CHECK:  body:
+# CHECK:    %0 = COPY %d0
+# CHECK:    %1 = COPY %0
+body:             |
+  bb.0:
+    liveins: %d0
+
+    %0(s64) = COPY %d0
+    %1(s64) = G_BITCAST %0
+...
+
+---
+# CHECK-LABEL: name: bitcast_s64_gpr_fpr
+name:            bitcast_s64_gpr_fpr
+legalized:       true
+regBankSelected: true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: gpr64all }
+# CHECK-NEXT:  - { id: 1, class: fpr64 }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: fpr }
+# CHECK:  body:
+# CHECK:    %0 = COPY %x0
+# CHECK:    %1 = COPY %0
+body:             |
+  bb.0:
+    liveins: %x0
+
+    %0(s64) = COPY %x0
+    %1(s64) = G_BITCAST %0
+...
+
+---
+# CHECK-LABEL: name: bitcast_s64_fpr_gpr
+name:            bitcast_s64_fpr_gpr
+legalized:       true
+regBankSelected: true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: fpr64 }
+# CHECK-NEXT:  - { id: 1, class: gpr64all }
+registers:
+  - { id: 0, class: fpr }
+  - { id: 1, class: gpr }
+
+# CHECK:  body:
+# CHECK:    %0 = COPY %d0
+# CHECK:    %1 = COPY %0
+body:             |
+  bb.0:
+    liveins: %d0
+
+    %0(s64) = COPY %d0
+    %1(s64) = G_BITCAST %0
+...
