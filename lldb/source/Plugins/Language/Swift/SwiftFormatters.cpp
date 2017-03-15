@@ -17,6 +17,7 @@
 #include "lldb/DataFormatters/StringPrinter.h"
 #include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Target/Process.h"
+#include "lldb/Target/SwiftLanguageRuntime.h"
 
 // FIXME: we should not need this
 #include "Plugins/Language/CPlusPlus/CxxStringTypes.h"
@@ -323,7 +324,7 @@ bool lldb_private::formatters::swift::StaticString_SummaryProvider(
 
 bool lldb_private::formatters::swift::NSContiguousString_SummaryProvider(
     ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
-  static ConstString g_StringCoreType("_TtVs11_StringCore");
+  static ConstString g_StringCoreType(SwiftLanguageRuntime::GetCurrentMangledName("_TtVs11_StringCore"));
   lldb::addr_t core_location = valobj.GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
   if (core_location == LLDB_INVALID_ADDRESS)
     return false;

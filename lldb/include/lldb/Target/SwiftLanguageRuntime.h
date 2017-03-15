@@ -215,7 +215,23 @@ public:
   virtual bool GetObjectDescription(Stream &str, Value &value,
                                     ExecutionContextScope *exe_scope) override;
 
+  static std::string DemangleSymbolAsString(const char *symbol,
+                                            bool simplified = false);
+
+  static std::string DemangleSymbolAsString(const ConstString &symbol, 
+                                            bool simplified = false);
+  
+  // Use these passthrough functions rather than calling into Swift directly,
+  // since some day we may want to support more than one swift variant.
   static bool IsSwiftMangledName(const char *name);
+  
+  static bool IsSwiftClassName(const char *name);
+  
+  static bool IsMetadataSymbol(const char *symbol);
+  
+  static bool IsIvarOffsetSymbol(const char *symbol);
+  
+  static const std::string GetCurrentMangledName(const char *mangled_name);
 
   struct SwiftErrorDescriptor {
   public:
@@ -422,7 +438,7 @@ protected:
   virtual MetadataPromiseSP GetPromiseForTypeNameAndFrame(const char *type_name,
                                                           StackFrame *frame);
 
-  bool GetTargetOfPartialApply(CompileUnit &cu, ConstString &apply_name,
+  bool GetTargetOfPartialApply(SymbolContext &curr_sc, ConstString &apply_name,
                                SymbolContext &sc);
 
   AppleObjCRuntimeV2 *GetObjCRuntime();

@@ -341,7 +341,7 @@ void Symtab::InitNameIndexes() {
                 }
               }
             }
-          } else if (name.size() >= 2 && name[0] == '_' && name[1] == 'T') {
+          } else if (SwiftLanguageRuntime::IsSwiftMangledName(name.str().c_str())) {
             lldb_private::ConstString basename;
             bool is_method = false;
             ConstString mangled_name = mangled.GetMangledName();

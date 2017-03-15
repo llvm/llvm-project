@@ -19,6 +19,7 @@
 #include "lldb/Symbol/SwiftASTContext.h"
 #include "lldb/Target/ObjCLanguageRuntime.h"
 #include "lldb/Target/Process.h"
+#include "lldb/Target/SwiftLanguageRuntime.h"
 
 #include "Plugins/Language/ObjC/NSDictionary.h"
 
@@ -316,8 +317,11 @@ SwiftHashedContainerBufferHandler::CreateBufferHandlerForNativeStorageOwner(
             SwiftASTContext *swift_ast_ctx = process_sp->GetTarget().GetScratchSwiftASTContext(error);
             if (swift_ast_ctx)
             {
-                CompilerType element_type(swift_ast_ctx->GetTypeFromMangledTypename("_TtGSqTPs9AnyObject_PS____", error));
-                auto handler = std::unique_ptr<SwiftHashedContainerBufferHandler>(Native(native_sp, key_type, value_type));
+                CompilerType element_type(swift_ast_ctx->GetTypeFromMangledTypename(
+                    SwiftLanguageRuntime::GetCurrentMangledName("_TtGSqTPs9AnyObject_PS____").c_str(), error));
+                auto handler = std::unique_ptr<SwiftHashedContainerBufferHandler>(Native(native_sp,
+                                                                                  key_type,
+                                                                                  value_type));
                 if (handler && handler->IsValid())
                     return handler;
             }

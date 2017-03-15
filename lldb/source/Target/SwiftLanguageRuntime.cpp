@@ -547,10 +547,150 @@ bool SwiftLanguageRuntime::GetObjectDescription(
 }
 
 bool SwiftLanguageRuntime::IsSwiftMangledName(const char *name) {
-  if (name && name[0] == '_' && name[1] == 'T')
-    return true;
-  else
+  return swift::Demangle::isSwiftSymbol(name);
+}
+
+std::string SwiftLanguageRuntime::DemangleSymbolAsString (const char *symbol,
+                                                          bool simplified) {
+  if (simplified) {
+    swift::Demangle::DemangleOptions options(swift::Demangle::DemangleOptions::
+                                             SimplifiedUIDemangleOptions());
+    return swift::Demangle::demangleSymbolAsString(
+        symbol, strlen(symbol), options);
+  } else
+    return swift::Demangle::demangleSymbolAsString(symbol, strlen(symbol));
+}
+
+std::string SwiftLanguageRuntime::DemangleSymbolAsString (const ConstString &symbol,
+                                                          bool simplified) {
+  if (simplified) {
+    swift::Demangle::DemangleOptions options(swift::Demangle::DemangleOptions::
+                                             SimplifiedUIDemangleOptions());
+    return swift::Demangle::demangleSymbolAsString(
+        symbol.GetStringRef(), options);
+  } else
+    return swift::Demangle::demangleSymbolAsString(symbol.GetStringRef());
+}
+
+bool SwiftLanguageRuntime::IsSwiftClassName(const char *name)
+{
+  // _TtC in the old mangling
+  if (!name)
     return false;
+
+  swift::Demangle::Context demangle_ctx;
+  swift::Demangle::NodePointer node_ptr =
+    demangle_ctx.demangleSymbolAsNode(name);
+  if (!node_ptr)
+    return false;
+
+  size_t num_children = node_ptr->getNumChildren();
+  
+  if (num_children != 1)
+    return false;
+    
+  if (node_ptr->getKind() != swift::Demangle::Node::Kind::Global)
+    return false;
+  
+  num_children = node_ptr->getNumChildren();
+  if (num_children != 1)
+  return true;
+  
+  swift::Demangle::NodePointer type_mangling_ptr = node_ptr->getFirstChild();
+  if (type_mangling_ptr->getKind() != swift::Demangle::Node::Kind::TypeMangling)
+    return false;
+  
+  if (type_mangling_ptr->getNumChildren() != 1)
+    return false;
+
+  swift::Demangle::NodePointer type_ptr = type_mangling_ptr->getFirstChild();
+  if (type_ptr->getKind() != swift::Demangle::Node::Kind::Type)
+    return false;
+  
+  if (type_ptr->getNumChildren() != 1)
+    return false;
+
+  swift::Demangle::NodePointer class_ptr = type_ptr->getFirstChild();
+  if (class_ptr->getKind() != swift::Demangle::Node::Kind::Class)
+    return false;
+  
+  return true;
+}
+
+bool SwiftLanguageRuntime::IsMetadataSymbol(const char *symbol) {
+  if (!symbol)
+    return false;
+
+  swift::Demangle::Context demangle_ctx;
+  swift::Demangle::NodePointer node_ptr =
+    demangle_ctx.demangleSymbolAsNode(symbol);
+  if (!node_ptr)
+    return false;
+
+  size_t num_children = node_ptr->getNumChildren();
+  
+  if (num_children != 1)
+    return false;
+    
+  if (node_ptr->getKind() != swift::Demangle::Node::Kind::Global)
+    return false;
+  
+  num_children = node_ptr->getNumChildren();
+  if (num_children != 1)
+    return false;
+  swift::Demangle::NodePointer type_meta_ptr = node_ptr->getFirstChild();
+  if (type_meta_ptr->getKind() != swift::Demangle::Node::Kind::TypeMetadata)
+    return false;
+  else
+    return true;
+  
+  return true;
+}
+
+bool SwiftLanguageRuntime::IsIvarOffsetSymbol(const char *symbol)
+{
+  if (!symbol) 
+    return false;
+  swift::Demangle::Context demangle_ctx;
+  swift::Demangle::NodePointer node_pointer = 
+    demangle_ctx.demangleSymbolAsNode(symbol);
+  if (!node_pointer)
+    return false;
+
+  size_t num_children = node_pointer->getNumChildren();
+  if (num_children < 2)
+    return false;
+  if (node_pointer->getChild(0)->getKind() != swift::Demangle::Node::Kind::Global)
+    return false;
+  swift::Demangle::NodePointer field_offset = node_pointer->getChild(1);
+  if (field_offset->getKind() != swift::Demangle::Node::Kind::FieldOffset)
+    return false;
+  if (node_pointer->getNumChildren() < 1)
+    return false;
+  if (node_pointer->getChild(0)->getKind() != swift::Demangle::Node::Kind::Directness)
+    return false;
+    
+  return true;
+}
+
+const std::string SwiftLanguageRuntime::GetCurrentMangledName(const char *mangled_name)
+{
+#ifndef USE_NEW_MANGLING
+  return std::string(mangled_name);
+#else
+  //FIXME: Check if we need to cache these lookups...
+  swift::Demangle::Context demangle_ctx;
+  swift::Demangle::NodePointer node_ptr = demangle_ctx.demangleSymbolAsNode(mangled_name);
+  if (!node_ptr)
+  {
+    // Sometimes this gets passed the prefix of a name, in which case we
+    // won't be able to demangle it.  In that case return what was passed in.
+    printf ("Couldn't get mangled name for %s.\n", mangled_name);
+    return mangled_name;
+  }
+  else
+    return swift::Demangle::mangleNode(node_ptr);
+#endif
 }
 
 uint32_t SwiftLanguageRuntime::FindEquivalentNames(
@@ -767,24 +907,26 @@ bool SwiftLanguageRuntime::MethodName::ExtractFunctionBasenameFromMangled(
       llvm::StringRef mangled_ref(mangled_cstr, mangled_cstr_len);
 
       // Only demangle swift functions
-      if (mangled_ref.startswith("_TF")) {
-        swift::Demangle::Context demangle_ctx;
-        swift::Demangle::NodePointer node =
-            demangle_ctx.demangleSymbolAsNode(mangled_ref);
-        StreamString identifier;
-        if (node) {
-          switch (node->getKind()) {
-          case swift::Demangle::Node::Kind::Global:
-            success = ParseGlobal(node, identifier, parent_kind, kind);
-            break;
+      // This is a no-op right now for the new mangling, because you
+      // have to demangle the whole name to figure this out anyway.
+      // I'm leaving the test here in case we actually need to do this
+      // only to functions.
+      swift::Demangle::Context demangle_ctx;
+      swift::Demangle::NodePointer node =
+          demangle_ctx.demangleSymbolAsNode(mangled_ref);
+      StreamString identifier;
+      if (node) {
+        switch (node->getKind()) {
+        case swift::Demangle::Node::Kind::Global:
+          success = ParseGlobal(node, identifier, parent_kind, kind);
+          break;
 
-          default:
-            break;
-          }
+        default:
+          break;
+        }
 
-          if (!identifier.GetString().empty()) {
-            basename = ConstString(identifier.GetString());
-          }
+        if (!identifier.GetString().empty()) {
+          basename = ConstString(identifier.GetString());
         }
       }
     }
@@ -2613,29 +2755,141 @@ SwiftLanguageRuntime::GetConcreteType(ExecutionContextScope *exe_scope,
   return promise_sp->FulfillTypePromise();
 }
 
-bool SwiftLanguageRuntime::GetTargetOfPartialApply(CompileUnit &cu,
+namespace {
+
+enum class ThunkKind
+{
+  Unknown = 0,
+  AllocatingInit,
+  PartialApply,
+  ObjCAttribute,
+  Reabstraction,
+  ProtocolConformance,
+};
+
+enum class ThunkAction
+{
+  Unknown = 0,
+  GetThunkTarget,
+  StepIntoConformance,
+  StepThrough
+};
+
+}
+
+static ThunkKind
+GetThunkKind(llvm::StringRef symbol_name)
+{
+  swift::Demangle::Node::Kind kind;
+  swift::Demangle::Context demangle_ctx;
+  if (!demangle_ctx.isThunkSymbol(symbol_name))
+    return ThunkKind::Unknown;
+
+  swift::Demangle::NodePointer nodes = demangle_ctx.demangleSymbolAsNode(symbol_name);
+  size_t num_global_children = nodes->getNumChildren();
+  if (num_global_children == 0)
+    return ThunkKind::Unknown;
+
+  swift::Demangle::NodePointer global_node_ptr = nodes->getFirstChild();
+  if (global_node_ptr->getKind() != swift::Demangle::Node::Kind::Global)
+    return ThunkKind::Unknown;
+  if (global_node_ptr->getNumChildren() == 0)
+    return ThunkKind::Unknown;
+
+  swift::Demangle::NodePointer node_ptr = global_node_ptr->getFirstChild();
+  kind = node_ptr->getKind();
+  switch (kind)
+  {
+  case swift::Demangle::Node::Kind::ObjCAttribute:
+        return ThunkKind::ObjCAttribute;
+    break;
+  case swift::Demangle::Node::Kind::ProtocolWitness:
+    if (node_ptr->getNumChildren() == 0)
+      return ThunkKind::Unknown;
+    if (node_ptr->getFirstChild()->getKind() 
+           == swift::Demangle::Node::Kind::ProtocolConformance)
+      return ThunkKind::ProtocolConformance;
+    break;
+  case swift::Demangle::Node::Kind::ReabstractionThunkHelper:
+    return ThunkKind::Reabstraction;
+  case swift::Demangle::Node::Kind::Allocator:
+    if (node_ptr->getNumChildren() == 0)
+      return ThunkKind::Unknown;
+    if (node_ptr->getFirstChild()->getKind() 
+           == swift::Demangle::Node::Kind::Class)
+      return ThunkKind::AllocatingInit;
+  default:
+    break;
+  }
+
+  return ThunkKind::Unknown;
+}
+static const char *GetThunkKindName (ThunkKind kind)
+{
+  switch (kind)
+  {
+    case ThunkKind::Unknown:
+      return "Unknown";
+    case ThunkKind::AllocatingInit:
+      return "StepThrough";
+    case ThunkKind::PartialApply:
+      return "GetThunkTarget";
+    case ThunkKind::ObjCAttribute:
+      return "GetThunkTarget";
+    case ThunkKind::Reabstraction:
+      return "GetThunkTarget";
+    case ThunkKind::ProtocolConformance:
+      return "StepIntoConformance";
+  }
+}
+
+static ThunkAction
+GetThunkAction (ThunkKind kind)
+{
+    switch (kind)
+    {
+      case ThunkKind::Unknown:
+        return ThunkAction::Unknown;
+      case ThunkKind::AllocatingInit:
+        return ThunkAction::StepThrough;
+      case ThunkKind::PartialApply:
+        return ThunkAction::GetThunkTarget;
+      case ThunkKind::ObjCAttribute:
+        return ThunkAction::GetThunkTarget;
+      case ThunkKind::Reabstraction:
+        return ThunkAction::GetThunkTarget;
+      case ThunkKind::ProtocolConformance:
+        return ThunkAction::StepIntoConformance;
+    }
+}
+
+bool SwiftLanguageRuntime::GetTargetOfPartialApply(SymbolContext &curr_sc,
                                                    ConstString &apply_name,
                                                    SymbolContext &sc) {
-  ModuleSP module = cu.GetModule();
+  if (!curr_sc.module_sp)
+    return false;
+    
   SymbolContextList sc_list;
-  const char *apply_name_str = apply_name.AsCString();
-  if (apply_name_str[0] == '_' && apply_name_str[1] == 'T' &&
-      apply_name_str[2] == 'P' && apply_name_str[3] == 'A' &&
-      apply_name_str[4] == '_') {
-    ConstString apply_target(apply_name_str + 5);
-    size_t num_symbols = module->FindFunctions(
-        apply_target, NULL, eFunctionNameTypeFull, true, false, false, sc_list);
+  swift::Demangle::Context demangle_ctx;
+  // Make sure this is a partial apply:
+  
+  std::string apply_target = demangle_ctx.getThunkTarget(apply_name.GetStringRef());
+  if (!apply_target.empty()) {
+    size_t num_symbols = curr_sc.module_sp->FindFunctions(
+        ConstString(apply_target), NULL, eFunctionNameTypeFull, true, false, false, sc_list);
     if (num_symbols == 0)
       return false;
+      
+    CompileUnit *curr_cu = curr_sc.comp_unit;
 
     size_t num_found = 0;
     for (size_t i = 0; i < num_symbols; i++) {
       SymbolContext tmp_sc;
       if (sc_list.GetContextAtIndex(i, tmp_sc)) {
-        if (tmp_sc.comp_unit && tmp_sc.comp_unit == &cu) {
+        if (tmp_sc.comp_unit && curr_cu && tmp_sc.comp_unit == curr_cu) {
           sc = tmp_sc;
           num_found++;
-        } else if (cu.GetModule() == tmp_sc.module_sp) {
+        } else if (curr_sc.module_sp == tmp_sc.module_sp) {
           sc = tmp_sc;
           num_found++;
         }
@@ -2654,24 +2908,10 @@ bool SwiftLanguageRuntime::GetTargetOfPartialApply(CompileUnit &cu,
 
 bool SwiftLanguageRuntime::IsSymbolARuntimeThunk(const Symbol &symbol) {
 
-  const char *symbol_name = symbol.GetMangled().GetMangledName().AsCString();
-  if (symbol_name) {
-    if (symbol_name[0] == '_' && symbol_name[1] == 'T') {
-      char char_2 = symbol_name[2];
-      if (char_2 == 'T') {
-        char char_3 = symbol_name[3];
-        if (char_3 == 'o')
-          return true;
-        else if (char_3 == 'W' || char_3 == 'R' || char_3 == 'r')
-          return true;
-      } else if (char_2 == 'P' && symbol_name[3] == 'A' &&
-                 symbol_name[4] == '_') {
-        return true;
-      }
-    }
-    return false;
-  } else
-    return false;
+  llvm::StringRef symbol_name = symbol.GetMangled().GetMangledName().GetStringRef();
+  
+  swift::Demangle::Context demangle_ctx;
+  return demangle_ctx.isThunkSymbol(symbol_name);
 }
 
 lldb::ThreadPlanSP
@@ -2688,197 +2928,189 @@ SwiftLanguageRuntime::GetStepThroughTrampolinePlan(Thread &thread,
 
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
   StackFrameSP stack_sp = thread.GetStackFrameAtIndex(0);
-  if (stack_sp) {
-    SymbolContext sc = stack_sp->GetSymbolContext(eSymbolContextEverything);
-    Symbol *symbol = sc.symbol;
+  if (!stack_sp)
+    return new_thread_plan_sp;
 
-    // Note, I don't really need to consult IsSymbolARuntimeThunk here, but it
-    // is fast to do and
-    // keeps this list and the one in IsSymbolARuntimeThunk in sync.
-    if (symbol && IsSymbolARuntimeThunk(*symbol)) {
-      // Only do this if you are at the beginning of the thunk function:
-      lldb::addr_t cur_addr = thread.GetRegisterContext()->GetPC();
-      lldb::addr_t symbol_addr = symbol->GetAddress().GetLoadAddress(
-          &thread.GetProcess()->GetTarget());
+  SymbolContext sc = stack_sp->GetSymbolContext(eSymbolContextEverything);
+  Symbol *symbol = sc.symbol;
 
-      if (symbol_addr != cur_addr)
+  // Note, I don't really need to consult IsSymbolARuntimeThunk here, but it
+  // is fast to do and
+  // keeps this list and the one in IsSymbolARuntimeThunk in sync.
+  if (!symbol || !IsSymbolARuntimeThunk(*symbol))
+      return new_thread_plan_sp;
+      
+  // Only do this if you are at the beginning of the thunk function:
+  lldb::addr_t cur_addr = thread.GetRegisterContext()->GetPC();
+  lldb::addr_t symbol_addr = symbol->GetAddress().GetLoadAddress(
+      &thread.GetProcess()->GetTarget());
+
+  if (symbol_addr != cur_addr)
+    return new_thread_plan_sp;
+
+  Address target_address;
+  ConstString symbol_mangled_name = symbol->GetMangled().GetMangledName();
+  const char *symbol_name = symbol_mangled_name.AsCString();
+  
+  ThunkKind thunk_kind = GetThunkKind(symbol_mangled_name.GetStringRef());
+  ThunkAction thunk_action = GetThunkAction(thunk_kind);
+  
+
+  switch (thunk_action)
+  {
+    case ThunkAction::Unknown:
+      return new_thread_plan_sp;
+    case ThunkAction::GetThunkTarget:
+    {
+      swift::Demangle::Context demangle_ctx;
+      std::string thunk_target = demangle_ctx.getThunkTarget(symbol_name);
+      if (thunk_target.empty())
+      {
+        if (log)
+          log->Printf("Stepped to thunk \"%s\" (kind: %s) but could not "
+                      "find the thunk target. ",
+                      symbol_name,
+                      GetThunkKindName(thunk_kind));
         return new_thread_plan_sp;
+      }
+      if (log)
+        log->Printf("Stepped to thunk \"%s\" (kind: %s) stepping to target: \"%s\".",
+                    symbol_name, GetThunkKindName(thunk_kind), thunk_target.c_str());
 
-      Address target_address;
-      ConstString symbol_mangled_name = symbol->GetMangled().GetMangledName();
-      const char *symbol_name = symbol_mangled_name.AsCString();
-      if (symbol_name && symbol_name[0] == '_' && symbol_name[1] == 'T') {
-        if (symbol_name[2] == 'T' && symbol_name[3] == 'o') {
-          // Thunks of type 2 always have mangled names of the form _TTo<Target
-          // Mangled Name Less _T>
-          // so we can just find that function and run to it:
-          std::string target_name(symbol_name + 4);
-          target_name.insert(0, "_T");
-          ModuleList modules = thread.GetProcess()->GetTarget().GetImages();
-          SymbolContextList sc_list;
-          modules.FindFunctionSymbols(ConstString(target_name),
-                                      eFunctionNameTypeFull, sc_list);
-          if (sc_list.GetSize() == 1) {
-            SymbolContext sc;
-            sc_list.GetContextAtIndex(0, sc);
+      ModuleList modules = thread.GetProcess()->GetTarget().GetImages();
+      SymbolContextList sc_list;
+      modules.FindFunctionSymbols(ConstString(thunk_target),
+                                    eFunctionNameTypeFull, sc_list);
+      if (sc_list.GetSize() == 1) {
+        SymbolContext sc;
+        sc_list.GetContextAtIndex(0, sc);
 
-            if (sc.symbol)
-              target_address = sc.symbol->GetAddress();
-          }
-        } else if (symbol_name[2] == 'T' && symbol_name[3] == 'W') {
-          // The TTW symbols encode the protocol conformance requirements and it
-          // is possible to go to
-          // the AST and get it to replay the logic that it used to determine
-          // what to dispatch to.
-          // But that ties us too closely to the logic of the compiler, and
-          // these thunks are quite
-          // simple, they just do a little retaining, and then call the correct
-          // function.
-          // So for simplicity's sake, I'm just going to get the base name of
-          // the function
-          // this protocol thunk is preparing to call, then step into through
-          // the thunk, stopping if I end up
-          // in a frame with that function name.
-
-          swift::Demangle::Context demangle_ctx;
-          swift::Demangle::NodePointer demangled_nodes =
-              demangle_ctx.demangleSymbolAsNode(symbol_mangled_name.GetStringRef());
-
-          // Now find the ProtocolWitness node in the demangled result.
-
-          swift::Demangle::NodePointer witness_node = demangled_nodes;
-          bool found_witness_node = false;
-          while (witness_node) {
-            if (witness_node->getKind() ==
-                swift::Demangle::Node::Kind::ProtocolWitness) {
-              found_witness_node = true;
-              break;
-            }
-            witness_node = witness_node->getFirstChild();
-          }
-          if (!found_witness_node) {
-            if (log)
-              log->Printf("Stepped into witness thunk \"%s\" but could not "
-                          "find the ProtocolWitness node in the demangled "
-                          "nodes.",
-                          symbol_name);
-            return new_thread_plan_sp;
-          }
-
-          size_t num_children = witness_node->getNumChildren();
-          if (num_children < 2) {
-            if (log)
-              log->Printf("Stepped into witness thunk \"%s\" but the "
-                          "ProtocolWitness node doesn't have enough nodes.",
-                          symbol_name);
-            return new_thread_plan_sp;
-          }
-
-          swift::Demangle::NodePointer function_node =
-              witness_node->getChild(1);
-          if (function_node == nullptr ||
-              function_node->getKind() !=
-                  swift::Demangle::Node::Kind::Function) {
-            if (log)
-              log->Printf("Stepped into witness thunk \"%s\" but could not "
-                          "find the function in the ProtocolWitness node.",
-                          symbol_name);
-            return new_thread_plan_sp;
-          }
-
-          // Okay, now find the name of this function.
-          num_children = function_node->getNumChildren();
-          swift::Demangle::NodePointer name_node(nullptr);
-          for (size_t i = 0; i < num_children; i++) {
-            if (function_node->getChild(i)->getKind() ==
-                swift::Demangle::Node::Kind::Identifier) {
-              name_node = function_node->getChild(i);
-              break;
-            }
-          }
-
-          if (!name_node) {
-            if (log)
-              log->Printf("Stepped into witness thunk \"%s\" but could not "
-                          "find the Function name in the function node.",
-                          symbol_name);
-            return new_thread_plan_sp;
-          }
-
-          std::string function_name(name_node->getText());
-          if (function_name.empty()) {
-            if (log)
-              log->Printf("Stepped into witness thunk \"%s\" but the Function "
-                          "name was empty.",
-                          symbol_name);
-            return new_thread_plan_sp;
-          }
-
-          // We have to get the address range of the thunk symbol, and make a
-          // "step through range stepping in"
-          AddressRange sym_addr_range(sc.symbol->GetAddress(),
-                                      sc.symbol->GetByteSize());
-          new_thread_plan_sp.reset(new ThreadPlanStepInRange(
-              thread, sym_addr_range, sc, function_name.c_str(),
-              eOnlyDuringStepping, eLazyBoolNo, eLazyBoolNo));
-          return new_thread_plan_sp;
-
-        } else if (symbol_name[2] == 'T' &&
-                   (symbol_name[3] == 'R' || symbol_name[3] == 'r')) {
-          // The TTR and TTr symbols are "reabstraction thunks.  I have no idea
-          // how to figure out what
-          // their targets are other than to just step through them in the hopes
-          // I get somewhere interesting.
-          if (log)
-            log->Printf("Stepping through reabstraction thunk: %s",
-                        symbol_name);
-          AddressRange sym_addr_range(sc.symbol->GetAddress(),
-                                      sc.symbol->GetByteSize());
-          new_thread_plan_sp.reset(new ThreadPlanStepInRange(
-              thread, sym_addr_range, sc, nullptr, eOnlyDuringStepping,
-              eLazyBoolNo, eLazyBoolNo));
-          return new_thread_plan_sp;
-        } else if (symbol_name[2] == 'P' && symbol_name[3] == 'A' &&
-                   symbol_name[4] == '_') {
-          // This is a closure thunk.  The actual closure call will follow this
-          // call, but the function to
-          // be called is encoded in the name of the thunk.
-          if (sc.comp_unit) {
-            SymbolContext target_ctx;
-            if (GetTargetOfPartialApply(*sc.comp_unit, symbol_mangled_name,
-                                        target_ctx)) {
-              if (target_ctx.symbol)
-                target_address = target_ctx.symbol->GetAddress();
-              else if (target_ctx.function)
-                target_address =
-                    target_ctx.function->GetAddressRange().GetBaseAddress();
-            }
-          }
-        } else {
-          // See if we can step through allocating init constructors:
-          ConstString demangled_name =
-              symbol->GetMangled().GetDemangledName(lldb::eLanguageTypeSwift);
-          const char *demangled_str = demangled_name.AsCString();
-          if (strstr("__allocating_init", demangled_str) != NULL) {
-            if (log)
-              log->Printf("Stepping through __allocating_init for symbol: %s",
-                          symbol_name);
-
-            AddressRange sym_addr_range(sc.symbol->GetAddress(),
-                                        sc.symbol->GetByteSize());
-            new_thread_plan_sp.reset(new ThreadPlanStepInRange(
-                thread, sym_addr_range, sc, nullptr, eOnlyDuringStepping,
-                eLazyBoolNo, eLazyBoolNo));
-            return new_thread_plan_sp;
-          }
-        }
-        if (target_address.IsValid()) {
-          new_thread_plan_sp.reset(
-              new ThreadPlanRunToAddress(thread, target_address, stop_others));
-        }
+        if (sc.symbol)
+          target_address = sc.symbol->GetAddress();
       }
     }
+    break;
+    case ThunkAction::StepIntoConformance:
+    {
+      // The TTW symbols encode the protocol conformance requirements and it
+      // is possible to go to
+      // the AST and get it to replay the logic that it used to determine
+      // what to dispatch to.
+      // But that ties us too closely to the logic of the compiler, and
+      // these thunks are quite
+      // simple, they just do a little retaining, and then call the correct
+      // function.
+      // So for simplicity's sake, I'm just going to get the base name of
+      // the function
+      // this protocol thunk is preparing to call, then step into through
+      // the thunk, stopping if I end up
+      // in a frame with that function name.
+
+      swift::Demangle::Context demangle_ctx;
+      swift::Demangle::NodePointer demangled_nodes =
+          demangle_ctx.demangleSymbolAsNode(symbol_mangled_name.GetStringRef());
+
+      // Now find the ProtocolWitness node in the demangled result.
+
+      swift::Demangle::NodePointer witness_node = demangled_nodes;
+      bool found_witness_node = false;
+      while (witness_node) {
+        if (witness_node->getKind() ==
+            swift::Demangle::Node::Kind::ProtocolWitness) {
+          found_witness_node = true;
+          break;
+        }
+        witness_node = witness_node->getFirstChild();
+      }
+      if (!found_witness_node) {
+        if (log)
+          log->Printf("Stepped into witness thunk \"%s\" but could not "
+                      "find the ProtocolWitness node in the demangled "
+                      "nodes.",
+                      symbol_name);
+        return new_thread_plan_sp;
+      }
+
+      size_t num_children = witness_node->getNumChildren();
+      if (num_children < 2) {
+        if (log)
+          log->Printf("Stepped into witness thunk \"%s\" but the "
+                      "ProtocolWitness node doesn't have enough nodes.",
+                      symbol_name);
+        return new_thread_plan_sp;
+      }
+
+      swift::Demangle::NodePointer function_node =
+          witness_node->getChild(1);
+      if (function_node == nullptr ||
+          function_node->getKind() !=
+              swift::Demangle::Node::Kind::Function) {
+        if (log)
+          log->Printf("Stepped into witness thunk \"%s\" but could not "
+                      "find the function in the ProtocolWitness node.",
+                      symbol_name);
+        return new_thread_plan_sp;
+      }
+
+      // Okay, now find the name of this function.
+      num_children = function_node->getNumChildren();
+      swift::Demangle::NodePointer name_node(nullptr);
+      for (size_t i = 0; i < num_children; i++) {
+        if (function_node->getChild(i)->getKind() ==
+            swift::Demangle::Node::Kind::Identifier) {
+          name_node = function_node->getChild(i);
+          break;
+        }
+      }
+
+      if (!name_node) {
+        if (log)
+          log->Printf("Stepped into witness thunk \"%s\" but could not "
+                      "find the Function name in the function node.",
+                      symbol_name);
+        return new_thread_plan_sp;
+      }
+
+      std::string function_name(name_node->getText());
+      if (function_name.empty()) {
+        if (log)
+          log->Printf("Stepped into witness thunk \"%s\" but the Function "
+                      "name was empty.",
+                      symbol_name);
+        return new_thread_plan_sp;
+      }
+
+      // We have to get the address range of the thunk symbol, and make a
+      // "step through range stepping in"
+      AddressRange sym_addr_range(sc.symbol->GetAddress(),
+                                  sc.symbol->GetByteSize());
+      new_thread_plan_sp.reset(new ThreadPlanStepInRange(
+          thread, sym_addr_range, sc, function_name.c_str(),
+          eOnlyDuringStepping, eLazyBoolNo, eLazyBoolNo));
+      return new_thread_plan_sp;
+
+    }
+    break;
+    case ThunkAction::StepThrough:
+    {
+      if (log)
+        log->Printf("Stepping through thunk: %s kind: %s",
+                    symbol_name, GetThunkKindName(thunk_kind));
+      AddressRange sym_addr_range(sc.symbol->GetAddress(),
+                                  sc.symbol->GetByteSize());
+      new_thread_plan_sp.reset(new ThreadPlanStepInRange(
+          thread, sym_addr_range, sc, nullptr, eOnlyDuringStepping,
+          eLazyBoolNo, eLazyBoolNo));
+      return new_thread_plan_sp;
+    }
+    break;
   }
+    
+  if (target_address.IsValid()) {
+    new_thread_plan_sp.reset(
+        new ThreadPlanRunToAddress(thread, target_address, stop_others));
+  }
+
   return new_thread_plan_sp;
 }
 
@@ -2961,7 +3193,7 @@ void SwiftLanguageRuntime::FindFunctionPointersInCall(
                           sc.symbol->GetMangled().GetMangledName();
                       if (symbol_name) {
                         SymbolContext target_context;
-                        if (GetTargetOfPartialApply(*sc.comp_unit, symbol_name,
+                        if (GetTargetOfPartialApply(sc, symbol_name,
                                                     target_context)) {
                           if (target_context.symbol)
                             fn_ptr_address =
@@ -3574,7 +3806,7 @@ protected:
           CompilerType base_type(base_object_sp->GetCompilerType());
           ConstString base_type_name(base_type.GetTypeName());
           if (base_type_name.IsEmpty() ||
-              !base_type_name.GetStringRef().startswith("_TtC"))
+              !SwiftLanguageRuntime::IsSwiftClassName(base_type_name.GetCString()))
             return base_object_sp;
           base_object_sp = m_backend.GetSyntheticBase(
               0, base_type, true,

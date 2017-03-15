@@ -21,6 +21,7 @@
 #include "lldb/Symbol/ObjectContainer.h"
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Target/Process.h"
+#include "lldb/Target/SwiftLanguageRuntime.h"
 #include "lldb/lldb-private.h"
 
 using namespace lldb;
@@ -633,11 +634,12 @@ lldb::SymbolType
 ObjectFile::GetSymbolTypeFromName(llvm::StringRef name,
                                   lldb::SymbolType symbol_type_hint) {
   if (!name.empty()) {
-    if (name.startswith("_T")) {
+    std::string name_str = name.str();
+    if (SwiftLanguageRuntime::IsSwiftMangledName(name_str.c_str())) {
       // Swift
-      if (name.startswith("_TM"))
+      if (SwiftLanguageRuntime::IsMetadataSymbol(name_str.c_str()))
         return lldb::eSymbolTypeMetadata;
-      if (name.startswith("_TWvd"))
+      if (SwiftLanguageRuntime::IsIvarOffsetSymbol(name_str.c_str()))
         return lldb::eSymbolTypeIVarOffset;
     } else if (name.startswith("_OBJC_")) {
       // ObjC
