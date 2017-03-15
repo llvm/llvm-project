@@ -29,14 +29,13 @@
 using namespace llvm;
 
 LegalizerHelper::LegalizerHelper(MachineFunction &MF)
-  : MRI(MF.getRegInfo()) {
+    : MRI(MF.getRegInfo()), LI(*MF.getSubtarget().getLegalizerInfo()) {
   MIRBuilder.setMF(MF);
 }
 
 LegalizerHelper::LegalizeResult
-LegalizerHelper::legalizeInstrStep(MachineInstr &MI,
-                                   const LegalizerInfo &LegalizerInfo) {
-  auto Action = LegalizerInfo.getAction(MI, MRI);
+LegalizerHelper::legalizeInstrStep(MachineInstr &MI) {
+  auto Action = LI.getAction(MI, MRI);
   switch (std::get<0>(Action)) {
   case LegalizerInfo::Legal:
     return AlreadyLegal;
@@ -51,16 +50,15 @@ LegalizerHelper::legalizeInstrStep(MachineInstr &MI,
   case LegalizerInfo::FewerElements:
     return fewerElementsVector(MI, std::get<1>(Action), std::get<2>(Action));
   case LegalizerInfo::Custom:
-    return LegalizerInfo.legalizeCustom(MI, MRI, MIRBuilder) ? Legalized
-                                                             : UnableToLegalize;
+    return LI.legalizeCustom(MI, MRI, MIRBuilder) ? Legalized
+                                                  : UnableToLegalize;
   default:
     return UnableToLegalize;
   }
 }
 
 LegalizerHelper::LegalizeResult
-LegalizerHelper::legalizeInstr(MachineInstr &MI,
-                               const LegalizerInfo &LegalizerInfo) {
+LegalizerHelper::legalizeInstr(MachineInstr &MI) {
   SmallVector<MachineInstr *, 4> WorkList;
   MIRBuilder.recordInsertions(
       [&](MachineInstr *MI) { WorkList.push_back(MI); });
@@ -70,7 +68,7 @@ LegalizerHelper::legalizeInstr(MachineInstr &MI,
   LegalizeResult Res;
   unsigned Idx = 0;
   do {
-    Res = legalizeInstrStep(*WorkList[Idx], LegalizerInfo);
+    Res = legalizeInstrStep(*WorkList[Idx]);
     if (Res == UnableToLegalize) {
       MIRBuilder.stopRecordingInsertions();
       return UnableToLegalize;
@@ -537,6 +535,56 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
     unsigned Zero = MRI.createGenericVirtualRegister(Ty);
     MIRBuilder.buildConstant(Zero, 0);
     MIRBuilder.buildICmp(CmpInst::ICMP_NE, Overflow, HiPart, Zero);
+    MI.eraseFromParent();
+    return Legalized;
+  }
+  case TargetOpcode::G_FNEG: {
+    // TODO: Handle vector types once we are able to
+    // represent them.
+    if (Ty.isVector())
+      return UnableToLegalize;
+    unsigned Res = MI.getOperand(0).getReg();
+    Type *ZeroTy;
+    LLVMContext &Ctx = MIRBuilder.getMF().getFunction()->getContext();
+    switch (Ty.getSizeInBits()) {
+    case 16:
+      ZeroTy = Type::getHalfTy(Ctx);
+      break;
+    case 32:
+      ZeroTy = Type::getFloatTy(Ctx);
+      break;
+    case 64:
+      ZeroTy = Type::getDoubleTy(Ctx);
+      break;
+    default:
+      llvm_unreachable("unexpected floating-point type");
+    }
+    ConstantFP &ZeroForNegation =
+        *cast<ConstantFP>(ConstantFP::getZeroValueForNegation(ZeroTy));
+    unsigned Zero = MRI.createGenericVirtualRegister(Ty);
+    MIRBuilder.buildFConstant(Zero, ZeroForNegation);
+    MIRBuilder.buildInstr(TargetOpcode::G_FSUB)
+        .addDef(Res)
+        .addUse(Zero)
+        .addUse(MI.getOperand(1).getReg());
+    MI.eraseFromParent();
+    return Legalized;
+  }
+  case TargetOpcode::G_FSUB: {
+    // Lower (G_FSUB LHS, RHS) to (G_FADD LHS, (G_FNEG RHS)).
+    // First, check if G_FNEG is marked as Lower. If so, we may
+    // end up with an infinite loop as G_FSUB is used to legalize G_FNEG.
+    if (LI.getAction({G_FNEG, Ty}).first == LegalizerInfo::Lower)
+      return UnableToLegalize;
+    unsigned Res = MI.getOperand(0).getReg();
+    unsigned LHS = MI.getOperand(1).getReg();
+    unsigned RHS = MI.getOperand(2).getReg();
+    unsigned Neg = MRI.createGenericVirtualRegister(Ty);
+    MIRBuilder.buildInstr(TargetOpcode::G_FNEG).addDef(Neg).addUse(RHS);
+    MIRBuilder.buildInstr(TargetOpcode::G_FADD)
+        .addDef(Res)
+        .addUse(LHS)
+        .addUse(Neg);
     MI.eraseFromParent();
     return Legalized;
   }

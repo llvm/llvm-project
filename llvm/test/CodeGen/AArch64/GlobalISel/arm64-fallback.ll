@@ -118,3 +118,23 @@ define void @test_write_register_intrin() {
   call void @llvm.write_register.i64(metadata !{!"sp"}, i64 0)
   ret void
 }
+
+@_ZTIi = external global i8*
+declare i32 @__gxx_personality_v0(...)
+
+; Check that we fallback on invoke translation failures.
+; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to translate instruction: invoke: '  invoke void %callee(i128 0)
+; FALLBACK-WITH-REPORT-NEXT:   to label %continue unwind label %broken' (in function: invoke_weird_type)
+; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for invoke_weird_type
+; FALLBACK-WITH-REPORT-OUT-LABEL: invoke_weird_type:
+define void @invoke_weird_type(void(i128)* %callee) personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+  invoke void %callee(i128 0)
+    to label %continue unwind label %broken
+
+broken:
+  landingpad { i8*, i32 } catch i8* bitcast(i8** @_ZTIi to i8*)
+  ret void
+
+continue:
+  ret void
+}

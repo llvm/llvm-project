@@ -594,6 +594,30 @@ public:
   /// \return a MachineInstrBuilder for the newly created instruction.
   MachineInstrBuilder buildSelect(unsigned Res, unsigned Tst,
                                   unsigned Op0, unsigned Op1);
+
+  /// Build and insert \p Res<def> = G_INSERT_VECTOR_ELT \p Val,
+  /// \p Elt, \p Idx
+  ///
+  /// \pre setBasicBlock or setMI must have been called.
+  /// \pre \p Res and \p Val must be a generic virtual register
+  //       with the same vector type.
+  /// \pre \p Elt and \p Idx must be a generic virtual register
+  ///      with scalar type.
+  ///
+  /// \return The newly created instruction.
+  MachineInstrBuilder buildInsertVectorElement(unsigned Res, unsigned Val,
+                                               unsigned Elt, unsigned Idx);
+
+  /// Build and insert \p Res<def> = G_EXTRACT_VECTOR_ELT \p Val, \p Idx
+  ///
+  /// \pre setBasicBlock or setMI must have been called.
+  /// \pre \p Res must be a generic virtual register with scalar type.
+  /// \pre \p Val must be a generic virtual register with vector type.
+  /// \pre \p Idx must be a generic virtual register with scalar type.
+  ///
+  /// \return The newly created instruction.
+  MachineInstrBuilder buildExtractVectorElement(unsigned Res, unsigned Val,
+                                                unsigned Idx);
 };
 
 } // End namespace llvm.
