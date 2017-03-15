@@ -690,7 +690,7 @@ public:
   void emitCxxRenderStmts(raw_ostream &OS) const override {
     assert(Sources.size() == getNumOperands() && "Inconsistent number of operands");
     for (const auto &Source : Sources) {
-      OS << "MIB.add(";
+      OS << "MIB.addOperand(";
       Source.emitCxxValueExpr(OS);
       OS << ");\n";
     }
