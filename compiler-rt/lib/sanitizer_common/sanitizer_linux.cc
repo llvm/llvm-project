@@ -1463,7 +1463,7 @@ void MaybeReexec() {
 void PrintModuleMap() { }
 
 void CheckNoDeepBind(const char *filename, int flag) {
-#if !SANITIZER_ANDROID
+#ifdef RTLD_DEEPBIND
   if (flag & RTLD_DEEPBIND) {
     Report(
         "You are trying to dlopen a %s shared library with RTLD_DEEPBIND flag"

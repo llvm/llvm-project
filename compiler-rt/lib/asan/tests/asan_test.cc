@@ -945,7 +945,7 @@ TEST(AddressSanitizer, ShadowGapTest) {
   char *addr = (char*)0x0000100000080000;
 # endif
 #endif
-  EXPECT_DEATH(*addr = 1, "AddressSanitizer: BUS on unknown");
+  EXPECT_DEATH(*addr = 1, "AddressSanitizer: (SEGV|BUS) on unknown");
 }
 #endif  // ASAN_NEEDS_SEGV
 

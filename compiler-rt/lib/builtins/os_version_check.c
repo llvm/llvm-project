@@ -18,6 +18,7 @@
 #include <CoreFoundation/CoreFoundation.h>
 #include <dispatch/dispatch.h>
 #include <TargetConditionals.h>
+#include <dlfcn.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -30,6 +31,55 @@ static dispatch_once_t DispatchOnceCounter;
 /* Find and parse the SystemVersion.plist file. */
 static void parseSystemVersionPList(void *Unused) {
   (void)Unused;
+  /* Load CoreFoundation dynamically */
+  const void *NullAllocator = dlsym(RTLD_DEFAULT, "kCFAllocatorNull");
+  if (!NullAllocator)
+    return;
+  const CFAllocatorRef kCFAllocatorNull =
+      *(const CFAllocatorRef *)NullAllocator;
+  typeof(CFDataCreateWithBytesNoCopy) *CFDataCreateWithBytesNoCopyFunc =
+      (typeof(CFDataCreateWithBytesNoCopy) *)dlsym(
+          RTLD_DEFAULT, "CFDataCreateWithBytesNoCopy");
+  if (!CFDataCreateWithBytesNoCopyFunc)
+    return;
+  typeof(CFPropertyListCreateWithData) *CFPropertyListCreateWithDataFunc =
+      (typeof(CFPropertyListCreateWithData) *)dlsym(
+          RTLD_DEFAULT, "CFPropertyListCreateWithData");
+  /* CFPropertyListCreateWithData was introduced only in macOS 10.6+, so it
+   * will be NULL on earlier OS versions. */
+  typeof(CFPropertyListCreateFromXMLData) *CFPropertyListCreateFromXMLDataFunc =
+      (typeof(CFPropertyListCreateFromXMLData) *)dlsym(
+          RTLD_DEFAULT, "CFPropertyListCreateFromXMLData");
+  /* CFPropertyListCreateFromXMLDataFunc is deprecated in macOS 10.10, so it
+   * might be NULL in future OS versions. */
+  if (!CFPropertyListCreateWithDataFunc && !CFPropertyListCreateFromXMLDataFunc)
+    return;
+  typeof(CFStringCreateWithCStringNoCopy) *CFStringCreateWithCStringNoCopyFunc =
+      (typeof(CFStringCreateWithCStringNoCopy) *)dlsym(
+          RTLD_DEFAULT, "CFStringCreateWithCStringNoCopy");
+  if (!CFStringCreateWithCStringNoCopyFunc)
+    return;
+  typeof(CFDictionaryGetValue) *CFDictionaryGetValueFunc =
+      (typeof(CFDictionaryGetValue) *)dlsym(RTLD_DEFAULT,
+                                            "CFDictionaryGetValue");
+  if (!CFDictionaryGetValueFunc)
+    return;
+  typeof(CFGetTypeID) *CFGetTypeIDFunc =
+      (typeof(CFGetTypeID) *)dlsym(RTLD_DEFAULT, "CFGetTypeID");
+  if (!CFGetTypeIDFunc)
+    return;
+  typeof(CFStringGetTypeID) *CFStringGetTypeIDFunc =
+      (typeof(CFStringGetTypeID) *)dlsym(RTLD_DEFAULT, "CFStringGetTypeID");
+  if (!CFStringGetTypeIDFunc)
+    return;
+  typeof(CFStringGetCString) *CFStringGetCStringFunc =
+      (typeof(CFStringGetCString) *)dlsym(RTLD_DEFAULT, "CFStringGetCString");
+  if (!CFStringGetCStringFunc)
+    return;
+  typeof(CFRelease) *CFReleaseFunc =
+      (typeof(CFRelease) *)dlsym(RTLD_DEFAULT, "CFRelease");
+  if (!CFReleaseFunc)
+    return;
 
   char *PListPath = "/System/Library/CoreServices/SystemVersion.plist";
 
@@ -67,40 +117,41 @@ static void parseSystemVersionPList(void *Unused) {
 
   /* Get the file buffer into CF's format. We pass in a null allocator here *
    * because we free PListBuf ourselves */
-  FileContentsRef = CFDataCreateWithBytesNoCopy(
+  FileContentsRef = (*CFDataCreateWithBytesNoCopyFunc)(
       NULL, PListBuf, (CFIndex)NumRead, kCFAllocatorNull);
   if (!FileContentsRef)
     goto Fail;
 
-  if (&CFPropertyListCreateWithData)
-    PListRef = CFPropertyListCreateWithData(
+  if (CFPropertyListCreateWithDataFunc)
+    PListRef = (*CFPropertyListCreateWithDataFunc)(
         NULL, FileContentsRef, kCFPropertyListImmutable, NULL, NULL);
-  else {
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-    PListRef = CFPropertyListCreateFromXMLData(NULL, FileContentsRef,
-                                               kCFPropertyListImmutable, NULL);
-#pragma clang diagnostic pop
-  }
+  else
+    PListRef = (*CFPropertyListCreateFromXMLDataFunc)(
+        NULL, FileContentsRef, kCFPropertyListImmutable, NULL);
   if (!PListRef)
     goto Fail;
 
-  CFTypeRef OpaqueValue =
-      CFDictionaryGetValue(PListRef, CFSTR("ProductVersion"));
-  if (!OpaqueValue || CFGetTypeID(OpaqueValue) != CFStringGetTypeID())
+  CFStringRef ProductVersion = (*CFStringCreateWithCStringNoCopyFunc)(
+      NULL, "ProductVersion", kCFStringEncodingASCII, kCFAllocatorNull);
+  if (!ProductVersion)
+    goto Fail;
+  CFTypeRef OpaqueValue = (*CFDictionaryGetValueFunc)(PListRef, ProductVersion);
+  (*CFReleaseFunc)(ProductVersion);
+  if (!OpaqueValue ||
+      (*CFGetTypeIDFunc)(OpaqueValue) != (*CFStringGetTypeIDFunc)())
     goto Fail;
 
   char VersionStr[32];
-  if (!CFStringGetCString((CFStringRef)OpaqueValue, VersionStr,
-                          sizeof(VersionStr), kCFStringEncodingUTF8))
+  if (!(*CFStringGetCStringFunc)((CFStringRef)OpaqueValue, VersionStr,
+                                 sizeof(VersionStr), kCFStringEncodingUTF8))
     goto Fail;
   sscanf(VersionStr, "%d.%d.%d", &GlobalMajor, &GlobalMinor, &GlobalSubminor);
 
 Fail:
   if (PListRef)
-    CFRelease(PListRef);
+    (*CFReleaseFunc)(PListRef);
   if (FileContentsRef)
-    CFRelease(FileContentsRef);
+    (*CFReleaseFunc)(FileContentsRef);
   free(PListBuf);
   fclose(PropertyList);
 }

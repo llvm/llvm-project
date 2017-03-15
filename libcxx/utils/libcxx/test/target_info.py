@@ -12,6 +12,7 @@ import lit.util  # pylint: disable=import-error,no-name-in-module
 import locale
 import os
 import platform
+import re
 import sys
 
 class DefaultTargetInfo(object):
@@ -70,12 +71,62 @@ class DarwinLocalTI(DefaultTargetInfo):
     def __init__(self, full_config):
         super(DarwinLocalTI, self).__init__(full_config)
 
+    def is_host_macosx(self):
+        name = lit.util.capture(['sw_vers', '-productName']).strip()
+        return name == "Mac OS X"
+
+    def get_macosx_version(self):
+        assert self.is_host_macosx()
+        version = lit.util.capture(['sw_vers', '-productVersion']).strip()
+        version = re.sub(r'([0-9]+\.[0-9]+)(\..*)?', r'\1', version)
+        return version
+
+    def get_sdk_version(self, name):
+        assert self.is_host_macosx()
+        cmd = ['xcrun', '--sdk', name, '--show-sdk-path']
+        try:
+            out = lit.util.capture(cmd).strip()
+        except OSError:
+            pass
+
+        if not out:
+            self.full_config.lit_config.fatal(
+                    "cannot infer sdk version with: %r" % cmd)
+
+        return re.sub(r'.*/[^0-9]+([0-9.]+)\.sdk', r'\1', out)
+
+    def get_platform(self):
+        platform = self.full_config.get_lit_conf('platform')
+        if platform:
+            platform = re.sub(r'([^0-9]+)([0-9\.]*)', r'\1-\2', platform)
+            name, version = tuple(platform.split('-', 1))
+        else:
+            name = 'macosx'
+            version = None
+
+        if version:
+            return (False, name, version)
+
+        # Infer the version, either from the SDK or the system itself.  For
+        # macosx, ignore the SDK version; what matters is what's at
+        # /usr/lib/libc++.dylib.
+        if name == 'macosx':
+            version = self.get_macosx_version()
+        else:
+            version = self.get_sdk_version(name)
+        return (True, name, version)
+
     def add_locale_features(self, features):
         add_common_locales(features, self.full_config.lit_config)
 
     def add_cxx_compile_flags(self, flags):
+        if self.full_config.use_deployment:
+            _, name, _ = self.full_config.config.deployment
+            cmd = ['xcrun', '--sdk', name, '--show-sdk-path']
+        else:
+            cmd = ['xcrun', '--show-sdk-path']
         try:
-            out = lit.util.capture(['xcrun', '--show-sdk-path']).strip()
+            out = lit.util.capture(cmd).strip()
             res = 0
         except OSError:
             res = -1

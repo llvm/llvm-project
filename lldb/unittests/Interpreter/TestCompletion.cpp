@@ -127,8 +127,8 @@ protected:
     ASSERT_NO_ERROR(fs::createUniqueDirectory("FsCompletion", BaseDir));
     const char *DirNames[] = {"foo", "fooa", "foob",       "fooc",
                               "bar", "baz",  "test_folder"};
-    const char *FileNames[] = {"aa%%%%.tmp",  "ab%%%%.tmp",  "ac%%%%.tmp",
-                               "foo%%%%.tmp", "bar%%%%.tmp", "baz%%%%.tmp"};
+    const char *FileNames[] = {"aa1234.tmp",  "ab1234.tmp",  "ac1234.tmp",
+                               "foo1234.tmp", "bar1234.tmp", "baz1234.tmp"};
     SmallString<128> *Dirs[] = {&DirFoo, &DirFooA, &DirFooB,      &DirFooC,
                                 &DirBar, &DirBaz,  &DirTestFolder};
     for (auto Dir : llvm::zip(DirNames, Dirs)) {

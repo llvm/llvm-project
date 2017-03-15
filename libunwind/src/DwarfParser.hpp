@@ -17,6 +17,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <limits>
 
 #include "libunwind.h"
 #include "dwarf2.h"

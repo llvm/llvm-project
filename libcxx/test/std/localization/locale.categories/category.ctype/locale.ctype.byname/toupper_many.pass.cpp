@@ -15,8 +15,8 @@
 
 // const charT* toupper(charT* low, const charT* high) const;
 
-// XFAIL: with_system_cxx_lib=x86_64-apple-darwin11
-// XFAIL: with_system_cxx_lib=x86_64-apple-darwin12
+// XFAIL: with_system_cxx_lib=x86_64-apple-macosx10.7
+// XFAIL: with_system_cxx_lib=x86_64-apple-macosx10.8
 
 #include <locale>
 #include <string>
