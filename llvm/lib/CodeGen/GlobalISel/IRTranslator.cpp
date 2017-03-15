@@ -258,7 +258,8 @@ bool IRTranslator::translateSwitch(const User &U,
 
     MachineBasicBlock *FalseMBB =
         MF->CreateMachineBasicBlock(SwInst.getParent());
-    MF->push_back(FalseMBB);
+    // Insert the comparison blocks one after the other.
+    MF->insert(std::next(CurMBB.getIterator()), FalseMBB);
     MIRBuilder.buildBr(*FalseMBB);
     CurMBB.addSuccessor(FalseMBB);
 
