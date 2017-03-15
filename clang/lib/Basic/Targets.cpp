@@ -6461,6 +6461,7 @@ public:
       .Case("hexagonv5", "5")
       .Case("hexagonv55", "55")
       .Case("hexagonv60", "60")
+      .Case("hexagonv62", "62")
       .Default(nullptr);
   }
 
@@ -6505,6 +6506,9 @@ void HexagonTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__HEXAGON_ARCH__", "60");
     Builder.defineMacro("__QDSP6_V60__");
     Builder.defineMacro("__QDSP6_ARCH__", "60");
+  } else if (CPU == "hexagonv62") {
+    Builder.defineMacro("__HEXAGON_V62__");
+    Builder.defineMacro("__HEXAGON_ARCH__", "62");
   }
 
   if (hasFeature("hvx")) {

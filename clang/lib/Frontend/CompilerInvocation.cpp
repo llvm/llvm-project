@@ -1420,7 +1420,8 @@ std::string CompilerInvocation::GetResourcesPath(const char *Argv0,
   return P.str();
 }
 
-static void ParseHeaderSearchArgs(HeaderSearchOptions &Opts, ArgList &Args) {
+static void ParseHeaderSearchArgs(HeaderSearchOptions &Opts, ArgList &Args,
+                                  const std::string &WorkingDir) {
   using namespace options;
   Opts.Sysroot = Args.getLastArgValue(OPT_isysroot, "/");
   Opts.Verbose = Args.hasArg(OPT_v);
@@ -1430,7 +1431,18 @@ static void ParseHeaderSearchArgs(HeaderSearchOptions &Opts, ArgList &Args) {
   if (const Arg *A = Args.getLastArg(OPT_stdlib_EQ))
     Opts.UseLibcxx = (strcmp(A->getValue(), "libc++") == 0);
   Opts.ResourceDir = Args.getLastArgValue(OPT_resource_dir);
-  Opts.ModuleCachePath = Args.getLastArgValue(OPT_fmodules_cache_path);
+
+  // Canonicalize -fmodules-cache-path before storing it.
+  SmallString<128> P(Args.getLastArgValue(OPT_fmodules_cache_path));
+  if (!(P.empty() || llvm::sys::path::is_absolute(P))) {
+    if (WorkingDir.empty())
+      llvm::sys::fs::make_absolute(P);
+    else
+      llvm::sys::fs::make_absolute(WorkingDir, P);
+  }
+  llvm::sys::path::remove_dots(P);
+  Opts.ModuleCachePath = P.str();
+
   Opts.ModuleUserBuildPath = Args.getLastArgValue(OPT_fmodules_user_build_path);
   for (const Arg *A : Args.filtered(OPT_fprebuilt_module_path))
     Opts.AddPrebuiltModulePath(A->getValue());
@@ -2511,7 +2523,8 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Res,
   ParseTargetArgs(Res.getTargetOpts(), Args, Diags);
   Success &= ParseCodeGenArgs(Res.getCodeGenOpts(), Args, DashX, Diags,
                               Res.getTargetOpts());
-  ParseHeaderSearchArgs(Res.getHeaderSearchOpts(), Args);
+  ParseHeaderSearchArgs(Res.getHeaderSearchOpts(), Args,
+                        Res.getFileSystemOpts().WorkingDir);
   ParseAPINotesArgs(Res.getAPINotesOpts(), Args, Diags);
 
   if (DashX == IK_AST || DashX == IK_LLVM_IR) {

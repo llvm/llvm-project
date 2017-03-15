@@ -20,7 +20,7 @@ int *_Nonnull nonnull_retval1(int *p) {
   // CHECK: [[NULL]]:
   // CHECK: [[ICMP:%.*]] = icmp ne i32* {{.*}}, null, !nosanitize
   // CHECK-NEXT: br i1 [[ICMP]], {{.*}}, !nosanitize
-  // CHECK: call void @__ubsan_handle_nonnull_return{{.*}}[[NONNULL_RV_LOC1]]
+  // CHECK: call void @__ubsan_handle_nullability_return{{.*}}[[NONNULL_RV_LOC1]]
   return p;
   // CHECK: [[NONULL]]:
   // CHECK-NEXT: ret i32*
@@ -34,7 +34,7 @@ void nonnull_arg(int *_Nonnull p) {}
 void call_func_with_nonnull_arg(int *_Nonnull p) {
   // CHECK: [[ICMP:%.*]] = icmp ne i32* {{.*}}, null, !nosanitize
   // CHECK-NEXT: br i1 [[ICMP]], {{.*}}, !nosanitize
-  // CHECK: call void @__ubsan_handle_nonnull_arg{{.*}}[[NONNULL_ARG_LOC]]
+  // CHECK: call void @__ubsan_handle_nullability_arg{{.*}}[[NONNULL_ARG_LOC]]
   nonnull_arg(p);
 }
 
@@ -108,7 +108,7 @@ int *_Nonnull nonnull_retval2(int *_Nonnull arg1,  //< Test this.
   // CHECK: [[NULL]]:
   // CHECK-NEXT: [[ICMP:%.*]] = icmp ne i32* {{.*}}, null, !nosanitize
   // CHECK-NEXT: br i1 [[ICMP]], {{.*}}, !nosanitize
-  // CHECK: call void @__ubsan_handle_nonnull_return{{.*}}[[NONNULL_RV_LOC2]]
+  // CHECK: call void @__ubsan_handle_nullability_return{{.*}}[[NONNULL_RV_LOC2]]
   return arg1;
   // CHECK: [[NONULL]]:
   // CHECK-NEXT: ret i32*
@@ -129,7 +129,7 @@ int *_Nonnull nonnull_retval2(int *_Nonnull arg1,  //< Test this.
   // CHECK: [[NULL]]:
   // CHECK-NEXT: [[ICMP:%.*]] = icmp ne i32* {{.*}}, null, !nosanitize
   // CHECK-NEXT: br i1 [[ICMP]], {{.*}}, !nosanitize
-  // CHECK: call void @__ubsan_handle_nonnull_return{{.*}}
+  // CHECK: call void @__ubsan_handle_nullability_return{{.*}}
   return arg1;
   // CHECK: [[NONULL]]:
   // CHECK-NEXT: ret i32*
@@ -143,7 +143,7 @@ int *_Nonnull nonnull_retval2(int *_Nonnull arg1,  //< Test this.
   // CHECK: [[NULL]]:
   // CHECK-NEXT: [[ICMP:%.*]] = icmp ne i32* {{.*}}, null, !nosanitize
   // CHECK-NEXT: br i1 [[ICMP]], {{.*}}, !nosanitize
-  // CHECK: call void @__ubsan_handle_nonnull_return{{.*}}
+  // CHECK: call void @__ubsan_handle_nullability_return{{.*}}
   return arg1;
   // CHECK: [[NONULL]]:
   // CHECK-NEXT: ret i32*
@@ -154,13 +154,13 @@ int *_Nonnull nonnull_retval2(int *_Nonnull arg1,  //< Test this.
 void call_A(A *a, int *p) {
   // CHECK: [[ICMP:%.*]] = icmp ne i32* [[P1:%.*]], null, !nosanitize
   // CHECK-NEXT: br i1 [[ICMP]], {{.*}}, !nosanitize
-  // CHECK: call void @__ubsan_handle_nonnull_arg{{.*}} !nosanitize
+  // CHECK: call void @__ubsan_handle_nullability_arg{{.*}} !nosanitize
   // CHECK: call i32* {{.*}} @objc_msgSend to i32* {{.*}}({{.*}}, i32* [[P1]])
   [a objc_method: p];
 
   // CHECK: [[ICMP:%.*]] = icmp ne i32* [[P2:%.*]], null, !nosanitize
   // CHECK-NEXT: br i1 [[ICMP]], {{.*}}, !nosanitize
-  // CHECK: call void @__ubsan_handle_nonnull_arg{{.*}} !nosanitize
+  // CHECK: call void @__ubsan_handle_nullability_arg{{.*}} !nosanitize
   // CHECK: call i32* {{.*}} @objc_msgSend to i32* {{.*}}({{.*}}, i32* [[P2]])
   [A objc_clsmethod: p];
 }

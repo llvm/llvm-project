@@ -2938,18 +2938,20 @@ void CodeGenFunction::EmitReturnValueCheck(llvm::Value *RV,
   // Prefer the returns_nonnull attribute if it's present.
   SourceLocation AttrLoc;
   SanitizerMask CheckKind;
+  SanitizerHandler Handler;
   if (RetNNAttr) {
     assert(!requiresReturnValueNullabilityCheck() &&
            "Cannot check nullability and the nonnull attribute");
     AttrLoc = RetNNAttr->getLocation();
     CheckKind = SanitizerKind::ReturnsNonnullAttribute;
+    Handler = SanitizerHandler::NonnullReturn;
   } else {
-    // FIXME: The runtime shouldn't refer to the 'returns_nonnull' attribute.
     if (auto *DD = dyn_cast<DeclaratorDecl>(CurCodeDecl))
       if (auto *TSI = DD->getTypeSourceInfo())
         if (auto FTL = TSI->getTypeLoc().castAs<FunctionTypeLoc>())
           AttrLoc = FTL.getReturnLoc().findNullabilityLoc();
     CheckKind = SanitizerKind::NullabilityReturn;
+    Handler = SanitizerHandler::NullabilityReturn;
   }
 
   SanitizerScope SanScope(this);
@@ -2971,8 +2973,7 @@ void CodeGenFunction::EmitReturnValueCheck(llvm::Value *RV,
   llvm::Constant *StaticData[] = {
       EmitCheckSourceLocation(EndLoc), EmitCheckSourceLocation(AttrLoc),
   };
-  EmitCheck(std::make_pair(Cond, CheckKind), SanitizerHandler::NonnullReturn,
-            StaticData, None);
+  EmitCheck(std::make_pair(Cond, CheckKind), Handler, StaticData, None);
 
   if (requiresReturnValueNullabilityCheck())
     EmitBlock(NoCheck);
@@ -3314,12 +3315,15 @@ void CodeGenFunction::EmitNonNullArgCheck(RValue RV, QualType ArgType,
 
   SourceLocation AttrLoc;
   SanitizerMask CheckKind;
+  SanitizerHandler Handler;
   if (NNAttr) {
     AttrLoc = NNAttr->getLocation();
     CheckKind = SanitizerKind::NonnullAttribute;
+    Handler = SanitizerHandler::NonnullArg;
   } else {
     AttrLoc = PVD->getTypeSourceInfo()->getTypeLoc().findNullabilityLoc();
     CheckKind = SanitizerKind::NullabilityArg;
+    Handler = SanitizerHandler::NullabilityArg;
   }
 
   SanitizerScope SanScope(this);
@@ -3331,8 +3335,7 @@ void CodeGenFunction::EmitNonNullArgCheck(RValue RV, QualType ArgType,
       EmitCheckSourceLocation(ArgLoc), EmitCheckSourceLocation(AttrLoc),
       llvm::ConstantInt::get(Int32Ty, ArgNo + 1),
   };
-  EmitCheck(std::make_pair(Cond, CheckKind), SanitizerHandler::NonnullArg,
-            StaticData, None);
+  EmitCheck(std::make_pair(Cond, CheckKind), Handler, StaticData, None);
 }
 
 void CodeGenFunction::EmitCallArgs(

@@ -5465,16 +5465,16 @@ void ASTReader::ReadPragmaDiagnosticMappings(DiagnosticsEngine &Diag) {
       Diag.DiagStates.push_back(BasedOn);
       DiagState *NewState = &Diag.DiagStates.back();
       DiagStates.push_back(NewState);
-      while (Idx + 1 < Record.size() && Record[Idx] != unsigned(-1)) {
+      unsigned Size = Record[Idx++];
+      assert(Idx + Size * 2 <= Record.size() &&
+             "Invalid data, not enough diag/map pairs");
+      while (Size--) {
         unsigned DiagID = Record[Idx++];
         diag::Severity Map = (diag::Severity)Record[Idx++];
         DiagnosticMapping Mapping = Diag.makeUserMapping(Map, Loc);
         if (Mapping.isPragma() || IncludeNonPragmaStates)
           NewState->setMapping(DiagID, Mapping);
       }
-      assert(Idx != Record.size() && Record[Idx] == unsigned(-1) &&
-             "Invalid data, didn't find '-1' marking end of diag/map pairs");
-      ++Idx;
       return NewState;
     };
 

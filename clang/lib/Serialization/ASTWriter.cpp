@@ -2873,14 +2873,18 @@ void ASTWriter::WritePragmaDiagnosticMappings(const DiagnosticsEngine &Diag,
   
     if (DiagStateID == 0) {
       DiagStateID = ++CurrID;
+
+      // Add a placeholder for the number of mappings.
+      auto SizeIdx = Record.size();
+      Record.emplace_back();
       for (const auto &I : *State) {
         if (I.second.isPragma() || IncludeNonPragmaStates) {
           Record.push_back(I.first);
           Record.push_back((unsigned)I.second.getSeverity());
         }
       }
-      // Add a sentinel to mark the end of the diag IDs.
-      Record.push_back(unsigned(-1));
+      // Update the placeholder.
+      Record[SizeIdx] = (Record.size() - SizeIdx) / 2;
     }
   };
 

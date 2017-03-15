@@ -806,7 +806,7 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirectiveWithExtDecl(
 ///         annot_pragma_openmp_end
 ///
 StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
-    AllowedContsructsKind Allowed) {
+    AllowedConstructsKind Allowed) {
   assert(Tok.is(tok::annot_pragma_openmp) && "Not an OpenMP directive!");
   ParenBraceBracketBalancer BalancerRAIIObj(*this);
   SmallVector<OMPClause *, 5> Clauses;

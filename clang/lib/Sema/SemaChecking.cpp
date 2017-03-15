@@ -8729,13 +8729,66 @@ bool AnalyzeBitFieldAssignment(Sema &S, FieldDecl *Bitfield, Expr *Init,
     return false;
 
   Expr *OriginalInit = Init->IgnoreParenImpCasts();
+  unsigned FieldWidth = Bitfield->getBitWidthValue(S.Context);
 
   llvm::APSInt Value;
-  if (!OriginalInit->EvaluateAsInt(Value, S.Context, Expr::SE_AllowSideEffects))
+  if (!OriginalInit->EvaluateAsInt(Value, S.Context,
+                                   Expr::SE_AllowSideEffects)) {
+    // The RHS is not constant.  If the RHS has an enum type, make sure the
+    // bitfield is wide enough to hold all the values of the enum without
+    // truncation.
+    if (const auto *EnumTy = OriginalInit->getType()->getAs<EnumType>()) {
+      EnumDecl *ED = EnumTy->getDecl();
+      bool SignedBitfield = BitfieldType->isSignedIntegerType();
+
+      // Enum types are implicitly signed on Windows, so check if there are any
+      // negative enumerators to see if the enum was intended to be signed or
+      // not.
+      bool SignedEnum = ED->getNumNegativeBits() > 0;
+
+      // Check for surprising sign changes when assigning enum values to a
+      // bitfield of different signedness.  If the bitfield is signed and we
+      // have exactly the right number of bits to store this unsigned enum,
+      // suggest changing the enum to an unsigned type. This typically happens
+      // on Windows where unfixed enums always use an underlying type of 'int'.
+      unsigned DiagID = 0;
+      if (SignedEnum && !SignedBitfield) {
+        DiagID = diag::warn_unsigned_bitfield_assigned_signed_enum;
+      } else if (SignedBitfield && !SignedEnum &&
+                 ED->getNumPositiveBits() == FieldWidth) {
+        DiagID = diag::warn_signed_bitfield_enum_conversion;
+      }
+
+      if (DiagID) {
+        S.Diag(InitLoc, DiagID) << Bitfield << ED;
+        TypeSourceInfo *TSI = Bitfield->getTypeSourceInfo();
+        SourceRange TypeRange =
+            TSI ? TSI->getTypeLoc().getSourceRange() : SourceRange();
+        S.Diag(Bitfield->getTypeSpecStartLoc(), diag::note_change_bitfield_sign)
+            << SignedEnum << TypeRange;
+      }
+
+      // Compute the required bitwidth. If the enum has negative values, we need
+      // one more bit than the normal number of positive bits to represent the
+      // sign bit.
+      unsigned BitsNeeded = SignedEnum ? std::max(ED->getNumPositiveBits() + 1,
+                                                  ED->getNumNegativeBits())
+                                       : ED->getNumPositiveBits();
+
+      // Check the bitwidth.
+      if (BitsNeeded > FieldWidth) {
+        Expr *WidthExpr = Bitfield->getBitWidth();
+        S.Diag(InitLoc, diag::warn_bitfield_too_small_for_enum)
+            << Bitfield << ED;
+        S.Diag(WidthExpr->getExprLoc(), diag::note_widen_bitfield)
+            << BitsNeeded << ED << WidthExpr->getSourceRange();
+      }
+    }
+
     return false;
+  }
 
   unsigned OriginalWidth = Value.getBitWidth();
-  unsigned FieldWidth = Bitfield->getBitWidthValue(S.Context);
 
   if (!Value.isSigned() || Value.isNegative())
     if (UnaryOperator *UO = dyn_cast<UnaryOperator>(OriginalInit))

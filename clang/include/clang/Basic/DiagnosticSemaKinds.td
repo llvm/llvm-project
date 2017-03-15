@@ -4976,6 +4976,21 @@ def warn_bitfield_width_exceeds_type_width: Warning<
 def warn_anon_bitfield_width_exceeds_type_width : Warning<
   "width of anonymous bit-field (%0 bits) exceeds width of its type; value "
   "will be truncated to %1 bit%s1">, InGroup<BitFieldWidth>;
+def warn_bitfield_too_small_for_enum : Warning<
+  "bit-field %0 is not wide enough to store all enumerators of %1">,
+  InGroup<BitFieldEnumConversion>, DefaultIgnore;
+def note_widen_bitfield : Note<
+  "widen this field to %0 bits to store all values of %1">;
+def warn_unsigned_bitfield_assigned_signed_enum : Warning<
+  "assigning value of signed enum type %1 to unsigned bit-field %0; "
+  "negative enumerators of enum %1 will be converted to positive values">,
+  InGroup<BitFieldEnumConversion>, DefaultIgnore;
+def warn_signed_bitfield_enum_conversion : Warning<
+  "signed bit-field %0 needs an extra bit to represent the largest positive "
+  "enumerators of %1">,
+  InGroup<BitFieldEnumConversion>, DefaultIgnore;
+def note_change_bitfield_sign : Note<
+  "consider making the bitfield type %select{unsigned|signed}0">;
 
 def warn_missing_braces : Warning<
   "suggest braces around initialization of subobject">,

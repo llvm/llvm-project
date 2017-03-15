@@ -115,6 +115,8 @@ enum TypeEvaluationKind {
   SANITIZER_CHECK(MissingReturn, missing_return, 0)                            \
   SANITIZER_CHECK(MulOverflow, mul_overflow, 0)                                \
   SANITIZER_CHECK(NegateOverflow, negate_overflow, 0)                          \
+  SANITIZER_CHECK(NullabilityArg, nullability_arg, 0)                          \
+  SANITIZER_CHECK(NullabilityReturn, nullability_return, 0)                    \
   SANITIZER_CHECK(NonnullArg, nonnull_arg, 0)                                  \
   SANITIZER_CHECK(NonnullReturn, nonnull_return, 0)                            \
   SANITIZER_CHECK(OutOfBounds, out_of_bounds, 0)                               \
@@ -2290,7 +2292,9 @@ public:
     TCK_Upcast,
     /// Checking the operand of a cast to a virtual base object. Must be an
     /// object within its lifetime.
-    TCK_UpcastToVirtualBase
+    TCK_UpcastToVirtualBase,
+    /// Checking the value assigned to a _Nonnull pointer. Must not be null.
+    TCK_NonnullAssign
   };
 
   /// \brief Whether any type-checking sanitizers are enabled. If \c false,

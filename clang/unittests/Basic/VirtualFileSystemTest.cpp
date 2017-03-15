@@ -363,16 +363,22 @@ TEST(VirtualFileSystemTest, BrokenSymlinkRealFSIteration) {
   for (vfs::directory_iterator I = FS->dir_begin(Twine(TestDirectory), EC), E;
        I != E; I.increment(EC)) {
     // Skip broken symlinks.
-    if (EC == std::errc::no_such_file_or_directory) {
-      EC = std::error_code();
+    auto EC2 = std::make_error_code(std::errc::no_such_file_or_directory);
+    if (EC == EC2) {
+      EC.clear();
       continue;
     }
     // For bot debugging.
     if (EC) {
-      outs() << "std::errc::no_such_file_or_directory: "
-             << (int)std::errc::no_such_file_or_directory << "\n";
-      outs() << "EC: " << EC.value() << "\n";
-      outs() << "EC message: " << EC.message() << "\n";
+      outs() << "Error code found:\n"
+             << "EC value: " << EC.value() << "\n"
+             << "EC category: " << EC.category().name()
+             << "EC message: " << EC.message() << "\n";
+
+      outs() << "Error code tested for:\n"
+             << "EC value: " << EC2.value() << "\n"
+             << "EC category: " << EC2.category().name()
+             << "EC message: " << EC2.message() << "\n";
     }
     ASSERT_FALSE(EC);
     EXPECT_TRUE(I->getName() == _b);
@@ -441,16 +447,22 @@ TEST(VirtualFileSystemTest, BrokenSymlinkRealFSRecursiveIteration) {
   for (vfs::recursive_directory_iterator I(*FS, Twine(TestDirectory), EC), E;
        I != E; I.increment(EC)) {
     // Skip broken symlinks.
-    if (EC == std::errc::no_such_file_or_directory) {
-      EC = std::error_code();
+    auto EC2 = std::make_error_code(std::errc::no_such_file_or_directory);
+    if (EC == EC2) {
+      EC.clear();
       continue;
     }
     // For bot debugging.
     if (EC) {
-      outs() << "std::errc::no_such_file_or_directory: "
-             << (int)std::errc::no_such_file_or_directory << "\n";
-      outs() << "EC: " << EC.value() << "\n";
-      outs() << "EC message: " << EC.message() << "\n";
+      outs() << "Error code found:\n"
+             << "EC value: " << EC.value() << "\n"
+             << "EC category: " << EC.category().name()
+             << "EC message: " << EC.message() << "\n";
+
+      outs() << "Error code tested for:\n"
+             << "EC value: " << EC2.value() << "\n"
+             << "EC category: " << EC2.category().name()
+             << "EC message: " << EC2.message() << "\n";
     }
     ASSERT_FALSE(EC);
     Contents.push_back(I->getName());

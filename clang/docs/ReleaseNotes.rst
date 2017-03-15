@@ -143,15 +143,27 @@ clang-format
          , public Y {
      };
 
-* Align block comment decorations
+* Align block comment decorations.
 
   .. code-block:: c++
 
-     /* line 1
-      * line 2
-      */
+     /* line 1                          /* line 1
+       * line 2               becomes:   * line 2
+      */                                 */
 
-* The :doc:`ClangFormatStyleOptions` documentation provides detailled examples for most options.
+* The :doc:`ClangFormatStyleOptions` documentation provides detailed examples for most options.
+
+* Namespace end comments are now added or updated automatically.
+
+  .. code-block:: c++
+
+     namespace A {                      namespace A {
+     int i;                             int i;
+     int j;                   becomes:  int j;
+     }                                  } // namespace A
+
+* Comment reflow support added. Overly long comment lines will now be reflown with the rest of
+  the paragraph instead of just broken. Option **ReflowComments** added and enabled by default.
 
 libclang
 --------
