@@ -172,6 +172,11 @@ InputSectionBase *InputSectionBase::getLinkOrderDep() const {
 // Returns a source location string. Used to construct an error message.
 template <class ELFT>
 std::string InputSectionBase::getLocation(uint64_t Offset) {
+  // We don't have file for synthetic sections.
+  if (getFile<ELFT>() == nullptr)
+    return (Config->OutputFile + ":(" + Name + "+0x" + utohexstr(Offset) + ")")
+        .str();
+
   // First check if we can get desired values from debugging information.
   std::string LineInfo = getFile<ELFT>()->getLineInfo(this, Offset);
   if (!LineInfo.empty())

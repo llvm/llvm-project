@@ -18,6 +18,10 @@
 # RUN:  { \
 # RUN:   *(.ddd) \
 # RUN:  } \
+# RUN:  .eee 0x5000 : AT(0x5000) \
+# RUN:  { \
+# RUN:   *(.eee) \
+# RUN:  } \
 # RUN: }" > %t.script
 # RUN: ld.lld %t --script %t.script -o %t2
 # RUN: llvm-readobj -program-headers %t2 | FileCheck %s
@@ -79,6 +83,19 @@
 # CHECK-NEXT:     Offset: 0x1018
 # CHECK-NEXT:     VirtualAddress: 0x1018
 # CHECK-NEXT:     PhysicalAddress: 0x4000
+# CHECK-NEXT:     FileSize: 8
+# CHECK-NEXT:     MemSize: 8
+# CHECK-NEXT:     Flags [
+# CHECK-NEXT:       PF_R
+# CHECK-NEXT:       PF_X
+# CHECK-NEXT:     ]
+# CHECK-NEXT:     Alignment: 4096
+# CHECK-NEXT:   }
+# CHECK-NEXT:   ProgramHeader {
+# CHECK-NEXT:     Type: PT_LOAD
+# CHECK-NEXT:     Offset: 0x2000
+# CHECK-NEXT:     VirtualAddress: 0x5000
+# CHECK-NEXT:     PhysicalAddress: 0x5000
 # CHECK-NEXT:     FileSize: 9
 # CHECK-NEXT:     MemSize: 9
 # CHECK-NEXT:     Flags [
@@ -116,4 +133,7 @@ _start:
 .quad 0
 
 .section .ddd, "a"
+.quad 0
+
+.section .eee, "a"
 .quad 0

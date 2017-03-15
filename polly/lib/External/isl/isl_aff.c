@@ -460,11 +460,15 @@ error:
 __isl_give isl_aff *isl_aff_align_params(__isl_take isl_aff *aff,
 	__isl_take isl_space *model)
 {
+	isl_bool equal_params;
+
 	if (!aff || !model)
 		goto error;
 
-	if (!isl_space_match(aff->ls->dim, isl_dim_param,
-			     model, isl_dim_param)) {
+	equal_params = isl_space_has_equal_params(aff->ls->dim, model);
+	if (equal_params < 0)
+		goto error;
+	if (!equal_params) {
 		isl_reordering *exp;
 
 		model = isl_space_drop_dims(model, isl_dim_in,
@@ -2611,10 +2615,14 @@ static __isl_give isl_set *align_params_pw_pw_set_and(
 	__isl_give isl_set *(*fn)(__isl_take isl_pw_aff *pwaff1,
 				    __isl_take isl_pw_aff *pwaff2))
 {
+	isl_bool equal_params;
+
 	if (!pwaff1 || !pwaff2)
 		goto error;
-	if (isl_space_match(pwaff1->dim, isl_dim_param,
-			  pwaff2->dim, isl_dim_param))
+	equal_params = isl_space_has_equal_params(pwaff1->dim, pwaff2->dim);
+	if (equal_params < 0)
+		goto error;
+	if (equal_params)
 		return fn(pwaff1, pwaff2);
 	if (!isl_space_has_named_params(pwaff1->dim) ||
 	    !isl_space_has_named_params(pwaff2->dim))
@@ -2637,9 +2645,14 @@ static __isl_give isl_map *align_params_pw_pw_map_and(
 	__isl_give isl_map *(*fn)(__isl_take isl_pw_aff *pa1,
 				    __isl_take isl_pw_aff *pa2))
 {
+	isl_bool equal_params;
+
 	if (!pa1 || !pa2)
 		goto error;
-	if (isl_space_match(pa1->dim, isl_dim_param, pa2->dim, isl_dim_param))
+	equal_params = isl_space_has_equal_params(pa1->dim, pa2->dim);
+	if (equal_params < 0)
+		goto error;
+	if (equal_params)
 		return fn(pa1, pa2);
 	if (!isl_space_has_named_params(pa1->dim) ||
 	    !isl_space_has_named_params(pa2->dim))
@@ -3732,7 +3745,7 @@ isl_bool isl_aff_matching_params(__isl_keep isl_aff *aff,
 
 	aff_space = isl_aff_get_domain_space(aff);
 
-	match = isl_space_match(space, isl_dim_param, aff_space, isl_dim_param);
+	match = isl_space_has_equal_params(space, aff_space);
 
 	isl_space_free(aff_space);
 	return match;
@@ -3751,7 +3764,7 @@ isl_stat isl_aff_check_match_domain_space(__isl_keep isl_aff *aff,
 
 	aff_space = isl_aff_get_domain_space(aff);
 
-	match = isl_space_match(space, isl_dim_param, aff_space, isl_dim_param);
+	match = isl_space_has_equal_params(space, aff_space);
 	if (match < 0)
 		goto error;
 	if (!match)
@@ -6083,9 +6096,14 @@ __isl_give isl_pw_multi_aff *isl_pw_multi_aff_set_pw_aff(
 	__isl_take isl_pw_multi_aff *pma, unsigned pos,
 	__isl_take isl_pw_aff *pa)
 {
+	isl_bool equal_params;
+
 	if (!pma || !pa)
 		goto error;
-	if (isl_space_match(pma->dim, isl_dim_param, pa->dim, isl_dim_param))
+	equal_params = isl_space_has_equal_params(pma->dim, pa->dim);
+	if (equal_params < 0)
+		goto error;
+	if (equal_params)
 		return pw_multi_aff_set_pw_aff(pma, pos, pa);
 	if (!isl_space_has_named_params(pma->dim) ||
 	    !isl_space_has_named_params(pa->dim))
@@ -6113,7 +6131,7 @@ isl_bool isl_pw_aff_matching_params(__isl_keep isl_pw_aff *pa,
 
 	pa_space = isl_pw_aff_get_space(pa);
 
-	match = isl_space_match(space, isl_dim_param, pa_space, isl_dim_param);
+	match = isl_space_has_equal_params(space, pa_space);
 
 	isl_space_free(pa_space);
 	return match;
@@ -6132,7 +6150,7 @@ isl_stat isl_pw_aff_check_match_domain_space(__isl_keep isl_pw_aff *pa,
 
 	pa_space = isl_pw_aff_get_space(pa);
 
-	match = isl_space_match(space, isl_dim_param, pa_space, isl_dim_param);
+	match = isl_space_has_equal_params(space, pa_space);
 	if (match < 0)
 		goto error;
 	if (!match)
@@ -6170,6 +6188,7 @@ __isl_give isl_pw_multi_aff *isl_pw_multi_aff_scale_multi_val(
 	__isl_take isl_pw_multi_aff *pma, __isl_take isl_multi_val *mv)
 {
 	int i;
+	isl_bool equal_params;
 
 	pma = isl_pw_multi_aff_cow(pma);
 	if (!pma || !mv)
@@ -6178,8 +6197,10 @@ __isl_give isl_pw_multi_aff *isl_pw_multi_aff_scale_multi_val(
 					mv->space, isl_dim_set))
 		isl_die(isl_pw_multi_aff_get_ctx(pma), isl_error_invalid,
 			"spaces don't match", goto error);
-	if (!isl_space_match(pma->dim, isl_dim_param,
-					mv->space, isl_dim_param)) {
+	equal_params = isl_space_has_equal_params(pma->dim, mv->space);
+	if (equal_params < 0)
+		goto error;
+	if (!equal_params) {
 		pma = isl_pw_multi_aff_align_params(pma,
 					    isl_multi_val_get_space(mv));
 		mv = isl_multi_val_align_params(mv,
@@ -6506,13 +6527,15 @@ isl_bool isl_multi_pw_aff_is_equal(__isl_keep isl_multi_pw_aff *mpa1,
 	__isl_keep isl_multi_pw_aff *mpa2)
 {
 	int i;
-	isl_bool equal;
+	isl_bool equal, equal_params;
 
 	if (!mpa1 || !mpa2)
 		return isl_bool_error;
 
-	if (!isl_space_match(mpa1->space, isl_dim_param,
-			     mpa2->space, isl_dim_param)) {
+	equal_params = isl_space_has_equal_params(mpa1->space, mpa2->space);
+	if (equal_params < 0)
+		return isl_bool_error;
+	if (!equal_params) {
 		if (!isl_space_has_named_params(mpa1->space))
 			return isl_bool_false;
 		if (!isl_space_has_named_params(mpa2->space))
@@ -6623,10 +6646,14 @@ error:
 __isl_give isl_multi_pw_aff *isl_multi_pw_aff_pullback_multi_aff(
 	__isl_take isl_multi_pw_aff *mpa, __isl_take isl_multi_aff *ma)
 {
+	isl_bool equal_params;
+
 	if (!mpa || !ma)
 		goto error;
-	if (isl_space_match(mpa->space, isl_dim_param,
-			    ma->space, isl_dim_param))
+	equal_params = isl_space_has_equal_params(mpa->space, ma->space);
+	if (equal_params < 0)
+		goto error;
+	if (equal_params)
 		return isl_multi_pw_aff_pullback_multi_aff_aligned(mpa, ma);
 	mpa = isl_multi_pw_aff_align_params(mpa, isl_multi_aff_get_space(ma));
 	ma = isl_multi_aff_align_params(ma, isl_multi_pw_aff_get_space(mpa));
@@ -6680,9 +6707,14 @@ error:
 __isl_give isl_multi_pw_aff *isl_multi_pw_aff_pullback_pw_multi_aff(
 	__isl_take isl_multi_pw_aff *mpa, __isl_take isl_pw_multi_aff *pma)
 {
+	isl_bool equal_params;
+
 	if (!mpa || !pma)
 		goto error;
-	if (isl_space_match(mpa->space, isl_dim_param, pma->dim, isl_dim_param))
+	equal_params = isl_space_has_equal_params(mpa->space, pma->dim);
+	if (equal_params < 0)
+		goto error;
+	if (equal_params)
 		return isl_multi_pw_aff_pullback_pw_multi_aff_aligned(mpa, pma);
 	mpa = isl_multi_pw_aff_align_params(mpa,
 					    isl_pw_multi_aff_get_space(pma));
@@ -6765,10 +6797,14 @@ static __isl_give isl_pw_aff *isl_multi_pw_aff_apply_aff_aligned(
 __isl_give isl_pw_aff *isl_multi_pw_aff_apply_aff(
 	__isl_take isl_multi_pw_aff *mpa, __isl_take isl_aff *aff)
 {
+	isl_bool equal_params;
+
 	if (!aff || !mpa)
 		goto error;
-	if (isl_space_match(aff->ls->dim, isl_dim_param,
-				mpa->space, isl_dim_param))
+	equal_params = isl_space_has_equal_params(aff->ls->dim, mpa->space);
+	if (equal_params < 0)
+		goto error;
+	if (equal_params)
 		return isl_multi_pw_aff_apply_aff_aligned(mpa, aff);
 
 	aff = isl_aff_align_params(aff, isl_multi_pw_aff_get_space(mpa));
@@ -6834,9 +6870,14 @@ error:
 __isl_give isl_pw_aff *isl_multi_pw_aff_apply_pw_aff(
 	__isl_take isl_multi_pw_aff *mpa, __isl_take isl_pw_aff *pa)
 {
+	isl_bool equal_params;
+
 	if (!pa || !mpa)
 		goto error;
-	if (isl_space_match(pa->dim, isl_dim_param, mpa->space, isl_dim_param))
+	equal_params = isl_space_has_equal_params(pa->dim, mpa->space);
+	if (equal_params < 0)
+		goto error;
+	if (equal_params)
 		return isl_multi_pw_aff_apply_pw_aff_aligned(mpa, pa);
 
 	pa = isl_pw_aff_align_params(pa, isl_multi_pw_aff_get_space(mpa));
@@ -7354,7 +7395,7 @@ static isl_stat isl_union_pw_aff_check_match_domain_space(
 			"expecting set space", return -1);
 
 	upa_space = isl_union_pw_aff_get_space(upa);
-	match = isl_space_match(space, isl_dim_param, upa_space, isl_dim_param);
+	match = isl_space_has_equal_params(space, upa_space);
 	if (match < 0)
 		goto error;
 	if (!match)
@@ -7381,7 +7422,7 @@ static isl_bool isl_union_pw_aff_matching_params(
 
 	upa_space = isl_union_pw_aff_get_space(upa);
 
-	match = isl_space_match(space, isl_dim_param, upa_space, isl_dim_param);
+	match = isl_space_has_equal_params(space, upa_space);
 
 	isl_space_free(upa_space);
 	return match;
@@ -8106,10 +8147,14 @@ error:
 __isl_give isl_multi_union_pw_aff *isl_multi_union_pw_aff_multi_val_on_domain(
 	__isl_take isl_union_set *domain, __isl_take isl_multi_val *mv)
 {
+	isl_bool equal_params;
+
 	if (!domain || !mv)
 		goto error;
-	if (isl_space_match(domain->dim, isl_dim_param,
-			    mv->space, isl_dim_param))
+	equal_params = isl_space_has_equal_params(domain->dim, mv->space);
+	if (equal_params < 0)
+		goto error;
+	if (equal_params)
 		return isl_multi_union_pw_aff_multi_val_on_domain_aligned(
 								    domain, mv);
 	domain = isl_union_set_align_params(domain,
@@ -8165,10 +8210,14 @@ error:
 __isl_give isl_multi_union_pw_aff *isl_multi_union_pw_aff_multi_aff_on_domain(
 	__isl_take isl_union_set *domain, __isl_take isl_multi_aff *ma)
 {
+	isl_bool equal_params;
+
 	if (!domain || !ma)
 		goto error;
-	if (isl_space_match(domain->dim, isl_dim_param,
-			    ma->space, isl_dim_param))
+	equal_params = isl_space_has_equal_params(domain->dim, ma->space);
+	if (equal_params < 0)
+		goto error;
+	if (equal_params)
 		return isl_multi_union_pw_aff_multi_aff_on_domain_aligned(
 								    domain, ma);
 	domain = isl_union_set_align_params(domain,
@@ -8773,6 +8822,7 @@ __isl_give isl_multi_pw_aff *isl_multi_union_pw_aff_extract_multi_pw_aff(
 	__isl_keep isl_multi_union_pw_aff *mupa, __isl_take isl_space *space)
 {
 	int i, n;
+	isl_bool equal_params;
 	isl_space *space_mpa = NULL;
 	isl_multi_pw_aff *mpa;
 
@@ -8780,7 +8830,10 @@ __isl_give isl_multi_pw_aff *isl_multi_union_pw_aff_extract_multi_pw_aff(
 		goto error;
 
 	space_mpa = isl_multi_union_pw_aff_get_space(mupa);
-	if (!isl_space_match(space_mpa, isl_dim_param, space, isl_dim_param)) {
+	equal_params = isl_space_has_equal_params(space_mpa, space);
+	if (equal_params < 0)
+		goto error;
+	if (!equal_params) {
 		space = isl_space_drop_dims(space, isl_dim_param,
 					0, isl_space_dim(space, isl_dim_param));
 		space = isl_space_align_params(space,

@@ -16,8 +16,8 @@
 
 // REQUIRES: locale.en_US.UTF-8
 
-// XFAIL: with_system_cxx_lib=x86_64-apple-darwin11
-// XFAIL: with_system_cxx_lib=x86_64-apple-darwin12
+// XFAIL: with_system_cxx_lib=x86_64-apple-macosx10.7
+// XFAIL: with_system_cxx_lib=x86_64-apple-macosx10.8
 
 // TODO: investigation needed
 // XFAIL: linux-gnu

@@ -4312,10 +4312,15 @@ error:
 __isl_give isl_qpolynomial *isl_qpolynomial_align_params(
 	__isl_take isl_qpolynomial *qp, __isl_take isl_space *model)
 {
+	isl_bool equal_params;
+
 	if (!qp || !model)
 		goto error;
 
-	if (!isl_space_match(qp->dim, isl_dim_param, model, isl_dim_param)) {
+	equal_params = isl_space_has_equal_params(qp->dim, model);
+	if (equal_params < 0)
+		goto error;
+	if (!equal_params) {
 		isl_reordering *exp;
 
 		model = isl_space_drop_dims(model, isl_dim_in,

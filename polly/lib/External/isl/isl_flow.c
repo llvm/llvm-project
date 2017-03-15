@@ -362,12 +362,21 @@ static __isl_give isl_access_info *isl_access_info_sort_sources(
 static __isl_give isl_space *space_align_and_join(__isl_take isl_space *left,
 	__isl_take isl_space *right)
 {
-	if (isl_space_match(left, isl_dim_param, right, isl_dim_param))
+	isl_bool equal_params;
+
+	equal_params = isl_space_has_equal_params(left, right);
+	if (equal_params < 0)
+		goto error;
+	if (equal_params)
 		return isl_space_join(left, right);
 
 	left = isl_space_align_params(left, isl_space_copy(right));
 	right = isl_space_align_params(right, isl_space_copy(left));
 	return isl_space_join(left, right);
+error:
+	isl_space_free(left);
+	isl_space_free(right);
+	return NULL;
 }
 
 /* Initialize an empty isl_flow structure corresponding to a given

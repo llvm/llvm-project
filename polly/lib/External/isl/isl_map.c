@@ -218,7 +218,7 @@ static isl_bool isl_basic_map_has_equal_params(__isl_keep isl_basic_map *bmap1,
 
 	space1 = isl_basic_map_peek_space(bmap1);
 	space2 = isl_basic_map_peek_space(bmap2);
-	return isl_space_match(space1, isl_dim_param, space2, isl_dim_param);
+	return isl_space_has_equal_params(space1, space2);
 }
 
 /* Do "map1" and "map2" have the same parameters?
@@ -230,7 +230,7 @@ isl_bool isl_map_has_equal_params(__isl_keep isl_map *map1,
 
 	space1 = isl_map_peek_space(map1);
 	space2 = isl_map_peek_space(map2);
-	return isl_space_match(space1, isl_dim_param, space2, isl_dim_param);
+	return isl_space_has_equal_params(space1, space2);
 }
 
 /* Do "map" and "set" have the same parameters?
@@ -5105,11 +5105,7 @@ __isl_give isl_basic_map *isl_basic_map_reset_space(
 	bmap_space = isl_basic_map_peek_space(bmap);
 	equal = isl_space_is_equal(bmap_space, space);
 	if (equal >= 0 && equal)
-		equal = isl_space_match(bmap_space, isl_dim_in,
-					space, isl_dim_in);
-	if (equal >= 0 && equal)
-		equal = isl_space_match(bmap_space, isl_dim_out,
-					space, isl_dim_out);
+		equal = isl_space_has_equal_ids(bmap_space, space);
 	if (equal < 0)
 		goto error;
 	if (equal) {
@@ -11233,6 +11229,7 @@ __isl_give isl_basic_map *isl_basic_map_align_params(
 	__isl_take isl_basic_map *bmap, __isl_take isl_space *model)
 {
 	isl_ctx *ctx;
+	isl_bool equal_params;
 
 	if (!bmap || !model)
 		goto error;
@@ -11244,7 +11241,10 @@ __isl_give isl_basic_map *isl_basic_map_align_params(
 	if (!isl_space_has_named_params(bmap->dim))
 		isl_die(ctx, isl_error_invalid,
 			"relation has unnamed parameters", goto error);
-	if (!isl_space_match(bmap->dim, isl_dim_param, model, isl_dim_param)) {
+	equal_params = isl_space_has_equal_params(bmap->dim, model);
+	if (equal_params < 0)
+		goto error;
+	if (!equal_params) {
 		isl_reordering *exp;
 		struct isl_dim_map *dim_map;
 
@@ -11279,7 +11279,7 @@ isl_bool isl_basic_set_space_has_equal_params(__isl_keep isl_basic_set *bset,
 	isl_space *bset_space;
 
 	bset_space = isl_basic_set_peek_space(bset);
-	return isl_space_match(bset_space, isl_dim_param, space, isl_dim_param);
+	return isl_space_has_equal_params(bset_space, space);
 }
 
 /* Do "map" and "space" have the same parameters?
@@ -11290,7 +11290,7 @@ isl_bool isl_map_space_has_equal_params(__isl_keep isl_map *map,
 	isl_space *map_space;
 
 	map_space = isl_map_peek_space(map);
-	return isl_space_match(map_space, isl_dim_param, space, isl_dim_param);
+	return isl_space_has_equal_params(map_space, space);
 }
 
 /* Do "set" and "space" have the same parameters?
@@ -12279,7 +12279,7 @@ static isl_stat check_basic_map_compatible_range_multi_aff(
 
 	ma_space = isl_multi_aff_get_space(ma);
 
-	m = isl_space_match(bmap->dim, isl_dim_param, ma_space, isl_dim_param);
+	m = isl_space_has_equal_params(bmap->dim, ma_space);
 	if (m < 0)
 		goto error;
 	if (!m)

@@ -69,10 +69,9 @@ def create_parser():
         '-A',
         '--arch',
         metavar='arch',
-        action='append',
-        dest='archs',
+        dest='arch',
         help=textwrap.dedent('''Specify the architecture(s) to test. This option can be specified more than once'''))
-    group.add_argument('-C', '--compiler', metavar='compiler', dest='compilers', action='append', help=textwrap.dedent(
+    group.add_argument('-C', '--compiler', metavar='compiler', dest='compiler', help=textwrap.dedent(
         '''Specify the compiler(s) used to build the inferior executables. The compiler path can be an executable basename or a full path to a compiler executable. This option can be specified multiple times.'''))
     if sys.platform == 'darwin':
         group.add_argument('--apple-sdk', metavar='apple_sdk', dest='apple_sdk', default="macosx", help=textwrap.dedent(
@@ -123,6 +122,10 @@ def create_parser():
         '--executable',
         metavar='executable-path',
         help='The path to the lldb executable')
+    group.add_argument(
+        '--server',
+        metavar='server-path',
+        help='The path to the debug server executable to use')
     group.add_argument(
         '-s',
         metavar='name',

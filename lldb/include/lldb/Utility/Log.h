@@ -13,9 +13,9 @@
 // Project includes
 #include "lldb/Utility/Flags.h"
 #include "lldb/Utility/Logging.h"
-#include "lldb/lldb-private.h"
 
 // Other libraries and framework includes
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/RWMutex.h"
@@ -100,17 +100,17 @@ public:
   EnableLogChannel(const std::shared_ptr<llvm::raw_ostream> &log_stream_sp,
                    uint32_t log_options, llvm::StringRef channel,
                    llvm::ArrayRef<const char *> categories,
-                   Stream &error_stream);
+                   llvm::raw_ostream &error_stream);
 
   static bool DisableLogChannel(llvm::StringRef channel,
                                 llvm::ArrayRef<const char *> categories,
-                                Stream &error_stream);
+                                llvm::raw_ostream &error_stream);
 
-  static bool ListChannelCategories(llvm::StringRef channel, Stream &stream);
+  static bool ListChannelCategories(llvm::StringRef channel, llvm::raw_ostream &stream);
 
-  static void DisableAllLogChannels(Stream *feedback_strm);
+  static void DisableAllLogChannels();
 
-  static void ListAllLogChannels(Stream *strm);
+  static void ListAllLogChannels(llvm::raw_ostream &stream);
 
   //------------------------------------------------------------------
   // Member functions
@@ -131,7 +131,6 @@ public:
     Format(file, function, llvm::formatv(format, std::forward<Args>(args)...));
   }
 
-  // CLEANUP: Add llvm::raw_ostream &Stream() function.
   void Printf(const char *format, ...) __attribute__((format(printf, 2, 3)));
 
   void VAPrintf(const char *format, va_list args);
@@ -183,12 +182,13 @@ private:
   typedef llvm::StringMap<Log> ChannelMap;
   static llvm::ManagedStatic<ChannelMap> g_channel_map;
 
-  static void ListCategories(Stream &stream,
+  static void ListCategories(llvm::raw_ostream &stream,
                              const ChannelMap::value_type &entry);
-  static uint32_t GetFlags(Stream &stream, const ChannelMap::value_type &entry,
+  static uint32_t GetFlags(llvm::raw_ostream &stream, const ChannelMap::value_type &entry,
                            llvm::ArrayRef<const char *> categories);
 
-  DISALLOW_COPY_AND_ASSIGN(Log);
+  Log(const Log &) = delete;
+  void operator=(const Log &) = delete;
 };
 
 } // namespace lldb_private

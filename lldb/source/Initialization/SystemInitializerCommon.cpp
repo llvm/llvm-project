@@ -121,5 +121,5 @@ void SystemInitializerCommon::Terminate() {
 #endif
 
   HostInfo::Terminate();
-  Log::DisableAllLogChannels(nullptr);
+  Log::DisableAllLogChannels();
 }

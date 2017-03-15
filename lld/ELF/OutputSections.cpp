@@ -249,12 +249,10 @@ template <class ELFT> void OutputSection::writeTo(uint8_t *Buf) {
   Script<ELFT>::X->writeDataBytes(this->Name, Buf);
 }
 
-template <class ELFT>
-static typename ELFT::uint getOutFlags(InputSectionBase *S) {
+static uint64_t getOutFlags(InputSectionBase *S) {
   return S->Flags & ~SHF_GROUP & ~SHF_COMPRESSED;
 }
 
-template <class ELFT>
 static SectionKey createKey(InputSectionBase *C, StringRef OutsecName) {
   //  The ELF spec just says
   // ----------------------------------------------------------------
@@ -299,12 +297,10 @@ static SectionKey createKey(InputSectionBase *C, StringRef OutsecName) {
   // Given the above issues, we instead merge sections by name and error on
   // incompatible types and flags.
 
-  typedef typename ELFT::uint uintX_t;
-
   uint32_t Alignment = 0;
-  uintX_t Flags = 0;
+  uint64_t Flags = 0;
   if (Config->Relocatable && (C->Flags & SHF_MERGE)) {
-    Alignment = std::max<uintX_t>(C->Alignment, C->Entsize);
+    Alignment = std::max<uint64_t>(C->Alignment, C->Entsize);
     Flags = C->Flags & (SHF_MERGE | SHF_STRINGS);
   }
 
@@ -331,23 +327,22 @@ static bool canMergeToProgbits(unsigned Type) {
          Type == SHT_NOTE;
 }
 
-template <class ELFT> static void reportDiscarded(InputSectionBase *IS) {
+static void reportDiscarded(InputSectionBase *IS) {
   if (!Config->PrintGcSections)
     return;
   message("removing unused section from '" + IS->Name + "' in file '" +
-          IS->getFile<ELFT>()->getName());
+          IS->File->getName());
 }
 
-template <class ELFT>
 void OutputSectionFactory::addInputSec(InputSectionBase *IS,
                                        StringRef OutsecName) {
   if (!IS->Live) {
-    reportDiscarded<ELFT>(IS);
+    reportDiscarded(IS);
     return;
   }
 
-  SectionKey Key = createKey<ELFT>(IS, OutsecName);
-  uint64_t Flags = getOutFlags<ELFT>(IS);
+  SectionKey Key = createKey(IS, OutsecName);
+  uint64_t Flags = getOutFlags(IS);
   OutputSection *&Sec = Map[Key];
   if (Sec) {
     if (getIncompatibleFlags(Sec->Flags) != getIncompatibleFlags(IS->Flags))
@@ -418,13 +413,5 @@ template void OutputSection::writeTo<ELF32BE>(uint8_t *Buf);
 template void OutputSection::writeTo<ELF64LE>(uint8_t *Buf);
 template void OutputSection::writeTo<ELF64BE>(uint8_t *Buf);
 
-template void OutputSectionFactory::addInputSec<ELF32LE>(InputSectionBase *,
-                                                         StringRef);
-template void OutputSectionFactory::addInputSec<ELF32BE>(InputSectionBase *,
-                                                         StringRef);
-template void OutputSectionFactory::addInputSec<ELF64LE>(InputSectionBase *,
-                                                         StringRef);
-template void OutputSectionFactory::addInputSec<ELF64BE>(InputSectionBase *,
-                                                         StringRef);
 }
 }
