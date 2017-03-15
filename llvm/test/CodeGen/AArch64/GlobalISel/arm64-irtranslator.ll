@@ -1271,3 +1271,35 @@ define void @test_trivial_inlineasm() {
   call void asm "wibble", ""()
   ret void
 }
+
+define <2 x i32> @test_insertelement(<2 x i32> %vec, i32 %elt, i32 %idx){
+; CHECK-LABEL: name: test_insertelement
+; CHECK: [[VEC:%[0-9]+]](<2 x s32>) = COPY %d0
+; CHECK: [[ELT:%[0-9]+]](s32) = COPY %w0
+; CHECK: [[IDX:%[0-9]+]](s32) = COPY %w1
+; CHECK: [[RES:%[0-9]+]](<2 x s32>) = G_INSERT_VECTOR_ELT [[VEC]], [[ELT]](s32), [[IDX]](s32)
+; CHECK: %d0 = COPY [[RES]](<2 x s32>)
+  %res = insertelement <2 x i32> %vec, i32 %elt, i32 %idx
+  ret <2 x i32> %res
+}
+
+define i32 @test_extractelement(<2 x i32> %vec, i32 %idx) {
+; CHECK-LABEL: name: test_extractelement
+; CHECK: [[VEC:%[0-9]+]](<2 x s32>) = COPY %d0
+; CHECK: [[IDX:%[0-9]+]](s32) = COPY %w0
+; CHECK: [[RES:%[0-9]+]](s32) = G_EXTRACT_VECTOR_ELT [[VEC]](<2 x s32>), [[IDX]](s32)
+; CHECK: %w0 = COPY [[RES]](s32)
+  %res = extractelement <2 x i32> %vec, i32 %idx
+  ret i32 %res
+}
+
+define i32 @test_singleelementvector(i32 %elt){
+; CHECK-LABEL: name: test_singleelementvector
+; CHECK: [[ELT:%[0-9]+]](s32) = COPY %w0
+; CHECK-NOT: G_INSERT_VECTOR_ELT
+; CHECK-NOT: G_EXTRACT_VECTOR_ELT
+; CHECK: %w0 = COPY [[ELT]](s32)
+  %vec = insertelement <1 x i32> undef, i32 %elt, i32 0
+  %res = extractelement <1 x i32> %vec, i32 0
+  ret i32 %res
+}
