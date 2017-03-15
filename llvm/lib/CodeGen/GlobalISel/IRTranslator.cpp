@@ -140,15 +140,9 @@ unsigned IRTranslator::getMemOpAlignment(const Instruction &I) {
   return Alignment ? Alignment : DL->getABITypeAlignment(ValTy);
 }
 
-MachineBasicBlock &IRTranslator::getOrCreateBB(const BasicBlock &BB) {
+MachineBasicBlock &IRTranslator::getMBB(const BasicBlock &BB) {
   MachineBasicBlock *&MBB = BBToMBB[&BB];
-  if (!MBB) {
-    MBB = MF->CreateMachineBasicBlock(&BB);
-    MF->push_back(MBB);
-
-    if (BB.hasAddressTaken())
-      MBB->setHasAddressTaken();
-  }
+  assert(MBB && "BasicBlock was not encountered before");
   return *MBB;
 }
 
@@ -221,18 +215,18 @@ bool IRTranslator::translateBr(const User &U, MachineIRBuilder &MIRBuilder) {
     // We want a G_BRCOND to the true BB followed by an unconditional branch.
     unsigned Tst = getOrCreateVReg(*BrInst.getCondition());
     const BasicBlock &TrueTgt = *cast<BasicBlock>(BrInst.getSuccessor(Succ++));
-    MachineBasicBlock &TrueBB = getOrCreateBB(TrueTgt);
+    MachineBasicBlock &TrueBB = getMBB(TrueTgt);
     MIRBuilder.buildBrCond(Tst, TrueBB);
   }
 
   const BasicBlock &BrTgt = *cast<BasicBlock>(BrInst.getSuccessor(Succ));
-  MachineBasicBlock &TgtBB = getOrCreateBB(BrTgt);
+  MachineBasicBlock &TgtBB = getMBB(BrTgt);
   MIRBuilder.buildBr(TgtBB);
 
   // Link successors.
   MachineBasicBlock &CurBB = MIRBuilder.getMBB();
   for (const BasicBlock *Succ : BrInst.successors())
-    CurBB.addSuccessor(&getOrCreateBB(*Succ));
+    CurBB.addSuccessor(&getMBB(*Succ));
   return true;
 }
 
@@ -256,7 +250,7 @@ bool IRTranslator::translateSwitch(const User &U,
     MIRBuilder.buildICmp(CmpInst::ICMP_EQ, Tst, CaseValueReg, SwCondValue);
     MachineBasicBlock &CurMBB = MIRBuilder.getMBB();
     const BasicBlock *TrueBB = CaseIt.getCaseSuccessor();
-    MachineBasicBlock &TrueMBB = getOrCreateBB(*TrueBB);
+    MachineBasicBlock &TrueMBB = getMBB(*TrueBB);
 
     MIRBuilder.buildBrCond(Tst, TrueMBB);
     CurMBB.addSuccessor(&TrueMBB);
@@ -272,7 +266,7 @@ bool IRTranslator::translateSwitch(const User &U,
   }
   // handle default case
   const BasicBlock *DefaultBB = SwInst.getDefaultDest();
-  MachineBasicBlock &DefaultMBB = getOrCreateBB(*DefaultBB);
+  MachineBasicBlock &DefaultMBB = getMBB(*DefaultBB);
   MIRBuilder.buildBr(DefaultMBB);
   MachineBasicBlock &CurMBB = MIRBuilder.getMBB();
   CurMBB.addSuccessor(&DefaultMBB);
@@ -291,7 +285,7 @@ bool IRTranslator::translateIndirectBr(const User &U,
   // Link successors.
   MachineBasicBlock &CurBB = MIRBuilder.getMBB();
   for (const BasicBlock *Succ : BrInst.successors())
-    CurBB.addSuccessor(&getOrCreateBB(*Succ));
+    CurBB.addSuccessor(&getMBB(*Succ));
 
   return true;
 }
@@ -823,8 +817,8 @@ bool IRTranslator::translateInvoke(const User &U,
   MIRBuilder.buildInstr(TargetOpcode::EH_LABEL).addSym(EndSymbol);
 
   // FIXME: track probabilities.
-  MachineBasicBlock &EHPadMBB = getOrCreateBB(*EHPadBB),
-                    &ReturnMBB = getOrCreateBB(*ReturnBB);
+  MachineBasicBlock &EHPadMBB = getMBB(*EHPadBB),
+                    &ReturnMBB = getMBB(*ReturnBB);
   MF->addInvoke(&EHPadMBB, BeginSymbol, EndSymbol);
   MIRBuilder.getMBB().addSuccessor(&ReturnMBB);
   MIRBuilder.getMBB().addSuccessor(&EHPadMBB);
@@ -1128,12 +1122,24 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
   // Release the per-function state when we return, whether we succeeded or not.
   auto FinalizeOnReturn = make_scope_exit([this]() { finalizeFunction(); });
 
-  // Setup a separate basic-block for the arguments and constants, falling
-  // through to the IR-level Function's entry block.
+  // Setup a separate basic-block for the arguments and constants
   MachineBasicBlock *EntryBB = MF->CreateMachineBasicBlock();
   MF->push_back(EntryBB);
-  EntryBB->addSuccessor(&getOrCreateBB(F.front()));
   EntryBuilder.setMBB(*EntryBB);
+
+  // Create all blocks, in IR order, to preserve the layout.
+  for (const BasicBlock &BB: F) {
+    auto *&MBB = BBToMBB[&BB];
+
+    MBB = MF->CreateMachineBasicBlock(&BB);
+    MF->push_back(MBB);
+
+    if (BB.hasAddressTaken())
+      MBB->setHasAddressTaken();
+  }
+
+  // Make our arguments/constants entry block fallthrough to the IR entry block.
+  EntryBB->addSuccessor(&getMBB(F.front()));
 
   // Lower the actual args into this basic block.
   SmallVector<unsigned, 8> VRegArgs;
@@ -1150,7 +1156,7 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
 
   // And translate the function!
   for (const BasicBlock &BB: F) {
-    MachineBasicBlock &MBB = getOrCreateBB(BB);
+    MachineBasicBlock &MBB = getMBB(BB);
     // Set the insertion point of all the following translations to
     // the end of this basic block.
     CurBuilder.setMBB(MBB);
