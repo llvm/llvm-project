@@ -188,18 +188,18 @@ entry:
 ; GCN-LABEL: {{^}}select_v2f16_imm_a:
 ; SI:  v_cvt_f32_f16_e32
 ; SI:  v_cvt_f32_f16_e32
-; SI:  v_cmp_lt_f32_e32 vcc, 0.5
 ; SI:  v_cvt_f32_f16_e32
 ; SI:  v_cvt_f32_f16_e32
 ; SI:  v_cvt_f32_f16_e32
 ; SI:  v_cvt_f32_f16_e32
 ; SI:  v_cmp_lt_f32_e64
+; SI:  v_cmp_lt_f32_e32 vcc, 0.5
 
 ; VI:  v_cmp_lt_f16_e32
 ; VI:  v_cmp_lt_f16_e64
 ; GCN: v_cndmask_b32_e32
-; SI:  v_cvt_f16_f32_e32
 ; GCN: v_cndmask_b32_e64
+; SI:  v_cvt_f16_f32_e32
 ; SI:  v_cvt_f16_f32_e32
 ; GCN: s_endpgm
 define void @select_v2f16_imm_a(
@@ -220,18 +220,19 @@ entry:
 ; GCN-LABEL: {{^}}select_v2f16_imm_b:
 ; SI:  v_cvt_f32_f16_e32
 ; SI:  v_cvt_f32_f16_e32
-; SI:  v_cmp_gt_f32_e32 vcc, 0.5
 ; SI:  v_cvt_f32_f16_e32
 ; SI:  v_cvt_f32_f16_e32
 ; SI:  v_cvt_f32_f16_e32
 ; SI:  v_cvt_f32_f16_e32
 ; SI:  v_cmp_gt_f32_e64
+; SI:  v_cmp_gt_f32_e32 vcc, 0.5
 
 ; VI:  v_cmp_gt_f16_e32
 ; VI:  v_cmp_gt_f16_e64
 ; GCN: v_cndmask_b32_e32
-; SI:  v_cvt_f16_f32_e32
 ; GCN: v_cndmask_b32_e64
+
+; SI:  v_cvt_f16_f32_e32
 ; SI:  v_cvt_f16_f32_e32
 ; GCN: s_endpgm
 define void @select_v2f16_imm_b(
@@ -258,8 +259,8 @@ entry:
 ; SI:  v_cvt_f32_f16_e32
 
 ; SI: v_cmp_nlt_f32_e32
-; SI: v_cndmask_b32_e32
-; SI: v_cmp_nlt_f32_e32
+; SI: v_cmp_nlt_f32_e64
+; SI: v_cndmask_b32_e64
 ; SI: v_cndmask_b32_e32
 
 ; VI: v_cmp_nlt_f16_e32
@@ -293,12 +294,13 @@ entry:
 ; SI:  v_cvt_f32_f16_e32
 ; SI:  v_cvt_f32_f16_e32
 ; SI:  v_cvt_f32_f16_e32
-; SI:  v_cmp_lt_f32_e32
 ; SI:  v_cmp_lt_f32_e64
+; SI:  v_cmp_lt_f32_e32
+
 ; VI:  v_cmp_lt_f16_e32
 ; VI:  v_cmp_lt_f16_e64
-; GCN: v_cndmask_b32_e32
-; GCN: v_cndmask_b32_e64
+; GCN: v_cndmask_b32
+; GCN: v_cndmask_b32
 ; SI:  v_cvt_f16_f32_e32
 ; SI:  v_cvt_f16_f32_e32
 ; GCN: s_endpgm

@@ -326,6 +326,10 @@ enum NodeType : unsigned {
   // with round to zero.
   CVT_PKRTZ_F16_F32,
 
+  // Same as the standard node, except the high bits of the resulting integer
+  // are known 0.
+  FP_TO_FP16,
+
   /// This node is for VLIW targets and it is used to represent a vector
   /// that is stored in consecutive registers with the same channel.
   /// For example:

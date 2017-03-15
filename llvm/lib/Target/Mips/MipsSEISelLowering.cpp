@@ -1123,7 +1123,8 @@ MipsSETargetLowering::PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI) const {
   case ISD::MUL:
     return performMULCombine(N, DAG, DCI, this);
   case ISD::SHL:
-    return performSHLCombine(N, DAG, DCI, Subtarget);
+    Val = performSHLCombine(N, DAG, DCI, Subtarget);
+    break;
   case ISD::SRA:
     return performSRACombine(N, DAG, DCI, Subtarget);
   case ISD::SRL:

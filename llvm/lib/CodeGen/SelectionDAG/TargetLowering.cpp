@@ -873,7 +873,7 @@ bool TargetLowering::SimplifyDemandedBits(SDValue Op,
       KnownZero <<= SA->getZExtValue();
       KnownOne  <<= SA->getZExtValue();
       // low bits known zero.
-      KnownZero |= APInt::getLowBitsSet(BitWidth, SA->getZExtValue());
+      KnownZero.setLowBits(SA->getZExtValue());
     }
     break;
   case ISD::SRL:
@@ -892,7 +892,7 @@ bool TargetLowering::SimplifyDemandedBits(SDValue Op,
       // If the shift is exact, then it does demand the low bits (and knows that
       // they are zero).
       if (cast<BinaryWithFlagsSDNode>(Op)->Flags.hasExact())
-        InDemandedMask |= APInt::getLowBitsSet(BitWidth, ShAmt);
+        InDemandedMask.setLowBits(ShAmt);
 
       // If this is ((X << C1) >>u ShAmt), see if we can simplify this into a
       // single shift.  We can do this if the top bits (which are shifted out)
@@ -923,8 +923,7 @@ bool TargetLowering::SimplifyDemandedBits(SDValue Op,
       KnownZero = KnownZero.lshr(ShAmt);
       KnownOne  = KnownOne.lshr(ShAmt);
 
-      APInt HighBits = APInt::getHighBitsSet(BitWidth, ShAmt);
-      KnownZero |= HighBits;  // High bits known zero.
+      KnownZero.setHighBits(ShAmt);  // High bits known zero.
     }
     break;
   case ISD::SRA:
@@ -950,7 +949,7 @@ bool TargetLowering::SimplifyDemandedBits(SDValue Op,
       // If the shift is exact, then it does demand the low bits (and knows that
       // they are zero).
       if (cast<BinaryWithFlagsSDNode>(Op)->Flags.hasExact())
-        InDemandedMask |= APInt::getLowBitsSet(BitWidth, ShAmt);
+        InDemandedMask.setLowBits(ShAmt);
 
       // If any of the demanded bits are produced by the sign extension, we also
       // demand the input sign bit.

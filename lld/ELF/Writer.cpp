@@ -202,10 +202,7 @@ template <class ELFT> static void combineMergableSections() {
 template <class ELFT> static void combineEhFrameSections() {
   for (InputSectionBase *&S : InputSections) {
     EhInputSection *ES = dyn_cast<EhInputSection>(S);
-    if (!ES)
-      continue;
-
-    if (!ES->Live)
+    if (!ES || !ES->Live)
       continue;
 
     In<ELFT>::EhFrame->addSection(ES);
@@ -378,7 +375,7 @@ template <class ELFT> void Writer<ELFT>::createSyntheticSections() {
       Config->ExportDynamic;
   if (Config->EMachine == EM_MIPS) {
     if (!Config->Shared && HasDynSymTab) {
-      In<ELFT>::MipsRldMap = make<MipsRldMapSection<ELFT>>();
+      In<ELFT>::MipsRldMap = make<MipsRldMapSection>();
       Add(In<ELFT>::MipsRldMap);
     }
     if (auto *Sec = MipsAbiFlagsSection<ELFT>::create())

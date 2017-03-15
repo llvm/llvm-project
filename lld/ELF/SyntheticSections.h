@@ -715,10 +715,10 @@ private:
 // of executable file which is pointed to by the DT_MIPS_RLD_MAP entry.
 // See "Dynamic section" in Chapter 5 in the following document:
 // ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
-template <class ELFT> class MipsRldMapSection : public SyntheticSection {
+class MipsRldMapSection : public SyntheticSection {
 public:
   MipsRldMapSection();
-  size_t getSize() const override { return sizeof(typename ELFT::uint); }
+  size_t getSize() const override { return Config->is64Bit() ? 8 : 4; }
   void writeTo(uint8_t *Buf) override;
 };
 
@@ -758,14 +758,23 @@ SymbolBody *addSyntheticLocal(StringRef Name, uint8_t Type, uint64_t Value,
                               uint64_t Size, InputSectionBase *Section);
 
 // Linker generated sections which can be used as inputs.
-template <class ELFT> struct In {
+struct InX {
   static InputSection *ARMAttributes;
-  static BuildIdSection<ELFT> *BuildId;
   static BssSection *Bss;
   static BssSection *BssRelRo;
   static InputSection *Common;
-  static DynamicSection<ELFT> *Dynamic;
   static StringTableSection *DynStrTab;
+  static InputSection *Interp;
+  static GotPltSection *GotPlt;
+  static IgotPltSection *IgotPlt;
+  static MipsRldMapSection *MipsRldMap;
+  static StringTableSection *ShStrTab;
+  static StringTableSection *StrTab;
+};
+
+template <class ELFT> struct In : public InX {
+  static BuildIdSection<ELFT> *BuildId;
+  static DynamicSection<ELFT> *Dynamic;
   static SymbolTableSection<ELFT> *DynSymTab;
   static EhFrameHeader<ELFT> *EhFrameHdr;
   static GnuHashTableSection<ELFT> *GnuHashTab;
@@ -773,31 +782,20 @@ template <class ELFT> struct In {
   static GotSection<ELFT> *Got;
   static EhFrameSection<ELFT> *EhFrame;
   static MipsGotSection<ELFT> *MipsGot;
-  static GotPltSection *GotPlt;
-  static IgotPltSection *IgotPlt;
   static HashTableSection<ELFT> *HashTab;
-  static InputSection *Interp;
-  static MipsRldMapSection<ELFT> *MipsRldMap;
   static PltSection<ELFT> *Plt;
   static PltSection<ELFT> *Iplt;
   static RelocationSection<ELFT> *RelaDyn;
   static RelocationSection<ELFT> *RelaPlt;
   static RelocationSection<ELFT> *RelaIplt;
-  static StringTableSection *ShStrTab;
-  static StringTableSection *StrTab;
   static SymbolTableSection<ELFT> *SymTab;
   static VersionDefinitionSection<ELFT> *VerDef;
   static VersionTableSection<ELFT> *VerSym;
   static VersionNeedSection<ELFT> *VerNeed;
 };
 
-template <class ELFT> InputSection *In<ELFT>::ARMAttributes;
-template <class ELFT> BssSection *In<ELFT>::Bss;
-template <class ELFT> BssSection *In<ELFT>::BssRelRo;
 template <class ELFT> BuildIdSection<ELFT> *In<ELFT>::BuildId;
-template <class ELFT> InputSection *In<ELFT>::Common;
 template <class ELFT> DynamicSection<ELFT> *In<ELFT>::Dynamic;
-template <class ELFT> StringTableSection *In<ELFT>::DynStrTab;
 template <class ELFT> SymbolTableSection<ELFT> *In<ELFT>::DynSymTab;
 template <class ELFT> EhFrameHeader<ELFT> *In<ELFT>::EhFrameHdr;
 template <class ELFT> GdbIndexSection<ELFT> *In<ELFT>::GdbIndex;
@@ -805,18 +803,12 @@ template <class ELFT> GnuHashTableSection<ELFT> *In<ELFT>::GnuHashTab;
 template <class ELFT> GotSection<ELFT> *In<ELFT>::Got;
 template <class ELFT> EhFrameSection<ELFT> *In<ELFT>::EhFrame;
 template <class ELFT> MipsGotSection<ELFT> *In<ELFT>::MipsGot;
-template <class ELFT> GotPltSection *In<ELFT>::GotPlt;
-template <class ELFT> IgotPltSection *In<ELFT>::IgotPlt;
 template <class ELFT> HashTableSection<ELFT> *In<ELFT>::HashTab;
-template <class ELFT> InputSection *In<ELFT>::Interp;
-template <class ELFT> MipsRldMapSection<ELFT> *In<ELFT>::MipsRldMap;
 template <class ELFT> PltSection<ELFT> *In<ELFT>::Plt;
 template <class ELFT> PltSection<ELFT> *In<ELFT>::Iplt;
 template <class ELFT> RelocationSection<ELFT> *In<ELFT>::RelaDyn;
 template <class ELFT> RelocationSection<ELFT> *In<ELFT>::RelaPlt;
 template <class ELFT> RelocationSection<ELFT> *In<ELFT>::RelaIplt;
-template <class ELFT> StringTableSection *In<ELFT>::ShStrTab;
-template <class ELFT> StringTableSection *In<ELFT>::StrTab;
 template <class ELFT> SymbolTableSection<ELFT> *In<ELFT>::SymTab;
 template <class ELFT> VersionDefinitionSection<ELFT> *In<ELFT>::VerDef;
 template <class ELFT> VersionTableSection<ELFT> *In<ELFT>::VerSym;

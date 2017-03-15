@@ -79,9 +79,9 @@ template <class ELFT> InputSection *elf::createCommonSection() {
 
   // Assign offsets to symbols.
   size_t Size = 0;
-  size_t Alignment = 1;
+  uint32_t Alignment = 1;
   for (DefinedCommon *Sym : Syms) {
-    Alignment = std::max<size_t>(Alignment, Sym->Alignment);
+    Alignment = std::max(Alignment, Sym->Alignment);
     Size = alignTo(Size, Sym->Alignment);
 
     // Compute symbol offset relative to beginning of input section.
@@ -2204,14 +2204,13 @@ size_t MergeSyntheticSection::getSize() const {
   return Builder.getSize();
 }
 
-template <class ELFT>
-MipsRldMapSection<ELFT>::MipsRldMapSection()
+MipsRldMapSection::MipsRldMapSection()
     : SyntheticSection(SHF_ALLOC | SHF_WRITE, SHT_PROGBITS,
-                       sizeof(typename ELFT::uint), ".rld_map") {}
+                       Config->is64Bit() ? 8 : 4, ".rld_map") {}
 
-template <class ELFT> void MipsRldMapSection<ELFT>::writeTo(uint8_t *Buf) {
+void MipsRldMapSection::writeTo(uint8_t *Buf) {
   // Apply filler from linker script.
-  uint64_t Filler = Script<ELFT>::X->getFiller(this->Name);
+  uint64_t Filler = ScriptBase->getFiller(this->Name);
   Filler = (Filler << 32) | Filler;
   memcpy(Buf, &Filler, getSize());
 }
@@ -2263,6 +2262,18 @@ InputSection *ThunkSection<ELFT>::getTargetInputSection() const {
   const Thunk<ELFT> *T = Thunks.front();
   return T->getTargetInputSection();
 }
+
+InputSection *InX::ARMAttributes;
+BssSection *InX::Bss;
+BssSection *InX::BssRelRo;
+InputSection *InX::Common;
+StringTableSection *InX::DynStrTab;
+InputSection *InX::Interp;
+GotPltSection *InX::GotPlt;
+IgotPltSection *InX::IgotPlt;
+MipsRldMapSection *InX::MipsRldMap;
+StringTableSection *InX::ShStrTab;
+StringTableSection *InX::StrTab;
 
 template InputSection *elf::createCommonSection<ELF32LE>();
 template InputSection *elf::createCommonSection<ELF32BE>();
@@ -2371,11 +2382,6 @@ template class elf::VersionDefinitionSection<ELF32LE>;
 template class elf::VersionDefinitionSection<ELF32BE>;
 template class elf::VersionDefinitionSection<ELF64LE>;
 template class elf::VersionDefinitionSection<ELF64BE>;
-
-template class elf::MipsRldMapSection<ELF32LE>;
-template class elf::MipsRldMapSection<ELF32BE>;
-template class elf::MipsRldMapSection<ELF64LE>;
-template class elf::MipsRldMapSection<ELF64BE>;
 
 template class elf::ARMExidxSentinelSection<ELF32LE>;
 template class elf::ARMExidxSentinelSection<ELF32BE>;

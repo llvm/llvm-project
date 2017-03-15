@@ -326,6 +326,14 @@ let AdditionalPredicates = [NotInMicroMips] in {
               EXT_FM<5>, ISA_MIPS64R2;
 }
 
+let isCodeGenOnly = 1, AdditionalPredicates = [NotInMicroMips] in {
+  def DEXT64_32 : InstSE<(outs GPR64Opnd:$rt),
+                         (ins GPR32Opnd:$rs, uimm5_report_uimm6:$pos,
+                              uimm5_plus1:$size),
+                         "dext $rt, $rs, $pos, $size", [], II_EXT, FrmR, "dext">,
+                  EXT_FM<3>, ISA_MIPS64R2;
+}
+
 let isCodeGenOnly = 1, rs = 0, shamt = 0 in {
   def DSLL64_32 : FR<0x00, 0x3c, (outs GPR64:$rd), (ins GPR32:$rt),
                      "dsll\t$rd, $rt, 32", [], II_DSLL>;
@@ -356,11 +364,11 @@ class Count1s<string opstr, RegisterOperand RO>:
   let TwoOperandAliasConstraint = "$rd = $rs";
 }
 
-class ExtsCins<string opstr, InstrItinClass itin,
-               SDPatternOperator Op = null_frag>:
-  InstSE<(outs GPR64Opnd:$rt), (ins GPR64Opnd:$rs, uimm5:$pos, uimm5:$lenm1),
-         !strconcat(opstr, " $rt, $rs, $pos, $lenm1"),
-         [(set GPR64Opnd:$rt, (Op GPR64Opnd:$rs, imm:$pos, imm:$lenm1))],
+class ExtsCins<string opstr, InstrItinClass itin, RegisterOperand RO,
+               PatFrag PosImm, SDPatternOperator Op = null_frag>:
+  InstSE<(outs RO:$rt), (ins RO:$rs, uimm5:$pos, uimm5:$lenm1),
+         !strconcat(opstr, "\t$rt, $rs, $pos, $lenm1"),
+         [(set RO:$rt, (Op RO:$rs, PosImm:$pos, imm:$lenm1))],
          itin, FrmR, opstr> {
   let TwoOperandAliasConstraint = "$rt = $rs";
 }
@@ -424,13 +432,28 @@ def DMUL  : ArithLogicR<"dmul", GPR64Opnd, 1, II_DMUL, mul>,
   let Defs = [HI0, LO0, P0, P1, P2];
 }
 
-// Extract a signed bit field /+32
-def EXTS  : ExtsCins<"exts", II_EXT>, EXTS_FM<0x3a>, ASE_CNMIPS;
-def EXTS32: ExtsCins<"exts32", II_EXT>, EXTS_FM<0x3b>, ASE_CNMIPS;
+let AdditionalPredicates = [NotInMicroMips] in {
+  // Extract a signed bit field /+32
+  def EXTS  : ExtsCins<"exts", II_EXT, GPR64Opnd, immZExt5>, EXTS_FM<0x3a>,
+              ASE_MIPS64_CNMIPS;
+  def EXTS32: ExtsCins<"exts32", II_EXT, GPR64Opnd, immZExt5Plus32>,
+              EXTS_FM<0x3b>, ASE_MIPS64_CNMIPS;
 
-// Clear and insert a bit field /+32
-def CINS  : ExtsCins<"cins", II_INS>, EXTS_FM<0x32>, ASE_CNMIPS;
-def CINS32: ExtsCins<"cins32", II_INS>, EXTS_FM<0x33>, ASE_CNMIPS;
+  // Clear and insert a bit field /+32
+  def CINS  : ExtsCins<"cins", II_INS, GPR64Opnd, immZExt5, MipsCIns>,
+              EXTS_FM<0x32>, ASE_MIPS64_CNMIPS;
+  def CINS32: ExtsCins<"cins32", II_INS, GPR64Opnd, immZExt5Plus32, MipsCIns>,
+              EXTS_FM<0x33>, ASE_MIPS64_CNMIPS;
+  let isCodeGenOnly = 1 in {
+    def CINS_i32 : ExtsCins<"cins", II_INS, GPR32Opnd, immZExt5, MipsCIns>,
+                   EXTS_FM<0x32>, ASE_MIPS64_CNMIPS;
+    def CINS64_32 :InstSE<(outs GPR64Opnd:$rt),
+                          (ins GPR32Opnd:$rs, uimm5:$pos, uimm5:$lenm1),
+                          "cins\t$rt, $rs, $pos, $lenm1", [], II_INS, FrmR,
+                          "cins">,
+                   EXTS_FM<0x32>, ASE_MIPS64_CNMIPS;
+  }
+}
 
 // Move to multiplier/product register
 def MTM0   : MoveToLOHI<"mtm0", GPR64Opnd, [MPL0, P0, P1, P2]>, MTMR_FM<0x08>,
@@ -646,6 +669,14 @@ def : MipsPat<(i64 (anyext GPR32:$src)),
 def : MipsPat<(i64 (zext GPR32:$src)), (DSRL (DSLL64_32 GPR32:$src), 32)>;
 def : MipsPat<(i64 (sext GPR32:$src)), (SLL64_32 GPR32:$src)>;
 
+let AdditionalPredicates = [NotInMicroMips] in {
+  def : MipsPat<(i64 (zext GPR32:$src)), (DEXT64_32 GPR32:$src, 0, 32)>,
+        ISA_MIPS64R2;
+  def : MipsPat<(i64 (zext (i32 (shl GPR32:$rt, immZExt5:$imm)))),
+                (CINS64_32 GPR32:$rt, imm:$imm, (immZExt5To31 imm:$imm))>,
+        ASE_MIPS64_CNMIPS;
+}
+
 // Sign extend in register
 def : MipsPat<(i64 (sext_inreg GPR64:$src, i32)),
               (SLL64_64 GPR64:$src)>;
@@ -796,21 +827,21 @@ def : MipsInstAlias<"bbit1 $rs, $p, $offset",
 def : MipsInstAlias<"exts $rt, $rs, $pos, $lenm1",
                     (EXTS32 GPR64Opnd:$rt, GPR64Opnd:$rs,
                             uimm5_plus32_normalize:$pos, uimm5:$lenm1), 0>,
-      ASE_CNMIPS;
+      ASE_MIPS64_CNMIPS;
 def : MipsInstAlias<"exts $rt, $pos, $lenm1",
                     (EXTS32 GPR64Opnd:$rt, GPR64Opnd:$rt,
                             uimm5_plus32_normalize:$pos, uimm5:$lenm1), 0>,
-      ASE_CNMIPS;
+      ASE_MIPS64_CNMIPS;
 
 // cins with $pos 32-63 in converted to cins32 with $pos 0-31
 def : MipsInstAlias<"cins $rt, $rs, $pos, $lenm1",
                     (CINS32 GPR64Opnd:$rt, GPR64Opnd:$rs,
                             uimm5_plus32_normalize:$pos, uimm5:$lenm1), 0>,
-      ASE_CNMIPS;
+      ASE_MIPS64_CNMIPS;
 def : MipsInstAlias<"cins $rt, $pos, $lenm1",
                     (CINS32 GPR64Opnd:$rt, GPR64Opnd:$rt,
                             uimm5_plus32_normalize:$pos, uimm5:$lenm1), 0>,
-      ASE_CNMIPS;
+      ASE_MIPS64_CNMIPS;
 
 //===----------------------------------------------------------------------===//
 // Assembler Pseudo Instructions

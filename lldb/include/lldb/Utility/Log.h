@@ -13,6 +13,7 @@
 // Project includes
 #include "lldb/Utility/Flags.h"
 #include "lldb/Utility/Logging.h"
+#include "lldb/lldb-defines.h"
 
 // Other libraries and framework includes
 #include "llvm/ADT/ArrayRef.h"

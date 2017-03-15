@@ -637,7 +637,7 @@ public:
     typedef basic_string                                 __self;
     typedef basic_string_view<_CharT, _Traits>           __self_view;
     typedef _Traits                                      traits_type;
-    typedef typename traits_type::char_type              value_type;
+    typedef _CharT                                       value_type;
     typedef _Allocator                                   allocator_type;
     typedef allocator_traits<allocator_type>             __alloc_traits;
     typedef typename __alloc_traits::size_type           size_type;
@@ -648,7 +648,7 @@ public:
     typedef typename __alloc_traits::const_pointer       const_pointer;
 
     static_assert(is_pod<value_type>::value, "Character type of basic_string must be a POD");
-    static_assert((is_same<_CharT, value_type>::value),
+    static_assert((is_same<_CharT, typename traits_type::char_type>::value),
                   "traits_type::char_type must be the same type as CharT");
     static_assert((is_same<typename allocator_type::value_type, value_type>::value),
                   "Allocator::value_type must be same type as value_type");

@@ -1,15 +1,15 @@
 ; RUN: llc -mtriple=mips64el-unknown-unknown -mcpu=mips4 -mattr=+soft-float -O1 \
 ; RUN:     -disable-mips-delay-filler -relocation-model=pic < %s | FileCheck \
-; RUN:     %s -check-prefixes=ALL,C_CC_FMT,PRER6
+; RUN:     %s -check-prefixes=ALL,C_CC_FMT,PRER6,NOT-R2R6
 ; RUN: llc -mtriple=mips64el-unknown-unknown -mcpu=mips64 -mattr=+soft-float -O1 \
 ; RUN:     -disable-mips-delay-filler -relocation-model=pic < %s | FileCheck \
-; RUN:     %s -check-prefixes=ALL,C_CC_FMT,PRER6
+; RUN:     %s -check-prefixes=ALL,C_CC_FMT,PRER6,NOT-R2R6
 ; RUN: llc -mtriple=mips64el-unknown-unknown -mcpu=mips64r2 -mattr=+soft-float \
 ; RUN:     -O1 -disable-mips-delay-filler -relocation-model=pic < %s | FileCheck \
-; RUN:     %s -check-prefixes=ALL,C_CC_FMT,PRER6
+; RUN:     %s -check-prefixes=ALL,C_CC_FMT,PRER6,R2R6
 ; RUN: llc -mtriple=mips64el-unknown-unknown -mcpu=mips64r6 -mattr=+soft-float \
 ; RUN:     -O1 -disable-mips-delay-filler -relocation-model=pic < %s | FileCheck \
-; RUN:     %s -check-prefixes=ALL,CMP_CC_FMT,R6
+; RUN:     %s -check-prefixes=ALL,CMP_CC_FMT,R6,R2R6
 
 @gld0 = external global fp128
 @gld1 = external global fp128
@@ -242,12 +242,16 @@ entry:
 }
 
 ; ALL-LABEL:             libcall1_fabsl:
-; ALL-DAG: ld      $[[R0:[0-9]+]], 8($[[R4:[0-9]+]])
-; ALL-DAG: daddiu  $[[R1:[0-9]+]], $zero, 1
-; ALL-DAG: dsll    $[[R2:[0-9]+]], $[[R1]], 63
-; ALL-DAG: daddiu  $[[R3:[0-9]+]], $[[R2]], -1
-; ALL-DAG: and     $4, $[[R0]], $[[R3]]
-; ALL-DAG: ld      $2, 0($[[R4]])
+; NOT-R2R6-DAG: ld      $[[R0:[0-9]+]], 8($[[R4:[0-9]+]])
+; NOT-R2R6-DAG: daddiu  $[[R1:[0-9]+]], $zero, 1
+; NOT-R2R6-DAG: dsll    $[[R2:[0-9]+]], $[[R1]], 63
+; NOT-R2R6-DAG: daddiu  $[[R3:[0-9]+]], $[[R2]], -1
+; NOT-R2R6-DAG: and     $4, $[[R0]], $[[R3]]
+; NOT-R2R6-DAG: ld      $2, 0($[[R4]])
+
+; R2R6-DAG: ld     $[[R0:[0-9]+]], 0($[[R3:[0-9]+]])
+; R2R6-DAG: ld     $[[R1:[0-9]+]], 8($[[R3]])
+; R2R6-DAG: dextm  $[[R2:[0-9]+]], $[[R1]], 0, 63
 
 define fp128 @libcall1_fabsl() {
 entry:
@@ -414,17 +418,19 @@ entry:
 declare fp128 @llvm.powi.f128(fp128, i32) #3
 
 ; ALL-LABEL:     libcall2_copysignl:
-; ALL-DAG: daddiu $[[R2:[0-9]+]], $zero, 1
-; ALL-DAG: dsll   $[[R3:[0-9]+]], $[[R2]], 63
-; ALL-DAG: ld     $[[R0:[0-9]+]], %got_disp(gld1)
-; ALL-DAG: ld     $[[R1:[0-9]+]], 8($[[R0]])
-; ALL-DAG: and    $[[R4:[0-9]+]], $[[R1]], $[[R3]]
-; ALL-DAG: ld     $[[R5:[0-9]+]], %got_disp(gld0)
-; ALL-DAG: ld     $[[R6:[0-9]+]], 8($[[R5]])
-; ALL-DAG: daddiu $[[R7:[0-9]+]], $[[R3]], -1
-; ALL-DAG: and    $[[R8:[0-9]+]], $[[R6]], $[[R7]]
-; ALL-DAG: or     $4, $[[R8]], $[[R4]]
-; ALL-DAG: ld     $2, 0($[[R5]])
+; ALL-DAG:      daddiu $[[R2:[0-9]+]], $zero, 1
+; ALL-DAG:      dsll   $[[R3:[0-9]+]], $[[R2]], 63
+; ALL-DAG:      ld     $[[R0:[0-9]+]], %got_disp(gld1)
+; ALL-DAG:      ld     $[[R1:[0-9]+]], 8($[[R0]])
+; ALL-DAG:      and    $[[R4:[0-9]+]], $[[R1]], $[[R3]]
+; ALL-DAG:      ld     $[[R5:[0-9]+]], %got_disp(gld0)
+; ALL-DAG:      ld     $[[R6:[0-9]+]], 8($[[R5]])
+; NOT-R2R6-DAG: daddiu $[[R7:[0-9]+]], $[[R3]], -1
+; NOT-R2R6-DAG: and    $[[R8:[0-9]+]], $[[R6]], $[[R7]]
+; NOT-R2R6-DAG: or     $4, $[[R8]], $[[R4]]
+; R2R6-DAG:     dextm  $[[R7:[0-9]+]], $[[R6]], 0, 63
+; R2R6-DAG:     or     $4, $[[R7]], $[[R4]]
+; ALL-DAG:      ld     $2, 0($[[R5]])
 
 define fp128 @libcall2_copysignl() {
 entry:

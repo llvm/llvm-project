@@ -81,6 +81,11 @@ enum : unsigned {
   WASM_OPCODE_F64_CONST  = 0x44,
 };
 
+enum : unsigned {
+  WASM_NAMES_FUNCTION    = 0x1,
+  WASM_NAMES_LOCAL       = 0x2,
+};
+
 // Subset of types that a value can have
 enum class ValType {
   I32 = WASM_TYPE_I32,

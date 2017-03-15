@@ -328,7 +328,7 @@ def : Pat<
 >;
 
 def : Pat<
-    (i16 (fp_to_f16 f32:$src)),
+    (i16 (AMDGPUfp_to_f16 f32:$src)),
     (V_CVT_F16_F32_e32 $src)
 >;
 

@@ -61,7 +61,6 @@ entry:
 ; GCN:     v_cvt_f32_i32_e32
 ; GCN:     v_cvt_f16_f32_e32
 ; GCN:     v_cvt_f16_f32_e32
-; GCN-DAG: v_and_b32_e32
 ; GCN-DAG: v_lshlrev_b32_e32
 ; GCN-DAG: v_or_b32_e32
 ; GCN:     buffer_store_dword

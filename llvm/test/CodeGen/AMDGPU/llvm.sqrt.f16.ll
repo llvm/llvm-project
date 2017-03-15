@@ -33,9 +33,8 @@ entry:
 ; SI:  v_cvt_f16_f32_e32 v[[R_F16_1:[0-9]+]], v[[R_F32_1]]
 ; VI:  v_sqrt_f16_e32 v[[R_F16_0:[0-9]+]], v[[A_V2_F16]]
 ; VI:  v_sqrt_f16_e32 v[[R_F16_1:[0-9]+]], v[[A_F16_1]]
-; GCN: v_and_b32_e32 v[[R_F16_LO:[0-9]+]], 0xffff, v[[R_F16_0]]
 ; GCN: v_lshlrev_b32_e32 v[[R_F16_HI:[0-9]+]], 16, v[[R_F16_1]]
-; GCN: v_or_b32_e32 v[[R_V2_F16:[0-9]+]], v[[R_F16_HI]], v[[R_F16_LO]]
+; GCN: v_or_b32_e32 v[[R_V2_F16:[0-9]+]], v[[R_F16_HI]], v[[R_F16_0]]
 ; GCN: buffer_store_dword v[[R_V2_F16]]
 ; GCN: s_endpgm
 define void @sqrt_v2f16(
