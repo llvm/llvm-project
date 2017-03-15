@@ -62,7 +62,6 @@ public:
   /// Get the integer value of a null pointer in the given address space.
   uint64_t getNullPointerValue(unsigned AddrSpace) const {
     switch(AddrSpace) {
-    case AMDGPUAS::PRIVATE_ADDRESS:
     case AMDGPUAS::LOCAL_ADDRESS:
     case AMDGPUAS::REGION_ADDRESS:
       return -1;

@@ -21,11 +21,11 @@
 ; DBGDAG-DAG: [[LD2:t[0-9]+]]: i16,ch = load<LD2[%tmp81](align=1)> [[ENTRYTOKEN]], [[BASEPTR]], undef:i64
 ; DBGDAG-DAG: [[LD1:t[0-9]+]]: i8,ch = load<LD1[%tmp12]> [[ENTRYTOKEN]], [[ADDPTR]], undef:i64
 
-; DBGDAG: [[LOADTOKEN:t[0-9]+]]: ch = TokenFactor [[LD2]]:1, [[LD1]]:1
-
+; DBGDAG-DAG: [[ST1:t[0-9]+]]: ch = store<ST1[%tmp14]> [[ENTRYTOKEN]], [[LD1]], t{{[0-9]+}}, undef:i64
+; DBGDAG-DAG: [[LOADTOKEN:t[0-9]+]]: ch = TokenFactor [[LD2]]:1, [[LD1]]:1
 ; DBGDAG-DAG: [[ST2:t[0-9]+]]: ch = store<ST2[%tmp10](align=1)> [[LOADTOKEN]], [[LD2]], t{{[0-9]+}}, undef:i64
-; DBGDAG-DAG: [[ST1:t[0-9]+]]: ch = store<ST1[%tmp14]> [[ST2]], [[LD1]], t{{[0-9]+}}, undef:i64
-; DBGDAG: X86ISD::RET_FLAG [[ST1]],
+
+; DBGDAG: X86ISD::RET_FLAG t{{[0-9]+}},
 
 ; DBGDAG: Type-legalized selection DAG: BB#0 'merge_store_partial_overlap_load:'
 define void @merge_store_partial_overlap_load([4 x i8]* %tmp) {

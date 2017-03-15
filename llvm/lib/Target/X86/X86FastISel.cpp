@@ -537,6 +537,15 @@ bool X86FastISel::X86FastEmitStore(EVT VT, unsigned ValReg, bool ValIsKill,
   case MVT::f80: // No f80 support yet.
   default: return false;
   case MVT::i1: {
+    // In case ValReg is a K register, COPY to a GPR
+    if (MRI.getRegClass(ValReg) == &X86::VK1RegClass) {
+      unsigned KValReg = ValReg;
+      ValReg = createResultReg(Subtarget->is64Bit() ? &X86::GR8RegClass
+                                                    : &X86::GR8_ABCD_LRegClass);
+      BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
+              TII.get(TargetOpcode::COPY), ValReg)
+          .addReg(KValReg);
+    }
     // Mask out all but lowest bit.
     unsigned AndResult = createResultReg(&X86::GR8RegClass);
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
@@ -1268,6 +1277,15 @@ bool X86FastISel::X86SelectRet(const Instruction *I) {
       if (SrcVT == MVT::i1) {
         if (Outs[0].Flags.isSExt())
           return false;
+        // In case SrcReg is a K register, COPY to a GPR
+        if (MRI.getRegClass(SrcReg) == &X86::VK1RegClass) {
+          unsigned KSrcReg = SrcReg;
+          SrcReg = createResultReg(Subtarget->is64Bit() ? &X86::GR8RegClass
+                                                    : &X86::GR8_ABCD_LRegClass);
+          BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
+                  TII.get(TargetOpcode::COPY), SrcReg)
+              .addReg(KSrcReg);
+        }
         SrcReg = fastEmitZExtFromI1(MVT::i8, SrcReg, /*TODO: Kill=*/false);
         SrcVT = MVT::i8;
       }
@@ -1559,6 +1577,16 @@ bool X86FastISel::X86SelectZExt(const Instruction *I) {
   // Handle zero-extension from i1 to i8, which is common.
   MVT SrcVT = TLI.getSimpleValueType(DL, I->getOperand(0)->getType());
   if (SrcVT == MVT::i1) {
+    // In case ResultReg is a K register, COPY to a GPR
+    if (MRI.getRegClass(ResultReg) == &X86::VK1RegClass) {
+      unsigned KResultReg = ResultReg;
+      ResultReg = createResultReg(Subtarget->is64Bit() ? &X86::GR8RegClass
+                                                    : &X86::GR8_ABCD_LRegClass);
+      BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
+              TII.get(TargetOpcode::COPY), ResultReg)
+          .addReg(KResultReg);
+    }
+
     // Set the high bits to zero.
     ResultReg = fastEmitZExtFromI1(MVT::i8, ResultReg, /*TODO: Kill=*/false);
     SrcVT = MVT::i8;
@@ -1740,7 +1768,8 @@ bool X86FastISel::X86SelectBranch(const Instruction *I) {
   // In case OpReg is a K register, COPY to a GPR
   if (MRI.getRegClass(OpReg) == &X86::VK1RegClass) {
     unsigned KOpReg = OpReg;
-    OpReg = createResultReg(&X86::GR8RegClass);
+    OpReg = createResultReg(Subtarget->is64Bit() ? &X86::GR8RegClass
+                                                 : &X86::GR8_ABCD_LRegClass);
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
             TII.get(TargetOpcode::COPY), OpReg)
         .addReg(KOpReg);
@@ -2084,7 +2113,8 @@ bool X86FastISel::X86FastEmitCMoveSelect(MVT RetVT, const Instruction *I) {
     // In case OpReg is a K register, COPY to a GPR
     if (MRI.getRegClass(CondReg) == &X86::VK1RegClass) {
       unsigned KCondReg = CondReg;
-      CondReg = createResultReg(&X86::GR8RegClass);
+      CondReg = createResultReg(Subtarget->is64Bit() ?
+                                &X86::GR8RegClass : &X86::GR8_ABCD_LRegClass);
       BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
               TII.get(TargetOpcode::COPY), CondReg)
           .addReg(KCondReg, getKillRegState(CondIsKill));
@@ -2297,7 +2327,8 @@ bool X86FastISel::X86FastEmitPseudoSelect(MVT RetVT, const Instruction *I) {
     // In case OpReg is a K register, COPY to a GPR
     if (MRI.getRegClass(CondReg) == &X86::VK1RegClass) {
       unsigned KCondReg = CondReg;
-      CondReg = createResultReg(&X86::GR8RegClass);
+      CondReg = createResultReg(Subtarget->is64Bit() ?
+                                &X86::GR8RegClass : &X86::GR8_ABCD_LRegClass);
       BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
               TII.get(TargetOpcode::COPY), CondReg)
           .addReg(KCondReg, getKillRegState(CondIsKill));

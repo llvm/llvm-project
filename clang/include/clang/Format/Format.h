@@ -136,6 +136,12 @@ struct FormatStyle {
 
   /// \brief Allow putting all parameters of a function declaration onto
   /// the next line even if ``BinPackParameters`` is ``false``.
+  /// \code
+  ///   true:                                   false:
+  ///   myFunction(foo,                 vs.     myFunction(foo, bar, plop);
+  ///              bar,
+  ///              plop);
+  /// \endcode
   bool AllowAllParametersOfDeclarationOnNextLine;
 
   /// \brief Allows contracting simple braced statements to a single line.
@@ -334,23 +340,133 @@ struct FormatStyle {
   /// \brief Different ways to attach braces to their surrounding context.
   enum BraceBreakingStyle {
     /// Always attach braces to surrounding context.
+    /// \code
+    ///   try {
+    ///     foo();
+    ///   } catch () {
+    ///   }
+    ///   void foo() { bar(); }
+    ///   class foo {};
+    ///   if (foo()) {
+    ///   } else {
+    ///   }
+    ///   enum X : int { A, B };
+    /// \endcode
     BS_Attach,
     /// Like ``Attach``, but break before braces on function, namespace and
     /// class definitions.
+    /// \code
+    ///   try {
+    ///     foo();
+    ///   } catch () {
+    ///   }
+    ///   void foo() { bar(); }
+    ///   class foo
+    ///   {
+    ///   };
+    ///   if (foo()) {
+    ///   } else {
+    ///   }
+    ///   enum X : int { A, B };
+    /// \endcode
     BS_Linux,
     /// Like ``Attach``, but break before braces on enum, function, and record
     /// definitions.
+    /// \code
+    ///   try {
+    ///     foo();
+    ///   } catch () {
+    ///   }
+    ///   void foo() { bar(); }
+    ///   class foo
+    ///   {
+    ///   };
+    ///   if (foo()) {
+    ///   } else {
+    ///   }
+    ///   enum X : int { A, B };
+    /// \endcode
     BS_Mozilla,
     /// Like ``Attach``, but break before function definitions, ``catch``, and
     /// ``else``.
+    /// \code
+    ///   try {
+    ///     foo();
+    ///   } catch () {
+    ///   }
+    ///   void foo() { bar(); }
+    ///   class foo
+    ///   {
+    ///   };
+    ///   if (foo()) {
+    ///   } else {
+    ///   }
+    ///   enum X : int
+    ///   {
+    ///     A,
+    ///     B
+    ///   };
+    /// \endcode
     BS_Stroustrup,
     /// Always break before braces.
+    /// \code
+    ///   try {
+    ///     foo();
+    ///   }
+    ///   catch () {
+    ///   }
+    ///   void foo() { bar(); }
+    ///   class foo {
+    ///   };
+    ///   if (foo()) {
+    ///   }
+    ///   else {
+    ///   }
+    ///   enum X : int { A, B };
+    /// \endcode
     BS_Allman,
     /// Always break before braces and add an extra level of indentation to
     /// braces of control statements, not to those of class, function
     /// or other definitions.
+    /// \code
+    ///   try
+    ///     {
+    ///       foo();
+    ///     }
+    ///   catch ()
+    ///     {
+    ///     }
+    ///   void foo() { bar(); }
+    ///   class foo
+    ///   {
+    ///   };
+    ///   if (foo())
+    ///     {
+    ///     }
+    ///   else
+    ///     {
+    ///     }
+    ///   enum X : int
+    ///   {
+    ///     A,
+    ///     B
+    ///   };
+    /// \endcode
     BS_GNU,
     /// Like ``Attach``, but break before functions.
+    /// \code
+    ///   try {
+    ///     foo();
+    ///   } catch () {
+    ///   }
+    ///   void foo() { bar(); }
+    ///   class foo {
+    ///   };
+    ///   if (foo()) {
+    ///   } else {
+    ///   }
+    ///   enum X : int { A, B };
+    /// \endcode
     BS_WebKit,
     /// Configure each individual brace in `BraceWrapping`.
     BS_Custom
@@ -360,26 +476,144 @@ struct FormatStyle {
   BraceBreakingStyle BreakBeforeBraces;
 
   /// \brief Precise control over the wrapping of braces.
+  /// \code
+  ///   # Should be declared this way:
+  ///   BreakBeforeBraces: Custom
+  ///   BraceWrapping:
+  ///       AfterClass: true
+  /// \endcode
   struct BraceWrappingFlags {
     /// \brief Wrap class definitions.
+    /// \code
+    ///   true:
+    ///   class foo {};
+    ///
+    ///   false:
+    ///   class foo
+    ///   {};
+    /// \endcode
     bool AfterClass;
     /// \brief Wrap control statements (``if``/``for``/``while``/``switch``/..).
+    /// \code
+    ///   true:
+    ///   if (foo())
+    ///   {
+    ///   } else
+    ///   {}
+    ///   for (int i = 0; i < 10; ++i)
+    ///   {}
+    ///
+    ///   false:
+    ///   if (foo()) {
+    ///   } else {
+    ///   }
+    ///   for (int i = 0; i < 10; ++i) {
+    ///   }
+    /// \endcode
     bool AfterControlStatement;
     /// \brief Wrap enum definitions.
+    /// \code
+    ///   true:
+    ///   enum X : int
+    ///   {
+    ///     B
+    ///   };
+    ///
+    ///   false:
+    ///   enum X : int { B };
+    /// \endcode
     bool AfterEnum;
     /// \brief Wrap function definitions.
+    /// \code
+    ///   true:
+    ///   void foo()
+    ///   {
+    ///     bar();
+    ///     bar2();
+    ///   }
+    ///
+    ///   false:
+    ///   void foo() {
+    ///     bar();
+    ///     bar2();
+    ///   }
+    /// \endcode
     bool AfterFunction;
     /// \brief Wrap namespace definitions.
+    /// \code
+    ///   true:
+    ///   namespace
+    ///   {
+    ///   int foo();
+    ///   int bar();
+    ///   }
+    ///
+    ///   false:
+    ///   namespace {
+    ///   int foo();
+    ///   int bar();
+    ///   }
+    /// \endcode
     bool AfterNamespace;
     /// \brief Wrap ObjC definitions (``@autoreleasepool``, interfaces, ..).
     bool AfterObjCDeclaration;
     /// \brief Wrap struct definitions.
+    /// \code
+    ///   true:
+    ///   struct foo
+    ///   {
+    ///     int x;
+    ///   }
+    ///
+    ///   false:
+    ///   struct foo {
+    ///     int x;
+    ///   }
+    /// \endcode
     bool AfterStruct;
     /// \brief Wrap union definitions.
+    /// \code
+    ///   true:
+    ///   union foo
+    ///   {
+    ///     int x;
+    ///   }
+    ///
+    ///   false:
+    ///   union foo {
+    ///     int x;
+    ///   }
+    /// \endcode
     bool AfterUnion;
     /// \brief Wrap before ``catch``.
+    /// \code
+    ///   true:
+    ///   try {
+    ///     foo();
+    ///   }
+    ///   catch () {
+    ///   }
+    ///
+    ///   false:
+    ///   try {
+    ///     foo();
+    ///   } catch () {
+    ///   }
+    /// \endcode
     bool BeforeCatch;
     /// \brief Wrap before ``else``.
+    /// \code
+    ///   true:
+    ///   if (foo()) {
+    ///   }
+    ///   else {
+    ///   }
+    ///
+    ///   false:
+    ///   if (foo()) {
+    ///   } else {
+    ///   }
+    /// \endcode
     bool BeforeElse;
     /// \brief Indent the wrapped braces themselves.
     bool IndentBraces;
@@ -392,6 +626,17 @@ struct FormatStyle {
   BraceWrappingFlags BraceWrapping;
 
   /// \brief If ``true``, ternary operators will be placed after line breaks.
+  /// \code
+  ///    true:
+  ///    veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongDescription
+  ///        ? firstValue
+  ///        : SecondValueVeryVeryVeryVeryLong;
+  ///
+  ///    true:
+  ///    veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongDescription ?
+  ///        firstValue :
+  ///        SecondValueVeryVeryVeryVeryLong;
+  /// \endcode
   bool BreakBeforeTernaryOperators;
 
   /// \brief Always break constructor initializers before commas and align
@@ -424,10 +669,31 @@ struct FormatStyle {
 
   /// \brief If ``true``, in the class inheritance expression clang-format will
   /// break before ``:`` and ``,`` if there is multiple inheritance.
+  /// \code
+  ///    true:                                  false:
+  ///    class MyClass                  vs.     class MyClass : public X, public Y {
+  ///        : public X                         };
+  ///        , public Y {
+  ///    };
+  /// \endcode
   bool BreakBeforeInheritanceComma;
 
   /// \brief If the constructor initializers don't fit on a line, put each
   /// initializer on its own line.
+  /// \code
+  ///   true:
+  ///   SomeClass::Constructor()
+  ///       : aaaaaaaa(aaaaaaaa), aaaaaaaa(aaaaaaaa), aaaaaaaa(aaaaaaaaaaaaaaaaaaaaaaaaa) {
+  ///     return 0;
+  ///   }
+  ///
+  ///   false:
+  ///   SomeClass::Constructor()
+  ///       : aaaaaaaa(aaaaaaaa), aaaaaaaa(aaaaaaaa),
+  ///         aaaaaaaa(aaaaaaaaaaaaaaaaaaaaaaaaa) {
+  ///     return 0;
+  ///   }
+  /// \endcode
   bool ConstructorInitializerAllOnOneLineOrOnePerLine;
 
   /// \brief The number of characters to use for indentation of constructor

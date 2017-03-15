@@ -12,7 +12,8 @@ define i64 @t0(<1 x i64>* %a, i32* %b) nounwind {
 ; X86-NEXT:    movl 12(%ebp), %eax
 ; X86-NEXT:    movl 8(%ebp), %ecx
 ; X86-NEXT:    movq (%ecx), %mm0
-; X86-NEXT:    psllq (%eax), %mm0
+; X86-NEXT:    movd (%eax), %mm1
+; X86-NEXT:    psllq %mm1, %mm0
 ; X86-NEXT:    movq %mm0, (%esp)
 ; X86-NEXT:    movl (%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
@@ -23,7 +24,8 @@ define i64 @t0(<1 x i64>* %a, i32* %b) nounwind {
 ; X64-LABEL: t0:
 ; X64:       # BB#0: # %entry
 ; X64-NEXT:    movq (%rdi), %mm0
-; X64-NEXT:    psllq (%rsi), %mm0
+; X64-NEXT:    movd (%rsi), %mm1
+; X64-NEXT:    psllq %mm1, %mm0
 ; X64-NEXT:    movd %mm0, %rax
 ; X64-NEXT:    retq
 entry:
@@ -46,7 +48,8 @@ define i64 @t1(<1 x i64>* %a, i32* %b) nounwind {
 ; X86-NEXT:    movl 12(%ebp), %eax
 ; X86-NEXT:    movl 8(%ebp), %ecx
 ; X86-NEXT:    movq (%ecx), %mm0
-; X86-NEXT:    psrlq (%eax), %mm0
+; X86-NEXT:    movd (%eax), %mm1
+; X86-NEXT:    psrlq %mm1, %mm0
 ; X86-NEXT:    movq %mm0, (%esp)
 ; X86-NEXT:    movl (%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
@@ -57,7 +60,8 @@ define i64 @t1(<1 x i64>* %a, i32* %b) nounwind {
 ; X64-LABEL: t1:
 ; X64:       # BB#0: # %entry
 ; X64-NEXT:    movq (%rdi), %mm0
-; X64-NEXT:    psrlq (%rsi), %mm0
+; X64-NEXT:    movd (%rsi), %mm1
+; X64-NEXT:    psrlq %mm1, %mm0
 ; X64-NEXT:    movd %mm0, %rax
 ; X64-NEXT:    retq
 entry:
@@ -80,7 +84,8 @@ define i64 @t2(<1 x i64>* %a, i32* %b) nounwind {
 ; X86-NEXT:    movl 12(%ebp), %eax
 ; X86-NEXT:    movl 8(%ebp), %ecx
 ; X86-NEXT:    movq (%ecx), %mm0
-; X86-NEXT:    psllw (%eax), %mm0
+; X86-NEXT:    movd (%eax), %mm1
+; X86-NEXT:    psllw %mm1, %mm0
 ; X86-NEXT:    movq %mm0, (%esp)
 ; X86-NEXT:    movl (%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
@@ -91,7 +96,8 @@ define i64 @t2(<1 x i64>* %a, i32* %b) nounwind {
 ; X64-LABEL: t2:
 ; X64:       # BB#0: # %entry
 ; X64-NEXT:    movq (%rdi), %mm0
-; X64-NEXT:    psllw (%rsi), %mm0
+; X64-NEXT:    movd (%rsi), %mm1
+; X64-NEXT:    psllw %mm1, %mm0
 ; X64-NEXT:    movd %mm0, %rax
 ; X64-NEXT:    retq
 entry:
@@ -114,7 +120,8 @@ define i64 @t3(<1 x i64>* %a, i32* %b) nounwind {
 ; X86-NEXT:    movl 12(%ebp), %eax
 ; X86-NEXT:    movl 8(%ebp), %ecx
 ; X86-NEXT:    movq (%ecx), %mm0
-; X86-NEXT:    psrlw (%eax), %mm0
+; X86-NEXT:    movd (%eax), %mm1
+; X86-NEXT:    psrlw %mm1, %mm0
 ; X86-NEXT:    movq %mm0, (%esp)
 ; X86-NEXT:    movl (%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
@@ -125,7 +132,8 @@ define i64 @t3(<1 x i64>* %a, i32* %b) nounwind {
 ; X64-LABEL: t3:
 ; X64:       # BB#0: # %entry
 ; X64-NEXT:    movq (%rdi), %mm0
-; X64-NEXT:    psrlw (%rsi), %mm0
+; X64-NEXT:    movd (%rsi), %mm1
+; X64-NEXT:    psrlw %mm1, %mm0
 ; X64-NEXT:    movd %mm0, %rax
 ; X64-NEXT:    retq
 entry:
@@ -148,7 +156,8 @@ define i64 @t4(<1 x i64>* %a, i32* %b) nounwind {
 ; X86-NEXT:    movl 12(%ebp), %eax
 ; X86-NEXT:    movl 8(%ebp), %ecx
 ; X86-NEXT:    movq (%ecx), %mm0
-; X86-NEXT:    pslld (%eax), %mm0
+; X86-NEXT:    movd (%eax), %mm1
+; X86-NEXT:    pslld %mm1, %mm0
 ; X86-NEXT:    movq %mm0, (%esp)
 ; X86-NEXT:    movl (%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
@@ -159,7 +168,8 @@ define i64 @t4(<1 x i64>* %a, i32* %b) nounwind {
 ; X64-LABEL: t4:
 ; X64:       # BB#0: # %entry
 ; X64-NEXT:    movq (%rdi), %mm0
-; X64-NEXT:    pslld (%rsi), %mm0
+; X64-NEXT:    movd (%rsi), %mm1
+; X64-NEXT:    pslld %mm1, %mm0
 ; X64-NEXT:    movd %mm0, %rax
 ; X64-NEXT:    retq
 entry:
@@ -182,7 +192,8 @@ define i64 @t5(<1 x i64>* %a, i32* %b) nounwind {
 ; X86-NEXT:    movl 12(%ebp), %eax
 ; X86-NEXT:    movl 8(%ebp), %ecx
 ; X86-NEXT:    movq (%ecx), %mm0
-; X86-NEXT:    psrld (%eax), %mm0
+; X86-NEXT:    movd (%eax), %mm1
+; X86-NEXT:    psrld %mm1, %mm0
 ; X86-NEXT:    movq %mm0, (%esp)
 ; X86-NEXT:    movl (%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
@@ -193,7 +204,8 @@ define i64 @t5(<1 x i64>* %a, i32* %b) nounwind {
 ; X64-LABEL: t5:
 ; X64:       # BB#0: # %entry
 ; X64-NEXT:    movq (%rdi), %mm0
-; X64-NEXT:    psrld (%rsi), %mm0
+; X64-NEXT:    movd (%rsi), %mm1
+; X64-NEXT:    psrld %mm1, %mm0
 ; X64-NEXT:    movd %mm0, %rax
 ; X64-NEXT:    retq
 entry:
@@ -216,7 +228,8 @@ define i64 @t6(<1 x i64>* %a, i32* %b) nounwind {
 ; X86-NEXT:    movl 12(%ebp), %eax
 ; X86-NEXT:    movl 8(%ebp), %ecx
 ; X86-NEXT:    movq (%ecx), %mm0
-; X86-NEXT:    psraw (%eax), %mm0
+; X86-NEXT:    movd (%eax), %mm1
+; X86-NEXT:    psraw %mm1, %mm0
 ; X86-NEXT:    movq %mm0, (%esp)
 ; X86-NEXT:    movl (%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
@@ -227,7 +240,8 @@ define i64 @t6(<1 x i64>* %a, i32* %b) nounwind {
 ; X64-LABEL: t6:
 ; X64:       # BB#0: # %entry
 ; X64-NEXT:    movq (%rdi), %mm0
-; X64-NEXT:    psraw (%rsi), %mm0
+; X64-NEXT:    movd (%rsi), %mm1
+; X64-NEXT:    psraw %mm1, %mm0
 ; X64-NEXT:    movd %mm0, %rax
 ; X64-NEXT:    retq
 entry:
@@ -250,7 +264,8 @@ define i64 @t7(<1 x i64>* %a, i32* %b) nounwind {
 ; X86-NEXT:    movl 12(%ebp), %eax
 ; X86-NEXT:    movl 8(%ebp), %ecx
 ; X86-NEXT:    movq (%ecx), %mm0
-; X86-NEXT:    psrad (%eax), %mm0
+; X86-NEXT:    movd (%eax), %mm1
+; X86-NEXT:    psrad %mm1, %mm0
 ; X86-NEXT:    movq %mm0, (%esp)
 ; X86-NEXT:    movl (%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
@@ -261,7 +276,8 @@ define i64 @t7(<1 x i64>* %a, i32* %b) nounwind {
 ; X64-LABEL: t7:
 ; X64:       # BB#0: # %entry
 ; X64-NEXT:    movq (%rdi), %mm0
-; X64-NEXT:    psrad (%rsi), %mm0
+; X64-NEXT:    movd (%rsi), %mm1
+; X64-NEXT:    psrad %mm1, %mm0
 ; X64-NEXT:    movd %mm0, %rax
 ; X64-NEXT:    retq
 entry:
@@ -563,8 +579,6 @@ entry:
 }
 declare x86_mmx @llvm.x86.mmx.psrl.q(x86_mmx, x86_mmx)
 
-; FIXME: Show issue with storing i32 to stack and then reloading as x86_mmx
-; which will lead to garbage in the other 32-bits.
 define void @test_psrlq_by_volatile_shift_amount(x86_mmx* %t) nounwind {
 ; X86-LABEL: test_psrlq_by_volatile_shift_amount:
 ; X86:       # BB#0: # %entry
@@ -574,11 +588,12 @@ define void @test_psrlq_by_volatile_shift_amount(x86_mmx* %t) nounwind {
 ; X86-NEXT:    subl $16, %esp
 ; X86-NEXT:    movl 8(%ebp), %eax
 ; X86-NEXT:    movl $1, {{[0-9]+}}(%esp)
+; X86-NEXT:    movd {{[0-9]+}}(%esp), %mm0
 ; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl $255, {{[0-9]+}}(%esp)
-; X86-NEXT:    movq {{[0-9]+}}(%esp), %mm0
-; X86-NEXT:    psrlq {{[0-9]+}}(%esp), %mm0
-; X86-NEXT:    movq %mm0, (%eax)
+; X86-NEXT:    movq {{[0-9]+}}(%esp), %mm1
+; X86-NEXT:    psrlq %mm0, %mm1
+; X86-NEXT:    movq %mm1, (%eax)
 ; X86-NEXT:    movl %ebp, %esp
 ; X86-NEXT:    popl %ebp
 ; X86-NEXT:    retl
@@ -586,10 +601,11 @@ define void @test_psrlq_by_volatile_shift_amount(x86_mmx* %t) nounwind {
 ; X64-LABEL: test_psrlq_by_volatile_shift_amount:
 ; X64:       # BB#0: # %entry
 ; X64-NEXT:    movl $1, -{{[0-9]+}}(%rsp)
+; X64-NEXT:    movd -{{[0-9]+}}(%rsp), %mm0
 ; X64-NEXT:    movl $255, %eax
-; X64-NEXT:    movd %rax, %mm0
-; X64-NEXT:    psrlq -{{[0-9]+}}(%rsp), %mm0
-; X64-NEXT:    movq %mm0, (%rdi)
+; X64-NEXT:    movd %rax, %mm1
+; X64-NEXT:    psrlq %mm0, %mm1
+; X64-NEXT:    movq %mm1, (%rdi)
 ; X64-NEXT:    retq
 entry:
   %0 = alloca i32, align 4

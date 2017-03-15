@@ -90,49 +90,49 @@ private:
   // compression we add these entries manually.
   const std::vector<ManualEntry> ManuallyAddedEntries = {
     // EVEX-Inst              VEX-Inst           Is128-bit
-      {"VMOVDQU8Z128mr",      "VMOVDQUmr",       true},
-      {"VMOVDQU8Z128rm",      "VMOVDQUrm",       true},
-      {"VMOVDQU8Z128rr",      "VMOVDQUrr",       true},
-      {"VMOVDQU8Z128rr_REV",  "VMOVDQUrr_REV",   true},
-      {"VMOVDQU16Z128mr",     "VMOVDQUmr",       true},
-      {"VMOVDQU16Z128rm",     "VMOVDQUrm",       true},
-      {"VMOVDQU16Z128rr",     "VMOVDQUrr",       true},
-      {"VMOVDQU16Z128rr_REV", "VMOVDQUrr_REV",   true},
-      {"VMOVDQU8Z256mr",      "VMOVDQUYmr",      false},
-      {"VMOVDQU8Z256rm",      "VMOVDQUYrm",      false},
-      {"VMOVDQU8Z256rr",      "VMOVDQUYrr",      false},
-      {"VMOVDQU8Z256rr_REV",  "VMOVDQUYrr_REV",  false},
-      {"VMOVDQU16Z256mr",     "VMOVDQUYmr",      false},
-      {"VMOVDQU16Z256rm",     "VMOVDQUYrm",      false},
-      {"VMOVDQU16Z256rr",     "VMOVDQUYrr",      false},
-      {"VMOVDQU16Z256rr_REV", "VMOVDQUYrr_REV",  false},
+    {"VMOVDQU8Z128mr",      "VMOVDQUmr",       true},
+    {"VMOVDQU8Z128rm",      "VMOVDQUrm",       true},
+    {"VMOVDQU8Z128rr",      "VMOVDQUrr",       true},
+    {"VMOVDQU8Z128rr_REV",  "VMOVDQUrr_REV",   true},
+    {"VMOVDQU16Z128mr",     "VMOVDQUmr",       true},
+    {"VMOVDQU16Z128rm",     "VMOVDQUrm",       true},
+    {"VMOVDQU16Z128rr",     "VMOVDQUrr",       true},
+    {"VMOVDQU16Z128rr_REV", "VMOVDQUrr_REV",   true},
+    {"VMOVDQU8Z256mr",      "VMOVDQUYmr",      false},
+    {"VMOVDQU8Z256rm",      "VMOVDQUYrm",      false},
+    {"VMOVDQU8Z256rr",      "VMOVDQUYrr",      false},
+    {"VMOVDQU8Z256rr_REV",  "VMOVDQUYrr_REV",  false},
+    {"VMOVDQU16Z256mr",     "VMOVDQUYmr",      false},
+    {"VMOVDQU16Z256rm",     "VMOVDQUYrm",      false},
+    {"VMOVDQU16Z256rr",     "VMOVDQUYrr",      false},
+    {"VMOVDQU16Z256rr_REV", "VMOVDQUYrr_REV",  false},
 
-      {"VPERMILPDZ128mi",     "VPERMILPDmi",     true},
-      {"VPERMILPDZ128ri",     "VPERMILPDri",     true},
-      {"VPERMILPDZ128rm",     "VPERMILPDrm",     true},
-      {"VPERMILPDZ128rr",     "VPERMILPDrr",     true},
-      {"VPERMILPDZ256mi",     "VPERMILPDYmi",    false},
-      {"VPERMILPDZ256ri",     "VPERMILPDYri",    false},
-      {"VPERMILPDZ256rm",     "VPERMILPDYrm",    false},
-      {"VPERMILPDZ256rr",     "VPERMILPDYrr",    false},
+    {"VPERMILPDZ128mi",     "VPERMILPDmi",     true},
+    {"VPERMILPDZ128ri",     "VPERMILPDri",     true},
+    {"VPERMILPDZ128rm",     "VPERMILPDrm",     true},
+    {"VPERMILPDZ128rr",     "VPERMILPDrr",     true},
+    {"VPERMILPDZ256mi",     "VPERMILPDYmi",    false},
+    {"VPERMILPDZ256ri",     "VPERMILPDYri",    false},
+    {"VPERMILPDZ256rm",     "VPERMILPDYrm",    false},
+    {"VPERMILPDZ256rr",     "VPERMILPDYrr",    false},
 
-      {"VPBROADCASTQZ128m",   "VPBROADCASTQrm",  true},
-      {"VPBROADCASTQZ128r",   "VPBROADCASTQrr",  true},
-      {"VPBROADCASTQZ256m",   "VPBROADCASTQYrm", false},
-      {"VPBROADCASTQZ256r",   "VPBROADCASTQYrr", false},
+    {"VPBROADCASTQZ128m",   "VPBROADCASTQrm",  true},
+    {"VPBROADCASTQZ128r",   "VPBROADCASTQrr",  true},
+    {"VPBROADCASTQZ256m",   "VPBROADCASTQYrm", false},
+    {"VPBROADCASTQZ256r",   "VPBROADCASTQYrr", false},
 
-      {"VBROADCASTSDZ256m",   "VBROADCASTSDYrm", false},
-      {"VBROADCASTSDZ256r",   "VBROADCASTSDYrr", false},
+    {"VBROADCASTSDZ256m",   "VBROADCASTSDYrm", false},
+    {"VBROADCASTSDZ256r",   "VBROADCASTSDYrr", false},
 
-      {"VEXTRACTF64x2Z256mr", "VEXTRACTF128mr",  false},
-      {"VEXTRACTF64x2Z256rr", "VEXTRACTF128rr",  false},
-      {"VEXTRACTI64x2Z256mr", "VEXTRACTI128mr",  false},
-      {"VEXTRACTI64x2Z256rr", "VEXTRACTI128rr",  false},
+    {"VEXTRACTF64x2Z256mr", "VEXTRACTF128mr",  false},
+    {"VEXTRACTF64x2Z256rr", "VEXTRACTF128rr",  false},
+    {"VEXTRACTI64x2Z256mr", "VEXTRACTI128mr",  false},
+    {"VEXTRACTI64x2Z256rr", "VEXTRACTI128rr",  false},
 
-      {"VINSERTF64x2Z256rm",  "VINSERTF128rm",   false},
-      {"VINSERTF64x2Z256rr",  "VINSERTF128rr",   false},
-      {"VINSERTI64x2Z256rm",  "VINSERTI128rm",   false},
-      {"VINSERTI64x2Z256rr",  "VINSERTI128rr",   false}
+    {"VINSERTF64x2Z256rm",  "VINSERTF128rm",   false},
+    {"VINSERTF64x2Z256rr",  "VINSERTF128rr",   false},
+    {"VINSERTI64x2Z256rm",  "VINSERTI128rm",   false},
+    {"VINSERTI64x2Z256rr",  "VINSERTI128rr",   false}
   };
 };
 
@@ -149,7 +149,7 @@ void X86EVEX2VEXTablesEmitter::printTable(const std::vector<Entry> &Table,
 
   // Print all entries added to the table
   for (auto Pair : Table) {
-    OS << "{ X86::" << Pair.first->TheDef->getName()
+    OS << "  { X86::" << Pair.first->TheDef->getName()
        << ", X86::" << Pair.second->TheDef->getName() << " },\n";
   }
 
@@ -157,7 +157,7 @@ void X86EVEX2VEXTablesEmitter::printTable(const std::vector<Entry> &Table,
   for (const ManualEntry &Entry : ManuallyAddedEntries) {
     if ((Table == EVEX2VEX128 && Entry.Is128Bit) ||
         (Table == EVEX2VEX256 && !Entry.Is128Bit)) {
-      OS << "{ X86::" << Entry.EVEXInstStr << ", X86::" << Entry.VEXInstStr
+      OS << "  { X86::" << Entry.EVEXInstStr << ", X86::" << Entry.VEXInstStr
          << " },\n";
     }
   }
@@ -242,7 +242,7 @@ public:
         if (getRegOperandSize(OpRec1) != getRegOperandSize(OpRec2))
           return false;
       } else if (isMemoryOperand(OpRec1) && isMemoryOperand(OpRec2)) {
-          return false;
+        return false;
       } else if (isImmediateOperand(OpRec1) && isImmediateOperand(OpRec2)) {
         if (OpRec1->getValueAsDef("Type") != OpRec2->getValueAsDef("Type"))
           return false;

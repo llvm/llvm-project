@@ -184,27 +184,15 @@ entry:
   ret <16 x i16> %a0
 }
 
-; TODO: The div-by-0 lanes are folded away, so we use scalar ops. Would it be better to keep this in the vector unit?
+; Div-by-0 in any lane is UB.
 
 define <4 x i32> @sdiv_non_splat(<4 x i32> %x) {
 ; SSE-LABEL: sdiv_non_splat:
 ; SSE:       # BB#0:
-; SSE-NEXT:    movd %xmm0, %eax
-; SSE-NEXT:    movl %eax, %ecx
-; SSE-NEXT:    shrl $31, %ecx
-; SSE-NEXT:    addl %eax, %ecx
-; SSE-NEXT:    sarl %ecx
-; SSE-NEXT:    movd %ecx, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: sdiv_non_splat:
 ; AVX:       # BB#0:
-; AVX-NEXT:    vmovd %xmm0, %eax
-; AVX-NEXT:    movl %eax, %ecx
-; AVX-NEXT:    shrl $31, %ecx
-; AVX-NEXT:    addl %eax, %ecx
-; AVX-NEXT:    sarl %ecx
-; AVX-NEXT:    vmovd %ecx, %xmm0
 ; AVX-NEXT:    retq
   %y = sdiv <4 x i32> %x, <i32 2, i32 0, i32 0, i32 0>
   ret <4 x i32> %y

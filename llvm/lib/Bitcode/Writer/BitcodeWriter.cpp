@@ -3708,9 +3708,16 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
     for (auto &EI : FS->calls()) {
       // If this GUID doesn't have a value id, it doesn't have a function
       // summary and we don't need to record any calls to it.
-      if (!hasValueId(EI.first.getGUID()))
-        continue;
-      NameVals.push_back(getValueId(EI.first.getGUID()));
+      GlobalValue::GUID GUID = EI.first.getGUID();
+      if (!hasValueId(GUID)) {
+        // For SamplePGO, the indirect call targets for local functions will
+        // have its original name annotated in profile. We try to find the
+        // corresponding PGOFuncName as the GUID.
+        GUID = Index.getGUIDFromOriginalID(GUID);
+        if (GUID == 0 || !hasValueId(GUID))
+          continue;
+      }
+      NameVals.push_back(getValueId(GUID));
       if (HasProfileData)
         NameVals.push_back(static_cast<uint8_t>(EI.second.Hotness));
     }

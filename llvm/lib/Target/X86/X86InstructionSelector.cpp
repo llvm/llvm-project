@@ -35,12 +35,19 @@ using namespace llvm;
 #error "You shouldn't build this"
 #endif
 
+#define GET_GLOBALISEL_IMPL
 #include "X86GenGlobalISel.inc"
+#undef GET_GLOBALISEL_IMPL
 
 X86InstructionSelector::X86InstructionSelector(const X86Subtarget &STI,
                                                const X86RegisterBankInfo &RBI)
     : InstructionSelector(), STI(STI), TII(*STI.getInstrInfo()),
-      TRI(*STI.getRegisterInfo()), RBI(RBI) {}
+      TRI(*STI.getRegisterInfo()), RBI(RBI)
+#define GET_GLOBALISEL_TEMPORARIES_INIT
+#include "X86GenGlobalISel.inc"
+#undef GET_GLOBALISEL_TEMPORARIES_INIT
+{
+}
 
 // FIXME: This should be target-independent, inferred from the types declared
 // for each class in the bank.

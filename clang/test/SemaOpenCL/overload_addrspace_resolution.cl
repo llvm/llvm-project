@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -cl-std=CL2.0 -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -cl-std=CL2.0 -emit-llvm -o - -triple x86_64-unknown-unknown %s | FileCheck %s
 
 void __attribute__((overloadable)) foo(global int *a, global int *b);
 void __attribute__((overloadable)) foo(generic int *a, generic int *b);

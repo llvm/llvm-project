@@ -113,6 +113,7 @@ template <> struct ScalarEnumerationTraits<RegisterId> {
     for (const auto &E : RegNames) {
       io.enumCase(Reg, E.Name.str().c_str(), static_cast<RegisterId>(E.Value));
     }
+    io.enumFallback<Hex16>(Reg);
   }
 };
 

@@ -54,6 +54,7 @@ namespace format {
   TYPE(JavaAnnotation) \
   TYPE(JsComputedPropertyName) \
   TYPE(JsFatArrow) \
+  TYPE(JsNonNullAssertion) \
   TYPE(JsTypeColon) \
   TYPE(JsTypeOperator) \
   TYPE(JsTypeOptionalQuestion) \

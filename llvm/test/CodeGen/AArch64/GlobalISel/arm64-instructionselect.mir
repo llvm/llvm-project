@@ -11,6 +11,9 @@
   define void @add_s32_gpr() { ret void }
   define void @add_s64_gpr() { ret void }
 
+  define void @add_imm_s32_gpr() { ret void }
+  define void @add_imm_s32_gpr_bb() { ret void }
+
   define void @sub_s32_gpr() { ret void }
   define void @sub_s64_gpr() { ret void }
 
@@ -201,6 +204,69 @@ body:             |
     %0(s64) = COPY %x0
     %1(s64) = COPY %x1
     %2(s64) = G_ADD %0, %1
+...
+
+---
+# Check that we select a 32-bit GPR G_ADD into ADDWrr on GPR32.
+# Also check that we constrain the register class of the COPY to GPR32.
+# CHECK-LABEL: name: add_imm_s32_gpr
+name:            add_imm_s32_gpr
+legalized:       true
+regBankSelected: true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: gpr32sp }
+# CHECK-NEXT:  - { id: 1, class: gpr32 }
+# CHECK-NEXT:  - { id: 2, class: gpr32sp }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+  - { id: 2, class: gpr }
+
+# CHECK:  body:
+# CHECK:    %0 = COPY %w0
+# CHECK:    %2 = ADDWri %0, 1, 0
+body:             |
+  bb.0:
+    liveins: %w0, %w1
+
+    %0(s32) = COPY %w0
+    %1(s32) = G_CONSTANT 1
+    %2(s32) = G_ADD %0, %1
+...
+
+---
+# Check that we select a 32-bit GPR G_ADD into ADDWrr on GPR32.
+# Also check that we constrain the register class of the COPY to GPR32.
+# CHECK-LABEL: name: add_imm_s32_gpr_bb
+name:            add_imm_s32_gpr_bb
+legalized:       true
+regBankSelected: true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: gpr32sp }
+# CHECK-NEXT:  - { id: 1, class: gpr32 }
+# CHECK-NEXT:  - { id: 2, class: gpr32sp }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+  - { id: 2, class: gpr }
+
+# CHECK:  body:
+# CHECK:    %0 = COPY %w0
+# CHECK:  bb.1:
+# CHECK:    %2 = ADDWri %0, 1, 0
+body:             |
+  bb.0:
+    liveins: %w0, %w1
+    successors: %bb.1
+
+    %0(s32) = COPY %w0
+    %1(s32) = G_CONSTANT 1
+    G_BR %bb.1
+
+  bb.1:
+    %2(s32) = G_ADD %0, %1
 ...
 
 ---

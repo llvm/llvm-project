@@ -43,3 +43,9 @@ def : GINodeEquiv<G_SREM, srem>;
 def : GINodeEquiv<G_UREM, urem>;
 
 def : GINodeEquiv<G_BR, br>;
+
+// Specifies the GlobalISel equivalents for SelectionDAG's ComplexPattern.
+// Should be used on defs that subclass GIComplexOperandMatcher<>.
+class GIComplexPatternEquiv<ComplexPattern seldag> {
+  ComplexPattern SelDAGEquivalent = seldag;
+}

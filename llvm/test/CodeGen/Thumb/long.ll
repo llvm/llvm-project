@@ -132,8 +132,7 @@ entry:
 ; CHECK: sbcs r1, r2
 }
 
-define i64 @f9d(i64 %x, i32 %y) { ; SUBS with small negative imm => SUBS reg
-; FIXME: this would be better lowered as an `ADDS imm`
+define i64 @f9d(i64 %x, i32 %y) { ; SUBS with small negative imm => ADDS imm
 entry:
         %conv = sext i32 %y to i64
         %shl = shl i64 %conv, 32
@@ -141,9 +140,7 @@ entry:
         %sub = sub nsw i64 %x, %or
         ret i64 %sub
 ; CHECK-LABEL: f9d:
-; CHECK: movs r3, #0
-; CHECK: mvns r3, r3
-; CHECK: subs r0, r0, r3
+; CHECK: adds r0, r0, #1
 ; CHECK: sbcs r1, r2
 }
 
@@ -187,11 +184,12 @@ entry:
         %tmp2 = add i64 %tmp1, -1000
         ret i64 %tmp2
 ; CHECK-LABEL: f11:
+; CHECK: movs r0, #125
+; CHECK: lsls r0, r0, #3
 ; CHECK: movs r1, #0
-; CHECK: ldr  r0,
-; CHECK: adds r2, r2, r0
+; CHECK: subs r2, r2, r0
 ; CHECK: sbcs r3, r1
-; CHECK: adds r0, r2, r0
+; CHECK: subs r0, r2, r0
 ; CHECK: sbcs r3, r1
 ; CHECK: movs r1, r3
 }

@@ -364,6 +364,9 @@ def parseOptionsAndInitTestdirs():
 
     if args.executable:
         lldbtest_config.lldbExec = os.path.realpath(args.executable)
+    
+    if args.server:
+        os.environ['LLDB_DEBUGSERVER_PATH'] = args.server
 
     if args.excluded:
         for excl_file in args.excluded:

@@ -15,6 +15,7 @@
 
 #if __LDBL_MANT_DIG__ == 113
 
+#include "int_lib.h"
 #include "fp_test.h"
 
 // Returns: a * b

@@ -28,6 +28,7 @@
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/DiagnosticPrinter.h"
+#include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IRReader/IRReader.h"
@@ -38,6 +39,8 @@
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/YAMLTraits.h"
+#include "llvm/Transforms/IPO/Internalize.h"
+
 #include <memory>
 using namespace clang;
 using namespace llvm;
@@ -168,8 +171,22 @@ namespace clang {
             Gen->CGM().AddDefaultFnAttrs(F);
 
         CurLinkModule = LM.Module.get();
-        if (Linker::linkModules(*getModule(), std::move(LM.Module),
-                                LM.LinkFlags))
+
+        bool Err;
+        if (LM.Internalize) {
+          Err = Linker::linkModules(
+              *getModule(), std::move(LM.Module), LM.LinkFlags,
+              [](llvm::Module &M, const llvm::StringSet<> &GVS) {
+                internalizeModule(M, [&GVS](const llvm::GlobalValue &GV) {
+                  return !GV.hasName() || (GVS.count(GV.getName()) == 0);
+                });
+              });
+        } else {
+          Err = Linker::linkModules(*getModule(), std::move(LM.Module),
+                                    LM.LinkFlags);
+        }
+
+        if (Err)
           return true;
       }
       return false; // success
@@ -319,7 +336,7 @@ namespace clang {
     void OptimizationFailureHandler(
         const llvm::DiagnosticInfoOptimizationFailure &D);
   };
-  
+
   void BackendConsumer::anchor() {}
 }
 
@@ -388,7 +405,7 @@ void BackendConsumer::InlineAsmDiagHandler2(const llvm::SMDiagnostic &D,
   // code.
   if (LocCookie.isValid()) {
     Diags.Report(LocCookie, DiagID).AddString(Message);
-    
+
     if (D.getLoc().isValid()) {
       DiagnosticBuilder B = Diags.Report(Loc, diag::note_fe_inline_asm_here);
       // Convert the SMDiagnostic ranges into SourceRange and attach them
@@ -401,7 +418,7 @@ void BackendConsumer::InlineAsmDiagHandler2(const llvm::SMDiagnostic &D,
     }
     return;
   }
-  
+
   // Otherwise, report the backend issue as occurring in the generated .s file.
   // If Loc is invalid, we still need to report the issue, it just gets no
   // location info.
@@ -815,8 +832,8 @@ CodeGenAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
         LinkModules.clear();
         return nullptr;
       }
-      LinkModules.push_back(
-          {std::move(ModuleOrErr.get()), F.PropagateAttrs, F.LinkFlags});
+      LinkModules.push_back({std::move(ModuleOrErr.get()), F.PropagateAttrs,
+                             F.Internalize, F.LinkFlags});
     }
 
   CoverageSourceInfo *CoverageInfo = nullptr;

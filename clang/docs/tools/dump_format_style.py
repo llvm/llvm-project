@@ -64,7 +64,7 @@ class NestedField:
     self.comment = comment.strip()
 
   def __str__(self):
-    return '* ``%s`` %s' % (self.name, doxygen2rst(self.comment))
+    return '\n* ``%s`` %s' % (self.name, doxygen2rst(self.comment))
 
 class Enum:
   def __init__(self, name, comment):

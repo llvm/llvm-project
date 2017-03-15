@@ -19,6 +19,7 @@
 
 #include "AMDGPU.h"
 #include "AMDGPUIntrinsicInfo.h"
+#include "AMDGPUTargetMachine.h"
 #include "AMDGPUSubtarget.h"
 #include "SIDefines.h"
 #include "SIISelLowering.h"
@@ -68,7 +69,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Target/TargetCallingConv.h"
-#include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Target/TargetRegisterInfo.h"
 #include <cassert>
@@ -2380,15 +2380,17 @@ SDValue SITargetLowering::lowerADDRSPACECAST(SDValue Op,
   const AddrSpaceCastSDNode *ASC = cast<AddrSpaceCastSDNode>(Op);
 
   SDValue Src = ASC->getOperand(0);
-
-  // FIXME: Really support non-0 null pointers.
-  SDValue SegmentNullPtr = DAG.getConstant(-1, SL, MVT::i32);
   SDValue FlatNullPtr = DAG.getConstant(0, SL, MVT::i64);
+
+  const AMDGPUTargetMachine &TM =
+    static_cast<const AMDGPUTargetMachine &>(getTargetMachine());
 
   // flat -> local/private
   if (ASC->getSrcAddressSpace() == AMDGPUAS::FLAT_ADDRESS) {
-    if (ASC->getDestAddressSpace() == AMDGPUAS::LOCAL_ADDRESS ||
-        ASC->getDestAddressSpace() == AMDGPUAS::PRIVATE_ADDRESS) {
+    unsigned DestAS = ASC->getDestAddressSpace();
+    if (DestAS == AMDGPUAS::LOCAL_ADDRESS || DestAS == AMDGPUAS::PRIVATE_ADDRESS) {
+      unsigned NullVal = TM.getNullPointerValue(DestAS);
+      SDValue SegmentNullPtr = DAG.getConstant(NullVal, SL, MVT::i32);
       SDValue NonNull = DAG.getSetCC(SL, MVT::i1, Src, FlatNullPtr, ISD::SETNE);
       SDValue Ptr = DAG.getNode(ISD::TRUNCATE, SL, MVT::i32, Src);
 
@@ -2399,8 +2401,11 @@ SDValue SITargetLowering::lowerADDRSPACECAST(SDValue Op,
 
   // local/private -> flat
   if (ASC->getDestAddressSpace() == AMDGPUAS::FLAT_ADDRESS) {
-    if (ASC->getSrcAddressSpace() == AMDGPUAS::LOCAL_ADDRESS ||
-        ASC->getSrcAddressSpace() == AMDGPUAS::PRIVATE_ADDRESS) {
+    unsigned SrcAS = ASC->getSrcAddressSpace();
+    if (SrcAS == AMDGPUAS::LOCAL_ADDRESS || SrcAS == AMDGPUAS::PRIVATE_ADDRESS) {
+      unsigned NullVal = TM.getNullPointerValue(SrcAS);
+      SDValue SegmentNullPtr = DAG.getConstant(NullVal, SL, MVT::i32);
+
       SDValue NonNull
         = DAG.getSetCC(SL, MVT::i1, Src, SegmentNullPtr, ISD::SETNE);
 
@@ -2923,11 +2928,6 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     SDValue Node = DAG.getNode(AMDGPUISD::CVT_PKRTZ_F16_F32, DL, MVT::i32,
                                Op.getOperand(1), Op.getOperand(2));
     return DAG.getNode(ISD::BITCAST, DL, VT, Node);
-  }
-  case AMDGPUIntrinsic::SI_packf16: { // Legacy name
-    EVT VT = Op.getValueType();
-    return DAG.getNode(AMDGPUISD::CVT_PKRTZ_F16_F32, DL, VT,
-                       Op.getOperand(1), Op.getOperand(2));
   }
   default:
     return AMDGPUTargetLowering::LowerOperation(Op, DAG);

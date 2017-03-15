@@ -21,9 +21,9 @@ define i32 @test_kortestc(i16 %a0, i16 %a1) {
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovw %esi, %k0
 ; CHECK-NEXT:    kmovw %edi, %k1
+; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    kortestw %k0, %k1
-; CHECK-NEXT:    sbbl %eax, %eax
-; CHECK-NEXT:    andl $1, %eax
+; CHECK-NEXT:    setb %al
 ; CHECK-NEXT:    retq
   %res = call i32 @llvm.x86.avx512.kortestc.w(i16 %a0, i16 %a1)
   ret i32 %res

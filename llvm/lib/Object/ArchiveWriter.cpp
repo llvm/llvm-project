@@ -341,6 +341,11 @@ writeSymbolTable(raw_fd_ostream &Out, object::Archive::Kind Kind,
   if (isBSDLike(Kind))
     print32(Out, Kind, StringTable.size()); // byte count of the string table
   Out << StringTable;
+  // If there are no symbols, emit an empty symbol table, to satisfy Solaris
+  // tools, older versions of which expect a symbol table in a non-empty
+  // archive, regardless of whether there are any symbols in it.
+  if (StringTable.size() == 0)
+    print32(Out, Kind, 0);
 
   // ld64 requires the next member header to start at an offset that is
   // 4 bytes aligned.

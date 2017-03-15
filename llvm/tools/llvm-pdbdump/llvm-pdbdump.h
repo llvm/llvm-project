@@ -67,6 +67,10 @@ extern llvm::cl::opt<bool> DumpFpo;
 extern llvm::cl::opt<bool> DumpStringTable;
 }
 
+namespace diff {
+extern llvm::cl::opt<bool> Pedantic;
+}
+
 namespace pdb2yaml {
 extern llvm::cl::opt<bool> NoFileHeaders;
 extern llvm::cl::opt<bool> StreamMetadata;

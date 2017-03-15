@@ -532,7 +532,7 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}atomic_umin_i32_ret:
-; GCN: flat_atomic_umin v{{[0-9]+}}, v[{{[0-9]+:[0-9]+}}], v{{[0-9]+}} glc{{$}}
+; GCN: flat_atomic_umin [[RET:v[0-9]+]], v[{{[0-9]+:[0-9]+}}], v{{[0-9]+}} glc{{$}}
 ; GCN: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RET]]
 define void @atomic_umin_i32_ret(i32 addrspace(4)* %out, i32 addrspace(4)* %out2, i32 %in) {
 entry:

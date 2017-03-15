@@ -1050,9 +1050,7 @@ bool IRTranslator::translate(const Instruction &Inst) {
     case Instruction::OPCODE: return translate##OPCODE(Inst, CurBuilder);
 #include "llvm/IR/Instruction.def"
   default:
-    if (!TPC->isGlobalISelAbortEnabled())
-      return false;
-    llvm_unreachable("unknown opcode");
+    return false;
   }
 }
 
@@ -1070,9 +1068,22 @@ bool IRTranslator::translate(const Constant &C, unsigned Reg) {
   else if (auto CAZ = dyn_cast<ConstantAggregateZero>(&C)) {
     if (!CAZ->getType()->isVectorTy())
       return false;
+    // Return the scalar if it is a <1 x Ty> vector.
+    if (CAZ->getNumElements() == 1)
+      return translate(*CAZ->getElementValue(0u), Reg);
     std::vector<unsigned> Ops;
     for (unsigned i = 0; i < CAZ->getNumElements(); ++i) {
       Constant &Elt = *CAZ->getElementValue(i);
+      Ops.push_back(getOrCreateVReg(Elt));
+    }
+    EntryBuilder.buildMerge(Reg, Ops);
+  } else if (auto CV = dyn_cast<ConstantDataVector>(&C)) {
+    // Return the scalar if it is a <1 x Ty> vector.
+    if (CV->getNumElements() == 1)
+      return translate(*CV->getElementAsConstant(0), Reg);
+    std::vector<unsigned> Ops;
+    for (unsigned i = 0; i < CV->getNumElements(); ++i) {
+      Constant &Elt = *CV->getElementAsConstant(i);
       Ops.push_back(getOrCreateVReg(Elt));
     }
     EntryBuilder.buildMerge(Reg, Ops);
@@ -1082,14 +1093,10 @@ bool IRTranslator::translate(const Constant &C, unsigned Reg) {
       case Instruction::OPCODE: return translate##OPCODE(*CE, EntryBuilder);
 #include "llvm/IR/Instruction.def"
     default:
-      if (!TPC->isGlobalISelAbortEnabled())
-        return false;
-      llvm_unreachable("unknown opcode");
+      return false;
     }
-  } else if (!TPC->isGlobalISelAbortEnabled())
+  } else
     return false;
-  else
-    llvm_unreachable("unhandled constant kind");
 
   return true;
 }

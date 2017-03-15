@@ -152,7 +152,6 @@ define <4 x i32> @sel_sdiv0_vec(i1 %cond) {
 define <4 x i32> @sdiv0elt_vec(<4 x i32> %x) {
 ; CHECK-LABEL: sdiv0elt_vec:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movaps {{.*#+}} xmm0 = <u,12,u,4294967292>
 ; CHECK-NEXT:    retq
   %zero = and <4 x i32> %x, <i32 0, i32 0, i32 0, i32 0>
   %some_ones = or <4 x i32> %zero, <i32 0, i32 -1, i32 0, i32 3>
@@ -163,7 +162,6 @@ define <4 x i32> @sdiv0elt_vec(<4 x i32> %x) {
 define <4 x i32> @udiv0elt_vec(<4 x i32> %x) {
 ; CHECK-LABEL: udiv0elt_vec:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movaps {{.*#+}} xmm0 = <u,4,3,u>
 ; CHECK-NEXT:    retq
   %div = udiv <4 x i32> <i32 11, i32 12, i32 13, i32 14>, <i32 0, i32 3, i32 4, i32 0>
   ret <4 x i32> %div
@@ -172,7 +170,6 @@ define <4 x i32> @udiv0elt_vec(<4 x i32> %x) {
 define <4 x i32> @urem0elt_vec(<4 x i32> %x) {
 ; CHECK-LABEL: urem0elt_vec:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movaps {{.*#+}} xmm0 = <u,u,u,2>
 ; CHECK-NEXT:    retq
   %zero = and <4 x i32> %x, <i32 0, i32 0, i32 0, i32 0>
   %some_ones = or <4 x i32> %zero, <i32 0, i32 0, i32 0, i32 3>
@@ -183,8 +180,6 @@ define <4 x i32> @urem0elt_vec(<4 x i32> %x) {
 define <4 x i32> @srem0elt_vec(<4 x i32> %x) {
 ; CHECK-LABEL: srem0elt_vec:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movl $-2, %eax
-; CHECK-NEXT:    movd %eax, %xmm0
 ; CHECK-NEXT:    retq
   %rem = srem <4 x i32> <i32 -11, i32 -12, i32 -13, i32 -14>, <i32 -3, i32 -3, i32 0, i32 2>
   ret <4 x i32> %rem

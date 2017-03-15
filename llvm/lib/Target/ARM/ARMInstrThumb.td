@@ -1453,12 +1453,6 @@ def : T1Pat<(ARMcmpZ tGPR:$Rn, imm0_255:$imm8),
 def : T1Pat<(ARMcmpZ tGPR:$Rn, tGPR:$Rm),
             (tCMPr   tGPR:$Rn, tGPR:$Rm)>;
 
-// Subtract with carry
-def : T1Pat<(ARMaddc tGPR:$lhs, imm0_7_neg:$rhs),
-            (tSUBSi3 tGPR:$lhs, imm0_7_neg:$rhs)>;
-def : T1Pat<(ARMaddc tGPR:$lhs, imm8_255_neg:$rhs),
-            (tSUBSi8 tGPR:$lhs, imm8_255_neg:$rhs)>;
-
 // Bswap 16 with load/store
 def : T1Pat<(srl (bswap (extloadi16 t_addrmode_is2:$addr)), (i32 16)),
             (tREV16 (tLDRHi t_addrmode_is2:$addr))>;

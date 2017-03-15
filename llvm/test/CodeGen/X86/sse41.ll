@@ -228,16 +228,16 @@ define i32 @ptestz_1(<2 x i64> %t1, <2 x i64> %t2) nounwind {
 define i32 @ptestz_2(<2 x i64> %t1, <2 x i64> %t2) nounwind {
 ; X32-LABEL: ptestz_2:
 ; X32:       ## BB#0:
+; X32-NEXT:    xorl %eax, %eax
 ; X32-NEXT:    ptest %xmm1, %xmm0
-; X32-NEXT:    sbbl %eax, %eax
-; X32-NEXT:    andl $1, %eax
+; X32-NEXT:    setb %al
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: ptestz_2:
 ; X64:       ## BB#0:
+; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    ptest %xmm1, %xmm0
-; X64-NEXT:    sbbl %eax, %eax
-; X64-NEXT:    andl $1, %eax
+; X64-NEXT:    setb %al
 ; X64-NEXT:    retq
   %tmp1 = call i32 @llvm.x86.sse41.ptestc(<2 x i64> %t1, <2 x i64> %t2) nounwind readnone
   ret i32 %tmp1

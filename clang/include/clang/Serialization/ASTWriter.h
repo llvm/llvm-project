@@ -106,6 +106,9 @@ private:
   /// \brief The bitstream writer used to emit this precompiled header.
   llvm::BitstreamWriter &Stream;
 
+  /// The buffer associated with the bitstream.
+  const SmallVectorImpl<char> &Buffer;
+
   /// \brief The ASTContext we're writing.
   ASTContext *Context = nullptr;
 
@@ -425,8 +428,16 @@ private:
   void WriteSubStmt(Stmt *S);
 
   void WriteBlockInfoBlock();
-  uint64_t WriteControlBlock(Preprocessor &PP, ASTContext &Context,
-                             StringRef isysroot, const std::string &OutputFile);
+  void WriteControlBlock(Preprocessor &PP, ASTContext &Context,
+                         StringRef isysroot, const std::string &OutputFile);
+
+  /// Write out the signature and diagnostic options, and return the signature.
+  ASTFileSignature writeUnhashedControlBlock(Preprocessor &PP,
+                                             ASTContext &Context);
+
+  /// Calculate hash of the pcm content.
+  static ASTFileSignature createSignature(StringRef Bytes);
+
   void WriteInputFiles(SourceManager &SourceMgr, HeaderSearchOptions &HSOpts,
                        bool Modules);
   void WriteSourceManagerBlock(SourceManager &SourceMgr,
@@ -493,14 +504,14 @@ private:
   void WriteDeclAbbrevs();
   void WriteDecl(ASTContext &Context, Decl *D);
 
-  uint64_t WriteASTCore(Sema &SemaRef,
-                        StringRef isysroot, const std::string &OutputFile,
-                        Module *WritingModule);
+  ASTFileSignature WriteASTCore(Sema &SemaRef, StringRef isysroot,
+                                const std::string &OutputFile,
+                                Module *WritingModule);
 
 public:
   /// \brief Create a new precompiled header writer that outputs to
   /// the given bitstream.
-  ASTWriter(llvm::BitstreamWriter &Stream,
+  ASTWriter(llvm::BitstreamWriter &Stream, SmallVectorImpl<char> &Buffer,
             ArrayRef<std::shared_ptr<ModuleFileExtension>> Extensions,
             bool IncludeTimestamps = true);
   ~ASTWriter() override;
@@ -526,9 +537,9 @@ public:
   ///
   /// \return the module signature, which eventually will be a hash of
   /// the module but currently is merely a random 32-bit number.
-  uint64_t WriteAST(Sema &SemaRef, const std::string &OutputFile,
-                    Module *WritingModule, StringRef isysroot,
-                    bool hasErrors = false);
+  ASTFileSignature WriteAST(Sema &SemaRef, const std::string &OutputFile,
+                            Module *WritingModule, StringRef isysroot,
+                            bool hasErrors = false);
 
   /// \brief Emit a token.
   void AddToken(const Token &Tok, RecordDataImpl &Record);

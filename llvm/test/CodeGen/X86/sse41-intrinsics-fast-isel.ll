@@ -898,17 +898,17 @@ define i32 @test_mm_test_all_ones(<2 x i64> %a0) {
 ; X32-LABEL: test_mm_test_all_ones:
 ; X32:       # BB#0:
 ; X32-NEXT:    pcmpeqd %xmm1, %xmm1
+; X32-NEXT:    xorl %eax, %eax
 ; X32-NEXT:    ptest %xmm1, %xmm0
-; X32-NEXT:    sbbl %eax, %eax
-; X32-NEXT:    andl $1, %eax
+; X32-NEXT:    setb %al
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_test_all_ones:
 ; X64:       # BB#0:
 ; X64-NEXT:    pcmpeqd %xmm1, %xmm1
+; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    ptest %xmm1, %xmm0
-; X64-NEXT:    sbbl %eax, %eax
-; X64-NEXT:    andl $1, %eax
+; X64-NEXT:    setb %al
 ; X64-NEXT:    retq
   %res = call i32 @llvm.x86.sse41.ptestc(<2 x i64> %a0, <2 x i64> <i64 -1, i64 -1>)
   ret i32 %res
@@ -956,16 +956,16 @@ declare i32 @llvm.x86.sse41.ptestnzc(<2 x i64>, <2 x i64>) nounwind readnone
 define i32 @test_mm_testc_si128(<2 x i64> %a0, <2 x i64> %a1) {
 ; X32-LABEL: test_mm_testc_si128:
 ; X32:       # BB#0:
+; X32-NEXT:    xorl %eax, %eax
 ; X32-NEXT:    ptest %xmm1, %xmm0
-; X32-NEXT:    sbbl %eax, %eax
-; X32-NEXT:    andl $1, %eax
+; X32-NEXT:    setb %al
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_testc_si128:
 ; X64:       # BB#0:
+; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    ptest %xmm1, %xmm0
-; X64-NEXT:    sbbl %eax, %eax
-; X64-NEXT:    andl $1, %eax
+; X64-NEXT:    setb %al
 ; X64-NEXT:    retq
   %res = call i32 @llvm.x86.sse41.ptestc(<2 x i64> %a0, <2 x i64> %a1)
   ret i32 %res

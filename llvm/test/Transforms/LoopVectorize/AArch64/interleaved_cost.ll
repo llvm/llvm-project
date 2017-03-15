@@ -170,8 +170,8 @@ entry:
 ; VF_2-LABEL: Checking a loop in "i64_factor_8"
 ; VF_2:         Found an estimated cost of 6 for VF 2 For instruction: %tmp2 = load i64, i64* %tmp0, align 8
 ; VF_2-NEXT:    Found an estimated cost of 0 for VF 2 For instruction: %tmp3 = load i64, i64* %tmp1, align 8
-; VF_2-NEXT:    Found an estimated cost of 10 for VF 2 For instruction: store i64 0, i64* %tmp0, align 8
-; VF_2-NEXT:    Found an estimated cost of 10 for VF 2 For instruction: store i64 0, i64* %tmp1, align 8
+; VF_2-NEXT:    Found an estimated cost of 7 for VF 2 For instruction: store i64 0, i64* %tmp0, align 8
+; VF_2-NEXT:    Found an estimated cost of 7 for VF 2 For instruction: store i64 0, i64* %tmp1, align 8
 for.body:
   %i = phi i64 [ 0, %entry ], [ %i.next, %for.body ]
   %tmp0 = getelementptr inbounds %i64.8, %i64.8* %data, i64 %i, i32 2

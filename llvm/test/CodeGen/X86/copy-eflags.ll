@@ -9,19 +9,22 @@ target triple = "i686-unknown-linux-gnu"
 @.str = private unnamed_addr constant [4 x i8] c"%d\0A\00", align 1
 
 ; CHECK-LABEL: func:
-; This tests whether eax is properly saved/restored around the lahf/sahf
-; instruction sequences.
+; This tests whether eax is properly saved/restored around the
+; lahf/sahf instruction sequences. We make mem op volatile to prevent
+; their reordering to avoid spills.
+
+
 define i32 @func() {
 entry:
   %bval = load i8, i8* @b
   %inc = add i8 %bval, 1
-  store i8 %inc, i8* @b
-  %cval = load i32, i32* @c
+  store volatile i8 %inc, i8* @b
+  %cval = load volatile i32, i32* @c
   %inc1 = add nsw i32 %cval, 1
-  store i32 %inc1, i32* @c
-  %aval = load i8, i8* @a
+  store volatile i32 %inc1, i32* @c
+  %aval = load volatile i8, i8* @a
   %inc2 = add i8 %aval, 1
-  store i8 %inc2, i8* @a
+  store volatile i8 %inc2, i8* @a
 ; Copy flags produced by the incb of %inc1 to a register, need to save+restore
 ; eax around it. The flags will be reused by %tobool.
 ; CHECK: pushl %eax

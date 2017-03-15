@@ -34,6 +34,7 @@
 #include "llvm/Support/SystemUtils.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Transforms/IPO/FunctionImport.h"
+#include "llvm/Transforms/IPO/Internalize.h"
 #include "llvm/Transforms/Utils/FunctionImportUtils.h"
 
 #include <memory>
@@ -272,6 +273,8 @@ static bool linkFiles(const char *argv0, LLVMContext &Context, Linker &L,
                       unsigned Flags) {
   // Filter out flags that don't apply to the first file we load.
   unsigned ApplicableFlags = Flags & Linker::Flags::OverrideFromSrc;
+  // Similar to some flags, internalization doesn't apply to the first file.
+  bool InternalizeLinkedSymbols = false;
   for (const auto &File : Files) {
     std::unique_ptr<Module> M = loadFile(argv0, File, Context);
     if (!M.get()) {
@@ -311,8 +314,24 @@ static bool linkFiles(const char *argv0, LLVMContext &Context, Linker &L,
     if (Verbose)
       errs() << "Linking in '" << File << "'\n";
 
-    if (L.linkInModule(std::move(M), ApplicableFlags))
+    bool Err = false;
+    if (InternalizeLinkedSymbols) {
+      Err = L.linkInModule(
+          std::move(M), ApplicableFlags, [](Module &M, const StringSet<> &GVS) {
+            internalizeModule(M, [&GVS](const GlobalValue &GV) {
+              return !GV.hasName() || (GVS.count(GV.getName()) == 0);
+            });
+          });
+    } else {
+      Err = L.linkInModule(std::move(M), ApplicableFlags);
+    }
+
+    if (Err)
       return false;
+
+    // Internalization applies to linking of subsequent files.
+    InternalizeLinkedSymbols = Internalize;
+
     // All linker flags apply to linking of subsequent files.
     ApplicableFlags = Flags;
   }
@@ -340,8 +359,6 @@ int main(int argc, char **argv) {
   Linker L(*Composite);
 
   unsigned Flags = Linker::Flags::None;
-  if (Internalize)
-    Flags |= Linker::Flags::InternalizeLinkedSymbols;
   if (OnlyNeeded)
     Flags |= Linker::Flags::LinkOnlyNeeded;
 

@@ -99,7 +99,7 @@ define void @test_nospare([8 x i64], [8 x float], ...) {
 ; __stack field should point just past them.
 define void @test_offsetstack([8 x i64], [2 x i64], [3 x float], ...) {
 ; CHECK-LABEL: test_offsetstack:
-; CHECK: sub sp, sp, #80
+; CHECK: stp {{q[0-9]+}}, {{q[0-9]+}}, [sp, #-80]!
 ; CHECK: add [[STACK_TOP:x[0-9]+]], sp, #96
 ; CHECK: add x[[VAR:[0-9]+]], {{x[0-9]+}}, :lo12:var
 ; CHECK: str [[STACK_TOP]], [x[[VAR]]]

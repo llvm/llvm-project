@@ -328,7 +328,7 @@ TEST_P(CoverageMappingTest, load_coverage_for_several_functions) {
   loadCoverageMapping();
 
   const auto FunctionRecords = LoadedCoverage->getCoveredFunctions();
-  EXPECT_EQ(2U, std::distance(FunctionRecords.begin(), FunctionRecords.end()));
+  EXPECT_EQ(2, std::distance(FunctionRecords.begin(), FunctionRecords.end()));
   for (const auto &FunctionRecord : FunctionRecords) {
     CoverageData Data = LoadedCoverage->getCoverageForFunction(FunctionRecord);
     std::vector<CoverageSegment> Segments(Data.begin(), Data.end());

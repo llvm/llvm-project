@@ -2308,14 +2308,14 @@ void SelectionDAG::computeKnownBits(SDValue Op, APInt &KnownZero,
     if (TLI->getBooleanContents(Op.getValueType().isVector(), false) ==
             TargetLowering::ZeroOrOneBooleanContent &&
         BitWidth > 1)
-      KnownZero |= APInt::getHighBitsSet(BitWidth, BitWidth - 1);
+      KnownZero.setBitsFrom(1);
     break;
   case ISD::SETCC:
     // If we know the result of a setcc has the top bits zero, use this info.
     if (TLI->getBooleanContents(Op.getOperand(0).getValueType()) ==
             TargetLowering::ZeroOrOneBooleanContent &&
         BitWidth > 1)
-      KnownZero |= APInt::getHighBitsSet(BitWidth, BitWidth - 1);
+      KnownZero.setBitsFrom(1);
     break;
   case ISD::SHL:
     if (const APInt *ShAmt = getValidShiftAmountConstant(Op)) {
@@ -2324,7 +2324,7 @@ void SelectionDAG::computeKnownBits(SDValue Op, APInt &KnownZero,
       KnownZero = KnownZero << *ShAmt;
       KnownOne = KnownOne << *ShAmt;
       // Low bits are known zero.
-      KnownZero |= APInt::getLowBitsSet(BitWidth, ShAmt->getZExtValue());
+      KnownZero.setLowBits(ShAmt->getZExtValue());
     }
     break;
   case ISD::SRL:
@@ -2334,8 +2334,7 @@ void SelectionDAG::computeKnownBits(SDValue Op, APInt &KnownZero,
       KnownZero = KnownZero.lshr(*ShAmt);
       KnownOne  = KnownOne.lshr(*ShAmt);
       // High bits are known zero.
-      APInt HighBits = APInt::getHighBitsSet(BitWidth, ShAmt->getZExtValue());
-      KnownZero |= HighBits;
+      KnownZero.setHighBits(ShAmt->getZExtValue());
     }
     break;
   case ISD::SRA:
@@ -2498,7 +2497,7 @@ void SelectionDAG::computeKnownBits(SDValue Op, APInt &KnownZero,
       if (TLI->getBooleanContents(Op.getOperand(0).getValueType()) ==
               TargetLowering::ZeroOrOneBooleanContent &&
           BitWidth > 1)
-        KnownZero.setBits(1, BitWidth);
+        KnownZero.setBitsFrom(1);
       break;
     }
     LLVM_FALLTHROUGH;
@@ -2549,7 +2548,7 @@ void SelectionDAG::computeKnownBits(SDValue Op, APInt &KnownZero,
       if (TLI->getBooleanContents(Op.getOperand(0).getValueType()) ==
               TargetLowering::ZeroOrOneBooleanContent &&
           BitWidth > 1)
-        KnownZero.setBits(1, BitWidth);
+        KnownZero.setBitsFrom(1);
       break;
     }
     LLVM_FALLTHROUGH;
@@ -2749,7 +2748,7 @@ void SelectionDAG::computeKnownBits(SDValue Op, APInt &KnownZero,
 
     KnownZero &= KnownZero2;
     KnownOne &= KnownOne2;
-    KnownZero |= APInt::getHighBitsSet(BitWidth, LeadZero);
+    KnownZero.setHighBits(LeadZero);
     break;
   }
   case ISD::UMAX: {
@@ -2765,7 +2764,7 @@ void SelectionDAG::computeKnownBits(SDValue Op, APInt &KnownZero,
 
     KnownZero &= KnownZero2;
     KnownOne &= KnownOne2;
-    KnownOne |= APInt::getHighBitsSet(BitWidth, LeadOne);
+    KnownOne.setHighBits(LeadOne);
     break;
   }
   case ISD::SMIN:
@@ -3337,6 +3336,9 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
       if (VT == MVT::f128 && C->getValueType(0) == MVT::i128)
         return getConstantFP(APFloat(APFloat::IEEEquad(), Val), DL, VT);
       break;
+    case ISD::ABS:
+      return getConstant(Val.abs(), DL, VT, C->isTargetOpcode(),
+                         C->isOpaque());
     case ISD::BITREVERSE:
       return getConstant(Val.reverseBits(), DL, VT, C->isTargetOpcode(),
                          C->isOpaque());
@@ -3456,6 +3458,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
       case ISD::TRUNCATE:
       case ISD::UINT_TO_FP:
       case ISD::SINT_TO_FP:
+      case ISD::ABS:
       case ISD::BITREVERSE:
       case ISD::BSWAP:
       case ISD::CTLZ:
@@ -3571,6 +3574,12 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
         return getNode(ISD::TRUNCATE, DL, VT, Operand.getNode()->getOperand(0));
       return Operand.getNode()->getOperand(0);
     }
+    if (OpOpcode == ISD::UNDEF)
+      return getUNDEF(VT);
+      break;
+  case ISD::ABS:
+    assert(VT.isInteger() && VT == Operand.getValueType() &&
+           "Invalid ABS!");
     if (OpOpcode == ISD::UNDEF)
       return getUNDEF(VT);
     break;
@@ -3696,12 +3705,6 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
   if (Cst1->isOpaque() || Cst2->isOpaque())
     return SDValue();
 
-  // Division/remainder with a zero divisor is undefined behavior.
-  if ((Opcode == ISD::SDIV || Opcode == ISD::UDIV ||
-       Opcode == ISD::SREM || Opcode == ISD::UREM) &&
-      Cst2->isNullValue())
-    return getUNDEF(VT);
-
   std::pair<APInt, bool> Folded = FoldValue(Opcode, Cst1->getAPIntValue(),
                                             Cst2->getAPIntValue());
   if (!Folded.second)
@@ -3729,6 +3732,30 @@ SDValue SelectionDAG::FoldSymbolOffset(unsigned Opcode, EVT VT,
                           GA->getOffset() + uint64_t(Offset));
 }
 
+bool SelectionDAG::isUndef(unsigned Opcode, ArrayRef<SDValue> Ops) {
+  switch (Opcode) {
+  case ISD::SDIV:
+  case ISD::UDIV:
+  case ISD::SREM:
+  case ISD::UREM: {
+    // If a divisor is zero/undef or any element of a divisor vector is
+    // zero/undef, the whole op is undef.
+    assert(Ops.size() == 2 && "Div/rem should have 2 operands");
+    SDValue Divisor = Ops[1];
+    if (Divisor.isUndef() || isNullConstant(Divisor))
+      return true;
+
+    return ISD::isBuildVectorOfConstantSDNodes(Divisor.getNode()) &&
+           any_of(Divisor->op_values(),
+                  [](SDValue V) { return V.isUndef() || isNullConstant(V); });
+    // TODO: Handle signed overflow.
+  }
+  // TODO: Handle oversized shifts.
+  default:
+    return false;
+  }
+}
+
 SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
                                              EVT VT, SDNode *Cst1,
                                              SDNode *Cst2) {
@@ -3737,6 +3764,9 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
   // bail early.
   if (Opcode >= ISD::BUILTIN_OP_END)
     return SDValue();
+
+  if (isUndef(Opcode, {SDValue(Cst1, 0), SDValue(Cst2, 0)}))
+    return getUNDEF(VT);
 
   // Handle the case of two scalars.
   if (const ConstantSDNode *Scalar1 = dyn_cast<ConstantSDNode>(Cst1)) {
@@ -3804,6 +3834,9 @@ SDValue SelectionDAG::FoldConstantVectorArithmetic(unsigned Opcode,
   // bail early.
   if (Opcode >= ISD::BUILTIN_OP_END)
     return SDValue();
+
+  if (isUndef(Opcode, Ops))
+    return getUNDEF(VT);
 
   // We can only fold vectors - maybe merge with FoldConstantArithmetic someday?
   if (!VT.isVector())

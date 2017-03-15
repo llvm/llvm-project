@@ -315,12 +315,11 @@ entry:
 ; Big-endian mode for N32/N64 must add an additional 4 to the offset due to byte
 ; order.
 ; O32-DAG:       addiu [[GV:\$[0-9]+]], ${{[0-9]+}}, %lo(dwords)
-; O32-DAG:       lw [[ARG1:\$[0-9]+]], 0([[VA]])
+; O32-DAG:       lw [[ARG1:\$[0-9]+]], 0([[VA_TMP2]])
 ; O32-DAG:       sw [[ARG1]], 8([[GV]])
-; O32-DAG:       lw [[VA:\$[0-9]+]], 0([[SP]])
-; O32-DAG:       addiu [[VA2:\$[0-9]+]], [[VA]], 4
-; O32-DAG:       sw [[VA2]], 0([[SP]])
-; O32-DAG:       lw [[ARG1:\$[0-9]+]], 0([[VA]])
+; O32-DAG:       addiu [[VA3:\$[0-9]+]], [[VA2]], 4
+; O32-DAG:       sw [[VA3]], 0([[SP]])
+; O32-DAG:       lw [[ARG1:\$[0-9]+]], 4([[VA_TMP2]])
 ; O32-DAG:       sw [[ARG1]], 12([[GV]])
 
 ; N32-DAG:       addiu [[GV:\$[0-9]+]], ${{[0-9]+}}, %lo(dwords)
@@ -349,10 +348,9 @@ entry:
 ; Load the second argument from the variable portion and copy it to the global.
 ; O32-DAG:       lw [[ARG2:\$[0-9]+]], 0([[VA]])
 ; O32-DAG:       sw [[ARG2]], 16([[GV]])
-; O32-DAG:       lw [[VA:\$[0-9]+]], 0([[SP]])
-; O32-DAG:       addiu [[VA2:\$[0-9]+]], [[VA]], 4
-; O32-DAG:       sw [[VA2]], 0([[SP]])
-; O32-DAG:       lw [[ARG2:\$[0-9]+]], 0([[VA]])
+; O32-DAG:       addiu [[VA3:\$[0-9]+]], [[VA2]], 4
+; O32-DAG:       sw [[VA3]], 0([[SP]])
+; O32-DAG:       lw [[ARG2:\$[0-9]+]], 4([[VA_TMP2]])
 ; O32-DAG:       sw [[ARG2]], 20([[GV]])
 
 ; NEW-DAG:       ld [[ARG2:\$[0-9]+]], 0([[VA2]])
@@ -678,12 +676,11 @@ entry:
 ; Big-endian mode for N32/N64 must add an additional 4 to the offset due to byte
 ; order.
 ; O32-DAG:       addiu [[GV:\$[0-9]+]], ${{[0-9]+}}, %lo(dwords)
-; O32-DAG:       lw [[ARG1:\$[0-9]+]], 0([[VA]])
+; O32-DAG:       lw [[ARG1:\$[0-9]+]], 0([[VA_TMP2]])
 ; O32-DAG:       sw [[ARG1]], 8([[GV]])
-; O32-DAG:       lw [[VA:\$[0-9]+]], 0([[SP]])
-; O32-DAG:       addiu [[VA2:\$[0-9]+]], [[VA]], 4
-; O32-DAG:       sw [[VA2]], 0([[SP]])
-; O32-DAG:       lw [[ARG1:\$[0-9]+]], 0([[VA]])
+; O32-DAG:       addiu [[VA3:\$[0-9]+]], [[VA2]], 4
+; O32-DAG:       sw [[VA3]], 0([[SP]])
+; O32-DAG:       lw [[ARG1:\$[0-9]+]], 4([[VA_TMP2]])
 ; O32-DAG:       sw [[ARG1]], 12([[GV]])
 
 ; N32-DAG:       addiu [[GV:\$[0-9]+]], ${{[0-9]+}}, %lo(dwords)
@@ -712,10 +709,9 @@ entry:
 ; Load the second argument from the variable portion and copy it to the global.
 ; O32-DAG:       lw [[ARG2:\$[0-9]+]], 0([[VA]])
 ; O32-DAG:       sw [[ARG2]], 16([[GV]])
-; O32-DAG:       lw [[VA:\$[0-9]+]], 0([[SP]])
-; O32-DAG:       addiu [[VA2:\$[0-9]+]], [[VA]], 4
+; O32-DAG:       addiu [[VA3:\$[0-9]+]], [[VA2]], 4
 ; O32-DAG:       sw [[VA2]], 0([[SP]])
-; O32-DAG:       lw [[ARG2:\$[0-9]+]], 0([[VA]])
+; O32-DAG:       lw [[ARG2:\$[0-9]+]], 4([[VA_TMP2]])
 ; O32-DAG:       sw [[ARG2]], 20([[GV]])
 
 ; NEW-DAG:       ld [[ARG2:\$[0-9]+]], 0([[VA2]])
@@ -1040,10 +1036,9 @@ entry:
 ; O32-DAG:       addiu [[GV:\$[0-9]+]], ${{[0-9]+}}, %lo(dwords)
 ; O32-DAG:       lw [[ARG1:\$[0-9]+]], 0([[VA]])
 ; O32-DAG:       sw [[ARG1]], 8([[GV]])
-; O32-DAG:       lw [[VA:\$[0-9]+]], 0([[SP]])
-; O32-DAG:       addiu [[VA2:\$[0-9]+]], [[VA]], 4
-; O32-DAG:       sw [[VA2]], 0([[SP]])
-; O32-DAG:       lw [[ARG1:\$[0-9]+]], 0([[VA]])
+; O32-DAG:       addiu [[VA3:\$[0-9]+]], [[VA2]], 4
+; O32-DAG:       sw [[VA3]], 0([[SP]])
+; O32-DAG:       lw [[ARG1:\$[0-9]+]], 4([[VA_TMP2]])
 ; O32-DAG:       sw [[ARG1]], 12([[GV]])
 
 ; N32-DAG:       addiu [[GV:\$[0-9]+]], ${{[0-9]+}}, %lo(dwords)
@@ -1072,10 +1067,9 @@ entry:
 ; Load the second argument from the variable portion and copy it to the global.
 ; O32-DAG:       lw [[ARG2:\$[0-9]+]], 0([[VA]])
 ; O32-DAG:       sw [[ARG2]], 16([[GV]])
-; O32-DAG:       lw [[VA:\$[0-9]+]], 0([[SP]])
-; O32-DAG:       addiu [[VA2:\$[0-9]+]], [[VA]], 4
-; O32-DAG:       sw [[VA2]], 0([[SP]])
-; O32-DAG:       lw [[ARG2:\$[0-9]+]], 0([[VA]])
+; O32-DAG:       addiu [[VA3:\$[0-9]+]], [[VA2]], 4
+; O32-DAG:       sw [[VA3]], 0([[SP]])
+; O32-DAG:       lw [[ARG2:\$[0-9]+]], 4([[VA_TMP2]])
 ; O32-DAG:       sw [[ARG2]], 20([[GV]])
 
 ; NEW-DAG:       ld [[ARG2:\$[0-9]+]], 0([[VA2]])

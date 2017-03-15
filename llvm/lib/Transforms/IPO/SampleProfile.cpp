@@ -1383,7 +1383,7 @@ bool SampleProfileLoaderLegacyPass::runOnModule(Module &M) {
 bool SampleProfileLoader::runOnFunction(Function &F) {
   F.setEntryCount(0);
   Samples = Reader->getSamplesFor(F);
-  if (!Samples->empty())
+  if (Samples && !Samples->empty())
     return emitAnnotations(F);
   return false;
 }

@@ -860,7 +860,9 @@ BitVector MachineFrameInfo::getPristineRegs(const MachineFunction &MF) const {
   if (!isCalleeSavedInfoValid())
     return BV;
 
-  for (const MCPhysReg *CSR = TRI->getCalleeSavedRegs(&MF); CSR && *CSR; ++CSR)
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
+  for (const MCPhysReg *CSR = MRI.getCalleeSavedRegs(); CSR && *CSR;
+       ++CSR)
     BV.set(*CSR);
 
   // Saved CSRs are not pristine.

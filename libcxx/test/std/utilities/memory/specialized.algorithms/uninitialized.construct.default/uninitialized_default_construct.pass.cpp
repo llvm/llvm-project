@@ -80,7 +80,7 @@ void test_counted()
     Counted* p = (Counted*)pool;
     std::uninitialized_default_construct(It(p), It(p+1));
     assert(Counted::count == 1);
-    assert(Counted::constructed = 1);
+    assert(Counted::constructed == 1);
     std::uninitialized_default_construct(It(p+1), It(p+N));
     assert(Counted::count == 5);
     assert(Counted::constructed == 5);

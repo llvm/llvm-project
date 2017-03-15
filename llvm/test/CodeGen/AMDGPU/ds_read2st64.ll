@@ -197,8 +197,8 @@ define void @simple_read2st64_f64_max_offset(double addrspace(1)* %out, double a
 
 ; SI-LABEL: @simple_read2st64_f64_over_max_offset
 ; SI-NOT: ds_read2st64_b64
-; SI: ds_read_b64 {{v\[[0-9]+:[0-9]+\]}}, {{v[0-9]+}} offset:512
-; SI: v_add_i32_e32 [[BIGADD:v[0-9]+]], vcc, 0x10000, {{v[0-9]+}}
+; SI-DAG: ds_read_b64 {{v\[[0-9]+:[0-9]+\]}}, {{v[0-9]+}} offset:512
+; SI-DAG: v_add_i32_e32 [[BIGADD:v[0-9]+]], vcc, 0x10000, {{v[0-9]+}}
 ; SI: ds_read_b64 {{v\[[0-9]+:[0-9]+\]}}, [[BIGADD]]
 ; SI: s_endpgm
 define void @simple_read2st64_f64_over_max_offset(double addrspace(1)* %out, double addrspace(3)* %lds) #0 {

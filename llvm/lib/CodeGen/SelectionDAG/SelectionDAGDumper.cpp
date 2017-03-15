@@ -300,6 +300,7 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::GET_DYNAMIC_AREA_OFFSET:    return "get.dynamic.area.offset";
 
   // Bit manipulation
+  case ISD::ABS:                        return "abs";
   case ISD::BITREVERSE:                 return "bitreverse";
   case ISD::BSWAP:                      return "bswap";
   case ISD::CTPOP:                      return "ctpop";

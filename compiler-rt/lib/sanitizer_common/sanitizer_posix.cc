@@ -366,8 +366,10 @@ const char *DescribeSignalOrException(int signo) {
       return "ILL";
     case SIGABRT:
       return "ABRT";
-    default:
+    case SIGSEGV:
       return "SEGV";
+    case SIGBUS:
+      return "BUS";
   }
   return "UNKNOWN SIGNAL";
 }

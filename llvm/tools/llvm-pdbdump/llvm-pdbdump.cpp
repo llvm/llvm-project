@@ -7,15 +7,14 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Dumps debug information present in PDB files.  This utility makes use of
-// the Microsoft Windows SDK, so will not compile or run on non-Windows
-// platforms.
+// Dumps debug information present in PDB files.
 //
 //===----------------------------------------------------------------------===//
 
 #include "llvm-pdbdump.h"
 
 #include "Analyze.h"
+#include "Diff.h"
 #include "LLVMOutputStyle.h"
 #include "LinePrinter.h"
 #include "OutputStyle.h"
@@ -81,6 +80,9 @@ cl::SubCommand RawSubcommand("raw", "Dump raw structure of the PDB file");
 cl::SubCommand
     PrettySubcommand("pretty",
                      "Dump semantic information about types and symbols");
+
+cl::SubCommand DiffSubcommand("diff", "Diff the contents of 2 PDB files");
+
 cl::SubCommand
     YamlToPdbSubcommand("yaml2pdb",
                         "Generate a PDB file from a YAML description");
@@ -158,6 +160,17 @@ cl::opt<bool> NoClassDefs("no-class-definitions",
 cl::opt<bool> NoEnumDefs("no-enum-definitions",
                          cl::desc("Don't display full enum definitions"),
                          cl::cat(FilterCategory), cl::sub(PrettySubcommand));
+}
+
+namespace diff {
+cl::opt<bool> Pedantic("pedantic",
+                       cl::desc("Finds all differences (even structural ones "
+                                "that produce otherwise identical PDBs)"),
+                       cl::sub(DiffSubcommand));
+
+cl::list<std::string> InputFilenames(cl::Positional,
+                                     cl::desc("<first> <second>"),
+                                     cl::OneOrMore, cl::sub(DiffSubcommand));
 }
 
 namespace raw {
@@ -414,12 +427,17 @@ static void yamlToPdb(StringRef Path) {
   ExitOnErr(Builder.commit(opts::yaml2pdb::YamlPdbOutputFile));
 }
 
-static void pdb2Yaml(StringRef Path) {
-  std::unique_ptr<IPDBSession> Session;
+static PDBFile &loadPDB(StringRef Path, std::unique_ptr<IPDBSession> &Session) {
   ExitOnErr(loadDataForPDB(PDB_ReaderType::Native, Path, Session));
 
-  NativeSession *RS = static_cast<NativeSession *>(Session.get());
-  PDBFile &File = RS->getPDBFile();
+  NativeSession *NS = static_cast<NativeSession *>(Session.get());
+  return NS->getPDBFile();
+}
+
+static void pdb2Yaml(StringRef Path) {
+  std::unique_ptr<IPDBSession> Session;
+  auto &File = loadPDB(Path, Session);
+
   auto O = llvm::make_unique<YAMLOutputStyle>(File);
   O = llvm::make_unique<YAMLOutputStyle>(File);
 
@@ -428,10 +446,8 @@ static void pdb2Yaml(StringRef Path) {
 
 static void dumpRaw(StringRef Path) {
   std::unique_ptr<IPDBSession> Session;
-  ExitOnErr(loadDataForPDB(PDB_ReaderType::Native, Path, Session));
+  auto &File = loadPDB(Path, Session);
 
-  NativeSession *RS = static_cast<NativeSession *>(Session.get());
-  PDBFile &File = RS->getPDBFile();
   auto O = llvm::make_unique<LLVMOutputStyle>(File);
 
   ExitOnErr(O->dump());
@@ -439,11 +455,20 @@ static void dumpRaw(StringRef Path) {
 
 static void dumpAnalysis(StringRef Path) {
   std::unique_ptr<IPDBSession> Session;
-  ExitOnErr(loadDataForPDB(PDB_ReaderType::Native, Path, Session));
-
-  NativeSession *NS = static_cast<NativeSession *>(Session.get());
-  PDBFile &File = NS->getPDBFile();
+  auto &File = loadPDB(Path, Session);
   auto O = llvm::make_unique<AnalysisStyle>(File);
+
+  ExitOnErr(O->dump());
+}
+
+static void diff(StringRef Path1, StringRef Path2) {
+  std::unique_ptr<IPDBSession> Session1;
+  std::unique_ptr<IPDBSession> Session2;
+
+  auto &File1 = loadPDB(Path1, Session1);
+  auto &File2 = loadPDB(Path2, Session2);
+
+  auto O = llvm::make_unique<DiffStyle>(File1, File2);
 
   ExitOnErr(O->dump());
 }
@@ -669,6 +694,12 @@ int main(int argc_, const char *argv_[]) {
   } else if (opts::RawSubcommand) {
     std::for_each(opts::raw::InputFilenames.begin(),
                   opts::raw::InputFilenames.end(), dumpRaw);
+  } else if (opts::DiffSubcommand) {
+    if (opts::diff::InputFilenames.size() != 2) {
+      errs() << "diff subcommand expects exactly 2 arguments.\n";
+      exit(1);
+    }
+    diff(opts::diff::InputFilenames[0], opts::diff::InputFilenames[1]);
   }
 
   outs().flush();

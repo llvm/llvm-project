@@ -433,6 +433,34 @@ ScheduleTreeOptimizer::applyRegisterTiling(__isl_take isl_schedule_node *Node,
   return Node;
 }
 
+namespace {
+bool isSimpleInnermostBand(const isl::schedule_node &Node) {
+  assert(isl_schedule_node_get_type(Node.keep()) == isl_schedule_node_band);
+  assert(isl_schedule_node_n_children(Node.keep()) == 1);
+
+  auto ChildType = isl_schedule_node_get_type(Node.child(0).keep());
+
+  if (ChildType == isl_schedule_node_leaf)
+    return true;
+
+  if (ChildType != isl_schedule_node_sequence)
+    return false;
+
+  auto Sequence = Node.child(0);
+
+  for (int c = 0, nc = isl_schedule_node_n_children(Sequence.keep()); c < nc;
+       ++c) {
+    auto Child = Sequence.child(c);
+    if (isl_schedule_node_get_type(Child.keep()) != isl_schedule_node_filter)
+      return false;
+    if (isl_schedule_node_get_type(Child.child(0).keep()) !=
+        isl_schedule_node_leaf)
+      return false;
+  }
+  return true;
+}
+} // namespace
+
 bool ScheduleTreeOptimizer::isTileableBandNode(
     __isl_keep isl_schedule_node *Node) {
   if (isl_schedule_node_get_type(Node) != isl_schedule_node_band)
@@ -451,14 +479,8 @@ bool ScheduleTreeOptimizer::isTileableBandNode(
   if (Dims <= 1)
     return false;
 
-  auto Child = isl_schedule_node_get_child(Node, 0);
-  auto Type = isl_schedule_node_get_type(Child);
-  isl_schedule_node_free(Child);
-
-  if (Type != isl_schedule_node_leaf)
-    return false;
-
-  return true;
+  auto ManagedNode = isl::manage(isl_schedule_node_copy(Node));
+  return isSimpleInnermostBand(ManagedNode);
 }
 
 __isl_give isl_schedule_node *

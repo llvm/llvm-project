@@ -197,6 +197,15 @@ static void computeImportForFunction(
     auto GUID = Edge.first.getGUID();
     DEBUG(dbgs() << " edge -> " << GUID << " Threshold:" << Threshold << "\n");
 
+    if (Index.findGlobalValueSummaryList(GUID) == Index.end()) {
+      // For SamplePGO, the indirect call targets for local functions will
+      // have its original name annotated in profile. We try to find the
+      // corresponding PGOFuncName as the GUID.
+      GUID = Index.getGUIDFromOriginalID(GUID);
+      if (GUID == 0)
+        continue;
+    }
+
     if (DefinedGVSummaries.count(GUID)) {
       DEBUG(dbgs() << "ignored! Target already in destination module.\n");
       continue;

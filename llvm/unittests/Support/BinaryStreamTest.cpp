@@ -686,7 +686,8 @@ TEST_F(BinaryStreamTest, BinaryItemStream) {
   std::vector<Foo> Foos = {{1, 1.0}, {2, 2.0}, {3, 3.0}};
   BumpPtrAllocator Allocator;
   for (const auto &F : Foos) {
-    uint8_t *Ptr = Allocator.Allocate<uint8_t>(sizeof(Foo));
+    uint8_t *Ptr = static_cast<uint8_t *>(Allocator.Allocate(sizeof(Foo), 
+                                                             alignof(Foo)));
     MutableArrayRef<uint8_t> Buffer(Ptr, sizeof(Foo));
     MutableBinaryByteStream Stream(Buffer, llvm::support::big);
     BinaryStreamWriter Writer(Stream);

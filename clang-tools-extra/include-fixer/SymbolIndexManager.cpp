@@ -103,46 +103,44 @@ SymbolIndexManager::search(llvm::StringRef Identifier,
     for (auto &SymAndSig : Symbols) {
       const SymbolInfo &Symbol = SymAndSig.Symbol;
       // Match the identifier name without qualifier.
-      if (Symbol.getName() == Names.back()) {
-        bool IsMatched = true;
-        auto SymbolContext = Symbol.getContexts().begin();
-        auto IdentiferContext = Names.rbegin() + 1; // Skip identifier name.
-        // Match the remaining context names.
-        while (IdentiferContext != Names.rend() &&
-               SymbolContext != Symbol.getContexts().end()) {
-          if (SymbolContext->second == *IdentiferContext) {
-            ++IdentiferContext;
-            ++SymbolContext;
-          } else if (SymbolContext->first ==
-                     find_all_symbols::SymbolInfo::ContextType::EnumDecl) {
-            // Skip non-scoped enum context.
-            ++SymbolContext;
-          } else {
-            IsMatched = false;
-            break;
-          }
+      bool IsMatched = true;
+      auto SymbolContext = Symbol.getContexts().begin();
+      auto IdentiferContext = Names.rbegin() + 1; // Skip identifier name.
+      // Match the remaining context names.
+      while (IdentiferContext != Names.rend() &&
+             SymbolContext != Symbol.getContexts().end()) {
+        if (SymbolContext->second == *IdentiferContext) {
+          ++IdentiferContext;
+          ++SymbolContext;
+        } else if (SymbolContext->first ==
+                   find_all_symbols::SymbolInfo::ContextType::EnumDecl) {
+          // Skip non-scoped enum context.
+          ++SymbolContext;
+        } else {
+          IsMatched = false;
+          break;
         }
+      }
 
-        // If the name was qualified we only want to add results if we evaluated
-        // all contexts.
-        if (IsFullyQualified)
-          IsMatched &= (SymbolContext == Symbol.getContexts().end());
+      // If the name was qualified we only want to add results if we evaluated
+      // all contexts.
+      if (IsFullyQualified)
+        IsMatched &= (SymbolContext == Symbol.getContexts().end());
 
-        // FIXME: Support full match. At this point, we only find symbols in
-        // database which end with the same contexts with the identifier.
-        if (IsMatched && IdentiferContext == Names.rend()) {
-          // If we're in a situation where we took a prefix but the thing we
-          // found couldn't possibly have a nested member ignore it.
-          if (TookPrefix &&
-              (Symbol.getSymbolKind() == SymbolInfo::SymbolKind::Function ||
-               Symbol.getSymbolKind() == SymbolInfo::SymbolKind::Variable ||
-               Symbol.getSymbolKind() ==
-                   SymbolInfo::SymbolKind::EnumConstantDecl ||
-               Symbol.getSymbolKind() == SymbolInfo::SymbolKind::Macro))
-            continue;
+      // FIXME: Support full match. At this point, we only find symbols in
+      // database which end with the same contexts with the identifier.
+      if (IsMatched && IdentiferContext == Names.rend()) {
+        // If we're in a situation where we took a prefix but the thing we
+        // found couldn't possibly have a nested member ignore it.
+        if (TookPrefix &&
+            (Symbol.getSymbolKind() == SymbolInfo::SymbolKind::Function ||
+             Symbol.getSymbolKind() == SymbolInfo::SymbolKind::Variable ||
+             Symbol.getSymbolKind() ==
+                 SymbolInfo::SymbolKind::EnumConstantDecl ||
+             Symbol.getSymbolKind() == SymbolInfo::SymbolKind::Macro))
+          continue;
 
-          MatchedSymbols.push_back(std::move(SymAndSig));
-        }
+        MatchedSymbols.push_back(std::move(SymAndSig));
       }
     }
     Names.pop_back();
@@ -152,7 +150,7 @@ SymbolIndexManager::search(llvm::StringRef Identifier,
   rank(MatchedSymbols, FileName);
   // Strip signals, they are no longer needed.
   std::vector<SymbolInfo> Res;
-  for (const auto &SymAndSig : MatchedSymbols)
+  for (auto &SymAndSig : MatchedSymbols)
     Res.push_back(std::move(SymAndSig.Symbol));
   return Res;
 }

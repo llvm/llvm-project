@@ -73,7 +73,7 @@ void TargetFrameLowering::determineCalleeSaves(MachineFunction &MF,
     return;
 
   // Get the callee saved register list...
-  const MCPhysReg *CSRegs = TRI.getCalleeSavedRegs(&MF);
+  const MCPhysReg *CSRegs = MF.getRegInfo().getCalleeSavedRegs();
 
   // Early exit if there are no callee saved registers.
   if (!CSRegs || CSRegs[0] == 0)

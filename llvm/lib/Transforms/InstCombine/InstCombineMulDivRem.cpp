@@ -298,39 +298,33 @@ Instruction *InstCombiner::visitMul(BinaryOperator &I) {
   // (X / Y) *  Y = X - (X % Y)
   // (X / Y) * -Y = (X % Y) - X
   {
-    Value *Op1C = Op1;
-    BinaryOperator *BO = dyn_cast<BinaryOperator>(Op0);
-    if (!BO ||
-        (BO->getOpcode() != Instruction::UDiv &&
-         BO->getOpcode() != Instruction::SDiv)) {
-      Op1C = Op0;
-      BO = dyn_cast<BinaryOperator>(Op1);
+    Value *Y = Op1;
+    BinaryOperator *Div = dyn_cast<BinaryOperator>(Op0);
+    if (!Div || (Div->getOpcode() != Instruction::UDiv &&
+                 Div->getOpcode() != Instruction::SDiv)) {
+      Y = Op0;
+      Div = dyn_cast<BinaryOperator>(Op1);
     }
-    Value *Neg = dyn_castNegVal(Op1C);
-    if (BO && BO->hasOneUse() &&
-        (BO->getOperand(1) == Op1C || BO->getOperand(1) == Neg) &&
-        (BO->getOpcode() == Instruction::UDiv ||
-         BO->getOpcode() == Instruction::SDiv)) {
-      Value *Op0BO = BO->getOperand(0), *Op1BO = BO->getOperand(1);
+    Value *Neg = dyn_castNegVal(Y);
+    if (Div && Div->hasOneUse() &&
+        (Div->getOperand(1) == Y || Div->getOperand(1) == Neg) &&
+        (Div->getOpcode() == Instruction::UDiv ||
+         Div->getOpcode() == Instruction::SDiv)) {
+      Value *X = Div->getOperand(0), *DivOp1 = Div->getOperand(1);
 
       // If the division is exact, X % Y is zero, so we end up with X or -X.
-      if (PossiblyExactOperator *SDiv = dyn_cast<PossiblyExactOperator>(BO))
-        if (SDiv->isExact()) {
-          if (Op1BO == Op1C)
-            return replaceInstUsesWith(I, Op0BO);
-          return BinaryOperator::CreateNeg(Op0BO);
-        }
+      if (Div->isExact()) {
+        if (DivOp1 == Y)
+          return replaceInstUsesWith(I, X);
+        return BinaryOperator::CreateNeg(X);
+      }
 
-      Value *Rem;
-      if (BO->getOpcode() == Instruction::UDiv)
-        Rem = Builder->CreateURem(Op0BO, Op1BO);
-      else
-        Rem = Builder->CreateSRem(Op0BO, Op1BO);
-      Rem->takeName(BO);
-
-      if (Op1BO == Op1C)
-        return BinaryOperator::CreateSub(Op0BO, Rem);
-      return BinaryOperator::CreateSub(Rem, Op0BO);
+      auto RemOpc = Div->getOpcode() == Instruction::UDiv ? Instruction::URem
+                                                          : Instruction::SRem;
+      Value *Rem = Builder->CreateBinOp(RemOpc, X, DivOp1);
+      if (DivOp1 == Y)
+        return BinaryOperator::CreateSub(X, Rem);
+      return BinaryOperator::CreateSub(Rem, X);
     }
   }
 

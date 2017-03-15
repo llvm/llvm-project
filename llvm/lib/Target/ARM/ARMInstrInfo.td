@@ -183,6 +183,9 @@ def ARMmemcopy : SDNode<"ARMISD::MEMCPY", SDT_ARMMEMCPY,
                         [SDNPHasChain, SDNPInGlue, SDNPOutGlue,
                          SDNPMayStore, SDNPMayLoad]>;
 
+def ARMsmulwb       : SDNode<"ARMISD::SMULWB", SDTIntBinOp, []>;
+def ARMsmulwt       : SDNode<"ARMISD::SMULWT", SDTIntBinOp, []>;
+
 //===----------------------------------------------------------------------===//
 // ARM Instruction Predicate Definitions.
 //
@@ -3953,27 +3956,35 @@ let hasSideEffects = 0 in {
 let isCommutable = 1 in {
 def SMULL : AsMul1I64<0b0000110, (outs GPR:$RdLo, GPR:$RdHi),
                                  (ins GPR:$Rn, GPR:$Rm), IIC_iMUL64,
-                    "smull", "\t$RdLo, $RdHi, $Rn, $Rm", []>,
+                    "smull", "\t$RdLo, $RdHi, $Rn, $Rm",
+                    [(set GPR:$RdLo, GPR:$RdHi,
+                          (smullohi GPR:$Rn, GPR:$Rm))]>,
                     Requires<[IsARM, HasV6]>,
            Sched<[WriteMUL64Lo, WriteMUL64Hi, ReadMUL, ReadMUL]>;
 
 def UMULL : AsMul1I64<0b0000100, (outs GPR:$RdLo, GPR:$RdHi),
                                  (ins GPR:$Rn, GPR:$Rm), IIC_iMUL64,
-                    "umull", "\t$RdLo, $RdHi, $Rn, $Rm", []>,
+                    "umull", "\t$RdLo, $RdHi, $Rn, $Rm",
+                    [(set GPR:$RdLo, GPR:$RdHi,
+                          (umullohi GPR:$Rn, GPR:$Rm))]>,
                     Requires<[IsARM, HasV6]>,
            Sched<[WriteMAC64Lo, WriteMAC64Hi, ReadMUL, ReadMUL]>;
 
 let Constraints = "@earlyclobber $RdLo,@earlyclobber $RdHi" in {
 def SMULLv5 : ARMPseudoExpand<(outs GPR:$RdLo, GPR:$RdHi),
                             (ins GPR:$Rn, GPR:$Rm, pred:$p, cc_out:$s),
-                            4, IIC_iMUL64, [],
+                            4, IIC_iMUL64,
+                            [(set GPR:$RdLo, GPR:$RdHi,
+                                  (smullohi GPR:$Rn, GPR:$Rm))],
           (SMULL GPR:$RdLo, GPR:$RdHi, GPR:$Rn, GPR:$Rm, pred:$p, cc_out:$s)>,
                            Requires<[IsARM, NoV6]>,
               Sched<[WriteMUL64Lo, WriteMUL64Hi, ReadMUL, ReadMUL]>;
 
 def UMULLv5 : ARMPseudoExpand<(outs GPR:$RdLo, GPR:$RdHi),
                             (ins GPR:$Rn, GPR:$Rm, pred:$p, cc_out:$s),
-                            4, IIC_iMUL64, [],
+                            4, IIC_iMUL64,
+                            [(set GPR:$RdLo, GPR:$RdHi,
+                                  (umullohi GPR:$Rn, GPR:$Rm))],
           (UMULL GPR:$RdLo, GPR:$RdHi, GPR:$Rn, GPR:$Rm, pred:$p, cc_out:$s)>,
                            Requires<[IsARM, NoV6]>,
              Sched<[WriteMUL64Lo, WriteMUL64Hi, ReadMUL, ReadMUL]>;
@@ -4100,13 +4111,13 @@ multiclass AI_smul<string opc> {
 
   def WB : AMulxyI<0b0001001, 0b01, (outs GPR:$Rd), (ins GPR:$Rn, GPR:$Rm),
               IIC_iMUL16, !strconcat(opc, "wb"), "\t$Rd, $Rn, $Rm",
-              []>,
+              [(set GPR:$Rd, (ARMsmulwb GPR:$Rn, GPR:$Rm))]>,
            Requires<[IsARM, HasV5TE]>,
            Sched<[WriteMUL16, ReadMUL, ReadMUL]>;
 
   def WT : AMulxyI<0b0001001, 0b11, (outs GPR:$Rd), (ins GPR:$Rn, GPR:$Rm),
               IIC_iMUL16, !strconcat(opc, "wt"), "\t$Rd, $Rn, $Rm",
-              []>,
+              [(set GPR:$Rd, (ARMsmulwt GPR:$Rn, GPR:$Rm))]>,
             Requires<[IsARM, HasV5TE]>,
            Sched<[WriteMUL16, ReadMUL, ReadMUL]>;
 }
@@ -4153,14 +4164,16 @@ multiclass AI_smla<string opc> {
   def WB : AMulxyIa<0b0001001, 0b00, (outs GPRnopc:$Rd),
               (ins GPRnopc:$Rn, GPRnopc:$Rm, GPR:$Ra),
               IIC_iMAC16, !strconcat(opc, "wb"), "\t$Rd, $Rn, $Rm, $Ra",
-              []>,
+              [(set GPRnopc:$Rd,
+                    (add GPR:$Ra, (ARMsmulwb GPRnopc:$Rn, GPRnopc:$Rm)))]>,
            Requires<[IsARM, HasV5TE, UseMulOps]>,
            Sched<[WriteMAC16, ReadMUL, ReadMUL, ReadMAC]>;
 
   def WT : AMulxyIa<0b0001001, 0b10, (outs GPRnopc:$Rd),
               (ins GPRnopc:$Rn, GPRnopc:$Rm, GPR:$Ra),
               IIC_iMAC16, !strconcat(opc, "wt"), "\t$Rd, $Rn, $Rm, $Ra",
-              []>,
+              [(set GPRnopc:$Rd,
+                    (add GPR:$Ra, (ARMsmulwt GPRnopc:$Rn, GPRnopc:$Rm)))]>,
            Requires<[IsARM, HasV5TE, UseMulOps]>,
            Sched<[WriteMAC16, ReadMUL, ReadMUL, ReadMAC]>;
   }

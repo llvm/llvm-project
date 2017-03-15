@@ -136,7 +136,6 @@ public:
   OutputSectionFactory(std::vector<OutputSection *> &OutputSections);
   ~OutputSectionFactory();
 
-  template <class ELFT>
   void addInputSec(InputSectionBase *IS, StringRef OutsecName);
 
 private:
@@ -144,11 +143,7 @@ private:
   std::vector<OutputSection *> &OutputSections;
 };
 
-template <class ELFT> uint64_t getHeaderSize() {
-  if (Config->OFormatBinary)
-    return 0;
-  return Out::ElfHeader->Size + Out::ProgramHeaders->Size;
-}
+uint64_t getHeaderSize();
 
 } // namespace elf
 } // namespace lld

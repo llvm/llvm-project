@@ -301,8 +301,8 @@ define zeroext i1 @icmp_ne(i32 %x, i32 %y) {
 define zeroext i1 @icmp_ugt(i32 %x, i32 %y) {
 ; SDAG-LABEL: icmp_ugt:
 ; SDAG:       ## BB#0:
-; SDAG-NEXT:    cmpl %edi, %esi
-; SDAG-NEXT:    setb %al
+; SDAG-NEXT:    cmpl %esi, %edi
+; SDAG-NEXT:    seta %al
 ; SDAG-NEXT:    retq
 ;
 ; FAST-LABEL: icmp_ugt:

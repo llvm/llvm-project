@@ -32,24 +32,6 @@ using namespace std::chrono;
 class Fuzzer {
 public:
 
-  // Aggregates all available coverage measurements.
-  struct Coverage {
-    Coverage() { Reset(); }
-
-    void Reset() {
-      BlockCoverage = 0;
-      CallerCalleeCoverage = 0;
-      CounterBitmapBits = 0;
-      CounterBitmap.clear();
-    }
-
-    size_t BlockCoverage;
-    size_t CallerCalleeCoverage;
-    // Precalculated number of bits in CounterBitmap.
-    size_t CounterBitmapBits;
-    std::vector<uint8_t> CounterBitmap;
-  };
-
   Fuzzer(UserCallback CB, InputCorpus &Corpus, MutationDispatcher &MD,
          FuzzingOptions Options);
   ~Fuzzer();
@@ -90,16 +72,11 @@ public:
   void CrashResistantMerge(const std::vector<std::string> &Args,
                            const std::vector<std::string> &Corpora);
   void CrashResistantMergeInternalStep(const std::string &ControlFilePath);
-  // Returns a subset of 'Extra' that adds coverage to 'Initial'.
-  UnitVector FindExtraUnits(const UnitVector &Initial, const UnitVector &Extra);
   MutationDispatcher &GetMD() { return MD; }
   void PrintFinalStats();
   void SetMaxInputLen(size_t MaxInputLen);
   void SetMaxMutationLen(size_t MaxMutationLen);
   void RssLimitCallback();
-
-  // Public for tests.
-  void ResetCoverage();
 
   bool InFuzzingThread() const { return IsMyThread; }
   size_t GetCurrentUnitInFuzzingThead(const uint8_t **Data) const;
@@ -133,7 +110,6 @@ private:
   // Stop tracing.
   void StopTraceRecording();
 
-  void SetDeathCallback();
   static void StaticDeathCallback();
   void DumpCurrentUnit(const char *Prefix);
   void DeathCallback();
@@ -160,16 +136,11 @@ private:
   long TimeOfLongestUnitInSeconds = 0;
   long EpochOfLastReadOfOutputCorpus = 0;
 
-  // Maximum recorded coverage.
-  Coverage MaxCoverage;
-
   size_t MaxInputLen = 0;
   size_t MaxMutationLen = 0;
 
   // Need to know our own thread.
   static thread_local bool IsMyThread;
-
-  bool InMergeMode = false;
 };
 
 }; // namespace fuzzer

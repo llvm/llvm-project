@@ -8,6 +8,7 @@ set(LLVM_LINK_COMPONENTS
 
 add_llvm_tool(llvm-pdbdump
   Analyze.cpp
+  Diff.cpp
   CompactTypeDumpVisitor.cpp
   llvm-pdbdump.cpp
   YamlSymbolDumper.cpp
@@ -24,6 +25,7 @@ add_llvm_tool(llvm-pdbdump
   PrettyTypeDumper.cpp
   PrettyTypedefDumper.cpp
   PrettyVariableDumper.cpp
+  StreamUtil.cpp
   YAMLOutputStyle.cpp
   )
 

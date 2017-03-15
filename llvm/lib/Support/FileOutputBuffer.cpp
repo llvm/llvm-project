@@ -57,6 +57,8 @@ FileOutputBuffer::create(StringRef FilePath, size_t Size, unsigned Flags) {
         // FIXME: In posix, you use the access() call to check this.
       }
       break;
+    case sys::fs::file_type::directory_file:
+      return errc::is_a_directory;
     default:
       if (EC)
         return EC;

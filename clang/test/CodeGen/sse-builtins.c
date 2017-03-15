@@ -802,7 +802,7 @@ int test_mm_ucomineq_ss(__m128 A, __m128 B) {
 
 __m128 test_mm_undefined_ps() {
   // CHECK-LABEL: @test_mm_undefined_ps
-  // CHECK: ret <4 x float> undef
+  // CHECK: ret <4 x float> zeroinitializer
   return _mm_undefined_ps();
 }
 

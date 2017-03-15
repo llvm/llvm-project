@@ -180,6 +180,7 @@ const RegisterBank &ARMRegisterBankInfo::getRegBankFromRegClass(
   switch (RC.getID()) {
   case GPRRegClassID:
   case GPRnopcRegClassID:
+  case GPRspRegClassID:
   case tGPR_and_tcGPRRegClassID:
   case tGPRRegClassID:
     return getRegBank(ARM::GPRRegBankID);

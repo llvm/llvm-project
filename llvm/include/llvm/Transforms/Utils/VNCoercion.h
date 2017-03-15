@@ -53,7 +53,7 @@ Value *coerceAvailableValueToLoadType(Value *StoredVal, Type *LoadedTy,
 /// On success, it returns the offset into DepSI that extraction would start.
 /// On failure, it returns -1.
 int analyzeLoadFromClobberingStore(Type *LoadTy, Value *LoadPtr,
-                                   StoreInst *DepSI);
+                                   StoreInst *DepSI, const DataLayout &DL);
 
 /// This function determines whether a value for the pointer LoadPtr can be
 /// extracted from the load at DepLI.

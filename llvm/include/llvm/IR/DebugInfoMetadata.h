@@ -629,7 +629,6 @@ public:
   bool isStaticMember() const { return getFlags() & FlagStaticMember; }
   bool isLValueReference() const { return getFlags() & FlagLValueReference; }
   bool isRValueReference() const { return getFlags() & FlagRValueReference; }
-  bool isExternalTypeRef() const { return getFlags() & FlagExternalTypeRef; }
 
   static bool classof(const Metadata *MD) {
     switch (MD->getMetadataID()) {

@@ -262,3 +262,32 @@ define i32 @f21(i32 %a, i32 %x, i16 %y) {
         %tmp5 = add i32 %a, %tmp4
         ret i32 %tmp5
 }
+
+@global_b = external global i16, align 2
+
+define i32 @f22(i32 %a) {
+; CHECK-LABEL: f22:
+; CHECK: smulwb r0, r0, r1
+; CHECK-THUMBV6-NOT: smulwb
+        %b = load i16, i16* @global_b, align 2
+        %sext = sext i16 %b to i64
+        %conv = sext i32 %a to i64
+        %mul = mul nsw i64 %sext, %conv
+        %shr37 = lshr i64 %mul, 16
+        %conv4 = trunc i64 %shr37 to i32
+        ret i32 %conv4
+}
+
+define i32 @f23(i32 %a, i32 %c) {
+; CHECK-LABEL: f23:
+; CHECK: smlawb r0, r0, r2, r1
+; CHECK-THUMBV6-NOT: smlawb
+        %b = load i16, i16* @global_b, align 2
+        %sext = sext i16 %b to i64
+        %conv = sext i32 %a to i64
+        %mul = mul nsw i64 %sext, %conv
+        %shr49 = lshr i64 %mul, 16
+        %conv5 = trunc i64 %shr49 to i32
+        %add = add nsw i32 %conv5, %c
+        ret i32 %add
+}

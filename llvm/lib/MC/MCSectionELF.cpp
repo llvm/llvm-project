@@ -103,6 +103,8 @@ void MCSectionELF::PrintSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
     OS << 'S';
   if (Flags & ELF::SHF_TLS)
     OS << 'T';
+  if (Flags & ELF::SHF_LINK_ORDER)
+    OS << 'm';
 
   // If there are target-specific flags, print them.
   Triple::ArchType Arch = T.getArch();
@@ -158,6 +160,12 @@ void MCSectionELF::PrintSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
     OS << ",";
     printName(OS, Group->getName());
     OS << ",comdat";
+  }
+
+  if (Flags & ELF::SHF_LINK_ORDER) {
+    assert(AssociatedSymbol);
+    OS << ",";
+    printName(OS, AssociatedSymbol->getName());
   }
 
   if (isUnique())

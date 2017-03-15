@@ -419,10 +419,6 @@ void tools::AddGoldPlugin(const ToolChain &ToolChain, const ArgList &Args,
 
 void tools::addArchSpecificRPath(const ToolChain &TC, const ArgList &Args,
                                  ArgStringList &CmdArgs) {
-  // In the cross-compilation case, arch-specific library path is likely
-  // unavailable at runtime.
-  if (TC.isCrossCompiling()) return;
-
   std::string CandidateRPath = TC.getArchSpecificLibPath();
   if (TC.getVFS().exists(CandidateRPath)) {
     CmdArgs.push_back("-rpath");
