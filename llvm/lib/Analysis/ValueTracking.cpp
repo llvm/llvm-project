@@ -848,6 +848,14 @@ static void computeKnownBitsFromShiftOperator(
 
   computeKnownBits(I->getOperand(1), KnownZero, KnownOne, Depth + 1, Q);
 
+  // If the shift amount could be greater than or equal to the bit-width of the LHS, the
+  // value could be undef, so we don't know anything about it.
+  if ((~KnownZero).uge(BitWidth)) {
+    KnownZero.clearAllBits();
+    KnownOne.clearAllBits();
+    return;
+  }
+
   // Note: We cannot use KnownZero.getLimitedValue() here, because if
   // BitWidth > 64 and any upper bits are known, we'll end up returning the
   // limit value (which implies all bits are known).

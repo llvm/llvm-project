@@ -73,6 +73,16 @@ private:
              VirtReg2IndexFunctor>
       VRegInfo;
 
+  /// The flag is true upon \p UpdatedCSRs initialization
+  /// and false otherwise.
+  bool IsUpdatedCSRsInitizialied;
+
+  /// Contains the updated callee saved register list.
+  /// As opposed to the static list defined in register info,
+  /// all registers that were disabled (in CalleeSaveDisableRegs)
+  /// are removed from the list.
+  SmallVector<MCPhysReg, 16> UpdatedCSRs;
+
   /// RegAllocHints - This vector records register allocation hints for virtual
   /// registers. For each virtual register, it keeps a register and hint type
   /// pair making up the allocation hint. Hint type is target specific except
@@ -206,6 +216,16 @@ public:
   //===--------------------------------------------------------------------===//
   // Register Info
   //===--------------------------------------------------------------------===//
+
+  /// Disables the register from the list of CSRs.
+  /// I.e. the register will not appear as part of the CSR mask.
+  /// \see UpdatedCalleeSavedRegs.
+  void disableCalleeSavedRegister(unsigned Reg);
+
+  /// Returns list of callee saved registers.
+  /// The function returns the updated CSR list (after taking into account
+  /// registers that are disabled from the CSR list).
+  const MCPhysReg *getCalleeSavedRegs() const;
 
   // Strictly for use by MachineInstr.cpp.
   void addRegOperandToUseList(MachineOperand *MO);

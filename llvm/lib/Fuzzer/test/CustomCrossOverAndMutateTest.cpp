@@ -3,11 +3,12 @@
 
 // Test that libFuzzer does not crash when LLVMFuzzerMutate called from
 // LLVMFuzzerCustomCrossOver.
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
-#include <string>
 #include <string.h>
+#include <string>
 #include <vector>
 
 #include "FuzzerInterface.h"
@@ -27,7 +28,7 @@ extern "C" size_t LLVMFuzzerCustomCrossOver(const uint8_t *Data1, size_t Size1,
                                             unsigned int Seed) {
   std::vector<uint8_t> Buffer(MaxOutSize * 10);
   LLVMFuzzerMutate(Buffer.data(), Buffer.size(), Buffer.size());
-  size_t Size = std::min<size_t>(Size1, MaxOutSize);
+  size_t Size = std::min(Size1, MaxOutSize);
   memcpy(Out, Data1, Size);
   return Size;
 }

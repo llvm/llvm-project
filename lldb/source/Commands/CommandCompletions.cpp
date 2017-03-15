@@ -131,13 +131,13 @@ static int DiskFilesOrDirectories(const llvm::Twine &partial_name,
       Remainder = Buffer.drop_front(FirstSep + 1);
 
     llvm::SmallString<PATH_MAX> Resolved;
-    if (!Resolver->ResolveExact(Username, Resolved)) {
+    if (!Resolver.ResolveExact(Username, Resolved)) {
       // We couldn't resolve it as a full username.  If there were no slashes
       // then this might be a partial username.   We try to resolve it as such
       // but after that, we're done regardless of any matches.
       if (FirstSep == llvm::StringRef::npos) {
         llvm::StringSet<> MatchSet;
-        saw_directory = Resolver->ResolvePartial(Username, MatchSet);
+        saw_directory = Resolver.ResolvePartial(Username, MatchSet);
         for (const auto &S : MatchSet) {
           Resolved = S.getKey();
           path::append(Resolved, path::get_separator());
@@ -195,7 +195,7 @@ static int DiskFilesOrDirectories(const llvm::Twine &partial_name,
     // We have a match.
 
     fs::file_status st;
-    if (EC = Entry.status(st))
+    if ((EC = Entry.status(st)))
       continue;
 
     // If it's a symlink, then we treat it as a directory as long as the target

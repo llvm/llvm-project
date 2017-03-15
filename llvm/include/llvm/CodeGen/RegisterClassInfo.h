@@ -56,10 +56,11 @@ class RegisterClassInfo {
 
   // Callee saved registers of last MF. Assumed to be valid until the next
   // runOnFunction() call.
-  const MCPhysReg *CalleeSaved = nullptr;
+  // Used only to determine if an update was made to CalleeSavedAliases.
+  const MCPhysReg *CalleeSavedRegs = nullptr;
 
-  // Map register number to CalleeSaved index + 1;
-  SmallVector<uint8_t, 4> CSRNum;
+  // Map register alias to the callee saved Register.
+  SmallVector<MCPhysReg, 4> CalleeSavedAliases;
 
   // Reserved registers in the current MF.
   BitVector Reserved;
@@ -108,11 +109,11 @@ public:
   }
 
   /// getLastCalleeSavedAlias - Returns the last callee saved register that
-  /// overlaps PhysReg, or 0 if Reg doesn't overlap a CSR.
+  /// overlaps PhysReg, or 0 if Reg doesn't overlap a CalleeSavedAliases.
   unsigned getLastCalleeSavedAlias(unsigned PhysReg) const {
     assert(TargetRegisterInfo::isPhysicalRegister(PhysReg));
-    if (unsigned N = CSRNum[PhysReg])
-      return CalleeSaved[N-1];
+    if (PhysReg < CalleeSavedAliases.size())
+      return CalleeSavedAliases[PhysReg];
     return 0;
   }
 

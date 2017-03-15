@@ -162,7 +162,7 @@ private:
 protected:
   /// GlobalValueSummary constructor.
   GlobalValueSummary(SummaryKind K, GVFlags Flags, std::vector<ValueInfo> Refs)
-      : Kind(K), Flags(Flags), RefEdgeList(std::move(Refs)) {}
+      : Kind(K), Flags(Flags), OriginalName(0), RefEdgeList(std::move(Refs)) {}
 
 public:
   virtual ~GlobalValueSummary() = default;
@@ -528,6 +528,10 @@ private:
   // FIXME: Add bitcode read/write support for this field.
   std::map<std::string, TypeIdSummary> TypeIdMap;
 
+  /// Mapping from original ID to GUID. If original ID can map to multiple
+  /// GUIDs, it will be mapped to 0.
+  std::map<GlobalValue::GUID, GlobalValue::GUID> OidGuidMap;
+
   // YAML I/O support.
   friend yaml::MappingTraits<ModuleSummaryIndex>;
 
@@ -555,9 +559,17 @@ public:
     return GlobalValueMap.find(ValueGUID);
   }
 
+  /// Return the GUID for \p OriginalId in the OidGuidMap.
+  GlobalValue::GUID getGUIDFromOriginalID(GlobalValue::GUID OriginalID) const {
+    const auto I = OidGuidMap.find(OriginalID);
+    return I == OidGuidMap.end() ? 0 : I->second;
+  }
+
   /// Add a global value summary for a value of the given name.
   void addGlobalValueSummary(StringRef ValueName,
                              std::unique_ptr<GlobalValueSummary> Summary) {
+    addOriginalName(GlobalValue::getGUID(ValueName),
+                    Summary->getOriginalName());
     GlobalValueMap[GlobalValue::getGUID(ValueName)].push_back(
         std::move(Summary));
   }
@@ -565,7 +577,19 @@ public:
   /// Add a global value summary for a value of the given GUID.
   void addGlobalValueSummary(GlobalValue::GUID ValueGUID,
                              std::unique_ptr<GlobalValueSummary> Summary) {
+    addOriginalName(ValueGUID, Summary->getOriginalName());
     GlobalValueMap[ValueGUID].push_back(std::move(Summary));
+  }
+
+  /// Add an original name for the value of the given GUID.
+  void addOriginalName(GlobalValue::GUID ValueGUID,
+                       GlobalValue::GUID OrigGUID) {
+    if (OrigGUID == 0 || ValueGUID == OrigGUID)
+      return;
+    if (OidGuidMap.count(OrigGUID) && OidGuidMap[OrigGUID] != ValueGUID)
+      OidGuidMap[OrigGUID] = 0;
+    else
+      OidGuidMap[OrigGUID] = ValueGUID;
   }
 
   /// Find the summary for global \p GUID in module \p ModuleId, or nullptr if

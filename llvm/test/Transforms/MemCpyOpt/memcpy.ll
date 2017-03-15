@@ -202,6 +202,21 @@ define void @test10(%opaque* noalias nocapture sret %x, i32 %y) {
   ret void
 }
 
+; don't create new addressspacecasts when we don't know they're safe for the target
+define void @test11([20 x i32] addrspace(1)* nocapture dereferenceable(80) %P) {
+  %A = alloca [20 x i32], align 4
+  %a = bitcast [20 x i32]* %A to i8*
+  %b = bitcast [20 x i32] addrspace(1)* %P to i8 addrspace(1)*
+  call void @llvm.memset.p0i8.i64(i8* %a, i8 0, i64 80, i32 4, i1 false)
+  call void @llvm.memcpy.p1i8.p0i8.i64(i8 addrspace(1)* %b, i8* %a, i64 80, i32 4, i1 false)
+  ret void
+; CHECK-LABEL: @test11(
+; CHECK-NOT: addrspacecast
+}
+
+declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i32, i1) nounwind
+declare void @llvm.memcpy.p1i8.p0i8.i64(i8 addrspace(1)* nocapture, i8* nocapture, i64, i32, i1) nounwind
+
 declare void @f1(%struct.big* nocapture sret)
 declare void @f2(%struct.big*)
 

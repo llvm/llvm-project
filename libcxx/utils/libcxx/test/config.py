@@ -117,14 +117,15 @@ class Configuration(object):
 
     def configure(self):
         self.configure_executor()
+        self.configure_use_system_cxx_lib()
         self.configure_target_info()
         self.configure_cxx()
         self.configure_triple()
+        self.configure_deployment()
         self.configure_src_root()
         self.configure_obj_root()
         self.configure_cxx_stdlib_under_test()
         self.configure_cxx_library_root()
-        self.configure_use_system_cxx_lib()
         self.configure_use_clang_verify()
         self.configure_use_thread_safety()
         self.configure_execute_external()
@@ -361,6 +362,13 @@ class Configuration(object):
         # Insert the platform name into the available features as a lower case.
         self.config.available_features.add(target_platform)
 
+        # If we're using deployment, add sub-components of the triple using
+        # "darwin" instead of the platform name.
+        if self.use_deployment:
+            arch, _, _ = self.config.deployment
+            self.config.available_features.add('apple-darwin')
+            self.config.available_features.add(arch + '-apple-darwin')
+
         # Simulator testing can take a really long time for some of these tests
         # so add a feature check so we can REQUIRES: long_tests in them
         self.long_tests = self.get_lit_bool('long_tests')
@@ -483,6 +491,10 @@ class Configuration(object):
                     ['-target', self.config.target_triple]):
                 self.lit_config.warning('use_target is true but -target is '\
                         'not supported by the compiler')
+        if self.use_deployment:
+            arch, name, version = self.config.deployment
+            self.cxx.flags += ['-arch', arch]
+            self.cxx.flags += ['-m' + name + '-version-min=' + version]
 
     def configure_compile_flags_header_includes(self):
         support_path = os.path.join(self.libcxx_src_root, 'test', 'support')
@@ -951,12 +963,34 @@ class Configuration(object):
         not_str = '%s %s ' % (pipes.quote(sys.executable), pipes.quote(not_py))
         sub.append(('not ', not_str))
 
+    def can_use_deployment(self):
+        # Check if the host is on an Apple platform using clang.
+        if not self.target_info.platform() == "darwin":
+            return False
+        if not self.target_info.is_host_macosx():
+            return False
+        if not self.cxx.type.endswith('clang'):
+            return False
+        return True
+
     def configure_triple(self):
         # Get or infer the target triple.
-        self.config.target_triple = self.get_lit_conf('target_triple')
+        target_triple = self.get_lit_conf('target_triple')
         self.use_target = self.get_lit_bool('use_target', False)
-        if self.use_target and self.config.target_triple:
+        if self.use_target and target_triple:
             self.lit_config.warning('use_target is true but no triple is specified')
+
+        # Use deployment if possible.
+        self.use_deployment = not self.use_target and self.can_use_deployment()
+        if self.use_deployment:
+            return
+
+        # Save the triple (and warn on Apple platforms).
+        self.config.target_triple = target_triple
+        if self.use_target and 'apple' in target_triple:
+            self.lit_config.warning('consider using arch and platform instead'
+                                    ' of target_triple on Apple platforms')
+
         # If no target triple was given, try to infer it from the compiler
         # under test.
         if not self.config.target_triple:
@@ -977,6 +1011,39 @@ class Configuration(object):
             self.config.target_triple = target_triple
             self.lit_config.note(
                 "inferred target_triple as: %r" % self.config.target_triple)
+
+    def configure_deployment(self):
+        assert not self.use_deployment is None
+        assert not self.use_target is None
+        if not self.use_deployment:
+            # Warn about ignored parameters.
+            if self.get_lit_conf('arch'):
+                self.lit_config.warning('ignoring arch, using target_triple')
+            if self.get_lit_conf('platform'):
+                self.lit_config.warning('ignoring platform, using target_triple')
+            return
+
+        assert not self.use_target
+        assert self.target_info.is_host_macosx()
+
+        # Always specify deployment explicitly on Apple platforms, since
+        # otherwise a platform is picked up from the SDK.  If the SDK version
+        # doesn't match the system version, tests that use the system library
+        # may fail spuriously.
+        arch = self.get_lit_conf('arch')
+        if not arch:
+            arch = self.cxx.getTriple().split('-', 1)[0]
+            self.lit_config.note("inferred arch as: %r" % arch)
+
+        inferred_platform, name, version = self.target_info.get_platform()
+        if inferred_platform:
+            self.lit_config.note("inferred platform as: %r" % (name + version))
+        self.config.deployment = (arch, name, version)
+
+        # Set the target triple for use by lit.
+        self.config.target_triple = arch + '-apple-' + name + version
+        self.lit_config.note(
+            "computed target_triple as: %r" % self.config.target_triple)
 
     def configure_env(self):
         self.target_info.configure_env(self.exec_env)

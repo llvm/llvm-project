@@ -17,6 +17,7 @@
 
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/Support/DataTypes.h"
+#include "llvm/Support/Wasm.h"
 
 namespace llvm {
 
@@ -149,40 +150,25 @@ static const unsigned StoreP2AlignOperandNo = 0;
 
 /// This is used to indicate block signatures.
 enum class ExprType {
-  Void    = 0x40,
-  I32     = 0x7f,
-  I64     = 0x7e,
-  F32     = 0x7d,
-  F64     = 0x7c,
-  I8x16   = 0x7b,
-  I16x8   = 0x7a,
-  I32x4   = 0x79,
-  F32x4   = 0x78,
-  B8x16   = 0x77,
-  B16x8   = 0x76,
-  B32x4   = 0x75
-};
-
-/// This is used to indicate local types.
-enum class ValType {
-  I32     = 0x7f,
-  I64     = 0x7e,
-  F32     = 0x7d,
-  F64     = 0x7c,
-  I8x16   = 0x7b,
-  I16x8   = 0x7a,
-  I32x4   = 0x79,
-  F32x4   = 0x78,
-  B8x16   = 0x77,
-  B16x8   = 0x76,
-  B32x4   = 0x75
+  Void    = -0x40,
+  I32     = -0x01,
+  I64     = -0x02,
+  F32     = -0x03,
+  F64     = -0x04,
+  I8x16   = -0x05,
+  I16x8   = -0x06,
+  I32x4   = -0x07,
+  F32x4   = -0x08,
+  B8x16   = -0x09,
+  B16x8   = -0x0a,
+  B32x4   = -0x0b
 };
 
 /// Instruction opcodes emitted via means other than CodeGen.
 static const unsigned Nop = 0x01;
 static const unsigned End = 0x0b;
 
-ValType toValType(const MVT &Ty);
+wasm::ValType toValType(const MVT &Ty);
 
 } // end namespace WebAssembly
 } // end namespace llvm

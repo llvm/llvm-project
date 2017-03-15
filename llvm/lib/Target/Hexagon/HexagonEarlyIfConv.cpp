@@ -482,7 +482,7 @@ unsigned HexagonEarlyIfConversion::computePhiCost(const MachineBasicBlock *B,
     const MachineOperand &RB = MI.getOperand(3);
     assert(RA.isReg() && RB.isReg());
     // Must have a MUX if the phi uses a subregister.
-    if (RA.getSubReg() != 0 || RA.getSubReg() != 0) {
+    if (RA.getSubReg() != 0 || RB.getSubReg() != 0) {
       Cost++;
       continue;
     }

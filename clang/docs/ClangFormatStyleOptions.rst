@@ -252,6 +252,13 @@ the configuration (without a prefix: ``Auto``).
   Allow putting all parameters of a function declaration onto
   the next line even if ``BinPackParameters`` is ``false``.
 
+  .. code-block:: c++
+
+    true:                                   false:
+    myFunction(foo,                 vs.     myFunction(foo, bar, plop);
+               bar,
+               plop);
+
 **AllowShortBlocksOnASingleLine** (``bool``)
   Allows contracting simple braced statements to a single line.
 
@@ -460,16 +467,148 @@ the configuration (without a prefix: ``Auto``).
 
   Nested configuration flags:
 
+
   * ``bool AfterClass`` Wrap class definitions.
+
+  .. code-block:: c++
+
+    true:
+    class foo {};
+
+    false:
+    class foo
+    {};
+
   * ``bool AfterControlStatement`` Wrap control statements (``if``/``for``/``while``/``switch``/..).
+
+  .. code-block:: c++
+
+    true:
+    if (foo())
+    {
+    } else
+    {}
+    for (int i = 0; i < 10; ++i)
+    {}
+
+    false:
+    if (foo()) {
+    } else {
+    }
+    for (int i = 0; i < 10; ++i) {
+    }
+
   * ``bool AfterEnum`` Wrap enum definitions.
+
+  .. code-block:: c++
+
+    true:
+    enum X : int
+    {
+      B
+    };
+
+    false:
+    enum X : int { B };
+
   * ``bool AfterFunction`` Wrap function definitions.
+
+  .. code-block:: c++
+
+    true:
+    void foo()
+    {
+      bar();
+      bar2();
+    }
+
+    false:
+    void foo() {
+      bar();
+      bar2();
+    }
+
   * ``bool AfterNamespace`` Wrap namespace definitions.
+
+  .. code-block:: c++
+
+    true:
+    namespace
+    {
+    int foo();
+    int bar();
+    }
+
+    false:
+    namespace {
+    int foo();
+    int bar();
+    }
+
   * ``bool AfterObjCDeclaration`` Wrap ObjC definitions (``@autoreleasepool``, interfaces, ..).
+
   * ``bool AfterStruct`` Wrap struct definitions.
+
+  .. code-block:: c++
+
+    true:
+    struct foo
+    {
+      int x;
+    }
+
+    false:
+    struct foo {
+      int x;
+    }
+
   * ``bool AfterUnion`` Wrap union definitions.
+
+  .. code-block:: c++
+
+    true:
+    union foo
+    {
+      int x;
+    }
+
+    false:
+    union foo {
+      int x;
+    }
+
   * ``bool BeforeCatch`` Wrap before ``catch``.
+
+  .. code-block:: c++
+
+    true:
+    try {
+      foo();
+    }
+    catch () {
+    }
+
+    false:
+    try {
+      foo();
+    } catch () {
+    }
+
   * ``bool BeforeElse`` Wrap before ``else``.
+
+  .. code-block:: c++
+
+    true:
+    if (foo()) {
+    }
+    else {
+    }
+
+    false:
+    if (foo()) {
+    } else {
+    }
+
   * ``bool IndentBraces`` Indent the wrapped braces themselves.
 
 
@@ -500,28 +639,145 @@ the configuration (without a prefix: ``Auto``).
   * ``BS_Attach`` (in configuration: ``Attach``)
     Always attach braces to surrounding context.
 
+    .. code-block:: c++
+
+      try {
+        foo();
+      } catch () {
+      }
+      void foo() { bar(); }
+      class foo {};
+      if (foo()) {
+      } else {
+      }
+      enum X : int { A, B };
+
   * ``BS_Linux`` (in configuration: ``Linux``)
     Like ``Attach``, but break before braces on function, namespace and
     class definitions.
+
+    .. code-block:: c++
+
+      try {
+        foo();
+      } catch () {
+      }
+      void foo() { bar(); }
+      class foo
+      {
+      };
+      if (foo()) {
+      } else {
+      }
+      enum X : int { A, B };
 
   * ``BS_Mozilla`` (in configuration: ``Mozilla``)
     Like ``Attach``, but break before braces on enum, function, and record
     definitions.
 
+    .. code-block:: c++
+
+      try {
+        foo();
+      } catch () {
+      }
+      void foo() { bar(); }
+      class foo
+      {
+      };
+      if (foo()) {
+      } else {
+      }
+      enum X : int { A, B };
+
   * ``BS_Stroustrup`` (in configuration: ``Stroustrup``)
     Like ``Attach``, but break before function definitions, ``catch``, and
     ``else``.
 
+    .. code-block:: c++
+
+      try {
+        foo();
+      } catch () {
+      }
+      void foo() { bar(); }
+      class foo
+      {
+      };
+      if (foo()) {
+      } else {
+      }
+      enum X : int
+      {
+        A,
+        B
+      };
+
   * ``BS_Allman`` (in configuration: ``Allman``)
     Always break before braces.
+
+    .. code-block:: c++
+
+      try {
+        foo();
+      }
+      catch () {
+      }
+      void foo() { bar(); }
+      class foo {
+      };
+      if (foo()) {
+      }
+      else {
+      }
+      enum X : int { A, B };
 
   * ``BS_GNU`` (in configuration: ``GNU``)
     Always break before braces and add an extra level of indentation to
     braces of control statements, not to those of class, function
     or other definitions.
 
+    .. code-block:: c++
+
+      try
+        {
+          foo();
+        }
+      catch ()
+        {
+        }
+      void foo() { bar(); }
+      class foo
+      {
+      };
+      if (foo())
+        {
+        }
+      else
+        {
+        }
+      enum X : int
+      {
+        A,
+        B
+      };
+
   * ``BS_WebKit`` (in configuration: ``WebKit``)
     Like ``Attach``, but break before functions.
+
+    .. code-block:: c++
+
+      try {
+        foo();
+      } catch () {
+      }
+      void foo() { bar(); }
+      class foo {
+      };
+      if (foo()) {
+      } else {
+      }
+      enum X : int { A, B };
 
   * ``BS_Custom`` (in configuration: ``Custom``)
     Configure each individual brace in `BraceWrapping`.
@@ -532,8 +788,28 @@ the configuration (without a prefix: ``Auto``).
   If ``true``, in the class inheritance expression clang-format will
   break before ``:`` and ``,`` if there is multiple inheritance.
 
+  .. code-block:: c++
+
+     true:                                  false:
+     class MyClass                  vs.     class MyClass : public X, public Y {
+         : public X                         };
+         , public Y {
+     };
+
 **BreakBeforeTernaryOperators** (``bool``)
   If ``true``, ternary operators will be placed after line breaks.
+
+  .. code-block:: c++
+
+     true:
+     veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongDescription
+         ? firstValue
+         : SecondValueVeryVeryVeryVeryLong;
+
+     true:
+     veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongDescription ?
+         firstValue :
+         SecondValueVeryVeryVeryVeryLong;
 
 **BreakConstructorInitializersBeforeComma** (``bool``)
   Always break constructor initializers before commas and align
@@ -564,6 +840,21 @@ the configuration (without a prefix: ``Auto``).
 **ConstructorInitializerAllOnOneLineOrOnePerLine** (``bool``)
   If the constructor initializers don't fit on a line, put each
   initializer on its own line.
+
+  .. code-block:: c++
+
+    true:
+    SomeClass::Constructor()
+        : aaaaaaaa(aaaaaaaa), aaaaaaaa(aaaaaaaa), aaaaaaaa(aaaaaaaaaaaaaaaaaaaaaaaaa) {
+      return 0;
+    }
+
+    false:
+    SomeClass::Constructor()
+        : aaaaaaaa(aaaaaaaa), aaaaaaaa(aaaaaaaa),
+          aaaaaaaa(aaaaaaaaaaaaaaaaaaaaaaaaa) {
+      return 0;
+    }
 
 **ConstructorInitializerIndentWidth** (``unsigned``)
   The number of characters to use for indentation of constructor

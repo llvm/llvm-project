@@ -9,6 +9,7 @@
 
 #include "gtest/gtest.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -329,5 +330,12 @@ TEST(raw_ostreamTest, FormattedHexBytes) {
   EXPECT_EQ("0000: 61 62 63 64 65 66 67  |abcdefg|\n"
             "0007: 68 69 6a 6b 6c        |hijkl|",
             format_bytes_with_ascii_str(B.take_front(12), 0, 7, 1));
+}
+
+TEST(raw_fd_ostreamTest, multiple_raw_fd_ostream_to_stdout) {
+  std::error_code EC;
+
+  { raw_fd_ostream("-", EC, sys::fs::OpenFlags::F_None); }
+  { raw_fd_ostream("-", EC, sys::fs::OpenFlags::F_None); }
 }
 }

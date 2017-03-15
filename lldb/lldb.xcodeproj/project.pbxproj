@@ -960,6 +960,7 @@
 		AFEC5FD81D94F9380076A480 /* Testx86AssemblyInspectionEngine.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AFEC5FD51D94F9380076A480 /* Testx86AssemblyInspectionEngine.cpp */; };
 		AFF87C87150FF669000E1742 /* com.apple.debugserver.plist in CopyFiles */ = {isa = PBXBuildFile; fileRef = AFF87C86150FF669000E1742 /* com.apple.debugserver.plist */; };
 		AFF87C8F150FF688000E1742 /* com.apple.debugserver.applist.plist in CopyFiles */ = {isa = PBXBuildFile; fileRef = AFF87C8E150FF688000E1742 /* com.apple.debugserver.applist.plist */; };
+		AFF8FF0C1E779D4B003830EF /* TildeExpressionResolver.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AFF8FF0B1E779D4B003830EF /* TildeExpressionResolver.cpp */; };
 		B207C4931429607D00F36E4E /* CommandObjectWatchpoint.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B207C4921429607D00F36E4E /* CommandObjectWatchpoint.cpp */; };
 		B2462247141AD37D00F3D409 /* OptionGroupWatchpoint.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B2462246141AD37D00F3D409 /* OptionGroupWatchpoint.cpp */; };
 		B27318421416AC12006039C8 /* WatchpointList.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B27318411416AC12006039C8 /* WatchpointList.cpp */; };
@@ -2999,6 +3000,8 @@
 		AFF87C8A150FF677000E1742 /* com.apple.debugserver.applist.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = com.apple.debugserver.applist.plist; path = tools/debugserver/source/com.apple.debugserver.applist.plist; sourceTree = "<group>"; };
 		AFF87C8C150FF680000E1742 /* com.apple.debugserver.applist.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = com.apple.debugserver.applist.plist; path = tools/debugserver/source/com.apple.debugserver.applist.plist; sourceTree = "<group>"; };
 		AFF87C8E150FF688000E1742 /* com.apple.debugserver.applist.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = com.apple.debugserver.applist.plist; path = tools/debugserver/source/com.apple.debugserver.applist.plist; sourceTree = "<group>"; };
+		AFF8FF0B1E779D4B003830EF /* TildeExpressionResolver.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = TildeExpressionResolver.cpp; path = source/Utility/TildeExpressionResolver.cpp; sourceTree = "<group>"; };
+		AFF8FF0D1E779D51003830EF /* TildeExpressionResolver.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = TildeExpressionResolver.h; path = include/lldb/Utility/TildeExpressionResolver.h; sourceTree = "<group>"; };
 		B207C4921429607D00F36E4E /* CommandObjectWatchpoint.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CommandObjectWatchpoint.cpp; path = source/Commands/CommandObjectWatchpoint.cpp; sourceTree = "<group>"; };
 		B207C4941429609C00F36E4E /* CommandObjectWatchpoint.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = CommandObjectWatchpoint.h; path = source/Commands/CommandObjectWatchpoint.h; sourceTree = "<group>"; };
 		B23DD24F12EDFAC1000C3894 /* ARMUtils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ARMUtils.h; path = Utility/ARMUtils.h; sourceTree = "<group>"; };
@@ -4236,6 +4239,8 @@
 				94BA8B6C176F8C9B005A91B5 /* Range.cpp */,
 				6DEC6F3A1BD66D950091ABA6 /* TaskPool.h */,
 				6DEC6F381BD66D750091ABA6 /* TaskPool.cpp */,
+				AFF8FF0B1E779D4B003830EF /* TildeExpressionResolver.cpp */,
+				AFF8FF0D1E779D51003830EF /* TildeExpressionResolver.h */,
 				2654A6911E552F3C00DA1013 /* UriParser.h */,
 				33064C991A5C7A330033D415 /* UriParser.cpp */,
 				AFC2DCEA1E6E2F7D00283714 /* UserID.cpp */,
@@ -7354,6 +7359,7 @@
 				268900E313353E6F00698AC0 /* TypeList.cpp in Sources */,
 				268900E413353E6F00698AC0 /* UnwindPlan.cpp in Sources */,
 				268900E513353E6F00698AC0 /* UnwindTable.cpp in Sources */,
+				AFF8FF0C1E779D4B003830EF /* TildeExpressionResolver.cpp in Sources */,
 				268900E613353E6F00698AC0 /* Variable.cpp in Sources */,
 				268900E713353E6F00698AC0 /* VariableList.cpp in Sources */,
 				257906641BD5AFD000178368 /* Acceptor.cpp in Sources */,

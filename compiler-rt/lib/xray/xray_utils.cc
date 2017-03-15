@@ -15,6 +15,7 @@
 #include "sanitizer_common/sanitizer_common.h"
 #include "xray_defs.h"
 #include "xray_flags.h"
+#include <stdlib.h>
 #include <cstdio>
 #include <errno.h>
 #include <fcntl.h>

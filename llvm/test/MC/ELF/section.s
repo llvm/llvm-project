@@ -1,4 +1,5 @@
 // RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu %s -o - | llvm-readobj -s | FileCheck %s
+// RUN: llvm-mc -filetype=asm -triple x86_64-pc-linux-gnu %s -o - |  FileCheck %s --check-prefix=ASM
 
 // Test that these names are accepted.
 
@@ -165,6 +166,9 @@ bar:
 .section .shf_metadata1,"am",@progbits,.Lshf_metadata_target2_1
 .section .shf_metadata2,"am",@progbits,.Lshf_metadata_target2_2
 .section .shf_metadata3,"am",@progbits,.shf_metadata_target1
+// ASM: .section .shf_metadata1,"am",@progbits,.Lshf_metadata_target2_1
+// ASM: .section .shf_metadata2,"am",@progbits,.Lshf_metadata_target2_2
+// ASM: .section .shf_metadata3,"am",@progbits,.shf_metadata_target1
 
 // CHECK:      Section {
 // CHECK:        Index: 22

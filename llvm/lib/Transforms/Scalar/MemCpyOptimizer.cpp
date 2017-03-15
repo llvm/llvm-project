@@ -932,6 +932,17 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpy, Value *cpyDest,
   if (MR != MRI_NoModRef)
     return false;
 
+  // We can't create address space casts here because we don't know if they're
+  // safe for the target.
+  if (cpySrc->getType()->getPointerAddressSpace() !=
+      cpyDest->getType()->getPointerAddressSpace())
+    return false;
+  for (unsigned i = 0; i < CS.arg_size(); ++i)
+    if (CS.getArgument(i)->stripPointerCasts() == cpySrc &&
+        cpySrc->getType()->getPointerAddressSpace() !=
+        CS.getArgument(i)->getType()->getPointerAddressSpace())
+      return false;
+
   // All the checks have passed, so do the transformation.
   bool changedArgument = false;
   for (unsigned i = 0; i < CS.arg_size(); ++i)

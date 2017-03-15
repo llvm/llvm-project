@@ -1524,6 +1524,11 @@ def idirafter : JoinedOrSeparate<["-"], "idirafter">, Group<clang_i_Group>, Flag
   HelpText<"Add directory to AFTER include search path">;
 def iframework : JoinedOrSeparate<["-"], "iframework">, Group<clang_i_Group>, Flags<[CC1Option]>,
   HelpText<"Add directory to SYSTEM framework search path">;
+def iframeworkwithsysroot : JoinedOrSeparate<["-"], "iframeworkwithsysroot">,
+  Group<clang_i_Group>,
+  HelpText<"Add directory to SYSTEM framework search path, "
+           "absolute paths are relative to -isysroot">,
+  MetaVarName<"<directory>">, Flags<[CC1Option]>;
 def imacros : JoinedOrSeparate<["-", "--"], "imacros">, Group<clang_i_Group>, Flags<[CC1Option]>,
   HelpText<"Include macros from file before parsing">, MetaVarName<"<file>">;
 def image__base : Separate<["-"], "image_base">;
@@ -2093,6 +2098,10 @@ def resource_dir_EQ : Joined<["-"], "resource-dir=">, Flags<[DriverOption, CoreO
 def rpath : Separate<["-"], "rpath">, Flags<[LinkerInput]>, Group<Link_Group>;
 def rtlib_EQ : Joined<["-", "--"], "rtlib=">,
   HelpText<"Compiler runtime library to use">;
+def frtlib_add_rpath: Flag<["-"], "frtlib-add-rpath">, Flags<[NoArgumentUnused]>,
+  HelpText<"Add -rpath with architecture-specific resource directory to the linker flags">;
+def fno_rtlib_add_rpath: Flag<["-"], "fno-rtlib-add-rpath">, Flags<[NoArgumentUnused]>,
+  HelpText<"Do not add -rpath with architecture-specific resource directory to the linker flags">;
 def r : Flag<["-"], "r">, Flags<[LinkerInput,NoArgumentUnused]>,
         Group<Link_Group>;
 def save_temps_EQ : Joined<["-", "--"], "save-temps=">, Flags<[DriverOption]>,
@@ -2317,6 +2326,8 @@ def mv55 : Flag<["-"], "mv55">, Group<m_hexagon_Features_Group>,
            Alias<mcpu_EQ>, AliasArgs<["hexagonv55"]>;
 def mv60 : Flag<["-"], "mv60">, Group<m_hexagon_Features_Group>,
            Alias<mcpu_EQ>, AliasArgs<["hexagonv60"]>;
+def mv62 : Flag<["-"], "mv62">, Group<m_hexagon_Features_Group>,
+           Alias<mcpu_EQ>, AliasArgs<["hexagonv62"]>;
 def mhexagon_hvx : Flag<["-"], "mhvx">, Group<m_hexagon_Features_Group>,
     Flags<[CC1Option]>, HelpText<"Enable Hexagon Vector eXtensions">;
 def mno_hexagon_hvx : Flag<["-"], "mno-hvx">, Group<m_hexagon_Features_Group>,

@@ -7139,6 +7139,17 @@ let Predicates = [IsBE] in {
                         (f64 (IMPLICIT_DEF)), (i32 0)))), dsub_0)), dsub_0))>;
 }
 
+def : Pat<(v2i64 (concat_vectors DPR:$Dn, DPR:$Dm)),
+          (REG_SEQUENCE QPR, DPR:$Dn, dsub_0, DPR:$Dm, dsub_1)>;
+def : Pat<(v4i32 (concat_vectors DPR:$Dn, DPR:$Dm)),
+          (REG_SEQUENCE QPR, DPR:$Dn, dsub_0, DPR:$Dm, dsub_1)>;
+def : Pat<(v8i16 (concat_vectors DPR:$Dn, DPR:$Dm)),
+          (REG_SEQUENCE QPR, DPR:$Dn, dsub_0, DPR:$Dm, dsub_1)>;
+def : Pat<(v16i8 (concat_vectors DPR:$Dn, DPR:$Dm)),
+          (REG_SEQUENCE QPR, DPR:$Dn, dsub_0, DPR:$Dm, dsub_1)>;
+def : Pat<(v4f32 (concat_vectors DPR:$Dn, DPR:$Dm)),
+          (REG_SEQUENCE QPR, DPR:$Dn, dsub_0, DPR:$Dm, dsub_1)>;
+
 //===----------------------------------------------------------------------===//
 // Assembler aliases
 //

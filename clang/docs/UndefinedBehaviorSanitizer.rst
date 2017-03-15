@@ -92,6 +92,12 @@ Available checks are:
      parameter which is declared to never be null.
   -  ``-fsanitize=null``: Use of a null pointer or creation of a null
      reference.
+  -  ``-fsanitize=nullability-arg``: Passing null as a function parameter
+     which is annotated with ``_Nonnull``.
+  -  ``-fsanitize=nullability-assign``: Assigning null to an lvalue which
+     is annotated with ``_Nonnull``.
+  -  ``-fsanitize=nullability-return``: Returning null from a function with
+     a return type annotated with ``_Nonnull``.
   -  ``-fsanitize=object-size``: An attempt to potentially use bytes which
      the optimizer can determine are not part of the object being accessed.
      This will also detect some types of undefined behavior that may not
@@ -130,11 +136,15 @@ Available checks are:
 
 You can also use the following check groups:
   -  ``-fsanitize=undefined``: All of the checks listed above other than
-     ``unsigned-integer-overflow``.
+     ``unsigned-integer-overflow`` and the ``nullability-*`` checks.
   -  ``-fsanitize=undefined-trap``: Deprecated alias of
      ``-fsanitize=undefined``.
   -  ``-fsanitize=integer``: Checks for undefined or suspicious integer
      behavior (e.g. unsigned integer overflow).
+  -  ``-fsanitize=nullability``: Enables ``nullability-arg``,
+     ``nullability-assign``, and ``nullability-return``. While violating
+     nullability does not have undefined behavior, it is often unintentional,
+     so UBSan offers to catch it.
 
 Stack traces and report symbolization
 =====================================

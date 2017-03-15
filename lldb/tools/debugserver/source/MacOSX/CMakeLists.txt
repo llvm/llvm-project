@@ -29,7 +29,6 @@ add_custom_command(OUTPUT ${DEBUGSERVER_VERS_GENERATED_FILE}
   )
 
 add_lldb_tool(debugserver INCLUDE_IN_FRAMEWORK
-  HasAVX.s
   CFBundle.cpp
   CFString.cpp
   Genealogy.cpp

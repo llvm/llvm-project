@@ -37,48 +37,42 @@ define x86_regcallcc i1 @test_CallargReti1(i1 %a)  {
 }
 
 ; WIN64-LABEL: testf32_inp
-; WIN64: movaps {{%xmm(1[2-5])}}, {{.*(%rsp).*}}  {{#+}} 16-byte Spill
-; WIN64: movaps {{%xmm(1[2-5])}}, {{.*(%rsp).*}}  {{#+}} 16-byte Spill
-; WIN64: movaps {{%xmm(1[2-5])}}, {{.*(%rsp).*}}  {{#+}} 16-byte Spill
-; WIN64: movaps {{%xmm(1[2-5])}}, {{.*(%rsp).*}}  {{#+}} 16-byte Spill
+; WIN64: movaps {{%xmm(1[2-5])}}, {{.*(%r(b|s)p).*}}  {{#+}} 16-byte Spill
+; WIN64: movaps {{%xmm(1[2-5])}}, {{.*(%r(b|s)p).*}}  {{#+}} 16-byte Spill
+; WIN64: movaps {{%xmm(1[2-5])}}, {{.*(%r(b|s)p).*}}  {{#+}} 16-byte Spill
+; WIN64: movaps {{%xmm(1[2-5])}}, {{.*(%r(b|s)p).*}}  {{#+}} 16-byte Spill
 ; WIN64: {{.*}} {{%xmm([0-9]|1[0-1])}}, {{%xmm(1[2-5])}}
 ; WIN64: {{.*}} {{%xmm([0-9]|1[0-1])}}, {{%xmm(1[2-5])}}
 ; WIN64: {{.*}} {{%xmm([0-9]|1[0-1])}}, {{%xmm(1[2-5])}}
 ; WIN64: {{.*}} {{%xmm([0-9]|1[0-1])}}, {{%xmm(1[2-5])}}
-; WIN64: movaps {{.*(%rsp).*}}, {{%xmm(1[2-5])}}  {{#+}} 16-byte Reload
-; WIN64: movaps {{.*(%rsp).*}}, {{%xmm(1[2-5])}}  {{#+}} 16-byte Reload
-; WIN64: movaps {{.*(%rsp).*}}, {{%xmm(1[2-5])}}  {{#+}} 16-byte Reload
-; WIN64: movaps {{.*(%rsp).*}}, {{%xmm(1[2-5])}}  {{#+}} 16-byte Reload
+; WIN64: movaps {{.*(%r(b|s)p).*}}, {{%xmm(1[2-5])}}  {{#+}} 16-byte Reload
+; WIN64: movaps {{.*(%r(b|s)p).*}}, {{%xmm(1[2-5])}}  {{#+}} 16-byte Reload
+; WIN64: movaps {{.*(%r(b|s)p).*}}, {{%xmm(1[2-5])}}  {{#+}} 16-byte Reload
+; WIN64: movaps {{.*(%r(b|s)p).*}}, {{%xmm(1[2-5])}}  {{#+}} 16-byte Reload
 ; WIN64: retq
 
 ; WIN32-LABEL: testf32_inp
-; WIN32: movaps {{%xmm([4-7])}}, {{.*(%ebp).*}}  {{#+}} 16-byte Spill
-; WIN32: movaps {{%xmm([4-7])}}, {{.*(%ebp).*}}  {{#+}} 16-byte Spill
-; WIN32: movaps {{%xmm([4-7])}}, {{.*(%ebp).*}}  {{#+}} 16-byte Spill
-; WIN32: movaps {{%xmm([4-7])}}, {{.*(%ebp).*}}  {{#+}} 16-byte Spill
+; WIN32: movaps {{%xmm([0-7])}}, {{.*(%e(b|s)p).*}}  {{#+}} 16-byte Spill
 ; WIN32: {{.*}} {{%xmm[0-7]}}, {{%xmm[4-7]}}
 ; WIN32: {{.*}} {{%xmm[0-7]}}, {{%xmm[4-7]}}
 ; WIN32: {{.*}} {{%xmm[0-7]}}, {{%xmm[4-7]}}
 ; WIN32: {{.*}} {{%xmm[0-7]}}, {{%xmm[4-7]}}
-; WIN32: movaps {{.*(%ebp).*}}, {{%xmm([4-7])}}  {{#+}} 16-byte Reload
-; WIN32: movaps {{.*(%ebp).*}}, {{%xmm([4-7])}}  {{#+}} 16-byte Reload
-; WIN32: movaps {{.*(%ebp).*}}, {{%xmm([4-7])}}  {{#+}} 16-byte Reload
-; WIN32: movaps {{.*(%ebp).*}}, {{%xmm([4-7])}}  {{#+}} 16-byte Reload
+; WIN32: movaps {{.*(%e(b|s)p).*}}, {{%xmm([0-7])}}  {{#+}} 16-byte Reload
 ; WIN32: retl
 
 ; LINUXOSX-LABEL: testf32_inp
-; LINUXOSX: movaps {{%xmm(1[2-5])}}, {{.*(%rsp).*}}  {{#+}} 16-byte Spill
-; LINUXOSX: movaps {{%xmm(1[2-5])}}, {{.*(%rsp).*}}  {{#+}} 16-byte Spill
-; LINUXOSX: movaps {{%xmm(1[2-5])}}, {{.*(%rsp).*}}  {{#+}} 16-byte Spill
-; LINUXOSX: movaps {{%xmm(1[2-5])}}, {{.*(%rsp).*}}  {{#+}} 16-byte Spill
+; LINUXOSX: movaps {{%xmm(1[2-5])}}, {{.*(%r(b|s)p).*}}  {{#+}} 16-byte Spill
+; LINUXOSX: movaps {{%xmm(1[2-5])}}, {{.*(%r(b|s)p).*}}  {{#+}} 16-byte Spill
+; LINUXOSX: movaps {{%xmm(1[2-5])}}, {{.*(%r(b|s)p).*}}  {{#+}} 16-byte Spill
+; LINUXOSX: movaps {{%xmm(1[2-5])}}, {{.*(%r(b|s)p).*}}  {{#+}} 16-byte Spill
 ; LINUXOSX: {{.*}} {{%xmm([0-9]|1[0-1])}}, {{%xmm(1[2-5])}}
 ; LINUXOSX: {{.*}} {{%xmm([0-9]|1[0-1])}}, {{%xmm(1[2-5])}}
 ; LINUXOSX: {{.*}} {{%xmm([0-9]|1[0-1])}}, {{%xmm(1[2-5])}}
 ; LINUXOSX: {{.*}} {{%xmm([0-9]|1[0-1])}}, {{%xmm(1[2-5])}}
-; LINUXOSX: movaps {{.*(%rsp).*}}, {{%xmm(1[2-5])}}  {{#+}} 16-byte Reload
-; LINUXOSX: movaps {{.*(%rsp).*}}, {{%xmm(1[2-5])}}  {{#+}} 16-byte Reload
-; LINUXOSX: movaps {{.*(%rsp).*}}, {{%xmm(1[2-5])}}  {{#+}} 16-byte Reload
-; LINUXOSX: movaps {{.*(%rsp).*}}, {{%xmm(1[2-5])}}  {{#+}} 16-byte Reload
+; LINUXOSX: movaps {{.*(%r(b|s)p).*}}, {{%xmm(1[2-5])}}  {{#+}} 16-byte Reload
+; LINUXOSX: movaps {{.*(%r(b|s)p).*}}, {{%xmm(1[2-5])}}  {{#+}} 16-byte Reload
+; LINUXOSX: movaps {{.*(%r(b|s)p).*}}, {{%xmm(1[2-5])}}  {{#+}} 16-byte Reload
+; LINUXOSX: movaps {{.*(%r(b|s)p).*}}, {{%xmm(1[2-5])}}  {{#+}} 16-byte Reload
 ; LINUXOSX: retq
 
 ;test calling conventions - input parameters, callee saved XMMs
@@ -93,10 +87,6 @@ define x86_regcallcc <16 x float> @testf32_inp(<16 x float> %a, <16 x float> %b,
 ; WIN32-LABEL: testi32_inp
 ; WIN32: pushl {{%e(si|di|bx|bp)}}
 ; WIN32: pushl {{%e(si|di|bx|bp)}}
-; WIN32: pushl {{%e(si|di|bx|bp)}}
-; WIN32: pushl {{%e(si|di|bx|bp)}}
-; WIN32: popl {{%e(si|di|bx|bp)}}
-; WIN32: popl {{%e(si|di|bx|bp)}}
 ; WIN32: popl {{%e(si|di|bx|bp)}}
 ; WIN32: popl {{%e(si|di|bx|bp)}}
 ; WIN32: retl
@@ -105,10 +95,6 @@ define x86_regcallcc <16 x float> @testf32_inp(<16 x float> %a, <16 x float> %b,
 ; WIN64: pushq	{{%r(bp|bx|1[0-5])}}
 ; WIN64: pushq	{{%r(bp|bx|1[0-5])}}
 ; WIN64: pushq	{{%r(bp|bx|1[0-5])}}
-; WIN64: pushq	{{%r(bp|bx|1[0-5])}}
-; WIN64: pushq	{{%r(bp|bx|1[0-5])}}
-; WIN64: popq	{{%r(bp|bx|1[0-5])}}
-; WIN64: popq	{{%r(bp|bx|1[0-5])}}
 ; WIN64: popq	{{%r(bp|bx|1[0-5])}}
 ; WIN64: popq	{{%r(bp|bx|1[0-5])}}
 ; WIN64: popq	{{%r(bp|bx|1[0-5])}}
@@ -117,10 +103,6 @@ define x86_regcallcc <16 x float> @testf32_inp(<16 x float> %a, <16 x float> %b,
 ; LINUXOSX-LABEL: testi32_inp
 ; LINUXOSX: pushq	{{%r(bp|bx|1[2-5])}}
 ; LINUXOSX: pushq	{{%r(bp|bx|1[2-5])}}
-; LINUXOSX: pushq	{{%r(bp|bx|1[2-5])}}
-; LINUXOSX: pushq	{{%r(bp|bx|1[2-5])}}
-; LINUXOSX: popq	{{%r(bp|bx|1[2-5])}}
-; LINUXOSX: popq	{{%r(bp|bx|1[2-5])}}
 ; LINUXOSX: popq	{{%r(bp|bx|1[2-5])}}
 ; LINUXOSX: popq	{{%r(bp|bx|1[2-5])}}
 ; LINUXOSX: retq

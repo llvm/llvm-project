@@ -36,6 +36,9 @@ private:
     /// function ourselves.
     bool PropagateAttrs;
 
+    /// If true, we use LLVM module internalizer.
+    bool Internalize;
+
     /// Bitwise combination of llvm::LinkerFlags used when we link the module.
     unsigned LinkFlags;
   };

@@ -3365,6 +3365,93 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
 
     break;
   }
+  case Intrinsic::amdgcn_icmp:
+  case Intrinsic::amdgcn_fcmp: {
+    const ConstantInt *CC = dyn_cast<ConstantInt>(II->getArgOperand(2));
+    if (!CC)
+      break;
+
+    // Guard against invalid arguments.
+    int64_t CCVal = CC->getZExtValue();
+    bool IsInteger = II->getIntrinsicID() == Intrinsic::amdgcn_icmp;
+    if ((IsInteger && (CCVal < CmpInst::FIRST_ICMP_PREDICATE ||
+                       CCVal > CmpInst::LAST_ICMP_PREDICATE)) ||
+        (!IsInteger && (CCVal < CmpInst::FIRST_FCMP_PREDICATE ||
+                        CCVal > CmpInst::LAST_FCMP_PREDICATE)))
+      break;
+
+    Value *Src0 = II->getArgOperand(0);
+    Value *Src1 = II->getArgOperand(1);
+
+    if (auto *CSrc0 = dyn_cast<Constant>(Src0)) {
+      if (auto *CSrc1 = dyn_cast<Constant>(Src1)) {
+        Constant *CCmp = ConstantExpr::getCompare(CCVal, CSrc0, CSrc1);
+        return replaceInstUsesWith(*II,
+                                   ConstantExpr::getSExt(CCmp, II->getType()));
+      }
+
+      // Canonicalize constants to RHS.
+      CmpInst::Predicate SwapPred
+        = CmpInst::getSwappedPredicate(static_cast<CmpInst::Predicate>(CCVal));
+      II->setArgOperand(0, Src1);
+      II->setArgOperand(1, Src0);
+      II->setArgOperand(2, ConstantInt::get(CC->getType(),
+                                            static_cast<int>(SwapPred)));
+      return II;
+    }
+
+    if (CCVal != CmpInst::ICMP_EQ && CCVal != CmpInst::ICMP_NE)
+      break;
+
+    // Canonicalize compare eq with true value to compare != 0
+    // llvm.amdgcn.icmp(zext (i1 x), 1, eq)
+    //   -> llvm.amdgcn.icmp(zext (i1 x), 0, ne)
+    // llvm.amdgcn.icmp(sext (i1 x), -1, eq)
+    //   -> llvm.amdgcn.icmp(sext (i1 x), 0, ne)
+    Value *ExtSrc;
+    if (CCVal == CmpInst::ICMP_EQ &&
+        ((match(Src1, m_One()) && match(Src0, m_ZExt(m_Value(ExtSrc)))) ||
+         (match(Src1, m_AllOnes()) && match(Src0, m_SExt(m_Value(ExtSrc))))) &&
+        ExtSrc->getType()->isIntegerTy(1)) {
+      II->setArgOperand(1, ConstantInt::getNullValue(Src1->getType()));
+      II->setArgOperand(2, ConstantInt::get(CC->getType(), CmpInst::ICMP_NE));
+      return II;
+    }
+
+    CmpInst::Predicate SrcPred;
+    Value *SrcLHS;
+    Value *SrcRHS;
+
+    // Fold compare eq/ne with 0 from a compare result as the predicate to the
+    // intrinsic. The typical use is a wave vote function in the library, which
+    // will be fed from a user code condition compared with 0. Fold in the
+    // redundant compare.
+
+    // llvm.amdgcn.icmp([sz]ext ([if]cmp pred a, b), 0, ne)
+    //   -> llvm.amdgcn.[if]cmp(a, b, pred)
+    //
+    // llvm.amdgcn.icmp([sz]ext ([if]cmp pred a, b), 0, eq)
+    //   -> llvm.amdgcn.[if]cmp(a, b, inv pred)
+    if (match(Src1, m_Zero()) &&
+        match(Src0,
+              m_ZExtOrSExt(m_Cmp(SrcPred, m_Value(SrcLHS), m_Value(SrcRHS))))) {
+      if (CCVal == CmpInst::ICMP_EQ)
+        SrcPred = CmpInst::getInversePredicate(SrcPred);
+
+      Intrinsic::ID NewIID = CmpInst::isFPPredicate(SrcPred) ?
+        Intrinsic::amdgcn_fcmp : Intrinsic::amdgcn_icmp;
+
+      Value *NewF = Intrinsic::getDeclaration(II->getModule(), NewIID,
+                                              SrcLHS->getType());
+      Value *Args[] = { SrcLHS, SrcRHS,
+                        ConstantInt::get(CC->getType(), SrcPred) };
+      CallInst *NewCall = Builder->CreateCall(NewF, Args);
+      NewCall->takeName(II);
+      return replaceInstUsesWith(*II, NewCall);
+    }
+
+    break;
+  }
   case Intrinsic::stackrestore: {
     // If the save is right next to the restore, remove the restore.  This can
     // happen when variable allocas are DCE'd.

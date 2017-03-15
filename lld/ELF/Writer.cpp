@@ -937,7 +937,7 @@ void Writer<ELFT>::forEachRelSec(std::function<void(InputSectionBase &)> Fn) {
 template <class ELFT> void Writer<ELFT>::createSections() {
   for (InputSectionBase *IS : InputSections)
     if (IS)
-      Factory.addInputSec<ELFT>(IS, getOutputSectionName(IS->Name));
+      Factory.addInputSec(IS, getOutputSectionName(IS->Name));
 
   sortBySymbolsOrder<ELFT>(OutputSections);
   sortInitFini<ELFT>(findSection(".init_array"));
@@ -1228,10 +1228,15 @@ template <class ELFT> void Writer<ELFT>::addStartEndSymbols() {
   auto Define = [&](StringRef Start, StringRef End, OutputSection *OS) {
     // These symbols resolve to the image base if the section does not exist.
     // A special value -1 indicates end of the section.
-    if (!OS && Config->pic())
-      OS = Out::ElfHeader;
-    addOptionalRegular<ELFT>(Start, OS, 0);
-    addOptionalRegular<ELFT>(End, OS, OS ? -1 : 0);
+    if (OS) {
+      addOptionalRegular<ELFT>(Start, OS, 0);
+      addOptionalRegular<ELFT>(End, OS, -1);
+    } else {
+      if (Config->pic())
+        OS = Out::ElfHeader;
+      addOptionalRegular<ELFT>(Start, OS, 0);
+      addOptionalRegular<ELFT>(End, OS, 0);
+    }
   };
 
   Define("__preinit_array_start", "__preinit_array_end", Out::PreinitArray);
@@ -1350,7 +1355,8 @@ template <class ELFT> std::vector<PhdrEntry> Writer<ELFT>::createPhdrs() {
     Ret.push_back(std::move(RelRo));
 
   // PT_GNU_EH_FRAME is a special section pointing on .eh_frame_hdr.
-  if (!In<ELFT>::EhFrame->empty() && In<ELFT>::EhFrameHdr)
+  if (!In<ELFT>::EhFrame->empty() && In<ELFT>::EhFrameHdr &&
+      In<ELFT>::EhFrame->OutSec && In<ELFT>::EhFrameHdr->OutSec)
     AddHdr(PT_GNU_EH_FRAME, In<ELFT>::EhFrameHdr->OutSec->getPhdrFlags())
         ->add(In<ELFT>::EhFrameHdr->OutSec);
 
@@ -1433,7 +1439,6 @@ template <class ELFT> void Writer<ELFT>::fixSectionAlignments() {
   }
 }
 
-template <class ELFT>
 bool elf::allocateHeaders(std::vector<PhdrEntry> &Phdrs,
                           ArrayRef<OutputSection *> OutputSections,
                           uint64_t Min) {
@@ -1443,7 +1448,7 @@ bool elf::allocateHeaders(std::vector<PhdrEntry> &Phdrs,
   if (FirstPTLoad == Phdrs.end())
     return false;
 
-  uint64_t HeaderSize = getHeaderSize<ELFT>();
+  uint64_t HeaderSize = getHeaderSize();
   if (HeaderSize > Min) {
     auto PhdrI =
         std::find_if(Phdrs.begin(), Phdrs.end(),
@@ -1460,7 +1465,7 @@ bool elf::allocateHeaders(std::vector<PhdrEntry> &Phdrs,
   Out::ElfHeader->Addr = Min;
   Out::ProgramHeaders->Addr = Min + Out::ElfHeader->Size;
 
-  if (Script<ELFT>::X->hasPhdrsCommands())
+  if (ScriptBase->hasPhdrsCommands())
     return true;
 
   if (FirstPTLoad->First)
@@ -1489,14 +1494,14 @@ template <class ELFT> void Writer<ELFT>::fixHeaders() {
     for (const auto &P : Config->SectionStartMap)
       Min = std::min(Min, P.second);
 
-  AllocateHeader = allocateHeaders<ELFT>(Phdrs, OutputSections, Min);
+  AllocateHeader = allocateHeaders(Phdrs, OutputSections, Min);
 }
 
 // Assign VAs (addresses at run-time) to output sections.
 template <class ELFT> void Writer<ELFT>::assignAddresses() {
   uintX_t VA = Config->ImageBase;
   if (AllocateHeader)
-    VA += getHeaderSize<ELFT>();
+    VA += getHeaderSize();
   uintX_t ThreadBssOffset = 0;
   for (OutputSection *Sec : OutputSections) {
     uint32_t Alignment = Sec->Alignment;
@@ -1870,19 +1875,6 @@ template void elf::writeResult<ELF32LE>();
 template void elf::writeResult<ELF32BE>();
 template void elf::writeResult<ELF64LE>();
 template void elf::writeResult<ELF64BE>();
-
-template bool elf::allocateHeaders<ELF32LE>(std::vector<PhdrEntry> &,
-                                            ArrayRef<OutputSection *>,
-                                            uint64_t);
-template bool elf::allocateHeaders<ELF32BE>(std::vector<PhdrEntry> &,
-                                            ArrayRef<OutputSection *>,
-                                            uint64_t);
-template bool elf::allocateHeaders<ELF64LE>(std::vector<PhdrEntry> &,
-                                            ArrayRef<OutputSection *>,
-                                            uint64_t);
-template bool elf::allocateHeaders<ELF64BE>(std::vector<PhdrEntry> &,
-                                            ArrayRef<OutputSection *>,
-                                            uint64_t);
 
 template bool elf::isRelroSection<ELF32LE>(const OutputSection *);
 template bool elf::isRelroSection<ELF32BE>(const OutputSection *);

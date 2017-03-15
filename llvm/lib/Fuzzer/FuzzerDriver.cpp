@@ -530,14 +530,10 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
   if (Flags.merge) {
     if (Options.MaxLen == 0)
       F->SetMaxInputLen(kMaxSaneLen);
-    if (TPC.UsingTracePcGuard()) {
-      if (Flags.merge_control_file)
-        F->CrashResistantMergeInternalStep(Flags.merge_control_file);
-      else
-        F->CrashResistantMerge(Args, *Inputs);
-    } else {
-      F->Merge(*Inputs);
-    }
+    if (Flags.merge_control_file)
+      F->CrashResistantMergeInternalStep(Flags.merge_control_file);
+    else
+      F->CrashResistantMerge(Args, *Inputs);
     exit(0);
   }
 

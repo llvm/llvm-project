@@ -842,12 +842,15 @@ define float @broadcast_lifetime() nounwind {
 ; X32-NEXT:    leal {{[0-9]+}}(%esp), %esi
 ; X32-NEXT:    movl %esi, (%esp)
 ; X32-NEXT:    calll _gfunc
-; X32-NEXT:    vbroadcastss {{[0-9]+}}(%esp), %xmm0
+; X32-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X32-NEXT:    vmovaps %xmm0, {{[0-9]+}}(%esp) ## 16-byte Spill
 ; X32-NEXT:    movl %esi, (%esp)
 ; X32-NEXT:    calll _gfunc
-; X32-NEXT:    vbroadcastss {{[0-9]+}}(%esp), %xmm0
-; X32-NEXT:    vsubss {{[0-9]+}}(%esp), %xmm0, %xmm0 ## 16-byte Folded Reload
+; X32-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X32-NEXT:    vpermilps $0, {{[0-9]+}}(%esp), %xmm1 ## 16-byte Folded Reload
+; X32-NEXT:    ## xmm1 = mem[0,0,0,0]
+; X32-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; X32-NEXT:    vsubss %xmm1, %xmm0, %xmm0
 ; X32-NEXT:    vmovss %xmm0, {{[0-9]+}}(%esp)
 ; X32-NEXT:    flds {{[0-9]+}}(%esp)
 ; X32-NEXT:    addl $56, %esp
@@ -859,12 +862,15 @@ define float @broadcast_lifetime() nounwind {
 ; X64-NEXT:    subq $40, %rsp
 ; X64-NEXT:    movq %rsp, %rdi
 ; X64-NEXT:    callq _gfunc
-; X64-NEXT:    vbroadcastss {{[0-9]+}}(%rsp), %xmm0
+; X64-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X64-NEXT:    vmovaps %xmm0, {{[0-9]+}}(%rsp) ## 16-byte Spill
 ; X64-NEXT:    movq %rsp, %rdi
 ; X64-NEXT:    callq _gfunc
-; X64-NEXT:    vbroadcastss {{[0-9]+}}(%rsp), %xmm0
-; X64-NEXT:    vsubss {{[0-9]+}}(%rsp), %xmm0, %xmm0 ## 16-byte Folded Reload
+; X64-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X64-NEXT:    vpermilps $0, {{[0-9]+}}(%rsp), %xmm1 ## 16-byte Folded Reload
+; X64-NEXT:    ## xmm1 = mem[0,0,0,0]
+; X64-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; X64-NEXT:    vsubss %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    addq $40, %rsp
 ; X64-NEXT:    retq
   %1 = alloca <4 x float>, align 16

@@ -3355,7 +3355,7 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
       // a single use.
       bool HasMultipleUses = false;
       for (unsigned i = 1, e = NodeStack.size()-1; i != e; ++i)
-        if (!NodeStack[i].hasOneUse()) {
+        if (!NodeStack[i].getNode()->hasOneUse()) {
           HasMultipleUses = true;
           break;
         }

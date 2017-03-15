@@ -6682,6 +6682,7 @@ bool ARMAsmParser::validateInstruction(MCInst &Inst,
     break;
   }
   case ARM::MOVi16:
+  case ARM::MOVTi16:
   case ARM::t2MOVi16:
   case ARM::t2MOVTi16:
     {

@@ -306,16 +306,28 @@ public:
     return Cost;
   }
 
-  /// Estimate the overhead of scalarizing an instructions unique operands.
+  /// Estimate the overhead of scalarizing an instructions unique
+  /// non-constant operands. The types of the arguments are ordinarily
+  /// scalar, in which case the costs are multiplied with VF. Vector
+  /// arguments are allowed if 1 is passed for VF.
   unsigned getOperandsScalarizationOverhead(ArrayRef<const Value *> Args,
                                             unsigned VF) {
     unsigned Cost = 0;
     SmallPtrSet<const Value*, 4> UniqueOperands;
     for (const Value *A : Args) {
-      if (UniqueOperands.insert(A).second)
-        Cost += getScalarizationOverhead(VectorType::get(A->getType(), VF),
-                                         false, true);
+      if (!isa<Constant>(A) && UniqueOperands.insert(A).second) {
+        Type *VecTy = nullptr;
+        if (A->getType()->isVectorTy()) {
+          assert (VF == 1 && "Vector argument passed with VF > 1");
+          VecTy = A->getType();
+        }
+        else
+          VecTy = VectorType::get(A->getType(), VF);
+
+        Cost += getScalarizationOverhead(VecTy, false, true);
+      }
     }
+
     return Cost;
   }
 
@@ -705,18 +717,40 @@ public:
     return Cost;
   }
 
-  /// Get intrinsic cost based on arguments  
+  /// Get intrinsic cost based on arguments.
   unsigned getIntrinsicInstrCost(Intrinsic::ID IID, Type *RetTy,
-                                 ArrayRef<Value *> Args, FastMathFlags FMF) {
+                                 ArrayRef<Value *> Args, FastMathFlags FMF,
+                                 unsigned VF = 1) {
+    unsigned RetVF = (RetTy->isVectorTy() ? RetTy->getVectorNumElements() : 1);
+    assert ((RetVF == 1 || VF == 1) && "VF > 1 and RetVF is a vector type");
+
     switch (IID) {
     default: {
+      // Assume that we need to scalarize this intrinsic.
       SmallVector<Type *, 4> Types;
-      for (Value *Op : Args)
-        Types.push_back(Op->getType());
-      return static_cast<T *>(this)->getIntrinsicInstrCost(IID, RetTy, Types,
-                                                           FMF);
+      for (Value *Op : Args) {
+        Type *OpTy = Op->getType();
+        assert (VF == 1 || !OpTy->isVectorTy());
+        Types.push_back(VF == 1 ? OpTy : VectorType::get(OpTy, VF));
+      }
+
+      if (VF > 1 && !RetTy->isVoidTy())
+        RetTy = VectorType::get(RetTy, VF);
+
+      // Compute the scalarization overhead based on Args for a vector
+      // intrinsic. A vectorizer will pass a scalar RetTy and VF > 1, while
+      // CostModel will pass a vector RetTy and VF is 1.
+      unsigned ScalarizationCost = UINT_MAX;
+      if (RetVF > 1 || VF > 1) {
+        ScalarizationCost = getScalarizationOverhead(RetTy, true, false);
+        ScalarizationCost += getOperandsScalarizationOverhead(Args, VF);
+      }
+
+      return static_cast<T *>(this)->
+        getIntrinsicInstrCost(IID, RetTy, Types, FMF, ScalarizationCost);
     }
     case Intrinsic::masked_scatter: {
+      assert (VF == 1 && "Can't vectorize types here.");
       Value *Mask = Args[3];
       bool VarMask = !isa<Constant>(Mask);
       unsigned Alignment = cast<ConstantInt>(Args[2])->getZExtValue();
@@ -727,6 +761,7 @@ public:
                                                        Alignment);
     }
     case Intrinsic::masked_gather: {
+      assert (VF == 1 && "Can't vectorize types here.");
       Value *Mask = Args[2];
       bool VarMask = !isa<Constant>(Mask);
       unsigned Alignment = cast<ConstantInt>(Args[1])->getZExtValue();
@@ -738,19 +773,23 @@ public:
     }
   }
   
-  /// Get intrinsic cost based on argument types
+  /// Get intrinsic cost based on argument types.
+  /// If ScalarizationCostPassed is UINT_MAX, the cost of scalarizing the
+  /// arguments and the return value will be computed based on types.
   unsigned getIntrinsicInstrCost(Intrinsic::ID IID, Type *RetTy,
-                                 ArrayRef<Type *> Tys, FastMathFlags FMF) {
+                          ArrayRef<Type *> Tys, FastMathFlags FMF,
+                          unsigned ScalarizationCostPassed = UINT_MAX) {
     SmallVector<unsigned, 2> ISDs;
     unsigned SingleCallCost = 10; // Library call cost. Make it expensive.
     switch (IID) {
     default: {
       // Assume that we need to scalarize this intrinsic.
-      unsigned ScalarizationCost = 0;
+      unsigned ScalarizationCost = ScalarizationCostPassed;
       unsigned ScalarCalls = 1;
       Type *ScalarRetTy = RetTy;
       if (RetTy->isVectorTy()) {
-        ScalarizationCost = getScalarizationOverhead(RetTy, true, false);
+        if (ScalarizationCostPassed == UINT_MAX)
+          ScalarizationCost = getScalarizationOverhead(RetTy, true, false);
         ScalarCalls = std::max(ScalarCalls, RetTy->getVectorNumElements());
         ScalarRetTy = RetTy->getScalarType();
       }
@@ -758,7 +797,8 @@ public:
       for (unsigned i = 0, ie = Tys.size(); i != ie; ++i) {
         Type *Ty = Tys[i];
         if (Ty->isVectorTy()) {
-          ScalarizationCost += getScalarizationOverhead(Ty, false, true);
+          if (ScalarizationCostPassed == UINT_MAX)
+            ScalarizationCost += getScalarizationOverhead(Ty, false, true);
           ScalarCalls = std::max(ScalarCalls, Ty->getVectorNumElements());
           Ty = Ty->getScalarType();
         }
@@ -906,7 +946,8 @@ public:
     // this will emit a costly libcall, adding call overhead and spills. Make it
     // very expensive.
     if (RetTy->isVectorTy()) {
-      unsigned ScalarizationCost = getScalarizationOverhead(RetTy, true, false);
+      unsigned ScalarizationCost = ((ScalarizationCostPassed != UINT_MAX) ?
+         ScalarizationCostPassed : getScalarizationOverhead(RetTy, true, false));
       unsigned ScalarCalls = RetTy->getVectorNumElements();
       SmallVector<Type *, 4> ScalarTys;
       for (unsigned i = 0, ie = Tys.size(); i != ie; ++i) {
@@ -919,7 +960,8 @@ public:
           IID, RetTy->getScalarType(), ScalarTys, FMF);
       for (unsigned i = 0, ie = Tys.size(); i != ie; ++i) {
         if (Tys[i]->isVectorTy()) {
-          ScalarizationCost += getScalarizationOverhead(Tys[i], false, true);
+          if (ScalarizationCostPassed == UINT_MAX)
+            ScalarizationCost += getScalarizationOverhead(Tys[i], false, true);
           ScalarCalls = std::max(ScalarCalls, Tys[i]->getVectorNumElements());
         }
       }

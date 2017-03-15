@@ -188,7 +188,6 @@ namespace {
 
   private:
     void Select(SDNode *N) override;
-    bool tryGather(SDNode *N, unsigned Opc);
 
     bool foldOffsetIntoAddress(uint64_t Offset, X86ISelAddressMode &AM);
     bool matchLoadInAddress(LoadSDNode *N, X86ISelAddressMode &AM);
@@ -1982,39 +1981,6 @@ static unsigned getFusedLdStOpcode(EVT &LdVT, unsigned Opc) {
   llvm_unreachable("unrecognized size for LdVT");
 }
 
-/// Customized ISel for GATHER operations.
-bool X86DAGToDAGISel::tryGather(SDNode *Node, unsigned Opc) {
-  // Operands of Gather: VSrc, Base, VIdx, VMask, Scale
-  SDValue Chain = Node->getOperand(0);
-  SDValue VSrc = Node->getOperand(2);
-  SDValue Base = Node->getOperand(3);
-  SDValue VIdx = Node->getOperand(4);
-  SDValue VMask = Node->getOperand(5);
-  ConstantSDNode *Scale = dyn_cast<ConstantSDNode>(Node->getOperand(6));
-  if (!Scale)
-    return false;
-
-  SDVTList VTs = CurDAG->getVTList(VSrc.getValueType(), VSrc.getValueType(),
-                                   MVT::Other);
-
-  SDLoc DL(Node);
-
-  // Memory Operands: Base, Scale, Index, Disp, Segment
-  SDValue Disp = CurDAG->getTargetConstant(0, DL, MVT::i32);
-  SDValue Segment = CurDAG->getRegister(0, MVT::i32);
-  const SDValue Ops[] = { VSrc, Base, getI8Imm(Scale->getSExtValue(), DL), VIdx,
-                          Disp, Segment, VMask, Chain};
-  SDNode *ResNode = CurDAG->getMachineNode(Opc, DL, VTs, Ops);
-  // Node has 2 outputs: VDst and MVT::Other.
-  // ResNode has 3 outputs: VDst, VMask_wb, and MVT::Other.
-  // We replace VDst of Node with VDst of ResNode, and Other of Node with Other
-  // of ResNode.
-  ReplaceUses(SDValue(Node, 0), SDValue(ResNode, 0));
-  ReplaceUses(SDValue(Node, 1), SDValue(ResNode, 2));
-  CurDAG->RemoveDeadNode(Node);
-  return true;
-}
-
 void X86DAGToDAGISel::Select(SDNode *Node) {
   MVT NVT = Node->getSimpleValueType(0);
   unsigned Opc, MOpc;
@@ -2049,55 +2015,6 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
       SelectCode(ZextTarget.getNode());
       SelectCode(Brind.getNode());
       return;
-    }
-    break;
-  }
-  case ISD::INTRINSIC_W_CHAIN: {
-    unsigned IntNo = cast<ConstantSDNode>(Node->getOperand(1))->getZExtValue();
-    switch (IntNo) {
-    default: break;
-    case Intrinsic::x86_avx2_gather_d_pd:
-    case Intrinsic::x86_avx2_gather_d_pd_256:
-    case Intrinsic::x86_avx2_gather_q_pd:
-    case Intrinsic::x86_avx2_gather_q_pd_256:
-    case Intrinsic::x86_avx2_gather_d_ps:
-    case Intrinsic::x86_avx2_gather_d_ps_256:
-    case Intrinsic::x86_avx2_gather_q_ps:
-    case Intrinsic::x86_avx2_gather_q_ps_256:
-    case Intrinsic::x86_avx2_gather_d_q:
-    case Intrinsic::x86_avx2_gather_d_q_256:
-    case Intrinsic::x86_avx2_gather_q_q:
-    case Intrinsic::x86_avx2_gather_q_q_256:
-    case Intrinsic::x86_avx2_gather_d_d:
-    case Intrinsic::x86_avx2_gather_d_d_256:
-    case Intrinsic::x86_avx2_gather_q_d:
-    case Intrinsic::x86_avx2_gather_q_d_256: {
-      if (!Subtarget->hasAVX2())
-        break;
-      unsigned Opc;
-      switch (IntNo) {
-      default: llvm_unreachable("Impossible intrinsic");
-      case Intrinsic::x86_avx2_gather_d_pd:     Opc = X86::VGATHERDPDrm;  break;
-      case Intrinsic::x86_avx2_gather_d_pd_256: Opc = X86::VGATHERDPDYrm; break;
-      case Intrinsic::x86_avx2_gather_q_pd:     Opc = X86::VGATHERQPDrm;  break;
-      case Intrinsic::x86_avx2_gather_q_pd_256: Opc = X86::VGATHERQPDYrm; break;
-      case Intrinsic::x86_avx2_gather_d_ps:     Opc = X86::VGATHERDPSrm;  break;
-      case Intrinsic::x86_avx2_gather_d_ps_256: Opc = X86::VGATHERDPSYrm; break;
-      case Intrinsic::x86_avx2_gather_q_ps:     Opc = X86::VGATHERQPSrm;  break;
-      case Intrinsic::x86_avx2_gather_q_ps_256: Opc = X86::VGATHERQPSYrm; break;
-      case Intrinsic::x86_avx2_gather_d_q:      Opc = X86::VPGATHERDQrm;  break;
-      case Intrinsic::x86_avx2_gather_d_q_256:  Opc = X86::VPGATHERDQYrm; break;
-      case Intrinsic::x86_avx2_gather_q_q:      Opc = X86::VPGATHERQQrm;  break;
-      case Intrinsic::x86_avx2_gather_q_q_256:  Opc = X86::VPGATHERQQYrm; break;
-      case Intrinsic::x86_avx2_gather_d_d:      Opc = X86::VPGATHERDDrm;  break;
-      case Intrinsic::x86_avx2_gather_d_d_256:  Opc = X86::VPGATHERDDYrm; break;
-      case Intrinsic::x86_avx2_gather_q_d:      Opc = X86::VPGATHERQDrm;  break;
-      case Intrinsic::x86_avx2_gather_q_d_256:  Opc = X86::VPGATHERQDYrm; break;
-      }
-      if (tryGather(Node, Opc))
-        return;
-      break;
-    }
     }
     break;
   }

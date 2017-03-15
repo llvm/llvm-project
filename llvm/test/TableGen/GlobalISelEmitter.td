@@ -21,7 +21,8 @@ class I<dag OOps, dag IOps, list<dag> Pat>
 //===- Test the function definition boilerplate. --------------------------===//
 
 // CHECK: bool MyTargetInstructionSelector::selectImpl(MachineInstr &I) const {
-// CHECK: const MachineRegisterInfo &MRI = I.getParent()->getParent()->getRegInfo();
+// CHECK: MachineFunction &MF = *I.getParent()->getParent();
+// CHECK: const MachineRegisterInfo &MRI = MF.getRegInfo();
 
 //===- Test a simple pattern with regclass operands. ----------------------===//
 

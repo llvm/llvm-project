@@ -175,6 +175,8 @@ class InstrItineraryData;
       VMULLs,       // ...signed
       VMULLu,       // ...unsigned
 
+      SMULWB,       // Signed multiply word by half word, bottom
+      SMULWT,       // Signed multiply word by half word, top
       UMLAL,        // 64bit Unsigned Accumulate Multiply
       SMLAL,        // 64bit Signed Accumulate Multiply
       UMAAL,        // 64-bit Unsigned Accumulate Accumulate Multiply
@@ -499,6 +501,11 @@ class InstrItineraryData;
 
     bool canCombineStoreAndExtract(Type *VectorTy, Value *Idx,
                                    unsigned &Cost) const override;
+
+    bool canMergeStoresTo(EVT MemVT) const override {
+      // Do not merge to larger than i32.
+      return (MemVT.getSizeInBits() <= 32);
+    }
 
     bool isCheapToSpeculateCttz() const override;
     bool isCheapToSpeculateCtlz() const override;

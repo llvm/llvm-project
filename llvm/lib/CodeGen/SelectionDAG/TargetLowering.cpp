@@ -471,6 +471,21 @@ TargetLowering::TargetLoweringOpt::SimplifyDemandedBits(SDNode *User,
   return true;
 }
 
+bool TargetLowering::SimplifyDemandedBits(SDValue Op, APInt &DemandedMask,
+                                          DAGCombinerInfo &DCI) const {
+
+  SelectionDAG &DAG = DCI.DAG;
+  TargetLoweringOpt TLO(DAG, !DCI.isBeforeLegalize(),
+                        !DCI.isBeforeLegalizeOps());
+  APInt KnownZero, KnownOne;
+
+  bool Simplified = SimplifyDemandedBits(Op, DemandedMask, KnownZero, KnownOne,
+                                         TLO);
+  if (Simplified)
+    DCI.CommitTargetLoweringOpt(TLO);
+  return Simplified;
+}
+
 /// Look at Op. At this point, we know that only the DemandedMask bits of the
 /// result of Op are ever used downstream. If we can use this information to
 /// simplify Op, create a new simplified DAG node and return true, returning the

@@ -440,13 +440,6 @@ namespace llvm {
                          DINode::DIFlags Flags = DINode::FlagZero,
                          unsigned CC = 0);
 
-    /// Create an external type reference.
-    /// \param Tag              Dwarf TAG.
-    /// \param File             File in which the type is defined.
-    /// \param UniqueIdentifier A unique identifier for the type.
-    DICompositeType *createExternalTypeRef(unsigned Tag, DIFile *File,
-                                           StringRef UniqueIdentifier);
-
     /// Create a new DIType* with "artificial" flag set.
     DIType *createArtificialType(DIType *Ty);
 

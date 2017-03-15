@@ -624,8 +624,9 @@ FormatStyle getGoogleStyle(FormatStyle::LanguageKind Language) {
     GoogleStyle.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_Empty;
     GoogleStyle.AlwaysBreakBeforeMultilineStrings = false;
     GoogleStyle.BreakBeforeTernaryOperators = false;
-    // taze:, and @tag followed by { for a lot of JSDoc tags.
-    GoogleStyle.CommentPragmas = "(taze:|(@[A-Za-z_0-9-]+[ \\t]*{))";
+    // taze:, @tag followed by { for a lot of JSDoc tags, and @see, which is
+    // commonly followed by overlong URLs.
+    GoogleStyle.CommentPragmas = "(taze:|(@[A-Za-z_0-9-]+[ \\t]*{)|@see)";
     GoogleStyle.MaxEmptyLinesToKeep = 3;
     GoogleStyle.NamespaceIndentation = FormatStyle::NI_All;
     GoogleStyle.SpacesInContainerLiterals = false;

@@ -127,13 +127,13 @@ protected:
     unsigned : NumStmtBits;
 
     unsigned ValueKind : 2;
-    unsigned ObjectKind : 2;
+    unsigned ObjectKind : 3;
     unsigned TypeDependent : 1;
     unsigned ValueDependent : 1;
     unsigned InstantiationDependent : 1;
     unsigned ContainsUnexpandedParameterPack : 1;
   };
-  enum { NumExprBits = 16 };
+  enum { NumExprBits = 17 };
 
   class CharacterLiteralBitfields {
     friend class CharacterLiteral;
@@ -350,6 +350,8 @@ protected:
 
 public:
   Stmt(StmtClass SC) {
+    static_assert(sizeof(*this) == sizeof(void *),
+                  "changing bitfields changed sizeof(Stmt)");
     static_assert(sizeof(*this) % alignof(void *) == 0,
                   "Insufficient alignment!");
     StmtBits.sClass = SC;

@@ -24,7 +24,7 @@
 #include "llvm/ADT/Twine.h"
 
 namespace lldb_private {
-struct TildeExpressionResolver;
+class TildeExpressionResolver;
 class CommandCompletions {
 public:
   //----------------------------------------------------------------------

@@ -7,21 +7,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _WIN32
-#include <dirent.h>
-#else
-#include "lldb/Host/windows/windows.h"
-#endif
-#include <fcntl.h>
-#ifndef _MSC_VER
-#include <libgen.h>
-#endif
 #include <fstream>
 #include <set>
 #include <string.h>
 
-#include "lldb/Host/Config.h" // Have to include this before we test the define...
-#ifdef LLDB_CONFIG_TILDE_RESOLVES_TO_USER
+#include "llvm/Config/llvm-config.h"
+#ifndef LLVM_ON_WIN32
 #include <pwd.h>
 #endif
 
@@ -159,7 +150,7 @@ size_t ParentPathEnd(llvm::StringRef path, FileSpec::PathSyntax syntax) {
 // If you want to complete "~" to the list of users, pass it to
 // ResolvePartialUsername.
 void FileSpec::ResolveUsername(llvm::SmallVectorImpl<char> &path) {
-#if LLDB_CONFIG_TILDE_RESOLVES_TO_USER
+#ifndef LLVM_ON_WIN32
   if (path.empty() || path[0] != '~')
     return;
 
@@ -227,7 +218,7 @@ void FileSpec::ResolveUsername(llvm::SmallVectorImpl<char> &path) {
 
 size_t FileSpec::ResolvePartialUsername(llvm::StringRef partial_name,
                                         StringList &matches) {
-#ifdef LLDB_CONFIG_TILDE_RESOLVES_TO_USER
+#if !defined(LLVM_ON_WIN32) && !defined(__ANDROID__)
   size_t extant_entries = matches.GetSize();
 
   setpwent();
@@ -251,17 +242,17 @@ size_t FileSpec::ResolvePartialUsername(llvm::StringRef partial_name,
 #else
   // Resolving home directories is not supported, just copy the path...
   return 0;
-#endif // #ifdef LLDB_CONFIG_TILDE_RESOLVES_TO_USER
+#endif // #ifdef LLVM_ON_WIN32
 }
 
 void FileSpec::Resolve(llvm::SmallVectorImpl<char> &path) {
   if (path.empty())
     return;
 
-#ifdef LLDB_CONFIG_TILDE_RESOLVES_TO_USER
+#ifndef LLVM_ON_WIN32
   if (path[0] == '~')
     ResolveUsername(path);
-#endif // #ifdef LLDB_CONFIG_TILDE_RESOLVES_TO_USER
+#endif // #ifdef LLVM_ON_WIN32
 
   // Save a copy of the original path that's passed in
   llvm::SmallString<128> original_path(path.begin(), path.end());
@@ -660,11 +651,8 @@ bool FileSpec::ResolvePath() {
   if (m_is_resolved)
     return true; // We have already resolved this path
 
-  char path_buf[PATH_MAX];
-  if (!GetPath(path_buf, PATH_MAX, false))
-    return false;
   // SetFile(...) will set m_is_resolved correctly if it can resolve the path
-  SetFile(path_buf, true);
+  SetFile(GetPath(false), true);
   return m_is_resolved;
 }
 
@@ -776,235 +764,37 @@ size_t FileSpec::MemorySize() const {
   return m_filename.MemorySize() + m_directory.MemorySize();
 }
 
-FileSpec::EnumerateDirectoryResult
-FileSpec::ForEachItemInDirectory(llvm::StringRef dir_path,
-                                 DirectoryCallback const &callback) {
-  if (dir_path.empty())
-    return eEnumerateDirectoryResultNext;
+void FileSpec::EnumerateDirectory(llvm::StringRef dir_path,
+                                  bool find_directories, bool find_files,
+                                  bool find_other,
+                                  EnumerateDirectoryCallbackType callback,
+                                  void *callback_baton) {
+  namespace fs = llvm::sys::fs;
+  std::error_code EC;
+  fs::recursive_directory_iterator Iter(dir_path, EC);
+  fs::recursive_directory_iterator End;
+  for (; Iter != End && !EC; Iter.increment(EC)) {
+    const auto &Item = *Iter;
+    fs::file_status Status;
+    if ((EC = Item.status(Status)))
+      break;
+    if (!find_files && fs::is_regular_file(Status))
+      continue;
+    if (!find_directories && fs::is_directory(Status))
+      continue;
+    if (!find_other && fs::is_other(Status))
+      continue;
 
-#ifdef _WIN32
-    std::string szDir(dir_path);
-    szDir += "\\*";
-
-    std::wstring wszDir;
-    if (!llvm::ConvertUTF8toWide(szDir, wszDir)) {
-      return eEnumerateDirectoryResultNext;
+    FileSpec Spec(Item.path(), false);
+    auto Result = callback(callback_baton, Status.type(), Spec);
+    if (Result == eEnumerateDirectoryResultQuit)
+      return;
+    if (Result == eEnumerateDirectoryResultNext) {
+      // Default behavior is to recurse.  Opt out if the callback doesn't want
+      // this behavior.
+      Iter.no_push();
     }
-
-    WIN32_FIND_DATAW ffd;
-    HANDLE hFind = FindFirstFileW(wszDir.c_str(), &ffd);
-
-    if (hFind == INVALID_HANDLE_VALUE) {
-      return eEnumerateDirectoryResultNext;
-    }
-
-    do {
-      namespace fs = llvm::sys::fs;
-      fs::file_type ft = fs::file_type::type_unknown;
-      if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
-        size_t len = wcslen(ffd.cFileName);
-
-        if (len == 1 && ffd.cFileName[0] == L'.')
-          continue;
-
-        if (len == 2 && ffd.cFileName[0] == L'.' && ffd.cFileName[1] == L'.')
-          continue;
-
-        ft = fs::file_type::directory_file;
-      } else if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DEVICE) {
-        ft = fs::file_type::type_unknown;
-      } else {
-        ft = fs::file_type::regular_file;
-      }
-
-      std::string fileName;
-      if (!llvm::convertWideToUTF8(ffd.cFileName, fileName)) {
-        continue;
-      }
-
-      std::string child_path = llvm::join_items("\\", dir_path, fileName);
-      // Don't resolve the file type or path
-      FileSpec child_path_spec(child_path.data(), false);
-
-      EnumerateDirectoryResult result = callback(ft, child_path_spec);
-
-      switch (result) {
-      case eEnumerateDirectoryResultNext:
-        // Enumerate next entry in the current directory. We just
-        // exit this switch and will continue enumerating the
-        // current directory as we currently are...
-        break;
-
-      case eEnumerateDirectoryResultEnter: // Recurse into the current entry
-                                           // if it is a directory or symlink,
-                                           // or next if not
-        if (FileSpec::ForEachItemInDirectory(child_path.data(), callback) ==
-            eEnumerateDirectoryResultQuit) {
-          // The subdirectory returned Quit, which means to
-          // stop all directory enumerations at all levels.
-          return eEnumerateDirectoryResultQuit;
-        }
-        break;
-
-      case eEnumerateDirectoryResultExit: // Exit from the current directory
-                                          // at the current level.
-        // Exit from this directory level and tell parent to
-        // keep enumerating.
-        return eEnumerateDirectoryResultNext;
-
-      case eEnumerateDirectoryResultQuit: // Stop directory enumerations at
-                                          // any level
-        return eEnumerateDirectoryResultQuit;
-      }
-    } while (FindNextFileW(hFind, &ffd) != 0);
-
-    FindClose(hFind);
-#else
-  std::string dir_string(dir_path);
-  lldb_utility::CleanUp<DIR *, int> dir_path_dir(opendir(dir_string.c_str()),
-                                                 NULL, closedir);
-  if (dir_path_dir.is_valid()) {
-    char dir_path_last_char = dir_path.back();
-
-    long path_max = fpathconf(dirfd(dir_path_dir.get()), _PC_NAME_MAX);
-#if defined(__APPLE_) && defined(__DARWIN_MAXPATHLEN)
-      if (path_max < __DARWIN_MAXPATHLEN)
-        path_max = __DARWIN_MAXPATHLEN;
-#endif
-      struct dirent *buf, *dp;
-      buf = (struct dirent *)malloc(offsetof(struct dirent, d_name) + path_max +
-                                    1);
-
-      while (buf && readdir_r(dir_path_dir.get(), buf, &dp) == 0 && dp) {
-        // Only search directories
-        if (dp->d_type == DT_DIR || dp->d_type == DT_UNKNOWN) {
-          size_t len = strlen(dp->d_name);
-
-          if (len == 1 && dp->d_name[0] == '.')
-            continue;
-
-          if (len == 2 && dp->d_name[0] == '.' && dp->d_name[1] == '.')
-            continue;
-        }
-
-        using namespace llvm::sys::fs;
-        file_type ft = file_type::type_unknown;
-
-        switch (dp->d_type) {
-        default:
-        case DT_UNKNOWN:
-          ft = file_type::type_unknown;
-          break;
-        case DT_FIFO:
-          ft = file_type::fifo_file;
-          break;
-        case DT_CHR:
-          ft = file_type::character_file;
-          break;
-        case DT_DIR:
-          ft = file_type::directory_file;
-          break;
-        case DT_BLK:
-          ft = file_type::block_file;
-          break;
-        case DT_REG:
-          ft = file_type::regular_file;
-          break;
-        case DT_LNK:
-          ft = file_type::symlink_file;
-          break;
-        case DT_SOCK:
-          ft = file_type::socket_file;
-          break;
-#if !defined(__OpenBSD__)
-        case DT_WHT:
-          ft = file_type::type_unknown;
-          break;
-#endif
-        }
-
-        std::string child_path;
-        // Don't make paths with "/foo//bar", that just confuses everybody.
-        if (dir_path_last_char == '/')
-          child_path = llvm::join_items("", dir_path, dp->d_name);
-        else
-          child_path = llvm::join_items('/', dir_path, dp->d_name);
-
-        // Don't resolve the file type or path
-        FileSpec child_path_spec(child_path, false);
-
-        EnumerateDirectoryResult result = callback(ft, child_path_spec);
-
-        switch (result) {
-        case eEnumerateDirectoryResultNext:
-          // Enumerate next entry in the current directory. We just
-          // exit this switch and will continue enumerating the
-          // current directory as we currently are...
-          break;
-
-        case eEnumerateDirectoryResultEnter: // Recurse into the current entry
-                                             // if it is a directory or
-                                             // symlink, or next if not
-          if (FileSpec::ForEachItemInDirectory(child_path, callback) ==
-              eEnumerateDirectoryResultQuit) {
-            // The subdirectory returned Quit, which means to
-            // stop all directory enumerations at all levels.
-            if (buf)
-              free(buf);
-            return eEnumerateDirectoryResultQuit;
-          }
-          break;
-
-        case eEnumerateDirectoryResultExit: // Exit from the current directory
-                                            // at the current level.
-          // Exit from this directory level and tell parent to
-          // keep enumerating.
-          if (buf)
-            free(buf);
-          return eEnumerateDirectoryResultNext;
-
-        case eEnumerateDirectoryResultQuit: // Stop directory enumerations at
-                                            // any level
-          if (buf)
-            free(buf);
-          return eEnumerateDirectoryResultQuit;
-        }
-      }
-      if (buf) {
-        free(buf);
-      }
-    }
-#endif
-  // By default when exiting a directory, we tell the parent enumeration
-  // to continue enumerating.
-  return eEnumerateDirectoryResultNext;
-}
-
-FileSpec::EnumerateDirectoryResult
-FileSpec::EnumerateDirectory(llvm::StringRef dir_path, bool find_directories,
-                             bool find_files, bool find_other,
-                             EnumerateDirectoryCallbackType callback,
-                             void *callback_baton) {
-  return ForEachItemInDirectory(
-      dir_path,
-      [&find_directories, &find_files, &find_other, &callback, &callback_baton](
-          llvm::sys::fs::file_type file_type, const FileSpec &file_spec) {
-        switch (file_type) {
-        case llvm::sys::fs::file_type::directory_file:
-          if (find_directories)
-            return callback(callback_baton, file_type, file_spec);
-          break;
-        case llvm::sys::fs::file_type::regular_file:
-          if (find_files)
-            return callback(callback_baton, file_type, file_spec);
-          break;
-        default:
-          if (find_other)
-            return callback(callback_baton, file_type, file_spec);
-          break;
-        }
-        return eEnumerateDirectoryResultNext;
-      });
+  }
 }
 
 FileSpec

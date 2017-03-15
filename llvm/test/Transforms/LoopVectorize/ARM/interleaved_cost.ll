@@ -124,12 +124,12 @@ entry:
 ; VF_4:         Found an estimated cost of 40 for VF 4 For instruction: %tmp2 = load half, half* %tmp0, align 2
 ; VF_4-NEXT:    Found an estimated cost of 0 for VF 4 For instruction: %tmp3 = load half, half* %tmp1, align 2
 ; VF_4-NEXT:    Found an estimated cost of 0 for VF 4 For instruction: store half 0xH0000, half* %tmp0, align 2
-; VF_4-NEXT:    Found an estimated cost of 40 for VF 4 For instruction: store half 0xH0000, half* %tmp1, align 2
+; VF_4-NEXT:    Found an estimated cost of 32 for VF 4 For instruction: store half 0xH0000, half* %tmp1, align 2
 ; VF_8-LABEL: Checking a loop in "half_factor_2"
 ; VF_8:         Found an estimated cost of 80 for VF 8 For instruction: %tmp2 = load half, half* %tmp0, align 2
 ; VF_8-NEXT:    Found an estimated cost of 0 for VF 8 For instruction: %tmp3 = load half, half* %tmp1, align 2
 ; VF_8-NEXT:    Found an estimated cost of 0 for VF 8 For instruction: store half 0xH0000, half* %tmp0, align 2
-; VF_8-NEXT:    Found an estimated cost of 80 for VF 8 For instruction: store half 0xH0000, half* %tmp1, align 2
+; VF_8-NEXT:    Found an estimated cost of 64 for VF 8 For instruction: store half 0xH0000, half* %tmp1, align 2
 for.body:
   %i = phi i64 [ 0, %entry ], [ %i.next, %for.body ]
   %tmp0 = getelementptr inbounds %half.2, %half.2* %data, i64 %i, i32 0

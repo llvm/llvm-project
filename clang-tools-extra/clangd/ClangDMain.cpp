@@ -67,6 +67,10 @@ int main(int argc, char *argv[]) {
     // by \r\n.
     std::string Line;
     std::getline(std::cin, Line);
+    if (!std::cin.good() && errno == EINTR) {
+      std::cin.clear();
+      continue;
+    }
 
     // Skip empty lines.
     llvm::StringRef LineRef(Line);
