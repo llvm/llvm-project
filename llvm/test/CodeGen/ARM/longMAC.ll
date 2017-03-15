@@ -3,12 +3,13 @@
 ; RUN: llc -mtriple=armeb-eabi %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-BE
 ; RUN: llc -mtriple=armebv7-eabi %s -o - | FileCheck %s -check-prefix=CHECK-V7-BE
 ; RUN: llc -mtriple=thumbv6-eabi %s -o - | FileCheck %s -check-prefix=CHECK-V6-THUMB
-; RUN: llc -mtriple=thumbv6t2-eabi %s -o - | FileCheck %s -check-prefix=CHECK-V6-THUMB2
-; RUN: llc -mtriple=thumbv7-eabi %s -o - | FileCheck %s -check-prefix=CHECK-V7-THUMB
+; RUN: llc -mtriple=thumbv6t2-eabi %s -o - | FileCheck %s -check-prefix=CHECK-T2-DSP
+; RUN: llc -mtriple=thumbv7-eabi %s -o - | FileCheck %s -check-prefix=CHECK-T2-DSP
 ; RUN: llc -mtriple=thumbebv7-eabi %s -o - | FileCheck %s -check-prefix=CHECK-V7-THUMB-BE
 ; RUN: llc -mtriple=thumbv6m-eabi %s -o - | FileCheck %s -check-prefix=CHECK-V6M-THUMB
 ; RUN: llc -mtriple=thumbv7m-eabi %s -o - | FileCheck %s -check-prefix=CHECK-V7M-THUMB
-; RUN: llc -mtriple=thumbv7em-eabi %s -o - | FileCheck %s -check-prefix=CHECK-V7EM-THUMB
+; RUN: llc -mtriple=thumbv7em-eabi %s -o - | FileCheck %s -check-prefix=CHECK-T2-DSP
+; RUN: llc -mtriple=armv5te-eabi %s -o - | FileCheck %s -check-prefix=CHECK-V5TE
 ; Check generated signed and unsigned multiply accumulate long.
 
 define i64 @MACLongTest1(i32 %a, i32 %b, i64 %c) {
@@ -20,12 +21,9 @@ define i64 @MACLongTest1(i32 %a, i32 %b, i64 %c) {
 ;CHECK-BE: umlal [[RDLO:r[0-9]+]], [[RDHI:r[0-9]+]], [[LHS:r[0-9]+]], [[RHS:r[0-9]+]]
 ;CHECK-BE: mov r0, [[RDHI]]
 ;CHECK-BE: mov r1, [[RDLO]]
-;CHECK-V6-THUMB2: umlal [[RDLO:r[0-9]+]], [[RDHI:r[0-9]+]], [[LHS:r[0-9]+]], [[RHS:r[0-9]+]]
-;CHECK-V6-THUMB2: mov r0, [[RDLO]]
-;CHECK-V6-THUMB2: mov r1, [[RDHI]]
-;CHECK-V7-THUMB: umlal [[RDLO:r[0-9]+]], [[RDHI:r[0-9]+]], [[LHS:r[0-9]+]], [[RHS:r[0-9]+]]
-;CHECK-V7-THUMB: mov r0, [[RDLO]]
-;CHECK-V7-THUMB: mov r1, [[RDHI]]
+;CHECK-T2-DSP: umlal [[RDLO:r[0-9]+]], [[RDHI:r[0-9]+]], [[LHS:r[0-9]+]], [[RHS:r[0-9]+]]
+;CHECK-T2-DSP-NEXT: mov r0, [[RDLO]]
+;CHECK-T2-DSP-NEXT: mov r1, [[RDHI]]
 ;CHECK-V7-THUMB-BE: umlal [[RDLO:r[0-9]+]], [[RDHI:r[0-9]+]], [[LHS:r[0-9]+]], [[RHS:r[0-9]+]]
 ;CHECK-V7-THUMB-BE: mov r0, [[RDHI]]
 ;CHECK-V7-THUMB-BE: mov r1, [[RDLO]]
@@ -44,12 +42,9 @@ define i64 @MACLongTest2(i32 %a, i32 %b, i64 %c)  {
 ;CHECK-BE: smlal [[RDLO:r[0-9]+]], [[RDHI:r[0-9]+]], [[LHS:r[0-9]+]], [[RHS:r[0-9]+]]
 ;CHECK-BE: mov r0, [[RDHI]]
 ;CHECK-BE: mov r1, [[RDLO]]
-;CHECK-V6-THUMB2: smlal [[RDLO:r[0-9]+]], [[RDHI:r[0-9]+]], [[LHS:r[0-9]+]], [[RHS:r[0-9]+]]
-;CHECK-V6-THUMB2: mov r0, [[RDLO]]
-;CHECK-V6-THUMB2: mov r1, [[RDHI]]
-;CHECK-V7-THUMB: smlal [[RDLO:r[0-9]+]], [[RDHI:r[0-9]+]], [[LHS:r[0-9]+]], [[RHS:r[0-9]+]]
-;CHECK-V7-THUMB: mov r0, [[RDLO]]
-;CHECK-V7-THUMB: mov r1, [[RDHI]]
+;CHECK-T2-DSP: smlal [[RDLO:r[0-9]+]], [[RDHI:r[0-9]+]], [[LHS:r[0-9]+]], [[RHS:r[0-9]+]]
+;CHECK-T2-DSP-NEXT: mov r0, [[RDLO]]
+;CHECK-T2-DSP-NEXT: mov r1, [[RDHI]]
 ;CHECK-V7-THUMB-BE: smlal [[RDLO:r[0-9]+]], [[RDHI:r[0-9]+]], [[LHS:r[0-9]+]], [[RHS:r[0-9]+]]
 ;CHECK-V7-THUMB-BE: mov r0, [[RDHI]]
 ;CHECK-V7-THUMB-BE: mov r1, [[RDLO]]
@@ -78,8 +73,7 @@ define i64 @MACLongTest3(i32 %a, i32 %b, i32 %c) {
 ;CHECK-BE: umlal [[RDLO:r[0-9]+]], [[RDHI]], r1, r0
 ;CHECK-BE: mov r0, [[RDHI]]
 ;CHECK-BE: mov r1, [[RDLO]]
-;CHECK-V6-THUMB2: umlal
-;CHECK-V7-THUMB: umlal
+;CHECK-T2-DSP: umlal
 ;CHECK-V6-THUMB-NOT: umlal
   %conv = zext i32 %b to i64
   %conv1 = zext i32 %a to i64
@@ -92,8 +86,7 @@ define i64 @MACLongTest3(i32 %a, i32 %b, i32 %c) {
 define i64 @MACLongTest4(i32 %a, i32 %b, i32 %c) {
 ;CHECK-LABEL: MACLongTest4:
 ;CHECK-V6-THUMB-NOT: smlal
-;CHECK-V6-THUMB2: smlal
-;CHECK-V7-THUMB: smlal
+;CHECK-T2-DSP: smlal
 ;CHECK-LE: asr [[RDHI:r[0-9]+]], [[RDLO:r[0-9]+]], #31
 ;CHECK-LE: smlal [[RDLO]], [[RDHI]], r1, r0
 ;CHECK-LE: mov r0, [[RDLO]]
@@ -118,10 +111,8 @@ define i64 @MACLongTest6(i32 %a, i32 %b, i32 %c, i32 %d) {
 ;CHECK: smlal   r12, lr, r3, r2
 ;CHECK-V7: smull   [[RDLO:r[0-9]+]], [[RDHI:r[0-9]+]], r1, r0
 ;CHECK-V7: smlal   [[RDLO]], [[RDHI]], [[Rn:r[0-9]+]], [[Rm:r[0-9]+]]
-;CHECK-V7-THUMB: smull   [[RDLO:r[0-9]+]], [[RDHI:r[0-9]+]], r1, r0
-;CHECK-V7-THUMB: smlal   [[RDLO]], [[RDHI]], [[Rn:r[0-9]+]], [[Rm:r[0-9]+]]
-;CHECK-V6-THUMB2: smull   [[RDLO:r[0-9]+]], [[RDHI:r[0-9]+]], r1, r0
-;CHECK-V6-THUMB2: smlal   [[RDLO]], [[RDHI]], [[Rn:r[0-9]+]], [[Rm:r[0-9]+]]
+;CHECK-T2-DSP: smull   [[RDLO:r[0-9]+]], [[RDHI:r[0-9]+]], r1, r0
+;CHECK-T2-DSP: smlal   [[RDLO]], [[RDHI]], [[Rn:r[0-9]+]], [[Rm:r[0-9]+]]
   %conv = sext i32 %a to i64
   %conv1 = sext i32 %b to i64
   %mul = mul nsw i64 %conv1, %conv
@@ -172,18 +163,12 @@ define i64 @MACLongTest9(i32 %lhs, i32 %rhs, i32 %lo, i32 %hi) {
 ;CHECK-V7-BE: umaal [[RDLO:r[0-9]+]], [[RDHI:r[0-9]+]], [[LHS:r[0-9]+]], [[RHS:r[0-9]+]]
 ;CHECK-V7-BE: mov r0, [[RDHI]]
 ;CHECK-V7-BE: mov r1, [[RDLO]]
-;CHECK-V6-THUMB2: umaal [[RDLO:r[0-9]+]], [[RDHI:r[0-9]+]], [[LHS:r[0-9]+]], [[RHS:r[0-9]+]]
-;CHECK-V6-THUMB2: mov r0, [[RDLO]]
-;CHECK-V6-THUMB2: mov r1, [[RDHI]]
-;CHECK-V7-THUMB: umaal [[RDLO:r[0-9]+]], [[RDHI:r[0-9]+]], [[LHS:r[0-9]+]], [[RHS:r[0-9]+]]
-;CHECK-V7-THUMB: mov r0, [[RDLO]]
-;CHECK-V7-THUMB: mov r1, [[RDHI]]
+;CHECK-T2-DSP: umaal [[RDLO:r[0-9]+]], [[RDHI:r[0-9]+]], [[LHS:r[0-9]+]], [[RHS:r[0-9]+]]
+;CHECK-T2-DSP-NEXT: mov r0, [[RDLO]]
+;CHECK-T2-DSP-NEXT: mov r1, [[RDHI]]
 ;CHECK-V7-THUMB-BE: umaal [[RDLO:r[0-9]+]], [[RDHI:r[0-9]+]], [[LHS:r[0-9]+]], [[RHS:r[0-9]+]]
 ;CHECK-V7-THUMB-BE: mov r0, [[RDHI]]
 ;CHECK-V7-THUMB-BE: mov r1, [[RDLO]]
-;CHECK-V7EM-THUMB: umaal [[RDLO:r[0-9]+]], [[RDHI:r[0-9]+]], [[LHS:r[0-9]+]], [[RHS:r[0-9]+]]
-;CHECK-V7EM-THUMB: mov r0, [[RDLO]]
-;CHECK-V7EM-THUMB: mov r1, [[RDHI]]
 ;CHECK-NOT:umaal
 ;CHECK-V6-THUMB-NOT: umaal
 ;CHECK-V6M-THUMB-NOT: umaal
@@ -206,18 +191,12 @@ define i64 @MACLongTest10(i32 %lhs, i32 %rhs, i32 %lo, i32 %hi) {
 ;CHECK-V7-BE: umaal [[RDLO:r[0-9]+]], [[RDHI:r[0-9]+]], [[LHS:r[0-9]+]], [[RHS:r[0-9]+]]
 ;CHECK-V7-BE: mov r0, [[RDHI]]
 ;CHECK-V7-BE: mov r1, [[RDLO]]
-;CHECK-V6-THUMB2: umaal [[RDLO:r[0-9]+]], [[RDHI:r[0-9]+]], [[LHS:r[0-9]+]], [[RHS:r[0-9]+]]
-;CHECK-V6-THUMB2: mov r0, [[RDLO]]
-;CHECK-V6-THUMB2: mov r1, [[RDHI]]
-;CHECK-V7-THUMB: umaal [[RDLO:r[0-9]+]], [[RDHI:r[0-9]+]], [[LHS:r[0-9]+]], [[RHS:r[0-9]+]]
-;CHECK-V7-THUMB: mov r0, [[RDLO]]
-;CHECK-V7-THUMB: mov r1, [[RDHI]]
+;CHECK-T2-DSP: umaal r2, r3, r1, r0
+;CHECK-T2-DSP-NEXT: mov r0, r2
+;CHECK-T2-DSP-NEXT: mov r1, r3
 ;CHECK-V7-THUMB-BE: umaal [[RDLO:r[0-9]+]], [[RDHI:r[0-9]+]], [[LHS:r[0-9]+]], [[RHS:r[0-9]+]]
 ;CHECK-V7-THUMB-BE: mov r0, [[RDHI]]
 ;CHECK-V7-THUMB-BE: mov r1, [[RDLO]]
-;CHECK-V7EM-THUMB: umaal [[RDLO:r[0-9]+]], [[RDHI:r[0-9]+]], [[LHS:r[0-9]+]], [[RHS:r[0-9]+]]
-;CHECK-V7EM-THUMB: mov r0, [[RDLO]]
-;CHECK-V7EM-THUMB: mov r1, [[RDHI]]
 ;CHECK-NOT:umaal
 ;CHECK-V6-THUMB-NOT:umaal
 ;CHECK-V6M-THUMB-NOT: umaal
@@ -230,4 +209,189 @@ define i64 @MACLongTest10(i32 %lhs, i32 %rhs, i32 %lo, i32 %hi) {
   %add = add i64 %conv2, %conv3
   %add2 = add i64 %add, %mul
   ret i64 %add2
+}
+
+define i64 @MACLongTest11(i16 %a, i16 %b, i64 %c)  {
+;CHECK-LABEL: MACLongTest11:
+;CHECK-T2-DSP-NOT: sxth
+;CHECK-T2-DSP: smlalbb r3, r2
+;CHECK-T2-DSP-NEXT: mov r0, r3
+;CHECK-T2-DSP-NEXT: mov r1, r2
+;CHECK-V5TE-NOT: sxth
+;CHECK-V5TE: smlalbb r3, r2
+;CHECK-V5TE-NEXT: mov r0, r3
+;CHECK-V5TE-NEXT: mov r1, r2
+;CHECK-V7-LE-NOT: sxth
+;CHECK-V7-LE: smlalbb r3, r2
+;CHECK-V7-LE-NEXT: mov r0, r3
+;CHECK-V7-LE-NEXT: mov r1, r2
+;CHECK-V7-THUMB-BE: smlalbb r2, r3
+;CHECK-V7-THUMB-BE-NEXT: mov r0, r3
+;CHECK-V7-THUMB-BE-NEXT: mov r1, r2
+;CHECK-LE-NOT: smlalbb
+;CHECK-BE-NOT: smlalbb
+;CHECK-V6M-THUMB-NOT: smlalbb
+;CHECK-V7M-THUMB-NOT: smlalbb
+  %conv = sext i16 %a to i32
+  %conv1 = sext i16 %b to i32
+  %mul = mul nsw i32 %conv1, %conv
+  %conv2 = sext i32 %mul to i64
+  %add = add nsw i64 %conv2, %c
+  ret i64 %add
+}
+
+define i64 @MACLongTest12(i16 %b, i32 %t, i64 %c)  {
+;CHECK-LABEL: MACLongTest12:
+;CHECK-T2-DSP-NOT: sxth
+;CHECK-T2-DSP-NOT: {{asr|lsr}}
+;CHECK-T2-DSP: smlalbt r3, r2, r0, r1
+;CHECK-T2-DSP-NEXT: mov r0, r3
+;CHECK-T2-DSP-NEXT: mov r1, r2
+;CHECK-T2-DSP-NOT: sxth
+;CHECK-V5TE-NOT: sxth
+;CHECK-V5TE-NOT: {{asr|lsr}}
+;CHECK-V5TE: smlalbt r3, r2, r0, r1
+;CHECK-V5TE-NEXT: mov r0, r3
+;CHECK-V5TE-NEXT: mov r1, r2
+;CHECK-V7-LE-NOT: sxth
+;CHECK-V7-LE-NOT: {{asr|lsr}}
+;CHECK-V7-LE: smlalbt r3, r2, r0, r1
+;CHECK-V7-LE-NEXT: mov r0, r3
+;CHECK-V7-LE-NEXT: mov r1, r2
+;CHECK-V7-THUMB-BE: smlalbt r2, r3,
+;CHECK-V7-THUMB-BE-NEXT: mov r0, r3
+;CHECK-V7-THUMB-BE-NEXT: mov r1, r2
+;CHECK-LE-NOT: smlalbt
+;CHECK-BE-NOT: smlalbt
+;CHECK-V6M-THUMB-NOT: smlalbt
+;CHECK-V7M-THUMB-NOT: smlalbt
+  %conv0 = sext i16 %b to i32
+  %conv1 = ashr i32 %t, 16
+  %mul = mul nsw i32 %conv0, %conv1
+  %conv2 = sext i32 %mul to i64
+  %add = add nsw i64 %conv2, %c
+  ret i64 %add
+}
+
+define i64 @MACLongTest13(i32 %t, i16 %b, i64 %c)  {
+;CHECK-LABEL: MACLongTest13:
+;CHECK-T2-DSP-NOT: sxth
+;CHECK-T2-DSP-NOT: {{asr|lsr}}
+;CHECK-T2-DSP: smlaltb r3, r2, r0, r1
+;CHECK-T2-DSP-NEXT: mov r0, r3
+;CHECK-T2-DSP-NEXT: mov r1, r2
+;CHECK-V5TE-NOT: sxth
+;CHECK-V5TE-NOT: {{asr|lsr}}
+;CHECK-V5TE: smlaltb r3, r2, r0, r1
+;CHECK-V5TE-NEXT: mov r0, r3
+;CHECK-V5TE-NEXT: mov r1, r2
+;CHECK-V7-LE-NOT: sxth
+;CHECK-V7-LE-NOT: {{asr|lsr}}
+;CHECK-V7-LE: smlaltb r3, r2, r0, r1
+;CHECK-V7-LE-NEXT: mov r0, r3
+;CHECK-V7-LE-NEXT: mov r1, r2
+;CHECK-V7-THUMB-BE: smlaltb r2, r3, r0, r1
+;CHECK-V7-THUMB-BE-NEXT: mov r0, r3
+;CHECK-V7-THUMB-BE-NEXT: mov r1, r2
+;CHECK-LE-NOT: smlaltb
+;CHECK-BE-NOT: smlaltb
+;CHECK-V6M-THUMB-NOT: smlaltb
+;CHECK-V7M-THUMB-NOT: smlaltb
+  %conv0 = ashr i32 %t, 16
+  %conv1= sext i16 %b to i32
+  %mul = mul nsw i32 %conv0, %conv1
+  %conv2 = sext i32 %mul to i64
+  %add = add nsw i64 %conv2, %c
+  ret i64 %add
+}
+
+define i64 @MACLongTest14(i32 %a, i32 %b, i64 %c)  {
+;CHECK-LABEL: MACLongTest14:
+;CHECK-T2-DSP-NOT: {{asr|lsr}}
+;CHECK-T2-DSP: smlaltt r3, r2,
+;CHECK-T2-DSP-NEXT: mov r0, r3
+;CHECK-T2-DSP-NEXT: mov r1, r2
+;CHECK-V5TE-NOT: {{asr|lsr}}
+;CHECK-V5TE: smlaltt r3, r2,
+;CHECK-V5TE-NEXT: mov r0, r3
+;CHECK-V5TE-NEXT: mov r1, r2
+;CHECK-V7-LE-NOT: {{asr|lsr}}
+;CHECK-V7-LE: smlaltt r3, r2,
+;CHECK-V7-LE-NEXT: mov r0, r3
+;CHECK-V7-LE-NEXT: mov r1, r2
+;CHECK-V7-THUMB-BE: smlaltt r2, r3,
+;CHECK-V7-THUMB-BE-NEXT: mov r0, r3
+;CHECK-V7-THUMB-BE-NEXT: mov r1, r2
+;CHECK-LE-NOT: smlaltt
+;CHECK-BE-NOT: smlaltt
+;CHECK-V6M-THUMB-NOT: smlaltt
+;CHECK-V7M-THUMB-NOT: smlaltt
+  %conv0 = ashr i32 %a, 16
+  %conv1 = ashr i32 %b, 16
+  %mul = mul nsw i32 %conv1, %conv0
+  %conv2 = sext i32 %mul to i64
+  %add = add nsw i64 %conv2, %c
+  ret i64 %add
+}
+
+@global_b = external global i16, align 2
+;CHECK-LABEL: MACLongTest15
+;CHECK-T2-DSP-NOT: {{asr|lsr}}
+;CHECK-T2-DSP: smlaltb r3, r2, r0, r1
+;CHECK-T2-DSP-NEXT: mov r0, r3
+;CHECK-T2-DSP-NEXT: mov r1, r2
+;CHECK-V5TE-NOT: {{asr|lsr}}
+;CHECK-V5TE: smlaltb r3, r2, r0, r1
+;CHECK-V5TE-NEXT: mov r0, r3
+;CHECK-V5TE-NEXT: mov r1, r2
+;CHECK-V7-LE-NOT: {{asr|lsr}}
+;CHECK-V7-LE: smlaltb r3, r2, r0, r1
+;CHECK-V7-LE-NEXT: mov r0, r3
+;CHECK-V7-LE-NEXT: mov r1, r2
+;CHECK-V7-THUMB-BE: smlaltb r2, r3, r0, r1
+;CHECK-V7-THUMB-BE-NEXT: mov r0, r3
+;CHECK-V7-THUMB-BE-NEXT: mov r1, r2
+;CHECK-LE-NOT: smlaltb
+;CHECK-BE-NOT: smlaltb
+;CHECK-V6M-THUMB-NOT: smlaltb
+;CHECK-V7M-THUMB-NOT: smlaltb
+define i64 @MACLongTest15(i32 %t, i64 %acc) {
+entry:
+  %0 = load i16, i16* @global_b, align 2
+  %conv = sext i16 %0 to i32
+  %shr = ashr i32 %t, 16
+  %mul = mul nsw i32 %shr, %conv
+  %conv1 = sext i32 %mul to i64
+  %add = add nsw i64 %conv1, %acc
+  ret i64 %add
+}
+
+;CHECK-LABEL: MACLongTest16
+;CHECK-T2-DSP-NOT: {{asr|lsr}}
+;CHECK-T2-DSP: smlalbt r3, r2, r1, r0
+;CHECK-T2-DSP-NEXT: mov r0, r3
+;CHECK-T2-DSP-NEXT: mov r1, r2
+;CHECK-V5TE-NOT: {{asr|lsr}}
+;CHECK-V5TE: smlalbt r3, r2, r1, r0
+;CHECK-V5TE-NEXT: mov r0, r3
+;CHECK-V5TE-NEXT: mov r1, r2
+;CHECK-V7-LE: smlalbt r3, r2, r1, r0
+;CHECK-V7-LE-NEXT: mov r0, r3
+;CHECK-V7-LE-NEXT: mov r1, r2
+;CHECK-V7-THUMB-BE: smlalbt r2, r3, r1, r0
+;CHECK-V7-THUMB-BE-NEXT: mov r0, r3
+;CHECK-V7-THUMB-BE-NEXT: mov r1, r2
+;CHECK-LE-NOT: smlalbt
+;CHECK-BE-NOT: smlalbt
+;CHECK-V6M-THUMB-NOT: smlalbt
+;CHECK-V7M-THUMB-NOT: smlalbt
+define i64 @MACLongTest16(i32 %t, i64 %acc) {
+entry:
+  %0 = load i16, i16* @global_b, align 2
+  %conv = sext i16 %0 to i32
+  %shr = ashr i32 %t, 16
+  %mul = mul nsw i32 %conv, %shr
+  %conv1 = sext i32 %mul to i64
+  %add = add nsw i64 %conv1, %acc
+  ret i64 %add
 }

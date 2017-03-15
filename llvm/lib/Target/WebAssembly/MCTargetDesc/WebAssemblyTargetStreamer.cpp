@@ -152,30 +152,20 @@ void WebAssemblyTargetELFStreamer::emitIndirectFunctionType(
 void WebAssemblyTargetELFStreamer::emitGlobalImport(StringRef name) {
 }
 
-static unsigned MVT2WasmType(MVT Ty) {
-  switch (Ty.SimpleTy) {
-  case MVT::i32: return wasm::WASM_TYPE_I32;
-  case MVT::i64: return wasm::WASM_TYPE_I64;
-  case MVT::f32: return wasm::WASM_TYPE_F32;
-  case MVT::f64: return wasm::WASM_TYPE_F64;
-  default: llvm_unreachable("unsupported type");
-  }
-}
-
 void WebAssemblyTargetWasmStreamer::emitParam(MCSymbol *Symbol,
                                               ArrayRef<MVT> Types) {
-  SmallVector<unsigned, 4> Params;
+  SmallVector<wasm::ValType, 4> Params;
   for (MVT Ty : Types)
-    Params.push_back(MVT2WasmType(Ty));
+    Params.push_back(WebAssembly::toValType(Ty));
 
   cast<MCSymbolWasm>(Symbol)->setParams(std::move(Params));
 }
 
 void WebAssemblyTargetWasmStreamer::emitResult(MCSymbol *Symbol,
                                                ArrayRef<MVT> Types) {
-  SmallVector<unsigned, 4> Returns;
+  SmallVector<wasm::ValType, 4> Returns;
   for (MVT Ty : Types)
-    Returns.push_back(MVT2WasmType(Ty));
+    Returns.push_back(WebAssembly::toValType(Ty));
 
   cast<MCSymbolWasm>(Symbol)->setReturns(std::move(Returns));
 }

@@ -900,6 +900,7 @@ void TargetLoweringBase::initActions() {
     setOperationAction(ISD::SMAX, VT, Expand);
     setOperationAction(ISD::UMIN, VT, Expand);
     setOperationAction(ISD::UMAX, VT, Expand);
+    setOperationAction(ISD::ABS, VT, Expand);
 
     // Overflow operations default to expand
     setOperationAction(ISD::SADDO, VT, Expand);

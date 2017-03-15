@@ -180,6 +180,10 @@ class InstrItineraryData;
       UMLAL,        // 64bit Unsigned Accumulate Multiply
       SMLAL,        // 64bit Signed Accumulate Multiply
       UMAAL,        // 64-bit Unsigned Accumulate Accumulate Multiply
+      SMLALBB,      // 64-bit signed accumulate multiply bottom, bottom 16
+      SMLALBT,      // 64-bit signed accumulate multiply bottom, top 16
+      SMLALTB,      // 64-bit signed accumulate multiply top, bottom 16
+      SMLALTT,      // 64-bit signed accumulate multiply top, top 16
 
       // Operands of the standard BUILD_VECTOR node are not legalized, which
       // is fine if BUILD_VECTORs are always lowered to shuffles or other

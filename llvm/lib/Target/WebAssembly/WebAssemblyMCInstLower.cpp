@@ -45,32 +45,32 @@ WebAssemblyMCInstLower::GetGlobalAddressSymbol(const MachineOperand &MO) const {
     const TargetMachine &TM = MF.getTarget();
     const Function &CurrentFunc = *MF.getFunction();
 
-    SmallVector<unsigned, 4> Returns;
-    SmallVector<unsigned, 4> Params;
+    SmallVector<wasm::ValType, 4> Returns;
+    SmallVector<wasm::ValType, 4> Params;
 
-    WebAssembly::ValType iPTR =
+    wasm::ValType iPTR =
         MF.getSubtarget<WebAssemblySubtarget>().hasAddr64() ?
-        WebAssembly::ValType::I64 :
-        WebAssembly::ValType::I32;
+        wasm::ValType::I64 :
+        wasm::ValType::I32;
 
     SmallVector<MVT, 4> ResultMVTs;
     ComputeLegalValueVTs(CurrentFunc, TM, FuncTy->getReturnType(), ResultMVTs);
     // WebAssembly can't currently handle returning tuples.
     if (ResultMVTs.size() <= 1)
       for (MVT ResultMVT : ResultMVTs)
-        Returns.push_back(unsigned(WebAssembly::toValType(ResultMVT)));
+        Returns.push_back(WebAssembly::toValType(ResultMVT));
     else
-      Params.push_back(unsigned(iPTR));
+      Params.push_back(iPTR);
 
     for (Type *Ty : FuncTy->params()) {
       SmallVector<MVT, 4> ParamMVTs;
       ComputeLegalValueVTs(CurrentFunc, TM, Ty, ParamMVTs);
       for (MVT ParamMVT : ParamMVTs)
-        Params.push_back(unsigned(WebAssembly::toValType(ParamMVT)));
+        Params.push_back(WebAssembly::toValType(ParamMVT));
     }
 
     if (FuncTy->isVarArg())
-      Params.push_back(unsigned(iPTR));
+      Params.push_back(iPTR);
 
     WasmSym->setReturns(std::move(Returns));
     WasmSym->setParams(std::move(Params));
@@ -95,8 +95,8 @@ MCSymbol *WebAssemblyMCInstLower::GetExternalSymbolSymbol(
   if (strcmp(Name, "__stack_pointer") == 0)
     return WasmSym;
 
-  SmallVector<unsigned, 4> Returns;
-  SmallVector<unsigned, 4> Params;
+  SmallVector<wasm::ValType, 4> Returns;
+  SmallVector<wasm::ValType, 4> Params;
   GetSignature(Subtarget, Name, Returns, Params);
 
   WasmSym->setReturns(std::move(Returns));
@@ -128,15 +128,15 @@ MCOperand WebAssemblyMCInstLower::LowerSymbolOperand(MCSymbol *Sym,
 }
 
 // Return the WebAssembly type associated with the given register class.
-static unsigned getType(const TargetRegisterClass *RC) {
+static wasm::ValType getType(const TargetRegisterClass *RC) {
   if (RC == &WebAssembly::I32RegClass)
-    return unsigned(WebAssembly::ExprType::I32);
+    return wasm::ValType::I32;
   if (RC == &WebAssembly::I64RegClass)
-    return unsigned(WebAssembly::ExprType::I64);
+    return wasm::ValType::I64;
   if (RC == &WebAssembly::F32RegClass)
-    return unsigned(WebAssembly::ExprType::F32);
+    return wasm::ValType::F32;
   if (RC == &WebAssembly::F64RegClass)
-    return unsigned(WebAssembly::ExprType::F64);
+    return wasm::ValType::F64;
   llvm_unreachable("Unexpected register class");
 }
 
@@ -172,8 +172,8 @@ void WebAssemblyMCInstLower::Lower(const MachineInstr *MI,
         if (Info.OperandType == WebAssembly::OPERAND_TYPEINDEX) {
           MCSymbol *Sym = Printer.createTempSymbol("typeindex");
           if (!isa<MCSymbolELF>(Sym)) {
-            SmallVector<unsigned, 4> Returns;
-            SmallVector<unsigned, 4> Params;
+            SmallVector<wasm::ValType, 4> Returns;
+            SmallVector<wasm::ValType, 4> Params;
 
             const MachineRegisterInfo &MRI =
                 MI->getParent()->getParent()->getRegInfo();

@@ -262,6 +262,7 @@ namespace {
     SDValue visitSRA(SDNode *N);
     SDValue visitSRL(SDNode *N);
     SDValue visitRotate(SDNode *N);
+    SDValue visitABS(SDNode *N);
     SDValue visitBSWAP(SDNode *N);
     SDValue visitBITREVERSE(SDNode *N);
     SDValue visitCTLZ(SDNode *N);
@@ -1423,6 +1424,7 @@ SDValue DAGCombiner::visit(SDNode *N) {
   case ISD::SRL:                return visitSRL(N);
   case ISD::ROTR:
   case ISD::ROTL:               return visitRotate(N);
+  case ISD::ABS:                return visitABS(N);
   case ISD::BSWAP:              return visitBSWAP(N);
   case ISD::BITREVERSE:         return visitBITREVERSE(N);
   case ISD::CTLZ:               return visitCTLZ(N);
@@ -2524,15 +2526,7 @@ static SDValue simplifyDivRem(SDNode *N, SelectionDAG &DAG) {
   EVT VT = N->getValueType(0);
   SDLoc DL(N);
 
-  // X / undef -> undef
-  // X % undef -> undef
-  if (N1.isUndef())
-    return N1;
-
-  // X / 0 --> undef
-  // X % 0 --> undef
-  // We don't need to preserve faults!
-  if (isNullConstantOrNullSplatConstant(N1))
+  if (DAG.isUndef(N->getOpcode(), {N0, N1}))
     return DAG.getUNDEF(VT);
 
   // undef / X -> 0
@@ -5012,6 +5006,17 @@ SDValue DAGCombiner::visitXOR(SDNode *N) {
                                          N01C->getAPIntValue(), DL, VT));
     }
   }
+
+  // fold Y = sra (X, size(X)-1); xor (add (X, Y), Y) -> (abs X)
+  unsigned OpSizeInBits = VT.getScalarSizeInBits();
+  if (N0.getOpcode() == ISD::ADD && N0.getOperand(1) == N1 &&
+      N1.getOpcode() == ISD::SRA && N1.getOperand(0) == N0.getOperand(0) &&
+      TLI.isOperationLegalOrCustom(ISD::ABS, VT)) {
+    if (ConstantSDNode *C = isConstOrConstSplat(N1.getOperand(1)))
+      if (C->getAPIntValue() == (OpSizeInBits - 1))
+        return DAG.getNode(ISD::ABS, SDLoc(N), VT, N0.getOperand(0));
+  }
+
   // fold (xor x, x) -> 0
   if (N0 == N1)
     return tryFoldToZero(SDLoc(N), TLI, VT, DAG, LegalOperations, LegalTypes);
@@ -5751,6 +5756,22 @@ SDValue DAGCombiner::visitSRL(SDNode *N) {
     }
   }
 
+  return SDValue();
+}
+
+SDValue DAGCombiner::visitABS(SDNode *N) {
+  SDValue N0 = N->getOperand(0);
+  EVT VT = N->getValueType(0);
+
+  // fold (abs c1) -> c2
+  if (DAG.isConstantIntBuildVectorOrConstantInt(N0))
+    return DAG.getNode(ISD::ABS, SDLoc(N), VT, N0);
+  // fold (abs (abs x)) -> (abs x)
+  if (N0.getOpcode() == ISD::ABS)
+    return N0;
+  // fold (abs x) -> x iff not-negative
+  if (DAG.SignBitIsZero(N0))
+    return N0;
   return SDValue();
 }
 

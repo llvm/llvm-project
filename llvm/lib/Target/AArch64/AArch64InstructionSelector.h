@@ -11,10 +11,13 @@
 /// AArch64.
 //===----------------------------------------------------------------------===//
 
+#ifdef LLVM_BUILD_GLOBAL_ISEL
+
 #ifndef LLVM_LIB_TARGET_AARCH64_AARCH64INSTRUCTIONSELECTOR_H
 #define LLVM_LIB_TARGET_AARCH64_AARCH64INSTRUCTIONSELECTOR_H
 
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
+#include "llvm/CodeGen/MachineOperand.h"
 
 namespace llvm {
 
@@ -23,6 +26,7 @@ class AArch64RegisterBankInfo;
 class AArch64RegisterInfo;
 class AArch64Subtarget;
 class AArch64TargetMachine;
+class MachineOperand;
 
 class MachineFunction;
 class MachineRegisterInfo;
@@ -45,13 +49,23 @@ private:
   /// the patterns that don't require complex C++.
   bool selectImpl(MachineInstr &I) const;
 
+  bool selectArithImmed(MachineOperand &Root, MachineOperand &Result1,
+                        MachineOperand &Result2) const;
+
   const AArch64TargetMachine &TM;
   const AArch64Subtarget &STI;
   const AArch64InstrInfo &TII;
   const AArch64RegisterInfo &TRI;
   const AArch64RegisterBankInfo &RBI;
+
+// We declare the temporaries used by selectImpl() in the class to minimize the
+// cost of constructing placeholder values.
+#define GET_GLOBALISEL_TEMPORARIES_DECL
+#include "AArch64GenGlobalISel.inc"
+#undef GET_GLOBALISEL_TEMPORARIES_DECL
 };
 
 } // end namespace llvm
 
 #endif // LLVM_LIB_TARGET_AARCH64_AARCH64INSTRUCTIONSELECTOR_H
+#endif // LLVM_BUILD_GLOBAL_ISEL

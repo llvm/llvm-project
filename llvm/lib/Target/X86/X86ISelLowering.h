@@ -239,9 +239,6 @@ namespace llvm {
       FHADD,
       FHSUB,
 
-      // Integer absolute value
-      ABS,
-
       // Detect Conflicts Within a Vector
       CONFLICT,
 

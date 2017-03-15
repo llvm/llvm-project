@@ -1653,7 +1653,7 @@ def main(num_threads, test_subdir, test_runner_name, results_formatter):
     # will be passed along to the timeout pre-kill handler and allows for loose
     # coupling of its implementation.
     runner_context = {
-        "archs": configuration.archs,
+        "arch": configuration.arch,
         "platform_name": configuration.lldb_platform_name,
         "platform_url": configuration.lldb_platform_url,
         "platform_working_dir": configuration.lldb_platform_working_dir,

@@ -339,6 +339,12 @@ namespace ISD {
     /// Bitwise operators - logical and, logical or, logical xor.
     AND, OR, XOR,
 
+    /// ABS - Determine the unsigned absolute value of a signed integer value of
+    /// the same bitwidth.
+    /// Note: A value of INT_MIN will return INT_MIN, no saturation or overflow
+    /// is performed.
+    ABS,
+
     /// Shift and rotation operations.  After legalization, the type of the
     /// shift amount is known to be TLI.getShiftAmountTy().  Before legalization
     /// the shift amount can be any type, but care must be taken to ensure it is

@@ -1357,6 +1357,11 @@ include "llvm/Target/TargetSelectionDAG.td"
 include "llvm/Target/GlobalISel/RegisterBank.td"
 
 //===----------------------------------------------------------------------===//
+// Pull in the common support for DAG isel generation.
+//
+include "llvm/Target/GlobalISel/Target.td"
+
+//===----------------------------------------------------------------------===//
 // Pull in the common support for the Global ISel DAG-based selector generation.
 //
 include "llvm/Target/GlobalISel/SelectionDAGCompat.td"

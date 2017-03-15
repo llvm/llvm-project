@@ -646,8 +646,23 @@ void AsmPrinter::EmitFunctionHeader() {
   }
 
   // Emit the prefix data.
-  if (F->hasPrefixData())
-    EmitGlobalConstant(F->getParent()->getDataLayout(), F->getPrefixData());
+  if (F->hasPrefixData()) {
+    if (MAI->hasSubsectionsViaSymbols()) {
+      // Preserving prefix data on platforms which use subsections-via-symbols
+      // is a bit tricky. Here we introduce a symbol for the prefix data
+      // and use the .alt_entry attribute to mark the function's real entry point
+      // as an alternative entry point to the prefix-data symbol.
+      MCSymbol *PrefixSym = OutContext.createLinkerPrivateTempSymbol();
+      OutStreamer->EmitLabel(PrefixSym);
+
+      EmitGlobalConstant(F->getParent()->getDataLayout(), F->getPrefixData());
+
+      // Emit an .alt_entry directive for the actual function symbol.
+      OutStreamer->EmitSymbolAttribute(CurrentFnSym, MCSA_AltEntry);
+    } else {
+      EmitGlobalConstant(F->getParent()->getDataLayout(), F->getPrefixData());
+    }
+  }
 
   // Emit the CurrentFnSym.  This is a virtual function to allow targets to
   // do their wild and crazy things as required.

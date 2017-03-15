@@ -1714,7 +1714,7 @@ class LLDBTestCaseFactory(type):
 
                 supported_categories = [
                     x for x in categories if test_categories.is_supported_on_platform(
-                        x, target_platform, configuration.compilers)]
+                        x, target_platform, configuration.compiler)]
                 if "dsym" in supported_categories:
                     @decorators.add_test_categories(["dsym"])
                     @wraps(attrvalue)

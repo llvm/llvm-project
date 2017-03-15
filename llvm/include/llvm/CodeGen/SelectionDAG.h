@@ -740,6 +740,9 @@ public:
     return getNode(ISD::CALLSEQ_END, DL, NodeTys, Ops);
   }
 
+  /// Return true if the result of this operation is always undefined.
+  bool isUndef(unsigned Opcode, ArrayRef<SDValue> Ops);
+
   /// Return an UNDEF node. UNDEF does not have a useful SDLoc.
   SDValue getUNDEF(EVT VT) {
     return getNode(ISD::UNDEF, SDLoc(), VT);

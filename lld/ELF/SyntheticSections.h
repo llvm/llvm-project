@@ -153,16 +153,19 @@ private:
   uint8_t *HashBuf;
 };
 
-// For each copy relocation, we create an instance of this class to
-// reserve space in .bss or .bss.rel.ro.
-template <class ELFT> class CopyRelSection final : public SyntheticSection {
-  typedef typename ELFT::uint uintX_t;
-
+// BssSection is used to reserve space for copy relocations. We create two
+// instances of this class for .bss and .bss.rel.ro. .bss is used for writable
+// symbols, and .bss.rel.ro is used for read-only symbols.
+class BssSection final : public SyntheticSection {
 public:
-  CopyRelSection(bool ReadOnly, uintX_t AddrAlign, size_t Size);
+  BssSection(StringRef Name);
   void writeTo(uint8_t *) override {}
+  bool empty() const override { return getSize() == 0; }
+  size_t reserveSpace(uint32_t Alignment, size_t Size);
   size_t getSize() const override { return Size; }
-  size_t Size;
+
+private:
+  size_t Size = 0;
 };
 
 template <class ELFT> class MipsGotSection final : public SyntheticSection {
@@ -265,9 +268,7 @@ private:
   uintX_t Size = 0;
 };
 
-template <class ELFT> class GotPltSection final : public SyntheticSection {
-  typedef typename ELFT::uint uintX_t;
-
+class GotPltSection final : public SyntheticSection {
 public:
   GotPltSection();
   void addEntry(SymbolBody &Sym);
@@ -283,9 +284,7 @@ private:
 // Symbols that will be relocated by Target->IRelativeRel.
 // On most Targets the IgotPltSection will immediately follow the GotPltSection
 // on ARM the IgotPltSection will immediately follow the GotSection.
-template <class ELFT> class IgotPltSection final : public SyntheticSection {
-  typedef typename ELFT::uint uintX_t;
-
+class IgotPltSection final : public SyntheticSection {
 public:
   IgotPltSection();
   void addEntry(SymbolBody &Sym);
@@ -297,9 +296,8 @@ private:
   std::vector<const SymbolBody *> Entries;
 };
 
-template <class ELFT> class StringTableSection final : public SyntheticSection {
+class StringTableSection final : public SyntheticSection {
 public:
-  typedef typename ELFT::uint uintX_t;
   StringTableSection(StringRef Name, bool Dynamic);
   unsigned addString(StringRef S, bool HashIt = true);
   void writeTo(uint8_t *Buf) override;
@@ -309,7 +307,7 @@ public:
 private:
   const bool Dynamic;
 
-  uintX_t Size = 0;
+  uint64_t Size = 0;
 
   llvm::DenseMap<StringRef, unsigned> StringMap;
   std::vector<StringRef> Strings;
@@ -416,7 +414,7 @@ public:
   typedef typename ELFT::Sym Elf_Sym;
   typedef typename ELFT::uint uintX_t;
 
-  SymbolTableSection(StringTableSection<ELFT> &StrTabSec);
+  SymbolTableSection(StringTableSection &StrTabSec);
 
   void finalizeContents() override;
   void postThunkContents() override;
@@ -431,7 +429,7 @@ private:
   // A vector of symbols and their string table offsets.
   std::vector<SymbolTableEntry> Symbols;
 
-  StringTableSection<ELFT> &StrTabSec;
+  StringTableSection &StrTabSec;
 };
 
 // Outputs GNU Hash section. For detailed explanation see:
@@ -763,9 +761,11 @@ SymbolBody *addSyntheticLocal(StringRef Name, uint8_t Type, uint64_t Value,
 template <class ELFT> struct In {
   static InputSection *ARMAttributes;
   static BuildIdSection<ELFT> *BuildId;
+  static BssSection *Bss;
+  static BssSection *BssRelRo;
   static InputSection *Common;
   static DynamicSection<ELFT> *Dynamic;
-  static StringTableSection<ELFT> *DynStrTab;
+  static StringTableSection *DynStrTab;
   static SymbolTableSection<ELFT> *DynSymTab;
   static EhFrameHeader<ELFT> *EhFrameHdr;
   static GnuHashTableSection<ELFT> *GnuHashTab;
@@ -773,8 +773,8 @@ template <class ELFT> struct In {
   static GotSection<ELFT> *Got;
   static EhFrameSection<ELFT> *EhFrame;
   static MipsGotSection<ELFT> *MipsGot;
-  static GotPltSection<ELFT> *GotPlt;
-  static IgotPltSection<ELFT> *IgotPlt;
+  static GotPltSection *GotPlt;
+  static IgotPltSection *IgotPlt;
   static HashTableSection<ELFT> *HashTab;
   static InputSection *Interp;
   static MipsRldMapSection<ELFT> *MipsRldMap;
@@ -783,8 +783,8 @@ template <class ELFT> struct In {
   static RelocationSection<ELFT> *RelaDyn;
   static RelocationSection<ELFT> *RelaPlt;
   static RelocationSection<ELFT> *RelaIplt;
-  static StringTableSection<ELFT> *ShStrTab;
-  static StringTableSection<ELFT> *StrTab;
+  static StringTableSection *ShStrTab;
+  static StringTableSection *StrTab;
   static SymbolTableSection<ELFT> *SymTab;
   static VersionDefinitionSection<ELFT> *VerDef;
   static VersionTableSection<ELFT> *VerSym;
@@ -792,10 +792,12 @@ template <class ELFT> struct In {
 };
 
 template <class ELFT> InputSection *In<ELFT>::ARMAttributes;
+template <class ELFT> BssSection *In<ELFT>::Bss;
+template <class ELFT> BssSection *In<ELFT>::BssRelRo;
 template <class ELFT> BuildIdSection<ELFT> *In<ELFT>::BuildId;
 template <class ELFT> InputSection *In<ELFT>::Common;
 template <class ELFT> DynamicSection<ELFT> *In<ELFT>::Dynamic;
-template <class ELFT> StringTableSection<ELFT> *In<ELFT>::DynStrTab;
+template <class ELFT> StringTableSection *In<ELFT>::DynStrTab;
 template <class ELFT> SymbolTableSection<ELFT> *In<ELFT>::DynSymTab;
 template <class ELFT> EhFrameHeader<ELFT> *In<ELFT>::EhFrameHdr;
 template <class ELFT> GdbIndexSection<ELFT> *In<ELFT>::GdbIndex;
@@ -803,8 +805,8 @@ template <class ELFT> GnuHashTableSection<ELFT> *In<ELFT>::GnuHashTab;
 template <class ELFT> GotSection<ELFT> *In<ELFT>::Got;
 template <class ELFT> EhFrameSection<ELFT> *In<ELFT>::EhFrame;
 template <class ELFT> MipsGotSection<ELFT> *In<ELFT>::MipsGot;
-template <class ELFT> GotPltSection<ELFT> *In<ELFT>::GotPlt;
-template <class ELFT> IgotPltSection<ELFT> *In<ELFT>::IgotPlt;
+template <class ELFT> GotPltSection *In<ELFT>::GotPlt;
+template <class ELFT> IgotPltSection *In<ELFT>::IgotPlt;
 template <class ELFT> HashTableSection<ELFT> *In<ELFT>::HashTab;
 template <class ELFT> InputSection *In<ELFT>::Interp;
 template <class ELFT> MipsRldMapSection<ELFT> *In<ELFT>::MipsRldMap;
@@ -813,8 +815,8 @@ template <class ELFT> PltSection<ELFT> *In<ELFT>::Iplt;
 template <class ELFT> RelocationSection<ELFT> *In<ELFT>::RelaDyn;
 template <class ELFT> RelocationSection<ELFT> *In<ELFT>::RelaPlt;
 template <class ELFT> RelocationSection<ELFT> *In<ELFT>::RelaIplt;
-template <class ELFT> StringTableSection<ELFT> *In<ELFT>::ShStrTab;
-template <class ELFT> StringTableSection<ELFT> *In<ELFT>::StrTab;
+template <class ELFT> StringTableSection *In<ELFT>::ShStrTab;
+template <class ELFT> StringTableSection *In<ELFT>::StrTab;
 template <class ELFT> SymbolTableSection<ELFT> *In<ELFT>::SymTab;
 template <class ELFT> VersionDefinitionSection<ELFT> *In<ELFT>::VerDef;
 template <class ELFT> VersionTableSection<ELFT> *In<ELFT>::VerSym;

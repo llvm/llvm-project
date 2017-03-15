@@ -287,6 +287,8 @@ bool MachineOperand::isIdenticalTo(const MachineOperand &Other) const {
     return getIntrinsicID() == Other.getIntrinsicID();
   case MachineOperand::MO_Predicate:
     return getPredicate() == Other.getPredicate();
+  case MachineOperand::MO_Placeholder:
+    return true;
   }
   llvm_unreachable("Invalid machine operand type");
 }
@@ -335,6 +337,8 @@ hash_code llvm::hash_value(const MachineOperand &MO) {
     return hash_combine(MO.getType(), MO.getTargetFlags(), MO.getIntrinsicID());
   case MachineOperand::MO_Predicate:
     return hash_combine(MO.getType(), MO.getTargetFlags(), MO.getPredicate());
+  case MachineOperand::MO_Placeholder:
+    return hash_combine();
   }
   llvm_unreachable("Invalid machine operand type");
 }
@@ -504,7 +508,11 @@ void MachineOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
     auto Pred = static_cast<CmpInst::Predicate>(getPredicate());
     OS << '<' << (CmpInst::isIntPredicate(Pred) ? "intpred" : "floatpred")
        << CmpInst::getPredicateName(Pred) << '>';
+    break;
   }
+  case MachineOperand::MO_Placeholder:
+    OS << "<placeholder>";
+    break;
   }
   if (unsigned TF = getTargetFlags())
     OS << "[TF=" << TF << ']';

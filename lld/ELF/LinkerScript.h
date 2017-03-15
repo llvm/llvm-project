@@ -287,6 +287,7 @@ public:
   bool shouldKeep(InputSectionBase *S);
   void assignOffsets(OutputSectionCommand *Cmd);
   void placeOrphanSections();
+  void processNonSectionCommands();
   void assignAddresses(std::vector<PhdrEntry> &Phdrs);
   int getSectionIndex(StringRef Name);
 };

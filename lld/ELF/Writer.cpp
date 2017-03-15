@@ -111,8 +111,8 @@ StringRef elf::getOutputSectionName(StringRef Name) {
   }
 
   for (StringRef V :
-       {".text.", ".rodata.", ".data.rel.ro.", ".data.", ".bss.",
-        ".init_array.", ".fini_array.", ".ctors.", ".dtors.", ".tbss.",
+       {".text.", ".rodata.", ".data.rel.ro.", ".data.", ".bss.rel.ro.",
+        ".bss.", ".init_array.", ".fini_array.", ".ctors.", ".dtors.", ".tbss.",
         ".gcc_except_table.", ".tdata.", ".ARM.exidx."}) {
     StringRef Prefix = V.drop_back();
     if (Name.startswith(V) || Name == Prefix)
@@ -270,6 +270,7 @@ template <class ELFT> void Writer<ELFT>::run() {
     } else {
       fixSectionAlignments();
       assignAddresses();
+      Script<ELFT>::X->processNonSectionCommands();
     }
 
     // Remove empty PT_LOAD to avoid causing the dynamic linker to try to mmap a
@@ -329,15 +330,11 @@ template <class ELFT> void Writer<ELFT>::createSyntheticSections() {
 
   auto Add = [](InputSectionBase *Sec) { InputSections.push_back(Sec); };
 
-  // Create singleton output sections.
-  Out::Bss = make<OutputSection>(".bss", SHT_NOBITS, SHF_ALLOC | SHF_WRITE);
-  Out::BssRelRo =
-      make<OutputSection>(".bss.rel.ro", SHT_NOBITS, SHF_ALLOC | SHF_WRITE);
-  In<ELFT>::DynStrTab = make<StringTableSection<ELFT>>(".dynstr", true);
+  In<ELFT>::DynStrTab = make<StringTableSection>(".dynstr", true);
   In<ELFT>::Dynamic = make<DynamicSection<ELFT>>();
   In<ELFT>::RelaDyn = make<RelocationSection<ELFT>>(
       Config->isRela() ? ".rela.dyn" : ".rel.dyn", Config->ZCombreloc);
-  In<ELFT>::ShStrTab = make<StringTableSection<ELFT>>(".shstrtab", false);
+  In<ELFT>::ShStrTab = make<StringTableSection>(".shstrtab", false);
 
   Out::ElfHeader = make<OutputSection>("", 0, SHF_ALLOC);
   Out::ElfHeader->Size = sizeof(Elf_Ehdr);
@@ -355,7 +352,7 @@ template <class ELFT> void Writer<ELFT>::createSyntheticSections() {
     Add(createCommentSection<ELFT>());
 
   if (Config->Strip != StripPolicy::All) {
-    In<ELFT>::StrTab = make<StringTableSection<ELFT>>(".strtab", false);
+    In<ELFT>::StrTab = make<StringTableSection>(".strtab", false);
     In<ELFT>::SymTab = make<SymbolTableSection<ELFT>>(*In<ELFT>::StrTab);
   }
 
@@ -369,6 +366,11 @@ template <class ELFT> void Writer<ELFT>::createSyntheticSections() {
     In<ELFT>::Common = Common;
     Add(Common);
   }
+
+  In<ELFT>::Bss = make<BssSection>(".bss");
+  Add(In<ELFT>::Bss);
+  In<ELFT>::BssRelRo = make<BssSection>(".bss.rel.ro");
+  Add(In<ELFT>::BssRelRo);
 
   // Add MIPS-specific sections.
   bool HasDynSymTab =
@@ -427,9 +429,9 @@ template <class ELFT> void Writer<ELFT>::createSyntheticSections() {
     Add(In<ELFT>::Got);
   }
 
-  In<ELFT>::GotPlt = make<GotPltSection<ELFT>>();
+  In<ELFT>::GotPlt = make<GotPltSection>();
   Add(In<ELFT>::GotPlt);
-  In<ELFT>::IgotPlt = make<IgotPltSection<ELFT>>();
+  In<ELFT>::IgotPlt = make<IgotPltSection>();
   Add(In<ELFT>::IgotPlt);
 
   if (Config->GdbIndex) {
@@ -619,7 +621,7 @@ template <class ELFT> bool elf::isRelroSection(const OutputSection *Sec) {
     return true;
   if (In<ELFT>::Got && Sec == In<ELFT>::Got->OutSec)
     return true;
-  if (Sec == Out::BssRelRo)
+  if (Sec == In<ELFT>::BssRelRo->OutSec)
     return true;
 
   StringRef S = Sec->Name;
@@ -1169,14 +1171,15 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   // Dynamic section must be the last one in this list and dynamic
   // symbol table section (DynSymTab) must be the first one.
   applySynthetic<ELFT>(
-      {In<ELFT>::DynSymTab, In<ELFT>::GnuHashTab, In<ELFT>::HashTab,
-       In<ELFT>::SymTab,    In<ELFT>::ShStrTab,   In<ELFT>::StrTab,
-       In<ELFT>::VerDef,    In<ELFT>::DynStrTab,  In<ELFT>::GdbIndex,
-       In<ELFT>::Got,       In<ELFT>::MipsGot,    In<ELFT>::IgotPlt,
-       In<ELFT>::GotPlt,    In<ELFT>::RelaDyn,    In<ELFT>::RelaIplt,
-       In<ELFT>::RelaPlt,   In<ELFT>::Plt,        In<ELFT>::Iplt,
-       In<ELFT>::Plt,       In<ELFT>::EhFrameHdr, In<ELFT>::VerSym,
-       In<ELFT>::VerNeed,   In<ELFT>::Dynamic},
+      {In<ELFT>::DynSymTab,  In<ELFT>::Bss,      In<ELFT>::BssRelRo,
+       In<ELFT>::GnuHashTab, In<ELFT>::HashTab,  In<ELFT>::SymTab,
+       In<ELFT>::ShStrTab,   In<ELFT>::StrTab,   In<ELFT>::VerDef,
+       In<ELFT>::DynStrTab,  In<ELFT>::GdbIndex, In<ELFT>::Got,
+       In<ELFT>::MipsGot,    In<ELFT>::IgotPlt,  In<ELFT>::GotPlt,
+       In<ELFT>::RelaDyn,    In<ELFT>::RelaIplt, In<ELFT>::RelaPlt,
+       In<ELFT>::Plt,        In<ELFT>::Iplt,     In<ELFT>::Plt,
+       In<ELFT>::EhFrameHdr, In<ELFT>::VerSym,   In<ELFT>::VerNeed,
+       In<ELFT>::Dynamic},
       [](SyntheticSection *SS) { SS->finalizeContents(); });
 
   // Some architectures use small displacements for jump instructions.
@@ -1205,16 +1208,6 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
 }
 
 template <class ELFT> void Writer<ELFT>::addPredefinedSections() {
-  // Add BSS sections.
-  auto Add = [=](OutputSection *Sec) {
-    if (!Sec->Sections.empty()) {
-      Sec->assignOffsets<ELFT>();
-      OutputSections.push_back(Sec);
-    }
-  };
-  Add(Out::Bss);
-  Add(Out::BssRelRo);
-
   // ARM ABI requires .ARM.exidx to be terminated by some piece of data.
   // We have the terminater synthetic section class. Add that at the end.
   auto *OS = dyn_cast_or_null<OutputSection>(findSection(".ARM.exidx"));

@@ -825,7 +825,8 @@ TEST_F(FileSystemTest, BrokenSymlinkDirectoryIteration) {
     ASSERT_NO_ERROR(ec);
 
     fs::file_status status;
-    if (i->status(status) == std::errc::no_such_file_or_directory) {
+    if (i->status(status) ==
+        std::make_error_code(std::errc::no_such_file_or_directory)) {
       i.no_push();
       continue;
     }

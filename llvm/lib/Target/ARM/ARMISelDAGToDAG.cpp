@@ -244,7 +244,6 @@ private:
 
   bool tryInlineAsm(SDNode *N);
 
-  void SelectConcatVector(SDNode *N);
   void SelectCMPZ(SDNode *N, bool &SwitchEQNEToPLMI);
 
   void SelectCMP_SWAP(SDNode *N);
@@ -2585,15 +2584,6 @@ void ARMDAGToDAGISel::SelectCMP_SWAP(SDNode *N) {
   CurDAG->RemoveDeadNode(N);
 }
 
-void ARMDAGToDAGISel::SelectConcatVector(SDNode *N) {
-  // The only time a CONCAT_VECTORS operation can have legal types is when
-  // two 64-bit vectors are concatenated to a 128-bit vector.
-  EVT VT = N->getValueType(0);
-  if (!VT.is128BitVector() || N->getNumOperands() != 2)
-    llvm_unreachable("unexpected CONCAT_VECTORS");
-  ReplaceNode(N, createDRegPairNode(VT, N->getOperand(0), N->getOperand(1)));
-}
-
 static Optional<std::pair<unsigned, unsigned>>
 getContiguousRangeOfSetBits(const APInt &A) {
   unsigned FirstOne = A.getBitWidth() - A.countLeadingZeros() - 1;
@@ -2899,49 +2889,6 @@ void ARMDAGToDAGISel::Select(SDNode *N) {
     }
 
     break;
-  }
-  case ARMISD::VMOVRRD:
-    ReplaceNode(N, CurDAG->getMachineNode(ARM::VMOVRRD, dl, MVT::i32, MVT::i32,
-                                          N->getOperand(0), getAL(CurDAG, dl),
-                                          CurDAG->getRegister(0, MVT::i32)));
-    return;
-  case ISD::UMUL_LOHI: {
-    if (Subtarget->isThumb1Only())
-      break;
-    if (Subtarget->isThumb()) {
-      SDValue Ops[] = { N->getOperand(0), N->getOperand(1),
-                        getAL(CurDAG, dl), CurDAG->getRegister(0, MVT::i32) };
-      ReplaceNode(
-          N, CurDAG->getMachineNode(ARM::t2UMULL, dl, MVT::i32, MVT::i32, Ops));
-      return;
-    } else {
-      SDValue Ops[] = { N->getOperand(0), N->getOperand(1),
-                        getAL(CurDAG, dl), CurDAG->getRegister(0, MVT::i32),
-                        CurDAG->getRegister(0, MVT::i32) };
-      ReplaceNode(N, CurDAG->getMachineNode(
-                         Subtarget->hasV6Ops() ? ARM::UMULL : ARM::UMULLv5, dl,
-                         MVT::i32, MVT::i32, Ops));
-      return;
-    }
-  }
-  case ISD::SMUL_LOHI: {
-    if (Subtarget->isThumb1Only())
-      break;
-    if (Subtarget->isThumb()) {
-      SDValue Ops[] = { N->getOperand(0), N->getOperand(1),
-                        getAL(CurDAG, dl), CurDAG->getRegister(0, MVT::i32) };
-      ReplaceNode(
-          N, CurDAG->getMachineNode(ARM::t2SMULL, dl, MVT::i32, MVT::i32, Ops));
-      return;
-    } else {
-      SDValue Ops[] = { N->getOperand(0), N->getOperand(1),
-                        getAL(CurDAG, dl), CurDAG->getRegister(0, MVT::i32),
-                        CurDAG->getRegister(0, MVT::i32) };
-      ReplaceNode(N, CurDAG->getMachineNode(
-                         Subtarget->hasV6Ops() ? ARM::SMULL : ARM::SMULLv5, dl,
-                         MVT::i32, MVT::i32, Ops));
-      return;
-    }
   }
   case ARMISD::UMAAL: {
     unsigned Opc = Subtarget->isThumb() ? ARM::t2UMAAL : ARM::UMAAL;
@@ -3835,10 +3782,6 @@ void ARMDAGToDAGISel::Select(SDNode *N) {
     ReplaceNode(N, CurDAG->getMachineNode(ARM::VTBL2, dl, VT, Ops));
     return;
   }
-
-  case ISD::CONCAT_VECTORS:
-    SelectConcatVector(N);
-    return;
 
   case ISD::ATOMIC_CMP_SWAP:
     SelectCMP_SWAP(N);

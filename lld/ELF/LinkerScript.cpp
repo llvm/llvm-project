@@ -153,11 +153,6 @@ void LinkerScript<ELFT>::addSymbol(SymbolAssignment *Cmd) {
     return;
 
   Cmd->Sym = addRegular<ELFT>(Cmd);
-
-  // If there are sections, then let the value be assigned later in
-  // `assignAddresses`.
-  if (!ScriptConfig->HasSections)
-    assignSymbol(Cmd);
 }
 
 bool SymbolAssignment::classof(const BaseCommand *C) {
@@ -341,15 +336,6 @@ void LinkerScript<ELFT>::processCommands(OutputSectionFactory &Factory) {
     // Handle symbol assignments outside of any output section.
     if (auto *Cmd = dyn_cast<SymbolAssignment>(Base1.get())) {
       addSymbol(Cmd);
-      continue;
-    }
-
-    if (auto *Cmd = dyn_cast<AssertCommand>(Base1.get())) {
-      // If we don't have SECTIONS then output sections have already been
-      // created by Writer<ELFT>. The LinkerScript<ELFT>::assignAddresses
-      // will not be called, so ASSERT should be evaluated now.
-      if (!Opt.HasSections)
-        Cmd->Expression();
       continue;
     }
 
@@ -776,6 +762,15 @@ void LinkerScriptBase::placeOrphanSections() {
 
     // Continue from where we found it.
     CmdIndex = (Pos - Opt.Commands.begin()) + 1;
+  }
+}
+
+void LinkerScriptBase::processNonSectionCommands() {
+  for (const std::unique_ptr<BaseCommand> &Base : Opt.Commands) {
+    if (auto *Cmd = dyn_cast<SymbolAssignment>(Base.get()))
+      assignSymbol(Cmd);
+    else if (auto *Cmd = dyn_cast<AssertCommand>(Base.get()))
+      Cmd->Expression();
   }
 }
 
@@ -1556,14 +1551,8 @@ SymbolAssignment *ScriptParser::readProvideOrAssignment(StringRef Tok) {
 
 SymbolAssignment *ScriptParser::readAssignment(StringRef Name) {
   StringRef Op = next();
-  Expr E;
   assert(Op == "=" || Op == "+=");
-  if (consume("ABSOLUTE")) {
-    E = readExpr();
-    E.IsAbsolute = [] { return true; };
-  } else {
-    E = readExpr();
-  }
+  Expr E = readExpr();
   if (Op == "+=") {
     std::string Loc = getCurrentLocation();
     E = [=] { return ScriptBase->getSymbolValue(Loc, Name) + E(); };
@@ -1739,6 +1728,11 @@ Expr ScriptParser::readPrimary() {
 
   // Built-in functions are parsed here.
   // https://sourceware.org/binutils/docs/ld/Builtin-Functions.html.
+  if (Tok == "ABSOLUTE") {
+    Expr E = readParenExpr();
+    E.IsAbsolute = [] { return true; };
+    return E;
+  }
   if (Tok == "ADDR") {
     StringRef Name = readParenLiteral();
     return {[=] { return ScriptBase->getOutputSection(Location, Name)->Addr; },

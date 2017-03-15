@@ -42,6 +42,7 @@
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
 #include <string>
+#include <numeric>
 using namespace llvm;
 
 #define DEBUG_TYPE "gisel-emitter"
@@ -80,6 +81,55 @@ public:
     }
     llvm_unreachable("Unhandled LLT");
   }
+
+  const LLT &get() const { return Ty; }
+};
+
+class InstructionMatcher;
+class OperandPlaceholder {
+private:
+  enum PlaceholderKind {
+    OP_MatchReference,
+    OP_Temporary,
+  } Kind;
+
+  struct MatchReferenceData {
+    InstructionMatcher *InsnMatcher;
+    StringRef InsnVarName;
+    StringRef SymbolicName;
+  };
+
+  struct TemporaryData {
+    unsigned OpIdx;
+  };
+
+  union {
+    struct MatchReferenceData MatchReference;
+    struct TemporaryData Temporary;
+  };
+
+  OperandPlaceholder(PlaceholderKind Kind) : Kind(Kind) {}
+
+public:
+  ~OperandPlaceholder() {}
+
+  static OperandPlaceholder
+  CreateMatchReference(InstructionMatcher *InsnMatcher,
+                       const StringRef InsnVarName, const StringRef SymbolicName) {
+    OperandPlaceholder Result(OP_MatchReference);
+    Result.MatchReference.InsnMatcher = InsnMatcher;
+    Result.MatchReference.InsnVarName = InsnVarName;
+    Result.MatchReference.SymbolicName = SymbolicName;
+    return Result;
+  }
+
+  static OperandPlaceholder CreateTemporary(unsigned OpIdx) {
+    OperandPlaceholder Result(OP_Temporary);
+    Result.Temporary.OpIdx = OpIdx;
+    return Result;
+  }
+
+  void emitCxxValueExpr(raw_ostream &OS) const;
 };
 
 /// Convert an MVT to an equivalent LLT if possible, or the invalid LLT() for
@@ -154,6 +204,7 @@ public:
   /// but OPM_Int must have priority over OPM_RegBank since constant integers
   /// are represented by a virtual register defined by a G_CONSTANT instruction.
   enum PredicateKind {
+    OPM_ComplexPattern,
     OPM_Int,
     OPM_LLT,
     OPM_RegBank,
@@ -179,6 +230,10 @@ public:
   virtual bool isHigherPriorityThan(const OperandPredicateMatcher &B) const {
     return Kind < B.Kind;
   };
+
+  /// Report the maximum number of temporary operands needed by the predicate
+  /// matcher.
+  virtual unsigned countTemporaryOperands() const { return 0; }
 };
 
 /// Generates code to check that an operand is a particular LLT.
@@ -199,6 +254,39 @@ public:
     OS << "MRI.getType(" << OperandExpr << ".getReg()) == (";
     Ty.emitCxxConstructorCall(OS);
     OS << ")";
+  }
+};
+
+/// Generates code to check that an operand is a particular target constant.
+class ComplexPatternOperandMatcher : public OperandPredicateMatcher {
+protected:
+  const Record &TheDef;
+  /// The index of the first temporary operand to allocate to this
+  /// ComplexPattern.
+  unsigned BaseTemporaryID;
+
+  unsigned getNumOperands() const {
+    return TheDef.getValueAsDag("Operands")->getNumArgs();
+  }
+
+public:
+  ComplexPatternOperandMatcher(const Record &TheDef, unsigned BaseTemporaryID)
+      : OperandPredicateMatcher(OPM_ComplexPattern), TheDef(TheDef),
+        BaseTemporaryID(BaseTemporaryID) {}
+
+  void emitCxxPredicateExpr(raw_ostream &OS,
+                            StringRef OperandExpr) const override {
+    OS << TheDef.getValueAsString("MatcherFn") << "(" << OperandExpr;
+    for (unsigned I = 0; I < getNumOperands(); ++I) {
+      OS << ", ";
+      OperandPlaceholder::CreateTemporary(BaseTemporaryID + I)
+          .emitCxxValueExpr(OS);
+    }
+    OS << ")";
+  }
+
+  unsigned countTemporaryOperands() const override {
+    return getNumOperands();
   }
 };
 
@@ -309,6 +397,17 @@ public:
 
     return false;
   };
+
+  /// Report the maximum number of temporary operands needed by the operand
+  /// matcher.
+  unsigned countTemporaryOperands() const {
+    return std::accumulate(
+        predicates().begin(), predicates().end(), 0,
+        [](unsigned A,
+           const std::unique_ptr<OperandPredicateMatcher> &Predicate) {
+          return A + Predicate->countTemporaryOperands();
+        });
+  }
 };
 
 /// Generates code to check a predicate on an instruction.
@@ -344,6 +443,10 @@ public:
   virtual bool isHigherPriorityThan(const InstructionPredicateMatcher &B) const {
     return Kind < B.Kind;
   };
+
+  /// Report the maximum number of temporary operands needed by the predicate
+  /// matcher.
+  virtual unsigned countTemporaryOperands() const { return 0; }
 };
 
 /// Generates code to check the opcode of an instruction.
@@ -466,14 +569,40 @@ public:
 
     return false;
   };
+
+  /// Report the maximum number of temporary operands needed by the instruction
+  /// matcher.
+  unsigned countTemporaryOperands() const {
+    return std::accumulate(predicates().begin(), predicates().end(), 0,
+                           [](unsigned A,
+                              const std::unique_ptr<InstructionPredicateMatcher>
+                                  &Predicate) {
+                             return A + Predicate->countTemporaryOperands();
+                           }) +
+           std::accumulate(Operands.begin(), Operands.end(), 0,
+                           [](unsigned A, const OperandMatcher &Operand) {
+                             return A + Operand.countTemporaryOperands();
+                           });
+  }
 };
 
 //===- Actions ------------------------------------------------------------===//
+void OperandPlaceholder::emitCxxValueExpr(raw_ostream &OS) const {
+  switch (Kind) {
+  case OP_MatchReference:
+    OS << MatchReference.InsnMatcher->getOperand(MatchReference.SymbolicName)
+              .getOperandExpr(MatchReference.InsnVarName);
+    break;
+  case OP_Temporary:
+    OS << "TempOp" << Temporary.OpIdx;
+    break;
+  }
+}
 
 namespace {
 class OperandRenderer {
 public:
-  enum RendererKind { OR_Copy, OR_Register };
+  enum RendererKind { OR_Copy, OR_Register, OR_ComplexPattern };
 
 protected:
   RendererKind Kind;
@@ -536,6 +665,34 @@ public:
   void emitCxxRenderStmts(raw_ostream &OS) const override {
     OS << "    MIB.addReg(" << RegisterDef->getValueAsString("Namespace")
        << "::" << RegisterDef->getName() << ");\n";
+  }
+};
+
+class RenderComplexPatternOperand : public OperandRenderer {
+private:
+  const Record &TheDef;
+  std::vector<OperandPlaceholder> Sources;
+
+  unsigned getNumOperands() const {
+    return TheDef.getValueAsDag("Operands")->getNumArgs();
+  }
+
+public:
+  RenderComplexPatternOperand(const Record &TheDef,
+                              const ArrayRef<OperandPlaceholder> Sources)
+      : OperandRenderer(OR_ComplexPattern), TheDef(TheDef), Sources(Sources) {}
+
+  static bool classof(const OperandRenderer *R) {
+    return R->getKind() == OR_ComplexPattern;
+  }
+
+  void emitCxxRenderStmts(raw_ostream &OS) const override {
+    assert(Sources.size() == getNumOperands() && "Inconsistent number of operands");
+    for (const auto &Source : Sources) {
+      OS << "MIB.add(";
+      Source.emitCxxValueExpr(OS);
+      OS << ");\n";
+    }
   }
 };
 
@@ -701,6 +858,15 @@ public:
 
     return false;
   };
+
+  /// Report the maximum number of temporary operands needed by the rule
+  /// matcher.
+  unsigned countTemporaryOperands() const {
+    return std::accumulate(Matchers.begin(), Matchers.end(), 0,
+                           [](unsigned A, const std::unique_ptr<InstructionMatcher> &Matcher) {
+                             return A + Matcher->countTemporaryOperands();
+                           });
+  }
 };
 
 //===- GlobalISelEmitter class --------------------------------------------===//
@@ -719,6 +885,11 @@ private:
   /// This is defined using 'GINodeEquiv' in the target description.
   DenseMap<Record *, const CodeGenInstruction *> NodeEquivs;
 
+  /// Keep track of the equivalence between ComplexPattern's and
+  /// GIComplexOperandMatcher. Map entries are specified by subclassing
+  /// GIComplexPatternEquiv.
+  DenseMap<const Record *, const Record *> ComplexPatternEquivs;
+
   void gatherNodeEquivs();
   const CodeGenInstruction *findNodeEquiv(Record *N);
 
@@ -732,6 +903,14 @@ void GlobalISelEmitter::gatherNodeEquivs() {
   for (Record *Equiv : RK.getAllDerivedDefinitions("GINodeEquiv"))
     NodeEquivs[Equiv->getValueAsDef("Node")] =
         &Target.getInstruction(Equiv->getValueAsDef("I"));
+
+  assert(ComplexPatternEquivs.empty());
+  for (Record *Equiv : RK.getAllDerivedDefinitions("GIComplexPatternEquiv")) {
+    Record *SelDAGEquiv = Equiv->getValueAsDef("SelDAGEquivalent");
+    if (!SelDAGEquiv)
+      continue;
+    ComplexPatternEquivs[SelDAGEquiv] = Equiv;
+ }
 }
 
 const CodeGenInstruction *GlobalISelEmitter::findNodeEquiv(Record *N) {
@@ -749,6 +928,8 @@ static Error failedImport(const Twine &Reason) {
 }
 
 Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
+  unsigned TempOpIdx = 0;
+
   // Keep track of the matchers and actions to emit.
   RuleMatcher M;
   M.addAction<DebugCommentAction>(P);
@@ -856,18 +1037,32 @@ Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
     if (auto *ChildDefInit = dyn_cast<DefInit>(SrcChild->getLeafValue())) {
       auto *ChildRec = ChildDefInit->getDef();
 
-      // Otherwise, we're looking for a bog-standard RegisterClass operand.
-      if (!ChildRec->isSubClassOf("RegisterClass"))
-        return failedImport("Src pattern child isn't a RegisterClass");
+      if (ChildRec->isSubClassOf("RegisterClass")) {
+        OM.addPredicate<RegisterBankOperandMatcher>(
+            Target.getRegisterClass(ChildRec));
+        continue;
+      }
 
-      OM.addPredicate<RegisterBankOperandMatcher>(
-          Target.getRegisterClass(ChildRec));
-      continue;
+      if (ChildRec->isSubClassOf("ComplexPattern")) {
+        const auto &ComplexPattern = ComplexPatternEquivs.find(ChildRec);
+        if (ComplexPattern == ComplexPatternEquivs.end())
+          return failedImport(
+              "SelectionDAG ComplexPattern not mapped to GlobalISel");
+
+        const auto &Predicate = OM.addPredicate<ComplexPatternOperandMatcher>(
+            *ComplexPattern->second, TempOpIdx);
+        TempOpIdx += Predicate.countTemporaryOperands();
+        continue;
+      }
+
+      return failedImport(
+          "Src pattern child def is an unsupported tablegen class");
     }
 
     return failedImport("Src pattern child is an unsupported kind");
   }
 
+  TempOpIdx = 0;
   // Finally render the used operands (i.e., the children of the root operator).
   for (unsigned i = 0, e = Dst->getNumChildren(); i != e; ++i) {
     auto *DstChild = Dst->getChild(i);
@@ -912,11 +1107,30 @@ Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
         continue;
       }
 
+      if (ChildRec->isSubClassOf("ComplexPattern")) {
+        const auto &ComplexPattern = ComplexPatternEquivs.find(ChildRec);
+        if (ComplexPattern == ComplexPatternEquivs.end())
+          return failedImport(
+              "SelectionDAG ComplexPattern not mapped to GlobalISel");
+
+        SmallVector<OperandPlaceholder, 2> RenderedOperands;
+        for (unsigned I = 0; I < InsnMatcher.getOperand(DstChild->getName())
+                                     .countTemporaryOperands();
+             ++I) {
+          RenderedOperands.push_back(OperandPlaceholder::CreateTemporary(I));
+          TempOpIdx++;
+        }
+        DstMIBuilder.addRenderer<RenderComplexPatternOperand>(
+            *ComplexPattern->second,
+            RenderedOperands);
+        continue;
+      }
+
       return failedImport(
           "Dst pattern child def is an unsupported tablegen class");
     }
 
-    return failedImport("Src pattern child is an unsupported kind");
+    return failedImport("Dst pattern child is an unsupported kind");
   }
 
   // We're done with this pattern!  It's eligible for GISel emission; return it.
@@ -930,11 +1144,6 @@ void GlobalISelEmitter::run(raw_ostream &OS) {
 
   emitSourceFileHeader(("Global Instruction Selector for the " +
                        Target.getName() + " target").str(), OS);
-  OS << "bool " << Target.getName()
-     << "InstructionSelector::selectImpl"
-        "(MachineInstr &I) const {\n  const MachineRegisterInfo &MRI = "
-        "I.getParent()->getParent()->getRegInfo();\n\n";
-
   std::vector<RuleMatcher> Rules;
   // Look through the SelectionDAG patterns we found, possibly emitting some.
   for (const PatternToMatch &Pat : CGP.ptms()) {
@@ -968,12 +1177,34 @@ void GlobalISelEmitter::run(raw_ostream &OS) {
               return false;
             });
 
+  unsigned MaxTemporaries = 0;
+  for (const auto &Rule : Rules)
+    MaxTemporaries = std::max(MaxTemporaries, Rule.countTemporaryOperands());
+
+  OS << "#ifdef GET_GLOBALISEL_TEMPORARIES_DECL\n";
+  for (unsigned I = 0; I < MaxTemporaries; ++I)
+    OS << "  mutable MachineOperand TempOp" << I << ";\n";
+  OS << "#endif // ifdef GET_GLOBALISEL_TEMPORARIES_DECL\n\n";
+
+  OS << "#ifdef GET_GLOBALISEL_TEMPORARIES_INIT\n";
+  for (unsigned I = 0; I < MaxTemporaries; ++I)
+    OS << ", TempOp" << I << "(MachineOperand::CreatePlaceholder())\n";
+  OS << "#endif // ifdef GET_GLOBALISEL_TEMPORARIES_INIT\n\n";
+
+  OS << "#ifdef GET_GLOBALISEL_IMPL\n"
+     << "bool " << Target.getName()
+     << "InstructionSelector::selectImpl(MachineInstr &I) const {\n"
+     << "  MachineFunction &MF = *I.getParent()->getParent();\n"
+     << "  const MachineRegisterInfo &MRI = MF.getRegInfo();\n";
+
   for (const auto &Rule : Rules) {
     Rule.emit(OS);
     ++NumPatternEmitted;
   }
 
-  OS << "  return false;\n}\n";
+  OS << "  return false;\n"
+     << "}\n"
+     << "#endif // ifdef GET_GLOBALISEL_IMPL\n";
 }
 
 } // end anonymous namespace
