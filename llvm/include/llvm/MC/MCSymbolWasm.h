@@ -10,14 +10,15 @@
 #define LLVM_MC_MCSYMBOLWASM_H
 
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/Support/Wasm.h"
 
 namespace llvm {
 class MCSymbolWasm : public MCSymbol {
 private:
   bool IsFunction = false;
   std::string ModuleName;
-  SmallVector<unsigned, 1> Returns;
-  SmallVector<unsigned, 4> Params;
+  SmallVector<wasm::ValType, 1> Returns;
+  SmallVector<wasm::ValType, 4> Params;
 
   /// An expression describing how to calculate the size of a symbol. If a
   /// symbol has no size this field will be NULL.
@@ -39,13 +40,15 @@ public:
 
   const StringRef getModuleName() const { return ModuleName; }
 
-  const SmallVector<unsigned, 1> &getReturns() const { return Returns; }
-  void setReturns(SmallVectorImpl<unsigned> &&Rets) {
+  const SmallVector<wasm::ValType, 1> &getReturns() const { return Returns; }
+
+  void setReturns(SmallVectorImpl<wasm::ValType> &&Rets) {
     Returns = std::move(Rets);
   }
 
-  const SmallVector<unsigned, 4> &getParams() const { return Params; }
-  void setParams(SmallVectorImpl<unsigned> &&Pars) {
+  const SmallVector<wasm::ValType, 4> &getParams() const { return Params; }
+
+  void setParams(SmallVectorImpl<wasm::ValType> &&Pars) {
     Params = std::move(Pars);
   }
 };

@@ -12,6 +12,7 @@ add_llvm_library(LLVMDebugInfoCodeView
   RecordSerialization.cpp
   SymbolRecordMapping.cpp
   SymbolDumper.cpp
+  SymbolSerializer.cpp
   TypeDatabase.cpp
   TypeDatabaseVisitor.cpp
   TypeDumpVisitor.cpp

@@ -1207,3 +1207,314 @@ define float @fmed3_qnan0_qnan1_x_f32(float %x) {
   %med3 = call float @llvm.amdgcn.fmed3.f32(float 0x7FF8001000000000, float 0x7FF8002000000000, float %x)
   ret float %med3
 }
+
+; --------------------------------------------------------------------
+; llvm.amdgcn.icmp
+; --------------------------------------------------------------------
+
+declare i64 @llvm.amdgcn.icmp.i32(i32, i32, i32) nounwind readnone convergent
+declare i64 @llvm.amdgcn.icmp.i64(i64, i64, i32) nounwind readnone convergent
+
+; Make sure there's no crash for invalid input
+; CHECK-LABEL: @invalid_nonconstant_icmp_code(
+; CHECK: call i64 @llvm.amdgcn.icmp.i32(i32 %a, i32 %b, i32 %c)
+define i64 @invalid_nonconstant_icmp_code(i32 %a, i32 %b, i32 %c) {
+  %result = call i64 @llvm.amdgcn.icmp.i32(i32 %a, i32 %b, i32 %c)
+  ret i64 %result
+}
+
+; CHECK-LABEL: @invalid_icmp_code(
+; CHECK: %under = call i64 @llvm.amdgcn.icmp.i32(i32 %a, i32 %b, i32 31)
+; CHECK: %over = call i64 @llvm.amdgcn.icmp.i32(i32 %a, i32 %b, i32 42)
+define i64 @invalid_icmp_code(i32 %a, i32 %b) {
+  %under = call i64 @llvm.amdgcn.icmp.i32(i32 %a, i32 %b, i32 31)
+  %over = call i64 @llvm.amdgcn.icmp.i32(i32 %a, i32 %b, i32 42)
+  %or = or i64 %under, %over
+  ret i64 %or
+}
+
+; CHECK-LABEL: @icmp_constant_inputs_false(
+; CHECK: ret i64 0
+define i64 @icmp_constant_inputs_false() {
+  %result = call i64 @llvm.amdgcn.icmp.i32(i32 9, i32 8, i32 32)
+  ret i64 %result
+}
+
+; CHECK-LABEL: @icmp_constant_inputs_true(
+; CHECK: ret i64 -1
+define i64 @icmp_constant_inputs_true() {
+  %result = call i64 @llvm.amdgcn.icmp.i32(i32 9, i32 8, i32 34)
+  ret i64 %result
+}
+
+; CHECK-LABEL: @icmp_constant_to_rhs_slt(
+; CHECK: %result = call i64 @llvm.amdgcn.icmp.i32(i32 %x, i32 9, i32 38)
+define i64 @icmp_constant_to_rhs_slt(i32 %x) {
+  %result = call i64 @llvm.amdgcn.icmp.i32(i32 9, i32 %x, i32 40)
+  ret i64 %result
+}
+
+; CHECK-LABEL: @fold_icmp_ne_0_zext_icmp_eq_i32(
+; CHECK-NEXT: call i64 @llvm.amdgcn.icmp.i32(i32 %a, i32 %b, i32 32)
+define i64 @fold_icmp_ne_0_zext_icmp_eq_i32(i32 %a, i32 %b) {
+  %cmp = icmp eq i32 %a, %b
+  %zext.cmp = zext i1 %cmp to i32
+  %mask = call i64 @llvm.amdgcn.icmp.i32(i32 %zext.cmp, i32 0, i32 33)
+  ret i64 %mask
+}
+
+; CHECK-LABEL: @fold_icmp_ne_0_zext_icmp_ne_i32(
+; CHECK-NEXT: call i64 @llvm.amdgcn.icmp.i32(i32 %a, i32 %b, i32 33)
+define i64 @fold_icmp_ne_0_zext_icmp_ne_i32(i32 %a, i32 %b) {
+  %cmp = icmp ne i32 %a, %b
+  %zext.cmp = zext i1 %cmp to i32
+  %mask = call i64 @llvm.amdgcn.icmp.i32(i32 %zext.cmp, i32 0, i32 33)
+  ret i64 %mask
+}
+
+; CHECK-LABEL: @fold_icmp_ne_0_zext_icmp_sle_i32(
+; CHECK-NEXT: call i64 @llvm.amdgcn.icmp.i32(i32 %a, i32 %b, i32 41)
+define i64 @fold_icmp_ne_0_zext_icmp_sle_i32(i32 %a, i32 %b) {
+  %cmp = icmp sle i32 %a, %b
+  %zext.cmp = zext i1 %cmp to i32
+  %mask = call i64 @llvm.amdgcn.icmp.i32(i32 %zext.cmp, i32 0, i32 33)
+  ret i64 %mask
+}
+
+; CHECK-LABEL: @fold_icmp_ne_0_zext_icmp_ugt_i64(
+; CHECK-NEXT: call i64 @llvm.amdgcn.icmp.i64(i64 %a, i64 %b, i32 34)
+define i64 @fold_icmp_ne_0_zext_icmp_ugt_i64(i64 %a, i64 %b) {
+  %cmp = icmp ugt i64 %a, %b
+  %zext.cmp = zext i1 %cmp to i32
+  %mask = call i64 @llvm.amdgcn.icmp.i32(i32 %zext.cmp, i32 0, i32 33)
+  ret i64 %mask
+}
+
+; CHECK-LABEL: @fold_icmp_ne_0_zext_icmp_ult_swap_i64(
+; CHECK-NEXT: call i64 @llvm.amdgcn.icmp.i64(i64 %a, i64 %b, i32 34)
+define i64 @fold_icmp_ne_0_zext_icmp_ult_swap_i64(i64 %a, i64 %b) {
+  %cmp = icmp ugt i64 %a, %b
+  %zext.cmp = zext i1 %cmp to i32
+  %mask = call i64 @llvm.amdgcn.icmp.i32(i32 0, i32 %zext.cmp, i32 33)
+  ret i64 %mask
+}
+
+; CHECK-LABEL: @fold_icmp_ne_0_zext_fcmp_oeq_f32(
+; CHECK-NEXT: call i64 @llvm.amdgcn.fcmp.f32(float %a, float %b, i32 1)
+define i64 @fold_icmp_ne_0_zext_fcmp_oeq_f32(float %a, float %b) {
+  %cmp = fcmp oeq float %a, %b
+  %zext.cmp = zext i1 %cmp to i32
+  %mask = call i64 @llvm.amdgcn.icmp.i32(i32 %zext.cmp, i32 0, i32 33)
+  ret i64 %mask
+}
+
+; CHECK-LABEL: @fold_icmp_ne_0_zext_fcmp_une_f32(
+; CHECK-NEXT: call i64 @llvm.amdgcn.fcmp.f32(float %a, float %b, i32 14)
+define i64 @fold_icmp_ne_0_zext_fcmp_une_f32(float %a, float %b) {
+  %cmp = fcmp une float %a, %b
+  %zext.cmp = zext i1 %cmp to i32
+  %mask = call i64 @llvm.amdgcn.icmp.i32(i32 %zext.cmp, i32 0, i32 33)
+  ret i64 %mask
+}
+
+; CHECK-LABEL: @fold_icmp_ne_0_zext_fcmp_olt_f64(
+; CHECK-NEXT: call i64 @llvm.amdgcn.fcmp.f64(double %a, double %b, i32 4)
+define i64 @fold_icmp_ne_0_zext_fcmp_olt_f64(double %a, double %b) {
+  %cmp = fcmp olt double %a, %b
+  %zext.cmp = zext i1 %cmp to i32
+  %mask = call i64 @llvm.amdgcn.icmp.i32(i32 %zext.cmp, i32 0, i32 33)
+  ret i64 %mask
+}
+
+; CHECK-LABEL: @fold_icmp_sext_icmp_ne_0_i32(
+; CHECK: %mask = call i64 @llvm.amdgcn.icmp.i32(i32 %a, i32 %b, i32 32)
+define i64 @fold_icmp_sext_icmp_ne_0_i32(i32 %a, i32 %b) {
+  %cmp = icmp eq i32 %a, %b
+  %sext.cmp = sext i1 %cmp to i32
+  %mask = call i64 @llvm.amdgcn.icmp.i32(i32 %sext.cmp, i32 0, i32 33)
+  ret i64 %mask
+}
+
+; CHECK-LABEL: @fold_icmp_eq_0_zext_icmp_eq_i32(
+; CHECK-NEXT: call i64 @llvm.amdgcn.icmp.i32(i32 %a, i32 %b, i32 33)
+define i64 @fold_icmp_eq_0_zext_icmp_eq_i32(i32 %a, i32 %b) {
+  %cmp = icmp eq i32 %a, %b
+  %zext.cmp = zext i1 %cmp to i32
+  %mask = call i64 @llvm.amdgcn.icmp.i32(i32 %zext.cmp, i32 0, i32 32)
+  ret i64 %mask
+}
+
+; CHECK-LABEL: @fold_icmp_eq_0_zext_icmp_slt_i32(
+; CHECK-NEXT: call i64 @llvm.amdgcn.icmp.i32(i32 %a, i32 %b, i32 39)
+define i64 @fold_icmp_eq_0_zext_icmp_slt_i32(i32 %a, i32 %b) {
+  %cmp = icmp slt i32 %a, %b
+  %zext.cmp = zext i1 %cmp to i32
+  %mask = call i64 @llvm.amdgcn.icmp.i32(i32 %zext.cmp, i32 0, i32 32)
+  ret i64 %mask
+}
+
+; CHECK-LABEL: @fold_icmp_eq_0_zext_fcmp_oeq_f32(
+; CHECK-NEXT: call i64 @llvm.amdgcn.fcmp.f32(float %a, float %b, i32 14)
+define i64 @fold_icmp_eq_0_zext_fcmp_oeq_f32(float %a, float %b) {
+  %cmp = fcmp oeq float %a, %b
+  %zext.cmp = zext i1 %cmp to i32
+  %mask = call i64 @llvm.amdgcn.icmp.i32(i32 %zext.cmp, i32 0, i32 32)
+  ret i64 %mask
+}
+
+; CHECK-LABEL: @fold_icmp_eq_0_zext_fcmp_ule_f32(
+; CHECK-NEXT: call i64 @llvm.amdgcn.fcmp.f32(float %a, float %b, i32 2)
+define i64 @fold_icmp_eq_0_zext_fcmp_ule_f32(float %a, float %b) {
+  %cmp = fcmp ule float %a, %b
+  %zext.cmp = zext i1 %cmp to i32
+  %mask = call i64 @llvm.amdgcn.icmp.i32(i32 %zext.cmp, i32 0, i32 32)
+  ret i64 %mask
+}
+
+; CHECK-LABEL: @fold_icmp_eq_0_zext_fcmp_ogt_f32(
+; CHECK-NEXT: call i64 @llvm.amdgcn.fcmp.f32(float %a, float %b, i32 13)
+define i64 @fold_icmp_eq_0_zext_fcmp_ogt_f32(float %a, float %b) {
+  %cmp = fcmp ogt float %a, %b
+  %zext.cmp = zext i1 %cmp to i32
+  %mask = call i64 @llvm.amdgcn.icmp.i32(i32 %zext.cmp, i32 0, i32 32)
+  ret i64 %mask
+}
+
+; CHECK-LABEL: @fold_icmp_zext_icmp_eq_1_i32(
+; CHECK-NEXT: call i64 @llvm.amdgcn.icmp.i32(i32 %a, i32 %b, i32 32)
+define i64 @fold_icmp_zext_icmp_eq_1_i32(i32 %a, i32 %b) {
+  %cmp = icmp eq i32 %a, %b
+  %zext.cmp = zext i1 %cmp to i32
+  %mask = call i64 @llvm.amdgcn.icmp.i32(i32 %zext.cmp, i32 1, i32 32)
+  ret i64 %mask
+}
+
+; CHECK-LABEL: @fold_icmp_zext_argi1_eq_1_i32(
+; CHECK: %zext.cond = zext i1 %cond to i32
+; CHECK: call i64 @llvm.amdgcn.icmp.i32(i32 %zext.cond, i32 0, i32 33)
+define i64 @fold_icmp_zext_argi1_eq_1_i32(i1 %cond) {
+  %zext.cond = zext i1 %cond to i32
+  %mask = call i64 @llvm.amdgcn.icmp.i32(i32 %zext.cond, i32 1, i32 32)
+  ret i64 %mask
+}
+
+; CHECK-LABEL: @fold_icmp_zext_argi1_eq_neg1_i32(
+; CHECK: %zext.cond = zext i1 %cond to i32
+; CHECK: call i64 @llvm.amdgcn.icmp.i32(i32 %zext.cond, i32 -1, i32 32)
+define i64 @fold_icmp_zext_argi1_eq_neg1_i32(i1 %cond) {
+  %zext.cond = zext i1 %cond to i32
+  %mask = call i64 @llvm.amdgcn.icmp.i32(i32 %zext.cond, i32 -1, i32 32)
+  ret i64 %mask
+}
+
+; CHECK-LABEL: @fold_icmp_sext_argi1_eq_1_i32(
+; CHECK: %sext.cond = sext i1 %cond to i32
+; CHECK: call i64 @llvm.amdgcn.icmp.i32(i32 %sext.cond, i32 1, i32 32)
+define i64 @fold_icmp_sext_argi1_eq_1_i32(i1 %cond) {
+  %sext.cond = sext i1 %cond to i32
+  %mask = call i64 @llvm.amdgcn.icmp.i32(i32 %sext.cond, i32 1, i32 32)
+  ret i64 %mask
+}
+
+; CHECK-LABEL: @fold_icmp_sext_argi1_eq_neg1_i32(
+; CHECK: %sext.cond = sext i1 %cond to i32
+; CHECK: call i64 @llvm.amdgcn.icmp.i32(i32 %sext.cond, i32 0, i32 33)
+define i64 @fold_icmp_sext_argi1_eq_neg1_i32(i1 %cond) {
+  %sext.cond = sext i1 %cond to i32
+  %mask = call i64 @llvm.amdgcn.icmp.i32(i32 %sext.cond, i32 -1, i32 32)
+  ret i64 %mask
+}
+
+; CHECK-LABEL: @fold_icmp_sext_argi1_eq_neg1_i64(
+; CHECK: %sext.cond = sext i1 %cond to i64
+; CHECK: call i64 @llvm.amdgcn.icmp.i64(i64 %sext.cond, i64 0, i32 33)
+define i64 @fold_icmp_sext_argi1_eq_neg1_i64(i1 %cond) {
+  %sext.cond = sext i1 %cond to i64
+  %mask = call i64 @llvm.amdgcn.icmp.i64(i64 %sext.cond, i64 -1, i32 32)
+  ret i64 %mask
+}
+
+; TODO: Should be able to fold to false
+; CHECK-LABEL: @fold_icmp_sext_icmp_eq_1_i32(
+; CHECK: %cmp = icmp eq i32 %a, %b
+; CHECK: %sext.cmp = sext i1 %cmp to i32
+; CHECK: %mask = call i64 @llvm.amdgcn.icmp.i32(i32 %sext.cmp, i32 1, i32 32)
+define i64 @fold_icmp_sext_icmp_eq_1_i32(i32 %a, i32 %b) {
+  %cmp = icmp eq i32 %a, %b
+  %sext.cmp = sext i1 %cmp to i32
+  %mask = call i64 @llvm.amdgcn.icmp.i32(i32 %sext.cmp, i32 1, i32 32)
+  ret i64 %mask
+}
+
+; CHECK-LABEL: @fold_icmp_sext_icmp_eq_neg1_i32(
+; CHECK: call i64 @llvm.amdgcn.icmp.i32(i32 %a, i32 %b, i32 32)
+define i64 @fold_icmp_sext_icmp_eq_neg1_i32(i32 %a, i32 %b) {
+  %cmp = icmp eq i32 %a, %b
+  %sext.cmp = sext i1 %cmp to i32
+  %mask = call i64 @llvm.amdgcn.icmp.i32(i32 %sext.cmp, i32 -1, i32 32)
+  ret i64 %mask
+}
+
+; CHECK-LABEL: @fold_icmp_sext_icmp_sge_neg1_i32(
+; CHECK: call i64 @llvm.amdgcn.icmp.i32(i32 %a, i32 %b, i32 39)
+define i64 @fold_icmp_sext_icmp_sge_neg1_i32(i32 %a, i32 %b) {
+  %cmp = icmp sge i32 %a, %b
+  %sext.cmp = sext i1 %cmp to i32
+  %mask = call i64 @llvm.amdgcn.icmp.i32(i32 %sext.cmp, i32 -1, i32 32)
+  ret i64 %mask
+}
+
+; CHECK-LABEL: @fold_not_icmp_ne_0_zext_icmp_sle_i32(
+; CHECK-NEXT: call i64 @llvm.amdgcn.icmp.i32(i32 %a, i32 %b, i32 38)
+define i64 @fold_not_icmp_ne_0_zext_icmp_sle_i32(i32 %a, i32 %b) {
+  %cmp = icmp sle i32 %a, %b
+  %not = xor i1 %cmp, true
+  %zext.cmp = zext i1 %not to i32
+  %mask = call i64 @llvm.amdgcn.icmp.i32(i32 %zext.cmp, i32 0, i32 33)
+  ret i64 %mask
+}
+
+; --------------------------------------------------------------------
+; llvm.amdgcn.fcmp
+; --------------------------------------------------------------------
+
+declare i64 @llvm.amdgcn.fcmp.f32(float, float, i32) nounwind readnone convergent
+
+; Make sure there's no crash for invalid input
+; CHECK-LABEL: @invalid_nonconstant_fcmp_code(
+; CHECK: call i64 @llvm.amdgcn.fcmp.f32(float %a, float %b, i32 %c)
+define i64 @invalid_nonconstant_fcmp_code(float %a, float %b, i32 %c) {
+  %result = call i64 @llvm.amdgcn.fcmp.f32(float %a, float %b, i32 %c)
+  ret i64 %result
+}
+
+; CHECK-LABEL: @invalid_fcmp_code(
+; CHECK: %under = call i64 @llvm.amdgcn.fcmp.f32(float %a, float %b, i32 -1)
+; CHECK: %over = call i64 @llvm.amdgcn.fcmp.f32(float %a, float %b, i32 16)
+define i64 @invalid_fcmp_code(float %a, float %b) {
+  %under = call i64 @llvm.amdgcn.fcmp.f32(float %a, float %b, i32 -1)
+  %over = call i64 @llvm.amdgcn.fcmp.f32(float %a, float %b, i32 16)
+  %or = or i64 %under, %over
+  ret i64 %or
+}
+
+; CHECK-LABEL: @fcmp_constant_inputs_false(
+; CHECK: ret i64 0
+define i64 @fcmp_constant_inputs_false() {
+  %result = call i64 @llvm.amdgcn.fcmp.f32(float 2.0, float 4.0, i32 1)
+  ret i64 %result
+}
+
+; CHECK-LABEL: @fcmp_constant_inputs_true(
+; CHECK: ret i64 -1
+define i64 @fcmp_constant_inputs_true() {
+  %result = call i64 @llvm.amdgcn.fcmp.f32(float 2.0, float 4.0, i32 4)
+  ret i64 %result
+}
+
+; CHECK-LABEL: @fcmp_constant_to_rhs_olt(
+; CHECK: %result = call i64 @llvm.amdgcn.fcmp.f32(float %x, float 4.000000e+00, i32 2)
+define i64 @fcmp_constant_to_rhs_olt(float %x) {
+  %result = call i64 @llvm.amdgcn.fcmp.f32(float 4.0, float %x, i32 4)
+  ret i64 %result
+}

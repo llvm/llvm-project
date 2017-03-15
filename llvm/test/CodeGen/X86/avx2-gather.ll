@@ -9,12 +9,14 @@ define <4 x float> @test_x86_avx2_gather_d_ps(i8* %a1, <4 x i32> %idx, <4 x floa
 ; X32-LABEL: test_x86_avx2_gather_d_ps:
 ; X32:       ## BB#0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    vxorps %xmm2, %xmm2, %xmm2
 ; X32-NEXT:    vgatherdps %xmm1, (%eax,%xmm0,2), %xmm2
 ; X32-NEXT:    vmovaps %xmm2, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_x86_avx2_gather_d_ps:
 ; X64:       ## BB#0:
+; X64-NEXT:    vxorps %xmm2, %xmm2, %xmm2
 ; X64-NEXT:    vgatherdps %xmm1, (%rdi,%xmm0,2), %xmm2
 ; X64-NEXT:    vmovaps %xmm2, %xmm0
 ; X64-NEXT:    retq
@@ -30,12 +32,14 @@ define <2 x double> @test_x86_avx2_gather_d_pd(i8* %a1, <4 x i32> %idx, <2 x dou
 ; X32-LABEL: test_x86_avx2_gather_d_pd:
 ; X32:       ## BB#0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
 ; X32-NEXT:    vgatherdpd %xmm1, (%eax,%xmm0,2), %xmm2
 ; X32-NEXT:    vmovapd %xmm2, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_x86_avx2_gather_d_pd:
 ; X64:       ## BB#0:
+; X64-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
 ; X64-NEXT:    vgatherdpd %xmm1, (%rdi,%xmm0,2), %xmm2
 ; X64-NEXT:    vmovapd %xmm2, %xmm0
 ; X64-NEXT:    retq
@@ -51,12 +55,14 @@ define <8 x float> @test_x86_avx2_gather_d_ps_256(i8* %a1, <8 x i32> %idx, <8 x 
 ; X32-LABEL: test_x86_avx2_gather_d_ps_256:
 ; X32:       ## BB#0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    vxorps %ymm2, %ymm2, %ymm2
 ; X32-NEXT:    vgatherdps %ymm1, (%eax,%ymm0,4), %ymm2
 ; X32-NEXT:    vmovaps %ymm2, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_x86_avx2_gather_d_ps_256:
 ; X64:       ## BB#0:
+; X64-NEXT:    vxorps %ymm2, %ymm2, %ymm2
 ; X64-NEXT:    vgatherdps %ymm1, (%rdi,%ymm0,4), %ymm2
 ; X64-NEXT:    vmovaps %ymm2, %ymm0
 ; X64-NEXT:    retq
@@ -72,12 +78,14 @@ define <4 x double> @test_x86_avx2_gather_d_pd_256(i8* %a1, <4 x i32> %idx, <4 x
 ; X32-LABEL: test_x86_avx2_gather_d_pd_256:
 ; X32:       ## BB#0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    vxorpd %ymm2, %ymm2, %ymm2
 ; X32-NEXT:    vgatherdpd %ymm1, (%eax,%xmm0,8), %ymm2
 ; X32-NEXT:    vmovapd %ymm2, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_x86_avx2_gather_d_pd_256:
 ; X64:       ## BB#0:
+; X64-NEXT:    vxorpd %ymm2, %ymm2, %ymm2
 ; X64-NEXT:    vgatherdpd %ymm1, (%rdi,%xmm0,8), %ymm2
 ; X64-NEXT:    vmovapd %ymm2, %ymm0
 ; X64-NEXT:    retq
@@ -116,16 +124,16 @@ define <2 x double> @test_mm_i32gather_pd(double *%a0, <2 x i64> %a1) {
 ; X32-LABEL: test_mm_i32gather_pd:
 ; X32:       ## BB#0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; X32-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
+; X32-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; X32-NEXT:    vgatherdpd %xmm2, (%eax,%xmm0,2), %xmm1
 ; X32-NEXT:    vmovapd %xmm1, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_i32gather_pd:
 ; X64:       ## BB#0:
-; X64-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; X64-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
+; X64-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; X64-NEXT:    vgatherdpd %xmm2, (%rdi,%xmm0,2), %xmm1
 ; X64-NEXT:    vmovapd %xmm1, %xmm0
 ; X64-NEXT:    retq

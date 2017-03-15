@@ -40,8 +40,12 @@ unsigned isl_space_offset(__isl_keep isl_space *dim, enum isl_dim_type type);
 isl_bool isl_space_may_be_set(__isl_keep isl_space *space);
 isl_bool isl_space_is_named_or_nested(__isl_keep isl_space *space,
 	enum isl_dim_type type);
+isl_bool isl_space_has_equal_ids(__isl_keep isl_space *space1,
+	__isl_keep isl_space *space2);
 isl_bool isl_space_has_named_params(__isl_keep isl_space *space);
 isl_stat isl_space_check_named_params(__isl_keep isl_space *space);
+isl_stat isl_space_check_equal_params(__isl_keep isl_space *space1,
+	__isl_keep isl_space *space2);
 __isl_give isl_space *isl_space_reset(__isl_take isl_space *dim,
 	enum isl_dim_type type);
 __isl_give isl_space *isl_space_flatten(__isl_take isl_space *dim);

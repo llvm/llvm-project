@@ -49,7 +49,6 @@ struct PhdrEntry {
 
 llvm::StringRef getOutputSectionName(llvm::StringRef Name);
 
-template <class ELFT>
 bool allocateHeaders(std::vector<PhdrEntry> &, llvm::ArrayRef<OutputSection *>,
                      uint64_t Min);
 

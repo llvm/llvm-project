@@ -68,8 +68,8 @@ void noQualifierParens(NoQualifierParens *f) {
 // RUN: c-index-test -code-completion-at=%s:65:6 %s | FileCheck -check-prefix=CHECK-CC2 %s
 //CHECK-CC2: ObjCInstanceMethodDecl:{ResultType void (^)(void)}{TypedText blockProperty} (35)
 //CHECK-CC2-NEXT: ObjCInstanceMethodDecl:{ResultType BarBlock}{TypedText blockProperty2} (35)
-//CHECK-CC2-NEXT: ObjCInstanceMethodDecl:{ResultType void}{TypedText setBlockProperty2:}{Placeholder BarBlock blockProperty2} (35)
-//CHECK-CC2-NEXT: ObjCInstanceMethodDecl:{ResultType void}{TypedText setBlockProperty:}{Placeholder void (^)(void)blockProperty} (35)
+//CHECK-CC2-NEXT: ObjCInstanceMethodDecl:{ResultType void}{TypedText setBlockProperty2:}{Placeholder ^int(int *)blockProperty2} (35)
+//CHECK-CC2-NEXT: ObjCInstanceMethodDecl:{ResultType void}{TypedText setBlockProperty:}{Placeholder ^(void)blockProperty} (35)
 
 @interface ClassProperties
 
@@ -86,3 +86,9 @@ void classBlockProperties() {
 //CHECK-CC3: ObjCPropertyDecl:{ResultType void}{TypedText explicit}{LeftParen (}{RightParen )} (35)
 //CHECK-CC3-NEXT: ObjCPropertyDecl:{ResultType void (^)()}{TypedText explicit}{Equal  = }{Placeholder ^(void)} (38)
 //CHECK-CC3-NEXT: ObjCPropertyDecl:{ResultType void}{TypedText explicitReadonly}{LeftParen (}{RightParen )} (35)
+
+void implicitSetterBlockPlaceholder(Test* test) {
+  [test setBlock: ^{}];
+}
+// RUN: c-index-test -code-completion-at=%s:91:9 %s | FileCheck -check-prefix=CHECK-CC4 %s
+// CHECK-CC4: ObjCInstanceMethodDecl:{ResultType void}{TypedText setBlocker:}{Placeholder ^Foo(int x, Foo y, FooBlock foo)blocker} (37)

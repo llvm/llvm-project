@@ -1877,12 +1877,9 @@ int BoUpSLP::getEntryCost(TreeEntry *E) {
       Intrinsic::ID ID = getVectorIntrinsicIDForCall(CI, TLI);
 
       // Calculate the cost of the scalar and vector calls.
-      SmallVector<Type*, 4> ScalarTys, VecTys;
-      for (unsigned op = 0, opc = CI->getNumArgOperands(); op!= opc; ++op) {
+      SmallVector<Type*, 4> ScalarTys;
+      for (unsigned op = 0, opc = CI->getNumArgOperands(); op!= opc; ++op)
         ScalarTys.push_back(CI->getArgOperand(op)->getType());
-        VecTys.push_back(VectorType::get(CI->getArgOperand(op)->getType(),
-                                         VecTy->getNumElements()));
-      }
 
       FastMathFlags FMF;
       if (auto *FPMO = dyn_cast<FPMathOperator>(CI))
@@ -1891,7 +1888,9 @@ int BoUpSLP::getEntryCost(TreeEntry *E) {
       int ScalarCallCost = VecTy->getNumElements() *
           TTI->getIntrinsicInstrCost(ID, ScalarTy, ScalarTys, FMF);
 
-      int VecCallCost = TTI->getIntrinsicInstrCost(ID, VecTy, VecTys, FMF);
+      SmallVector<Value *, 4> Args(CI->arg_operands());
+      int VecCallCost = TTI->getIntrinsicInstrCost(ID, CI->getType(), Args, FMF,
+                                                   VecTy->getNumElements());
 
       DEBUG(dbgs() << "SLP: Call cost "<< VecCallCost - ScalarCallCost
             << " (" << VecCallCost  << "-" <<  ScalarCallCost << ")"

@@ -42,6 +42,7 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Object/Decompressor.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TarWriter.h"
 #include "llvm/Support/TargetSelect.h"
@@ -630,7 +631,9 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
 
   std::tie(Config->SysvHash, Config->GnuHash) = getHashStyle(Args);
 
-  // Parse --build-id or --build-id=<style>.
+  // Parse --build-id or --build-id=<style>. We handle "tree" as a
+  // synonym for "sha1" because all of our hash functions including
+  // -build-id=sha1 are tree hashes for performance reasons.
   if (Args.hasArg(OPT_build_id))
     Config->BuildId = BuildIdKind::Fast;
   if (auto *Arg = Args.getLastArg(OPT_build_id_eq)) {
@@ -796,6 +799,26 @@ static uint64_t getImageBase(opt::InputArgList &Args) {
   return V;
 }
 
+// Returns true if a given file seems to be writable.
+//
+// Determining whether a file is writable or not is amazingly hard,
+// and after all the only reliable way of doing that is to actually
+// create a file. But we don't want to do that in this function
+// because LLD shouldn't update any file if it will end in a failure.
+// We also don't want to reimplement heuristics. So we'll let
+// FileOutputBuffer do the work.
+//
+// FileOutputBuffer doesn't touch a desitnation file until commit()
+// is called. We use that class without calling commit() to predict
+// if the given file is writable.
+static bool isWritable(StringRef Path) {
+  if (auto EC = FileOutputBuffer::create(Path, 1).getError()) {
+    error("cannot open output file " + Path + ": " + EC.message());
+    return false;
+  }
+  return true;
+}
+
 // Do actual linking. Note that when this function is called,
 // all linker scripts have already been parsed.
 template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
@@ -810,6 +833,12 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   // Default output filename is "a.out" by the Unix tradition.
   if (Config->OutputFile.empty())
     Config->OutputFile = "a.out";
+
+  // Fail early if the output file is not writable. If a user has a long link,
+  // e.g. due to a large LTO link, they do not wish to run it and find that it
+  // failed because there was a mistake in their command-line.
+  if (!isWritable(Config->OutputFile))
+    return;
 
   // Use default entry point name if no name was given via the command
   // line nor linker scripts. For some reason, MIPS entry point name is

@@ -23,11 +23,13 @@
 #include <cstdlib> // for qsort
 #include <functional>
 #include <iterator>
+#include <limits>
 #include <memory>
 #include <tuple>
 #include <utility> // for std::pair
 
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Compiler.h"
@@ -43,6 +45,10 @@ namespace detail {
 
 template <typename RangeT>
 using IterOfRange = decltype(std::begin(std::declval<RangeT &>()));
+
+template <typename RangeT>
+using ValueOfRange = typename std::remove_reference<decltype(
+    *std::begin(std::declval<RangeT &>()))>::type;
 
 } // End detail namespace
 
@@ -883,6 +889,14 @@ auto partition(R &&Range, UnaryPredicate P) -> decltype(std::begin(Range)) {
   return std::partition(std::begin(Range), std::end(Range), P);
 }
 
+/// \brief Given a range of type R, iterate the entire range and return a
+/// SmallVector with elements of the vector.  This is useful, for example,
+/// when you want to iterate a range and then sort the results.
+template <unsigned Size, typename R>
+SmallVector<detail::ValueOfRange<R>, Size> to_vector(R &&Range) {
+  return {std::begin(Range), std::end(Range)};
+}
+
 /// Provide a container algorithm similar to C++ Library Fundamentals v2's
 /// `erase_if` which is equivalent to:
 ///
@@ -977,47 +991,85 @@ template <typename T> struct deref {
 };
 
 namespace detail {
-template <typename R> class enumerator_impl {
-public:
-  template <typename X> struct result_pair {
-    result_pair(std::size_t Index, X Value) : Index(Index), Value(Value) {}
+template <typename R> class enumerator_iter;
 
-    const std::size_t Index;
-    X Value;
-  };
+template <typename R> struct result_pair {
+  friend class enumerator_iter<R>;
 
-  class iterator {
-    typedef
-        typename std::iterator_traits<IterOfRange<R>>::reference iter_reference;
-    typedef result_pair<iter_reference> result_type;
+  result_pair() : Index(-1) {}
+  result_pair(std::size_t Index, IterOfRange<R> Iter)
+      : Index(Index), Iter(Iter) {}
 
-  public:
-    iterator(IterOfRange<R> &&Iter, std::size_t Index)
-        : Iter(Iter), Index(Index) {}
+  result_pair<R> &operator=(const result_pair<R> &Other) {
+    Index = Other.Index;
+    Iter = Other.Iter;
+    return *this;
+  }
 
-    result_type operator*() const { return result_type(Index, *Iter); }
-
-    iterator &operator++() {
-      ++Iter;
-      ++Index;
-      return *this;
-    }
-
-    bool operator!=(const iterator &RHS) const { return Iter != RHS.Iter; }
-
-  private:
-    IterOfRange<R> Iter;
-    std::size_t Index;
-  };
-
-public:
-  explicit enumerator_impl(R &&Range) : Range(std::forward<R>(Range)) {}
-
-  iterator begin() { return iterator(std::begin(Range), 0); }
-  iterator end() { return iterator(std::end(Range), std::size_t(-1)); }
+  std::size_t index() const { return Index; }
+  const ValueOfRange<R> &value() const { return *Iter; }
+  ValueOfRange<R> &value() { return *Iter; }
 
 private:
-  R Range;
+  std::size_t Index;
+  IterOfRange<R> Iter;
+};
+
+template <typename R>
+class enumerator_iter
+    : public iterator_facade_base<
+          enumerator_iter<R>, std::forward_iterator_tag, result_pair<R>,
+          typename std::iterator_traits<IterOfRange<R>>::difference_type,
+          typename std::iterator_traits<IterOfRange<R>>::pointer,
+          typename std::iterator_traits<IterOfRange<R>>::reference> {
+  using result_type = result_pair<R>;
+
+public:
+  explicit enumerator_iter(IterOfRange<R> EndIter)
+    : Result(std::numeric_limits<size_t>::max(), EndIter) { }
+
+  enumerator_iter(std::size_t Index, IterOfRange<R> Iter)
+      : Result(Index, Iter) {}
+
+  result_type &operator*() { return Result; }
+  const result_type &operator*() const { return Result; }
+
+  enumerator_iter<R> &operator++() {
+    assert(Result.Index != std::numeric_limits<size_t>::max());
+    ++Result.Iter;
+    ++Result.Index;
+    return *this;
+  }
+
+  bool operator==(const enumerator_iter<R> &RHS) const {
+    // Don't compare indices here, only iterators.  It's possible for an end
+    // iterator to have different indices depending on whether it was created
+    // by calling std::end() versus incrementing a valid iterator.
+    return Result.Iter == RHS.Result.Iter;
+  }
+
+  enumerator_iter<R> &operator=(const enumerator_iter<R> &Other) {
+    Result = Other.Result;
+    return *this;
+  }
+
+private:
+  result_type Result;
+};
+
+template <typename R> class enumerator {
+public:
+  explicit enumerator(R &&Range) : TheRange(std::forward<R>(Range)) {}
+
+  enumerator_iter<R> begin() {
+    return enumerator_iter<R>(0, std::begin(TheRange));
+  }
+  enumerator_iter<R> end() {
+    return enumerator_iter<R>(std::end(TheRange));
+  }
+
+private:
+  R TheRange;
 };
 }
 
@@ -1036,8 +1088,8 @@ private:
 ///   Item 2 - C
 ///   Item 3 - D
 ///
-template <typename R> detail::enumerator_impl<R> enumerate(R &&Range) {
-  return detail::enumerator_impl<R>(std::forward<R>(Range));
+template <typename R> detail::enumerator<R> enumerate(R &&TheRange) {
+  return detail::enumerator<R>(std::forward<R>(TheRange));
 }
 
 namespace detail {

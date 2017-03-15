@@ -1127,39 +1127,51 @@ namespace {
         FastMathFlags FMFCI;
         if (auto *FPMOCI = dyn_cast<FPMathOperator>(CI))
           FMFCI = FPMOCI->getFastMathFlags();
+        SmallVector<Value *, 4> IArgs(CI->arg_operands());
+        unsigned ICost = TTI->getIntrinsicInstrCost(IID, IT1, IArgs, FMFCI);
 
-        SmallVector<Type*, 4> Tys;
-        for (unsigned i = 0, ie = CI->getNumArgOperands(); i != ie; ++i)
-          Tys.push_back(CI->getArgOperand(i)->getType());
-        unsigned ICost = TTI->getIntrinsicInstrCost(IID, IT1, Tys, FMFCI);
-
-        Tys.clear();
         CallInst *CJ = cast<CallInst>(J);
 
         FastMathFlags FMFCJ;
         if (auto *FPMOCJ = dyn_cast<FPMathOperator>(CJ))
           FMFCJ = FPMOCJ->getFastMathFlags();
 
-        for (unsigned i = 0, ie = CJ->getNumArgOperands(); i != ie; ++i)
-          Tys.push_back(CJ->getArgOperand(i)->getType());
-        unsigned JCost = TTI->getIntrinsicInstrCost(IID, JT1, Tys, FMFCJ);
+        SmallVector<Value *, 4> JArgs(CJ->arg_operands());
+        unsigned JCost = TTI->getIntrinsicInstrCost(IID, JT1, JArgs, FMFCJ);
 
-        Tys.clear();
         assert(CI->getNumArgOperands() == CJ->getNumArgOperands() &&
                "Intrinsic argument counts differ");
+        SmallVector<Type*, 4> Tys;
+        SmallVector<Value *, 4> VecArgs;
         for (unsigned i = 0, ie = CI->getNumArgOperands(); i != ie; ++i) {
           if ((IID == Intrinsic::powi || IID == Intrinsic::ctlz ||
-               IID == Intrinsic::cttz) && i == 1)
+               IID == Intrinsic::cttz) && i == 1) {
             Tys.push_back(CI->getArgOperand(i)->getType());
-          else
+            VecArgs.push_back(CI->getArgOperand(i));
+          }
+          else {
             Tys.push_back(getVecTypeForPair(CI->getArgOperand(i)->getType(),
                                             CJ->getArgOperand(i)->getType()));
+            // Add both operands, and then count their scalarization overhead
+            // with VF 1.
+            VecArgs.push_back(CI->getArgOperand(i));
+            VecArgs.push_back(CJ->getArgOperand(i));
+          }
         }
+
+        // Compute the scalarization cost here with the original operands (to
+        // check for uniqueness etc), and then call getIntrinsicInstrCost()
+        // with the constructed vector types.
+        Type *RetTy = getVecTypeForPair(IT1, JT1);
+        unsigned ScalarizationCost = 0;
+        if (!RetTy->isVoidTy())
+          ScalarizationCost += TTI->getScalarizationOverhead(RetTy, true, false);
+        ScalarizationCost += TTI->getOperandsScalarizationOverhead(VecArgs, 1);
 
         FastMathFlags FMFV = FMFCI;
         FMFV &= FMFCJ;
-        Type *RetTy = getVecTypeForPair(IT1, JT1);
-        unsigned VCost = TTI->getIntrinsicInstrCost(IID, RetTy, Tys, FMFV);
+        unsigned VCost = TTI->getIntrinsicInstrCost(IID, RetTy, Tys, FMFV,
+                                                    ScalarizationCost);
 
         if (VCost > ICost + JCost)
           return false;

@@ -298,6 +298,17 @@ void InstrProfSymtab::create(Module &M, bool InLTO) {
     const std::string &PGOFuncName = getPGOFuncName(F, InLTO);
     addFuncName(PGOFuncName);
     MD5FuncMap.emplace_back(Function::getGUID(PGOFuncName), &F);
+    // In ThinLTO, local function may have been promoted to global and have
+    // suffix added to the function name. We need to add the stripped function
+    // name to the symbol table so that we can find a match from profile.
+    if (InLTO) {
+      auto pos = PGOFuncName.find('.');
+      if (pos != std::string::npos) {
+        const std::string &OtherFuncName = PGOFuncName.substr(0, pos);
+        addFuncName(OtherFuncName);
+        MD5FuncMap.emplace_back(Function::getGUID(OtherFuncName), &F);
+      }
+    }
   }
 
   finalizeSymtab();

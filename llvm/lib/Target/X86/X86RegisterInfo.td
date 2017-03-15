@@ -254,9 +254,6 @@ def FPSW : X86Reg<"fpsw", 0>;
 // Status flags register
 def EFLAGS : X86Reg<"flags", 0>;
 
-// SSE floating point control/status register
-def MXCSR : X86Reg<"mxcsr", 0>;
-
 // Segment registers
 def CS : X86Reg<"cs", 1>;
 def DS : X86Reg<"ds", 3>;

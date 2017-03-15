@@ -462,65 +462,28 @@ DecodeStatus ARMDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
     return checkDecodedInstruction(MI, Size, Address, OS, CS, Insn, Result);
   }
 
-  // VFP and NEON instructions, similarly, are shared between ARM
-  // and Thumb modes.
-  Result = decodeInstruction(DecoderTableVFP32, MI, Insn, Address, this, STI);
-  if (Result != MCDisassembler::Fail) {
-    Size = 4;
-    return Result;
-  }
+  struct DecodeTable {
+    const uint8_t *P;
+    bool DecodePred;
+  };
 
-  Result = decodeInstruction(DecoderTableVFPV832, MI, Insn, Address, this, STI);
-  if (Result != MCDisassembler::Fail) {
-    Size = 4;
-    return Result;
-  }
+  const DecodeTable Tables[] = {
+      {DecoderTableVFP32, false},      {DecoderTableVFPV832, false},
+      {DecoderTableNEONData32, true},  {DecoderTableNEONLoadStore32, true},
+      {DecoderTableNEONDup32, true},   {DecoderTablev8NEON32, false},
+      {DecoderTablev8Crypto32, false},
+  };
 
-  Result =
-      decodeInstruction(DecoderTableNEONData32, MI, Insn, Address, this, STI);
-  if (Result != MCDisassembler::Fail) {
-    Size = 4;
-    // Add a fake predicate operand, because we share these instruction
-    // definitions with Thumb2 where these instructions are predicable.
-    if (!DecodePredicateOperand(MI, 0xE, Address, this))
-      return MCDisassembler::Fail;
-    return Result;
-  }
-
-  Result = decodeInstruction(DecoderTableNEONLoadStore32, MI, Insn, Address,
-                             this, STI);
-  if (Result != MCDisassembler::Fail) {
-    Size = 4;
-    // Add a fake predicate operand, because we share these instruction
-    // definitions with Thumb2 where these instructions are predicable.
-    if (!DecodePredicateOperand(MI, 0xE, Address, this))
-      return MCDisassembler::Fail;
-    return Result;
-  }
-
-  Result =
-      decodeInstruction(DecoderTableNEONDup32, MI, Insn, Address, this, STI);
-  if (Result != MCDisassembler::Fail) {
-    Size = 4;
-    // Add a fake predicate operand, because we share these instruction
-    // definitions with Thumb2 where these instructions are predicable.
-    if (!DecodePredicateOperand(MI, 0xE, Address, this))
-      return MCDisassembler::Fail;
-    return Result;
-  }
-
-  Result =
-      decodeInstruction(DecoderTablev8NEON32, MI, Insn, Address, this, STI);
-  if (Result != MCDisassembler::Fail) {
-    Size = 4;
-    return Result;
-  }
-
-  Result =
-      decodeInstruction(DecoderTablev8Crypto32, MI, Insn, Address, this, STI);
-  if (Result != MCDisassembler::Fail) {
-    Size = 4;
-    return Result;
+  for (auto Table : Tables) {
+    Result = decodeInstruction(Table.P, MI, Insn, Address, this, STI);
+    if (Result != MCDisassembler::Fail) {
+      Size = 4;
+      // Add a fake predicate operand, because we share these instruction
+      // definitions with Thumb2 where these instructions are predicable.
+      if (Table.DecodePred && !DecodePredicateOperand(MI, 0xE, Address, this))
+        return MCDisassembler::Fail;
+      return Result;
+    }
   }
 
   Size = 0;

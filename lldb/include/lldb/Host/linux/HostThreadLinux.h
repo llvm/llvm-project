@@ -22,7 +22,6 @@ public:
   HostThreadLinux();
   HostThreadLinux(lldb::thread_t thread);
 
-  static void SetName(lldb::thread_t thread, llvm::StringRef name);
   static void GetName(lldb::thread_t thread, llvm::SmallVectorImpl<char> &name);
 };
 }

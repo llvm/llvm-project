@@ -469,30 +469,25 @@ define x86_regcallcc <32 x float> @testf32_inp(<32 x float> %a, <32 x float> %b,
   ret <32 x float> %x4
 }
 
-; X32-LABEL: pushl {{%e(si|di|bx|bp)}}
-; X32: pushl {{%e(si|di|bx|bp)}}
-; X32: pushl {{%e(si|di|bx|bp)}}
-; X32: pushl {{%e(si|di|bx|bp)}}
-; X32: popl {{%e(si|di|bx|bp)}}
-; X32: popl {{%e(si|di|bx|bp)}}
-; X32: popl {{%e(si|di|bx|bp)}}
-; X32: popl {{%e(si|di|bx|bp)}}
+; X32-LABEL: testi32_inp
+; X32: pushl {{%e(bx|bp)}}
+; X32: pushl {{%e(bx|bp)}}
+; X32: popl {{%e(bx|bp)}}
+; X32: popl {{%e(bx|bp)}}
 ; X32: retl
 
-; WIN64-LABEL: pushq	{{%r(bp|bx|1[0-5])}}
+; WIN64-LABEL: testi32_inp
 ; WIN64: pushq	{{%r(bp|bx|1[0-5])}}
 ; WIN64: pushq	{{%r(bp|bx|1[0-5])}}
 ; WIN64: pushq	{{%r(bp|bx|1[0-5])}}
-; WIN64: popq	{{%r(bp|bx|1[0-5])}}
 ; WIN64: popq	{{%r(bp|bx|1[0-5])}}
 ; WIN64: popq	{{%r(bp|bx|1[0-5])}}
 ; WIN64: popq	{{%r(bp|bx|1[0-5])}}
 ; WIN64: retq
 
-; LINUXOSX64-LABEL: pushq	{{%r(bp|bx|1[2-5])}}
+; LINUXOSX64-LABEL: testi32_inp
 ; LINUXOSX64: pushq	{{%r(bp|bx|1[2-5])}}
 ; LINUXOSX64: pushq	{{%r(bp|bx|1[2-5])}}
-; LINUXOSX64: popq	{{%r(bp|bx|1[2-5])}}
 ; LINUXOSX64: popq	{{%r(bp|bx|1[2-5])}}
 ; LINUXOSX64: popq	{{%r(bp|bx|1[2-5])}}
 ; LINUXOSX64: retq

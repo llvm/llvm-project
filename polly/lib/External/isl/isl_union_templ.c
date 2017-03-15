@@ -112,10 +112,14 @@ __isl_give PART *FN(FN(UNION,extract),PARTS)(__isl_keep UNION *u,
 	__isl_take isl_space *space)
 {
 	struct isl_hash_table_entry *entry;
+	isl_bool equal_params;
 
 	if (!u || !space)
 		goto error;
-	if (!isl_space_match(u->space, isl_dim_param, space, isl_dim_param)) {
+	equal_params = isl_space_has_equal_params(u->space, space);
+	if (equal_params < 0)
+		goto error;
+	if (!equal_params) {
 		space = isl_space_drop_dims(space, isl_dim_param,
 					0, isl_space_dim(space, isl_dim_param));
 		space = isl_space_align_params(space,
@@ -413,12 +417,16 @@ error:
 __isl_give UNION *FN(UNION,align_params)(__isl_take UNION *u,
 	__isl_take isl_space *model)
 {
+	isl_bool equal_params;
 	isl_reordering *r;
 
 	if (!u || !model)
 		goto error;
 
-	if (isl_space_match(u->space, isl_dim_param, model, isl_dim_param)) {
+	equal_params = isl_space_has_equal_params(u->space, model);
+	if (equal_params < 0)
+		goto error;
+	if (equal_params) {
 		isl_space_free(model);
 		return u;
 	}

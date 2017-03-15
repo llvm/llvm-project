@@ -124,6 +124,10 @@ def create_parser():
         metavar='executable-path',
         help='The path to the lldb executable')
     group.add_argument(
+        '--server',
+        metavar='server-path',
+        help='The path to the debug server executable to use')
+    group.add_argument(
         '-s',
         metavar='name',
         help='Specify the name of the dir created to store the session files of tests with errored or failed status. If not specified, the test driver uses the timestamp as the session dir name')

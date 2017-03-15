@@ -1,6 +1,6 @@
 ; RUN: llc -verify-machineinstrs -mcpu=pwr7 -O0 -fast-isel=false -mattr=-vsx < %s | FileCheck %s
 ; RUN: llc -verify-machineinstrs -mcpu=pwr7 -O0 -fast-isel=false -mattr=+vsx < %s | FileCheck -check-prefix=CHECK-VSX %s
-; RUN: llc -verify-machineinstrs -mcpu=pwr9 -O0 -fast-isel=false -mattr=+vsx < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mcpu=pwr9 -O0 -fast-isel=false -mattr=+vsx < %s | FileCheck -check-prefix=CHECK-P9 %s
 
 ; Verify internal alignment of long double in a struct.  The double
 ; argument comes in in GPR3; GPR4 is skipped; GPRs 5 and 6 contain
@@ -19,19 +19,44 @@ entry:
   ret ppc_fp128 %0
 }
 
+; The additional stores are caused because we forward the value in the
+; store->load->bitcast path to make a store and bitcast of the same
+; value. Since the target does bitcast through memory and we no longer
+; remember the address we need to do the store in a fresh local
+; address. 
+
 ; CHECK-DAG: std 6, 72(1)
 ; CHECK-DAG: std 5, 64(1)
 ; CHECK-DAG: std 4, 56(1)
 ; CHECK-DAG: std 3, 48(1)
-; CHECK: lfd 1, 64(1)
-; CHECK: lfd 2, 72(1)
+
+; CHECK-DAG: std 5, -16(1)
+; CHECK-DAG: std 6, -8(1)
+; CHECK-DAG: lfd 1, -16(1)
+; CHECK-DAG: lfd 2, -8(1)
+
+; FIXMECHECK: lfd 1, 64(1)
+; FIXMECHECK: lfd 2, 72(1)
 
 ; CHECK-VSX-DAG: std 6, 72(1)
 ; CHECK-VSX-DAG: std 5, 64(1)
 ; CHECK-VSX-DAG: std 4, 56(1)
 ; CHECK-VSX-DAG: std 3, 48(1)
-; CHECK-VSX: li 3, 16
-; CHECK-VSX: addi 4, 1, 48
-; CHECK-VSX: lxsdx 1, 4, 3
-; CHECK-VSX: li 3, 24
-; CHECK-VSX: lxsdx 2, 4, 3
+; CHECK-VSX-DAG: std 5, -16(1)
+; CHECK-VSX-DAG: std 6, -8(1)
+; CHECK-VSX: addi 3, 1, -16
+; CHECK-VSX: lxsdx 1, 0, 3
+; CHECK-VSX: addi 3, 1, -8
+; CHECK-VSX: lxsdx 2, 0, 3
+
+; FIXME-VSX: addi 4, 1, 48
+; FIXME-VSX: lxsdx 1, 4, 3
+; FIXME-VSX: li 3, 24
+; FIXME-VSX: lxsdx 2, 4, 3
+
+; CHECK-P9: std 6, 72(1)
+; CHECK-P9: std 5, 64(1)
+; CHECK-P9: std 4, 56(1)
+; CHECK-P9: std 3, 48(1)
+; CHECK-P9: mtvsrd 1, 5
+; CHECK-P9: mtvsrd 2, 6

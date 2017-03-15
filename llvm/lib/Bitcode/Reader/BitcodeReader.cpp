@@ -4852,6 +4852,7 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(
   // Keep around the last seen summary to be used when we see an optional
   // "OriginalName" attachement.
   GlobalValueSummary *LastSeenSummary = nullptr;
+  GlobalValue::GUID LastSeenGUID = 0;
   bool Combined = false;
 
   // We can expect to see any number of type ID information records before
@@ -5020,6 +5021,7 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(
       PendingTypeTestAssumeConstVCalls.clear();
       PendingTypeCheckedLoadConstVCalls.clear();
       LastSeenSummary = FS.get();
+      LastSeenGUID = GUID;
       FS->setModulePath(ModuleIdMap[ModuleId]);
       TheIndex.addGlobalValueSummary(GUID, std::move(FS));
       Combined = true;
@@ -5046,6 +5048,7 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(
       AS->setAliasee(AliaseeInModule);
 
       GlobalValue::GUID GUID = getGUIDFromValueId(ValueID).first;
+      LastSeenGUID = GUID;
       TheIndex.addGlobalValueSummary(GUID, std::move(AS));
       Combined = true;
       break;
@@ -5062,6 +5065,7 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(
       LastSeenSummary = FS.get();
       FS->setModulePath(ModuleIdMap[ModuleId]);
       GlobalValue::GUID GUID = getGUIDFromValueId(ValueID).first;
+      LastSeenGUID = GUID;
       TheIndex.addGlobalValueSummary(GUID, std::move(FS));
       Combined = true;
       break;
@@ -5072,8 +5076,10 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(
       if (!LastSeenSummary)
         return error("Name attachment that does not follow a combined record");
       LastSeenSummary->setOriginalName(OriginalName);
+      TheIndex.addOriginalName(LastSeenGUID, OriginalName);
       // Reset the LastSeenSummary
       LastSeenSummary = nullptr;
+      LastSeenGUID = 0;
       break;
     }
     case bitc::FS_TYPE_TESTS: {

@@ -239,9 +239,6 @@ namespace llvm {
       FHADD,
       FHSUB,
 
-      // Integer absolute value
-      ABS,
-
       // Detect Conflicts Within a Vector
       CONFLICT,
 
@@ -1087,7 +1084,8 @@ namespace llvm {
                             CallingConv::ID CallConv, bool isVarArg,
                             const SmallVectorImpl<ISD::InputArg> &Ins,
                             const SDLoc &dl, SelectionDAG &DAG,
-                            SmallVectorImpl<SDValue> &InVals) const;
+                            SmallVectorImpl<SDValue> &InVals,
+                            uint32_t *RegMask) const;
     SDValue LowerMemArgument(SDValue Chain, CallingConv::ID CallConv,
                              const SmallVectorImpl<ISD::InputArg> &ArgInfo,
                              const SDLoc &dl, SelectionDAG &DAG,

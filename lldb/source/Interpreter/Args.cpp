@@ -931,12 +931,12 @@ bool Args::ContainsEnvironmentVariable(llvm::StringRef env_var_name,
   // Check each arg to see if it matches the env var name.
   for (auto arg : llvm::enumerate(m_entries)) {
     llvm::StringRef name, value;
-    std::tie(name, value) = arg.Value.ref.split('=');
+    std::tie(name, value) = arg.value().ref.split('=');
     if (name != env_var_name)
       continue;
 
     if (argument_index)
-      *argument_index = arg.Index;
+      *argument_index = arg.index();
     return true;
   }
 
@@ -954,9 +954,9 @@ size_t Args::FindArgumentIndexForOption(Option *long_options,
              long_options[long_options_index].definition->long_option);
 
   for (auto entry : llvm::enumerate(m_entries)) {
-    if (entry.Value.ref.startswith(short_buffer) ||
-        entry.Value.ref.startswith(long_buffer))
-      return entry.Index;
+    if (entry.value().ref.startswith(short_buffer) ||
+        entry.value().ref.startswith(long_buffer))
+      return entry.index();
   }
 
   return size_t(-1);

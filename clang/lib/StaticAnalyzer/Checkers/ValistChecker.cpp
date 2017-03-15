@@ -165,11 +165,8 @@ void ValistChecker::checkPreCall(const CallEvent &Call,
 const MemRegion *ValistChecker::getVAListAsRegion(SVal SV, const Expr *E,
                                                   bool &IsSymbolic,
                                                   CheckerContext &C) const {
-  // FIXME: on some platforms CallAndMessage checker finds some instances of
-  // the uninitialized va_list usages. CallAndMessage checker is disabled in
-  // the tests so they can verify platform independently those issues. As a
-  // side effect, this check is required here.
-  if (SV.isUnknownOrUndef())
+  const MemRegion *Reg = SV.getAsRegion();
+  if (!Reg)
     return nullptr;
   // TODO: In the future this should be abstracted away by the analyzer.
   bool VaListModelledAsArray = false;
@@ -178,7 +175,6 @@ const MemRegion *ValistChecker::getVAListAsRegion(SVal SV, const Expr *E,
     VaListModelledAsArray =
         Ty->isPointerType() && Ty->getPointeeType()->isRecordType();
   }
-  const MemRegion *Reg = SV.getAsRegion();
   if (const auto *DeclReg = Reg->getAs<DeclRegion>()) {
     if (isa<ParmVarDecl>(DeclReg->getDecl()))
       Reg = C.getState()->getSVal(SV.castAs<Loc>()).getAsRegion();

@@ -53,14 +53,14 @@ enum : unsigned {
 };
 
 // Type immediate encodings used in various contexts.
-enum : unsigned {
-  WASM_TYPE_I32          = 0x7f,
-  WASM_TYPE_I64          = 0x7e,
-  WASM_TYPE_F32          = 0x7d,
-  WASM_TYPE_F64          = 0x7c,
-  WASM_TYPE_ANYFUNC      = 0x70,
-  WASM_TYPE_FUNC         = 0x60,
-  WASM_TYPE_NORESULT     = 0x40, // for blocks with no result values
+enum {
+  WASM_TYPE_I32          = -0x01,
+  WASM_TYPE_I64          = -0x02,
+  WASM_TYPE_F32          = -0x03,
+  WASM_TYPE_F64          = -0x04,
+  WASM_TYPE_ANYFUNC      = -0x10,
+  WASM_TYPE_FUNC         = -0x20,
+  WASM_TYPE_NORESULT     = -0x40, // for blocks with no result values
 };
 
 // Kinds of externals (for imports and exports).
@@ -79,6 +79,14 @@ enum : unsigned {
   WASM_OPCODE_I64_CONST  = 0x42,
   WASM_OPCODE_F32_CONST  = 0x43,
   WASM_OPCODE_F64_CONST  = 0x44,
+};
+
+// Subset of types that a value can have
+enum class ValType {
+  I32 = WASM_TYPE_I32,
+  I64 = WASM_TYPE_I64,
+  F32 = WASM_TYPE_F32,
+  F64 = WASM_TYPE_F64,
 };
 
 #define WASM_RELOC(name, value) name = value,

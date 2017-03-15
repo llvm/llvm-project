@@ -248,7 +248,7 @@ define void @fptosi_v2f32_v2i32(<4 x float>, <1 x i64>*) nounwind {
   ret void
 }
 
-; FIXME: If we are transferring MMX conversion results to XMM registers we could use the MMX equivalents
+; FIXME: If we are transferring MMX registers to XMM for conversion we could use the MMX equivalents
 ; (CVTPI2PD + CVTPI2PS) without affecting rounding/exceptions etc.
 
 define <2 x double> @sitofp_v2i32_v2f64(<1 x i64>*) nounwind {

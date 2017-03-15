@@ -60,42 +60,7 @@ static void constraint_drop_vars(isl_int *c, unsigned n, unsigned rem)
 struct isl_basic_set *isl_basic_set_drop_dims(
 		struct isl_basic_set *bset, unsigned first, unsigned n)
 {
-	int i;
-
-	if (!bset)
-		goto error;
-
-	isl_assert(bset->ctx, first + n <= bset->dim->n_out, goto error);
-
-	if (n == 0 && !isl_space_is_named_or_nested(bset->dim, isl_dim_set))
-		return bset;
-
-	bset = isl_basic_set_cow(bset);
-	if (!bset)
-		return NULL;
-
-	for (i = 0; i < bset->n_eq; ++i)
-		constraint_drop_vars(bset->eq[i]+1+bset->dim->nparam+first, n,
-				     (bset->dim->n_out-first-n)+bset->extra);
-
-	for (i = 0; i < bset->n_ineq; ++i)
-		constraint_drop_vars(bset->ineq[i]+1+bset->dim->nparam+first, n,
-				     (bset->dim->n_out-first-n)+bset->extra);
-
-	for (i = 0; i < bset->n_div; ++i)
-		constraint_drop_vars(bset->div[i]+1+1+bset->dim->nparam+first, n,
-				     (bset->dim->n_out-first-n)+bset->extra);
-
-	bset->dim = isl_space_drop_outputs(bset->dim, first, n);
-	if (!bset->dim)
-		goto error;
-
-	ISL_F_CLR(bset, ISL_BASIC_SET_NORMALIZED);
-	bset = isl_basic_set_simplify(bset);
-	return isl_basic_set_finalize(bset);
-error:
-	isl_basic_set_free(bset);
-	return NULL;
+	return isl_basic_map_drop(bset_to_bmap(bset), isl_dim_set, first, n);
 }
 
 /* Move "n" divs starting at "first" to the end of the list of divs.

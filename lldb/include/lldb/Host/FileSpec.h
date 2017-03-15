@@ -564,27 +564,21 @@ public:
                                     // directory
     eEnumerateDirectoryResultEnter, // Recurse into the current entry if it is a
                                     // directory or symlink, or next if not
-    eEnumerateDirectoryResultExit,  // Exit from the current directory at the
-                                    // current level.
     eEnumerateDirectoryResultQuit   // Stop directory enumerations at any level
   };
 
   typedef EnumerateDirectoryResult (*EnumerateDirectoryCallbackType)(
       void *baton, llvm::sys::fs::file_type file_type, const FileSpec &spec);
 
-  static EnumerateDirectoryResult
-  EnumerateDirectory(llvm::StringRef dir_path, bool find_directories,
-                     bool find_files, bool find_other,
-                     EnumerateDirectoryCallbackType callback,
-                     void *callback_baton);
+  static void EnumerateDirectory(llvm::StringRef dir_path,
+                                 bool find_directories, bool find_files,
+                                 bool find_other,
+                                 EnumerateDirectoryCallbackType callback,
+                                 void *callback_baton);
 
   typedef std::function<EnumerateDirectoryResult(
       llvm::sys::fs::file_type file_type, const FileSpec &spec)>
       DirectoryCallback;
-
-  static EnumerateDirectoryResult
-  ForEachItemInDirectory(llvm::StringRef dir_path,
-                         DirectoryCallback const &callback);
 
 protected:
   //------------------------------------------------------------------

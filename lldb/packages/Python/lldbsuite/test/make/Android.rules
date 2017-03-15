@@ -61,11 +61,23 @@ ifeq "$(findstring clang,$(CC))" "clang"
 		-gcc-toolchain $(NDK_ROOT)/toolchains/$(TOOLCHAIN_DIR)/prebuilt/$(HOST_TAG)
 endif
 
-ARCH_CFLAGS += \
-	--sysroot=$(NDK_ROOT)/platforms/android-$(API_LEVEL)/arch-$(SYSROOT_ARCH) \
-	-isystem $(NDK_ROOT)/sources/cxx-stl/gnu-libstdc++/4.9/include \
-	-isystem $(NDK_ROOT)/sources/cxx-stl/gnu-libstdc++/4.9/libs/$(STL_ARCH)/include \
-	-isystem $(NDK_ROOT)/sources/cxx-stl/gnu-libstdc++/4.9/include/backward
-ARCH_LDFLAGS += -lm \
-	$(NDK_ROOT)/sources/cxx-stl/gnu-libstdc++/4.9/libs/$(STL_ARCH)/libgnustl_static.a \
-	--sysroot=$(NDK_ROOT)/platforms/android-$(API_LEVEL)/arch-$(SYSROOT_ARCH)
+ARCH_CFLAGS += --sysroot=$(NDK_ROOT)/platforms/android-$(API_LEVEL)/arch-$(SYSROOT_ARCH)
+ARCH_LDFLAGS += --sysroot=$(NDK_ROOT)/platforms/android-$(API_LEVEL)/arch-$(SYSROOT_ARCH) -lm
+
+ifeq (1,$(USE_LIBCPP))
+	ARCH_CFLAGS += \
+		-isystem $(NDK_ROOT)/sources/cxx-stl/llvm-libc++/include \
+		-isystem $(NDK_ROOT)/sources/android/support/include \
+		-isystem $(NDK_ROOT)/sources/cxx-stl/llvm-libc++abi/include
+
+	ARCH_LDFLAGS += \
+		-L$(NDK_ROOT)/sources/cxx-stl/llvm-libc++/libs/$(STL_ARCH) \
+		-l$(NDK_ROOT)/sources/cxx-stl/llvm-libc++/libs/$(STL_ARCH)/libc++.a
+else
+	ARCH_CFLAGS += \
+		-isystem $(NDK_ROOT)/sources/cxx-stl/gnu-libstdc++/4.9/include \
+		-isystem $(NDK_ROOT)/sources/cxx-stl/gnu-libstdc++/4.9/libs/$(STL_ARCH)/include \
+		-isystem $(NDK_ROOT)/sources/cxx-stl/gnu-libstdc++/4.9/include/backward
+
+	ARCH_LDFLAGS += $(NDK_ROOT)/sources/cxx-stl/gnu-libstdc++/4.9/libs/$(STL_ARCH)/libgnustl_static.a
+endif

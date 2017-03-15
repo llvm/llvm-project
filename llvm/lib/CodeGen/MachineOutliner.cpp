@@ -516,6 +516,10 @@ private:
 
 public:
 
+  unsigned operator[](const size_t i) const {
+    return Str[i];
+  }
+
   /// \brief Return a substring of the tree with maximum benefit if such a
   /// substring exists.
   ///
@@ -800,11 +804,13 @@ struct OutlinedFunction {
   /// The number of instructions this function would save.
   unsigned Benefit = 0;
 
+  bool IsTailCall = false;
+
   OutlinedFunction(size_t Name, size_t OccurrenceCount,
                    const std::vector<unsigned> &Sequence,
-                   unsigned Benefit)
+                   unsigned Benefit, bool IsTailCall)
       : Name(Name), OccurrenceCount(OccurrenceCount), Sequence(Sequence),
-        Benefit(Benefit)
+        Benefit(Benefit), IsTailCall(IsTailCall)
         {}
 };
 
@@ -1009,7 +1015,9 @@ struct MachineOutliner : public ModulePass {
   /// \returns The length of the longest candidate found. 0 if there are none.
   unsigned buildCandidateList(std::vector<Candidate> &CandidateList,
                               std::vector<OutlinedFunction> &FunctionList,
-                              SuffixTree &ST, const TargetInstrInfo &TII);
+                              SuffixTree &ST,
+                              InstructionMapper &Mapper,
+                              const TargetInstrInfo &TII);
 
   /// \brief Remove any overlapping candidates that weren't handled by the
   /// suffix tree's pruning method.
@@ -1136,7 +1144,8 @@ void MachineOutliner::pruneOverlaps(std::vector<Candidate> &CandidateList,
       // is being removed.
       F2.OccurrenceCount--;
       F2.Benefit = TII.getOutliningBenefit(F2.Sequence.size(),
-                                           F2.OccurrenceCount
+                                           F2.OccurrenceCount,
+                                           F2.IsTailCall
                                            );
 
       // Mark C2 as not in the list.
@@ -1155,6 +1164,7 @@ unsigned
 MachineOutliner::buildCandidateList(std::vector<Candidate> &CandidateList,
                                     std::vector<OutlinedFunction> &FunctionList,
                                     SuffixTree &ST,
+                                    InstructionMapper &Mapper,
                                     const TargetInstrInfo &TII) {
 
   std::vector<unsigned> CandidateSequence; // Current outlining candidate.
@@ -1163,7 +1173,8 @@ MachineOutliner::buildCandidateList(std::vector<Candidate> &CandidateList,
   // Function for maximizing query in the suffix tree.
   // This allows us to define more fine-grained types of things to outline in
   // the target without putting target-specific info in the suffix tree.
-  auto BenefitFn = [&TII](const SuffixTreeNode &Curr, size_t StringLen) {
+  auto BenefitFn = [&TII, &ST, &Mapper](const SuffixTreeNode &Curr,
+                                        size_t StringLen) {
 
     // Any leaf whose parent is the root only has one occurrence.
     if (Curr.Parent->isRoot())
@@ -1180,7 +1191,16 @@ MachineOutliner::buildCandidateList(std::vector<Candidate> &CandidateList,
     if (Occurrences < 2)
       return 0u;
 
-    return TII.getOutliningBenefit(StringLen, Occurrences);
+    // Check if the last instruction in the sequence is a return.
+    MachineInstr *LastInstr =
+    Mapper.IntegerInstructionMap[ST[Curr.SuffixIdx + StringLen - 1]];
+    assert(LastInstr && "Last instruction in sequence was unmapped!");
+
+    // The only way a terminator could be mapped as legal is if it was safe to
+    // tail call.
+    bool IsTailCall = LastInstr->isTerminator();
+
+    return TII.getOutliningBenefit(StringLen, Occurrences, IsTailCall);
   };
 
   // Repeatedly query the suffix tree for the substring that maximizes
@@ -1204,10 +1224,19 @@ MachineOutliner::buildCandidateList(std::vector<Candidate> &CandidateList,
     if (CandidateSequence.size() > MaxCandidateLen)
       MaxCandidateLen = CandidateSequence.size();
 
+    MachineInstr *LastInstr =
+    Mapper.IntegerInstructionMap[CandidateSequence.back()];
+    assert(LastInstr && "Last instruction in sequence was unmapped!");
+
+    // The only way a terminator could be mapped as legal is if it was safe to
+    // tail call.
+    bool IsTailCall = LastInstr->isTerminator();
+
     // Keep track of the benefit of outlining this candidate in its
     // OutlinedFunction.
     unsigned FnBenefit = TII.getOutliningBenefit(CandidateSequence.size(),
-                                                 Occurrences.size()
+                                                 Occurrences.size(),
+                                                 IsTailCall
                                                  );
 
     assert(FnBenefit > 0 && "Function cannot be unbeneficial!");
@@ -1217,7 +1246,8 @@ MachineOutliner::buildCandidateList(std::vector<Candidate> &CandidateList,
         FunctionList.size(), // Number of this function.
         Occurrences.size(),  // Number of occurrences.
         CandidateSequence,   // Sequence to outline.
-        FnBenefit            // Instructions saved by outlining this function.
+        FnBenefit,           // Instructions saved by outlining this function.
+        IsTailCall           // Flag set if this function is to be tail called.
         );
 
     // Save each of the occurrences of the candidate so we can outline them.
@@ -1273,7 +1303,7 @@ MachineOutliner::createOutlinedFunction(Module &M, const OutlinedFunction &OF,
   // Insert the new function into the module.
   MF.insert(MF.begin(), &MBB);
 
-  TII.insertOutlinerPrologue(MBB, MF);
+  TII.insertOutlinerPrologue(MBB, MF, OF.IsTailCall);
 
   // Copy over the instructions for the function using the integer mappings in
   // its sequence.
@@ -1288,7 +1318,7 @@ MachineOutliner::createOutlinedFunction(Module &M, const OutlinedFunction &OF,
     MBB.insert(MBB.end(), NewMI);
   }
 
-  TII.insertOutlinerEpilogue(MBB, MF);
+  TII.insertOutlinerEpilogue(MBB, MF, OF.IsTailCall);
 
   return &MF;
 }
@@ -1335,7 +1365,7 @@ bool MachineOutliner::outline(Module &M,
     const TargetInstrInfo &TII = *STI.getInstrInfo();
 
     // Insert a call to the new function and erase the old sequence.
-    TII.insertOutlinedCall(M, *MBB, StartIt, *MF);
+    TII.insertOutlinedCall(M, *MBB, StartIt, *MF, OF.IsTailCall);
     StartIt = Mapper.InstrList[C.StartIdx];
     MBB->erase(StartIt, EndIt);
 
@@ -1392,7 +1422,7 @@ bool MachineOutliner::runOnModule(Module &M) {
   std::vector<OutlinedFunction> FunctionList;
 
   unsigned MaxCandidateLen =
-      buildCandidateList(CandidateList, FunctionList, ST, *TII);
+      buildCandidateList(CandidateList, FunctionList, ST, Mapper, *TII);
 
   pruneOverlaps(CandidateList, FunctionList, MaxCandidateLen, *TII);
   return outline(M, CandidateList, FunctionList, Mapper);

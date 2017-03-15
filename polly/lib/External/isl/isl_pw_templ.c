@@ -269,6 +269,7 @@ error:
 __isl_give PW *FN(PW,align_params)(__isl_take PW *pw, __isl_take isl_space *model)
 {
 	isl_ctx *ctx;
+	isl_bool equal_params;
 
 	if (!pw || !model)
 		goto error;
@@ -280,7 +281,10 @@ __isl_give PW *FN(PW,align_params)(__isl_take PW *pw, __isl_take isl_space *mode
 	if (!isl_space_has_named_params(pw->dim))
 		isl_die(ctx, isl_error_invalid,
 			"input has unnamed parameters", goto error);
-	if (!isl_space_match(pw->dim, isl_dim_param, model, isl_dim_param)) {
+	equal_params = isl_space_has_equal_params(pw->dim, model);
+	if (equal_params < 0)
+		goto error;
+	if (!equal_params) {
 		isl_reordering *exp;
 
 		model = isl_space_drop_dims(model, isl_dim_in,
@@ -306,10 +310,14 @@ static __isl_give PW *FN(PW,align_params_pw_pw_and)(__isl_take PW *pw1,
 	__isl_give PW *(*fn)(__isl_take PW *pw1, __isl_take PW *pw2))
 {
 	isl_ctx *ctx;
+	isl_bool equal_params;
 
 	if (!pw1 || !pw2)
 		goto error;
-	if (isl_space_match(pw1->dim, isl_dim_param, pw2->dim, isl_dim_param))
+	equal_params = isl_space_has_equal_params(pw1->dim, pw2->dim);
+	if (equal_params < 0)
+		goto error;
+	if (equal_params)
 		return fn(pw1, pw2);
 	ctx = FN(PW,get_ctx)(pw1);
 	if (!isl_space_has_named_params(pw1->dim) ||
@@ -2048,12 +2056,16 @@ static __isl_give PW *FN(PW,align_params_pw_multi_aff_and)(__isl_take PW *pw,
 	__isl_give PW *(*fn)(__isl_take PW *pw, __isl_take isl_multi_aff *ma))
 {
 	isl_ctx *ctx;
+	isl_bool equal_params;
 	isl_space *ma_space;
 
 	ma_space = isl_multi_aff_get_space(ma);
 	if (!pw || !ma || !ma_space)
 		goto error;
-	if (isl_space_match(pw->dim, isl_dim_param, ma_space, isl_dim_param)) {
+	equal_params = isl_space_has_equal_params(pw->dim, ma_space);
+	if (equal_params < 0)
+		goto error;
+	if (equal_params) {
 		isl_space_free(ma_space);
 		return fn(pw, ma);
 	}
@@ -2078,12 +2090,16 @@ static __isl_give PW *FN(PW,align_params_pw_pw_multi_aff_and)(__isl_take PW *pw,
 		__isl_take isl_pw_multi_aff *ma))
 {
 	isl_ctx *ctx;
+	isl_bool equal_params;
 	isl_space *pma_space;
 
 	pma_space = isl_pw_multi_aff_get_space(pma);
 	if (!pw || !pma || !pma_space)
 		goto error;
-	if (isl_space_match(pw->dim, isl_dim_param, pma_space, isl_dim_param)) {
+	equal_params = isl_space_has_equal_params(pw->dim, pma_space);
+	if (equal_params < 0)
+		goto error;
+	if (equal_params) {
 		isl_space_free(pma_space);
 		return fn(pw, pma);
 	}

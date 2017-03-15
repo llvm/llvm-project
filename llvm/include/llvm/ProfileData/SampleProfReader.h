@@ -283,7 +283,12 @@ public:
 
   /// \brief Return the samples collected for function \p F.
   FunctionSamples *getSamplesFor(const Function &F) {
-    return &Profiles[F.getName()];
+    // The function name may have been updated by adding suffix. In sample
+    // profile, the function names are all stripped, so we need to strip
+    // the function name suffix before matching with profile.
+    if (Profiles.count(F.getName().split('.').first))
+      return &Profiles[(F.getName().split('.').first)];
+    return nullptr;
   }
 
   /// \brief Return all the profiles.

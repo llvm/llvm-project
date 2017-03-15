@@ -5387,7 +5387,7 @@ Sema::BuildResolvedCallExpr(Expr *Fn, NamedDecl *NDecl,
   // but can be very challenging to debug.
   if (auto *Caller = getCurFunctionDecl())
     if (Caller->hasAttr<ARMInterruptAttr>())
-      if (!FDecl->hasAttr<ARMInterruptAttr>())
+      if (!FDecl || !FDecl->hasAttr<ARMInterruptAttr>())
         Diag(Fn->getExprLoc(), diag::warn_arm_interrupt_calling_convention);
 
   // Promote the function operand.

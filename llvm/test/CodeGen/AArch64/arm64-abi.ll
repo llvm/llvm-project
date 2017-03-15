@@ -205,10 +205,7 @@ declare i32 @args_i32(i32, i32, i32, i32, i32, i32, i32, i32, i16 signext, i32,
 define i32 @test8(i32 %argc, i8** nocapture %argv) nounwind {
 entry:
 ; CHECK-LABEL: test8
-; CHECK: strb {{w[0-9]+}}, [sp, #3]
-; CHECK: strb wzr, [sp, #2]
-; CHECK: strb {{w[0-9]+}}, [sp, #1]
-; CHECK: strb wzr, [sp]
+; CHECK: str w8, [sp]
 ; CHECK: bl
 ; FAST-LABEL: test8
 ; FAST: strb {{w[0-9]+}}, [sp]

@@ -10,6 +10,17 @@ Type:            Class
 Seen:            1
 Used:            0
 ---
+Name:           foo_bar
+Contexts:
+  - ContextType:     Namespace
+    ContextName:     a
+  - ContextType:     Namespace
+    ContextName:     b
+FilePath:        foobar.h
+Type:            Class
+Seen:            0
+Used:            0
+---
 Name:           bar
 Contexts:
   - ContextType:     Namespace

@@ -80,7 +80,9 @@ COMMON_FLAG(int, print_module_map, 0,
             "exits, 2 = print after each report.")
 COMMON_FLAG(bool, check_printf, true, "Check printf arguments.")
 COMMON_FLAG(bool, handle_segv, true,
-            "If set, registers the tool's custom SIGSEGV/SIGBUS handler.")
+            "If set, registers the tool's custom SIGSEGV handler.")
+COMMON_FLAG(bool, handle_sigbus, true,
+            "If set, registers the tool's custom SIGBUS handler.")
 COMMON_FLAG(bool, handle_abort, false,
             "If set, registers the tool's custom SIGABRT handler.")
 COMMON_FLAG(bool, handle_sigill, false,

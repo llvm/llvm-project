@@ -573,7 +573,7 @@ void RegAllocPBQP::findVRegIntervalsToAlloc(const MachineFunction &MF,
 
 static bool isACalleeSavedRegister(unsigned reg, const TargetRegisterInfo &TRI,
                                    const MachineFunction &MF) {
-  const MCPhysReg *CSR = TRI.getCalleeSavedRegs(&MF);
+  const MCPhysReg *CSR = MF.getRegInfo().getCalleeSavedRegs();
   for (unsigned i = 0; CSR[i] != 0; ++i)
     if (TRI.regsOverlap(reg, CSR[i]))
       return true;

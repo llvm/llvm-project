@@ -198,9 +198,6 @@ public:
 
   /// Add a type's DW_AT_signature and set the  declaration flag.
   void addDIETypeSignature(DIE &Die, uint64_t Signature);
-  /// Add an attribute containing the type signature for a unique identifier.
-  void addDIETypeSignature(DIE &Die, dwarf::Attribute Attribute,
-                           StringRef Identifier);
 
   /// Add block data.
   void addBlock(DIE &Die, dwarf::Attribute Attribute, DIELoc *Block);

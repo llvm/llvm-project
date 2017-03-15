@@ -46,13 +46,44 @@ public:
 	C * operator&() const { assert(false); } // should not be called
 };
 
+class D : private std::nested_exception {};
+
+
+class E1 : public std::nested_exception {};
+class E2 : public std::nested_exception {};
+class E : public E1, public E2 {};
+
 int main()
 {
     {
         try
         {
-            A a(3);
+            A a(3);  // not a polymorphic type --> no effect
             std::rethrow_if_nested(a);
+            assert(true);
+        }
+        catch (...)
+        {
+            assert(false);
+        }
+    }
+    {
+        try
+        {
+            D s;  // inaccessible base class --> no effect
+            std::rethrow_if_nested(s);
+            assert(true);
+        }
+        catch (...)
+        {
+            assert(false);
+        }
+    }
+    {
+        try
+        {
+            E s;  // ambiguous base class --> no effect
+            std::rethrow_if_nested(s);
             assert(true);
         }
         catch (...)
