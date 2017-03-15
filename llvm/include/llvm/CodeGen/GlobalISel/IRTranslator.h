@@ -426,7 +426,7 @@ public:
   //     MIRBuilder.getOrCreateBB(bb)
   //     for each inst in bb
   //       if (!translate(MIRBuilder, inst, ValToVReg, ConstantToSequence))
-  //         report_fatal_error(“Don’t know how to translate input");
+  //         report_fatal_error("Don't know how to translate input");
   //   finalize()
   bool runOnMachineFunction(MachineFunction &MF) override;
 };
