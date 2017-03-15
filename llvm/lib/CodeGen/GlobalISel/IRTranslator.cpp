@@ -1107,7 +1107,6 @@ void IRTranslator::finalizeFunction() {
   PendingPHIs.clear();
   ValToVReg.clear();
   FrameIndices.clear();
-  Constants.clear();
   MachinePreds.clear();
 }
 
