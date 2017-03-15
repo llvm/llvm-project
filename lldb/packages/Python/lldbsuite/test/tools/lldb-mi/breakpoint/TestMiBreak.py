@@ -226,36 +226,45 @@ class MiBreakTestCase(lldbmi_testcase.MiTestCaseBase):
         self.runCmd(
             "-interpreter-exec console \"settings set target.move-to-nearest-code off\"")
         self.expect("\^done")
-        line = line_number('main.cpp', '// BP_before_main')
-        self.runCmd("-break-insert -f main.cpp:%d" % line)
+        line_decl = line_number('main.cpp', '// BP_main_decl')
+        line_in = line_number('main.cpp', '// BP_in_main')
+        self.runCmd("-break-insert -f main.cpp:%d" % line_in)
         self.expect("\^done,bkpt={number=\"1\"")
 
         # Test that non-pending BP will not be set on non-existing line if target.move-to-nearest-code=off
         # Note: this increases the BP number by 1 even though BP #2 is invalid.
-        self.runCmd("-break-insert main.cpp:%d" % line)
+        self.runCmd("-break-insert main.cpp:%d" % line_in)
         self.expect(
             "\^error,msg=\"Command 'break-insert'. Breakpoint location 'main.cpp:%d' not found\"" %
-            line)
+            line_in)
 
         # Set target.move-to-nearest-code=on and target.skip-prologue=on and
-        # set BP #3
+        # set BP #3 & #4
         self.runCmd(
             "-interpreter-exec console \"settings set target.move-to-nearest-code on\"")
         self.runCmd(
             "-interpreter-exec console \"settings set target.skip-prologue on\"")
         self.expect("\^done")
-        self.runCmd("-break-insert main.cpp:%d" % line)
+        self.runCmd("-break-insert main.cpp:%d" % line_in)
         self.expect("\^done,bkpt={number=\"3\"")
+        self.runCmd("-break-insert main.cpp:%d" % line_decl)
+        self.expect("\^done,bkpt={number=\"4\"")
 
-        # Set target.skip-prologue=off and set BP #4
+        # Set target.skip-prologue=off and set BP #5
         self.runCmd(
             "-interpreter-exec console \"settings set target.skip-prologue off\"")
         self.expect("\^done")
-        self.runCmd("-break-insert main.cpp:%d" % line)
-        self.expect("\^done,bkpt={number=\"4\"")
+        self.runCmd("-break-insert main.cpp:%d" % line_decl)
+        self.expect("\^done,bkpt={number=\"5\"")
 
-        # Test that BP #4 is located before BP #3
+        # Test that BP #5 is located before BP #4
         self.runCmd("-exec-run")
+        self.expect("\^running")
+        self.expect(
+            "\*stopped,reason=\"breakpoint-hit\",disp=\"del\",bkptno=\"5\"")
+
+        # Test that BP #4 is hit
+        self.runCmd("-exec-continue")
         self.expect("\^running")
         self.expect(
             "\*stopped,reason=\"breakpoint-hit\",disp=\"del\",bkptno=\"4\"")
@@ -266,7 +275,7 @@ class MiBreakTestCase(lldbmi_testcase.MiTestCaseBase):
         self.expect(
             "\*stopped,reason=\"breakpoint-hit\",disp=\"del\",bkptno=\"3\"")
 
-        # Test that the target.language=pascal setting works and that BP #5 is
+        # Test that the target.language=pascal setting works and that BP #6 is
         # NOT set
         self.runCmd(
             "-interpreter-exec console \"settings set target.language c\"")
@@ -274,16 +283,16 @@ class MiBreakTestCase(lldbmi_testcase.MiTestCaseBase):
         self.runCmd("-break-insert ns.foo1")
         self.expect("\^error")
 
-        # Test that the target.language=c++ setting works and that BP #6 is hit
+        # Test that the target.language=c++ setting works and that BP #7 is hit
         self.runCmd(
             "-interpreter-exec console \"settings set target.language c++\"")
         self.expect("\^done")
         self.runCmd("-break-insert ns::foo1")
-        self.expect("\^done,bkpt={number=\"6\"")
+        self.expect("\^done,bkpt={number=\"7\"")
         self.runCmd("-exec-continue")
         self.expect("\^running")
         self.expect(
-            "\*stopped,reason=\"breakpoint-hit\",disp=\"del\",bkptno=\"6\"")
+            "\*stopped,reason=\"breakpoint-hit\",disp=\"del\",bkptno=\"7\"")
 
         # Test that BP #1 and #2 weren't set by running to program exit
         self.runCmd("-exec-continue")

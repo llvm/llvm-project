@@ -288,11 +288,10 @@ void LinkerScriptBase::computeInputSections(InputSectionDescription *I) {
   }
 }
 
-template <class ELFT>
-void LinkerScript<ELFT>::discard(ArrayRef<InputSectionBase *> V) {
+void LinkerScriptBase::discard(ArrayRef<InputSectionBase *> V) {
   for (InputSectionBase *S : V) {
     S->Live = false;
-    if (S == In<ELFT>::ShStrTab)
+    if (S == InX::ShStrTab)
       error("discarding .shstrtab section is not allowed");
     discard(S->DependentSections);
   }
@@ -1425,7 +1424,7 @@ Expr ScriptParser::readAssert() {
   return [=] {
     if (!E())
       error(Msg);
-    return ScriptBase->getDot();
+    return ScriptBase->Dot;
   };
 }
 
@@ -1755,7 +1754,7 @@ Expr ScriptParser::readPrimary() {
       return [=] { return alignTo(E(), E2()); };
     }
     expect(")");
-    return [=] { return alignTo(ScriptBase->getDot(), E()); };
+    return [=] { return alignTo(ScriptBase->Dot, E()); };
   }
   if (Tok == "CONSTANT") {
     StringRef Name = readParenLiteral();
@@ -1779,13 +1778,13 @@ Expr ScriptParser::readPrimary() {
     expect(",");
     readExpr();
     expect(")");
-    return [=] { return alignTo(ScriptBase->getDot(), E()); };
+    return [=] { return alignTo(ScriptBase->Dot, E()); };
   }
   if (Tok == "DATA_SEGMENT_END") {
     expect("(");
     expect(".");
     expect(")");
-    return []() { return ScriptBase->getDot(); };
+    return []() { return ScriptBase->Dot; };
   }
   // GNU linkers implements more complicated logic to handle
   // DATA_SEGMENT_RELRO_END. We instead ignore the arguments and just align to
@@ -1796,7 +1795,7 @@ Expr ScriptParser::readPrimary() {
     expect(",");
     readExpr();
     expect(")");
-    return []() { return alignTo(ScriptBase->getDot(), Target->PageSize); };
+    return []() { return alignTo(ScriptBase->Dot, Target->PageSize); };
   }
   if (Tok == "SIZEOF") {
     StringRef Name = readParenLiteral();
