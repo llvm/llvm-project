@@ -31,31 +31,16 @@ MATH_MANGLE(asin)(double x)
     double y = BUILTIN_ABS_F64(x);
     bool transform = y >= 0.5;
 
-    double rt = 0.5 * (1.0 - y);
+    double rt = MATH_MAD(y, -0.5, 0.5);
     double y2 = y * y;
     double r = transform ? rt : y2;
 
-    // Use a rational approximation for [0.0, 0.5]
-
-    double un = MATH_MAD(r,
-                    MATH_MAD(r,
-                        MATH_MAD(r,
-                            MATH_MAD(r,
-                                MATH_MAD(r, 0x1.951665d321061p-15, 0x1.1e5f887a62135p-10),
-                                -0x1.c28d390c29690p-5),
-                            0x1.1a2bec1b7ef59p-2),
-                        -0x1.c7b297e269eacp-2),
-                    0x1.d1e4180029834p-3);
-
-    double ud = MATH_MAD(r,
-                    MATH_MAD(r,
-                        MATH_MAD(r,
-                            MATH_MAD(r, 0x1.b1a422982ce76p-4, -0x1.e324ab418f78dp-1),
-                            0x1.62021571dccfcp+1),
-                        -0x1.a4646f903cdeap+1),
-                    0x1.5d6b12001f228p+0);
-
-    double u = r * MATH_FAST_DIV(un, ud);
+    double u = r * MATH_MAD(r, MATH_MAD(r, MATH_MAD(r, MATH_MAD(r, 
+                   MATH_MAD(r, MATH_MAD(r, MATH_MAD(r, MATH_MAD(r, 
+                   MATH_MAD(r, MATH_MAD(r, MATH_MAD(r, 
+                       0x1.059859fea6a70p-5, -0x1.0a5a378a05eafp-6), 0x1.4052137024d6ap-6), 0x1.ab3a098a70509p-8),
+                       0x1.8ed60a300c8d2p-7), 0x1.c6fa84b77012bp-7), 0x1.1c6c111dccb70p-6), 0x1.6e89f0a0adacfp-6),
+                       0x1.f1c72c668963fp-6), 0x1.6db6db41ce4bdp-5), 0x1.333333336fd5bp-4), 0x1.5555555555380p-3);
 
     // Reconstruct asin carefully in transformed region
     double v;
@@ -66,15 +51,10 @@ MATH_MANGLE(asin)(double x)
         double p = MATH_MAD(2.0*s, u, -MATH_MAD(-2.0, st, piby2_tail));
         double q = MATH_MAD(-2.0, sh, hpiby2_head);
         v = hpiby2_head - (p - q);
+        v = y == 1.0 ? piby2 : v;
     } else {
         v = MATH_MAD(y, u, y);
     }
-
-    // v = y < 0x1.0p-28 ? y : v;
-    if (!FINITE_ONLY_OPT()) {
-        v = y > 1.0 ? AS_DOUBLE(QNANBITPATT_DP64) : v;
-    }
-    v = y == 1.0 ? piby2 : v;
 
     return BUILTIN_COPYSIGN_F64(v, x);
 }

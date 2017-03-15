@@ -30,20 +30,18 @@ MATH_MANGLE(asinpi)(half x)
 
     half ax = BUILTIN_ABS_F16(x);
 
-    half tx = 0.5h * (1.0h - ax);
-    half x2 = x*x;
-    half r = ax >= 0.5h ? tx : x2;
+    half r;
+    if (ax <= 0.5h) {
+        half s = x * x;
+        r = ax * MATH_MAD(s, MATH_MAD(s, 0x1.0b8p-5h, 0x1.a7cp-5h), 0x1.46p-2h);
+    } else {
+        float s = BUILTIN_MAD_F32((float)ax, -0.5f, 0.5f);
+        float t = BUILTIN_SQRT_F32(s);
+        float p = BUILTIN_MAD_F32(t, BUILTIN_MAD_F32(s, BUILTIN_MAD_F32(s,
+                      -0x1.f4b736p-5f, -0x1.ad0826p-4f), -0x1.45f5a8p-1f), 0.5f);
+        r = (half)p;
+    }
 
-    half u = r * MATH_MAD(r, MATH_MAD(r, 0x1.6db6dcp-5h, 0x1.333334p-4h), 0x1.555556p-3h);
-
-    half s = MATH_FAST_SQRT(r);
-    half ret = MATH_MAD(-2.0h*piinv, MATH_MAD(s, u, s), 0.5h);
-    half xux = piinv*MATH_MAD(ax, u, ax);
-    ret = ax < 0.5h ? xux : ret;
-
-    ret = ax > 1.0h ? AS_HALF((short)QNANBITPATT_HP16) : ret;
-    ret = ax == 1.0h ? 0.5h : ret;
-    ret = BUILTIN_COPYSIGN_F16(ret, x);
-    return ret;
+    return BUILTIN_COPYSIGN_F16(r, x);
 }
 
