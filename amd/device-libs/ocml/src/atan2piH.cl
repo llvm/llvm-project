@@ -8,15 +8,13 @@
 
 #include "mathH.h"
 
-extern CONSTATTR half MATH_PRIVATE(atanred)(half);
+extern CONSTATTR half MATH_PRIVATE(atanpired)(half);
 
 CONSTATTR BGEN(atan2pi)
 
 CONSTATTR half
 MATH_MANGLE(atan2pi)(half y, half x)
 {
-    const half pi = 0x1.921fb6p+1h;
-
     half ax = BUILTIN_ABS_F16(x);
     half ay = BUILTIN_ABS_F16(y);
     half v = BUILTIN_MIN_F16(ax, ay);
@@ -24,8 +22,7 @@ MATH_MANGLE(atan2pi)(half y, half x)
 
     half vbyu = MATH_DIV(v, u);
 
-    half a = MATH_PRIVATE(atanred)(vbyu);
-    a = MATH_FAST_DIV(a, pi);
+    half a = MATH_PRIVATE(atanpired)(vbyu);
 
     half at = 0.5h - a;
     a = ay > ax ? at : a;

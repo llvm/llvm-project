@@ -28,28 +28,20 @@ MATH_MANGLE(asinpi)(float x)
 
     float ax = BUILTIN_ABS_F32(x);
 
-    float tx = 0.5f * (1.0f - ax);
-    float x2 = x*x;
+    float tx = MATH_MAD(ax, -0.5f, 0.5f);
+    float x2 = ax * ax;
     float r = ax >= 0.5f ? tx : x2;
 
-    float u = r * MATH_MAD(r,
-                      MATH_MAD(r,
-                          MATH_MAD(r,
-                              MATH_MAD(r,
-                                  MATH_MAD(r, 0x1.14e326p-5f, 0x1.17dda4p-6f),
-                                  0x1.fdcb1ep-6f),
-                              0x1.6d5902p-5f),
-                          0x1.33343cp-4f),
-                      0x1.555554p-3f);
+    float u = r * MATH_MAD(r, MATH_MAD(r, MATH_MAD(r, MATH_MAD(r, 
+                  MATH_MAD(r, 
+                      -0x1.3f1c6cp-8f, 0x1.2ac560p-6f), 0x1.80aab4p-8f), 0x1.e53378p-7f),
+                      0x1.86680ap-6f), 0x1.b29c5ap-5f);
 
     float s = MATH_FAST_SQRT(r);
-    float ret = MATH_MAD(-2.0 * piinv, MATH_MAD(s, u, s), 0.5f);
-    float xux = piinv * MATH_MAD(ax, u, ax);
-    ret = ax < 0.5f ? xux : ret;
+    float ret = MATH_MAD(-2.0, MATH_MAD(s, u, piinv*s), 0.5f);
+    float xux = MATH_MAD(piinv, ax, ax*u);
+    ret = ax >= 0.5f ? ret : xux;
 
-    ret = ax > 1.0f ? AS_FLOAT(QNANBITPATT_SP32) : ret;
-    ret = ax == 1.0f ? 0.5f : ret;
-    ret = BUILTIN_COPYSIGN_F32(ret, x);
-    return ret;
+    return BUILTIN_COPYSIGN_F32(ret, x);
 }
 

@@ -7,7 +7,7 @@
 
 #include "mathD.h"
 
-extern CONSTATTR double MATH_PRIVATE(atanred)(double);
+extern CONSTATTR double MATH_PRIVATE(atanpired)(double);
 
 CONSTATTR double
 MATH_MANGLE(atan2pi)(double y, double x)
@@ -20,8 +20,7 @@ MATH_MANGLE(atan2pi)(double y, double x)
     double v = BUILTIN_MIN_F64(ax, ay);
     double vbyu = MATH_DIV(v, u);
 
-    double a = MATH_PRIVATE(atanred)(vbyu);
-    a = MATH_DIV(a, pi);
+    double a = MATH_PRIVATE(atanpired)(vbyu);
 
     bool xneg = AS_INT2(x).y < 0;
 
