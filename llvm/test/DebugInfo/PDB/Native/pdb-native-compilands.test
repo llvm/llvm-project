@@ -1,0 +1,65 @@
+; Test that the native PDB reader can enumerate the compilands.
+; RUN: llvm-pdbdump pretty -native -compilands %p/../Inputs/empty.pdb \
+; RUN:   | FileCheck -check-prefix=EMPTY %s
+; RUN: llvm-pdbdump pretty -native -compilands %p/../Inputs/big-read.pdb \
+; RUN:   | FileCheck -check-prefix=BIGREAD %s
+
+; Reference output was generated with the DIA reader to ensure that the
+; `-native` option produces identical output.  The paths output will have
+; backslashes even on non-Windows platforms because they are from PDBs built
+; on Windows.  The path prefixes have been elided because those may be
+; machine-specific.
+
+EMPTY:---COMPILANDS---
+EMPTY:  \llvm\test\DebugInfo\PDB\Inputs\empty.obj
+EMPTY:  * Linker *
+
+BIGREAD:---COMPILANDS---
+BIGREAD:  \llvm\test\tools\llvm-symbolizer\pdb\Inputs\test.obj
+BIGREAD:  f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\_cpu_disp_.obj
+BIGREAD:  f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\_initsect_.obj
+BIGREAD:  f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\_sehprolg4_.obj
+BIGREAD:  f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\_chandler4gs_.obj
+BIGREAD:  f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\_secchk_.obj
+BIGREAD:  f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\gs_cookie.obj
+BIGREAD:  f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\gs_report.obj
+BIGREAD:  f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\gs_support.obj
+BIGREAD:  f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\checkcfg.obj
+BIGREAD:  f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\guard_support.obj
+BIGREAD:  f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\loadcfg.obj
+BIGREAD:  f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\dyn_tls_dtor.obj
+BIGREAD:  f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\dyn_tls_init.obj
+BIGREAD:  f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\matherr_detection.obj
+BIGREAD:  f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\ucrt_detection.obj
+BIGREAD:  f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\argv_mode.obj
+BIGREAD:  f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\commit_mode.obj
+BIGREAD:  f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\default_local_stdio_options.obj
+BIGREAD:  f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\denormal_control.obj
+BIGREAD:  f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\env_mode.obj
+BIGREAD:  f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\file_mode.obj
+BIGREAD:  f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\invalid_parameter_handler.obj
+BIGREAD:  f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\matherr.obj
+BIGREAD:  f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\new_mode.obj
+BIGREAD:  f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\thread_locale.obj
+BIGREAD:  f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\tncleanup.obj
+BIGREAD:  f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\exe_main.obj
+BIGREAD:  f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\initializers.obj
+BIGREAD:  f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\utility.obj
+BIGREAD:  f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\ucrt_stubs.obj
+BIGREAD:  f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\utility_desktop.obj
+BIGREAD:  f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\default_precision.obj
+BIGREAD:  Import:KERNEL32.dll
+BIGREAD:  KERNEL32.dll
+BIGREAD:  Import:VCRUNTIME140.dll
+BIGREAD:  VCRUNTIME140.dll
+BIGREAD:  Import:api-ms-win-crt-stdio-l1-1-0.dll
+BIGREAD:  api-ms-win-crt-stdio-l1-1-0.dll
+BIGREAD:  Import:api-ms-win-crt-runtime-l1-1-0.dll
+BIGREAD:  api-ms-win-crt-runtime-l1-1-0.dll
+BIGREAD:  Import:api-ms-win-crt-math-l1-1-0.dll
+BIGREAD:  api-ms-win-crt-math-l1-1-0.dll
+BIGREAD:  Import:api-ms-win-crt-locale-l1-1-0.dll
+BIGREAD:  api-ms-win-crt-locale-l1-1-0.dll
+BIGREAD:  Import:api-ms-win-crt-heap-l1-1-0.dll
+BIGREAD:  api-ms-win-crt-heap-l1-1-0.dll
+BIGREAD:  * Linker *

@@ -61,48 +61,48 @@ class ScopBuilder {
   /// Load/Store instruction.
   ///
   /// @param Inst       The Load/Store instruction that access the memory
-  /// @param L          The parent loop of the instruction
+  /// @param Stmt       The parent statement of the instruction
   ///
   /// @returns True if the access could be built, False otherwise.
-  bool buildAccessMultiDimFixed(MemAccInst Inst, Loop *L);
+  bool buildAccessMultiDimFixed(MemAccInst Inst, ScopStmt *Stmt);
 
   /// Try to build a multi-dimensional parameteric sized MemoryAccess.
   ///        from the Load/Store instruction.
   ///
   /// @param Inst       The Load/Store instruction that access the memory
-  /// @param L          The parent loop of the instruction
+  /// @param Stmt       The parent statement of the instruction
   ///
   /// @returns True if the access could be built, False otherwise.
-  bool buildAccessMultiDimParam(MemAccInst Inst, Loop *L);
+  bool buildAccessMultiDimParam(MemAccInst Inst, ScopStmt *Stmt);
 
   /// Try to build a MemoryAccess for a memory intrinsic.
   ///
   /// @param Inst       The instruction that access the memory
-  /// @param L          The parent loop of the instruction
+  /// @param Stmt       The parent statement of the instruction
   ///
   /// @returns True if the access could be built, False otherwise.
-  bool buildAccessMemIntrinsic(MemAccInst Inst, Loop *L);
+  bool buildAccessMemIntrinsic(MemAccInst Inst, ScopStmt *Stmt);
 
   /// Try to build a MemoryAccess for a call instruction.
   ///
   /// @param Inst       The call instruction that access the memory
-  /// @param L          The parent loop of the instruction
+  /// @param Stmt       The parent statement of the instruction
   ///
   /// @returns True if the access could be built, False otherwise.
-  bool buildAccessCallInst(MemAccInst Inst, Loop *L);
+  bool buildAccessCallInst(MemAccInst Inst, ScopStmt *Stmt);
 
   /// Build a single-dimensional parametric sized MemoryAccess
   ///        from the Load/Store instruction.
   ///
   /// @param Inst       The Load/Store instruction that access the memory
-  /// @param L          The parent loop of the instruction
-  void buildAccessSingleDim(MemAccInst Inst, Loop *L);
+  /// @param Stmt       The parent statement of the instruction
+  void buildAccessSingleDim(MemAccInst Inst, ScopStmt *Stmt);
 
   /// Build an instance of MemoryAccess from the Load/Store instruction.
   ///
   /// @param Inst       The Load/Store instruction that access the memory
-  /// @param L          The parent loop of the instruction
-  void buildMemoryAccess(MemAccInst Inst, Loop *L);
+  /// @param Stmt       The parent statement of the instruction
+  void buildMemoryAccess(MemAccInst Inst, ScopStmt *Stmt);
 
   /// Analyze and extract the cross-BB scalar dependences (or, dataflow
   /// dependencies) of an instruction.

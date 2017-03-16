@@ -5,6 +5,8 @@
 ; RUN: llc -march=amdgcn -mcpu=bonaire -mattr=-promote-alloca -amdgpu-sroa=0 < %s | FileCheck -check-prefix=GCN -check-prefix=CI %s
 ; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -mattr=-promote-alloca -amdgpu-sroa=0 < %s | FileCheck -check-prefix=GCN -check-prefix=VI %s
 
+target datalayout = "e-p:32:32-p1:64:64-p2:64:64-p3:32:32-p4:64:64-p5:32:32-p24:64:64-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64"
+
 ; OPT-LABEL: @test_sink_global_small_offset_i32(
 ; OPT-CI-NOT: getelementptr i32, i32 addrspace(1)* %in
 ; OPT-VI: getelementptr i32, i32 addrspace(1)* %in
@@ -486,7 +488,7 @@ done:
 %struct.foo = type { [3 x float], [3 x float] }
 
 ; OPT-LABEL: @sink_ds_address(
-; OPT: ptrtoint %struct.foo addrspace(3)* %ptr to i64
+; OPT: ptrtoint %struct.foo addrspace(3)* %ptr to i32
 
 ; GCN-LABEL: {{^}}sink_ds_address:
 ; GCN: s_load_dword [[SREG1:s[0-9]+]],
@@ -535,6 +537,85 @@ if:
 endif:
   %x = phi i32 [ %tmp1, %if ], [ 0, %entry ]
   store i32 %x, i32 addrspace(1)* %out.gep
+  br label %done
+
+done:
+  ret void
+}
+
+; OPT-LABEL: @test_sink_local_small_offset_atomicrmw_i32(
+; OPT: %sunkaddr = ptrtoint i32 addrspace(3)* %in to i32
+; OPT: %sunkaddr1 = add i32 %sunkaddr, 28
+; OPT: %sunkaddr2 = inttoptr i32 %sunkaddr1 to i32 addrspace(3)*
+; OPT: %tmp1 = atomicrmw add i32 addrspace(3)* %sunkaddr2, i32 2 seq_cst
+define void @test_sink_local_small_offset_atomicrmw_i32(i32 addrspace(3)* %out, i32 addrspace(3)* %in) {
+entry:
+  %out.gep = getelementptr i32, i32 addrspace(3)* %out, i32 999999
+  %in.gep = getelementptr i32, i32 addrspace(3)* %in, i32 7
+  %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #0
+  %tmp0 = icmp eq i32 %tid, 0
+  br i1 %tmp0, label %endif, label %if
+
+if:
+  %tmp1 = atomicrmw add i32 addrspace(3)* %in.gep, i32 2 seq_cst
+  br label %endif
+
+endif:
+  %x = phi i32 [ %tmp1, %if ], [ 0, %entry ]
+  store i32 %x, i32 addrspace(3)* %out.gep
+  br label %done
+
+done:
+  ret void
+}
+
+; OPT-LABEL: @test_sink_local_small_offset_cmpxchg_i32(
+; OPT: %sunkaddr = ptrtoint i32 addrspace(3)* %in to i32
+; OPT: %sunkaddr1 = add i32 %sunkaddr, 28
+; OPT: %sunkaddr2 = inttoptr i32 %sunkaddr1 to i32 addrspace(3)*
+; OPT: %tmp1.struct = cmpxchg i32 addrspace(3)* %sunkaddr2, i32 undef, i32 2 seq_cst monotonic
+define void @test_sink_local_small_offset_cmpxchg_i32(i32 addrspace(3)* %out, i32 addrspace(3)* %in) {
+entry:
+  %out.gep = getelementptr i32, i32 addrspace(3)* %out, i32 999999
+  %in.gep = getelementptr i32, i32 addrspace(3)* %in, i32 7
+  %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #0
+  %tmp0 = icmp eq i32 %tid, 0
+  br i1 %tmp0, label %endif, label %if
+
+if:
+  %tmp1.struct = cmpxchg i32 addrspace(3)* %in.gep, i32 undef, i32 2 seq_cst monotonic
+  %tmp1 = extractvalue { i32, i1 } %tmp1.struct, 0
+  br label %endif
+
+endif:
+  %x = phi i32 [ %tmp1, %if ], [ 0, %entry ]
+  store i32 %x, i32 addrspace(3)* %out.gep
+  br label %done
+
+done:
+  ret void
+}
+
+; OPT-LABEL: @test_wrong_operand_local_small_offset_cmpxchg_i32(
+; OPT: %in.gep = getelementptr i32, i32 addrspace(3)* %in, i32 7
+; OPT: br i1
+; OPT: cmpxchg i32 addrspace(3)* addrspace(3)* undef, i32 addrspace(3)* %in.gep, i32 addrspace(3)* undef seq_cst monotonic
+define void @test_wrong_operand_local_small_offset_cmpxchg_i32(i32 addrspace(3)* addrspace(3)* %out, i32 addrspace(3)* %in) {
+entry:
+  %out.gep = getelementptr i32 addrspace(3)*, i32 addrspace(3)* addrspace(3)* %out, i32 999999
+  %in.gep = getelementptr i32, i32 addrspace(3)* %in, i32 7
+  %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #0
+  %tmp0 = icmp eq i32 %tid, 0
+  br i1 %tmp0, label %endif, label %if
+
+if:
+  %tmp1.struct = cmpxchg i32 addrspace(3)* addrspace(3)* undef, i32 addrspace(3)* %in.gep, i32 addrspace(3)* undef seq_cst monotonic
+  %tmp1 = extractvalue { i32 addrspace(3)*, i1 } %tmp1.struct, 0
+  br label %endif
+
+endif:
+  %x = phi i32 addrspace(3)* [ %tmp1, %if ], [ null, %entry ]
+  store i32 addrspace(3)* %x, i32 addrspace(3)* addrspace(3)* %out.gep
   br label %done
 
 done:

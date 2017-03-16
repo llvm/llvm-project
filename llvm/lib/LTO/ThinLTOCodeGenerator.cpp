@@ -1023,11 +1023,7 @@ void ThinLTOCodeGenerator::run() {
     }
   }
 
-  CachePruning(CacheOptions.Path)
-      .setPruningInterval(std::chrono::seconds(CacheOptions.PruningInterval))
-      .setEntryExpiration(std::chrono::seconds(CacheOptions.Expiration))
-      .setMaxSize(CacheOptions.MaxPercentageOfAvailableSpace)
-      .prune();
+  pruneCache(CacheOptions.Path, CacheOptions.Policy);
 
   // If statistics were requested, print them out now.
   if (llvm::AreStatisticsEnabled())

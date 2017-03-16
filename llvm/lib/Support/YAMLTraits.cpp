@@ -398,17 +398,10 @@ bool Input::canElideEmptySequence() {
 //===----------------------------------------------------------------------===//
 
 Output::Output(raw_ostream &yout, void *context, int WrapColumn)
-    : IO(context),
-      Out(yout),
-      WrapColumn(WrapColumn),
-      Column(0),
-      ColumnAtFlowStart(0),
-      ColumnAtMapFlowStart(0),
-      NeedBitValueComma(false),
-      NeedFlowSequenceComma(false),
-      EnumerationMatchFound(false),
-      NeedsNewLine(false) {
-}
+    : IO(context), Out(yout), WrapColumn(WrapColumn), Column(0),
+      ColumnAtFlowStart(0), ColumnAtMapFlowStart(0), NeedBitValueComma(false),
+      NeedFlowSequenceComma(false), EnumerationMatchFound(false),
+      NeedsNewLine(false), WriteDefaultValues(false) {}
 
 Output::~Output() {
 }
@@ -462,7 +455,7 @@ std::vector<StringRef> Output::keys() {
 bool Output::preflightKey(const char *Key, bool Required, bool SameAsDefault,
                           bool &UseDefault, void *&) {
   UseDefault = false;
-  if (Required || !SameAsDefault) {
+  if (Required || !SameAsDefault || WriteDefaultValues) {
     auto State = StateStack.back();
     if (State == inFlowMapFirstKey || State == inFlowMapOtherKey) {
       flowKey(Key);

@@ -91,6 +91,7 @@ using namespace llvm;
 
 STATISTIC(NumOfPGOInstrument, "Number of edges instrumented.");
 STATISTIC(NumOfPGOSelectInsts, "Number of select instruction instrumented.");
+STATISTIC(NumOfPGOMemIntrinsics, "Number of mem intrinsics instrumented.");
 STATISTIC(NumOfPGOEdge, "Number of edges.");
 STATISTIC(NumOfPGOBB, "Number of basic-blocks.");
 STATISTIC(NumOfPGOSplit, "Number of critical edge splits.");
@@ -168,6 +169,10 @@ static cl::opt<bool>
                               "display to only one function, use "
                               "filtering option -view-bfi-func-name."));
 
+// Command line option to enable/disable memop intrinsic calls..
+static cl::opt<bool> PGOInstrMemOP("pgo-instr-memop", cl::init(true),
+                                   cl::Hidden);
+
 // Command line option to turn on CFG dot dump after profile annotation.
 // Defined in Analysis/BlockFrequencyInfo.cpp:  -pgo-view-counts
 extern cl::opt<bool> PGOViewCounts;
@@ -200,6 +205,7 @@ struct SelectInstVisitor : public InstVisitor<SelectInstVisitor> {
   SelectInstVisitor(Function &Func) : F(Func) {}
 
   void countSelects(Function &Func) {
+    NSIs = 0;
     Mode = VM_counting;
     visit(Func);
   }
@@ -229,7 +235,43 @@ struct SelectInstVisitor : public InstVisitor<SelectInstVisitor> {
   void annotateOneSelectInst(SelectInst &SI);
   // Visit \p SI instruction and perform tasks according to visit mode.
   void visitSelectInst(SelectInst &SI);
+  // Return the number of select instructions. This needs be called after
+  // countSelects().
   unsigned getNumOfSelectInsts() const { return NSIs; }
+};
+
+/// Instruction Visitor class to visit memory intrinsic calls.
+struct MemIntrinsicVisitor : public InstVisitor<MemIntrinsicVisitor> {
+  Function &F;
+  unsigned NMemIs = 0;          // Number of memIntrinsics instrumented.
+  VisitMode Mode = VM_counting; // Visiting mode.
+  unsigned CurCtrId = 0;        // Current counter index.
+  unsigned TotalNumCtrs = 0;    // Total number of counters
+  GlobalVariable *FuncNameVar = nullptr;
+  uint64_t FuncHash = 0;
+  PGOUseFunc *UseFunc = nullptr;
+
+  MemIntrinsicVisitor(Function &Func) : F(Func) {}
+
+  void countMemIntrinsics(Function &Func) {
+    NMemIs = 0;
+    Mode = VM_counting;
+    visit(Func);
+  }
+  void instrumentMemIntrinsics(Function &Func, unsigned TotalNC,
+                               GlobalVariable *FNV, uint64_t FHash) {
+    Mode = VM_instrument;
+    TotalNumCtrs = TotalNC;
+    FuncHash = FHash;
+    FuncNameVar = FNV;
+    visit(Func);
+  }
+
+  // Visit the IR stream and annotate all mem intrinsic call instructions.
+  void instrumentOneMemIntrinsic(MemIntrinsic &MI);
+  // Visit \p MI instruction and perform tasks according to visit mode.
+  void visitMemIntrinsic(MemIntrinsic &SI);
+  unsigned getNumOfMemIntrinsics() const { return NMemIs; }
 };
 
 class PGOInstrumentationGenLegacyPass : public ModulePass {
@@ -349,8 +391,9 @@ private:
   std::unordered_multimap<Comdat *, GlobalValue *> &ComdatMembers;
 
 public:
-  std::vector<Instruction *> IndirectCallSites;
+  std::vector<std::vector<Instruction *>> ValueSites;
   SelectInstVisitor SIVisitor;
+  MemIntrinsicVisitor MIVisitor;
   std::string FuncName;
   GlobalVariable *FuncNameVar;
   // CFG hash value for this function.
@@ -380,13 +423,15 @@ public:
       std::unordered_multimap<Comdat *, GlobalValue *> &ComdatMembers,
       bool CreateGlobalVar = false, BranchProbabilityInfo *BPI = nullptr,
       BlockFrequencyInfo *BFI = nullptr)
-      : F(Func), ComdatMembers(ComdatMembers), SIVisitor(Func), FunctionHash(0),
-        MST(F, BPI, BFI) {
+      : F(Func), ComdatMembers(ComdatMembers), ValueSites(IPVK_Last + 1),
+        SIVisitor(Func), MIVisitor(Func), FunctionHash(0), MST(F, BPI, BFI) {
 
     // This should be done before CFG hash computation.
     SIVisitor.countSelects(Func);
+    MIVisitor.countMemIntrinsics(Func);
     NumOfPGOSelectInsts += SIVisitor.getNumOfSelectInsts();
-    IndirectCallSites = findIndirectCallSites(Func);
+    NumOfPGOMemIntrinsics += MIVisitor.getNumOfMemIntrinsics();
+    ValueSites[IPVK_IndirectCallTarget] = findIndirectCallSites(Func);
 
     FuncName = getPGOFuncName(F);
     computeCFGHash();
@@ -438,7 +483,7 @@ void FuncPGOInstrumentation<Edge, BBInfo>::computeCFGHash() {
   }
   JC.update(Indexes);
   FunctionHash = (uint64_t)SIVisitor.getNumOfSelectInsts() << 56 |
-                 (uint64_t)IndirectCallSites.size() << 48 |
+                 (uint64_t)ValueSites[IPVK_IndirectCallTarget].size() << 48 |
                  (uint64_t)MST.AllEdges.size() << 32 | JC.getCRC();
 }
 
@@ -585,7 +630,7 @@ static void instrumentOneFunc(
     return;
 
   unsigned NumIndirectCallSites = 0;
-  for (auto &I : FuncInfo.IndirectCallSites) {
+  for (auto &I : FuncInfo.ValueSites[IPVK_IndirectCallTarget]) {
     CallSite CS(I);
     Value *Callee = CS.getCalledValue();
     DEBUG(dbgs() << "Instrument one indirect call: CallSite Index = "
@@ -598,10 +643,14 @@ static void instrumentOneFunc(
         {llvm::ConstantExpr::getBitCast(FuncInfo.FuncNameVar, I8PtrTy),
          Builder.getInt64(FuncInfo.FunctionHash),
          Builder.CreatePtrToInt(Callee, Builder.getInt64Ty()),
-         Builder.getInt32(llvm::InstrProfValueKind::IPVK_IndirectCallTarget),
+         Builder.getInt32(IPVK_IndirectCallTarget),
          Builder.getInt32(NumIndirectCallSites++)});
   }
   NumOfPGOICall += NumIndirectCallSites;
+
+  // Now instrument memop intrinsic calls.
+  FuncInfo.MIVisitor.instrumentMemIntrinsics(
+      F, NumCounters, FuncInfo.FuncNameVar, FuncInfo.FunctionHash);
 }
 
 // This class represents a CFG edge in profile use compilation.
@@ -686,8 +735,11 @@ public:
   // Set the branch weights based on the count values.
   void setBranchWeights();
 
-  // Annotate the indirect call sites.
-  void annotateIndirectCallSites();
+  // Annotate the value profile call sites all all value kind.
+  void annotateValueSites();
+
+  // Annotate the value profile call sites for one value kind.
+  void annotateValueSites(uint32_t Kind);
 
   // The hotness of the function from the profile count.
   enum FuncFreqAttr { FFA_Normal, FFA_Cold, FFA_Hot };
@@ -1055,9 +1107,9 @@ void SelectInstVisitor::visitSelectInst(SelectInst &SI) {
   if (SI.getCondition()->getType()->isVectorTy())
     return;
 
-  NSIs++;
   switch (Mode) {
   case VM_counting:
+    NSIs++;
     return;
   case VM_instrument:
     instrumentOneSelectInst(SI);
@@ -1070,35 +1122,77 @@ void SelectInstVisitor::visitSelectInst(SelectInst &SI) {
   llvm_unreachable("Unknown visiting mode");
 }
 
-// Traverse all the indirect callsites and annotate the instructions.
-void PGOUseFunc::annotateIndirectCallSites() {
+void MemIntrinsicVisitor::instrumentOneMemIntrinsic(MemIntrinsic &MI) {
+  Module *M = F.getParent();
+  IRBuilder<> Builder(&MI);
+  Type *Int64Ty = Builder.getInt64Ty();
+  Type *I8PtrTy = Builder.getInt8PtrTy();
+  Value *Length = MI.getLength();
+  assert(!dyn_cast<ConstantInt>(Length));
+  Builder.CreateCall(
+      Intrinsic::getDeclaration(M, Intrinsic::instrprof_value_profile),
+      {llvm::ConstantExpr::getBitCast(FuncNameVar, I8PtrTy),
+       Builder.getInt64(FuncHash), Builder.CreatePtrToInt(Length, Int64Ty),
+       Builder.getInt32(IPVK_MemOPSize), Builder.getInt32(CurCtrId)});
+  ++CurCtrId;
+}
+
+void MemIntrinsicVisitor::visitMemIntrinsic(MemIntrinsic &MI) {
+  if (!PGOInstrMemOP)
+    return;
+  Value *Length = MI.getLength();
+  // Not instrument constant length calls.
+  if (dyn_cast<ConstantInt>(Length))
+    return;
+
+  NMemIs++;
+  switch (Mode) {
+  case VM_counting:
+    return;
+  case VM_instrument:
+    instrumentOneMemIntrinsic(MI);
+    return;
+  case VM_annotate:
+    break;
+  }
+  llvm_unreachable("Unknown visiting mode");
+}
+
+// Traverse all valuesites and annotate the instructions for all value kind.
+void PGOUseFunc::annotateValueSites() {
   if (DisableValueProfiling)
     return;
 
   // Create the PGOFuncName meta data.
   createPGOFuncNameMetadata(F, FuncInfo.FuncName);
 
-  unsigned IndirectCallSiteIndex = 0;
-  auto &IndirectCallSites = FuncInfo.IndirectCallSites;
-  unsigned NumValueSites =
-      ProfileRecord.getNumValueSites(IPVK_IndirectCallTarget);
-  if (NumValueSites != IndirectCallSites.size()) {
-    std::string Msg =
-        std::string("Inconsistent number of indirect call sites: ") +
-        F.getName().str();
+  for (uint32_t Kind = IPVK_First; Kind <= IPVK_Last; ++Kind)
+    annotateValueSites(Kind);
+}
+
+// Annotate the instructions for a specific value kind.
+void PGOUseFunc::annotateValueSites(uint32_t Kind) {
+  unsigned ValueSiteIndex = 0;
+  auto &ValueSites = FuncInfo.ValueSites[Kind];
+  unsigned NumValueSites = ProfileRecord.getNumValueSites(Kind);
+  if (NumValueSites != ValueSites.size()) {
     auto &Ctx = M->getContext();
-    Ctx.diagnose(
-        DiagnosticInfoPGOProfile(M->getName().data(), Msg, DS_Warning));
+    Ctx.diagnose(DiagnosticInfoPGOProfile(
+        M->getName().data(),
+        Twine("Inconsistent number of value sites for kind = ") + Twine(Kind) +
+            " in " + F.getName().str(),
+        DS_Warning));
     return;
   }
 
-  for (auto &I : IndirectCallSites) {
-    DEBUG(dbgs() << "Read one indirect call instrumentation: Index="
-                 << IndirectCallSiteIndex << " out of " << NumValueSites
-                 << "\n");
-    annotateValueSite(*M, *I, ProfileRecord, IPVK_IndirectCallTarget,
-                      IndirectCallSiteIndex, MaxNumAnnotations);
-    IndirectCallSiteIndex++;
+  for (auto &I : ValueSites) {
+    DEBUG(dbgs() << "Read one value site profile (kind = " << Kind
+                 << "): Index = " << ValueSiteIndex << " out of "
+                 << NumValueSites << "\n");
+    annotateValueSite(*M, *I, ProfileRecord,
+                      static_cast<InstrProfValueKind>(Kind), ValueSiteIndex,
+                      MaxNumAnnotations);
+    ValueSiteIndex++;
   }
 }
 } // end anonymous namespace
@@ -1231,7 +1325,7 @@ static bool annotateAllFunctions(
       continue;
     Func.populateCounters();
     Func.setBranchWeights();
-    Func.annotateIndirectCallSites();
+    Func.annotateValueSites();
     PGOUseFunc::FuncFreqAttr FreqAttr = Func.getFuncFreqAttr();
     if (FreqAttr == PGOUseFunc::FFA_Cold)
       ColdFunctions.push_back(&F);

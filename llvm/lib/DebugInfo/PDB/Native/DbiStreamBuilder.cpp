@@ -13,6 +13,7 @@
 #include "llvm/DebugInfo/MSF/MSFBuilder.h"
 #include "llvm/DebugInfo/MSF/MappedBlockStream.h"
 #include "llvm/DebugInfo/PDB/Native/DbiStream.h"
+#include "llvm/DebugInfo/PDB/Native/ModInfoBuilder.h"
 #include "llvm/DebugInfo/PDB/Native/RawError.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Support/BinaryStreamWriter.h"
@@ -23,14 +24,12 @@ using namespace llvm::codeview;
 using namespace llvm::msf;
 using namespace llvm::pdb;
 
-namespace {
-class ModiSubstreamBuilder {};
-}
-
 DbiStreamBuilder::DbiStreamBuilder(msf::MSFBuilder &Msf)
     : Msf(Msf), Allocator(Msf.getAllocator()), Age(1), BuildNumber(0),
       PdbDllVersion(0), PdbDllRbld(0), Flags(0), MachineType(PDB_Machine::x86),
       Header(nullptr), DbgStreams((int)DbgHeaderType::Max) {}
+
+DbiStreamBuilder::~DbiStreamBuilder() {}
 
 void DbiStreamBuilder::setVersionHeader(PdbRaw_DbiVer V) { VerHeader = V; }
 
@@ -75,39 +74,37 @@ uint32_t DbiStreamBuilder::calculateSerializedLength() const {
          calculateSectionMapStreamSize() + calculateDbgStreamsSize();
 }
 
-Error DbiStreamBuilder::addModuleInfo(StringRef ObjFile, StringRef Module) {
-  auto Entry = llvm::make_unique<ModuleInfo>();
-  ModuleInfo *M = Entry.get();
-  Entry->Mod = Module;
-  Entry->Obj = ObjFile;
-  auto Result = ModuleInfos.insert(std::make_pair(Module, std::move(Entry)));
+Expected<ModInfoBuilder &>
+DbiStreamBuilder::addModuleInfo(StringRef ModuleName) {
+  uint32_t Index = ModiList.size();
+  auto MIB = llvm::make_unique<ModInfoBuilder>(ModuleName, Index, Msf);
+  auto M = MIB.get();
+  auto Result = ModiMap.insert(std::make_pair(ModuleName, std::move(MIB)));
+
   if (!Result.second)
     return make_error<RawError>(raw_error_code::duplicate_entry,
                                 "The specified module already exists");
-  ModuleInfoList.push_back(M);
-  return Error::success();
+  ModiList.push_back(M);
+  return *M;
 }
 
 Error DbiStreamBuilder::addModuleSourceFile(StringRef Module, StringRef File) {
-  auto ModIter = ModuleInfos.find(Module);
-  if (ModIter == ModuleInfos.end())
+  auto ModIter = ModiMap.find(Module);
+  if (ModIter == ModiMap.end())
     return make_error<RawError>(raw_error_code::no_entry,
                                 "The specified module was not found");
   uint32_t Index = SourceFileNames.size();
   SourceFileNames.insert(std::make_pair(File, Index));
   auto &ModEntry = *ModIter;
-  ModEntry.second->SourceFiles.push_back(File);
+  ModEntry.second->addSourceFile(File);
   return Error::success();
 }
 
 uint32_t DbiStreamBuilder::calculateModiSubstreamSize() const {
   uint32_t Size = 0;
-  for (const auto &M : ModuleInfoList) {
-    Size += sizeof(ModuleInfoHeader);
-    Size += M->Mod.size() + 1;
-    Size += M->Obj.size() + 1;
-  }
-  return alignTo(Size, sizeof(uint32_t));
+  for (const auto &M : ModiList)
+    Size += M->calculateSerializedLength();
+  return Size;
 }
 
 uint32_t DbiStreamBuilder::calculateSectionContribsStreamSize() const {
@@ -127,11 +124,11 @@ uint32_t DbiStreamBuilder::calculateFileInfoSubstreamSize() const {
   uint32_t Size = 0;
   Size += sizeof(ulittle16_t);                         // NumModules
   Size += sizeof(ulittle16_t);                         // NumSourceFiles
-  Size += ModuleInfoList.size() * sizeof(ulittle16_t); // ModIndices
-  Size += ModuleInfoList.size() * sizeof(ulittle16_t); // ModFileCounts
+  Size += ModiList.size() * sizeof(ulittle16_t);       // ModIndices
+  Size += ModiList.size() * sizeof(ulittle16_t);       // ModFileCounts
   uint32_t NumFileInfos = 0;
-  for (const auto &M : ModuleInfoList)
-    NumFileInfos += M->SourceFiles.size();
+  for (const auto &M : ModiList)
+    NumFileInfos += M->source_files().size();
   Size += NumFileInfos * sizeof(ulittle32_t); // FileNameOffsets
   Size += calculateNamesBufferSize();
   return alignTo(Size, sizeof(uint32_t));
@@ -149,31 +146,6 @@ uint32_t DbiStreamBuilder::calculateDbgStreamsSize() const {
   return DbgStreams.size() * sizeof(uint16_t);
 }
 
-Error DbiStreamBuilder::generateModiSubstream() {
-  uint32_t Size = calculateModiSubstreamSize();
-  auto Data = Allocator.Allocate<uint8_t>(Size);
-
-  ModInfoBuffer = MutableBinaryByteStream(MutableArrayRef<uint8_t>(Data, Size),
-                                          llvm::support::little);
-
-  BinaryStreamWriter ModiWriter(ModInfoBuffer);
-  for (const auto &M : ModuleInfoList) {
-    ModuleInfoHeader Layout = {};
-    Layout.ModDiStream = kInvalidStreamIndex;
-    Layout.NumFiles = M->SourceFiles.size();
-    if (auto EC = ModiWriter.writeObject(Layout))
-      return EC;
-    if (auto EC = ModiWriter.writeCString(M->Mod))
-      return EC;
-    if (auto EC = ModiWriter.writeCString(M->Obj))
-      return EC;
-  }
-  if (ModiWriter.bytesRemaining() > sizeof(uint32_t))
-    return make_error<RawError>(raw_error_code::invalid_format,
-                                "Unexpected bytes in Modi Stream Data");
-  return Error::success();
-}
-
 Error DbiStreamBuilder::generateFileInfoSubstream() {
   uint32_t Size = calculateFileInfoSubstreamSize();
   uint32_t NameSize = calculateNamesBufferSize();
@@ -187,7 +159,7 @@ Error DbiStreamBuilder::generateFileInfoSubstream() {
       WritableBinaryStreamRef(FileInfoBuffer).keep_front(NamesOffset);
   BinaryStreamWriter MetadataWriter(MetadataBuffer);
 
-  uint16_t ModiCount = std::min<uint32_t>(UINT16_MAX, ModuleInfos.size());
+  uint16_t ModiCount = std::min<uint32_t>(UINT16_MAX, ModiList.size());
   uint16_t FileCount = std::min<uint32_t>(UINT16_MAX, SourceFileNames.size());
   if (auto EC = MetadataWriter.writeInteger(ModiCount)) // NumModules
     return EC;
@@ -197,8 +169,8 @@ Error DbiStreamBuilder::generateFileInfoSubstream() {
     if (auto EC = MetadataWriter.writeInteger(I)) // Mod Indices
       return EC;
   }
-  for (const auto MI : ModuleInfoList) {
-    FileCount = static_cast<uint16_t>(MI->SourceFiles.size());
+  for (const auto &MI : ModiList) {
+    FileCount = static_cast<uint16_t>(MI->source_files().size());
     if (auto EC = MetadataWriter.writeInteger(FileCount)) // Mod File Counts
       return EC;
   }
@@ -215,8 +187,8 @@ Error DbiStreamBuilder::generateFileInfoSubstream() {
       return EC;
   }
 
-  for (const auto MI : ModuleInfoList) {
-    for (StringRef Name : MI->SourceFiles) {
+  for (const auto &MI : ModiList) {
+    for (StringRef Name : MI->source_files()) {
       auto Result = SourceFileNames.find(Name);
       if (Result == SourceFileNames.end())
         return make_error<RawError>(raw_error_code::no_entry,
@@ -242,13 +214,13 @@ Error DbiStreamBuilder::finalize() {
   if (Header)
     return Error::success();
 
-  DbiStreamHeader *H = Allocator.Allocate<DbiStreamHeader>();
+  for (auto &MI : ModiList)
+    MI->finalize();
 
-  if (auto EC = generateModiSubstream())
-    return EC;
   if (auto EC = generateFileInfoSubstream())
     return EC;
 
+  DbiStreamHeader *H = Allocator.Allocate<DbiStreamHeader>();
   H->VersionHeader = *VerHeader;
   H->VersionSignature = -1;
   H->Age = Age;
@@ -260,7 +232,7 @@ Error DbiStreamBuilder::finalize() {
 
   H->ECSubstreamSize = 0;
   H->FileInfoSize = FileInfoBuffer.getLength();
-  H->ModiSubstreamSize = ModInfoBuffer.getLength();
+  H->ModiSubstreamSize = calculateModiSubstreamSize();
   H->OptionalDbgHdrSize = DbgStreams.size() * sizeof(uint16_t);
   H->SecContrSubstreamSize = calculateSectionContribsStreamSize();
   H->SectionMapSize = calculateSectionMapStreamSize();
@@ -275,6 +247,11 @@ Error DbiStreamBuilder::finalize() {
 }
 
 Error DbiStreamBuilder::finalizeMsfLayout() {
+  for (auto &MI : ModiList) {
+    if (auto EC = MI->finalizeMsfLayout())
+      return EC;
+  }
+
   uint32_t Length = calculateSerializedLength();
   if (auto EC = Msf.setStreamSize(StreamDBI, Length))
     return EC;
@@ -360,19 +337,21 @@ std::vector<SecMapEntry> DbiStreamBuilder::createSectionMap(
 }
 
 Error DbiStreamBuilder::commit(const msf::MSFLayout &Layout,
-                               WritableBinaryStreamRef Buffer) {
+                               WritableBinaryStreamRef MsfBuffer) {
   if (auto EC = finalize())
     return EC;
 
-  auto InfoS =
-      WritableMappedBlockStream::createIndexedStream(Layout, Buffer, StreamDBI);
+  auto DbiS = WritableMappedBlockStream::createIndexedStream(Layout, MsfBuffer,
+                                                             StreamDBI);
 
-  BinaryStreamWriter Writer(*InfoS);
+  BinaryStreamWriter Writer(*DbiS);
   if (auto EC = Writer.writeObject(*Header))
     return EC;
 
-  if (auto EC = Writer.writeStreamRef(ModInfoBuffer))
-    return EC;
+  for (auto &M : ModiList) {
+    if (auto EC = M->commit(Writer, Layout, MsfBuffer))
+      return EC;
+  }
 
   if (!SectionContribs.empty()) {
     if (auto EC = Writer.writeEnum(DbiSecContribVer60))
@@ -401,7 +380,7 @@ Error DbiStreamBuilder::commit(const msf::MSFLayout &Layout,
     if (Stream.StreamNumber == kInvalidStreamIndex)
       continue;
     auto WritableStream = WritableMappedBlockStream::createIndexedStream(
-        Layout, Buffer, Stream.StreamNumber);
+        Layout, MsfBuffer, Stream.StreamNumber);
     BinaryStreamWriter DbgStreamWriter(*WritableStream);
     if (auto EC = DbgStreamWriter.writeArray(Stream.Data))
       return EC;

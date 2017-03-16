@@ -154,6 +154,7 @@ public:
   uint32_t getOffset() const { return Offset; }
   uint32_t getLength() const { return Stream.getLength(); }
   uint32_t bytesRemaining() const { return getLength() - getOffset(); }
+  Error padToAlignment(uint32_t Align);
 
 protected:
   WritableBinaryStreamRef Stream;

@@ -1125,9 +1125,22 @@ void Darwin::AddDeploymentTarget(DerivedArgList &Args) const {
   }
 
   Arg *OSXVersion = Args.getLastArg(options::OPT_mmacosx_version_min_EQ);
-  Arg *iOSVersion = Args.getLastArg(options::OPT_miphoneos_version_min_EQ);
-  Arg *TvOSVersion = Args.getLastArg(options::OPT_mtvos_version_min_EQ);
-  Arg *WatchOSVersion = Args.getLastArg(options::OPT_mwatchos_version_min_EQ);
+  Arg *iOSVersion = Args.getLastArg(options::OPT_miphoneos_version_min_EQ,
+                                    options::OPT_mios_simulator_version_min_EQ);
+  Arg *TvOSVersion =
+      Args.getLastArg(options::OPT_mtvos_version_min_EQ,
+                      options::OPT_mtvos_simulator_version_min_EQ);
+  Arg *WatchOSVersion =
+      Args.getLastArg(options::OPT_mwatchos_version_min_EQ,
+                      options::OPT_mwatchos_simulator_version_min_EQ);
+
+  // Add a macro to differentiate between m(iphone|tv|watch)os-version-min=X.Y and
+  // -m(iphone|tv|watch)simulator-version-min=X.Y.
+  if (Args.hasArg(options::OPT_mios_simulator_version_min_EQ) ||
+      Args.hasArg(options::OPT_mtvos_simulator_version_min_EQ) ||
+      Args.hasArg(options::OPT_mwatchos_simulator_version_min_EQ))
+    Args.append(Args.MakeSeparateArg(nullptr, Opts.getOption(options::OPT_D),
+                                     " __APPLE_EMBEDDED_SIMULATOR__=1"));
 
   if (OSXVersion && (iOSVersion || TvOSVersion || WatchOSVersion)) {
     getDriver().Diag(diag::err_drv_argument_not_allowed_with)

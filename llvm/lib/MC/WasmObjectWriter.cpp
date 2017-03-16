@@ -982,25 +982,30 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
   }
 
   // === Name Section ==========================================================
-  if (NumFuncImports != 0 || !Functions.empty()) {
+  uint32_t TotalFunctions = NumFuncImports + Functions.size();
+  if (TotalFunctions != 0) {
     startSection(Section, wasm::WASM_SEC_CUSTOM, "name");
+    SectionBookkeeping SubSection;
+    startSection(SubSection, wasm::WASM_NAMES_FUNCTION);
 
-    encodeULEB128(NumFuncImports + Functions.size(), getStream());
+    encodeULEB128(TotalFunctions, getStream());
+    uint32_t Index = 0;
     for (const WasmImport &Import : Imports) {
       if (Import.Kind == wasm::WASM_EXTERNAL_FUNCTION) {
+        encodeULEB128(Index, getStream());
         encodeULEB128(Import.FieldName.size(), getStream());
         writeBytes(Import.FieldName);
-        encodeULEB128(0, getStream()); // local count, meaningless for imports
+        ++Index;
       }
     }
     for (const WasmFunction &Func : Functions) {
+      encodeULEB128(Index, getStream());
       encodeULEB128(Func.Sym->getName().size(), getStream());
       writeBytes(Func.Sym->getName());
-
-      // TODO: Local names.
-      encodeULEB128(0, getStream()); // local count
+      ++Index;
     }
 
+    endSection(SubSection);
     endSection(Section);
   }
 

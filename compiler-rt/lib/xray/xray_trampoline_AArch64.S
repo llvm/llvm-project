@@ -1,3 +1,5 @@
+#include "../builtins/assembly.h"
+
     .text
     /* The variable containing the handler function pointer */
     .global _ZN6__xray19XRayPatchedFunctionE
@@ -138,3 +140,5 @@ FunctionTailExit_restore:
     LDP X3, X4, [SP], #16
     LDP X1, X2, [SP], #16
     RET
+
+NO_EXEC_STACK_DIRECTIVE

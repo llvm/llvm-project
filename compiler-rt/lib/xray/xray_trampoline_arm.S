@@ -1,3 +1,5 @@
+#include "../builtins/assembly.h"
+
     .syntax unified
     .arch armv6t2
     .fpu vfpv2
@@ -96,3 +98,5 @@ FunctionTailExit_restore:
     @ Restore floating-point parameters of the instrumented function
     VPOP {d0-d7}
     POP {r1-r3,pc}
+
+NO_EXEC_STACK_DIRECTIVE

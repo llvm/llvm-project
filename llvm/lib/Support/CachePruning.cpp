@@ -34,7 +34,7 @@ static void writeTimestampFile(StringRef TimestampFile) {
 }
 
 /// Prune the cache of files that haven't been accessed in a long time.
-bool CachePruning::prune() {
+bool llvm::pruneCache(StringRef Path, CachePruningPolicy Policy) {
   using namespace std::chrono;
 
   if (Path.empty())
@@ -47,7 +47,11 @@ bool CachePruning::prune() {
   if (!isPathDir)
     return false;
 
-  if (Expiration == seconds(0) && PercentageOfAvailableSpace == 0) {
+  Policy.PercentageOfAvailableSpace =
+      std::min(Policy.PercentageOfAvailableSpace, 100u);
+
+  if (Policy.Expiration == seconds(0) &&
+      Policy.PercentageOfAvailableSpace == 0) {
     DEBUG(dbgs() << "No pruning settings set, exit early\n");
     // Nothing will be pruned, early exit
     return false;
@@ -67,12 +71,12 @@ bool CachePruning::prune() {
       return false;
     }
   } else {
-    if (Interval == seconds(0)) {
+    if (Policy.Interval == seconds(0)) {
       // Check whether the time stamp is older than our pruning interval.
       // If not, do nothing.
       const auto TimeStampModTime = FileStatus.getLastModificationTime();
       auto TimeStampAge = CurrentTime - TimeStampModTime;
-      if (TimeStampAge <= Interval) {
+      if (TimeStampAge <= Policy.Interval) {
         DEBUG(dbgs() << "Timestamp file too recent ("
                      << duration_cast<seconds>(TimeStampAge).count()
                      << "s old), do not prune.\n");
@@ -85,7 +89,7 @@ bool CachePruning::prune() {
     writeTimestampFile(TimestampFile);
   }
 
-  bool ShouldComputeSize = (PercentageOfAvailableSpace > 0);
+  bool ShouldComputeSize = (Policy.PercentageOfAvailableSpace > 0);
 
   // Keep track of space
   std::set<std::pair<uint64_t, std::string>> FileSizes;
@@ -122,7 +126,7 @@ bool CachePruning::prune() {
     // If the file hasn't been used recently enough, delete it
     const auto FileAccessTime = FileStatus.getLastAccessedTime();
     auto FileAge = CurrentTime - FileAccessTime;
-    if (FileAge > Expiration) {
+    if (FileAge > Policy.Expiration) {
       DEBUG(dbgs() << "Remove " << File->path() << " ("
                    << duration_cast<seconds>(FileAge).count() << "s old)\n");
       sys::fs::remove(File->path());
@@ -143,9 +147,11 @@ bool CachePruning::prune() {
     auto AvailableSpace = TotalSize + SpaceInfo.free;
     auto FileAndSize = FileSizes.rbegin();
     DEBUG(dbgs() << "Occupancy: " << ((100 * TotalSize) / AvailableSpace)
-                 << "% target is: " << PercentageOfAvailableSpace << "\n");
+                 << "% target is: " << Policy.PercentageOfAvailableSpace
+                 << "\n");
     // Remove the oldest accessed files first, till we get below the threshold
-    while (((100 * TotalSize) / AvailableSpace) > PercentageOfAvailableSpace &&
+    while (((100 * TotalSize) / AvailableSpace) >
+               Policy.PercentageOfAvailableSpace &&
            FileAndSize != FileSizes.rend()) {
       // Remove the file.
       sys::fs::remove(FileAndSize->second);

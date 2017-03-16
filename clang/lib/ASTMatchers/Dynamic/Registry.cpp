@@ -359,9 +359,14 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(nullStmt);
   REGISTER_MATCHER(numSelectorArgs);
   REGISTER_MATCHER(ofClass);
+  REGISTER_MATCHER(objcCategoryDecl);
   REGISTER_MATCHER(objcInterfaceDecl);
+  REGISTER_MATCHER(objcIvarDecl);
   REGISTER_MATCHER(objcMessageExpr);
+  REGISTER_MATCHER(objcMethodDecl);
   REGISTER_MATCHER(objcObjectPointerType);
+  REGISTER_MATCHER(objcPropertyDecl);
+  REGISTER_MATCHER(objcProtocolDecl);
   REGISTER_MATCHER(on);
   REGISTER_MATCHER(onImplicitObjectArgument);
   REGISTER_MATCHER(opaqueValueExpr);

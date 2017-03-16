@@ -158,11 +158,11 @@ void MappingTraits<PdbObject>::mapping(IO &IO, PdbObject &Obj) {
 }
 
 void MappingTraits<MSFHeaders>::mapping(IO &IO, MSFHeaders &Obj) {
-  IO.mapRequired("SuperBlock", Obj.SuperBlock);
-  IO.mapRequired("NumDirectoryBlocks", Obj.NumDirectoryBlocks);
-  IO.mapRequired("DirectoryBlocks", Obj.DirectoryBlocks);
-  IO.mapRequired("NumStreams", Obj.NumStreams);
-  IO.mapRequired("FileSize", Obj.FileSize);
+  IO.mapOptional("SuperBlock", Obj.SuperBlock);
+  IO.mapOptional("NumDirectoryBlocks", Obj.NumDirectoryBlocks);
+  IO.mapOptional("DirectoryBlocks", Obj.DirectoryBlocks);
+  IO.mapOptional("NumStreams", Obj.NumStreams);
+  IO.mapOptional("FileSize", Obj.FileSize);
 }
 
 void MappingTraits<msf::SuperBlock>::mapping(IO &IO, msf::SuperBlock &SB) {
@@ -170,12 +170,13 @@ void MappingTraits<msf::SuperBlock>::mapping(IO &IO, msf::SuperBlock &SB) {
     ::memcpy(SB.MagicBytes, msf::Magic, sizeof(msf::Magic));
   }
 
-  IO.mapRequired("BlockSize", SB.BlockSize);
-  IO.mapRequired("FreeBlockMap", SB.FreeBlockMapBlock);
-  IO.mapRequired("NumBlocks", SB.NumBlocks);
-  IO.mapRequired("NumDirectoryBytes", SB.NumDirectoryBytes);
-  IO.mapRequired("Unknown1", SB.Unknown1);
-  IO.mapRequired("BlockMapAddr", SB.BlockMapAddr);
+  using u32 = support::ulittle32_t;
+  IO.mapOptional("BlockSize", SB.BlockSize, u32(4096U));
+  IO.mapOptional("FreeBlockMap", SB.FreeBlockMapBlock, u32(0U));
+  IO.mapOptional("NumBlocks", SB.NumBlocks, u32(0U));
+  IO.mapOptional("NumDirectoryBytes", SB.NumDirectoryBytes, u32(0U));
+  IO.mapOptional("Unknown1", SB.Unknown1, u32(0U));
+  IO.mapOptional("BlockMapAddr", SB.BlockMapAddr, u32(0U));
 }
 
 void MappingTraits<StreamBlockList>::mapping(IO &IO, StreamBlockList &SB) {
@@ -183,26 +184,26 @@ void MappingTraits<StreamBlockList>::mapping(IO &IO, StreamBlockList &SB) {
 }
 
 void MappingTraits<PdbInfoStream>::mapping(IO &IO, PdbInfoStream &Obj) {
-  IO.mapRequired("Age", Obj.Age);
-  IO.mapRequired("Guid", Obj.Guid);
-  IO.mapRequired("Signature", Obj.Signature);
-  IO.mapRequired("Version", Obj.Version);
+  IO.mapOptional("Age", Obj.Age, 1U);
+  IO.mapOptional("Guid", Obj.Guid);
+  IO.mapOptional("Signature", Obj.Signature, 0U);
+  IO.mapOptional("Version", Obj.Version, PdbImplVC70);
 }
 
 void MappingContextTraits<PdbDbiStream, pdb::yaml::SerializationContext>::mapping(IO &IO, PdbDbiStream &Obj, pdb::yaml::SerializationContext &Context) {
-  IO.mapRequired("VerHeader", Obj.VerHeader);
-  IO.mapRequired("Age", Obj.Age);
-  IO.mapRequired("BuildNumber", Obj.BuildNumber);
-  IO.mapRequired("PdbDllVersion", Obj.PdbDllVersion);
-  IO.mapRequired("PdbDllRbld", Obj.PdbDllRbld);
-  IO.mapRequired("Flags", Obj.Flags);
-  IO.mapRequired("MachineType", Obj.MachineType);
+  IO.mapOptional("VerHeader", Obj.VerHeader, PdbDbiV70);
+  IO.mapOptional("Age", Obj.Age, 1U);
+  IO.mapOptional("BuildNumber", Obj.BuildNumber, uint16_t(0U));
+  IO.mapOptional("PdbDllVersion", Obj.PdbDllVersion, 0U);
+  IO.mapOptional("PdbDllRbld", Obj.PdbDllRbld, uint16_t(0U));
+  IO.mapOptional("Flags", Obj.Flags, uint16_t(1U));
+  IO.mapOptional("MachineType", Obj.MachineType, PDB_Machine::x86);
   IO.mapOptionalWithContext("Modules", Obj.ModInfos, Context);
 }
 
 void MappingContextTraits<PdbTpiStream, pdb::yaml::SerializationContext>::mapping(
     IO &IO, pdb::yaml::PdbTpiStream &Obj, pdb::yaml::SerializationContext &Context) {
-  IO.mapRequired("Version", Obj.Version);
+  IO.mapOptional("Version", Obj.Version, PdbTpiV80);
   IO.mapRequired("Records", Obj.Records, Context);
 }
 
@@ -234,13 +235,13 @@ void MappingContextTraits<PdbSymbolRecord, pdb::yaml::SerializationContext>::map
 }
 
 void MappingContextTraits<PdbModiStream, pdb::yaml::SerializationContext>::mapping(IO &IO, PdbModiStream &Obj, pdb::yaml::SerializationContext &Context) {
-  IO.mapRequired("Signature", Obj.Signature);
+  IO.mapOptional("Signature", Obj.Signature, 4U);
   IO.mapRequired("Records", Obj.Symbols, Context);
 }
 
 void MappingContextTraits<PdbDbiModuleInfo, pdb::yaml::SerializationContext>::mapping(IO &IO, PdbDbiModuleInfo &Obj, pdb::yaml::SerializationContext &Context) {
   IO.mapRequired("Module", Obj.Mod);
-  IO.mapRequired("ObjFile", Obj.Obj);
+  IO.mapOptional("ObjFile", Obj.Obj, Obj.Mod);
   IO.mapOptional("SourceFiles", Obj.SourceFiles);
   IO.mapOptionalWithContext("Modi", Obj.Modi, Context);
 }
