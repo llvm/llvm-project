@@ -302,7 +302,7 @@ void DwarfExpression::maskSubRegister() {
   assert(SubRegisterSizeInBits && "no subregister was registered");
   if (SubRegisterOffsetInBits > 0)
     addShr(SubRegisterOffsetInBits);
-  uint64_t Mask = (1UL << SubRegisterSizeInBits) - 1;
+  uint64_t Mask = (1ULL << (uint64_t)SubRegisterSizeInBits) - 1ULL;
   addAnd(Mask);
 }
 
