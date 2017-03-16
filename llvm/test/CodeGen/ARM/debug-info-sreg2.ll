@@ -10,7 +10,7 @@ target triple = "thumbv7-apple-macosx10.6.7"
 
 ; CHECK: 0x00000000: Beginning address offset:
 ; CHECK-NEXT:           Ending address offset:
-; CHECK-NEXT:            Location description: 90 {{.. .. .. .. $}}
+; CHECK-NEXT:            Location description: 90 {{.. .. $}}
 
 define void @_Z3foov() optsize ssp !dbg !1 {
 entry:
