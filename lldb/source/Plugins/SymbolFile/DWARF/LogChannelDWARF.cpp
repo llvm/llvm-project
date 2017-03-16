@@ -9,7 +9,6 @@
 
 #include "LogChannelDWARF.h"
 
-using namespace lldb;
 using namespace lldb_private;
 
 static constexpr Log::Category g_categories[] = {

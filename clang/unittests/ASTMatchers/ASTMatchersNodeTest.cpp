@@ -1500,9 +1500,10 @@ TEST(ObjCMessageExprMatcher, SimpleExprs) {
 
   std::string Objc1String =
     "@interface Str "
-      " - (Str *)uppercaseString:(Str *)str;"
+      " - (Str *)uppercaseString;"
       "@end "
       "@interface foo "
+      "- (void)contents;"
       "- (void)meth:(Str *)text;"
       "@end "
       " "
@@ -1538,6 +1539,46 @@ TEST(ObjCMessageExprMatcher, SimpleExprs) {
     objcMessageExpr(matchesSelector("uppercase*"),
                     argumentCountIs(0)
     )));
+}
+
+TEST(ObjCDeclMacher, CoreDecls) {
+  std::string ObjCString =
+    "@protocol Proto "
+    "- (void)protoDidThing; "
+    "@end "
+    "@interface Thing "
+    "@property int enabled; "
+    "@end "
+    "@interface Thing (ABC) "
+    "- (void)abc_doThing; "
+    "@end "
+    "@implementation Thing "
+    "{ id _ivar; } "
+    "- (void)anything {} "
+    "@end "
+    ;
+
+  EXPECT_TRUE(matchesObjC(
+    ObjCString,
+    objcProtocolDecl(hasName("Proto"))));
+  EXPECT_TRUE(matchesObjC(
+    ObjCString,
+    objcCategoryDecl(hasName("ABC"))));
+  EXPECT_TRUE(matchesObjC(
+    ObjCString,
+    objcMethodDecl(hasName("protoDidThing"))));
+  EXPECT_TRUE(matchesObjC(
+    ObjCString,
+    objcMethodDecl(hasName("abc_doThing"))));
+  EXPECT_TRUE(matchesObjC(
+    ObjCString,
+    objcMethodDecl(hasName("anything"))));
+  EXPECT_TRUE(matchesObjC(
+    ObjCString,
+    objcIvarDecl(hasName("_ivar"))));
+  EXPECT_TRUE(matchesObjC(
+    ObjCString,
+    objcPropertyDecl(hasName("enabled"))));
 }
 
 } // namespace ast_matchers

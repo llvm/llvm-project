@@ -123,6 +123,9 @@ cl::opt<uint64_t> LoadAddress(
     "load-address",
     cl::desc("Assume the module is loaded at the specified address"),
     cl::cat(OtherOptions), cl::sub(PrettySubcommand));
+cl::opt<bool> Native("native", cl::desc("Use native PDB reader instead of DIA"),
+  cl::cat(OtherOptions), cl::sub(PrettySubcommand));
+
 cl::list<std::string> ExcludeTypes(
     "exclude-types", cl::desc("Exclude types by regular expression"),
     cl::ZeroOrMore, cl::cat(FilterCategory), cl::sub(PrettySubcommand));
@@ -476,7 +479,9 @@ static void diff(StringRef Path1, StringRef Path2) {
 static void dumpPretty(StringRef Path) {
   std::unique_ptr<IPDBSession> Session;
 
-  ExitOnErr(loadDataForPDB(PDB_ReaderType::DIA, Path, Session));
+  const auto ReaderType =
+      opts::pretty::Native ? PDB_ReaderType::Native : PDB_ReaderType::DIA;
+  ExitOnErr(loadDataForPDB(ReaderType, Path, Session));
 
   if (opts::pretty::LoadAddress)
     Session->setLoadAddress(opts::pretty::LoadAddress);

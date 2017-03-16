@@ -78,6 +78,22 @@ public:
   bool isPIEDefault() const override;
   bool isPICDefaultForced() const override;
 
+  enum class SubDirectoryType {
+    Bin,
+    Include,
+    Lib,
+  };
+  std::string getSubDirectoryPath(SubDirectoryType Type,
+                                  llvm::Triple::ArchType TargetArch) const;
+
+  // Convenience overload.
+  // Uses the current target arch.
+  std::string getSubDirectoryPath(SubDirectoryType Type) const {
+    return getSubDirectoryPath(Type, getArch());
+  }
+
+  bool getIsVS2017OrNewer() const { return IsVS2017OrNewer; }
+
   void
   AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                             llvm::opt::ArgStringList &CC1Args) const override;
@@ -88,17 +104,10 @@ public:
   void AddCudaIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                           llvm::opt::ArgStringList &CC1Args) const override;
 
-  bool getWindowsSDKDir(std::string &path, int &major,
-                        std::string &windowsSDKIncludeVersion,
-                        std::string &windowsSDKLibVersion) const;
   bool getWindowsSDKLibraryPath(std::string &path) const;
   /// \brief Check if Universal CRT should be used if available
-  bool useUniversalCRT(std::string &visualStudioDir) const;
-  bool getUniversalCRTSdkDir(std::string &path, std::string &ucrtVersion) const;
   bool getUniversalCRTLibraryPath(std::string &path) const;
-  bool getVisualStudioInstallDir(std::string &path) const;
-  bool getVisualStudioBinariesFolder(const char *clangProgramPath,
-                                     std::string &path) const;
+  bool useUniversalCRT() const;
   VersionTuple
   computeMSVCVersion(const Driver *D,
                      const llvm::opt::ArgList &Args) const override;
@@ -120,9 +129,8 @@ protected:
   Tool *buildLinker() const override;
   Tool *buildAssembler() const override;
 private:
-  VersionTuple getMSVCVersionFromTriple() const;
-  VersionTuple getMSVCVersionFromExe() const;
-
+  std::string VCToolChainPath;
+  bool IsVS2017OrNewer = false;
   CudaInstallationDetector CudaInstallation;
 };
 

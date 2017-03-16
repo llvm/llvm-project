@@ -19,8 +19,8 @@ entry:
 ; PPC64: blr
 
 ; PPC64-P8-LABEL: test_abs:
-; PPC64-P8-DAG: mfvsrd [[LO:[0-9]+]], 2
-; PPC64-P8-DAG: mfvsrd [[HI:[0-9]+]], 1
+; PPC64-P8-DAG: mffprd [[LO:[0-9]+]], 2
+; PPC64-P8-DAG: mffprd [[HI:[0-9]+]], 1
 ; PPC64-P8-DAG: rldicr [[FLIP_BIT:[0-9]+]], [[HI]], 0, 0
 ; PPC64-P8-DAG: xor 3, [[HI]], [[FLIP_BIT]]
 ; PPC64-P8-DAG: xor 4, [[LO]], [[FLIP_BIT]]
@@ -59,8 +59,8 @@ entry:
 ; PPC64: blr
 
 ; PPC64-P8-LABEL: test_neg:
-; PPC64-P8-DAG: mfvsrd [[LO:[0-9]+]], 2
-; PPC64-P8-DAG: mfvsrd [[HI:[0-9]+]], 1
+; PPC64-P8-DAG: mffprd [[LO:[0-9]+]], 2
+; PPC64-P8-DAG: mffprd [[HI:[0-9]+]], 1
 ; PPC64-P8-DAG: li [[IMM1:[0-9]+]], 1
 ; PPC64-P8-DAG: sldi [[FLIP_BIT:[0-9]+]], [[IMM1]], 63
 ; PPC64-P8-NOT: BARRIER
@@ -101,7 +101,7 @@ entry:
 ; PPC64: blr
 
 ; PPC64-P8-LABEL: test_copysign:
-; PPC64-P8-DAG: mfvsrd [[X_HI:[0-9]+]], 1
+; PPC64-P8-DAG: mffprd [[X_HI:[0-9]+]], 1
 ; PPC64-P8-DAG: li [[HI_TMP:[0-9]+]], 16399
 ; PPC64-P8-DAG: sldi [[CST_HI:[0-9]+]], [[HI_TMP]], 48
 ; PPC64-P8-DAG: li [[LO_TMP:[0-9]+]], 3019

@@ -123,8 +123,8 @@ define void @fabs_free_v2f16(<2 x half> addrspace(1)* %out, i32 %in) #0 {
 ; CI: v_cvt_f32_f16_e32
 ; CI: v_cvt_f32_f16_e32
 ; CI: v_mul_f32_e64 v{{[0-9]+}}, |v{{[0-9]+}}|, v{{[0-9]+}}
-; CI: v_mul_f32_e64 v{{[0-9]+}}, |v{{[0-9]+}}|, v{{[0-9]+}}
 ; CI: v_cvt_f16_f32
+; CI: v_mul_f32_e64 v{{[0-9]+}}, |v{{[0-9]+}}|, v{{[0-9]+}}
 ; CI: v_cvt_f16_f32
 
 ; VI: v_lshrrev_b32_e32 v{{[0-9]+}}, 16,

@@ -7,6 +7,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <string_view>
+// <string>
+//   The strings's value type must be the same as the traits's char_type
 
-int main () {}
+#include <string>
+
+int main()
+{
+    std::basic_string<char, std::char_traits<wchar_t>> s;
+}

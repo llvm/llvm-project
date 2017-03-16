@@ -532,9 +532,12 @@
             xxswapd 7, 63
 
 # Move to/from VSR
-# CHECK-BE: mfvsrd 3, 0                        # encoding: [0x7c,0x03,0x00,0x66]
-# CHECK-LE: mfvsrd 3, 0                        # encoding: [0x66,0x00,0x03,0x7c]
-            mfvsrd 3, 0
+# CHECK-BE: mfvsrd 3, 40                       # encoding: [0x7d,0x03,0x00,0x67]
+# CHECK-LE: mfvsrd 3, 40                       # encoding: [0x67,0x00,0x03,0x7d]
+            mfvsrd 3, 40
+# CHECK-BE: mfvsrd 3, 40                       # encoding: [0x7d,0x03,0x00,0x67]
+# CHECK-LE: mfvsrd 3, 40                       # encoding: [0x67,0x00,0x03,0x7d]
+            mfvrd 3, 8
 # CHECK-BE: mfvsrwz 5, 0                       # encoding: [0x7c,0x05,0x00,0xe6]
 # CHECK-LE: mfvsrwz 5, 0                       # encoding: [0xe6,0x00,0x05,0x7c]
             mfvsrwz 5, 0

@@ -349,7 +349,7 @@ private:
   std::unordered_multimap<Comdat *, GlobalValue *> &ComdatMembers;
 
 public:
-  std::vector<Instruction *> IndirectCallSites;
+  std::vector<std::vector<Instruction *>> ValueSites;
   SelectInstVisitor SIVisitor;
   std::string FuncName;
   GlobalVariable *FuncNameVar;
@@ -380,13 +380,13 @@ public:
       std::unordered_multimap<Comdat *, GlobalValue *> &ComdatMembers,
       bool CreateGlobalVar = false, BranchProbabilityInfo *BPI = nullptr,
       BlockFrequencyInfo *BFI = nullptr)
-      : F(Func), ComdatMembers(ComdatMembers), SIVisitor(Func), FunctionHash(0),
-        MST(F, BPI, BFI) {
+      : F(Func), ComdatMembers(ComdatMembers), ValueSites(IPVK_Last + 1),
+        SIVisitor(Func), FunctionHash(0), MST(F, BPI, BFI) {
 
     // This should be done before CFG hash computation.
     SIVisitor.countSelects(Func);
     NumOfPGOSelectInsts += SIVisitor.getNumOfSelectInsts();
-    IndirectCallSites = findIndirectCallSites(Func);
+    ValueSites[IPVK_IndirectCallTarget] = findIndirectCallSites(Func);
 
     FuncName = getPGOFuncName(F);
     computeCFGHash();
@@ -438,7 +438,7 @@ void FuncPGOInstrumentation<Edge, BBInfo>::computeCFGHash() {
   }
   JC.update(Indexes);
   FunctionHash = (uint64_t)SIVisitor.getNumOfSelectInsts() << 56 |
-                 (uint64_t)IndirectCallSites.size() << 48 |
+                 (uint64_t)ValueSites[IPVK_IndirectCallTarget].size() << 48 |
                  (uint64_t)MST.AllEdges.size() << 32 | JC.getCRC();
 }
 
@@ -585,7 +585,7 @@ static void instrumentOneFunc(
     return;
 
   unsigned NumIndirectCallSites = 0;
-  for (auto &I : FuncInfo.IndirectCallSites) {
+  for (auto &I : FuncInfo.ValueSites[IPVK_IndirectCallTarget]) {
     CallSite CS(I);
     Value *Callee = CS.getCalledValue();
     DEBUG(dbgs() << "Instrument one indirect call: CallSite Index = "
@@ -598,7 +598,7 @@ static void instrumentOneFunc(
         {llvm::ConstantExpr::getBitCast(FuncInfo.FuncNameVar, I8PtrTy),
          Builder.getInt64(FuncInfo.FunctionHash),
          Builder.CreatePtrToInt(Callee, Builder.getInt64Ty()),
-         Builder.getInt32(llvm::InstrProfValueKind::IPVK_IndirectCallTarget),
+         Builder.getInt32(IPVK_IndirectCallTarget),
          Builder.getInt32(NumIndirectCallSites++)});
   }
   NumOfPGOICall += NumIndirectCallSites;
@@ -686,8 +686,11 @@ public:
   // Set the branch weights based on the count values.
   void setBranchWeights();
 
-  // Annotate the indirect call sites.
-  void annotateIndirectCallSites();
+  // Annotate the value profile call sites all all value kind.
+  void annotateValueSites();
+
+  // Annotate the value profile call sites for one value kind.
+  void annotateValueSites(uint32_t Kind);
 
   // The hotness of the function from the profile count.
   enum FuncFreqAttr { FFA_Normal, FFA_Cold, FFA_Hot };
@@ -1070,35 +1073,41 @@ void SelectInstVisitor::visitSelectInst(SelectInst &SI) {
   llvm_unreachable("Unknown visiting mode");
 }
 
-// Traverse all the indirect callsites and annotate the instructions.
-void PGOUseFunc::annotateIndirectCallSites() {
+// Traverse all valuesites and annotate the instructions for all value kind.
+void PGOUseFunc::annotateValueSites() {
   if (DisableValueProfiling)
     return;
 
   // Create the PGOFuncName meta data.
   createPGOFuncNameMetadata(F, FuncInfo.FuncName);
 
-  unsigned IndirectCallSiteIndex = 0;
-  auto &IndirectCallSites = FuncInfo.IndirectCallSites;
-  unsigned NumValueSites =
-      ProfileRecord.getNumValueSites(IPVK_IndirectCallTarget);
-  if (NumValueSites != IndirectCallSites.size()) {
-    std::string Msg =
-        std::string("Inconsistent number of indirect call sites: ") +
-        F.getName().str();
+  for (uint32_t Kind = IPVK_First; Kind <= IPVK_Last; ++Kind)
+    annotateValueSites(Kind);
+}
+
+// Annotate the instructions for a specific value kind.
+void PGOUseFunc::annotateValueSites(uint32_t Kind) {
+  unsigned ValueSiteIndex = 0;
+  auto &ValueSites = FuncInfo.ValueSites[Kind];
+  unsigned NumValueSites = ProfileRecord.getNumValueSites(Kind);
+  if (NumValueSites != ValueSites.size()) {
     auto &Ctx = M->getContext();
-    Ctx.diagnose(
-        DiagnosticInfoPGOProfile(M->getName().data(), Msg, DS_Warning));
+    Ctx.diagnose(DiagnosticInfoPGOProfile(
+        M->getName().data(),
+        Twine("Inconsistent number of value sites for kind = ") + Twine(Kind) +
+            " in " + F.getName().str(),
+        DS_Warning));
     return;
   }
 
-  for (auto &I : IndirectCallSites) {
-    DEBUG(dbgs() << "Read one indirect call instrumentation: Index="
-                 << IndirectCallSiteIndex << " out of " << NumValueSites
-                 << "\n");
-    annotateValueSite(*M, *I, ProfileRecord, IPVK_IndirectCallTarget,
-                      IndirectCallSiteIndex, MaxNumAnnotations);
-    IndirectCallSiteIndex++;
+  for (auto &I : ValueSites) {
+    DEBUG(dbgs() << "Read one value site profile (kind = " << Kind
+                 << "): Index = " << ValueSiteIndex << " out of "
+                 << NumValueSites << "\n");
+    annotateValueSite(*M, *I, ProfileRecord,
+                      static_cast<InstrProfValueKind>(Kind), ValueSiteIndex,
+                      MaxNumAnnotations);
+    ValueSiteIndex++;
   }
 }
 } // end anonymous namespace
@@ -1231,7 +1240,7 @@ static bool annotateAllFunctions(
       continue;
     Func.populateCounters();
     Func.setBranchWeights();
-    Func.annotateIndirectCallSites();
+    Func.annotateValueSites();
     PGOUseFunc::FuncFreqAttr FreqAttr = Func.getFuncFreqAttr();
     if (FreqAttr == PGOUseFunc::FFA_Cold)
       ColdFunctions.push_back(&F);

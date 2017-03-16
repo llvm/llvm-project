@@ -121,6 +121,7 @@ else()
       linux/HostInfoLinux.cpp
       linux/HostThreadLinux.cpp
       linux/LibcGlue.cpp
+      linux/Support.cpp
       )
     list(APPEND LLDB_PLUGINS lldbPluginProcessLinux)
     if (CMAKE_SYSTEM_NAME MATCHES "Android")

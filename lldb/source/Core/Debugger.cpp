@@ -1242,7 +1242,7 @@ void Debugger::SetLoggingCallback(lldb::LogOutputCallback log_callback,
 bool Debugger::EnableLog(llvm::StringRef channel,
                          llvm::ArrayRef<const char *> categories,
                          llvm::StringRef log_file, uint32_t log_options,
-                         Stream &error_stream) {
+                         llvm::raw_ostream &error_stream) {
   const bool should_close = true;
   const bool unbuffered = true;
 
@@ -1266,7 +1266,7 @@ bool Debugger::EnableLog(llvm::StringRef channel,
       int FD;
       if (std::error_code ec =
               llvm::sys::fs::openFileForWrite(log_file, FD, flags)) {
-        error_stream.Format("Unable to open log file: {0}", ec.message());
+        error_stream << "Unable to open log file: " << ec.message();
         return false;
       }
       log_stream_sp.reset(

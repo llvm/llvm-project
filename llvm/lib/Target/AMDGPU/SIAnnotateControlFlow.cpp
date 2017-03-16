@@ -215,9 +215,9 @@ void SIAnnotateControlFlow::eraseIfUnused(PHINode *Phi) {
 
 /// \brief Open a new "If" block
 void SIAnnotateControlFlow::openIf(BranchInst *Term) {
-  if (isUniform(Term)) {
+  if (isUniform(Term))
     return;
-  }
+
   Value *Ret = CallInst::Create(If, Term->getCondition(), "", Term);
   Term->setCondition(ExtractValueInst::Create(Ret, 0, "", Term));
   push(Term->getSuccessor(1), ExtractValueInst::Create(Ret, 1, "", Term));
@@ -296,14 +296,17 @@ Value *SIAnnotateControlFlow::handleLoopCondition(Value *Cond, PHINode *Broken,
           continue;
         }
       }
+
       TerminatorInst *Insert = From->getTerminator();
       Value *PhiArg = CallInst::Create(Break, Broken, "", Insert);
       NewPhi->setIncomingValue(i, PhiArg);
     }
+
     eraseIfUnused(Phi);
     return Ret;
+  }
 
-  } else if (Instruction *Inst = dyn_cast<Instruction>(Cond)) {
+  if (Instruction *Inst = dyn_cast<Instruction>(Cond)) {
     BasicBlock *Parent = Inst->getParent();
     Instruction *Insert;
     if (L->contains(Inst)) {
@@ -311,30 +314,30 @@ Value *SIAnnotateControlFlow::handleLoopCondition(Value *Cond, PHINode *Broken,
     } else {
       Insert = L->getHeader()->getFirstNonPHIOrDbgOrLifetime();
     }
+
     Value *Args[] = { Cond, Broken };
     return CallInst::Create(IfBreak, Args, "", Insert);
+  }
 
   // Insert IfBreak before TERM for constant COND.
-  } else if (isa<ConstantInt>(Cond)) {
+  if (isa<ConstantInt>(Cond)) {
     Value *Args[] = { Cond, Broken };
     return CallInst::Create(IfBreak, Args, "", Term);
-
-  } else {
-    llvm_unreachable("Unhandled loop condition!");
   }
-  return nullptr;
+
+  llvm_unreachable("Unhandled loop condition!");
 }
 
 /// \brief Handle a back edge (loop)
 void SIAnnotateControlFlow::handleLoop(BranchInst *Term) {
-  if (isUniform(Term)) {
+  if (isUniform(Term))
     return;
-  }
 
   BasicBlock *BB = Term->getParent();
   llvm::Loop *L = LI->getLoopFor(BB);
   if (!L)
     return;
+
   BasicBlock *Target = Term->getSuccessor(1);
   PHINode *Broken = PHINode::Create(Int64, 0, "", &Target->front());
 
@@ -342,15 +345,14 @@ void SIAnnotateControlFlow::handleLoop(BranchInst *Term) {
   Term->setCondition(BoolTrue);
   Value *Arg = handleLoopCondition(Cond, Broken, L, Term);
 
-  for (pred_iterator PI = pred_begin(Target), PE = pred_end(Target);
-       PI != PE; ++PI) {
-
-    Broken->addIncoming(*PI == BB ? Arg : Int64Zero, *PI);
-  }
+  for (BasicBlock *Pred : predecessors(Target))
+    Broken->addIncoming(Pred == BB ? Arg : Int64Zero, Pred);
 
   Term->setCondition(CallInst::Create(Loop, Arg, "", Term));
   push(Term->getSuccessor(0), Arg);
-}/// \brief Close the last opened control flow
+}
+
+/// \brief Close the last opened control flow
 void SIAnnotateControlFlow::closeControlFlow(BasicBlock *BB) {
   llvm::Loop *L = LI->getLoopFor(BB);
 
@@ -360,14 +362,15 @@ void SIAnnotateControlFlow::closeControlFlow(BasicBlock *BB) {
     // We can't insert an EndCF call into a loop header, because it will
     // get executed on every iteration of the loop, when it should be
     // executed only once before the loop.
-    SmallVector <BasicBlock*, 8> Latches;
+    SmallVector <BasicBlock *, 8> Latches;
     L->getLoopLatches(Latches);
 
-    std::vector<BasicBlock*> Preds;
-    for (pred_iterator PI = pred_begin(BB), PE = pred_end(BB); PI != PE; ++PI) {
-      if (!is_contained(Latches, *PI))
-        Preds.push_back(*PI);
+    SmallVector<BasicBlock *, 2> Preds;
+    for (BasicBlock *Pred : predecessors(BB)) {
+      if (!is_contained(Latches, Pred))
+        Preds.push_back(Pred);
     }
+
     BB = llvm::SplitBlockPredecessors(BB, Preds, "endcf.split", DT, LI, false);
   }
 
@@ -380,40 +383,41 @@ void SIAnnotateControlFlow::closeControlFlow(BasicBlock *BB) {
 /// \brief Annotate the control flow with intrinsics so the backend can
 /// recognize if/then/else and loops.
 bool SIAnnotateControlFlow::runOnFunction(Function &F) {
-
   DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
   LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
   DA = &getAnalysis<DivergenceAnalysis>();
 
   for (df_iterator<BasicBlock *> I = df_begin(&F.getEntryBlock()),
        E = df_end(&F.getEntryBlock()); I != E; ++I) {
-
-    BranchInst *Term = dyn_cast<BranchInst>((*I)->getTerminator());
+    BasicBlock *BB = *I;
+    BranchInst *Term = dyn_cast<BranchInst>(BB->getTerminator());
 
     if (!Term || Term->isUnconditional()) {
-      if (isTopOfStack(*I))
-        closeControlFlow(*I);
+      if (isTopOfStack(BB))
+        closeControlFlow(BB);
 
       continue;
     }
 
     if (I.nodeVisited(Term->getSuccessor(1))) {
-      if (isTopOfStack(*I))
-        closeControlFlow(*I);
+      if (isTopOfStack(BB))
+        closeControlFlow(BB);
 
       handleLoop(Term);
       continue;
     }
 
-    if (isTopOfStack(*I)) {
+    if (isTopOfStack(BB)) {
       PHINode *Phi = dyn_cast<PHINode>(Term->getCondition());
-      if (Phi && Phi->getParent() == *I && isElse(Phi)) {
+      if (Phi && Phi->getParent() == BB && isElse(Phi)) {
         insertElse(Term);
         eraseIfUnused(Phi);
         continue;
       }
-      closeControlFlow(*I);
+
+      closeControlFlow(BB);
     }
+
     openIf(Term);
   }
 

@@ -689,11 +689,12 @@ private:
     assert(DefaultValue.hasValue() == false &&
            "Optional<T> shouldn't have a value!");
     void *SaveInfo;
-    bool UseDefault;
+    bool UseDefault = true;
     const bool sameAsDefault = outputting() && !Val.hasValue();
     if (!outputting() && !Val.hasValue())
       Val = T();
-    if (this->preflightKey(Key, Required, sameAsDefault, UseDefault,
+    if (Val.hasValue() &&
+        this->preflightKey(Key, Required, sameAsDefault, UseDefault,
                            SaveInfo)) {
       yamlize(*this, Val.getValue(), Required, Ctx);
       this->postflightKey(SaveInfo);
@@ -731,7 +732,7 @@ private:
   }
 
 private:
-  void  *Ctxt;
+  void *Ctxt;
 };
 
 namespace detail {
@@ -1251,6 +1252,13 @@ public:
   Output(llvm::raw_ostream &, void *Ctxt = nullptr, int WrapColumn = 70);
   ~Output() override;
 
+  /// \brief Set whether or not to output optional values which are equal
+  /// to the default value.  By default, when outputting if you attempt
+  /// to write a value that is equal to the default, the value gets ignored.
+  /// Sometimes, it is useful to be able to see these in the resulting YAML
+  /// anyway.
+  void setWriteDefaultValues(bool Write) { WriteDefaultValues = Write; }
+
   bool outputting() override;
   bool mapTag(StringRef, bool) override;
   void beginMapping() override;
@@ -1314,6 +1322,7 @@ private:
   bool                     NeedFlowSequenceComma;
   bool                     EnumerationMatchFound;
   bool                     NeedsNewLine;
+  bool WriteDefaultValues;
 };
 
 /// YAML I/O does conversion based on types. But often native data types

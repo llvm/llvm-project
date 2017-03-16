@@ -116,6 +116,7 @@ namespace llvm {
 
       Ext,
       Ins,
+      CIns,
 
       // EXTR.W instrinsic nodes.
       EXTP,

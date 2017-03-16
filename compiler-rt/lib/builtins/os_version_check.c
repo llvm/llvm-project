@@ -47,9 +47,12 @@ static void parseSystemVersionPList(void *Unused) {
           RTLD_DEFAULT, "CFPropertyListCreateWithData");
   /* CFPropertyListCreateWithData was introduced only in macOS 10.6+, so it
    * will be NULL on earlier OS versions. */
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
   typeof(CFPropertyListCreateFromXMLData) *CFPropertyListCreateFromXMLDataFunc =
       (typeof(CFPropertyListCreateFromXMLData) *)dlsym(
           RTLD_DEFAULT, "CFPropertyListCreateFromXMLData");
+#pragma clang diagnostic pop
   /* CFPropertyListCreateFromXMLDataFunc is deprecated in macOS 10.10, so it
    * might be NULL in future OS versions. */
   if (!CFPropertyListCreateWithDataFunc && !CFPropertyListCreateFromXMLDataFunc)

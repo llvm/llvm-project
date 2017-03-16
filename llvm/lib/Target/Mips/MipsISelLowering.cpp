@@ -147,6 +147,7 @@ const char *MipsTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case MipsISD::Sync:              return "MipsISD::Sync";
   case MipsISD::Ext:               return "MipsISD::Ext";
   case MipsISD::Ins:               return "MipsISD::Ins";
+  case MipsISD::CIns:              return "MipsISD::CIns";
   case MipsISD::LWL:               return "MipsISD::LWL";
   case MipsISD::LWR:               return "MipsISD::LWR";
   case MipsISD::SWL:               return "MipsISD::SWL";
@@ -428,6 +429,7 @@ MipsTargetLowering::MipsTargetLowering(const MipsTargetMachine &TM,
   setTargetDAGCombine(ISD::OR);
   setTargetDAGCombine(ISD::ADD);
   setTargetDAGCombine(ISD::AssertZext);
+  setTargetDAGCombine(ISD::SHL);
 
   if (ABI.IsO32()) {
     // These libcalls are not available in 32-bit.
@@ -702,41 +704,81 @@ static SDValue performCMovFPCombine(SDNode *N, SelectionDAG &DAG,
 static SDValue performANDCombine(SDNode *N, SelectionDAG &DAG,
                                  TargetLowering::DAGCombinerInfo &DCI,
                                  const MipsSubtarget &Subtarget) {
-  // Pattern match EXT.
-  //  $dst = and ((sra or srl) $src , pos), (2**size - 1)
-  //  => ext $dst, $src, size, pos
   if (DCI.isBeforeLegalizeOps() || !Subtarget.hasExtractInsert())
     return SDValue();
 
-  SDValue ShiftRight = N->getOperand(0), Mask = N->getOperand(1);
-  unsigned ShiftRightOpc = ShiftRight.getOpcode();
+  SDValue FirstOperand = N->getOperand(0);
+  unsigned FirstOperandOpc = FirstOperand.getOpcode();
+  SDValue Mask = N->getOperand(1);
+  EVT ValTy = N->getValueType(0);
+  SDLoc DL(N);
 
-  // Op's first operand must be a shift right.
-  if (ShiftRightOpc != ISD::SRA && ShiftRightOpc != ISD::SRL)
-    return SDValue();
-
-  // The second operand of the shift must be an immediate.
+  uint64_t Pos = 0, SMPos, SMSize;
   ConstantSDNode *CN;
-  if (!(CN = dyn_cast<ConstantSDNode>(ShiftRight.getOperand(1))))
-    return SDValue();
-
-  uint64_t Pos = CN->getZExtValue();
-  uint64_t SMPos, SMSize;
+  SDValue NewOperand;
+  unsigned Opc;
 
   // Op's second operand must be a shifted mask.
   if (!(CN = dyn_cast<ConstantSDNode>(Mask)) ||
       !isShiftedMask(CN->getZExtValue(), SMPos, SMSize))
     return SDValue();
 
-  // Return if the shifted mask does not start at bit 0 or the sum of its size
-  // and Pos exceeds the word's size.
-  EVT ValTy = N->getValueType(0);
-  if (SMPos != 0 || Pos + SMSize > ValTy.getSizeInBits())
-    return SDValue();
+  if (FirstOperandOpc == ISD::SRA || FirstOperandOpc == ISD::SRL) {
+    // Pattern match EXT.
+    //  $dst = and ((sra or srl) $src , pos), (2**size - 1)
+    //  => ext $dst, $src, pos, size
 
-  SDLoc DL(N);
-  return DAG.getNode(MipsISD::Ext, DL, ValTy,
-                     ShiftRight.getOperand(0),
+    // The second operand of the shift must be an immediate.
+    if (!(CN = dyn_cast<ConstantSDNode>(FirstOperand.getOperand(1))))
+      return SDValue();
+
+    Pos = CN->getZExtValue();
+
+    // Return if the shifted mask does not start at bit 0 or the sum of its size
+    // and Pos exceeds the word's size.
+    if (SMPos != 0 || Pos + SMSize > ValTy.getSizeInBits())
+      return SDValue();
+
+    Opc = MipsISD::Ext;
+    NewOperand = FirstOperand.getOperand(0);
+  } else if (FirstOperandOpc == ISD::SHL && Subtarget.hasCnMips()) {
+    // Pattern match CINS.
+    //  $dst = and (shl $src , pos), mask
+    //  => cins $dst, $src, pos, size
+    // mask is a shifted mask with consecutive 1's, pos = shift amount,
+    // size = population count.
+
+    // The second operand of the shift must be an immediate.
+    if (!(CN = dyn_cast<ConstantSDNode>(FirstOperand.getOperand(1))))
+      return SDValue();
+
+    Pos = CN->getZExtValue();
+
+    if (SMPos != Pos || Pos >= ValTy.getSizeInBits() || SMSize >= 32 ||
+        Pos + SMSize > ValTy.getSizeInBits())
+      return SDValue();
+
+    NewOperand = FirstOperand.getOperand(0);
+    // SMSize is 'location' (position) in this case, not size.
+    SMSize--;
+    Opc = MipsISD::CIns;
+  } else {
+    // Pattern match EXT.
+    //  $dst = and $src, (2**size - 1) , if size > 16
+    //  => ext $dst, $src, pos, size , pos = 0
+
+    // If the mask is <= 0xffff, andi can be used instead.
+    if (CN->getZExtValue() <= 0xffff)
+      return SDValue();
+
+    // Return if the mask doesn't start at position 0.
+    if (SMPos)
+      return SDValue();
+
+    Opc = MipsISD::Ext;
+    NewOperand = FirstOperand;
+  }
+  return DAG.getNode(Opc, DL, ValTy, NewOperand,
                      DAG.getConstant(Pos, DL, MVT::i32),
                      DAG.getConstant(SMSize, DL, MVT::i32));
 }
@@ -855,6 +897,58 @@ static SDValue performAssertZextCombine(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+
+static SDValue performSHLCombine(SDNode *N, SelectionDAG &DAG,
+                                 TargetLowering::DAGCombinerInfo &DCI,
+                                 const MipsSubtarget &Subtarget) {
+  // Pattern match CINS.
+  //  $dst = shl (and $src , imm), pos
+  //  => cins $dst, $src, pos, size
+
+  if (DCI.isBeforeLegalizeOps() || !Subtarget.hasCnMips())
+    return SDValue();
+
+  SDValue FirstOperand = N->getOperand(0);
+  unsigned FirstOperandOpc = FirstOperand.getOpcode();
+  SDValue SecondOperand = N->getOperand(1);
+  EVT ValTy = N->getValueType(0);
+  SDLoc DL(N);
+
+  uint64_t Pos = 0, SMPos, SMSize;
+  ConstantSDNode *CN;
+  SDValue NewOperand;
+
+  // The second operand of the shift must be an immediate.
+  if (!(CN = dyn_cast<ConstantSDNode>(SecondOperand)))
+    return SDValue();
+
+  Pos = CN->getZExtValue();
+
+  if (Pos >= ValTy.getSizeInBits())
+    return SDValue();
+
+  if (FirstOperandOpc != ISD::AND)
+    return SDValue();
+
+  // AND's second operand must be a shifted mask.
+  if (!(CN = dyn_cast<ConstantSDNode>(FirstOperand.getOperand(1))) ||
+      !isShiftedMask(CN->getZExtValue(), SMPos, SMSize))
+    return SDValue();
+
+  // Return if the shifted mask does not start at bit 0 or the sum of its size
+  // and Pos exceeds the word's size.
+  if (SMPos != 0 || SMSize > 32 || Pos + SMSize > ValTy.getSizeInBits())
+    return SDValue();
+
+  NewOperand = FirstOperand.getOperand(0);
+  // SMSize is 'location' (position) in this case, not size.
+  SMSize--;
+
+  return DAG.getNode(MipsISD::CIns, DL, ValTy, NewOperand,
+                     DAG.getConstant(Pos, DL, MVT::i32),
+                     DAG.getConstant(SMSize, DL, MVT::i32));
+}
+
 SDValue  MipsTargetLowering::PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI)
   const {
   SelectionDAG &DAG = DCI.DAG;
@@ -878,6 +972,8 @@ SDValue  MipsTargetLowering::PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI)
     return performADDCombine(N, DAG, DCI, Subtarget);
   case ISD::AssertZext:
     return performAssertZextCombine(N, DAG, DCI, Subtarget);
+  case ISD::SHL:
+    return performSHLCombine(N, DAG, DCI, Subtarget);
   }
 
   return SDValue();

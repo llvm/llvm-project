@@ -1,0 +1,21 @@
+# Check directory options for obvious issues.
+
+RUN: llvm-config --bindir 2>&1 | FileCheck --check-prefix=CHECK-BINDIR %s
+CHECK-BINDIR: {{.*}}{{/|\\}}bin
+CHECK-BINDIR-NOT: error:
+CHECK-BINDIR-NOT: warning
+
+RUN: llvm-config --includedir 2>&1 | FileCheck --check-prefix=CHECK-INCLUDEDIR %s
+CHECK-INCLUDEDIR: {{.*}}{{/|\\}}include
+CHECK-INCLUDEDIR-NOT: error:
+CHECK-INCLUDEDIR-NOT: warning
+
+RUN: llvm-config --libdir 2>&1 | FileCheck --check-prefix=CHECK-LIBDIR %s
+CHECK-LIBDIR: {{.*}}{{/|\\}}lib{{.*}}
+CHECK-LIBDIR-NOT: error:
+CHECK-LIBDIR-NOT: warning
+
+RUN: llvm-config --cmakedir 2>&1 | FileCheck --check-prefix=CHECK-CMAKEDIR %s
+CHECK-CMAKEDIR: {{.*}}{{/|\\}}cmake{{/|\\}}llvm
+CHECK-CMAKEDIR-NOT: error:
+CHECK-CMAKEDIR-NOT: warning

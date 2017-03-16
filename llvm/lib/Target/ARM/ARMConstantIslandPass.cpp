@@ -2104,6 +2104,12 @@ bool ARMConstantIslands::optimizeThumb2JumpTables() {
       IdxReg = Shift->getOperand(2).getReg();
       unsigned ShiftedIdxReg = Shift->getOperand(0).getReg();
 
+      // It's important that IdxReg is live until the actual TBB/TBH. Most of
+      // the range is checked later, but the LEA might still clobber it and not
+      // actually get removed.
+      if (BaseReg == IdxReg && !jumpTableFollowsTB(MI, User.CPEMI))
+        continue;
+
       MachineInstr *Load = User.MI->getNextNode();
       if (Load->getOpcode() != ARM::tLDRr)
         continue;
@@ -2135,14 +2141,14 @@ bool ARMConstantIslands::optimizeThumb2JumpTables() {
           // IdxReg gets redefined in the middle of the sequence.
           continue;
       }
-      
+
       // Now safe to delete the load and lsl. The LEA will be removed later.
       CanDeleteLEA = true;
       Shift->eraseFromParent();
       Load->eraseFromParent();
       DeadSize += 4;
     }
-    
+
     DEBUG(dbgs() << "Shrink JT: " << *MI);
     MachineInstr *CPEMI = User.CPEMI;
     unsigned Opc = ByteOk ? ARM::t2TBB_JT : ARM::t2TBH_JT;

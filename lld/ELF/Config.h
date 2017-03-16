@@ -162,6 +162,9 @@ struct Configuration {
   unsigned Optimize;
   unsigned ThinLTOJobs;
 
+  // Returns true if target is 64 bit.
+  bool is64Bit() const { return EKind == ELF64LEKind || EKind == ELF64BEKind; }
+
   // The ELF spec defines two types of relocation table entries, RELA and
   // REL. RELA is a triplet of (offset, info, addend) while REL is a
   // tuple of (offset, info). Addends for REL are implicit and read from
@@ -177,9 +180,8 @@ struct Configuration {
   // As far as we know, all 64-bit ABIs are using RELA. A few 32-bit ABIs
   // are using RELA too.
   bool isRela() const {
-    bool is64 = (EKind == ELF64LEKind || EKind == ELF64BEKind);
-    bool isX32Abi = (EKind == ELF32LEKind && EMachine == llvm::ELF::EM_X86_64);
-    return is64 || isX32Abi || MipsN32Abi;
+    bool IsX32Abi = (EKind == ELF32LEKind && EMachine == llvm::ELF::EM_X86_64);
+    return is64Bit() || IsX32Abi || MipsN32Abi;
   }
 
   // Returns true if we need to pass through relocations in input

@@ -61,7 +61,7 @@ private:
 template <typename T>
 testing::AssertionResult matchesConditionally(
     const std::string &Code, const T &AMatcher, bool ExpectMatch,
-    llvm::StringRef CompileArg,
+    llvm::ArrayRef<llvm::StringRef> CompileArgs,
     const FileContentMappings &VirtualMappedFiles = FileContentMappings(),
     const std::string &Filename = "input.cc") {
   bool Found = false, DynamicFound = false;
@@ -81,8 +81,9 @@ testing::AssertionResult matchesConditionally(
   // FIXME: This is a hack to work around the fact that there's no way to do the
   // equivalent of runToolOnCodeWithArgs without instantiating a full Driver.
   // We should consider having a function, at least for tests, that invokes cc1.
-  std::vector<std::string> Args = {CompileArg, "-frtti", "-fexceptions",
-                                   "-target", "i386-unknown-unknown"};
+  std::vector<std::string> Args(CompileArgs.begin(), CompileArgs.end());
+  Args.insert(Args.end(), {"-frtti", "-fexceptions",
+                           "-target", "i386-unknown-unknown"});
   if (!runToolOnCodeWithArgs(
           Factory->create(), Code, Args, Filename, "clang-tool",
           std::make_shared<PCHContainerOperations>(), VirtualMappedFiles)) {
@@ -105,6 +106,17 @@ testing::AssertionResult matchesConditionally(
 }
 
 template <typename T>
+testing::AssertionResult matchesConditionally(
+    const std::string &Code, const T &AMatcher, bool ExpectMatch,
+    llvm::StringRef CompileArg,
+    const FileContentMappings &VirtualMappedFiles = FileContentMappings(),
+    const std::string &Filename = "input.cc") {
+  return matchesConditionally(Code, AMatcher, ExpectMatch,
+                              llvm::makeArrayRef(CompileArg),
+                              VirtualMappedFiles, Filename);
+}
+
+template <typename T>
 testing::AssertionResult matches(const std::string &Code, const T &AMatcher) {
   return matchesConditionally(Code, AMatcher, true, "-std=c++11");
 }
@@ -116,11 +128,12 @@ testing::AssertionResult notMatches(const std::string &Code,
 }
 
 template <typename T>
-testing::AssertionResult matchesObjC(const std::string &Code,
-                                     const T &AMatcher) {
-  return matchesConditionally(
-    Code, AMatcher, true,
-    "", FileContentMappings(), "input.m");
+testing::AssertionResult matchesObjC(const std::string &Code, const T &AMatcher,
+                                     bool ExpectMatch = true) {
+  return matchesConditionally(Code, AMatcher, ExpectMatch,
+                              {"-fobjc-nonfragile-abi", "-Wno-objc-root-class",
+                               "-Wno-incomplete-implementation"},
+                              FileContentMappings(), "input.m");
 }
 
 template <typename T>
@@ -145,10 +158,8 @@ testing::AssertionResult notMatchesC(const std::string &Code,
 
 template <typename T>
 testing::AssertionResult notMatchesObjC(const std::string &Code,
-                                     const T &AMatcher) {
-  return matchesConditionally(
-    Code, AMatcher, false,
-    "", FileContentMappings(), "input.m");
+                                        const T &AMatcher) {
+  return matchesObjC(Code, AMatcher, false);
 }
 
 

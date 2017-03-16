@@ -467,7 +467,7 @@ def : Pat <
 
 // fp_to_fp16 patterns
 def : Pat <
-  (i32 (fp_to_f16 (f32 (VOP3Mods0 f32:$src0, i32:$src0_modifiers, i1:$clamp, i32:$omod)))),
+  (i32 (AMDGPUfp_to_f16 (f32 (VOP3Mods0 f32:$src0, i32:$src0_modifiers, i1:$clamp, i32:$omod)))),
   (V_CVT_F16_F32_e64 $src0_modifiers, f32:$src0, $clamp, $omod)
 >;
 
