@@ -376,14 +376,12 @@ void BuildIdSection<ELFT>::computeHash(
   HashFn(HashBuf, Hashes);
 }
 
-BssSection::BssSection(StringRef Name)
-    : SyntheticSection(SHF_ALLOC | SHF_WRITE, SHT_NOBITS, 0, Name) {}
-
-size_t BssSection::reserveSpace(uint32_t Alignment, size_t Size) {
-  OutSec->updateAlignment(Alignment);
-  this->Size = alignTo(this->Size, Alignment) + Size;
-  return this->Size - Size;
-}
+template <class ELFT>
+CopyRelSection<ELFT>::CopyRelSection(bool ReadOnly, uint32_t Alignment,
+                                     size_t S)
+    : SyntheticSection(SHF_ALLOC, SHT_NOBITS, Alignment,
+                       ReadOnly ? ".bss.rel.ro" : ".bss"),
+      Size(S) {}
 
 template <class ELFT>
 void BuildIdSection<ELFT>::writeBuildId(ArrayRef<uint8_t> Buf) {
@@ -959,7 +957,7 @@ void GotPltSection::writeTo(uint8_t *Buf) {
   Buf += Target->GotPltHeaderEntriesNum * Target->GotPltEntrySize;
   for (const SymbolBody *B : Entries) {
     Target->writeGotPlt(Buf, *B);
-    Buf += Config->is64Bit() ? 8 : 4;
+    Buf += Config->is64() ? 8 : 4;
   }
 }
 
@@ -983,7 +981,7 @@ size_t IgotPltSection::getSize() const {
 void IgotPltSection::writeTo(uint8_t *Buf) {
   for (const SymbolBody *B : Entries) {
     Target->writeIgotPlt(Buf, *B);
-    Buf += Config->is64Bit() ? 8 : 4;
+    Buf += Config->is64() ? 8 : 4;
   }
 }
 
@@ -1197,7 +1195,7 @@ template <class ELFT> void DynamicSection<ELFT>::writeTo(uint8_t *Buf) {
 }
 
 template <class ELFT>
-typename ELFT::uint DynamicReloc<ELFT>::getOffset() const {
+uint64_t DynamicReloc<ELFT>::getOffset() const {
   return InputSec->OutSec->Addr + InputSec->getOffset(OffsetInSec);
 }
 
@@ -1391,7 +1389,7 @@ template <class ELFT> void SymbolTableSection<ELFT>::writeTo(uint8_t *Buf) {
     ESym->st_size = Body->getSize<ELFT>();
 
     // Set a section index.
-    if (const OutputSection *OutSec = Body->getOutputSection<ELFT>())
+    if (const OutputSection *OutSec = Body->getOutputSection())
       ESym->st_shndx = OutSec->SectionIndex;
     else if (isa<DefinedRegular>(Body))
       ESym->st_shndx = SHN_ABS;
@@ -1661,7 +1659,7 @@ template <class ELFT> void PltSection<ELFT>::writeTo(uint8_t *Buf) {
   for (auto &I : Entries) {
     const SymbolBody *B = I.first;
     unsigned RelOff = I.second + PltOff;
-    uint64_t Got = B->getGotPltVA<ELFT>();
+    uint64_t Got = B->getGotPltVA();
     uint64_t Plt = this->getVA() + Off;
     Target->writePlt(Buf + Off, Got, Plt, B->PltIndex, RelOff);
     Off += Target->PltEntrySize;
@@ -2206,7 +2204,7 @@ size_t MergeSyntheticSection::getSize() const {
 
 MipsRldMapSection::MipsRldMapSection()
     : SyntheticSection(SHF_ALLOC | SHF_WRITE, SHT_PROGBITS,
-                       Config->is64Bit() ? 8 : 4, ".rld_map") {}
+                       Config->is64() ? 8 : 4, ".rld_map") {}
 
 void MipsRldMapSection::writeTo(uint8_t *Buf) {
   // Apply filler from linker script.
@@ -2236,15 +2234,14 @@ void ARMExidxSentinelSection<ELFT>::writeTo(uint8_t *Buf) {
   write32le(Buf + 4, 0x1);
 }
 
-template <class ELFT>
-ThunkSection<ELFT>::ThunkSection(OutputSection *OS, uint64_t Off)
+ThunkSection::ThunkSection(OutputSection *OS, uint64_t Off)
     : SyntheticSection(SHF_ALLOC | SHF_EXECINSTR, SHT_PROGBITS,
-                       sizeof(typename ELFT::uint), ".text.thunk") {
+                       Config->is64() ? 8 : 4, ".text.thunk") {
   this->OutSec = OS;
   this->OutSecOff = Off;
 }
 
-template <class ELFT> void ThunkSection<ELFT>::addThunk(Thunk<ELFT> *T) {
+void ThunkSection::addThunk(Thunk *T) {
   uint64_t Off = alignTo(Size, T->alignment);
   T->Offset = Off;
   Thunks.push_back(T);
@@ -2252,20 +2249,17 @@ template <class ELFT> void ThunkSection<ELFT>::addThunk(Thunk<ELFT> *T) {
   Size = Off + T->size();
 }
 
-template <class ELFT> void ThunkSection<ELFT>::writeTo(uint8_t *Buf) {
-  for (const Thunk<ELFT> *T : Thunks)
+void ThunkSection::writeTo(uint8_t *Buf) {
+  for (const Thunk *T : Thunks)
     T->writeTo(Buf + T->Offset, *this);
 }
 
-template <class ELFT>
-InputSection *ThunkSection<ELFT>::getTargetInputSection() const {
-  const Thunk<ELFT> *T = Thunks.front();
+InputSection *ThunkSection::getTargetInputSection() const {
+  const Thunk *T = Thunks.front();
   return T->getTargetInputSection();
 }
 
 InputSection *InX::ARMAttributes;
-BssSection *InX::Bss;
-BssSection *InX::BssRelRo;
 InputSection *InX::Common;
 StringTableSection *InX::DynStrTab;
 InputSection *InX::Interp;
@@ -2317,6 +2311,11 @@ template class elf::BuildIdSection<ELF32LE>;
 template class elf::BuildIdSection<ELF32BE>;
 template class elf::BuildIdSection<ELF64LE>;
 template class elf::BuildIdSection<ELF64BE>;
+
+template class elf::CopyRelSection<ELF32LE>;
+template class elf::CopyRelSection<ELF32BE>;
+template class elf::CopyRelSection<ELF64LE>;
+template class elf::CopyRelSection<ELF64BE>;
 
 template class elf::GotSection<ELF32LE>;
 template class elf::GotSection<ELF32BE>;
@@ -2387,11 +2386,6 @@ template class elf::ARMExidxSentinelSection<ELF32LE>;
 template class elf::ARMExidxSentinelSection<ELF32BE>;
 template class elf::ARMExidxSentinelSection<ELF64LE>;
 template class elf::ARMExidxSentinelSection<ELF64BE>;
-
-template class elf::ThunkSection<ELF32LE>;
-template class elf::ThunkSection<ELF32BE>;
-template class elf::ThunkSection<ELF64LE>;
-template class elf::ThunkSection<ELF64BE>;
 
 template class elf::EhFrameSection<ELF32LE>;
 template class elf::EhFrameSection<ELF32BE>;

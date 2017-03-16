@@ -79,11 +79,11 @@ public:
 
   template <class ELFT> typename ELFT::uint getGotOffset() const;
   template <class ELFT> typename ELFT::uint getGotVA() const;
-  template <class ELFT> typename ELFT::uint getGotPltOffset() const;
-  template <class ELFT> typename ELFT::uint getGotPltVA() const;
+  uint64_t getGotPltOffset() const;
+  uint64_t getGotPltVA() const;
   template <class ELFT> typename ELFT::uint getPltVA() const;
   template <class ELFT> typename ELFT::uint getSize() const;
-  template <class ELFT> OutputSection *getOutputSection() const;
+  OutputSection *getOutputSection() const;
 
   // The file from which this symbol was created.
   InputFile *File = nullptr;
@@ -238,9 +238,8 @@ public:
   // This field is a pointer to the symbol's version definition.
   const void *Verdef;
 
-  // CopyRelSec and CopyRelSecOff are significant only when NeedsCopy is true.
-  InputSection *CopyRelSec;
-  size_t CopyRelSecOff;
+  // Section is significant only when NeedsCopy is true.
+  InputSection *Section = nullptr;
 
 private:
   template <class ELFT> const typename ELFT::Sym &getSym() const {
