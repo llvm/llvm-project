@@ -1,4 +1,5 @@
-; RUN: opt -amdgpu-clp-vector-expansion -mtriple=amdgcn-- -mcpu=fiji -S < %s | FileCheck %s
+; RUN: opt -amdgpu-clp-vector-expansion -mtriple=amdgcn-- -mcpu=fiji -S < %s | FileCheck -check-prefixes=CHECK,NOHALF %s
+; RUN: opt -amdgpu-clp-vector-expansion -amdgpu-clp-expand-half-func -mtriple=amdgcn-- -mcpu=fiji -S < %s | FileCheck -check-prefixes=CHECK,HALF %s
 ; Function Attrs: nounwind
 define void @foo(float %p1, <2 x float> %p2, <3 x float> %p3, <4 x float> %p4) {
 entry:
@@ -8,6 +9,8 @@ entry:
   call <2 x half> @_Z5clampDv2_DhDhDh( <2 x half> <half 0xH0000, half 0xH3C00>, half 0xH0000, half 0xH3C00)
   ret void
 }
+
+; NOHALF: declare <2 x half> @_Z5clampDv2_DhDhDh(<2 x half>, half, half)
 
 ; CHECK: define weak <2 x float> @_Z4cbrtDv2_f(<2 x float> %_p1)
 ; CHECK: %[[var0:[0-9]+]] = extractelement <2 x float> %_p1, i32 0
@@ -58,13 +61,14 @@ declare <4 x float> @_Z4fmaxDv4_ff(<4 x float>, float)
 ; CHECK: declare float @_Z4fmaxff(float, float)
 ; CHECK-NOT: declare <2 x float> @_Z4fmaxDv2_ff(<2 x float>, float)
 
-; CHECK: define weak <2 x half> @_Z5clampDv2_DhDhDh(<2 x half> %_p1, half %_p2, half %_p3)
-; CHECK: %lo.call = call half @_Z5clampDhDhDh(half %{{[0-9]+}}, half %_p2, half %_p3)
-; CHECK: %[[var13:[0-9]+]] = insertelement <2 x half> undef, half %lo.call, i32 0
-; CHECK: %hi.call = call half @_Z5clampDhDhDh(half %{{[0-9]+}}, half %_p2, half %_p3)
-; CHECK: %[[var14:[0-9]+]] = insertelement <2 x half> %[[var13]], half %hi.call, i32 1
-; CHECK: ret <2 x half> %[[var14]]
+; HALF: define weak <2 x half> @_Z5clampDv2_DhDhDh(<2 x half> %_p1, half %_p2, half %_p3)
+; NOHALF-NOT: define weak <2 x half> @_Z5clampDv2_DhDhDh(<2 x half> %_p1, half %_p2, half %_p3)
+; HALF: %lo.call = call half @_Z5clampDhDhDh(half %{{[0-9]+}}, half %_p2, half %_p3)
+; HALF: %[[var13:[0-9]+]] = insertelement <2 x half> undef, half %lo.call, i32 0
+; HALF: %hi.call = call half @_Z5clampDhDhDh(half %{{[0-9]+}}, half %_p2, half %_p3)
+; HALF: %[[var14:[0-9]+]] = insertelement <2 x half> %[[var13]], half %hi.call, i32 1
+; HALF: ret <2 x half> %[[var14]]
 
 declare <2 x half> @_Z5clampDv2_DhDhDh(<2 x half>, half, half)
-; CHECK: declare half @_Z5clampDhDhDh(half, half, half)
-; CHECK-NOT: declare <2 x half> @_Z5clampDv2_DhDhDh(<2 x half>, half, half)
+; HALF: declare half @_Z5clampDhDhDh(half, half, half)
+; HALF-NOT: declare <2 x half> @_Z5clampDv2_DhDhDh(<2 x half>, half, half)

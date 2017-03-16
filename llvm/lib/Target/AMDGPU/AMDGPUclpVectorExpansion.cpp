@@ -18,6 +18,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/Linker/Linker.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -26,6 +27,10 @@
 #define DEBUG_TYPE "amdclpvectorexpansion"
 
 using namespace llvm;
+
+static cl::opt<bool> ExpandHalfFunc("amdgpu-clp-expand-half-func",
+    cl::desc("Enable expanding functions with half types in clp"),
+    cl::init(false));
 
 // Copied from amd_ocl_builtindef.h
 // descriptor for a parameter type or return type
@@ -613,6 +618,14 @@ std::string AMDGPUclpVectorExpansion::getNextFunctionName(StringRef CurFuncName,
   return Oss.str();
 } // AMDGPUclpVectorExpansion::getNextFunctionName
 
+static bool hasHalfParams(Function &F) {
+  for (auto &I:F.args()) {
+    if (I.getType()->getScalarType()->isHalfTy())
+      return true;
+  }
+  return false;
+}
+
 /// process a function to collect information for funcuseInfo
 ///
 void AMDGPUclpVectorExpansion::checkAndAddToExpansion(Function *TheFunc) {
@@ -627,6 +640,10 @@ void AMDGPUclpVectorExpansion::checkAndAddToExpansion(Function *TheFunc) {
   if (!FuncName.substr(UnmangledLen)
            .startswith(OPENCL_VARG_BUILTIN_SPIR_VECTYPE))
     return;
+
+  if (!ExpandHalfFunc && hasHalfParams(*TheFunc)) {
+    return;
+  }
 
   StringRef Suffix =
       FuncName.substr(UnmangledLen + OPENCL_VARG_BUILTIN_SPIR_VECTYPE_LEN);
