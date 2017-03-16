@@ -2,7 +2,7 @@
 ; RUN: llvm-dwarfdump %t.o | FileCheck %s
 ;
 ; Test that on x86_64, the 32-bit subregister esi is emitted as
-; DW_OP_piece 32 of the 64-bit rsi.
+; subregister of the 64-bit rsi.
 ;
 ; rdar://problem/16015314
 ;
@@ -11,8 +11,8 @@
 ; CHECK-NEXT:  DW_AT_location [DW_FORM_data4]	(0x00000000)
 ; CHECK-NEXT:  DW_AT_name [DW_FORM_strp]{{.*}} "a"
 ; CHECK: .debug_loc contents:
-;                                    rsi, piece 0x00000004
-; CHECK:       Location description: 54 93 04 
+;                                    rsi
+; CHECK:       Location description: 54
 ;
 ; struct bar {
 ;   int a;

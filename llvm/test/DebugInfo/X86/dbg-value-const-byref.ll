@@ -34,10 +34,10 @@
 ; CHECK: Beginning address offset: [[C1]]
 ; CHECK:    Ending address offset: [[C2:.*]]
 ; CHECK:     Location description: 11 07
-;        rax, piece 0x00000004
+;        rax
 ; CHECK: Beginning address offset: [[C2]]
 ; CHECK:    Ending address offset: [[R1:.*]]
-; CHECK:     Location description: 50 93 04
+; CHECK:     Location description: 50
 ;         rdi+0
 ; CHECK: Beginning address offset: [[R1]]
 ; CHECK:    Ending address offset: [[R2:.*]]
