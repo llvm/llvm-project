@@ -743,6 +743,8 @@ private:
 
   Selector GetterName;    // getter name of NULL if no getter
   Selector SetterName;    // setter name of NULL if no setter
+  SourceLocation GetterNameLoc; // location of the getter attribute's value
+  SourceLocation SetterNameLoc; // location of the setter attribute's value
 
   ObjCMethodDecl *GetterMethodDecl; // Declaration of getter instance method
   ObjCMethodDecl *SetterMethodDecl; // Declaration of setter instance method
@@ -855,10 +857,18 @@ public:
   }
 
   Selector getGetterName() const { return GetterName; }
-  void setGetterName(Selector Sel) { GetterName = Sel; }
+  SourceLocation getGetterNameLoc() const { return GetterNameLoc; }
+  void setGetterName(Selector Sel, SourceLocation Loc) {
+    GetterName = Sel;
+    GetterNameLoc = Loc;
+  }
 
   Selector getSetterName() const { return SetterName; }
-  void setSetterName(Selector Sel) { SetterName = Sel; }
+  SourceLocation getSetterNameLoc() const { return SetterNameLoc; }
+  void setSetterName(Selector Sel, SourceLocation Loc) {
+    SetterName = Sel;
+    SetterNameLoc = Loc;
+  }
 
   ObjCMethodDecl *getGetterMethodDecl() const { return GetterMethodDecl; }
   void setGetterMethodDecl(ObjCMethodDecl *gDecl) { GetterMethodDecl = gDecl; }
