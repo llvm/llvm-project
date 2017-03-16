@@ -8,17 +8,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Utility/Logging.h"
-
-// C Includes
-// C++ Includes
-#include <atomic>
-#include <cstring>
-
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Utility/Log.h"
 
-using namespace lldb;
 using namespace lldb_private;
 
 static constexpr Log::Category g_categories[] = {

@@ -2301,98 +2301,129 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (Args.hasArg(options::OPT_fsplit_stack))
     CmdArgs.push_back("-split-stacks");
 
-  // If -Ofast is the optimization level, then -ffast-math should be enabled.
-  // This alias option is being used to simplify the getLastArg logic.
-  OptSpecifier FastMathAliasOption =
-      OFastEnabled ? options::OPT_Ofast : options::OPT_ffast_math;
-
   // Handle various floating point optimization flags, mapping them to the
-  // appropriate LLVM code generation flags. The pattern for all of these is to
-  // default off the codegen optimizations, and if any flag enables them and no
-  // flag disables them after the flag enabling them, enable the codegen
-  // optimization. This is complicated by several "umbrella" flags.
-  if (Arg *A = Args.getLastArg(
-          options::OPT_ffast_math, FastMathAliasOption,
-          options::OPT_fno_fast_math, options::OPT_ffinite_math_only,
-          options::OPT_fno_finite_math_only, options::OPT_fhonor_infinities,
-          options::OPT_fno_honor_infinities))
-    if (A->getOption().getID() != options::OPT_fno_fast_math &&
-        A->getOption().getID() != options::OPT_fno_finite_math_only &&
-        A->getOption().getID() != options::OPT_fhonor_infinities)
-      CmdArgs.push_back("-menable-no-infs");
-  if (Arg *A = Args.getLastArg(
-          options::OPT_ffast_math, FastMathAliasOption,
-          options::OPT_fno_fast_math, options::OPT_ffinite_math_only,
-          options::OPT_fno_finite_math_only, options::OPT_fhonor_nans,
-          options::OPT_fno_honor_nans))
-    if (A->getOption().getID() != options::OPT_fno_fast_math &&
-        A->getOption().getID() != options::OPT_fno_finite_math_only &&
-        A->getOption().getID() != options::OPT_fhonor_nans)
-      CmdArgs.push_back("-menable-no-nans");
-
+  // appropriate LLVM code generation flags. This is complicated by several
+  // "umbrella" flags, so we do this by stepping through the flags incrementally
+  // adjusting what we think is enabled/disabled, then at the end settting the
+  // LLVM flags based on the final state.
+  bool HonorInfs = true;
+  bool HonorNans = true;
   // -fmath-errno is the default on some platforms, e.g. BSD-derived OSes.
   bool MathErrno = getToolChain().IsMathErrnoDefault();
-  if (Arg *A =
-          Args.getLastArg(options::OPT_ffast_math, FastMathAliasOption,
-                          options::OPT_fno_fast_math, options::OPT_fmath_errno,
-                          options::OPT_fno_math_errno)) {
-    // Turning on -ffast_math (with either flag) removes the need for MathErrno.
-    // However, turning *off* -ffast_math merely restores the toolchain default
-    // (which may be false).
-    if (A->getOption().getID() == options::OPT_fno_math_errno ||
-        A->getOption().getID() == options::OPT_ffast_math ||
-        A->getOption().getID() == options::OPT_Ofast)
+  bool AssociativeMath = false;
+  bool ReciprocalMath = false;
+  bool SignedZeros = true;
+  bool TrappingMath = true;
+  StringRef DenormalFpMath = "";
+  StringRef FpContract = "";
+
+  for (Arg *A : Args) {
+    switch (A->getOption().getID()) {
+    // If this isn't an FP option skip the claim below
+    default:
+      continue;
+
+    // Options controlling individual features
+    case options::OPT_fhonor_infinities:    HonorInfs = true;        break;
+    case options::OPT_fno_honor_infinities: HonorInfs = false;       break;
+    case options::OPT_fhonor_nans:          HonorNans = true;        break;
+    case options::OPT_fno_honor_nans:       HonorNans = false;       break;
+    case options::OPT_fmath_errno:          MathErrno = true;        break;
+    case options::OPT_fno_math_errno:       MathErrno = false;       break;
+    case options::OPT_fassociative_math:    AssociativeMath = true;  break;
+    case options::OPT_fno_associative_math: AssociativeMath = false; break;
+    case options::OPT_freciprocal_math:     ReciprocalMath = true;   break;
+    case options::OPT_fno_reciprocal_math:  ReciprocalMath = false;  break;
+    case options::OPT_fsigned_zeros:        SignedZeros = true;      break;
+    case options::OPT_fno_signed_zeros:     SignedZeros = false;     break;
+    case options::OPT_ftrapping_math:       TrappingMath = true;     break;
+    case options::OPT_fno_trapping_math:    TrappingMath = false;    break;
+
+    case options::OPT_fdenormal_fp_math_EQ:
+      DenormalFpMath = A->getValue();
+      break;
+
+    // Validate and pass through -fp-contract option.
+    case options::OPT_ffp_contract: {
+      StringRef Val = A->getValue();
+      if (Val == "fast" || Val == "on" || Val == "off") {
+        FpContract = Val;
+      } else {
+        D.Diag(diag::err_drv_unsupported_option_argument)
+            << A->getOption().getName() << Val;
+      }
+      break;
+    }
+
+    case options::OPT_ffinite_math_only:
+      HonorInfs = false;
+      HonorNans = false;
+      break;
+    case options::OPT_fno_finite_math_only:
+      HonorInfs = true;
+      HonorNans = true;
+      break;
+
+    case options::OPT_funsafe_math_optimizations:
+      AssociativeMath = true;
+      ReciprocalMath = true;
+      SignedZeros = false;
+      TrappingMath = false;
+      break;
+    case options::OPT_fno_unsafe_math_optimizations:
+      AssociativeMath = false;
+      ReciprocalMath = false;
+      SignedZeros = true;
+      TrappingMath = true;
+      // -fno_unsafe_math_optimizations restores default denormal handling
+      DenormalFpMath = "";
+      break;
+
+    case options::OPT_Ofast:
+      // If -Ofast is the optimization level, then -ffast-math should be enabled
+      if (!OFastEnabled)
+        continue;
+      LLVM_FALLTHROUGH;
+    case options::OPT_ffast_math:
+      HonorInfs = false;
+      HonorNans = false;
       MathErrno = false;
-    else if (A->getOption().getID() == options::OPT_fmath_errno)
-      MathErrno = true;
+      AssociativeMath = true;
+      ReciprocalMath = true;
+      SignedZeros = false;
+      TrappingMath = false;
+      // If fast-math is set then set the fp-contract mode to fast.
+      FpContract = "fast";
+      break;
+    case options::OPT_fno_fast_math:
+      HonorInfs = true;
+      HonorNans = true;
+      // Turning on -ffast-math (with either flag) removes the need for
+      // MathErrno. However, turning *off* -ffast-math merely restores the
+      // toolchain default (which may be false).
+      MathErrno = getToolChain().IsMathErrnoDefault();
+      AssociativeMath = false;
+      ReciprocalMath = false;
+      SignedZeros = true;
+      TrappingMath = true;
+      // -fno_fast_math restores default denormal and fpcontract handling
+      DenormalFpMath = "";
+      FpContract = "";
+      break;
+    }
+    // If we handled this option claim it
+    A->claim();
   }
+
+  if (!HonorInfs)
+    CmdArgs.push_back("-menable-no-infs");
+
+  if (!HonorNans)
+    CmdArgs.push_back("-menable-no-nans");
+
   if (MathErrno)
     CmdArgs.push_back("-fmath-errno");
 
-  // There are several flags which require disabling very specific
-  // optimizations. Any of these being disabled forces us to turn off the
-  // entire set of LLVM optimizations, so collect them through all the flag
-  // madness.
-  bool AssociativeMath = false;
-  if (Arg *A = Args.getLastArg(
-          options::OPT_ffast_math, FastMathAliasOption,
-          options::OPT_fno_fast_math, options::OPT_funsafe_math_optimizations,
-          options::OPT_fno_unsafe_math_optimizations,
-          options::OPT_fassociative_math, options::OPT_fno_associative_math))
-    if (A->getOption().getID() != options::OPT_fno_fast_math &&
-        A->getOption().getID() != options::OPT_fno_unsafe_math_optimizations &&
-        A->getOption().getID() != options::OPT_fno_associative_math)
-      AssociativeMath = true;
-  bool ReciprocalMath = false;
-  if (Arg *A = Args.getLastArg(
-          options::OPT_ffast_math, FastMathAliasOption,
-          options::OPT_fno_fast_math, options::OPT_funsafe_math_optimizations,
-          options::OPT_fno_unsafe_math_optimizations,
-          options::OPT_freciprocal_math, options::OPT_fno_reciprocal_math))
-    if (A->getOption().getID() != options::OPT_fno_fast_math &&
-        A->getOption().getID() != options::OPT_fno_unsafe_math_optimizations &&
-        A->getOption().getID() != options::OPT_fno_reciprocal_math)
-      ReciprocalMath = true;
-  bool SignedZeros = true;
-  if (Arg *A = Args.getLastArg(
-          options::OPT_ffast_math, FastMathAliasOption,
-          options::OPT_fno_fast_math, options::OPT_funsafe_math_optimizations,
-          options::OPT_fno_unsafe_math_optimizations,
-          options::OPT_fsigned_zeros, options::OPT_fno_signed_zeros))
-    if (A->getOption().getID() != options::OPT_fno_fast_math &&
-        A->getOption().getID() != options::OPT_fno_unsafe_math_optimizations &&
-        A->getOption().getID() != options::OPT_fsigned_zeros)
-      SignedZeros = false;
-  bool TrappingMath = true;
-  if (Arg *A = Args.getLastArg(
-          options::OPT_ffast_math, FastMathAliasOption,
-          options::OPT_fno_fast_math, options::OPT_funsafe_math_optimizations,
-          options::OPT_fno_unsafe_math_optimizations,
-          options::OPT_ftrapping_math, options::OPT_fno_trapping_math))
-    if (A->getOption().getID() != options::OPT_fno_fast_math &&
-        A->getOption().getID() != options::OPT_fno_unsafe_math_optimizations &&
-        A->getOption().getID() != options::OPT_ftrapping_math)
-      TrappingMath = false;
   if (!MathErrno && AssociativeMath && ReciprocalMath && !SignedZeros &&
       !TrappingMath)
     CmdArgs.push_back("-menable-unsafe-fp-math");
@@ -2406,50 +2437,24 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (!TrappingMath)
     CmdArgs.push_back("-fno-trapping-math");
 
+  if (!DenormalFpMath.empty())
+    CmdArgs.push_back(Args.MakeArgString("-fdenormal-fp-math="+DenormalFpMath));
 
-  if (Arg *A = Args.getLastArg(options::OPT_ffast_math, FastMathAliasOption,
-                               options::OPT_fno_fast_math,
-                               options::OPT_funsafe_math_optimizations,
-                               options::OPT_fno_unsafe_math_optimizations,
-                               options::OPT_fdenormal_fp_math_EQ))
-    if (A->getOption().getID() != options::OPT_fno_fast_math &&
-        A->getOption().getID() != options::OPT_fno_unsafe_math_optimizations)
-      Args.AddLastArg(CmdArgs, options::OPT_fdenormal_fp_math_EQ);
-
-  // Validate and pass through -fp-contract option.
-  if (Arg *A = Args.getLastArg(options::OPT_ffast_math, FastMathAliasOption,
-                               options::OPT_fno_fast_math,
-                               options::OPT_ffp_contract)) {
-    if (A->getOption().getID() == options::OPT_ffp_contract) {
-      StringRef Val = A->getValue();
-      if (Val == "fast" || Val == "on" || Val == "off") {
-        CmdArgs.push_back(Args.MakeArgString("-ffp-contract=" + Val));
-      } else {
-        D.Diag(diag::err_drv_unsupported_option_argument)
-            << A->getOption().getName() << Val;
-      }
-    } else if (A->getOption().matches(options::OPT_ffast_math) ||
-               (OFastEnabled && A->getOption().matches(options::OPT_Ofast))) {
-      // If fast-math is set then set the fp-contract mode to fast.
-      CmdArgs.push_back(Args.MakeArgString("-ffp-contract=fast"));
-    }
-  }
+  if (!FpContract.empty())
+    CmdArgs.push_back(Args.MakeArgString("-ffp-contract="+FpContract));
 
   ParseMRecip(getToolChain().getDriver(), Args, CmdArgs);
 
-  // We separately look for the '-ffast-math' and '-ffinite-math-only' flags,
-  // and if we find them, tell the frontend to provide the appropriate
-  // preprocessor macros. This is distinct from enabling any optimizations as
-  // these options induce language changes which must survive serialization
-  // and deserialization, etc.
-  if (Arg *A = Args.getLastArg(options::OPT_ffast_math, FastMathAliasOption,
-                               options::OPT_fno_fast_math))
-    if (!A->getOption().matches(options::OPT_fno_fast_math))
-      CmdArgs.push_back("-ffast-math");
-  if (Arg *A = Args.getLastArg(options::OPT_ffinite_math_only,
-                               options::OPT_fno_fast_math))
-    if (A->getOption().matches(options::OPT_ffinite_math_only))
-      CmdArgs.push_back("-ffinite-math-only");
+  // -ffast-math enables the __FAST_MATH__ preprocessor macro, but check for the
+  // individual features enabled by -ffast-math instead of the option itself as
+  // that's consistent with gcc's behaviour.
+  if (!HonorInfs && !HonorNans && !MathErrno && AssociativeMath &&
+      ReciprocalMath && !SignedZeros && !TrappingMath)
+    CmdArgs.push_back("-ffast-math");
+
+  // Handle __FINITE_MATH_ONLY__ similarly.
+  if (!HonorInfs && !HonorNans)
+    CmdArgs.push_back("-ffinite-math-only");
 
   // Decide whether to use verbose asm. Verbose assembly is the default on
   // toolchains which have the integrated assembler on by default.

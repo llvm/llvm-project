@@ -1447,8 +1447,8 @@ int X86TTIImpl::getIntrinsicInstrCost(Intrinsic::ID IID, Type *RetTy,
     { ISD::FSQRT,      MVT::v4f64,  43 }, // SNB from http://www.agner.org/
   };
   static const CostTblEntry SSE42CostTbl[] = {
-    { ISD::FSQRT, MVT::f32,   18 }, // Nehalem from http://www.agner.org/
-    { ISD::FSQRT, MVT::v4f32, 18 }, // Nehalem from http://www.agner.org/
+    { ISD::FSQRT,      MVT::f32,    18 }, // Nehalem from http://www.agner.org/
+    { ISD::FSQRT,      MVT::v4f32,  18 }, // Nehalem from http://www.agner.org/
   };
   static const CostTblEntry SSSE3CostTbl[] = {
     { ISD::BITREVERSE, MVT::v2i64,   5 },
@@ -1491,8 +1491,8 @@ int X86TTIImpl::getIntrinsicInstrCost(Intrinsic::ID IID, Type *RetTy,
     { ISD::FSQRT,      MVT::v2f64,  32 }, // Nehalem from http://www.agner.org/
   };
   static const CostTblEntry SSE1CostTbl[] = {
-    { ISD::FSQRT, MVT::f32,   28 }, // Pentium III from http://www.agner.org/
-    { ISD::FSQRT, MVT::v4f32, 56 }, // Pentium III from http://www.agner.org/
+    { ISD::FSQRT,      MVT::f32,    28 }, // Pentium III from http://www.agner.org/
+    { ISD::FSQRT,      MVT::v4f32,  56 }, // Pentium III from http://www.agner.org/
   };
 
   unsigned ISD = ISD::DELETED_NODE;

@@ -2732,19 +2732,24 @@ def : Thumb2DSPMulPat<(add rGPR:$Ra,
                         (mul (sra rGPR:$Rn, (i32 16)), sext_16_node:$Rm)),
                       (t2SMLATB rGPR:$Rn, rGPR:$Rm, rGPR:$Ra)>;
 
-class T2SMLAL<bits<3> op22_20, bits<4> op7_4, string opc, list<dag> pattern>
-  : T2FourReg_mac<1, op22_20, op7_4,
-                  (outs rGPR:$Ra, rGPR:$Rd),
-                  (ins rGPR:$Rn, rGPR:$Rm),
-                  IIC_iMAC64, opc, "\t$Ra, $Rd, $Rn, $Rm", []>,
-                  Requires<[IsThumb2, HasDSP]>,
-    Sched<[WriteMAC64Lo, WriteMAC64Hi, ReadMUL, ReadMUL, ReadMAC, ReadMAC]>;
-
 // Halfword multiple accumulate long: SMLAL<x><y>
-def t2SMLALBB : T2SMLAL<0b100, 0b1000, "smlalbb", []>;
-def t2SMLALBT : T2SMLAL<0b100, 0b1001, "smlalbt", []>;
-def t2SMLALTB : T2SMLAL<0b100, 0b1010, "smlaltb", []>;
-def t2SMLALTT : T2SMLAL<0b100, 0b1011, "smlaltt", []>;
+def t2SMLALBB : T2MlaLong<0b100, 0b1000, "smlalbb">,
+                          Requires<[IsThumb2, HasDSP]>;
+def t2SMLALBT : T2MlaLong<0b100, 0b1001, "smlalbt">,
+                          Requires<[IsThumb2, HasDSP]>;
+def t2SMLALTB : T2MlaLong<0b100, 0b1010, "smlaltb">,
+                          Requires<[IsThumb2, HasDSP]>;
+def t2SMLALTT : T2MlaLong<0b100, 0b1011, "smlaltt">,
+                          Requires<[IsThumb2, HasDSP]>;
+
+def : Thumb2DSPPat<(ARMsmlalbb GPR:$Rn, GPR:$Rm, GPR:$RLo, GPR:$RHi),
+                   (t2SMLALBB $Rn, $Rm, $RLo, $RHi)>;
+def : Thumb2DSPPat<(ARMsmlalbt GPR:$Rn, GPR:$Rm, GPR:$RLo, GPR:$RHi),
+                   (t2SMLALBT $Rn, $Rm, $RLo, $RHi)>;
+def : Thumb2DSPPat<(ARMsmlaltb GPR:$Rn, GPR:$Rm, GPR:$RLo, GPR:$RHi),
+                   (t2SMLALTB $Rn, $Rm, $RLo, $RHi)>;
+def : Thumb2DSPPat<(ARMsmlaltt GPR:$Rn, GPR:$Rm, GPR:$RLo, GPR:$RHi),
+                   (t2SMLALTT $Rn, $Rm, $RLo, $RHi)>;
 
 class T2DualHalfMul<bits<3> op22_20, bits<4> op7_4, string opc>
   : T2ThreeReg_mac<0, op22_20, op7_4,

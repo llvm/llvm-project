@@ -30,7 +30,7 @@ int main() {
 // CHECK:    in main {{.*}}wcsncpy.cc:26
 
 // CHECK:  Uninitialized value was stored to memory at
-// CHECK:    in wcsncpy
+// CHECK:    in {{[^\s]*}}wcsncpy
 // CHECK:    in main {{.*}}wcsncpy.cc:25
 
 // CHECK:  Memory was marked as uninitialized

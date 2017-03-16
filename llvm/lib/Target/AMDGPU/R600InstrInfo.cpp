@@ -893,7 +893,7 @@ bool R600InstrInfo::isPredicable(const MachineInstr &MI) const {
 
 bool
 R600InstrInfo::isProfitableToIfCvt(MachineBasicBlock &MBB,
-                                   unsigned NumCyles,
+                                   unsigned NumCycles,
                                    unsigned ExtraPredCycles,
                                    BranchProbability Probability) const{
   return true;
@@ -912,7 +912,7 @@ R600InstrInfo::isProfitableToIfCvt(MachineBasicBlock &TMBB,
 
 bool
 R600InstrInfo::isProfitableToDupForIfCvt(MachineBasicBlock &MBB,
-                                         unsigned NumCyles,
+                                         unsigned NumCycles,
                                          BranchProbability Probability)
                                          const {
   return true;

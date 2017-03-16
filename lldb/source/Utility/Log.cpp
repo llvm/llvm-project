@@ -9,10 +9,8 @@
 
 // Project includes
 #include "lldb/Utility/Log.h"
-
-#include "lldb/Utility/NameMatches.h"
-#include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/VASPrintf.h"
+#include "lldb/lldb-types.h"
 
 // Other libraries and framework includes
 #include "llvm/ADT/STLExtras.h"
@@ -32,20 +30,20 @@
 #include <mutex>
 #include <string>
 
-using namespace lldb;
 using namespace lldb_private;
 
 llvm::ManagedStatic<Log::ChannelMap> Log::g_channel_map;
 
-void Log::ListCategories(Stream &stream, const ChannelMap::value_type &entry) {
-  stream.Format("Logging categories for '{0}':\n", entry.first());
-  stream.Format("  all - all available logging categories\n");
-  stream.Format("  default - default set of logging categories\n");
+void Log::ListCategories(llvm::raw_ostream &stream, const ChannelMap::value_type &entry) {
+  stream << llvm::formatv("Logging categories for '{0}':\n", entry.first());
+  stream << "  all - all available logging categories\n";
+  stream << "  default - default set of logging categories\n";
   for (const auto &category : entry.second.m_channel.categories)
-    stream.Format("  {0} - {1}\n", category.name, category.description);
+    stream << llvm::formatv("  {0} - {1}\n", category.name,
+                            category.description);
 }
 
-uint32_t Log::GetFlags(Stream &stream, const ChannelMap::value_type &entry,
+uint32_t Log::GetFlags(llvm::raw_ostream &stream, const ChannelMap::value_type &entry,
                          llvm::ArrayRef<const char *> categories) {
   bool list_categories = false;
   uint32_t flags = 0;
@@ -65,7 +63,8 @@ uint32_t Log::GetFlags(Stream &stream, const ChannelMap::value_type &entry,
       flags |= cat->flag;
       continue;
     }
-    stream.Format("error: unrecognized log category '{0}'\n", category);
+    stream << llvm::formatv("error: unrecognized log category '{0}'\n",
+                            category);
     list_categories = true;
   }
   if (list_categories)
@@ -194,10 +193,10 @@ void Log::Unregister(llvm::StringRef name) {
 bool Log::EnableLogChannel(
     const std::shared_ptr<llvm::raw_ostream> &log_stream_sp,
     uint32_t log_options, llvm::StringRef channel,
-    llvm::ArrayRef<const char *> categories, Stream &error_stream) {
+    llvm::ArrayRef<const char *> categories, llvm::raw_ostream &error_stream) {
   auto iter = g_channel_map->find(channel);
   if (iter == g_channel_map->end()) {
-    error_stream.Format("Invalid log channel '{0}'.\n", channel);
+    error_stream << llvm::formatv("Invalid log channel '{0}'.\n", channel);
     return false;
   }
   uint32_t flags = categories.empty()
@@ -209,10 +208,10 @@ bool Log::EnableLogChannel(
 
 bool Log::DisableLogChannel(llvm::StringRef channel,
                             llvm::ArrayRef<const char *> categories,
-                            Stream &error_stream) {
+                            llvm::raw_ostream &error_stream) {
   auto iter = g_channel_map->find(channel);
   if (iter == g_channel_map->end()) {
-    error_stream.Format("Invalid log channel '{0}'.\n", channel);
+    error_stream << llvm::formatv("Invalid log channel '{0}'.\n", channel);
     return false;
   }
   uint32_t flags = categories.empty()
@@ -222,30 +221,32 @@ bool Log::DisableLogChannel(llvm::StringRef channel,
   return true;
 }
 
-bool Log::ListChannelCategories(llvm::StringRef channel, Stream &stream) {
+bool Log::ListChannelCategories(llvm::StringRef channel,
+                                llvm::raw_ostream &stream) {
   auto ch = g_channel_map->find(channel);
   if (ch == g_channel_map->end()) {
-    stream.Format("Invalid log channel '{0}'.\n", channel);
+    stream << llvm::formatv("Invalid log channel '{0}'.\n", channel);
     return false;
   }
   ListCategories(stream, *ch);
   return true;
 }
 
-void Log::DisableAllLogChannels(Stream *feedback_strm) {
+void Log::DisableAllLogChannels() {
   for (auto &entry : *g_channel_map)
     entry.second.Disable(UINT32_MAX);
 }
 
-void Log::ListAllLogChannels(Stream *strm) {
+void Log::ListAllLogChannels(llvm::raw_ostream &stream) {
   if (g_channel_map->empty()) {
-    strm->PutCString("No logging channels are currently registered.\n");
+    stream << "No logging channels are currently registered.\n";
     return;
   }
 
   for (const auto &channel : *g_channel_map)
-    ListCategories(*strm, channel);
+    ListCategories(stream, channel);
 }
+
 bool Log::GetVerbose() const {
   return m_options.load(std::memory_order_relaxed) & LLDB_LOG_OPTION_VERBOSE;
 }

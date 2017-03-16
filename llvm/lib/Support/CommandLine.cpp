@@ -123,7 +123,7 @@ public:
   void ResetAllOptionOccurrences();
 
   bool ParseCommandLineOptions(int argc, const char *const *argv,
-                               StringRef Overview, bool IgnoreErrors);
+                               StringRef Overview, raw_ostream *Errs = nullptr);
 
   void addLiteralOption(Option &Opt, SubCommand *SC, StringRef Name) {
     if (Opt.hasArgStr())
@@ -1013,9 +1013,9 @@ void cl::ParseEnvironmentOptions(const char *progName, const char *envVar,
 }
 
 bool cl::ParseCommandLineOptions(int argc, const char *const *argv,
-                                 StringRef Overview, bool IgnoreErrors) {
+                                 StringRef Overview, raw_ostream *Errs) {
   return GlobalParser->ParseCommandLineOptions(argc, argv, Overview,
-                                               IgnoreErrors);
+                                               Errs);
 }
 
 void CommandLineParser::ResetAllOptionOccurrences() {
@@ -1030,7 +1030,7 @@ void CommandLineParser::ResetAllOptionOccurrences() {
 bool CommandLineParser::ParseCommandLineOptions(int argc,
                                                 const char *const *argv,
                                                 StringRef Overview,
-                                                bool IgnoreErrors) {
+                                                raw_ostream *Errs) {
   assert(hasOptions() && "No options specified!");
 
   // Expand response files.
@@ -1045,6 +1045,9 @@ bool CommandLineParser::ParseCommandLineOptions(int argc,
   ProgramName = sys::path::filename(StringRef(argv[0]));
 
   ProgramOverview = Overview;
+  bool IgnoreErrors = Errs;
+  if (!Errs)
+    Errs = &errs();
   bool ErrorParsing = false;
 
   // Check out the positional arguments to collect information about them.
@@ -1097,15 +1100,14 @@ bool CommandLineParser::ParseCommandLineOptions(int argc,
         // not specified after an option that eats all extra arguments, or this
         // one will never get any!
         //
-        if (!IgnoreErrors) {
+        if (!IgnoreErrors)
           Opt->error("error - option can never match, because "
                      "another positional argument will match an "
                      "unbounded number of values, and this option"
                      " does not require a value!");
-          errs() << ProgramName << ": CommandLine Error: Option '"
-                 << Opt->ArgStr << "' is all messed up!\n";
-          errs() << PositionalOpts.size();
-        }
+        *Errs << ProgramName << ": CommandLine Error: Option '" << Opt->ArgStr
+              << "' is all messed up!\n";
+        *Errs << PositionalOpts.size();
         ErrorParsing = true;
       }
       UnboundedFound |= EatsUnboundedNumberOfValues(Opt);
@@ -1200,15 +1202,13 @@ bool CommandLineParser::ParseCommandLineOptions(int argc,
 
     if (!Handler) {
       if (SinkOpts.empty()) {
-        if (!IgnoreErrors) {
-          errs() << ProgramName << ": Unknown command line argument '"
-                 << argv[i] << "'.  Try: '" << argv[0] << " -help'\n";
+        *Errs << ProgramName << ": Unknown command line argument '" << argv[i]
+              << "'.  Try: '" << argv[0] << " -help'\n";
 
-          if (NearestHandler) {
-            // If we know a near match, report it as well.
-            errs() << ProgramName << ": Did you mean '-" << NearestHandlerString
-                   << "'?\n";
-          }
+        if (NearestHandler) {
+          // If we know a near match, report it as well.
+          *Errs << ProgramName << ": Did you mean '-" << NearestHandlerString
+                 << "'?\n";
         }
 
         ErrorParsing = true;
@@ -1231,22 +1231,18 @@ bool CommandLineParser::ParseCommandLineOptions(int argc,
 
   // Check and handle positional arguments now...
   if (NumPositionalRequired > PositionalVals.size()) {
-    if (!IgnoreErrors) {
-      errs() << ProgramName
+      *Errs << ProgramName
              << ": Not enough positional command line arguments specified!\n"
              << "Must specify at least " << NumPositionalRequired
              << " positional argument" << (NumPositionalRequired > 1 ? "s" : "")
              << ": See: " << argv[0] << " - help\n";
-    }
 
     ErrorParsing = true;
   } else if (!HasUnlimitedPositionals &&
              PositionalVals.size() > PositionalOpts.size()) {
-    if (!IgnoreErrors) {
-      errs() << ProgramName << ": Too many positional arguments specified!\n"
-             << "Can specify at most " << PositionalOpts.size()
-             << " positional arguments: See: " << argv[0] << " -help\n";
-    }
+    *Errs << ProgramName << ": Too many positional arguments specified!\n"
+          << "Can specify at most " << PositionalOpts.size()
+          << " positional arguments: See: " << argv[0] << " -help\n";
     ErrorParsing = true;
 
   } else if (!ConsumeAfterOpt) {
@@ -2182,5 +2178,6 @@ void cl::ResetAllOptionOccurrences() {
 
 void LLVMParseCommandLineOptions(int argc, const char *const *argv,
                                  const char *Overview) {
-  llvm::cl::ParseCommandLineOptions(argc, argv, StringRef(Overview), true);
+  llvm::cl::ParseCommandLineOptions(argc, argv, StringRef(Overview),
+                                    &llvm::nulls());
 }

@@ -93,9 +93,8 @@ static void DupDescriptor(int error_fd, const FileSpec &file_spec, int fd,
 static void LLVM_ATTRIBUTE_NORETURN ChildFunc(int error_fd,
                                               const ProcessLaunchInfo &info) {
   // First, make sure we disable all logging. If we are logging to stdout, our
-  // logs can be
-  // mistaken for inferior output.
-  Log::DisableAllLogChannels(nullptr);
+  // logs can be mistaken for inferior output.
+  Log::DisableAllLogChannels();
 
   // Do not inherit setgid powers.
   if (setgid(getgid()) != 0)

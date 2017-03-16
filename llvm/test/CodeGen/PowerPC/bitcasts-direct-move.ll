@@ -20,7 +20,7 @@ entry:
   ret i64 %0
 ; CHECK-P7: stxsdx 1,
 ; CHECK-P7: ld 3,
-; CHECK: mfvsrd 3, 1
+; CHECK: mffprd 3, 1
 }
 
 define float @i32tof32(i32 signext %a) {
@@ -60,7 +60,7 @@ entry:
   ret i64 %0
 ; CHECK-P7: stxsdx 1,
 ; CHECK-P7: ld 3,
-; CHECK: mfvsrd 3, 1
+; CHECK: mffprd 3, 1
 }
 
 define float @i32utof32(i32 zeroext %a) {
