@@ -93,18 +93,6 @@ void GlobalObject::setAlignment(unsigned Align) {
   assert(getAlignment() == Align && "Alignment representation error!");
 }
 
-unsigned GlobalObject::getGlobalObjectSubClassData() const {
-  unsigned ValueData = getGlobalValueSubClassData();
-  return ValueData >> GlobalObjectBits;
-}
-
-void GlobalObject::setGlobalObjectSubClassData(unsigned Val) {
-  unsigned OldData = getGlobalValueSubClassData();
-  setGlobalValueSubClassData((OldData & GlobalObjectMask) |
-                             (Val << GlobalObjectBits));
-  assert(getGlobalObjectSubClassData() == Val && "representation error");
-}
-
 void GlobalObject::copyAttributesFrom(const GlobalValue *Src) {
   GlobalValue::copyAttributesFrom(Src);
   if (const auto *GV = dyn_cast<GlobalObject>(Src)) {

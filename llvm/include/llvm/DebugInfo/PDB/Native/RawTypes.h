@@ -266,6 +266,10 @@ struct PDB_UniqueId {
   uint8_t Guid[16];
 };
 
+inline bool operator==(const PDB_UniqueId &LHS, const PDB_UniqueId &RHS) {
+  return 0 == ::memcmp(LHS.Guid, RHS.Guid, sizeof(LHS.Guid));
+}
+
 // The header preceeding the global TPI stream.
 // This corresponds to `HDR` in PDB/dbi/tpi.h.
 struct TpiStreamHeader {

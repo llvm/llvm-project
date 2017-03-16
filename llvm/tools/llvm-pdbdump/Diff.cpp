@@ -12,24 +12,49 @@
 #include "StreamUtil.h"
 #include "llvm-pdbdump.h"
 
+#include "llvm/DebugInfo/PDB/Native/Formatters.h"
+#include "llvm/DebugInfo/PDB/Native/InfoStream.h"
 #include "llvm/DebugInfo/PDB/Native/PDBFile.h"
 #include "llvm/DebugInfo/PDB/Native/RawConstants.h"
 #include "llvm/DebugInfo/PDB/Native/StringTable.h"
 
 #include "llvm/Support/FormatAdapters.h"
+#include "llvm/Support/FormatProviders.h"
 #include "llvm/Support/FormatVariadic.h"
 
 using namespace llvm;
 using namespace llvm::pdb;
 
-template<typename R>
-using ValueOfRange = llvm::detail::ValueOfRange<R>;
+namespace llvm {
+template <> struct format_provider<PdbRaw_FeatureSig> {
+  static void format(const PdbRaw_FeatureSig &Sig, raw_ostream &Stream,
+                     StringRef Style) {
+    switch (Sig) {
+    case PdbRaw_FeatureSig::MinimalDebugInfo:
+      Stream << "MinimalDebugInfo";
+      break;
+    case PdbRaw_FeatureSig::NoTypeMerge:
+      Stream << "NoTypeMerge";
+      break;
+    case PdbRaw_FeatureSig::VC110:
+      Stream << "VC110";
+      break;
+    case PdbRaw_FeatureSig::VC140:
+      Stream << "VC140";
+      break;
+    }
+  }
+};
+}
 
-template<typename Range, typename Comp>
+template <typename R> using ValueOfRange = llvm::detail::ValueOfRange<R>;
+
+template <typename Range, typename Comp>
 static void set_differences(Range &&R1, Range &&R2,
-    SmallVectorImpl<ValueOfRange<Range>> *OnlyLeft,
-    SmallVectorImpl<ValueOfRange<Range>> *OnlyRight,
-    SmallVectorImpl<ValueOfRange<Range>> *Intersection, Comp Comparator) {
+                            SmallVectorImpl<ValueOfRange<Range>> *OnlyLeft,
+                            SmallVectorImpl<ValueOfRange<Range>> *OnlyRight,
+                            SmallVectorImpl<ValueOfRange<Range>> *Intersection,
+                            Comp Comparator) {
 
   std::sort(R1.begin(), R1.end(), Comparator);
   std::sort(R2.begin(), R2.end(), Comparator);
@@ -37,19 +62,19 @@ static void set_differences(Range &&R1, Range &&R2,
   if (OnlyLeft) {
     OnlyLeft->reserve(R1.size());
     auto End = std::set_difference(R1.begin(), R1.end(), R2.begin(), R2.end(),
-      OnlyLeft->begin(), Comparator);
+                                   OnlyLeft->begin(), Comparator);
     OnlyLeft->set_size(std::distance(OnlyLeft->begin(), End));
   }
   if (OnlyRight) {
     OnlyLeft->reserve(R2.size());
     auto End = std::set_difference(R2.begin(), R2.end(), R1.begin(), R1.end(),
-      OnlyRight->begin(), Comparator);
+                                   OnlyRight->begin(), Comparator);
     OnlyRight->set_size(std::distance(OnlyRight->begin(), End));
   }
   if (Intersection) {
     Intersection->reserve(std::min(R1.size(), R2.size()));
-    auto End = std::set_intersection(R1.begin(), R1.end(), R2.begin(),
-      R2.end(), Intersection->begin(), Comparator);
+    auto End = std::set_intersection(R1.begin(), R1.end(), R2.begin(), R2.end(),
+                                     Intersection->begin(), Comparator);
     Intersection->set_size(std::distance(Intersection->begin(), End));
   }
 }
@@ -61,9 +86,9 @@ set_differences(Range &&R1, Range &&R2,
                 SmallVectorImpl<ValueOfRange<Range>> *OnlyRight,
                 SmallVectorImpl<ValueOfRange<Range>> *Intersection = nullptr) {
   std::less<ValueOfRange<Range>> Comp;
-  set_differences(std::forward<Range>(R1), std::forward<Range>(R2), OnlyLeft, OnlyRight, Intersection, Comp);
+  set_differences(std::forward<Range>(R1), std::forward<Range>(R2), OnlyLeft,
+                  OnlyRight, Intersection, Comp);
 }
-
 
 DiffStyle::DiffStyle(PDBFile &File1, PDBFile &File2)
     : File1(File1), File2(File2) {}
@@ -114,12 +139,53 @@ Error DiffStyle::dump() {
 template <typename T>
 static bool diffAndPrint(StringRef Label, PDBFile &File1, PDBFile &File2, T V1,
                          T V2) {
-  if (V1 != V2) {
-    outs().indent(2) << Label << "\n";
-    outs().indent(4) << formatv("{0}: {1}\n", File1.getFilePath(), V1);
-    outs().indent(4) << formatv("{0}: {1}\n", File2.getFilePath(), V2);
+  if (V1 == V2) {
+    outs() << formatv("  {0}: No differences detected!\n", Label);
+    return false;
   }
-  return (V1 != V2);
+
+  outs().indent(2) << Label << "\n";
+  outs().indent(4) << formatv("{0}: {1}\n", File1.getFilePath(), V1);
+  outs().indent(4) << formatv("{0}: {1}\n", File2.getFilePath(), V2);
+  return true;
+}
+
+template <typename T>
+static bool diffAndPrint(StringRef Label, PDBFile &File1, PDBFile &File2,
+                         ArrayRef<T> V1, ArrayRef<T> V2) {
+  if (V1 == V2) {
+    outs() << formatv("  {0}: No differences detected!\n", Label);
+    return false;
+  }
+
+  outs().indent(2) << Label << "\n";
+  outs().indent(4) << formatv("{0}: {1}\n", File1.getFilePath(),
+                              make_range(V1.begin(), V1.end()));
+  outs().indent(4) << formatv("{0}: {1}\n", File2.getFilePath(),
+                              make_range(V2.begin(), V2.end()));
+  return true;
+}
+
+template <typename T>
+static bool printSymmetricDifferences(PDBFile &File1, PDBFile &File2,
+                                      T &&OnlyRange1, T &&OnlyRange2,
+                                      StringRef Label) {
+  bool HasDiff = false;
+  if (!OnlyRange1.empty()) {
+    HasDiff = true;
+    outs() << formatv("  {0} {1}(s) only in ({2})\n", OnlyRange1.size(), Label,
+                      File1.getFilePath());
+    for (const auto &Item : OnlyRange1)
+      outs() << formatv("    {0}\n", Label, Item);
+  }
+  if (!OnlyRange2.empty()) {
+    HasDiff = true;
+    outs() << formatv("  {0} {1}(s) only in ({2})\n", OnlyRange2.size(),
+                      File2.getFilePath());
+    for (const auto &Item : OnlyRange2)
+      outs() << formatv("    {0}\n", Item);
+  }
+  return HasDiff;
 }
 
 Error DiffStyle::diffSuperBlock() {
@@ -275,14 +341,19 @@ Error DiffStyle::diffStringTable() {
   bool Has1 = !!ExpectedST1;
   bool Has2 = !!ExpectedST2;
   if (!(Has1 && Has2)) {
-    // If one has a string table and the other doesn't, we can print less output.
+    // If one has a string table and the other doesn't, we can print less
+    // output.
     if (Has1 != Has2) {
       if (Has1) {
-        outs() << formatv("  {0}: ({1} strings)\n", File1.getFilePath(), ExpectedST1->getNameCount());
-        outs() << formatv("  {0}: (string table not present)\n", File2.getFilePath());
+        outs() << formatv("  {0}: ({1} strings)\n", File1.getFilePath(),
+                          ExpectedST1->getNameCount());
+        outs() << formatv("  {0}: (string table not present)\n",
+                          File2.getFilePath());
       } else {
-        outs() << formatv("  {0}: (string table not present)\n", File1.getFilePath());
-        outs() << formatv("  {0}: ({1})\n", File2.getFilePath(), ExpectedST2->getNameCount());
+        outs() << formatv("  {0}: (string table not present)\n",
+                          File1.getFilePath());
+        outs() << formatv("  {0}: ({1})\n", File2.getFilePath(),
+                          ExpectedST2->getNameCount());
       }
     }
     consumeError(ExpectedST1.takeError());
@@ -294,16 +365,28 @@ Error DiffStyle::diffStringTable() {
   auto &ST1 = *ExpectedST1;
   auto &ST2 = *ExpectedST2;
 
-  HasDiff |= diffAndPrint("Stream Size", File1, File2, ST1.getByteSize(), ST2.getByteSize());
-  HasDiff |= diffAndPrint("Hash Version", File1, File2, ST1.getHashVersion(), ST1.getHashVersion());
-  HasDiff |= diffAndPrint("Signature", File1, File2, ST1.getSignature(), ST1.getSignature());
+  if (ST1.getByteSize() != ST2.getByteSize()) {
+    outs() << "  Stream Size\n";
+    outs() << formatv("    {0} - {1} byte(s)\n", File1.getFilePath(),
+                      ST1.getByteSize());
+    outs() << formatv("    {0} - {1} byte(s)\n", File2.getFilePath(),
+                      ST2.getByteSize());
+    outs() << formatv("    Difference: {0} bytes\n",
+                      AbsoluteDifference(ST1.getByteSize(), ST2.getByteSize()));
+    HasDiff = true;
+  }
+  HasDiff |= diffAndPrint("Hash Version", File1, File2, ST1.getHashVersion(),
+                          ST1.getHashVersion());
+  HasDiff |= diffAndPrint("Signature", File1, File2, ST1.getSignature(),
+                          ST1.getSignature());
 
   // Both have a valid string table, dive in and compare individual strings.
 
   auto IdList1 = ST1.name_ids();
   auto IdList2 = ST2.name_ids();
   if (opts::diff::Pedantic) {
-    // In pedantic mode, we compare index by index (i.e. the strings are in the same order
+    // In pedantic mode, we compare index by index (i.e. the strings are in the
+    // same order
     // in both tables.
     uint32_t Max = std::max(IdList1.size(), IdList2.size());
     for (uint32_t I = 0; I < Max; ++I) {
@@ -320,11 +403,15 @@ Error DiffStyle::diffStringTable() {
       if (Id1 == Id2 && S1 == S2)
         continue;
 
-      std::string OutId1 = Id1 ? formatv("{0}", *Id1).str() : "(index not present)";
-      std::string OutId2 = Id2 ? formatv("{0}", *Id2).str() : "(index not present)";
+      std::string OutId1 =
+          Id1 ? formatv("{0}", *Id1).str() : "(index not present)";
+      std::string OutId2 =
+          Id2 ? formatv("{0}", *Id2).str() : "(index not present)";
       outs() << formatv("  String {0}\n", I);
-      outs() << formatv("    {0}: Hash - {1}, Value - {2}\n", File1.getFilePath(), OutId1, S1);
-      outs() << formatv("    {0}: Hash - {1}, Value - {2}\n", File2.getFilePath(), OutId2, S2);
+      outs() << formatv("    {0}: Hash - {1}, Value - {2}\n",
+                        File1.getFilePath(), OutId1, S1);
+      outs() << formatv("    {0}: Hash - {1}, Value - {2}\n",
+                        File2.getFilePath(), OutId2, S2);
       HasDiff = true;
     }
   } else {
@@ -338,22 +425,21 @@ Error DiffStyle::diffStringTable() {
 
     SmallVector<StringRef, 64> OnlyP;
     SmallVector<StringRef, 64> OnlyQ;
-
+    auto End1 = std::remove(Strings1.begin(), Strings1.end(), "");
+    auto End2 = std::remove(Strings2.begin(), Strings2.end(), "");
+    uint32_t Empty1 = std::distance(End1, Strings1.end());
+    uint32_t Empty2 = std::distance(End2, Strings2.end());
+    Strings1.erase(End1, Strings1.end());
+    Strings2.erase(End2, Strings2.end());
     set_differences(Strings1, Strings2, &OnlyP, &OnlyQ);
+    printSymmetricDifferences(File1, File2, OnlyP, OnlyQ, "String");
 
-    if (!OnlyP.empty()) {
-      HasDiff = true;
-      outs() << formatv("  {0} String(s) only in ({1})\n",
-        OnlyP.size(), File1.getFilePath());
-      for (auto Item : OnlyP)
-        outs() << formatv("    {2}\n", Item);
-    }
-    if (!OnlyQ.empty()) {
-      HasDiff = true;
-      outs() << formatv("  {0} String(s) only in ({1})\n",
-        OnlyQ.size(), File2.getFilePath());
-      for (auto Item : OnlyQ)
-        outs() << formatv("    {2}\n", Item);
+    if (Empty1 != Empty2) {
+      PDBFile &MoreF = (Empty1 > Empty2) ? File1 : File2;
+      PDBFile &LessF = (Empty1 < Empty2) ? File1 : File2;
+      uint32_t Difference = AbsoluteDifference(Empty1, Empty2);
+      outs() << formatv("  {0} had {1} more empty strings than {2}\n",
+                        MoreF.getFilePath(), Difference, LessF.getFilePath());
     }
   }
   if (!HasDiff)
@@ -363,7 +449,62 @@ Error DiffStyle::diffStringTable() {
 
 Error DiffStyle::diffFreePageMap() { return Error::success(); }
 
-Error DiffStyle::diffInfoStream() { return Error::success(); }
+Error DiffStyle::diffInfoStream() {
+  auto ExpectedInfo1 = File1.getPDBInfoStream();
+  auto ExpectedInfo2 = File2.getPDBInfoStream();
+
+  outs() << "PDB Stream: Searching for differences...\n";
+  bool Has1 = !!ExpectedInfo1;
+  bool Has2 = !!ExpectedInfo2;
+  if (!(Has1 && Has2)) {
+    if (Has1 != Has2)
+      outs() << formatv("{0} does not have a PDB Stream!\n",
+                        Has1 ? File1.getFilePath() : File2.getFilePath());
+    consumeError(ExpectedInfo2.takeError());
+    consumeError(ExpectedInfo2.takeError());
+    return Error::success();
+  }
+
+  bool HasDiff = false;
+  auto &IS1 = *ExpectedInfo1;
+  auto &IS2 = *ExpectedInfo2;
+  if (IS1.getStreamSize() != IS2.getStreamSize()) {
+    outs() << "  Stream Size\n";
+    outs() << formatv("    {0} - {1} byte(s)\n", File1.getFilePath(),
+                      IS1.getStreamSize());
+    outs() << formatv("    {0} - {1} byte(s)\n", File2.getFilePath(),
+                      IS2.getStreamSize());
+    outs() << formatv(
+        "    Difference: {0} bytes\n",
+        AbsoluteDifference(IS1.getStreamSize(), IS2.getStreamSize()));
+    HasDiff = true;
+  }
+  HasDiff |= diffAndPrint("Age", File1, File2, IS1.getAge(), IS2.getAge());
+  HasDiff |= diffAndPrint("Guid", File1, File2, IS1.getGuid(), IS2.getGuid());
+  HasDiff |= diffAndPrint("Signature", File1, File2, IS1.getSignature(),
+                          IS2.getSignature());
+  HasDiff |=
+      diffAndPrint("Version", File1, File2, IS1.getVersion(), IS2.getVersion());
+  HasDiff |= diffAndPrint("Features", File1, File2, IS1.getFeatureSignatures(),
+                          IS2.getFeatureSignatures());
+  HasDiff |= diffAndPrint("Named Stream Byte Size", File1, File2,
+                          IS1.getNamedStreamMapByteSize(),
+                          IS2.getNamedStreamMapByteSize());
+  SmallVector<StringRef, 4> NS1;
+  SmallVector<StringRef, 4> NS2;
+  for (const auto &X : IS1.getNamedStreams().entries())
+    NS1.push_back(X.getKey());
+  for (const auto &X : IS2.getNamedStreams().entries())
+    NS2.push_back(X.getKey());
+  SmallVector<StringRef, 4> OnlyP;
+  SmallVector<StringRef, 4> OnlyQ;
+  set_differences(NS1, NS2, &OnlyP, &OnlyQ);
+  printSymmetricDifferences(File1, File2, OnlyP, OnlyQ, "Named Streams");
+  if (!HasDiff)
+    outs() << "PDB Stream: No differences detected!\n";
+
+  return Error::success();
+}
 
 Error DiffStyle::diffDbiStream() { return Error::success(); }
 

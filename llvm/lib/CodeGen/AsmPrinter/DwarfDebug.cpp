@@ -127,17 +127,17 @@ static const char *const DWARFGroupDescription = "DWARF Emission";
 static const char *const DbgTimerName = "writer";
 static const char *const DbgTimerDescription = "DWARF Debug Writer";
 
-void DebugLocDwarfExpression::EmitOp(uint8_t Op, const char *Comment) {
+void DebugLocDwarfExpression::emitOp(uint8_t Op, const char *Comment) {
   BS.EmitInt8(
       Op, Comment ? Twine(Comment) + " " + dwarf::OperationEncodingString(Op)
                   : dwarf::OperationEncodingString(Op));
 }
 
-void DebugLocDwarfExpression::EmitSigned(int64_t Value) {
+void DebugLocDwarfExpression::emitSigned(int64_t Value) {
   BS.EmitSLEB128(Value, Twine(Value));
 }
 
-void DebugLocDwarfExpression::EmitUnsigned(uint64_t Value) {
+void DebugLocDwarfExpression::emitUnsigned(uint64_t Value) {
   BS.EmitULEB128(Value, Twine(Value));
 }
 
@@ -1499,21 +1499,21 @@ static void emitDebugLocValue(const AsmPrinter &AP, const DIBasicType *BT,
   if (Value.isInt()) {
     if (BT && (BT->getEncoding() == dwarf::DW_ATE_signed ||
                BT->getEncoding() == dwarf::DW_ATE_signed_char))
-      DwarfExpr.AddSignedConstant(Value.getInt());
+      DwarfExpr.addSignedConstant(Value.getInt());
     else
-      DwarfExpr.AddUnsignedConstant(Value.getInt());
+      DwarfExpr.addUnsignedConstant(Value.getInt());
   } else if (Value.isLocation()) {
     MachineLocation Loc = Value.getLoc();
     const TargetRegisterInfo &TRI = *AP.MF->getSubtarget().getRegisterInfo();
     if (Loc.getOffset())
-      DwarfExpr.AddMachineRegIndirect(TRI, Loc.getReg(), Loc.getOffset());
+      DwarfExpr.addMachineRegIndirect(TRI, Loc.getReg(), Loc.getOffset());
     else
-      DwarfExpr.AddMachineRegExpression(TRI, ExprCursor, Loc.getReg());
+      DwarfExpr.addMachineRegExpression(TRI, ExprCursor, Loc.getReg());
   } else if (Value.isConstantFP()) {
     APInt RawBytes = Value.getConstantFP()->getValueAPF().bitcastToAPInt();
-    DwarfExpr.AddUnsignedConstant(RawBytes);
+    DwarfExpr.addUnsignedConstant(RawBytes);
   }
-  DwarfExpr.AddExpression(std::move(ExprCursor));
+  DwarfExpr.addExpression(std::move(ExprCursor));
 }
 
 void DebugLocEntry::finalize(const AsmPrinter &AP,

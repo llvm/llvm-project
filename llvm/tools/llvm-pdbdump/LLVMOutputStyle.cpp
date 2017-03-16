@@ -387,6 +387,7 @@ Error LLVMOutputStyle::dumpInfoStream() {
   P.printHex("Signature", IS->getSignature());
   P.printNumber("Age", IS->getAge());
   P.printObject("Guid", IS->getGuid());
+  P.printHex("Features", IS->getFeatures());
   {
     DictScope DD(P, "Named Streams");
     for (const auto &S : IS->getNamedStreams().entries())

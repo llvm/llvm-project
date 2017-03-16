@@ -311,88 +311,9 @@ if( MSVC )
     -D_UNICODE
   )
 
-  set(msvc_warning_flags
-    # Disabled warnings.
-    -wd4141 # Suppress ''modifier' : used more than once' (because of __forceinline combined with inline)
-    -wd4146 # Suppress 'unary minus operator applied to unsigned type, result still unsigned'
-    -wd4180 # Suppress 'qualifier applied to function type has no meaning; ignored'
-    -wd4244 # Suppress ''argument' : conversion from 'type1' to 'type2', possible loss of data'
-    -wd4258 # Suppress ''var' : definition from the for loop is ignored; the definition from the enclosing scope is used'
-    -wd4267 # Suppress ''var' : conversion from 'size_t' to 'type', possible loss of data'
-    -wd4291 # Suppress ''declaration' : no matching operator delete found; memory will not be freed if initialization throws an exception'
-    -wd4345 # Suppress 'behavior change: an object of POD type constructed with an initializer of the form () will be default-initialized'
-    -wd4351 # Suppress 'new behavior: elements of array 'array' will be default initialized'
-    -wd4355 # Suppress ''this' : used in base member initializer list'
-    -wd4456 # Suppress 'declaration of 'var' hides local variable'
-    -wd4457 # Suppress 'declaration of 'var' hides function parameter'
-    -wd4458 # Suppress 'declaration of 'var' hides class member'
-    -wd4459 # Suppress 'declaration of 'var' hides global declaration'
-    -wd4503 # Suppress ''identifier' : decorated name length exceeded, name was truncated'
-    -wd4624 # Suppress ''derived class' : destructor could not be generated because a base class destructor is inaccessible'
-    -wd4722 # Suppress 'function' : destructor never returns, potential memory leak
-    -wd4800 # Suppress ''type' : forcing value to bool 'true' or 'false' (performance warning)'
-    -wd4100 # Suppress 'unreferenced formal parameter'
-    -wd4127 # Suppress 'conditional expression is constant'
-    -wd4512 # Suppress 'assignment operator could not be generated'
-    -wd4505 # Suppress 'unreferenced local function has been removed'
-    -wd4610 # Suppress '<class> can never be instantiated'
-    -wd4510 # Suppress 'default constructor could not be generated'
-    -wd4702 # Suppress 'unreachable code'
-    -wd4245 # Suppress 'signed/unsigned mismatch'
-    -wd4706 # Suppress 'assignment within conditional expression'
-    -wd4310 # Suppress 'cast truncates constant value'
-    -wd4701 # Suppress 'potentially uninitialized local variable'
-    -wd4703 # Suppress 'potentially uninitialized local pointer variable'
-    -wd4389 # Suppress 'signed/unsigned mismatch'
-    -wd4611 # Suppress 'interaction between '_setjmp' and C++ object destruction is non-portable'
-    -wd4805 # Suppress 'unsafe mix of type <type> and type <type> in operation'
-    -wd4204 # Suppress 'nonstandard extension used : non-constant aggregate initializer'
-    -wd4577 # Suppress 'noexcept used with no exception handling mode specified; termination on exception is not guaranteed'
-    -wd4091 # Suppress 'typedef: ignored on left of '' when no variable is declared'
-        # C4592 is disabled because of false positives in Visual Studio 2015
-        # Update 1. Re-evaluate the usefulness of this diagnostic with Update 2.
-    -wd4592 # Suppress ''var': symbol will be dynamically initialized (implementation limitation)
-    -wd4319 # Suppress ''operator' : zero extending 'type' to 'type' of greater size'
-
-	# Ideally, we'd like this warning to be enabled, but MSVC 2013 doesn't
-	# support the 'aligned' attribute in the way that clang sources requires (for
-	# any code that uses the LLVM_ALIGNAS macro), so this is must be disabled to
-	# avoid unwanted alignment warnings.
-	# When we switch to requiring a version of MSVC that supports the 'alignas'
-	# specifier (MSVC 2015?) this warning can be re-enabled.
-    -wd4324 # Suppress 'structure was padded due to __declspec(align())'
-
-    # Promoted warnings.
-    -w14062 # Promote 'enumerator in switch of enum is not handled' to level 1 warning.
-
-    # Promoted warnings to errors.
-    -we4238 # Promote 'nonstandard extension used : class rvalue used as lvalue' to error.
-    )
-
-  # Enable warnings
-  if (LLVM_ENABLE_WARNINGS)
-    # Put /W4 in front of all the -we flags. cl.exe doesn't care, but for
-    # clang-cl having /W4 after the -we flags will re-enable the warnings
-    # disabled by -we.
-    set(msvc_warning_flags "/W4 ${msvc_warning_flags}")
-    # CMake appends /W3 by default, and having /W3 followed by /W4 will result in 
-    # cl : Command line warning D9025 : overriding '/W3' with '/W4'.  Since this is
-    # a command line warning and not a compiler warning, it cannot be suppressed except
-    # by fixing the command line.
-    string(REGEX REPLACE " /W[0-4]" "" CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
-    string(REGEX REPLACE " /W[0-4]" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
-
-    if (LLVM_ENABLE_PEDANTIC)
-      # No MSVC equivalent available
-    endif (LLVM_ENABLE_PEDANTIC)
-  endif (LLVM_ENABLE_WARNINGS)
   if (LLVM_ENABLE_WERROR)
-    append("/WX" msvc_warning_flags)
+    append("/WX" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
   endif (LLVM_ENABLE_WERROR)
-
-  foreach(flag ${msvc_warning_flags})
-    append("${flag}" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
-  endforeach(flag)
 
   append("/Zc:inline" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
 
@@ -443,63 +364,6 @@ if( MSVC )
   endif()
 
 elseif( LLVM_COMPILER_IS_GCC_COMPATIBLE )
-  if (LLVM_ENABLE_WARNINGS)
-    append("-Wall -W -Wno-unused-parameter -Wwrite-strings" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
-    append("-Wcast-qual" CMAKE_CXX_FLAGS)
-
-    # Turn off missing field initializer warnings for gcc to avoid noise from
-    # false positives with empty {}. Turn them on otherwise (they're off by
-    # default for clang).
-    check_cxx_compiler_flag("-Wmissing-field-initializers" CXX_SUPPORTS_MISSING_FIELD_INITIALIZERS_FLAG)
-    if (CXX_SUPPORTS_MISSING_FIELD_INITIALIZERS_FLAG)
-      if (CMAKE_COMPILER_IS_GNUCXX)
-        append("-Wno-missing-field-initializers" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
-      else()
-        append("-Wmissing-field-initializers" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
-      endif()
-    endif()
-
-    append_if(LLVM_ENABLE_PEDANTIC "-pedantic" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
-    append_if(LLVM_ENABLE_PEDANTIC "-Wno-long-long" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
-    add_flag_if_supported("-Wcovered-switch-default" COVERED_SWITCH_DEFAULT_FLAG)
-    append_if(USE_NO_UNINITIALIZED "-Wno-uninitialized" CMAKE_CXX_FLAGS)
-    append_if(USE_NO_MAYBE_UNINITIALIZED "-Wno-maybe-uninitialized" CMAKE_CXX_FLAGS)
-
-    # Check if -Wnon-virtual-dtor warns even though the class is marked final.
-    # If it does, don't add it. So it won't be added on clang 3.4 and older.
-    # This also catches cases when -Wnon-virtual-dtor isn't supported by
-    # the compiler at all.  This flag is not activated for gcc since it will
-    # incorrectly identify a protected non-virtual base when there is a friend
-    # declaration.
-    if (NOT CMAKE_COMPILER_IS_GNUCXX)
-      set(OLD_CMAKE_REQUIRED_FLAGS ${CMAKE_REQUIRED_FLAGS})
-      set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -std=c++11 -Werror=non-virtual-dtor")
-      CHECK_CXX_SOURCE_COMPILES("class base {public: virtual void anchor();protected: ~base();};
-                                 class derived final : public base { public: ~derived();};
-                                 int main() { return 0; }"
-                                CXX_WONT_WARN_ON_FINAL_NONVIRTUALDTOR)
-      set(CMAKE_REQUIRED_FLAGS ${OLD_CMAKE_REQUIRED_FLAGS})
-      append_if(CXX_WONT_WARN_ON_FINAL_NONVIRTUALDTOR
-                "-Wnon-virtual-dtor" CMAKE_CXX_FLAGS)
-    endif()
-
-    # Enable -Wdelete-non-virtual-dtor if available.
-    add_flag_if_supported("-Wdelete-non-virtual-dtor" DELETE_NON_VIRTUAL_DTOR_FLAG)
-
-    # Check if -Wcomment is OK with an // comment ending with '\' if the next
-    # line is also a // comment.
-    set(OLD_CMAKE_REQUIRED_FLAGS ${CMAKE_REQUIRED_FLAGS})
-    set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -Werror -Wcomment")
-    CHECK_C_SOURCE_COMPILES("// \\\\\\n//\\nint main() {return 0;}"
-                            C_WCOMMENT_ALLOWS_LINE_WRAP)
-    set(CMAKE_REQUIRED_FLAGS ${OLD_CMAKE_REQUIRED_FLAGS})
-    if (NOT C_WCOMMENT_ALLOWS_LINE_WRAP)
-      append("-Wno-comment" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
-    endif()
-
-    # Enable -Wstring-conversion to catch misuse of string literals.
-    add_flag_if_supported("-Wstring-conversion" STRING_CONVERSION_FLAG)
-  endif (LLVM_ENABLE_WARNINGS)
   append_if(LLVM_ENABLE_WERROR "-Werror" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
   add_flag_if_supported("-Werror=date-time" WERROR_DATE_TIME)
   if (LLVM_ENABLE_CXX1Y)
@@ -552,6 +416,151 @@ elseif( LLVM_COMPILER_IS_GCC_COMPATIBLE )
     endif()
   endif(LLVM_ENABLE_MODULES)
 endif( MSVC )
+
+if (MSVC AND NOT CLANG_CL)
+  set(msvc_warning_flags
+    # Disabled warnings.
+    -wd4141 # Suppress ''modifier' : used more than once' (because of __forceinline combined with inline)
+    -wd4146 # Suppress 'unary minus operator applied to unsigned type, result still unsigned'
+    -wd4180 # Suppress 'qualifier applied to function type has no meaning; ignored'
+    -wd4244 # Suppress ''argument' : conversion from 'type1' to 'type2', possible loss of data'
+    -wd4258 # Suppress ''var' : definition from the for loop is ignored; the definition from the enclosing scope is used'
+    -wd4267 # Suppress ''var' : conversion from 'size_t' to 'type', possible loss of data'
+    -wd4291 # Suppress ''declaration' : no matching operator delete found; memory will not be freed if initialization throws an exception'
+    -wd4345 # Suppress 'behavior change: an object of POD type constructed with an initializer of the form () will be default-initialized'
+    -wd4351 # Suppress 'new behavior: elements of array 'array' will be default initialized'
+    -wd4355 # Suppress ''this' : used in base member initializer list'
+    -wd4456 # Suppress 'declaration of 'var' hides local variable'
+    -wd4457 # Suppress 'declaration of 'var' hides function parameter'
+    -wd4458 # Suppress 'declaration of 'var' hides class member'
+    -wd4459 # Suppress 'declaration of 'var' hides global declaration'
+    -wd4503 # Suppress ''identifier' : decorated name length exceeded, name was truncated'
+    -wd4624 # Suppress ''derived class' : destructor could not be generated because a base class destructor is inaccessible'
+    -wd4722 # Suppress 'function' : destructor never returns, potential memory leak
+    -wd4800 # Suppress ''type' : forcing value to bool 'true' or 'false' (performance warning)'
+    -wd4100 # Suppress 'unreferenced formal parameter'
+    -wd4127 # Suppress 'conditional expression is constant'
+    -wd4512 # Suppress 'assignment operator could not be generated'
+    -wd4505 # Suppress 'unreferenced local function has been removed'
+    -wd4610 # Suppress '<class> can never be instantiated'
+    -wd4510 # Suppress 'default constructor could not be generated'
+    -wd4702 # Suppress 'unreachable code'
+    -wd4245 # Suppress 'signed/unsigned mismatch'
+    -wd4706 # Suppress 'assignment within conditional expression'
+    -wd4310 # Suppress 'cast truncates constant value'
+    -wd4701 # Suppress 'potentially uninitialized local variable'
+    -wd4703 # Suppress 'potentially uninitialized local pointer variable'
+    -wd4389 # Suppress 'signed/unsigned mismatch'
+    -wd4611 # Suppress 'interaction between '_setjmp' and C++ object destruction is non-portable'
+    -wd4805 # Suppress 'unsafe mix of type <type> and type <type> in operation'
+    -wd4204 # Suppress 'nonstandard extension used : non-constant aggregate initializer'
+    -wd4577 # Suppress 'noexcept used with no exception handling mode specified; termination on exception is not guaranteed'
+    -wd4091 # Suppress 'typedef: ignored on left of '' when no variable is declared'
+        # C4592 is disabled because of false positives in Visual Studio 2015
+        # Update 1. Re-evaluate the usefulness of this diagnostic with Update 2.
+    -wd4592 # Suppress ''var': symbol will be dynamically initialized (implementation limitation)
+    -wd4319 # Suppress ''operator' : zero extending 'type' to 'type' of greater size'
+
+    # Ideally, we'd like this warning to be enabled, but MSVC 2013 doesn't
+    # support the 'aligned' attribute in the way that clang sources requires (for
+    # any code that uses the LLVM_ALIGNAS macro), so this is must be disabled to
+    # avoid unwanted alignment warnings.
+    # When we switch to requiring a version of MSVC that supports the 'alignas'
+    # specifier (MSVC 2015?) this warning can be re-enabled.
+    -wd4324 # Suppress 'structure was padded due to __declspec(align())'
+
+    # Promoted warnings.
+    -w14062 # Promote 'enumerator in switch of enum is not handled' to level 1 warning.
+
+    # Promoted warnings to errors.
+    -we4238 # Promote 'nonstandard extension used : class rvalue used as lvalue' to error.
+    )
+
+  # Enable warnings
+  if (LLVM_ENABLE_WARNINGS)
+    # Put /W4 in front of all the -we flags. cl.exe doesn't care, but for
+    # clang-cl having /W4 after the -we flags will re-enable the warnings
+    # disabled by -we.
+    set(msvc_warning_flags "/W4 ${msvc_warning_flags}")
+    # CMake appends /W3 by default, and having /W3 followed by /W4 will result in
+    # cl : Command line warning D9025 : overriding '/W3' with '/W4'.  Since this is
+    # a command line warning and not a compiler warning, it cannot be suppressed except
+    # by fixing the command line.
+    string(REGEX REPLACE " /W[0-4]" "" CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
+    string(REGEX REPLACE " /W[0-4]" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+
+    if (LLVM_ENABLE_PEDANTIC)
+      # No MSVC equivalent available
+    endif (LLVM_ENABLE_PEDANTIC)
+  endif (LLVM_ENABLE_WARNINGS)
+
+  foreach(flag ${msvc_warning_flags})
+    append("${flag}" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+  endforeach(flag)
+endif (MSVC AND NOT CLANG_CL)
+
+if (LLVM_ENABLE_WARNINGS AND (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL))
+  append("-Wall -W -Wno-unused-parameter -Wwrite-strings" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+  append("-Wcast-qual" CMAKE_CXX_FLAGS)
+
+  # Turn off missing field initializer warnings for gcc to avoid noise from
+  # false positives with empty {}. Turn them on otherwise (they're off by
+  # default for clang).
+  check_cxx_compiler_flag("-Wmissing-field-initializers" CXX_SUPPORTS_MISSING_FIELD_INITIALIZERS_FLAG)
+  if (CXX_SUPPORTS_MISSING_FIELD_INITIALIZERS_FLAG)
+    if (CMAKE_COMPILER_IS_GNUCXX)
+      append("-Wno-missing-field-initializers" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+    else()
+      append("-Wmissing-field-initializers" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+    endif()
+  endif()
+
+  if (LLVM_ENABLE_PEDANTIC AND LLVM_COMPILER_IS_GCC_COMPATIBLE)
+    append("-pedantic" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+    append("-Wno-long-long" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+  endif()
+
+  add_flag_if_supported("-Wcovered-switch-default" COVERED_SWITCH_DEFAULT_FLAG)
+  append_if(USE_NO_UNINITIALIZED "-Wno-uninitialized" CMAKE_CXX_FLAGS)
+  append_if(USE_NO_MAYBE_UNINITIALIZED "-Wno-maybe-uninitialized" CMAKE_CXX_FLAGS)
+
+  # Check if -Wnon-virtual-dtor warns even though the class is marked final.
+  # If it does, don't add it. So it won't be added on clang 3.4 and older.
+  # This also catches cases when -Wnon-virtual-dtor isn't supported by
+  # the compiler at all.  This flag is not activated for gcc since it will
+  # incorrectly identify a protected non-virtual base when there is a friend
+  # declaration. Don't activate this in general on Windows as this warning has
+  # too many false positives on COM-style classes, which are destroyed with
+  # Release() (PR32286).
+  if (NOT CMAKE_COMPILER_IS_GNUCXX AND NOT WIN32)
+    set(OLD_CMAKE_REQUIRED_FLAGS ${CMAKE_REQUIRED_FLAGS})
+    set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -std=c++11 -Werror=non-virtual-dtor")
+    CHECK_CXX_SOURCE_COMPILES("class base {public: virtual void anchor();protected: ~base();};
+                               class derived final : public base { public: ~derived();};
+                               int main() { return 0; }"
+                              CXX_WONT_WARN_ON_FINAL_NONVIRTUALDTOR)
+    set(CMAKE_REQUIRED_FLAGS ${OLD_CMAKE_REQUIRED_FLAGS})
+    append_if(CXX_WONT_WARN_ON_FINAL_NONVIRTUALDTOR
+              "-Wnon-virtual-dtor" CMAKE_CXX_FLAGS)
+  endif()
+
+  # Enable -Wdelete-non-virtual-dtor if available.
+  add_flag_if_supported("-Wdelete-non-virtual-dtor" DELETE_NON_VIRTUAL_DTOR_FLAG)
+
+  # Check if -Wcomment is OK with an // comment ending with '\' if the next
+  # line is also a // comment.
+  set(OLD_CMAKE_REQUIRED_FLAGS ${CMAKE_REQUIRED_FLAGS})
+  set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -Werror -Wcomment")
+  CHECK_C_SOURCE_COMPILES("// \\\\\\n//\\nint main() {return 0;}"
+                          C_WCOMMENT_ALLOWS_LINE_WRAP)
+  set(CMAKE_REQUIRED_FLAGS ${OLD_CMAKE_REQUIRED_FLAGS})
+  if (NOT C_WCOMMENT_ALLOWS_LINE_WRAP)
+    append("-Wno-comment" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+  endif()
+
+  # Enable -Wstring-conversion to catch misuse of string literals.
+  add_flag_if_supported("-Wstring-conversion" STRING_CONVERSION_FLAG)
+endif (LLVM_ENABLE_WARNINGS AND (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL))
 
 macro(append_common_sanitizer_flags)
   if (NOT MSVC)

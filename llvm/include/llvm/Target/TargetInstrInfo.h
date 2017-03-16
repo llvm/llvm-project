@@ -1503,9 +1503,11 @@ public:
     return None;
   }
 
-  /// Determines whether |Inst| is a tail call instruction.
+  /// Determines whether \p Inst is a tail call instruction. Override this
+  /// method on targets that do not properly set MCID::Return and MCID::Call on
+  /// tail call instructions."
   virtual bool isTailCall(const MachineInstr &Inst) const {
-    return false;
+    return Inst.isReturn() && Inst.isCall();
   }
 
   /// True if the instruction is bound to the top of its basic block and no

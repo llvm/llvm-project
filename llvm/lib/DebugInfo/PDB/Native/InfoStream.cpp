@@ -51,8 +51,43 @@ Error InfoStream::reload() {
   Age = H->Age;
   Guid = H->Guid;
 
-  return NamedStreams.load(Reader);
+  uint32_t Offset = Reader.getOffset();
+  if (auto EC = NamedStreams.load(Reader))
+    return EC;
+  uint32_t NewOffset = Reader.getOffset();
+  NamedStreamMapByteSize = NewOffset - Offset;
+
+  bool Stop = false;
+  while (!Stop && !Reader.empty()) {
+    PdbRaw_FeatureSig Sig;
+    if (auto EC = Reader.readEnum(Sig))
+      return EC;
+    // Since this value comes from a file, it's possible we have some strange
+    // value which doesn't correspond to any value.  We don't want to warn on
+    // -Wcovered-switch-default in this case, so switch on the integral value
+    // instead of the enumeration value.
+    switch (uint32_t(Sig)) {
+    case uint32_t(PdbRaw_FeatureSig::VC110):
+      // No other flags for VC110 PDB.
+      Stop = true;
+      LLVM_FALLTHROUGH;
+    case uint32_t(PdbRaw_FeatureSig::VC140):
+      Features |= PdbFeatureContainsIdStream;
+      break;
+    case uint32_t(PdbRaw_FeatureSig::NoTypeMerge):
+      Features |= PdbFeatureNoTypeMerging;
+      break;
+    case uint32_t(PdbRaw_FeatureSig::MinimalDebugInfo):
+      Features |= PdbFeatureMinimalDebugInfo;
+    default:
+      continue;
+    }
+    FeatureSignatures.push_back(Sig);
+  }
+  return Error::success();
 }
+
+uint32_t InfoStream::getStreamSize() const { return Stream->getLength(); }
 
 uint32_t InfoStream::getNamedStreamIndex(llvm::StringRef Name) const {
   uint32_t Result;
@@ -75,6 +110,16 @@ uint32_t InfoStream::getSignature() const { return Signature; }
 uint32_t InfoStream::getAge() const { return Age; }
 
 PDB_UniqueId InfoStream::getGuid() const { return Guid; }
+
+uint32_t InfoStream::getNamedStreamMapByteSize() const {
+  return NamedStreamMapByteSize;
+}
+
+PdbRaw_Features InfoStream::getFeatures() const { return Features; }
+
+ArrayRef<PdbRaw_FeatureSig> InfoStream::getFeatureSignatures() const {
+  return FeatureSignatures;
+}
 
 const NamedStreamMap &InfoStream::getNamedStreams() const {
   return NamedStreams;

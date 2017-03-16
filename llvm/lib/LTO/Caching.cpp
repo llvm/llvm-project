@@ -21,31 +21,6 @@
 using namespace llvm;
 using namespace llvm::lto;
 
-static void commitEntry(StringRef TempFilename, StringRef EntryPath) {
-  // Rename to final destination (hopefully race condition won't matter here)
-  auto EC = sys::fs::rename(TempFilename, EntryPath);
-  if (EC) {
-    // Renaming failed, probably not the same filesystem, copy and delete.
-    // FIXME: Avoid needing to do this by creating the temporary file in the
-    // cache directory.
-    {
-      auto ReloadedBufferOrErr = MemoryBuffer::getFile(TempFilename);
-      if (auto EC = ReloadedBufferOrErr.getError())
-        report_fatal_error(Twine("Failed to open temp file '") + TempFilename +
-                           "': " + EC.message() + "\n");
-
-      raw_fd_ostream OS(EntryPath, EC, sys::fs::F_None);
-      if (EC)
-        report_fatal_error(Twine("Failed to open ") + EntryPath +
-                           " to save cached entry\n");
-      // I'm not sure what are the guarantee if two processes are doing this
-      // at the same time.
-      OS << (*ReloadedBufferOrErr)->getBuffer();
-    }
-    sys::fs::remove(TempFilename);
-  }
-}
-
 Expected<NativeObjectCache> lto::localCache(StringRef CacheDirectoryPath,
                                             AddFileFn AddFile) {
   if (std::error_code EC = sys::fs::create_directories(CacheDirectoryPath))
@@ -78,7 +53,10 @@ Expected<NativeObjectCache> lto::localCache(StringRef CacheDirectoryPath,
       ~CacheStream() {
         // Make sure the file is closed before committing it.
         OS.reset();
-        commitEntry(TempFilename, EntryPath);
+        // This is atomic on POSIX systems.
+        if (auto EC = sys::fs::rename(TempFilename, EntryPath))
+          report_fatal_error(Twine("Failed to rename temporary file ") +
+                             TempFilename + ": " + EC.message() + "\n");
         AddFile(Task, EntryPath);
       }
     };
@@ -86,9 +64,11 @@ Expected<NativeObjectCache> lto::localCache(StringRef CacheDirectoryPath,
     return [=](size_t Task) -> std::unique_ptr<NativeObjectStream> {
       // Write to a temporary to avoid race condition
       int TempFD;
-      SmallString<64> TempFilename;
+      SmallString<64> TempFilenameModel, TempFilename;
+      sys::path::append(TempFilenameModel, CacheDirectoryPath, "Thin-%%%%%%.tmp.o");
       std::error_code EC =
-          sys::fs::createTemporaryFile("Thin", "tmp.o", TempFD, TempFilename);
+          sys::fs::createUniqueFile(TempFilenameModel, TempFD, TempFilename,
+                                    sys::fs::owner_read | sys::fs::owner_write);
       if (EC) {
         errs() << "Error: " << EC.message() << "\n";
         report_fatal_error("ThinLTO: Can't get a temporary file");

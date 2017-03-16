@@ -343,7 +343,7 @@ struct WasmImport {
 
 // A wasm function to be written into the function section.
 struct WasmFunction {
-  unsigned Type;
+  int32_t Type;
   const MCSymbolWasm *Sym;
 };
 
@@ -356,7 +356,7 @@ struct WasmExport {
 
 // A wasm global to be written into the global section.
 struct WasmGlobal {
-  unsigned Type;
+  wasm::ValType Type;
   bool IsMutable;
   uint32_t InitialValue;
 };
@@ -510,10 +510,10 @@ static void WriteRelocations(
 void WasmObjectWriter::writeObject(MCAssembler &Asm,
                                    const MCAsmLayout &Layout) {
   MCContext &Ctx = Asm.getContext();
-  unsigned PtrType = is64Bit() ? wasm::WASM_TYPE_I64 : wasm::WASM_TYPE_I32;
+  wasm::ValType PtrType = is64Bit() ? wasm::ValType::I64 : wasm::ValType::I32;
 
   // Collect information from the available symbols.
-  DenseMap<WasmFunctionType, unsigned, WasmFunctionTypeDenseMapInfo>
+  DenseMap<WasmFunctionType, int32_t, WasmFunctionTypeDenseMapInfo>
       FunctionTypeIndices;
   SmallVector<WasmFunctionType, 4> FunctionTypes;
   SmallVector<WasmFunction, 4> Functions;
@@ -552,7 +552,7 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
   // Populate the Imports set.
   for (const MCSymbol &S : Asm.symbols()) {
     const auto &WS = static_cast<const MCSymbolWasm &>(S);
-    unsigned Type;
+    int32_t Type;
 
     if (WS.isFunction()) {
       // Prepare the function's type, if we haven't seen it yet.
@@ -566,7 +566,7 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
 
       Type = Pair.first->second;
     } else {
-      Type = PtrType;
+      Type = int32_t(PtrType);
     }
 
     // If the symbol is not defined in this translation unit, import it.
@@ -607,7 +607,7 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
     const SmallVectorImpl<char> &Contents = DataFrag.getContents();
     for (char p : Contents) {
       WasmGlobal G;
-      G.Type = uint8_t(p);
+      G.Type = wasm::ValType(p);
       G.IsMutable = true;
       G.InitialValue = 0;
       Globals.push_back(G);
@@ -632,7 +632,7 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
       if (Pair.second)
         FunctionTypes.push_back(F);
 
-      unsigned Type = Pair.first->second;
+      int32_t Type = Pair.first->second;
 
       if (WS.isDefined(/*SetUsed=*/false)) {
         // A definition. Take the next available index.
@@ -850,7 +850,7 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
 
     encodeULEB128(Globals.size(), getStream());
     for (const WasmGlobal &Global : Globals) {
-      encodeSLEB128(Global.Type, getStream());
+      writeValueType(Global.Type);
       write8(Global.IsMutable);
 
       write8(wasm::WASM_OPCODE_I32_CONST);

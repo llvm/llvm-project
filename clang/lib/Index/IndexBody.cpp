@@ -22,6 +22,10 @@ class BodyIndexer : public RecursiveASTVisitor<BodyIndexer> {
   SmallVector<Stmt*, 16> StmtStack;
 
   typedef RecursiveASTVisitor<BodyIndexer> base;
+
+  Stmt *getParentStmt() const {
+    return StmtStack.size() < 2 ? nullptr : StmtStack.end()[-2];
+  }
 public:
   BodyIndexer(IndexingContext &indexCtx,
               const NamedDecl *Parent, const DeclContext *DC)
@@ -178,7 +182,8 @@ public:
       SymbolRoleSet Roles{};
       SmallVector<SymbolRelation, 2> Relations;
       addCallRole(Roles, Relations);
-      if (E->isImplicit())
+      Stmt *Containing = getParentStmt();
+      if (E->isImplicit() || (Containing && isa<PseudoObjectExpr>(Containing)))
         Roles |= (unsigned)SymbolRole::Implicit;
 
       if (isDynamic(E)) {
@@ -194,9 +199,12 @@ public:
   }
 
   bool VisitObjCPropertyRefExpr(ObjCPropertyRefExpr *E) {
-    if (E->isExplicitProperty())
+    if (E->isExplicitProperty()) {
+      SmallVector<SymbolRelation, 2> Relations;
+      SymbolRoleSet Roles = getRolesForRef(E, Relations);
       return IndexCtx.handleReference(E->getExplicitProperty(), E->getLocation(),
-                                      Parent, ParentDC, SymbolRoleSet(), {}, E);
+                                      Parent, ParentDC, Roles, Relations, E);
+    }
 
     // No need to do a handleReference for the objc method, because there will
     // be a message expr as part of PseudoObjectExpr.

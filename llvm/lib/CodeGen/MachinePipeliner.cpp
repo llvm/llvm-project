@@ -955,7 +955,7 @@ static void getPhiRegs(MachineInstr &Phi, MachineBasicBlock *Loop,
   for (unsigned i = 1, e = Phi.getNumOperands(); i != e; i += 2)
     if (Phi.getOperand(i + 1).getMBB() != Loop)
       InitVal = Phi.getOperand(i).getReg();
-    else if (Phi.getOperand(i + 1).getMBB() == Loop)
+    else
       LoopVal = Phi.getOperand(i).getReg();
 
   assert(InitVal != 0 && LoopVal != 0 && "Unexpected Phi structure.");
@@ -3475,7 +3475,7 @@ bool SwingSchedulerDAG::isLoopCarriedOrder(SUnit *Source, const SDep &Dep,
   // increment value to determine if the accesses may be loop carried.
   if (OffsetS >= OffsetD)
     return OffsetS + AccessSizeS > DeltaS;
-  else if (OffsetS < OffsetD)
+  else
     return OffsetD + AccessSizeD > DeltaD;
 
   return true;

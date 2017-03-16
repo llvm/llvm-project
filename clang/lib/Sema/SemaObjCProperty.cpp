@@ -200,9 +200,10 @@ Decl *Sema::ActOnProperty(Scope *S, SourceLocation AtLoc,
   if (ObjCCategoryDecl *CDecl = dyn_cast<ObjCCategoryDecl>(ClassDecl)) {
     if (CDecl->IsClassExtension()) {
       Res = HandlePropertyInClassExtension(S, AtLoc, LParenLoc,
-                                           FD, GetterSel, SetterSel,
-                                           isReadWrite,
-                                           Attributes,
+                                           FD,
+                                           GetterSel, ODS.getGetterNameLoc(),
+                                           SetterSel, ODS.getSetterNameLoc(),
+                                           isReadWrite, Attributes,
                                            ODS.getPropertyAttributes(),
                                            T, TSI, MethodImplKind);
       if (!Res)
@@ -212,9 +213,10 @@ Decl *Sema::ActOnProperty(Scope *S, SourceLocation AtLoc,
 
   if (!Res) {
     Res = CreatePropertyDecl(S, ClassDecl, AtLoc, LParenLoc, FD,
-                             GetterSel, SetterSel, isReadWrite,
-                             Attributes, ODS.getPropertyAttributes(),
-                             T, TSI, MethodImplKind);
+                             GetterSel, ODS.getGetterNameLoc(), SetterSel,
+                             ODS.getSetterNameLoc(), isReadWrite, Attributes,
+                             ODS.getPropertyAttributes(), T, TSI,
+                             MethodImplKind);
     if (lexicalDC)
       Res->setLexicalDeclContext(lexicalDC);
   }
@@ -412,7 +414,10 @@ Sema::HandlePropertyInClassExtension(Scope *S,
                                      SourceLocation AtLoc,
                                      SourceLocation LParenLoc,
                                      FieldDeclarator &FD,
-                                     Selector GetterSel, Selector SetterSel,
+                                     Selector GetterSel,
+                                     SourceLocation GetterNameLoc,
+                                     Selector SetterSel,
+                                     SourceLocation SetterNameLoc,
                                      const bool isReadWrite,
                                      unsigned &Attributes,
                                      const unsigned AttributesAsWritten,
@@ -512,7 +517,8 @@ Sema::HandlePropertyInClassExtension(Scope *S,
   // Create a new ObjCPropertyDecl with the DeclContext being
   // the class extension.
   ObjCPropertyDecl *PDecl = CreatePropertyDecl(S, CDecl, AtLoc, LParenLoc,
-                                               FD, GetterSel, SetterSel,
+                                               FD, GetterSel, GetterNameLoc,
+                                               SetterSel, SetterNameLoc,
                                                isReadWrite,
                                                Attributes, AttributesAsWritten,
                                                T, TSI, MethodImplKind, DC);
@@ -562,7 +568,9 @@ ObjCPropertyDecl *Sema::CreatePropertyDecl(Scope *S,
                                            SourceLocation LParenLoc,
                                            FieldDeclarator &FD,
                                            Selector GetterSel,
+                                           SourceLocation GetterNameLoc,
                                            Selector SetterSel,
+                                           SourceLocation SetterNameLoc,
                                            const bool isReadWrite,
                                            const unsigned Attributes,
                                            const unsigned AttributesAsWritten,
@@ -640,8 +648,8 @@ ObjCPropertyDecl *Sema::CreatePropertyDecl(Scope *S,
 
   // Regardless of setter/getter attribute, we save the default getter/setter
   // selector names in anticipation of declaration of setter/getter methods.
-  PDecl->setGetterName(GetterSel);
-  PDecl->setSetterName(SetterSel);
+  PDecl->setGetterName(GetterSel, GetterNameLoc);
+  PDecl->setSetterName(SetterSel, SetterNameLoc);
   PDecl->setPropertyAttributesAsWritten(
                           makePropertyAttributesAsWritten(AttributesAsWritten));
 

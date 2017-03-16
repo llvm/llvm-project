@@ -19,6 +19,7 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/LibDriver/LibDriver.h"
+#include "llvm/Object/ArchiveWriter.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
@@ -417,43 +418,97 @@ static std::string getMapFile(const opt::InputArgList &Args) {
   return (OutFile.substr(0, OutFile.rfind('.')) + ".map").str();
 }
 
-// Returns true if a given file is a LLVM bitcode file. If it is a
-// static library, this function returns true if all files in the
-// archive are bitcode files.
-static bool isBitcodeFile(StringRef Path) {
-  using namespace sys::fs;
+// Returns slices of MB by parsing MB as an archive file.
+// Each slice consists of a member file in the archive.
+std::vector<MemoryBufferRef> getArchiveMembers(MemoryBufferRef MB) {
+  std::unique_ptr<Archive> File =
+      check(Archive::create(MB),
+            MB.getBufferIdentifier() + ": failed to parse archive");
 
+  std::vector<MemoryBufferRef> V;
+  Error Err = Error::success();
+  for (const ErrorOr<Archive::Child> &COrErr : File->children(Err)) {
+    Archive::Child C =
+        check(COrErr, MB.getBufferIdentifier() +
+                          ": could not get the child of the archive");
+    MemoryBufferRef MBRef =
+        check(C.getMemoryBufferRef(),
+              MB.getBufferIdentifier() +
+                  ": could not get the buffer for a child of the archive");
+    V.push_back(MBRef);
+  }
+  if (Err)
+    fatal(MB.getBufferIdentifier() +
+          ": Archive::children failed: " + toString(std::move(Err)));
+  return V;
+}
+
+// A helper function for filterBitcodeFiles.
+static bool needsRebuilding(MemoryBufferRef MB) {
+  // The MSVC linker doesn't support thin archives, so if it's a thin
+  // archive, we always need to rebuild it.
+  std::unique_ptr<Archive> File =
+      check(Archive::create(MB), "Failed to read " + MB.getBufferIdentifier());
+  if (File->isThin())
+    return true;
+
+  // Returns true if the archive contains at least one bitcode file.
+  for (MemoryBufferRef Member : getArchiveMembers(MB))
+    if (identify_magic(Member.getBuffer()) == file_magic::bitcode)
+      return true;
+  return false;
+}
+
+// Opens a given path as an archive file and removes bitcode files
+// from them if exists. This function is to appease the MSVC linker as
+// their linker doesn't like archive files containing non-native
+// object files.
+//
+// If a given archive doesn't contain bitcode files, the archive path
+// is returned as-is. Otherwise, a new temporary file is created and
+// its path is returned.
+static Optional<std::string>
+filterBitcodeFiles(StringRef Path, std::vector<std::string> &TemporaryFiles) {
   std::unique_ptr<MemoryBuffer> MB = check(
       MemoryBuffer::getFile(Path, -1, false, true), "could not open " + Path);
-  file_magic Magic = identify_magic(MB->getBuffer());
+  MemoryBufferRef MBRef = MB->getMemBufferRef();
+  file_magic Magic = identify_magic(MBRef.getBuffer());
 
   if (Magic == file_magic::bitcode)
-    return true;
+    return None;
+  if (Magic != file_magic::archive)
+    return Path.str();
+  if (!needsRebuilding(MBRef))
+    return Path.str();
 
-  if (Magic == file_magic::archive) {
-    std::unique_ptr<Archive> File =
-        check(Archive::create(MB->getMemBufferRef()));
+  log("Creating a temporary archive for " + Path +
+      " to remove bitcode files");
 
-    Error Err = Error::success();
-    for (const ErrorOr<Archive::Child> &COrErr : File->children(Err)) {
-      if (Err)
-        return false;
-      Archive::Child C = check(COrErr);
-      MemoryBufferRef MBRef = check(C.getMemoryBufferRef());
-      if (identify_magic(MBRef.getBuffer()) != file_magic::bitcode)
-        return false;
-    }
-    if (Err)
-      return false;
-    return true;
-  }
+  std::vector<NewArchiveMember> New;
+  for (MemoryBufferRef Member : getArchiveMembers(MBRef))
+    if (identify_magic(Member.getBuffer()) != file_magic::bitcode)
+      New.emplace_back(Member);
 
-  return false;
+  SmallString<128> S;
+  if (auto EC = sys::fs::createTemporaryFile("lld-" + sys::path::stem(Path),
+                                             ".lib", S))
+    fatal(EC, "cannot create a temporary file");
+  std::string Temp = S.str();
+  TemporaryFiles.push_back(Temp);
+
+  std::pair<StringRef, std::error_code> Ret =
+      llvm::writeArchive(Temp, New, /*WriteSymtab=*/true, Archive::Kind::K_GNU,
+                         /*Deterministics=*/true,
+                         /*Thin=*/false);
+  if (Ret.second)
+    error("failed to create a new archive " + S.str() + ": " + Ret.first);
+  return Temp;
 }
 
 // Create response file contents and invoke the MSVC linker.
 void LinkerDriver::invokeMSVC(opt::InputArgList &Args) {
   std::string Rsp = "/nologo ";
+  std::vector<std::string> Temps;
 
   for (auto *Arg : Args) {
     switch (Arg->getOption().getID()) {
@@ -467,14 +522,15 @@ void LinkerDriver::invokeMSVC(opt::InputArgList &Args) {
       if (!StringRef(Arg->getValue()).startswith("lld"))
         Rsp += toString(Arg) + " ";
       break;
-    case OPT_INPUT:
-      // Bitcode files are stripped as they've been compiled to
-      // native object files.
-      if (Optional<StringRef> Path = doFindFile(Arg->getValue()))
-        if (isBitcodeFile(*Path))
-          break;
+    case OPT_INPUT: {
+      if (Optional<StringRef> Path = doFindFile(Arg->getValue())) {
+        if (Optional<std::string> S = filterBitcodeFiles(*Path, Temps))
+          Rsp += quote(*S) + " ";
+        continue;
+      }
       Rsp += quote(Arg->getValue()) + " ";
       break;
+    }
     default:
       Rsp += toString(Arg) + " ";
     }
@@ -482,6 +538,9 @@ void LinkerDriver::invokeMSVC(opt::InputArgList &Args) {
 
   std::vector<StringRef> ObjectFiles = Symtab.compileBitcodeFiles();
   runMSVCLinker(Rsp, ObjectFiles);
+
+  for (StringRef Path : Temps)
+    sys::fs::remove(Path);
 }
 
 void LinkerDriver::enqueueTask(std::function<void()> Task) {

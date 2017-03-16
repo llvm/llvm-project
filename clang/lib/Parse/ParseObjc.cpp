@@ -929,7 +929,7 @@ void Parser::ParseObjCPropertyAttribute(ObjCDeclSpec &DS) {
 
       if (IsSetter) {
         DS.setPropertyAttributes(ObjCDeclSpec::DQ_PR_setter);
-        DS.setSetterName(SelIdent);
+        DS.setSetterName(SelIdent, SelLoc);
 
         if (ExpectAndConsume(tok::colon,
                              diag::err_expected_colon_after_setter_name)) {
@@ -938,7 +938,7 @@ void Parser::ParseObjCPropertyAttribute(ObjCDeclSpec &DS) {
         }
       } else {
         DS.setPropertyAttributes(ObjCDeclSpec::DQ_PR_getter);
-        DS.setGetterName(SelIdent);
+        DS.setGetterName(SelIdent, SelLoc);
       }
     } else if (II->isStr("nonnull")) {
       if (DS.getPropertyAttributes() & ObjCDeclSpec::DQ_PR_nullability)
