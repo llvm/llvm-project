@@ -303,7 +303,8 @@ TEST(CommandLineTest, SetValueInSubcategories) {
   EXPECT_FALSE(SC1Opt);
   EXPECT_FALSE(SC2Opt);
   const char *args[] = {"prog", "-top-level"};
-  EXPECT_TRUE(cl::ParseCommandLineOptions(2, args, StringRef(), true));
+  EXPECT_TRUE(
+      cl::ParseCommandLineOptions(2, args, StringRef(), &llvm::nulls()));
   EXPECT_TRUE(TopLevelOpt);
   EXPECT_FALSE(SC1Opt);
   EXPECT_FALSE(SC2Opt);
@@ -315,7 +316,8 @@ TEST(CommandLineTest, SetValueInSubcategories) {
   EXPECT_FALSE(SC1Opt);
   EXPECT_FALSE(SC2Opt);
   const char *args2[] = {"prog", "sc1", "-sc1"};
-  EXPECT_TRUE(cl::ParseCommandLineOptions(3, args2, StringRef(), true));
+  EXPECT_TRUE(
+      cl::ParseCommandLineOptions(3, args2, StringRef(), &llvm::nulls()));
   EXPECT_FALSE(TopLevelOpt);
   EXPECT_TRUE(SC1Opt);
   EXPECT_FALSE(SC2Opt);
@@ -327,7 +329,8 @@ TEST(CommandLineTest, SetValueInSubcategories) {
   EXPECT_FALSE(SC1Opt);
   EXPECT_FALSE(SC2Opt);
   const char *args3[] = {"prog", "sc2", "-sc2"};
-  EXPECT_TRUE(cl::ParseCommandLineOptions(3, args3, StringRef(), true));
+  EXPECT_TRUE(
+      cl::ParseCommandLineOptions(3, args3, StringRef(), &llvm::nulls()));
   EXPECT_FALSE(TopLevelOpt);
   EXPECT_FALSE(SC1Opt);
   EXPECT_TRUE(SC2Opt);
@@ -342,8 +345,13 @@ TEST(CommandLineTest, LookupFailsInWrongSubCommand) {
   StackOption<bool> SC1Opt("sc1", cl::sub(SC1), cl::init(false));
   StackOption<bool> SC2Opt("sc2", cl::sub(SC2), cl::init(false));
 
+  std::string Errs;
+  raw_string_ostream OS(Errs);
+
   const char *args[] = {"prog", "sc1", "-sc2"};
-  EXPECT_FALSE(cl::ParseCommandLineOptions(3, args, StringRef(), true));
+  EXPECT_FALSE(cl::ParseCommandLineOptions(3, args, StringRef(), &OS));
+  OS.flush();
+  EXPECT_FALSE(Errs.empty());
 }
 
 TEST(CommandLineTest, AddToAllSubCommands) {
@@ -358,23 +366,30 @@ TEST(CommandLineTest, AddToAllSubCommands) {
   const char *args2[] = {"prog", "sc1", "-everywhere"};
   const char *args3[] = {"prog", "sc2", "-everywhere"};
 
+  std::string Errs;
+  raw_string_ostream OS(Errs);
+
   EXPECT_FALSE(AllOpt);
-  EXPECT_TRUE(cl::ParseCommandLineOptions(2, args, StringRef(), true));
+  EXPECT_TRUE(cl::ParseCommandLineOptions(2, args, StringRef(), &OS));
   EXPECT_TRUE(AllOpt);
 
   AllOpt = false;
 
   cl::ResetAllOptionOccurrences();
   EXPECT_FALSE(AllOpt);
-  EXPECT_TRUE(cl::ParseCommandLineOptions(3, args2, StringRef(), true));
+  EXPECT_TRUE(cl::ParseCommandLineOptions(3, args2, StringRef(), &OS));
   EXPECT_TRUE(AllOpt);
 
   AllOpt = false;
 
   cl::ResetAllOptionOccurrences();
   EXPECT_FALSE(AllOpt);
-  EXPECT_TRUE(cl::ParseCommandLineOptions(3, args3, StringRef(), true));
+  EXPECT_TRUE(cl::ParseCommandLineOptions(3, args3, StringRef(), &OS));
   EXPECT_TRUE(AllOpt);
+
+  // Since all parsing succeeded, the error message should be empty.
+  OS.flush();
+  EXPECT_TRUE(Errs.empty());
 }
 
 TEST(CommandLineTest, ReparseCommandLineOptions) {
@@ -386,14 +401,16 @@ TEST(CommandLineTest, ReparseCommandLineOptions) {
   const char *args[] = {"prog", "-top-level"};
 
   EXPECT_FALSE(TopLevelOpt);
-  EXPECT_TRUE(cl::ParseCommandLineOptions(2, args, StringRef(), true));
+  EXPECT_TRUE(
+      cl::ParseCommandLineOptions(2, args, StringRef(), &llvm::nulls()));
   EXPECT_TRUE(TopLevelOpt);
 
   TopLevelOpt = false;
 
   cl::ResetAllOptionOccurrences();
   EXPECT_FALSE(TopLevelOpt);
-  EXPECT_TRUE(cl::ParseCommandLineOptions(2, args, StringRef(), true));
+  EXPECT_TRUE(
+      cl::ParseCommandLineOptions(2, args, StringRef(), &llvm::nulls()));
   EXPECT_TRUE(TopLevelOpt);
 }
 
@@ -406,14 +423,21 @@ TEST(CommandLineTest, RemoveFromRegularSubCommand) {
 
   const char *args[] = {"prog", "sc", "-remove-option"};
 
+  std::string Errs;
+  raw_string_ostream OS(Errs);
+
   EXPECT_FALSE(RemoveOption);
-  EXPECT_TRUE(cl::ParseCommandLineOptions(3, args, StringRef(), true));
+  EXPECT_TRUE(cl::ParseCommandLineOptions(3, args, StringRef(), &OS));
   EXPECT_TRUE(RemoveOption);
+  OS.flush();
+  EXPECT_TRUE(Errs.empty());
 
   RemoveOption.removeArgument();
 
   cl::ResetAllOptionOccurrences();
-  EXPECT_FALSE(cl::ParseCommandLineOptions(3, args, StringRef(), true));
+  EXPECT_FALSE(cl::ParseCommandLineOptions(3, args, StringRef(), &OS));
+  OS.flush();
+  EXPECT_FALSE(Errs.empty());
 }
 
 TEST(CommandLineTest, RemoveFromTopLevelSubCommand) {
@@ -427,13 +451,15 @@ TEST(CommandLineTest, RemoveFromTopLevelSubCommand) {
   const char *args[] = {"prog", "-top-level-remove"};
 
   EXPECT_FALSE(TopLevelRemove);
-  EXPECT_TRUE(cl::ParseCommandLineOptions(2, args, StringRef(), true));
+  EXPECT_TRUE(
+      cl::ParseCommandLineOptions(2, args, StringRef(), &llvm::nulls()));
   EXPECT_TRUE(TopLevelRemove);
 
   TopLevelRemove.removeArgument();
 
   cl::ResetAllOptionOccurrences();
-  EXPECT_FALSE(cl::ParseCommandLineOptions(2, args, StringRef(), true));
+  EXPECT_FALSE(
+      cl::ParseCommandLineOptions(2, args, StringRef(), &llvm::nulls()));
 }
 
 TEST(CommandLineTest, RemoveFromAllSubCommands) {
@@ -452,32 +478,38 @@ TEST(CommandLineTest, RemoveFromAllSubCommands) {
 
   // It should work for all subcommands including the top-level.
   EXPECT_FALSE(RemoveOption);
-  EXPECT_TRUE(cl::ParseCommandLineOptions(2, args0, StringRef(), true));
+  EXPECT_TRUE(
+      cl::ParseCommandLineOptions(2, args0, StringRef(), &llvm::nulls()));
   EXPECT_TRUE(RemoveOption);
 
   RemoveOption = false;
 
   cl::ResetAllOptionOccurrences();
   EXPECT_FALSE(RemoveOption);
-  EXPECT_TRUE(cl::ParseCommandLineOptions(3, args1, StringRef(), true));
+  EXPECT_TRUE(
+      cl::ParseCommandLineOptions(3, args1, StringRef(), &llvm::nulls()));
   EXPECT_TRUE(RemoveOption);
 
   RemoveOption = false;
 
   cl::ResetAllOptionOccurrences();
   EXPECT_FALSE(RemoveOption);
-  EXPECT_TRUE(cl::ParseCommandLineOptions(3, args2, StringRef(), true));
+  EXPECT_TRUE(
+      cl::ParseCommandLineOptions(3, args2, StringRef(), &llvm::nulls()));
   EXPECT_TRUE(RemoveOption);
 
   RemoveOption.removeArgument();
 
   // It should not work for any subcommands including the top-level.
   cl::ResetAllOptionOccurrences();
-  EXPECT_FALSE(cl::ParseCommandLineOptions(2, args0, StringRef(), true));
+  EXPECT_FALSE(
+      cl::ParseCommandLineOptions(2, args0, StringRef(), &llvm::nulls()));
   cl::ResetAllOptionOccurrences();
-  EXPECT_FALSE(cl::ParseCommandLineOptions(3, args1, StringRef(), true));
+  EXPECT_FALSE(
+      cl::ParseCommandLineOptions(3, args1, StringRef(), &llvm::nulls()));
   cl::ResetAllOptionOccurrences();
-  EXPECT_FALSE(cl::ParseCommandLineOptions(3, args2, StringRef(), true));
+  EXPECT_FALSE(
+      cl::ParseCommandLineOptions(3, args2, StringRef(), &llvm::nulls()));
 }
 
 TEST(CommandLineTest, GetRegisteredSubcommands) {
@@ -491,7 +523,8 @@ TEST(CommandLineTest, GetRegisteredSubcommands) {
   const char *args0[] = {"prog", "sc1"};
   const char *args1[] = {"prog", "sc2"};
 
-  EXPECT_TRUE(cl::ParseCommandLineOptions(2, args0, StringRef(), true));
+  EXPECT_TRUE(
+      cl::ParseCommandLineOptions(2, args0, StringRef(), &llvm::nulls()));
   EXPECT_FALSE(Opt1);
   EXPECT_FALSE(Opt2);
   for (auto *S : cl::getRegisteredSubcommands()) {
@@ -500,7 +533,8 @@ TEST(CommandLineTest, GetRegisteredSubcommands) {
   }
 
   cl::ResetAllOptionOccurrences();
-  EXPECT_TRUE(cl::ParseCommandLineOptions(2, args1, StringRef(), true));
+  EXPECT_TRUE(
+      cl::ParseCommandLineOptions(2, args1, StringRef(), &llvm::nulls()));
   EXPECT_FALSE(Opt1);
   EXPECT_FALSE(Opt2);
   for (auto *S : cl::getRegisteredSubcommands()) {

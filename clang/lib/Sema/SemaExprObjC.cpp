@@ -2556,6 +2556,24 @@ ExprResult Sema::BuildInstanceMessageImplicit(Expr *Receiver,
                               /*isImplicit=*/true);
 }
 
+static bool isMethodDeclaredInRootProtocol(Sema &S, const ObjCMethodDecl *M) {
+  if (!S.NSAPIObj)
+    return false;
+  const auto *Protocol = dyn_cast<ObjCProtocolDecl>(M->getDeclContext());
+  if (!Protocol)
+    return false;
+  const IdentifierInfo *II = S.NSAPIObj->getNSClassId(NSAPI::ClassId_NSObject);
+  if (const auto *RootClass = dyn_cast_or_null<ObjCInterfaceDecl>(
+          S.LookupSingleName(S.TUScope, II, Protocol->getLocStart(),
+                             Sema::LookupOrdinaryName))) {
+    for (const ObjCProtocolDecl *P : RootClass->all_referenced_protocols()) {
+      if (P->getCanonicalDecl() == Protocol->getCanonicalDecl())
+        return true;
+    }
+  }
+  return false;
+}
+
 /// \brief Build an Objective-C instance message expression.
 ///
 /// This routine takes care of both normal instance messages and
@@ -2731,7 +2749,7 @@ ExprResult Sema::BuildInstanceMessage(Expr *Receiver,
         if (!Method) {
           Method = LookupMethodInQualifiedType(Sel, QClassTy, true);
           // warn if instance method found for a Class message.
-          if (Method) {
+          if (Method && !isMethodDeclaredInRootProtocol(*this, Method)) {
             Diag(SelLoc, diag::warn_instance_method_on_class_found)
               << Method->getSelector() << Sel;
             Diag(Method->getLocation(), diag::note_method_declared_at)

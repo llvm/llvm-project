@@ -139,7 +139,7 @@ class ProcResourceKind;
 // changes this to an in-order issue/dispatch resource. In this case,
 // the scheduler counts down from the cycle that the instruction
 // issues in-order, forcing a stall whenever a subsequent instruction
-// requires the same resource until the number of ResourceCyles
+// requires the same resource until the number of ResourceCycles
 // specified in WriteRes expire. Setting BufferSize=1 changes this to
 // an in-order latency resource. In this case, the scheduler models
 // producer/consumer stalls between instructions that use the

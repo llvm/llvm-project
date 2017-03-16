@@ -1,0 +1,174 @@
+# RUN: llc -mtriple=aarch64-- -run-pass=instruction-select -verify-machineinstrs -global-isel %s -o - | FileCheck %s
+
+--- |
+  target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
+
+  define void @store_s64_gpr(i64* %addr) { ret void }
+  define void @store_s32_gpr(i32* %addr) { ret void }
+  define void @store_s16_gpr(i16* %addr) { ret void }
+  define void @store_s8_gpr(i8* %addr) { ret void }
+  define void @store_s64_fpr(i64* %addr) { ret void }
+  define void @store_s32_fpr(i32* %addr) { ret void }
+...
+
+---
+# CHECK-LABEL: name: store_s64_gpr
+name:            store_s64_gpr
+legalized:       true
+regBankSelected: true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: gpr64sp }
+# CHECK-NEXT:  - { id: 1, class: gpr64 }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+
+# CHECK:  body:
+# CHECK: %0 = COPY %x0
+# CHECK: %1 = COPY %x1
+# CHECK: STRXui %1, %0, 0 :: (store 8 into %ir.addr)
+body:             |
+  bb.0:
+    liveins: %x0, %x1
+
+    %0(p0) = COPY %x0
+    %1(s64) = COPY %x1
+    G_STORE  %1, %0 :: (store 8 into %ir.addr)
+
+...
+
+---
+# CHECK-LABEL: name: store_s32_gpr
+name:            store_s32_gpr
+legalized:       true
+regBankSelected: true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: gpr64sp }
+# CHECK-NEXT:  - { id: 1, class: gpr32 }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+
+# CHECK:  body:
+# CHECK: %0 = COPY %x0
+# CHECK: %1 = COPY %w1
+# CHECK: STRWui %1, %0, 0 :: (store 4 into %ir.addr)
+body:             |
+  bb.0:
+    liveins: %x0, %w1
+
+    %0(p0) = COPY %x0
+    %1(s32) = COPY %w1
+    G_STORE  %1, %0 :: (store 4 into %ir.addr)
+
+...
+
+---
+# CHECK-LABEL: name: store_s16_gpr
+name:            store_s16_gpr
+legalized:       true
+regBankSelected: true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: gpr64sp }
+# CHECK-NEXT:  - { id: 1, class: gpr32 }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+
+# CHECK:  body:
+# CHECK: %0 = COPY %x0
+# CHECK: %1 = COPY %w1
+# CHECK: STRHHui %1, %0, 0 :: (store 2 into %ir.addr)
+body:             |
+  bb.0:
+    liveins: %x0, %w1
+
+    %0(p0) = COPY %x0
+    %1(s16) = COPY %w1
+    G_STORE  %1, %0 :: (store 2 into %ir.addr)
+
+...
+
+---
+# CHECK-LABEL: name: store_s8_gpr
+name:            store_s8_gpr
+legalized:       true
+regBankSelected: true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: gpr64sp }
+# CHECK-NEXT:  - { id: 1, class: gpr32 }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+
+# CHECK:  body:
+# CHECK: %0 = COPY %x0
+# CHECK: %1 = COPY %w1
+# CHECK: STRBBui %1, %0, 0 :: (store 1 into %ir.addr)
+body:             |
+  bb.0:
+    liveins: %x0, %w1
+
+    %0(p0) = COPY %x0
+    %1(s8) = COPY %w1
+    G_STORE  %1, %0 :: (store 1 into %ir.addr)
+
+...
+
+---
+# CHECK-LABEL: name: store_s64_fpr
+name:            store_s64_fpr
+legalized:       true
+regBankSelected: true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: gpr64sp }
+# CHECK-NEXT:  - { id: 1, class: fpr64 }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: fpr }
+
+# CHECK:  body:
+# CHECK: %0 = COPY %x0
+# CHECK: %1 = COPY %d1
+# CHECK: STRDui %1, %0, 0 :: (store 8 into %ir.addr)
+body:             |
+  bb.0:
+    liveins: %x0, %d1
+
+    %0(p0) = COPY %x0
+    %1(s64) = COPY %d1
+    G_STORE  %1, %0 :: (store 8 into %ir.addr)
+
+...
+
+---
+# CHECK-LABEL: name: store_s32_fpr
+name:            store_s32_fpr
+legalized:       true
+regBankSelected: true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: gpr64sp }
+# CHECK-NEXT:  - { id: 1, class: fpr32 }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: fpr }
+
+# CHECK:  body:
+# CHECK: %0 = COPY %x0
+# CHECK: %1 = COPY %s1
+# CHECK: STRSui %1, %0, 0 :: (store 4 into %ir.addr)
+body:             |
+  bb.0:
+    liveins: %x0, %s1
+
+    %0(p0) = COPY %x0
+    %1(s32) = COPY %s1
+    G_STORE  %1, %0 :: (store 4 into %ir.addr)
+
+...

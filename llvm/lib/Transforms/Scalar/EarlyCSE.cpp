@@ -591,27 +591,28 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
   // which reaches this block where the condition might hold a different
   // value.  Since we're adding this to the scoped hash table (like any other
   // def), it will have been popped if we encounter a future merge block.
-  if (BasicBlock *Pred = BB->getSinglePredecessor())
-    if (auto *BI = dyn_cast<BranchInst>(Pred->getTerminator()))
-      if (BI->isConditional())
-        if (auto *CondInst = dyn_cast<Instruction>(BI->getCondition()))
-          if (SimpleValue::canHandle(CondInst)) {
-            assert(BI->getSuccessor(0) == BB || BI->getSuccessor(1) == BB);
-            auto *ConditionalConstant = (BI->getSuccessor(0) == BB) ?
-              ConstantInt::getTrue(BB->getContext()) :
-              ConstantInt::getFalse(BB->getContext());
-            AvailableValues.insert(CondInst, ConditionalConstant);
-            DEBUG(dbgs() << "EarlyCSE CVP: Add conditional value for '"
-                  << CondInst->getName() << "' as " << *ConditionalConstant
-                  << " in " << BB->getName() << "\n");
-            // Replace all dominated uses with the known value.
-            if (unsigned Count =
-                    replaceDominatedUsesWith(CondInst, ConditionalConstant, DT,
-                                             BasicBlockEdge(Pred, BB))) {
-              Changed = true;
-              NumCSECVP = NumCSECVP + Count;
-            }
-          }
+  if (BasicBlock *Pred = BB->getSinglePredecessor()) {
+    auto *BI = dyn_cast<BranchInst>(Pred->getTerminator());
+    if (BI && BI->isConditional()) {
+      auto *CondInst = dyn_cast<Instruction>(BI->getCondition());
+      if (CondInst && SimpleValue::canHandle(CondInst)) {
+        assert(BI->getSuccessor(0) == BB || BI->getSuccessor(1) == BB);
+        auto *TorF = (BI->getSuccessor(0) == BB)
+                         ? ConstantInt::getTrue(BB->getContext())
+                         : ConstantInt::getFalse(BB->getContext());
+        AvailableValues.insert(CondInst, TorF);
+        DEBUG(dbgs() << "EarlyCSE CVP: Add conditional value for '"
+                     << CondInst->getName() << "' as " << *TorF << " in "
+                     << BB->getName() << "\n");
+        // Replace all dominated uses with the known value.
+        if (unsigned Count = replaceDominatedUsesWith(
+                CondInst, TorF, DT, BasicBlockEdge(Pred, BB))) {
+          Changed = true;
+          NumCSECVP = NumCSECVP + Count;
+        }
+      }
+    }
+  }
 
   /// LastStore - Keep track of the last non-volatile store that we saw... for
   /// as long as there in no instruction that reads memory.  If we see a store

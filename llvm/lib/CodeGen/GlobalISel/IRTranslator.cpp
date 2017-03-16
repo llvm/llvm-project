@@ -140,15 +140,9 @@ unsigned IRTranslator::getMemOpAlignment(const Instruction &I) {
   return Alignment ? Alignment : DL->getABITypeAlignment(ValTy);
 }
 
-MachineBasicBlock &IRTranslator::getOrCreateBB(const BasicBlock &BB) {
+MachineBasicBlock &IRTranslator::getMBB(const BasicBlock &BB) {
   MachineBasicBlock *&MBB = BBToMBB[&BB];
-  if (!MBB) {
-    MBB = MF->CreateMachineBasicBlock(&BB);
-    MF->push_back(MBB);
-
-    if (BB.hasAddressTaken())
-      MBB->setHasAddressTaken();
-  }
+  assert(MBB && "BasicBlock was not encountered before");
   return *MBB;
 }
 
@@ -196,9 +190,11 @@ bool IRTranslator::translateCompare(const User &U,
   if (CmpInst::isIntPredicate(Pred))
     MIRBuilder.buildICmp(Pred, Res, Op0, Op1);
   else if (Pred == CmpInst::FCMP_FALSE)
-    MIRBuilder.buildConstant(Res, 0);
-  else if  (Pred == CmpInst::FCMP_TRUE)
-    MIRBuilder.buildConstant(Res, 1);
+    MIRBuilder.buildCopy(
+        Res, getOrCreateVReg(*Constant::getNullValue(CI->getType())));
+  else if (Pred == CmpInst::FCMP_TRUE)
+    MIRBuilder.buildCopy(
+        Res, getOrCreateVReg(*Constant::getAllOnesValue(CI->getType())));
   else
     MIRBuilder.buildFCmp(Pred, Res, Op0, Op1);
 
@@ -221,18 +217,18 @@ bool IRTranslator::translateBr(const User &U, MachineIRBuilder &MIRBuilder) {
     // We want a G_BRCOND to the true BB followed by an unconditional branch.
     unsigned Tst = getOrCreateVReg(*BrInst.getCondition());
     const BasicBlock &TrueTgt = *cast<BasicBlock>(BrInst.getSuccessor(Succ++));
-    MachineBasicBlock &TrueBB = getOrCreateBB(TrueTgt);
+    MachineBasicBlock &TrueBB = getMBB(TrueTgt);
     MIRBuilder.buildBrCond(Tst, TrueBB);
   }
 
   const BasicBlock &BrTgt = *cast<BasicBlock>(BrInst.getSuccessor(Succ));
-  MachineBasicBlock &TgtBB = getOrCreateBB(BrTgt);
+  MachineBasicBlock &TgtBB = getMBB(BrTgt);
   MIRBuilder.buildBr(TgtBB);
 
   // Link successors.
   MachineBasicBlock &CurBB = MIRBuilder.getMBB();
   for (const BasicBlock *Succ : BrInst.successors())
-    CurBB.addSuccessor(&getOrCreateBB(*Succ));
+    CurBB.addSuccessor(&getMBB(*Succ));
   return true;
 }
 
@@ -256,7 +252,7 @@ bool IRTranslator::translateSwitch(const User &U,
     MIRBuilder.buildICmp(CmpInst::ICMP_EQ, Tst, CaseValueReg, SwCondValue);
     MachineBasicBlock &CurMBB = MIRBuilder.getMBB();
     const BasicBlock *TrueBB = CaseIt.getCaseSuccessor();
-    MachineBasicBlock &TrueMBB = getOrCreateBB(*TrueBB);
+    MachineBasicBlock &TrueMBB = getMBB(*TrueBB);
 
     MIRBuilder.buildBrCond(Tst, TrueMBB);
     CurMBB.addSuccessor(&TrueMBB);
@@ -264,7 +260,8 @@ bool IRTranslator::translateSwitch(const User &U,
 
     MachineBasicBlock *FalseMBB =
         MF->CreateMachineBasicBlock(SwInst.getParent());
-    MF->push_back(FalseMBB);
+    // Insert the comparison blocks one after the other.
+    MF->insert(std::next(CurMBB.getIterator()), FalseMBB);
     MIRBuilder.buildBr(*FalseMBB);
     CurMBB.addSuccessor(FalseMBB);
 
@@ -272,7 +269,7 @@ bool IRTranslator::translateSwitch(const User &U,
   }
   // handle default case
   const BasicBlock *DefaultBB = SwInst.getDefaultDest();
-  MachineBasicBlock &DefaultMBB = getOrCreateBB(*DefaultBB);
+  MachineBasicBlock &DefaultMBB = getMBB(*DefaultBB);
   MIRBuilder.buildBr(DefaultMBB);
   MachineBasicBlock &CurMBB = MIRBuilder.getMBB();
   CurMBB.addSuccessor(&DefaultMBB);
@@ -291,7 +288,7 @@ bool IRTranslator::translateIndirectBr(const User &U,
   // Link successors.
   MachineBasicBlock &CurBB = MIRBuilder.getMBB();
   for (const BasicBlock *Succ : BrInst.successors())
-    CurBB.addSuccessor(&getOrCreateBB(*Succ));
+    CurBB.addSuccessor(&getMBB(*Succ));
 
   return true;
 }
@@ -431,9 +428,10 @@ bool IRTranslator::translateGetElementPtr(const User &U,
 
   Value &Op0 = *U.getOperand(0);
   unsigned BaseReg = getOrCreateVReg(Op0);
-  LLT PtrTy = getLLTForType(*Op0.getType(), *DL);
-  unsigned PtrSize = DL->getPointerSizeInBits(PtrTy.getAddressSpace());
-  LLT OffsetTy = LLT::scalar(PtrSize);
+  Type *PtrIRTy = Op0.getType();
+  LLT PtrTy = getLLTForType(*PtrIRTy, *DL);
+  Type *OffsetIRTy = DL->getIntPtrType(PtrIRTy);
+  LLT OffsetTy = getLLTForType(*OffsetIRTy, *DL);
 
   int64_t Offset = 0;
   for (gep_type_iterator GTI = gep_type_begin(&U), E = gep_type_end(&U);
@@ -455,8 +453,8 @@ bool IRTranslator::translateGetElementPtr(const User &U,
 
       if (Offset != 0) {
         unsigned NewBaseReg = MRI->createGenericVirtualRegister(PtrTy);
-        unsigned OffsetReg = MRI->createGenericVirtualRegister(OffsetTy);
-        MIRBuilder.buildConstant(OffsetReg, Offset);
+        unsigned OffsetReg =
+            getOrCreateVReg(*ConstantInt::get(OffsetIRTy, Offset));
         MIRBuilder.buildGEP(NewBaseReg, BaseReg, OffsetReg);
 
         BaseReg = NewBaseReg;
@@ -464,8 +462,8 @@ bool IRTranslator::translateGetElementPtr(const User &U,
       }
 
       // N = N + Idx * ElementSize;
-      unsigned ElementSizeReg = MRI->createGenericVirtualRegister(OffsetTy);
-      MIRBuilder.buildConstant(ElementSizeReg, ElementSize);
+      unsigned ElementSizeReg =
+          getOrCreateVReg(*ConstantInt::get(OffsetIRTy, ElementSize));
 
       unsigned IdxReg = getOrCreateVReg(*Idx);
       if (MRI->getType(IdxReg) != OffsetTy) {
@@ -484,8 +482,7 @@ bool IRTranslator::translateGetElementPtr(const User &U,
   }
 
   if (Offset != 0) {
-    unsigned OffsetReg = MRI->createGenericVirtualRegister(OffsetTy);
-    MIRBuilder.buildConstant(OffsetReg, Offset);
+    unsigned OffsetReg = getOrCreateVReg(*ConstantInt::get(OffsetIRTy, Offset));
     MIRBuilder.buildGEP(getOrCreateVReg(U), BaseReg, OffsetReg);
     return true;
   }
@@ -566,8 +563,8 @@ bool IRTranslator::translateOverflowIntrinsic(const CallInst &CI, unsigned Op,
                  .addUse(getOrCreateVReg(*CI.getOperand(1)));
 
   if (Op == TargetOpcode::G_UADDE || Op == TargetOpcode::G_USUBE) {
-    unsigned Zero = MRI->createGenericVirtualRegister(s1);
-    EntryBuilder.buildConstant(Zero, 0);
+    unsigned Zero = getOrCreateVReg(
+        *Constant::getNullValue(Type::getInt1Ty(CI.getContext())));
     MIB.addUse(Zero);
   }
 
@@ -823,8 +820,8 @@ bool IRTranslator::translateInvoke(const User &U,
   MIRBuilder.buildInstr(TargetOpcode::EH_LABEL).addSym(EndSymbol);
 
   // FIXME: track probabilities.
-  MachineBasicBlock &EHPadMBB = getOrCreateBB(*EHPadBB),
-                    &ReturnMBB = getOrCreateBB(*ReturnBB);
+  MachineBasicBlock &EHPadMBB = getMBB(*EHPadBB),
+                    &ReturnMBB = getMBB(*ReturnBB);
   MF->addInvoke(&EHPadMBB, BeginSymbol, EndSymbol);
   MIRBuilder.getMBB().addSuccessor(&ReturnMBB);
   MIRBuilder.getMBB().addSuccessor(&EHPadMBB);
@@ -919,7 +916,8 @@ bool IRTranslator::translateAlloca(const User &U,
 
   unsigned NumElts = getOrCreateVReg(*AI.getArraySize());
 
-  LLT IntPtrTy = LLT::scalar(DL->getPointerSizeInBits());
+  Type *IntPtrIRTy = DL->getIntPtrType(AI.getType());
+  LLT IntPtrTy = getLLTForType(*IntPtrIRTy, *DL);
   if (MRI->getType(NumElts) != IntPtrTy) {
     unsigned ExtElts = MRI->createGenericVirtualRegister(IntPtrTy);
     MIRBuilder.buildZExtOrTrunc(ExtElts, NumElts);
@@ -927,8 +925,8 @@ bool IRTranslator::translateAlloca(const User &U,
   }
 
   unsigned AllocSize = MRI->createGenericVirtualRegister(IntPtrTy);
-  unsigned TySize = MRI->createGenericVirtualRegister(IntPtrTy);
-  MIRBuilder.buildConstant(TySize, -DL->getTypeAllocSize(Ty));
+  unsigned TySize =
+      getOrCreateVReg(*ConstantInt::get(IntPtrIRTy, -DL->getTypeAllocSize(Ty)));
   MIRBuilder.buildMul(AllocSize, NumElts, TySize);
 
   LLT PtrTy = getLLTForType(*AI.getType(), *DL);
@@ -1107,7 +1105,6 @@ void IRTranslator::finalizeFunction() {
   PendingPHIs.clear();
   ValToVReg.clear();
   FrameIndices.clear();
-  Constants.clear();
   MachinePreds.clear();
 }
 
@@ -1129,12 +1126,24 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
   // Release the per-function state when we return, whether we succeeded or not.
   auto FinalizeOnReturn = make_scope_exit([this]() { finalizeFunction(); });
 
-  // Setup a separate basic-block for the arguments and constants, falling
-  // through to the IR-level Function's entry block.
+  // Setup a separate basic-block for the arguments and constants
   MachineBasicBlock *EntryBB = MF->CreateMachineBasicBlock();
   MF->push_back(EntryBB);
-  EntryBB->addSuccessor(&getOrCreateBB(F.front()));
   EntryBuilder.setMBB(*EntryBB);
+
+  // Create all blocks, in IR order, to preserve the layout.
+  for (const BasicBlock &BB: F) {
+    auto *&MBB = BBToMBB[&BB];
+
+    MBB = MF->CreateMachineBasicBlock(&BB);
+    MF->push_back(MBB);
+
+    if (BB.hasAddressTaken())
+      MBB->setHasAddressTaken();
+  }
+
+  // Make our arguments/constants entry block fallthrough to the IR entry block.
+  EntryBB->addSuccessor(&getMBB(F.front()));
 
   // Lower the actual args into this basic block.
   SmallVector<unsigned, 8> VRegArgs;
@@ -1151,7 +1160,7 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
 
   // And translate the function!
   for (const BasicBlock &BB: F) {
-    MachineBasicBlock &MBB = getOrCreateBB(BB);
+    MachineBasicBlock &MBB = getMBB(BB);
     // Set the insertion point of all the following translations to
     // the end of this basic block.
     CurBuilder.setMBB(MBB);

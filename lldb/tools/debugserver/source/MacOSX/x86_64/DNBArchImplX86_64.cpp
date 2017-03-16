@@ -411,21 +411,17 @@ kern_return_t DNBArchImplX86_64::SetFPUState() {
     m_state.SetError(e_regSetFPU, Write, 0);
     return m_state.GetError(e_regSetFPU, Write);
   } else {
+    int flavor = __x86_64_FLOAT_STATE;
+    mach_msg_type_number_t count = e_regSetWordSizeFPU;
     if (CPUHasAVX() || FORCE_AVX_REGS) {
-      m_state.SetError(
-          e_regSetFPU, Write,
-          ::thread_set_state(m_thread->MachPortNumber(), __x86_64_AVX_STATE,
-                             (thread_state_t)&m_state.context.fpu.avx,
-                             e_regSetWordSizeAVX));
-      return m_state.GetError(e_regSetFPU, Write);
-    } else {
-      m_state.SetError(
-          e_regSetFPU, Write,
-          ::thread_set_state(m_thread->MachPortNumber(), __x86_64_FLOAT_STATE,
-                             (thread_state_t)&m_state.context.fpu.no_avx,
-                             e_regSetWordSizeFPU));
-      return m_state.GetError(e_regSetFPU, Write);
+      flavor = __x86_64_AVX_STATE;
+      count = e_regSetWordSizeAVX;
     }
+    m_state.SetError(
+          e_regSetFPU, Write,
+          ::thread_set_state(m_thread->MachPortNumber(), flavor,
+                             (thread_state_t)&m_state.context.fpu, count));
+   return m_state.GetError(e_regSetFPU, Write);
   }
 }
 

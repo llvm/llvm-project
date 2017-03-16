@@ -693,6 +693,10 @@ def gi_addsub_shifted_imm32 :
     GIComplexOperandMatcher<s32, (ops i32imm, i32imm), "selectArithImmed">,
     GIComplexPatternEquiv<addsub_shifted_imm32>;
 
+def gi_addsub_shifted_imm64 :
+    GIComplexOperandMatcher<s64, (ops i32imm, i32imm), "selectArithImmed">,
+    GIComplexPatternEquiv<addsub_shifted_imm64>;
+
 class neg_addsub_shifted_imm<ValueType Ty>
     : Operand<Ty>, ComplexPattern<Ty, 2, "SelectNegArithImmed", [imm]> {
   let PrintMethod = "printAddSubImm";

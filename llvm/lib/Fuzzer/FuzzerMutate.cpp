@@ -77,7 +77,7 @@ size_t MutationDispatcher::Mutate_CustomCrossOver(uint8_t *Data, size_t Size,
                                                   size_t MaxSize) {
   if (!Corpus || Corpus->size() < 2 || Size == 0)
     return 0;
-  size_t Idx = Rand(Corpus->size());
+  size_t Idx = Corpus->ChooseUnitIdxToMutate(Rand);
   const Unit &Other = (*Corpus)[Idx];
   if (Other.empty())
     return 0;

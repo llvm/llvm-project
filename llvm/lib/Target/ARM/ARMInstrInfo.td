@@ -92,6 +92,13 @@ def SDTBinaryArithWithFlagsInOut : SDTypeProfile<2, 3,
                                              SDTCisVT<1, i32>,
                                              SDTCisVT<4, i32>]>;
 
+def SDT_LongMac  : SDTypeProfile<2, 4, [SDTCisVT<0, i32>,
+                                        SDTCisSameAs<0, 1>,
+                                        SDTCisSameAs<0, 2>,
+                                        SDTCisSameAs<0, 3>,
+                                        SDTCisSameAs<0, 4>,
+                                        SDTCisSameAs<0, 5>]>;
+
 // Node definitions.
 def ARMWrapper       : SDNode<"ARMISD::Wrapper",     SDTIntUnaryOp>;
 def ARMWrapperPIC    : SDNode<"ARMISD::WrapperPIC",  SDTIntUnaryOp>;
@@ -185,6 +192,10 @@ def ARMmemcopy : SDNode<"ARMISD::MEMCPY", SDT_ARMMEMCPY,
 
 def ARMsmulwb       : SDNode<"ARMISD::SMULWB", SDTIntBinOp, []>;
 def ARMsmulwt       : SDNode<"ARMISD::SMULWT", SDTIntBinOp, []>;
+def ARMsmlalbb      : SDNode<"ARMISD::SMLALBB", SDT_LongMac, []>;
+def ARMsmlalbt      : SDNode<"ARMISD::SMLALBT", SDT_LongMac, []>;
+def ARMsmlaltb      : SDNode<"ARMISD::SMLALTB", SDT_LongMac, []>;
+def ARMsmlaltt      : SDNode<"ARMISD::SMLALTT", SDT_LongMac, []>;
 
 //===----------------------------------------------------------------------===//
 // ARM Instruction Predicate Definitions.
@@ -4183,29 +4194,28 @@ defm SMUL : AI_smul<"smul">;
 defm SMLA : AI_smla<"smla">;
 
 // Halfword multiply accumulate long: SMLAL<x><y>.
-def SMLALBB : AMulxyI64<0b0001010, 0b00, (outs GPRnopc:$RdLo, GPRnopc:$RdHi),
-                      (ins GPRnopc:$Rn, GPRnopc:$Rm),
-                      IIC_iMAC64, "smlalbb", "\t$RdLo, $RdHi, $Rn, $Rm", []>,
-              Requires<[IsARM, HasV5TE]>,
-              Sched<[WriteMAC64Lo, WriteMAC64Hi, ReadMUL, ReadMUL, ReadMAC, ReadMAC]>;
+class SMLAL<bits<2> opc1, string asm>
+ : AMulxyI64<0b0001010, opc1,
+        (outs GPRnopc:$RdLo, GPRnopc:$RdHi),
+        (ins GPRnopc:$Rn, GPRnopc:$Rm, GPRnopc:$RLo, GPRnopc:$RHi),
+        IIC_iMAC64, asm, "\t$RdLo, $RdHi, $Rn, $Rm", []>,
+        RegConstraint<"$RLo = $RdLo, $RHi = $RdHi">,
+        Requires<[IsARM, HasV5TE]>,
+        Sched<[WriteMAC64Lo, WriteMAC64Hi, ReadMUL, ReadMUL, ReadMAC, ReadMAC]>;
 
-def SMLALBT : AMulxyI64<0b0001010, 0b10, (outs GPRnopc:$RdLo, GPRnopc:$RdHi),
-                      (ins GPRnopc:$Rn, GPRnopc:$Rm),
-                      IIC_iMAC64, "smlalbt", "\t$RdLo, $RdHi, $Rn, $Rm", []>,
-              Requires<[IsARM, HasV5TE]>,
-              Sched<[WriteMAC64Lo, WriteMAC64Hi, ReadMUL, ReadMUL, ReadMAC, ReadMAC]>;
+def SMLALBB : SMLAL<0b00, "smlalbb">;
+def SMLALBT : SMLAL<0b10, "smlalbt">;
+def SMLALTB : SMLAL<0b01, "smlaltb">;
+def SMLALTT : SMLAL<0b11, "smlaltt">;
 
-def SMLALTB : AMulxyI64<0b0001010, 0b01, (outs GPRnopc:$RdLo, GPRnopc:$RdHi),
-                      (ins GPRnopc:$Rn, GPRnopc:$Rm),
-                      IIC_iMAC64, "smlaltb", "\t$RdLo, $RdHi, $Rn, $Rm", []>,
-              Requires<[IsARM, HasV5TE]>,
-              Sched<[WriteMAC64Lo, WriteMAC64Hi, ReadMUL, ReadMUL, ReadMAC, ReadMAC]>;
-
-def SMLALTT : AMulxyI64<0b0001010, 0b11, (outs GPRnopc:$RdLo, GPRnopc:$RdHi),
-                      (ins GPRnopc:$Rn, GPRnopc:$Rm),
-                      IIC_iMAC64, "smlaltt", "\t$RdLo, $RdHi, $Rn, $Rm", []>,
-              Requires<[IsARM, HasV5TE]>,
-              Sched<[WriteMAC64Lo, WriteMAC64Hi, ReadMUL, ReadMUL, ReadMAC, ReadMAC]>;
+def : ARMV5TEPat<(ARMsmlalbb GPR:$Rn, GPR:$Rm, GPR:$RLo, GPR:$RHi),
+                 (SMLALBB $Rn, $Rm, $RLo, $RHi)>;
+def : ARMV5TEPat<(ARMsmlalbt GPR:$Rn, GPR:$Rm, GPR:$RLo, GPR:$RHi),
+                 (SMLALBT $Rn, $Rm, $RLo, $RHi)>;
+def : ARMV5TEPat<(ARMsmlaltb GPR:$Rn, GPR:$Rm, GPR:$RLo, GPR:$RHi),
+                 (SMLALTB $Rn, $Rm, $RLo, $RHi)>;
+def : ARMV5TEPat<(ARMsmlaltt GPR:$Rn, GPR:$Rm, GPR:$RLo, GPR:$RHi),
+                 (SMLALTT $Rn, $Rm, $RLo, $RHi)>;
 
 // Helper class for AI_smld.
 class AMulDualIbase<bit long, bit sub, bit swap, dag oops, dag iops,

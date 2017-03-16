@@ -337,11 +337,64 @@ nonTypeTemplateParmDecl()
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Decl.html">Decl</a>&gt;</td><td class="name" onclick="toggle('objcCategoryDecl0')"><a name="objcCategoryDecl0Anchor">objcCategoryDecl</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1ObjCCategoryDecl.html">ObjCCategoryDecl</a>&gt;...</td></tr>
+<tr><td colspan="4" class="doc" id="objcCategoryDecl0"><pre>Matches Objective-C category declarations.
+
+Example matches Foo (Additions)
+  @interface Foo (Additions)
+  @end
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Decl.html">Decl</a>&gt;</td><td class="name" onclick="toggle('objcInterfaceDecl0')"><a name="objcInterfaceDecl0Anchor">objcInterfaceDecl</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1ObjCInterfaceDecl.html">ObjCInterfaceDecl</a>&gt;...</td></tr>
 <tr><td colspan="4" class="doc" id="objcInterfaceDecl0"><pre>Matches Objective-C interface declarations.
 
 Example matches Foo
   @interface Foo
+  @end
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Decl.html">Decl</a>&gt;</td><td class="name" onclick="toggle('objcIvarDecl0')"><a name="objcIvarDecl0Anchor">objcIvarDecl</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1ObjCIvarDecl.html">ObjCIvarDecl</a>&gt;...</td></tr>
+<tr><td colspan="4" class="doc" id="objcIvarDecl0"><pre>Matches Objective-C instance variable declarations.
+
+Example matches _enabled
+  @implementation Foo {
+    BOOL _enabled;
+  }
+  @end
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Decl.html">Decl</a>&gt;</td><td class="name" onclick="toggle('objcMethodDecl0')"><a name="objcMethodDecl0Anchor">objcMethodDecl</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1ObjCMethodDecl.html">ObjCMethodDecl</a>&gt;...</td></tr>
+<tr><td colspan="4" class="doc" id="objcMethodDecl0"><pre>Matches Objective-C method declarations.
+
+Example matches both declaration and definition of -[Foo method]
+  @interface Foo
+  - (void)method;
+  @end
+
+  @implementation Foo
+  - (void)method {}
+  @end
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Decl.html">Decl</a>&gt;</td><td class="name" onclick="toggle('objcPropertyDecl0')"><a name="objcPropertyDecl0Anchor">objcPropertyDecl</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1ObjCPropertyDecl.html">ObjCPropertyDecl</a>&gt;...</td></tr>
+<tr><td colspan="4" class="doc" id="objcPropertyDecl0"><pre>Matches Objective-C property declarations.
+
+Example matches enabled
+  @interface Foo
+  @property BOOL enabled;
+  @end
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Decl.html">Decl</a>&gt;</td><td class="name" onclick="toggle('objcProtocolDecl0')"><a name="objcProtocolDecl0Anchor">objcProtocolDecl</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1ObjCProtocolDecl.html">ObjCProtocolDecl</a>&gt;...</td></tr>
+<tr><td colspan="4" class="doc" id="objcProtocolDecl0"><pre>Matches Objective-C protocol declarations.
+
+Example matches FooDelegate
+  @protocol FooDelegate
   @end
 </pre></td></tr>
 

@@ -58,6 +58,7 @@ static cl::opt<bool> WarnOnSkippedPatterns(
              "in the GlobalISel selector"),
     cl::init(false));
 
+namespace {
 //===- Helper functions ---------------------------------------------------===//
 
 /// This class stands in for LLT wherever we want to tablegen-erate an
@@ -148,6 +149,39 @@ static bool isTrivialOperatorNode(const TreePatternNode *N) {
 }
 
 //===- Matchers -----------------------------------------------------------===//
+
+class MatchAction;
+
+/// Generates code to check that a match rule matches.
+class RuleMatcher {
+  /// A list of matchers that all need to succeed for the current rule to match.
+  /// FIXME: This currently supports a single match position but could be
+  /// extended to support multiple positions to support div/rem fusion or
+  /// load-multiple instructions.
+  std::vector<std::unique_ptr<InstructionMatcher>> Matchers;
+
+  /// A list of actions that need to be taken when all predicates in this rule
+  /// have succeeded.
+  std::vector<std::unique_ptr<MatchAction>> Actions;
+
+public:
+  RuleMatcher() {}
+
+  InstructionMatcher &addInstructionMatcher();
+
+  template <class Kind, class... Args> Kind &addAction(Args &&... args);
+
+  void emit(raw_ostream &OS) const;
+
+  /// Compare the priority of this object and B.
+  ///
+  /// Returns true if this object is more important than B.
+  bool isHigherPriorityThan(const RuleMatcher &B) const;
+
+  /// Report the maximum number of temporary operands needed by the rule
+  /// matcher.
+  unsigned countTemporaryOperands() const;
+};
 
 template <class PredicateTy> class PredicateListMatcher {
 private:
@@ -599,7 +633,6 @@ void OperandPlaceholder::emitCxxValueExpr(raw_ostream &OS) const {
   }
 }
 
-namespace {
 class OperandRenderer {
 public:
   enum RendererKind { OR_Copy, OR_Register, OR_ComplexPattern };
@@ -784,90 +817,70 @@ public:
   }
 };
 
-/// Generates code to check that a match rule matches.
-class RuleMatcher {
-  /// A list of matchers that all need to succeed for the current rule to match.
-  /// FIXME: This currently supports a single match position but could be
-  /// extended to support multiple positions to support div/rem fusion or
-  /// load-multiple instructions.
-  std::vector<std::unique_ptr<InstructionMatcher>> Matchers;
+InstructionMatcher &RuleMatcher::addInstructionMatcher() {
+  Matchers.emplace_back(new InstructionMatcher());
+  return *Matchers.back();
+}
 
-  /// A list of actions that need to be taken when all predicates in this rule
-  /// have succeeded.
-  std::vector<std::unique_ptr<MatchAction>> Actions;
+template <class Kind, class... Args>
+Kind &RuleMatcher::addAction(Args &&... args) {
+  Actions.emplace_back(llvm::make_unique<Kind>(std::forward<Args>(args)...));
+  return *static_cast<Kind *>(Actions.back().get());
+}
 
-public:
-  RuleMatcher() {}
+void RuleMatcher::emit(raw_ostream &OS) const {
+  if (Matchers.empty())
+    llvm_unreachable("Unexpected empty matcher!");
 
-  InstructionMatcher &addInstructionMatcher() {
-    Matchers.emplace_back(new InstructionMatcher());
-    return *Matchers.back();
+  // The representation supports rules that require multiple roots such as:
+  //    %ptr(p0) = ...
+  //    %elt0(s32) = G_LOAD %ptr
+  //    %1(p0) = G_ADD %ptr, 4
+  //    %elt1(s32) = G_LOAD p0 %1
+  // which could be usefully folded into:
+  //    %ptr(p0) = ...
+  //    %elt0(s32), %elt1(s32) = TGT_LOAD_PAIR %ptr
+  // on some targets but we don't need to make use of that yet.
+  assert(Matchers.size() == 1 && "Cannot handle multi-root matchers yet");
+  OS << "  if (";
+  Matchers.front()->emitCxxPredicateExpr(OS, "I");
+  OS << ") {\n";
+
+  for (const auto &MA : Actions) {
+    OS << "    ";
+    MA->emitCxxActionStmts(OS, "I");
+    OS << "\n";
   }
 
-  template <class Kind, class... Args>
-  Kind &addAction(Args&&... args) {
-    Actions.emplace_back(llvm::make_unique<Kind>(std::forward<Args>(args)...));
-    return *static_cast<Kind *>(Actions.back().get());
-  }
+  OS << "    constrainSelectedInstRegOperands(NewI, TII, TRI, RBI);\n";
+  OS << "    return true;\n";
+  OS << "  }\n\n";
+}
 
-  void emit(raw_ostream &OS) const {
-    if (Matchers.empty())
-      llvm_unreachable("Unexpected empty matcher!");
-
-    // The representation supports rules that require multiple roots such as:
-    //    %ptr(p0) = ...
-    //    %elt0(s32) = G_LOAD %ptr
-    //    %1(p0) = G_ADD %ptr, 4
-    //    %elt1(s32) = G_LOAD p0 %1
-    // which could be usefully folded into:
-    //    %ptr(p0) = ...
-    //    %elt0(s32), %elt1(s32) = TGT_LOAD_PAIR %ptr
-    // on some targets but we don't need to make use of that yet.
-    assert(Matchers.size() == 1 && "Cannot handle multi-root matchers yet");
-    OS << "  if (";
-    Matchers.front()->emitCxxPredicateExpr(OS, "I");
-    OS << ") {\n";
-
-    for (const auto &MA : Actions) {
-      OS << "    ";
-      MA->emitCxxActionStmts(OS, "I");
-      OS << "\n";
-    }
-
-    OS << "    constrainSelectedInstRegOperands(NewI, TII, TRI, RBI);\n";
-    OS << "    return true;\n";
-    OS << "  }\n\n";
-  }
-
-  /// Compare the priority of this object and B.
-  ///
-  /// Returns true if this object is more important than B.
-  bool isHigherPriorityThan(const RuleMatcher &B) const {
-    // Rules involving more match roots have higher priority.
-    if (Matchers.size() > B.Matchers.size())
-      return true;
-    if (Matchers.size() < B.Matchers.size())
-      return false;
-
-    for (const auto &Matcher : zip(Matchers, B.Matchers)) {
-      if (std::get<0>(Matcher)->isHigherPriorityThan(*std::get<1>(Matcher)))
-        return true;
-      if (std::get<1>(Matcher)->isHigherPriorityThan(*std::get<0>(Matcher)))
-        return false;
-    }
-
+bool RuleMatcher::isHigherPriorityThan(const RuleMatcher &B) const {
+  // Rules involving more match roots have higher priority.
+  if (Matchers.size() > B.Matchers.size())
+    return true;
+  if (Matchers.size() < B.Matchers.size())
     return false;
-  };
 
-  /// Report the maximum number of temporary operands needed by the rule
-  /// matcher.
-  unsigned countTemporaryOperands() const {
-    return std::accumulate(Matchers.begin(), Matchers.end(), 0,
-                           [](unsigned A, const std::unique_ptr<InstructionMatcher> &Matcher) {
-                             return A + Matcher->countTemporaryOperands();
-                           });
+  for (const auto &Matcher : zip(Matchers, B.Matchers)) {
+    if (std::get<0>(Matcher)->isHigherPriorityThan(*std::get<1>(Matcher)))
+      return true;
+    if (std::get<1>(Matcher)->isHigherPriorityThan(*std::get<0>(Matcher)))
+      return false;
   }
+
+  return false;
 };
+
+unsigned RuleMatcher::countTemporaryOperands() const {
+  return std::accumulate(
+      Matchers.begin(), Matchers.end(), 0,
+      [](unsigned A, const std::unique_ptr<InstructionMatcher> &Matcher) {
+        return A + Matcher->countTemporaryOperands();
+      });
+}
 
 //===- GlobalISelEmitter class --------------------------------------------===//
 
@@ -891,7 +904,7 @@ private:
   DenseMap<const Record *, const Record *> ComplexPatternEquivs;
 
   void gatherNodeEquivs();
-  const CodeGenInstruction *findNodeEquiv(Record *N);
+  const CodeGenInstruction *findNodeEquiv(Record *N) const;
 
   /// Analyze pattern \p P, returning a matcher for it if possible.
   /// Otherwise, return an Error explaining why we don't support it.
@@ -913,7 +926,7 @@ void GlobalISelEmitter::gatherNodeEquivs() {
  }
 }
 
-const CodeGenInstruction *GlobalISelEmitter::findNodeEquiv(Record *N) {
+const CodeGenInstruction *GlobalISelEmitter::findNodeEquiv(Record *N) const {
   return NodeEquivs.lookup(N);
 }
 

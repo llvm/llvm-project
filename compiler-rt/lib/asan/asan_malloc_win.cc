@@ -100,7 +100,7 @@ void *realloc(void *ptr, size_t size) {
 
 ALLOCATION_FUNCTION_ATTRIBUTE
 void *_realloc_dbg(void *ptr, size_t size, int) {
-  CHECK(!"_realloc_dbg should not exist!");
+  UNREACHABLE("_realloc_dbg should not exist!");
   return 0;
 }
 
