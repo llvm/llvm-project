@@ -14,12 +14,56 @@
 
 #include "llvm/DebugInfo/PDB/Native/PDBFile.h"
 #include "llvm/DebugInfo/PDB/Native/RawConstants.h"
+#include "llvm/DebugInfo/PDB/Native/StringTable.h"
 
 #include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/FormatVariadic.h"
 
 using namespace llvm;
 using namespace llvm::pdb;
+
+template<typename R>
+using ValueOfRange = llvm::detail::ValueOfRange<R>;
+
+template<typename Range, typename Comp>
+static void set_differences(Range &&R1, Range &&R2,
+    SmallVectorImpl<ValueOfRange<Range>> *OnlyLeft,
+    SmallVectorImpl<ValueOfRange<Range>> *OnlyRight,
+    SmallVectorImpl<ValueOfRange<Range>> *Intersection, Comp Comparator) {
+
+  std::sort(R1.begin(), R1.end(), Comparator);
+  std::sort(R2.begin(), R2.end(), Comparator);
+
+  if (OnlyLeft) {
+    OnlyLeft->reserve(R1.size());
+    auto End = std::set_difference(R1.begin(), R1.end(), R2.begin(), R2.end(),
+      OnlyLeft->begin(), Comparator);
+    OnlyLeft->set_size(std::distance(OnlyLeft->begin(), End));
+  }
+  if (OnlyRight) {
+    OnlyLeft->reserve(R2.size());
+    auto End = std::set_difference(R2.begin(), R2.end(), R1.begin(), R1.end(),
+      OnlyRight->begin(), Comparator);
+    OnlyRight->set_size(std::distance(OnlyRight->begin(), End));
+  }
+  if (Intersection) {
+    Intersection->reserve(std::min(R1.size(), R2.size()));
+    auto End = std::set_intersection(R1.begin(), R1.end(), R2.begin(),
+      R2.end(), Intersection->begin(), Comparator);
+    Intersection->set_size(std::distance(Intersection->begin(), End));
+  }
+}
+
+template <typename Range>
+static void
+set_differences(Range &&R1, Range &&R2,
+                SmallVectorImpl<ValueOfRange<Range>> *OnlyLeft,
+                SmallVectorImpl<ValueOfRange<Range>> *OnlyRight,
+                SmallVectorImpl<ValueOfRange<Range>> *Intersection = nullptr) {
+  std::less<ValueOfRange<Range>> Comp;
+  set_differences(std::forward<Range>(R1), std::forward<Range>(R2), OnlyLeft, OnlyRight, Intersection, Comp);
+}
+
 
 DiffStyle::DiffStyle(PDBFile &File1, PDBFile &File2)
     : File1(File1), File2(File2) {}
@@ -162,26 +206,12 @@ Error DiffStyle::diffStreamDirectory() {
     auto Comparator = [](const value_type &I1, const value_type &I2) {
       return I1.value() < I2.value();
     };
-    std::sort(PI.begin(), PI.end(), Comparator);
-    std::sort(QI.begin(), QI.end(), Comparator);
 
     decltype(PI) OnlyP;
     decltype(QI) OnlyQ;
     decltype(PI) Common;
 
-    OnlyP.reserve(P.size());
-    OnlyQ.reserve(Q.size());
-    Common.reserve(Q.size());
-
-    auto PEnd = std::set_difference(PI.begin(), PI.end(), QI.begin(), QI.end(),
-                                    OnlyP.begin(), Comparator);
-    auto QEnd = std::set_difference(QI.begin(), QI.end(), PI.begin(), PI.end(),
-                                    OnlyQ.begin(), Comparator);
-    auto ComEnd = std::set_intersection(PI.begin(), PI.end(), QI.begin(),
-                                        QI.end(), Common.begin(), Comparator);
-    OnlyP.set_size(std::distance(OnlyP.begin(), PEnd));
-    OnlyQ.set_size(std::distance(OnlyQ.begin(), QEnd));
-    Common.set_size(std::distance(Common.begin(), ComEnd));
+    set_differences(PI, QI, &OnlyP, &OnlyQ, &Common, Comparator);
 
     if (!OnlyP.empty()) {
       HasDifferences = true;
@@ -238,7 +268,98 @@ Error DiffStyle::diffStreamDirectory() {
   return Error::success();
 }
 
-Error DiffStyle::diffStringTable() { return Error::success(); }
+Error DiffStyle::diffStringTable() {
+  auto ExpectedST1 = File1.getStringTable();
+  auto ExpectedST2 = File2.getStringTable();
+  outs() << "String Table: Searching for differences...\n";
+  bool Has1 = !!ExpectedST1;
+  bool Has2 = !!ExpectedST2;
+  if (!(Has1 && Has2)) {
+    // If one has a string table and the other doesn't, we can print less output.
+    if (Has1 != Has2) {
+      if (Has1) {
+        outs() << formatv("  {0}: ({1} strings)\n", File1.getFilePath(), ExpectedST1->getNameCount());
+        outs() << formatv("  {0}: (string table not present)\n", File2.getFilePath());
+      } else {
+        outs() << formatv("  {0}: (string table not present)\n", File1.getFilePath());
+        outs() << formatv("  {0}: ({1})\n", File2.getFilePath(), ExpectedST2->getNameCount());
+      }
+    }
+    consumeError(ExpectedST1.takeError());
+    consumeError(ExpectedST2.takeError());
+    return Error::success();
+  }
+
+  bool HasDiff = false;
+  auto &ST1 = *ExpectedST1;
+  auto &ST2 = *ExpectedST2;
+
+  HasDiff |= diffAndPrint("Stream Size", File1, File2, ST1.getByteSize(), ST2.getByteSize());
+  HasDiff |= diffAndPrint("Hash Version", File1, File2, ST1.getHashVersion(), ST1.getHashVersion());
+  HasDiff |= diffAndPrint("Signature", File1, File2, ST1.getSignature(), ST1.getSignature());
+
+  // Both have a valid string table, dive in and compare individual strings.
+
+  auto IdList1 = ST1.name_ids();
+  auto IdList2 = ST2.name_ids();
+  if (opts::diff::Pedantic) {
+    // In pedantic mode, we compare index by index (i.e. the strings are in the same order
+    // in both tables.
+    uint32_t Max = std::max(IdList1.size(), IdList2.size());
+    for (uint32_t I = 0; I < Max; ++I) {
+      Optional<uint32_t> Id1, Id2;
+      StringRef S1, S2;
+      if (I < IdList1.size()) {
+        Id1 = IdList1[I];
+        S1 = ST1.getStringForID(*Id1);
+      }
+      if (I < IdList2.size()) {
+        Id2 = IdList2[I];
+        S2 = ST2.getStringForID(*Id2);
+      }
+      if (Id1 == Id2 && S1 == S2)
+        continue;
+
+      std::string OutId1 = Id1 ? formatv("{0}", *Id1).str() : "(index not present)";
+      std::string OutId2 = Id2 ? formatv("{0}", *Id2).str() : "(index not present)";
+      outs() << formatv("  String {0}\n", I);
+      outs() << formatv("    {0}: Hash - {1}, Value - {2}\n", File1.getFilePath(), OutId1, S1);
+      outs() << formatv("    {0}: Hash - {1}, Value - {2}\n", File2.getFilePath(), OutId2, S2);
+      HasDiff = true;
+    }
+  } else {
+    std::vector<StringRef> Strings1, Strings2;
+    Strings1.reserve(IdList1.size());
+    Strings2.reserve(IdList2.size());
+    for (auto ID : IdList1)
+      Strings1.push_back(ST1.getStringForID(ID));
+    for (auto ID : IdList2)
+      Strings2.push_back(ST2.getStringForID(ID));
+
+    SmallVector<StringRef, 64> OnlyP;
+    SmallVector<StringRef, 64> OnlyQ;
+
+    set_differences(Strings1, Strings2, &OnlyP, &OnlyQ);
+
+    if (!OnlyP.empty()) {
+      HasDiff = true;
+      outs() << formatv("  {0} String(s) only in ({1})\n",
+        OnlyP.size(), File1.getFilePath());
+      for (auto Item : OnlyP)
+        outs() << formatv("    {2}\n", Item);
+    }
+    if (!OnlyQ.empty()) {
+      HasDiff = true;
+      outs() << formatv("  {0} String(s) only in ({1})\n",
+        OnlyQ.size(), File2.getFilePath());
+      for (auto Item : OnlyQ)
+        outs() << formatv("    {2}\n", Item);
+    }
+  }
+  if (!HasDiff)
+    outs() << "String Table: No differences detected!\n";
+  return Error::success();
+}
 
 Error DiffStyle::diffFreePageMap() { return Error::success(); }
 

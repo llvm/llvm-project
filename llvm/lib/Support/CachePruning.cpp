@@ -15,6 +15,7 @@
 
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Errc.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
@@ -33,8 +34,75 @@ static void writeTimestampFile(StringRef TimestampFile) {
   raw_fd_ostream Out(TimestampFile.str(), EC, sys::fs::F_None);
 }
 
+static Expected<std::chrono::seconds> parseDuration(StringRef Duration) {
+  if (Duration.empty())
+    return make_error<StringError>("Duration must not be empty",
+                                   inconvertibleErrorCode());
+
+  StringRef NumStr = Duration.slice(0, Duration.size()-1);
+  uint64_t Num;
+  if (NumStr.getAsInteger(0, Num))
+    return make_error<StringError>("'" + NumStr + "' not an integer",
+                                   inconvertibleErrorCode());
+
+  switch (Duration.back()) {
+  case 's':
+    return std::chrono::seconds(Num);
+  case 'm':
+    return std::chrono::minutes(Num);
+  case 'h':
+    return std::chrono::hours(Num);
+  default:
+    return make_error<StringError>("'" + Duration +
+                                       "' must end with one of 's', 'm' or 'h'",
+                                   inconvertibleErrorCode());
+  }
+}
+
+Expected<CachePruningPolicy>
+llvm::parseCachePruningPolicy(StringRef PolicyStr) {
+  CachePruningPolicy Policy;
+  std::pair<StringRef, StringRef> P = {"", PolicyStr};
+  while (!P.second.empty()) {
+    P = P.second.split(':');
+
+    StringRef Key, Value;
+    std::tie(Key, Value) = P.first.split('=');
+    if (Key == "prune_interval") {
+      auto DurationOrErr = parseDuration(Value);
+      if (!DurationOrErr)
+        return DurationOrErr.takeError();
+      Policy.Interval = *DurationOrErr;
+    } else if (Key == "prune_after") {
+      auto DurationOrErr = parseDuration(Value);
+      if (!DurationOrErr)
+        return DurationOrErr.takeError();
+      Policy.Expiration = *DurationOrErr;
+    } else if (Key == "cache_size") {
+      if (Value.back() != '%')
+        return make_error<StringError>("'" + Value + "' must be a percentage",
+                                       inconvertibleErrorCode());
+      StringRef SizeStr = Value.slice(0, Value.size() - 1);
+      uint64_t Size;
+      if (SizeStr.getAsInteger(0, Size))
+        return make_error<StringError>("'" + SizeStr + "' not an integer",
+                                       inconvertibleErrorCode());
+      if (Size > 100)
+        return make_error<StringError>("'" + SizeStr +
+                                           "' must be between 0 and 100",
+                                       inconvertibleErrorCode());
+      Policy.PercentageOfAvailableSpace = Size;
+    } else {
+      return make_error<StringError>("Unknown key: '" + Key + "'",
+                                     inconvertibleErrorCode());
+    }
+  }
+
+  return Policy;
+}
+
 /// Prune the cache of files that haven't been accessed in a long time.
-bool CachePruning::prune() {
+bool llvm::pruneCache(StringRef Path, CachePruningPolicy Policy) {
   using namespace std::chrono;
 
   if (Path.empty())
@@ -47,7 +115,11 @@ bool CachePruning::prune() {
   if (!isPathDir)
     return false;
 
-  if (Expiration == seconds(0) && PercentageOfAvailableSpace == 0) {
+  Policy.PercentageOfAvailableSpace =
+      std::min(Policy.PercentageOfAvailableSpace, 100u);
+
+  if (Policy.Expiration == seconds(0) &&
+      Policy.PercentageOfAvailableSpace == 0) {
     DEBUG(dbgs() << "No pruning settings set, exit early\n");
     // Nothing will be pruned, early exit
     return false;
@@ -67,12 +139,12 @@ bool CachePruning::prune() {
       return false;
     }
   } else {
-    if (Interval == seconds(0)) {
+    if (Policy.Interval == seconds(0)) {
       // Check whether the time stamp is older than our pruning interval.
       // If not, do nothing.
       const auto TimeStampModTime = FileStatus.getLastModificationTime();
       auto TimeStampAge = CurrentTime - TimeStampModTime;
-      if (TimeStampAge <= Interval) {
+      if (TimeStampAge <= Policy.Interval) {
         DEBUG(dbgs() << "Timestamp file too recent ("
                      << duration_cast<seconds>(TimeStampAge).count()
                      << "s old), do not prune.\n");
@@ -85,7 +157,7 @@ bool CachePruning::prune() {
     writeTimestampFile(TimestampFile);
   }
 
-  bool ShouldComputeSize = (PercentageOfAvailableSpace > 0);
+  bool ShouldComputeSize = (Policy.PercentageOfAvailableSpace > 0);
 
   // Keep track of space
   std::set<std::pair<uint64_t, std::string>> FileSizes;
@@ -122,7 +194,7 @@ bool CachePruning::prune() {
     // If the file hasn't been used recently enough, delete it
     const auto FileAccessTime = FileStatus.getLastAccessedTime();
     auto FileAge = CurrentTime - FileAccessTime;
-    if (FileAge > Expiration) {
+    if (FileAge > Policy.Expiration) {
       DEBUG(dbgs() << "Remove " << File->path() << " ("
                    << duration_cast<seconds>(FileAge).count() << "s old)\n");
       sys::fs::remove(File->path());
@@ -143,9 +215,11 @@ bool CachePruning::prune() {
     auto AvailableSpace = TotalSize + SpaceInfo.free;
     auto FileAndSize = FileSizes.rbegin();
     DEBUG(dbgs() << "Occupancy: " << ((100 * TotalSize) / AvailableSpace)
-                 << "% target is: " << PercentageOfAvailableSpace << "\n");
+                 << "% target is: " << Policy.PercentageOfAvailableSpace
+                 << "\n");
     // Remove the oldest accessed files first, till we get below the threshold
-    while (((100 * TotalSize) / AvailableSpace) > PercentageOfAvailableSpace &&
+    while (((100 * TotalSize) / AvailableSpace) >
+               Policy.PercentageOfAvailableSpace &&
            FileAndSize != FileSizes.rend()) {
       // Remove the file.
       sys::fs::remove(FileAndSize->second);

@@ -28,6 +28,7 @@ enum class raw_error_code {
   duplicate_entry,
   no_entry,
   not_writable,
+  stream_too_long,
   invalid_tpi_hash,
 };
 

@@ -9,6 +9,7 @@
 
 #include "llvm/Support/BinaryStreamWriter.h"
 
+#include "llvm/Support/BinaryStreamError.h"
 #include "llvm/Support/BinaryStreamReader.h"
 #include "llvm/Support/BinaryStreamRef.h"
 
@@ -55,5 +56,13 @@ Error BinaryStreamWriter::writeStreamRef(BinaryStreamRef Ref, uint32_t Length) {
     if (auto EC = writeBytes(Chunk))
       return EC;
   }
+  return Error::success();
+}
+
+Error BinaryStreamWriter::padToAlignment(uint32_t Align) {
+  uint32_t NewOffset = alignTo(Offset, Align);
+  if (NewOffset > getLength())
+    return make_error<BinaryStreamError>(stream_error_code::stream_too_short);
+  Offset = NewOffset;
   return Error::success();
 }

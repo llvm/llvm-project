@@ -10,11 +10,13 @@
 #include "llvm/DebugInfo/PDB/Native/NativeRawSymbol.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/DebugInfo/PDB/Native/InfoStream.h"
 #include "llvm/DebugInfo/PDB/IPDBEnumChildren.h"
+#include "llvm/DebugInfo/PDB/Native/DbiStream.h"
+#include "llvm/DebugInfo/PDB/Native/InfoStream.h"
+#include "llvm/DebugInfo/PDB/Native/NativeEnumModules.h"
+#include "llvm/DebugInfo/PDB/Native/NativeSession.h"
 #include "llvm/DebugInfo/PDB/Native/PDBFile.h"
 #include "llvm/DebugInfo/PDB/PDBExtras.h"
-#include "llvm/DebugInfo/PDB/Native/NativeSession.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -28,6 +30,21 @@ void NativeRawSymbol::dump(raw_ostream &OS, int Indent) const {}
 
 std::unique_ptr<IPDBEnumSymbols>
 NativeRawSymbol::findChildren(PDB_SymType Type) const {
+  switch (Type) {
+  case PDB_SymType::Compiland: {
+    auto &File = Session.getPDBFile();
+    auto Dbi = File.getPDBDbiStream();
+    if (Dbi) {
+      const auto Modules = Dbi->modules();
+      return std::unique_ptr<IPDBEnumSymbols>(
+          new NativeEnumModules(Session, Modules));
+    }
+    consumeError(Dbi.takeError());
+    break;
+  }
+  default:
+    break;
+  }
   return nullptr;
 }
 

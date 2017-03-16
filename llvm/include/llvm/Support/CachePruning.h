@@ -20,50 +20,39 @@
 
 namespace llvm {
 
-/// Handle pruning a directory provided a path and some options to control what
-/// to prune.
-class CachePruning {
-public:
-  /// Prepare to prune \p Path.
-  CachePruning(StringRef Path) : Path(Path) {}
+template <typename T> class Expected;
 
-  /// Define the pruning interval. This is intended to be used to avoid scanning
-  /// the directory too often. It does not impact the decision of which file to
-  /// prune. A value of 0 forces the scan to occurs.
-  CachePruning &setPruningInterval(std::chrono::seconds PruningInterval) {
-    Interval = PruningInterval;
-    return *this;
-  }
+/// Policy for the pruneCache() function. A default constructed
+/// CachePruningPolicy provides a reasonable default policy.
+struct CachePruningPolicy {
+  /// The pruning interval. This is intended to be used to avoid scanning the
+  /// directory too often. It does not impact the decision of which file to
+  /// prune. A value of 0 forces the scan to occur.
+  std::chrono::seconds Interval = std::chrono::seconds(1200);
 
-  /// Define the expiration for a file. When a file hasn't been accessed for
-  /// \p ExpireAfter seconds, it is removed from the cache. A value of 0 disable
-  /// the expiration-based pruning.
-  CachePruning &setEntryExpiration(std::chrono::seconds ExpireAfter) {
-    Expiration = ExpireAfter;
-    return *this;
-  }
+  /// The expiration for a file. When a file hasn't been accessed for Expiration
+  /// seconds, it is removed from the cache. A value of 0 disables the
+  /// expiration-based pruning.
+  std::chrono::seconds Expiration = std::chrono::hours(7 * 24); // 1w
 
-  /// Define the maximum size for the cache directory, in terms of percentage of
-  /// the available space on the the disk. Set to 100 to indicate no limit, 50
-  /// to indicate that the cache size will not be left over half the
-  /// available disk space. A value over 100 will be reduced to 100. A value of
-  /// 0 disable the size-based pruning.
-  CachePruning &setMaxSize(unsigned Percentage) {
-    PercentageOfAvailableSpace = std::min(100u, Percentage);
-    return *this;
-  }
-
-  /// Peform pruning using the supplied options, returns true if pruning
-  /// occured, i.e. if PruningInterval was expired.
-  bool prune();
-
-private:
-  // Options that matches the setters above.
-  std::string Path;
-  std::chrono::seconds Expiration = std::chrono::seconds::zero();
-  std::chrono::seconds Interval = std::chrono::seconds::zero();
-  unsigned PercentageOfAvailableSpace = 0;
+  /// The maximum size for the cache directory, in terms of percentage of the
+  /// available space on the the disk. Set to 100 to indicate no limit, 50 to
+  /// indicate that the cache size will not be left over half the available disk
+  /// space. A value over 100 will be reduced to 100. A value of 0 disables the
+  /// size-based pruning.
+  unsigned PercentageOfAvailableSpace = 75;
 };
+
+/// Parse the given string as a cache pruning policy. Defaults are taken from a
+/// default constructed CachePruningPolicy object.
+/// For example: "prune_interval=30s:prune_after=24h:cache_size=50%"
+/// which means a pruning interval of 30 seconds, expiration time of 24 hours
+/// and maximum cache size of 50% of available disk space.
+Expected<CachePruningPolicy> parseCachePruningPolicy(StringRef PolicyStr);
+
+/// Peform pruning using the supplied policy, returns true if pruning
+/// occured, i.e. if Policy.Interval was expired.
+bool pruneCache(StringRef Path, CachePruningPolicy Policy);
 
 } // namespace llvm
 

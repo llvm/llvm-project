@@ -23,7 +23,6 @@
 
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DepthFirstIterator.h"
-#include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/Statistic.h"
@@ -568,9 +567,8 @@ unsigned StackColoring::collectMarkers(unsigned NumSlot)
 
   // Step 2: compute begin/end sets for each block
 
-  // NOTE: We use a reverse-post-order iteration to ensure that we obtain a
-  // deterministic numbering, and because we'll need a post-order iteration
-  // later for solving the liveness dataflow problem.
+  // NOTE: We use a depth-first iteration to ensure that we obtain a
+  // deterministic numbering.
   for (MachineBasicBlock *MBB : depth_first(MF)) {
 
     // Assign a serial number to this basic block.

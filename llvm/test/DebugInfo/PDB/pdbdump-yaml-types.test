@@ -4,18 +4,14 @@
 YAML: ---
 YAML: MSF:             
 YAML:   SuperBlock:      
-YAML:     BlockSize:       4096
-YAML:     FreeBlockMap:    2
 YAML:     NumBlocks:       25
 YAML:     NumDirectoryBytes: 136
-YAML:     Unknown1:        0
 YAML:     BlockMapAddr:    24
 YAML:   NumDirectoryBlocks: 1
 YAML:   DirectoryBlocks: [ 23 ]
 YAML:   NumStreams:      0
 YAML:   FileSize:        102400
 YAML: TpiStream:       
-YAML:   Version:         VC80
 YAML:   Records:         
 YAML:     - Kind:            LF_ARGLIST
 YAML:       ArgList:         

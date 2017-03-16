@@ -1,0 +1,11 @@
+; This testcase verifies that we can produce a minimal PDB, while
+; serving as an example for how to construct a minimal PDB for other
+; testcases.  It takes as input a small fragment of hand-written yaml
+; that specifies nothing about the PDB other than a definition of one
+; symbol that it contains.  Then it produces a PDB, and uses the
+; resulting PDB to go back to yaml, and verify that the resulting yaml
+; is identical.
+
+; RUN: llvm-pdbdump yaml2pdb -pdb=%t.pdb %p/Inputs/one-symbol.yaml
+; RUN: llvm-pdbdump pdb2yaml -minimal -dbi-module-syms -no-file-headers %t.pdb > %t.pdb.yaml
+; RUN: diff -b %p/Inputs/one-symbol.yaml %t.pdb.yaml

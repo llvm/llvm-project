@@ -1,6 +1,6 @@
 ; PR32278
 
-; RUN: llc < %s
+; RUN: llc -mtriple=x86_64-unknown < %s
 
 define i8 @foo_v4i1_0_0_1_1_2_2_3_3(i8 %in) {
   %trunc = trunc i8 %in to i4

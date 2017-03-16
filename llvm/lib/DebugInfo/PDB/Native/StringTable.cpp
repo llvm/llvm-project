@@ -20,9 +20,11 @@ using namespace llvm;
 using namespace llvm::support;
 using namespace llvm::pdb;
 
-StringTable::StringTable() : Signature(0), HashVersion(0), NameCount(0) {}
+StringTable::StringTable() {}
 
 Error StringTable::load(BinaryStreamReader &Stream) {
+  ByteSize = Stream.getLength();
+
   const StringTableHeader *H;
   if (auto EC = Stream.readObject(H))
     return EC;
@@ -56,7 +58,16 @@ Error StringTable::load(BinaryStreamReader &Stream) {
 
   if (auto EC = Stream.readInteger(NameCount))
     return EC;
+
+  if (Stream.bytesRemaining() > 0)
+    return make_error<RawError>(raw_error_code::stream_too_long,
+      "Unexpected bytes found in string table");
+
   return Error::success();
+}
+
+uint32_t StringTable::getByteSize() const {
+  return ByteSize;
 }
 
 StringRef StringTable::getStringForID(uint32_t ID) const {
