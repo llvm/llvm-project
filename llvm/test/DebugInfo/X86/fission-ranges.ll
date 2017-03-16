@@ -30,16 +30,16 @@
 ; CHECK-NEXT: {{^$}}
 ; CHECK-NEXT:   Beginning address index: 3
 ; CHECK-NEXT:                    Length: 25
-; CHECK-NEXT:      Location description: 50 93 04
+; CHECK-NEXT:      Location description: 50
 ; CHECK: [[E]]: Beginning address index: 4
 ; CHECK-NEXT:                    Length: 19
-; CHECK-NEXT:      Location description: 50 93 04
+; CHECK-NEXT:      Location description: 50
 ; CHECK: [[B]]: Beginning address index: 5
 ; CHECK-NEXT:                    Length: 17
-; CHECK-NEXT:      Location description: 50 93 04
+; CHECK-NEXT:      Location description: 50
 ; CHECK: [[D]]: Beginning address index: 6
 ; CHECK-NEXT:                    Length: 17
-; CHECK-NEXT:      Location description: 50 93 04
+; CHECK-NEXT:      Location description: 50
 
 ; Make sure we don't produce any relocations in any .dwo section (though in particular, debug_info.dwo)
 ; HDR-NOT: .rela.{{.*}}.dwo
