@@ -143,7 +143,7 @@ void MCELFStreamer::ChangeSection(MCSection *Section,
   if (Grp)
     Asm.registerSymbol(*Grp);
 
-  this->MCObjectStreamer::ChangeSection(Section, Subsection);
+  changeSectionImpl(Section, Subsection);
   Asm.registerSymbol(*Section->getBeginSymbol());
 }
 

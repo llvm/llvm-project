@@ -318,33 +318,29 @@ entry:
   ret void
 }
 
-define <8 x i8> @vuzp_trunc(<8 x i8> %in0, <8 x i8> %in1, <8 x i32> %cmp0, <8 x i32> %cmp1) {
+define <8 x i8> @cmpsel_trunc(<8 x i8> %in0, <8 x i8> %in1, <8 x i32> %cmp0, <8 x i32> %cmp1) {
 ; In order to create the select we need to truncate the vcgt result from a vector of i32 to a vector of i8.
 ; This results in a build_vector with mismatched types. We will generate two vmovn.i32 instructions to
-; truncate from i32 to i16 and one vuzp to perform the final truncation for i8.
-; CHECK-LABEL: vuzp_trunc:
+; truncate from i32 to i16 and one vmovn.i16 to perform the final truncation for i8.
+; CHECK-LABEL: cmpsel_trunc:
 ; CHECK:       @ BB#0:
 ; CHECK-NEXT:    .save {r4, r5, r11, lr}
 ; CHECK-NEXT:    push {r4, r5, r11, lr}
-; CHECK-NEXT:    add r12, sp, #48
-; CHECK-NEXT:    add lr, sp, #16
 ; CHECK-NEXT:    add r4, sp, #64
 ; CHECK-NEXT:    add r5, sp, #32
+; CHECK-NEXT:    add r12, sp, #48
+; CHECK-NEXT:    add lr, sp, #16
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r5]
 ; CHECK-NEXT:    vld1.64 {d18, d19}, [r4]
 ; CHECK-NEXT:    vld1.64 {d20, d21}, [lr]
 ; CHECK-NEXT:    vld1.64 {d22, d23}, [r12]
 ; CHECK-NEXT:    vcgt.u32 q8, q9, q8
 ; CHECK-NEXT:    vcgt.u32 q9, q11, q10
-; CHECK-NEXT:    vmovn.i32 d16, q8
-; CHECK-NEXT:    vmovn.i32 d17, q9
-; CHECK-NEXT:    vmov.i8 d18, #0x7
-; CHECK-NEXT:    vmov d19, r0, r1
-; CHECK-NEXT:    vuzp.8 d17, d16
-; CHECK-NEXT:    vneg.s8 d16, d18
-; CHECK-NEXT:    vshl.i8 d17, d17, #7
+; CHECK-NEXT:    vmovn.i32 d17, q8
+; CHECK-NEXT:    vmovn.i32 d16, q9
 ; CHECK-NEXT:    vmov d18, r2, r3
-; CHECK-NEXT:    vshl.s8 d16, d17, d16
+; CHECK-NEXT:    vmov d19, r0, r1
+; CHECK-NEXT:    vmovn.i16 d16, q8
 ; CHECK-NEXT:    vbsl d16, d19, d18
 ; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    pop {r4, r5, r11, lr}

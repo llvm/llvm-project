@@ -111,15 +111,17 @@ static void MemoryProfileCB(const SuspendedThreadsList &suspended_threads_list,
 
 }  // namespace __asan
 
+#endif  // CAN_SANITIZE_LEAKS
+
 extern "C" {
 SANITIZER_INTERFACE_ATTRIBUTE
 void __sanitizer_print_memory_profile(uptr top_percent,
                                       uptr max_number_of_contexts) {
+#if CAN_SANITIZE_LEAKS
   uptr Arg[2];
   Arg[0] = top_percent;
   Arg[1] = max_number_of_contexts;
   __sanitizer::StopTheWorld(__asan::MemoryProfileCB, Arg);
+#endif  // CAN_SANITIZE_LEAKS
 }
 }  // extern "C"
-
-#endif  // CAN_SANITIZE_LEAKS

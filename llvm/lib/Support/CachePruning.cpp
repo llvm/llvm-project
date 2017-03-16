@@ -15,6 +15,7 @@
 
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Errc.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
@@ -31,6 +32,73 @@ using namespace llvm;
 static void writeTimestampFile(StringRef TimestampFile) {
   std::error_code EC;
   raw_fd_ostream Out(TimestampFile.str(), EC, sys::fs::F_None);
+}
+
+static Expected<std::chrono::seconds> parseDuration(StringRef Duration) {
+  if (Duration.empty())
+    return make_error<StringError>("Duration must not be empty",
+                                   inconvertibleErrorCode());
+
+  StringRef NumStr = Duration.slice(0, Duration.size()-1);
+  uint64_t Num;
+  if (NumStr.getAsInteger(0, Num))
+    return make_error<StringError>("'" + NumStr + "' not an integer",
+                                   inconvertibleErrorCode());
+
+  switch (Duration.back()) {
+  case 's':
+    return std::chrono::seconds(Num);
+  case 'm':
+    return std::chrono::minutes(Num);
+  case 'h':
+    return std::chrono::hours(Num);
+  default:
+    return make_error<StringError>("'" + Duration +
+                                       "' must end with one of 's', 'm' or 'h'",
+                                   inconvertibleErrorCode());
+  }
+}
+
+Expected<CachePruningPolicy>
+llvm::parseCachePruningPolicy(StringRef PolicyStr) {
+  CachePruningPolicy Policy;
+  std::pair<StringRef, StringRef> P = {"", PolicyStr};
+  while (!P.second.empty()) {
+    P = P.second.split(':');
+
+    StringRef Key, Value;
+    std::tie(Key, Value) = P.first.split('=');
+    if (Key == "prune_interval") {
+      auto DurationOrErr = parseDuration(Value);
+      if (!DurationOrErr)
+        return DurationOrErr.takeError();
+      Policy.Interval = *DurationOrErr;
+    } else if (Key == "prune_after") {
+      auto DurationOrErr = parseDuration(Value);
+      if (!DurationOrErr)
+        return DurationOrErr.takeError();
+      Policy.Expiration = *DurationOrErr;
+    } else if (Key == "cache_size") {
+      if (Value.back() != '%')
+        return make_error<StringError>("'" + Value + "' must be a percentage",
+                                       inconvertibleErrorCode());
+      StringRef SizeStr = Value.slice(0, Value.size() - 1);
+      uint64_t Size;
+      if (SizeStr.getAsInteger(0, Size))
+        return make_error<StringError>("'" + SizeStr + "' not an integer",
+                                       inconvertibleErrorCode());
+      if (Size > 100)
+        return make_error<StringError>("'" + SizeStr +
+                                           "' must be between 0 and 100",
+                                       inconvertibleErrorCode());
+      Policy.PercentageOfAvailableSpace = Size;
+    } else {
+      return make_error<StringError>("Unknown key: '" + Key + "'",
+                                     inconvertibleErrorCode());
+    }
+  }
+
+  return Policy;
 }
 
 /// Prune the cache of files that haven't been accessed in a long time.

@@ -1335,4 +1335,175 @@ TEST_F(FileSystemTest, set_current_path) {
   ASSERT_EQ(D1, D2) << "D1: " << TestDirectory << "\nD2: " << path;
 }
 
+TEST_F(FileSystemTest, permissions) {
+  int FD;
+  SmallString<64> TempPath;
+  ASSERT_NO_ERROR(fs::createTemporaryFile("prefix", "temp", FD, TempPath));
+  FileRemover Cleanup(TempPath);
+
+  // Make sure it exists.
+  ASSERT_TRUE(fs::exists(Twine(TempPath)));
+
+  auto CheckPermissions = [&](fs::perms Expected) {
+    ErrorOr<fs::perms> Actual = fs::getPermissions(TempPath);
+    return Actual && *Actual == Expected;
+  };
+
+  std::error_code NoError;
+  EXPECT_EQ(fs::setPermissions(TempPath, fs::all_all), NoError);
+  EXPECT_TRUE(CheckPermissions(fs::all_all));
+
+  EXPECT_EQ(fs::setPermissions(TempPath, fs::all_read | fs::all_exe), NoError);
+  EXPECT_TRUE(CheckPermissions(fs::all_read | fs::all_exe));
+
+#if defined(LLVM_ON_WIN32)
+  fs::perms ReadOnly = fs::all_read | fs::all_exe;
+  EXPECT_EQ(fs::setPermissions(TempPath, fs::no_perms), NoError);
+  EXPECT_TRUE(CheckPermissions(ReadOnly));
+
+  EXPECT_EQ(fs::setPermissions(TempPath, fs::owner_read), NoError);
+  EXPECT_TRUE(CheckPermissions(ReadOnly));
+
+  EXPECT_EQ(fs::setPermissions(TempPath, fs::owner_write), NoError);
+  EXPECT_TRUE(CheckPermissions(fs::all_all));
+
+  EXPECT_EQ(fs::setPermissions(TempPath, fs::owner_exe), NoError);
+  EXPECT_TRUE(CheckPermissions(ReadOnly));
+
+  EXPECT_EQ(fs::setPermissions(TempPath, fs::owner_all), NoError);
+  EXPECT_TRUE(CheckPermissions(fs::all_all));
+
+  EXPECT_EQ(fs::setPermissions(TempPath, fs::group_read), NoError);
+  EXPECT_TRUE(CheckPermissions(ReadOnly));
+
+  EXPECT_EQ(fs::setPermissions(TempPath, fs::group_write), NoError);
+  EXPECT_TRUE(CheckPermissions(fs::all_all));
+
+  EXPECT_EQ(fs::setPermissions(TempPath, fs::group_exe), NoError);
+  EXPECT_TRUE(CheckPermissions(ReadOnly));
+
+  EXPECT_EQ(fs::setPermissions(TempPath, fs::group_all), NoError);
+  EXPECT_TRUE(CheckPermissions(fs::all_all));
+
+  EXPECT_EQ(fs::setPermissions(TempPath, fs::others_read), NoError);
+  EXPECT_TRUE(CheckPermissions(ReadOnly));
+
+  EXPECT_EQ(fs::setPermissions(TempPath, fs::others_write), NoError);
+  EXPECT_TRUE(CheckPermissions(fs::all_all));
+
+  EXPECT_EQ(fs::setPermissions(TempPath, fs::others_exe), NoError);
+  EXPECT_TRUE(CheckPermissions(ReadOnly));
+
+  EXPECT_EQ(fs::setPermissions(TempPath, fs::others_all), NoError);
+  EXPECT_TRUE(CheckPermissions(fs::all_all));
+
+  EXPECT_EQ(fs::setPermissions(TempPath, fs::all_read), NoError);
+  EXPECT_TRUE(CheckPermissions(ReadOnly));
+
+  EXPECT_EQ(fs::setPermissions(TempPath, fs::all_write), NoError);
+  EXPECT_TRUE(CheckPermissions(fs::all_all));
+
+  EXPECT_EQ(fs::setPermissions(TempPath, fs::all_exe), NoError);
+  EXPECT_TRUE(CheckPermissions(ReadOnly));
+
+  EXPECT_EQ(fs::setPermissions(TempPath, fs::set_uid_on_exe), NoError);
+  EXPECT_TRUE(CheckPermissions(ReadOnly));
+
+  EXPECT_EQ(fs::setPermissions(TempPath, fs::set_gid_on_exe), NoError);
+  EXPECT_TRUE(CheckPermissions(ReadOnly));
+
+  EXPECT_EQ(fs::setPermissions(TempPath, fs::sticky_bit), NoError);
+  EXPECT_TRUE(CheckPermissions(ReadOnly));
+
+  EXPECT_EQ(fs::setPermissions(TempPath, fs::set_uid_on_exe |
+                                             fs::set_gid_on_exe |
+                                             fs::sticky_bit),
+            NoError);
+  EXPECT_TRUE(CheckPermissions(ReadOnly));
+
+  EXPECT_EQ(fs::setPermissions(TempPath, ReadOnly | fs::set_uid_on_exe |
+                                             fs::set_gid_on_exe |
+                                             fs::sticky_bit),
+            NoError);
+  EXPECT_TRUE(CheckPermissions(ReadOnly));
+
+  EXPECT_EQ(fs::setPermissions(TempPath, fs::all_perms), NoError);
+  EXPECT_TRUE(CheckPermissions(fs::all_all));
+#else
+  EXPECT_EQ(fs::setPermissions(TempPath, fs::no_perms), NoError);
+  EXPECT_TRUE(CheckPermissions(fs::no_perms));
+
+  EXPECT_EQ(fs::setPermissions(TempPath, fs::owner_read), NoError);
+  EXPECT_TRUE(CheckPermissions(fs::owner_read));
+
+  EXPECT_EQ(fs::setPermissions(TempPath, fs::owner_write), NoError);
+  EXPECT_TRUE(CheckPermissions(fs::owner_write));
+
+  EXPECT_EQ(fs::setPermissions(TempPath, fs::owner_exe), NoError);
+  EXPECT_TRUE(CheckPermissions(fs::owner_exe));
+
+  EXPECT_EQ(fs::setPermissions(TempPath, fs::owner_all), NoError);
+  EXPECT_TRUE(CheckPermissions(fs::owner_all));
+
+  EXPECT_EQ(fs::setPermissions(TempPath, fs::group_read), NoError);
+  EXPECT_TRUE(CheckPermissions(fs::group_read));
+
+  EXPECT_EQ(fs::setPermissions(TempPath, fs::group_write), NoError);
+  EXPECT_TRUE(CheckPermissions(fs::group_write));
+
+  EXPECT_EQ(fs::setPermissions(TempPath, fs::group_exe), NoError);
+  EXPECT_TRUE(CheckPermissions(fs::group_exe));
+
+  EXPECT_EQ(fs::setPermissions(TempPath, fs::group_all), NoError);
+  EXPECT_TRUE(CheckPermissions(fs::group_all));
+
+  EXPECT_EQ(fs::setPermissions(TempPath, fs::others_read), NoError);
+  EXPECT_TRUE(CheckPermissions(fs::others_read));
+
+  EXPECT_EQ(fs::setPermissions(TempPath, fs::others_write), NoError);
+  EXPECT_TRUE(CheckPermissions(fs::others_write));
+
+  EXPECT_EQ(fs::setPermissions(TempPath, fs::others_exe), NoError);
+  EXPECT_TRUE(CheckPermissions(fs::others_exe));
+
+  EXPECT_EQ(fs::setPermissions(TempPath, fs::others_all), NoError);
+  EXPECT_TRUE(CheckPermissions(fs::others_all));
+
+  EXPECT_EQ(fs::setPermissions(TempPath, fs::all_read), NoError);
+  EXPECT_TRUE(CheckPermissions(fs::all_read));
+
+  EXPECT_EQ(fs::setPermissions(TempPath, fs::all_write), NoError);
+  EXPECT_TRUE(CheckPermissions(fs::all_write));
+
+  EXPECT_EQ(fs::setPermissions(TempPath, fs::all_exe), NoError);
+  EXPECT_TRUE(CheckPermissions(fs::all_exe));
+
+  EXPECT_EQ(fs::setPermissions(TempPath, fs::set_uid_on_exe), NoError);
+  EXPECT_TRUE(CheckPermissions(fs::set_uid_on_exe));
+
+  EXPECT_EQ(fs::setPermissions(TempPath, fs::set_gid_on_exe), NoError);
+  EXPECT_TRUE(CheckPermissions(fs::set_gid_on_exe));
+
+  EXPECT_EQ(fs::setPermissions(TempPath, fs::sticky_bit), NoError);
+  EXPECT_TRUE(CheckPermissions(fs::sticky_bit));
+
+  EXPECT_EQ(fs::setPermissions(TempPath, fs::set_uid_on_exe |
+                                             fs::set_gid_on_exe |
+                                             fs::sticky_bit),
+            NoError);
+  EXPECT_TRUE(CheckPermissions(fs::set_uid_on_exe | fs::set_gid_on_exe |
+                               fs::sticky_bit));
+
+  EXPECT_EQ(fs::setPermissions(TempPath, fs::all_read | fs::set_uid_on_exe |
+                                             fs::set_gid_on_exe |
+                                             fs::sticky_bit),
+            NoError);
+  EXPECT_TRUE(CheckPermissions(fs::all_read | fs::set_uid_on_exe |
+                               fs::set_gid_on_exe | fs::sticky_bit));
+
+  EXPECT_EQ(fs::setPermissions(TempPath, fs::all_perms), NoError);
+  EXPECT_TRUE(CheckPermissions(fs::all_perms));
+#endif
+}
+
 } // anonymous namespace

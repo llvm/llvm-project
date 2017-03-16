@@ -142,12 +142,6 @@ public:
   struct CachingOptions {
     std::string Path;                    // Path to the cache, empty to disable.
     CachePruningPolicy Policy;
-
-    CachingOptions() {
-      Policy.Interval = std::chrono::seconds(1200);
-      Policy.Expiration = std::chrono::hours(7 * 24); // 1w
-      Policy.PercentageOfAvailableSpace = 75;
-    };
   };
 
   /// Provide a path to a directory where to store the cached files for

@@ -247,8 +247,6 @@ define <4 x double> @signbit_sel_v4f64(<4 x double> %x, <4 x double> %y, <4 x i6
 define <4 x double> @signbit_sel_v4f64_small_mask(<4 x double> %x, <4 x double> %y, <4 x i32> %mask) {
 ; AVX1-LABEL: signbit_sel_v4f64_small_mask:
 ; AVX1:       # BB#0:
-; AVX1-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; AVX1-NEXT:    vpcmpgtd %xmm2, %xmm3, %xmm2
 ; AVX1-NEXT:    vpmovsxdq %xmm2, %xmm3
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[2,3,0,1]
 ; AVX1-NEXT:    vpmovsxdq %xmm2, %xmm2

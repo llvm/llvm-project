@@ -44,7 +44,7 @@ void MachineRegisterInfo::Delegate::anchor() {}
 MachineRegisterInfo::MachineRegisterInfo(MachineFunction *MF)
     : MF(MF), TracksSubRegLiveness(MF->getSubtarget().enableSubRegLiveness() &&
                                    EnableSubRegLiveness),
-      IsUpdatedCSRsInitizialied(false) {
+      IsUpdatedCSRsInitialized(false) {
   unsigned NumRegs = getTargetRegisterInfo()->getNumRegs();
   VRegInfo.reserve(256);
   RegAllocHints.reserve(256);
@@ -564,7 +564,7 @@ void MachineRegisterInfo::disableCalleeSavedRegister(unsigned Reg) {
   assert(Reg && (Reg < TRI->getNumRegs()) &&
          "Trying to disable an invalid register");
 
-  if (!IsUpdatedCSRsInitizialied) {
+  if (!IsUpdatedCSRsInitialized) {
     const MCPhysReg *CSR = TRI->getCalleeSavedRegs(MF);
     for (const MCPhysReg *I = CSR; *I; ++I)
       UpdatedCSRs.push_back(*I);
@@ -573,7 +573,7 @@ void MachineRegisterInfo::disableCalleeSavedRegister(unsigned Reg) {
     // (no more registers should be pushed).
     UpdatedCSRs.push_back(0);
 
-    IsUpdatedCSRsInitizialied = true;
+    IsUpdatedCSRsInitialized = true;
   }
 
   // Remove the register (and its aliases from the list).
@@ -583,8 +583,9 @@ void MachineRegisterInfo::disableCalleeSavedRegister(unsigned Reg) {
 }
 
 const MCPhysReg *MachineRegisterInfo::getCalleeSavedRegs() const {
-  if (IsUpdatedCSRsInitizialied)
+  if (IsUpdatedCSRsInitialized)
     return UpdatedCSRs.data();
 
   return getTargetRegisterInfo()->getCalleeSavedRegs(MF);
 }
+

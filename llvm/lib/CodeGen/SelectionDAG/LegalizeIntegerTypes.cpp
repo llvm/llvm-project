@@ -1089,6 +1089,10 @@ SDValue DAGTypeLegalizer::PromoteIntOp_SELECT(SDNode *N, unsigned OpNo) {
   SDValue Cond = N->getOperand(0);
   EVT OpTy = N->getOperand(1).getValueType();
 
+  if (N->getOpcode() == ISD::VSELECT)
+    if (SDValue Res = WidenVSELECTAndMask(N))
+      return Res;
+
   // Promote all the way up to the canonical SetCC type.
   EVT OpVT = N->getOpcode() == ISD::SELECT ? OpTy.getScalarType() : OpTy;
   Cond = PromoteTargetBoolean(Cond, OpVT);

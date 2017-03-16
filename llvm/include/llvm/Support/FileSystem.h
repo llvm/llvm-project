@@ -93,6 +93,7 @@ enum perms {
   set_uid_on_exe = 04000,
   set_gid_on_exe = 02000,
   sticky_bit = 01000,
+  all_perms = all_all | set_uid_on_exe | set_gid_on_exe | sticky_bit,
   perms_not_known = 0xFFFF
 };
 
@@ -181,7 +182,7 @@ public:
 
   file_status(file_type Type) : Type(Type) {}
 
-  file_status(file_type Type, uint32_t LastAccessTimeHigh,
+  file_status(file_type Type, perms Perms, uint32_t LastAccessTimeHigh,
               uint32_t LastAccessTimeLow, uint32_t LastWriteTimeHigh,
               uint32_t LastWriteTimeLow, uint32_t VolumeSerialNumber,
               uint32_t FileSizeHigh, uint32_t FileSizeLow,
@@ -191,7 +192,7 @@ public:
         LastWriteTimeLow(LastWriteTimeLow),
         VolumeSerialNumber(VolumeSerialNumber), FileSizeHigh(FileSizeHigh),
         FileSizeLow(FileSizeLow), FileIndexHigh(FileIndexHigh),
-        FileIndexLow(FileIndexLow), Type(Type) {}
+        FileIndexLow(FileIndexLow), Type(Type), Perms(Perms) {}
   #endif
 
   // getters
@@ -604,6 +605,27 @@ std::error_code status(const Twine &path, file_status &result,
 
 /// @brief A version for when a file descriptor is already available.
 std::error_code status(int FD, file_status &Result);
+
+/// @brief Set file permissions.
+///
+/// @param Path File to set permissions on.
+/// @param Permissions New file permissions.
+/// @returns errc::success if the permissions were successfully set, otherwise
+///          a platform-specific error_code.
+/// @note On Windows, all permissions except *_write are ignored. Using any of
+///       owner_write, group_write, or all_write will make the file writable.
+///       Otherwise, the file will be marked as read-only.
+std::error_code setPermissions(const Twine &Path, perms Permissions);
+
+/// @brief Get file permissions.
+///
+/// @param Path File to get permissions from.
+/// @returns the permissions if they were successfully retrieved, otherwise a
+///          platform-specific error_code.
+/// @note On Windows, if the file does not have the FILE_ATTRIBUTE_READONLY
+///       attribute, all_all will be returned. Otherwise, all_read | all_exe
+///       will be returned.
+ErrorOr<perms> getPermissions(const Twine &Path);
 
 /// @brief Get file size.
 ///
