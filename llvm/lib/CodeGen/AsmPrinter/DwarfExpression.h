@@ -110,29 +110,29 @@ public:
   void finalize();
 
   /// Output a dwarf operand and an optional assembler comment.
-  virtual void EmitOp(uint8_t Op, const char *Comment = nullptr) = 0;
+  virtual void emitOp(uint8_t Op, const char *Comment = nullptr) = 0;
   /// Emit a raw signed value.
-  virtual void EmitSigned(int64_t Value) = 0;
+  virtual void emitSigned(int64_t Value) = 0;
   /// Emit a raw unsigned value.
-  virtual void EmitUnsigned(uint64_t Value) = 0;
+  virtual void emitUnsigned(uint64_t Value) = 0;
   /// Return whether the given machine register is the frame register in the
   /// current function.
   virtual bool isFrameRegister(const TargetRegisterInfo &TRI, unsigned MachineReg) = 0;
 
   /// Emit a dwarf register operation.
-  void AddReg(int DwarfReg, const char *Comment = nullptr);
+  void addReg(int DwarfReg, const char *Comment = nullptr);
   /// Emit an (double-)indirect dwarf register operation.
-  void AddRegIndirect(int DwarfReg, int Offset);
+  void addRegIndirect(int DwarfReg, int Offset);
 
   /// Emit a DW_OP_piece or DW_OP_bit_piece operation for a variable fragment.
   /// \param OffsetInBits    This is an optional offset into the location that
   /// is at the top of the DWARF stack.
-  void AddOpPiece(unsigned SizeInBits, unsigned OffsetInBits = 0);
+  void addOpPiece(unsigned SizeInBits, unsigned OffsetInBits = 0);
 
   /// Emit a shift-right dwarf operation.
-  void AddShr(unsigned ShiftBy);
+  void addShr(unsigned ShiftBy);
   /// Emit a bitwise and dwarf operation.
-  void AddAnd(unsigned Mask);
+  void addAnd(unsigned Mask);
 
   /// Emit a DW_OP_stack_value, if supported.
   ///
@@ -145,11 +145,11 @@ public:
   /// constant value, so the producers and consumers started to rely on
   /// heuristics to disambiguate the value vs. location status of the
   /// expression.  See PR21176 for more details.
-  void AddStackValue();
+  void addStackValue();
 
   /// Emit an indirect dwarf register operation for the given machine register.
   /// \return false if no DWARF register exists for MachineReg.
-  bool AddMachineRegIndirect(const TargetRegisterInfo &TRI, unsigned MachineReg,
+  bool addMachineRegIndirect(const TargetRegisterInfo &TRI, unsigned MachineReg,
                              int Offset = 0);
 
   /// Emit a partial DWARF register operation.
@@ -167,15 +167,15 @@ public:
   /// multiple subregisters that alias the register.
   ///
   /// \return false if no DWARF register exists for MachineReg.
-  bool AddMachineReg(const TargetRegisterInfo &TRI, unsigned MachineReg,
+  bool addMachineReg(const TargetRegisterInfo &TRI, unsigned MachineReg,
                      unsigned MaxSize = ~1U);
 
   /// Emit a signed constant.
-  void AddSignedConstant(int64_t Value);
+  void addSignedConstant(int64_t Value);
   /// Emit an unsigned constant.
-  void AddUnsignedConstant(uint64_t Value);
+  void addUnsignedConstant(uint64_t Value);
   /// Emit an unsigned constant.
-  void AddUnsignedConstant(const APInt &Value);
+  void addUnsignedConstant(const APInt &Value);
 
   /// Emit a machine register location. As an optimization this may also consume
   /// the prefix of a DwarfExpression if a more efficient representation for
@@ -186,7 +186,7 @@ public:
   ///                                 fragment inside the entire variable.
   /// \return                         false if no DWARF register exists
   ///                                 for MachineReg.
-  bool AddMachineRegExpression(const TargetRegisterInfo &TRI,
+  bool addMachineRegExpression(const TargetRegisterInfo &TRI,
                                DIExpressionCursor &Expr, unsigned MachineReg,
                                unsigned FragmentOffsetInBits = 0);
   /// Emit all remaining operations in the DIExpressionCursor.
@@ -194,7 +194,7 @@ public:
   /// \param FragmentOffsetInBits     If this is one fragment out of multiple
   ///                                 locations, this is the offset of the
   ///                                 fragment inside the entire variable.
-  void AddExpression(DIExpressionCursor &&Expr,
+  void addExpression(DIExpressionCursor &&Expr,
                      unsigned FragmentOffsetInBits = 0);
 
   /// If applicable, emit an empty DW_OP_piece / DW_OP_bit_piece to advance to
@@ -210,9 +210,9 @@ public:
   DebugLocDwarfExpression(unsigned DwarfVersion, ByteStreamer &BS)
       : DwarfExpression(DwarfVersion), BS(BS) {}
 
-  void EmitOp(uint8_t Op, const char *Comment = nullptr) override;
-  void EmitSigned(int64_t Value) override;
-  void EmitUnsigned(uint64_t Value) override;
+  void emitOp(uint8_t Op, const char *Comment = nullptr) override;
+  void emitSigned(int64_t Value) override;
+  void emitUnsigned(uint64_t Value) override;
   bool isFrameRegister(const TargetRegisterInfo &TRI,
                        unsigned MachineReg) override;
 };
@@ -225,9 +225,9 @@ const AsmPrinter &AP;
 
 public:
   DIEDwarfExpression(const AsmPrinter &AP, DwarfUnit &DU, DIELoc &DIE);
-  void EmitOp(uint8_t Op, const char *Comment = nullptr) override;
-  void EmitSigned(int64_t Value) override;
-  void EmitUnsigned(uint64_t Value) override;
+  void emitOp(uint8_t Op, const char *Comment = nullptr) override;
+  void emitSigned(int64_t Value) override;
+  void emitUnsigned(uint64_t Value) override;
   bool isFrameRegister(const TargetRegisterInfo &TRI,
                        unsigned MachineReg) override;
   DIELoc *finalize() {
