@@ -59,4 +59,6 @@ int lprofSuspendSigKill();
 /* Restore previously suspended SIGKILL. */
 void lprofRestoreSigKill();
 
+void lprofInstallSignalHandler(int sig, void(*handler)(int));
+
 #endif /* PROFILE_INSTRPROFILINGUTIL_H */
