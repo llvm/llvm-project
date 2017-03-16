@@ -25,54 +25,33 @@ MATH_MANGLE(asinpi)(double x)
     // reconstruct the terms carefully.
 
     const double piinv = 0x1.45f306dc9c883p-2;
-    const double hpiby2_head = 0x1.921fb54442d18p-1;
 
     double y = BUILTIN_ABS_F64(x);
     bool transform = y >= 0.5;
 
-    double rt = 0.5 * (1.0 - y);
+    double rt = MATH_MAD(y, -0.5, 0.5);
     double y2 = y * y;
     double r = transform ? rt : y2;
 
-    // Use a rational approximation for [0.0, 0.5]
+    double u = r * MATH_MAD(r, MATH_MAD(r, MATH_MAD(r, MATH_MAD(r, 
+                   MATH_MAD(r, MATH_MAD(r, MATH_MAD(r, MATH_MAD(r, 
+                   MATH_MAD(r, MATH_MAD(r, MATH_MAD(r, 
+                       0x1.547a51d41fb0bp-7, -0x1.6a3fb0718a8f7p-8), 0x1.a7b91f7177ee8p-8), 0x1.035d3435b8ad8p-9),
+                       0x1.ff0549b4e0449p-9), 0x1.21604ae288f96p-8), 0x1.6a2b36f9aec49p-8), 0x1.d2b076c914f04p-8),
+                       0x1.3ce53861f8f1fp-7), 0x1.d1a4529a30a69p-7), 0x1.8723a1d61d2e9p-6), 0x1.b2995e7b7af0fp-5);
 
-    double un = MATH_MAD(r,
-                    MATH_MAD(r,
-                        MATH_MAD(r,
-                            MATH_MAD(r,
-                                MATH_MAD(r, 0x1.951665d321061p-15, 0x1.1e5f887a62135p-10),
-                                -0x1.c28d390c29690p-5),
-                            0x1.1a2bec1b7ef59p-2),
-                        -0x1.c7b297e269eacp-2),
-                    0x1.d1e4180029834p-3);
-
-    double ud = MATH_MAD(r,
-                    MATH_MAD(r,
-                        MATH_MAD(r,
-                            MATH_MAD(r, 0x1.b1a422982ce76p-4, -0x1.e324ab418f78dp-1),
-                            0x1.62021571dccfcp+1),
-                        -0x1.a4646f903cdeap+1),
-                    0x1.5d6b12001f228p+0);
-
-    double u = r * MATH_FAST_DIV(un, ud);
-
-    // Reconstruct asin carefully in transformed region
     double v;
     if (transform) {
         double s = MATH_FAST_SQRT(r);
         double sh = AS_DOUBLE(AS_ULONG(s) & 0xffffffff00000000UL);
         double st = MATH_FAST_DIV(MATH_MAD(-sh, sh, r), s + sh);
-        double p = (2.0*piinv)*MATH_MAD(s, u, st);
-        double q = piinv*MATH_MAD(-2.0, sh, hpiby2_head);
+        double p = 2.0*MATH_MAD(s, u, piinv*st);
+        double q = MATH_MAD(-2.0*piinv, sh, 0.25);
         v = 0.25 - (p - q);
+        v = y == 1.0 ? 0.5 : v;
     } else {
-        v = piinv * MATH_MAD(y, u, y);
+        v = MATH_MAD(y, piinv, y*u);
     }
-
-    if (!FINITE_ONLY_OPT()) {
-        v = y > 1.0 ? AS_DOUBLE(QNANBITPATT_DP64) : v;
-    }
-    v = y == 1.0 ? 0.5 : v;
 
     return BUILTIN_COPYSIGN_F64(v, x);
 }

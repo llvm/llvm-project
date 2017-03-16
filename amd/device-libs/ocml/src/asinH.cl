@@ -26,24 +26,20 @@ MATH_MANGLE(asin)(half x)
     // together with the above polynomial approximation, and
     // reconstruct the terms carefully.
 
-    const half piby2 = 0x1.921fb6p+0h;
-
     half ax = BUILTIN_ABS_F16(x);
+    half r;
 
-    half tx = 0.5h * (1.0h - ax);
-    half x2 = x*x;
-    half r = ax >= 0.5h ? tx : x2;
+    if (ax <= 0.5h) {
+        half s = x * x;
+        half p = s * MATH_MAD(s, 0x1.828p-4h, 0x1.52p-3h);
+        r = MATH_MAD(ax, p, ax);
+    } else {
+        float s = BUILTIN_MAD_F32((float)ax, -0.5f, 0.5f);
+        float t = BUILTIN_SQRT_F32(s);
+        float p = BUILTIN_MAD_F32(t, BUILTIN_MAD_F32(s, -0x1.82675ap-2f, -0x1.ff9f6p+0f), 0x1.921fb6p+0f);
+        r = (half)p;
+    }
 
-    half u = r * MATH_MAD(r, MATH_MAD(r, 0x1.5e98c8p-5h, 0x1.0ba2eep-4h), 0x1.561ee8p-3h);
-
-    half s = MATH_FAST_SQRT(r);
-    half ret = MATH_MAD(MATH_MAD(s, u, s), -2.0h, piby2);
-    half xux = MATH_MAD(ax, u, ax);
-    ret = ax < 0.5h ? xux : ret;
-
-    ret = ax > 1.0h ? AS_HALF((short)QNANBITPATT_HP16) : ret;
-    ret = ax == 1.0h ? piby2 : ret;
-    ret = BUILTIN_COPYSIGN_F16(ret, x);
-    return ret;
+    return BUILTIN_COPYSIGN_F16(r, x);
 }
 

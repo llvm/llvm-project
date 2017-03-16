@@ -1,4 +1,3 @@
-
 /*===--------------------------------------------------------------------------
  *                   ROCm Device Libraries
  *
@@ -8,25 +7,12 @@
 
 #include "mathH.h"
 
-extern CONSTATTR half MATH_PRIVATE(atanpired)(half);
-
-CONSTATTR UGEN(atanpi)
-
 CONSTATTR INLINEATTR half
-MATH_MANGLE(atanpi)(half x)
+MATH_PRIVATE(atanpired)(half v)
 {
-    half v = BUILTIN_ABS_F16(x);
-    bool g = v > 1.0h;
-
-    half vi = MATH_FAST_RCP(v);
-    v = g ? vi : v;
-
-    half a = MATH_PRIVATE(atanpired)(v);
-
-    half y = 0.5h - a;
-    a = g ? y : a;
-
-    return BUILTIN_COPYSIGN_F16(a, x);
+    half t = v * v;
+    half z = MATH_MAD(t, MATH_MAD(t, MATH_MAD(t,
+                 -0x1.ef4p-7h, 0x1.a44p-5h), -0x1.ac8p-4h), 0x1.46p-2h);
+    return v * z;
 }
-
 

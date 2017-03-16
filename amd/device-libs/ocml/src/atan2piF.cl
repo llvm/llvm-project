@@ -7,7 +7,7 @@
 
 #include "mathF.h"
 
-extern CONSTATTR float MATH_PRIVATE(atanred)(float);
+extern CONSTATTR float MATH_PRIVATE(atanpired)(float);
 
 CONSTATTR float
 MATH_MANGLE(atan2pi)(float y, float x)
@@ -27,13 +27,7 @@ MATH_MANGLE(atan2pi)(float y, float x)
         vbyu = MATH_DIV(v, u);
     }
 
-    float a = MATH_PRIVATE(atanred)(vbyu);
-
-    if (DAZ_OPT()) {
-        a = MATH_FAST_DIV(a, pi);
-    } else {
-        a = MATH_DIV(a, pi);
-    }
+    float a = MATH_PRIVATE(atanpired)(vbyu);
 
     float at = 0.5f - a;
     a = ay > ax ? at : a;
