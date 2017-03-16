@@ -61,6 +61,7 @@
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Casting.h"
@@ -508,6 +509,13 @@ const SISubtarget *SITargetLowering::getSubtarget() const {
 // TargetLowering queries
 //===----------------------------------------------------------------------===//
 
+bool SITargetLowering::isShuffleMaskLegal(const SmallVectorImpl<int> &,
+                                          EVT) const {
+  // SI has some legal vector types, but no legal vector operations. Say no
+  // shuffles are legal in order to prefer scalarizing some vector operations.
+  return false;
+}
+
 bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
                                           const CallInst &CI,
                                           unsigned IntrID) const {
@@ -527,11 +535,20 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   }
 }
 
-bool SITargetLowering::isShuffleMaskLegal(const SmallVectorImpl<int> &,
-                                          EVT) const {
-  // SI has some legal vector types, but no legal vector operations. Say no
-  // shuffles are legal in order to prefer scalarizing some vector operations.
-  return false;
+bool SITargetLowering::getAddrModeArguments(IntrinsicInst *II,
+                                            SmallVectorImpl<Value*> &Ops,
+                                            Type *&AccessTy) const {
+  switch (II->getIntrinsicID()) {
+  case Intrinsic::amdgcn_atomic_inc:
+  case Intrinsic::amdgcn_atomic_dec: {
+    Value *Ptr = II->getArgOperand(0);
+    AccessTy = II->getType();
+    Ops.push_back(Ptr);
+    return true;
+  }
+  default:
+    return false;
+  }
 }
 
 bool SITargetLowering::isLegalFlatAddressingMode(const AddrMode &AM) const {

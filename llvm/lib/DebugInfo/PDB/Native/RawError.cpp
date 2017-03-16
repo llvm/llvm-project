@@ -38,6 +38,8 @@ public:
       return "The entry does not exist.";
     case raw_error_code::not_writable:
       return "The PDB does not support writing.";
+    case raw_error_code::stream_too_long:
+      return "The stream was longer than expected.";
     case raw_error_code::invalid_tpi_hash:
       return "The Type record has an invalid hash value.";
     }

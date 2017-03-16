@@ -1006,7 +1006,7 @@ bool MipsSEDAGToDAGISel::trySelect(SDNode *Node) {
                                     : (SplatBitSize == 64 ? Mips::FILL_D : 0));
 
       assert(FILLOp != 0 && "Unknown FILL Op for splat synthesis!");
-      assert((!ABI.IsO32() || (ABI.IsO32() && FILLOp != Mips::FILL_D)) &&
+      assert((!ABI.IsO32() || (FILLOp != Mips::FILL_D)) &&
              "Attempting to use fill.d on MIPS32!");
 
       const unsigned Lo = SplatValue.getLoBits(16).getZExtValue();

@@ -1560,16 +1560,16 @@ void ScopStmt::collectSurroundingLoops() {
   }
 }
 
-ScopStmt::ScopStmt(Scop &parent, Region &R)
+ScopStmt::ScopStmt(Scop &parent, Region &R, Loop *SurroundingLoop)
     : Parent(parent), InvalidDomain(nullptr), Domain(nullptr), BB(nullptr),
-      R(&R), Build(nullptr) {
+      R(&R), Build(nullptr), SurroundingLoop(SurroundingLoop) {
 
   BaseName = getIslCompatibleName("Stmt_", R.getNameStr(), "");
 }
 
-ScopStmt::ScopStmt(Scop &parent, BasicBlock &bb)
+ScopStmt::ScopStmt(Scop &parent, BasicBlock &bb, Loop *SurroundingLoop)
     : Parent(parent), InvalidDomain(nullptr), Domain(nullptr), BB(&bb),
-      R(nullptr), Build(nullptr) {
+      R(nullptr), Build(nullptr), SurroundingLoop(SurroundingLoop) {
 
   BaseName = getIslCompatibleName("Stmt_", &bb, "");
 }
@@ -2485,8 +2485,6 @@ static __isl_give isl_set *adjustDomainDimensions(Scop &S,
 
 bool Scop::propagateInvalidStmtDomains(Region *R, DominatorTree &DT,
                                        LoopInfo &LI) {
-  auto &BoxedLoops = getBoxedLoops();
-
   ReversePostOrderTraversal<Region *> RTraversal(R);
   for (auto *RN : RTraversal) {
 
@@ -2541,7 +2539,7 @@ bool Scop::propagateInvalidStmtDomains(Region *R, DominatorTree &DT,
       if (DT.dominates(SuccBB, BB))
         continue;
 
-      auto *SuccBBLoop = getFirstNonBoxedLoopFor(SuccBB, LI, BoxedLoops);
+      auto *SuccBBLoop = SuccStmt->getSurroundingLoop();
       auto *AdjustedInvalidDomain = adjustDomainDimensions(
           *this, isl_set_copy(InvalidDomain), BBLoop, SuccBBLoop);
       auto *SuccInvalidDomain = SuccStmt->getInvalidDomain();
@@ -2579,7 +2577,6 @@ void Scop::propagateDomainConstraintsToRegionExit(
   if (!BBReg || BBReg->getEntry() != BB || !contains(ExitBB))
     return;
 
-  auto &BoxedLoops = getBoxedLoops();
   // Do not propagate the domain if there is a loop backedge inside the region
   // that would prevent the exit block from being executed.
   auto *L = BBLoop;
@@ -2595,7 +2592,8 @@ void Scop::propagateDomainConstraintsToRegionExit(
   auto *Domain = DomainMap[BB];
   assert(Domain && "Cannot propagate a nullptr");
 
-  auto *ExitBBLoop = getFirstNonBoxedLoopFor(ExitBB, LI, BoxedLoops);
+  auto *ExitStmt = getStmtFor(ExitBB);
+  auto *ExitBBLoop = ExitStmt->getSurroundingLoop();
 
   // Since the dimensions of @p BB and @p ExitBB might be different we have to
   // adjust the domain before we can propagate it.
@@ -2609,7 +2607,6 @@ void Scop::propagateDomainConstraintsToRegionExit(
       ExitDomain ? isl_set_union(AdjustedDomain, ExitDomain) : AdjustedDomain;
 
   // Initialize the invalid domain.
-  auto *ExitStmt = getStmtFor(ExitBB);
   ExitStmt->setInvalidDomain(isl_set_empty(isl_set_get_space(ExitDomain)));
 
   FinishedExitBlocks.insert(ExitBB);
@@ -2713,8 +2710,7 @@ bool Scop::buildDomainsWithBranchConstraints(Region *R, DominatorTree &DT,
         continue;
       }
 
-      auto &BoxedLoops = getBoxedLoops();
-      auto *SuccBBLoop = getFirstNonBoxedLoopFor(SuccBB, LI, BoxedLoops);
+      auto *SuccBBLoop = SuccStmt->getSurroundingLoop();
       CondSet = adjustDomainDimensions(*this, CondSet, BBLoop, SuccBBLoop);
 
       // Set the domain for the successor or merge it with an existing domain in
@@ -2753,13 +2749,10 @@ Scop::getPredecessorDomainConstraints(BasicBlock *BB,
   if (R.getEntry() == BB)
     return isl_set_universe(isl_set_get_space(Domain));
 
-  // The set of boxed loops (loops in non-affine subregions) for this SCoP.
-  auto &BoxedLoops = getBoxedLoops();
-
   // The region info of this function.
   auto &RI = *R.getRegionInfo();
 
-  auto *BBLoop = getFirstNonBoxedLoopFor(BB, LI, BoxedLoops);
+  auto *BBLoop = getStmtFor(BB)->getSurroundingLoop();
 
   // A domain to collect all predecessor domains, thus all conditions under
   // which the block is executed. To this end we start with the empty domain.
@@ -2795,7 +2788,7 @@ Scop::getPredecessorDomainConstraints(BasicBlock *BB,
     }
 
     auto *PredBBDom = getDomainConditions(PredBB);
-    auto *PredBBLoop = getFirstNonBoxedLoopFor(PredBB, LI, BoxedLoops);
+    auto *PredBBLoop = getStmtFor(PredBB)->getSurroundingLoop();
     PredBBDom = adjustDomainDimensions(*this, PredBBDom, PredBBLoop, BBLoop);
 
     PredDom = isl_set_union(PredDom, PredBBDom);
@@ -4435,16 +4428,16 @@ mapToDimension(__isl_take isl_union_set *USet, int N) {
   return isl_multi_union_pw_aff_from_union_pw_multi_aff(Data.Res);
 }
 
-void Scop::addScopStmt(BasicBlock *BB) {
+void Scop::addScopStmt(BasicBlock *BB, Loop *SurroundingLoop) {
   assert(BB && "Unexpected nullptr!");
-  Stmts.emplace_back(*this, *BB);
+  Stmts.emplace_back(*this, *BB, SurroundingLoop);
   auto *Stmt = &Stmts.back();
   StmtMap[BB] = Stmt;
 }
 
-void Scop::addScopStmt(Region *R) {
+void Scop::addScopStmt(Region *R, Loop *SurroundingLoop) {
   assert(R && "Unexpected nullptr!");
-  Stmts.emplace_back(*this, *R);
+  Stmts.emplace_back(*this, *R, SurroundingLoop);
   auto *Stmt = &Stmts.back();
   for (BasicBlock *BB : R->blocks())
     StmtMap[BB] = Stmt;

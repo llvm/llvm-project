@@ -105,7 +105,10 @@ void HexagonCVIResource::SetupTUL(TypeUnitsAndLanes *TUL, StringRef CPU) {
   (*TUL)[HexagonII::TypeCVI_VP] = UnitsAndLanes(CVI_XLANE, 1);
   (*TUL)[HexagonII::TypeCVI_VP_VS] = UnitsAndLanes(CVI_XLANE, 2);
   (*TUL)[HexagonII::TypeCVI_VS] = UnitsAndLanes(CVI_SHIFT, 1);
-  (*TUL)[HexagonII::TypeCVI_VINLANESAT] = UnitsAndLanes(CVI_SHIFT, 1);
+  (*TUL)[HexagonII::TypeCVI_VINLANESAT] =
+      (CPU == "hexagonv60" || CPU == "hexagonv61" || CPU == "hexagonv61v1") ?
+      UnitsAndLanes(CVI_SHIFT, 1) :
+      UnitsAndLanes(CVI_XLANE | CVI_SHIFT | CVI_MPY0 | CVI_MPY1, 1);
   (*TUL)[HexagonII::TypeCVI_VM_LD] =
       UnitsAndLanes(CVI_XLANE | CVI_SHIFT | CVI_MPY0 | CVI_MPY1, 1);
   (*TUL)[HexagonII::TypeCVI_VM_TMP_LD] = UnitsAndLanes(CVI_NONE, 0);

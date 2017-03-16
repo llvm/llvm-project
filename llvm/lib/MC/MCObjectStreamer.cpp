@@ -203,6 +203,7 @@ bool MCObjectStreamer::changeSectionImpl(MCSection *Section,
                                          const MCExpr *Subsection) {
   assert(Section && "Cannot switch to a null section!");
   flushPendingLabels(nullptr);
+  getContext().clearDwarfLocSeen();
 
   bool Created = getAssembler().registerSection(*Section);
 

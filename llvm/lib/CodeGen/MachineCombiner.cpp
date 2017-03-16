@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 //
 // The machine combiner pass uses machine trace metrics to ensure the combined
-// instructions does not lengthen the critical path or the resource depth.
+// instructions do not lengthen the critical path or the resource depth.
 //===----------------------------------------------------------------------===//
 
 #define DEBUG_TYPE "machine-combiner"

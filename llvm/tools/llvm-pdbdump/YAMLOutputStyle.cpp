@@ -24,7 +24,9 @@ using namespace llvm;
 using namespace llvm::pdb;
 
 YAMLOutputStyle::YAMLOutputStyle(PDBFile &File)
-    : File(File), Out(outs()), Obj(File.getAllocator()) {}
+    : File(File), Out(outs()), Obj(File.getAllocator()) {
+  Out.setWriteDefaultValues(!opts::pdb2yaml::Minimal);
+}
 
 Error YAMLOutputStyle::dump() {
   if (opts::pdb2yaml::StreamDirectory)

@@ -6047,6 +6047,21 @@ INTERCEPTOR(void *, getutxline, void *ut) {
 #define INIT_UTMPX
 #endif
 
+#if SANITIZER_INTERCEPT_GETLOADAVG
+INTERCEPTOR(int, getloadavg, double *loadavg, int nelem) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, getloadavg, loadavg, nelem);
+  int res = REAL(getloadavg)(loadavg, nelem);
+  if (res > 0)
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, loadavg, res * sizeof(*loadavg));
+  return res;
+}
+#define INIT_GETLOADAVG                      \
+  COMMON_INTERCEPT_FUNCTION(getloadavg);
+#else
+#define INIT_GETLOADAVG
+#endif
+
 static void InitializeCommonInterceptors() {
   static u64 metadata_mem[sizeof(MetadataHashMap) / sizeof(u64) + 1];
   interceptor_metadata_map = new((void *)&metadata_mem) MetadataHashMap();
@@ -6245,4 +6260,5 @@ static void InitializeCommonInterceptors() {
   // FIXME: add other *stat interceptors.
   INIT_UTMP;
   INIT_UTMPX;
+  INIT_GETLOADAVG;
 }

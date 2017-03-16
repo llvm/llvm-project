@@ -142,7 +142,7 @@ static bool canGoAfterDWARF(const MCSectionMachO &MSec) {
 void MCMachOStreamer::ChangeSection(MCSection *Section,
                                     const MCExpr *Subsection) {
   // Change the section normally.
-  bool Created = MCObjectStreamer::changeSectionImpl(Section, Subsection);
+  bool Created = changeSectionImpl(Section, Subsection);
   const MCSectionMachO &MSec = *cast<MCSectionMachO>(Section);
   StringRef SegName = MSec.getSegmentName();
   if (SegName == "__DWARF")

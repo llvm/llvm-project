@@ -39,6 +39,7 @@
 #include "llvm/DebugInfo/PDB/Native/DbiStreamBuilder.h"
 #include "llvm/DebugInfo/PDB/Native/InfoStream.h"
 #include "llvm/DebugInfo/PDB/Native/InfoStreamBuilder.h"
+#include "llvm/DebugInfo/PDB/Native/ModInfoBuilder.h"
 #include "llvm/DebugInfo/PDB/Native/NativeSession.h"
 #include "llvm/DebugInfo/PDB/Native/PDBFile.h"
 #include "llvm/DebugInfo/PDB/Native/PDBFileBuilder.h"
@@ -293,6 +294,9 @@ cl::opt<bool>
                   cl::desc("Do not dump MSF file headers (you will not be able "
                            "to generate a fresh PDB from the resulting YAML)"),
                   cl::sub(PdbToYamlSubcommand), cl::init(false));
+cl::opt<bool> Minimal("minimal",
+                      cl::desc("Don't write fields with default values"),
+                      cl::sub(PdbToYamlSubcommand), cl::init(false));
 
 cl::opt<bool> StreamMetadata(
     "stream-metadata",
@@ -367,13 +371,13 @@ static void yamlToPdb(StringRef Path) {
   llvm::yaml::Input In(Buffer->getBuffer());
   pdb::yaml::PdbObject YamlObj(Allocator);
   In >> YamlObj;
-  if (!YamlObj.Headers.hasValue())
-    ExitOnErr(make_error<GenericError>(generic_error_code::unspecified,
-                                       "Yaml does not contain MSF headers"));
 
   PDBFileBuilder Builder(Allocator);
 
-  ExitOnErr(Builder.initialize(YamlObj.Headers->SuperBlock.BlockSize));
+  uint32_t BlockSize = 4096;
+  if (YamlObj.Headers.hasValue())
+    BlockSize = YamlObj.Headers->SuperBlock.BlockSize;
+  ExitOnErr(Builder.initialize(BlockSize));
   // Add each of the reserved streams.  We ignore stream metadata in the
   // yaml, because we will reconstruct our own view of the streams.  For
   // example, the YAML may say that there were 20 streams in the original
@@ -389,43 +393,51 @@ static void yamlToPdb(StringRef Path) {
       Strings.insert(S);
   }
 
-  if (YamlObj.PdbStream.hasValue()) {
-    auto &InfoBuilder = Builder.getInfoBuilder();
-    InfoBuilder.setAge(YamlObj.PdbStream->Age);
-    InfoBuilder.setGuid(YamlObj.PdbStream->Guid);
-    InfoBuilder.setSignature(YamlObj.PdbStream->Signature);
-    InfoBuilder.setVersion(YamlObj.PdbStream->Version);
-  }
+  pdb::yaml::PdbInfoStream DefaultInfoStream;
+  pdb::yaml::PdbDbiStream DefaultDbiStream;
+  pdb::yaml::PdbTpiStream DefaultTpiStream;
 
-  if (YamlObj.DbiStream.hasValue()) {
-    auto &DbiBuilder = Builder.getDbiBuilder();
-    DbiBuilder.setAge(YamlObj.DbiStream->Age);
-    DbiBuilder.setBuildNumber(YamlObj.DbiStream->BuildNumber);
-    DbiBuilder.setFlags(YamlObj.DbiStream->Flags);
-    DbiBuilder.setMachineType(YamlObj.DbiStream->MachineType);
-    DbiBuilder.setPdbDllRbld(YamlObj.DbiStream->PdbDllRbld);
-    DbiBuilder.setPdbDllVersion(YamlObj.DbiStream->PdbDllVersion);
-    DbiBuilder.setVersionHeader(YamlObj.DbiStream->VerHeader);
-    for (const auto &MI : YamlObj.DbiStream->ModInfos) {
-      ExitOnErr(DbiBuilder.addModuleInfo(MI.Obj, MI.Mod));
-      for (auto S : MI.SourceFiles)
-        ExitOnErr(DbiBuilder.addModuleSourceFile(MI.Mod, S));
+  const auto &Info = YamlObj.PdbStream.getValueOr(DefaultInfoStream);
+
+  auto &InfoBuilder = Builder.getInfoBuilder();
+  InfoBuilder.setAge(Info.Age);
+  InfoBuilder.setGuid(Info.Guid);
+  InfoBuilder.setSignature(Info.Signature);
+  InfoBuilder.setVersion(Info.Version);
+
+  const auto &Dbi = YamlObj.DbiStream.getValueOr(DefaultDbiStream);
+  auto &DbiBuilder = Builder.getDbiBuilder();
+  DbiBuilder.setAge(Dbi.Age);
+  DbiBuilder.setBuildNumber(Dbi.BuildNumber);
+  DbiBuilder.setFlags(Dbi.Flags);
+  DbiBuilder.setMachineType(Dbi.MachineType);
+  DbiBuilder.setPdbDllRbld(Dbi.PdbDllRbld);
+  DbiBuilder.setPdbDllVersion(Dbi.PdbDllVersion);
+  DbiBuilder.setVersionHeader(Dbi.VerHeader);
+  for (const auto &MI : Dbi.ModInfos) {
+    auto &ModiBuilder = ExitOnErr(DbiBuilder.addModuleInfo(MI.Obj));
+
+    for (auto S : MI.SourceFiles)
+      ExitOnErr(DbiBuilder.addModuleSourceFile(MI.Mod, S));
+    if (MI.Modi.hasValue()) {
+      const auto &ModiStream = *MI.Modi;
+      ModiBuilder.setObjFileName(MI.Obj);
+      for (auto Symbol : ModiStream.Symbols)
+        ModiBuilder.addSymbol(Symbol.Record);
     }
   }
 
-  if (YamlObj.TpiStream.hasValue()) {
-    auto &TpiBuilder = Builder.getTpiBuilder();
-    TpiBuilder.setVersionHeader(YamlObj.TpiStream->Version);
-    for (const auto &R : YamlObj.TpiStream->Records)
-      TpiBuilder.addTypeRecord(R.Record);
-  }
+  auto &TpiBuilder = Builder.getTpiBuilder();
+  const auto &Tpi = YamlObj.TpiStream.getValueOr(DefaultTpiStream);
+  TpiBuilder.setVersionHeader(Tpi.Version);
+  for (const auto &R : Tpi.Records)
+    TpiBuilder.addTypeRecord(R.Record);
 
-  if (YamlObj.IpiStream.hasValue()) {
-    auto &IpiBuilder = Builder.getIpiBuilder();
-    IpiBuilder.setVersionHeader(YamlObj.IpiStream->Version);
-    for (const auto &R : YamlObj.IpiStream->Records)
-      IpiBuilder.addTypeRecord(R.Record);
-  }
+  const auto &Ipi = YamlObj.IpiStream.getValueOr(DefaultTpiStream);
+  auto &IpiBuilder = Builder.getIpiBuilder();
+  IpiBuilder.setVersionHeader(Ipi.Version);
+  for (const auto &R : Ipi.Records)
+    IpiBuilder.addTypeRecord(R.Record);
 
   ExitOnErr(Builder.commit(opts::yaml2pdb::YamlPdbOutputFile));
 }
