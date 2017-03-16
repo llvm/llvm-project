@@ -149,7 +149,7 @@ static cl::opt<unsigned> TriangleChainCount(
     "triangle-chain-count",
     cl::desc("Number of triangle-shaped-CFG's that need to be in a row for the "
              "triangle tail duplication heuristic to kick in. 0 to disable."),
-    cl::init(3),
+    cl::init(2),
     cl::Hidden);
 
 extern cl::opt<unsigned> StaticLikelyProb;

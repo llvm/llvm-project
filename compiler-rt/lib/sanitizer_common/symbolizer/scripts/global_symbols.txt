@@ -37,6 +37,7 @@ clock_gettime U
 cfgetospeed U
 dl_iterate_phdr U
 dlsym U
+dup U
 dup2 U
 environ U
 execv U

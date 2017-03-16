@@ -123,7 +123,7 @@ void BackgroundThread(void *arg) {
     if (heap_profile &&
         current_rss_mb > rss_during_last_reported_profile * 1.1) {
       Printf("\n\nHEAP PROFILE at RSS %zdMb\n", current_rss_mb);
-      __sanitizer_print_memory_profile(90);
+      __sanitizer_print_memory_profile(90, 20);
       rss_during_last_reported_profile = current_rss_mb;
     }
   }

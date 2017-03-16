@@ -422,17 +422,10 @@ define <2 x half> @test_select_cc(<2 x half> %a, <2 x half> %b, <2 x half> %c, <
 ; CHECK-DAG:  ld.param.v2.f32    {[[B0:%f[0-9]+]], [[B1:%f[0-9]+]]}, [test_select_cc_f32_f16_param_1];
 ; CHECK-DAG:  ld.param.b32    [[C:%hh[0-9]+]], [test_select_cc_f32_f16_param_2];
 ; CHECK-DAG:  ld.param.b32    [[D:%hh[0-9]+]], [test_select_cc_f32_f16_param_3];
-; CHECK-DAG:  mov.b32         {[[C0:%h[0-9]+]], [[C1:%h[0-9]+]]}, [[C]]
-; CHECK-DAG:  mov.b32         {[[D0:%h[0-9]+]], [[D1:%h[0-9]+]]}, [[D]]
 ;
-; TODO: Currently DAG combiner scalarizes setcc before we can lower it to setp.f16x2.
-;       We'd like to see this instruction:
-; CHECK-F16-NOTYET:  setp.neu.f16x2  [[P0:%p[0-9]+]]|[[P1:%p[0-9]+]], [[C]], [[D]]
-;       But we end up with a pair of scalar instances of it instead:
-; CHECK-F16-DAG:  setp.neu.f16  [[P0:%p[0-9]+]], [[C0]], [[D0]]
-; CHECK-F16-DAG:  setp.neu.f16  [[P1:%p[0-9]+]], [[C1]], [[D1]]
-
-
+; CHECK-F16:  setp.neu.f16x2  [[P0:%p[0-9]+]]|[[P1:%p[0-9]+]], [[C]], [[D]]
+; CHECK-NOF16-DAG: mov.b32         {[[C0:%h[0-9]+]], [[C1:%h[0-9]+]]}, [[C]]
+; CHECK-NOF16-DAG: mov.b32         {[[D0:%h[0-9]+]], [[D1:%h[0-9]+]]}, [[D]]
 ; CHECK-NOF16-DAG: cvt.f32.f16 [[DF0:%f[0-9]+]], [[D0]];
 ; CHECK-NOF16-DAG: cvt.f32.f16 [[CF0:%f[0-9]+]], [[C0]];
 ; CHECK-NOF16-DAG: cvt.f32.f16 [[DF1:%f[0-9]+]], [[D1]];

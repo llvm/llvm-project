@@ -88,7 +88,7 @@ public:
   void ClearAutoDictionary();
   void PrintRecommendedDictionary();
 
-  void SetCorpus(InputCorpus *Corpus) { this->Corpus = Corpus; }
+  void SetCorpus(const InputCorpus *Corpus) { this->Corpus = Corpus; }
 
   Random &GetRand() { return Rand; }
 
@@ -141,7 +141,7 @@ private:
   DictionaryEntry CmpDictionaryEntriesDeque[kCmpDictionaryEntriesDequeSize];
   size_t CmpDictionaryEntriesDequeIdx = 0;
 
-  InputCorpus *Corpus = nullptr;
+  const InputCorpus *Corpus = nullptr;
   std::vector<uint8_t> MutateInPlaceHere;
   // CustomCrossOver needs its own buffer as a custom implementation may call
   // LLVMFuzzerMutate, which in turn may resize MutateInPlaceHere.

@@ -505,11 +505,4 @@ int __sanitizer_install_malloc_and_free_hooks(void (*malloc_hook)(const void *,
                                               void (*free_hook)(const void *)) {
   return InstallMallocFreeHooks(malloc_hook, free_hook);
 }
-
-#if !SANITIZER_GO
-SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_print_memory_profile,
-                             int top_percent) {
-  (void)top_percent;
-}
-#endif
 } // extern "C"

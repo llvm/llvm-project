@@ -238,6 +238,13 @@ static void maybe_duplicate_stderr() {
   }
 }
 
+// Define LLVMFuzzerMutate to avoid link failures for targets that use it
+// with libFuzzer's LLVMFuzzerCustomMutator.
+extern "C" size_t LLVMFuzzerMutate(uint8_t *Data, size_t Size, size_t MaxSize) {
+  assert(false && "LLVMFuzzerMutate should not be called from afl_driver");
+  return 0;
+}
+
 int main(int argc, char **argv) {
   fprintf(stderr, "======================= INFO =========================\n"
                   "This binary is built for AFL-fuzz.\n"

@@ -709,11 +709,11 @@ void InstrProfiling::getMemOPSizeOptions() {
     auto Pos = MemOPSizeRange.find(":");
     if (Pos != std::string::npos) {
       if (Pos > 0)
-        MemOPSizeRangeStart = std::stoi(MemOPSizeRange.substr(0, Pos));
+        MemOPSizeRangeStart = atoi(MemOPSizeRange.substr(0, Pos).c_str());
       if (Pos < MemOPSizeRange.size() - 1)
-        MemOPSizeRangeLast = std::stoi(MemOPSizeRange.substr(Pos + 1));
+        MemOPSizeRangeLast = atoi(MemOPSizeRange.substr(Pos + 1).c_str());
     } else
-      MemOPSizeRangeLast = std::stoi(MemOPSizeRange);
+      MemOPSizeRangeLast = atoi(MemOPSizeRange.c_str());
   }
   assert(MemOPSizeRangeLast >= MemOPSizeRangeStart);
 

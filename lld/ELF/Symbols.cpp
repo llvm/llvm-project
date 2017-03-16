@@ -106,8 +106,7 @@ static typename ELFT::uint getSymVA(const SymbolBody &Body, int64_t &Addend) {
   case SymbolBody::SharedKind: {
     auto &SS = cast<SharedSymbol>(Body);
     if (SS.NeedsCopy)
-      return SS.CopyRelSec->OutSec->Addr + SS.CopyRelSec->OutSecOff +
-             SS.CopyRelSecOff;
+      return SS.Section->OutSec->Addr + SS.Section->OutSecOff;
     if (SS.NeedsPltAddr)
       return Body.getPltVA<ELFT>();
     return 0;
@@ -172,13 +171,13 @@ template <class ELFT> typename ELFT::uint SymbolBody::getGotOffset() const {
   return GotIndex * Target->GotEntrySize;
 }
 
-template <class ELFT> typename ELFT::uint SymbolBody::getGotPltVA() const {
+uint64_t SymbolBody::getGotPltVA() const {
   if (this->IsInIgot)
-    return In<ELFT>::IgotPlt->getVA() + getGotPltOffset<ELFT>();
-  return In<ELFT>::GotPlt->getVA() + getGotPltOffset<ELFT>();
+    return InX::IgotPlt->getVA() + getGotPltOffset();
+  return InX::GotPlt->getVA() + getGotPltOffset();
 }
 
-template <class ELFT> typename ELFT::uint SymbolBody::getGotPltOffset() const {
+uint64_t SymbolBody::getGotPltOffset() const {
   return GotPltIndex * Target->GotPltEntrySize;
 }
 
@@ -199,7 +198,7 @@ template <class ELFT> typename ELFT::uint SymbolBody::getSize() const {
   return 0;
 }
 
-template <class ELFT> OutputSection *SymbolBody::getOutputSection() const {
+OutputSection *SymbolBody::getOutputSection() const {
   if (auto *S = dyn_cast<DefinedRegular>(this)) {
     if (S->Section)
       return S->Section->getOutputSection();
@@ -208,13 +207,13 @@ template <class ELFT> OutputSection *SymbolBody::getOutputSection() const {
 
   if (auto *S = dyn_cast<SharedSymbol>(this)) {
     if (S->NeedsCopy)
-      return S->CopyRelSec->OutSec;
+      return S->Section->OutSec;
     return nullptr;
   }
 
   if (isa<DefinedCommon>(this)) {
     if (Config->DefineCommon)
-      return In<ELFT>::Common->OutSec;
+      return InX::Common->OutSec;
     return nullptr;
   }
 
@@ -392,16 +391,6 @@ template uint32_t SymbolBody::template getGotOffset<ELF32BE>() const;
 template uint64_t SymbolBody::template getGotOffset<ELF64LE>() const;
 template uint64_t SymbolBody::template getGotOffset<ELF64BE>() const;
 
-template uint32_t SymbolBody::template getGotPltVA<ELF32LE>() const;
-template uint32_t SymbolBody::template getGotPltVA<ELF32BE>() const;
-template uint64_t SymbolBody::template getGotPltVA<ELF64LE>() const;
-template uint64_t SymbolBody::template getGotPltVA<ELF64BE>() const;
-
-template uint32_t SymbolBody::template getGotPltOffset<ELF32LE>() const;
-template uint32_t SymbolBody::template getGotPltOffset<ELF32BE>() const;
-template uint64_t SymbolBody::template getGotPltOffset<ELF64LE>() const;
-template uint64_t SymbolBody::template getGotPltOffset<ELF64BE>() const;
-
 template uint32_t SymbolBody::template getPltVA<ELF32LE>() const;
 template uint32_t SymbolBody::template getPltVA<ELF32BE>() const;
 template uint64_t SymbolBody::template getPltVA<ELF64LE>() const;
@@ -411,11 +400,6 @@ template uint32_t SymbolBody::template getSize<ELF32LE>() const;
 template uint32_t SymbolBody::template getSize<ELF32BE>() const;
 template uint64_t SymbolBody::template getSize<ELF64LE>() const;
 template uint64_t SymbolBody::template getSize<ELF64BE>() const;
-
-template OutputSection *SymbolBody::template getOutputSection<ELF32LE>() const;
-template OutputSection *SymbolBody::template getOutputSection<ELF32BE>() const;
-template OutputSection *SymbolBody::template getOutputSection<ELF64LE>() const;
-template OutputSection *SymbolBody::template getOutputSection<ELF64BE>() const;
 
 template bool DefinedRegular::template isMipsPIC<ELF32LE>() const;
 template bool DefinedRegular::template isMipsPIC<ELF32BE>() const;

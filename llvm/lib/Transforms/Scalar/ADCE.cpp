@@ -262,25 +262,6 @@ void AggressiveDeadCodeElimination::initialize() {
       continue;
     auto *BB = BBInfo.BB;
     if (!PDT.getNode(BB)) {
-      markLive(BBInfo.Terminator);
-      continue;
-    }
-    for (auto *Succ : successors(BB))
-      if (!PDT.getNode(Succ)) {
-        markLive(BBInfo.Terminator);
-        break;
-      }
-  }
-
-  // Mark blocks live if there is no path from the block to the
-  // return of the function or a successor for which this is true.
-  // This protects IDFCalculator which cannot handle such blocks.
-  for (auto &BBInfoPair : BlockInfo) {
-    auto &BBInfo = BBInfoPair.second;
-    if (BBInfo.terminatorIsLive())
-      continue;
-    auto *BB = BBInfo.BB;
-    if (!PDT.getNode(BB)) {
       DEBUG(dbgs() << "Not post-dominated by return: " << BB->getName()
                    << '\n';);
       markLive(BBInfo.Terminator);

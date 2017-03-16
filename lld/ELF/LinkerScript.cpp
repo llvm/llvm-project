@@ -939,7 +939,7 @@ template <class ELFT> bool LinkerScript<ELFT>::isAbsolute(StringRef S) {
 template <class ELFT>
 OutputSection *LinkerScript<ELFT>::getSymbolSection(StringRef S) {
   if (SymbolBody *Sym = Symtab<ELFT>::X->find(S))
-    return Sym->getOutputSection<ELFT>();
+    return Sym->getOutputSection();
   return CurOutSec;
 }
 

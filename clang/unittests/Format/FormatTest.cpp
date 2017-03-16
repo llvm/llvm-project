@@ -4132,6 +4132,9 @@ TEST_F(FormatTest, AlignsPipes) {
   verifyFormat(
       "llvm::errs() << aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa(\n"
       "    aaaaaaaaaaaaaaaaaaaaaaaaaaaa, aaaaaaaaaaaaaaaaaaaaaaaaaaaa);");
+  verifyFormat(
+      "auto Diag = diag() << aaaaaaaaaaaaaaaa(aaaaaaaaaaaa, aaaaaaaaaaaaa,\n"
+      "                                       aaaaaaaaaaaaaaaaaaaaaaaaaa);");
 
   verifyFormat("llvm::outs() << \"aaaaaaaaaaaaaaaa: \"\n"
                "             << aaaaaaaa.aaaaaaaaaaaa(aaa)->aaaaaaaaaaaaaa();");
@@ -9972,6 +9975,10 @@ TEST_F(FormatTest, ArrayAsTemplateType) {
   Spaces.SpacesInSquareBrackets = true;
   EXPECT_EQ("auto a = unique_ptr<Foo<Bar>[ 10 ]>;",
             format("auto a = unique_ptr < Foo < Bar>[10]> ;", Spaces));
+}
+
+TEST_F(FormatTest, NoSpaceAfterSuper) {
+    verifyFormat("__super::FooBar();");
 }
 
 TEST(FormatStyle, GetStyleOfFile) {
