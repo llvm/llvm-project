@@ -153,17 +153,7 @@ INSTR_PROF_RAW_HEADER(uint64_t, ValueKindLast, IPVK_Last)
 VALUE_PROF_FUNC_PARAM(uint64_t, TargetValue, Type::getInt64Ty(Ctx)) \
                       INSTR_PROF_COMMA
 VALUE_PROF_FUNC_PARAM(void *, Data, Type::getInt8PtrTy(Ctx)) INSTR_PROF_COMMA
-#ifndef VALUE_RANGE_PROF
 VALUE_PROF_FUNC_PARAM(uint32_t, CounterIndex, Type::getInt32Ty(Ctx))
-#else /* VALUE_RANGE_PROF */
-VALUE_PROF_FUNC_PARAM(uint32_t, CounterIndex, Type::getInt32Ty(Ctx)) \
-                      INSTR_PROF_COMMA
-VALUE_PROF_FUNC_PARAM(uint64_t, PreciseRangeStart, Type::getInt64Ty(Ctx)) \
-                      INSTR_PROF_COMMA
-VALUE_PROF_FUNC_PARAM(uint64_t, PreciseRangeLast, Type::getInt64Ty(Ctx)) \
-                      INSTR_PROF_COMMA
-VALUE_PROF_FUNC_PARAM(uint64_t, LargeValue, Type::getInt64Ty(Ctx))
-#endif /*VALUE_RANGE_PROF */
 #undef VALUE_PROF_FUNC_PARAM
 #undef INSTR_PROF_COMMA
 /* VALUE_PROF_FUNC_PARAM end */
@@ -184,15 +174,13 @@ VALUE_PROF_FUNC_PARAM(uint64_t, LargeValue, Type::getInt64Ty(Ctx))
  * name hash and the function address.
  */
 VALUE_PROF_KIND(IPVK_IndirectCallTarget, 0)
-/* For memory intrinsic functions size profiling. */
-VALUE_PROF_KIND(IPVK_MemOPSize, 1)
 /* These two kinds must be the last to be
  * declared. This is to make sure the string
  * array created with the template can be
  * indexed with the kind value.
  */
 VALUE_PROF_KIND(IPVK_First, IPVK_IndirectCallTarget)
-VALUE_PROF_KIND(IPVK_Last, IPVK_MemOPSize)
+VALUE_PROF_KIND(IPVK_Last, IPVK_IndirectCallTarget)
 
 #undef VALUE_PROF_KIND
 /* VALUE_PROF_KIND end */
@@ -661,9 +649,6 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
 #define INSTR_PROF_VALUE_PROF_FUNC __llvm_profile_instrument_target
 #define INSTR_PROF_VALUE_PROF_FUNC_STR \
         INSTR_PROF_QUOTE(INSTR_PROF_VALUE_PROF_FUNC)
-#define INSTR_PROF_VALUE_RANGE_PROF_FUNC __llvm_profile_instrument_range
-#define INSTR_PROF_VALUE_RANGE_PROF_FUNC_STR \
-        INSTR_PROF_QUOTE(INSTR_PROF_VALUE_RANGE_PROF_FUNC)
 
 /* InstrProfile per-function control data alignment.  */
 #define INSTR_PROF_DATA_ALIGNMENT 8

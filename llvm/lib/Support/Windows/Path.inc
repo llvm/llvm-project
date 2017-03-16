@@ -530,13 +530,15 @@ static std::error_code getStatus(HANDLE FileHandle, file_status &Result) {
     file_type Type = (Info.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
                          ? file_type::directory_file
                          : file_type::regular_file;
-    Result =
-        file_status(Type, Info.ftLastAccessTime.dwHighDateTime,
-                    Info.ftLastAccessTime.dwLowDateTime,
-                    Info.ftLastWriteTime.dwHighDateTime,
-                    Info.ftLastWriteTime.dwLowDateTime,
-                    Info.dwVolumeSerialNumber, Info.nFileSizeHigh,
-                    Info.nFileSizeLow, Info.nFileIndexHigh, Info.nFileIndexLow);
+    perms Permissions = (Info.dwFileAttributes & FILE_ATTRIBUTE_READONLY)
+                            ? (all_read | all_exe)
+                            : all_all;
+    Result = file_status(
+        Type, Permissions, Info.ftLastAccessTime.dwHighDateTime,
+        Info.ftLastAccessTime.dwLowDateTime,
+        Info.ftLastWriteTime.dwHighDateTime, Info.ftLastWriteTime.dwLowDateTime,
+        Info.dwVolumeSerialNumber, Info.nFileSizeHigh, Info.nFileSizeLow,
+        Info.nFileIndexHigh, Info.nFileIndexLow);
     return std::error_code();
   }
 
@@ -587,6 +589,37 @@ std::error_code status(const Twine &path, file_status &result, bool Follow) {
 std::error_code status(int FD, file_status &Result) {
   HANDLE FileHandle = reinterpret_cast<HANDLE>(_get_osfhandle(FD));
   return getStatus(FileHandle, Result);
+}
+
+std::error_code setPermissions(const Twine &Path, perms Permissions) {
+  SmallVector<wchar_t, 128> PathUTF16;
+  if (std::error_code EC = widenPath(Path, PathUTF16))
+    return EC;
+
+  DWORD Attributes = ::GetFileAttributesW(PathUTF16.begin());
+  if (Attributes == INVALID_FILE_ATTRIBUTES)
+    return mapWindowsError(GetLastError());
+
+  // There are many Windows file attributes that are not to do with the file
+  // permissions (e.g. FILE_ATTRIBUTE_HIDDEN). We need to be careful to preserve
+  // them.
+  if (Permissions & all_write) {
+    Attributes &= ~FILE_ATTRIBUTE_READONLY;
+    if (Attributes == 0)
+      // FILE_ATTRIBUTE_NORMAL indicates no other attributes are set.
+      Attributes |= FILE_ATTRIBUTE_NORMAL;
+  }
+  else {
+    Attributes |= FILE_ATTRIBUTE_READONLY;
+    // FILE_ATTRIBUTE_NORMAL is not compatible with any other attributes, so
+    // remove it, if it is present.
+    Attributes &= ~FILE_ATTRIBUTE_NORMAL;
+  }
+
+  if (!::SetFileAttributesW(PathUTF16.begin(), Attributes))
+    return mapWindowsError(GetLastError());
+
+  return std::error_code();
 }
 
 std::error_code setLastModificationAndAccessTime(int FD, TimePoint<> Time) {

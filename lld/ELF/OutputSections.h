@@ -83,7 +83,7 @@ public:
   void sortCtorsDtors();
   template <class ELFT> void writeTo(uint8_t *Buf);
   template <class ELFT> void finalize();
-  template <class ELFT> void assignOffsets();
+  void assignOffsets();
   std::vector<InputSection *> Sections;
 
   // Location in the output buffer.

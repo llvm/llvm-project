@@ -15,7 +15,7 @@
 namespace lld {
 namespace elf {
 class SymbolBody;
-template <class ELFT> class ThunkSection;
+class ThunkSection;
 // Class to describe an instance of a Thunk.
 // A Thunk is a code-sequence inserted by the linker in between a caller and
 // the callee. The relocation to the callee is redirected to the Thunk, which
@@ -25,17 +25,17 @@ template <class ELFT> class ThunkSection;
 //
 // Thunks can be created for DefinedRegular, Shared and Undefined Symbols.
 // Thunks are assigned to synthetic ThunkSections
-template <class ELFT> class Thunk {
+class Thunk {
 public:
   Thunk(const SymbolBody &Destination);
   virtual ~Thunk();
 
   virtual uint32_t size() const { return 0; }
-  virtual void writeTo(uint8_t *Buf, ThunkSection<ELFT> &IS) const {}
+  virtual void writeTo(uint8_t *Buf, ThunkSection &IS) const {}
 
   // All Thunks must define at least one symbol ThunkSym so that we can
   // redirect relocations to it.
-  virtual void addSymbols(ThunkSection<ELFT> &IS) {}
+  virtual void addSymbols(ThunkSection &IS) {}
 
   // Some Thunks must be placed immediately before their Target as they elide
   // a branch and fall through to the first Symbol in the Target.
@@ -51,7 +51,7 @@ public:
 
 // For a Relocation to symbol S create a Thunk to be added to a synthetic
 // ThunkSection. At present there are implementations for ARM and Mips Thunks.
-template <class ELFT> Thunk<ELFT> *addThunk(uint32_t RelocType, SymbolBody &S);
+template <class ELFT> Thunk *addThunk(uint32_t RelocType, SymbolBody &S);
 
 } // namespace elf
 } // namespace lld

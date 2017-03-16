@@ -75,12 +75,11 @@ private:
 
   /// The flag is true upon \p UpdatedCSRs initialization
   /// and false otherwise.
-  bool IsUpdatedCSRsInitizialied;
+  bool IsUpdatedCSRsInitialized;
 
   /// Contains the updated callee saved register list.
   /// As opposed to the static list defined in register info,
-  /// all registers that were disabled (in CalleeSaveDisableRegs)
-  /// are removed from the list.
+  /// all registers that were disabled are removed from the list.
   SmallVector<MCPhysReg, 16> UpdatedCSRs;
 
   /// RegAllocHints - This vector records register allocation hints for virtual

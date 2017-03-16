@@ -196,10 +196,6 @@ OPTIONS
 
  Specify that the input profile is a sample-based profile.
 
-.. option:: -memop-sizes
-
- Show the profiled sizes of the memory intrinsic calls for shown functions.
-
 EXIT STATUS
 -----------
 

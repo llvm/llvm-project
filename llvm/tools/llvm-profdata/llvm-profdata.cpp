@@ -458,7 +458,7 @@ typedef struct ValueSitesStats {
 
 static void traverseAllValueSites(const InstrProfRecord &Func, uint32_t VK,
                                   ValueSitesStats &Stats, raw_fd_ostream &OS,
-                                  InstrProfSymtab *Symtab) {
+                                  InstrProfSymtab &Symtab) {
   uint32_t NS = Func.getNumValueSites(VK);
   Stats.TotalNumValueSites += NS;
   for (size_t I = 0; I < NS; ++I) {
@@ -473,11 +473,8 @@ static void traverseAllValueSites(const InstrProfRecord &Func, uint32_t VK,
     }
     for (uint32_t V = 0; V < NV; V++) {
       OS << "\t[ " << I << ", ";
-      if (Symtab == nullptr)
-        OS << VD[V].Value;
-      else
-        OS << Symtab->getFuncName(VD[V].Value);
-      OS << ", " << VD[V].Count << " ]\n";
+      OS << Symtab.getFuncName(VD[V].Value) << ", " << VD[V].Count;
+      OS << " ]\n";
     }
   }
 }
@@ -497,7 +494,7 @@ static void showValueSitesStats(raw_fd_ostream &OS, uint32_t VK,
 }
 
 static int showInstrProfile(const std::string &Filename, bool ShowCounts,
-                            bool ShowIndirectCallTargets, bool ShowMemOPSizes,
+                            bool ShowIndirectCallTargets,
                             bool ShowDetailedSummary,
                             std::vector<uint32_t> DetailedSummaryCutoffs,
                             bool ShowAllFunctions,
@@ -550,11 +547,6 @@ static int showInstrProfile(const std::string &Filename, bool ShowCounts,
         OS << "    Indirect Call Site Count: "
            << Func.getNumValueSites(IPVK_IndirectCallTarget) << "\n";
 
-      uint32_t NumMemOPCalls = Func.getNumValueSites(IPVK_MemOPSize);
-      if (ShowMemOPSizes && NumMemOPCalls > 0)
-        OS << "    Number of Memory Intrinsics Calls: " << NumMemOPCalls
-           << "\n";
-
       if (ShowCounts) {
         OS << "    Block counts: [";
         size_t Start = (IsIRInstr ? 0 : 1);
@@ -568,13 +560,7 @@ static int showInstrProfile(const std::string &Filename, bool ShowCounts,
         OS << "    Indirect Target Results:\n";
         traverseAllValueSites(Func, IPVK_IndirectCallTarget,
                               VPStats[IPVK_IndirectCallTarget], OS,
-                              &(Reader->getSymtab()));
-      }
-
-      if (ShowMemOPSizes && NumMemOPCalls > 0) {
-        OS << "    Memory Instrinsic Size Results:\n";
-        traverseAllValueSites(Func, IPVK_MemOPSize, VPStats[IPVK_MemOPSize], OS,
-                              nullptr);
+                              Reader->getSymtab());
       }
     }
   }
@@ -589,16 +575,10 @@ static int showInstrProfile(const std::string &Filename, bool ShowCounts,
   OS << "Total functions: " << PS->getNumFunctions() << "\n";
   OS << "Maximum function count: " << PS->getMaxFunctionCount() << "\n";
   OS << "Maximum internal block count: " << PS->getMaxInternalCount() << "\n";
-
   if (ShownFunctions && ShowIndirectCallTargets) {
     OS << "Statistics for indirect call sites profile:\n";
     showValueSitesStats(OS, IPVK_IndirectCallTarget,
                         VPStats[IPVK_IndirectCallTarget]);
-  }
-
-  if (ShownFunctions && ShowMemOPSizes) {
-    OS << "Statistics for memory intrinsic calls sizes profile:\n";
-    showValueSitesStats(OS, IPVK_MemOPSize, VPStats[IPVK_MemOPSize]);
   }
 
   if (ShowDetailedSummary) {
@@ -649,10 +629,6 @@ static int show_main(int argc, const char *argv[]) {
   cl::opt<bool> ShowIndirectCallTargets(
       "ic-targets", cl::init(false),
       cl::desc("Show indirect call site target values for shown functions"));
-  cl::opt<bool> ShowMemOPSizes(
-      "memop-sizes", cl::init(false),
-      cl::desc("Show the profiled sizes of the memory intrinsic calls "
-               "for shown functions"));
   cl::opt<bool> ShowDetailedSummary("detailed-summary", cl::init(false),
                                     cl::desc("Show detailed profile summary"));
   cl::list<uint32_t> DetailedSummaryCutoffs(
@@ -691,9 +667,8 @@ static int show_main(int argc, const char *argv[]) {
                                 DetailedSummaryCutoffs.end());
   if (ProfileKind == instr)
     return showInstrProfile(Filename, ShowCounts, ShowIndirectCallTargets,
-                            ShowMemOPSizes, ShowDetailedSummary,
-                            DetailedSummaryCutoffs, ShowAllFunctions,
-                            ShowFunction, TextFormat, OS);
+                            ShowDetailedSummary, DetailedSummaryCutoffs,
+                            ShowAllFunctions, ShowFunction, TextFormat, OS);
   else
     return showSampleProfile(Filename, ShowCounts, ShowAllFunctions,
                              ShowFunction, OS);

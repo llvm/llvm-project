@@ -903,6 +903,12 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
         // made dead by this operation on other functions).
         Callee.removeDeadConstantUsers();
         if (Callee.use_empty()) {
+          Calls.erase(
+              std::remove_if(Calls.begin() + i + 1, Calls.end(),
+                             [&Callee](const std::pair<CallSite, int> &Call) {
+                               return Call.first.getCaller() == &Callee;
+                             }),
+              Calls.end());
           // Clear the body and queue the function itself for deletion when we
           // finish inlining and call graph updates.
           // Note that after this point, it is an error to do anything other

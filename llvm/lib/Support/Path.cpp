@@ -1192,6 +1192,14 @@ std::error_code directory_entry::status(file_status &result) const {
   return fs::status(Path, result, FollowSymlinks);
 }
 
+ErrorOr<perms> getPermissions(const Twine &Path) {
+  file_status Status;
+  if (std::error_code EC = status(Path, Status))
+    return EC;
+
+  return Status.permissions();
+}
+
 } // end namespace fs
 } // end namespace sys
 } // end namespace llvm
