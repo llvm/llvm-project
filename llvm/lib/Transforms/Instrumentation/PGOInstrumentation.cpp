@@ -91,6 +91,7 @@ using namespace llvm;
 
 STATISTIC(NumOfPGOInstrument, "Number of edges instrumented.");
 STATISTIC(NumOfPGOSelectInsts, "Number of select instruction instrumented.");
+STATISTIC(NumOfPGOMemIntrinsics, "Number of mem intrinsics instrumented.");
 STATISTIC(NumOfPGOEdge, "Number of edges.");
 STATISTIC(NumOfPGOBB, "Number of basic-blocks.");
 STATISTIC(NumOfPGOSplit, "Number of critical edge splits.");
@@ -168,6 +169,10 @@ static cl::opt<bool>
                               "display to only one function, use "
                               "filtering option -view-bfi-func-name."));
 
+// Command line option to enable/disable memop intrinsic calls..
+static cl::opt<bool> PGOInstrMemOP("pgo-instr-memop", cl::init(true),
+                                   cl::Hidden);
+
 // Command line option to turn on CFG dot dump after profile annotation.
 // Defined in Analysis/BlockFrequencyInfo.cpp:  -pgo-view-counts
 extern cl::opt<bool> PGOViewCounts;
@@ -200,6 +205,7 @@ struct SelectInstVisitor : public InstVisitor<SelectInstVisitor> {
   SelectInstVisitor(Function &Func) : F(Func) {}
 
   void countSelects(Function &Func) {
+    NSIs = 0;
     Mode = VM_counting;
     visit(Func);
   }
@@ -229,7 +235,43 @@ struct SelectInstVisitor : public InstVisitor<SelectInstVisitor> {
   void annotateOneSelectInst(SelectInst &SI);
   // Visit \p SI instruction and perform tasks according to visit mode.
   void visitSelectInst(SelectInst &SI);
+  // Return the number of select instructions. This needs be called after
+  // countSelects().
   unsigned getNumOfSelectInsts() const { return NSIs; }
+};
+
+/// Instruction Visitor class to visit memory intrinsic calls.
+struct MemIntrinsicVisitor : public InstVisitor<MemIntrinsicVisitor> {
+  Function &F;
+  unsigned NMemIs = 0;          // Number of memIntrinsics instrumented.
+  VisitMode Mode = VM_counting; // Visiting mode.
+  unsigned CurCtrId = 0;        // Current counter index.
+  unsigned TotalNumCtrs = 0;    // Total number of counters
+  GlobalVariable *FuncNameVar = nullptr;
+  uint64_t FuncHash = 0;
+  PGOUseFunc *UseFunc = nullptr;
+
+  MemIntrinsicVisitor(Function &Func) : F(Func) {}
+
+  void countMemIntrinsics(Function &Func) {
+    NMemIs = 0;
+    Mode = VM_counting;
+    visit(Func);
+  }
+  void instrumentMemIntrinsics(Function &Func, unsigned TotalNC,
+                               GlobalVariable *FNV, uint64_t FHash) {
+    Mode = VM_instrument;
+    TotalNumCtrs = TotalNC;
+    FuncHash = FHash;
+    FuncNameVar = FNV;
+    visit(Func);
+  }
+
+  // Visit the IR stream and annotate all mem intrinsic call instructions.
+  void instrumentOneMemIntrinsic(MemIntrinsic &MI);
+  // Visit \p MI instruction and perform tasks according to visit mode.
+  void visitMemIntrinsic(MemIntrinsic &SI);
+  unsigned getNumOfMemIntrinsics() const { return NMemIs; }
 };
 
 class PGOInstrumentationGenLegacyPass : public ModulePass {
@@ -351,6 +393,7 @@ private:
 public:
   std::vector<std::vector<Instruction *>> ValueSites;
   SelectInstVisitor SIVisitor;
+  MemIntrinsicVisitor MIVisitor;
   std::string FuncName;
   GlobalVariable *FuncNameVar;
   // CFG hash value for this function.
@@ -381,11 +424,13 @@ public:
       bool CreateGlobalVar = false, BranchProbabilityInfo *BPI = nullptr,
       BlockFrequencyInfo *BFI = nullptr)
       : F(Func), ComdatMembers(ComdatMembers), ValueSites(IPVK_Last + 1),
-        SIVisitor(Func), FunctionHash(0), MST(F, BPI, BFI) {
+        SIVisitor(Func), MIVisitor(Func), FunctionHash(0), MST(F, BPI, BFI) {
 
     // This should be done before CFG hash computation.
     SIVisitor.countSelects(Func);
+    MIVisitor.countMemIntrinsics(Func);
     NumOfPGOSelectInsts += SIVisitor.getNumOfSelectInsts();
+    NumOfPGOMemIntrinsics += MIVisitor.getNumOfMemIntrinsics();
     ValueSites[IPVK_IndirectCallTarget] = findIndirectCallSites(Func);
 
     FuncName = getPGOFuncName(F);
@@ -602,6 +647,10 @@ static void instrumentOneFunc(
          Builder.getInt32(NumIndirectCallSites++)});
   }
   NumOfPGOICall += NumIndirectCallSites;
+
+  // Now instrument memop intrinsic calls.
+  FuncInfo.MIVisitor.instrumentMemIntrinsics(
+      F, NumCounters, FuncInfo.FuncNameVar, FuncInfo.FunctionHash);
 }
 
 // This class represents a CFG edge in profile use compilation.
@@ -1058,9 +1107,9 @@ void SelectInstVisitor::visitSelectInst(SelectInst &SI) {
   if (SI.getCondition()->getType()->isVectorTy())
     return;
 
-  NSIs++;
   switch (Mode) {
   case VM_counting:
+    NSIs++;
     return;
   case VM_instrument:
     instrumentOneSelectInst(SI);
@@ -1070,6 +1119,42 @@ void SelectInstVisitor::visitSelectInst(SelectInst &SI) {
     return;
   }
 
+  llvm_unreachable("Unknown visiting mode");
+}
+
+void MemIntrinsicVisitor::instrumentOneMemIntrinsic(MemIntrinsic &MI) {
+  Module *M = F.getParent();
+  IRBuilder<> Builder(&MI);
+  Type *Int64Ty = Builder.getInt64Ty();
+  Type *I8PtrTy = Builder.getInt8PtrTy();
+  Value *Length = MI.getLength();
+  assert(!dyn_cast<ConstantInt>(Length));
+  Builder.CreateCall(
+      Intrinsic::getDeclaration(M, Intrinsic::instrprof_value_profile),
+      {llvm::ConstantExpr::getBitCast(FuncNameVar, I8PtrTy),
+       Builder.getInt64(FuncHash), Builder.CreatePtrToInt(Length, Int64Ty),
+       Builder.getInt32(IPVK_MemOPSize), Builder.getInt32(CurCtrId)});
+  ++CurCtrId;
+}
+
+void MemIntrinsicVisitor::visitMemIntrinsic(MemIntrinsic &MI) {
+  if (!PGOInstrMemOP)
+    return;
+  Value *Length = MI.getLength();
+  // Not instrument constant length calls.
+  if (dyn_cast<ConstantInt>(Length))
+    return;
+
+  NMemIs++;
+  switch (Mode) {
+  case VM_counting:
+    return;
+  case VM_instrument:
+    instrumentOneMemIntrinsic(MI);
+    return;
+  case VM_annotate:
+    break;
+  }
   llvm_unreachable("Unknown visiting mode");
 }
 

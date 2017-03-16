@@ -94,6 +94,11 @@ inline StringRef getInstrProfValueProfFuncName() {
   return INSTR_PROF_VALUE_PROF_FUNC_STR;
 }
 
+/// Return the name profile runtime entry point to do value range profiling.
+inline StringRef getInstrProfValueRangeProfFuncName() {
+  return INSTR_PROF_VALUE_RANGE_PROF_FUNC_STR;
+}
+
 /// Return the name of the section containing function coverage mapping
 /// data.
 inline StringRef getInstrProfCoverageSectionName(bool AddSegment) {
@@ -689,12 +694,15 @@ struct InstrProfRecord {
 
 private:
   std::vector<InstrProfValueSiteRecord> IndirectCallSites;
+  std::vector<InstrProfValueSiteRecord> MemOPSizes;
   const std::vector<InstrProfValueSiteRecord> &
 
   getValueSitesForKind(uint32_t ValueKind) const {
     switch (ValueKind) {
     case IPVK_IndirectCallTarget:
       return IndirectCallSites;
+    case IPVK_MemOPSize:
+      return MemOPSizes;
     default:
       llvm_unreachable("Unknown value kind!");
     }

@@ -872,7 +872,7 @@ bool RuleMatcher::isHigherPriorityThan(const RuleMatcher &B) const {
   }
 
   return false;
-};
+}
 
 unsigned RuleMatcher::countTemporaryOperands() const {
   return std::accumulate(

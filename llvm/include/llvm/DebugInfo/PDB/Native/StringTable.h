@@ -30,6 +30,8 @@ public:
 
   Error load(BinaryStreamReader &Stream);
 
+  uint32_t getByteSize() const;
+
   uint32_t getNameCount() const { return NameCount; }
   uint32_t getHashVersion() const { return HashVersion; }
   uint32_t getSignature() const { return Signature; }
@@ -42,9 +44,10 @@ public:
 private:
   BinaryStreamRef NamesBuffer;
   FixedStreamArray<support::ulittle32_t> IDs;
-  uint32_t Signature;
-  uint32_t HashVersion;
-  uint32_t NameCount;
+  uint32_t ByteSize = 0;
+  uint32_t Signature = 0;
+  uint32_t HashVersion = 0;
+  uint32_t NameCount = 0;
 };
 
 } // end namespace pdb
