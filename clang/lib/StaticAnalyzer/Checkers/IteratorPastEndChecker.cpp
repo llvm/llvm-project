@@ -415,8 +415,6 @@ bool IteratorPastEndChecker::evalCall(const CallExpr *CE,
         return evalFindFirstOf(C, CE);
       } else if (FD->getIdentifier() == II_find_if) {
         return evalFindIf(C, CE);
-      } else if (FD->getIdentifier() == II_find_if) {
-        return evalFindIf(C, CE);
       } else if (FD->getIdentifier() == II_find_if_not) {
         return evalFindIfNot(C, CE);
       } else if (FD->getIdentifier() == II_upper_bound) {
