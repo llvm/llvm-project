@@ -158,8 +158,10 @@ extern "C" {
   // Prints stack traces for all live heap allocations ordered by total
   // allocation size until `top_percent` of total live heap is shown.
   // `top_percent` should be between 1 and 100.
+  // At most `max_number_of_contexts` contexts (stack traces) is printed.
   // Experimental feature currently available only with asan on Linux/x86_64.
-  void __sanitizer_print_memory_profile(size_t top_percent);
+  void __sanitizer_print_memory_profile(size_t top_percent,
+                                        size_t max_number_of_contexts);
 
   // Fiber annotation interface.
   // Before switching to a different stack, one must call

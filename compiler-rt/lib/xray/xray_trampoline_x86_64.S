@@ -13,6 +13,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "../builtins/assembly.h"
+
 .macro SAVE_REGISTERS
 	subq $200, %rsp
 	movupd	%xmm0, 184(%rsp)
@@ -188,3 +190,5 @@ __xray_ArgLoggerEntry:
 .Larg1entryEnd:
 	.size __xray_ArgLoggerEntry, .Larg1entryEnd-__xray_ArgLoggerEntry
 	.cfi_endproc
+
+NO_EXEC_STACK_DIRECTIVE
