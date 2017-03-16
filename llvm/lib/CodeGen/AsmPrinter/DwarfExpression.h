@@ -119,7 +119,7 @@ public:
   /// Emit a dwarf register operation.
   void AddReg(int DwarfReg, const char *Comment = nullptr);
   /// Emit an (double-)indirect dwarf register operation.
-  void AddRegIndirect(int DwarfReg, int Offset, bool Deref = false);
+  void AddRegIndirect(int DwarfReg, int Offset);
 
   /// Emit a DW_OP_piece or DW_OP_bit_piece operation for a variable fragment.
   /// \param OffsetInBits    This is an optional offset into the location that
