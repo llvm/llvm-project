@@ -121,39 +121,79 @@ extern int setjmp(jmp_buf);
 @end
 
 @interface I2
-@property (readwrite) id prop;
+// CHECK: [[@LINE-1]]:12 | class/ObjC | I2 | [[I2_USR:.*]] | {{.*}} | Decl | rel: 0
 
-// CHECK: [[@LINE+4]]:63 | instance-property(IB,IBColl)/ObjC | buttons | c:objc(cs)I2(py)buttons | <no-cgname> | Decl,RelChild | rel: 1
-// CHECK-NEXT: RelChild | I2 | c:objc(cs)I2
+@property (readwrite) id prop;
+// CHECK: [[@LINE-1]]:26 | instance-method/acc-get/ObjC | prop | [[I2_prop_getter_USR:.*]] | -[I2 prop] | Decl,Dyn,Impl,RelChild,RelAcc | rel: 2
+// CHECK: [[@LINE-2]]:26 | instance-method/acc-set/ObjC | setProp: | [[I2_prop_setter_USR:.*]] | -[I2 setProp:] | Decl,Dyn,Impl,RelChild,RelAcc | rel: 2
+// CHECK: [[@LINE-3]]:26 | instance-property/ObjC | prop | [[I2_prop_USR:.*]] | <no-cgname> | Decl,RelChild | rel: 1
+
+@property (readwrite, getter=customGet, setter=customSet:) id unrelated;
+// CHECK: [[@LINE-1]]:30 | instance-method/acc-get/ObjC | customGet | {{.*}} | -[I2 customGet] | Decl,Dyn,RelChild,RelAcc | rel: 2
+// CHECK: [[@LINE-2]]:48 | instance-method/acc-set/ObjC | customSet: | {{.*}} | -[I2 customSet:] | Decl,Dyn,RelChild,RelAcc | rel: 2
+// CHECK: [[@LINE-3]]:63 | instance-property/ObjC | unrelated | {{.*}} | <no-cgname> | Decl,RelChild | rel: 1
+
+-(id)declaredGet;
+@property (readwrite, getter=declaredGet) id otherProp;
+// CHECK: [[@LINE-1]]:30 | instance-method/acc-get/ObjC | declaredGet | {{.*}} | -[I2 declaredGet] | Ref,RelCont | rel: 1
+// CHECK: [[@LINE-3]]:6 | instance-method/acc-get/ObjC | declaredGet | {{.*}} | -[I2 declaredGet] | Decl,Dyn,RelChild,RelAcc | rel: 2
+// CHECK: [[@LINE-3]]:46 | instance-method/acc-set/ObjC | setOtherProp: | {{.*}} | -[I2 setOtherProp:] | Decl,Dyn,Impl,RelChild,RelAcc | rel: 2
+
+// CHECK: [[@LINE+4]]:63 | instance-property(IB,IBColl)/ObjC | buttons | [[buttons_USR:.*]] | <no-cgname> | Decl,RelChild | rel: 1
+// CHECK-NEXT: RelChild | I2 | [[I2_USR]]
 // CHECK: [[@LINE+2]]:50 | class/ObjC | I1 | c:objc(cs)I1 | _OBJC_CLASS_$_I1 | Ref,RelCont,RelIBType | rel: 1
-// CHECK-NEXT: RelCont,RelIBType | buttons | c:objc(cs)I2(py)buttons
+// CHECK-NEXT: RelCont,RelIBType | buttons | [[buttons_USR]]
 @property (nonatomic, strong) IBOutletCollection(I1) NSArray *buttons;
 @end
 
 @implementation I2
-// CHECK: [[@LINE+9]]:13 | instance-property/ObjC | prop | c:objc(cs)I2(py)prop | <no-cgname> | Def,RelChild,RelAcc | rel: 2
-// CHECK-NEXT: RelChild | I2 | c:objc(cs)I2
+// CHECK: [[@LINE+9]]:13 | instance-property/ObjC | prop | [[I2_prop_USR:.*]] | <no-cgname> | Def,RelChild,RelAcc | rel: 2
+// CHECK-NEXT: RelChild | I2 | [[I2_USR]]
 // CHECK-NEXT: RelAcc | _prop | c:objc(cs)I2@_prop
-// CHECK: [[@LINE+6]]:13 | instance-method/acc-get/ObjC | prop | c:objc(cs)I2(im)prop | -[I2 prop] | Def,Impl,RelChild | rel: 1
-// CHECK-NEXT: RelChild | I2 | c:objc(cs)I2
-// CHECK: [[@LINE+4]]:13 | instance-method/acc-set/ObjC | setProp: | c:objc(cs)I2(im)setProp: | -[I2 setProp:] | Def,Impl,RelChild | rel: 1
-// CHECK-NEXT: RelChild | I2 | c:objc(cs)I2
+// CHECK: [[@LINE+6]]:13 | instance-method/acc-get/ObjC | prop | [[I2_prop_getter_USR]] | -[I2 prop] | Def,Impl,RelChild | rel: 1
+// CHECK-NEXT: RelChild | I2 | [[I2_USR]]
+// CHECK: [[@LINE+4]]:13 | instance-method/acc-set/ObjC | setProp: | [[I2_prop_setter_USR]] | -[I2 setProp:] | Def,Impl,RelChild | rel: 1
+// CHECK-NEXT: RelChild | I2 | [[I2_USR]]
 // CHECK: [[@LINE+2]]:20 | field/ObjC | _prop | c:objc(cs)I2@_prop | <no-cgname> | Def,RelChild | rel: 1
-// CHECK-NEXT: RelChild | I2 | c:objc(cs)I2
+// CHECK-NEXT: RelChild | I2 | [[I2_USR]]
 @synthesize prop = _prop;
 
-// CHECK: [[@LINE+11]]:12 | instance-method(IB)/ObjC | doAction:foo: | c:objc(cs)I2(im)doAction:foo: | -[I2 doAction:foo:] | Def,Dyn,RelChild | rel: 1
-// CHECK-NEXT: RelChild | I2 | c:objc(cs)I2
+// CHECK: [[@LINE+11]]:12 | instance-method(IB)/ObjC | doAction:foo: | [[doAction_USR:.*]] | -[I2 doAction:foo:] | Def,Dyn,RelChild | rel: 1
+// CHECK-NEXT: RelChild | I2 | [[I2_USR]]
 // CHECK: [[@LINE+9]]:22 | class/ObjC | I1 | c:objc(cs)I1 | _OBJC_CLASS_$_I1 | Ref,RelCont,RelIBType | rel: 1
-// CHECK-NEXT: RelCont,RelIBType | doAction:foo: | c:objc(cs)I2(im)doAction:foo:
+// CHECK-NEXT: RelCont,RelIBType | doAction:foo: | [[doAction_USR]]
 // CHECK-NOT: [[@LINE+7]]:27 | param
 // LOCAL: [[@LINE+6]]:27 | param(local)/C | sender | c:{{.*}} | _sender | Def,RelChild | rel: 1
-// LOCAL-NEXT: RelChild | doAction:foo: | c:objc(cs)I2(im)doAction:foo:
+// LOCAL-NEXT: RelChild | doAction:foo: | [[doAction_USR:.*]]
 // CHECK: [[@LINE+4]]:39 | class/ObjC | I1 | c:objc(cs)I1 | _OBJC_CLASS_$_I1 | Ref,RelCont | rel: 1
 // CHECK-NOT: [[@LINE+3]]:44 | param
 // LOCAL: [[@LINE+2]]:44 | param(local)/C | bar | c:{{.*}} | _bar | Def,RelChild | rel: 1
-// LOCAL-NEXT: RelChild | doAction:foo: | c:objc(cs)I2(im)doAction:foo:
--(IBAction)doAction:(I1 *)sender foo:(I1 *)bar {}
+// LOCAL-NEXT: RelChild | doAction:foo: | [[doAction_USR]]
+-(IBAction)doAction:(I1 *)sender foo:(I1 *)bar {
+  [self prop];
+  // CHECK: [[@LINE-1]]:9 | instance-method/acc-get/ObjC | prop | [[I2_prop_getter_USR]] | -[I2 prop] | Ref,Call,Dyn,RelRec,RelCall,RelCont | rel: 2
+  // CHECK-NEXT: RelCall,RelCont | doAction:foo: | [[doAction_USR]]
+  // CHECK-NEXT: RelRec | I2 | [[I2_USR]]
+
+  [self setProp: bar];
+  // CHECK: [[@LINE-1]]:9 | instance-method/acc-set/ObjC | setProp: | [[I2_prop_setter_USR]] | -[I2 setProp:] | Ref,Call,Dyn,RelRec,RelCall,RelCont | rel: 2
+  // CHECK-NEXT: RelCall,RelCont | doAction:foo: | [[doAction_USR]]
+  // CHECK-NEXT: RelRec | I2 | [[I2_USR]]
+
+  self.prop;
+  // CHECK: [[@LINE-1]]:8 | instance-property/ObjC | prop | [[I2_prop_USR]] | <no-cgname> | Ref,RelCont | rel: 1
+  // CHECK-NEXT: RelCont | doAction:foo: | [[doAction_USR]]
+  // CHECK: [[@LINE-3]]:8 | instance-method/acc-get/ObjC | prop | [[I2_prop_getter_USR]] | -[I2 prop] | Ref,Call,Dyn,Impl,RelRec,RelCall,RelCont | rel: 2
+  // CHECK-NEXT: RelCall,RelCont | doAction:foo: | [[doAction_USR]]
+  // CHECK-NEXT: RelRec | I2 | [[I2_USR]]
+
+  self.prop = self.prop;
+  // CHECK: [[@LINE-1]]:8 | instance-property/ObjC | prop | [[I2_prop_USR]] | <no-cgname> | Ref,Writ,RelCont | rel: 1
+  // CHECK-NEXT: RelCont | doAction:foo: | [[doAction_USR]]
+  // CHECK:[[@LINE-3]]:8 | instance-method/acc-set/ObjC | setProp: | [[I2_prop_setter_USR]] | -[I2 setProp:] | Ref,Call,Dyn,Impl,RelRec,RelCall,RelCont | rel: 2
+  // CHECK-NEXT: RelCall,RelCont | doAction:foo: | [[doAction_USR]]
+  // CHECK-NEXT: RelRec | I2 | [[I2_USR]]
+}
 @end
 
 @interface I3

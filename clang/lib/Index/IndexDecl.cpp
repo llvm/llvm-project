@@ -98,9 +98,28 @@ public:
     if (MethodLoc.isInvalid())
       MethodLoc = D->getLocation();
 
+    SourceLocation AttrLoc;
+
+    // check for (getter=/setter=)
+    if (AssociatedProp) {
+      bool isGetter = !D->param_size();
+      AttrLoc = isGetter ?
+        AssociatedProp->getGetterNameLoc():
+        AssociatedProp->getSetterNameLoc();
+    }
+
     SymbolRoleSet Roles = (SymbolRoleSet)SymbolRole::Dynamic;
-    if (D->isImplicit())
-      Roles |= (SymbolRoleSet)SymbolRole::Implicit;
+    if (D->isImplicit()) {
+      if (AttrLoc.isValid()) {
+        MethodLoc = AttrLoc;
+      } else {
+        Roles |= (SymbolRoleSet)SymbolRole::Implicit;
+      }
+    } else if (AttrLoc.isValid()) {
+      IndexCtx.handleReference(D, AttrLoc, cast<NamedDecl>(D->getDeclContext()),
+                               D->getDeclContext(), 0);
+    }
+
     if (!IndexCtx.handleDecl(D, MethodLoc, Roles, Relations))
       return false;
     IndexCtx.indexTypeSourceInfo(D->getReturnTypeSourceInfo(), D);
