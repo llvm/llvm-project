@@ -31,6 +31,10 @@ using namespace llvm;
 WebAssemblyTargetStreamer::WebAssemblyTargetStreamer(MCStreamer &S)
     : MCTargetStreamer(S) {}
 
+void WebAssemblyTargetStreamer::emitValueType(wasm::ValType Type) {
+  Streamer.EmitSLEB128IntValue(int32_t(Type));
+}
+
 WebAssemblyTargetAsmStreamer::WebAssemblyTargetAsmStreamer(
     MCStreamer &S, formatted_raw_ostream &OS)
     : WebAssemblyTargetStreamer(S), OS(OS) {}
@@ -128,7 +132,7 @@ void WebAssemblyTargetELFStreamer::emitResult(MCSymbol *Symbol,
 void WebAssemblyTargetELFStreamer::emitLocal(ArrayRef<MVT> Types) {
   Streamer.EmitULEB128IntValue(Types.size());
   for (MVT Type : Types)
-    Streamer.EmitIntValue(int64_t(WebAssembly::toValType(Type)), 1);
+    emitValueType(WebAssembly::toValType(Type));
 }
 
 void WebAssemblyTargetELFStreamer::emitGlobal(ArrayRef<MVT> Types) {
@@ -182,7 +186,7 @@ void WebAssemblyTargetWasmStreamer::emitLocal(ArrayRef<MVT> Types) {
   Streamer.EmitULEB128IntValue(Grouped.size());
   for (auto Pair : Grouped) {
     Streamer.EmitULEB128IntValue(Pair.second);
-    Streamer.EmitULEB128IntValue(uint64_t(WebAssembly::toValType(Pair.first)));
+    emitValueType(WebAssembly::toValType(Pair.first));
   }
 }
 
@@ -194,7 +198,7 @@ void WebAssemblyTargetWasmStreamer::emitGlobal(ArrayRef<MVT> Types) {
   Streamer.SwitchSection(Streamer.getContext()
                                  .getWasmSection(".global_variables", 0, 0));
   for (MVT Ty : Types)
-    Streamer.EmitIntValue(uint64_t(WebAssembly::toValType(Ty)), 1);
+    Streamer.EmitIntValue(int64_t(WebAssembly::toValType(Ty)), 1);
   Streamer.PopSection();
 }
 

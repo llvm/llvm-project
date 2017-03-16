@@ -1246,7 +1246,10 @@ bool AArch64InstructionSelector::selectArithImmed(
     MachineInstr *Def = MRI.getVRegDef(Root.getReg());
     if (Def->getOpcode() != TargetOpcode::G_CONSTANT)
       return false;
-    Immed = Def->getOperand(1).getImm();
+    MachineOperand &Op1 = Def->getOperand(1);
+    if (!Op1.isCImm() || Op1.getCImm()->getBitWidth() > 64)
+      return false;
+    Immed = Op1.getCImm()->getZExtValue();
   } else
     return false;
 

@@ -427,6 +427,7 @@ void Dependences::calculateDependences(Scop &S) {
   // reduction dependences or dependences that are finer than statement
   // level dependences.
   if (!HasReductions && Level == AL_Statement) {
+    RED = isl_union_map_empty(isl_union_map_get_space(RAW));
     TC_RED = isl_union_map_empty(isl_union_set_get_space(TaggedStmtDomain));
     isl_union_set_free(TaggedStmtDomain);
     return;

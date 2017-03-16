@@ -3010,7 +3010,6 @@ ExprResult Sema::BuildInstanceMessage(Expr *Receiver,
               case OMF_copy:
               case OMF_mutableCopy:
               case OMF_new:
-              case OMF_self:
               case OMF_init:
                 // Issue error, unless ns_returns_not_retained.
                 if (!SelMethod->hasAttr<NSReturnsNotRetainedAttr>()) {

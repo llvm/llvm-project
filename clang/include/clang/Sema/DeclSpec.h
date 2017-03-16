@@ -861,11 +861,19 @@ public:
 
   const IdentifierInfo *getGetterName() const { return GetterName; }
   IdentifierInfo *getGetterName() { return GetterName; }
-  void setGetterName(IdentifierInfo *name) { GetterName = name; }
+  SourceLocation getGetterNameLoc() const { return GetterNameLoc; }
+  void setGetterName(IdentifierInfo *name, SourceLocation loc) {
+    GetterName = name;
+    GetterNameLoc = loc;
+  }
 
   const IdentifierInfo *getSetterName() const { return SetterName; }
   IdentifierInfo *getSetterName() { return SetterName; }
-  void setSetterName(IdentifierInfo *name) { SetterName = name; }
+  SourceLocation getSetterNameLoc() const { return SetterNameLoc; }
+  void setSetterName(IdentifierInfo *name, SourceLocation loc) {
+    SetterName = name;
+    SetterNameLoc = loc;
+  }
 
 private:
   // FIXME: These two are unrelated and mutually exclusive. So perhaps
@@ -882,6 +890,9 @@ private:
 
   IdentifierInfo *GetterName;    // getter name or NULL if no getter
   IdentifierInfo *SetterName;    // setter name or NULL if no setter
+  SourceLocation GetterNameLoc; // location of the getter attribute's value
+  SourceLocation SetterNameLoc; // location of the setter attribute's value
+
 };
 
 /// \brief Represents a C++ unqualified-id that has been parsed. 

@@ -145,6 +145,7 @@ Error YAMLOutputStyle::dumpPDBStream() {
   Obj.PdbStream->Guid = InfoS.getGuid();
   Obj.PdbStream->Signature = InfoS.getSignature();
   Obj.PdbStream->Version = InfoS.getVersion();
+  Obj.PdbStream->Features = InfoS.getFeatureSignatures();
 
   return Error::success();
 }

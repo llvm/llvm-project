@@ -415,9 +415,9 @@ define i32 @clamp_unsigned2(i32 %x) {
 define double @PR31751_umin1(i32 %x) {
 ; CHECK-LABEL: @PR31751_umin1(
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 %x, 2147483647
-; CHECK-NEXT:    [[CONV1:%.*]] = select i1 [[TMP1]], i32 %x, i32 2147483647
-; CHECK-NEXT:    [[TMP2:%.*]] = sitofp i32 [[CONV1]] to double
-; CHECK-NEXT:    ret double [[TMP2]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[TMP1]], i32 %x, i32 2147483647
+; CHECK-NEXT:    [[CONV:%.*]] = sitofp i32 [[SEL]] to double
+; CHECK-NEXT:    ret double [[CONV]]
 ;
   %cmp = icmp slt i32 %x, 0
   %sel = select i1 %cmp, i32 2147483647, i32 %x
@@ -456,9 +456,9 @@ define double @PR31751_umin3(i32 %x) {
 define double @PR31751_umax1(i32 %x) {
 ; CHECK-LABEL: @PR31751_umax1(
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i32 %x, -2147483648
-; CHECK-NEXT:    [[CONV1:%.*]] = select i1 [[TMP1]], i32 %x, i32 -2147483648
-; CHECK-NEXT:    [[TMP2:%.*]] = sitofp i32 [[CONV1]] to double
-; CHECK-NEXT:    ret double [[TMP2]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[TMP1]], i32 %x, i32 -2147483648
+; CHECK-NEXT:    [[CONV:%.*]] = sitofp i32 [[SEL]] to double
+; CHECK-NEXT:    ret double [[CONV]]
 ;
   %cmp = icmp sgt i32 %x, -1
   %sel = select i1 %cmp, i32 2147483648, i32 %x
@@ -490,5 +490,78 @@ define double @PR31751_umax3(i32 %x) {
   %sel = select i1 %cmp, i32 2147483648, i32 %x
   %conv = sitofp i32 %sel to double
   ret double %conv
+}
+
+; The icmp/select form a canonical smax, so don't hide that by folding the final bitcast into the select.
+
+define float @bitcast_scalar_smax(float %x, float %y) {
+; CHECK-LABEL: @bitcast_scalar_smax(
+; CHECK-NEXT:    [[BCX:%.*]] = bitcast float %x to i32
+; CHECK-NEXT:    [[BCY:%.*]] = bitcast float %y to i32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[BCX]], [[BCY]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 [[BCX]], i32 [[BCY]]
+; CHECK-NEXT:    [[BCS:%.*]] = bitcast i32 [[SEL]] to float
+; CHECK-NEXT:    ret float [[BCS]]
+;
+  %bcx = bitcast float %x to i32
+  %bcy = bitcast float %y to i32
+  %cmp = icmp sgt i32 %bcx, %bcy
+  %sel = select i1 %cmp, i32 %bcx, i32 %bcy
+  %bcs = bitcast i32 %sel to float
+  ret float %bcs
+}
+
+; FIXME: Create a canonical umax by bitcasting the select.
+
+define float @bitcast_scalar_umax(float %x, float %y) {
+; CHECK-LABEL: @bitcast_scalar_umax(
+; CHECK-NEXT:    [[BCX:%.*]] = bitcast float %x to i32
+; CHECK-NEXT:    [[BCY:%.*]] = bitcast float %y to i32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[BCX]], [[BCY]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], float %x, float %y
+; CHECK-NEXT:    ret float [[SEL]]
+;
+  %bcx = bitcast float %x to i32
+  %bcy = bitcast float %y to i32
+  %cmp = icmp ugt i32 %bcx, %bcy
+  %sel = select i1 %cmp, float %x, float %y
+  ret float %sel
+}
+
+; PR32306 - https://bugs.llvm.org/show_bug.cgi?id=32306
+; The icmp/select form a canonical smin, so don't hide that by folding the final bitcast into the select.
+
+define <8 x float> @bitcast_vector_smin(<8 x float> %x, <8 x float> %y) {
+; CHECK-LABEL: @bitcast_vector_smin(
+; CHECK-NEXT:    [[BCX:%.*]] = bitcast <8 x float> %x to <8 x i32>
+; CHECK-NEXT:    [[BCY:%.*]] = bitcast <8 x float> %y to <8 x i32>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt <8 x i32> [[BCX]], [[BCY]]
+; CHECK-NEXT:    [[SEL:%.*]] = select <8 x i1> [[CMP]], <8 x i32> [[BCX]], <8 x i32> [[BCY]]
+; CHECK-NEXT:    [[BCS:%.*]] = bitcast <8 x i32> [[SEL]] to <8 x float>
+; CHECK-NEXT:    ret <8 x float> [[BCS]]
+;
+  %bcx = bitcast <8 x float> %x to <8 x i32>
+  %bcy = bitcast <8 x float> %y to <8 x i32>
+  %cmp = icmp slt <8 x i32> %bcx, %bcy
+  %sel = select <8 x i1> %cmp, <8 x i32> %bcx, <8 x i32> %bcy
+  %bcs = bitcast <8 x i32> %sel to <8 x float>
+  ret <8 x float> %bcs
+}
+
+; FIXME: Create a canonical umin by bitcasting the select.
+
+define <8 x float> @bitcast_vector_umin(<8 x float> %x, <8 x float> %y) {
+; CHECK-LABEL: @bitcast_vector_umin(
+; CHECK-NEXT:    [[BCX:%.*]] = bitcast <8 x float> %x to <8 x i32>
+; CHECK-NEXT:    [[BCY:%.*]] = bitcast <8 x float> %y to <8 x i32>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt <8 x i32> [[BCX]], [[BCY]]
+; CHECK-NEXT:    [[SEL:%.*]] = select <8 x i1> [[CMP]], <8 x float> %x, <8 x float> %y
+; CHECK-NEXT:    ret <8 x float> [[SEL]]
+;
+  %bcx = bitcast <8 x float> %x to <8 x i32>
+  %bcy = bitcast <8 x float> %y to <8 x i32>
+  %cmp = icmp slt <8 x i32> %bcx, %bcy
+  %sel = select <8 x i1> %cmp, <8 x float> %x, <8 x float> %y
+  ret <8 x float> %sel
 }
 

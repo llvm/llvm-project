@@ -15,13 +15,13 @@ $_Z3barIvEvv = comdat any
 
 ; CHECK-NOT: __profn__Z3barIvEvv
 ; CHECK: @__profc__Z3barIvEvv = linkonce_odr hidden global [1 x i64] zeroinitializer, section "{{.*}}__llvm_prf_cnts", comdat($__profv__Z3barIvEvv), align 8
-; CHECK: @__profd__Z3barIvEvv = linkonce_odr hidden global { i64, i64, i64*, i8*, i8*, i32, [1 x i16] } { i64 4947693190065689389, i64 0, i64* getelementptr inbounds ([1 x i64], [1 x i64]* @__profc__Z3barIvEvv, i32 0, i32 0), i8*{{.*}}, i8* null, i32 1, [1 x i16] zeroinitializer }, section "{{.*}}__llvm_prf_data{{.*}}", comdat($__profv__Z3barIvEvv), align 8
+; CHECK: @__profd__Z3barIvEvv = linkonce_odr hidden global { i64, i64, i64*, i8*, i8*, i32, [2 x i16] } { i64 4947693190065689389, i64 0, i64* getelementptr inbounds ([1 x i64], [1 x i64]* @__profc__Z3barIvEvv, i32 0, i32 0), i8*{{.*}}, i8* null, i32 1, [2 x i16] zeroinitializer }, section "{{.*}}__llvm_prf_data{{.*}}", comdat($__profv__Z3barIvEvv), align 8
 ; CHECK: @__llvm_prf_nm = private constant [{{.*}} x i8] c"{{.*}}", section "{{.*}}__llvm_prf_names"
 
 
 ; COFF-NOT: __profn__Z3barIvEvv
 ; COFF: @__profc__Z3barIvEvv = linkonce_odr hidden global [1 x i64] zeroinitializer, section "{{.*}}__llvm_prf_cnts", comdat, align 8
-; COFF: @__profd__Z3barIvEvv = linkonce_odr hidden global { i64, i64, i64*, i8*, i8*, i32, [1 x i16] } { i64 4947693190065689389, i64 0, i64* getelementptr inbounds ([1 x i64], [1 x i64]* @__profc__Z3barIvEvv, i32 0, i32 0), i8*{{.*}}, i8* null, i32 1, [1 x i16] zeroinitializer }, section "{{.*}}__llvm_prf_data{{.*}}", comdat($__profc__Z3barIvEvv), align 8
+; COFF: @__profd__Z3barIvEvv = linkonce_odr hidden global { i64, i64, i64*, i8*, i8*, i32, [2 x i16] } { i64 4947693190065689389, i64 0, i64* getelementptr inbounds ([1 x i64], [1 x i64]* @__profc__Z3barIvEvv, i32 0, i32 0), i8*{{.*}}, i8* null, i32 1, [2 x i16] zeroinitializer }, section "{{.*}}__llvm_prf_data{{.*}}", comdat($__profc__Z3barIvEvv), align 8
 
 
 declare void @llvm.instrprof.increment(i8*, i64, i32, i32) #1

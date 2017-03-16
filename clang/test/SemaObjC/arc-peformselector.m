@@ -8,6 +8,7 @@
 - (id) init __attribute__((ns_returns_not_retained));
 - (id)PlusZero;
 - (id)PlusOne __attribute__((ns_returns_retained)); // expected-note {{method 'PlusOne' declared here}}
+- (id)self;
 @end
 
 @interface I : NSObject
@@ -31,6 +32,8 @@
 
   return [self performSelector : @selector(PlusZero)];
   return [self performSelector : @selector(PlusOne)]; // expected-error {{performSelector names a selector which retains the object}}
+
+  return [self performSelector: @selector(self)]; // No error, -self is not +1!
 }
 
 - (id)performSelector:(SEL)aSelector { return 0; }

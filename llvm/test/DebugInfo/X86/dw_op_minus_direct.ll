@@ -8,8 +8,8 @@
 
 ; CHECK: Beginning address offset: 0x0000000000000000
 ; CHECK:    Ending address offset: 0x0000000000000004
-; CHECK:     Location description: 50 10 01 1c 93 04
-;                                  rax, constu 0x00000001, minus, piece 0x00000004
+; CHECK:     Location description: 50 10 ff ff ff ff 0f 1a 10 01 1c
+;                                  rax, constu 0xffffffff, and, constu 0x00000001, minus
 source_filename = "minus.c"
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.12.0"

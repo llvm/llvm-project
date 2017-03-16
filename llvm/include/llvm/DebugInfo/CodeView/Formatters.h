@@ -30,6 +30,10 @@ public:
 inline detail::GuidAdapter fmt_guid(StringRef Item) {
   return detail::GuidAdapter(Item);
 }
+
+inline detail::GuidAdapter fmt_guid(ArrayRef<uint8_t> Item) {
+  return detail::GuidAdapter(Item);
+}
 }
 }
 

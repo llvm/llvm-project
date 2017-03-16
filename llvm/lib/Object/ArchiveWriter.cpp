@@ -393,10 +393,6 @@ llvm::writeArchive(StringRef ArcName,
 
   std::vector<unsigned> MemberOffsetRefs;
 
-  std::vector<std::unique_ptr<MemoryBuffer>> Buffers;
-  std::vector<MemoryBufferRef> Members;
-  std::vector<sys::fs::file_status> NewMemberStatus;
-
   unsigned MemberReferenceOffset = 0;
   if (WriteSymtab) {
     ErrorOr<unsigned> MemberReferenceOffsetOrErr = writeSymbolTable(

@@ -543,8 +543,6 @@ public:
   ArrayRef<std::pair<unsigned, const char *>>
   getSerializableDirectMachineOperandTargetFlags() const override;
 
-  bool isTailCall(const MachineInstr &Inst) const override;
-
   unsigned getOutliningBenefit(size_t SequenceSize,
                                size_t Occurrences,
                                bool CanBeTailCall) const override;

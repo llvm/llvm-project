@@ -109,8 +109,6 @@ public:
     getNoopForMachoTarget(NopInst);
   }
 
-  bool isTailCall(const MachineInstr &Inst) const override;
-
   // Return the non-pre/post incrementing version of 'Opc'. Return 0
   // if there is not such an opcode.
   virtual unsigned getUnindexedOpcode(unsigned Opc) const = 0;

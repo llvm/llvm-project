@@ -1124,8 +1124,10 @@ void ASTDeclReader::VisitObjCPropertyDecl(ObjCPropertyDecl *D) {
       (ObjCPropertyDecl::PropertyAttributeKind)Record.readInt());
   D->setPropertyImplementation(
       (ObjCPropertyDecl::PropertyControl)Record.readInt());
-  D->setGetterName(Record.readDeclarationName().getObjCSelector());
-  D->setSetterName(Record.readDeclarationName().getObjCSelector());
+  D->setGetterName(Record.readDeclarationName().getObjCSelector(),
+                   ReadSourceLocation());
+  D->setSetterName(Record.readDeclarationName().getObjCSelector(),
+                   ReadSourceLocation());
   D->setGetterMethodDecl(ReadDeclAs<ObjCMethodDecl>());
   D->setSetterMethodDecl(ReadDeclAs<ObjCMethodDecl>());
   D->setPropertyIvarDecl(ReadDeclAs<ObjCIvarDecl>());

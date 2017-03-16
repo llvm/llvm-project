@@ -129,7 +129,7 @@ inline void deleter(T *Ptr) {
 //===----------------------------------------------------------------------===//
 
 // mapped_iterator - This is a simple iterator adapter that causes a function to
-// be dereferenced whenever operator* is invoked on the iterator.
+// be applied whenever operator* is invoked on the iterator.
 //
 template <class RootIt, class UnaryFunc>
 class mapped_iterator {
