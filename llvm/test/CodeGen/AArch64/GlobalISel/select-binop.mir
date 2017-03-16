@@ -164,7 +164,7 @@ body:             |
     liveins: %x0, %w1
 
     %0(s64) = COPY %x0
-    %1(s64) = G_CONSTANT 1
+    %1(s64) = G_CONSTANT i32 1
     %2(s64) = G_ADD %0, %1
 ...
 
