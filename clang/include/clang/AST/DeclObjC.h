@@ -858,14 +858,14 @@ public:
 
   Selector getGetterName() const { return GetterName; }
   SourceLocation getGetterNameLoc() const { return GetterNameLoc; }
-  void setGetterName(Selector Sel, SourceLocation Loc) {
+  void setGetterName(Selector Sel, SourceLocation Loc = SourceLocation()) {
     GetterName = Sel;
     GetterNameLoc = Loc;
   }
 
   Selector getSetterName() const { return SetterName; }
   SourceLocation getSetterNameLoc() const { return SetterNameLoc; }
-  void setSetterName(Selector Sel, SourceLocation Loc) {
+  void setSetterName(Selector Sel, SourceLocation Loc = SourceLocation()) {
     SetterName = Sel;
     SetterNameLoc = Loc;
   }
