@@ -27,6 +27,7 @@ CHECK-NEXT:   Version: 20000404
 CHECK-NEXT:   Signature: 0x54E507E2
 CHECK-NEXT:   Age: 1
 CHECK-NEXT:   Guid: {0B355641-86A0-A249-896F-9988FAE52FF0}
+CHECK-NEXT:   Features: 0x1
 CHECK-NEXT:   Named Streams {
 CHECK:          /names: 
 CHECK:        }

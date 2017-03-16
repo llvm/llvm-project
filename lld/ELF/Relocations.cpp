@@ -795,13 +795,13 @@ static void scanRelocs(InputSectionBase &C, ArrayRef<RelTy> Rels) {
         In<ELFT>::Iplt->addEntry(Body);
         In<ELFT>::IgotPlt->addEntry(Body);
         In<ELFT>::RelaIplt->addReloc({Target->IRelativeRel, In<ELFT>::IgotPlt,
-                                      Body.getGotPltOffset<ELFT>(),
-                                      !Preemptible, &Body, 0});
+                                      Body.getGotPltOffset(), !Preemptible,
+                                      &Body, 0});
       } else {
         In<ELFT>::Plt->addEntry(Body);
         In<ELFT>::GotPlt->addEntry(Body);
         In<ELFT>::RelaPlt->addReloc({Target->PltRel, In<ELFT>::GotPlt,
-                                     Body.getGotPltOffset<ELFT>(), !Preemptible,
+                                     Body.getGotPltOffset(), !Preemptible,
                                      &Body, 0});
       }
       continue;

@@ -4711,19 +4711,6 @@ bool ARMBaseInstrInfo::hasNOP() const {
   return Subtarget.getFeatureBits()[ARM::HasV6KOps];
 }
 
-bool ARMBaseInstrInfo::isTailCall(const MachineInstr &Inst) const
-{
-  switch (Inst.getOpcode()) {
-  case ARM::TAILJMPd:
-  case ARM::TAILJMPr:
-  case ARM::TCRETURNdi:
-  case ARM::TCRETURNri:
-    return true;
-  default:
-    return false;
-  }
-}
-
 bool ARMBaseInstrInfo::isSwiftFastImmShift(const MachineInstr *MI) const {
   if (MI->getNumOperands() < 4)
     return true;

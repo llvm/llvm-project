@@ -79,8 +79,8 @@ public:
 
   template <class ELFT> typename ELFT::uint getGotOffset() const;
   template <class ELFT> typename ELFT::uint getGotVA() const;
-  template <class ELFT> typename ELFT::uint getGotPltOffset() const;
-  template <class ELFT> typename ELFT::uint getGotPltVA() const;
+  uint64_t getGotPltOffset() const;
+  uint64_t getGotPltVA() const;
   template <class ELFT> typename ELFT::uint getPltVA() const;
   template <class ELFT> typename ELFT::uint getSize() const;
   OutputSection *getOutputSection() const;

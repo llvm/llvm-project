@@ -404,6 +404,8 @@ static void yamlToPdb(StringRef Path) {
   InfoBuilder.setGuid(Info.Guid);
   InfoBuilder.setSignature(Info.Signature);
   InfoBuilder.setVersion(Info.Version);
+  for (auto F : Info.Features)
+    InfoBuilder.addFeature(F);
 
   const auto &Dbi = YamlObj.DbiStream.getValueOr(DefaultDbiStream);
   auto &DbiBuilder = Builder.getDbiBuilder();
@@ -415,7 +417,7 @@ static void yamlToPdb(StringRef Path) {
   DbiBuilder.setPdbDllVersion(Dbi.PdbDllVersion);
   DbiBuilder.setVersionHeader(Dbi.VerHeader);
   for (const auto &MI : Dbi.ModInfos) {
-    auto &ModiBuilder = ExitOnErr(DbiBuilder.addModuleInfo(MI.Obj));
+    auto &ModiBuilder = ExitOnErr(DbiBuilder.addModuleInfo(MI.Mod));
 
     for (auto S : MI.SourceFiles)
       ExitOnErr(DbiBuilder.addModuleSourceFile(MI.Mod, S));

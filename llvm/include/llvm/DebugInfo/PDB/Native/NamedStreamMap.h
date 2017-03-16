@@ -36,6 +36,7 @@ public:
   Error commit(BinaryStreamWriter &Writer) const;
   uint32_t finalize();
 
+  uint32_t size() const;
   bool get(StringRef Stream, uint32_t &StreamNo) const;
   void set(StringRef Stream, uint32_t StreamNo);
   void remove(StringRef Stream);

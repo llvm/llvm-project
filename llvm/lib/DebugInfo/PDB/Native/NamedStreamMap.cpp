@@ -114,6 +114,8 @@ NamedStreamMap::entries() const {
                                                       Mapping.end());
 }
 
+uint32_t NamedStreamMap::size() const { return Mapping.size(); }
+
 bool NamedStreamMap::get(StringRef Stream, uint32_t &StreamNo) const {
   auto Iter = Mapping.find(Stream);
   if (Iter == Mapping.end())

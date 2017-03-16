@@ -904,8 +904,8 @@ Instruction *InstCombiner::visitZExt(ZExtInst &CI) {
   unsigned BitsToClear;
   if ((DestTy->isVectorTy() || shouldChangeType(SrcTy, DestTy)) &&
       canEvaluateZExtd(Src, DestTy, BitsToClear, *this, &CI)) {
-    assert(BitsToClear < SrcTy->getScalarSizeInBits() &&
-           "Unreasonable BitsToClear");
+    assert(BitsToClear <= SrcTy->getScalarSizeInBits() &&
+           "Can't clear more bits than in SrcTy");
 
     // Okay, we can transform this!  Insert the new expression now.
     DEBUG(dbgs() << "ICE: EvaluateInDifferentType converting expression type"

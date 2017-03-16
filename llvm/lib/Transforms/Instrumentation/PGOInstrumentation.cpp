@@ -1145,9 +1145,9 @@ void MemIntrinsicVisitor::visitMemIntrinsic(MemIntrinsic &MI) {
   if (dyn_cast<ConstantInt>(Length))
     return;
 
-  NMemIs++;
   switch (Mode) {
   case VM_counting:
+    NMemIs++;
     return;
   case VM_instrument:
     instrumentOneMemIntrinsic(MI);
@@ -1167,7 +1167,9 @@ void PGOUseFunc::annotateValueSites() {
   createPGOFuncNameMetadata(F, FuncInfo.FuncName);
 
   for (uint32_t Kind = IPVK_First; Kind <= IPVK_Last; ++Kind)
-    annotateValueSites(Kind);
+    // TBD: Only handle IPVK_IndirectCallTarget for now.
+    if (Kind == IPVK_IndirectCallTarget)
+      annotateValueSites(Kind);
 }
 
 // Annotate the instructions for a specific value kind.

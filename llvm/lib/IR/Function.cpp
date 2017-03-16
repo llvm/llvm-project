@@ -185,30 +185,8 @@ bool Argument::hasAttribute(Attribute::AttrKind Kind) const {
 // Helper Methods in Function
 //===----------------------------------------------------------------------===//
 
-bool Function::isMaterializable() const {
-  return getGlobalObjectSubClassData() & (1 << IsMaterializableBit);
-}
-
-void Function::setIsMaterializable(bool V) {
-  unsigned Mask = 1 << IsMaterializableBit;
-  setGlobalObjectSubClassData((~Mask & getGlobalObjectSubClassData()) |
-                              (V ? Mask : 0u));
-}
-
 LLVMContext &Function::getContext() const {
   return getType()->getContext();
-}
-
-FunctionType *Function::getFunctionType() const {
-  return cast<FunctionType>(getValueType());
-}
-
-bool Function::isVarArg() const {
-  return getFunctionType()->isVarArg();
-}
-
-Type *Function::getReturnType() const {
-  return getFunctionType()->getReturnType();
 }
 
 void Function::removeFromParent() {
@@ -294,13 +272,6 @@ void Function::stealArgumentListFrom(Function &Src) {
   ArgumentList.splice(ArgumentList.end(), Src.ArgumentList);
   setValueSubclassData(getSubclassDataFromValue() & ~(1 << 0));
   Src.setValueSubclassData(Src.getSubclassDataFromValue() | (1 << 0));
-}
-
-size_t Function::arg_size() const {
-  return getFunctionType()->getNumParams();
-}
-bool Function::arg_empty() const {
-  return getFunctionType()->getNumParams() == 0;
 }
 
 // dropAllReferences() - This function causes all the subinstructions to "let

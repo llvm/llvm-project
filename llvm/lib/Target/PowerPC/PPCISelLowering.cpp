@@ -5154,7 +5154,7 @@ SDValue PPCTargetLowering::LowerCall_64SVR4(
   // On ELFv2, we can avoid allocating the parameter area if all the arguments 
   // can be passed to the callee in registers.
   // For the fast calling convention, there is another check below.
-  // Note: keep consistent with LowerFormalArguments_64SVR4()
+  // Note: We should keep consistent with LowerFormalArguments_64SVR4()
   bool HasParameterArea = !isELFv2ABI || isVarArg || CallConv == CallingConv::Fast;
   if (!HasParameterArea) {
     unsigned ParamAreaSize = NumGPRs * PtrByteSize;

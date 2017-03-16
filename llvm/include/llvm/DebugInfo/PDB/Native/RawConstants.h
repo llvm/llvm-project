@@ -10,6 +10,7 @@
 #ifndef LLVM_DEBUGINFO_PDB_RAW_PDBRAWCONSTANTS_H
 #define LLVM_DEBUGINFO_PDB_RAW_PDBRAWCONSTANTS_H
 
+#include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 
 #include <cstdint>
@@ -30,6 +31,21 @@ enum PdbRaw_ImplVer : uint32_t {
   PdbImplVC80 = 20030901,
   PdbImplVC110 = 20091201,
   PdbImplVC140 = 20140508,
+};
+
+enum class PdbRaw_FeatureSig : uint32_t {
+  VC110 = PdbImplVC110,
+  VC140 = PdbImplVC140,
+  NoTypeMerge = 0x4D544F4E,
+  MinimalDebugInfo = 0x494E494D,
+};
+
+enum PdbRaw_Features : uint32_t {
+  PdbFeatureNone = 0x0,
+  PdbFeatureContainsIdStream = 0x1,
+  PdbFeatureMinimalDebugInfo = 0x2,
+  PdbFeatureNoTypeMerging = 0x4,
+  LLVM_MARK_AS_BITMASK_ENUM(/* LargestValue = */ PdbFeatureNoTypeMerging)
 };
 
 enum PdbRaw_DbiVer : uint32_t {
