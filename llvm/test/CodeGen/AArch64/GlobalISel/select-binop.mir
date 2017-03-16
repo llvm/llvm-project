@@ -137,7 +137,7 @@ body:             |
     liveins: %w0, %w1
 
     %0(s32) = COPY %w0
-    %1(s32) = G_CONSTANT 1
+    %1(s32) = G_CONSTANT i32 1
     %2(s32) = G_ADD %0, %1
 ...
 
@@ -193,7 +193,7 @@ body:             |
     successors: %bb.1
 
     %0(s32) = COPY %w0
-    %1(s32) = G_CONSTANT 1
+    %1(s32) = G_CONSTANT i32 1
     G_BR %bb.1
 
   bb.1:
