@@ -23,7 +23,7 @@
 #include "swift/AST/Decl.h"
 #include "swift/AST/DiagnosticEngine.h"
 #include "swift/AST/IRGenOptions.h"
-#include "swift/AST/Mangle.h"
+#include "swift/AST/ASTMangler.h"
 #include "swift/AST/NameLookup.h"
 #include "swift/AST/SearchPathOptions.h"
 #include "swift/AST/Type.h"
@@ -64,6 +64,7 @@
 #include "swift/../../lib/IRGen/IRGenModule.h"
 #include "swift/../../lib/IRGen/Linking.h"
 #include "swift/../../lib/IRGen/TypeInfo.h"
+#include "swift/../../lib/IRGen/IRGenMangler.h"
 
 #include "swift/Serialization/SerializedModuleLoader.h"
 #include "swift/Strings.h"
@@ -4024,9 +4025,8 @@ ConstString SwiftASTContext::GetMangledTypeName(swift::TypeBase *type_base) {
   });
 
   if (!has_archetypes) {
-    swift::Mangle::Mangler mangler(true);
-    mangler.mangleTypeForDebugger(swift_type, nullptr);
-    std::string s = mangler.finalize();
+    swift::NewMangling::ASTMangler mangler(true);
+    std::string s = mangler.mangleTypeForDebugger(swift_type, nullptr);
 
     if (!s.empty()) {
       ConstString mangled_cs(s.c_str());
@@ -7549,9 +7549,8 @@ static int64_t GetInstanceVariableOffset_Symbol(ExecutionContext *exe_ctx,
       }
 
       if (the_value_decl) {
-        swift::Mangle::Mangler mangler;
-        mangler.mangleFieldOffsetFull(the_value_decl, false);
-        std::string buffer = mangler.finalize();
+        swift::irgen::IRGenMangler mangler;
+        std::string buffer = mangler.mangleFieldOffsetFull(the_value_decl, false);
 
         StreamString symbol_name;
         symbol_name.Printf("%s", buffer.c_str());

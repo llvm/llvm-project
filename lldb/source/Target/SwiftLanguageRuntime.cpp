@@ -23,7 +23,7 @@
 #include "swift/ABI/System.h"
 #include "swift/AST/ASTContext.h"
 #include "swift/AST/Decl.h"
-#include "swift/AST/Mangle.h"
+#include "swift/AST/ASTMangler.h"
 #include "swift/AST/Module.h"
 #include "swift/AST/Types.h"
 #include "swift/Demangling/Demangle.h"
@@ -3392,10 +3392,10 @@ void SwiftLanguageRuntime::RegisterGlobalError(Target &target, ConstString name,
       ConstString mangled_name;
 
       {
-        swift::Mangle::Mangler mangler;
+        swift::NewMangling::ASTMangler mangler;
 
-        mangler.mangleGlobalVariableFull(var_decl);
-        mangled_name = ConstString(mangler.finalize().c_str());
+        std::string m_str = mangler.mangleGlobalVariableFull(var_decl);
+        mangled_name = ConstString(m_str.c_str());
       }
 
       lldb::addr_t symbol_addr;
