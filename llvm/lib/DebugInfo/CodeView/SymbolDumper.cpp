@@ -468,8 +468,8 @@ Error CVSymbolDumperImpl::visitKnownRecord(CVSymbol &CVR,
   for (auto &Annotation : InlineSite.annotations()) {
     switch (Annotation.OpCode) {
     case BinaryAnnotationsOpCode::Invalid:
-      return llvm::make_error<CodeViewError>(
-          "Invalid binary annotation opcode!");
+      W.printString("(Annotation Padding)");
+      break;
     case BinaryAnnotationsOpCode::CodeOffset:
     case BinaryAnnotationsOpCode::ChangeCodeOffset:
     case BinaryAnnotationsOpCode::ChangeCodeLength:

@@ -585,6 +585,9 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->Target1Rel = getArg(Args, OPT_target1_rel, OPT_target1_abs, false);
   Config->Target2 = getTarget2(Args);
   Config->ThinLTOCacheDir = getString(Args, OPT_thinlto_cache_dir);
+  Config->ThinLTOCachePolicy =
+      check(parseCachePruningPolicy(getString(Args, OPT_thinlto_cache_policy)),
+            "--thinlto-cache-policy: invalid cache policy");
   Config->ThinLTOJobs = getInteger(Args, OPT_thinlto_jobs, -1u);
   Config->Threads = getArg(Args, OPT_threads, OPT_no_threads, true);
   Config->Trace = Args.hasArg(OPT_trace);

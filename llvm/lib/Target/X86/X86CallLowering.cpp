@@ -179,7 +179,7 @@ bool X86CallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
 
   SmallVector<ArgInfo, 8> SplitArgs;
   unsigned Idx = 0;
-  for (auto &Arg : F.getArgumentList()) {
+  for (auto &Arg : F.args()) {
     ArgInfo OrigArg(VRegs[Idx], Arg.getType());
     setArgFlags(OrigArg, Idx + 1, DL, F);
     LLT Ty = MRI.getType(VRegs[Idx]);

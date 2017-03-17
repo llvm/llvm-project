@@ -418,27 +418,21 @@ static std::string getMapFile(const opt::InputArgList &Args) {
   return (OutFile.substr(0, OutFile.rfind('.')) + ".map").str();
 }
 
-// Returns slices of MB by parsing MB as an archive file.
-// Each slice consists of a member file in the archive.
-std::vector<MemoryBufferRef> getArchiveMembers(MemoryBufferRef MB) {
-  std::unique_ptr<Archive> File =
-      check(Archive::create(MB),
-            MB.getBufferIdentifier() + ": failed to parse archive");
-
+std::vector<MemoryBufferRef> getArchiveMembers(Archive *File) {
   std::vector<MemoryBufferRef> V;
   Error Err = Error::success();
   for (const ErrorOr<Archive::Child> &COrErr : File->children(Err)) {
     Archive::Child C =
-        check(COrErr, MB.getBufferIdentifier() +
-                          ": could not get the child of the archive");
+        check(COrErr,
+              File->getFileName() + ": could not get the child of the archive");
     MemoryBufferRef MBRef =
         check(C.getMemoryBufferRef(),
-              MB.getBufferIdentifier() +
+              File->getFileName() +
                   ": could not get the buffer for a child of the archive");
     V.push_back(MBRef);
   }
   if (Err)
-    fatal(MB.getBufferIdentifier() +
+    fatal(File->getFileName() +
           ": Archive::children failed: " + toString(std::move(Err)));
   return V;
 }
@@ -453,7 +447,7 @@ static bool needsRebuilding(MemoryBufferRef MB) {
     return true;
 
   // Returns true if the archive contains at least one bitcode file.
-  for (MemoryBufferRef Member : getArchiveMembers(MB))
+  for (MemoryBufferRef Member : getArchiveMembers(File.get()))
     if (identify_magic(Member.getBuffer()) == file_magic::bitcode)
       return true;
   return false;
@@ -481,13 +475,19 @@ filterBitcodeFiles(StringRef Path, std::vector<std::string> &TemporaryFiles) {
   if (!needsRebuilding(MBRef))
     return Path.str();
 
-  log("Creating a temporary archive for " + Path +
-      " to remove bitcode files");
+  std::unique_ptr<Archive> File =
+      check(Archive::create(MBRef),
+            MBRef.getBufferIdentifier() + ": failed to parse archive");
 
   std::vector<NewArchiveMember> New;
-  for (MemoryBufferRef Member : getArchiveMembers(MBRef))
+  for (MemoryBufferRef Member : getArchiveMembers(File.get()))
     if (identify_magic(Member.getBuffer()) != file_magic::bitcode)
       New.emplace_back(Member);
+
+  if (New.empty())
+    return None;
+
+  log("Creating a temporary archive for " + Path + " to remove bitcode files");
 
   SmallString<128> S;
   if (auto EC = sys::fs::createTemporaryFile("lld-" + sys::path::stem(Path),
@@ -515,6 +515,7 @@ void LinkerDriver::invokeMSVC(opt::InputArgList &Args) {
     case OPT_linkrepro:
     case OPT_lldmap:
     case OPT_lldmap_file:
+    case OPT_lldsavetemps:
     case OPT_msvclto:
       // LLD-specific options are stripped.
       break;

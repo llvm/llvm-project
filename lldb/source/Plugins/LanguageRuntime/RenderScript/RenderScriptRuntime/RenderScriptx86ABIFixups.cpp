@@ -267,8 +267,7 @@ bool fixupRSAllocationStructByValCalls(llvm::Module &module) {
   // for all called function decls
   for (auto func : rs_functions) {
     // inspect all of the arguments in the call
-    llvm::SymbolTableList<llvm::Argument> &arg_list = func->getArgumentList();
-    for (auto &arg : arg_list) {
+    for (auto &arg : func->args()) {
       if (arg.hasByValAttr()) {
         arg.removeAttr(attr_byval);
         changed = true;

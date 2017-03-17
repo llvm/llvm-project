@@ -67,12 +67,9 @@ static Error mapNameAndUniqueName(CodeViewRecordIO &IO, StringRef &Name,
       error(IO.mapStringZ(N));
       error(IO.mapStringZ(U));
     } else {
-      size_t BytesNeeded = Name.size() + 1;
-      StringRef N = Name;
-      if (BytesNeeded > BytesLeft) {
-        size_t BytesToDrop = std::min(N.size(), BytesToDrop);
-        N = N.drop_back(BytesToDrop);
-      }
+      // Cap the length of the string at however many bytes we have available,
+      // plus one for the required null terminator.
+      auto N = StringRef(Name).take_front(BytesLeft - 1);
       error(IO.mapStringZ(N));
     }
   } else {

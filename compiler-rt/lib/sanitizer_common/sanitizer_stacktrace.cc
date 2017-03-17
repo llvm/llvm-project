@@ -79,22 +79,15 @@ void BufferedStackTrace::FastUnwindStack(uptr pc, uptr bp, uptr stack_top,
   while (IsValidFrame((uptr)frame, stack_top, bottom) &&
          IsAligned((uptr)frame, sizeof(*frame)) &&
          size < max_depth) {
-     // PowerPC ABIs specify that the return address is saved on the
-     // *caller's* stack frame.  Thus we must dereference the back chain
-     // to find the caller frame before extracting it.
-     uhwptr *caller_frame = (uhwptr*)frame[0];
-     if (!IsValidFrame((uptr)caller_frame, stack_top, bottom) ||
-         !IsAligned((uptr)caller_frame, sizeof(uhwptr)))
-       break;
 #ifdef __powerpc__
-    // For most ABIs the offset where the return address is saved is two
-    // register sizes.  The exception is the SVR4 ABI, which uses an
-    // offset of only one register size.
-#ifdef _CALL_SYSV
-    uhwptr pc1 = caller_frame[1];
-#else
+    // PowerPC ABIs specify that the return address is saved at offset
+    // 16 of the *caller's* stack frame.  Thus we must dereference the
+    // back chain to find the caller frame before extracting it.
+    uhwptr *caller_frame = (uhwptr*)frame[0];
+    if (!IsValidFrame((uptr)caller_frame, stack_top, bottom) ||
+        !IsAligned((uptr)caller_frame, sizeof(uhwptr)))
+      break;
     uhwptr pc1 = caller_frame[2];
-#endif
 #elif defined(__s390__)
     uhwptr pc1 = frame[14];
 #else

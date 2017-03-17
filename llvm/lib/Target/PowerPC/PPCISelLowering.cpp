@@ -4111,7 +4111,7 @@ needStackSlotPassParameters(const PPCSubtarget &Subtarget,
 
 static bool
 hasSameArgumentList(const Function *CallerFn, ImmutableCallSite *CS) {
-  if (CS->arg_size() != CallerFn->getArgumentList().size())
+  if (CS->arg_size() != CallerFn->arg_size())
     return false;
 
   ImmutableCallSite::arg_iterator CalleeArgIter = CS->arg_begin();

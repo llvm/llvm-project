@@ -8149,11 +8149,11 @@ _mm512_maskz_getexp_ps (__mmask16 __U, __m512 __A)
                                        (__v8di)(__m512i)(index), (__mmask8)-1, \
                                        (int)(scale)); })
 
-#define _mm512_mask_i64gather_ps( __v1_old, __mask, __index,\
-                                  __addr, __scale) __extension__({\
-__builtin_ia32_gatherdiv16sf ((__v8sf) __v1_old,\
-                              __addr,(__v8di) __index, __mask, __scale);\
-})
+#define _mm512_mask_i64gather_ps(v1_old, mask, index, addr, scale) __extension__({\
+  (__m256)__builtin_ia32_gatherdiv16sf((__v8sf)(__m256)(v1_old),\
+                                       (float const *)(addr), \
+                                       (__v8di)(__m512i)(index), \
+                                       (__mmask8)(mask), (int)(scale)); })
 
 #define _mm512_i64gather_epi32(index, addr, scale) __extension__ ({\
   (__m256i)__builtin_ia32_gatherdiv16si((__v8si)_mm256_undefined_ps(), \

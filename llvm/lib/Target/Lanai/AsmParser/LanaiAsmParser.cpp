@@ -1096,7 +1096,7 @@ StringRef LanaiAsmParser::splitMnemonic(StringRef Name, SMLoc NameLoc,
   return Mnemonic;
 }
 
-bool IsMemoryAssignmentError(const OperandVector &Operands) {
+static bool IsMemoryAssignmentError(const OperandVector &Operands) {
   // Detects if a memory operation has an erroneous base register modification.
   // Memory operations are detected by matching the types of operands.
   //

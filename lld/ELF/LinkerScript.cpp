@@ -1424,7 +1424,7 @@ Expr ScriptParser::readAssert() {
   return [=] {
     if (!E())
       error(Msg);
-    return ScriptBase->Dot;
+    return ScriptBase->getDot();
   };
 }
 
@@ -1754,7 +1754,7 @@ Expr ScriptParser::readPrimary() {
       return [=] { return alignTo(E(), E2()); };
     }
     expect(")");
-    return [=] { return alignTo(ScriptBase->Dot, E()); };
+    return [=] { return alignTo(ScriptBase->getDot(), E()); };
   }
   if (Tok == "CONSTANT") {
     StringRef Name = readParenLiteral();
@@ -1778,13 +1778,13 @@ Expr ScriptParser::readPrimary() {
     expect(",");
     readExpr();
     expect(")");
-    return [=] { return alignTo(ScriptBase->Dot, E()); };
+    return [=] { return alignTo(ScriptBase->getDot(), E()); };
   }
   if (Tok == "DATA_SEGMENT_END") {
     expect("(");
     expect(".");
     expect(")");
-    return []() { return ScriptBase->Dot; };
+    return []() { return ScriptBase->getDot(); };
   }
   // GNU linkers implements more complicated logic to handle
   // DATA_SEGMENT_RELRO_END. We instead ignore the arguments and just align to
@@ -1795,7 +1795,7 @@ Expr ScriptParser::readPrimary() {
     expect(",");
     readExpr();
     expect(")");
-    return []() { return alignTo(ScriptBase->Dot, Target->PageSize); };
+    return []() { return alignTo(ScriptBase->getDot(), Target->PageSize); };
   }
   if (Tok == "SIZEOF") {
     StringRef Name = readParenLiteral();

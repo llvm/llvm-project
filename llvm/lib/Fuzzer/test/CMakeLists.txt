@@ -128,6 +128,7 @@ set(Tests
   TimeoutTest
   TimeoutEmptyTest
   TraceMallocTest
+  TwoDifferentBugsTest
   )
 
 if(APPLE OR MSVC)

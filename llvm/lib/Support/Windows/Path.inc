@@ -1023,7 +1023,7 @@ static void expandTildeExpr(SmallVectorImpl<char> &Path) {
 
   StringRef PathStr(Path.begin(), Path.size());
   PathStr = PathStr.drop_front();
-  StringRef Expr = PathStr.take_until(path::is_separator);
+  StringRef Expr = PathStr.take_until([](char c) { return path::is_separator(c); });
 
   if (!Expr.empty()) {
     // This is probably a ~username/ expression.  Don't support this on Windows.

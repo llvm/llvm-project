@@ -337,8 +337,7 @@ bool ARMCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
   if (Subtarget->useSoftFloat() || !Subtarget->hasVFP2())
     return false;
 
-  auto &Args = F.getArgumentList();
-  for (auto &Arg : Args)
+  for (auto &Arg : F.args())
     if (!isSupportedType(DL, TLI, Arg.getType()))
       return false;
 
@@ -347,7 +346,7 @@ bool ARMCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
 
   SmallVector<ArgInfo, 8> ArgInfos;
   unsigned Idx = 0;
-  for (auto &Arg : Args) {
+  for (auto &Arg : F.args()) {
     ArgInfo AInfo(VRegs[Idx], Arg.getType());
     setArgFlags(AInfo, Idx + 1, DL, F);
     splitToValueTypes(AInfo, ArgInfos, DL, MF.getRegInfo());

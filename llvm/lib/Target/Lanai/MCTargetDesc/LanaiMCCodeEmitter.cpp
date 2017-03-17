@@ -89,7 +89,7 @@ public:
 
 } // end anonymous namespace
 
-Lanai::Fixups FixupKind(const MCExpr *Expr) {
+static Lanai::Fixups FixupKind(const MCExpr *Expr) {
   if (isa<MCSymbolRefExpr>(Expr))
     return Lanai::FIXUP_LANAI_21;
   if (const LanaiMCExpr *McExpr = dyn_cast<LanaiMCExpr>(Expr)) {
@@ -134,8 +134,8 @@ unsigned LanaiMCCodeEmitter::getMachineOpValue(
 }
 
 // Helper function to adjust P and Q bits on load and store instructions.
-unsigned adjustPqBits(const MCInst &Inst, unsigned Value, unsigned PBitShift,
-                      unsigned QBitShift) {
+static unsigned adjustPqBits(const MCInst &Inst, unsigned Value,
+                             unsigned PBitShift, unsigned QBitShift) {
   const MCOperand AluOp = Inst.getOperand(3);
   unsigned AluCode = AluOp.getImm();
 

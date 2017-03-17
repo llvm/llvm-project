@@ -21,6 +21,7 @@
 #include <cstdint>
 #include <cstring>
 #include <memory>
+#include <string>
 #include <sys/syscall.h>
 #include <unistd.h>
 

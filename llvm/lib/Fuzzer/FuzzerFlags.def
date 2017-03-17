@@ -108,6 +108,7 @@ FUZZER_FLAG_STRING(exit_on_item, "Exit if an item with a given sha1 sum"
 
 FUZZER_FLAG_STRING(run_equivalence_server, "Experimental")
 FUZZER_FLAG_STRING(use_equivalence_server, "Experimental")
+FUZZER_FLAG_INT(analyze_dict, 0, "Experimental")
 
 FUZZER_DEPRECATED_FLAG(exit_on_first)
 FUZZER_DEPRECATED_FLAG(save_minimized_corpus)
