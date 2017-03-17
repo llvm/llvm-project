@@ -123,9 +123,6 @@ exit:
 ;CHECK-NEXT: .[[TEST3LABEL:[_0-9A-Za-z]+]]: # %test3
 ;CHECK-NEXT: rlwinm. {{[0-9]+}}, [[TAGREG]], 0, 29, 29
 ;CHECK-NEXT: bne 0, .[[OPT3LABEL:[_0-9A-Za-z]+]]
-;CHECK-NEXT: .[[TEST4LABEL:[_0-9A-Za-z]+]]: # %test4
-;CHECK-NEXT: rlwinm. {{[0-9]+}}, [[TAGREG]], 0, 28, 28
-;CHECK-NEXT: bne 0, .[[OPT4LABEL:[_0-9A-Za-z]+]]
 ;CHECK-NEXT: .[[EXITLABEL:[_0-9A-Za-z]+]]: # %exit
 ;CHECK: blr
 ;CHECK-NEXT: .[[OPT1LABEL]]:
@@ -133,11 +130,8 @@ exit:
 ;CHECK-NEXT: beq 0, .[[TEST3LABEL]]
 ;CHECK-NEXT: .[[OPT2LABEL]]:
 ;CHECK: rlwinm. {{[0-9]+}}, [[TAGREG]], 0, 29, 29
-;CHECK-NEXT: beq 0, .[[TEST4LABEL]]
-;CHECK-NEXT: .[[OPT3LABEL]]:
-;CHECK: rlwinm. {{[0-9]+}}, [[TAGREG]], 0, 28, 28
 ;CHECK-NEXT: beq 0, .[[EXITLABEL]]
-;CHECK-NEXT: .[[OPT4LABEL]]:
+;CHECK-NEXT: .[[OPT3LABEL]]:
 ;CHECK: b .[[EXITLABEL]]
 
 define void @straight_test_50(i32 %tag) {
@@ -160,16 +154,9 @@ optional2:
 test3:
   %tagbit3 = and i32 %tag, 4
   %tagbit3eq0 = icmp eq i32 %tagbit3, 0
-  br i1 %tagbit3eq0, label %test4, label %optional3, !prof !2
+  br i1 %tagbit3eq0, label %exit, label %optional3, !prof !1
 optional3:
   call void @c()
-  br label %test4
-test4:
-  %tagbit4 = and i32 %tag, 8
-  %tagbit4eq0 = icmp eq i32 %tagbit4, 0
-  br i1 %tagbit4eq0, label %exit, label %optional4, !prof !1
-optional4:
-  call void @d()
   br label %exit
 exit:
   ret void

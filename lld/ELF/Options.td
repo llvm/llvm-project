@@ -394,4 +394,6 @@ def opt_remarks_with_hotness: Flag<["--"], "opt-remarks-with-hotness">,
 def save_temps: F<"save-temps">;
 def thinlto_cache_dir: J<"thinlto-cache-dir=">,
   HelpText<"Path to ThinLTO cached object file directory">;
+def thinlto_cache_policy: S<"thinlto-cache-policy">,
+  HelpText<"Pruning policy for the ThinLTO cache">;
 def thinlto_jobs: J<"thinlto-jobs=">, HelpText<"Number of ThinLTO jobs">;

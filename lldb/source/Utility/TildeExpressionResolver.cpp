@@ -28,9 +28,8 @@ TildeExpressionResolver::~TildeExpressionResolver() {}
 bool StandardTildeExpressionResolver::ResolveExact(
     StringRef Expr, SmallVectorImpl<char> &Output) {
   // We expect the tilde expression to be ONLY the expression itself, and
-  // contain
-  // no separators.
-  assert(!llvm::any_of(Expr, path::is_separator));
+  // contain no separators.
+  assert(!llvm::any_of(Expr, [](char c) { return path::is_separator(c); }));
   assert(Expr.empty() || Expr[0] == '~');
 
   return !fs::real_path(Expr, Output, true);
@@ -40,7 +39,7 @@ bool StandardTildeExpressionResolver::ResolvePartial(StringRef Expr,
                                                      StringSet<> &Output) {
   // We expect the tilde expression to be ONLY the expression itself, and
   // contain no separators.
-  assert(!llvm::any_of(Expr, path::is_separator));
+  assert(!llvm::any_of(Expr, [](char c) { return path::is_separator(c); }));
   assert(Expr.empty() || Expr[0] == '~');
 
   Output.clear();

@@ -40,7 +40,7 @@ TEST(ValueTest, UsedInBasicBlock) {
   Function *F = M->getFunction("f");
 
   EXPECT_FALSE(F->isUsedInBasicBlock(&F->front()));
-  EXPECT_TRUE((++F->arg_begin())->isUsedInBasicBlock(&F->front()));
+  EXPECT_TRUE(std::next(F->arg_begin())->isUsedInBasicBlock(&F->front()));
   EXPECT_TRUE(F->arg_begin()->isUsedInBasicBlock(&F->front()));
 }
 

@@ -92,7 +92,7 @@ static void removeTailCallAttribute(AllocaInst *Frame, AAResults &AA) {
 
 // Given a resume function @f.resume(%f.frame* %frame), returns %f.frame type.
 static Type *getFrameType(Function *Resume) {
-  auto *ArgType = Resume->getArgumentList().front().getType();
+  auto *ArgType = Resume->arg_begin()->getType();
   return cast<PointerType>(ArgType)->getElementType();
 }
 

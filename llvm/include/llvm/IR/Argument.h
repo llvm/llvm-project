@@ -32,14 +32,14 @@ template <typename NodeTy> class SymbolTableListTraits;
 class Argument : public Value, public ilist_node<Argument> {
   virtual void anchor();
   Function *Parent;
+  unsigned ArgNo;
 
   friend class SymbolTableListTraits<Argument>;
   void setParent(Function *parent);
 
 public:
-  /// If \p F is specified, the argument is inserted at the end of the argument
-  /// list for \p F.
-  explicit Argument(Type *Ty, const Twine &Name = "", Function *F = nullptr);
+  /// Argument constructor.
+  explicit Argument(Type *Ty, const Twine &Name = "", unsigned ArgNo = 0);
 
   inline const Function *getParent() const { return Parent; }
   inline       Function *getParent()       { return Parent; }
@@ -47,7 +47,7 @@ public:
   /// Return the index of this formal argument in its containing function.
   ///
   /// For example in "void foo(int a, float b)" a is 0 and b is 1.
-  unsigned getArgNo() const;
+  unsigned getArgNo() const { return ArgNo; }
 
   /// Return true if this argument has the nonnull attribute. Also returns true
   /// if at least one byte is known to be dereferenceable and the pointer is in

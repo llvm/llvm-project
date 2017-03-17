@@ -238,7 +238,6 @@ bool AArch64CallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
 bool AArch64CallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
                                                const Function &F,
                                                ArrayRef<unsigned> VRegs) const {
-  auto &Args = F.getArgumentList();
   MachineFunction &MF = MIRBuilder.getMF();
   MachineBasicBlock &MBB = MIRBuilder.getMBB();
   MachineRegisterInfo &MRI = MF.getRegInfo();
@@ -246,7 +245,7 @@ bool AArch64CallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
 
   SmallVector<ArgInfo, 8> SplitArgs;
   unsigned i = 0;
-  for (auto &Arg : Args) {
+  for (auto &Arg : F.args()) {
     ArgInfo OrigArg{VRegs[i], Arg.getType()};
     setArgFlags(OrigArg, i + 1, DL, F);
     bool Split = false;

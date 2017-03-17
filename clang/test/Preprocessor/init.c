@@ -6922,7 +6922,10 @@
 // PPC-DARWIN:#define __WINT_WIDTH__ 32
 // PPC-DARWIN:#define __powerpc__ 1
 // PPC-DARWIN:#define __ppc__ 1
-//
+
+// RUN: %clang_cc1 -E -dM -ffreestanding -triple=powerpc64-apple-darwin8 < /dev/null | FileCheck -match-full-lines -check-prefix PPC64-DARWIN %s
+// PPC64-DARWIN:#define __STRUCT_PARM_ALIGN__ 16
+
 // RUN: %clang_cc1 -x cl -E -dM -ffreestanding -triple=amdgcn < /dev/null | FileCheck -match-full-lines -check-prefix AMDGCN --check-prefix AMDGPU %s
 // RUN: %clang_cc1 -x cl -E -dM -ffreestanding -triple=r600 -target-cpu caicos < /dev/null | FileCheck -match-full-lines --check-prefix AMDGPU %s
 //

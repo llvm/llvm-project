@@ -29,7 +29,7 @@ TEST(IntegerDivision, SDiv) {
   Function *F = Function::Create(FunctionType::get(Builder.getInt32Ty(),
                                                    ArgTys, false),
                                  GlobalValue::ExternalLinkage, "F", &M);
-  assert(F->getArgumentList().size() == 2);
+  assert(F->arg_size() == 2);
 
   BasicBlock *BB = BasicBlock::Create(C, "", F);
   Builder.SetInsertPoint(BB);
@@ -59,7 +59,7 @@ TEST(IntegerDivision, UDiv) {
   Function *F = Function::Create(FunctionType::get(Builder.getInt32Ty(),
                                                    ArgTys, false),
                                  GlobalValue::ExternalLinkage, "F", &M);
-  assert(F->getArgumentList().size() == 2);
+  assert(F->arg_size() == 2);
 
   BasicBlock *BB = BasicBlock::Create(C, "", F);
   Builder.SetInsertPoint(BB);
@@ -89,7 +89,7 @@ TEST(IntegerDivision, SRem) {
   Function *F = Function::Create(FunctionType::get(Builder.getInt32Ty(),
                                                    ArgTys, false),
                                  GlobalValue::ExternalLinkage, "F", &M);
-  assert(F->getArgumentList().size() == 2);
+  assert(F->arg_size() == 2);
 
   BasicBlock *BB = BasicBlock::Create(C, "", F);
   Builder.SetInsertPoint(BB);
@@ -119,7 +119,7 @@ TEST(IntegerDivision, URem) {
   Function *F = Function::Create(FunctionType::get(Builder.getInt32Ty(),
                                                    ArgTys, false),
                                  GlobalValue::ExternalLinkage, "F", &M);
-  assert(F->getArgumentList().size() == 2);
+  assert(F->arg_size() == 2);
 
   BasicBlock *BB = BasicBlock::Create(C, "", F);
   Builder.SetInsertPoint(BB);
@@ -150,7 +150,7 @@ TEST(IntegerDivision, SDiv64) {
   Function *F = Function::Create(FunctionType::get(Builder.getInt64Ty(),
                                                    ArgTys, false),
                                  GlobalValue::ExternalLinkage, "F", &M);
-  assert(F->getArgumentList().size() == 2);
+  assert(F->arg_size() == 2);
 
   BasicBlock *BB = BasicBlock::Create(C, "", F);
   Builder.SetInsertPoint(BB);
@@ -180,7 +180,7 @@ TEST(IntegerDivision, UDiv64) {
   Function *F = Function::Create(FunctionType::get(Builder.getInt64Ty(),
                                                    ArgTys, false),
                                  GlobalValue::ExternalLinkage, "F", &M);
-  assert(F->getArgumentList().size() == 2);
+  assert(F->arg_size() == 2);
 
   BasicBlock *BB = BasicBlock::Create(C, "", F);
   Builder.SetInsertPoint(BB);
@@ -210,7 +210,7 @@ TEST(IntegerDivision, SRem64) {
   Function *F = Function::Create(FunctionType::get(Builder.getInt64Ty(),
                                                    ArgTys, false),
                                  GlobalValue::ExternalLinkage, "F", &M);
-  assert(F->getArgumentList().size() == 2);
+  assert(F->arg_size() == 2);
 
   BasicBlock *BB = BasicBlock::Create(C, "", F);
   Builder.SetInsertPoint(BB);
@@ -240,7 +240,7 @@ TEST(IntegerDivision, URem64) {
   Function *F = Function::Create(FunctionType::get(Builder.getInt64Ty(),
                                                    ArgTys, false),
                                  GlobalValue::ExternalLinkage, "F", &M);
-  assert(F->getArgumentList().size() == 2);
+  assert(F->arg_size() == 2);
 
   BasicBlock *BB = BasicBlock::Create(C, "", F);
   Builder.SetInsertPoint(BB);

@@ -1,5 +1,7 @@
 ;; Make sure we re-create archive files to strip bitcode files.
 
+;; Do not create empty archives because the MSVC linker
+;; doesn't support them.
 ; RUN: llvm-as -o %t.obj %s
 ; RUN: rm -f %t-main1.a
 ; RUN: llvm-ar cru %t-main1.a %t.obj
@@ -8,7 +10,7 @@
 ; RUN: lld-link %t-main1.a %t.dir/bitcode.obj /msvclto /out:%t.exe /opt:lldlto=1 /opt:icf \
 ; RUN:   /entry:main /verbose > %t.log || true
 ; RUN: FileCheck -check-prefix=BC %s < %t.log
-; BC: Creating a temporary archive for
+; BC-NOT: Creating a temporary archive for
 
 ; RUN: rm -f %t-main2.a
 ; RUN: llvm-ar cru %t-main2.a %t.dir/bitcode.obj

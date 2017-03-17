@@ -509,22 +509,13 @@ public:
   /// Requires that this has no function body.
   void stealArgumentListFrom(Function &Src);
 
-  /// Get the underlying elements of the Function... the basic block list is
-  /// empty for external functions.
-  ///
-  const ArgumentListType &getArgumentList() const {
-    CheckLazyArguments();
-    return ArgumentList;
-  }
-  ArgumentListType &getArgumentList() {
-    CheckLazyArguments();
-    return ArgumentList;
-  }
-
   static ArgumentListType Function::*getSublistAccess(Argument*) {
     return &Function::ArgumentList;
   }
 
+  /// Get the underlying elements of the Function... the basic block list is
+  /// empty for external functions.
+  ///
   const BasicBlockListType &getBasicBlockList() const { return BasicBlocks; }
         BasicBlockListType &getBasicBlockList()       { return BasicBlocks; }
 

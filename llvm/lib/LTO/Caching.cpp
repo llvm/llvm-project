@@ -22,7 +22,7 @@ using namespace llvm;
 using namespace llvm::lto;
 
 Expected<NativeObjectCache> lto::localCache(StringRef CacheDirectoryPath,
-                                            AddFileFn AddFile) {
+                                            AddBufferFn AddBuffer) {
   if (std::error_code EC = sys::fs::create_directories(CacheDirectoryPath))
     return errorCodeToError(EC);
 
@@ -30,34 +30,49 @@ Expected<NativeObjectCache> lto::localCache(StringRef CacheDirectoryPath,
     // First, see if we have a cache hit.
     SmallString<64> EntryPath;
     sys::path::append(EntryPath, CacheDirectoryPath, Key);
-    if (sys::fs::exists(EntryPath)) {
-      AddFile(Task, EntryPath);
+    ErrorOr<std::unique_ptr<MemoryBuffer>> MBOrErr =
+        MemoryBuffer::getFile(EntryPath);
+    if (MBOrErr) {
+      AddBuffer(Task, std::move(*MBOrErr));
       return AddStreamFn();
     }
 
+    if (MBOrErr.getError() != std::errc::no_such_file_or_directory)
+      report_fatal_error(Twine("Failed to open cache file ") + EntryPath +
+                         ": " + MBOrErr.getError().message() + "\n");
+
     // This native object stream is responsible for commiting the resulting
-    // file to the cache and calling AddFile to add it to the link.
+    // file to the cache and calling AddBuffer to add it to the link.
     struct CacheStream : NativeObjectStream {
-      AddFileFn AddFile;
+      AddBufferFn AddBuffer;
       std::string TempFilename;
       std::string EntryPath;
       unsigned Task;
 
-      CacheStream(std::unique_ptr<raw_pwrite_stream> OS, AddFileFn AddFile,
+      CacheStream(std::unique_ptr<raw_pwrite_stream> OS, AddBufferFn AddBuffer,
                   std::string TempFilename, std::string EntryPath,
                   unsigned Task)
-          : NativeObjectStream(std::move(OS)), AddFile(std::move(AddFile)),
+          : NativeObjectStream(std::move(OS)), AddBuffer(std::move(AddBuffer)),
             TempFilename(std::move(TempFilename)),
             EntryPath(std::move(EntryPath)), Task(Task) {}
 
       ~CacheStream() {
+        // FIXME: This code could race with the cache pruner, but it is unlikely
+        // that the cache pruner will choose to remove a newly created file.
+
         // Make sure the file is closed before committing it.
         OS.reset();
         // This is atomic on POSIX systems.
         if (auto EC = sys::fs::rename(TempFilename, EntryPath))
           report_fatal_error(Twine("Failed to rename temporary file ") +
                              TempFilename + ": " + EC.message() + "\n");
-        AddFile(Task, EntryPath);
+
+        ErrorOr<std::unique_ptr<MemoryBuffer>> MBOrErr =
+            MemoryBuffer::getFile(EntryPath);
+        if (!MBOrErr)
+          report_fatal_error(Twine("Failed to open cache file ") + EntryPath +
+                             ": " + MBOrErr.getError().message() + "\n");
+        AddBuffer(Task, std::move(*MBOrErr));
       }
     };
 
@@ -77,7 +92,7 @@ Expected<NativeObjectCache> lto::localCache(StringRef CacheDirectoryPath,
       // This CacheStream will move the temporary file into the cache when done.
       return llvm::make_unique<CacheStream>(
           llvm::make_unique<raw_fd_ostream>(TempFD, /* ShouldClose */ true),
-          AddFile, TempFilename.str(), EntryPath.str(), Task);
+          AddBuffer, TempFilename.str(), EntryPath.str(), Task);
     };
   };
 }

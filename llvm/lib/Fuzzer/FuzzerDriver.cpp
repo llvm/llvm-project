@@ -355,6 +355,74 @@ int MinimizeCrashInputInternalStep(Fuzzer *F, InputCorpus *Corpus) {
   return 0;
 }
 
+int AnalyzeDictionary(Fuzzer *F, const std::vector<Unit>& Dict,
+                      UnitVector& Corpus) {
+  Printf("Started dictionary minimization (up to %d tests)\n",
+         Dict.size() * Corpus.size() * 2);
+
+  // Scores and usage count for each dictionary unit.
+  std::vector<int> Scores(Dict.size());
+  std::vector<int> Usages(Dict.size());
+
+  std::vector<size_t> InitialFeatures;
+  std::vector<size_t> ModifiedFeatures;
+  for (auto &C : Corpus) {
+    // Get coverage for the testcase without modifications.
+    F->ExecuteCallback(C.data(), C.size());
+    InitialFeatures.clear();
+    TPC.CollectFeatures([&](size_t Feature) -> bool {
+      InitialFeatures.push_back(Feature);
+      return true;
+    });
+
+    for (size_t i = 0; i < Dict.size(); ++i) {
+      auto Data = C;
+      auto StartPos = std::search(Data.begin(), Data.end(),
+                                  Dict[i].begin(), Dict[i].end());
+      // Skip dictionary unit, if the testcase does not contain it.
+      if (StartPos == Data.end())
+        continue;
+
+      ++Usages[i];
+      while (StartPos != Data.end()) {
+        // Replace all occurrences of dictionary unit in the testcase.
+        auto EndPos = StartPos + Dict[i].size();
+        for (auto It = StartPos; It != EndPos; ++It)
+          *It ^= 0xFF;
+
+        StartPos = std::search(EndPos, Data.end(),
+                               Dict[i].begin(), Dict[i].end());
+      }
+
+      // Get coverage for testcase with masked occurrences of dictionary unit.
+      F->ExecuteCallback(Data.data(), Data.size());
+      ModifiedFeatures.clear();
+      TPC.CollectFeatures([&](size_t Feature) -> bool {
+        ModifiedFeatures.push_back(Feature);
+        return true;
+      });
+
+      if (InitialFeatures == ModifiedFeatures)
+        --Scores[i];
+      else
+        Scores[i] += 2;
+    }
+  }
+
+  Printf("###### Useless dictionary elements. ######\n");
+  for (size_t i = 0; i < Dict.size(); ++i) {
+    // Dictionary units with positive score are treated as useful ones.
+    if (Scores[i] > 0)
+       continue;
+
+    Printf("\"");
+    PrintASCII(Dict[i].data(), Dict[i].size(), "\"");
+    Printf(" # Score: %d, Used: %d\n", Scores[i], Usages[i]);
+  }
+  Printf("###### End of useless dictionary elements. ######\n");
+  return 0;
+}
+
 int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
   using namespace fuzzer;
   assert(argc && argv && "Argument pointers cannot be nullptr");
@@ -544,6 +612,19 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
     Printf("Loading corpus dir: %s\n", Inp.c_str());
     ReadDirToVectorOfUnits(Inp.c_str(), &InitialCorpus, nullptr,
                            TemporaryMaxLen, /*ExitOnError=*/false);
+  }
+
+  if (Flags.analyze_dict) {
+    if (Dictionary.empty() || Inputs->empty()) {
+      Printf("ERROR: can't analyze dict without dict and corpus provided\n");
+      return 1;
+    }
+    if (AnalyzeDictionary(F, Dictionary, InitialCorpus)) {
+      Printf("Dictionary analysis failed\n");
+      exit(1);
+    }
+    Printf("Dictionary analysis suceeded\n");
+    exit(0);
   }
 
   if (Options.MaxLen == 0) {
