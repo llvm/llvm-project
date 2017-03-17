@@ -15,8 +15,8 @@ using namespace clang;
 llvm::MemoryBuffer &
 MemoryBufferCache::addBuffer(llvm::StringRef Filename,
                              std::unique_ptr<llvm::MemoryBuffer> Buffer) {
-  auto Insertion = Buffers.insert(std::make_pair(
-      Filename, BufferEntry{std::move(Buffer), NextIndex++}));
+  auto Insertion =
+      Buffers.insert({Filename, BufferEntry{std::move(Buffer), NextIndex++}});
   assert(Insertion.second && "Already has a buffer");
   return *Insertion.first->second.Buffer;
 }
