@@ -360,6 +360,7 @@ The ``framework`` qualifier specifies that this module corresponds to a Darwin-s
   Name.framework/
     Modules/module.modulemap  Module map for the framework
     Headers/                  Subdirectory containing framework headers
+    PrivateHeaders/           Subdirectory containing framework private headers
     Frameworks/               Subdirectory containing embedded frameworks
     Resources/                Subdirectory containing additional resources
     Name                      Symbolic link to the shared library for the framework
@@ -841,6 +842,16 @@ file. In our example library, the ``module.private.modulemap`` file
 would be available when ``Foo_Private.h`` is available, making it
 easier to split a library's public and private APIs along header
 boundaries.
+
+When writing a private module as part of a *framework*, it's recommended that:
+
+* Headers for this module are present in the ``PrivateHeaders``
+  framework subdirectory.
+* The private module is defined as a *submodule* of the public framework (if
+  there's one), similar to how ``Foo.Private`` is defined in the example above.
+* The ``explicit`` keyword should be used to guarantee that its content will
+  only be available when the submodule itself is explicitly named (through a
+  ``@import`` for example).
 
 Modularizing a Platform
 =======================
