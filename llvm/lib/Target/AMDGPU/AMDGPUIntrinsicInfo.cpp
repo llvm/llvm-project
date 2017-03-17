@@ -55,10 +55,6 @@ FunctionType *AMDGPUIntrinsicInfo::getType(LLVMContext &Context, unsigned ID,
                                            ArrayRef<Type*> Tys) const {
   // FIXME: Re-use Intrinsic::getType machinery
   switch (ID) {
-  case AMDGPUIntrinsic::amdgcn_fdiv_fast: {
-    Type *F32Ty = Type::getFloatTy(Context);
-    return FunctionType::get(F32Ty, { F32Ty, F32Ty }, false);
-  }
   default:
     llvm_unreachable("unhandled intrinsic");
   }

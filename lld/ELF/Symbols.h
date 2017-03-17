@@ -75,13 +75,13 @@ public:
   bool isInGot() const { return GotIndex != -1U; }
   bool isInPlt() const { return PltIndex != -1U; }
 
-  template <class ELFT> typename ELFT::uint getVA(int64_t Addend = 0) const;
+  uint64_t getVA(int64_t Addend = 0) const;
 
-  template <class ELFT> typename ELFT::uint getGotOffset() const;
+  uint64_t getGotOffset() const;
   template <class ELFT> typename ELFT::uint getGotVA() const;
   uint64_t getGotPltOffset() const;
   uint64_t getGotPltVA() const;
-  template <class ELFT> typename ELFT::uint getPltVA() const;
+  uint64_t getPltVA() const;
   template <class ELFT> typename ELFT::uint getSize() const;
   OutputSection *getOutputSection() const;
 

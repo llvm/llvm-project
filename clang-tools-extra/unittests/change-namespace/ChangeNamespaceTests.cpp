@@ -2006,6 +2006,52 @@ TEST_F(ChangeNamespaceTest, EnumInClass) {
   EXPECT_EQ(format(Expected), runChangeNamespaceOnCode(Code));
 }
 
+TEST_F(ChangeNamespaceTest, TypeAsTemplateParameter) {
+  std::string Code = "namespace na {\n"
+                     "struct X {};\n"
+                     "namespace nb {\n"
+                     "template <typename TT>\n"
+                     "void TempTemp(const TT& t) {\n"
+                     "  TT tmp;\n"
+                     "}\n"
+                     "template <typename T>\n"
+                     "void Temp(const T& t) {\n"
+                     "  T tmp = t;\n"
+                     "  TempTemp(tmp);\n"
+                     "  TempTemp(t);\n"
+                     "}\n"
+                     "void f() {\n"
+                     "  X x;\n"
+                     "  Temp(x);\n"
+                     "}\n"
+                     "} // namespace nb\n"
+                     "} // namespace na\n";
+  std::string Expected = "namespace na {\n"
+                         "struct X {};\n"
+                         "\n"
+                         "} // namespace na\n"
+                         "namespace x {\n"
+                         "namespace y {\n"
+                         "template <typename TT>\n"
+                         "void TempTemp(const TT& t) {\n"
+                         "  TT tmp;\n"
+                         "}\n"
+                         "template <typename T>\n"
+                         "void Temp(const T& t) {\n"
+                         "  T tmp = t;\n"
+                         "  TempTemp(tmp);\n"
+                         "  TempTemp(t);\n"
+                         "}\n"
+                         "void f() {\n"
+                         "  ::na::X x;\n"
+                         "  Temp(x);\n"
+                         "}\n"
+                         "} // namespace y\n"
+                         "} // namespace x\n";
+
+  EXPECT_EQ(format(Expected), runChangeNamespaceOnCode(Code));
+}
+
 } // anonymous namespace
 } // namespace change_namespace
 } // namespace clang

@@ -415,12 +415,12 @@ void X86TargetInfo::writeGotPltHeader(uint8_t *Buf) const {
 void X86TargetInfo::writeGotPlt(uint8_t *Buf, const SymbolBody &S) const {
   // Entries in .got.plt initially points back to the corresponding
   // PLT entries with a fixed offset to skip the first instruction.
-  write32le(Buf, S.getPltVA<ELF32LE>() + 6);
+  write32le(Buf, S.getPltVA() + 6);
 }
 
 void X86TargetInfo::writeIgotPlt(uint8_t *Buf, const SymbolBody &S) const {
   // An x86 entry is the address of the ifunc resolver function.
-  write32le(Buf, S.getVA<ELF32LE>());
+  write32le(Buf, S.getVA());
 }
 
 uint32_t X86TargetInfo::getDynRel(uint32_t Type) const {
@@ -704,7 +704,7 @@ template <class ELFT>
 void X86_64TargetInfo<ELFT>::writeGotPlt(uint8_t *Buf,
                                          const SymbolBody &S) const {
   // See comments in X86TargetInfo::writeGotPlt.
-  write32le(Buf, S.getPltVA<ELFT>() + 6);
+  write32le(Buf, S.getPltVA() + 6);
 }
 
 template <class ELFT>
@@ -1743,7 +1743,7 @@ void ARMTargetInfo::writeGotPlt(uint8_t *Buf, const SymbolBody &) const {
 
 void ARMTargetInfo::writeIgotPlt(uint8_t *Buf, const SymbolBody &S) const {
   // An ARM entry is the address of the ifunc resolver function.
-  write32le(Buf, S.getVA<ELF32LE>());
+  write32le(Buf, S.getVA());
 }
 
 void ARMTargetInfo::writePltHeader(uint8_t *Buf) const {
@@ -1807,14 +1807,14 @@ bool ARMTargetInfo::needsThunk(RelExpr Expr, uint32_t RelocType,
   case R_ARM_JUMP24:
     // Source is ARM, all PLT entries are ARM so no interworking required.
     // Otherwise we need to interwork if Symbol has bit 0 set (Thumb).
-    if (Expr == R_PC && ((S.getVA<ELF32LE>() & 1) == 1))
+    if (Expr == R_PC && ((S.getVA() & 1) == 1))
       return true;
     break;
   case R_ARM_THM_JUMP19:
   case R_ARM_THM_JUMP24:
     // Source is Thumb, all PLT entries are ARM so interworking is required.
     // Otherwise we need to interwork if Symbol has bit 0 clear (ARM).
-    if (Expr == R_PLT_PC || ((S.getVA<ELF32LE>() & 1) == 0))
+    if (Expr == R_PLT_PC || ((S.getVA() & 1) == 0))
       return true;
     break;
   }

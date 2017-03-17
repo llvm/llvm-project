@@ -624,7 +624,7 @@ void WebAssemblyLowerEmscriptenEHSjLj::createSetThrewFunction(Module &M) {
   Function *F =
       Function::Create(FTy, GlobalValue::ExternalLinkage, SetThrewFName, &M);
   Argument *Arg1 = &*(F->arg_begin());
-  Argument *Arg2 = &*(++F->arg_begin());
+  Argument *Arg2 = &*std::next(F->arg_begin());
   Arg1->setName("threw");
   Arg2->setName("value");
   BasicBlock *EntryBB = BasicBlock::Create(C, "entry", F);

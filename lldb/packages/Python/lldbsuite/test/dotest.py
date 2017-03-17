@@ -25,6 +25,7 @@ from __future__ import print_function
 import atexit
 import os
 import errno
+import logging
 import platform
 import re
 import signal
@@ -275,7 +276,12 @@ def parseOptionsAndInitTestdirs():
         do_help = True
 
     if args.compiler:
-        configuration.compiler = args.compiler
+        configuration.compiler = os.path.realpath(args.compiler)
+        if not is_exe(configuration.compiler):
+            logging.error(
+                    '%s is not a valid compiler executable; aborting...',
+                    args.compiler)
+            sys.exit(-1)
     else:
         # Use a compiler appropriate appropriate for the Apple SDK if one was
         # specified
@@ -361,8 +367,14 @@ def parseOptionsAndInitTestdirs():
         configuration.lldbFrameworkPath = args.framework
 
     if args.executable:
+        # lldb executable is passed explicitly
         lldbtest_config.lldbExec = os.path.realpath(args.executable)
-    
+        if not is_exe(lldbtest_config.lldbExec):
+            logging.error(
+                    '%s is not a valid executable to test; aborting...',
+                    args.executable)
+            sys.exit(-1)
+
     if args.server:
         os.environ['LLDB_DEBUGSERVER_PATH'] = args.server
 

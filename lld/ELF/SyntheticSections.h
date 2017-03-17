@@ -153,9 +153,10 @@ private:
   uint8_t *HashBuf;
 };
 
-// BssSection is used to reserve space for copy relocations. We create two
-// instances of this class for .bss and .bss.rel.ro. .bss is used for writable
-// symbols, and .bss.rel.ro is used for read-only symbols.
+// BssSection is used to reserve space for copy relocations and common symbols.
+// We create three instances of this class for .bss, .bss.rel.ro and "COMMON".
+// .bss is used for writable symbols, .bss.rel.ro is used for read-only symbols
+// and latter used for common symbols.
 class BssSection final : public SyntheticSection {
 public:
   BssSection(StringRef Name);
@@ -313,7 +314,7 @@ private:
   std::vector<StringRef> Strings;
 };
 
-template <class ELFT> class DynamicReloc {
+class DynamicReloc {
 public:
   DynamicReloc(uint32_t Type, const InputSectionBase *InputSec,
                uint64_t OffsetInSec, bool UseSymVA, SymbolBody *Sym,
@@ -388,7 +389,7 @@ template <class ELFT> class RelocationSection final : public SyntheticSection {
 
 public:
   RelocationSection(StringRef Name, bool Sort);
-  void addReloc(const DynamicReloc<ELFT> &Reloc);
+  void addReloc(const DynamicReloc &Reloc);
   unsigned getRelocOffset();
   void finalizeContents() override;
   void writeTo(uint8_t *Buf) override;
@@ -399,7 +400,7 @@ public:
 private:
   bool Sort;
   size_t NumRelativeRelocs = 0;
-  std::vector<DynamicReloc<ELFT>> Relocs;
+  std::vector<DynamicReloc> Relocs;
 };
 
 struct SymbolTableEntry {

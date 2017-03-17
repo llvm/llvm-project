@@ -229,6 +229,8 @@ void AMDGPUTargetMachine::addPreLinkPasses(PassManagerBase & PM) {
 }
 
 void AMDGPUTargetMachine::adjustPassManager(PassManagerBuilder &Builder) {
+  Builder.DivergentTarget = true;
+
   bool Internalize = InternalizeSymbols &&
                      (getOptLevel() > CodeGenOpt::None) &&
                      (getTargetTriple().getArch() == Triple::amdgcn);

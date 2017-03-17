@@ -16,6 +16,7 @@
 #include <sys/sysctl.h>
 #include <sys/types.h>
 #include <sys/user.h>
+#include <machine/elf.h>
 
 // C++ Includes
 #include <mutex>
@@ -49,6 +50,7 @@
 #include "lldb/Target/DynamicLoader.h"
 #include "lldb/Target/Platform.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/DataBufferHeap.h"
 
 #include "lldb/Host/posix/Fcntl.h"
 
@@ -912,11 +914,11 @@ const DataBufferSP ProcessFreeBSD::GetAuxvData() {
   PlatformSP platform_sp = GetTarget().GetPlatform();
   assert(platform_sp && platform_sp->IsHost());
 
-  int mib[4] = {CTL_KERN, KERN_PROC, KERN_PROC_AUXV, process->GetID()};
+  int mib[4] = {CTL_KERN, KERN_PROC, KERN_PROC_AUXV, (int)m_process->GetID()};
   size_t auxv_size = AT_COUNT * sizeof(Elf_Auxinfo);
   DataBufferSP buf_sp(new DataBufferHeap(auxv_size, 0));
 
-  if (::sysctl(mib, 4, buf_ap->GetBytes(), &auxv_size, NULL, 0) != 0) {
+  if (::sysctl(mib, 4, buf_sp->GetBytes(), &auxv_size, NULL, 0) != 0) {
     perror("sysctl failed on auxv");
     buf_sp.reset();
   }

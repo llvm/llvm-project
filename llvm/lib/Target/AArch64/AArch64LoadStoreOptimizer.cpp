@@ -93,12 +93,18 @@ struct AArch64LoadStoreOpt : public MachineFunctionPass {
     initializeAArch64LoadStoreOptPass(*PassRegistry::getPassRegistry());
   }
 
+  AliasAnalysis *AA;
   const AArch64InstrInfo *TII;
   const TargetRegisterInfo *TRI;
   const AArch64Subtarget *Subtarget;
 
   // Track which registers have been modified and used.
   BitVector ModifiedRegs, UsedRegs;
+
+  virtual void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<AAResultsWrapperPass>();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
 
   // Scan the instructions looking for a load/store that can be combined
   // with the current instruction into a load/store pair.
@@ -936,7 +942,7 @@ static int alignTo(int Num, int PowOf2) {
 }
 
 static bool mayAlias(MachineInstr &MIa, MachineInstr &MIb,
-                     const AArch64InstrInfo *TII) {
+                     AliasAnalysis *AA) {
   // One of the instructions must modify memory.
   if (!MIa.mayStore() && !MIb.mayStore())
     return false;
@@ -945,14 +951,14 @@ static bool mayAlias(MachineInstr &MIa, MachineInstr &MIb,
   if (!MIa.mayLoadOrStore() && !MIb.mayLoadOrStore())
     return false;
 
-  return !TII->areMemAccessesTriviallyDisjoint(MIa, MIb);
+  return MIa.mayAlias(AA, MIb, /*UseTBAA*/false);
 }
 
 static bool mayAlias(MachineInstr &MIa,
                      SmallVectorImpl<MachineInstr *> &MemInsns,
-                     const AArch64InstrInfo *TII) {
+                     AliasAnalysis *AA) {
   for (MachineInstr *MIb : MemInsns)
-    if (mayAlias(MIa, *MIb, TII))
+    if (mayAlias(MIa, *MIb, AA))
       return true;
 
   return false;
@@ -1010,7 +1016,7 @@ bool AArch64LoadStoreOpt::findMatchingStore(
       return false;
 
     // If we encounter a store aliased with the load, return early.
-    if (MI.mayStore() && mayAlias(LoadMI, MI, TII))
+    if (MI.mayStore() && mayAlias(LoadMI, MI, AA))
       return false;
   } while (MBBI != B && Count < Limit);
   return false;
@@ -1180,7 +1186,7 @@ AArch64LoadStoreOpt::findMatchingInsn(MachineBasicBlock::iterator I,
         // first.
         if (!ModifiedRegs[getLdStRegOp(MI).getReg()] &&
             !(MI.mayLoad() && UsedRegs[getLdStRegOp(MI).getReg()]) &&
-            !mayAlias(MI, MemInsns, TII)) {
+            !mayAlias(MI, MemInsns, AA)) {
           Flags.setMergeForward(false);
           return MBBI;
         }
@@ -1191,7 +1197,7 @@ AArch64LoadStoreOpt::findMatchingInsn(MachineBasicBlock::iterator I,
         // into the second.
         if (!ModifiedRegs[getLdStRegOp(FirstMI).getReg()] &&
             !(MayLoad && UsedRegs[getLdStRegOp(FirstMI).getReg()]) &&
-            !mayAlias(FirstMI, MemInsns, TII)) {
+            !mayAlias(FirstMI, MemInsns, AA)) {
           Flags.setMergeForward(true);
           return MBBI;
         }
@@ -1734,6 +1740,7 @@ bool AArch64LoadStoreOpt::runOnMachineFunction(MachineFunction &Fn) {
   Subtarget = &static_cast<const AArch64Subtarget &>(Fn.getSubtarget());
   TII = static_cast<const AArch64InstrInfo *>(Subtarget->getInstrInfo());
   TRI = Subtarget->getRegisterInfo();
+  AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
 
   // Resize the modified and used register bitfield trackers.  We do this once
   // per function and then clear the bitfield each time we optimize a load or

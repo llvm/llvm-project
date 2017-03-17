@@ -33,6 +33,7 @@
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/CodeMetrics.h"
+#include "llvm/Analysis/DivergenceAnalysis.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopPass.h"
@@ -180,12 +181,14 @@ namespace {
     // NewBlocks contained cloned copy of basic blocks from LoopBlocks.
     std::vector<BasicBlock*> NewBlocks;
 
+    bool hasBranchDivergence;
+
   public:
     static char ID; // Pass ID, replacement for typeid
-    explicit LoopUnswitch(bool Os = false) :
+    explicit LoopUnswitch(bool Os = false, bool hasBranchDivergence = false) :
       LoopPass(ID), OptimizeForSize(Os), redoLoop(false),
       currentLoop(nullptr), DT(nullptr), loopHeader(nullptr),
-      loopPreheader(nullptr) {
+      loopPreheader(nullptr), hasBranchDivergence(hasBranchDivergence) {
         initializeLoopUnswitchPass(*PassRegistry::getPassRegistry());
       }
 
@@ -198,6 +201,8 @@ namespace {
     void getAnalysisUsage(AnalysisUsage &AU) const override {
       AU.addRequired<AssumptionCacheTracker>();
       AU.addRequired<TargetTransformInfoWrapperPass>();
+      if (hasBranchDivergence)
+        AU.addRequired<DivergenceAnalysis>();
       getLoopAnalysisUsage(AU);
     }
 
@@ -367,11 +372,12 @@ INITIALIZE_PASS_BEGIN(LoopUnswitch, "loop-unswitch", "Unswitch loops",
 INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_DEPENDENCY(LoopPass)
 INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(DivergenceAnalysis)
 INITIALIZE_PASS_END(LoopUnswitch, "loop-unswitch", "Unswitch loops",
                       false, false)
 
-Pass *llvm::createLoopUnswitchPass(bool Os) {
-  return new LoopUnswitch(Os);
+Pass *llvm::createLoopUnswitchPass(bool Os, bool hasBranchDivergence) {
+  return new LoopUnswitch(Os, hasBranchDivergence);
 }
 
 /// Operator chain lattice.
@@ -806,6 +812,15 @@ bool LoopUnswitch::UnswitchIfProfitable(Value *LoopCond, Constant *Val,
                  << " at non-trivial condition '" << *Val
                  << "' == " << *LoopCond << "\n"
                  << ". Cost too high.\n");
+    return false;
+  }
+  if (hasBranchDivergence &&
+      getAnalysis<DivergenceAnalysis>().isDivergent(LoopCond)) {
+    DEBUG(dbgs() << "NOT unswitching loop %"
+                 << currentLoop->getHeader()->getName()
+                 << " at non-trivial condition '" << *Val
+                 << "' == " << *LoopCond << "\n"
+                 << ". Condition is divergent.\n");
     return false;
   }
 

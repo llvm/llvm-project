@@ -358,11 +358,9 @@ template <class ELFT> void Writer<ELFT>::createSyntheticSections() {
     Add(In<ELFT>::BuildId);
   }
 
-  InputSection *Common = createCommonSection<ELFT>();
-  if (!Common->Data.empty()) {
-    In<ELFT>::Common = Common;
-    Add(Common);
-  }
+  In<ELFT>::Common = createCommonSection<ELFT>();
+  if (In<ELFT>::Common)
+    Add(InX::Common);
 
   In<ELFT>::Bss = make<BssSection>(".bss");
   Add(In<ELFT>::Bss);
@@ -1612,7 +1610,7 @@ template <class ELFT> typename ELFT::uint Writer<ELFT>::getEntryAddr() {
   // Case 1, 2 or 3. As a special case, if the symbol is actually
   // a number, we'll use that number as an address.
   if (SymbolBody *B = Symtab<ELFT>::X->find(Config->Entry))
-    return B->getVA<ELFT>();
+    return B->getVA();
   uint64_t Addr;
   if (!Config->Entry.getAsInteger(0, Addr))
     return Addr;

@@ -53,7 +53,7 @@ int getARMSubArchVersionNumber(const llvm::Triple &Triple);
 bool isARMMProfile(const llvm::Triple &Triple);
 
 } // end namespace arm
-} // end namespace target
+} // end namespace tools
 } // end namespace driver
 } // end namespace clang
 

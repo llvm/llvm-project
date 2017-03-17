@@ -252,40 +252,76 @@ void X86FrameLowering::emitSPUpdate(MachineBasicBlock &MBB,
                                     int64_t NumBytes, bool InEpilogue) const {
   bool isSub = NumBytes < 0;
   uint64_t Offset = isSub ? -NumBytes : NumBytes;
+  MachineInstr::MIFlag Flag =
+      isSub ? MachineInstr::FrameSetup : MachineInstr::FrameDestroy;
 
   uint64_t Chunk = (1LL << 31) - 1;
   DebugLoc DL = MBB.findDebugLoc(MBBI);
 
-  while (Offset) {
-    if (Offset > Chunk) {
-      // Rather than emit a long series of instructions for large offsets,
-      // load the offset into a register and do one sub/add
-      unsigned Reg = 0;
+  if (Offset > Chunk) {
+    // Rather than emit a long series of instructions for large offsets,
+    // load the offset into a register and do one sub/add
+    unsigned Reg = 0;
+    unsigned Rax = (unsigned)(Is64Bit ? X86::RAX : X86::EAX);
 
-      if (isSub && !isEAXLiveIn(MBB))
-        Reg = (unsigned)(Is64Bit ? X86::RAX : X86::EAX);
+    if (isSub && !isEAXLiveIn(MBB))
+      Reg = Rax;
+    else
+      Reg = findDeadCallerSavedReg(MBB, MBBI, TRI, Is64Bit);
+
+    unsigned MovRIOpc = Is64Bit ? X86::MOV64ri : X86::MOV32ri;
+    unsigned AddSubRROpc =
+        isSub ? getSUBrrOpcode(Is64Bit) : getADDrrOpcode(Is64Bit);
+    if (Reg) {
+      BuildMI(MBB, MBBI, DL, TII.get(MovRIOpc), Reg)
+          .addImm(Offset)
+          .setMIFlag(Flag);
+      MachineInstr *MI = BuildMI(MBB, MBBI, DL, TII.get(AddSubRROpc), StackPtr)
+                             .addReg(StackPtr)
+                             .addReg(Reg);
+      MI->getOperand(3).setIsDead(); // The EFLAGS implicit def is dead.
+      return;
+    } else if (Offset > 8 * Chunk) {
+      // If we would need more than 8 add or sub instructions (a >16GB stack
+      // frame), it's worth spilling RAX to materialize this immediate.
+      //   pushq %rax
+      //   movabsq +-$Offset+-SlotSize, %rax
+      //   addq %rsp, %rax
+      //   xchg %rax, (%rsp)
+      //   movq (%rsp), %rsp
+      assert(Is64Bit && "can't have 32-bit 16GB stack frame");
+      BuildMI(MBB, MBBI, DL, TII.get(X86::PUSH64r))
+          .addReg(Rax, RegState::Kill)
+          .setMIFlag(Flag);
+      // Subtract is not commutative, so negate the offset and always use add.
+      // Subtract 8 less and add 8 more to account for the PUSH we just did.
+      if (isSub)
+        Offset = -(Offset - SlotSize);
       else
-        Reg = findDeadCallerSavedReg(MBB, MBBI, TRI, Is64Bit);
-
-      if (Reg) {
-        unsigned Opc = Is64Bit ? X86::MOV64ri : X86::MOV32ri;
-        BuildMI(MBB, MBBI, DL, TII.get(Opc), Reg)
-          .addImm(Offset);
-        Opc = isSub
-          ? getSUBrrOpcode(Is64Bit)
-          : getADDrrOpcode(Is64Bit);
-        MachineInstr *MI = BuildMI(MBB, MBBI, DL, TII.get(Opc), StackPtr)
-          .addReg(StackPtr)
-          .addReg(Reg);
-        MI->getOperand(3).setIsDead(); // The EFLAGS implicit def is dead.
-        Offset = 0;
-        continue;
-      }
+        Offset = Offset + SlotSize;
+      BuildMI(MBB, MBBI, DL, TII.get(MovRIOpc), Rax)
+          .addImm(Offset)
+          .setMIFlag(Flag);
+      MachineInstr *MI = BuildMI(MBB, MBBI, DL, TII.get(X86::ADD64rr), Rax)
+                             .addReg(Rax)
+                             .addReg(StackPtr);
+      MI->getOperand(3).setIsDead(); // The EFLAGS implicit def is dead.
+      // Exchange the new SP in RAX with the top of the stack.
+      addRegOffset(
+          BuildMI(MBB, MBBI, DL, TII.get(X86::XCHG64rm), Rax).addReg(Rax),
+          StackPtr, false, 0);
+      // Load new SP from the top of the stack into RSP.
+      addRegOffset(BuildMI(MBB, MBBI, DL, TII.get(X86::MOV64rm), StackPtr),
+                   StackPtr, false, 0);
+      return;
     }
+  }
 
+  while (Offset) {
     uint64_t ThisVal = std::min(Offset, Chunk);
-    if (ThisVal == (Is64Bit ? 8 : 4)) {
-      // Use push / pop instead.
+    if (ThisVal == SlotSize) {
+      // Use push / pop for slot sized adjustments as a size optimization. We
+      // need to find a dead register when using pop.
       unsigned Reg = isSub
         ? (unsigned)(Is64Bit ? X86::RAX : X86::EAX)
         : findDeadCallerSavedReg(MBB, MBBI, TRI, Is64Bit);
@@ -293,23 +329,16 @@ void X86FrameLowering::emitSPUpdate(MachineBasicBlock &MBB,
         unsigned Opc = isSub
           ? (Is64Bit ? X86::PUSH64r : X86::PUSH32r)
           : (Is64Bit ? X86::POP64r  : X86::POP32r);
-        MachineInstr *MI = BuildMI(MBB, MBBI, DL, TII.get(Opc))
-          .addReg(Reg, getDefRegState(!isSub) | getUndefRegState(isSub));
-        if (isSub)
-          MI->setFlag(MachineInstr::FrameSetup);
-        else
-          MI->setFlag(MachineInstr::FrameDestroy);
+        BuildMI(MBB, MBBI, DL, TII.get(Opc))
+            .addReg(Reg, getDefRegState(!isSub) | getUndefRegState(isSub))
+            .setMIFlag(Flag);
         Offset -= ThisVal;
         continue;
       }
     }
 
-    MachineInstrBuilder MI = BuildStackAdjustment(
-        MBB, MBBI, DL, isSub ? -ThisVal : ThisVal, InEpilogue);
-    if (isSub)
-      MI.setMIFlag(MachineInstr::FrameSetup);
-    else
-      MI.setMIFlag(MachineInstr::FrameDestroy);
+    BuildStackAdjustment(MBB, MBBI, DL, isSub ? -ThisVal : ThisVal, InEpilogue)
+        .setMIFlag(Flag);
 
     Offset -= ThisVal;
   }

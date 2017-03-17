@@ -218,8 +218,7 @@ handleTlsRelocation(uint32_t Type, SymbolBody &Body, InputSectionBase &C,
       if (!Body.isInGot()) {
         In<ELFT>::Got->addEntry(Body);
         In<ELFT>::RelaDyn->addReloc({Target->TlsGotRel, In<ELFT>::Got,
-                                     Body.getGotOffset<ELFT>(), false, &Body,
-                                     0});
+                                     Body.getGotOffset(), false, &Body, 0});
       }
       return Target->TlsGdRelaxSkip;
     }
@@ -654,7 +653,7 @@ static void scanRelocs(InputSectionBase &C, ArrayRef<RelTy> Rels) {
   if (!Config->ZText)
     IsWrite = true;
 
-  auto AddDyn = [=](const DynamicReloc<ELFT> &Reloc) {
+  auto AddDyn = [=](const DynamicReloc &Reloc) {
     In<ELFT>::RelaDyn->addReloc(Reloc);
   };
 
@@ -789,13 +788,13 @@ static void scanRelocs(InputSectionBase &C, ArrayRef<RelTy> Rels) {
         continue;
 
       if (Body.isGnuIFunc() && !Preemptible) {
-        In<ELFT>::Iplt->addEntry<ELFT>(Body);
+        InX::Iplt->addEntry<ELFT>(Body);
         In<ELFT>::IgotPlt->addEntry(Body);
         In<ELFT>::RelaIplt->addReloc({Target->IRelativeRel, In<ELFT>::IgotPlt,
                                       Body.getGotPltOffset(), !Preemptible,
                                       &Body, 0});
       } else {
-        In<ELFT>::Plt->addEntry<ELFT>(Body);
+        InX::Plt->addEntry<ELFT>(Body);
         In<ELFT>::GotPlt->addEntry(Body);
         In<ELFT>::RelaPlt->addReloc({Target->PltRel, In<ELFT>::GotPlt,
                                      Body.getGotPltOffset(), !Preemptible,
@@ -815,8 +814,8 @@ static void scanRelocs(InputSectionBase &C, ArrayRef<RelTy> Rels) {
         // ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
         In<ELFT>::MipsGot->addEntry(Body, Addend, Expr);
         if (Body.isTls() && Body.isPreemptible())
-          AddDyn({Target->TlsGotRel, In<ELFT>::MipsGot,
-                  Body.getGotOffset<ELFT>(), false, &Body, 0});
+          AddDyn({Target->TlsGotRel, In<ELFT>::MipsGot, Body.getGotOffset(),
+                  false, &Body, 0});
         continue;
       }
 
@@ -824,7 +823,7 @@ static void scanRelocs(InputSectionBase &C, ArrayRef<RelTy> Rels) {
         continue;
 
       In<ELFT>::Got->addEntry(Body);
-      uintX_t Off = Body.getGotOffset<ELFT>();
+      uintX_t Off = Body.getGotOffset();
       uint32_t DynType;
       RelExpr GotRE = R_ABS;
       if (Body.isTls()) {
