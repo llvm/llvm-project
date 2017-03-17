@@ -1,4 +1,4 @@
-include_directories( ${CMAKE_SOURCE_DIR}/lib/Target/AMDGPU/ )
+include_directories( ${LLVM_SOURCE_DIR}/lib/Target/AMDGPU/ )
 
 set(LLVM_LINK_COMPONENTS
   AllTargetsAsmPrinters
