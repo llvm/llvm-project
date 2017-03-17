@@ -580,8 +580,7 @@ Constant *DataFlowSanitizer::getOrBuildTrampolineFunction(FunctionType *FT,
     Function::arg_iterator AI = F->arg_begin(); ++AI;
     for (unsigned N = FT->getNumParams(); N != 0; ++AI, --N)
       Args.push_back(&*AI);
-    CallInst *CI =
-        CallInst::Create(&F->getArgumentList().front(), Args, "", BB);
+    CallInst *CI = CallInst::Create(&*F->arg_begin(), Args, "", BB);
     ReturnInst *RI;
     if (FT->getReturnType()->isVoidTy())
       RI = ReturnInst::Create(*Ctx, BB);
@@ -595,7 +594,7 @@ Constant *DataFlowSanitizer::getOrBuildTrampolineFunction(FunctionType *FT,
     DFSanVisitor(DFSF).visitCallInst(*CI);
     if (!FT->getReturnType()->isVoidTy())
       new StoreInst(DFSF.getShadow(RI->getReturnValue()),
-                    &F->getArgumentList().back(), RI);
+                    &*std::prev(F->arg_end()), RI);
   }
 
   return C;
@@ -906,7 +905,7 @@ Value *DFSanFunction::getShadow(Value *V) {
         break;
       }
       case DataFlowSanitizer::IA_Args: {
-        unsigned ArgIdx = A->getArgNo() + F->getArgumentList().size() / 2;
+        unsigned ArgIdx = A->getArgNo() + F->arg_size() / 2;
         Function::arg_iterator i = F->arg_begin();
         while (ArgIdx--)
           ++i;

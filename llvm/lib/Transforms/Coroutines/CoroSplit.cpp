@@ -223,7 +223,7 @@ static Function *createClone(Function &F, Twine Suffix, coro::Shape &Shape,
   // Replace all args with undefs. The buildCoroutineFrame algorithm already
   // rewritten access to the args that occurs after suspend points with loads
   // and stores to/from the coroutine frame.
-  for (Argument &A : F.getArgumentList())
+  for (Argument &A : F.args())
     VMap[&A] = UndefValue::get(A.getType());
 
   SmallVector<ReturnInst *, 4> Returns;
@@ -264,7 +264,7 @@ static Function *createClone(Function &F, Twine Suffix, coro::Shape &Shape,
   IRBuilder<> Builder(&NewF->getEntryBlock().front());
 
   // Remap frame pointer.
-  Argument *NewFramePtr = &NewF->getArgumentList().front();
+  Argument *NewFramePtr = &*NewF->arg_begin();
   Value *OldFramePtr = cast<Value>(VMap[Shape.FramePtr]);
   NewFramePtr->takeName(OldFramePtr);
   OldFramePtr->replaceAllUsesWith(NewFramePtr);

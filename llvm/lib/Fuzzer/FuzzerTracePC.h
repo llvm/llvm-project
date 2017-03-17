@@ -49,7 +49,6 @@ class TracePC {
  public:
   static const size_t kNumPCs = 1 << 21;
 
-  void HandleTrace(uint32_t *guard, uintptr_t PC);
   void HandleInit(uint32_t *start, uint32_t *stop);
   void HandleCallerCallee(uintptr_t Caller, uintptr_t Callee);
   template <class T> void HandleCmp(uintptr_t PC, T Arg1, T Arg2);

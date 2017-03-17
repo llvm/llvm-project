@@ -122,10 +122,12 @@ public:
 
   // Provide fast operand accessors.
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
-  /// Returns the type of the ret val.
-  Type *getReturnType() const;
   /// Returns the FunctionType for me.
-  FunctionType *getFunctionType() const;
+  FunctionType *getFunctionType() const {
+    return cast<FunctionType>(getValueType());
+  }
+  /// Returns the type of the ret val.
+  Type *getReturnType() const { return getFunctionType()->getReturnType(); }
 
   /// getContext - Return a reference to the LLVMContext associated with this
   /// function.
@@ -133,10 +135,16 @@ public:
 
   /// isVarArg - Return true if this function takes a variable number of
   /// arguments.
-  bool isVarArg() const;
+  bool isVarArg() const { return getFunctionType()->isVarArg(); }
 
-  bool isMaterializable() const;
-  void setIsMaterializable(bool V);
+  bool isMaterializable() const {
+    return getGlobalObjectSubClassData() & (1 << IsMaterializableBit);
+  }
+  void setIsMaterializable(bool V) {
+    unsigned Mask = 1 << IsMaterializableBit;
+    setGlobalObjectSubClassData((~Mask & getGlobalObjectSubClassData()) |
+                                (V ? Mask : 0u));
+  }
 
   /// getIntrinsicID - This method returns the ID number of the specified
   /// function, or Intrinsic::not_intrinsic if the function is not an
@@ -501,22 +509,13 @@ public:
   /// Requires that this has no function body.
   void stealArgumentListFrom(Function &Src);
 
-  /// Get the underlying elements of the Function... the basic block list is
-  /// empty for external functions.
-  ///
-  const ArgumentListType &getArgumentList() const {
-    CheckLazyArguments();
-    return ArgumentList;
-  }
-  ArgumentListType &getArgumentList() {
-    CheckLazyArguments();
-    return ArgumentList;
-  }
-
   static ArgumentListType Function::*getSublistAccess(Argument*) {
     return &Function::ArgumentList;
   }
 
+  /// Get the underlying elements of the Function... the basic block list is
+  /// empty for external functions.
+  ///
   const BasicBlockListType &getBasicBlockList() const { return BasicBlocks; }
         BasicBlockListType &getBasicBlockList()       { return BasicBlocks; }
 
@@ -582,8 +581,8 @@ public:
 
 /// @}
 
-  size_t arg_size() const;
-  bool arg_empty() const;
+  size_t arg_size() const { return getFunctionType()->getNumParams(); }
+  bool arg_empty() const { return arg_size() == 0; }
 
   /// \brief Check whether this function has a personality function.
   bool hasPersonalityFn() const {

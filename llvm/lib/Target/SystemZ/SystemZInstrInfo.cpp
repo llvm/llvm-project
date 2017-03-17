@@ -80,11 +80,24 @@ void SystemZInstrInfo::splitMove(MachineBasicBlock::iterator MI,
   MachineInstr *EarlierMI = MF.CloneMachineInstr(&*MI);
   MBB->insert(MI, EarlierMI);
 
-  // Set up the two 64-bit registers.
+  // Set up the two 64-bit registers and remember super reg and its flags.
   MachineOperand &HighRegOp = EarlierMI->getOperand(0);
   MachineOperand &LowRegOp = MI->getOperand(0);
+  unsigned Reg128 = LowRegOp.getReg();
+  unsigned Reg128Killed = getKillRegState(LowRegOp.isKill());
+  unsigned Reg128Undef  = getUndefRegState(LowRegOp.isUndef());
   HighRegOp.setReg(RI.getSubReg(HighRegOp.getReg(), SystemZ::subreg_h64));
   LowRegOp.setReg(RI.getSubReg(LowRegOp.getReg(), SystemZ::subreg_l64));
+
+  if (MI->mayStore()) {
+    // Add implicit uses of the super register in case one of the subregs is
+    // undefined. We could track liveness and skip storing an undefined
+    // subreg, but this is hopefully rare (discovered with llvm-stress).
+    // If Reg128 was killed, set kill flag on MI.
+    unsigned Reg128UndefImpl = (Reg128Undef | RegState::Implicit);
+    MachineInstrBuilder(MF, EarlierMI).addReg(Reg128, Reg128UndefImpl);
+    MachineInstrBuilder(MF, MI).addReg(Reg128, (Reg128UndefImpl | Reg128Killed));
+  }
 
   // The address in the first (high) instruction is already correct.
   // Adjust the offset in the second (low) instruction.

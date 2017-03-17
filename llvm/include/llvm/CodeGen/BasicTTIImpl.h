@@ -742,7 +742,9 @@ public:
       // CostModel will pass a vector RetTy and VF is 1.
       unsigned ScalarizationCost = UINT_MAX;
       if (RetVF > 1 || VF > 1) {
-        ScalarizationCost = getScalarizationOverhead(RetTy, true, false);
+        ScalarizationCost = 0;
+        if (!RetTy->isVoidTy())
+          ScalarizationCost += getScalarizationOverhead(RetTy, true, false);
         ScalarizationCost += getOperandsScalarizationOverhead(Args, VF);
       }
 

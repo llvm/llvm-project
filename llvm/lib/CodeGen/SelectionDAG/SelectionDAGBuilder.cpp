@@ -8000,7 +8000,7 @@ findArgumentCopyElisionCandidates(const DataLayout &DL,
   // entries as we have arguments.
   enum StaticAllocaInfo { Unknown, Clobbered, Elidable };
   SmallDenseMap<const AllocaInst *, StaticAllocaInfo, 8> StaticAllocas;
-  unsigned NumArgs = FuncInfo->Fn->getArgumentList().size();
+  unsigned NumArgs = FuncInfo->Fn->arg_size();
   StaticAllocas.reserve(NumArgs * 2);
 
   auto GetInfoIfStaticAlloca = [&](const Value *V) -> StaticAllocaInfo * {

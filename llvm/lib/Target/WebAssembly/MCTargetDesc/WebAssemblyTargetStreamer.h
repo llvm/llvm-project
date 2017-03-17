@@ -18,6 +18,7 @@
 
 #include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/MC/MCStreamer.h"
+#include "llvm/Support/Wasm.h"
 
 namespace llvm {
 
@@ -50,6 +51,9 @@ public:
   virtual void emitIndIdx(const MCExpr *Value) = 0;
   /// .import_global
   virtual void emitGlobalImport(StringRef name) = 0;
+
+protected:
+  void emitValueType(wasm::ValType Type);
 };
 
 /// This part is for ascii assembly output

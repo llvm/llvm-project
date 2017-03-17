@@ -56,6 +56,13 @@ static bool canPeel(Loop *L) {
   if (!L->getExitingBlock() || !L->getUniqueExitBlock())
     return false;
 
+  // Don't try to peel loops where the latch is not the exiting block.
+  // This can be an indication of two different things:
+  // 1) The loop is not rotated.
+  // 2) The loop contains irreducible control flow that involves the latch.
+  if (L->getLoopLatch() != L->getExitingBlock())
+    return false;
+
   return true;
 }
 

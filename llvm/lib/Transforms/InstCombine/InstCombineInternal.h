@@ -28,6 +28,9 @@
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Pass.h"
 #include "llvm/Transforms/InstCombine/InstCombineWorklist.h"
+#include "llvm/Transforms/Utils/Local.h"
+#include "llvm/Support/Dwarf.h"
+#include "llvm/IR/DIBuilder.h"
 
 #define DEBUG_TYPE "instcombine"
 
@@ -470,8 +473,9 @@ public:
   /// methods should return the value returned by this function.
   Instruction *eraseInstFromFunction(Instruction &I) {
     DEBUG(dbgs() << "IC: ERASE " << I << '\n');
-
     assert(I.use_empty() && "Cannot erase instruction that is used!");
+    salvageDebugInfo(I);
+
     // Make sure that we reprocess all operands now that we reduced their
     // use counts.
     if (I.getNumOperands() < 8) {

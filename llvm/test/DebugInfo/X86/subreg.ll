@@ -4,8 +4,9 @@
 ; being in its superregister.
 
 ; CHECK: .byte   80                      # super-register DW_OP_reg0
-; CHECK-NEXT: .byte   147                # DW_OP_piece
-; CHECK-NEXT: .byte   2                  # 2
+; No need to a piece at offset 0.
+; CHECK-NOT: DW_OP_piece
+; CHECK-NOT: DW_OP_bit_piece
 
 define i16 @f(i16 signext %zzz) nounwind !dbg !1 {
 entry:

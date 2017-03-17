@@ -29,7 +29,7 @@ void ExplicitConstructorCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       cxxConversionDecl(unless(anyOf(isExplicit(), // Already marked explicit.
                                      isImplicit(), // Compiler-generated.
-                                     isInstantiated())))
+                                     isDeleted(), isInstantiated())))
 
           .bind("conversion"),
       this);

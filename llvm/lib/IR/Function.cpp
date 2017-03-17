@@ -39,29 +39,13 @@ template class llvm::SymbolTableListTraits<BasicBlock>;
 
 void Argument::anchor() { }
 
-Argument::Argument(Type *Ty, const Twine &Name, Function *Par)
-  : Value(Ty, Value::ArgumentVal) {
-  Parent = nullptr;
-
-  if (Par)
-    Par->getArgumentList().push_back(this);
+Argument::Argument(Type *Ty, const Twine &Name, unsigned ArgNo)
+    : Value(Ty, Value::ArgumentVal), Parent(nullptr), ArgNo(ArgNo) {
   setName(Name);
 }
 
 void Argument::setParent(Function *parent) {
   Parent = parent;
-}
-
-unsigned Argument::getArgNo() const {
-  const Function *F = getParent();
-  assert(F && "Argument is not in a function");
-
-  Function::const_arg_iterator AI = F->arg_begin();
-  unsigned ArgIdx = 0;
-  for (; &*AI != this; ++AI)
-    ++ArgIdx;
-
-  return ArgIdx;
 }
 
 bool Argument::hasNonNullAttr() const {
@@ -185,30 +169,8 @@ bool Argument::hasAttribute(Attribute::AttrKind Kind) const {
 // Helper Methods in Function
 //===----------------------------------------------------------------------===//
 
-bool Function::isMaterializable() const {
-  return getGlobalObjectSubClassData() & (1 << IsMaterializableBit);
-}
-
-void Function::setIsMaterializable(bool V) {
-  unsigned Mask = 1 << IsMaterializableBit;
-  setGlobalObjectSubClassData((~Mask & getGlobalObjectSubClassData()) |
-                              (V ? Mask : 0u));
-}
-
 LLVMContext &Function::getContext() const {
   return getType()->getContext();
-}
-
-FunctionType *Function::getFunctionType() const {
-  return cast<FunctionType>(getValueType());
-}
-
-bool Function::isVarArg() const {
-  return getFunctionType()->isVarArg();
-}
-
-Type *Function::getReturnType() const {
-  return getFunctionType()->getReturnType();
 }
 
 void Function::removeFromParent() {
@@ -266,7 +228,8 @@ void Function::BuildLazyArguments() const {
   for (unsigned i = 0, e = FT->getNumParams(); i != e; ++i) {
     assert(!FT->getParamType(i)->isVoidTy() &&
            "Cannot have void typed arguments!");
-    ArgumentList.push_back(new Argument(FT->getParamType(i)));
+    ArgumentList.push_back(
+        new Argument(FT->getParamType(i), "", i));
   }
 
   // Clear the lazy arguments bit.
@@ -294,13 +257,6 @@ void Function::stealArgumentListFrom(Function &Src) {
   ArgumentList.splice(ArgumentList.end(), Src.ArgumentList);
   setValueSubclassData(getSubclassDataFromValue() & ~(1 << 0));
   Src.setValueSubclassData(Src.getSubclassDataFromValue() | (1 << 0));
-}
-
-size_t Function::arg_size() const {
-  return getFunctionType()->getNumParams();
-}
-bool Function::arg_empty() const {
-  return getFunctionType()->getNumParams() == 0;
 }
 
 // dropAllReferences() - This function causes all the subinstructions to "let

@@ -707,7 +707,7 @@ void coro::buildCoroutineFrame(Function &F, Shape &Shape) {
 
   // Collect the spills for arguments and other not-materializable values.
   Spills.clear();
-  for (Argument &A : F.getArgumentList())
+  for (Argument &A : F.args())
     for (User *U : A.users())
       if (Checker.isDefinitionAcrossSuspend(A, U))
         Spills.emplace_back(&A, U);

@@ -87,8 +87,6 @@ public:
   /// Return true if this is an unscaled load/store.
   bool isUnscaledLdSt(MachineInstr &MI) const;
 
-  bool isTailCall(const MachineInstr &Inst) const override;
-
   static bool isPairableLdStInst(const MachineInstr &MI) {
     switch (MI.getOpcode()) {
     default:

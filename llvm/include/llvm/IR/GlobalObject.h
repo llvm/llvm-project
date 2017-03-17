@@ -63,8 +63,17 @@ public:
   }
   void setAlignment(unsigned Align);
 
-  unsigned getGlobalObjectSubClassData() const;
-  void setGlobalObjectSubClassData(unsigned Val);
+  unsigned getGlobalObjectSubClassData() const {
+    unsigned ValueData = getGlobalValueSubClassData();
+    return ValueData >> GlobalObjectBits;
+  }
+
+  void setGlobalObjectSubClassData(unsigned Val) {
+    unsigned OldData = getGlobalValueSubClassData();
+    setGlobalValueSubClassData((OldData & GlobalObjectMask) |
+                               (Val << GlobalObjectBits));
+    assert(getGlobalObjectSubClassData() == Val && "representation error");
+  }
 
   /// Check if this global has a custom object file section.
   ///

@@ -71,6 +71,7 @@
 ; EMPTY-NEXT:   Signature: 0x54E507E2
 ; EMPTY-NEXT:   Age: 1
 ; EMPTY-NEXT:   Guid: {0B355641-86A0-A249-896F-9988FAE52FF0}
+; EMPTY-NEXT:   Features: 0x1
 ; EMPTY-NEXT:   Named Streams {
 ; EMPTY-NEXT:     /names: 13
 ; EMPTY-NEXT:     /LinkInfo: 5
@@ -1003,6 +1004,7 @@
 ; ALL:   Signature: 0x54E507E2
 ; ALL:   Age: 1
 ; ALL:   Guid: {0B355641-86A0-A249-896F-9988FAE52FF0}
+; ALL:   Features: 0x1
 ; ALL: }
 ; ALL: Type Info Stream (IPI) {
 ; ALL:   IPI Version: 20040203
@@ -1701,6 +1703,7 @@
 ; BIG-NEXT:   Signature: 0x571FFE67
 ; BIG-NEXT:   Age: 1
 ; BIG-NEXT:   Guid: {880ECC89-DF81-0B4F-839C-58CBD052E937}
+; BIG-NEXT:   Features: 0x1
 ; BIG-NEXT:   Named Streams {
 ; BIG-NEXT:     /names: 13
 ; BIG-NEXT:     /LinkInfo: 5

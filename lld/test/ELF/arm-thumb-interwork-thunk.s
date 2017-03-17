@@ -187,12 +187,12 @@ thumb_caller:
 // CHECK-ABS-THUMB-NEXT: thumb_caller:
 // CHECK-ABS-THUMB-NEXT:     1400:       ff f7 7e ee     blx     #-772
 // CHECK-ABS-THUMB-NEXT:     1404:       ff f7 7c ee     blx     #-776
-// CHECK-ABS-THUMB-NEXT:     1408:       00 f0 0a b8     b.w     #20 <__ThumbToARMv7ABSLongThunk_arm_callee1+0x4>
-// CHECK-ABS-THUMB-NEXT:     140c:       00 f0 0d b8     b.w     #26 <__ThumbToARMv7ABSLongThunk_arm_callee2+0x4>
-// CHECK-ABS-THUMB-NEXT:     1410:       00 f0 10 b8     b.w     #32 <__ThumbToARMv7ABSLongThunk_arm_callee3+0x4>
-// CHECK-ABS-THUMB-NEXT:     1414:       00 f0 04 80     beq.w   #8 <__ThumbToARMv7ABSLongThunk_arm_callee1+0x4>
-// CHECK-ABS-THUMB-NEXT:     1418:       00 f0 07 80     beq.w   #14 <__ThumbToARMv7ABSLongThunk_arm_callee2+0x4>
-// CHECK-ABS-THUMB-NEXT:     141c:       40 f0 0a 80     bne.w   #20 <__ThumbToARMv7ABSLongThunk_arm_callee3+0x4>
+// CHECK-ABS-THUMB-NEXT:     1408:       00 f0 0a b8     b.w     #20 <__ThumbToARMv7ABSLongThunk_arm_callee1>
+// CHECK-ABS-THUMB-NEXT:     140c:       00 f0 0d b8     b.w     #26 <__ThumbToARMv7ABSLongThunk_arm_callee2>
+// CHECK-ABS-THUMB-NEXT:     1410:       00 f0 10 b8     b.w     #32 <__ThumbToARMv7ABSLongThunk_arm_callee3>
+// CHECK-ABS-THUMB-NEXT:     1414:       00 f0 04 80     beq.w   #8 <__ThumbToARMv7ABSLongThunk_arm_callee1>
+// CHECK-ABS-THUMB-NEXT:     1418:       00 f0 07 80     beq.w   #14 <__ThumbToARMv7ABSLongThunk_arm_callee2>
+// CHECK-ABS-THUMB-NEXT:     141c:       40 f0 0a 80     bne.w   #20 <__ThumbToARMv7ABSLongThunk_arm_callee3>
 // CHECK-ABS-THUMB: __ThumbToARMv7ABSLongThunk_arm_callee1:
 // 0x1100 = arm_callee1
 // CHECK-ABS-THUMB-NEXT:     1420:       41 f2 00 1c     movw    r12, #4352
@@ -213,12 +213,12 @@ thumb_caller:
 // CHECK-PI-THUMB-NEXT: thumb_caller:
 // CHECK-PI-THUMB-NEXT:     1400:       ff f7 7e ee     blx     #-772
 // CHECK-PI-THUMB-NEXT:     1404:       ff f7 7c ee     blx     #-776
-// CHECK-PI-THUMB-NEXT:     1408:       00 f0 0a b8     b.w     #20 <__ThumbToARMV7PILongThunk_arm_callee1+0x4>
-// CHECK-PI-THUMB-NEXT:     140c:       00 f0 0e b8     b.w     #28 <__ThumbToARMV7PILongThunk_arm_callee2+0x4>
-// CHECK-PI-THUMB-NEXT:     1410:       00 f0 12 b8     b.w     #36 <__ThumbToARMV7PILongThunk_arm_callee3+0x4>
-// CHECK-PI-THUMB-NEXT:     1414:       00 f0 04 80     beq.w   #8 <__ThumbToARMV7PILongThunk_arm_callee1+0x4>
-// CHECK-PI-THUMB-NEXT:     1418:       00 f0 08 80     beq.w   #16 <__ThumbToARMV7PILongThunk_arm_callee2+0x4>
-// CHECK-PI-THUMB-NEXT:     141c:       40 f0 0c 80     bne.w   #24 <__ThumbToARMV7PILongThunk_arm_callee3+0x4>
+// CHECK-PI-THUMB-NEXT:     1408:       00 f0 0a b8     b.w     #20 <__ThumbToARMV7PILongThunk_arm_callee1>
+// CHECK-PI-THUMB-NEXT:     140c:       00 f0 0e b8     b.w     #28 <__ThumbToARMV7PILongThunk_arm_callee2>
+// CHECK-PI-THUMB-NEXT:     1410:       00 f0 12 b8     b.w     #36 <__ThumbToARMV7PILongThunk_arm_callee3>
+// CHECK-PI-THUMB-NEXT:     1414:       00 f0 04 80     beq.w   #8 <__ThumbToARMV7PILongThunk_arm_callee1>
+// CHECK-PI-THUMB-NEXT:     1418:       00 f0 08 80     beq.w   #16 <__ThumbToARMV7PILongThunk_arm_callee2>
+// CHECK-PI-THUMB-NEXT:     141c:       40 f0 0c 80     bne.w   #24 <__ThumbToARMV7PILongThunk_arm_callee3>
 // CHECK-PI-THUMB: __ThumbToARMV7PILongThunk_arm_callee1:
 // 0x1428 + 4 - 0x32c = 0x1100 = arm_callee1
 // CHECK-PI-THUMB-NEXT:     1420:       4f f6 d4 4c     movw    r12, #64724

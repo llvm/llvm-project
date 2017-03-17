@@ -486,7 +486,8 @@ static void expandTildeExpr(SmallVectorImpl<char> &Path) {
     return;
 
   PathStr = PathStr.drop_front();
-  StringRef Expr = PathStr.take_until(path::is_separator);
+  StringRef Expr =
+      PathStr.take_until([](char c) { return path::is_separator(c); });
   StringRef Remainder = PathStr.substr(Expr.size() + 1);
   SmallString<128> Storage;
   if (Expr.empty()) {
@@ -547,7 +548,7 @@ static std::error_code fillStatus(int StatRet, const struct stat &Status,
   else if (S_ISLNK(Status.st_mode))
     Type = file_type::symlink_file;
 
-  perms Perms = static_cast<perms>(Status.st_mode);
+  perms Perms = static_cast<perms>(Status.st_mode) & all_perms;
   Result =
       file_status(Type, Perms, Status.st_dev, Status.st_ino, Status.st_atime,
                   Status.st_mtime, Status.st_uid, Status.st_gid,
@@ -569,6 +570,15 @@ std::error_code status(int FD, file_status &Result) {
   struct stat Status;
   int StatRet = ::fstat(FD, &Status);
   return fillStatus(StatRet, Status, Result);
+}
+
+std::error_code setPermissions(const Twine &Path, perms Permissions) {
+  SmallString<128> PathStorage;
+  StringRef P = Path.toNullTerminatedStringRef(PathStorage);
+
+  if (::chmod(P.begin(), Permissions))
+    return std::error_code(errno, std::generic_category());
+  return std::error_code();
 }
 
 std::error_code setLastModificationAndAccessTime(int FD, TimePoint<> Time) {

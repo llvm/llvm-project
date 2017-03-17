@@ -119,11 +119,6 @@ FileType("filetype", cl::init(TargetMachine::CGFT_AssemblyFile),
                         "Emit nothing, for performance testing")));
 
 cl::opt<bool>
-EnableFPMAD("enable-fp-mad",
-            cl::desc("Enable less precise MAD instructions to be generated"),
-            cl::init(false));
-
-cl::opt<bool>
 DisableFPElim("disable-fp-elim",
               cl::desc("Disable frame pointer elimination optimization"),
               cl::init(false));
@@ -283,7 +278,6 @@ DebuggerTuningOpt("debugger-tune",
 // a TargetOptions object with CodeGen flags and returns it.
 static inline TargetOptions InitTargetOptionsFromCodeGenFlags() {
   TargetOptions Options;
-  Options.LessPreciseFPMADOption = EnableFPMAD;
   Options.AllowFPOpFusion = FuseFPOps;
   Options.UnsafeFPMath = EnableUnsafeFPMath;
   Options.NoInfsFPMath = EnableNoInfsFPMath;

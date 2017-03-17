@@ -54,15 +54,15 @@ DIEDwarfExpression::DIEDwarfExpression(const AsmPrinter &AP, DwarfUnit &DU,
     : DwarfExpression(AP.getDwarfVersion()), AP(AP), DU(DU),
       DIE(DIE) {}
 
-void DIEDwarfExpression::EmitOp(uint8_t Op, const char* Comment) {
+void DIEDwarfExpression::emitOp(uint8_t Op, const char* Comment) {
   DU.addUInt(DIE, dwarf::DW_FORM_data1, Op);
 }
 
-void DIEDwarfExpression::EmitSigned(int64_t Value) {
+void DIEDwarfExpression::emitSigned(int64_t Value) {
   DU.addSInt(DIE, dwarf::DW_FORM_sdata, Value);
 }
 
-void DIEDwarfExpression::EmitUnsigned(uint64_t Value) {
+void DIEDwarfExpression::emitUnsigned(uint64_t Value) {
   DU.addUInt(DIE, dwarf::DW_FORM_udata, Value);
 }
 
@@ -475,11 +475,11 @@ void DwarfUnit::addBlockByrefAddress(const DbgVariable &DV, DIE &Die,
 
   bool validReg;
   if (Location.isReg())
-    validReg = Expr.AddMachineReg(*Asm->MF->getSubtarget().getRegisterInfo(),
+    validReg = Expr.addMachineReg(*Asm->MF->getSubtarget().getRegisterInfo(),
                                   Location.getReg());
   else
     validReg =
-        Expr.AddMachineRegIndirect(*Asm->MF->getSubtarget().getRegisterInfo(),
+        Expr.addMachineRegIndirect(*Asm->MF->getSubtarget().getRegisterInfo(),
                                    Location.getReg(), Location.getOffset());
 
   if (!validReg)
@@ -509,7 +509,7 @@ void DwarfUnit::addBlockByrefAddress(const DbgVariable &DV, DIE &Die,
     DIExpr.push_back(dwarf::DW_OP_plus);
     DIExpr.push_back(varFieldOffset);
   }
-  Expr.AddExpression(makeArrayRef(DIExpr));
+  Expr.addExpression(makeArrayRef(DIExpr));
   Expr.finalize();
 
   // Now attach the location information to the DIE.

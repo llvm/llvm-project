@@ -38,6 +38,7 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::pdb::yaml::PdbDbiModuleInfo)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::pdb::yaml::PdbSymbolRecord)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::pdb::yaml::PdbTpiRecord)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::pdb::yaml::StreamBlockList)
+LLVM_YAML_IS_FLOW_SEQUENCE_VECTOR(llvm::pdb::PdbRaw_FeatureSig)
 
 namespace llvm {
 namespace yaml {
@@ -134,6 +135,16 @@ template <> struct ScalarEnumerationTraits<llvm::pdb::PdbRaw_TpiVer> {
     io.enumCase(Value, "VC80", llvm::pdb::PdbRaw_TpiVer::PdbTpiV80);
   }
 };
+
+template <> struct ScalarEnumerationTraits<llvm::pdb::PdbRaw_FeatureSig> {
+  static void enumeration(IO &io, PdbRaw_FeatureSig &Features) {
+    io.enumCase(Features, "MinimalDebugInfo",
+                PdbRaw_FeatureSig::MinimalDebugInfo);
+    io.enumCase(Features, "NoTypeMerge", PdbRaw_FeatureSig::NoTypeMerge);
+    io.enumCase(Features, "VC110", PdbRaw_FeatureSig::VC110);
+    io.enumCase(Features, "VC140", PdbRaw_FeatureSig::VC140);
+  }
+};
 }
 }
 
@@ -187,6 +198,7 @@ void MappingTraits<PdbInfoStream>::mapping(IO &IO, PdbInfoStream &Obj) {
   IO.mapOptional("Age", Obj.Age, 1U);
   IO.mapOptional("Guid", Obj.Guid);
   IO.mapOptional("Signature", Obj.Signature, 0U);
+  IO.mapOptional("Features", Obj.Features);
   IO.mapOptional("Version", Obj.Version, PdbImplVC70);
 }
 
