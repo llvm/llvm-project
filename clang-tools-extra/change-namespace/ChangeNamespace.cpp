@@ -286,6 +286,15 @@ AST_MATCHER(EnumDecl, isScoped) {
     return Node.isScoped();
 }
 
+bool isTemplateParameter(TypeLoc Type) {
+  while (!Type.isNull()) {
+    if (Type.getTypeLocClass() == TypeLoc::SubstTemplateTypeParm)
+      return true;
+    Type = Type.getNextTypeLoc();
+  }
+  return false;
+}
+
 } // anonymous namespace
 
 ChangeNamespaceTool::ChangeNamespaceTool(
@@ -832,6 +841,8 @@ void ChangeNamespaceTool::fixTypeLoc(
     return;
   // Types of CXXCtorInitializers do not need to be fixed.
   if (llvm::is_contained(BaseCtorInitializerTypeLocs, Type))
+    return;
+  if (isTemplateParameter(Type))
     return;
   // The declaration which this TypeLoc refers to.
   const auto *FromDecl = Result.Nodes.getNodeAs<NamedDecl>("from_decl");

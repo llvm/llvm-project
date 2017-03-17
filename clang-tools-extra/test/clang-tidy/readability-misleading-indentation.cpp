@@ -76,5 +76,36 @@ int main()
     {
     }
 
+  if(cond1) {
+  }
+  else if (cond2) {
+  }
+  else {
+  }
+
+  if(cond1) {
+  }
+  else if (cond2) {
+  }
+       else {
+  }
+  // CHECK-MESSAGES: :[[@LINE-2]]:8: warning: different indentation for 'if' and corresponding 'else' [readability-misleading-indentation]
+  
+  if (cond1) {
+    if (cond1) {
+    }
+    else if (cond2) {
+    }
+    else {
+    }
+    if (cond1) {
+    } else if (cond2) {
+    } else if (!cond2) {
+    } else {
+    }
+  }
+  else if (cond2) {
+  }
+
   BLOCK
 }

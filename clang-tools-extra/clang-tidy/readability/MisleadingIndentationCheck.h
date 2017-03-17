@@ -30,7 +30,8 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 
 private:
-  void danglingElseCheck(const SourceManager &SM, const IfStmt *If);
+  void danglingElseCheck(const SourceManager &SM, ASTContext *Context,
+                         const IfStmt *If);
   void missingBracesCheck(const SourceManager &SM, const CompoundStmt *CStmt);
 };
 

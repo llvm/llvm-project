@@ -649,7 +649,7 @@ void ScopBuilder::addPHIReadAccess(PHINode *PHI) {
                   ArrayRef<const SCEV *>(), MemoryKind::PHI);
 }
 
-void ScopBuilder::buildScop(Region &R) {
+void ScopBuilder::buildScop(Region &R, AssumptionCache &AC) {
   scop.reset(new Scop(R, SE, LI, *SD.getDetectionContext(&R)));
 
   buildStmts(R);
@@ -673,12 +673,12 @@ void ScopBuilder::buildScop(Region &R) {
       addArrayAccess(MemAccInst(GlobalRead), MemoryAccess::READ, BP,
                      BP->getType(), false, {AF}, {nullptr}, GlobalRead);
 
-  scop->init(AA, DT, LI);
+  scop->init(AA, AC, DT, LI);
 }
 
-ScopBuilder::ScopBuilder(Region *R, AliasAnalysis &AA, const DataLayout &DL,
-                         DominatorTree &DT, LoopInfo &LI, ScopDetection &SD,
-                         ScalarEvolution &SE)
+ScopBuilder::ScopBuilder(Region *R, AssumptionCache &AC, AliasAnalysis &AA,
+                         const DataLayout &DL, DominatorTree &DT, LoopInfo &LI,
+                         ScopDetection &SD, ScalarEvolution &SE)
     : AA(AA), DL(DL), DT(DT), LI(LI), SD(SD), SE(SE) {
 
   Function *F = R->getEntry()->getParent();
@@ -688,7 +688,7 @@ ScopBuilder::ScopBuilder(Region *R, AliasAnalysis &AA, const DataLayout &DL,
   std::string Msg = "SCoP begins here.";
   emitOptimizationRemarkAnalysis(F->getContext(), DEBUG_TYPE, *F, Beg, Msg);
 
-  buildScop(*R);
+  buildScop(*R, AC);
 
   DEBUG(scop->print(dbgs()));
 

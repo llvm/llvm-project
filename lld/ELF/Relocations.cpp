@@ -218,8 +218,7 @@ handleTlsRelocation(uint32_t Type, SymbolBody &Body, InputSectionBase &C,
       if (!Body.isInGot()) {
         In<ELFT>::Got->addEntry(Body);
         In<ELFT>::RelaDyn->addReloc({Target->TlsGotRel, In<ELFT>::Got,
-                                     Body.getGotOffset<ELFT>(), false, &Body,
-                                     0});
+                                     Body.getGotOffset(), false, &Body, 0});
       }
       return Target->TlsGdRelaxSkip;
     }
@@ -479,23 +478,20 @@ template <class ELFT> static void addCopyRelSymbol(SharedSymbol *SS) {
   // See if this symbol is in a read-only segment. If so, preserve the symbol's
   // memory protection by reserving space in the .bss.rel.ro section.
   bool IsReadOnly = isReadOnly<ELFT>(SS);
-  OutputSection *OSec = IsReadOnly ? Out::BssRelRo : Out::Bss;
-
-  // Create a SyntheticSection in Out to hold the .bss and the Copy Reloc.
-  auto *ISec =
-      make<CopyRelSection<ELFT>>(IsReadOnly, SS->getAlignment<ELFT>(), SymSize);
-  OSec->addSection(ISec);
+  BssSection *Sec = IsReadOnly ? In<ELFT>::BssRelRo : In<ELFT>::Bss;
+  uintX_t Off = Sec->reserveSpace(SS->getAlignment<ELFT>(), SymSize);
 
   // Look through the DSO's dynamic symbol table for aliases and create a
   // dynamic symbol for each one. This causes the copy relocation to correctly
   // interpose any aliases.
   for (SharedSymbol *Sym : getSymbolsAt<ELFT>(SS)) {
     Sym->NeedsCopy = true;
-    Sym->Section = ISec;
+    Sym->CopyRelSec = Sec;
+    Sym->CopyRelSecOff = Off;
     Sym->symbol()->IsUsedInRegularObj = true;
   }
 
-  In<ELFT>::RelaDyn->addReloc({Target->CopyRel, ISec, 0, false, SS, 0});
+  In<ELFT>::RelaDyn->addReloc({Target->CopyRel, Sec, Off, false, SS, 0});
 }
 
 template <class ELFT>
@@ -657,7 +653,7 @@ static void scanRelocs(InputSectionBase &C, ArrayRef<RelTy> Rels) {
   if (!Config->ZText)
     IsWrite = true;
 
-  auto AddDyn = [=](const DynamicReloc<ELFT> &Reloc) {
+  auto AddDyn = [=](const DynamicReloc &Reloc) {
     In<ELFT>::RelaDyn->addReloc(Reloc);
   };
 
@@ -792,13 +788,13 @@ static void scanRelocs(InputSectionBase &C, ArrayRef<RelTy> Rels) {
         continue;
 
       if (Body.isGnuIFunc() && !Preemptible) {
-        In<ELFT>::Iplt->addEntry(Body);
+        InX::Iplt->addEntry<ELFT>(Body);
         In<ELFT>::IgotPlt->addEntry(Body);
         In<ELFT>::RelaIplt->addReloc({Target->IRelativeRel, In<ELFT>::IgotPlt,
                                       Body.getGotPltOffset(), !Preemptible,
                                       &Body, 0});
       } else {
-        In<ELFT>::Plt->addEntry(Body);
+        InX::Plt->addEntry<ELFT>(Body);
         In<ELFT>::GotPlt->addEntry(Body);
         In<ELFT>::RelaPlt->addReloc({Target->PltRel, In<ELFT>::GotPlt,
                                      Body.getGotPltOffset(), !Preemptible,
@@ -818,8 +814,8 @@ static void scanRelocs(InputSectionBase &C, ArrayRef<RelTy> Rels) {
         // ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
         In<ELFT>::MipsGot->addEntry(Body, Addend, Expr);
         if (Body.isTls() && Body.isPreemptible())
-          AddDyn({Target->TlsGotRel, In<ELFT>::MipsGot,
-                  Body.getGotOffset<ELFT>(), false, &Body, 0});
+          AddDyn({Target->TlsGotRel, In<ELFT>::MipsGot, Body.getGotOffset(),
+                  false, &Body, 0});
         continue;
       }
 
@@ -827,7 +823,7 @@ static void scanRelocs(InputSectionBase &C, ArrayRef<RelTy> Rels) {
         continue;
 
       In<ELFT>::Got->addEntry(Body);
-      uintX_t Off = Body.getGotOffset<ELFT>();
+      uintX_t Off = Body.getGotOffset();
       uint32_t DynType;
       RelExpr GotRE = R_ABS;
       if (Body.isTls()) {
