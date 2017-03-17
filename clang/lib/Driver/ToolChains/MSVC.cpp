@@ -446,6 +446,8 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   TC.addProfileRTLibs(Args, CmdArgs);
 
+  std::vector<const char *> Environment;
+
   // We need to special case some linker paths.  In the case of lld, we need to
   // translate 'lld' into 'lld-link', and in the case of the regular msvc
   // linker, we need to use a special search algorithm.
@@ -459,14 +461,77 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     // from the program PATH, because other environments like GnuWin32 install
     // their own link.exe which may come first.
     linkPath = FindVisualStudioExecutable(TC, "link.exe");
+
+#ifdef USE_WIN32
+    // When cross-compiling with VS2017 or newer, link.exe expects to have
+    // its containing bin directory at the top of PATH, followed by the
+    // native target bin directory.
+    // e.g. when compiling for x86 on an x64 host, PATH should start with:
+    // /bin/HostX64/x86;/bin/HostX64/x64
+    if (TC.getIsVS2017OrNewer() &&
+        llvm::Triple(llvm::sys::getProcessTriple()).getArch() != TC.getArch()) {
+      auto HostArch = llvm::Triple(llvm::sys::getProcessTriple()).getArch();
+
+      auto EnvBlockWide =
+          std::unique_ptr<wchar_t[], decltype(&FreeEnvironmentStringsW)>(
+              GetEnvironmentStringsW(), FreeEnvironmentStringsW);
+      if (!EnvBlockWide)
+        goto SkipSettingEnvironment;
+
+      size_t EnvCount = 0;
+      size_t EnvBlockLen = 0;
+      while (EnvBlockWide[EnvBlockLen] != L'\0') {
+        ++EnvCount;
+        EnvBlockLen += std::wcslen(&EnvBlockWide[EnvBlockLen]) +
+                       1 /*string null-terminator*/;
+      }
+      ++EnvBlockLen; // add the block null-terminator
+
+      std::string EnvBlock;
+      if (!llvm::convertUTF16ToUTF8String(
+              llvm::ArrayRef<char>(reinterpret_cast<char *>(EnvBlockWide.get()),
+                                   EnvBlockLen * sizeof(EnvBlockWide[0])),
+              EnvBlock))
+        goto SkipSettingEnvironment;
+
+      Environment.reserve(EnvCount);
+
+      // Now loop over each string in the block and copy them into the
+      // environment vector, adjusting the PATH variable as needed when we
+      // find it.
+      for (const char *Cursor = EnvBlock.data(); *Cursor != '\0';) {
+        llvm::StringRef EnvVar(Cursor);
+        if (EnvVar.startswith_lower("path=")) {
+          using SubDirectoryType = toolchains::MSVCToolChain::SubDirectoryType;
+          constexpr size_t PrefixLen = 5; // strlen("path=")
+          Environment.push_back(Args.MakeArgString(
+              EnvVar.substr(0, PrefixLen) +
+              TC.getSubDirectoryPath(SubDirectoryType::Bin) +
+              llvm::Twine(llvm::sys::EnvPathSeparator) +
+              TC.getSubDirectoryPath(SubDirectoryType::Bin, HostArch) +
+              (EnvVar.size() > PrefixLen
+                   ? llvm::Twine(llvm::sys::EnvPathSeparator) +
+                         EnvVar.substr(PrefixLen)
+                   : "")));
+        } else {
+          Environment.push_back(Args.MakeArgString(EnvVar));
+        }
+        Cursor += EnvVar.size() + 1 /*null-terminator*/;
+      }
+    }
+  SkipSettingEnvironment:;
+#endif
   } else {
     linkPath = Linker;
     llvm::sys::path::replace_extension(linkPath, "exe");
     linkPath = TC.GetProgramPath(linkPath.c_str());
   }
 
-  const char *Exec = Args.MakeArgString(linkPath);
-  C.addCommand(llvm::make_unique<Command>(JA, *this, Exec, CmdArgs, Inputs));
+  auto LinkCmd = llvm::make_unique<Command>(
+      JA, *this, Args.MakeArgString(linkPath), CmdArgs, Inputs);
+  if (!Environment.empty())
+    LinkCmd->setEnvironment(Environment);
+  C.addCommand(std::move(LinkCmd));
 }
 
 void visualstudio::Compiler::ConstructJob(Compilation &C, const JobAction &JA,

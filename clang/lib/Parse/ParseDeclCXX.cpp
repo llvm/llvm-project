@@ -266,10 +266,21 @@ Decl *Parser::ParseNamespaceAlias(SourceLocation NamespaceLoc,
 
   CXXScopeSpec SS;
   // Parse (optional) nested-name-specifier.
-  ParseOptionalCXXScopeSpecifier(SS, nullptr, /*EnteringContext=*/false);
+  ParseOptionalCXXScopeSpecifier(SS, nullptr, /*EnteringContext=*/false,
+                                 /*MayBePseudoDestructor=*/nullptr,
+                                 /*IsTypename=*/false,
+                                 /*LastII=*/nullptr,
+                                 /*OnlyNamespace=*/true);
 
-  if (SS.isInvalid() || Tok.isNot(tok::identifier)) {
+  if (Tok.isNot(tok::identifier)) {
     Diag(Tok, diag::err_expected_namespace_name);
+    // Skip to end of the definition and eat the ';'.
+    SkipUntil(tok::semi);
+    return nullptr;
+  }
+
+  if (SS.isInvalid()) {
+    // Diagnostics have been emitted in ParseOptionalCXXScopeSpecifier.
     // Skip to end of the definition and eat the ';'.
     SkipUntil(tok::semi);
     return nullptr;
@@ -487,17 +498,28 @@ Decl *Parser::ParseUsingDirective(unsigned Context,
 
   CXXScopeSpec SS;
   // Parse (optional) nested-name-specifier.
-  ParseOptionalCXXScopeSpecifier(SS, nullptr, /*EnteringContext=*/false);
+  ParseOptionalCXXScopeSpecifier(SS, nullptr, /*EnteringContext=*/false,
+                                 /*MayBePseudoDestructor=*/nullptr,
+                                 /*IsTypename=*/false,
+                                 /*LastII=*/nullptr,
+                                 /*OnlyNamespace=*/true);
 
   IdentifierInfo *NamespcName = nullptr;
   SourceLocation IdentLoc = SourceLocation();
 
   // Parse namespace-name.
-  if (SS.isInvalid() || Tok.isNot(tok::identifier)) {
+  if (Tok.isNot(tok::identifier)) {
     Diag(Tok, diag::err_expected_namespace_name);
     // If there was invalid namespace name, skip to end of decl, and eat ';'.
     SkipUntil(tok::semi);
     // FIXME: Are there cases, when we would like to call ActOnUsingDirective?
+    return nullptr;
+  }
+
+  if (SS.isInvalid()) {
+    // Diagnostics have been emitted in ParseOptionalCXXScopeSpecifier.
+    // Skip to end of the definition and eat the ';'.
+    SkipUntil(tok::semi);
     return nullptr;
   }
 

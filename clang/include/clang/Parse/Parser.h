@@ -1534,7 +1534,8 @@ private:
                                       bool EnteringContext,
                                       bool *MayBePseudoDestructor = nullptr,
                                       bool IsTypename = false,
-                                      IdentifierInfo **LastII = nullptr);
+                                      IdentifierInfo **LastII = nullptr,
+                                      bool OnlyNamespace = false);
 
   //===--------------------------------------------------------------------===//
   // C++0x 5.1.2: Lambda expressions

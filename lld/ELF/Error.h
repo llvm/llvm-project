@@ -69,7 +69,7 @@ template <class T> T check(ErrorOr<T> E, const Twine &Prefix) {
 
 template <class T> T check(Expected<T> E, const Twine &Prefix) {
   if (!E)
-    fatal(Prefix + ": " + errorToErrorCode(E.takeError()).message());
+    fatal(Prefix + ": " + toString(E.takeError()));
   return std::move(*E);
 }
 
