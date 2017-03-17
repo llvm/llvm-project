@@ -40,6 +40,8 @@ struct A {
   explicit A(void *x, void *y) {}
   explicit operator bool() const { return true; }
 
+  operator double() const = delete;
+
   explicit A(const A& a) {}
   // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: copy constructor should not be declared explicit [google-explicit-constructor]
   // CHECK-FIXES: {{^  }}A(const A& a) {}

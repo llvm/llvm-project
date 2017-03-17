@@ -97,10 +97,6 @@ void GetProcessExecutableAndTriple(const AutoHandle &handle,
 }
 }
 
-lldb::DataBufferSP Host::GetAuxvData(lldb_private::Process *process) {
-  return 0;
-}
-
 lldb::thread_t Host::GetCurrentThread() {
   return lldb::thread_t(::GetCurrentThread());
 }

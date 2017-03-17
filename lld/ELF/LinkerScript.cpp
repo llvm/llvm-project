@@ -53,6 +53,80 @@ using namespace llvm::support::endian;
 using namespace lld;
 using namespace lld::elf;
 
+uint64_t ExprValue::getValue() const {
+  if (Sec)
+    return Sec->getOffset(Val) + Sec->getOutputSection()->Addr;
+  return Val;
+}
+
+uint64_t ExprValue::getSecAddr() const {
+  if (Sec)
+    return Sec->getOffset(0) + Sec->getOutputSection()->Addr;
+  return 0;
+}
+
+// Some operations only support one non absolute value. Move the
+// absolute one to the right hand side for convenience.
+static void moveAbsRight(ExprValue &A, ExprValue &B) {
+  if (A.isAbsolute())
+    std::swap(A, B);
+  if (!B.isAbsolute())
+    error("At least one side of the expression must be absolute");
+}
+
+static ExprValue add(ExprValue A, ExprValue B) {
+  moveAbsRight(A, B);
+  return {A.Sec, A.ForceAbsolute, A.Val + B.getValue()};
+}
+static ExprValue sub(ExprValue A, ExprValue B) {
+  return {A.Sec, A.Val - B.getValue()};
+}
+static ExprValue mul(ExprValue A, ExprValue B) {
+  return A.getValue() * B.getValue();
+}
+static ExprValue div(ExprValue A, ExprValue B) {
+  if (uint64_t BV = B.getValue())
+    return A.getValue() / BV;
+  error("division by zero");
+  return 0;
+}
+static ExprValue leftShift(ExprValue A, ExprValue B) {
+  return A.getValue() << B.getValue();
+}
+static ExprValue rightShift(ExprValue A, ExprValue B) {
+  return A.getValue() >> B.getValue();
+}
+static ExprValue lessThan(ExprValue A, ExprValue B) {
+  return A.getValue() < B.getValue();
+}
+static ExprValue greaterThan(ExprValue A, ExprValue B) {
+  return A.getValue() > B.getValue();
+}
+static ExprValue greaterThanOrEqual(ExprValue A, ExprValue B) {
+  return A.getValue() >= B.getValue();
+}
+static ExprValue lessThanOrEqual(ExprValue A, ExprValue B) {
+  return A.getValue() <= B.getValue();
+}
+static ExprValue equal(ExprValue A, ExprValue B) {
+  return A.getValue() == B.getValue();
+}
+static ExprValue notEqual(ExprValue A, ExprValue B) {
+  return A.getValue() != B.getValue();
+}
+static ExprValue bitAnd(ExprValue A, ExprValue B) {
+  moveAbsRight(A, B);
+  return {A.Sec, A.ForceAbsolute,
+          (A.getValue() & B.getValue()) - A.getSecAddr()};
+}
+static ExprValue bitOr(ExprValue A, ExprValue B) {
+  moveAbsRight(A, B);
+  return {A.Sec, A.ForceAbsolute,
+          (A.getValue() | B.getValue()) - A.getSecAddr()};
+}
+static ExprValue bitNot(ExprValue A) { return ~A.getValue(); }
+static ExprValue minus(ExprValue A) { return -A.getValue(); }
+
 LinkerScriptBase *elf::ScriptBase;
 ScriptConfiguration *elf::ScriptConfig;
 
@@ -63,8 +137,8 @@ template <class ELFT> static SymbolBody *addRegular(SymbolAssignment *Cmd) {
       Cmd->Name, /*Type*/ 0, Visibility, /*CanOmitFromDynSym*/ false,
       /*File*/ nullptr);
   Sym->Binding = STB_GLOBAL;
-  SectionBase *Sec =
-      Cmd->Expression.IsAbsolute() ? nullptr : Cmd->Expression.Section();
+  ExprValue Value = Cmd->Expression();
+  SectionBase *Sec = Value.isAbsolute() ? nullptr : Value.Sec;
   replaceBody<DefinedRegular>(Sym, Cmd->Name, /*IsLocal=*/false, Visibility,
                               STT_NOTYPE, 0, 0, Sec, nullptr);
   return Sym->body();
@@ -87,7 +161,8 @@ OutputSection *LinkerScriptBase::getOutputSection(const Twine &Loc,
     if (Sec->Name == Name)
       return Sec;
 
-  error(Loc + ": undefined section " + Name);
+  if (ErrorOnMissingSection)
+    error(Loc + ": undefined section " + Name);
   return &FakeSec;
 }
 
@@ -105,7 +180,7 @@ uint64_t LinkerScriptBase::getOutputSectionSize(StringRef Name) {
 }
 
 void LinkerScriptBase::setDot(Expr E, const Twine &Loc, bool InSec) {
-  uint64_t Val = E();
+  uint64_t Val = E().getValue();
   if (Val < Dot) {
     if (InSec)
       error(Loc + ": unable to move location counter backward for: " +
@@ -132,12 +207,15 @@ void LinkerScriptBase::assignSymbol(SymbolAssignment *Cmd, bool InSec) {
     return;
 
   auto *Sym = cast<DefinedRegular>(Cmd->Sym);
-  Sym->Value = Cmd->Expression();
-  if (!Cmd->Expression.IsAbsolute()) {
-    Sym->Section = Cmd->Expression.Section();
-    if (auto *Sec = dyn_cast_or_null<OutputSection>(Sym->Section))
-      if (Sec->Flags & SHF_ALLOC)
-        Sym->Value -= Sec->Addr;
+  ExprValue V = Cmd->Expression();
+  if (V.isAbsolute()) {
+    Sym->Value = V.getValue();
+  } else {
+    Sym->Section = V.Sec;
+    if (Sym->Section->Flags & SHF_ALLOC)
+      Sym->Value = V.Val;
+    else
+      Sym->Value = V.getValue();
   }
 }
 
@@ -373,7 +451,7 @@ void LinkerScript<ELFT>::processCommands(OutputSectionFactory &Factory) {
       // is given, input sections are aligned to that value, whether the
       // given value is larger or smaller than the original section alignment.
       if (Cmd->SubalignExpr) {
-        uint32_t Subalign = Cmd->SubalignExpr();
+        uint32_t Subalign = Cmd->SubalignExpr().getValue();
         for (InputSectionBase *S : V)
           S->Alignment = Subalign;
       }
@@ -557,12 +635,12 @@ void LinkerScriptBase::assignOffsets(OutputSectionCommand *Cmd) {
 
   if (Cmd->LMAExpr) {
     uint64_t D = Dot;
-    LMAOffset = [=] { return Cmd->LMAExpr() - D; };
+    LMAOffset = [=] { return Cmd->LMAExpr().getValue() - D; };
   }
 
   // Handle align (e.g. ".foo : ALIGN(16) { ... }").
   if (Cmd->AlignExpr)
-    Sec->updateAlignment(Cmd->AlignExpr());
+    Sec->updateAlignment(Cmd->AlignExpr().getValue());
 
   // Try and find an appropriate memory region to assign offsets in.
   CurMemRegion = findMemoryRegion(Cmd, Sec);
@@ -776,6 +854,7 @@ void LinkerScriptBase::processNonSectionCommands() {
 void LinkerScriptBase::assignAddresses(std::vector<PhdrEntry> &Phdrs) {
   // Assign addresses as instructed by linker script SECTIONS sub-commands.
   Dot = 0;
+  ErrorOnMissingSection = true;
   switchTo(Aether);
 
   for (const std::unique_ptr<BaseCommand> &Base : Opt.Commands) {
@@ -820,7 +899,7 @@ std::vector<PhdrEntry> LinkerScriptBase::createPhdrs() {
       Phdr.add(Out::ProgramHeaders);
 
     if (Cmd.LMAExpr) {
-      Phdr.p_paddr = Cmd.LMAExpr();
+      Phdr.p_paddr = Cmd.LMAExpr().getValue();
       Phdr.HasLMA = true;
     }
   }
@@ -888,7 +967,8 @@ void LinkerScript<ELFT>::writeDataBytes(StringRef Name, uint8_t *Buf) {
   auto *Cmd = dyn_cast<OutputSectionCommand>(Opt.Commands[I].get());
   for (const std::unique_ptr<BaseCommand> &Base : Cmd->Commands)
     if (auto *Data = dyn_cast<BytesDataCommand>(Base.get()))
-      writeInt<ELFT>(Buf + Data->Offset, Data->Expression(), Data->Size);
+      writeInt<ELFT>(Buf + Data->Offset, Data->Expression().getValue(),
+                     Data->Size);
 }
 
 bool LinkerScriptBase::hasLMA(StringRef Name) {
@@ -912,35 +992,21 @@ int LinkerScriptBase::getSectionIndex(StringRef Name) {
 }
 
 template <class ELFT>
-uint64_t LinkerScript<ELFT>::getSymbolValue(const Twine &Loc, StringRef S) {
+ExprValue LinkerScript<ELFT>::getSymbolValue(const Twine &Loc, StringRef S) {
   if (S == ".")
-    return Dot;
-  if (SymbolBody *B = Symtab<ELFT>::X->find(S))
-    return B->getVA<ELFT>();
+    return {CurOutSec, Dot - CurOutSec->Addr};
+  if (SymbolBody *B = Symtab<ELFT>::X->find(S)) {
+    if (auto *D = dyn_cast<DefinedRegular>(B))
+      return {D->Section, D->Value};
+    auto *C = cast<DefinedCommon>(B);
+    return {In<ELFT>::Common, C->Offset};
+  }
   error(Loc + ": symbol not found: " + S);
   return 0;
 }
 
 template <class ELFT> bool LinkerScript<ELFT>::isDefined(StringRef S) {
   return Symtab<ELFT>::X->find(S) != nullptr;
-}
-
-template <class ELFT> bool LinkerScript<ELFT>::isAbsolute(StringRef S) {
-  if (S == ".")
-    return false;
-  SymbolBody *Sym = Symtab<ELFT>::X->find(S);
-  auto *DR = dyn_cast_or_null<DefinedRegular>(Sym);
-  return DR && !DR->Section;
-}
-
-// Gets section symbol belongs to. Symbol "." doesn't belong to any
-// specific section but isn't absolute at the same time, so we try
-// to find suitable section for it as well.
-template <class ELFT>
-OutputSection *LinkerScript<ELFT>::getSymbolSection(StringRef S) {
-  if (SymbolBody *Sym = Symtab<ELFT>::X->find(S))
-    return Sym->getOutputSection();
-  return CurOutSec;
 }
 
 // Returns indices of ELF headers containing specific section, identified
@@ -1256,7 +1322,7 @@ void ScriptParser::readPhdrs() {
         expect("(");
         // Passing 0 for the value of dot is a bit of a hack. It means that
         // we accept expressions like ".|1".
-        PhdrCmd.Flags = readExpr()();
+        PhdrCmd.Flags = readExpr()().getValue();
         expect(")");
       } else
         setError("unexpected header attribute: " + Tok);
@@ -1422,7 +1488,7 @@ Expr ScriptParser::readAssert() {
   StringRef Msg = unquote(next());
   expect(")");
   return [=] {
-    if (!E())
+    if (!E().getValue())
       error(Msg);
     return ScriptBase->getDot();
   };
@@ -1554,7 +1620,7 @@ SymbolAssignment *ScriptParser::readAssignment(StringRef Name) {
   Expr E = readExpr();
   if (Op == "+=") {
     std::string Loc = getCurrentLocation();
-    E = [=] { return ScriptBase->getSymbolValue(Loc, Name) + E(); };
+    E = [=] { return add(ScriptBase->getSymbolValue(Loc, Name), E()); };
   }
   return new SymbolAssignment(Name, E, getCurrentLocation());
 }
@@ -1572,48 +1638,35 @@ Expr ScriptParser::readExpr() {
 }
 
 static Expr combine(StringRef Op, Expr L, Expr R) {
-  auto IsAbs = [=] { return L.IsAbsolute() && R.IsAbsolute(); };
-  auto GetOutSec = [=] {
-    SectionBase *S = L.Section();
-    return S ? S : R.Section();
-  };
-
   if (Op == "*")
-    return [=] { return L() * R(); };
+    return [=] { return mul(L(), R()); };
   if (Op == "/") {
-    return [=]() -> uint64_t {
-      uint64_t RHS = R();
-      if (RHS == 0) {
-        error("division by zero");
-        return 0;
-      }
-      return L() / RHS;
-    };
+    return [=] { return div(L(), R()); };
   }
   if (Op == "+")
-    return {[=] { return L() + R(); }, IsAbs, GetOutSec};
+    return [=] { return add(L(), R()); };
   if (Op == "-")
-    return {[=] { return L() - R(); }, IsAbs, GetOutSec};
+    return [=] { return sub(L(), R()); };
   if (Op == "<<")
-    return [=] { return L() << R(); };
+    return [=] { return leftShift(L(), R()); };
   if (Op == ">>")
-    return [=] { return L() >> R(); };
+    return [=] { return rightShift(L(), R()); };
   if (Op == "<")
-    return [=] { return L() < R(); };
+    return [=] { return lessThan(L(), R()); };
   if (Op == ">")
-    return [=] { return L() > R(); };
+    return [=] { return greaterThan(L(), R()); };
   if (Op == ">=")
-    return [=] { return L() >= R(); };
+    return [=] { return greaterThanOrEqual(L(), R()); };
   if (Op == "<=")
-    return [=] { return L() <= R(); };
+    return [=] { return lessThanOrEqual(L(), R()); };
   if (Op == "==")
-    return [=] { return L() == R(); };
+    return [=] { return ::equal(L(), R()); };
   if (Op == "!=")
-    return [=] { return L() != R(); };
+    return [=] { return notEqual(L(), R()); };
   if (Op == "&")
-    return [=] { return L() & R(); };
+    return [=] { return bitAnd(L(), R()); };
   if (Op == "|")
-    return [=] { return L() | R(); };
+    return [=] { return bitOr(L(), R()); };
   llvm_unreachable("invalid operator");
 }
 
@@ -1718,25 +1771,28 @@ Expr ScriptParser::readPrimary() {
 
   if (Tok == "~") {
     Expr E = readPrimary();
-    return [=] { return ~E(); };
+    return [=] { return bitNot(E()); };
   }
   if (Tok == "-") {
     Expr E = readPrimary();
-    return [=] { return -E(); };
+    return [=] { return minus(E()); };
   }
 
   // Built-in functions are parsed here.
   // https://sourceware.org/binutils/docs/ld/Builtin-Functions.html.
   if (Tok == "ABSOLUTE") {
-    Expr E = readParenExpr();
-    E.IsAbsolute = [] { return true; };
-    return E;
+    Expr Inner = readParenExpr();
+    return [=] {
+      ExprValue I = Inner();
+      I.ForceAbsolute = true;
+      return I;
+    };
   }
   if (Tok == "ADDR") {
     StringRef Name = readParenLiteral();
-    return {[=] { return ScriptBase->getOutputSection(Location, Name)->Addr; },
-            [=] { return false; },
-            [=] { return ScriptBase->getOutputSection(Location, Name); }};
+    return [=]() -> ExprValue {
+      return {ScriptBase->getOutputSection(Location, Name), 0};
+    };
   }
   if (Tok == "LOADADDR") {
     StringRef Name = readParenLiteral();
@@ -1751,10 +1807,10 @@ Expr ScriptParser::readPrimary() {
     if (consume(",")) {
       Expr E2 = readExpr();
       expect(")");
-      return [=] { return alignTo(E(), E2()); };
+      return [=] { return alignTo(E().getValue(), E2().getValue()); };
     }
     expect(")");
-    return [=] { return alignTo(ScriptBase->getDot(), E()); };
+    return [=] { return alignTo(ScriptBase->getDot(), E().getValue()); };
   }
   if (Tok == "CONSTANT") {
     StringRef Name = readParenLiteral();
@@ -1778,13 +1834,13 @@ Expr ScriptParser::readPrimary() {
     expect(",");
     readExpr();
     expect(")");
-    return [=] { return alignTo(ScriptBase->getDot(), E()); };
+    return [=] { return alignTo(ScriptBase->getDot(), E().getValue()); };
   }
   if (Tok == "DATA_SEGMENT_END") {
     expect("(");
     expect(".");
     expect(")");
-    return []() { return ScriptBase->getDot(); };
+    return [] { return ScriptBase->getDot(); };
   }
   // GNU linkers implements more complicated logic to handle
   // DATA_SEGMENT_RELRO_END. We instead ignore the arguments and just align to
@@ -1795,7 +1851,7 @@ Expr ScriptParser::readPrimary() {
     expect(",");
     readExpr();
     expect(")");
-    return []() { return alignTo(ScriptBase->getDot(), Target->PageSize); };
+    return [] { return alignTo(ScriptBase->getDot(), Target->PageSize); };
   }
   if (Tok == "SIZEOF") {
     StringRef Name = readParenLiteral();
@@ -1817,16 +1873,14 @@ Expr ScriptParser::readPrimary() {
   // Tok is a symbol name.
   if (Tok != "." && !isValidCIdentifier(Tok))
     setError("malformed number: " + Tok);
-  return {[=] { return ScriptBase->getSymbolValue(Location, Tok); },
-          [=] { return ScriptBase->isAbsolute(Tok); },
-          [=] { return ScriptBase->getSymbolSection(Tok); }};
+  return [=] { return ScriptBase->getSymbolValue(Location, Tok); };
 }
 
 Expr ScriptParser::readTernary(Expr Cond) {
   Expr L = readExpr();
   expect(":");
   Expr R = readExpr();
-  return [=] { return Cond() ? L() : R(); };
+  return [=] { return Cond().getValue() ? L() : R(); };
 }
 
 Expr ScriptParser::readParenExpr() {

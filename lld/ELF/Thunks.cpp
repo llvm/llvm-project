@@ -104,8 +104,8 @@ public:
 } // end anonymous namespace
 
 // ARM Target Thunks
-template <class ELFT> static uint64_t getARMThunkDestVA(const SymbolBody &S) {
-  uint64_t V = S.isInPlt() ? S.getPltVA<ELFT>() : S.getVA<ELFT>();
+static uint64_t getARMThunkDestVA(const SymbolBody &S) {
+  uint64_t V = S.isInPlt() ? S.getPltVA() : S.getVA();
   return SignExtend64<32>(V);
 }
 
@@ -117,7 +117,7 @@ void ARMToThumbV7ABSLongThunk<ELFT>::writeTo(uint8_t *Buf,
       0x00, 0xc0, 0x40, 0xe3, // movt         ip,:upper16:S
       0x1c, 0xff, 0x2f, 0xe1, // bx   ip
   };
-  uint64_t S = getARMThunkDestVA<ELFT>(this->Destination);
+  uint64_t S = getARMThunkDestVA(this->Destination);
   memcpy(Buf, Data, sizeof(Data));
   Target->relocateOne(Buf, R_ARM_MOVW_ABS_NC, S);
   Target->relocateOne(Buf + 4, R_ARM_MOVT_ABS, S);
@@ -139,7 +139,7 @@ void ThumbToARMV7ABSLongThunk<ELFT>::writeTo(uint8_t *Buf,
       0xc0, 0xf2, 0x00, 0x0c, // movt         ip, :upper16:S
       0x60, 0x47,             // bx   ip
   };
-  uint64_t S = getARMThunkDestVA<ELFT>(this->Destination);
+  uint64_t S = getARMThunkDestVA(this->Destination);
   memcpy(Buf, Data, sizeof(Data));
   Target->relocateOne(Buf, R_ARM_THM_MOVW_ABS_NC, S);
   Target->relocateOne(Buf + 4, R_ARM_THM_MOVT_ABS, S);
@@ -162,8 +162,8 @@ void ARMToThumbV7PILongThunk<ELFT>::writeTo(uint8_t *Buf,
       0x0f, 0xc0, 0x8c, 0xe0, // L1: add ip, ip, pc
       0x1c, 0xff, 0x2f, 0xe1, //     bx r12
   };
-  uint64_t S = getARMThunkDestVA<ELFT>(this->Destination);
-  uint64_t P = this->ThunkSym->template getVA<ELFT>();
+  uint64_t S = getARMThunkDestVA(this->Destination);
+  uint64_t P = this->ThunkSym->getVA();
   memcpy(Buf, Data, sizeof(Data));
   Target->relocateOne(Buf, R_ARM_MOVW_PREL_NC, S - P - 16);
   Target->relocateOne(Buf + 4, R_ARM_MOVT_PREL, S - P - 12);
@@ -186,8 +186,8 @@ void ThumbToARMV7PILongThunk<ELFT>::writeTo(uint8_t *Buf,
       0xfc, 0x44,             // L1: add  r12, pc
       0x60, 0x47,             //     bx   r12
   };
-  uint64_t S = getARMThunkDestVA<ELFT>(this->Destination);
-  uint64_t P = this->ThunkSym->template getVA<ELFT>();
+  uint64_t S = getARMThunkDestVA(this->Destination);
+  uint64_t P = this->ThunkSym->getVA();
   memcpy(Buf, Data, sizeof(Data));
   Target->relocateOne(Buf, R_ARM_THM_MOVW_PREL_NC, S - P - 12);
   Target->relocateOne(Buf + 4, R_ARM_THM_MOVT_PREL, S - P - 8);
@@ -206,7 +206,7 @@ template <class ELFT>
 void MipsThunk<ELFT>::writeTo(uint8_t *Buf, ThunkSection &) const {
   const endianness E = ELFT::TargetEndianness;
 
-  uint64_t S = this->Destination.template getVA<ELFT>();
+  uint64_t S = this->Destination.getVA();
   write32<E>(Buf, 0x3c190000);                // lui   $25, %hi(func)
   write32<E>(Buf + 4, 0x08000000 | (S >> 2)); // j     func
   write32<E>(Buf + 8, 0x27390000);            // addiu $25, $25, %lo(func)

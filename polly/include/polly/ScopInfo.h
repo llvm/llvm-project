@@ -33,6 +33,7 @@
 using namespace llvm;
 
 namespace llvm {
+class AssumptionCache;
 class Loop;
 class LoopInfo;
 class PHINode;
@@ -1708,7 +1709,8 @@ private:
   //@}
 
   /// Initialize this ScopBuilder.
-  void init(AliasAnalysis &AA, DominatorTree &DT, LoopInfo &LI);
+  void init(AliasAnalysis &AA, AssumptionCache &AC, DominatorTree &DT,
+            LoopInfo &LI);
 
   /// Propagate domains that are known due to graph properties.
   ///
@@ -1882,7 +1884,7 @@ private:
   void buildContext();
 
   /// Add user provided parameter constraints to context (source code).
-  void addUserAssumptions(DominatorTree &DT, LoopInfo &LI);
+  void addUserAssumptions(AssumptionCache &AC, DominatorTree &DT, LoopInfo &LI);
 
   /// Add user provided parameter constraints to context (command line).
   void addUserContext();
@@ -2480,7 +2482,12 @@ public:
   void realignParams();
 
   /// Return true if this SCoP can be profitably optimized.
-  bool isProfitable() const;
+  ///
+  /// @param ScalarsAreUnprofitable Never consider statements with scalar writes
+  ///                               as profitably optimizable.
+  ///
+  /// @return Whether this SCoP can be profitably optimized.
+  bool isProfitable(bool ScalarsAreUnprofitable) const;
 
   /// Return true if the SCoP contained at least one error block.
   bool hasErrorBlock() const { return HasErrorBlock; }

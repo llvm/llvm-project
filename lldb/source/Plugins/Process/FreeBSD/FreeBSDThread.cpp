@@ -9,6 +9,12 @@
 
 // C Includes
 #include <errno.h>
+#include <pthread.h>
+#include <pthread_np.h>
+#include <stdlib.h>
+#include <sys/sysctl.h>
+#include <sys/types.h>
+#include <sys/user.h>
 
 // C++ Includes
 // Other libraries and framework includes
@@ -113,9 +119,41 @@ void FreeBSDThread::SetName(const char *name) {
 
 const char *FreeBSDThread::GetName() {
   if (!m_thread_name_valid) {
-    llvm::SmallString<32> thread_name;
-    HostNativeThread::GetName(GetID(), thread_name);
-    m_thread_name = thread_name.c_str();
+    m_thread_name.clear();
+    int pid = GetProcess()->GetID();
+
+    struct kinfo_proc *kp = nullptr, *nkp;
+    size_t len = 0;
+    int error;
+    int ctl[4] = {CTL_KERN, KERN_PROC, KERN_PROC_PID | KERN_PROC_INC_THREAD,
+                  pid};
+
+    while (1) {
+      error = sysctl(ctl, 4, kp, &len, nullptr, 0);
+      if (kp == nullptr || (error != 0 && errno == ENOMEM)) {
+        // Add extra space in case threads are added before next call.
+        len += sizeof(*kp) + len / 10;
+        nkp = (struct kinfo_proc *)realloc(kp, len);
+        if (nkp == nullptr) {
+          free(kp);
+          return nullptr;
+        }
+        kp = nkp;
+        continue;
+      }
+      if (error != 0)
+        len = 0;
+      break;
+    }
+
+    for (size_t i = 0; i < len / sizeof(*kp); i++) {
+      if (kp[i].ki_tid == (lwpid_t)GetID()) {
+        m_thread_name.append(kp[i].ki_tdname,
+                             kp[i].ki_tdname + strlen(kp[i].ki_tdname));
+        break;
+      }
+    }
+    free(kp);
     m_thread_name_valid = true;
   }
 

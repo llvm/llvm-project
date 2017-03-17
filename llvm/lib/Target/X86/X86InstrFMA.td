@@ -191,13 +191,15 @@ multiclass fma3s_rm_int<bits<8> opc, string OpcodeStr,
 multiclass fma3s_forms<bits<8> opc132, bits<8> opc213, bits<8> opc231,
                        string OpStr, string PackTy, string Suff,
                        SDNode OpNode, RegisterClass RC,
-                       X86MemOperand x86memop> {
-  defm NAME#132#Suff : fma3s_rm<opc132, !strconcat(OpStr, "132", PackTy),
-                                x86memop, RC>;
-  defm NAME#213#Suff : fma3s_rm<opc213, !strconcat(OpStr, "213", PackTy),
-                                x86memop, RC, OpNode>;
-  defm NAME#231#Suff : fma3s_rm<opc231, !strconcat(OpStr, "231", PackTy),
-                                x86memop, RC>;
+                       X86MemOperand x86memop> { 
+  let Predicates = [HasFMA, NoAVX512] in {
+    defm NAME#132#Suff : fma3s_rm<opc132, !strconcat(OpStr, "132", PackTy),
+                                  x86memop, RC>;
+    defm NAME#213#Suff : fma3s_rm<opc213, !strconcat(OpStr, "213", PackTy),
+                                  x86memop, RC, OpNode>;
+    defm NAME#231#Suff : fma3s_rm<opc231, !strconcat(OpStr, "231", PackTy),
+                                  x86memop, RC>;
+  }
 }
 
 // The FMA 213 form is created for lowering of scalar FMA intrinscis
