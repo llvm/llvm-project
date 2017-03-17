@@ -10,9 +10,6 @@
 #ifndef liblldb_NativeProcessProtocol_h_
 #define liblldb_NativeProcessProtocol_h_
 
-#include <mutex>
-#include <vector>
-
 #include "lldb/Host/MainLoop.h"
 #include "lldb/Utility/Error.h"
 #include "lldb/lldb-private-forward.h"
@@ -20,6 +17,8 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/MemoryBuffer.h"
+#include <vector>
 
 #include "NativeBreakpointList.h"
 #include "NativeWatchpointList.h"
@@ -151,6 +150,9 @@ public:
   bool CanResume() const { return m_state == lldb::eStateStopped; }
 
   bool GetByteOrder(lldb::ByteOrder &byte_order) const;
+
+  virtual llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
+  GetAuxvData() const = 0;
 
   //----------------------------------------------------------------------
   // Exit Status

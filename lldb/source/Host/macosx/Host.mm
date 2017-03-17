@@ -1448,7 +1448,3 @@ void Host::SystemLog(SystemLogType type, const char *format, va_list args) {
     ::asl_vlog(NULL, g_aslmsg, asl_level, format, args);
   }
 }
-
-lldb::DataBufferSP Host::GetAuxvData(lldb_private::Process *process) {
-  return lldb::DataBufferSP();
-}

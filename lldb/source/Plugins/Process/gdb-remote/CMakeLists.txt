@@ -2,6 +2,15 @@ if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
   include_directories(${LIBXML2_INCLUDE_DIR})
 endif()
 
+set(LLDB_PLUGINS
+  lldbPluginProcessUtility
+  lldbPluginPlatformMacOSX
+)
+
+if(CMAKE_SYSTEM_NAME MATCHES "Linux|Android")
+  list(APPEND LLDB_PLUGINS lldbPluginProcessLinux)
+endif()
+
 add_lldb_library(lldbPluginProcessGDBRemote PLUGIN
   GDBRemoteClientBase.cpp
   GDBRemoteCommunication.cpp
@@ -24,8 +33,7 @@ add_lldb_library(lldbPluginProcessGDBRemote PLUGIN
     lldbSymbol
     lldbTarget
     lldbUtility
-    lldbPluginProcessUtility
-    lldbPluginPlatformMacOSX
+    ${LLDB_PLUGINS}
   LINK_COMPONENTS
     Support
   )

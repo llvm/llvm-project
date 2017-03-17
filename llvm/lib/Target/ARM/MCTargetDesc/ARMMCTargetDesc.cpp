@@ -260,8 +260,23 @@ public:
       return false;
 
     int64_t Imm = Inst.getOperand(0).getImm();
-    // FIXME: This is not right for thumb.
     Target = Addr+Imm+8; // In ARM mode the PC is always off by 8 bytes.
+    return true;
+  }
+};
+
+class ThumbMCInstrAnalysis : public ARMMCInstrAnalysis {
+public:
+  ThumbMCInstrAnalysis(const MCInstrInfo *Info) : ARMMCInstrAnalysis(Info) {}
+
+  bool evaluateBranch(const MCInst &Inst, uint64_t Addr,
+                      uint64_t Size, uint64_t &Target) const override {
+    // We only handle PCRel branches for now.
+    if (Info->get(Inst.getOpcode()).OpInfo[0].OperandType!=MCOI::OPERAND_PCREL)
+      return false;
+
+    int64_t Imm = Inst.getOperand(0).getImm();
+    Target = Addr+Imm+4; // In Thumb mode the PC is always off by 4 bytes.
     return true;
   }
 };
@@ -270,6 +285,10 @@ public:
 
 static MCInstrAnalysis *createARMMCInstrAnalysis(const MCInstrInfo *Info) {
   return new ARMMCInstrAnalysis(Info);
+}
+
+static MCInstrAnalysis *createThumbMCInstrAnalysis(const MCInstrInfo *Info) {
+  return new ThumbMCInstrAnalysis(Info);
 }
 
 // Force static initialization.
@@ -288,9 +307,6 @@ extern "C" void LLVMInitializeARMTargetMC() {
     // Register the MC subtarget info.
     TargetRegistry::RegisterMCSubtargetInfo(*T,
                                             ARM_MC::createARMMCSubtargetInfo);
-
-    // Register the MC instruction analyzer.
-    TargetRegistry::RegisterMCInstrAnalysis(*T, createARMMCInstrAnalysis);
 
     TargetRegistry::RegisterELFStreamer(*T, createELFStreamer);
     TargetRegistry::RegisterCOFFStreamer(*T, createARMWinCOFFStreamer);
@@ -312,6 +328,12 @@ extern "C" void LLVMInitializeARMTargetMC() {
     // Register the MC relocation info.
     TargetRegistry::RegisterMCRelocationInfo(*T, createARMMCRelocationInfo);
   }
+
+  // Register the MC instruction analyzer.
+  for (Target *T : {&getTheARMLETarget(), &getTheARMBETarget()})
+    TargetRegistry::RegisterMCInstrAnalysis(*T, createARMMCInstrAnalysis);
+  for (Target *T : {&getTheThumbLETarget(), &getTheThumbBETarget()})
+    TargetRegistry::RegisterMCInstrAnalysis(*T, createThumbMCInstrAnalysis);
 
   // Register the MC Code Emitter
   for (Target *T : {&getTheARMLETarget(), &getTheThumbLETarget()})

@@ -31,7 +31,6 @@
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/DataExtractor.h"
 
-#include "Plugins/Process/Linux/ProcFileReader.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Symbol/ObjectFile.h"
 
@@ -113,15 +112,6 @@ static bool GetStatusInfo(::pid_t Pid, ProcessInstanceInfo &ProcessInfo,
     }
   }
   return true;
-}
-
-lldb::DataBufferSP Host::GetAuxvData(lldb_private::Process *process) {
-  return process_linux::ProcFileReader::ReadIntoDataBuffer(process->GetID(),
-                                                           "auxv");
-}
-
-lldb::DataBufferSP Host::GetAuxvData(lldb::pid_t pid) {
-  return process_linux::ProcFileReader::ReadIntoDataBuffer(pid, "auxv");
 }
 
 static bool IsDirNumeric(const char *dname) {

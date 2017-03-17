@@ -272,7 +272,7 @@ void InputSection::copyRelocations(uint8_t *Buf, ArrayRef<RelTy> Rels) {
       }
 
       if (Config->isRela()) {
-        P->r_addend += Body.getVA<ELFT>() - Section->getOutputSection()->Addr;
+        P->r_addend += Body.getVA() - Section->getOutputSection()->Addr;
       } else if (Config->Relocatable) {
         const uint8_t *BufLoc = RelocatedSection->Data.begin() + Rel.r_offset;
         RelocatedSection->Relocations.push_back(
@@ -344,17 +344,16 @@ getRelocTargetVA(uint32_t Type, int64_t A, typename ELFT::uint P,
     return getAArch64Page(In<ELFT>::Got->getGlobalDynAddr(Body) + A) -
            getAArch64Page(P);
   case R_PLT:
-    return Body.getPltVA<ELFT>() + A;
+    return Body.getPltVA() + A;
   case R_PLT_PC:
   case R_PPC_PLT_OPD:
-    return Body.getPltVA<ELFT>() + A - P;
+    return Body.getPltVA() + A - P;
   case R_SIZE:
     return Body.getSize<ELFT>() + A;
   case R_GOTREL:
-    return Body.getVA<ELFT>(A) - In<ELFT>::Got->getVA();
+    return Body.getVA(A) - In<ELFT>::Got->getVA();
   case R_GOTREL_FROM_END:
-    return Body.getVA<ELFT>(A) - In<ELFT>::Got->getVA() -
-           In<ELFT>::Got->getSize();
+    return Body.getVA(A) - In<ELFT>::Got->getVA() - In<ELFT>::Got->getSize();
   case R_RELAX_TLS_GD_TO_IE_END:
   case R_GOT_FROM_END:
     return Body.getGotOffset<ELFT>() + A - In<ELFT>::Got->getSize();
@@ -384,15 +383,14 @@ getRelocTargetVA(uint32_t Type, int64_t A, typename ELFT::uint P,
         Body.symbol()->isWeak())
       return 0;
     if (Target->TcbSize)
-      return Body.getVA<ELFT>(A) +
-             alignTo(Target->TcbSize, Out::TlsPhdr->p_align);
-    return Body.getVA<ELFT>(A) - Out::TlsPhdr->p_memsz;
+      return Body.getVA(A) + alignTo(Target->TcbSize, Out::TlsPhdr->p_align);
+    return Body.getVA(A) - Out::TlsPhdr->p_memsz;
   case R_RELAX_TLS_GD_TO_LE_NEG:
   case R_NEG_TLS:
-    return Out::TlsPhdr->p_memsz - Body.getVA<ELFT>(A);
+    return Out::TlsPhdr->p_memsz - Body.getVA(A);
   case R_ABS:
   case R_RELAX_GOT_PC_NOPIC:
-    return Body.getVA<ELFT>(A);
+    return Body.getVA(A);
   case R_GOT_OFF:
     return Body.getGotOffset<ELFT>() + A;
   case R_MIPS_GOT_LOCAL_PAGE:
@@ -411,7 +409,7 @@ getRelocTargetVA(uint32_t Type, int64_t A, typename ELFT::uint P,
            In<ELFT>::MipsGot->getBodyEntryOffset(Body, A) -
            In<ELFT>::MipsGot->getGp();
   case R_MIPS_GOTREL:
-    return Body.getVA<ELFT>(A) - In<ELFT>::MipsGot->getGp();
+    return Body.getVA(A) - In<ELFT>::MipsGot->getGp();
   case R_MIPS_TLSGD:
     return In<ELFT>::MipsGot->getVA() + In<ELFT>::MipsGot->getTlsOffset() +
            In<ELFT>::MipsGot->getGlobalDynOffset(Body) -
@@ -420,7 +418,7 @@ getRelocTargetVA(uint32_t Type, int64_t A, typename ELFT::uint P,
     return In<ELFT>::MipsGot->getVA() + In<ELFT>::MipsGot->getTlsOffset() +
            In<ELFT>::MipsGot->getTlsIndexOff() - In<ELFT>::MipsGot->getGp();
   case R_PPC_OPD: {
-    uint64_t SymVA = Body.getVA<ELFT>(A);
+    uint64_t SymVA = Body.getVA(A);
     // If we have an undefined weak symbol, we might get here with a symbol
     // address of zero. That could overflow, but the code must be unreachable,
     // so don't bother doing anything at all.
@@ -447,12 +445,12 @@ getRelocTargetVA(uint32_t Type, int64_t A, typename ELFT::uint P,
         return getAArch64UndefinedRelativeWeakVA(Type, A, P);
     }
   case R_RELAX_GOT_PC:
-    return Body.getVA<ELFT>(A) - P;
+    return Body.getVA(A) - P;
   case R_PLT_PAGE_PC:
   case R_PAGE_PC:
     if (Body.isUndefined() && !Body.isLocal() && Body.symbol()->isWeak())
       return getAArch64Page(A);
-    return getAArch64Page(Body.getVA<ELFT>(A)) - getAArch64Page(P);
+    return getAArch64Page(Body.getVA(A)) - getAArch64Page(P);
   }
   llvm_unreachable("Invalid expression");
 }

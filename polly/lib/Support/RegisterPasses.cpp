@@ -194,6 +194,11 @@ static cl::opt<bool>
                    cl::desc("Simplify SCoP after optimizations"),
                    cl::init(false), cl::cat(PollyCategory));
 
+static cl::opt<bool> EnablePruneUnprofitable(
+    "polly-enable-prune-unprofitable",
+    cl::desc("Bail out on unprofitable SCoPs before rescheduling"), cl::Hidden,
+    cl::init(true), cl::cat(PollyCategory));
+
 namespace polly {
 void initializePollyPasses(PassRegistry &Registry) {
   initializeCodeGenerationPass(Registry);
@@ -219,6 +224,7 @@ void initializePollyPasses(PassRegistry &Registry) {
   initializeDeLICMPass(Registry);
   initializeSimplifyPass(Registry);
   initializeDumpModulePass(Registry);
+  initializePruneUnprofitablePass(Registry);
 }
 
 /// Register Polly passes such that they form a polyhedral optimizer.
@@ -281,6 +287,9 @@ void registerPollyPasses(llvm::legacy::PassManagerBase &PM) {
 
   if (DeadCodeElim)
     PM.add(polly::createDeadCodeElimPass());
+
+  if (EnablePruneUnprofitable)
+    PM.add(polly::createPruneUnprofitablePass());
 
   if (Target == TARGET_GPU) {
     // GPU generation provides its own scheduling optimization strategy.

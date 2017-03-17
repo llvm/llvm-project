@@ -38,8 +38,7 @@ DefinedRegular *ElfSym::MipsGpDisp;
 DefinedRegular *ElfSym::MipsLocalGp;
 DefinedRegular *ElfSym::MipsGp;
 
-template <class ELFT>
-static typename ELFT::uint getSymVA(const SymbolBody &Body, int64_t &Addend) {
+static uint64_t getSymVA(const SymbolBody &Body, int64_t &Addend) {
   switch (Body.kind()) {
   case SymbolBody::DefinedRegularKind: {
     auto &D = cast<DefinedRegular>(Body);
@@ -101,14 +100,15 @@ static typename ELFT::uint getSymVA(const SymbolBody &Body, int64_t &Addend) {
   case SymbolBody::DefinedCommonKind:
     if (!Config->DefineCommon)
       return 0;
-    return In<ELFT>::Common->OutSec->Addr + In<ELFT>::Common->OutSecOff +
+    return InX::Common->OutSec->Addr + InX::Common->OutSecOff +
            cast<DefinedCommon>(Body).Offset;
   case SymbolBody::SharedKind: {
     auto &SS = cast<SharedSymbol>(Body);
     if (SS.NeedsCopy)
-      return SS.Section->OutSec->Addr + SS.Section->OutSecOff;
+      return SS.CopyRelSec->OutSec->Addr + SS.CopyRelSec->OutSecOff +
+             SS.CopyRelSecOff;
     if (SS.NeedsPltAddr)
-      return Body.getPltVA<ELFT>();
+      return Body.getPltVA();
     return 0;
   }
   case SymbolBody::UndefinedKind:
@@ -157,9 +157,8 @@ bool SymbolBody::isPreemptible() const {
   return true;
 }
 
-template <class ELFT>
-typename ELFT::uint SymbolBody::getVA(int64_t Addend) const {
-  typename ELFT::uint OutVA = getSymVA<ELFT>(*this, Addend);
+uint64_t SymbolBody::getVA(int64_t Addend) const {
+  uint64_t OutVA = getSymVA(*this, Addend);
   return OutVA + Addend;
 }
 
@@ -181,10 +180,10 @@ uint64_t SymbolBody::getGotPltOffset() const {
   return GotPltIndex * Target->GotPltEntrySize;
 }
 
-template <class ELFT> typename ELFT::uint SymbolBody::getPltVA() const {
+uint64_t SymbolBody::getPltVA() const {
   if (this->IsInIplt)
-    return In<ELFT>::Iplt->getVA() + PltIndex * Target->PltEntrySize;
-  return In<ELFT>::Plt->getVA() + Target->PltHeaderSize +
+    return InX::Iplt->getVA() + PltIndex * Target->PltEntrySize;
+  return InX::Plt->getVA() + Target->PltHeaderSize +
          PltIndex * Target->PltEntrySize;
 }
 
@@ -207,7 +206,7 @@ OutputSection *SymbolBody::getOutputSection() const {
 
   if (auto *S = dyn_cast<SharedSymbol>(this)) {
     if (S->NeedsCopy)
-      return S->Section->OutSec;
+      return S->CopyRelSec->OutSec;
     return nullptr;
   }
 
@@ -376,11 +375,6 @@ std::string lld::toString(const SymbolBody &B) {
   return B.getName();
 }
 
-template uint32_t SymbolBody::template getVA<ELF32LE>(int64_t) const;
-template uint32_t SymbolBody::template getVA<ELF32BE>(int64_t) const;
-template uint64_t SymbolBody::template getVA<ELF64LE>(int64_t) const;
-template uint64_t SymbolBody::template getVA<ELF64BE>(int64_t) const;
-
 template uint32_t SymbolBody::template getGotVA<ELF32LE>() const;
 template uint32_t SymbolBody::template getGotVA<ELF32BE>() const;
 template uint64_t SymbolBody::template getGotVA<ELF64LE>() const;
@@ -390,11 +384,6 @@ template uint32_t SymbolBody::template getGotOffset<ELF32LE>() const;
 template uint32_t SymbolBody::template getGotOffset<ELF32BE>() const;
 template uint64_t SymbolBody::template getGotOffset<ELF64LE>() const;
 template uint64_t SymbolBody::template getGotOffset<ELF64BE>() const;
-
-template uint32_t SymbolBody::template getPltVA<ELF32LE>() const;
-template uint32_t SymbolBody::template getPltVA<ELF32BE>() const;
-template uint64_t SymbolBody::template getPltVA<ELF64LE>() const;
-template uint64_t SymbolBody::template getPltVA<ELF64BE>() const;
 
 template uint32_t SymbolBody::template getSize<ELF32LE>() const;
 template uint32_t SymbolBody::template getSize<ELF32BE>() const;

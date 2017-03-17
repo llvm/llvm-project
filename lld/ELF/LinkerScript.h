@@ -38,28 +38,23 @@ class OutputSectionFactory;
 class InputSectionBase;
 class SectionBase;
 
+struct ExprValue {
+  SectionBase *Sec;
+  uint64_t Val;
+  bool ForceAbsolute;
+
+  ExprValue(SectionBase *Sec, bool ForceAbsolute, uint64_t Val)
+      : Sec(Sec), Val(Val), ForceAbsolute(ForceAbsolute) {}
+  ExprValue(SectionBase *Sec, uint64_t Val) : ExprValue(Sec, false, Val) {}
+  ExprValue(uint64_t Val) : ExprValue(nullptr, Val) {}
+  bool isAbsolute() const { return ForceAbsolute || Sec == nullptr; }
+  uint64_t getValue() const;
+};
+
 // This represents an expression in the linker script.
 // ScriptParser::readExpr reads an expression and returns an Expr.
-// Later, we evaluate the expression by calling the function
-// with the value of special context variable ".".
-struct Expr {
-  std::function<uint64_t()> Val;
-  std::function<bool()> IsAbsolute;
-
-  // If expression is section-relative the function below is used
-  // to get the output section pointer.
-  std::function<SectionBase *()> Section;
-
-  uint64_t operator()() const { return Val(); }
-  operator bool() const { return (bool)Val; }
-
-  Expr(std::function<uint64_t()> Val, std::function<bool()> IsAbsolute,
-       std::function<SectionBase *()> Section)
-      : Val(Val), IsAbsolute(IsAbsolute), Section(Section) {}
-  template <typename T>
-  Expr(T V) : Expr(V, [] { return true; }, [] { return nullptr; }) {}
-  Expr() : Expr(nullptr) {}
-};
+// Later, we evaluate the expression by calling the function.
+typedef std::function<ExprValue()> Expr;
 
 // Parses a linker script. Calling this function updates
 // Config and ScriptConfig.
@@ -205,7 +200,6 @@ struct MemoryRegion {
   uint32_t NegFlags;
 };
 
-
 // ScriptConfiguration holds linker script parse results.
 struct ScriptConfiguration {
   // Used to assign addresses to sections.
@@ -248,6 +242,7 @@ protected:
   void process(BaseCommand &Base);
 
   OutputSection *Aether;
+  bool ErrorOnMissingSection = false;
 
   // "ScriptConfig" is a bit too long, so define a short name for it.
   ScriptConfiguration &Opt = *ScriptConfig;
@@ -269,10 +264,8 @@ public:
   uint64_t getOutputSectionSize(StringRef S);
   void discard(ArrayRef<InputSectionBase *> V);
 
-  virtual uint64_t getSymbolValue(const Twine &Loc, StringRef S) = 0;
+  virtual ExprValue getSymbolValue(const Twine &Loc, StringRef S) = 0;
   virtual bool isDefined(StringRef S) = 0;
-  virtual bool isAbsolute(StringRef S) = 0;
-  virtual OutputSection *getSymbolSection(StringRef S) = 0;
 
   std::vector<OutputSection *> *OutputSections;
   void addOrphanSections(OutputSectionFactory &Factory);
@@ -303,10 +296,8 @@ public:
   void addSymbol(SymbolAssignment *Cmd);
   void processCommands(OutputSectionFactory &Factory);
 
-  uint64_t getSymbolValue(const Twine &Loc, StringRef S) override;
+  ExprValue getSymbolValue(const Twine &Loc, StringRef S) override;
   bool isDefined(StringRef S) override;
-  bool isAbsolute(StringRef S) override;
-  OutputSection *getSymbolSection(StringRef S) override;
 };
 
 // Variable template is a C++14 feature, so we can't template

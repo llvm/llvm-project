@@ -89,7 +89,8 @@ static cl::opt<Dependences::AnalysisLevel> OptAnalysisLevel(
 static __isl_give isl_map *tag(__isl_take isl_map *Relation,
                                __isl_take isl_id *TagId) {
   isl_space *Space = isl_map_get_space(Relation);
-  Space = isl_space_drop_dims(Space, isl_dim_out, 0, isl_map_n_out(Relation));
+  Space = isl_space_drop_dims(Space, isl_dim_out, 0,
+                              isl_map_dim(Relation, isl_dim_out));
   Space = isl_space_set_tuple_id(Space, isl_dim_out, TagId);
   isl_multi_aff *Tag = isl_multi_aff_domain_map(Space);
   Relation = isl_map_preimage_domain_multi_aff(Relation, Tag);
@@ -166,6 +167,8 @@ static void collectInfo(Scop &S, isl_union_map *&Read, isl_union_map *&Write,
 
       if (MA->isRead())
         Read = isl_union_map_add_map(Read, accdom);
+      else if (MA->isMayWrite())
+        MayWrite = isl_union_map_add_map(MayWrite, accdom);
       else
         Write = isl_union_map_add_map(Write, accdom);
     }
@@ -365,7 +368,7 @@ void Dependences::calculateDependences(Scop &S) {
 
       Flow = buildFlow(Read, Write, MayWrite, Schedule);
 
-      RAW = isl_union_flow_get_must_dependence(Flow);
+      RAW = isl_union_flow_get_may_dependence(Flow);
       isl_union_flow_free(Flow);
 
       Flow = buildFlow(Write, Write, Read, Schedule);

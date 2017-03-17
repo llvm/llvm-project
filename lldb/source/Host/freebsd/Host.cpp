@@ -243,23 +243,6 @@ bool Host::GetProcessInfo(lldb::pid_t pid, ProcessInstanceInfo &process_info) {
   return false;
 }
 
-lldb::DataBufferSP Host::GetAuxvData(lldb_private::Process *process) {
-  int mib[4] = {CTL_KERN, KERN_PROC, KERN_PROC_AUXV, 0};
-  size_t auxv_size = AT_COUNT * sizeof(Elf_Auxinfo);
-  DataBufferSP buf_sp;
-
-  std::unique_ptr<DataBufferHeap> buf_ap(new DataBufferHeap(auxv_size, 0));
-
-  mib[3] = process->GetID();
-  if (::sysctl(mib, 4, buf_ap->GetBytes(), &auxv_size, NULL, 0) == 0) {
-    buf_sp.reset(buf_ap.release());
-  } else {
-    perror("sysctl failed on auxv");
-  }
-
-  return buf_sp;
-}
-
 Error Host::ShellExpandArguments(ProcessLaunchInfo &launch_info) {
   return Error("unimplemented");
 }

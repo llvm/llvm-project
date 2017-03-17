@@ -63,33 +63,22 @@ template <class ELFT> static std::vector<DefinedCommon *> getCommonSymbols() {
 
 // Find all common symbols and allocate space for them.
 template <class ELFT> InputSection *elf::createCommonSection() {
-  auto *Ret = make<InputSection>(SHF_ALLOC | SHF_WRITE, SHT_NOBITS, 1,
-                                 ArrayRef<uint8_t>(), "COMMON");
-  Ret->Live = true;
-
   if (!Config->DefineCommon)
-    return Ret;
+    return nullptr;
 
   // Sort the common symbols by alignment as an heuristic to pack them better.
   std::vector<DefinedCommon *> Syms = getCommonSymbols<ELFT>();
+  if (Syms.empty())
+    return nullptr;
+
   std::stable_sort(Syms.begin(), Syms.end(),
                    [](const DefinedCommon *A, const DefinedCommon *B) {
                      return A->Alignment > B->Alignment;
                    });
+  BssSection *Ret = make<BssSection>("COMMON");
+  for (DefinedCommon *Sym : Syms)
+    Sym->Offset = Ret->reserveSpace(Sym->Alignment, Sym->Size);
 
-  // Assign offsets to symbols.
-  size_t Size = 0;
-  uint32_t Alignment = 1;
-  for (DefinedCommon *Sym : Syms) {
-    Alignment = std::max(Alignment, Sym->Alignment);
-    Size = alignTo(Size, Sym->Alignment);
-
-    // Compute symbol offset relative to beginning of input section.
-    Sym->Offset = Size;
-    Size += Sym->Size;
-  }
-  Ret->Alignment = Alignment;
-  Ret->Data = makeArrayRef<uint8_t>(nullptr, Size);
   return Ret;
 }
 
@@ -376,12 +365,16 @@ void BuildIdSection<ELFT>::computeHash(
   HashFn(HashBuf, Hashes);
 }
 
-template <class ELFT>
-CopyRelSection<ELFT>::CopyRelSection(bool ReadOnly, uint32_t Alignment,
-                                     size_t S)
-    : SyntheticSection(SHF_ALLOC, SHT_NOBITS, Alignment,
-                       ReadOnly ? ".bss.rel.ro" : ".bss"),
-      Size(S) {}
+BssSection::BssSection(StringRef Name)
+    : SyntheticSection(SHF_ALLOC | SHF_WRITE, SHT_NOBITS, 0, Name) {}
+
+size_t BssSection::reserveSpace(uint32_t Alignment, size_t Size) {
+  if (OutSec)
+    OutSec->updateAlignment(Alignment);
+  this->Size = alignTo(this->Size, Alignment) + Size;
+  this->Alignment = std::max<uint32_t>(this->Alignment, Alignment);
+  return this->Size - Size;
+}
 
 template <class ELFT>
 void BuildIdSection<ELFT>::writeBuildId(ArrayRef<uint8_t> Buf) {
@@ -787,7 +780,7 @@ MipsGotSection<ELFT>::getPageEntryOffset(const SymbolBody &B,
   const OutputSection *OutSec =
       cast<DefinedRegular>(&B)->Section->getOutputSection();
   uintX_t SecAddr = getMipsPageAddr(OutSec->Addr);
-  uintX_t SymAddr = getMipsPageAddr(B.getVA<ELFT>(Addend));
+  uintX_t SymAddr = getMipsPageAddr(B.getVA(Addend));
   uintX_t Index = PageIndexMap.lookup(OutSec) + (SymAddr - SecAddr) / 0xffff;
   assert(Index < PageEntriesNum);
   return (HeaderEntriesNum + Index) * sizeof(uintX_t);
@@ -867,7 +860,7 @@ template <class ELFT> bool MipsGotSection<ELFT>::empty() const {
 
 template <class ELFT>
 typename MipsGotSection<ELFT>::uintX_t MipsGotSection<ELFT>::getGp() const {
-  return ElfSym::MipsGp->template getVA<ELFT>(0);
+  return ElfSym::MipsGp->getVA(0);
 }
 
 template <class ELFT>
@@ -908,7 +901,7 @@ template <class ELFT> void MipsGotSection<ELFT>::writeTo(uint8_t *Buf) {
     uint8_t *Entry = Buf;
     Buf += sizeof(uintX_t);
     const SymbolBody *Body = SA.first;
-    uintX_t VA = Body->template getVA<ELFT>(SA.second);
+    uintX_t VA = Body->getVA(SA.second);
     writeUint<ELFT>(Entry, VA);
   };
   std::for_each(std::begin(LocalEntries), std::end(LocalEntries), AddEntry);
@@ -924,7 +917,7 @@ template <class ELFT> void MipsGotSection<ELFT>::writeTo(uint8_t *Buf) {
   for (const SymbolBody *B : TlsEntries) {
     if (!B || B->isPreemptible())
       continue;
-    uintX_t VA = B->getVA<ELFT>();
+    uintX_t VA = B->getVA();
     if (B->GotIndex != -1U) {
       uint8_t *Entry = Buf + B->GotIndex * sizeof(uintX_t);
       writeUint<ELFT>(Entry, VA - 0x7000);
@@ -1184,7 +1177,7 @@ template <class ELFT> void DynamicSection<ELFT>::writeTo(uint8_t *Buf) {
       P->d_un.d_val = E.OutSec->Size;
       break;
     case Entry::SymAddr:
-      P->d_un.d_ptr = E.Sym->template getVA<ELFT>();
+      P->d_un.d_ptr = E.Sym->getVA();
       break;
     case Entry::PlainInt:
       P->d_un.d_val = E.Val;
@@ -1194,18 +1187,17 @@ template <class ELFT> void DynamicSection<ELFT>::writeTo(uint8_t *Buf) {
   }
 }
 
-template <class ELFT>
-uint64_t DynamicReloc<ELFT>::getOffset() const {
+uint64_t DynamicReloc::getOffset() const {
   return InputSec->OutSec->Addr + InputSec->getOffset(OffsetInSec);
 }
 
-template <class ELFT> int64_t DynamicReloc<ELFT>::getAddend() const {
+int64_t DynamicReloc::getAddend() const {
   if (UseSymVA)
-    return Sym->getVA<ELFT>(Addend);
+    return Sym->getVA(Addend);
   return Addend;
 }
 
-template <class ELFT> uint32_t DynamicReloc<ELFT>::getSymIndex() const {
+uint32_t DynamicReloc::getSymIndex() const {
   if (Sym && !UseSymVA)
     return Sym->DynsymIndex;
   return 0;
@@ -1220,7 +1212,7 @@ RelocationSection<ELFT>::RelocationSection(StringRef Name, bool Sort)
 }
 
 template <class ELFT>
-void RelocationSection<ELFT>::addReloc(const DynamicReloc<ELFT> &Reloc) {
+void RelocationSection<ELFT>::addReloc(const DynamicReloc &Reloc) {
   if (Reloc.Type == Target->RelativeRel)
     ++NumRelativeRelocs;
   Relocs.push_back(Reloc);
@@ -1238,7 +1230,7 @@ static bool compRelocations(const RelTy &A, const RelTy &B) {
 
 template <class ELFT> void RelocationSection<ELFT>::writeTo(uint8_t *Buf) {
   uint8_t *BufBegin = Buf;
-  for (const DynamicReloc<ELFT> &Rel : Relocs) {
+  for (const DynamicReloc &Rel : Relocs) {
     auto *P = reinterpret_cast<Elf_Rela *>(Buf);
     Buf += Config->isRela() ? sizeof(Elf_Rela) : sizeof(Elf_Rel);
 
@@ -1402,7 +1394,7 @@ template <class ELFT> void SymbolTableSection<ELFT>::writeTo(uint8_t *Buf) {
     if (!Config->DefineCommon && isa<DefinedCommon>(Body))
       ESym->st_value = cast<DefinedCommon>(Body)->Alignment;
     else
-      ESym->st_value = Body->getVA<ELFT>();
+      ESym->st_value = Body->getVA();
 
     ++ESym;
   }
@@ -1642,12 +1634,11 @@ template <class ELFT> void HashTableSection<ELFT>::writeTo(uint8_t *Buf) {
   }
 }
 
-template <class ELFT>
-PltSection<ELFT>::PltSection(size_t S)
+PltSection::PltSection(size_t S)
     : SyntheticSection(SHF_ALLOC | SHF_EXECINSTR, SHT_PROGBITS, 16, ".plt"),
       HeaderSize(S) {}
 
-template <class ELFT> void PltSection<ELFT>::writeTo(uint8_t *Buf) {
+void PltSection::writeTo(uint8_t *Buf) {
   // At beginning of PLT but not the IPLT, we have code to call the dynamic
   // linker to resolve dynsyms at runtime. Write such code.
   if (HeaderSize != 0)
@@ -1666,7 +1657,7 @@ template <class ELFT> void PltSection<ELFT>::writeTo(uint8_t *Buf) {
   }
 }
 
-template <class ELFT> void PltSection<ELFT>::addEntry(SymbolBody &Sym) {
+template <class ELFT> void PltSection::addEntry(SymbolBody &Sym) {
   Sym.PltIndex = Entries.size();
   RelocationSection<ELFT> *PltRelocSection = In<ELFT>::RelaPlt;
   if (HeaderSize == 0) {
@@ -1677,13 +1668,13 @@ template <class ELFT> void PltSection<ELFT>::addEntry(SymbolBody &Sym) {
   Entries.push_back(std::make_pair(&Sym, RelOff));
 }
 
-template <class ELFT> size_t PltSection<ELFT>::getSize() const {
+size_t PltSection::getSize() const {
   return HeaderSize + Entries.size() * Target->PltEntrySize;
 }
 
 // Some architectures such as additional symbols in the PLT section. For
 // example ARM uses mapping symbols to aid disassembly
-template <class ELFT> void PltSection<ELFT>::addSymbols() {
+void PltSection::addSymbols() {
   // The PLT may have symbols defined for the Header, the IPLT has no header
   if (HeaderSize != 0)
     Target->addPltHeaderSymbols(this);
@@ -1694,8 +1685,8 @@ template <class ELFT> void PltSection<ELFT>::addSymbols() {
   }
 }
 
-template <class ELFT> unsigned PltSection<ELFT>::getPltRelocOff() const {
-  return (HeaderSize == 0) ? In<ELFT>::Plt->getSize() : 0;
+unsigned PltSection::getPltRelocOff() const {
+  return (HeaderSize == 0) ? InX::Plt->getSize() : 0;
 }
 
 template <class ELFT>
@@ -2259,13 +2250,26 @@ InputSection *ThunkSection::getTargetInputSection() const {
   return T->getTargetInputSection();
 }
 
+namespace lld {
+namespace elf {
+template void PltSection::addEntry<ELF32LE>(SymbolBody &Sym);
+template void PltSection::addEntry<ELF32BE>(SymbolBody &Sym);
+template void PltSection::addEntry<ELF64LE>(SymbolBody &Sym);
+template void PltSection::addEntry<ELF64BE>(SymbolBody &Sym);
+}
+}
+
 InputSection *InX::ARMAttributes;
+BssSection *InX::Bss;
+BssSection *InX::BssRelRo;
 InputSection *InX::Common;
 StringTableSection *InX::DynStrTab;
 InputSection *InX::Interp;
 GotPltSection *InX::GotPlt;
 IgotPltSection *InX::IgotPlt;
 MipsRldMapSection *InX::MipsRldMap;
+PltSection *InX::Plt;
+PltSection *InX::Iplt;
 StringTableSection *InX::ShStrTab;
 StringTableSection *InX::StrTab;
 
@@ -2312,11 +2316,6 @@ template class elf::BuildIdSection<ELF32BE>;
 template class elf::BuildIdSection<ELF64LE>;
 template class elf::BuildIdSection<ELF64BE>;
 
-template class elf::CopyRelSection<ELF32LE>;
-template class elf::CopyRelSection<ELF32BE>;
-template class elf::CopyRelSection<ELF64LE>;
-template class elf::CopyRelSection<ELF64BE>;
-
 template class elf::GotSection<ELF32LE>;
 template class elf::GotSection<ELF32BE>;
 template class elf::GotSection<ELF64LE>;
@@ -2351,11 +2350,6 @@ template class elf::HashTableSection<ELF32LE>;
 template class elf::HashTableSection<ELF32BE>;
 template class elf::HashTableSection<ELF64LE>;
 template class elf::HashTableSection<ELF64BE>;
-
-template class elf::PltSection<ELF32LE>;
-template class elf::PltSection<ELF32BE>;
-template class elf::PltSection<ELF64LE>;
-template class elf::PltSection<ELF64BE>;
 
 template class elf::GdbIndexSection<ELF32LE>;
 template class elf::GdbIndexSection<ELF32BE>;
