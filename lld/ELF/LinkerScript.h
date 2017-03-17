@@ -49,6 +49,7 @@ struct ExprValue {
   ExprValue(uint64_t Val) : ExprValue(nullptr, Val) {}
   bool isAbsolute() const { return ForceAbsolute || Sec == nullptr; }
   uint64_t getValue() const;
+  uint64_t getSecAddr() const;
 };
 
 // This represents an expression in the linker script.

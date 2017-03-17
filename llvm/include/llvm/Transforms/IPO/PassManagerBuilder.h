@@ -153,6 +153,7 @@ public:
   bool PrepareForLTO;
   bool PrepareForThinLTO;
   bool PerformThinLTO;
+  bool DivergentTarget;
 
   /// Enable profile instrumentation pass.
   bool EnablePGOInstrGen;

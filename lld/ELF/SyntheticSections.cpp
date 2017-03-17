@@ -131,7 +131,7 @@ MipsAbiFlagsSection<ELFT> *MipsAbiFlagsSection<ELFT>::create() {
   bool Create = false;
 
   for (InputSectionBase *Sec : InputSections) {
-    if (!Sec->Live || Sec->Type != SHT_MIPS_ABIFLAGS)
+    if (Sec->Type != SHT_MIPS_ABIFLAGS)
       continue;
     Sec->Live = false;
     Create = true;
@@ -200,7 +200,7 @@ MipsOptionsSection<ELFT> *MipsOptionsSection<ELFT>::create() {
   bool Create = false;
 
   for (InputSectionBase *Sec : InputSections) {
-    if (!Sec->Live || Sec->Type != SHT_MIPS_OPTIONS)
+    if (Sec->Type != SHT_MIPS_OPTIONS)
       continue;
     Sec->Live = false;
     Create = true;
@@ -258,7 +258,7 @@ MipsReginfoSection<ELFT> *MipsReginfoSection<ELFT>::create() {
   bool Create = false;
 
   for (InputSectionBase *Sec : InputSections) {
-    if (!Sec->Live || Sec->Type != SHT_MIPS_REGINFO)
+    if (Sec->Type != SHT_MIPS_REGINFO)
       continue;
     Sec->Live = false;
     Create = true;
@@ -1712,7 +1712,6 @@ readCuList(DWARFContext &Dwarf, InputSection *Sec) {
   return Ret;
 }
 
-template <class ELFT>
 static InputSectionBase *findSection(ArrayRef<InputSectionBase *> Arr,
                                      uint64_t Offset) {
   for (InputSectionBase *S : Arr)
@@ -1736,7 +1735,7 @@ readAddressArea(DWARFContext &Dwarf, InputSection *Sec, size_t CurrentCU) {
         Sec->template getFile<ELFT>()->getSections();
 
     for (std::pair<uint64_t, uint64_t> &R : Ranges)
-      if (InputSectionBase *S = findSection<ELFT>(Sections, R.first))
+      if (InputSectionBase *S = findSection(Sections, R.first))
         Ret.push_back({S, R.first - S->getOffsetInFile(),
                        R.second - S->getOffsetInFile(), CurrentCU});
     ++CurrentCU;
@@ -2250,15 +2249,6 @@ InputSection *ThunkSection::getTargetInputSection() const {
   return T->getTargetInputSection();
 }
 
-namespace lld {
-namespace elf {
-template void PltSection::addEntry<ELF32LE>(SymbolBody &Sym);
-template void PltSection::addEntry<ELF32BE>(SymbolBody &Sym);
-template void PltSection::addEntry<ELF64LE>(SymbolBody &Sym);
-template void PltSection::addEntry<ELF64BE>(SymbolBody &Sym);
-}
-}
-
 InputSection *InX::ARMAttributes;
 BssSection *InX::Bss;
 BssSection *InX::BssRelRo;
@@ -2272,6 +2262,11 @@ PltSection *InX::Plt;
 PltSection *InX::Iplt;
 StringTableSection *InX::ShStrTab;
 StringTableSection *InX::StrTab;
+
+template void PltSection::addEntry<ELF32LE>(SymbolBody &Sym);
+template void PltSection::addEntry<ELF32BE>(SymbolBody &Sym);
+template void PltSection::addEntry<ELF64LE>(SymbolBody &Sym);
+template void PltSection::addEntry<ELF64BE>(SymbolBody &Sym);
 
 template InputSection *elf::createCommonSection<ELF32LE>();
 template InputSection *elf::createCommonSection<ELF32BE>();

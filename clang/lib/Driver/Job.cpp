@@ -301,19 +301,33 @@ void Command::setResponseFile(const char *FileName) {
   ResponseFileFlag += FileName;
 }
 
+void Command::setEnvironment(llvm::ArrayRef<const char *> NewEnvironment) {
+  Environment.reserve(NewEnvironment.size() + 1);
+  Environment.assign(NewEnvironment.begin(), NewEnvironment.end());
+  Environment.push_back(nullptr);
+}
+
 int Command::Execute(const StringRef **Redirects, std::string *ErrMsg,
                      bool *ExecutionFailed) const {
   SmallVector<const char*, 128> Argv;
+
+  const char **Envp;
+  if (Environment.empty()) {
+    Envp = nullptr;
+  } else {
+    assert(Environment.back() == nullptr &&
+           "Environment vector should be null-terminated by now");
+    Envp = const_cast<const char **>(Environment.data());
+  }
 
   if (ResponseFile == nullptr) {
     Argv.push_back(Executable);
     Argv.append(Arguments.begin(), Arguments.end());
     Argv.push_back(nullptr);
 
-    return llvm::sys::ExecuteAndWait(Executable, Argv.data(), /*env*/ nullptr,
-                                     Redirects, /*secondsToWait*/ 0,
-                                     /*memoryLimit*/ 0, ErrMsg,
-                                     ExecutionFailed);
+    return llvm::sys::ExecuteAndWait(
+        Executable, Argv.data(), Envp, Redirects, /*secondsToWait*/ 0,
+        /*memoryLimit*/ 0, ErrMsg, ExecutionFailed);
   }
 
   // We need to put arguments in a response file (command is too large)
@@ -337,8 +351,8 @@ int Command::Execute(const StringRef **Redirects, std::string *ErrMsg,
     return -1;
   }
 
-  return llvm::sys::ExecuteAndWait(Executable, Argv.data(), /*env*/ nullptr,
-                                   Redirects, /*secondsToWait*/ 0,
+  return llvm::sys::ExecuteAndWait(Executable, Argv.data(), Envp, Redirects,
+                                   /*secondsToWait*/ 0,
                                    /*memoryLimit*/ 0, ErrMsg, ExecutionFailed);
 }
 

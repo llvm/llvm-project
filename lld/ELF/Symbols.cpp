@@ -163,10 +163,10 @@ uint64_t SymbolBody::getVA(int64_t Addend) const {
 }
 
 template <class ELFT> typename ELFT::uint SymbolBody::getGotVA() const {
-  return In<ELFT>::Got->getVA() + getGotOffset<ELFT>();
+  return In<ELFT>::Got->getVA() + getGotOffset();
 }
 
-template <class ELFT> typename ELFT::uint SymbolBody::getGotOffset() const {
+uint64_t SymbolBody::getGotOffset() const {
   return GotIndex * Target->GotEntrySize;
 }
 
@@ -379,11 +379,6 @@ template uint32_t SymbolBody::template getGotVA<ELF32LE>() const;
 template uint32_t SymbolBody::template getGotVA<ELF32BE>() const;
 template uint64_t SymbolBody::template getGotVA<ELF64LE>() const;
 template uint64_t SymbolBody::template getGotVA<ELF64BE>() const;
-
-template uint32_t SymbolBody::template getGotOffset<ELF32LE>() const;
-template uint32_t SymbolBody::template getGotOffset<ELF32BE>() const;
-template uint64_t SymbolBody::template getGotOffset<ELF64LE>() const;
-template uint64_t SymbolBody::template getGotOffset<ELF64BE>() const;
 
 template uint32_t SymbolBody::template getSize<ELF32LE>() const;
 template uint32_t SymbolBody::template getSize<ELF32BE>() const;

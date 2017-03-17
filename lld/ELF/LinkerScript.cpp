@@ -59,7 +59,23 @@ uint64_t ExprValue::getValue() const {
   return Val;
 }
 
+uint64_t ExprValue::getSecAddr() const {
+  if (Sec)
+    return Sec->getOffset(0) + Sec->getOutputSection()->Addr;
+  return 0;
+}
+
+// Some operations only support one non absolute value. Move the
+// absolute one to the right hand side for convenience.
+static void moveAbsRight(ExprValue &A, ExprValue &B) {
+  if (A.isAbsolute())
+    std::swap(A, B);
+  if (!B.isAbsolute())
+    error("At least one side of the expression must be absolute");
+}
+
 static ExprValue add(ExprValue A, ExprValue B) {
+  moveAbsRight(A, B);
   return {A.Sec, A.ForceAbsolute, A.Val + B.getValue()};
 }
 static ExprValue sub(ExprValue A, ExprValue B) {
@@ -99,10 +115,14 @@ static ExprValue notEqual(ExprValue A, ExprValue B) {
   return A.getValue() != B.getValue();
 }
 static ExprValue bitAnd(ExprValue A, ExprValue B) {
-  return A.getValue() & B.getValue();
+  moveAbsRight(A, B);
+  return {A.Sec, A.ForceAbsolute,
+          (A.getValue() & B.getValue()) - A.getSecAddr()};
 }
 static ExprValue bitOr(ExprValue A, ExprValue B) {
-  return A.getValue() | B.getValue();
+  moveAbsRight(A, B);
+  return {A.Sec, A.ForceAbsolute,
+          (A.getValue() | B.getValue()) - A.getSecAddr()};
 }
 static ExprValue bitNot(ExprValue A) { return ~A.getValue(); }
 static ExprValue minus(ExprValue A) { return -A.getValue(); }

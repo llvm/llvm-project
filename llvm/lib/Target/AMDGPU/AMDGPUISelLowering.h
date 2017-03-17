@@ -235,6 +235,12 @@ enum NodeType : unsigned {
   UMUL,        // 32bit unsigned multiplication
   BRANCH_COND,
   // End AMDIL ISD Opcodes
+
+  // Masked control flow nodes.
+  IF,
+  ELSE,
+  LOOP,
+
   ENDPGM,
   RETURN,
   DWORDADDR,

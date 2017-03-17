@@ -556,8 +556,12 @@ template <class ELFT> void ArchiveFile::parse() {
                MB.getBufferIdentifier() + ": failed to parse archive");
 
   // Read the symbol table to construct Lazy objects.
-  for (const Archive::Symbol &Sym : File->symbols())
+  for (const Archive::Symbol &Sym : File->symbols()) {
     Symtab<ELFT>::X->addLazyArchive(this, Sym);
+  }
+
+  if (File->symbols().begin() == File->symbols().end())
+    Config->ArchiveWithoutSymbolsSeen = true;
 }
 
 // Returns a buffer pointing to a member file containing a given symbol.

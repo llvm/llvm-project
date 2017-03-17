@@ -2730,6 +2730,26 @@ void SelectionDAG::computeKnownBits(SDValue Op, APInt &KnownZero,
     KnownOne = KnownOne2.byteSwap();
     break;
   }
+  case ISD::ABS: {
+    computeKnownBits(Op.getOperand(0), KnownZero2, KnownOne2, DemandedElts,
+                     Depth + 1);
+
+    // If the source's MSB is zero then we know the rest of the bits already.
+    if (KnownZero2[BitWidth - 1]) {
+      KnownZero = KnownZero2;
+      KnownOne = KnownOne2;
+      break;
+    }
+
+    // We only know that the absolute values's MSB will be zero iff there is
+    // a set bit that isn't the sign bit (otherwise it could be INT_MIN).
+    KnownOne2.clearBit(BitWidth - 1);
+    if (KnownOne2.getBoolValue()) {
+      KnownZero = APInt::getSignBit(BitWidth);
+      break;
+    }
+    break;
+  }
   case ISD::UMIN: {
     computeKnownBits(Op.getOperand(0), KnownZero, KnownOne, DemandedElts,
                      Depth + 1);

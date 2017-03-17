@@ -356,7 +356,7 @@ getRelocTargetVA(uint32_t Type, int64_t A, typename ELFT::uint P,
     return Body.getVA(A) - In<ELFT>::Got->getVA() - In<ELFT>::Got->getSize();
   case R_RELAX_TLS_GD_TO_IE_END:
   case R_GOT_FROM_END:
-    return Body.getGotOffset<ELFT>() + A - In<ELFT>::Got->getSize();
+    return Body.getGotOffset() + A - In<ELFT>::Got->getSize();
   case R_RELAX_TLS_GD_TO_IE_ABS:
   case R_GOT:
     return Body.getGotVA<ELFT>() + A;
@@ -392,7 +392,7 @@ getRelocTargetVA(uint32_t Type, int64_t A, typename ELFT::uint P,
   case R_RELAX_GOT_PC_NOPIC:
     return Body.getVA(A);
   case R_GOT_OFF:
-    return Body.getGotOffset<ELFT>() + A;
+    return Body.getGotOffset() + A;
   case R_MIPS_GOT_LOCAL_PAGE:
     // If relocation against MIPS local symbol requires GOT entry, this entry
     // should be initialized by 'page address'. This address is high 16-bits

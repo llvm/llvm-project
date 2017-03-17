@@ -757,7 +757,7 @@ bool EfficiencySanitizer::instrumentGetElementPtr(Instruction *I, Module &M) {
     return false;
   }
   Type *SourceTy = GepInst->getSourceElementType();
-  StructType *StructTy;
+  StructType *StructTy = nullptr;
   ConstantInt *Idx;
   // Check if GEP calculates address from a struct array.
   if (isa<StructType>(SourceTy)) {

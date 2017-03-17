@@ -46,9 +46,37 @@ def AMDGPUFmasOp : SDTypeProfile<1, 4,
 
 def AMDGPUKillSDT : SDTypeProfile<0, 1, [SDTCisInt<0>]>;
 
+def AMDGPUIfOp : SDTypeProfile<1, 2,
+  [SDTCisVT<0, i64>, SDTCisVT<1, i1>, SDTCisVT<2, OtherVT>]
+>;
+
+def AMDGPUElseOp : SDTypeProfile<1, 2,
+  [SDTCisVT<0, i64>, SDTCisVT<1, i64>, SDTCisVT<2, OtherVT>]
+>;
+
+def AMDGPULoopOp : SDTypeProfile<0, 2,
+  [SDTCisVT<0, i64>, SDTCisVT<1, OtherVT>]
+>;
+
+def AMDGPUBreakOp : SDTypeProfile<1, 1,
+  [SDTCisVT<0, i64>, SDTCisVT<1, i64>]
+>;
+
+def AMDGPUIfBreakOp : SDTypeProfile<1, 2,
+  [SDTCisVT<0, i64>, SDTCisVT<1, i1>, SDTCisVT<2, i64>]
+>;
+
+def AMDGPUElseBreakOp : SDTypeProfile<1, 2,
+  [SDTCisVT<0, i64>, SDTCisVT<1, i64>, SDTCisVT<2, i64>]
+>;
+
 //===----------------------------------------------------------------------===//
 // AMDGPU DAG Nodes
 //
+
+def AMDGPUif : SDNode<"AMDGPUISD::IF", AMDGPUIfOp, [SDNPHasChain]>;
+def AMDGPUelse : SDNode<"AMDGPUISD::ELSE", AMDGPUElseOp, [SDNPHasChain]>;
+def AMDGPUloop : SDNode<"AMDGPUISD::LOOP", AMDGPULoopOp, [SDNPHasChain]>;
 
 def AMDGPUconstdata_ptr : SDNode<
   "AMDGPUISD::CONST_DATA_PTR", SDTypeProfile <1, 1, [SDTCisVT<0, iPTR>,

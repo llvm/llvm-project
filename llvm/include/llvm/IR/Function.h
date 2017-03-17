@@ -48,20 +48,20 @@ class DISubprogram;
 
 class Function : public GlobalObject, public ilist_node<Function> {
 public:
-  typedef SymbolTableList<Argument> ArgumentListType;
   typedef SymbolTableList<BasicBlock> BasicBlockListType;
 
   // BasicBlock iterators...
   typedef BasicBlockListType::iterator iterator;
   typedef BasicBlockListType::const_iterator const_iterator;
 
-  typedef ArgumentListType::iterator arg_iterator;
-  typedef ArgumentListType::const_iterator const_arg_iterator;
+  typedef Argument *arg_iterator;
+  typedef const Argument *const_arg_iterator;
 
 private:
   // Important things that make up a function!
   BasicBlockListType  BasicBlocks;        ///< The basic blocks
-  mutable ArgumentListType ArgumentList;  ///< The formal arguments
+  mutable Argument *Arguments;            ///< The formal arguments
+  size_t NumArgs;
   std::unique_ptr<ValueSymbolTable>
       SymTab;                             ///< Symbol table of args/instructions
   AttributeSet AttributeSets;             ///< Parameter attributes
@@ -102,6 +102,8 @@ private:
   }
 
   void BuildLazyArguments() const;
+
+  void clearArguments();
 
   /// Function ctor - If the (optional) Module argument is specified, the
   /// function is automatically inserted into the end of the function list for
@@ -509,10 +511,6 @@ public:
   /// Requires that this has no function body.
   void stealArgumentListFrom(Function &Src);
 
-  static ArgumentListType Function::*getSublistAccess(Argument*) {
-    return &Function::ArgumentList;
-  }
-
   /// Get the underlying elements of the Function... the basic block list is
   /// empty for external functions.
   ///
@@ -556,20 +554,20 @@ public:
 
   arg_iterator arg_begin() {
     CheckLazyArguments();
-    return ArgumentList.begin();
+    return Arguments;
   }
   const_arg_iterator arg_begin() const {
     CheckLazyArguments();
-    return ArgumentList.begin();
+    return Arguments;
   }
 
   arg_iterator arg_end() {
     CheckLazyArguments();
-    return ArgumentList.end();
+    return Arguments + NumArgs;
   }
   const_arg_iterator arg_end() const {
     CheckLazyArguments();
-    return ArgumentList.end();
+    return Arguments + NumArgs;
   }
 
   iterator_range<arg_iterator> args() {
@@ -581,7 +579,7 @@ public:
 
 /// @}
 
-  size_t arg_size() const { return getFunctionType()->getNumParams(); }
+  size_t arg_size() const { return NumArgs; }
   bool arg_empty() const { return arg_size() == 0; }
 
   /// \brief Check whether this function has a personality function.

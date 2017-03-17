@@ -64,14 +64,14 @@ enum FileKind { FileError = 0, Basename, Dirname, Fullpath };
 #define ENTRY_CHILDREN(n, t, f, c)                                             \
   {                                                                            \
     n, nullptr, FormatEntity::Entry::Type::t,                                  \
-        FormatEntity::Entry::FormatType::f, 0, llvm::array_lengthof(c), c,     \
-        false                                                                  \
+        FormatEntity::Entry::FormatType::f, 0,                                 \
+        static_cast<uint32_t>(llvm::array_lengthof(c)), c, false               \
   }
 #define ENTRY_CHILDREN_KEEP_SEP(n, t, f, c)                                    \
   {                                                                            \
     n, nullptr, FormatEntity::Entry::Type::t,                                  \
-        FormatEntity::Entry::FormatType::f, 0, llvm::array_lengthof(c), c,     \
-        true                                                                   \
+        FormatEntity::Entry::FormatType::f, 0,                                 \
+        static_cast<uint32_t>(llvm::array_lengthof(c)), c, true                \
   }
 #define ENTRY_STRING(n, s)                                                     \
   {                                                                            \
