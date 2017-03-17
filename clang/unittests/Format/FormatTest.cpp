@@ -9977,6 +9977,10 @@ TEST_F(FormatTest, ArrayAsTemplateType) {
             format("auto a = unique_ptr < Foo < Bar>[10]> ;", Spaces));
 }
 
+TEST_F(FormatTest, NoSpaceAfterSuper) {
+    verifyFormat("__super::FooBar();");
+}
+
 TEST(FormatStyle, GetStyleOfFile) {
   vfs::InMemoryFileSystem FS;
   // Test 1: format file in the same directory.

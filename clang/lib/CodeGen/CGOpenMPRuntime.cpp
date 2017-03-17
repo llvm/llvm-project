@@ -3780,9 +3780,7 @@ CGOpenMPRuntime::emitTaskInit(CodeGenFunction &CGF, SourceLocation Loc,
   // Emit initial values for private copies (if any).
   llvm::Value *TaskPrivatesMap = nullptr;
   auto *TaskPrivatesMapTy =
-      std::next(cast<llvm::Function>(TaskFunction)->getArgumentList().begin(),
-                3)
-          ->getType();
+      std::next(cast<llvm::Function>(TaskFunction)->arg_begin(), 3)->getType();
   if (!Privates.empty()) {
     auto FI = std::next(KmpTaskTWithPrivatesQTyRD->field_begin());
     TaskPrivatesMap = emitTaskPrivateMappingFunction(
