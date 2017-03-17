@@ -81,7 +81,6 @@ GDBRemoteCommunicationServerLLGS::GDBRemoteCommunicationServerLLGS(
       m_continue_tid(LLDB_INVALID_THREAD_ID), m_debugged_process_mutex(),
       m_debugged_process_sp(), m_stdio_communication("process.stdio"),
       m_inferior_prev_state(StateType::eStateInvalid),
-      m_active_auxv_buffer_sp(), m_saved_registers_mutex(),
       m_saved_registers_map(), m_next_saved_registers_id(1),
       m_handshake_completed(false) {
   RegisterPacketHandlers();
@@ -2694,7 +2693,7 @@ GDBRemoteCommunicationServerLLGS::Handle_qXfer_auxv_read(
                                  "qXfer:auxv:read:: packet missing length");
 
   // Grab the auxv data if we need it.
-  if (!m_active_auxv_buffer_sp) {
+  if (!m_active_auxv_buffer_up) {
     // Make sure we have a valid process.
     if (!m_debugged_process_sp ||
         (m_debugged_process_sp->GetID() == LLDB_INVALID_PROCESS_ID)) {
@@ -2706,55 +2705,45 @@ GDBRemoteCommunicationServerLLGS::Handle_qXfer_auxv_read(
     }
 
     // Grab the auxv data.
-    m_active_auxv_buffer_sp = Host::GetAuxvData(m_debugged_process_sp->GetID());
-    if (!m_active_auxv_buffer_sp ||
-        m_active_auxv_buffer_sp->GetByteSize() == 0) {
-      // Hmm, no auxv data, call that an error.
-      if (log)
-        log->Printf("GDBRemoteCommunicationServerLLGS::%s failed, no auxv data "
-                    "retrieved",
-                    __FUNCTION__);
-      m_active_auxv_buffer_sp.reset();
-      return SendErrorResponse(0x11);
+    auto buffer_or_error = m_debugged_process_sp->GetAuxvData();
+    if (!buffer_or_error) {
+      std::error_code ec = buffer_or_error.getError();
+      LLDB_LOG(log, "no auxv data retrieved: {0}", ec.message());
+      return SendErrorResponse(ec.value());
     }
+    m_active_auxv_buffer_up = std::move(*buffer_or_error);
   }
-
-  // FIXME find out if/how I lock the stream here.
 
   StreamGDBRemote response;
   bool done_with_buffer = false;
 
-  if (auxv_offset >= m_active_auxv_buffer_sp->GetByteSize()) {
+  llvm::StringRef buffer = m_active_auxv_buffer_up->getBuffer();
+  if (auxv_offset >= buffer.size()) {
     // We have nothing left to send.  Mark the buffer as complete.
     response.PutChar('l');
     done_with_buffer = true;
   } else {
     // Figure out how many bytes are available starting at the given offset.
-    const uint64_t bytes_remaining =
-        m_active_auxv_buffer_sp->GetByteSize() - auxv_offset;
-
-    // Figure out how many bytes we're going to read.
-    const uint64_t bytes_to_read =
-        (auxv_length > bytes_remaining) ? bytes_remaining : auxv_length;
+    buffer = buffer.drop_front(auxv_offset);
 
     // Mark the response type according to whether we're reading the remainder
     // of the auxv data.
-    if (bytes_to_read >= bytes_remaining) {
+    if (auxv_length >= buffer.size()) {
       // There will be nothing left to read after this
       response.PutChar('l');
       done_with_buffer = true;
     } else {
       // There will still be bytes to read after this request.
       response.PutChar('m');
+      buffer = buffer.take_front(auxv_length);
     }
 
     // Now write the data in encoded binary form.
-    response.PutEscapedBytes(m_active_auxv_buffer_sp->GetBytes() + auxv_offset,
-                             bytes_to_read);
+    response.PutEscapedBytes(buffer.data(), buffer.size());
   }
 
   if (done_with_buffer)
-    m_active_auxv_buffer_sp.reset();
+    m_active_auxv_buffer_up.reset();
 
   return SendPacketNoLock(response.GetString());
 #else
@@ -3216,20 +3205,10 @@ uint32_t GDBRemoteCommunicationServerLLGS::GetNextSavedRegistersID() {
 }
 
 void GDBRemoteCommunicationServerLLGS::ClearProcessSpecificData() {
-  Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PROCESS | GDBR_LOG_PROCESS));
-  if (log)
-    log->Printf("GDBRemoteCommunicationServerLLGS::%s()", __FUNCTION__);
+  Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PROCESS));
 
-// Clear any auxv cached data.
-// *BSD impls should be able to do this too.
-#if defined(__linux__)
-  if (log)
-    log->Printf("GDBRemoteCommunicationServerLLGS::%s clearing auxv buffer "
-                "(previously %s)",
-                __FUNCTION__,
-                m_active_auxv_buffer_sp ? "was set" : "was not set");
-  m_active_auxv_buffer_sp.reset();
-#endif
+  LLDB_LOG(log, "clearing auxv buffer: {0}", m_active_auxv_buffer_up.get());
+  m_active_auxv_buffer_up.reset();
 }
 
 FileSpec

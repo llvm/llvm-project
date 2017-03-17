@@ -10,6 +10,12 @@
 
 // C Includes
 #include <errno.h>
+#include <pthread.h>
+#include <pthread_np.h>
+#include <stdlib.h>
+#include <sys/sysctl.h>
+#include <sys/types.h>
+#include <sys/user.h>
 
 // C++ Includes
 #include <mutex>
@@ -904,15 +910,18 @@ bool ProcessFreeBSD::IsAThreadRunning() {
 const DataBufferSP ProcessFreeBSD::GetAuxvData() {
   // If we're the local platform, we can ask the host for auxv data.
   PlatformSP platform_sp = GetTarget().GetPlatform();
-  if (platform_sp && platform_sp->IsHost())
-    return lldb_private::Host::GetAuxvData(this);
+  assert(platform_sp && platform_sp->IsHost());
 
-  // Somewhat unexpected - the process is not running locally or we don't have a
-  // platform.
-  assert(
-      false &&
-      "no platform or not the host - how did we get here with ProcessFreeBSD?");
-  return DataBufferSP();
+  int mib[4] = {CTL_KERN, KERN_PROC, KERN_PROC_AUXV, process->GetID()};
+  size_t auxv_size = AT_COUNT * sizeof(Elf_Auxinfo);
+  DataBufferSP buf_sp(new DataBufferHeap(auxv_size, 0));
+
+  if (::sysctl(mib, 4, buf_ap->GetBytes(), &auxv_size, NULL, 0) != 0) {
+    perror("sysctl failed on auxv");
+    buf_sp.reset();
+  }
+
+  return buf_sp;
 }
 
 struct EmulatorBaton {

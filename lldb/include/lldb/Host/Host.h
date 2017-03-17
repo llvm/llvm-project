@@ -238,10 +238,6 @@ public:
       uint32_t timeout_sec,
       bool run_in_default_shell = true);
 
-  static lldb::DataBufferSP GetAuxvData(lldb_private::Process *process);
-
-  static lldb::DataBufferSP GetAuxvData(lldb::pid_t pid);
-
   static bool OpenFileInExternalEditor(const FileSpec &file_spec,
                                        uint32_t line_no);
 

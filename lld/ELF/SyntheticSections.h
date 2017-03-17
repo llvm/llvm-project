@@ -153,15 +153,19 @@ private:
   uint8_t *HashBuf;
 };
 
-// For each copy relocation, we create an instance of this class to
-// reserve space in .bss or .bss.rel.ro.
-template <class ELFT> class CopyRelSection final : public SyntheticSection {
+// BssSection is used to reserve space for copy relocations. We create two
+// instances of this class for .bss and .bss.rel.ro. .bss is used for writable
+// symbols, and .bss.rel.ro is used for read-only symbols.
+class BssSection final : public SyntheticSection {
 public:
-  CopyRelSection(bool ReadOnly, uint32_t Alignment, size_t Size);
+  BssSection(StringRef Name);
   void writeTo(uint8_t *) override {}
-
+  bool empty() const override { return getSize() == 0; }
+  size_t reserveSpace(uint32_t Alignment, size_t Size);
   size_t getSize() const override { return Size; }
-  size_t Size;
+
+private:
+  size_t Size = 0;
 };
 
 template <class ELFT> class MipsGotSection final : public SyntheticSection {
@@ -475,14 +479,15 @@ private:
 // header as its first entry that is used at run-time to resolve lazy binding.
 // The latter is used for GNU Ifunc symbols, that will be subject to a
 // Target->IRelativeRel.
-template <class ELFT> class PltSection : public SyntheticSection {
+class PltSection : public SyntheticSection {
 public:
   PltSection(size_t HeaderSize);
   void writeTo(uint8_t *Buf) override;
   size_t getSize() const override;
-  void addEntry(SymbolBody &Sym);
   bool empty() const override { return Entries.empty(); }
   void addSymbols();
+
+  template <class ELFT> void addEntry(SymbolBody &Sym);
 
 private:
   void writeHeader(uint8_t *Buf){};
@@ -754,12 +759,16 @@ SymbolBody *addSyntheticLocal(StringRef Name, uint8_t Type, uint64_t Value,
 // Linker generated sections which can be used as inputs.
 struct InX {
   static InputSection *ARMAttributes;
+  static BssSection *Bss;
+  static BssSection *BssRelRo;
   static InputSection *Common;
   static StringTableSection *DynStrTab;
   static InputSection *Interp;
   static GotPltSection *GotPlt;
   static IgotPltSection *IgotPlt;
   static MipsRldMapSection *MipsRldMap;
+  static PltSection *Plt;
+  static PltSection *Iplt;
   static StringTableSection *ShStrTab;
   static StringTableSection *StrTab;
 };
@@ -775,8 +784,6 @@ template <class ELFT> struct In : public InX {
   static EhFrameSection<ELFT> *EhFrame;
   static MipsGotSection<ELFT> *MipsGot;
   static HashTableSection<ELFT> *HashTab;
-  static PltSection<ELFT> *Plt;
-  static PltSection<ELFT> *Iplt;
   static RelocationSection<ELFT> *RelaDyn;
   static RelocationSection<ELFT> *RelaPlt;
   static RelocationSection<ELFT> *RelaIplt;
@@ -796,8 +803,6 @@ template <class ELFT> GotSection<ELFT> *In<ELFT>::Got;
 template <class ELFT> EhFrameSection<ELFT> *In<ELFT>::EhFrame;
 template <class ELFT> MipsGotSection<ELFT> *In<ELFT>::MipsGot;
 template <class ELFT> HashTableSection<ELFT> *In<ELFT>::HashTab;
-template <class ELFT> PltSection<ELFT> *In<ELFT>::Plt;
-template <class ELFT> PltSection<ELFT> *In<ELFT>::Iplt;
 template <class ELFT> RelocationSection<ELFT> *In<ELFT>::RelaDyn;
 template <class ELFT> RelocationSection<ELFT> *In<ELFT>::RelaPlt;
 template <class ELFT> RelocationSection<ELFT> *In<ELFT>::RelaIplt;

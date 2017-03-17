@@ -376,12 +376,15 @@ void BuildIdSection<ELFT>::computeHash(
   HashFn(HashBuf, Hashes);
 }
 
-template <class ELFT>
-CopyRelSection<ELFT>::CopyRelSection(bool ReadOnly, uint32_t Alignment,
-                                     size_t S)
-    : SyntheticSection(SHF_ALLOC, SHT_NOBITS, Alignment,
-                       ReadOnly ? ".bss.rel.ro" : ".bss"),
-      Size(S) {}
+BssSection::BssSection(StringRef Name)
+    : SyntheticSection(SHF_ALLOC | SHF_WRITE, SHT_NOBITS, 0, Name) {}
+
+size_t BssSection::reserveSpace(uint32_t Alignment, size_t Size) {
+  OutSec->updateAlignment(Alignment);
+  this->Size = alignTo(this->Size, Alignment) + Size;
+  this->Alignment = std::max<uint32_t>(this->Alignment, Alignment);
+  return this->Size - Size;
+}
 
 template <class ELFT>
 void BuildIdSection<ELFT>::writeBuildId(ArrayRef<uint8_t> Buf) {
@@ -1642,12 +1645,11 @@ template <class ELFT> void HashTableSection<ELFT>::writeTo(uint8_t *Buf) {
   }
 }
 
-template <class ELFT>
-PltSection<ELFT>::PltSection(size_t S)
+PltSection::PltSection(size_t S)
     : SyntheticSection(SHF_ALLOC | SHF_EXECINSTR, SHT_PROGBITS, 16, ".plt"),
       HeaderSize(S) {}
 
-template <class ELFT> void PltSection<ELFT>::writeTo(uint8_t *Buf) {
+void PltSection::writeTo(uint8_t *Buf) {
   // At beginning of PLT but not the IPLT, we have code to call the dynamic
   // linker to resolve dynsyms at runtime. Write such code.
   if (HeaderSize != 0)
@@ -1666,7 +1668,7 @@ template <class ELFT> void PltSection<ELFT>::writeTo(uint8_t *Buf) {
   }
 }
 
-template <class ELFT> void PltSection<ELFT>::addEntry(SymbolBody &Sym) {
+template <class ELFT> void PltSection::addEntry(SymbolBody &Sym) {
   Sym.PltIndex = Entries.size();
   RelocationSection<ELFT> *PltRelocSection = In<ELFT>::RelaPlt;
   if (HeaderSize == 0) {
@@ -1677,13 +1679,13 @@ template <class ELFT> void PltSection<ELFT>::addEntry(SymbolBody &Sym) {
   Entries.push_back(std::make_pair(&Sym, RelOff));
 }
 
-template <class ELFT> size_t PltSection<ELFT>::getSize() const {
+size_t PltSection::getSize() const {
   return HeaderSize + Entries.size() * Target->PltEntrySize;
 }
 
 // Some architectures such as additional symbols in the PLT section. For
 // example ARM uses mapping symbols to aid disassembly
-template <class ELFT> void PltSection<ELFT>::addSymbols() {
+void PltSection::addSymbols() {
   // The PLT may have symbols defined for the Header, the IPLT has no header
   if (HeaderSize != 0)
     Target->addPltHeaderSymbols(this);
@@ -1694,8 +1696,8 @@ template <class ELFT> void PltSection<ELFT>::addSymbols() {
   }
 }
 
-template <class ELFT> unsigned PltSection<ELFT>::getPltRelocOff() const {
-  return (HeaderSize == 0) ? In<ELFT>::Plt->getSize() : 0;
+unsigned PltSection::getPltRelocOff() const {
+  return (HeaderSize == 0) ? InX::Plt->getSize() : 0;
 }
 
 template <class ELFT>
@@ -2259,13 +2261,26 @@ InputSection *ThunkSection::getTargetInputSection() const {
   return T->getTargetInputSection();
 }
 
+namespace lld {
+namespace elf {
+template void PltSection::addEntry<ELF32LE>(SymbolBody &Sym);
+template void PltSection::addEntry<ELF32BE>(SymbolBody &Sym);
+template void PltSection::addEntry<ELF64LE>(SymbolBody &Sym);
+template void PltSection::addEntry<ELF64BE>(SymbolBody &Sym);
+}
+}
+
 InputSection *InX::ARMAttributes;
+BssSection *InX::Bss;
+BssSection *InX::BssRelRo;
 InputSection *InX::Common;
 StringTableSection *InX::DynStrTab;
 InputSection *InX::Interp;
 GotPltSection *InX::GotPlt;
 IgotPltSection *InX::IgotPlt;
 MipsRldMapSection *InX::MipsRldMap;
+PltSection *InX::Plt;
+PltSection *InX::Iplt;
 StringTableSection *InX::ShStrTab;
 StringTableSection *InX::StrTab;
 
@@ -2312,11 +2327,6 @@ template class elf::BuildIdSection<ELF32BE>;
 template class elf::BuildIdSection<ELF64LE>;
 template class elf::BuildIdSection<ELF64BE>;
 
-template class elf::CopyRelSection<ELF32LE>;
-template class elf::CopyRelSection<ELF32BE>;
-template class elf::CopyRelSection<ELF64LE>;
-template class elf::CopyRelSection<ELF64BE>;
-
 template class elf::GotSection<ELF32LE>;
 template class elf::GotSection<ELF32BE>;
 template class elf::GotSection<ELF64LE>;
@@ -2351,11 +2361,6 @@ template class elf::HashTableSection<ELF32LE>;
 template class elf::HashTableSection<ELF32BE>;
 template class elf::HashTableSection<ELF64LE>;
 template class elf::HashTableSection<ELF64BE>;
-
-template class elf::PltSection<ELF32LE>;
-template class elf::PltSection<ELF32BE>;
-template class elf::PltSection<ELF64LE>;
-template class elf::PltSection<ELF64BE>;
 
 template class elf::GdbIndexSection<ELF32LE>;
 template class elf::GdbIndexSection<ELF32BE>;

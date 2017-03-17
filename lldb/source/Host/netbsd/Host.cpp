@@ -259,10 +259,6 @@ bool Host::GetProcessInfo(lldb::pid_t pid, ProcessInstanceInfo &process_info) {
   return false;
 }
 
-lldb::DataBufferSP Host::GetAuxvData(lldb_private::Process *process) {
-  return lldb::DataBufferSP();
-}
-
 Error Host::ShellExpandArguments(ProcessLaunchInfo &launch_info) {
   return Error("unimplemented");
 }

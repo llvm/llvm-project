@@ -14,21 +14,21 @@
 branch24t:
 	b target
 
-@ CHECK-ENCODING-LABEL: branch24t
+@ CHECK-ENCODING-LABEL: branch24t:
 @ CHECK-ENCODING-NEXT: b.w #0
 
 	.thumb_func
 branch20t:
 	bcc target
 
-@ CHECK-ENCODING-LABEL: branch20t
+@ CHECK-ENCODING-LABEL: branch20t:
 @ CHECK-ENCODING-NEXT: blo.w #0
 
 	.thumb_func
 blx23t:
 	bl target
 
-@ CHECK-ENCODING-LABEL: blx23t
+@ CHECK-ENCODING-LABEL: blx23t:
 @ CHECK-ENCODING-NEXT: bl #0
 
 	.thumb_func
@@ -37,7 +37,7 @@ mov32t:
 	movt r0, :upper16:target
 	blx r0
 
-@ CHECK-ENCODING-LABEL: mov32t
+@ CHECK-ENCODING-LABEL: mov32t:
 @ CHECK-ENCODING-NEXT: movw r0, #0
 @ CHECK-ENCODING-NEXT: movt r0, #0
 @ CHECK-ENCODING-NEXT: blx r0
@@ -50,7 +50,7 @@ addr32:
 .Laddr32:
 	.long target
 
-@ CHECK-ENCODING-LABEL: addr32
+@ CHECK-ENCODING-LABEL: addr32:
 @ CHECK-ENCODING-NEXT: ldr r0, [pc, #4]
 @ CHECK-ENCODING-NEXT: bx r0
 @ CHECK-ENCODING-NEXT: trap
@@ -65,7 +65,7 @@ addr32nb:
 .Laddr32nb:
 	.long target(imgrel)
 
-@ CHECK-ENCODING-LABEL: addr32nb
+@ CHECK-ENCODING-LABEL: addr32nb:
 @ CHECK-ENCODING-NEXT: ldr.w r0, [pc, #4]
 @ CHECK-ENCODING-NEXT: bx r0
 @ CHECK-ENCODING-NEXT: trap
@@ -80,7 +80,7 @@ secrel:
 .Lsecrel:
 	.long target(secrel32)
 
-@ CHECK-ENCODING-LABEL: secrel
+@ CHECK-ENCODING-LABEL: secrel:
 @ CHECK-ENCODING-NEXT: ldr.w r0, [pc, #4]
 @ CHECK-ENCODING-NEXT: bx r0
 @ CHECK-ENCODING-NEXT: trap

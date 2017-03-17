@@ -19,6 +19,7 @@
 #include "lldb/Core/State.h"
 #include "lldb/Host/HostNativeThread.h"
 #include "lldb/Host/linux/Ptrace.h"
+#include "lldb/Host/linux/Support.h"
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/lldb-enumerations.h"
@@ -90,15 +91,12 @@ NativeThreadLinux::NativeThreadLinux(NativeProcessLinux *process,
       m_stop_info(), m_reg_context_sp(), m_stop_description() {}
 
 std::string NativeThreadLinux::GetName() {
-  NativeProcessProtocolSP process_sp = m_process_wp.lock();
-  if (!process_sp)
-    return "<unknown: no process>";
+  NativeProcessLinux &process = GetProcess();
 
-  // const NativeProcessLinux *const process =
-  // reinterpret_cast<NativeProcessLinux*> (process_sp->get ());
-  llvm::SmallString<32> thread_name;
-  HostNativeThread::GetName(GetID(), thread_name);
-  return thread_name.c_str();
+  auto BufferOrError = getProcFile(process.GetID(), GetID(), "comm");
+  if (!BufferOrError)
+    return "";
+  return BufferOrError.get()->getBuffer().rtrim('\n');
 }
 
 lldb::StateType NativeThreadLinux::GetState() { return m_state; }

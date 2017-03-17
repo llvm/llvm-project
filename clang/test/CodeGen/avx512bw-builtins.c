@@ -1677,19 +1677,19 @@ void test_mm512_mask_cvtepi16_storeu_epi8 (void * __P, __mmask32 __M, __m512i __
 {
  // CHECK-LABEL: @test_mm512_mask_cvtepi16_storeu_epi8
  // CHECK: @llvm.x86.avx512.mask.pmov.wb.mem.512
- __builtin_ia32_pmovwb512mem_mask ( __P,  __A, __M);
+ _mm512_mask_cvtepi16_storeu_epi8 ( __P,  __M, __A);
 }
 
 void test_mm512_mask_cvtsepi16_storeu_epi8 (void * __P, __mmask32 __M, __m512i __A)
 {
  // CHECK-LABEL: @test_mm512_mask_cvtsepi16_storeu_epi8
  // CHECK: @llvm.x86.avx512.mask.pmovs.wb.mem.512
- __builtin_ia32_pmovswb512mem_mask ( __P,  __A, __M);
+ _mm512_mask_cvtsepi16_storeu_epi8 ( __P,  __M, __A);
 }
 
 void test_mm512_mask_cvtusepi16_storeu_epi8 (void * __P, __mmask32 __M, __m512i __A)
 {
  // CHECK-LABEL: @test_mm512_mask_cvtusepi16_storeu_epi8
  // CHECK: @llvm.x86.avx512.mask.pmovus.wb.mem.512
- __builtin_ia32_pmovuswb512mem_mask ( __P, __A, __M);
+ _mm512_mask_cvtusepi16_storeu_epi8 ( __P, __M, __A);
 }

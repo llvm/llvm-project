@@ -163,6 +163,9 @@ std::vector<InputFile *> BitcodeCompiler::compile() {
       },
       Cache));
 
+  if (!Config->ThinLTOCacheDir.empty())
+    pruneCache(Config->ThinLTOCacheDir, Config->ThinLTOCachePolicy);
+
   for (unsigned I = 0; I != MaxTasks; ++I) {
     if (Buff[I].empty())
       continue;
