@@ -2851,7 +2851,7 @@ static __isl_give isl_map *
 createNextIterationMap(__isl_take isl_space *SetSpace, unsigned Dim) {
   auto *MapSpace = isl_space_map_from_set(SetSpace);
   auto *NextIterationMap = isl_map_universe(isl_space_copy(MapSpace));
-  for (unsigned u = 0; u < isl_map_n_in(NextIterationMap); u++)
+  for (unsigned u = 0; u < isl_map_dim(NextIterationMap, isl_dim_in); u++)
     if (u != Dim)
       NextIterationMap =
           isl_map_equate(NextIterationMap, isl_dim_in, u, isl_dim_out, u);

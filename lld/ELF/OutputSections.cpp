@@ -31,6 +31,8 @@ using namespace lld;
 using namespace lld::elf;
 
 uint8_t Out::First;
+OutputSection *Out::Bss;
+OutputSection *Out::BssRelRo;
 OutputSection *Out::Opd;
 uint8_t *Out::OpdBuf;
 PhdrEntry *Out::TlsPhdr;
@@ -87,7 +89,7 @@ static bool compareByFilePosition(InputSection *A, InputSection *B) {
 template <class ELFT> void OutputSection::finalize() {
   if ((this->Flags & SHF_LINK_ORDER) && !this->Sections.empty()) {
     std::sort(Sections.begin(), Sections.end(), compareByFilePosition<ELFT>);
-    assignOffsets<ELFT>();
+    assignOffsets();
 
     // We must preserve the link order dependency of sections with the
     // SHF_LINK_ORDER flag. The dependency is indicated by the sh_link field. We
@@ -131,7 +133,7 @@ void OutputSection::addSection(InputSectionBase *C) {
 
 // This function is called after we sort input sections
 // and scan relocations to setup sections' offsets.
-template <class ELFT> void OutputSection::assignOffsets() {
+void OutputSection::assignOffsets() {
   uint64_t Off = 0;
   for (InputSection *S : Sections) {
     Off = alignTo(Off, S->Alignment);
@@ -395,11 +397,6 @@ template void OutputSection::writeHeaderTo<ELF32LE>(ELF32LE::Shdr *Shdr);
 template void OutputSection::writeHeaderTo<ELF32BE>(ELF32BE::Shdr *Shdr);
 template void OutputSection::writeHeaderTo<ELF64LE>(ELF64LE::Shdr *Shdr);
 template void OutputSection::writeHeaderTo<ELF64BE>(ELF64BE::Shdr *Shdr);
-
-template void OutputSection::assignOffsets<ELF32LE>();
-template void OutputSection::assignOffsets<ELF32BE>();
-template void OutputSection::assignOffsets<ELF64LE>();
-template void OutputSection::assignOffsets<ELF64BE>();
 
 template void OutputSection::finalize<ELF32LE>();
 template void OutputSection::finalize<ELF32BE>();

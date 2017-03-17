@@ -123,7 +123,8 @@ static int DiskFilesOrDirectories(const llvm::Twine &partial_name,
 
   if (CompletionBuffer.startswith("~")) {
     llvm::StringRef Buffer(CompletionBuffer);
-    size_t FirstSep = Buffer.find_if(path::is_separator);
+    size_t FirstSep =
+        Buffer.find_if([](char c) { return path::is_separator(c); });
 
     llvm::StringRef Username = Buffer.take_front(FirstSep);
     llvm::StringRef Remainder;

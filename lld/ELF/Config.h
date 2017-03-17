@@ -13,6 +13,7 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
+#include "llvm/Support/CachePruning.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/ELF.h"
 
@@ -72,6 +73,7 @@ struct VersionDefinition {
 struct Configuration {
   InputFile *FirstElf = nullptr;
   uint8_t OSABI = 0;
+  llvm::CachePruningPolicy ThinLTOCachePolicy;
   llvm::StringMap<uint64_t> SectionStartMap;
   llvm::StringRef DynamicLinker;
   llvm::StringRef Entry;
@@ -163,7 +165,7 @@ struct Configuration {
   unsigned ThinLTOJobs;
 
   // Returns true if target is 64 bit.
-  bool is64Bit() const { return EKind == ELF64LEKind || EKind == ELF64BEKind; }
+  bool is64() const { return EKind == ELF64LEKind || EKind == ELF64BEKind; }
 
   // The ELF spec defines two types of relocation table entries, RELA and
   // REL. RELA is a triplet of (offset, info, addend) while REL is a
@@ -181,7 +183,7 @@ struct Configuration {
   // are using RELA too.
   bool isRela() const {
     bool IsX32Abi = (EKind == ELF32LEKind && EMachine == llvm::ELF::EM_X86_64);
-    return is64Bit() || IsX32Abi || MipsN32Abi;
+    return is64() || IsX32Abi || MipsN32Abi;
   }
 
   // Returns true if we need to pass through relocations in input

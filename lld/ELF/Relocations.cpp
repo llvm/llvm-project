@@ -479,20 +479,23 @@ template <class ELFT> static void addCopyRelSymbol(SharedSymbol *SS) {
   // See if this symbol is in a read-only segment. If so, preserve the symbol's
   // memory protection by reserving space in the .bss.rel.ro section.
   bool IsReadOnly = isReadOnly<ELFT>(SS);
-  BssSection *Sec = IsReadOnly ? In<ELFT>::BssRelRo : In<ELFT>::Bss;
-  uintX_t Off = Sec->reserveSpace(SS->getAlignment<ELFT>(), SymSize);
+  OutputSection *OSec = IsReadOnly ? Out::BssRelRo : Out::Bss;
+
+  // Create a SyntheticSection in Out to hold the .bss and the Copy Reloc.
+  auto *ISec =
+      make<CopyRelSection<ELFT>>(IsReadOnly, SS->getAlignment<ELFT>(), SymSize);
+  OSec->addSection(ISec);
 
   // Look through the DSO's dynamic symbol table for aliases and create a
   // dynamic symbol for each one. This causes the copy relocation to correctly
   // interpose any aliases.
   for (SharedSymbol *Sym : getSymbolsAt<ELFT>(SS)) {
     Sym->NeedsCopy = true;
-    Sym->CopyRelSec = Sec;
-    Sym->CopyRelSecOff = Off;
+    Sym->Section = ISec;
     Sym->symbol()->IsUsedInRegularObj = true;
   }
 
-  In<ELFT>::RelaDyn->addReloc({Target->CopyRel, Sec, Off, false, SS, 0});
+  In<ELFT>::RelaDyn->addReloc({Target->CopyRel, ISec, 0, false, SS, 0});
 }
 
 template <class ELFT>
@@ -792,13 +795,13 @@ static void scanRelocs(InputSectionBase &C, ArrayRef<RelTy> Rels) {
         In<ELFT>::Iplt->addEntry(Body);
         In<ELFT>::IgotPlt->addEntry(Body);
         In<ELFT>::RelaIplt->addReloc({Target->IRelativeRel, In<ELFT>::IgotPlt,
-                                      Body.getGotPltOffset<ELFT>(),
-                                      !Preemptible, &Body, 0});
+                                      Body.getGotPltOffset(), !Preemptible,
+                                      &Body, 0});
       } else {
         In<ELFT>::Plt->addEntry(Body);
         In<ELFT>::GotPlt->addEntry(Body);
         In<ELFT>::RelaPlt->addReloc({Target->PltRel, In<ELFT>::GotPlt,
-                                     Body.getGotPltOffset<ELFT>(), !Preemptible,
+                                     Body.getGotPltOffset(), !Preemptible,
                                      &Body, 0});
       }
       continue;
@@ -858,11 +861,10 @@ template <class ELFT> void scanRelocations(InputSectionBase &S) {
 // in the Sections vector, and recalculate the InputSection output section
 // offsets.
 // This may invalidate any output section offsets stored outside of InputSection
-template <class ELFT>
 static void mergeThunks(OutputSection *OS,
-                        std::vector<ThunkSection<ELFT> *> &Thunks) {
+                        std::vector<ThunkSection *> &Thunks) {
   // Order Thunks in ascending OutSecOff
-  auto ThunkCmp = [](const ThunkSection<ELFT> *A, const ThunkSection<ELFT> *B) {
+  auto ThunkCmp = [](const ThunkSection *A, const ThunkSection *B) {
     return A->OutSecOff < B->OutSecOff;
   };
   std::stable_sort(Thunks.begin(), Thunks.end(), ThunkCmp);
@@ -877,7 +879,7 @@ static void mergeThunks(OutputSection *OS,
     if (A->OutSecOff == B->OutSecOff)
       // Check if Thunk is immediately before any specific Target InputSection
       // for example Mips LA25 Thunks.
-      if (auto *TA = dyn_cast<ThunkSection<ELFT>>(A))
+      if (auto *TA = dyn_cast<ThunkSection>(A))
         if (TA && TA->getTargetInputSection() == B)
           return true;
     return false;
@@ -885,7 +887,7 @@ static void mergeThunks(OutputSection *OS,
   std::merge(OS->Sections.begin(), OS->Sections.end(), Thunks.begin(),
              Thunks.end(), std::back_inserter(Tmp), MergeCmp);
   OS->Sections = std::move(Tmp);
-  OS->assignOffsets<ELFT>();
+  OS->assignOffsets();
 }
 
 // Process all relocations from the InputSections that have been assigned
@@ -901,11 +903,11 @@ static void mergeThunks(OutputSection *OS,
 template <class ELFT>
 bool createThunks(ArrayRef<OutputSection *> OutputSections) {
   // Track Symbols that already have a Thunk
-  DenseMap<SymbolBody *, Thunk<ELFT> *> ThunkedSymbols;
+  DenseMap<SymbolBody *, Thunk *> ThunkedSymbols;
   // Track InputSections that have a ThunkSection placed in front
-  DenseMap<InputSection *, ThunkSection<ELFT> *> ThunkedSections;
+  DenseMap<InputSection *, ThunkSection *> ThunkedSections;
   // Track the ThunksSections that need to be inserted into an OutputSection
-  std::map<OutputSection *, std::vector<ThunkSection<ELFT> *>> ThunkSections;
+  std::map<OutputSection *, std::vector<ThunkSection *>> ThunkSections;
 
   // Find or create a Thunk for Body for relocation Type
   auto GetThunk = [&](SymbolBody &Body, uint32_t Type) {
@@ -917,18 +919,18 @@ bool createThunks(ArrayRef<OutputSection *> OutputSections) {
 
   // Find or create a ThunkSection to be placed immediately before IS
   auto GetISThunkSec = [&](InputSection *IS, OutputSection *OS) {
-    ThunkSection<ELFT> *TS = ThunkedSections.lookup(IS);
+    ThunkSection *TS = ThunkedSections.lookup(IS);
     if (TS)
       return TS;
     auto *TOS = cast<OutputSection>(IS->OutSec);
-    TS = make<ThunkSection<ELFT>>(TOS, IS->OutSecOff);
+    TS = make<ThunkSection>(TOS, IS->OutSecOff);
     ThunkSections[TOS].push_back(TS);
     ThunkedSections[IS] = TS;
     return TS;
   };
   // Find or create a ThunkSection to be placed as last executable section in
   // OS.
-  auto GetOSThunkSec = [&](ThunkSection<ELFT> *&TS, OutputSection *OS) {
+  auto GetOSThunkSec = [&](ThunkSection *&TS, OutputSection *OS) {
     if (TS == nullptr) {
       uint32_t Off = 0;
       for (auto *IS : OS->Sections) {
@@ -936,7 +938,7 @@ bool createThunks(ArrayRef<OutputSection *> OutputSections) {
         if ((IS->Flags & SHF_EXECINSTR) == 0)
           break;
       }
-      TS = make<ThunkSection<ELFT>>(OS, Off);
+      TS = make<ThunkSection>(OS, Off);
       ThunkSections[OS].push_back(TS);
     }
     return TS;
@@ -952,18 +954,17 @@ bool createThunks(ArrayRef<OutputSection *> OutputSections) {
     if (OS == nullptr)
       continue;
 
-    ThunkSection<ELFT> *OSTS = nullptr;
+    ThunkSection *OSTS = nullptr;
     for (InputSection *IS : OS->Sections) {
       for (Relocation &Rel : IS->Relocations) {
         SymbolBody &Body = *Rel.Sym;
-        if (Target->needsThunk(Rel.Expr, Rel.Type, IS->template getFile<ELFT>(),
-                               Body)) {
-          Thunk<ELFT> *T;
+        if (Target->needsThunk(Rel.Expr, Rel.Type, IS->File, Body)) {
+          Thunk *T;
           bool IsNew;
           std::tie(T, IsNew) = GetThunk(Body, Rel.Type);
           if (IsNew) {
             // Find or create a ThunkSection for the new Thunk
-            ThunkSection<ELFT> *TS;
+            ThunkSection *TS;
             if (auto *TIS = T->getTargetInputSection())
               TS = GetISThunkSec(TIS, OS);
             else
@@ -980,7 +981,7 @@ bool createThunks(ArrayRef<OutputSection *> OutputSections) {
 
   // Merge all created synthetic ThunkSections back into OutputSection
   for (auto &KV : ThunkSections)
-    mergeThunks<ELFT>(KV.first, KV.second);
+    mergeThunks(KV.first, KV.second);
   return !ThunkSections.empty();
 }
 
