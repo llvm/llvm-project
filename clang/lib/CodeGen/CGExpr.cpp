@@ -1301,6 +1301,53 @@ llvm::MDNode *CodeGenFunction::getRangeForLoadFromType(QualType Ty) {
   return MDHelper.createRange(Min, End);
 }
 
+bool CodeGenFunction::EmitScalarRangeCheck(llvm::Value *Value, QualType Ty,
+                                           SourceLocation Loc) {
+  bool HasBoolCheck = SanOpts.has(SanitizerKind::Bool);
+  bool HasEnumCheck = SanOpts.has(SanitizerKind::Enum);
+  if (!HasBoolCheck && !HasEnumCheck)
+    return false;
+
+  bool IsBool = hasBooleanRepresentation(Ty) ||
+                NSAPI(CGM.getContext()).isObjCBOOLType(Ty);
+  bool NeedsBoolCheck = HasBoolCheck && IsBool;
+  bool NeedsEnumCheck = HasEnumCheck && Ty->getAs<EnumType>();
+  if (!NeedsBoolCheck && !NeedsEnumCheck)
+    return false;
+
+  // Single-bit booleans don't need to be checked. Special-case this to avoid
+  // a bit width mismatch when handling bitfield values. This is handled by
+  // EmitFromMemory for the non-bitfield case.
+  if (IsBool &&
+      cast<llvm::IntegerType>(Value->getType())->getBitWidth() == 1)
+    return false;
+
+  llvm::APInt Min, End;
+  if (!getRangeForType(*this, Ty, Min, End, /*StrictEnums=*/true, IsBool))
+    return true;
+
+  SanitizerScope SanScope(this);
+  llvm::Value *Check;
+  --End;
+  if (!Min) {
+    Check = Builder.CreateICmpULE(
+        Value, llvm::ConstantInt::get(getLLVMContext(), End));
+  } else {
+    llvm::Value *Upper = Builder.CreateICmpSLE(
+        Value, llvm::ConstantInt::get(getLLVMContext(), End));
+    llvm::Value *Lower = Builder.CreateICmpSGE(
+        Value, llvm::ConstantInt::get(getLLVMContext(), Min));
+    Check = Builder.CreateAnd(Upper, Lower);
+  }
+  llvm::Constant *StaticArgs[] = {EmitCheckSourceLocation(Loc),
+                                  EmitCheckTypeDescriptor(Ty)};
+  SanitizerMask Kind =
+      NeedsEnumCheck ? SanitizerKind::Enum : SanitizerKind::Bool;
+  EmitCheck(std::make_pair(Check, Kind), SanitizerHandler::LoadInvalidValue,
+            StaticArgs, EmitCheckValue(Value));
+  return true;
+}
+
 llvm::Value *CodeGenFunction::EmitLoadOfScalar(Address Addr, bool Volatile,
                                                QualType Ty,
                                                SourceLocation Loc,
@@ -1353,35 +1400,9 @@ llvm::Value *CodeGenFunction::EmitLoadOfScalar(Address Addr, bool Volatile,
                                       false /*ConvertTypeToTag*/);
   }
 
-  bool IsBool = hasBooleanRepresentation(Ty) ||
-                NSAPI(CGM.getContext()).isObjCBOOLType(Ty);
-  bool NeedsBoolCheck = SanOpts.has(SanitizerKind::Bool) && IsBool;
-  bool NeedsEnumCheck =
-      SanOpts.has(SanitizerKind::Enum) && Ty->getAs<EnumType>();
-  if (NeedsBoolCheck || NeedsEnumCheck) {
-    SanitizerScope SanScope(this);
-    llvm::APInt Min, End;
-    if (getRangeForType(*this, Ty, Min, End, /*StrictEnums=*/true, IsBool)) {
-      --End;
-      llvm::Value *Check;
-      if (!Min)
-        Check = Builder.CreateICmpULE(
-          Load, llvm::ConstantInt::get(getLLVMContext(), End));
-      else {
-        llvm::Value *Upper = Builder.CreateICmpSLE(
-          Load, llvm::ConstantInt::get(getLLVMContext(), End));
-        llvm::Value *Lower = Builder.CreateICmpSGE(
-          Load, llvm::ConstantInt::get(getLLVMContext(), Min));
-        Check = Builder.CreateAnd(Upper, Lower);
-      }
-      llvm::Constant *StaticArgs[] = {
-        EmitCheckSourceLocation(Loc),
-        EmitCheckTypeDescriptor(Ty)
-      };
-      SanitizerMask Kind = NeedsEnumCheck ? SanitizerKind::Enum : SanitizerKind::Bool;
-      EmitCheck(std::make_pair(Check, Kind), SanitizerHandler::LoadInvalidValue,
-                StaticArgs, EmitCheckValue(Load));
-    }
+  if (EmitScalarRangeCheck(Load, Ty, Loc)) {
+    // In order to prevent the optimizer from throwing away the check, don't
+    // attach range metadata to the load.
   } else if (CGM.getCodeGenOpts().OptimizationLevel > 0)
     if (llvm::MDNode *RangeInfo = getRangeForLoadFromType(Ty))
       Load->setMetadata(llvm::LLVMContext::MD_range, RangeInfo);
@@ -1523,10 +1544,11 @@ RValue CodeGenFunction::EmitLoadOfLValue(LValue LV, SourceLocation Loc) {
     return EmitLoadOfGlobalRegLValue(LV);
 
   assert(LV.isBitField() && "Unknown LValue type!");
-  return EmitLoadOfBitfieldLValue(LV);
+  return EmitLoadOfBitfieldLValue(LV, Loc);
 }
 
-RValue CodeGenFunction::EmitLoadOfBitfieldLValue(LValue LV) {
+RValue CodeGenFunction::EmitLoadOfBitfieldLValue(LValue LV,
+                                                 SourceLocation Loc) {
   const CGBitFieldInfo &Info = LV.getBitFieldInfo();
 
   // Get the output type.
@@ -1551,7 +1573,7 @@ RValue CodeGenFunction::EmitLoadOfBitfieldLValue(LValue LV) {
                               "bf.clear");
   }
   Val = Builder.CreateIntCast(Val, ResLTy, Info.IsSigned, "bf.cast");
-
+  EmitScalarRangeCheck(Val, LV.getType(), Loc);
   return RValue::get(Val);
 }
 

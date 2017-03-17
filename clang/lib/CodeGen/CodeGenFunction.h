@@ -115,6 +115,8 @@ enum TypeEvaluationKind {
   SANITIZER_CHECK(MissingReturn, missing_return, 0)                            \
   SANITIZER_CHECK(MulOverflow, mul_overflow, 0)                                \
   SANITIZER_CHECK(NegateOverflow, negate_overflow, 0)                          \
+  SANITIZER_CHECK(NullabilityArg, nullability_arg, 0)                          \
+  SANITIZER_CHECK(NullabilityReturn, nullability_return, 0)                    \
   SANITIZER_CHECK(NonnullArg, nonnull_arg, 0)                                  \
   SANITIZER_CHECK(NonnullReturn, nonnull_return, 0)                            \
   SANITIZER_CHECK(OutOfBounds, out_of_bounds, 0)                               \
@@ -1371,6 +1373,16 @@ private:
   /// information about the layout of the variable.
   llvm::DenseMap<const ValueDecl *, BlockByrefInfo> BlockByrefInfos;
 
+  /// Used by -fsanitize=nullability-return to determine whether the return
+  /// value can be checked.
+  llvm::Value *RetValNullabilityPrecondition = nullptr;
+
+  /// Check if -fsanitize=nullability-return instrumentation is required for
+  /// this function.
+  bool requiresReturnValueNullabilityCheck() const {
+    return RetValNullabilityPrecondition;
+  }
+
   llvm::BasicBlock *TerminateLandingPad;
   llvm::BasicBlock *TerminateHandler;
   llvm::BasicBlock *TrapBB;
@@ -1748,6 +1760,9 @@ public:
   /// given temporary.
   void EmitFunctionEpilog(const CGFunctionInfo &FI, bool EmitRetDbgLoc,
                           SourceLocation EndLoc);
+
+  /// Emit a test that checks if the return value \p RV is nonnull.
+  void EmitReturnValueCheck(llvm::Value *RV, SourceLocation EndLoc);
 
   /// EmitStartEHSpec - Emit the start of the exception spec.
   void EmitStartEHSpec(const Decl *D);
@@ -2273,7 +2288,9 @@ public:
     TCK_Upcast,
     /// Checking the operand of a cast to a virtual base object. Must be an
     /// object within its lifetime.
-    TCK_UpcastToVirtualBase
+    TCK_UpcastToVirtualBase,
+    /// Checking the value assigned to a _Nonnull pointer. Must not be null.
+    TCK_NonnullAssign
   };
 
   /// \brief Whether any type-checking sanitizers are enabled. If \c false,
@@ -2886,6 +2903,13 @@ public:
   /// representation to its value representation.
   llvm::Value *EmitFromMemory(llvm::Value *Value, QualType Ty);
 
+  /// Check if the scalar \p Value is within the valid range for the given
+  /// type \p Ty.
+  ///
+  /// Returns true if a check is needed (even if the range is unknown).
+  bool EmitScalarRangeCheck(llvm::Value *Value, QualType Ty,
+                            SourceLocation Loc);
+
   /// EmitLoadOfScalar - Load a scalar value from an address, taking
   /// care to appropriately convert from the memory representation to
   /// the LLVM value representation.
@@ -2926,7 +2950,7 @@ public:
   /// rvalue, returning the rvalue.
   RValue EmitLoadOfLValue(LValue V, SourceLocation Loc);
   RValue EmitLoadOfExtVectorElementLValue(LValue V);
-  RValue EmitLoadOfBitfieldLValue(LValue LV);
+  RValue EmitLoadOfBitfieldLValue(LValue LV, SourceLocation Loc);
   RValue EmitLoadOfGlobalRegLValue(LValue LV);
 
   /// EmitStoreThroughLValue - Store the specified rvalue into the specified
@@ -3438,6 +3462,10 @@ public:
   /// evaluate to true based on PGO data.
   void EmitBranchOnBoolExpr(const Expr *Cond, llvm::BasicBlock *TrueBlock,
                             llvm::BasicBlock *FalseBlock, uint64_t TrueCount);
+
+  /// Given an assignment `*LHS = RHS`, emit a test that checks if \p RHS is
+  /// nonnull, if \p LHS is marked _Nonnull.
+  void EmitNullabilityCheck(LValue LHS, llvm::Value *RHS, SourceLocation Loc);
 
   /// \brief Emit a description of a type in a format suitable for passing to
   /// a runtime sanitizer handler.
