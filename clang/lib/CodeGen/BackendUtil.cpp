@@ -583,7 +583,6 @@ void EmitAssemblyHelper::CreateTargetMachine(bool MustCreateTM) {
   if (LangOpts.SjLjExceptions)
     Options.ExceptionModel = llvm::ExceptionHandling::SjLj;
 
-  Options.LessPreciseFPMADOption = CodeGenOpts.LessPreciseFPMAD;
   Options.NoInfsFPMath = CodeGenOpts.NoInfsFPMath;
   Options.NoNaNsFPMath = CodeGenOpts.NoNaNsFPMath;
   Options.NoZerosInBSS = CodeGenOpts.NoZeroInitializedInBSS;

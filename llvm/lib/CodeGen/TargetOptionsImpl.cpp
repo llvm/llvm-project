@@ -34,14 +34,6 @@ bool TargetOptions::DisableFramePointerElim(const MachineFunction &MF) const {
   return false;
 }
 
-/// LessPreciseFPMAD - This flag return true when -enable-fp-mad option
-/// is specified on the command line.  When this flag is off(default), the
-/// code generator is not allowed to generate mad (multiply add) if the
-/// result is "less precise" than doing those operations individually.
-bool TargetOptions::LessPreciseFPMAD() const {
-  return UnsafeFPMath || LessPreciseFPMADOption;
-}
-
 /// HonorSignDependentRoundingFPMath - Return true if the codegen must assume
 /// that the rounding mode of the FPU can change from its default.
 bool TargetOptions::HonorSignDependentRoundingFPMath() const {

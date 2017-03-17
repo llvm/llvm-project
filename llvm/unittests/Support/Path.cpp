@@ -53,6 +53,9 @@ TEST(is_separator, Works) {
   EXPECT_FALSE(path::is_separator('-'));
   EXPECT_FALSE(path::is_separator(' '));
 
+  EXPECT_TRUE(path::is_separator('\\', path::Style::windows));
+  EXPECT_FALSE(path::is_separator('\\', path::Style::posix));
+
 #ifdef LLVM_ON_WIN32
   EXPECT_TRUE(path::is_separator('\\'));
 #else
@@ -252,7 +255,6 @@ TEST(Support, AbsolutePathDotIterator) {
   }
 }
 
-#ifdef LLVM_ON_WIN32
 TEST(Support, AbsolutePathIteratorWin32) {
   SmallString<64> Path(StringRef("c:\\c\\e\\foo.txt"));
   typedef SmallVector<StringRef, 4> PathComponents;
@@ -265,8 +267,9 @@ TEST(Support, AbsolutePathIteratorWin32) {
   // when iterating.
   ExpectedPathComponents.insert(ExpectedPathComponents.begin()+1, "\\");
 
-  for (path::const_iterator I = path::begin(Path), E = path::end(Path); I != E;
-       ++I) {
+  for (path::const_iterator I = path::begin(Path, path::Style::windows),
+                            E = path::end(Path);
+       I != E; ++I) {
     ActualPathComponents.push_back(*I);
   }
 
@@ -276,34 +279,29 @@ TEST(Support, AbsolutePathIteratorWin32) {
     EXPECT_EQ(ExpectedPathComponents[i].str(), ActualPathComponents[i].str());
   }
 }
-#endif // LLVM_ON_WIN32
 
 TEST(Support, AbsolutePathIteratorEnd) {
   // Trailing slashes are converted to '.' unless they are part of the root path.
-  SmallVector<StringRef, 4> Paths;
-  Paths.push_back("/foo/");
-  Paths.push_back("/foo//");
-  Paths.push_back("//net//");
-#ifdef LLVM_ON_WIN32
-  Paths.push_back("c:\\\\");
-#endif
+  SmallVector<std::pair<StringRef, path::Style>, 4> Paths;
+  Paths.emplace_back("/foo/", path::Style::native);
+  Paths.emplace_back("/foo//", path::Style::native);
+  Paths.emplace_back("//net//", path::Style::native);
+  Paths.emplace_back("c:\\\\", path::Style::windows);
 
-  for (StringRef Path : Paths) {
-    StringRef LastComponent = *path::rbegin(Path);
+  for (auto &Path : Paths) {
+    StringRef LastComponent = *path::rbegin(Path.first, Path.second);
     EXPECT_EQ(".", LastComponent);
   }
 
-  SmallVector<StringRef, 3> RootPaths;
-  RootPaths.push_back("/");
-  RootPaths.push_back("//net/");
-#ifdef LLVM_ON_WIN32
-  RootPaths.push_back("c:\\");
-#endif
+  SmallVector<std::pair<StringRef, path::Style>, 3> RootPaths;
+  RootPaths.emplace_back("/", path::Style::native);
+  RootPaths.emplace_back("//net/", path::Style::native);
+  RootPaths.emplace_back("c:\\", path::Style::windows);
 
-  for (StringRef Path : RootPaths) {
-    StringRef LastComponent = *path::rbegin(Path);
+  for (auto &Path : RootPaths) {
+    StringRef LastComponent = *path::rbegin(Path.first, Path.second);
     EXPECT_EQ(1u, LastComponent.size());
-    EXPECT_TRUE(path::is_separator(LastComponent[0]));
+    EXPECT_TRUE(path::is_separator(LastComponent[0], Path.second));
   }
 }
 
@@ -1056,40 +1054,23 @@ TEST_F(FileSystemTest, FileMapping) {
 }
 
 TEST(Support, NormalizePath) {
-#if defined(LLVM_ON_WIN32)
-#define EXPECT_PATH_IS(path__, windows__, not_windows__)                        \
-  EXPECT_EQ(path__, windows__);
-#else
-#define EXPECT_PATH_IS(path__, windows__, not_windows__)                        \
-  EXPECT_EQ(path__, not_windows__);
-#endif
+  using TestTuple = std::tuple<const char *, const char *, const char *>;
+  std::vector<TestTuple> Tests;
+  Tests.emplace_back("a", "a", "a");
+  Tests.emplace_back("a/b", "a\\b", "a/b");
+  Tests.emplace_back("a\\b", "a\\b", "a/b");
+  Tests.emplace_back("a\\\\b", "a\\\\b", "a\\\\b");
+  Tests.emplace_back("\\a", "\\a", "/a");
+  Tests.emplace_back("a\\", "a\\", "a/");
 
-  SmallString<64> Path1("a");
-  SmallString<64> Path2("a/b");
-  SmallString<64> Path3("a\\b");
-  SmallString<64> Path4("a\\\\b");
-  SmallString<64> Path5("\\a");
-  SmallString<64> Path6("a\\");
-
-  path::native(Path1);
-  EXPECT_PATH_IS(Path1, "a", "a");
-
-  path::native(Path2);
-  EXPECT_PATH_IS(Path2, "a\\b", "a/b");
-
-  path::native(Path3);
-  EXPECT_PATH_IS(Path3, "a\\b", "a/b");
-
-  path::native(Path4);
-  EXPECT_PATH_IS(Path4, "a\\\\b", "a\\\\b");
-
-  path::native(Path5);
-  EXPECT_PATH_IS(Path5, "\\a", "/a");
-
-  path::native(Path6);
-  EXPECT_PATH_IS(Path6, "a\\", "a/");
-
-#undef EXPECT_PATH_IS
+  for (auto &T : Tests) {
+    SmallString<64> Win(std::get<0>(T));
+    SmallString<64> Posix(Win);
+    path::native(Win, path::Style::windows);
+    path::native(Posix, path::Style::posix);
+    EXPECT_EQ(std::get<1>(T), Win);
+    EXPECT_EQ(std::get<2>(T), Posix);
+  }
 
 #if defined(LLVM_ON_WIN32)
   SmallString<64> PathHome;
@@ -1129,43 +1110,48 @@ TEST(Support, RemoveLeadingDotSlash) {
   EXPECT_EQ(Path2, "");
 }
 
-static std::string remove_dots(StringRef path,
-    bool remove_dot_dot) {
+static std::string remove_dots(StringRef path, bool remove_dot_dot,
+                               path::Style style) {
   SmallString<256> buffer(path);
-  path::remove_dots(buffer, remove_dot_dot);
+  path::remove_dots(buffer, remove_dot_dot, style);
   return buffer.str();
 }
 
 TEST(Support, RemoveDots) {
-#if defined(LLVM_ON_WIN32)
-  EXPECT_EQ("foolz\\wat", remove_dots(".\\.\\\\foolz\\wat", false));
-  EXPECT_EQ("", remove_dots(".\\\\\\\\\\", false));
+  EXPECT_EQ("foolz\\wat",
+            remove_dots(".\\.\\\\foolz\\wat", false, path::Style::windows));
+  EXPECT_EQ("", remove_dots(".\\\\\\\\\\", false, path::Style::windows));
 
-  EXPECT_EQ("a\\..\\b\\c", remove_dots(".\\a\\..\\b\\c", false));
-  EXPECT_EQ("b\\c", remove_dots(".\\a\\..\\b\\c", true));
-  EXPECT_EQ("c", remove_dots(".\\.\\c", true));
-  EXPECT_EQ("..\\a\\c", remove_dots("..\\a\\b\\..\\c", true));
-  EXPECT_EQ("..\\..\\a\\c", remove_dots("..\\..\\a\\b\\..\\c", true));
+  EXPECT_EQ("a\\..\\b\\c",
+            remove_dots(".\\a\\..\\b\\c", false, path::Style::windows));
+  EXPECT_EQ("b\\c", remove_dots(".\\a\\..\\b\\c", true, path::Style::windows));
+  EXPECT_EQ("c", remove_dots(".\\.\\c", true, path::Style::windows));
+  EXPECT_EQ("..\\a\\c",
+            remove_dots("..\\a\\b\\..\\c", true, path::Style::windows));
+  EXPECT_EQ("..\\..\\a\\c",
+            remove_dots("..\\..\\a\\b\\..\\c", true, path::Style::windows));
 
   SmallString<64> Path1(".\\.\\c");
-  EXPECT_TRUE(path::remove_dots(Path1, true));
+  EXPECT_TRUE(path::remove_dots(Path1, true, path::Style::windows));
   EXPECT_EQ("c", Path1);
-#else
-  EXPECT_EQ("foolz/wat", remove_dots("././/foolz/wat", false));
-  EXPECT_EQ("", remove_dots("./////", false));
 
-  EXPECT_EQ("a/../b/c", remove_dots("./a/../b/c", false));
-  EXPECT_EQ("b/c", remove_dots("./a/../b/c", true));
-  EXPECT_EQ("c", remove_dots("././c", true));
-  EXPECT_EQ("../a/c", remove_dots("../a/b/../c", true));
-  EXPECT_EQ("../../a/c", remove_dots("../../a/b/../c", true));
-  EXPECT_EQ("/a/c", remove_dots("/../../a/c", true));
-  EXPECT_EQ("/a/c", remove_dots("/../a/b//../././/c", true));
+  EXPECT_EQ("foolz/wat",
+            remove_dots("././/foolz/wat", false, path::Style::posix));
+  EXPECT_EQ("", remove_dots("./////", false, path::Style::posix));
 
-  SmallString<64> Path1("././c");
-  EXPECT_TRUE(path::remove_dots(Path1, true));
-  EXPECT_EQ("c", Path1);
-#endif
+  EXPECT_EQ("a/../b/c", remove_dots("./a/../b/c", false, path::Style::posix));
+  EXPECT_EQ("b/c", remove_dots("./a/../b/c", true, path::Style::posix));
+  EXPECT_EQ("c", remove_dots("././c", true, path::Style::posix));
+  EXPECT_EQ("../a/c", remove_dots("../a/b/../c", true, path::Style::posix));
+  EXPECT_EQ("../../a/c",
+            remove_dots("../../a/b/../c", true, path::Style::posix));
+  EXPECT_EQ("/a/c", remove_dots("/../../a/c", true, path::Style::posix));
+  EXPECT_EQ("/a/c",
+            remove_dots("/../a/b//../././/c", true, path::Style::posix));
+
+  SmallString<64> Path2("././c");
+  EXPECT_TRUE(path::remove_dots(Path2, true, path::Style::posix));
+  EXPECT_EQ("c", Path2);
 }
 
 TEST(Support, ReplacePathPrefix) {

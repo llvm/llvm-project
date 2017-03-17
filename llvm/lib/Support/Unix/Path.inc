@@ -486,7 +486,8 @@ static void expandTildeExpr(SmallVectorImpl<char> &Path) {
     return;
 
   PathStr = PathStr.drop_front();
-  StringRef Expr = PathStr.take_until(path::is_separator);
+  StringRef Expr =
+      PathStr.take_until([](char c) { return path::is_separator(c); });
   StringRef Remainder = PathStr.substr(Expr.size() + 1);
   SmallString<128> Storage;
   if (Expr.empty()) {

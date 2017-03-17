@@ -1853,9 +1853,9 @@ bool IRForTarget::ReplaceVariables(Function &llvm_function) {
   if (!m_decl_map->GetStructInfo(num_elements, size, alignment))
     return false;
 
-  Function::arg_iterator iter(llvm_function.getArgumentList().begin());
+  Function::arg_iterator iter(llvm_function.arg_begin());
 
-  if (iter == llvm_function.getArgumentList().end()) {
+  if (iter == llvm_function.arg_end()) {
     m_error_stream.Printf("Internal error [IRForTarget]: Wrapper takes no "
                           "arguments (should take at least a struct pointer)");
 
@@ -1867,7 +1867,7 @@ bool IRForTarget::ReplaceVariables(Function &llvm_function) {
   if (argument->getName().equals("this")) {
     ++iter;
 
-    if (iter == llvm_function.getArgumentList().end()) {
+    if (iter == llvm_function.arg_end()) {
       m_error_stream.Printf("Internal error [IRForTarget]: Wrapper takes only "
                             "'this' argument (should take a struct pointer "
                             "too)");
@@ -1879,7 +1879,7 @@ bool IRForTarget::ReplaceVariables(Function &llvm_function) {
   } else if (argument->getName().equals("self")) {
     ++iter;
 
-    if (iter == llvm_function.getArgumentList().end()) {
+    if (iter == llvm_function.arg_end()) {
       m_error_stream.Printf("Internal error [IRForTarget]: Wrapper takes only "
                             "'self' argument (should take '_cmd' and a struct "
                             "pointer too)");
@@ -1897,7 +1897,7 @@ bool IRForTarget::ReplaceVariables(Function &llvm_function) {
 
     ++iter;
 
-    if (iter == llvm_function.getArgumentList().end()) {
+    if (iter == llvm_function.arg_end()) {
       m_error_stream.Printf("Internal error [IRForTarget]: Wrapper takes only "
                             "'self' and '_cmd' arguments (should take a struct "
                             "pointer too)");

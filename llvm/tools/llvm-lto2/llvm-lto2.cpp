@@ -275,18 +275,13 @@ int main(int argc, char **argv) {
     return llvm::make_unique<lto::NativeObjectStream>(std::move(S));
   };
 
-  auto AddFile = [&](size_t Task, StringRef Path) {
-    auto ReloadedBufferOrErr = MemoryBuffer::getFile(Path);
-    if (auto EC = ReloadedBufferOrErr.getError())
-      report_fatal_error(Twine("Can't reload cached file '") + Path + "': " +
-                         EC.message() + "\n");
-
-    *AddStream(Task)->OS << (*ReloadedBufferOrErr)->getBuffer();
+  auto AddBuffer = [&](size_t Task, std::unique_ptr<MemoryBuffer> MB) {
+    *AddStream(Task)->OS << MB->getBuffer();
   };
 
   NativeObjectCache Cache;
   if (!CacheDir.empty())
-    Cache = check(localCache(CacheDir, AddFile), "failed to create cache");
+    Cache = check(localCache(CacheDir, AddBuffer), "failed to create cache");
 
   check(Lto.run(AddStream, Cache), "LTO::run failed");
 }

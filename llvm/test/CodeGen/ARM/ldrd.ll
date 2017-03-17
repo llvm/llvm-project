@@ -189,5 +189,23 @@ define i32* @strd_postupdate_inc(i32* %p0, i32 %v0, i32 %v1) "no-frame-pointer-e
   ret i32* %p1
 }
 
+; CHECK-LABEL: ldrd_strd_aa:
+; NORMAL: ldrd [[TMP1:r[0-9]]], [[TMP2:r[0-9]]],
+; NORMAL: strd [[TMP1]], [[TMP2]],
+; CONSERVATIVE-NOT: ldrd
+; CONSERVATIVE-NOT: strd
+; CHECK: bx lr
+
+define void @ldrd_strd_aa(i32* noalias nocapture %x, i32* noalias nocapture readonly %y) {
+entry:
+  %0 = load i32, i32* %y, align 4
+  store i32 %0, i32* %x, align 4
+  %arrayidx2 = getelementptr inbounds i32, i32* %y, i32 1
+  %1 = load i32, i32* %arrayidx2, align 4
+  %arrayidx3 = getelementptr inbounds i32, i32* %x, i32 1
+  store i32 %1, i32* %arrayidx3, align 4
+  ret void
+}
+
 declare void @llvm.lifetime.start(i64, i8* nocapture) nounwind
 declare void @llvm.lifetime.end(i64, i8* nocapture) nounwind

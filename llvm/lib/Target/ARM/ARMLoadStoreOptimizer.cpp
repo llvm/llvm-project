@@ -1961,6 +1961,7 @@ namespace {
     static char ID;
     ARMPreAllocLoadStoreOpt() : MachineFunctionPass(ID) {}
 
+    AliasAnalysis *AA;
     const DataLayout *TD;
     const TargetInstrInfo *TII;
     const TargetRegisterInfo *TRI;
@@ -1972,6 +1973,11 @@ namespace {
 
     StringRef getPassName() const override {
       return ARM_PREALLOC_LOAD_STORE_OPT_NAME;
+    }
+
+    virtual void getAnalysisUsage(AnalysisUsage &AU) const override {
+      AU.addRequired<AAResultsWrapperPass>();
+      MachineFunctionPass::getAnalysisUsage(AU);
     }
 
   private:
@@ -2003,6 +2009,7 @@ bool ARMPreAllocLoadStoreOpt::runOnMachineFunction(MachineFunction &Fn) {
   TRI = STI->getRegisterInfo();
   MRI = &Fn.getRegInfo();
   MF  = &Fn;
+  AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
 
   bool Modified = false;
   for (MachineBasicBlock &MFI : Fn)
@@ -2016,28 +2023,19 @@ static bool IsSafeAndProfitableToMove(bool isLd, unsigned Base,
                                       MachineBasicBlock::iterator E,
                                       SmallPtrSetImpl<MachineInstr*> &MemOps,
                                       SmallSet<unsigned, 4> &MemRegs,
-                                      const TargetRegisterInfo *TRI) {
+                                      const TargetRegisterInfo *TRI,
+                                      AliasAnalysis *AA) {
   // Are there stores / loads / calls between them?
-  // FIXME: This is overly conservative. We should make use of alias information
-  // some day.
   SmallSet<unsigned, 4> AddedRegPressure;
   while (++I != E) {
     if (I->isDebugValue() || MemOps.count(&*I))
       continue;
     if (I->isCall() || I->isTerminator() || I->hasUnmodeledSideEffects())
       return false;
-    if (isLd && I->mayStore())
-      return false;
-    if (!isLd) {
-      if (I->mayLoad())
-        return false;
-      // It's not safe to move the first 'str' down.
-      // str r1, [r0]
-      // strh r5, [r0]
-      // str r4, [r0, #+4]
-      if (I->mayStore())
-        return false;
-    }
+    if (I->mayStore() || (!isLd && I->mayLoad()))
+      for (MachineInstr *MemOp : MemOps)
+        if (I->mayAlias(AA, *MemOp, /*UseTBAA*/ false))
+          return false;
     for (unsigned j = 0, NumOps = I->getNumOperands(); j != NumOps; ++j) {
       MachineOperand &MO = I->getOperand(j);
       if (!MO.isReg())
@@ -2212,7 +2210,7 @@ bool ARMPreAllocLoadStoreOpt::RescheduleOps(MachineBasicBlock *MBB,
       bool DoMove = (LastLoc - FirstLoc) <= NumMove*4; // FIXME: Tune this.
       if (DoMove)
         DoMove = IsSafeAndProfitableToMove(isLd, Base, FirstOp, LastOp,
-                                           MemOps, MemRegs, TRI);
+                                           MemOps, MemRegs, TRI, AA);
       if (!DoMove) {
         for (unsigned i = 0; i != NumMove; ++i)
           Ops.pop_back();

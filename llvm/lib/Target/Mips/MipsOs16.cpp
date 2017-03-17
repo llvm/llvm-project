@@ -57,7 +57,7 @@ static  bool needsFPFromSig(Function &F) {
     ;
   }
   if (F.arg_size() >=1) {
-    Argument &Arg = F.getArgumentList().front();
+    Argument &Arg = *F.arg_begin();
     switch (Arg.getType()->getTypeID()) {
     case Type::FloatTyID:
     case Type::DoubleTyID:
