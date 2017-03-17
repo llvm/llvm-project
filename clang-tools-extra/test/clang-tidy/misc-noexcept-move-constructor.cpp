@@ -42,3 +42,13 @@ struct OK3 {
   OK3(OK3 &&) noexcept(false) {}
   OK3 &operator=(OK3 &&) = delete;
 };
+
+struct OK4 {
+  OK4(OK4 &&) noexcept = default;
+  OK4 &operator=(OK4 &&) noexcept = default;
+};
+
+struct OK5 {
+  OK5(OK5 &&) noexcept(true) = default;
+  OK5 &operator=(OK5 &&) noexcept(true) = default;
+};

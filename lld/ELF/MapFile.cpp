@@ -87,7 +87,7 @@ static void writeInputSection(raw_fd_ostream &OS, const InputSection *IS,
       continue;
     if (DR->isSection())
       continue;
-    writeSymbolLine(OS, Width, Sym->getVA<ELFT>(), Sym->getSize<ELFT>(),
+    writeSymbolLine(OS, Width, Sym->getVA(), Sym->getSize<ELFT>(),
                     toString(*Sym));
     OS << '\n';
   }

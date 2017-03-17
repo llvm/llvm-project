@@ -26,7 +26,7 @@
 // These optimizations include:
 //
 //  - Tiling of the innermost tilable bands
-//  - Prevectorization - The coice of a possible outer loop that is strip-mined
+//  - Prevectorization - The choice of a possible outer loop that is strip-mined
 //                       to the innermost level to enable inner-loop
 //                       vectorization.
 //  - Some optimizations for spatial locality are also planned.
@@ -36,7 +36,7 @@
 //
 // Polyhedral AST generation is more than scanning polyhedra
 // Tobias Grosser, Sven Verdoolaege, Albert Cohen
-// ACM Transations on Programming Languages and Systems (TOPLAS),
+// ACM Transactions on Programming Languages and Systems (TOPLAS),
 // 37(4), July 2015
 // http://www.grosser.es/#pub-polyhedral-AST-generation
 //

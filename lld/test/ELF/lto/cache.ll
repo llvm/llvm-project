@@ -5,7 +5,7 @@
 
 ; RUN: rm -Rf %t.cache && mkdir %t.cache
 ; Create a file that will be removed by cache pruning due to age.
-; RUN: touch -t 197001010000 %t.cache/foo
+; RUN: touch -t 197001011200 %t.cache/foo
 ; RUN: ld.lld --thinlto-cache-dir=%t.cache --thinlto-cache-policy prune_after=1h -o %t3 %t2.o %t.o
 
 ; Two cached objects, plus a timestamp file, minus the file we removed.

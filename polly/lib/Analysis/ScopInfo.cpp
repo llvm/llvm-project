@@ -29,10 +29,10 @@
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopIterator.h"
@@ -135,11 +135,22 @@ static cl::opt<bool>
 static cl::opt<bool> UnprofitableScalarAccs(
     "polly-unprofitable-scalar-accs",
     cl::desc("Count statements with scalar accesses as not optimizable"),
-    cl::Hidden, cl::init(true), cl::cat(PollyCategory));
+    cl::Hidden, cl::init(false), cl::cat(PollyCategory));
 
 static cl::opt<bool> PollyPreciseInbounds(
     "polly-precise-inbounds",
     cl::desc("Take more precise inbounds assumptions (do not scale well)"),
+    cl::Hidden, cl::init(false), cl::cat(PollyCategory));
+
+static cl::opt<bool>
+    PollyIgnoreInbounds("polly-ignore-inbounds",
+                        cl::desc("Do not take inbounds assumptions at all"),
+                        cl::Hidden, cl::init(false), cl::cat(PollyCategory));
+
+static cl::opt<bool> PollyIgnoreParamBounds(
+    "polly-ignore-parameter-bounds",
+    cl::desc(
+        "Do not add parameter bounds and do no gist simplify sets accordingly"),
     cl::Hidden, cl::init(false), cl::cat(PollyCategory));
 
 static cl::opt<bool> PollyPreciseFoldAccesses(
@@ -677,6 +688,8 @@ MemoryAccess::createBasicAccessMap(ScopStmt *Statement) {
 // constraints is the set of constraints that needs to be assumed to ensure such
 // statement instances are never executed.
 void MemoryAccess::assumeNoOutOfBound() {
+  if (PollyIgnoreInbounds)
+    return;
   auto *SAI = getScopArrayInfo();
   isl_space *Space = isl_space_range(getOriginalAccessRelationSpace());
   isl_set *Outside = isl_set_empty(isl_space_copy(Space));
@@ -1933,82 +1946,76 @@ bool Scop::isDominatedBy(const DominatorTree &DT, BasicBlock *BB) const {
   return DT.dominates(BB, getEntry());
 }
 
-void Scop::addUserAssumptions(DominatorTree &DT, LoopInfo &LI) {
+void Scop::addUserAssumptions(AssumptionCache &AC, DominatorTree &DT,
+                              LoopInfo &LI) {
   auto &F = getFunction();
-
-  // TODO: Walk the DominatorTree from getRegion().getExit() to its root in
-  // order to not iterate over blocks we skip anyways.
-  for (auto &BB : F) {
-    bool InScop = contains(&BB);
-    if (!InScop && !isDominatedBy(DT, &BB))
+  for (auto &Assumption : AC.assumptions()) {
+    auto *CI = dyn_cast_or_null<CallInst>(Assumption);
+    if (!CI || CI->getNumArgOperands() != 1)
       continue;
 
-    for (auto &Assumption : BB) {
-      auto *CI = dyn_cast_or_null<IntrinsicInst>(&Assumption);
-      if (!CI || CI->getNumArgOperands() != 1 ||
-          CI->getIntrinsicID() != Intrinsic::assume)
-        continue;
+    bool InScop = contains(CI);
+    if (!InScop && !isDominatedBy(DT, CI->getParent()))
+      continue;
 
-      auto *L = LI.getLoopFor(CI->getParent());
-      auto *Val = CI->getArgOperand(0);
-      ParameterSetTy DetectedParams;
-      if (!isAffineConstraint(Val, &R, L, *SE, DetectedParams)) {
-        emitOptimizationRemarkAnalysis(F.getContext(), DEBUG_TYPE, F,
-                                       CI->getDebugLoc(),
-                                       "Non-affine user assumption ignored.");
-        continue;
-      }
-
-      // Collect all newly introduced parameters.
-      ParameterSetTy NewParams;
-      for (auto *Param : DetectedParams) {
-        Param = extractConstantFactor(Param, *SE).second;
-        Param = getRepresentingInvariantLoadSCEV(Param);
-        if (Parameters.count(Param))
-          continue;
-        NewParams.insert(Param);
-      }
-
-      SmallVector<isl_set *, 2> ConditionSets;
-      auto *TI = InScop ? CI->getParent()->getTerminator() : nullptr;
-      auto &Stmt = InScop ? *getStmtFor(CI->getParent()) : *Stmts.begin();
-      auto *Dom = InScop ? getDomainConditions(&Stmt) : isl_set_copy(Context);
-      bool Valid = buildConditionSets(Stmt, Val, TI, L, Dom, ConditionSets);
-      isl_set_free(Dom);
-
-      if (!Valid)
-        continue;
-
-      isl_set *AssumptionCtx = nullptr;
-      if (InScop) {
-        AssumptionCtx = isl_set_complement(isl_set_params(ConditionSets[1]));
-        isl_set_free(ConditionSets[0]);
-      } else {
-        AssumptionCtx = isl_set_complement(ConditionSets[1]);
-        AssumptionCtx = isl_set_intersect(AssumptionCtx, ConditionSets[0]);
-      }
-
-      // Project out newly introduced parameters as they are not otherwise
-      // useful.
-      if (!NewParams.empty()) {
-        for (unsigned u = 0; u < isl_set_n_param(AssumptionCtx); u++) {
-          auto *Id = isl_set_get_dim_id(AssumptionCtx, isl_dim_param, u);
-          auto *Param = static_cast<const SCEV *>(isl_id_get_user(Id));
-          isl_id_free(Id);
-
-          if (!NewParams.count(Param))
-            continue;
-
-          AssumptionCtx =
-              isl_set_project_out(AssumptionCtx, isl_dim_param, u--, 1);
-        }
-      }
-
-      emitOptimizationRemarkAnalysis(
-          F.getContext(), DEBUG_TYPE, F, CI->getDebugLoc(),
-          "Use user assumption: " + stringFromIslObj(AssumptionCtx));
-      Context = isl_set_intersect(Context, AssumptionCtx);
+    auto *L = LI.getLoopFor(CI->getParent());
+    auto *Val = CI->getArgOperand(0);
+    ParameterSetTy DetectedParams;
+    if (!isAffineConstraint(Val, &R, L, *SE, DetectedParams)) {
+      emitOptimizationRemarkAnalysis(F.getContext(), DEBUG_TYPE, F,
+                                     CI->getDebugLoc(),
+                                     "Non-affine user assumption ignored.");
+      continue;
     }
+
+    // Collect all newly introduced parameters.
+    ParameterSetTy NewParams;
+    for (auto *Param : DetectedParams) {
+      Param = extractConstantFactor(Param, *SE).second;
+      Param = getRepresentingInvariantLoadSCEV(Param);
+      if (Parameters.count(Param))
+        continue;
+      NewParams.insert(Param);
+    }
+
+    SmallVector<isl_set *, 2> ConditionSets;
+    auto *TI = InScop ? CI->getParent()->getTerminator() : nullptr;
+    auto &Stmt = InScop ? *getStmtFor(CI->getParent()) : *Stmts.begin();
+    auto *Dom = InScop ? getDomainConditions(&Stmt) : isl_set_copy(Context);
+    bool Valid = buildConditionSets(Stmt, Val, TI, L, Dom, ConditionSets);
+    isl_set_free(Dom);
+
+    if (!Valid)
+      continue;
+
+    isl_set *AssumptionCtx = nullptr;
+    if (InScop) {
+      AssumptionCtx = isl_set_complement(isl_set_params(ConditionSets[1]));
+      isl_set_free(ConditionSets[0]);
+    } else {
+      AssumptionCtx = isl_set_complement(ConditionSets[1]);
+      AssumptionCtx = isl_set_intersect(AssumptionCtx, ConditionSets[0]);
+    }
+
+    // Project out newly introduced parameters as they are not otherwise useful.
+    if (!NewParams.empty()) {
+      for (unsigned u = 0; u < isl_set_n_param(AssumptionCtx); u++) {
+        auto *Id = isl_set_get_dim_id(AssumptionCtx, isl_dim_param, u);
+        auto *Param = static_cast<const SCEV *>(isl_id_get_user(Id));
+        isl_id_free(Id);
+
+        if (!NewParams.count(Param))
+          continue;
+
+        AssumptionCtx =
+            isl_set_project_out(AssumptionCtx, isl_dim_param, u--, 1);
+      }
+    }
+
+    emitOptimizationRemarkAnalysis(
+        F.getContext(), DEBUG_TYPE, F, CI->getDebugLoc(),
+        "Use user assumption: " + stringFromIslObj(AssumptionCtx));
+    Context = isl_set_intersect(Context, AssumptionCtx);
   }
 }
 
@@ -2096,6 +2103,9 @@ void Scop::addParameterBounds() {
 }
 
 void Scop::realignParams() {
+  if (PollyIgnoreParamBounds)
+    return;
+
   // Add all parameters into a common model.
   isl_space *Space = isl_space_params_alloc(getIslCtx(), ParameterIds.size());
 
@@ -3347,13 +3357,14 @@ void Scop::finalizeAccesses() {
   assumeNoOutOfBounds();
 }
 
-void Scop::init(AliasAnalysis &AA, DominatorTree &DT, LoopInfo &LI) {
+void Scop::init(AliasAnalysis &AA, AssumptionCache &AC, DominatorTree &DT,
+                LoopInfo &LI) {
   buildInvariantEquivalenceClasses();
 
   if (!buildDomains(&R, DT, LI))
     return;
 
-  addUserAssumptions(DT, LI);
+  addUserAssumptions(AC, DT, LI);
 
   // Remove empty statements.
   // Exit early in case there are no executable statements left in this scop.
@@ -3371,7 +3382,7 @@ void Scop::init(AliasAnalysis &AA, DominatorTree &DT, LoopInfo &LI) {
 
   // Check early for profitability. Afterwards it cannot change anymore,
   // only the runtime context could become infeasible.
-  if (!isProfitable()) {
+  if (!isProfitable(UnprofitableScalarAccs)) {
     invalidate(PROFITABLE, DebugLoc());
     return;
   }
@@ -3885,7 +3896,7 @@ __isl_give isl_set *Scop::getAssumedContext() const {
   return isl_set_copy(AssumedContext);
 }
 
-bool Scop::isProfitable() const {
+bool Scop::isProfitable(bool ScalarsAreUnprofitable) const {
   if (PollyProcessUnprofitable)
     return true;
 
@@ -3902,11 +3913,11 @@ bool Scop::isProfitable() const {
     for (auto *MA : Stmt) {
       if (MA->isRead())
         continue;
-      ContainsArrayAccs |= MA->isArrayKind();
-      ContainsScalarAccs |= MA->isScalarKind();
+      ContainsArrayAccs |= MA->isLatestArrayKind();
+      ContainsScalarAccs |= MA->isLatestScalarKind();
     }
 
-    if (!UnprofitableScalarAccs || (ContainsArrayAccs && !ContainsScalarAccs))
+    if (!ScalarsAreUnprofitable || (ContainsArrayAccs && !ContainsScalarAccs))
       OptimizableStmtsOrLoops += Stmt.getNumIterators();
   }
 
@@ -4633,6 +4644,7 @@ void ScopInfoRegionPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequiredTransitive<ScalarEvolutionWrapperPass>();
   AU.addRequiredTransitive<ScopDetection>();
   AU.addRequired<AAResultsWrapperPass>();
+  AU.addRequired<AssumptionCacheTracker>();
   AU.setPreservesAll();
 }
 
@@ -4667,8 +4679,9 @@ bool ScopInfoRegionPass::runOnRegion(Region *R, RGPassManager &RGM) {
   auto &AA = getAnalysis<AAResultsWrapperPass>().getAAResults();
   auto const &DL = F->getParent()->getDataLayout();
   auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+  auto &AC = getAnalysis<AssumptionCacheTracker>().getAssumptionCache(*F);
 
-  ScopBuilder SB(R, AA, DL, DT, LI, SD, SE);
+  ScopBuilder SB(R, AC, AA, DL, DT, LI, SD, SE);
   S = SB.getScop(); // take ownership of scop object
 
   if (S) {
@@ -4695,6 +4708,7 @@ INITIALIZE_PASS_BEGIN(ScopInfoRegionPass, "polly-scops",
                       "Polly - Create polyhedral description of Scops", false,
                       false);
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass);
+INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker);
 INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass);
 INITIALIZE_PASS_DEPENDENCY(RegionInfoPass);
 INITIALIZE_PASS_DEPENDENCY(ScalarEvolutionWrapperPass);
@@ -4712,6 +4726,7 @@ void ScopInfoWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequiredTransitive<ScalarEvolutionWrapperPass>();
   AU.addRequiredTransitive<ScopDetection>();
   AU.addRequired<AAResultsWrapperPass>();
+  AU.addRequired<AssumptionCacheTracker>();
   AU.setPreservesAll();
 }
 
@@ -4723,6 +4738,7 @@ bool ScopInfoWrapperPass::runOnFunction(Function &F) {
   auto &AA = getAnalysis<AAResultsWrapperPass>().getAAResults();
   auto const &DL = F.getParent()->getDataLayout();
   auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+  auto &AC = getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
 
   /// Create polyhedral descripton of scops for all the valid regions of a
   /// function.
@@ -4731,7 +4747,7 @@ bool ScopInfoWrapperPass::runOnFunction(Function &F) {
     if (!SD.isMaxRegionInScop(*R))
       continue;
 
-    ScopBuilder SB(R, AA, DL, DT, LI, SD, SE);
+    ScopBuilder SB(R, AC, AA, DL, DT, LI, SD, SE);
     std::unique_ptr<Scop> S = SB.getScop();
     if (!S)
       continue;
@@ -4763,6 +4779,7 @@ INITIALIZE_PASS_BEGIN(
     "Polly - Create polyhedral description of all Scops of a function", false,
     false);
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass);
+INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker);
 INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass);
 INITIALIZE_PASS_DEPENDENCY(RegionInfoPass);
 INITIALIZE_PASS_DEPENDENCY(ScalarEvolutionWrapperPass);

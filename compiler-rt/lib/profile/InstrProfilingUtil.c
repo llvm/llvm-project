@@ -30,6 +30,11 @@
 #include <stdlib.h>
 #include <string.h>
 
+#if defined(__linux__)
+#include <signal.h>
+#include <sys/prctl.h>
+#endif
+
 COMPILER_RT_VISIBILITY
 void __llvm_profile_recursive_mkdir(char *path) {
   int i;
@@ -236,5 +241,23 @@ COMPILER_RT_VISIBILITY void lprofInstallSignalHandler(int sig,
   if (err)
     PROF_WARN("Unable to install an exit signal handler for %d (errno = %d).\n",
               sig, err);
+#endif
+}
+
+COMPILER_RT_VISIBILITY int lprofSuspendSigKill() {
+#if defined(__linux__)
+  int PDeachSig = 0;
+  /* Temporarily suspend getting SIGKILL upon exit of the parent process. */
+  if (prctl(PR_GET_PDEATHSIG, &PDeachSig) == 0 && PDeachSig == SIGKILL)
+    prctl(PR_SET_PDEATHSIG, 0);
+  return (PDeachSig == SIGKILL);
+#else
+  return 0;
+#endif
+}
+
+COMPILER_RT_VISIBILITY void lprofRestoreSigKill() {
+#if defined(__linux__)
+  prctl(PR_SET_PDEATHSIG, SIGKILL);
 #endif
 }
