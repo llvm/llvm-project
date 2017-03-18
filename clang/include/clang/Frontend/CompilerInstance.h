@@ -44,7 +44,6 @@ class ExternalASTSource;
 class FileEntry;
 class FileManager;
 class FrontendAction;
-class MemoryBufferCache;
 class Module;
 class Preprocessor;
 class Sema;
@@ -90,9 +89,6 @@ class CompilerInstance : public ModuleLoader {
 
   /// The source manager.
   IntrusiveRefCntPtr<SourceManager> SourceMgr;
-
-  /// The cache of PCM files.
-  IntrusiveRefCntPtr<MemoryBufferCache> PCMCache;
 
   /// The preprocessor.
   std::shared_ptr<Preprocessor> PP;
@@ -182,7 +178,7 @@ public:
   explicit CompilerInstance(
       std::shared_ptr<PCHContainerOperations> PCHContainerOps =
           std::make_shared<PCHContainerOperations>(),
-      MemoryBufferCache *SharedPCMCache = nullptr);
+      bool BuildingModule = false);
   ~CompilerInstance() override;
 
   /// @name High-Level Operations
@@ -787,8 +783,6 @@ public:
   }
 
   void setExternalSemaSource(IntrusiveRefCntPtr<ExternalSemaSource> ESS);
-
-  MemoryBufferCache &getPCMCache() const { return *PCMCache; }
 };
 
 } // end namespace clang
