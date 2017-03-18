@@ -123,11 +123,11 @@ template <class ELFT> void EhReader<ELFT>::skipLeb128() {
   failOn(ErrPos, "corrupted CIE (failed to read LEB128)");
 }
 
-template <class ELFT> static size_t getAugPSize(unsigned Enc) {
+static size_t getAugPSize(unsigned Enc) {
   switch (Enc & 0x0f) {
   case DW_EH_PE_absptr:
   case DW_EH_PE_signed:
-    return ELFT::Is64Bits ? 8 : 4;
+    return Config->Wordsize;
   case DW_EH_PE_udata2:
   case DW_EH_PE_sdata2:
     return 2;
@@ -145,7 +145,7 @@ template <class ELFT> void EhReader<ELFT>::skipAugP() {
   uint8_t Enc = readByte();
   if ((Enc & 0xf0) == DW_EH_PE_aligned)
     failOn(D.data() - 1, "DW_EH_PE_aligned encoding is not supported");
-  size_t Size = getAugPSize<ELFT>(Enc);
+  size_t Size = getAugPSize(Enc);
   if (Size == 0)
     failOn(D.data() - 1, "unknown FDE encoding");
   if (Size >= D.size())

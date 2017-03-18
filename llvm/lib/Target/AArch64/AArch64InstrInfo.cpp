@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AArch64InstrInfo.h"
+#include "AArch64MachineFunctionInfo.h"
 #include "AArch64Subtarget.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "Utils/AArch64BaseInfo.h"
@@ -1683,16 +1684,59 @@ bool AArch64InstrInfo::getMemOpBaseRegImmOfsWidth(
   } else
     return false;
 
-  // Offset is calculated as the immediate operand multiplied by the scaling factor.
-  // Unscaled instructions have scaling factor set to 1.
+  // Get the scaling factor for the instruction and set the width for the 
+  // instruction.
   unsigned Scale = 0;
-  switch (LdSt.getOpcode()) {
-  default:
+  int64_t Dummy1, Dummy2;
+
+  // If this returns false, then it's an instruction we don't want to handle.
+  if (!getMemOpInfo(LdSt.getOpcode(), Scale, Width, Dummy1, Dummy2))
     return false;
+
+  // Compute the offset. Offset is calculated as the immediate operand
+  // multiplied by the scaling factor. Unscaled instructions have scaling factor
+  // set to 1.
+  if (LdSt.getNumExplicitOperands() == 3) {
+    BaseReg = LdSt.getOperand(1).getReg();
+    Offset = LdSt.getOperand(2).getImm() * Scale;
+  } else {
+    assert(LdSt.getNumExplicitOperands() == 4 && "invalid number of operands");
+    BaseReg = LdSt.getOperand(2).getReg();
+    Offset = LdSt.getOperand(3).getImm() * Scale;
+  }
+  return true;
+}
+
+MachineOperand&
+AArch64InstrInfo::getMemOpBaseRegImmOfsOffsetOperand(MachineInstr &LdSt) const {
+  assert(LdSt.mayLoadOrStore() && "Expected a memory operation.");
+  MachineOperand &OfsOp = LdSt.getOperand(LdSt.getNumExplicitOperands()-1);
+  assert(OfsOp.isImm() && "Offset operand wasn't immediate.");
+  return OfsOp;
+}
+
+bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, unsigned &Scale,
+                                    unsigned &Width, int64_t &MinOffset,
+                                    int64_t &MaxOffset) const {
+  switch (Opcode) {
+  // Not a memory operation or something we want to handle.  
+  default:
+    Scale = Width = 0;
+    MinOffset = MaxOffset = 0;
+    return false;
+  case AArch64::STRWpost:
+  case AArch64::LDRWpost:
+    Width = 32;
+    Scale = 4;
+    MinOffset = -256;
+    MaxOffset = 255;
+    break;
   case AArch64::LDURQi:
   case AArch64::STURQi:
     Width = 16;
     Scale = 1;
+    MinOffset = -256;
+    MaxOffset = 255;
     break;
   case AArch64::LDURXi:
   case AArch64::LDURDi:
@@ -1700,6 +1744,8 @@ bool AArch64InstrInfo::getMemOpBaseRegImmOfsWidth(
   case AArch64::STURDi:
     Width = 8;
     Scale = 1;
+    MinOffset = -256;
+    MaxOffset = 255;
     break;
   case AArch64::LDURWi:
   case AArch64::LDURSi:
@@ -1708,6 +1754,8 @@ bool AArch64InstrInfo::getMemOpBaseRegImmOfsWidth(
   case AArch64::STURSi:
     Width = 4;
     Scale = 1;
+    MinOffset = -256;
+    MaxOffset = 255;
     break;
   case AArch64::LDURHi:
   case AArch64::LDURHHi:
@@ -1717,6 +1765,8 @@ bool AArch64InstrInfo::getMemOpBaseRegImmOfsWidth(
   case AArch64::STURHHi:
     Width = 2;
     Scale = 1;
+    MinOffset = -256;
+    MaxOffset = 255;
     break;
   case AArch64::LDURBi:
   case AArch64::LDURBBi:
@@ -1726,6 +1776,8 @@ bool AArch64InstrInfo::getMemOpBaseRegImmOfsWidth(
   case AArch64::STURBBi:
     Width = 1;
     Scale = 1;
+    MinOffset = -256;
+    MaxOffset = 255;
     break;
   case AArch64::LDPQi:
   case AArch64::LDNPQi:
@@ -1733,10 +1785,14 @@ bool AArch64InstrInfo::getMemOpBaseRegImmOfsWidth(
   case AArch64::STNPQi:
     Scale = 16;
     Width = 32;
+    MinOffset = -64;
+    MaxOffset = 63;
     break;
   case AArch64::LDRQui:
   case AArch64::STRQui:
     Scale = Width = 16;
+    MinOffset = 0;
+    MaxOffset = 4095;
     break;
   case AArch64::LDPXi:
   case AArch64::LDPDi:
@@ -1748,12 +1804,16 @@ bool AArch64InstrInfo::getMemOpBaseRegImmOfsWidth(
   case AArch64::STNPDi:
     Scale = 8;
     Width = 16;
+    MinOffset = -64;
+    MaxOffset = 63;
     break;
   case AArch64::LDRXui:
   case AArch64::LDRDui:
   case AArch64::STRXui:
   case AArch64::STRDui:
     Scale = Width = 8;
+    MinOffset = 0;
+    MaxOffset = 4095;
     break;
   case AArch64::LDPWi:
   case AArch64::LDPSi:
@@ -1765,6 +1825,8 @@ bool AArch64InstrInfo::getMemOpBaseRegImmOfsWidth(
   case AArch64::STNPSi:
     Scale = 4;
     Width = 8;
+    MinOffset = -64;
+    MaxOffset = 63;
     break;
   case AArch64::LDRWui:
   case AArch64::LDRSui:
@@ -1772,29 +1834,27 @@ bool AArch64InstrInfo::getMemOpBaseRegImmOfsWidth(
   case AArch64::STRWui:
   case AArch64::STRSui:
     Scale = Width = 4;
+    MinOffset = 0;
+    MaxOffset = 4095;
     break;
   case AArch64::LDRHui:
   case AArch64::LDRHHui:
   case AArch64::STRHui:
   case AArch64::STRHHui:
     Scale = Width = 2;
+    MinOffset = 0;
+    MaxOffset = 4095;
     break;
   case AArch64::LDRBui:
   case AArch64::LDRBBui:
   case AArch64::STRBui:
   case AArch64::STRBBui:
     Scale = Width = 1;
+    MinOffset = 0;
+    MaxOffset = 4095;
     break;
   }
 
-  if (LdSt.getNumExplicitOperands() == 3) {
-    BaseReg = LdSt.getOperand(1).getReg();
-    Offset = LdSt.getOperand(2).getImm() * Scale;
-  } else {
-    assert(LdSt.getNumExplicitOperands() == 4 && "invalid number of operands");
-    BaseReg = LdSt.getOperand(2).getReg();
-    Offset = LdSt.getOperand(3).getImm() * Scale;
-  }
   return true;
 }
 
@@ -4196,3 +4256,201 @@ AArch64InstrInfo::getSerializableBitmaskMachineOperandTargetFlags() const {
       {MO_TLS, "aarch64-tls"}};
   return makeArrayRef(TargetFlags);
 }
+
+unsigned AArch64InstrInfo::getOutliningBenefit(size_t SequenceSize,
+                                               size_t Occurrences,
+                                               bool CanBeTailCall) const {
+  unsigned NotOutlinedSize = SequenceSize * Occurrences;
+  unsigned OutlinedSize;
+
+  // Is this candidate something we can outline as a tail call?
+  if (CanBeTailCall) {
+    // If yes, then we just outline the sequence and replace each of its
+    // occurrences with a branch instruction.
+    OutlinedSize = SequenceSize + Occurrences;
+  } else {
+    // If no, then we outline the sequence (SequenceSize), add a return (+1),
+    // and replace each occurrence with a save/restore to LR and a call
+    // (3 * Occurrences)
+    OutlinedSize = (SequenceSize + 1) + (3 * Occurrences);
+  }
+
+  // Return the number of instructions saved by outlining this sequence.
+  return NotOutlinedSize > OutlinedSize ? NotOutlinedSize - OutlinedSize : 0;
+}
+
+bool AArch64InstrInfo::isFunctionSafeToOutlineFrom(MachineFunction &MF) const {
+  return MF.getFunction()->hasFnAttribute(Attribute::NoRedZone);
+}
+
+AArch64GenInstrInfo::MachineOutlinerInstrType
+AArch64InstrInfo::getOutliningType(MachineInstr &MI) const {
+
+  MachineFunction *MF = MI.getParent()->getParent();
+  AArch64FunctionInfo *FuncInfo = MF->getInfo<AArch64FunctionInfo>();
+
+  // Don't outline LOHs.
+  if (FuncInfo->getLOHRelated().count(&MI))
+    return MachineOutlinerInstrType::Illegal;
+
+  // Don't allow debug values to impact outlining type.
+  if (MI.isDebugValue() || MI.isIndirectDebugValue())
+    return MachineOutlinerInstrType::Invisible;
+
+  // Is this a terminator for a basic block?
+  if (MI.isTerminator()) {
+
+    // Is this the end of a function?
+    if (MI.getParent()->succ_empty())
+        return MachineOutlinerInstrType::Legal;
+
+    // It's not, so don't outline it.
+    return MachineOutlinerInstrType::Illegal;
+  }
+
+  // Don't outline positions.
+  if (MI.isPosition())
+    return MachineOutlinerInstrType::Illegal;
+
+  // Make sure none of the operands are un-outlinable.
+  for (const MachineOperand &MOP : MI.operands())
+    if (MOP.isCPI() || MOP.isJTI() || MOP.isCFIIndex() || MOP.isFI() ||
+        MOP.isTargetIndex())
+      return MachineOutlinerInstrType::Illegal;
+
+  // Don't outline anything that uses the link register.
+  if (MI.modifiesRegister(AArch64::LR, &RI) ||
+      MI.readsRegister(AArch64::LR, &RI))
+      return MachineOutlinerInstrType::Illegal;
+
+  // Does this use the stack?
+  if (MI.modifiesRegister(AArch64::SP, &RI) ||
+      MI.readsRegister(AArch64::SP, &RI)) {
+
+    // Is it a memory operation?
+    if (MI.mayLoadOrStore()) {
+      unsigned Base; // Filled with the base regiser of MI.
+      int64_t Offset; // Filled with the offset of MI.
+      unsigned DummyWidth;
+
+      // Does it allow us to offset the base register and is the base SP?
+      if (!getMemOpBaseRegImmOfsWidth(MI, Base, Offset, DummyWidth, &RI) ||
+                                      Base != AArch64::SP)
+        return MachineOutlinerInstrType::Illegal;
+
+      // Find the minimum/maximum offset for this instruction and check if
+      // fixing it up would be in range.
+      int64_t MinOffset, MaxOffset;
+      unsigned DummyScale;
+      getMemOpInfo(MI.getOpcode(), DummyScale, DummyWidth, MinOffset,
+                   MaxOffset);
+
+      // TODO: We should really test what happens if an instruction overflows.
+      // This is tricky to test with IR tests, but when the outliner is moved
+      // to a MIR test, it really ought to be checked.
+      if (Offset + 16 < MinOffset || Offset + 16 > MaxOffset) {
+        errs() << "Overflow!\n";
+        return MachineOutlinerInstrType::Illegal;
+      }
+
+      // It's in range, so we can outline it.
+      return MachineOutlinerInstrType::Legal;
+    }
+
+    // We can't fix it up, so don't outline it.
+    return MachineOutlinerInstrType::Illegal;
+  }
+
+  return MachineOutlinerInstrType::Legal;
+}
+
+void AArch64InstrInfo::fixupPostOutline(MachineBasicBlock &MBB) const {
+  for (MachineInstr &MI : MBB) {
+    unsigned Base, Width;
+    int64_t Offset;
+
+    // Is this a load or store with an immediate offset with SP as the base?
+    if (!MI.mayLoadOrStore() ||
+        !getMemOpBaseRegImmOfsWidth(MI, Base, Offset, Width, &RI) ||
+        Base != AArch64::SP)
+      continue;
+
+    // It is, so we have to fix it up.
+    unsigned Scale;
+    int64_t Dummy1, Dummy2;
+
+    MachineOperand &StackOffsetOperand = getMemOpBaseRegImmOfsOffsetOperand(MI);
+    assert(StackOffsetOperand.isImm() && "Stack offset wasn't immediate!");
+    getMemOpInfo(MI.getOpcode(), Scale, Width, Dummy1, Dummy2);
+    assert(Scale != 0 && "Unexpected opcode!");
+
+    // We've pushed the return address to the stack, so add 16 to the offset.
+    // This is safe, since we already checked if it would overflow when we
+    // checked if this instruction was legal to outline.
+    int64_t NewImm = (Offset + 16)/Scale;
+    StackOffsetOperand.setImm(NewImm);
+  }
+}
+
+void AArch64InstrInfo::insertOutlinerEpilogue(MachineBasicBlock &MBB,
+                                              MachineFunction &MF,
+                                              bool IsTailCall) const {
+
+  // If this is a tail call outlined function, then there's already a return.
+  if (IsTailCall)
+    return;
+
+  // It's not a tail call, so we have to insert the return ourselves.
+  MachineInstr *ret = BuildMI(MF, DebugLoc(), get(AArch64::RET))
+                          .addReg(AArch64::LR, RegState::Undef);
+  MBB.insert(MBB.end(), ret);
+
+  // Walk over the basic block and fix up all the stack accesses.
+  fixupPostOutline(MBB);
+}
+
+void AArch64InstrInfo::insertOutlinerPrologue(MachineBasicBlock &MBB,
+                                              MachineFunction &MF,
+                                              bool IsTailCall) const {}
+
+MachineBasicBlock::iterator AArch64InstrInfo::insertOutlinedCall(
+    Module &M, MachineBasicBlock &MBB, MachineBasicBlock::iterator &It,
+    MachineFunction &MF, bool IsTailCall) const {
+
+  // Are we tail calling?
+  if (IsTailCall) {
+    // If yes, then we can just branch to the label.
+    It = MBB.insert(It,
+                    BuildMI(MF, DebugLoc(), get(AArch64::B))
+                        .addGlobalAddress(M.getNamedValue(MF.getName())));
+    return It;
+  }
+
+  // We're not tail calling, so we have to save LR before the call and restore
+  // it after.
+  MachineInstr *STRXpre = BuildMI(MF, DebugLoc(), get(AArch64::STRXpre))
+                              .addReg(AArch64::SP, RegState::Define)
+                              .addReg(AArch64::LR)
+                              .addReg(AArch64::SP)
+                              .addImm(-16);
+  It = MBB.insert(It, STRXpre);
+  It++;
+
+  // Insert the call.
+  It = MBB.insert(It,
+                  BuildMI(MF, DebugLoc(), get(AArch64::BL))
+                      .addGlobalAddress(M.getNamedValue(MF.getName())));
+
+  It++;
+
+  // Restore the link register.
+  MachineInstr *LDRXpost = BuildMI(MF, DebugLoc(), get(AArch64::LDRXpost))
+                               .addReg(AArch64::SP, RegState::Define)
+                               .addReg(AArch64::LR)
+                               .addReg(AArch64::SP)
+                               .addImm(16);
+  It = MBB.insert(It, LDRXpost);
+
+  return It;
+}
+

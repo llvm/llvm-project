@@ -80,9 +80,8 @@ template <class ELFT> void elf::ObjectFile<ELFT>::initializeDwarfLine() {
   ObjectInfo ObjInfo;
   DWARFContextInMemory Dwarf(*Obj, &ObjInfo);
   DwarfLine.reset(new DWARFDebugLine(&Dwarf.getLineSection().Relocs));
-  DataExtractor LineData(Dwarf.getLineSection().Data,
-                         ELFT::TargetEndianness == support::little,
-                         ELFT::Is64Bits ? 8 : 4);
+  DataExtractor LineData(Dwarf.getLineSection().Data, Config->IsLE,
+                         Config->Wordsize);
 
   // The second parameter is offset in .debug_line section
   // for compilation unit (CU) of interest. We have only one

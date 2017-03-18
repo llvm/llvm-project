@@ -7317,21 +7317,39 @@ bool SDNode::isOperandOf(const SDNode *N) const {
 /// side-effecting instructions on any chain path.  In practice, this looks
 /// through token factors and non-volatile loads.  In order to remain efficient,
 /// this only looks a couple of nodes in, it does not do an exhaustive search.
+///
+/// Note that we only need to examine chains when we're searching for
+/// side-effects; SelectionDAG requires that all side-effects are represented
+/// by chains, even if another operand would force a specific ordering. This
+/// constraint is necessary to allow transformations like splitting loads.
 bool SDValue::reachesChainWithoutSideEffects(SDValue Dest,
-                                               unsigned Depth) const {
+                                             unsigned Depth) const {
   if (*this == Dest) return true;
 
   // Don't search too deeply, we just want to be able to see through
   // TokenFactor's etc.
   if (Depth == 0) return false;
 
-  // If this is a token factor, all inputs to the TF happen in parallel.  If any
-  // of the operands of the TF does not reach dest, then we cannot do the xform.
+  // If this is a token factor, all inputs to the TF happen in parallel.
   if (getOpcode() == ISD::TokenFactor) {
-    for (unsigned i = 0, e = getNumOperands(); i != e; ++i)
-      if (!getOperand(i).reachesChainWithoutSideEffects(Dest, Depth-1))
-        return false;
-    return true;
+    // First, try a shallow search.
+    if (is_contained((*this)->ops(), Dest)) {
+      // We found the chain we want as an operand of this TokenFactor.
+      // Essentially, we reach the chain without side-effects if we could
+      // serialize the TokenFactor into a simple chain of operations with
+      // Dest as the last operation. This is automatically true if the
+      // chain has one use: there are no other ordering constraints.
+      // If the chain has more than one use, we give up: some other
+      // use of Dest might force a side-effect between Dest and the current
+      // node.
+      if (Dest.hasOneUse())
+        return true;
+    }
+    // Next, try a deep search: check whether every operand of the TokenFactor
+    // reaches Dest.
+    return all_of((*this)->ops(), [=](SDValue Op) {
+      return Op.reachesChainWithoutSideEffects(Dest, Depth - 1);
+    });
   }
 
   // Loads don't have side effects, look through them.

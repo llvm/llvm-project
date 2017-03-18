@@ -5449,7 +5449,7 @@ static unsigned getConstantTripCount(const SCEVConstant *ExitCount) {
   return ((unsigned)ExitConst->getZExtValue()) + 1;
 }
 
-unsigned ScalarEvolution::getSmallConstantTripCount(Loop *L) {
+unsigned ScalarEvolution::getSmallConstantTripCount(const Loop *L) {
   if (BasicBlock *ExitingBB = L->getExitingBlock())
     return getSmallConstantTripCount(L, ExitingBB);
 
@@ -5457,7 +5457,7 @@ unsigned ScalarEvolution::getSmallConstantTripCount(Loop *L) {
   return 0;
 }
 
-unsigned ScalarEvolution::getSmallConstantTripCount(Loop *L,
+unsigned ScalarEvolution::getSmallConstantTripCount(const Loop *L,
                                                     BasicBlock *ExitingBlock) {
   assert(ExitingBlock && "Must pass a non-null exiting block!");
   assert(L->isLoopExiting(ExitingBlock) &&
@@ -5467,13 +5467,13 @@ unsigned ScalarEvolution::getSmallConstantTripCount(Loop *L,
   return getConstantTripCount(ExitCount);
 }
 
-unsigned ScalarEvolution::getSmallConstantMaxTripCount(Loop *L) {
+unsigned ScalarEvolution::getSmallConstantMaxTripCount(const Loop *L) {
   const auto *MaxExitCount =
       dyn_cast<SCEVConstant>(getMaxBackedgeTakenCount(L));
   return getConstantTripCount(MaxExitCount);
 }
 
-unsigned ScalarEvolution::getSmallConstantTripMultiple(Loop *L) {
+unsigned ScalarEvolution::getSmallConstantTripMultiple(const Loop *L) {
   if (BasicBlock *ExitingBB = L->getExitingBlock())
     return getSmallConstantTripMultiple(L, ExitingBB);
 
@@ -5494,7 +5494,7 @@ unsigned ScalarEvolution::getSmallConstantTripMultiple(Loop *L) {
 /// As explained in the comments for getSmallConstantTripCount, this assumes
 /// that control exits the loop via ExitingBlock.
 unsigned
-ScalarEvolution::getSmallConstantTripMultiple(Loop *L,
+ScalarEvolution::getSmallConstantTripMultiple(const Loop *L,
                                               BasicBlock *ExitingBlock) {
   assert(ExitingBlock && "Must pass a non-null exiting block!");
   assert(L->isLoopExiting(ExitingBlock) &&
@@ -5529,7 +5529,8 @@ ScalarEvolution::getSmallConstantTripMultiple(Loop *L,
 /// Get the expression for the number of loop iterations for which this loop is
 /// guaranteed not to exit via ExitingBlock. Otherwise return
 /// SCEVCouldNotCompute.
-const SCEV *ScalarEvolution::getExitCount(Loop *L, BasicBlock *ExitingBlock) {
+const SCEV *ScalarEvolution::getExitCount(const Loop *L,
+                                          BasicBlock *ExitingBlock) {
   return getBackedgeTakenInfo(L).getExact(ExitingBlock, this);
 }
 

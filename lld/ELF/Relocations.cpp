@@ -101,7 +101,7 @@ handleNoRelaxTlsRelocation(GOT *Got, uint32_t Type, SymbolBody &Body,
     // if we know that we are linking an executable. For ARM we resolve the
     // relocation when writing the Got. MIPS has a custom Got implementation
     // that writes the Module index in directly.
-    if (!Body.isPreemptible() && !Config->pic() && Config->EMachine == EM_ARM)
+    if (!Body.isPreemptible() && !Config->Pic && Config->EMachine == EM_ARM)
       Got->Relocations.push_back(
           {R_ABS, Target->TlsModuleIndexRel, Off, 0, &Body});
     else {
@@ -111,7 +111,7 @@ handleNoRelaxTlsRelocation(GOT *Got, uint32_t Type, SymbolBody &Body,
     }
   };
   if (isRelExprOneOf<R_MIPS_TLSLD, R_TLSLD_PC>(Expr)) {
-    if (Got->addTlsIndex() && (Config->pic() || Config->EMachine == EM_ARM))
+    if (Got->addTlsIndex() && (Config->Pic || Config->EMachine == EM_ARM))
       addModuleReloc(Body, Got, Got->getTlsIndexOff(), true);
     C.Relocations.push_back({Expr, Type, Offset, Addend, &Body});
     return 1;
@@ -244,7 +244,7 @@ template <endianness E> static int16_t readSignedLo16(const uint8_t *Loc) {
 
 template <class RelTy>
 static uint32_t getMipsPairType(const RelTy *Rel, const SymbolBody &Sym) {
-  switch (Rel->getType(Config->isMips64EL())) {
+  switch (Rel->getType(Config->IsMips64EL)) {
   case R_MIPS_HI16:
     return R_MIPS_LO16;
   case R_MIPS_GOT16:
@@ -262,7 +262,7 @@ template <class ELFT, class RelTy>
 static int32_t findMipsPairedAddend(const uint8_t *Buf, const uint8_t *BufLoc,
                                     SymbolBody &Sym, const RelTy *Rel,
                                     const RelTy *End) {
-  uint32_t SymIndex = Rel->getSymbol(Config->isMips64EL());
+  uint32_t SymIndex = Rel->getSymbol(Config->IsMips64EL);
   uint32_t Type = getMipsPairType(Rel, Sym);
 
   // Some MIPS relocations use addend calculated from addend of the relocation
@@ -273,16 +273,16 @@ static int32_t findMipsPairedAddend(const uint8_t *Buf, const uint8_t *BufLoc,
     return 0;
 
   for (const RelTy *RI = Rel; RI != End; ++RI) {
-    if (RI->getType(Config->isMips64EL()) != Type)
+    if (RI->getType(Config->IsMips64EL) != Type)
       continue;
-    if (RI->getSymbol(Config->isMips64EL()) != SymIndex)
+    if (RI->getSymbol(Config->IsMips64EL) != SymIndex)
       continue;
     const endianness E = ELFT::TargetEndianness;
     return ((read32<E>(BufLoc) & 0xffff) << 16) +
            readSignedLo16<E>(Buf + RI->r_offset);
   }
   warn("can't find matching " + toString(Type) + " relocation for " +
-       toString(Rel->getType(Config->isMips64EL())));
+       toString(Rel->getType(Config->IsMips64EL)));
   return 0;
 }
 
@@ -325,12 +325,12 @@ isStaticLinkTimeConstant(RelExpr E, uint32_t Type, const SymbolBody &Body,
   // These never do, except if the entire file is position dependent or if
   // only the low bits are used.
   if (E == R_GOT || E == R_PLT || E == R_TLSDESC)
-    return Target->usesOnlyLowPageBits(Type) || !Config->pic();
+    return Target->usesOnlyLowPageBits(Type) || !Config->Pic;
 
   if (isPreemptible(Body, Type))
     return false;
 
-  if (!Config->pic())
+  if (!Config->Pic)
     return true;
 
   bool AbsVal = isAbsoluteValue<ELFT>(Body);
@@ -515,7 +515,7 @@ static RelExpr adjustExpr(const elf::ObjectFile<ELFT> &File, SymbolBody &Body,
   // This relocation would require the dynamic linker to write a value to read
   // only memory. We can hack around it if we are producing an executable and
   // the refered symbol can be preemepted to refer to the executable.
-  if (Config->Shared || (Config->pic() && !isRelExpr(Expr))) {
+  if (Config->Shared || (Config->Pic && !isRelExpr(Expr))) {
     error(S.getLocation<ELFT>(RelOff) + ": can't create dynamic relocation " +
           toString(Type) + " against " +
           (Body.getName().empty() ? "local symbol in readonly segment"
@@ -575,7 +575,7 @@ template <class ELFT, class RelTy>
 static int64_t computeAddend(const elf::ObjectFile<ELFT> &File,
                              const uint8_t *SectionData, const RelTy *End,
                              const RelTy &RI, RelExpr Expr, SymbolBody &Body) {
-  uint32_t Type = RI.getType(Config->isMips64EL());
+  uint32_t Type = RI.getType(Config->IsMips64EL);
   int64_t Addend = getAddend<ELFT>(RI);
   const uint8_t *BufLoc = SectionData + RI.r_offset;
   if (!RelTy::IsRela)
@@ -592,7 +592,7 @@ static int64_t computeAddend(const elf::ObjectFile<ELFT> &File,
     if (Expr == R_MIPS_GOTREL && Body.isLocal())
       Addend += File.MipsGp0;
   }
-  if (Config->pic() && Config->EMachine == EM_PPC64 && Type == R_PPC64_TOC)
+  if (Config->Pic && Config->EMachine == EM_PPC64 && Type == R_PPC64_TOC)
     Addend += getPPC64TocBase();
   return Addend;
 }
@@ -638,7 +638,7 @@ mergeMipsN32RelTypes(uint32_t Type, uint32_t Offset, RelTy *I, RelTy *E) {
   uint32_t Processed = 0;
   for (; I != E && Offset == I->r_offset; ++I) {
     ++Processed;
-    Type |= I->getType(Config->isMips64EL()) << (8 * Processed);
+    Type |= I->getType(Config->IsMips64EL) << (8 * Processed);
   }
   return std::make_pair(Type, Processed);
 }
@@ -682,7 +682,7 @@ static void scanRelocs(InputSectionBase &C, ArrayRef<RelTy> Rels) {
   for (auto I = Rels.begin(), E = Rels.end(); I != E; ++I) {
     const RelTy &RI = *I;
     SymbolBody &Body = File->getRelocTargetSym(RI);
-    uint32_t Type = RI.getType(Config->isMips64EL());
+    uint32_t Type = RI.getType(Config->IsMips64EL);
 
     if (Config->MipsN32Abi) {
       uint32_t Processed;
@@ -840,14 +840,13 @@ static void scanRelocs(InputSectionBase &C, ArrayRef<RelTy> Rels) {
       if (Body.isTls()) {
         DynType = Target->TlsGotRel;
         GotRE = R_TLS;
-      } else if (!Preemptible && Config->pic() && !isAbsolute<ELFT>(Body))
+      } else if (!Preemptible && Config->Pic && !isAbsolute<ELFT>(Body))
         DynType = Target->RelativeRel;
       else
         DynType = Target->GotRel;
 
       // FIXME: this logic is almost duplicated above.
-      bool Constant =
-          !Preemptible && !(Config->pic() && !isAbsolute<ELFT>(Body));
+      bool Constant = !Preemptible && !(Config->Pic && !isAbsolute<ELFT>(Body));
       if (!Constant)
         AddDyn({DynType, In<ELFT>::Got, Off, !Preemptible, &Body, 0});
       if (Constant || (!RelTy::IsRela && !Preemptible))

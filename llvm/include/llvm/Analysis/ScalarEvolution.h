@@ -1296,7 +1296,7 @@ public:
   ///
   /// Implemented in terms of the \c getSmallConstantTripCount overload with
   /// the single exiting block passed to it. See that routine for details.
-  unsigned getSmallConstantTripCount(Loop *L);
+  unsigned getSmallConstantTripCount(const Loop *L);
 
   /// Returns the maximum trip count of this loop as a normal unsigned
   /// value. Returns 0 if the trip count is unknown or not constant. This
@@ -1305,12 +1305,12 @@ public:
   /// before taking the branch. For loops with multiple exits, it may not be
   /// the number times that the loop header executes if the loop exits
   /// prematurely via another branch.
-  unsigned getSmallConstantTripCount(Loop *L, BasicBlock *ExitingBlock);
+  unsigned getSmallConstantTripCount(const Loop *L, BasicBlock *ExitingBlock);
 
   /// Returns the upper bound of the loop trip count as a normal unsigned
   /// value.
   /// Returns 0 if the trip count is unknown or not constant.
-  unsigned getSmallConstantMaxTripCount(Loop *L);
+  unsigned getSmallConstantMaxTripCount(const Loop *L);
 
   /// Returns the largest constant divisor of the trip count of the
   /// loop if it is a single-exit loop and we can compute a small maximum for
@@ -1318,7 +1318,7 @@ public:
   ///
   /// Implemented in terms of the \c getSmallConstantTripMultiple overload with
   /// the single exiting block passed to it. See that routine for details.
-  unsigned getSmallConstantTripMultiple(Loop *L);
+  unsigned getSmallConstantTripMultiple(const Loop *L);
 
   /// Returns the largest constant divisor of the trip count of this loop as a
   /// normal unsigned value, if possible. This means that the actual trip
@@ -1326,12 +1326,13 @@ public:
   /// count could very well be zero as well!). As explained in the comments
   /// for getSmallConstantTripCount, this assumes that control exits the loop
   /// via ExitingBlock.
-  unsigned getSmallConstantTripMultiple(Loop *L, BasicBlock *ExitingBlock);
+  unsigned getSmallConstantTripMultiple(const Loop *L,
+                                        BasicBlock *ExitingBlock);
 
   /// Get the expression for the number of loop iterations for which this loop
   /// is guaranteed not to exit via ExitingBlock. Otherwise return
   /// SCEVCouldNotCompute.
-  const SCEV *getExitCount(Loop *L, BasicBlock *ExitingBlock);
+  const SCEV *getExitCount(const Loop *L, BasicBlock *ExitingBlock);
 
   /// If the specified loop has a predictable backedge-taken count, return it,
   /// otherwise return a SCEVCouldNotCompute object. The backedge-taken count

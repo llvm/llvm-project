@@ -12,6 +12,7 @@
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/LangOptions.h"
+#include "clang/Basic/MemoryBufferCache.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
@@ -64,10 +65,12 @@ protected:
     SourceMgr.setMainFileID(SourceMgr.createFileID(std::move(Buf)));
 
     VoidModuleLoader ModLoader;
+    MemoryBufferCache PCMCache;
     HeaderSearch HeaderInfo(std::make_shared<HeaderSearchOptions>(), SourceMgr,
                             Diags, LangOpts, Target.get());
     Preprocessor PP(std::make_shared<PreprocessorOptions>(), Diags, LangOpts,
-                    SourceMgr, HeaderInfo, ModLoader, /*IILookup =*/nullptr,
+                    SourceMgr, PCMCache, HeaderInfo, ModLoader,
+                    /*IILookup =*/nullptr,
                     /*OwnsHeaderSearch =*/false);
     PP.Initialize(*Target);
     PP.EnterMainSourceFile();
