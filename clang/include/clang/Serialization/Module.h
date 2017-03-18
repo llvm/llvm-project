@@ -163,9 +163,9 @@ public:
   /// \brief The generation of which this module file is a part.
   unsigned Generation;
   
-  /// \brief The memory buffer that stores the data associated with
-  /// this AST file.
-  std::unique_ptr<llvm::MemoryBuffer> Buffer;
+  /// The memory buffer that stores the data associated with
+  /// this AST file, owned by the PCMCache in the ModuleManager.
+  llvm::MemoryBuffer *Buffer;
 
   /// \brief The size of this file, in bits.
   uint64_t SizeInBits = 0;

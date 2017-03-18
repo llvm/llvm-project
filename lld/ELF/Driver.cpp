@@ -65,6 +65,8 @@ BumpPtrAllocator elf::BAlloc;
 StringSaver elf::Saver{BAlloc};
 std::vector<SpecificAllocBase *> elf::SpecificAllocBase::Instances;
 
+static void setConfigs();
+
 bool elf::link(ArrayRef<const char *> Args, bool CanExitEarly,
                raw_ostream &Error) {
   ErrorCount = 0;
@@ -327,6 +329,7 @@ void LinkerDriver::main(ArrayRef<const char *> ArgsArr, bool CanExitEarly) {
   initLLVM(Args);
   createFiles(Args);
   inferMachineType();
+  setConfigs();
   checkOptions(Args);
   if (ErrorCount)
     return;
@@ -696,6 +699,27 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
       readVersionScript(*Buffer);
 }
 
+// Some Config members do not directly correspond to any particular
+// command line options, but computed based on other Config values.
+// This function initialize such members. See Config.h for the details
+// of these values.
+static void setConfigs() {
+  ELFKind Kind = Config->EKind;
+  uint16_t Machine = Config->EMachine;
+  bool Is64 = (Kind == ELF64LEKind || Kind == ELF64BEKind);
+
+  // There is an ILP32 ABI for x86-64, although it's not very popular.
+  // It is called the x32 ABI.
+  bool IsX32 = (Kind == ELF32LEKind && Machine == EM_X86_64);
+
+  Config->CopyRelocs = (Config->Relocatable || Config->EmitRelocs);
+  Config->IsLE = (Kind == ELF32LEKind || Kind == ELF64LEKind);
+  Config->IsMips64EL = (Kind == ELF64LEKind && Machine == EM_MIPS);
+  Config->IsRela = Is64 || IsX32 || Config->MipsN32Abi;
+  Config->Pic = Config->Pie || Config->Shared;
+  Config->Wordsize = Is64 ? 8 : 4;
+}
+
 // Returns a value of "-format" option.
 static bool getBinaryOption(StringRef S) {
   if (S == "binary")
@@ -789,7 +813,7 @@ static uint64_t getImageBase(opt::InputArgList &Args) {
   // has to be called after the variable is initialized.
   auto *Arg = Args.getLastArg(OPT_image_base);
   if (!Arg)
-    return Config->pic() ? 0 : Target->DefaultImageBase;
+    return Config->Pic ? 0 : Target->DefaultImageBase;
 
   StringRef S = Arg->getValue();
   uint64_t V;

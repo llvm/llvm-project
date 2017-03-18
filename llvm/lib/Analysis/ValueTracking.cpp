@@ -321,11 +321,11 @@ static void computeKnownBitsAddSub(bool Add, const Value *Op0, const Value *Op1,
       // Adding two non-negative numbers, or subtracting a negative number from
       // a non-negative one, can't wrap into negative.
       if (LHSKnownZero.isNegative() && KnownZero2.isNegative())
-        KnownZero |= APInt::getSignBit(BitWidth);
+        KnownZero.setSignBit();
       // Adding two negative numbers, or subtracting a non-negative number from
       // a negative one, can't wrap into non-negative.
       else if (LHSKnownOne.isNegative() && KnownOne2.isNegative())
-        KnownOne |= APInt::getSignBit(BitWidth);
+        KnownOne.setSignBit();
     }
   }
 }
@@ -732,7 +732,7 @@ static void computeKnownBitsFromAssume(const Value *V, APInt &KnownZero,
 
       if (RHSKnownZero.isNegative()) {
         // We know that the sign bit is zero.
-        KnownZero |= APInt::getSignBit(BitWidth);
+        KnownZero.setSignBit();
       }
     // assume(v >_s c) where c is at least -1.
     } else if (match(Arg, m_ICmp(Pred, m_V, m_Value(A))) &&
@@ -743,7 +743,7 @@ static void computeKnownBitsFromAssume(const Value *V, APInt &KnownZero,
 
       if (RHSKnownOne.isAllOnesValue() || RHSKnownZero.isNegative()) {
         // We know that the sign bit is zero.
-        KnownZero |= APInt::getSignBit(BitWidth);
+        KnownZero.setSignBit();
       }
     // assume(v <=_s c) where c is negative
     } else if (match(Arg, m_ICmp(Pred, m_V, m_Value(A))) &&
@@ -754,7 +754,7 @@ static void computeKnownBitsFromAssume(const Value *V, APInt &KnownZero,
 
       if (RHSKnownOne.isNegative()) {
         // We know that the sign bit is one.
-        KnownOne |= APInt::getSignBit(BitWidth);
+        KnownOne.setSignBit();
       }
     // assume(v <_s c) where c is non-positive
     } else if (match(Arg, m_ICmp(Pred, m_V, m_Value(A))) &&
@@ -765,7 +765,7 @@ static void computeKnownBitsFromAssume(const Value *V, APInt &KnownZero,
 
       if (RHSKnownZero.isAllOnesValue() || RHSKnownOne.isNegative()) {
         // We know that the sign bit is one.
-        KnownOne |= APInt::getSignBit(BitWidth);
+        KnownOne.setSignBit();
       }
     // assume(v <=_u c)
     } else if (match(Arg, m_ICmp(Pred, m_V, m_Value(A))) &&

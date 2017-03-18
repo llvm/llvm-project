@@ -248,7 +248,7 @@ template <class ELFT> void Writer<ELFT>::run() {
   if (Config->Discard != DiscardPolicy::All)
     copyLocalSymbols();
 
-  if (Config->copyRelocs())
+  if (Config->CopyRelocs)
     addSectionSymbols();
 
   // Now that we have a complete set of output sections. This function
@@ -330,7 +330,7 @@ template <class ELFT> void Writer<ELFT>::createSyntheticSections() {
   In<ELFT>::DynStrTab = make<StringTableSection>(".dynstr", true);
   In<ELFT>::Dynamic = make<DynamicSection<ELFT>>();
   In<ELFT>::RelaDyn = make<RelocationSection<ELFT>>(
-      Config->isRela() ? ".rela.dyn" : ".rel.dyn", Config->ZCombreloc);
+      Config->IsRela ? ".rela.dyn" : ".rel.dyn", Config->ZCombreloc);
   In<ELFT>::ShStrTab = make<StringTableSection>(".shstrtab", false);
 
   Out::ElfHeader = make<OutputSection>("", 0, SHF_ALLOC);
@@ -368,9 +368,8 @@ template <class ELFT> void Writer<ELFT>::createSyntheticSections() {
   Add(In<ELFT>::BssRelRo);
 
   // Add MIPS-specific sections.
-  bool HasDynSymTab =
-      !Symtab<ELFT>::X->getSharedFiles().empty() || Config->pic() ||
-      Config->ExportDynamic;
+  bool HasDynSymTab = !Symtab<ELFT>::X->getSharedFiles().empty() ||
+                      Config->Pic || Config->ExportDynamic;
   if (Config->EMachine == EM_MIPS) {
     if (!Config->Shared && HasDynSymTab) {
       In<ELFT>::MipsRldMap = make<MipsRldMapSection>();
@@ -437,7 +436,7 @@ template <class ELFT> void Writer<ELFT>::createSyntheticSections() {
   // We always need to add rel[a].plt to output if it has entries.
   // Even for static linking it can contain R_[*]_IRELATIVE relocations.
   In<ELFT>::RelaPlt = make<RelocationSection<ELFT>>(
-      Config->isRela() ? ".rela.plt" : ".rel.plt", false /*Sort*/);
+      Config->IsRela ? ".rela.plt" : ".rel.plt", false /*Sort*/);
   Add(In<ELFT>::RelaPlt);
 
   // The RelaIplt immediately follows .rel.plt (.rel.dyn for ARM) to ensure
@@ -785,10 +784,10 @@ addOptionalRegular(StringRef Name, SectionBase *Sec, uint64_t Val,
 template <class ELFT> void Writer<ELFT>::addRelIpltSymbols() {
   if (In<ELFT>::DynSymTab)
     return;
-  StringRef S = Config->isRela() ? "__rela_iplt_start" : "__rel_iplt_start";
+  StringRef S = Config->IsRela ? "__rela_iplt_start" : "__rel_iplt_start";
   addOptionalRegular<ELFT>(S, In<ELFT>::RelaIplt, 0, STV_HIDDEN, STB_WEAK);
 
-  S = Config->isRela() ? "__rela_iplt_end" : "__rel_iplt_end";
+  S = Config->IsRela ? "__rela_iplt_end" : "__rel_iplt_end";
   addOptionalRegular<ELFT>(S, In<ELFT>::RelaIplt, -1, STV_HIDDEN, STB_WEAK);
 }
 
@@ -1215,7 +1214,7 @@ template <class ELFT> void Writer<ELFT>::addStartEndSymbols() {
       addOptionalRegular<ELFT>(Start, OS, 0);
       addOptionalRegular<ELFT>(End, OS, -1);
     } else {
-      if (Config->pic())
+      if (Config->Pic)
         OS = Out::ElfHeader;
       addOptionalRegular<ELFT>(Start, OS, 0);
       addOptionalRegular<ELFT>(End, OS, 0);
@@ -1637,7 +1636,7 @@ template <class ELFT> static uint8_t getELFEncoding() {
 }
 
 static uint16_t getELFType() {
-  if (Config->pic())
+  if (Config->Pic)
     return ET_DYN;
   if (Config->Relocatable)
     return ET_REL;

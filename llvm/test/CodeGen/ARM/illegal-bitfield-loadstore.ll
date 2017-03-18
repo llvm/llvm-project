@@ -159,11 +159,10 @@ define void @i56_insert_bit(i56* %a, i1 zeroext %bit) {
 ; BE-NEXT:    .save {r11, lr}
 ; BE-NEXT:    push {r11, lr}
 ; BE-NEXT:    mov r2, r0
+; BE-NEXT:    ldr lr, [r0]
 ; BE-NEXT:    ldrh r12, [r2, #4]!
 ; BE-NEXT:    ldrb r3, [r2, #2]
-; BE-NEXT:    strb r3, [r2, #2]
 ; BE-NEXT:    orr r12, r3, r12, lsl #8
-; BE-NEXT:    ldr lr, [r0]
 ; BE-NEXT:    orr r3, r12, lr, lsl #24
 ; BE-NEXT:    bic r3, r3, #8192
 ; BE-NEXT:    orr r1, r3, r1, lsl #13

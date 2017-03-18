@@ -71,7 +71,7 @@ public:
   bool handleReference(const NamedDecl *D, SourceLocation Loc,
                        const NamedDecl *Parent,
                        const DeclContext *DC,
-                       SymbolRoleSet Roles,
+                       SymbolRoleSet Roles = SymbolRoleSet(),
                        ArrayRef<SymbolRelation> Relations = None,
                        const Expr *RefE = nullptr,
                        const Decl *RefD = nullptr);

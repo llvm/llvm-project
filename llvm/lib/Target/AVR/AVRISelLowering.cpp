@@ -356,7 +356,7 @@ SDValue AVRTargetLowering::LowerDivRem(SDValue Op, SelectionDAG &DAG) const {
   TargetLowering::CallLoweringInfo CLI(DAG);
   CLI.setDebugLoc(dl)
       .setChain(InChain)
-      .setCallee(getLibcallCallingConv(LC), RetTy, Callee, std::move(Args))
+      .setLibCallee(getLibcallCallingConv(LC), RetTy, Callee, std::move(Args))
       .setInRegister()
       .setSExtResult(isSigned)
       .setZExtResult(!isSigned);
@@ -1983,4 +1983,3 @@ unsigned AVRTargetLowering::getRegisterByName(const char *RegName,
 }
 
 } // end of namespace llvm
-

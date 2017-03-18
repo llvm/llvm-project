@@ -278,6 +278,8 @@ def parseOptionsAndInitTestdirs():
     if args.compiler:
         configuration.compiler = os.path.realpath(args.compiler)
         if not is_exe(configuration.compiler):
+            configuration.compiler = which(args.compiler)
+        if not is_exe(configuration.compiler):
             logging.error(
                     '%s is not a valid compiler executable; aborting...',
                     args.compiler)
@@ -369,6 +371,8 @@ def parseOptionsAndInitTestdirs():
     if args.executable:
         # lldb executable is passed explicitly
         lldbtest_config.lldbExec = os.path.realpath(args.executable)
+        if not is_exe(lldbtest_config.lldbExec):
+            lldbtest_config.lldbExec = which(args.executable)
         if not is_exe(lldbtest_config.lldbExec):
             logging.error(
                     '%s is not a valid executable to test; aborting...',

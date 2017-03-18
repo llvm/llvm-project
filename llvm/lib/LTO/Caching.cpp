@@ -37,7 +37,10 @@ Expected<NativeObjectCache> lto::localCache(StringRef CacheDirectoryPath,
       return AddStreamFn();
     }
 
-    if (MBOrErr.getError() != std::errc::no_such_file_or_directory)
+    // FIXME: Workaround for libstdc++ version mismatch bug, see D31063 review
+    // thread.
+    if ((std::errc)MBOrErr.getError().value() !=
+        std::errc::no_such_file_or_directory)
       report_fatal_error(Twine("Failed to open cache file ") + EntryPath +
                          ": " + MBOrErr.getError().message() + "\n");
 

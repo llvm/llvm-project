@@ -119,21 +119,6 @@ STATISTIC(NumFastIselSuccessTarget, "Number of insts selected by "
                                     "target-specific selector");
 STATISTIC(NumFastIselDead, "Number of dead insts removed on failure");
 
-void FastISel::ArgListEntry::setAttributes(ImmutableCallSite *CS,
-                                           unsigned AttrIdx) {
-  IsSExt = CS->paramHasAttr(AttrIdx, Attribute::SExt);
-  IsZExt = CS->paramHasAttr(AttrIdx, Attribute::ZExt);
-  IsInReg = CS->paramHasAttr(AttrIdx, Attribute::InReg);
-  IsSRet = CS->paramHasAttr(AttrIdx, Attribute::StructRet);
-  IsNest = CS->paramHasAttr(AttrIdx, Attribute::Nest);
-  IsByVal = CS->paramHasAttr(AttrIdx, Attribute::ByVal);
-  IsInAlloca = CS->paramHasAttr(AttrIdx, Attribute::InAlloca);
-  IsReturned = CS->paramHasAttr(AttrIdx, Attribute::Returned);
-  IsSwiftSelf = CS->paramHasAttr(AttrIdx, Attribute::SwiftSelf);
-  IsSwiftError = CS->paramHasAttr(AttrIdx, Attribute::SwiftError);
-  Alignment = CS->getParamAlignment(AttrIdx);
-}
-
 /// Set the current block to which generated machine instructions will be
 /// appended, and clear the local CSE map.
 void FastISel::startNewBlock() {
@@ -929,6 +914,7 @@ bool FastISel::lowerCallTo(const CallInst *CI, MCSymbol *Symbol,
     Entry.setAttributes(&CS, ArgI + 1);
     Args.push_back(Entry);
   }
+  TLI.markLibCallAttributes(MF, CS.getCallingConv(), Args);
 
   CallLoweringInfo CLI;
   CLI.setCallee(RetTy, FTy, Symbol, std::move(Args), CS, NumArgs);

@@ -718,7 +718,7 @@ private:
 class MipsRldMapSection : public SyntheticSection {
 public:
   MipsRldMapSection();
-  size_t getSize() const override { return Config->is64() ? 8 : 4; }
+  size_t getSize() const override { return Config->Wordsize; }
   void writeTo(uint8_t *Buf) override;
 };
 
