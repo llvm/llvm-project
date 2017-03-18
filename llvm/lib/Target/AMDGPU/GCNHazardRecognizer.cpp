@@ -39,7 +39,8 @@ using namespace llvm;
 GCNHazardRecognizer::GCNHazardRecognizer(const MachineFunction &MF) :
   CurrCycleInstr(nullptr),
   MF(MF),
-  ST(MF.getSubtarget<SISubtarget>()) {
+  ST(MF.getSubtarget<SISubtarget>()),
+  TII(*ST.getInstrInfo()) {
   MaxLookAhead = 5;
 }
 
@@ -72,15 +73,15 @@ static bool isRFE(unsigned Opcode) {
 }
 
 static bool isSMovRel(unsigned Opcode) {
-  return Opcode == AMDGPU::S_MOVRELS_B32 || AMDGPU::S_MOVRELS_B64 ||
-         Opcode == AMDGPU::S_MOVRELD_B32 || AMDGPU::S_MOVRELD_B64;
-}
-
-static bool isVInterp(unsigned Opcode) {
-  return Opcode == AMDGPU::V_INTERP_P1_F32 ||
-         Opcode == AMDGPU::V_INTERP_P1_F32_16bank ||
-         Opcode == AMDGPU::V_INTERP_P2_F32 ||
-         Opcode == AMDGPU::V_INTERP_MOV_F32;
+  switch (Opcode) {
+  case AMDGPU::S_MOVRELS_B32:
+  case AMDGPU::S_MOVRELS_B64:
+  case AMDGPU::S_MOVRELD_B32:
+  case AMDGPU::S_MOVRELD_B64:
+    return true;
+  default:
+    return false;
+  }
 }
 
 static unsigned getHWReg(const SIInstrInfo *TII, const MachineInstr &RegInstr) {
@@ -120,7 +121,7 @@ GCNHazardRecognizer::getHazardType(SUnit *SU, int Stalls) {
   if (isRFE(MI->getOpcode()) && checkRFEHazards(MI) > 0)
     return NoopHazard;
 
-  if ((isVInterp(MI->getOpcode()) || isSMovRel(MI->getOpcode())) &&
+  if ((TII.isVINTRP(*MI) || isSMovRel(MI->getOpcode())) &&
       checkReadM0Hazards(MI) > 0)
     return NoopHazard;
 
@@ -155,7 +156,7 @@ unsigned GCNHazardRecognizer::PreEmitNoops(MachineInstr *MI) {
     if (isRWLane(MI->getOpcode()))
       WaitStates = std::max(WaitStates, checkRWLaneHazards(MI));
 
-    if (isVInterp(MI->getOpcode()))
+    if (TII.isVINTRP(*MI))
       WaitStates = std::max(WaitStates, checkReadM0Hazards(MI));
 
     return WaitStates;
@@ -170,7 +171,7 @@ unsigned GCNHazardRecognizer::PreEmitNoops(MachineInstr *MI) {
   if (isRFE(MI->getOpcode()))
     return std::max(WaitStates, checkRFEHazards(MI));
 
-  if (isSMovRel(MI->getOpcode()))
+  if (TII.isVINTRP(*MI) || isSMovRel(MI->getOpcode()))
     return std::max(WaitStates, checkReadM0Hazards(MI));
 
   return WaitStates;
@@ -186,8 +187,7 @@ void GCNHazardRecognizer::AdvanceCycle() {
   if (!CurrCycleInstr)
     return;
 
-  const SIInstrInfo *TII = ST.getInstrInfo();
-  unsigned NumWaitStates = TII->getNumWaitStates(*CurrCycleInstr);
+  unsigned NumWaitStates = TII.getNumWaitStates(*CurrCycleInstr);
 
   // Keep track of emitted instructions
   EmittedInstrs.push_front(CurrCycleInstr);
@@ -317,7 +317,6 @@ int GCNHazardRecognizer::checkSMEMSoftClauseHazards(MachineInstr *SMEM) {
 
 int GCNHazardRecognizer::checkSMRDHazards(MachineInstr *SMRD) {
   const SISubtarget &ST = MF.getSubtarget<SISubtarget>();
-  const SIInstrInfo *TII = ST.getInstrInfo();
   int WaitStatesNeeded = 0;
 
   WaitStatesNeeded = checkSMEMSoftClauseHazards(SMRD);
@@ -329,7 +328,7 @@ int GCNHazardRecognizer::checkSMRDHazards(MachineInstr *SMRD) {
   // A read of an SGPR by SMRD instruction requires 4 wait states when the
   // SGPR was written by a VALU instruction.
   int SmrdSgprWaitStates = 4;
-  auto IsHazardDefFn = [TII] (MachineInstr *MI) { return TII->isVALU(*MI); };
+  auto IsHazardDefFn = [this] (MachineInstr *MI) { return TII.isVALU(*MI); };
 
   for (const MachineOperand &Use : SMRD->uses()) {
     if (!Use.isReg())

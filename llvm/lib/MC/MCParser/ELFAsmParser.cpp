@@ -391,8 +391,12 @@ bool ELFAsmParser::maybeParseSectionType(StringRef &TypeName) {
     return false;
   Lex();
   if (L.isNot(AsmToken::At) && L.isNot(AsmToken::Percent) &&
-      L.isNot(AsmToken::String))
-    return TokError("expected '@<type>', '%<type>' or \"<type>\"");
+      L.isNot(AsmToken::String)) {
+    if (L.getAllowAtInIdentifier())
+      return TokError("expected '@<type>', '%<type>' or \"<type>\"");
+    else
+      return TokError("expected '%<type>' or \"<type>\"");
+  }
   if (!L.is(AsmToken::String))
     Lex();
   if (L.is(AsmToken::Integer)) {

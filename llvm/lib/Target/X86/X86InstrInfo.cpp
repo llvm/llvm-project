@@ -8045,7 +8045,7 @@ static bool hasPartialRegUpdate(unsigned Opcode) {
   return false;
 }
 
-/// Inform the ExeDepsFix pass how many idle
+/// Inform the ExecutionDepsFix pass how many idle
 /// instructions we would like before a partial register update.
 unsigned X86InstrInfo::getPartialRegUpdateClearance(
     const MachineInstr &MI, unsigned OpNum,
@@ -8198,8 +8198,8 @@ static bool hasUndefRegUpdate(unsigned Opcode) {
   return false;
 }
 
-/// Inform the ExeDepsFix pass how many idle instructions we would like before
-/// certain undef register reads.
+/// Inform the ExecutionDepsFix pass how many idle instructions we would like
+/// before certain undef register reads.
 ///
 /// This catches the VCVTSI2SD family of instructions:
 ///

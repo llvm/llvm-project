@@ -2156,31 +2156,25 @@ static SDNode *findUser(SDValue Value, unsigned Opcode) {
   return nullptr;
 }
 
-bool SITargetLowering::isCFIntrinsic(const SDNode *Intr) const {
+unsigned SITargetLowering::isCFIntrinsic(const SDNode *Intr) const {
   if (Intr->getOpcode() == ISD::INTRINSIC_W_CHAIN) {
     switch (cast<ConstantSDNode>(Intr->getOperand(1))->getZExtValue()) {
-    case AMDGPUIntrinsic::amdgcn_if:
-    case AMDGPUIntrinsic::amdgcn_else:
-    case AMDGPUIntrinsic::amdgcn_end_cf:
-    case AMDGPUIntrinsic::amdgcn_loop:
-      return true;
+    case Intrinsic::amdgcn_if:
+      return AMDGPUISD::IF;
+    case Intrinsic::amdgcn_else:
+      return AMDGPUISD::ELSE;
+    case Intrinsic::amdgcn_loop:
+      return AMDGPUISD::LOOP;
+    case Intrinsic::amdgcn_end_cf:
+      llvm_unreachable("should not occur");
     default:
-      return false;
+      return 0;
     }
   }
 
-  if (Intr->getOpcode() == ISD::INTRINSIC_WO_CHAIN) {
-    switch (cast<ConstantSDNode>(Intr->getOperand(0))->getZExtValue()) {
-    case AMDGPUIntrinsic::amdgcn_break:
-    case AMDGPUIntrinsic::amdgcn_if_break:
-    case AMDGPUIntrinsic::amdgcn_else_break:
-      return true;
-    default:
-      return false;
-    }
-  }
-
-  return false;
+  // break, if_break, else_break are all only used as inputs to loop, not
+  // directly as branch conditions.
+  return 0;
 }
 
 void SITargetLowering::createDebuggerPrologueStackObjects(
@@ -2255,7 +2249,8 @@ SDValue SITargetLowering::LowerBRCOND(SDValue BRCOND,
   // eg: i1,ch = llvm.amdgcn.loop t0, TargetConstant:i32<6271>, t3
   // =>     t9: ch = llvm.amdgcn.loop t0, TargetConstant:i32<6271>, t3, BasicBlock:ch<bb1 0x7fee5286d088>
 
-  if (!isCFIntrinsic(Intr)) {
+  unsigned CFNode = isCFIntrinsic(Intr);
+  if (CFNode == 0) {
     // This is a uniform branch so we don't need to legalize.
     return BRCOND;
   }
@@ -2273,15 +2268,13 @@ SDValue SITargetLowering::LowerBRCOND(SDValue BRCOND,
   if (HaveChain)
     Ops.push_back(BRCOND.getOperand(0));
 
-  Ops.append(Intr->op_begin() + (HaveChain ?  1 : 0), Intr->op_end());
+  Ops.append(Intr->op_begin() + (HaveChain ?  2 : 1), Intr->op_end());
   Ops.push_back(Target);
 
   ArrayRef<EVT> Res(Intr->value_begin() + 1, Intr->value_end());
 
   // build the new intrinsic call
-  SDNode *Result = DAG.getNode(
-    Res.size() > 1 ? ISD::INTRINSIC_W_CHAIN : ISD::INTRINSIC_VOID, DL,
-    DAG.getVTList(Res), Ops).getNode();
+  SDNode *Result = DAG.getNode(CFNode, DL, DAG.getVTList(Res), Ops).getNode();
 
   if (!HaveChain) {
     SDValue Ops[] =  {
@@ -2810,7 +2803,7 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return DAG.getMemIntrinsicNode(AMDGPUISD::LOAD_CONSTANT, DL,
                                    Op->getVTList(), Ops, VT, MMO);
   }
-  case AMDGPUIntrinsic::amdgcn_fdiv_fast:
+  case Intrinsic::amdgcn_fdiv_fast:
     return lowerFDIV_FAST(Op, DAG);
   case AMDGPUIntrinsic::SI_vs_load_input:
     return DAG.getNode(AMDGPUISD::LOAD_INPUT, DL, VT,

@@ -1,6 +1,6 @@
-; RUN: llc -verify-machineinstrs -march=amdgcn -mcpu=gfx901 -mattr=+flat-for-global,-fp64-fp16-denormals < %s | FileCheck -check-prefix=GCN -check-prefix=GFX9 -check-prefix=GFX89 %s
-; RUN: llc -verify-machineinstrs -march=amdgcn -mcpu=fiji -mattr=+flat-for-global < %s | FileCheck -check-prefix=GCN -check-prefix=CIVI -check-prefix=VI -check-prefix=GFX89 %s
-; RUN: llc -verify-machineinstrs -march=amdgcn -mcpu=hawaii -mattr=+flat-for-global < %s | FileCheck -check-prefix=GCN -check-prefix=CIVI -check-prefix=CI %s
+; RUN: llc -verify-machineinstrs -march=amdgcn -mcpu=gfx901 -enable-amdgpu-aa=0 -mattr=+flat-for-global,-fp64-fp16-denormals < %s | FileCheck -check-prefix=GCN -check-prefix=GFX9 -check-prefix=GFX89 %s
+; RUN: llc -verify-machineinstrs -march=amdgcn -mcpu=fiji -enable-amdgpu-aa=0 -mattr=+flat-for-global < %s | FileCheck -check-prefix=GCN -check-prefix=CIVI -check-prefix=VI -check-prefix=GFX89 %s
+; RUN: llc -verify-machineinstrs -march=amdgcn -mcpu=hawaii -enable-amdgpu-aa=0 -mattr=+flat-for-global < %s | FileCheck -check-prefix=GCN -check-prefix=CIVI -check-prefix=CI %s
 
 ; GCN-LABEL: {{^}}s_insertelement_v2i16_0:
 ; GCN: s_load_dword [[VEC:s[0-9]+]]

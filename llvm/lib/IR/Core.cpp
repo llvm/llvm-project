@@ -1913,10 +1913,8 @@ void LLVMGetParams(LLVMValueRef FnRef, LLVMValueRef *ParamRefs) {
 }
 
 LLVMValueRef LLVMGetParam(LLVMValueRef FnRef, unsigned index) {
-  Function::arg_iterator AI = unwrap<Function>(FnRef)->arg_begin();
-  while (index --> 0)
-    AI++;
-  return wrap(&*AI);
+  Function *Fn = unwrap<Function>(FnRef);
+  return wrap(&Fn->arg_begin()[index]);
 }
 
 LLVMValueRef LLVMGetParamParent(LLVMValueRef V) {
@@ -1941,18 +1939,17 @@ LLVMValueRef LLVMGetLastParam(LLVMValueRef Fn) {
 
 LLVMValueRef LLVMGetNextParam(LLVMValueRef Arg) {
   Argument *A = unwrap<Argument>(Arg);
-  Function::arg_iterator I(A);
-  if (++I == A->getParent()->arg_end())
+  Function *Fn = A->getParent();
+  if (A->getArgNo() + 1 >= Fn->arg_size())
     return nullptr;
-  return wrap(&*I);
+  return wrap(&Fn->arg_begin()[A->getArgNo() + 1]);
 }
 
 LLVMValueRef LLVMGetPreviousParam(LLVMValueRef Arg) {
   Argument *A = unwrap<Argument>(Arg);
-  Function::arg_iterator I(A);
-  if (I == A->getParent()->arg_begin())
+  if (A->getArgNo() == 0)
     return nullptr;
-  return wrap(&*--I);
+  return wrap(&A->getParent()->arg_begin()[A->getArgNo() - 1]);
 }
 
 void LLVMSetParamAlignment(LLVMValueRef Arg, unsigned align) {

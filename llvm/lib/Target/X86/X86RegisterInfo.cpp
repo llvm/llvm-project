@@ -80,7 +80,7 @@ X86RegisterInfo::X86RegisterInfo(const Triple &TT)
 
 bool
 X86RegisterInfo::trackLivenessAfterRegAlloc(const MachineFunction &MF) const {
-  // ExeDepsFixer and PostRAScheduler require liveness.
+  // ExecutionDepsFixer and PostRAScheduler require liveness.
   return true;
 }
 

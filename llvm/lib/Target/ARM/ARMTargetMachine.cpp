@@ -25,6 +25,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/CodeGen/ExecutionDepsFix.h"
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
 #include "llvm/CodeGen/GlobalISel/GISelAccessor.h"
 #include "llvm/CodeGen/GlobalISel/IRTranslator.h"
@@ -76,6 +77,10 @@ static cl::opt<cl::boolOrDefault>
 EnableGlobalMerge("arm-global-merge", cl::Hidden,
                   cl::desc("Enable the global merge pass"));
 
+namespace llvm {
+  void initializeARMExecutionDepsFixPass(PassRegistry&);
+}
+
 extern "C" void LLVMInitializeARMTarget() {
   // Register the target.
   RegisterTargetMachine<ARMLETargetMachine> X(getTheARMLETarget());
@@ -88,6 +93,7 @@ extern "C" void LLVMInitializeARMTarget() {
   initializeARMLoadStoreOptPass(Registry);
   initializeARMPreAllocLoadStoreOptPass(Registry);
   initializeARMConstantIslandsPass(Registry);
+  initializeARMExecutionDepsFixPass(Registry);
 }
 
 static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
@@ -441,7 +447,20 @@ public:
   void addPreEmitPass() override;
 };
 
+class ARMExecutionDepsFix : public ExecutionDepsFix {
+public:
+  static char ID;
+  ARMExecutionDepsFix() : ExecutionDepsFix(ID, ARM::DPRRegClass) {}
+  StringRef getPassName() const override {
+    return "ARM Execution Dependency Fix";
+  }
+};
+char ARMExecutionDepsFix::ID;
+
 } // end anonymous namespace
+
+INITIALIZE_PASS(ARMExecutionDepsFix, "arm-execution-deps-fix",
+                "ARM Execution Dependency Fix", false, false)
 
 TargetPassConfig *ARMBaseTargetMachine::createPassConfig(PassManagerBase &PM) {
   return new ARMPassConfig(this, PM);
@@ -536,7 +555,7 @@ void ARMPassConfig::addPreSched2() {
     if (EnableARMLoadStoreOpt)
       addPass(createARMLoadStoreOptimizationPass());
 
-    addPass(createExecutionDependencyFixPass(&ARM::DPRRegClass));
+    addPass(new ARMExecutionDepsFix());
   }
 
   // Expand some pseudo instructions into multiple instructions to allow

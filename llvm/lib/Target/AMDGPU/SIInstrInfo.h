@@ -451,6 +451,14 @@ public:
     return get(Opcode).TSFlags & SIInstrFlags::VOP3P;
   }
 
+  static bool isVINTRP(const MachineInstr &MI) {
+    return MI.getDesc().TSFlags & SIInstrFlags::VINTRP;
+  }
+
+  bool isVINTRP(uint16_t Opcode) const {
+    return get(Opcode).TSFlags & SIInstrFlags::VINTRP;
+  }
+
   static bool isScalarUnit(const MachineInstr &MI) {
     return MI.getDesc().TSFlags & (SIInstrFlags::SALU | SIInstrFlags::SMRD);
   }

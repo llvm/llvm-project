@@ -2873,9 +2873,9 @@ ARMTargetLowering::LowerToTLSGeneralDynamicModel(GlobalAddressSDNode *GA,
 
   // FIXME: is there useful debug info available here?
   TargetLowering::CallLoweringInfo CLI(DAG);
-  CLI.setDebugLoc(dl).setChain(Chain)
-    .setCallee(CallingConv::C, Type::getInt32Ty(*DAG.getContext()),
-               DAG.getExternalSymbol("__tls_get_addr", PtrVT), std::move(Args));
+  CLI.setDebugLoc(dl).setChain(Chain).setLibCallee(
+      CallingConv::C, Type::getInt32Ty(*DAG.getContext()),
+      DAG.getExternalSymbol("__tls_get_addr", PtrVT), std::move(Args));
 
   std::pair<SDValue, SDValue> CallResult = LowerCallTo(CLI);
   return CallResult.first;
@@ -7350,9 +7350,9 @@ SDValue ARMTargetLowering::LowerFSINCOS(SDValue Op, SelectionDAG &DAG) const {
     ArgListEntry Entry;
     Entry.Node = SRet;
     Entry.Ty = RetTy->getPointerTo();
-    Entry.isSExt = false;
-    Entry.isZExt = false;
-    Entry.isSRet = true;
+    Entry.IsSExt = false;
+    Entry.IsZExt = false;
+    Entry.IsSRet = true;
     Args.push_back(Entry);
     RetTy = Type::getVoidTy(*DAG.getContext());
   }
@@ -7360,8 +7360,8 @@ SDValue ARMTargetLowering::LowerFSINCOS(SDValue Op, SelectionDAG &DAG) const {
   ArgListEntry Entry;
   Entry.Node = Arg;
   Entry.Ty = ArgTy;
-  Entry.isSExt = false;
-  Entry.isZExt = false;
+  Entry.IsSExt = false;
+  Entry.IsZExt = false;
   Args.push_back(Entry);
 
   const char *LibcallName =
@@ -7572,12 +7572,12 @@ static SDValue LowerFPOWI(SDValue Op, const ARMSubtarget &Subtarget,
 
   Entry.Node = Val;
   Entry.Ty = Val.getValueType().getTypeForEVT(*DAG.getContext());
-  Entry.isZExt = true;
+  Entry.IsZExt = true;
   Args.push_back(Entry);
 
   Entry.Node = Exponent;
   Entry.Ty = Exponent.getValueType().getTypeForEVT(*DAG.getContext());
-  Entry.isZExt = true;
+  Entry.IsZExt = true;
   Args.push_back(Entry);
 
   Type *LCRTy = Val.getValueType().getTypeForEVT(*DAG.getContext());
@@ -13012,8 +13012,8 @@ static TargetLowering::ArgListTy getDivRemArgList(
     Type *ArgTy = ArgVT.getTypeForEVT(*Context);
     Entry.Node = N->getOperand(i);
     Entry.Ty = ArgTy;
-    Entry.isSExt = isSigned;
-    Entry.isZExt = !isSigned;
+    Entry.IsSExt = isSigned;
+    Entry.IsZExt = !isSigned;
     Args.push_back(Entry);
   }
   if (Subtarget->isTargetWindows() && Args.size() >= 2)

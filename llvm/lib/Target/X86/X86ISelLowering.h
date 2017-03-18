@@ -688,6 +688,9 @@ namespace llvm {
     unsigned getJumpTableEncoding() const override;
     bool useSoftFloat() const override;
 
+    void markLibCallAttributes(MachineFunction *MF, unsigned CC,
+                               ArgListTy &Args) const override;
+
     MVT getScalarShiftAmountTy(const DataLayout &, EVT) const override {
       return MVT::i8;
     }

@@ -173,34 +173,29 @@ let isTerminator = 1 in {
 
 def SI_IF: CFPseudoInstSI <
   (outs SReg_64:$dst), (ins SReg_64:$vcc, brtarget:$target),
-  [(set i64:$dst, (int_amdgcn_if i1:$vcc, bb:$target))], 1, 1> {
+  [(set i64:$dst, (AMDGPUif i1:$vcc, bb:$target))], 1, 1> {
   let Constraints = "";
   let Size = 12;
-  let mayLoad = 1;
-  let mayStore = 1;
   let hasSideEffects = 1;
 }
 
 def SI_ELSE : CFPseudoInstSI <
-  (outs SReg_64:$dst), (ins SReg_64:$src, brtarget:$target, i1imm:$execfix), [], 1, 1> {
+  (outs SReg_64:$dst),
+  (ins SReg_64:$src, brtarget:$target, i1imm:$execfix), [], 1, 1> {
   let Constraints = "$src = $dst";
   let Size = 12;
-  let mayStore = 1;
-  let mayLoad = 1;
   let hasSideEffects = 1;
 }
 
 def SI_LOOP : CFPseudoInstSI <
   (outs), (ins SReg_64:$saved, brtarget:$target),
-  [(int_amdgcn_loop i64:$saved, bb:$target)], 1, 1> {
+  [(AMDGPUloop i64:$saved, bb:$target)], 1, 1> {
   let Size = 8;
-  let isBranch = 1;
+  let isBranch = 0;
   let hasSideEffects = 1;
-  let mayLoad = 1;
-  let mayStore = 1;
 }
 
-} // End isBranch = 1, isTerminator = 1
+} // End isTerminator = 1
 
 def SI_END_CF : CFPseudoInstSI <
   (outs), (ins SReg_64:$saved),
@@ -208,9 +203,9 @@ def SI_END_CF : CFPseudoInstSI <
   let Size = 4;
   let isAsCheapAsAMove = 1;
   let isReMaterializable = 1;
-  let mayLoad = 1;
-  let mayStore = 1;
   let hasSideEffects = 1;
+  let mayLoad = 1; // FIXME: Should not need memory flags
+  let mayStore = 1;
 }
 
 def SI_BREAK : CFPseudoInstSI <
@@ -400,7 +395,7 @@ def : Pat<
 >;
 
 def : Pat<
-  (int_amdgcn_else i64:$src, bb:$target),
+  (AMDGPUelse i64:$src, bb:$target),
   (SI_ELSE $src, $target, 0)
 >;
 

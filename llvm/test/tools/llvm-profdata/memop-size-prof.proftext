@@ -1,0 +1,123 @@
+# RUN: llvm-profdata show -memop-sizes -ic-targets -function=foo %s | FileCheck %s --check-prefixes=MEMOP,MEMOP_SUM,ICALL,ICALL_SUM
+# RUN: llvm-profdata show -memop-sizes -ic-targets -counts -text -function=foo %s | FileCheck %s --check-prefixes=TEXT,MEMOP_TEXT,ICALL_TEXT
+# RUN: llvm-profdata merge -o %t.profdata  %s
+# RUN: llvm-profdata show -memop-sizes -ic-targets -function=foo %t.profdata | FileCheck %s --check-prefixes=MEMOP,MEMOP_SUM,ICALL,ICALL_SUM
+# RUN: llvm-profdata merge -o %t.proftext -text %s
+# RUN: llvm-profdata show -memop-sizes -ic-targets -function=foo %t.proftext| FileCheck %s --check-prefixes=MEMOP,MEMOP_SUM,ICALL,ICALL_SUM
+
+# IR level Instrumentation Flag
+:ir
+ic1
+# Func Hash:
+10
+# Num Counters:
+2
+# Counter Values:
+999000
+359800
+
+ic2
+# Func Hash:
+10
+# Num Counters:
+2
+# Counter Values:
+1001000
+360200
+
+foo
+# Func Hash:
+35277121310
+# Num Counters:
+3
+# Counter Values:
+20
+556
+1
+# Num Value Kinds:
+2
+# Value Kind IPVK_IndirectCallTarget
+0
+# NumSites
+3
+# Values for each site
+0
+2
+ic2:1000
+ic1:100
+1
+ic2:20000
+#ICALL: Indirect Target Results:
+#ICALL-NEXT:  [ 1, ic2, 1000 ]
+#ICALL-NEXT:  [ 1, ic1, 100 ]
+#ICALL-NEXT:  [ 2, ic2, 20000 ]
+
+# ValueKind = IPVK_MemOPSize:
+1
+# NumValueSites:
+1
+9
+1:99
+2:88
+3:77
+9:72
+4:66
+5:55
+6:44
+7:33
+8:22
+
+#MEMOP: Memory Instrinsic Size Results:
+#MEMOP-NEXT:  [ 0, 1, 99 ]
+#MEMOP-NEXT:  [ 0, 2, 88 ]
+#MEMOP-NEXT:  [ 0, 3, 77 ]
+#MEMOP-NEXT:  [ 0, 9, 72 ]
+#MEMOP-NEXT:  [ 0, 4, 66 ]
+#MEMOP-NEXT:  [ 0, 5, 55 ]
+#MEMOP-NEXT:  [ 0, 6, 44 ]
+#MEMOP-NEXT:  [ 0, 7, 33 ]
+#MEMOP-NEXT:  [ 0, 8, 22 ]
+
+#ICALL_SUM: Statistics for indirect call sites profile:
+#ICALL_SUM: Total number of sites: 3
+#ICALL_SUM: Total number of sites with values: 2
+#ICALL_SUM: Total number of profiled values: 3
+#ICALL_SUM: Value sites histogram:
+#ICALL_SUM:     NumTargets, SiteCount
+#ICALL_SUM:         1, 1
+#ICALL_SUM:         2, 1
+
+#MEMOP_SUM: Statistics for memory intrinsic calls sizes profile:
+#MEMOP_SUM: Total number of sites: 1
+#MEMOP_SUM: Total number of sites with values: 1
+#MEMOP_SUM: Total number of profiled values: 9
+#MEMOP_SUM: Value sites histogram:
+#MEMOP_SUM:	NumTargets, SiteCount
+#MEMOP_SUM:	9, 1
+
+#TEXT: # Num Value Kinds:
+#TEXT: 2
+#ICALL_TEXT: # ValueKind = IPVK_IndirectCallTarget:
+#ICALL_TEXT: 0
+#ICALL_TEXT: # NumValueSites:
+#ICALL_TEXT: 3
+#ICALL_TEXT: 0
+#ICALL_TEXT: 2
+#ICALL_TEXT: ic2:1000
+#ICALL_TEXT: ic1:100
+#ICALL_TEXT: 1
+#ICALL_TEXT: ic2:20000
+#MEMOP_TEXT: # ValueKind = IPVK_MemOPSize:
+#MEMOP_TEXT: 1
+#MEMOP_TEXT: # NumValueSites:
+#MEMOP_TEXT: 1
+#MEMOP_TEXT: 9
+#MEMOP_TEXT: 1:99
+#MEMOP_TEXT: 2:88
+#MEMOP_TEXT: 3:77
+#MEMOP_TEXT: 9:72
+#MEMOP_TEXT: 4:66
+#MEMOP_TEXT: 5:55
+#MEMOP_TEXT: 6:44
+#MEMOP_TEXT: 7:33
+#MEMOP_TEXT: 8:22

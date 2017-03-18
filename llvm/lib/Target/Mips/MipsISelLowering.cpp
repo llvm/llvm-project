@@ -1922,8 +1922,9 @@ lowerGlobalTLSAddress(SDValue Op, SelectionDAG &DAG) const
     Args.push_back(Entry);
 
     TargetLowering::CallLoweringInfo CLI(DAG);
-    CLI.setDebugLoc(DL).setChain(DAG.getEntryNode())
-      .setCallee(CallingConv::C, PtrTy, TlsGetAddr, std::move(Args));
+    CLI.setDebugLoc(DL)
+        .setChain(DAG.getEntryNode())
+        .setLibCallee(CallingConv::C, PtrTy, TlsGetAddr, std::move(Args));
     std::pair<SDValue, SDValue> CallResult = LowerCallTo(CLI);
 
     SDValue Ret = CallResult.first;

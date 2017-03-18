@@ -2032,7 +2032,7 @@ void SelectionDAGBuilder::visitSPDescriptorParent(StackProtectorDescriptor &SPD,
     Entry.Node = StackSlot;
     Entry.Ty = FnTy->getParamType(0);
     if (Fn->hasAttribute(1, Attribute::AttrKind::InReg))
-      Entry.isInReg = true;
+      Entry.IsInReg = true;
     Args.push_back(Entry);
 
     TargetLowering::CallLoweringInfo CLI(DAG);
@@ -4912,14 +4912,12 @@ SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I, unsigned Intrinsic) {
       report_fatal_error("Unsupported element size");
 
     TargetLowering::CallLoweringInfo CLI(DAG);
-    CLI.setDebugLoc(sdl)
-        .setChain(getRoot())
-        .setCallee(TLI.getLibcallCallingConv(LibraryCall),
-                   Type::getVoidTy(*DAG.getContext()),
-                   DAG.getExternalSymbol(
-                       TLI.getLibcallName(LibraryCall),
-                       TLI.getPointerTy(DAG.getDataLayout())),
-                   std::move(Args));
+    CLI.setDebugLoc(sdl).setChain(getRoot()).setLibCallee(
+        TLI.getLibcallCallingConv(LibraryCall),
+        Type::getVoidTy(*DAG.getContext()),
+        DAG.getExternalSymbol(TLI.getLibcallName(LibraryCall),
+                              TLI.getPointerTy(DAG.getDataLayout())),
+        std::move(Args));
 
     std::pair<SDValue, SDValue> CallResult = TLI.LowerCallTo(CLI);
     DAG.setRoot(CallResult.second);
@@ -5538,7 +5536,7 @@ SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I, unsigned Intrinsic) {
     TargetLowering::ArgListTy Args;
 
     TargetLowering::CallLoweringInfo CLI(DAG);
-    CLI.setDebugLoc(sdl).setChain(getRoot()).setCallee(
+    CLI.setDebugLoc(sdl).setChain(getRoot()).setLibCallee(
         CallingConv::C, I.getType(),
         DAG.getExternalSymbol(TrapFuncName.data(),
                               TLI.getPointerTy(DAG.getDataLayout())),
@@ -5857,7 +5855,6 @@ void SelectionDAGBuilder::LowerCallTo(ImmutableCallSite CS, SDValue Callee,
   Type *RetTy = CS.getType();
 
   TargetLowering::ArgListTy Args;
-  TargetLowering::ArgListEntry Entry;
   Args.reserve(CS.arg_size());
 
   const Value *SwiftErrorVal = nullptr;
@@ -5873,6 +5870,7 @@ void SelectionDAGBuilder::LowerCallTo(ImmutableCallSite CS, SDValue Callee,
 
   for (ImmutableCallSite::arg_iterator i = CS.arg_begin(), e = CS.arg_end();
        i != e; ++i) {
+    TargetLowering::ArgListEntry Entry;
     const Value *V = *i;
 
     // Skip empty types
@@ -5886,7 +5884,7 @@ void SelectionDAGBuilder::LowerCallTo(ImmutableCallSite CS, SDValue Callee,
     Entry.setAttributes(&CS, i - CS.arg_begin() + 1);
 
     // Use swifterror virtual register as input to the call.
-    if (Entry.isSwiftError && TLI.supportSwiftError()) {
+    if (Entry.IsSwiftError && TLI.supportSwiftError()) {
       SwiftErrorVal = V;
       // We find the virtual register for the actual swifterror argument.
       // Instead of using the Value, we use the virtual register instead.
@@ -5899,7 +5897,7 @@ void SelectionDAGBuilder::LowerCallTo(ImmutableCallSite CS, SDValue Callee,
 
     // If we have an explicit sret argument that is an Instruction, (i.e., it
     // might point to function-local memory), we can't meaningfully tail-call.
-    if (Entry.isSRet && isa<Instruction>(V))
+    if (Entry.IsSRet && isa<Instruction>(V))
       isTailCall = false;
   }
 
@@ -7657,15 +7655,15 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
     ArgListEntry Entry;
     Entry.Node = DemoteStackSlot;
     Entry.Ty = StackSlotPtrType;
-    Entry.isSExt = false;
-    Entry.isZExt = false;
-    Entry.isInReg = false;
-    Entry.isSRet = true;
-    Entry.isNest = false;
-    Entry.isByVal = false;
-    Entry.isReturned = false;
-    Entry.isSwiftSelf = false;
-    Entry.isSwiftError = false;
+    Entry.IsSExt = false;
+    Entry.IsZExt = false;
+    Entry.IsInReg = false;
+    Entry.IsSRet = true;
+    Entry.IsNest = false;
+    Entry.IsByVal = false;
+    Entry.IsReturned = false;
+    Entry.IsSwiftSelf = false;
+    Entry.IsSwiftError = false;
     Entry.Alignment = Align;
     CLI.getArgs().insert(CLI.getArgs().begin(), Entry);
     CLI.RetTy = Type::getVoidTy(CLI.RetTy->getContext());
@@ -7698,7 +7696,7 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
   ArgListTy &Args = CLI.getArgs();
   if (supportSwiftError()) {
     for (unsigned i = 0, e = Args.size(); i != e; ++i) {
-      if (Args[i].isSwiftError) {
+      if (Args[i].IsSwiftError) {
         ISD::InputArg MyFlags;
         MyFlags.VT = getPointerTy(DL);
         MyFlags.ArgVT = EVT(getPointerTy(DL));
@@ -7715,7 +7713,7 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
     SmallVector<EVT, 4> ValueVTs;
     ComputeValueVTs(*this, DL, Args[i].Ty, ValueVTs);
     Type *FinalType = Args[i].Ty;
-    if (Args[i].isByVal)
+    if (Args[i].IsByVal)
       FinalType = cast<PointerType>(Args[i].Ty)->getElementType();
     bool NeedsRegBlock = functionArgumentNeedsConsecutiveRegisters(
         FinalType, CLI.CallConv, CLI.IsVarArg);
@@ -7728,11 +7726,11 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
       ISD::ArgFlagsTy Flags;
       unsigned OriginalAlignment = DL.getABITypeAlignment(ArgTy);
 
-      if (Args[i].isZExt)
+      if (Args[i].IsZExt)
         Flags.setZExt();
-      if (Args[i].isSExt)
+      if (Args[i].IsSExt)
         Flags.setSExt();
-      if (Args[i].isInReg) {
+      if (Args[i].IsInReg) {
         // If we are using vectorcall calling convention, a structure that is
         // passed InReg - is surely an HVA
         if (CLI.CallConv == CallingConv::X86_VectorCall &&
@@ -7745,15 +7743,15 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
         // Set InReg Flag
         Flags.setInReg();
       }
-      if (Args[i].isSRet)
+      if (Args[i].IsSRet)
         Flags.setSRet();
-      if (Args[i].isSwiftSelf)
+      if (Args[i].IsSwiftSelf)
         Flags.setSwiftSelf();
-      if (Args[i].isSwiftError)
+      if (Args[i].IsSwiftError)
         Flags.setSwiftError();
-      if (Args[i].isByVal)
+      if (Args[i].IsByVal)
         Flags.setByVal();
-      if (Args[i].isInAlloca) {
+      if (Args[i].IsInAlloca) {
         Flags.setInAlloca();
         // Set the byval flag for CCAssignFn callbacks that don't know about
         // inalloca.  This way we can know how many bytes we should've allocated
@@ -7762,7 +7760,7 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
         // in the various CC lowering callbacks.
         Flags.setByVal();
       }
-      if (Args[i].isByVal || Args[i].isInAlloca) {
+      if (Args[i].IsByVal || Args[i].IsInAlloca) {
         PointerType *Ty = cast<PointerType>(Args[i].Ty);
         Type *ElementTy = Ty->getElementType();
         Flags.setByValSize(DL.getTypeAllocSize(ElementTy));
@@ -7775,7 +7773,7 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
           FrameAlign = getByValTypeAlignment(ElementTy, DL);
         Flags.setByValAlign(FrameAlign);
       }
-      if (Args[i].isNest)
+      if (Args[i].IsNest)
         Flags.setNest();
       if (NeedsRegBlock)
         Flags.setInConsecutiveRegs();
@@ -7786,13 +7784,13 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
       SmallVector<SDValue, 4> Parts(NumParts);
       ISD::NodeType ExtendKind = ISD::ANY_EXTEND;
 
-      if (Args[i].isSExt)
+      if (Args[i].IsSExt)
         ExtendKind = ISD::SIGN_EXTEND;
-      else if (Args[i].isZExt)
+      else if (Args[i].IsZExt)
         ExtendKind = ISD::ZERO_EXTEND;
 
       // Conservatively only handle 'returned' on non-vectors for now
-      if (Args[i].isReturned && !Op.getValueType().isVector()) {
+      if (Args[i].IsReturned && !Op.getValueType().isVector()) {
         assert(CLI.RetTy == Args[i].Ty && RetTys.size() == NumValues &&
                "unexpected use of 'returned'");
         // Before passing 'returned' to the target lowering code, ensure that
@@ -7806,9 +7804,9 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
         // parameter extension method is not compatible with the return
         // extension method
         if ((NumParts * PartVT.getSizeInBits() == VT.getSizeInBits()) ||
-            (ExtendKind != ISD::ANY_EXTEND &&
-             CLI.RetSExt == Args[i].isSExt && CLI.RetZExt == Args[i].isZExt))
-        Flags.setReturned();
+            (ExtendKind != ISD::ANY_EXTEND && CLI.RetSExt == Args[i].IsSExt &&
+             CLI.RetZExt == Args[i].IsZExt))
+          Flags.setReturned();
       }
 
       getCopyToParts(CLI.DAG, CLI.DL, Op, &Parts[0], NumParts, PartVT,

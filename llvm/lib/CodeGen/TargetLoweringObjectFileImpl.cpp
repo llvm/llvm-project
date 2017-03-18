@@ -225,6 +225,20 @@ static const Comdat *getELFComdat(const GlobalValue *GV) {
   return C;
 }
 
+static const MCSymbolELF *getAssociatedSymbol(const GlobalObject *GO,
+                                              const TargetMachine &TM) {
+  MDNode *MD = GO->getMetadata(LLVMContext::MD_associated);
+  if (!MD)
+    return nullptr;
+
+  auto *VM = dyn_cast<ValueAsMetadata>(MD->getOperand(0));
+  if (!VM)
+    report_fatal_error("MD_associated operand is not ValueAsMetadata");
+
+  GlobalObject *OtherGO = dyn_cast<GlobalObject>(VM->getValue());
+  return OtherGO ? dyn_cast<MCSymbolELF>(TM.getSymbol(OtherGO)) : nullptr;
+}
+
 MCSection *TargetLoweringObjectFileELF::getExplicitSectionGlobal(
     const GlobalObject *GO, SectionKind Kind, const TargetMachine &TM) const {
   StringRef SectionName = GO->getSection();
@@ -238,9 +252,23 @@ MCSection *TargetLoweringObjectFileELF::getExplicitSectionGlobal(
     Group = C->getName();
     Flags |= ELF::SHF_GROUP;
   }
-  return getContext().getELFSection(SectionName,
-                                    getELFSectionType(SectionName, Kind), Flags,
-                                    /*EntrySize=*/0, Group);
+
+  // A section can have at most one associated section. Put each global with
+  // MD_associated in a unique section.
+  unsigned UniqueID = MCContext::GenericSectionID;
+  const MCSymbolELF *AssociatedSymbol = getAssociatedSymbol(GO, TM);
+  if (AssociatedSymbol) {
+    UniqueID = NextUniqueID++;
+    Flags |= ELF::SHF_LINK_ORDER;
+  }
+
+  MCSectionELF *Section = getContext().getELFSection(
+      SectionName, getELFSectionType(SectionName, Kind), Flags,
+      /*EntrySize=*/0, Group, UniqueID, AssociatedSymbol);
+  // Make sure that we did not get some other section with incompatible sh_link.
+  // This should not be possible due to UniqueID code above.
+  assert(Section->getAssociatedSymbol() == AssociatedSymbol);
+  return Section;
 }
 
 /// Return the section prefix name used by options FunctionsSections and
@@ -262,11 +290,10 @@ static StringRef getSectionPrefixForGlobal(SectionKind Kind) {
   return ".data.rel.ro";
 }
 
-static MCSectionELF *
-selectELFSectionForGlobal(MCContext &Ctx, const GlobalObject *GO,
-                          SectionKind Kind, Mangler &Mang,
-                          const TargetMachine &TM, bool EmitUniqueSection,
-                          unsigned Flags, unsigned *NextUniqueID) {
+static MCSectionELF *selectELFSectionForGlobal(
+    MCContext &Ctx, const GlobalObject *GO, SectionKind Kind, Mangler &Mang,
+    const TargetMachine &TM, bool EmitUniqueSection, unsigned Flags,
+    unsigned *NextUniqueID, const MCSymbolELF *AssociatedSymbol) {
   unsigned EntrySize = 0;
   if (Kind.isMergeableCString()) {
     if (Kind.isMergeable2ByteCString()) {
@@ -333,7 +360,7 @@ selectELFSectionForGlobal(MCContext &Ctx, const GlobalObject *GO,
   if (Kind.isExecuteOnly())
     UniqueID = 0;
   return Ctx.getELFSection(Name, getELFSectionType(Name, Kind), Flags,
-                           EntrySize, Group, UniqueID);
+                           EntrySize, Group, UniqueID, AssociatedSymbol);
 }
 
 MCSection *TargetLoweringObjectFileELF::SelectSectionForGlobal(
@@ -351,8 +378,17 @@ MCSection *TargetLoweringObjectFileELF::SelectSectionForGlobal(
   }
   EmitUniqueSection |= GO->hasComdat();
 
-  return selectELFSectionForGlobal(getContext(), GO, Kind, getMangler(), TM,
-                                   EmitUniqueSection, Flags, &NextUniqueID);
+  const MCSymbolELF *AssociatedSymbol = getAssociatedSymbol(GO, TM);
+  if (AssociatedSymbol) {
+    EmitUniqueSection = true;
+    Flags |= ELF::SHF_LINK_ORDER;
+  }
+
+  MCSectionELF *Section = selectELFSectionForGlobal(
+      getContext(), GO, Kind, getMangler(), TM, EmitUniqueSection, Flags,
+      &NextUniqueID, AssociatedSymbol);
+  assert(Section->getAssociatedSymbol() == AssociatedSymbol);
+  return Section;
 }
 
 MCSection *TargetLoweringObjectFileELF::getSectionForJumpTable(
@@ -365,8 +401,9 @@ MCSection *TargetLoweringObjectFileELF::getSectionForJumpTable(
     return ReadOnlySection;
 
   return selectELFSectionForGlobal(getContext(), &F, SectionKind::getReadOnly(),
-                                   getMangler(), TM, EmitUniqueSection, ELF::SHF_ALLOC,
-                                   &NextUniqueID);
+                                   getMangler(), TM, EmitUniqueSection,
+                                   ELF::SHF_ALLOC, &NextUniqueID,
+                                   /* AssociatedSymbol */ nullptr);
 }
 
 bool TargetLoweringObjectFileELF::shouldPutJumpTableInFunctionSection(
