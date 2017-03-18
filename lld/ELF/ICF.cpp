@@ -209,7 +209,7 @@ template <class RelTy>
 bool ICF<ELFT>::constantEq(ArrayRef<RelTy> RelsA, ArrayRef<RelTy> RelsB) {
   auto Eq = [](const RelTy &A, const RelTy &B) {
     return A.r_offset == B.r_offset &&
-           A.getType(Config->isMips64EL()) == B.getType(Config->isMips64EL()) &&
+           A.getType(Config->IsMips64EL) == B.getType(Config->IsMips64EL) &&
            getAddend<ELFT>(A) == getAddend<ELFT>(B);
   };
 

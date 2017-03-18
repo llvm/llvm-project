@@ -1084,8 +1084,8 @@ DAGTypeLegalizer::ExpandChainLibCall(RTLIB::Libcall LC, SDNode *Node,
     Type *ArgTy = ArgVT.getTypeForEVT(*DAG.getContext());
     Entry.Node = Node->getOperand(i);
     Entry.Ty = ArgTy;
-    Entry.isSExt = isSigned;
-    Entry.isZExt = !isSigned;
+    Entry.IsSExt = isSigned;
+    Entry.IsZExt = !isSigned;
     Args.push_back(Entry);
   }
   SDValue Callee = DAG.getExternalSymbol(TLI.getLibcallName(LC),
@@ -1094,9 +1094,12 @@ DAGTypeLegalizer::ExpandChainLibCall(RTLIB::Libcall LC, SDNode *Node,
   Type *RetTy = Node->getValueType(0).getTypeForEVT(*DAG.getContext());
 
   TargetLowering::CallLoweringInfo CLI(DAG);
-  CLI.setDebugLoc(SDLoc(Node)).setChain(InChain)
-    .setCallee(TLI.getLibcallCallingConv(LC), RetTy, Callee, std::move(Args))
-    .setSExtResult(isSigned).setZExtResult(!isSigned);
+  CLI.setDebugLoc(SDLoc(Node))
+      .setChain(InChain)
+      .setLibCallee(TLI.getLibcallCallingConv(LC), RetTy, Callee,
+                    std::move(Args))
+      .setSExtResult(isSigned)
+      .setZExtResult(!isSigned);
 
   std::pair<SDValue, SDValue> CallInfo = TLI.LowerCallTo(CLI);
 

@@ -14,7 +14,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
-#include "AMDGPUIntrinsicInfo.h"
 #include "AMDGPUSubtarget.h"
 #include "AMDGPUTargetMachine.h"
 #include "llvm/ADT/StringRef.h"
@@ -389,9 +388,7 @@ bool AMDGPUCodeGenPrepare::visitFDiv(BinaryOperator &FDiv) {
   Builder.setFastMathFlags(FMF);
   Builder.SetCurrentDebugLocation(FDiv.getDebugLoc());
 
-  const AMDGPUIntrinsicInfo *II = TM->getIntrinsicInfo();
-  Function *Decl
-    = II->getDeclaration(Mod, AMDGPUIntrinsic::amdgcn_fdiv_fast, {});
+  Function *Decl = Intrinsic::getDeclaration(Mod, Intrinsic::amdgcn_fdiv_fast);
 
   Value *Num = FDiv.getOperand(0);
   Value *Den = FDiv.getOperand(1);

@@ -28,50 +28,10 @@
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Transforms/IPO/FunctionAttrs.h"
 #include "llvm/Transforms/Utils/Cloning.h"
+#include "llvm/Transforms/Utils/ModuleUtils.h"
 using namespace llvm;
 
 namespace {
-
-// Produce a unique identifier for this module by taking the MD5 sum of the
-// names of the module's strong external symbols. This identifier is
-// normally guaranteed to be unique, or the program would fail to link due to
-// multiply defined symbols.
-//
-// If the module has no strong external symbols (such a module may still have a
-// semantic effect if it performs global initialization), we cannot produce a
-// unique identifier for this module, so we return the empty string, which
-// causes the entire module to be written as a regular LTO module.
-std::string getModuleId(Module *M) {
-  MD5 Md5;
-  bool ExportsSymbols = false;
-  auto AddGlobal = [&](GlobalValue &GV) {
-    if (GV.isDeclaration() || GV.getName().startswith("llvm.") ||
-        !GV.hasExternalLinkage())
-      return;
-    ExportsSymbols = true;
-    Md5.update(GV.getName());
-    Md5.update(ArrayRef<uint8_t>{0});
-  };
-
-  for (auto &F : *M)
-    AddGlobal(F);
-  for (auto &GV : M->globals())
-    AddGlobal(GV);
-  for (auto &GA : M->aliases())
-    AddGlobal(GA);
-  for (auto &IF : M->ifuncs())
-    AddGlobal(IF);
-
-  if (!ExportsSymbols)
-    return "";
-
-  MD5::MD5Result R;
-  Md5.final(R);
-
-  SmallString<32> Str;
-  MD5::stringifyResult(R, Str);
-  return ("$" + Str).str();
-}
 
 // Promote each local-linkage entity defined by ExportM and used by ImportM by
 // changing visibility and appending the given ModuleId.
@@ -253,7 +213,7 @@ void forEachVirtualFunction(Constant *C, function_ref<void(Function *)> Fn) {
 void splitAndWriteThinLTOBitcode(
     raw_ostream &OS, function_ref<AAResults &(Function &)> AARGetter,
     Module &M) {
-  std::string ModuleId = getModuleId(&M);
+  std::string ModuleId = getUniqueModuleId(&M);
   if (ModuleId.empty()) {
     // We couldn't generate a module ID for this module, just write it out as a
     // regular LTO module.

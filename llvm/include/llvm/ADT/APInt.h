@@ -1175,6 +1175,11 @@ public:
   /// Set the given bit to 1 whose position is given as "bitPosition".
   void setBit(unsigned bitPosition);
 
+  /// Set the sign bit to 1.
+  void setSignBit() {
+    setBit(BitWidth - 1);
+  }
+
   /// Set the bits from loBit (inclusive) to hiBit (exclusive) to 1.
   void setBits(unsigned loBit, unsigned hiBit) {
     assert(hiBit <= BitWidth && "hiBit out of range");

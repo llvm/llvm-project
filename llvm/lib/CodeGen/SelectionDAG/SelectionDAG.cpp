@@ -2730,6 +2730,26 @@ void SelectionDAG::computeKnownBits(SDValue Op, APInt &KnownZero,
     KnownOne = KnownOne2.byteSwap();
     break;
   }
+  case ISD::ABS: {
+    computeKnownBits(Op.getOperand(0), KnownZero2, KnownOne2, DemandedElts,
+                     Depth + 1);
+
+    // If the source's MSB is zero then we know the rest of the bits already.
+    if (KnownZero2[BitWidth - 1]) {
+      KnownZero = KnownZero2;
+      KnownOne = KnownOne2;
+      break;
+    }
+
+    // We only know that the absolute values's MSB will be zero iff there is
+    // a set bit that isn't the sign bit (otherwise it could be INT_MIN).
+    KnownOne2.clearBit(BitWidth - 1);
+    if (KnownOne2.getBoolValue()) {
+      KnownZero = APInt::getSignBit(BitWidth);
+      break;
+    }
+    break;
+  }
   case ISD::UMIN: {
     computeKnownBits(Op.getOperand(0), KnownZero, KnownOne, DemandedElts,
                      Depth + 1);
@@ -5155,11 +5175,11 @@ SDValue SelectionDAG::getMemcpy(SDValue Chain, const SDLoc &dl, SDValue Dst,
   TargetLowering::CallLoweringInfo CLI(*this);
   CLI.setDebugLoc(dl)
       .setChain(Chain)
-      .setCallee(TLI->getLibcallCallingConv(RTLIB::MEMCPY),
-                 Dst.getValueType().getTypeForEVT(*getContext()),
-                 getExternalSymbol(TLI->getLibcallName(RTLIB::MEMCPY),
-                                   TLI->getPointerTy(getDataLayout())),
-                 std::move(Args))
+      .setLibCallee(TLI->getLibcallCallingConv(RTLIB::MEMCPY),
+                    Dst.getValueType().getTypeForEVT(*getContext()),
+                    getExternalSymbol(TLI->getLibcallName(RTLIB::MEMCPY),
+                                      TLI->getPointerTy(getDataLayout())),
+                    std::move(Args))
       .setDiscardResult()
       .setTailCall(isTailCall);
 
@@ -5216,11 +5236,11 @@ SDValue SelectionDAG::getMemmove(SDValue Chain, const SDLoc &dl, SDValue Dst,
   TargetLowering::CallLoweringInfo CLI(*this);
   CLI.setDebugLoc(dl)
       .setChain(Chain)
-      .setCallee(TLI->getLibcallCallingConv(RTLIB::MEMMOVE),
-                 Dst.getValueType().getTypeForEVT(*getContext()),
-                 getExternalSymbol(TLI->getLibcallName(RTLIB::MEMMOVE),
-                                   TLI->getPointerTy(getDataLayout())),
-                 std::move(Args))
+      .setLibCallee(TLI->getLibcallCallingConv(RTLIB::MEMMOVE),
+                    Dst.getValueType().getTypeForEVT(*getContext()),
+                    getExternalSymbol(TLI->getLibcallName(RTLIB::MEMMOVE),
+                                      TLI->getPointerTy(getDataLayout())),
+                    std::move(Args))
       .setDiscardResult()
       .setTailCall(isTailCall);
 
@@ -5278,11 +5298,11 @@ SDValue SelectionDAG::getMemset(SDValue Chain, const SDLoc &dl, SDValue Dst,
   TargetLowering::CallLoweringInfo CLI(*this);
   CLI.setDebugLoc(dl)
       .setChain(Chain)
-      .setCallee(TLI->getLibcallCallingConv(RTLIB::MEMSET),
-                 Dst.getValueType().getTypeForEVT(*getContext()),
-                 getExternalSymbol(TLI->getLibcallName(RTLIB::MEMSET),
-                                   TLI->getPointerTy(getDataLayout())),
-                 std::move(Args))
+      .setLibCallee(TLI->getLibcallCallingConv(RTLIB::MEMSET),
+                    Dst.getValueType().getTypeForEVT(*getContext()),
+                    getExternalSymbol(TLI->getLibcallName(RTLIB::MEMSET),
+                                      TLI->getPointerTy(getDataLayout())),
+                    std::move(Args))
       .setDiscardResult()
       .setTailCall(isTailCall);
 
@@ -7297,21 +7317,39 @@ bool SDNode::isOperandOf(const SDNode *N) const {
 /// side-effecting instructions on any chain path.  In practice, this looks
 /// through token factors and non-volatile loads.  In order to remain efficient,
 /// this only looks a couple of nodes in, it does not do an exhaustive search.
+///
+/// Note that we only need to examine chains when we're searching for
+/// side-effects; SelectionDAG requires that all side-effects are represented
+/// by chains, even if another operand would force a specific ordering. This
+/// constraint is necessary to allow transformations like splitting loads.
 bool SDValue::reachesChainWithoutSideEffects(SDValue Dest,
-                                               unsigned Depth) const {
+                                             unsigned Depth) const {
   if (*this == Dest) return true;
 
   // Don't search too deeply, we just want to be able to see through
   // TokenFactor's etc.
   if (Depth == 0) return false;
 
-  // If this is a token factor, all inputs to the TF happen in parallel.  If any
-  // of the operands of the TF does not reach dest, then we cannot do the xform.
+  // If this is a token factor, all inputs to the TF happen in parallel.
   if (getOpcode() == ISD::TokenFactor) {
-    for (unsigned i = 0, e = getNumOperands(); i != e; ++i)
-      if (!getOperand(i).reachesChainWithoutSideEffects(Dest, Depth-1))
-        return false;
-    return true;
+    // First, try a shallow search.
+    if (is_contained((*this)->ops(), Dest)) {
+      // We found the chain we want as an operand of this TokenFactor.
+      // Essentially, we reach the chain without side-effects if we could
+      // serialize the TokenFactor into a simple chain of operations with
+      // Dest as the last operation. This is automatically true if the
+      // chain has one use: there are no other ordering constraints.
+      // If the chain has more than one use, we give up: some other
+      // use of Dest might force a side-effect between Dest and the current
+      // node.
+      if (Dest.hasOneUse())
+        return true;
+    }
+    // Next, try a deep search: check whether every operand of the TokenFactor
+    // reaches Dest.
+    return all_of((*this)->ops(), [=](SDValue Op) {
+      return Op.reachesChainWithoutSideEffects(Dest, Depth - 1);
+    });
   }
 
   // Loads don't have side effects, look through them.

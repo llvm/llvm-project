@@ -90,10 +90,10 @@ def err_module_unavailable : Error<
   "module '%0' %select{is incompatible with|requires}1 feature '%2'">;
 def err_module_header_missing : Error<
   "%select{|umbrella }0header '%1' not found">;
-def err_module_lock_failure : Error<
-  "could not acquire lock file for module '%0': %1">, DefaultFatal;
-def err_module_lock_timeout : Error<
-  "timed out waiting to acquire lock file for module '%0'">, DefaultFatal;
+def remark_module_lock_failure : Remark<
+  "could not acquire lock file for module '%0': %1">, InGroup<ModuleBuild>;
+def remark_module_lock_timeout : Remark<
+  "timed out waiting to acquire lock file for module '%0'">, InGroup<ModuleBuild>;
 def err_module_cycle : Error<"cyclic dependency in module '%0': %1">, 
   DefaultFatal;
 def err_module_prebuilt : Error<

@@ -920,6 +920,7 @@ Value *llvm::emitPutChar(Value *Char, IRBuilder<> &B,
   Module *M = B.GetInsertBlock()->getModule();
   Value *PutChar = M->getOrInsertFunction("putchar", B.getInt32Ty(),
                                           B.getInt32Ty(), nullptr);
+  inferLibFuncAttributes(*M->getFunction("putchar"), *TLI);
   CallInst *CI = B.CreateCall(PutChar,
                               B.CreateIntCast(Char,
                               B.getInt32Ty(),

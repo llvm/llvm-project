@@ -483,7 +483,7 @@ LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
   Args.push_back(Entry);
 
   TargetLowering::CallLoweringInfo CLI(DAG);
-  CLI.setDebugLoc(DL).setChain(Chain).setCallee(
+  CLI.setDebugLoc(DL).setChain(Chain).setLibCallee(
       CallingConv::C, IntPtrTy,
       DAG.getExternalSymbol("__misaligned_load",
                             getPointerTy(DAG.getDataLayout())),

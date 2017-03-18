@@ -912,7 +912,7 @@ template <class ELFT> void MipsGotSection<ELFT>::writeTo(uint8_t *Buf) {
   // TLS symbol's values otherwise. To calculate the adjustments use offsets
   // for thread-local storage.
   // https://www.linux-mips.org/wiki/NPTL
-  if (TlsIndexOff != -1U && !Config->pic())
+  if (TlsIndexOff != -1U && !Config->Pic)
     writeUint<ELFT>(Buf + TlsIndexOff, 1);
   for (const SymbolBody *B : TlsEntries) {
     if (!B || B->isPreemptible())
@@ -950,7 +950,7 @@ void GotPltSection::writeTo(uint8_t *Buf) {
   Buf += Target->GotPltHeaderEntriesNum * Target->GotPltEntrySize;
   for (const SymbolBody *B : Entries) {
     Target->writeGotPlt(Buf, *B);
-    Buf += Config->is64() ? 8 : 4;
+    Buf += Config->Wordsize;
   }
 }
 
@@ -974,7 +974,7 @@ size_t IgotPltSection::getSize() const {
 void IgotPltSection::writeTo(uint8_t *Buf) {
   for (const SymbolBody *B : Entries) {
     Target->writeIgotPlt(Buf, *B);
-    Buf += Config->is64() ? 8 : 4;
+    Buf += Config->Wordsize;
   }
 }
 
@@ -1076,7 +1076,7 @@ template <class ELFT> void DynamicSection<ELFT>::finalizeContents() {
 
   this->Link = In<ELFT>::DynStrTab->OutSec->SectionIndex;
   if (In<ELFT>::RelaDyn->OutSec->Size > 0) {
-    bool IsRela = Config->isRela();
+    bool IsRela = Config->IsRela;
     add({IsRela ? DT_RELA : DT_REL, In<ELFT>::RelaDyn});
     add({IsRela ? DT_RELASZ : DT_RELSZ, In<ELFT>::RelaDyn->OutSec->Size});
     add({IsRela ? DT_RELAENT : DT_RELENT,
@@ -1096,7 +1096,7 @@ template <class ELFT> void DynamicSection<ELFT>::finalizeContents() {
     add({DT_PLTRELSZ, In<ELFT>::RelaPlt->OutSec->Size});
     add({Config->EMachine == EM_MIPS ? DT_MIPS_PLTGOT : DT_PLTGOT,
          In<ELFT>::GotPlt});
-    add({DT_PLTREL, uint64_t(Config->isRela() ? DT_RELA : DT_REL)});
+    add({DT_PLTREL, uint64_t(Config->IsRela ? DT_RELA : DT_REL)});
   }
 
   add({DT_SYMTAB, In<ELFT>::DynSymTab});
@@ -1205,10 +1205,10 @@ uint32_t DynamicReloc::getSymIndex() const {
 
 template <class ELFT>
 RelocationSection<ELFT>::RelocationSection(StringRef Name, bool Sort)
-    : SyntheticSection(SHF_ALLOC, Config->isRela() ? SHT_RELA : SHT_REL,
+    : SyntheticSection(SHF_ALLOC, Config->IsRela ? SHT_RELA : SHT_REL,
                        sizeof(uintX_t), Name),
       Sort(Sort) {
-  this->Entsize = Config->isRela() ? sizeof(Elf_Rela) : sizeof(Elf_Rel);
+  this->Entsize = Config->IsRela ? sizeof(Elf_Rela) : sizeof(Elf_Rel);
 }
 
 template <class ELFT>
@@ -1220,21 +1220,21 @@ void RelocationSection<ELFT>::addReloc(const DynamicReloc &Reloc) {
 
 template <class ELFT, class RelTy>
 static bool compRelocations(const RelTy &A, const RelTy &B) {
-  bool AIsRel = A.getType(Config->isMips64EL()) == Target->RelativeRel;
-  bool BIsRel = B.getType(Config->isMips64EL()) == Target->RelativeRel;
+  bool AIsRel = A.getType(Config->IsMips64EL) == Target->RelativeRel;
+  bool BIsRel = B.getType(Config->IsMips64EL) == Target->RelativeRel;
   if (AIsRel != BIsRel)
     return AIsRel;
 
-  return A.getSymbol(Config->isMips64EL()) < B.getSymbol(Config->isMips64EL());
+  return A.getSymbol(Config->IsMips64EL) < B.getSymbol(Config->IsMips64EL);
 }
 
 template <class ELFT> void RelocationSection<ELFT>::writeTo(uint8_t *Buf) {
   uint8_t *BufBegin = Buf;
   for (const DynamicReloc &Rel : Relocs) {
     auto *P = reinterpret_cast<Elf_Rela *>(Buf);
-    Buf += Config->isRela() ? sizeof(Elf_Rela) : sizeof(Elf_Rel);
+    Buf += Config->IsRela ? sizeof(Elf_Rela) : sizeof(Elf_Rel);
 
-    if (Config->isRela())
+    if (Config->IsRela)
       P->r_addend = Rel.getAddend();
     P->r_offset = Rel.getOffset();
     if (Config->EMachine == EM_MIPS && Rel.getInputSec() == In<ELFT>::MipsGot)
@@ -1242,11 +1242,11 @@ template <class ELFT> void RelocationSection<ELFT>::writeTo(uint8_t *Buf) {
       // allocated in the end of the GOT. We need to adjust the offset to take
       // in account 'local' and 'global' GOT entries.
       P->r_offset += In<ELFT>::MipsGot->getTlsOffset();
-    P->setSymbolAndType(Rel.getSymIndex(), Rel.Type, Config->isMips64EL());
+    P->setSymbolAndType(Rel.getSymIndex(), Rel.Type, Config->IsMips64EL);
   }
 
   if (Sort) {
-    if (Config->isRela())
+    if (Config->IsRela)
       std::stable_sort((Elf_Rela *)BufBegin,
                        (Elf_Rela *)BufBegin + Relocs.size(),
                        compRelocations<ELFT, Elf_Rela>);
@@ -2193,8 +2193,8 @@ size_t MergeSyntheticSection::getSize() const {
 }
 
 MipsRldMapSection::MipsRldMapSection()
-    : SyntheticSection(SHF_ALLOC | SHF_WRITE, SHT_PROGBITS,
-                       Config->is64() ? 8 : 4, ".rld_map") {}
+    : SyntheticSection(SHF_ALLOC | SHF_WRITE, SHT_PROGBITS, Config->Wordsize,
+                       ".rld_map") {}
 
 void MipsRldMapSection::writeTo(uint8_t *Buf) {
   // Apply filler from linker script.
@@ -2226,7 +2226,7 @@ void ARMExidxSentinelSection<ELFT>::writeTo(uint8_t *Buf) {
 
 ThunkSection::ThunkSection(OutputSection *OS, uint64_t Off)
     : SyntheticSection(SHF_ALLOC | SHF_EXECINSTR, SHT_PROGBITS,
-                       Config->is64() ? 8 : 4, ".text.thunk") {
+                       Config->Wordsize, ".text.thunk") {
   this->OutSec = OS;
   this->OutSecOff = Off;
 }
@@ -2249,15 +2249,6 @@ InputSection *ThunkSection::getTargetInputSection() const {
   return T->getTargetInputSection();
 }
 
-namespace lld {
-namespace elf {
-template void PltSection::addEntry<ELF32LE>(SymbolBody &Sym);
-template void PltSection::addEntry<ELF32BE>(SymbolBody &Sym);
-template void PltSection::addEntry<ELF64LE>(SymbolBody &Sym);
-template void PltSection::addEntry<ELF64BE>(SymbolBody &Sym);
-}
-}
-
 InputSection *InX::ARMAttributes;
 BssSection *InX::Bss;
 BssSection *InX::BssRelRo;
@@ -2271,6 +2262,11 @@ PltSection *InX::Plt;
 PltSection *InX::Iplt;
 StringTableSection *InX::ShStrTab;
 StringTableSection *InX::StrTab;
+
+template void PltSection::addEntry<ELF32LE>(SymbolBody &Sym);
+template void PltSection::addEntry<ELF32BE>(SymbolBody &Sym);
+template void PltSection::addEntry<ELF64LE>(SymbolBody &Sym);
+template void PltSection::addEntry<ELF64BE>(SymbolBody &Sym);
 
 template InputSection *elf::createCommonSection<ELF32LE>();
 template InputSection *elf::createCommonSection<ELF32BE>();

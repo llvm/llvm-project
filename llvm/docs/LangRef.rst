@@ -5106,6 +5106,32 @@ Examples:
 
 See :doc:`TypeMetadata`.
 
+'``associated``' Metadata
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The ``associated`` metadata may be attached to a global object
+declaration with a single argument that references another global object.
+
+This metadata prevents discarding of the global object in linker GC
+unless the referenced object is also discarded. The linker support for
+this feature is spotty. For best compatibility, globals carrying this
+metadata may also:
+
+- Be in a comdat with the referenced global.
+- Be in @llvm.compiler.used.
+- Have an explicit section with a name which is a valid C identifier.
+
+It does not have any effect on non-ELF targets.
+
+Example:
+
+.. code-block:: llvm
+
+    $a = comdat any
+    @a = global i32 1, comdat $a
+    @b = internal global i32 2, comdat $a, section "abc", !associated !0
+    !0 = !{i32* @a}
+
 
 Module Flags Metadata
 =====================

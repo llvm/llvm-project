@@ -239,13 +239,13 @@ void InputSection::copyRelocations(uint8_t *Buf, ArrayRef<RelTy> Rels) {
   // That happens because getSymbolIndex(...) call below performs
   // simple linear search.
   for (const RelTy &Rel : Rels) {
-    uint32_t Type = Rel.getType(Config->isMips64EL());
+    uint32_t Type = Rel.getType(Config->IsMips64EL);
     SymbolBody &Body = this->getFile<ELFT>()->getRelocTargetSym(Rel);
 
     auto *P = reinterpret_cast<typename ELFT::Rela *>(Buf);
     Buf += sizeof(RelTy);
 
-    if (Config->isRela())
+    if (Config->IsRela)
       P->r_addend = getAddend<ELFT>(Rel);
 
     // Output section VA is zero for -r, so r_offset is an offset within the
@@ -253,7 +253,7 @@ void InputSection::copyRelocations(uint8_t *Buf, ArrayRef<RelTy> Rels) {
     P->r_offset = RelocatedSection->OutSec->Addr +
                   RelocatedSection->getOffset(Rel.r_offset);
     P->setSymbolAndType(In<ELFT>::SymTab->getSymbolIndex(&Body), Type,
-                        Config->isMips64EL());
+                        Config->IsMips64EL);
 
     if (Body.Type == STT_SECTION) {
       // We combine multiple section symbols into only one per
@@ -271,7 +271,7 @@ void InputSection::copyRelocations(uint8_t *Buf, ArrayRef<RelTy> Rels) {
         continue;
       }
 
-      if (Config->isRela()) {
+      if (Config->IsRela) {
         P->r_addend += Body.getVA() - Section->getOutputSection()->Addr;
       } else if (Config->Relocatable) {
         const uint8_t *BufLoc = RelocatedSection->Data.begin() + Rel.r_offset;
@@ -466,7 +466,7 @@ template <class ELFT, class RelTy>
 void InputSection::relocateNonAlloc(uint8_t *Buf, ArrayRef<RelTy> Rels) {
   typedef typename ELFT::uint uintX_t;
   for (const RelTy &Rel : Rels) {
-    uint32_t Type = Rel.getType(Config->isMips64EL());
+    uint32_t Type = Rel.getType(Config->IsMips64EL);
     uint64_t Offset = getOffset(Rel.r_offset);
     uint8_t *BufLoc = Buf + Offset;
     int64_t Addend = getAddend<ELFT>(Rel);

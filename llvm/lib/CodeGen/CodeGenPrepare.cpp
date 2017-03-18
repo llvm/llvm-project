@@ -220,10 +220,12 @@ class TypePromotionTransaction;
     bool optimizeExtractElementInst(Instruction *Inst);
     bool dupRetToEnableTailCallOpts(BasicBlock *BB);
     bool placeDbgValues(Function &F);
-    bool extLdPromotion(TypePromotionTransaction &TPT, LoadInst *&LI,
-                        Instruction *&Inst,
-                        const SmallVectorImpl<Instruction *> &Exts,
-                        unsigned CreatedInstCost);
+    bool canFormExtLd(const SmallVectorImpl<Instruction *> &MovedExts,
+                      LoadInst *&LI, Instruction *&Inst, bool HasPromoted);
+    bool tryToPromoteExts(TypePromotionTransaction &TPT,
+                          const SmallVectorImpl<Instruction *> &Exts,
+                          SmallVectorImpl<Instruction *> &ProfitablyMovedExts,
+                          unsigned CreatedInstsCost = 0);
     bool splitBranchCondition(Function &F);
     bool simplifyOffsetableRelocate(Instruction &I);
     bool splitIndirectCriticalEdges(Function &F);
@@ -4435,14 +4437,14 @@ bool CodeGenPrepare::optimizeInlineAsmInst(CallInst *CS) {
   return MadeChange;
 }
 
-/// \brief Check if all the uses of \p Inst are equivalent (or free) zero or
+/// \brief Check if all the uses of \p Val are equivalent (or free) zero or
 /// sign extensions.
-static bool hasSameExtUse(Instruction *Inst, const TargetLowering &TLI) {
-  assert(!Inst->use_empty() && "Input must have at least one use");
-  const Instruction *FirstUser = cast<Instruction>(*Inst->user_begin());
+static bool hasSameExtUse(Value *Val, const TargetLowering &TLI) {
+  assert(!Val->use_empty() && "Input must have at least one use");
+  const Instruction *FirstUser = cast<Instruction>(*Val->user_begin());
   bool IsSExt = isa<SExtInst>(FirstUser);
   Type *ExtTy = FirstUser->getType();
-  for (const User *U : Inst->users()) {
+  for (const User *U : Val->users()) {
     const Instruction *UI = cast<Instruction>(U);
     if ((IsSExt && !isa<SExtInst>(UI)) || (!IsSExt && !isa<ZExtInst>(UI)))
       return false;
@@ -4452,11 +4454,11 @@ static bool hasSameExtUse(Instruction *Inst, const TargetLowering &TLI) {
       continue;
 
     // If IsSExt is true, we are in this situation:
-    // a = Inst
+    // a = Val
     // b = sext ty1 a to ty2
     // c = sext ty1 a to ty3
     // Assuming ty2 is shorter than ty3, this could be turned into:
-    // a = Inst
+    // a = Val
     // b = sext ty1 a to ty2
     // c = sext ty2 b to ty3
     // However, the last sext is not free.
@@ -4483,16 +4485,13 @@ static bool hasSameExtUse(Instruction *Inst, const TargetLowering &TLI) {
   return true;
 }
 
-/// \brief Try to form ExtLd by promoting \p Exts until they reach a
-/// load instruction.
-/// If an ext(load) can be formed, it is returned via \p LI for the load
-/// and \p Inst for the extension.
-/// Otherwise LI == nullptr and Inst == nullptr.
-/// When some promotion happened, \p TPT contains the proper state to
-/// revert them.
+/// \brief Try to speculatively promote extensions in \p Exts and continue
+/// promoting through newly promoted operands recursively as far as doing so is
+/// profitable. Save extensions profitably moved up, in \p ProfitablyMovedExts.
+/// When some promotion happened, \p TPT contains the proper state to revert
+/// them.
 ///
-/// \return true when promoting was necessary to expose the ext(load)
-/// opportunity, false otherwise.
+/// \return true if some promotion happened, false otherwise.
 ///
 /// Example:
 /// \code
@@ -4507,27 +4506,37 @@ static bool hasSameExtUse(Instruction *Inst, const TargetLowering &TLI) {
 /// %add = add nuw i64 %zext, 4
 /// \endcode
 /// Thanks to the promotion, we can match zext(load i32*) to i64.
-bool CodeGenPrepare::extLdPromotion(TypePromotionTransaction &TPT,
-                                    LoadInst *&LI, Instruction *&Inst,
-                                    const SmallVectorImpl<Instruction *> &Exts,
-                                    unsigned CreatedInstsCost = 0) {
-  // Iterate over all the extensions to see if one form an ext(load).
+bool CodeGenPrepare::tryToPromoteExts(
+    TypePromotionTransaction &TPT, const SmallVectorImpl<Instruction *> &Exts,
+    SmallVectorImpl<Instruction *> &ProfitablyMovedExts,
+    unsigned CreatedInstsCost) {
+  bool Promoted = false;
+
+  // Iterate over all the extensions to try to promote them.
   for (auto I : Exts) {
-    // Check if we directly have ext(load).
-    if ((LI = dyn_cast<LoadInst>(I->getOperand(0)))) {
-      Inst = I;
-      // No promotion happened here.
-      return false;
+    // Early check if we directly have ext(load).
+    if (isa<LoadInst>(I->getOperand(0))) {
+      ProfitablyMovedExts.push_back(I);
+      continue;
     }
-    // Check whether or not we want to do any promotion.
+
+    // Check whether or not we want to do any promotion.  The reason we have
+    // this check inside the for loop is to catch the case where an extension
+    // is directly fed by a load because in such case the extension can be moved
+    // up without any promotion on its operands.
     if (!TLI || !TLI->enableExtLdPromotion() || DisableExtLdPromotion)
-      continue;
+      return false;
+
     // Get the action to perform the promotion.
-    TypePromotionHelper::Action TPH = TypePromotionHelper::getAction(
-        I, InsertedInsts, *TLI, PromotedInsts);
+    TypePromotionHelper::Action TPH =
+        TypePromotionHelper::getAction(I, InsertedInsts, *TLI, PromotedInsts);
     // Check if we can promote.
-    if (!TPH)
+    if (!TPH) {
+      // Save the current extension as we cannot move up through its operand.
+      ProfitablyMovedExts.push_back(I);
       continue;
+    }
+
     // Save the current state.
     TypePromotionTransaction::ConstRestorationPt LastKnownGood =
         TPT.getRestorationPoint();
@@ -4548,33 +4557,90 @@ bool CodeGenPrepare::extLdPromotion(TypePromotionTransaction &TPT,
     // because the new extension may be removed too.
     long long TotalCreatedInstsCost = CreatedInstsCost + NewCreatedInstsCost;
     // FIXME: It would be possible to propagate a negative value instead of
-    // conservatively ceiling it to 0. 
+    // conservatively ceiling it to 0.
     TotalCreatedInstsCost =
         std::max((long long)0, (TotalCreatedInstsCost - ExtCost));
     if (!StressExtLdPromotion &&
         (TotalCreatedInstsCost > 1 ||
          !isPromotedInstructionLegal(*TLI, *DL, PromotedVal))) {
-      // The promotion is not profitable, rollback to the previous state.
+      // This promotion is not profitable, rollback to the previous state, and
+      // save the current extension in ProfitablyMovedExts as the latest
+      // speculative promotion turned out to be unprofitable.
       TPT.rollback(LastKnownGood);
+      ProfitablyMovedExts.push_back(I);
+      continue;
+    }
+    // Continue promoting NewExts as far as doing so is profitable.
+    SmallVector<Instruction *, 2> NewlyMovedExts;
+    (void)tryToPromoteExts(TPT, NewExts, NewlyMovedExts, TotalCreatedInstsCost);
+    bool NewPromoted = false;
+    for (auto ExtInst : NewlyMovedExts) {
+      Instruction *MovedExt = cast<Instruction>(ExtInst);
+      Value *ExtOperand = MovedExt->getOperand(0);
+      // If we have reached to a load, we need this extra profitability check
+      // as it could potentially be merged into an ext(load).
+      if (isa<LoadInst>(ExtOperand) &&
+          !(StressExtLdPromotion || NewCreatedInstsCost <= ExtCost ||
+            (ExtOperand->hasOneUse() || hasSameExtUse(ExtOperand, *TLI))))
+        continue;
+
+      ProfitablyMovedExts.push_back(MovedExt);
+      NewPromoted = true;
+    }
+
+    // If none of speculative promotions for NewExts is profitable, rollback
+    // and save the current extension (I) as the last profitable extension.
+    if (!NewPromoted) {
+      TPT.rollback(LastKnownGood);
+      ProfitablyMovedExts.push_back(I);
       continue;
     }
     // The promotion is profitable.
-    // Check if it exposes an ext(load).
-    (void)extLdPromotion(TPT, LI, Inst, NewExts, TotalCreatedInstsCost);
-    if (LI && (StressExtLdPromotion || NewCreatedInstsCost <= ExtCost ||
-               // If we have created a new extension, i.e., now we have two
-               // extensions. We must make sure one of them is merged with
-               // the load, otherwise we may degrade the code quality.
-               (LI->hasOneUse() || hasSameExtUse(LI, *TLI))))
-      // Promotion happened.
-      return true;
-    // If this does not help to expose an ext(load) then, rollback.
-    TPT.rollback(LastKnownGood);
+    Promoted = true;
   }
-  // None of the extension can form an ext(load).
-  LI = nullptr;
-  Inst = nullptr;
-  return false;
+  return Promoted;
+}
+
+/// Return true, if an ext(load) can be formed from an extension in
+/// \p MovedExts.
+bool CodeGenPrepare::canFormExtLd(
+    const SmallVectorImpl<Instruction *> &MovedExts, LoadInst *&LI,
+    Instruction *&Inst, bool HasPromoted) {
+  for (auto *MovedExtInst : MovedExts) {
+    if (isa<LoadInst>(MovedExtInst->getOperand(0))) {
+      LI = cast<LoadInst>(MovedExtInst->getOperand(0));
+      Inst = MovedExtInst;
+      break;
+    }
+  }
+  if (!LI)
+    return false;
+
+  // If they're already in the same block, there's nothing to do.
+  // Make the cheap checks first if we did not promote.
+  // If we promoted, we need to check if it is indeed profitable.
+  if (!HasPromoted && LI->getParent() == Inst->getParent())
+    return false;
+
+  EVT VT = TLI->getValueType(*DL, Inst->getType());
+  EVT LoadVT = TLI->getValueType(*DL, LI->getType());
+
+  // If the load has other users and the truncate is not free, this probably
+  // isn't worthwhile.
+  if (!LI->hasOneUse() && (TLI->isTypeLegal(LoadVT) || !TLI->isTypeLegal(VT)) &&
+      !TLI->isTruncateFree(Inst->getType(), LI->getType()))
+    return false;
+
+  // Check whether the target supports casts folded into loads.
+  unsigned LType;
+  if (isa<ZExtInst>(Inst))
+    LType = ISD::ZEXTLOAD;
+  else {
+    assert(isa<SExtInst>(Inst) && "Unexpected ext type!");
+    LType = ISD::SEXTLOAD;
+  }
+
+  return TLI->isLoadExtLegal(LType, VT, LoadVT);
 }
 
 /// Move a zext or sext fed by a load into the same basic block as the load,
@@ -4592,48 +4658,17 @@ bool CodeGenPrepare::moveExtToFormExtLoad(Instruction *&I) {
   // an extended load.
   TypePromotionTransaction TPT;
   TypePromotionTransaction::ConstRestorationPt LastKnownGood =
-    TPT.getRestorationPoint();
+      TPT.getRestorationPoint();
   SmallVector<Instruction *, 1> Exts;
+  SmallVector<Instruction *, 2> LastMovedExts;
   Exts.push_back(I);
+
+  bool HasPromoted = tryToPromoteExts(TPT, Exts, LastMovedExts);
+
   // Look for a load being extended.
   LoadInst *LI = nullptr;
   Instruction *OldExt = I;
-  bool HasPromoted = extLdPromotion(TPT, LI, I, Exts);
-  if (!LI || !I) {
-    assert(!HasPromoted && !LI && "If we did not match any load instruction "
-                                  "the code must remain the same");
-    I = OldExt;
-    return false;
-  }
-
-  // If they're already in the same block, there's nothing to do.
-  // Make the cheap checks first if we did not promote.
-  // If we promoted, we need to check if it is indeed profitable.
-  if (!HasPromoted && LI->getParent() == I->getParent())
-    return false;
-
-  EVT VT = TLI->getValueType(*DL, I->getType());
-  EVT LoadVT = TLI->getValueType(*DL, LI->getType());
-
-  // If the load has other users and the truncate is not free, this probably
-  // isn't worthwhile.
-  if (!LI->hasOneUse() &&
-      (TLI->isTypeLegal(LoadVT) || !TLI->isTypeLegal(VT)) &&
-      !TLI->isTruncateFree(I->getType(), LI->getType())) {
-    I = OldExt;
-    TPT.rollback(LastKnownGood);
-    return false;
-  }
-
-  // Check whether the target supports casts folded into loads.
-  unsigned LType;
-  if (isa<ZExtInst>(I))
-    LType = ISD::ZEXTLOAD;
-  else {
-    assert(isa<SExtInst>(I) && "Unexpected ext type!");
-    LType = ISD::SEXTLOAD;
-  }
-  if (!TLI->isLoadExtLegal(LType, VT, LoadVT)) {
+  if (!canFormExtLd(LastMovedExts, LI, I, HasPromoted)) {
     I = OldExt;
     TPT.rollback(LastKnownGood);
     return false;
@@ -4646,7 +4681,7 @@ bool CodeGenPrepare::moveExtToFormExtLoad(Instruction *&I) {
   I->insertAfter(LI);
   // CGP does not check if the zext would be speculatively executed when moved
   // to the same basic block as the load. Preserving its original location would
-  // pessimize the debugging experience, as well as negatively impact the 
+  // pessimize the debugging experience, as well as negatively impact the
   // quality of sample pgo. We don't want to use "line 0" as that has a
   // size cost in the line-table section and logically the zext can be seen as
   // part of the load. Therefore we conservatively reuse the same debug location

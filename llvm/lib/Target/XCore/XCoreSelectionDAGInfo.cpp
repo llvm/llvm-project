@@ -35,11 +35,11 @@ SDValue XCoreSelectionDAGInfo::EmitTargetCodeForMemcpy(
     TargetLowering::CallLoweringInfo CLI(DAG);
     CLI.setDebugLoc(dl)
         .setChain(Chain)
-        .setCallee(TLI.getLibcallCallingConv(RTLIB::MEMCPY),
-                   Type::getVoidTy(*DAG.getContext()),
-                   DAG.getExternalSymbol("__memcpy_4",
-                                         TLI.getPointerTy(DAG.getDataLayout())),
-                   std::move(Args))
+        .setLibCallee(TLI.getLibcallCallingConv(RTLIB::MEMCPY),
+                      Type::getVoidTy(*DAG.getContext()),
+                      DAG.getExternalSymbol(
+                          "__memcpy_4", TLI.getPointerTy(DAG.getDataLayout())),
+                      std::move(Args))
         .setDiscardResult();
 
     std::pair<SDValue,SDValue> CallResult = TLI.LowerCallTo(CLI);

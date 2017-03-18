@@ -30,7 +30,6 @@ using namespace llvm;
 
 // Explicit instantiations of SymbolTableListTraits since some of the methods
 // are not in the public header file...
-template class llvm::SymbolTableListTraits<Argument>;
 template class llvm::SymbolTableListTraits<BasicBlock>;
 
 //===----------------------------------------------------------------------===//
@@ -39,8 +38,8 @@ template class llvm::SymbolTableListTraits<BasicBlock>;
 
 void Argument::anchor() { }
 
-Argument::Argument(Type *Ty, const Twine &Name, unsigned ArgNo)
-    : Value(Ty, Value::ArgumentVal), Parent(nullptr), ArgNo(ArgNo) {
+Argument::Argument(Type *Ty, const Twine &Name, Function *Par, unsigned ArgNo)
+    : Value(Ty, Value::ArgumentVal), Parent(Par), ArgNo(ArgNo) {
   setName(Name);
 }
 
@@ -188,7 +187,8 @@ void Function::eraseFromParent() {
 Function::Function(FunctionType *Ty, LinkageTypes Linkage, const Twine &name,
                    Module *ParentModule)
     : GlobalObject(Ty, Value::FunctionVal,
-                   OperandTraits<Function>::op_begin(this), 0, Linkage, name) {
+                   OperandTraits<Function>::op_begin(this), 0, Linkage, name),
+      Arguments(nullptr), NumArgs(Ty->getNumParams()) {
   assert(FunctionType::isValidReturnType(getReturnType()) &&
          "invalid return type");
   setGlobalObjectSubClassData(0);
@@ -216,7 +216,8 @@ Function::~Function() {
   dropAllReferences();    // After this it is safe to delete instructions.
 
   // Delete all of the method arguments and unlink from symbol table...
-  ArgumentList.clear();
+  if (Arguments)
+    clearArguments();
 
   // Remove the function from the on-the-side GC table.
   clearGC();
@@ -224,17 +225,33 @@ Function::~Function() {
 
 void Function::BuildLazyArguments() const {
   // Create the arguments vector, all arguments start out unnamed.
-  FunctionType *FT = getFunctionType();
-  for (unsigned i = 0, e = FT->getNumParams(); i != e; ++i) {
-    assert(!FT->getParamType(i)->isVoidTy() &&
-           "Cannot have void typed arguments!");
-    ArgumentList.push_back(
-        new Argument(FT->getParamType(i), "", i));
+  auto *FT = getFunctionType();
+  if (NumArgs > 0) {
+    Arguments = std::allocator<Argument>().allocate(NumArgs);
+    for (unsigned i = 0, e = NumArgs; i != e; ++i) {
+      Type *ArgTy = FT->getParamType(i);
+      assert(!ArgTy->isVoidTy() && "Cannot have void typed arguments!");
+      new (Arguments + i) Argument(ArgTy, "", const_cast<Function *>(this), i);
+    }
   }
 
   // Clear the lazy arguments bit.
   unsigned SDC = getSubclassDataFromValue();
   const_cast<Function*>(this)->setValueSubclassData(SDC &= ~(1<<0));
+  assert(!hasLazyArguments());
+}
+
+static MutableArrayRef<Argument> makeArgArray(Argument *Args, size_t Count) {
+  return MutableArrayRef<Argument>(Args, Count);
+}
+
+void Function::clearArguments() {
+  for (Argument &A : makeArgArray(Arguments, NumArgs)) {
+    A.setName("");
+    A.~Argument();
+  }
+  std::allocator<Argument>().deallocate(Arguments, NumArgs);
+  Arguments = nullptr;
 }
 
 void Function::stealArgumentListFrom(Function &Src) {
@@ -242,10 +259,10 @@ void Function::stealArgumentListFrom(Function &Src) {
 
   // Drop the current arguments, if any, and set the lazy argument bit.
   if (!hasLazyArguments()) {
-    assert(llvm::all_of(ArgumentList,
+    assert(llvm::all_of(makeArgArray(Arguments, NumArgs),
                         [](const Argument &A) { return A.use_empty(); }) &&
            "Expected arguments to be unused in declaration");
-    ArgumentList.clear();
+    clearArguments();
     setValueSubclassData(getSubclassDataFromValue() | (1 << 0));
   }
 
@@ -254,8 +271,23 @@ void Function::stealArgumentListFrom(Function &Src) {
     return;
 
   // Steal arguments from Src, and fix the lazy argument bits.
-  ArgumentList.splice(ArgumentList.end(), Src.ArgumentList);
+  assert(arg_size() == Src.arg_size());
+  Arguments = Src.Arguments;
+  Src.Arguments = nullptr;
+  for (Argument &A : makeArgArray(Arguments, NumArgs)) {
+    // FIXME: This does the work of transferNodesFromList inefficiently.
+    SmallString<128> Name;
+    if (A.hasName())
+      Name = A.getName();
+    if (!Name.empty())
+      A.setName("");
+    A.setParent(this);
+    if (!Name.empty())
+      A.setName(Name);
+  }
+
   setValueSubclassData(getSubclassDataFromValue() & ~(1 << 0));
+  assert(!hasLazyArguments());
   Src.setValueSubclassData(Src.getSubclassDataFromValue() | (1 << 0));
 }
 

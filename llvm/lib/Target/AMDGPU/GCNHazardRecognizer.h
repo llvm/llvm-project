@@ -34,6 +34,7 @@ class GCNHazardRecognizer final : public ScheduleHazardRecognizer {
   std::list<MachineInstr*> EmittedInstrs;
   const MachineFunction &MF;
   const SISubtarget &ST;
+  const SIInstrInfo &TII;
 
   int getWaitStatesSince(function_ref<bool(MachineInstr *)> IsHazard);
   int getWaitStatesSinceDef(unsigned Reg,

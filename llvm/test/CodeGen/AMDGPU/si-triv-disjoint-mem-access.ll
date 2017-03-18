@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -mcpu=bonaire -verify-machineinstrs -enable-misched -enable-aa-sched-mi < %s | FileCheck -check-prefix=FUNC -check-prefix=CI %s
+; RUN: llc -march=amdgcn -mcpu=bonaire -enable-amdgpu-aa=0 -verify-machineinstrs -enable-misched -enable-aa-sched-mi < %s | FileCheck -check-prefix=FUNC -check-prefix=CI %s
 
 declare void @llvm.SI.tbuffer.store.i32(<16 x i8>, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32)
 declare void @llvm.SI.tbuffer.store.v4i32(<16 x i8>, <4 x i32>, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32)
