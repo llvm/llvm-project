@@ -1,6 +1,6 @@
-; RUN: llc -stop-after machine-sink %s -o %t.mir
+; RUN: llc -mtriple=x86_64-pc-win32 -stop-after machine-sink %s -o %t.mir
 ; RUN: FileCheck %s < %t.mir
-; RUN: llc %t.mir -run-pass machine-sink
+; RUN: llc %t.mir -mtriple=x86_64-pc-win32 -run-pass machine-sink
 ; Check that callee saved registers are printed in a format that can then be parsed.
 
 declare x86_regcallcc i32 @callee(i32 %a0, i32 %b0, i32 %c0, i32 %d0, i32 %e0)

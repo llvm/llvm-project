@@ -73,12 +73,10 @@ public:
     typedef std::input_iterator_tag iterator_category;
     typedef std::ptrdiff_t          difference_type;
 
-    /// Ptr - There are 3 forms that 'Ptr' represents:
+    /// Ptr - There are 2 forms that 'Ptr' represents:
     /// 1) A single NamedDecl. (Ptr & 0x1 == 0)
     /// 2) A IdDeclInfo::DeclsTy::iterator that traverses only the decls of the
-    ///    same declaration context. (Ptr & 0x3 == 0x1)
-    /// 3) A IdDeclInfo::DeclsTy::iterator that traverses the decls of parent
-    ///    declaration contexts too. (Ptr & 0x3 == 0x3)
+    ///    same declaration context. (Ptr & 0x1 == 0x1)
     uintptr_t Ptr;
     typedef IdDeclInfo::DeclsTy::iterator BaseIter;
 
@@ -97,7 +95,7 @@ public:
 
     BaseIter getIterator() const {
       assert(isIterator() && "Ptr not an iterator!");
-      return reinterpret_cast<BaseIter>(Ptr & ~0x3);
+      return reinterpret_cast<BaseIter>(Ptr & ~0x1);
     }
 
     friend class IdentifierResolver;
@@ -127,14 +125,6 @@ public:
       else
         incrementSlowCase();
       return *this;
-    }
-
-    uintptr_t getAsOpaqueValue() const { return Ptr; }
-
-    static iterator getFromOpaqueValue(uintptr_t P) {
-      iterator Result;
-      Result.Ptr = P;
-      return Result;
     }
   };
 
