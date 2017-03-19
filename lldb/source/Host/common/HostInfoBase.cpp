@@ -314,9 +314,7 @@ bool HostInfoBase::ComputeProcessTempFileDirectory(FileSpec &file_spec) {
 
   std::string pid_str{llvm::to_string(Host::GetCurrentProcessID())};
   temp_file_spec.AppendPathComponent(pid_str);
-  if (!FileSystem::MakeDirectory(temp_file_spec,
-                                 eFilePermissionsDirectoryDefault)
-           .Success())
+  if (llvm::sys::fs::create_directory(temp_file_spec.GetPath()))
     return false;
 
   file_spec.GetDirectory().SetCString(temp_file_spec.GetCString());
@@ -338,9 +336,7 @@ bool HostInfoBase::ComputeGlobalTempFileDirectory(FileSpec &file_spec) {
     return false;
 
   temp_file_spec.AppendPathComponent("lldb");
-  if (!FileSystem::MakeDirectory(temp_file_spec,
-                                 eFilePermissionsDirectoryDefault)
-           .Success())
+  if (llvm::sys::fs::create_directory(temp_file_spec.GetPath()))
     return false;
 
   file_spec.GetDirectory().SetCString(temp_file_spec.GetCString());

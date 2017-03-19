@@ -98,7 +98,7 @@ template <class ELFT> void OutputSection::finalize() {
   }
 
   uint32_t Type = this->Type;
-  if (!Config->copyRelocs() || (Type != SHT_RELA && Type != SHT_REL))
+  if (!Config->CopyRelocs || (Type != SHT_RELA && Type != SHT_REL))
     return;
 
   InputSection *First = Sections[0];

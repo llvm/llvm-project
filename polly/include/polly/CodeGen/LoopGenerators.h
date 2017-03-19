@@ -101,7 +101,7 @@ public:
   /// Create a parallel loop generator for the current function.
   ParallelLoopGenerator(PollyIRBuilder &Builder, Pass *P, LoopInfo &LI,
                         DominatorTree &DT, const DataLayout &DL)
-      : Builder(Builder), P(P), LI(LI), DT(DT), DL(DL),
+      : Builder(Builder), P(P), LI(LI), DT(DT),
         LongType(
             Type::getIntNTy(Builder.getContext(), DL.getPointerSizeInBits())),
         M(Builder.GetInsertBlock()->getParent()->getParent()) {}
@@ -139,9 +139,6 @@ private:
 
   /// The dominance tree of the current function we need to update.
   DominatorTree &DT;
-
-  /// The target layout to get the right size for types.
-  const DataLayout &DL;
 
   /// The type of a "long" on this hardware used for backend calls.
   Type *LongType;

@@ -32,7 +32,6 @@
 #include "Plugins/Process/gdb-remote/ProcessGDBRemoteLog.h"
 #include "lldb/Host/ConnectionFileDescriptor.h"
 #include "lldb/Host/FileSpec.h"
-#include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostGetOpt.h"
 #include "lldb/Host/OptionParser.h"
 #include "lldb/Host/common/TCPSocket.h"
@@ -102,8 +101,7 @@ static void display_usage(const char *progname, const char *subcommand) {
 static Error save_socket_id_to_file(const std::string &socket_id,
                                     const FileSpec &file_spec) {
   FileSpec temp_file_spec(file_spec.GetDirectory().AsCString(), false);
-  auto error = FileSystem::MakeDirectory(temp_file_spec,
-                                         eFilePermissionsDirectoryDefault);
+  Error error(llvm::sys::fs::create_directory(temp_file_spec.GetPath()));
   if (error.Fail())
     return Error("Failed to create directory %s: %s",
                  temp_file_spec.GetCString(), error.AsCString());
