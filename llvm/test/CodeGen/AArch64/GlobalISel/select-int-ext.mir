@@ -39,6 +39,7 @@ body:             |
 
     %0(s32) = COPY %w0
     %1(s64) = G_ANYEXT %0
+    %x0 = COPY %1(s64)
 ...
 
 ---
@@ -63,6 +64,7 @@ body:             |
 
     %0(s8) = COPY %w0
     %1(s32) = G_ANYEXT %0
+    %w0 = COPY %1(s32)
 ...
 
 ---
@@ -89,6 +91,7 @@ body:             |
 
     %0(s32) = COPY %w0
     %1(s64) = G_ZEXT %0
+    %x0 = COPY %1(s64)
 ...
 
 ---
@@ -113,6 +116,7 @@ body:             |
 
     %0(s8) = COPY %w0
     %1(s32) = G_ZEXT %0
+    %w0 = COPY %1(s32)
 ...
 
 ---
@@ -137,6 +141,7 @@ body:             |
 
     %0(s8) = COPY %w0
     %1(s16) = G_ZEXT %0
+    %w0 = COPY %1(s16)
 ...
 
 ---
@@ -163,6 +168,7 @@ body:             |
 
     %0(s32) = COPY %w0
     %1(s64) = G_SEXT %0
+    %x0 = COPY %1(s64)
 ...
 
 ---
@@ -187,6 +193,7 @@ body:             |
 
     %0(s8) = COPY %w0
     %1(s32) = G_SEXT %0
+    %w0 = COPY %1(s32)
 ...
 
 ---
@@ -211,4 +218,5 @@ body:             |
 
     %0(s8) = COPY %w0
     %1(s16) = G_SEXT %0
+    %w0 = COPY %1(s16)
 ...
