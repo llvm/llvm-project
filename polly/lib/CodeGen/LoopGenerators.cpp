@@ -167,11 +167,6 @@ Value *ParallelLoopGenerator::createParallelLoop(
   Builder.CreateCall(SubFn, SubFnParam);
   createCallJoinThreads();
 
-  // Mark the end of the lifetime for the parameter struct.
-  Type *Ty = Struct->getType();
-  ConstantInt *SizeOf = Builder.getInt64(DL.getTypeAllocSize(Ty));
-  Builder.CreateLifetimeEnd(Struct, SizeOf);
-
   return IV;
 }
 
@@ -293,10 +288,6 @@ ParallelLoopGenerator::storeValuesIntoStruct(SetVector<Value *> &Values) {
   Instruction *IP = &*EntryBB.getFirstInsertionPt();
   StructType *Ty = StructType::get(Builder.getContext(), Members);
   AllocaInst *Struct = new AllocaInst(Ty, nullptr, "polly.par.userContext", IP);
-
-  // Mark the start of the lifetime for the parameter struct.
-  ConstantInt *SizeOf = Builder.getInt64(DL.getTypeAllocSize(Ty));
-  Builder.CreateLifetimeStart(Struct, SizeOf);
 
   for (unsigned i = 0; i < Values.size(); i++) {
     Value *Address = Builder.CreateStructGEP(Ty, Struct, i);
