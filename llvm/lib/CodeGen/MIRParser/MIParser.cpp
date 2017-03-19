@@ -176,6 +176,7 @@ public:
   bool parseIntrinsicOperand(MachineOperand &Dest);
   bool parsePredicateOperand(MachineOperand &Dest);
   bool parseTargetIndexOperand(MachineOperand &Dest);
+  bool parseCustomRegisterMaskOperand(MachineOperand &Dest);
   bool parseLiveoutRegisterMaskOperand(MachineOperand &Dest);
   bool parseMachineOperand(MachineOperand &Dest,
                            Optional<unsigned> &TiedDefIdx);
@@ -1670,6 +1671,35 @@ bool MIParser::parseTargetIndexOperand(MachineOperand &Dest) {
   return false;
 }
 
+bool MIParser::parseCustomRegisterMaskOperand(MachineOperand &Dest) {
+  assert(Token.stringValue() == "CustomRegMask" && "Expected a custom RegMask");
+  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
+  assert(TRI && "Expected target register info");
+  lex();
+  if (expectAndConsume(MIToken::lparen))
+    return true;
+
+  uint32_t *Mask = MF.allocateRegisterMask(TRI->getNumRegs());
+  while (true) {
+    if (Token.isNot(MIToken::NamedRegister))
+      return error("expected a named register");
+    unsigned Reg;
+    if (parseNamedRegister(Reg))
+      return true;
+    lex();
+    Mask[Reg / 32] |= 1U << (Reg % 32);
+    // TODO: Report an error if the same register is used more than once.
+    if (Token.isNot(MIToken::comma))
+      break;
+    lex();
+  }
+
+  if (expectAndConsume(MIToken::rparen))
+    return true;
+  Dest = MachineOperand::CreateRegMask(Mask);
+  return false;
+}
+
 bool MIParser::parseLiveoutRegisterMaskOperand(MachineOperand &Dest) {
   assert(Token.is(MIToken::kw_liveout));
   const auto *TRI = MF.getSubtarget().getRegisterInfo();
@@ -1767,8 +1797,8 @@ bool MIParser::parseMachineOperand(MachineOperand &Dest,
       Dest = MachineOperand::CreateRegMask(RegMask);
       lex();
       break;
-    }
-    LLVM_FALLTHROUGH;
+    } else
+      return parseCustomRegisterMaskOperand(Dest);
   default:
     // FIXME: Parse the MCSymbol machine operand.
     return error("expected a machine operand");

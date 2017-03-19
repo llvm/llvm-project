@@ -7712,6 +7712,133 @@ __m512i test_mm512_mask_set1_epi32 (__m512i __O, __mmask16 __M, int __A)
   return _mm512_mask_set1_epi32 ( __O, __M, __A);
 }
 
+__m512i test_mm512_set_epi8(char e63, char e62, char e61, char e60, char e59,
+    char e58, char e57, char e56, char e55, char e54, char e53, char e52,
+    char e51, char e50, char e49, char e48, char e47, char e46, char e45,
+    char e44, char e43, char e42, char e41, char e40, char e39, char e38,
+    char e37, char e36, char e35, char e34, char e33, char e32, char e31,
+    char e30, char e29, char e28, char e27, char e26, char e25, char e24,
+    char e23, char e22, char e21, char e20, char e19, char e18, char e17,
+    char e16, char e15, char e14, char e13, char e12, char e11, char e10,
+    char e9, char e8, char e7, char e6, char e5, char e4, char e3, char e2,
+    char e1, char e0) {
+
+  //CHECK-LABEL: @test_mm512_set_epi8
+  //CHECK: load i8, i8* %e63.addr, align 1
+   //CHECK: load i8, i8* %e62.addr, align 1
+   //CHECK: load i8, i8* %e61.addr, align 1
+   //CHECK: load i8, i8* %e60.addr, align 1
+   //CHECK: load i8, i8* %e59.addr, align 1
+   //CHECK: load i8, i8* %e58.addr, align 1
+   //CHECK: load i8, i8* %e57.addr, align 1
+   //CHECK: load i8, i8* %e56.addr, align 1
+   //CHECK: load i8, i8* %e55.addr, align 1
+   //CHECK: load i8, i8* %e54.addr, align 1
+   //CHECK: load i8, i8* %e53.addr, align 1
+   //CHECK: load i8, i8* %e52.addr, align 1
+   //CHECK: load i8, i8* %e51.addr, align 1
+   //CHECK: load i8, i8* %e50.addr, align 1
+   //CHECK: load i8, i8* %e49.addr, align 1
+   //CHECK: load i8, i8* %e48.addr, align 1
+   //CHECK: load i8, i8* %e47.addr, align 1
+   //CHECK: load i8, i8* %e46.addr, align 1
+   //CHECK: load i8, i8* %e45.addr, align 1
+   //CHECK: load i8, i8* %e44.addr, align 1
+   //CHECK: load i8, i8* %e43.addr, align 1
+   //CHECK: load i8, i8* %e42.addr, align 1
+   //CHECK: load i8, i8* %e41.addr, align 1
+   //CHECK: load i8, i8* %e40.addr, align 1
+   //CHECK: load i8, i8* %e39.addr, align 1
+   //CHECK: load i8, i8* %e38.addr, align 1
+   //CHECK: load i8, i8* %e37.addr, align 1
+   //CHECK: load i8, i8* %e36.addr, align 1
+   //CHECK: load i8, i8* %e35.addr, align 1
+   //CHECK: load i8, i8* %e34.addr, align 1
+   //CHECK: load i8, i8* %e33.addr, align 1
+   //CHECK: load i8, i8* %e32.addr, align 1
+   //CHECK: load i8, i8* %e31.addr, align 1
+   //CHECK: load i8, i8* %e30.addr, align 1
+   //CHECK: load i8, i8* %e29.addr, align 1
+   //CHECK: load i8, i8* %e28.addr, align 1
+   //CHECK: load i8, i8* %e27.addr, align 1
+   //CHECK: load i8, i8* %e26.addr, align 1
+   //CHECK: load i8, i8* %e25.addr, align 1
+   //CHECK: load i8, i8* %e24.addr, align 1
+   //CHECK: load i8, i8* %e23.addr, align 1
+   //CHECK: load i8, i8* %e22.addr, align 1
+   //CHECK: load i8, i8* %e21.addr, align 1
+   //CHECK: load i8, i8* %e20.addr, align 1
+   //CHECK: load i8, i8* %e19.addr, align 1
+   //CHECK: load i8, i8* %e18.addr, align 1
+   //CHECK: load i8, i8* %e17.addr, align 1
+   //CHECK: load i8, i8* %e16.addr, align 1
+   //CHECK: load i8, i8* %e15.addr, align 1
+   //CHECK: load i8, i8* %e14.addr, align 1
+   //CHECK: load i8, i8* %e13.addr, align 1
+   //CHECK: load i8, i8* %e12.addr, align 1
+   //CHECK: load i8, i8* %e11.addr, align 1
+   //CHECK: load i8, i8* %e10.addr, align 1
+   //CHECK: load i8, i8* %e9.addr, align 1
+   //CHECK: load i8, i8* %e8.addr, align 1
+   //CHECK: load i8, i8* %e7.addr, align 1
+   //CHECK: load i8, i8* %e6.addr, align 1
+   //CHECK: load i8, i8* %e5.addr, align 1
+   //CHECK: load i8, i8* %e4.addr, align 1
+   //CHECK: load i8, i8* %e3.addr, align 1
+   //CHECK: load i8, i8* %e2.addr, align 1
+   //CHECK: load i8, i8* %e1.addr, align 1
+   //CHECK: load i8, i8* %e0.addr, align 1
+  return _mm512_set_epi8(e63, e62, e61, e60, e59, e58, e57, e56, e55, e54,
+      e53, e52, e51, e50, e49, e48,e47, e46, e45, e44, e43, e42, e41, e40,
+      e39, e38, e37, e36, e35, e34, e33, e32,e31, e30, e29, e28, e27, e26,
+      e25, e24, e23, e22, e21, e20, e19, e18, e17, e16, e15, e14, e13, e12,
+      e11, e10, e9, e8, e7, e6, e5, e4, e3, e2, e1, e0);
+}
+
+__m512i test_mm512_set_epi16(short e31, short e30, short e29, short e28,
+    short e27, short e26, short e25, short e24, short e23, short e22,
+    short e21, short e20, short e19, short e18, short e17,
+    short e16, short e15, short e14, short e13, short e12,
+    short e11, short e10, short e9, short e8, short e7,
+    short e6, short e5, short e4, short e3, short e2, short e1, short e0) {
+  //CHECK-LABEL: @test_mm512_set_epi16
+  //CHECK: insertelement{{.*}}i32 0
+  //CHECK: insertelement{{.*}}i32 1
+  //CHECK: insertelement{{.*}}i32 2
+  //CHECK: insertelement{{.*}}i32 3
+  //CHECK: insertelement{{.*}}i32 4
+  //CHECK: insertelement{{.*}}i32 5
+  //CHECK: insertelement{{.*}}i32 6
+  //CHECK: insertelement{{.*}}i32 7
+  //CHECK: insertelement{{.*}}i32 8
+  //CHECK: insertelement{{.*}}i32 9
+  //CHECK: insertelement{{.*}}i32 10
+  //CHECK: insertelement{{.*}}i32 11
+  //CHECK: insertelement{{.*}}i32 12
+  //CHECK: insertelement{{.*}}i32 13
+  //CHECK: insertelement{{.*}}i32 14
+  //CHECK: insertelement{{.*}}i32 15
+  //CHECK: insertelement{{.*}}i32 16
+  //CHECK: insertelement{{.*}}i32 17
+  //CHECK: insertelement{{.*}}i32 18
+  //CHECK: insertelement{{.*}}i32 19
+  //CHECK: insertelement{{.*}}i32 20
+  //CHECK: insertelement{{.*}}i32 21
+  //CHECK: insertelement{{.*}}i32 22
+  //CHECK: insertelement{{.*}}i32 23
+  //CHECK: insertelement{{.*}}i32 24
+  //CHECK: insertelement{{.*}}i32 25
+  //CHECK: insertelement{{.*}}i32 26
+  //CHECK: insertelement{{.*}}i32 27
+  //CHECK: insertelement{{.*}}i32 28
+  //CHECK: insertelement{{.*}}i32 29
+  //CHECK: insertelement{{.*}}i32 30
+  //CHECK: insertelement{{.*}}i32 31
+  return _mm512_set_epi16(e31, e30, e29, e28, e27, e26, e25, e24, e23, e22,
+      e21, e20, e19, e18, e17, e16, e15, e14, e13, e12, e11, e10, e9, e8, e7,
+      e6, e5, e4, e3, e2, e1, e0);
+
+}
 __m512i test_mm512_set_epi32 (int __A, int __B, int __C, int __D,
                int __E, int __F, int __G, int __H,
                int __I, int __J, int __K, int __L,

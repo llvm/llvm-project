@@ -43,10 +43,12 @@ static cl::opt<bool> Aligned("enable-polly-aligned",
                              cl::Hidden, cl::init(false), cl::ZeroOrMore,
                              cl::cat(PollyCategory));
 
-static cl::opt<bool> DebugPrinting(
+bool PollyDebugPrinting;
+static cl::opt<bool, true> DebugPrintingX(
     "polly-codegen-add-debug-printing",
     cl::desc("Add printf calls that show the values loaded/stored."),
-    cl::Hidden, cl::init(false), cl::ZeroOrMore, cl::cat(PollyCategory));
+    cl::location(PollyDebugPrinting), cl::Hidden, cl::init(false),
+    cl::ZeroOrMore, cl::cat(PollyCategory));
 
 BlockGenerator::BlockGenerator(
     PollyIRBuilder &B, LoopInfo &LI, ScalarEvolution &SE, DominatorTree &DT,
@@ -232,7 +234,7 @@ Value *BlockGenerator::generateArrayLoad(ScopStmt &Stmt, LoadInst *Load,
   Value *ScalarLoad = Builder.CreateAlignedLoad(
       NewPointer, Load->getAlignment(), Load->getName() + "_p_scalar_");
 
-  if (DebugPrinting)
+  if (PollyDebugPrinting)
     RuntimeDebugBuilder::createCPUPrinter(Builder, "Load from ", NewPointer,
                                           ": ", ScalarLoad, "\n");
 
@@ -247,7 +249,7 @@ void BlockGenerator::generateArrayStore(ScopStmt &Stmt, StoreInst *Store,
   Value *ValueOperand = getNewValue(Stmt, Store->getValueOperand(), BBMap, LTS,
                                     getLoopForStmt(Stmt));
 
-  if (DebugPrinting)
+  if (PollyDebugPrinting)
     RuntimeDebugBuilder::createCPUPrinter(Builder, "Store to  ", NewPointer,
                                           ": ", ValueOperand, "\n");
 
