@@ -294,8 +294,6 @@ class NewGVN {
   BitVector TouchedInstructions;
 
   DenseMap<const BasicBlock *, std::pair<unsigned, unsigned>> BlockInstRange;
-  DenseMap<const DomTreeNode *, std::pair<unsigned, unsigned>>
-      DominatedInstRange;
 
 #ifndef NDEBUG
   // Debugging for how many times each block and instruction got processed.
@@ -1330,9 +1328,11 @@ void NewGVN::addPredicateUsers(const PredicateBase *PB, Instruction *I) {
 // Touch all the predicates that depend on this instruction.
 void NewGVN::markPredicateUsersTouched(Instruction *I) {
   const auto Result = PredicateToUsers.find(I);
-  if (Result != PredicateToUsers.end())
+  if (Result != PredicateToUsers.end()) {
     for (auto *User : Result->second)
       TouchedInstructions.set(InstrDFS.lookup(User));
+    PredicateToUsers.erase(Result);
+  }
 }
 
 // Touch the instructions that need to be updated after a congruence class has a
@@ -1730,7 +1730,6 @@ void NewGVN::cleanupTables() {
   DFSToInstr.clear();
   BlockInstRange.clear();
   TouchedInstructions.clear();
-  DominatedInstRange.clear();
   MemoryAccessToClass.clear();
   PredicateToUsers.clear();
 }
@@ -2112,7 +2111,6 @@ bool NewGVN::runGVN() {
   }
 
   TouchedInstructions.resize(ICount);
-  DominatedInstRange.reserve(F.size());
   // Ensure we don't end up resizing the expressionToClass map, as
   // that can be quite expensive. At most, we have one expression per
   // instruction.

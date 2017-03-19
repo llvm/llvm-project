@@ -2105,6 +2105,11 @@ public:
   /// Take a list of parameters and add the new ones to the scop.
   void addParams(const ParameterSetTy &NewParameters);
 
+  /// Return an iterator range containing the scop parameters.
+  iterator_range<ParameterSetTy::iterator> parameters() const {
+    return make_range(Parameters.begin(), Parameters.end());
+  }
+
   /// Return whether this scop is empty, i.e. contains no statements that
   /// could be executed.
   bool isEmpty() const { return Stmts.empty(); }
