@@ -65,7 +65,7 @@ public:
 
   static unsigned getEmptyKey() { return ~0U; }
   static unsigned getTombstoneKey() { return ~1U; }
-
+  bool operator!=(const Expression &Other) const { return !(*this == Other); }
   bool operator==(const Expression &Other) const {
     if (getOpcode() != Other.getOpcode())
       return false;

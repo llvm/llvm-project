@@ -3816,8 +3816,6 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   // In some calling conventions we need to remove the used physical registers
   // from the reg mask.
   if (CallConv == CallingConv::X86_RegCall) {
-    /// @todo Need to add support in MIPrinter and MIParser to represent
-    ///       the customed RegMask.
     const TargetRegisterInfo *TRI = Subtarget.getRegisterInfo();
 
     // Allocate a new Reg Mask and copy Mask.

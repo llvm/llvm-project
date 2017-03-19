@@ -216,6 +216,9 @@ public:
   // Register Info
   //===--------------------------------------------------------------------===//
 
+  /// Returns true if the updated CSR list was initialized and false otherwise.
+  bool isUpdatedCSRsInitialized() const { return IsUpdatedCSRsInitialized; }
+
   /// Disables the register from the list of CSRs.
   /// I.e. the register will not appear as part of the CSR mask.
   /// \see UpdatedCalleeSavedRegs.
@@ -225,6 +228,10 @@ public:
   /// The function returns the updated CSR list (after taking into account
   /// registers that are disabled from the CSR list).
   const MCPhysReg *getCalleeSavedRegs() const;
+
+  /// Sets the updated Callee Saved Registers list.
+  /// Notice that it will override ant previously disabled/saved CSRs.
+  void setCalleeSavedRegs(ArrayRef<MCPhysReg> CSRs);
 
   // Strictly for use by MachineInstr.cpp.
   void addRegOperandToUseList(MachineOperand *MO);
@@ -754,8 +761,6 @@ public:
   }
 
   const BitVector &getUsedPhysRegsMask() const { return UsedPhysRegMask; }
-
-  void setUsedPhysRegMask(BitVector &Mask) { UsedPhysRegMask = Mask; }
 
   //===--------------------------------------------------------------------===//
   // Reserved Register Info

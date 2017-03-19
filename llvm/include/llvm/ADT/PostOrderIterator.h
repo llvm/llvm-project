@@ -268,6 +268,10 @@ inverse_post_order_ext(const T &G, SetType &S) {
 // with a postorder iterator to build the data structures).  The moral of this
 // story is: Don't create more ReversePostOrderTraversal classes than necessary.
 //
+// Because it does the traversal in its constructor, it won't invalidate when
+// BasicBlocks are removed, *but* it may contain erased blocks. Some places
+// rely on this behavior (i.e. GVN).
+//
 // This class should be used like this:
 // {
 //   ReversePostOrderTraversal<Function*> RPOT(FuncPtr); // Expensive to create

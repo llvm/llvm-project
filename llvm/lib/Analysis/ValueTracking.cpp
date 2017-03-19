@@ -255,30 +255,6 @@ static void computeKnownBitsAddSub(bool Add, const Value *Op0, const Value *Op1,
                                    APInt &KnownZero, APInt &KnownOne,
                                    APInt &KnownZero2, APInt &KnownOne2,
                                    unsigned Depth, const Query &Q) {
-  if (!Add) {
-    if (const ConstantInt *CLHS = dyn_cast<ConstantInt>(Op0)) {
-      // We know that the top bits of C-X are clear if X contains less bits
-      // than C (i.e. no wrap-around can happen).  For example, 20-X is
-      // positive if we can prove that X is >= 0 and < 16.
-      if (!CLHS->getValue().isNegative()) {
-        unsigned BitWidth = KnownZero.getBitWidth();
-        unsigned NLZ = (CLHS->getValue()+1).countLeadingZeros();
-        // NLZ can't be BitWidth with no sign bit
-        APInt MaskV = APInt::getHighBitsSet(BitWidth, NLZ+1);
-        computeKnownBits(Op1, KnownZero2, KnownOne2, Depth + 1, Q);
-
-        // If all of the MaskV bits are known to be zero, then we know the
-        // output top bits are zero, because we now know that the output is
-        // from [0-C].
-        if ((KnownZero2 & MaskV) == MaskV) {
-          unsigned NLZ2 = CLHS->getValue().countLeadingZeros();
-          // Top bits known zero.
-          KnownZero = APInt::getHighBitsSet(BitWidth, NLZ2);
-        }
-      }
-    }
-  }
-
   unsigned BitWidth = KnownZero.getBitWidth();
 
   // If an initial sequence of bits in the result is not needed, the
