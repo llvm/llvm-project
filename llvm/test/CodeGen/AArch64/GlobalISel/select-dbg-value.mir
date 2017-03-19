@@ -1,0 +1,47 @@
+# RUN: llc -O0 -mtriple arm64-- -run-pass=instruction-select -global-isel %s -o - | FileCheck %s
+
+--- |
+  target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
+
+  define void @test_dbg_value() !dbg !5 {
+    ; Keep the dbg metadata live by referencing it in the IR.
+    call void @llvm.dbg.value(metadata i32 0, i64 0, metadata !7, metadata !9), !dbg !10
+    ret void
+  }
+
+  declare void @llvm.dbg.value(metadata, i64, metadata, metadata)
+
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!3, !4}
+
+  !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "llvm", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
+  !1 = !DIFile(filename: "test.ll", directory: "/tmp")
+  !2 = !{}
+  !3 = !{i32 2, !"Dwarf Version", i32 4}
+  !4 = !{i32 2, !"Debug Info Version", i32 3}
+  !5 = distinct !DISubprogram(name: "test_dbg_value", scope: !1, file: !1, line: 1, type: !6, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: false, unit: !0, variables: !2)
+  !6 = !DISubroutineType(types: !2)
+  !7 = !DILocalVariable(name: "in", arg: 1, scope: !5, file: !1, line: 1, type: !8)
+  !8 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+  !9 = !DIExpression()
+  !10 = !DILocation(line: 1, column: 1, scope: !5)
+...
+
+---
+# CHECK-LABEL: name: test_dbg_value
+name:            test_dbg_value
+legalized:       true
+regBankSelected: true
+# CHECK: registers:
+# CHECK-NEXT:  - { id: 0, class: gpr32all }
+body: |
+  bb.0:
+    liveins: %w0
+    %0:gpr(s32) = COPY %w0
+
+    ; CHECK: DBG_VALUE debug-use %0, debug-use _, !7, !9, debug-location !10
+    ; CHECK: DBG_VALUE _, 0, !7, !9, debug-location !10
+
+    DBG_VALUE debug-use %0(s32), debug-use _, !7, !9, debug-location !10
+    DBG_VALUE _, 0, !7, !9, debug-location !10
+...

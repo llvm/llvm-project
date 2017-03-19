@@ -33,12 +33,12 @@ declare i16 @llvm.x86.avx512.kand.w(i16, i16) nounwind readnone
 define i16 @test_kand(i16 %a0, i16 %a1) {
 ; CHECK-LABEL: test_kand:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    movw $8, %ax
-; CHECK-NEXT:    kmovw %eax, %k0
+; CHECK-NEXT:    kmovw %esi, %k0
 ; CHECK-NEXT:    kmovw %edi, %k1
+; CHECK-NEXT:    movw $8, %ax
+; CHECK-NEXT:    kmovw %eax, %k2
 ; CHECK-NEXT:    kandw %k0, %k1, %k0
-; CHECK-NEXT:    kmovw %esi, %k1
-; CHECK-NEXT:    kandw %k1, %k0, %k0
+; CHECK-NEXT:    kandw %k0, %k2, %k0
 ; CHECK-NEXT:    kmovw %k0, %eax
 ; CHECK-NEXT:    retq
   %t1 = call i16 @llvm.x86.avx512.kand.w(i16 %a0, i16 8)
@@ -50,12 +50,12 @@ declare i16 @llvm.x86.avx512.kandn.w(i16, i16) nounwind readnone
 define i16 @test_kandn(i16 %a0, i16 %a1) {
 ; CHECK-LABEL: test_kandn:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    movw $8, %ax
-; CHECK-NEXT:    kmovw %eax, %k0
+; CHECK-NEXT:    kmovw %esi, %k0
 ; CHECK-NEXT:    kmovw %edi, %k1
+; CHECK-NEXT:    movw $8, %ax
+; CHECK-NEXT:    kmovw %eax, %k2
+; CHECK-NEXT:    kandnw %k2, %k1, %k1
 ; CHECK-NEXT:    kandnw %k0, %k1, %k0
-; CHECK-NEXT:    kmovw %esi, %k1
-; CHECK-NEXT:    kandnw %k1, %k0, %k0
 ; CHECK-NEXT:    kmovw %k0, %eax
 ; CHECK-NEXT:    retq
   %t1 = call i16 @llvm.x86.avx512.kandn.w(i16 %a0, i16 8)
@@ -79,12 +79,12 @@ declare i16 @llvm.x86.avx512.kor.w(i16, i16) nounwind readnone
 define i16 @test_kor(i16 %a0, i16 %a1) {
 ; CHECK-LABEL: test_kor:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    movw $8, %ax
-; CHECK-NEXT:    kmovw %eax, %k0
+; CHECK-NEXT:    kmovw %esi, %k0
 ; CHECK-NEXT:    kmovw %edi, %k1
+; CHECK-NEXT:    movw $8, %ax
+; CHECK-NEXT:    kmovw %eax, %k2
 ; CHECK-NEXT:    korw %k0, %k1, %k0
-; CHECK-NEXT:    kmovw %esi, %k1
-; CHECK-NEXT:    korw %k1, %k0, %k0
+; CHECK-NEXT:    korw %k0, %k2, %k0
 ; CHECK-NEXT:    kmovw %k0, %eax
 ; CHECK-NEXT:    retq
   %t1 = call i16 @llvm.x86.avx512.kor.w(i16 %a0, i16 8)
@@ -110,12 +110,12 @@ declare i16 @llvm.x86.avx512.kxnor.w(i16, i16) nounwind readnone
 define i16 @test_kxnor(i16 %a0, i16 %a1) {
 ; CHECK-LABEL: test_kxnor:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    movw $8, %ax
-; CHECK-NEXT:    kmovw %eax, %k0
+; CHECK-NEXT:    kmovw %esi, %k0
 ; CHECK-NEXT:    kmovw %edi, %k1
-; CHECK-NEXT:    kxnorw %k0, %k1, %k0
-; CHECK-NEXT:    kmovw %esi, %k1
-; CHECK-NEXT:    kxnorw %k1, %k0, %k0
+; CHECK-NEXT:    movw $8, %ax
+; CHECK-NEXT:    kmovw %eax, %k2
+; CHECK-NEXT:    kxorw %k0, %k1, %k0
+; CHECK-NEXT:    kxorw %k0, %k2, %k0
 ; CHECK-NEXT:    kmovw %k0, %eax
 ; CHECK-NEXT:    retq
   %t1 = call i16 @llvm.x86.avx512.kxnor.w(i16 %a0, i16 8)
@@ -127,12 +127,12 @@ declare i16 @llvm.x86.avx512.kxor.w(i16, i16) nounwind readnone
 define i16 @test_kxor(i16 %a0, i16 %a1) {
 ; CHECK-LABEL: test_kxor:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    movw $8, %ax
-; CHECK-NEXT:    kmovw %eax, %k0
+; CHECK-NEXT:    kmovw %esi, %k0
 ; CHECK-NEXT:    kmovw %edi, %k1
+; CHECK-NEXT:    movw $8, %ax
+; CHECK-NEXT:    kmovw %eax, %k2
 ; CHECK-NEXT:    kxorw %k0, %k1, %k0
-; CHECK-NEXT:    kmovw %esi, %k1
-; CHECK-NEXT:    kxorw %k1, %k0, %k0
+; CHECK-NEXT:    kxorw %k0, %k2, %k0
 ; CHECK-NEXT:    kmovw %k0, %eax
 ; CHECK-NEXT:    retq
   %t1 = call i16 @llvm.x86.avx512.kxor.w(i16 %a0, i16 8)

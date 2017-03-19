@@ -726,8 +726,6 @@ Value *InstCombiner::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
       return I;
 
     unsigned Leaders = KnownZero2.countLeadingOnes();
-    Leaders = std::max(Leaders,
-                       KnownZero2.countLeadingOnes());
     KnownZero = APInt::getHighBitsSet(BitWidth, Leaders) & DemandedMask;
     break;
   }

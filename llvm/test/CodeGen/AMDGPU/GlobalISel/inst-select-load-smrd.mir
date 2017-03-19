@@ -25,25 +25,18 @@ regBankSelected: true
 # VI:   S_LOAD_DWORD_IMM [[PTR]], 1020, 0
 
 # Immediate overflow for SI
-# FIXME: The immediate gets selected twice, once into the
-# S_LOAD_DWORD instruction and once just as a normal constat.
-# SI: S_MOV_B32 1024
 # SI: [[K1024:%[0-9]+]] = S_MOV_B32 1024
 # SI: S_LOAD_DWORD_SGPR [[PTR]], [[K1024]], 0
 # CI: S_LOAD_DWORD_IMM_ci [[PTR]], 256, 0
 # VI: S_LOAD_DWORD_IMM [[PTR]], 1024, 0
 
 # Max immediate offset for VI
-# SI: S_MOV_B32 1048572
 # SI: [[K1048572:%[0-9]+]] = S_MOV_B32 1048572
 # CI: S_LOAD_DWORD_IMM_ci [[PTR]], 262143
 # VI: S_LOAD_DWORD_IMM [[PTR]], 1048572
 
 #
 # Immediate overflow for VI
-# FIXME: The immediate gets selected twice, once into the
-# S_LOAD_DWORD instruction and once just as a normal constat.
-# SIVI: S_MOV_B32 1048576
 # SIVI: [[K1048576:%[0-9]+]] = S_MOV_B32 1048576
 # SIVI: S_LOAD_DWORD_SGPR [[PTR]], [[K1048576]], 0
 # CI: S_LOAD_DWORD_IMM_ci [[PTR]], 262144, 0
@@ -76,9 +69,6 @@ regBankSelected: true
 # GCN: S_LOAD_DWORD_IMM [[ADD_PTR]], 0, 0
 
 # Max 32-bit byte offset
-# FIXME: The immediate gets selected twice, once into the
-# S_LOAD_DWORD instruction and once just as a normal constat.
-# SIVI: S_MOV_B32 4294967292
 # SIVI: [[K4294967292:%[0-9]+]] = S_MOV_B32 4294967292
 # SIVI: S_LOAD_DWORD_SGPR [[PTR]], [[K4294967292]], 0
 # CI: S_LOAD_DWORD_IMM_ci [[PTR]], 1073741823, 0
@@ -106,38 +96,47 @@ body: |
     %1:sgpr(s64) = G_CONSTANT i64 4
     %2:sgpr(p2) = G_GEP %0, %1
     %3:sgpr(s32) = G_LOAD %2 :: (load 4 from %ir.const0)
+    %sgpr0 = COPY %3
 
     %4:sgpr(s64) = G_CONSTANT i64 1020
     %5:sgpr(p2) = G_GEP %0, %4
     %6:sgpr(s32) = G_LOAD %5 :: (load 4 from %ir.const0)
+    %sgpr0 = COPY %6
 
     %7:sgpr(s64) = G_CONSTANT i64 1024
     %8:sgpr(p2) = G_GEP %0, %7
     %9:sgpr(s32) = G_LOAD %8 :: (load 4 from %ir.const0)
+    %sgpr0 = COPY %9
 
     %10:sgpr(s64) = G_CONSTANT i64 1048572
     %11:sgpr(p2) = G_GEP %0, %10
     %12:sgpr(s32) = G_LOAD %11 :: (load 4 from %ir.const0)
+    %sgpr0 = COPY %12
 
     %13:sgpr(s64) = G_CONSTANT i64 1048576
     %14:sgpr(p2) = G_GEP %0, %13
     %15:sgpr(s32) = G_LOAD %14 :: (load 4 from %ir.const0)
+    %sgpr0 = COPY %15
 
     %16:sgpr(s64) = G_CONSTANT i64 17179869180
     %17:sgpr(p2) = G_GEP %0, %16
     %18:sgpr(s32) = G_LOAD %17 :: (load 4 from %ir.const0)
+    %sgpr0 = COPY %18
 
     %19:sgpr(s64) = G_CONSTANT i64 17179869184
     %20:sgpr(p2) = G_GEP %0, %19
     %21:sgpr(s32) = G_LOAD %20 :: (load 4 from %ir.const0)
+    %sgpr0 = COPY %21
 
     %22:sgpr(s64) = G_CONSTANT i64 4294967292
     %23:sgpr(p2) = G_GEP %0, %22
     %24:sgpr(s32) = G_LOAD %23 :: (load 4 from %ir.const0)
+    %sgpr0 = COPY %24
 
     %25:sgpr(s64) = G_CONSTANT i64 4294967296
     %26:sgpr(p2) = G_GEP %0, %25
     %27:sgpr(s32) = G_LOAD %26 :: (load 4 from %ir.const0)
+    %sgpr0 = COPY %27
 
 ...
 ---

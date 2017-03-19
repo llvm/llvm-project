@@ -490,6 +490,41 @@ declare void @fn2(i64)
 declare void @fn3(i64)
 
 
+; Make sure we phi-translate and make the partially redundant load in
+; merge fully redudant and then we can jump-thread the block with the
+; store.
+;
+; CHECK-LABEL: define i32 @phi_translate_partial_redundant_loads(i32, i32*, i32*
+; CHECK: merge.thread:
+; CHECK: store
+; CHECK: br label %left_x
+;
+; CHECK: left_x:
+; CHECK-NEXT: ret i32 20
+define i32 @phi_translate_partial_redundant_loads(i32, i32*, i32*)  {
+  %cmp0 = icmp ne i32 %0, 0
+  br i1 %cmp0, label %left, label %right
+
+left:
+  store i32 1, i32* %1, align 4
+  br label %merge
+
+right:
+  br label %merge
+
+merge:
+  %phiptr = phi i32* [ %1, %left ], [ %2, %right ]
+  %newload = load i32, i32* %phiptr, align 4
+  %cmp1 = icmp slt i32 %newload, 5
+  br i1 %cmp1, label %left_x, label %right_x
+
+left_x:
+  ret i32 20
+
+right_x:
+  ret i32 10
+}
+
 !0 = !{!3, !3, i64 0}
 !1 = !{!"omnipotent char", !2}
 !2 = !{!"Simple C/C++ TBAA"}

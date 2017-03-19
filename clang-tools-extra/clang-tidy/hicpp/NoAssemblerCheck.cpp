@@ -23,7 +23,7 @@ const internal::VariadicDynCastAllOfMatcher<Decl, FileScopeAsmDecl>
 
 namespace clang {
 namespace tidy {
-namespace safety {
+namespace hicpp {
 
 void NoAssemblerCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(asmStmt().bind("asm-stmt"), this);
@@ -46,6 +46,6 @@ void NoAssemblerCheck::check(const MatchFinder::MatchResult &Result) {
   diag(ASMLocation, "do not use inline assembler in safety-critical code");
 }
 
-} // namespace safety
+} // namespace hicpp
 } // namespace tidy
 } // namespace clang

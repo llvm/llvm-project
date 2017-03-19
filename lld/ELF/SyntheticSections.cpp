@@ -1283,7 +1283,8 @@ SymbolTableSection<ELFT>::SymbolTableSection(StringTableSection &StrTabSec)
 // See "Global Offset Table" in Chapter 5 in the following document
 // for detailed description:
 // ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
-static bool sortMipsSymbols(const SymbolTableEntry &L, const SymbolTableEntry &R) {
+static bool sortMipsSymbols(const SymbolTableEntry &L,
+                            const SymbolTableEntry &R) {
   // Sort entries related to non-local preemptible symbols by GOT indexes.
   // All other entries go to the first part of GOT in arbitrary order.
   bool LIsInLocalGot = !L.Symbol->IsInGlobalMipsGot;

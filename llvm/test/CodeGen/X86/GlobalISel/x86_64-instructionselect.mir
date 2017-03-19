@@ -87,6 +87,7 @@ body:             |
     %0(s64) = COPY %rdi
     %1(s64) = COPY %rsi
     %2(s64) = G_ADD %0, %1
+    %rax = COPY %2(s64)
 
 ...
 
@@ -112,6 +113,7 @@ body:             |
     %0(s32) = COPY %edi
     %1(s32) = COPY %esi
     %2(s32) = G_ADD %0, %1
+    %rax = COPY %2(s32)
 
 ...
 
@@ -137,6 +139,7 @@ body:             |
     %0(s64) = COPY %rdi
     %1(s64) = COPY %rsi
     %2(s64) = G_SUB %0, %1
+    %rax = COPY %2(s64)
 
 ...
 
@@ -162,6 +165,7 @@ body:             |
     %0(s32) = COPY %edi
     %1(s32) = COPY %esi
     %2(s32) = G_SUB %0, %1
+    %rax = COPY %2(s32)
 
 ...
 
