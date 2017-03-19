@@ -53,6 +53,7 @@ Clang-Tidy Checks
    google-runtime-memset
    google-runtime-operator
    google-runtime-references
+   hicpp-no-assembler
    llvm-header-guard
    llvm-include-order
    llvm-namespace-comment
@@ -155,4 +156,3 @@ Clang-Tidy Checks
    readability-simplify-boolean-expr
    readability-static-definition-in-anonymous-namespace
    readability-uniqueptr-delete-release
-   safety-no-assembler

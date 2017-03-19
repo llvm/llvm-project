@@ -22,7 +22,6 @@
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Host/FileSpec.h"
-#include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Symbol/ObjectFile.h"
@@ -279,8 +278,7 @@ PlatformMacOSX::GetFileWithUUID(const lldb_private::FileSpec &platform_file,
       FileSpec module_cache_folder =
           module_cache_spec.CopyByRemovingLastPathComponent();
       // try to make the local directory first
-      Error err = FileSystem::MakeDirectory(module_cache_folder,
-                                            eFilePermissionsDirectoryDefault);
+      Error err(llvm::sys::fs::create_directory(module_cache_folder.GetPath()));
       if (err.Fail())
         return err;
       err = GetFile(platform_file, module_cache_spec);

@@ -12,7 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 #include "clang/Serialization/ModuleManager.h"
-#include "clang/Basic/MemoryBufferCache.h"
 #include "clang/Frontend/PCHContainerOperations.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/ModuleMap.h"
@@ -138,9 +137,7 @@ ModuleManager::addModule(StringRef FileName, ModuleKind Type,
   // Load the contents of the module
   if (std::unique_ptr<llvm::MemoryBuffer> Buffer = lookupBuffer(FileName)) {
     // The buffer was already provided for us.
-    NewModule->Buffer = &PCMCache->addBuffer(FileName, std::move(Buffer));
-  } else if (llvm::MemoryBuffer *Buffer = PCMCache->lookupBuffer(FileName)) {
-    NewModule->Buffer = Buffer;
+    NewModule->Buffer = std::move(Buffer);
   } else {
     // Open the AST file.
     llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> Buf((std::error_code()));
@@ -161,7 +158,7 @@ ModuleManager::addModule(StringRef FileName, ModuleKind Type,
       return Missing;
     }
 
-    NewModule->Buffer = &PCMCache->addBuffer(FileName, std::move(*Buf));
+    NewModule->Buffer = std::move(*Buf);
   }
 
   // Initialize the stream.
@@ -170,13 +167,8 @@ ModuleManager::addModule(StringRef FileName, ModuleKind Type,
   // Read the signature eagerly now so that we can check it.  Avoid calling
   // ReadSignature unless there's something to check though.
   if (ExpectedSignature && checkSignature(ReadSignature(NewModule->Data),
-                                          ExpectedSignature, ErrorStr)) {
-    // Try to remove the buffer.  If it can't be removed, then it was already
-    // validated by this process.
-    if (!PCMCache->tryToRemoveBuffer(NewModule->FileName))
-      FileMgr.invalidateCache(NewModule->File);
+                                          ExpectedSignature, ErrorStr))
     return OutOfDate;
-  }
 
   // We're keeping this module.  Store it everywhere.
   Module = Modules[Entry] = NewModule.get();
@@ -243,12 +235,7 @@ void ModuleManager::removeModules(
     // Files that didn't make it through ReadASTCore successfully will be
     // rebuilt (or there was an error). Invalidate them so that we can load the
     // new files that will be renamed over the old ones.
-    //
-    // The PCMCache tracks whether the module was succesfully loaded in another
-    // thread/context; in that case, it won't need to be rebuilt (and we can't
-    // safely invalidate it anyway).
-    if (LoadedSuccessfully.count(&*victim) == 0 &&
-        !PCMCache->tryToRemoveBuffer(victim->FileName))
+    if (LoadedSuccessfully.count(&*victim) == 0)
       FileMgr.invalidateCache(victim->File);
   }
 
@@ -305,10 +292,10 @@ void ModuleManager::moduleFileAccepted(ModuleFile *MF) {
   ModulesInCommonWithGlobalIndex.push_back(MF);
 }
 
-ModuleManager::ModuleManager(FileManager &FileMgr, MemoryBufferCache &PCMCache,
+ModuleManager::ModuleManager(FileManager &FileMgr,
                              const PCHContainerReader &PCHContainerRdr)
-    : FileMgr(FileMgr), PCMCache(&PCMCache), PCHContainerRdr(PCHContainerRdr),
-      GlobalIndex(), FirstVisitState(nullptr) {}
+    : FileMgr(FileMgr), PCHContainerRdr(PCHContainerRdr), GlobalIndex(),
+      FirstVisitState(nullptr) {}
 
 ModuleManager::~ModuleManager() { delete FirstVisitState; }
 

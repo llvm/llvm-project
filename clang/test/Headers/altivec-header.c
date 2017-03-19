@@ -9,4 +9,4 @@
 
 // CHECK: target triple = "powerpc64-
 // CHECK-NEXT: {{^$}}
-// CHECK-NEXT: llvm.ident
+// CHECK-NEXT: {{llvm\..*}}

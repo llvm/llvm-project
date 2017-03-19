@@ -119,6 +119,9 @@ extern char &SIDebuggerInsertNopsID;
 void initializeSIInsertWaitsPass(PassRegistry&);
 extern char &SIInsertWaitsID;
 
+ImmutablePass *createAMDGPUAAWrapperPass();
+void initializeAMDGPUAAWrapperPassPass(PassRegistry&);
+
 Target &getTheAMDGPUTarget();
 Target &getTheGCNTarget();
 

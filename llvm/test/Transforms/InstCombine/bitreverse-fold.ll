@@ -37,6 +37,13 @@ define i32 @reverse_neg1_i32() {
   ret i32 %x
 }
 
+; CHECK-LABEL: @reverse_undef_i32(
+; CHECK-NEXT: ret i32 undef
+define i32 @reverse_undef_i32() {
+  %x = call i32 @llvm.bitreverse.i32(i32 undef)
+  ret i32 %x
+}
+
 ; CHECK-LABEL: @reverse_false_i1(
 ; CHECK-NEXT: ret i1 false
 define i1 @reverse_false_i1() {
@@ -48,6 +55,13 @@ define i1 @reverse_false_i1() {
 ; CHECK-NEXT: ret i1 true
 define i1 @reverse_true_i1() {
   %x = call i1 @llvm.bitreverse.i1(i1 true)
+  ret i1 %x
+}
+
+; CHECK-LABEL: @reverse_undef_i1(
+; CHECK-NEXT: ret i1 undef
+define i1 @reverse_undef_i1() {
+  %x = call i1 @llvm.bitreverse.i1(i1 undef)
   ret i1 %x
 }
 

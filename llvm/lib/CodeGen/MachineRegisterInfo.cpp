@@ -589,3 +589,15 @@ const MCPhysReg *MachineRegisterInfo::getCalleeSavedRegs() const {
   return getTargetRegisterInfo()->getCalleeSavedRegs(MF);
 }
 
+void MachineRegisterInfo::setCalleeSavedRegs(ArrayRef<MCPhysReg> CSRs) {
+  if (IsUpdatedCSRsInitialized)
+    UpdatedCSRs.clear();
+
+  for (MCPhysReg Reg : CSRs)
+    UpdatedCSRs.push_back(Reg);
+
+  // Zero value represents the end of the register list
+  // (no more registers should be pushed).
+  UpdatedCSRs.push_back(0);
+  IsUpdatedCSRsInitialized = true;
+}

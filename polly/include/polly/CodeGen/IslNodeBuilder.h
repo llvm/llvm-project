@@ -181,11 +181,13 @@ protected:
 
   /// Materialize parameters of @p Set.
   ///
-  /// @param All If not set only parameters referred to by the constraints in
-  ///            @p Set will be materialized, otherwise all.
+  /// @returns False, iff a problem occurred and the value was not materialized.
+  bool materializeParameters(__isl_take isl_set *Set);
+
+  /// Materialize all parameters in the current scop.
   ///
   /// @returns False, iff a problem occurred and the value was not materialized.
-  bool materializeParameters(__isl_take isl_set *Set, bool All);
+  bool materializeParameters();
 
   // Extract the upper bound of this loop
   //

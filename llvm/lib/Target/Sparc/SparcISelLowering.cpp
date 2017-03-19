@@ -2177,8 +2177,8 @@ SparcTargetLowering::LowerF128Op(SDValue Op, SelectionDAG &DAG,
     Entry.Node = RetPtr;
     Entry.Ty   = PointerType::getUnqual(RetTy);
     if (!Subtarget->is64Bit())
-      Entry.isSRet = true;
-    Entry.isReturned = false;
+      Entry.IsSRet = true;
+    Entry.IsReturned = false;
     Args.push_back(Entry);
     RetTyABI = Type::getVoidTy(*DAG.getContext());
   }

@@ -15,6 +15,7 @@
 
 #include "AMDGPUTargetMachine.h"
 #include "AMDGPU.h"
+#include "AMDGPUAliasAnalysis.h"
 #include "AMDGPUCallLowering.h"
 #include "AMDGPUInstructionSelector.h"
 #include "AMDGPULegalizerInfo.h"
@@ -93,6 +94,11 @@ static cl::opt<bool> InternalizeSymbols(
   cl::init(false),
   cl::Hidden);
 
+// Enable address space based alias analysis
+static cl::opt<bool> EnableAMDGPUAliasAnalysis("enable-amdgpu-aa", cl::Hidden,
+  cl::desc("Enable AMDGPU Alias Analysis"),
+  cl::init(true));
+
 extern "C" void LLVMInitializeAMDGPUTarget() {
   // Register the target
   RegisterTargetMachine<R600TargetMachine> X(getTheAMDGPUTarget());
@@ -119,6 +125,7 @@ extern "C" void LLVMInitializeAMDGPUTarget() {
   initializeSIInsertSkipsPass(*PR);
   initializeSIDebuggerInsertNopsPass(*PR);
   initializeSIOptimizeExecMaskingPass(*PR);
+  initializeAMDGPUAAWrapperPassPass(*PR);
 }
 
 static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
@@ -507,6 +514,15 @@ void AMDGPUPassConfig::addIRPasses() {
       addPass(createSROAPass());
 
     addStraightLineScalarOptimizationPasses();
+
+    if (EnableAMDGPUAliasAnalysis) {
+      addPass(createAMDGPUAAWrapperPass());
+      addPass(createExternalAAWrapperPass([](Pass &P, Function &,
+                                             AAResults &AAR) {
+        if (auto *WrapperPass = P.getAnalysisIfAvailable<AMDGPUAAWrapperPass>())
+          AAR.addAAResult(WrapperPass->getResult());
+        }));
+    }
   }
 
   TargetPassConfig::addIRPasses();

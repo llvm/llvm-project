@@ -1,0 +1,12 @@
+------------------------------------------------------------------------------
+clang-tidy High-Integrity C++ Files
+------------------------------------------------------------------------------
+All clang-tidy files are licensed under the LLVM license with the following
+additions:
+
+Any file referencing a High-Integrity C++ Coding guideline:
+
+HIC++ Coding Standard as created by PRQA.
+
+Please see http://www.codingstandard.com/section/conditions-of-use/ for more
+information.

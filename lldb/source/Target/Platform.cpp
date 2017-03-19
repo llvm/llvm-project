@@ -761,7 +761,7 @@ bool Platform::SetWorkingDirectory(const FileSpec &file_spec) {
 
 Error Platform::MakeDirectory(const FileSpec &file_spec, uint32_t permissions) {
   if (IsHost())
-    return FileSystem::MakeDirectory(file_spec, permissions);
+    return llvm::sys::fs::create_directory(file_spec.GetPath(), permissions);
   else {
     Error error;
     error.SetErrorStringWithFormat("remote platform %s doesn't support %s",
@@ -773,9 +773,12 @@ Error Platform::MakeDirectory(const FileSpec &file_spec, uint32_t permissions) {
 
 Error Platform::GetFilePermissions(const FileSpec &file_spec,
                                    uint32_t &file_permissions) {
-  if (IsHost())
-    return FileSystem::GetFilePermissions(file_spec, file_permissions);
-  else {
+  if (IsHost()) {
+    auto Value = llvm::sys::fs::getPermissions(file_spec.GetPath());
+    if (Value)
+      file_permissions = Value.get();
+    return Error(Value.getError());
+  } else {
     Error error;
     error.SetErrorStringWithFormat("remote platform %s doesn't support %s",
                                    GetPluginName().GetCString(),
@@ -786,9 +789,10 @@ Error Platform::GetFilePermissions(const FileSpec &file_spec,
 
 Error Platform::SetFilePermissions(const FileSpec &file_spec,
                                    uint32_t file_permissions) {
-  if (IsHost())
-    return FileSystem::SetFilePermissions(file_spec, file_permissions);
-  else {
+  if (IsHost()) {
+    auto Perms = static_cast<llvm::sys::fs::perms>(file_permissions);
+    return llvm::sys::fs::setPermissions(file_spec.GetPath(), Perms);
+  } else {
     Error error;
     error.SetErrorStringWithFormat("remote platform %s doesn't support %s",
                                    GetPluginName().GetCString(),

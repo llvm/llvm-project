@@ -326,13 +326,19 @@ body:             |
     ; CHECK: [[FI32VREG:%[0-9]+]] = ADDri %fixed-stack.[[FI32]], 0, 14, _, _
 
     %1(s32) = G_LOAD %0(p0) :: (load 4)
-    ; CHECK: {{%[0-9]+}} = LDRi12 [[FI32VREG]], 0, 14, _
+    ; CHECK: [[LD32VREG:%[0-9]+]] = LDRi12 [[FI32VREG]], 0, 14, _
+
+    %r0 = COPY %1
+    ; CHECK: %r0 = COPY [[LD32VREG]]
 
     %2(p0) = G_FRAME_INDEX %fixed-stack.0
     ; CHECK: [[FI1VREG:%[0-9]+]] = ADDri %fixed-stack.[[FI1]], 0, 14, _, _
 
     %3(s1) = G_LOAD %2(p0) :: (load 1)
-    ; CHECK: {{%[0-9]+}} = LDRBi12 [[FI1VREG]], 0, 14, _
+    ; CHECK: [[LD1VREG:%[0-9]+]] = LDRBi12 [[FI1VREG]], 0, 14, _
+
+    %r0 = COPY %3
+    ; CHECK: %r0 = COPY [[LD1VREG]]
 
     BX_RET 14, _
     ; CHECK: BX_RET 14, _

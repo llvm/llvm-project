@@ -39,6 +39,7 @@ body:             |
     %0(s32) = COPY %w0
     %1(s32) = COPY %w1
     %2(s32) = G_XOR %0, %1
+    %w0 = COPY %2(s32)
 ...
 
 ---
@@ -68,6 +69,7 @@ body:             |
     %0(s64) = COPY %x0
     %1(s64) = COPY %x1
     %2(s64) = G_XOR %0, %1
+    %x0 = COPY %2(s64)
 ...
 
 ---
@@ -80,7 +82,7 @@ regBankSelected: true
 
 # CHECK:      registers:
 # CHECK-NEXT:  - { id: 0, class: gpr32 }
-# CHECK-NEXT:  - { id: 1, class: gpr32 }
+# CHECK-NEXT:  - { id: 1, class: gpr }
 # CHECK-NEXT:  - { id: 2, class: gpr32 }
 registers:
   - { id: 0, class: gpr }
@@ -97,6 +99,7 @@ body:             |
     %0(s32) = COPY %w0
     %1(s32) = G_CONSTANT i64 -1
     %2(s32) = G_XOR %0, %1
+    %w0 = COPY %2(s32)
 ...
 
 ---
@@ -108,7 +111,7 @@ regBankSelected: true
 
 # CHECK:      registers:
 # CHECK-NEXT:  - { id: 0, class: gpr64 }
-# CHECK-NEXT:  - { id: 1, class: gpr64 }
+# CHECK-NEXT:  - { id: 1, class: gpr }
 # CHECK-NEXT:  - { id: 2, class: gpr64 }
 registers:
   - { id: 0, class: gpr }
@@ -125,6 +128,7 @@ body:             |
     %0(s64) = COPY %x0
     %1(s64) = G_CONSTANT i64 -1
     %2(s64) = G_XOR %0, %1
+    %x0 = COPY %2(s64)
 ...
 
 ---
@@ -136,7 +140,7 @@ regBankSelected: true
 
 # CHECK:      registers:
 # CHECK-NEXT:  - { id: 0, class: gpr32 }
-# CHECK-NEXT:  - { id: 1, class: gpr32 }
+# CHECK-NEXT:  - { id: 1, class: gpr }
 # CHECK-NEXT:  - { id: 2, class: gpr32 }
 registers:
   - { id: 0, class: gpr }
@@ -157,4 +161,5 @@ body:             |
   bb.1:
     %0(s32) = COPY %w0
     %2(s32) = G_XOR %0, %1
+    %w0 = COPY %2(s32)
 ...

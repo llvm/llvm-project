@@ -467,17 +467,19 @@ bool MIRParserImpl::parseRegisterInfo(PerFunctionMIParsingState &PFS,
     RegInfo.addLiveIn(Reg, VReg);
   }
 
-  // Parse the callee saved register mask.
-  BitVector CalleeSavedRegisterMask(RegInfo.getUsedPhysRegsMask().size());
-  if (!YamlMF.CalleeSavedRegisters)
-    return false;
-  for (const auto &RegSource : YamlMF.CalleeSavedRegisters.getValue()) {
-    unsigned Reg = 0;
-    if (parseNamedRegisterReference(PFS, Reg, RegSource.Value, Error))
-      return error(Error, RegSource.SourceRange);
-    CalleeSavedRegisterMask[Reg] = true;
+  // Parse the callee saved registers (Registers that will
+  // be saved for the caller).
+  if (YamlMF.CalleeSavedRegisters) {
+    SmallVector<MCPhysReg, 16> CalleeSavedRegisters;
+    for (const auto &RegSource : YamlMF.CalleeSavedRegisters.getValue()) {
+      unsigned Reg = 0;
+      if (parseNamedRegisterReference(PFS, Reg, RegSource.Value, Error))
+        return error(Error, RegSource.SourceRange);
+      CalleeSavedRegisters.push_back(Reg);
+    }
+    RegInfo.setCalleeSavedRegs(CalleeSavedRegisters);
   }
-  RegInfo.setUsedPhysRegMask(CalleeSavedRegisterMask.flip());
+
   return false;
 }
 
@@ -510,14 +512,12 @@ bool MIRParserImpl::setupRegisterInfo(const PerFunctionMIParsingState &PFS,
   }
 
   // Compute MachineRegisterInfo::UsedPhysRegMask
-  if (!YamlMF.CalleeSavedRegisters) {
-    for (const MachineBasicBlock &MBB : MF) {
-      for (const MachineInstr &MI : MBB) {
-        for (const MachineOperand &MO : MI.operands()) {
-          if (!MO.isRegMask())
-            continue;
-          MRI.addPhysRegsUsedFromRegMask(MO.getRegMask());
-        }
+  for (const MachineBasicBlock &MBB : MF) {
+    for (const MachineInstr &MI : MBB) {
+      for (const MachineOperand &MO : MI.operands()) {
+        if (!MO.isRegMask())
+          continue;
+        MRI.addPhysRegsUsedFromRegMask(MO.getRegMask());
       }
     }
   }
