@@ -64,7 +64,8 @@ public:
   bool ResolveExact(StringRef Expr, SmallVectorImpl<char> &Output) override {
     Output.clear();
 
-    assert(!llvm::any_of(Expr, llvm::sys::path::is_separator));
+    assert(!llvm::any_of(
+        Expr, [](char c) { return llvm::sys::path::is_separator(c); }));
     assert(Expr.empty() || Expr[0] == '~');
     Expr = Expr.drop_front();
     if (Expr.empty()) {
@@ -85,7 +86,8 @@ public:
   bool ResolvePartial(StringRef Expr, StringSet<> &Output) override {
     Output.clear();
 
-    assert(!llvm::any_of(Expr, llvm::sys::path::is_separator));
+    assert(!llvm::any_of(
+        Expr, [](char c) { return llvm::sys::path::is_separator(c); }));
     assert(Expr.empty() || Expr[0] == '~');
     Expr = Expr.drop_front();
 

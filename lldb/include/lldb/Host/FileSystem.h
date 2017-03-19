@@ -28,12 +28,6 @@ public:
 
   static FileSpec::PathSyntax GetNativePathSyntax();
 
-  static Error MakeDirectory(const FileSpec &file_spec, uint32_t mode);
-
-  static Error GetFilePermissions(const FileSpec &file_spec,
-                                  uint32_t &file_permissions);
-  static Error SetFilePermissions(const FileSpec &file_spec,
-                                  uint32_t file_permissions);
   static lldb::user_id_t GetFileSize(const FileSpec &file_spec);
   static bool GetFileExists(const FileSpec &file_spec);
 

@@ -8848,6 +8848,8 @@ _mm512_permutexvar_epi32 (__m512i __X, __m512i __Y)
                  (__mmask16) -1);
 }
 
+#define _mm512_permutevar_epi32 _mm512_permutexvar_epi32
+
 static __inline__ __m512i __DEFAULT_FN_ATTRS
 _mm512_mask_permutexvar_epi32 (__m512i __W, __mmask16 __M, __m512i __X,
              __m512i __Y)
@@ -8857,6 +8859,8 @@ _mm512_mask_permutexvar_epi32 (__m512i __W, __mmask16 __M, __m512i __X,
                  (__v16si) __W,
                  __M);
 }
+
+#define _mm512_mask_permutevar_epi32 _mm512_mask_permutexvar_epi32
 
 static __inline__ __mmask16 __DEFAULT_FN_ATTRS
 _mm512_kand (__mmask16 __A, __mmask16 __B)
@@ -9624,6 +9628,45 @@ _mm512_mask_set1_epi64 (__m512i __O, __mmask8 __M, long long __A)
                  __M);
 }
 #endif
+
+static  __inline __m512i __DEFAULT_FN_ATTRS
+_mm512_set_epi8 (char __e63, char __e62, char __e61, char __e60, char __e59,
+    char __e58, char __e57, char __e56, char __e55, char __e54, char __e53,
+    char __e52, char __e51, char __e50, char __e49, char __e48, char __e47,
+    char __e46, char __e45, char __e44, char __e43, char __e42, char __e41,
+    char __e40, char __e39, char __e38, char __e37, char __e36, char __e35,
+    char __e34, char __e33, char __e32, char __e31, char __e30, char __e29,
+    char __e28, char __e27, char __e26, char __e25, char __e24, char __e23,
+    char __e22, char __e21, char __e20, char __e19, char __e18, char __e17,
+    char __e16, char __e15, char __e14, char __e13, char __e12, char __e11,
+    char __e10, char __e9, char __e8, char __e7, char __e6, char __e5,
+    char __e4, char __e3, char __e2, char __e1, char __e0) {
+
+  return __extension__ (__m512i)(__v64qi)
+    {__e0, __e1, __e2, __e3, __e4, __e5, __e6, __e7,
+     __e8, __e9, __e10, __e11, __e12, __e13, __e14, __e15,
+     __e16, __e17, __e18, __e19, __e20, __e21, __e22, __e23,
+     __e24, __e25, __e26, __e27, __e28, __e29, __e30, __e31,
+     __e32, __e33, __e34, __e35, __e36, __e37, __e38, __e39,
+     __e40, __e41, __e42, __e43, __e44, __e45, __e46, __e47,
+     __e48, __e49, __e50, __e51, __e52, __e53, __e54, __e55,
+     __e56, __e57, __e58, __e59, __e60, __e61, __e62, __e63};
+}
+
+static  __inline __m512i __DEFAULT_FN_ATTRS
+_mm512_set_epi16(short __e31, short __e30, short __e29, short __e28,
+    short __e27, short __e26, short __e25, short __e24, short __e23,
+    short __e22, short __e21, short __e20, short __e19, short __e18,
+    short __e17, short __e16, short __e15, short __e14, short __e13,
+    short __e12, short __e11, short __e10, short __e9, short __e8,
+    short __e7, short __e6, short __e5, short __e4, short __e3,
+    short __e2, short __e1, short __e0) {
+  return __extension__ (__m512i)(__v32hi)
+    {__e0, __e1, __e2, __e3, __e4, __e5, __e6, __e7,
+     __e8, __e9, __e10, __e11, __e12, __e13, __e14, __e15,
+     __e16, __e17, __e18, __e19, __e20, __e21, __e22, __e23,
+     __e24, __e25, __e26, __e27, __e28, __e29, __e30, __e31 };
+}
 
 static __inline __m512i __DEFAULT_FN_ATTRS
 _mm512_set_epi32 (int __A, int __B, int __C, int __D,
