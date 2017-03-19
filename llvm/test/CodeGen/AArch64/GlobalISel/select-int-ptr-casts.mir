@@ -1,0 +1,144 @@
+# RUN: llc -mtriple=aarch64-- -run-pass=instruction-select -verify-machineinstrs -global-isel %s -o - | FileCheck %s
+
+--- |
+  target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
+
+  define void @inttoptr_p0_s64() { ret void }
+  define void @ptrtoint_s64_p0() { ret void }
+  define void @ptrtoint_s32_p0() { ret void }
+  define void @ptrtoint_s16_p0() { ret void }
+  define void @ptrtoint_s8_p0() { ret void }
+  define void @ptrtoint_s1_p0() { ret void }
+...
+
+---
+# CHECK-LABEL: name: inttoptr_p0_s64
+name:            inttoptr_p0_s64
+legalized:       true
+regBankSelected: true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: gpr64all }
+# CHECK-NEXT:  - { id: 1, class: gpr64all }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+# CHECK:  body:
+# CHECK:    %0 = COPY %x0
+# CHECK:    %1 = COPY %0
+body:             |
+  bb.0:
+    liveins: %x0
+    %0(s64) = COPY %x0
+    %1(p0) = G_INTTOPTR %0
+...
+
+---
+# CHECK-LABEL: name: ptrtoint_s64_p0
+name:            ptrtoint_s64_p0
+legalized:       true
+regBankSelected: true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: gpr64 }
+# CHECK-NEXT:  - { id: 1, class: gpr64 }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+# CHECK:  body:
+# CHECK:    %0 = COPY %x0
+# CHECK:    %1 = COPY %0
+body:             |
+  bb.0:
+    liveins: %x0
+    %0(p0) = COPY %x0
+    %1(s64) = G_PTRTOINT %0
+...
+
+---
+# CHECK-LABEL: name: ptrtoint_s32_p0
+name:            ptrtoint_s32_p0
+legalized:       true
+regBankSelected: true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: gpr64 }
+# CHECK-NEXT:  - { id: 1, class: gpr32 }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+# CHECK:  body:
+# CHECK:    %0 = COPY %x0
+# CHECK:    %1 = COPY %0.sub_32
+body:             |
+  bb.0:
+    liveins: %x0
+    %0(p0) = COPY %x0
+    %1(s32) = G_PTRTOINT %0
+...
+
+---
+# CHECK-LABEL: name: ptrtoint_s16_p0
+name:            ptrtoint_s16_p0
+legalized:       true
+regBankSelected: true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: gpr64 }
+# CHECK-NEXT:  - { id: 1, class: gpr32 }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+# CHECK:  body:
+# CHECK:    %0 = COPY %x0
+# CHECK:    %1 = COPY %0.sub_32
+body:             |
+  bb.0:
+    liveins: %x0
+    %0(p0) = COPY %x0
+    %1(s16) = G_PTRTOINT %0
+...
+
+---
+# CHECK-LABEL: name: ptrtoint_s8_p0
+name:            ptrtoint_s8_p0
+legalized:       true
+regBankSelected: true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: gpr64 }
+# CHECK-NEXT:  - { id: 1, class: gpr32 }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+# CHECK:  body:
+# CHECK:    %0 = COPY %x0
+# CHECK:    %1 = COPY %0.sub_32
+body:             |
+  bb.0:
+    liveins: %x0
+    %0(p0) = COPY %x0
+    %1(s8) = G_PTRTOINT %0
+...
+
+---
+# CHECK-LABEL: name: ptrtoint_s1_p0
+name:            ptrtoint_s1_p0
+legalized:       true
+regBankSelected: true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: gpr64 }
+# CHECK-NEXT:  - { id: 1, class: gpr32 }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+# CHECK:  body:
+# CHECK:    %0 = COPY %x0
+# CHECK:    %1 = COPY %0.sub_32
+body:             |
+  bb.0:
+    liveins: %x0
+    %0(p0) = COPY %x0
+    %1(s1) = G_PTRTOINT %0
+...
