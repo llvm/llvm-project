@@ -4025,7 +4025,7 @@ ConstString SwiftASTContext::GetMangledTypeName(swift::TypeBase *type_base) {
   });
 
   if (!has_archetypes) {
-    swift::NewMangling::ASTMangler mangler(true);
+    swift::Mangle::ASTMangler mangler(true);
     std::string s = mangler.mangleTypeForDebugger(swift_type, nullptr);
 
     if (!s.empty()) {
