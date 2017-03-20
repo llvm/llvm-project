@@ -41,12 +41,6 @@ def duplicate_check(method):
     return predicate
 
 
-def tempdir():
-    """ Return the default temorary directory. """
-
-    return os.getenv('TMPDIR', os.getenv('TEMP', os.getenv('TMP', '/tmp')))
-
-
 def run_build(command, *args, **kwargs):
     """ Run and report build command execution
 
