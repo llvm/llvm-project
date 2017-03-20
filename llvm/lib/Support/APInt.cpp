@@ -76,6 +76,7 @@ inline static unsigned getDigit(char cdigit, uint8_t radix) {
 
 
 void APInt::initSlowCase(uint64_t val, bool isSigned) {
+  VAL = 0;
   pVal = getClearedMemory(getNumWords());
   pVal[0] = val;
   if (isSigned && int64_t(val) < 0)
@@ -85,6 +86,7 @@ void APInt::initSlowCase(uint64_t val, bool isSigned) {
 }
 
 void APInt::initSlowCase(const APInt& that) {
+  VAL = 0;
   pVal = getMemory(getNumWords());
   memcpy(pVal, that.pVal, getNumWords() * APINT_WORD_SIZE);
 }
@@ -96,6 +98,7 @@ void APInt::initFromArray(ArrayRef<uint64_t> bigVal) {
     VAL = bigVal[0];
   else {
     // Get memory, cleared to 0
+    VAL = 0;
     pVal = getClearedMemory(getNumWords());
     // Calculate the number of words to copy
     unsigned words = std::min<unsigned>(bigVal.size(), getNumWords());
@@ -107,12 +110,12 @@ void APInt::initFromArray(ArrayRef<uint64_t> bigVal) {
 }
 
 APInt::APInt(unsigned numBits, ArrayRef<uint64_t> bigVal)
-  : BitWidth(numBits), VAL(0) {
+  : BitWidth(numBits) {
   initFromArray(bigVal);
 }
 
 APInt::APInt(unsigned numBits, unsigned numWords, const uint64_t bigVal[])
-  : BitWidth(numBits), VAL(0) {
+  : BitWidth(numBits) {
   initFromArray(makeArrayRef(bigVal, numWords));
 }
 

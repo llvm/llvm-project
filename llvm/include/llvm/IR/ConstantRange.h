@@ -184,6 +184,10 @@ public:
   ///
   APInt getSetSize() const;
 
+  /// Compare set size of this range with the range CR.
+  ///
+  bool isSizeStrictlySmallerThanOf(const ConstantRange &CR) const;
+
   /// Return the largest unsigned value contained in the ConstantRange.
   ///
   APInt getUnsignedMax() const;
