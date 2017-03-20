@@ -117,6 +117,30 @@ protected:
   /// Emit an (double-)indirect dwarf register operation.
   void addRegIndirect(int DwarfReg, int Offset);
 
+  /// Emit an indirect dwarf register operation for the given machine register.
+  /// \return false if no DWARF register exists for MachineReg.
+  bool addMachineRegIndirect(const TargetRegisterInfo &TRI, unsigned MachineReg,
+                             int Offset = 0);
+
+  /// Emit a partial DWARF register operation.
+  ///
+  /// \param MachineReg           The register number.
+  /// \param MaxSize              If the register must be composed from
+  ///                             sub-registers this is an upper bound
+  ///                             for how many bits the emitted DW_OP_piece
+  ///                             may cover.
+  ///
+  /// If size and offset is zero an operation for the entire register is
+  /// emitted: Some targets do not provide a DWARF register number for every
+  /// register.  If this is the case, this function will attempt to emit a DWARF
+  /// register by emitting a fragment of a super-register or by piecing together
+  /// multiple subregisters that alias the register.
+  ///
+  /// \return false if no DWARF register exists for MachineReg.
+  bool addMachineReg(const TargetRegisterInfo &TRI, unsigned MachineReg,
+                     unsigned MaxSize = ~1U);
+
+
   /// Emit a DW_OP_piece or DW_OP_bit_piece operation for a variable fragment.
   /// \param OffsetInBits    This is an optional offset into the location that
   /// is at the top of the DWARF stack.
@@ -146,29 +170,6 @@ public:
 
   /// This needs to be called last to commit any pending changes.
   void finalize();
-
-  /// Emit an indirect dwarf register operation for the given machine register.
-  /// \return false if no DWARF register exists for MachineReg.
-  bool addMachineRegIndirect(const TargetRegisterInfo &TRI, unsigned MachineReg,
-                             int Offset = 0);
-
-  /// Emit a partial DWARF register operation.
-  ///
-  /// \param MachineReg           The register number.
-  /// \param MaxSize              If the register must be composed from
-  ///                             sub-registers this is an upper bound
-  ///                             for how many bits the emitted DW_OP_piece
-  ///                             may cover.
-  ///
-  /// If size and offset is zero an operation for the entire register is
-  /// emitted: Some targets do not provide a DWARF register number for every
-  /// register.  If this is the case, this function will attempt to emit a DWARF
-  /// register by emitting a fragment of a super-register or by piecing together
-  /// multiple subregisters that alias the register.
-  ///
-  /// \return false if no DWARF register exists for MachineReg.
-  bool addMachineReg(const TargetRegisterInfo &TRI, unsigned MachineReg,
-                     unsigned MaxSize = ~1U);
 
   /// Emit a signed constant.
   void addSignedConstant(int64_t Value);
