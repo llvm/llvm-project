@@ -767,6 +767,22 @@ public:
     if (canMutate()) {
       OS << "I.setDesc(TII.get(" << I->Namespace << "::" << I->TheDef->getName()
          << "));\n";
+
+      if (!I->ImplicitDefs.empty() || !I->ImplicitUses.empty()) {
+        OS << "    auto MIB = MachineInstrBuilder(MF, &I);\n";
+
+        for (auto Def : I->ImplicitDefs) {
+          auto Namespace = Def->getValueAsString("Namespace");
+          OS << "    MIB.addDef(" << Namespace << "::" << Def->getName()
+             << ", RegState::Implicit);\n";
+        }
+        for (auto Use : I->ImplicitUses) {
+          auto Namespace = Use->getValueAsString("Namespace");
+          OS << "    MIB.addUse(" << Namespace << "::" << Use->getName()
+             << ", RegState::Implicit);\n";
+        }
+      }
+
       OS << "    MachineInstr &NewI = I;\n";
       return;
     }
