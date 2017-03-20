@@ -302,7 +302,7 @@ the configuration (without a prefix: ``Auto``).
 
     .. code-block:: c++
 
-      class {
+      class Foo {
         void f() { foo(); }
       };
 
@@ -311,7 +311,7 @@ the configuration (without a prefix: ``Auto``).
 
     .. code-block:: c++
 
-      class {
+      class Foo {
         void f() { foo(); }
       };
       void f() { bar(); }
@@ -898,7 +898,7 @@ the configuration (without a prefix: ``Auto``).
 
   .. code-block:: c++
 
-     CommentPragmas: '^ FOOBAR pragma:'
+     // CommentPragmas: '^ FOOBAR pragma:'
      // Will leave the following line unaffected
      #include <vector> // FOOBAR pragma: keep
 

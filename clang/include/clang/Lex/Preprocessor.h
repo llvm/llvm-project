@@ -47,6 +47,7 @@ class ExternalPreprocessorSource;
 class FileManager;
 class FileEntry;
 class HeaderSearch;
+class MemoryBufferCache;
 class PragmaNamespace;
 class PragmaHandler;
 class CommentHandler;
@@ -102,6 +103,7 @@ class Preprocessor {
   const TargetInfo  *AuxTarget;
   FileManager       &FileMgr;
   SourceManager     &SourceMgr;
+  MemoryBufferCache &PCMCache;
   std::unique_ptr<ScratchBuffer> ScratchBuf;
   HeaderSearch      &HeaderInfo;
   ModuleLoader      &TheModuleLoader;
@@ -652,6 +654,7 @@ class Preprocessor {
 public:
   Preprocessor(std::shared_ptr<PreprocessorOptions> PPOpts,
                DiagnosticsEngine &diags, LangOptions &opts, SourceManager &SM,
+               MemoryBufferCache &PCMCache,
                HeaderSearch &Headers, ModuleLoader &TheModuleLoader,
                IdentifierInfoLookup *IILookup = nullptr,
                bool OwnsHeaderSearch = false,
@@ -691,6 +694,7 @@ public:
   const TargetInfo *getAuxTargetInfo() const { return AuxTarget; }
   FileManager &getFileManager() const { return FileMgr; }
   SourceManager &getSourceManager() const { return SourceMgr; }
+  MemoryBufferCache &getPCMCache() const { return PCMCache; }
   HeaderSearch &getHeaderSearchInfo() const { return HeaderInfo; }
 
   IdentifierTable &getIdentifierTable() { return Identifiers; }

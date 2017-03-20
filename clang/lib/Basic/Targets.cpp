@@ -1488,6 +1488,11 @@ bool PPCTargetInfo::initFeatureMap(
     .Case("pwr8", true)
     .Case("pwr7", true)
     .Default(false);
+  Features["htm"] = llvm::StringSwitch<bool>(CPU)
+    .Case("ppc64le", true)
+    .Case("pwr9", true)
+    .Case("pwr8", true)
+    .Default(false);
 
   if (!ppcUserFeaturesCheck(Diags, FeaturesVec))
     return false;

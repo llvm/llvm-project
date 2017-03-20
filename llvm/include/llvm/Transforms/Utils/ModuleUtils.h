@@ -81,17 +81,6 @@ void appendToCompilerUsed(Module &M, ArrayRef<GlobalValue *> Values);
 void filterDeadComdatFunctions(
     Module &M, SmallVectorImpl<Function *> &DeadComdatFunctions);
 
-/// \brief Produce a unique identifier for this module by taking the MD5 sum of
-/// the names of the module's strong external symbols.
-///
-/// This identifier is normally guaranteed to be unique, or the program would
-/// fail to link due to multiply defined symbols.
-///
-/// If the module has no strong external symbols (such a module may still have a
-/// semantic effect if it performs global initialization), we cannot produce a
-/// unique identifier for this module, so we return the empty string.
-std::string getUniqueModuleId(Module *M);
-
 } // End llvm namespace
 
 #endif //  LLVM_TRANSFORMS_UTILS_MODULEUTILS_H

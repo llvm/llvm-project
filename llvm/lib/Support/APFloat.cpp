@@ -761,7 +761,7 @@ IEEEFloat &IEEEFloat::operator=(IEEEFloat &&rhs) {
 
 bool IEEEFloat::isDenormal() const {
   return isFiniteNonZero() && (exponent == semantics->minExponent) &&
-         (APInt::tcExtractBit(significandParts(), 
+         (APInt::tcExtractBit(significandParts(),
                               semantics->precision - 1) == 0);
 }
 
@@ -980,14 +980,14 @@ lostFraction IEEEFloat::multiplySignificand(const IEEEFloat &rhs,
   //     rhs = b23 . b22 ... b0 * 2^e2
   // the result of multiplication is:
   //   *this = c48 c47 c46 . c45 ... c0 * 2^(e1+e2)
-  // Note that there are three significant bits at the left-hand side of the 
+  // Note that there are three significant bits at the left-hand side of the
   // radix point: two for the multiplication, and an overflow bit for the
   // addition (that will always be zero at this point). Move the radix point
   // toward left by two bits, and adjust exponent accordingly.
   exponent += 2;
 
   if (addend && addend->isNonZero()) {
-    // The intermediate result of the multiplication has "2 * precision" 
+    // The intermediate result of the multiplication has "2 * precision"
     // signicant bit; adjust the addend to be consistent with mul result.
     //
     Significand savedSignificand = significand;
@@ -1039,7 +1039,7 @@ lostFraction IEEEFloat::multiplySignificand(const IEEEFloat &rhs,
   }
 
   // Convert the result having "2 * precision" significant-bits back to the one
-  // having "precision" significant-bits. First, move the radix point from 
+  // having "precision" significant-bits. First, move the radix point from
   // poision "2*precision - 1" to "precision - 1". The exponent need to be
   // adjusted by "2*precision - 1" - "precision - 1" = "precision".
   exponent -= precision + 1;
@@ -1716,9 +1716,10 @@ IEEEFloat::opStatus IEEEFloat::remainder(const IEEEFloat &rhs) {
   int parts = partCount();
   integerPart *x = new integerPart[parts];
   bool ignored;
-  fs = V.convertToInteger(x, parts * integerPartWidth, true,
-                          rmNearestTiesToEven, &ignored);
-  if (fs==opInvalidOp) {
+  fs = V.convertToInteger(makeMutableArrayRef(x, parts),
+                          parts * integerPartWidth, true, rmNearestTiesToEven,
+                          &ignored);
+  if (fs == opInvalidOp) {
     delete[] x;
     return fs;
   }
@@ -1756,9 +1757,10 @@ IEEEFloat::opStatus IEEEFloat::mod(const IEEEFloat &rhs) {
     int parts = partCount();
     integerPart *x = new integerPart[parts];
     bool ignored;
-    fs = V.convertToInteger(x, parts * integerPartWidth, true,
-                            rmTowardZero, &ignored);
-    if (fs==opInvalidOp) {
+    fs = V.convertToInteger(makeMutableArrayRef(x, parts),
+                            parts * integerPartWidth, true, rmTowardZero,
+                            &ignored);
+    if (fs == opInvalidOp) {
       delete[] x;
       return fs;
     }
@@ -2051,7 +2053,7 @@ IEEEFloat::opStatus IEEEFloat::convert(const fltSemantics &toSemantics,
    Note that for conversions to integer type the C standard requires
    round-to-zero to always be used.  */
 IEEEFloat::opStatus IEEEFloat::convertToSignExtendedInteger(
-    integerPart *parts, unsigned int width, bool isSigned,
+    MutableArrayRef<integerPart> parts, unsigned int width, bool isSigned,
     roundingMode rounding_mode, bool *isExact) const {
   lostFraction lost_fraction;
   const integerPart *src;
@@ -2064,9 +2066,10 @@ IEEEFloat::opStatus IEEEFloat::convertToSignExtendedInteger(
     return opInvalidOp;
 
   dstPartsCount = partCountForBits(width);
+  assert(dstPartsCount <= parts.size() && "Integer too big");
 
   if (category == fcZero) {
-    APInt::tcSet(parts, 0, dstPartsCount);
+    APInt::tcSet(parts.data(), 0, dstPartsCount);
     // Negative zero can't be represented as an int.
     *isExact = !sign;
     return opOK;
@@ -2078,7 +2081,7 @@ IEEEFloat::opStatus IEEEFloat::convertToSignExtendedInteger(
      the destination.  */
   if (exponent < 0) {
     /* Our absolute value is less than one; truncate everything.  */
-    APInt::tcSet(parts, 0, dstPartsCount);
+    APInt::tcSet(parts.data(), 0, dstPartsCount);
     /* For exponent -1 the integer bit represents .5, look at that.
        For smaller exponents leftmost truncated bit is 0. */
     truncatedBits = semantics->precision -1U - exponent;
@@ -2094,11 +2097,13 @@ IEEEFloat::opStatus IEEEFloat::convertToSignExtendedInteger(
     if (bits < semantics->precision) {
       /* We truncate (semantics->precision - bits) bits.  */
       truncatedBits = semantics->precision - bits;
-      APInt::tcExtract(parts, dstPartsCount, src, bits, truncatedBits);
+      APInt::tcExtract(parts.data(), dstPartsCount, src, bits, truncatedBits);
     } else {
       /* We want at least as many bits as are available.  */
-      APInt::tcExtract(parts, dstPartsCount, src, semantics->precision, 0);
-      APInt::tcShiftLeft(parts, dstPartsCount, bits - semantics->precision);
+      APInt::tcExtract(parts.data(), dstPartsCount, src, semantics->precision,
+                       0);
+      APInt::tcShiftLeft(parts.data(), dstPartsCount,
+                         bits - semantics->precision);
       truncatedBits = 0;
     }
   }
@@ -2110,7 +2115,7 @@ IEEEFloat::opStatus IEEEFloat::convertToSignExtendedInteger(
                                                   truncatedBits);
     if (lost_fraction != lfExactlyZero &&
         roundAwayFromZero(rounding_mode, lost_fraction, truncatedBits)) {
-      if (APInt::tcIncrement(parts, dstPartsCount))
+      if (APInt::tcIncrement(parts.data(), dstPartsCount))
         return opInvalidOp;     /* Overflow.  */
     }
   } else {
@@ -2118,7 +2123,7 @@ IEEEFloat::opStatus IEEEFloat::convertToSignExtendedInteger(
   }
 
   /* Step 3: check if we fit in the destination.  */
-  unsigned int omsb = APInt::tcMSB(parts, dstPartsCount) + 1;
+  unsigned int omsb = APInt::tcMSB(parts.data(), dstPartsCount) + 1;
 
   if (sign) {
     if (!isSigned) {
@@ -2129,7 +2134,8 @@ IEEEFloat::opStatus IEEEFloat::convertToSignExtendedInteger(
       /* It takes omsb bits to represent the unsigned integer value.
          We lose a bit for the sign, but care is needed as the
          maximally negative integer is a special case.  */
-      if (omsb == width && APInt::tcLSB(parts, dstPartsCount) + 1 != omsb)
+      if (omsb == width &&
+          APInt::tcLSB(parts.data(), dstPartsCount) + 1 != omsb)
         return opInvalidOp;
 
       /* This case can happen because of rounding.  */
@@ -2137,7 +2143,7 @@ IEEEFloat::opStatus IEEEFloat::convertToSignExtendedInteger(
         return opInvalidOp;
     }
 
-    APInt::tcNegate (parts, dstPartsCount);
+    APInt::tcNegate (parts.data(), dstPartsCount);
   } else {
     if (omsb >= width + !isSigned)
       return opInvalidOp;
@@ -2159,11 +2165,10 @@ IEEEFloat::opStatus IEEEFloat::convertToSignExtendedInteger(
    the original value.  This is almost equivalent to result==opOK,
    except for negative zeroes.
 */
-IEEEFloat::opStatus IEEEFloat::convertToInteger(integerPart *parts,
-                                                unsigned int width,
-                                                bool isSigned,
-                                                roundingMode rounding_mode,
-                                                bool *isExact) const {
+IEEEFloat::opStatus
+IEEEFloat::convertToInteger(MutableArrayRef<integerPart> parts,
+                            unsigned int width, bool isSigned,
+                            roundingMode rounding_mode, bool *isExact) const {
   opStatus fs;
 
   fs = convertToSignExtendedInteger(parts, width, isSigned, rounding_mode,
@@ -2173,6 +2178,7 @@ IEEEFloat::opStatus IEEEFloat::convertToInteger(integerPart *parts,
     unsigned int bits, dstPartsCount;
 
     dstPartsCount = partCountForBits(width);
+    assert(dstPartsCount <= parts.size() && "Integer too big");
 
     if (category == fcNaN)
       bits = 0;
@@ -2181,9 +2187,9 @@ IEEEFloat::opStatus IEEEFloat::convertToInteger(integerPart *parts,
     else
       bits = width - isSigned;
 
-    APInt::tcSetLeastSignificantBits(parts, dstPartsCount, bits);
+    APInt::tcSetLeastSignificantBits(parts.data(), dstPartsCount, bits);
     if (sign && isSigned)
-      APInt::tcShiftLeft(parts, dstPartsCount, width - 1);
+      APInt::tcShiftLeft(parts.data(), dstPartsCount, width - 1);
   }
 
   return fs;
@@ -2472,7 +2478,7 @@ IEEEFloat::convertFromDecimalString(StringRef str, roundingMode rounding_mode) {
 
   // Test if we have a zero number allowing for strings with no null terminators
   // and zero decimals with non-zero exponents.
-  // 
+  //
   // We computed firstSigDigit by ignoring all zeros and dots. Thus if
   // D->firstSigDigit equals str.end(), every digit must be a zero and there can
   // be at most one dot. On the other hand, if we have a zero with a non-zero
@@ -4293,11 +4299,10 @@ APFloat::opStatus DoubleAPFloat::next(bool nextDown) {
   return Ret;
 }
 
-APFloat::opStatus DoubleAPFloat::convertToInteger(integerPart *Input,
-                                                  unsigned int Width,
-                                                  bool IsSigned,
-                                                  roundingMode RM,
-                                                  bool *IsExact) const {
+APFloat::opStatus
+DoubleAPFloat::convertToInteger(MutableArrayRef<integerPart> Input,
+                                unsigned int Width, bool IsSigned,
+                                roundingMode RM, bool *IsExact) const {
   assert(Semantics == &semPPCDoubleDouble && "Unexpected Semantics");
   return APFloat(semPPCDoubleDoubleLegacy, bitcastToAPInt())
       .convertToInteger(Input, Width, IsSigned, RM, IsExact);
@@ -4511,7 +4516,7 @@ APFloat::opStatus APFloat::convertToInteger(APSInt &result,
                                             bool *isExact) const {
   unsigned bitWidth = result.getBitWidth();
   SmallVector<uint64_t, 4> parts(result.getNumWords());
-  opStatus status = convertToInteger(parts.data(), bitWidth, result.isSigned(),
+  opStatus status = convertToInteger(parts, bitWidth, result.isSigned(),
                                      rounding_mode, isExact);
   // Keeps the original signed-ness.
   result = APInt(bitWidth, parts);

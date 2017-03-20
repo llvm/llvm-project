@@ -96,24 +96,6 @@ static ExprValue leftShift(ExprValue A, ExprValue B) {
 static ExprValue rightShift(ExprValue A, ExprValue B) {
   return A.getValue() >> B.getValue();
 }
-static ExprValue lessThan(ExprValue A, ExprValue B) {
-  return A.getValue() < B.getValue();
-}
-static ExprValue greaterThan(ExprValue A, ExprValue B) {
-  return A.getValue() > B.getValue();
-}
-static ExprValue greaterThanOrEqual(ExprValue A, ExprValue B) {
-  return A.getValue() >= B.getValue();
-}
-static ExprValue lessThanOrEqual(ExprValue A, ExprValue B) {
-  return A.getValue() <= B.getValue();
-}
-static ExprValue equal(ExprValue A, ExprValue B) {
-  return A.getValue() == B.getValue();
-}
-static ExprValue notEqual(ExprValue A, ExprValue B) {
-  return A.getValue() != B.getValue();
-}
 static ExprValue bitAnd(ExprValue A, ExprValue B) {
   moveAbsRight(A, B);
   return {A.Sec, A.ForceAbsolute,
@@ -430,6 +412,7 @@ void LinkerScriptBase::processCommands(OutputSectionFactory &Factory) {
   Aether = make<OutputSection>("", 0, SHF_ALLOC);
   Aether->SectionIndex = 1;
   CurOutSec = Aether;
+  Dot = 0;
 
   for (unsigned I = 0; I < Opt.Commands.size(); ++I) {
     auto Iter = Opt.Commands.begin() + I;
@@ -1673,17 +1656,17 @@ static Expr combine(StringRef Op, Expr L, Expr R) {
   if (Op == ">>")
     return [=] { return rightShift(L(), R()); };
   if (Op == "<")
-    return [=] { return lessThan(L(), R()); };
+    return [=] { return L().getValue() < R().getValue(); };
   if (Op == ">")
-    return [=] { return greaterThan(L(), R()); };
+    return [=] { return L().getValue() > R().getValue(); };
   if (Op == ">=")
-    return [=] { return greaterThanOrEqual(L(), R()); };
+    return [=] { return L().getValue() >= R().getValue(); };
   if (Op == "<=")
-    return [=] { return lessThanOrEqual(L(), R()); };
+    return [=] { return L().getValue() <= R().getValue(); };
   if (Op == "==")
-    return [=] { return ::equal(L(), R()); };
+    return [=] { return L().getValue() == R().getValue(); };
   if (Op == "!=")
-    return [=] { return notEqual(L(), R()); };
+    return [=] { return L().getValue() != R().getValue(); };
   if (Op == "&")
     return [=] { return bitAnd(L(), R()); };
   if (Op == "|")

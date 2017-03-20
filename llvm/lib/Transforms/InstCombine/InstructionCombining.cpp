@@ -3032,6 +3032,8 @@ static bool AddReachableCodeToWorklist(BasicBlock *BB, const DataLayout &DL,
           FoldRes = C;
 
         if (FoldRes != C) {
+          DEBUG(dbgs() << "IC: ConstFold operand of: " << *Inst << "\n    Old = " << *C
+                       << "\n    New = " << *FoldRes << '\n');
           *i = FoldRes;
           MadeIRChange = true;
         }

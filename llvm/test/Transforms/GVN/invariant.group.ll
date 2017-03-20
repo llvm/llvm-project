@@ -382,12 +382,12 @@ define void @testNotGlobal() {
 
    %b0 = bitcast i8* %a to i1*
    call void @fooBit(i1* %b0, i1 1)
-; CHECK: %trunc = trunc i8 %b to i1
+; CHECK: %1 = trunc i8 %b to i1
    %2 = load i1, i1* %b0, !invariant.group !0
-; CHECK-NEXT: call void @fooBit(i1* %b0, i1 %trunc)
+; CHECK-NEXT: call void @fooBit(i1* %b0, i1 %1)
    call void @fooBit(i1* %b0, i1 %2)
    %3 = load i1, i1* %b0, !invariant.group !0
-; CHECK-NEXT: call void @fooBit(i1* %b0, i1 %trunc)
+; CHECK-NEXT: call void @fooBit(i1* %b0, i1 %1)
    call void @fooBit(i1* %b0, i1 %3)
    ret void
 }
