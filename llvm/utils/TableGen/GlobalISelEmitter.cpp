@@ -174,6 +174,8 @@ class RuleMatcher {
 public:
   RuleMatcher()
       : Matchers(), Actions(), InsnVariableNames(), NextInsnVarID(0) {}
+  RuleMatcher(RuleMatcher &&Other) = default;
+  RuleMatcher &operator=(RuleMatcher &&Other) = default;
 
   InstructionMatcher &addInstructionMatcher();
 
