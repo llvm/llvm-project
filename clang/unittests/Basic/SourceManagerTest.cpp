@@ -12,7 +12,6 @@
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/LangOptions.h"
-#include "clang/Basic/MemoryBufferCache.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
 #include "clang/Lex/HeaderSearch.h"
@@ -79,11 +78,10 @@ TEST_F(SourceManagerTest, isBeforeInTranslationUnit) {
   SourceMgr.setMainFileID(mainFileID);
 
   VoidModuleLoader ModLoader;
-  MemoryBufferCache PCMCache;
   HeaderSearch HeaderInfo(std::make_shared<HeaderSearchOptions>(), SourceMgr,
                           Diags, LangOpts, &*Target);
   Preprocessor PP(std::make_shared<PreprocessorOptions>(), Diags, LangOpts,
-                  SourceMgr, PCMCache, HeaderInfo, ModLoader,
+                  SourceMgr, HeaderInfo, ModLoader,
                   /*IILookup =*/nullptr,
                   /*OwnsHeaderSearch =*/false);
   PP.Initialize(*Target);
@@ -200,11 +198,10 @@ TEST_F(SourceManagerTest, getMacroArgExpandedLocation) {
   SourceMgr.overrideFileContents(headerFile, std::move(HeaderBuf));
 
   VoidModuleLoader ModLoader;
-  MemoryBufferCache PCMCache;
   HeaderSearch HeaderInfo(std::make_shared<HeaderSearchOptions>(), SourceMgr,
                           Diags, LangOpts, &*Target);
   Preprocessor PP(std::make_shared<PreprocessorOptions>(), Diags, LangOpts,
-                  SourceMgr, PCMCache, HeaderInfo, ModLoader,
+                  SourceMgr, HeaderInfo, ModLoader,
                   /*IILookup =*/nullptr,
                   /*OwnsHeaderSearch =*/false);
   PP.Initialize(*Target);
@@ -301,11 +298,10 @@ TEST_F(SourceManagerTest, isBeforeInTranslationUnitWithMacroInInclude) {
   SourceMgr.overrideFileContents(headerFile, std::move(HeaderBuf));
 
   VoidModuleLoader ModLoader;
-  MemoryBufferCache PCMCache;
   HeaderSearch HeaderInfo(std::make_shared<HeaderSearchOptions>(), SourceMgr,
                           Diags, LangOpts, &*Target);
   Preprocessor PP(std::make_shared<PreprocessorOptions>(), Diags, LangOpts,
-                  SourceMgr, PCMCache, HeaderInfo, ModLoader,
+                  SourceMgr, HeaderInfo, ModLoader,
                   /*IILookup =*/nullptr,
                   /*OwnsHeaderSearch =*/false);
   PP.Initialize(*Target);

@@ -96,24 +96,6 @@ static ExprValue leftShift(ExprValue A, ExprValue B) {
 static ExprValue rightShift(ExprValue A, ExprValue B) {
   return A.getValue() >> B.getValue();
 }
-static ExprValue lessThan(ExprValue A, ExprValue B) {
-  return A.getValue() < B.getValue();
-}
-static ExprValue greaterThan(ExprValue A, ExprValue B) {
-  return A.getValue() > B.getValue();
-}
-static ExprValue greaterThanOrEqual(ExprValue A, ExprValue B) {
-  return A.getValue() >= B.getValue();
-}
-static ExprValue lessThanOrEqual(ExprValue A, ExprValue B) {
-  return A.getValue() <= B.getValue();
-}
-static ExprValue equal(ExprValue A, ExprValue B) {
-  return A.getValue() == B.getValue();
-}
-static ExprValue notEqual(ExprValue A, ExprValue B) {
-  return A.getValue() != B.getValue();
-}
 static ExprValue bitAnd(ExprValue A, ExprValue B) {
   moveAbsRight(A, B);
   return {A.Sec, A.ForceAbsolute,
@@ -127,7 +109,7 @@ static ExprValue bitOr(ExprValue A, ExprValue B) {
 static ExprValue bitNot(ExprValue A) { return ~A.getValue(); }
 static ExprValue minus(ExprValue A) { return -A.getValue(); }
 
-LinkerScriptBase *elf::ScriptBase;
+LinkerScriptBase *elf::Script;
 ScriptConfiguration *elf::ScriptConfig;
 
 template <class ELFT> static SymbolBody *addRegular(SymbolAssignment *Cmd) {
@@ -219,18 +201,47 @@ void LinkerScriptBase::assignSymbol(SymbolAssignment *Cmd, bool InSec) {
   }
 }
 
-template <class ELFT>
-void LinkerScript<ELFT>::addSymbol(SymbolAssignment *Cmd) {
+static SymbolBody *findSymbol(StringRef S) {
+  switch (Config->EKind) {
+  case ELF32LEKind:
+    return Symtab<ELF32LE>::X->find(S);
+  case ELF32BEKind:
+    return Symtab<ELF32BE>::X->find(S);
+  case ELF64LEKind:
+    return Symtab<ELF64LE>::X->find(S);
+  case ELF64BEKind:
+    return Symtab<ELF64BE>::X->find(S);
+  default:
+    llvm_unreachable("unknown Config->EKind");
+  }
+}
+
+static SymbolBody *addRegularSymbol(SymbolAssignment *Cmd) {
+  switch (Config->EKind) {
+  case ELF32LEKind:
+    return addRegular<ELF32LE>(Cmd);
+  case ELF32BEKind:
+    return addRegular<ELF32BE>(Cmd);
+  case ELF64LEKind:
+    return addRegular<ELF64LE>(Cmd);
+  case ELF64BEKind:
+    return addRegular<ELF64BE>(Cmd);
+  default:
+    llvm_unreachable("unknown Config->EKind");
+  }
+}
+
+void LinkerScriptBase::addSymbol(SymbolAssignment *Cmd) {
   if (Cmd->Name == ".")
     return;
 
   // If a symbol was in PROVIDE(), we need to define it only when
   // it is a referenced undefined symbol.
-  SymbolBody *B = Symtab<ELFT>::X->find(Cmd->Name);
+  SymbolBody *B = findSymbol(Cmd->Name);
   if (Cmd->Provide && (!B || B->isDefined()))
     return;
 
-  Cmd->Sym = addRegular<ELFT>(Cmd);
+  Cmd->Sym = addRegularSymbol(Cmd);
 }
 
 bool SymbolAssignment::classof(const BaseCommand *C) {
@@ -252,9 +263,6 @@ bool AssertCommand::classof(const BaseCommand *C) {
 bool BytesDataCommand::classof(const BaseCommand *C) {
   return C->Kind == BytesDataKind;
 }
-
-template <class ELFT> LinkerScript<ELFT>::LinkerScript() = default;
-template <class ELFT> LinkerScript<ELFT>::~LinkerScript() = default;
 
 static StringRef basename(InputSectionBase *S) {
   if (S->File)
@@ -391,8 +399,7 @@ LinkerScriptBase::createInputSectionList(OutputSectionCommand &OutCmd) {
   return Ret;
 }
 
-template <class ELFT>
-void LinkerScript<ELFT>::processCommands(OutputSectionFactory &Factory) {
+void LinkerScriptBase::processCommands(OutputSectionFactory &Factory) {
   // A symbol can be assigned before any section is mentioned in the linker
   // script. In an DSO, the symbol values are addresses, so the only important
   // section values are:
@@ -405,6 +412,7 @@ void LinkerScript<ELFT>::processCommands(OutputSectionFactory &Factory) {
   Aether = make<OutputSection>("", 0, SHF_ALLOC);
   Aether->SectionIndex = 1;
   CurOutSec = Aether;
+  Dot = 0;
 
   for (unsigned I = 0; I < Opt.Commands.size(); ++I) {
     auto Iter = Opt.Commands.begin() + I;
@@ -936,30 +944,28 @@ uint32_t LinkerScriptBase::getFiller(StringRef Name) {
   return 0;
 }
 
-template <class ELFT>
 static void writeInt(uint8_t *Buf, uint64_t Data, uint64_t Size) {
-  const endianness E = ELFT::TargetEndianness;
+  const endianness E = Config->IsLE ? endianness::little : endianness::big;
 
   switch (Size) {
   case 1:
     *Buf = (uint8_t)Data;
     break;
   case 2:
-    write16<E>(Buf, Data);
+    write16(Buf, Data, E);
     break;
   case 4:
-    write32<E>(Buf, Data);
+    write32(Buf, Data, E);
     break;
   case 8:
-    write64<E>(Buf, Data);
+    write64(Buf, Data, E);
     break;
   default:
     llvm_unreachable("unsupported Size argument");
   }
 }
 
-template <class ELFT>
-void LinkerScript<ELFT>::writeDataBytes(StringRef Name, uint8_t *Buf) {
+void LinkerScriptBase::writeDataBytes(StringRef Name, uint8_t *Buf) {
   int I = getSectionIndex(Name);
   if (I == INT_MAX)
     return;
@@ -967,8 +973,7 @@ void LinkerScript<ELFT>::writeDataBytes(StringRef Name, uint8_t *Buf) {
   auto *Cmd = dyn_cast<OutputSectionCommand>(Opt.Commands[I].get());
   for (const std::unique_ptr<BaseCommand> &Base : Cmd->Commands)
     if (auto *Data = dyn_cast<BytesDataCommand>(Base.get()))
-      writeInt<ELFT>(Buf + Data->Offset, Data->Expression().getValue(),
-                     Data->Size);
+      writeInt(Buf + Data->Offset, Data->Expression().getValue(), Data->Size);
 }
 
 bool LinkerScriptBase::hasLMA(StringRef Name) {
@@ -991,22 +996,21 @@ int LinkerScriptBase::getSectionIndex(StringRef Name) {
   return INT_MAX;
 }
 
-template <class ELFT>
-ExprValue LinkerScript<ELFT>::getSymbolValue(const Twine &Loc, StringRef S) {
+ExprValue LinkerScriptBase::getSymbolValue(const Twine &Loc, StringRef S) {
   if (S == ".")
     return {CurOutSec, Dot - CurOutSec->Addr};
-  if (SymbolBody *B = Symtab<ELFT>::X->find(S)) {
+  if (SymbolBody *B = findSymbol(S)) {
     if (auto *D = dyn_cast<DefinedRegular>(B))
       return {D->Section, D->Value};
     auto *C = cast<DefinedCommon>(B);
-    return {In<ELFT>::Common, C->Offset};
+    return {InX::Common, C->Offset};
   }
   error(Loc + ": symbol not found: " + S);
   return 0;
 }
 
-template <class ELFT> bool LinkerScript<ELFT>::isDefined(StringRef S) {
-  return Symtab<ELFT>::X->find(S) != nullptr;
+bool LinkerScriptBase::isDefined(StringRef S) {
+  return findSymbol(S) != nullptr;
 }
 
 // Returns indices of ELF headers containing specific section, identified
@@ -1490,7 +1494,7 @@ Expr ScriptParser::readAssert() {
   return [=] {
     if (!E().getValue())
       error(Msg);
-    return ScriptBase->getDot();
+    return Script->getDot();
   };
 }
 
@@ -1620,7 +1624,7 @@ SymbolAssignment *ScriptParser::readAssignment(StringRef Name) {
   Expr E = readExpr();
   if (Op == "+=") {
     std::string Loc = getCurrentLocation();
-    E = [=] { return add(ScriptBase->getSymbolValue(Loc, Name), E()); };
+    E = [=] { return add(Script->getSymbolValue(Loc, Name), E()); };
   }
   return new SymbolAssignment(Name, E, getCurrentLocation());
 }
@@ -1652,17 +1656,17 @@ static Expr combine(StringRef Op, Expr L, Expr R) {
   if (Op == ">>")
     return [=] { return rightShift(L(), R()); };
   if (Op == "<")
-    return [=] { return lessThan(L(), R()); };
+    return [=] { return L().getValue() < R().getValue(); };
   if (Op == ">")
-    return [=] { return greaterThan(L(), R()); };
+    return [=] { return L().getValue() > R().getValue(); };
   if (Op == ">=")
-    return [=] { return greaterThanOrEqual(L(), R()); };
+    return [=] { return L().getValue() >= R().getValue(); };
   if (Op == "<=")
-    return [=] { return lessThanOrEqual(L(), R()); };
+    return [=] { return L().getValue() <= R().getValue(); };
   if (Op == "==")
-    return [=] { return ::equal(L(), R()); };
+    return [=] { return L().getValue() == R().getValue(); };
   if (Op == "!=")
-    return [=] { return notEqual(L(), R()); };
+    return [=] { return L().getValue() != R().getValue(); };
   if (Op == "&")
     return [=] { return bitAnd(L(), R()); };
   if (Op == "|")
@@ -1791,13 +1795,12 @@ Expr ScriptParser::readPrimary() {
   if (Tok == "ADDR") {
     StringRef Name = readParenLiteral();
     return [=]() -> ExprValue {
-      return {ScriptBase->getOutputSection(Location, Name), 0};
+      return {Script->getOutputSection(Location, Name), 0};
     };
   }
   if (Tok == "LOADADDR") {
     StringRef Name = readParenLiteral();
-    return
-        [=] { return ScriptBase->getOutputSection(Location, Name)->getLMA(); };
+    return [=] { return Script->getOutputSection(Location, Name)->getLMA(); };
   }
   if (Tok == "ASSERT")
     return readAssert();
@@ -1810,7 +1813,7 @@ Expr ScriptParser::readPrimary() {
       return [=] { return alignTo(E().getValue(), E2().getValue()); };
     }
     expect(")");
-    return [=] { return alignTo(ScriptBase->getDot(), E().getValue()); };
+    return [=] { return alignTo(Script->getDot(), E().getValue()); };
   }
   if (Tok == "CONSTANT") {
     StringRef Name = readParenLiteral();
@@ -1818,7 +1821,7 @@ Expr ScriptParser::readPrimary() {
   }
   if (Tok == "DEFINED") {
     StringRef Name = readParenLiteral();
-    return [=] { return ScriptBase->isDefined(Name) ? 1 : 0; };
+    return [=] { return Script->isDefined(Name) ? 1 : 0; };
   }
   if (Tok == "SEGMENT_START") {
     expect("(");
@@ -1834,13 +1837,13 @@ Expr ScriptParser::readPrimary() {
     expect(",");
     readExpr();
     expect(")");
-    return [=] { return alignTo(ScriptBase->getDot(), E().getValue()); };
+    return [=] { return alignTo(Script->getDot(), E().getValue()); };
   }
   if (Tok == "DATA_SEGMENT_END") {
     expect("(");
     expect(".");
     expect(")");
-    return [] { return ScriptBase->getDot(); };
+    return [] { return Script->getDot(); };
   }
   // GNU linkers implements more complicated logic to handle
   // DATA_SEGMENT_RELRO_END. We instead ignore the arguments and just align to
@@ -1851,16 +1854,15 @@ Expr ScriptParser::readPrimary() {
     expect(",");
     readExpr();
     expect(")");
-    return [] { return alignTo(ScriptBase->getDot(), Target->PageSize); };
+    return [] { return alignTo(Script->getDot(), Target->PageSize); };
   }
   if (Tok == "SIZEOF") {
     StringRef Name = readParenLiteral();
-    return [=] { return ScriptBase->getOutputSectionSize(Name); };
+    return [=] { return Script->getOutputSectionSize(Name); };
   }
   if (Tok == "ALIGNOF") {
     StringRef Name = readParenLiteral();
-    return
-        [=] { return ScriptBase->getOutputSection(Location, Name)->Alignment; };
+    return [=] { return Script->getOutputSection(Location, Name)->Alignment; };
   }
   if (Tok == "SIZEOF_HEADERS")
     return [=] { return elf::getHeaderSize(); };
@@ -1873,7 +1875,7 @@ Expr ScriptParser::readPrimary() {
   // Tok is a symbol name.
   if (Tok != "." && !isValidCIdentifier(Tok))
     setError("malformed number: " + Tok);
-  return [=] { return ScriptBase->getSymbolValue(Location, Tok); };
+  return [=] { return Script->getSymbolValue(Location, Tok); };
 }
 
 Expr ScriptParser::readTernary(Expr Cond) {
@@ -2037,8 +2039,8 @@ std::vector<SymbolVersion> ScriptParser::readVersionExtern() {
   return Ret;
 }
 
-uint64_t ScriptParser::readMemoryAssignment(
-    StringRef S1, StringRef S2, StringRef S3) {
+uint64_t ScriptParser::readMemoryAssignment(StringRef S1, StringRef S2,
+                                            StringRef S3) {
   if (!(consume(S1) || consume(S2) || consume(S3))) {
     setError("expected one of: " + S1 + ", " + S2 + ", or " + S3);
     return 0;
@@ -2048,7 +2050,7 @@ uint64_t ScriptParser::readMemoryAssignment(
   // TODO: Fully support constant expressions.
   uint64_t Val;
   if (!readInteger(next(), Val))
-    setError("nonconstant expression for "+ S1);
+    setError("nonconstant expression for " + S1);
   return Val;
 }
 
@@ -2122,8 +2124,3 @@ void elf::readVersionScript(MemoryBufferRef MB) {
 void elf::readDynamicList(MemoryBufferRef MB) {
   ScriptParser(MB).readDynamicList();
 }
-
-template class elf::LinkerScript<ELF32LE>;
-template class elf::LinkerScript<ELF32BE>;
-template class elf::LinkerScript<ELF64LE>;
-template class elf::LinkerScript<ELF64BE>;
