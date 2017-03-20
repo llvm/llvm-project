@@ -133,8 +133,7 @@ StringRef elf::getOutputSectionName(StringRef Name) {
 
 template <class ELFT> static bool needsInterpSection() {
   return !Symtab<ELFT>::X->getSharedFiles().empty() &&
-         !Config->DynamicLinker.empty() &&
-         !Script<ELFT>::X->ignoreInterpSection();
+         !Config->DynamicLinker.empty() && !Script->ignoreInterpSection();
 }
 
 template <class ELFT> void elf::writeResult() { Writer<ELFT>().run(); }
@@ -228,21 +227,21 @@ template <class ELFT> void Writer<ELFT>::run() {
     addReservedSymbols();
 
   // Create output sections.
-  Script<ELFT>::X->OutputSections = &OutputSections;
+  Script->OutputSections = &OutputSections;
   if (ScriptConfig->HasSections) {
     // If linker script contains SECTIONS commands, let it create sections.
-    Script<ELFT>::X->processCommands(Factory);
+    Script->processCommands(Factory);
 
     // Linker scripts may have left some input sections unassigned.
     // Assign such sections using the default rule.
-    Script<ELFT>::X->addOrphanSections(Factory);
+    Script->addOrphanSections(Factory);
   } else {
     // If linker script does not contain SECTIONS commands, create
     // output sections by default rules. We still need to give the
     // linker script a chance to run, because it might contain
     // non-SECTIONS commands such as ASSERT.
     createSections();
-    Script<ELFT>::X->processCommands(Factory);
+    Script->processCommands(Factory);
   }
 
   if (Config->Discard != DiscardPolicy::All)
@@ -263,11 +262,11 @@ template <class ELFT> void Writer<ELFT>::run() {
     assignFileOffsets();
   } else {
     if (ScriptConfig->HasSections) {
-      Script<ELFT>::X->assignAddresses(Phdrs);
+      Script->assignAddresses(Phdrs);
     } else {
       fixSectionAlignments();
       assignAddresses();
-      Script<ELFT>::X->processNonSectionCommands();
+      Script->processNonSectionCommands();
     }
 
     // Remove empty PT_LOAD to avoid causing the dynamic linker to try to mmap a
@@ -723,8 +722,8 @@ static bool compareSectionsNonScript(const OutputSection *A,
 template <class ELFT>
 static bool compareSections(const OutputSection *A, const OutputSection *B) {
   // For now, put sections mentioned in a linker script first.
-  int AIndex = Script<ELFT>::X->getSectionIndex(A->Name);
-  int BIndex = Script<ELFT>::X->getSectionIndex(B->Name);
+  int AIndex = Script->getSectionIndex(A->Name);
+  int BIndex = Script->getSectionIndex(B->Name);
   bool AInScript = AIndex != INT_MAX;
   bool BInScript = BIndex != INT_MAX;
   if (AInScript != BInScript)
@@ -968,7 +967,7 @@ template <class ELFT> void Writer<ELFT>::sortSections() {
                      compareSectionsNonScript<ELFT>);
     return;
   }
-  Script<ELFT>::X->adjustSectionsBeforeSorting();
+  Script->adjustSectionsBeforeSorting();
 
   // The order of the sections in the script is arbitrary and may not agree with
   // compareSectionsNonScript. This means that we cannot easily define a
@@ -1001,7 +1000,7 @@ template <class ELFT> void Writer<ELFT>::sortSections() {
   auto E = OutputSections.end();
   auto NonScriptI =
       std::find_if(OutputSections.begin(), E, [](OutputSection *S) {
-        return Script<ELFT>::X->getSectionIndex(S->Name) == INT_MAX;
+        return Script->getSectionIndex(S->Name) == INT_MAX;
       });
   while (NonScriptI != E) {
     auto BestPos = std::max_element(
@@ -1031,7 +1030,7 @@ template <class ELFT> void Writer<ELFT>::sortSections() {
     ++NonScriptI;
   }
 
-  Script<ELFT>::X->adjustSectionsAfterSorting();
+  Script->adjustSectionsAfterSorting();
 }
 
 static void applySynthetic(const std::vector<SyntheticSection *> &Sections,
@@ -1152,8 +1151,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   // The headers have to be created before finalize as that can influence the
   // image base and the dynamic section on mips includes the image base.
   if (!Config->Relocatable && !Config->OFormatBinary) {
-    Phdrs = Script<ELFT>::X->hasPhdrsCommands() ? Script<ELFT>::X->createPhdrs()
-                                                : createPhdrs();
+    Phdrs = Script->hasPhdrsCommands() ? Script->createPhdrs() : createPhdrs();
     addPtArmExid(Phdrs);
     fixHeaders();
   }
@@ -1306,7 +1304,7 @@ template <class ELFT> std::vector<PhdrEntry> Writer<ELFT>::createPhdrs() {
     // different flags or is loaded at a discontiguous address using AT linker
     // script command.
     uintX_t NewFlags = computeFlags<ELFT>(Sec->getPhdrFlags());
-    if (Script<ELFT>::X->hasLMA(Sec->Name) || Flags != NewFlags) {
+    if (Script->hasLMA(Sec->Name) || Flags != NewFlags) {
       Load = AddHdr(PT_LOAD, NewFlags);
       Flags = NewFlags;
     }
@@ -1370,7 +1368,7 @@ template <class ELFT> std::vector<PhdrEntry> Writer<ELFT>::createPhdrs() {
   PhdrEntry *Note = nullptr;
   for (OutputSection *Sec : OutputSections) {
     if (Sec->Type == SHT_NOTE) {
-      if (!Note || Script<ELFT>::X->hasLMA(Sec->Name))
+      if (!Note || Script->hasLMA(Sec->Name))
         Note = AddHdr(PT_NOTE, PF_R);
       Note->add(Sec);
     } else {
@@ -1447,7 +1445,7 @@ bool elf::allocateHeaders(std::vector<PhdrEntry> &Phdrs,
   Out::ElfHeader->Addr = Min;
   Out::ProgramHeaders->Addr = Min + Out::ElfHeader->Size;
 
-  if (ScriptBase->hasPhdrsCommands())
+  if (Script->hasPhdrsCommands())
     return true;
 
   if (FirstPTLoad->First)

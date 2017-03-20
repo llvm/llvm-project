@@ -500,8 +500,6 @@ private:
 };
 
 template <class ELFT> class GdbIndexSection final : public SyntheticSection {
-  typedef typename ELFT::uint uintX_t;
-
   const unsigned OffsetTypeSize = 4;
   const unsigned CuListOffset = 6 * OffsetTypeSize;
   const unsigned CompilationUnitSize = 16;
@@ -516,7 +514,7 @@ public:
   bool empty() const override;
 
   // Pairs of [CU Offset, CU length].
-  std::vector<std::pair<uintX_t, uintX_t>> CompilationUnits;
+  std::vector<std::pair<uint64_t, uint64_t>> CompilationUnits;
 
   llvm::StringTableBuilder StringPool;
 

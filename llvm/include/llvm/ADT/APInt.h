@@ -232,7 +232,7 @@ public:
   /// \param val the initial value of the APInt
   /// \param isSigned how to treat signedness of val
   APInt(unsigned numBits, uint64_t val, bool isSigned = false)
-      : BitWidth(numBits), VAL(0) {
+      : BitWidth(numBits) {
     assert(BitWidth && "bitwidth too small");
     if (isSingleWord()) {
       VAL = val;
@@ -275,7 +275,7 @@ public:
 
   /// Simply makes *this a copy of that.
   /// @brief Copy Constructor.
-  APInt(const APInt &that) : BitWidth(that.BitWidth), VAL(0) {
+  APInt(const APInt &that) : BitWidth(that.BitWidth) {
     if (isSingleWord())
       VAL = that.VAL;
     else

@@ -31,7 +31,7 @@ import logging
 from libear import build_libear, TemporaryDirectory
 from libscanbuild import command_entry_point, compiler_wrapper, \
     wrapper_environment, run_command, run_build
-from libscanbuild import duplicate_check, tempdir
+from libscanbuild import duplicate_check
 from libscanbuild.compilation import split_command
 from libscanbuild.arguments import parse_args_for_intercept_build
 from libscanbuild.shell import encode, decode
@@ -84,7 +84,7 @@ def capture(args):
                 for entry in itertools.chain(previous, current)
                 if os.path.exists(entry['file']) and not duplicate(entry))
 
-    with TemporaryDirectory(prefix='intercept-', dir=tempdir()) as tmp_dir:
+    with TemporaryDirectory(prefix='intercept-') as tmp_dir:
         # run the build command
         environment = setup_environment(args, tmp_dir)
         exit_code = run_build(args.build, env=environment)
