@@ -2084,6 +2084,10 @@ public:
     }
   }
 
+  uint64_t getPreferredPointerWidth(unsigned AddrSpace) const override {
+    return 64;
+  }
+
   uint64_t getMaxPointerWidth() const override {
     return getTriple().getArch() == llvm::Triple::amdgcn ? 64 : 32;
   }

@@ -296,6 +296,13 @@ public:
     return AddrSpace == 0 ? PointerAlign : getPointerAlignV(AddrSpace);
   }
 
+  /// \brief Return the "preferred" width of pointers on this target, for the
+  /// specified address space.  This can be different from "getPointerWidth" in
+  /// cases where the final address space is not yet known.
+  virtual uint64_t getPreferredPointerWidth(unsigned AddrSpace) const {
+    return getPointerWidth(AddrSpace);
+  }
+
   /// \brief Return the maximum width of pointers on this target.
   virtual uint64_t getMaxPointerWidth() const {
     return PointerWidth;
