@@ -23,6 +23,7 @@ registers:
 body:             |
   bb.0:
     %0(s32) = G_CONSTANT i32 42
+    %w0 = COPY %0(s32)
 ...
 
 ---
@@ -38,6 +39,7 @@ registers:
 body:             |
   bb.0:
     %0(s64) = G_CONSTANT i64 1234567890123
+    %x0 = COPY %0(s64)
 ...
 
 ---
@@ -54,6 +56,7 @@ registers:
 body:             |
   bb.0:
     %0(s32) = G_FCONSTANT float 3.5
+    %s0 = COPY %0(s32)
 ...
 
 ---
@@ -70,4 +73,5 @@ registers:
 body:             |
   bb.0:
     %0(s64) = G_FCONSTANT double 1.0
+    %d0 = COPY %0(s64)
 ...

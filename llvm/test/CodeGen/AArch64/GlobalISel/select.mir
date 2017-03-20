@@ -47,6 +47,7 @@ stack:
 body:             |
   bb.0:
     %0(p0) = G_FRAME_INDEX %stack.0.ptr0
+    %x0 = COPY %0(p0)
 ...
 
 ---
@@ -68,6 +69,7 @@ body:             |
     %0(p0) = COPY %x0
     %1(s64) = G_CONSTANT i64 42
     %2(p0) = G_GEP %0, %1(s64)
+    %x0 = COPY %2(p0)
 ...
 
 ---
@@ -83,6 +85,7 @@ body:             |
       liveins: %x0
     %0:gpr(p0) = COPY %x0
     %1:gpr(p0) = G_PTR_MASK %0, 3
+    %x0 = COPY %1(p0)
 ...
 
 ---
@@ -101,6 +104,7 @@ registers:
 body:             |
   bb.0:
     %0(p0) = G_GLOBAL_VALUE @var_local
+    %x0 = COPY %0(p0)
 ...
 
 ---
@@ -118,6 +122,7 @@ registers:
 body:             |
   bb.0:
     %0(p0) = G_GLOBAL_VALUE @var_got
+    %x0 = COPY %0(p0)
 ...
 
 ---
@@ -157,12 +162,15 @@ body:             |
 
     %0(s32) = COPY %w0
     %1(s1) = G_ICMP intpred(eq), %0, %0
+    %w0 = COPY %1(s1)
 
     %2(s64) = COPY %x0
     %3(s1) = G_ICMP intpred(uge), %2, %2
+    %w0 = COPY %3(s1)
 
     %4(p0) = COPY %x0
     %5(s1) = G_ICMP intpred(ne), %4, %4
+    %w0 = COPY %5(s1)
 ...
 
 ---
@@ -199,9 +207,11 @@ body:             |
 
     %0(s32) = COPY %s0
     %1(s1) = G_FCMP floatpred(one), %0, %0
+    %w0 = COPY %1(s1)
 
     %2(s64) = COPY %d0
     %3(s1) = G_FCMP floatpred(uge), %2, %2
+    %w0 = COPY %3(s1)
 
 ...
 
@@ -287,12 +297,15 @@ body:             |
     %1(s32) = COPY %w1
     %2(s32) = COPY %w2
     %3(s32) = G_SELECT %0, %1, %2
+    %w0 = COPY %3(s32)
 
     %4(s64) = COPY %x0
     %5(s64) = COPY %x1
     %6(s64) = G_SELECT %0, %4, %5
+    %x0 = COPY %6(s64)
 
     %7(p0) = COPY %x0
     %8(p0) = COPY %x1
     %9(p0) = G_SELECT %0, %7, %8
+    %x0 = COPY %9(p0)
 ...

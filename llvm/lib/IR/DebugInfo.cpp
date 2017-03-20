@@ -241,26 +241,29 @@ bool DebugInfoFinder::addScope(DIScope *Scope) {
 
 static llvm::MDNode *stripDebugLocFromLoopID(llvm::MDNode *N) {
   assert(N->op_begin() != N->op_end() && "Missing self reference?");
-  auto DebugLocOp =
-      std::find_if(N->op_begin() + 1, N->op_end(), [](const MDOperand &Op) {
-        return isa<DILocation>(Op.get());
-      });
 
-  // No debug location, we do not have to rewrite this MDNode.
-  if (DebugLocOp == N->op_end())
+  // if there is no debug location, we do not have to rewrite this MDNode.
+  if (std::none_of(N->op_begin() + 1, N->op_end(), [](const MDOperand &Op) {
+        return isa<DILocation>(Op.get());
+      }))
     return N;
 
-  // There is only the debug location without any actual loop metadata, hence we
+  // If there is only the debug location without any actual loop metadata, we
   // can remove the metadata.
-  if (N->getNumOperands() == 2)
+  if (std::none_of(N->op_begin() + 1, N->op_end(), [](const MDOperand &Op) {
+        return !isa<DILocation>(Op.get());
+      }))
     return nullptr;
 
   SmallVector<Metadata *, 4> Args;
   // Reserve operand 0 for loop id self reference.
   auto TempNode = MDNode::getTemporary(N->getContext(), None);
   Args.push_back(TempNode.get());
-  Args.append(N->op_begin() + 1, DebugLocOp);
-  Args.append(DebugLocOp + 1, N->op_end());
+  // Add all non-debug location operands back.
+  for (auto Op = N->op_begin() + 1; Op != N->op_end(); Op++) {
+    if (!isa<DILocation>(*Op))
+      Args.push_back(*Op);
+  }
 
   // Set the first operand to itself.
   MDNode *LoopID = MDNode::get(N->getContext(), Args);

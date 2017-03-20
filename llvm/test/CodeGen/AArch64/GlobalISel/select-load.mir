@@ -35,7 +35,7 @@ body:             |
 
     %0(p0) = COPY %x0
     %1(s64) = G_LOAD  %0 :: (load 8 from %ir.addr)
-
+    %x0 = COPY %1(s64)
 ...
 
 ---
@@ -60,7 +60,7 @@ body:             |
 
     %0(p0) = COPY %x0
     %1(s32) = G_LOAD  %0 :: (load 4 from %ir.addr)
-
+    %w0 = COPY %1(s32)
 ...
 
 ---
@@ -85,7 +85,7 @@ body:             |
 
     %0(p0) = COPY %x0
     %1(s16) = G_LOAD  %0 :: (load 2 from %ir.addr)
-
+    %w0 = COPY %1(s16)
 ...
 
 ---
@@ -110,7 +110,7 @@ body:             |
 
     %0(p0) = COPY %x0
     %1(s8) = G_LOAD  %0 :: (load 1 from %ir.addr)
-
+    %w0 = COPY %1(s8)
 ...
 
 ---
@@ -135,7 +135,7 @@ body:             |
 
     %0(p0) = COPY %x0
     %1(s64) = G_LOAD  %0 :: (load 8 from %ir.addr)
-
+    %d0 = COPY %1(s64)
 ...
 
 ---
@@ -160,7 +160,7 @@ body:             |
 
     %0(p0) = COPY %x0
     %1(s32) = G_LOAD  %0 :: (load 4 from %ir.addr)
-
+    %s0 = COPY %1(s32)
 ...
 
 ---
@@ -185,7 +185,7 @@ body:             |
 
     %0(p0) = COPY %x0
     %1(s16) = G_LOAD  %0 :: (load 2 from %ir.addr)
-
+    %h0 = COPY %1(s16)
 ...
 
 ---
@@ -210,5 +210,5 @@ body:             |
 
     %0(p0) = COPY %x0
     %1(s8) = G_LOAD  %0 :: (load 1 from %ir.addr)
-
+    %b0 = COPY %1(s8)
 ...

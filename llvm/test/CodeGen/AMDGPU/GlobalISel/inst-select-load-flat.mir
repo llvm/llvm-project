@@ -22,6 +22,7 @@ body: |
 
     %0:vgpr(p1) = COPY %vgpr0_vgpr1
     %1:vgpr(s32) = G_LOAD %0 :: (load 4 from %ir.global0)
+    %vgpr0 = COPY %1
 
 ...
 ---
