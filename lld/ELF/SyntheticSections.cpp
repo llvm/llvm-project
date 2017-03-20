@@ -1771,12 +1771,10 @@ class ObjInfoTy : public llvm::LoadedObjectInfo {
 };
 
 template <class ELFT> void GdbIndexSection<ELFT>::readDwarf(InputSection *Sec) {
-  elf::ObjectFile<ELFT> *File = Sec->template getFile<ELFT>();
-
   Expected<std::unique_ptr<object::ObjectFile>> Obj =
-      object::ObjectFile::createObjectFile(File->MB);
+      object::ObjectFile::createObjectFile(Sec->File->MB);
   if (!Obj) {
-    error(toString(File) + ": error creating DWARF context");
+    error(toString(Sec->File) + ": error creating DWARF context");
     return;
   }
 
@@ -1854,7 +1852,7 @@ template <class ELFT> void GdbIndexSection<ELFT>::writeTo(uint8_t *Buf) {
   Buf += 24;
 
   // Write the CU list.
-  for (std::pair<uintX_t, uintX_t> CU : CompilationUnits) {
+  for (std::pair<uint64_t, uint64_t> CU : CompilationUnits) {
     write64le(Buf, CU.first);
     write64le(Buf + 8, CU.second);
     Buf += 16;
@@ -1862,7 +1860,7 @@ template <class ELFT> void GdbIndexSection<ELFT>::writeTo(uint8_t *Buf) {
 
   // Write the address area.
   for (AddressEntry &E : AddressArea) {
-    uintX_t BaseAddr = E.Section->OutSec->Addr + E.Section->getOffset(0);
+    uint64_t BaseAddr = E.Section->OutSec->Addr + E.Section->getOffset(0);
     write64le(Buf, BaseAddr + E.LowAddress);
     write64le(Buf + 8, BaseAddr + E.HighAddress);
     write32le(Buf + 16, E.CuIndex);
@@ -2199,7 +2197,7 @@ MipsRldMapSection::MipsRldMapSection()
 
 void MipsRldMapSection::writeTo(uint8_t *Buf) {
   // Apply filler from linker script.
-  uint64_t Filler = ScriptBase->getFiller(this->Name);
+  uint64_t Filler = Script->getFiller(this->Name);
   Filler = (Filler << 32) | Filler;
   memcpy(Buf, &Filler, getSize());
 }

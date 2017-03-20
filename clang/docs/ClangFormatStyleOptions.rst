@@ -327,7 +327,7 @@ the configuration (without a prefix: ``Auto``).
 
 **AlwaysBreakAfterDefinitionReturnType** (``DefinitionReturnTypeBreakingStyle``)
   The function definition return type breaking style to use.  This
-  option is deprecated and is retained for backwards compatibility.
+  option is **deprecated** and is retained for backwards compatibility.
 
   Possible values:
 
@@ -455,9 +455,35 @@ the configuration (without a prefix: ``Auto``).
   If ``false``, a function call's arguments will either be all on the
   same line or will have one line each.
 
+  .. code-block:: c++
+
+    true:
+    void f() {
+      f(aaaaaaaaaaaaaaaaaaaa, aaaaaaaaaaaaaaaaaaaa,
+        aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa);
+    }
+
+    false:
+    void f() {
+      f(aaaaaaaaaaaaaaaaaaaa,
+        aaaaaaaaaaaaaaaaaaaa,
+        aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa);
+    }
+
 **BinPackParameters** (``bool``)
   If ``false``, a function declaration's or function definition's
   parameters will either all be on the same line or will have one line each.
+
+  .. code-block:: c++
+
+    true:
+    void f(int aaaaaaaaaaaaaaaaaaaa, int aaaaaaaaaaaaaaaaaaaa,
+           int aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa) {}
+
+    false:
+    void f(int aaaaaaaaaaaaaaaaaaaa,
+           int aaaaaaaaaaaaaaaaaaaa,
+           int aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa) {}
 
 **BraceWrapping** (``BraceWrappingFlags``)
   Control of individual brace wrapping cases.
@@ -623,11 +649,44 @@ the configuration (without a prefix: ``Auto``).
   * ``BOS_None`` (in configuration: ``None``)
     Break after operators.
 
+    .. code-block:: c++
+
+       LooooooooooongType loooooooooooooooooooooongVariable =
+           someLooooooooooooooooongFunction();
+
+       bool value = aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa +
+                            aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa ==
+                        aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa &&
+                    aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa >
+                        ccccccccccccccccccccccccccccccccccccccccc;
+
   * ``BOS_NonAssignment`` (in configuration: ``NonAssignment``)
     Break before operators that aren't assignments.
 
+    .. code-block:: c++
+
+       LooooooooooongType loooooooooooooooooooooongVariable =
+           someLooooooooooooooooongFunction();
+
+       bool value = aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+                            + aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+                        == aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+                    && aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+                           > ccccccccccccccccccccccccccccccccccccccccc;
+
   * ``BOS_All`` (in configuration: ``All``)
     Break before operators.
+
+    .. code-block:: c++
+
+       LooooooooooongType loooooooooooooooooooooongVariable
+           = someLooooooooooooooooongFunction();
+
+       bool value = aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+                            + aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+                        == aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+                    && aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+                           > ccccccccccccccccccccccccccccccccccccccccc;
 
 
 
@@ -837,6 +896,12 @@ the configuration (without a prefix: ``Auto``).
   A regular expression that describes comments with special meaning,
   which should not be split into lines or otherwise changed.
 
+  .. code-block:: c++
+
+     CommentPragmas: '^ FOOBAR pragma:'
+     // Will leave the following line unaffected
+     #include <vector> // FOOBAR pragma: keep
+
 **ConstructorInitializerAllOnOneLineOrOnePerLine** (``bool``)
   If the constructor initializers don't fit on a line, put each
   initializer on its own line.
@@ -979,6 +1044,16 @@ the configuration (without a prefix: ``Auto``).
 **IndentWidth** (``unsigned``)
   The number of columns to use for indentation.
 
+  .. code-block:: c++
+
+     IndentWidth: 3
+     void f() {
+        someFunction();
+        if (true, false) {
+           f();
+        }
+     }
+
 **IndentWrappedFunctionNames** (``bool``)
   Indent if a function definition or declaration is wrapped after the
   type.
@@ -991,16 +1066,43 @@ the configuration (without a prefix: ``Auto``).
   * ``JSQS_Leave`` (in configuration: ``Leave``)
     Leave string quotes as they are.
 
+    .. code-block:: js
+
+       string1 = "foo";
+       string2 = 'bar';
+
   * ``JSQS_Single`` (in configuration: ``Single``)
     Always use single quotes.
 
+    .. code-block:: js
+
+       string1 = 'foo';
+       string2 = 'bar';
+
   * ``JSQS_Double`` (in configuration: ``Double``)
     Always use double quotes.
+
+    .. code-block:: js
+
+       string1 = "foo";
+       string2 = "bar";
 
 
 
 **JavaScriptWrapImports** (``bool``)
   Whether to wrap JavaScript import/export statements.
+
+  .. code-block:: js
+
+     true:
+     import {
+         VeryLongImportsAreAnnoying,
+         VeryLongImportsAreAnnoying,
+         VeryLongImportsAreAnnoying,
+     } from 'some/module.js'
+
+     false:
+     import {VeryLongImportsAreAnnoying, VeryLongImportsAreAnnoying, VeryLongImportsAreAnnoying,} from "some/module.js"
 
 **KeepEmptyLinesAtTheStartOfBlocks** (``bool``)
   If true, empty lines at the start of blocks are kept.
@@ -1037,11 +1139,48 @@ the configuration (without a prefix: ``Auto``).
 **MacroBlockBegin** (``std::string``)
   A regular expression matching macros that start a block.
 
+  .. code-block:: c++
+
+     # With:
+     MacroBlockBegin: "^NS_MAP_BEGIN|\
+     NS_TABLE_HEAD$"
+     MacroBlockEnd: "^\
+     NS_MAP_END|\
+     NS_TABLE_.*_END$"
+
+     NS_MAP_BEGIN
+       foo();
+     NS_MAP_END
+
+     NS_TABLE_HEAD
+       bar();
+     NS_TABLE_FOO_END
+
+     # Without:
+     NS_MAP_BEGIN
+     foo();
+     NS_MAP_END
+
+     NS_TABLE_HEAD
+     bar();
+     NS_TABLE_FOO_END
+
 **MacroBlockEnd** (``std::string``)
   A regular expression matching macros that end a block.
 
 **MaxEmptyLinesToKeep** (``unsigned``)
   The maximum number of consecutive empty lines to keep.
+
+  .. code-block:: c++
+
+     MaxEmptyLinesToKeep: 1         vs.     MaxEmptyLinesToKeep: 0
+     int f() {                              int f() {
+       int = 1;                                 int i = 1;
+                                                i = foo();
+       i = foo();                               return i;
+                                            }
+       return i;
+     }
 
 **NamespaceIndentation** (``NamespaceIndentationKind``)
   The indentation used for namespaces.
@@ -1051,11 +1190,38 @@ the configuration (without a prefix: ``Auto``).
   * ``NI_None`` (in configuration: ``None``)
     Don't indent in namespaces.
 
+    .. code-block:: c++
+
+       namespace out {
+       int i;
+       namespace in {
+       int i;
+       }
+       }
+
   * ``NI_Inner`` (in configuration: ``Inner``)
     Indent only in inner namespaces (nested in other namespaces).
 
+    .. code-block:: c++
+
+       namespace out {
+       int i;
+       namespace in {
+         int i;
+       }
+       }
+
   * ``NI_All`` (in configuration: ``All``)
     Indent in all namespaces.
+
+    .. code-block:: c++
+
+       namespace out {
+         int i;
+         namespace in {
+           int i;
+         }
+       }
 
 
 
@@ -1120,6 +1286,18 @@ the configuration (without a prefix: ``Auto``).
 **ReflowComments** (``bool``)
   If ``true``, clang-format will attempt to re-flow comments.
 
+  .. code-block:: c++
+
+     false:
+     // veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of information
+     /* second veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of information */
+
+     true:
+     // veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of
+     // information
+     /* second veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of
+      * information */
+
 **SortIncludes** (``bool``)
   If ``true``, clang-format will sort ``#includes``.
 
@@ -1162,9 +1340,25 @@ the configuration (without a prefix: ``Auto``).
   * ``SBPO_Never`` (in configuration: ``Never``)
     Never put a space before opening parentheses.
 
+    .. code-block:: c++
+
+       void f() {
+         if(true) {
+           f();
+         }
+       }
+
   * ``SBPO_ControlStatements`` (in configuration: ``ControlStatements``)
     Put a space before opening parentheses only after control statement
     keywords (``for/if/while...``).
+
+    .. code-block:: c++
+
+       void f() {
+         if (true) {
+           f();
+         }
+       }
 
   * ``SBPO_Always`` (in configuration: ``Always``)
     Always put a space before opening parentheses, except when it's
@@ -1172,10 +1366,28 @@ the configuration (without a prefix: ``Auto``).
     when determined by other style rules (after unary operators, opening
     parentheses, etc.)
 
+    .. code-block:: c++
+
+       void f () {
+         if (true) {
+           f ();
+         }
+       }
+
 
 
 **SpaceInEmptyParentheses** (``bool``)
   If ``true``, spaces may be inserted into ``()``.
+
+  .. code-block:: c++
+
+     true:                                false:
+     void f( ) {                    vs.   void f() {
+       int x[] = {foo( ), bar( )};          int x[] = {foo(), bar()};
+       if (true) {                          if (true) {
+         f( );                                f();
+       }                                    }
+     }                                    }
 
 **SpacesBeforeTrailingComments** (``unsigned``)
   The number of spaces before trailing line comments
@@ -1184,6 +1396,15 @@ the configuration (without a prefix: ``Auto``).
   This does not affect trailing block comments (``/*`` - comments) as
   those commonly have different usage patterns and a number of special
   cases.
+
+  .. code-block:: c++
+
+     SpacesBeforeTrailingComments: 3
+     void f() {
+       if (true) {   // foo1
+         f();        // bar
+       }             // foo
+     }
 
 **SpacesInAngles** (``bool``)
   If ``true``, spaces will be inserted after ``<`` and before ``>``
@@ -1206,6 +1427,12 @@ the configuration (without a prefix: ``Auto``).
 **SpacesInContainerLiterals** (``bool``)
   If ``true``, spaces are inserted inside container literals (e.g.
   ObjC and Javascript array and dict literals).
+
+  .. code-block:: js
+
+     true:                                  false:
+     var arr = [ 1, 2, 3 ];         vs.     var arr = [1, 2, 3];
+     f({a : 1, b : 2, c : 3});              f({a: 1, b: 2, c: 3});
 
 **SpacesInParentheses** (``bool``)
   If ``true``, spaces will be inserted after ``(`` and before ``)``.
@@ -1376,4 +1603,3 @@ The result is:
           r();
       }
   }
-

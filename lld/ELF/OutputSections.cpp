@@ -236,7 +236,7 @@ void fill(uint8_t *Buf, size_t Size, uint32_t Filler) {
 
 template <class ELFT> void OutputSection::writeTo(uint8_t *Buf) {
   Loc = Buf;
-  if (uint32_t Filler = Script<ELFT>::X->getFiller(this->Name))
+  if (uint32_t Filler = Script->getFiller(this->Name))
     fill(Buf, this->Size, Filler);
 
   auto Fn = [=](InputSection *IS) { IS->writeTo<ELFT>(Buf); };
@@ -244,7 +244,7 @@ template <class ELFT> void OutputSection::writeTo(uint8_t *Buf) {
 
   // Linker scripts may have BYTE()-family commands with which you
   // can write arbitrary bytes to the output. Process them if any.
-  Script<ELFT>::X->writeDataBytes(this->Name, Buf);
+  Script->writeDataBytes(this->Name, Buf);
 }
 
 static uint64_t getOutFlags(InputSectionBase *S) {
