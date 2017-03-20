@@ -3392,7 +3392,7 @@ void SwiftLanguageRuntime::RegisterGlobalError(Target &target, ConstString name,
       ConstString mangled_name;
 
       {
-        swift::NewMangling::ASTMangler mangler;
+        swift::Mangle::ASTMangler mangler;
 
         std::string m_str = mangler.mangleGlobalVariableFull(var_decl);
         mangled_name = ConstString(m_str.c_str());
