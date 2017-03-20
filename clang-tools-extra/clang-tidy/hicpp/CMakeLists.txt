@@ -1,8 +1,8 @@
 set(LLVM_LINK_COMPONENTS support)
 
-add_clang_library(clangTidySafetyModule
+add_clang_library(clangTidyHICPPModule
   NoAssemblerCheck.cpp
-  SafetyTidyModule.cpp
+  HICPPTidyModule.cpp
 
   LINK_LIBS
   clangAST

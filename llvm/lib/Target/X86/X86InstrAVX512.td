@@ -2381,15 +2381,6 @@ multiclass avx512_mask_unop_all<bits<8> opc, string OpcodeStr,
 
 defm KNOT : avx512_mask_unop_all<0x44, "knot", vnot>;
 
-multiclass avx512_mask_unop_int<string IntName, string InstName> {
-  let Predicates = [HasAVX512] in
-    def : Pat<(!cast<Intrinsic>("int_x86_avx512_"##IntName##"_w")
-                (i16 GR16:$src)),
-              (COPY_TO_REGCLASS (!cast<Instruction>(InstName##"Wrr")
-              (v16i1 (COPY_TO_REGCLASS GR16:$src, VK16))), GR16)>;
-}
-defm : avx512_mask_unop_int<"knot", "KNOT">;
-
 // KNL does not support KMOVB, 8-bit mask is promoted to 16-bit
 let Predicates = [HasAVX512, NoDQI] in
 def : Pat<(vnot VK8:$src),
@@ -2437,21 +2428,6 @@ defm KXNOR : avx512_mask_binop_all<0x46, "kxnor", vxnor, 1>;
 defm KXOR  : avx512_mask_binop_all<0x47, "kxor",  xor,   1>;
 defm KANDN : avx512_mask_binop_all<0x42, "kandn", vandn, 0>;
 defm KADD  : avx512_mask_binop_all<0x4A, "kadd",  add,   1, HasDQI>;
-
-multiclass avx512_mask_binop_int<string IntName, string InstName> {
-  let Predicates = [HasAVX512] in
-    def : Pat<(!cast<Intrinsic>("int_x86_avx512_"##IntName##"_w")
-                (i16 GR16:$src1), (i16 GR16:$src2)),
-              (COPY_TO_REGCLASS (!cast<Instruction>(InstName##"Wrr")
-              (v16i1 (COPY_TO_REGCLASS GR16:$src1, VK16)),
-              (v16i1 (COPY_TO_REGCLASS GR16:$src2, VK16))), GR16)>;
-}
-
-defm : avx512_mask_binop_int<"kand",  "KAND">;
-defm : avx512_mask_binop_int<"kandn", "KANDN">;
-defm : avx512_mask_binop_int<"kor",   "KOR">;
-defm : avx512_mask_binop_int<"kxnor", "KXNOR">;
-defm : avx512_mask_binop_int<"kxor",  "KXOR">;
 
 multiclass avx512_binop_pat<SDPatternOperator VOpNode, SDPatternOperator OpNode,
                             Instruction Inst> {

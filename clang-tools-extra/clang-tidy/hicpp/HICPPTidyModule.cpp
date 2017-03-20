@@ -1,4 +1,4 @@
-//===------- SafetyTidyModule.cpp - clang-tidy ----------------------------===//
+//===------- HICPPTidyModule.cpp - clang-tidy -----------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -14,25 +14,25 @@
 
 namespace clang {
 namespace tidy {
-namespace safety {
+namespace hicpp {
 
-class SafetyModule : public ClangTidyModule {
+class HICPPModule : public ClangTidyModule {
 public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
     CheckFactories.registerCheck<NoAssemblerCheck>(
-        "safety-no-assembler");
+        "hicpp-no-assembler");
   }
 };
 
-// Register the SafetyModule using this statically initialized variable.
-static ClangTidyModuleRegistry::Add<SafetyModule>
-    X("safety-module", "Adds safety-critical checks.");
+// Register the HICPPModule using this statically initialized variable.
+static ClangTidyModuleRegistry::Add<HICPPModule>
+    X("hicpp-module", "Adds High-Integrity C++ checks.");
 
-} // namespace safety
+} // namespace hicpp
 
 // This anchor is used to force the linker to link in the generated object file
-// and thus register the SafetyModule.
-volatile int SafetyModuleAnchorSource = 0;
+// and thus register the HICPPModule.
+volatile int HICPPModuleAnchorSource = 0;
 
 } // namespace tidy
 } // namespace clang

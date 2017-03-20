@@ -17,7 +17,8 @@ import os
 import sys
 import argparse
 import logging
-from libscanbuild import reconfigure_logging, tempdir
+import tempfile
+from libscanbuild import reconfigure_logging
 from libscanbuild.clang import get_checkers
 
 __all__ = ['parse_args_for_intercept_build', 'parse_args_for_analyze_build',
@@ -187,7 +188,7 @@ def create_analyze_parser(from_build_command):
         '--output',
         '-o',
         metavar='<path>',
-        default=tempdir(),
+        default=tempfile.gettempdir(),
         help="""Specifies the output directory for analyzer reports.
         Subdirectory will be created if default directory is targeted.""")
     output.add_argument(

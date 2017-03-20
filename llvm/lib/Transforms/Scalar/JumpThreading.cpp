@@ -931,6 +931,14 @@ bool JumpThreadingPass::ProcessImpliedCondition(BasicBlock *BB) {
   return false;
 }
 
+/// Return true if Op is an instruction defined in the given block.
+static bool isOpDefinedInBlock(Value *Op, BasicBlock *BB) {
+  if (Instruction *OpInst = dyn_cast<Instruction>(Op))
+    if (OpInst->getParent() == BB)
+      return true;
+  return false;
+}
+
 /// SimplifyPartiallyRedundantLoad - If LI is an obviously partially redundant
 /// load instruction, eliminate it by replacing it with a PHI node.  This is an
 /// important optimization that encourages jump threading, and needs to be run
@@ -953,11 +961,10 @@ bool JumpThreadingPass::SimplifyPartiallyRedundantLoad(LoadInst *LI) {
 
   Value *LoadedPtr = LI->getOperand(0);
 
-  // If the loaded operand is defined in the LoadBB, it can't be available.
-  // TODO: Could do simple PHI translation, that would be fun :)
-  if (Instruction *PtrOp = dyn_cast<Instruction>(LoadedPtr))
-    if (PtrOp->getParent() == LoadBB)
-      return false;
+  // If the loaded operand is defined in the LoadBB and its not a phi,
+  // it can't be available in predecessors.
+  if (isOpDefinedInBlock(LoadedPtr, LoadBB) && !isa<PHINode>(LoadedPtr))
+    return false;
 
   // Scan a few instructions up from the load, to see if it is obviously live at
   // the entry to its block.
@@ -1008,23 +1015,31 @@ bool JumpThreadingPass::SimplifyPartiallyRedundantLoad(LoadInst *LI) {
     if (!PredsScanned.insert(PredBB).second)
       continue;
 
-    // Scan the predecessor to see if the value is available in the pred.
     BBIt = PredBB->end();
     unsigned NumScanedInst = 0;
-    Value *PredAvailable = FindAvailableLoadedValue(
-        LI, PredBB, BBIt, DefMaxInstsToScan, AA, &IsLoadCSE, &NumScanedInst);
+    Value *PredAvailable = nullptr;
+    // NOTE: We don't CSE load that is volatile or anything stronger than
+    // unordered, that should have been checked when we entered the function.
+    assert(LI->isUnordered() && "Attempting to CSE volatile or atomic loads");
+    // If this is a load on a phi pointer, phi-translate it and search
+    // for available load/store to the pointer in predecessors.
+    Value *Ptr = LoadedPtr->DoPHITranslation(LoadBB, PredBB);
+    PredAvailable = FindAvailablePtrLoadStore(
+        Ptr, LI->getType(), LI->isAtomic(), PredBB, BBIt, DefMaxInstsToScan,
+        AA, &IsLoadCSE, &NumScanedInst);
 
-    // If PredBB has a single predecessor, continue scanning through the single
-    // predecessor.
+    // If PredBB has a single predecessor, continue scanning through the
+    // single precessor.
     BasicBlock *SinglePredBB = PredBB;
     while (!PredAvailable && SinglePredBB && BBIt == SinglePredBB->begin() &&
            NumScanedInst < DefMaxInstsToScan) {
       SinglePredBB = SinglePredBB->getSinglePredecessor();
       if (SinglePredBB) {
         BBIt = SinglePredBB->end();
-        PredAvailable = FindAvailableLoadedValue(
-            LI, SinglePredBB, BBIt, (DefMaxInstsToScan - NumScanedInst), AA,
-            &IsLoadCSE, &NumScanedInst);
+        PredAvailable = FindAvailablePtrLoadStore(
+            Ptr, LI->getType(), LI->isAtomic(), SinglePredBB, BBIt,
+            (DefMaxInstsToScan - NumScanedInst), AA, &IsLoadCSE,
+            &NumScanedInst);
       }
     }
 
@@ -1087,10 +1102,10 @@ bool JumpThreadingPass::SimplifyPartiallyRedundantLoad(LoadInst *LI) {
   if (UnavailablePred) {
     assert(UnavailablePred->getTerminator()->getNumSuccessors() == 1 &&
            "Can't handle critical edge here!");
-    LoadInst *NewVal =
-        new LoadInst(LoadedPtr, LI->getName() + ".pr", false,
-                     LI->getAlignment(), LI->getOrdering(), LI->getSynchScope(),
-                     UnavailablePred->getTerminator());
+    LoadInst *NewVal = new LoadInst(
+        LoadedPtr->DoPHITranslation(LoadBB, UnavailablePred),
+        LI->getName() + ".pr", false, LI->getAlignment(), LI->getOrdering(),
+        LI->getSynchScope(), UnavailablePred->getTerminator());
     NewVal->setDebugLoc(LI->getDebugLoc());
     if (AATags)
       NewVal->setAAMetadata(AATags);

@@ -19648,6 +19648,15 @@ static SDValue LowerINTRINSIC_WO_CHAIN(SDValue Op, const X86Subtarget &Subtarget
                                 Src2, Src1);
       return DAG.getBitcast(VT, Res);
     }
+    case MASK_BINOP: {
+      MVT VT = Op.getSimpleValueType();
+      MVT MaskVT = MVT::getVectorVT(MVT::i1, VT.getSizeInBits());
+
+      SDValue Src1 = getMaskNode(Op.getOperand(1), MaskVT, Subtarget, DAG, dl);
+      SDValue Src2 = getMaskNode(Op.getOperand(2), MaskVT, Subtarget, DAG, dl);
+      SDValue Res = DAG.getNode(IntrData->Opc0, dl, MaskVT, Src1, Src2);
+      return DAG.getBitcast(VT, Res);
+    }
     case FIXUPIMMS:
     case FIXUPIMMS_MASKZ:
     case FIXUPIMM:
@@ -19818,6 +19827,33 @@ static SDValue LowerINTRINSIC_WO_CHAIN(SDValue Op, const X86Subtarget &Subtarget
     SDValue Test = DAG.getNode(X86ISD::KORTEST, dl, MVT::i32, LHS, RHS);
     SDValue SetCC = getSETCC(X86CC, Test, dl, DAG);
     return DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::i32, SetCC);
+  }
+
+  case Intrinsic::x86_avx512_knot_w: {
+    SDValue LHS = DAG.getBitcast(MVT::v16i1, Op.getOperand(1));
+    SDValue RHS = DAG.getConstant(1, dl, MVT::v16i1);
+    SDValue Res = DAG.getNode(ISD::XOR, dl, MVT::v16i1, LHS, RHS);
+    return DAG.getBitcast(MVT::i16, Res);
+  }
+
+  case Intrinsic::x86_avx512_kandn_w: {
+    SDValue LHS = DAG.getBitcast(MVT::v16i1, Op.getOperand(1));
+    // Invert LHS for the not.
+    LHS = DAG.getNode(ISD::XOR, dl, MVT::v16i1, LHS,
+                      DAG.getConstant(1, dl, MVT::v16i1));
+    SDValue RHS = DAG.getBitcast(MVT::v16i1, Op.getOperand(2));
+    SDValue Res = DAG.getNode(ISD::AND, dl, MVT::v16i1, LHS, RHS);
+    return DAG.getBitcast(MVT::i16, Res);
+  }
+
+  case Intrinsic::x86_avx512_kxnor_w: {
+    SDValue LHS = DAG.getBitcast(MVT::v16i1, Op.getOperand(1));
+    SDValue RHS = DAG.getBitcast(MVT::v16i1, Op.getOperand(2));
+    SDValue Res = DAG.getNode(ISD::XOR, dl, MVT::v16i1, LHS, RHS);
+    // Invert result for the not.
+    Res = DAG.getNode(ISD::XOR, dl, MVT::v16i1, Res,
+                      DAG.getConstant(1, dl, MVT::v16i1));
+    return DAG.getBitcast(MVT::i16, Res);
   }
 
   case Intrinsic::x86_sse42_pcmpistria128:
