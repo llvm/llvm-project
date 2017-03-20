@@ -353,7 +353,7 @@ template <class ELFT> void Writer<ELFT>::createSyntheticSections() {
   }
 
   if (Config->BuildId != BuildIdKind::None) {
-    In<ELFT>::BuildId = make<BuildIdSection<ELFT>>();
+    In<ELFT>::BuildId = make<BuildIdSection>();
     Add(In<ELFT>::BuildId);
   }
 
@@ -415,7 +415,7 @@ template <class ELFT> void Writer<ELFT>::createSyntheticSections() {
   // Add .got. MIPS' .got is so different from the other archs,
   // it has its own class.
   if (Config->EMachine == EM_MIPS) {
-    In<ELFT>::MipsGot = make<MipsGotSection<ELFT>>();
+    In<ELFT>::MipsGot = make<MipsGotSection>();
     Add(In<ELFT>::MipsGot);
   } else {
     In<ELFT>::Got = make<GotSection<ELFT>>();
@@ -802,9 +802,7 @@ template <class ELFT> void Writer<ELFT>::addReservedSymbols() {
     ElfSym::MipsGp = Symtab<ELFT>::X->addAbsolute("_gp", STV_HIDDEN, STB_LOCAL);
 
     // On MIPS O32 ABI, _gp_disp is a magic symbol designates offset between
-    // start of function and 'gp' pointer into GOT. To simplify relocation
-    // calculation we assign _gp value to it and calculate corresponding
-    // relocations as relative to this value.
+    // start of function and 'gp' pointer into GOT.
     if (Symtab<ELFT>::X->find("_gp_disp"))
       ElfSym::MipsGpDisp =
           Symtab<ELFT>::X->addAbsolute("_gp_disp", STV_HIDDEN, STB_LOCAL);
@@ -1692,10 +1690,6 @@ template <class ELFT> void Writer<ELFT>::fixPredefinedSymbols() {
       if (Gp != (uintX_t)-1)
         ElfSym::MipsGp->Value = Gp + 0x7ff0;
     }
-    if (ElfSym::MipsGpDisp)
-      ElfSym::MipsGpDisp->Value = ElfSym::MipsGp->Value;
-    if (ElfSym::MipsLocalGp)
-      ElfSym::MipsLocalGp->Value = ElfSym::MipsGp->Value;
   }
 }
 

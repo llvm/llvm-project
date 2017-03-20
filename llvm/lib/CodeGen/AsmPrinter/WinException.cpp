@@ -68,7 +68,7 @@ void WinException::beginFunction(const MachineFunction *MF) {
 
   const Function *F = MF->getFunction();
 
-  shouldEmitMoves = Asm->needsSEHMoves();
+  shouldEmitMoves = Asm->needsSEHMoves() && MF->hasWinCFI();
 
   const TargetLoweringObjectFile &TLOF = Asm->getObjFileLowering();
   unsigned PerEncoding = TLOF.getPersonalityEncoding();
@@ -94,7 +94,7 @@ void WinException::beginFunction(const MachineFunction *MF) {
 
   // If we're not using CFI, we don't want the CFI or the personality, but we
   // might want EH tables if we had EH pads.
-  if (!Asm->MAI->usesWindowsCFI() || (!MF->hasWinCFI() && !PerFn)) {
+  if (!Asm->MAI->usesWindowsCFI()) {
     if (Per == EHPersonality::MSVC_X86SEH && !hasEHFunclets) {
       // If this is 32-bit SEH and we don't have any funclets (really invokes),
       // make sure we emit the parent offset label. Some unreferenced filter

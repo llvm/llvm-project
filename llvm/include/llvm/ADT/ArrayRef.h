@@ -487,6 +487,18 @@ namespace llvm {
     return ArrayRef<T>(Arr);
   }
 
+  /// Construct a MutableArrayRef from a single element.
+  template<typename T>
+  MutableArrayRef<T> makeMutableArrayRef(T &OneElt) {
+    return OneElt;
+  }
+
+  /// Construct a MutableArrayRef from a pointer and length.
+  template<typename T>
+  MutableArrayRef<T> makeMutableArrayRef(T *data, size_t length) {
+    return MutableArrayRef<T>(data, length);
+  }
+
   /// @}
   /// @name ArrayRef Comparison Operators
   /// @{

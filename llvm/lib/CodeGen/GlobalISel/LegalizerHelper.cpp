@@ -114,11 +114,12 @@ LegalizerHelper::libcall(MachineInstr &MI) {
     Type *Ty = Size == 64 ? Type::getDoubleTy(Ctx) : Type::getFloatTy(Ctx);
     auto &CLI = *MIRBuilder.getMF().getSubtarget().getCallLowering();
     auto &TLI = *MIRBuilder.getMF().getSubtarget().getTargetLowering();
-    const char *Name = TLI.getLibcallName(getRTLibDesc(MI.getOpcode(), Size));
+    auto Libcall = getRTLibDesc(MI.getOpcode(), Size);
+    const char *Name = TLI.getLibcallName(Libcall);
     MIRBuilder.getMF().getFrameInfo().setHasCalls(true);
     CLI.lowerCall(
-        MIRBuilder, MachineOperand::CreateES(Name),
-        {MI.getOperand(0).getReg(), Ty},
+        MIRBuilder, TLI.getLibcallCallingConv(Libcall),
+        MachineOperand::CreateES(Name), {MI.getOperand(0).getReg(), Ty},
         {{MI.getOperand(1).getReg(), Ty}, {MI.getOperand(2).getReg(), Ty}});
     MI.eraseFromParent();
     return Legalized;

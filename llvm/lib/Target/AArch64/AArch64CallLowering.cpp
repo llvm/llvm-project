@@ -302,6 +302,7 @@ bool AArch64CallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
 }
 
 bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
+                                    CallingConv::ID CallConv,
                                     const MachineOperand &Callee,
                                     const ArgInfo &OrigRet,
                                     ArrayRef<ArgInfo> OrigArgs) const {
@@ -321,9 +322,9 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   // Find out which ABI gets to decide where things go.
   const AArch64TargetLowering &TLI = *getTLI<AArch64TargetLowering>();
   CCAssignFn *AssignFnFixed =
-      TLI.CCAssignFnForCall(F.getCallingConv(), /*IsVarArg=*/false);
+      TLI.CCAssignFnForCall(CallConv, /*IsVarArg=*/false);
   CCAssignFn *AssignFnVarArg =
-      TLI.CCAssignFnForCall(F.getCallingConv(), /*IsVarArg=*/true);
+      TLI.CCAssignFnForCall(CallConv, /*IsVarArg=*/true);
 
   auto CallSeqStart = MIRBuilder.buildInstr(AArch64::ADJCALLSTACKDOWN);
 

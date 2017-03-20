@@ -526,3 +526,20 @@ entry:
   %r = notail call arm_aapcscc double @aapcscc_fp_target(float %b, double %a, float %b, double %a)
   ret double %r
 }
+
+declare arm_aapcscc float @different_call_conv_target(float)
+
+define arm_aapcs_vfpcc float @test_call_different_call_conv(float %x) {
+; CHECK-LABEL: name: test_call_different_call_conv
+; CHECK: [[X:%[0-9]+]](s32) = COPY %s0
+; CHECK: ADJCALLSTACKDOWN 0, 14, _, implicit-def %sp, implicit %sp
+; CHECK: %r0 = COPY [[X]]
+; CHECK: BLX @different_call_conv_target, csr_aapcs, implicit-def %lr, implicit %sp, implicit %r0, implicit-def %r0
+; CHECK: [[R:%[0-9]+]](s32) = COPY %r0
+; CHECK: ADJCALLSTACKUP 0, 0, 14, _, implicit-def %sp, implicit %sp
+; CHECK: %s0 = COPY [[R]]
+; CHECK: BX_RET 14, _, implicit %s0
+entry:
+  %r = notail call arm_aapcscc float @different_call_conv_target(float %x)
+  ret float %r
+}

@@ -317,9 +317,10 @@ isStaticLinkTimeConstant(RelExpr E, uint32_t Type, const SymbolBody &Body,
                          InputSectionBase &S, typename ELFT::uint RelOff) {
   // These expressions always compute a constant
   if (isRelExprOneOf<R_SIZE, R_GOT_FROM_END, R_GOT_OFF, R_MIPS_GOT_LOCAL_PAGE,
-                     R_MIPS_GOT_OFF, R_MIPS_GOT_OFF32, R_MIPS_TLSGD,
-                     R_GOT_PAGE_PC, R_GOT_PC, R_PLT_PC, R_TLSGD_PC, R_TLSGD,
-                     R_PPC_PLT_OPD, R_TLSDESC_CALL, R_TLSDESC_PAGE, R_HINT>(E))
+                     R_MIPS_GOT_OFF, R_MIPS_GOT_OFF32, R_MIPS_GOT_GP_PC,
+                     R_MIPS_TLSGD, R_GOT_PAGE_PC, R_GOT_PC, R_PLT_PC,
+                     R_TLSGD_PC, R_TLSGD, R_PPC_PLT_OPD, R_TLSDESC_CALL,
+                     R_TLSDESC_PAGE, R_HINT>(E))
     return true;
 
   // These never do, except if the entire file is position dependent or if
@@ -350,8 +351,6 @@ isStaticLinkTimeConstant(RelExpr E, uint32_t Type, const SymbolBody &Body,
   // to simplify the code.
   if (AbsVal && RelE) {
     if (Body.isUndefined() && !Body.isLocal() && Body.symbol()->isWeak())
-      return true;
-    if (&Body == ElfSym::MipsGpDisp)
       return true;
     error(S.getLocation<ELFT>(RelOff) + ": relocation " + toString(Type) +
           " cannot refer to absolute symbol '" + toString(Body) +
@@ -582,13 +581,6 @@ static int64_t computeAddend(const elf::ObjectFile<ELFT> &File,
     Addend += Target->getImplicitAddend(BufLoc, Type);
   if (Config->EMachine == EM_MIPS) {
     Addend += findMipsPairedAddend<ELFT>(SectionData, BufLoc, Body, &RI, End);
-    if (Type == R_MIPS_LO16 && Expr == R_PC)
-      // R_MIPS_LO16 expression has R_PC type iif the target is _gp_disp
-      // symbol. In that case we should use the following formula for
-      // calculation "AHL + GP - P + 4". Let's add 4 right here.
-      // For details see p. 4-19 at
-      // ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
-      Addend += 4;
     if (Expr == R_MIPS_GOTREL && Body.isLocal())
       Addend += File.MipsGp0;
   }

@@ -27,17 +27,12 @@ bool canCoerceMustAliasedValueToLoad(Value *StoredVal, Type *LoadTy,
   return true;
 }
 
-/// If we saw a store of a value to memory, and
-/// then a load from a must-aliased pointer of a different type, try to coerce
-/// the stored value.  LoadedTy is the type of the load we want to replace.
-/// IRB is IRBuilder used to insert new instructions.
-///
-/// If we can't do it, return null.
-Value *coerceAvailableValueToLoadType(Value *StoredVal, Type *LoadedTy,
-                                      IRBuilder<> &IRB, const DataLayout &DL) {
+template <class T, class HelperClass>
+static T *coerceAvailableValueToLoadTypeHelper(T *StoredVal, Type *LoadedTy,
+                                               HelperClass &Helper,
+                                               const DataLayout &DL) {
   assert(canCoerceMustAliasedValueToLoad(StoredVal, LoadedTy, DL) &&
          "precondition violation - materialization can't fail");
-
   if (auto *C = dyn_cast<Constant>(StoredVal))
     if (auto *FoldedStoredVal = ConstantFoldConstant(C, DL))
       StoredVal = FoldedStoredVal;
@@ -53,12 +48,12 @@ Value *coerceAvailableValueToLoadType(Value *StoredVal, Type *LoadedTy,
     // Pointer to Pointer -> use bitcast.
     if (StoredValTy->getScalarType()->isPointerTy() &&
         LoadedTy->getScalarType()->isPointerTy()) {
-      StoredVal = IRB.CreateBitCast(StoredVal, LoadedTy);
+      StoredVal = Helper.CreateBitCast(StoredVal, LoadedTy);
     } else {
       // Convert source pointers to integers, which can be bitcast.
       if (StoredValTy->getScalarType()->isPointerTy()) {
         StoredValTy = DL.getIntPtrType(StoredValTy);
-        StoredVal = IRB.CreatePtrToInt(StoredVal, StoredValTy);
+        StoredVal = Helper.CreatePtrToInt(StoredVal, StoredValTy);
       }
 
       Type *TypeToCastTo = LoadedTy;
@@ -66,11 +61,11 @@ Value *coerceAvailableValueToLoadType(Value *StoredVal, Type *LoadedTy,
         TypeToCastTo = DL.getIntPtrType(TypeToCastTo);
 
       if (StoredValTy != TypeToCastTo)
-        StoredVal = IRB.CreateBitCast(StoredVal, TypeToCastTo);
+        StoredVal = Helper.CreateBitCast(StoredVal, TypeToCastTo);
 
       // Cast to pointer if the load needs a pointer type.
       if (LoadedTy->getScalarType()->isPointerTy())
-        StoredVal = IRB.CreateIntToPtr(StoredVal, LoadedTy);
+        StoredVal = Helper.CreateIntToPtr(StoredVal, LoadedTy);
     }
 
     if (auto *C = dyn_cast<ConstantExpr>(StoredVal))
@@ -79,7 +74,6 @@ Value *coerceAvailableValueToLoadType(Value *StoredVal, Type *LoadedTy,
 
     return StoredVal;
   }
-
   // If the loaded value is smaller than the available value, then we can
   // extract out a piece from it.  If the available value is too small, then we
   // can't do anything.
@@ -89,13 +83,13 @@ Value *coerceAvailableValueToLoadType(Value *StoredVal, Type *LoadedTy,
   // Convert source pointers to integers, which can be manipulated.
   if (StoredValTy->getScalarType()->isPointerTy()) {
     StoredValTy = DL.getIntPtrType(StoredValTy);
-    StoredVal = IRB.CreatePtrToInt(StoredVal, StoredValTy);
+    StoredVal = Helper.CreatePtrToInt(StoredVal, StoredValTy);
   }
 
   // Convert vectors and fp to integer, which can be manipulated.
   if (!StoredValTy->isIntegerTy()) {
     StoredValTy = IntegerType::get(StoredValTy->getContext(), StoredValSize);
-    StoredVal = IRB.CreateBitCast(StoredVal, StoredValTy);
+    StoredVal = Helper.CreateBitCast(StoredVal, StoredValTy);
   }
 
   // If this is a big-endian system, we need to shift the value down to the low
@@ -103,20 +97,21 @@ Value *coerceAvailableValueToLoadType(Value *StoredVal, Type *LoadedTy,
   if (DL.isBigEndian()) {
     uint64_t ShiftAmt = DL.getTypeStoreSizeInBits(StoredValTy) -
                         DL.getTypeStoreSizeInBits(LoadedTy);
-    StoredVal = IRB.CreateLShr(StoredVal, ShiftAmt, "tmp");
+    StoredVal = Helper.CreateLShr(
+        StoredVal, ConstantInt::get(StoredVal->getType(), ShiftAmt));
   }
 
   // Truncate the integer to the right size now.
   Type *NewIntTy = IntegerType::get(StoredValTy->getContext(), LoadedValSize);
-  StoredVal = IRB.CreateTrunc(StoredVal, NewIntTy, "trunc");
+  StoredVal = Helper.CreateTruncOrBitCast(StoredVal, NewIntTy);
 
   if (LoadedTy != NewIntTy) {
     // If the result is a pointer, inttoptr.
     if (LoadedTy->getScalarType()->isPointerTy())
-      StoredVal = IRB.CreateIntToPtr(StoredVal, LoadedTy, "inttoptr");
+      StoredVal = Helper.CreateIntToPtr(StoredVal, LoadedTy);
     else
       // Otherwise, bitcast.
-      StoredVal = IRB.CreateBitCast(StoredVal, LoadedTy, "bitcast");
+      StoredVal = Helper.CreateBitCast(StoredVal, LoadedTy);
   }
 
   if (auto *C = dyn_cast<Constant>(StoredVal))
@@ -126,10 +121,21 @@ Value *coerceAvailableValueToLoadType(Value *StoredVal, Type *LoadedTy,
   return StoredVal;
 }
 
-/// This function is called when we have a
-/// memdep query of a load that ends up being a clobbering memory write (store,
-/// memset, memcpy, memmove).  This means that the write *may* provide bits used
-/// by the load but we can't be sure because the pointers don't mustalias.
+/// If we saw a store of a value to memory, and
+/// then a load from a must-aliased pointer of a different type, try to coerce
+/// the stored value.  LoadedTy is the type of the load we want to replace.
+/// IRB is IRBuilder used to insert new instructions.
+///
+/// If we can't do it, return null.
+Value *coerceAvailableValueToLoadType(Value *StoredVal, Type *LoadedTy,
+                                      IRBuilder<> &IRB, const DataLayout &DL) {
+  return coerceAvailableValueToLoadTypeHelper(StoredVal, LoadedTy, IRB, DL);
+}
+
+/// This function is called when we have a memdep query of a load that ends up
+/// being a clobbering memory write (store, memset, memcpy, memmove).  This
+/// means that the write *may* provide bits used by the load but we can't be
+/// sure because the pointers don't must-alias.
 ///
 /// Check this case to see if there is anything more we can do before we give
 /// up.  This returns -1 if we have to give up, or a byte number in the stored
@@ -286,28 +292,20 @@ int analyzeLoadFromClobberingMemInst(Type *LoadTy, Value *LoadPtr,
   return -1;
 }
 
-/// This function is called when we have a
-/// memdep query of a load that ends up being a clobbering store.  This means
-/// that the store provides bits used by the load but we the pointers don't
-/// mustalias.  Check this case to see if there is anything more we can do
-/// before we give up.
-Value *getStoreValueForLoad(Value *SrcVal, unsigned Offset, Type *LoadTy,
-                            Instruction *InsertPt, const DataLayout &DL) {
+template <class T, class HelperClass>
+static T *getStoreValueForLoadHelper(T *SrcVal, unsigned Offset, Type *LoadTy,
+                                     HelperClass &Helper,
+                                     const DataLayout &DL) {
   LLVMContext &Ctx = SrcVal->getType()->getContext();
 
   uint64_t StoreSize = (DL.getTypeSizeInBits(SrcVal->getType()) + 7) / 8;
   uint64_t LoadSize = (DL.getTypeSizeInBits(LoadTy) + 7) / 8;
-
-  IRBuilder<> Builder(InsertPt);
-
   // Compute which bits of the stored value are being used by the load.  Convert
   // to an integer type to start with.
   if (SrcVal->getType()->getScalarType()->isPointerTy())
-    SrcVal =
-        Builder.CreatePtrToInt(SrcVal, DL.getIntPtrType(SrcVal->getType()));
+    SrcVal = Helper.CreatePtrToInt(SrcVal, DL.getIntPtrType(SrcVal->getType()));
   if (!SrcVal->getType()->isIntegerTy())
-    SrcVal =
-        Builder.CreateBitCast(SrcVal, IntegerType::get(Ctx, StoreSize * 8));
+    SrcVal = Helper.CreateBitCast(SrcVal, IntegerType::get(Ctx, StoreSize * 8));
 
   // Shift the bits to the least significant depending on endianness.
   unsigned ShiftAmt;
@@ -315,25 +313,42 @@ Value *getStoreValueForLoad(Value *SrcVal, unsigned Offset, Type *LoadTy,
     ShiftAmt = Offset * 8;
   else
     ShiftAmt = (StoreSize - LoadSize - Offset) * 8;
-
   if (ShiftAmt)
-    SrcVal = Builder.CreateLShr(SrcVal, ShiftAmt);
+    SrcVal = Helper.CreateLShr(SrcVal,
+                               ConstantInt::get(SrcVal->getType(), ShiftAmt));
 
   if (LoadSize != StoreSize)
-    SrcVal = Builder.CreateTrunc(SrcVal, IntegerType::get(Ctx, LoadSize * 8));
-
-  return coerceAvailableValueToLoadType(SrcVal, LoadTy, Builder, DL);
+    SrcVal = Helper.CreateTruncOrBitCast(SrcVal,
+                                         IntegerType::get(Ctx, LoadSize * 8));
+  return SrcVal;
 }
 
-/// This function is called when we have a
-/// memdep query of a load that ends up being a clobbering load.  This means
-/// that the load *may* provide bits used by the load but we can't be sure
-/// because the pointers don't mustalias.  Check this case to see if there is
-/// anything more we can do before we give up.
-Value *getLoadValueForLoad(LoadInst *SrcVal, unsigned Offset, Type *LoadTy,
-                           Instruction *InsertPt) {
+/// This function is called when we have a memdep query of a load that ends up
+/// being a clobbering store.  This means that the store provides bits used by
+/// the load but the pointers don't must-alias.  Check this case to see if
+/// there is anything more we can do before we give up.
+Value *getStoreValueForLoad(Value *SrcVal, unsigned Offset, Type *LoadTy,
+                            Instruction *InsertPt, const DataLayout &DL) {
 
-  const DataLayout &DL = SrcVal->getModule()->getDataLayout();
+  IRBuilder<> Builder(InsertPt);
+  SrcVal = getStoreValueForLoadHelper(SrcVal, Offset, LoadTy, Builder, DL);
+  return coerceAvailableValueToLoadTypeHelper(SrcVal, LoadTy, Builder, DL);
+}
+
+Constant *getConstantStoreValueForLoad(Constant *SrcVal, unsigned Offset,
+                                       Type *LoadTy, const DataLayout &DL) {
+  ConstantFolder F;
+  SrcVal = getStoreValueForLoadHelper(SrcVal, Offset, LoadTy, F, DL);
+  return coerceAvailableValueToLoadTypeHelper(SrcVal, LoadTy, F, DL);
+}
+
+/// This function is called when we have a memdep query of a load that ends up
+/// being a clobbering load.  This means that the load *may* provide bits used
+/// by the load but we can't be sure because the pointers don't must-alias.
+/// Check this case to see if there is anything more we can do before we give
+/// up.
+Value *getLoadValueForLoad(LoadInst *SrcVal, unsigned Offset, Type *LoadTy,
+                           Instruction *InsertPt, const DataLayout &DL) {
   // If Offset+LoadTy exceeds the size of SrcVal, then we must be wanting to
   // widen SrcVal out to a larger load.
   unsigned SrcValStoreSize = DL.getTypeStoreSize(SrcVal->getType());
@@ -348,7 +363,6 @@ Value *getLoadValueForLoad(LoadInst *SrcVal, unsigned Offset, Type *LoadTy,
       NewLoadSize = NextPowerOf2(NewLoadSize);
 
     Value *PtrVal = SrcVal->getPointerOperand();
-
     // Insert the new load after the old load.  This ensures that subsequent
     // memdep queries will find the new load.  We can't easily remove the old
     // load completely because it is already in the value numbering table.
@@ -379,44 +393,51 @@ Value *getLoadValueForLoad(LoadInst *SrcVal, unsigned Offset, Type *LoadTy,
   return getStoreValueForLoad(SrcVal, Offset, LoadTy, InsertPt, DL);
 }
 
-/// This function is called when we have a
-/// memdep query of a load that ends up being a clobbering mem intrinsic.
-Value *getMemInstValueForLoad(MemIntrinsic *SrcInst, unsigned Offset,
-                              Type *LoadTy, Instruction *InsertPt,
-                              const DataLayout &DL) {
+Constant *getConstantLoadValueForLoad(Constant *SrcVal, unsigned Offset,
+                                      Type *LoadTy, const DataLayout &DL) {
+  unsigned SrcValStoreSize = DL.getTypeStoreSize(SrcVal->getType());
+  unsigned LoadSize = DL.getTypeStoreSize(LoadTy);
+  if (Offset + LoadSize > SrcValStoreSize)
+    return nullptr;
+  return getConstantStoreValueForLoad(SrcVal, Offset, LoadTy, DL);
+}
+
+template <class T, class HelperClass>
+T *getMemInstValueForLoadHelper(MemIntrinsic *SrcInst, unsigned Offset,
+                                Type *LoadTy, HelperClass &Helper,
+                                const DataLayout &DL) {
   LLVMContext &Ctx = LoadTy->getContext();
   uint64_t LoadSize = DL.getTypeSizeInBits(LoadTy) / 8;
-
-  IRBuilder<> Builder(InsertPt);
 
   // We know that this method is only called when the mem transfer fully
   // provides the bits for the load.
   if (MemSetInst *MSI = dyn_cast<MemSetInst>(SrcInst)) {
     // memset(P, 'x', 1234) -> splat('x'), even if x is a variable, and
     // independently of what the offset is.
-    Value *Val = MSI->getValue();
+    T *Val = cast<T>(MSI->getValue());
     if (LoadSize != 1)
-      Val = Builder.CreateZExt(Val, IntegerType::get(Ctx, LoadSize * 8));
-
-    Value *OneElt = Val;
+      Val =
+          Helper.CreateZExtOrBitCast(Val, IntegerType::get(Ctx, LoadSize * 8));
+    T *OneElt = Val;
 
     // Splat the value out to the right number of bits.
     for (unsigned NumBytesSet = 1; NumBytesSet != LoadSize;) {
       // If we can double the number of bytes set, do it.
       if (NumBytesSet * 2 <= LoadSize) {
-        Value *ShVal = Builder.CreateShl(Val, NumBytesSet * 8);
-        Val = Builder.CreateOr(Val, ShVal);
+        T *ShVal = Helper.CreateShl(
+            Val, ConstantInt::get(Val->getType(), NumBytesSet * 8));
+        Val = Helper.CreateOr(Val, ShVal);
         NumBytesSet <<= 1;
         continue;
       }
 
       // Otherwise insert one byte at a time.
-      Value *ShVal = Builder.CreateShl(Val, 1 * 8);
-      Val = Builder.CreateOr(OneElt, ShVal);
+      T *ShVal = Helper.CreateShl(Val, ConstantInt::get(Val->getType(), 1 * 8));
+      Val = Helper.CreateOr(OneElt, ShVal);
       ++NumBytesSet;
     }
 
-    return coerceAvailableValueToLoadType(Val, LoadTy, Builder, DL);
+    return coerceAvailableValueToLoadTypeHelper(Val, LoadTy, Helper, DL);
   }
 
   // Otherwise, this is a memcpy/memmove from a constant global.
@@ -434,6 +455,28 @@ Value *getMemInstValueForLoad(MemIntrinsic *SrcInst, unsigned Offset,
                                        OffsetCst);
   Src = ConstantExpr::getBitCast(Src, PointerType::get(LoadTy, AS));
   return ConstantFoldLoadFromConstPtr(Src, LoadTy, DL);
+}
+
+/// This function is called when we have a
+/// memdep query of a load that ends up being a clobbering mem intrinsic.
+Value *getMemInstValueForLoad(MemIntrinsic *SrcInst, unsigned Offset,
+                              Type *LoadTy, Instruction *InsertPt,
+                              const DataLayout &DL) {
+  IRBuilder<> Builder(InsertPt);
+  return getMemInstValueForLoadHelper<Value, IRBuilder<>>(SrcInst, Offset,
+                                                          LoadTy, Builder, DL);
+}
+
+Constant *getConstantMemInstValueForLoad(MemIntrinsic *SrcInst, unsigned Offset,
+                                         Type *LoadTy, const DataLayout &DL) {
+  // The only case analyzeLoadFromClobberingMemInst cannot be converted to a
+  // constant is when it's a memset of a non-constant.
+  if (auto *MSI = dyn_cast<MemSetInst>(SrcInst))
+    if (!isa<Constant>(MSI->getValue()))
+      return nullptr;
+  ConstantFolder F;
+  return getMemInstValueForLoadHelper<Constant, ConstantFolder>(SrcInst, Offset,
+                                                                LoadTy, F, DL);
 }
 } // namespace VNCoercion
 } // namespace llvm

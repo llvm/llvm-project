@@ -156,6 +156,8 @@ public:
   /// This hook must be implemented to lower the given call instruction,
   /// including argument and return value marshalling.
   ///
+  /// \p CallConv is the calling convention to be used for the call.
+  ///
   /// \p Callee is the destination of the call. It should be either a register,
   /// globaladdress, or externalsymbol.
   ///
@@ -171,7 +173,7 @@ public:
   /// needs to be passed.
   ///
   /// \return true if the lowering succeeded, false otherwise.
-  virtual bool lowerCall(MachineIRBuilder &MIRBuilder,
+  virtual bool lowerCall(MachineIRBuilder &MIRBuilder, CallingConv::ID CallConv,
                          const MachineOperand &Callee, const ArgInfo &OrigRet,
                          ArrayRef<ArgInfo> OrigArgs) const {
     return false;

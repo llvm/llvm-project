@@ -5504,17 +5504,16 @@ ScalarEvolution::getSmallConstantTripMultiple(const Loop *L,
     return 1;
 
   // Get the trip count from the BE count by adding 1.
-  const SCEV *TCMul = getAddExpr(ExitCount, getOne(ExitCount->getType()));
-  // FIXME: SCEV distributes multiplication as V1*C1 + V2*C1. We could attempt
-  // to factor simple cases.
-  if (const SCEVMulExpr *Mul = dyn_cast<SCEVMulExpr>(TCMul))
-    TCMul = Mul->getOperand(0);
+  const SCEV *TCExpr = getAddExpr(ExitCount, getOne(ExitCount->getType()));
 
-  const SCEVConstant *MulC = dyn_cast<SCEVConstant>(TCMul);
-  if (!MulC)
-    return 1;
+  const SCEVConstant *TC = dyn_cast<SCEVConstant>(TCExpr);
+  if (!TC)
+    // Attempt to factor more general cases. Returns the greatest power of
+    // two divisor. If overflow happens, the trip count expression is still
+    // divisible by the greatest power of 2 divisor returned.
+    return 1U << std::min((uint32_t)31, GetMinTrailingZeros(TCExpr));
 
-  ConstantInt *Result = MulC->getValue();
+  ConstantInt *Result = TC->getValue();
 
   // Guard against huge trip counts (this requires checking
   // for zero to handle the case where the trip count == -1 and the
@@ -9667,6 +9666,13 @@ static void PrintLoopInfo(raw_ostream &OS, ScalarEvolution *SE,
     OS << "Unpredictable predicated backedge-taken count. ";
   }
   OS << "\n";
+
+  if (SE->hasLoopInvariantBackedgeTakenCount(L)) {
+    OS << "Loop ";
+    L->getHeader()->printAsOperand(OS, /*PrintType=*/false);
+    OS << ": ";
+    OS << "Trip multiple is " << SE->getSmallConstantTripMultiple(L) << "\n";
+  }
 }
 
 static StringRef loopDispositionToStr(ScalarEvolution::LoopDisposition LD) {

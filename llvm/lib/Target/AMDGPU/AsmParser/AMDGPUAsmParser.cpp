@@ -542,9 +542,11 @@ public:
     return getModifiers().hasIntModifiers();
   }
 
+  uint64_t applyInputFPModifiers(uint64_t Val, unsigned Size) const;
+
   void addImmOperands(MCInst &Inst, unsigned N, bool ApplyModifiers = true) const;
 
-  void addLiteralImmOperand(MCInst &Inst, int64_t Val) const;
+  void addLiteralImmOperand(MCInst &Inst, int64_t Val, bool ApplyModifiers) const;
 
   template <unsigned Bitwidth>
   void addKImmFPOperands(MCInst &Inst, unsigned N) const;
@@ -949,9 +951,10 @@ public:
   OperandMatchResultTy parseStringWithPrefix(StringRef Prefix,
                                              StringRef &Value);
 
-  OperandMatchResultTy parseImm(OperandVector &Operands);
+  bool parseAbsoluteExpr(int64_t &Val, bool AbsMod = false);
+  OperandMatchResultTy parseImm(OperandVector &Operands, bool AbsMod = false);
   OperandMatchResultTy parseReg(OperandVector &Operands);
-  OperandMatchResultTy parseRegOrImm(OperandVector &Operands);
+  OperandMatchResultTy parseRegOrImm(OperandVector &Operands, bool AbsMod = false);
   OperandMatchResultTy parseRegOrImmWithFPInputMods(OperandVector &Operands, bool AllowImm = true);
   OperandMatchResultTy parseRegOrImmWithIntInputMods(OperandVector &Operands, bool AllowImm = true);
   OperandMatchResultTy parseRegWithFPInputMods(OperandVector &Operands);
@@ -1173,6 +1176,13 @@ bool AMDGPUOperand::isLiteralImm(MVT type) const {
   if (!Imm.IsFPImm) {
     // We got int literal token.
 
+    if (type == MVT::f64 && hasFPModifiers()) {
+      // Cannot apply fp modifiers to int literals preserving the same semantics
+      // for VOP1/2/C and VOP3 because of integer truncation. To avoid ambiguity,
+      // disable these cases.
+      return false;
+    }
+
     unsigned Size = type.getSizeInBits();
     if (Size == 64)
       Size = 32;
@@ -1202,32 +1212,47 @@ bool AMDGPUOperand::isRegClass(unsigned RCID) const {
   return isRegKind() && AsmParser->getMRI()->getRegClass(RCID).contains(getReg());
 }
 
-void AMDGPUOperand::addImmOperands(MCInst &Inst, unsigned N, bool ApplyModifiers) const {
-  int64_t Val = Imm.Val;
-  if (isImmTy(ImmTyNone) && ApplyModifiers && Imm.Mods.hasFPModifiers() && Imm.Mods.Neg) {
-    // Apply modifiers to immediate value. Only negate can get here
-    if (Imm.IsFPImm) {
-      APFloat F(BitsToDouble(Val));
-      F.changeSign();
-      Val = F.bitcastToAPInt().getZExtValue();
-    } else {
-      Val = -Val;
-    }
+uint64_t AMDGPUOperand::applyInputFPModifiers(uint64_t Val, unsigned Size) const
+{
+  assert(isImmTy(ImmTyNone) && Imm.Mods.hasFPModifiers());
+  assert(Size == 2 || Size == 4 || Size == 8);
+
+  const uint64_t FpSignMask = (1ULL << (Size * 8 - 1));
+
+  if (Imm.Mods.Abs) {
+    Val &= ~FpSignMask;
   }
+  if (Imm.Mods.Neg) {
+    Val ^= FpSignMask;
+  }
+
+  return Val;
+}
+
+void AMDGPUOperand::addImmOperands(MCInst &Inst, unsigned N, bool ApplyModifiers) const {
 
   if (AMDGPU::isSISrcOperand(AsmParser->getMII()->get(Inst.getOpcode()),
                              Inst.getNumOperands())) {
-    addLiteralImmOperand(Inst, Val);
+    addLiteralImmOperand(Inst, Imm.Val,
+                         ApplyModifiers &
+                         isImmTy(ImmTyNone) && Imm.Mods.hasFPModifiers());
   } else {
-    Inst.addOperand(MCOperand::createImm(Val));
+    assert(!isImmTy(ImmTyNone) || !hasModifiers());
+    Inst.addOperand(MCOperand::createImm(Imm.Val));
   }
 }
 
-void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val) const {
+void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val, bool ApplyModifiers) const {
   const auto& InstDesc = AsmParser->getMII()->get(Inst.getOpcode());
   auto OpNum = Inst.getNumOperands();
   // Check that this operand accepts literals
   assert(AMDGPU::isSISrcOperand(InstDesc, OpNum));
+
+  if (ApplyModifiers) {
+    assert(AMDGPU::isSISrcFPOperand(InstDesc, OpNum));
+    const unsigned Size = Imm.IsFPImm ? sizeof(double) : getOperandSize(InstDesc, OpNum);
+    Val = applyInputFPModifiers(Val, Size);
+  }
 
   APInt Literal(64, Val);
   uint8_t OpTy = InstDesc.OpInfo[OpNum].OperandType;
@@ -1632,8 +1657,33 @@ std::unique_ptr<AMDGPUOperand> AMDGPUAsmParser::parseRegister() {
   return AMDGPUOperand::CreateReg(this, Reg, StartLoc, EndLoc, false);
 }
 
+bool
+AMDGPUAsmParser::parseAbsoluteExpr(int64_t &Val, bool AbsMod) {
+  if (AbsMod && getLexer().peekTok().is(AsmToken::Pipe) &&
+      (getLexer().getKind() == AsmToken::Integer ||
+       getLexer().getKind() == AsmToken::Real)) {
+
+    // This is a workaround for handling operands like these:
+    //     |1.0|
+    //     |-1|
+    // This syntax is not compatible with syntax of standard
+    // MC expressions (due to the trailing '|').
+
+    SMLoc EndLoc;
+    const MCExpr *Expr;
+
+    if (getParser().parsePrimaryExpr(Expr, EndLoc)) {
+      return true;
+    }
+
+    return !Expr->evaluateAsAbsolute(Val);
+  }
+
+  return getParser().parseAbsoluteExpression(Val);
+}
+
 OperandMatchResultTy
-AMDGPUAsmParser::parseImm(OperandVector &Operands) {
+AMDGPUAsmParser::parseImm(OperandVector &Operands, bool AbsMod) {
   // TODO: add syntactic sugar for 1/(2*PI)
   bool Minus = false;
   if (getLexer().getKind() == AsmToken::Minus) {
@@ -1645,7 +1695,7 @@ AMDGPUAsmParser::parseImm(OperandVector &Operands) {
   switch(getLexer().getKind()) {
   case AsmToken::Integer: {
     int64_t IntVal;
-    if (getParser().parseAbsoluteExpression(IntVal))
+    if (parseAbsoluteExpr(IntVal, AbsMod))
       return MatchOperand_ParseFail;
     if (Minus)
       IntVal *= -1;
@@ -1654,7 +1704,7 @@ AMDGPUAsmParser::parseImm(OperandVector &Operands) {
   }
   case AsmToken::Real: {
     int64_t IntVal;
-    if (getParser().parseAbsoluteExpression(IntVal))
+    if (parseAbsoluteExpr(IntVal, AbsMod))
       return MatchOperand_ParseFail;
 
     APFloat F(BitsToDouble(IntVal));
@@ -1682,8 +1732,8 @@ AMDGPUAsmParser::parseReg(OperandVector &Operands) {
 }
 
 OperandMatchResultTy
-AMDGPUAsmParser::parseRegOrImm(OperandVector &Operands) {
-  auto res = parseImm(Operands);
+AMDGPUAsmParser::parseRegOrImm(OperandVector &Operands, bool AbsMod) {
+  auto res = parseImm(Operands, AbsMod);
   if (res != MatchOperand_NoMatch) {
     return res;
   }
@@ -1694,14 +1744,44 @@ AMDGPUAsmParser::parseRegOrImm(OperandVector &Operands) {
 OperandMatchResultTy
 AMDGPUAsmParser::parseRegOrImmWithFPInputMods(OperandVector &Operands,
                                               bool AllowImm) {
-  // XXX: During parsing we can't determine if minus sign means
-  // negate-modifier or negative immediate value.
-  // By default we suppose it is modifier.
-  bool Negate = false, Abs = false, Abs2 = false;
+  bool Negate = false, Negate2 = false, Abs = false, Abs2 = false;
 
   if (getLexer().getKind()== AsmToken::Minus) {
+    const AsmToken NextToken = getLexer().peekTok();
+
+    // Disable ambiguous constructs like '--1' etc. Should use neg(-1) instead.
+    if (NextToken.is(AsmToken::Minus)) {
+      Error(Parser.getTok().getLoc(), "invalid syntax, expected 'neg' modifier");
+      return MatchOperand_ParseFail;
+    }
+
+    // '-' followed by an integer literal N should be interpreted as integer
+    // negation rather than a floating-point NEG modifier applied to N.
+    // Beside being contr-intuitive, such use of floating-point NEG modifier
+    // results in different meaning of integer literals used with VOP1/2/C
+    // and VOP3, for example:
+    //    v_exp_f32_e32 v5, -1 // VOP1: src0 = 0xFFFFFFFF
+    //    v_exp_f32_e64 v5, -1 // VOP3: src0 = 0x80000001
+    // Negative fp literals should be handled likewise for unifomtity
+    if (!NextToken.is(AsmToken::Integer) && !NextToken.is(AsmToken::Real)) {
+      Parser.Lex();
+      Negate = true;
+    }
+  }
+
+  if (getLexer().getKind() == AsmToken::Identifier &&
+      Parser.getTok().getString() == "neg") {
+    if (Negate) {
+      Error(Parser.getTok().getLoc(), "expected register or immediate");
+      return MatchOperand_ParseFail;
+    }
     Parser.Lex();
-    Negate = true;
+    Negate2 = true;
+    if (getLexer().isNot(AsmToken::LParen)) {
+      Error(Parser.getTok().getLoc(), "expected left paren after neg");
+      return MatchOperand_ParseFail;
+    }
+    Parser.Lex();
   }
 
   if (getLexer().getKind() == AsmToken::Identifier &&
@@ -1726,7 +1806,7 @@ AMDGPUAsmParser::parseRegOrImmWithFPInputMods(OperandVector &Operands,
 
   OperandMatchResultTy Res;
   if (AllowImm) {
-    Res = parseRegOrImm(Operands);
+    Res = parseRegOrImm(Operands, Abs);
   } else {
     Res = parseReg(Operands);
   }
@@ -1735,9 +1815,6 @@ AMDGPUAsmParser::parseRegOrImmWithFPInputMods(OperandVector &Operands,
   }
 
   AMDGPUOperand::Modifiers Mods;
-  if (Negate) {
-    Mods.Neg = true;
-  }
   if (Abs) {
     if (getLexer().getKind() != AsmToken::Pipe) {
       Error(Parser.getTok().getLoc(), "expected vertical bar");
@@ -1753,6 +1830,17 @@ AMDGPUAsmParser::parseRegOrImmWithFPInputMods(OperandVector &Operands,
     }
     Parser.Lex();
     Mods.Abs = true;
+  }
+
+  if (Negate) {
+    Mods.Neg = true;
+  } else if (Negate2) {
+    if (getLexer().isNot(AsmToken::RParen)) {
+      Error(Parser.getTok().getLoc(), "expected closing parentheses");
+      return MatchOperand_ParseFail;
+    }
+    Parser.Lex();
+    Mods.Neg = true;
   }
 
   if (Mods.hasFPModifiers()) {
