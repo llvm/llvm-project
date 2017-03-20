@@ -102,13 +102,6 @@ protected:
   /// Add masking operations to stencil out a subregister.
   void maskSubRegister();
 
-public:
-  DwarfExpression(unsigned DwarfVersion) : DwarfVersion(DwarfVersion) {}
-  virtual ~DwarfExpression() {};
-
-  /// This needs to be called last to commit any pending changes.
-  void finalize();
-
   /// Output a dwarf operand and an optional assembler comment.
   virtual void emitOp(uint8_t Op, const char *Comment = nullptr) = 0;
   /// Emit a raw signed value.
@@ -146,6 +139,13 @@ public:
   /// heuristics to disambiguate the value vs. location status of the
   /// expression.  See PR21176 for more details.
   void addStackValue();
+
+public:
+  DwarfExpression(unsigned DwarfVersion) : DwarfVersion(DwarfVersion) {}
+  virtual ~DwarfExpression() {};
+
+  /// This needs to be called last to commit any pending changes.
+  void finalize();
 
   /// Emit an indirect dwarf register operation for the given machine register.
   /// \return false if no DWARF register exists for MachineReg.
@@ -206,15 +206,14 @@ public:
 class DebugLocDwarfExpression : public DwarfExpression {
   ByteStreamer &BS;
 
-public:
-  DebugLocDwarfExpression(unsigned DwarfVersion, ByteStreamer &BS)
-      : DwarfExpression(DwarfVersion), BS(BS) {}
-
   void emitOp(uint8_t Op, const char *Comment = nullptr) override;
   void emitSigned(int64_t Value) override;
   void emitUnsigned(uint64_t Value) override;
   bool isFrameRegister(const TargetRegisterInfo &TRI,
                        unsigned MachineReg) override;
+public:
+  DebugLocDwarfExpression(unsigned DwarfVersion, ByteStreamer &BS)
+      : DwarfExpression(DwarfVersion), BS(BS) {}
 };
 
 /// DwarfExpression implementation for singular DW_AT_location.
@@ -223,13 +222,13 @@ const AsmPrinter &AP;
   DwarfUnit &DU;
   DIELoc &DIE;
 
-public:
-  DIEDwarfExpression(const AsmPrinter &AP, DwarfUnit &DU, DIELoc &DIE);
   void emitOp(uint8_t Op, const char *Comment = nullptr) override;
   void emitSigned(int64_t Value) override;
   void emitUnsigned(uint64_t Value) override;
   bool isFrameRegister(const TargetRegisterInfo &TRI,
                        unsigned MachineReg) override;
+public:
+  DIEDwarfExpression(const AsmPrinter &AP, DwarfUnit &DU, DIELoc &DIE);
   DIELoc *finalize() {
     DwarfExpression::finalize();
     return &DIE;
